@@ -420,10 +420,12 @@
     .alarm-btn-dismiss {
       background:rgba(255,255,255,.15); color:white; border:2px solid rgba(255,255,255,.35);
       padding:12px 24px; border-radius:100px; font-family:var(--font); font-size:14px; font-weight:700;
-      cursor:pointer; transition:all .2s; display:none;
+      cursor:pointer; transition:all .2s;
     }
-    .alarm-btn-dismiss.visible { display:block; }
     .alarm-btn-dismiss:hover   { background:rgba(255,255,255,.25); }
+    .alarm-hint {
+      font-size:12px; color:rgba(255,220,220,.8); margin-top:-4px; margin-bottom:2px;
+    }
 
     /* ════ FOOTER ════ */
     .footer {
@@ -531,8 +533,7 @@
       }
       .alarm-btn-confirm { width:100%; padding:13px 20px; font-size:14px; border-radius:12px; }
       .alarm-btn-snooze  { flex:1; padding:11px 10px; font-size:13px; }
-      /* Botão fechar SEMPRE visível no mobile */
-      .alarm-btn-dismiss { display:block !important; flex:1; padding:11px 10px; font-size:13px; }
+      .alarm-btn-dismiss { flex:1; padding:11px 10px; font-size:13px; }
 
       /* Footer: oculto no mobile (tabs fazem o papel) */
       .footer { display:none; }
@@ -554,6 +555,7 @@
     <textarea id="alarm-acao" placeholder="Ex: Liguei para a tutora — linha ocupada. / Mandei mensagem no WhatsApp..." oninput="checkAlarmForm()"></textarea>
     <label>👤 Seu nome (assinatura):</label>
     <input type="text" id="alarm-assinatura" placeholder="Seu nome completo" oninput="checkAlarmForm()">
+    <div class="alarm-hint" id="alarm-hint">⬆ Preencha os campos acima para habilitar o botão Registrar</div>
   </div>
 
   <div class="alarm-footer">
@@ -1414,14 +1416,16 @@ function triggerAlarme(key, petName, tutor, deficit) {
   document.getElementById('alarm-acao').value       = '';
   document.getElementById('alarm-assinatura').value = '';
   document.getElementById('alarm-btn-confirm').disabled = true;
-  document.getElementById('alarm-btn-dismiss').classList.remove('visible');
+  document.getElementById('alarm-hint').style.display = '';
   document.getElementById('alarm-overlay').classList.add('active');
 }
 
 function checkAlarmForm() {
   const acao  = document.getElementById('alarm-acao').value.trim();
   const assin = document.getElementById('alarm-assinatura').value.trim();
-  document.getElementById('alarm-btn-confirm').disabled = !(acao&&assin);
+  const ok    = !!(acao && assin);
+  document.getElementById('alarm-btn-confirm').disabled = !ok;
+  document.getElementById('alarm-hint').style.display   = ok ? 'none' : '';
 }
 
 function confirmarAlarme() {
