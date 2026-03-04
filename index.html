@@ -804,6 +804,7 @@ let   racaoDataCache  = {};   // espelho local do Firebase — atualizado em tem
 let activeTab   = 'hospedes';
 let currentAlarm= null; // { petKey, petName, tutor, deficit }
 let alarmQueue  = [];   // petKeys pendentes
+const snoozedKeys = new Set(); // keys com alarme adiado — não disparam enquanto estiverem aqui
 let loading     = false;
 let status      = 'ok';
 let countdown   = REFRESH_OK;
@@ -1435,21 +1436,20 @@ function confirmarAlarme() {
     const now = getBrasiliaDate();
     record.entries.push({ acao, assinatura:assin, timestamp:formatDateTime(now) });
     record.status = 'em_processo';
-    saveRacaoData(data);
+    saveRacaoData(data); // Firebase listener vai chamar renderAll() — status já é em_processo, não reabre
   }
   document.getElementById('alarm-overlay').classList.remove('active');
   currentAlarm = null;
-  renderAll();
 }
 
 function adiarAlarme(minutos) {
-  // Fecha o alarme agora — volta automaticamente após N minutos
-  document.getElementById('alarm-overlay').classList.remove('active');
   const snoozedKey = currentAlarm ? currentAlarm.key : null;
+  document.getElementById('alarm-overlay').classList.remove('active');
   currentAlarm = null;
-  renderAll();
   if(snoozedKey) {
+    snoozedKeys.add(snoozedKey); // bloqueia o alarme durante o snooze
     setTimeout(() => {
+      snoozedKeys.delete(snoozedKey);
       const data   = getRacaoData();
       const record = data[snoozedKey];
       if(record && record.status === 'pendente' && !currentAlarm) {
@@ -1459,12 +1459,21 @@ function adiarAlarme(minutos) {
       }
     }, minutos * 60 * 1000);
   }
+  // NÃO chama renderAll() — Firebase listener cuida disso sem reabrir o alarme
 }
 
 function fecharAlarme() {
+  const key = currentAlarm ? currentAlarm.key : null;
   document.getElementById('alarm-overlay').classList.remove('active');
   currentAlarm = null;
-  renderAll();
+  // Se ainda pendente, dá 2 minutos antes de voltar
+  if(key) {
+    const record = getRacaoData()[key];
+    if(record && record.status === 'pendente') {
+      snoozedKeys.add(key);
+      setTimeout(() => snoozedKeys.delete(key), 2 * 60 * 1000);
+    }
+  }
 }
 
 function checkPendingAlarms() {
@@ -1473,7 +1482,7 @@ function checkPendingAlarms() {
   for(const pet of hospedes) {
     const key    = getRacaoKey(pet.petName, formatDateKey(selectedDate));
     const record = data[key];
-    if(record && record.status==='pendente' && !currentAlarm) {
+    if(record && record.status==='pendente' && !currentAlarm && !snoozedKeys.has(key)) {
       triggerAlarme(key, pet.petName, pet.tutorName||'', record.deficit);
       return;
     }
