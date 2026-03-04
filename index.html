@@ -649,6 +649,10 @@
   <div class="footer-txt">Dados salvos · Atualização: 2 min</div>
 </footer>
 
+<!-- Firebase SDK -->
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-database-compat.js"></script>
+
 <script>
 // ════════════════════════════════════════════════════════════
 //  CONFIGURAÇÃO
@@ -658,7 +662,15 @@ const TAB_NOMES  = 'Calendário Hospedagem para dash'; // col A = Data, cols B-A
 const REFRESH_OK = 120;
 const REFRESH_ER = 30;
 const CACHE_KEY  = 'zeluz_hosp_v1';
-const RACAO_KEY  = 'zeluz_racao_v2';
+const FIREBASE_CONFIG = {
+  apiKey:            "AIzaSyD3udp47XruRAEeIYWNGn0ICGCX3a1qr28",
+  authDomain:        "hospedagem-zeluz.firebaseapp.com",
+  databaseURL:       "https://hospedagem-zeluz-default-rtdb.firebaseio.com",
+  projectId:         "hospedagem-zeluz",
+  storageBucket:     "hospedagem-zeluz.firebasestorage.app",
+  messagingSenderId: "199129329105",
+  appId:             "1:199129329105:web:22d0995972c197e24644f0"
+};
 const TZ         = 'America/Sao_Paulo';
 
 const MESES = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho',
@@ -768,6 +780,8 @@ const FRASES = [
 // ════════════════════════════════════════════════════════════
 let selectedDate = new Date(); selectedDate.setHours(0,0,0,0);
 const memNomes  = {};   // { '_all': [{...rows}] }
+let   firebaseDb      = null;
+let   racaoDataCache  = {};   // espelho local do Firebase — atualizado em tempo real
 let activeTab   = 'hospedes';
 let currentAlarm= null; // { petKey, petName, tutor, deficit }
 let alarmQueue  = [];   // petKeys pendentes
@@ -781,6 +795,22 @@ let clockSynced = false;
 // ════════════════════════════════════════════════════════════
 //  INIT
 // ════════════════════════════════════════════════════════════
+function initFirebase() {
+  try {
+    const app = firebase.initializeApp(FIREBASE_CONFIG);
+    firebaseDb = firebase.database(app);
+    // Listener em tempo real — qualquer dispositivo que salvar aciona todos
+    firebaseDb.ref('racao').on('value', snapshot => {
+      const novos = snapshot.val() || {};
+      const mudou = JSON.stringify(novos) !== JSON.stringify(racaoDataCache);
+      racaoDataCache = novos;
+      if(mudou) renderAll();   // redesenha e verifica alarmes em todos os dispositivos
+    });
+  } catch(e) {
+    console.error('Firebase init:', e);
+  }
+}
+
 function init() {
   setFraseDia();
   syncInternetTime();
@@ -790,8 +820,8 @@ function init() {
   setInterval(tick, 1000);
   updateDateLabel();
   switchTab('hospedes');
+  initFirebase();   // conecta ao Firebase antes de carregar dados
   loadData();
-  checkPendingAlarms();
 }
 
 // ════════════════════════════════════════════════════════════
@@ -1125,8 +1155,11 @@ function renderBadgeStatus(status, racao) {
 // ════════════════════════════════════════════════════════════
 //  CALCULADORA DE RAÇÃO
 // ════════════════════════════════════════════════════════════
-function getRacaoData()         { try{return JSON.parse(localStorage.getItem(RACAO_KEY)||'{}')}catch{return{}} }
-function saveRacaoData(d)       { try{localStorage.setItem(RACAO_KEY,JSON.stringify(d))}catch{} }
+function getRacaoData()   { return racaoDataCache; }
+function saveRacaoData(d) {
+  racaoDataCache = d;   // atualiza local imediatamente (UI responsiva)
+  if(firebaseDb) firebaseDb.ref('racao').set(d).catch(e => console.error('Firebase save:', e));
+}
 function getRacaoKey(pet,date)  { return `${pet}__${date}`; }
 function getRacaoRecord(key)    { return getRacaoData()[key]||null; }
 
