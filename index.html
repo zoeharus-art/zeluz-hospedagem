@@ -1366,6 +1366,7 @@ function adicionarEntrada(key) {
   if(!record) { alert('Salve o cálculo de ração primeiro.'); return; }
 
   const now = getBrasiliaDate();
+  if(!Array.isArray(record.entries)) record.entries = [];
   record.entries.push({ acao, assinatura:assin, timestamp:formatDateTime(now) });
   if(record.status!=='resolvido') record.status='em_processo';
   saveRacaoData(data);
@@ -1400,6 +1401,7 @@ function marcarResolvido(key) {
   if(!record) return;
 
   const now = getBrasiliaDate();
+  if(!Array.isArray(record.entries)) record.entries = [];
   record.entries.push({ acao, assinatura:assin, timestamp:formatDateTime(now), resolucao:true });
   record.status = 'resolvido';
   saveRacaoData(data);
@@ -1438,6 +1440,7 @@ function confirmarAlarme() {
   const record = data[currentAlarm.key];
   if(record) {
     const now = getBrasiliaDate();
+    if(!Array.isArray(record.entries)) record.entries = [];
     record.entries.push({ acao, assinatura:assin, timestamp:formatDateTime(now) });
     record.status = 'em_processo';
     saveRacaoData(data); // Firebase listener vai chamar renderAll() — status já é em_processo, não reabre
