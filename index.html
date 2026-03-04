@@ -1477,12 +1477,16 @@ function fecharAlarme() {
 }
 
 function checkPendingAlarms() {
+  // Se o alarme já está visível na tela, não interfere
+  if(document.getElementById('alarm-overlay').classList.contains('active')) return;
+  if(currentAlarm) return;
+
   const data     = getRacaoData();
   const hospedes = getHospedesHoje();
   for(const pet of hospedes) {
     const key    = getRacaoKey(pet.petName, formatDateKey(selectedDate));
     const record = data[key];
-    if(record && record.status==='pendente' && !currentAlarm && !snoozedKeys.has(key)) {
+    if(record && record.status==='pendente' && !snoozedKeys.has(key)) {
       triggerAlarme(key, pet.petName, pet.tutorName||'', record.deficit);
       return;
     }
