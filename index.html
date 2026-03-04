@@ -510,19 +510,29 @@
       .nova-entrada-btns { flex-wrap:wrap; }
       .btn-add-entry, .btn-resolve { flex:1; min-width:140px; }
 
-      /* Alarme: full-screen amigável */
-      .alarm-overlay  { padding:18px 12px; gap:4px; overflow-y:auto; }
-      .alarm-bowl     { width:64px; height:64px; margin-bottom:6px; }
-      .alarm-titulo   { font-size:24px; margin-bottom:2px; }
-      .alarm-sub      { font-size:11px; letter-spacing:1px; margin-bottom:6px; }
-      .alarm-pet-nm   { font-size:20px; margin-bottom:2px; }
-      .alarm-deficit  { font-size:14px; margin-bottom:10px; }
-      .alarm-form     { padding:12px 12px; max-width:100%; }
-      .alarm-form textarea { min-height:56px; }
-      .alarm-footer   { flex-wrap:wrap; gap:8px; margin-top:8px; }
-      .alarm-btn-confirm { width:100%; padding:14px 20px; font-size:14px; border-radius:14px; }
-      .alarm-btn-snooze  { flex:1; padding:11px 12px; font-size:13px; }
-      .alarm-btn-dismiss { flex:1; padding:11px 12px; font-size:13px; }
+      /* Alarme: botões SEMPRE visíveis no rodapé fixo */
+      .alarm-overlay  {
+        padding:16px 12px 110px; gap:4px;
+        overflow-y:auto; justify-content:flex-start;
+      }
+      .alarm-bowl     { width:56px; height:56px; margin-bottom:4px; }
+      .alarm-titulo   { font-size:22px; margin-bottom:2px; }
+      .alarm-sub      { font-size:10px; letter-spacing:1px; margin-bottom:4px; }
+      .alarm-pet-nm   { font-size:18px; margin-bottom:2px; }
+      .alarm-deficit  { font-size:13px; margin-bottom:8px; }
+      .alarm-form     { padding:10px 12px; max-width:100%; }
+      .alarm-form textarea { min-height:48px; }
+      /* Footer fixo no rodapé — sempre visível independente do tamanho da tela */
+      .alarm-footer {
+        position:fixed; bottom:0; left:0; right:0; z-index:10001;
+        background:rgba(150,0,0,.98); padding:10px 12px;
+        padding-bottom:max(10px, env(safe-area-inset-bottom));
+        gap:8px; margin-top:0; flex-wrap:wrap; justify-content:center;
+      }
+      .alarm-btn-confirm { width:100%; padding:13px 20px; font-size:14px; border-radius:12px; }
+      .alarm-btn-snooze  { flex:1; padding:11px 10px; font-size:13px; }
+      /* Botão fechar SEMPRE visível no mobile */
+      .alarm-btn-dismiss { display:block !important; flex:1; padding:11px 10px; font-size:13px; }
 
       /* Footer: oculto no mobile (tabs fazem o papel) */
       .footer { display:none; }
