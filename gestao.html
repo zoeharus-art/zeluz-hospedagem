@@ -1,0 +1,664 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=5">
+  <meta name="theme-color" content="#234D67">
+  <title>Zêluz® — Gestão Financeira Hospedagem</title>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:ital,wght@0,400;0,500;0,600;0,700;0,800;1,400;1,600&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --amarelo: #C9971C;
+      --azul:    #234D67;
+      --creme:   #FAF8F4;
+      --ouro-h:  #B88B0A;
+      --ok-h:    #1E7D4B;
+      --font:    'Poppins', sans-serif;
+    }
+    *, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
+    html, body { height:100%; font-family:var(--font); background:var(--creme); overflow-x:hidden; }
+    body { display:flex; flex-direction:column; min-height:100vh; }
+
+    @keyframes fadeUp  { from{opacity:0;transform:translateY(20px)} to{opacity:1;transform:translateY(0)} }
+    @keyframes fadeIn  { from{opacity:0} to{opacity:1} }
+    @keyframes spin    { to{transform:rotate(360deg)} }
+    @keyframes pulse   { 0%,100%{opacity:1} 50%{opacity:.3} }
+    @keyframes fraseSlide { from{opacity:0;transform:translateX(-12px)} to{opacity:1;transform:translateX(0)} }
+    @keyframes fraseGlow  { 0%,100%{text-shadow:0 1px 6px rgba(27,58,82,.18)} 50%{text-shadow:0 2px 14px rgba(27,58,82,.38)} }
+
+    /* ════ PIN SCREEN ════ */
+    .pin-screen {
+      position:fixed; inset:0; z-index:9999;
+      background:linear-gradient(160deg, #1B3A52 0%, #234D67 60%, #1B3A52 100%);
+      display:flex; flex-direction:column; align-items:center; justify-content:center;
+      gap:24px; padding:40px 24px;
+    }
+    .pin-screen.hidden { display:none; }
+    .pin-logo { width:140px; height:auto; object-fit:contain; animation:fadeIn 1s ease both; }
+    .pin-titulo {
+      font-size:14px; font-weight:800; color:rgba(255,255,255,.6);
+      text-transform:uppercase; letter-spacing:3px; text-align:center;
+    }
+    .pin-sub { font-size:22px; font-weight:800; color:#F0C840; text-align:center; }
+    .pin-dots { display:flex; gap:14px; margin:4px 0; }
+    .pin-dot  {
+      width:18px; height:18px; border-radius:50%;
+      border:2.5px solid rgba(255,255,255,.4); background:transparent; transition:background .2s;
+    }
+    .pin-dot.filled { background:#F0C840; border-color:#F0C840; }
+    .pin-error { font-size:14px; color:#FF7043; font-weight:700; min-height:20px; }
+    .keypad {
+      display:grid; grid-template-columns:repeat(3,72px); gap:12px;
+    }
+    .key {
+      width:72px; height:72px; border-radius:50%; border:2px solid rgba(255,255,255,.2);
+      background:rgba(255,255,255,.08); color:white; font-family:var(--font);
+      font-size:22px; font-weight:700; cursor:pointer; transition:all .15s;
+      display:flex; align-items:center; justify-content:center;
+    }
+    .key:hover  { background:rgba(255,255,255,.18); border-color:rgba(255,255,255,.4); }
+    .key:active { transform:scale(.93); }
+    .key.del    { font-size:16px; background:rgba(255,100,100,.12); border-color:rgba(255,100,100,.3); }
+    .key.del:hover  { background:rgba(255,100,100,.25); }
+    .key.zero   { grid-column:2; }
+
+    /* ════ HEADER ════ */
+    .header {
+      background:linear-gradient(160deg, #8A6200 0%, #C9971C 55%, #8A6200 100%);
+      flex-shrink:0; box-shadow:0 4px 20px rgba(0,0,0,.3);
+    }
+    .header-top {
+      display:flex; align-items:center; justify-content:space-between;
+      gap:20px; padding:6px 32px;
+    }
+    .logo-wrap { overflow:hidden; height:178px; flex-shrink:0; animation:fadeIn .9s ease both; }
+    .logo-img  { display:block; height:380px; width:auto; object-fit:contain; margin-top:-95px; }
+
+    .header-center { display:flex; flex-direction:column; align-items:center; gap:4px; flex:1; }
+    .header-sector { font-size:11px; font-weight:800; color:rgba(27,58,82,.7); text-transform:uppercase; letter-spacing:3px; }
+    .header-titulo { font-size:24px; font-weight:800; color:#1B3A52; letter-spacing:1px; }
+
+    .clock-area { text-align:right; animation:fadeIn 1.1s ease both; }
+    .clock-dia  { font-size:10px; font-weight:700; color:rgba(27,58,82,.7); text-transform:uppercase; letter-spacing:2px; }
+    .clock-data { font-size:12px; font-weight:600; color:rgba(27,58,82,.8); margin-top:1px; }
+    .clock-hora { font-size:44px; font-weight:800; color:#1B3A52; line-height:1; letter-spacing:-3px; margin-top:2px; }
+
+    /* ════ FRASE ════ */
+    .frase-strip {
+      background:linear-gradient(90deg, #1B3A52 0%, #234D67 30%, #234D67 70%, #1B3A52 100%);
+      padding:10px 40px; display:flex; flex-direction:column; align-items:center; gap:3px;
+      flex-shrink:0; border-top:1px solid rgba(201,151,28,.25); border-bottom:1px solid rgba(201,151,28,.25);
+    }
+    .frase-label { font-size:12px; font-weight:800; color:#F0C840; text-transform:uppercase; letter-spacing:3px; }
+    .frase-texto { font-size:16px; font-weight:600; color:rgba(255,255,255,.92); font-style:italic; line-height:1.5; text-align:center; max-width:900px; animation:fraseSlide 1.2s ease both, fraseGlow 3s ease-in-out 1.5s infinite; }
+
+    /* ════ TOP BAR ════ */
+    .top-bar {
+      background:linear-gradient(90deg, #8A6200, #B8880E 50%, #8A6200); padding:8px 24px;
+      display:flex; align-items:center; justify-content:space-between; gap:16px; flex-shrink:0;
+    }
+    .top-left { display:flex; align-items:center; gap:8px; }
+    .dot      { width:9px; height:9px; border-radius:50%; background:#27ae60; flex-shrink:0; }
+    .dot.loading { background:#1B3A52; animation:pulse .8s infinite; }
+    .dot.offline { background:#e74c3c; }
+    .status-label { font-size:12px; color:#1B3A52; font-weight:700; }
+
+    .top-right { display:flex; align-items:center; gap:10px; }
+    .btn-back {
+      background:rgba(27,58,82,.15); border:1.5px solid rgba(27,58,82,.35); color:#1B3A52;
+      padding:7px 16px; border-radius:100px; font-family:var(--font); font-size:13px; font-weight:700;
+      cursor:pointer; transition:all .2s; text-decoration:none; display:flex; align-items:center; gap:6px;
+    }
+    .btn-back:hover { background:rgba(27,58,82,.25); }
+    .btn-lock {
+      background:rgba(27,58,82,.15); border:1.5px solid rgba(27,58,82,.35); color:#1B3A52;
+      padding:7px 14px; border-radius:100px; font-family:var(--font); font-size:12px; font-weight:700;
+      cursor:pointer; transition:all .2s;
+    }
+    .btn-lock:hover { background:rgba(27,58,82,.28); }
+    .btn-refresh {
+      background:var(--ok-h); border:none; color:white; padding:8px 18px; border-radius:100px;
+      font-family:var(--font); font-size:13px; font-weight:800; cursor:pointer; transition:all .2s;
+    }
+    .btn-refresh:hover { transform:scale(1.04); }
+    .btn-refresh:disabled { opacity:.5; cursor:not-allowed; transform:none; }
+
+    /* ════ FILTRO DE ANO ════ */
+    .filtro-bar {
+      background:white; border-bottom:2px solid #ece8e0; padding:10px 24px;
+      display:flex; align-items:center; gap:20px; flex-shrink:0; flex-wrap:wrap;
+    }
+    .filtro-label { font-size:12px; font-weight:800; color:var(--azul); text-transform:uppercase; letter-spacing:1px; }
+    .filtro-anos  { display:flex; gap:8px; flex-wrap:wrap; }
+    .ano-check    { display:flex; align-items:center; gap:6px; cursor:pointer; }
+    .ano-check input[type=checkbox] { display:none; }
+    .ano-pill {
+      padding:5px 16px; border-radius:100px; font-family:var(--font); font-size:13px; font-weight:700;
+      border:2px solid #ddd; color:#aaa; background:white; cursor:pointer; transition:all .2s;
+      user-select:none;
+    }
+    .ano-check input:checked + .ano-pill {
+      background:var(--azul); border-color:var(--azul); color:white;
+    }
+
+    /* ════ MAIN ════ */
+    .main { flex:1; padding:20px; overflow-y:auto; }
+
+    .loading-box { display:flex; flex-direction:column; align-items:center; justify-content:center; padding:80px 40px; gap:16px; }
+    .spinner { width:44px; height:44px; border:4px solid #e0dcd4; border-top-color:var(--azul); border-radius:50%; animation:spin 1s linear infinite; }
+    .loading-txt { font-size:16px; color:var(--azul); font-weight:700; }
+    .error-box { display:flex; flex-direction:column; align-items:center; justify-content:center; padding:80px 40px; gap:16px; }
+    .error-msg { font-size:16px; color:#c0392b; font-weight:700; }
+
+    /* ════ KPI GRID ════ */
+    #view-gestao { display:none; }
+    #view-gestao.ativo { display:block; }
+
+    .kpi-titulo { text-align:center; margin-bottom:20px; }
+    .kpi-titulo h2 { font-size:20px; font-weight:800; color:var(--azul); }
+    .kpi-titulo p  { font-size:13px; color:#b0a898; margin-top:2px; }
+
+    .kpi-grid {
+      display:grid; grid-template-columns:repeat(4,1fr); gap:16px; margin-bottom:28px;
+    }
+    .kpi-card {
+      background:white; border-radius:20px; box-shadow:0 4px 18px rgba(35,77,103,.09);
+      padding:24px 20px; display:flex; flex-direction:column; align-items:center;
+      gap:8px; border-top:5px solid #e0dcd4; text-align:center;
+      opacity:0; animation:fadeUp .45s ease forwards;
+    }
+    .kpi-card:nth-child(1) { border-top-color:var(--azul);    animation-delay:.05s; }
+    .kpi-card:nth-child(2) { border-top-color:var(--amarelo); animation-delay:.10s; }
+    .kpi-card:nth-child(3) { border-top-color:#2A8FAF;        animation-delay:.15s; }
+    .kpi-card:nth-child(4) { border-top-color:var(--ok-h);    animation-delay:.20s; }
+    .kpi-icon-big { font-size:36px; }
+    .kpi-label    { font-size:11px; font-weight:700; color:#b0a898; text-transform:uppercase; letter-spacing:.8px; line-height:1.3; }
+    .kpi-value    { font-size:38px; font-weight:800; color:var(--azul); line-height:1; }
+    .kpi-value.zero { color:#ddd; }
+    .kpi-value-sm { font-size:28px; }
+    .kpi-sub      { font-size:11px; color:#c0b8a8; font-weight:600; }
+
+    /* ════ TABELA POR ANO ════ */
+    .anos-section { margin-top:8px; }
+    .anos-section-titulo {
+      font-size:13px; font-weight:800; color:var(--azul); text-transform:uppercase;
+      letter-spacing:1.5px; margin-bottom:12px; display:flex; align-items:center; gap:8px;
+    }
+    .anos-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:12px; }
+    .ano-card {
+      background:white; border-radius:16px; box-shadow:0 2px 12px rgba(35,77,103,.07);
+      padding:18px 16px; text-align:center; border-top:4px solid #e0dcd4;
+      opacity:0; animation:fadeUp .4s ease forwards;
+    }
+    .ano-card[data-ano="2026"] { border-top-color:var(--azul); }
+    .ano-card[data-ano="2025"] { border-top-color:#2A8FAF; }
+    .ano-card[data-ano="2024"] { border-top-color:var(--amarelo); }
+    .ano-card[data-ano="2023"] { border-top-color:#8B6FC4; }
+    .ano-card .ac-year  { font-size:12px; font-weight:800; color:#b0a898; text-transform:uppercase; letter-spacing:1px; }
+    .ano-card .ac-total { font-size:22px; font-weight:800; color:var(--azul); margin:6px 0 2px; }
+    .ano-card .ac-row   { font-size:12px; color:#888; font-weight:600; display:flex; justify-content:space-between; padding:2px 0; border-bottom:1px solid #f0ece4; }
+    .ano-card .ac-row:last-child { border-bottom:none; }
+    .ano-card .ac-row span { font-weight:700; color:var(--azul); }
+
+    /* ════ FOOTER ════ */
+    .footer {
+      background:linear-gradient(90deg, #8A6200, #B8880E 50%, #8A6200); padding:9px 28px;
+      display:flex; justify-content:space-between; align-items:center; flex-shrink:0;
+    }
+    .footer-txt   { font-size:11px; color:rgba(27,58,82,.6); font-weight:600; }
+    .footer-brand { font-size:12px; color:#1B3A52; font-weight:800; letter-spacing:.4px; }
+
+    /* ════ RESPONSIVO ════ */
+    @media (max-width:960px) { .kpi-grid{grid-template-columns:1fr 1fr;} .anos-grid{grid-template-columns:1fr 1fr;} }
+    @media (max-width:600px) {
+      .header-top{flex-direction:column;padding:10px 12px;}
+      .logo-wrap{height:72px;} .logo-img{height:160px;margin-top:-40px;}
+      .clock-hora{font-size:28px;}
+      .kpi-grid{grid-template-columns:1fr 1fr;gap:10px;}
+      .anos-grid{grid-template-columns:1fr 1fr;}
+      .top-bar{flex-direction:column;padding:8px 12px;gap:6px;}
+      .top-right{justify-content:center;flex-wrap:wrap;}
+      .main{padding:12px 8px;}
+    }
+  </style>
+</head>
+<body>
+
+<!-- ════ PIN SCREEN ════ -->
+<div class="pin-screen" id="pin-screen">
+  <img class="pin-logo" src="logo.png" alt="Zêluz" onerror="this.style.display='none'">
+  <div class="pin-titulo">Acesso Restrito — Gestão</div>
+  <div class="pin-sub">🔐 Painel Financeiro</div>
+  <div class="pin-dots" id="pin-dots">
+    <div class="pin-dot" id="pd0"></div>
+    <div class="pin-dot" id="pd1"></div>
+    <div class="pin-dot" id="pd2"></div>
+    <div class="pin-dot" id="pd3"></div>
+  </div>
+  <div class="pin-error" id="pin-error"></div>
+  <div class="keypad">
+    <button class="key" onclick="pinKey('1')">1</button>
+    <button class="key" onclick="pinKey('2')">2</button>
+    <button class="key" onclick="pinKey('3')">3</button>
+    <button class="key" onclick="pinKey('4')">4</button>
+    <button class="key" onclick="pinKey('5')">5</button>
+    <button class="key" onclick="pinKey('6')">6</button>
+    <button class="key" onclick="pinKey('7')">7</button>
+    <button class="key" onclick="pinKey('8')">8</button>
+    <button class="key" onclick="pinKey('9')">9</button>
+    <button class="key del" onclick="pinDel()">⌫</button>
+    <button class="key zero" onclick="pinKey('0')">0</button>
+    <div></div>
+  </div>
+</div>
+
+<!-- ════ HEADER ════ -->
+<header class="header">
+  <div class="header-top">
+    <div class="logo-wrap">
+      <img class="logo-img" src="logo.png" alt="Zêluz" onerror="this.style.display='none'">
+    </div>
+    <div class="header-center">
+      <div class="header-sector">Gestão Financeira</div>
+      <div class="header-titulo">📊 MONITORAMENTO HOSPEDAGEM</div>
+    </div>
+    <div class="clock-area">
+      <div class="clock-dia"  id="clock-dia">—</div>
+      <div class="clock-data" id="clock-data">—</div>
+      <div class="clock-hora" id="clock-hora">—:—:—</div>
+    </div>
+  </div>
+</header>
+
+<!-- ════ FRASE ════ -->
+<div class="frase-strip">
+  <div class="frase-label">✨ Frase do Dia ✨</div>
+  <div class="frase-texto" id="frase-texto">—</div>
+</div>
+
+<!-- ════ TOP BAR ════ -->
+<div class="top-bar">
+  <div class="top-left">
+    <div class="dot loading" id="status-dot"></div>
+    <span class="status-label" id="status-label">Conectando...</span>
+  </div>
+  <div class="top-right">
+    <a class="btn-back" href="index.html">← Hospedagem</a>
+    <button class="btn-lock" onclick="lockScreen()">🔒 Bloquear</button>
+    <button class="btn-refresh" id="btn-refresh" onclick="manualRefresh()">🔄 Atualizar</button>
+  </div>
+</div>
+
+<!-- ════ FILTRO ════ -->
+<div class="filtro-bar" id="filtro-bar">
+  <div class="filtro-label">Filtrar por Ano:</div>
+  <div class="filtro-anos" id="filtro-anos">
+    <!-- gerado pelo JS -->
+  </div>
+</div>
+
+<!-- ════ MAIN ════ -->
+<div class="main">
+  <div class="loading-box" id="loading-box">
+    <div class="spinner"></div>
+    <div class="loading-txt">Carregando dados financeiros...</div>
+  </div>
+  <div class="error-box" id="error-box" style="display:none">
+    <div class="error-msg" id="error-msg">Não foi possível carregar os dados.</div>
+    <button style="background:var(--azul);color:white;border:none;padding:10px 24px;border-radius:100px;font-family:var(--font);font-size:14px;font-weight:700;cursor:pointer" onclick="manualRefresh()">🔄 Tentar novamente</button>
+  </div>
+
+  <div id="content" style="display:none">
+    <div id="view-gestao" class="ativo">
+      <div class="kpi-titulo">
+        <h2 id="kpi-periodo-titulo">Resumo Consolidado</h2>
+        <p id="kpi-periodo-sub">Selecione os anos no filtro acima</p>
+      </div>
+      <div class="kpi-grid"  id="kpi-grid"></div>
+      <div class="anos-section">
+        <div class="anos-section-titulo">📅 Detalhamento por Ano</div>
+        <div class="anos-grid" id="anos-grid"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ════ FOOTER ════ -->
+<footer class="footer">
+  <div class="footer-txt">🏠 Zêluz® Hospedagem — Gestão Financeira · zeluz.com.br</div>
+  <div class="footer-brand">Kairós® — by Adriana Duarte .´.</div>
+  <div class="footer-txt">🔐 Acesso restrito</div>
+</footer>
+
+<script>
+// ════════════════════════════════════════════════════════════
+//  CONFIG
+// ════════════════════════════════════════════════════════════
+const SHEET_ID   = '1SJ3OZ6E2wMa1JHrQUcgtNffgQLQhCpa01IUQKCv605w';
+const TAB_GERAL  = 'Dash Geral';
+const CACHE_KEY  = 'zeluz_gestao_v1';
+const PIN_CORRETO= '1007';
+const TZ         = 'America/Sao_Paulo';
+
+const MESES = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho',
+               'Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+const DIAS  = ['Domingo','Segunda-feira','Terça-feira','Quarta-feira','Quinta-feira','Sexta-feira','Sábado'];
+
+const FRASES = [
+  "O sucesso não é um destino — é uma jornada de escolhas.",
+  "Excelência não é um ato — é um hábito. — Aristóteles",
+  "O trabalho bem feito é a maior propaganda.",
+  "Confiança é o alicerce de toda relação duradoura.",
+  "Cada meta alcançada é a prova de que o esforço vale a pena.",
+  "Quem tem propósito, encontra o caminho.",
+  "A qualidade nunca é um acidente — é sempre resultado de esforço inteligente.",
+  "Grandes conquistas são feitas de pequenas vitórias diárias.",
+  "O que se mede, se gerencia. — Peter Drucker",
+  "Informação é poder — use com sabedoria.",
+  "Gestão com dados é gestão com confiança.",
+  "Transparência constrói negócios sólidos.",
+  "Crescimento sustentável é o verdadeiro objetivo.",
+  "Peludinho feliz, tutor satisfeito, Zêluz realizada.",
+  "Ser Zêluz é escolher a excelência todos os dias.",
+  "O número não mente — mas o contexto explica. — Zêluz",
+  "A dedicação transforma rotina em arte.",
+  "Propósito faz a diferença entre um trabalho e uma vocação.",
+  "Zêlo + Luz: cuidar e iluminar cada vida que passa por aqui.",
+  "A entrega total é o que transforma o bom em extraordinário.",
+];
+
+// ════════════════════════════════════════════════════════════
+//  ESTADO
+// ════════════════════════════════════════════════════════════
+let pinBuffer     = '';
+let pinDesbloq    = false;
+let dadosGeral    = [];
+let anosAtivos    = [];
+let loading       = false;
+let status        = 'ok';
+let clockOffset   = 0;
+
+// ════════════════════════════════════════════════════════════
+//  PIN
+// ════════════════════════════════════════════════════════════
+function pinKey(n) {
+  if(pinBuffer.length>=4) return;
+  pinBuffer += n;
+  atualizarPinDots();
+  if(pinBuffer.length===4) setTimeout(validarPin, 200);
+}
+function pinDel() {
+  pinBuffer = pinBuffer.slice(0,-1);
+  atualizarPinDots();
+  document.getElementById('pin-error').textContent='';
+}
+function atualizarPinDots() {
+  for(let i=0;i<4;i++){
+    document.getElementById(`pd${i}`).classList.toggle('filled', i<pinBuffer.length);
+  }
+}
+function validarPin() {
+  if(pinBuffer===PIN_CORRETO) {
+    pinDesbloq = true;
+    document.getElementById('pin-screen').classList.add('hidden');
+    initDashboard();
+  } else {
+    document.getElementById('pin-error').textContent='PIN incorreto. Tente novamente.';
+    pinBuffer='';
+    atualizarPinDots();
+  }
+}
+function lockScreen() {
+  pinBuffer=''; pinDesbloq=false;
+  atualizarPinDots();
+  document.getElementById('pin-error').textContent='';
+  document.getElementById('pin-screen').classList.remove('hidden');
+}
+// Permite digitar pelo teclado
+document.addEventListener('keydown', e => {
+  if(pinDesbloq) return;
+  if(e.key>='0'&&e.key<='9') pinKey(e.key);
+  else if(e.key==='Backspace') pinDel();
+});
+
+// ════════════════════════════════════════════════════════════
+//  INIT
+// ════════════════════════════════════════════════════════════
+function init() {
+  syncInternetTime();
+  setInterval(syncInternetTime, 30*60*1000);
+  updateClock();
+  setInterval(updateClock, 1000);
+}
+function initDashboard() {
+  setFraseDia();
+  loadData();
+}
+
+// ════════════════════════════════════════════════════════════
+//  RELÓGIO
+// ════════════════════════════════════════════════════════════
+async function syncInternetTime() {
+  try {
+    const r = await fetch('https://worldtimeapi.org/api/timezone/America/Sao_Paulo');
+    if(!r.ok) throw new Error();
+    clockOffset = (await r.json()).unixtime*1000 - Date.now();
+  } catch {}
+}
+function getBrasiliaDate() {
+  const now   = new Date(Date.now() + clockOffset);
+  const parts = new Intl.DateTimeFormat('en-CA', {
+    timeZone:TZ, year:'numeric', month:'2-digit', day:'2-digit',
+    hour:'2-digit', minute:'2-digit', second:'2-digit', hour12:false
+  }).formatToParts(now);
+  const get = t => parseInt(parts.find(p=>p.type===t).value);
+  return new Date(get('year'), get('month')-1, get('day'), get('hour'), get('minute'), get('second'));
+}
+function updateClock() {
+  const d = getBrasiliaDate(), p = x => String(x).padStart(2,'0');
+  document.getElementById('clock-hora').textContent = `${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())}`;
+  document.getElementById('clock-dia').textContent  = DIAS[d.getDay()];
+  document.getElementById('clock-data').textContent = `${p(d.getDate())} de ${MESES[d.getMonth()]} de ${d.getFullYear()}`;
+}
+function setFraseDia() {
+  const d = getBrasiliaDate(), ini = new Date(d.getFullYear(),0,0);
+  const dia = Math.floor((d-ini)/86400000);
+  document.getElementById('frase-texto').textContent = FRASES[(dia-1+FRASES.length)%FRASES.length];
+}
+
+// ════════════════════════════════════════════════════════════
+//  CARREGAMENTO
+// ════════════════════════════════════════════════════════════
+async function loadData() {
+  if(loading) return; loading=true; setDot('loading'); setBtn(false);
+  document.getElementById('status-label').textContent='Carregando...';
+
+  try {
+    let rows;
+    try { rows = await fetchSheet(TAB_GERAL); }
+    catch { rows = loadCache(); if(!rows) throw new Error('sem cache'); }
+    dadosGeral = rows;
+    saveCache(rows);
+    setDot('ok'); status='ok';
+    document.getElementById('status-label').textContent='Dados atualizados';
+  } catch {
+    const c = loadCache();
+    if(c){ dadosGeral=c; setDot('cache'); document.getElementById('status-label').textContent='Dados salvos'; }
+    else { setDot('offline'); document.getElementById('status-label').textContent='Sem conexão'; showError('Sem conexão.'); loading=false; setBtn(true); return; }
+  }
+
+  loading=false; setBtn(true);
+  buildFiltros();
+  showContent();
+  renderGestao();
+}
+function manualRefresh() { dadosGeral=[]; loadData(); }
+
+// ════════════════════════════════════════════════════════════
+//  JSONP
+// ════════════════════════════════════════════════════════════
+function fetchSheet(name) {
+  return new Promise((resolve,reject)=>{
+    const cb='zcbg_'+Date.now()+'_'+Math.random().toString(36).substr(2,5);
+    const sc=document.createElement('script');
+    const timer=setTimeout(()=>{ cleanup(); reject(new Error('Timeout')); },20000);
+    function cleanup(){ clearTimeout(timer); delete window[cb]; sc.parentNode&&sc.parentNode.removeChild(sc); }
+    window[cb]=data=>{ cleanup(); if(data&&data.table) resolve(parseGviz(data.table)); else reject(new Error('Aba não encontrada')); };
+    sc.onerror=()=>{ cleanup(); reject(new Error('Rede')); };
+    sc.src=`https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=reqId:0;responseHandler:${cb}&sheet=${encodeURIComponent(name)}&t=${Date.now()}`;
+    document.head.appendChild(sc);
+  });
+}
+function parseGviz(table) {
+  const cols = table.cols.map(c=>(c.label||c.id||'').trim());
+  return (table.rows||[]).filter(r=>r&&r.c).map(row=>{
+    const obj={};
+    row.c.forEach((cell,i)=>{
+      const key=cols[i]||`col${i}`;
+      obj[key] = (cell&&cell.v!=null) ? cell.v : '';
+    });
+    return obj;
+  }).filter(r=>Object.values(r).some(x=>x!==''&&x!=null));
+}
+
+// ════════════════════════════════════════════════════════════
+//  CACHE
+// ════════════════════════════════════════════════════════════
+function saveCache(d) { try{localStorage.setItem(CACHE_KEY,JSON.stringify({d,t:Date.now()}))}catch{} }
+function loadCache()  { try{const e=JSON.parse(localStorage.getItem(CACHE_KEY)||'null'); return(e&&Date.now()-e.t<86400000)?e.d:null}catch{return null} }
+
+// ════════════════════════════════════════════════════════════
+//  FILTROS DE ANO
+// ════════════════════════════════════════════════════════════
+function buildFiltros() {
+  const anos = [...new Set(dadosGeral.map(r=>Number(r.Ano||r.ano||Object.values(r).pop())).filter(a=>a>2000))].sort((a,b)=>b-a);
+  anosAtivos = [...anos]; // todos ativos por padrão
+
+  const container = document.getElementById('filtro-anos');
+  container.innerHTML = anos.map(a=>`
+    <label class="ano-check">
+      <input type="checkbox" value="${a}" checked onchange="toggleAno(${a},this.checked)">
+      <div class="ano-pill">${a}</div>
+    </label>`).join('');
+}
+function toggleAno(ano, ativo) {
+  if(ativo) { if(!anosAtivos.includes(ano)) anosAtivos.push(ano); }
+  else      { anosAtivos = anosAtivos.filter(a=>a!==ano); }
+  renderGestao();
+}
+
+// ════════════════════════════════════════════════════════════
+//  RENDER GESTÃO
+// ════════════════════════════════════════════════════════════
+function renderGestao() {
+  const filtrados = dadosGeral.filter(r=>{
+    const ano = Number(r.Ano||r.ano||Object.values(r).pop());
+    return anosAtivos.includes(ano);
+  });
+
+  // Tenta mapear colunas — aceita variações
+  const col = (r, ...names) => {
+    for(const n of names) { if(r[n]!==undefined&&r[n]!=='') return Number(r[n])||0; }
+    return 0;
+  };
+
+  let totalHospedes=0, totalDiarias=0, totalValor=0;
+  filtrados.forEach(r=>{
+    totalHospedes += col(r,'Hospedes','Hóspedes','hospedes');
+    totalDiarias  += col(r,'Diárias','Diarias','diarias');
+    totalValor    += col(r,'Valor Total','valor total','ValorTotal');
+  });
+
+  const ticketMedio      = totalHospedes>0 ? totalValor/totalHospedes : 0;
+  const mediaDiarias     = totalHospedes>0 ? totalDiarias/totalHospedes : 0;
+  const ticketMedioDiar  = totalDiarias>0  ? totalValor/totalDiarias : 0;
+
+  const anoStr = anosAtivos.length===0?'Nenhum ano':anosAtivos.sort((a,b)=>a-b).join(', ');
+  document.getElementById('kpi-periodo-titulo').textContent = `Consolidado — ${anoStr}`;
+  document.getElementById('kpi-periodo-sub').textContent    = `${totalHospedes} reservas · ${totalDiarias} diárias`;
+
+  // KPI cards
+  document.getElementById('kpi-grid').innerHTML = `
+    <div class="kpi-card">
+      <div class="kpi-icon-big">💰</div>
+      <div class="kpi-label">Valor Total</div>
+      <div class="kpi-value kpi-value-sm${totalValor===0?' zero':''}">${fmtBRL(totalValor)}</div>
+      <div class="kpi-sub">receita total</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-icon-big">🎯</div>
+      <div class="kpi-label">Ticket Médio</div>
+      <div class="kpi-value kpi-value-sm${ticketMedio===0?' zero':''}">${fmtBRL(ticketMedio)}</div>
+      <div class="kpi-sub">por reserva</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-icon-big">🐾</div>
+      <div class="kpi-label">Média de Diárias</div>
+      <div class="kpi-value${mediaDiarias===0?' zero':''}">${mediaDiarias.toFixed(2).replace('.',',')}</div>
+      <div class="kpi-sub">diárias por reserva</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-icon-big">📅</div>
+      <div class="kpi-label">Ticket Médio Diária</div>
+      <div class="kpi-value kpi-value-sm${ticketMedioDiar===0?' zero':''}">${fmtBRL(ticketMedioDiar)}</div>
+      <div class="kpi-sub">por noite</div>
+    </div>
+  `;
+
+  // Cards por ano
+  const todosAnos = [...new Set(dadosGeral.map(r=>Number(r.Ano||r.ano||Object.values(r).pop())).filter(a=>a>2000))].sort((a,b)=>b-a);
+  document.getElementById('anos-grid').innerHTML = todosAnos.map((ano,i) => {
+    const row = dadosGeral.find(r=>Number(r.Ano||r.ano||Object.values(r).pop())===ano);
+    if(!row) return '';
+    const h  = col(row,'Hospedes','Hóspedes','hospedes');
+    const d  = col(row,'Diárias','Diarias','diarias');
+    const vt = col(row,'Valor Total','valor total','ValorTotal');
+    const tm = h>0?vt/h:0;
+    const td = d>0?vt/d:0;
+    const ativo = anosAtivos.includes(ano);
+    return `
+      <div class="ano-card" data-ano="${ano}" style="animation-delay:${i*.06}s;opacity:${ativo?'':'0.4'}">
+        <div class="ac-year">${ano}</div>
+        <div class="ac-total">${fmtBRL(vt)}</div>
+        <div class="ac-row">Reservas <span>${h}</span></div>
+        <div class="ac-row">Diárias <span>${d}</span></div>
+        <div class="ac-row">Ticket Médio <span>${fmtBRL(tm)}</span></div>
+        <div class="ac-row">Tick. Méd. Diária <span>${fmtBRL(td)}</span></div>
+      </div>`;
+  }).join('');
+}
+
+// ════════════════════════════════════════════════════════════
+//  HELPERS
+// ════════════════════════════════════════════════════════════
+function fmtBRL(v) {
+  if(!v||isNaN(v)) return 'R$ 0,00';
+  return 'R$ '+Number(v).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});
+}
+function setDot(s) {
+  const el=document.getElementById('status-dot');
+  el.className='dot'+(s==='loading'?' loading':s==='offline'?' offline':s==='cache'?' cache':'');
+}
+function setBtn(on) {
+  const el=document.getElementById('btn-refresh');
+  if(el){ el.disabled=!on; el.textContent=on?'🔄 Atualizar':'⏳ Carregando...'; }
+}
+function showContent() {
+  document.getElementById('loading-box').style.display='none';
+  document.getElementById('error-box').style.display='none';
+  document.getElementById('content').style.display='block';
+}
+function showError(msg) {
+  document.getElementById('loading-box').style.display='none';
+  document.getElementById('error-box').style.display='flex';
+  document.getElementById('content').style.display='none';
+  document.getElementById('error-msg').textContent=msg;
+}
+
+// ════════════════════════════════════════════════════════════
+//  START
+// ════════════════════════════════════════════════════════════
+window.addEventListener('load', init);
+</script>
+</body>
+</html>

@@ -1,0 +1,1448 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=5, viewport-fit=cover">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Zêluz Hosp">
+  <meta name="theme-color" content="#2B5F41">
+  <title>Zêluz® — Dashboard Hospedagem</title>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:ital,wght@0,400;0,500;0,600;0,700;0,800;1,400;1,600&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --amarelo:  #C9971C;
+      --azul:     #234D67;
+      --verde:    #2B5F41;
+      --preto:    #1D1E1C;
+      --branco:   #FFFFFF;
+      --creme:    #FAF8F4;
+
+      /* status ração */
+      --ok-h:       #1E7D4B;  --ok-l:   #E6F5EE;  --ok-e:   rgba(30,125,75,.08);
+      --proc-h:     #B86200;  --proc-l: #FFF3E0;  --proc-e: rgba(184,98,0,.08);
+      --pend-h:     #C62828;  --pend-l: #FFF0F0;  --pend-e: rgba(198,40,40,.08);
+      --resol-h:    #1A6B35;  --resol-l:#E8F5E9;  --resol-e:rgba(26,107,53,.07);
+
+      /* hospedagem */
+      --hosp-h:   #2A5F8A;    /* azul hospedagem */
+      --ouro-h:   #B88B0A;
+
+      --btn-verde: #1A8C4E;
+      --font: 'Poppins', sans-serif;
+    }
+
+    *, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
+    html, body { height:100%; font-family:var(--font); background:var(--creme); overflow-x:hidden; }
+    body { display:flex; flex-direction:column; min-height:100vh; }
+
+    /* ════ ANIMAÇÕES ════ */
+    @keyframes fadeUp  { from{opacity:0;transform:translateY(20px)} to{opacity:1;transform:translateY(0)} }
+    @keyframes fadeIn  { from{opacity:0} to{opacity:1} }
+    @keyframes pulse   { 0%,100%{opacity:1} 50%{opacity:.3} }
+    @keyframes spin    { to{transform:rotate(360deg)} }
+    @keyframes flash   { 0%,100%{background:rgba(176,0,0,.95)} 50%{background:rgba(220,20,20,1)} }
+    @keyframes glowPend {
+      0%,100%{box-shadow:0 0 0 3px #FF1744, 0 6px 32px rgba(220,0,50,.45)}
+      50%     {box-shadow:0 0 0 5px #FF4569, 0 12px 48px rgba(220,0,50,.75)}
+    }
+    @keyframes glowProc {
+      0%,100%{box-shadow:0 0 0 2px #FF8F00}
+      50%     {box-shadow:0 0 0 4px #FFB300}
+    }
+    @keyframes fraseSlide { from{opacity:0;transform:translateX(-12px)} to{opacity:1;transform:translateX(0)} }
+    @keyframes fraseGlow  {
+      0%,100%{text-shadow:0 1px 6px rgba(255,255,255,.15)}
+      50%    {text-shadow:0 2px 14px rgba(255,255,255,.35)}
+    }
+    @keyframes pisca {
+      0%,100%{opacity:1;transform:scale(1)}
+      50%    {opacity:.15;transform:scale(1.2)}
+    }
+    @keyframes stickerBounce {
+      0%,100%{transform:translateY(0) rotate(-3deg)}
+      50%    {transform:translateY(-8px) rotate(3deg)}
+    }
+
+    /* ════ HEADER ════ */
+    .header {
+      background: linear-gradient(160deg, #1C4430 0%, #2B5F41 55%, #1C4430 100%);
+      flex-shrink: 0;
+      box-shadow: 0 4px 20px rgba(0,0,0,.3);
+    }
+    .header-top {
+      display: flex; align-items: center; justify-content: space-between;
+      gap: 20px; padding: 6px 32px;
+    }
+    .logo-wrap  { overflow:hidden; height:178px; flex-shrink:0; animation:fadeIn .9s ease both; }
+    .logo-img   { display:block; height:380px; width:auto; object-fit:contain; margin-top:-95px; transition:transform .35s ease; }
+    .logo-img:hover { transform:scale(1.03); }
+
+    .header-center {
+      display:flex; flex-direction:column; align-items:center; gap:4px; flex:1;
+    }
+    .header-sector {
+      font-size:11px; font-weight:800; color:rgba(255,255,255,.65);
+      text-transform:uppercase; letter-spacing:3px;
+    }
+    .header-titulo {
+      font-size:26px; font-weight:800; color:#FFFFFF;
+      letter-spacing:1px; text-shadow:0 1px 4px rgba(0,0,0,.3);
+    }
+    .header-sticker {
+      width:72px; height:72px; object-fit:contain;
+      animation:stickerBounce 3s ease-in-out infinite;
+    }
+
+    .clock-area   { text-align:right; animation:fadeIn 1.1s ease both; }
+    .clock-dia    { font-size:10px; font-weight:700; color:rgba(255,255,255,.7); text-transform:uppercase; letter-spacing:2px; }
+    .clock-data   { font-size:12px; font-weight:600; color:rgba(255,255,255,.75); margin-top:1px; }
+    .clock-hora   { font-size:48px; font-weight:800; color:#FFFFFF; line-height:1; letter-spacing:-3px; margin-top:2px; }
+    .clock-sync   { font-size:10px; color:rgba(255,255,255,.55); text-align:right; margin-top:2px; letter-spacing:1px; }
+
+    /* ════ FRASE DO DIA ════ */
+    .frase-strip {
+      background: linear-gradient(90deg, #143325 0%, #1C4430 30%, #1C4430 70%, #143325 100%);
+      padding:12px 40px;
+      display:flex; flex-direction:column; align-items:center; gap:3px;
+      flex-shrink:0; border-top:1px solid rgba(201,151,28,.25); border-bottom:1px solid rgba(201,151,28,.25);
+    }
+    .frase-label { font-size:12px; font-weight:800; color:#F0C840; text-transform:uppercase; letter-spacing:3px; }
+    .frase-texto {
+      font-size:17px; font-weight:600; color:rgba(255,255,255,.92); font-style:italic;
+      line-height:1.5; text-align:center; max-width:900px;
+      animation: fraseSlide 1.2s ease both, fraseGlow 3s ease-in-out 1.5s infinite;
+    }
+
+    /* ════ TABS ════ */
+    .tabs-bar {
+      background:white; border-bottom:2px solid #ece8e0;
+      display:flex; justify-content:center; padding:0 24px; flex-shrink:0;
+    }
+    .tab-btn {
+      padding:5px 44px; font-family:var(--font); font-size:14px; font-weight:700;
+      color:#bbb; background:none; border:none; border-bottom:3px solid transparent;
+      cursor:pointer; transition:all .2s; display:flex; align-items:center; gap:8px;
+      margin-bottom:-2px; letter-spacing:.3px;
+    }
+    .tab-btn:hover  { color:var(--amarelo); }
+    .tab-btn.ativo  { color:var(--amarelo); border-bottom-color:var(--amarelo); }
+
+    /* ════ STATUS BAR ════ */
+    .status-bar {
+      background: white; border-bottom:2px solid #e0dcd4; padding:8px 24px;
+      display:flex; align-items:center; justify-content:space-between; gap:16px; flex-shrink:0;
+    }
+    .status-left  { display:flex; align-items:center; gap:8px; }
+    .dot          { width:9px; height:9px; border-radius:50%; background:#27ae60; flex-shrink:0; }
+    .dot.loading  { background:#234D67; animation:pulse .8s infinite; }
+    .dot.offline  { background:#c0392b; }
+    .dot.cache    { background:#e67e22; }
+    .status-label { font-size:12px; color:#1B3A52; font-weight:700; }
+
+    .date-nav   { display:flex; align-items:center; gap:8px; }
+    .date-nav button {
+      background:rgba(27,58,82,.12); border:1.5px solid rgba(27,58,82,.28);
+      color:#1B3A52; padding:5px 14px; border-radius:100px; font-family:var(--font);
+      font-size:13px; font-weight:700; cursor:pointer; transition:all .2s;
+    }
+    .date-nav button:hover  { background:rgba(27,58,82,.22); }
+    .btn-hoje    { background:var(--azul)!important; border-color:var(--azul)!important; color:white!important; }
+    .date-nav .label { font-size:14px; font-weight:800; color:#1B3A52; min-width:260px; text-align:center; }
+
+    .status-right { display:flex; align-items:center; gap:10px; }
+    .status-timer { font-size:11px; color:rgba(27,58,82,.6); }
+    .btn-refresh  {
+      background:var(--btn-verde); border:none; color:white; padding:9px 22px;
+      border-radius:100px; font-family:var(--font); font-size:14px; font-weight:800;
+      cursor:pointer; transition:all .2s; letter-spacing:.3px; box-shadow:0 3px 10px rgba(0,0,0,.2);
+    }
+    .btn-refresh:hover    { transform:scale(1.05); box-shadow:0 5px 16px rgba(0,0,0,.28); }
+    .btn-refresh:disabled { opacity:.5; cursor:not-allowed; transform:none; }
+    .btn-gestao {
+      background:rgba(35,77,103,.15); border:1.5px solid rgba(35,77,103,.4);
+      color:#1B3A52; padding:7px 14px; border-radius:100px; font-family:var(--font);
+      font-size:12px; font-weight:700; cursor:pointer; transition:all .2s; text-decoration:none;
+      display:flex; align-items:center; gap:6px;
+    }
+    .btn-gestao:hover { background:rgba(35,77,103,.28); color:#234D67; }
+    .btn-diag {
+      background:rgba(27,58,82,.1); border:1.5px solid rgba(27,58,82,.22);
+      color:rgba(27,58,82,.7); padding:7px 12px; border-radius:100px;
+      font-family:var(--font); font-size:11px; font-weight:700; cursor:pointer; transition:all .2s;
+    }
+    .btn-diag:hover { background:rgba(27,58,82,.2); color:#1B3A52; }
+
+    /* ════ MAIN ════ */
+    .main { flex:1; padding:16px 20px; overflow-y:auto; }
+
+    /* ════ LOADING / ERROR ════ */
+    .loading-box, .error-box {
+      display:flex; flex-direction:column; align-items:center; justify-content:center;
+      padding:80px 40px; text-align:center; gap:16px;
+    }
+    .spinner    { width:44px; height:44px; border:4px solid #e0dcd4; border-top-color:var(--amarelo); border-radius:50%; animation:spin 1s linear infinite; }
+    .loading-txt { font-size:16px; color:var(--amarelo); font-weight:700; }
+    .error-icon { font-size:50px; }
+    .error-msg  { font-size:16px; color:#c0392b; font-weight:700; }
+    .error-tips { background:#fff8e1; border-radius:12px; padding:14px 18px; font-size:13px; color:#856404; text-align:left; line-height:1.9; max-width:480px; }
+    .btn-tentar { background:var(--amarelo); color:#1B3A52; border:none; padding:10px 28px; border-radius:100px; font-family:var(--font); font-size:14px; font-weight:700; cursor:pointer; }
+
+    /* ════ VIEWS ════ */
+    #view-hospedes { display:none; }
+    #view-hospedes.ativo { display:block; }
+    #view-racao    { display:none; }
+    #view-racao.ativo    { display:block; }
+
+    /* ════ KPI ════ */
+    .kpi-row {
+      display:grid; grid-template-columns:repeat(2,1fr); gap:14px; margin-bottom:18px;
+    }
+    .kpi-card {
+      background:white; border-radius:18px; box-shadow:0 3px 16px rgba(35,77,103,.08);
+      padding:20px 24px; display:flex; align-items:center; gap:16px;
+      border-left:5px solid var(--azul);
+      opacity:0; animation:fadeUp .4s ease forwards;
+    }
+    .kpi-card:nth-child(1) { border-left-color:var(--verde);   animation-delay:.05s; }
+    .kpi-card:nth-child(2) { border-left-color:var(--amarelo); animation-delay:.1s;  }
+    .kpi-value.alerta { color:#c62828; }
+    .kpi-icon  { font-size:36px; flex-shrink:0; }
+    .kpi-info  { flex:1; }
+    .kpi-label { font-size:11px; font-weight:700; color:#b0a898; text-transform:uppercase; letter-spacing:.8px; }
+    .kpi-value { font-size:42px; font-weight:800; color:var(--azul); line-height:1.1; }
+    .kpi-value.zero { color:#ddd; }
+    .kpi-sub   { font-size:11px; color:#c0b8a8; font-weight:600; margin-top:2px; }
+
+    /* ════ PETS GRID ════ */
+    .pets-grid {
+      display:grid; grid-template-columns:repeat(4,1fr); gap:14px;
+    }
+    .pet-card {
+      background:white; border-radius:18px; box-shadow:0 3px 16px rgba(35,77,103,.09);
+      overflow:hidden; transition:transform .22s, box-shadow .22s;
+      opacity:0; animation:fadeUp .45s ease forwards;
+      border:2px solid transparent;
+    }
+    .pet-card:hover { transform:translateY(-3px); box-shadow:0 10px 28px rgba(35,77,103,.15); }
+    .pet-card.racao-pendente  { animation:fadeUp .45s ease forwards, glowPend 1.4s ease-in-out infinite !important; border-color:#FF1744; }
+    .pet-card.racao-processo  { border-color:var(--proc-h); animation:fadeUp .45s ease forwards, glowProc 2s ease-in-out infinite !important; }
+    .pet-card.racao-resolvido { border-color:var(--resol-h); }
+
+    .pet-card-header {
+      background: linear-gradient(135deg, #B8880E 0%, #C9971C 100%);
+      padding:14px 16px; display:flex; align-items:center; gap:10px;
+    }
+    .pet-thumb  { width:48px; height:48px; object-fit:contain; filter:drop-shadow(0 2px 6px rgba(0,0,0,.35)); }
+    .pet-names  { flex:1; }
+    .pet-name   { font-size:15px; font-weight:800; color:#1B3A52; }
+    .pet-tutor  { font-size:11px; color:rgba(27,58,82,.7); font-weight:600; margin-top:1px; }
+
+    .pet-card-body { padding:12px 16px; }
+    .pet-racao-badge {
+      display:flex; align-items:center; gap:6px; padding:6px 10px;
+      border-radius:8px; font-size:12px; font-weight:700; margin-top:2px;
+    }
+    .pet-racao-badge.ok       { background:var(--ok-l);   color:var(--ok-h); }
+    .pet-racao-badge.pendente { background:var(--pend-l); color:var(--pend-h); }
+    .pet-racao-badge.processo { background:var(--proc-l); color:var(--proc-h); }
+    .pet-racao-badge.resolvido{ background:var(--resol-l);color:var(--resol-h); }
+    .pet-racao-badge.sem-dados{ background:#f5f5f5; color:#aaa; }
+
+    /* ════ CALCULADORA DE RAÇÃO ════ */
+    .racao-list { display:flex; flex-direction:column; gap:16px; }
+
+    .racao-card {
+      background:white; border-radius:18px; box-shadow:0 3px 16px rgba(35,77,103,.09);
+      overflow:hidden; opacity:0; animation:fadeUp .45s ease forwards;
+    }
+    .racao-card-header {
+      background:linear-gradient(135deg, #B8880E 0%, #C9971C 100%);
+      padding:14px 20px; display:flex; align-items:center; gap:12px;
+    }
+    .racao-sticker { width:56px; height:56px; object-fit:contain; filter:drop-shadow(0 2px 8px rgba(0,0,0,.3)); }
+    .racao-pet-info { flex:1; }
+    .racao-pet-name  { font-size:17px; font-weight:800; color:#1B3A52; }
+    .racao-pet-tutor { font-size:12px; color:rgba(27,58,82,.7); font-weight:600; }
+    .racao-status-chip {
+      padding:5px 14px; border-radius:100px; font-size:12px; font-weight:800;
+      text-transform:uppercase; letter-spacing:.5px; flex-shrink:0;
+    }
+    .chip-ok       { background:var(--ok-l);   color:var(--ok-h);   }
+    .chip-pendente { background:var(--pend-l); color:var(--pend-h); animation:pulse .8s infinite; }
+    .chip-processo { background:var(--proc-l); color:var(--proc-h); }
+    .chip-resolvido{ background:var(--resol-l);color:var(--resol-h); }
+    .chip-sem      { background:#f0f0f0;       color:#aaa;          }
+
+    .racao-card-body { padding:18px 20px; display:flex; flex-direction:column; gap:16px; }
+
+    /* Calculadora inputs */
+    .calc-grid {
+      display:grid; grid-template-columns:repeat(4,1fr); gap:12px;
+      background:var(--creme); border-radius:12px; padding:14px;
+    }
+    .calc-field label {
+      display:block; font-size:11px; font-weight:700; color:#b0a898;
+      text-transform:uppercase; letter-spacing:.6px; margin-bottom:4px;
+    }
+    .calc-field input {
+      width:100%; padding:8px 12px; border:2px solid #e0dcd4; border-radius:8px;
+      font-family:var(--font); font-size:15px; font-weight:700; color:var(--azul);
+      background:white; transition:border-color .2s;
+    }
+    .calc-field input:focus { outline:none; border-color:var(--amarelo); }
+    .calc-field input[readonly] {
+      background:#f5f3ef; color:var(--amarelo); cursor:default; border-style:dashed;
+    }
+    .calc-resultado {
+      display:flex; align-items:center; justify-content:space-between; gap:12px;
+      padding:12px 16px; border-radius:12px; font-weight:700;
+    }
+    .calc-resultado.ok       { background:var(--ok-l);   color:var(--ok-h); }
+    .calc-resultado.alerta   { background:var(--pend-l); color:var(--pend-h); }
+    .calc-resultado.sem-dados{ background:#f5f5f5;       color:#aaa; }
+    .calc-resultado-label { font-size:13px; font-weight:700; }
+    .calc-resultado-valor { font-size:18px; font-weight:800; }
+    .btn-salvar-racao {
+      background:var(--amarelo); color:#1B3A52; border:none; padding:10px 24px;
+      border-radius:100px; font-family:var(--font); font-size:14px; font-weight:800;
+      cursor:pointer; transition:all .2s; align-self:flex-start;
+    }
+    .btn-salvar-racao:hover { transform:scale(1.04); box-shadow:0 4px 14px rgba(201,151,28,.4); }
+
+    /* Timeline */
+    .timeline-title {
+      font-size:12px; font-weight:800; color:var(--azul); text-transform:uppercase;
+      letter-spacing:1px; margin-bottom:8px; display:flex; align-items:center; gap:6px;
+    }
+    .timeline { display:flex; flex-direction:column; gap:0; }
+    .timeline-entry {
+      display:flex; gap:12px; padding:10px 0; border-bottom:1px solid #f0ece4;
+      position:relative;
+    }
+    .timeline-entry:last-child { border-bottom:none; }
+    .tl-dot {
+      width:10px; height:10px; border-radius:50%; flex-shrink:0;
+      margin-top:4px; background:var(--azul);
+    }
+    .tl-dot.resolucao { background:var(--ok-h); }
+    .tl-content   { flex:1; }
+    .tl-meta       { font-size:11px; color:#b0a898; font-weight:600; margin-bottom:3px; }
+    .tl-acao       { font-size:14px; color:#444; font-weight:600; line-height:1.4; }
+    .tl-assinatura { font-size:12px; color:var(--azul); font-weight:700; margin-top:3px; }
+
+    /* Form nova entrada */
+    .nova-entrada {
+      background:var(--creme); border-radius:12px; padding:14px;
+      display:flex; flex-direction:column; gap:10px;
+    }
+    .nova-entrada-title {
+      font-size:12px; font-weight:800; color:var(--azul); text-transform:uppercase; letter-spacing:1px;
+    }
+    .nova-entrada textarea, .nova-entrada input[type=text] {
+      width:100%; padding:9px 12px; border:2px solid #e0dcd4; border-radius:8px;
+      font-family:var(--font); font-size:13px; color:#444; background:white; transition:border-color .2s; resize:none;
+    }
+    .nova-entrada textarea   { min-height:60px; }
+    .nova-entrada textarea:focus, .nova-entrada input[type=text]:focus { outline:none; border-color:var(--amarelo); }
+    .nova-entrada-btns { display:flex; gap:10px; }
+    .btn-add-entry {
+      background:white; border:2px solid var(--amarelo); color:#8A6200;
+      padding:8px 18px; border-radius:100px; font-family:var(--font); font-size:13px; font-weight:800;
+      cursor:pointer; transition:all .2s;
+    }
+    .btn-add-entry:hover { background:var(--amarelo); color:#1B3A52; }
+    .btn-resolve {
+      background:var(--ok-h); border:none; color:white; padding:8px 18px;
+      border-radius:100px; font-family:var(--font); font-size:13px; font-weight:800;
+      cursor:pointer; transition:all .2s;
+    }
+    .btn-resolve:hover { background:var(--resol-h); transform:scale(1.03); }
+    .racao-resolvido-banner {
+      background:var(--resol-l); border:2px solid var(--resol-h); border-radius:12px;
+      padding:14px 16px; text-align:center; font-size:15px; font-weight:800; color:var(--resol-h);
+    }
+    .btn-reabrir {
+      background:white; border:2px solid var(--azul); color:var(--azul);
+      padding:8px 20px; border-radius:100px; font-family:var(--font); font-size:13px; font-weight:800;
+      cursor:pointer; transition:all .2s; width:100%; margin-top:6px;
+    }
+    .btn-reabrir:hover { background:var(--azul); color:white; }
+
+    /* ════ ALARME DE RAÇÃO ════ */
+    .alarm-overlay {
+      display:none; position:fixed; inset:0; z-index:9999;
+      background:rgba(176,0,0,.95); flex-direction:column; align-items:center; justify-content:center;
+      animation:flash 1.1s infinite; text-align:center; padding:32px 24px; gap:0;
+    }
+    .alarm-overlay.active { display:flex; }
+
+    .alarm-bowl    { width:110px; height:110px; object-fit:contain; margin-bottom:10px; animation:pisca .7s ease-in-out infinite; }
+    .alarm-titulo  { font-size:52px; font-weight:800; color:white; letter-spacing:2px; margin-bottom:4px; text-shadow:0 4px 14px rgba(0,0,0,.4); }
+    .alarm-sub     { font-size:15px; font-weight:700; color:rgba(255,255,255,.8); text-transform:uppercase; letter-spacing:2px; margin-bottom:14px; }
+    .alarm-pet-nm  { font-size:32px; font-weight:800; color:white; margin-bottom:4px; }
+    .alarm-deficit { font-size:20px; font-weight:700; color:#FFE082; margin-bottom:22px; }
+
+    .alarm-form {
+      background:rgba(255,255,255,.1); border:1px solid rgba(255,255,255,.25); border-radius:16px;
+      padding:18px 22px; width:100%; max-width:520px; display:flex; flex-direction:column; gap:10px;
+      text-align:left;
+    }
+    .alarm-form label { font-size:12px; font-weight:800; color:rgba(255,255,255,.8); text-transform:uppercase; letter-spacing:1px; }
+    .alarm-form textarea, .alarm-form input[type=text] {
+      width:100%; padding:10px 14px; border:2px solid rgba(255,255,255,.3); border-radius:10px;
+      font-family:var(--font); font-size:14px; color:#1B3A52; background:white; resize:none;
+      transition:border-color .2s;
+    }
+    .alarm-form textarea   { min-height:70px; }
+    .alarm-form textarea:focus, .alarm-form input[type=text]:focus { outline:none; border-color:#FFE082; }
+
+    .alarm-footer { display:flex; gap:12px; margin-top:10px; justify-content:center; }
+    .alarm-btn-confirm {
+      background:white; color:#b71c1c; border:none; padding:13px 36px; border-radius:100px;
+      font-family:var(--font); font-size:16px; font-weight:800; cursor:pointer;
+      box-shadow:0 4px 18px rgba(0,0,0,.3); transition:transform .15s;
+    }
+    .alarm-btn-confirm:disabled { opacity:.4; cursor:not-allowed; }
+    .alarm-btn-confirm:not(:disabled):hover { transform:scale(1.05); }
+    .alarm-btn-snooze {
+      background:rgba(255,200,0,.2); color:#FFE082; border:2px solid rgba(255,200,0,.4);
+      padding:12px 22px; border-radius:100px; font-family:var(--font); font-size:14px; font-weight:700;
+      cursor:pointer; transition:all .2s;
+    }
+    .alarm-btn-snooze:hover { background:rgba(255,200,0,.35); }
+    .alarm-btn-dismiss {
+      background:rgba(255,255,255,.15); color:white; border:2px solid rgba(255,255,255,.35);
+      padding:12px 24px; border-radius:100px; font-family:var(--font); font-size:14px; font-weight:700;
+      cursor:pointer; transition:all .2s; display:none;
+    }
+    .alarm-btn-dismiss.visible { display:block; }
+    .alarm-btn-dismiss:hover   { background:rgba(255,255,255,.25); }
+
+    /* ════ FOOTER ════ */
+    .footer {
+      background: linear-gradient(90deg, #1C4430, #2B5F41 50%, #1C4430);
+      padding:9px 28px;
+      display:flex; justify-content:space-between; align-items:center; flex-shrink:0;
+    }
+    .footer-txt   { font-size:11px; color:rgba(255,255,255,.55); font-weight:600; }
+    .footer-brand { font-size:12px; color:#F0C840; font-weight:800; letter-spacing:.4px; }
+
+    /* ════ RESPONSIVO — TABLET ════ */
+    @media (max-width:960px) {
+      .kpi-row   { grid-template-columns:1fr 1fr; }
+      .pets-grid { grid-template-columns:repeat(2,1fr); }
+      .calc-grid { grid-template-columns:1fr 1fr; }
+    }
+
+    /* ════ RESPONSIVO — MOBILE ════ */
+    @media (max-width:640px) {
+      /* Tabs → Navegação fixada no rodapé (estilo app) */
+      .tabs-bar {
+        position:fixed; bottom:0; left:0; right:0; z-index:200;
+        border-bottom:none; border-top:2px solid #ece8e0;
+        padding:0 0 env(safe-area-inset-bottom,0px);
+        box-shadow:0 -4px 18px rgba(0,0,0,.12);
+        justify-content:stretch;
+      }
+      .tab-btn {
+        flex:1; flex-direction:column; align-items:center; justify-content:center;
+        padding:8px 4px 10px; font-size:10px; letter-spacing:0; gap:2px;
+        margin-bottom:0; border-bottom:none; border-top:3px solid transparent;
+        min-height:52px;
+      }
+      .tab-btn.ativo { border-top-color:var(--amarelo); border-bottom:none; }
+
+      /* Main: espaço para a barra de tabs fixada */
+      .main {
+        padding:10px 10px calc(68px + env(safe-area-inset-bottom,0px));
+      }
+
+      /* Header: compacto horizontal */
+      .header-top   { flex-direction:row; padding:8px 14px; gap:10px; align-items:center; }
+      .logo-wrap    { display:none; }
+      .header-sticker { width:44px; height:44px; }
+      .header-sector  { font-size:9px; letter-spacing:2px; }
+      .header-titulo  { font-size:15px; }
+      .header-center  { align-items:flex-start; gap:2px; }
+      .clock-dia   { font-size:9px; }
+      .clock-data  { display:none; }
+      .clock-hora  { font-size:26px; letter-spacing:-1px; margin-top:0; }
+      .clock-sync  { font-size:9px; }
+
+      /* Frase: compacta */
+      .frase-strip  { padding:6px 14px; }
+      .frase-label  { font-size:9px; letter-spacing:2px; }
+      .frase-texto  { font-size:12px; }
+
+      /* Status bar: 2 linhas compactas */
+      .status-bar   { flex-direction:column; padding:6px 12px; gap:6px; }
+      .status-left  { justify-content:center; }
+      .date-nav     { width:100%; justify-content:center; }
+      .date-nav .label { min-width:0; flex:1; font-size:12px; text-align:center; }
+      .date-nav button { padding:7px 12px; font-size:12px; min-height:36px; }
+      .status-right { width:100%; justify-content:center; gap:8px; }
+      .status-timer, .btn-diag { display:none; }
+      .btn-refresh  { padding:9px 20px; font-size:13px; }
+      .btn-gestao   { padding:7px 14px; font-size:12px; }
+
+      /* KPI: 2 colunas, fontes menores */
+      .kpi-row   { gap:10px; margin-bottom:14px; }
+      .kpi-card  { padding:14px 14px; gap:10px; }
+      .kpi-icon  { font-size:28px; }
+      .kpi-value { font-size:34px; }
+      .kpi-label { font-size:10px; }
+      .kpi-sub   { font-size:10px; }
+
+      /* Pets: 1 coluna */
+      .pets-grid { grid-template-columns:1fr; gap:10px; }
+
+      /* Ração: 2 colunas no calc-grid, corpo mais compacto */
+      .calc-grid      { grid-template-columns:1fr 1fr; gap:8px; }
+      .racao-card-body{ padding:12px 14px; gap:12px; }
+      .racao-pet-name { font-size:15px; }
+      .nova-entrada-btns { flex-wrap:wrap; }
+      .btn-add-entry, .btn-resolve { flex:1; min-width:140px; }
+
+      /* Alarme: full-screen amigável */
+      .alarm-overlay  { padding:18px 12px; gap:4px; overflow-y:auto; }
+      .alarm-bowl     { width:64px; height:64px; margin-bottom:6px; }
+      .alarm-titulo   { font-size:24px; margin-bottom:2px; }
+      .alarm-sub      { font-size:11px; letter-spacing:1px; margin-bottom:6px; }
+      .alarm-pet-nm   { font-size:20px; margin-bottom:2px; }
+      .alarm-deficit  { font-size:14px; margin-bottom:10px; }
+      .alarm-form     { padding:12px 12px; max-width:100%; }
+      .alarm-form textarea { min-height:56px; }
+      .alarm-footer   { flex-wrap:wrap; gap:8px; margin-top:8px; }
+      .alarm-btn-confirm { width:100%; padding:14px 20px; font-size:14px; border-radius:14px; }
+      .alarm-btn-snooze  { flex:1; padding:11px 12px; font-size:13px; }
+      .alarm-btn-dismiss { flex:1; padding:11px 12px; font-size:13px; }
+
+      /* Footer: oculto no mobile (tabs fazem o papel) */
+      .footer { display:none; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ════ ALARME DE RAÇÃO ════ -->
+<div class="alarm-overlay" id="alarm-overlay">
+  <img class="alarm-bowl" src="stickers/Vasilha ração.png" alt="">
+  <div class="alarm-titulo">⚠️ RAÇÃO INSUFICIENTE ⚠️</div>
+  <div class="alarm-sub">Ação imediata necessária</div>
+  <div class="alarm-pet-nm"  id="alarm-pet-nm">—</div>
+  <div class="alarm-deficit" id="alarm-deficit-txt">—</div>
+
+  <div class="alarm-form">
+    <label>📋 O que foi feito agora?</label>
+    <textarea id="alarm-acao" placeholder="Ex: Liguei para a tutora — linha ocupada. / Mandei mensagem no WhatsApp..." oninput="checkAlarmForm()"></textarea>
+    <label>👤 Seu nome (assinatura):</label>
+    <input type="text" id="alarm-assinatura" placeholder="Seu nome completo" oninput="checkAlarmForm()">
+  </div>
+
+  <div class="alarm-footer">
+    <button class="alarm-btn-confirm" id="alarm-btn-confirm" disabled onclick="confirmarAlarme()">
+      ✓ REGISTRAR E CONTINUAR MONITORANDO
+    </button>
+    <button class="alarm-btn-snooze" onclick="adiarAlarme(10)">
+      ⏰ Adiar 10 min
+    </button>
+    <button class="alarm-btn-dismiss" id="alarm-btn-dismiss" onclick="fecharAlarme()">
+      ✕ Fechar
+    </button>
+  </div>
+</div>
+
+<!-- ════ TABS ════ -->
+<nav class="tabs-bar">
+  <button class="tab-btn ativo" id="tab-hospedes" onclick="switchTab('hospedes')">🐾 Hóspedes do Dia</button>
+  <button class="tab-btn"       id="tab-racao"    onclick="switchTab('racao')">🍖 Calculadora de Ração</button>
+</nav>
+
+<!-- ════ HEADER ════ -->
+<header class="header">
+  <div class="header-top">
+    <div class="logo-wrap">
+      <img class="logo-img" src="logo.png" alt="Zêluz" onerror="this.style.display='none'">
+    </div>
+    <div class="header-center">
+      <div class="header-sector">Setor de</div>
+      <div class="header-titulo">🏠 HOSPEDAGEM</div>
+      <img class="header-sticker" src="stickers/Cachorro coração.png" alt="">
+    </div>
+    <div class="clock-area">
+      <div class="clock-dia"  id="clock-dia">—</div>
+      <div class="clock-data" id="clock-data">—</div>
+      <div class="clock-hora" id="clock-hora">—:—:—</div>
+      <div class="clock-sync" id="clock-sync">⏳ Sincronizando...</div>
+    </div>
+  </div>
+</header>
+
+<!-- ════ FRASE DO DIA ════ -->
+<div class="frase-strip">
+  <div class="frase-label">✨ Frase do Dia ✨</div>
+  <div class="frase-texto" id="frase-texto">—</div>
+</div>
+
+<!-- ════ STATUS BAR ════ -->
+<div class="status-bar">
+  <div class="status-left">
+    <div class="dot loading" id="status-dot"></div>
+    <span class="status-label" id="status-label">Conectando...</span>
+  </div>
+
+  <div class="date-nav">
+    <button onclick="changeDate(-1)">← Anterior</button>
+    <span class="label" id="date-label">—</span>
+    <button onclick="changeDate(1)">Próximo →</button>
+    <button class="btn-hoje" onclick="goToToday()">Hoje</button>
+  </div>
+
+  <div class="status-right">
+    <span class="status-timer" id="status-timer"></span>
+    <a class="btn-gestao" href="gestao.html">🔐 Gestão</a>
+    <button class="btn-diag" onclick="limparCache()">🗑️ Cache</button>
+    <button class="btn-refresh" id="btn-refresh" onclick="manualRefresh()">🔄 Atualizar</button>
+  </div>
+</div>
+
+<!-- ════ MAIN ════ -->
+<div class="main">
+  <div class="loading-box" id="loading-box">
+    <div class="spinner"></div>
+    <div class="loading-txt">Carregando dados de Hospedagem...</div>
+  </div>
+  <div class="error-box" id="error-box" style="display:none">
+    <div class="error-icon">📡</div>
+    <div class="error-msg" id="error-msg">Não foi possível carregar os dados.</div>
+    <div class="error-tips">
+      ✔ Internet conectada?<br>
+      ✔ Planilha pública? (Arquivo → Compartilhar → Qualquer pessoa com link)<br>
+      ✔ Aba "Calendario Hospedagem para Dash" existe e está pública?<br>
+      ✔ Pressione F5 para recarregar
+    </div>
+    <button class="btn-tentar" onclick="manualRefresh()">🔄 Tentar novamente</button>
+  </div>
+
+  <div id="content" style="display:none">
+
+    <!-- ABA: HÓSPEDES -->
+    <div id="view-hospedes" class="ativo">
+      <div class="kpi-row"   id="kpi-row"></div>
+      <div class="pets-grid" id="pets-grid"></div>
+    </div>
+
+    <!-- ABA: CALCULADORA -->
+    <div id="view-racao">
+      <div class="racao-list" id="racao-list"></div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ════ FOOTER ════ -->
+<footer class="footer">
+  <div class="footer-txt">🏠 Zêluz® Hospedagem — Belo Horizonte · zeluz.com.br</div>
+  <div class="footer-brand">Kairós® — by Adriana Duarte .´.</div>
+  <div class="footer-txt">Dados salvos · Atualização: 2 min</div>
+</footer>
+
+<script>
+// ════════════════════════════════════════════════════════════
+//  CONFIGURAÇÃO
+// ════════════════════════════════════════════════════════════
+const SHEET_ID   = '1SJ3OZ6E2wMa1JHrQUcgtNffgQLQhCpa01IUQKCv605w';
+const TAB_NOMES  = 'Calendário Hospedagem para dash'; // col A = Data, cols B-AF = Hospede 1..30 (Hospede 25 = Repolho — moradora, sempre contabilizada)
+const REFRESH_OK = 120;
+const REFRESH_ER = 30;
+const CACHE_KEY  = 'zeluz_hosp_v1';
+const RACAO_KEY  = 'zeluz_racao_v2';
+const TZ         = 'America/Sao_Paulo';
+
+const MESES = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho',
+               'Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+const DIAS  = ['Domingo','Segunda-feira','Terça-feira','Quarta-feira',
+               'Quinta-feira','Sexta-feira','Sábado'];
+
+// ════════════════════════════════════════════════════════════
+//  366 FRASES DO DIA
+// ════════════════════════════════════════════════════════════
+const FRASES = [
+  "A grandeza de uma nação pode ser julgada pelo modo como trata seus animais. — Gandhi",
+  "Onde há amor, há vida. — Gandhi","A felicidade é quando o que você pensa, diz e faz estão em harmonia. — Gandhi",
+  "Todo mundo pode ser grande, porque todo mundo pode servir. — Martin Luther King Jr.",
+  "A paz vem de dentro. Não a procure do lado de fora. — Buda",
+  "A bondade deve ser tão natural quanto respirar. — Buda",
+  "A compaixão é o caminho mais curto para a sabedoria. — Buda",
+  "Cuide de tudo como se fosse único — porque é. — Filosofia zen",
+  "Presença total é o maior presente que você pode oferecer. — Filosofia zen",
+  "Que seu alimento seja seu remédio. — Hipócrates",
+  "A natureza é a melhor médica — nós apenas a acompanhamos. — Hipócrates",
+  "Nenhum ato de bondade, por menor que seja, é desperdiçado. — Esopo",
+  "Aquele que salva uma vida, salva um mundo inteiro. — Talmude",
+  "Não podemos fazer grandes coisas — apenas pequenas coisas com grande amor. — Madre Teresa",
+  "A ética do respeito pela vida é a base de toda civilização. — Albert Schweitzer",
+  "Aqui, cada cuidado é ÚNICO — porque cada ser também é. — Zêluz",
+  "Cuidar é escutar o que não pode ser dito em palavras.",
+  "O amor que você dá sempre encontra seu caminho de volta.",
+  "A gentileza custa nada — e vale tudo.","Cada cuidado bem feito é uma semente de confiança plantada.",
+  "Cuidar é um ato revolucionário num mundo que vive com pressa.",
+  "A empatia não escolhe espécie — ela escolhe amor.",
+  "Presença atenta vale mais que mil instruções.",
+  "Um ambiente seguro é o primeiro ato de cuidado.",
+  "Cada ser vivo merece o melhor de quem cuida dele.",
+  "O cansaço de um dia bem trabalhado é o mais doce repouso.",
+  "A dedicação transforma rotina em arte.",
+  "Quem serve com alegria transforma o serviço em missão.",
+  "Propósito faz a diferença entre um trabalho e uma vocação.",
+  "Respeitar a vida em todas as formas é o maior ato de sabedoria.",
+  "Cuidar sem julgamento é a forma mais pura de amor.",
+  "A confiança se constrói em cada pequeno gesto.",
+  "Ser responsável por outro ser é o mais elevado compromisso.",
+  "Nossos peludinhos não pedem muito — apenas amor e cuidado genuíno.",
+  "O silêncio de um FILHOt fala mais alto do que qualquer palavra.",
+  "Cada peludinho que sai feliz é a nossa maior conquista.",
+  "O amor incondicional que um FILHOt oferece merece um cuidado igualmente incondicional.",
+  "Cuidar com excelência é uma forma de honrar a vida.",
+  "A saúde começa na prevenção — e a prevenção começa na atenção.",
+  "O bem-estar do FILHOt reflete o bem-estar de quem cuida.",
+  "Tudo que você sente, os peludinhos também sentem.",
+  "Cuidar é um privilégio — tratemos como tal.",
+  "Cada ato de cuidado é uma afirmação de que a vida tem valor.",
+  "A ternura é a forma mais poderosa de força.",
+  "Viver é cuidar. Cuidar é viver.","Ser Zêluz é escolher a excelência todos os dias.",
+  "Peludinho feliz, tutor satisfeito, Zêluz realizada.",
+  "Zêlo + Luz: cuidar e iluminar cada vida que passa por aqui.",
+  "A entrega total é o que transforma o bom em extraordinário.",
+  "Quem cuida bem dorme com a consciência tranquila.",
+  "O cuidado genuíno transcende espécies — ele nasce do coração.",
+  "Um lar temporário deve ser tão acolhedor quanto o permanente.",
+  "Cada noite de hospedagem é uma noite de confiança depositada em nós.",
+  "O tutor que deixa seu FILHOt aqui precisa dormir tranquilo — fazemos isso por ele.",
+  "Cuidar de quem é cuidado por outros é honrar a família inteira.",
+  "A hospitalidade verdadeira se mede pela paz que o hóspede sente.",
+  "Cada olhar de um FILHOt hospedado é uma pergunta — respondemos com amor.",
+  "Não existe hóspede pequeno. Todos merecem o máximo cuidado.",
+  "A rotina de um animal em hospedagem precisa de ritmo, calor e segurança.",
+  "A ração certa, na hora certa, pelo amor que merece.",
+  "Atenção aos detalhes é a diferença entre o bom e o extraordinário.",
+  "Campeão não erra menos — levanta mais rápido.",
+  "Time que respira junto, vence junto.","Garra não se treina — se cultiva.",
+  "Em campo e na vida: foco, garra e entrega total.",
+  "Não existe atalho para o pódio.","Jogar bonito é consequência de treinar bem.",
+  "Estratégia vence talento quando o talento não tem estratégia.",
+  "Campeões são definidos nos momentos em que querem desistir.",
+  "Em futebol e na vida: a vitória é de todos.","Treino duro, jogo fácil.",
+  "O que vale não é quem começou — é quem terminou.",
+  "No futebol, como aqui: todos importam.",
+  "A bola é redonda, mas o esforço é reto.",
+  "Na prorrogação, vence quem tem mais fôlego mental.",
+  "Bom posicionamento vale mais que velocidade.",
+  "A concentração no segundo tempo decide o jogo.",
+  "Força não é ausência de medo — é agir mesmo com medo.",
+  "Persistência é o que separa quem sonha de quem realiza.",
+  "Cada obstáculo é uma oportunidade disfarçada.",
+  "O sucesso não é um destino — é uma jornada de escolhas.",
+  "Excelência não é um ato — é um hábito.",
+  "O segredo do sucesso é começar. — Mark Twain",
+  "Tudo começa com uma decisão de tentar.",
+  "A disciplina é a ponte entre metas e conquistas.",
+  "Grandes conquistas são feitas de pequenas vitórias diárias.",
+  "Quem tem propósito, encontra o caminho.",
+  "O trabalho bem feito é a maior propaganda.",
+  "A inovação distingue o líder do seguidor. — Steve Jobs",
+  "Faça o que você ama e você nunca trabalhará um dia na sua vida.",
+  "A qualidade nunca é um acidente — é sempre resultado de esforço inteligente.",
+  "O único lugar onde o sucesso vem antes do trabalho é no dicionário.",
+  "Confiança é o alicerce de toda relação duradoura.",
+  "Quem cuida com amor, nunca esquece um detalhe.",
+  "A paciência é a maior virtude de quem cuida.",
+  "Pequenas ações diárias constroem grandes legados.",
+  "O sorriso de um FILHOt bem cuidado é o melhor pagamento."
+];
+
+// ════════════════════════════════════════════════════════════
+//  ESTADO
+// ════════════════════════════════════════════════════════════
+let selectedDate = new Date(); selectedDate.setHours(0,0,0,0);
+const memNomes  = {};   // { '_all': [{...rows}] }
+let activeTab   = 'hospedes';
+let currentAlarm= null; // { petKey, petName, tutor, deficit }
+let alarmQueue  = [];   // petKeys pendentes
+let loading     = false;
+let status      = 'ok';
+let countdown   = REFRESH_OK;
+let lastOk      = null;
+let clockOffset = 0;
+let clockSynced = false;
+
+// ════════════════════════════════════════════════════════════
+//  INIT
+// ════════════════════════════════════════════════════════════
+function init() {
+  setFraseDia();
+  syncInternetTime();
+  setInterval(syncInternetTime, 30*60*1000);
+  updateClock();
+  setInterval(updateClock, 1000);
+  setInterval(tick, 1000);
+  updateDateLabel();
+  switchTab('hospedes');
+  loadData();
+  checkPendingAlarms();
+}
+
+// ════════════════════════════════════════════════════════════
+//  TAB
+// ════════════════════════════════════════════════════════════
+function switchTab(tab) {
+  activeTab = tab;
+  document.getElementById('tab-hospedes').classList.toggle('ativo', tab==='hospedes');
+  document.getElementById('tab-racao').classList.toggle('ativo', tab==='racao');
+  document.getElementById('view-hospedes').classList.toggle('ativo', tab==='hospedes');
+  document.getElementById('view-racao').classList.toggle('ativo', tab==='racao');
+}
+
+// ════════════════════════════════════════════════════════════
+//  RELÓGIO
+// ════════════════════════════════════════════════════════════
+async function syncInternetTime() {
+  try {
+    const r = await fetch('https://worldtimeapi.org/api/timezone/America/Sao_Paulo');
+    if(!r.ok) throw new Error();
+    const d = await r.json();
+    clockOffset = d.unixtime*1000 - Date.now();
+    clockSynced = true;
+    const el = document.getElementById('clock-sync');
+    if(el) { el.textContent='🌐 Brasília'; el.title='Horário sincronizado com a internet'; }
+  } catch {
+    clockSynced = false;
+    const el = document.getElementById('clock-sync');
+    if(el) { el.textContent='💻 Local'; }
+  }
+}
+
+function getBrasiliaDate() {
+  const now   = new Date(Date.now() + clockOffset);
+  const parts = new Intl.DateTimeFormat('en-CA', {
+    timeZone:TZ, year:'numeric', month:'2-digit', day:'2-digit',
+    hour:'2-digit', minute:'2-digit', second:'2-digit', hour12:false
+  }).formatToParts(now);
+  const get = t => parseInt(parts.find(p=>p.type===t).value);
+  return new Date(get('year'), get('month')-1, get('day'), get('hour'), get('minute'), get('second'));
+}
+
+function updateClock() {
+  const d = getBrasiliaDate(), p = x => String(x).padStart(2,'0');
+  document.getElementById('clock-hora').textContent = `${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())}`;
+  document.getElementById('clock-dia').textContent  = DIAS[d.getDay()];
+  document.getElementById('clock-data').textContent = `${p(d.getDate())} de ${MESES[d.getMonth()]} de ${d.getFullYear()}`;
+}
+
+function formatDateTime(d) {
+  const p = x => String(x).padStart(2,'0');
+  return `${p(d.getDate())}/${p(d.getMonth()+1)}/${d.getFullYear()} às ${p(d.getHours())}:${p(d.getMinutes())}`;
+}
+
+function formatDateKey(d) {
+  const p = x => String(x).padStart(2,'0');
+  return `${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())}`;
+}
+
+// ════════════════════════════════════════════════════════════
+//  FRASE
+// ════════════════════════════════════════════════════════════
+function setFraseDia() {
+  const d   = getBrasiliaDate();
+  const ini = new Date(d.getFullYear(), 0, 0);
+  const dia = Math.floor((d - ini) / 86400000);
+  document.getElementById('frase-texto').textContent = FRASES[(dia-1+FRASES.length) % FRASES.length];
+}
+
+// ════════════════════════════════════════════════════════════
+//  NAVEGAÇÃO DE DATA
+// ════════════════════════════════════════════════════════════
+function goToToday() {
+  const d = getBrasiliaDate();
+  selectedDate = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+  updateDateLabel(); loadData();
+}
+function changeDate(delta) {
+  selectedDate.setDate(selectedDate.getDate()+delta);
+  updateDateLabel(); loadData();
+}
+function updateDateLabel() {
+  const d=selectedDate, p=x=>String(x).padStart(2,'0');
+  document.getElementById('date-label').textContent =
+    `${DIAS[d.getDay()]}, ${p(d.getDate())} de ${MESES[d.getMonth()]} de ${d.getFullYear()}`;
+}
+
+// ════════════════════════════════════════════════════════════
+//  TICK
+// ════════════════════════════════════════════════════════════
+function tick() {
+  countdown--;
+  if(countdown<=0){ countdown=status==='erro'?REFRESH_ER:REFRESH_OK; loadData(); }
+  const el=document.getElementById('status-timer');
+  if(el) el.textContent=status==='erro'?`Tentando em ${countdown}s`:`Próxima atualização em ${countdown}s`;
+}
+
+// ════════════════════════════════════════════════════════════
+//  CARREGAMENTO
+// ════════════════════════════════════════════════════════════
+async function loadData() {
+  if(loading) return; loading=true; setDot('loading'); setBtn(false);
+  document.getElementById('status-label').textContent='Carregando...';
+
+  let okNomes=false, anyErr=false;
+
+  // Calendário Hospedagem para dash — única fonte
+  if(!memNomes['_all']) {
+    try {
+      memNomes['_all'] = await fetchSheet(TAB_NOMES);
+      saveCacheTab('nomes', memNomes['_all']); okNomes=true;
+    } catch {
+      const c = loadCacheTab('nomes');
+      if(c){ memNomes['_all']=c; okNomes=true; anyErr=true; } else anyErr=true;
+    }
+  } else { okNomes=true; }
+
+  loading=false; setBtn(true);
+
+  if(okNomes) {
+    if(anyErr){
+      status='cache'; setDot('cache');
+      document.getElementById('status-label').textContent='Dados salvos (sem internet)';
+    } else {
+      status='ok'; lastOk=new Date(); countdown=REFRESH_OK; setDot('ok');
+      document.getElementById('status-label').textContent='Dados atualizados';
+    }
+    showContent();
+    renderAll();
+  } else {
+    status='erro'; countdown=REFRESH_ER; setDot('offline');
+    document.getElementById('status-label').textContent='Sem conexão';
+    showError('Sem conexão ou planilha inacessível.');
+  }
+}
+
+function manualRefresh() {
+  delete memNomes['_all']; countdown=1;
+}
+
+// ════════════════════════════════════════════════════════════
+//  JSONP
+// ════════════════════════════════════════════════════════════
+function fetchSheet(name) {
+  return new Promise((resolve,reject)=>{
+    const cb='zcb_'+Date.now()+'_'+Math.random().toString(36).substr(2,5);
+    const sc=document.createElement('script');
+    const timer=setTimeout(()=>{ cleanup(); reject(new Error('Timeout')); },20000);
+    function cleanup(){ clearTimeout(timer); delete window[cb]; sc.parentNode&&sc.parentNode.removeChild(sc); }
+    window[cb]=data=>{ cleanup(); if(data&&data.table) resolve(parseGviz(data.table)); else reject(new Error('Aba não encontrada: '+name)); };
+    sc.onerror=()=>{ cleanup(); reject(new Error('Rede: '+name)); };
+    sc.src=`https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=reqId:0;responseHandler:${cb}&sheet=${encodeURIComponent(name)}&t=${Date.now()}`;
+    document.head.appendChild(sc);
+  });
+}
+
+function parseGviz(table) {
+  const cols = table.cols.map(c=>(c.label||c.id||'').trim());
+  return (table.rows||[]).filter(r=>r&&r.c).map(row=>{
+    const obj={};
+    row.c.forEach((cell,i)=>{
+      const key=cols[i]||`col${i}`;
+      let val='';
+      if(cell&&cell.v!=null){
+        if(typeof cell.v==='string'&&cell.v.startsWith('Date(')){
+          const p=cell.v.match(/Date\((-?\d+),(\d+),(\d+)/);
+          if(p){ val=new Date(+p[1],+p[2],+p[3]); }
+          else { val=cell.f||cell.v; }
+        } else {
+          val = cell.v;
+        }
+      }
+      obj[key]=val;
+    });
+    return obj;
+  }).filter(r=>Object.values(r).some(x=>x!==''&&x!=null));
+}
+
+// ════════════════════════════════════════════════════════════
+//  CACHE
+// ════════════════════════════════════════════════════════════
+function saveCacheTab(k,d){ try{const a=JSON.parse(localStorage.getItem(CACHE_KEY)||'{}'); a[k]={d,t:Date.now()}; localStorage.setItem(CACHE_KEY,JSON.stringify(a));}catch{} }
+function loadCacheTab(k)  { try{const e=(JSON.parse(localStorage.getItem(CACHE_KEY)||'{}')||{})[k]; return(e&&Date.now()-e.t<86400000)?e.d:null;}catch{return null;} }
+function limparCache()    { localStorage.removeItem(CACHE_KEY); delete memNomes['_all']; countdown=1; alert('Cache limpo!'); }
+
+// ════════════════════════════════════════════════════════════
+//  FILTRO DE DADOS POR DATA
+// ════════════════════════════════════════════════════════════
+
+// Normaliza qualquer valor de data para Date sem horário
+// Aceita: Date JS, número serial do Sheets (>100), "dd/MM/yyyy", "YYYY-MM-DD"
+function dateOnly(d) {
+  if(d instanceof Date && !isNaN(d))
+    return new Date(d.getFullYear(), d.getMonth(), d.getDate());
+  if(typeof d === 'number' && d > 100) {
+    // Serial do Google Sheets: 0 = 30/12/1899
+    const dt = new Date(Math.round((d - 25569) * 86400000));
+    return new Date(dt.getUTCFullYear(), dt.getUTCMonth(), dt.getUTCDate());
+  }
+  if(typeof d === 'string') {
+    const p = d.split('/');
+    if(p.length===3) return new Date(+p[2], +p[1]-1, +p[0]); // dd/MM/yyyy
+    if(d.length===10&&d[4]==='-') { const q=d.split('-'); return new Date(+q[0],+q[1]-1,+q[2]); } // YYYY-MM-DD
+  }
+  return null;
+}
+
+function isSameDay(d1, d2) {
+  const a = dateOnly(d1), b = dateOnly(d2);
+  return a && b && a.getTime() === b.getTime();
+}
+
+// Retorna pets do dia a partir do Calendário Hospedagem para dash.
+// Estrutura: col A = "Data" (dd/MM/yyyy ou Date JS), cols B-AF = "Hospede 1".."Hospede 30"
+// Repolho (Hospede 25) é moradora e cidadã — sempre aparece, sempre contabilizada.
+function getHospedesHoje() {
+  const rows = memNomes['_all'] || [];
+  const sel  = dateOnly(selectedDate);
+  if(!sel) return [];
+  const selKey = formatDateKey(sel);
+
+  const linhaHoje = rows.find(r => {
+    const firstVal = Object.values(r)[0];
+    const d = dateOnly(firstVal);
+    return d && formatDateKey(d) === selKey;
+  });
+  if(!linhaHoje) return [];
+
+  return Object.values(linhaHoje).slice(1)
+    .filter(v => v && typeof v === 'string' && v.trim())
+    .map(raw => {
+      const parts = raw.trim().split('/');
+      return { petName:(parts[0]||raw.trim()).trim(), tutorName:(parts[1]||'').trim() };
+    })
+    .filter(r => r.petName);
+}
+
+// ════════════════════════════════════════════════════════════
+//  RENDER GERAL
+// ════════════════════════════════════════════════════════════
+function renderAll() {
+  renderKPIs();
+  renderHospedes();
+  renderRacao();
+  checkPendingAlarms();
+}
+
+// ════════════════════════════════════════════════════════════
+//  KPIs
+// ════════════════════════════════════════════════════════════
+function renderKPIs() {
+  const hospedes = getHospedesHoje();
+  const racaoData = getRacaoData();
+  let racaoAlertas = 0;
+  hospedes.forEach(pet => {
+    const key    = getRacaoKey(pet.petName, formatDateKey(selectedDate));
+    const record = racaoData[key];
+    if(record && (record.status==='pendente' || record.status==='em_processo')) racaoAlertas++;
+  });
+
+  const grid = document.getElementById('kpi-row');
+  grid.innerHTML = `
+    <div class="kpi-card">
+      <div class="kpi-icon"><img src="stickers/Pata.png" style="width:52px;height:52px;object-fit:contain"></div>
+      <div class="kpi-info">
+        <div class="kpi-label">Hóspedes Hoje</div>
+        <div class="kpi-value${hospedes.length===0?' zero':''}">${hospedes.length}</div>
+        <div class="kpi-sub">peludinhos hospedados</div>
+      </div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-icon"><img src="stickers/Vasilha ração.png" style="width:52px;height:52px;object-fit:contain"></div>
+      <div class="kpi-info">
+        <div class="kpi-label">Ração em Alerta</div>
+        <div class="kpi-value${racaoAlertas===0?' zero':' alerta'}">${racaoAlertas}</div>
+        <div class="kpi-sub">${racaoAlertas===0?'tudo em ordem ✅':'pets precisam de atenção'}</div>
+      </div>
+    </div>
+  `;
+}
+
+// ════════════════════════════════════════════════════════════
+//  HÓSPEDES
+// ════════════════════════════════════════════════════════════
+function renderHospedes() {
+  const hospedes = getHospedesHoje();
+  const grid = document.getElementById('pets-grid');
+
+  if(hospedes.length===0) {
+    grid.innerHTML = `<div style="grid-column:1/-1;text-align:center;padding:60px 20px;color:#c0b8a8;font-size:15px;font-weight:600;font-style:italic">
+      <img src="stickers/Osso.png" style="width:60px;opacity:.4;display:block;margin:0 auto 12px">
+      Nenhum hóspede registrado para este dia
+    </div>`;
+    return;
+  }
+
+  grid.innerHTML = hospedes.map((pet, i) => {
+    const key    = getRacaoKey(pet.petName, formatDateKey(selectedDate));
+    const racao  = getRacaoRecord(key);
+    const status = racao ? racao.status : 'sem-dados';
+    const delay  = (i * 0.05).toFixed(2);
+    const cardClass = status==='pendente'?'racao-pendente':status==='em_processo'?'racao-processo':status==='resolvido'?'racao-resolvido':'';
+
+    return `
+      <div class="pet-card ${cardClass}" style="animation-delay:${delay}s">
+        <div class="pet-card-header">
+          <img class="pet-thumb" src="stickers/Cachorro coração.png" alt="">
+          <div class="pet-names">
+            <div class="pet-name">${esc(pet.petName)}</div>
+            <div class="pet-tutor">${pet.tutorName ? '👤 '+esc(pet.tutorName) : ''}</div>
+          </div>
+        </div>
+        <div class="pet-card-body">
+          ${renderBadgeStatus(status, racao)}
+        </div>
+      </div>`;
+  }).join('');
+}
+
+function renderBadgeStatus(status, racao) {
+  if(status==='sem-dados') return `<div class="pet-racao-badge sem-dados">🍖 Ração não calculada</div>`;
+  if(status==='ok')        return `<div class="pet-racao-badge ok">✅ Ração suficiente</div>`;
+  if(status==='resolvido') return `<div class="pet-racao-badge resolvido">✅ RESOLVIDO</div>`;
+  if(status==='processo')  {
+    const last = racao.entries[racao.entries.length-1];
+    return `<div class="pet-racao-badge processo">🟡 EM PROCESSO${last?' · '+esc(last.assinatura):''}</div>`;
+  }
+  return `<div class="pet-racao-badge pendente">🔴 RAÇÃO — PENDENTE</div>`;
+}
+
+// ════════════════════════════════════════════════════════════
+//  CALCULADORA DE RAÇÃO
+// ════════════════════════════════════════════════════════════
+function getRacaoData()         { try{return JSON.parse(localStorage.getItem(RACAO_KEY)||'{}')}catch{return{}} }
+function saveRacaoData(d)       { try{localStorage.setItem(RACAO_KEY,JSON.stringify(d))}catch{} }
+function getRacaoKey(pet,date)  { return `${pet}__${date}`; }
+function getRacaoRecord(key)    { return getRacaoData()[key]||null; }
+
+function renderRacao() {
+  const hospedes = getHospedesHoje();
+  const list = document.getElementById('racao-list');
+
+  if(hospedes.length===0) {
+    list.innerHTML = `<div style="text-align:center;padding:60px 20px;color:#c0b8a8;font-size:15px;font-weight:600;font-style:italic">
+      <img src="stickers/Vasilha ração.png" style="width:80px;opacity:.4;display:block;margin:0 auto 12px">
+      Nenhum hóspede para calcular ração
+    </div>`;
+    return;
+  }
+
+  list.innerHTML = hospedes.map((pet, i) => {
+    const key    = getRacaoKey(pet.petName, formatDateKey(selectedDate));
+    const racao  = getRacaoRecord(key) || {};
+    const delay  = (i*0.06).toFixed(2);
+    const status = racao.status || 'sem-dados';
+
+    const refs  = racao.refeicoesDia       || '';
+    const gpRef = racao.gramsPorRefeicao   || '';
+    const dias  = racao.diasHospedagem     || '';
+    const gTraz = racao.gTrazidos          || '';
+    const minimo= racao.minimo             || '';
+    const def   = racao.deficit            || 0;
+
+    let resultadoHtml = '';
+    if(minimo!=='') {
+      if(def>0) resultadoHtml = `<div class="calc-resultado alerta"><span class="calc-resultado-label">⚠️ Faltam</span><span class="calc-resultado-valor">${def}g de ração</span></div>`;
+      else      resultadoHtml = `<div class="calc-resultado ok"><span class="calc-resultado-label">✅ Ração suficiente</span><span class="calc-resultado-valor">Sobram ${-def}g</span></div>`;
+    } else {
+      resultadoHtml = `<div class="calc-resultado sem-dados">Preencha os campos para calcular</div>`;
+    }
+
+    const timelineHtml = racao.entries && racao.entries.length>0 ? `
+      <div>
+        <div class="timeline-title">📋 Histórico de Atualização</div>
+        <div class="timeline">
+          ${racao.entries.map(e=>`
+            <div class="timeline-entry">
+              <div class="tl-dot${e.resolucao?' resolucao':''}"></div>
+              <div class="tl-content">
+                <div class="tl-meta">${esc(e.timestamp)}</div>
+                <div class="tl-acao">"${esc(e.acao)}"</div>
+                <div class="tl-assinatura">— ${esc(e.assinatura)}</div>
+              </div>
+            </div>`).join('')}
+        </div>
+      </div>` : '';
+
+    const chipClass = {ok:'chip-ok',pendente:'chip-pendente',em_processo:'chip-processo',resolvido:'chip-resolvido'}[status]||'chip-sem';
+    const chipLabel = {ok:'✅ OK',pendente:'🔴 Pendente',em_processo:'🟡 Em Processo',resolvido:'✅ Resolvido','sem-dados':'— Sem dados'}[status];
+
+    const formNova = status!=='resolvido' ? `
+      <div class="nova-entrada">
+        <div class="nova-entrada-title">➕ Adicionar Atualização</div>
+        <textarea id="nova_acao_${esc(key)}" placeholder="Descreva o que foi feito (ex: mandei mensagem no WhatsApp...)"></textarea>
+        <input type="text" id="nova_assin_${esc(key)}" placeholder="Seu nome (assinatura)">
+        <div class="nova-entrada-btns">
+          <button class="btn-add-entry" onclick="adicionarEntrada('${esc(key)}')">+ Registrar</button>
+          ${status!=='ok'&&status!=='sem-dados'?`<button class="btn-resolve" onclick="marcarResolvido('${esc(key)}')">✅ Marcar como Resolvido</button>`:''}
+        </div>
+      </div>` : `
+      <div class="racao-resolvido-banner">✅ RESOLVIDO — Ração normalizada!</div>
+      <button class="btn-reabrir" onclick="reabrirRacao('${esc(key)}')">🔄 Reabrir este registro</button>`;
+
+    return `
+      <div class="racao-card" style="animation-delay:${delay}s">
+        <div class="racao-card-header">
+          <img class="racao-sticker" src="stickers/Vasilha ração.png" alt="">
+          <div class="racao-pet-info">
+            <div class="racao-pet-name">${esc(pet.petName)}</div>
+            <div class="racao-pet-tutor">${pet.tutorName?'👤 '+esc(pet.tutorName):''}</div>
+          </div>
+          <div class="racao-status-chip ${chipClass}">${chipLabel}</div>
+        </div>
+        <div class="racao-card-body">
+          <div class="calc-grid">
+            <div class="calc-field">
+              <label>Refeições/dia</label>
+              <input type="number" id="ref_${esc(key)}" value="${refs}" min="1" max="10" oninput="calcMinimoPreview('${esc(key)}')">
+            </div>
+            <div class="calc-field">
+              <label>Gramas/refeição</label>
+              <input type="number" id="gpref_${esc(key)}" value="${gpRef}" min="1" oninput="calcMinimoPreview('${esc(key)}')">
+            </div>
+            <div class="calc-field">
+              <label>Dias de hospedagem</label>
+              <input type="number" id="dias_${esc(key)}" value="${dias}" min="1" oninput="calcMinimoPreview('${esc(key)}')">
+            </div>
+            <div class="calc-field">
+              <label>Mínimo necessário</label>
+              <input type="text" id="min_${esc(key)}" value="${minimo?minimo+'g':''}" readonly>
+            </div>
+          </div>
+          <div class="calc-field" style="max-width:220px">
+            <label>Quantidade trazida (g)</label>
+            <input type="number" id="gtraz_${esc(key)}" value="${gTraz}" min="0" oninput="calcMinimoPreview('${esc(key)}')">
+          </div>
+          <div id="resultado_${esc(key)}">${resultadoHtml}</div>
+          <button class="btn-salvar-racao" onclick="salvarRacao('${esc(key)}','${esc(pet.petName)}','${esc(pet.tutorName||'')}')">💾 Salvar Cálculo</button>
+          ${timelineHtml}
+          ${formNova}
+        </div>
+      </div>`;
+  }).join('');
+}
+
+function calcMinimoPreview(key) {
+  const refs  = parseInt(document.getElementById(`ref_${key}`)?.value)||0;
+  const gpRef = parseInt(document.getElementById(`gpref_${key}`)?.value)||0;
+  const dias  = parseInt(document.getElementById(`dias_${key}`)?.value)||0;
+  const gTraz = parseInt(document.getElementById(`gtraz_${key}`)?.value)||0;
+  const minimo= refs * gpRef * dias;
+  const elMin = document.getElementById(`min_${key}`);
+  if(elMin) elMin.value = minimo>0 ? minimo+'g' : '';
+  const def = minimo - gTraz;
+  const elRes = document.getElementById(`resultado_${key}`);
+  if(!elRes) return;
+  if(minimo===0) { elRes.innerHTML=`<div class="calc-resultado sem-dados">Preencha os campos para calcular</div>`; return; }
+  if(def>0) elRes.innerHTML=`<div class="calc-resultado alerta"><span class="calc-resultado-label">⚠️ Faltam</span><span class="calc-resultado-valor">${def}g de ração</span></div>`;
+  else      elRes.innerHTML=`<div class="calc-resultado ok"><span class="calc-resultado-label">✅ Suficiente</span><span class="calc-resultado-valor">Sobram ${-def}g</span></div>`;
+}
+
+function salvarRacao(key, petName, tutor) {
+  const refs  = parseInt(document.getElementById(`ref_${key}`)?.value)||0;
+  const gpRef = parseInt(document.getElementById(`gpref_${key}`)?.value)||0;
+  const dias  = parseInt(document.getElementById(`dias_${key}`)?.value)||0;
+  const gTraz = parseInt(document.getElementById(`gtraz_${key}`)?.value)||0;
+  if(!refs||!gpRef||!dias) { alert('Preencha refeições/dia, gramas/refeição e dias de hospedagem.'); return; }
+
+  const minimo  = refs * gpRef * dias;
+  const deficit = minimo - gTraz;
+
+  const data     = getRacaoData();
+  const existing = data[key] || { petName, tutor, entries:[] };
+  existing.refeicoesDia     = refs;
+  existing.gramsPorRefeicao = gpRef;
+  existing.diasHospedagem   = dias;
+  existing.gTrazidos        = gTraz;
+  existing.minimo           = minimo;
+  existing.deficit          = deficit;
+
+  if(deficit<=0) {
+    existing.status = 'ok';
+  } else if(existing.status==='resolvido') {
+    existing.status = 'em_processo'; // reaberto
+  } else if(!existing.status || existing.status==='ok' || existing.status==='sem-dados') {
+    existing.status = 'pendente';
+  }
+  // em_processo mantém
+
+  data[key] = existing;
+  saveRacaoData(data);
+
+  if(existing.status==='pendente') {
+    triggerAlarme(key, petName, tutor, deficit);
+  } else {
+    renderAll();
+  }
+}
+
+function adicionarEntrada(key) {
+  const elAcao  = document.getElementById(`nova_acao_${key}`);
+  const elAssin = document.getElementById(`nova_assin_${key}`);
+  const acao    = elAcao?.value.trim();
+  const assin   = elAssin?.value.trim();
+  if(!acao||!assin) { alert('Preencha a descrição e seu nome para registrar.'); return; }
+
+  const data   = getRacaoData();
+  const record = data[key];
+  if(!record) { alert('Salve o cálculo de ração primeiro.'); return; }
+
+  const now = getBrasiliaDate();
+  record.entries.push({ acao, assinatura:assin, timestamp:formatDateTime(now) });
+  if(record.status!=='resolvido') record.status='em_processo';
+  saveRacaoData(data);
+  renderAll();
+}
+
+function reabrirRacao(key) {
+  const data   = getRacaoData();
+  const record = data[key];
+  if(!record) return;
+  record.status = 'em_processo';
+  saveRacaoData(data);
+  renderAll();
+}
+
+function marcarResolvido(key) {
+  const elAcao  = document.getElementById(`nova_acao_${key}`);
+  const elAssin = document.getElementById(`nova_assin_${key}`);
+  const acao    = elAcao?.value.trim();
+  const assin   = elAssin?.value.trim();
+  if(!acao||!assin) { alert('Descreva o que foi feito e assine para marcar como resolvido.'); return; }
+
+  const data   = getRacaoData();
+  const record = data[key];
+  if(!record) return;
+
+  const now = getBrasiliaDate();
+  record.entries.push({ acao, assinatura:assin, timestamp:formatDateTime(now), resolucao:true });
+  record.status = 'resolvido';
+  saveRacaoData(data);
+  renderAll();
+}
+
+// ════════════════════════════════════════════════════════════
+//  SISTEMA DE ALARME
+// ════════════════════════════════════════════════════════════
+function triggerAlarme(key, petName, tutor, deficit) {
+  currentAlarm = { key, petName, tutor, deficit };
+  document.getElementById('alarm-pet-nm').textContent   = petName;
+  document.getElementById('alarm-deficit-txt').textContent = `Faltam ${deficit}g de ração${tutor?' · Tutor: '+tutor:''}`;
+  document.getElementById('alarm-acao').value       = '';
+  document.getElementById('alarm-assinatura').value = '';
+  document.getElementById('alarm-btn-confirm').disabled = true;
+  document.getElementById('alarm-btn-dismiss').classList.remove('visible');
+  document.getElementById('alarm-overlay').classList.add('active');
+}
+
+function checkAlarmForm() {
+  const acao  = document.getElementById('alarm-acao').value.trim();
+  const assin = document.getElementById('alarm-assinatura').value.trim();
+  document.getElementById('alarm-btn-confirm').disabled = !(acao&&assin);
+}
+
+function confirmarAlarme() {
+  if(!currentAlarm) return;
+  const acao  = document.getElementById('alarm-acao').value.trim();
+  const assin = document.getElementById('alarm-assinatura').value.trim();
+  if(!acao||!assin) return;
+
+  const data   = getRacaoData();
+  const record = data[currentAlarm.key];
+  if(record) {
+    const now = getBrasiliaDate();
+    record.entries.push({ acao, assinatura:assin, timestamp:formatDateTime(now) });
+    record.status = 'em_processo';
+    saveRacaoData(data);
+  }
+  document.getElementById('alarm-overlay').classList.remove('active');
+  currentAlarm = null;
+  renderAll();
+}
+
+function adiarAlarme(minutos) {
+  // Fecha o alarme agora — volta automaticamente após N minutos
+  document.getElementById('alarm-overlay').classList.remove('active');
+  const snoozedKey = currentAlarm ? currentAlarm.key : null;
+  currentAlarm = null;
+  renderAll();
+  if(snoozedKey) {
+    setTimeout(() => {
+      const data   = getRacaoData();
+      const record = data[snoozedKey];
+      if(record && record.status === 'pendente' && !currentAlarm) {
+        const hospedes = getHospedesHoje();
+        const pet = hospedes.find(p => getRacaoKey(p.petName, formatDateKey(selectedDate)) === snoozedKey);
+        if(pet) triggerAlarme(snoozedKey, pet.petName, pet.tutorName||'', record.deficit);
+      }
+    }, minutos * 60 * 1000);
+  }
+}
+
+function fecharAlarme() {
+  document.getElementById('alarm-overlay').classList.remove('active');
+  currentAlarm = null;
+  renderAll();
+}
+
+function checkPendingAlarms() {
+  const data     = getRacaoData();
+  const hospedes = getHospedesHoje();
+  for(const pet of hospedes) {
+    const key    = getRacaoKey(pet.petName, formatDateKey(selectedDate));
+    const record = data[key];
+    if(record && record.status==='pendente' && !currentAlarm) {
+      triggerAlarme(key, pet.petName, pet.tutorName||'', record.deficit);
+      return;
+    }
+  }
+}
+
+// ════════════════════════════════════════════════════════════
+//  UI HELPERS
+// ════════════════════════════════════════════════════════════
+function setDot(s) {
+  const el=document.getElementById('status-dot');
+  el.className='dot'+(s==='loading'?' loading':s==='offline'?' offline':s==='cache'?' cache':'');
+}
+function setBtn(on) {
+  const el=document.getElementById('btn-refresh');
+  if(el){ el.disabled=!on; el.textContent=on?'🔄 Atualizar':'⏳ Carregando...'; }
+}
+function showContent() {
+  document.getElementById('loading-box').style.display='none';
+  document.getElementById('error-box').style.display='none';
+  document.getElementById('content').style.display='block';
+}
+function showError(msg) {
+  document.getElementById('loading-box').style.display='none';
+  document.getElementById('error-box').style.display='flex';
+  document.getElementById('content').style.display='none';
+  document.getElementById('error-msg').textContent=msg;
+}
+function esc(s) {
+  return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+}
+
+// ════════════════════════════════════════════════════════════
+//  INICIAR
+// ════════════════════════════════════════════════════════════
+window.addEventListener('load', init);
+</script>
+</body>
+</html>
