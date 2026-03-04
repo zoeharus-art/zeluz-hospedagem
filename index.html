@@ -369,6 +369,11 @@
       cursor:pointer; transition:all .2s; width:100%; margin-top:6px;
     }
     .btn-reabrir:hover { background:var(--azul); color:white; }
+    .btn-apagar {
+      background:none; border:none; color:#ccc; font-family:var(--font); font-size:11px;
+      font-weight:700; cursor:pointer; padding:4px 0; transition:color .2s; display:block; margin-top:8px;
+    }
+    .btn-apagar:hover { color:#c62828; }
 
     /* ════ ALARME DE RAÇÃO ════ */
     .alarm-overlay {
@@ -651,6 +656,7 @@
 
 <!-- Firebase SDK -->
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-database-compat.js"></script>
 
 <script>
@@ -797,15 +803,21 @@ let clockSynced = false;
 // ════════════════════════════════════════════════════════════
 function initFirebase() {
   try {
-    const app = firebase.initializeApp(FIREBASE_CONFIG);
-    firebaseDb = firebase.database(app);
-    // Listener em tempo real — qualquer dispositivo que salvar aciona todos
-    firebaseDb.ref('racao').on('value', snapshot => {
-      const novos = snapshot.val() || {};
-      const mudou = JSON.stringify(novos) !== JSON.stringify(racaoDataCache);
-      racaoDataCache = novos;
-      if(mudou) renderAll();   // redesenha e verifica alarmes em todos os dispositivos
-    });
+    const app  = firebase.initializeApp(FIREBASE_CONFIG);
+    const auth = firebase.auth(app);
+    // Autenticação anônima — invisível ao usuário, bloqueia acesso externo ao banco
+    auth.signInAnonymously()
+      .then(() => {
+        firebaseDb = firebase.database(app);
+        // Listener em tempo real — qualquer dispositivo que salvar aciona todos
+        firebaseDb.ref('racao').on('value', snapshot => {
+          const novos = snapshot.val() || {};
+          const mudou = JSON.stringify(novos) !== JSON.stringify(racaoDataCache);
+          racaoDataCache = novos;
+          if(mudou) renderAll();
+        });
+      })
+      .catch(e => console.error('Firebase auth:', e));
   } catch(e) {
     console.error('Firebase init:', e);
   }
@@ -1265,6 +1277,8 @@ function renderRacao() {
           <button class="btn-salvar-racao" onclick="salvarRacao('${esc(key)}','${esc(pet.petName)}','${esc(pet.tutorName||'')}')">💾 Salvar Cálculo</button>
           ${timelineHtml}
           ${formNova}
+          ${status!=='sem-dados'?`<button class="btn-apagar" onclick="apagarRacao('${esc(key)}')">🗑️ Apagar registro — lançamento errado</button>`:''}
+
         </div>
       </div>`;
   }).join('');
@@ -1340,6 +1354,13 @@ function adicionarEntrada(key) {
   if(record.status!=='resolvido') record.status='em_processo';
   saveRacaoData(data);
   renderAll();
+}
+
+function apagarRacao(key) {
+  if(!confirm('Apagar este registro completamente?\n\nUse apenas para corrigir um lançamento errado.')) return;
+  const data = getRacaoData();
+  delete data[key];
+  saveRacaoData(data);
 }
 
 function reabrirRacao(key) {
