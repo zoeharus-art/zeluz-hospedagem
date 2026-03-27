@@ -236,7 +236,8 @@
     }
     .pet-thumb  { width:48px; height:48px; object-fit:contain; filter:drop-shadow(0 2px 6px rgba(0,0,0,.35)); }
     .pet-names  { flex:1; }
-    .pet-name   { font-size:15px; font-weight:800; color:#1B3A52; }
+    .pet-name   { font-size:15px; font-weight:800; color:#1B3A52; cursor:pointer; transition:color .2s; }
+    .pet-name:hover { color:var(--amarelo); text-decoration:underline; }
     .pet-tutor  { font-size:11px; color:rgba(27,58,82,.7); font-weight:600; margin-top:1px; }
 
     .pet-card-body { padding:12px 16px; }
@@ -1157,7 +1158,7 @@ function renderHospedes() {
         <div class="pet-card-header">
           <img class="pet-thumb" src="stickers/Cachorro coração.png" alt="">
           <div class="pet-names">
-            <div class="pet-name">${esc(pet.petName)}</div>
+            <div class="pet-name" onclick="abrirFicha('${esc(pet.petName)}','${formatDateKey(selectedDate)}')" title="Clique para abrir a ficha de ração">${esc(pet.petName)}</div>
             <div class="pet-tutor">${pet.tutorName ? '👤 '+esc(pet.tutorName) : ''}</div>
           </div>
         </div>
@@ -1256,7 +1257,7 @@ function renderRacao() {
       <button class="btn-reabrir" onclick="reabrirRacao('${esc(key)}')">🔄 Reabrir este registro</button>`;
 
     return `
-      <div class="racao-card" style="animation-delay:${delay}s">
+      <div class="racao-card" id="racao-card-${esc(key)}" style="animation-delay:${delay}s">
         <div class="racao-card-header">
           <img class="racao-sticker" src="stickers/Vasilha ração.png" alt="">
           <div class="racao-pet-info">
@@ -1446,6 +1447,8 @@ function confirmarAlarme() {
   }
   document.getElementById('alarm-overlay').classList.remove('active');
   currentAlarm = null;
+  // Verifica se há outros pets com alarme pendente (independência por pet)
+  setTimeout(() => checkPendingAlarms(), 300);
 }
 
 function adiarAlarme(minutos) {
@@ -1465,7 +1468,8 @@ function adiarAlarme(minutos) {
       }
     }, minutos * 60 * 1000);
   }
-  // NÃO chama renderAll() — Firebase listener cuida disso sem reabrir o alarme
+  // Verifica se há outros pets com alarme pendente (independência por pet)
+  setTimeout(() => checkPendingAlarms(), 300);
 }
 
 function fecharAlarme() {
@@ -1480,6 +1484,8 @@ function fecharAlarme() {
       setTimeout(() => snoozedKeys.delete(key), 2 * 60 * 1000);
     }
   }
+  // Verifica se há outros pets com alarme pendente (independência por pet)
+  setTimeout(() => checkPendingAlarms(), 300);
 }
 
 function checkPendingAlarms() {
@@ -1497,6 +1503,25 @@ function checkPendingAlarms() {
       return;
     }
   }
+}
+
+// ════════════════════════════════════════════════════════════
+//  ABRIR FICHA (clique no nome do pet → calculadora)
+// ════════════════════════════════════════════════════════════
+function abrirFicha(petName, dateKey) {
+  switchTab('racao');
+  // Aguarda o DOM atualizar após switch de aba
+  requestAnimationFrame(() => {
+    const key = getRacaoKey(petName, dateKey);
+    const card = document.getElementById('racao-card-' + key);
+    if(card) {
+      card.scrollIntoView({ behavior:'smooth', block:'start' });
+      // Destaque visual temporário
+      card.style.transition = 'box-shadow .3s';
+      card.style.boxShadow = '0 0 0 4px var(--amarelo), 0 8px 32px rgba(201,151,28,.4)';
+      setTimeout(() => { card.style.boxShadow = ''; }, 2000);
+    }
+  });
 }
 
 // ════════════════════════════════════════════════════════════
