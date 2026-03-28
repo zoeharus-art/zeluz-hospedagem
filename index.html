@@ -225,7 +225,9 @@
       opacity:0; animation:fadeUp .45s ease forwards;
       border:2px solid transparent;
     }
+    .pet-card       { cursor:pointer; }
     .pet-card:hover { transform:translateY(-3px); box-shadow:0 10px 28px rgba(35,77,103,.15); }
+    .pet-card:active { transform:scale(.98); }
     .pet-card.racao-pendente  { animation:fadeUp .45s ease forwards, glowPend 1.4s ease-in-out infinite !important; border-color:#FF1744; }
     .pet-card.racao-processo  { border-color:var(--proc-h); animation:fadeUp .45s ease forwards, glowProc 2s ease-in-out infinite !important; }
     .pet-card.racao-resolvido { border-color:var(--resol-h); }
@@ -236,8 +238,7 @@
     }
     .pet-thumb  { width:48px; height:48px; object-fit:contain; filter:drop-shadow(0 2px 6px rgba(0,0,0,.35)); }
     .pet-names  { flex:1; }
-    .pet-name   { font-size:15px; font-weight:800; color:#1B3A52; cursor:pointer; transition:color .2s; }
-    .pet-name:hover { color:var(--amarelo); text-decoration:underline; }
+    .pet-name   { font-size:15px; font-weight:800; color:#1B3A52; }
     .pet-tutor  { font-size:11px; color:rgba(27,58,82,.7); font-weight:600; margin-top:1px; }
 
     .pet-card-body { padding:12px 16px; }
@@ -539,6 +540,51 @@
       /* Footer: oculto no mobile (tabs fazem o papel) */
       .footer { display:none; }
     }
+
+    /* ════ SETOR BADGE ════ */
+    .setor-badge {
+      display:inline-flex; align-items:center; gap:6px;
+      padding:4px 14px; border-radius:100px; font-size:11px; font-weight:800;
+      letter-spacing:1.5px; text-transform:uppercase; margin-top:4px;
+    }
+    .setor-badge.gestao   { background:rgba(94,108,255,.2);  color:#8B9AFF; }
+    .setor-badge.hospedagem { background:rgba(201,151,28,.2); color:#F0C840; }
+    .setor-badge.recepcao { background:rgba(255,82,82,.2);   color:#FF8A80; }
+
+    /* ════ BANNER GESTÃO (alertas sem popup) ════ */
+    .gestao-alert-banner {
+      background:linear-gradient(135deg, #FFF0F0, #FFE0E0); border:2px solid #FF5252;
+      border-radius:14px; padding:14px 20px; margin-bottom:16px;
+      display:flex; align-items:center; gap:14px; animation:fadeUp .4s ease;
+    }
+    .gestao-alert-icon { font-size:36px; }
+    .gestao-alert-info { flex:1; }
+    .gestao-alert-title { font-size:14px; font-weight:800; color:#C62828; }
+    .gestao-alert-detail { font-size:12px; color:#E53935; font-weight:600; margin-top:2px; }
+
+    /* ════ TOGGLE DE REFEIÇÕES ════ */
+    .meal-row { display:flex; flex-direction:column; gap:6px; }
+    .meal-label { font-size:11px; font-weight:700; color:#b0a898; text-transform:uppercase; letter-spacing:.6px; }
+    .meal-toggles { display:flex; gap:8px; flex-wrap:wrap; }
+    .meal-btn {
+      padding:10px 16px; border-radius:12px; border:2px solid #e0dcd4;
+      background:white; font-family:var(--font); font-size:13px; font-weight:700;
+      color:#aaa; cursor:pointer; transition:all .2s; user-select:none;
+      display:flex; align-items:center; gap:6px; min-width:100px; justify-content:center;
+    }
+    .meal-btn:hover { border-color:var(--amarelo); color:#8A6200; }
+    .meal-btn.selected {
+      background:var(--amarelo); border-color:var(--amarelo); color:#1B3A52;
+      box-shadow:0 2px 8px rgba(201,151,28,.3);
+    }
+    .meal-btn .meal-icon { font-size:16px; }
+    .meal-summary {
+      font-size:12px; font-weight:700; color:var(--azul); margin-top:4px;
+      padding:8px 12px; background:rgba(35,77,103,.06); border-radius:8px;
+    }
+    @media (max-width:640px) {
+      .meal-btn { flex:1; min-width:80px; padding:12px 10px; font-size:12px; }
+    }
   </style>
 </head>
 <body>
@@ -664,7 +710,7 @@
 <footer class="footer">
   <div class="footer-txt">🏠 Zêluz® Hospedagem — Belo Horizonte · zeluz.com.br</div>
   <div class="footer-brand">
-    <img src="kairos-program-signature-footer-v3-transparent - logo.png" alt="Kairós" style="height:66px;display:block;margin:0 auto;opacity:.85;">
+    <img src="kairos-lockup.svg" alt="Kairós" style="height:48px;display:block;margin:0 auto;opacity:.9;">
   </div>
   <div class="footer-txt">Dados salvos · Atualização: 2 min</div>
 </footer>
@@ -814,6 +860,19 @@ let lastOk      = null;
 let clockOffset = 0;
 let clockSynced = false;
 
+// ════ SETOR ════
+// ?setor=gestao | hospedagem | recepcao
+const SETOR = (() => {
+  const p = new URLSearchParams(window.location.search).get('setor');
+  if(['gestao','hospedagem','recepcao'].includes(p)) return p;
+  return 'gestao'; // padrão = visão geral
+})();
+const SETOR_LABELS = {
+  gestao:     { emoji:'👁️', nome:'Gestão',     desc:'Visão geral — acompanhamento' },
+  hospedagem: { emoji:'📋', nome:'Hospedagem',  desc:'Cálculo de ração e check-in' },
+  recepcao:   { emoji:'📞', nome:'Recepção',    desc:'Resolver pendências de ração' }
+};
+
 // ════════════════════════════════════════════════════════════
 //  INIT
 // ════════════════════════════════════════════════════════════
@@ -848,8 +907,31 @@ function init() {
   setInterval(tick, 1000);
   updateDateLabel();
   switchTab('hospedes');
-  initFirebase();   // conecta ao Firebase antes de carregar dados
+  initFirebase();
   loadData();
+  applySetor();
+}
+
+function applySetor() {
+  const info = SETOR_LABELS[SETOR];
+  // Badge no header
+  const center = document.querySelector('.header-center');
+  if(center) {
+    const badge = document.createElement('div');
+    badge.className = 'setor-badge ' + SETOR;
+    badge.textContent = info.emoji + ' ' + info.nome;
+    badge.title = info.desc;
+    center.appendChild(badge);
+  }
+  // Recepção: esconde botão fechar do alarme (DEVE registrar ação)
+  if(SETOR === 'recepcao') {
+    const btnDismiss = document.getElementById('alarm-btn-dismiss');
+    if(btnDismiss) btnDismiss.style.display = 'none';
+  }
+  // Gestão: esconde aba calculadora (view-only)
+  if(SETOR === 'gestao') {
+    document.getElementById('tab-racao').style.display = 'none';
+  }
 }
 
 // ════════════════════════════════════════════════════════════
@@ -1111,7 +1193,23 @@ function renderKPIs() {
   });
 
   const grid = document.getElementById('kpi-row');
-  grid.innerHTML = `
+  // Banner de alerta para Gestão (sem popup, visual)
+  let bannerHtml = '';
+  if(SETOR === 'gestao' && racaoAlertas > 0) {
+    const pendentes = hospedes.filter(pet => {
+      const key = getRacaoKey(pet.petName, formatDateKey(selectedDate));
+      const r = racaoData[key];
+      return r && (r.status==='pendente' || r.status==='em_processo');
+    }).map(p => p.petName);
+    bannerHtml = `<div class="gestao-alert-banner" style="grid-column:1/-1">
+      <div class="gestao-alert-icon">🚨</div>
+      <div class="gestao-alert-info">
+        <div class="gestao-alert-title">${racaoAlertas} pendência${racaoAlertas>1?'s':''} de ração</div>
+        <div class="gestao-alert-detail">${pendentes.join(', ')}</div>
+      </div>
+    </div>`;
+  }
+  grid.innerHTML = bannerHtml + `
     <div class="kpi-card">
       <div class="kpi-icon"><img src="stickers/Pata.png" style="width:52px;height:52px;object-fit:contain"></div>
       <div class="kpi-info">
@@ -1154,11 +1252,11 @@ function renderHospedes() {
     const cardClass = status==='pendente'?'racao-pendente':status==='em_processo'?'racao-processo':status==='resolvido'?'racao-resolvido':'';
 
     return `
-      <div class="pet-card ${cardClass}" style="animation-delay:${delay}s">
+      <div class="pet-card ${cardClass}" style="animation-delay:${delay}s" onclick="abrirFicha('${esc(pet.petName)}','${formatDateKey(selectedDate)}')" title="Clique para abrir a ficha de ração">
         <div class="pet-card-header">
           <img class="pet-thumb" src="stickers/Cachorro coração.png" alt="">
           <div class="pet-names">
-            <div class="pet-name" onclick="abrirFicha('${esc(pet.petName)}','${formatDateKey(selectedDate)}')" title="Clique para abrir a ficha de ração">${esc(pet.petName)}</div>
+            <div class="pet-name">${esc(pet.petName)}</div>
             <div class="pet-tutor">${pet.tutorName ? '👤 '+esc(pet.tutorName) : ''}</div>
           </div>
         </div>
@@ -1209,12 +1307,15 @@ function renderRacao() {
     const delay  = (i*0.06).toFixed(2);
     const status = racao.status || 'sem-dados';
 
-    const refs  = racao.refeicoesDia       || '';
     const gpRef = racao.gramsPorRefeicao   || '';
     const dias  = racao.diasHospedagem     || '';
     const gTraz = racao.gTrazidos          || '';
     const minimo= racao.minimo             || '';
     const def   = racao.deficit            || 0;
+    // Refeições por dia de entrada/saída (array [café, almoço, jantar] — 0 ou 1)
+    const refEnt = racao.refEntrada || [1,1,1];
+    const refSai = racao.refSaida   || [1,1,1];
+    const totalRef = racao.totalRefeicoes || '';
 
     let resultadoHtml = '';
     if(minimo!=='') {
@@ -1256,6 +1357,10 @@ function renderRacao() {
       <div class="racao-resolvido-banner">✅ RESOLVIDO — Ração normalizada!</div>
       <button class="btn-reabrir" onclick="reabrirRacao('${esc(key)}')">🔄 Reabrir este registro</button>`;
 
+    // Meal toggle buttons helper
+    const mealBtn = (keyId, mealIdx, icon, label, selected) =>
+      `<div class="meal-btn${selected?' selected':''}" onclick="toggleMeal('${esc(key)}','${keyId}',${mealIdx})" id="mb_${keyId}_${mealIdx}_${esc(key)}">${icon} ${label}</div>`;
+
     return `
       <div class="racao-card" id="racao-card-${esc(key)}" style="animation-delay:${delay}s">
         <div class="racao-card-header">
@@ -1267,11 +1372,28 @@ function renderRacao() {
           <div class="racao-status-chip ${chipClass}">${chipLabel}</div>
         </div>
         <div class="racao-card-body">
-          <div class="calc-grid">
-            <div class="calc-field">
-              <label>Refeições/dia</label>
-              <input type="number" id="ref_${esc(key)}" value="${refs}" min="1" max="10" oninput="calcMinimoPreview('${esc(key)}')">
+
+          <!-- REFEIÇÕES: Dia de Entrada -->
+          <div class="meal-row">
+            <div class="meal-label">🟢 Dia de Entrada — quais refeições fará?</div>
+            <div class="meal-toggles">
+              ${mealBtn('ent',0,'☀️','Café',refEnt[0])}
+              ${mealBtn('ent',1,'🍽️','Almoço',refEnt[1])}
+              ${mealBtn('ent',2,'🌙','Jantar',refEnt[2])}
             </div>
+          </div>
+
+          <!-- REFEIÇÕES: Dia de Saída -->
+          <div class="meal-row">
+            <div class="meal-label">🔴 Dia de Saída — quais refeições fará?</div>
+            <div class="meal-toggles">
+              ${mealBtn('sai',0,'☀️','Café',refSai[0])}
+              ${mealBtn('sai',1,'🍽️','Almoço',refSai[1])}
+              ${mealBtn('sai',2,'🌙','Jantar',refSai[2])}
+            </div>
+          </div>
+
+          <div class="calc-grid" style="grid-template-columns:repeat(3,1fr)">
             <div class="calc-field">
               <label>Gramas/refeição</label>
               <input type="number" id="gpref_${esc(key)}" value="${gpRef}" min="1" oninput="calcMinimoPreview('${esc(key)}')">
@@ -1281,14 +1403,15 @@ function renderRacao() {
               <input type="number" id="dias_${esc(key)}" value="${dias}" min="1" oninput="calcMinimoPreview('${esc(key)}')">
             </div>
             <div class="calc-field">
-              <label>Mínimo necessário</label>
-              <input type="text" id="min_${esc(key)}" value="${minimo?minimo+'g':''}" readonly>
+              <label>Quantidade trazida (g)</label>
+              <input type="number" id="gtraz_${esc(key)}" value="${gTraz}" min="0" oninput="calcMinimoPreview('${esc(key)}')">
             </div>
           </div>
-          <div class="calc-field" style="max-width:220px">
-            <label>Quantidade trazida (g)</label>
-            <input type="number" id="gtraz_${esc(key)}" value="${gTraz}" min="0" oninput="calcMinimoPreview('${esc(key)}')">
+
+          <div class="meal-summary" id="summary_${esc(key)}">
+            ${totalRef ? `📊 ${totalRef} refeições × ${gpRef}g = ${minimo}g necessários` : 'Selecione as refeições e preencha os campos'}
           </div>
+
           <div id="resultado_${esc(key)}">${resultadoHtml}</div>
           <button class="btn-salvar-racao" onclick="salvarRacao('${esc(key)}','${esc(pet.petName)}','${esc(pet.tutorName||'')}')">💾 Salvar Cálculo</button>
           ${timelineHtml}
@@ -1300,15 +1423,60 @@ function renderRacao() {
   }).join('');
 }
 
+// Estado temporário dos toggles de refeição (antes de salvar)
+const mealState = {}; // { key: { ent:[1,1,1], sai:[1,1,1] } }
+
+function getMealState(key) {
+  if(!mealState[key]) {
+    const racao = getRacaoRecord(key) || {};
+    mealState[key] = {
+      ent: racao.refEntrada ? [...racao.refEntrada] : [1,1,1],
+      sai: racao.refSaida   ? [...racao.refSaida]   : [1,1,1]
+    };
+  }
+  return mealState[key];
+}
+
+function toggleMeal(key, tipo, idx) {
+  const state = getMealState(key);
+  state[tipo][idx] = state[tipo][idx] ? 0 : 1;
+  // Atualiza visual do botão
+  const btn = document.getElementById(`mb_${tipo}_${idx}_${key}`);
+  if(btn) btn.classList.toggle('selected', !!state[tipo][idx]);
+  calcMinimoPreview(key);
+}
+
+function calcTotalRefeicoes(key) {
+  const state = getMealState(key);
+  const dias  = parseInt(document.getElementById(`dias_${key}`)?.value) || 0;
+  if(dias <= 0) return 0;
+  const entMeals = state.ent[0] + state.ent[1] + state.ent[2];
+  const saiMeals = state.sai[0] + state.sai[1] + state.sai[2];
+  if(dias === 1) return entMeals; // só 1 dia: entrada = saída
+  if(dias === 2) return entMeals + saiMeals; // 2 dias: entrada + saída
+  // 3+ dias: entrada + (dias intermediários × 3) + saída
+  const middle = dias - 2;
+  return entMeals + (middle * 3) + saiMeals;
+}
+
 function calcMinimoPreview(key) {
-  const refs  = parseInt(document.getElementById(`ref_${key}`)?.value)||0;
   const gpRef = parseInt(document.getElementById(`gpref_${key}`)?.value)||0;
   const dias  = parseInt(document.getElementById(`dias_${key}`)?.value)||0;
   const gTraz = parseInt(document.getElementById(`gtraz_${key}`)?.value)||0;
-  const minimo= refs * gpRef * dias;
-  const elMin = document.getElementById(`min_${key}`);
-  if(elMin) elMin.value = minimo>0 ? minimo+'g' : '';
-  const def = minimo - gTraz;
+  const totalRef = calcTotalRefeicoes(key);
+  const minimo   = totalRef * gpRef;
+  const def      = minimo - gTraz;
+
+  // Atualizar sumário
+  const elSummary = document.getElementById(`summary_${key}`);
+  if(elSummary) {
+    if(totalRef > 0 && gpRef > 0) {
+      elSummary.innerHTML = `📊 <strong>${totalRef} refeições</strong> × ${gpRef}g = <strong>${minimo}g</strong> necessários`;
+    } else {
+      elSummary.textContent = 'Selecione as refeições e preencha os campos';
+    }
+  }
+
   const elRes = document.getElementById(`resultado_${key}`);
   if(!elRes) return;
   if(minimo===0) { elRes.innerHTML=`<div class="calc-resultado sem-dados">Preencha os campos para calcular</div>`; return; }
@@ -1317,21 +1485,24 @@ function calcMinimoPreview(key) {
 }
 
 function salvarRacao(key, petName, tutor) {
-  const refs  = parseInt(document.getElementById(`ref_${key}`)?.value)||0;
   const gpRef = parseInt(document.getElementById(`gpref_${key}`)?.value)||0;
   const dias  = parseInt(document.getElementById(`dias_${key}`)?.value)||0;
   const gTraz = parseInt(document.getElementById(`gtraz_${key}`)?.value)||0;
-  if(!refs||!gpRef||!dias) { alert('Preencha refeições/dia, gramas/refeição e dias de hospedagem.'); return; }
+  if(!gpRef||!dias) { alert('Preencha gramas/refeição e dias de hospedagem.'); return; }
 
-  const minimo  = refs * gpRef * dias;
-  const deficit = minimo - gTraz;
+  const state    = getMealState(key);
+  const totalRef = calcTotalRefeicoes(key);
+  const minimo   = totalRef * gpRef;
+  const deficit  = minimo - gTraz;
 
   const data     = getRacaoData();
   const existing = data[key] || { petName, tutor, entries:[] };
-  existing.refeicoesDia     = refs;
   existing.gramsPorRefeicao = gpRef;
   existing.diasHospedagem   = dias;
   existing.gTrazidos        = gTraz;
+  existing.refEntrada       = state.ent;
+  existing.refSaida         = state.sai;
+  existing.totalRefeicoes   = totalRef;
   existing.minimo           = minimo;
   existing.deficit          = deficit;
 
@@ -1489,6 +1660,9 @@ function fecharAlarme() {
 }
 
 function checkPendingAlarms() {
+  // Gestão e Hospedagem: NÃO mostram alarme popup — só badges visuais
+  if(SETOR === 'gestao' || SETOR === 'hospedagem') return;
+
   // Se o alarme já está visível na tela, não interfere
   if(document.getElementById('alarm-overlay').classList.contains('active')) return;
   if(currentAlarm) return;
