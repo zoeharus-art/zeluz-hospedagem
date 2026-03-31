@@ -292,6 +292,11 @@
       width:100%; padding:8px 12px; border:2px solid #e0dcd4; border-radius:8px;
       font-family:var(--font); font-size:15px; font-weight:700; color:var(--azul);
       background:white; transition:border-color .2s;
+      -moz-appearance:textfield; /* Remove setas Firefox */
+    }
+    .calc-field input::-webkit-outer-spin-button,
+    .calc-field input::-webkit-inner-spin-button {
+      -webkit-appearance:none; margin:0; /* Remove setas Chrome/Safari/Edge */
     }
     .calc-field input:focus { outline:none; border-color:var(--amarelo); }
     .calc-field input[readonly] {
