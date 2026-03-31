@@ -562,28 +562,10 @@
     .gestao-alert-title { font-size:14px; font-weight:800; color:#C62828; }
     .gestao-alert-detail { font-size:12px; color:#E53935; font-weight:600; margin-top:2px; }
 
-    /* ════ TOGGLE DE REFEIÇÕES ════ */
-    .meal-row { display:flex; flex-direction:column; gap:6px; }
-    .meal-label { font-size:11px; font-weight:700; color:#b0a898; text-transform:uppercase; letter-spacing:.6px; }
-    .meal-toggles { display:flex; gap:8px; flex-wrap:wrap; }
-    .meal-btn {
-      padding:10px 16px; border-radius:12px; border:2px solid #e0dcd4;
-      background:white; font-family:var(--font); font-size:13px; font-weight:700;
-      color:#aaa; cursor:pointer; transition:all .2s; user-select:none;
-      display:flex; align-items:center; gap:6px; min-width:100px; justify-content:center;
-    }
-    .meal-btn:hover { border-color:var(--amarelo); color:#8A6200; }
-    .meal-btn.selected {
-      background:var(--amarelo); border-color:var(--amarelo); color:#1B3A52;
-      box-shadow:0 2px 8px rgba(201,151,28,.3);
-    }
-    .meal-btn .meal-icon { font-size:16px; }
+    /* ════ RESUMO DE CÁLCULO ════ */
     .meal-summary {
       font-size:12px; font-weight:700; color:var(--azul); margin-top:4px;
       padding:8px 12px; background:rgba(35,77,103,.06); border-radius:8px;
-    }
-    @media (max-width:640px) {
-      .meal-btn { flex:1; min-width:80px; padding:12px 10px; font-size:12px; }
     }
   </style>
 </head>
@@ -1309,15 +1291,12 @@ function renderRacao() {
     const delay  = (i*0.06).toFixed(2);
     const status = racao.status || 'sem-dados';
 
-    const gpRef = racao.gramsPorRefeicao   || '';
-    const dias  = racao.diasHospedagem     || '';
-    const gTraz = racao.gTrazidos          || '';
-    const minimo= racao.minimo             || '';
-    const def   = racao.deficit            || 0;
-    // Refeições por dia de entrada/saída (array [café, almoço, jantar] — 0 ou 1)
-    const refEnt = racao.refEntrada || [1,1,1];
-    const refSai = racao.refSaida   || [1,1,1];
-    const totalRef = racao.totalRefeicoes || '';
+    const gpRef  = racao.gramsPorRefeicao   || '';
+    const refDia = racao.refeicoesPorDia   || '';
+    const dias   = racao.diasHospedagem    || '';
+    const gTraz  = racao.gTrazidos         || '';
+    const minimo = racao.minimo            || '';
+    const def    = racao.deficit           || 0;
 
     let resultadoHtml = '';
     if(minimo!=='') {
@@ -1359,10 +1338,6 @@ function renderRacao() {
       <div class="racao-resolvido-banner">✅ RESOLVIDO — Ração normalizada!</div>
       <button class="btn-reabrir" onclick="reabrirRacao('${esc(key)}')">🔄 Reabrir este registro</button>`;
 
-    // Meal toggle buttons helper
-    const mealBtn = (keyId, mealIdx, icon, label, selected) =>
-      `<div class="meal-btn${selected?' selected':''}" onclick="toggleMeal('${esc(key)}','${keyId}',${mealIdx})" id="mb_${keyId}_${mealIdx}_${esc(key)}">${icon} ${label}</div>`;
-
     return `
       <div class="racao-card" id="racao-card-${esc(key)}" style="animation-delay:${delay}s">
         <div class="racao-card-header">
@@ -1375,30 +1350,14 @@ function renderRacao() {
         </div>
         <div class="racao-card-body">
 
-          <!-- REFEIÇÕES: Dia de Entrada -->
-          <div class="meal-row">
-            <div class="meal-label">🟢 Dia de Entrada — quais refeições fará?</div>
-            <div class="meal-toggles">
-              ${mealBtn('ent',0,'☀️','Café',refEnt[0])}
-              ${mealBtn('ent',1,'🍽️','Almoço',refEnt[1])}
-              ${mealBtn('ent',2,'🌙','Jantar',refEnt[2])}
-            </div>
-          </div>
-
-          <!-- REFEIÇÕES: Dia de Saída -->
-          <div class="meal-row">
-            <div class="meal-label">🔴 Dia de Saída — quais refeições fará?</div>
-            <div class="meal-toggles">
-              ${mealBtn('sai',0,'☀️','Café',refSai[0])}
-              ${mealBtn('sai',1,'🍽️','Almoço',refSai[1])}
-              ${mealBtn('sai',2,'🌙','Jantar',refSai[2])}
-            </div>
-          </div>
-
-          <div class="calc-grid" style="grid-template-columns:repeat(3,1fr)">
+          <div class="calc-grid">
             <div class="calc-field">
               <label>Gramas/refeição</label>
               <input type="number" id="gpref_${esc(key)}" value="${gpRef}" min="1" oninput="calcMinimoPreview('${esc(key)}')">
+            </div>
+            <div class="calc-field">
+              <label>Refeições/dia</label>
+              <input type="number" id="refdia_${esc(key)}" value="${refDia}" min="1" max="4" oninput="calcMinimoPreview('${esc(key)}')">
             </div>
             <div class="calc-field">
               <label>Dias de hospedagem</label>
@@ -1411,7 +1370,7 @@ function renderRacao() {
           </div>
 
           <div class="meal-summary" id="summary_${esc(key)}">
-            ${totalRef ? `📊 ${totalRef} refeições × ${gpRef}g = ${minimo}g necessários` : 'Selecione as refeições e preencha os campos'}
+            ${minimo ? `📊 ${gpRef}g × ${refDia} ref/dia × ${dias} dias = ${minimo}g necessários` : 'Preencha os campos para calcular'}
           </div>
 
           <div id="resultado_${esc(key)}">${resultadoHtml}</div>
@@ -1425,57 +1384,20 @@ function renderRacao() {
   }).join('');
 }
 
-// Estado temporário dos toggles de refeição (antes de salvar)
-const mealState = {}; // { key: { ent:[1,1,1], sai:[1,1,1] } }
-
-function getMealState(key) {
-  if(!mealState[key]) {
-    const racao = getRacaoRecord(key) || {};
-    mealState[key] = {
-      ent: racao.refEntrada ? [...racao.refEntrada] : [1,1,1],
-      sai: racao.refSaida   ? [...racao.refSaida]   : [1,1,1]
-    };
-  }
-  return mealState[key];
-}
-
-function toggleMeal(key, tipo, idx) {
-  const state = getMealState(key);
-  state[tipo][idx] = state[tipo][idx] ? 0 : 1;
-  // Atualiza visual do botão
-  const btn = document.getElementById(`mb_${tipo}_${idx}_${key}`);
-  if(btn) btn.classList.toggle('selected', !!state[tipo][idx]);
-  calcMinimoPreview(key);
-}
-
-function calcTotalRefeicoes(key) {
-  const state = getMealState(key);
-  const dias  = parseInt(document.getElementById(`dias_${key}`)?.value) || 0;
-  if(dias <= 0) return 0;
-  const entMeals = state.ent[0] + state.ent[1] + state.ent[2];
-  const saiMeals = state.sai[0] + state.sai[1] + state.sai[2];
-  if(dias === 1) return entMeals; // só 1 dia: entrada = saída
-  if(dias === 2) return entMeals + saiMeals; // 2 dias: entrada + saída
-  // 3+ dias: entrada + (dias intermediários × 3) + saída
-  const middle = dias - 2;
-  return entMeals + (middle * 3) + saiMeals;
-}
-
 function calcMinimoPreview(key) {
-  const gpRef = parseInt(document.getElementById(`gpref_${key}`)?.value)||0;
-  const dias  = parseInt(document.getElementById(`dias_${key}`)?.value)||0;
-  const gTraz = parseInt(document.getElementById(`gtraz_${key}`)?.value)||0;
-  const totalRef = calcTotalRefeicoes(key);
-  const minimo   = totalRef * gpRef;
-  const def      = minimo - gTraz;
+  const gpRef  = parseInt(document.getElementById(`gpref_${key}`)?.value)||0;
+  const refDia = parseInt(document.getElementById(`refdia_${key}`)?.value)||0;
+  const dias   = parseInt(document.getElementById(`dias_${key}`)?.value)||0;
+  const gTraz  = parseInt(document.getElementById(`gtraz_${key}`)?.value)||0;
+  const minimo = gpRef * refDia * dias;
+  const def    = minimo - gTraz;
 
-  // Atualizar sumário
   const elSummary = document.getElementById(`summary_${key}`);
   if(elSummary) {
-    if(totalRef > 0 && gpRef > 0) {
-      elSummary.innerHTML = `📊 <strong>${totalRef} refeições</strong> × ${gpRef}g = <strong>${minimo}g</strong> necessários`;
+    if(gpRef > 0 && refDia > 0 && dias > 0) {
+      elSummary.innerHTML = `📊 <strong>${gpRef}g</strong> × ${refDia} ref/dia × ${dias} dias = <strong>${minimo}g</strong> necessários`;
     } else {
-      elSummary.textContent = 'Selecione as refeições e preencha os campos';
+      elSummary.textContent = 'Preencha os campos para calcular';
     }
   }
 
@@ -1487,24 +1409,21 @@ function calcMinimoPreview(key) {
 }
 
 function salvarRacao(key, petName, tutor) {
-  const gpRef = parseInt(document.getElementById(`gpref_${key}`)?.value)||0;
-  const dias  = parseInt(document.getElementById(`dias_${key}`)?.value)||0;
-  const gTraz = parseInt(document.getElementById(`gtraz_${key}`)?.value)||0;
-  if(!gpRef||!dias) { alert('Preencha gramas/refeição e dias de hospedagem.'); return; }
+  const gpRef  = parseInt(document.getElementById(`gpref_${key}`)?.value)||0;
+  const refDia = parseInt(document.getElementById(`refdia_${key}`)?.value)||0;
+  const dias   = parseInt(document.getElementById(`dias_${key}`)?.value)||0;
+  const gTraz  = parseInt(document.getElementById(`gtraz_${key}`)?.value)||0;
+  if(!gpRef||!refDia||!dias) { alert('Preencha gramas/refeição, refeições/dia e dias de hospedagem.'); return; }
 
-  const state    = getMealState(key);
-  const totalRef = calcTotalRefeicoes(key);
-  const minimo   = totalRef * gpRef;
-  const deficit  = minimo - gTraz;
+  const minimo  = gpRef * refDia * dias;
+  const deficit = minimo - gTraz;
 
   const data     = getRacaoData();
   const existing = data[key] || { petName, tutor, entries:[] };
   existing.gramsPorRefeicao = gpRef;
+  existing.refeicoesPorDia  = refDia;
   existing.diasHospedagem   = dias;
   existing.gTrazidos        = gTraz;
-  existing.refEntrada       = state.ent;
-  existing.refSaida         = state.sai;
-  existing.totalRefeicoes   = totalRef;
   existing.minimo           = minimo;
   existing.deficit          = deficit;
 
