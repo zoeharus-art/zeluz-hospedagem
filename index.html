@@ -281,7 +281,7 @@
 
     /* Calculadora inputs */
     .calc-grid {
-      display:grid; grid-template-columns:repeat(3,1fr); gap:12px;
+      display:grid; grid-template-columns:repeat(4,1fr); gap:12px;
       background:var(--creme); border-radius:12px; padding:14px;
     }
     .calc-field label {
@@ -1400,6 +1400,10 @@ function renderRacao() {
               <input type="number" id="gpref_${esc(key)}" value="${gpRef}" min="1" oninput="calcMinimoPreview('${esc(key)}')">
             </div>
             <div class="calc-field">
+              <label>Refeições/dia</label>
+              <input type="number" id="refdia_${esc(key)}" value="${refDia}" min="1" max="4" oninput="calcMinimoPreview('${esc(key)}')">
+            </div>
+            <div class="calc-field">
               <label>Dias de hospedagem</label>
               <input type="number" id="dias_${esc(key)}" value="${dias}" min="1" oninput="calcMinimoPreview('${esc(key)}')">
             </div>
@@ -1468,21 +1472,19 @@ function getMealCounts(key) {
 
 function calcMinimoPreview(key) {
   const gpRef  = parseInt(document.getElementById(`gpref_${key}`)?.value)||0;
+  const refDia = parseInt(document.getElementById(`refdia_${key}`)?.value)||0;
   const dias   = parseInt(document.getElementById(`dias_${key}`)?.value)||0;
   const gTraz  = parseInt(document.getElementById(`gtraz_${key}`)?.value)||0;
   const meals  = getMealCounts(key);
 
   let totalRefeicoes = 0;
   if(dias === 1) {
-    // Só 1 dia: entrada = saída, usa só checkboxes de entrada
     totalRefeicoes = meals.entrada;
   } else if(dias === 2) {
-    // 2 dias: dia de entrada + dia de saída, sem dias intermediários
     totalRefeicoes = meals.entrada + meals.saida;
   } else if(dias >= 3) {
-    // 3+ dias: entrada + (dias-2) × 3 refeições completas + saída
     const diasMeio = dias - 2;
-    totalRefeicoes = meals.entrada + (diasMeio * 3) + meals.saida;
+    totalRefeicoes = meals.entrada + (diasMeio * refDia) + meals.saida;
   }
 
   const minimo = gpRef * totalRefeicoes;
@@ -1497,7 +1499,7 @@ function calcMinimoPreview(key) {
       } else if(dias === 2) {
         detalhes = `Entrada: ${meals.entrada} ref · Saída: ${meals.saida} ref`;
       } else {
-        detalhes = `Entrada: ${meals.entrada} ref · ${dias-2} dias × 3 ref · Saída: ${meals.saida} ref`;
+        detalhes = `Entrada: ${meals.entrada} ref · ${dias-2} dias × ${refDia} ref · Saída: ${meals.saida} ref`;
       }
       elSummary.innerHTML = `📊 <strong>${gpRef}g</strong> × ${totalRefeicoes} refeições = <strong>${minimo}g</strong> necessários<br><span style="font-size:10px;color:#999">${detalhes}</span>`;
     } else {
@@ -1514,19 +1516,20 @@ function calcMinimoPreview(key) {
 
 function salvarRacao(key, petName, tutor) {
   const gpRef  = parseInt(document.getElementById(`gpref_${key}`)?.value)||0;
+  const refDia = parseInt(document.getElementById(`refdia_${key}`)?.value)||0;
   const dias   = parseInt(document.getElementById(`dias_${key}`)?.value)||0;
   const gTraz  = parseInt(document.getElementById(`gtraz_${key}`)?.value)||0;
   const meals  = getMealCounts(key);
   const isActive = id => document.getElementById(id)?.classList.contains('active') || false;
 
-  if(!gpRef||!dias) { alert('Preencha gramas/refeição e dias de hospedagem.'); return; }
+  if(!gpRef||!refDia||!dias) { alert('Preencha gramas/refeição, refeições/dia e dias de hospedagem.'); return; }
   if(meals.entrada === 0 && dias >= 1) { alert('Marque pelo menos 1 refeição no dia de entrada.'); return; }
   if(meals.saida === 0 && dias >= 2) { alert('Marque pelo menos 1 refeição no dia de saída.'); return; }
 
   let totalRefeicoes = 0;
   if(dias === 1) { totalRefeicoes = meals.entrada; }
   else if(dias === 2) { totalRefeicoes = meals.entrada + meals.saida; }
-  else { totalRefeicoes = meals.entrada + ((dias - 2) * 3) + meals.saida; }
+  else { totalRefeicoes = meals.entrada + ((dias - 2) * refDia) + meals.saida; }
 
   const minimo  = gpRef * totalRefeicoes;
   const deficit = minimo - gTraz;
@@ -1534,7 +1537,7 @@ function salvarRacao(key, petName, tutor) {
   const data     = getRacaoData();
   const existing = data[key] || { petName, tutor, entries:[] };
   existing.gramsPorRefeicao = gpRef;
-  existing.refeicoesPorDia  = 3; // padrão dias intermediários
+  existing.refeicoesPorDia  = refDia;
   existing.diasHospedagem   = dias;
   existing.entradaCafe   = isActive(`ec_${key}`);
   existing.entradaAlmoco = isActive(`ea_${key}`);
