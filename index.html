@@ -1311,6 +1311,33 @@ function saveRacaoData(d) {
 function getRacaoKey(pet,date)  { return `${pet}__${date}`; }
 function getRacaoRecord(key)    { return getRacaoData()[key]||null; }
 
+// ── Helpers para propagar ração em todos os dias da estadia ──
+function addDays(dateStr, n) {
+  const parts = dateStr.split('-');
+  const d = new Date(+parts[0], +parts[1]-1, +parts[2]);
+  d.setDate(d.getDate() + n);
+  return formatDateKey(d);
+}
+function getGrupoKeys(petName, dataCheckIn, dias) {
+  const keys = [];
+  for(let i = 0; i < dias; i++) keys.push(getRacaoKey(petName, addDays(dataCheckIn, i)));
+  return keys;
+}
+function propagarParaGrupo(data, record, petName) {
+  const checkIn = record.dataCheckIn;
+  const dias    = record.diasHospedagem;
+  if(!checkIn || !dias) return;
+  const keys = getGrupoKeys(petName, checkIn, dias);
+  keys.forEach(k => { data[k] = JSON.parse(JSON.stringify(record)); });
+}
+function apagarGrupo(data, record, petName) {
+  const checkIn = record.dataCheckIn;
+  const dias    = record.diasHospedagem;
+  if(!checkIn || !dias) return;
+  const keys = getGrupoKeys(petName, checkIn, dias);
+  keys.forEach(k => { delete data[k]; });
+}
+
 function renderRacao() {
   const hospedes = getHospedesHoje();
   const list = document.getElementById('racao-list');
@@ -1369,6 +1396,30 @@ function renderRacao() {
     const chipClass = {ok:'chip-ok',pendente:'chip-pendente',em_processo:'chip-processo',resolvido:'chip-resolvido'}[status]||'chip-sem';
     const chipLabel = {ok:'✅ OK',pendente:'🔴 Pendente',em_processo:'🟡 Em Processo',resolvido:'✅ Resolvido','sem-dados':'— Sem dados'}[status];
 
+    // Banner informativo: dados propagados do check-in
+    const curDateStr = formatDateKey(selectedDate);
+    const checkIn    = racao.dataCheckIn || '';
+    const diasTotal  = racao.diasHospedagem || 0;
+    let bannerEstadia = '';
+    if(checkIn && diasTotal > 1 && status !== 'sem-dados') {
+      const checkInParts = checkIn.split('-');
+      const checkInFmt   = `${checkInParts[2]}/${checkInParts[1]}/${checkInParts[0]}`;
+      const checkOutDate = addDays(checkIn, diasTotal - 1);
+      const coParts      = checkOutDate.split('-');
+      const checkOutFmt  = `${coParts[2]}/${coParts[1]}/${coParts[0]}`;
+      if(curDateStr !== checkIn) {
+        bannerEstadia = `<div style="background:linear-gradient(135deg,#1a237e20,#0d47a120);border:1px solid #1a237e40;border-radius:10px;padding:10px 14px;margin-bottom:12px;font-size:12px;color:#c0b8a8;display:flex;align-items:center;gap:8px">
+          <span style="font-size:18px">📋</span>
+          <span>Ração calculada no check-in <strong style="color:#f5e6c8">${checkInFmt}</strong> · Estadia até <strong style="color:#f5e6c8">${checkOutFmt}</strong> (${diasTotal} dias)</span>
+        </div>`;
+      } else {
+        bannerEstadia = `<div style="background:linear-gradient(135deg,#1b5e2020,#2e7d3220);border:1px solid #2e7d3240;border-radius:10px;padding:10px 14px;margin-bottom:12px;font-size:12px;color:#c0b8a8;display:flex;align-items:center;gap:8px">
+          <span style="font-size:18px">🏠</span>
+          <span>Dia do check-in · Estadia até <strong style="color:#f5e6c8">${checkOutFmt}</strong> (${diasTotal} dias) · Salvo em todos os dias</span>
+        </div>`;
+      }
+    }
+
     const formNova = status!=='resolvido' ? `
       <div class="nova-entrada">
         <div class="nova-entrada-title">➕ Adicionar Atualização</div>
@@ -1393,6 +1444,7 @@ function renderRacao() {
           <div class="racao-status-chip ${chipClass}">${chipLabel}</div>
         </div>
         <div class="racao-card-body">
+          ${bannerEstadia}
 
           <div class="calc-grid">
             <div class="calc-field">
@@ -1536,9 +1588,16 @@ function salvarRacao(key, petName, tutor) {
 
   const data     = getRacaoData();
   const existing = data[key] || { petName, tutor, entries:[] };
-  existing.gramsPorRefeicao = gpRef;
-  existing.refeicoesPorDia  = refDia;
-  existing.diasHospedagem   = dias;
+
+  // Determinar dataCheckIn: se já existia, manter; senão, é a data selecionada
+  const dataCheckIn = existing.dataCheckIn || formatDateKey(selectedDate);
+
+  existing.petName            = petName;
+  existing.tutor              = tutor;
+  existing.gramsPorRefeicao   = gpRef;
+  existing.refeicoesPorDia    = refDia;
+  existing.diasHospedagem     = dias;
+  existing.dataCheckIn        = dataCheckIn;
   existing.entradaCafe   = isActive(`ec_${key}`);
   existing.entradaAlmoco = isActive(`ea_${key}`);
   existing.entradaJantar = isActive(`ej_${key}`);
@@ -1558,7 +1617,8 @@ function salvarRacao(key, petName, tutor) {
   }
   // em_processo mantém
 
-  data[key] = existing;
+  // Propagar para TODOS os dias da estadia
+  propagarParaGrupo(data, existing, petName);
   saveRacaoData(data);
 
   if(existing.status==='pendente') {
@@ -1583,14 +1643,26 @@ function adicionarEntrada(key) {
   if(!Array.isArray(record.entries)) record.entries = [];
   record.entries.push({ acao, assinatura:assin, timestamp:formatDateTime(now) });
   if(record.status!=='resolvido') record.status='em_processo';
+
+  // Propagar para todos os dias da estadia
+  propagarParaGrupo(data, record, record.petName);
   saveRacaoData(data);
   renderAll();
 }
 
 function apagarRacao(key) {
-  if(!confirm('Apagar este registro completamente?\n\nUse apenas para corrigir um lançamento errado.')) return;
-  const data = getRacaoData();
-  delete data[key];
+  const data   = getRacaoData();
+  const record = data[key];
+  const dias   = record?.diasHospedagem || 1;
+  const msg    = dias > 1
+    ? `Apagar este registro de TODOS os ${dias} dias da estadia?\n\nUse apenas para corrigir um lançamento errado.`
+    : 'Apagar este registro completamente?\n\nUse apenas para corrigir um lançamento errado.';
+  if(!confirm(msg)) return;
+  if(record && record.dataCheckIn && record.diasHospedagem) {
+    apagarGrupo(data, record, record.petName);
+  } else {
+    delete data[key];
+  }
   saveRacaoData(data);
 }
 
@@ -1599,6 +1671,7 @@ function reabrirRacao(key) {
   const record = data[key];
   if(!record) return;
   record.status = 'em_processo';
+  propagarParaGrupo(data, record, record.petName);
   saveRacaoData(data);
   renderAll();
 }
@@ -1618,6 +1691,7 @@ function marcarResolvido(key) {
   if(!Array.isArray(record.entries)) record.entries = [];
   record.entries.push({ acao, assinatura:assin, timestamp:formatDateTime(now), resolucao:true });
   record.status = 'resolvido';
+  propagarParaGrupo(data, record, record.petName);
   saveRacaoData(data);
   renderAll();
 }
@@ -1657,11 +1731,11 @@ function confirmarAlarme() {
     if(!Array.isArray(record.entries)) record.entries = [];
     record.entries.push({ acao, assinatura:assin, timestamp:formatDateTime(now) });
     record.status = 'em_processo';
-    saveRacaoData(data); // Firebase listener vai chamar renderAll() — status já é em_processo, não reabre
+    propagarParaGrupo(data, record, record.petName);
+    saveRacaoData(data);
   }
   document.getElementById('alarm-overlay').classList.remove('active');
   currentAlarm = null;
-  // Verifica se há outros pets com alarme pendente (independência por pet)
   setTimeout(() => checkPendingAlarms(), 300);
 }
 
