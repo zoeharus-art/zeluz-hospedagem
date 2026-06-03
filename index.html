@@ -909,8 +909,11 @@ function initFirebase() {
         // Listener em tempo real — qualquer dispositivo que salvar aciona todos
         firebaseDb.ref('racao').on('value', snapshot => {
           const novos = snapshot.val() || {};
+          const migrou = migrarChavesRacaoLegado(novos);
           const mudou = JSON.stringify(novos) !== JSON.stringify(racaoDataCache);
           racaoDataCache = novos;
+          // Persiste a migração uma única vez (idempotente — não gera loop)
+          if(migrou && firebaseDb) firebaseDb.ref('racao').set(novos).catch(e => console.error('Firebase migrate:', e));
           if(mudou) renderAll();
         });
       })
@@ -1209,7 +1212,7 @@ function renderKPIs() {
   const racaoData = getRacaoData();
   let racaoAlertas = 0;
   hospedes.forEach(pet => {
-    const key    = getRacaoKey(pet.petName, formatDateKey(selectedDate));
+    const key    = getRacaoKey(petUid(pet), formatDateKey(selectedDate));
     const record = racaoData[key];
     if(record && (record.status==='pendente' || record.status==='em_processo')) racaoAlertas++;
   });
@@ -1219,7 +1222,7 @@ function renderKPIs() {
   let bannerHtml = '';
   if(SETOR === 'gestao' && racaoAlertas > 0) {
     const pendentes = hospedes.filter(pet => {
-      const key = getRacaoKey(pet.petName, formatDateKey(selectedDate));
+      const key = getRacaoKey(petUid(pet), formatDateKey(selectedDate));
       const r = racaoData[key];
       return r && (r.status==='pendente' || r.status==='em_processo');
     }).map(p => p.petName);
@@ -1267,14 +1270,14 @@ function renderHospedes() {
   }
 
   grid.innerHTML = hospedes.map((pet, i) => {
-    const key    = getRacaoKey(pet.petName, formatDateKey(selectedDate));
+    const key    = getRacaoKey(petUid(pet), formatDateKey(selectedDate));
     const racao  = getRacaoRecord(key);
     const status = racao ? racao.status : 'sem-dados';
     const delay  = (i * 0.05).toFixed(2);
     const cardClass = status==='pendente'?'racao-pendente':status==='em_processo'?'racao-processo':status==='resolvido'?'racao-resolvido':'';
 
     return `
-      <div class="pet-card ${cardClass}" style="animation-delay:${delay}s" onclick="abrirFicha('${esc(pet.petName)}','${formatDateKey(selectedDate)}')" title="Clique para abrir a ficha de ração">
+      <div class="pet-card ${cardClass}" style="animation-delay:${delay}s" onclick="abrirFicha('${esc(petUid(pet))}','${formatDateKey(selectedDate)}')" title="Clique para abrir a ficha de ração">
         <div class="pet-card-header">
           <img class="pet-thumb" src="stickers/Cachorro coração.png" alt="">
           <div class="pet-names">
@@ -1310,6 +1313,32 @@ function saveRacaoData(d) {
 }
 function getRacaoKey(pet,date)  { return `${pet}__${date}`; }
 function getRacaoRecord(key)    { return getRacaoData()[key]||null; }
+// Identificador único do hóspede: nome + tutor. Evita colisão entre homônimos
+// no mesmo dia (ex.: "Ozzy / Sabrina" e "Ozzy / Zuleica"). Sem tutor → só o nome.
+function petUid(pet)  { const n=((pet&&pet.petName)||'').trim(); const t=((pet&&pet.tutorName)||'').trim(); return t ? `${n}__${t}` : n; }
+function petUidRec(r) { const n=((r&&r.petName)||'').trim();  const t=((r&&r.tutor)||'').trim();     return t ? `${n}__${t}` : n; }
+// Migração one-shot: converte chaves legadas "pet__data" → "pet__tutor__data" usando o
+// tutor já gravado em cada registro. Não-ambígua (fatia pelo petName do próprio record)
+// e idempotente (após migrar, não há mais chave legada com tutor para converter).
+function migrarChavesRacaoLegado(data) {
+  let mudou = false;
+  for (const k of Object.keys(data)) {
+    const r = data[k];
+    if (!r || typeof r !== 'object') continue;
+    const nome  = (r.petName || '').trim();
+    const tutor = (r.tutor   || '').trim();
+    if (!nome || !tutor) continue;                 // sem tutor: chave não muda
+    const prefixo = nome + '__';
+    if (!k.startsWith(prefixo)) continue;
+    const resto = k.slice(prefixo.length);         // formato legado → resto = data (YYYY-MM-DD)
+    if (resto.includes('__')) continue;            // já está no formato novo (pet__tutor__data)
+    const novaChave = `${nome}__${tutor}__${resto}`;
+    if (!data[novaChave]) data[novaChave] = r;     // nunca sobrescreve registro novo já existente
+    delete data[k];
+    mudou = true;
+  }
+  return mudou;
+}
 
 // ── Helpers para propagar ração em todos os dias da estadia ──
 function addDays(dateStr, n) {
@@ -1318,23 +1347,23 @@ function addDays(dateStr, n) {
   d.setDate(d.getDate() + n);
   return formatDateKey(d);
 }
-function getGrupoKeys(petName, dataCheckIn, dias) {
+function getGrupoKeys(uid, dataCheckIn, dias) {
   const keys = [];
-  for(let i = 0; i < dias; i++) keys.push(getRacaoKey(petName, addDays(dataCheckIn, i)));
+  for(let i = 0; i < dias; i++) keys.push(getRacaoKey(uid, addDays(dataCheckIn, i)));
   return keys;
 }
-function propagarParaGrupo(data, record, petName) {
+function propagarParaGrupo(data, record, uid) {
   const checkIn = record.dataCheckIn;
   const dias    = record.diasHospedagem;
   if(!checkIn || !dias) return;
-  const keys = getGrupoKeys(petName, checkIn, dias);
+  const keys = getGrupoKeys(uid, checkIn, dias);
   keys.forEach(k => { data[k] = JSON.parse(JSON.stringify(record)); });
 }
-function apagarGrupo(data, record, petName) {
+function apagarGrupo(data, record, uid) {
   const checkIn = record.dataCheckIn;
   const dias    = record.diasHospedagem;
   if(!checkIn || !dias) return;
-  const keys = getGrupoKeys(petName, checkIn, dias);
+  const keys = getGrupoKeys(uid, checkIn, dias);
   keys.forEach(k => { delete data[k]; });
 }
 
@@ -1351,7 +1380,7 @@ function renderRacao() {
   }
 
   list.innerHTML = hospedes.map((pet, i) => {
-    const key    = getRacaoKey(pet.petName, formatDateKey(selectedDate));
+    const key    = getRacaoKey(petUid(pet), formatDateKey(selectedDate));
     const racao  = getRacaoRecord(key) || {};
     const delay  = (i*0.06).toFixed(2);
     const status = racao.status || 'sem-dados';
@@ -1618,7 +1647,7 @@ function salvarRacao(key, petName, tutor) {
   // em_processo mantém
 
   // Propagar para TODOS os dias da estadia
-  propagarParaGrupo(data, existing, petName);
+  propagarParaGrupo(data, existing, petUidRec(existing));
   saveRacaoData(data);
 
   if(existing.status==='pendente') {
@@ -1645,7 +1674,7 @@ function adicionarEntrada(key) {
   if(record.status!=='resolvido') record.status='em_processo';
 
   // Propagar para todos os dias da estadia
-  propagarParaGrupo(data, record, record.petName);
+  propagarParaGrupo(data, record, petUidRec(record));
   saveRacaoData(data);
   renderAll();
 }
@@ -1659,7 +1688,7 @@ function apagarRacao(key) {
     : 'Apagar este registro completamente?\n\nUse apenas para corrigir um lançamento errado.';
   if(!confirm(msg)) return;
   if(record && record.dataCheckIn && record.diasHospedagem) {
-    apagarGrupo(data, record, record.petName);
+    apagarGrupo(data, record, petUidRec(record));
   } else {
     delete data[key];
   }
@@ -1671,7 +1700,7 @@ function reabrirRacao(key) {
   const record = data[key];
   if(!record) return;
   record.status = 'em_processo';
-  propagarParaGrupo(data, record, record.petName);
+  propagarParaGrupo(data, record, petUidRec(record));
   saveRacaoData(data);
   renderAll();
 }
@@ -1691,7 +1720,7 @@ function marcarResolvido(key) {
   if(!Array.isArray(record.entries)) record.entries = [];
   record.entries.push({ acao, assinatura:assin, timestamp:formatDateTime(now), resolucao:true });
   record.status = 'resolvido';
-  propagarParaGrupo(data, record, record.petName);
+  propagarParaGrupo(data, record, petUidRec(record));
   saveRacaoData(data);
   renderAll();
 }
@@ -1731,7 +1760,7 @@ function confirmarAlarme() {
     if(!Array.isArray(record.entries)) record.entries = [];
     record.entries.push({ acao, assinatura:assin, timestamp:formatDateTime(now) });
     record.status = 'em_processo';
-    propagarParaGrupo(data, record, record.petName);
+    propagarParaGrupo(data, record, petUidRec(record));
     saveRacaoData(data);
   }
   document.getElementById('alarm-overlay').classList.remove('active');
@@ -1751,7 +1780,7 @@ function adiarAlarme(minutos) {
       const record = data[snoozedKey];
       if(record && record.status === 'pendente' && !currentAlarm) {
         const hospedes = getHospedesHoje();
-        const pet = hospedes.find(p => getRacaoKey(p.petName, formatDateKey(selectedDate)) === snoozedKey);
+        const pet = hospedes.find(p => getRacaoKey(petUid(p), formatDateKey(selectedDate)) === snoozedKey);
         if(pet) triggerAlarme(snoozedKey, pet.petName, pet.tutorName||'', record.deficit);
       }
     }, minutos * 60 * 1000);
@@ -1787,7 +1816,7 @@ function checkPendingAlarms() {
   const data     = getRacaoData();
   const hospedes = getHospedesHoje();
   for(const pet of hospedes) {
-    const key    = getRacaoKey(pet.petName, formatDateKey(selectedDate));
+    const key    = getRacaoKey(petUid(pet), formatDateKey(selectedDate));
     const record = data[key];
     if(record && record.status==='pendente' && !snoozedKeys.has(key)) {
       triggerAlarme(key, pet.petName, pet.tutorName||'', record.deficit);
@@ -1799,11 +1828,11 @@ function checkPendingAlarms() {
 // ════════════════════════════════════════════════════════════
 //  ABRIR FICHA (clique no nome do pet → calculadora)
 // ════════════════════════════════════════════════════════════
-function abrirFicha(petName, dateKey) {
+function abrirFicha(uid, dateKey) {
   switchTab('racao');
   // Aguarda o DOM atualizar após switch de aba
   requestAnimationFrame(() => {
-    const key = getRacaoKey(petName, dateKey);
+    const key = getRacaoKey(uid, dateKey);
     const card = document.getElementById('racao-card-' + key);
     if(card) {
       card.scrollIntoView({ behavior:'smooth', block:'start' });
