@@ -154,8 +154,8 @@
     font-size:14px;cursor:pointer;margin-bottom:14px;padding:4px 0}
   .back-btn:hover{color:var(--z-gold-deep)}
   .hosp-head{display:flex;align-items:center;gap:16px}
-  .hosp-head .ph{width:148px;height:148px;border-radius:50%;display:grid;place-items:center;
-    background:var(--z-auaulandia);color:#fff;font-weight:800;font-size:58px;font-family:var(--font-marca);flex:0 0 auto;box-shadow:0 8px 22px rgba(35,77,103,.22)}
+  .hosp-head .ph{width:168px;height:168px;border-radius:18px;display:grid;place-items:center;
+    background:var(--z-auaulandia);color:#fff;font-weight:800;font-size:64px;font-family:var(--font-marca);flex:0 0 auto;box-shadow:0 8px 22px rgba(35,77,103,.22)}
   .hosp-tutor{font-size:11px;color:var(--muted);font-weight:600;margin-top:6px}
   .hosp-count{display:flex;align-items:center;gap:14px;background:var(--z-blue);color:var(--z-cream);
     border-radius:var(--radius);padding:16px 22px;margin-bottom:16px;box-shadow:var(--shadow)}
@@ -197,20 +197,19 @@
   @media(max-width:560px){.cad-grid{grid-template-columns:1fr}}
   .cad-in{width:100%;font-family:var(--font-ui);font-size:14px;padding:11px 13px;border:1.5px solid var(--line);border-radius:11px;background:var(--z-cream);color:var(--z-blue)}
   .cad-in:focus{border-color:var(--z-gold);outline:none}
-  .checklist-note{background:rgba(222,180,40,.16);border:1.5px solid var(--z-gold);border-radius:12px;
-    padding:13px 16px;margin-bottom:16px;font-size:14px;font-weight:700;color:var(--z-blue)}
-  .lock-note{display:none;font-size:12px;font-weight:600;color:var(--z-blue-soft);background:var(--z-cream-warm);
-    border:1px solid var(--line);border-radius:9px;padding:8px 12px;margin-bottom:12px}
-  body:not([data-role="gestao"]) #card-cadastro .cad-in,
-  body:not([data-role="gestao"]) #card-cadastro .seg button{pointer-events:none;opacity:.97}
-  body:not([data-role="gestao"]) #card-cadastro .lock-note{display:block}
+  .checklist-note{background:rgba(222,180,40,.22);border:2px solid var(--z-gold);border-radius:14px;
+    padding:16px 18px;margin-bottom:16px;font-size:15.5px;font-weight:700;color:var(--z-blue);
+    display:flex;align-items:center;gap:8px;animation:piscaCheck 1.5s ease-in-out infinite}
+  @keyframes piscaCheck{0%,100%{box-shadow:0 0 0 0 rgba(222,180,40,.6)}50%{box-shadow:0 0 0 8px rgba(222,180,40,0)}}
+  .lock-note{display:none !important}
+  .hf-chipline{font-size:13.5px;font-weight:800;color:var(--z-gold-deep);margin-top:3px}
+  .btn-foto-mini{margin-top:10px;background:var(--z-gold);color:var(--z-blue);border:none;border-radius:9px;padding:7px 14px;font-family:var(--font-ui);font-weight:700;font-size:12.5px;cursor:pointer}
+  body:not([data-role="gestao"]) #card-cadastro, body:not([data-role="gestao"]) .chip-box{display:none}
   body[data-role="plantonista"] .so-foto, body[data-role="tutor"] .so-foto{display:none}
   body[data-role="plantonista"] #card-dia .seg button, body[data-role="plantonista"] #card-dia textarea,
-  body[data-role="tutor"] #card-dia .seg button, body[data-role="tutor"] #card-dia textarea{pointer-events:none}
-  body[data-role="plantonista"] #card-dia .lock-note, body[data-role="tutor"] #card-dia .lock-note{display:block}
+  body[data-role="tutor"] #card-dia .seg button, body[data-role="tutor"] #card-dia textarea,
   body[data-role="monitor"] #card-noite .seg button, body[data-role="monitor"] #card-noite textarea,
   body[data-role="tutor"] #card-noite .seg button, body[data-role="tutor"] #card-noite textarea{pointer-events:none}
-  body[data-role="monitor"] #card-noite .lock-note, body[data-role="tutor"] #card-noite .lock-note{display:block}
   @media(max-width:600px){.datenav #dateLabel{display:none}}
 
   /* ===== ficha ===== */
@@ -497,18 +496,20 @@
       <button class="back-btn" onclick="fecharPlantao()">← Voltar à hospedagem</button>
 
       <div class="card hosp-head">
+        <input id="hfPhotoFile" type="file" accept="image/*" capture="environment" style="display:none" onchange="onPhoto(event)">
         <div class="ph" id="hf-av">T</div>
         <div style="flex:1">
           <div class="hf-nome" id="hf-nome">Thor</div>
-          <div class="hf-meta" id="hf-meta">Pastor Alemão · Tutor: Carlos Lima</div>
-          <div class="hf-estadia" id="hf-estadia">Estadia: 02/06 → 07/06 · <strong>Dia 3 de 5</strong></div>
+          <div class="hf-chipline" id="hf-chipline">Microchip: --</div>
+          <div class="hf-meta" id="hf-meta"></div>
+          <div class="hf-estadia" id="hf-estadia"></div>
+          <button class="btn-foto-mini so-foto" onclick="document.getElementById('hfPhotoFile').click()">📷 Trocar foto</button>
         </div>
         <span class="chip-serv">AuAulândia</span>
       </div>
 
       <div class="card" id="card-cadastro">
-        <div class="lock-note">🔒 Dados de cadastro — somente a Gestão altera</div>
-        <input id="hfPhotoFile" type="file" accept="image/*" capture="environment" style="display:none" onchange="onPhoto(event)">
+        <h2 style="font-size:20px;margin-bottom:10px">Dados de cadastro</h2>
         <div class="cad-grid">
           <div class="field"><label>Data de nascimento</label><input type="date" id="hf-nasc" class="cad-in" oninput="onCad()"></div>
           <div class="field"><label>Idade</label><input type="text" id="hf-idade" class="cad-in" readonly placeholder="—"></div>
@@ -516,8 +517,9 @@
           <div class="field"><label>Sexo</label><div class="seg" id="hf-sexo" data-single><button onclick="pick(this);onCad()">Macho</button><button onclick="pick(this);onCad()">Fêmea</button></div></div>
           <div class="field"><label>Castrado?</label><div class="seg gold" id="hf-cast" data-single><button onclick="pick(this);onCad()">Sim</button><button onclick="pick(this);onCad()">Não</button></div></div>
           <div class="field"><label>Nome do tutor</label><input type="text" id="hf-tutor" class="cad-in" oninput="onCad()" placeholder="Nome do tutor"></div>
+          <div class="field"><label>Nº Microchip · últimos do visor</label><input type="text" id="hf-chip" class="cad-in" maxlength="6" inputmode="numeric" placeholder="000000" oninput="onChip(this.value)"></div>
         </div>
-        <button class="btn btn-gold so-foto" style="margin-top:14px" onclick="document.getElementById('hfPhotoFile').click()">Trocar foto</button>
+        <div class="actions" style="margin-top:14px"><button class="btn btn-primary" onclick="onCad();this.textContent='✅ Cadastro salvo';setTimeout(()=>this.textContent='Salvar cadastro',1500)">Salvar cadastro</button></div>
       </div>
       <datalist id="racasList"></datalist>
 
@@ -537,12 +539,7 @@
           <div class="sub">vem da ficha do peludinho — o plantonista serve esta quantidade</div></div>
       </div>
 
-      <div class="checklist-note">📋 O Check-list de hospedagem é o seu material de trabalho principal. Leia-o!</div>
-
-      <div class="chip-box">
-        <div><div class="chip-lab">Nº do Microchip</div><div style="font-size:10px;opacity:.75;font-weight:600;margin-top:2px">últimos dígitos do visor</div></div>
-        <input id="hf-chip" class="chip-input" maxlength="6" inputmode="numeric" placeholder="000000" oninput="onChip(this.value)">
-      </div>
+      <div class="checklist-note">📋 O Check-list de hospedagem é o seu material de trabalho principal. <strong>Leia-o!</strong></div>
 
       <div class="card" id="card-dia">
         <h2>Relatório do Dia</h2>
@@ -584,6 +581,8 @@
         <div class="hint">Dorme junto com alguém, medicação, manias, cuidado especial.</div>
         <textarea style="width:100%;font-family:var(--font-ui);font-size:14px;padding:12px;border:1.5px solid var(--line);border-radius:11px;background:var(--z-cream);min-height:80px" placeholder="Ex: dorme na cama com a plantonista, toma remédio às 22h"></textarea>
       </div>
+
+      <div class="checklist-note">📋 Antes de assinar: o Check-list de hospedagem é o seu material de trabalho principal. <strong>Leia-o!</strong></div>
 
       <div class="card">
         <h2>Passagem de plantão</h2>
@@ -812,7 +811,7 @@
   function onChip(v){ onCad(); }
   // ---- Cadastro do peludinho (só Gestão edita) ----
   function cadKey(h){ return ((h&&h.nome||'')+'__'+(h&&h.tutor||'')).toLowerCase().replace(/[.#$\[\]\/]/g,'-'); }
-  function calcIdade(v){ if(!v) return ''; const n=new Date(v),h=new Date(); let a=h.getFullYear()-n.getFullYear(),m=h.getMonth()-n.getMonth(); if(h.getDate()<n.getDate())m--; if(m<0){a--;m+=12;} let t=''; if(a>0)t+=a+(a===1?' ano':' anos'); if(m>0)t+=(t?' e ':'')+m+(m===1?' mês':' meses'); return t||'filhote'; }
+  function calcIdade(v){ if(!v) return ''; const n=new Date(v),h=new Date(); let a=h.getFullYear()-n.getFullYear(); const md=h.getMonth()-n.getMonth(); if(md<0||(md===0&&h.getDate()<n.getDate()))a--; return a>=1?(a+(a===1?' ano':' anos')):'menos de 1 ano'; }
   function segVal(id){ const b=document.querySelector('#'+id+' button.on'); return b?b.textContent.trim():''; }
   function setSeg(id,val){ const g=document.getElementById(id); if(!g)return; g.querySelectorAll('button').forEach(b=>{ b.classList.remove('on','t-ok','t-bad','t-warn'); if(val&&b.textContent.trim()===val) b.classList.add('on'); }); }
   function atualizarHeader(cad){
@@ -820,6 +819,7 @@
     const id=calcIdade(cad.nasc); if(id)p.push(id); if(cad.castrado==='Sim')p.push('Castrado');
     const tut=cad.tutor||(currentHosp&&currentHosp.tutor)||'';
     document.getElementById('hf-meta').innerHTML = p.join(' · ') + (tut?(p.length?' · ':'')+'Tutor: '+tut:'');
+    const cl=document.getElementById('hf-chipline'); if(cl) cl.textContent='Microchip: '+(cad.chip||'--');
   }
   function onCad(){
     if(!currentHosp) return;
