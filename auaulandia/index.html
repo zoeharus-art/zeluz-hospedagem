@@ -293,6 +293,11 @@
   table.pel .pel-num{color:var(--muted);font-weight:700}
   .pel-freq{display:inline-block;background:rgba(90,171,181,.16);color:#2b7e88;font-weight:700;font-size:12px;padding:3px 11px;border-radius:999px}
   .pel-obs{display:inline-block;font-size:10px;font-weight:700;color:#a85a2e;background:rgba(224,136,86,.14);padding:2px 7px;border-radius:999px;margin-left:7px}
+  .dias-cell{white-space:nowrap}
+  .dia{display:inline-block;font-size:10px;font-weight:700;color:#b6ad9c;background:#f4f1e8;padding:2px 6px;border-radius:6px;margin-right:2px}
+  .dia.on{color:var(--z-cream);background:var(--z-auaulandia)}
+  .dctab{padding:9px 17px;border-radius:999px;font-size:13.5px;font-weight:600;cursor:pointer;background:var(--z-white);border:1.5px solid var(--line);color:var(--muted)}
+  .dctab.active{background:var(--z-daycare);color:#fff;border-color:var(--z-daycare)}
   .role-note{font-size:12px;background:var(--z-cream-warm);border:1px solid var(--line);border-radius:10px;
     padding:10px 14px;color:var(--z-blue-soft);margin-bottom:18px;display:flex;gap:8px;align-items:center}
 
@@ -333,14 +338,14 @@
   <nav class="nav" id="nav">
     <div class="grp">Operação</div>
     <a class="active" data-v="inicio"><span data-icon="home"></span><span>Início</span></a>
-    <a data-v="ficha"><span data-icon="paw"></span><span>Peludinhos</span></a>
     <a data-v="hoje"><span data-icon="clock"></span><span>Linha do Tempo</span></a>
     <a data-v="adaptacao"><span data-icon="star"></span><span>Adaptação · 1º mês</span></a>
     <div class="grp">Serviços</div>
-    <a data-v="daycare"><span data-icon="sun"></span><span>Day Care</span><span class="soon">em breve</span></a>
+    <a data-v="daycare"><span data-icon="sun"></span><span>Day Care</span></a>
     <a data-v="hospedagem"><span data-icon="moon"></span><span>AuAulândia</span></a>
     <a data-v="agenda"><span data-icon="cal"></span><span>Agenda</span><span class="soon">em breve</span></a>
     <div class="grp">Gestão</div>
+    <a data-v="ficha" class="so-gestao"><span data-icon="paw"></span><span>Peludinhos</span></a>
     <a data-v="pessoas" class="so-gestao"><span data-icon="users"></span><span>Pessoas</span></a>
     <a data-v="sair"><span data-icon="exit"></span><span>Sair</span></a>
   </nav>
@@ -381,19 +386,23 @@
     <div class="pets-grid" id="petsGrid"></div>
   </section>
 
-  <!-- ===== PELUDINHOS (turma) ===== -->
+  <!-- ===== PELUDINHOS (cadastro mestre) ===== -->
   <section class="view" id="v-ficha">
-    <div class="role-note"><span data-icon="paw"></span><span>Turma que vem na <strong>Segunda-feira</strong>. Base do Day Care — nome, raça, quantas vezes por semana vem, tutor e nascimento. Buscar por nome, raça ou tutor.</span></div>
-    <div class="pel-toolbar">
-      <input class="search" id="pelSearch" placeholder="Buscar peludinho, raça ou tutor..." style="width:300px;max-width:100%" oninput="renderPel()">
-      <span class="pel-count" id="pelCount"></span>
+    <div id="pel-lista">
+      <div class="role-note"><span data-icon="paw"></span><span>Todos os peludinhos <strong>matriculados</strong> no Day Care. Clique no nome para ver e editar a ficha completa.</span></div>
+      <div class="pel-toolbar">
+        <input class="search" id="pelSearch" placeholder="Buscar peludinho, raça ou tutor..." style="width:300px;max-width:100%" oninput="renderPel()">
+        <span class="pel-count" id="pelCount"></span>
+        <button class="btn btn-gold" style="margin-left:auto;padding:10px 18px;flex:0 0 auto" onclick="inserirAluno()">+ Inserir novo Aluno</button>
+      </div>
+      <div class="pel-wrap">
+        <table class="pel">
+          <thead><tr><th>Nº</th><th>Peludinho</th><th>Raça</th><th>Vem</th><th>Dias</th><th>Tutor</th><th>Nascimento</th><th>Idade</th></tr></thead>
+          <tbody id="pelBody"></tbody>
+        </table>
+      </div>
     </div>
-    <div class="pel-wrap">
-      <table class="pel">
-        <thead><tr><th>Nº</th><th>Peludinho</th><th>Raça</th><th>Vem</th><th>Tutor</th><th>Nascimento</th><th>Idade</th></tr></thead>
-        <tbody id="pelBody"></tbody>
-      </table>
-    </div>
+    <div id="pel-ficha" style="display:none"></div>
   </section>
 
   <!-- ===== ADAPTAÇÃO 1º MÊS ===== -->
@@ -440,7 +449,23 @@
   </section>
 
   <!-- ===== PLACEHOLDERS ===== -->
-  <section class="view" id="v-daycare"><div class="soon-box"><img class="ic-st" src="assets/stickers/pata.png" alt=""><div class="t">Day Care</div><div class="d">Chamada, almoço e atividades do dia — próxima etapa.</div></div></section>
+  <section class="view" id="v-daycare">
+    <div class="role-note"><span data-icon="sun"></span><span>Chamada do dia por turma. Escolha o dia da semana — aparece quem vem nesse dia.</span></div>
+    <div class="subtabs" id="dcTabs">
+      <div class="dctab active" data-d="seg">Segunda</div>
+      <div class="dctab" data-d="ter">Terça</div>
+      <div class="dctab" data-d="qua">Quarta</div>
+      <div class="dctab" data-d="qui">Quinta</div>
+      <div class="dctab" data-d="sex">Sexta</div>
+    </div>
+    <div class="pel-toolbar"><span class="pel-count" id="dcCount"></span></div>
+    <div class="pel-wrap">
+      <table class="pel">
+        <thead><tr><th>Nº</th><th>Peludinho</th><th>Raça</th><th>Vem</th><th>Tutor</th><th>Idade</th></tr></thead>
+        <tbody id="dcBody"></tbody>
+      </table>
+    </div>
+  </section>
   <section class="view" id="v-hospedagem">
     <!-- LISTA de peludinhos em hospedagem -->
     <div id="hosp-lista">
@@ -672,7 +697,7 @@
   function goToToday(){ selectedDate=new Date(); updateDateLabel(); carregarHospedes(); }
   updateDateLabel();
 
-  const titles={inicio:['Início','Visão geral do dia'],ficha:['Peludinhos','Turma de segunda'],
+  const titles={inicio:['Início','Visão geral do dia'],ficha:['Peludinhos','Matriculados'],
     hoje:['Linha do Tempo','O dia do peludinho'],adaptacao:['Adaptação · 1º mês','Como está se adaptando'],
     daycare:['Day Care','Chamada e atividades'],hospedagem:['AuAulândia','Passagem de plantão'],
     agenda:['Agenda','Frequência e reservas'],pessoas:['Pessoas & Turnos','Equipe e tarefas'],sair:['Sair','']};
@@ -1125,69 +1150,236 @@
   carregarHospedes();
   carregarRacas();
 
-  // ===== PELUDINHOS — turma de Segunda (dados reais Adriana) =====
+  // ===== PELUDINHOS — cadastro mestre (118, consolidado das 5 turmas) =====
   const PELUDINHOS=[
-    {n:'Backer',raca:'Spitz',freq:'2x',tutor:'Fernanda',nasc:'2017-07-20'},
-    {n:'Batata',raca:'Dachshund',freq:'1x',tutor:'Roberta',nasc:'2021-09-07'},
-    {n:'Beau',raca:'Poodle',freq:'3x',tutor:'Rebeca',nasc:'2020-06-07'},
-    {n:'Belinha',raca:'Spitz',freq:'3x',tutor:'Shirley',nasc:'2018-12-26'},
-    {n:'Bilu',raca:'Cavalier',freq:'1x',tutor:'Ana Carolina',nasc:'2024-08-28'},
-    {n:'Bloo',raca:'SRD',freq:'3x',tutor:'Bruna',nasc:'2020-07-06'},
-    {n:'Brad',raca:'Dachshund',freq:'3x',tutor:'Ana Paula',nasc:'2021-01-18'},
-    {n:'Bruce',raca:'Beagle',freq:'3x',tutor:'Vanessa',nasc:'2023-05-05'},
-    {n:'Buh',raca:'Westie',freq:'2x',tutor:'Mariana/Lila',nasc:'2019-02-25'},
-    {n:'Chico',raca:'Shih Tzu',freq:'2x',tutor:'Marcela',nasc:'2019-11-11'},
-    {n:'Chico',raca:'Cavalier',freq:'3x',tutor:'Juliano',nasc:'2025-01-01'},
-    {n:'Coco',raca:'Beagle',freq:'3x',tutor:'Bruna',nasc:'2017-08-11'},
-    {n:'Cookie',raca:'SRD',freq:'2x',tutor:'Raquel',nasc:'2023-05-09'},
-    {n:'Flock',raca:'SRD',freq:'2x',tutor:'Simone',nasc:'2019-06-08'},
-    {n:'Flor',raca:'Shih Tzu',freq:'1x',tutor:'Bruna',nasc:'2017-04-13'},
-    {n:'Freddie',raca:'Spitz',freq:'3x',tutor:'Julia',nasc:'2020-05-15'},
-    {n:'Frida',raca:'SRD',freq:'2x',tutor:'Luciana',nasc:'2020-10-17'},
-    {n:'Gaia',raca:'Beagle',freq:'3x',tutor:'Mariana',nasc:'2022-08-12'},
-    {n:'Hoppy',raca:'Spitz',freq:'2x',tutor:'Gabrielle',nasc:'2022-10-27'},
-    {n:'Jack',raca:'Shih Tzu',freq:'1x',tutor:'Raquel',nasc:'2016-06-05'},
-    {n:'Jasmin',raca:'Shih Tzu',freq:'3x',tutor:'Riva',nasc:'2022-04-27'},
-    {n:'Kira',raca:'Lhasa',freq:'5x',tutor:'Julia',nasc:'2022-03-10'},
-    {n:'Lanna',raca:'SRD',freq:'3x',tutor:'Luiza',nasc:'2020-01-10'},
-    {n:'Lilly',raca:'SRD',freq:'3x',tutor:'Luiza',nasc:'2020-01-10'},
-    {n:'Lolla',raca:'Spitz',freq:'2x',tutor:'Caroline',nasc:'2020-08-14'},
-    {n:'Lua',raca:'Jack Russell',freq:'3x',tutor:'Adilson',nasc:'2021-12-28'},
-    {n:'Luna',raca:'SRD',freq:'3x',tutor:'Riva',nasc:'2025-11-10',obs:'Não castrada'},
-    {n:'Maria Flor',raca:'Shih Tzu',freq:'3x',tutor:'Josiane',nasc:'2021-02-08'},
-    {n:'Maya',raca:'SRD',freq:'2x',tutor:'Marcela',nasc:'2018-05-05'},
-    {n:'Nick Minaj',raca:'SRD',freq:'2x',tutor:'Luiza',nasc:'2024-08-06'},
-    {n:'Nina',raca:'Westie',freq:'2x',tutor:'Mariana/Lila',nasc:'2018-03-15'},
-    {n:'Oliver',raca:'Dachshund',freq:'2x',tutor:'Luiza',nasc:'2021-03-22'},
-    {n:'Otavio',raca:'Spitz',freq:'2x',tutor:'Erika',nasc:'2021-06-06'},
-    {n:'Ozzy',raca:'Spitz',freq:'1x',tutor:'Zuleica',nasc:'2017-05-09'},
-    {n:'Pipoca',raca:'Maltês',freq:'3x',tutor:'João',nasc:'2025-05-18',obs:'Não castrado'},
-    {n:'Rafael',raca:'Dachshund',freq:'3x',tutor:'Renata',nasc:'2022-06-28'},
-    {n:'Rock',raca:'Spitz',freq:'2x',tutor:'Thaisa',nasc:'2024-10-30'},
-    {n:'Romeo',raca:'SRD',freq:'4x',tutor:'Jeanine',nasc:'2022-07-05'},
-    {n:'Sebastião',raca:'SRD',freq:'1x',tutor:'Mariana',nasc:'2018-10-21'},
-    {n:'Theo',raca:'SRD',freq:'5x',tutor:'Renata',nasc:'2025-07-12'},
-    {n:'Toshi',raca:'Shiba Inu',freq:'3x',tutor:'Victor/Zélia',nasc:'2020-02-19'},
-    {n:'Valentina',raca:'Shih Tzu',freq:'3x',tutor:'Marina',nasc:'2020-08-24'},
-    {n:'Zara',raca:'SRD',freq:'2x',tutor:'Milena',nasc:'2023-05-10'}
+    {n:"Amora",raca:"SRD",freq:"1x",tutor:"Cristiane",nasc:"2020-07-01",dias:["qua"]},
+    {n:"Backer",raca:"Spitz",freq:"2x",tutor:"Fernanda",nasc:"2017-07-20",dias:["seg","qua"]},
+    {n:"Bartolomeu",raca:"Buldogue Francês",freq:"2x",tutor:"Isac",nasc:"2023-10-11",dias:["ter","qui"]},
+    {n:"Batata",raca:"Dachshund",freq:"1x",tutor:"Roberta",nasc:"2021-09-07",dias:["seg"]},
+    {n:"Beau",raca:"Poodle",freq:"3x",tutor:"Rebeca",nasc:"2020-06-07",dias:["seg","qua","sex"]},
+    {n:"Becca",raca:"Yorkshire",freq:"2x",tutor:"Jéssica",nasc:"2021-05-17",dias:["qua","sex"]},
+    {n:"Belinha",raca:"Spitz",freq:"3x",tutor:"Shirley",nasc:"2018-12-26",dias:["seg","qua","sex"]},
+    {n:"Billie Joe",raca:"Westie",freq:"2x",tutor:"Cristiano",nasc:"2022-07-11",dias:["ter","qui"]},
+    {n:"Billy",raca:"Shih Tzu",freq:"1x",tutor:"Cristianne",nasc:"2017-02-05",dias:["sex"]},
+    {n:"Billy Paul",raca:"Westie",freq:"2x",tutor:"Juliana",nasc:"2024-12-16",dias:["ter","sex"]},
+    {n:"Bilu",raca:"Cavalier",freq:"1x",tutor:"Ana Carolina",nasc:"2024-08-28",dias:["seg"]},
+    {n:"Bis Leon",raca:"Spitz",freq:"2x",tutor:"Bruno",nasc:"2021-09-10",dias:["ter","sex"]},
+    {n:"Biscoito",raca:"Chihuahua",freq:"2x",tutor:"Loris",nasc:"2022-06-20",dias:["ter","sex"]},
+    {n:"Blink",raca:"Westie",freq:"2x",tutor:"Marina",nasc:"2022-06-15",dias:["ter","qui"]},
+    {n:"Bloo",raca:"SRD",freq:"3x",tutor:"Bruna",nasc:"2020-07-06",dias:["seg","qua","sex"]},
+    {n:"Boris",raca:"Buldogue",freq:"2x",tutor:"Laura",nasc:"2020-08-15",dias:["qua","sex"]},
+    {n:"Boris",raca:"Westie",freq:"1x",tutor:"Valéria",nasc:"2016-12-14",dias:["sex"]},
+    {n:"Brad",raca:"Dachshund",freq:"3x",tutor:"Ana Paula",nasc:"2021-01-18",dias:["seg","qua","sex"]},
+    {n:"Bruce",raca:"SRD",freq:"2x",tutor:"Paola",nasc:"2021-05-10",dias:["ter","qui"]},
+    {n:"Bruce",raca:"Beagle",freq:"3x",tutor:"Vanessa",nasc:"2023-05-05",dias:["seg","qua","sex"]},
+    {n:"Bud",raca:"SRD",freq:"2x",tutor:"Leonardo",nasc:"2018-11-01",dias:["qua"]},
+    {n:"Buddy",raca:"Spitz",freq:"2x",tutor:"Thais",nasc:"2022-07-22",dias:["ter","qui"]},
+    {n:"Buh",raca:"Westie",freq:"2x",tutor:"Mariana/Lila",nasc:"2019-02-25",dias:["seg","qui"]},
+    {n:"Camus",raca:"Maltês",freq:"1x",tutor:"Sophia/João",nasc:"2020-01-23",dias:["qui"]},
+    {n:"Charlotte",raca:"Norfolk",freq:"1x",tutor:"Sabrina",nasc:"2024-08-08",dias:["ter"]},
+    {n:"Chiara",raca:"Westie",freq:"1x",tutor:"Victor",nasc:"2016-03-12",dias:["qua"]},
+    {n:"Chico",raca:"Cavalier",freq:"3x",tutor:"Juliano",nasc:"2025-01-01",dias:["seg","qui","sex"]},
+    {n:"Chico",raca:"Shih Tzu",freq:"2x",tutor:"Marcela",nasc:"2019-11-11",dias:["seg","qui"]},
+    {n:"Cindy",raca:"Westie",freq:"1x",tutor:"Thiana",nasc:"2019-12-22",dias:["qui"]},
+    {n:"Coco",raca:"Beagle",freq:"3x",tutor:"Bruna",nasc:"2017-08-11",dias:["seg","qua","sex"]},
+    {n:"Coco Chanel",raca:"Westie",freq:"2x",tutor:"Juliana",nasc:"2024-06-28",dias:["ter","sex"]},
+    {n:"Cookie",raca:"SRD",freq:"2x",tutor:"Raquel",nasc:"2023-05-09",dias:["seg","sex"]},
+    {n:"Cookie",raca:"Shih Tzu",freq:"1x",tutor:"Yara",nasc:"2016-07-23",dias:["ter","sex"],castrado:"Não"},
+    {n:"Cora",raca:"Galgo",freq:"2x",tutor:"Fabrícia",nasc:"2022-09-20",dias:["ter","qui"]},
+    {n:"Corina",raca:"Galgo",freq:"2x",tutor:"Fabrícia",nasc:"2022-09-20",dias:["ter","qui"]},
+    {n:"Cristal",raca:"Yorkshire",freq:"1x",tutor:"Ana Paula",nasc:"2024-08-17",dias:["ter"]},
+    {n:"Cristal",raca:"Shih Tzu",freq:"1x",tutor:"Yara",nasc:"2017-10-30",dias:["ter","sex"]},
+    {n:"Dólar",raca:"Yorkshire",freq:"1x",tutor:"Cristiane",nasc:"2022-02-02",dias:["qua"]},
+    {n:"Dolly",raca:"Westie",freq:"1x",tutor:"Marguita",nasc:"2015-11-28",dias:["qui"]},
+    {n:"Duda",raca:"Jack Russell",freq:"2x",tutor:"Rhiane",nasc:"2024-07-09",dias:["qua","sex"]},
+    {n:"Elizabeth",raca:"SRD",freq:"2x",tutor:"Felipe",nasc:"2023-11-05",dias:["ter","qui"]},
+    {n:"Farofa",raca:"SRD",freq:"1x",tutor:"Luiza/André",nasc:"2025-03-18",dias:["qui"]},
+    {n:"Fiona",raca:"Buldogue Francês",freq:"2x",tutor:"Isac",nasc:"2017-06-03",dias:["ter","qui"]},
+    {n:"Flock",raca:"SRD",freq:"2x",tutor:"Simone",nasc:"2019-06-08",dias:["seg","qua"]},
+    {n:"Flor",raca:"Shih Tzu",freq:"1x",tutor:"Bruna",nasc:"2017-04-13",dias:["seg"]},
+    {n:"Fofuxo",raca:"Spitz",freq:"2x",tutor:"Isadora",nasc:"2022-08-10",dias:["ter","qui"]},
+    {n:"Francisco",raca:"Spitz",freq:"1x",tutor:"Paula",nasc:"2024-04-15",dias:["qua"]},
+    {n:"Fred",raca:"SRD",freq:"1x",tutor:"Eleonora",nasc:"2020-02-08",dias:["ter"]},
+    {n:"Freddie",raca:"Spitz",freq:"3x",tutor:"Julia",nasc:"2020-05-15",dias:["seg","qua","sex"]},
+    {n:"Frida",raca:"SRD",freq:"2x",tutor:"Luciana",nasc:"2020-10-17",dias:["seg","qua"]},
+    {n:"Gaia",raca:"Beagle",freq:"3x",tutor:"Mariana",nasc:"2022-08-12",dias:["seg","qua","sex"]},
+    {n:"Hana",raca:"Shiba Inu",freq:"1x",tutor:"Alessandra",nasc:"2021-04-08",dias:["qua"]},
+    {n:"Heidi",raca:"Westie",freq:"1x",tutor:"Laura/Ligia",nasc:"2021-06-21",dias:["qui"]},
+    {n:"Hoppy",raca:"Spitz",freq:"2x",tutor:"Gabrielle",nasc:"2022-10-27",dias:["seg","ter","sex"]},
+    {n:"Hulk",raca:"Westie",freq:"2x",tutor:"Carlos/Leticia",nasc:"2024-06-28",dias:["qua","sex"]},
+    {n:"Jack",raca:"Shih Tzu",freq:"1x",tutor:"Raquel",nasc:"2016-06-05",dias:["seg"]},
+    {n:"Jasmin",raca:"Shih Tzu",freq:"3x",tutor:"Riva",nasc:"2022-04-27",dias:["seg","qua","sex"]},
+    {n:"João",raca:"Lhasa Apso",freq:"1x",tutor:"Carina",nasc:"2020-05-01",dias:["qua"]},
+    {n:"Juju",raca:"Lhasa Apso",freq:"1x",tutor:"Carina",nasc:"2020-05-01",dias:["qua"],apelido:"Ana Julia"},
+    {n:"Jujuba",raca:"Westie",freq:"1x",tutor:"Ana Cristina",nasc:"2017-10-18",dias:["sex"]},
+    {n:"Juma",raca:"Westie",freq:"1x",tutor:"Carolina",nasc:"2022-09-25",dias:["sex"]},
+    {n:"Kira",raca:"Lhasa",freq:"5x",tutor:"Julia",nasc:"2022-03-10",dias:["seg","ter","qua","qui","sex"]},
+    {n:"Kira Lee",raca:"Dachshund",freq:"3x",tutor:"Valéria",nasc:"2024-06-26",dias:["ter","qua","sex"],castrado:"Não"},
+    {n:"Kurama",raca:"SRD",freq:"1x",tutor:"Juliana",nasc:"2021-01-06",dias:["qua"]},
+    {n:"Lady",raca:"SRD",freq:"2x",tutor:"Bruno",nasc:"2022-08-18",dias:["ter"]},
+    {n:"Lana",raca:"Cocker",freq:"2x",tutor:"Marcela",nasc:"2023-09-06",dias:["ter","qui"]},
+    {n:"Lanna",raca:"SRD",freq:"3x",tutor:"Luiza",nasc:"2020-01-10",dias:["seg","qua","sex"]},
+    {n:"Lilly",raca:"SRD",freq:"3x",tutor:"Luiza",nasc:"2020-01-10",dias:["seg","qua","sex"]},
+    {n:"Lilo",raca:"Pomsky",freq:"1x",tutor:"Danielle",nasc:"2024-09-10",dias:["ter","sex"]},
+    {n:"Lisa",raca:"Shih Tzu",freq:"1x",tutor:"Enilce",nasc:"2021-09-25",dias:["sex"]},
+    {n:"Lolla",raca:"Spitz",freq:"2x",tutor:"Caroline",nasc:"2020-08-14",dias:["seg","qui"]},
+    {n:"Lua",raca:"Jack Russell",freq:"3x",tutor:"Adilson",nasc:"2021-12-28",dias:["seg","ter","qui"]},
+    {n:"Luke",raca:"Biewer",freq:"1x",tutor:"Valeria",nasc:"2020-09-28",dias:["qui"]},
+    {n:"Luna",raca:"SRD",freq:"3x",tutor:"Riva",nasc:"2025-11-10",dias:["seg","qua","sex"],castrado:"Não"},
+    {n:"Lupin",raca:"Galgo",freq:"2x",tutor:"Junia",nasc:"2025-08-11",dias:["ter","qui"]},
+    {n:"Maria Flor",raca:"Shih Tzu",freq:"3x",tutor:"Josiane",nasc:"2021-02-08",dias:["seg","qua","sex"]},
+    {n:"Marta",raca:"Shih Tzu",freq:"1x",tutor:"Mariana",nasc:"2022-12-01",dias:["qua"]},
+    {n:"Maya",raca:"SRD",freq:"1x",tutor:"Luciana",nasc:"2021-06-10",dias:["qua"]},
+    {n:"Maya",raca:"SRD",freq:"2x",tutor:"Marcela",nasc:"2018-05-05",dias:["seg","qui"]},
+    {n:"Mika",raca:"Spitz",freq:"1x",tutor:"Ivana",nasc:"2020-01-17",dias:["sex"]},
+    {n:"Nick",raca:"Yorkshire",freq:"2x",tutor:"Claudia",nasc:"2022-11-01",dias:["ter","sex"]},
+    {n:"Nick Minaj",raca:"SRD",freq:"2x",tutor:"Luiza",nasc:"2024-08-06",dias:["seg","ter"]},
+    {n:"Nina",raca:"Westie",freq:"2x",tutor:"Mariana/Lila",nasc:"2018-03-15",dias:["seg","qui"]},
+    {n:"Norberto",raca:"Beagle",freq:"3x",tutor:"Marisa/Bernardo",nasc:"2020-11-17",dias:["ter","qua","sex"]},
+    {n:"Oliver",raca:"Dachshund",freq:"2x",tutor:"Luiza",nasc:"2021-03-22",dias:["seg","qui"]},
+    {n:"Olivia",raca:"SRD",freq:"3x",tutor:"Patricia",nasc:"2023-08-15",dias:["ter","qua","sex"]},
+    {n:"Olivia",raca:"Westie",freq:"1x",tutor:"Victor",nasc:"2022-04-14",dias:["qua"]},
+    {n:"Otavio",raca:"Spitz",freq:"2x",tutor:"Erika",nasc:"2021-06-06",dias:["seg","ter"]},
+    {n:"Ozzy",raca:"Lhasa Apso",freq:"2x",tutor:"Márcia",nasc:"2018-09-08",dias:["ter"]},
+    {n:"Ozzy",raca:"Norfolk",freq:"1x",tutor:"Sabrina",nasc:"2020-02-15",dias:["ter"]},
+    {n:"Ozzy",raca:"Spitz",freq:"1x",tutor:"Zuleica",nasc:"2017-05-09",dias:["seg"]},
+    {n:"Paçoca",raca:"Dachshund",freq:"1x",tutor:"Clemencia",nasc:"2024-02-13",dias:["ter"]},
+    {n:"Palito",raca:"Schnauzer",freq:"2x",tutor:"Gabriela",nasc:"2021-11-19",dias:["qua","qui"]},
+    {n:"Peter",raca:"Shetland",freq:"1x",tutor:"Cristianna",nasc:"2020-10-23",dias:["qui"]},
+    {n:"Pipoca",raca:"Maltês",freq:"3x",tutor:"João",nasc:"2025-05-18",dias:["seg","qua","sex"],castrado:"Não"},
+    {n:"Rafael",raca:"Dachshund",freq:"3x",tutor:"Renata",nasc:"2022-06-28",dias:["seg","qua","sex"]},
+    {n:"Ragnar",raca:"Westie",freq:"2x",tutor:"Paola",nasc:"2019-11-10",dias:["ter","sex"]},
+    {n:"Rock",raca:"Spitz",freq:"2x",tutor:"Thaisa",nasc:"2024-10-30",dias:["seg","qua"]},
+    {n:"Romeo",raca:"SRD",freq:"4x",tutor:"Jeanine",nasc:"2022-07-05",dias:["seg","qua","qui","sex"]},
+    {n:"Safira",raca:"Pomsky",freq:"2x",tutor:"Karla",nasc:"2021-11-26",dias:["qui"]},
+    {n:"Salsa",raca:"SRD",freq:"1x",tutor:"Fabricio",nasc:"2020-04-30",dias:["qui"]},
+    {n:"Sebastião",raca:"SRD",freq:"1x",tutor:"Mariana",nasc:"2018-10-21",dias:["seg"]},
+    {n:"Serena",raca:"Spitz",freq:"2x",tutor:"Ana Flávia",nasc:"2022-08-07",dias:["ter","qui"]},
+    {n:"Shiba",raca:"Shiba Inu",freq:"2x",tutor:"Gustavo",nasc:"2019-08-20",dias:["ter","qui"]},
+    {n:"Simba",raca:"Spitz",freq:"2x",tutor:"Thais",nasc:"2023-11-25",dias:["ter","qui"]},
+    {n:"Snow",raca:"Westie",freq:"2x",tutor:"Rachel",nasc:"2016-12-07",dias:["ter","qui"]},
+    {n:"Stella",raca:"SRD",freq:"2x",tutor:"Leonardo",nasc:"2017-11-01",dias:["qua"]},
+    {n:"Tablito",raca:"Chihuahua",freq:"2x",tutor:"Loris",nasc:"2022-10-10",dias:["ter","sex"]},
+    {n:"Theo",raca:"Westie",freq:"1x",tutor:"Marilene",nasc:"2018-06-04",dias:["qui"]},
+    {n:"Theo",raca:"SRD",freq:"5x",tutor:"Renata",nasc:"2025-07-12",dias:["seg","ter","qua","qui","sex"]},
+    {n:"Thor",raca:"Dachshund",freq:"2x",tutor:"Andrea",nasc:"",dias:["qua","sex"]},
+    {n:"Tonico",raca:"Shih Tzu",freq:"1x",tutor:"Maize",nasc:"2021-12-16",dias:["qui"]},
+    {n:"Toshi",raca:"Shiba Inu",freq:"3x",tutor:"Victor/Zélia",nasc:"2020-02-19",dias:["seg","qua","sex"]},
+    {n:"Valentina",raca:"Shih Tzu",freq:"3x",tutor:"Marina",nasc:"2020-08-24",dias:["seg","qua","sex"]},
+    {n:"Valentina",raca:"SRD",freq:"3x",tutor:"Patricia",nasc:"2016-05-01",dias:["ter","qua","sex"]},
+    {n:"Yume",raca:"Shiba Inu",freq:"2x",tutor:"Natercia",nasc:"2022-08-26",dias:["ter","qui"]},
+    {n:"Yumi",raca:"SRD",freq:"2x",tutor:"Paola",nasc:"2021-01-25",dias:["ter","qui"]},
+    {n:"Zara",raca:"SRD",freq:"2x",tutor:"Milena",nasc:"2023-05-10",dias:["seg","sex"]}
   ];
+  const ORDEM_DIAS=['seg','ter','qua','qui','sex'];
+  const DIA_LBL={seg:'Seg',ter:'Ter',qua:'Qua',qui:'Qui',sex:'Sex'};
+  const DIA_FULL={seg:'Segunda',ter:'Terça',qua:'Quarta',qui:'Quinta',sex:'Sexta'};
+  const CORES_PEL=['#E08856','#5AABB5','#5E9B6B','#2E7D8A','#B8A9C9','#234D67'];
+  function corPel(i){ return CORES_PEL[i%CORES_PEL.length]; }
+  function jsNorm(s){ return (s||'').normalize('NFD').replace(/[̀-ͯ]/g,'').toLowerCase(); }
   function fmtNasc(iso){ if(!iso) return '—'; const a=iso.split('-'); return a.length===3?`${a[2]}/${a[1]}/${a[0]}`:iso; }
+  function diasHtml(dias){ return ORDEM_DIAS.map(d=>`<span class="dia${(dias||[]).indexOf(d)>=0?' on':''}">${DIA_LBL[d]}</span>`).join(''); }
+  function escAttr(s){ return (s||'').toString().replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;'); }
+
+  // --- ficha mestre: campos extras editáveis (persistem local + Firebase) ---
+  function pelKey(p){ return ((p.n||'')+'__'+(p.tutor||'')).toLowerCase().replace(/[.#$\[\]\/]/g,'-'); }
+  function pelExtra(p){ try{ return JSON.parse(localStorage.getItem('zeluz_pel_'+pelKey(p))||'{}'); }catch(e){ return {}; } }
+  function setPelExtra(p,patch){
+    const o=pelExtra(p); Object.assign(o,patch); localStorage.setItem('zeluz_pel_'+pelKey(p),JSON.stringify(o));
+    if(DB) DB.ref('daycare/cadastro/'+pelKey(p)).update(patch).catch(()=>{});
+    const s=document.getElementById('pel-saved'); if(s){ s.textContent='✓ Salvo'; setTimeout(()=>{ if(s) s.textContent=''; },1200); }
+  }
+  function segBtnsPel(field,val,opts){ return opts.map(o=>`<button class="${val===o?'on':''}" onclick="pick(this);setPelExtra(pelAtual,{${field}:this.textContent.trim()})">${o}</button>`).join(''); }
+
   function renderPel(){
     const inp=document.getElementById('pelSearch'); if(!inp) return;
-    const q=(inp.value||'').toLowerCase().trim();
-    const list=PELUDINHOS.filter(p=>!q||[p.n,p.raca,p.tutor].join(' ').toLowerCase().indexOf(q)>=0);
-    document.getElementById('pelCount').textContent=`${list.length} peludinho${list.length===1?'':'s'} · turma de segunda`;
-    document.getElementById('pelBody').innerHTML=list.map((p,i)=>`<tr>
-      <td class="pel-num">${i+1}</td>
-      <td><span class="pel-nome">${p.n}</span>${p.obs?`<span class="pel-obs">${p.obs}</span>`:''}</td>
+    const q=jsNorm(inp.value);
+    const list=PELUDINHOS.map((p,i)=>({p,i})).filter(o=>!q||jsNorm([o.p.n,o.p.raca,o.p.tutor].join(' ')).indexOf(q)>=0);
+    document.getElementById('pelCount').textContent=`${PELUDINHOS.length} matriculados`+(q?` · ${list.length} na busca`:'');
+    document.getElementById('pelBody').innerHTML=list.map((o,row)=>{ const p=o.p; return `<tr onclick="abrirPeludinho(${o.i})" style="cursor:pointer">
+      <td class="pel-num">${row+1}</td>
+      <td><span class="pel-nome">${p.n}</span>${p.apelido?` <span class="pel-obs">${p.apelido}</span>`:''}${p.castrado==='Não'?' <span class="pel-obs">Não castrado</span>':''}</td>
       <td>${p.raca}</td>
       <td><span class="pel-freq">${p.freq}</span></td>
+      <td class="dias-cell">${diasHtml(p.dias)}</td>
       <td>${p.tutor}</td>
       <td>${fmtNasc(p.nasc)}</td>
       <td>${calcIdade(p.nasc)||'—'}</td>
-    </tr>`).join('');
+    </tr>`; }).join('');
+  }
+
+  let pelAtual=null;
+  function abrirPeludinho(i){
+    const p=PELUDINHOS[i]; pelAtual=p; const ex=pelExtra(p);
+    const idade=calcIdade(p.nasc);
+    document.getElementById('pel-lista').style.display='none';
+    const f=document.getElementById('pel-ficha'); f.style.display='block';
+    const sexo=ex.sexo||'', castr=ex.castrado||p.castrado||'';
+    const metaTop=[p.raca, sexo, idade].filter(Boolean).join(' · ');
+    f.innerHTML=`
+      <button class="back-btn" onclick="voltarPel()">← Voltar aos peludinhos</button>
+      <div class="card hosp-head">
+        <div class="ph" style="background:${corPel(i)}">${(p.n[0]||'?')}</div>
+        <div style="flex:1">
+          <div class="hf-nome">${p.n}${p.apelido?` <span style="font-size:14px;color:var(--muted)">(${p.apelido})</span>`:''}</div>
+          <div class="hf-meta">${metaTop}${castr==='Não'?' · <strong style="color:var(--z-daycare)">Não castrado</strong>':''}</div>
+          <div class="hf-estadia">Tutor: ${p.tutor}</div>
+          <div style="margin-top:9px">${diasHtml(p.dias)} <span class="pel-freq" style="margin-left:6px">${p.freq}/semana</span></div>
+        </div>
+        <span class="chip-serv" style="background:rgba(224,136,86,.16);color:#a85a2e">Day Care</span>
+      </div>
+      <div class="card">
+        <h2 style="font-size:20px">Identificação</h2>
+        <div class="hint">Os campos em branco você preenche aqui — salva sozinho em todos os aparelhos.</div>
+        <div class="cad-grid">
+          <div class="field"><label>Raça</label><input class="cad-in" value="${escAttr(p.raca)}" onchange="setPelExtra(pelAtual,{raca:this.value})"></div>
+          <div class="field"><label>Data de nascimento</label><input type="date" class="cad-in" value="${p.nasc||''}" onchange="setPelExtra(pelAtual,{nasc:this.value})"></div>
+          <div class="field"><label>Sexo</label><div class="seg" data-single>${segBtnsPel('sexo',sexo,['Macho','Fêmea'])}</div></div>
+          <div class="field"><label>Castrado?</label><div class="seg gold" data-single>${segBtnsPel('castrado',castr,['Sim','Não'])}</div></div>
+          <div class="field"><label>Tutor(es)</label><input class="cad-in" value="${escAttr(p.tutor)}" onchange="setPelExtra(pelAtual,{tutor:this.value})"></div>
+          <div class="field"><label>Telefone / WhatsApp</label><input class="cad-in" value="${escAttr(ex.tel||'')}" placeholder="(31) 9____-____" onchange="setPelExtra(pelAtual,{tel:this.value})"></div>
+          <div class="field"><label>Bairro</label><input class="cad-in" value="${escAttr(ex.bairro||'')}" placeholder="Bairro" onchange="setPelExtra(pelAtual,{bairro:this.value})"></div>
+          <div class="field"><label>Quem indicou</label><input class="cad-in" value="${escAttr(ex.indicou||'')}" placeholder="Indicação / como conheceu" onchange="setPelExtra(pelAtual,{indicou:this.value})"></div>
+          <div class="field"><label>Data de matrícula</label><input type="date" class="cad-in" value="${ex.matricula||''}" onchange="setPelExtra(pelAtual,{matricula:this.value})"></div>
+          <div class="field"><label>Frequência</label><input class="cad-in" value="${escAttr(p.freq)} por semana" readonly></div>
+        </div>
+        <div class="field" style="margin-top:6px"><label>Observações / cuidados (alergia, medicação, restrição alimentar, manias)</label><textarea class="cad-in" style="min-height:74px" placeholder="Anote aqui tudo que o monitor precisa saber" onchange="setPelExtra(pelAtual,{obs:this.value})">${escAttr(ex.obs||'')}</textarea></div>
+        <div id="pel-saved" style="font-size:12px;color:var(--crm-ok);font-weight:700;margin-top:8px"></div>
+      </div>`;
+    window.scrollTo({top:0,behavior:'smooth'});
+  }
+  function voltarPel(){ document.getElementById('pel-ficha').style.display='none'; document.getElementById('pel-lista').style.display='block'; }
+  function inserirAluno(){
+    const nome=(prompt('Nome do novo Aluno (peludinho):')||'').trim(); if(!nome) return;
+    const tutor=(prompt('Nome do tutor:')||'').trim();
+    const raca=(prompt('Raça:')||'').trim();
+    PELUDINHOS.push({n:nome,raca:raca,freq:'1x',tutor:tutor,nasc:'',dias:[]});
+    PELUDINHOS.sort((a,b)=>jsNorm(a.n).localeCompare(jsNorm(b.n))||jsNorm(a.tutor).localeCompare(jsNorm(b.tutor)));
+    renderPel();
+    alert('Aluno adicionado. Clique no nome para completar a ficha (nascimento, dias, telefone...).');
   }
   renderPel();
+
+  // ===== DAY CARE — chamada por turma (filtra pelos dias) =====
+  let dcDia='seg';
+  function renderDaycare(){
+    const body=document.getElementById('dcBody'); if(!body) return;
+    const list=PELUDINHOS.filter(p=>(p.dias||[]).indexOf(dcDia)>=0).sort((a,b)=>jsNorm(a.n).localeCompare(jsNorm(b.n)));
+    document.getElementById('dcCount').textContent=`${list.length} peludinhos na turma de ${DIA_FULL[dcDia]}`;
+    body.innerHTML=list.map((p,i)=>`<tr>
+      <td class="pel-num">${i+1}</td>
+      <td><span class="pel-nome">${p.n}</span>${p.castrado==='Não'?' <span class="pel-obs">Não castrado</span>':''}</td>
+      <td>${p.raca}</td>
+      <td><span class="pel-freq">${p.freq}</span></td>
+      <td>${p.tutor}</td>
+      <td>${calcIdade(p.nasc)||'—'}</td>
+    </tr>`).join('');
+  }
+  document.querySelectorAll('.dctab').forEach(t=>t.onclick=()=>{
+    document.querySelectorAll('.dctab').forEach(x=>x.classList.remove('active'));
+    t.classList.add('active'); dcDia=t.dataset.d; renderDaycare();
+  });
+  renderDaycare();
 </script>
 </body>
 </html>
