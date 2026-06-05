@@ -1,0 +1,247 @@
+/* ============================================================
+   ZÊLUZ DESIGN SYSTEM v8.1 — TOKENS
+   Fonte única de verdade. Todos os arquivos do DS importam isto.
+   Não duplicar valores. Mudança aqui = propaga em tudo.
+
+   CONSTITUIÇÃO CROMÁTICA — 3 CAMADAS (cada cor = 1 camada = 1 papel):
+     1. MARCA (Hiato)      → identidade: gold, blue, cream, neutros, black
+     2. ECOSSISTEMA        → serviço: emporio, spa, vetcare, daycare, auaulandia
+     3. CRM / SEMÁFORO     → status: --crm-critico/atencao/ok/info (vívido universal)
+   Ref. visual: docs/zeluz/branding/carta-de-cores-zeluz.html
+   Spec: docs/zeluz/branding/ZELUZ-DESIGN.md
+   v8.1 (02/jun/2026): camada CRM adicionada + de-colisão serviço↔status.
+   ============================================================ */
+
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&family=Cormorant+Garamond:ital,wght@0,400;0,600;1,400&family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap');
+
+:root {
+  /* ─── CORES INSTITUCIONAIS ─────────────────────────────── */
+  --z-gold:        #DEB428;  /* PRINCIPAL — uso pontual, nunca chapado */
+  --z-gold-light:  #E5C353;
+  --z-gold-deep:   #B8961F;
+  --z-blue:        #234D67;  /* Complementar — âncora institucional */
+  --z-blue-deep:   #1A3A4F;
+  --z-blue-soft:   #3A6A85;
+  --z-cream:       #FFFDF6;  /* Fundo principal — quente, não branco puro */
+  --z-cream-warm:  #F9F5EC;
+  --z-white:       #FFFFFF;
+  --z-black:       #1D1E1C;
+
+  /* ─── WASHES (transparências leves) ─────────────────────
+     Azul/dourado em wash = fundo leve, NUNCA chapado */
+  --z-gold-wash-03:  rgba(222,180,40,.03);
+  --z-gold-wash-05:  rgba(222,180,40,.05);
+  --z-gold-wash-08:  rgba(222,180,40,.08);
+  --z-gold-wash-12:  rgba(222,180,40,.12);
+  --z-gold-wash-20:  rgba(222,180,40,.20);
+  --z-gold-wash-30:  rgba(222,180,40,.30);
+
+  --z-blue-wash-03:  rgba(35,77,103,.03);
+  --z-blue-wash-06:  rgba(35,77,103,.06);
+  --z-blue-wash-10:  rgba(35,77,103,.10);
+  --z-blue-wash-15:  rgba(35,77,103,.15);
+  --z-blue-wash-25:  rgba(35,77,103,.25);
+  --z-blue-wash-60:  rgba(35,77,103,.60);
+
+  /* ─── NEUTRAS ────────────────────────────────────────── */
+  --z-gray-50:   #FAFAF8;
+  --z-gray-100:  #F7F7F5;
+  --z-gray-200:  #EEEDE9;
+  --z-gray-300:  #DDDCD8;
+  --z-gray-400:  #B5B4B0;
+  --z-gray-500:  #8A8985;
+  --z-gray-600:  #6B6A66;
+  --z-gray-700:  #4A4946;
+  --z-gray-800:  #2E2D2B;
+  --z-gray-900:  #1D1E1C;
+
+  /* ═══ CAMADA 3 · CRM / SEMÁFORO (STATUS — vívido universal) ═══ [v8.1]
+     Papel: SINALIZAR status. Cores difundidas na mente humana (semáforo).
+     Uso EXCLUSIVO: status em CRM, dashboards, alertas. NUNCA decoração de marca.
+     Ref: docs/zeluz/branding/carta-de-cores-zeluz.html */
+  --crm-critico:       #C0392B;            /* vermelho — crítico/urgente: pare e aja */
+  --crm-critico-soft:  rgba(192,57,43,.12);
+  --crm-critico-text:  #9B2C2C;
+  --crm-atencao:       #F1C40F;            /* amarelo-sinal — atenção/pendência (texto SEMPRE escuro) */
+  --crm-atencao-soft:  rgba(241,196,15,.18);
+  --crm-atencao-text:  #8A6D00;
+  --crm-ok:            #27AE60;            /* verde — ok/sucesso/em dia */
+  --crm-ok-soft:       rgba(39,174,96,.12);
+  --crm-ok-text:       #1E8449;
+  --crm-info:          #2980B9;            /* azul-sinal — info/em andamento (≠ azul-marca, ≠ vetcare) */
+  --crm-info-soft:     rgba(41,128,185,.12);
+  --crm-info-text:     #1F618D;
+
+  /* ─── FUNCIONAIS (status) — ALIASES → apontam para o semáforo CRM ───
+     Compatibilidade: peça que usa var(--z-success) etc. passa a render
+     o semáforo vívido automaticamente. */
+  --z-success:        var(--crm-ok);
+  --z-success-light:  var(--crm-ok-soft);
+  --z-success-deep:   var(--crm-ok-text);
+  --z-error:          var(--crm-critico);
+  --z-error-light:    var(--crm-critico-soft);
+  --z-error-deep:     var(--crm-critico-text);
+  --z-warning:        var(--crm-atencao);
+  --z-warning-light:  var(--crm-atencao-soft);
+  --z-warning-deep:   var(--crm-atencao-text);
+  --z-info:           var(--crm-info);
+  --z-info-light:     var(--crm-info-soft);
+  --z-info-deep:      var(--crm-info-text);
+
+  /* ═══ CAMADA 2 · ECOSSISTEMA (SERVIÇO — neurociência) ═══
+     Papel: IDENTIFICAR serviço. Tags, seções, ícones. NUNCA status.
+     De-colisão v8.1: --z-emporio (#5E9B6B) ≠ --z-success (#27AE60);
+                      --z-vetcare (#2E7D8A) ≠ --z-info (#2980B9). */
+  --z-emporio:     #5E9B6B;  /* Empório (verde — natural) */
+  --z-spa:         #B8A9C9;  /* SPA (lavanda — cuidado) */
+  --z-vetcare:     #2E7D8A;  /* VetCare (azul-petróleo — saúde) */
+  --z-daycare:     #E08856;  /* Daycare (coral afetivo — energia) */
+  --z-auaulandia:  #5AABB5;  /* Auaulândia (turquesa — alegria) */
+
+  /* ─── PALETA CATEGÓRICA P/ GRÁFICOS (8 séries) ────────
+     Use em ordem para múltiplas séries.
+     1ª série = sempre dourado (cor principal Zêluz). */
+  --chart-1:  #DEB428;  /* dourado Zêluz */
+  --chart-2:  #234D67;  /* azul Zêluz */
+  --chart-3:  #5E9B6B;  /* verde empório */
+  --chart-4:  #E08856;  /* coral daycare */
+  --chart-5:  #B8A9C9;  /* lavanda spa */
+  --chart-6:  #5AABB5;  /* turquesa */
+  --chart-7:  #C44545;  /* vermelho */
+  --chart-8:  #6B6A66;  /* cinza neutro */
+
+  /* ─── SOMBRAS (base azul para integração com paleta) ── */
+  --shadow-xs: 0 1px 2px rgba(35,77,103,.04);
+  --shadow-sm: 0 1px 3px rgba(35,77,103,.06), 0 1px 2px rgba(35,77,103,.04);
+  --shadow-md: 0 4px 12px rgba(35,77,103,.08), 0 2px 4px rgba(35,77,103,.04);
+  --shadow-lg: 0 8px 24px rgba(35,77,103,.10), 0 4px 8px rgba(35,77,103,.04);
+  --shadow-xl: 0 16px 48px rgba(35,77,103,.12), 0 8px 16px rgba(35,77,103,.06);
+  --shadow-2xl: 0 24px 72px rgba(35,77,103,.14), 0 12px 24px rgba(35,77,103,.08);
+  --shadow-glow-gold: 0 0 0 4px rgba(222,180,40,.15);
+  --shadow-glow-blue: 0 0 0 4px rgba(35,77,103,.15);
+
+  /* ─── BORDER RADIUS ──────────────────────────────────── */
+  --radius-xs:   4px;
+  --radius-sm:   8px;
+  --radius-md:   12px;
+  --radius-lg:   16px;
+  --radius-xl:   24px;
+  --radius-2xl:  32px;
+  --radius-full: 999px;
+
+  /* ─── ESPAÇAMENTO (escala 4/8) ──────────────────────── */
+  --space-0:   0;
+  --space-1:   4px;
+  --space-2:   8px;
+  --space-3:   12px;
+  --space-4:   16px;
+  --space-5:   20px;
+  --space-6:   24px;
+  --space-8:   32px;
+  --space-10:  40px;
+  --space-12:  48px;
+  --space-16:  64px;
+  --space-20:  80px;
+  --space-24:  96px;
+  --space-32:  128px;
+
+  /* ─── TIPOGRAFIA — FAMÍLIAS ─────────────────────────── */
+  --font-marketing: 'Poppins', -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+  --font-ui:        'Inter', -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+  --font-accent:    'Cormorant Garamond', Georgia, serif;
+  --font-mono:      'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+  --z-mono:         var(--font-mono);  /* alias — usado em zeluz-social */
+
+  /* ─── ESCALA TIPOGRÁFICA ─────────────────────────────── */
+  --text-xs:    11px;
+  --text-sm:    13px;
+  --text-base:  14px;
+  --text-md:    15px;
+  --text-lg:    17px;
+  --text-xl:    20px;
+  --text-2xl:   24px;
+  --text-3xl:   30px;
+  --text-4xl:   36px;
+  --text-5xl:   48px;
+  --text-6xl:   60px;
+  --text-7xl:   72px;
+  --text-8xl:   96px;
+
+  /* ─── FONT WEIGHTS ───────────────────────────────────── */
+  --weight-light:    300;
+  --weight-regular:  400;
+  --weight-medium:   500;
+  --weight-semibold: 600;
+  --weight-bold:     700;
+
+  /* ─── LINE HEIGHTS ───────────────────────────────────── */
+  --leading-none:    1;
+  --leading-tight:   1.2;
+  --leading-snug:    1.35;
+  --leading-normal:  1.5;
+  --leading-relaxed: 1.6;
+  --leading-loose:   1.75;
+
+  /* ─── LETTER SPACING ─────────────────────────────────── */
+  --tracking-tight:  -0.02em;
+  --tracking-snug:   -0.01em;
+  --tracking-normal: 0;
+  --tracking-wide:   0.04em;
+  --tracking-wider:  0.08em;
+  --tracking-widest: 0.12em;
+
+  /* ─── MOTION (durações + easing) ─────────────────────── */
+  --duration-fast:    150ms;
+  --duration-normal:  220ms;
+  --duration-slow:    320ms;
+  --duration-slower:  480ms;
+  --ease-out:    cubic-bezier(0.16, 1, 0.3, 1);          /* Apple-like — saída suave */
+  --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);      /* leve overshoot pra delight */
+  --ease-linear: linear;
+
+  /* ─── Z-INDEX (camadas) ──────────────────────────────── */
+  --z-base:     1;
+  --z-elevated: 10;
+  --z-sticky:   100;
+  --z-overlay:  500;
+  --z-modal:    1000;
+  --z-popover:  1500;
+  --z-toast:    2000;
+  --z-tooltip:  3000;
+
+  /* ─── BREAKPOINTS (referência — não usar como var) ──── */
+  /* mobile:  < 480px
+     tablet:  481-768px
+     desktop: 769-1024px
+     wide:    1025-1280px
+     ultra:   > 1281px */
+
+  /* ─── LAYOUT ─────────────────────────────────────────── */
+  --container-max:    1280px;
+  --container-narrow: 960px;
+  --sidebar-width:    260px;
+  --sidebar-collapsed: 80px;
+  --topbar-height:    64px;
+}
+
+/* ─── DARK MODE (opcional — futuro) ────────────────────── */
+@media (prefers-color-scheme: dark) {
+  /* Mantém light por enquanto. Adriana decidir se quer dark mode. */
+}
+
+/* ─── RESET ─────────────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { font-size: 16px; -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; scroll-behavior: smooth; }
+body {
+  font-family: var(--font-ui);
+  font-size: var(--text-base);
+  font-weight: var(--weight-regular);
+  line-height: var(--leading-normal);
+  color: var(--z-black);
+  background: var(--z-cream);
+}
+a { color: inherit; text-decoration: none; }
+button { background: none; border: none; cursor: pointer; font-family: inherit; }
+img, svg { display: block; max-width: 100%; }
+input, textarea, select { font-family: inherit; font-size: inherit; }

@@ -1,0 +1,800 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Zêluz · Sistema DayCare</title>
+<!-- RASCUNHO VISUAL (shell do app) para aprovação de Adriana. DS v8.1. Sem backend ainda. -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Poppins:wght@600;700;800&family=Cormorant+Garamond:wght@600;700&display=swap" rel="stylesheet">
+<link rel="icon" href="assets/simbolo.png">
+<!-- Tokens oficiais do Design System Zêluz v8 (fonte de verdade) -->
+<link rel="stylesheet" href="assets/tokens-ds-v8.css">
+<style>
+  :root{
+    /* MARCA */
+    --z-gold:#DEB428; --z-gold-light:#E5C353; --z-gold-deep:#B8961F;
+    --z-blue:#234D67; --z-blue-deep:#1A3A4F; --z-blue-soft:#3A6A85;
+    --z-cream:#FFFDF6; --z-cream-warm:#F9F5EC; --z-white:#FFFFFF;
+    /* ECOSSISTEMA */
+    --z-daycare:#E08856; --z-auaulandia:#5AABB5; --z-emporio:#5E9B6B;
+    --z-spa:#B8A9C9; --z-vetcare:#2E7D8A;
+    /* STATUS */
+    --crm-critico:#C0392B; --crm-atencao:#F1C40F; --crm-atencao-text:#8A6D00;
+    --crm-ok:#27AE60; --crm-info:#2980B9;
+    /* base */
+    --line:#e7e0d2; --muted:#7c8a93;
+    --font-ui:'Inter',sans-serif; --font-marca:'Poppins',sans-serif; --font-accent:'Cormorant Garamond',serif;
+    --radius:14px; --shadow:0 4px 18px rgba(35,77,103,.08); --shadow-lg:0 12px 34px rgba(35,77,103,.16);
+    --sidebar:268px;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:var(--font-ui);background:var(--z-cream);color:var(--z-blue-deep);-webkit-font-smoothing:antialiased}
+
+  /* ===== LOGIN ===== */
+  .login-screen{position:fixed;inset:0;z-index:200;display:flex;align-items:center;justify-content:center;
+    background:radial-gradient(120% 80% at 50% 0%,rgba(222,180,40,.12),transparent 55%),linear-gradient(165deg,#2A597A,#1A3A4F);padding:24px}
+  .login-box{background:var(--z-cream);border-radius:22px;padding:34px 30px;width:100%;max-width:360px;text-align:center;
+    box-shadow:0 24px 70px rgba(0,0,0,.35)}
+  .login-logo{width:160px;max-width:70%;height:auto;margin:0 auto 4px;display:block}
+  .login-sub{font-size:11px;letter-spacing:1.4px;text-transform:uppercase;color:var(--muted);font-weight:600;margin-bottom:22px}
+  .login-title{font-size:16px;font-weight:700;color:var(--z-blue);margin-bottom:16px}
+  #loginPwd{width:100%;text-align:center;font-size:26px;letter-spacing:8px;font-family:var(--font-ui);font-weight:700;
+    color:var(--z-blue);background:var(--z-white);border:2px solid var(--line);border-radius:14px;padding:14px;outline:none}
+  #loginPwd:focus{border-color:var(--z-gold)}
+  .login-btn{width:100%;margin-top:14px;background:var(--z-blue);color:var(--z-cream);border:none;border-radius:14px;
+    padding:14px;font-family:var(--font-ui);font-weight:700;font-size:15px;cursor:pointer}
+  .login-btn:hover{background:#1b3d52}
+  .login-err{min-height:20px;margin-top:10px;font-size:13px;font-weight:600;color:var(--crm-critico)}
+  .who-user{display:flex;align-items:center;justify-content:space-between;gap:8px}
+  .who-user #whoName{font-size:13px;font-weight:700}
+  .who-sair{background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.2);color:var(--z-cream);
+    font-family:var(--font-ui);font-weight:600;font-size:12px;padding:6px 12px;border-radius:8px;cursor:pointer}
+  .who-sair:hover{background:rgba(255,255,255,.2)}
+
+  /* ===================== SIDEBAR ===================== */
+  .sidebar{
+    position:fixed;top:0;left:0;bottom:0;width:var(--sidebar);
+    background:
+      radial-gradient(120% 60% at 20% 0%, rgba(222,180,40,.10), transparent 60%),
+      radial-gradient(90% 50% at 100% 100%, rgba(58,106,133,.45), transparent 55%),
+      linear-gradient(165deg,#2A597A 0%,#234D67 45%,#1A3A4F 100%);
+    color:var(--z-cream);display:flex;flex-direction:column;z-index:50;
+    transition:transform .25s ease;overflow:hidden;
+  }
+  /* watermark do símbolo — tira o "chapado" sem mudar a cor do DS */
+  .sidebar::after{
+    content:'';position:absolute;right:-34px;bottom:-26px;width:200px;height:200px;
+    background:url('assets/simbolo.png') no-repeat center/contain;
+    opacity:.07;pointer-events:none;filter:brightness(0) invert(1);
+  }
+  .brand{display:flex;align-items:center;justify-content:center;padding:26px 16px 10px;position:relative;z-index:1}
+  .brand-logo{width:210px;max-width:92%;height:auto;display:block;filter:drop-shadow(0 2px 8px rgba(0,0,0,.25))}
+  .brand-sub{text-align:center;font-size:10.5px;letter-spacing:1.5px;text-transform:uppercase;
+    opacity:.7;font-weight:600;margin:0 0 8px}
+
+  .brand-sub{position:relative;z-index:1}
+  .nav{flex:1;overflow-y:auto;padding:8px 12px;scrollbar-width:thin;position:relative;z-index:1}
+  .who{position:relative;z-index:1}
+  .nav .grp{font-size:10px;text-transform:uppercase;letter-spacing:1.2px;opacity:.5;font-weight:700;margin:16px 12px 7px}
+  .nav a{
+    display:flex;align-items:center;gap:12px;padding:11px 13px;border-radius:11px;
+    color:var(--z-cream);text-decoration:none;font-size:14px;font-weight:500;
+    opacity:.82;transition:.16s;cursor:pointer;margin-bottom:2px;
+  }
+  .nav a:hover{background:rgba(255,255,255,.07);opacity:1}
+  .nav a.active{background:var(--z-gold);color:var(--z-blue);opacity:1;font-weight:700;box-shadow:var(--shadow)}
+  .nav a svg{width:19px;height:19px;flex:0 0 auto}
+  .nav a .soon{margin-left:auto;font-size:9px;background:rgba(255,255,255,.14);padding:2px 7px;border-radius:999px;font-weight:600;letter-spacing:.3px}
+
+  .who{padding:13px 16px;border-top:1px solid rgba(255,255,255,.1)}
+  .who .lab{font-size:10px;opacity:.6;font-weight:600;text-transform:uppercase;letter-spacing:.6px;margin-bottom:6px}
+  .who select{
+    width:100%;font-family:var(--font-ui);font-size:13px;font-weight:600;
+    background:rgba(255,255,255,.1);color:var(--z-cream);border:1px solid rgba(255,255,255,.18);
+    border-radius:9px;padding:8px 10px;cursor:pointer;
+  }
+  .who select option{color:var(--z-blue)}
+
+  /* ===================== TOPO MOBILE ===================== */
+  .mobtop{display:none;position:sticky;top:0;z-index:40;background:var(--z-blue);color:var(--z-cream);
+    padding:12px 16px;align-items:center;gap:12px}
+  .mobtop button{background:transparent;border:none;color:var(--z-cream);font-size:22px;cursor:pointer}
+  .mobtop .nm{font-family:var(--font-marca);font-weight:800;font-size:17px}
+
+  /* ===================== MAIN ===================== */
+  .main{margin-left:var(--sidebar);min-height:100vh}
+  .head{
+    background:var(--z-cream-warm);border-bottom:1px solid var(--line);
+    padding:18px 26px;display:flex;align-items:center;gap:16px;position:sticky;top:0;z-index:20;
+  }
+  .head h1{font-size:21px;font-weight:700;color:var(--z-blue);flex:1}
+  .head h1 small{display:block;font-size:12px;font-weight:500;color:var(--muted);margin-top:2px}
+  .search{
+    background:var(--z-white);border:1.5px solid var(--line);border-radius:999px;
+    padding:9px 16px;font-family:var(--font-ui);font-size:13.5px;color:var(--z-blue);width:230px;outline:none;
+  }
+  .search:focus{border-color:var(--z-gold)}
+  .av{width:40px;height:40px;border-radius:50%;background:var(--z-blue);color:var(--z-cream);
+    display:grid;place-items:center;font-weight:700;font-size:15px;flex:0 0 auto}
+
+  .view{padding:26px;display:none;max-width:1100px}
+  .view.active{display:block;animation:fade .25s ease}
+  @keyframes fade{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+
+  /* ===== cards peludinhos (Início) ===== */
+  .pets-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(165px,1fr));gap:16px}
+  .pet{
+    background:var(--z-white);border:1px solid var(--line);border-radius:var(--radius);
+    padding:18px 14px;text-align:center;cursor:pointer;transition:.18s;box-shadow:var(--shadow);
+  }
+  .pet:hover{transform:translateY(-3px);box-shadow:var(--shadow-lg)}
+  .pet .ph{width:74px;height:74px;border-radius:50%;margin:0 auto 11px;display:grid;place-items:center;
+    font-weight:800;font-size:26px;color:var(--z-white);font-family:var(--font-marca)}
+  .pet .nm{font-weight:700;font-size:15px;color:var(--z-blue)}
+  .pet .br{font-size:11.5px;color:var(--muted);margin-top:2px}
+  .pet .tag{display:inline-block;margin-top:9px;font-size:10px;font-weight:700;padding:3px 10px;border-radius:999px;
+    background:rgba(224,136,86,.14);color:#a85a2e;letter-spacing:.3px}
+  .pet.add{display:grid;place-items:center;border:2px dashed var(--z-gold);background:var(--z-gold-light)}
+  .pet.add:hover{background:var(--z-gold)}
+  .pet.add .plus{font-size:30px;color:var(--z-gold-deep);font-weight:300}
+  .pet.add .t{font-size:13px;font-weight:700;color:var(--z-blue-soft);margin-top:6px}
+
+  .kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:14px;margin-bottom:24px}
+  .kpi{background:var(--z-white);border:1px solid var(--line);border-radius:var(--radius);padding:14px 16px;box-shadow:var(--shadow);display:flex;align-items:center;gap:12px}
+  .kpi-st{width:46px;height:46px;object-fit:contain;flex:0 0 auto}
+  .kpi .v{font-size:27px;font-weight:800;color:var(--z-blue);font-family:var(--font-marca);line-height:1}
+  .kpi .l{font-size:12px;color:var(--muted);font-weight:600;margin-top:3px}
+  .kpi .v.coral{color:var(--z-daycare)}
+  .soon-box .ic-st{width:84px;height:84px;object-fit:contain;opacity:.9}
+
+  /* ===== hospedagem ===== */
+  .back-btn{background:none;border:none;color:var(--z-blue-soft);font-family:var(--font-ui);font-weight:600;
+    font-size:14px;cursor:pointer;margin-bottom:14px;padding:4px 0}
+  .back-btn:hover{color:var(--z-gold-deep)}
+  .hosp-head{display:flex;align-items:center;gap:16px}
+  .hosp-head .ph{width:104px;height:104px;border-radius:50%;display:grid;place-items:center;
+    background:var(--z-auaulandia);color:#fff;font-weight:800;font-size:42px;font-family:var(--font-marca);flex:0 0 auto;box-shadow:0 6px 18px rgba(35,77,103,.18)}
+  .hosp-tutor{font-size:11px;color:var(--muted);font-weight:600;margin-top:6px}
+  .hosp-count{display:flex;align-items:center;gap:14px;background:var(--z-blue);color:var(--z-cream);
+    border-radius:var(--radius);padding:16px 22px;margin-bottom:16px;box-shadow:var(--shadow)}
+  .hosp-count img{width:46px;height:46px;object-fit:contain}
+  .hosp-count .n{font-family:var(--font-marca);font-weight:800;font-size:38px;line-height:1;color:var(--z-gold)}
+  .hosp-count .lab{font-size:14px;font-weight:600;opacity:.92}
+  .hf-nome{font-family:var(--font-accent);font-size:28px;font-weight:700;color:var(--z-blue);line-height:1}
+  .hf-meta{font-size:13px;color:var(--muted);font-weight:600;margin-top:3px}
+  .hf-estadia{font-size:12.5px;color:var(--z-blue-soft);margin-top:5px}
+  .chip-serv{background:rgba(90,171,181,.16);color:#2b7e88;font-size:11px;font-weight:700;
+    padding:5px 12px;border-radius:999px;letter-spacing:.3px;flex:0 0 auto}
+  .turno-banner{display:flex;justify-content:space-between;align-items:center;gap:14px;flex-wrap:wrap;
+    background:var(--z-blue);color:var(--z-cream);border-radius:var(--radius);padding:16px 20px;margin-bottom:16px}
+  .turno-banner .tb-lab{font-size:10.5px;text-transform:uppercase;letter-spacing:.8px;opacity:.7;font-weight:700}
+  .turno-banner .tb-nm{font-size:17px;font-weight:700;margin-top:3px}
+  .turno-banner .tb-plant{text-align:right}
+  .hosp-st{font-size:10px;font-weight:700;padding:3px 10px;border-radius:999px;display:inline-block;margin-top:9px;letter-spacing:.3px}
+  .hosp-st.pend{background:rgba(241,196,15,.18);color:var(--crm-atencao-text)}
+  .hosp-st.ok{background:rgba(39,174,96,.14);color:var(--crm-ok)}
+
+  /* navegador de data */
+  .datenav{display:flex;align-items:center;gap:4px;background:var(--z-white);border:1.5px solid var(--line);border-radius:999px;padding:4px 6px;flex:0 0 auto}
+  .datenav button{border:none;background:transparent;color:var(--z-blue);font-family:var(--font-ui);font-weight:600;font-size:15px;cursor:pointer;padding:5px 10px;border-radius:999px;line-height:1}
+  .datenav button:hover{background:var(--z-cream-warm)}
+  .datenav #dateLabel{font-size:13px;font-weight:600;color:var(--z-blue);padding:0 8px;white-space:nowrap}
+  .datenav .hoje{background:var(--z-gold);color:var(--z-blue);font-weight:700;font-size:12px;padding:6px 12px}
+  /* porção de ração na ficha */
+  .racao-info{background:rgba(222,180,40,.12);border:1.5px solid var(--z-gold-light);border-radius:12px;
+    padding:13px 16px;margin-bottom:16px;font-size:14px;color:var(--z-blue-deep);display:flex;align-items:center;gap:11px}
+  .racao-info img{width:32px;height:32px;object-fit:contain;flex:0 0 auto}
+  .racao-info strong{color:var(--z-blue);font-size:16px}
+  .racao-info .sub{color:var(--muted);font-size:11.5px;font-weight:600}
+  @media(max-width:600px){.datenav #dateLabel{display:none}}
+
+  /* ===== ficha ===== */
+  .subtabs{display:flex;gap:7px;flex-wrap:wrap;margin-bottom:18px}
+  .subtab{padding:8px 15px;border-radius:999px;font-size:13px;font-weight:600;cursor:pointer;
+    background:var(--z-white);border:1.5px solid var(--line);color:var(--muted)}
+  .subtab.active{background:var(--z-blue);color:var(--z-cream);border-color:var(--z-blue)}
+  .card{background:var(--z-white);border:1px solid var(--line);border-radius:var(--radius);padding:20px;margin-bottom:16px;box-shadow:var(--shadow)}
+  .card h2{font-family:var(--font-accent);font-size:25px;font-weight:700;color:var(--z-blue);margin-bottom:3px}
+  .card .hint{font-size:12px;color:var(--muted);font-weight:500;margin-bottom:16px}
+  .subpanel{display:none}.subpanel.active{display:block}
+
+  .pair{display:flex;justify-content:space-between;gap:14px;padding:11px 0;border-bottom:1px solid var(--cream-warm,#f1ebde)}
+  .pair:last-child{border-bottom:none}
+  .pair .k{font-size:13px;color:var(--muted);font-weight:600}
+  .pair .val{font-size:14px;color:var(--z-blue);font-weight:600;text-align:right}
+  .sensivel-badge{font-size:9px;background:var(--z-blue-soft);color:#fff;padding:2px 7px;border-radius:999px;margin-left:6px;font-weight:700;vertical-align:middle}
+
+  /* toggles e chips */
+  .field{margin-bottom:15px}
+  .field>label{display:block;font-size:12.5px;font-weight:600;color:var(--z-blue);margin-bottom:7px}
+  .seg{display:inline-flex;background:#eef3f6;border-radius:11px;padding:4px;gap:4px;flex-wrap:wrap}
+  .seg button{border:none;background:transparent;font-family:var(--font-ui);font-size:13.5px;font-weight:600;
+    color:var(--z-blue);padding:9px 16px;border-radius:8px;cursor:pointer;transition:.15s}
+  .seg button.on{background:var(--z-blue);color:var(--z-cream);box-shadow:var(--shadow)}
+  .seg.gold button.on{background:var(--z-gold);color:var(--z-blue)}
+  .seg.ok button.on{background:var(--crm-ok);color:#fff}
+  .seg.no button.on{background:var(--crm-critico);color:#fff}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+  .obsline{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 0;border-bottom:1px solid #f1ebde}
+  .obsline:last-child{border-bottom:none}
+  .obsline .q{font-size:14px;font-weight:600;color:var(--z-blue)}
+
+  /* timeline */
+  .tl{position:relative;padding-left:30px}
+  .tl::before{content:'';position:absolute;left:9px;top:6px;bottom:6px;width:2px;background:var(--line)}
+  .tl-item{position:relative;padding:0 0 20px}
+  .tl-item .dot{position:absolute;left:-30px;top:1px;width:20px;height:20px;border-radius:50%;
+    background:var(--z-daycare);border:3px solid var(--z-cream);box-shadow:0 0 0 1px var(--line)}
+  .tl-item .hora{font-size:12px;color:var(--muted);font-weight:700}
+  .tl-item .ac{font-size:15px;font-weight:600;color:var(--z-blue);margin-top:1px}
+  .tl-item .ac em{font-style:normal;color:var(--crm-ok);font-weight:700}
+
+  /* placeholder seções futuras */
+  .soon-box{text-align:center;padding:70px 20px;color:var(--muted)}
+  .soon-box .ic{font-size:46px;opacity:.4}
+  .soon-box .t{font-size:17px;font-weight:700;color:var(--z-blue-soft);margin-top:12px}
+  .soon-box .d{font-size:13px;margin-top:6px}
+
+  .btn{border:none;font-family:var(--font-ui);font-weight:700;font-size:14px;padding:12px 22px;border-radius:11px;cursor:pointer}
+  .btn-primary{background:var(--z-blue);color:var(--z-cream)}
+  .btn-gold{background:var(--z-gold);color:var(--z-blue)}
+  .actions{display:flex;gap:10px;margin-top:8px}
+
+  /* permissões por papel */
+  body[data-role="monitor"] .sensivel,
+  body[data-role="tutor"]   .sensivel{display:none !important}
+  body[data-role="monitor"] .so-gestao,
+  body[data-role="tutor"]   .so-gestao{display:none !important}
+  .role-note{font-size:12px;background:var(--z-cream-warm);border:1px solid var(--line);border-radius:10px;
+    padding:10px 14px;color:var(--z-blue-soft);margin-bottom:18px;display:flex;gap:8px;align-items:center}
+
+  /* responsivo */
+  .overlay{display:none;position:fixed;inset:0;background:rgba(26,58,79,.5);z-index:45}
+  @media(max-width:860px){
+    .sidebar{transform:translateX(-100%)}
+    .sidebar.open{transform:translateX(0)}
+    .overlay.show{display:block}
+    .main{margin-left:0}
+    .mobtop{display:flex}
+    .head .search{display:none}
+    .grid2{grid-template-columns:1fr}
+  }
+</style>
+</head>
+<body data-role="gestao">
+
+<!-- ============ LOGIN ============ -->
+<div class="login-screen" id="loginScreen">
+  <div class="login-box">
+    <img src="assets/logo-wordmark.png" alt="Zêluz" class="login-logo">
+    <div class="login-sub">Sistema DayCare · AuAulândia</div>
+    <div class="login-title">Entrar com sua senha</div>
+    <input id="loginPwd" type="password" inputmode="numeric" maxlength="6" placeholder="• • • •"
+      onkeydown="if(event.key==='Enter')doLogin()">
+    <button class="login-btn" onclick="doLogin()">Entrar</button>
+    <div class="login-err" id="loginErr"></div>
+  </div>
+</div>
+
+<!-- ============ SIDEBAR ============ -->
+<aside class="sidebar" id="sidebar">
+  <div class="brand">
+    <img src="assets/logo-wordmark.png" alt="Zêluz" class="brand-logo">
+  </div>
+  <div class="brand-sub">Sistema DayCare</div>
+  <nav class="nav" id="nav">
+    <div class="grp">Operação</div>
+    <a class="active" data-v="inicio"><span data-icon="home"></span><span>Início</span></a>
+    <a data-v="ficha"><span data-icon="paw"></span><span>Peludinhos</span></a>
+    <a data-v="hoje"><span data-icon="clock"></span><span>Linha do Tempo</span></a>
+    <a data-v="adaptacao"><span data-icon="star"></span><span>Adaptação · 1º mês</span></a>
+    <div class="grp">Serviços</div>
+    <a data-v="daycare"><span data-icon="sun"></span><span>Day Care</span><span class="soon">em breve</span></a>
+    <a data-v="hospedagem"><span data-icon="moon"></span><span>AuAulândia</span></a>
+    <a data-v="agenda"><span data-icon="cal"></span><span>Agenda</span><span class="soon">em breve</span></a>
+    <div class="grp">Gestão</div>
+    <a data-v="pessoas"><span data-icon="users"></span><span>Pessoas</span><span class="soon">em breve</span></a>
+    <a data-v="sair"><span data-icon="exit"></span><span>Sair</span></a>
+  </nav>
+  <div class="who">
+    <div class="lab">Conectado como</div>
+    <div class="who-user"><span id="whoName">—</span><button class="who-sair" onclick="logout()">Sair</button></div>
+  </div>
+</aside>
+<div class="overlay" id="overlay" onclick="closeNav()"></div>
+
+<!-- ============ TOPO MOBILE ============ -->
+<div class="mobtop">
+  <button onclick="openNav()">☰</button>
+  <div class="nm">Zêluz · DayCare</div>
+</div>
+
+<!-- ============ MAIN ============ -->
+<main class="main">
+  <div class="head">
+    <h1 id="head-title">Início <small id="head-sub">Visão geral do dia</small></h1>
+    <div class="datenav">
+      <button onclick="changeDate(-1)" title="Dia anterior">‹</button>
+      <span id="dateLabel">—</span>
+      <button onclick="changeDate(1)" title="Próximo dia">›</button>
+      <button class="hoje" onclick="goToToday()">Hoje</button>
+    </div>
+    <div class="av">AD</div>
+  </div>
+
+  <!-- ===== INÍCIO ===== -->
+  <section class="view active" id="v-inicio">
+    <div class="kpis">
+      <div class="kpi"><img class="kpi-st" src="assets/stickers/pata.png" alt=""><div><div class="v">14</div><div class="l">Peludinhos hoje</div></div></div>
+      <div class="kpi"><img class="kpi-st" src="assets/stickers/vasilha.png" alt=""><div><div class="v coral">9</div><div class="l">No Day Care</div></div></div>
+      <div class="kpi"><img class="kpi-st" src="assets/stickers/osso.png" alt=""><div><div class="v">5</div><div class="l">Na Auaulândia</div></div></div>
+      <div class="kpi"><img class="kpi-st" src="assets/stickers/coracao.png" alt=""><div><div class="v">3</div><div class="l">Em adaptação</div></div></div>
+    </div>
+    <div class="pets-grid" id="petsGrid"></div>
+  </section>
+
+  <!-- ===== FICHA (peludinho) ===== -->
+  <section class="view" id="v-ficha">
+    <div class="role-note"><span data-icon="lock"></span><span><strong>Ficha imutável.</strong> Só Gestão e Supervisor inserem dados. Campos com <span class="sensivel-badge">sensível</span> não aparecem para Monitor e Tutor.</span></div>
+    <div class="subtabs">
+      <div class="subtab active" data-s="s-ident">Identificação</div>
+      <div class="subtab" data-s="s-saude">Saúde &amp; Vacinas</div>
+      <div class="subtab" data-s="s-rotina">Rotina</div>
+      <div class="subtab" data-s="s-comp">Comportamento</div>
+    </div>
+
+    <div class="subpanel active" id="s-ident">
+      <div class="card">
+        <div style="display:flex;gap:18px;align-items:center;margin-bottom:18px">
+          <div class="ph" style="width:84px;height:84px;border-radius:50%;background:var(--z-daycare);display:grid;place-items:center;color:#fff;font-weight:800;font-size:30px;font-family:var(--font-marca)">A</div>
+          <div><div style="font-family:var(--font-accent);font-size:30px;font-weight:700;color:var(--z-blue);line-height:1">Amora</div>
+          <div style="color:var(--muted);font-size:13px;font-weight:600">Spitz Alemão · Fêmea · 3 anos e 2 meses</div></div>
+        </div>
+        <div class="pair"><span class="k">Data de nascimento</span><span class="val">14/04/2023</span></div>
+        <div class="pair"><span class="k">Sexo</span><span class="val">Fêmea</span></div>
+        <div class="pair"><span class="k">Castrado</span><span class="val">Sim</span></div>
+        <div class="pair"><span class="k">Raça</span><span class="val">Spitz Alemão</span></div>
+        <div class="pair"><span class="k">Data de matrícula</span><span class="val">02/01/2026</span></div>
+        <div class="pair"><span class="k">Tutor(es)</span><span class="val">Sabrina Oliveira</span></div>
+        <div class="pair sensivel"><span class="k">Celular <span class="sensivel-badge">sensível</span></span><span class="val">(31) 9 9999-0000</span></div>
+        <div class="pair"><span class="k">Bairro</span><span class="val">Buritis</span></div>
+        <div class="pair"><span class="k">Como conheceu a Zêluz</span><span class="val">Indicação</span></div>
+      </div>
+      <div class="actions so-gestao"><button class="btn btn-gold" onclick="alert('No sistema real: abre o formulário para criar/editar (só Gestão e Supervisor).')">Editar ficha</button></div>
+    </div>
+
+    <div class="subpanel" id="s-saude">
+      <div class="card">
+        <h2>Vacinas &amp; proteção</h2>
+        <div class="hint">Última dose e quem aplicou (Zêluz ou Tutor).</div>
+        <div class="pair"><span class="k">Múltipla</span><span class="val">10/03/2026 · <span style="color:var(--z-gold-deep)">Zêluz</span></span></div>
+        <div class="pair"><span class="k">Raiva</span><span class="val">10/03/2026 · <span style="color:var(--z-gold-deep)">Zêluz</span></span></div>
+        <div class="pair"><span class="k">Gripe</span><span class="val">22/02/2026 · Tutor</span></div>
+        <div class="pair"><span class="k">Vermífugo</span><span class="val">01/05/2026 · <span style="color:var(--z-gold-deep)">Zêluz</span></span></div>
+        <div class="pair"><span class="k">Carrapaticida</span><span class="val">01/05/2026 · Tutor</span></div>
+      </div>
+      <div class="card sensivel">
+        <h2>Saúde geral <span class="sensivel-badge">sensível</span></h2>
+        <div class="pair"><span class="k">Alergia</span><span class="val">Frango</span></div>
+        <div class="pair"><span class="k">Medicamento</span><span class="val">Nenhum</span></div>
+        <div class="pair"><span class="k">Cirurgia</span><span class="val">Castração (2024)</span></div>
+      </div>
+    </div>
+
+    <div class="subpanel" id="s-rotina">
+      <div class="card">
+        <h2>Rotina &amp; alimentação</h2>
+        <div class="pair"><span class="k">Dias de Day Care</span><span class="val">Seg · Qua · Sex</span></div>
+        <div class="pair"><span class="k">Alimentação</span><span class="val">Ração · 80g 2x/dia</span></div>
+        <div class="pair"><span class="k">Almoça na creche</span><span class="val">Sim</span></div>
+        <div class="pair"><span class="k">Passeia</span><span class="val">Sim · 2x ao dia</span></div>
+        <div class="pair"><span class="k">Xixi e cocô</span><span class="val">Fora de casa</span></div>
+      </div>
+    </div>
+
+    <div class="subpanel" id="s-comp">
+      <div class="card sensivel">
+        <h2>Comportamento <span class="sensivel-badge">sensível</span></h2>
+        <div class="pair"><span class="k">Em casa</span><span class="val">Tranquila, dorme muito</span></div>
+        <div class="pair"><span class="k">Com pessoas</span><span class="val">Sociável</span></div>
+        <div class="pair"><span class="k">Com outros peludos</span><span class="val">Brinca bem</span></div>
+        <div class="pair"><span class="k">Medos</span><span class="val">Fogos de artifício</span></div>
+        <div class="pair"><span class="k">Já atacou outro peludo</span><span class="val">Não</span></div>
+      </div>
+      <div class="card">
+        <h2>Preferências</h2>
+        <div class="pair"><span class="k">Comidinhas que gosta</span><span class="val">Cenoura · Maçã</span></div>
+        <div class="pair"><span class="k">Brincadeira favorita</span><span class="val">Bolinha</span></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== ADAPTAÇÃO 1º MÊS ===== -->
+  <section class="view" id="v-adaptacao">
+    <div class="role-note so-gestao"><span data-icon="star"></span><span>Registro do <strong>primeiro mês / adaptação</strong>. Marque como o peludinho passou o dia — rápido, só tocando.</span></div>
+    <div class="card">
+      <h2>Como foi a adaptação hoje?</h2>
+      <div class="hint">Amora · 04/06/2026 · 2º dia de adaptação</div>
+
+      <div class="obsline"><span class="q">Farrogeou (rosnou)?</span><div class="seg no" data-single><button onclick="pick(this)">Não</button><button onclick="pick(this)">Sim</button></div></div>
+      <div class="obsline"><span class="q">Deixou ser cheirado?</span><div class="seg ok" data-single><button onclick="pick(this)">Sim</button><button onclick="pick(this)">Não</button></div></div>
+      <div class="obsline"><span class="q">Cheirou os outros?</span><div class="seg ok" data-single><button onclick="pick(this)">Sim</button><button onclick="pick(this)">Não</button></div></div>
+      <div class="obsline"><span class="q">Estava retraído?</span><div class="seg" data-single><button onclick="pick(this)">Não</button><button onclick="pick(this)">Um pouco</button><button onclick="pick(this)">Sim</button></div></div>
+      <div class="obsline"><span class="q">Estava à vontade?</span><div class="seg ok" data-single><button onclick="pick(this)">Sim</button><button onclick="pick(this)">Não</button></div></div>
+      <div class="obsline"><span class="q">Brincou?</span><div class="seg ok" data-single><button onclick="pick(this)">Sim</button><button onclick="pick(this)">Não</button></div></div>
+      <div class="obsline"><span class="q">Pediu colo?</span><div class="seg" data-single><button onclick="pick(this)">Não</button><button onclick="pick(this)">Sim</button></div></div>
+      <div class="obsline"><span class="q">Ficou atrás de alguém?</span><div class="seg" data-single><button onclick="pick(this)">Não</button><button onclick="pick(this)">Sim</button></div></div>
+      <div class="obsline"><span class="q">Foi para as portas?</span><div class="seg" data-single><button onclick="pick(this)">Não</button><button onclick="pick(this)">Sim</button></div></div>
+      <div class="obsline"><span class="q">Chorou?</span><div class="seg no" data-single><button onclick="pick(this)">Não</button><button onclick="pick(this)">Sim</button></div></div>
+      <div class="obsline"><span class="q">Tomou água?</span><div class="seg ok" data-single><button onclick="pick(this)">Sim</button><button onclick="pick(this)">Não</button></div></div>
+      <div class="obsline"><span class="q">Fez xixi?</span><div class="seg" data-single><button onclick="pick(this)">Sim</button><button onclick="pick(this)">Não</button></div></div>
+      <div class="obsline"><span class="q">Fez cocô?</span><div class="seg" data-single><button onclick="pick(this)">Sim</button><button onclick="pick(this)">Não</button></div></div>
+
+      <div class="field" style="margin-top:18px"><label>Brinquedo predileto / observação do dia</label>
+        <input type="text" style="width:100%;font-family:var(--font-ui);font-size:14px;padding:12px;border:1.5px solid var(--line);border-radius:11px;background:var(--z-cream)" placeholder="Ex: pelúcia do pato, ficou perto da Encãotadora Bia"></div>
+      <div class="actions"><button class="btn btn-primary" onclick="alert('Rascunho: salvaria o registro de adaptação do dia.')">Salvar registro do dia</button></div>
+    </div>
+  </section>
+
+  <!-- ===== LINHA DO TEMPO ===== -->
+  <section class="view" id="v-hoje">
+    <div class="card">
+      <h2>Linha do tempo · Amora</h2>
+      <div class="hint">Quarta, 04 de junho de 2026</div>
+      <div class="tl">
+        <div class="tl-item"><div class="dot"></div><div class="hora">07:33</div><div class="ac">Check-in Day Care</div></div>
+        <div class="tl-item"><div class="dot" style="background:var(--z-vetcare)"></div><div class="hora">09:00</div><div class="ac">Aucademia · jogos cognitivos</div></div>
+        <div class="tl-item"><div class="dot" style="background:var(--z-emporio)"></div><div class="hora">12:00</div><div class="ac">Almoço: <em>comeu tudo</em></div></div>
+        <div class="tl-item"><div class="dot" style="background:var(--z-spa)"></div><div class="hora">15:35</div><div class="ac">Massagem dessensibilizadora</div></div>
+        <div class="tl-item"><div class="dot" style="background:var(--z-auaulandia)"></div><div class="hora">15:40</div><div class="ac">Hidratação</div></div>
+        <div class="tl-item"><div class="dot"></div><div class="hora">18:15</div><div class="ac">Check-out Day Care</div></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== PLACEHOLDERS ===== -->
+  <section class="view" id="v-daycare"><div class="soon-box"><img class="ic-st" src="assets/stickers/pata.png" alt=""><div class="t">Day Care</div><div class="d">Chamada, almoço e atividades do dia — próxima etapa.</div></div></section>
+  <section class="view" id="v-hospedagem">
+    <!-- LISTA de peludinhos em hospedagem -->
+    <div id="hosp-lista">
+      <div class="kpis">
+        <div class="kpi"><img class="kpi-st" src="assets/stickers/coracao.png" alt=""><div><div class="v" id="kpiHosp">0</div><div class="l">Hóspedes hoje</div></div></div>
+        <div class="kpi"><img class="kpi-st" src="assets/stickers/auau.png" alt=""><div><div class="v coral" id="kpiMorada">0</div><div class="l">Moradora · Repolho</div></div></div>
+      </div>
+      <div class="role-note"><span data-icon="moon"></span><span>Selecione o peludinho hospedado para registrar a <strong>passagem de plantão</strong>. Turnos: Diurno 07h–19h · Noturno 19h–07h.</span></div>
+      <div class="pets-grid" id="hospGrid"></div>
+    </div>
+
+    <!-- FICHA de passagem de plantão -->
+    <div id="hosp-ficha" style="display:none">
+      <button class="back-btn" onclick="fecharPlantao()">← Voltar à hospedagem</button>
+
+      <div class="card hosp-head">
+        <div class="ph" id="hf-av">T</div>
+        <div style="flex:1">
+          <div class="hf-nome" id="hf-nome">Thor</div>
+          <div class="hf-meta" id="hf-meta">Pastor Alemão · Tutor: Carlos Lima</div>
+          <div class="hf-estadia" id="hf-estadia">Estadia: 02/06 → 07/06 · <strong>Dia 3 de 5</strong></div>
+        </div>
+        <span class="chip-serv">AuAulândia</span>
+      </div>
+
+      <div class="card" style="display:flex;gap:16px;align-items:center;flex-wrap:wrap">
+        <input id="hfPhotoFile" type="file" accept="image/*" capture="environment" style="display:none" onchange="onPhoto(event)">
+        <button class="btn btn-gold" onclick="document.getElementById('hfPhotoFile').click()">Adicionar / trocar foto</button>
+        <div class="field" style="flex:1;min-width:220px;margin:0">
+          <label>Raça <span style="color:var(--muted);font-weight:500">— comece a digitar: <em>wes</em> → West Terrier</span></label>
+          <input id="hfRaca" list="racasList" autocomplete="off" placeholder="Selecione a raça"
+            style="width:100%;font-family:var(--font-ui);font-size:14px;padding:11px 13px;border:1.5px solid var(--line);border-radius:11px;background:var(--z-cream)"
+            oninput="onRaca(this.value)">
+        </div>
+      </div>
+      <datalist id="racasList"></datalist>
+
+      <div class="turno-banner">
+        <div><div class="tb-lab">Turno atual</div>
+          <div class="seg gold" data-single style="margin-top:6px">
+            <button class="on" onclick="pick(this)">Diurno · 07h–19h</button>
+            <button onclick="pick(this)">Noturno · 19h–07h</button>
+          </div>
+        </div>
+        <div class="tb-plant"><div class="tb-lab">Plantonista</div><div class="tb-nm">Bia Andrade</div></div>
+      </div>
+
+      <div class="racao-info">
+        <img src="assets/stickers/vasilha.png" alt="">
+        <div>Porção de ração: <strong id="hf-racao">80g · 2x ao dia</strong>
+          <div class="sub">vem da ficha do peludinho — o plantonista serve esta quantidade</div></div>
+      </div>
+
+      <div class="card">
+        <h2>Como foi o turno?</h2>
+        <div class="hint">Toque para marcar. Rápido, sem digitar.</div>
+        <div class="obsline"><span class="q">Alimentação</span><div class="seg" data-single><button class="on" onclick="pick(this)">Comeu tudo</button><button onclick="pick(this)">Parte</button><button onclick="pick(this)">Recusou</button></div></div>
+        <div class="obsline"><span class="q">Bebeu água?</span><div class="seg ok" data-single><button onclick="pick(this)">Sim</button><button onclick="pick(this)">Não</button></div></div>
+        <div class="obsline"><span class="q">Fez xixi?</span><div class="seg" data-single><button onclick="pick(this)">Sim</button><button onclick="pick(this)">Não</button></div></div>
+        <div class="obsline"><span class="q">Fez cocô?</span><div class="seg" data-single><button onclick="pick(this)">Sim</button><button onclick="pick(this)">Não</button></div></div>
+        <div class="obsline"><span class="q">Humor</span><div class="seg" data-single><button onclick="pick(this)">Tranquilo</button><button onclick="pick(this)">Agitado</button><button onclick="pick(this)">Carente</button><button onclick="pick(this)">Quieto</button></div></div>
+        <div class="obsline"><span class="q">Com outros peludos</span><div class="seg" data-single><button onclick="pick(this)">Brincou bem</button><button onclick="pick(this)">Indiferente</button><button onclick="pick(this)">Evitou</button></div></div>
+        <div class="obsline"><span class="q">Teve desentendimento?</span><div class="seg no" data-single><button onclick="pick(this)">Não</button><button onclick="pick(this)">Sim</button></div></div>
+        <div class="obsline"><span class="q">Dormiu bem?</span><div class="seg ok" data-single><button onclick="pick(this)">Sim</button><button onclick="pick(this)">Não</button></div></div>
+      </div>
+
+      <div class="card">
+        <h2>Algo especial</h2>
+        <div class="hint">Dorme junto com alguém, medicação, manias, cuidado especial.</div>
+        <textarea style="width:100%;font-family:var(--font-ui);font-size:14px;padding:12px;border:1.5px solid var(--line);border-radius:11px;background:var(--z-cream);min-height:80px" placeholder="Ex: dorme na cama com a plantonista, toma remédio às 22h"></textarea>
+      </div>
+
+      <div class="card">
+        <h2>Passagem de plantão</h2>
+        <div class="hint">Quem entrega e quem recebe o peludinho na troca de turno.</div>
+        <div class="grid2">
+          <div class="field"><label>Entregue por</label><input type="text" value="Bia Andrade"></div>
+          <div class="field"><label>Recebido por</label><input type="text" placeholder="Próximo plantonista"></div>
+        </div>
+        <div class="actions"><button class="btn btn-primary" onclick="alert('Rascunho: registraria a passagem de plantão com data e hora automáticas.')">Registrar passagem de plantão</button></div>
+      </div>
+    </div>
+  </section>
+  <section class="view" id="v-agenda"><div class="soon-box"><img class="ic-st" src="assets/stickers/coleira.png" alt=""><div class="t">Agenda</div><div class="d">Calendário de frequência e reservas — próxima etapa.</div></div></section>
+  <section class="view" id="v-pessoas"><div class="soon-box"><img class="ic-st" src="assets/stickers/coracao.png" alt=""><div class="t">Pessoas &amp; Turnos</div><div class="d">Equipe, horários e tarefas por Zeloso — próxima etapa.</div></div></section>
+  <section class="view" id="v-sair"><div class="soon-box"><img class="ic-st" src="assets/simbolo.png" alt=""><div class="t">Sair</div><div class="d">No sistema real, encerra a sessão com segurança.</div></div></section>
+</main>
+
+<script>
+  // ---- ícones SVG (line) ----
+  function ic(n){
+    const p={
+      home:'M3 11l9-8 9 8M5 10v10h14V10',
+      paw:'M5 14c-1.5 0-2.5 1.2-2.5 2.6S3.5 19 5 19s2.5-1 2.5-2.4S6.5 14 5 14zM19 14c-1.5 0-2.5 1.2-2.5 2.6S17.5 19 19 19s2.5-1 2.5-2.4S20.5 14 19 14zM9 8C7.6 8 6.7 9.2 6.7 10.6S7.6 13 9 13s2.3-1 2.3-2.4S10.4 8 9 8zM15 8c-1.4 0-2.3 1.2-2.3 2.6S13.6 13 15 13s2.3-1 2.3-2.4S16.4 8 15 8z',
+      clock:'M12 7v5l3 2M21 12a9 9 0 11-18 0 9 9 0 0118 0z',
+      star:'M12 3l2.6 5.3 5.9.9-4.2 4.1 1 5.8L12 16.9 6.7 19.1l1-5.8L3.5 9.2l5.9-.9z',
+      sun:'M12 4V2M12 22v-2M4 12H2M22 12h-2M6 6L4.5 4.5M19.5 19.5L18 18M6 18l-1.5 1.5M19.5 4.5L18 6M12 8a4 4 0 100 8 4 4 0 000-8z',
+      moon:'M21 12.8A9 9 0 1111.2 3a7 7 0 009.8 9.8z',
+      cal:'M3 9h18M7 3v3M17 3v3M5 5h14v16H5z',
+      users:'M16 18v-2a4 4 0 00-8 0v2M12 11a3.5 3.5 0 100-7 3.5 3.5 0 000 7M20 18v-1.5a3 3 0 00-2.5-3M4 18v-1.5a3 3 0 012.5-3',
+      exit:'M16 17l5-5-5-5M21 12H9M12 19H5V5h7',
+      lock:'M6 11h12v9H6zM9 11V8a3 3 0 016 0v3'
+    }[n]||'';
+    return `<svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">${p.split('M').filter(Boolean).map(d=>'<path d="M'+d+'"/>').join('')}</svg>`;
+  }
+  // injeta ícones SVG em qualquer elemento com data-icon
+  document.querySelectorAll('[data-icon]').forEach(el=>{ el.innerHTML = ic(el.dataset.icon); el.style.display='inline-flex'; });
+
+  // ---- Navegador de data ----
+  const DIAS=['Domingo','Segunda','Terça','Quarta','Quinta','Sexta','Sábado'];
+  const MESES=['janeiro','fevereiro','março','abril','maio','junho','julho','agosto','setembro','outubro','novembro','dezembro'];
+  let selectedDate=new Date();
+  function updateDateLabel(){
+    const d=selectedDate, p=x=>String(x).padStart(2,'0');
+    document.getElementById('dateLabel').textContent=`${DIAS[d.getDay()]}, ${p(d.getDate())} de ${MESES[d.getMonth()]} de ${d.getFullYear()}`;
+  }
+  function changeDate(n){ selectedDate.setDate(selectedDate.getDate()+n); updateDateLabel(); carregarHospedes(); }
+  function goToToday(){ selectedDate=new Date(); updateDateLabel(); carregarHospedes(); }
+  updateDateLabel();
+
+  const titles={inicio:['Início','Visão geral do dia'],ficha:['Peludinhos','Ficha completa'],
+    hoje:['Linha do Tempo','O dia do peludinho'],adaptacao:['Adaptação · 1º mês','Como está se adaptando'],
+    daycare:['Day Care','Chamada e atividades'],hospedagem:['AuAulândia','Passagem de plantão'],
+    agenda:['Agenda','Frequência e reservas'],pessoas:['Pessoas & Turnos','Equipe e tarefas'],sair:['Sair','']};
+
+  document.getElementById('nav').addEventListener('click',e=>{
+    const a=e.target.closest('a'); if(!a) return;
+    const v=a.dataset.v;
+    document.querySelectorAll('#nav a').forEach(x=>x.classList.remove('active'));
+    a.classList.add('active');
+    document.querySelectorAll('.view').forEach(x=>x.classList.remove('active'));
+    document.getElementById('v-'+v).classList.add('active');
+    document.getElementById('head-title').childNodes[0].nodeValue=titles[v][0]+' ';
+    document.getElementById('head-sub').textContent=titles[v][1];
+    if(v==='hospedagem') fecharPlantao();
+    closeNav(); window.scrollTo({top:0,behavior:'smooth'});
+  });
+
+  // subtabs da ficha
+  document.querySelectorAll('.subtab').forEach(t=>t.onclick=()=>{
+    document.querySelectorAll('.subtab').forEach(x=>x.classList.remove('active'));
+    document.querySelectorAll('.subpanel').forEach(x=>x.classList.remove('active'));
+    t.classList.add('active'); document.getElementById(t.dataset.s).classList.add('active');
+  });
+
+  function pick(btn){btn.parentNode.querySelectorAll('button').forEach(b=>b.classList.remove('on'));btn.classList.add('on');}
+  function setRole(r){document.body.dataset.role=r;}
+  function openNav(){document.getElementById('sidebar').classList.add('open');document.getElementById('overlay').classList.add('show');}
+  function closeNav(){document.getElementById('sidebar').classList.remove('open');document.getElementById('overlay').classList.remove('show');}
+
+  // cards de peludinhos (exemplo)
+  const cores=['#E08856','#5AABB5','#5E9B6B','#2E7D8A','#B8A9C9','#234D67'];
+  const pets=[['Amora','Spitz Alemão'],['Ozzy','Golden'],['Fox','Vira-lata caramelo'],['Arena','Border Collie'],
+    ['Thor','Pastor Alemão'],['Nina','Poodle'],['Bento','Beagle'],['Luna','Shih-tzu']];
+  document.getElementById('petsGrid').innerHTML =
+    `<div class="pet add so-gestao" onclick="alert('No sistema real: nova ficha (só Gestão e Supervisor).')"><div class="plus">+</div><div class="t">Nova ficha</div></div>`+
+    pets.map((p,i)=>`<div class="pet" onclick="document.querySelector('[data-v=ficha]').click()">
+      <div class="ph" style="background:${cores[i%cores.length]}">${p[0][0]}</div>
+      <div class="nm">${p[0]}</div><div class="br">${p[1]}</div>
+      <div class="tag">No Day Care</div></div>`).join('');
+
+  // ===== HOSPEDAGEM — peludinhos hospedados hoje (04/06), dados reais da planilha =====
+  let hospedes=[
+    {nome:'Harry',    tutor:'Lilian',    raca:'', ini:'H', cor:'#5AABB5'},
+    {nome:'Rock',     tutor:'Thaisa',    raca:'', ini:'R', cor:'#E08856'},
+    {nome:'Bloom',    tutor:'Alexandre', raca:'', ini:'B', cor:'#5E9B6B'},
+    {nome:'Teka',     tutor:'Clara',     raca:'', ini:'T', cor:'#2E7D8A'},
+    {nome:'Bene',     tutor:'Clara',     raca:'', ini:'B', cor:'#B8A9C9'},
+    {nome:'Yume',     tutor:'Natercia',  raca:'', ini:'Y', cor:'#234D67'},
+    {nome:'Duda',     tutor:'Rhiane',    raca:'', ini:'D', cor:'#5AABB5'},
+    {nome:'Romeo',    tutor:'Jeanine',   raca:'', ini:'R', cor:'#E08856'},
+    {nome:'Becca',    tutor:'Jessica',   raca:'', ini:'B', cor:'#5E9B6B'},
+    {nome:'Ozzy',     tutor:'Zuleica',   raca:'', ini:'O', cor:'#2E7D8A'},
+    {nome:'Ozzy',     tutor:'Sabrina',   raca:'', ini:'O', cor:'#B8A9C9'},
+    {nome:'Charlotte',tutor:'Sabrina',   raca:'', ini:'C', cor:'#234D67'},
+    {nome:'Repolho',  tutor:'Zêluz · moradora', raca:'', ini:'R', cor:'#DEB428', mascote:true}
+  ];
+  // Banco de raças (autocomplete) — lista dela + raças mais comuns no Brasil
+  // Banco de raças Zêluz — pequeno porte / companhia (sem grande porte, sem cães de guarda)
+  let racasMap={}; // 'nome__tutor' (lowercase) -> raça, vinda da planilha
+  const RACAS=['Pomsky','Spitz Alemão (Lulu da Pomerânia)','West Terrier','SRD (vira-lata)','Galgo',
+    'Shih Tzu','Lhasa Apso','Poodle','Maltês','Yorkshire','Cavalier King Charles','Schnauzer',
+    'Norfolk Terrier','Pug','Boston Terrier','Shiba','Jack Russell Terrier','Pastor de Shetland',
+    'Bichon Frisé','Bichon Havanês','Buldogue Francês','Chihuahua','Pequinês','Papillon','Bolonhês',
+    'Coton de Tuléar','King Charles Spaniel','Terrier Tibetano','Spaniel Tibetano','Crista Chinês',
+    'Pinscher','Dachshund (Salsicha)','Fox Paulistinha','Cocker Spaniel'];
+  document.getElementById('racasList').innerHTML = RACAS.map(r=>`<option value="${r}">`).join('');
+
+  // Persistência LOCAL no navegador (para testar hoje, antes do cofre).
+  // Chave = nome + tutor (mesma interligação que resolve homônimos).
+  const LS_KEY='zeluz_auau_v1';
+  const loadLocal=()=>{ try{return JSON.parse(localStorage.getItem(LS_KEY)||'{}')}catch(e){return {}} };
+  const saveLocal=o=>localStorage.setItem(LS_KEY,JSON.stringify(o));
+  const petKey=h=>`${h.nome}__${h.tutor}`;
+  const getInfo=h=>loadLocal()[petKey(h)]||{};
+  function setInfo(h,patch){ const o=loadLocal(); o[petKey(h)]=Object.assign({},o[petKey(h)]||{},patch); saveLocal(o); }
+
+  function renderHosp(){
+    document.getElementById('kpiHosp').textContent   = hospedes.filter(h=>!h.mascote).length;
+    document.getElementById('kpiMorada').textContent = hospedes.filter(h=>h.mascote).length;
+    document.getElementById('hospGrid').innerHTML =
+      `<div class="pet add" onclick="alert('No sistema real: lista os alunos do Day Care de hoje para marcar um como PERNOITE (ficou hospedado por emergência da família). Ele passa a aparecer aqui automaticamente.')">
+         <div class="plus">+</div><div class="t">Adicionar pernoite<br><span style="font-size:10px;font-weight:600;color:var(--muted)">aluno do Day Care</span></div></div>`+
+      hospedes.map((h,i)=>{
+        const info=getInfo(h);
+        const ph = info.foto
+          ? `<div class="ph" style="background-image:url('${info.foto}');background-size:cover;background-position:center"></div>`
+          : `<div class="ph" style="background:${h.cor}">${h.ini}</div>`;
+        const raca = info.raca || racasMap[(h.nome+'__'+h.tutor).toLowerCase()] || (h.mascote?'Moradora Zêluz':'<span style="color:#b6ad9c;font-style:italic">Raça a cadastrar</span>');
+        return `<div class="pet" onclick="abrirPlantao(${i})">
+          ${ph}
+          <div class="nm">${h.nome}</div>
+          <div class="br">${raca}</div>
+          <div class="hosp-tutor">${h.mascote?'Nossa Zelozinha':'Tutor: '+h.tutor}</div>
+        </div>`;
+      }).join('');
+  }
+  renderHosp();
+
+  let currentHosp=null;
+  function abrirPlantao(i){
+    const h=hospedes[i]; currentHosp=h;
+    const info=getInfo(h);
+    const av=document.getElementById('hf-av');
+    if(info.foto){ av.style.backgroundImage=`url('${info.foto}')`; av.style.backgroundSize='cover'; av.style.backgroundPosition='center'; av.textContent=''; }
+    else { av.style.backgroundImage='none'; av.textContent=h.ini; av.style.background=h.cor; }
+    document.getElementById('hf-nome').textContent=h.nome;
+    const raca=info.raca||racasMap[(h.nome+'__'+h.tutor).toLowerCase()]||'';
+    document.getElementById('hf-meta').innerHTML=`${raca?raca+' · ':''}${h.mascote?'Nossa Zelozinha':'Tutor: '+h.tutor}`;
+    document.getElementById('hf-estadia').innerHTML=`Na AuAulândia · <strong>estadia a confirmar na ficha</strong>`;
+    document.getElementById('hfRaca').value=raca;
+    document.getElementById('hosp-lista').style.display='none';
+    document.getElementById('hosp-ficha').style.display='block';
+    window.scrollTo({top:0,behavior:'smooth'});
+  }
+  function onPhoto(e){
+    const f=e.target.files&&e.target.files[0]; if(!f||!currentHosp) return;
+    const r=new FileReader();
+    r.onload=()=>{ setInfo(currentHosp,{foto:r.result});
+      const av=document.getElementById('hf-av');
+      av.style.backgroundImage=`url('${r.result}')`; av.style.backgroundSize='cover'; av.style.backgroundPosition='center'; av.textContent='';
+      renderHosp(); };
+    r.readAsDataURL(f);
+  }
+  function onRaca(v){
+    if(!currentHosp) return;
+    setInfo(currentHosp,{raca:v}); renderHosp();
+    document.getElementById('hf-meta').innerHTML=`${v?v+' · ':''}${currentHosp.mascote?'Nossa Zelozinha':'Tutor: '+currentHosp.tutor}`;
+  }
+  function fecharPlantao(){
+    document.getElementById('hosp-ficha').style.display='none';
+    document.getElementById('hosp-lista').style.display='block';
+  }
+
+  // ===== LOGIN (senhas de teste — depois cada pessoa terá a sua) =====
+  const SENHAS={
+    '1000':{role:'monitor',     nome:'Monitor 5'},
+    '1001':{role:'plantonista', nome:'Plantonista'},
+    '0902':{role:'gestao',      nome:'Márcia · Gestora'}
+  };
+  function doLogin(){
+    const v=(document.getElementById('loginPwd').value||'').trim();
+    const u=SENHAS[v];
+    if(!u){ document.getElementById('loginErr').textContent='Senha incorreta. Tente de novo.'; return; }
+    sessionStorage.setItem('zeluz_login', JSON.stringify(u));
+    aplicarLogin(u);
+  }
+  function aplicarLogin(u){
+    document.body.dataset.role=u.role;
+    document.getElementById('whoName').textContent=u.nome;
+    document.getElementById('loginScreen').style.display='none';
+    document.getElementById('loginErr').textContent='';
+    const a=document.querySelector('[data-v="hospedagem"]'); if(a) a.click(); // entra direto na AuAulândia
+  }
+  function logout(){
+    sessionStorage.removeItem('zeluz_login');
+    document.getElementById('loginPwd').value='';
+    document.getElementById('loginScreen').style.display='flex';
+  }
+  (function(){ try{ const u=JSON.parse(sessionStorage.getItem('zeluz_login')||'null'); if(u&&u.role) aplicarLogin(u); }catch(e){} })();
+
+  // ===== LISTA AUTOMÁTICA — mesma planilha do dashboard de hospedagem =====
+  const SHEET_ID='1SJ3OZ6E2wMa1JHrQUcgtNffgQLQhCpa01IUQKCv605w';
+  const TAB_HOSP='Calendário Hospedagem para dash';
+  const CORES=['#5AABB5','#E08856','#5E9B6B','#2E7D8A','#B8A9C9','#234D67'];
+  function fetchSheet(name){
+    return new Promise((res,rej)=>{
+      const cb='zcb_'+Math.round(performance.now())+'_'+Math.round(Math.random()*1e5);
+      const sc=document.createElement('script');
+      const timer=setTimeout(()=>{cleanup();rej(new Error('timeout'));},15000);
+      function cleanup(){clearTimeout(timer);try{delete window[cb];}catch(e){window[cb]=undefined;} if(sc.parentNode)sc.parentNode.removeChild(sc);}
+      window[cb]=d=>{cleanup(); (d&&d.table)?res(d.table):rej(new Error('no table'));};
+      sc.onerror=()=>{cleanup();rej(new Error('net'));};
+      sc.src=`https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=reqId:0;responseHandler:${cb}&sheet=${encodeURIComponent(name)}&t=${Date.now()}`;
+      document.head.appendChild(sc);
+    });
+  }
+  function cellDate(c){
+    if(!c||c.v==null) return null;
+    if(typeof c.v==='string'&&c.v.startsWith('Date(')){ const m=c.v.match(/Date\((-?\d+),(\d+),(\d+)/); if(m) return new Date(+m[1],+m[2],+m[3]); }
+    return null;
+  }
+  async function carregarHospedes(){
+    try{
+      const table=await fetchSheet(TAB_HOSP);
+      const rows=table.rows||[]; const p=x=>String(x).padStart(2,'0');
+      const alvo=`${selectedDate.getFullYear()}-${p(selectedDate.getMonth()+1)}-${p(selectedDate.getDate())}`;
+      let linha=null;
+      for(const r of rows){ const c=r.c||[]; const d=cellDate(c[0]); if(d && `${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())}`===alvo){ linha=c; break; } }
+      if(!linha) return;
+      const lista=[];
+      linha.slice(1).forEach(c=>{ const raw=c&&c.v; if(raw&&typeof raw==='string'&&raw.trim()){ const parts=raw.trim().split('/'); lista.push({nome:(parts[0]||raw).trim(), tutor:(parts[1]||'').trim()}); } });
+      if(lista.length){
+        hospedes = lista.map((h,i)=>({nome:h.nome, tutor:h.tutor, raca:'', ini:(h.nome[0]||'?').toUpperCase(), cor:CORES[i%CORES.length], mascote:/repolho/i.test(h.nome)}));
+        renderHosp();
+      }
+    }catch(e){ console.warn('Planilha indisponível — usando lista de exemplo.', e); }
+  }
+  // Lê a aba "Cadastro" (colunas Nome · Tutor · Raça) e cruza pelo nome+tutor
+  async function carregarRacas(){
+    try{
+      const table=await fetchSheet('Cadastro');
+      const rows=table.rows||[]; const cols=(table.cols||[]).map(c=>((c.label||c.id||'')+'').toLowerCase());
+      const iNome=cols.findIndex(c=>c.indexOf('nome')>=0);
+      const iTutor=cols.findIndex(c=>c.indexOf('tutor')>=0);
+      const iRaca=cols.findIndex(c=>c.indexOf('ra')>=0);
+      if(iNome<0||iRaca<0) return;
+      const map={};
+      rows.forEach(r=>{ const c=r.c||[];
+        const nome=(((c[iNome]&&c[iNome].v))||'').toString().trim();
+        const tutor=((iTutor>=0&&c[iTutor]&&c[iTutor].v)||'').toString().trim();
+        const raca=(((c[iRaca]&&c[iRaca].v))||'').toString().trim();
+        if(nome&&raca) map[(nome+'__'+tutor).toLowerCase()]=raca;
+      });
+      racasMap=map; renderHosp();
+    }catch(e){ /* aba "Cadastro" ainda não existe — tudo bem, é opcional */ }
+  }
+  carregarHospedes();
+  carregarRacas();
+</script>
+</body>
+</html>
