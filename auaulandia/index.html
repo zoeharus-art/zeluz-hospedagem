@@ -269,6 +269,7 @@
 
   /* permissões por papel */
   body[data-role="monitor"] .sensivel,
+  body[data-role="plantonista"] .sensivel,
   body[data-role="tutor"]   .sensivel{display:none !important}
   body[data-role="monitor"] .so-gestao,
   body[data-role="plantonista"] .so-gestao,
@@ -298,6 +299,39 @@
   .dia.on{color:var(--z-cream);background:var(--z-auaulandia)}
   .dctab{padding:9px 17px;border-radius:999px;font-size:13.5px;font-weight:600;cursor:pointer;background:var(--z-white);border:1.5px solid var(--line);color:var(--muted)}
   .dctab.active{background:var(--z-daycare);color:#fff;border-color:var(--z-daycare)}
+  /* cadeado de sensibilidade */
+  .lock-toggle{cursor:pointer;font-size:13px;margin-left:5px;user-select:none}
+  /* abas internas da ficha do peludinho */
+  .subtab2{padding:8px 15px;border-radius:999px;font-size:13px;font-weight:600;cursor:pointer;background:var(--z-white);border:1.5px solid var(--line);color:var(--muted)}
+  .subtab2.active{background:var(--z-blue);color:var(--z-cream);border-color:var(--z-blue)}
+  .ppanel2{display:none}.ppanel2.active{display:block}
+  /* card de alertas de saude (destaque) */
+  .alert-card{background:#fff;border:1px solid var(--line);border-left:5px solid var(--crm-atencao);border-radius:var(--radius);padding:18px 20px;margin-bottom:16px;box-shadow:var(--shadow)}
+  .alert-pills{display:flex;flex-wrap:wrap;gap:8px;margin:6px 0 14px}
+  .alert-pill{display:inline-flex;align-items:center;gap:6px;font-size:12.5px;font-weight:800;padding:7px 13px;border-radius:10px;letter-spacing:.2px}
+  .alert-pill.crit{background:rgba(192,57,43,.12);color:var(--crm-critico);border:1.5px solid rgba(192,57,43,.4);animation:piscaAlerta 1.5s ease-in-out infinite}
+  .alert-pill.warn{background:rgba(222,180,40,.16);color:var(--crm-atencao-text);border:1.5px solid rgba(222,180,40,.45)}
+  @keyframes piscaAlerta{0%,100%{box-shadow:0 0 0 0 rgba(192,57,43,.5)}50%{box-shadow:0 0 0 6px rgba(192,57,43,0)}}
+  /* vacinas */
+  .vac-row{display:grid;grid-template-columns:1.3fr 1fr 1fr;gap:12px;align-items:end;padding:11px 0;border-bottom:1px solid #f1ebde}
+  .vac-row:last-child{border-bottom:none}
+  .vac-row .vac-nome{font-weight:700;color:var(--z-blue);font-size:14px;align-self:center}
+  @media(max-width:560px){.vac-row{grid-template-columns:1fr 1fr}.vac-row .vac-nome{grid-column:1/-1}}
+  /* Day Care chamada */
+  .dc-layout{display:flex;gap:18px;align-items:flex-start}
+  .dc-days{display:flex;flex-direction:column;gap:8px;flex:0 0 auto;width:152px}
+  .dc-day{padding:12px 14px;border-radius:12px;font-weight:700;font-size:14px;cursor:pointer;background:var(--z-white);border:1.5px solid var(--line);color:var(--muted)}
+  .dc-day .qt{float:right;font-size:11px;opacity:.7;font-weight:600}
+  .dc-day.active{background:var(--z-daycare);color:#fff;border-color:var(--z-daycare)}
+  .dc-day.hoje::after{content:' · hoje';font-size:10px;opacity:.7}
+  .dc-main{flex:1;min-width:0}
+  .pet{position:relative}
+  .dc-present{position:absolute;top:9px;right:9px;width:30px;height:30px;border-radius:50%;border:2px solid var(--line);background:#fff;display:grid;place-items:center;cursor:pointer;font-size:15px;font-weight:800;color:#c9c2b2;z-index:2}
+  .dc-present.veio{background:var(--crm-ok);border-color:var(--crm-ok);color:#fff}
+  .dc-present.faltou{background:var(--crm-critico);border-color:var(--crm-critico);color:#fff}
+  .pet .mini-alert{position:absolute;top:9px;left:9px;font-size:10px;font-weight:800;color:#fff;background:var(--crm-critico);padding:3px 8px;border-radius:8px;z-index:2;animation:piscaAlerta 1.5s ease-in-out infinite}
+  body[data-role="plantonista"] .so-day,body[data-role="tutor"] .so-day{display:none !important}
+  @media(max-width:640px){.dc-layout{flex-direction:column}.dc-days{flex-direction:row;width:100%;overflow-x:auto}.dc-day{flex:0 0 auto}}
   .role-note{font-size:12px;background:var(--z-cream-warm);border:1px solid var(--line);border-radius:10px;
     padding:10px 14px;color:var(--z-blue-soft);margin-bottom:18px;display:flex;gap:8px;align-items:center}
 
@@ -341,7 +375,7 @@
     <a data-v="hoje"><span data-icon="clock"></span><span>Linha do Tempo</span></a>
     <a data-v="adaptacao"><span data-icon="star"></span><span>Adaptação · 1º mês</span></a>
     <div class="grp">Serviços</div>
-    <a data-v="daycare"><span data-icon="sun"></span><span>Day Care</span></a>
+    <a data-v="daycare" class="so-day"><span data-icon="sun"></span><span>Day Care</span></a>
     <a data-v="hospedagem"><span data-icon="moon"></span><span>AuAulândia</span></a>
     <a data-v="agenda"><span data-icon="cal"></span><span>Agenda</span><span class="soon">em breve</span></a>
     <div class="grp">Gestão</div>
@@ -397,7 +431,7 @@
       </div>
       <div class="pel-wrap">
         <table class="pel">
-          <thead><tr><th>Nº</th><th>Peludinho</th><th>Raça</th><th>Vem</th><th>Dias</th><th>Tutor</th><th>Nascimento</th><th>Idade</th></tr></thead>
+          <thead><tr><th>Nº</th><th>Peludinho</th><th>Raça</th><th>Vem</th><th>Dias</th><th>Tutor</th><th>Idade</th></tr></thead>
           <tbody id="pelBody"></tbody>
         </table>
       </div>
@@ -450,20 +484,13 @@
 
   <!-- ===== PLACEHOLDERS ===== -->
   <section class="view" id="v-daycare">
-    <div class="role-note"><span data-icon="sun"></span><span>Chamada do dia por turma. Escolha o dia da semana — aparece quem vem nesse dia.</span></div>
-    <div class="subtabs" id="dcTabs">
-      <div class="dctab active" data-d="seg">Segunda</div>
-      <div class="dctab" data-d="ter">Terça</div>
-      <div class="dctab" data-d="qua">Quarta</div>
-      <div class="dctab" data-d="qui">Quinta</div>
-      <div class="dctab" data-d="sex">Sexta</div>
-    </div>
-    <div class="pel-toolbar"><span class="pel-count" id="dcCount"></span></div>
-    <div class="pel-wrap">
-      <table class="pel">
-        <thead><tr><th>Nº</th><th>Peludinho</th><th>Raça</th><th>Vem</th><th>Tutor</th><th>Idade</th></tr></thead>
-        <tbody id="dcBody"></tbody>
-      </table>
+    <div class="role-note"><span data-icon="sun"></span><span><strong>Aulunos</strong> do dia. Marque a presença tocando no círculo de cada peludinho (chamada). Toque no card para ver a ficha.</span></div>
+    <div class="dc-layout">
+      <div class="dc-days" id="dcDays"></div>
+      <div class="dc-main">
+        <div class="pel-toolbar"><span class="pel-count" id="dcCount"></span></div>
+        <div class="pets-grid" id="dcGrid"></div>
+      </div>
     </div>
   </section>
   <section class="view" id="v-hospedagem">
@@ -650,6 +677,7 @@
       DB=firebase.database();
       if(typeof preCadastro==='function') preCadastro();
       DB.ref('auaulandia/cadastro').on('value', s=>{ cadCache=s.val()||{}; if(typeof renderHosp==='function') renderHosp(); });
+      DB.ref('daycare/config/sensiveis').on('value', s=>{ const v=s.val(); if(Array.isArray(v)){ try{ SENS=new Set(v); }catch(e){} } });
     }).catch(e=>console.warn('Firebase auth:',e));
   }catch(e){ console.warn('Firebase init:',e); }
 
@@ -712,6 +740,8 @@
     document.getElementById('head-title').childNodes[0].nodeValue=titles[v][0]+' ';
     document.getElementById('head-sub').textContent=titles[v][1];
     if(v==='hospedagem') fecharPlantao();
+    if(v==='ficha'){ const l=document.getElementById('pel-lista'),fi=document.getElementById('pel-ficha'); if(l&&fi){ l.style.display='block'; fi.style.display='none'; } }
+    if(v==='daycare' && typeof carregarChamada==='function') carregarChamada();
     closeNav(); window.scrollTo({top:0,behavior:'smooth'});
   });
 
@@ -1291,64 +1321,171 @@
   }
   function segBtnsPel(field,val,opts){ return opts.map(o=>`<button class="${val===o?'on':''}" onclick="pick(this);setPelExtra(pelAtual,{${field}:this.textContent.trim()})">${o}</button>`).join(''); }
 
+  // sensibilidade configurável pela Gestão (cadeado por campo)
+  let SENS=new Set();
+  (function(){ const raw=localStorage.getItem('zeluz_daycare_sens'); if(raw){ try{ SENS=new Set(JSON.parse(raw)); }catch(e){} } else { SENS=new Set(['tel']); } })();
+  function salvarSens(){ const a=[...SENS]; localStorage.setItem('zeluz_daycare_sens',JSON.stringify(a)); if(DB) DB.ref('daycare/config/sensiveis').set(a).catch(()=>{}); }
+  function ehGestaoRole(){ return document.body.dataset.role==='gestao'; }
+  function toggleSens(fid){ if(SENS.has(fid)) SENS.delete(fid); else SENS.add(fid); salvarSens(); if(pelAtualIdx!=null) abrirPeludinho(pelAtualIdx); }
+  function fLock(fid){
+    const on=SENS.has(fid);
+    if(!ehGestaoRole()) return on?'<span class="sensivel-badge">sensível</span>':'';
+    return `<span class="lock-toggle" onclick="toggleSens('${fid}')" title="${on?'Oculto para monitor e plantonista. Clique para liberar':'Clique para ocultar de monitor e plantonista'}">${on?'🔒':'🔓'}</span>`+(on?'<span class="sensivel-badge">sensível</span>':'');
+  }
+  function fieldSens(fid,label,inputHtml){ const sens=SENS.has(fid); return `<div class="field${sens?' sensivel':''}"><label>${label} ${fLock(fid)}</label>${inputHtml}</div>`; }
+  function alertPills(ex){
+    const P=[];
+    if(ex.alergia) P.push(`<span class="alert-pill crit">ALERGIA: ${escAttr(ex.alergia)}</span>`);
+    if(ex.restricao) P.push(`<span class="alert-pill crit">RESTRIÇÃO: ${escAttr(ex.restricao)}</span>`);
+    if(ex.problema) P.push(`<span class="alert-pill crit">SAÚDE: ${escAttr(ex.problema)}</span>`);
+    if(ex.medicacao) P.push(`<span class="alert-pill warn">MEDICAÇÃO: ${escAttr(ex.medicacao)}</span>`);
+    if(ex.manias) P.push(`<span class="alert-pill warn">MANIAS: ${escAttr(ex.manias)}</span>`);
+    return P.length?`<div class="alert-pills">${P.join('')}</div>`:'';
+  }
+  function refreshPills(){ const el=document.getElementById('pelPills'); if(el&&pelAtual) el.innerHTML=alertPills(pelExtra(pelAtual)); }
+  function vacRow(ex,key,label){ return `<div class="vac-row"><div class="vac-nome">${label}</div>
+    <div class="field" style="margin:0"><label style="font-size:11px">Tomou em</label><input type="date" class="cad-in" value="${ex[key+'_t']||''}" onchange="setPelExtra(pelAtual,{${key}_t:this.value})"></div>
+    <div class="field" style="margin:0"><label style="font-size:11px">Próxima</label><input type="date" class="cad-in" value="${ex[key+'_p']||''}" onchange="setPelExtra(pelAtual,{${key}_p:this.value})"></div>
+  </div>`; }
+  let pelFotoPend=null;
+  function onPhotoPel(e){ const fl=e.target.files&&e.target.files[0]; if(!fl) return; const r=new FileReader();
+    r.onload=()=>{ const img=new Image(); img.onload=()=>{ const max=400; let w=img.width,h=img.height;
+      if(w>h){ if(w>max){ h=Math.round(h*max/w); w=max; } } else { if(h>max){ w=Math.round(w*max/h); h=max; } }
+      const c=document.createElement('canvas'); c.width=w; c.height=h; c.getContext('2d').drawImage(img,0,0,w,h);
+      pelFotoPend=c.toDataURL('image/jpeg',0.72);
+      const av=document.getElementById('pelAv'); if(av){ av.style.backgroundImage=`url('${pelFotoPend}')`; av.style.backgroundSize='cover'; av.style.backgroundPosition='center'; av.textContent=''; }
+      const st=document.getElementById('pelFotoSt'); if(st){ st.style.color='var(--crm-atencao-text)'; st.textContent='Foto pronta — clique em Salvar foto.'; }
+    }; img.src=r.result; }; r.readAsDataURL(fl); }
+  function salvarFotoPel(){ if(!pelAtual) return; if(!pelFotoPend){ alert('Escolha a foto primeiro (Inserir foto).'); return; }
+    setPelExtra(pelAtual,{foto:pelFotoPend}); const st=document.getElementById('pelFotoSt'); if(st){ st.style.color='var(--crm-ok)'; st.textContent='✓ Foto salva! Aparece na chamada e em todos os aparelhos.'; } pelFotoPend=null; if(typeof renderDaycare==='function') renderDaycare(); }
+
   function renderPel(){
     const inp=document.getElementById('pelSearch'); if(!inp) return;
     const q=jsNorm(inp.value);
     const list=PELUDINHOS.map((p,i)=>({p,i})).filter(o=>!q||jsNorm([o.p.n,o.p.raca,o.p.tutor].join(' ')).indexOf(q)>=0);
     document.getElementById('pelCount').textContent=`${PELUDINHOS.length} matriculados`+(q?` · ${list.length} na busca`:'');
-    document.getElementById('pelBody').innerHTML=list.map((o,row)=>{ const p=o.p; return `<tr onclick="abrirPeludinho(${o.i})" style="cursor:pointer">
+    document.getElementById('pelBody').innerHTML=list.map((o,row)=>{ const p=o.p; return `<tr onclick="abrirPeludinhoLista(${o.i})" style="cursor:pointer">
       <td class="pel-num">${row+1}</td>
       <td><span class="pel-nome">${p.n}</span>${p.apelido?` <span class="pel-obs">${p.apelido}</span>`:''}${p.castrado==='Não'?' <span class="pel-obs">Não castrado</span>':''}</td>
       <td>${p.raca}</td>
       <td><span class="pel-freq">${p.freq}</span></td>
       <td class="dias-cell">${diasHtml(p.dias)}</td>
       <td>${p.tutor}</td>
-      <td>${fmtNasc(p.nasc)}</td>
       <td>${calcIdade(p.nasc)||'—'}</td>
     </tr>`; }).join('');
   }
 
-  let pelAtual=null;
+  let pelAtual=null, pelAtualIdx=null, pelOrigem='peludinhos';
+  function abrirPeludinhoLista(i){ pelOrigem='peludinhos'; abrirPeludinho(i); }
+  function irParaView(v){
+    document.querySelectorAll('#nav a').forEach(x=>x.classList.remove('active'));
+    const a=document.querySelector('#nav a[data-v="'+v+'"]'); if(a) a.classList.add('active');
+    document.querySelectorAll('.view').forEach(x=>x.classList.remove('active'));
+    const sec=document.getElementById('v-'+v); if(sec) sec.classList.add('active');
+    if(typeof titles!=='undefined'&&titles[v]){ document.getElementById('head-title').childNodes[0].nodeValue=titles[v][0]+' '; document.getElementById('head-sub').textContent=titles[v][1]; }
+    window.scrollTo({top:0,behavior:'smooth'});
+  }
   function abrirPeludinho(i){
-    const p=PELUDINHOS[i]; pelAtual=p; const ex=pelExtra(p);
+    const p=PELUDINHOS[i]; pelAtual=p; pelAtualIdx=i; pelFotoPend=null; const ex=pelExtra(p);
     const idade=calcIdade(p.nasc);
     document.getElementById('pel-lista').style.display='none';
     const f=document.getElementById('pel-ficha'); f.style.display='block';
     const sexo=ex.sexo||'', castr=ex.castrado||p.castrado||'';
-    const metaTop=[p.raca, sexo, idade].filter(Boolean).join(' · ');
+    const foto=ex.foto;
+    const ph=foto?`<div class="ph" id="pelAv" style="background-image:url('${foto}');background-size:cover;background-position:center"></div>`:`<div class="ph" id="pelAv" style="background:${corPel(i)}">${(p.n[0]||'?')}</div>`;
     f.innerHTML=`
-      <button class="back-btn" onclick="voltarPel()">← Voltar aos peludinhos</button>
+      <button class="back-btn" onclick="voltarPel()">← Voltar</button>
       <div class="card hosp-head">
-        <div class="ph" style="background:${corPel(i)}">${(p.n[0]||'?')}</div>
+        <input id="pelFotoFile" type="file" accept="image/*" capture="environment" style="display:none" onchange="onPhotoPel(event)">
+        ${ph}
         <div style="flex:1">
           <div class="hf-nome">${p.n}${p.apelido?` <span style="font-size:14px;color:var(--muted)">(${p.apelido})</span>`:''}</div>
-          <div class="hf-meta">${metaTop}${castr==='Não'?' · <strong style="color:var(--z-daycare)">Não castrado</strong>':''}</div>
+          <div class="hf-meta">${[p.raca,sexo,idade].filter(Boolean).join(' · ')}${castr==='Não'?' · <strong style="color:var(--z-daycare)">Não castrado</strong>':''}</div>
           <div class="hf-estadia">Tutor: ${p.tutor}</div>
           <div style="margin-top:9px">${diasHtml(p.dias)} <span class="pel-freq" style="margin-left:6px">${p.freq}/semana</span></div>
+          <div class="so-gestao" style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px">
+            <button class="btn-foto-mini" onclick="document.getElementById('pelFotoFile').click()">📷 Inserir foto</button>
+            <button class="btn-foto-mini" style="background:var(--z-blue);color:var(--z-cream)" onclick="salvarFotoPel()">💾 Salvar foto</button>
+          </div>
+          <div id="pelFotoSt" style="font-size:11.5px;font-weight:700;margin-top:5px"></div>
         </div>
         <span class="chip-serv" style="background:rgba(224,136,86,.16);color:#a85a2e">Day Care</span>
       </div>
-      <div class="card">
-        <h2 style="font-size:20px">Identificação</h2>
-        <div class="hint">Os campos em branco você preenche aqui — salva sozinho em todos os aparelhos.</div>
+
+      <div class="alert-card">
+        <h2 style="font-size:19px;margin-bottom:3px">Atenção · Saúde e Cuidados</h2>
+        <div class="hint">Tudo que o monitor precisa saber antes de cuidar e dar o almoço.</div>
+        <div id="pelPills">${alertPills(ex)}</div>
+        <div class="cad-grid">
+          <div class="field"><label>Alergia</label><input class="cad-in" value="${escAttr(ex.alergia||'')}" placeholder="Ex: frango — ou deixe vazio" onchange="setPelExtra(pelAtual,{alergia:this.value});refreshPills()"></div>
+          <div class="field"><label>Restrição alimentar</label><input class="cad-in" value="${escAttr(ex.restricao||'')}" placeholder="Ex: sem grãos" onchange="setPelExtra(pelAtual,{restricao:this.value});refreshPills()"></div>
+          <div class="field"><label>Medicação</label><input class="cad-in" value="${escAttr(ex.medicacao||'')}" placeholder="Nome, dose, horário" onchange="setPelExtra(pelAtual,{medicacao:this.value});refreshPills()"></div>
+          <div class="field"><label>Algum problema de saúde</label><input class="cad-in" value="${escAttr(ex.problema||'')}" placeholder="Ex: cardíaco — ou vazio" onchange="setPelExtra(pelAtual,{problema:this.value});refreshPills()"></div>
+          <div class="field"><label>Manias</label><input class="cad-in" value="${escAttr(ex.manias||'')}" placeholder="Ex: protege a comida" onchange="setPelExtra(pelAtual,{manias:this.value});refreshPills()"></div>
+        </div>
+      </div>
+
+      <div class="subtabs">
+        <div class="subtab2 active" onclick="pelSubtab(this,'ps-ident')">Identificação</div>
+        <div class="subtab2" onclick="pelSubtab(this,'ps-saude')">Saúde &amp; Vacinas</div>
+        <div class="subtab2" onclick="pelSubtab(this,'ps-rotina')">Rotina</div>
+        <div class="subtab2" onclick="pelSubtab(this,'ps-comp')">Comportamento</div>
+      </div>
+
+      <div class="ppanel2 active" id="ps-ident"><div class="card">
         <div class="cad-grid">
           <div class="field"><label>Raça</label><input class="cad-in" value="${escAttr(p.raca)}" onchange="setPelExtra(pelAtual,{raca:this.value})"></div>
           <div class="field"><label>Data de nascimento</label><input type="date" class="cad-in" value="${p.nasc||''}" onchange="setPelExtra(pelAtual,{nasc:this.value})"></div>
           <div class="field"><label>Sexo</label><div class="seg" data-single>${segBtnsPel('sexo',sexo,['Macho','Fêmea'])}</div></div>
           <div class="field"><label>Castrado?</label><div class="seg gold" data-single>${segBtnsPel('castrado',castr,['Sim','Não'])}</div></div>
+          <div class="field"><label>Microchip</label><input class="cad-in" value="${escAttr(ex.microchip||'')}" placeholder="Número do microchip" onchange="setPelExtra(pelAtual,{microchip:this.value})"></div>
           <div class="field"><label>Tutor(es)</label><input class="cad-in" value="${escAttr(p.tutor)}" onchange="setPelExtra(pelAtual,{tutor:this.value})"></div>
-          <div class="field"><label>Telefone / WhatsApp</label><input class="cad-in" value="${escAttr(ex.tel||'')}" placeholder="(31) 9____-____" onchange="setPelExtra(pelAtual,{tel:this.value})"></div>
-          <div class="field"><label>Bairro</label><input class="cad-in" value="${escAttr(ex.bairro||'')}" placeholder="Bairro" onchange="setPelExtra(pelAtual,{bairro:this.value})"></div>
-          <div class="field"><label>Quem indicou</label><input class="cad-in" value="${escAttr(ex.indicou||'')}" placeholder="Indicação / como conheceu" onchange="setPelExtra(pelAtual,{indicou:this.value})"></div>
+          ${fieldSens('tel','Telefone / WhatsApp',`<input class="cad-in" value="${escAttr(ex.tel||'')}" placeholder="(31) 9____-____" onchange="setPelExtra(pelAtual,{tel:this.value})">`)}
+          ${fieldSens('bairro','Bairro',`<input class="cad-in" value="${escAttr(ex.bairro||'')}" placeholder="Bairro" onchange="setPelExtra(pelAtual,{bairro:this.value})">`)}
+          ${fieldSens('indicou','Quem indicou',`<input class="cad-in" value="${escAttr(ex.indicou||'')}" placeholder="Indicação" onchange="setPelExtra(pelAtual,{indicou:this.value})">`)}
           <div class="field"><label>Data de matrícula</label><input type="date" class="cad-in" value="${ex.matricula||''}" onchange="setPelExtra(pelAtual,{matricula:this.value})"></div>
           <div class="field"><label>Frequência</label><input class="cad-in" value="${escAttr(p.freq)} por semana" readonly></div>
         </div>
-        <div class="field" style="margin-top:6px"><label>Observações / cuidados (alergia, medicação, restrição alimentar, manias)</label><textarea class="cad-in" style="min-height:74px" placeholder="Anote aqui tudo que o monitor precisa saber" onchange="setPelExtra(pelAtual,{obs:this.value})">${escAttr(ex.obs||'')}</textarea></div>
         <div id="pel-saved" style="font-size:12px;color:var(--crm-ok);font-weight:700;margin-top:8px"></div>
-      </div>`;
+      </div></div>
+
+      <div class="ppanel2" id="ps-saude"><div class="card">
+        <h2 style="font-size:20px">Saúde &amp; Vacinas</h2>
+        <div class="field" style="max-width:260px"><label>Último check-up</label><input type="date" class="cad-in" value="${ex.checkup||''}" onchange="setPelExtra(pelAtual,{checkup:this.value})"></div>
+        <div style="margin-top:6px">
+          ${vacRow(ex,'vac_mult','Vacina Múltipla')}
+          ${vacRow(ex,'vac_gripe','Vacina de Gripe')}
+          ${vacRow(ex,'vac_raiva','Vacina Antirrábica')}
+          ${vacRow(ex,'carrapaticida','Carrapaticida')}
+          ${vacRow(ex,'vermifugo','Vermífugo')}
+        </div>
+      </div></div>
+
+      <div class="ppanel2" id="ps-rotina"><div class="card">
+        <h2 style="font-size:20px">Rotina &amp; alimentação</h2>
+        <div class="cad-grid">
+          <div class="field"><label>Alimentação (ração / dose)</label><input class="cad-in" value="${escAttr(ex.alimentacao||'')}" placeholder="Ex: Ração X · 80g 2x/dia" onchange="setPelExtra(pelAtual,{alimentacao:this.value})"></div>
+          <div class="field"><label>Almoça na creche?</label><div class="seg gold" data-single>${segBtnsPel('almoca',ex.almoca||'',['Sim','Não'])}</div></div>
+          <div class="field"><label>Passeia?</label><div class="seg gold" data-single>${segBtnsPel('passeia',ex.passeia||'',['Sim','Não'])}</div></div>
+          <div class="field"><label>Xixi e cocô</label><input class="cad-in" value="${escAttr(ex.banheiro||'')}" placeholder="Ex: fora de casa" onchange="setPelExtra(pelAtual,{banheiro:this.value})"></div>
+        </div>
+      </div></div>
+
+      <div class="ppanel2" id="ps-comp"><div class="card">
+        <h2 style="font-size:20px">Comportamento</h2>
+        <div class="cad-grid">
+          <div class="field"><label>Em casa</label><input class="cad-in" value="${escAttr(ex.comp_casa||'')}" onchange="setPelExtra(pelAtual,{comp_casa:this.value})"></div>
+          <div class="field"><label>Com pessoas</label><input class="cad-in" value="${escAttr(ex.comp_pessoas||'')}" onchange="setPelExtra(pelAtual,{comp_pessoas:this.value})"></div>
+          <div class="field"><label>Com outros peludos</label><input class="cad-in" value="${escAttr(ex.comp_peludos||'')}" onchange="setPelExtra(pelAtual,{comp_peludos:this.value})"></div>
+          <div class="field"><label>Medos</label><input class="cad-in" value="${escAttr(ex.medos||'')}" placeholder="Ex: fogos" onchange="setPelExtra(pelAtual,{medos:this.value})"></div>
+          <div class="field"><label>Já atacou outro peludo?</label><div class="seg" data-single>${segBtnsPel('atacou',ex.atacou||'',['Não','Sim'])}</div></div>
+          <div class="field"><label>Brincadeira favorita</label><input class="cad-in" value="${escAttr(ex.brincadeira||'')}" placeholder="Ex: bolinha" onchange="setPelExtra(pelAtual,{brincadeira:this.value})"></div>
+        </div>
+      </div></div>`;
     window.scrollTo({top:0,behavior:'smooth'});
   }
-  function voltarPel(){ document.getElementById('pel-ficha').style.display='none'; document.getElementById('pel-lista').style.display='block'; }
+  function pelSubtab(el,id){ el.parentNode.querySelectorAll('.subtab2').forEach(x=>x.classList.remove('active')); el.classList.add('active'); document.querySelectorAll('.ppanel2').forEach(x=>x.classList.remove('active')); const t=document.getElementById(id); if(t) t.classList.add('active'); }
+  function voltarPel(){ if(pelOrigem==='daycare'){ irParaView('daycare'); if(typeof carregarChamada==='function') carregarChamada(); } else { document.getElementById('pel-ficha').style.display='none'; document.getElementById('pel-lista').style.display='block'; } }
   function inserirAluno(){
     const nome=(prompt('Nome do novo Aluno (peludinho):')||'').trim(); if(!nome) return;
     const tutor=(prompt('Nome do tutor:')||'').trim();
@@ -1360,26 +1497,72 @@
   }
   renderPel();
 
-  // ===== DAY CARE — chamada por turma (filtra pelos dias) =====
-  let dcDia='seg';
-  function renderDaycare(){
-    const body=document.getElementById('dcBody'); if(!body) return;
-    const list=PELUDINHOS.filter(p=>(p.dias||[]).indexOf(dcDia)>=0).sort((a,b)=>jsNorm(a.n).localeCompare(jsNorm(b.n)));
-    document.getElementById('dcCount').textContent=`${list.length} peludinhos na turma de ${DIA_FULL[dcDia]}`;
-    body.innerHTML=list.map((p,i)=>`<tr>
-      <td class="pel-num">${i+1}</td>
-      <td><span class="pel-nome">${p.n}</span>${p.castrado==='Não'?' <span class="pel-obs">Não castrado</span>':''}</td>
-      <td>${p.raca}</td>
-      <td><span class="pel-freq">${p.freq}</span></td>
-      <td>${p.tutor}</td>
-      <td>${calcIdade(p.nasc)||'—'}</td>
-    </tr>`).join('');
+  // ===== DAY CARE — chamada visual (Aulunos do dia) =====
+  const HOJE_DIA=(()=>{ const d=new Date().getDay(); return (d>=1&&d<=5)?ORDEM_DIAS[d-1]:'seg'; })();
+  let dcDia=HOJE_DIA, dcChamada={}, dcAvulsos=[];
+  function dcDataKey(){ const p=x=>String(x).padStart(2,'0'); const d=new Date(); return d.getFullYear()+'-'+p(d.getMonth()+1)+'-'+p(d.getDate()); }
+  function dcKey(name,tutor){ return jsNorm((name||'')+'__'+(tutor||'')).replace(/[.#$\[\]\/ ]/g,'-'); }
+  function renderDcDays(){
+    const el=document.getElementById('dcDays'); if(!el) return;
+    el.innerHTML=ORDEM_DIAS.map(d=>{ const qt=PELUDINHOS.filter(p=>(p.dias||[]).indexOf(d)>=0).length;
+      return `<div class="dc-day${d===dcDia?' active':''}${d===HOJE_DIA?' hoje':''}" onclick="setDcDia('${d}')">${DIA_FULL[d]}<span class="qt">${qt}</span></div>`; }).join('');
   }
-  document.querySelectorAll('.dctab').forEach(t=>t.onclick=()=>{
-    document.querySelectorAll('.dctab').forEach(x=>x.classList.remove('active'));
-    t.classList.add('active'); dcDia=t.dataset.d; renderDaycare();
-  });
-  renderDaycare();
+  function setDcDia(d){ dcDia=d; carregarChamada(); }
+  function turmaDoDia(){
+    const base=PELUDINHOS.map((p,i)=>({p,i})).filter(o=>(o.p.dias||[]).indexOf(dcDia)>=0);
+    dcAvulsos.forEach((a,k)=>base.push({p:{n:a.nome,raca:a.raca||'',tutor:a.tutor||'',freq:'avulso',dias:[dcDia],nasc:''},i:'av'+k,avulso:true}));
+    return base.sort((x,y)=>jsNorm(x.p.n).localeCompare(jsNorm(y.p.n)));
+  }
+  function renderDaycare(){
+    if(!document.getElementById('dcGrid')) return;
+    renderDcDays();
+    const list=turmaDoDia();
+    const veio=list.filter(o=>dcChamada[dcKey(o.p.n,o.p.tutor)]==='veio').length;
+    const d=new Date(), p2=x=>String(x).padStart(2,'0');
+    document.getElementById('dcCount').textContent=`Aulunos de ${DIA_FULL[dcDia]} · ${list.length} na turma · ${veio} presentes · ${p2(d.getDate())}/${p2(d.getMonth()+1)}`;
+    document.getElementById('dcGrid').innerHTML =
+      `<div class="pet add" onclick="adicionarAvulsa()"><div class="plus">+</div><div class="t">Diária avulsa<br><span style="font-size:10px;font-weight:600;color:var(--muted)">aulino do dia</span></div></div>`+
+      list.map(o=>{ const p=o.p; const ex=(typeof o.i==='number')?pelExtra(p):{}; const foto=ex.foto;
+        const k=dcKey(p.n,p.tutor); const st=dcChamada[k];
+        const cls=st==='veio'?'veio':(st==='faltou'?'faltou':''); const ic=st==='veio'?'✓':(st==='faltou'?'✕':'○');
+        const alerta=(ex.alergia||ex.restricao)?`<span class="mini-alert">RESTRIÇÃO</span>`:'';
+        const ph=foto?`<div class="ph" style="background-image:url('${foto}');background-size:cover;background-position:center"></div>`:`<div class="ph" style="background:${corPel(typeof o.i==='number'?o.i:0)}">${(p.n[0]||'?')}</div>`;
+        const clickFicha=(typeof o.i==='number')?`onclick="abrirPeludinhoDay(${o.i})" style="cursor:pointer"`:'';
+        return `<div class="pet">
+          <div class="dc-present ${cls}" onclick="marcarPresenca('${k}')" title="Marcar presença (veio / faltou)">${ic}</div>
+          ${alerta}
+          <div ${clickFicha}>
+            ${ph}
+            <div class="nm">${p.n}</div>
+            <div class="br">${p.raca||'—'}</div>
+            <div class="hosp-tutor">${o.avulso?'Diária avulsa':'Tutor: '+p.tutor}</div>
+          </div>
+        </div>`;
+      }).join('');
+  }
+  function marcarPresenca(k){
+    const cur=dcChamada[k]; const next=cur==='veio'?'faltou':(cur==='faltou'?'':'veio');
+    if(next) dcChamada[k]=next; else delete dcChamada[k];
+    if(DB) DB.ref('daycare/chamada/'+dcDataKey()+'/'+k).set(next||null).catch(()=>{});
+    renderDaycare();
+  }
+  function carregarChamada(){
+    dcChamada={}; dcAvulsos=[];
+    if(DB){
+      Promise.all([
+        DB.ref('daycare/chamada/'+dcDataKey()).once('value').then(s=>{ dcChamada=s.val()||{}; }).catch(()=>{}),
+        DB.ref('daycare/avulsos/'+dcDataKey()).once('value').then(s=>{ dcAvulsos=Object.values(s.val()||{}); }).catch(()=>{})
+      ]).then(renderDaycare).catch(renderDaycare);
+    } else renderDaycare();
+  }
+  function adicionarAvulsa(){
+    const nome=(prompt('Diária avulsa — nome do peludinho:')||'').trim(); if(!nome) return;
+    const tutor=(prompt('Nome do tutor:')||'').trim();
+    if(DB){ DB.ref('daycare/avulsos/'+dcDataKey()).push({nome:nome,tutor:tutor}).then(carregarChamada).catch(e=>alert('Erro: '+e.message)); }
+    else { dcAvulsos.push({nome:nome,tutor:tutor}); renderDaycare(); }
+  }
+  function abrirPeludinhoDay(i){ pelOrigem='daycare'; irParaView('ficha'); abrirPeludinho(i); }
+  carregarChamada();
 </script>
 </body>
 </html>
