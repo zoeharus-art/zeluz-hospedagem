@@ -272,6 +272,12 @@
   body[data-role="tutor"]   .sensivel{display:none !important}
   body[data-role="monitor"] .so-gestao,
   body[data-role="tutor"]   .so-gestao{display:none !important}
+  /* .so-master = SÓ a Gestora (Márcia). Supervisão (Amanda) e equipe não veem. */
+  body:not([data-role="gestao"]) .so-master{display:none !important}
+  /* mensagem para quem entra em Pessoas mas não é a Gestora (ex: Amanda) */
+  body[data-role="gestao"] .so-supervisor-only{display:none !important}
+  /* abas internas de Pessoas (handler próprio, não colide com a Ficha) */
+  .ppanel{display:none}.ppanel.active{display:block}
   .role-note{font-size:12px;background:var(--z-cream-warm);border:1px solid var(--line);border-radius:10px;
     padding:10px 14px;color:var(--z-blue-soft);margin-bottom:18px;display:flex;gap:8px;align-items:center}
 
@@ -320,7 +326,7 @@
     <a data-v="hospedagem"><span data-icon="moon"></span><span>AuAulândia</span></a>
     <a data-v="agenda"><span data-icon="cal"></span><span>Agenda</span><span class="soon">em breve</span></a>
     <div class="grp">Gestão</div>
-    <a data-v="pessoas"><span data-icon="users"></span><span>Pessoas</span><span class="soon">em breve</span></a>
+    <a data-v="pessoas" class="so-gestao"><span data-icon="users"></span><span>Pessoas</span></a>
     <a data-v="sair"><span data-icon="exit"></span><span>Sair</span></a>
   </nav>
   <div class="who">
@@ -616,7 +622,29 @@
     </div>
   </section>
   <section class="view" id="v-agenda"><div class="soon-box"><img class="ic-st" src="assets/stickers/coleira.png" alt=""><div class="t">Agenda</div><div class="d">Calendário de frequência e reservas — próxima etapa.</div></div></section>
-  <section class="view" id="v-pessoas"><div class="soon-box"><img class="ic-st" src="assets/stickers/coracao.png" alt=""><div class="t">Pessoas &amp; Turnos</div><div class="d">Equipe, horários e tarefas por Zeloso — próxima etapa.</div></div></section>
+  <section class="view" id="v-pessoas">
+    <!-- abas de Pessoas (escalável: Senhas hoje; Equipe e Turnos depois) -->
+    <div class="subtabs so-master">
+      <div class="ptab active" data-p="p-senhas">Senhas</div>
+    </div>
+
+    <!-- SENHAS — só a Gestora (Márcia) vê -->
+    <div class="ppanel active so-master" id="p-senhas">
+      <div class="role-note"><span data-icon="lock"></span><span><strong>Área restrita à Gestão.</strong> Estas senhas aparecem só para você, Márcia. A Supervisão e a equipe não têm acesso a esta lista.</span></div>
+      <div class="card">
+        <h2>Senhas de acesso</h2>
+        <div class="hint">A senha que cada pessoa digita para entrar no sistema. A senha da Gestora não fica listada aqui, por segurança.</div>
+        <div class="pair"><span class="k">Amanda · Supervisora</span><span class="val" style="font-family:var(--font-marca);font-size:18px;letter-spacing:3px;color:var(--z-gold-deep)">0912</span></div>
+        <div class="pair"><span class="k">Monitor 5</span><span class="val" style="font-family:var(--font-marca);font-size:18px;letter-spacing:3px;color:var(--z-gold-deep)">1000</span></div>
+        <div class="pair"><span class="k">Plantonista</span><span class="val" style="font-family:var(--font-marca);font-size:18px;letter-spacing:3px;color:var(--z-gold-deep)">1001</span></div>
+      </div>
+    </div>
+
+    <!-- mensagem para quem entra em Pessoas mas não é a Gestora (ex: Amanda) -->
+    <div class="so-supervisor-only">
+      <div class="soon-box"><img class="ic-st" src="assets/stickers/coracao.png" alt=""><div class="t">Pessoas &amp; Turnos</div><div class="d">Equipe, horários e tarefas por Zeloso — próxima etapa.</div></div>
+    </div>
+  </section>
   <section class="view" id="v-sair"><div class="soon-box"><img class="ic-st" src="assets/simbolo.png" alt=""><div class="t">Sair</div><div class="d">No sistema real, encerra a sessão com segurança.</div></div></section>
 </main>
 
@@ -710,6 +738,13 @@
     document.querySelectorAll('.subtab').forEach(x=>x.classList.remove('active'));
     document.querySelectorAll('.subpanel').forEach(x=>x.classList.remove('active'));
     t.classList.add('active'); document.getElementById(t.dataset.s).classList.add('active');
+  });
+
+  // abas internas de Pessoas (isolado da ficha)
+  document.querySelectorAll('.ptab').forEach(t=>t.onclick=()=>{
+    document.querySelectorAll('.ptab').forEach(x=>x.classList.remove('active'));
+    document.querySelectorAll('.ppanel').forEach(x=>x.classList.remove('active'));
+    t.classList.add('active'); const el=document.getElementById(t.dataset.p); if(el) el.classList.add('active');
   });
 
   function pick(btn){
