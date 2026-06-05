@@ -331,6 +331,18 @@
   .dc-present.faltou{background:var(--crm-critico);border-color:var(--crm-critico);color:#fff}
   .pet .mini-alert{position:absolute;top:9px;left:9px;font-size:10px;font-weight:800;color:#fff;background:var(--crm-critico);padding:3px 8px;border-radius:8px;z-index:2;animation:piscaAlerta 1.5s ease-in-out infinite}
   body[data-role="plantonista"] .so-day,body[data-role="tutor"] .so-day{display:none !important}
+  /* Plantonista: só AuAulândia e Sair */
+  body[data-role="plantonista"] .nav a,body[data-role="plantonista"] .nav .grp,body[data-role="plantonista"] .nav .subnav{display:none !important}
+  body[data-role="plantonista"] .nav a[data-v="hospedagem"],body[data-role="plantonista"] .nav a[data-v="sair"]{display:flex !important}
+  /* Monitor: sem Operação */
+  body[data-role="monitor"] .op-only,body[data-role="monitor"] .grp-operacao{display:none !important}
+  /* selos de adaptação (foco do time) */
+  .mini-adapt{position:absolute;top:8px;right:8px;font-size:10px;font-weight:800;color:var(--z-blue);background:var(--z-gold);padding:3px 8px;border-radius:8px;z-index:3;animation:piscaAdapt 1s ease-in-out infinite}
+  .dc-card .mini-adapt,.alm-card .mini-adapt{top:32px}
+  @keyframes piscaAdapt{0%,100%{opacity:1}50%{opacity:.4}}
+  .adapt-banner{background:linear-gradient(90deg,rgba(222,180,40,.28),rgba(222,180,40,.1));border:2px solid var(--z-gold);border-radius:12px;padding:12px 16px;margin-bottom:12px;font-weight:800;color:var(--z-blue-deep);text-align:center;animation:piscaAlerta 1.1s ease-in-out infinite}
+  .subnav-grp{font-size:10px;text-transform:uppercase;letter-spacing:1px;opacity:.55;font-weight:700;margin:9px 0 3px 12px;color:var(--z-cream)}
+  .dc-titulo{font-family:var(--font-accent);font-size:23px;font-weight:700;color:var(--z-blue);margin-bottom:12px}
   @media(max-width:640px){.dc-layout{flex-direction:column}.dc-days{flex-direction:row;width:100%;overflow-x:auto}.dc-day{flex:0 0 auto}}
   /* submenu de dias no menu lateral */
   .subnav{display:flex;flex-direction:column;margin:2px 0 6px 22px;border-left:2px solid rgba(255,255,255,.14);padding-left:6px;position:relative;z-index:1}
@@ -356,6 +368,11 @@
   .dc-btn{flex:1;border:1.5px solid var(--line);background:#fff;border-radius:9px;padding:10px 6px;font-family:var(--font-ui);font-weight:700;font-size:13.5px;cursor:pointer;color:var(--z-blue)}
   .dc-btn.veio.on{background:var(--crm-ok);color:#fff;border-color:var(--crm-ok)}
   .dc-btn.faltou.on{background:var(--crm-critico);color:#fff;border-color:var(--crm-critico)}
+  /* To-Do (checklist) */
+  .todo-item{display:flex;align-items:center;gap:11px;padding:11px 14px;border:1.5px solid var(--line);border-radius:11px;margin-bottom:8px;cursor:pointer;font-weight:600;color:var(--z-blue);background:#fff}
+  .todo-item.on{background:rgba(39,174,96,.1);border-color:var(--crm-ok)}
+  .todo-box{width:24px;height:24px;border-radius:7px;border:2px solid var(--line);display:grid;place-items:center;font-weight:800;color:#fff;background:#fff;flex:0 0 auto;font-size:14px}
+  .todo-item.on .todo-box{background:var(--crm-ok);border-color:var(--crm-ok)}
   /* Banco de atividades */
   .ativ-card{background:#fff;border:1px solid var(--line);border-left:4px solid var(--z-gold);border-radius:12px;padding:13px 16px;margin-bottom:10px;box-shadow:var(--shadow)}
   .ativ-head{display:flex;align-items:center;gap:10px}
@@ -420,10 +437,9 @@
   </div>
   <div class="brand-sub">Sistema DayCare</div>
   <nav class="nav" id="nav">
-    <div class="grp">Operação</div>
-    <a class="active" data-v="inicio"><span data-icon="home"></span><span>Início</span></a>
-    <a data-v="hoje"><span data-icon="clock"></span><span>Linha do Tempo</span></a>
-    <a data-v="adaptacao"><span data-icon="star"></span><span>Adaptação · 1º mês</span></a>
+    <div class="grp grp-operacao">Operação</div>
+    <a class="active op-only" data-v="inicio"><span data-icon="home"></span><span>Início</span></a>
+    <a class="op-only" data-v="hoje"><span data-icon="clock"></span><span>Linha do Tempo</span></a>
     <div class="grp">Serviços</div>
     <a data-v="daycare" class="so-day"><span data-icon="sun"></span><span>Day Care</span></a>
     <div class="subnav so-day" id="dcSubnav" style="display:none"></div>
@@ -535,21 +551,25 @@
 
   <!-- ===== PLACEHOLDERS ===== -->
   <section class="view" id="v-daycare">
-    <div class="role-note"><span data-icon="sun"></span><span><strong>Aulunos</strong> de <strong id="dcDiaLabel">hoje</strong>. Em cada peludinho toque <strong>VEIO</strong> ou <strong>FALTOU</strong> (chamada). A lista de faltas vai para a Gestão. Toque no card para ver a ficha.</span></div>
-    <div class="subtabs">
-      <div class="dctab2 active" data-t="chamada" onclick="setDcAba('chamada')">Chamada</div>
-      <div class="dctab2" data-t="almoco" onclick="setDcAba('almoco')">Almoço</div>
-    </div>
-    <div id="dc-chamada">
+    <div id="dcAdaptBanner"></div>
+    <div class="dc-titulo"><span id="dcAtivLabel">Chamada</span> · <span id="dcDiaLabel">hoje</span></div>
+    <div id="scr-chamada" class="dc-scr">
+      <div class="role-note"><span data-icon="sun"></span><span>Toque <strong>VEIO</strong> ou <strong>FALTOU</strong> em cada peludinho. A lista de faltas vai para a Gestão. Toque no card para ver a ficha.</span></div>
       <div id="dcResumo"></div>
       <div class="pel-toolbar"><span class="pel-count" id="dcCount"></span></div>
       <div class="pets-grid" id="dcGrid"></div>
     </div>
-    <div id="dc-almoco" style="display:none">
+    <div id="scr-almoco" class="dc-scr" style="display:none">
       <div id="almTurno"></div>
       <div id="almResumo"></div>
       <div class="pel-toolbar"><span class="pel-count" id="almCount"></span></div>
       <div class="pets-grid" id="almGrid"></div>
+    </div>
+    <div id="scr-generic" class="dc-scr" style="display:none">
+      <div class="role-note"><span data-icon="star"></span><span>Marque <strong>Feito</strong> em cada peludinho que passou por esta atividade. Cada atividade terá seu protocolo próprio em breve.</span></div>
+      <div id="genResumo"></div>
+      <div class="pel-toolbar"><span class="pel-count" id="genCount"></span></div>
+      <div class="pets-grid" id="genGrid"></div>
     </div>
   </section>
   <section class="view" id="v-hospedagem">
@@ -561,6 +581,11 @@
       </div>
       <div class="role-note"><span data-icon="moon"></span><span>Selecione o peludinho hospedado para registrar a <strong>passagem de plantão</strong>. Turnos: Diurno 07h–19h · Noturno 19h–07h.</span></div>
       <div class="pets-grid" id="hospGrid"></div>
+      <div class="card" id="card-checkout-plantao" style="margin-top:18px">
+        <h2 style="font-size:19px">Check-out do plantão</h2>
+        <div class="hint">Antes de sair, confirme cada item. Fica salvo no dia.</div>
+        <div id="checkoutPlantaoList"></div>
+      </div>
     </div>
 
     <!-- FICHA de passagem de plantão -->
@@ -806,7 +831,7 @@
     document.getElementById('head-sub').textContent=titles[v][1];
     if(v==='hospedagem') fecharPlantao();
     if(v==='ficha'){ const l=document.getElementById('pel-lista'),fi=document.getElementById('pel-ficha'); if(l&&fi){ l.style.display='block'; fi.style.display='none'; } }
-    if(v==='daycare'){ const sm=document.getElementById('dcSubnav'); if(sm) sm.style.display='block'; if(typeof carregarChamada==='function') carregarChamada(); }
+    if(v==='daycare'){ if(typeof abrirDayCare==='function') abrirDayCare(); }
     closeNav(); window.scrollTo({top:0,behavior:'smooth'});
   });
 
@@ -1488,6 +1513,7 @@
           <div class="field"><label>Medicação</label><input class="cad-in" value="${escAttr(ex.medicacao||'')}" placeholder="Nome, dose, horário" onchange="setPelExtra(pelAtual,{medicacao:this.value});refreshPills()"></div>
           <div class="field"><label>Algum problema de saúde</label><input class="cad-in" value="${escAttr(ex.problema||'')}" placeholder="Ex: cardíaco — ou vazio" onchange="setPelExtra(pelAtual,{problema:this.value});refreshPills()"></div>
           <div class="field"><label>Manias</label><input class="cad-in" value="${escAttr(ex.manias||'')}" placeholder="Ex: protege a comida" onchange="setPelExtra(pelAtual,{manias:this.value});refreshPills()"></div>
+          <div class="field"><label>Em adaptacao (1&ordm; mes)?</label><div class="seg gold" data-single>${segBtnsPel('adaptacao',ex.adaptacao||'',['Sim','Nao'])}</div></div>
         </div>
       </div>
 
@@ -1572,13 +1598,23 @@
 
   // ===== DAY CARE — chamada visual a prova de burros (Aulunos do dia) =====
   const HOJE_DIA=(()=>{ const d=new Date().getDay(); return (d>=1&&d<=5)?ORDEM_DIAS[d-1]:'seg'; })();
-  let dcDia=HOJE_DIA, dcChamada={}, dcAvulsos=[];
+  let dcDia=HOJE_DIA, dcChamada={}, dcAvulsos=[], dcAtiv='chamada';
+  const ATIVS_DC=[{s:'checkin-corpo',t:'Check-in do corpo'},{s:'checkin-pert',t:'Check-in dos pertences'},{s:'chamada',t:'Chamada',esp:1},{s:'livre',t:'Atividade livre'},{s:'ea',t:'Enriquecimento Ambiental (EA)'},{s:'aucademia',t:'Aucademia'},{s:'almoco',t:'Almoço',esp:1},{s:'massagem',t:'Massagem Dessensibilizadora'},{s:'jogos',t:'Jogos Cognitivos'},{s:'aulinha',t:'Aulinha de Disciplina'},{s:'agility',t:'Agility Funcional'},{s:'musicoterapia',t:'Musicoterapia'},{s:'checkout-pert',t:'Check-out dos pertences'},{s:'checkout-corpo',t:'Check-out do corpinho'}];
   function dcDataKey(){ const p=x=>String(x).padStart(2,'0'); const d=new Date(); return d.getFullYear()+'-'+p(d.getMonth()+1)+'-'+p(d.getDate()); }
   function dcKey(name,tutor){ return jsNorm((name||'')+'__'+(tutor||'')).replace(/[.#$\[\]\/ ]/g,'-'); }
-  function montarSubnavDias(){ const sm=document.getElementById('dcSubnav'); if(sm) sm.innerHTML=ORDEM_DIAS.map(d=>`<a data-d="${d}" onclick="abrirDcDia('${d}')">${DIA_FULL[d]}${d===HOJE_DIA?' · hoje':''}</a>`).join(''); }
-  function marcarSubnavAtivo(){ document.querySelectorAll('#dcSubnav a').forEach(a=>a.classList.toggle('active', a.dataset.d===dcDia)); }
-  function abrirDcDia(d){ dcDia=d; const sm=document.getElementById('dcSubnav'); if(sm) sm.style.display='block'; if(typeof irParaView==='function') irParaView('daycare'); marcarSubnavAtivo(); carregarChamada(); if(typeof dcAba!=='undefined'&&dcAba==='almoco') carregarAlmoco(); if(typeof closeNav==='function') closeNav(); }
-  function setDcDia(d){ abrirDcDia(d); }
+  function montarSubnav(){ const sm=document.getElementById('dcSubnav'); if(!sm) return;
+    let h='<div class="subnav-grp">Turminhas</div>';
+    h+=ORDEM_DIAS.map(d=>`<a data-d="${d}" onclick="setDcDia('${d}')">${DIA_FULL[d]}${d===HOJE_DIA?' · hoje':''}</a>`).join('');
+    h+='<div class="subnav-grp">Atividades</div>';
+    h+=ATIVS_DC.map(a=>`<a data-a="${a.s}" onclick="abrirAtividade('${a.s}')">${a.t}</a>`).join('');
+    sm.innerHTML=h;
+  }
+  function marcarSubnavAtivo(){ document.querySelectorAll('#dcSubnav a').forEach(a=>{ if(a.dataset.d!=null) a.classList.toggle('active', a.dataset.d===dcDia); if(a.dataset.a!=null) a.classList.toggle('active', a.dataset.a===dcAtiv); }); }
+  function abrirDayCare(){ const sm=document.getElementById('dcSubnav'); if(sm) sm.style.display='block'; marcarSubnavAtivo(); renderAtual(); }
+  function setDcDia(d){ dcDia=d; if(typeof irParaView==='function') irParaView('daycare'); const sm=document.getElementById('dcSubnav'); if(sm) sm.style.display='block'; marcarSubnavAtivo(); renderAtual(); if(typeof closeNav==='function') closeNav(); }
+  function abrirAtividade(slug){ dcAtiv=slug; if(typeof irParaView==='function') irParaView('daycare'); const sm=document.getElementById('dcSubnav'); if(sm) sm.style.display='block'; marcarSubnavAtivo(); renderAtual(); if(typeof closeNav==='function') closeNav(); }
+  function mostrarScr(){ const esp=(dcAtiv==='chamada'||dcAtiv==='almoco'); const a=document.getElementById('scr-chamada'),b=document.getElementById('scr-almoco'),c=document.getElementById('scr-generic'); if(a)a.style.display=dcAtiv==='chamada'?'block':'none'; if(b)b.style.display=dcAtiv==='almoco'?'block':'none'; if(c)c.style.display=esp?'none':'block'; const lbl=document.getElementById('dcAtivLabel'); if(lbl){ const f=ATIVS_DC.find(x=>x.s===dcAtiv); lbl.textContent=f?f.t:'Chamada'; } const dl=document.getElementById('dcDiaLabel'); if(dl) dl.textContent=DIA_FULL[dcDia]; }
+  function renderAtual(){ mostrarScr(); if(dcAtiv==='chamada') carregarChamada(); else if(dcAtiv==='almoco') carregarAlmoco(); else carregarGenerico(); if(typeof renderAdaptBanner==='function') renderAdaptBanner(); }
   function turmaDoDia(){
     const base=PELUDINHOS.map((p,i)=>({p,i})).filter(o=>(o.p.dias||[]).indexOf(dcDia)>=0);
     dcAvulsos.forEach((a,k)=>base.push({p:{n:a.nome,raca:a.raca||'',tutor:a.tutor||'',freq:'avulso',dias:[dcDia],nasc:''},i:'av'+k,avulso:true}));
@@ -1610,7 +1646,7 @@
         const clickFicha=(typeof o.i==='number')?`onclick="abrirPeludinhoDay(${o.i})" style="cursor:pointer"`:'';
         const ribbon=st==='veio'?'<div class="dc-ribbon veio">PRESENTE</div>':(st==='faltou'?'<div class="dc-ribbon faltou">FALTOU</div>':'<div class="dc-ribbon pend">PENDENTE — marque</div>');
         return `<div class="pet dc-card ${st}">
-          ${ribbon}${alerta}
+          ${ribbon}${alerta}${seloAdapt(ex)}
           <div ${clickFicha}>
             ${ph}
             <div class="nm">${p.n}</div>
@@ -1646,8 +1682,8 @@
     else { dcAvulsos.push({nome:nome,tutor:tutor}); renderDaycare(); }
   }
   function abrirPeludinhoDay(i){ pelOrigem='daycare'; irParaView('ficha'); abrirPeludinho(i); }
-  montarSubnavDias();
-  carregarChamada();
+  montarSubnav();
+  renderAtual();
 
   // ===== BANCO DE ATIVIDADES DOS MONITORES =====
   const ATIVIDADES_DEFAULT=[
@@ -1692,9 +1728,46 @@
   function removerAtividade(i){ if(!confirm('Remover a atividade \"'+ATIVIDADES[i].t+'\"?')) return; ATIVIDADES.splice(i,1); salvarAtiv(); renderAtiv(); }
   renderAtiv();
 
+  // ===== ADAPTACAO + ATIVIDADE GENERICA (To-Do por peludinho) =====
+  function seloAdapt(ex){ return (ex&&ex.adaptacao==='Sim')?'<span class="mini-adapt">ADAPTACAO</span>':''; }
+  function renderAdaptBanner(){ const el=document.getElementById('dcAdaptBanner'); if(!el) return;
+    const nomes=turmaDoDia().filter(o=>typeof o.i==='number').filter(o=>{ const ex=pelExtra(o.p); return ex&&ex.adaptacao==='Sim'; }).map(o=>o.p.n);
+    el.innerHTML=nomes.length?`<div class="adapt-banner">&#9733; EM ADAPTACAO HOJE: ${nomes.join(', ')} &mdash; foco de todo o time!</div>`:'';
+  }
+  let genMarcas={};
+  function carregarGenerico(){ genMarcas={}; if(DB){ DB.ref('daycare/atividade/'+dcDataKey()+'/'+dcAtiv).once('value').then(s=>{ genMarcas=s.val()||{}; }).then(renderGenerico).catch(renderGenerico); } else renderGenerico(); }
+  function marcarGenerico(k){ const cur=genMarcas[k]; const nx=(cur==='feito')?'':'feito'; if(nx) genMarcas[k]=nx; else delete genMarcas[k]; if(DB) DB.ref('daycare/atividade/'+dcDataKey()+'/'+dcAtiv+'/'+k).set(nx||null).catch(()=>{}); renderGenerico(); }
+  function renderGenerico(){
+    if(!document.getElementById('genGrid')) return;
+    const list=turmaDoDia(); let feito=0;
+    list.forEach(o=>{ if(genMarcas[dcKey(o.p.n,o.p.tutor)]==='feito')feito++; });
+    const f=ATIVS_DC.find(a=>a.s===dcAtiv);
+    document.getElementById('genResumo').innerHTML=`<div class="dc-resumo"><div class="dc-stat ok"><b>${feito}</b>feito</div><div class="dc-stat pend"><b>${list.length-feito}</b>pendente</div></div>`;
+    document.getElementById('genCount').textContent=`${list.length} aulunos &middot; ${f?f.t:''}`;
+    document.getElementById('genGrid').innerHTML=list.map(o=>{ const p=o.p; const ex=(typeof o.i==='number')?pelExtra(p):{}; const foto=ex.foto; const k=dcKey(p.n,p.tutor); const ok=genMarcas[k]==='feito';
+      const restr=(ex.restricao||ex.alergia)?`<span class="mini-alert">RESTRICAO</span>`:'';
+      const ph=foto?`<div class="ph" style="background-image:url('${foto}');background-size:cover;background-position:center"></div>`:`<div class="ph" style="background:${corPel(typeof o.i==='number'?o.i:0)}">${(p.n[0]||'?')}</div>`;
+      return `<div class="pet dc-card ${ok?'veio':''}">
+        <div class="dc-ribbon ${ok?'veio':'pend'}">${ok?'FEITO':'PENDENTE'}</div>${restr}${seloAdapt(ex)}
+        <div ${typeof o.i==='number'?`onclick="abrirPeludinhoDay(${o.i})" style="cursor:pointer"`:''}>${ph}<div class="nm">${p.n}</div><div class="br">${p.raca||'-'}</div></div>
+        <div class="dc-actions"><button class="dc-btn veio ${ok?'on':''}" style="flex:1" onclick="marcarGenerico('${k}')">${ok?'&#10003; Feito':'Marcar feito'}</button></div>
+      </div>`;
+    }).join('');
+  }
+
+  // ===== CHECK-OUT DO PLANTAO (To-Do plantonista) =====
+  const CHECKOUT_PLANTAO=['Fechar porta da sala','Fechar porta da cozinha','Colocar o alarme'];
+  let coPlantao={};
+  function carregarCheckoutPlantao(){ if(DB){ DB.ref('auaulandia/checkout/'+dcDataKey()).once('value').then(s=>{ coPlantao=s.val()||{}; }).then(renderCheckoutPlantao).catch(renderCheckoutPlantao); } else renderCheckoutPlantao(); }
+  function toggleCheckoutPlantao(i){ coPlantao[i]=!coPlantao[i]; if(DB) DB.ref('auaulandia/checkout/'+dcDataKey()+'/'+i).set(coPlantao[i]||null).catch(()=>{}); renderCheckoutPlantao(); }
+  function renderCheckoutPlantao(){ const el=document.getElementById('checkoutPlantaoList'); if(!el) return;
+    el.innerHTML=CHECKOUT_PLANTAO.map((t,i)=>{ const on=!!coPlantao[i]; return `<label class="todo-item ${on?'on':''}" onclick="toggleCheckoutPlantao(${i})"><span class="todo-box">${on?'&#10003;':''}</span>${t}</label>`; }).join('');
+  }
+  carregarCheckoutPlantao();
+
   // ===== ALMOCO (Monitor 6) =====
   let dcAba='chamada', almMarcas={}, almTurno={};
-  function setDcAba(t){ dcAba=t; document.querySelectorAll('#v-daycare .dctab2').forEach(x=>x.classList.toggle('active',x.dataset.t===t)); document.getElementById('dc-chamada').style.display=t==='chamada'?'block':'none'; document.getElementById('dc-almoco').style.display=t==='almoco'?'block':'none'; if(t==='almoco') carregarAlmoco(); }
+  function setDcAba(t){ abrirAtividade(t); }
   function horaAgora(){ const d=new Date(),p=x=>String(x).padStart(2,'0'); return p(d.getHours())+':'+p(d.getMinutes()); }
   function quemSou(){ try{ const u=JSON.parse(sessionStorage.getItem('zeluz_login')||'null'); return (u&&u.nome)||'-'; }catch(e){ return '-'; } }
   function carregarAlmoco(){
@@ -1748,7 +1821,7 @@
         <div ${typeof o.i==='number'?`onclick="abrirPeludinhoDay(${o.i})" style="cursor:pointer"`:''}>
           ${ph}<div class="nm">${p.n}</div><div class="br">${p.raca||'-'}</div>
         </div>
-        ${neon}${info}
+        ${seloAdapt(ex)}${neon}${info}
         <div class="dc-actions alm-actions">
           <button class="alm-btn tudo ${m==='tudo'?'on':''}" onclick="marcarAlmoco('${k}','tudo')">Comeu tudo</button>
           <button class="alm-btn metade ${m==='metade'?'on':''}" onclick="marcarAlmoco('${k}','metade')">Metade</button>
