@@ -204,7 +204,7 @@
   .lock-note{display:none !important}
   .hf-chipline{font-size:13.5px;font-weight:800;color:var(--z-gold-deep);margin-top:3px}
   .btn-foto-mini{margin-top:10px;background:var(--z-gold);color:var(--z-blue);border:none;border-radius:9px;padding:7px 14px;font-family:var(--font-ui);font-weight:700;font-size:12.5px;cursor:pointer}
-  body:not([data-role="gestao"]) #card-cadastro, body:not([data-role="gestao"]) .chip-box{display:none}
+  body[data-role="monitor"] #card-cadastro, body[data-role="plantonista"] #card-cadastro, body[data-role="tutor"] #card-cadastro{display:none}
   body[data-role="plantonista"] .so-foto, body[data-role="tutor"] .so-foto{display:none}
   body[data-role="plantonista"] #card-dia .seg button, body[data-role="plantonista"] #card-dia textarea,
   body[data-role="tutor"] #card-dia .seg button, body[data-role="tutor"] #card-dia textarea,
@@ -523,6 +523,10 @@
           <div class="field"><label>Nome do tutor</label><input type="text" id="hf-tutor" class="cad-in" oninput="onCad()" placeholder="Nome do tutor"></div>
           <div class="field"><label>Nº Microchip · últimos do visor</label><input type="text" id="hf-chip" class="cad-in" maxlength="6" inputmode="numeric" placeholder="000000" oninput="onChip(this.value)"></div>
         </div>
+        <div class="field" style="margin-top:6px"><label>Dias do Day Care <span style="color:var(--muted);font-weight:500">(pode mudar todo mês)</span></label>
+          <div class="chips" id="hf-dias">
+            <div class="chip" onclick="toggleDia(this)">Seg</div><div class="chip" onclick="toggleDia(this)">Ter</div><div class="chip" onclick="toggleDia(this)">Qua</div><div class="chip" onclick="toggleDia(this)">Qui</div><div class="chip" onclick="toggleDia(this)">Sex</div>
+          </div></div>
         <div class="actions" style="margin-top:14px"><button class="btn btn-primary" onclick="onCad();this.textContent='✅ Cadastro salvo';setTimeout(()=>this.textContent='Salvar cadastro',1500)">Salvar cadastro</button></div>
       </div>
       <datalist id="racasList"></datalist>
@@ -577,9 +581,9 @@
         <div class="obsline"><span class="q">Jantou?</span><div class="seg" data-single><button data-tone="ok" onclick="pick(this)">Sim</button><button data-tone="warn" onclick="pick(this)">Não</button><button data-tone="warn" onclick="pick(this)">Metade</button><button onclick="pick(this)">Não se aplica</button></div></div>
         <div class="obsline"><span class="q">Almoçou?</span><div class="seg" data-single><button data-tone="ok" onclick="pick(this)">Sim</button><button data-tone="warn" onclick="pick(this)">Não</button><button data-tone="warn" onclick="pick(this)">Metade</button><button onclick="pick(this)">Não se aplica</button></div></div>
         <div class="obsline"><span class="q">Foi dada medicação?</span><div class="seg" data-single><button data-tone="ok" onclick="pick(this)">Sim</button><button onclick="pick(this)">Não</button><button onclick="pick(this)">Não se aplica</button></div></div>
-        <div class="field" style="margin-bottom:14px"><label>Qual medicação? (nome, quantidade e horário)</label><textarea style="width:100%;font-family:var(--font-ui);font-size:14px;padding:11px;border:1.5px solid var(--line);border-radius:11px;background:var(--z-cream);min-height:56px" placeholder="Ex: Apoquel 16mg, 1 comprimido às 22h"></textarea></div>
+        <div class="field" style="margin-bottom:14px"><label>Qual medicação? (nome, quantidade e horário)</label><textarea style="width:100%;font-family:var(--font-ui);font-size:14px;padding:11px;border:1.5px solid var(--line);border-radius:11px;background:var(--z-cream);min-height:56px" placeholder="(nome do medicamento) dosagem e horário"></textarea></div>
         <div class="obsline"><span class="q">Foi dada suplementação?</span><div class="seg" data-single><button data-tone="ok" onclick="pick(this)">Sim</button><button onclick="pick(this)">Não</button><button onclick="pick(this)">Não se aplica</button></div></div>
-        <div class="field"><label>Qual suplemento? (nome, quantidade e horário)</label><textarea style="width:100%;font-family:var(--font-ui);font-size:14px;padding:11px;border:1.5px solid var(--line);border-radius:11px;background:var(--z-cream);min-height:56px" placeholder="Ex: Condroitina, 1 dose após o jantar"></textarea></div>
+        <div class="field"><label>Qual suplemento? (nome, quantidade e horário)</label><textarea style="width:100%;font-family:var(--font-ui);font-size:14px;padding:11px;border:1.5px solid var(--line);border-radius:11px;background:var(--z-cream);min-height:56px" placeholder="(nome do suplemento), dosagem e horário"></textarea></div>
       </div>
 
       <div class="card">
@@ -861,8 +865,9 @@
     if(!currentHosp) return;
     const nasc=document.getElementById('hf-nasc').value;
     document.getElementById('hf-idade').value=calcIdade(nasc);
+    const dias=[].slice.call(document.querySelectorAll('#hf-dias .chip.on')).map(c=>c.textContent.trim()).join(',');
     const cad={ nasc:nasc, raca:document.getElementById('hfRaca').value||'', sexo:segVal('hf-sexo'),
-      castrado:segVal('hf-cast'), tutor:document.getElementById('hf-tutor').value||'', chip:document.getElementById('hf-chip').value||'' };
+      castrado:segVal('hf-cast'), tutor:document.getElementById('hf-tutor').value||'', chip:document.getElementById('hf-chip').value||'', dias:dias };
     setInfo(currentHosp,cad);
     if(DB) DB.ref('auaulandia/cadastro/'+cadKey(currentHosp)).update(cad).catch(()=>{});
     atualizarHeader(cad);
@@ -875,9 +880,12 @@
     setSeg('hf-sexo',cad.sexo); setSeg('hf-cast',cad.castrado);
     document.getElementById('hf-tutor').value=cad.tutor||(currentHosp&&currentHosp.tutor)||'';
     document.getElementById('hf-chip').value=cad.chip||'';
+    const ds=(cad.dias||'').split(',').map(s=>s.trim());
+    document.querySelectorAll('#hf-dias .chip').forEach(c=>c.classList.toggle('on', ds.indexOf(c.textContent.trim())>=0));
     if(cad.foto){ const av=document.getElementById('hf-av'); av.style.backgroundImage=`url('${cad.foto}')`; av.style.backgroundSize='cover'; av.style.backgroundPosition='center'; av.textContent=''; }
     atualizarHeader(cad);
   }
+  function toggleDia(c){ c.classList.toggle('on'); onCad(); }
   function carregarCadastro(){
     if(!currentHosp) return;
     fotoPendente=null;
@@ -961,7 +969,8 @@
   const SENHAS={
     '1000':{role:'monitor',     nome:'Monitor 5'},
     '1001':{role:'plantonista', nome:'Plantonista'},
-    '0902':{role:'gestao',      nome:'Márcia · Gestora'}
+    '0902':{role:'gestao',      nome:'Márcia · Gestora'},
+    '0912':{role:'supervisor',  nome:'Amanda · Supervisora'}
   };
   function doLogin(){
     const v=(document.getElementById('loginPwd').value||'').trim();
