@@ -214,8 +214,10 @@
     color:var(--z-blue);padding:9px 16px;border-radius:8px;cursor:pointer;transition:.15s}
   .seg button.on{background:var(--z-blue);color:var(--z-cream);box-shadow:var(--shadow)}
   .seg.gold button.on{background:var(--z-gold);color:var(--z-blue)}
-  .seg.ok button.on{background:var(--crm-ok);color:#fff}
-  .seg.no button.on{background:var(--crm-critico);color:#fff}
+  /* semáforo por botão: verde=bom · vermelho=atenção · amarelo=neutro */
+  .seg button.on.t-ok{background:var(--crm-ok);color:#fff}
+  .seg button.on.t-bad{background:var(--crm-critico);color:#fff}
+  .seg button.on.t-warn{background:var(--crm-atencao);color:var(--crm-atencao-text)}
   .grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
   .obsline{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 0;border-bottom:1px solid #f1ebde}
   .obsline:last-child{border-bottom:none}
@@ -500,7 +502,7 @@
             <button onclick="pick(this)">Noturno · 19h–07h</button>
           </div>
         </div>
-        <div class="tb-plant"><div class="tb-lab">Plantonista</div><div class="tb-nm">Bia Andrade</div></div>
+        <div class="tb-plant"><div class="tb-lab">Plantonista</div><div class="tb-nm" id="hf-plant">—</div></div>
       </div>
 
       <div class="racao-info">
@@ -512,14 +514,14 @@
       <div class="card">
         <h2>Como foi o turno?</h2>
         <div class="hint">Toque para marcar. Rápido, sem digitar.</div>
-        <div class="obsline"><span class="q">Alimentação</span><div class="seg" data-single><button class="on" onclick="pick(this)">Comeu tudo</button><button onclick="pick(this)">Parte</button><button onclick="pick(this)">Recusou</button></div></div>
-        <div class="obsline"><span class="q">Bebeu água?</span><div class="seg ok" data-single><button onclick="pick(this)">Sim</button><button onclick="pick(this)">Não</button></div></div>
-        <div class="obsline"><span class="q">Fez xixi?</span><div class="seg" data-single><button onclick="pick(this)">Sim</button><button onclick="pick(this)">Não</button></div></div>
-        <div class="obsline"><span class="q">Fez cocô?</span><div class="seg" data-single><button onclick="pick(this)">Sim</button><button onclick="pick(this)">Não</button></div></div>
-        <div class="obsline"><span class="q">Humor</span><div class="seg" data-single><button onclick="pick(this)">Tranquilo</button><button onclick="pick(this)">Agitado</button><button onclick="pick(this)">Carente</button><button onclick="pick(this)">Quieto</button></div></div>
-        <div class="obsline"><span class="q">Com outros peludos</span><div class="seg" data-single><button onclick="pick(this)">Brincou bem</button><button onclick="pick(this)">Indiferente</button><button onclick="pick(this)">Evitou</button></div></div>
-        <div class="obsline"><span class="q">Teve desentendimento?</span><div class="seg no" data-single><button onclick="pick(this)">Não</button><button onclick="pick(this)">Sim</button></div></div>
-        <div class="obsline"><span class="q">Dormiu bem?</span><div class="seg ok" data-single><button onclick="pick(this)">Sim</button><button onclick="pick(this)">Não</button></div></div>
+        <div class="obsline"><span class="q">Alimentação</span><div class="seg" data-single><button data-tone="ok" onclick="pick(this)">Comeu tudo</button><button data-tone="warn" onclick="pick(this)">Parte</button><button data-tone="bad" onclick="pick(this)">Recusou</button></div></div>
+        <div class="obsline"><span class="q">Bebeu água?</span><div class="seg" data-single><button data-tone="ok" onclick="pick(this)">Sim</button><button data-tone="bad" onclick="pick(this)">Não</button></div></div>
+        <div class="obsline"><span class="q">Fez xixi?</span><div class="seg" data-single><button data-tone="ok" onclick="pick(this)">Sim</button><button data-tone="warn" onclick="pick(this)">Não</button></div></div>
+        <div class="obsline"><span class="q">Fez cocô?</span><div class="seg" data-single><button data-tone="ok" onclick="pick(this)">Sim</button><button data-tone="warn" onclick="pick(this)">Não</button></div></div>
+        <div class="obsline"><span class="q">Humor</span><div class="seg" data-single><button data-tone="ok" onclick="pick(this)">Tranquilo</button><button data-tone="warn" onclick="pick(this)">Agitado</button><button data-tone="warn" onclick="pick(this)">Carente</button><button data-tone="warn" onclick="pick(this)">Quieto</button></div></div>
+        <div class="obsline"><span class="q">Com outros peludos</span><div class="seg" data-single><button data-tone="ok" onclick="pick(this)">Brincou bem</button><button data-tone="warn" onclick="pick(this)">Indiferente</button><button data-tone="bad" onclick="pick(this)">Evitou</button></div></div>
+        <div class="obsline"><span class="q">Teve desentendimento?</span><div class="seg" data-single><button data-tone="ok" onclick="pick(this)">Não</button><button data-tone="bad" onclick="pick(this)">Sim</button></div></div>
+        <div class="obsline"><span class="q">Dormiu bem?</span><div class="seg" data-single><button data-tone="ok" onclick="pick(this)">Sim</button><button data-tone="bad" onclick="pick(this)">Não</button></div></div>
       </div>
 
       <div class="card">
@@ -532,7 +534,7 @@
         <h2>Passagem de plantão</h2>
         <div class="hint">Quem entrega e quem recebe o peludinho na troca de turno.</div>
         <div class="grid2">
-          <div class="field"><label>Entregue por</label><input type="text" value="Bia Andrade"></div>
+          <div class="field"><label>Entregue por</label><input type="text" placeholder="Nome de quem entrega"></div>
           <div class="field"><label>Recebido por</label><input type="text" placeholder="Próximo plantonista"></div>
         </div>
         <div class="actions"><button class="btn btn-primary" onclick="alert('Rascunho: registraria a passagem de plantão com data e hora automáticas.')">Registrar passagem de plantão</button></div>
@@ -601,7 +603,11 @@
     t.classList.add('active'); document.getElementById(t.dataset.s).classList.add('active');
   });
 
-  function pick(btn){btn.parentNode.querySelectorAll('button').forEach(b=>b.classList.remove('on'));btn.classList.add('on');}
+  function pick(btn){
+    btn.parentNode.querySelectorAll('button').forEach(b=>b.classList.remove('on','t-ok','t-bad','t-warn'));
+    btn.classList.add('on');
+    if(btn.dataset.tone) btn.classList.add('t-'+btn.dataset.tone);
+  }
   function setRole(r){document.body.dataset.role=r;}
   function openNav(){document.getElementById('sidebar').classList.add('open');document.getElementById('overlay').classList.add('show');}
   function closeNav(){document.getElementById('sidebar').classList.remove('open');document.getElementById('overlay').classList.remove('show');}

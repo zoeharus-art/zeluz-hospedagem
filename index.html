@@ -267,8 +267,7 @@
     .racao-pet-info { flex:1; }
     .racao-pet-name  { font-size:17px; font-weight:800; color:#1B3A52; }
     .racao-pet-tutor { font-size:12px; color:rgba(27,58,82,.7); font-weight:600; }
-    .racao-pet-raca  { font-size:11px; color:var(--amarelo); font-weight:700; margin-top:1px; }
-    .pet-raca        { font-size:11px; color:var(--amarelo); font-weight:700; margin-top:2px; }
+    .pet-name-raca   { font-weight:600; color:#234D67; opacity:.8; }
     .racao-status-chip {
       padding:5px 14px; border-radius:100px; font-size:12px; font-weight:800;
       text-transform:uppercase; letter-spacing:.5px; flex-shrink:0;
@@ -1283,9 +1282,8 @@ function renderHospedes() {
         <div class="pet-card-header">
           <img class="pet-thumb" src="stickers/Cachorro coração.png" alt="">
           <div class="pet-names">
-            <div class="pet-name">${esc(pet.petName)}</div>
+            <div class="pet-name">${esc(pet.petName)}${pet.racaName?` <span class="pet-name-raca">- ${esc(pet.racaName)}</span>`:''}</div>
             <div class="pet-tutor">${pet.tutorName ? '👤 '+esc(pet.tutorName) : ''}</div>
-            ${pet.racaName ? `<div class="pet-raca">🐾 ${esc(pet.racaName)}</div>` : ''}
           </div>
         </div>
         <div class="pet-card-body">
@@ -1470,9 +1468,8 @@ function renderRacao() {
         <div class="racao-card-header">
           <img class="racao-sticker" src="stickers/Vasilha ração.png" alt="">
           <div class="racao-pet-info">
-            <div class="racao-pet-name">${esc(pet.petName)}</div>
+            <div class="racao-pet-name">${esc(pet.petName)}${pet.racaName?` <span class="pet-name-raca">- ${esc(pet.racaName)}</span>`:''}</div>
             <div class="racao-pet-tutor">${pet.tutorName?'👤 '+esc(pet.tutorName):''}</div>
-            ${pet.racaName?`<div class="racao-pet-raca">🐾 ${esc(pet.racaName)}</div>`:''}
           </div>
           <div class="racao-status-chip ${chipClass}">${chipLabel}</div>
         </div>
