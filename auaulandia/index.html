@@ -643,6 +643,12 @@
     'Coton de Tuléar','King Charles Spaniel','Terrier Tibetano','Spaniel Tibetano','Crista Chinês',
     'Pinscher','Dachshund (Salsicha)','Fox Paulistinha','Cocker Spaniel'];
   document.getElementById('racasList').innerHTML = RACAS.map(r=>`<option value="${r}">`).join('');
+  // Raça que vier da planilha e ainda não estiver no banco → acrescenta sozinha
+  function addRacasAoBanco(novas){
+    const set=new Set(RACAS.map(r=>r.toLowerCase())); let mudou=false;
+    (novas||[]).forEach(r=>{ const v=(r||'').trim(); if(v && !set.has(v.toLowerCase())){ RACAS.push(v); set.add(v.toLowerCase()); mudou=true; } });
+    if(mudou) document.getElementById('racasList').innerHTML = RACAS.map(r=>`<option value="${r}">`).join('');
+  }
 
   // Persistência LOCAL no navegador (para testar hoje, antes do cofre).
   // Chave = nome + tutor (mesma interligação que resolve homônimos).
@@ -770,6 +776,7 @@
       linha.slice(1).forEach(c=>{ const raw=c&&c.v; if(raw&&typeof raw==='string'&&raw.trim()){ const parts=raw.trim().split('/'); lista.push({nome:(parts[0]||raw).trim(), tutor:(parts[1]||'').trim(), raca:(parts[2]||'').trim()}); } });
       if(lista.length){
         hospedes = lista.map((h,i)=>({nome:h.nome, tutor:h.tutor, raca:h.raca||'', ini:(h.nome[0]||'?').toUpperCase(), cor:CORES[i%CORES.length], mascote:/repolho/i.test(h.nome)}));
+        addRacasAoBanco(hospedes.map(h=>h.raca).filter(Boolean));
         renderHosp();
       }
     }catch(e){ console.warn('Planilha indisponível — usando lista de exemplo.', e); }
@@ -790,7 +797,7 @@
         const raca=(((c[iRaca]&&c[iRaca].v))||'').toString().trim();
         if(nome&&raca) map[(nome+'__'+tutor).toLowerCase()]=raca;
       });
-      racasMap=map; renderHosp();
+      racasMap=map; addRacasAoBanco(Object.values(map)); renderHosp();
     }catch(e){ /* aba "Cadastro" ainda não existe — tudo bem, é opcional */ }
   }
   carregarHospedes();
