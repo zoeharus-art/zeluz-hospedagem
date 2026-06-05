@@ -205,6 +205,7 @@
   .hf-chipline{font-size:13.5px;font-weight:800;color:var(--z-gold-deep);margin-top:3px}
   .btn-foto-mini{margin-top:10px;background:var(--z-gold);color:var(--z-blue);border:none;border-radius:9px;padding:7px 14px;font-family:var(--font-ui);font-weight:700;font-size:12.5px;cursor:pointer}
   body[data-role="monitor"] #card-cadastro, body[data-role="plantonista"] #card-cadastro, body[data-role="tutor"] #card-cadastro{display:none}
+  body[data-role="monitor"] #card-texto, body[data-role="plantonista"] #card-texto, body[data-role="tutor"] #card-texto{display:none}
   body[data-role="plantonista"] .so-foto, body[data-role="tutor"] .so-foto{display:none}
   body[data-role="plantonista"] #card-dia .seg button, body[data-role="plantonista"] #card-dia textarea,
   body[data-role="tutor"] #card-dia .seg button, body[data-role="tutor"] #card-dia textarea,
@@ -589,7 +590,7 @@
 
       <div class="checklist-note">📋 Antes de assinar — o Check-list de hospedagem é o seu material de trabalho principal. <strong>LEIA-O!</strong><br><span style="font-size:14px;font-weight:800;color:var(--crm-critico)">DÚVIDAS? LIGUE: 31 99764-4296 / 31 99111-1826</span></div>
 
-      <div class="card">
+      <div class="card" id="card-texto">
         <h2>📱 Texto para o tutor</h2>
         <div class="hint">A Gestora gera o texto pronto a partir do que foi marcado e envia ao tutor.</div>
         <textarea id="hf-txt" style="width:100%;font-family:var(--font-ui);font-size:14.5px;line-height:1.5;padding:13px;border:1.5px solid var(--line);border-radius:11px;background:var(--z-cream);min-height:90px" placeholder="Clique em Gerar texto"></textarea>
