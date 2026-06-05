@@ -188,6 +188,11 @@
   .racao-info img{width:32px;height:32px;object-fit:contain;flex:0 0 auto}
   .racao-info strong{color:var(--z-blue);font-size:16px}
   .racao-info .sub{color:var(--muted);font-size:11.5px;font-weight:600}
+  .chip-box{background:var(--z-blue);color:var(--z-cream);border-radius:var(--radius);padding:14px 20px;
+    margin-bottom:16px;display:flex;align-items:center;justify-content:space-between;gap:14px;box-shadow:var(--shadow)}
+  .chip-lab{font-size:11px;text-transform:uppercase;letter-spacing:.8px;opacity:.85;font-weight:700}
+  .chip-input{width:130px;font-family:var(--font-marca);font-weight:800;font-size:28px;letter-spacing:7px;
+    text-align:center;border:none;border-radius:11px;padding:8px;background:var(--z-cream);color:var(--z-blue)}
   @media(max-width:600px){.datenav #dateLabel{display:none}}
 
   /* ===== ficha ===== */
@@ -511,17 +516,42 @@
           <div class="sub">vem da ficha do peludinho — o plantonista serve esta quantidade</div></div>
       </div>
 
+      <div class="chip-box">
+        <div><div class="chip-lab">Nº do Microchip · 4 últimos</div></div>
+        <input id="hf-chip" class="chip-input" maxlength="4" inputmode="numeric" placeholder="0000" oninput="onChip(this.value)">
+      </div>
+
       <div class="card">
-        <h2>Como foi o turno?</h2>
-        <div class="hint">Toque para marcar. Rápido, sem digitar.</div>
-        <div class="obsline"><span class="q">Alimentação</span><div class="seg" data-single><button data-tone="ok" onclick="pick(this)">Comeu tudo</button><button data-tone="warn" onclick="pick(this)">Parte</button><button data-tone="bad" onclick="pick(this)">Recusou</button></div></div>
-        <div class="obsline"><span class="q">Bebeu água?</span><div class="seg" data-single><button data-tone="ok" onclick="pick(this)">Sim</button><button data-tone="bad" onclick="pick(this)">Não</button></div></div>
-        <div class="obsline"><span class="q">Fez xixi?</span><div class="seg" data-single><button data-tone="ok" onclick="pick(this)">Sim</button><button data-tone="warn" onclick="pick(this)">Não</button></div></div>
-        <div class="obsline"><span class="q">Fez cocô?</span><div class="seg" data-single><button data-tone="ok" onclick="pick(this)">Sim</button><button data-tone="warn" onclick="pick(this)">Não</button></div></div>
-        <div class="obsline"><span class="q">Humor</span><div class="seg" data-single><button data-tone="ok" onclick="pick(this)">Tranquilo</button><button data-tone="warn" onclick="pick(this)">Agitado</button><button data-tone="warn" onclick="pick(this)">Carente</button><button data-tone="warn" onclick="pick(this)">Quieto</button></div></div>
-        <div class="obsline"><span class="q">Com outros peludos</span><div class="seg" data-single><button data-tone="ok" onclick="pick(this)">Brincou bem</button><button data-tone="warn" onclick="pick(this)">Indiferente</button><button data-tone="bad" onclick="pick(this)">Evitou</button></div></div>
+        <h2>Relatório do Dia · Day Care</h2>
+        <div class="hint">Preenchido pela Monitora (seg a sáb). Toque para marcar.</div>
+        <div class="obsline"><span class="q">Gastou energia?</span><div class="seg" data-single><button data-tone="warn" onclick="pick(this)">Pouco</button><button data-tone="ok" onclick="pick(this)">Bastante</button><button data-tone="ok" onclick="pick(this)">Muito</button></div></div>
         <div class="obsline"><span class="q">Teve desentendimento?</span><div class="seg" data-single><button data-tone="ok" onclick="pick(this)">Não</button><button data-tone="bad" onclick="pick(this)">Sim</button></div></div>
-        <div class="obsline"><span class="q">Dormiu bem?</span><div class="seg" data-single><button data-tone="ok" onclick="pick(this)">Sim</button><button data-tone="bad" onclick="pick(this)">Não</button></div></div>
+        <div class="obsline"><span class="q">Precisa ficar separado?</span><div class="seg" data-single><button data-tone="ok" onclick="pick(this)">Não</button><button data-tone="bad" onclick="pick(this)">Sim</button></div></div>
+        <div class="obsline"><span class="q">Tem irmão hospedado?</span><div class="seg" data-single><button onclick="pick(this)">Não</button><button onclick="pick(this)">Sim</button></div></div>
+        <div class="obsline"><span class="q">Tem alergia?</span><div class="seg" data-single><button data-tone="ok" onclick="pick(this)">Não</button><button data-tone="warn" onclick="pick(this)">Sim</button></div></div>
+        <div class="obsline"><span class="q">Tem medicação?</span><div class="seg" data-single><button onclick="pick(this)">Não</button><button data-tone="warn" onclick="pick(this)">Sim</button></div></div>
+        <div class="obsline"><span class="q">Trouxe roupa de frio?</span><div class="seg" data-single><button data-tone="ok" onclick="pick(this)">Sim</button><button onclick="pick(this)">Não</button></div></div>
+        <div class="obsline"><span class="q">Fez cocô?</span><div class="seg" data-single><button data-tone="ok" onclick="pick(this)">Sim</button><button data-tone="warn" onclick="pick(this)">Não</button></div></div>
+        <div class="obsline"><span class="q">Consistência</span><div class="seg" data-single><button data-tone="ok" onclick="pick(this)">Normal</button><button data-tone="warn" onclick="pick(this)">Pastoso</button><button data-tone="bad" onclick="pick(this)">Diarreia</button></div></div>
+        <div class="obsline"><span class="q">Coleira repelente?</span><div class="seg" data-single><button data-tone="ok" onclick="pick(this)">Sim</button><button data-tone="warn" onclick="pick(this)">Não</button></div></div>
+        <div class="obsline"><span class="q">Coleira de identificação?</span><div class="seg" data-single><button data-tone="ok" onclick="pick(this)">Sim</button><button data-tone="warn" onclick="pick(this)">Não</button></div></div>
+        <div class="field" style="margin-top:14px"><label>Observação</label><textarea style="width:100%;font-family:var(--font-ui);font-size:14px;padding:12px;border:1.5px solid var(--line);border-radius:11px;background:var(--z-cream);min-height:70px" placeholder="Algo do dia que seja importante"></textarea></div>
+      </div>
+
+      <div class="card">
+        <h2>Relatório da Noite · Plantão</h2>
+        <div class="hint">Preenchido pela Plantonista. A Gestora recebe pronto para enviar ao tutor.</div>
+        <div class="obsline"><span class="q">Como passou a noite?</span><div class="seg" data-single><button data-tone="ok" onclick="pick(this)">Dormiu a noite inteira</button><button data-tone="warn" onclick="pick(this)">Agitado</button></div></div>
+        <div class="obsline"><span class="q">Está ativo?</span><div class="seg" data-single><button data-tone="ok" onclick="pick(this)">Sim</button><button data-tone="warn" onclick="pick(this)">Não</button></div></div>
+        <div class="obsline"><span class="q">Bebeu água?</span><div class="seg" data-single><button data-tone="ok" onclick="pick(this)">Sim</button><button data-tone="bad" onclick="pick(this)">Não</button></div></div>
+        <div class="obsline"><span class="q">Fez cocô?</span><div class="seg" data-single><button data-tone="ok" onclick="pick(this)">Sim</button><button data-tone="warn" onclick="pick(this)">Não</button><button data-tone="warn" onclick="pick(this)">Não vi</button></div></div>
+        <div class="obsline"><span class="q">Consistência</span><div class="seg" data-single><button data-tone="ok" onclick="pick(this)">Normal</button><button data-tone="warn" onclick="pick(this)">Pastoso</button><button data-tone="bad" onclick="pick(this)">Diarreia</button></div></div>
+        <div class="obsline"><span class="q">Fez xixi?</span><div class="seg" data-single><button data-tone="ok" onclick="pick(this)">Sim</button><button data-tone="warn" onclick="pick(this)">Não</button><button data-tone="warn" onclick="pick(this)">Não vi</button></div></div>
+        <div class="obsline"><span class="q">Aspecto do xixi</span><div class="seg" data-single><button data-tone="ok" onclick="pick(this)">Claro</button><button data-tone="warn" onclick="pick(this)">Amarelo escuro</button><button data-tone="bad" onclick="pick(this)">Com sangue</button></div></div>
+        <div class="obsline"><span class="q">Jantou?</span><div class="seg" data-single><button data-tone="ok" onclick="pick(this)">Sim</button><button data-tone="bad" onclick="pick(this)">Não</button><button data-tone="warn" onclick="pick(this)">Metade</button></div></div>
+        <div class="obsline"><span class="q">Almoçou?</span><div class="seg" data-single><button data-tone="ok" onclick="pick(this)">Sim</button><button data-tone="bad" onclick="pick(this)">Não</button><button data-tone="warn" onclick="pick(this)">Metade</button></div></div>
+        <div class="obsline"><span class="q">Foi dada medicação?</span><div class="seg" data-single><button data-tone="ok" onclick="pick(this)">Sim</button><button onclick="pick(this)">Não</button></div></div>
+        <div class="obsline"><span class="q">Foi dada suplementação?</span><div class="seg" data-single><button data-tone="ok" onclick="pick(this)">Sim</button><button onclick="pick(this)">Não</button></div></div>
       </div>
 
       <div class="card">
@@ -537,7 +567,11 @@
           <div class="field"><label>Entregue por</label><input type="text" placeholder="Nome de quem entrega"></div>
           <div class="field"><label>Recebido por</label><input type="text" placeholder="Próximo plantonista"></div>
         </div>
-        <div class="actions"><button class="btn btn-primary" onclick="alert('Rascunho: registraria a passagem de plantão com data e hora automáticas.')">Registrar passagem de plantão</button></div>
+        <div class="actions">
+          <button class="btn" style="flex:0 0 auto;background:var(--z-cream-warm);color:var(--z-blue);border:1.5px solid var(--line)" onclick="limparFicha()">Limpar</button>
+          <button class="btn btn-primary" onclick="salvarFicha()">Salvar relatório</button>
+        </div>
+        <div id="hf-status" style="text-align:center;font-size:13px;font-weight:600;color:var(--crm-ok);margin-top:10px;min-height:18px"></div>
       </div>
     </div>
   </section>
@@ -546,7 +580,25 @@
   <section class="view" id="v-sair"><div class="soon-box"><img class="ic-st" src="assets/simbolo.png" alt=""><div class="t">Sair</div><div class="d">No sistema real, encerra a sessão com segurança.</div></div></section>
 </main>
 
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-database-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
 <script>
+  // ---- Firebase (banco gratuito que já temos) ----
+  let DB=null;
+  try{
+    firebase.initializeApp({
+      apiKey:"AIzaSyD3udp47XruRAEeIYWNGn0ICGCX3a1qr28",
+      authDomain:"hospedagem-zeluz.firebaseapp.com",
+      databaseURL:"https://hospedagem-zeluz-default-rtdb.firebaseio.com",
+      projectId:"hospedagem-zeluz",
+      storageBucket:"hospedagem-zeluz.firebasestorage.app",
+      messagingSenderId:"199129329105",
+      appId:"1:199129329105:web:22d0995972c197e24644f0"
+    });
+    firebase.auth().signInAnonymously().then(()=>{ DB=firebase.database(); }).catch(e=>console.warn('Firebase auth:',e));
+  }catch(e){ console.warn('Firebase init:',e); }
+
   // ---- ícones SVG (line) ----
   function ic(n){
     const p={
@@ -574,7 +626,20 @@
     const d=selectedDate, p=x=>String(x).padStart(2,'0');
     document.getElementById('dateLabel').textContent=`${DIAS[d.getDay()]}, ${p(d.getDate())} de ${MESES[d.getMonth()]} de ${d.getFullYear()}`;
   }
-  function changeDate(n){ selectedDate.setDate(selectedDate.getDate()+n); updateDateLabel(); carregarHospedes(); }
+  function changeDate(n){
+    const nova=new Date(selectedDate); nova.setDate(nova.getDate()+n);
+    if(document.body.dataset.role==='plantonista'){
+      const hoje=new Date(); hoje.setHours(0,0,0,0);
+      const dom=new Date(hoje); dom.setDate(dom.getDate()+((7-hoje.getDay())%7)); // próximo domingo
+      const d=new Date(nova); d.setHours(0,0,0,0);
+      if(d<hoje || d>dom){ // trava: só de hoje até domingo
+        const el=document.getElementById('dateLabel');
+        if(el){ const orig=el.textContent; el.textContent='🔒 Fora do seu período'; setTimeout(()=>updateDateLabel(),1200); }
+        return;
+      }
+    }
+    selectedDate=nova; updateDateLabel(); carregarHospedes();
+  }
   function goToToday(){ selectedDate=new Date(); updateDateLabel(); carregarHospedes(); }
   updateDateLabel();
 
@@ -701,6 +766,8 @@
     document.getElementById('hfRaca').value=raca;
     document.getElementById('hosp-lista').style.display='none';
     document.getElementById('hosp-ficha').style.display='block';
+    document.getElementById('hf-status').textContent='';
+    carregarFicha();
     window.scrollTo({top:0,behavior:'smooth'});
   }
   function onPhoto(e){
@@ -716,6 +783,45 @@
     if(!currentHosp) return;
     setInfo(currentHosp,{raca:v}); renderHosp();
     document.getElementById('hf-meta').innerHTML=`${v?v+' · ':''}${currentHosp.mascote?'Nossa Zelozinha':'Tutor: '+currentHosp.tutor}`;
+  }
+  function onChip(v){ if(currentHosp) setInfo(currentHosp,{chip:v}); }
+
+  // ---- Relatórios da ficha: coletar, aplicar, salvar no banco, limpar ----
+  function fichaKey(){ const p=x=>String(x).padStart(2,'0'); const d=selectedDate; const pk=currentHosp?currentHosp.nome+'__'+currentHosp.tutor:''; return (pk+'__'+d.getFullYear()+'-'+p(d.getMonth()+1)+'-'+p(d.getDate())).toLowerCase().replace(/[.#$\[\]\/]/g,'-'); }
+  function coletarFicha(){
+    const dados={turno:'',campos:{},textos:[],chip:document.getElementById('hf-chip').value||''};
+    const tb=document.querySelector('#hosp-ficha .turno-banner .seg button.on'); dados.turno=tb?tb.textContent.trim():'';
+    document.querySelectorAll('#hosp-ficha .obsline').forEach(line=>{ const q=line.querySelector('.q'); const on=line.querySelector('button.on'); if(q) dados.campos[q.textContent.trim()]= on?on.textContent.trim():''; });
+    document.querySelectorAll('#hosp-ficha textarea').forEach(t=>dados.textos.push(t.value||''));
+    return dados;
+  }
+  function aplicarFicha(d){
+    d=d||{}; const campos=d.campos||{}; const textos=d.textos||[];
+    document.querySelectorAll('#hosp-ficha .obsline').forEach(line=>{
+      const q=line.querySelector('.q'); const val=q?campos[q.textContent.trim()]:'';
+      line.querySelectorAll('button').forEach(b=>{ b.classList.remove('on','t-ok','t-bad','t-warn'); if(val&&b.textContent.trim()===val){ b.classList.add('on'); if(b.dataset.tone)b.classList.add('t-'+b.dataset.tone); } });
+    });
+    document.querySelectorAll('#hosp-ficha textarea').forEach((t,i)=>t.value=textos[i]||'');
+    document.getElementById('hf-chip').value = d.chip || (currentHosp?(getInfo(currentHosp).chip||''):'');
+  }
+  function carregarFicha(){
+    if(DB){ DB.ref('auaulandia/relatorios/'+fichaKey()).once('value').then(s=>aplicarFicha(s.val())).catch(()=>aplicarFicha({})); }
+    else { aplicarFicha({}); }
+  }
+  function salvarFicha(){
+    if(!currentHosp) return;
+    const st=document.getElementById('hf-status'); const dados=coletarFicha();
+    setInfo(currentHosp,{chip:dados.chip});
+    if(DB){
+      st.style.color='var(--muted)'; st.textContent='Salvando...';
+      DB.ref('auaulandia/relatorios/'+fichaKey()).set(Object.assign({},dados,{_ts:Date.now()}))
+        .then(()=>{ st.style.color='var(--crm-ok)'; st.textContent='✅ Salvo! Já aparece nos outros aparelhos.'; })
+        .catch(e=>{ st.style.color='var(--crm-critico)'; st.textContent='⚠️ Erro ao salvar: '+e.message; });
+    } else { st.style.color='var(--crm-atencao-text)'; st.textContent='Banco conectando... tente salvar de novo em 5s.'; }
+  }
+  function limparFicha(){
+    if(!confirm('Apagar tudo que foi marcado nesta ficha?')) return;
+    aplicarFicha({}); const st=document.getElementById('hf-status'); if(st){ st.style.color='var(--muted)'; st.textContent='Ficha limpa.'; }
   }
   function fecharPlantao(){
     document.getElementById('hosp-ficha').style.display='none';
