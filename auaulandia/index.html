@@ -332,6 +332,30 @@
   .pet .mini-alert{position:absolute;top:9px;left:9px;font-size:10px;font-weight:800;color:#fff;background:var(--crm-critico);padding:3px 8px;border-radius:8px;z-index:2;animation:piscaAlerta 1.5s ease-in-out infinite}
   body[data-role="plantonista"] .so-day,body[data-role="tutor"] .so-day{display:none !important}
   @media(max-width:640px){.dc-layout{flex-direction:column}.dc-days{flex-direction:row;width:100%;overflow-x:auto}.dc-day{flex:0 0 auto}}
+  /* submenu de dias no menu lateral */
+  .subnav{display:flex;flex-direction:column;margin:2px 0 6px 22px;border-left:2px solid rgba(255,255,255,.14);padding-left:6px;position:relative;z-index:1}
+  .subnav a{color:var(--z-cream);text-decoration:none;font-size:13px;font-weight:500;opacity:.82;padding:8px 12px;border-radius:9px;cursor:pointer}
+  .subnav a:hover{background:rgba(255,255,255,.07);opacity:1}
+  .subnav a.active{background:var(--z-gold);color:var(--z-blue);opacity:1;font-weight:700}
+  /* chamada a prova de burros */
+  .dc-resumo{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:10px}
+  .dc-stat{flex:1;min-width:108px;background:#fff;border:1px solid var(--line);border-radius:12px;padding:12px 15px;font-size:13px;font-weight:600;color:var(--muted);box-shadow:var(--shadow)}
+  .dc-stat b{font-size:25px;font-family:var(--font-marca);display:block;line-height:1;margin-bottom:2px}
+  .dc-stat.ok b{color:var(--crm-ok)} .dc-stat.bad b{color:var(--crm-critico)} .dc-stat.pend b{color:var(--crm-atencao-text)}
+  .dc-faltas{background:rgba(192,57,43,.1);border:1.5px solid rgba(192,57,43,.35);color:var(--crm-critico);border-radius:11px;padding:11px 15px;font-size:14px;font-weight:600;margin-bottom:10px}
+  .dc-pend-note{background:rgba(222,180,40,.14);border:1.5px solid rgba(222,180,40,.4);color:var(--crm-atencao-text);border-radius:11px;padding:9px 14px;font-size:13px;font-weight:600;margin-bottom:14px}
+  .dc-card{padding-top:32px;overflow:hidden}
+  .dc-ribbon{position:absolute;top:0;left:0;right:0;text-align:center;font-size:11px;font-weight:800;letter-spacing:.6px;padding:5px}
+  .dc-ribbon.pend{background:rgba(222,180,40,.22);color:var(--crm-atencao-text)}
+  .dc-ribbon.veio{background:var(--crm-ok);color:#fff}
+  .dc-ribbon.faltou{background:var(--crm-critico);color:#fff}
+  .dc-card.veio{border-color:var(--crm-ok);box-shadow:0 0 0 2px rgba(39,174,96,.32)}
+  .dc-card.faltou{border-color:var(--crm-critico);box-shadow:0 0 0 2px rgba(192,57,43,.32);opacity:.88}
+  .dc-card .mini-alert{top:32px;left:8px}
+  .dc-actions{display:flex;gap:6px;margin-top:11px}
+  .dc-btn{flex:1;border:1.5px solid var(--line);background:#fff;border-radius:9px;padding:10px 6px;font-family:var(--font-ui);font-weight:700;font-size:13.5px;cursor:pointer;color:var(--z-blue)}
+  .dc-btn.veio.on{background:var(--crm-ok);color:#fff;border-color:var(--crm-ok)}
+  .dc-btn.faltou.on{background:var(--crm-critico);color:#fff;border-color:var(--crm-critico)}
   .role-note{font-size:12px;background:var(--z-cream-warm);border:1px solid var(--line);border-radius:10px;
     padding:10px 14px;color:var(--z-blue-soft);margin-bottom:18px;display:flex;gap:8px;align-items:center}
 
@@ -376,6 +400,7 @@
     <a data-v="adaptacao"><span data-icon="star"></span><span>Adaptação · 1º mês</span></a>
     <div class="grp">Serviços</div>
     <a data-v="daycare" class="so-day"><span data-icon="sun"></span><span>Day Care</span></a>
+    <div class="subnav so-day" id="dcSubnav" style="display:none"></div>
     <a data-v="hospedagem"><span data-icon="moon"></span><span>AuAulândia</span></a>
     <a data-v="agenda"><span data-icon="cal"></span><span>Agenda</span><span class="soon">em breve</span></a>
     <div class="grp">Gestão</div>
@@ -427,7 +452,7 @@
       <div class="pel-toolbar">
         <input class="search" id="pelSearch" placeholder="Buscar peludinho, raça ou tutor..." style="width:300px;max-width:100%" oninput="renderPel()">
         <span class="pel-count" id="pelCount"></span>
-        <button class="btn btn-gold" style="margin-left:auto;padding:10px 18px;flex:0 0 auto" onclick="inserirAluno()">+ Inserir novo Aluno</button>
+        <button class="btn btn-gold" style="margin-left:auto;padding:10px 18px;flex:0 0 auto" onclick="inserirAluno()">+ Inserir novo AULUNO</button>
       </div>
       <div class="pel-wrap">
         <table class="pel">
@@ -484,14 +509,10 @@
 
   <!-- ===== PLACEHOLDERS ===== -->
   <section class="view" id="v-daycare">
-    <div class="role-note"><span data-icon="sun"></span><span><strong>Aulunos</strong> do dia. Marque a presença tocando no círculo de cada peludinho (chamada). Toque no card para ver a ficha.</span></div>
-    <div class="dc-layout">
-      <div class="dc-days" id="dcDays"></div>
-      <div class="dc-main">
-        <div class="pel-toolbar"><span class="pel-count" id="dcCount"></span></div>
-        <div class="pets-grid" id="dcGrid"></div>
-      </div>
-    </div>
+    <div class="role-note"><span data-icon="sun"></span><span><strong>Aulunos</strong> de <strong id="dcDiaLabel">hoje</strong>. Em cada peludinho toque <strong>VEIO</strong> ou <strong>FALTOU</strong> (chamada). A lista de faltas vai para a Gestão. Toque no card para ver a ficha.</span></div>
+    <div id="dcResumo"></div>
+    <div class="pel-toolbar"><span class="pel-count" id="dcCount"></span></div>
+    <div class="pets-grid" id="dcGrid"></div>
   </section>
   <section class="view" id="v-hospedagem">
     <!-- LISTA de peludinhos em hospedagem -->
@@ -733,6 +754,7 @@
   document.getElementById('nav').addEventListener('click',e=>{
     const a=e.target.closest('a'); if(!a) return;
     const v=a.dataset.v;
+    if(!v) return; // sub-links (dias do Day Care) tratam o próprio clique
     document.querySelectorAll('#nav a').forEach(x=>x.classList.remove('active'));
     a.classList.add('active');
     document.querySelectorAll('.view').forEach(x=>x.classList.remove('active'));
@@ -741,7 +763,7 @@
     document.getElementById('head-sub').textContent=titles[v][1];
     if(v==='hospedagem') fecharPlantao();
     if(v==='ficha'){ const l=document.getElementById('pel-lista'),fi=document.getElementById('pel-ficha'); if(l&&fi){ l.style.display='block'; fi.style.display='none'; } }
-    if(v==='daycare' && typeof carregarChamada==='function') carregarChamada();
+    if(v==='daycare'){ const sm=document.getElementById('dcSubnav'); if(sm) sm.style.display='block'; if(typeof carregarChamada==='function') carregarChamada(); }
     closeNav(); window.scrollTo({top:0,behavior:'smooth'});
   });
 
@@ -1292,7 +1314,7 @@
     {n:"Tablito",raca:"Chihuahua",freq:"2x",tutor:"Loris",nasc:"2022-10-10",dias:["ter","sex"]},
     {n:"Theo",raca:"Westie",freq:"1x",tutor:"Marilene",nasc:"2018-06-04",dias:["qui"]},
     {n:"Theo",raca:"SRD",freq:"5x",tutor:"Renata",nasc:"2025-07-12",dias:["seg","ter","qua","qui","sex"]},
-    {n:"Thor",raca:"Dachshund",freq:"2x",tutor:"Andrea",nasc:"",dias:["qua","sex"]},
+    {n:"Thor",raca:"Dachshund",freq:"2x",tutor:"Andrea",nasc:"2022-06-04",dias:["qua","sex"]},
     {n:"Tonico",raca:"Shih Tzu",freq:"1x",tutor:"Maize",nasc:"2021-12-16",dias:["qui"]},
     {n:"Toshi",raca:"Shiba Inu",freq:"3x",tutor:"Victor/Zélia",nasc:"2020-02-19",dias:["seg","qua","sex"]},
     {n:"Valentina",raca:"Shih Tzu",freq:"3x",tutor:"Marina",nasc:"2020-08-24",dias:["seg","qua","sex"]},
@@ -1481,9 +1503,16 @@
           <div class="field"><label>Já atacou outro peludo?</label><div class="seg" data-single>${segBtnsPel('atacou',ex.atacou||'',['Não','Sim'])}</div></div>
           <div class="field"><label>Brincadeira favorita</label><input class="cad-in" value="${escAttr(ex.brincadeira||'')}" placeholder="Ex: bolinha" onchange="setPelExtra(pelAtual,{brincadeira:this.value})"></div>
         </div>
-      </div></div>`;
+      </div></div>
+
+      <div class="actions" style="margin-top:4px">
+        <button class="btn btn-primary" onclick="salvarFichaPel()">💾 Salvar ficha</button>
+        <button class="btn" style="background:var(--z-cream-warm);color:var(--z-blue);border:1.5px solid var(--line)" onclick="voltarPel()">Voltar</button>
+      </div>
+      <div id="pel-saved2" style="text-align:center;font-size:13px;font-weight:700;color:var(--crm-ok);margin-top:8px;min-height:18px"></div>`;
     window.scrollTo({top:0,behavior:'smooth'});
   }
+  function salvarFichaPel(){ if(document.activeElement&&document.activeElement.blur) document.activeElement.blur(); const s=document.getElementById('pel-saved2'); if(s){ s.textContent='✓ Ficha salva! Disponível em todos os aparelhos.'; setTimeout(()=>{ if(s) s.textContent=''; },2200); } if(typeof renderDaycare==='function') renderDaycare(); }
   function pelSubtab(el,id){ el.parentNode.querySelectorAll('.subtab2').forEach(x=>x.classList.remove('active')); el.classList.add('active'); document.querySelectorAll('.ppanel2').forEach(x=>x.classList.remove('active')); const t=document.getElementById(id); if(t) t.classList.add('active'); }
   function voltarPel(){ if(pelOrigem==='daycare'){ irParaView('daycare'); if(typeof carregarChamada==='function') carregarChamada(); } else { document.getElementById('pel-ficha').style.display='none'; document.getElementById('pel-lista').style.display='block'; } }
   function inserirAluno(){
@@ -1493,21 +1522,19 @@
     PELUDINHOS.push({n:nome,raca:raca,freq:'1x',tutor:tutor,nasc:'',dias:[]});
     PELUDINHOS.sort((a,b)=>jsNorm(a.n).localeCompare(jsNorm(b.n))||jsNorm(a.tutor).localeCompare(jsNorm(b.tutor)));
     renderPel();
-    alert('Aluno adicionado. Clique no nome para completar a ficha (nascimento, dias, telefone...).');
+    alert('AULUNO adicionado. Clique no nome para completar a ficha (nascimento, dias, telefone...).');
   }
   renderPel();
 
-  // ===== DAY CARE — chamada visual (Aulunos do dia) =====
+  // ===== DAY CARE — chamada visual a prova de burros (Aulunos do dia) =====
   const HOJE_DIA=(()=>{ const d=new Date().getDay(); return (d>=1&&d<=5)?ORDEM_DIAS[d-1]:'seg'; })();
   let dcDia=HOJE_DIA, dcChamada={}, dcAvulsos=[];
   function dcDataKey(){ const p=x=>String(x).padStart(2,'0'); const d=new Date(); return d.getFullYear()+'-'+p(d.getMonth()+1)+'-'+p(d.getDate()); }
   function dcKey(name,tutor){ return jsNorm((name||'')+'__'+(tutor||'')).replace(/[.#$\[\]\/ ]/g,'-'); }
-  function renderDcDays(){
-    const el=document.getElementById('dcDays'); if(!el) return;
-    el.innerHTML=ORDEM_DIAS.map(d=>{ const qt=PELUDINHOS.filter(p=>(p.dias||[]).indexOf(d)>=0).length;
-      return `<div class="dc-day${d===dcDia?' active':''}${d===HOJE_DIA?' hoje':''}" onclick="setDcDia('${d}')">${DIA_FULL[d]}<span class="qt">${qt}</span></div>`; }).join('');
-  }
-  function setDcDia(d){ dcDia=d; carregarChamada(); }
+  function montarSubnavDias(){ const sm=document.getElementById('dcSubnav'); if(sm) sm.innerHTML=ORDEM_DIAS.map(d=>`<a data-d="${d}" onclick="abrirDcDia('${d}')">${DIA_FULL[d]}${d===HOJE_DIA?' · hoje':''}</a>`).join(''); }
+  function marcarSubnavAtivo(){ document.querySelectorAll('#dcSubnav a').forEach(a=>a.classList.toggle('active', a.dataset.d===dcDia)); }
+  function abrirDcDia(d){ dcDia=d; const sm=document.getElementById('dcSubnav'); if(sm) sm.style.display='block'; if(typeof irParaView==='function') irParaView('daycare'); marcarSubnavAtivo(); carregarChamada(); if(typeof closeNav==='function') closeNav(); }
+  function setDcDia(d){ abrirDcDia(d); }
   function turmaDoDia(){
     const base=PELUDINHOS.map((p,i)=>({p,i})).filter(o=>(o.p.dias||[]).indexOf(dcDia)>=0);
     dcAvulsos.forEach((a,k)=>base.push({p:{n:a.nome,raca:a.raca||'',tutor:a.tutor||'',freq:'avulso',dias:[dcDia],nasc:''},i:'av'+k,avulso:true}));
@@ -1515,33 +1542,46 @@
   }
   function renderDaycare(){
     if(!document.getElementById('dcGrid')) return;
-    renderDcDays();
+    const lbl=document.getElementById('dcDiaLabel'); if(lbl) lbl.textContent=DIA_FULL[dcDia];
+    marcarSubnavAtivo();
     const list=turmaDoDia();
-    const veio=list.filter(o=>dcChamada[dcKey(o.p.n,o.p.tutor)]==='veio').length;
-    const d=new Date(), p2=x=>String(x).padStart(2,'0');
-    document.getElementById('dcCount').textContent=`Aulunos de ${DIA_FULL[dcDia]} · ${list.length} na turma · ${veio} presentes · ${p2(d.getDate())}/${p2(d.getMonth()+1)}`;
+    let nVeio=0,nFaltou=0,nPend=0; const faltas=[],pendentes=[];
+    list.forEach(o=>{ const st=dcChamada[dcKey(o.p.n,o.p.tutor)]; if(st==='veio')nVeio++; else if(st==='faltou'){nFaltou++;faltas.push(o.p.n);} else {nPend++;pendentes.push(o.p.n);} });
+    const d=new Date(),p2=x=>String(x).padStart(2,'0');
+    document.getElementById('dcCount').textContent=`Turma de ${DIA_FULL[dcDia]} · ${list.length} aulunos · ${p2(d.getDate())}/${p2(d.getMonth()+1)}`;
+    document.getElementById('dcResumo').innerHTML=`
+      <div class="dc-resumo">
+        <div class="dc-stat ok"><b>${nVeio}</b>presentes</div>
+        <div class="dc-stat bad"><b>${nFaltou}</b>faltas</div>
+        <div class="dc-stat pend"><b>${nPend}</b>falta marcar</div>
+      </div>
+      ${faltas.length?`<div class="dc-faltas"><strong>Faltaram hoje (${faltas.length}):</strong> ${faltas.join(', ')}</div>`:''}
+      ${nPend?`<div class="dc-pend-note"><strong>Ainda sem chamada (${nPend}):</strong> ${pendentes.join(', ')}</div>`:''}`;
     document.getElementById('dcGrid').innerHTML =
       `<div class="pet add" onclick="adicionarAvulsa()"><div class="plus">+</div><div class="t">Diária avulsa<br><span style="font-size:10px;font-weight:600;color:var(--muted)">aulino do dia</span></div></div>`+
       list.map(o=>{ const p=o.p; const ex=(typeof o.i==='number')?pelExtra(p):{}; const foto=ex.foto;
-        const k=dcKey(p.n,p.tutor); const st=dcChamada[k];
-        const cls=st==='veio'?'veio':(st==='faltou'?'faltou':''); const ic=st==='veio'?'✓':(st==='faltou'?'✕':'○');
+        const k=dcKey(p.n,p.tutor); const st=dcChamada[k]||'pend';
         const alerta=(ex.alergia||ex.restricao)?`<span class="mini-alert">RESTRIÇÃO</span>`:'';
         const ph=foto?`<div class="ph" style="background-image:url('${foto}');background-size:cover;background-position:center"></div>`:`<div class="ph" style="background:${corPel(typeof o.i==='number'?o.i:0)}">${(p.n[0]||'?')}</div>`;
         const clickFicha=(typeof o.i==='number')?`onclick="abrirPeludinhoDay(${o.i})" style="cursor:pointer"`:'';
-        return `<div class="pet">
-          <div class="dc-present ${cls}" onclick="marcarPresenca('${k}')" title="Marcar presença (veio / faltou)">${ic}</div>
-          ${alerta}
+        const ribbon=st==='veio'?'<div class="dc-ribbon veio">PRESENTE</div>':(st==='faltou'?'<div class="dc-ribbon faltou">FALTOU</div>':'<div class="dc-ribbon pend">PENDENTE — marque</div>');
+        return `<div class="pet dc-card ${st}">
+          ${ribbon}${alerta}
           <div ${clickFicha}>
             ${ph}
             <div class="nm">${p.n}</div>
             <div class="br">${p.raca||'—'}</div>
             <div class="hosp-tutor">${o.avulso?'Diária avulsa':'Tutor: '+p.tutor}</div>
           </div>
+          <div class="dc-actions">
+            <button class="dc-btn veio ${st==='veio'?'on':''}" onclick="marcarPresenca('${k}','veio')">✓ Veio</button>
+            <button class="dc-btn faltou ${st==='faltou'?'on':''}" onclick="marcarPresenca('${k}','faltou')">✕ Faltou</button>
+          </div>
         </div>`;
       }).join('');
   }
-  function marcarPresenca(k){
-    const cur=dcChamada[k]; const next=cur==='veio'?'faltou':(cur==='faltou'?'':'veio');
+  function marcarPresenca(k,val){
+    const cur=dcChamada[k]; const next=(cur===val)?'':val;
     if(next) dcChamada[k]=next; else delete dcChamada[k];
     if(DB) DB.ref('daycare/chamada/'+dcDataKey()+'/'+k).set(next||null).catch(()=>{});
     renderDaycare();
@@ -1562,6 +1602,7 @@
     else { dcAvulsos.push({nome:nome,tutor:tutor}); renderDaycare(); }
   }
   function abrirPeludinhoDay(i){ pelOrigem='daycare'; irParaView('ficha'); abrirPeludinho(i); }
+  montarSubnavDias();
   carregarChamada();
 </script>
 </body>
