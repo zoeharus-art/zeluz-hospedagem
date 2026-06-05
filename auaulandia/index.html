@@ -503,7 +503,11 @@
           <div class="hf-chipline" id="hf-chipline">Microchip: --</div>
           <div class="hf-meta" id="hf-meta"></div>
           <div class="hf-estadia" id="hf-estadia"></div>
-          <button class="btn-foto-mini so-foto" onclick="document.getElementById('hfPhotoFile').click()">📷 Trocar foto</button>
+          <div class="so-foto" style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:10px">
+            <button class="btn-foto-mini" onclick="document.getElementById('hfPhotoFile').click()">📷 Trocar foto</button>
+            <button class="btn-foto-mini" style="background:var(--z-blue);color:var(--z-cream)" onclick="salvarFoto()">💾 Salvar foto</button>
+          </div>
+          <div id="hf-fotostatus" style="font-size:11.5px;font-weight:700;margin-top:5px"></div>
         </div>
         <span class="chip-serv">AuAulândia</span>
       </div>
@@ -611,7 +615,7 @@
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
 <script>
   // ---- Firebase (banco gratuito que já temos) ----
-  let DB=null;
+  let DB=null, cadCache={}, fotoPendente=null;
   try{
     firebase.initializeApp({
       apiKey:"AIzaSyD3udp47XruRAEeIYWNGn0ICGCX3a1qr28",
@@ -622,7 +626,11 @@
       messagingSenderId:"199129329105",
       appId:"1:199129329105:web:22d0995972c197e24644f0"
     });
-    firebase.auth().signInAnonymously().then(()=>{ DB=firebase.database(); if(typeof preCadastro==='function') preCadastro(); }).catch(e=>console.warn('Firebase auth:',e));
+    firebase.auth().signInAnonymously().then(()=>{
+      DB=firebase.database();
+      if(typeof preCadastro==='function') preCadastro();
+      DB.ref('auaulandia/cadastro').on('value', s=>{ cadCache=s.val()||{}; if(typeof renderHosp==='function') renderHosp(); });
+    }).catch(e=>console.warn('Firebase auth:',e));
   }catch(e){ console.warn('Firebase init:',e); }
 
   // ---- ícones SVG (line) ----
@@ -763,11 +771,11 @@
       `<div class="pet add" onclick="alert('No sistema real: lista os alunos do Day Care de hoje para marcar um como PERNOITE (ficou hospedado por emergência da família). Ele passa a aparecer aqui automaticamente.')">
          <div class="plus">+</div><div class="t">Adicionar pernoite<br><span style="font-size:10px;font-weight:600;color:var(--muted)">aluno do Day Care</span></div></div>`+
       hospedes.map((h,i)=>{
-        const info=getInfo(h);
-        const ph = info.foto
-          ? `<div class="ph" style="background-image:url('${info.foto}');background-size:cover;background-position:center"></div>`
+        const cad=getCad(h);
+        const ph = cad.foto
+          ? `<div class="ph" style="background-image:url('${cad.foto}');background-size:cover;background-position:center"></div>`
           : `<div class="ph" style="background:${h.cor}">${h.ini}</div>`;
-        const raca = info.raca || h.raca || racasMap[(h.nome+'__'+h.tutor).toLowerCase()] || (h.mascote?'Moradora Zêluz':'<span style="color:#b6ad9c;font-style:italic">Raça a cadastrar</span>');
+        const raca = cad.raca || h.raca || racasMap[(h.nome+'__'+h.tutor).toLowerCase()] || (h.mascote?'Moradora Zêluz':'<span style="color:#b6ad9c;font-style:italic">Raça a cadastrar</span>');
         return `<div class="pet" onclick="abrirPlantao(${i})">
           ${ph}
           <div class="nm">${h.nome}</div>
@@ -799,11 +807,26 @@
   function onPhoto(e){
     const f=e.target.files&&e.target.files[0]; if(!f||!currentHosp) return;
     const r=new FileReader();
-    r.onload=()=>{ setInfo(currentHosp,{foto:r.result});
-      const av=document.getElementById('hf-av');
-      av.style.backgroundImage=`url('${r.result}')`; av.style.backgroundSize='cover'; av.style.backgroundPosition='center'; av.textContent='';
-      renderHosp(); };
+    r.onload=()=>{ const img=new Image(); img.onload=()=>{
+      const max=400; let w=img.width,h=img.height;
+      if(w>h){ if(w>max){ h=Math.round(h*max/w); w=max; } } else { if(h>max){ w=Math.round(w*max/h); h=max; } }
+      const c=document.createElement('canvas'); c.width=w; c.height=h; c.getContext('2d').drawImage(img,0,0,w,h);
+      fotoPendente=c.toDataURL('image/jpeg',0.72);
+      const av=document.getElementById('hf-av'); av.style.backgroundImage=`url('${fotoPendente}')`; av.style.backgroundSize='cover'; av.style.backgroundPosition='center'; av.textContent='';
+      const st=document.getElementById('hf-fotostatus'); if(st){ st.style.color='var(--crm-atencao-text)'; st.textContent='Foto pronta — clique em 💾 Salvar foto.'; }
+    }; img.src=r.result; };
     r.readAsDataURL(f);
+  }
+  function salvarFoto(){
+    if(!currentHosp) return;
+    if(!fotoPendente){ alert('Tire ou escolha a foto primeiro (📷 Trocar foto).'); return; }
+    const st=document.getElementById('hf-fotostatus');
+    setInfo(currentHosp,{foto:fotoPendente});
+    if(DB){ st.style.color='var(--muted)'; st.textContent='Salvando foto...';
+      DB.ref('auaulandia/cadastro/'+cadKey(currentHosp)).update({foto:fotoPendente})
+        .then(()=>{ st.style.color='var(--crm-ok)'; st.textContent='✅ Foto salva! Aparece em todos os aparelhos.'; fotoPendente=null; renderHosp(); })
+        .catch(e=>{ st.style.color='var(--crm-critico)'; st.textContent='⚠️ Erro ao salvar a foto: '+e.message; });
+    } else { st.style.color='var(--crm-atencao-text)'; st.textContent='Banco conectando... tente de novo em 5s.'; }
   }
   function onRaca(v){
     if(!currentHosp) return;
@@ -813,6 +836,7 @@
   function onChip(v){ onCad(); }
   // ---- Cadastro do peludinho (só Gestão edita) ----
   function cadKey(h){ return ((h&&h.nome||'')+'__'+(h&&h.tutor||'')).toLowerCase().replace(/[.#$\[\]\/]/g,'-'); }
+  function getCad(h){ return (h&&cadCache[cadKey(h)]) || (h?getInfo(h):{}) || {}; }
   function calcIdade(v){ if(!v) return ''; const n=new Date(v),h=new Date(); let a=h.getFullYear()-n.getFullYear(); const md=h.getMonth()-n.getMonth(); if(md<0||(md===0&&h.getDate()<n.getDate()))a--; return a>=1?(a+(a===1?' ano':' anos')):'menos de 1 ano'; }
   function segVal(id){ const b=document.querySelector('#'+id+' button.on'); return b?b.textContent.trim():''; }
   function setSeg(id,val){ const g=document.getElementById(id); if(!g)return; g.querySelectorAll('button').forEach(b=>{ b.classList.remove('on','t-ok','t-bad','t-warn'); if(val&&b.textContent.trim()===val) b.classList.add('on'); }); }
@@ -841,12 +865,14 @@
     setSeg('hf-sexo',cad.sexo); setSeg('hf-cast',cad.castrado);
     document.getElementById('hf-tutor').value=cad.tutor||(currentHosp&&currentHosp.tutor)||'';
     document.getElementById('hf-chip').value=cad.chip||'';
+    if(cad.foto){ const av=document.getElementById('hf-av'); av.style.backgroundImage=`url('${cad.foto}')`; av.style.backgroundSize='cover'; av.style.backgroundPosition='center'; av.textContent=''; }
     atualizarHeader(cad);
   }
   function carregarCadastro(){
     if(!currentHosp) return;
-    if(DB){ DB.ref('auaulandia/cadastro/'+cadKey(currentHosp)).once('value').then(s=>aplicarCadastro(s.val()||getInfo(currentHosp))).catch(()=>aplicarCadastro(getInfo(currentHosp))); }
-    else aplicarCadastro(getInfo(currentHosp));
+    fotoPendente=null;
+    aplicarCadastro(getCad(currentHosp));
+    if(DB) DB.ref('auaulandia/cadastro/'+cadKey(currentHosp)).once('value').then(s=>{ if(s.val()) aplicarCadastro(s.val()); }).catch(()=>{});
   }
   function preCadastro(){
     if(!DB) return;
