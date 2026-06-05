@@ -553,6 +553,7 @@
   <section class="view" id="v-daycare">
     <div id="dcAdaptBanner"></div>
     <div class="dc-titulo"><span id="dcAtivLabel">Chamada</span> · <span id="dcDiaLabel">hoje</span></div>
+    <div class="pel-toolbar"><input class="search" id="dcBusca" placeholder="Buscar peludinho, raça ou tutor..." style="width:300px;max-width:100%" oninput="onDcBusca()"></div>
     <div id="scr-chamada" class="dc-scr">
       <div class="role-note"><span data-icon="sun"></span><span>Toque <strong>VEIO</strong> ou <strong>FALTOU</strong> em cada peludinho. A lista de faltas vai para a Gestão. Toque no card para ver a ficha.</span></div>
       <div id="dcResumo"></div>
@@ -1639,7 +1640,7 @@
       ${nPend?`<div class="dc-pend-note"><strong>Ainda sem chamada (${nPend}):</strong> ${pendentes.join(', ')}</div>`:''}`;
     document.getElementById('dcGrid').innerHTML =
       `<div class="pet add" onclick="adicionarAvulsa()"><div class="plus">+</div><div class="t">Diária avulsa<br><span style="font-size:10px;font-weight:600;color:var(--muted)">aulino do dia</span></div></div>`+
-      list.map(o=>{ const p=o.p; const ex=(typeof o.i==='number')?pelExtra(p):{}; const foto=ex.foto;
+      filtraLista(list).map(o=>{ const p=o.p; const ex=(typeof o.i==='number')?pelExtra(p):{}; const foto=ex.foto;
         const k=dcKey(p.n,p.tutor); const st=dcChamada[k]||'pend';
         const alerta=(ex.alergia||ex.restricao)?`<span class="mini-alert">RESTRIÇÃO</span>`:'';
         const ph=foto?`<div class="ph" style="background-image:url('${foto}');background-size:cover;background-position:center"></div>`:`<div class="ph" style="background:${corPel(typeof o.i==='number'?o.i:0)}">${(p.n[0]||'?')}</div>`;
@@ -1734,7 +1735,9 @@
     const nomes=turmaDoDia().filter(o=>typeof o.i==='number').filter(o=>{ const ex=pelExtra(o.p); return ex&&ex.adaptacao==='Sim'; }).map(o=>o.p.n);
     el.innerHTML=nomes.length?`<div class="adapt-banner">&#9733; EM ADAPTACAO HOJE: ${nomes.join(', ')} &mdash; foco de todo o time!</div>`:'';
   }
-  let genMarcas={};
+  let genMarcas={}, dcBuscaVal='';
+  function filtraLista(list){ const q=jsNorm(dcBuscaVal); return q?list.filter(o=>jsNorm([o.p.n,o.p.raca,o.p.tutor].join(' ')).indexOf(q)>=0):list; }
+  function onDcBusca(){ const el=document.getElementById('dcBusca'); dcBuscaVal=el?el.value:''; if(dcAtiv==='chamada')renderDaycare(); else if(dcAtiv==='almoco')renderAlmoco(); else renderGenerico(); }
   function carregarGenerico(){ genMarcas={}; if(DB){ DB.ref('daycare/atividade/'+dcDataKey()+'/'+dcAtiv).once('value').then(s=>{ genMarcas=s.val()||{}; }).then(renderGenerico).catch(renderGenerico); } else renderGenerico(); }
   function marcarGenerico(k){ const cur=genMarcas[k]; const nx=(cur==='feito')?'':'feito'; if(nx) genMarcas[k]=nx; else delete genMarcas[k]; if(DB) DB.ref('daycare/atividade/'+dcDataKey()+'/'+dcAtiv+'/'+k).set(nx||null).catch(()=>{}); renderGenerico(); }
   function renderGenerico(){
@@ -1744,7 +1747,7 @@
     const f=ATIVS_DC.find(a=>a.s===dcAtiv);
     document.getElementById('genResumo').innerHTML=`<div class="dc-resumo"><div class="dc-stat ok"><b>${feito}</b>feito</div><div class="dc-stat pend"><b>${list.length-feito}</b>pendente</div></div>`;
     document.getElementById('genCount').textContent=`${list.length} aulunos &middot; ${f?f.t:''}`;
-    document.getElementById('genGrid').innerHTML=list.map(o=>{ const p=o.p; const ex=(typeof o.i==='number')?pelExtra(p):{}; const foto=ex.foto; const k=dcKey(p.n,p.tutor); const ok=genMarcas[k]==='feito';
+    document.getElementById('genGrid').innerHTML=filtraLista(list).map(o=>{ const p=o.p; const ex=(typeof o.i==='number')?pelExtra(p):{}; const foto=ex.foto; const k=dcKey(p.n,p.tutor); const ok=genMarcas[k]==='feito';
       const restr=(ex.restricao||ex.alergia)?`<span class="mini-alert">RESTRICAO</span>`:'';
       const ph=foto?`<div class="ph" style="background-image:url('${foto}');background-size:cover;background-position:center"></div>`:`<div class="ph" style="background:${corPel(typeof o.i==='number'?o.i:0)}">${(p.n[0]||'?')}</div>`;
       return `<div class="pet dc-card ${ok?'veio':''}">
@@ -1788,7 +1791,6 @@
     document.getElementById('almTurno').innerHTML=`<div class="alm-turno">
       <div><div class="tb-lab">Almoco - ${DIA_FULL[dcDia]}</div>
         <div style="font-size:13px;margin-top:3px">Inicio: <strong>${t.inicio||'-'}</strong>${t.quemInicio?' ('+t.quemInicio+')':''} &nbsp;&middot;&nbsp; Fim: <strong>${t.fim||'-'}</strong>${t.quemFim?' ('+t.quemFim+')':''}</div>
-        <div style="font-size:11px;opacity:.8;margin-top:2px">Carimba o horario real de quem deu o almoco (controle anti-fraude).</div>
       </div>
       <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:flex-start">
         <button class="btn btn-gold" onclick="iniciarAlmoco()">&#9654; Iniciar almoco</button>
@@ -1804,7 +1806,7 @@
       </div>
       ${naoList.length?`<div class="dc-faltas"><strong>NAO COMERAM - vao para o 2&ordm; horario (${naoList.length}):</strong> ${naoList.join(', ')}</div>`:''}`;
     document.getElementById('almCount').textContent=`${list.length} aulunos no almoco de ${DIA_FULL[dcDia]}`;
-    document.getElementById('almGrid').innerHTML=list.map(o=>{ const p=o.p; const ex=(typeof o.i==='number')?pelExtra(p):{};
+    document.getElementById('almGrid').innerHTML=filtraLista(list).map(o=>{ const p=o.p; const ex=(typeof o.i==='number')?pelExtra(p):{};
       const a=(typeof o.i==='number')?(ALMOCO[pelKey(p)]||null):null; const foto=ex.foto; const k=dcKey(p.n,p.tutor); const m=almMarcas[k]||'';
       const restrRaw=(a&&a.restr)||ex.restricao||ex.alergia||'';
       const ph=foto?`<div class="ph" style="background-image:url('${foto}');background-size:cover;background-position:center"></div>`:`<div class="ph" style="background:${corPel(typeof o.i==='number'?o.i:0)}">${(p.n[0]||'?')}</div>`;
