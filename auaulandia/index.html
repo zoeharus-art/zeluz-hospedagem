@@ -154,8 +154,8 @@
     font-size:14px;cursor:pointer;margin-bottom:14px;padding:4px 0}
   .back-btn:hover{color:var(--z-gold-deep)}
   .hosp-head{display:flex;align-items:center;gap:16px}
-  .hosp-head .ph{width:104px;height:104px;border-radius:50%;display:grid;place-items:center;
-    background:var(--z-auaulandia);color:#fff;font-weight:800;font-size:42px;font-family:var(--font-marca);flex:0 0 auto;box-shadow:0 6px 18px rgba(35,77,103,.18)}
+  .hosp-head .ph{width:148px;height:148px;border-radius:50%;display:grid;place-items:center;
+    background:var(--z-auaulandia);color:#fff;font-weight:800;font-size:58px;font-family:var(--font-marca);flex:0 0 auto;box-shadow:0 8px 22px rgba(35,77,103,.22)}
   .hosp-tutor{font-size:11px;color:var(--muted);font-weight:600;margin-top:6px}
   .hosp-count{display:flex;align-items:center;gap:14px;background:var(--z-blue);color:var(--z-cream);
     border-radius:var(--radius);padding:16px 22px;margin-bottom:16px;box-shadow:var(--shadow)}
@@ -191,8 +191,26 @@
   .chip-box{background:var(--z-blue);color:var(--z-cream);border-radius:var(--radius);padding:14px 20px;
     margin-bottom:16px;display:flex;align-items:center;justify-content:space-between;gap:14px;box-shadow:var(--shadow)}
   .chip-lab{font-size:11px;text-transform:uppercase;letter-spacing:.8px;opacity:.85;font-weight:700}
-  .chip-input{width:130px;font-family:var(--font-marca);font-weight:800;font-size:28px;letter-spacing:7px;
+  .chip-input{width:150px;font-family:var(--font-marca);font-weight:800;font-size:26px;letter-spacing:5px;
     text-align:center;border:none;border-radius:11px;padding:8px;background:var(--z-cream);color:var(--z-blue)}
+  .cad-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+  @media(max-width:560px){.cad-grid{grid-template-columns:1fr}}
+  .cad-in{width:100%;font-family:var(--font-ui);font-size:14px;padding:11px 13px;border:1.5px solid var(--line);border-radius:11px;background:var(--z-cream);color:var(--z-blue)}
+  .cad-in:focus{border-color:var(--z-gold);outline:none}
+  .checklist-note{background:rgba(222,180,40,.16);border:1.5px solid var(--z-gold);border-radius:12px;
+    padding:13px 16px;margin-bottom:16px;font-size:14px;font-weight:700;color:var(--z-blue)}
+  .lock-note{display:none;font-size:12px;font-weight:600;color:var(--z-blue-soft);background:var(--z-cream-warm);
+    border:1px solid var(--line);border-radius:9px;padding:8px 12px;margin-bottom:12px}
+  body:not([data-role="gestao"]) #card-cadastro .cad-in,
+  body:not([data-role="gestao"]) #card-cadastro .seg button{pointer-events:none;opacity:.97}
+  body:not([data-role="gestao"]) #card-cadastro .lock-note{display:block}
+  body[data-role="plantonista"] .so-foto, body[data-role="tutor"] .so-foto{display:none}
+  body[data-role="plantonista"] #card-dia .seg button, body[data-role="plantonista"] #card-dia textarea,
+  body[data-role="tutor"] #card-dia .seg button, body[data-role="tutor"] #card-dia textarea{pointer-events:none}
+  body[data-role="plantonista"] #card-dia .lock-note, body[data-role="tutor"] #card-dia .lock-note{display:block}
+  body[data-role="monitor"] #card-noite .seg button, body[data-role="monitor"] #card-noite textarea,
+  body[data-role="tutor"] #card-noite .seg button, body[data-role="tutor"] #card-noite textarea{pointer-events:none}
+  body[data-role="monitor"] #card-noite .lock-note, body[data-role="tutor"] #card-noite .lock-note{display:block}
   @media(max-width:600px){.datenav #dateLabel{display:none}}
 
   /* ===== ficha ===== */
@@ -488,15 +506,18 @@
         <span class="chip-serv">AuAulândia</span>
       </div>
 
-      <div class="card" style="display:flex;gap:16px;align-items:center;flex-wrap:wrap">
+      <div class="card" id="card-cadastro">
+        <div class="lock-note">🔒 Dados de cadastro — somente a Gestão altera</div>
         <input id="hfPhotoFile" type="file" accept="image/*" capture="environment" style="display:none" onchange="onPhoto(event)">
-        <button class="btn btn-gold" onclick="document.getElementById('hfPhotoFile').click()">Adicionar / trocar foto</button>
-        <div class="field" style="flex:1;min-width:220px;margin:0">
-          <label>Raça <span style="color:var(--muted);font-weight:500">— comece a digitar: <em>wes</em> → West Terrier</span></label>
-          <input id="hfRaca" list="racasList" autocomplete="off" placeholder="Selecione a raça"
-            style="width:100%;font-family:var(--font-ui);font-size:14px;padding:11px 13px;border:1.5px solid var(--line);border-radius:11px;background:var(--z-cream)"
-            oninput="onRaca(this.value)">
+        <div class="cad-grid">
+          <div class="field"><label>Data de nascimento</label><input type="date" id="hf-nasc" class="cad-in" oninput="onCad()"></div>
+          <div class="field"><label>Idade</label><input type="text" id="hf-idade" class="cad-in" readonly placeholder="—"></div>
+          <div class="field"><label>Raça</label><input id="hfRaca" class="cad-in" list="racasList" autocomplete="off" placeholder="wes → West Terrier" oninput="onRaca(this.value);onCad()"></div>
+          <div class="field"><label>Sexo</label><div class="seg" id="hf-sexo" data-single><button onclick="pick(this);onCad()">Macho</button><button onclick="pick(this);onCad()">Fêmea</button></div></div>
+          <div class="field"><label>Castrado?</label><div class="seg gold" id="hf-cast" data-single><button onclick="pick(this);onCad()">Sim</button><button onclick="pick(this);onCad()">Não</button></div></div>
+          <div class="field"><label>Nome do tutor</label><input type="text" id="hf-tutor" class="cad-in" oninput="onCad()" placeholder="Nome do tutor"></div>
         </div>
+        <button class="btn btn-gold so-foto" style="margin-top:14px" onclick="document.getElementById('hfPhotoFile').click()">Trocar foto</button>
       </div>
       <datalist id="racasList"></datalist>
 
@@ -516,14 +537,17 @@
           <div class="sub">vem da ficha do peludinho — o plantonista serve esta quantidade</div></div>
       </div>
 
+      <div class="checklist-note">📋 O Check-list de hospedagem é o seu material de trabalho principal. Leia-o!</div>
+
       <div class="chip-box">
-        <div><div class="chip-lab">Nº do Microchip · 4 últimos</div></div>
-        <input id="hf-chip" class="chip-input" maxlength="4" inputmode="numeric" placeholder="0000" oninput="onChip(this.value)">
+        <div><div class="chip-lab">Nº do Microchip</div><div style="font-size:10px;opacity:.75;font-weight:600;margin-top:2px">últimos dígitos do visor</div></div>
+        <input id="hf-chip" class="chip-input" maxlength="6" inputmode="numeric" placeholder="000000" oninput="onChip(this.value)">
       </div>
 
-      <div class="card">
-        <h2>Relatório do Dia · Day Care</h2>
+      <div class="card" id="card-dia">
+        <h2>Relatório do Dia</h2>
         <div class="hint">Preenchido pela Monitora (seg a sáb). Toque para marcar.</div>
+        <div class="lock-note">🔒 Somente leitura — este relatório é da Monitora</div>
         <div class="obsline"><span class="q">Gastou energia?</span><div class="seg" data-single><button data-tone="warn" onclick="pick(this)">Pouco</button><button data-tone="ok" onclick="pick(this)">Bastante</button><button data-tone="ok" onclick="pick(this)">Muito</button></div></div>
         <div class="obsline"><span class="q">Teve desentendimento?</span><div class="seg" data-single><button data-tone="ok" onclick="pick(this)">Não</button><button data-tone="bad" onclick="pick(this)">Sim</button></div></div>
         <div class="obsline"><span class="q">Precisa ficar separado?</span><div class="seg" data-single><button data-tone="ok" onclick="pick(this)">Não</button><button data-tone="bad" onclick="pick(this)">Sim</button></div></div>
@@ -538,9 +562,10 @@
         <div class="field" style="margin-top:14px"><label>Observação</label><textarea style="width:100%;font-family:var(--font-ui);font-size:14px;padding:12px;border:1.5px solid var(--line);border-radius:11px;background:var(--z-cream);min-height:70px" placeholder="Algo do dia que seja importante"></textarea></div>
       </div>
 
-      <div class="card">
+      <div class="card" id="card-noite">
         <h2>Relatório da Noite · Plantão</h2>
         <div class="hint">Preenchido pela Plantonista. A Gestora recebe pronto para enviar ao tutor.</div>
+        <div class="lock-note">🔒 Somente leitura — este relatório é da Plantonista</div>
         <div class="obsline"><span class="q">Como passou a noite?</span><div class="seg" data-single><button data-tone="ok" onclick="pick(this)">Dormiu a noite inteira</button><button data-tone="warn" onclick="pick(this)">Agitado</button></div></div>
         <div class="obsline"><span class="q">Está ativo?</span><div class="seg" data-single><button data-tone="ok" onclick="pick(this)">Sim</button><button data-tone="warn" onclick="pick(this)">Não</button></div></div>
         <div class="obsline"><span class="q">Bebeu água?</span><div class="seg" data-single><button data-tone="ok" onclick="pick(this)">Sim</button><button data-tone="bad" onclick="pick(this)">Não</button></div></div>
@@ -596,7 +621,7 @@
       messagingSenderId:"199129329105",
       appId:"1:199129329105:web:22d0995972c197e24644f0"
     });
-    firebase.auth().signInAnonymously().then(()=>{ DB=firebase.database(); }).catch(e=>console.warn('Firebase auth:',e));
+    firebase.auth().signInAnonymously().then(()=>{ DB=firebase.database(); if(typeof preCadastro==='function') preCadastro(); }).catch(e=>console.warn('Firebase auth:',e));
   }catch(e){ console.warn('Firebase init:',e); }
 
   // ---- ícones SVG (line) ----
@@ -784,7 +809,48 @@
     setInfo(currentHosp,{raca:v}); renderHosp();
     document.getElementById('hf-meta').innerHTML=`${v?v+' · ':''}${currentHosp.mascote?'Nossa Zelozinha':'Tutor: '+currentHosp.tutor}`;
   }
-  function onChip(v){ if(currentHosp) setInfo(currentHosp,{chip:v}); }
+  function onChip(v){ onCad(); }
+  // ---- Cadastro do peludinho (só Gestão edita) ----
+  function cadKey(h){ return ((h&&h.nome||'')+'__'+(h&&h.tutor||'')).toLowerCase().replace(/[.#$\[\]\/]/g,'-'); }
+  function calcIdade(v){ if(!v) return ''; const n=new Date(v),h=new Date(); let a=h.getFullYear()-n.getFullYear(),m=h.getMonth()-n.getMonth(); if(h.getDate()<n.getDate())m--; if(m<0){a--;m+=12;} let t=''; if(a>0)t+=a+(a===1?' ano':' anos'); if(m>0)t+=(t?' e ':'')+m+(m===1?' mês':' meses'); return t||'filhote'; }
+  function segVal(id){ const b=document.querySelector('#'+id+' button.on'); return b?b.textContent.trim():''; }
+  function setSeg(id,val){ const g=document.getElementById(id); if(!g)return; g.querySelectorAll('button').forEach(b=>{ b.classList.remove('on','t-ok','t-bad','t-warn'); if(val&&b.textContent.trim()===val) b.classList.add('on'); }); }
+  function atualizarHeader(cad){
+    cad=cad||{}; const p=[]; if(cad.raca)p.push(cad.raca); if(cad.sexo)p.push(cad.sexo);
+    const id=calcIdade(cad.nasc); if(id)p.push(id); if(cad.castrado==='Sim')p.push('Castrado');
+    const tut=cad.tutor||(currentHosp&&currentHosp.tutor)||'';
+    document.getElementById('hf-meta').innerHTML = p.join(' · ') + (tut?(p.length?' · ':'')+'Tutor: '+tut:'');
+  }
+  function onCad(){
+    if(!currentHosp) return;
+    const nasc=document.getElementById('hf-nasc').value;
+    document.getElementById('hf-idade').value=calcIdade(nasc);
+    const cad={ nasc:nasc, raca:document.getElementById('hfRaca').value||'', sexo:segVal('hf-sexo'),
+      castrado:segVal('hf-cast'), tutor:document.getElementById('hf-tutor').value||'', chip:document.getElementById('hf-chip').value||'' };
+    setInfo(currentHosp,cad);
+    if(DB) DB.ref('auaulandia/cadastro/'+cadKey(currentHosp)).update(cad).catch(()=>{});
+    atualizarHeader(cad);
+  }
+  function aplicarCadastro(cad){
+    cad=cad||{};
+    document.getElementById('hf-nasc').value=cad.nasc||'';
+    document.getElementById('hf-idade').value=calcIdade(cad.nasc);
+    document.getElementById('hfRaca').value=cad.raca||(currentHosp&&currentHosp.raca)||'';
+    setSeg('hf-sexo',cad.sexo); setSeg('hf-cast',cad.castrado);
+    document.getElementById('hf-tutor').value=cad.tutor||(currentHosp&&currentHosp.tutor)||'';
+    document.getElementById('hf-chip').value=cad.chip||'';
+    atualizarHeader(cad);
+  }
+  function carregarCadastro(){
+    if(!currentHosp) return;
+    if(DB){ DB.ref('auaulandia/cadastro/'+cadKey(currentHosp)).once('value').then(s=>aplicarCadastro(s.val()||getInfo(currentHosp))).catch(()=>aplicarCadastro(getInfo(currentHosp))); }
+    else aplicarCadastro(getInfo(currentHosp));
+  }
+  function preCadastro(){
+    if(!DB) return;
+    DB.ref('auaulandia/cadastro/charlotte__sabrina').update({chip:'225732'}).catch(()=>{});
+    DB.ref('auaulandia/cadastro/lana__').update({chip:'375365'}).catch(()=>{});
+  }
 
   // ---- Relatórios da ficha: coletar, aplicar, salvar no banco, limpar ----
   function fichaKey(){ const p=x=>String(x).padStart(2,'0'); const d=selectedDate; const pk=currentHosp?currentHosp.nome+'__'+currentHosp.tutor:''; return (pk+'__'+d.getFullYear()+'-'+p(d.getMonth()+1)+'-'+p(d.getDate())).toLowerCase().replace(/[.#$\[\]\/]/g,'-'); }
@@ -802,9 +868,9 @@
       line.querySelectorAll('button').forEach(b=>{ b.classList.remove('on','t-ok','t-bad','t-warn'); if(val&&b.textContent.trim()===val){ b.classList.add('on'); if(b.dataset.tone)b.classList.add('t-'+b.dataset.tone); } });
     });
     document.querySelectorAll('#hosp-ficha textarea').forEach((t,i)=>t.value=textos[i]||'');
-    document.getElementById('hf-chip').value = d.chip || (currentHosp?(getInfo(currentHosp).chip||''):'');
   }
   function carregarFicha(){
+    carregarCadastro();
     if(DB){ DB.ref('auaulandia/relatorios/'+fichaKey()).once('value').then(s=>aplicarFicha(s.val())).catch(()=>aplicarFicha({})); }
     else { aplicarFicha({}); }
   }
