@@ -271,6 +271,7 @@
   body[data-role="monitor"] .sensivel,
   body[data-role="tutor"]   .sensivel{display:none !important}
   body[data-role="monitor"] .so-gestao,
+  body[data-role="plantonista"] .so-gestao,
   body[data-role="tutor"]   .so-gestao{display:none !important}
   /* .so-master = SÓ a Gestora (Márcia). Supervisão (Amanda) e equipe não veem. */
   body:not([data-role="gestao"]) .so-master{display:none !important}
@@ -278,6 +279,20 @@
   body[data-role="gestao"] .so-supervisor-only{display:none !important}
   /* abas internas de Pessoas (handler próprio, não colide com a Ficha) */
   .ppanel{display:none}.ppanel.active{display:block}
+
+  /* ===== tabela de Peludinhos (turma) ===== */
+  .pel-toolbar{display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin-bottom:14px}
+  .pel-count{font-size:13px;color:var(--muted);font-weight:600}
+  .pel-wrap{overflow-x:auto;border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);background:var(--z-white)}
+  table.pel{width:100%;border-collapse:collapse;font-size:13.5px;min-width:680px}
+  table.pel thead th{background:var(--z-blue);color:var(--z-cream);font-weight:700;font-size:11.5px;text-transform:uppercase;letter-spacing:.5px;padding:11px 12px;text-align:left;white-space:nowrap}
+  table.pel tbody td{padding:11px 12px;border-bottom:1px solid #f1ebde;color:var(--z-blue-deep);white-space:nowrap}
+  table.pel tbody tr:last-child td{border-bottom:none}
+  table.pel tbody tr:hover{background:rgba(222,180,40,.07)}
+  table.pel .pel-nome{font-weight:700;color:var(--z-blue)}
+  table.pel .pel-num{color:var(--muted);font-weight:700}
+  .pel-freq{display:inline-block;background:rgba(90,171,181,.16);color:#2b7e88;font-weight:700;font-size:12px;padding:3px 11px;border-radius:999px}
+  .pel-obs{display:inline-block;font-size:10px;font-weight:700;color:#a85a2e;background:rgba(224,136,86,.14);padding:2px 7px;border-radius:999px;margin-left:7px}
   .role-note{font-size:12px;background:var(--z-cream-warm);border:1px solid var(--line);border-radius:10px;
     padding:10px 14px;color:var(--z-blue-soft);margin-bottom:18px;display:flex;gap:8px;align-items:center}
 
@@ -366,79 +381,18 @@
     <div class="pets-grid" id="petsGrid"></div>
   </section>
 
-  <!-- ===== FICHA (peludinho) ===== -->
+  <!-- ===== PELUDINHOS (turma) ===== -->
   <section class="view" id="v-ficha">
-    <div class="role-note"><span data-icon="lock"></span><span><strong>Ficha imutável.</strong> Só Gestão e Supervisor inserem dados. Campos com <span class="sensivel-badge">sensível</span> não aparecem para Monitor e Tutor.</span></div>
-    <div class="subtabs">
-      <div class="subtab active" data-s="s-ident">Identificação</div>
-      <div class="subtab" data-s="s-saude">Saúde &amp; Vacinas</div>
-      <div class="subtab" data-s="s-rotina">Rotina</div>
-      <div class="subtab" data-s="s-comp">Comportamento</div>
+    <div class="role-note"><span data-icon="paw"></span><span>Turma que vem na <strong>Segunda-feira</strong>. Base do Day Care — nome, raça, quantas vezes por semana vem, tutor e nascimento. Buscar por nome, raça ou tutor.</span></div>
+    <div class="pel-toolbar">
+      <input class="search" id="pelSearch" placeholder="Buscar peludinho, raça ou tutor..." style="width:300px;max-width:100%" oninput="renderPel()">
+      <span class="pel-count" id="pelCount"></span>
     </div>
-
-    <div class="subpanel active" id="s-ident">
-      <div class="card">
-        <div style="display:flex;gap:18px;align-items:center;margin-bottom:18px">
-          <div class="ph" style="width:84px;height:84px;border-radius:50%;background:var(--z-daycare);display:grid;place-items:center;color:#fff;font-weight:800;font-size:30px;font-family:var(--font-marca)">A</div>
-          <div><div style="font-family:var(--font-accent);font-size:30px;font-weight:700;color:var(--z-blue);line-height:1">Amora</div>
-          <div style="color:var(--muted);font-size:13px;font-weight:600">Spitz Alemão · Fêmea · 3 anos e 2 meses</div></div>
-        </div>
-        <div class="pair"><span class="k">Data de nascimento</span><span class="val">14/04/2023</span></div>
-        <div class="pair"><span class="k">Sexo</span><span class="val">Fêmea</span></div>
-        <div class="pair"><span class="k">Castrado</span><span class="val">Sim</span></div>
-        <div class="pair"><span class="k">Raça</span><span class="val">Spitz Alemão</span></div>
-        <div class="pair"><span class="k">Data de matrícula</span><span class="val">02/01/2026</span></div>
-        <div class="pair"><span class="k">Tutor(es)</span><span class="val">Sabrina Oliveira</span></div>
-        <div class="pair sensivel"><span class="k">Celular <span class="sensivel-badge">sensível</span></span><span class="val">(31) 9 9999-0000</span></div>
-        <div class="pair"><span class="k">Bairro</span><span class="val">Buritis</span></div>
-        <div class="pair"><span class="k">Como conheceu a Zêluz</span><span class="val">Indicação</span></div>
-      </div>
-      <div class="actions so-gestao"><button class="btn btn-gold" onclick="alert('No sistema real: abre o formulário para criar/editar (só Gestão e Supervisor).')">Editar ficha</button></div>
-    </div>
-
-    <div class="subpanel" id="s-saude">
-      <div class="card">
-        <h2>Vacinas &amp; proteção</h2>
-        <div class="hint">Última dose e quem aplicou (Zêluz ou Tutor).</div>
-        <div class="pair"><span class="k">Múltipla</span><span class="val">10/03/2026 · <span style="color:var(--z-gold-deep)">Zêluz</span></span></div>
-        <div class="pair"><span class="k">Raiva</span><span class="val">10/03/2026 · <span style="color:var(--z-gold-deep)">Zêluz</span></span></div>
-        <div class="pair"><span class="k">Gripe</span><span class="val">22/02/2026 · Tutor</span></div>
-        <div class="pair"><span class="k">Vermífugo</span><span class="val">01/05/2026 · <span style="color:var(--z-gold-deep)">Zêluz</span></span></div>
-        <div class="pair"><span class="k">Carrapaticida</span><span class="val">01/05/2026 · Tutor</span></div>
-      </div>
-      <div class="card sensivel">
-        <h2>Saúde geral <span class="sensivel-badge">sensível</span></h2>
-        <div class="pair"><span class="k">Alergia</span><span class="val">Frango</span></div>
-        <div class="pair"><span class="k">Medicamento</span><span class="val">Nenhum</span></div>
-        <div class="pair"><span class="k">Cirurgia</span><span class="val">Castração (2024)</span></div>
-      </div>
-    </div>
-
-    <div class="subpanel" id="s-rotina">
-      <div class="card">
-        <h2>Rotina &amp; alimentação</h2>
-        <div class="pair"><span class="k">Dias de Day Care</span><span class="val">Seg · Qua · Sex</span></div>
-        <div class="pair"><span class="k">Alimentação</span><span class="val">Ração · 80g 2x/dia</span></div>
-        <div class="pair"><span class="k">Almoça na creche</span><span class="val">Sim</span></div>
-        <div class="pair"><span class="k">Passeia</span><span class="val">Sim · 2x ao dia</span></div>
-        <div class="pair"><span class="k">Xixi e cocô</span><span class="val">Fora de casa</span></div>
-      </div>
-    </div>
-
-    <div class="subpanel" id="s-comp">
-      <div class="card sensivel">
-        <h2>Comportamento <span class="sensivel-badge">sensível</span></h2>
-        <div class="pair"><span class="k">Em casa</span><span class="val">Tranquila, dorme muito</span></div>
-        <div class="pair"><span class="k">Com pessoas</span><span class="val">Sociável</span></div>
-        <div class="pair"><span class="k">Com outros peludos</span><span class="val">Brinca bem</span></div>
-        <div class="pair"><span class="k">Medos</span><span class="val">Fogos de artifício</span></div>
-        <div class="pair"><span class="k">Já atacou outro peludo</span><span class="val">Não</span></div>
-      </div>
-      <div class="card">
-        <h2>Preferências</h2>
-        <div class="pair"><span class="k">Comidinhas que gosta</span><span class="val">Cenoura · Maçã</span></div>
-        <div class="pair"><span class="k">Brincadeira favorita</span><span class="val">Bolinha</span></div>
-      </div>
+    <div class="pel-wrap">
+      <table class="pel">
+        <thead><tr><th>Nº</th><th>Peludinho</th><th>Raça</th><th>Vem</th><th>Tutor</th><th>Nascimento</th><th>Idade</th></tr></thead>
+        <tbody id="pelBody"></tbody>
+      </table>
     </div>
   </section>
 
@@ -510,7 +464,10 @@
           <div class="hf-chipline" id="hf-chipline">Microchip: --</div>
           <div class="hf-meta" id="hf-meta"></div>
           <div class="hf-estadia" id="hf-estadia"></div>
-          <div class="so-foto" style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:10px">
+          <div class="so-gestao" style="margin-top:10px">
+            <button class="btn-foto-mini" style="background:var(--z-gold);color:var(--z-blue)" onclick="toggleCadastro()">✏️ Editar cadastro</button>
+          </div>
+          <div class="so-foto" style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:8px">
             <button class="btn-foto-mini" onclick="document.getElementById('hfPhotoFile').click()">📷 Trocar foto</button>
             <button class="btn-foto-mini" style="background:var(--z-blue);color:var(--z-cream)" onclick="salvarFoto()">💾 Salvar foto</button>
           </div>
@@ -519,7 +476,7 @@
         <span class="chip-serv">AuAulândia</span>
       </div>
 
-      <div class="card" id="card-cadastro">
+      <div class="card" id="card-cadastro" style="display:none">
         <h2 style="font-size:20px;margin-bottom:10px">Dados de cadastro</h2>
         <div class="cad-grid">
           <div class="field"><label>Data de nascimento</label><input type="date" id="hf-nasc" class="cad-in" oninput="onCad()"></div>
@@ -530,11 +487,7 @@
           <div class="field"><label>Nome do tutor</label><input type="text" id="hf-tutor" class="cad-in" oninput="onCad()" placeholder="Nome do tutor"></div>
           <div class="field"><label>Nº Microchip · últimos do visor</label><input type="text" id="hf-chip" class="cad-in" maxlength="6" inputmode="numeric" placeholder="000000" oninput="onChip(this.value)"></div>
         </div>
-        <div class="field" style="margin-top:6px"><label>Dias do Day Care <span style="color:var(--muted);font-weight:500">(pode mudar todo mês)</span></label>
-          <div class="chips" id="hf-dias">
-            <div class="chip" onclick="toggleDia(this)">Seg</div><div class="chip" onclick="toggleDia(this)">Ter</div><div class="chip" onclick="toggleDia(this)">Qua</div><div class="chip" onclick="toggleDia(this)">Qui</div><div class="chip" onclick="toggleDia(this)">Sex</div>
-          </div></div>
-        <div class="actions" style="margin-top:14px"><button class="btn btn-primary" onclick="onCad();this.textContent='✅ Cadastro salvo';setTimeout(()=>this.textContent='Salvar cadastro',1500)">Salvar cadastro</button></div>
+        <div class="actions" style="margin-top:8px"><button class="btn btn-primary" onclick="onCad();this.textContent='✅ Cadastro salvo';setTimeout(()=>this.textContent='Salvar cadastro',1500)">Salvar cadastro</button><button class="btn" style="background:var(--z-cream-warm);color:var(--z-blue);border:1.5px solid var(--line)" onclick="toggleCadastro()">Fechar</button></div>
       </div>
       <datalist id="racasList"></datalist>
 
@@ -715,7 +668,7 @@
   function goToToday(){ selectedDate=new Date(); updateDateLabel(); carregarHospedes(); }
   updateDateLabel();
 
-  const titles={inicio:['Início','Visão geral do dia'],ficha:['Peludinhos','Ficha completa'],
+  const titles={inicio:['Início','Visão geral do dia'],ficha:['Peludinhos','Turma de segunda'],
     hoje:['Linha do Tempo','O dia do peludinho'],adaptacao:['Adaptação · 1º mês','Como está se adaptando'],
     daycare:['Day Care','Chamada e atividades'],hospedagem:['AuAulândia','Passagem de plantão'],
     agenda:['Agenda','Frequência e reservas'],pessoas:['Pessoas & Turnos','Equipe e tarefas'],sair:['Sair','']};
@@ -846,6 +799,7 @@
     document.getElementById('hosp-lista').style.display='none';
     document.getElementById('hosp-ficha').style.display='block';
     document.getElementById('hf-status').textContent='';
+    const cc=document.getElementById('card-cadastro'); if(cc) cc.style.display='none'; // cadastro começa fechado
     carregarFicha();
     window.scrollTo({top:0,behavior:'smooth'});
   }
@@ -879,6 +833,7 @@
     document.getElementById('hf-meta').innerHTML=`${v?v+' · ':''}${currentHosp.mascote?'Nossa Zelozinha':'Tutor: '+currentHosp.tutor}`;
   }
   function onChip(v){ onCad(); }
+  function toggleCadastro(){ const c=document.getElementById('card-cadastro'); if(!c) return; c.style.display=(c.style.display==='block'?'none':'block'); if(c.style.display==='block') c.scrollIntoView({behavior:'smooth',block:'center'}); }
   // ---- Cadastro do peludinho (só Gestão edita) ----
   function cadKey(h){ return ((h&&h.nome||'')+'__'+(h&&h.tutor||'')).toLowerCase().replace(/[.#$\[\]\/]/g,'-'); }
   function getCad(h){ return (h&&cadCache[cadKey(h)]) || (h?getInfo(h):{}) || {}; }
@@ -1099,6 +1054,70 @@
   }
   carregarHospedes();
   carregarRacas();
+
+  // ===== PELUDINHOS — turma de Segunda (dados reais Adriana) =====
+  const PELUDINHOS=[
+    {n:'Backer',raca:'Spitz',freq:'2x',tutor:'Fernanda',nasc:'2017-07-20'},
+    {n:'Batata',raca:'Dachshund',freq:'1x',tutor:'Roberta',nasc:'2021-09-07'},
+    {n:'Beau',raca:'Poodle',freq:'3x',tutor:'Rebeca',nasc:'2020-06-07'},
+    {n:'Belinha',raca:'Spitz',freq:'3x',tutor:'Shirley',nasc:'2018-12-26'},
+    {n:'Bilu',raca:'Cavalier',freq:'1x',tutor:'Ana Carolina',nasc:'2024-08-28'},
+    {n:'Bloo',raca:'SRD',freq:'3x',tutor:'Bruna',nasc:'2020-07-06'},
+    {n:'Brad',raca:'Dachshund',freq:'3x',tutor:'Ana Paula',nasc:'2021-01-18'},
+    {n:'Bruce',raca:'Beagle',freq:'3x',tutor:'Vanessa',nasc:'2023-05-05'},
+    {n:'Buh',raca:'Westie',freq:'2x',tutor:'Mariana/Lila',nasc:'2019-02-25'},
+    {n:'Chico',raca:'Shih Tzu',freq:'2x',tutor:'Marcela',nasc:'2019-11-11'},
+    {n:'Chico',raca:'Cavalier',freq:'3x',tutor:'Juliano',nasc:'2025-01-01'},
+    {n:'Coco',raca:'Beagle',freq:'3x',tutor:'Bruna',nasc:'2017-08-11'},
+    {n:'Cookie',raca:'SRD',freq:'2x',tutor:'Raquel',nasc:'2023-05-09'},
+    {n:'Flock',raca:'SRD',freq:'2x',tutor:'Simone',nasc:'2019-06-08'},
+    {n:'Flor',raca:'Shih Tzu',freq:'1x',tutor:'Bruna',nasc:'2017-04-13'},
+    {n:'Freddie',raca:'Spitz',freq:'3x',tutor:'Julia',nasc:'2020-05-15'},
+    {n:'Frida',raca:'SRD',freq:'2x',tutor:'Luciana',nasc:'2020-10-17'},
+    {n:'Gaia',raca:'Beagle',freq:'3x',tutor:'Mariana',nasc:'2022-08-12'},
+    {n:'Hoppy',raca:'Spitz',freq:'2x',tutor:'Gabrielle',nasc:'2022-10-27'},
+    {n:'Jack',raca:'Shih Tzu',freq:'1x',tutor:'Raquel',nasc:'2016-06-05'},
+    {n:'Jasmin',raca:'Shih Tzu',freq:'3x',tutor:'Riva',nasc:'2022-04-27'},
+    {n:'Kira',raca:'Lhasa',freq:'5x',tutor:'Julia',nasc:'2022-03-10'},
+    {n:'Lanna',raca:'SRD',freq:'3x',tutor:'Luiza',nasc:'2020-01-10'},
+    {n:'Lilly',raca:'SRD',freq:'3x',tutor:'Luiza',nasc:'2020-01-10'},
+    {n:'Lolla',raca:'Spitz',freq:'2x',tutor:'Caroline',nasc:'2020-08-14'},
+    {n:'Lua',raca:'Jack Russell',freq:'3x',tutor:'Adilson',nasc:'2021-12-28'},
+    {n:'Luna',raca:'SRD',freq:'3x',tutor:'Riva',nasc:'2025-11-10',obs:'Não castrada'},
+    {n:'Maria Flor',raca:'Shih Tzu',freq:'3x',tutor:'Josiane',nasc:'2021-02-08'},
+    {n:'Maya',raca:'SRD',freq:'2x',tutor:'Marcela',nasc:'2018-05-05'},
+    {n:'Nick Minaj',raca:'SRD',freq:'2x',tutor:'Luiza',nasc:'2024-08-06'},
+    {n:'Nina',raca:'Westie',freq:'2x',tutor:'Mariana/Lila',nasc:'2018-03-15'},
+    {n:'Oliver',raca:'Dachshund',freq:'2x',tutor:'Luiza',nasc:'2021-03-22'},
+    {n:'Otavio',raca:'Spitz',freq:'2x',tutor:'Erika',nasc:'2021-06-06'},
+    {n:'Ozzy',raca:'Spitz',freq:'1x',tutor:'Zuleica',nasc:'2017-05-09'},
+    {n:'Pipoca',raca:'Maltês',freq:'3x',tutor:'João',nasc:'2025-05-18',obs:'Não castrado'},
+    {n:'Rafael',raca:'Dachshund',freq:'3x',tutor:'Renata',nasc:'2022-06-28'},
+    {n:'Rock',raca:'Spitz',freq:'2x',tutor:'Thaisa',nasc:'2024-10-30'},
+    {n:'Romeo',raca:'SRD',freq:'4x',tutor:'Jeanine',nasc:'2022-07-05'},
+    {n:'Sebastião',raca:'SRD',freq:'1x',tutor:'Mariana',nasc:'2018-10-21'},
+    {n:'Theo',raca:'SRD',freq:'5x',tutor:'Renata',nasc:'2025-07-12'},
+    {n:'Toshi',raca:'Shiba Inu',freq:'3x',tutor:'Victor/Zélia',nasc:'2020-02-19'},
+    {n:'Valentina',raca:'Shih Tzu',freq:'3x',tutor:'Marina',nasc:'2020-08-24'},
+    {n:'Zara',raca:'SRD',freq:'2x',tutor:'Milena',nasc:'2023-05-10'}
+  ];
+  function fmtNasc(iso){ if(!iso) return '—'; const a=iso.split('-'); return a.length===3?`${a[2]}/${a[1]}/${a[0]}`:iso; }
+  function renderPel(){
+    const inp=document.getElementById('pelSearch'); if(!inp) return;
+    const q=(inp.value||'').toLowerCase().trim();
+    const list=PELUDINHOS.filter(p=>!q||[p.n,p.raca,p.tutor].join(' ').toLowerCase().indexOf(q)>=0);
+    document.getElementById('pelCount').textContent=`${list.length} peludinho${list.length===1?'':'s'} · turma de segunda`;
+    document.getElementById('pelBody').innerHTML=list.map((p,i)=>`<tr>
+      <td class="pel-num">${i+1}</td>
+      <td><span class="pel-nome">${p.n}</span>${p.obs?`<span class="pel-obs">${p.obs}</span>`:''}</td>
+      <td>${p.raca}</td>
+      <td><span class="pel-freq">${p.freq}</span></td>
+      <td>${p.tutor}</td>
+      <td>${fmtNasc(p.nasc)}</td>
+      <td>${calcIdade(p.nasc)||'—'}</td>
+    </tr>`).join('');
+  }
+  renderPel();
 </script>
 </body>
 </html>
