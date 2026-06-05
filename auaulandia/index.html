@@ -539,7 +539,7 @@
           <div class="sub">vem da ficha do peludinho — o plantonista serve esta quantidade</div></div>
       </div>
 
-      <div class="checklist-note">📋 O Check-list de hospedagem é o seu material de trabalho principal. <strong>Leia-o!</strong></div>
+      <div class="checklist-note"><div>📋 O Check-list de hospedagem é o seu material de trabalho principal. <strong>LEIA-O!</strong><br><span style="font-size:13px;font-weight:600">Dúvidas, LIGUE: 31 99764-4296 / 31 99111-1826</span></div></div>
 
       <div class="card" id="card-dia">
         <h2>Relatório do Dia</h2>
@@ -548,10 +548,10 @@
         <div class="obsline"><span class="q">Gastou energia?</span><div class="seg" data-single><button data-tone="warn" onclick="pick(this)">Pouco</button><button data-tone="ok" onclick="pick(this)">Bastante</button><button data-tone="ok" onclick="pick(this)">Muito</button></div></div>
         <div class="obsline"><span class="q">Teve desentendimento?</span><div class="seg" data-single><button data-tone="ok" onclick="pick(this)">Não</button><button data-tone="bad" onclick="pick(this)">Sim</button></div></div>
         <div class="obsline"><span class="q">Precisa ficar separado?</span><div class="seg" data-single><button data-tone="ok" onclick="pick(this)">Não</button><button data-tone="bad" onclick="pick(this)">Sim</button></div></div>
-        <div class="obsline"><span class="q">Tem irmão hospedado?</span><div class="seg" data-single><button onclick="pick(this)">Não</button><button onclick="pick(this)">Sim</button></div></div>
+        <div class="obsline"><span class="q">Tem irmão hospedado?</span><div class="seg" data-single><button data-tone="warn" onclick="pick(this)">Não</button><button data-tone="ok" onclick="pick(this)">Sim</button></div></div>
         <div class="obsline"><span class="q">Tem alergia?</span><div class="seg" data-single><button data-tone="ok" onclick="pick(this)">Não</button><button data-tone="warn" onclick="pick(this)">Sim</button></div></div>
         <div class="obsline"><span class="q">Tem medicação?</span><div class="seg" data-single><button onclick="pick(this)">Não</button><button data-tone="warn" onclick="pick(this)">Sim</button></div></div>
-        <div class="obsline"><span class="q">Trouxe roupa de frio?</span><div class="seg" data-single><button data-tone="ok" onclick="pick(this)">Sim</button><button onclick="pick(this)">Não</button></div></div>
+        <div class="obsline"><span class="q">Trouxe roupa de frio?</span><div class="seg" data-single><button data-tone="ok" onclick="pick(this)">Sim</button><button data-tone="warn" onclick="pick(this)">Não</button></div></div>
         <div class="obsline"><span class="q">Fez cocô?</span><div class="seg" data-single><button data-tone="ok" onclick="pick(this)">Sim</button><button data-tone="warn" onclick="pick(this)">Não</button></div></div>
         <div class="obsline"><span class="q">Consistência</span><div class="seg" data-single><button data-tone="ok" onclick="pick(this)">Normal</button><button data-tone="warn" onclick="pick(this)">Pastoso</button><button data-tone="bad" onclick="pick(this)">Diarreia</button></div></div>
         <div class="obsline"><span class="q">Coleira repelente?</span><div class="seg" data-single><button data-tone="ok" onclick="pick(this)">Sim</button><button data-tone="warn" onclick="pick(this)">Não</button></div></div>
@@ -570,10 +570,12 @@
         <div class="obsline"><span class="q">Consistência</span><div class="seg" data-single><button data-tone="ok" onclick="pick(this)">Normal</button><button data-tone="warn" onclick="pick(this)">Pastoso</button><button data-tone="bad" onclick="pick(this)">Diarreia</button></div></div>
         <div class="obsline"><span class="q">Fez xixi?</span><div class="seg" data-single><button data-tone="ok" onclick="pick(this)">Sim</button><button data-tone="warn" onclick="pick(this)">Não</button><button data-tone="warn" onclick="pick(this)">Não vi</button></div></div>
         <div class="obsline"><span class="q">Aspecto do xixi</span><div class="seg" data-single><button data-tone="ok" onclick="pick(this)">Claro</button><button data-tone="warn" onclick="pick(this)">Amarelo escuro</button><button data-tone="bad" onclick="pick(this)">Com sangue</button></div></div>
-        <div class="obsline"><span class="q">Jantou?</span><div class="seg" data-single><button data-tone="ok" onclick="pick(this)">Sim</button><button data-tone="bad" onclick="pick(this)">Não</button><button data-tone="warn" onclick="pick(this)">Metade</button></div></div>
-        <div class="obsline"><span class="q">Almoçou?</span><div class="seg" data-single><button data-tone="ok" onclick="pick(this)">Sim</button><button data-tone="bad" onclick="pick(this)">Não</button><button data-tone="warn" onclick="pick(this)">Metade</button></div></div>
-        <div class="obsline"><span class="q">Foi dada medicação?</span><div class="seg" data-single><button data-tone="ok" onclick="pick(this)">Sim</button><button onclick="pick(this)">Não</button></div></div>
-        <div class="obsline"><span class="q">Foi dada suplementação?</span><div class="seg" data-single><button data-tone="ok" onclick="pick(this)">Sim</button><button onclick="pick(this)">Não</button></div></div>
+        <div class="obsline"><span class="q">Jantou?</span><div class="seg" data-single><button data-tone="ok" onclick="pick(this)">Sim</button><button data-tone="warn" onclick="pick(this)">Não</button><button data-tone="warn" onclick="pick(this)">Metade</button><button onclick="pick(this)">Não se aplica</button></div></div>
+        <div class="obsline"><span class="q">Almoçou?</span><div class="seg" data-single><button data-tone="ok" onclick="pick(this)">Sim</button><button data-tone="warn" onclick="pick(this)">Não</button><button data-tone="warn" onclick="pick(this)">Metade</button><button onclick="pick(this)">Não se aplica</button></div></div>
+        <div class="obsline"><span class="q">Foi dada medicação?</span><div class="seg" data-single><button data-tone="ok" onclick="pick(this)">Sim</button><button onclick="pick(this)">Não</button><button onclick="pick(this)">Não se aplica</button></div></div>
+        <div class="field" style="margin-bottom:14px"><label>Qual medicação? (nome, quantidade e horário)</label><textarea style="width:100%;font-family:var(--font-ui);font-size:14px;padding:11px;border:1.5px solid var(--line);border-radius:11px;background:var(--z-cream);min-height:56px" placeholder="Ex: Apoquel 16mg, 1 comprimido às 22h"></textarea></div>
+        <div class="obsline"><span class="q">Foi dada suplementação?</span><div class="seg" data-single><button data-tone="ok" onclick="pick(this)">Sim</button><button onclick="pick(this)">Não</button><button onclick="pick(this)">Não se aplica</button></div></div>
+        <div class="field"><label>Qual suplemento? (nome, quantidade e horário)</label><textarea style="width:100%;font-family:var(--font-ui);font-size:14px;padding:11px;border:1.5px solid var(--line);border-radius:11px;background:var(--z-cream);min-height:56px" placeholder="Ex: Condroitina, 1 dose após o jantar"></textarea></div>
       </div>
 
       <div class="card">
@@ -582,7 +584,7 @@
         <textarea style="width:100%;font-family:var(--font-ui);font-size:14px;padding:12px;border:1.5px solid var(--line);border-radius:11px;background:var(--z-cream);min-height:80px" placeholder="Ex: dorme na cama com a plantonista, toma remédio às 22h"></textarea>
       </div>
 
-      <div class="checklist-note">📋 Antes de assinar: o Check-list de hospedagem é o seu material de trabalho principal. <strong>Leia-o!</strong></div>
+      <div class="checklist-note"><div>📋 Antes de assinar — o Check-list de hospedagem é o seu material de trabalho principal. <strong>LEIA-O!</strong><br><span style="font-size:13px;font-weight:600">Dúvidas, LIGUE: 31 99764-4296 / 31 99111-1826</span></div></div>
 
       <div class="card">
         <h2>Passagem de plantão</h2>
@@ -857,14 +859,14 @@
   function coletarFicha(){
     const dados={turno:'',campos:{},textos:[],chip:document.getElementById('hf-chip').value||''};
     const tb=document.querySelector('#hosp-ficha .turno-banner .seg button.on'); dados.turno=tb?tb.textContent.trim():'';
-    document.querySelectorAll('#hosp-ficha .obsline').forEach(line=>{ const q=line.querySelector('.q'); const on=line.querySelector('button.on'); if(q) dados.campos[q.textContent.trim()]= on?on.textContent.trim():''; });
+    document.querySelectorAll('#hosp-ficha .obsline').forEach((line,i)=>{ const on=line.querySelector('button.on'); dados.campos['c'+i]= on?on.textContent.trim():''; });
     document.querySelectorAll('#hosp-ficha textarea').forEach(t=>dados.textos.push(t.value||''));
     return dados;
   }
   function aplicarFicha(d){
     d=d||{}; const campos=d.campos||{}; const textos=d.textos||[];
-    document.querySelectorAll('#hosp-ficha .obsline').forEach(line=>{
-      const q=line.querySelector('.q'); const val=q?campos[q.textContent.trim()]:'';
+    document.querySelectorAll('#hosp-ficha .obsline').forEach((line,i)=>{
+      const val=campos['c'+i];
       line.querySelectorAll('button').forEach(b=>{ b.classList.remove('on','t-ok','t-bad','t-warn'); if(val&&b.textContent.trim()===val){ b.classList.add('on'); if(b.dataset.tone)b.classList.add('t-'+b.dataset.tone); } });
     });
     document.querySelectorAll('#hosp-ficha textarea').forEach((t,i)=>t.value=textos[i]||'');
