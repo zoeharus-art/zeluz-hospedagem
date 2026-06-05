@@ -270,9 +270,11 @@
   /* permissões por papel */
   body[data-role="monitor"] .sensivel,
   body[data-role="plantonista"] .sensivel,
+  body[data-role="aprendiz"] .sensivel,
   body[data-role="tutor"]   .sensivel{display:none !important}
   body[data-role="monitor"] .so-gestao,
   body[data-role="plantonista"] .so-gestao,
+  body[data-role="aprendiz"] .so-gestao,
   body[data-role="tutor"]   .so-gestao{display:none !important}
   /* .so-master = SÓ a Gestora (Márcia). Supervisão (Amanda) e equipe não veem. */
   body:not([data-role="gestao"]) .so-master{display:none !important}
@@ -335,7 +337,8 @@
   body[data-role="plantonista"] .nav a,body[data-role="plantonista"] .nav .grp,body[data-role="plantonista"] .nav .subnav{display:none !important}
   body[data-role="plantonista"] .nav a[data-v="hospedagem"],body[data-role="plantonista"] .nav a[data-v="sair"]{display:flex !important}
   /* Monitor: sem Operação */
-  body[data-role="monitor"] .op-only,body[data-role="monitor"] .grp-operacao{display:none !important}
+  body[data-role="monitor"] .op-only,body[data-role="monitor"] .grp-operacao,
+  body[data-role="aprendiz"] .op-only,body[data-role="aprendiz"] .grp-operacao{display:none !important}
   /* selos de adaptação (foco do time) */
   .mini-adapt{position:absolute;top:8px;right:8px;font-size:10px;font-weight:800;color:var(--z-blue);background:var(--z-gold);padding:3px 8px;border-radius:8px;z-index:3;animation:piscaAdapt 1s ease-in-out infinite}
   .dc-card .mini-adapt,.alm-card .mini-adapt{top:32px}
@@ -381,6 +384,17 @@
   .ativ-del{background:none;border:none;color:var(--crm-critico);font-size:20px;font-weight:700;cursor:pointer;line-height:1;padding:0 4px}
   .ativ-itens{margin:9px 0 0 26px;padding:0}
   .ativ-itens li{font-size:13px;color:var(--z-blue-deep);margin-bottom:4px}
+  /* Protocolo almoco */
+  .dctab2.locked{opacity:.42;cursor:not-allowed}
+  .alm-regras{display:flex;flex-direction:column;gap:8px;margin-top:6px}
+  .alm-regra{background:var(--z-cream-warm);border-left:4px solid var(--z-blue-soft);border-radius:9px;padding:10px 14px;font-size:13.5px;color:var(--z-blue-deep);font-weight:600}
+  .alm-regra.obg{border-left-color:var(--crm-critico);background:rgba(192,57,43,.07)}
+  .alm-regra.warn{border-left-color:var(--z-gold);background:rgba(222,180,40,.1)}
+  .alm-next{margin-top:14px;text-align:center}
+  .mini-banho{position:absolute;top:8px;left:8px;font-size:10px;font-weight:800;color:#fff;background:var(--z-auaulandia);padding:3px 8px;border-radius:8px;z-index:3}
+  .alm-card .mini-banho{top:32px}
+  .banho-toggle{margin-top:7px;width:100%;border:1.5px solid var(--line);background:#fff;border-radius:9px;padding:7px;font-family:var(--font-ui);font-weight:700;font-size:12px;cursor:pointer;color:var(--z-blue-soft)}
+  .banho-toggle.on{background:var(--z-auaulandia);color:#fff;border-color:var(--z-auaulandia)}
   /* Almoco */
   .dctab2{padding:9px 18px;border-radius:999px;font-size:14px;font-weight:700;cursor:pointer;background:var(--z-white);border:1.5px solid var(--line);color:var(--muted)}
   .dctab2.active{background:var(--z-blue);color:var(--z-cream);border-color:var(--z-blue)}
@@ -561,10 +575,21 @@
       <div class="pets-grid" id="dcGrid"></div>
     </div>
     <div id="scr-almoco" class="dc-scr" style="display:none">
-      <div id="almTurno"></div>
-      <div id="almResumo"></div>
-      <div class="pel-toolbar"><span class="pel-count" id="almCount"></span></div>
-      <div class="pets-grid" id="almGrid"></div>
+      <div class="subtabs alm-steps">
+        <div class="dctab2 active" data-step="prep" onclick="setAlmStep('prep')">1. Preparação</div>
+        <div class="dctab2" data-step="exec" onclick="setAlmStep('exec')">2. Como Executar</div>
+        <div class="dctab2" data-step="grade" onclick="setAlmStep('grade')">3. Almoço</div>
+        <div class="dctab2" data-step="final" onclick="setAlmStep('final')">4. Finalizar</div>
+      </div>
+      <div id="alm-prep" class="alm-step"></div>
+      <div id="alm-exec" class="alm-step" style="display:none"></div>
+      <div id="alm-grade" class="alm-step" style="display:none">
+        <div id="almTurno"></div>
+        <div id="almResumo"></div>
+        <div class="pel-toolbar"><span class="pel-count" id="almCount"></span></div>
+        <div class="pets-grid" id="almGrid"></div>
+      </div>
+      <div id="alm-final" class="alm-step" style="display:none"></div>
     </div>
     <div id="scr-generic" class="dc-scr" style="display:none">
       <div class="role-note"><span data-icon="star"></span><span>Marque <strong>Feito</strong> em cada peludinho que passou por esta atividade. Cada atividade terá seu protocolo próprio em breve.</span></div>
@@ -1172,7 +1197,8 @@
     '1000':{role:'monitor',     nome:'Monitor 5'},
     '1001':{role:'plantonista', nome:'Plantonista'},
     '0902':{role:'gestao',      nome:'Márcia · Gestora'},
-    '0912':{role:'supervisor',  nome:'Amanda · Supervisora'}
+    '0912':{role:'supervisor',  nome:'Amanda · Supervisora'},
+    '1002':{role:'aprendiz',    nome:'Monitor Aprendiz'}
   };
   function doLogin(){
     const v=(document.getElementById('loginPwd').value||'').trim();
@@ -1658,6 +1684,7 @@
             <button class="dc-btn veio ${st==='veio'?'on':''}" onclick="marcarPresenca('${k}','veio')">✓ Veio</button>
             <button class="dc-btn faltou ${st==='faltou'?'on':''}" onclick="marcarPresenca('${k}','faltou')">✕ Faltou</button>
           </div>
+          ${typeof o.i==='number'?`<button class="banho-toggle ${dcBanho[k]?'on':''}" onclick="toggleBanho('${k}')">${dcBanho[k]?'Tem banho hoje':'Marcar banho'}</button>`:''}
         </div>`;
       }).join('');
   }
@@ -1668,11 +1695,12 @@
     renderDaycare();
   }
   function carregarChamada(){
-    dcChamada={}; dcAvulsos=[];
+    dcChamada={}; dcAvulsos=[]; dcBanho={};
     if(DB){
       Promise.all([
         DB.ref('daycare/chamada/'+dcDataKey()).once('value').then(s=>{ dcChamada=s.val()||{}; }).catch(()=>{}),
-        DB.ref('daycare/avulsos/'+dcDataKey()).once('value').then(s=>{ dcAvulsos=Object.values(s.val()||{}); }).catch(()=>{})
+        DB.ref('daycare/avulsos/'+dcDataKey()).once('value').then(s=>{ dcAvulsos=Object.values(s.val()||{}); }).catch(()=>{}),
+        DB.ref('daycare/banho/'+dcDataKey()).once('value').then(s=>{ dcBanho=s.val()||{}; }).catch(()=>{})
       ]).then(renderDaycare).catch(renderDaycare);
     } else renderDaycare();
   }
@@ -1735,7 +1763,77 @@
     const nomes=turmaDoDia().filter(o=>typeof o.i==='number').filter(o=>{ const ex=pelExtra(o.p); return ex&&ex.adaptacao==='Sim'; }).map(o=>o.p.n);
     el.innerHTML=nomes.length?`<div class="adapt-banner">&#9733; EM ADAPTACAO HOJE: ${nomes.join(', ')} &mdash; foco de todo o time!</div>`:'';
   }
-  let genMarcas={}, dcBuscaVal='';
+  let genMarcas={}, dcBuscaVal='', dcBanho={};
+  // --- Protocolo de Almoço (maio 2025) ---
+  let almStep='grade', almPrep={}, almFinal={}, almExecOk=false;
+  const ALM_PREP=[
+    'Montar os 9 cercadinhos com espaço entre eles (um não encosta no outro)',
+    'Comedouros: 5 lentos + 4 simples + 9 vasilhas de água (inox)',
+    'Separar comedouros LIMPOS para quem tem restrição',
+    'Materiais na caixa vermelha: colheres e facas etiquetadas, vasilhas de cheirinho, água, fita crepe, caneta, guia unificada',
+    'Pá, vassoura, lixeira e mop perto das portas',
+    'Separar 10 vasilhas com tampa (para quem não comer no 1º horário)',
+    'Abrir a porta do corredor (central) e deixar aberta',
+    'Verificar portas FECHADAS: cozinha, parte de baixo e lareira',
+    'Fazer o cheirinho nos potes',
+    'Conferir as listas: do dia (em cor), avulsos/reposições (com o Líder), check-in dos hóspedes, papel para anotar quem não almoçou'
+  ];
+  const ALM_REGRAS=[
+    {t:'Ordem de servir: PRIMEIRO quem tem banho + comida natural/geladeira; depois os outros',obg:1},
+    {t:'Cada peludinho em 1 cercado — irmãos da mesma família comem juntos',obg:0},
+    {t:'Pote vazio com o NOME na frente do cercado',obg:1},
+    {t:'Liberação individual pelo corredor — não deixar entrar andando (risco de briga)',obg:1},
+    {t:'No máximo 10 minutos por peludinho — mexer com a colher',obg:0},
+    {t:'Grandes: guia transpassada, NUNCA no pescoço',obg:1},
+    {t:'Limpar (pá e vassoura) antes de colocar o próximo',obg:0},
+    {t:'Não comeu → vasilha com tampa etiquetada → 2º horário (Monitor III)',obg:0}
+  ];
+  const ALM_FINAL=[
+    'Recolher todos os vasilhames na caixa vermelha',
+    'Cercados: todos comeram → guardar todos; nem todos → deixar 4 e guardar o resto',
+    'Catar toda a comida espalhada (pá e vassoura)',
+    'Organizar a cozinha (guardar balança e utensílios)',
+    'Lavar: comedouros, potes de comida úmida, colheres, facas e vasilhas',
+    'Guardar utensílios lavados na caixa vermelha (na bancada)',
+    'Guardar potes dos peludinhos na outra caixa (para escorrer)',
+    'ENTREGAR a lista de quem não comeu para o Monitor III (2º horário)'
+  ];
+  const ALM_TEMPO_EXTRA=['Maria Flor','João e Juju','Cookie e Cristal','Cookie (SRD)'];
+  function isAprendiz(){ return document.body.dataset.role==='aprendiz'; }
+  function prepCompleto(){ return ALM_PREP.every((_,i)=>almPrep[i]); }
+  function stepLocked(step){ if(!isAprendiz()) return false; if(step==='prep') return false; if(step==='exec') return !prepCompleto(); return !(prepCompleto()&&almExecOk); }
+  function setAlmStep(step){ if(stepLocked(step)){ alert('Conclua a etapa anterior primeiro (modo treinamento).'); return; } almStep=step; renderAlmStep(); }
+  function renderAlmStep(){
+    ['prep','exec','grade','final'].forEach(st=>{ const el=document.getElementById('alm-'+st); if(el) el.style.display=(st===almStep)?'block':'none'; });
+    document.querySelectorAll('#scr-almoco .alm-steps .dctab2').forEach(b=>{ b.classList.toggle('active',b.dataset.step===almStep); b.classList.toggle('locked',stepLocked(b.dataset.step)); });
+    if(almStep==='prep') renderAlmPrep();
+    else if(almStep==='exec') renderAlmExec();
+    else if(almStep==='grade') renderAlmoco();
+    else if(almStep==='final') renderAlmFinal();
+  }
+  function renderAlmPrep(){ const el=document.getElementById('alm-prep'); if(!el) return; const done=ALM_PREP.filter((_,i)=>almPrep[i]).length;
+    el.innerHTML=`<div class="role-note"><span data-icon="paw"></span><span>1ª etapa &mdash; <strong>Organização do espaço</strong>. Marque cada item conforme prepara. (${done}/${ALM_PREP.length})</span></div>`
+      +ALM_PREP.map((t,i)=>`<label class="todo-item ${almPrep[i]?'on':''}" onclick="toggleAlmPrep(${i})"><span class="todo-box">${almPrep[i]?'&#10003;':''}</span>${t}</label>`).join('')
+      +(isAprendiz()?(prepCompleto()?`<div class="alm-next"><button class="btn btn-primary" onclick="setAlmStep('exec')">Preparação feita &rarr; Como Executar</button></div>`:`<div class="alm-next"><span class="hint">Marque todos os itens para liberar a próxima etapa.</span></div>`):'');
+  }
+  function toggleAlmPrep(i){ almPrep[i]=!almPrep[i]; if(DB) DB.ref('daycare/almoco-prep/'+dcDataKey()+'/'+i).set(almPrep[i]||null).catch(()=>{}); renderAlmStep(); }
+  function renderAlmExec(){ const el=document.getElementById('alm-exec'); if(!el) return;
+    el.innerHTML=`<div class="role-note"><span data-icon="star"></span><span>2ª etapa &mdash; <strong>Como executar</strong>. Regras obrigatórias. Leia antes de servir.</span></div>`
+      +`<div class="alm-regras">`+ALM_REGRAS.map(r=>`<div class="alm-regra ${r.obg?'obg':''}">${r.obg?'<b>OBRIGATÓRIO:</b> ':''}${r.t}</div>`).join('')
+      +`<div class="alm-regra warn">Deixar mais tempo: ${ALM_TEMPO_EXTRA.join(', ')}</div></div>`
+      +(isAprendiz()?`<div class="alm-next"><button class="btn btn-primary" onclick="confirmarExec()">Li e entendi &rarr; Ir para o Almoço</button></div>`:'');
+  }
+  function confirmarExec(){ almExecOk=true; if(DB) DB.ref('daycare/almoco-exec/'+dcDataKey()).set(true).catch(()=>{}); setAlmStep('grade'); }
+  function renderAlmFinal(){ const el=document.getElementById('alm-final'); if(!el) return; const done=ALM_FINAL.filter((_,i)=>almFinal[i]).length;
+    el.innerHTML=`<div class="role-note"><span data-icon="moon"></span><span>3ª etapa &mdash; <strong>Finalização</strong>. (${done}/${ALM_FINAL.length})</span></div>`
+      +ALM_FINAL.map((t,i)=>`<label class="todo-item ${almFinal[i]?'on':''}" onclick="toggleAlmFinal(${i})"><span class="todo-box">${almFinal[i]?'&#10003;':''}</span>${t}</label>`).join('');
+  }
+  function toggleAlmFinal(i){ almFinal[i]=!almFinal[i]; if(DB) DB.ref('daycare/almoco-final/'+dcDataKey()+'/'+i).set(almFinal[i]||null).catch(()=>{}); renderAlmFinal(); }
+  function seloBanho(k){ return dcBanho[k]?'<span class="mini-banho">BANHO</span>':''; }
+  function toggleBanho(k){ dcBanho[k]=!dcBanho[k]; if(DB) DB.ref('daycare/banho/'+dcDataKey()+'/'+k).set(dcBanho[k]||null).catch(()=>{}); if(dcAtiv==='chamada')renderDaycare(); else if(dcAtiv==='almoco')renderAlmStep(); }
+  function temGeladeira(a){ return !!(a&&/natural|geladeira/i.test(a.alim||'')); }
+  function prioAlm(o){ if(typeof o.i!=='number') return 1; const k=dcKey(o.p.n,o.p.tutor); const a=ALMOCO[pelKey(o.p)]; return (dcBanho[k]||temGeladeira(a))?0:1; }
+  function ordemAlmoco(list){ return list.slice().sort((x,y)=>{ const px=prioAlm(x),py=prioAlm(y); if(px!==py)return px-py; return jsNorm(x.p.n).localeCompare(jsNorm(y.p.n)); }); }
   function filtraLista(list){ const q=jsNorm(dcBuscaVal); return q?list.filter(o=>jsNorm([o.p.n,o.p.raca,o.p.tutor].join(' ')).indexOf(q)>=0):list; }
   function onDcBusca(){ const el=document.getElementById('dcBusca'); dcBuscaVal=el?el.value:''; if(dcAtiv==='chamada')renderDaycare(); else if(dcAtiv==='almoco')renderAlmoco(); else renderGenerico(); }
   function carregarGenerico(){ genMarcas={}; if(DB){ DB.ref('daycare/atividade/'+dcDataKey()+'/'+dcAtiv).once('value').then(s=>{ genMarcas=s.val()||{}; }).then(renderGenerico).catch(renderGenerico); } else renderGenerico(); }
@@ -1774,20 +1872,25 @@
   function horaAgora(){ const d=new Date(),p=x=>String(x).padStart(2,'0'); return p(d.getHours())+':'+p(d.getMinutes()); }
   function quemSou(){ try{ const u=JSON.parse(sessionStorage.getItem('zeluz_login')||'null'); return (u&&u.nome)||'-'; }catch(e){ return '-'; } }
   function carregarAlmoco(){
-    almMarcas={}; almTurno={};
+    almMarcas={}; almTurno={}; almPrep={}; almFinal={}; almExecOk=false;
+    function decideStep(){ if(isAprendiz()){ almStep = !prepCompleto()?'prep':(!almExecOk?'exec':'grade'); } else { almStep='grade'; } renderAlmStep(); }
     if(DB){
       Promise.all([
         DB.ref('daycare/almoco/'+dcDataKey()).once('value').then(s=>{ almMarcas=s.val()||{}; }).catch(()=>{}),
-        DB.ref('daycare/almoco-turno/'+dcDataKey()).once('value').then(s=>{ almTurno=s.val()||{}; }).catch(()=>{})
-      ]).then(renderAlmoco).catch(renderAlmoco);
-    } else renderAlmoco();
+        DB.ref('daycare/almoco-turno/'+dcDataKey()).once('value').then(s=>{ almTurno=s.val()||{}; }).catch(()=>{}),
+        DB.ref('daycare/almoco-prep/'+dcDataKey()).once('value').then(s=>{ almPrep=s.val()||{}; }).catch(()=>{}),
+        DB.ref('daycare/almoco-final/'+dcDataKey()).once('value').then(s=>{ almFinal=s.val()||{}; }).catch(()=>{}),
+        DB.ref('daycare/almoco-exec/'+dcDataKey()).once('value').then(s=>{ almExecOk=!!s.val(); }).catch(()=>{}),
+        DB.ref('daycare/banho/'+dcDataKey()).once('value').then(s=>{ dcBanho=s.val()||{}; }).catch(()=>{})
+      ]).then(decideStep).catch(decideStep);
+    } else decideStep();
   }
   function iniciarAlmoco(){ const h=horaAgora(),q=quemSou(); almTurno=Object.assign({},almTurno,{inicio:h,quemInicio:q}); if(DB) DB.ref('daycare/almoco-turno/'+dcDataKey()).update({inicio:h,quemInicio:q}).catch(()=>{}); renderAlmoco(); }
   function encerrarAlmoco(){ const h=horaAgora(),q=quemSou(); almTurno=Object.assign({},almTurno,{fim:h,quemFim:q}); if(DB) DB.ref('daycare/almoco-turno/'+dcDataKey()).update({fim:h,quemFim:q}).catch(()=>{}); renderAlmoco(); }
   function marcarAlmoco(k,val){ const cur=almMarcas[k]; const nx=(cur===val)?'':val; if(nx) almMarcas[k]=nx; else delete almMarcas[k]; if(DB) DB.ref('daycare/almoco/'+dcDataKey()+'/'+k).set(nx||null).catch(()=>{}); renderAlmoco(); }
   function renderAlmoco(){
     if(!document.getElementById('almGrid')) return;
-    const list=turmaDoDia(); const t=almTurno||{};
+    const list=ordemAlmoco(turmaDoDia()); const t=almTurno||{};
     document.getElementById('almTurno').innerHTML=`<div class="alm-turno">
       <div><div class="tb-lab">Almoco - ${DIA_FULL[dcDia]}</div>
         <div style="font-size:13px;margin-top:3px">Inicio: <strong>${t.inicio||'-'}</strong>${t.quemInicio?' ('+t.quemInicio+')':''} &nbsp;&middot;&nbsp; Fim: <strong>${t.fim||'-'}</strong>${t.quemFim?' ('+t.quemFim+')':''}</div>
@@ -1823,7 +1926,7 @@
         <div ${typeof o.i==='number'?`onclick="abrirPeludinhoDay(${o.i})" style="cursor:pointer"`:''}>
           ${ph}<div class="nm">${p.n}</div><div class="br">${p.raca||'-'}</div>
         </div>
-        ${seloAdapt(ex)}${neon}${info}
+        ${seloBanho(k)}${seloAdapt(ex)}${neon}${info}
         <div class="dc-actions alm-actions">
           <button class="alm-btn tudo ${m==='tudo'?'on':''}" onclick="marcarAlmoco('${k}','tudo')">Comeu tudo</button>
           <button class="alm-btn metade ${m==='metade'?'on':''}" onclick="marcarAlmoco('${k}','metade')">Metade</button>
