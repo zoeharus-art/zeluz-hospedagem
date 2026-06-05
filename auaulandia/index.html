@@ -199,7 +199,7 @@
   .cad-in:focus{border-color:var(--z-gold);outline:none}
   .checklist-note{background:rgba(222,180,40,.22);border:2px solid var(--z-gold);border-radius:14px;
     padding:16px 18px;margin-bottom:16px;font-size:15.5px;font-weight:700;color:var(--z-blue);
-    display:flex;align-items:center;gap:8px;animation:piscaCheck 1.5s ease-in-out infinite}
+    text-align:center;animation:piscaCheck 1.5s ease-in-out infinite}
   @keyframes piscaCheck{0%,100%{box-shadow:0 0 0 0 rgba(222,180,40,.6)}50%{box-shadow:0 0 0 8px rgba(222,180,40,0)}}
   .lock-note{display:none !important}
   .hf-chipline{font-size:13.5px;font-weight:800;color:var(--z-gold-deep);margin-top:3px}
@@ -543,7 +543,7 @@
           <div class="sub">vem da ficha do peludinho — o plantonista serve esta quantidade</div></div>
       </div>
 
-      <div class="checklist-note"><div>📋 O Check-list de hospedagem é o seu material de trabalho principal. <strong>LEIA-O!</strong><br><span style="font-size:13px;font-weight:600">Dúvidas, LIGUE: 31 99764-4296 / 31 99111-1826</span></div></div>
+      <div class="checklist-note">📋 O Check-list de hospedagem é o seu material de trabalho principal. <strong>LEIA-O!</strong><br><span style="font-size:14px;font-weight:800;color:var(--crm-critico)">DÚVIDAS? LIGUE: 31 99764-4296 / 31 99111-1826</span></div>
 
       <div class="card" id="card-dia">
         <h2>Relatório do Dia</h2>
@@ -570,9 +570,9 @@
         <div class="obsline"><span class="q">Como passou a noite?</span><div class="seg" data-single><button data-tone="ok" onclick="pick(this)">Dormiu a noite inteira</button><button data-tone="warn" onclick="pick(this)">Agitado</button></div></div>
         <div class="obsline"><span class="q">Está ativo?</span><div class="seg" data-single><button data-tone="ok" onclick="pick(this)">Sim</button><button data-tone="warn" onclick="pick(this)">Não</button></div></div>
         <div class="obsline"><span class="q">Bebeu água?</span><div class="seg" data-single><button data-tone="ok" onclick="pick(this)">Sim</button><button data-tone="bad" onclick="pick(this)">Não</button></div></div>
-        <div class="obsline"><span class="q">Fez cocô?</span><div class="seg" data-single><button data-tone="ok" onclick="pick(this)">Sim</button><button data-tone="warn" onclick="pick(this)">Não</button><button data-tone="warn" onclick="pick(this)">Não vi</button></div></div>
+        <div class="obsline"><span class="q">Fez cocô?</span><div class="seg" data-single><button data-tone="ok" onclick="pick(this)">Sim</button><button data-tone="warn" onclick="pick(this)">Não</button><button onclick="pick(this)">Não vi</button></div></div>
         <div class="obsline"><span class="q">Consistência</span><div class="seg" data-single><button data-tone="ok" onclick="pick(this)">Normal</button><button data-tone="warn" onclick="pick(this)">Pastoso</button><button data-tone="bad" onclick="pick(this)">Diarreia</button></div></div>
-        <div class="obsline"><span class="q">Fez xixi?</span><div class="seg" data-single><button data-tone="ok" onclick="pick(this)">Sim</button><button data-tone="warn" onclick="pick(this)">Não</button><button data-tone="warn" onclick="pick(this)">Não vi</button></div></div>
+        <div class="obsline"><span class="q">Fez xixi?</span><div class="seg" data-single><button data-tone="ok" onclick="pick(this)">Sim</button><button data-tone="warn" onclick="pick(this)">Não</button><button onclick="pick(this)">Não vi</button></div></div>
         <div class="obsline"><span class="q">Aspecto do xixi</span><div class="seg" data-single><button data-tone="ok" onclick="pick(this)">Claro</button><button data-tone="warn" onclick="pick(this)">Amarelo escuro</button><button data-tone="bad" onclick="pick(this)">Com sangue</button></div></div>
         <div class="obsline"><span class="q">Jantou?</span><div class="seg" data-single><button data-tone="ok" onclick="pick(this)">Sim</button><button data-tone="warn" onclick="pick(this)">Não</button><button data-tone="warn" onclick="pick(this)">Metade</button><button onclick="pick(this)">Não se aplica</button></div></div>
         <div class="obsline"><span class="q">Almoçou?</span><div class="seg" data-single><button data-tone="ok" onclick="pick(this)">Sim</button><button data-tone="warn" onclick="pick(this)">Não</button><button data-tone="warn" onclick="pick(this)">Metade</button><button onclick="pick(this)">Não se aplica</button></div></div>
@@ -588,7 +588,7 @@
         <textarea style="width:100%;font-family:var(--font-ui);font-size:14px;padding:12px;border:1.5px solid var(--line);border-radius:11px;background:var(--z-cream);min-height:80px" placeholder="Ex: dorme na cama com a plantonista, toma remédio às 22h"></textarea>
       </div>
 
-      <div class="checklist-note"><div>📋 Antes de assinar — o Check-list de hospedagem é o seu material de trabalho principal. <strong>LEIA-O!</strong><br><span style="font-size:13px;font-weight:600">Dúvidas, LIGUE: 31 99764-4296 / 31 99111-1826</span></div></div>
+      <div class="checklist-note">📋 Antes de assinar — o Check-list de hospedagem é o seu material de trabalho principal. <strong>LEIA-O!</strong><br><span style="font-size:14px;font-weight:800;color:var(--crm-critico)">DÚVIDAS? LIGUE: 31 99764-4296 / 31 99111-1826</span></div>
 
       <div class="card">
         <h2>Passagem de plantão</h2>
