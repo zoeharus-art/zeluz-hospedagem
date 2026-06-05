@@ -591,15 +591,25 @@
       <div class="checklist-note">📋 Antes de assinar — o Check-list de hospedagem é o seu material de trabalho principal. <strong>LEIA-O!</strong><br><span style="font-size:14px;font-weight:800;color:var(--crm-critico)">DÚVIDAS? LIGUE: 31 99764-4296 / 31 99111-1826</span></div>
 
       <div class="card">
-        <h2>Passagem de plantão</h2>
-        <div class="hint">Quem entrega e quem recebe o peludinho na troca de turno.</div>
+        <h2>📱 Texto para o tutor</h2>
+        <div class="hint">A Gestora gera o texto pronto a partir do que foi marcado e envia ao tutor.</div>
+        <textarea id="hf-txt" style="width:100%;font-family:var(--font-ui);font-size:14.5px;line-height:1.5;padding:13px;border:1.5px solid var(--line);border-radius:11px;background:var(--z-cream);min-height:90px" placeholder="Clique em Gerar texto"></textarea>
+        <div class="actions">
+          <button class="btn btn-gold" onclick="gerarTexto()">Gerar texto</button>
+          <button class="btn" style="flex:0 0 auto;background:var(--z-cream-warm);color:var(--z-blue);border:1.5px solid var(--line)" onclick="copiarTexto()">Copiar</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>Assinar e passar o plantão</h2>
+        <div class="hint">Assine com seu nome para registrar. <strong>Sem assinatura, não salva.</strong></div>
         <div class="grid2">
-          <div class="field"><label>Entregue por</label><input type="text" placeholder="Nome de quem entrega"></div>
-          <div class="field"><label>Recebido por</label><input type="text" placeholder="Próximo plantonista"></div>
+          <div class="field"><label>Sua assinatura (nome de quem preencheu) *</label><input type="text" id="hf-assina" placeholder="Seu nome completo"></div>
+          <div class="field"><label>Recebido por (quem assume)</label><input type="text" id="hf-receb" placeholder="Próximo plantão / Gestora"></div>
         </div>
         <div class="actions">
           <button class="btn" style="flex:0 0 auto;background:var(--z-cream-warm);color:var(--z-blue);border:1.5px solid var(--line)" onclick="limparFicha()">Limpar</button>
-          <button class="btn btn-primary" onclick="salvarFicha()">Salvar relatório</button>
+          <button class="btn btn-primary" onclick="salvarFicha()">Assinar e salvar</button>
         </div>
         <div id="hf-status" style="text-align:center;font-size:13px;font-weight:600;color:var(--crm-ok);margin-top:10px;min-height:18px"></div>
       </div>
@@ -768,7 +778,7 @@
     document.getElementById('kpiHosp').textContent   = hospedes.filter(h=>!h.mascote).length;
     document.getElementById('kpiMorada').textContent = hospedes.filter(h=>h.mascote).length;
     document.getElementById('hospGrid').innerHTML =
-      `<div class="pet add" onclick="alert('No sistema real: lista os alunos do Day Care de hoje para marcar um como PERNOITE (ficou hospedado por emergência da família). Ele passa a aparecer aqui automaticamente.')">
+      `<div class="pet add" onclick="adicionarPernoite()">
          <div class="plus">+</div><div class="t">Adicionar pernoite<br><span style="font-size:10px;font-weight:600;color:var(--muted)">aluno do Day Care</span></div></div>`+
       hospedes.map((h,i)=>{
         const cad=getCad(h);
@@ -887,6 +897,7 @@
     const tb=document.querySelector('#hosp-ficha .turno-banner .seg button.on'); dados.turno=tb?tb.textContent.trim():'';
     document.querySelectorAll('#hosp-ficha .obsline').forEach((line,i)=>{ const on=line.querySelector('button.on'); dados.campos['c'+i]= on?on.textContent.trim():''; });
     document.querySelectorAll('#hosp-ficha textarea').forEach(t=>dados.textos.push(t.value||''));
+    dados.assina=(document.getElementById('hf-assina').value||''); dados.receb=(document.getElementById('hf-receb').value||'');
     return dados;
   }
   function aplicarFicha(d){
@@ -896,6 +907,7 @@
       line.querySelectorAll('button').forEach(b=>{ b.classList.remove('on','t-ok','t-bad','t-warn'); if(val&&b.textContent.trim()===val){ b.classList.add('on'); if(b.dataset.tone)b.classList.add('t-'+b.dataset.tone); } });
     });
     document.querySelectorAll('#hosp-ficha textarea').forEach((t,i)=>t.value=textos[i]||'');
+    document.getElementById('hf-assina').value=d.assina||''; document.getElementById('hf-receb').value=d.receb||'';
   }
   function carregarFicha(){
     carregarCadastro();
@@ -904,7 +916,10 @@
   }
   function salvarFicha(){
     if(!currentHosp) return;
-    const st=document.getElementById('hf-status'); const dados=coletarFicha();
+    const st=document.getElementById('hf-status');
+    const assina=(document.getElementById('hf-assina').value||'').trim();
+    if(!assina){ st.style.color='var(--crm-critico)'; st.textContent='✋ Assine com seu nome para salvar (campo "Sua assinatura").'; document.getElementById('hf-assina').focus(); return; }
+    const dados=coletarFicha();
     setInfo(currentHosp,{chip:dados.chip});
     if(DB){
       st.style.color='var(--muted)'; st.textContent='Salvando...';
@@ -917,6 +932,26 @@
     if(!confirm('Apagar tudo que foi marcado nesta ficha?')) return;
     aplicarFicha({}); const st=document.getElementById('hf-status'); if(st){ st.style.color='var(--muted)'; st.textContent='Ficha limpa.'; }
   }
+  function valDe(cardId,perg){ for(const l of document.querySelectorAll('#'+cardId+' .obsline')){ const q=l.querySelector('.q'); if(q&&q.textContent.trim()===perg){ const on=l.querySelector('button.on'); return on?on.textContent.trim():''; } } return ''; }
+  function gerarTexto(){
+    if(!currentHosp) return;
+    const nome=currentHosp.nome;
+    const noite=valDe('card-noite','Como passou a noite?');
+    let t;
+    if(noite){ // relatório da NOITE → mensagem da manhã
+      const jantou=valDe('card-noite','Jantou?'), xixi=valDe('card-noite','Fez xixi?'), coco=valDe('card-noite','Fez cocô?'), agua=valDe('card-noite','Bebeu água?'), med=valDe('card-noite','Foi dada medicação?');
+      t='Bom dia! O '+nome+' '+(noite==='Agitado'?'passou a noite um pouco agitado':'dormiu tranquilo a noite toda');
+      if(jantou==='Sim') t+=', jantou tudo'; else if(jantou==='Metade') t+=', jantou metade'; else if(jantou==='Não') t+=', não quis jantar';
+      if(xixi==='Sim') t+=', fez xixi normal'; else if(xixi==='Não') t+=', ainda não fez xixi';
+      if(coco==='Sim') t+=' e já fez cocô'; else if(coco==='Não') t+=' e ainda não fez cocô';
+      if(agua==='Sim') t+=', bebeu água'; if(med==='Sim') t+=', tomou a medicação certinho';
+      t+='. Já está pronto para um dia super divertido com os aumigos!';
+    } else { // relatório do DIA → mensagem da noite
+      t='Boa noite! O '+nome+' teve um ótimo dia aqui na AuAulândia. Já jantou e está pronto para dormir e sonhar com todas as aventuras de hoje — e as que ainda vai viver amanhã!';
+    }
+    document.getElementById('hf-txt').value=t;
+  }
+  function copiarTexto(){ const t=document.getElementById('hf-txt'); if(!t.value){ gerarTexto(); } t.select(); try{ document.execCommand('copy'); }catch(e){} alert('Texto copiado! Cole no WhatsApp do tutor.'); }
   function fecharPlantao(){
     document.getElementById('hosp-ficha').style.display='none';
     document.getElementById('hosp-lista').style.display='block';
@@ -977,15 +1012,31 @@
       const alvo=`${selectedDate.getFullYear()}-${p(selectedDate.getMonth()+1)}-${p(selectedDate.getDate())}`;
       let linha=null;
       for(const r of rows){ const c=r.c||[]; const d=cellDate(c[0]); if(d && `${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())}`===alvo){ linha=c; break; } }
-      if(!linha) return;
-      const lista=[];
-      linha.slice(1).forEach(c=>{ const raw=c&&c.v; if(raw&&typeof raw==='string'&&raw.trim()){ const parts=raw.trim().split('/'); lista.push({nome:(parts[0]||raw).trim(), tutor:(parts[1]||'').trim(), raca:(parts[2]||'').trim()}); } });
-      if(lista.length){
-        hospedes = lista.map((h,i)=>({nome:h.nome, tutor:h.tutor, raca:h.raca||'', ini:(h.nome[0]||'?').toUpperCase(), cor:CORES[i%CORES.length], mascote:/repolho/i.test(h.nome)}));
-        addRacasAoBanco(hospedes.map(h=>h.raca).filter(Boolean));
-        renderHosp();
+      if(linha){
+        const lista=[];
+        linha.slice(1).forEach(c=>{ const raw=c&&c.v; if(raw&&typeof raw==='string'&&raw.trim()){ const parts=raw.trim().split('/'); lista.push({nome:(parts[0]||raw).trim(), tutor:(parts[1]||'').trim(), raca:(parts[2]||'').trim()}); } });
+        if(lista.length){
+          hospedes = lista.map((h,i)=>({nome:h.nome, tutor:h.tutor, raca:h.raca||'', ini:(h.nome[0]||'?').toUpperCase(), cor:CORES[i%CORES.length], mascote:/repolho/i.test(h.nome)}));
+          addRacasAoBanco(hospedes.map(h=>h.raca).filter(Boolean));
+        }
       }
-    }catch(e){ console.warn('Planilha indisponível — usando lista de exemplo.', e); }
+      renderHosp(); carregarManuais();
+    }catch(e){ console.warn('Planilha indisponível — usando lista de exemplo.', e); carregarManuais(); }
+  }
+  function dataKeyAtual(){ const p=x=>String(x).padStart(2,'0'); const d=selectedDate; return d.getFullYear()+'-'+p(d.getMonth()+1)+'-'+p(d.getDate()); }
+  function carregarManuais(){
+    if(!DB) return;
+    DB.ref('auaulandia/manuais/'+dataKeyAtual()).once('value').then(s=>{
+      const arr=Object.values(s.val()||{});
+      arr.forEach((m,i)=>{ if(m&&m.nome && !hospedes.some(h=>h.nome===m.nome&&h.tutor===(m.tutor||''))){ hospedes.push({nome:m.nome, tutor:m.tutor||'', raca:'', ini:(m.nome[0]||'?').toUpperCase(), cor:CORES[(hospedes.length+i)%CORES.length], pernoite:true}); } });
+      renderHosp();
+    }).catch(()=>{});
+  }
+  function adicionarPernoite(){
+    const nome=prompt('Pernoite — nome do peludinho (aluno do Day Care que ficou hospedado):'); if(!nome||!nome.trim()) return;
+    const tutor=(prompt('Nome do tutor:')||'').trim();
+    if(DB){ DB.ref('auaulandia/manuais/'+dataKeyAtual()).push({nome:nome.trim(),tutor:tutor}).then(()=>carregarManuais()).catch(e=>alert('Erro ao adicionar: '+e.message)); }
+    else { hospedes.push({nome:nome.trim(),tutor:tutor,raca:'',ini:(nome.trim()[0]||'?').toUpperCase(),cor:CORES[hospedes.length%CORES.length],pernoite:true}); renderHosp(); }
   }
   // Lê a aba "Cadastro" (colunas Nome · Tutor · Raça) e cruza pelo nome+tutor
   async function carregarRacas(){
