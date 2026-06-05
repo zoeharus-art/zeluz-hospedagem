@@ -664,7 +664,7 @@
         const ph = info.foto
           ? `<div class="ph" style="background-image:url('${info.foto}');background-size:cover;background-position:center"></div>`
           : `<div class="ph" style="background:${h.cor}">${h.ini}</div>`;
-        const raca = info.raca || racasMap[(h.nome+'__'+h.tutor).toLowerCase()] || (h.mascote?'Moradora Zêluz':'<span style="color:#b6ad9c;font-style:italic">Raça a cadastrar</span>');
+        const raca = info.raca || h.raca || racasMap[(h.nome+'__'+h.tutor).toLowerCase()] || (h.mascote?'Moradora Zêluz':'<span style="color:#b6ad9c;font-style:italic">Raça a cadastrar</span>');
         return `<div class="pet" onclick="abrirPlantao(${i})">
           ${ph}
           <div class="nm">${h.nome}</div>
@@ -683,7 +683,7 @@
     if(info.foto){ av.style.backgroundImage=`url('${info.foto}')`; av.style.backgroundSize='cover'; av.style.backgroundPosition='center'; av.textContent=''; }
     else { av.style.backgroundImage='none'; av.textContent=h.ini; av.style.background=h.cor; }
     document.getElementById('hf-nome').textContent=h.nome;
-    const raca=info.raca||racasMap[(h.nome+'__'+h.tutor).toLowerCase()]||'';
+    const raca=info.raca||h.raca||racasMap[(h.nome+'__'+h.tutor).toLowerCase()]||'';
     document.getElementById('hf-meta').innerHTML=`${raca?raca+' · ':''}${h.mascote?'Nossa Zelozinha':'Tutor: '+h.tutor}`;
     document.getElementById('hf-estadia').innerHTML=`Na AuAulândia · <strong>estadia a confirmar na ficha</strong>`;
     document.getElementById('hfRaca').value=raca;
@@ -767,9 +767,9 @@
       for(const r of rows){ const c=r.c||[]; const d=cellDate(c[0]); if(d && `${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())}`===alvo){ linha=c; break; } }
       if(!linha) return;
       const lista=[];
-      linha.slice(1).forEach(c=>{ const raw=c&&c.v; if(raw&&typeof raw==='string'&&raw.trim()){ const parts=raw.trim().split('/'); lista.push({nome:(parts[0]||raw).trim(), tutor:(parts[1]||'').trim()}); } });
+      linha.slice(1).forEach(c=>{ const raw=c&&c.v; if(raw&&typeof raw==='string'&&raw.trim()){ const parts=raw.trim().split('/'); lista.push({nome:(parts[0]||raw).trim(), tutor:(parts[1]||'').trim(), raca:(parts[2]||'').trim()}); } });
       if(lista.length){
-        hospedes = lista.map((h,i)=>({nome:h.nome, tutor:h.tutor, raca:'', ini:(h.nome[0]||'?').toUpperCase(), cor:CORES[i%CORES.length], mascote:/repolho/i.test(h.nome)}));
+        hospedes = lista.map((h,i)=>({nome:h.nome, tutor:h.tutor, raca:h.raca||'', ini:(h.nome[0]||'?').toUpperCase(), cor:CORES[i%CORES.length], mascote:/repolho/i.test(h.nome)}));
         renderHosp();
       }
     }catch(e){ console.warn('Planilha indisponível — usando lista de exemplo.', e); }
