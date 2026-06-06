@@ -371,6 +371,25 @@
   .dc-btn{flex:1;border:1.5px solid var(--line);background:#fff;border-radius:9px;padding:10px 6px;font-family:var(--font-ui);font-weight:700;font-size:13.5px;cursor:pointer;color:var(--z-blue)}
   .dc-btn.veio.on{background:var(--crm-ok);color:#fff;border-color:var(--crm-ok)}
   .dc-btn.faltou.on{background:var(--crm-critico);color:#fff;border-color:var(--crm-critico)}
+  /* Relatórios (accordion) */
+  .rel-head{display:flex;align-items:center;gap:10px;cursor:pointer;user-select:none}
+  .rel-head h2{flex:1;margin:0}
+  .rel-tag{font-size:11px;font-weight:700;color:var(--z-blue-soft);background:var(--z-cream-warm);padding:3px 10px;border-radius:999px}
+  .rel-caret{font-size:14px;color:var(--muted);transition:transform .2s}
+  .rel-card.collapsed .rel-caret{transform:rotate(-90deg)}
+  .rel-card.collapsed .rel-body{display:none}
+  .rel-body{margin-top:12px}
+  .rel-assina{margin-top:14px;border-top:1px dashed var(--line);padding-top:12px}
+  .rel-status{text-align:center;font-size:13px;font-weight:700;margin-top:8px;min-height:18px}
+  /* Resumo da Gestora */
+  .gest-card{border-left:5px solid var(--z-gold)}
+  .gest-item{border:1px solid var(--line);border-radius:11px;padding:11px 13px;margin-top:9px;background:var(--z-cream)}
+  .gest-item.alerta{border-color:rgba(192,57,43,.45);background:rgba(192,57,43,.05)}
+  .gest-head{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+  .gest-badge{font-size:10.5px;font-weight:800;color:#fff;background:var(--crm-critico);padding:3px 9px;border-radius:8px}
+  .gest-ok{font-size:10.5px;font-weight:800;color:var(--crm-ok);background:rgba(39,174,96,.12);padding:3px 9px;border-radius:8px}
+  .gest-pend{font-size:10.5px;font-weight:700;color:var(--crm-atencao-text);background:rgba(222,180,40,.15);padding:3px 9px;border-radius:8px}
+  .gest-txt{width:100%;font-family:var(--font-ui);font-size:13.5px;line-height:1.5;padding:10px;border:1.5px solid var(--line);border-radius:10px;background:#fff;min-height:96px}
   /* To-Do (checklist) */
   .todo-item{display:flex;align-items:center;gap:11px;padding:11px 14px;border:1.5px solid var(--line);border-radius:11px;margin-bottom:8px;cursor:pointer;font-weight:600;color:var(--z-blue);background:#fff}
   .todo-item.on{background:rgba(39,174,96,.1);border-color:var(--crm-ok)}
@@ -601,6 +620,7 @@
   <section class="view" id="v-hospedagem">
     <!-- LISTA de peludinhos em hospedagem -->
     <div id="hosp-lista">
+      <div id="painelGestora" class="so-gestao"></div>
       <div class="kpis">
         <div class="kpi"><img class="kpi-st" src="assets/stickers/coracao.png" alt=""><div><div class="v" id="kpiHosp">0</div><div class="l">Hóspedes hoje</div></div></div>
         <div class="kpi"><img class="kpi-st" src="assets/stickers/auau.png" alt=""><div><div class="v coral" id="kpiMorada">0</div><div class="l">Moradora · Repolho</div></div></div>
@@ -670,8 +690,9 @@
 
       <div class="checklist-note">📋 O Check-list de hospedagem é o seu material de trabalho principal. <strong>LEIA-O!</strong><br><span style="font-size:14px;font-weight:800;color:var(--crm-critico)">DÚVIDAS? LIGUE: 31 99764-4296 / 31 99111-1826</span></div>
 
-      <div class="card" id="card-dia">
-        <h2>Relatório do Dia</h2>
+      <div class="card rel-card collapsed" id="card-dia">
+        <div class="rel-head" onclick="toggleRel('card-dia')"><h2>Relatório do Dia</h2><span class="rel-tag">Monitora</span><span class="rel-caret">▾</span></div>
+        <div class="rel-body">
         <div class="hint">Preenchido pela Monitora (seg a sáb). Toque para marcar.</div>
         <div class="lock-note">🔒 Somente leitura — este relatório é da Monitora</div>
         <div class="obsline"><span class="q">Gastou energia?</span><div class="seg" data-single><button data-tone="warn" onclick="pick(this)">Pouco</button><button data-tone="ok" onclick="pick(this)">Bastante</button><button data-tone="ok" onclick="pick(this)">Muito</button></div></div>
@@ -686,12 +707,32 @@
         <div class="obsline"><span class="q">Coleira repelente?</span><div class="seg" data-single><button data-tone="ok" onclick="pick(this)">Sim</button><button data-tone="warn" onclick="pick(this)">Não</button></div></div>
         <div class="obsline"><span class="q">Coleira de identificação?</span><div class="seg" data-single><button data-tone="ok" onclick="pick(this)">Sim</button><button data-tone="warn" onclick="pick(this)">Não</button></div></div>
         <div class="field" style="margin-top:14px"><label>Observação</label><textarea style="width:100%;font-family:var(--font-ui);font-size:14px;padding:12px;border:1.5px solid var(--line);border-radius:11px;background:var(--z-cream);min-height:70px" placeholder="Algo do dia que seja importante"></textarea></div>
+        <div class="rel-assina"><div class="field"><label>Assinatura da Monitora *</label><input id="passou-dia" class="cad-in"></div><div class="actions"><button class="btn btn-primary" onclick="salvarRelatorioCard('dia')">Salvar relatório do dia</button></div><div id="status-dia" class="rel-status"></div></div>
+        </div>
       </div>
 
-      <div class="card" id="card-noite">
-        <h2>Relatório da Noite · Plantão</h2>
-        <div class="hint">Preenchido pela Plantonista. A Gestora recebe pronto para enviar ao tutor.</div>
-        <div class="lock-note">🔒 Somente leitura — este relatório é da Plantonista</div>
+      <div class="card rel-card collapsed" id="card-inicio">
+        <div class="rel-head" onclick="toggleRel('card-inicio')"><h2>Relatório do Início do Plantão</h2><span class="rel-tag">Plantonista · 19h</span><span class="rel-caret">▾</span></div>
+        <div class="rel-body">
+        <div class="hint">Como o peludinho chegou e está no começo do plantão (ainda não dormiu).</div>
+        <div class="obsline"><span class="q">Como está agora?</span><div class="seg" data-single><button data-tone="ok" onclick="pick(this)">Calmo</button><button data-tone="warn" onclick="pick(this)">Agitado</button></div></div>
+        <div class="obsline"><span class="q">Está ativo?</span><div class="seg" data-single><button data-tone="ok" onclick="pick(this)">Sim</button><button data-tone="warn" onclick="pick(this)">Não</button></div></div>
+        <div class="obsline"><span class="q">Bebeu água?</span><div class="seg" data-single><button data-tone="ok" onclick="pick(this)">Sim</button><button data-tone="bad" onclick="pick(this)">Não</button></div></div>
+        <div class="obsline"><span class="q">Jantou?</span><div class="seg" data-single><button data-tone="ok" onclick="pick(this)">Sim</button><button data-tone="bad" onclick="pick(this)">Não</button><button data-tone="warn" onclick="pick(this)">Metade</button><button data-tone="warn" onclick="pick(this)">Não se aplica</button></div></div>
+        <div class="obsline"><span class="q">Fez xixi?</span><div class="seg" data-single><button data-tone="ok" onclick="pick(this)">Sim</button><button data-tone="warn" onclick="pick(this)">Não</button><button data-tone="warn" onclick="pick(this)">Não vi</button></div></div>
+        <div class="obsline"><span class="q">Fez cocô?</span><div class="seg" data-single><button data-tone="ok" onclick="pick(this)">Sim</button><button data-tone="warn" onclick="pick(this)">Não</button><button data-tone="warn" onclick="pick(this)">Não vi</button></div></div>
+        <div class="obsline"><span class="q">Foi dada medicação?</span><div class="seg" data-single><button data-tone="ok" onclick="pick(this)">Sim</button><button data-tone="bad" onclick="pick(this)">Não</button><button data-tone="warn" onclick="pick(this)">Não se aplica</button></div></div>
+        <div class="field"><label>Qual medicação? (nome, quantidade e horário)</label><textarea class="cad-in" style="min-height:54px" placeholder="(nome do medicamento) dosagem e horário"></textarea></div>
+        <div class="obsline"><span class="q">Foi dada suplementação?</span><div class="seg" data-single><button data-tone="ok" onclick="pick(this)">Sim</button><button data-tone="bad" onclick="pick(this)">Não</button><button data-tone="warn" onclick="pick(this)">Não se aplica</button></div></div>
+        <div class="field"><label>Observação do início do plantão</label><textarea class="cad-in" style="min-height:60px" placeholder="Algo importante na chegada"></textarea></div>
+        <div class="rel-assina"><div class="grid2"><div class="field"><label>Quem passou o plantão (assina) *</label><input id="passou-inicio" class="cad-in"></div><div class="field"><label>Quem recebeu — Plantonista (assina) *</label><input id="recebeu-inicio" class="cad-in"></div></div><div class="actions"><button class="btn btn-primary" onclick="salvarRelatorioCard('inicio')">OK, li tudo — salvar e abrir a Noite</button></div><div id="status-inicio" class="rel-status"></div></div>
+        </div>
+      </div>
+
+      <div class="card rel-card collapsed" id="card-noite">
+        <div class="rel-head" onclick="toggleRel('card-noite')"><h2>Relatório da Noite</h2><span class="rel-tag">Plantonista · 7h</span><span class="rel-caret">▾</span></div>
+        <div class="rel-body">
+        <div class="hint">Preenchido pela Plantonista de manhã, na passagem do plantão.</div>
         <div class="obsline"><span class="q">Como passou a noite?</span><div class="seg" data-single><button data-tone="ok" onclick="pick(this)">Dormiu a noite inteira</button><button data-tone="warn" onclick="pick(this)">Agitado</button></div></div>
         <div class="obsline"><span class="q">Está ativo?</span><div class="seg" data-single><button data-tone="ok" onclick="pick(this)">Sim</button><button data-tone="warn" onclick="pick(this)">Não</button></div></div>
         <div class="obsline"><span class="q">Bebeu água?</span><div class="seg" data-single><button data-tone="ok" onclick="pick(this)">Sim</button><button data-tone="bad" onclick="pick(this)">Não</button></div></div>
@@ -705,12 +746,8 @@
         <div class="field" style="margin-bottom:14px"><label>Qual medicação? (nome, quantidade e horário)</label><textarea style="width:100%;font-family:var(--font-ui);font-size:14px;padding:11px;border:1.5px solid var(--line);border-radius:11px;background:var(--z-cream);min-height:56px" placeholder="(nome do medicamento) dosagem e horário"></textarea></div>
         <div class="obsline"><span class="q">Foi dada suplementação?</span><div class="seg" data-single><button data-tone="ok" onclick="pick(this)">Sim</button><button data-tone="bad" onclick="pick(this)">Não</button><button data-tone="warn" onclick="pick(this)">Não se aplica</button></div></div>
         <div class="field"><label>Qual suplemento? (nome, quantidade e horário)</label><textarea style="width:100%;font-family:var(--font-ui);font-size:14px;padding:11px;border:1.5px solid var(--line);border-radius:11px;background:var(--z-cream);min-height:56px" placeholder="(nome do suplemento), dosagem e horário"></textarea></div>
-      </div>
-
-      <div class="card">
-        <h2>Algo especial</h2>
-        <div class="hint">Dorme junto com alguém, medicação, manias, cuidado especial.</div>
-        <textarea style="width:100%;font-family:var(--font-ui);font-size:14px;padding:12px;border:1.5px solid var(--line);border-radius:11px;background:var(--z-cream);min-height:80px" placeholder="Ex: dorme na cama com a plantonista, toma remédio às 22h"></textarea>
+        <div class="rel-assina"><div class="grid2"><div class="field"><label>Quem passou o plantão — Plantonista (assina) *</label><input id="passou-noite" class="cad-in"></div><div class="field"><label>Quem recebeu (assina) *</label><input id="recebeu-noite" class="cad-in"></div></div><div class="actions"><button class="btn btn-primary" onclick="salvarRelatorioCard('noite')">OK, li tudo — salvar</button></div><div id="status-noite" class="rel-status"></div></div>
+        </div>
       </div>
 
       <div class="checklist-note">📋 Antes de assinar — o Check-list de hospedagem é o seu material de trabalho principal. <strong>LEIA-O!</strong><br><span style="font-size:14px;font-weight:800;color:var(--crm-critico)">DÚVIDAS? LIGUE: 31 99764-4296 / 31 99111-1826</span></div>
@@ -725,19 +762,6 @@
         </div>
       </div>
 
-      <div class="card">
-        <h2>Assinar e passar o plantão</h2>
-        <div class="hint">Assine com seu nome para registrar. <strong>Sem assinatura, não salva.</strong></div>
-        <div class="grid2">
-          <div class="field"><label>Sua assinatura (nome de quem preencheu) *</label><input type="text" id="hf-assina" placeholder="Seu nome completo"></div>
-          <div class="field"><label>Recebido por (quem assume)</label><input type="text" id="hf-receb" placeholder="Próximo plantão / Gestora"></div>
-        </div>
-        <div class="actions">
-          <button class="btn" style="flex:0 0 auto;background:var(--z-cream-warm);color:var(--z-blue);border:1.5px solid var(--line)" onclick="limparFicha()">Limpar</button>
-          <button class="btn btn-primary" onclick="salvarFicha()">Assinar e salvar</button>
-        </div>
-        <div id="hf-status" style="text-align:center;font-size:13px;font-weight:600;color:var(--crm-ok);margin-top:10px;min-height:18px"></div>
-      </div>
     </div>
   </section>
   <section class="view" id="v-agenda"><div class="soon-box"><img class="ic-st" src="assets/stickers/coleira.png" alt=""><div class="t">Agenda</div><div class="d">Calendário de frequência e reservas — próxima etapa.</div></div></section>
@@ -973,7 +997,7 @@
     document.getElementById('hfRaca').value=raca;
     document.getElementById('hosp-lista').style.display='none';
     document.getElementById('hosp-ficha').style.display='block';
-    document.getElementById('hf-status').textContent='';
+    const _hs=document.getElementById('hf-status'); if(_hs) _hs.textContent='';
     const cc=document.getElementById('card-cadastro'); if(cc) cc.style.display='none'; // cadastro começa fechado
     carregarFicha();
     window.scrollTo({top:0,behavior:'smooth'});
@@ -1061,144 +1085,94 @@
 
   // ---- Relatórios da ficha: coletar, aplicar, salvar no banco, limpar ----
   function fichaKey(){ const p=x=>String(x).padStart(2,'0'); const d=selectedDate; const pk=currentHosp?currentHosp.nome+'__'+currentHosp.tutor:''; return (pk+'__'+d.getFullYear()+'-'+p(d.getMonth()+1)+'-'+p(d.getDate())).toLowerCase().replace(/[.#$\[\]\/]/g,'-'); }
-  function coletarFicha(){
-    const dados={turno:'',campos:{},textos:[],chip:document.getElementById('hf-chip').value||''};
-    const tb=document.querySelector('#hosp-ficha .turno-banner .seg button.on'); dados.turno=tb?tb.textContent.trim():'';
-    document.querySelectorAll('#hosp-ficha .obsline').forEach((line,i)=>{ const on=line.querySelector('button.on'); dados.campos['c'+i]= on?on.textContent.trim():''; });
-    document.querySelectorAll('#hosp-ficha textarea').forEach(t=>dados.textos.push(t.value||''));
-    dados.assina=(document.getElementById('hf-assina').value||''); dados.receb=(document.getElementById('hf-receb').value||'');
-    return dados;
-  }
-  function aplicarFicha(d){
-    d=d||{}; const campos=d.campos||{}; const textos=d.textos||[];
-    document.querySelectorAll('#hosp-ficha .obsline').forEach((line,i)=>{
-      const val=campos['c'+i];
-      line.querySelectorAll('button').forEach(b=>{ b.classList.remove('on','t-ok','t-bad','t-warn'); if(val&&b.textContent.trim()===val){ b.classList.add('on'); if(b.dataset.tone)b.classList.add('t-'+b.dataset.tone); } });
-    });
-    document.querySelectorAll('#hosp-ficha textarea').forEach((t,i)=>t.value=textos[i]||'');
-    document.getElementById('hf-assina').value=d.assina||''; document.getElementById('hf-receb').value=d.receb||'';
-  }
-  function carregarFicha(){
-    carregarCadastro();
-    if(DB){ DB.ref('auaulandia/relatorios/'+fichaKey()).once('value').then(s=>aplicarFicha(s.val())).catch(()=>aplicarFicha({})); }
-    else { aplicarFicha({}); }
-  }
-  function validarRelatorio(){
-    const role=document.body.dataset.role; let cards=[];
-    if(role==='plantonista') cards=['card-noite']; else if(role==='monitor') cards=['card-dia']; else return [];
-    const falt=[];
-    cards.forEach(c=>{ document.querySelectorAll('#'+c+' .obsline').forEach(l=>{ if(!l.querySelector('button.on')){ const q=l.querySelector('.q'); if(q) falt.push(q.textContent.trim()); } }); });
-    return falt;
-  }
-  function salvarFicha(){
-    if(!currentHosp) return;
-    const st=document.getElementById('hf-status');
-    const assina=(document.getElementById('hf-assina').value||'').trim();
-    if(!assina){ st.style.color='var(--crm-critico)'; st.textContent='✋ Assine com seu nome para salvar (campo "Sua assinatura").'; document.getElementById('hf-assina').focus(); return; }
-    const falt=validarRelatorio();
-    if(falt.length){ st.style.color='var(--crm-critico)'; st.textContent='✋ Preencha TODOS os campos antes de salvar. Faltou: '+falt.slice(0,5).join(', ')+(falt.length>5?'…':''); return; }
-    const dados=coletarFicha();
-    setInfo(currentHosp,{chip:dados.chip});
-    if(DB){
-      st.style.color='var(--muted)'; st.textContent='Salvando...';
-      DB.ref('auaulandia/relatorios/'+fichaKey()).set(Object.assign({},dados,{_ts:Date.now()}))
-        .then(()=>{ st.style.color='var(--crm-ok)'; st.textContent='✅ Salvo! Já aparece nos outros aparelhos.'; })
-        .catch(e=>{ st.style.color='var(--crm-critico)'; st.textContent='⚠️ Erro ao salvar: '+e.message; });
-    } else { st.style.color='var(--crm-atencao-text)'; st.textContent='Banco conectando... tente salvar de novo em 5s.'; }
-  }
-  function limparFicha(){
-    if(!confirm('Apagar tudo que foi marcado nesta ficha?')) return;
-    aplicarFicha({}); const st=document.getElementById('hf-status'); if(st){ st.style.color='var(--muted)'; st.textContent='Ficha limpa.'; }
-  }
+  function toggleRel(cardId){ const c=document.getElementById(cardId); if(c) c.classList.toggle('collapsed'); }
+  function coletarCard(cardId){ const byQ={}; document.querySelectorAll('#'+cardId+' .obsline').forEach(l=>{ const q=l.querySelector('.q'); const on=l.querySelector('button.on'); if(q) byQ[q.textContent.trim()]= on?on.textContent.trim():''; }); const areas=[]; const byArea={}; document.querySelectorAll('#'+cardId+' textarea').forEach(t=>{ areas.push(t.value||''); const ph=(t.placeholder||'').toLowerCase(); if(ph.indexOf('medicamento')>=0) byArea.medicamento=t.value||''; else if(ph.indexOf('suplemento')>=0) byArea.suplemento=t.value||''; }); return {byQ:byQ,areas:areas,byArea:byArea}; }
+  function aplicarCard(cardId,d){ d=d||{}; const byQ=d.byQ||{}; document.querySelectorAll('#'+cardId+' .obsline').forEach(l=>{ const q=l.querySelector('.q'); const val=q?byQ[q.textContent.trim()]:''; l.querySelectorAll('button').forEach(b=>{ b.classList.remove('on','t-ok','t-bad','t-warn'); if(val&&b.textContent.trim()===val){ b.classList.add('on'); if(b.dataset.tone) b.classList.add('t-'+b.dataset.tone);} }); }); const areas=d.areas||[]; document.querySelectorAll('#'+cardId+' textarea').forEach((t,i)=>t.value=areas[i]||''); const tipo=cardId.replace('card-',''); const sp=document.getElementById('passou-'+tipo); if(sp) sp.value=d.passou||''; const sr=document.getElementById('recebeu-'+tipo); if(sr) sr.value=d.recebeu||''; }
+  function carregarFicha(){ carregarCadastro(); ['dia','inicio','noite'].forEach(tp=>{ const c=document.getElementById('card-'+tp); if(c) c.classList.add('collapsed'); if(DB){ DB.ref('auaulandia/relatorios/'+fichaKey()+'/'+tp).once('value').then(s=>aplicarCard('card-'+tp,s.val())).catch(()=>aplicarCard('card-'+tp,{})); } else aplicarCard('card-'+tp,{}); }); }
+  function salvarRelatorioCard(tipo){ if(!currentHosp) return; const card='card-'+tipo; const st=document.getElementById('status-'+tipo);
+    const passouEl=document.getElementById('passou-'+tipo), recebeuEl=document.getElementById('recebeu-'+tipo);
+    const passou=((passouEl&&passouEl.value)||'').trim(); const recebeu=recebeuEl?((recebeuEl.value)||'').trim():'';
+    if(!passou||(recebeuEl&&!recebeu)){ if(st){ st.style.color='var(--crm-critico)'; st.textContent='✋ Faltou assinatura.'; } return; }
+    const falt=[]; document.querySelectorAll('#'+card+' .obsline').forEach(l=>{ if(!l.querySelector('button.on')){ const q=l.querySelector('.q'); if(q) falt.push(q.textContent.trim()); } });
+    if(falt.length){ if(st){ st.style.color='var(--crm-critico)'; st.textContent='✋ Preencha TODOS os campos. Faltou: '+falt.slice(0,5).join(', ')+(falt.length>5?'…':''); } return; }
+    const dados=coletarCard(card); dados.passou=passou; if(recebeuEl) dados.recebeu=recebeu; dados._ts=Date.now();
+    if(DB){ if(st){ st.style.color='var(--muted)'; st.textContent='Salvando...'; } DB.ref('auaulandia/relatorios/'+fichaKey()+'/'+tipo).set(dados).then(()=>{ if(st){ st.style.color='var(--crm-ok)'; st.textContent='✅ Salvo!'; } const c=document.getElementById(card); if(c) c.classList.add('collapsed'); if(tipo==='inicio'){ const n=document.getElementById('card-noite'); if(n) n.classList.remove('collapsed'); } }).catch(e=>{ if(st){ st.style.color='var(--crm-critico)'; st.textContent='⚠️ Erro: '+e.message; } }); } else { if(st){ st.style.color='var(--crm-atencao-text)'; st.textContent='Banco conectando...'; } } }
   function valDe(cardId,perg){ for(const l of document.querySelectorAll('#'+cardId+' .obsline')){ const q=l.querySelector('.q'); if(q&&q.textContent.trim()===perg){ const on=l.querySelector('button.on'); return on?on.textContent.trim():''; } } return ''; }
   // ---- gerador de texto para o tutor: personalizado, em parágrafos, sempre diferente ----
   function rnd(arr){ return arr[Math.floor(Math.random()*arr.length)]; }
   function primeiroNome(s){ return ((s||'').split(/[\/,]/)[0]||'').trim().split(/\s+/)[0]||''; }
   function txtArea(sub){ for(const t of document.querySelectorAll('#card-noite textarea')){ if((t.placeholder||'').toLowerCase().indexOf(sub)>=0) return (t.value||'').trim(); } return ''; }
-  function gerarTexto(){
-    if(!currentHosp) return;
-    const nome=currentHosp.nome;
-    const tutor=primeiroNome(currentHosp.tutor);
-    const cad=getCad(currentHosp)||{};
-    const fem = cad.sexo==='Fêmea';
-    const Art = fem?'A':'O', art = fem?'a':'o';
-    const g=(m,f)=>fem?f:m;
-    const brinq=((document.getElementById('hf-brinq')||{}).value||'').trim();
-    const noite=valDe('card-noite','Como passou a noite?');
-    const isManha = !!noite; // relatório da noite preenchido => mensagem da manhã
-
-    const saud = isManha ? 'Bom dia' : 'Boa noite';
-    const l1 = rnd([
-      `${saud} ${tutor}, como está?`,
-      `${saud} ${tutor}, tudo bem?`,
-      `${saud} ${tutor}, espero que esteja bem.`
-    ]);
-    const l2 = rnd(isManha ? [
-      'A noite por aí foi tranquila?',
-      'Espero que tenha descansado bem.',
-      'A viagem segue tranquila?',
-      'Como foi a sua noite?'
-    ] : [
-      'A viagem tem sido tranquila?',
-      'Espero que o seu dia tenha sido bom.',
-      'Tudo bem por aí?',
-      'Espero que esteja conseguindo descansar.'
-    ]);
-
+  function montarTextoTutor(ctx){
+    const nome=ctx.nome,tutor=ctx.tutor,fem=ctx.fem,brinq=ctx.brinq,energia=ctx.energia,noite=ctx.noite,jant=ctx.jant,xixi=ctx.xixi,coco=ctx.coco,med=ctx.med,sup=ctx.sup,medTxt=ctx.medTxt,supTxt=ctx.supTxt;
+    const art=fem?'a':'o'; const g=(m,f)=>fem?f:m;
+    const isManha=!!noite;
+    const saud=isManha?'Bom dia':'Boa noite';
+    const l1=rnd([`${saud} ${tutor}, como está?`,`${saud} ${tutor}, tudo bem?`,`${saud} ${tutor}, espero que esteja bem.`]);
+    const l2=rnd(isManha?['A noite por aí foi tranquila?','Espero que tenha descansado bem.','A viagem segue tranquila?','Como foi a sua noite?']:['A viagem tem sido tranquila?','Espero que o seu dia tenha sido bom.','Tudo bem por aí?','Espero que esteja conseguindo descansar.']);
     let corpo, fecho;
     if(isManha){
-      const ab = rnd([
-        `Aqui ${art} ${nome} ${noite==='Agitado'?g('descansou um pouquinho menos, mas acordou bem','descansou um pouquinho menos, mas acordou bem'):g('dormiu tranquilo a noite toda','dormiu tranquila a noite toda')}`,
-        `Por aqui, ${art} ${nome} ${noite==='Agitado'?'teve uma noite um pouco mais agitada, mas já está bem':g('teve uma ótima noite de sono','teve uma ótima noite de sono')}`
-      ]);
-      let c = ab;
-      const jant=valDe('card-noite','Jantou?'), xixi=valDe('card-noite','Fez xixi?'), coco=valDe('card-noite','Fez cocô?');
+      const ab=rnd([`Aqui ${art} ${nome} ${noite==='Agitado'?'descansou um pouquinho menos, mas acordou bem':g('dormiu tranquilo a noite toda','dormiu tranquila a noite toda')}`,`Por aqui, ${art} ${nome} ${noite==='Agitado'?'teve uma noite um pouco mais agitada, mas já está bem':'teve uma ótima noite de sono'}`]);
+      let c=ab;
       if(jant==='Sim') c+=', jantou tudo ontem'; else if(jant==='Metade') c+=', jantou metade do potinho'; else if(jant==='Não') c+=', comeu pouquinho';
       if(xixi==='Sim') c+=', já fez xixi'; if(coco==='Sim') c+=' e fez cocô certinho';
-      c+='.';
-      corpo=c;
-      fecho = rnd([
-        `Agora está ${g('animado','animada')} para mais um dia cheio de brincadeiras com os aumigos!`,
-        `É só alegria por aqui: mais um dia de aventuras pela frente!`,
-        `Já está ${g('pronto','pronta')} para aproveitar o dia com a gente.`
-      ]);
+      c+='.'; corpo=c;
+      fecho=rnd([`Agora está ${g('animado','animada')} para mais um dia cheio de brincadeiras com os aumigos!`,`É só alegria por aqui: mais um dia de aventuras pela frente!`,`Já está ${g('pronto','pronta')} para aproveitar o dia com a gente.`]);
     } else {
-      const energia=valDe('card-dia','Gastou energia?');
-      const ab = rnd([
-        `Aqui ${art} ${nome} teve um ótimo dia de cuidado`,
-        `Por aqui, ${art} ${nome} foi muito ${g('bem cuidado','bem cuidada')} hoje`,
-        `Foi mais um dia especial para ${art} ${nome} aqui na AuAulândia`
-      ]);
+      const ab=rnd([`Aqui ${art} ${nome} teve um ótimo dia de cuidado`,`Por aqui, ${art} ${nome} foi muito ${g('bem cuidado','bem cuidada')} hoje`,`Foi mais um dia especial para ${art} ${nome} aqui na AuAulândia`]);
       let at;
       if(energia==='Muito') at=rnd(['Soltou bastante energia e brincou muito com os aumigos','Teve um dia bem ativo, brincou sem parar']);
       else if(energia==='Bastante') at=rnd(['Brincou bastante e participou das atividades','Curtiu as brincadeiras e os passeios do dia']);
-      else if(energia==='Pouco') at=rnd([`Preferiu um dia mais tranquilo, ficou no sossego`,`Teve um dia mais calminho, descansando e relaxando`,`Ficou mais quietinho${fem?'':''}, do jeitinho que gosta`]);
+      else if(energia==='Pouco') at=rnd(['Preferiu um dia mais tranquilo, ficou no sossego','Teve um dia mais calminho, descansando e relaxando']);
       else at=rnd(['Passou o dia bem cuidado com a gente','Teve um bom dia por aqui']);
-      corpo = `${ab}. ${at}${(brinq&&energia!=='Pouco')?`, e claro, não deixou de brincar com ${brinq}`:''}.`;
-      fecho = rnd([
-        `Já jantou e agora está ${g('pronto','pronta')} para dormir e sonhar com todas as aventuras de hoje... e as que ainda terá amanhã.`,
-        `Já jantou e agora é hora de descansar bem para mais um dia cheio de diversão.`,
-        `Já está de barriguinha cheia e se aconchegando para uma noite tranquila de soninho.`
-      ]);
+      corpo=`${ab}. ${at}${(brinq&&energia!=='Pouco')?`, e claro, não deixou de brincar com ${brinq}`:''}.`;
+      fecho=rnd([`Já jantou e agora está ${g('pronto','pronta')} para dormir e sonhar com todas as aventuras de hoje... e as que ainda terá amanhã.`,`Já jantou e agora é hora de descansar bem para mais um dia cheio de diversão.`,`Já está de barriguinha cheia e se aconchegando para uma noite tranquila de soninho.`]);
     }
-
-    // medicação / suplemento da noite (com nome, dose e horário reais)
-    const med=valDe('card-noite','Foi dada medicação?'), sup=valDe('card-noite','Foi dada suplementação?');
-    const medTxt=txtArea('medicamento'), supTxt=txtArea('suplemento');
     let cuid='';
-    if(med==='Sim') cuid += ` Tomou a medicação certinha${medTxt?': '+medTxt:''}.`;
-    if(sup==='Sim') cuid += ` Também recebeu o suplemento${supTxt?': '+supTxt:''}.`;
-
-    let texto = `${l1}\n${l2}\n\n${corpo}`;
-    if(cuid.trim()) texto += `\n\n${cuid.trim()}`;
-    texto += `\n\n${fecho}`;
-    document.getElementById('hf-txt').value = texto;
+    if(med==='Sim') cuid+=` Tomou a medicação certinha${medTxt?': '+medTxt:''}.`;
+    if(sup==='Sim') cuid+=` Também recebeu o suplemento${supTxt?': '+supTxt:''}.`;
+    let texto=`${l1}\n${l2}\n\n${corpo}`; if(cuid.trim()) texto+=`\n\n${cuid.trim()}`; texto+=`\n\n${fecho}`;
+    return texto;
   }
+  function ctxDoDOM(){ const cad=getCad(currentHosp)||{};
+    return { nome:currentHosp.nome, tutor:primeiroNome(currentHosp.tutor), fem:cad.sexo==='Fêmea', brinq:((document.getElementById('hf-brinq')||{}).value||'').trim(),
+      energia:valDe('card-dia','Gastou energia?'), noite:valDe('card-noite','Como passou a noite?'), jant:valDe('card-noite','Jantou?'), xixi:valDe('card-noite','Fez xixi?'), coco:valDe('card-noite','Fez cocô?'),
+      med:valDe('card-noite','Foi dada medicação?'), sup:valDe('card-noite','Foi dada suplementação?'), medTxt:txtArea('medicamento'), supTxt:txtArea('suplemento') }; }
+  function gerarTexto(){ if(!currentHosp) return; document.getElementById('hf-txt').value=montarTextoTutor(ctxDoDOM()); }
   function copiarTexto(){ const t=document.getElementById('hf-txt'); if(!t.value){ gerarTexto(); } t.select(); try{ document.execCommand('copy'); }catch(e){} alert('Texto copiado! Cole no WhatsApp do tutor.'); }
   function fecharPlantao(){
     document.getElementById('hosp-ficha').style.display='none';
     document.getElementById('hosp-lista').style.display='block';
+    if(typeof carregarPainelGestora==='function') carregarPainelGestora();
   }
+  // ---- Resumo da Gestora (AuAulândia) ----
+  function fichaKeyDe(h,d){ const p=x=>String(x).padStart(2,'0'); const pk=(h&&h.nome||'')+'__'+(h&&h.tutor||''); return (pk+'__'+d.getFullYear()+'-'+p(d.getMonth()+1)+'-'+p(d.getDate())).toLowerCase().replace(/[.#$\[\]\/]/g,'-'); }
+  const ALERTAS_REL=[ {q:'Consistência',v:'Diarreia',t:'diarreia'},{q:'Aspecto do xixi',v:'Com sangue',t:'xixi com sangue'},{q:'Bebeu água?',v:'Não',t:'não bebeu água'},{q:'Jantou?',v:'Não',t:'não jantou'},{q:'Almoçou?',v:'Não',t:'não almoçou'},{q:'Teve desentendimento?',v:'Sim',t:'desentendimento'},{q:'Foi dada medicação?',v:'Não',t:'medicação não dada'} ];
+  function alertasDe(byQ){ const a=[]; ALERTAS_REL.forEach(x=>{ if((byQ||{})[x.q]===x.v) a.push(x.t); }); return a; }
+  function ctxDeRelatorio(h,rel){ const cad=getCad(h)||{}; const byQ=(rel&&rel.byQ)||{}; const areas=(rel&&rel.byArea)||{};
+    return { nome:h.nome, tutor:primeiroNome(h.tutor), fem:cad.sexo==='Fêmea', brinq:cad.brinquedos||'', energia:byQ['Gastou energia?']||'', noite:byQ['Como passou a noite?']||'', jant:byQ['Jantou?']||'', xixi:byQ['Fez xixi?']||'', coco:byQ['Fez cocô?']||'', med:byQ['Foi dada medicação?']||'', sup:byQ['Foi dada suplementação?']||'', medTxt:areas.medicamento||'', supTxt:areas.suplemento||'' }; }
+  function carregarPainelGestora(){
+    const el=document.getElementById('painelGestora'); if(!el) return;
+    const role=document.body.dataset.role; if(role!=='gestao'&&role!=='supervisor'){ el.innerHTML=''; return; }
+    const reais=(hospedes||[]).filter(h=>!h.mascote);
+    if(!DB||!reais.length){ el.innerHTML=''; return; }
+    Promise.all(reais.map(h=>{ const base='auaulandia/relatorios/'+fichaKeyDe(h,selectedDate); return Promise.all([ DB.ref(base+'/dia').once('value').then(s=>s.val()).catch(()=>null), DB.ref(base+'/noite').once('value').then(s=>s.val()).catch(()=>null) ]).then(function(r){ return {h:h,dia:r[0],noite:r[1]}; }); })).then(renderPainelGestora).catch(()=>{});
+  }
+  function renderPainelGestora(arr){
+    const el=document.getElementById('painelGestora'); if(!el) return;
+    const alertas=[]; let prontos=0,pendentes=0;
+    arr.forEach(o=>{ const has=(o.dia&&o.dia.byQ)||(o.noite&&o.noite.byQ); if(has) prontos++; else pendentes++; if(o.dia&&o.dia.byQ) alertasDe(o.dia.byQ).forEach(a=>alertas.push(o.h.nome+': '+a)); if(o.noite&&o.noite.byQ) alertasDe(o.noite.byQ).forEach(a=>alertas.push(o.h.nome+': '+a)); });
+    let html='<div class="card gest-card"><h2 style="font-size:20px;margin-bottom:2px">Resumo de hoje · AuAulândia</h2><div class="hint">'+arr.length+' hóspedes · '+prontos+' com relatório · '+pendentes+' sem relatório</div>';
+    html+= alertas.length? '<div class="dc-faltas" style="margin-top:10px">⚠ <strong>ATENÇÃO ('+alertas.length+'):</strong> '+alertas.join(' · ')+'</div>' : '<div class="dc-pend-note" style="margin-top:10px;background:rgba(39,174,96,.1);border-color:rgba(39,174,96,.35);color:var(--crm-ok)">Sem alertas vermelhos hoje.</div>';
+    html+='<div class="hint" style="margin-top:12px;font-weight:700">Textos prontos para enviar ao tutor:</div>';
+    arr.sort(function(a,b){return jsNorm(a.h.nome).localeCompare(jsNorm(b.h.nome));}).forEach(o=>{
+      const rel=(o.noite&&o.noite.byQ)?o.noite:((o.dia&&o.dia.byQ)?o.dia:null);
+      const al=[]; if(o.dia&&o.dia.byQ) alertasDe(o.dia.byQ).forEach(a=>al.push(a)); if(o.noite&&o.noite.byQ) alertasDe(o.noite.byQ).forEach(a=>al.push(a));
+      const texto=rel?montarTextoTutor(ctxDeRelatorio(o.h,rel)):'';
+      html+='<div class="gest-item'+(al.length?' alerta':'')+'"><div class="gest-head"><strong>'+o.h.nome+'</strong> <span style="color:var(--muted);font-size:12px">'+o.h.tutor+'</span> '+(al.length?'<span class="gest-badge">'+al.join(', ')+'</span>':(rel?'<span class="gest-ok">pronto</span>':'<span class="gest-pend">sem relatório</span>'))+'</div>'+(rel?'<textarea class="gest-txt" readonly>'+texto+'</textarea><button class="btn btn-gold" style="padding:7px 14px;font-size:13px;margin-top:6px" onclick="copiarGest(this)">Copiar texto</button>':'')+'</div>';
+    });
+    html+='</div>'; el.innerHTML=html;
+  }
+  function copiarGest(btn){ const ta=btn.parentNode.querySelector('.gest-txt'); if(ta){ ta.select(); try{document.execCommand('copy');}catch(e){} btn.textContent='Copiado!'; setTimeout(()=>btn.textContent='Copiar texto',1500);} }
 
   // ===== LOGIN (senhas de teste — depois cada pessoa terá a sua) =====
   const SENHAS={
@@ -1265,7 +1239,7 @@
           addRacasAoBanco(hospedes.map(h=>h.raca).filter(Boolean));
         }
       }
-      renderHosp(); carregarManuais();
+      renderHosp(); carregarManuais(); if(typeof carregarPainelGestora==='function') carregarPainelGestora();
     }catch(e){ console.warn('Planilha indisponível — usando lista de exemplo.', e); carregarManuais(); }
   }
   function dataKeyAtual(){ const p=x=>String(x).padStart(2,'0'); const d=selectedDate; return d.getFullYear()+'-'+p(d.getMonth()+1)+'-'+p(d.getDate()); }
