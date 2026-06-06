@@ -380,6 +380,9 @@
   .rel-card.collapsed .rel-body{display:none}
   .rel-body{margin-top:12px}
   .rel-assina{margin-top:14px;border-top:1px dashed var(--line);padding-top:12px}
+  /* ordem cronologica do ciclo de plantao: Noite (fecha) -> Dia -> Jantar (abre o proximo) */
+  .rel-stack{display:flex;flex-direction:column}
+  #card-noite{order:1}#card-dia{order:2}#card-inicio{order:3}
   .rel-status{text-align:center;font-size:13px;font-weight:700;margin-top:8px;min-height:18px}
   /* Resumo da Gestora */
   .gest-card{border-left:5px solid var(--z-gold)}
@@ -732,6 +735,7 @@
 
       <div class="checklist-note">📋 O Check-list de hospedagem é o seu material de trabalho principal. <strong>LEIA-O!</strong><br><span style="font-size:14px;font-weight:800;color:var(--crm-critico)">DÚVIDAS? LIGUE: 31 99764-4296 / 31 99111-1826</span></div>
 
+      <div class="rel-stack">
       <div class="card rel-card collapsed" id="card-dia">
         <div class="rel-head" onclick="toggleRel('card-dia')"><h2>Relatório do Dia</h2><span class="rel-tag">Monitora</span><span class="rel-caret">▾</span></div>
         <div class="rel-body">
@@ -749,12 +753,12 @@
         <div class="obsline"><span class="q">Coleira repelente?</span><div class="seg" data-single><button data-tone="ok" onclick="pick(this)">Sim</button><button data-tone="warn" onclick="pick(this)">Não</button></div></div>
         <div class="obsline"><span class="q">Coleira de identificação?</span><div class="seg" data-single><button data-tone="ok" onclick="pick(this)">Sim</button><button data-tone="warn" onclick="pick(this)">Não</button></div></div>
         <div class="field" style="margin-top:14px"><label>Observação</label><textarea style="width:100%;font-family:var(--font-ui);font-size:14px;padding:12px;border:1.5px solid var(--line);border-radius:11px;background:var(--z-cream);min-height:70px" placeholder="Algo do dia que seja importante"></textarea></div>
-        <div class="rel-assina"><div class="field"><label>Assinatura da Monitora *</label><input id="passou-dia" class="cad-in"></div><div class="actions"><button class="btn btn-primary" onclick="salvarRelatorioCard('dia')">Salvar relatório do dia</button></div><div id="status-dia" class="rel-status"></div></div>
+        <div class="rel-assina"><div class="grid2"><div class="field"><label>Quem passou — Monitora (assina) *</label><input id="passou-dia" class="cad-in"></div><div class="field"><label>Quem recebeu / vai pegar o plantão (assina) *</label><input id="recebeu-dia" class="cad-in"></div></div><div class="actions"><button class="btn btn-primary" onclick="salvarRelatorioCard('dia')">Salvar relatório do dia</button></div><div id="status-dia" class="rel-status"></div></div>
         </div>
       </div>
 
       <div class="card rel-card collapsed" id="card-inicio">
-        <div class="rel-head" onclick="toggleRel('card-inicio')"><h2>Relatório do Início do Plantão</h2><span class="rel-tag">Plantonista · 19h</span><span class="rel-caret">▾</span></div>
+        <div class="rel-head" onclick="toggleRel('card-inicio')"><h2>Relatório do Início do Plantão · Jantar</h2><span class="rel-tag">Plantonista · 19h</span><span class="rel-caret">▾</span></div>
         <div class="rel-body">
         <div class="hint">Como o peludinho chegou e está no começo do plantão (ainda não dormiu).</div>
         <div class="obsline"><span class="q">Como está agora?</span><div class="seg" data-single><button data-tone="ok" onclick="pick(this)">Calmo</button><button data-tone="warn" onclick="pick(this)">Agitado</button></div></div>
@@ -767,7 +771,7 @@
         <div class="field"><label>Qual medicação? (nome, quantidade e horário)</label><textarea class="cad-in" style="min-height:54px" placeholder="(nome do medicamento) dosagem e horário"></textarea></div>
         <div class="obsline"><span class="q">Foi dada suplementação?</span><div class="seg" data-single><button data-tone="ok" onclick="pick(this)">Sim</button><button data-tone="bad" onclick="pick(this)">Não</button><button data-tone="warn" onclick="pick(this)">Não se aplica</button></div></div>
         <div class="field"><label>Observação do início do plantão</label><textarea class="cad-in" style="min-height:60px" placeholder="Algo importante na chegada"></textarea></div>
-        <div class="rel-assina"><div class="grid2"><div class="field"><label>Quem passou o plantão (assina) *</label><input id="passou-inicio" class="cad-in"></div><div class="field"><label>Quem recebeu — Plantonista (assina) *</label><input id="recebeu-inicio" class="cad-in"></div></div><div class="actions"><button class="btn btn-primary" onclick="salvarRelatorioCard('inicio')">OK, li tudo — salvar e abrir a Noite</button></div><div id="status-inicio" class="rel-status"></div></div>
+        <div class="rel-assina"><div class="grid2"><div class="field"><label>Quem passou o plantão (assina) *</label><input id="passou-inicio" class="cad-in"></div><div class="field"><label>Quem recebeu — Plantonista (assina) *</label><input id="recebeu-inicio" class="cad-in"></div></div><div class="actions"><button class="btn btn-primary" onclick="salvarRelatorioCard('inicio')">Salvar o jantar (início do plantão)</button></div><div id="status-inicio" class="rel-status"></div></div>
         </div>
       </div>
 
@@ -792,6 +796,7 @@
         </div>
       </div>
 
+      </div><!-- /rel-stack -->
       <div class="checklist-note">📋 Antes de assinar — o Check-list de hospedagem é o seu material de trabalho principal. <strong>LEIA-O!</strong><br><span style="font-size:14px;font-weight:800;color:var(--crm-critico)">DÚVIDAS? LIGUE: 31 99764-4296 / 31 99111-1826</span></div>
 
       <div class="card" id="card-texto">
@@ -1183,7 +1188,7 @@
     const falt=[]; document.querySelectorAll('#'+card+' .obsline').forEach(l=>{ if(!l.querySelector('button.on')){ const q=l.querySelector('.q'); if(q) falt.push(q.textContent.trim()); } });
     if(falt.length){ if(st){ st.style.color='var(--crm-critico)'; st.textContent='✋ Preencha TODOS os campos. Faltou: '+falt.slice(0,5).join(', ')+(falt.length>5?'…':''); } return; }
     const dados=coletarCard(card); dados.passou=passou; if(recebeuEl) dados.recebeu=recebeu; dados._ts=Date.now();
-    if(DB){ if(st){ st.style.color='var(--muted)'; st.textContent='Salvando...'; } DB.ref('auaulandia/relatorios/'+fichaKey()+'/'+tipo).set(dados).then(()=>{ if(st){ st.style.color='var(--crm-ok)'; st.textContent='✅ Salvo!'; } if(typeof audit==='function') audit('relatorio', tipo, {pet:(currentHosp&&currentHosp.nome)||'', assinou:passou}); const c=document.getElementById(card); if(c) c.classList.add('collapsed'); if(tipo==='inicio'){ const n=document.getElementById('card-noite'); if(n) n.classList.remove('collapsed'); } }).catch(e=>{ if(st){ st.style.color='var(--crm-critico)'; st.textContent='⚠️ Erro: '+e.message; } }); } else { if(st){ st.style.color='var(--crm-atencao-text)'; st.textContent='Banco conectando...'; } } }
+    if(DB){ if(st){ st.style.color='var(--muted)'; st.textContent='Salvando...'; } DB.ref('auaulandia/relatorios/'+fichaKey()+'/'+tipo).set(dados).then(()=>{ if(st){ st.style.color='var(--crm-ok)'; st.textContent=(tipo==='inicio')?'✅ Jantar salvo! A Noite será preenchida amanhã de manhã, na passagem do plantão.':'✅ Salvo!'; } if(typeof audit==='function') audit('relatorio', tipo, {pet:(currentHosp&&currentHosp.nome)||'', assinou:passou}); const c=document.getElementById(card); if(c) c.classList.add('collapsed'); }).catch(e=>{ if(st){ st.style.color='var(--crm-critico)'; st.textContent='⚠️ Erro: '+e.message; } }); } else { if(st){ st.style.color='var(--crm-atencao-text)'; st.textContent='Banco conectando...'; } } }
   function valDe(cardId,perg){ for(const l of document.querySelectorAll('#'+cardId+' .obsline')){ const q=l.querySelector('.q'); if(q&&q.textContent.trim()===perg){ const on=l.querySelector('button.on'); return on?on.textContent.trim():''; } } return ''; }
   // ---- gerador de texto para o tutor: personalizado, em parágrafos, sempre diferente ----
   function rnd(arr){ return arr[Math.floor(Math.random()*arr.length)]; }
@@ -1281,6 +1286,7 @@
     document.getElementById('whoName').textContent=u.nome;
     document.getElementById('loginScreen').style.display='none';
     document.getElementById('loginErr').textContent='';
+    try{ selectedDate=new Date(); if(typeof updateDateLabel==='function') updateDateLabel(); }catch(e){} // sempre abre no dia de hoje
     const a=document.querySelector('[data-v="hospedagem"]'); if(a) a.click(); // entra direto na AuAulândia
   }
   function logout(){
