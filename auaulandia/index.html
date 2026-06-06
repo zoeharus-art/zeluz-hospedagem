@@ -344,7 +344,7 @@
   .dc-card .mini-adapt,.alm-card .mini-adapt{top:32px}
   @keyframes piscaAdapt{0%,100%{opacity:1}50%{opacity:.4}}
   .adapt-banner{background:linear-gradient(90deg,rgba(222,180,40,.28),rgba(222,180,40,.1));border:2px solid var(--z-gold);border-radius:12px;padding:12px 16px;margin-bottom:12px;font-weight:800;color:var(--z-blue-deep);text-align:center;animation:piscaAlerta 1.1s ease-in-out infinite}
-  .subnav-grp{font-size:10px;text-transform:uppercase;letter-spacing:1px;opacity:.55;font-weight:700;margin:9px 0 3px 12px;color:var(--z-cream)}
+  .subnav-grp{font-size:11px;text-transform:uppercase;letter-spacing:1.3px;font-weight:800;margin:14px 12px 5px;color:var(--z-gold);border-bottom:1px solid rgba(222,180,40,.35);padding-bottom:4px}
   .dc-titulo{font-family:var(--font-accent);font-size:23px;font-weight:700;color:var(--z-blue);margin-bottom:12px}
   @media(max-width:640px){.dc-layout{flex-direction:column}.dc-days{flex-direction:row;width:100%;overflow-x:auto}.dc-day{flex:0 0 auto}}
   /* submenu de dias no menu lateral */
@@ -679,7 +679,7 @@
         <div class="obsline"><span class="q">Precisa ficar separado?</span><div class="seg" data-single><button data-tone="ok" onclick="pick(this)">Não</button><button data-tone="bad" onclick="pick(this)">Sim</button></div></div>
         <div class="obsline"><span class="q">Tem irmão hospedado?</span><div class="seg" data-single><button data-tone="warn" onclick="pick(this)">Não</button><button data-tone="ok" onclick="pick(this)">Sim</button></div></div>
         <div class="obsline"><span class="q">Tem alergia?</span><div class="seg" data-single><button data-tone="ok" onclick="pick(this)">Não</button><button data-tone="warn" onclick="pick(this)">Sim</button></div></div>
-        <div class="obsline"><span class="q">Tem medicação?</span><div class="seg" data-single><button onclick="pick(this)">Não</button><button data-tone="warn" onclick="pick(this)">Sim</button></div></div>
+        <div class="obsline"><span class="q">Tem medicação?</span><div class="seg" data-single><button data-tone="ok" onclick="pick(this)">Não</button><button data-tone="warn" onclick="pick(this)">Sim</button></div></div>
         <div class="obsline"><span class="q">Trouxe roupa de frio?</span><div class="seg" data-single><button data-tone="ok" onclick="pick(this)">Sim</button><button data-tone="warn" onclick="pick(this)">Não</button></div></div>
         <div class="obsline"><span class="q">Fez cocô?</span><div class="seg" data-single><button data-tone="ok" onclick="pick(this)">Sim</button><button data-tone="warn" onclick="pick(this)">Não</button></div></div>
         <div class="obsline"><span class="q">Consistência</span><div class="seg" data-single><button data-tone="ok" onclick="pick(this)">Normal</button><button data-tone="warn" onclick="pick(this)">Pastoso</button><button data-tone="bad" onclick="pick(this)">Diarreia</button></div></div>
@@ -695,15 +695,15 @@
         <div class="obsline"><span class="q">Como passou a noite?</span><div class="seg" data-single><button data-tone="ok" onclick="pick(this)">Dormiu a noite inteira</button><button data-tone="warn" onclick="pick(this)">Agitado</button></div></div>
         <div class="obsline"><span class="q">Está ativo?</span><div class="seg" data-single><button data-tone="ok" onclick="pick(this)">Sim</button><button data-tone="warn" onclick="pick(this)">Não</button></div></div>
         <div class="obsline"><span class="q">Bebeu água?</span><div class="seg" data-single><button data-tone="ok" onclick="pick(this)">Sim</button><button data-tone="bad" onclick="pick(this)">Não</button></div></div>
-        <div class="obsline"><span class="q">Fez cocô?</span><div class="seg" data-single><button data-tone="ok" onclick="pick(this)">Sim</button><button data-tone="warn" onclick="pick(this)">Não</button><button onclick="pick(this)">Não vi</button></div></div>
+        <div class="obsline"><span class="q">Fez cocô?</span><div class="seg" data-single><button data-tone="ok" onclick="pick(this)">Sim</button><button data-tone="warn" onclick="pick(this)">Não</button><button data-tone="warn" onclick="pick(this)">Não vi</button></div></div>
         <div class="obsline"><span class="q">Consistência</span><div class="seg" data-single><button data-tone="ok" onclick="pick(this)">Normal</button><button data-tone="warn" onclick="pick(this)">Pastoso</button><button data-tone="bad" onclick="pick(this)">Diarreia</button></div></div>
-        <div class="obsline"><span class="q">Fez xixi?</span><div class="seg" data-single><button data-tone="ok" onclick="pick(this)">Sim</button><button data-tone="warn" onclick="pick(this)">Não</button><button onclick="pick(this)">Não vi</button></div></div>
+        <div class="obsline"><span class="q">Fez xixi?</span><div class="seg" data-single><button data-tone="ok" onclick="pick(this)">Sim</button><button data-tone="warn" onclick="pick(this)">Não</button><button data-tone="warn" onclick="pick(this)">Não vi</button></div></div>
         <div class="obsline"><span class="q">Aspecto do xixi</span><div class="seg" data-single><button data-tone="ok" onclick="pick(this)">Claro</button><button data-tone="warn" onclick="pick(this)">Amarelo escuro</button><button data-tone="bad" onclick="pick(this)">Com sangue</button></div></div>
-        <div class="obsline"><span class="q">Jantou?</span><div class="seg" data-single><button data-tone="ok" onclick="pick(this)">Sim</button><button data-tone="warn" onclick="pick(this)">Não</button><button data-tone="warn" onclick="pick(this)">Metade</button><button onclick="pick(this)">Não se aplica</button></div></div>
-        <div class="obsline"><span class="q">Almoçou?</span><div class="seg" data-single><button data-tone="ok" onclick="pick(this)">Sim</button><button data-tone="warn" onclick="pick(this)">Não</button><button data-tone="warn" onclick="pick(this)">Metade</button><button onclick="pick(this)">Não se aplica</button></div></div>
-        <div class="obsline"><span class="q">Foi dada medicação?</span><div class="seg" data-single><button data-tone="ok" onclick="pick(this)">Sim</button><button onclick="pick(this)">Não</button><button onclick="pick(this)">Não se aplica</button></div></div>
+        <div class="obsline"><span class="q">Jantou?</span><div class="seg" data-single><button data-tone="ok" onclick="pick(this)">Sim</button><button data-tone="bad" onclick="pick(this)">Não</button><button data-tone="warn" onclick="pick(this)">Metade</button><button data-tone="warn" onclick="pick(this)">Não se aplica</button></div></div>
+        <div class="obsline"><span class="q">Almoçou?</span><div class="seg" data-single><button data-tone="ok" onclick="pick(this)">Sim</button><button data-tone="bad" onclick="pick(this)">Não</button><button data-tone="warn" onclick="pick(this)">Metade</button><button data-tone="warn" onclick="pick(this)">Não se aplica</button></div></div>
+        <div class="obsline"><span class="q">Foi dada medicação?</span><div class="seg" data-single><button data-tone="ok" onclick="pick(this)">Sim</button><button data-tone="bad" onclick="pick(this)">Não</button><button data-tone="warn" onclick="pick(this)">Não se aplica</button></div></div>
         <div class="field" style="margin-bottom:14px"><label>Qual medicação? (nome, quantidade e horário)</label><textarea style="width:100%;font-family:var(--font-ui);font-size:14px;padding:11px;border:1.5px solid var(--line);border-radius:11px;background:var(--z-cream);min-height:56px" placeholder="(nome do medicamento) dosagem e horário"></textarea></div>
-        <div class="obsline"><span class="q">Foi dada suplementação?</span><div class="seg" data-single><button data-tone="ok" onclick="pick(this)">Sim</button><button onclick="pick(this)">Não</button><button onclick="pick(this)">Não se aplica</button></div></div>
+        <div class="obsline"><span class="q">Foi dada suplementação?</span><div class="seg" data-single><button data-tone="ok" onclick="pick(this)">Sim</button><button data-tone="bad" onclick="pick(this)">Não</button><button data-tone="warn" onclick="pick(this)">Não se aplica</button></div></div>
         <div class="field"><label>Qual suplemento? (nome, quantidade e horário)</label><textarea style="width:100%;font-family:var(--font-ui);font-size:14px;padding:11px;border:1.5px solid var(--line);border-radius:11px;background:var(--z-cream);min-height:56px" placeholder="(nome do suplemento), dosagem e horário"></textarea></div>
       </div>
 
@@ -857,7 +857,7 @@
     document.getElementById('head-sub').textContent=titles[v][1];
     if(v==='hospedagem') fecharPlantao();
     if(v==='ficha'){ const l=document.getElementById('pel-lista'),fi=document.getElementById('pel-ficha'); if(l&&fi){ l.style.display='block'; fi.style.display='none'; } }
-    if(v==='daycare'){ if(typeof abrirDayCare==='function') abrirDayCare(); }
+    if(v==='daycare'){ if(typeof abrirDayCare==='function') abrirDayCare(); } else { const sm=document.getElementById('dcSubnav'); if(sm) sm.style.display='none'; }
     closeNav(); window.scrollTo({top:0,behavior:'smooth'});
   });
 
@@ -1083,11 +1083,20 @@
     if(DB){ DB.ref('auaulandia/relatorios/'+fichaKey()).once('value').then(s=>aplicarFicha(s.val())).catch(()=>aplicarFicha({})); }
     else { aplicarFicha({}); }
   }
+  function validarRelatorio(){
+    const role=document.body.dataset.role; let cards=[];
+    if(role==='plantonista') cards=['card-noite']; else if(role==='monitor') cards=['card-dia']; else return [];
+    const falt=[];
+    cards.forEach(c=>{ document.querySelectorAll('#'+c+' .obsline').forEach(l=>{ if(!l.querySelector('button.on')){ const q=l.querySelector('.q'); if(q) falt.push(q.textContent.trim()); } }); });
+    return falt;
+  }
   function salvarFicha(){
     if(!currentHosp) return;
     const st=document.getElementById('hf-status');
     const assina=(document.getElementById('hf-assina').value||'').trim();
     if(!assina){ st.style.color='var(--crm-critico)'; st.textContent='✋ Assine com seu nome para salvar (campo "Sua assinatura").'; document.getElementById('hf-assina').focus(); return; }
+    const falt=validarRelatorio();
+    if(falt.length){ st.style.color='var(--crm-critico)'; st.textContent='✋ Preencha TODOS os campos antes de salvar. Faltou: '+falt.slice(0,5).join(', ')+(falt.length>5?'…':''); return; }
     const dados=coletarFicha();
     setInfo(currentHosp,{chip:dados.chip});
     if(DB){
@@ -1154,19 +1163,18 @@
         `Já está ${g('pronto','pronta')} para aproveitar o dia com a gente.`
       ]);
     } else {
+      const energia=valDe('card-dia','Gastou energia?');
       const ab = rnd([
-        `Aqui ${art} ${nome} teve um dia muito ${g('divertido','divertida')}`,
-        `Por aqui, ${art} ${nome} aproveitou cada minutinho do dia`,
-        `Foi um dia muito especial para ${art} ${nome} aqui na AuAulândia`,
-        `${Art} ${nome} se divertiu bastante com os aumigos hoje`
+        `Aqui ${art} ${nome} teve um ótimo dia de cuidado`,
+        `Por aqui, ${art} ${nome} foi muito ${g('bem cuidado','bem cuidada')} hoje`,
+        `Foi mais um dia especial para ${art} ${nome} aqui na AuAulândia`
       ]);
-      const at = rnd([
-        'Brincou bastante e fez diversas atividades',
-        'Participou de tudo e soltou a energia com os aumigos',
-        'Fez novos aumigos e brincou sem parar',
-        'Curtiu os passeios e as brincadeiras do dia'
-      ]);
-      corpo = `${ab}. ${at}${brinq?`, e claro, não deixou de brincar com ${brinq}`:''}.`;
+      let at;
+      if(energia==='Muito') at=rnd(['Soltou bastante energia e brincou muito com os aumigos','Teve um dia bem ativo, brincou sem parar']);
+      else if(energia==='Bastante') at=rnd(['Brincou bastante e participou das atividades','Curtiu as brincadeiras e os passeios do dia']);
+      else if(energia==='Pouco') at=rnd([`Preferiu um dia mais tranquilo, ficou no sossego`,`Teve um dia mais calminho, descansando e relaxando`,`Ficou mais quietinho${fem?'':''}, do jeitinho que gosta`]);
+      else at=rnd(['Passou o dia bem cuidado com a gente','Teve um bom dia por aqui']);
+      corpo = `${ab}. ${at}${(brinq&&energia!=='Pouco')?`, e claro, não deixou de brincar com ${brinq}`:''}.`;
       fecho = rnd([
         `Já jantou e agora está ${g('pronto','pronta')} para dormir e sonhar com todas as aventuras de hoje... e as que ainda terá amanhã.`,
         `Já jantou e agora é hora de descansar bem para mais um dia cheio de diversão.`,
@@ -1711,8 +1719,6 @@
     else { dcAvulsos.push({nome:nome,tutor:tutor}); renderDaycare(); }
   }
   function abrirPeludinhoDay(i){ pelOrigem='daycare'; irParaView('ficha'); abrirPeludinho(i); }
-  montarSubnav();
-  renderAtual();
 
   // ===== BANCO DE ATIVIDADES DOS MONITORES =====
   const ATIVIDADES_DEFAULT=[
@@ -1844,7 +1850,7 @@
     list.forEach(o=>{ if(genMarcas[dcKey(o.p.n,o.p.tutor)]==='feito')feito++; });
     const f=ATIVS_DC.find(a=>a.s===dcAtiv);
     document.getElementById('genResumo').innerHTML=`<div class="dc-resumo"><div class="dc-stat ok"><b>${feito}</b>feito</div><div class="dc-stat pend"><b>${list.length-feito}</b>pendente</div></div>`;
-    document.getElementById('genCount').textContent=`${list.length} aulunos &middot; ${f?f.t:''}`;
+    document.getElementById('genCount').textContent=`${list.length} aulunos · ${f?f.t:''}`;
     document.getElementById('genGrid').innerHTML=filtraLista(list).map(o=>{ const p=o.p; const ex=(typeof o.i==='number')?pelExtra(p):{}; const foto=ex.foto; const k=dcKey(p.n,p.tutor); const ok=genMarcas[k]==='feito';
       const restr=(ex.restricao||ex.alergia)?`<span class="mini-alert">RESTRICAO</span>`:'';
       const ph=foto?`<div class="ph" style="background-image:url('${foto}');background-size:cover;background-position:center"></div>`:`<div class="ph" style="background:${corPel(typeof o.i==='number'?o.i:0)}">${(p.n[0]||'?')}</div>`;
@@ -1935,6 +1941,10 @@
       </div>`;
     }).join('');
   }
+
+  // INIT do Day Care (no fim: garante todas as variaveis e funcoes definidas)
+  montarSubnav();
+  renderAtual();
 </script>
 </body>
 </html>
