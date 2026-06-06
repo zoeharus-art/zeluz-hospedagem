@@ -435,6 +435,47 @@
   .role-note{font-size:12px;background:var(--z-cream-warm);border:1px solid var(--line);border-radius:10px;
     padding:10px 14px;color:var(--z-blue-soft);margin-bottom:18px;display:flex;gap:8px;align-items:center}
 
+  /* ===== Painel do Dia (auditoria & pontuação) ===== */
+  .p-datenav{display:flex;align-items:center;gap:6px;background:var(--z-white);border:1.5px solid var(--line);border-radius:14px;padding:6px 8px;margin-bottom:16px;flex-wrap:wrap}
+  .p-datenav button{border:none;background:transparent;color:var(--z-blue);font-family:var(--font-ui);font-weight:600;font-size:15px;cursor:pointer;padding:6px 12px;border-radius:10px;line-height:1}
+  .p-datenav button:hover{background:var(--z-cream-warm)}
+  .p-datenav #painelDateLabel{font-size:14px;font-weight:700;color:var(--z-blue);padding:0 8px;flex:1;min-width:120px}
+  .p-datenav .hoje{background:var(--z-gold);color:var(--z-blue);font-weight:700;font-size:13px}
+  .p-datenav .p-cfg-btn{background:var(--z-cream-warm);border:1.5px solid var(--line);color:var(--z-blue-soft);font-size:12.5px;font-weight:700}
+  .p-cfg-row{display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding:9px 0;border-bottom:1px solid #f1ebde}
+  .p-cfg-row:last-child{border-bottom:none}
+  .p-cfg-lab{font-weight:700;color:var(--z-blue);min-width:170px;font-size:14px}
+  .p-cfg-row label{font-size:12.5px;color:var(--muted);font-weight:600;display:inline-flex;align-items:center;gap:6px}
+  .p-cfg-row input[type=time]{font-family:var(--font-ui);font-size:14px;padding:7px 10px;border:1.5px solid var(--line);border-radius:9px;background:var(--z-cream);color:var(--z-blue)}
+  .p-score{display:flex;align-items:center;gap:18px;background:var(--z-blue);color:var(--z-cream);border-radius:var(--radius);padding:20px 24px;margin-bottom:16px;box-shadow:var(--shadow)}
+  .p-score-num{font-family:var(--font-marca);font-weight:800;font-size:52px;line-height:1}
+  .p-score-lab{font-size:14px;line-height:1.5;opacity:.95}
+  .p-proto{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:13px 0;border-bottom:1px solid #f1ebde;flex-wrap:wrap}
+  .p-proto:last-child{border-bottom:none}
+  .p-proto-nm{font-weight:700;color:var(--z-blue);font-size:14.5px}
+  .p-proto-meta{font-size:12px;color:var(--muted);font-weight:600;margin-top:2px}
+  .p-proto-r{display:flex;gap:6px;flex-wrap:wrap;flex:0 0 auto}
+  .p-proto.falta{opacity:.95}
+  .p-pill{font-size:11px;font-weight:800;padding:4px 10px;border-radius:8px;letter-spacing:.2px;white-space:nowrap}
+  .p-pill.ok{background:rgba(39,174,96,.13);color:var(--crm-ok)}
+  .p-pill.warn{background:rgba(222,180,40,.18);color:var(--crm-atencao-text)}
+  .p-pill.bad{background:rgba(192,57,43,.12);color:var(--crm-critico)}
+  .p-pill.neutro{background:var(--z-cream-warm);color:var(--muted)}
+  .p-pessoa{border:1px solid var(--line);border-left:4px solid var(--z-gold);border-radius:11px;padding:12px 15px;margin-top:10px;background:var(--z-cream)}
+  .p-pessoa-h{display:flex;align-items:center;gap:9px;flex-wrap:wrap}
+  .p-pessoa-h b{color:var(--z-blue);font-size:15px}
+  .p-pessoa-role{font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:var(--z-blue-soft);background:rgba(58,106,133,.12);padding:2px 8px;border-radius:6px}
+  .p-pessoa-n{margin-left:auto;font-size:12px;font-weight:800;color:var(--z-gold-deep)}
+  .p-pessoa-time{font-size:12px;color:var(--muted);font-weight:600;margin-top:4px}
+  .p-pessoa-ac{font-size:13px;color:var(--z-blue-deep);margin-top:6px;line-height:1.5}
+  .p-tl{position:relative;padding-left:8px}
+  .p-tl-item{display:flex;gap:12px;align-items:baseline;padding:8px 0;border-bottom:1px solid #f5f1e8;flex-wrap:wrap}
+  .p-tl-item:last-child{border-bottom:none}
+  .p-tl-h{font-family:var(--font-marca);font-weight:700;color:var(--z-gold-deep);font-size:13px;min-width:48px}
+  .p-tl-q{font-weight:700;color:var(--z-blue);font-size:13px;min-width:110px}
+  .p-tl-a{font-size:13px;color:var(--z-blue-deep)}
+  .p-empty{text-align:center;padding:40px 20px;color:var(--muted);font-size:14px;font-weight:600}
+
   /* responsivo */
   .overlay{display:none;position:fixed;inset:0;background:rgba(26,58,79,.5);z-index:45}
   @media(max-width:860px){
@@ -479,6 +520,7 @@
     <a data-v="hospedagem"><span data-icon="moon"></span><span>AuAulândia</span></a>
     <a data-v="agenda"><span data-icon="cal"></span><span>Agenda</span><span class="soon">em breve</span></a>
     <div class="grp">Gestão</div>
+    <a data-v="painel" class="so-gestao"><span data-icon="star"></span><span>Painel do Dia</span></a>
     <a data-v="ficha" class="so-gestao"><span data-icon="paw"></span><span>Peludinhos</span></a>
     <a data-v="pessoas" class="so-gestao"><span data-icon="users"></span><span>Pessoas</span></a>
     <a data-v="sair"><span data-icon="exit"></span><span>Sair</span></a>
@@ -792,6 +834,19 @@
     </div>
 
   </section>
+  <!-- ===== PAINEL DO DIA (Dashboard de Gestão — só observa) ===== -->
+  <section class="view" id="v-painel">
+    <div class="role-note so-gestao"><span data-icon="star"></span><span><strong>Painel do Dia.</strong> Visão completa de como o dia transcorreu: presença, almoço, atividades e — o mais importante — <strong>se cada protocolo foi cumprido, no horário, e por quem</strong>. Esta tela só observa: não altera nada.</span></div>
+    <div class="p-datenav">
+      <button onclick="painelMuda(-1)" title="Dia anterior">‹</button>
+      <span id="painelDateLabel">—</span>
+      <button onclick="painelMuda(1)" title="Próximo dia">›</button>
+      <button class="hoje" onclick="painelHoje()">Hoje</button>
+      <button class="p-cfg-btn so-master" onclick="abrirAuditCfg()">⚙ Horários esperados</button>
+    </div>
+    <div id="painelCfg" class="card so-master" style="display:none"></div>
+    <div id="painelWrap"><div class="p-empty">Carregando o dia…</div></div>
+  </section>
   <section class="view" id="v-sair"><div class="soon-box"><img class="ic-st" src="assets/simbolo.png" alt=""><div class="t">Sair</div><div class="d">No sistema real, encerra a sessão com segurança.</div></div></section>
 </main>
 
@@ -818,6 +873,7 @@
       DB.ref('daycare/config/sensiveis').on('value', s=>{ const v=s.val(); if(Array.isArray(v)){ try{ SENS=new Set(v); }catch(e){} } });
       DB.ref('daycare/config/atividades').on('value', s=>{ const v=s.val(); if(Array.isArray(v)&&v.length){ ATIVIDADES=v; if(typeof renderAtiv==='function') renderAtiv(); } });
       DB.ref('daycare/cadastro').on('value', s=>{ pelCadCache=s.val()||{}; if(typeof renderPel==='function') renderPel(); });
+      DB.ref('daycare/config/auditoria').on('value', s=>{ const v=s.val(); if(v&&typeof v==='object'){ try{ AUDIT_CFG=Object.assign({},AUDIT_CFG,v); }catch(e){} if(typeof renderPainelDia==='function') renderPainelDia(); } });
     }).catch(e=>console.warn('Firebase auth:',e));
   }catch(e){ console.warn('Firebase init:',e); }
 
@@ -868,7 +924,8 @@
   const titles={inicio:['Início','Visão geral do dia'],ficha:['Peludinhos','Matriculados'],
     hoje:['Linha do Tempo','O dia do peludinho'],adaptacao:['Adaptação · 1º mês','Como está se adaptando'],
     daycare:['Day Care','Chamada e atividades'],hospedagem:['AuAulândia','Passagem de plantão'],
-    agenda:['Agenda','Frequência e reservas'],pessoas:['Pessoas & Turnos','Equipe e tarefas'],sair:['Sair','']};
+    agenda:['Agenda','Frequência e reservas'],pessoas:['Pessoas & Turnos','Equipe e tarefas'],
+    painel:['Painel do Dia','Auditoria e cumprimento de protocolos'],sair:['Sair','']};
 
   document.getElementById('nav').addEventListener('click',e=>{
     const a=e.target.closest('a'); if(!a) return;
@@ -883,6 +940,7 @@
     if(v==='hospedagem') fecharPlantao();
     if(v==='ficha'){ const l=document.getElementById('pel-lista'),fi=document.getElementById('pel-ficha'); if(l&&fi){ l.style.display='block'; fi.style.display='none'; } }
     if(v==='daycare'){ if(typeof abrirDayCare==='function') abrirDayCare(); } else { const sm=document.getElementById('dcSubnav'); if(sm) sm.style.display='none'; }
+    if(v==='painel'){ if(typeof carregarPainel==='function') carregarPainel(); }
     closeNav(); window.scrollTo({top:0,behavior:'smooth'});
   });
 
@@ -1094,9 +1152,14 @@
   const MAP_NOITE_ANTIGO=['Como passou a noite?','Está ativo?','Bebeu água?','Fez cocô?','Consistência','Fez xixi?','Aspecto do xixi','Jantou?','Almoçou?','Foi dada medicação?','Foi dada suplementação?'];
   function migrarAntigo(raiz){ if(!raiz||!raiz.campos) return null; const c=raiz.campos||{}; const t=raiz.textos||[];
     const diaByQ={}; MAP_DIA_ANTIGO.forEach((q,i)=>{ diaByQ[q]=c['c'+i]||''; });
-    const noiteByQ={}; MAP_NOITE_ANTIGO.forEach((q,i)=>{ noiteByQ[q]=c['c'+(11+i)]||''; });
+    // O 2º bloco do formato antigo (c11..c21) era preenchido pela plantonista na CHEGADA (19h)
+    // = Relatório do INÍCIO do Plantão — não a Noite. Prova: "Como passou a noite?"/"Almoçou?"
+    // vinham SEMPRE vazios (a noite ainda não tinha passado). As perguntas casam por texto com
+    // o card Início, então aplicarCard mapeia certo. A Noite só é preenchida na manhã seguinte.
+    const inicioByQ={}; MAP_NOITE_ANTIGO.forEach((q,i)=>{ inicioByQ[q]=c['c'+(11+i)]||''; });
     return { dia:{ byQ:diaByQ, byArea:{}, areas:[t[0]||''], passou:raiz.assina||'' },
-             noite:{ byQ:noiteByQ, byArea:{medicamento:t[1]||'',suplemento:t[2]||''}, areas:[t[1]||'',t[2]||''], passou:raiz.assina||'', recebeu:raiz.receb||'' } }; }
+             inicio:{ byQ:inicioByQ, byArea:{medicamento:t[1]||''}, areas:[t[1]||'',''], passou:raiz.assina||'', recebeu:raiz.receb||'' },
+             noite:null }; }
   function carregarFicha(){
     carregarCadastro();
     ['dia','inicio','noite'].forEach(tp=>{ const c=document.getElementById('card-'+tp); if(c) c.classList.add('collapsed'); });
@@ -1109,8 +1172,8 @@
       DB.ref(base).once('value').then(s=>s.val()).catch(()=>null)
     ]).then(function(r){ const dia=r[0],inicio=r[1],noite=r[2],raiz=r[3]; const ant=migrarAntigo(raiz);
       aplicarCard('card-dia', dia || (ant?ant.dia:{}));
-      aplicarCard('card-inicio', inicio || {});
-      aplicarCard('card-noite', noite || (ant?ant.noite:{}));
+      aplicarCard('card-inicio', inicio || (ant?ant.inicio:{}));
+      aplicarCard('card-noite', noite || {});
     }).catch(function(){ ['dia','inicio','noite'].forEach(tp=>aplicarCard('card-'+tp,{})); });
   }
   function salvarRelatorioCard(tipo){ if(!currentHosp) return; const card='card-'+tipo; const st=document.getElementById('status-'+tipo);
@@ -1120,7 +1183,7 @@
     const falt=[]; document.querySelectorAll('#'+card+' .obsline').forEach(l=>{ if(!l.querySelector('button.on')){ const q=l.querySelector('.q'); if(q) falt.push(q.textContent.trim()); } });
     if(falt.length){ if(st){ st.style.color='var(--crm-critico)'; st.textContent='✋ Preencha TODOS os campos. Faltou: '+falt.slice(0,5).join(', ')+(falt.length>5?'…':''); } return; }
     const dados=coletarCard(card); dados.passou=passou; if(recebeuEl) dados.recebeu=recebeu; dados._ts=Date.now();
-    if(DB){ if(st){ st.style.color='var(--muted)'; st.textContent='Salvando...'; } DB.ref('auaulandia/relatorios/'+fichaKey()+'/'+tipo).set(dados).then(()=>{ if(st){ st.style.color='var(--crm-ok)'; st.textContent='✅ Salvo!'; } const c=document.getElementById(card); if(c) c.classList.add('collapsed'); if(tipo==='inicio'){ const n=document.getElementById('card-noite'); if(n) n.classList.remove('collapsed'); } }).catch(e=>{ if(st){ st.style.color='var(--crm-critico)'; st.textContent='⚠️ Erro: '+e.message; } }); } else { if(st){ st.style.color='var(--crm-atencao-text)'; st.textContent='Banco conectando...'; } } }
+    if(DB){ if(st){ st.style.color='var(--muted)'; st.textContent='Salvando...'; } DB.ref('auaulandia/relatorios/'+fichaKey()+'/'+tipo).set(dados).then(()=>{ if(st){ st.style.color='var(--crm-ok)'; st.textContent='✅ Salvo!'; } if(typeof audit==='function') audit('relatorio', tipo, {pet:(currentHosp&&currentHosp.nome)||'', assinou:passou}); const c=document.getElementById(card); if(c) c.classList.add('collapsed'); if(tipo==='inicio'){ const n=document.getElementById('card-noite'); if(n) n.classList.remove('collapsed'); } }).catch(e=>{ if(st){ st.style.color='var(--crm-critico)'; st.textContent='⚠️ Erro: '+e.message; } }); } else { if(st){ st.style.color='var(--crm-atencao-text)'; st.textContent='Banco conectando...'; } } }
   function valDe(cardId,perg){ for(const l of document.querySelectorAll('#'+cardId+' .obsline')){ const q=l.querySelector('.q'); if(q&&q.textContent.trim()===perg){ const on=l.querySelector('button.on'); return on?on.textContent.trim():''; } } return ''; }
   // ---- gerador de texto para o tutor: personalizado, em parágrafos, sempre diferente ----
   function rnd(arr){ return arr[Math.floor(Math.random()*arr.length)]; }
@@ -1179,7 +1242,7 @@
     const role=document.body.dataset.role; if(role!=='gestao'&&role!=='supervisor'){ el.innerHTML=''; return; }
     const reais=(hospedes||[]).filter(h=>!h.mascote);
     if(!DB||!reais.length){ el.innerHTML=''; return; }
-    Promise.all(reais.map(h=>{ const base='auaulandia/relatorios/'+fichaKeyDe(h,selectedDate); return Promise.all([ DB.ref(base+'/dia').once('value').then(s=>s.val()).catch(()=>null), DB.ref(base+'/noite').once('value').then(s=>s.val()).catch(()=>null), DB.ref(base).once('value').then(s=>s.val()).catch(()=>null) ]).then(function(r){ const ant=migrarAntigo(r[2]); return {h:h, dia:r[0]||(ant?ant.dia:null), noite:r[1]||(ant?ant.noite:null)}; }); })).then(renderPainelGestora).catch(()=>{});
+    Promise.all(reais.map(h=>{ const base='auaulandia/relatorios/'+fichaKeyDe(h,selectedDate); return Promise.all([ DB.ref(base+'/dia').once('value').then(s=>s.val()).catch(()=>null), DB.ref(base+'/inicio').once('value').then(s=>s.val()).catch(()=>null), DB.ref(base+'/noite').once('value').then(s=>s.val()).catch(()=>null), DB.ref(base).once('value').then(s=>s.val()).catch(()=>null) ]).then(function(r){ const ant=migrarAntigo(r[3]); return {h:h, dia:r[0]||(ant?ant.dia:null), noite:r[2]||r[1]||(ant?ant.inicio:null)}; }); })).then(renderPainelGestora).catch(()=>{});
   }
   function renderPainelGestora(arr){
     const el=document.getElementById('painelGestora'); if(!el) return;
@@ -1699,6 +1762,7 @@
     const cur=dcChamada[k]; const next=(cur===val)?'':val;
     if(next) dcChamada[k]=next; else delete dcChamada[k];
     if(DB) DB.ref('daycare/chamada/'+dcDataKey()+'/'+k).set(next||null).catch(()=>{});
+    if(typeof audit==='function') audit('chamada', next?(next==='veio'?'marcou presença':'marcou falta'):'desmarcou', {alvo:k});
     renderDaycare();
   }
   function carregarChamada(){
@@ -1821,28 +1885,29 @@
       +ALM_PREP.map((t,i)=>`<label class="todo-item ${almPrep[i]?'on':''}" onclick="toggleAlmPrep(${i})"><span class="todo-box">${almPrep[i]?'&#10003;':''}</span>${t}</label>`).join('')
       +(isAprendiz()?(prepCompleto()?`<div class="alm-next"><button class="btn btn-primary" onclick="setAlmStep('exec')">Preparação feita &rarr; Como Executar</button></div>`:`<div class="alm-next"><span class="hint">Marque todos os itens para liberar a próxima etapa.</span></div>`):'');
   }
-  function toggleAlmPrep(i){ almPrep[i]=!almPrep[i]; if(DB) DB.ref('daycare/almoco-prep/'+dcDataKey()+'/'+i).set(almPrep[i]||null).catch(()=>{}); renderAlmStep(); }
+  function toggleAlmPrep(i){ almPrep[i]=!almPrep[i]; if(DB) DB.ref('daycare/almoco-prep/'+dcDataKey()+'/'+i).set(almPrep[i]||null).catch(()=>{}); if(typeof audit==='function'&&almPrep[i]) audit('almoco_prep','preparação: '+(ALM_PREP[i]||('item '+(i+1)))); renderAlmStep(); }
   function renderAlmExec(){ const el=document.getElementById('alm-exec'); if(!el) return;
     el.innerHTML=`<div class="role-note"><span data-icon="star"></span><span>2ª etapa &mdash; <strong>Como executar</strong>. Regras obrigatórias. Leia antes de servir.</span></div>`
       +`<div class="alm-regras">`+ALM_REGRAS.map(r=>`<div class="alm-regra ${r.obg?'obg':''}">${r.obg?'<b>OBRIGATÓRIO:</b> ':''}${r.t}</div>`).join('')
       +`<div class="alm-regra warn">Deixar mais tempo: ${ALM_TEMPO_EXTRA.join(', ')}</div></div>`
       +(isAprendiz()?`<div class="alm-next"><button class="btn btn-primary" onclick="confirmarExec()">Li e entendi &rarr; Ir para o Almoço</button></div>`:'');
   }
-  function confirmarExec(){ almExecOk=true; if(DB) DB.ref('daycare/almoco-exec/'+dcDataKey()).set(true).catch(()=>{}); setAlmStep('grade'); }
+  function confirmarExec(){ almExecOk=true; if(DB) DB.ref('daycare/almoco-exec/'+dcDataKey()).set(true).catch(()=>{}); if(typeof audit==='function') audit('almoco_exec','confirmou que leu as regras de execução'); setAlmStep('grade'); }
   function renderAlmFinal(){ const el=document.getElementById('alm-final'); if(!el) return; const done=ALM_FINAL.filter((_,i)=>almFinal[i]).length;
     el.innerHTML=`<div class="role-note"><span data-icon="moon"></span><span>3ª etapa &mdash; <strong>Finalização</strong>. (${done}/${ALM_FINAL.length})</span></div>`
       +ALM_FINAL.map((t,i)=>`<label class="todo-item ${almFinal[i]?'on':''}" onclick="toggleAlmFinal(${i})"><span class="todo-box">${almFinal[i]?'&#10003;':''}</span>${t}</label>`).join('');
   }
-  function toggleAlmFinal(i){ almFinal[i]=!almFinal[i]; if(DB) DB.ref('daycare/almoco-final/'+dcDataKey()+'/'+i).set(almFinal[i]||null).catch(()=>{}); renderAlmFinal(); }
+  function toggleAlmFinal(i){ almFinal[i]=!almFinal[i]; if(DB) DB.ref('daycare/almoco-final/'+dcDataKey()+'/'+i).set(almFinal[i]||null).catch(()=>{}); if(typeof audit==='function'&&almFinal[i]) audit('almoco_final','finalização: '+(ALM_FINAL[i]||('item '+(i+1)))); renderAlmFinal(); }
   function seloBanho(k){ return dcBanho[k]?'<span class="mini-banho">BANHO</span>':''; }
-  function toggleBanho(k){ dcBanho[k]=!dcBanho[k]; if(DB) DB.ref('daycare/banho/'+dcDataKey()+'/'+k).set(dcBanho[k]||null).catch(()=>{}); if(dcAtiv==='chamada')renderDaycare(); else if(dcAtiv==='almoco')renderAlmStep(); }
+  function toggleBanho(k){ dcBanho[k]=!dcBanho[k]; if(DB) DB.ref('daycare/banho/'+dcDataKey()+'/'+k).set(dcBanho[k]||null).catch(()=>{}); if(typeof audit==='function') audit('banho', dcBanho[k]?'marcou banho':'tirou banho', {alvo:k}); if(dcAtiv==='chamada')renderDaycare(); else if(dcAtiv==='almoco')renderAlmStep(); }
   function temGeladeira(a){ return !!(a&&/natural|geladeira/i.test(a.alim||'')); }
   function prioAlm(o){ if(typeof o.i!=='number') return 1; const k=dcKey(o.p.n,o.p.tutor); const a=ALMOCO[pelKey(o.p)]; return (dcBanho[k]||temGeladeira(a))?0:1; }
   function ordemAlmoco(list){ return list.slice().sort((x,y)=>{ const px=prioAlm(x),py=prioAlm(y); if(px!==py)return px-py; return jsNorm(x.p.n).localeCompare(jsNorm(y.p.n)); }); }
   function filtraLista(list){ const q=jsNorm(dcBuscaVal); return q?list.filter(o=>jsNorm([o.p.n,o.p.raca,o.p.tutor].join(' ')).indexOf(q)>=0):list; }
   function onDcBusca(){ const el=document.getElementById('dcBusca'); dcBuscaVal=el?el.value:''; if(dcAtiv==='chamada')renderDaycare(); else if(dcAtiv==='almoco')renderAlmoco(); else renderGenerico(); }
   function carregarGenerico(){ genMarcas={}; if(DB){ DB.ref('daycare/atividade/'+dcDataKey()+'/'+dcAtiv).once('value').then(s=>{ genMarcas=s.val()||{}; }).then(renderGenerico).catch(renderGenerico); } else renderGenerico(); }
-  function marcarGenerico(k){ const cur=genMarcas[k]; const nx=(cur==='feito')?'':'feito'; if(nx) genMarcas[k]=nx; else delete genMarcas[k]; if(DB) DB.ref('daycare/atividade/'+dcDataKey()+'/'+dcAtiv+'/'+k).set(nx||null).catch(()=>{}); renderGenerico(); }
+  function marcarGenerico(k){ const cur=genMarcas[k]; const nx=(cur==='feito')?'':'feito'; if(nx) genMarcas[k]=nx; else delete genMarcas[k]; if(DB) DB.ref('daycare/atividade/'+dcDataKey()+'/'+dcAtiv+'/'+k).set(nx||null).catch(()=>{}); if(typeof audit==='function'&&nx) audit('atividade', (nomeAtiv(dcAtiv)||dcAtiv)+': feito', {alvo:k, slug:dcAtiv}); renderGenerico(); }
+  function nomeAtiv(slug){ try{ const a=(typeof ATIVS_DC!=='undefined'?ATIVS_DC:[]).find(x=>x.s===slug); return a?a.t:slug; }catch(e){ return slug; } }
   function renderGenerico(){
     if(!document.getElementById('genGrid')) return;
     const list=turmaDoDia(); let feito=0;
@@ -1865,7 +1930,7 @@
   const CHECKOUT_PLANTAO=['Fechar porta da sala','Fechar porta da cozinha','Colocar o alarme'];
   let coPlantao={};
   function carregarCheckoutPlantao(){ if(DB){ DB.ref('auaulandia/checkout/'+dcDataKey()).once('value').then(s=>{ coPlantao=s.val()||{}; }).then(renderCheckoutPlantao).catch(renderCheckoutPlantao); } else renderCheckoutPlantao(); }
-  function toggleCheckoutPlantao(i){ coPlantao[i]=!coPlantao[i]; if(DB) DB.ref('auaulandia/checkout/'+dcDataKey()+'/'+i).set(coPlantao[i]||null).catch(()=>{}); renderCheckoutPlantao(); }
+  function toggleCheckoutPlantao(i){ coPlantao[i]=!coPlantao[i]; if(DB) DB.ref('auaulandia/checkout/'+dcDataKey()+'/'+i).set(coPlantao[i]||null).catch(()=>{}); if(typeof audit==='function'&&coPlantao[i]) audit('checkout','check-out do plantão: item '+(i+1)); renderCheckoutPlantao(); }
   function renderCheckoutPlantao(){ const el=document.getElementById('checkoutPlantaoList'); if(!el) return;
     el.innerHTML=CHECKOUT_PLANTAO.map((t,i)=>{ const on=!!coPlantao[i]; return `<label class="todo-item ${on?'on':''}" onclick="toggleCheckoutPlantao(${i})"><span class="todo-box">${on?'&#10003;':''}</span>${t}</label>`; }).join('');
   }
@@ -1890,9 +1955,9 @@
       ]).then(decideStep).catch(decideStep);
     } else decideStep();
   }
-  function iniciarAlmoco(){ const h=horaAgora(),q=quemSou(); almTurno=Object.assign({},almTurno,{inicio:h,quemInicio:q}); if(DB) DB.ref('daycare/almoco-turno/'+dcDataKey()).update({inicio:h,quemInicio:q}).catch(()=>{}); renderAlmoco(); }
-  function encerrarAlmoco(){ const h=horaAgora(),q=quemSou(); almTurno=Object.assign({},almTurno,{fim:h,quemFim:q}); if(DB) DB.ref('daycare/almoco-turno/'+dcDataKey()).update({fim:h,quemFim:q}).catch(()=>{}); renderAlmoco(); }
-  function marcarAlmoco(k,val){ const cur=almMarcas[k]; const nx=(cur===val)?'':val; if(nx) almMarcas[k]=nx; else delete almMarcas[k]; if(DB) DB.ref('daycare/almoco/'+dcDataKey()+'/'+k).set(nx||null).catch(()=>{}); renderAlmoco(); }
+  function iniciarAlmoco(){ const h=horaAgora(),q=quemSou(); almTurno=Object.assign({},almTurno,{inicio:h,quemInicio:q}); if(DB) DB.ref('daycare/almoco-turno/'+dcDataKey()).update({inicio:h,quemInicio:q}).catch(()=>{}); if(typeof audit==='function') audit('almoco_ini','iniciou o almoço às '+h); renderAlmoco(); }
+  function encerrarAlmoco(){ const h=horaAgora(),q=quemSou(); almTurno=Object.assign({},almTurno,{fim:h,quemFim:q}); if(DB) DB.ref('daycare/almoco-turno/'+dcDataKey()).update({fim:h,quemFim:q}).catch(()=>{}); if(typeof audit==='function') audit('almoco_fim','encerrou o almoço às '+h); renderAlmoco(); }
+  function marcarAlmoco(k,val){ const cur=almMarcas[k]; const nx=(cur===val)?'':val; if(nx) almMarcas[k]=nx; else delete almMarcas[k]; if(DB) DB.ref('daycare/almoco/'+dcDataKey()+'/'+k).set(nx||null).catch(()=>{}); if(typeof audit==='function'&&nx) audit('almoco_grade', nx==='tudo'?'comeu tudo':(nx==='metade'?'comeu metade':'não comeu'), {alvo:k}); renderAlmoco(); }
   function renderAlmoco(){
     if(!document.getElementById('almGrid')) return;
     const list=ordemAlmoco(turmaDoDia()); const t=almTurno||{};
@@ -1940,6 +2005,171 @@
       </div>`;
     }).join('');
   }
+
+  // ===================================================================
+  // ===== AUDITORIA & PONTUAÇÃO (coração da dor: cumprir protocolos) ====
+  // ===================================================================
+  // Toda ação relevante deixa um rastro: quem + quando + o quê.
+  // Base: quemSou()/horaAgora() já existem. Grava em daycare/auditoria/{data}.
+  function _audKey(){ const p=x=>String(x).padStart(2,'0'); const d=new Date(); return d.getFullYear()+'-'+p(d.getMonth()+1)+'-'+p(d.getDate()); }
+  function _sessao(){ try{ return JSON.parse(sessionStorage.getItem('zeluz_login')||'null')||{}; }catch(e){ return {}; } }
+  function audit(acao, detalhe, meta){
+    try{
+      if(!DB) return;
+      const u=_sessao();
+      const rec=Object.assign({ ts:Date.now(), hora:horaAgora(), quem:(u.nome||'-'), role:(u.role||'-'), acao:acao||'', detalhe:(detalhe==null?'':String(detalhe)) }, meta||{});
+      DB.ref('daycare/auditoria/'+_audKey()).push(rec).catch(()=>{});
+    }catch(e){}
+  }
+
+  // Janelas de horário esperadas por protocolo (Gestão pode ajustar).
+  // Default sensato baseado na rotina real do Day Care.
+  let AUDIT_CFG = {
+    abertura:  { ini:'06:30', fim:'08:00', label:'Abertura do Day Care' },
+    chamada:   { ini:'07:00', fim:'09:30', label:'Chamada' },
+    almoco:    { ini:'11:30', fim:'13:30', label:'Almoço' },
+    relInicio: { ini:'18:30', fim:'20:00', label:'Início do Plantão' },
+    relNoite:  { ini:'06:30', fim:'08:00', label:'Relatório da Noite' },
+    checkout:  { ini:'06:30', fim:'08:00', label:'Check-out do plantão' }
+  };
+  function salvarAuditCfg(){ if(DB) DB.ref('daycare/config/auditoria').set(AUDIT_CFG).catch(()=>{}); if(typeof renderPainelDia==='function') renderPainelDia(); }
+  // hh:mm dentro da janela? retorna 'ok' | 'fora' | 'sem' (sem hora registrada)
+  function noPrazo(hhmm, faixa){ if(!hhmmValido(hhmm)) return 'sem'; if(!faixa) return 'ok'; return (hhmm>=faixa.ini && hhmm<=faixa.fim)?'ok':'fora'; }
+  function hhmmValido(s){ return typeof s==='string' && /^\d{2}:\d{2}$/.test(s); }
+
+  // ---- Painel do Dia (Dashboard de Gestão — só observa) ----
+  let painelDate=new Date();
+  let painelData={};   // snapshot do dia carregado
+  function pKey(d){ const p=x=>String(x).padStart(2,'0'); return d.getFullYear()+'-'+p(d.getMonth()+1)+'-'+p(d.getDate()); }
+  function pLabel(){ const d=painelDate; return DIAS[d.getDay()]+', '+String(d.getDate()).padStart(2,'0')+' de '+MESES[d.getMonth()]; }
+  function painelMuda(n){ const nv=new Date(painelDate); nv.setDate(nv.getDate()+n); painelDate=nv; carregarPainel(); }
+  function painelHoje(){ painelDate=new Date(); carregarPainel(); }
+  function carregarPainel(){
+    if(!document.getElementById('painelWrap')) return;
+    const k=pKey(painelDate);
+    if(!DB){ painelData={}; renderPainelDia(); return; }
+    const get=p=>DB.ref(p).once('value').then(s=>s.val()).catch(()=>null);
+    Promise.all([
+      get('daycare/chamada/'+k), get('daycare/avulsos/'+k),
+      get('daycare/almoco/'+k), get('daycare/almoco-turno/'+k),
+      get('daycare/almoco-prep/'+k), get('daycare/almoco-final/'+k), get('daycare/almoco-exec/'+k),
+      get('daycare/atividade/'+k), get('daycare/banho/'+k),
+      get('daycare/auditoria/'+k), get('auaulandia/checkout/'+k)
+    ]).then(r=>{
+      painelData={ chamada:r[0]||{}, avulsos:r[1]||{}, almoco:r[2]||{}, almTurno:r[3]||{},
+        almPrep:r[4]||{}, almFinal:r[5]||{}, almExec:!!r[6], atividade:r[7]||{}, banho:r[8]||{},
+        auditoria:r[9]||{}, checkout:r[10]||{} };
+      renderPainelDia();
+    }).catch(()=>{ painelData={}; renderPainelDia(); });
+  }
+  // status de um protocolo: {ok:bool, prazo:'ok'|'fora'|'sem', hora, quem, detalhe}
+  function protoStatus(d){
+    const D=painelData, st={};
+    // Chamada — feita se há ao menos 1 marcação; hora = 1º registro de chamada na auditoria
+    const chKeys=Object.keys(D.chamada||{}); const aud=Object.values(D.auditoria||{});
+    const ch1=aud.filter(a=>a.acao==='chamada').sort((a,b)=>(a.ts||0)-(b.ts||0))[0];
+    st.chamada={ feita:chKeys.length>0, hora:ch1?ch1.hora:'', quem:ch1?ch1.quem:'', n:chKeys.length };
+    st.chamada.prazo=noPrazo(st.chamada.hora, AUDIT_CFG.chamada); st.chamada.ok=st.chamada.feita;
+    // Almoço — início e fim registrados (anti-fraude já grava quem+quando)
+    const t=D.almTurno||{};
+    st.almoco={ ini:t.inicio||'', quemIni:t.quemInicio||'', fim:t.fim||'', quemFim:t.quemFim||'',
+      grade:Object.keys(D.almoco||{}).length, prep:Object.values(D.almPrep||{}).filter(Boolean).length,
+      final:Object.values(D.almFinal||{}).filter(Boolean).length, exec:!!D.almExec };
+    st.almoco.ok = !!(t.inicio && t.fim);
+    st.almoco.prazo=noPrazo(t.inicio, AUDIT_CFG.almoco);
+    // Relatórios do plantão (AuAulândia) — contagem via auditoria
+    st.relInicio = aud.filter(a=>a.acao==='relatorio' && a.detalhe==='inicio');
+    st.relNoite  = aud.filter(a=>a.acao==='relatorio' && a.detalhe==='noite');
+    st.relDia    = aud.filter(a=>a.acao==='relatorio' && a.detalhe==='dia');
+    // Check-out do plantão
+    st.checkout={ n:Object.values(D.checkout||{}).filter(Boolean).length };
+    const co=aud.filter(a=>a.acao==='checkout').sort((a,b)=>(b.ts||0)-(a.ts||0))[0];
+    st.checkout.hora=co?co.hora:''; st.checkout.quem=co?co.quem:''; st.checkout.ok=st.checkout.n>0;
+    st.checkout.prazo=noPrazo(st.checkout.hora, AUDIT_CFG.checkout);
+    return st;
+  }
+  function pillPrazo(p){ if(p==='ok') return '<span class="p-pill ok">no prazo</span>'; if(p==='fora') return '<span class="p-pill warn">fora do horário</span>'; return '<span class="p-pill neutro">sem registro de hora</span>'; }
+  function pillFeito(ok){ return ok?'<span class="p-pill ok">cumprido</span>':'<span class="p-pill bad">pendente</span>'; }
+  function renderPainelDia(){
+    const wrap=document.getElementById('painelWrap'); if(!wrap) return;
+    const lab=document.getElementById('painelDateLabel'); if(lab) lab.textContent=pLabel();
+    const D=painelData; const aud=Object.values(D.auditoria||{}).slice().sort((a,b)=>(a.ts||0)-(b.ts||0));
+    // ---- resumo do dia ----
+    let veio=0,faltou=0; Object.values(D.chamada||{}).forEach(v=>{ if(v==='veio')veio++; else if(v==='faltou')faltou++; });
+    let aTudo=0,aMet=0,aNao=0; Object.values(D.almoco||{}).forEach(v=>{ if(v==='tudo')aTudo++; else if(v==='metade')aMet++; else if(v==='nao')aNao++; });
+    const ativFeitas=Object.keys(D.atividade||{}).length;
+    const st=protoStatus();
+    // ---- cumprimento (score do dia) ----
+    const protos=[
+      {nome:'Chamada', ok:st.chamada.ok, prazo:st.chamada.prazo, hora:st.chamada.hora, quem:st.chamada.quem, extra:st.chamada.n+' marcados'},
+      {nome:'Almoço — Início', ok:!!st.almoco.ini, prazo:st.almoco.prazo, hora:st.almoco.ini, quem:st.almoco.quemIni, extra:''},
+      {nome:'Almoço — Encerramento', ok:!!st.almoco.fim, prazo:'ok', hora:st.almoco.fim, quem:st.almoco.quemFim, extra:''},
+      {nome:'Almoço — Preparação (checklist)', ok:st.almoco.prep>=10, prazo:'ok', hora:'', quem:'', extra:st.almoco.prep+'/10 itens'},
+      {nome:'Almoço — Finalização (checklist)', ok:st.almoco.final>=8, prazo:'ok', hora:'', quem:'', extra:st.almoco.final+'/8 itens'},
+      {nome:'Relatório do Plantão (Início)', ok:st.relInicio.length>0, prazo:st.relInicio[0]?noPrazo(st.relInicio[0].hora,AUDIT_CFG.relInicio):'sem', hora:st.relInicio[0]?st.relInicio[0].hora:'', quem:st.relInicio[0]?st.relInicio[0].quem:'', extra:st.relInicio.length+' assinados'},
+      {nome:'Relatório do Plantão (Noite)', ok:st.relNoite.length>0, prazo:st.relNoite[0]?noPrazo(st.relNoite[0].hora,AUDIT_CFG.relNoite):'sem', hora:st.relNoite[0]?st.relNoite[0].hora:'', quem:st.relNoite[0]?st.relNoite[0].quem:'', extra:st.relNoite.length+' assinados'},
+      {nome:'Check-out do plantão', ok:st.checkout.ok, prazo:st.checkout.prazo, hora:st.checkout.hora, quem:st.checkout.quem, extra:st.checkout.n+' itens'}
+    ];
+    const cumpridos=protos.filter(p=>p.ok).length;
+    const noPrazoN=protos.filter(p=>p.ok && p.prazo!=='fora').length;
+    const score=Math.round((cumpridos/protos.length)*100);
+    const scoreCor = score>=85?'var(--crm-ok)':(score>=60?'var(--z-gold-deep)':'var(--crm-critico)');
+    // ---- por pessoa ----
+    const porPessoa={};
+    aud.forEach(a=>{ const q=a.quem||'-'; if(!porPessoa[q]) porPessoa[q]={n:0,prim:a.hora,ult:a.hora,role:a.role,acoes:{}}; const P=porPessoa[q]; P.n++; P.ult=a.hora; P.acoes[a.acao]=(P.acoes[a.acao]||0)+1; });
+    // ---- monta HTML ----
+    let html='';
+    html+=`<div class="p-score"><div class="p-score-num" style="color:${scoreCor}">${score}%</div>
+      <div class="p-score-lab"><b>Protocolos cumpridos hoje</b><br>${cumpridos} de ${protos.length} cumpridos · ${noPrazoN} no horário</div></div>`;
+    html+=`<div class="dc-resumo" style="margin-bottom:16px">
+      <div class="dc-stat ok"><b>${veio}</b>presentes</div>
+      <div class="dc-stat bad"><b>${faltou}</b>faltas</div>
+      <div class="dc-stat ok"><b>${aTudo}</b>comeram tudo</div>
+      <div class="dc-stat pend"><b>${aMet}</b>metade</div>
+      <div class="dc-stat bad"><b>${aNao}</b>não comeram</div>
+      <div class="dc-stat"><b style="color:var(--z-blue)">${ativFeitas}</b>atividades c/ registro</div>
+    </div>`;
+    // cumprimento
+    html+='<div class="card"><h2>Cumprimento dos protocolos</h2><div class="hint">Cada protocolo do dia: foi cumprido? no horário esperado? por quem?</div>';
+    protos.forEach(p=>{
+      html+=`<div class="p-proto ${p.ok?'':'falta'}"><div class="p-proto-l"><div class="p-proto-nm">${p.nome}</div>
+        <div class="p-proto-meta">${p.hora?('às '+p.hora):''}${p.quem?(' · '+p.quem):''}${p.extra?(' · '+p.extra):''}</div></div>
+        <div class="p-proto-r">${pillFeito(p.ok)}${p.ok?pillPrazo(p.prazo):''}</div></div>`;
+    });
+    html+='</div>';
+    // por pessoa
+    html+='<div class="card"><h2>O que cada pessoa fez hoje</h2><div class="hint">Ações registradas no sistema, com horário. Quanto mais rastro, mais auditável.</div>';
+    const pessoas=Object.keys(porPessoa);
+    if(!pessoas.length) html+='<div class="p-empty">Nenhuma ação registrada neste dia ainda.</div>';
+    else pessoas.forEach(q=>{ const P=porPessoa[q]; const resumo=Object.keys(P.acoes).map(a=>ACAO_LABEL[a]?(ACAO_LABEL[a]+' ('+P.acoes[a]+')'):(a+' ('+P.acoes[a]+')')).join(' · ');
+      html+=`<div class="p-pessoa"><div class="p-pessoa-h"><b>${q}</b><span class="p-pessoa-role">${P.role||''}</span><span class="p-pessoa-n">${P.n} ações</span></div>
+        <div class="p-pessoa-time">das ${P.prim} às ${P.ult}</div>
+        <div class="p-pessoa-ac">${resumo}</div></div>`; });
+    html+='</div>';
+    // linha do tempo
+    html+='<div class="card"><h2>Linha do tempo do dia</h2><div class="hint">Tudo o que aconteceu, em ordem. Rastreabilidade total.</div>';
+    if(!aud.length) html+='<div class="p-empty">Sem registros para este dia.</div>';
+    else { html+='<div class="p-tl">'; aud.forEach(a=>{ html+=`<div class="p-tl-item"><span class="p-tl-h">${a.hora||'--:--'}</span><span class="p-tl-q">${a.quem||'-'}</span><span class="p-tl-a">${ACAO_LABEL[a.acao]||a.acao}${a.detalhe?' — '+a.detalhe:''}</span></div>`; }); html+='</div>'; }
+    html+='</div>';
+    wrap.innerHTML=html;
+  }
+  const ACAO_LABEL={ chamada:'Chamada', almoco_ini:'Iniciou o almoço', almoco_fim:'Encerrou o almoço',
+    almoco_grade:'Marcou no almoço', almoco_prep:'Checklist preparação', almoco_final:'Checklist finalização',
+    almoco_exec:'Confirmou execução', atividade:'Atividade', banho:'Banho', relatorio:'Relatório assinado',
+    checkout:'Check-out do plantão' };
+  // editor de janelas de horário (só Gestão)
+  function abrirAuditCfg(){ const el=document.getElementById('painelCfg'); if(!el) return;
+    if(el.style.display==='block'){ el.style.display='none'; return; }
+    el.style.display='block';
+    const ordem=['abertura','chamada','almoco','relInicio','relNoite','checkout'];
+    let h='<h2>Horários esperados de cada protocolo</h2><div class="hint">Define a janela em que cada protocolo deve acontecer. Fora dela, o Painel marca “fora do horário”. Ajuste à rotina real.</div>';
+    ordem.forEach(k=>{ const c=AUDIT_CFG[k]||{ini:'',fim:'',label:k}; h+=`<div class="p-cfg-row"><span class="p-cfg-lab">${c.label}</span>
+      <label>de <input type="time" value="${c.ini}" onchange="setAuditCfg('${k}','ini',this.value)"></label>
+      <label>até <input type="time" value="${c.fim}" onchange="setAuditCfg('${k}','fim',this.value)"></label></div>`; });
+    h+='<div class="actions" style="margin-top:12px"><button class="btn btn-primary" onclick="document.getElementById(\'painelCfg\').style.display=\'none\'">Fechar</button></div>';
+    el.innerHTML=h;
+  }
+  function setAuditCfg(k,campo,val){ if(!AUDIT_CFG[k]) return; AUDIT_CFG[k][campo]=val; salvarAuditCfg(); }
 
   // INIT do Day Care (no fim: garante todas as variaveis e funcoes definidas)
   montarSubnav();
