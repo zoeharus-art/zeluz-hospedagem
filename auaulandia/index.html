@@ -817,6 +817,7 @@
       DB.ref('auaulandia/cadastro').on('value', s=>{ cadCache=s.val()||{}; if(typeof renderHosp==='function') renderHosp(); });
       DB.ref('daycare/config/sensiveis').on('value', s=>{ const v=s.val(); if(Array.isArray(v)){ try{ SENS=new Set(v); }catch(e){} } });
       DB.ref('daycare/config/atividades').on('value', s=>{ const v=s.val(); if(Array.isArray(v)&&v.length){ ATIVIDADES=v; if(typeof renderAtiv==='function') renderAtiv(); } });
+      DB.ref('daycare/cadastro').on('value', s=>{ pelCadCache=s.val()||{}; if(typeof renderPel==='function') renderPel(); });
     }).catch(e=>console.warn('Firebase auth:',e));
   }catch(e){ console.warn('Firebase init:',e); }
 
@@ -1436,7 +1437,8 @@
 
   // --- ficha mestre: campos extras editáveis (persistem local + Firebase) ---
   function pelKey(p){ return ((p.n||'')+'__'+(p.tutor||'')).toLowerCase().replace(/[.#$\[\]\/]/g,'-'); }
-  function pelExtra(p){ try{ return JSON.parse(localStorage.getItem('zeluz_pel_'+pelKey(p))||'{}'); }catch(e){ return {}; } }
+  let pelCadCache={};
+  function pelExtra(p){ const k=pelKey(p); let local={}; try{ local=JSON.parse(localStorage.getItem('zeluz_pel_'+k)||'{}'); }catch(e){} const remote=pelCadCache[k]||{}; return Object.assign({},local,remote); }
   function setPelExtra(p,patch){
     const o=pelExtra(p); Object.assign(o,patch); localStorage.setItem('zeluz_pel_'+pelKey(p),JSON.stringify(o));
     if(DB) DB.ref('daycare/cadastro/'+pelKey(p)).update(patch).catch(()=>{});
@@ -1489,7 +1491,7 @@
     document.getElementById('pelCount').textContent=`${PELUDINHOS.length} matriculados`+(q?` · ${list.length} na busca`:'');
     document.getElementById('pelBody').innerHTML=list.map((o,row)=>{ const p=o.p; return `<tr onclick="abrirPeludinhoLista(${o.i})" style="cursor:pointer">
       <td class="pel-num">${row+1}</td>
-      <td><span class="pel-nome">${p.n}</span>${p.apelido?` <span class="pel-obs">${p.apelido}</span>`:''}${p.castrado==='Não'?' <span class="pel-obs">Não castrado</span>':''}</td>
+      <td><span class="pel-nome">${p.n}</span>${p.apelido?` <span class="pel-obs">${p.apelido}</span>`:''}${((pelExtra(p).castrado||p.castrado)==='Não')?' <span class="pel-obs">Não castrado</span>':''}</td>
       <td>${p.raca}</td>
       <td><span class="pel-freq">${p.freq}</span></td>
       <td class="dias-cell">${diasHtml(p.dias)}</td>
