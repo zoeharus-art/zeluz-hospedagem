@@ -1088,7 +1088,30 @@
   function toggleRel(cardId){ const c=document.getElementById(cardId); if(c) c.classList.toggle('collapsed'); }
   function coletarCard(cardId){ const byQ={}; document.querySelectorAll('#'+cardId+' .obsline').forEach(l=>{ const q=l.querySelector('.q'); const on=l.querySelector('button.on'); if(q) byQ[q.textContent.trim()]= on?on.textContent.trim():''; }); const areas=[]; const byArea={}; document.querySelectorAll('#'+cardId+' textarea').forEach(t=>{ areas.push(t.value||''); const ph=(t.placeholder||'').toLowerCase(); if(ph.indexOf('medicamento')>=0) byArea.medicamento=t.value||''; else if(ph.indexOf('suplemento')>=0) byArea.suplemento=t.value||''; }); return {byQ:byQ,areas:areas,byArea:byArea}; }
   function aplicarCard(cardId,d){ d=d||{}; const byQ=d.byQ||{}; document.querySelectorAll('#'+cardId+' .obsline').forEach(l=>{ const q=l.querySelector('.q'); const val=q?byQ[q.textContent.trim()]:''; l.querySelectorAll('button').forEach(b=>{ b.classList.remove('on','t-ok','t-bad','t-warn'); if(val&&b.textContent.trim()===val){ b.classList.add('on'); if(b.dataset.tone) b.classList.add('t-'+b.dataset.tone);} }); }); const areas=d.areas||[]; document.querySelectorAll('#'+cardId+' textarea').forEach((t,i)=>t.value=areas[i]||''); const tipo=cardId.replace('card-',''); const sp=document.getElementById('passou-'+tipo); if(sp) sp.value=d.passou||''; const sr=document.getElementById('recebeu-'+tipo); if(sr) sr.value=d.recebeu||''; }
-  function carregarFicha(){ carregarCadastro(); ['dia','inicio','noite'].forEach(tp=>{ const c=document.getElementById('card-'+tp); if(c) c.classList.add('collapsed'); if(DB){ DB.ref('auaulandia/relatorios/'+fichaKey()+'/'+tp).once('value').then(s=>aplicarCard('card-'+tp,s.val())).catch(()=>aplicarCard('card-'+tp,{})); } else aplicarCard('card-'+tp,{}); }); }
+  // mapeamento do formato ANTIGO (campos c0..c21 da ficha de 1 salvar so) para os relatorios novos
+  const MAP_DIA_ANTIGO=['Gastou energia?','Teve desentendimento?','Precisa ficar separado?','Tem irmão hospedado?','Tem alergia?','Tem medicação?','Trouxe roupa de frio?','Fez cocô?','Consistência','Coleira repelente?','Coleira de identificação?'];
+  const MAP_NOITE_ANTIGO=['Como passou a noite?','Está ativo?','Bebeu água?','Fez cocô?','Consistência','Fez xixi?','Aspecto do xixi','Jantou?','Almoçou?','Foi dada medicação?','Foi dada suplementação?'];
+  function migrarAntigo(raiz){ if(!raiz||!raiz.campos) return null; const c=raiz.campos||{}; const t=raiz.textos||[];
+    const diaByQ={}; MAP_DIA_ANTIGO.forEach((q,i)=>{ diaByQ[q]=c['c'+i]||''; });
+    const noiteByQ={}; MAP_NOITE_ANTIGO.forEach((q,i)=>{ noiteByQ[q]=c['c'+(11+i)]||''; });
+    return { dia:{ byQ:diaByQ, byArea:{}, areas:[t[0]||''], passou:raiz.assina||'' },
+             noite:{ byQ:noiteByQ, byArea:{medicamento:t[1]||'',suplemento:t[2]||''}, areas:[t[1]||'',t[2]||''], passou:raiz.assina||'', recebeu:raiz.receb||'' } }; }
+  function carregarFicha(){
+    carregarCadastro();
+    ['dia','inicio','noite'].forEach(tp=>{ const c=document.getElementById('card-'+tp); if(c) c.classList.add('collapsed'); });
+    if(!DB){ ['dia','inicio','noite'].forEach(tp=>aplicarCard('card-'+tp,{})); return; }
+    const base='auaulandia/relatorios/'+fichaKey();
+    Promise.all([
+      DB.ref(base+'/dia').once('value').then(s=>s.val()).catch(()=>null),
+      DB.ref(base+'/inicio').once('value').then(s=>s.val()).catch(()=>null),
+      DB.ref(base+'/noite').once('value').then(s=>s.val()).catch(()=>null),
+      DB.ref(base).once('value').then(s=>s.val()).catch(()=>null)
+    ]).then(function(r){ const dia=r[0],inicio=r[1],noite=r[2],raiz=r[3]; const ant=migrarAntigo(raiz);
+      aplicarCard('card-dia', dia || (ant?ant.dia:{}));
+      aplicarCard('card-inicio', inicio || {});
+      aplicarCard('card-noite', noite || (ant?ant.noite:{}));
+    }).catch(function(){ ['dia','inicio','noite'].forEach(tp=>aplicarCard('card-'+tp,{})); });
+  }
   function salvarRelatorioCard(tipo){ if(!currentHosp) return; const card='card-'+tipo; const st=document.getElementById('status-'+tipo);
     const passouEl=document.getElementById('passou-'+tipo), recebeuEl=document.getElementById('recebeu-'+tipo);
     const passou=((passouEl&&passouEl.value)||'').trim(); const recebeu=recebeuEl?((recebeuEl.value)||'').trim():'';
@@ -1155,7 +1178,7 @@
     const role=document.body.dataset.role; if(role!=='gestao'&&role!=='supervisor'){ el.innerHTML=''; return; }
     const reais=(hospedes||[]).filter(h=>!h.mascote);
     if(!DB||!reais.length){ el.innerHTML=''; return; }
-    Promise.all(reais.map(h=>{ const base='auaulandia/relatorios/'+fichaKeyDe(h,selectedDate); return Promise.all([ DB.ref(base+'/dia').once('value').then(s=>s.val()).catch(()=>null), DB.ref(base+'/noite').once('value').then(s=>s.val()).catch(()=>null) ]).then(function(r){ return {h:h,dia:r[0],noite:r[1]}; }); })).then(renderPainelGestora).catch(()=>{});
+    Promise.all(reais.map(h=>{ const base='auaulandia/relatorios/'+fichaKeyDe(h,selectedDate); return Promise.all([ DB.ref(base+'/dia').once('value').then(s=>s.val()).catch(()=>null), DB.ref(base+'/noite').once('value').then(s=>s.val()).catch(()=>null), DB.ref(base).once('value').then(s=>s.val()).catch(()=>null) ]).then(function(r){ const ant=migrarAntigo(r[2]); return {h:h, dia:r[0]||(ant?ant.dia:null), noite:r[1]||(ant?ant.noite:null)}; }); })).then(renderPainelGestora).catch(()=>{});
   }
   function renderPainelGestora(arr){
     const el=document.getElementById('painelGestora'); if(!el) return;
