@@ -880,6 +880,9 @@
       DB.ref('daycare/config/atividades').on('value', s=>{ const v=s.val(); if(Array.isArray(v)&&v.length){ ATIVIDADES=v; if(typeof renderAtiv==='function') renderAtiv(); } });
       DB.ref('daycare/cadastro').on('value', s=>{ pelCadCache=s.val()||{}; if(typeof renderPel==='function') renderPel(); });
       DB.ref('daycare/config/auditoria').on('value', s=>{ const v=s.val(); if(v&&typeof v==='object'){ try{ AUDIT_CFG=Object.assign({},AUDIT_CFG,v); }catch(e){} if(typeof renderPainelDia==='function') renderPainelDia(); } });
+      // Sincronização em tempo real das pernoites/hóspedes manuais entre TODOS os aparelhos.
+      // (antes usava .once() e quem já estava com o app aberto não via a inserção do outro celular)
+      DB.ref('auaulandia/manuais').on('value', ()=>{ try{ const ls=document.getElementById('loginScreen'); if(ls && ls.style.display==='none' && typeof carregarHospedes==='function') carregarHospedes(); }catch(e){} });
     }).catch(e=>console.warn('Firebase auth:',e));
   }catch(e){ console.warn('Firebase init:',e); }
 
