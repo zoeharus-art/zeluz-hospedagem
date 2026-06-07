@@ -207,7 +207,7 @@
   body[data-role="monitor"] #card-cadastro, body[data-role="plantonista"] #card-cadastro, body[data-role="tutor"] #card-cadastro{display:none}
   body[data-role="monitor"] #card-texto, body[data-role="plantonista"] #card-texto, body[data-role="tutor"] #card-texto{display:none}
   body[data-role="plantonista"] .so-foto, body[data-role="tutor"] .so-foto{display:none}
-  body[data-role="plantonista"] #card-dia .seg button, body[data-role="plantonista"] #card-dia textarea,
+  /* Relatório do Dia: editável por quem está de plantão (monitora, plantonista, gestão). Só o tutor é read-only. */
   body[data-role="tutor"] #card-dia .seg button, body[data-role="tutor"] #card-dia textarea,
   body[data-role="monitor"] #card-noite .seg button, body[data-role="monitor"] #card-noite textarea,
   body[data-role="tutor"] #card-noite .seg button, body[data-role="tutor"] #card-noite textarea{pointer-events:none}
@@ -478,6 +478,7 @@
   .p-tl-q{font-weight:700;color:var(--z-blue);font-size:13px;min-width:110px}
   .p-tl-a{font-size:13px;color:var(--z-blue-deep)}
   .p-empty{text-align:center;padding:40px 20px;color:var(--muted);font-size:14px;font-weight:600}
+  .saida-hoje{display:inline-block;margin-top:8px;font-size:10px;font-weight:800;letter-spacing:.3px;color:var(--crm-atencao-text);background:rgba(222,180,40,.2);border:1px solid rgba(222,180,40,.5);padding:3px 9px;border-radius:7px}
 
   /* responsivo */
   .overlay{display:none;position:fixed;inset:0;background:rgba(26,58,79,.5);z-index:45}
@@ -739,7 +740,7 @@
       <div class="card rel-card collapsed" id="card-dia">
         <div class="rel-head" onclick="toggleRel('card-dia')"><h2>Relatório do Dia</h2><span class="rel-tag">Monitora</span><span class="rel-caret">▾</span></div>
         <div class="rel-body">
-        <div class="hint">Preenchido pela Monitora (seg a sáb). Toque para marcar.</div>
+        <div class="hint">Como foi o Dia dos nossos FILHOts no Day Care? — o Monitor relata como foi o dia. Toque para marcar.</div>
         <div class="lock-note">🔒 Somente leitura — este relatório é da Monitora</div>
         <div class="obsline"><span class="q">Gastou energia?</span><div class="seg" data-single><button data-tone="warn" onclick="pick(this)">Pouco</button><button data-tone="ok" onclick="pick(this)">Bastante</button><button data-tone="ok" onclick="pick(this)">Muito</button></div></div>
         <div class="obsline"><span class="q">Teve desentendimento?</span><div class="seg" data-single><button data-tone="ok" onclick="pick(this)">Não</button><button data-tone="bad" onclick="pick(this)">Sim</button></div></div>
@@ -758,9 +759,9 @@
       </div>
 
       <div class="card rel-card collapsed" id="card-inicio">
-        <div class="rel-head" onclick="toggleRel('card-inicio')"><h2>Relatório do Início do Plantão · Jantar</h2><span class="rel-tag">Plantonista · 19h</span><span class="rel-caret">▾</span></div>
+        <div class="rel-head" onclick="toggleRel('card-inicio')"><h2>Relatório do Jantar e preparação para dormir</h2><span class="rel-tag">Plantonista · 19h</span><span class="rel-caret">▾</span></div>
         <div class="rel-body">
-        <div class="hint">Como o peludinho chegou e está no começo do plantão (ainda não dormiu).</div>
+        <div class="hint">A Plantonista relata o jantar e a preparação para dormir (chegada da noite, ~19h).</div>
         <div class="obsline"><span class="q">Como está agora?</span><div class="seg" data-single><button data-tone="ok" onclick="pick(this)">Calmo</button><button data-tone="warn" onclick="pick(this)">Agitado</button></div></div>
         <div class="obsline"><span class="q">Está ativo?</span><div class="seg" data-single><button data-tone="ok" onclick="pick(this)">Sim</button><button data-tone="warn" onclick="pick(this)">Não</button></div></div>
         <div class="obsline"><span class="q">Bebeu água?</span><div class="seg" data-single><button data-tone="ok" onclick="pick(this)">Sim</button><button data-tone="bad" onclick="pick(this)">Não</button></div></div>
@@ -778,7 +779,7 @@
       <div class="card rel-card collapsed" id="card-noite">
         <div class="rel-head" onclick="toggleRel('card-noite')"><h2>Relatório da Noite</h2><span class="rel-tag">Plantonista · 7h</span><span class="rel-caret">▾</span></div>
         <div class="rel-body">
-        <div class="hint">Preenchido pela Plantonista de manhã, na passagem do plantão.</div>
+        <div class="hint">Como os FILHOts passaram a noite? — a Plantonista relata como dormiram TODOS que ficaram (os hóspedes saem só depois das 8h30, então todos que dormiram entram aqui).</div>
         <div class="obsline"><span class="q">Como passou a noite?</span><div class="seg" data-single><button data-tone="ok" onclick="pick(this)">Dormiu a noite inteira</button><button data-tone="warn" onclick="pick(this)">Agitado</button></div></div>
         <div class="obsline"><span class="q">Está ativo?</span><div class="seg" data-single><button data-tone="ok" onclick="pick(this)">Sim</button><button data-tone="warn" onclick="pick(this)">Não</button></div></div>
         <div class="obsline"><span class="q">Bebeu água?</span><div class="seg" data-single><button data-tone="ok" onclick="pick(this)">Sim</button><button data-tone="bad" onclick="pick(this)">Não</button></div></div>
@@ -1042,6 +1043,7 @@
           <div class="nm">${h.nome}</div>
           <div class="br">${raca}</div>
           <div class="hosp-tutor">${h.mascote?'Nossa Zelozinha':'Tutor: '+h.tutor}</div>
+          ${h.saidaHoje?'<div class="saida-hoje">Dormiu · sai hoje</div>':''}
         </div>`;
       }).join('');
   }
@@ -1321,14 +1323,22 @@
     try{
       const table=await fetchSheet(TAB_HOSP);
       const rows=table.rows||[]; const p=x=>String(x).padStart(2,'0');
-      const alvo=`${selectedDate.getFullYear()}-${p(selectedDate.getMonth()+1)}-${p(selectedDate.getDate())}`;
-      let linha=null;
-      for(const r of rows){ const c=r.c||[]; const d=cellDate(c[0]); if(d && `${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())}`===alvo){ linha=c; break; } }
-      if(linha){
-        const lista=[];
-        linha.slice(1).forEach(c=>{ const raw=c&&c.v; if(raw&&typeof raw==='string'&&raw.trim()){ const parts=raw.trim().split('/'); lista.push({nome:(parts[0]||raw).trim(), tutor:(parts[1]||'').trim(), raca:(parts[2]||'').trim()}); } });
+      function listaDe(dt){ const alvo=`${dt.getFullYear()}-${p(dt.getMonth()+1)}-${p(dt.getDate())}`;
+        for(const r of rows){ const c=r.c||[]; const d=cellDate(c[0]); if(d && `${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())}`===alvo){
+          const out=[]; c.slice(1).forEach(x=>{ const raw=x&&x.v; if(raw&&typeof raw==='string'&&raw.trim()){ const parts=raw.trim().split('/'); out.push({nome:(parts[0]||raw).trim(), tutor:(parts[1]||'').trim(), raca:(parts[2]||'').trim()}); } }); return out; } }
+        return null; }
+      const hoje=listaDe(selectedDate);
+      // Quem DORMIU na noite anterior e ainda não saiu (os FILHOts só vão embora depois das 8h30):
+      // a véspera que não consta hoje = "saída hoje". Eles dormiram, então precisam do Relatório da Noite.
+      const vesp=new Date(selectedDate); vesp.setDate(vesp.getDate()-1);
+      const ontem=listaDe(vesp)||[];
+      if(hoje){
+        const chave=h=>(h.nome+'|'+h.tutor).toLowerCase();
+        const setHoje=new Set(hoje.map(chave));
+        const dormiramSaindo=ontem.filter(h=>!setHoje.has(chave(h))).map(h=>Object.assign({},h,{saidaHoje:true}));
+        const lista=hoje.concat(dormiramSaindo);
         if(lista.length){
-          hospedes = lista.map((h,i)=>({nome:h.nome, tutor:h.tutor, raca:h.raca||'', ini:(h.nome[0]||'?').toUpperCase(), cor:CORES[i%CORES.length], mascote:/repolho/i.test(h.nome)}));
+          hospedes = lista.map((h,i)=>({nome:h.nome, tutor:h.tutor, raca:h.raca||'', ini:(h.nome[0]||'?').toUpperCase(), cor:CORES[i%CORES.length], mascote:/repolho/i.test(h.nome), saidaHoje:!!h.saidaHoje}));
           addRacasAoBanco(hospedes.map(h=>h.raca).filter(Boolean));
         }
       }
