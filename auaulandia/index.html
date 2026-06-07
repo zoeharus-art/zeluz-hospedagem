@@ -1027,9 +1027,13 @@
   function setInfo(h,patch){ const o=loadLocal(); o[petKey(h)]=Object.assign({},o[petKey(h)]||{},patch); saveLocal(o); }
 
   function renderHosp(){
+    // ordem alfabética (a moradora Repolho por último)
+    hospedes.sort((a,b)=>{ if(!!a.mascote!==!!b.mascote) return a.mascote?1:-1; return (a.nome||'').localeCompare((b.nome||''),'pt',{sensitivity:'base'}); });
     document.getElementById('kpiHosp').textContent   = hospedes.filter(h=>!h.mascote).length;
     document.getElementById('kpiMorada').textContent = hospedes.filter(h=>h.mascote).length;
     document.getElementById('hospGrid').innerHTML =
+      `<div class="pet add so-gestao" onclick="adicionarHospede()">
+         <div class="plus">+</div><div class="t">Adicionar hóspede<br><span style="font-size:10px;font-weight:600;color:var(--muted)">Gestão / Supervisão</span></div></div>`+
       `<div class="pet add" onclick="adicionarPernoite()">
          <div class="plus">+</div><div class="t">Adicionar pernoite<br><span style="font-size:10px;font-weight:600;color:var(--muted)">aluno do Day Care</span></div></div>`+
       hospedes.map((h,i)=>{
@@ -1359,6 +1363,13 @@
     const tutor=(prompt('Nome do tutor:')||'').trim();
     if(DB){ DB.ref('auaulandia/manuais/'+dataKeyAtual()).push({nome:nome.trim(),tutor:tutor}).then(()=>carregarManuais()).catch(e=>alert('Erro ao adicionar: '+e.message)); }
     else { hospedes.push({nome:nome.trim(),tutor:tutor,raca:'',ini:(nome.trim()[0]||'?').toUpperCase(),cor:CORES[hospedes.length%CORES.length],pernoite:true}); renderHosp(); }
+  }
+  // Gestão/Supervisão insere um hóspede novo (ex.: chegou à noite e o administrativo não registrou)
+  function adicionarHospede(){
+    const nome=(prompt('Novo hóspede — nome do peludinho:')||'').trim(); if(!nome) return;
+    const tutor=(prompt('Nome do tutor:')||'').trim();
+    if(DB){ DB.ref('auaulandia/manuais/'+dataKeyAtual()).push({nome:nome,tutor:tutor,hospede:true}).then(()=>carregarManuais()).catch(e=>alert('Erro ao adicionar: '+e.message)); }
+    else { hospedes.push({nome:nome,tutor:tutor,raca:'',ini:(nome[0]||'?').toUpperCase(),cor:CORES[hospedes.length%CORES.length],pernoite:true}); renderHosp(); }
   }
   // Lê a aba "Cadastro" (colunas Nome · Tutor · Raça) e cruza pelo nome+tutor
   async function carregarRacas(){
