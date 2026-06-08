@@ -167,11 +167,6 @@
   .hf-estadia{font-size:12.5px;color:var(--z-blue-soft);margin-top:5px}
   .chip-serv{background:rgba(90,171,181,.16);color:#2b7e88;font-size:11px;font-weight:700;
     padding:5px 12px;border-radius:999px;letter-spacing:.3px;flex:0 0 auto}
-  .turno-banner{display:flex;justify-content:space-between;align-items:center;gap:14px;flex-wrap:wrap;
-    background:var(--z-blue);color:var(--z-cream);border-radius:var(--radius);padding:16px 20px;margin-bottom:16px}
-  .turno-banner .tb-lab{font-size:10.5px;text-transform:uppercase;letter-spacing:.8px;opacity:.7;font-weight:700}
-  .turno-banner .tb-nm{font-size:17px;font-weight:700;margin-top:3px}
-  .turno-banner .tb-plant{text-align:right}
   .hosp-st{font-size:10px;font-weight:700;padding:3px 10px;border-radius:999px;display:inline-block;margin-top:9px;letter-spacing:.3px}
   .hosp-st.pend{background:rgba(241,196,15,.18);color:var(--crm-atencao-text)}
   .hosp-st.ok{background:rgba(39,174,96,.14);color:var(--crm-ok)}
@@ -490,6 +485,8 @@
   .protocolo-regras li::before{content:counter(pr);position:absolute;left:10px;top:10px;width:26px;height:26px;display:flex;align-items:center;justify-content:center;background:#DEB428;color:#234D67;font-weight:800;border-radius:8px;font-size:13px}
   .protocolo-regras li.crit{border-color:rgba(192,57,43,.45);background:rgba(192,57,43,.06);color:#C0392B}
   .protocolo-regras li.crit::before{background:#C0392B;color:#fff}
+  .proto-subt{margin:20px 0 4px;padding-top:16px;border-top:1px solid rgba(35,77,103,.12);font-weight:700;color:#234D67;font-size:15px;display:flex;align-items:center;gap:9px}
+  .proto-subt::before{content:'';width:6px;height:18px;background:#DEB428;border-radius:3px;display:inline-block}
 
   /* responsivo */
   .overlay{display:none;position:fixed;inset:0;background:rgba(26,58,79,.5);z-index:45}
@@ -696,12 +693,13 @@
         <h2 style="font-size:19px">Protocolo do Plantão</h2>
         <div class="hint">Regras imprescindíveis — valem durante todo o plantão.</div>
         <ol class="protocolo-regras">
-          <li>GERAR BEM-ESTAR AOS FILHOts!</li>
-          <li class="crit">GARANTIR QUE A ALIMENTAÇÃO SEJA DADA CORRETAMENTE — temos diversos peludinhos com alergias severas. NENHUMA alimentação pode ser trocada!</li>
-          <li class="crit">GARANTIR QUE O PELUDINHO RECEBA CORRETAMENTE O MEDICAMENTO, caso necessário!</li>
-          <li>O plantonista NÃO pode sair da empresa enquanto estiver no horário de plantão.</li>
+          <li>Gerar bem-estar aos FILHOts.</li>
+          <li class="crit">Garantir que a alimentação seja dada corretamente — temos diversos peludinhos com <strong>alergias severas</strong>. <strong>Nenhuma alimentação pode ser trocada.</strong></li>
+          <li class="crit">Garantir que o peludinho receba corretamente o <strong>medicamento</strong>, caso necessário.</li>
+          <li>O plantonista não pode sair da empresa enquanto estiver no horário de plantão.</li>
         </ol>
-        <div class="hint" style="margin-top:16px">Antes de sair, confirme cada item abaixo. Fica salvo no dia.</div>
+        <div class="proto-subt">Antes de sair do plantão</div>
+        <div class="hint">Confirme cada item abaixo. Fica salvo no dia.</div>
         <div id="checkoutPlantaoList"></div>
       </div>
       <div class="pets-grid" id="hospGrid"></div>
@@ -749,17 +747,6 @@
         <div class="actions" style="margin-top:8px"><button class="btn btn-primary" onclick="onCad();this.textContent='✅ Cadastro salvo';setTimeout(()=>this.textContent='Salvar cadastro',1500)">Salvar cadastro</button><button class="btn" style="background:var(--z-cream-warm);color:var(--z-blue);border:1.5px solid var(--line)" onclick="toggleCadastro()">Fechar</button></div>
       </div>
       <datalist id="racasList"></datalist>
-
-      <div class="turno-banner">
-        <div><div class="tb-lab">Turno atual</div>
-          <div class="seg gold" data-single style="margin-top:6px">
-            <button class="on" onclick="pick(this)">Diurno · 07h–19h</button>
-            <button onclick="pick(this)">Noturno · 19h–07h</button>
-          </div>
-        </div>
-        <div class="tb-plant"><div class="tb-lab">Plantonista</div><div class="tb-nm" id="hf-plant">—</div></div>
-      </div>
-
 
       <div class="checklist-note">📋 O Check-list de hospedagem é o seu material de trabalho principal. <strong>LEIA-O!</strong><br><span style="font-size:14px;font-weight:800;color:var(--crm-critico)">DÚVIDAS? LIGUE: 31 99764-4296 / 31 99111-1826</span></div>
 
