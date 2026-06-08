@@ -479,6 +479,17 @@
   .p-tl-a{font-size:13px;color:var(--z-blue-deep)}
   .p-empty{text-align:center;padding:40px 20px;color:var(--muted);font-size:14px;font-weight:600}
   .saida-hoje{display:inline-block;margin-top:8px;font-size:10px;font-weight:800;letter-spacing:.3px;color:var(--crm-atencao-text);background:rgba(222,180,40,.2);border:1px solid rgba(222,180,40,.5);padding:3px 9px;border-radius:7px}
+  /* Tarjas de tipo do hóspede (HÓSPEDE / PERNOITE / MORADORA) */
+  .tarja{display:inline-block;margin-top:8px;font-size:10px;font-weight:800;letter-spacing:.4px;padding:3px 9px;border-radius:7px}
+  .tarja.t-hospede{background:#234D67;color:#FFFDF6}
+  .tarja.t-pernoite{background:#DEB428;color:#234D67}
+  .tarja.t-moradora{background:rgba(35,77,103,.08);color:#234D67;border:1px solid #DEB428}
+  /* Protocolo do Plantão — 4 regras imprescindíveis */
+  .protocolo-regras{list-style:none;margin:12px 0 0;padding:0;counter-reset:pr}
+  .protocolo-regras li{counter-increment:pr;position:relative;padding:11px 12px 11px 44px;margin-bottom:8px;background:var(--z-cream);border:1px solid rgba(35,77,103,.12);border-radius:10px;font-weight:600;color:#234D67;line-height:1.4;font-size:13.5px}
+  .protocolo-regras li::before{content:counter(pr);position:absolute;left:10px;top:10px;width:26px;height:26px;display:flex;align-items:center;justify-content:center;background:#DEB428;color:#234D67;font-weight:800;border-radius:8px;font-size:13px}
+  .protocolo-regras li.crit{border-color:rgba(192,57,43,.45);background:rgba(192,57,43,.06);color:#C0392B}
+  .protocolo-regras li.crit::before{background:#C0392B;color:#fff}
 
   /* responsivo */
   .overlay{display:none;position:fixed;inset:0;background:rgba(26,58,79,.5);z-index:45}
@@ -681,12 +692,19 @@
         <div class="kpi"><img class="kpi-st" src="assets/stickers/auau.png" alt=""><div><div class="v coral" id="kpiMorada">0</div><div class="l">Moradora · Repolho</div></div></div>
       </div>
       <div class="role-note"><span data-icon="moon"></span><span>Selecione o peludinho hospedado para registrar a <strong>passagem de plantão</strong>. Turnos: Diurno 07h–19h · Noturno 19h–07h.</span></div>
-      <div class="pets-grid" id="hospGrid"></div>
-      <div class="card" id="card-checkout-plantao" style="margin-top:18px">
-        <h2 style="font-size:19px">Check-out do plantão</h2>
-        <div class="hint">Antes de sair, confirme cada item. Fica salvo no dia.</div>
+      <div class="card" id="card-checkout-plantao" style="margin-bottom:18px">
+        <h2 style="font-size:19px">Protocolo do Plantão</h2>
+        <div class="hint">Regras imprescindíveis — valem durante todo o plantão.</div>
+        <ol class="protocolo-regras">
+          <li>GERAR BEM-ESTAR AOS FILHOts!</li>
+          <li class="crit">GARANTIR QUE A ALIMENTAÇÃO SEJA DADA CORRETAMENTE — temos diversos peludinhos com alergias severas. NENHUMA alimentação pode ser trocada!</li>
+          <li class="crit">GARANTIR QUE O PELUDINHO RECEBA CORRETAMENTE O MEDICAMENTO, caso necessário!</li>
+          <li>O plantonista NÃO pode sair da empresa enquanto estiver no horário de plantão.</li>
+        </ol>
+        <div class="hint" style="margin-top:16px">Antes de sair, confirme cada item abaixo. Fica salvo no dia.</div>
         <div id="checkoutPlantaoList"></div>
       </div>
+      <div class="pets-grid" id="hospGrid"></div>
     </div>
 
     <!-- FICHA de passagem de plantão -->
@@ -1073,11 +1091,14 @@
           ? `<div class="ph" style="background-image:url('${cad.foto}');background-size:cover;background-position:center"></div>`
           : `<div class="ph" style="background:${h.cor}">${h.ini}</div>`;
         const raca = cad.raca || h.raca || racasMap[(h.nome+'__'+h.tutor).toLowerCase()] || (h.mascote?'Moradora Zêluz':'<span style="color:#b6ad9c;font-style:italic">Raça a cadastrar</span>');
+        const tp = h.mascote ? 'moradora' : (h.hospede ? 'hospede' : (h.pernoite ? 'pernoite' : 'hospede'));
+        const tj = {hospede:['t-hospede','HÓSPEDE'], pernoite:['t-pernoite','PERNOITE'], moradora:['t-moradora','MORADORA']}[tp];
         return `<div class="pet" onclick="abrirPlantao(${i})">
           ${ph}
           <div class="nm">${h.nome}</div>
           <div class="br">${raca}</div>
           <div class="hosp-tutor">${h.mascote?'Nossa Zelozinha':'Tutor: '+h.tutor}</div>
+          <div class="tarja ${tj[0]}">${tj[1]}</div>
           ${h.saidaHoje?'<div class="saida-hoje">Dormiu · sai hoje</div>':''}
         </div>`;
       }).join('');
@@ -1394,7 +1415,7 @@
     if(!DB) return;
     DB.ref('auaulandia/manuais/'+dataKeyAtual()).once('value').then(s=>{
       const arr=Object.values(s.val()||{});
-      arr.forEach((m,i)=>{ if(m&&m.nome && !hospedes.some(h=>h.nome===m.nome&&h.tutor===(m.tutor||''))){ hospedes.push({nome:m.nome, tutor:m.tutor||'', raca:'', ini:(m.nome[0]||'?').toUpperCase(), cor:CORES[(hospedes.length+i)%CORES.length], pernoite:true}); } });
+      arr.forEach((m,i)=>{ if(m&&m.nome && !hospedes.some(h=>h.nome===m.nome&&h.tutor===(m.tutor||''))){ hospedes.push({nome:m.nome, tutor:m.tutor||'', raca:'', ini:(m.nome[0]||'?').toUpperCase(), cor:CORES[(hospedes.length+i)%CORES.length], pernoite:!m.hospede, hospede:!!m.hospede}); } });
       renderHosp();
     }).catch(()=>{});
   }
@@ -2097,7 +2118,7 @@
     almoco:    { ini:'11:30', fim:'13:30', label:'Almoço' },
     relInicio: { ini:'18:30', fim:'20:00', label:'Início do Plantão' },
     relNoite:  { ini:'06:30', fim:'08:00', label:'Relatório da Noite' },
-    checkout:  { ini:'06:30', fim:'08:00', label:'Check-out do plantão' }
+    checkout:  { ini:'06:30', fim:'08:00', label:'Protocolo do Plantão' }
   };
   function salvarAuditCfg(){ if(DB) DB.ref('daycare/config/auditoria').set(AUDIT_CFG).catch(()=>{}); if(typeof renderPainelDia==='function') renderPainelDia(); }
   // hh:mm dentro da janela? retorna 'ok' | 'fora' | 'sem' (sem hora registrada)
@@ -2148,7 +2169,7 @@
     st.relInicio = aud.filter(a=>a.acao==='relatorio' && a.detalhe==='inicio');
     st.relNoite  = aud.filter(a=>a.acao==='relatorio' && a.detalhe==='noite');
     st.relDia    = aud.filter(a=>a.acao==='relatorio' && a.detalhe==='dia');
-    // Check-out do plantão
+    // Protocolo do Plantão (check-out de saída)
     st.checkout={ n:Object.values(D.checkout||{}).filter(Boolean).length };
     const co=aud.filter(a=>a.acao==='checkout').sort((a,b)=>(b.ts||0)-(a.ts||0))[0];
     st.checkout.hora=co?co.hora:''; st.checkout.quem=co?co.quem:''; st.checkout.ok=st.checkout.n>0;
@@ -2175,7 +2196,7 @@
       {nome:'Almoço — Finalização (checklist)', ok:st.almoco.final>=8, prazo:'ok', hora:'', quem:'', extra:st.almoco.final+'/8 itens'},
       {nome:'Relatório do Plantão (Início)', ok:st.relInicio.length>0, prazo:st.relInicio[0]?noPrazo(st.relInicio[0].hora,AUDIT_CFG.relInicio):'sem', hora:st.relInicio[0]?st.relInicio[0].hora:'', quem:st.relInicio[0]?st.relInicio[0].quem:'', extra:st.relInicio.length+' assinados'},
       {nome:'Relatório do Plantão (Noite)', ok:st.relNoite.length>0, prazo:st.relNoite[0]?noPrazo(st.relNoite[0].hora,AUDIT_CFG.relNoite):'sem', hora:st.relNoite[0]?st.relNoite[0].hora:'', quem:st.relNoite[0]?st.relNoite[0].quem:'', extra:st.relNoite.length+' assinados'},
-      {nome:'Check-out do plantão', ok:st.checkout.ok, prazo:st.checkout.prazo, hora:st.checkout.hora, quem:st.checkout.quem, extra:st.checkout.n+' itens'}
+      {nome:'Protocolo do Plantão', ok:st.checkout.ok, prazo:st.checkout.prazo, hora:st.checkout.hora, quem:st.checkout.quem, extra:st.checkout.n+' itens'}
     ];
     const cumpridos=protos.filter(p=>p.ok).length;
     const noPrazoN=protos.filter(p=>p.ok && p.prazo!=='fora').length;
@@ -2223,7 +2244,7 @@
   const ACAO_LABEL={ chamada:'Chamada', almoco_ini:'Iniciou o almoço', almoco_fim:'Encerrou o almoço',
     almoco_grade:'Marcou no almoço', almoco_prep:'Checklist preparação', almoco_final:'Checklist finalização',
     almoco_exec:'Confirmou execução', atividade:'Atividade', banho:'Banho', relatorio:'Relatório assinado',
-    checkout:'Check-out do plantão' };
+    checkout:'Protocolo do Plantão' };
   // editor de janelas de horário (só Gestão)
   function abrirAuditCfg(){ const el=document.getElementById('painelCfg'); if(!el) return;
     if(el.style.display==='block'){ el.style.display='none'; return; }
