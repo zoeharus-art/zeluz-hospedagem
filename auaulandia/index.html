@@ -487,6 +487,15 @@
   .protocolo-regras li.crit::before{background:#C0392B;color:#fff}
   .proto-subt{margin:20px 0 4px;padding-top:16px;border-top:1px solid rgba(35,77,103,.12);font-weight:700;color:#234D67;font-size:15px;display:flex;align-items:center;gap:9px}
   .proto-subt::before{content:'';width:6px;height:18px;background:#DEB428;border-radius:3px;display:inline-block}
+  /* Medicação/Suplementação à prova de erro — 5 linhas estruturadas */
+  .medgrid{margin:4px 0 14px;border:1px solid var(--line);border-radius:11px;overflow:hidden}
+  .medgrid-head,.medrow{display:grid;grid-template-columns:1.3fr .82fr 1fr}
+  .medgrid-head{background:var(--z-blue);color:var(--z-cream);font-size:10.5px;font-weight:700;letter-spacing:.4px}
+  .medgrid-head span{padding:7px 9px}
+  .medrow input{border:none;border-top:1px solid var(--line);border-right:1px solid var(--line);padding:10px 9px;font-family:var(--font-ui);font-size:13.5px;background:var(--z-cream);width:100%;color:#234D67}
+  .medrow input:last-child{border-right:none}
+  .medrow input:focus{outline:none;background:#fff;box-shadow:inset 0 0 0 2px rgba(222,180,40,.5)}
+  .medgrid.dim{opacity:.45;pointer-events:none}
 
   /* responsivo */
   .overlay{display:none;position:fixed;inset:0;background:rgba(26,58,79,.5);z-index:45}
@@ -764,6 +773,10 @@
         <div class="obsline"><span class="q">Tem irmão hospedado?</span><div class="seg" data-single><button data-tone="warn" onclick="pick(this)">Não</button><button data-tone="ok" onclick="pick(this)">Sim</button></div></div>
         <div class="obsline"><span class="q">Tem alergia?</span><div class="seg" data-single><button data-tone="ok" onclick="pick(this)">Não</button><button data-tone="warn" onclick="pick(this)">Sim</button></div></div>
         <div class="obsline"><span class="q">Tem medicação?</span><div class="seg" data-single><button data-tone="ok" onclick="pick(this)">Não</button><button data-tone="warn" onclick="pick(this)">Sim</button></div></div>
+        <div class="obsline"><span class="q">Foi dada medicação?</span><div class="seg" data-single><button data-tone="ok" onclick="pick(this)">Sim</button><button data-tone="bad" onclick="pick(this)">Não</button><button data-tone="warn" onclick="pick(this)">Não se aplica</button></div></div>
+        <div class="medgrid-slot" data-kind="med"></div>
+        <div class="obsline"><span class="q">Foi dada suplementação?</span><div class="seg" data-single><button data-tone="ok" onclick="pick(this)">Sim</button><button data-tone="bad" onclick="pick(this)">Não</button><button data-tone="warn" onclick="pick(this)">Não se aplica</button></div></div>
+        <div class="medgrid-slot" data-kind="sup"></div>
         <div class="obsline"><span class="q">Trouxe roupa de frio?</span><div class="seg" data-single><button data-tone="ok" onclick="pick(this)">Sim</button><button data-tone="warn" onclick="pick(this)">Não</button></div></div>
         <div class="obsline"><span class="q">Fez cocô?</span><div class="seg" data-single><button data-tone="ok" onclick="pick(this)">Sim</button><button data-tone="warn" onclick="pick(this)">Não</button></div></div>
         <div class="obsline"><span class="q">Consistência</span><div class="seg" data-single><button data-tone="ok" onclick="pick(this)">Normal</button><button data-tone="warn" onclick="pick(this)">Pastoso</button><button data-tone="bad" onclick="pick(this)">Diarreia</button></div></div>
@@ -785,8 +798,9 @@
         <div class="obsline"><span class="q">Fez xixi?</span><div class="seg" data-single><button data-tone="ok" onclick="pick(this)">Sim</button><button data-tone="warn" onclick="pick(this)">Não</button><button data-tone="warn" onclick="pick(this)">Não vi</button></div></div>
         <div class="obsline"><span class="q">Fez cocô?</span><div class="seg" data-single><button data-tone="ok" onclick="pick(this)">Sim</button><button data-tone="warn" onclick="pick(this)">Não</button><button data-tone="warn" onclick="pick(this)">Não vi</button></div></div>
         <div class="obsline"><span class="q">Foi dada medicação?</span><div class="seg" data-single><button data-tone="ok" onclick="pick(this)">Sim</button><button data-tone="bad" onclick="pick(this)">Não</button><button data-tone="warn" onclick="pick(this)">Não se aplica</button></div></div>
-        <div class="field"><label>Qual medicação? (nome, quantidade e horário)</label><textarea class="cad-in" style="min-height:54px" placeholder="(nome do medicamento) dosagem e horário"></textarea></div>
+        <div class="medgrid-slot" data-kind="med"></div>
         <div class="obsline"><span class="q">Foi dada suplementação?</span><div class="seg" data-single><button data-tone="ok" onclick="pick(this)">Sim</button><button data-tone="bad" onclick="pick(this)">Não</button><button data-tone="warn" onclick="pick(this)">Não se aplica</button></div></div>
+        <div class="medgrid-slot" data-kind="sup"></div>
         <div class="field"><label>Observação do início do plantão</label><textarea class="cad-in" style="min-height:60px" placeholder="Algo importante na chegada"></textarea></div>
         <div class="rel-assina"><div class="grid2"><div class="field"><label>Quem passou o plantão (assina) *</label><input id="passou-inicio" class="cad-in"></div><div class="field"><label>Quem recebeu — Plantonista (assina) *</label><input id="recebeu-inicio" class="cad-in"></div></div><div class="actions"><button class="btn btn-primary" onclick="salvarRelatorioCard('inicio')">Salvar o jantar (início do plantão)</button></div><div id="status-inicio" class="rel-status"></div></div>
         </div>
@@ -806,9 +820,9 @@
         <div class="obsline"><span class="q">Jantou?</span><div class="seg" data-single><button data-tone="ok" onclick="pick(this)">Sim</button><button data-tone="bad" onclick="pick(this)">Não</button><button data-tone="warn" onclick="pick(this)">Metade</button><button data-tone="warn" onclick="pick(this)">Não se aplica</button></div></div>
         <div class="obsline"><span class="q">Almoçou?</span><div class="seg" data-single><button data-tone="ok" onclick="pick(this)">Sim</button><button data-tone="bad" onclick="pick(this)">Não</button><button data-tone="warn" onclick="pick(this)">Metade</button><button data-tone="warn" onclick="pick(this)">Não se aplica</button></div></div>
         <div class="obsline"><span class="q">Foi dada medicação?</span><div class="seg" data-single><button data-tone="ok" onclick="pick(this)">Sim</button><button data-tone="bad" onclick="pick(this)">Não</button><button data-tone="warn" onclick="pick(this)">Não se aplica</button></div></div>
-        <div class="field" style="margin-bottom:14px"><label>Qual medicação? (nome, quantidade e horário)</label><textarea style="width:100%;font-family:var(--font-ui);font-size:14px;padding:11px;border:1.5px solid var(--line);border-radius:11px;background:var(--z-cream);min-height:56px" placeholder="(nome do medicamento) dosagem e horário"></textarea></div>
+        <div class="medgrid-slot" data-kind="med"></div>
         <div class="obsline"><span class="q">Foi dada suplementação?</span><div class="seg" data-single><button data-tone="ok" onclick="pick(this)">Sim</button><button data-tone="bad" onclick="pick(this)">Não</button><button data-tone="warn" onclick="pick(this)">Não se aplica</button></div></div>
-        <div class="field"><label>Qual suplemento? (nome, quantidade e horário)</label><textarea style="width:100%;font-family:var(--font-ui);font-size:14px;padding:11px;border:1.5px solid var(--line);border-radius:11px;background:var(--z-cream);min-height:56px" placeholder="(nome do suplemento), dosagem e horário"></textarea></div>
+        <div class="medgrid-slot" data-kind="sup"></div>
         <div class="rel-assina"><div class="grid2"><div class="field"><label>Quem passou o plantão — Plantonista (assina) *</label><input id="passou-noite" class="cad-in"></div><div class="field"><label>Quem recebeu (assina) *</label><input id="recebeu-noite" class="cad-in"></div></div><div class="actions"><button class="btn btn-primary" onclick="salvarRelatorioCard('noite')">OK, li tudo — salvar</button></div><div id="status-noite" class="rel-status"></div></div>
         </div>
       </div>
@@ -1195,8 +1209,14 @@
   // ---- Relatórios da ficha: coletar, aplicar, salvar no banco, limpar ----
   function fichaKey(){ const p=x=>String(x).padStart(2,'0'); const d=selectedDate; const pk=currentHosp?currentHosp.nome+'__'+currentHosp.tutor:''; return (pk+'__'+d.getFullYear()+'-'+p(d.getMonth()+1)+'-'+p(d.getDate())).toLowerCase().replace(/[.#$\[\]\/]/g,'-'); }
   function toggleRel(cardId){ const c=document.getElementById(cardId); if(c) c.classList.toggle('collapsed'); }
-  function coletarCard(cardId){ const byQ={}; document.querySelectorAll('#'+cardId+' .obsline').forEach(l=>{ const q=l.querySelector('.q'); const on=l.querySelector('button.on'); if(q) byQ[q.textContent.trim()]= on?on.textContent.trim():''; }); const areas=[]; const byArea={}; document.querySelectorAll('#'+cardId+' textarea').forEach(t=>{ areas.push(t.value||''); const ph=(t.placeholder||'').toLowerCase(); if(ph.indexOf('medicamento')>=0) byArea.medicamento=t.value||''; else if(ph.indexOf('suplemento')>=0) byArea.suplemento=t.value||''; }); return {byQ:byQ,areas:areas,byArea:byArea}; }
-  function aplicarCard(cardId,d){ d=d||{}; const byQ=d.byQ||{}; document.querySelectorAll('#'+cardId+' .obsline').forEach(l=>{ const q=l.querySelector('.q'); const val=q?byQ[q.textContent.trim()]:''; l.querySelectorAll('button').forEach(b=>{ b.classList.remove('on','t-ok','t-bad','t-warn'); if(val&&b.textContent.trim()===val){ b.classList.add('on'); if(b.dataset.tone) b.classList.add('t-'+b.dataset.tone);} }); }); const areas=d.areas||[]; document.querySelectorAll('#'+cardId+' textarea').forEach((t,i)=>t.value=areas[i]||''); const tipo=cardId.replace('card-',''); const sp=document.getElementById('passou-'+tipo); if(sp) sp.value=d.passou||''; const sr=document.getElementById('recebeu-'+tipo); if(sr) sr.value=d.recebeu||''; }
+  // ---- Medicação/Suplementação à prova de erro: 5 linhas (Medicamento · Horário · Dosagem) ----
+  function medgridHTML(kind){ let rows=''; for(let i=0;i<5;i++){ rows+='<div class="medrow"><input data-c="m" placeholder="Medicamento"><input data-c="h" placeholder="Horário"><input data-c="d" placeholder="Dosagem"></div>'; } const cab=(kind==='sup')?'Suplemento':'Medicamento'; return '<div class="medgrid-head"><span>'+cab+'</span><span>Horário</span><span>Dosagem</span></div>'+rows; }
+  function montarMedgrids(){ document.querySelectorAll('.medgrid-slot').forEach(s=>{ if(s.dataset.done) return; s.classList.add('medgrid'); s.innerHTML=medgridHTML(s.dataset.kind||'med'); s.dataset.done='1'; }); }
+  function coletarMedgrids(cardId){ const out={med:[],sup:[]}; document.querySelectorAll('#'+cardId+' .medgrid').forEach(g=>{ const kind=g.dataset.kind==='sup'?'sup':'med'; const rows=[]; g.querySelectorAll('.medrow').forEach(r=>{ const m=(r.querySelector('[data-c=m]').value||'').trim(); const h=(r.querySelector('[data-c=h]').value||'').trim(); const d=(r.querySelector('[data-c=d]').value||'').trim(); if(m||h||d) rows.push({m:m,h:h,d:d}); }); out[kind]=rows; }); return out; }
+  function aplicarMedgrids(cardId,d){ d=d||{}; montarMedgrids(); document.querySelectorAll('#'+cardId+' .medgrid').forEach(g=>{ const kind=g.dataset.kind==='sup'?'sup':'med'; const arr=(kind==='sup'?(d.sups||[]):(d.meds||[])); const rows=g.querySelectorAll('.medrow'); rows.forEach((r,i)=>{ const o=arr[i]||{}; r.querySelector('[data-c=m]').value=o.m||''; r.querySelector('[data-c=h]').value=o.h||''; r.querySelector('[data-c=d]').value=o.d||''; }); if((!arr||!arr.length)&&rows[0]){ const ba=d.byArea||{}; const old=(kind==='sup')?ba.suplemento:ba.medicamento; if(old) rows[0].querySelector('[data-c=m]').value=old; } }); }
+  function medsToTxt(arr){ return (arr||[]).map(o=>[o.m,o.d,o.h].filter(Boolean).join(' ')).filter(Boolean).join('; '); }
+  function coletarCard(cardId){ const byQ={}; document.querySelectorAll('#'+cardId+' .obsline').forEach(l=>{ const q=l.querySelector('.q'); const on=l.querySelector('button.on'); if(q) byQ[q.textContent.trim()]= on?on.textContent.trim():''; }); const areas=[]; const byArea={}; document.querySelectorAll('#'+cardId+' textarea').forEach(t=>{ areas.push(t.value||''); const ph=(t.placeholder||'').toLowerCase(); if(ph.indexOf('medicamento')>=0) byArea.medicamento=t.value||''; else if(ph.indexOf('suplemento')>=0) byArea.suplemento=t.value||''; }); const mg=coletarMedgrids(cardId); return {byQ:byQ,areas:areas,byArea:byArea,meds:mg.med,sups:mg.sup}; }
+  function aplicarCard(cardId,d){ d=d||{}; const byQ=d.byQ||{}; document.querySelectorAll('#'+cardId+' .obsline').forEach(l=>{ const q=l.querySelector('.q'); const val=q?byQ[q.textContent.trim()]:''; l.querySelectorAll('button').forEach(b=>{ b.classList.remove('on','t-ok','t-bad','t-warn'); if(val&&b.textContent.trim()===val){ b.classList.add('on'); if(b.dataset.tone) b.classList.add('t-'+b.dataset.tone);} }); }); const areas=d.areas||[]; document.querySelectorAll('#'+cardId+' textarea').forEach((t,i)=>t.value=areas[i]||''); const tipo=cardId.replace('card-',''); const sp=document.getElementById('passou-'+tipo); if(sp) sp.value=d.passou||''; const sr=document.getElementById('recebeu-'+tipo); if(sr) sr.value=d.recebeu||''; aplicarMedgrids(cardId,d); }
   // mapeamento do formato ANTIGO (campos c0..c21 da ficha de 1 salvar so) para os relatorios novos
   const MAP_DIA_ANTIGO=['Gastou energia?','Teve desentendimento?','Precisa ficar separado?','Tem irmão hospedado?','Tem alergia?','Tem medicação?','Trouxe roupa de frio?','Fez cocô?','Consistência','Coleira repelente?','Coleira de identificação?'];
   const MAP_NOITE_ANTIGO=['Como passou a noite?','Está ativo?','Bebeu água?','Fez cocô?','Consistência','Fez xixi?','Aspecto do xixi','Jantou?','Almoçou?','Foi dada medicação?','Foi dada suplementação?'];
@@ -1232,6 +1252,17 @@
     if(!passou||(recebeuEl&&!recebeu)){ if(st){ st.style.color='var(--crm-critico)'; st.textContent='✋ Faltou assinatura.'; } return; }
     const falt=[]; document.querySelectorAll('#'+card+' .obsline').forEach(l=>{ if(!l.querySelector('button.on')){ const q=l.querySelector('.q'); if(q) falt.push(q.textContent.trim()); } });
     if(falt.length){ if(st){ st.style.color='var(--crm-critico)'; st.textContent='✋ Preencha TODOS os campos. Faltou: '+falt.slice(0,5).join(', ')+(falt.length>5?'…':''); } return; }
+    // ---- Medicação/Suplementação à prova de erro ----
+    const _mg=coletarMedgrids(card);
+    function _vMed(kind,label,resp){ const arr=_mg[kind]||[]; const completas=arr.filter(o=>o.m&&o.h&&o.d); const incompletas=arr.filter(o=>(o.m||o.h||o.d)&&!(o.m&&o.h&&o.d));
+      if(incompletas.length) return 'Há linha de '+label+' incompleta — preencha Medicamento, Horário e Dosagem (ou apague a linha).';
+      if(resp==='Sim' && !completas.length) return 'Você marcou que deu '+label+' — preencha Medicamento, Horário e Dosagem em pelo menos 1 linha.'; return ''; }
+    const _medResp=valDe(card,'Foi dada medicação?'); const _supResp=valDe(card,'Foi dada suplementação?');
+    const _eMed=_vMed('med','medicação',_medResp); if(_eMed){ if(st){ st.style.color='var(--crm-critico)'; st.textContent='✋ '+_eMed; } return; }
+    const _eSup=_vMed('sup','suplementação',_supResp); if(_eSup){ if(st){ st.style.color='var(--crm-critico)'; st.textContent='✋ '+_eSup; } return; }
+    const _nome=(currentHosp&&currentHosp.nome)||'o FILHOt';
+    if(_medResp==='Não se aplica' && !confirm('Confirma que '+_nome+' NÃO tem medicação? Se tiver e não foi dada, volte e registre.')) return;
+    if(_supResp==='Não se aplica' && !confirm('Confirma que '+_nome+' NÃO tem suplementação?')) return;
     const dados=coletarCard(card); dados.passou=passou; if(recebeuEl) dados.recebeu=recebeu; dados._ts=Date.now();
     if(DB){ if(st){ st.style.color='var(--muted)'; st.textContent='Salvando...'; } DB.ref('auaulandia/relatorios/'+fichaKey()+'/'+tipo).set(dados).then(()=>{ if(st){ st.style.color='var(--crm-ok)'; st.textContent=(tipo==='inicio')?'✅ Jantar salvo! A Noite será preenchida amanhã de manhã, na passagem do plantão.':'✅ Salvo!'; } if(typeof audit==='function') audit('relatorio', tipo, {pet:(currentHosp&&currentHosp.nome)||'', assinou:passou}); const c=document.getElementById(card); if(c) c.classList.add('collapsed'); }).catch(e=>{ if(st){ st.style.color='var(--crm-critico)'; st.textContent='⚠️ Erro: '+e.message; } }); } else { if(st){ st.style.color='var(--crm-atencao-text)'; st.textContent='Banco conectando...'; } } }
   function valDe(cardId,perg){ for(const l of document.querySelectorAll('#'+cardId+' .obsline')){ const q=l.querySelector('.q'); if(q&&q.textContent.trim()===perg){ const on=l.querySelector('button.on'); return on?on.textContent.trim():''; } } return ''; }
@@ -1273,7 +1304,7 @@
   function ctxDoDOM(){ const cad=getCad(currentHosp)||{};
     return { nome:currentHosp.nome, tutor:primeiroNome(currentHosp.tutor), fem:cad.sexo==='Fêmea', brinq:((document.getElementById('hf-brinq')||{}).value||'').trim(),
       energia:valDe('card-dia','Gastou energia?'), noite:valDe('card-noite','Como passou a noite?'), jant:valDe('card-noite','Jantou?'), xixi:valDe('card-noite','Fez xixi?'), coco:valDe('card-noite','Fez cocô?'),
-      med:valDe('card-noite','Foi dada medicação?'), sup:valDe('card-noite','Foi dada suplementação?'), medTxt:txtArea('medicamento'), supTxt:txtArea('suplemento') }; }
+      med:valDe('card-noite','Foi dada medicação?'), sup:valDe('card-noite','Foi dada suplementação?'), medTxt:medsToTxt(coletarMedgrids('card-noite').med), supTxt:medsToTxt(coletarMedgrids('card-noite').sup) }; }
   function gerarTexto(){ if(!currentHosp) return; document.getElementById('hf-txt').value=montarTextoTutor(ctxDoDOM()); }
   function copiarTexto(){ const t=document.getElementById('hf-txt'); if(!t.value){ gerarTexto(); } t.select(); try{ document.execCommand('copy'); }catch(e){} alert('Texto copiado! Cole no WhatsApp do tutor.'); }
   function fecharPlantao(){
@@ -2249,6 +2280,7 @@
   // INIT do Day Care (no fim: garante todas as variaveis e funcoes definidas)
   montarSubnav();
   renderAtual();
+  montarMedgrids();
 </script>
 </body>
 </html>
