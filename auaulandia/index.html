@@ -491,6 +491,15 @@
     .head .search{display:none}
     .grid2{grid-template-columns:1fr}
   }
+  /* Rodapé Kairós — idêntico ao Ágora (comercial) */
+  .kairos-footer-horizontal{display:flex;align-items:center;justify-content:center;gap:14px;padding:28px 20px;flex-wrap:wrap;border-top:1px solid rgba(222,180,40,0.10);margin-top:24px}
+  .kairos-footer-horizontal a{display:flex;align-items:center;gap:10px;text-decoration:none}
+  .kairos-footer-horizontal .kf-mono{height:48px;width:auto}
+  .kairos-footer-horizontal .kf-name{font-family:'Manrope','Poppins',sans-serif;font-size:30px;font-weight:600;letter-spacing:-0.5px;background:linear-gradient(135deg,#5E6CFF,#6AF2A3);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+  .kairos-footer-horizontal .kf-sep{width:1px;height:36px;background:rgba(35,77,103,0.18)}
+  .kairos-footer-horizontal .kf-text{font-family:'Manrope','Poppins',sans-serif;font-size:15px;color:rgba(35,77,103,0.50)}
+  .kairos-footer-horizontal .kf-text strong{font-weight:600;color:rgba(35,77,103,0.70)}
+  .kairos-footer-horizontal .kf-tripontos{color:#DEB428;font-weight:700;margin-left:1px}
 </style>
 </head>
 <body data-role="gestao">
@@ -743,6 +752,8 @@
         <div class="hint">Como foi o Dia dos nossos FILHOts no Day Care? — o Monitor relata como foi o dia. Toque para marcar.</div>
         <div class="lock-note">🔒 Somente leitura — este relatório é da Monitora</div>
         <div class="obsline"><span class="q">Gastou energia?</span><div class="seg" data-single><button data-tone="warn" onclick="pick(this)">Pouco</button><button data-tone="ok" onclick="pick(this)">Bastante</button><button data-tone="ok" onclick="pick(this)">Muito</button></div></div>
+        <div class="obsline"><span class="q">Tomou café da manhã?</span><div class="seg" data-single><button data-tone="ok" onclick="pick(this)">Sim</button><button data-tone="bad" onclick="pick(this)">Não</button><button data-tone="warn" onclick="pick(this)">Metade</button><button data-tone="warn" onclick="pick(this)">Não se aplica</button></div></div>
+        <div class="obsline"><span class="q">Almoçou?</span><div class="seg" data-single><button data-tone="ok" onclick="pick(this)">Sim</button><button data-tone="bad" onclick="pick(this)">Não</button><button data-tone="warn" onclick="pick(this)">Metade</button><button data-tone="warn" onclick="pick(this)">Não se aplica</button></div></div>
         <div class="obsline"><span class="q">Teve desentendimento?</span><div class="seg" data-single><button data-tone="ok" onclick="pick(this)">Não</button><button data-tone="bad" onclick="pick(this)">Sim</button></div></div>
         <div class="obsline"><span class="q">Precisa ficar separado?</span><div class="seg" data-single><button data-tone="ok" onclick="pick(this)">Não</button><button data-tone="bad" onclick="pick(this)">Sim</button></div></div>
         <div class="obsline"><span class="q">Tem irmão hospedado?</span><div class="seg" data-single><button data-tone="warn" onclick="pick(this)">Não</button><button data-tone="ok" onclick="pick(this)">Sim</button></div></div>
@@ -779,7 +790,7 @@
       <div class="card rel-card collapsed" id="card-noite">
         <div class="rel-head" onclick="toggleRel('card-noite')"><h2>Relatório da Noite</h2><span class="rel-tag">Plantonista · 7h</span><span class="rel-caret">▾</span></div>
         <div class="rel-body">
-        <div class="hint">Como os FILHOts passaram a noite? — a Plantonista relata como dormiram TODOS que ficaram (os hóspedes saem só depois das 8h30, então todos que dormiram entram aqui).</div>
+        <div class="hint">Como os FILHOts passaram a noite? — a Plantonista relata como dormiram TODOS que ficaram (os hóspedes saem até as 11h30, então todos que dormiram entram aqui).</div>
         <div class="obsline"><span class="q">Como passou a noite?</span><div class="seg" data-single><button data-tone="ok" onclick="pick(this)">Dormiu a noite inteira</button><button data-tone="warn" onclick="pick(this)">Agitado</button></div></div>
         <div class="obsline"><span class="q">Está ativo?</span><div class="seg" data-single><button data-tone="ok" onclick="pick(this)">Sim</button><button data-tone="warn" onclick="pick(this)">Não</button></div></div>
         <div class="obsline"><span class="q">Bebeu água?</span><div class="seg" data-single><button data-tone="ok" onclick="pick(this)">Sim</button><button data-tone="bad" onclick="pick(this)">Não</button></div></div>
@@ -854,6 +865,23 @@
     <div id="painelWrap"><div class="p-empty">Carregando o dia…</div></div>
   </section>
   <section class="view" id="v-sair"><div class="soon-box"><img class="ic-st" src="assets/simbolo.png" alt=""><div class="t">Sair</div><div class="d">No sistema real, encerra a sessão com segurança.</div></div></section>
+
+  <!-- FOOTER KAIRÓS -->
+  <div class="kairos-footer-horizontal">
+    <div class="kf-text">Desenvolvido por</div>
+    <a href="https://kairospresenca.com.br/" target="_blank" rel="noopener">
+      <svg class="kf-mono" viewBox="30 10 180 240" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <defs><linearGradient id="kfG" x1="80" y1="28" x2="180" y2="228" gradientUnits="userSpaceOnUse"><stop stop-color="#5E6CFF"/><stop offset="0.48" stop-color="#5E6CFF"/><stop offset="0.52" stop-color="#6AF2A3"/><stop offset="1" stop-color="#6AF2A3"/></linearGradient></defs>
+        <line x1="80" y1="32" x2="80" y2="224" stroke="url(#kfG)" stroke-width="10" stroke-linecap="round"/>
+        <line x1="80" y1="128" x2="188" y2="40" stroke="url(#kfG)" stroke-width="10" stroke-linecap="round"/>
+        <path d="M80 128 C128 152 160 188 188 220" stroke="url(#kfG)" stroke-width="10" stroke-linecap="round" fill="none"/>
+        <circle cx="80" cy="128" r="5" fill="#FFFDF6"/><circle cx="80" cy="128" r="5" fill="none" stroke="url(#kfG)" stroke-width="2"/><circle cx="80" cy="128" r="2" fill="#234D67"/>
+      </svg>
+      <span class="kf-name">Kair&#243;s</span>
+    </a>
+    <div class="kf-sep"></div>
+    <div class="kf-text"><strong>by Adriana Duarte<span class="kf-tripontos">.&#x27;.</span></strong></div>
+  </div>
 </main>
 
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
@@ -1342,7 +1370,16 @@
       if(hoje){
         const chave=h=>(h.nome+'|'+h.tutor).toLowerCase();
         const setHoje=new Set(hoje.map(chave));
-        const dormiramSaindo=ontem.filter(h=>!setHoje.has(chave(h))).map(h=>Object.assign({},h,{saidaHoje:true}));
+        let dormiramSaindo=ontem.filter(h=>!setHoje.has(chave(h))).map(h=>Object.assign({},h,{saidaHoje:true}));
+        // Corte de saída: os hóspedes vão embora até as 11h30 (tolerância de atraso).
+        // ANTES das 11h30 aparecem TODOS que dormiram (para o Relatório da Noite, que a
+        // plantonista passa às 7h). DEPOIS das 11h30 quem tinha saída hoje some — a planilha
+        // é a fonte: se a recepção estender a estadia (voo cancelado etc.), o FILHOt volta
+        // para a coluna de "hoje" e reaparece. Vale só quando a tela está no dia de hoje real.
+        const _ag=new Date();
+        const _ehHoje = selectedDate.getFullYear()===_ag.getFullYear() && selectedDate.getMonth()===_ag.getMonth() && selectedDate.getDate()===_ag.getDate();
+        const _depoisDoCorte = _ag.getHours()>11 || (_ag.getHours()===11 && _ag.getMinutes()>=30);
+        if(_ehHoje && _depoisDoCorte){ dormiramSaindo=[]; }
         const lista=hoje.concat(dormiramSaindo);
         if(lista.length){
           hospedes = lista.map((h,i)=>({nome:h.nome, tutor:h.tutor, raca:h.raca||'', ini:(h.nome[0]||'?').toUpperCase(), cor:CORES[i%CORES.length], mascote:/repolho/i.test(h.nome), saidaHoje:!!h.saidaHoje}));
