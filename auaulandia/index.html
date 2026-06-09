@@ -553,6 +553,8 @@
       onkeydown="if(event.key==='Enter')doLogin()">
     <button class="login-btn" onclick="doLogin()">Entrar</button>
     <div class="login-err" id="loginErr"></div>
+    <button type="button" onclick="autorizarAparelho()" style="margin-top:16px;background:none;border:1.5px solid rgba(35,77,103,.25);color:var(--z-blue);border-radius:10px;padding:10px 14px;font-family:var(--font-ui);font-weight:600;font-size:12.5px;cursor:pointer;width:100%">Autorizar este aparelho (Gestão)</button>
+    <div id="deviceStatus" style="font-size:11.5px;margin-top:8px;font-weight:600"></div>
   </div>
 </div>
 
@@ -1381,16 +1383,38 @@
   const SENHAS={
     '1000':{role:'monitor',     nome:'Monitor 5'},
     '1001':{role:'plantonista', nome:'Plantonista'},
-    '0902':{role:'gestao',      nome:'Márcia · Gestora'},
+    '0901':{role:'gestao',      nome:'Adriana · Gestão Total', avisoSonoro:true},
+    '0902':{role:'gestao',      nome:'Márcia · Gestora', avisoSonoro:true},
     '0912':{role:'supervisor',  nome:'Amanda · Supervisora'},
     '1002':{role:'aprendiz',    nome:'Monitor Aprendiz'}
   };
+  // ===== TRAVA POR APARELHO: só celulares autorizados pela Gestão entram =====
+  function getDeviceId(){ let id=null; try{ id=localStorage.getItem('zeluz_device_id'); }catch(e){}
+    if(!id){ id=(self.crypto&&crypto.randomUUID)?crypto.randomUUID():('dev-'+Date.now()+'-'+Math.floor(Math.random()*1e9)); try{ localStorage.setItem('zeluz_device_id',id); }catch(e){} }
+    return id; }
+  function deviceLocalOk(){ try{ return localStorage.getItem('zeluz_device_ok')==='1'; }catch(e){ return false; } }
+  function deviceAutorizado(cb){ const id=getDeviceId();
+    if(DB){ DB.ref('auaulandia/aparelhos/'+id).once('value').then(s=>{ const ok=!!s.val(); try{ if(ok) localStorage.setItem('zeluz_device_ok','1'); else localStorage.removeItem('zeluz_device_ok'); }catch(e){} cb(ok); }).catch(()=>cb(deviceLocalOk())); }
+    else { cb(deviceLocalOk()); } }
+  function mostrarStatusDevice(){ const el=document.getElementById('deviceStatus'); if(!el) return; deviceAutorizado(function(ok){ el.innerHTML= ok?'Este aparelho está autorizado &#10003;':'Este aparelho ainda <strong>não está autorizado</strong>. A Gestão precisa autorizar.'; el.style.color= ok?'var(--crm-ok)':'var(--crm-atencao-text)'; }); }
+  function autorizarAparelho(){ const err=document.getElementById('loginErr'); err.style.color='';
+    const v=(document.getElementById('loginPwd').value||'').trim(); const u=SENHAS[v];
+    if(!u||u.role!=='gestao'){ err.style.color='var(--crm-critico)'; err.textContent='Digite a senha da GESTÃO no campo acima e toque em Autorizar.'; return; }
+    const nome=(prompt('Dê um nome para ESTE aparelho (ex: iPhone Daycare 1):')||'').trim(); if(!nome) return;
+    const id=getDeviceId(); const reg={nome:nome, por:u.nome, ts:Date.now()};
+    if(DB){ DB.ref('auaulandia/aparelhos/'+id).set(reg).then(()=>{ try{ localStorage.setItem('zeluz_device_ok','1'); }catch(e){} err.style.color='var(--crm-ok)'; err.textContent='✅ Aparelho "'+nome+'" autorizado! Agora a equipe entra normalmente neste celular.'; mostrarStatusDevice(); }).catch(e=>{ err.style.color='var(--crm-critico)'; err.textContent='Erro ao autorizar: '+e.message; }); }
+    else { try{ localStorage.setItem('zeluz_device_ok','1'); }catch(e){} err.style.color='var(--crm-atencao-text)'; err.textContent='Aparelho autorizado localmente (sem internet no momento).'; } }
   function doLogin(){
     const v=(document.getElementById('loginPwd').value||'').trim();
-    const u=SENHAS[v];
-    if(!u){ document.getElementById('loginErr').textContent='Senha incorreta. Tente de novo.'; return; }
-    sessionStorage.setItem('zeluz_login', JSON.stringify(u));
-    aplicarLogin(u);
+    const u=SENHAS[v]; const err=document.getElementById('loginErr'); err.style.color='';
+    if(!u){ err.textContent='Senha incorreta. Tente de novo.'; return; }
+    const ehGestao=(u.role==='gestao'||u.role==='supervisor');
+    deviceAutorizado(function(ok){
+      if(ok || ehGestao){ sessionStorage.setItem('zeluz_login', JSON.stringify(u)); aplicarLogin(u); return; }
+      // Aparelho não autorizado e não é gestão → bloqueia
+      err.style.color='var(--crm-critico)';
+      err.innerHTML='Este aparelho não está autorizado.<br>Peça à <strong>Gestão</strong> para autorizar (botão abaixo).';
+    });
   }
   function aplicarLogin(u){
     document.body.dataset.role=u.role;
@@ -1404,8 +1428,9 @@
     sessionStorage.removeItem('zeluz_login');
     document.getElementById('loginPwd').value='';
     document.getElementById('loginScreen').style.display='flex';
+    if(typeof mostrarStatusDevice==='function') mostrarStatusDevice();
   }
-  (function(){ try{ const u=JSON.parse(sessionStorage.getItem('zeluz_login')||'null'); if(u&&u.role) aplicarLogin(u); }catch(e){} })();
+  (function(){ try{ const u=JSON.parse(sessionStorage.getItem('zeluz_login')||'null'); if(u&&u.role) aplicarLogin(u); else if(typeof mostrarStatusDevice==='function') mostrarStatusDevice(); }catch(e){} })();
 
   // ===== LISTA AUTOMÁTICA — mesma planilha do dashboard de hospedagem =====
   const SHEET_ID='1SJ3OZ6E2wMa1JHrQUcgtNffgQLQhCpa01IUQKCv605w';
