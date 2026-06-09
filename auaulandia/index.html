@@ -203,6 +203,8 @@
   .btn-foto-mini{margin-top:10px;background:var(--z-gold);color:var(--z-blue);border:none;border-radius:9px;padding:7px 14px;font-family:var(--font-ui);font-weight:700;font-size:12.5px;cursor:pointer}
   body[data-role="monitor"] #card-cadastro, body[data-role="plantonista"] #card-cadastro, body[data-role="tutor"] #card-cadastro{display:none}
   body[data-role="monitor"] #card-texto, body[data-role="plantonista"] #card-texto, body[data-role="tutor"] #card-texto{display:none}
+  /* Protocolo do Plantão = SÓ o plantonista (monitor, gestão, supervisão e tutor não veem) */
+  body:not([data-role="plantonista"]) #card-checkout-plantao{display:none !important}
   body[data-role="plantonista"] .so-foto, body[data-role="tutor"] .so-foto{display:none}
   /* Relatório do Dia: editável por quem está de plantão (monitora, plantonista, gestão). Só o tutor é read-only. */
   body[data-role="tutor"] #card-dia .seg button, body[data-role="tutor"] #card-dia textarea,
@@ -487,13 +489,20 @@
   .protocolo-regras li::before{content:counter(pr);position:absolute;left:12px;top:50%;transform:translateY(-50%);width:36px;height:36px;display:flex;align-items:center;justify-content:center;background:var(--rc);color:#fff;font-weight:800;border-radius:11px;font-size:17px}
   .protocolo-regras li strong{color:var(--rc);font-weight:800}
   .protocolo-regras li:nth-child(1){--rc:#234D67;--rc-bg:rgba(35,77,103,.07);--rc-bd:rgba(35,77,103,.22)}
-  .protocolo-regras li:nth-child(2){--rc:#C0392B;--rc-bg:rgba(192,57,43,.07);--rc-bd:rgba(192,57,43,.28)}
-  .protocolo-regras li:nth-child(3){--rc:#B26A00;--rc-bg:rgba(178,106,0,.08);--rc-bd:rgba(178,106,0,.30)}
-  .protocolo-regras li:nth-child(4){--rc:#1E7A5A;--rc-bg:rgba(30,122,90,.07);--rc-bd:rgba(30,122,90,.26)}
+  .protocolo-regras li:nth-child(2){--rc:#1E7A5A;--rc-bg:rgba(30,122,90,.07);--rc-bd:rgba(30,122,90,.26)}
+  .protocolo-regras li:nth-child(3){--rc:#C0392B;--rc-bg:rgba(192,57,43,.07);--rc-bd:rgba(192,57,43,.28)}
+  .protocolo-regras li:nth-child(4){--rc:#B26A00;--rc-bg:rgba(178,106,0,.08);--rc-bd:rgba(178,106,0,.30)}
+  .protocolo-regras li:nth-child(5){--rc:#5B4B8A;--rc-bg:rgba(91,75,138,.08);--rc-bd:rgba(91,75,138,.28)}
+  .todo-det{display:block;font-size:12px;color:var(--muted);font-weight:500;margin-top:3px;line-height:1.35}
   #card-checkout-plantao>h2{font-size:23px;letter-spacing:-.022em}
   .med-add{margin-top:8px;background:rgba(35,77,103,.06);border:1.5px dashed rgba(35,77,103,.3);color:#234D67;border-radius:10px;padding:9px 14px;font-family:var(--font-ui);font-weight:700;font-size:13px;cursor:pointer;width:100%}
   .med-add:hover{background:rgba(222,180,40,.12);border-color:#DEB428}
   .medhint{font-size:12.5px;color:var(--muted);margin:2px 0 6px;font-weight:500}
+  /* Painel da Gestora — separadores por gravidade */
+  .gest-nivel{font-weight:800;font-size:12px;letter-spacing:.4px;padding:8px 12px;border-radius:9px;margin:14px 0 8px}
+  .gest-nivel.gn-urgente{background:rgba(192,57,43,.12);color:#C0392B;border:1px solid rgba(192,57,43,.4)}
+  .gest-nivel.gn-atencao{background:rgba(222,180,40,.16);color:#9a7b00;border:1px solid rgba(222,180,40,.5)}
+  .gest-nivel.gn-ok{background:rgba(39,174,96,.1);color:#1E7A5A;border:1px solid rgba(39,174,96,.35)}
   .proto-subt{margin:20px 0 4px;padding-top:16px;border-top:1px solid rgba(35,77,103,.12);font-weight:700;color:#234D67;font-size:15px;display:flex;align-items:center;gap:9px}
   .proto-subt::before{content:'';width:6px;height:18px;background:#DEB428;border-radius:3px;display:inline-block}
   /* Medicação/Suplementação à prova de erro — 5 linhas estruturadas */
@@ -711,14 +720,17 @@
         <h2 style="font-size:19px">Protocolo do Plantão</h2>
         <div class="hint">Regras imprescindíveis — valem durante todo o plantão.</div>
         <ol class="protocolo-regras">
+          <li>Ler com atenção o <strong>Check-in de hospedagem</strong> de cada peludinho. Qualquer dúvida, <strong>ligue: 31 99764-4296</strong> ou <strong>31 99111-1826</strong>.</li>
           <li>Gerar <strong>bem-estar</strong> aos FILHOts.</li>
           <li>Garantir que a alimentação seja dada corretamente — temos diversos peludinhos com <strong>alergias severas</strong>. <strong>Nenhuma alimentação pode ser trocada.</strong></li>
           <li>Garantir que o peludinho receba corretamente o <strong>medicamento</strong>, caso necessário.</li>
           <li>O plantonista <strong>não pode sair</strong> da empresa enquanto estiver no horário de plantão.</li>
         </ol>
         <div class="proto-subt">Antes de sair — Plantão Noturno</div>
-        <div class="hint">Confirme cada item abaixo. Fica salvo no dia.</div>
+        <div class="hint">Confirme cada item abaixo. Ao terminar, toque em salvar.</div>
         <div id="checkoutPlantaoList"></div>
+        <button class="btn btn-primary" style="margin-top:14px;width:100%" onclick="salvarCheckoutPlantao()">Salvar check-list do plantão</button>
+        <div id="status-checkout" class="rel-status"></div>
       </div>
       <div class="pets-grid" id="hospGrid"></div>
     </div>
@@ -1343,9 +1355,13 @@
     let html='<div class="card gest-card"><h2 style="font-size:20px;margin-bottom:2px">Resumo de hoje · AuAulândia</h2><div class="hint">'+arr.length+' hóspedes · '+prontos+' com relatório · '+pendentes+' sem relatório</div>';
     html+= alertas.length? '<div class="dc-faltas" style="margin-top:10px">⚠ <strong>ATENÇÃO ('+alertas.length+'):</strong> '+alertas.join(' · ')+'</div>' : '<div class="dc-pend-note" style="margin-top:10px;background:rgba(39,174,96,.1);border-color:rgba(39,174,96,.35);color:var(--crm-ok)">Sem alertas vermelhos hoje.</div>';
     html+='<div class="hint" style="margin-top:12px;font-weight:700">Textos prontos para enviar ao tutor:</div>';
-    arr.sort(function(a,b){return jsNorm(a.h.nome).localeCompare(jsNorm(b.h.nome));}).forEach(o=>{
-      const rel=(o.noite&&o.noite.byQ)?o.noite:((o.dia&&o.dia.byQ)?o.dia:null);
-      const al=[]; if(o.dia&&o.dia.byQ) alertasDe(o.dia.byQ).forEach(a=>al.push(a)); if(o.noite&&o.noite.byQ) alertasDe(o.noite.byQ).forEach(a=>al.push(a));
+    // Ordena por GRAVIDADE: vermelho (alerta) primeiro, amarelo (sem relatório) depois, verde por último.
+    arr.forEach(o=>{ const al=[]; if(o.dia&&o.dia.byQ) alertasDe(o.dia.byQ).forEach(a=>al.push(a)); if(o.noite&&o.noite.byQ) alertasDe(o.noite.byQ).forEach(a=>al.push(a)); const rel=(o.noite&&o.noite.byQ)?o.noite:((o.dia&&o.dia.byQ)?o.dia:null); o._al=al; o._rel=rel; o._nivel=al.length?3:(rel?1:2); });
+    arr.sort(function(a,b){ if(b._nivel!==a._nivel) return b._nivel-a._nivel; return jsNorm(a.h.nome).localeCompare(jsNorm(b.h.nome)); });
+    const lblNv={3:'Verificar URGENTE',2:'Atenção · falta relatório',1:'Tudo certo'}; const clsNv={3:'gn-urgente',2:'gn-atencao',1:'gn-ok'}; let _ultNv=null;
+    arr.forEach(o=>{
+      if(o._nivel!==_ultNv){ html+='<div class="gest-nivel '+clsNv[o._nivel]+'">'+lblNv[o._nivel]+'</div>'; _ultNv=o._nivel; }
+      const rel=o._rel, al=o._al;
       const texto=rel?montarTextoTutor(ctxDeRelatorio(o.h,rel)):'';
       html+='<div class="gest-item'+(al.length?' alerta':'')+'"><div class="gest-head"><strong>'+o.h.nome+'</strong> <span style="color:var(--muted);font-size:12px">'+o.h.tutor+'</span> '+(al.length?'<span class="gest-badge">'+al.join(', ')+'</span>':(rel?'<span class="gest-ok">pronto</span>':'<span class="gest-pend">sem relatório</span>'))+'</div>'+(rel?'<textarea class="gest-txt" readonly>'+texto+'</textarea><button class="btn btn-gold" style="padding:7px 14px;font-size:13px;margin-top:6px" onclick="copiarGest(this)">Copiar texto</button>':'')+'</div>';
     });
@@ -1429,7 +1445,9 @@
         const _ag=new Date();
         const _ehHoje = selectedDate.getFullYear()===_ag.getFullYear() && selectedDate.getMonth()===_ag.getMonth() && selectedDate.getDate()===_ag.getDate();
         const _depoisDoCorte = _ag.getHours()>11 || (_ag.getHours()===11 && _ag.getMinutes()>=30);
-        if(_ehHoje && _depoisDoCorte){ dormiramSaindo=[]; }
+        // "Dormiu · sai hoje" só vale HOJE e antes das 11h30 (para o Relatório da Noite cobrir quem dormiu).
+        // Em datas passadas/futuras, ou após o corte, mostra SÓ a planilha do dia (senão a contagem infla).
+        if(!(_ehHoje && !_depoisDoCorte)){ dormiramSaindo=[]; }
         const lista=hoje.concat(dormiramSaindo);
         if(lista.length){
           hospedes = lista.map((h,i)=>({nome:h.nome, tutor:h.tutor, raca:h.raca||'', ini:(h.nome[0]||'?').toUpperCase(), cor:CORES[i%CORES.length], mascote:/repolho/i.test(h.nome), saidaHoje:!!h.saidaHoje}));
@@ -1442,11 +1460,18 @@
   function dataKeyAtual(){ const p=x=>String(x).padStart(2,'0'); const d=selectedDate; return d.getFullYear()+'-'+p(d.getMonth()+1)+'-'+p(d.getDate()); }
   function carregarManuais(){
     if(!DB) return;
-    DB.ref('auaulandia/manuais/'+dataKeyAtual()).once('value').then(s=>{
-      const arr=Object.values(s.val()||{});
-      arr.forEach((m,i)=>{ if(m&&m.nome && !hospedes.some(h=>h.nome===m.nome&&h.tutor===(m.tutor||''))){ hospedes.push({nome:m.nome, tutor:m.tutor||'', raca:'', ini:(m.nome[0]||'?').toUpperCase(), cor:CORES[(hospedes.length+i)%CORES.length], pernoite:!m.hospede, hospede:!!m.hospede}); } });
-      renderHosp();
-    }).catch(()=>{});
+    const p=x=>String(x).padStart(2,'0'); const keyDe=d=>d.getFullYear()+'-'+p(d.getMonth()+1)+'-'+p(d.getDate());
+    const hojeK=dataKeyAtual();
+    const vesp=new Date(selectedDate); vesp.setDate(vesp.getDate()-1); const vespK=keyDe(vesp);
+    const _ag=new Date();
+    const _ehHoje = selectedDate.getFullYear()===_ag.getFullYear() && selectedDate.getMonth()===_ag.getMonth() && selectedDate.getDate()===_ag.getDate();
+    const _antesCorte = !(_ag.getHours()>11 || (_ag.getHours()===11 && _ag.getMinutes()>=30));
+    const incluiVesp = _ehHoje && _antesCorte; // pernoite que dormiu aparece de manhã, igual aos hóspedes
+    const add=(m,saida)=>{ if(m&&m.nome && !hospedes.some(h=>h.nome===m.nome&&h.tutor===(m.tutor||''))){ hospedes.push({nome:m.nome, tutor:m.tutor||'', raca:'', ini:(m.nome[0]||'?').toUpperCase(), cor:CORES[hospedes.length%CORES.length], pernoite:!m.hospede, hospede:!!m.hospede, saidaHoje:!!saida}); } };
+    Promise.all([
+      DB.ref('auaulandia/manuais/'+hojeK).once('value').then(s=>s.val()||{}).catch(()=>({})),
+      incluiVesp ? DB.ref('auaulandia/manuais/'+vespK).once('value').then(s=>s.val()||{}).catch(()=>({})) : Promise.resolve({})
+    ]).then(function(r){ Object.values(r[0]||{}).forEach(m=>add(m,false)); Object.values(r[1]||{}).forEach(m=>add(m,true)); renderHosp(); }).catch(()=>{});
   }
   function adicionarPernoite(){
     const nome=prompt('Pernoite — nome do peludinho (aluno do Day Care que ficou hospedado):'); if(!nome||!nome.trim()) return;
@@ -2045,19 +2070,21 @@
 
   // ===== CHECK-OUT DO PLANTAO (To-Do plantonista) =====
   const CHECKOUT_PLANTAO=[
-    'Conferir se a água do mop está limpa',
-    'Trocar a água de todos antes de dormir',
-    'No inverno, conferir se todos têm agasalho — <strong>vestir!</strong>',
-    'Conferir se há medicação para mais tarde',
-    'Se algum peludo não comeu, dar segundo horário de refeição',
-    'Cozinha: porta de grade com <strong>2 cadeados</strong> e porta de madeira com <strong>2 traves e fechadura</strong>',
-    'Cineminha: porta de grade com <strong>1 cadeado</strong> e porta de madeira com <strong>fechadura</strong>',
-    'Sala de reunião: portão com <strong>2 cadeados</strong> e porta de madeira com <strong>2 traves e tetra-chave</strong>',
+    'Colocar água nova para todos os Peludinhos antes de dormir',
+    'Fechar Cozinha <span class="todo-det">porta de grade com 2 cadeados e porta de madeira com 2 traves e fechadura</span>',
+    'Fechar Cineminha <span class="todo-det">porta de grade com 1 cadeado e porta de madeira com fechadura</span>',
+    'Fechar Sala de reunião <span class="todo-det">portão com 2 cadeados e porta de madeira com 2 traves e tetra-chave</span>',
     'Conferir se a janela da sala de reunião e do escritório estão travadas',
-    'Ligar o alarme Verisure: <strong>Principal E Perimetral — os dois!</strong> Se não acionar, ver qual porta está aberta e fechá-la'];
+    'Conferir se todas as luzes estão apagadas',
+    'Ligar o alarme Verisure <span class="todo-det">Principal E Perimetral — os dois! Se não acionar, ver qual porta está aberta e fechá-la</span>'];
   let coPlantao={};
   function carregarCheckoutPlantao(){ if(DB){ DB.ref('auaulandia/checkout/'+dcDataKey()).once('value').then(s=>{ coPlantao=s.val()||{}; }).then(renderCheckoutPlantao).catch(renderCheckoutPlantao); } else renderCheckoutPlantao(); }
   function toggleCheckoutPlantao(i){ coPlantao[i]=!coPlantao[i]; if(DB) DB.ref('auaulandia/checkout/'+dcDataKey()+'/'+i).set(coPlantao[i]||null).catch(()=>{}); if(typeof audit==='function'&&coPlantao[i]) audit('checkout','check-out do plantão: item '+(i+1)); renderCheckoutPlantao(); }
+  function salvarCheckoutPlantao(){ const st=document.getElementById('status-checkout'); const total=CHECKOUT_PLANTAO.length; let n=0; for(let i=0;i<total;i++) if(coPlantao[i]) n++;
+    if(n<total){ if(st){ st.style.color='var(--crm-critico)'; st.textContent='✋ Faltam '+(total-n)+' item(ns) do check-list. Marque todos antes de salvar.'; } return; }
+    if(DB) DB.ref('auaulandia/checkout/'+dcDataKey()+'/_salvo').set(Date.now()).catch(()=>{});
+    if(typeof audit==='function') audit('checkout','check-list do plantão salvo ('+total+' itens)');
+    if(st){ st.style.color='var(--crm-ok)'; st.textContent='✅ Check-list do plantão salvo! Bom descanso.'; } }
   function renderCheckoutPlantao(){ const el=document.getElementById('checkoutPlantaoList'); if(!el) return;
     el.innerHTML=CHECKOUT_PLANTAO.map((t,i)=>{ const on=!!coPlantao[i]; return `<label class="todo-item ${on?'on':''}" onclick="toggleCheckoutPlantao(${i})"><span class="todo-box">${on?'&#10003;':''}</span>${t}</label>`; }).join('');
   }
