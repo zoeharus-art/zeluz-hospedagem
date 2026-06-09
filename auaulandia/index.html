@@ -25,7 +25,7 @@
     --crm-ok:#27AE60; --crm-info:#2980B9;
     /* base */
     --line:#e7e0d2; --muted:#7c8a93;
-    --font-ui:'Inter',sans-serif; --font-marca:'Inter',sans-serif; --font-accent:'Cormorant Garamond',serif;
+    --font-ui:'Inter',sans-serif; --font-marca:'Inter',sans-serif; --font-accent:'Inter',sans-serif;
     --radius:14px; --shadow:0 4px 18px rgba(35,77,103,.08); --shadow-lg:0 12px 34px rgba(35,77,103,.16);
     --sidebar:268px;
   }
@@ -205,8 +205,11 @@
   body[data-role="monitor"] #card-texto, body[data-role="plantonista"] #card-texto, body[data-role="tutor"] #card-texto{display:none}
   /* Protocolo do Plantão = SÓ o plantonista (monitor, gestão, supervisão e tutor não veem) */
   body:not([data-role="plantonista"]) #card-checkout-plantao{display:none !important}
-  /* Foto (trocar/salvar) só Gestão e Supervisão. !important vence o style inline display:flex. */
-  body:not([data-role="gestao"]):not([data-role="supervisor"]) .so-foto{display:none !important}
+  /* Foto (trocar/salvar): Gestão, Supervisão e Monitor podem. Plantonista e tutor NÃO (só recebem).
+     !important vence o style inline display:flex. */
+  body[data-role="plantonista"] .so-foto, body[data-role="tutor"] .so-foto{display:none !important}
+  /* Adicionar pernoite/hóspede: equipe (gestão/supervisão/monitor). Plantonista e tutor NÃO. */
+  body[data-role="plantonista"] .pet.add, body[data-role="tutor"] .pet.add{display:none !important}
   /* Relatório do Dia: editável por quem está de plantão (monitora, plantonista, gestão). Só o tutor é read-only. */
   body[data-role="tutor"] #card-dia .seg button, body[data-role="tutor"] #card-dia textarea,
   body[data-role="monitor"] #card-noite .seg button, body[data-role="monitor"] #card-noite textarea,
