@@ -205,7 +205,8 @@
   body[data-role="monitor"] #card-texto, body[data-role="plantonista"] #card-texto, body[data-role="tutor"] #card-texto{display:none}
   /* Protocolo do Plantão = SÓ o plantonista (monitor, gestão, supervisão e tutor não veem) */
   body:not([data-role="plantonista"]) #card-checkout-plantao{display:none !important}
-  body[data-role="plantonista"] .so-foto, body[data-role="tutor"] .so-foto{display:none}
+  /* Foto (trocar/salvar) só Gestão e Supervisão. !important vence o style inline display:flex. */
+  body:not([data-role="gestao"]):not([data-role="supervisor"]) .so-foto{display:none !important}
   /* Relatório do Dia: editável por quem está de plantão (monitora, plantonista, gestão). Só o tutor é read-only. */
   body[data-role="tutor"] #card-dia .seg button, body[data-role="tutor"] #card-dia textarea,
   body[data-role="monitor"] #card-noite .seg button, body[data-role="monitor"] #card-noite textarea,
@@ -1135,7 +1136,8 @@
     else { av.style.backgroundImage='none'; av.textContent=h.ini; av.style.background=h.cor; }
     document.getElementById('hf-nome').textContent=h.nome;
     const raca=info.raca||h.raca||racasMap[(h.nome+'__'+h.tutor).toLowerCase()]||'';
-    document.getElementById('hf-meta').innerHTML=`${raca?raca+' · ':''}${h.mascote?'Nossa Zelozinha':'Tutor: '+h.tutor}`;
+    const _tp=h.mascote?'Moradora':(h.hospede?'Hóspede':(h.pernoite?'Pernoite':'Hóspede'));
+    document.getElementById('hf-meta').innerHTML=`${raca?raca+' · ':''}<strong>${_tp}</strong> · ${h.mascote?'Nossa Zelozinha':'Tutor: '+h.tutor}`;
     document.getElementById('hf-estadia').innerHTML=`Na AuAulândia · <strong>estadia a confirmar na ficha</strong>`;
     document.getElementById('hfRaca').value=raca;
     document.getElementById('hosp-lista').style.display='none';
@@ -1172,7 +1174,7 @@
   function onRaca(v){
     if(!currentHosp) return;
     setInfo(currentHosp,{raca:v}); renderHosp();
-    document.getElementById('hf-meta').innerHTML=`${v?v+' · ':''}${currentHosp.mascote?'Nossa Zelozinha':'Tutor: '+currentHosp.tutor}`;
+    document.getElementById('hf-meta').innerHTML=`${v?v+' · ':''}<strong>${currentHosp.mascote?'Moradora':(currentHosp.hospede?'Hóspede':(currentHosp.pernoite?'Pernoite':'Hóspede'))}</strong> · ${currentHosp.mascote?'Nossa Zelozinha':'Tutor: '+currentHosp.tutor}`;
   }
   function onChip(v){ onCad(); }
   function toggleCadastro(){ const c=document.getElementById('card-cadastro'); if(!c) return; c.style.display=(c.style.display==='block'?'none':'block'); if(c.style.display==='block') c.scrollIntoView({behavior:'smooth',block:'center'}); }
@@ -1183,10 +1185,13 @@
   function segVal(id){ const b=document.querySelector('#'+id+' button.on'); return b?b.textContent.trim():''; }
   function setSeg(id,val){ const g=document.getElementById(id); if(!g)return; g.querySelectorAll('button').forEach(b=>{ b.classList.remove('on','t-ok','t-bad','t-warn'); if(val&&b.textContent.trim()===val) b.classList.add('on'); }); }
   function atualizarHeader(cad){
-    cad=cad||{}; const p=[]; if(cad.raca)p.push(cad.raca); if(cad.sexo)p.push(cad.sexo);
+    cad=cad||{}; const p=[]; const h=currentHosp||{};
+    const rc=cad.raca||h.raca||racasMap[((h.nome||'')+'__'+(h.tutor||'')).toLowerCase()]||''; if(rc)p.push(rc);
+    if(cad.sexo)p.push(cad.sexo);
     const id=calcIdade(cad.nasc); if(id)p.push(id); if(cad.castrado==='Sim')p.push('Castrado');
+    const tp=h.mascote?'Moradora':(h.hospede?'Hóspede':(h.pernoite?'Pernoite':'Hóspede'));
     const tut=cad.tutor||(currentHosp&&currentHosp.tutor)||'';
-    document.getElementById('hf-meta').innerHTML = p.join(' · ') + (tut?(p.length?' · ':'')+'Tutor: '+tut:'');
+    document.getElementById('hf-meta').innerHTML = (p.length?p.join(' · ')+' · ':'') + '<strong>'+tp+'</strong>' + (tut?' · '+(h.mascote?'Nossa Zelozinha':'Tutor: '+tut):'');
     const cl=document.getElementById('hf-chipline'); if(cl) cl.textContent='Microchip: '+(cad.chip||'--');
   }
   function onCad(){
@@ -1275,9 +1280,8 @@
   function salvarRelatorioCard(tipo){ if(!currentHosp) return; const card='card-'+tipo; const st=document.getElementById('status-'+tipo);
     const passouEl=document.getElementById('passou-'+tipo), recebeuEl=document.getElementById('recebeu-'+tipo);
     const passou=((passouEl&&passouEl.value)||'').trim(); const recebeu=recebeuEl?((recebeuEl.value)||'').trim():'';
-    if(!passou||(recebeuEl&&!recebeu)){ if(st){ st.style.color='var(--crm-critico)'; st.textContent='✋ Faltou assinatura.'; } return; }
     const falt=[]; document.querySelectorAll('#'+card+' .obsline').forEach(l=>{ if(!l.querySelector('button.on')){ const q=l.querySelector('.q'); if(q) falt.push(q.textContent.trim()); } });
-    if(falt.length){ if(st){ st.style.color='var(--crm-critico)'; st.textContent='✋ Preencha TODOS os campos. Faltou: '+falt.slice(0,5).join(', ')+(falt.length>5?'…':''); } return; }
+    if(falt.length){ if(st){ st.style.color='var(--crm-critico)'; st.textContent='✋ Antes de passar para o próximo peludinho, responda TODAS as perguntas! Faltou: '+falt.slice(0,6).join(', ')+(falt.length>6?'…':''); } return; }
     // ---- Medicação/Suplementação à prova de erro: "Tem? Sim" exige tabela preenchida ----
     const _mg=coletarMedgrids(card);
     function _vMed(kind,label,resp){ if(resp!=='Sim') return ''; const arr=_mg[kind]||[]; const completas=arr.filter(o=>o.m&&o.h&&o.d); const incompletas=arr.filter(o=>(o.m||o.h||o.d)&&!(o.m&&o.h&&o.d));
@@ -1286,6 +1290,7 @@
     const _medResp=valDe(card,'Tem medicação?'); const _supResp=valDe(card,'Tem suplementação?');
     const _eMed=_vMed('med','medicação',_medResp); if(_eMed){ if(st){ st.style.color='var(--crm-critico)'; st.textContent='✋ '+_eMed; } return; }
     const _eSup=_vMed('sup','suplementação',_supResp); if(_eSup){ if(st){ st.style.color='var(--crm-critico)'; st.textContent='✋ '+_eSup; } return; }
+    if(!passou||(recebeuEl&&!recebeu)){ if(st){ st.style.color='var(--crm-critico)'; st.textContent='✋ Agora é só assinar: preencha quem passou e quem recebeu o plantão.'; } return; }
     const dados=coletarCard(card); dados.passou=passou; if(recebeuEl) dados.recebeu=recebeu; dados._ts=Date.now();
     if(DB){ if(st){ st.style.color='var(--muted)'; st.textContent='Salvando...'; } DB.ref('auaulandia/relatorios/'+fichaKey()+'/'+tipo).set(dados).then(()=>{ if(st){ st.style.color='var(--crm-ok)'; st.textContent=(tipo==='inicio')?'✅ Jantar salvo! A Noite será preenchida amanhã de manhã, na passagem do plantão.':'✅ Salvo!'; } if(typeof audit==='function') audit('relatorio', tipo, {pet:(currentHosp&&currentHosp.nome)||'', assinou:passou}); const c=document.getElementById(card); if(c) c.classList.add('collapsed'); }).catch(e=>{ if(st){ st.style.color='var(--crm-critico)'; st.textContent='⚠️ Erro: '+e.message; } }); } else { if(st){ st.style.color='var(--crm-atencao-text)'; st.textContent='Banco conectando...'; } } }
   function valDe(cardId,perg){ for(const l of document.querySelectorAll('#'+cardId+' .obsline')){ const q=l.querySelector('.q'); if(q&&q.textContent.trim()===perg){ const on=l.querySelector('button.on'); return on?on.textContent.trim():''; } } return ''; }
