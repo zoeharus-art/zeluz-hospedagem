@@ -214,7 +214,20 @@
   body[data-role="tutor"] #card-dia .seg button, body[data-role="tutor"] #card-dia textarea,
   body[data-role="monitor"] #card-noite .seg button, body[data-role="monitor"] #card-noite textarea,
   body[data-role="tutor"] #card-noite .seg button, body[data-role="tutor"] #card-noite textarea{pointer-events:none}
-  @media(max-width:600px){.datenav #dateLabel{display:none}}
+  .datenav .dl-rel{color:var(--z-gold-deep);font-weight:800}
+  @media(max-width:600px){.datenav #dateLabel{font-size:11.5px;padding:0 4px}.datenav .dl-wd{display:none}.datenav button{padding:5px 8px;font-size:14px}.datenav .hoje{padding:6px 10px}}
+  /* Banner Parte 2 — histórico de medicação na estadia */
+  .medhist-banner{background:rgba(222,180,40,.16);border:2px solid var(--z-gold);border-radius:14px;padding:13px 16px;margin-bottom:14px;font-size:14.5px;font-weight:600;color:var(--z-blue);line-height:1.45}
+  .medhist-banner strong{color:var(--z-blue)}
+  /* Dados do peludinho no celular: empilha foto + dados (corrige aperto p/ plantonista/monitor/gestão) */
+  @media(max-width:560px){
+    .hosp-head{flex-direction:column;align-items:flex-start;gap:12px}
+    .hosp-head .ph{width:96px;height:96px;font-size:40px;border-radius:14px}
+    .hosp-head>div[style*="flex:1"]{width:100%}
+    .hf-nome{font-size:24px}
+    .hosp-head .chip-serv{align-self:flex-start}
+    .so-foto{width:100%}
+  }
 
   /* ===== ficha ===== */
   .subtabs{display:flex;gap:7px;flex-wrap:wrap;margin-bottom:18px}
@@ -786,6 +799,7 @@
 
       <div class="checklist-note">📋 O Check-list de hospedagem é o seu material de trabalho principal. <strong>LEIA-O!</strong><br><span style="font-size:14px;font-weight:800;color:var(--crm-critico)">DÚVIDAS? LIGUE: 31 99764-4296 / 31 99111-1826</span></div>
 
+      <div id="medHistBanner" class="medhist-banner" style="display:none"></div>
       <div class="rel-stack">
       <div class="card rel-card collapsed" id="card-dia">
         <div class="rel-head" onclick="toggleRel('card-dia')"><h2>Relatório do Dia</h2><span class="rel-tag">Monitora</span><span class="rel-caret">▾</span></div>
@@ -806,6 +820,8 @@
         <div class="obsline"><span class="q">Trouxe roupa de frio?</span><div class="seg" data-single><button data-tone="ok" onclick="pick(this)">Sim</button><button data-tone="warn" onclick="pick(this)">Não</button></div></div>
         <div class="obsline"><span class="q">Fez cocô?</span><div class="seg" data-single><button data-tone="ok" onclick="pick(this)">Sim</button><button data-tone="warn" onclick="pick(this)">Não</button></div></div>
         <div class="obsline"><span class="q">Consistência</span><div class="seg" data-single><button data-tone="ok" onclick="pick(this)">Normal</button><button data-tone="bad" onclick="pick(this)">Pastoso</button><button data-tone="bad" onclick="pick(this)">Diarreia</button></div></div>
+        <div class="obsline"><span class="q">Vomitou?</span><div class="seg" data-single><button data-tone="ok" onclick="pick(this);onVomQ(this)">Não</button><button data-tone="bad" onclick="pick(this);onVomQ(this)">Sim</button></div></div>
+        <div class="obsline vom-tipo" style="display:none"><span class="q">Tipo de vômito</span><div class="seg" data-single><button data-tone="warn" onclick="pick(this)">Amarelo (bile)</button><button data-tone="warn" onclick="pick(this)">Branco / espumoso (água)</button><button data-tone="warn" onclick="pick(this)">Comida / ração</button></div></div>
         <div class="obsline"><span class="q">Coleira repelente?</span><div class="seg" data-single><button data-tone="ok" onclick="pick(this)">Sim</button><button data-tone="warn" onclick="pick(this)">Não</button></div></div>
         <div class="obsline"><span class="q">Coleira de identificação?</span><div class="seg" data-single><button data-tone="ok" onclick="pick(this)">Sim</button><button data-tone="warn" onclick="pick(this)">Não</button></div></div>
         <div class="field" style="margin-top:14px"><label>Observação</label><textarea style="width:100%;font-family:var(--font-ui);font-size:14px;padding:12px;border:1.5px solid var(--line);border-radius:11px;background:var(--z-cream);min-height:70px" placeholder="Algo do dia que seja importante"></textarea></div>
@@ -823,6 +839,8 @@
         <div class="obsline"><span class="q">Jantou?</span><div class="seg" data-single><button data-tone="ok" onclick="pick(this)">Sim</button><button data-tone="bad" onclick="pick(this)">Não</button><button data-tone="warn" onclick="pick(this)">Metade</button><button data-tone="warn" onclick="pick(this)">Não se aplica</button></div></div>
         <div class="obsline"><span class="q">Fez xixi?</span><div class="seg" data-single><button data-tone="ok" onclick="pick(this)">Sim</button><button data-tone="warn" onclick="pick(this)">Não</button><button data-tone="warn" onclick="pick(this)">Não vi</button></div></div>
         <div class="obsline"><span class="q">Fez cocô?</span><div class="seg" data-single><button data-tone="ok" onclick="pick(this)">Sim</button><button data-tone="warn" onclick="pick(this)">Não</button><button data-tone="warn" onclick="pick(this)">Não vi</button></div></div>
+        <div class="obsline"><span class="q">Vomitou?</span><div class="seg" data-single><button data-tone="ok" onclick="pick(this);onVomQ(this)">Não</button><button data-tone="bad" onclick="pick(this);onVomQ(this)">Sim</button></div></div>
+        <div class="obsline vom-tipo" style="display:none"><span class="q">Tipo de vômito</span><div class="seg" data-single><button data-tone="warn" onclick="pick(this)">Amarelo (bile)</button><button data-tone="warn" onclick="pick(this)">Branco / espumoso (água)</button><button data-tone="warn" onclick="pick(this)">Comida / ração</button></div></div>
         <div class="obsline"><span class="q">Tem medicação?</span><div class="seg" data-single><button data-tone="ok" onclick="pick(this);onMedQ(this)">Não</button><button data-tone="warn" onclick="pick(this);onMedQ(this)">Sim</button></div></div>
         <div class="medgrid-slot" data-kind="med"></div>
         <div class="obsline"><span class="q">Tem suplementação?</span><div class="seg" data-single><button data-tone="ok" onclick="pick(this);onMedQ(this)">Não</button><button data-tone="warn" onclick="pick(this);onMedQ(this)">Sim</button></div></div>
@@ -841,6 +859,8 @@
         <div class="obsline"><span class="q">Bebeu água?</span><div class="seg" data-single><button data-tone="ok" onclick="pick(this)">Sim</button><button data-tone="bad" onclick="pick(this)">Não</button></div></div>
         <div class="obsline"><span class="q">Fez cocô?</span><div class="seg" data-single><button data-tone="ok" onclick="pick(this)">Sim</button><button data-tone="warn" onclick="pick(this)">Não</button><button data-tone="warn" onclick="pick(this)">Não vi</button></div></div>
         <div class="obsline"><span class="q">Consistência</span><div class="seg" data-single><button data-tone="ok" onclick="pick(this)">Normal</button><button data-tone="bad" onclick="pick(this)">Pastoso</button><button data-tone="bad" onclick="pick(this)">Diarreia</button></div></div>
+        <div class="obsline"><span class="q">Vomitou?</span><div class="seg" data-single><button data-tone="ok" onclick="pick(this);onVomQ(this)">Não</button><button data-tone="bad" onclick="pick(this);onVomQ(this)">Sim</button></div></div>
+        <div class="obsline vom-tipo" style="display:none"><span class="q">Tipo de vômito</span><div class="seg" data-single><button data-tone="warn" onclick="pick(this)">Amarelo (bile)</button><button data-tone="warn" onclick="pick(this)">Branco / espumoso (água)</button><button data-tone="warn" onclick="pick(this)">Comida / ração</button></div></div>
         <div class="obsline"><span class="q">Fez xixi?</span><div class="seg" data-single><button data-tone="ok" onclick="pick(this)">Sim</button><button data-tone="warn" onclick="pick(this)">Não</button><button data-tone="warn" onclick="pick(this)">Não vi</button></div></div>
         <div class="obsline"><span class="q">Aspecto do xixi</span><div class="seg" data-single><button data-tone="ok" onclick="pick(this)">Claro</button><button data-tone="warn" onclick="pick(this)">Amarelo escuro</button><button data-tone="bad" onclick="pick(this)">Com sangue</button></div></div>
         <div class="obsline"><span class="q">Jantou?</span><div class="seg" data-single><button data-tone="ok" onclick="pick(this)">Sim</button><button data-tone="bad" onclick="pick(this)">Não</button><button data-tone="warn" onclick="pick(this)">Metade</button><button data-tone="warn" onclick="pick(this)">Não se aplica</button></div></div>
@@ -849,6 +869,7 @@
         <div class="medgrid-slot" data-kind="med"></div>
         <div class="obsline"><span class="q">Tem suplementação?</span><div class="seg" data-single><button data-tone="ok" onclick="pick(this);onMedQ(this)">Não</button><button data-tone="warn" onclick="pick(this);onMedQ(this)">Sim</button></div></div>
         <div class="medgrid-slot" data-kind="sup"></div>
+        <div class="field" style="margin-top:14px"><label>Observação</label><textarea style="width:100%;font-family:var(--font-ui);font-size:14px;padding:12px;border:1.5px solid var(--line);border-radius:11px;background:var(--z-cream);min-height:70px" placeholder="Algo da noite que seja importante e não foi perguntado"></textarea></div>
         <div class="rel-assina"><div class="grid2"><div class="field"><label>Quem passou o plantão — Plantonista (assina) *</label><input id="passou-noite" class="cad-in"></div><div class="field"><label>Quem recebeu (assina) *</label><input id="recebeu-noite" class="cad-in"></div></div><div class="actions"><button class="btn btn-primary" onclick="salvarRelatorioCard('noite')">OK, li tudo — salvar</button></div><div id="status-noite" class="rel-status"></div></div>
         </div>
       </div>
@@ -984,7 +1005,12 @@
   let selectedDate=new Date();
   function updateDateLabel(){
     const d=selectedDate, p=x=>String(x).padStart(2,'0');
-    document.getElementById('dateLabel').textContent=`${DIAS[d.getDay()]}, ${p(d.getDate())} de ${MESES[d.getMonth()]} de ${d.getFullYear()}`;
+    const dd=`${p(d.getDate())}/${p(d.getMonth()+1)}/${d.getFullYear()}`;
+    const hoje=new Date(); hoje.setHours(0,0,0,0); const alvo=new Date(d); alvo.setHours(0,0,0,0);
+    const dif=Math.round((alvo-hoje)/86400000);
+    const rel = dif===0?'Hoje' : dif===-1?'Ontem' : dif===1?'Amanhã' : '';
+    const el=document.getElementById('dateLabel'); if(!el) return;
+    el.innerHTML = (rel?'<strong class="dl-rel">'+rel+'</strong> · ':'') + dd + ' <span class="dl-wd">· '+DIAS[d.getDay()]+'</span>';
   }
   function changeDate(n){
     const nova=new Date(selectedDate); nova.setDate(nova.getDate()+n);
@@ -1247,12 +1273,40 @@
   function coletarMedgrids(cardId){ const out={med:[],sup:[]}; document.querySelectorAll('#'+cardId+' .medgrid').forEach(g=>{ const kind=g.dataset.kind==='sup'?'sup':'med'; const rows=[]; g.querySelectorAll('.medrow').forEach(r=>{ const m=(r.querySelector('[data-c=m]').value||'').trim(); const h=(r.querySelector('[data-c=h]').value||'').trim(); const d=(r.querySelector('[data-c=d]').value||'').trim(); if(m||h||d) rows.push({m:m,h:h,d:d}); }); out[kind]=rows; }); return out; }
   function aplicarMedgrids(cardId,d){ d=d||{}; montarMedgrids(); document.querySelectorAll('#'+cardId+' .medgrid').forEach(g=>{ const kind=g.dataset.kind==='sup'?'sup':'med'; let arr=(kind==='sup'?(d.sups||[]):(d.meds||[])); if(!arr||!arr.length){ const ba=d.byArea||{}; const old=(kind==='sup')?ba.suplemento:ba.medicamento; if(old) arr=[{m:old,h:'',d:''}]; } const rowsEl=g.querySelector('.medrows'); if(rowsEl){ const n=Math.max(5,(arr||[]).length); rowsEl.innerHTML=''; for(let i=0;i<n;i++) rowsEl.insertAdjacentHTML('beforeend', medRowHTML(kind)); rowsEl.querySelectorAll('.medrow').forEach((r,i)=>{ const o=(arr&&arr[i])||{}; r.querySelector('[data-c=m]').value=o.m||''; r.querySelector('[data-c=h]').value=o.h||''; r.querySelector('[data-c=d]').value=o.d||''; }); } }); sincMedVis(cardId); }
   function medsToTxt(arr){ return (arr||[]).map(o=>[o.m,o.d,o.h].filter(Boolean).join(' ')).filter(Boolean).join('; '); }
-  // "Tem medicação/suplementação? Sim" abre a tabela; "Não" esconde. Estadia com histórico força mostrar (Parte 2).
+  // detecta se um relatório (novo ou antigo) registrou medicação
+  function temMedEm(rel){ if(!rel) return false; if(rel.meds&&rel.meds.length) return true; if(rel.byQ&&rel.byQ['Tem medicação?']==='Sim') return true; if(rel.byArea&&rel.byArea.medicamento) return true; return false; }
+  // Parte 2: histórico de medicação na estadia atual do FILHOt aberto (preenchido ao abrir a ficha)
+  let medHistEstadia={tinha:false};
+  // "Tem medicação/suplementação? Sim" abre a tabela; "Não" esconde. Estadia com histórico de medicação força mostrar (Parte 2).
   function gridAposObsline(l){ let el=l.nextElementSibling; while(el && !(el.classList&&el.classList.contains('medgrid'))) el=el.nextElementSibling; return el; }
-  function sincMedVis(cardId){ document.querySelectorAll('#'+cardId+' .obsline').forEach(l=>{ const q=l.querySelector('.q'); if(!q) return; const t=q.textContent.trim(); if(t==='Tem medicação?'||t==='Tem suplementação?'){ const g=gridAposObsline(l); if(g){ const on=l.querySelector('button.on'); g.style.display=(on&&on.textContent.trim()==='Sim')?'block':'none'; } } }); }
+  function sincMedVis(cardId){ document.querySelectorAll('#'+cardId+' .obsline').forEach(l=>{ const q=l.querySelector('.q'); if(!q) return; const t=q.textContent.trim(); if(t==='Tem medicação?'||t==='Tem suplementação?'){ const g=gridAposObsline(l); if(g){ const on=l.querySelector('button.on'); let show=(on&&on.textContent.trim()==='Sim'); if(t==='Tem medicação?' && medHistEstadia.tinha) show=true; g.style.display=show?'block':'none'; } } }); }
   function onMedQ(btn){ const card=btn.closest('.rel-card'); if(card) sincMedVis(card.id); }
+  // ---- Vômito: "Vomitou? Sim" abre "Tipo de vômito"; "Não" esconde ----
+  function sincVomVis(cardId){ document.querySelectorAll('#'+cardId+' .vom-tipo').forEach(function(l){ let p=l.previousElementSibling; while(p && !(p.querySelector&&p.querySelector('.q')&&p.querySelector('.q').textContent.trim()==='Vomitou?')) p=p.previousElementSibling; const on=p?p.querySelector('button.on'):null; l.style.display=(on&&on.textContent.trim()==='Sim')?'flex':'none'; }); }
+  function onVomQ(btn){ const card=btn.closest('.rel-card'); if(card) sincVomVis(card.id); }
+  // Parte 2 — varre os dias anteriores CONTÍGUOS da estadia e marca se houve medicação
+  function checarHistMedEstadia(hosp, cb){
+    medHistEstadia={tinha:false};
+    if(!DB||!hosp){ if(cb)cb(); return; }
+    const p=x=>String(x).padStart(2,'0'); const tasks=[];
+    for(let i=1;i<=14;i++){ const d=new Date(selectedDate); d.setDate(d.getDate()-i);
+      const key=((hosp.nome||'')+'__'+(hosp.tutor||'')+'__'+d.getFullYear()+'-'+p(d.getMonth()+1)+'-'+p(d.getDate())).toLowerCase().replace(/[.#$\[\]\/]/g,'-');
+      const label=p(d.getDate())+'/'+p(d.getMonth()+1);
+      tasks.push(DB.ref('auaulandia/relatorios/'+key).once('value').then(s=>({v:s.val(),label:label})).catch(()=>({v:null,label:label}))); }
+    Promise.all(tasks).then(function(res){
+      for(const r of res){ if(!r.v){ break; } // dia sem relatório = fim da estadia contígua
+        const ant=migrarAntigo(r.v); const cand=[r.v.dia,r.v.inicio,r.v.noite]; if(ant){ cand.push(ant.dia,ant.inicio); }
+        let achou=false; for(const rel of cand){ if(temMedEm(rel)){ achou=true; break; } }
+        if(achou){ medHistEstadia={tinha:true, quando:r.label}; break; } }
+      if(cb) cb();
+    }).catch(()=>{ if(cb)cb(); });
+  }
+  function renderMedHistBanner(){ const el=document.getElementById('medHistBanner'); if(!el) return;
+    if(medHistEstadia.tinha){ const hoje=(valDe('card-dia','Tem medicação?')==='Sim'||valDe('card-inicio','Tem medicação?')==='Sim'||valDe('card-noite','Tem medicação?')==='Sim');
+      el.style.display='block'; el.innerHTML='⚠ <strong>'+((currentHosp&&currentHosp.nome)||'Este FILHOt')+'</strong> teve <strong>medicação registrada nesta estadia</strong> (dia '+medHistEstadia.quando+'). '+(hoje?'Continue registrando o horário e a quantidade.':'Se ainda toma, registre. Se acabou ou foi suspenso, confirme ao salvar.'); }
+    else { el.style.display='none'; el.innerHTML=''; } }
   function coletarCard(cardId){ const byQ={}; document.querySelectorAll('#'+cardId+' .obsline').forEach(l=>{ const q=l.querySelector('.q'); const on=l.querySelector('button.on'); if(q) byQ[q.textContent.trim()]= on?on.textContent.trim():''; }); const areas=[]; const byArea={}; document.querySelectorAll('#'+cardId+' textarea').forEach(t=>{ areas.push(t.value||''); const ph=(t.placeholder||'').toLowerCase(); if(ph.indexOf('medicamento')>=0) byArea.medicamento=t.value||''; else if(ph.indexOf('suplemento')>=0) byArea.suplemento=t.value||''; }); const mg=coletarMedgrids(cardId); return {byQ:byQ,areas:areas,byArea:byArea,meds:mg.med,sups:mg.sup}; }
-  function aplicarCard(cardId,d){ d=d||{}; const byQ=d.byQ||{}; document.querySelectorAll('#'+cardId+' .obsline').forEach(l=>{ const q=l.querySelector('.q'); const val=q?byQ[q.textContent.trim()]:''; l.querySelectorAll('button').forEach(b=>{ b.classList.remove('on','t-ok','t-bad','t-warn'); if(val&&b.textContent.trim()===val){ b.classList.add('on'); if(b.dataset.tone) b.classList.add('t-'+b.dataset.tone);} }); }); const areas=d.areas||[]; document.querySelectorAll('#'+cardId+' textarea').forEach((t,i)=>t.value=areas[i]||''); const tipo=cardId.replace('card-',''); const sp=document.getElementById('passou-'+tipo); if(sp) sp.value=d.passou||''; const sr=document.getElementById('recebeu-'+tipo); if(sr) sr.value=d.recebeu||''; aplicarMedgrids(cardId,d); }
+  function aplicarCard(cardId,d){ d=d||{}; const byQ=d.byQ||{}; document.querySelectorAll('#'+cardId+' .obsline').forEach(l=>{ const q=l.querySelector('.q'); const val=q?byQ[q.textContent.trim()]:''; l.querySelectorAll('button').forEach(b=>{ b.classList.remove('on','t-ok','t-bad','t-warn'); if(val&&b.textContent.trim()===val){ b.classList.add('on'); if(b.dataset.tone) b.classList.add('t-'+b.dataset.tone);} }); }); const areas=d.areas||[]; document.querySelectorAll('#'+cardId+' textarea').forEach((t,i)=>t.value=areas[i]||''); const tipo=cardId.replace('card-',''); const sp=document.getElementById('passou-'+tipo); if(sp) sp.value=d.passou||''; const sr=document.getElementById('recebeu-'+tipo); if(sr) sr.value=d.recebeu||''; aplicarMedgrids(cardId,d); sincVomVis(cardId); }
   // mapeamento do formato ANTIGO (campos c0..c21 da ficha de 1 salvar so) para os relatorios novos
   const MAP_DIA_ANTIGO=['Gastou energia?','Teve desentendimento?','Precisa ficar separado?','Tem irmão hospedado?','Tem alergia?','Tem medicação?','Trouxe roupa de frio?','Fez cocô?','Consistência','Coleira repelente?','Coleira de identificação?'];
   const MAP_NOITE_ANTIGO=['Como passou a noite?','Está ativo?','Bebeu água?','Fez cocô?','Consistência','Fez xixi?','Aspecto do xixi','Jantou?','Almoçou?','Tem medicação?','Tem suplementação?'];
@@ -1268,6 +1322,7 @@
              noite:null }; }
   function carregarFicha(){
     carregarCadastro();
+    medHistEstadia={tinha:false}; renderMedHistBanner();
     ['dia','inicio','noite'].forEach(tp=>{ const c=document.getElementById('card-'+tp); if(c) c.classList.add('collapsed'); });
     if(!DB){ ['dia','inicio','noite'].forEach(tp=>aplicarCard('card-'+tp,{})); return; }
     const base='auaulandia/relatorios/'+fichaKey();
@@ -1280,12 +1335,13 @@
       aplicarCard('card-dia', dia || (ant?ant.dia:{}));
       aplicarCard('card-inicio', inicio || (ant?ant.inicio:{}));
       aplicarCard('card-noite', noite || {});
+      checarHistMedEstadia(currentHosp, function(){ ['dia','inicio','noite'].forEach(tp=>sincMedVis('card-'+tp)); renderMedHistBanner(); });
     }).catch(function(){ ['dia','inicio','noite'].forEach(tp=>aplicarCard('card-'+tp,{})); });
   }
   function salvarRelatorioCard(tipo){ if(!currentHosp) return; const card='card-'+tipo; const st=document.getElementById('status-'+tipo);
     const passouEl=document.getElementById('passou-'+tipo), recebeuEl=document.getElementById('recebeu-'+tipo);
     const passou=((passouEl&&passouEl.value)||'').trim(); const recebeu=recebeuEl?((recebeuEl.value)||'').trim():'';
-    const falt=[]; document.querySelectorAll('#'+card+' .obsline').forEach(l=>{ if(!l.querySelector('button.on')){ const q=l.querySelector('.q'); if(q) falt.push(q.textContent.trim()); } });
+    const falt=[]; document.querySelectorAll('#'+card+' .obsline').forEach(l=>{ if(l.style.display==='none') return; /* pula perguntas condicionais escondidas (ex.: Tipo de vômito quando "Vomitou? Não") */ if(!l.querySelector('button.on')){ const q=l.querySelector('.q'); if(q) falt.push(q.textContent.trim()); } });
     if(falt.length){ if(st){ st.style.color='var(--crm-critico)'; st.textContent='✋ Antes de passar para o próximo peludinho, responda TODAS as perguntas! Faltou: '+falt.slice(0,6).join(', ')+(falt.length>6?'…':''); } return; }
     // ---- Medicação/Suplementação à prova de erro: "Tem? Sim" exige tabela preenchida ----
     const _mg=coletarMedgrids(card);
@@ -1295,6 +1351,16 @@
     const _medResp=valDe(card,'Tem medicação?'); const _supResp=valDe(card,'Tem suplementação?');
     const _eMed=_vMed('med','medicação',_medResp); if(_eMed){ if(st){ st.style.color='var(--crm-critico)'; st.textContent='✋ '+_eMed; } return; }
     const _eSup=_vMed('sup','suplementação',_supResp); if(_eSup){ if(st){ st.style.color='var(--crm-critico)'; st.textContent='✋ '+_eSup; } return; }
+    // ---- Parte 2 — cross-check de medicação: era esperada (Dia disse Sim OU histórico da estadia) e agora foi marcada como não ----
+    const _esperaDia=(tipo!=='dia' && valDe('card-dia','Tem medicação?')==='Sim');
+    if((_esperaDia||medHistEstadia.tinha) && _medResp!=='Sim'){
+      const _motivo=_esperaDia ? ('O Relatório do Dia indicou que '+(currentHosp.nome||'este FILHOt')+' TEM medicação.')
+        : ((currentHosp.nome||'Este FILHOt')+' teve medicação registrada nesta estadia (dia '+medHistEstadia.quando+').');
+      if(!confirm('⚠ '+_motivo+'\n\nVocê marcou que NÃO há medicação agora. O remédio ACABOU ou foi suspenso?\n\nOK = Sim, acabou / foi suspenso\nCancelar = não — vou registrar a medicação')){
+        if(st){ st.style.color='var(--crm-critico)'; st.textContent='Marque "Tem medicação? Sim" e preencha o nome, o horário e a quantidade.'; } return; }
+      if(!confirm('Tem CERTEZA de que o medicamento de '+(currentHosp.nome||'este FILHOt')+' acabou ou foi suspenso?\n\nNa dúvida, LIGUE 31 99764-4296.\n\nOK = tenho certeza\nCancelar = vou confirmar antes')){
+        if(st){ st.style.color='var(--crm-critico)'; st.textContent='Na dúvida sobre a medicação, ligue 31 99764-4296 antes de salvar.'; } return; }
+    }
     if(!passou||(recebeuEl&&!recebeu)){ if(st){ st.style.color='var(--crm-critico)'; st.textContent='✋ Agora é só assinar: preencha quem passou e quem recebeu o plantão.'; } return; }
     const dados=coletarCard(card); dados.passou=passou; if(recebeuEl) dados.recebeu=recebeu; dados._ts=Date.now();
     if(DB){ if(st){ st.style.color='var(--muted)'; st.textContent='Salvando...'; } DB.ref('auaulandia/relatorios/'+fichaKey()+'/'+tipo).set(dados).then(()=>{ if(st){ st.style.color='var(--crm-ok)'; st.textContent=(tipo==='inicio')?'✅ Jantar salvo! A Noite será preenchida amanhã de manhã, na passagem do plantão.':'✅ Salvo!'; } if(typeof audit==='function') audit('relatorio', tipo, {pet:(currentHosp&&currentHosp.nome)||'', assinou:passou}); const c=document.getElementById(card); if(c) c.classList.add('collapsed'); }).catch(e=>{ if(st){ st.style.color='var(--crm-critico)'; st.textContent='⚠️ Erro: '+e.message; } }); } else { if(st){ st.style.color='var(--crm-atencao-text)'; st.textContent='Banco conectando...'; } } }
@@ -1347,7 +1413,7 @@
   }
   // ---- Resumo da Gestora (AuAulândia) ----
   function fichaKeyDe(h,d){ const p=x=>String(x).padStart(2,'0'); const pk=(h&&h.nome||'')+'__'+(h&&h.tutor||''); return (pk+'__'+d.getFullYear()+'-'+p(d.getMonth()+1)+'-'+p(d.getDate())).toLowerCase().replace(/[.#$\[\]\/]/g,'-'); }
-  const ALERTAS_REL=[ {q:'Consistência',v:'Diarreia',t:'diarreia'},{q:'Consistência',v:'Pastoso',t:'fezes pastosas'},{q:'Aspecto do xixi',v:'Com sangue',t:'xixi com sangue'},{q:'Bebeu água?',v:'Não',t:'não bebeu água'},{q:'Jantou?',v:'Não',t:'não jantou'},{q:'Almoçou?',v:'Não',t:'não almoçou'},{q:'Teve desentendimento?',v:'Sim',t:'desentendimento'} ];
+  const ALERTAS_REL=[ {q:'Consistência',v:'Diarreia',t:'diarreia'},{q:'Consistência',v:'Pastoso',t:'fezes pastosas'},{q:'Aspecto do xixi',v:'Com sangue',t:'xixi com sangue'},{q:'Bebeu água?',v:'Não',t:'não bebeu água'},{q:'Jantou?',v:'Não',t:'não jantou'},{q:'Almoçou?',v:'Não',t:'não almoçou'},{q:'Teve desentendimento?',v:'Sim',t:'desentendimento'},{q:'Vomitou?',v:'Sim',t:'vomitou'} ];
   function alertasDe(byQ){ const a=[]; ALERTAS_REL.forEach(x=>{ if((byQ||{})[x.q]===x.v) a.push(x.t); }); return a; }
   function ctxDeRelatorio(h,rel){ const cad=getCad(h)||{}; const byQ=(rel&&rel.byQ)||{}; const areas=(rel&&rel.byArea)||{};
     return { nome:h.nome, tutor:primeiroNome(h.tutor), fem:cad.sexo==='Fêmea', brinq:cad.brinquedos||'', energia:byQ['Gastou energia?']||'', noite:byQ['Como passou a noite?']||'', jant:byQ['Jantou?']||'', xixi:byQ['Fez xixi?']||'', coco:byQ['Fez cocô?']||'', med:byQ['Tem medicação?']||'', sup:byQ['Tem suplementação?']||'', medTxt:medsToTxt((rel&&rel.meds)||[])||areas.medicamento||'', supTxt:medsToTxt((rel&&rel.sups)||[])||areas.suplemento||'' }; }
@@ -1366,7 +1432,10 @@
     html+= alertas.length? '<div class="dc-faltas" style="margin-top:10px">⚠ <strong>ATENÇÃO ('+alertas.length+'):</strong> '+alertas.join(' · ')+'</div>' : '<div class="dc-pend-note" style="margin-top:10px;background:rgba(39,174,96,.1);border-color:rgba(39,174,96,.35);color:var(--crm-ok)">Sem alertas vermelhos hoje.</div>';
     html+='<div class="hint" style="margin-top:12px;font-weight:700">Textos prontos para enviar ao tutor:</div>';
     // Ordena por GRAVIDADE: vermelho (alerta) primeiro, amarelo (sem relatório) depois, verde por último.
-    arr.forEach(o=>{ const al=[]; if(o.dia&&o.dia.byQ) alertasDe(o.dia.byQ).forEach(a=>al.push(a)); if(o.noite&&o.noite.byQ) alertasDe(o.noite.byQ).forEach(a=>al.push(a)); const rel=(o.noite&&o.noite.byQ)?o.noite:((o.dia&&o.dia.byQ)?o.dia:null); o._al=al; o._rel=rel; o._nivel=al.length?3:(rel?1:2); });
+    arr.forEach(o=>{ let al=[]; if(o.dia&&o.dia.byQ) alertasDe(o.dia.byQ).forEach(a=>al.push(a)); if(o.noite&&o.noite.byQ) alertasDe(o.noite.byQ).forEach(a=>al.push(a));
+      if(o.dia&&o.dia.byQ&&o.dia.byQ['Tem medicação?']==='Sim' && o.noite&&o.noite.byQ && !temMedEm(o.noite)) al.push('medicação não confirmada à noite');
+      al=al.filter((v,i)=>al.indexOf(v)===i);
+      const rel=(o.noite&&o.noite.byQ)?o.noite:((o.dia&&o.dia.byQ)?o.dia:null); o._al=al; o._rel=rel; o._nivel=al.length?3:(rel?1:2); });
     arr.sort(function(a,b){ if(b._nivel!==a._nivel) return b._nivel-a._nivel; return jsNorm(a.h.nome).localeCompare(jsNorm(b.h.nome)); });
     const lblNv={3:'Verificar URGENTE',2:'Atenção · falta relatório',1:'Tudo certo'}; const clsNv={3:'gn-urgente',2:'gn-atencao',1:'gn-ok'}; let _ultNv=null;
     arr.forEach(o=>{
