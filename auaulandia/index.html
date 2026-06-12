@@ -3,6 +3,10 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<!-- Anti-cache: evita o app abrir versão antiga no iPhone/PWA -->
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
 <title>Zêluz · Sistema DayCare</title>
 <!-- RASCUNHO VISUAL (shell do app) para aprovação de Adriana. DS v8.1. Sem backend ainda. -->
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -158,6 +162,9 @@
   .hosp-head{display:flex;align-items:center;gap:16px}
   .hosp-head .ph{width:168px;height:168px;border-radius:18px;display:grid;place-items:center;
     background:var(--z-auaulandia);color:#fff;font-weight:800;font-size:64px;font-family:var(--font-marca);flex:0 0 auto;box-shadow:0 8px 22px rgba(35,77,103,.22)}
+  /* Tag AuAulândia sobre a foto (economiza espaço — não ocupa coluna própria) */
+  .hf-photo-wrap{position:relative;flex:0 0 auto;align-self:flex-start}
+  .chip-serv.chip-on-photo{position:absolute;top:9px;left:50%;transform:translateX(-50%);z-index:2;background:#2b7e88;color:#fff;font-weight:700;white-space:nowrap;box-shadow:0 2px 10px rgba(0,0,0,.22)}
   .hosp-tutor{font-size:11px;color:var(--muted);font-weight:600;margin-top:6px}
   .hosp-count{display:flex;align-items:center;gap:14px;background:var(--z-blue);color:var(--z-cream);
     border-radius:var(--radius);padding:16px 22px;margin-bottom:16px;box-shadow:var(--shadow)}
@@ -510,6 +517,10 @@
   .protocolo-regras li:nth-child(3){--rc:#C0392B;--rc-bg:rgba(192,57,43,.07);--rc-bd:rgba(192,57,43,.28)}
   .protocolo-regras li:nth-child(4){--rc:#B26A00;--rc-bg:rgba(178,106,0,.08);--rc-bd:rgba(178,106,0,.30)}
   .protocolo-regras li:nth-child(5){--rc:#5B4B8A;--rc-bg:rgba(91,75,138,.08);--rc-bd:rgba(91,75,138,.28)}
+  /* Selo crítico: frase que não pode ser ignorada (ex.: nenhuma alimentação pode ser trocada) */
+  .proto-critico{display:block;margin-top:11px;background:#C0392B;color:#fff;font-weight:800;font-size:15px;letter-spacing:.6px;line-height:1.3;padding:12px 15px;border-radius:11px;box-shadow:0 3px 12px rgba(192,57,43,.34);animation:piscaCritico 1.5s ease-in-out infinite}
+  .proto-critico::selection{background:#fff;color:#C0392B}
+  @keyframes piscaCritico{0%,100%{box-shadow:0 3px 12px rgba(192,57,43,.30)}50%{box-shadow:0 0 0 5px rgba(192,57,43,0),0 3px 12px rgba(192,57,43,.55)}}
   .todo-det{display:block;font-size:12px;color:var(--muted);font-weight:500;margin-top:3px;line-height:1.35}
   #card-checkout-plantao>h2{font-size:23px;letter-spacing:-.022em}
   .med-add{margin-top:8px;background:rgba(35,77,103,.06);border:1.5px dashed rgba(35,77,103,.3);color:#234D67;border-radius:10px;padding:9px 14px;font-family:var(--font-ui);font-weight:700;font-size:13px;cursor:pointer;width:100%}
@@ -741,7 +752,7 @@
         <ol class="protocolo-regras">
           <li>Ler com atenção o <strong>Check-in de hospedagem</strong> de cada peludinho. Qualquer dúvida, <strong>ligue: 31 99764-4296</strong> ou <strong>31 99111-1826</strong>.</li>
           <li>Gerar <strong>bem-estar</strong> aos FILHOts.</li>
-          <li>Garantir que a alimentação seja dada corretamente — temos diversos peludinhos com <strong>alergias severas</strong>. <strong>Nenhuma alimentação pode ser trocada.</strong></li>
+          <li>Garantir que a alimentação seja dada corretamente — temos diversos peludinhos com <strong>alergias severas</strong>.<span class="proto-critico">⚠ NENHUMA ALIMENTAÇÃO PODE SER TROCADA</span></li>
           <li>Garantir que o peludinho receba corretamente o <strong>medicamento</strong>, caso necessário.</li>
           <li>O plantonista <strong>não pode sair</strong> da empresa enquanto estiver no horário de plantão.</li>
         </ol>
@@ -760,7 +771,10 @@
 
       <div class="card hosp-head">
         <input id="hfPhotoFile" type="file" accept="image/*" capture="environment" style="display:none" onchange="onPhoto(event)">
-        <div class="ph" id="hf-av">T</div>
+        <div class="hf-photo-wrap">
+          <div class="ph" id="hf-av">T</div>
+          <span class="chip-serv chip-on-photo">AuAulândia</span>
+        </div>
         <div style="flex:1">
           <div class="hf-nome" id="hf-nome">Thor</div>
           <div class="hf-chipline" id="hf-chipline">Microchip: --</div>
@@ -779,7 +793,6 @@
             <input id="hf-brinq" class="cad-in" placeholder="Ex: bolinha, pelúcia do pato, cabo de guerra" oninput="onBrinq()" style="font-size:13px">
           </div>
         </div>
-        <span class="chip-serv">AuAulândia</span>
       </div>
 
       <div class="card" id="card-cadastro" style="display:none">
