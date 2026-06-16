@@ -223,6 +223,15 @@
   body[data-role="tutor"] #card-noite .seg button, body[data-role="tutor"] #card-noite textarea{pointer-events:none}
   .datenav .dl-rel{color:var(--z-gold-deep);font-weight:800}
   @media(max-width:600px){.datenav #dateLabel{font-size:11.5px;padding:0 4px}.datenav .dl-wd{display:none}.datenav button{padding:5px 8px;font-size:14px}.datenav .hoje{padding:6px 10px}}
+  /* Navegador de dia DENTRO da ficha do peludinho (todos os perfis podem navegar) */
+  .ficha-datenav{display:flex;align-items:center;gap:4px;background:var(--z-white);border:1.5px solid var(--line);border-radius:999px;padding:4px 6px;margin-bottom:14px;flex-wrap:wrap}
+  .ficha-datenav button{border:none;background:transparent;color:var(--z-blue);font-family:var(--font-ui);font-weight:600;font-size:15px;cursor:pointer;padding:5px 10px;border-radius:999px;line-height:1}
+  .ficha-datenav button:hover{background:var(--z-cream-warm)}
+  .ficha-datenav #hf-datelabel{font-size:13px;font-weight:600;color:var(--z-blue);padding:0 8px;white-space:nowrap}
+  .ficha-datenav .hoje{background:var(--z-gold);color:var(--z-blue);font-weight:700;font-size:12px;padding:6px 12px}
+  .ficha-datenav .dl-rel{color:var(--z-gold-deep);font-weight:800}
+  .ficha-datenav-hint{font-size:11px;color:var(--muted);font-weight:600;margin-left:auto;padding-right:6px}
+  @media(max-width:600px){.ficha-datenav #hf-datelabel{font-size:11.5px}.ficha-datenav .dl-wd{display:none}.ficha-datenav-hint{display:none}}
   /* Banner Parte 2 — histórico de medicação na estadia */
   .medhist-banner{background:rgba(222,180,40,.16);border:2px solid var(--z-gold);border-radius:14px;padding:13px 16px;margin-bottom:14px;font-size:14.5px;font-weight:600;color:var(--z-blue);line-height:1.45}
   .medhist-banner strong{color:var(--z-blue)}
@@ -769,6 +778,14 @@
     <div id="hosp-ficha" style="display:none">
       <button class="back-btn" onclick="fecharPlantao()">← Voltar à hospedagem</button>
 
+      <div class="ficha-datenav">
+        <button onclick="fichaMudaDia(-1)" title="Dia anterior">‹</button>
+        <span id="hf-datelabel">—</span>
+        <button onclick="fichaMudaDia(1)" title="Próximo dia">›</button>
+        <button class="hoje" onclick="fichaHoje()">Hoje</button>
+        <span class="ficha-datenav-hint">Relatório do dia selecionado</span>
+      </div>
+
       <div class="card hosp-head">
         <input id="hfPhotoFile" type="file" accept="image/*" capture="environment" style="display:none" onchange="onPhoto(event)">
         <div class="hf-photo-wrap">
@@ -798,7 +815,8 @@
       <div class="card" id="card-cadastro" style="display:none">
         <h2 style="font-size:20px;margin-bottom:10px">Dados de cadastro</h2>
         <div class="cad-grid">
-          <div class="field"><label>Data de nascimento</label><input type="date" id="hf-nasc" class="cad-in" oninput="onCad()"></div>
+          <div class="field" style="grid-column:1/-1"><label>Nome do peludinho <span style="font-weight:600;color:var(--muted)">(Gestão / Supervisão)</span></label><input type="text" id="hf-nome-edit" class="cad-in" autocomplete="off" placeholder="Nome do FILHOt" oninput="onCadNome()"></div>
+          <div class="field"><label>Data de nascimento</label><input type="text" id="hf-nasc" class="cad-in" inputmode="numeric" placeholder="dd/mm/aaaa" maxlength="10" autocomplete="off" oninput="onCad()" onblur="normalizarNasc()"></div>
           <div class="field"><label>Idade</label><input type="text" id="hf-idade" class="cad-in" readonly placeholder="—"></div>
           <div class="field"><label>Raça</label><input id="hfRaca" class="cad-in" list="racasList" autocomplete="off" placeholder="wes → West Terrier" oninput="onRaca(this.value);onCad()"></div>
           <div class="field"><label>Sexo</label><div class="seg" id="hf-sexo" data-single><button onclick="pick(this);onCad()">Macho</button><button onclick="pick(this);onCad()">Fêmea</button></div></div>
@@ -1016,15 +1034,26 @@
   const DIAS=['Domingo','Segunda','Terça','Quarta','Quinta','Sexta','Sábado'];
   const MESES=['janeiro','fevereiro','março','abril','maio','junho','julho','agosto','setembro','outubro','novembro','dezembro'];
   let selectedDate=new Date();
-  function updateDateLabel(){
+  function dateLabelHTML(){
     const d=selectedDate, p=x=>String(x).padStart(2,'0');
     const dd=`${p(d.getDate())}/${p(d.getMonth()+1)}/${d.getFullYear()}`;
     const hoje=new Date(); hoje.setHours(0,0,0,0); const alvo=new Date(d); alvo.setHours(0,0,0,0);
     const dif=Math.round((alvo-hoje)/86400000);
     const rel = dif===0?'Hoje' : dif===-1?'Ontem' : dif===1?'Amanhã' : '';
-    const el=document.getElementById('dateLabel'); if(!el) return;
-    el.innerHTML = (rel?'<strong class="dl-rel">'+rel+'</strong> · ':'') + dd + ' <span class="dl-wd">· '+DIAS[d.getDay()]+'</span>';
+    return (rel?'<strong class="dl-rel">'+rel+'</strong> · ':'') + dd + ' <span class="dl-wd">· '+DIAS[d.getDay()]+'</span>';
   }
+  function updateDateLabel(){
+    const html=dateLabelHTML();
+    const el=document.getElementById('dateLabel'); if(el) el.innerHTML=html;
+    const fl=document.getElementById('hf-datelabel'); if(fl) fl.innerHTML=html; // navegador dentro da ficha
+  }
+  function fichaAberta(){ const f=document.getElementById('hosp-ficha'); return !!(f && f.style.display==='block'); }
+  // Navegar o dia DENTRO da ficha do peludinho (todos os perfis). Só muda a VISUALIZAÇÃO/registro do dia — não mexe na reserva.
+  function fichaMudaDia(n){
+    const nova=new Date(selectedDate); nova.setDate(nova.getDate()+n);
+    selectedDate=nova; updateDateLabel(); carregarFicha(); carregarHospedes();
+  }
+  function fichaHoje(){ selectedDate=new Date(); updateDateLabel(); carregarFicha(); carregarHospedes(); }
   function changeDate(n){
     const nova=new Date(selectedDate); nova.setDate(nova.getDate()+n);
     if(document.body.dataset.role==='plantonista'){
@@ -1037,9 +1066,9 @@
         return;
       }
     }
-    selectedDate=nova; updateDateLabel(); carregarHospedes();
+    selectedDate=nova; updateDateLabel(); carregarHospedes(); if(fichaAberta()) carregarFicha();
   }
-  function goToToday(){ selectedDate=new Date(); updateDateLabel(); carregarHospedes(); }
+  function goToToday(){ selectedDate=new Date(); updateDateLabel(); carregarHospedes(); if(fichaAberta()) carregarFicha(); }
   updateDateLabel();
 
   const titles={inicio:['Início','Visão geral do dia'],ficha:['Peludinhos','Matriculados'],
@@ -1161,7 +1190,7 @@
         const tj = {hospede:['t-hospede','HÓSPEDE'], pernoite:['t-pernoite','PERNOITE'], moradora:['t-moradora','MORADORA']}[tp];
         return `<div class="pet" onclick="abrirPlantao(${i})">
           ${ph}
-          <div class="nm">${h.nome}</div>
+          <div class="nm">${cad.nome||h.nome}</div>
           <div class="br">${raca}</div>
           <div class="hosp-tutor">${h.mascote?'Nossa Zelozinha':'Tutor: '+h.tutor}</div>
           <div class="tarja ${tj[0]}">${tj[1]}</div>
@@ -1178,7 +1207,7 @@
     const av=document.getElementById('hf-av');
     if(info.foto){ av.style.backgroundImage=`url('${info.foto}')`; av.style.backgroundSize='cover'; av.style.backgroundPosition='center'; av.textContent=''; }
     else { av.style.backgroundImage='none'; av.textContent=h.ini; av.style.background=h.cor; }
-    document.getElementById('hf-nome').textContent=h.nome;
+    document.getElementById('hf-nome').textContent=(getCad(h)&&getCad(h).nome)||h.nome;
     const raca=info.raca||h.raca||racasMap[(h.nome+'__'+h.tutor).toLowerCase()]||'';
     const _tp=h.mascote?'Moradora':(h.hospede?'Hóspede':(h.pernoite?'Pernoite':'Hóspede'));
     document.getElementById('hf-meta').innerHTML=`${raca?raca+' · ':''}<strong>${_tp}</strong> · ${h.mascote?'Nossa Zelozinha':'Tutor: '+h.tutor}`;
@@ -1188,6 +1217,7 @@
     document.getElementById('hosp-ficha').style.display='block';
     const _hs=document.getElementById('hf-status'); if(_hs) _hs.textContent='';
     const cc=document.getElementById('card-cadastro'); if(cc) cc.style.display='none'; // cadastro começa fechado
+    updateDateLabel(); // sincroniza o navegador de dia dentro da ficha
     carregarFicha();
     window.scrollTo({top:0,behavior:'smooth'});
   }
@@ -1225,7 +1255,20 @@
   // ---- Cadastro do peludinho (só Gestão edita) ----
   function cadKey(h){ return ((h&&h.nome||'')+'__'+(h&&h.tutor||'')).toLowerCase().replace(/[.#$\[\]\/]/g,'-'); }
   function getCad(h){ return (h&&cadCache[cadKey(h)]) || (h?getInfo(h):{}) || {}; }
-  function calcIdade(v){ if(!v) return ''; const n=new Date(v),h=new Date(); let a=h.getFullYear()-n.getFullYear(); const md=h.getMonth()-n.getMonth(); if(md<0||(md===0&&h.getDate()<n.getDate()))a--; return a>=1?(a+(a===1?' ano':' anos')):'menos de 1 ano'; }
+  // Aceita data digitada OU colada de outro cadastro: dd/mm/aaaa, dd-mm-aaaa, dd.mm.aaaa, dd/mm/aa ou ISO aaaa-mm-dd → devolve ISO (aaaa-mm-dd) ou '' se ainda incompleta
+  function parseNascToISO(v){
+    if(!v) return ''; v=String(v).trim(); let m;
+    if((m=v.match(/^(\d{4})-(\d{2})-(\d{2})$/))) return v; // já ISO
+    if((m=v.match(/^(\d{1,2})[\/\-.](\d{1,2})[\/\-.](\d{4})$/))){ const dd=+m[1],mm=+m[2],yy=+m[3];
+      if(mm>=1&&mm<=12&&dd>=1&&dd<=31) return yy+'-'+String(mm).padStart(2,'0')+'-'+String(dd).padStart(2,'0'); }
+    if((m=v.match(/^(\d{1,2})[\/\-.](\d{1,2})[\/\-.](\d{2})$/))){ const dd=+m[1],mm=+m[2]; let yy=+m[3];
+      yy = yy<=(new Date().getFullYear()%100) ? 2000+yy : 1900+yy;
+      if(mm>=1&&mm<=12&&dd>=1&&dd<=31) return yy+'-'+String(mm).padStart(2,'0')+'-'+String(dd).padStart(2,'0'); }
+    return '';
+  }
+  function isoParaBR(iso){ const m=String(iso||'').match(/^(\d{4})-(\d{2})-(\d{2})$/); return m?(m[3]+'/'+m[2]+'/'+m[1]):(iso||''); }
+  function normalizarNasc(){ const el=document.getElementById('hf-nasc'); if(!el) return; const iso=parseNascToISO(el.value); if(iso) el.value=isoParaBR(iso); }
+  function calcIdade(v){ const iso=parseNascToISO(v); if(!iso) return ''; const n=new Date(iso+'T00:00:00'); if(isNaN(n.getTime())) return ''; const h=new Date(); let a=h.getFullYear()-n.getFullYear(); const md=h.getMonth()-n.getMonth(); if(md<0||(md===0&&h.getDate()<n.getDate()))a--; return a>=1?(a+(a===1?' ano':' anos')):'menos de 1 ano'; }
   function segVal(id){ const b=document.querySelector('#'+id+' button.on'); return b?b.textContent.trim():''; }
   function setSeg(id,val){ const g=document.getElementById(id); if(!g)return; g.querySelectorAll('button').forEach(b=>{ b.classList.remove('on','t-ok','t-bad','t-warn'); if(val&&b.textContent.trim()===val) b.classList.add('on'); }); }
   function atualizarHeader(cad){
@@ -1240,18 +1283,34 @@
   }
   function onCad(){
     if(!currentHosp) return;
-    const nasc=document.getElementById('hf-nasc').value;
+    const rawNasc=document.getElementById('hf-nasc').value;
+    const nasc=parseNascToISO(rawNasc) || rawNasc.trim(); // guarda ISO quando válida; mantém o que foi digitado enquanto incompleta
     document.getElementById('hf-idade').value=calcIdade(nasc);
     const dias=[].slice.call(document.querySelectorAll('#hf-dias .chip.on')).map(c=>c.textContent.trim()).join(',');
-    const cad={ nasc:nasc, raca:document.getElementById('hfRaca').value||'', sexo:segVal('hf-sexo'),
+    const nomeEdit=((document.getElementById('hf-nome-edit')||{}).value||'').trim();
+    const cad={ nome:nomeEdit, nasc:nasc, raca:document.getElementById('hfRaca').value||'', sexo:segVal('hf-sexo'),
       castrado:segVal('hf-cast'), tutor:document.getElementById('hf-tutor').value||'', chip:document.getElementById('hf-chip').value||'', dias:dias };
     setInfo(currentHosp,cad);
     if(DB) DB.ref('auaulandia/cadastro/'+cadKey(currentHosp)).update(cad).catch(()=>{});
     atualizarHeader(cad);
   }
+  // Editar o nome do FILHOt — só Gestão/Supervisão (o card-cadastro já é restrito a esses perfis).
+  // O nome editado VENCE na exibição; o vínculo interno dos dados (relatórios/fotos) continua pela etiqueta original — nada se desliga.
+  function onCadNome(){
+    if(!currentHosp) return;
+    const v=((document.getElementById('hf-nome-edit')||{}).value||'').trim();
+    setInfo(currentHosp,{nome:v});
+    if(DB) DB.ref('auaulandia/cadastro/'+cadKey(currentHosp)).update({nome:v}).catch(()=>{});
+    const disp=v||currentHosp.nome||'';
+    const t=document.getElementById('hf-nome'); if(t) t.textContent=disp;
+    renderHosp();
+  }
   function aplicarCadastro(cad){
     cad=cad||{};
-    document.getElementById('hf-nasc').value=cad.nasc||'';
+    const _nomeDisp=cad.nome||(currentHosp&&currentHosp.nome)||'';
+    const _ne=document.getElementById('hf-nome-edit'); if(_ne) _ne.value=_nomeDisp;
+    const _tt=document.getElementById('hf-nome'); if(_tt) _tt.textContent=_nomeDisp;
+    document.getElementById('hf-nasc').value=isoParaBR(cad.nasc)||''; // exibe dd/mm/aaaa
     document.getElementById('hf-idade').value=calcIdade(cad.nasc);
     document.getElementById('hfRaca').value=cad.raca||(currentHosp&&currentHosp.raca)||'';
     setSeg('hf-sexo',cad.sexo); setSeg('hf-cast',cad.castrado);
