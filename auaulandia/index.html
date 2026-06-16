@@ -162,9 +162,9 @@
   .hosp-head{display:flex;align-items:center;gap:16px}
   .hosp-head .ph{width:168px;height:168px;border-radius:18px;display:grid;place-items:center;
     background:var(--z-auaulandia);color:#fff;font-weight:800;font-size:64px;font-family:var(--font-marca);flex:0 0 auto;box-shadow:0 8px 22px rgba(35,77,103,.22)}
-  /* Tag AuAulândia sobre a foto (economiza espaço — não ocupa coluna própria) */
-  .hf-photo-wrap{position:relative;flex:0 0 auto;align-self:flex-start}
-  .chip-serv.chip-on-photo{position:absolute;top:9px;left:50%;transform:translateX(-50%);z-index:2;background:#2b7e88;color:#fff;font-weight:700;white-space:nowrap;box-shadow:0 2px 10px rgba(0,0,0,.22)}
+  /* Tag AuAulândia ABAIXO da foto (não sobre ela) */
+  .hf-photo-wrap{display:flex;flex-direction:column;align-items:center;gap:8px;flex:0 0 auto;align-self:flex-start}
+  .chip-serv.chip-on-photo{background:#2b7e88;color:#fff;font-weight:700;white-space:nowrap}
   .hosp-tutor{font-size:11px;color:var(--muted);font-weight:600;margin-top:6px}
   .hosp-count{display:flex;align-items:center;gap:14px;background:var(--z-blue);color:var(--z-cream);
     border-radius:var(--radius);padding:16px 22px;margin-bottom:16px;box-shadow:var(--shadow)}
