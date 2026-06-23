@@ -687,7 +687,7 @@
       <div class="obsline"><span class="q">Chorou?</span><div class="seg no" data-single><button onclick="pick(this)">Não</button><button onclick="pick(this)">Sim</button></div></div>
       <div class="obsline"><span class="q">Tomou água?</span><div class="seg ok" data-single><button onclick="pick(this)">Sim</button><button onclick="pick(this)">Não</button></div></div>
       <div class="obsline"><span class="q">Fez xixi?</span><div class="seg" data-single><button onclick="pick(this)">Sim</button><button onclick="pick(this)">Não</button></div></div>
-      <div class="obsline"><span class="q">Fez cocô?</span><div class="seg" data-single><button onclick="pick(this)">Sim</button><button onclick="pick(this)">Não</button></div></div>
+      <div class="obsline"><span class="q">Fez cocô?</span><div class="seg" data-single><button onclick="pick(this)">Sim</button><button onclick="pick(this)">Não</button><button onclick="pick(this)">Não vi</button></div></div>
 
       <div class="field" style="margin-top:18px"><label>Brinquedo predileto / observação do dia</label>
         <input type="text" style="width:100%;font-family:var(--font-ui);font-size:14px;padding:12px;border:1.5px solid var(--line);border-radius:11px;background:var(--z-cream)" placeholder="Ex: pelúcia do pato, ficou perto da Encãotadora Bia"></div>
@@ -849,8 +849,8 @@
         <div class="obsline"><span class="q">Tem suplementação?</span><div class="seg" data-single><button data-tone="ok" onclick="pick(this);onMedQ(this)">Não</button><button data-tone="warn" onclick="pick(this);onMedQ(this)">Sim</button></div></div>
         <div class="medgrid-slot" data-kind="sup"></div>
         <div class="obsline"><span class="q">Trouxe roupa de frio?</span><div class="seg" data-single><button data-tone="ok" onclick="pick(this)">Sim</button><button data-tone="warn" onclick="pick(this)">Não</button></div></div>
-        <div class="obsline"><span class="q">Fez cocô?</span><div class="seg" data-single><button data-tone="ok" onclick="pick(this)">Sim</button><button data-tone="warn" onclick="pick(this)">Não</button></div></div>
-        <div class="obsline"><span class="q">Consistência</span><div class="seg" data-single><button data-tone="ok" onclick="pick(this)">Normal</button><button data-tone="bad" onclick="pick(this)">Pastoso</button><button data-tone="bad" onclick="pick(this)">Diarreia</button></div></div>
+        <div class="obsline"><span class="q">Fez cocô?</span><div class="seg" data-single><button data-tone="ok" onclick="pick(this);onCocoQ(this)">Sim</button><button data-tone="warn" onclick="pick(this);onCocoQ(this)">Não</button><button data-tone="warn" onclick="pick(this);onCocoQ(this)">Não vi</button></div></div>
+        <div class="obsline"><span class="q">Consistência</span><div class="seg" data-single><button data-tone="ok" onclick="pick(this)">Normal</button><button data-tone="bad" onclick="pick(this)">Pastoso</button><button data-tone="bad" onclick="pick(this)">Diarreia</button><button data-tone="warn" onclick="pick(this)">Não vi</button></div></div>
         <div class="obsline"><span class="q">Vomitou?</span><div class="seg" data-single><button data-tone="ok" onclick="pick(this);onVomQ(this)">Não</button><button data-tone="bad" onclick="pick(this);onVomQ(this)">Sim</button></div></div>
         <div class="obsline vom-tipo" style="display:none"><span class="q">Tipo de vômito</span><div class="seg" data-single><button data-tone="warn" onclick="pick(this)">Amarelo (bile)</button><button data-tone="warn" onclick="pick(this)">Branco / espumoso (água)</button><button data-tone="warn" onclick="pick(this)">Comida / ração</button></div></div>
         <div class="obsline"><span class="q">Coleira repelente?</span><div class="seg" data-single><button data-tone="ok" onclick="pick(this)">Sim</button><button data-tone="warn" onclick="pick(this)">Não</button></div></div>
@@ -869,7 +869,8 @@
         <div class="obsline"><span class="q">Bebeu água?</span><div class="seg" data-single><button data-tone="ok" onclick="pick(this)">Sim</button><button data-tone="bad" onclick="pick(this)">Não</button></div></div>
         <div class="obsline"><span class="q">Jantou?</span><div class="seg" data-single><button data-tone="ok" onclick="pick(this)">Sim</button><button data-tone="bad" onclick="pick(this)">Não</button><button data-tone="warn" onclick="pick(this)">Metade</button><button data-tone="warn" onclick="pick(this)">Não se aplica</button></div></div>
         <div class="obsline"><span class="q">Fez xixi?</span><div class="seg" data-single><button data-tone="ok" onclick="pick(this)">Sim</button><button data-tone="warn" onclick="pick(this)">Não</button><button data-tone="warn" onclick="pick(this)">Não vi</button></div></div>
-        <div class="obsline"><span class="q">Fez cocô?</span><div class="seg" data-single><button data-tone="ok" onclick="pick(this)">Sim</button><button data-tone="warn" onclick="pick(this)">Não</button><button data-tone="warn" onclick="pick(this)">Não vi</button></div></div>
+        <div class="obsline"><span class="q">Fez cocô?</span><div class="seg" data-single><button data-tone="ok" onclick="pick(this);onCocoQ(this)">Sim</button><button data-tone="warn" onclick="pick(this);onCocoQ(this)">Não</button><button data-tone="warn" onclick="pick(this);onCocoQ(this)">Não vi</button></div></div>
+        <div class="obsline"><span class="q">Consistência</span><div class="seg" data-single><button data-tone="ok" onclick="pick(this)">Normal</button><button data-tone="bad" onclick="pick(this)">Pastoso</button><button data-tone="bad" onclick="pick(this)">Diarreia</button><button data-tone="warn" onclick="pick(this)">Não vi</button></div></div>
         <div class="obsline"><span class="q">Vomitou?</span><div class="seg" data-single><button data-tone="ok" onclick="pick(this);onVomQ(this)">Não</button><button data-tone="bad" onclick="pick(this);onVomQ(this)">Sim</button></div></div>
         <div class="obsline vom-tipo" style="display:none"><span class="q">Tipo de vômito</span><div class="seg" data-single><button data-tone="warn" onclick="pick(this)">Amarelo (bile)</button><button data-tone="warn" onclick="pick(this)">Branco / espumoso (água)</button><button data-tone="warn" onclick="pick(this)">Comida / ração</button></div></div>
         <div class="obsline"><span class="q">Tem medicação?</span><div class="seg" data-single><button data-tone="ok" onclick="pick(this);onMedQ(this)">Não</button><button data-tone="warn" onclick="pick(this);onMedQ(this)">Sim</button></div></div>
@@ -888,8 +889,8 @@
         <div class="obsline"><span class="q">Como passou a noite?</span><div class="seg" data-single><button data-tone="ok" onclick="pick(this)">Dormiu a noite inteira</button><button data-tone="warn" onclick="pick(this)">Agitado</button></div></div>
         <div class="obsline"><span class="q">Está ativo?</span><div class="seg" data-single><button data-tone="ok" onclick="pick(this)">Sim</button><button data-tone="warn" onclick="pick(this)">Não</button></div></div>
         <div class="obsline"><span class="q">Bebeu água?</span><div class="seg" data-single><button data-tone="ok" onclick="pick(this)">Sim</button><button data-tone="bad" onclick="pick(this)">Não</button></div></div>
-        <div class="obsline"><span class="q">Fez cocô?</span><div class="seg" data-single><button data-tone="ok" onclick="pick(this)">Sim</button><button data-tone="warn" onclick="pick(this)">Não</button><button data-tone="warn" onclick="pick(this)">Não vi</button></div></div>
-        <div class="obsline"><span class="q">Consistência</span><div class="seg" data-single><button data-tone="ok" onclick="pick(this)">Normal</button><button data-tone="bad" onclick="pick(this)">Pastoso</button><button data-tone="bad" onclick="pick(this)">Diarreia</button></div></div>
+        <div class="obsline"><span class="q">Fez cocô?</span><div class="seg" data-single><button data-tone="ok" onclick="pick(this);onCocoQ(this)">Sim</button><button data-tone="warn" onclick="pick(this);onCocoQ(this)">Não</button><button data-tone="warn" onclick="pick(this);onCocoQ(this)">Não vi</button></div></div>
+        <div class="obsline"><span class="q">Consistência</span><div class="seg" data-single><button data-tone="ok" onclick="pick(this)">Normal</button><button data-tone="bad" onclick="pick(this)">Pastoso</button><button data-tone="bad" onclick="pick(this)">Diarreia</button><button data-tone="warn" onclick="pick(this)">Não vi</button></div></div>
         <div class="obsline"><span class="q">Vomitou?</span><div class="seg" data-single><button data-tone="ok" onclick="pick(this);onVomQ(this)">Não</button><button data-tone="bad" onclick="pick(this);onVomQ(this)">Sim</button></div></div>
         <div class="obsline vom-tipo" style="display:none"><span class="q">Tipo de vômito</span><div class="seg" data-single><button data-tone="warn" onclick="pick(this)">Amarelo (bile)</button><button data-tone="warn" onclick="pick(this)">Branco / espumoso (água)</button><button data-tone="warn" onclick="pick(this)">Comida / ração</button></div></div>
         <div class="obsline"><span class="q">Fez xixi?</span><div class="seg" data-single><button data-tone="ok" onclick="pick(this)">Sim</button><button data-tone="warn" onclick="pick(this)">Não</button><button data-tone="warn" onclick="pick(this)">Não vi</button></div></div>
@@ -1356,6 +1357,16 @@
   // ---- Vômito: "Vomitou? Sim" abre "Tipo de vômito"; "Não" esconde ----
   function sincVomVis(cardId){ document.querySelectorAll('#'+cardId+' .vom-tipo').forEach(function(l){ let p=l.previousElementSibling; while(p && !(p.querySelector&&p.querySelector('.q')&&p.querySelector('.q').textContent.trim()==='Vomitou?')) p=p.previousElementSibling; const on=p?p.querySelector('button.on'):null; l.style.display=(on&&on.textContent.trim()==='Sim')?'flex':'none'; }); }
   function onVomQ(btn){ const card=btn.closest('.rel-card'); if(card) sincVomVis(card.id); }
+  // Se a pessoa não viu o cocô, também não viu a consistência: marca "Não vi" na Consistência do mesmo relatório.
+  function onCocoQ(btn){
+    const card=btn.closest('.rel-card'); if(!card) return;
+    if(btn.textContent.trim()!=='Não vi') return;
+    let cons=null;
+    card.querySelectorAll('.obsline').forEach(function(l){ const q=l.querySelector('.q'); if(q && q.textContent.trim()==='Consistência') cons=l; });
+    if(!cons) return;
+    const alvo=Array.from(cons.querySelectorAll('button')).find(function(b){ return b.textContent.trim()==='Não vi'; });
+    if(alvo) pick(alvo);
+  }
   // Parte 2 — varre os dias anteriores CONTÍGUOS da estadia e marca se houve medicação
   function checarHistMedEstadia(hosp, cb){
     medHistEstadia={tinha:false};
