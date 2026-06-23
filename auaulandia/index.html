@@ -1357,16 +1357,22 @@
   // ---- Vômito: "Vomitou? Sim" abre "Tipo de vômito"; "Não" esconde ----
   function sincVomVis(cardId){ document.querySelectorAll('#'+cardId+' .vom-tipo').forEach(function(l){ let p=l.previousElementSibling; while(p && !(p.querySelector&&p.querySelector('.q')&&p.querySelector('.q').textContent.trim()==='Vomitou?')) p=p.previousElementSibling; const on=p?p.querySelector('button.on'):null; l.style.display=(on&&on.textContent.trim()==='Sim')?'flex':'none'; }); }
   function onVomQ(btn){ const card=btn.closest('.rel-card'); if(card) sincVomVis(card.id); }
-  // Se a pessoa não viu o cocô, também não viu a consistência: marca "Não vi" na Consistência do mesmo relatório.
-  function onCocoQ(btn){
-    const card=btn.closest('.rel-card'); if(!card) return;
-    if(btn.textContent.trim()!=='Não vi') return;
-    let cons=null;
-    card.querySelectorAll('.obsline').forEach(function(l){ const q=l.querySelector('.q'); if(q && q.textContent.trim()==='Consistência') cons=l; });
-    if(!cons) return;
-    const alvo=Array.from(cons.querySelectorAll('button')).find(function(b){ return b.textContent.trim()==='Não vi'; });
-    if(alvo) pick(alvo);
+  // Consistência depende do cocô no MESMO relatório:
+  //  - "Não" (não fez): esconde a Consistência — não há o que avaliar
+  //  - "Não vi": marca a Consistência como "Não vi" (quem não viu o cocô não viu a consistência)
+  //  - "Sim": mostra a Consistência para o usuário avaliar
+  function _consDoCard(card){ let cons=null; card.querySelectorAll('.obsline').forEach(function(l){ const q=l.querySelector('.q'); if(q && q.textContent.trim()==='Consistência') cons=l; }); return cons; }
+  function _limparSeg(obs){ obs.querySelectorAll('button').forEach(function(b){ b.classList.remove('on','t-ok','t-bad','t-warn'); }); }
+  function sincCocoVis(cardId){
+    const card=document.getElementById(cardId); if(!card) return;
+    const cons=_consDoCard(card); if(!cons) return;
+    let coco=''; card.querySelectorAll('.obsline').forEach(function(l){ const q=l.querySelector('.q'); if(q && q.textContent.trim()==='Fez cocô?'){ const on=l.querySelector('button.on'); coco=on?on.textContent.trim():''; } });
+    if(coco==='Não'){ _limparSeg(cons); cons.style.display='none'; return; }
+    cons.style.display='flex';
+    if(coco==='Não vi'){ const alvo=Array.from(cons.querySelectorAll('button')).find(function(b){ return b.textContent.trim()==='Não vi'; }); if(alvo) pick(alvo); }
+    else if(coco==='Sim'){ const on=cons.querySelector('button.on'); if(on && on.textContent.trim()==='Não vi') _limparSeg(cons); }
   }
+  function onCocoQ(btn){ const card=btn.closest('.rel-card'); if(card) sincCocoVis(card.id); }
   // Parte 2 — varre os dias anteriores CONTÍGUOS da estadia e marca se houve medicação
   function checarHistMedEstadia(hosp, cb){
     medHistEstadia={tinha:false};
@@ -1389,7 +1395,7 @@
       el.style.display='block'; el.innerHTML='⚠ <strong>'+((currentHosp&&currentHosp.nome)||'Este FILHOt')+'</strong> teve <strong>medicação registrada nesta estadia</strong> (dia '+medHistEstadia.quando+'). '+(hoje?'Continue registrando o horário e a quantidade.':'Se ainda toma, registre. Se acabou ou foi suspenso, confirme ao salvar.'); }
     else { el.style.display='none'; el.innerHTML=''; } }
   function coletarCard(cardId){ const byQ={}; document.querySelectorAll('#'+cardId+' .obsline').forEach(l=>{ const q=l.querySelector('.q'); const on=l.querySelector('button.on'); if(q) byQ[q.textContent.trim()]= on?on.textContent.trim():''; }); const areas=[]; const byArea={}; document.querySelectorAll('#'+cardId+' textarea').forEach(t=>{ areas.push(t.value||''); const ph=(t.placeholder||'').toLowerCase(); if(ph.indexOf('medicamento')>=0) byArea.medicamento=t.value||''; else if(ph.indexOf('suplemento')>=0) byArea.suplemento=t.value||''; }); const mg=coletarMedgrids(cardId); return {byQ:byQ,areas:areas,byArea:byArea,meds:mg.med,sups:mg.sup}; }
-  function aplicarCard(cardId,d){ d=d||{}; const byQ=d.byQ||{}; document.querySelectorAll('#'+cardId+' .obsline').forEach(l=>{ const q=l.querySelector('.q'); const val=q?byQ[q.textContent.trim()]:''; l.querySelectorAll('button').forEach(b=>{ b.classList.remove('on','t-ok','t-bad','t-warn'); if(val&&b.textContent.trim()===val){ b.classList.add('on'); if(b.dataset.tone) b.classList.add('t-'+b.dataset.tone);} }); }); const areas=d.areas||[]; document.querySelectorAll('#'+cardId+' textarea').forEach((t,i)=>t.value=areas[i]||''); const tipo=cardId.replace('card-',''); const sp=document.getElementById('passou-'+tipo); if(sp) sp.value=d.passou||''; const sr=document.getElementById('recebeu-'+tipo); if(sr) sr.value=d.recebeu||''; aplicarMedgrids(cardId,d); sincVomVis(cardId); }
+  function aplicarCard(cardId,d){ d=d||{}; const byQ=d.byQ||{}; document.querySelectorAll('#'+cardId+' .obsline').forEach(l=>{ const q=l.querySelector('.q'); const val=q?byQ[q.textContent.trim()]:''; l.querySelectorAll('button').forEach(b=>{ b.classList.remove('on','t-ok','t-bad','t-warn'); if(val&&b.textContent.trim()===val){ b.classList.add('on'); if(b.dataset.tone) b.classList.add('t-'+b.dataset.tone);} }); }); const areas=d.areas||[]; document.querySelectorAll('#'+cardId+' textarea').forEach((t,i)=>t.value=areas[i]||''); const tipo=cardId.replace('card-',''); const sp=document.getElementById('passou-'+tipo); if(sp) sp.value=d.passou||''; const sr=document.getElementById('recebeu-'+tipo); if(sr) sr.value=d.recebeu||''; aplicarMedgrids(cardId,d); sincVomVis(cardId); sincCocoVis(cardId); }
   // mapeamento do formato ANTIGO (campos c0..c21 da ficha de 1 salvar so) para os relatorios novos
   const MAP_DIA_ANTIGO=['Gastou energia?','Teve desentendimento?','Precisa ficar separado?','Tem irmão hospedado?','Tem alergia?','Tem medicação?','Trouxe roupa de frio?','Fez cocô?','Consistência','Coleira repelente?','Coleira de identificação?'];
   const MAP_NOITE_ANTIGO=['Como passou a noite?','Está ativo?','Bebeu água?','Fez cocô?','Consistência','Fez xixi?','Aspecto do xixi','Jantou?','Almoçou?','Tem medicação?','Tem suplementação?'];
