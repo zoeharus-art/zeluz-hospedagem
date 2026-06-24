@@ -1516,6 +1516,8 @@
   function fichaKeyDe(h,d){ const p=x=>String(x).padStart(2,'0'); const pk=(h&&h.nome||'')+'__'+(h&&h.tutor||''); return (pk+'__'+d.getFullYear()+'-'+p(d.getMonth()+1)+'-'+p(d.getDate())).toLowerCase().replace(/[.#$\[\]\/]/g,'-'); }
   const ALERTAS_REL=[ {q:'Consistência',v:'Diarreia',t:'diarreia'},{q:'Consistência',v:'Pastoso',t:'fezes pastosas'},{q:'Aspecto do xixi',v:'Com sangue',t:'xixi com sangue'},{q:'Bebeu água?',v:'Não',t:'não bebeu água'},{q:'Jantou?',v:'Não',t:'não jantou'},{q:'Almoçou?',v:'Não',t:'não almoçou'},{q:'Teve desentendimento?',v:'Sim',t:'desentendimento'},{q:'Vomitou?',v:'Sim',t:'vomitou'} ];
   function alertasDe(byQ){ const a=[]; ALERTAS_REL.forEach(x=>{ if((byQ||{})[x.q]===x.v) a.push(x.t); }); return a; }
+  // Junta alertas dos 3 momentos do dia (dia + início do plantão + noite), sem repetir
+  function alertasDoItem(o){ let a=[]; ['dia','inicio','noite'].forEach(k=>{ if(o[k]&&o[k].byQ) a=a.concat(alertasDe(o[k].byQ)); }); return a.filter((v,i)=>a.indexOf(v)===i); }
   function ctxDeRelatorio(h,rel){ const cad=getCad(h)||{}; const byQ=(rel&&rel.byQ)||{}; const areas=(rel&&rel.byArea)||{};
     return { nome:h.nome, tutor:primeiroNome(h.tutor), fem:cad.sexo==='Fêmea', brinq:cad.brinquedos||'', energia:byQ['Gastou energia?']||'', noite:byQ['Como passou a noite?']||'', jant:byQ['Jantou?']||'', xixi:byQ['Fez xixi?']||'', coco:byQ['Fez cocô?']||'', med:byQ['Tem medicação?']||'', sup:byQ['Tem suplementação?']||'', medTxt:medsToTxt((rel&&rel.meds)||[])||areas.medicamento||'', supTxt:medsToTxt((rel&&rel.sups)||[])||areas.suplemento||'' }; }
   function carregarPainelGestora(){
@@ -1523,21 +1525,21 @@
     const role=document.body.dataset.role; if(role!=='gestao'&&role!=='supervisor'){ el.innerHTML=''; return; }
     const reais=(hospedes||[]); // inclui a moradora (Repolho): a Gestora precisa ver alertas dela também
     if(!DB||!reais.length){ el.innerHTML=''; return; }
-    Promise.all(reais.map(h=>{ const base='auaulandia/relatorios/'+fichaKeyDe(h,selectedDate); return Promise.all([ DB.ref(base+'/dia').once('value').then(s=>s.val()).catch(()=>null), DB.ref(base+'/inicio').once('value').then(s=>s.val()).catch(()=>null), DB.ref(base+'/noite').once('value').then(s=>s.val()).catch(()=>null), DB.ref(base).once('value').then(s=>s.val()).catch(()=>null) ]).then(function(r){ const ant=migrarAntigo(r[3]); return {h:h, dia:r[0]||(ant?ant.dia:null), noite:r[2]||r[1]||(ant?ant.inicio:null)}; }); })).then(renderPainelGestora).catch(()=>{});
+    Promise.all(reais.map(h=>{ const base='auaulandia/relatorios/'+fichaKeyDe(h,selectedDate); return Promise.all([ DB.ref(base+'/dia').once('value').then(s=>s.val()).catch(()=>null), DB.ref(base+'/inicio').once('value').then(s=>s.val()).catch(()=>null), DB.ref(base+'/noite').once('value').then(s=>s.val()).catch(()=>null), DB.ref(base).once('value').then(s=>s.val()).catch(()=>null) ]).then(function(r){ const ant=migrarAntigo(r[3]); return {h:h, dia:r[0]||(ant?ant.dia:null), inicio:r[1]||(ant?ant.inicio:null), noite:r[2]||r[1]||(ant?ant.inicio:null)}; }); })).then(renderPainelGestora).catch(()=>{});
   }
   function renderPainelGestora(arr){
     const el=document.getElementById('painelGestora'); if(!el) return;
     const alertas=[]; let prontos=0,pendentes=0;
-    arr.forEach(o=>{ const has=(o.dia&&o.dia.byQ)||(o.noite&&o.noite.byQ); if(has) prontos++; else pendentes++; if(o.dia&&o.dia.byQ) alertasDe(o.dia.byQ).forEach(a=>alertas.push(o.h.nome+': '+a)); if(o.noite&&o.noite.byQ) alertasDe(o.noite.byQ).forEach(a=>alertas.push(o.h.nome+': '+a)); });
+    arr.forEach(o=>{ const has=(o.dia&&o.dia.byQ)||(o.inicio&&o.inicio.byQ)||(o.noite&&o.noite.byQ); if(has) prontos++; else pendentes++; alertasDoItem(o).forEach(a=>alertas.push(o.h.nome+': '+a)); });
     const _nHosp=arr.filter(o=>!o.h.mascote).length, _temMor=arr.some(o=>o.h.mascote);
     let html='<div class="card gest-card"><h2 style="font-size:20px;margin-bottom:2px">Resumo de hoje · AuAulândia</h2><div class="hint">'+_nHosp+' hóspedes'+(_temMor?' + Repolho (moradora)':'')+' · '+prontos+' com relatório · '+pendentes+' sem relatório</div>';
     html+= alertas.length? '<div class="dc-faltas" style="margin-top:10px">⚠ <strong>ATENÇÃO ('+alertas.length+'):</strong> '+alertas.join(' · ')+'</div>' : '<div class="dc-pend-note" style="margin-top:10px;background:rgba(39,174,96,.1);border-color:rgba(39,174,96,.35);color:var(--crm-ok)">Sem alertas vermelhos hoje.</div>';
     html+='<div class="hint" style="margin-top:12px;font-weight:700">Textos prontos para enviar ao tutor:</div>';
     // Ordena por GRAVIDADE: vermelho (alerta) primeiro, amarelo (sem relatório) depois, verde por último.
-    arr.forEach(o=>{ let al=[]; if(o.dia&&o.dia.byQ) alertasDe(o.dia.byQ).forEach(a=>al.push(a)); if(o.noite&&o.noite.byQ) alertasDe(o.noite.byQ).forEach(a=>al.push(a));
+    arr.forEach(o=>{ let al=alertasDoItem(o);
       if(o.dia&&o.dia.byQ&&o.dia.byQ['Tem medicação?']==='Sim' && o.noite&&o.noite.byQ && !temMedEm(o.noite)) al.push('medicação não confirmada à noite');
       al=al.filter((v,i)=>al.indexOf(v)===i);
-      const rel=(o.noite&&o.noite.byQ)?o.noite:((o.dia&&o.dia.byQ)?o.dia:null); o._al=al; o._rel=rel; o._nivel=al.length?3:(rel?1:2); });
+      const rel=(o.noite&&o.noite.byQ)?o.noite:((o.dia&&o.dia.byQ)?o.dia:(o.inicio&&o.inicio.byQ?o.inicio:null)); o._al=al; o._rel=rel; o._nivel=al.length?3:(rel?1:2); });
     arr.sort(function(a,b){ if(b._nivel!==a._nivel) return b._nivel-a._nivel; return jsNorm(a.h.nome).localeCompare(jsNorm(b.h.nome)); });
     const lblNv={3:'Verificar URGENTE',2:'Atenção · falta relatório',1:'Tudo certo'}; const clsNv={3:'gn-urgente',2:'gn-atencao',1:'gn-ok'}; let _ultNv=null;
     arr.forEach(o=>{
