@@ -1521,7 +1521,7 @@
   function carregarPainelGestora(){
     const el=document.getElementById('painelGestora'); if(!el) return;
     const role=document.body.dataset.role; if(role!=='gestao'&&role!=='supervisor'){ el.innerHTML=''; return; }
-    const reais=(hospedes||[]).filter(h=>!h.mascote);
+    const reais=(hospedes||[]); // inclui a moradora (Repolho): a Gestora precisa ver alertas dela também
     if(!DB||!reais.length){ el.innerHTML=''; return; }
     Promise.all(reais.map(h=>{ const base='auaulandia/relatorios/'+fichaKeyDe(h,selectedDate); return Promise.all([ DB.ref(base+'/dia').once('value').then(s=>s.val()).catch(()=>null), DB.ref(base+'/inicio').once('value').then(s=>s.val()).catch(()=>null), DB.ref(base+'/noite').once('value').then(s=>s.val()).catch(()=>null), DB.ref(base).once('value').then(s=>s.val()).catch(()=>null) ]).then(function(r){ const ant=migrarAntigo(r[3]); return {h:h, dia:r[0]||(ant?ant.dia:null), noite:r[2]||r[1]||(ant?ant.inicio:null)}; }); })).then(renderPainelGestora).catch(()=>{});
   }
@@ -1529,7 +1529,8 @@
     const el=document.getElementById('painelGestora'); if(!el) return;
     const alertas=[]; let prontos=0,pendentes=0;
     arr.forEach(o=>{ const has=(o.dia&&o.dia.byQ)||(o.noite&&o.noite.byQ); if(has) prontos++; else pendentes++; if(o.dia&&o.dia.byQ) alertasDe(o.dia.byQ).forEach(a=>alertas.push(o.h.nome+': '+a)); if(o.noite&&o.noite.byQ) alertasDe(o.noite.byQ).forEach(a=>alertas.push(o.h.nome+': '+a)); });
-    let html='<div class="card gest-card"><h2 style="font-size:20px;margin-bottom:2px">Resumo de hoje · AuAulândia</h2><div class="hint">'+arr.length+' hóspedes · '+prontos+' com relatório · '+pendentes+' sem relatório</div>';
+    const _nHosp=arr.filter(o=>!o.h.mascote).length, _temMor=arr.some(o=>o.h.mascote);
+    let html='<div class="card gest-card"><h2 style="font-size:20px;margin-bottom:2px">Resumo de hoje · AuAulândia</h2><div class="hint">'+_nHosp+' hóspedes'+(_temMor?' + Repolho (moradora)':'')+' · '+prontos+' com relatório · '+pendentes+' sem relatório</div>';
     html+= alertas.length? '<div class="dc-faltas" style="margin-top:10px">⚠ <strong>ATENÇÃO ('+alertas.length+'):</strong> '+alertas.join(' · ')+'</div>' : '<div class="dc-pend-note" style="margin-top:10px;background:rgba(39,174,96,.1);border-color:rgba(39,174,96,.35);color:var(--crm-ok)">Sem alertas vermelhos hoje.</div>';
     html+='<div class="hint" style="margin-top:12px;font-weight:700">Textos prontos para enviar ao tutor:</div>';
     // Ordena por GRAVIDADE: vermelho (alerta) primeiro, amarelo (sem relatório) depois, verde por último.
@@ -1541,9 +1542,12 @@
     const lblNv={3:'Verificar URGENTE',2:'Atenção · falta relatório',1:'Tudo certo'}; const clsNv={3:'gn-urgente',2:'gn-atencao',1:'gn-ok'}; let _ultNv=null;
     arr.forEach(o=>{
       if(o._nivel!==_ultNv){ html+='<div class="gest-nivel '+clsNv[o._nivel]+'">'+lblNv[o._nivel]+'</div>'; _ultNv=o._nivel; }
-      const rel=o._rel, al=o._al;
-      const texto=rel?montarTextoTutor(ctxDeRelatorio(o.h,rel)):'';
-      html+='<div class="gest-item'+(al.length?' alerta':'')+'"><div class="gest-head"><strong>'+o.h.nome+'</strong> <span style="color:var(--muted);font-size:12px">'+o.h.tutor+'</span> '+(al.length?'<span class="gest-badge">'+al.join(', ')+'</span>':(rel?'<span class="gest-ok">pronto</span>':'<span class="gest-pend">sem relatório</span>'))+'</div>'+(rel?'<textarea class="gest-txt" readonly>'+texto+'</textarea><button class="btn btn-gold" style="padding:7px 14px;font-size:13px;margin-top:6px" onclick="copiarGest(this)">Copiar texto</button>':'')+'</div>';
+      const rel=o._rel, al=o._al, ehMorador=!!o.h.mascote;
+      const texto=(rel&&!ehMorador)?montarTextoTutor(ctxDeRelatorio(o.h,rel)):'';
+      const tutorLabel=ehMorador?'moradora · cuidado interno (sem texto p/ tutor)':o.h.tutor;
+      const statusTag=al.length?'<span class="gest-badge">'+al.join(', ')+'</span>':(rel?'<span class="gest-ok">'+(ehMorador?'observada':'pronto')+'</span>':'<span class="gest-pend">sem relatório</span>');
+      const corpo=ehMorador?'':(rel?'<textarea class="gest-txt" readonly>'+texto+'</textarea><button class="btn btn-gold" style="padding:7px 14px;font-size:13px;margin-top:6px" onclick="copiarGest(this)">Copiar texto</button>':'');
+      html+='<div class="gest-item'+(al.length?' alerta':'')+'"><div class="gest-head"><strong>'+o.h.nome+'</strong> <span style="color:var(--muted);font-size:12px">'+tutorLabel+'</span> '+statusTag+'</div>'+corpo+'</div>';
     });
     html+='</div>'; el.innerHTML=html;
   }
