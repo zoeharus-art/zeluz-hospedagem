@@ -1,0 +1,456 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=5, viewport-fit=cover">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Zêluz Check-in">
+  <meta name="theme-color" content="#2B5F41">
+  <title>Zêluz® — Check-in Hospedagem</title>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:ital,wght@0,400;0,500;0,600;0,700;0,800;1,400;1,600&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --amarelo:#C9971C; --azul:#234D67; --verde:#2B5F41; --preto:#1D1E1C;
+      --branco:#FFFFFF; --creme:#FAF8F4; --btn-verde:#1A8C4E;
+      --ok-h:#1E7D4B; --ok-l:#E6F5EE; --pend-h:#C62828; --pend-l:#FFF0F0;
+      --font:'Poppins', sans-serif;
+    }
+    *, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
+    html, body { font-family:var(--font); background:var(--creme); color:var(--azul); overflow-x:hidden; }
+    body { display:flex; flex-direction:column; min-height:100vh; }
+
+    @keyframes fadeUp { from{opacity:0;transform:translateY(16px)} to{opacity:1;transform:translateY(0)} }
+    @keyframes fadeIn { from{opacity:0} to{opacity:1} }
+    @keyframes toastIn { from{opacity:0;transform:translate(-50%,20px)} to{opacity:1;transform:translate(-50%,0)} }
+
+    /* ════ HEADER ════ */
+    .header { background:linear-gradient(160deg,#1C4430 0%,#2B5F41 55%,#1C4430 100%); box-shadow:0 4px 20px rgba(0,0,0,.3); flex-shrink:0; }
+    .header-top { display:flex; align-items:center; justify-content:space-between; gap:16px; padding:10px 24px; }
+    .logo-wrap { overflow:hidden; height:64px; flex-shrink:0; animation:fadeIn .9s ease both; }
+    .logo-img { display:block; height:138px; width:auto; object-fit:contain; margin-top:-36px; }
+    .header-center { display:flex; flex-direction:column; align-items:center; gap:2px; flex:1; }
+    .header-sector { font-size:10px; font-weight:800; color:rgba(255,255,255,.6); text-transform:uppercase; letter-spacing:3px; }
+    .header-titulo { font-size:21px; font-weight:800; color:#FFF; letter-spacing:1px; text-shadow:0 1px 4px rgba(0,0,0,.3); }
+    .header-link { font-size:12px; font-weight:700; color:rgba(255,255,255,.85); text-decoration:none; background:rgba(255,255,255,.12); padding:8px 14px; border-radius:100px; white-space:nowrap; transition:background .2s; }
+    .header-link:hover { background:rgba(255,255,255,.22); }
+
+    /* ════ LAYOUT ════ */
+    .wrap { width:100%; max-width:860px; margin:0 auto; padding:20px 16px 120px; }
+
+    /* ════ BUSCA / REAPROVEITAMENTO ════ */
+    .busca-card { background:linear-gradient(135deg,#234D67 0%,#1A3A4F 100%); border-radius:18px; padding:20px 22px; box-shadow:0 8px 28px rgba(35,77,103,.28); animation:fadeUp .5s ease both; position:relative; z-index:5; }
+    .busca-titulo { color:#FFF; font-size:16px; font-weight:800; display:flex; align-items:center; gap:8px; }
+    .busca-sub { color:rgba(255,255,255,.7); font-size:12.5px; font-weight:500; margin:4px 0 14px; }
+    .busca-box { position:relative; }
+    .busca-input { width:100%; padding:15px 18px; border:none; border-radius:12px; font-family:var(--font); font-size:16px; font-weight:600; color:var(--azul); box-shadow:0 2px 10px rgba(0,0,0,.15); }
+    .busca-input:focus { outline:3px solid var(--amarelo); }
+    .busca-results { position:absolute; top:calc(100% + 6px); left:0; right:0; background:#FFF; border-radius:12px; box-shadow:0 12px 32px rgba(0,0,0,.25); max-height:300px; overflow-y:auto; display:none; z-index:20; }
+    .busca-results.show { display:block; }
+    .busca-item { padding:13px 18px; cursor:pointer; border-bottom:1px solid #f0ece4; transition:background .15s; }
+    .busca-item:last-child { border-bottom:none; }
+    .busca-item:hover, .busca-item.sel { background:var(--creme); }
+    .busca-item-nome { font-size:15px; font-weight:700; color:var(--azul); }
+    .busca-item-meta { font-size:12px; color:#8a8270; font-weight:600; margin-top:1px; }
+    .busca-empty { padding:16px 18px; color:#8a8270; font-size:13px; font-weight:600; font-style:italic; }
+    .busca-acoes { display:flex; gap:10px; margin-top:14px; }
+    .btn-novo { flex:1; background:var(--amarelo); color:#1B3A52; border:none; padding:13px; border-radius:100px; font-family:var(--font); font-size:14px; font-weight:800; cursor:pointer; transition:transform .15s, box-shadow .2s; }
+    .btn-novo:hover { transform:translateY(-1px); box-shadow:0 6px 18px rgba(201,151,28,.4); }
+
+    /* ════ STATUS DE CONEXÃO ════ */
+    .conn { text-align:center; font-size:11px; font-weight:700; padding:6px; letter-spacing:.5px; }
+    .conn.on { color:var(--ok-h); }
+    .conn.off { color:var(--pend-h); }
+
+    /* ════ FICHA (form) ════ */
+    .ficha { margin-top:18px; animation:fadeUp .55s ease both; }
+    .ficha.editando .modo-novo { display:flex; }
+    .card { background:#FFF; border-radius:16px; padding:20px 20px 22px; box-shadow:0 4px 18px rgba(0,0,0,.06); margin-bottom:16px; }
+    .card-titulo { font-size:13px; font-weight:800; color:var(--azul); text-transform:uppercase; letter-spacing:.8px; display:flex; align-items:center; gap:8px; margin-bottom:16px; padding-bottom:12px; border-bottom:2px solid #f0ece4; }
+    .modo-novo { display:none; align-items:center; gap:6px; margin-left:auto; font-size:10px; font-weight:800; color:var(--ok-h); background:var(--ok-l); padding:3px 10px; border-radius:100px; letter-spacing:.5px; }
+    .grid { display:grid; grid-template-columns:1fr 1fr; gap:14px; }
+    .field { display:flex; flex-direction:column; gap:6px; }
+    .field.full { grid-column:1 / -1; }
+    .field label { font-size:12px; font-weight:700; color:#6b6456; }
+    .field .req { color:var(--amarelo); }
+    .field input, .field textarea {
+      width:100%; padding:12px 14px; border:2px solid #e6e1d6; border-radius:10px;
+      font-family:var(--font); font-size:15.5px; font-weight:600; color:var(--azul); background:#FFF; transition:border-color .2s;
+    }
+    .field input::placeholder, .field textarea::placeholder { color:#bdb6a6; font-weight:500; }
+    .field input:focus, .field textarea:focus { outline:none; border-color:var(--amarelo); }
+    .field textarea { resize:vertical; min-height:64px; }
+    .field input[type=date] { color:var(--azul); }
+    .idade-tag { font-size:12px; font-weight:700; color:var(--ok-h); background:var(--ok-l); padding:3px 10px; border-radius:100px; align-self:flex-start; }
+    .idade-tag.vazio { display:none; }
+
+    /* toggles sim/não, macho/fêmea */
+    .opts { display:flex; gap:8px; }
+    .opt-btn { flex:1; padding:11px; border:2px solid #e6e1d6; border-radius:10px; background:#FFF; cursor:pointer; font-family:var(--font); font-size:14px; font-weight:700; color:#9a9a9a; transition:all .15s; user-select:none; text-align:center; }
+    .opt-btn:hover { border-color:var(--amarelo); }
+    .opt-btn.active { background:var(--amarelo); color:#1B3A52; border-color:var(--amarelo); box-shadow:0 2px 8px rgba(201,151,28,.22); }
+
+    @media(max-width:560px){ .grid{ grid-template-columns:1fr; } .field.half-keep{ } }
+
+    /* ════ BARRA SALVAR (fixa) ════ */
+    .savebar { position:fixed; bottom:0; left:0; right:0; background:rgba(255,255,255,.96); backdrop-filter:blur(8px); border-top:2px solid #ece8e0; padding:12px 16px; display:flex; gap:12px; align-items:center; justify-content:center; z-index:30; box-shadow:0 -4px 20px rgba(0,0,0,.07); }
+    .savebar .resumo { font-size:12px; color:#8a8270; font-weight:600; flex:1; max-width:300px; }
+    .btn-salvar { background:var(--btn-verde); color:#FFF; border:none; padding:15px 36px; border-radius:100px; font-family:var(--font); font-size:16px; font-weight:800; cursor:pointer; transition:transform .15s, box-shadow .2s; box-shadow:0 4px 16px rgba(26,140,78,.35); }
+    .btn-salvar:hover { transform:translateY(-2px); box-shadow:0 8px 24px rgba(26,140,78,.45); }
+    .btn-salvar:disabled { background:#cfc8bc; box-shadow:none; cursor:not-allowed; transform:none; }
+
+    /* ════ TOAST ════ */
+    .toast { position:fixed; bottom:90px; left:50%; transform:translateX(-50%); background:var(--azul); color:#FFF; padding:14px 26px; border-radius:100px; font-size:14px; font-weight:700; box-shadow:0 8px 28px rgba(0,0,0,.3); z-index:50; display:none; animation:toastIn .35s ease; }
+    .toast.show { display:block; }
+    .toast.ok { background:var(--btn-verde); }
+    .toast.erro { background:var(--pend-h); }
+
+    footer { text-align:center; padding:18px; color:#b0a898; font-size:11px; font-weight:600; }
+  </style>
+</head>
+<body>
+
+<header class="header">
+  <div class="header-top">
+    <div class="logo-wrap"><img class="logo-img" src="logo.png" alt="Zêluz" onerror="this.style.display='none'"></div>
+    <div class="header-center">
+      <div class="header-sector">Hospedagem</div>
+      <div class="header-titulo">📋 Check-in</div>
+    </div>
+    <a class="header-link" href="index.html">← Painel</a>
+  </div>
+</header>
+
+<div class="conn off" id="conn">conectando ao banco…</div>
+
+<div class="wrap">
+
+  <!-- BUSCA / REAPROVEITAMENTO -->
+  <div class="busca-card">
+    <div class="busca-titulo">🔎 Esse FILHOt já é cliente Zêluz?</div>
+    <div class="busca-sub">Digite o nome. Se já tem cadastro, puxamos tudo — sem reescrever nada.</div>
+    <div class="busca-box">
+      <input type="text" class="busca-input" id="busca" placeholder="Nome do FILHOt…" autocomplete="off"
+             oninput="onBusca()" onfocus="onBusca()">
+      <div class="busca-results" id="buscaResults"></div>
+    </div>
+    <div class="busca-acoes">
+      <button class="btn-novo" onclick="novoFilhot()">➕ É a primeira vez — Novo FILHOt</button>
+    </div>
+  </div>
+
+  <!-- FICHA -->
+  <div class="ficha" id="ficha" style="display:none">
+
+    <div class="card">
+      <div class="card-titulo">🐾 Dados do FILHOt <span class="modo-novo" id="modoNovo">✦ Novo cadastro</span></div>
+      <div class="grid">
+        <div class="field full">
+          <label>Nome do FILHOt <span class="req">*</span></label>
+          <input type="text" id="f_nome" placeholder="Ex: Dolly" oninput="refreshResumo()">
+        </div>
+        <div class="field">
+          <label>Raça</label>
+          <input type="text" id="f_raca" placeholder="Ex: Westie">
+        </div>
+        <div class="field">
+          <label>Cor</label>
+          <input type="text" id="f_cor" placeholder="Ex: Branco">
+        </div>
+        <div class="field">
+          <label>Data de nascimento</label>
+          <input type="date" id="f_nasc" onchange="onNasc()">
+        </div>
+        <div class="field">
+          <label>Idade</label>
+          <span class="idade-tag vazio" id="idadeTag"></span>
+          <input type="text" id="f_idade_manual" placeholder="Se não souber a data, escreva aqui (ex: 3 anos)">
+        </div>
+        <div class="field">
+          <label>Sexo</label>
+          <div class="opts" id="opt_sexo">
+            <div class="opt-btn" data-val="Macho" onclick="pickOpt(this,'opt_sexo')">♂ Macho</div>
+            <div class="opt-btn" data-val="Fêmea" onclick="pickOpt(this,'opt_sexo')">♀ Fêmea</div>
+          </div>
+        </div>
+        <div class="field">
+          <label>Castrado?</label>
+          <div class="opts" id="opt_castrado">
+            <div class="opt-btn" data-val="Sim" onclick="pickOpt(this,'opt_castrado')">Sim</div>
+            <div class="opt-btn" data-val="Não" onclick="pickOpt(this,'opt_castrado')">Não</div>
+          </div>
+        </div>
+        <div class="field">
+          <label>Microchip</label>
+          <input type="text" id="f_chip" inputmode="numeric" placeholder="Número do microchip">
+        </div>
+        <div class="field">
+          <label>Peso de entrada (kg)</label>
+          <input type="number" id="f_peso" step="0.1" min="0" inputmode="decimal" placeholder="Ex: 8,0">
+        </div>
+        <div class="field">
+          <label>Coleira</label>
+          <input type="text" id="f_coleira" placeholder="Cor / tipo da coleira">
+        </div>
+        <div class="field full">
+          <label>Característica física / observações</label>
+          <textarea id="f_caract" placeholder="Sinais, manchas, temperamento, cuidados especiais…"></textarea>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-titulo">👤 Tutor</div>
+      <div class="grid">
+        <div class="field">
+          <label>Nome do tutor <span class="req">*</span></label>
+          <input type="text" id="t_nome" placeholder="Ex: Margarete" oninput="refreshResumo()">
+        </div>
+        <div class="field">
+          <label>Telefone / WhatsApp</label>
+          <input type="tel" id="t_tel" inputmode="tel" placeholder="(31) 9 9999-9999">
+        </div>
+        <div class="field full">
+          <label>Veterinário de confiança</label>
+          <input type="text" id="t_vet" placeholder="Nome do veterinário / clínica">
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <footer>Zêluz® · Aqui, cada cuidado é ÚNICO · Cadastro reaproveitável — o que é salvo volta sozinho na próxima estadia</footer>
+</div>
+
+<!-- BARRA SALVAR -->
+<div class="savebar" id="savebar" style="display:none">
+  <div class="resumo" id="resumo">Preencha o nome do FILHOt e do tutor.</div>
+  <button class="btn-salvar" id="btnSalvar" onclick="salvarCadastro()" disabled>💾 Salvar cadastro</button>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<!-- Firebase SDK -->
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-database-compat.js"></script>
+<script>
+// ════════════════════════════════════════════════════════════
+//  CONFIG — mesmo banco do painel de Hospedagem
+// ════════════════════════════════════════════════════════════
+const FIREBASE_CONFIG = {
+  apiKey:            "AIzaSyD3udp47XruRAEeIYWNGn0ICGCX3a1qr28",
+  authDomain:        "hospedagem-zeluz.firebaseapp.com",
+  databaseURL:       "https://hospedagem-zeluz-default-rtdb.firebaseio.com",
+  projectId:         "hospedagem-zeluz",
+  storageBucket:     "hospedagem-zeluz.firebasestorage.app",
+  messagingSenderId: "199129329105",
+  appId:             "1:199129329105:web:22d0995972c197e24644f0"
+};
+
+let firebaseDb   = null;
+let cadastros    = {};     // espelho local do nó 'filhots'
+let editandoUid  = null;   // uid do cadastro carregado (null = novo)
+
+// ── Utilidades ──
+function slug(s){ return (s||'').trim().toLowerCase()
+  .normalize('NFD').replace(/[̀-ͯ]/g,'')
+  .replace(/[^a-z0-9]+/g,'-').replace(/^-+|-+$/g,''); }
+function uidDe(nome, tutor){ const n=slug(nome), t=slug(tutor); return t ? `${n}__${t}` : n; }
+function esc(s){ return (s||'').replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function val(id){ return (document.getElementById(id)?.value || '').trim(); }
+function setVal(id,v){ const el=document.getElementById(id); if(el) el.value = v||''; }
+
+// ── Firebase ──
+function initFirebase(){
+  try {
+    const app  = firebase.initializeApp(FIREBASE_CONFIG);
+    const auth = firebase.auth(app);
+    auth.signInAnonymously()
+      .then(()=>{
+        firebaseDb = firebase.database(app);
+        firebaseDb.ref('filhots').on('value', snap=>{
+          cadastros = snap.val() || {};
+          marcarConn(true);
+          onBusca();
+        }, err=>{ console.error('Firebase read:', err); marcarConn(false); });
+      })
+      .catch(e=>{ console.error('Firebase auth:', e); marcarConn(false); });
+  } catch(e){ console.error('Firebase init:', e); marcarConn(false); }
+}
+function marcarConn(ok){
+  const el = document.getElementById('conn');
+  el.className = 'conn ' + (ok?'on':'off');
+  el.textContent = ok ? '● banco conectado — cadastros salvos voltam sozinhos' : '○ sem conexão com o banco — confira a internet';
+}
+
+// ── Busca / autocomplete (reaproveitamento) ──
+function onBusca(){
+  const termo = slug(val('busca'));
+  const box = document.getElementById('buscaResults');
+  const lista = Object.entries(cadastros)
+    .map(([uid,c]) => ({ uid, ...c }))
+    .filter(c => !termo || slug(c.nome).includes(termo) || slug(c.tutor||'').includes(termo))
+    .sort((a,b)=> (a.nome||'').localeCompare(b.nome||''))
+    .slice(0, 8);
+
+  if(!val('busca')){ box.classList.remove('show'); box.innerHTML=''; return; }
+
+  if(lista.length === 0){
+    box.innerHTML = `<div class="busca-empty">Nenhum cadastro encontrado. Toque em “Novo FILHOt” para criar.</div>`;
+  } else {
+    box.innerHTML = lista.map(c => `
+      <div class="busca-item" onclick="carregar('${esc(c.uid)}')">
+        <div class="busca-item-nome">🐾 ${esc(c.nome)}${c.raca?` · ${esc(c.raca)}`:''}</div>
+        <div class="busca-item-meta">👤 ${esc(c.tutor||'sem tutor')}${c.microchip?` · chip ${esc(c.microchip)}`:''}</div>
+      </div>`).join('');
+  }
+  box.classList.add('show');
+}
+
+function carregar(uid){
+  const c = cadastros[uid];
+  if(!c) return;
+  editandoUid = uid;
+  setVal('f_nome', c.nome);   setVal('f_raca', c.raca);   setVal('f_cor', c.cor);
+  setVal('f_nasc', c.nascimento); setVal('f_idade_manual', c.idadeManual);
+  setVal('f_chip', c.microchip);  setVal('f_peso', c.pesoEntrada);
+  setVal('f_coleira', c.coleira); setVal('f_caract', c.caracteristica);
+  setVal('t_nome', c.tutor);  setVal('t_tel', c.telefone);  setVal('t_vet', c.veterinario);
+  setOpt('opt_sexo', c.sexo); setOpt('opt_castrado', c.castrado);
+  document.getElementById('modoNovo').style.display = 'none';
+  onNasc(); abrirFicha(); fecharResultados();
+  toast(`Cadastro de ${c.nome} carregado — confira e atualize se precisar.`, 'ok');
+}
+
+function novoFilhot(){
+  editandoUid = null;
+  ['f_nome','f_raca','f_cor','f_nasc','f_idade_manual','f_chip','f_peso','f_coleira','f_caract','t_nome','t_tel','t_vet']
+    .forEach(id=>setVal(id,''));
+  setOpt('opt_sexo',''); setOpt('opt_castrado','');
+  // pré-preenche o nome com o que foi digitado na busca
+  setVal('f_nome', val('busca'));
+  document.getElementById('modoNovo').style.display = 'inline-flex';
+  onNasc(); abrirFicha(); fecharResultados();
+}
+
+function abrirFicha(){
+  document.getElementById('ficha').style.display = 'block';
+  document.getElementById('savebar').style.display = 'flex';
+  refreshResumo();
+}
+function fecharResultados(){ document.getElementById('buscaResults').classList.remove('show'); }
+
+// ── Opções (sexo, castrado) ──
+function pickOpt(el, grupo){
+  document.querySelectorAll(`#${grupo} .opt-btn`).forEach(b=>b.classList.remove('active'));
+  el.classList.add('active');
+}
+function setOpt(grupo, valor){
+  document.querySelectorAll(`#${grupo} .opt-btn`).forEach(b=>{
+    b.classList.toggle('active', b.dataset.val === valor);
+  });
+}
+function getOpt(grupo){
+  const a = document.querySelector(`#${grupo} .opt-btn.active`);
+  return a ? a.dataset.val : '';
+}
+
+// ── Idade a partir da data de nascimento ──
+function onNasc(){
+  const iso = val('f_nasc');
+  const tag = document.getElementById('idadeTag');
+  const txt = calcIdade(iso);
+  if(txt){ tag.textContent = '🎂 ' + txt; tag.classList.remove('vazio'); }
+  else   { tag.textContent = ''; tag.classList.add('vazio'); }
+}
+function calcIdade(iso){
+  if(!iso) return '';
+  const n = new Date(iso + 'T00:00:00'); const h = new Date();
+  if(isNaN(n) || n > h) return '';
+  let anos = h.getFullYear() - n.getFullYear();
+  let meses = h.getMonth() - n.getMonth();
+  if(h.getDate() < n.getDate()) meses--;
+  if(meses < 0){ anos--; meses += 12; }
+  const pa = anos === 1 ? '1 ano' : `${anos} anos`;
+  const pm = meses === 1 ? '1 mês' : `${meses} meses`;
+  if(anos <= 0) return pm;
+  if(meses === 0) return pa;
+  return `${pa} e ${pm}`;
+}
+
+// ── Resumo + habilitar salvar ──
+function refreshResumo(){
+  const nome = val('f_nome'), tutor = val('t_nome');
+  const btn = document.getElementById('btnSalvar');
+  const resumo = document.getElementById('resumo');
+  const ok = nome && tutor;
+  btn.disabled = !ok;
+  if(!nome && !tutor) resumo.textContent = 'Preencha o nome do FILHOt e do tutor.';
+  else if(!nome)      resumo.textContent = 'Falta o nome do FILHOt.';
+  else if(!tutor)     resumo.textContent = 'Falta o nome do tutor.';
+  else                resumo.textContent = `${nome} · tutor: ${tutor}`;
+}
+
+// ── Salvar ──
+function salvarCadastro(){
+  const nome = val('f_nome'), tutor = val('t_nome');
+  if(!nome || !tutor){ toast('Preencha o nome do FILHOt e do tutor.', 'erro'); return; }
+
+  const uid = uidDe(nome, tutor);
+  const anterior = cadastros[uid] || {};
+  const reg = {
+    nome, raca: val('f_raca'), cor: val('f_cor'),
+    nascimento: val('f_nasc'), idadeManual: val('f_idade_manual'),
+    sexo: getOpt('opt_sexo'), castrado: getOpt('opt_castrado'),
+    microchip: val('f_chip'), pesoEntrada: val('f_peso'),
+    coleira: val('f_coleira'), caracteristica: val('f_caract'),
+    tutor, telefone: val('t_tel'), veterinario: val('t_vet'),
+    criadoEm: anterior.criadoEm || agora(),
+    atualizadoEm: agora()
+  };
+
+  // Se o nome/tutor mudou e gerou outro uid, remove o registro antigo
+  const removerAntigo = (editandoUid && editandoUid !== uid) ? editandoUid : null;
+
+  if(firebaseDb){
+    const updates = {};
+    updates[`filhots/${uid}`] = reg;
+    if(removerAntigo) updates[`filhots/${removerAntigo}`] = null;
+    firebaseDb.ref().update(updates)
+      .then(()=>{ editandoUid = uid; document.getElementById('modoNovo').style.display='none';
+                  toast(`✅ ${nome} salvo! Na próxima estadia é só buscar pelo nome.`, 'ok'); })
+      .catch(e=>{ console.error('save', e); toast('Erro ao salvar no banco. Tente de novo.', 'erro'); });
+  } else {
+    // fallback local (sem conexão) — não perde o que foi digitado
+    cadastros[uid] = reg;
+    toast('Salvo localmente (sem banco). Reconecte para sincronizar.', 'erro');
+  }
+}
+
+function agora(){
+  try {
+    return new Date().toLocaleString('pt-BR', { timeZone:'America/Sao_Paulo' });
+  } catch(e){ return new Date().toISOString(); }
+}
+
+// ── Toast ──
+let toastTimer = null;
+function toast(msg, tipo){
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'toast show' + (tipo ? ' ' + tipo : '');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(()=> t.classList.remove('show'), 3800);
+}
+
+// Fecha o dropdown ao tocar fora
+document.addEventListener('click', e=>{
+  if(!e.target.closest('.busca-box')) fecharResultados();
+});
+
+initFirebase();
+</script>
+</body>
+</html>
