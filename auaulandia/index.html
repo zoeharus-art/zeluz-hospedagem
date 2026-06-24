@@ -1529,11 +1529,17 @@
   }
   function renderPainelGestora(arr){
     const el=document.getElementById('painelGestora'); if(!el) return;
-    const alertas=[]; let prontos=0,pendentes=0;
-    arr.forEach(o=>{ const has=(o.dia&&o.dia.byQ)||(o.inicio&&o.inicio.byQ)||(o.noite&&o.noite.byQ); if(has) prontos++; else pendentes++; alertasDoItem(o).forEach(a=>alertas.push(o.h.nome+': '+a)); });
+    const petsAlerta=[]; let prontos=0,pendentes=0;
+    arr.forEach(o=>{ const has=(o.dia&&o.dia.byQ)||(o.inicio&&o.inicio.byQ)||(o.noite&&o.noite.byQ); if(has) prontos++; else pendentes++; const als=alertasDoItem(o); if(als.length) petsAlerta.push({nome:o.h.nome, als:als}); });
     const _nHosp=arr.filter(o=>!o.h.mascote).length, _temMor=arr.some(o=>o.h.mascote);
+    const _cap=s=>s.charAt(0).toUpperCase()+s.slice(1);
     let html='<div class="card gest-card"><h2 style="font-size:20px;margin-bottom:2px">Resumo de hoje · AuAulândia</h2><div class="hint">'+_nHosp+' hóspedes'+(_temMor?' + Repolho (moradora)':'')+' · '+prontos+' com relatório · '+pendentes+' sem relatório</div>';
-    html+= alertas.length? '<div class="dc-faltas" style="margin-top:10px">⚠ <strong>ATENÇÃO ('+alertas.length+'):</strong> '+alertas.join(' · ')+'</div>' : '<div class="dc-pend-note" style="margin-top:10px;background:rgba(39,174,96,.1);border-color:rgba(39,174,96,.35);color:var(--crm-ok)">Sem alertas vermelhos hoje.</div>';
+    if(petsAlerta.length){
+      const linhas=petsAlerta.map((p,i)=>'<div style="margin-top:7px;font-weight:700;color:var(--crm-critico);font-size:14px">'+(i+1)+' — '+p.nome+' — '+p.als.map(_cap).join(', ')+'</div>').join('');
+      html+='<div class="dc-faltas" style="margin-top:10px"><div style="font-weight:800;font-size:15px;color:var(--crm-critico);letter-spacing:.3px">⚠ ATENÇÃO: '+petsAlerta.length+' peludinho'+(petsAlerta.length>1?'s':'')+'</div>'+linhas+'</div>';
+    } else {
+      html+='<div class="dc-pend-note" style="margin-top:10px;background:rgba(39,174,96,.1);border-color:rgba(39,174,96,.35);color:var(--crm-ok)">Sem alertas vermelhos hoje.</div>';
+    }
     html+='<div class="hint" style="margin-top:12px;font-weight:700">Textos prontos para enviar ao tutor:</div>';
     // Ordena por GRAVIDADE: vermelho (alerta) primeiro, amarelo (sem relatório) depois, verde por último.
     arr.forEach(o=>{ let al=alertasDoItem(o);
