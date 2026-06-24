@@ -373,7 +373,7 @@
     .comida-toggle.on .sw { background:var(--btn-verde); }
     .comida-toggle.on .sw::after { left:23px; }
     .comida-grid {
-      display:grid; grid-template-columns:1fr 1fr; gap:12px;
+      display:grid; grid-template-columns:repeat(3,1fr); gap:12px;
       background:#F1F7F3; border:1.5px solid #cfe6da; border-radius:12px; padding:14px;
     }
     .comida-grid .calc-field label { color:#2B7A4B; }
@@ -897,7 +897,7 @@ const FRASES = [
   "A hospitalidade verdadeira se mede pela paz que o hóspede sente.",
   "Cada olhar de um FILHOt hospedado é uma pergunta — respondemos com amor.",
   "Não existe hóspede pequeno. Todos merecem o máximo cuidado.",
-  "A rotina de um animal em hospedagem precisa de ritmo, calor e segurança.",
+  "A rotina de um FILHOt em hospedagem precisa de ritmo, calor e segurança.",
   "A ração certa, na hora certa, pelo amor que merece.",
   "Atenção aos detalhes é a diferença entre o bom e o extraordinário.",
   "Campeão não erra menos — levanta mais rápido.",
@@ -1476,6 +1476,7 @@ function renderRacao() {
     const gComidaRef  = racao.gComidaPorRefeicao || '';
     const gComidaTraz = racao.gComidaTrazida || '';
     const defComida   = racao.deficitComida || 0;
+    const gComidaRefDia = racao.gComidaRefeicoesPorDia || '';   // refeições/dia que recebem comida natural
 
     let resultadoHtml = '';
     if(minimo!=='') {
@@ -1601,6 +1602,10 @@ function renderRacao() {
               <input type="number" id="cpref_${esc(key)}" value="${gComidaRef}" min="1" oninput="calcMinimoPreview('${esc(key)}')">
             </div>
             <div class="calc-field">
+              <label>🍲 Refeições/dia com natural</label>
+              <input type="number" id="crefdia_${esc(key)}" value="${gComidaRefDia}" min="1" max="4" placeholder="1, 2 ou 3" oninput="calcMinimoPreview('${esc(key)}')">
+            </div>
+            <div class="calc-field">
               <label>🍲 Comida trazida (g)</label>
               <input type="number" id="ctraz_${esc(key)}" value="${gComidaTraz}" min="0" oninput="calcMinimoPreview('${esc(key)}')">
             </div>
@@ -1663,6 +1668,17 @@ function getMealCounts(key) {
   return { entrada, saida };
 }
 
+// Total de refeições COM comida natural na estadia, respeitando os dias parciais.
+// Dias do meio dão natural em cRefDia refeições (no máx. o que ele come/dia = refDia).
+// Dias de entrada/saída: só nas refeições que de fato acontecem (no máx. cRefDia).
+function totalRefNatural(dias, mEntrada, mSaida, cRefDia, refDia) {
+  if(!cRefDia || !dias) return 0;
+  const meio = refDia ? Math.min(cRefDia, refDia) : cRefDia;
+  if(dias === 1) return Math.min(cRefDia, mEntrada);
+  if(dias === 2) return Math.min(cRefDia, mEntrada) + Math.min(cRefDia, mSaida);
+  return Math.min(cRefDia, mEntrada) + ((dias - 2) * meio) + Math.min(cRefDia, mSaida);
+}
+
 // Calcula os dias de hospedagem a partir das datas de entrada e saída.
 // Regra Zêluz: o dia da chegada conta como Dia 1 → dias = (saída − entrada) + 1.
 function calcDias(key) {
@@ -1721,11 +1737,13 @@ function calcMinimoPreview(key) {
   const minimo = gpRef * totalRefeicoes;
   const def    = minimo - gTraz;
 
-  // Comida natural (opcional) — usa o MESMO número de refeições marcadas
+  // Comida natural (opcional) — gramas/refeição × refeições/dia com natural × dias
   const comeComida = document.getElementById(`comidatoggle_${key}`)?.classList.contains('on') || false;
-  const cpRef = parseInt(document.getElementById(`cpref_${key}`)?.value)||0;
-  const cTraz = parseInt(document.getElementById(`ctraz_${key}`)?.value)||0;
-  const minimoComida = comeComida ? cpRef * totalRefeicoes : 0;
+  const cpRef   = parseInt(document.getElementById(`cpref_${key}`)?.value)||0;
+  const cRefDia = parseInt(document.getElementById(`crefdia_${key}`)?.value)||0;
+  const cTraz   = parseInt(document.getElementById(`ctraz_${key}`)?.value)||0;
+  const refNatural   = comeComida ? totalRefNatural(dias, meals.entrada, meals.saida, cRefDia, refDia) : 0;
+  const minimoComida = comeComida ? cpRef * refNatural : 0;
   const defComida    = minimoComida - cTraz;
 
   const elSummary = document.getElementById(`summary_${key}`);
@@ -1739,8 +1757,8 @@ function calcMinimoPreview(key) {
       } else {
         detalhes = `Entrada: ${meals.entrada} ref · ${dias-2} dias × ${refDia} ref · Saída: ${meals.saida} ref`;
       }
-      const linhaComida = (comeComida && cpRef > 0)
-        ? `<br>🍲 Comida: <strong>${cpRef}g</strong> × ${totalRefeicoes} ref = <strong>${minimoComida}g</strong>` : '';
+      const linhaComida = (comeComida && cpRef > 0 && cRefDia > 0)
+        ? `<br>🍲 Comida: <strong>${cpRef}g</strong> × ${refNatural} refeições = <strong>${minimoComida}g</strong>` : '';
       elSummary.innerHTML = `📊 Ração: <strong>${gpRef}g</strong> × ${totalRefeicoes} refeições = <strong>${minimo}g</strong>${linhaComida}<br><span style="font-size:10px;color:#999">${detalhes}</span>`;
     } else {
       elSummary.textContent = 'Preencha os campos e marque as refeições para calcular';
@@ -1753,7 +1771,7 @@ function calcMinimoPreview(key) {
   let html = '';
   if(def>0) html = `<div class="calc-resultado alerta"><span class="calc-resultado-label">⚠️ Ração — faltam</span><span class="calc-resultado-valor">${def}g</span></div>`;
   else      html = `<div class="calc-resultado ok"><span class="calc-resultado-label">✅ Ração suficiente</span><span class="calc-resultado-valor">Sobram ${-def}g</span></div>`;
-  if(comeComida && cpRef > 0) {
+  if(comeComida && cpRef > 0 && cRefDia > 0) {
     if(defComida>0) html += `<div class="calc-resultado alerta comida"><span class="calc-resultado-label">⚠️ Comida — faltam</span><span class="calc-resultado-valor">${defComida}g</span></div>`;
     else            html += `<div class="calc-resultado ok comida"><span class="calc-resultado-label">✅ Comida suficiente</span><span class="calc-resultado-valor">Sobram ${-defComida}g</span></div>`;
   }
@@ -1772,13 +1790,15 @@ function salvarRacao(key, petName, tutor) {
 
   // Comida natural / úmida (alimentação mista)
   const comeComida = document.getElementById(`comidatoggle_${key}`)?.classList.contains('on') || false;
-  const cpRef = parseInt(document.getElementById(`cpref_${key}`)?.value)||0;
-  const cTraz = parseInt(document.getElementById(`ctraz_${key}`)?.value)||0;
+  const cpRef   = parseInt(document.getElementById(`cpref_${key}`)?.value)||0;
+  const cRefDia = parseInt(document.getElementById(`crefdia_${key}`)?.value)||0;
+  const cTraz   = parseInt(document.getElementById(`ctraz_${key}`)?.value)||0;
 
   if(!entradaData || !saidaData) { alert('Preencha a data de entrada e a data de saída.'); return; }
   if(!dias)        { alert('Confira as datas — a saída precisa ser igual ou depois da entrada.'); return; }
   if(!gpRef||!refDia) { alert('Preencha gramas/refeição e refeições/dia.'); return; }
   if(comeComida && !cpRef) { alert('Você marcou que come comida natural. Preencha as gramas de comida por refeição.'); return; }
+  if(comeComida && !cRefDia) { alert('Você marcou comida natural. Preencha em quantas refeições por dia ela é dada (1, 2 ou 3).'); return; }
   if(meals.entrada === 0 && dias >= 1) { alert('Marque pelo menos 1 refeição no dia de entrada.'); return; }
   if(meals.saida === 0 && dias >= 2) { alert('Marque pelo menos 1 refeição no dia de saída.'); return; }
 
@@ -1789,7 +1809,8 @@ function salvarRacao(key, petName, tutor) {
 
   const minimo  = gpRef * totalRefeicoes;
   const deficit = minimo - gTraz;
-  const minimoComida  = comeComida ? cpRef * totalRefeicoes : 0;
+  const refNatural    = comeComida ? totalRefNatural(dias, meals.entrada, meals.saida, cRefDia, refDia) : 0;
+  const minimoComida  = comeComida ? cpRef * refNatural : 0;
   const deficitComida = comeComida ? (minimoComida - cTraz) : 0;
 
   const data     = getRacaoData();
@@ -1814,11 +1835,12 @@ function salvarRacao(key, petName, tutor) {
   existing.gTrazidos        = gTraz;
   existing.minimo           = minimo;
   existing.deficit          = deficit;
-  existing.comeComida         = comeComida;
-  existing.gComidaPorRefeicao = comeComida ? cpRef : 0;
-  existing.gComidaTrazida     = comeComida ? cTraz : 0;
-  existing.minimoComida       = minimoComida;
-  existing.deficitComida      = deficitComida;
+  existing.comeComida              = comeComida;
+  existing.gComidaPorRefeicao      = comeComida ? cpRef : 0;
+  existing.gComidaRefeicoesPorDia  = comeComida ? cRefDia : 0;
+  existing.gComidaTrazida          = comeComida ? cTraz : 0;
+  existing.minimoComida            = minimoComida;
+  existing.deficitComida           = deficitComida;
 
   // Status considera ração E comida: pendente se faltar qualquer um dos dois
   const faltaAlgo = deficit > 0 || (comeComida && deficitComida > 0);
