@@ -94,7 +94,34 @@
     .opt-btn:hover { border-color:var(--amarelo); }
     .opt-btn.active { background:var(--amarelo); color:#1B3A52; border-color:var(--amarelo); box-shadow:0 2px 8px rgba(201,151,28,.22); }
 
-    @media(max-width:560px){ .grid{ grid-template-columns:1fr; } .field.half-keep{ } }
+    @media(max-width:560px){ .grid{ grid-template-columns:1fr; } }
+
+    /* blocos que aparecem só quando "Sim" */
+    .cond { display:none; margin-top:14px; }
+    .cond.show { display:block; animation:fadeUp .3s ease both; }
+
+    /* medicação em quadro */
+    .med-quadro { display:flex; flex-direction:column; gap:12px; }
+    .med-row { background:var(--creme); border:1.5px solid #ece6da; border-radius:12px; padding:12px 14px; position:relative; }
+    .med-row .grid { gap:10px; }
+    .med-del { position:absolute; top:8px; right:10px; background:none; border:none; color:#cbb; font-size:18px; font-weight:800; cursor:pointer; line-height:1; transition:color .15s; }
+    .med-del:hover { color:var(--pend-h); }
+    .usar-ate { display:flex; gap:10px; align-items:flex-end; flex-wrap:wrap; }
+    .usar-ate .field { flex:1; min-width:140px; }
+    .chk { display:flex; align-items:center; gap:8px; font-size:13.5px; font-weight:700; color:var(--verde); cursor:pointer; user-select:none; padding-bottom:11px; white-space:nowrap; }
+    .chk input { width:20px; height:20px; accent-color:var(--btn-verde); }
+    .med-add { background:#FFF; border:2px dashed var(--amarelo); color:#8A6200; padding:11px; border-radius:12px; font-family:var(--font); font-size:13.5px; font-weight:800; cursor:pointer; transition:all .2s; width:100%; margin-top:4px; }
+    .med-add:hover { background:var(--creme); }
+
+    /* pertences em etiquetas */
+    .pert-add-box { display:flex; gap:8px; }
+    .pert-add-box input { flex:1; }
+    .pert-add-btn { background:var(--amarelo); color:#1B3A52; border:none; padding:0 18px; border-radius:10px; font-family:var(--font); font-size:14px; font-weight:800; cursor:pointer; white-space:nowrap; }
+    .pert-chips { display:flex; flex-wrap:wrap; gap:8px; margin-top:12px; min-height:4px; }
+    .pert-chip { background:var(--ok-l); color:var(--ok-h); border:1.5px solid #cfe6da; padding:7px 10px 7px 14px; border-radius:100px; font-size:13.5px; font-weight:700; display:flex; align-items:center; gap:8px; animation:fadeUp .2s ease both; }
+    .pert-chip-del { background:none; border:none; color:var(--ok-h); font-size:16px; font-weight:800; cursor:pointer; line-height:1; opacity:.6; }
+    .pert-chip-del:hover { opacity:1; }
+    .pert-vazio { font-size:12.5px; color:#b0a898; font-weight:600; font-style:italic; }
 
     /* ════ BARRA SALVAR (fixa) ════ */
     .savebar { position:fixed; bottom:0; left:0; right:0; background:rgba(255,255,255,.96); backdrop-filter:blur(8px); border-top:2px solid #ece8e0; padding:12px 16px; display:flex; gap:12px; align-items:center; justify-content:center; z-index:30; box-shadow:0 -4px 20px rgba(0,0,0,.07); }
@@ -193,10 +220,6 @@
           <input type="text" id="f_chip" inputmode="numeric" placeholder="Número do microchip" style="margin-top:8px;display:none" oninput="refreshResumo()">
         </div>
         <div class="field">
-          <label>Peso de entrada (kg)</label>
-          <input type="number" id="f_peso" step="0.1" min="0" inputmode="decimal" placeholder="Ex: 8,0">
-        </div>
-        <div class="field">
           <label>Coleira</label>
           <input type="text" id="f_coleira" placeholder="Cor / tipo da coleira">
         </div>
@@ -223,6 +246,137 @@
           <input type="text" id="t_vet" placeholder="Nome do veterinário / clínica">
         </div>
       </div>
+    </div>
+
+    <!-- ESTADIA -->
+    <div class="card">
+      <div class="card-titulo">📅 Estadia</div>
+      <div class="grid">
+        <div class="field">
+          <label>Entrada</label>
+          <input type="date" id="e_entrada">
+        </div>
+        <div class="field">
+          <label>Saída prevista</label>
+          <input type="date" id="e_saida">
+        </div>
+        <div class="field">
+          <label>Peso na entrada (kg)</label>
+          <input type="number" id="e_peso_ent" step="0.1" min="0" inputmode="decimal" placeholder="Ex: 8,0">
+        </div>
+        <div class="field">
+          <label>Peso na saída (kg)</label>
+          <input type="number" id="e_peso_sai" step="0.1" min="0" inputmode="decimal" placeholder="Preenchido no check-out">
+        </div>
+      </div>
+    </div>
+
+    <!-- ALIMENTAÇÃO -->
+    <div class="card">
+      <div class="card-titulo">🍽️ Alimentação</div>
+      <div class="grid">
+        <div class="field">
+          <label>🥣 Ração / refeição (g)</label>
+          <input type="number" id="a_racao_g" min="0" inputmode="numeric" placeholder="Ex: 23">
+        </div>
+        <div class="field">
+          <label>🥣 Refeições de ração / dia</label>
+          <input type="number" id="a_racao_ref" min="0" max="4" inputmode="numeric" placeholder="1, 2 ou 3">
+        </div>
+      </div>
+      <div class="opts" id="g_natural" style="margin-top:14px">
+        <div class="opt-btn" data-val="sim" onclick="toggleCond('g_natural','cond_natural',this)">🍲 Come comida natural</div>
+        <div class="opt-btn" data-val="nao" onclick="toggleCond('g_natural','cond_natural',this)">Só ração</div>
+      </div>
+      <div class="cond" id="cond_natural">
+        <div class="grid">
+          <div class="field">
+            <label>🍲 Comida natural / refeição (g)</label>
+            <input type="number" id="a_nat_g" min="0" inputmode="numeric" placeholder="Ex: 100">
+          </div>
+          <div class="field">
+            <label>🍲 Refeições com natural / dia</label>
+            <input type="number" id="a_nat_ref" min="0" max="4" inputmode="numeric" placeholder="1, 2 ou 3">
+          </div>
+          <div class="field full">
+            <label>🍲 Itens da comida natural</label>
+            <input type="text" id="a_nat_itens" placeholder="Ex: patê, frango cozido, abóbora">
+          </div>
+        </div>
+      </div>
+      <div class="field full" style="margin-top:14px">
+        <label>Observação sobre a alimentação</label>
+        <input type="text" id="a_obs" placeholder="Horários, restrições, jeito de dar…">
+      </div>
+    </div>
+
+    <!-- MEDICAÇÃO -->
+    <div class="card">
+      <div class="card-titulo">💊 Medicação</div>
+      <div class="opts" id="g_med">
+        <div class="opt-btn" data-val="sim" onclick="toggleCond('g_med','cond_med',this)">Sim, toma</div>
+        <div class="opt-btn" data-val="nao" onclick="toggleCond('g_med','cond_med',this)">Não toma</div>
+      </div>
+      <div class="cond" id="cond_med">
+        <div class="med-quadro" id="medQuadro"></div>
+        <button class="med-add" onclick="addMedRow()">＋ Adicionar medicação</button>
+      </div>
+    </div>
+
+    <!-- BANHO NA SAÍDA -->
+    <div class="card">
+      <div class="card-titulo">🛁 Banho na saída</div>
+      <div class="opts" id="g_banho">
+        <div class="opt-btn" data-val="sim" onclick="toggleCond('g_banho','cond_banho',this)">Sim</div>
+        <div class="opt-btn" data-val="nao" onclick="toggleCond('g_banho','cond_banho',this)">Não</div>
+      </div>
+      <div class="cond" id="cond_banho">
+        <div class="grid">
+          <div class="field">
+            <label>Horário</label>
+            <input type="time" id="b_horario">
+          </div>
+          <div class="field">
+            <label>Qual banho</label>
+            <input type="text" id="b_qual" placeholder="Ex: Dermoprotetor, hidratação…">
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- PERTENCES -->
+    <div class="card">
+      <div class="card-titulo">🎒 Pertences que ficaram</div>
+      <div class="pert-add-box">
+        <input type="text" id="pert_input" list="pertences_sug" placeholder="Digite e toque em Adicionar (ex: sacola amarela)"
+               autocomplete="off" onkeydown="if(event.key==='Enter'){event.preventDefault();addPertence();}">
+        <button class="pert-add-btn" onclick="addPertence()">+ Adicionar</button>
+      </div>
+      <div class="pert-chips" id="pertChips"><span class="pert-vazio">Nenhum pertence adicionado ainda.</span></div>
+    </div>
+
+    <!-- OBSERVAÇÕES -->
+    <div class="card">
+      <div class="card-titulo">📝 Outros / Observações</div>
+      <div class="field full">
+        <textarea id="o_obs" placeholder="Qualquer informação importante para a estadia…"></textarea>
+      </div>
+    </div>
+
+    <!-- RECEPÇÃO -->
+    <div class="card">
+      <div class="card-titulo">✍️ Recepção (Check-in)</div>
+      <div class="grid">
+        <div class="field">
+          <label>Consultora que recebeu</label>
+          <input type="text" id="r_consultora" placeholder="Nome da Consultora de Bem-Estar">
+        </div>
+        <div class="field">
+          <label>Encãotador que conferiu</label>
+          <input type="text" id="r_encantador" placeholder="Nome do Encãotador">
+        </div>
+      </div>
+      <div class="busca-sub" style="margin-top:12px">✍️ Assinatura do tutor na tela e PDF: chegam no próximo passo.</div>
     </div>
 
   </div>
@@ -264,6 +418,17 @@
   <option value="Marrom e branco"></option><option value="Caramelo e branco"></option>
   <option value="Bege"></option><option value="Chocolate"></option><option value="Mesclado"></option>
 </datalist>
+<datalist id="pertences_sug">
+  <option value="Cama"></option><option value="Cobertor"></option><option value="Toalha"></option>
+  <option value="Sacola"></option><option value="Bola"></option><option value="Brinquedo"></option>
+  <option value="Mordedor"></option><option value="Roupa"></option><option value="Peitoral"></option>
+  <option value="Coleira"></option><option value="Guia"></option><option value="Pingente / plaquinha"></option>
+  <option value="Comedouro"></option><option value="Bebedouro"></option><option value="Vasilha"></option>
+  <option value="Tapete higiênico"></option><option value="Escova"></option><option value="Shampoo"></option>
+  <option value="Ração (saquinho)"></option><option value="Comida natural / patê"></option>
+  <option value="Petiscos"></option><option value="Remédio"></option><option value="Fralda"></option>
+  <option value="Caixa de transporte"></option>
+</datalist>
 
 <!-- Firebase SDK -->
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
@@ -293,6 +458,8 @@ let racaoData    = {};     // nó 'racao' (FILHOts com ração calculada — tê
 let rosterNomes  = [];     // nomes da planilha de hóspedes
 let conhecidos   = [];     // união: cadastros + ração + planilha
 let editandoUid  = null;   // uid do cadastro carregado (null = novo)
+let pertences    = [];     // etiquetas de pertences
+let medSeq       = 0;      // contador de linhas de medicação
 
 // ── Utilidades ──
 function slug(s){ return (s||'').trim().toLowerCase()
@@ -421,12 +588,37 @@ function carregar(uid){
   const c = cadastros[uid];
   if(!c) return;
   editandoUid = uid;
+  // identidade
   setVal('f_nome', c.nome);   setVal('f_raca', c.raca);   setVal('f_cor', c.cor);
   setVal('f_nasc', c.nascimento); setVal('f_idade_manual', c.idadeManual);
-  aplicarChip(c.microchip);       setVal('f_peso', c.pesoEntrada);
+  aplicarChip(c.microchip);
   setVal('f_coleira', c.coleira); setVal('f_caract', c.caracteristica);
   setVal('t_nome', c.tutor);  setVal('t_tel', c.telefone);  setVal('t_vet', c.veterinario);
   setOpt('opt_sexo', c.sexo); setOpt('opt_castrado', c.castrado);
+  // estadia
+  setVal('e_entrada', c.entrada); setVal('e_saida', c.saida);
+  setVal('e_peso_ent', c.pesoEntrada); setVal('e_peso_sai', c.pesoSaida);
+  // alimentação
+  setVal('a_racao_g', c.racaoG); setVal('a_racao_ref', c.racaoRefDia);
+  setCond('g_natural','cond_natural', c.comeNatural ? 'sim' : 'nao');
+  setVal('a_nat_g', c.naturalG); setVal('a_nat_ref', c.naturalRefDia); setVal('a_nat_itens', c.naturalItens);
+  setVal('a_obs', c.obsAlimentar);
+  // medicação
+  document.getElementById('medQuadro').innerHTML = '';
+  const meds = Array.isArray(c.medicacoes) ? c.medicacoes : [];
+  const temMed = c.temMedicacao || meds.length > 0;
+  setCond('g_med','cond_med', temMed ? 'sim' : 'nao');
+  if(temMed){ meds.length ? meds.forEach(m=>addMedRow(m)) : addMedRow(); }
+  // banho
+  setCond('g_banho','cond_banho', c.banhoSaida === 'sim' ? 'sim' : 'nao');
+  setVal('b_horario', c.banhoHorario); setVal('b_qual', c.banhoQual);
+  // pertences
+  pertences = Array.isArray(c.pertences) ? c.pertences.slice() : [];
+  renderPertChips();
+  // outros + recepção
+  setVal('o_obs', c.observacoes);
+  setVal('r_consultora', c.recepConsultora); setVal('r_encantador', c.recepEncantador);
+
   document.getElementById('modoNovo').style.display = 'none';
   onNasc(); abrirFicha(); fecharResultados();
   toast(`Cadastro de ${c.nome} carregado — confira e atualize se precisar.`, 'ok');
@@ -434,9 +626,14 @@ function carregar(uid){
 
 function novoFilhot(){
   editandoUid = null;
-  ['f_nome','f_raca','f_cor','f_nasc','f_idade_manual','f_chip','f_peso','f_coleira','f_caract','t_nome','t_tel','t_vet']
+  ['f_nome','f_raca','f_cor','f_nasc','f_idade_manual','f_chip','f_coleira','f_caract','t_nome','t_tel','t_vet',
+   'e_entrada','e_saida','e_peso_ent','e_peso_sai','a_racao_g','a_racao_ref','a_nat_g','a_nat_ref','a_nat_itens','a_obs',
+   'b_horario','b_qual','o_obs','r_consultora','r_encantador']
     .forEach(id=>setVal(id,''));
   setOpt('opt_sexo',''); setOpt('opt_castrado',''); aplicarChip('');
+  setCond('g_natural','cond_natural',''); setCond('g_med','cond_med',''); setCond('g_banho','cond_banho','');
+  document.getElementById('medQuadro').innerHTML = '';
+  pertences = []; renderPertChips();
   // pré-preenche o nome com o que foi digitado na busca
   setVal('f_nome', val('busca'));
   document.getElementById('modoNovo').style.display = 'inline-flex';
@@ -492,6 +689,80 @@ function getOpt(grupo){
   return a ? a.dataset.val : '';
 }
 
+// ── Toggles Sim/Não que abrem um bloco condicional ──
+function toggleCond(groupId, condId, el){
+  document.querySelectorAll(`#${groupId} .opt-btn`).forEach(b=>b.classList.remove('active'));
+  el.classList.add('active');
+  const mostra = el.dataset.val === 'sim';
+  document.getElementById(condId)?.classList.toggle('show', mostra);
+  if(condId === 'cond_med' && mostra && document.querySelectorAll('#medQuadro .med-row').length === 0) addMedRow();
+}
+function setCond(groupId, condId, valor){
+  document.querySelectorAll(`#${groupId} .opt-btn`).forEach(b=>b.classList.toggle('active', b.dataset.val === valor));
+  document.getElementById(condId)?.classList.toggle('show', valor === 'sim');
+}
+
+// ── Medicação (quadro: nome · dosagem · horário · usar até / contínuo) ──
+function addMedRow(data){
+  const d = data || {};
+  const id = ++medSeq;
+  const cont = document.getElementById('medQuadro');
+  const div = document.createElement('div');
+  div.className = 'med-row';
+  div.id = 'med_' + id;
+  const continuo = !!d.continuo;
+  div.innerHTML = `
+    <button class="med-del" title="Remover" onclick="removeMedRow(${id})">✕</button>
+    <div class="grid">
+      <div class="field"><label>Nome do remédio</label><input type="text" id="med_nome_${id}" value="${esc(d.nome||'')}" placeholder="Ex: Apoquel"></div>
+      <div class="field"><label>Dosagem</label><input type="text" id="med_dose_${id}" value="${esc(d.dosagem||'')}" placeholder="Ex: 1 comprimido"></div>
+      <div class="field"><label>Horário</label><input type="text" id="med_hora_${id}" value="${esc(d.horario||'')}" placeholder="Ex: 8h e 20h"></div>
+    </div>
+    <div class="usar-ate" style="margin-top:10px">
+      <div class="field"><label>Usar até</label><input type="date" id="med_ate_${id}" value="${esc(d.usarAte||'')}" ${continuo?'disabled':''}></div>
+      <label class="chk"><input type="checkbox" id="med_cont_${id}" ${continuo?'checked':''} onchange="onMedContinuo(${id})"> Uso contínuo (toda a estadia)</label>
+    </div>`;
+  cont.appendChild(div);
+}
+function onMedContinuo(id){
+  const cont = document.getElementById('med_cont_' + id).checked;
+  const dt = document.getElementById('med_ate_' + id);
+  dt.disabled = cont; if(cont) dt.value = '';
+}
+function removeMedRow(id){ document.getElementById('med_' + id)?.remove(); }
+function getMeds(){
+  const out = [];
+  document.querySelectorAll('#medQuadro .med-row').forEach(row=>{
+    const id = row.id.replace('med_','');
+    const nome = (document.getElementById('med_nome_'+id)?.value||'').trim();
+    if(!nome) return;
+    out.push({
+      nome,
+      dosagem:  (document.getElementById('med_dose_'+id)?.value||'').trim(),
+      horario:  (document.getElementById('med_hora_'+id)?.value||'').trim(),
+      continuo: document.getElementById('med_cont_'+id)?.checked || false,
+      usarAte:  document.getElementById('med_cont_'+id)?.checked ? '' : (document.getElementById('med_ate_'+id)?.value||'')
+    });
+  });
+  return out;
+}
+
+// ── Pertences (etiquetas) ──
+function addPertence(){
+  const inp = document.getElementById('pert_input');
+  const v = (inp.value||'').trim();
+  if(!v) return;
+  if(!pertences.some(p => p.toLowerCase() === v.toLowerCase())) pertences.push(v);
+  inp.value = ''; inp.focus();
+  renderPertChips();
+}
+function removePertence(i){ pertences.splice(i,1); renderPertChips(); }
+function renderPertChips(){
+  const box = document.getElementById('pertChips');
+  if(pertences.length === 0){ box.innerHTML = `<span class="pert-vazio">Nenhum pertence adicionado ainda.</span>`; return; }
+  box.innerHTML = pertences.map((p,i)=>`<span class="pert-chip">${esc(p)} <button class="pert-chip-del" onclick="removePertence(${i})">✕</button></span>`).join('');
+}
+
 // ── Idade a partir da data de nascimento ──
 function onNasc(){
   const iso = val('f_nasc');
@@ -542,12 +813,31 @@ function salvarCadastro(){
   const uid = uidDe(nome, tutor);
   const anterior = cadastros[uid] || {};
   const reg = {
+    // identidade
     nome, raca: val('f_raca'), cor: val('f_cor'),
     nascimento: val('f_nasc'), idadeManual: val('f_idade_manual'),
     sexo: getOpt('opt_sexo'), castrado: getOpt('opt_castrado'),
-    microchip, pesoEntrada: val('f_peso'),
+    microchip,
     coleira: val('f_coleira'), caracteristica: val('f_caract'),
     tutor, telefone: val('t_tel'), veterinario: val('t_vet'),
+    // estadia
+    entrada: val('e_entrada'), saida: val('e_saida'),
+    pesoEntrada: val('e_peso_ent'), pesoSaida: val('e_peso_sai'),
+    // alimentação
+    racaoG: val('a_racao_g'), racaoRefDia: val('a_racao_ref'),
+    comeNatural: getOpt('g_natural') === 'sim',
+    naturalG: val('a_nat_g'), naturalRefDia: val('a_nat_ref'), naturalItens: val('a_nat_itens'),
+    obsAlimentar: val('a_obs'),
+    // medicação
+    temMedicacao: getOpt('g_med') === 'sim',
+    medicacoes: getOpt('g_med') === 'sim' ? getMeds() : [],
+    // banho na saída
+    banhoSaida: getOpt('g_banho') || '',
+    banhoHorario: val('b_horario'), banhoQual: val('b_qual'),
+    // pertences / outros / recepção
+    pertences: pertences.slice(),
+    observacoes: val('o_obs'),
+    recepConsultora: val('r_consultora'), recepEncantador: val('r_encantador'),
     criadoEm: anterior.criadoEm || agora(),
     atualizadoEm: agora()
   };
