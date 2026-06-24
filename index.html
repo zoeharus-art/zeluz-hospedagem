@@ -319,6 +319,76 @@
     }
     .btn-salvar-racao:hover { transform:scale(1.04); box-shadow:0 4px 14px rgba(201,151,28,.4); }
 
+    /* ════ BANNER DE ESTADIA (legível em fundo claro) ════ */
+    .banner-estadia {
+      display:flex; align-items:center; gap:10px; flex-wrap:wrap;
+      padding:13px 16px; border-radius:12px; margin-bottom:2px;
+      font-size:13.5px; font-weight:600; line-height:1.45;
+    }
+    .banner-estadia .be-ico { font-size:20px; flex-shrink:0; }
+    .banner-estadia.hoje  { background:var(--ok-l);  border:2px solid var(--ok-h);   color:#14502F; }
+    .banner-estadia.outro { background:#E9F1F8;       border:2px solid var(--hosp-h); color:#1B3A52; }
+    .banner-estadia .be-data {
+      display:inline-block; background:var(--azul); color:#fff; font-weight:800;
+      padding:3px 11px; border-radius:8px; font-size:14px; letter-spacing:.3px; white-space:nowrap;
+    }
+    .banner-estadia.hoje .be-data { background:var(--ok-h); }
+    .banner-estadia .be-dias { font-weight:800; }
+
+    /* ════ DATAS DE ENTRADA/SAÍDA → DIAS AUTOMÁTICOS ════ */
+    .calc-datas {
+      display:grid; grid-template-columns:1fr 1fr auto; gap:12px; align-items:end;
+      background:var(--creme); border-radius:12px; padding:14px;
+    }
+    .calc-datas .calc-field input[type=date] {
+      width:100%; padding:8px 12px; border:2px solid #e0dcd4; border-radius:8px;
+      font-family:var(--font); font-size:14px; font-weight:700; color:var(--azul);
+      background:white; transition:border-color .2s;
+    }
+    .calc-datas .calc-field input[type=date]:focus { outline:none; border-color:var(--amarelo); }
+    .dias-badge {
+      background:var(--azul); color:#fff; border-radius:10px; padding:9px 16px;
+      text-align:center; min-width:78px; align-self:end;
+    }
+    .dias-badge .n { font-size:24px; font-weight:800; line-height:1; display:block; }
+    .dias-badge .l { font-size:9px; font-weight:700; text-transform:uppercase; letter-spacing:.6px; opacity:.85; }
+    .calc-datas-erro { grid-column:1/-1; color:var(--pend-h); font-size:12.5px; font-weight:700; }
+    .calc-datas-hint { grid-column:1/-1; color:#8a8270; font-size:11.5px; font-weight:600; }
+    @media(max-width:560px){ .calc-datas{grid-template-columns:1fr 1fr} .dias-badge{grid-column:1/-1} }
+
+    /* ════ COMIDA NATURAL (alimentação mista) ════ */
+    .comida-toggle {
+      display:flex; align-items:center; gap:11px; padding:11px 15px;
+      background:var(--creme); border-radius:12px; cursor:pointer; user-select:none;
+      font-size:13.5px; font-weight:700; color:var(--azul);
+    }
+    .comida-toggle .sw {
+      width:46px; height:25px; border-radius:100px; background:#cfc8bc;
+      position:relative; transition:.2s; flex-shrink:0;
+    }
+    .comida-toggle .sw::after {
+      content:''; position:absolute; top:2px; left:2px; width:21px; height:21px;
+      border-radius:50%; background:#fff; transition:.2s; box-shadow:0 1px 3px rgba(0,0,0,.2);
+    }
+    .comida-toggle.on .sw { background:var(--btn-verde); }
+    .comida-toggle.on .sw::after { left:23px; }
+    .comida-grid {
+      display:grid; grid-template-columns:1fr 1fr; gap:12px;
+      background:#F1F7F3; border:1.5px solid #cfe6da; border-radius:12px; padding:14px;
+    }
+    .comida-grid .calc-field label { color:#2B7A4B; }
+    .comida-grid .calc-field input {
+      width:100%; padding:8px 12px; border:2px solid #cfe6da; border-radius:8px;
+      font-family:var(--font); font-size:15px; font-weight:700; color:var(--verde);
+      background:white; transition:border-color .2s; -moz-appearance:textfield;
+    }
+    .comida-grid .calc-field input::-webkit-outer-spin-button,
+    .comida-grid .calc-field input::-webkit-inner-spin-button { -webkit-appearance:none; margin:0; }
+    .comida-grid .calc-field input:focus { outline:none; border-color:var(--btn-verde); }
+    .calc-resultado.alerta.comida { background:#FFF3E0; color:#B86200; }
+    .calc-resultado.ok.comida { background:#E6F5EE; color:#1E7D4B; }
+    @media(max-width:560px){ .comida-grid{grid-template-columns:1fr 1fr} }
+
     /* ════ REFEIÇÕES ENTRADA/SAÍDA ════ */
     .meal-day-row {
       background:var(--creme); border-radius:12px; padding:12px 14px;
@@ -1398,11 +1468,23 @@ function renderRacao() {
     const saidaCafe     = racao.saidaCafe     || false;
     const saidaAlmoco   = racao.saidaAlmoco   || false;
     const saidaJantar   = racao.saidaJantar   || false;
+    // Datas de entrada/saída (dias automáticos) — o dia da chegada conta como Dia 1
+    const entradaData = racao.dataCheckIn || formatDateKey(selectedDate);
+    const saidaData   = (racao.dataCheckIn && dias) ? addDays(racao.dataCheckIn, (+dias)-1) : '';
+    // Comida natural / úmida (alimentação mista)
+    const comeComida  = racao.comeComida || false;
+    const gComidaRef  = racao.gComidaPorRefeicao || '';
+    const gComidaTraz = racao.gComidaTrazida || '';
+    const defComida   = racao.deficitComida || 0;
 
     let resultadoHtml = '';
     if(minimo!=='') {
-      if(def>0) resultadoHtml = `<div class="calc-resultado alerta"><span class="calc-resultado-label">⚠️ Faltam</span><span class="calc-resultado-valor">${def}g de ração</span></div>`;
+      if(def>0) resultadoHtml = `<div class="calc-resultado alerta"><span class="calc-resultado-label">⚠️ Ração — faltam</span><span class="calc-resultado-valor">${def}g</span></div>`;
       else      resultadoHtml = `<div class="calc-resultado ok"><span class="calc-resultado-label">✅ Ração suficiente</span><span class="calc-resultado-valor">Sobram ${-def}g</span></div>`;
+      if(comeComida && gComidaRef!=='') {
+        if(defComida>0) resultadoHtml += `<div class="calc-resultado alerta comida"><span class="calc-resultado-label">⚠️ Comida — faltam</span><span class="calc-resultado-valor">${defComida}g</span></div>`;
+        else            resultadoHtml += `<div class="calc-resultado ok comida"><span class="calc-resultado-label">✅ Comida suficiente</span><span class="calc-resultado-valor">Sobram ${-defComida}g</span></div>`;
+      }
     } else {
       resultadoHtml = `<div class="calc-resultado sem-dados">Preencha os campos para calcular</div>`;
     }
@@ -1438,14 +1520,14 @@ function renderRacao() {
       const coParts      = checkOutDate.split('-');
       const checkOutFmt  = `${coParts[2]}/${coParts[1]}/${coParts[0]}`;
       if(curDateStr !== checkIn) {
-        bannerEstadia = `<div style="background:linear-gradient(135deg,#1a237e20,#0d47a120);border:1px solid #1a237e40;border-radius:10px;padding:10px 14px;margin-bottom:12px;font-size:12px;color:#c0b8a8;display:flex;align-items:center;gap:8px">
-          <span style="font-size:18px">📋</span>
-          <span>Ração calculada no check-in <strong style="color:#f5e6c8">${checkInFmt}</strong> · Estadia até <strong style="color:#f5e6c8">${checkOutFmt}</strong> (${diasTotal} dias)</span>
+        bannerEstadia = `<div class="banner-estadia outro">
+          <span class="be-ico">📋</span>
+          <span>Hospedagem de <span class="be-data">${checkInFmt}</span> até <span class="be-data">${checkOutFmt}</span> · <span class="be-dias">${diasTotal} dias</span>. O cálculo vale para toda a estadia.</span>
         </div>`;
       } else {
-        bannerEstadia = `<div style="background:linear-gradient(135deg,#1b5e2020,#2e7d3220);border:1px solid #2e7d3240;border-radius:10px;padding:10px 14px;margin-bottom:12px;font-size:12px;color:#c0b8a8;display:flex;align-items:center;gap:8px">
-          <span style="font-size:18px">🏠</span>
-          <span>Dia do check-in · Estadia até <strong style="color:#f5e6c8">${checkOutFmt}</strong> (${diasTotal} dias) · Salvo em todos os dias</span>
+        bannerEstadia = `<div class="banner-estadia hoje">
+          <span class="be-ico">🏠</span>
+          <span>Chegou em <span class="be-data">${checkInFmt}</span> · vai até <span class="be-data">${checkOutFmt}</span> · <span class="be-dias">${diasTotal} dias</span>. Salvo em todos os dias da estadia.</span>
         </div>`;
       }
     }
@@ -1476,6 +1558,20 @@ function renderRacao() {
         <div class="racao-card-body">
           ${bannerEstadia}
 
+          <div class="calc-datas">
+            <div class="calc-field">
+              <label>📅 Entrada (chegada)</label>
+              <input type="date" id="entrada_${esc(key)}" value="${entradaData}" onchange="calcDias('${esc(key)}')">
+            </div>
+            <div class="calc-field">
+              <label>📅 Saída</label>
+              <input type="date" id="saida_${esc(key)}" value="${saidaData}" onchange="calcDias('${esc(key)}')">
+            </div>
+            <div class="dias-badge"><span class="n" id="diasbadge_${esc(key)}">${dias||'—'}</span><span class="l">dias</span></div>
+            <div class="calc-datas-hint">O dia da chegada já conta como Dia 1 (o do jantar). Os dias se calculam sozinhos pelas datas.</div>
+            <div class="calc-datas-erro" id="diaserro_${esc(key)}" style="display:none"></div>
+          </div>
+
           <div class="calc-grid">
             <div class="calc-field">
               <label>Gramas/refeição</label>
@@ -1486,12 +1582,27 @@ function renderRacao() {
               <input type="number" id="refdia_${esc(key)}" value="${refDia}" min="1" max="4" oninput="calcMinimoPreview('${esc(key)}')">
             </div>
             <div class="calc-field">
-              <label>Dias de hospedagem</label>
-              <input type="number" id="dias_${esc(key)}" value="${dias}" min="1" oninput="calcMinimoPreview('${esc(key)}')">
+              <label>Dias (automático)</label>
+              <input type="number" id="dias_${esc(key)}" value="${dias}" readonly tabindex="-1">
             </div>
             <div class="calc-field">
-              <label>Quantidade trazida (g)</label>
+              <label>Ração trazida (g)</label>
               <input type="number" id="gtraz_${esc(key)}" value="${gTraz}" min="0" oninput="calcMinimoPreview('${esc(key)}')">
+            </div>
+          </div>
+
+          <div class="comida-toggle${comeComida?' on':''}" id="comidatoggle_${esc(key)}" onclick="toggleComida('${esc(key)}')">
+            <span class="sw"></span>
+            <span>Também come comida natural / úmida? <span style="font-weight:600;color:#8a8270;font-size:12px">(além da ração)</span></span>
+          </div>
+          <div class="comida-grid" id="comidagrid_${esc(key)}" style="display:${comeComida?'grid':'none'}">
+            <div class="calc-field">
+              <label>🍲 Comida/refeição (g)</label>
+              <input type="number" id="cpref_${esc(key)}" value="${gComidaRef}" min="1" oninput="calcMinimoPreview('${esc(key)}')">
+            </div>
+            <div class="calc-field">
+              <label>🍲 Comida trazida (g)</label>
+              <input type="number" id="ctraz_${esc(key)}" value="${gComidaTraz}" min="0" oninput="calcMinimoPreview('${esc(key)}')">
             </div>
           </div>
 
@@ -1552,6 +1663,44 @@ function getMealCounts(key) {
   return { entrada, saida };
 }
 
+// Calcula os dias de hospedagem a partir das datas de entrada e saída.
+// Regra Zêluz: o dia da chegada conta como Dia 1 → dias = (saída − entrada) + 1.
+function calcDias(key) {
+  const elEnt   = document.getElementById(`entrada_${key}`);
+  const elSai   = document.getElementById(`saida_${key}`);
+  const elDias  = document.getElementById(`dias_${key}`);
+  const elBadge = document.getElementById(`diasbadge_${key}`);
+  const elErro  = document.getElementById(`diaserro_${key}`);
+  const ent = elEnt?.value;
+  const sai = elSai?.value;
+  let dias = 0;
+  if(elErro){ elErro.style.display='none'; elErro.textContent=''; }
+  if(ent && sai) {
+    const dEnt = new Date(ent+'T00:00:00');
+    const dSai = new Date(sai+'T00:00:00');
+    const diff = Math.round((dSai - dEnt)/86400000);
+    if(diff < 0) {
+      if(elErro){ elErro.style.display='block'; elErro.textContent='⚠️ A data de saída está antes da entrada. Confira as datas.'; }
+      dias = 0;
+    } else {
+      dias = diff + 1; // o dia da chegada conta como Dia 1 (o do jantar)
+    }
+  }
+  if(elDias)  elDias.value = dias || '';
+  if(elBadge) elBadge.textContent = dias || '—';
+  calcMinimoPreview(key);
+}
+
+// Liga/desliga a seção de comida natural (alimentação mista)
+function toggleComida(key) {
+  const t = document.getElementById(`comidatoggle_${key}`);
+  const g = document.getElementById(`comidagrid_${key}`);
+  if(!t || !g) return;
+  const on = t.classList.toggle('on');
+  g.style.display = on ? 'grid' : 'none';
+  calcMinimoPreview(key);
+}
+
 function calcMinimoPreview(key) {
   const gpRef  = parseInt(document.getElementById(`gpref_${key}`)?.value)||0;
   const refDia = parseInt(document.getElementById(`refdia_${key}`)?.value)||0;
@@ -1572,6 +1721,13 @@ function calcMinimoPreview(key) {
   const minimo = gpRef * totalRefeicoes;
   const def    = minimo - gTraz;
 
+  // Comida natural (opcional) — usa o MESMO número de refeições marcadas
+  const comeComida = document.getElementById(`comidatoggle_${key}`)?.classList.contains('on') || false;
+  const cpRef = parseInt(document.getElementById(`cpref_${key}`)?.value)||0;
+  const cTraz = parseInt(document.getElementById(`ctraz_${key}`)?.value)||0;
+  const minimoComida = comeComida ? cpRef * totalRefeicoes : 0;
+  const defComida    = minimoComida - cTraz;
+
   const elSummary = document.getElementById(`summary_${key}`);
   if(elSummary) {
     if(gpRef > 0 && dias > 0 && totalRefeicoes > 0) {
@@ -1583,7 +1739,9 @@ function calcMinimoPreview(key) {
       } else {
         detalhes = `Entrada: ${meals.entrada} ref · ${dias-2} dias × ${refDia} ref · Saída: ${meals.saida} ref`;
       }
-      elSummary.innerHTML = `📊 <strong>${gpRef}g</strong> × ${totalRefeicoes} refeições = <strong>${minimo}g</strong> necessários<br><span style="font-size:10px;color:#999">${detalhes}</span>`;
+      const linhaComida = (comeComida && cpRef > 0)
+        ? `<br>🍲 Comida: <strong>${cpRef}g</strong> × ${totalRefeicoes} ref = <strong>${minimoComida}g</strong>` : '';
+      elSummary.innerHTML = `📊 Ração: <strong>${gpRef}g</strong> × ${totalRefeicoes} refeições = <strong>${minimo}g</strong>${linhaComida}<br><span style="font-size:10px;color:#999">${detalhes}</span>`;
     } else {
       elSummary.textContent = 'Preencha os campos e marque as refeições para calcular';
     }
@@ -1592,8 +1750,14 @@ function calcMinimoPreview(key) {
   const elRes = document.getElementById(`resultado_${key}`);
   if(!elRes) return;
   if(minimo===0) { elRes.innerHTML=`<div class="calc-resultado sem-dados">Preencha os campos e marque as refeições</div>`; return; }
-  if(def>0) elRes.innerHTML=`<div class="calc-resultado alerta"><span class="calc-resultado-label">⚠️ Faltam</span><span class="calc-resultado-valor">${def}g de ração</span></div>`;
-  else      elRes.innerHTML=`<div class="calc-resultado ok"><span class="calc-resultado-label">✅ Suficiente</span><span class="calc-resultado-valor">Sobram ${-def}g</span></div>`;
+  let html = '';
+  if(def>0) html = `<div class="calc-resultado alerta"><span class="calc-resultado-label">⚠️ Ração — faltam</span><span class="calc-resultado-valor">${def}g</span></div>`;
+  else      html = `<div class="calc-resultado ok"><span class="calc-resultado-label">✅ Ração suficiente</span><span class="calc-resultado-valor">Sobram ${-def}g</span></div>`;
+  if(comeComida && cpRef > 0) {
+    if(defComida>0) html += `<div class="calc-resultado alerta comida"><span class="calc-resultado-label">⚠️ Comida — faltam</span><span class="calc-resultado-valor">${defComida}g</span></div>`;
+    else            html += `<div class="calc-resultado ok comida"><span class="calc-resultado-label">✅ Comida suficiente</span><span class="calc-resultado-valor">Sobram ${-defComida}g</span></div>`;
+  }
+  elRes.innerHTML = html;
 }
 
 function salvarRacao(key, petName, tutor) {
@@ -1601,10 +1765,20 @@ function salvarRacao(key, petName, tutor) {
   const refDia = parseInt(document.getElementById(`refdia_${key}`)?.value)||0;
   const dias   = parseInt(document.getElementById(`dias_${key}`)?.value)||0;
   const gTraz  = parseInt(document.getElementById(`gtraz_${key}`)?.value)||0;
+  const entradaData = document.getElementById(`entrada_${key}`)?.value || '';
+  const saidaData   = document.getElementById(`saida_${key}`)?.value || '';
   const meals  = getMealCounts(key);
   const isActive = id => document.getElementById(id)?.classList.contains('active') || false;
 
-  if(!gpRef||!refDia||!dias) { alert('Preencha gramas/refeição, refeições/dia e dias de hospedagem.'); return; }
+  // Comida natural / úmida (alimentação mista)
+  const comeComida = document.getElementById(`comidatoggle_${key}`)?.classList.contains('on') || false;
+  const cpRef = parseInt(document.getElementById(`cpref_${key}`)?.value)||0;
+  const cTraz = parseInt(document.getElementById(`ctraz_${key}`)?.value)||0;
+
+  if(!entradaData || !saidaData) { alert('Preencha a data de entrada e a data de saída.'); return; }
+  if(!dias)        { alert('Confira as datas — a saída precisa ser igual ou depois da entrada.'); return; }
+  if(!gpRef||!refDia) { alert('Preencha gramas/refeição e refeições/dia.'); return; }
+  if(comeComida && !cpRef) { alert('Você marcou que come comida natural. Preencha as gramas de comida por refeição.'); return; }
   if(meals.entrada === 0 && dias >= 1) { alert('Marque pelo menos 1 refeição no dia de entrada.'); return; }
   if(meals.saida === 0 && dias >= 2) { alert('Marque pelo menos 1 refeição no dia de saída.'); return; }
 
@@ -1615,12 +1789,14 @@ function salvarRacao(key, petName, tutor) {
 
   const minimo  = gpRef * totalRefeicoes;
   const deficit = minimo - gTraz;
+  const minimoComida  = comeComida ? cpRef * totalRefeicoes : 0;
+  const deficitComida = comeComida ? (minimoComida - cTraz) : 0;
 
   const data     = getRacaoData();
   const existing = data[key] || { petName, tutor, entries:[] };
 
-  // Determinar dataCheckIn: se já existia, manter; senão, é a data selecionada
-  const dataCheckIn = existing.dataCheckIn || formatDateKey(selectedDate);
+  // A data de entrada digitada é a verdade do check-in (corrige contagem manual de dias)
+  const dataCheckIn = entradaData;
 
   existing.petName            = petName;
   existing.tutor              = tutor;
@@ -1628,6 +1804,7 @@ function salvarRacao(key, petName, tutor) {
   existing.refeicoesPorDia    = refDia;
   existing.diasHospedagem     = dias;
   existing.dataCheckIn        = dataCheckIn;
+  existing.dataCheckOut       = saidaData;
   existing.entradaCafe   = isActive(`ec_${key}`);
   existing.entradaAlmoco = isActive(`ea_${key}`);
   existing.entradaJantar = isActive(`ej_${key}`);
@@ -1637,8 +1814,15 @@ function salvarRacao(key, petName, tutor) {
   existing.gTrazidos        = gTraz;
   existing.minimo           = minimo;
   existing.deficit          = deficit;
+  existing.comeComida         = comeComida;
+  existing.gComidaPorRefeicao = comeComida ? cpRef : 0;
+  existing.gComidaTrazida     = comeComida ? cTraz : 0;
+  existing.minimoComida       = minimoComida;
+  existing.deficitComida      = deficitComida;
 
-  if(deficit<=0) {
+  // Status considera ração E comida: pendente se faltar qualquer um dos dois
+  const faltaAlgo = deficit > 0 || (comeComida && deficitComida > 0);
+  if(!faltaAlgo) {
     existing.status = 'ok';
   } else if(existing.status==='resolvido') {
     existing.status = 'em_processo'; // reaberto
@@ -1652,7 +1836,8 @@ function salvarRacao(key, petName, tutor) {
   saveRacaoData(data);
 
   if(existing.status==='pendente') {
-    triggerAlarme(key, petName, tutor, deficit);
+    const totalFalta = (deficit>0?deficit:0) + (comeComida && deficitComida>0 ? deficitComida : 0);
+    triggerAlarme(key, petName, tutor, totalFalta);
   } else {
     renderAll();
   }
@@ -1732,7 +1917,7 @@ function marcarResolvido(key) {
 function triggerAlarme(key, petName, tutor, deficit) {
   currentAlarm = { key, petName, tutor, deficit };
   document.getElementById('alarm-pet-nm').textContent   = petName;
-  document.getElementById('alarm-deficit-txt').textContent = `Faltam ${deficit}g de ração${tutor?' · Tutor: '+tutor:''}`;
+  document.getElementById('alarm-deficit-txt').textContent = `Faltam ${deficit}g de alimento${tutor?' · Tutor: '+tutor:''}`;
   document.getElementById('alarm-acao').value       = '';
   document.getElementById('alarm-assinatura').value = '';
   document.getElementById('alarm-btn-confirm').disabled = true;
