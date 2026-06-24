@@ -331,6 +331,11 @@
   .dias-cell{white-space:nowrap}
   .dia{display:inline-block;font-size:10px;font-weight:700;color:#b6ad9c;background:#f4f1e8;padding:2px 6px;border-radius:6px;margin-right:2px}
   .dia.on{color:var(--z-cream);background:var(--z-auaulandia)}
+  .dia.clic{cursor:pointer;font-size:12px;padding:5px 10px;border:1.5px solid var(--line)}
+  .dia.clic:hover{border-color:var(--z-daycare)}
+  .dia.clic.on{border-color:var(--z-auaulandia)}
+  .pel-nome-input{width:100%;max-width:300px;font-family:var(--font-marca,inherit);font-size:20px;font-weight:800;color:var(--z-blue);border:1.5px dashed var(--line);border-radius:9px;padding:4px 10px;background:var(--z-cream)}
+  .pel-nome-input:focus{border-style:solid;border-color:var(--z-gold);outline:none}
   .dctab{padding:9px 17px;border-radius:999px;font-size:13.5px;font-weight:600;cursor:pointer;background:var(--z-white);border:1.5px solid var(--line);color:var(--muted)}
   .dctab.active{background:var(--z-daycare);color:#fff;border-color:var(--z-daycare)}
   /* cadeado de sensibilidade */
@@ -656,7 +661,7 @@
       <div class="pel-toolbar">
         <input class="search" id="pelSearch" placeholder="Buscar peludinho, raça ou tutor..." style="width:300px;max-width:100%" oninput="renderPel()">
         <span class="pel-count" id="pelCount"></span>
-        <button class="btn btn-gold" style="margin-left:auto;padding:10px 18px;flex:0 0 auto" onclick="inserirAluno()">+ Inserir novo AULUNO</button>
+        <button class="btn btn-gold so-gestao" style="margin-left:auto;padding:10px 18px;flex:0 0 auto" onclick="inserirAluno()">+ Inserir novo AULUNO</button>
       </div>
       <div class="pel-wrap">
         <table class="pel">
@@ -936,15 +941,13 @@
       <div id="ativList"></div>
     </div>
 
-    <!-- SENHAS — só a Gestora (Márcia) vê -->
+    <!-- SENHAS — área restrita à Gestão (Adriana e Márcia) -->
     <div class="ppanel so-master" id="p-senhas">
-      <div class="role-note"><span data-icon="lock"></span><span><strong>Área restrita à Gestão.</strong> Estas senhas aparecem só para você, Márcia. A Supervisão e a equipe não têm acesso a esta lista.</span></div>
+      <div class="role-note"><span data-icon="lock"></span><span><strong>Área restrita à Gestão.</strong> Relatório completo das senhas de acesso de todas as pessoas. A Supervisão e a equipe não têm acesso a esta lista.</span></div>
       <div class="card">
-        <h2>Senhas de acesso</h2>
-        <div class="hint">A senha que cada pessoa digita para entrar no sistema. A senha da Gestora não fica listada aqui, por segurança.</div>
-        <div class="pair"><span class="k">Amanda · Supervisora</span><span class="val" style="font-family:var(--font-marca);font-size:18px;letter-spacing:3px;color:var(--z-gold-deep)">0912</span></div>
-        <div class="pair"><span class="k">Monitor 5</span><span class="val" style="font-family:var(--font-marca);font-size:18px;letter-spacing:3px;color:var(--z-gold-deep)">1000</span></div>
-        <div class="pair"><span class="k">Plantonista</span><span class="val" style="font-family:var(--font-marca);font-size:18px;letter-spacing:3px;color:var(--z-gold-deep)">1001</span></div>
+        <h2>Relatório de senhas de acesso</h2>
+        <div class="hint">A senha que cada pessoa digita para entrar no sistema, da Gestão à equipe. Esta lista é gerada automaticamente do cadastro — sempre atualizada.</div>
+        <div id="senhasList"></div>
       </div>
     </div>
 
@@ -1004,7 +1007,7 @@
       DB.ref('auaulandia/cadastro').on('value', s=>{ cadCache=s.val()||{}; if(typeof renderHosp==='function') renderHosp(); });
       DB.ref('daycare/config/sensiveis').on('value', s=>{ const v=s.val(); if(Array.isArray(v)){ try{ SENS=new Set(v); }catch(e){} } });
       DB.ref('daycare/config/atividades').on('value', s=>{ const v=s.val(); if(Array.isArray(v)&&v.length){ ATIVIDADES=v; if(typeof renderAtiv==='function') renderAtiv(); } });
-      DB.ref('daycare/cadastro').on('value', s=>{ pelCadCache=s.val()||{}; if(typeof renderPel==='function') renderPel(); });
+      DB.ref('daycare/cadastro').on('value', s=>{ pelCadCache=s.val()||{}; if(typeof mergeNovosAlunos==='function') mergeNovosAlunos(); if(typeof renderPel==='function') renderPel(); if(typeof renderDaycare==='function') renderDaycare(); });
       DB.ref('daycare/config/auditoria').on('value', s=>{ const v=s.val(); if(v&&typeof v==='object'){ try{ AUDIT_CFG=Object.assign({},AUDIT_CFG,v); }catch(e){} if(typeof renderPainelDia==='function') renderPainelDia(); } });
       // Sincronização em tempo real das pernoites/hóspedes manuais entre TODOS os aparelhos.
       // (antes usava .once() e quem já estava com o app aberto não via a inserção do outro celular)
@@ -1574,6 +1577,17 @@
     '0912':{role:'supervisor',  nome:'Amanda · Supervisora'},
     '1002':{role:'aprendiz',    nome:'Monitor Aprendiz'}
   };
+  // ===== RELATÓRIO DE SENHAS (só Gestão vê) — gerado do cadastro acima =====
+  function renderSenhas(){
+    const el=document.getElementById('senhasList'); if(!el) return;
+    const ordem={gestao:0, supervisor:1, monitor:2, plantonista:3, aprendiz:4};
+    const lista=Object.keys(SENHAS).map(pwd=>({pwd, ...SENHAS[pwd]}))
+      .sort((a,b)=>(ordem[a.role]??9)-(ordem[b.role]??9));
+    el.innerHTML=lista.map(p=>
+      '<div class="pair"><span class="k">'+p.nome+'</span>'+
+      '<span class="val" style="font-family:var(--font-marca);font-size:18px;letter-spacing:3px;color:var(--z-gold-deep)">'+p.pwd+'</span></div>'
+    ).join('');
+  }
   // ===== TRAVA POR APARELHO: só celulares autorizados pela Gestão entram =====
   function getDeviceId(){ let id=null; try{ id=localStorage.getItem('zeluz_device_id'); }catch(e){}
     if(!id){ id=(self.crypto&&crypto.randomUUID)?crypto.randomUUID():('dev-'+Date.now()+'-'+Math.floor(Math.random()*1e9)); try{ localStorage.setItem('zeluz_device_id',id); }catch(e){} }
@@ -1616,7 +1630,7 @@
     document.getElementById('loginScreen').style.display='flex';
     if(typeof mostrarStatusDevice==='function') mostrarStatusDevice();
   }
-  (function(){ try{ const u=JSON.parse(sessionStorage.getItem('zeluz_login')||'null'); if(u&&u.role) aplicarLogin(u); else if(typeof mostrarStatusDevice==='function') mostrarStatusDevice(); }catch(e){} })();
+  (function(){ try{ renderSenhas(); }catch(e){} try{ const u=JSON.parse(sessionStorage.getItem('zeluz_login')||'null'); if(u&&u.role) aplicarLogin(u); else if(typeof mostrarStatusDevice==='function') mostrarStatusDevice(); }catch(e){} })();
 
   // ===== LISTA AUTOMÁTICA — mesma planilha do dashboard de hospedagem =====
   const SHEET_ID='1SJ3OZ6E2wMa1JHrQUcgtNffgQLQhCpa01IUQKCv605w';
@@ -1870,6 +1884,41 @@
   }
   function segBtnsPel(field,val,opts){ return opts.map(o=>`<button class="${val===o?'on':''}" onclick="pick(this);setPelExtra(pelAtual,{${field}:this.textContent.trim()})">${o}</button>`).join(''); }
 
+  // --- leitura unificada: o valor editado (extra/Firebase) vence o valor base hardcoded ---
+  function canEditPel(){ const r=document.body.dataset.role; return r==='gestao'||r==='supervisor'; }
+  function pelGet(p,campo){ const ex=pelExtra(p); const v=ex[campo]; return (v!=null&&v!=='')?v:(p[campo]!=null?p[campo]:''); }
+  function pelDias(p){ const ex=pelExtra(p); return Array.isArray(ex.dias)?ex.dias:(Array.isArray(p.dias)?p.dias:[]); }
+  function pelFreq(p){ const n=pelDias(p).length; if(n>0) return n+'x'; const f=pelGet(p,'freq'); return f||'—'; }
+  function pelNome(p){ return pelGet(p,'n')||p.n||''; }
+  function pelNasc(p){ const ex=pelExtra(p); return ex.nasc||p.nasc||''; }
+  // chips de dias clicáveis (frequência recalcula sozinha)
+  function diasEditInner(p){
+    const dias=pelDias(p), can=canEditPel();
+    const chips=ORDEM_DIAS.map(d=>`<span class="dia${dias.indexOf(d)>=0?' on':''}${can?' clic':''}"${can?` onclick="toggleDiaPel('${d}')"`:''}>${DIA_LBL[d]}</span>`).join('');
+    return chips+` <span class="pel-freq" id="pelFreqLabel" style="margin-left:6px">${pelFreq(p)}/semana</span>`;
+  }
+  function toggleDiaPel(d){
+    if(!canEditPel()||!pelAtual) return;
+    const dias=pelDias(pelAtual).slice(); const i=dias.indexOf(d);
+    if(i>=0) dias.splice(i,1); else dias.push(d);
+    dias.sort((a,b)=>ORDEM_DIAS.indexOf(a)-ORDEM_DIAS.indexOf(b));
+    setPelExtra(pelAtual,{dias:dias, freq:(dias.length?dias.length+'x':'')});
+    const w=document.getElementById('pelDiasEdit'); if(w) w.innerHTML=diasEditInner(pelAtual);
+    const fi=document.getElementById('pelFreqInput'); if(fi) fi.value=pelFreq(pelAtual)+' por semana';
+    renderPel(); if(typeof renderDaycare==='function') renderDaycare();
+  }
+  function onNomePel(v){ if(!pelAtual) return; setPelExtra(pelAtual,{n:(v||'').trim()}); renderPel(); if(typeof renderDaycare==='function') renderDaycare(); }
+  // alunos novos cadastrados pela equipe vivem no Firebase (daycare/cadastro com _novo) e entram na lista base
+  function mergeNovosAlunos(){
+    try{
+      const baseKeys=new Set(PELUDINHOS.map(p=>pelKey(p)));
+      Object.keys(pelCadCache||{}).forEach(k=>{ const c=pelCadCache[k];
+        if(c&&c._novo&&!baseKeys.has(k)){ PELUDINHOS.push({n:c.n||'',raca:c.raca||'',freq:c.freq||'',tutor:c.tutor||'',nasc:c.nasc||'',dias:Array.isArray(c.dias)?c.dias:[]}); baseKeys.add(k); }
+      });
+      PELUDINHOS.sort((a,b)=>jsNorm(a.n).localeCompare(jsNorm(b.n))||jsNorm(a.tutor).localeCompare(jsNorm(b.tutor)));
+    }catch(e){}
+  }
+
   // sensibilidade configurável pela Gestão (cadeado por campo)
   let SENS=new Set();
   (function(){ const raw=localStorage.getItem('zeluz_daycare_sens'); if(raw){ try{ SENS=new Set(JSON.parse(raw)); }catch(e){} } else { SENS=new Set(['tel']); } })();
@@ -1915,12 +1964,12 @@
     document.getElementById('pelCount').textContent=`${PELUDINHOS.length} matriculados`+(q?` · ${list.length} na busca`:'');
     document.getElementById('pelBody').innerHTML=list.map((o,row)=>{ const p=o.p; return `<tr onclick="abrirPeludinhoLista(${o.i})" style="cursor:pointer">
       <td class="pel-num">${row+1}</td>
-      <td><span class="pel-nome">${p.n}</span>${p.apelido?` <span class="pel-obs">${p.apelido}</span>`:''}${((pelExtra(p).castrado||p.castrado)==='Não')?' <span class="pel-obs">Não castrado</span>':''}</td>
-      <td>${p.raca}</td>
-      <td><span class="pel-freq">${p.freq}</span></td>
-      <td class="dias-cell">${diasHtml(p.dias)}</td>
-      <td>${p.tutor}</td>
-      <td>${calcIdade(p.nasc)||'—'}</td>
+      <td><span class="pel-nome">${pelNome(p)}</span>${p.apelido?` <span class="pel-obs">${p.apelido}</span>`:''}${((pelExtra(p).castrado||p.castrado)==='Não')?' <span class="pel-obs">Não castrado</span>':''}</td>
+      <td>${pelGet(p,'raca')||'—'}</td>
+      <td><span class="pel-freq">${pelFreq(p)}</span></td>
+      <td class="dias-cell">${diasHtml(pelDias(p))}</td>
+      <td>${pelGet(p,'tutor')||'—'}</td>
+      <td>${calcIdade(pelNasc(p))||'—'}</td>
     </tr>`; }).join('');
   }
 
@@ -1936,7 +1985,7 @@
   }
   function abrirPeludinho(i){
     const p=PELUDINHOS[i]; pelAtual=p; pelAtualIdx=i; pelFotoPend=null; const ex=pelExtra(p);
-    const idade=calcIdade(p.nasc);
+    const idade=calcIdade(pelNasc(p)); const can=canEditPel();
     document.getElementById('pel-lista').style.display='none';
     const f=document.getElementById('pel-ficha'); f.style.display='block';
     const sexo=ex.sexo||'', castr=ex.castrado||p.castrado||'';
@@ -1948,10 +1997,11 @@
         <input id="pelFotoFile" type="file" accept="image/*" capture="environment" style="display:none" onchange="onPhotoPel(event)">
         ${ph}
         <div style="flex:1">
-          <div class="hf-nome">${p.n}${p.apelido?` <span style="font-size:14px;color:var(--muted)">(${p.apelido})</span>`:''}</div>
-          <div class="hf-meta">${[p.raca,sexo,idade].filter(Boolean).join(' · ')}${castr==='Não'?' · <strong style="color:var(--z-daycare)">Não castrado</strong>':''}</div>
-          <div class="hf-estadia">Tutor: ${p.tutor}</div>
-          <div style="margin-top:9px">${diasHtml(p.dias)} <span class="pel-freq" style="margin-left:6px">${p.freq}/semana</span></div>
+          <div class="hf-nome">${can?`<input class="pel-nome-input" value="${escAttr(pelNome(p))}" onchange="onNomePel(this.value)" aria-label="Nome do peludinho">`:`${pelNome(p)}`}${p.apelido?` <span style="font-size:14px;color:var(--muted)">(${p.apelido})</span>`:''}</div>
+          <div class="hf-meta">${[pelGet(p,'raca'),sexo,idade].filter(Boolean).join(' · ')}${castr==='Não'?' · <strong style="color:var(--z-daycare)">Não castrado</strong>':''}</div>
+          <div class="hf-estadia">Tutor: ${escAttr(pelGet(p,'tutor'))}</div>
+          <div id="pelDiasEdit" style="margin-top:9px">${diasEditInner(p)}</div>
+          ${can?'<div class="hint" style="margin-top:4px;font-size:11px">Toque nos dias para marcar quando o peludinho vem — a frequência ajusta sozinha.</div>':''}
           <div class="so-gestao" style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px">
             <button class="btn-foto-mini" onclick="document.getElementById('pelFotoFile').click()">📷 Inserir foto</button>
             <button class="btn-foto-mini" style="background:var(--z-blue);color:var(--z-cream)" onclick="salvarFotoPel()">💾 Salvar foto</button>
@@ -1984,17 +2034,17 @@
 
       <div class="ppanel2 active" id="ps-ident"><div class="card">
         <div class="cad-grid">
-          <div class="field"><label>Raça</label><input class="cad-in" value="${escAttr(p.raca)}" onchange="setPelExtra(pelAtual,{raca:this.value})"></div>
-          <div class="field"><label>Data de nascimento</label><input type="date" class="cad-in" value="${p.nasc||''}" onchange="setPelExtra(pelAtual,{nasc:this.value})"></div>
+          <div class="field"><label>Raça</label><input class="cad-in" list="racasList" value="${escAttr(pelGet(p,'raca'))}" onchange="setPelExtra(pelAtual,{raca:this.value})"></div>
+          <div class="field"><label>Data de nascimento</label><input type="date" class="cad-in" value="${pelNasc(p)||''}" onchange="setPelExtra(pelAtual,{nasc:this.value})"></div>
           <div class="field"><label>Sexo</label><div class="seg" data-single>${segBtnsPel('sexo',sexo,['Macho','Fêmea'])}</div></div>
           <div class="field"><label>Castrado?</label><div class="seg gold" data-single>${segBtnsPel('castrado',castr,['Sim','Não'])}</div></div>
           <div class="field"><label>Microchip</label><input class="cad-in" value="${escAttr(ex.microchip||'')}" placeholder="Número do microchip" onchange="setPelExtra(pelAtual,{microchip:this.value})"></div>
-          <div class="field"><label>Tutor(es)</label><input class="cad-in" value="${escAttr(p.tutor)}" onchange="setPelExtra(pelAtual,{tutor:this.value})"></div>
+          <div class="field"><label>Tutor(es)</label><input class="cad-in" value="${escAttr(pelGet(p,'tutor'))}" onchange="setPelExtra(pelAtual,{tutor:this.value})"></div>
           ${fieldSens('tel','Telefone / WhatsApp',`<input class="cad-in" value="${escAttr(ex.tel||'')}" placeholder="(31) 9____-____" onchange="setPelExtra(pelAtual,{tel:this.value})">`)}
           ${fieldSens('bairro','Bairro',`<input class="cad-in" value="${escAttr(ex.bairro||'')}" placeholder="Bairro" onchange="setPelExtra(pelAtual,{bairro:this.value})">`)}
           ${fieldSens('indicou','Quem indicou',`<input class="cad-in" value="${escAttr(ex.indicou||'')}" placeholder="Indicação" onchange="setPelExtra(pelAtual,{indicou:this.value})">`)}
           <div class="field"><label>Data de matrícula</label><input type="date" class="cad-in" value="${ex.matricula||''}" onchange="setPelExtra(pelAtual,{matricula:this.value})"></div>
-          <div class="field"><label>Frequência</label><input class="cad-in" value="${escAttr(p.freq)} por semana" readonly></div>
+          <div class="field"><label>Frequência (automática pelos dias)</label><input id="pelFreqInput" class="cad-in" value="${escAttr(pelFreq(p))} por semana" readonly></div>
         </div>
         <div id="pel-saved" style="font-size:12px;color:var(--crm-ok);font-weight:700;margin-top:8px"></div>
       </div></div>
@@ -2038,19 +2088,31 @@
         <button class="btn" style="background:var(--z-cream-warm);color:var(--z-blue);border:1.5px solid var(--line)" onclick="voltarPel()">Voltar</button>
       </div>
       <div id="pel-saved2" style="text-align:center;font-size:13px;font-weight:700;color:var(--crm-ok);margin-top:8px;min-height:18px"></div>`;
+    if(!can){
+      f.querySelectorAll('input,select,textarea').forEach(el=>{ el.disabled=true; });
+      f.querySelectorAll('.seg button, .vac-row button').forEach(el=>{ el.disabled=true; });
+    }
     window.scrollTo({top:0,behavior:'smooth'});
   }
   function salvarFichaPel(){ if(document.activeElement&&document.activeElement.blur) document.activeElement.blur(); const s=document.getElementById('pel-saved2'); if(s){ s.textContent='✓ Ficha salva! Disponível em todos os aparelhos.'; setTimeout(()=>{ if(s) s.textContent=''; },2200); } if(typeof renderDaycare==='function') renderDaycare(); }
   function pelSubtab(el,id){ el.parentNode.querySelectorAll('.subtab2').forEach(x=>x.classList.remove('active')); el.classList.add('active'); document.querySelectorAll('.ppanel2').forEach(x=>x.classList.remove('active')); const t=document.getElementById(id); if(t) t.classList.add('active'); }
   function voltarPel(){ if(pelOrigem==='daycare'){ irParaView('daycare'); if(typeof carregarChamada==='function') carregarChamada(); } else { document.getElementById('pel-ficha').style.display='none'; document.getElementById('pel-lista').style.display='block'; } }
   function inserirAluno(){
-    const nome=(prompt('Nome do novo Aluno (peludinho):')||'').trim(); if(!nome) return;
-    const tutor=(prompt('Nome do tutor:')||'').trim();
-    const raca=(prompt('Raça:')||'').trim();
-    PELUDINHOS.push({n:nome,raca:raca,freq:'1x',tutor:tutor,nasc:'',dias:[]});
+    if(!canEditPel()){ alert('Apenas Gestão e Supervisão podem cadastrar um novo aluno.'); return; }
+    const nome=(prompt('Nome do novo AULUNO (peludinho):')||'').trim(); if(!nome) return;
+    const tutor=(prompt('Nome do tutor(es):')||'').trim();
+    const novo={n:nome,raca:'',freq:'',tutor:tutor,nasc:'',dias:[]};
+    const key=pelKey(novo);
+    if(PELUDINHOS.some(p=>pelKey(p)===key)){ alert('Já existe um aluno com esse nome e tutor.'); return; }
+    PELUDINHOS.push(novo);
     PELUDINHOS.sort((a,b)=>jsNorm(a.n).localeCompare(jsNorm(b.n))||jsNorm(a.tutor).localeCompare(jsNorm(b.tutor)));
+    // grava no banco para não sumir ao recarregar (e aparecer em todos os aparelhos)
+    const reg={_novo:true,n:nome,tutor:tutor,raca:'',nasc:'',dias:[],freq:''};
+    try{ localStorage.setItem('zeluz_pel_'+key,JSON.stringify(reg)); }catch(e){}
+    if(DB) DB.ref('daycare/cadastro/'+key).update(reg).catch(()=>{});
     renderPel();
-    alert('AULUNO adicionado. Clique no nome para completar a ficha (nascimento, dias, telefone...).');
+    const idx=PELUDINHOS.findIndex(p=>pelKey(p)===key);
+    if(idx>=0){ pelOrigem='peludinhos'; abrirPeludinho(idx); }
   }
   renderPel();
 
@@ -2074,7 +2136,7 @@
   function mostrarScr(){ const esp=(dcAtiv==='chamada'||dcAtiv==='almoco'); const a=document.getElementById('scr-chamada'),b=document.getElementById('scr-almoco'),c=document.getElementById('scr-generic'); if(a)a.style.display=dcAtiv==='chamada'?'block':'none'; if(b)b.style.display=dcAtiv==='almoco'?'block':'none'; if(c)c.style.display=esp?'none':'block'; const lbl=document.getElementById('dcAtivLabel'); if(lbl){ const f=ATIVS_DC.find(x=>x.s===dcAtiv); lbl.textContent=f?f.t:'Chamada'; } const dl=document.getElementById('dcDiaLabel'); if(dl) dl.textContent=DIA_FULL[dcDia]; }
   function renderAtual(){ mostrarScr(); if(dcAtiv==='chamada') carregarChamada(); else if(dcAtiv==='almoco') carregarAlmoco(); else carregarGenerico(); if(typeof renderAdaptBanner==='function') renderAdaptBanner(); }
   function turmaDoDia(){
-    const base=PELUDINHOS.map((p,i)=>({p,i})).filter(o=>(o.p.dias||[]).indexOf(dcDia)>=0);
+    const base=PELUDINHOS.map((p,i)=>({p,i})).filter(o=>pelDias(o.p).indexOf(dcDia)>=0);
     dcAvulsos.forEach((a,k)=>base.push({p:{n:a.nome,raca:a.raca||'',tutor:a.tutor||'',freq:'avulso',dias:[dcDia],nasc:''},i:'av'+k,avulso:true}));
     return base.sort((x,y)=>jsNorm(x.p.n).localeCompare(jsNorm(y.p.n)));
   }
@@ -2107,9 +2169,9 @@
           ${ribbon}${alerta}${seloAdapt(ex)}
           <div ${clickFicha}>
             ${ph}
-            <div class="nm">${p.n}</div>
-            <div class="br">${p.raca||'—'}</div>
-            <div class="hosp-tutor">${o.avulso?'Diária avulsa':'Tutor: '+p.tutor}</div>
+            <div class="nm">${(typeof o.i==='number')?pelNome(p):p.n}</div>
+            <div class="br">${((typeof o.i==='number')?pelGet(p,'raca'):p.raca)||'—'}</div>
+            <div class="hosp-tutor">${o.avulso?'Diária avulsa':'Tutor: '+((typeof o.i==='number')?pelGet(p,'tutor'):p.tutor)}</div>
           </div>
           <div class="dc-actions">
             <button class="dc-btn veio ${st==='veio'?'on':''}" onclick="marcarPresenca('${k}','veio')">✓ Veio</button>
