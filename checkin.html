@@ -40,12 +40,12 @@
     .wrap { width:100%; max-width:860px; margin:0 auto; padding:20px 16px 120px; }
 
     /* ════ BUSCA / REAPROVEITAMENTO ════ */
-    .busca-card { background:linear-gradient(135deg,#234D67 0%,#1A3A4F 100%); border-radius:18px; padding:20px 22px; box-shadow:0 8px 28px rgba(35,77,103,.28); animation:fadeUp .5s ease both; position:relative; z-index:5; }
-    .busca-titulo { color:#FFF; font-size:16px; font-weight:800; display:flex; align-items:center; gap:8px; }
-    .busca-sub { color:rgba(255,255,255,.7); font-size:12.5px; font-weight:500; margin:4px 0 14px; }
+    .busca-card { background:#FFF; border-radius:18px; padding:20px 22px; box-shadow:0 6px 22px rgba(0,0,0,.08); border-top:4px solid var(--amarelo); animation:fadeUp .5s ease both; position:relative; z-index:5; }
+    .busca-titulo { color:var(--verde); font-size:16px; font-weight:800; display:flex; align-items:center; gap:8px; }
+    .busca-sub { color:#8a8270; font-size:12.5px; font-weight:500; margin:4px 0 14px; }
     .busca-box { position:relative; }
-    .busca-input { width:100%; padding:15px 18px; border:none; border-radius:12px; font-family:var(--font); font-size:16px; font-weight:600; color:var(--azul); box-shadow:0 2px 10px rgba(0,0,0,.15); }
-    .busca-input:focus { outline:3px solid var(--amarelo); }
+    .busca-input { width:100%; padding:15px 18px; border:2px solid #e6e1d6; border-radius:12px; font-family:var(--font); font-size:16px; font-weight:600; color:var(--verde); background:var(--creme); transition:border-color .2s; }
+    .busca-input:focus { outline:none; border-color:var(--amarelo); background:#FFF; }
     .busca-results { position:absolute; top:calc(100% + 6px); left:0; right:0; background:#FFF; border-radius:12px; box-shadow:0 12px 32px rgba(0,0,0,.25); max-height:300px; overflow-y:auto; display:none; z-index:20; }
     .busca-results.show { display:block; }
     .busca-item { padding:13px 18px; cursor:pointer; border-bottom:1px solid #f0ece4; transition:background .15s; }
@@ -54,6 +54,9 @@
     .busca-item-nome { font-size:15px; font-weight:700; color:var(--azul); }
     .busca-item-meta { font-size:12px; color:#8a8270; font-weight:600; margin-top:1px; }
     .busca-empty { padding:16px 18px; color:#8a8270; font-size:13px; font-weight:600; font-style:italic; }
+    .busca-badge { font-size:10px; font-weight:800; padding:2px 9px; border-radius:100px; margin-left:6px; vertical-align:middle; white-space:nowrap; }
+    .busca-badge.ok   { background:var(--ok-l); color:var(--ok-h); }
+    .busca-badge.novo { background:#FFF3E0; color:#B86200; }
     .busca-acoes { display:flex; gap:10px; margin-top:14px; }
     .btn-novo { flex:1; background:var(--amarelo); color:#1B3A52; border:none; padding:13px; border-radius:100px; font-family:var(--font); font-size:14px; font-weight:800; cursor:pointer; transition:transform .15s, box-shadow .2s; }
     .btn-novo:hover { transform:translateY(-1px); box-shadow:0 6px 18px rgba(201,151,28,.4); }
@@ -152,11 +155,11 @@
         </div>
         <div class="field">
           <label>Raça</label>
-          <input type="text" id="f_raca" placeholder="Ex: Westie">
+          <input type="text" id="f_raca" list="racas" placeholder="Comece a digitar e escolha…" autocomplete="off">
         </div>
         <div class="field">
           <label>Cor</label>
-          <input type="text" id="f_cor" placeholder="Ex: Branco">
+          <input type="text" id="f_cor" list="cores" placeholder="Comece a digitar…" autocomplete="off">
         </div>
         <div class="field">
           <label>Data de nascimento</label>
@@ -182,8 +185,12 @@
           </div>
         </div>
         <div class="field">
-          <label>Microchip</label>
-          <input type="text" id="f_chip" inputmode="numeric" placeholder="Número do microchip">
+          <label>Microchip <span class="req">*</span></label>
+          <div class="opts" id="opt_chip">
+            <div class="opt-btn" data-val="tem" onclick="pickChip(this)">Tem nº</div>
+            <div class="opt-btn" data-val="nao" onclick="pickChip(this)">Não tem</div>
+          </div>
+          <input type="text" id="f_chip" inputmode="numeric" placeholder="Número do microchip" style="margin-top:8px;display:none" oninput="refreshResumo()">
         </div>
         <div class="field">
           <label>Peso de entrada (kg)</label>
@@ -231,6 +238,33 @@
 
 <div class="toast" id="toast"></div>
 
+<datalist id="racas">
+  <option value="Sem raça definida (SRD / Vira-lata)"></option>
+  <option value="Spitz Alemão / Lulu da Pomerânia"></option>
+  <option value="West Highland White Terrier (Westie)"></option>
+  <option value="Shih Tzu"></option><option value="Maltês"></option><option value="Lhasa Apso"></option>
+  <option value="Yorkshire Terrier"></option><option value="Poodle"></option><option value="Poodle Toy"></option>
+  <option value="Golden Retriever"></option><option value="Labrador Retriever"></option>
+  <option value="Buldogue Francês"></option><option value="Buldogue Inglês"></option>
+  <option value="Pug"></option><option value="Beagle"></option><option value="Border Collie"></option>
+  <option value="Pinscher"></option><option value="Dachshund (Salsicha)"></option>
+  <option value="Schnauzer"></option><option value="Cavalier King Charles Spaniel"></option>
+  <option value="Bichon Frisé"></option><option value="Cocker Spaniel"></option>
+  <option value="Pastor Alemão"></option><option value="Rottweiler"></option><option value="Boxer"></option>
+  <option value="Akita"></option><option value="Husky Siberiano"></option><option value="Chow Chow"></option>
+  <option value="Pastor de Shetland"></option><option value="Border Terrier"></option>
+  <option value="Fox Paulistinha"></option><option value="Pequinês"></option><option value="Chihuahua"></option>
+  <option value="Pastor Australiano"></option><option value="Doberman"></option><option value="Dálmata"></option>
+  <option value="Basset Hound"></option><option value="São Bernardo"></option><option value="Weimaraner"></option>
+</datalist>
+<datalist id="cores">
+  <option value="Branco"></option><option value="Preto"></option><option value="Caramelo"></option>
+  <option value="Marrom"></option><option value="Cinza"></option><option value="Creme"></option>
+  <option value="Dourado"></option><option value="Tricolor"></option><option value="Preto e branco"></option>
+  <option value="Marrom e branco"></option><option value="Caramelo e branco"></option>
+  <option value="Bege"></option><option value="Chocolate"></option><option value="Mesclado"></option>
+</datalist>
+
 <!-- Firebase SDK -->
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
@@ -249,8 +283,15 @@ const FIREBASE_CONFIG = {
   appId:             "1:199129329105:web:22d0995972c197e24644f0"
 };
 
+// Planilha viva de hóspedes (mesma do painel) — para sugerir FILHOts já conhecidos
+const SHEET_ID  = '1SJ3OZ6E2wMa1JHrQUcgtNffgQLQhCpa01IUQKCv605w';
+const TAB_NOMES = 'Calendário Hospedagem para dash';
+
 let firebaseDb   = null;
-let cadastros    = {};     // espelho local do nó 'filhots'
+let cadastros    = {};     // espelho local do nó 'filhots' (cadastros completos)
+let racaoData    = {};     // nó 'racao' (FILHOts com ração calculada — têm nome + tutor)
+let rosterNomes  = [];     // nomes da planilha de hóspedes
+let conhecidos   = [];     // união: cadastros + ração + planilha
 let editandoUid  = null;   // uid do cadastro carregado (null = novo)
 
 // ── Utilidades ──
@@ -273,11 +314,73 @@ function initFirebase(){
         firebaseDb.ref('filhots').on('value', snap=>{
           cadastros = snap.val() || {};
           marcarConn(true);
-          onBusca();
+          rebuildConhecidos(); onBusca();
         }, err=>{ console.error('Firebase read:', err); marcarConn(false); });
+        // FILHOts que já têm ração calculada (têm nome + tutor) — viram sugestão de busca
+        firebaseDb.ref('racao').once('value')
+          .then(s=>{ racaoData = s.val() || {}; rebuildConhecidos(); onBusca(); })
+          .catch(e=>console.warn('racao read:', e));
       })
       .catch(e=>{ console.error('Firebase auth:', e); marcarConn(false); });
   } catch(e){ console.error('Firebase init:', e); marcarConn(false); }
+  carregarRoster();
+}
+
+// Lê os nomes da planilha viva de hóspedes (Repolho, Toshi, etc.) via JSONP
+function carregarRoster(){
+  fetchSheet(TAB_NOMES)
+    .then(rows=>{ rosterNomes = extrairNomesRoster(rows); rebuildConhecidos(); onBusca(); })
+    .catch(e=>console.warn('roster:', e));
+}
+function fetchSheet(name){
+  return new Promise((resolve,reject)=>{
+    const cb = 'zcb_' + Date.now() + '_' + Math.random().toString(36).substr(2,5);
+    const sc = document.createElement('script');
+    const timer = setTimeout(()=>{ cleanup(); reject(new Error('Timeout')); }, 20000);
+    function cleanup(){ clearTimeout(timer); delete window[cb]; sc.parentNode && sc.parentNode.removeChild(sc); }
+    window[cb] = data=>{ cleanup(); (data && data.table) ? resolve(parseGviz(data.table)) : reject(new Error('Aba não encontrada')); };
+    sc.onerror = ()=>{ cleanup(); reject(new Error('Rede')); };
+    sc.src = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=reqId:0;responseHandler:${cb}&sheet=${encodeURIComponent(name)}&t=${Date.now()}`;
+    document.head.appendChild(sc);
+  });
+}
+function parseGviz(table){
+  const cols = table.cols.map(c=>(c.label||c.id||'').trim());
+  return (table.rows||[]).filter(r=>r&&r.c).map(row=>{
+    const obj = {};
+    row.c.forEach((cell,i)=>{ obj[cols[i]||`col${i}`] = (cell && cell.v!=null) ? cell.v : ''; });
+    return obj;
+  });
+}
+// Colunas "Hospede 1".."Hospede 30" trazem os nomes dos FILHOts
+function extrairNomesRoster(rows){
+  const set = new Set();
+  rows.forEach(r=>{
+    Object.entries(r).forEach(([k,v])=>{
+      if(/hospede/i.test(k) && typeof v === 'string'){ const n = v.trim(); if(n && n.length>1) set.add(n); }
+    });
+  });
+  return [...set];
+}
+
+// Une cadastros (completos) + ração + planilha numa lista única de FILHOts conhecidos
+function rebuildConhecidos(){
+  const map = new Map();  // chave = slug(nome)|slug(tutor)
+  Object.entries(cadastros).forEach(([uid,c])=>{
+    if(!c || !c.nome) return;
+    map.set(slug(c.nome)+'|'+slug(c.tutor||''), { nome:c.nome, tutor:c.tutor||'', uid, cadastrado:true });
+  });
+  Object.values(racaoData||{}).forEach(r=>{
+    if(!r || !r.petName) return;
+    const key = slug(r.petName)+'|'+slug(r.tutor||'');
+    if(!map.has(key)) map.set(key, { nome:r.petName, tutor:r.tutor||'', cadastrado:false });
+  });
+  (rosterNomes||[]).forEach(nome=>{
+    const sn = slug(nome);
+    const jaTem = [...map.keys()].some(k=>k.split('|')[0] === sn);
+    if(!jaTem) map.set(sn+'|', { nome, tutor:'', cadastrado:false });
+  });
+  conhecidos = [...map.values()];
 }
 function marcarConn(ok){
   const el = document.getElementById('conn');
@@ -289,22 +392,27 @@ function marcarConn(ok){
 function onBusca(){
   const termo = slug(val('busca'));
   const box = document.getElementById('buscaResults');
-  const lista = Object.entries(cadastros)
-    .map(([uid,c]) => ({ uid, ...c }))
-    .filter(c => !termo || slug(c.nome).includes(termo) || slug(c.tutor||'').includes(termo))
-    .sort((a,b)=> (a.nome||'').localeCompare(b.nome||''))
-    .slice(0, 8);
-
   if(!val('busca')){ box.classList.remove('show'); box.innerHTML=''; return; }
 
+  const lista = conhecidos
+    .filter(c => slug(c.nome).includes(termo) || slug(c.tutor||'').includes(termo))
+    .sort((a,b)=> (Number(b.cadastrado) - Number(a.cadastrado)) || a.nome.localeCompare(b.nome))
+    .slice(0, 12);
+
   if(lista.length === 0){
-    box.innerHTML = `<div class="busca-empty">Nenhum cadastro encontrado. Toque em “Novo FILHOt” para criar.</div>`;
+    box.innerHTML = `<div class="busca-empty">Não encontrei “${esc(val('busca'))}”. Toque em “Novo FILHOt” para cadastrar.</div>`;
   } else {
-    box.innerHTML = lista.map(c => `
-      <div class="busca-item" onclick="carregar('${esc(c.uid)}')">
-        <div class="busca-item-nome">🐾 ${esc(c.nome)}${c.raca?` · ${esc(c.raca)}`:''}</div>
-        <div class="busca-item-meta">👤 ${esc(c.tutor||'sem tutor')}${c.microchip?` · chip ${esc(c.microchip)}`:''}</div>
-      </div>`).join('');
+    box.innerHTML = lista.map(c => {
+      const badge = c.cadastrado
+        ? `<span class="busca-badge ok">✓ cadastrado</span>`
+        : `<span class="busca-badge novo">completar</span>`;
+      const acao = c.cadastrado ? `carregar('${esc(c.uid)}')` : `prefill('${esc(c.nome)}','${esc(c.tutor||'')}')`;
+      return `
+        <div class="busca-item" onclick="${acao}">
+          <div class="busca-item-nome">🐾 ${esc(c.nome)} ${badge}</div>
+          <div class="busca-item-meta">👤 ${esc(c.tutor || 'tutor a confirmar')}</div>
+        </div>`;
+    }).join('');
   }
   box.classList.add('show');
 }
@@ -315,7 +423,7 @@ function carregar(uid){
   editandoUid = uid;
   setVal('f_nome', c.nome);   setVal('f_raca', c.raca);   setVal('f_cor', c.cor);
   setVal('f_nasc', c.nascimento); setVal('f_idade_manual', c.idadeManual);
-  setVal('f_chip', c.microchip);  setVal('f_peso', c.pesoEntrada);
+  aplicarChip(c.microchip);       setVal('f_peso', c.pesoEntrada);
   setVal('f_coleira', c.coleira); setVal('f_caract', c.caracteristica);
   setVal('t_nome', c.tutor);  setVal('t_tel', c.telefone);  setVal('t_vet', c.veterinario);
   setOpt('opt_sexo', c.sexo); setOpt('opt_castrado', c.castrado);
@@ -328,11 +436,38 @@ function novoFilhot(){
   editandoUid = null;
   ['f_nome','f_raca','f_cor','f_nasc','f_idade_manual','f_chip','f_peso','f_coleira','f_caract','t_nome','t_tel','t_vet']
     .forEach(id=>setVal(id,''));
-  setOpt('opt_sexo',''); setOpt('opt_castrado','');
+  setOpt('opt_sexo',''); setOpt('opt_castrado',''); aplicarChip('');
   // pré-preenche o nome com o que foi digitado na busca
   setVal('f_nome', val('busca'));
   document.getElementById('modoNovo').style.display = 'inline-flex';
   onNasc(); abrirFicha(); fecharResultados();
+}
+
+// FILHOt conhecido (da planilha/ração) mas ainda sem cadastro completo
+function prefill(nome, tutor){
+  novoFilhot();
+  setVal('f_nome', nome); setVal('t_nome', tutor);
+  document.getElementById('modoNovo').style.display = 'inline-flex';
+  refreshResumo(); fecharResultados();
+  toast(`${nome} é conhecido, mas ainda sem cadastro completo. Preencha e salve.`, 'ok');
+}
+
+// Microchip: tem nº (mostra campo) ou não tem
+function pickChip(el){
+  pickOpt(el, 'opt_chip');
+  const tem = el.dataset.val === 'tem';
+  const inp = document.getElementById('f_chip');
+  inp.style.display = tem ? 'block' : 'none';
+  if(!tem) setVal('f_chip','');
+  refreshResumo();
+  if(tem) inp.focus();
+}
+function aplicarChip(valor){
+  const v = (valor || '').trim();
+  const inp = document.getElementById('f_chip');
+  if(v === 'Não tem'){ setOpt('opt_chip','nao'); inp.style.display='none'; setVal('f_chip',''); }
+  else if(v){ setOpt('opt_chip','tem'); inp.style.display='block'; setVal('f_chip', v); }
+  else { setOpt('opt_chip',''); inp.style.display='none'; setVal('f_chip',''); }
 }
 
 function abrirFicha(){
@@ -383,14 +518,15 @@ function calcIdade(iso){
 // ── Resumo + habilitar salvar ──
 function refreshResumo(){
   const nome = val('f_nome'), tutor = val('t_nome');
+  const chipOpt = getOpt('opt_chip');
+  const chipOk = chipOpt === 'nao' || (chipOpt === 'tem' && val('f_chip'));
   const btn = document.getElementById('btnSalvar');
   const resumo = document.getElementById('resumo');
-  const ok = nome && tutor;
-  btn.disabled = !ok;
-  if(!nome && !tutor) resumo.textContent = 'Preencha o nome do FILHOt e do tutor.';
-  else if(!nome)      resumo.textContent = 'Falta o nome do FILHOt.';
-  else if(!tutor)     resumo.textContent = 'Falta o nome do tutor.';
-  else                resumo.textContent = `${nome} · tutor: ${tutor}`;
+  btn.disabled = !(nome && tutor && chipOk);
+  if(!nome)        resumo.textContent = 'Falta o nome do FILHOt.';
+  else if(!tutor)  resumo.textContent = 'Falta o nome do tutor.';
+  else if(!chipOk) resumo.textContent = 'Falta o microchip: marque “Tem nº” ou “Não tem”.';
+  else             resumo.textContent = `${nome} · tutor: ${tutor}`;
 }
 
 // ── Salvar ──
@@ -398,13 +534,18 @@ function salvarCadastro(){
   const nome = val('f_nome'), tutor = val('t_nome');
   if(!nome || !tutor){ toast('Preencha o nome do FILHOt e do tutor.', 'erro'); return; }
 
+  const chipOpt = getOpt('opt_chip');
+  if(!chipOpt){ toast('Informe o microchip: marque “Tem nº” ou “Não tem”.', 'erro'); return; }
+  if(chipOpt === 'tem' && !val('f_chip')){ toast('Digite o número do microchip (ou marque “Não tem”).', 'erro'); return; }
+  const microchip = chipOpt === 'nao' ? 'Não tem' : val('f_chip');
+
   const uid = uidDe(nome, tutor);
   const anterior = cadastros[uid] || {};
   const reg = {
     nome, raca: val('f_raca'), cor: val('f_cor'),
     nascimento: val('f_nasc'), idadeManual: val('f_idade_manual'),
     sexo: getOpt('opt_sexo'), castrado: getOpt('opt_castrado'),
-    microchip: val('f_chip'), pesoEntrada: val('f_peso'),
+    microchip, pesoEntrada: val('f_peso'),
     coleira: val('f_coleira'), caracteristica: val('f_caract'),
     tutor, telefone: val('t_tel'), veterinario: val('t_vet'),
     criadoEm: anterior.criadoEm || agora(),
