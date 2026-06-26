@@ -557,6 +557,29 @@
   .medrow input:focus{outline:none;background:#fff;box-shadow:inset 0 0 0 2px rgba(222,180,40,.5)}
   .medgrid.dim{opacity:.45;pointer-events:none}
 
+  /* ===== Diária Avulsa — tela grande de busca (à prova de baixa leitura) ===== */
+  #avulsaModal{display:none;position:fixed;inset:0;z-index:70;background:rgba(26,58,79,.55)}
+  #avulsaModal.show{display:block}
+  .av-sheet{position:absolute;inset:0;background:var(--z-cream);display:flex;flex-direction:column}
+  .av-head{background:linear-gradient(135deg,var(--z-daycare),#c96f3f);color:#fff;padding:16px 18px;display:flex;align-items:center;gap:14px;flex-shrink:0}
+  .av-head .av-t{font-size:22px;font-weight:800;flex:1;line-height:1.15}
+  .av-close{background:rgba(255,255,255,.22);border:none;color:#fff;width:46px;height:46px;border-radius:50%;font-size:22px;font-weight:800;cursor:pointer;flex-shrink:0}
+  .av-searchwrap{padding:16px 18px;background:var(--z-white);border-bottom:2px solid var(--line);flex-shrink:0}
+  .av-search{width:100%;padding:18px 20px;font-size:21px;font-weight:700;border:3px solid var(--z-daycare);border-radius:16px;font-family:var(--font-ui);color:var(--z-blue)}
+  .av-search:focus{outline:none;border-color:#c96f3f}
+  .av-hint{font-size:13.5px;color:var(--muted);font-weight:600;margin-top:9px;text-align:center}
+  .av-results{flex:1;overflow-y:auto;padding:16px 18px 50px;display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:14px;align-content:start}
+  .av-card{background:var(--z-white);border:2px solid var(--line);border-radius:18px;padding:16px 12px 18px;text-align:center;cursor:pointer;transition:transform .12s,border-color .15s,box-shadow .2s}
+  .av-card:active{transform:scale(.96)}
+  .av-card:hover{border-color:var(--z-daycare);box-shadow:var(--shadow-lg)}
+  .av-ph{width:78px;height:78px;border-radius:50%;margin:0 auto 11px;background-size:cover;background-position:center;display:grid;place-items:center;font-size:32px;font-weight:800;color:#fff}
+  .av-nm{font-size:18px;font-weight:800;color:var(--z-blue);line-height:1.15}
+  .av-br{font-size:13px;color:var(--muted);font-weight:600;margin-top:3px}
+  .av-tt{font-size:13px;color:var(--z-daycare);font-weight:700;margin-top:5px;line-height:1.2}
+  .av-empty{grid-column:1/-1;text-align:center;padding:46px 18px;color:var(--muted);font-size:14px;font-weight:600;line-height:1.5}
+  .av-empty .big{font-size:19px;font-weight:800;color:var(--z-blue);margin-bottom:8px}
+  @media(max-width:480px){ .av-results{grid-template-columns:1fr 1fr} .av-head .av-t{font-size:19px} }
+
   /* responsivo */
   .overlay{display:none;position:fixed;inset:0;background:rgba(26,58,79,.5);z-index:45}
   @media(max-width:860px){
@@ -623,6 +646,21 @@
   </div>
 </aside>
 <div class="overlay" id="overlay" onclick="closeNav()"></div>
+
+<!-- ============ DIÁRIA AVULSA — busca grande ============ -->
+<div id="avulsaModal" onclick="if(event.target===this)fecharAvulsaModal()">
+  <div class="av-sheet">
+    <div class="av-head">
+      <button class="av-close" onclick="fecharAvulsaModal()" aria-label="Fechar">✕</button>
+      <div class="av-t">Diária Avulsa<br><span style="font-size:14px;font-weight:600;opacity:.92">Quem veio hoje? Toque no FILHOt.</span></div>
+    </div>
+    <div class="av-searchwrap">
+      <input class="av-search" id="avBusca" placeholder="Nome do FILHOt, tutor ou raça…" autocomplete="off" oninput="renderAvulsaResults()">
+      <div class="av-hint">Só FILHOt já cadastrado. Não achou? Fale com a Gestão para cadastrar.</div>
+    </div>
+    <div class="av-results" id="avResults"></div>
+  </div>
+</div>
 
 <!-- ============ TOPO MOBILE ============ -->
 <div class="mobtop">
@@ -2198,11 +2236,51 @@
       ]).then(renderDaycare).catch(renderDaycare);
     } else renderDaycare();
   }
-  function adicionarAvulsa(){
-    const nome=(prompt('Diária avulsa — nome do peludinho:')||'').trim(); if(!nome) return;
-    const tutor=(prompt('Nome do tutor:')||'').trim();
-    if(DB){ DB.ref('daycare/avulsos/'+dcDataKey()).push({nome:nome,tutor:tutor}).then(carregarChamada).catch(e=>alert('Erro: '+e.message)); }
-    else { dcAvulsos.push({nome:nome,tutor:tutor}); renderDaycare(); }
+  // Diária Avulsa: abre a tela grande de busca (só FILHOt já cadastrado)
+  function adicionarAvulsa(){ abrirAvulsaModal(); }
+  function abrirAvulsaModal(){
+    const m=document.getElementById('avulsaModal'); if(!m) return;
+    const b=document.getElementById('avBusca'); if(b) b.value='';
+    m.classList.add('show'); renderAvulsaResults();
+    setTimeout(()=>{ try{ b&&b.focus(); }catch(e){} },150);
+  }
+  function fecharAvulsaModal(){ const m=document.getElementById('avulsaModal'); if(m) m.classList.remove('show'); }
+  function renderAvulsaResults(){
+    const box=document.getElementById('avResults'); if(!box) return;
+    const q=jsNorm(document.getElementById('avBusca')?document.getElementById('avBusca').value:'');
+    const jaHoje=new Set((dcAvulsos||[]).map(a=>jsNorm((a.nome||'')+'__'+(a.tutor||''))));
+    const list=PELUDINHOS.map((p,i)=>({p,i}))
+      .filter(o=>!q || jsNorm([pelNome(o.p),pelGet(o.p,'raca'),pelGet(o.p,'tutor')].join(' ')).indexOf(q)>=0)
+      .sort((x,y)=>jsNorm(pelNome(x.p)).localeCompare(jsNorm(pelNome(y.p))));
+    if(list.length===0){
+      box.innerHTML=`<div class="av-empty"><div class="big">${q?'Não encontrei esse FILHOt':'Comece a digitar o nome'}</div>`+
+        (q?'A diária avulsa só vale para FILHOt já cadastrado.<br>Fale com a Gestão para cadastrar em <strong>Peludinhos → + Inserir novo AULUNO</strong>.':'Pode buscar por nome do FILHOt, tutor ou raça.')+
+        `</div>`;
+      return;
+    }
+    box.innerHTML=list.slice(0,60).map(o=>{
+      const p=o.p; const ex=pelExtra(p); const foto=ex.foto;
+      const nome=pelNome(p), raca=pelGet(p,'raca')||'—', tutor=pelGet(p,'tutor')||'tutor a confirmar';
+      const marcado=jaHoje.has(jsNorm(nome+'__'+(pelGet(p,'tutor')||'')));
+      const ph=foto?`<div class="av-ph" style="background-image:url('${foto}')"></div>`
+                   :`<div class="av-ph" style="background:${corPel(o.i)}">${(nome[0]||'?').toUpperCase()}</div>`;
+      return `<div class="av-card" onclick="escolherAvulso(${o.i})">
+        ${ph}
+        <div class="av-nm">${nome}${marcado?' ✓':''}</div>
+        <div class="av-br">${raca}</div>
+        <div class="av-tt">${tutor}</div>
+      </div>`;
+    }).join('');
+  }
+  function escolherAvulso(i){
+    const p=PELUDINHOS[i]; if(!p) return;
+    const nome=pelNome(p), tutor=pelGet(p,'tutor')||'', raca=pelGet(p,'raca')||'';
+    const reg={nome:nome,tutor:tutor,raca:raca,key:pelKey(p)};
+    if(DB){
+      DB.ref('daycare/avulsos/'+dcDataKey()).push(reg)
+        .then(()=>{ fecharAvulsaModal(); if(typeof audit==='function') audit('avulsa','adicionou diária avulsa',{alvo:nome}); carregarChamada(); })
+        .catch(e=>alert('Erro: '+e.message));
+    } else { (dcAvulsos=dcAvulsos||[]).push(reg); fecharAvulsaModal(); renderDaycare(); }
   }
   function abrirPeludinhoDay(i){ pelOrigem='daycare'; irParaView('ficha'); abrirPeludinho(i); }
 
