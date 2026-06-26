@@ -580,6 +580,21 @@
   .av-empty .big{font-size:19px;font-weight:800;color:var(--z-blue);margin-bottom:8px}
   @media(max-width:480px){ .av-results{grid-template-columns:1fr 1fr} .av-head .av-t{font-size:19px} }
 
+  /* ===== Novo AULUNO — telinha de 2 campos antes da ficha completa ===== */
+  #novoAlunoModal{display:none;position:fixed;inset:0;z-index:75;background:rgba(26,58,79,.55);padding:20px;overflow-y:auto}
+  #novoAlunoModal.show{display:flex;align-items:center;justify-content:center}
+  .na-card{background:var(--z-white);border-radius:20px;padding:26px 24px;max-width:460px;width:100%;box-shadow:var(--shadow-lg);border-top:5px solid var(--z-daycare)}
+  .na-title{font-size:24px;font-weight:800;color:var(--z-blue)}
+  .na-sub{font-size:13.5px;color:var(--muted);font-weight:600;margin:6px 0 16px;line-height:1.45}
+  .na-lb{display:block;font-size:13px;font-weight:700;color:var(--z-blue);margin:12px 0 6px}
+  .na-in{width:100%;padding:15px 16px;font-size:18px;font-weight:700;border:2.5px solid var(--line);border-radius:14px;font-family:var(--font-ui);color:var(--z-blue)}
+  .na-in:focus{outline:none;border-color:var(--z-daycare)}
+  .na-warn{color:var(--crm-critico-text);font-size:13.5px;font-weight:700;margin-top:10px;min-height:6px}
+  .na-btns{display:flex;gap:12px;margin-top:20px}
+  .na-cancel{flex:0 0 auto;background:none;border:2px solid var(--line);color:var(--muted);padding:14px 20px;border-radius:100px;font-family:var(--font-ui);font-size:15px;font-weight:700;cursor:pointer}
+  .na-ok{flex:1;background:var(--z-daycare);color:#fff;border:none;padding:14px;border-radius:100px;font-family:var(--font-ui);font-size:16px;font-weight:800;cursor:pointer}
+  .na-ok:hover{filter:brightness(1.06)}
+
   /* responsivo */
   .overlay{display:none;position:fixed;inset:0;background:rgba(26,58,79,.5);z-index:45}
   @media(max-width:860px){
@@ -659,6 +674,23 @@
       <div class="av-hint">Só FILHOt já cadastrado. Não achou? Fale com a Gestão para cadastrar.</div>
     </div>
     <div class="av-results" id="avResults"></div>
+  </div>
+</div>
+
+<!-- ============ NOVO AULUNO — 2 campos → ficha completa ============ -->
+<div id="novoAlunoModal" onclick="if(event.target===this)fecharNovoAluno()">
+  <div class="na-card">
+    <div class="na-title">Novo AULUNO</div>
+    <div class="na-sub">Comece pelo nome e o tutor. Em seguida abre a <strong>ficha completa</strong> para o resto: raça, foto, alergias, medicação, vacinas, rotina…</div>
+    <label class="na-lb">Nome do FILHOt</label>
+    <input class="na-in" id="naNome" placeholder="Ex: Beau" autocomplete="off" onkeydown="if(event.key==='Enter')document.getElementById('naTutor').focus()">
+    <label class="na-lb">Tutor — nome e sobrenome</label>
+    <input class="na-in" id="naTutor" placeholder="Ex: Rebeca Azevedo" autocomplete="off" onkeydown="if(event.key==='Enter')criarAluno()">
+    <div class="na-warn" id="naWarn"></div>
+    <div class="na-btns">
+      <button class="na-cancel" onclick="fecharNovoAluno()">Cancelar</button>
+      <button class="na-ok" onclick="criarAluno()">Criar e abrir a ficha →</button>
+    </div>
   </div>
 </div>
 
@@ -2135,19 +2167,31 @@
   function salvarFichaPel(){ if(document.activeElement&&document.activeElement.blur) document.activeElement.blur(); const s=document.getElementById('pel-saved2'); if(s){ s.textContent='✓ Ficha salva! Disponível em todos os aparelhos.'; setTimeout(()=>{ if(s) s.textContent=''; },2200); } if(typeof renderDaycare==='function') renderDaycare(); }
   function pelSubtab(el,id){ el.parentNode.querySelectorAll('.subtab2').forEach(x=>x.classList.remove('active')); el.classList.add('active'); document.querySelectorAll('.ppanel2').forEach(x=>x.classList.remove('active')); const t=document.getElementById(id); if(t) t.classList.add('active'); }
   function voltarPel(){ if(pelOrigem==='daycare'){ irParaView('daycare'); if(typeof carregarChamada==='function') carregarChamada(); } else { document.getElementById('pel-ficha').style.display='none'; document.getElementById('pel-lista').style.display='block'; } }
+  // Novo AULUNO: telinha de 2 campos (nome + tutor) → abre a FICHA COMPLETA para o resto
   function inserirAluno(){
     if(!canEditPel()){ alert('Apenas Gestão e Supervisão podem cadastrar um novo aluno.'); return; }
-    const nome=(prompt('Nome do novo AULUNO (peludinho):')||'').trim(); if(!nome) return;
-    const tutor=(prompt('Nome do tutor(es):')||'').trim();
+    const m=document.getElementById('novoAlunoModal'); if(!m) return;
+    const n=document.getElementById('naNome'), t=document.getElementById('naTutor'), w=document.getElementById('naWarn');
+    if(n) n.value=''; if(t) t.value=''; if(w) w.textContent='';
+    m.classList.add('show');
+    setTimeout(()=>{ try{ n&&n.focus(); }catch(e){} },150);
+  }
+  function fecharNovoAluno(){ const m=document.getElementById('novoAlunoModal'); if(m) m.classList.remove('show'); }
+  function criarAluno(){
+    const nome=(document.getElementById('naNome').value||'').trim();
+    const tutor=(document.getElementById('naTutor').value||'').trim();
+    const w=document.getElementById('naWarn');
+    if(!nome){ if(w) w.textContent='Escreva o nome do FILHOt.'; return; }
     const novo={n:nome,raca:'',freq:'',tutor:tutor,nasc:'',dias:[]};
     const key=pelKey(novo);
-    if(PELUDINHOS.some(p=>pelKey(p)===key)){ alert('Já existe um aluno com esse nome e tutor.'); return; }
+    if(PELUDINHOS.some(p=>pelKey(p)===key)){ if(w) w.textContent='Já existe um AULUNO com esse nome e tutor.'; return; }
     PELUDINHOS.push(novo);
     PELUDINHOS.sort((a,b)=>jsNorm(a.n).localeCompare(jsNorm(b.n))||jsNorm(a.tutor).localeCompare(jsNorm(b.tutor)));
     // grava no banco para não sumir ao recarregar (e aparecer em todos os aparelhos)
     const reg={_novo:true,n:nome,tutor:tutor,raca:'',nasc:'',dias:[],freq:''};
     try{ localStorage.setItem('zeluz_pel_'+key,JSON.stringify(reg)); }catch(e){}
     if(DB) DB.ref('daycare/cadastro/'+key).update(reg).catch(()=>{});
+    fecharNovoAluno();
     renderPel();
     const idx=PELUDINHOS.findIndex(p=>pelKey(p)===key);
     if(idx>=0){ pelOrigem='peludinhos'; abrirPeludinho(idx); }
