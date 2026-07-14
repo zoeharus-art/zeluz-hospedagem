@@ -658,10 +658,11 @@
     <div class="subnav so-day" id="dcSubnav" style="display:none"></div>
     <a data-v="hospedagem"><span data-icon="moon"></span><span>AuAulândia</span></a>
     <a data-v="agenda"><span data-icon="cal"></span><span>Agenda</span><span class="soon">em breve</span></a>
-    <div class="grp">Gestão</div>
-    <a data-v="painel" class="so-gestao"><span data-icon="star"></span><span>Painel do Dia</span></a>
+    <div class="grp so-master">Gestão</div>
+    <a data-v="painel" class="so-master"><span data-icon="star"></span><span>Painel do Dia</span></a>
     <a data-v="ficha" class="so-gestao"><span data-icon="paw"></span><span>Peludinhos</span></a>
-    <a data-v="pessoas" class="so-gestao"><span data-icon="users"></span><span>Pessoas</span></a>
+    <a data-v="pessoas" class="so-master"><span data-icon="users"></span><span>Pessoas</span></a>
+    <div class="subnav so-master" id="pSubnav" style="display:none"></div>
     <a data-v="sair"><span data-icon="exit"></span><span>Sair</span></a>
   </nav>
   <div class="who">
@@ -1011,12 +1012,7 @@
     <div class="card"><div id="aberturaM1Prog" class="hint" style="margin-bottom:10px"></div><div id="aberturaM1List"></div></div>
   </section>
   <section class="view" id="v-pessoas">
-    <!-- abas de Pessoas (escalável: Senhas hoje; Equipe e Turnos depois) -->
-    <div class="subtabs">
-      <div class="ptab active" data-p="p-ativ">Atividades</div>
-      <div class="ptab so-master" data-p="p-monitores">Monitores</div>
-      <div class="ptab so-master" data-p="p-senhas">Senhas</div>
-    </div>
+    <!-- Seções acessadas pelo submenu do sidebar (Pessoas -> Atividades / Monitores / Senhas) -->
 
     <!-- ATIVIDADES — banco dos monitores (Gestão acrescenta/remove) -->
     <div class="ppanel active" id="p-ativ">
@@ -1187,6 +1183,8 @@
     if(v==='hospedagem') fecharPlantao();
     if(v==='ficha'){ const l=document.getElementById('pel-lista'),fi=document.getElementById('pel-ficha'); if(l&&fi){ l.style.display='block'; fi.style.display='none'; } }
     if(v==='daycare'){ if(typeof abrirDayCare==='function') abrirDayCare(); } else { const sm=document.getElementById('dcSubnav'); if(sm) sm.style.display='none'; }
+    const pn=document.getElementById('pSubnav'); if(pn) pn.style.display=(v==='pessoas')?'block':'none';
+    if(v==='pessoas'){ if(typeof montarPSubnav==='function') montarPSubnav(); if(typeof abrirPessoas==='function') abrirPessoas('ativ'); return; }
     if(v==='painel'){ if(typeof carregarPainel==='function') carregarPainel(); }
     if(v==='abertura'){ if(typeof carregarAberturaM1==='function') carregarAberturaM1(); }
     closeNav(); window.scrollTo({top:0,behavior:'smooth'});
@@ -1205,6 +1203,25 @@
     document.querySelectorAll('.ppanel').forEach(x=>x.classList.remove('active'));
     t.classList.add('active'); const el=document.getElementById(t.dataset.p); if(el) el.classList.add('active');
   });
+  // ===== Submenu de Pessoas no sidebar (Atividades / Monitores / Senhas) =====
+  const PESSOAS_SUB=[['ativ','p-ativ','Atividades'],['monitores','p-monitores','Monitores'],['senhas','p-senhas','Senhas']];
+  function montarPSubnav(){ const sm=document.getElementById('pSubnav'); if(!sm) return; sm.innerHTML=PESSOAS_SUB.map(([k,,t])=>`<a data-pp="${k}" onclick="abrirPessoas('${k}')">${t}</a>`).join(''); }
+  function marcarPSubnavAtivo(k){ document.querySelectorAll('#pSubnav a').forEach(a=>a.classList.toggle('active', a.dataset.pp===k)); }
+  function abrirPessoas(k){
+    document.querySelectorAll('#nav a').forEach(x=>x.classList.remove('active'));
+    const pa=document.querySelector('#nav a[data-v="pessoas"]'); if(pa) pa.classList.add('active');
+    document.querySelectorAll('.view').forEach(x=>x.classList.remove('active'));
+    document.getElementById('v-pessoas').classList.add('active');
+    document.getElementById('head-title').childNodes[0].nodeValue='Pessoas & Turnos ';
+    document.getElementById('head-sub').textContent='Equipe e tarefas';
+    const sm=document.getElementById('pSubnav'); if(sm) sm.style.display='block';
+    const map={ativ:'p-ativ',monitores:'p-monitores',senhas:'p-senhas'};
+    document.querySelectorAll('#v-pessoas .ppanel').forEach(x=>x.classList.remove('active'));
+    const el=document.getElementById(map[k]||'p-ativ'); if(el) el.classList.add('active');
+    try{ if(k==='monitores') renderMonitores(); else if(k==='senhas') renderSenhas(); else renderAtiv(); }catch(e){}
+    marcarPSubnavAtivo(k);
+    if(typeof closeNav==='function') closeNav(); window.scrollTo({top:0,behavior:'smooth'});
+  }
 
   function pick(btn){
     btn.parentNode.querySelectorAll('button').forEach(b=>b.classList.remove('on','t-ok','t-bad','t-warn'));
@@ -1668,9 +1685,7 @@
     '0901':{role:'gestao',      nome:'Adriana · Gestão Total', avisoSonoro:true},
     '0902':{role:'gestao',      nome:'Márcia · Gestora', avisoSonoro:true},
     '0912':{role:'supervisor',  nome:'Amanda · Supervisora'},
-    '1002':{role:'aprendiz',    nome:'Monitor Aprendiz'},
-    '1003':{role:'monitor',     nome:'Amanda Barbosa', atividades:['almoco']},
-    '1004':{role:'monitor',     nome:'Leticya', atividades:['almoco']}
+    '1002':{role:'aprendiz',    nome:'Monitor Aprendiz'}
   };
   // ===== ESCOPO DE ATIVIDADES POR PESSOA =====
   // Se o usuário logado tem `atividades:[...]`, ele só enxerga essas atividades do Day Care
