@@ -373,6 +373,9 @@
   /* Plantonista: só AuAulândia e Sair */
   body[data-role="plantonista"] .nav a,body[data-role="plantonista"] .nav .grp,body[data-role="plantonista"] .nav .subnav{display:none !important}
   body[data-role="plantonista"] .nav a[data-v="hospedagem"],body[data-role="plantonista"] .nav a[data-v="sair"]{display:flex !important}
+  /* "Atividades Monitor 1" (rotina de abertura) — só aparece para quem tem abertura=true */
+  .nav a.so-abertura{display:none}
+  body[data-abertura="1"] .nav a.so-abertura{display:flex}
   /* Escopo restrito por pessoa (ex.: Amanda Barbosa — só o almoço): esconde tudo menos Day Care e Sair */
   body[data-scope="atividade"] .nav a[data-v="hospedagem"],
   body[data-scope="atividade"] .nav a[data-v="agenda"],
@@ -651,6 +654,7 @@
     <a class="op-only" data-v="hoje"><span data-icon="clock"></span><span>Linha do Tempo</span></a>
     <div class="grp">Serviços</div>
     <a data-v="daycare" class="so-day"><span data-icon="sun"></span><span>Day Care</span></a>
+    <a data-v="abertura" class="so-abertura"><span data-icon="sun"></span><span>Atividades Monitor 1</span></a>
     <div class="subnav so-day" id="dcSubnav" style="display:none"></div>
     <a data-v="hospedagem"><span data-icon="moon"></span><span>AuAulândia</span></a>
     <a data-v="agenda"><span data-icon="cal"></span><span>Agenda</span><span class="soon">em breve</span></a>
@@ -1002,10 +1006,15 @@
     </div>
   </section>
   <section class="view" id="v-agenda"><div class="soon-box"><img class="ic-st" src="assets/stickers/coleira.png" alt=""><div class="t">Agenda</div><div class="d">Calendário de frequência e reservas — próxima etapa.</div></div></section>
+  <section class="view" id="v-abertura">
+    <div class="role-note"><span data-icon="sun"></span><span><strong>Rotina de abertura do turno — Monitor 1.</strong> Marque cada item conforme executa. Fica registrado com horário e quem fez.</span></div>
+    <div class="card"><div id="aberturaM1Prog" class="hint" style="margin-bottom:10px"></div><div id="aberturaM1List"></div></div>
+  </section>
   <section class="view" id="v-pessoas">
     <!-- abas de Pessoas (escalável: Senhas hoje; Equipe e Turnos depois) -->
     <div class="subtabs">
       <div class="ptab active" data-p="p-ativ">Atividades</div>
+      <div class="ptab so-master" data-p="p-monitores">Monitores</div>
       <div class="ptab so-master" data-p="p-senhas">Senhas</div>
     </div>
 
@@ -1014,6 +1023,13 @@
       <div class="role-note"><span data-icon="users"></span><span>Banco de <strong>atividades dos monitores</strong>. A Gestão pode acrescentar ou remover. Depois cada atividade é distribuída entre os 6 monitores.</span></div>
       <div class="pel-toolbar"><span class="pel-count" id="ativCount"></span><button class="btn btn-gold so-master" style="margin-left:auto;padding:10px 16px;flex:0 0 auto" onclick="acrescentarAtividade()">+ Acrescentar atividade</button></div>
       <div id="ativList"></div>
+    </div>
+
+    <!-- MONITORES — área restrita à Gestão: nomear, senha e horário sem entrar no código -->
+    <div class="ppanel so-master" id="p-monitores">
+      <div class="role-note"><span data-icon="users"></span><span><strong>Gestão dos monitores.</strong> Nomeie cada monitor, defina a senha e o horário de entrada/saída. As mudanças valem na hora, em todos os aparelhos — sem precisar de programador.</span></div>
+      <div id="monitoresList"></div>
+      <div class="actions" style="margin-top:12px"><button class="btn btn-primary" onclick="salvarMonitores()">Salvar monitores</button><span id="monitoresStatus" class="rel-status"></span></div>
     </div>
 
     <!-- SENHAS — área restrita à Gestão (Adriana e Márcia) -->
@@ -1084,6 +1100,7 @@
       DB.ref('daycare/config/atividades').on('value', s=>{ const v=s.val(); if(Array.isArray(v)&&v.length){ ATIVIDADES=v; if(typeof renderAtiv==='function') renderAtiv(); } });
       DB.ref('daycare/cadastro').on('value', s=>{ pelCadCache=s.val()||{}; if(typeof mergeNovosAlunos==='function') mergeNovosAlunos(); if(typeof renderPel==='function') renderPel(); if(typeof renderDaycare==='function') renderDaycare(); });
       DB.ref('daycare/config/auditoria').on('value', s=>{ const v=s.val(); if(v&&typeof v==='object'){ try{ AUDIT_CFG=Object.assign({},AUDIT_CFG,v); }catch(e){} if(typeof renderPainelDia==='function') renderPainelDia(); } });
+      DB.ref('daycare/config/monitores').on('value', s=>{ const v=s.val(); if(Array.isArray(v)&&v.length){ MONITORES=v; } else { MONITORES=MONITORES_DEFAULT.map(m=>Object.assign({},m)); } try{ if(typeof renderSenhas==='function') renderSenhas(); }catch(e){} try{ if(typeof renderMonitores==='function') renderMonitores(); }catch(e){} try{ if(typeof renderPainelDia==='function') renderPainelDia(); }catch(e){} });
       // Sincronização em tempo real das pernoites/hóspedes manuais entre TODOS os aparelhos.
       // (antes usava .once() e quem já estava com o app aberto não via a inserção do outro celular)
       DB.ref('auaulandia/manuais').on('value', ()=>{ try{ const ls=document.getElementById('loginScreen'); if(ls && ls.style.display==='none' && typeof carregarHospedes==='function') carregarHospedes(); }catch(e){} });
@@ -1154,7 +1171,8 @@
     hoje:['Linha do Tempo','O dia do peludinho'],adaptacao:['Adaptação · 1º mês','Como está se adaptando'],
     daycare:['Day Care','Chamada e atividades'],hospedagem:['AuAulândia','Passagem de plantão'],
     agenda:['Agenda','Frequência e reservas'],pessoas:['Pessoas & Turnos','Equipe e tarefas'],
-    painel:['Painel do Dia','Auditoria e cumprimento de protocolos'],sair:['Sair','']};
+    painel:['Painel do Dia','Auditoria e cumprimento de protocolos'],
+    abertura:['Atividades Monitor 1','Rotina de abertura do turno'],sair:['Sair','']};
 
   document.getElementById('nav').addEventListener('click',e=>{
     const a=e.target.closest('a'); if(!a) return;
@@ -1170,6 +1188,7 @@
     if(v==='ficha'){ const l=document.getElementById('pel-lista'),fi=document.getElementById('pel-ficha'); if(l&&fi){ l.style.display='block'; fi.style.display='none'; } }
     if(v==='daycare'){ if(typeof abrirDayCare==='function') abrirDayCare(); } else { const sm=document.getElementById('dcSubnav'); if(sm) sm.style.display='none'; }
     if(v==='painel'){ if(typeof carregarPainel==='function') carregarPainel(); }
+    if(v==='abertura'){ if(typeof carregarAberturaM1==='function') carregarAberturaM1(); }
     closeNav(); window.scrollTo({top:0,behavior:'smooth'});
   });
 
@@ -1645,7 +1664,6 @@
 
   // ===== LOGIN (senhas de teste — depois cada pessoa terá a sua) =====
   const SENHAS={
-    '1000':{role:'monitor',     nome:'Monitor 5'},
     '1001':{role:'plantonista', nome:'Plantonista'},
     '0901':{role:'gestao',      nome:'Adriana · Gestão Total', avisoSonoro:true},
     '0902':{role:'gestao',      nome:'Márcia · Gestora', avisoSonoro:true},
@@ -1659,16 +1677,57 @@
   // e entra direto na primeira delas. Sem o campo = acesso normal (todas as atividades).
   function usuarioAtual(){ try{ return JSON.parse(sessionStorage.getItem('zeluz_login')||'null'); }catch(e){ return null; } }
   function atividadesPermitidas(){ const u=usuarioAtual(); return (u&&Array.isArray(u.atividades)&&u.atividades.length)?u.atividades:null; }
+  // ===== MONITORES EDITÁVEIS PELA GESTÃO (nome/senha/horário) — igual ao Ágora nomeia consultores =====
+  // Slots de turno com horário. A Gestão renomeia e ajusta senha/horário pela tela Pessoas -> Monitores.
+  // Persistidos no Firebase (daycare/config/monitores). Se offline, valem os defaults abaixo.
+  const MONITORES_DEFAULT=[
+    {id:'m1', nome:'Monitor 1', senha:'1005', entrada:'06:50', saida:'15:50', abertura:true},
+    {id:'m2', nome:'Monitor 2', senha:'1006', entrada:'07:00', saida:'16:00'},
+    {id:'m3', nome:'Monitor 3', senha:'1007', entrada:'08:00', saida:'17:00'},
+    {id:'m4', nome:'Monitor 4', senha:'1008', entrada:'09:00', saida:'18:00'},
+    {id:'m5', nome:'Monitor 5', senha:'1009', entrada:'10:00', saida:'19:00'},
+    {id:'m6', nome:'Monitor 6', senha:'1010', entrada:'10:15', saida:'19:15'}
+  ];
+  let MONITORES = MONITORES_DEFAULT.map(m=>Object.assign({},m));
+  // Mapa de senhas em runtime = SENHAS fixas (gestão/supervisão/etc) + monitores editáveis
+  function senhasRuntime(){
+    const map={}; Object.keys(SENHAS).forEach(k=>{ map[k]=SENHAS[k]; });
+    (MONITORES||[]).forEach(m=>{ if(m&&m.senha){ map[String(m.senha).trim()]={ role:'monitor', nome:m.nome, monId:m.id, entrada:m.entrada, saida:m.saida, abertura:!!m.abertura, atividades:(Array.isArray(m.atividades)&&m.atividades.length)?m.atividades:undefined }; } });
+    return map;
+  }
   // ===== RELATÓRIO DE SENHAS (só Gestão vê) — gerado do cadastro acima =====
   function renderSenhas(){
     const el=document.getElementById('senhasList'); if(!el) return;
     const ordem={gestao:0, supervisor:1, monitor:2, plantonista:3, aprendiz:4};
-    const lista=Object.keys(SENHAS).map(pwd=>({pwd, ...SENHAS[pwd]}))
-      .sort((a,b)=>(ordem[a.role]??9)-(ordem[b.role]??9));
+    const SR=senhasRuntime();
+    const lista=Object.keys(SR).map(pwd=>({pwd, ...SR[pwd]}))
+      .sort((a,b)=>(ordem[a.role]??9)-(ordem[b.role]??9) || String(a.nome).localeCompare(String(b.nome)));
     el.innerHTML=lista.map(p=>
-      '<div class="pair"><span class="k">'+p.nome+'</span>'+
+      '<div class="pair"><span class="k">'+p.nome+(p.entrada?' <span style="color:var(--z-blue);font-size:12px">('+p.entrada+'–'+(p.saida||'')+')</span>':'')+'</span>'+
       '<span class="val" style="font-family:var(--font-marca);font-size:18px;letter-spacing:3px;color:var(--z-gold-deep)">'+p.pwd+'</span></div>'
     ).join('');
+  }
+  // ===== EDIÇÃO DE MONITORES (Gestão) — nome, senha e horário =====
+  function renderMonitores(){
+    const el=document.getElementById('monitoresList'); if(!el) return;
+    el.innerHTML=(MONITORES||[]).map((m,i)=>`
+      <div class="mon-row" style="display:grid;grid-template-columns:1.6fr .8fr .8fr .8fr;gap:8px;align-items:end;padding:12px;border:1px solid var(--z-line,#e7e0d2);border-radius:12px;margin-bottom:10px">
+        <div class="field"><label style="font-size:12px;color:var(--z-blue)">Nome do monitor</label><input class="cad-in" value="${(m.nome||'').replace(/"/g,'&quot;')}" oninput="setMon(${i},'nome',this.value)"></div>
+        <div class="field"><label style="font-size:12px;color:var(--z-blue)">Senha</label><input class="cad-in" inputmode="numeric" maxlength="6" value="${m.senha||''}" oninput="setMon(${i},'senha',this.value)"></div>
+        <div class="field"><label style="font-size:12px;color:var(--z-blue)">Entrada</label><input class="cad-in" type="time" value="${m.entrada||''}" onchange="setMon(${i},'entrada',this.value)"></div>
+        <div class="field"><label style="font-size:12px;color:var(--z-blue)">Saída</label><input class="cad-in" type="time" value="${m.saida||''}" onchange="setMon(${i},'saida',this.value)"></div>
+      </div>`).join('');
+  }
+  function setMon(i,campo,val){ if(!MONITORES[i]) return; MONITORES[i][campo]=(campo==='senha')?String(val).replace(/\D/g,''):val; if(campo==='senha'||campo==='nome') { try{ renderSenhas(); }catch(e){} } }
+  function salvarMonitores(){
+    const st=document.getElementById('monitoresStatus'); if(st) st.style.color='';
+    const senhas=(MONITORES||[]).map(m=>String(m.senha||'').trim());
+    // valida senhas: 4-6 dígitos, sem duplicar entre si nem com as senhas fixas
+    for(const m of MONITORES){ const s=String(m.senha||'').trim(); if(!/^[0-9]{4,6}$/.test(s)){ if(st){ st.style.color='var(--crm-critico)'; st.textContent='Senha inválida em "'+(m.nome||'?')+'": use 4 a 6 dígitos.'; } return; } if(SENHAS[s]){ if(st){ st.style.color='var(--crm-critico)'; st.textContent='A senha '+s+' já é usada pela Gestão/equipe fixa. Escolha outra.'; } return; } }
+    if(new Set(senhas).size!==senhas.length){ if(st){ st.style.color='var(--crm-critico)'; st.textContent='Há senhas repetidas entre os monitores. Cada um precisa de uma senha única.'; } return; }
+    if(DB){ DB.ref('daycare/config/monitores').set(MONITORES).then(()=>{ if(st){ st.style.color='var(--crm-ok)'; st.textContent='✅ Monitores salvos! Já valem em todos os aparelhos.'; } }).catch(e=>{ if(st){ st.style.color='var(--crm-critico)'; st.textContent='Erro ao salvar: '+e.message; } }); }
+    else { if(st){ st.style.color='var(--crm-atencao-text)'; st.textContent='Salvo localmente (sem internet agora).'; } }
+    try{ renderSenhas(); }catch(e){}
   }
   // ===== TRAVA POR APARELHO: só celulares autorizados pela Gestão entram =====
   function getDeviceId(){ let id=null; try{ id=localStorage.getItem('zeluz_device_id'); }catch(e){}
@@ -1680,7 +1739,7 @@
     else { cb(deviceLocalOk()); } }
   function mostrarStatusDevice(){ const el=document.getElementById('deviceStatus'); if(!el) return; deviceAutorizado(function(ok){ el.innerHTML= ok?'Este aparelho está autorizado &#10003;':'Este aparelho ainda <strong>não está autorizado</strong>. A Gestão precisa autorizar.'; el.style.color= ok?'var(--crm-ok)':'var(--crm-atencao-text)'; }); }
   function autorizarAparelho(){ const err=document.getElementById('loginErr'); err.style.color='';
-    const v=(document.getElementById('loginPwd').value||'').trim(); const u=SENHAS[v];
+    const v=(document.getElementById('loginPwd').value||'').trim(); const u=senhasRuntime()[v];
     if(!u||u.role!=='gestao'){ err.style.color='var(--crm-critico)'; err.textContent='Digite a senha da GESTÃO no campo acima e toque em Autorizar.'; return; }
     const nome=(prompt('Dê um nome para ESTE aparelho (ex: iPhone Daycare 1):')||'').trim(); if(!nome) return;
     const id=getDeviceId(); const reg={nome:nome, por:u.nome, ts:Date.now()};
@@ -1688,7 +1747,7 @@
     else { try{ localStorage.setItem('zeluz_device_ok','1'); }catch(e){} err.style.color='var(--crm-atencao-text)'; err.textContent='Aparelho autorizado localmente (sem internet no momento).'; } }
   function doLogin(){
     const v=(document.getElementById('loginPwd').value||'').trim();
-    const u=SENHAS[v]; const err=document.getElementById('loginErr'); err.style.color='';
+    const u=senhasRuntime()[v]; const err=document.getElementById('loginErr'); err.style.color='';
     if(!u){ err.textContent='Senha incorreta. Tente de novo.'; return; }
     const ehGestao=(u.role==='gestao'||u.role==='supervisor');
     deviceAutorizado(function(ok){
@@ -1701,6 +1760,7 @@
   function aplicarLogin(u){
     try{ sessionStorage.setItem('zeluz_login', JSON.stringify(u)); }catch(e){} // fonte única do escopo (montarSubnav/abrirAtividade leem daqui)
     document.body.dataset.role=u.role;
+    if(u.abertura) document.body.dataset.abertura='1'; else document.body.removeAttribute('data-abertura');
     document.getElementById('whoName').textContent=u.nome;
     document.getElementById('loginScreen').style.display='none';
     document.getElementById('loginErr').textContent='';
@@ -1718,7 +1778,7 @@
     document.getElementById('loginScreen').style.display='flex';
     if(typeof mostrarStatusDevice==='function') mostrarStatusDevice();
   }
-  (function(){ try{ renderSenhas(); }catch(e){} try{ const u=JSON.parse(sessionStorage.getItem('zeluz_login')||'null'); if(u&&u.role) aplicarLogin(u); else if(typeof mostrarStatusDevice==='function') mostrarStatusDevice(); }catch(e){} })();
+  (function(){ try{ renderSenhas(); }catch(e){} try{ renderMonitores(); }catch(e){} try{ const u=JSON.parse(sessionStorage.getItem('zeluz_login')||'null'); if(u&&u.role) aplicarLogin(u); else if(typeof mostrarStatusDevice==='function') mostrarStatusDevice(); }catch(e){} })();
 
   // ===== LISTA AUTOMÁTICA — mesma planilha do dashboard de hospedagem =====
   const SHEET_ID='1SJ3OZ6E2wMa1JHrQUcgtNffgQLQhCpa01IUQKCv605w';
@@ -2519,6 +2579,29 @@
   }
   carregarCheckoutPlantao();
 
+  // ===== ATIVIDADES MONITOR 1 — Rotina de Abertura (to-do marcável) =====
+  const ABERTURA_M1=[
+    'Bater ponto — 06h50',
+    'Destrancar portas internas e externas autorizadas',
+    'Conferir se não há peludinhos soltos fora das áreas previstas',
+    'Ligar iluminação dos pátios e áreas cobertas',
+    'Verificar ventilação / teto retrátil conforme o clima',
+    'Vistoriar o pátio principal: pisos, ralos, possíveis objetos perigosos',
+    'Vistoriar pátios secundários',
+    'Conferir portões, travas e fechamentos',
+    'Preparar pás, vassouras, mops de água limpa e lixeiras nos 6 espaços',
+    'Fazer check-in do corpo dos hóspedes e vídeo de interação deles',
+    'Conferir CELULAR — informativos',
+    'Receber informações do plantão/noturno (quando aplicável)'
+  ];
+  let abrM1={};
+  function carregarAberturaM1(){ if(DB){ DB.ref('daycare/abertura-m1/'+dcDataKey()).once('value').then(s=>{ abrM1=s.val()||{}; }).then(renderAberturaM1).catch(renderAberturaM1); } else renderAberturaM1(); }
+  function toggleAberturaM1(i){ abrM1[i]=!abrM1[i]; if(DB) DB.ref('daycare/abertura-m1/'+dcDataKey()+'/'+i).set(abrM1[i]||null).catch(()=>{}); if(typeof audit==='function'&&abrM1[i]) audit('abertura_m1','abertura: '+(ABERTURA_M1[i]||('item '+(i+1)))); renderAberturaM1(); }
+  function renderAberturaM1(){ const el=document.getElementById('aberturaM1List'); if(!el) return; const done=ABERTURA_M1.filter((_,i)=>abrM1[i]).length;
+    const pr=document.getElementById('aberturaM1Prog'); if(pr) pr.innerHTML=`<strong>${done}/${ABERTURA_M1.length}</strong> itens concluídos`;
+    el.innerHTML=ABERTURA_M1.map((t,i)=>`<label class="todo-item ${abrM1[i]?'on':''}" onclick="toggleAberturaM1(${i})"><span class="todo-box">${abrM1[i]?'&#10003;':''}</span>${t}</label>`).join('');
+  }
+
   // ===== ALMOCO (Monitor 6) =====
   let dcAba='chamada', almMarcas={}, almTurno={};
   function setDcAba(t){ abrirAtividade(t); }
@@ -2672,11 +2755,12 @@
       get('daycare/almoco/'+k), get('daycare/almoco-turno/'+k),
       get('daycare/almoco-prep/'+k), get('daycare/almoco-final/'+k), get('daycare/almoco-exec/'+k),
       get('daycare/atividade/'+k), get('daycare/banho/'+k),
-      get('daycare/auditoria/'+k), get('auaulandia/checkout/'+k)
+      get('daycare/auditoria/'+k), get('auaulandia/checkout/'+k),
+      get('daycare/almoco-prep-turno/'+k), get('daycare/almoco-final-turno/'+k)
     ]).then(r=>{
       painelData={ chamada:r[0]||{}, avulsos:r[1]||{}, almoco:r[2]||{}, almTurno:r[3]||{},
         almPrep:r[4]||{}, almFinal:r[5]||{}, almExec:!!r[6], atividade:r[7]||{}, banho:r[8]||{},
-        auditoria:r[9]||{}, checkout:r[10]||{} };
+        auditoria:r[9]||{}, checkout:r[10]||{}, almPrepTurno:r[11]||{}, almFinalTurno:r[12]||{} };
       renderPainelDia();
     }).catch(()=>{ painelData={}; renderPainelDia(); });
   }
@@ -2747,6 +2831,25 @@
       <div class="dc-stat bad"><b>${aNao}</b>não comeram</div>
       <div class="dc-stat"><b style="color:var(--z-blue)">${ativFeitas}</b>atividades c/ registro</div>
     </div>`;
+    // ---- Plantão agora (escala de monitores × hora atual) ----
+    const agora=horaAgora();
+    html+=`<div class="card"><h2>Plantão agora <span style="font-size:12px;color:var(--z-blue)">${agora}</span></h2><div class="hint">Quem deveria estar no Day Care neste horário, pela escala de monitores.</div>`;
+    if(!(MONITORES||[]).length) html+='<div class="p-empty">Nenhum monitor cadastrado.</div>';
+    else html+='<div class="p-tl">'+(MONITORES).map(m=>{ const on=m.entrada&&m.saida&&(m.entrada<=agora)&&(agora<=m.saida); return `<div class="p-tl-item"><span class="p-tl-h">${m.entrada||'--'}–${m.saida||'--'}</span><span class="p-tl-q">${m.nome||'-'}</span><span class="p-tl-a">${on?'<span class="p-pill ok">em turno</span>':'<span class="p-pill neutro">fora do turno</span>'}</span></div>`; }).join('')+'</div>';
+    html+='</div>';
+    // ---- Banco de Tempo do Almoço (durações das 3 etapas) ----
+    const pt=D.almPrepTurno||{}, at=D.almTurno||{}, ft=D.almFinalTurno||{};
+    const dP=diffMin(pt.inicio,pt.fim), dA=diffMin(at.inicio,at.fim), dF=diffMin(ft.inicio,ft.fim);
+    const dTot=(dP||dA||dF)!=null?[dP,dA,dF].reduce((s,x)=>s+(x||0),0):null;
+    html+=`<div class="card"><h2>Banco de Tempo — Almoço</h2><div class="hint">Duração de cada etapa hoje. Serve para comparar o ritmo das monitoras ao longo dos dias.</div>
+      <div class="dc-resumo">
+        <div class="dc-stat"><b style="color:var(--z-blue)">${fmtDur(dP)}</b>Preparação</div>
+        <div class="dc-stat"><b style="color:var(--z-blue)">${fmtDur(dA)}</b>Almoço</div>
+        <div class="dc-stat"><b style="color:var(--z-blue)">${fmtDur(dF)}</b>Encerramento</div>
+        <div class="dc-stat ok"><b>${fmtDur(dTot)}</b>Total</div>
+      </div>
+      <div class="hint" style="margin-top:8px">Preparação: ${pt.inicio||'-'} &rarr; ${pt.fim||'-'}${pt.quemInicio?' ('+pt.quemInicio+')':''} &nbsp;·&nbsp; Almoço: ${at.inicio||'-'} &rarr; ${at.fim||'-'}${at.quemInicio?' ('+at.quemInicio+')':''} &nbsp;·&nbsp; Encerramento: ${ft.inicio||'-'} &rarr; ${ft.fim||'-'}${ft.quemInicio?' ('+ft.quemInicio+')':''}</div>
+    </div>`;
     // cumprimento
     html+='<div class="card"><h2>Cumprimento dos protocolos</h2><div class="hint">Cada protocolo do dia: foi cumprido? no horário esperado? por quem?</div>';
     protos.forEach(p=>{
@@ -2774,7 +2877,8 @@
   const ACAO_LABEL={ chamada:'Chamada', almoco_ini:'Iniciou o almoço', almoco_fim:'Encerrou o almoço',
     almoco_grade:'Marcou no almoço', almoco_prep:'Checklist preparação', almoco_final:'Checklist finalização',
     almoco_exec:'Confirmou execução', atividade:'Atividade', banho:'Banho', relatorio:'Relatório assinado',
-    checkout:'Protocolo do Plantão' };
+    checkout:'Protocolo do Plantão', prep_ini:'Iniciou preparação', prep_fim:'Encerrou preparação',
+    final_ini:'Iniciou finalização', final_fim:'Encerrou finalização', abertura_m1:'Abertura (Monitor 1)' };
   // editor de janelas de horário (só Gestão)
   function abrirAuditCfg(){ const el=document.getElementById('painelCfg'); if(!el) return;
     if(el.style.display==='block'){ el.style.display='none'; return; }
@@ -2792,6 +2896,8 @@
   // INIT do Day Care (no fim: garante todas as variaveis e funcoes definidas)
   montarSubnav();
   renderAtual();
+  // Painel do Dia ao vivo — atualiza sozinho a cada 30s enquanto estiver aberto no dia de hoje (sala da gestão)
+  setInterval(function(){ try{ const v=document.getElementById('v-painel'); if(v && getComputedStyle(v).display!=='none' && typeof carregarPainel==='function' && pKey(painelDate)===pKey(new Date())) carregarPainel(); }catch(e){} }, 30000);
   montarMedgrids();
 </script>
 </body>
