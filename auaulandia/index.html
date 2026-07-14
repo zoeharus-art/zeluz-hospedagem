@@ -1651,7 +1651,8 @@
     '0902':{role:'gestao',      nome:'Márcia · Gestora', avisoSonoro:true},
     '0912':{role:'supervisor',  nome:'Amanda · Supervisora'},
     '1002':{role:'aprendiz',    nome:'Monitor Aprendiz'},
-    '1003':{role:'monitor',     nome:'Amanda Barbosa', atividades:['almoco']}
+    '1003':{role:'monitor',     nome:'Amanda Barbosa', atividades:['almoco']},
+    '1004':{role:'monitor',     nome:'Leticya', atividades:['almoco']}
   };
   // ===== ESCOPO DE ATIVIDADES POR PESSOA =====
   // Se o usuário logado tem `atividades:[...]`, ele só enxerga essas atividades do Day Care
@@ -2448,7 +2449,8 @@
     else if(almStep==='final') renderAlmFinal();
   }
   function renderAlmPrep(){ const el=document.getElementById('alm-prep'); if(!el) return; const done=ALM_PREP.filter((_,i)=>almPrep[i]).length;
-    el.innerHTML=`<div class="role-note"><span data-icon="paw"></span><span>1ª etapa &mdash; <strong>Organização do espaço</strong>. Marque cada item conforme prepara. (${done}/${ALM_PREP.length})</span></div>`
+    el.innerHTML=barraTurno('Preparação', almPrepTurno, 'iniciarPrep', 'encerrarPrep')
+      +`<div class="role-note"><span data-icon="paw"></span><span>1ª etapa &mdash; <strong>Organização do espaço</strong>. Marque cada item conforme prepara. (${done}/${ALM_PREP.length})</span></div>`
       +ALM_PREP.map((t,i)=>`<label class="todo-item ${almPrep[i]?'on':''}" onclick="toggleAlmPrep(${i})"><span class="todo-box">${almPrep[i]?'&#10003;':''}</span>${t}</label>`).join('')
       +(isAprendiz()?(prepCompleto()?`<div class="alm-next"><button class="btn btn-primary" onclick="setAlmStep('exec')">Preparação feita &rarr; Como Executar</button></div>`:`<div class="alm-next"><span class="hint">Marque todos os itens para liberar a próxima etapa.</span></div>`):'');
   }
@@ -2461,8 +2463,10 @@
   }
   function confirmarExec(){ almExecOk=true; if(DB) DB.ref('daycare/almoco-exec/'+dcDataKey()).set(true).catch(()=>{}); if(typeof audit==='function') audit('almoco_exec','confirmou que leu as regras de execução'); setAlmStep('grade'); }
   function renderAlmFinal(){ const el=document.getElementById('alm-final'); if(!el) return; const done=ALM_FINAL.filter((_,i)=>almFinal[i]).length;
-    el.innerHTML=`<div class="role-note"><span data-icon="moon"></span><span>3ª etapa &mdash; <strong>Finalização</strong>. (${done}/${ALM_FINAL.length})</span></div>`
-      +ALM_FINAL.map((t,i)=>`<label class="todo-item ${almFinal[i]?'on':''}" onclick="toggleAlmFinal(${i})"><span class="todo-box">${almFinal[i]?'&#10003;':''}</span>${t}</label>`).join('');
+    el.innerHTML=barraTurno('Finalização', almFinalTurno, 'iniciarFinal', 'encerrarFinal')
+      +`<div class="role-note"><span data-icon="moon"></span><span>3ª etapa &mdash; <strong>Finalização</strong>. (${done}/${ALM_FINAL.length})</span></div>`
+      +ALM_FINAL.map((t,i)=>`<label class="todo-item ${almFinal[i]?'on':''}" onclick="toggleAlmFinal(${i})"><span class="todo-box">${almFinal[i]?'&#10003;':''}</span>${t}</label>`).join('')
+      +bancoTempoHTML();
   }
   function toggleAlmFinal(i){ almFinal[i]=!almFinal[i]; if(DB) DB.ref('daycare/almoco-final/'+dcDataKey()+'/'+i).set(almFinal[i]||null).catch(()=>{}); if(typeof audit==='function'&&almFinal[i]) audit('almoco_final','finalização: '+(ALM_FINAL[i]||('item '+(i+1)))); renderAlmFinal(); }
   function seloBanho(k){ return dcBanho[k]?'<span class="mini-banho">BANHO</span>':''; }
@@ -2521,12 +2525,14 @@
   function horaAgora(){ const d=new Date(),p=x=>String(x).padStart(2,'0'); return p(d.getHours())+':'+p(d.getMinutes()); }
   function quemSou(){ try{ const u=JSON.parse(sessionStorage.getItem('zeluz_login')||'null'); return (u&&u.nome)||'-'; }catch(e){ return '-'; } }
   function carregarAlmoco(){
-    almMarcas={}; almTurno={}; almPrep={}; almFinal={}; almExecOk=false;
+    almMarcas={}; almTurno={}; almPrep={}; almFinal={}; almExecOk=false; almPrepTurno={}; almFinalTurno={};
     function decideStep(){ if(isAprendiz()){ almStep = !prepCompleto()?'prep':(!almExecOk?'exec':'grade'); } else { almStep='grade'; } renderAlmStep(); }
     if(DB){
       Promise.all([
         DB.ref('daycare/almoco/'+dcDataKey()).once('value').then(s=>{ almMarcas=s.val()||{}; }).catch(()=>{}),
         DB.ref('daycare/almoco-turno/'+dcDataKey()).once('value').then(s=>{ almTurno=s.val()||{}; }).catch(()=>{}),
+        DB.ref('daycare/almoco-prep-turno/'+dcDataKey()).once('value').then(s=>{ almPrepTurno=s.val()||{}; }).catch(()=>{}),
+        DB.ref('daycare/almoco-final-turno/'+dcDataKey()).once('value').then(s=>{ almFinalTurno=s.val()||{}; }).catch(()=>{}),
         DB.ref('daycare/almoco-prep/'+dcDataKey()).once('value').then(s=>{ almPrep=s.val()||{}; }).catch(()=>{}),
         DB.ref('daycare/almoco-final/'+dcDataKey()).once('value').then(s=>{ almFinal=s.val()||{}; }).catch(()=>{}),
         DB.ref('daycare/almoco-exec/'+dcDataKey()).once('value').then(s=>{ almExecOk=!!s.val(); }).catch(()=>{}),
@@ -2537,6 +2543,39 @@
   function iniciarAlmoco(){ const h=horaAgora(),q=quemSou(); almTurno=Object.assign({},almTurno,{inicio:h,quemInicio:q}); if(DB) DB.ref('daycare/almoco-turno/'+dcDataKey()).update({inicio:h,quemInicio:q}).catch(()=>{}); if(typeof audit==='function') audit('almoco_ini','iniciou o almoço às '+h); renderAlmoco(); }
   function encerrarAlmoco(){ const h=horaAgora(),q=quemSou(); almTurno=Object.assign({},almTurno,{fim:h,quemFim:q}); if(DB) DB.ref('daycare/almoco-turno/'+dcDataKey()).update({fim:h,quemFim:q}).catch(()=>{}); if(typeof audit==='function') audit('almoco_fim','encerrou o almoço às '+h); renderAlmoco(); }
   function marcarAlmoco(k,val){ const cur=almMarcas[k]; const nx=(cur===val)?'':val; if(nx) almMarcas[k]=nx; else delete almMarcas[k]; if(DB) DB.ref('daycare/almoco/'+dcDataKey()+'/'+k).set(nx||null).catch(()=>{}); if(typeof audit==='function'&&nx) audit('almoco_grade', nx==='tudo'?'comeu tudo':(nx==='metade'?'comeu metade':'não comeu'), {alvo:k}); renderAlmoco(); }
+  // ===== TEMPOS DAS ETAPAS — Banco de Tempo (Preparação e Finalização, mesmo padrão do Almoço) =====
+  let almPrepTurno={}, almFinalTurno={};
+  function diffMin(ini,fim){ if(!ini||!fim) return null; const a=ini.split(':'),b=fim.split(':'); if(a.length<2||b.length<2) return null; let m=(+b[0]*60+ +b[1])-(+a[0]*60+ +a[1]); if(m<0) m+=1440; return m; }
+  function fmtDur(m){ if(m==null) return '—'; const h=Math.floor(m/60),mm=m%60; return h?(h+'h'+String(mm).padStart(2,'0')):(mm+' min'); }
+  function barraTurno(titulo, turno, fnIni, fnFim){ const t=turno||{}; const dur=diffMin(t.inicio,t.fim);
+    return `<div class="alm-turno">
+      <div><div class="tb-lab">${titulo} &mdash; ${DIA_FULL[dcDia]}</div>
+        <div style="font-size:13px;margin-top:3px">Início: <strong>${t.inicio||'-'}</strong>${t.quemInicio?' ('+t.quemInicio+')':''} &nbsp;&middot;&nbsp; Fim: <strong>${t.fim||'-'}</strong>${t.quemFim?' ('+t.quemFim+')':''}${dur!=null?' &nbsp;&middot;&nbsp; Duração: <strong>'+fmtDur(dur)+'</strong>':''}</div>
+      </div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:flex-start">
+        <button class="btn btn-gold" onclick="${fnIni}()">&#9654; Iniciar</button>
+        <button class="btn" style="background:rgba(255,255,255,.14);color:var(--z-cream);border:1px solid rgba(255,255,255,.25)" onclick="${fnFim}()">&#9632; Encerrar</button>
+      </div></div>`;
+  }
+  function iniciarPrep(){ const h=horaAgora(),q=quemSou(); almPrepTurno=Object.assign({},almPrepTurno,{inicio:h,quemInicio:q}); if(DB) DB.ref('daycare/almoco-prep-turno/'+dcDataKey()).update({inicio:h,quemInicio:q}).catch(()=>{}); if(typeof audit==='function') audit('prep_ini','iniciou a preparação às '+h); renderAlmPrep(); }
+  function encerrarPrep(){ const h=horaAgora(),q=quemSou(); almPrepTurno=Object.assign({},almPrepTurno,{fim:h,quemFim:q}); if(DB) DB.ref('daycare/almoco-prep-turno/'+dcDataKey()).update({fim:h,quemFim:q}).catch(()=>{}); if(typeof audit==='function') audit('prep_fim','encerrou a preparação às '+h); renderAlmPrep(); }
+  function iniciarFinal(){ const h=horaAgora(),q=quemSou(); almFinalTurno=Object.assign({},almFinalTurno,{inicio:h,quemInicio:q}); if(DB) DB.ref('daycare/almoco-final-turno/'+dcDataKey()).update({inicio:h,quemInicio:q}).catch(()=>{}); if(typeof audit==='function') audit('final_ini','iniciou a finalização às '+h); renderAlmFinal(); }
+  function encerrarFinal(){ const h=horaAgora(),q=quemSou(); almFinalTurno=Object.assign({},almFinalTurno,{fim:h,quemFim:q}); if(DB) DB.ref('daycare/almoco-final-turno/'+dcDataKey()).update({fim:h,quemFim:q}).catch(()=>{}); if(typeof audit==='function') audit('final_fim','encerrou a finalização às '+h); renderAlmFinal(); }
+  function bancoTempoHTML(){
+    const p=diffMin(almPrepTurno.inicio,almPrepTurno.fim);
+    const a=diffMin((almTurno||{}).inicio,(almTurno||{}).fim);
+    const f=diffMin(almFinalTurno.inicio,almFinalTurno.fim);
+    const total=(p||a||f)!=null?[p,a,f].reduce((s,x)=>s+(x||0),0):null;
+    const quem=almPrepTurno.quemInicio||(almTurno||{}).quemInicio||almFinalTurno.quemInicio||'-';
+    return `<div class="alm-turno" style="margin-top:14px">
+      <div style="width:100%">
+        <div class="tb-lab">Banco de Tempo &mdash; ${DIA_FULL[dcDia]} &middot; ${quem}</div>
+        <div style="font-size:13px;margin-top:6px;line-height:1.9">
+          Preparação: <strong>${fmtDur(p)}</strong> &nbsp;&middot;&nbsp; Almoço: <strong>${fmtDur(a)}</strong> &nbsp;&middot;&nbsp; Finalização: <strong>${fmtDur(f)}</strong><br>
+          Tempo total: <strong>${fmtDur(total)}</strong>
+        </div>
+      </div></div>`;
+  }
   function renderAlmoco(){
     if(!document.getElementById('almGrid')) return;
     const list=ordemAlmoco(turmaDoDia()); const t=almTurno||{};
