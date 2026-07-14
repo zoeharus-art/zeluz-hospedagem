@@ -373,6 +373,11 @@
   /* Plantonista: só AuAulândia e Sair */
   body[data-role="plantonista"] .nav a,body[data-role="plantonista"] .nav .grp,body[data-role="plantonista"] .nav .subnav{display:none !important}
   body[data-role="plantonista"] .nav a[data-v="hospedagem"],body[data-role="plantonista"] .nav a[data-v="sair"]{display:flex !important}
+  /* Escopo restrito por pessoa (ex.: Amanda Barbosa — só o almoço): esconde tudo menos Day Care e Sair */
+  body[data-scope="atividade"] .nav a[data-v="hospedagem"],
+  body[data-scope="atividade"] .nav a[data-v="agenda"],
+  body[data-scope="atividade"] .nav a[data-v="inicio"],
+  body[data-scope="atividade"] .nav a[data-v="hoje"]{display:none !important}
   /* Monitor: sem Operação */
   body[data-role="monitor"] .op-only,body[data-role="monitor"] .grp-operacao,
   body[data-role="aprendiz"] .op-only,body[data-role="aprendiz"] .grp-operacao{display:none !important}
@@ -1645,8 +1650,14 @@
     '0901':{role:'gestao',      nome:'Adriana · Gestão Total', avisoSonoro:true},
     '0902':{role:'gestao',      nome:'Márcia · Gestora', avisoSonoro:true},
     '0912':{role:'supervisor',  nome:'Amanda · Supervisora'},
-    '1002':{role:'aprendiz',    nome:'Monitor Aprendiz'}
+    '1002':{role:'aprendiz',    nome:'Monitor Aprendiz'},
+    '1003':{role:'monitor',     nome:'Amanda Barbosa', atividades:['almoco']}
   };
+  // ===== ESCOPO DE ATIVIDADES POR PESSOA =====
+  // Se o usuário logado tem `atividades:[...]`, ele só enxerga essas atividades do Day Care
+  // e entra direto na primeira delas. Sem o campo = acesso normal (todas as atividades).
+  function usuarioAtual(){ try{ return JSON.parse(sessionStorage.getItem('zeluz_login')||'null'); }catch(e){ return null; } }
+  function atividadesPermitidas(){ const u=usuarioAtual(); return (u&&Array.isArray(u.atividades)&&u.atividades.length)?u.atividades:null; }
   // ===== RELATÓRIO DE SENHAS (só Gestão vê) — gerado do cadastro acima =====
   function renderSenhas(){
     const el=document.getElementById('senhasList'); if(!el) return;
@@ -1687,11 +1698,17 @@
     });
   }
   function aplicarLogin(u){
+    try{ sessionStorage.setItem('zeluz_login', JSON.stringify(u)); }catch(e){} // fonte única do escopo (montarSubnav/abrirAtividade leem daqui)
     document.body.dataset.role=u.role;
     document.getElementById('whoName').textContent=u.nome;
     document.getElementById('loginScreen').style.display='none';
     document.getElementById('loginErr').textContent='';
     try{ selectedDate=new Date(); if(typeof updateDateLabel==='function') updateDateLabel(); }catch(e){} // sempre abre no dia de hoje
+    // Escopo restrito (ex.: monitora só do almoço): esconde o resto e entra direto na atividade
+    const escopo=(Array.isArray(u.atividades)&&u.atividades.length)?u.atividades:null;
+    if(escopo) document.body.dataset.scope='atividade'; else document.body.removeAttribute('data-scope');
+    try{ if(typeof montarSubnav==='function') montarSubnav(); }catch(e){} // sempre remonta (evita subnav preso de outra sessão)
+    if(escopo && typeof abrirAtividade==='function'){ abrirAtividade(escopo[0]); return; }
     const a=document.querySelector('[data-v="hospedagem"]'); if(a) a.click(); // entra direto na AuAulândia
   }
   function logout(){
@@ -2205,16 +2222,21 @@
   function dcDataKey(){ const p=x=>String(x).padStart(2,'0'); const d=new Date(); return d.getFullYear()+'-'+p(d.getMonth()+1)+'-'+p(d.getDate()); }
   function dcKey(name,tutor){ return jsNorm((name||'')+'__'+(tutor||'')).replace(/[.#$\[\]\/ ]/g,'-'); }
   function montarSubnav(){ const sm=document.getElementById('dcSubnav'); if(!sm) return;
-    let h='<div class="subnav-grp">Turminhas</div>';
-    h+=ORDEM_DIAS.map(d=>`<a data-d="${d}" onclick="setDcDia('${d}')">${DIA_FULL[d]}${d===HOJE_DIA?' · hoje':''}</a>`).join('');
+    const escopo=(typeof atividadesPermitidas==='function')?atividadesPermitidas():null;
+    const ativs=escopo?ATIVS_DC.filter(a=>escopo.indexOf(a.s)>=0):ATIVS_DC;
+    let h='';
+    if(!escopo){ // no modo restrito, sem seletor de dia — foco só na atividade
+      h+='<div class="subnav-grp">Turminhas</div>';
+      h+=ORDEM_DIAS.map(d=>`<a data-d="${d}" onclick="setDcDia('${d}')">${DIA_FULL[d]}${d===HOJE_DIA?' · hoje':''}</a>`).join('');
+    }
     h+='<div class="subnav-grp">Atividades</div>';
-    h+=ATIVS_DC.map(a=>`<a data-a="${a.s}" onclick="abrirAtividade('${a.s}')">${a.t}</a>`).join('');
+    h+=ativs.map(a=>`<a data-a="${a.s}" onclick="abrirAtividade('${a.s}')">${a.t}</a>`).join('');
     sm.innerHTML=h;
   }
   function marcarSubnavAtivo(){ document.querySelectorAll('#dcSubnav a').forEach(a=>{ if(a.dataset.d!=null) a.classList.toggle('active', a.dataset.d===dcDia); if(a.dataset.a!=null) a.classList.toggle('active', a.dataset.a===dcAtiv); }); }
   function abrirDayCare(){ const sm=document.getElementById('dcSubnav'); if(sm) sm.style.display='block'; marcarSubnavAtivo(); renderAtual(); }
   function setDcDia(d){ dcDia=d; if(typeof irParaView==='function') irParaView('daycare'); const sm=document.getElementById('dcSubnav'); if(sm) sm.style.display='block'; marcarSubnavAtivo(); renderAtual(); if(typeof closeNav==='function') closeNav(); }
-  function abrirAtividade(slug){ dcAtiv=slug; if(typeof irParaView==='function') irParaView('daycare'); const sm=document.getElementById('dcSubnav'); if(sm) sm.style.display='block'; marcarSubnavAtivo(); renderAtual(); if(typeof closeNav==='function') closeNav(); }
+  function abrirAtividade(slug){ const escopo=(typeof atividadesPermitidas==='function')?atividadesPermitidas():null; if(escopo&&escopo.indexOf(slug)<0) slug=escopo[0]; dcAtiv=slug; if(typeof irParaView==='function') irParaView('daycare'); const sm=document.getElementById('dcSubnav'); if(sm) sm.style.display='block'; marcarSubnavAtivo(); renderAtual(); if(typeof closeNav==='function') closeNav(); }
   function mostrarScr(){ const esp=(dcAtiv==='chamada'||dcAtiv==='almoco'); const a=document.getElementById('scr-chamada'),b=document.getElementById('scr-almoco'),c=document.getElementById('scr-generic'); if(a)a.style.display=dcAtiv==='chamada'?'block':'none'; if(b)b.style.display=dcAtiv==='almoco'?'block':'none'; if(c)c.style.display=esp?'none':'block'; const lbl=document.getElementById('dcAtivLabel'); if(lbl){ const f=ATIVS_DC.find(x=>x.s===dcAtiv); lbl.textContent=f?f.t:'Chamada'; } const dl=document.getElementById('dcDiaLabel'); if(dl) dl.textContent=DIA_FULL[dcDia]; }
   function renderAtual(){ mostrarScr(); if(dcAtiv==='chamada') carregarChamada(); else if(dcAtiv==='almoco') carregarAlmoco(); else carregarGenerico(); if(typeof renderAdaptBanner==='function') renderAdaptBanner(); }
   function turmaDoDia(){
