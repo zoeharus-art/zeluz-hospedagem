@@ -2578,10 +2578,10 @@
   }
   function renderAlmoco(){
     if(!document.getElementById('almGrid')) return;
-    const list=ordemAlmoco(turmaDoDia()); const t=almTurno||{};
+    const list=ordemAlmoco(turmaDoDia()); const t=almTurno||{}; const durAlm=diffMin(t.inicio,t.fim);
     document.getElementById('almTurno').innerHTML=`<div class="alm-turno">
       <div><div class="tb-lab">Almoco - ${DIA_FULL[dcDia]}</div>
-        <div style="font-size:13px;margin-top:3px">Inicio: <strong>${t.inicio||'-'}</strong>${t.quemInicio?' ('+t.quemInicio+')':''} &nbsp;&middot;&nbsp; Fim: <strong>${t.fim||'-'}</strong>${t.quemFim?' ('+t.quemFim+')':''}</div>
+        <div style="font-size:13px;margin-top:3px">Inicio: <strong>${t.inicio||'-'}</strong>${t.quemInicio?' ('+t.quemInicio+')':''} &nbsp;&middot;&nbsp; Fim: <strong>${t.fim||'-'}</strong>${t.quemFim?' ('+t.quemFim+')':''}${durAlm!=null?' &nbsp;&middot;&nbsp; Duração: <strong>'+fmtDur(durAlm)+'</strong>':''}</div>
       </div>
       <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:flex-start">
         <button class="btn btn-gold" onclick="iniciarAlmoco()">&#9654; Iniciar almoco</button>
