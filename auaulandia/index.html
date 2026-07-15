@@ -317,7 +317,7 @@
   /* Passagem de plantão — aguardando recebimento (pisca em vermelho até quem recebe ler e assinar) */
   @keyframes piscaReceb{0%,100%{box-shadow:0 0 0 2px var(--crm-critico);background:rgba(200,40,40,.04)}50%{box-shadow:0 0 0 6px rgba(200,40,40,.5);background:rgba(200,40,40,.13)}}
   .rel-card.aguarda-receb{animation:piscaReceb 1s ease-in-out infinite;border-color:var(--crm-critico) !important}
-  .rel-card.aguarda-receb .rel-head h2::after{content:' — AGUARDANDO RECEBIMENTO';color:var(--crm-critico);font-size:12px;font-weight:800;letter-spacing:.5px}
+  .rel-card.aguarda-receb .rel-head h2::after{content:' — AGUARDANDO ' attr(data-aguarda);color:var(--crm-critico);font-size:12px;font-weight:800;letter-spacing:.5px}
   .receb-box{display:none;margin-top:14px;padding:14px;border:2px dashed var(--crm-critico);border-radius:12px;background:rgba(200,40,40,.05)}
   .rel-card.aguarda-receb .receb-box,.rel-card.receb-done .receb-box{display:block}
   .receb-aviso{font-weight:800;color:var(--crm-critico);margin-bottom:10px}
@@ -1555,8 +1555,11 @@
   // ---- Passagem de plantao: quem passa NAO preenche quem recebeu. O card pisca ate o recebedor ler e assinar ----
   // Dia: Monitora passa -> Plantonista recebe. Jantar: so a Plantonista assina (sem recebedor). Noite: Plantonista passa -> Monitor(a) que pega o plantao recebe.
   const RELSTATE={dia:{passou:'',recebeu:''},inicio:{passou:'',recebeu:''},noite:{passou:'',recebeu:''}};
+  // quem e esperado para receber cada plantao — vira o aviso "AGUARDANDO ..." no titulo do card
+  const QUEM_RECEBE={dia:'PLANTONISTA',noite:'MONITOR(A)'};
   function sincRecebVis(tipo){ const c=document.getElementById('card-'+tipo); if(!c) return;
     const temBox=!!document.getElementById('receb-'+tipo); const st=RELSTATE[tipo]||{};
+    const h2=c.querySelector('.rel-head h2'); if(h2&&QUEM_RECEBE[tipo]) h2.dataset.aguarda=QUEM_RECEBE[tipo];
     c.classList.toggle('aguarda-receb', temBox && !!st.passou && !st.recebeu);
     c.classList.toggle('receb-done', temBox && !!st.recebeu);
     const sr=document.getElementById('status-receb-'+tipo);
