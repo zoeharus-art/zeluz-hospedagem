@@ -2738,8 +2738,27 @@
   function turmaDoDia(){
     const base=PELUDINHOS.map((p,i)=>({p,i})).filter(o=>pelDias(o.p).indexOf(dcDia)>=0 && !pelInativo(o.p));
     dcAvulsos.forEach((a,k)=>base.push({p:{n:a.nome,raca:a.raca||'',tutor:a.tutor||'',freq:'avulso',dias:[dcDia],nasc:''},i:'av'+k,avulso:true}));
+    // A planilha manda: Reposição (não é do dia mas veio hoje) e Avulso (pagou diária)
+    // entram na lista do dia — na chamada e no almoço. Só vale para hoje.
+    if(ehHoje()){
+      const jaTem=new Set(base.map(o=>dcKey(o.p.n,o.p.tutor)));
+      ['reposicao','avulso'].forEach(campo=>{
+        (planDia[campo]||[]).forEach(it=>{
+          if(!it.p) return;
+          const k=dcKey(it.p.n,it.p.tutor);
+          if(jaTem.has(k)||pelInativo(it.p)) return;
+          jaTem.add(k);
+          const i=PELUDINHOS.indexOf(it.p);
+          base.push({ p:it.p, i:(i>=0?i:'pl'+k), daPlanilha:campo });
+        });
+      });
+    }
     return base.sort((x,y)=>jsNorm(x.p.n).localeCompare(jsNorm(y.p.n)));
   }
+  // Falta avisada na planilha: sai do almoço (não adianta servir para quem não veio).
+  function faltouHoje(o){ if(!ehHoje()) return false;
+    const k=dcKey(o.p.n,o.p.tutor);
+    return (planDia.faltas||[]).some(it=>it.p&&dcKey(it.p.n,it.p.tutor)===k); }
   function renderDaycare(){
     if(!document.getElementById('dcGrid')) return;
     const lbl=document.getElementById('dcDiaLabel'); if(lbl) lbl.textContent=DIA_FULL[dcDia];
@@ -2766,7 +2785,7 @@
         const clickFicha=(typeof o.i==='number')?`onclick="abrirPeludinhoDay(${o.i})" style="cursor:pointer"`:'';
         const ribbon=st==='veio'?'<div class="dc-ribbon veio">PRESENTE</div>':(st==='faltou'?'<div class="dc-ribbon faltou">FALTOU</div>':'<div class="dc-ribbon pend">PENDENTE — marque</div>');
         return `<div class="pet dc-card ${st}${o.foraDia?' fora-dia':''}">
-          ${ribbon}${alerta}${o.foraDia?seloForaDia(o):seloAdapt(ex)}
+          ${ribbon}${alerta}${o.daPlanilha?seloPlanilha(o):(o.foraDia?seloForaDia(o):seloAdapt(ex))}
           <div ${clickFicha}>
             ${ph}
             <div class="nm">${(typeof o.i==='number')?pelNome(p):p.n}</div>
@@ -2794,7 +2813,9 @@
       Promise.all([
         DB.ref('daycare/chamada/'+dcDataKey()).once('value').then(s=>{ dcChamada=s.val()||{}; }).catch(()=>{}),
         DB.ref('daycare/avulsos/'+dcDataKey()).once('value').then(s=>{ dcAvulsos=Object.values(s.val()||{}); }).catch(()=>{}),
-        DB.ref('daycare/banho/'+dcDataKey()).once('value').then(s=>{ dcBanho=s.val()||{}; }).catch(()=>{})
+        DB.ref('daycare/banho/'+dcDataKey()).once('value').then(s=>{ dcBanho=s.val()||{}; }).catch(()=>{}),
+        // a chamada precisa dos que a planilha trouxe: Reposição e Avulso
+        carregarPlanilhaDia().catch(()=>{})
       ]).then(renderDaycare).catch(renderDaycare);
     } else renderDaycare();
   }
@@ -3011,6 +3032,10 @@
       .filter(o=>!pelInativo(o.p) && !jaTem.has(dcKey(o.p.n,o.p.tutor)) && casaBusca(o,q))
       .sort((x,y)=>jsNorm(x.p.n).localeCompare(jsNorm(y.p.n)));
     return dentro.concat(fora); }
+  // veio por Reposição ou Avulso (a planilha trouxe) — a monitora precisa saber que ele
+  // não é da turma fixa do dia
+  function seloPlanilha(o){ if(!o||!o.daPlanilha) return '';
+    return '<span class="mini-fora">'+(o.daPlanilha==='avulso'?'AVULSO':'REPOSICAO')+'</span>'; }
   function seloForaDia(o){ return o&&o.foraDia?`<span class="mini-fora">NAO E DE ${(DIA_LBL[dcDia]||'HOJE').toUpperCase()}</span>`:''; }
   function onDcBusca(){ const el=document.getElementById('dcBusca'); dcBuscaVal=el?el.value:''; if(dcAtiv==='chamada')renderDaycare(); else if(dcAtiv==='almoco')renderAlmoco(); else renderGenerico(); }
   function carregarGenerico(){ genMarcas={};
@@ -3192,7 +3217,9 @@
     // que o peludinho foi esquecido.
     const turma=turmaDoDia();
     const foraList=turma.filter(o=>typeof o.i==='number'&&naoAlmoca(o.p));
-    const list=ordemAlmoco(turma.filter(o=>!(typeof o.i==='number'&&naoAlmoca(o.p))));
+    const faltouList=turma.filter(o=>faltouHoje(o)); // falta avisada na planilha
+    const fora=o=>(typeof o.i==='number'&&naoAlmoca(o.p))||faltouHoje(o);
+    const list=ordemAlmoco(turma.filter(o=>!fora(o)));
     const t=almTurno||{}; const durAlm=diffMin(t.inicio,t.fim);
     document.getElementById('almTurno').innerHTML=`<div class="alm-turno">
       <div><div class="tb-lab">Almoco - ${DIA_FULL[dcDia]}</div>
@@ -3213,6 +3240,7 @@
       </div>
       ${naoList.length?`<div class="dc-faltas"><strong>NAO COMERAM - vao para o 2&ordm; horario (${naoList.length}):</strong> ${naoList.join(', ')}</div>`:''}
       ${metList.length?`<div class="dc-meia"><strong>COMERAM METADE (${metList.length}):</strong> ${metList.join(', ')}</div>`:''}
+      ${faltouList.length?`<div class="alm-fora"><strong>FALTARAM HOJE (${faltouList.length}):</strong> ${faltouList.map(o=>nomeDesamb(o,faltouList)).join(', ')} &mdash; a planilha avisou a falta, entao sairam do almoco.</div>`:''}
       ${foraList.length?`<div class="alm-fora"><strong>NAO ALMOCAM (${foraList.length}):</strong> ${foraList.map(o=>nomeDesamb(o,foraList)).join(', ')} &mdash; fora da lista de propósito, nao precisa servir.</div>`:''}
       ${!ehHoje()?`<div class="dc-meia"><strong>Você está vendo a turma de ${DIA_FULL[dcDia]}, que não é hoje.</strong> Isto é só planejamento: o almoço se marca no dia em que acontece. Para registrar, volte para ${DIA_FULL[HOJE_DIA]} (hoje).</div>`:''}
       ${avisoPlanilha()}
@@ -3241,7 +3269,7 @@
         <div ${typeof o.i==='number'?`onclick="abrirPeludinhoDay(${o.i})" style="cursor:pointer"`:''}>
           ${ph}<div class="nm">${nomeDesamb(o,list)}</div><div class="br">${p.raca||'-'}</div>
         </div>
-        ${seloBanho(k)}${seloAnsioso(p,temBanho(k))}${o.foraDia?seloForaDia(o):seloAdapt(ex)}${neon}${info}
+        ${seloBanho(k)}${seloAnsioso(p,temBanho(k))}${o.daPlanilha?seloPlanilha(o):(o.foraDia?seloForaDia(o):seloAdapt(ex))}${neon}${info}
         <div class="dc-actions alm-actions">
           <button class="alm-btn tudo ${m==='tudo'?'on':''}" onclick="marcarAlmoco('${k}','tudo')">Comeu tudo</button>
           <button class="alm-btn metade ${m==='metade'?'on':''}" onclick="marcarAlmoco('${k}','metade')">Metade</button>
