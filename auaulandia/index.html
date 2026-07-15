@@ -395,8 +395,7 @@
   /* Escopo restrito por pessoa (ex.: Amanda Barbosa — só o almoço): esconde tudo menos Day Care e Sair */
   body[data-scope="atividade"] .nav a[data-v="hospedagem"],
   body[data-scope="atividade"] .nav a[data-v="agenda"],
-  body[data-scope="atividade"] .nav a[data-v="inicio"],
-  body[data-scope="atividade"] .nav a[data-v="hoje"]{display:none !important}
+  body[data-scope="atividade"] .nav a[data-v="inicio"]{display:none !important}
   /* Monitor: sem Operação */
   body[data-role="monitor"] .op-only,body[data-role="monitor"] .grp-operacao,
   body[data-role="aprendiz"] .op-only,body[data-role="aprendiz"] .grp-operacao{display:none !important}
@@ -423,6 +422,11 @@
   .dc-meia{background:rgba(222,180,40,.14);border:1.5px solid rgba(222,180,40,.5);color:var(--z-blue);border-radius:11px;padding:11px 15px;font-size:14px;font-weight:600;margin-bottom:10px}
   /* não almoçam — informativo: saíram da fila de propósito */
   .alm-fora{background:rgba(35,77,103,.08);border:1.5px dashed rgba(35,77,103,.35);color:var(--z-blue);border-radius:11px;padding:11px 15px;font-size:13.5px;font-weight:600;margin-bottom:10px}
+  /* legenda da ordem de servir — a lista não é alfabética, é por ordem de servir */
+  .alm-legenda{background:var(--z-cream-warm);border:1.5px solid var(--line);border-radius:11px;padding:10px 14px;font-size:12.5px;color:var(--z-blue);margin-bottom:10px;line-height:1.7}
+  .alm-legenda .lg-g{display:inline-block;background:var(--z-cream);border:1px solid var(--line);border-radius:999px;padding:2px 10px;margin:0 4px;font-weight:600}
+  .alm-legenda .lg-g b{color:var(--z-gold);font-weight:800}
+  .alm-legenda .lg-nota{display:block;margin-top:5px;font-size:11.5px;color:var(--muted)}
   /* achado pela busca mas não é da turma do dia (reposição, avulso, urgência) */
   .mini-fora{position:absolute;top:8px;right:8px;font-size:9.5px;font-weight:800;color:var(--z-cream);background:var(--z-daycare,#E08856);padding:3px 8px;border-radius:8px;z-index:3;letter-spacing:.3px}
   .alm-card .mini-fora,.dc-card .mini-fora{top:32px}
@@ -701,7 +705,6 @@
   <nav class="nav" id="nav">
     <div class="grp grp-operacao">Operação</div>
     <a class="active op-only" data-v="inicio"><span data-icon="home"></span><span>Início</span></a>
-    <a class="op-only" data-v="hoje"><span data-icon="clock"></span><span>Linha do Tempo</span></a>
     <div class="grp">Serviços</div>
     <a data-v="daycare" class="so-day"><span data-icon="sun"></span><span>Day Care</span></a>
     <a data-v="abertura" class="so-abertura"><span data-icon="sun"></span><span>Atividades Monitor 1</span></a>
@@ -831,20 +834,6 @@
   </section>
 
   <!-- ===== LINHA DO TEMPO ===== -->
-  <section class="view" id="v-hoje">
-    <div class="card">
-      <h2>Linha do tempo · Amora</h2>
-      <div class="hint">Quarta, 04 de junho de 2026</div>
-      <div class="tl">
-        <div class="tl-item"><div class="dot"></div><div class="hora">07:33</div><div class="ac">Check-in Day Care</div></div>
-        <div class="tl-item"><div class="dot" style="background:var(--z-vetcare)"></div><div class="hora">09:00</div><div class="ac">Aucademia · jogos cognitivos</div></div>
-        <div class="tl-item"><div class="dot" style="background:var(--z-emporio)"></div><div class="hora">12:00</div><div class="ac">Almoço: <em>comeu tudo</em></div></div>
-        <div class="tl-item"><div class="dot" style="background:var(--z-spa)"></div><div class="hora">15:35</div><div class="ac">Massagem dessensibilizadora</div></div>
-        <div class="tl-item"><div class="dot" style="background:var(--z-auaulandia)"></div><div class="hora">15:40</div><div class="ac">Hidratação</div></div>
-        <div class="tl-item"><div class="dot"></div><div class="hora">18:15</div><div class="ac">Check-out Day Care</div></div>
-      </div>
-    </div>
-  </section>
 
   <!-- ===== PLACEHOLDERS ===== -->
   <section class="view" id="v-daycare">
@@ -1240,7 +1229,7 @@
   updateDateLabel();
 
   const titles={inicio:['Início','Visão geral do dia'],ficha:['Peludinhos','Matriculados'],
-    hoje:['Linha do Tempo','O dia do peludinho'],adaptacao:['Adaptação · 1º mês','Como está se adaptando'],
+    adaptacao:['Adaptação · 1º mês','Como está se adaptando'],
     daycare:['Day Care','Chamada e atividades'],hospedagem:['AuAulândia','Passagem de plantão'],
     agenda:['Agenda','Frequência e reservas'],pessoas:['Pessoas & Turnos','Equipe e tarefas'],
     painel:['Painel do Dia','Auditoria e cumprimento de protocolos'],
@@ -2014,8 +2003,18 @@
     const escopo=(Array.isArray(u.atividades)&&u.atividades.length)?u.atividades:null;
     if(escopo) document.body.dataset.scope='atividade'; else document.body.removeAttribute('data-scope');
     try{ if(typeof montarSubnav==='function') montarSubnav(); }catch(e){} // sempre remonta (evita subnav preso de outra sessão)
+    // Quem tem escopo restrito (ex.: Amanda Barbosa, só almoço) cai direto na atividade dela.
     if(escopo && typeof abrirAtividade==='function'){ abrirAtividade(escopo[0]); return; }
-    const a=document.querySelector('[data-v="hospedagem"]'); if(a) a.click(); // entra direto na AuAulândia
+    // Cada perfil cai na tela onde trabalha. Antes todo mundo caía na AuAulândia — a Gestão
+    // tinha de navegar até o Início toda vez.
+    const v=telaInicialDe(u);
+    const a=document.querySelector('[data-v="'+v+'"]'); if(a) a.click();
+  }
+  // Gestão e Supervisão abrem no Início (visão do dia); quem é da operação abre na AuAulândia.
+  function telaInicialDe(u){
+    const r=((u&&u.role)||'').toLowerCase();
+    if(r==='gestao'||r==='supervisor') return 'inicio';
+    return 'hospedagem'; // plantonista, monitor, aprendiz
   }
   function logout(){
     sessionStorage.removeItem('zeluz_login');
@@ -3057,7 +3056,11 @@
       ${naoList.length?`<div class="dc-faltas"><strong>NAO COMERAM - vao para o 2&ordm; horario (${naoList.length}):</strong> ${naoList.join(', ')}</div>`:''}
       ${metList.length?`<div class="dc-meia"><strong>COMERAM METADE (${metList.length}):</strong> ${metList.join(', ')}</div>`:''}
       ${foraList.length?`<div class="alm-fora"><strong>NAO ALMOCAM (${foraList.length}):</strong> ${foraList.map(o=>nomeDesamb(o,foraList)).join(', ')} &mdash; fora da lista de propósito, nao precisa servir.</div>`:''}
-      ${!ehHoje()?`<div class="dc-meia"><strong>Você está vendo a turma de ${DIA_FULL[dcDia]}, que não é hoje.</strong> Isto é só planejamento: o almoço se marca no dia em que acontece. Para registrar, volte para ${DIA_FULL[HOJE_DIA]} (hoje).</div>`:''}`;
+      ${!ehHoje()?`<div class="dc-meia"><strong>Você está vendo a turma de ${DIA_FULL[dcDia]}, que não é hoje.</strong> Isto é só planejamento: o almoço se marca no dia em que acontece. Para registrar, volte para ${DIA_FULL[HOJE_DIA]} (hoje).</div>`:''}
+      <div class="alm-legenda"><strong>Ordem de servir</strong> &mdash; a lista já vem nesta ordem, de cima para baixo:
+        <span class="lg-g"><b>1º</b> quem tem banho</span><span class="lg-g"><b>2º</b> comedouro lento</span><span class="lg-g"><b>3º</b> comida natural/geladeira</span><span class="lg-g"><b>4º</b> os outros</span>
+        <span class="lg-nota">Dentro de cada grupo, alfabética. Por isso um peludinho de comida natural aparece depois de um "S" — não é erro.</span>
+      </div>`;
     const faltam=list.filter(o=>!jaComeu(o)).length;
     document.getElementById('almCount').textContent=faltam
       ? `Faltam ${faltam} de ${list.length} — os já servidos vão para o fim da lista`
