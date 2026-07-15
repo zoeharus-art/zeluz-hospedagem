@@ -428,6 +428,8 @@
   .alm-legenda .lg-g b{color:var(--z-gold);font-weight:800}
   .alm-legenda .lg-nota{display:block;margin-top:5px;font-size:11.5px;color:var(--muted)}
   /* achado pela busca mas não é da turma do dia (reposição, avulso, urgência) */
+  /* contagem de matriculados por dia na subnav (só Gestão/Supervisão) */
+  .dia-n{float:right;background:var(--z-gold);color:var(--z-blue);font-size:10.5px;font-weight:800;border-radius:999px;padding:1px 7px;margin-left:6px}
   .mini-fora{position:absolute;top:8px;right:8px;font-size:9.5px;font-weight:800;color:var(--z-cream);background:var(--z-daycare,#E08856);padding:3px 8px;border-radius:8px;z-index:3;letter-spacing:.3px}
   .alm-card .mini-fora,.dc-card .mini-fora{top:32px}
   .pet.fora-dia{outline:2px dashed rgba(224,136,86,.55);outline-offset:2px}
@@ -2274,6 +2276,10 @@
   // Inativar, nunca excluir: "quero todo o banco de dados sempre". Quem saiu (Bud e Stella —
   // brigas) ou faleceu sai das listas do dia, mas o cadastro e o histórico ficam inteiros.
   function pelInativo(p){ const ex=pelExtra(p); return !!(ex&&ex.inativo==='Sim'); }
+  // Quantos aulunos estão matriculados em cada dia — só Gestão e Supervisão (Adriana, Márcia,
+  // Amanda). Para o monitor seria ruído; para elas é ocupação da turma.
+  function vePorDia(){ const r=(document.body.dataset.role||''); return r==='gestao'||r==='supervisor'; }
+  function nMatriculados(d){ return PELUDINHOS.filter(p=>!pelInativo(p)&&pelDias(p).indexOf(d)>=0).length; }
   const ORDEM_DIAS=['seg','ter','qua','qui','sex'];
   const DIA_LBL={seg:'Seg',ter:'Ter',qua:'Qua',qui:'Qui',sex:'Sex'};
   const DIA_FULL={seg:'Segunda',ter:'Terça',qua:'Quarta',qui:'Quinta',sex:'Sexta'};
@@ -2585,7 +2591,8 @@
     let h='';
     if(!escopo){ // no modo restrito, sem seletor de dia — foco só na atividade
       h+='<div class="subnav-grp">Turminhas</div>';
-      h+=ORDEM_DIAS.map(d=>`<a data-d="${d}" onclick="setDcDia('${d}')">${DIA_FULL[d]}${d===HOJE_DIA?' · hoje':''}</a>`).join('');
+      // Nº de matriculados por dia — só Gestão e Supervisão veem (decisão de Adriana).
+      h+=ORDEM_DIAS.map(d=>`<a data-d="${d}" onclick="setDcDia('${d}')">${DIA_FULL[d]}${d===HOJE_DIA?' · hoje':''}${vePorDia()?`<span class="dia-n">${nMatriculados(d)}</span>`:''}</a>`).join('');
     }
     h+='<div class="subnav-grp">Atividades</div>';
     h+=ativs.map(a=>`<a data-a="${a.s}" onclick="abrirAtividade('${a.s}')">${a.t}</a>`).join('');
