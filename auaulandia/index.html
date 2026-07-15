@@ -2577,7 +2577,7 @@
   // ===== DAY CARE — chamada visual a prova de burros (Aulunos do dia) =====
   const HOJE_DIA=(()=>{ const d=new Date().getDay(); return (d>=1&&d<=5)?ORDEM_DIAS[d-1]:'seg'; })();
   let dcDia=HOJE_DIA, dcChamada={}, dcAvulsos=[], dcAtiv='chamada';
-  const ATIVS_DC=[{s:'checkin-corpo',t:'Check-in do corpo'},{s:'checkin-pert',t:'Check-in dos pertences'},{s:'chamada',t:'Chamada',esp:1},{s:'livre',t:'Atividade livre'},{s:'ea',t:'Enriquecimento Ambiental (EA)'},{s:'aucademia',t:'Aucademia'},{s:'almoco',t:'Almoço',esp:1},{s:'massagem',t:'Massagem Dessensibilizadora'},{s:'jogos',t:'Jogos Cognitivos'},{s:'aulinha',t:'Aulinha de Disciplina'},{s:'agility',t:'Agility Funcional'},{s:'musicoterapia',t:'Musicoterapia'},{s:'checkout-pert',t:'Check-out dos pertences'},{s:'checkout-corpo',t:'Check-out do corpinho'}];
+  const ATIVS_DC=[{s:'checkin-corpo',t:'Check-in do corpo'},{s:'checkin-pert',t:'Check-in dos pertences'},{s:'chamada',t:'Chamada',esp:1},{s:'livre',t:'Atividade livre'},{s:'ea',t:'Enriquecimento Ambiental (EA)'},{s:'aucademia',t:'Aucademia'},{s:'almoco',t:'Almoço',esp:1},{s:'almoco2',t:'2º Horário de Almoço'},{s:'massagem',t:'Massagem Dessensibilizadora'},{s:'jogos',t:'Jogos Cognitivos'},{s:'aulinha',t:'Aulinha de Disciplina'},{s:'agility',t:'Agility Funcional'},{s:'musicoterapia',t:'Musicoterapia'},{s:'checkout-pert',t:'Check-out dos pertences'},{s:'checkout-corpo',t:'Check-out do corpinho'}];
   function dcDataKey(){ const p=x=>String(x).padStart(2,'0'); const d=new Date(); return d.getFullYear()+'-'+p(d.getMonth()+1)+'-'+p(d.getDate()); }
   function dcKey(name,tutor){ return jsNorm((name||'')+'__'+(tutor||'')).replace(/[.#$\[\]\/ ]/g,'-'); }
   function montarSubnav(){ const sm=document.getElementById('dcSubnav'); if(!sm) return;
@@ -2874,16 +2874,41 @@
     return dentro.concat(fora); }
   function seloForaDia(o){ return o&&o.foraDia?`<span class="mini-fora">NAO E DE ${(DIA_LBL[dcDia]||'HOJE').toUpperCase()}</span>`:''; }
   function onDcBusca(){ const el=document.getElementById('dcBusca'); dcBuscaVal=el?el.value:''; if(dcAtiv==='chamada')renderDaycare(); else if(dcAtiv==='almoco')renderAlmoco(); else renderGenerico(); }
-  function carregarGenerico(){ genMarcas={}; if(DB){ DB.ref('daycare/atividade/'+dcDataKey()+'/'+dcAtiv).once('value').then(s=>{ genMarcas=s.val()||{}; }).then(renderGenerico).catch(renderGenerico); } else renderGenerico(); }
+  function carregarGenerico(){ genMarcas={};
+    if(!DB){ renderGenerico(); return; }
+    // o 2º horário se monta a partir de quem não comeu, então precisa das marcações do
+    // almoço — que só eram carregadas na tela do Almoço (a lista viria vazia aqui).
+    const jobs=[ DB.ref('daycare/atividade/'+dcDataKey()+'/'+dcAtiv).once('value').then(s=>{ genMarcas=s.val()||{}; }) ];
+    if(ehAlmoco2()) jobs.push( DB.ref('daycare/almoco/'+dcDataKey()).once('value').then(s=>{ almMarcas=s.val()||{}; }) );
+    Promise.all(jobs).then(renderGenerico).catch(renderGenerico); }
   function marcarGenerico(k){ const cur=genMarcas[k]; const nx=(cur==='feito')?'':'feito'; if(nx) genMarcas[k]=nx; else delete genMarcas[k]; if(DB) DB.ref('daycare/atividade/'+dcDataKey()+'/'+dcAtiv+'/'+k).set(nx||null).catch(()=>{}); if(typeof audit==='function'&&nx) audit('atividade', (nomeAtiv(dcAtiv)||dcAtiv)+': feito', {alvo:k, slug:dcAtiv}); renderGenerico(); }
   function nomeAtiv(slug){ try{ const a=(typeof ATIVS_DC!=='undefined'?ATIVS_DC:[]).find(x=>x.s===slug); return a?a.t:slug; }catch(e){ return slug; } }
+  // 2º Horário de Almoço (Monitor: Octávio) — recebe só quem NÃO comeu no 1º horário.
+  // Trazer a turma inteira faria o monitor procurar quem precisa entre dezenas de cards.
+  const MONITOR_ALMOCO2='Octávio';
+  function ehAlmoco2(){ return dcAtiv==='almoco2'; }
+  function listaSegundoHorario(){ return turmaDoDia().filter(o=>marcaDe(o)==='nao'); }
+  // Lista para a Consultora avisar os tutores: quem não comeu e quem comeu metade.
+  function avisoAlmoco2(list){
+    const met=turmaDoDia().filter(o=>marcaDe(o)==='metade');
+    const nomes=a=>a.map(o=>nomeDesamb(o,turmaDoDia())).join(', ');
+    let h=`<div class="dc-meia"><strong>Monitor do 2º horário: ${MONITOR_ALMOCO2}.</strong> Aqui estão só os que não comeram no 1º horário.</div>`;
+    if(!ehHoje()) return `<div class="dc-meia"><strong>Você está vendo ${DIA_FULL[dcDia]}, que não é hoje.</strong> O 2º horário é do dia em que acontece.</div>`;
+    if(list.length) h+=`<div class="dc-faltas"><strong>AVISAR OS TUTORES &mdash; nao comeram (${list.length}):</strong> ${nomes(list)}</div>`;
+    if(met.length) h+=`<div class="dc-meia"><strong>AVISAR OS TUTORES &mdash; comeram metade (${met.length}):</strong> ${nomes(met)}</div>`;
+    if(!list.length&&!met.length) h+=`<div class="alm-fora">Ninguem ficou para o 2º horário e ninguem comeu metade &mdash; nada para avisar aos tutores.</div>`;
+    return h;
+  }
   function renderGenerico(){
     if(!document.getElementById('genGrid')) return;
-    const list=turmaDoDia(); let feito=0;
+    const list=ehAlmoco2()?listaSegundoHorario():turmaDoDia(); let feito=0;
     list.forEach(o=>{ if(genMarcas[dcKey(o.p.n,o.p.tutor)]==='feito')feito++; });
     const f=ATIVS_DC.find(a=>a.s===dcAtiv);
-    document.getElementById('genResumo').innerHTML=`<div class="dc-resumo"><div class="dc-stat ok"><b>${feito}</b>feito</div><div class="dc-stat pend"><b>${list.length-feito}</b>pendente</div></div>`;
-    document.getElementById('genCount').textContent=`${list.length} aulunos · ${f?f.t:''}`;
+    document.getElementById('genResumo').innerHTML=`<div class="dc-resumo"><div class="dc-stat ok"><b>${feito}</b>feito</div><div class="dc-stat pend"><b>${list.length-feito}</b>pendente</div></div>`
+      +(ehAlmoco2()?avisoAlmoco2(list):'');
+    document.getElementById('genCount').textContent=ehAlmoco2()
+      ? (list.length?`${list.length} para o 2º horário — nao comeram no 1º`:'Ninguem ficou para o 2º horário')
+      : `${list.length} aulunos · ${f?f.t:''}`;
     document.getElementById('genGrid').innerHTML=filtraLista(list).map(o=>{ const p=o.p; const ex=(typeof o.i==='number')?pelExtra(p):{}; const foto=ex.foto; const k=dcKey(p.n,p.tutor); const ok=genMarcas[k]==='feito';
       const restr=(ex.restricao||ex.alergia)?`<span class="mini-alert">RESTRICAO</span>`:'';
       const ph=foto?`<div class="ph" style="background-image:url('${foto}');background-size:cover;background-position:center"></div>`:`<div class="ph" style="background:${corPel(typeof o.i==='number'?o.i:0)}">${(p.n[0]||'?')}</div>`;
