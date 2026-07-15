@@ -314,6 +314,16 @@
   body[data-role="gestao"] .so-supervisor-only{display:none !important}
   /* abas internas de Pessoas (handler próprio, não colide com a Ficha) */
   .ppanel{display:none}.ppanel.active{display:block}
+  /* Passagem de plantão — aguardando recebimento (pisca em vermelho até quem recebe ler e assinar) */
+  @keyframes piscaReceb{0%,100%{box-shadow:0 0 0 2px var(--crm-critico);background:rgba(200,40,40,.04)}50%{box-shadow:0 0 0 6px rgba(200,40,40,.5);background:rgba(200,40,40,.13)}}
+  .rel-card.aguarda-receb{animation:piscaReceb 1s ease-in-out infinite;border-color:var(--crm-critico) !important}
+  .rel-card.aguarda-receb .rel-head h2::after{content:' — AGUARDANDO RECEBIMENTO';color:var(--crm-critico);font-size:12px;font-weight:800;letter-spacing:.5px}
+  .receb-box{display:none;margin-top:14px;padding:14px;border:2px dashed var(--crm-critico);border-radius:12px;background:rgba(200,40,40,.05)}
+  .rel-card.aguarda-receb .receb-box,.rel-card.receb-done .receb-box{display:block}
+  .receb-aviso{font-weight:800;color:var(--crm-critico);margin-bottom:10px}
+  .rel-card.receb-done .receb-box{border:2px solid var(--crm-ok);background:rgba(20,140,90,.06)}
+  .rel-card.receb-done .receb-aviso{display:none}
+  .rel-card.receb-done .rel-head h2::after{content:' — RECEBIDO';color:var(--crm-ok);font-size:12px;font-weight:800;letter-spacing:.5px}
 
   /* ===== tabela de Peludinhos (turma) ===== */
   .pel-toolbar{display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin-bottom:14px}
@@ -941,7 +951,17 @@
         <div class="obsline"><span class="q">Coleira repelente?</span><div class="seg" data-single><button data-tone="ok" onclick="pick(this)">Sim</button><button data-tone="warn" onclick="pick(this)">Não</button></div></div>
         <div class="obsline"><span class="q">Coleira de identificação?</span><div class="seg" data-single><button data-tone="ok" onclick="pick(this)">Sim</button><button data-tone="warn" onclick="pick(this)">Não</button></div></div>
         <div class="field" style="margin-top:14px"><label>Observação</label><textarea style="width:100%;font-family:var(--font-ui);font-size:14px;padding:12px;border:1.5px solid var(--line);border-radius:11px;background:var(--z-cream);min-height:70px" placeholder="Algo do dia que seja importante"></textarea></div>
-        <div class="rel-assina"><div class="grid2"><div class="field"><label>Quem passou — Monitora (assina) *</label><input id="passou-dia" class="cad-in"></div><div class="field"><label>Quem recebeu / vai pegar o plantão (assina) *</label><input id="recebeu-dia" class="cad-in"></div></div><div class="actions"><button class="btn btn-primary" onclick="salvarRelatorioCard('dia')">Salvar relatório do dia</button></div><div id="status-dia" class="rel-status"></div></div>
+        <div class="rel-assina">
+          <div class="field"><label>Quem passou — Monitora (assina) *</label><input id="passou-dia" class="cad-in"></div>
+          <div class="actions"><button class="btn btn-primary" onclick="salvarRelatorioCard('dia')">Passar plantão (salvar)</button></div>
+          <div id="status-dia" class="rel-status"></div>
+          <div class="receb-box" id="receb-dia">
+            <div class="receb-aviso">🔴 Aguardando o Plantonista LER e assinar o recebimento — um por um.</div>
+            <div class="field"><label>Quem recebeu — Plantonista (lê e assina)</label><input id="recebeu-dia" class="cad-in"></div>
+            <div class="actions"><button class="btn btn-gold" onclick="confirmarRecebimento('dia')">Li tudo — confirmar recebimento</button></div>
+            <div id="status-receb-dia" class="rel-status"></div>
+          </div>
+        </div>
         </div>
       </div>
 
@@ -963,7 +983,7 @@
         <div class="obsline"><span class="q">Tem suplementação?</span><div class="seg" data-single><button data-tone="ok" onclick="pick(this);onMedQ(this)">Não</button><button data-tone="warn" onclick="pick(this);onMedQ(this)">Sim</button></div></div>
         <div class="medgrid-slot" data-kind="sup"></div>
         <div class="field"><label>Observação do início do plantão</label><textarea class="cad-in" style="min-height:60px" placeholder="Algo importante na chegada"></textarea></div>
-        <div class="rel-assina"><div class="grid2"><div class="field"><label>Quem passou o plantão (assina) *</label><input id="passou-inicio" class="cad-in"></div><div class="field"><label>Quem recebeu — Plantonista (assina) *</label><input id="recebeu-inicio" class="cad-in"></div></div><div class="actions"><button class="btn btn-primary" onclick="salvarRelatorioCard('inicio')">Salvar o jantar (início do plantão)</button></div><div id="status-inicio" class="rel-status"></div></div>
+        <div class="rel-assina"><div class="field"><label>Quem fez o jantar — Plantonista (assina) *</label><input id="passou-inicio" class="cad-in"></div><div class="actions"><button class="btn btn-primary" onclick="salvarRelatorioCard('inicio')">Salvar o jantar (início do plantão)</button></div><div id="status-inicio" class="rel-status"></div></div>
         </div>
       </div>
 
@@ -987,7 +1007,17 @@
         <div class="obsline"><span class="q">Tem suplementação?</span><div class="seg" data-single><button data-tone="ok" onclick="pick(this);onMedQ(this)">Não</button><button data-tone="warn" onclick="pick(this);onMedQ(this)">Sim</button></div></div>
         <div class="medgrid-slot" data-kind="sup"></div>
         <div class="field" style="margin-top:14px"><label>Observação</label><textarea style="width:100%;font-family:var(--font-ui);font-size:14px;padding:12px;border:1.5px solid var(--line);border-radius:11px;background:var(--z-cream);min-height:70px" placeholder="Algo da noite que seja importante e não foi perguntado"></textarea></div>
-        <div class="rel-assina"><div class="grid2"><div class="field"><label>Quem passou o plantão — Plantonista (assina) *</label><input id="passou-noite" class="cad-in"></div><div class="field"><label>Quem recebeu (assina) *</label><input id="recebeu-noite" class="cad-in"></div></div><div class="actions"><button class="btn btn-primary" onclick="salvarRelatorioCard('noite')">OK, li tudo — salvar</button></div><div id="status-noite" class="rel-status"></div></div>
+        <div class="rel-assina">
+          <div class="field"><label>Quem passou o plantão — Plantonista (assina) *</label><input id="passou-noite" class="cad-in"></div>
+          <div class="actions"><button class="btn btn-primary" onclick="salvarRelatorioCard('noite')">Passar plantão (salvar)</button></div>
+          <div id="status-noite" class="rel-status"></div>
+          <div class="receb-box" id="receb-noite">
+            <div class="receb-aviso">🔴 Aguardando quem vai pegar o plantão LER e assinar o recebimento — um por um.</div>
+            <div class="field"><label>Quem recebeu — Monitor(a) que pega o plantão (lê e assina)</label><input id="recebeu-noite" class="cad-in"></div>
+            <div class="actions"><button class="btn btn-gold" onclick="confirmarRecebimento('noite')">Li tudo — confirmar recebimento</button></div>
+            <div id="status-receb-noite" class="rel-status"></div>
+          </div>
+        </div>
         </div>
       </div>
 
@@ -1521,7 +1551,28 @@
       el.style.display='block'; el.innerHTML='⚠ <strong>'+((currentHosp&&currentHosp.nome)||'Este FILHOt')+'</strong> teve <strong>medicação registrada nesta estadia</strong> (dia '+medHistEstadia.quando+'). '+(hoje?'Continue registrando o horário e a quantidade.':'Se ainda toma, registre. Se acabou ou foi suspenso, confirme ao salvar.'); }
     else { el.style.display='none'; el.innerHTML=''; } }
   function coletarCard(cardId){ const byQ={}; document.querySelectorAll('#'+cardId+' .obsline').forEach(l=>{ const q=l.querySelector('.q'); const on=l.querySelector('button.on'); if(q) byQ[q.textContent.trim()]= on?on.textContent.trim():''; }); const areas=[]; const byArea={}; document.querySelectorAll('#'+cardId+' textarea').forEach(t=>{ areas.push(t.value||''); const ph=(t.placeholder||'').toLowerCase(); if(ph.indexOf('medicamento')>=0) byArea.medicamento=t.value||''; else if(ph.indexOf('suplemento')>=0) byArea.suplemento=t.value||''; }); const mg=coletarMedgrids(cardId); return {byQ:byQ,areas:areas,byArea:byArea,meds:mg.med,sups:mg.sup}; }
-  function aplicarCard(cardId,d){ d=d||{}; const byQ=d.byQ||{}; document.querySelectorAll('#'+cardId+' .obsline').forEach(l=>{ const q=l.querySelector('.q'); const val=q?byQ[q.textContent.trim()]:''; l.querySelectorAll('button').forEach(b=>{ b.classList.remove('on','t-ok','t-bad','t-warn'); if(val&&b.textContent.trim()===val){ b.classList.add('on'); if(b.dataset.tone) b.classList.add('t-'+b.dataset.tone);} }); }); const areas=d.areas||[]; document.querySelectorAll('#'+cardId+' textarea').forEach((t,i)=>t.value=areas[i]||''); const tipo=cardId.replace('card-',''); const sp=document.getElementById('passou-'+tipo); if(sp) sp.value=d.passou||''; const sr=document.getElementById('recebeu-'+tipo); if(sr) sr.value=d.recebeu||''; aplicarMedgrids(cardId,d); sincVomVis(cardId); sincCocoVis(cardId); sincXixiVis(cardId); }
+  function aplicarCard(cardId,d){ d=d||{}; const byQ=d.byQ||{}; document.querySelectorAll('#'+cardId+' .obsline').forEach(l=>{ const q=l.querySelector('.q'); const val=q?byQ[q.textContent.trim()]:''; l.querySelectorAll('button').forEach(b=>{ b.classList.remove('on','t-ok','t-bad','t-warn'); if(val&&b.textContent.trim()===val){ b.classList.add('on'); if(b.dataset.tone) b.classList.add('t-'+b.dataset.tone);} }); }); const areas=d.areas||[]; document.querySelectorAll('#'+cardId+' textarea').forEach((t,i)=>t.value=areas[i]||''); const tipo=cardId.replace('card-',''); const sp=document.getElementById('passou-'+tipo); if(sp) sp.value=d.passou||''; const sr=document.getElementById('recebeu-'+tipo); if(sr) sr.value=d.recebeu||''; aplicarMedgrids(cardId,d); sincVomVis(cardId); sincCocoVis(cardId); sincXixiVis(cardId); RELSTATE[tipo]={passou:d.passou||'',recebeu:d.recebeu||''}; sincRecebVis(tipo); }
+  // ---- Passagem de plantao: quem passa NAO preenche quem recebeu. O card pisca ate o recebedor ler e assinar ----
+  // Dia: Monitora passa -> Plantonista recebe. Jantar: so a Plantonista assina (sem recebedor). Noite: Plantonista passa -> Monitor(a) que pega o plantao recebe.
+  const RELSTATE={dia:{passou:'',recebeu:''},inicio:{passou:'',recebeu:''},noite:{passou:'',recebeu:''}};
+  function sincRecebVis(tipo){ const c=document.getElementById('card-'+tipo); if(!c) return;
+    const temBox=!!document.getElementById('receb-'+tipo); const st=RELSTATE[tipo]||{};
+    c.classList.toggle('aguarda-receb', temBox && !!st.passou && !st.recebeu);
+    c.classList.toggle('receb-done', temBox && !!st.recebeu);
+    const sr=document.getElementById('status-receb-'+tipo);
+    if(sr){ if(st.recebeu){ sr.style.color='var(--crm-ok)'; sr.textContent='✅ Recebimento assinado por '+st.recebeu+'.'; } else sr.textContent=''; } }
+  function confirmarRecebimento(tipo){ if(!currentHosp) return; const st=document.getElementById('status-receb-'+tipo);
+    const el=document.getElementById('recebeu-'+tipo); const nome=((el&&el.value)||'').trim();
+    const quemPassou=(RELSTATE[tipo]||{}).passou||'';
+    if(!quemPassou){ if(st){ st.style.color='var(--crm-critico)'; st.textContent='✋ Ninguém passou este plantão ainda — não há o que receber.'; } return; }
+    if(!nome){ if(st){ st.style.color='var(--crm-critico)'; st.textContent='✋ Escreva o seu nome para assinar o recebimento.'; } return; }
+    if(!confirm('Você leu TODO o relatório de '+((currentHosp&&currentHosp.nome)||'este FILHOt')+'?\n\nAo assinar, você assume o cuidado dele a partir de agora.\n\nOK = li tudo e assino\nCancelar = vou ler antes')) return;
+    if(!DB){ if(st){ st.style.color='var(--crm-atencao-text)'; st.textContent='Banco conectando...'; } return; }
+    if(st){ st.style.color='var(--muted)'; st.textContent='Salvando...'; }
+    DB.ref('auaulandia/relatorios/'+fichaKey()+'/'+tipo).update({recebeu:nome,_tsReceb:Date.now()}).then(function(){
+      RELSTATE[tipo].recebeu=nome; sincRecebVis(tipo);
+      if(typeof audit==='function') audit('recebimento', tipo, {pet:(currentHosp&&currentHosp.nome)||'', assinou:nome});
+    }).catch(function(e){ if(st){ st.style.color='var(--crm-critico)'; st.textContent='⚠️ Erro: '+e.message; } }); }
   // mapeamento do formato ANTIGO (campos c0..c21 da ficha de 1 salvar so) para os relatorios novos
   const MAP_DIA_ANTIGO=['Gastou energia?','Teve desentendimento?','Precisa ficar separado?','Tem irmão hospedado?','Tem alergia?','Tem medicação?','Trouxe roupa de frio?','Fez cocô?','Consistência','Coleira repelente?','Coleira de identificação?'];
   const MAP_NOITE_ANTIGO=['Como passou a noite?','Está ativo?','Bebeu água?','Fez cocô?','Consistência','Fez xixi?','Aspecto do xixi','Jantou?','Almoçou?','Tem medicação?','Tem suplementação?'];
@@ -1554,8 +1605,8 @@
     }).catch(function(){ ['dia','inicio','noite'].forEach(tp=>aplicarCard('card-'+tp,{})); });
   }
   function salvarRelatorioCard(tipo){ if(!currentHosp) return; const card='card-'+tipo; const st=document.getElementById('status-'+tipo);
-    const passouEl=document.getElementById('passou-'+tipo), recebeuEl=document.getElementById('recebeu-'+tipo);
-    const passou=((passouEl&&passouEl.value)||'').trim(); const recebeu=recebeuEl?((recebeuEl.value)||'').trim():'';
+    const passouEl=document.getElementById('passou-'+tipo);
+    const passou=((passouEl&&passouEl.value)||'').trim();
     const falt=[]; document.querySelectorAll('#'+card+' .obsline').forEach(l=>{ if(l.style.display==='none') return; /* pula perguntas condicionais escondidas (ex.: Tipo de vômito quando "Vomitou? Não") */ if(!l.querySelector('button.on')){ const q=l.querySelector('.q'); if(q) falt.push(q.textContent.trim()); } });
     if(falt.length){ if(st){ st.style.color='var(--crm-critico)'; st.textContent='✋ Antes de passar para o próximo peludinho, responda TODAS as perguntas! Faltou: '+falt.slice(0,6).join(', ')+(falt.length>6?'…':''); } return; }
     // ---- Medicação/Suplementação à prova de erro: "Tem? Sim" exige tabela preenchida ----
@@ -1576,9 +1627,15 @@
       if(!confirm('Tem CERTEZA de que o medicamento de '+(currentHosp.nome||'este FILHOt')+' acabou ou foi suspenso?\n\nNa dúvida, LIGUE 31 99764-4296.\n\nOK = tenho certeza\nCancelar = vou confirmar antes')){
         if(st){ st.style.color='var(--crm-critico)'; st.textContent='Na dúvida sobre a medicação, ligue 31 99764-4296 antes de salvar.'; } return; }
     }
-    if(!passou||(recebeuEl&&!recebeu)){ if(st){ st.style.color='var(--crm-critico)'; st.textContent='✋ Agora é só assinar: preencha quem passou e quem recebeu o plantão.'; } return; }
-    const dados=coletarCard(card); dados.passou=passou; if(recebeuEl) dados.recebeu=recebeu; dados._ts=Date.now();
-    if(DB){ if(st){ st.style.color='var(--muted)'; st.textContent='Salvando...'; } DB.ref('auaulandia/relatorios/'+fichaKey()+'/'+tipo).set(dados).then(()=>{ if(st){ st.style.color='var(--crm-ok)'; st.textContent=(tipo==='inicio')?'✅ Jantar salvo! A Noite será preenchida amanhã de manhã, na passagem do plantão.':'✅ Salvo!'; } if(typeof audit==='function') audit('relatorio', tipo, {pet:(currentHosp&&currentHosp.nome)||'', assinou:passou}); const c=document.getElementById(card); if(c) c.classList.add('collapsed'); }).catch(e=>{ if(st){ st.style.color='var(--crm-critico)'; st.textContent='⚠️ Erro: '+e.message; } }); } else { if(st){ st.style.color='var(--crm-atencao-text)'; st.textContent='Banco conectando...'; } } }
+    if(!passou){ if(st){ st.style.color='var(--crm-critico)'; st.textContent='✋ Agora é só assinar: escreva o seu nome em quem passou o plantão.'; } return; }
+    // quem passa NAO preenche quem recebeu — o recebimento e assinado depois, por quem pega o plantao
+    const dados=coletarCard(card); dados.passou=passou; const _rSalvo=(RELSTATE[tipo]||{}).recebeu||''; if(_rSalvo){ dados.recebeu=_rSalvo; dados._tsReceb=(RELSTATE[tipo]||{})._tsReceb||Date.now(); } dados._ts=Date.now();
+    if(DB){ if(st){ st.style.color='var(--muted)'; st.textContent='Salvando...'; } DB.ref('auaulandia/relatorios/'+fichaKey()+'/'+tipo).set(dados).then(()=>{
+        RELSTATE[tipo]={passou:passou,recebeu:_rSalvo,_tsReceb:dados._tsReceb||0}; sincRecebVis(tipo);
+        const _quemRecebe=(tipo==='dia')?'o Plantonista':'quem pega o plantão';
+        if(st){ st.style.color='var(--crm-ok)'; st.textContent=(tipo==='inicio')?'✅ Jantar salvo! A Noite será preenchida amanhã de manhã, na passagem do plantão.'
+          : (_rSalvo?'✅ Salvo!':'✅ Plantão passado! Agora fica piscando em vermelho até '+_quemRecebe+' ler e assinar o recebimento.'); }
+        if(typeof audit==='function') audit('relatorio', tipo, {pet:(currentHosp&&currentHosp.nome)||'', assinou:passou}); const c=document.getElementById(card); if(c) c.classList.add('collapsed'); }).catch(e=>{ if(st){ st.style.color='var(--crm-critico)'; st.textContent='⚠️ Erro: '+e.message; } }); } else { if(st){ st.style.color='var(--crm-atencao-text)'; st.textContent='Banco conectando...'; } } }
   function valDe(cardId,perg){ for(const l of document.querySelectorAll('#'+cardId+' .obsline')){ const q=l.querySelector('.q'); if(q&&q.textContent.trim()===perg){ const on=l.querySelector('button.on'); return on?on.textContent.trim():''; } } return ''; }
   // ---- gerador de texto para o tutor: personalizado, em parágrafos, sempre diferente ----
   function rnd(arr){ return arr[Math.floor(Math.random()*arr.length)]; }
