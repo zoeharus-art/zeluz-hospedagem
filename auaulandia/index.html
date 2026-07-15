@@ -423,6 +423,10 @@
   .dc-meia{background:rgba(222,180,40,.14);border:1.5px solid rgba(222,180,40,.5);color:var(--z-blue);border-radius:11px;padding:11px 15px;font-size:14px;font-weight:600;margin-bottom:10px}
   /* não almoçam — informativo: saíram da fila de propósito */
   .alm-fora{background:rgba(35,77,103,.08);border:1.5px dashed rgba(35,77,103,.35);color:var(--z-blue);border-radius:11px;padding:11px 15px;font-size:13.5px;font-weight:600;margin-bottom:10px}
+  /* achado pela busca mas não é da turma do dia (reposição, avulso, urgência) */
+  .mini-fora{position:absolute;top:8px;right:8px;font-size:9.5px;font-weight:800;color:var(--z-cream);background:var(--z-daycare,#E08856);padding:3px 8px;border-radius:8px;z-index:3;letter-spacing:.3px}
+  .alm-card .mini-fora,.dc-card .mini-fora{top:32px}
+  .pet.fora-dia{outline:2px dashed rgba(224,136,86,.55);outline-offset:2px}
   .dc-pend-note{background:rgba(222,180,40,.14);border:1.5px solid rgba(222,180,40,.4);color:var(--crm-atencao-text);border-radius:11px;padding:9px 14px;font-size:13px;font-weight:600;margin-bottom:14px}
   .dc-card{padding-top:32px;overflow:hidden}
   .dc-ribbon{position:absolute;top:0;left:0;right:0;text-align:center;font-size:11px;font-weight:800;letter-spacing:.6px;padding:5px}
@@ -772,10 +776,10 @@
   <!-- ===== INÍCIO ===== -->
   <section class="view active" id="v-inicio">
     <div class="kpis">
-      <div class="kpi"><img class="kpi-st" src="assets/stickers/pata.png" alt=""><div><div class="v">14</div><div class="l">Peludinhos hoje</div></div></div>
-      <div class="kpi"><img class="kpi-st" src="assets/stickers/vasilha.png" alt=""><div><div class="v coral">9</div><div class="l">No Day Care</div></div></div>
-      <div class="kpi"><img class="kpi-st" src="assets/stickers/osso.png" alt=""><div><div class="v">5</div><div class="l">Na Auaulândia</div></div></div>
-      <div class="kpi"><img class="kpi-st" src="assets/stickers/coracao.png" alt=""><div><div class="v">3</div><div class="l">Em adaptação</div></div></div>
+      <div class="kpi"><img class="kpi-st" src="assets/stickers/pata.png" alt=""><div><div class="v" id="kpiTotal">—</div><div class="l">Peludinhos hoje</div></div></div>
+      <div class="kpi"><img class="kpi-st" src="assets/stickers/vasilha.png" alt=""><div><div class="v coral" id="kpiDay">—</div><div class="l">No Day Care</div></div></div>
+      <div class="kpi"><img class="kpi-st" src="assets/stickers/osso.png" alt=""><div><div class="v" id="kpiAua">—</div><div class="l">Na Auaulândia</div></div></div>
+      <div class="kpi"><img class="kpi-st" src="assets/stickers/coracao.png" alt=""><div><div class="v" id="kpiAdapt">—</div><div class="l">Em adaptação</div></div></div>
     </div>
     <div class="pets-grid" id="petsGrid"></div>
   </section>
@@ -1164,7 +1168,7 @@
       DB.ref('auaulandia/cadastro').on('value', s=>{ cadCache=s.val()||{}; if(typeof renderHosp==='function') renderHosp(); });
       DB.ref('daycare/config/sensiveis').on('value', s=>{ const v=s.val(); if(Array.isArray(v)){ try{ SENS=new Set(v); }catch(e){} } });
       DB.ref('daycare/config/atividades').on('value', s=>{ const v=s.val(); if(Array.isArray(v)&&v.length){ ATIVIDADES=v; if(typeof renderAtiv==='function') renderAtiv(); } });
-      DB.ref('daycare/cadastro').on('value', s=>{ pelCadCache=s.val()||{}; if(typeof mergeNovosAlunos==='function') mergeNovosAlunos(); if(typeof renderPel==='function') renderPel(); if(typeof renderDaycare==='function') renderDaycare(); });
+      DB.ref('daycare/cadastro').on('value', s=>{ pelCadCache=s.val()||{}; if(typeof mergeNovosAlunos==='function') mergeNovosAlunos(); if(typeof renderPel==='function') renderPel(); if(typeof renderDaycare==='function') renderDaycare(); if(typeof renderKPIs==='function') renderKPIs(); });
       // cadastro de almoço editável (sobrepõe a semente) — reflete na grade em tempo real
       DB.ref('daycare/almoco-cad').on('value', s=>{ almCadCache=s.val()||{}; try{ if(typeof renderAlmStep==='function'&&dcAtiv==='almoco') renderAlmStep(); }catch(e){} });
       DB.ref('daycare/config/auditoria').on('value', s=>{ const v=s.val(); if(v&&typeof v==='object'){ try{ AUDIT_CFG=Object.assign({},AUDIT_CFG,v); }catch(e){} if(typeof renderPainelDia==='function') renderPainelDia(); } });
@@ -1357,6 +1361,23 @@
   const getInfo=h=>loadLocal()[petKey(h)]||{};
   function setInfo(h,patch){ const o=loadLocal(); o[petKey(h)]=Object.assign({},o[petKey(h)]||{},patch); saveLocal(o); }
 
+  // Os KPIs do Início eram números fixos no HTML (14/9/5/3) — nunca calcularam nada.
+  // Agora: Day Care = turma do dia (sem inativos), AuAulândia = hóspedes carregados da
+  // planilha, adaptação = quem está no 1º mês. Roda depois que as duas fontes chegam.
+  function renderKPIs(){
+    try{
+      const el=id=>document.getElementById(id);
+      if(!el('kpiTotal')) return;
+      const turma=(typeof turmaDoDia==='function')?turmaDoDia():[];
+      const nDay=turma.length;
+      const nAua=Array.isArray(hospedes)?hospedes.length:0;
+      const nAdapt=turma.filter(o=>{ const ex=pelExtra(o.p); return ex&&ex.adaptacao==='Sim'; }).length;
+      el('kpiTotal').textContent=nDay+nAua;
+      el('kpiDay').textContent=nDay;
+      el('kpiAua').textContent=nAua;
+      el('kpiAdapt').textContent=nAdapt;
+    }catch(e){ /* nunca derrubar a tela por causa de um contador */ }
+  }
   function renderHosp(){
     // ordem alfabética (a moradora Repolho por último)
     hospedes.sort((a,b)=>{ if(!!a.mascote!==!!b.mascote) return a.mascote?1:-1; return (a.nome||'').localeCompare((b.nome||''),'pt',{sensitivity:'base'}); });
@@ -1384,6 +1405,7 @@
           ${h.saidaHoje?'<div class="saida-hoje">Dormiu · sai hoje</div>':''}
         </div>`;
       }).join('');
+    renderKPIs();
   }
   renderHosp();
 
@@ -2250,6 +2272,9 @@
     if(typeof audit==='function') audit('almoco_cad','alterou o cadastro de almoço: '+Object.keys(patch).join(', '),{alvo:k});
   }
   function naoAlmoca(p){ const a=almCad(p); return !!(a&&a.nao); }
+  // Inativar, nunca excluir: "quero todo o banco de dados sempre". Quem saiu (Bud e Stella —
+  // brigas) ou faleceu sai das listas do dia, mas o cadastro e o histórico ficam inteiros.
+  function pelInativo(p){ const ex=pelExtra(p); return !!(ex&&ex.inativo==='Sim'); }
   const ORDEM_DIAS=['seg','ter','qua','qui','sex'];
   const DIA_LBL={seg:'Seg',ter:'Ter',qua:'Qua',qui:'Qui',sex:'Sex'};
   const DIA_FULL={seg:'Segunda',ter:'Terça',qua:'Quarta',qui:'Quinta',sex:'Sexta'};
@@ -2358,6 +2383,16 @@
       <div class="field"><label>Comedouro lento?</label><div class="seg gold" data-single>${seg('lento',a.lento?'Sim':'Nao',['Sim','Nao'])}</div></div>
       <div class="field"><label>NÃO almoça na creche?</label><div class="seg gold" data-single>${seg('nao',a.nao?'Sim':'Nao',['Sim','Nao'])}</div></div>`;
   }
+  // Saída do Day Care — inativa sem apagar nada.
+  function camposSaidaFicha(){
+    const ex=pelExtra(pelAtual)||{};
+    const on=ex.inativo==='Sim';
+    return `
+      <div class="field"><label>Saiu do Day Care?</label><div class="seg gold" data-single>${segBtnsPel('inativo',ex.inativo||'',['Sim','Nao'])}</div></div>
+      <div class="field"><label>Data da saída</label><input class="cad-in" value="${escAttr(ex.dataSaida||'')}" placeholder="dd/mm/aaaa" onchange="setPelExtra(pelAtual,{dataSaida:this.value})"></div>
+      <div class="field" style="grid-column:1/-1"><label>Motivo da saída${on?' <span style="color:var(--crm-critico)">— obrigatório</span>':''}</label><input class="cad-in" value="${escAttr(ex.motivoSaida||'')}" placeholder="Ex: brigas — Stella ciumenta com o Bud · falecido · mudança" onchange="setPelExtra(pelAtual,{motivoSaida:this.value});refreshPills()"></div>
+      ${on?`<div class="field" style="grid-column:1/-1"><div class="dc-faltas" style="margin:0">Inativo: sai das listas do dia, mas o cadastro e o histórico ficam guardados. Aparece para a Márcia no painel da Gestão como contato a fazer.</div></div>`:''}`;
+  }
   function renderAlmSeFor(){ try{ if(dcAtiv==='almoco'&&typeof renderAlmStep==='function') renderAlmStep(); }catch(e){} }
   function renderPel(){
     const inp=document.getElementById('pelSearch'); if(!inp) return;
@@ -2429,6 +2464,10 @@
         <h3 class="cad-sub">Almoço &mdash; o que aparece na grade do Day Care</h3>
         <div class="cad-grid">
           ${camposAlmocoFicha()}
+        </div>
+        <h3 class="cad-sub">Saída do Day Care</h3>
+        <div class="cad-grid">
+          ${camposSaidaFicha()}
         </div>
       </div>
 
@@ -2560,7 +2599,7 @@
   function mostrarScr(){ const esp=(dcAtiv==='chamada'||dcAtiv==='almoco'); const a=document.getElementById('scr-chamada'),b=document.getElementById('scr-almoco'),c=document.getElementById('scr-generic'); if(a)a.style.display=dcAtiv==='chamada'?'block':'none'; if(b)b.style.display=dcAtiv==='almoco'?'block':'none'; if(c)c.style.display=esp?'none':'block'; const lbl=document.getElementById('dcAtivLabel'); if(lbl){ const f=ATIVS_DC.find(x=>x.s===dcAtiv); lbl.textContent=f?f.t:'Chamada'; } const dl=document.getElementById('dcDiaLabel'); if(dl) dl.textContent=DIA_FULL[dcDia]; }
   function renderAtual(){ mostrarScr(); if(dcAtiv==='chamada') carregarChamada(); else if(dcAtiv==='almoco') carregarAlmoco(); else carregarGenerico(); if(typeof renderAdaptBanner==='function') renderAdaptBanner(); }
   function turmaDoDia(){
-    const base=PELUDINHOS.map((p,i)=>({p,i})).filter(o=>pelDias(o.p).indexOf(dcDia)>=0);
+    const base=PELUDINHOS.map((p,i)=>({p,i})).filter(o=>pelDias(o.p).indexOf(dcDia)>=0 && !pelInativo(o.p));
     dcAvulsos.forEach((a,k)=>base.push({p:{n:a.nome,raca:a.raca||'',tutor:a.tutor||'',freq:'avulso',dias:[dcDia],nasc:''},i:'av'+k,avulso:true}));
     return base.sort((x,y)=>jsNorm(x.p.n).localeCompare(jsNorm(y.p.n)));
   }
@@ -2589,8 +2628,8 @@
         const ph=foto?`<div class="ph" style="background-image:url('${foto}');background-size:cover;background-position:center"></div>`:`<div class="ph" style="background:${corPel(typeof o.i==='number'?o.i:0)}">${(p.n[0]||'?')}</div>`;
         const clickFicha=(typeof o.i==='number')?`onclick="abrirPeludinhoDay(${o.i})" style="cursor:pointer"`:'';
         const ribbon=st==='veio'?'<div class="dc-ribbon veio">PRESENTE</div>':(st==='faltou'?'<div class="dc-ribbon faltou">FALTOU</div>':'<div class="dc-ribbon pend">PENDENTE — marque</div>');
-        return `<div class="pet dc-card ${st}">
-          ${ribbon}${alerta}${seloAdapt(ex)}
+        return `<div class="pet dc-card ${st}${o.foraDia?' fora-dia':''}">
+          ${ribbon}${alerta}${o.foraDia?seloForaDia(o):seloAdapt(ex)}
           <div ${clickFicha}>
             ${ph}
             <div class="nm">${(typeof o.i==='number')?pelNome(p):p.n}</div>
@@ -2821,7 +2860,19 @@
     const fx=jaComeu(x)?1:0, fy=jaComeu(y)?1:0; if(fx!==fy) return fx-fy;
     const px=prioAlm(x),py=prioAlm(y); if(px!==py)return px-py;
     return jsNorm(x.p.n).localeCompare(jsNorm(y.p.n)); }); }
-  function filtraLista(list){ const q=jsNorm(dcBuscaVal); return q?list.filter(o=>jsNorm([o.p.n,o.p.raca,o.p.tutor].join(' ')).indexOf(q)>=0):list; }
+  // Buscar acha QUALQUER peludinho, não só a turma do dia.
+  // Caso real: tutor liga 22h para a Márcia pedindo vaga amanhã; ela autoriza e avisa o time
+  // por WhatsApp; ninguém põe na planilha. O monitor precisa achar o peludinho assim mesmo.
+  // Quem não é do dia vem depois, marcado — some quando a busca é apagada.
+  function casaBusca(o,q){ return jsNorm([o.p.n,o.p.raca,o.p.tutor].join(' ')).indexOf(q)>=0; }
+  function filtraLista(list){ const q=jsNorm(dcBuscaVal); if(!q) return list;
+    const dentro=list.filter(o=>casaBusca(o,q));
+    const jaTem=new Set(list.map(o=>dcKey(o.p.n,o.p.tutor)));
+    const fora=PELUDINHOS.map((p,i)=>({p,i,foraDia:true}))
+      .filter(o=>!pelInativo(o.p) && !jaTem.has(dcKey(o.p.n,o.p.tutor)) && casaBusca(o,q))
+      .sort((x,y)=>jsNorm(x.p.n).localeCompare(jsNorm(y.p.n)));
+    return dentro.concat(fora); }
+  function seloForaDia(o){ return o&&o.foraDia?`<span class="mini-fora">NAO E DE ${(DIA_LBL[dcDia]||'HOJE').toUpperCase()}</span>`:''; }
   function onDcBusca(){ const el=document.getElementById('dcBusca'); dcBuscaVal=el?el.value:''; if(dcAtiv==='chamada')renderDaycare(); else if(dcAtiv==='almoco')renderAlmoco(); else renderGenerico(); }
   function carregarGenerico(){ genMarcas={}; if(DB){ DB.ref('daycare/atividade/'+dcDataKey()+'/'+dcAtiv).once('value').then(s=>{ genMarcas=s.val()||{}; }).then(renderGenerico).catch(renderGenerico); } else renderGenerico(); }
   function marcarGenerico(k){ const cur=genMarcas[k]; const nx=(cur==='feito')?'':'feito'; if(nx) genMarcas[k]=nx; else delete genMarcas[k]; if(DB) DB.ref('daycare/atividade/'+dcDataKey()+'/'+dcAtiv+'/'+k).set(nx||null).catch(()=>{}); if(typeof audit==='function'&&nx) audit('atividade', (nomeAtiv(dcAtiv)||dcAtiv)+': feito', {alvo:k, slug:dcAtiv}); renderGenerico(); }
@@ -2999,11 +3050,11 @@
         </div>`; }
       else info=`<div class="alm-info"><div class="alm-extra" style="color:var(--muted)">Almoco nao cadastrado</div></div>`;
       const neon=restrRaw?`<div class="alm-restr">&#9888; ${/restri/i.test(restrRaw)?restrRaw:('RESTRICAO: '+restrRaw)}</div>`:'';
-      return `<div class="pet alm-card ${m}">
+      return `<div class="pet alm-card ${m}${o.foraDia?' fora-dia':''}">
         <div ${typeof o.i==='number'?`onclick="abrirPeludinhoDay(${o.i})" style="cursor:pointer"`:''}>
           ${ph}<div class="nm">${nomeDesamb(o,list)}</div><div class="br">${p.raca||'-'}</div>
         </div>
-        ${seloBanho(k)}${seloAnsioso(p,!!dcBanho[k])}${seloAdapt(ex)}${neon}${info}
+        ${seloBanho(k)}${seloAnsioso(p,!!dcBanho[k])}${o.foraDia?seloForaDia(o):seloAdapt(ex)}${neon}${info}
         <div class="dc-actions alm-actions">
           <button class="alm-btn tudo ${m==='tudo'?'on':''}" onclick="marcarAlmoco('${k}','tudo')">Comeu tudo</button>
           <button class="alm-btn metade ${m==='metade'?'on':''}" onclick="marcarAlmoco('${k}','metade')">Metade</button>
