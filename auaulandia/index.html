@@ -2757,7 +2757,13 @@
   // 1º quem tem banho · 2º os Ansiosos (caixa própria) · 3º comida natural/geladeira · 4º os outros
   function prioAlm(o){ if(typeof o.i!=='number') return 3; const k=dcKey(o.p.n,o.p.tutor); const a=ALMOCO[pelKey(o.p)];
     if(dcBanho[k]) return 0; if(ehAnsioso(o.p)) return 1; if(temGeladeira(a)) return 2; return 3; }
-  function ordemAlmoco(list){ return list.slice().sort((x,y)=>{ const px=prioAlm(x),py=prioAlm(y); if(px!==py)return px-py; return jsNorm(x.p.n).localeCompare(jsNorm(y.p.n)); }); }
+  function jaComeu(o){ return !!almMarcas[dcKey(o.p.n,o.p.tutor)]; }
+  // Quem já foi servido cai para o fim da fila: a monitora só olha para quem falta.
+  // Dentro de cada grupo vale a ordem obrigatória (banho > ansioso > natural > outros).
+  function ordemAlmoco(list){ return list.slice().sort((x,y)=>{
+    const fx=jaComeu(x)?1:0, fy=jaComeu(y)?1:0; if(fx!==fy) return fx-fy;
+    const px=prioAlm(x),py=prioAlm(y); if(px!==py)return px-py;
+    return jsNorm(x.p.n).localeCompare(jsNorm(y.p.n)); }); }
   function filtraLista(list){ const q=jsNorm(dcBuscaVal); return q?list.filter(o=>jsNorm([o.p.n,o.p.raca,o.p.tutor].join(' ')).indexOf(q)>=0):list; }
   function onDcBusca(){ const el=document.getElementById('dcBusca'); dcBuscaVal=el?el.value:''; if(dcAtiv==='chamada')renderDaycare(); else if(dcAtiv==='almoco')renderAlmoco(); else renderGenerico(); }
   function carregarGenerico(){ genMarcas={}; if(DB){ DB.ref('daycare/atividade/'+dcDataKey()+'/'+dcAtiv).once('value').then(s=>{ genMarcas=s.val()||{}; }).then(renderGenerico).catch(renderGenerico); } else renderGenerico(); }
@@ -2904,7 +2910,10 @@
       </div>
       ${naoList.length?`<div class="dc-faltas"><strong>NAO COMERAM - vao para o 2&ordm; horario (${naoList.length}):</strong> ${naoList.join(', ')}</div>`:''}
       ${metList.length?`<div class="dc-meia"><strong>COMERAM METADE (${metList.length}):</strong> ${metList.join(', ')}</div>`:''}`;
-    document.getElementById('almCount').textContent=`${list.length} aulunos no almoco de ${DIA_FULL[dcDia]}`;
+    const faltam=list.filter(o=>!jaComeu(o)).length;
+    document.getElementById('almCount').textContent=faltam
+      ? `Faltam ${faltam} de ${list.length} — os já servidos vão para o fim da lista`
+      : `Todos os ${list.length} aulunos foram servidos`;
     document.getElementById('almGrid').innerHTML=filtraLista(list).map(o=>{ const p=o.p; const ex=(typeof o.i==='number')?pelExtra(p):{};
       const a=(typeof o.i==='number')?(ALMOCO[pelKey(p)]||null):null; const foto=ex.foto; const k=dcKey(p.n,p.tutor); const m=almMarcas[k]||'';
       const restrRaw=(a&&a.restr)||ex.restricao||ex.alergia||'';
