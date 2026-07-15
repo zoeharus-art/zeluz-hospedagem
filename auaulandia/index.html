@@ -417,6 +417,8 @@
   .dc-stat b{font-size:25px;font-family:var(--font-marca);display:block;line-height:1;margin-bottom:2px}
   .dc-stat.ok b{color:var(--crm-ok)} .dc-stat.bad b{color:var(--crm-critico)} .dc-stat.pend b{color:var(--crm-atencao-text)}
   .dc-faltas{background:rgba(192,57,43,.1);border:1.5px solid rgba(192,57,43,.35);color:var(--crm-critico);border-radius:11px;padding:11px 15px;font-size:14px;font-weight:600;margin-bottom:10px}
+  /* comeu metade / almoço em andamento — atenção, não é falta */
+  .dc-meia{background:rgba(222,180,40,.14);border:1.5px solid rgba(222,180,40,.5);color:var(--z-blue);border-radius:11px;padding:11px 15px;font-size:14px;font-weight:600;margin-bottom:10px}
   .dc-pend-note{background:rgba(222,180,40,.14);border:1.5px solid rgba(222,180,40,.4);color:var(--crm-atencao-text);border-radius:11px;padding:9px 14px;font-size:13px;font-weight:600;margin-bottom:14px}
   .dc-card{padding-top:32px;overflow:hidden}
   .dc-ribbon{position:absolute;top:0;left:0;right:0;text-align:center;font-size:11px;font-weight:800;letter-spacing:.6px;padding:5px}
@@ -2892,15 +2894,16 @@
         <button class="btn btn-gold" onclick="iniciarAlmoco()">&#9654; Iniciar almoco</button>
         <button class="btn" style="background:rgba(255,255,255,.14);color:var(--z-cream);border:1px solid rgba(255,255,255,.25)" onclick="encerrarAlmoco()">&#9632; Encerrar</button>
       </div></div>`;
-    let tudo=0,metade=0,nao=0; const naoList=[];
-    list.forEach(o=>{ const m=almMarcas[dcKey(o.p.n,o.p.tutor)]; if(m==='tudo')tudo++; else if(m==='metade')metade++; else if(m==='nao'){nao++;naoList.push(o.p.n);} });
+    let tudo=0,metade=0,nao=0; const naoList=[], metList=[];
+    list.forEach(o=>{ const m=almMarcas[dcKey(o.p.n,o.p.tutor)]; if(m==='tudo')tudo++; else if(m==='metade'){metade++;metList.push(o.p.n);} else if(m==='nao'){nao++;naoList.push(o.p.n);} });
     document.getElementById('almResumo').innerHTML=`
       <div class="dc-resumo">
         <div class="dc-stat ok"><b>${tudo}</b>comeram tudo</div>
         <div class="dc-stat pend"><b>${metade}</b>metade</div>
         <div class="dc-stat bad"><b>${nao}</b>nao comeram</div>
       </div>
-      ${naoList.length?`<div class="dc-faltas"><strong>NAO COMERAM - vao para o 2&ordm; horario (${naoList.length}):</strong> ${naoList.join(', ')}</div>`:''}`;
+      ${naoList.length?`<div class="dc-faltas"><strong>NAO COMERAM - vao para o 2&ordm; horario (${naoList.length}):</strong> ${naoList.join(', ')}</div>`:''}
+      ${metList.length?`<div class="dc-meia"><strong>COMERAM METADE (${metList.length}):</strong> ${metList.join(', ')}</div>`:''}`;
     document.getElementById('almCount').textContent=`${list.length} aulunos no almoco de ${DIA_FULL[dcDia]}`;
     document.getElementById('almGrid').innerHTML=filtraLista(list).map(o=>{ const p=o.p; const ex=(typeof o.i==='number')?pelExtra(p):{};
       const a=(typeof o.i==='number')?(ALMOCO[pelKey(p)]||null):null; const foto=ex.foto; const k=dcKey(p.n,p.tutor); const m=almMarcas[k]||'';
@@ -2986,6 +2989,29 @@
       renderPainelDia();
     }).catch(()=>{ painelData={}; renderPainelDia(); });
   }
+  // As marcações do almoço são gravadas por chave (nome__tutor normalizado). Para a Gestão
+  // ler, a chave precisa virar nome de novo.
+  function nomeDaChaveDC(k){
+    for(const p of PELUDINHOS){ if(dcKey(p.n,p.tutor)===k) return p.n; }
+    for(const a of Object.values((painelData||{}).avulsos||{})){ if(a&&dcKey(a.nome,a.tutor||'')===k) return a.nome; }
+    return k;
+  }
+  // Relação nominal de quem não comeu e de quem comeu metade — o número sozinho não deixa agir.
+  function relAlmocoHTML(){
+    const D=painelData||{}; const marcas=D.almoco||{};
+    const por=(v)=>Object.keys(marcas).filter(k=>marcas[k]===v).map(nomeDaChaveDC).sort((a,b)=>jsNorm(a).localeCompare(jsNorm(b)));
+    const nao=por('nao'), met=por('metade');
+    const ini=(D.almTurno||{}).inicio, fim=(D.almTurno||{}).fim;
+    let h='';
+    if(nao.length) h+='<div class="dc-faltas"><strong>NÃO COMERAM ('+nao.length+') — vão para o 2º horário (Monitor III):</strong> '+nao.join(', ')+'</div>';
+    if(met.length) h+='<div class="dc-meia"><strong>COMERAM METADE ('+met.length+'):</strong> '+met.join(', ')+'</div>';
+    if(!Object.keys(marcas).length){
+      h+='<div class="dc-meia">'+(ini&&!fim
+        ? '<strong>Almoço em andamento desde '+ini+'</strong> — nenhum peludinho marcado ainda. As marcações aparecem aqui conforme a monitora vai tocando em "Comeu tudo / Metade / Não comeu".'
+        : '<strong>Nenhuma marcação de almoço hoje.</strong> Assim que a monitora marcar na grade, a relação aparece aqui.')+'</div>';
+    }
+    return h;
+  }
   // status de um protocolo: {ok:bool, prazo:'ok'|'fora'|'sem', hora, quem, detalhe}
   function protoStatus(d){
     const D=painelData, st={};
@@ -3019,6 +3045,7 @@
     const lab=document.getElementById('painelDateLabel'); if(lab) lab.textContent=pLabel();
     const D=painelData; const aud=Object.values(D.auditoria||{}).slice().sort((a,b)=>(a.ts||0)-(b.ts||0));
     // ---- resumo do dia ----
+
     let veio=0,faltou=0; Object.values(D.chamada||{}).forEach(v=>{ if(v==='veio')veio++; else if(v==='faltou')faltou++; });
     let aTudo=0,aMet=0,aNao=0; Object.values(D.almoco||{}).forEach(v=>{ if(v==='tudo')aTudo++; else if(v==='metade')aMet++; else if(v==='nao')aNao++; });
     const ativFeitas=Object.keys(D.atividade||{}).length;
@@ -3053,6 +3080,8 @@
       <div class="dc-stat bad"><b>${aNao}</b>não comeram</div>
       <div class="dc-stat"><b style="color:var(--z-blue)">${ativFeitas}</b>atividades c/ registro</div>
     </div>`;
+    // ---- Quem não comeu e quem comeu metade — por NOME, para a Gestão agir ----
+    html+=relAlmocoHTML();
     // ---- Plantão agora (escala de monitores × hora atual) ----
     const agora=horaAgora();
     html+=`<div class="card"><h2>Plantão agora <span style="font-size:12px;color:var(--z-blue)">${agora}</span></h2><div class="hint">Quem deveria estar no Day Care neste horário, pela escala de monitores.</div>`;
