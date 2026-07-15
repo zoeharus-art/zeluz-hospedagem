@@ -422,6 +422,12 @@
   .dc-meia{background:rgba(222,180,40,.14);border:1.5px solid rgba(222,180,40,.5);color:var(--z-blue);border-radius:11px;padding:11px 15px;font-size:14px;font-weight:600;margin-bottom:10px}
   /* não almoçam — informativo: saíram da fila de propósito */
   .alm-fora{background:rgba(35,77,103,.08);border:1.5px dashed rgba(35,77,103,.35);color:var(--z-blue);border-radius:11px;padding:11px 15px;font-size:13.5px;font-weight:600;margin-bottom:10px}
+  /* despertador do banho — 5 min antes, para ninguem esquecer de descer com o FILHOt */
+  .desp-banho{position:fixed;left:0;right:0;top:0;z-index:90;background:var(--z-gold);color:var(--z-blue);box-shadow:0 4px 18px rgba(0,0,0,.22);animation:despPisca 1.1s ease-in-out infinite}
+  .desp-in{display:flex;align-items:center;justify-content:center;gap:14px;flex-wrap:wrap;padding:12px 16px;max-width:900px;margin:0 auto}
+  .desp-tx{font-size:15px;font-weight:700;line-height:1.4}
+  .desp-tx span{display:block;font-size:12.5px;font-weight:600;opacity:.85}
+  @keyframes despPisca{0%,100%{background:var(--z-gold)}50%{background:#f0cc55}}
   /* legenda da ordem de servir — a lista não é alfabética, é por ordem de servir */
   .alm-legenda{background:var(--z-cream-warm);border:1.5px solid var(--line);border-radius:11px;padding:10px 14px;font-size:12.5px;color:var(--z-blue);margin-bottom:10px;line-height:1.7}
   .alm-legenda .lg-g{display:inline-block;background:var(--z-cream);border:1px solid var(--line);border-radius:999px;padding:2px 10px;margin:0 4px;font-weight:600}
@@ -782,6 +788,7 @@
   </div>
 
   <!-- ===== INÍCIO ===== -->
+  <div id="despBanho" class="desp-banho" style="display:none"></div>
   <section class="view active" id="v-inicio">
     <div class="kpis">
       <div class="kpi"><img class="kpi-st" src="assets/stickers/pata.png" alt=""><div><div class="v" id="kpiTotal">—</div><div class="l">Peludinhos hoje</div></div></div>
@@ -1164,6 +1171,9 @@
       DB.ref('daycare/config/atividades').on('value', s=>{ const v=s.val(); if(Array.isArray(v)&&v.length){ ATIVIDADES=v; if(typeof renderAtiv==='function') renderAtiv(); } });
       DB.ref('daycare/cadastro').on('value', s=>{ pelCadCache=s.val()||{}; if(typeof mergeNovosAlunos==='function') mergeNovosAlunos(); if(typeof renderPel==='function') renderPel(); if(typeof renderDaycare==='function') renderDaycare(); if(typeof renderKPIs==='function') renderKPIs(); });
       // cadastro de almoço editável (sobrepõe a semente) — reflete na grade em tempo real
+      // quem já desceu para o banho — um monitor dá baixa e o aviso some em todos os aparelhos
+      DB.ref('daycare/banho-aviso/'+dcDataKey()).on('value', s=>{ despBaixa=s.val()||{};
+        try{ if(despNaTela&&despBaixa[despNaTela]) fecharDespertador(null); }catch(e){} });
       DB.ref('daycare/almoco-cad').on('value', s=>{ almCadCache=s.val()||{}; try{ if(typeof renderAlmStep==='function'&&dcAtiv==='almoco') renderAlmStep(); }catch(e){} });
       DB.ref('daycare/config/auditoria').on('value', s=>{ const v=s.val(); if(v&&typeof v==='object'){ try{ AUDIT_CFG=Object.assign({},AUDIT_CFG,v); }catch(e){} if(typeof renderPainelDia==='function') renderPainelDia(); } });
       DB.ref('daycare/config/monitores').on('value', s=>{ const v=s.val(); if(Array.isArray(v)&&v.length){ MONITORES=v; } else { MONITORES=MONITORES_DEFAULT.map(m=>Object.assign({},m)); } try{ if(typeof renderSenhas==='function') renderSenhas(); }catch(e){} try{ if(typeof renderMonitores==='function') renderMonitores(); }catch(e){} try{ if(typeof renderPainelDia==='function') renderPainelDia(); }catch(e){} });
@@ -2386,6 +2396,7 @@
           });
       });
       planDia=out;
+      try{ checarDespertadorBanho(); }catch(e){} // não esperar o próximo tique de 30s
     }catch(e){
       // planilha fora do ar não pode parar o almoço — o app segue com marcação manual
       planDia=Object.assign(zerar,{erro:'Não consegui ler a planilha agora. O que estiver marcado no app continua valendo.'});
@@ -2399,6 +2410,60 @@
   function banhoDaPlanilha(k){ return (planDia.banho||[]).some(it=>it.p&&dcKey(it.p.n,it.p.tutor)===k); }
   function temBanho(k){ return !!dcBanho[k] || banhoDaPlanilha(k); }
   function horaBanhoDe(k){ const it=(planDia.banho||[]).find(x=>x.p&&dcKey(x.p.n,x.p.tutor)===k); return it?(it.hora||''):''; }
+  // ===== DESPERTADOR DO BANHO =====
+  // Dor declarada pela Adriana: "esquecerem de descer com o peludinho". A planilha diz a
+  // hora; o app avisa 5 minutos antes. Qualquer monitor pode receber e dar baixa — quando
+  // um dá, para de tocar em todos os aparelhos (o aviso vive no Firebase).
+  const DESP_ANTES_MIN=5;
+  let despBaixa={};   // {chave: quem desceu} — vem do Firebase
+  let despNaTela=null;
+  function minutosAte(hhmm){ const m=/^(\d{2}):(\d{2})$/.exec(hhmm||''); if(!m) return null;
+    const d=new Date(); const alvo=(+m[1])*60+(+m[2]); const agora=d.getHours()*60+d.getMinutes();
+    return alvo-agora; }
+  function bipDespertador(){
+    try{ const AC=window.AudioContext||window.webkitAudioContext; if(!AC) return;
+      const ac=new AC();
+      [0,0.28,0.56].forEach(t=>{ const o=ac.createOscillator(), g=ac.createGain();
+        o.type='sine'; o.frequency.value=880; g.gain.value=0.0001;
+        o.connect(g); g.connect(ac.destination);
+        const t0=ac.currentTime+t;
+        g.gain.exponentialRampToValueAtTime(0.25, t0+0.02);
+        g.gain.exponentialRampToValueAtTime(0.0001, t0+0.22);
+        o.start(t0); o.stop(t0+0.24); });
+      setTimeout(()=>{ try{ ac.close(); }catch(e){} }, 1500);
+    }catch(e){ /* som é bônus; o banner é o que importa */ }
+  }
+  function fecharDespertador(k){
+    const el=document.getElementById('despBanho'); if(el) el.style.display='none';
+    despNaTela=null;
+    if(k){ despBaixa[k]=quemSou();
+      if(DB) DB.ref('daycare/banho-aviso/'+dcDataKey()+'/'+k).set(quemSou()||'-').catch(()=>{});
+      if(typeof audit==='function') audit('banho_desceu','desceu para o banho',{alvo:k}); }
+  }
+  function mostrarDespertador(it){
+    const el=document.getElementById('despBanho'); if(!el) return;
+    const k=dcKey(it.p.n,it.p.tutor); despNaTela=k;
+    el.innerHTML='<div class="desp-in"><div class="desp-tx"><strong>'+it.p.n+'</strong> tem banho às <strong>'+it.hora+'</strong>'
+      +'<span>Desça com ele agora — faltam '+DESP_ANTES_MIN+' minutos.</span></div>'
+      +'<button class="btn btn-gold" onclick="fecharDespertador(\''+k+'\')">Já desci</button></div>';
+    el.style.display='block';
+    bipDespertador();
+  }
+  function checarDespertadorBanho(){
+    try{
+      if(!ehHoje()||!planDia.lida) return;
+      if(despNaTela) return; // já tem um na tela
+      const fila=(planDia.banho||[]).filter(it=>it.p&&it.hora).sort((a,b)=>a.hora.localeCompare(b.hora));
+      for(const it of fila){
+        const k=dcKey(it.p.n,it.p.tutor);
+        if(despBaixa[k]) continue;
+        const m=minutosAte(it.hora);
+        if(m===null) continue;
+        if(m<=DESP_ANTES_MIN && m>=-15){ mostrarDespertador(it); return; } // -15: atrasado ainda avisa
+      }
+    }catch(e){}
+  }
+  setInterval(checarDespertadorBanho, 30000);
   function pelInativo(p){ const ex=pelExtra(p); return !!(ex&&ex.inativo==='Sim'); }
   // Quantos aulunos estão matriculados em cada dia — só Gestão e Supervisão (Adriana, Márcia,
   // Amanda). Para o monitor seria ruído; para elas é ocupação da turma.
