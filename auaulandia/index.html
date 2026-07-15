@@ -2033,7 +2033,8 @@
   const SHEET_ID='1SJ3OZ6E2wMa1JHrQUcgtNffgQLQhCpa01IUQKCv605w';
   const TAB_HOSP='Calendário Hospedagem para dash';
   const CORES=['#5AABB5','#E08856','#5E9B6B','#2E7D8A','#B8A9C9','#234D67'];
-  function fetchSheet(name){
+  // `id` opcional: a planilha do Day Care (recepção) é outra, mas o mecanismo é o mesmo.
+  function fetchSheet(name, id){
     return new Promise((res,rej)=>{
       const cb='zcb_'+Math.round(performance.now())+'_'+Math.round(Math.random()*1e5);
       const sc=document.createElement('script');
@@ -2041,7 +2042,7 @@
       function cleanup(){clearTimeout(timer);try{delete window[cb];}catch(e){window[cb]=undefined;} if(sc.parentNode)sc.parentNode.removeChild(sc);}
       window[cb]=d=>{cleanup(); (d&&d.table)?res(d.table):rej(new Error('no table'));};
       sc.onerror=()=>{cleanup();rej(new Error('net'));};
-      sc.src=`https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=reqId:0;responseHandler:${cb}&sheet=${encodeURIComponent(name)}&t=${Date.now()}`;
+      sc.src=`https://docs.google.com/spreadsheets/d/${id||SHEET_ID}/gviz/tq?tqx=reqId:0;responseHandler:${cb}&sheet=${encodeURIComponent(name)}&t=${Date.now()}`;
       document.head.appendChild(sc);
     });
   }
@@ -2279,6 +2280,125 @@
   // Inativar, nunca excluir: "quero todo o banco de dados sempre". Quem saiu (Bud e Stella —
   // brigas) ou faleceu sai das listas do dia, mas o cadastro e o histórico ficam inteiros.
   function abrirTodosPeludinhos(){ const a=document.querySelector('[data-v="ficha"]'); if(a) a.click(); if(typeof closeNav==='function') closeNav(); }
+  // ===== PLANILHA DO DAY CARE (a recepção manda) =====
+  // Decisão de Adriana: "a planilha é quem manda em tudo". A recepção preenche;
+  // o app lê e aplica. Marcar no app continua existindo, mas como fallback
+  // (planilha fora do ar, recepção esqueceu ou faltou).
+  // Uma aba por mês, no padrão "2026 DayCare Julho".
+  const SHEET_DC='1sYJfssdMiUGkyeUX2EUUVpSjpE80kETDT6Gktnqd9kA';
+  const MESES_ABA=['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+  function abaDaycareDe(d){ return d.getFullYear()+' DayCare '+MESES_ABA[d.getMonth()]; }
+  let planDia={ banho:[], avulso:[], reposicao:[], adaptacao:[], faltas:[], duvidas:[], lida:false, erro:'' };
+
+  // --- casar o que a recepção digitou com o cadastro ---
+  // A recepção escreve à mão: "nina/poodle", "fred/srd SHAMPOO", "MAYA POMSKY", "Boris Westie".
+  // Tem "/" ou espaço separando a raça, sufixo de serviço e erro de digitação ("jaasmim" = Jasmin).
+  const PLAN_LIXO=/\b(shampoo|xampu|banho|tosa|hidratacao|trimming|ozonio)\b/g;
+  function planNorm(x){ return String(x||'').normalize('NFD').replace(/[̀-ͯ]/g,'').toLowerCase().replace(/\s+/g,' ').trim(); }
+  function planPartir(txt){
+    let t=planNorm(txt).replace(PLAN_LIXO,' ').replace(/\s+/g,' ').trim();
+    if(!t) return null;
+    if(t.indexOf('/')>=0){ const a=t.split('/'); return {nome:(a[0]||'').trim(), raca:(a[1]||'').trim()}; }
+    return {nome:t, raca:''};
+  }
+  function planDist(a,b){ const m=a.length,n=b.length; if(!m) return n; if(!n) return m;
+    let prev=Array.from({length:n+1},(_,j)=>j), cur=new Array(n+1);
+    for(let i=1;i<=m;i++){ cur[0]=i;
+      for(let j=1;j<=n;j++) cur[j]=Math.min(prev[j]+1, cur[j-1]+1, prev[j-1]+(a[i-1]===b[j-1]?0:1));
+      const t=prev; prev=cur; cur=t; }
+    return prev[n]; }
+  function planRacaBate(cad,txt){ const c=planNorm(cad), t=planNorm(txt); if(!c||!t) return false;
+    if(c.indexOf(t)>=0||t.indexOf(c)>=0) return true; return planDist(c,t)<=2; }
+  // devolve {p, conf, ambiguo, txt} — ambiguo:true = NÃO aplicar sozinho, a Gestão resolve
+  function planCasar(cel){
+    const q=planPartir(cel); if(!q) return null;
+    const alvo=planNorm(q.nome);
+    let cands=PELUDINHOS.filter(p=>planNorm(p.n)===alvo);
+    if(!cands.length && !q.raca){ // "boris westie" — nome e raça sem barra
+      const partes=alvo.split(' ');
+      for(let k=partes.length-1;k>=1;k--){
+        const nome=partes.slice(0,k).join(' ');
+        const c2=PELUDINHOS.filter(p=>planNorm(p.n)===nome);
+        if(c2.length){ q.nome=nome; q.raca=partes.slice(k).join(' '); cands=c2; break; }
+      }
+    }
+    let conf=cands.length?'exato':'';
+    if(!cands.length){ // erro de digitação
+      const prim=alvo.split(' ')[0]; let melhor=null, md=99;
+      PELUDINHOS.forEach(p=>{ const d=Math.min(planDist(planNorm(p.n),alvo), planDist(planNorm(p.n),prim));
+        if(d<md){ md=d; melhor=[p]; } else if(d===md&&melhor) melhor.push(p); });
+      if(melhor && md<=(alvo.length<=4?1:2)){ cands=melhor; conf='fuzzy'; }
+    }
+    if(!cands.length) return {p:null, conf:'nao-achou', ambiguo:true, txt:cel};
+    if(cands.length>1 && q.raca){
+      const porRaca=cands.filter(p=>planRacaBate(p.raca,q.raca));
+      if(porRaca.length===1) return {p:porRaca[0], conf:(conf==='fuzzy'?'fuzzy':'raca'), ambiguo:false, txt:cel};
+      if(porRaca.length) cands=porRaca; else return {p:null, conf:'conflito-raca', ambiguo:true, txt:cel};
+    }
+    // Nome único mas raça diverge ("nina/poodle" e a Nina do cadastro é Westie): pode ser
+    // outro FILHOt que não está no cadastro. Não casar em silêncio — a comida/banho iria pro errado.
+    if(cands.length===1 && q.raca && !planRacaBate(cands[0].raca, q.raca))
+      return {p:cands[0], conf:'conflito-raca', ambiguo:true, txt:cel};
+    return {p:cands[0], conf, ambiguo:cands.length>1, txt:cel};
+  }
+  // --- ler a linha do dia na planilha e aplicar ---
+  // Colunas (a recepção preenche à mão, uma linha por peludinho, ~50 linhas por dia):
+  const PLAN_COL={ data:'Data', banho:'Banho', horaBanho:'Hora Banho', adaptacao:'Adaptação',
+                   avulso:'Avulso', faltas:'Faltas Avisadas', reposicao:'Reposição' };
+  function planIdx(cols){ const m={};
+    (cols||[]).forEach((c,i)=>{ const lab=planNorm((c&&c.label)||'');
+      Object.keys(PLAN_COL).forEach(k=>{ if(lab===planNorm(PLAN_COL[k])) m[k]=i; }); });
+    return m; }
+  function planCel(r,i,fmt){ if(i==null) return ''; const c=(r&&r.c)||[]; if(i>=c.length||!c[i]) return '';
+    if(fmt && c[i].f!=null) return String(c[i].f).trim(); // `f` = valor formatado (ex.: hora "14:00")
+    const v=c[i].v; return v==null?'':String(v).trim(); }
+  function planMesmaData(cel, d){ // vem como "Date(2026,6,15)"
+    const m=/^Date\((\d+),(\d+),(\d+)/.exec(String(cel||'')); if(!m) return false;
+    return +m[1]===d.getFullYear() && +m[2]===d.getMonth() && +m[3]===d.getDate(); }
+  // A hora vem do gviz como "Date(1899,11,30,14,0,0)" (serial de hora do Sheets) e a hora
+  // legível fica no campo `f` ("14:00"). Aceita os dois, e também texto solto.
+  function planHora(v){ let t=String(v||'');
+    let m=/^Date\((\d+),(\d+),(\d+),(\d+),(\d+)/.exec(t);
+    if(m){ const h=+m[4], mi=+m[5];
+      return (h>=0&&h<=23&&mi>=0&&mi<=59)?String(h).padStart(2,'0')+':'+String(mi).padStart(2,'0'):''; }
+    m=/(\d{1,2}):(\d{2})/.exec(t); if(!m) return '';
+    const h=+m[1], mi=+m[2]; if(!(h>=0&&h<=23&&mi>=0&&mi<=59)) return '';
+    return String(h).padStart(2,'0')+':'+String(mi).padStart(2,'0'); }
+
+  async function carregarPlanilhaDia(){
+    const d=new Date(); // a planilha do dia é sempre a de hoje
+    const zerar={ banho:[], avulso:[], reposicao:[], adaptacao:[], faltas:[], duvidas:[], lida:false, erro:'' };
+    try{
+      const t=await fetchSheet(abaDaycareDe(d), SHEET_DC);
+      const ix=planIdx(t.cols);
+      if(ix.data==null){ planDia=Object.assign(zerar,{erro:'A aba "'+abaDaycareDe(d)+'" não tem coluna Data.'}); return planDia; }
+      const out=Object.assign({}, zerar, {lida:true});
+      (t.rows||[]).forEach(r=>{
+        if(!planMesmaData(planCel(r,ix.data), d)) return;
+        [['banho','banho'],['avulso','avulso'],['reposicao','reposicao'],['adaptacao','adaptacao'],['faltas','faltas']]
+          .forEach(par=>{ const campo=par[0], col=par[1];
+            const cel=planCel(r,ix[col]); if(!cel) return;
+            const m=planCasar(cel);
+            if(!m) return;
+            const item={ txt:cel, p:m.p, conf:m.conf, campo:campo };
+            if(campo==='banho') item.hora=planHora(planCel(r,ix.horaBanho));
+            if(m.ambiguo) out.duvidas.push(item); else out[campo].push(item);
+          });
+      });
+      planDia=out;
+    }catch(e){
+      // planilha fora do ar não pode parar o almoço — o app segue com marcação manual
+      planDia=Object.assign(zerar,{erro:'Não consegui ler a planilha agora. O que estiver marcado no app continua valendo.'});
+    }
+    return planDia;
+  }
+  // Banho da planilha entra sozinho na ordem do almoço (Adriana: "se a planilha diz que
+  // Elizabeth tem banho, ela tem banho — não precisa de humano marcar").
+  // Não grava no Firebase: o que a recepção escreve é a fonte, e marcar à mão continua
+  // funcionando por cima disso.
+  function banhoDaPlanilha(k){ return (planDia.banho||[]).some(it=>it.p&&dcKey(it.p.n,it.p.tutor)===k); }
+  function temBanho(k){ return !!dcBanho[k] || banhoDaPlanilha(k); }
+  function horaBanhoDe(k){ const it=(planDia.banho||[]).find(x=>x.p&&dcKey(x.p.n,x.p.tutor)===k); return it?(it.hora||''):''; }
   function pelInativo(p){ const ex=pelExtra(p); return !!(ex&&ex.inativo==='Sim'); }
   // Quantos aulunos estão matriculados em cada dia — só Gestão e Supervisão (Adriana, Márcia,
   // Amanda). Para o monitor seria ruído; para elas é ocupação da turma.
@@ -2844,7 +2964,9 @@
       +bancoTempoHTML();
   }
   function toggleAlmFinal(i){ almFinal[i]=!almFinal[i]; if(DB) DB.ref('daycare/almoco-final/'+dcDataKey()+'/'+i).set(almFinal[i]||null).catch(()=>{}); if(typeof audit==='function'&&almFinal[i]) audit('almoco_final','finalização: '+(ALM_FINAL[i]||('item '+(i+1)))); renderAlmFinal(); }
-  function seloBanho(k){ return dcBanho[k]?'<span class="mini-banho">BANHO</span>':''; }
+  function seloBanho(k){ if(!temBanho(k)) return '';
+    const h=horaBanhoDe(k); // hora vem da planilha; marcado à mão não tem hora
+    return '<span class="mini-banho">BANHO'+(h?' '+h:'')+'</span>'; }
   function toggleBanho(k){ dcBanho[k]=!dcBanho[k]; if(DB) DB.ref('daycare/banho/'+dcDataKey()+'/'+k).set(dcBanho[k]||null).catch(()=>{}); if(typeof audit==='function') audit('banho', dcBanho[k]?'marcou banho':'tirou banho', {alvo:k}); if(dcAtiv==='chamada')renderDaycare(); else if(dcAtiv==='almoco')renderAlmStep(); }
   function temGeladeira(a){ return !!(a&&/natural|geladeira/i.test(a.alim||'')); }
   // 2º da ordem de servir. A pergunta que a Gestão definiu é "Come em comedouro lento?" —
@@ -2857,7 +2979,7 @@
   // Ordem obrigatória de servir (Parte 2 — Como executar):
   // 1º quem tem banho · 2º os Ansiosos (caixa própria) · 3º comida natural/geladeira · 4º os outros
   function prioAlm(o){ if(typeof o.i!=='number') return 3; const k=dcKey(o.p.n,o.p.tutor); const a=almCad(o.p);
-    if(dcBanho[k]) return 0; if(ehAnsioso(o.p)) return 1; if(temGeladeira(a)) return 2; return 3; }
+    if(temBanho(k)) return 0; if(ehAnsioso(o.p)) return 1; if(temGeladeira(a)) return 2; return 3; }
   // almMarcas é sempre do dia de hoje. Em outro dia da semana a grade é planejamento: não
   // mostra marcação nenhuma (senão o peludinho de seg+qua aparece "comeu" na segunda).
   function marcaDe(o){ return ehHoje()?(almMarcas[dcKey(o.p.n,o.p.tutor)]||''):''; }
@@ -2999,7 +3121,9 @@
         DB.ref('daycare/almoco-prep/'+dcDataKey()).once('value').then(s=>{ almPrep=s.val()||{}; }).catch(()=>{}),
         DB.ref('daycare/almoco-final/'+dcDataKey()).once('value').then(s=>{ almFinal=s.val()||{}; }).catch(()=>{}),
         DB.ref('daycare/almoco-exec/'+dcDataKey()).once('value').then(s=>{ almExecOk=!!s.val(); }).catch(()=>{}),
-        DB.ref('daycare/banho/'+dcDataKey()).once('value').then(s=>{ dcBanho=s.val()||{}; }).catch(()=>{})
+        DB.ref('daycare/banho/'+dcDataKey()).once('value').then(s=>{ dcBanho=s.val()||{}; }).catch(()=>{}),
+        // a planilha da recepção define quem tem banho — e banho é o 1º da ordem de servir
+        carregarPlanilhaDia().catch(()=>{})
       ]).then(decideStep).catch(decideStep);
     } else decideStep();
   }
@@ -3045,6 +3169,22 @@
         </div>
       </div></div>`;
   }
+  // O que a planilha diz e o app não conseguiu identificar sozinho. Nunca adivinhar:
+  // dar banho ou comida ao FILHOt errado é pior do que pedir ajuda.
+  function avisoPlanilha(){
+    if(planDia.erro) return '<div class="dc-meia"><strong>Planilha:</strong> '+planDia.erro+'</div>';
+    if(!planDia.lida) return '';
+    const d=planDia.duvidas||[];
+    let h='';
+    const nB=(planDia.banho||[]).length;
+    if(nB) h+='<div class="alm-fora"><strong>Banho de hoje (da planilha):</strong> '
+      +(planDia.banho||[]).map(it=>it.p.n+(it.hora?' às '+it.hora:'')).join(', ')
+      +' &mdash; já estão no topo da lista, não precisa marcar.</div>';
+    if(d.length) h+='<div class="dc-faltas"><strong>A planilha tem '+d.length+' nome'+(d.length>1?'s':'')+' que eu não consegui identificar:</strong> '
+      +d.map(it=>'"'+it.txt+'"'+(it.conf==='conflito-raca'&&it.p?' (parece '+it.p.n+' '+it.p.raca+', mas a raça não bate)':'')).join(' · ')
+      +' &mdash; confira o nome na planilha ou marque à mão aqui. Não apliquei sozinho para não trocar o peludinho.</div>';
+    return h;
+  }
   function renderAlmoco(){
     if(!document.getElementById('almGrid')) return;
     // Quem não almoça sai da atividade — antes ficava na fila só com um selo, e a monitora
@@ -3075,6 +3215,7 @@
       ${metList.length?`<div class="dc-meia"><strong>COMERAM METADE (${metList.length}):</strong> ${metList.join(', ')}</div>`:''}
       ${foraList.length?`<div class="alm-fora"><strong>NAO ALMOCAM (${foraList.length}):</strong> ${foraList.map(o=>nomeDesamb(o,foraList)).join(', ')} &mdash; fora da lista de propósito, nao precisa servir.</div>`:''}
       ${!ehHoje()?`<div class="dc-meia"><strong>Você está vendo a turma de ${DIA_FULL[dcDia]}, que não é hoje.</strong> Isto é só planejamento: o almoço se marca no dia em que acontece. Para registrar, volte para ${DIA_FULL[HOJE_DIA]} (hoje).</div>`:''}
+      ${avisoPlanilha()}
       <div class="alm-legenda"><strong>Ordem de servir</strong> &mdash; a lista já vem nesta ordem, de cima para baixo:
         <span class="lg-g"><b>1º</b> quem tem banho</span><span class="lg-g"><b>2º</b> comedouro lento</span><span class="lg-g"><b>3º</b> comida natural/geladeira</span><span class="lg-g"><b>4º</b> os outros</span>
         <span class="lg-nota">Dentro de cada grupo, alfabética. Por isso um peludinho de comida natural aparece depois de um "S" — não é erro.</span>
@@ -3100,7 +3241,7 @@
         <div ${typeof o.i==='number'?`onclick="abrirPeludinhoDay(${o.i})" style="cursor:pointer"`:''}>
           ${ph}<div class="nm">${nomeDesamb(o,list)}</div><div class="br">${p.raca||'-'}</div>
         </div>
-        ${seloBanho(k)}${seloAnsioso(p,!!dcBanho[k])}${o.foraDia?seloForaDia(o):seloAdapt(ex)}${neon}${info}
+        ${seloBanho(k)}${seloAnsioso(p,temBanho(k))}${o.foraDia?seloForaDia(o):seloAdapt(ex)}${neon}${info}
         <div class="dc-actions alm-actions">
           <button class="alm-btn tudo ${m==='tudo'?'on':''}" onclick="marcarAlmoco('${k}','tudo')">Comeu tudo</button>
           <button class="alm-btn metade ${m==='metade'?'on':''}" onclick="marcarAlmoco('${k}','metade')">Metade</button>
