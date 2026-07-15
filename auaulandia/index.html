@@ -474,6 +474,11 @@
   .alm-next{margin-top:14px;text-align:center}
   .mini-banho{position:absolute;top:8px;left:8px;font-size:10px;font-weight:800;color:#fff;background:var(--z-auaulandia);padding:3px 8px;border-radius:8px;z-index:3}
   .alm-card .mini-banho{top:32px}
+  /* ANSIOSO — come em caixa própria. 2º da ordem de servir (depois de quem tem banho). */
+  .mini-ansioso{position:absolute;top:8px;left:8px;font-size:10px;font-weight:800;color:var(--z-cream);background:var(--z-blue);padding:3px 8px;border-radius:8px;z-index:3}
+  .alm-card .mini-ansioso{top:32px}
+  .mini-ansioso.lower{top:32px}
+  .alm-card .mini-ansioso.lower,.dc-card .mini-ansioso.lower{top:56px}
   .banho-toggle{margin-top:7px;width:100%;border:1.5px solid var(--line);background:#fff;border-radius:9px;padding:7px;font-family:var(--font-ui);font-weight:700;font-size:12px;cursor:pointer;color:var(--z-blue-soft)}
   .banho-toggle.on{background:var(--z-auaulandia);color:#fff;border-color:var(--z-auaulandia)}
   /* Almoco */
@@ -574,9 +579,15 @@
   .medgrid-head,.medrow{display:grid;grid-template-columns:1.3fr .82fr 1fr}
   .medgrid-head{background:var(--z-blue);color:var(--z-cream);font-size:10.5px;font-weight:700;letter-spacing:.4px}
   .medgrid-head span{padding:7px 9px}
-  .medrow input{border:none;border-top:1px solid var(--line);border-right:1px solid var(--line);padding:10px 9px;font-family:var(--font-ui);font-size:13.5px;background:var(--z-cream);width:100%;color:#234D67}
+  .meditem{border-top:1px solid var(--line)}
+  .medrow input{border:none;border-right:1px solid var(--line);padding:10px 9px;font-family:var(--font-ui);font-size:13.5px;background:var(--z-cream);width:100%;color:#234D67}
   .medrow input:last-child{border-right:none}
   .medrow input:focus{outline:none;background:#fff;box-shadow:inset 0 0 0 2px rgba(222,180,40,.5)}
+  /* Quantidade = número + unidade escolhida no botão (não aceita texto livre) */
+  .medunits{display:flex;flex-wrap:wrap;gap:6px;padding:8px 9px;background:var(--z-cream-warm);border-top:1px dashed var(--line)}
+  .medunits button{border:1.5px solid var(--line);background:var(--z-cream);color:var(--z-blue);border-radius:999px;padding:6px 11px;font-size:12.5px;font-weight:700;font-family:var(--font-ui);cursor:pointer}
+  .medunits button.on{background:var(--z-gold);border-color:var(--z-gold);color:var(--z-blue)}
+  .medunits .mu-lab{align-self:center;font-size:10.5px;font-weight:800;letter-spacing:.4px;color:var(--muted);text-transform:uppercase;margin-right:2px}
   .medgrid.dim{opacity:.45;pointer-events:none}
 
   /* ===== Diária Avulsa — tela grande de busca (à prova de baixa leitura) ===== */
@@ -1494,12 +1505,38 @@
     const tp=cardId.replace('card-','');
     if(!c.classList.contains('collapsed')){ if(!LEITURA_T0[tp]) LEITURA_T0[tp]=Date.now(); observarFimLeitura(tp); } }
   // ---- Medicação/Suplementação à prova de erro: tabela direcionada (nome · horário · quantidade) ----
-  function medRowHTML(kind){ const ph=(kind==='sup')?'Nome do suplemento':'Nome do medicamento'; return '<div class="medrow"><input data-c="m" placeholder="'+ph+'"><input data-c="h" placeholder="Horário que deu"><input data-c="d" placeholder="Quantidade"></div>'; }
-  function medgridHTML(kind){ const cab=(kind==='sup')?'Suplemento':'Medicamento'; const nome=(kind==='sup')?'suplemento':'medicamento'; let rows=''; for(let i=0;i<5;i++){ rows+=medRowHTML(kind); } return '<div class="medhint">Para cada '+nome+': escreva o nome, o horário em que você deu e a quantidade.</div>'+'<div class="medgrid-head"><span>'+cab+'</span><span>Horário</span><span>Quantidade</span></div>'+'<div class="medrows">'+rows+'</div>'+'<button type="button" class="med-add" onclick="addMedRow(this)">+ Acrescentar '+nome+'</button>'; }
+  // Unidades fechadas: a quantidade NUNCA é texto livre (evita "." e afins). Número + unidade, sempre.
+  const MED_UNIDADES=['comprimido','cápsula','ml','gota','sachê','colher'];
+  const MED_PLURAL={'comprimido':'comprimidos','cápsula':'cápsulas','gota':'gotas','sachê':'sachês','colher':'colheres'};
+  function semAcento(s){ return String(s||'').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,''); }
+  function qtdNum(q){ const n=parseFloat(String(q||'').replace(',','.')); return (isFinite(n)&&n>0)?n:null; }
+  // "1"+"comprimido" -> "1 comprimido" | "2"+"gota" -> "2 gotas". Formato igual ao histórico já salvo.
+  function fmtQtd(q,u){ const n=qtdNum(q); if(n==null||!u) return ''; const s=String(q).trim().replace('.',','); if(u==='ml') return s+' ml'; return s+' '+((n>1&&MED_PLURAL[u])?MED_PLURAL[u]:u); }
+  function unidadeDe(txt){ const t=semAcento(txt).trim(); if(/^(ml|mililitro)/.test(t)) return 'ml'; if(/^comprimido/.test(t)) return 'comprimido'; if(/^capsula/.test(t)) return 'cápsula'; if(/^gota/.test(t)) return 'gota'; if(/^sache/.test(t)) return 'sachê'; if(/^colher/.test(t)) return 'colher'; return ''; }
+  function parseQtd(d){ const m=String(d||'').trim().match(/^(\d+(?:[.,]\d+)?)\s*(.*)$/); return m?{q:m[1],u:unidadeDe(m[2])}:{q:'',u:''}; }
+  // Horário: aceita 7, 730, 7h30, 7:30 -> normaliza para 07:30. Inválido volta '' e o salvar bloqueia.
+  function normHora(v){ const d=String(v||'').replace(/\D/g,''); if(!d) return ''; let H,M;
+    if(d.length<=2){ H=d; M='00'; } else if(d.length===3){ H=d.slice(0,1); M=d.slice(1); } else { H=d.slice(0,2); M=d.slice(2,4); }
+    const h=parseInt(H,10), m=parseInt(M,10); if(!(h>=0&&h<=23&&m>=0&&m<=59)) return '';
+    return String(h).padStart(2,'0')+':'+String(m).padStart(2,'0'); }
+  function normalizarHoraMed(inp){ const n=normHora(inp.value); if(n) inp.value=n; }
+  function horaOk(h){ return /^([01]\d|2[0-3]):[0-5]\d$/.test(String(h||'').trim()); }
+  function nomeMedOk(m){ return (String(m||'').match(/[A-Za-zÀ-ÿ]/g)||[]).length>=2; }
+  function pickUnit(btn){ const w=btn.parentElement; const on=btn.classList.contains('on'); w.querySelectorAll('button').forEach(b=>b.classList.remove('on')); if(!on) btn.classList.add('on'); }
+  function medRowHTML(kind){ const ph=(kind==='sup')?'Nome do suplemento':'Nome do medicamento';
+    const units=MED_UNIDADES.map(u=>'<button type="button" onclick="pickUnit(this)">'+u+'</button>').join('');
+    return '<div class="meditem">'
+      +'<div class="medrow"><input data-c="m" placeholder="'+ph+'"><input data-c="h" inputmode="numeric" placeholder="07:30" onblur="normalizarHoraMed(this)"><input data-c="q" inputmode="decimal" placeholder="1"></div>'
+      +'<div class="medunits"><span class="mu-lab">Unidade</span>'+units+'</div>'
+    +'</div>'; }
+  function medgridHTML(kind){ const cab=(kind==='sup')?'Suplemento':'Medicamento'; const nome=(kind==='sup')?'suplemento':'medicamento'; let rows=''; for(let i=0;i<5;i++){ rows+=medRowHTML(kind); } return '<div class="medhint">Para cada '+nome+': escreva o nome, o horário em que você deu (ex: 07:30) e a quantidade — o número e a unidade (1 comprimido, 10 ml, 2 gotas).</div>'+'<div class="medgrid-head"><span>'+cab+'</span><span>Horário</span><span>Quantidade</span></div>'+'<div class="medrows">'+rows+'</div>'+'<button type="button" class="med-add" onclick="addMedRow(this)">+ Acrescentar '+nome+'</button>'; }
   function montarMedgrids(){ document.querySelectorAll('.medgrid-slot').forEach(s=>{ if(s.dataset.done) return; s.classList.add('medgrid'); s.innerHTML=medgridHTML(s.dataset.kind||'med'); s.style.display='none'; s.dataset.done='1'; }); }
   function addMedRow(btn){ const grid=btn.closest('.medgrid'); if(!grid) return; const rows=grid.querySelector('.medrows'); const kind=grid.dataset.kind==='sup'?'sup':'med'; if(rows) rows.insertAdjacentHTML('beforeend', medRowHTML(kind)); }
-  function coletarMedgrids(cardId){ const out={med:[],sup:[]}; document.querySelectorAll('#'+cardId+' .medgrid').forEach(g=>{ const kind=g.dataset.kind==='sup'?'sup':'med'; const rows=[]; g.querySelectorAll('.medrow').forEach(r=>{ const m=(r.querySelector('[data-c=m]').value||'').trim(); const h=(r.querySelector('[data-c=h]').value||'').trim(); const d=(r.querySelector('[data-c=d]').value||'').trim(); if(m||h||d) rows.push({m:m,h:h,d:d}); }); out[kind]=rows; }); return out; }
-  function aplicarMedgrids(cardId,d){ d=d||{}; montarMedgrids(); document.querySelectorAll('#'+cardId+' .medgrid').forEach(g=>{ const kind=g.dataset.kind==='sup'?'sup':'med'; let arr=(kind==='sup'?(d.sups||[]):(d.meds||[])); if(!arr||!arr.length){ const ba=d.byArea||{}; const old=(kind==='sup')?ba.suplemento:ba.medicamento; if(old) arr=[{m:old,h:'',d:''}]; } const rowsEl=g.querySelector('.medrows'); if(rowsEl){ const n=Math.max(5,(arr||[]).length); rowsEl.innerHTML=''; for(let i=0;i<n;i++) rowsEl.insertAdjacentHTML('beforeend', medRowHTML(kind)); rowsEl.querySelectorAll('.medrow').forEach((r,i)=>{ const o=(arr&&arr[i])||{}; r.querySelector('[data-c=m]').value=o.m||''; r.querySelector('[data-c=h]').value=o.h||''; r.querySelector('[data-c=d]').value=o.d||''; }); } }); sincMedVis(cardId); }
+  function coletarMedgrids(cardId){ const out={med:[],sup:[]}; document.querySelectorAll('#'+cardId+' .medgrid').forEach(g=>{ const kind=g.dataset.kind==='sup'?'sup':'med'; const rows=[]; g.querySelectorAll('.meditem').forEach(r=>{ const m=(r.querySelector('[data-c=m]').value||'').trim(); const h=(r.querySelector('[data-c=h]').value||'').trim(); const q=(r.querySelector('[data-c=q]').value||'').trim(); const ub=r.querySelector('.medunits button.on'); const u=ub?ub.textContent.trim():''; if(m||h||q||u) rows.push({m:m,h:normHora(h)||h,q:q,u:u,d:fmtQtd(q,u)}); }); out[kind]=rows; }); return out; }
+  function aplicarMedgrids(cardId,d){ d=d||{}; montarMedgrids(); document.querySelectorAll('#'+cardId+' .medgrid').forEach(g=>{ const kind=g.dataset.kind==='sup'?'sup':'med'; let arr=(kind==='sup'?(d.sups||[]):(d.meds||[])); if(!arr||!arr.length){ const ba=d.byArea||{}; const old=(kind==='sup')?ba.suplemento:ba.medicamento; if(old) arr=[{m:old,h:'',d:''}]; } const rowsEl=g.querySelector('.medrows'); if(rowsEl){ const n=Math.max(5,(arr||[]).length); rowsEl.innerHTML=''; for(let i=0;i<n;i++) rowsEl.insertAdjacentHTML('beforeend', medRowHTML(kind)); rowsEl.querySelectorAll('.meditem').forEach((r,i)=>{ const o=(arr&&arr[i])||{}; r.querySelector('[data-c=m]').value=o.m||''; r.querySelector('[data-c=h]').value=o.h?(normHora(o.h)||o.h):'';
+      // registros antigos guardavam só o texto da quantidade ("1 comprimido") — separa em número + unidade
+      let q=o.q||'', u=o.u||''; if(!q&&!u&&o.d){ const pq=parseQtd(o.d); q=pq.q; u=pq.u; }
+      r.querySelector('[data-c=q]').value=q; r.querySelectorAll('.medunits button').forEach(b=>b.classList.toggle('on', !!u&&b.textContent.trim()===u)); }); } }); sincMedVis(cardId); }
   function medsToTxt(arr){ return (arr||[]).map(o=>[o.m,o.d,o.h].filter(Boolean).join(' ')).filter(Boolean).join('; '); }
   // detecta se um relatório (novo ou antigo) registrou medicação
   function temMedEm(rel){ if(!rel) return false; if(rel.meds&&rel.meds.length) return true; if(rel.byQ&&rel.byQ['Tem medicação?']==='Sim') return true; if(rel.byArea&&rel.byArea.medicamento) return true; return false; }
@@ -1664,9 +1701,16 @@
     if(falt.length){ if(st){ st.style.color='var(--crm-critico)'; st.textContent='✋ Antes de passar para o próximo peludinho, responda TODAS as perguntas! Faltou: '+falt.slice(0,6).join(', ')+(falt.length>6?'…':''); } return; }
     // ---- Medicação/Suplementação à prova de erro: "Tem? Sim" exige tabela preenchida ----
     const _mg=coletarMedgrids(card);
-    function _vMed(kind,label,resp){ if(resp!=='Sim') return ''; const arr=_mg[kind]||[]; const completas=arr.filter(o=>o.m&&o.h&&o.d); const incompletas=arr.filter(o=>(o.m||o.h||o.d)&&!(o.m&&o.h&&o.d));
-      if(incompletas.length) return 'Há linha de '+label+' incompleta — escreva o nome, o horário e a quantidade (ou apague a linha).';
-      if(!completas.length) return 'Você marcou que tem '+label+' — escreva o nome, o horário e a quantidade em pelo menos 1 linha.'; return ''; }
+    // Não basta ter algo escrito: o nome precisa ser um nome, o horário uma hora e a quantidade um
+    // número com unidade. Um "." em cada campo NÃO passa mais.
+    function _vMed(kind,label,resp){ if(resp!=='Sim') return ''; const arr=(_mg[kind]||[]).filter(o=>o.m||o.h||o.q||o.u);
+      if(!arr.length) return 'Você marcou que tem '+label+' — preencha o nome, o horário e a quantidade em pelo menos 1 linha.';
+      for(let i=0;i<arr.length;i++){ const o=arr[i], ln='Linha '+(i+1)+' de '+label+': ';
+        if(!nomeMedOk(o.m)) return ln+'escreva o NOME por extenso (um ponto ou uma letra solta não vale).';
+        if(!horaOk(o.h)) return ln+'escreva o HORÁRIO em que você deu — hora de verdade, ex: 07:30.';
+        if(qtdNum(o.q)==null) return ln+'escreva a QUANTIDADE em número — ex: 1, 0,5 ou 10.';
+        if(!o.u) return ln+'toque na UNIDADE da quantidade (comprimido, ml, gota…).'; }
+      return ''; }
     const _medResp=valDe(card,'Tem medicação?'); const _supResp=valDe(card,'Tem suplementação?');
     const _eMed=_vMed('med','medicação',_medResp); if(_eMed){ if(st){ st.style.color='var(--crm-critico)'; st.textContent='✋ '+_eMed; } return; }
     const _eSup=_vMed('sup','suplementação',_supResp); if(_eSup){ if(st){ st.style.color='var(--crm-critico)'; st.textContent='✋ '+_eSup; } return; }
@@ -2231,6 +2275,7 @@
     if(ex.problema) P.push(`<span class="alert-pill crit">SAÚDE: ${escAttr(ex.problema)}</span>`);
     if(ex.medicacao) P.push(`<span class="alert-pill warn">MEDICAÇÃO: ${escAttr(ex.medicacao)}</span>`);
     if(ex.manias) P.push(`<span class="alert-pill warn">MANIAS: ${escAttr(ex.manias)}</span>`);
+    if(ex.ansioso==='Sim') P.push(`<span class="alert-pill warn">ANSIOSO: come em caixa própria — servir logo após quem tem banho</span>`);
     return P.length?`<div class="alert-pills">${P.join('')}</div>`:'';
   }
   function refreshPills(){ const el=document.getElementById('pelPills'); if(el&&pelAtual) el.innerHTML=alertPills(pelExtra(pelAtual)); }
@@ -2315,6 +2360,7 @@
           <div class="field"><label>Algum problema de saúde</label><input class="cad-in" value="${escAttr(ex.problema||'')}" placeholder="Ex: cardíaco — ou vazio" onchange="setPelExtra(pelAtual,{problema:this.value});refreshPills()"></div>
           <div class="field"><label>Manias</label><input class="cad-in" value="${escAttr(ex.manias||'')}" placeholder="Ex: protege a comida" onchange="setPelExtra(pelAtual,{manias:this.value});refreshPills()"></div>
           <div class="field"><label>Em adaptacao (1&ordm; mes)?</label><div class="seg gold" data-single>${segBtnsPel('adaptacao',ex.adaptacao||'',['Sim','Nao'])}</div></div>
+          <div class="field"><label>Ansioso &mdash; come em caixa propria?</label><div class="seg gold" data-single>${segBtnsPel('ansioso',ex.ansioso||'',['Sim','Nao'])}</div></div>
         </div>
       </div>
 
@@ -2677,7 +2723,12 @@
   function seloBanho(k){ return dcBanho[k]?'<span class="mini-banho">BANHO</span>':''; }
   function toggleBanho(k){ dcBanho[k]=!dcBanho[k]; if(DB) DB.ref('daycare/banho/'+dcDataKey()+'/'+k).set(dcBanho[k]||null).catch(()=>{}); if(typeof audit==='function') audit('banho', dcBanho[k]?'marcou banho':'tirou banho', {alvo:k}); if(dcAtiv==='chamada')renderDaycare(); else if(dcAtiv==='almoco')renderAlmStep(); }
   function temGeladeira(a){ return !!(a&&/natural|geladeira/i.test(a.alim||'')); }
-  function prioAlm(o){ if(typeof o.i!=='number') return 1; const k=dcKey(o.p.n,o.p.tutor); const a=ALMOCO[pelKey(o.p)]; return (dcBanho[k]||temGeladeira(a))?0:1; }
+  function ehAnsioso(p){ const ex=pelExtra(p); return !!(ex&&ex.ansioso==='Sim'); }
+  function seloAnsioso(p,temBanho){ return ehAnsioso(p)?`<span class="mini-ansioso${temBanho?' lower':''}">ANSIOSO</span>`:''; }
+  // Ordem obrigatória de servir (Parte 2 — Como executar):
+  // 1º quem tem banho · 2º os Ansiosos (caixa própria) · 3º comida natural/geladeira · 4º os outros
+  function prioAlm(o){ if(typeof o.i!=='number') return 3; const k=dcKey(o.p.n,o.p.tutor); const a=ALMOCO[pelKey(o.p)];
+    if(dcBanho[k]) return 0; if(ehAnsioso(o.p)) return 1; if(temGeladeira(a)) return 2; return 3; }
   function ordemAlmoco(list){ return list.slice().sort((x,y)=>{ const px=prioAlm(x),py=prioAlm(y); if(px!==py)return px-py; return jsNorm(x.p.n).localeCompare(jsNorm(y.p.n)); }); }
   function filtraLista(list){ const q=jsNorm(dcBuscaVal); return q?list.filter(o=>jsNorm([o.p.n,o.p.raca,o.p.tutor].join(' ')).indexOf(q)>=0):list; }
   function onDcBusca(){ const el=document.getElementById('dcBusca'); dcBuscaVal=el?el.value:''; if(dcAtiv==='chamada')renderDaycare(); else if(dcAtiv==='almoco')renderAlmoco(); else renderGenerico(); }
@@ -2842,7 +2893,7 @@
         <div ${typeof o.i==='number'?`onclick="abrirPeludinhoDay(${o.i})" style="cursor:pointer"`:''}>
           ${ph}<div class="nm">${p.n}</div><div class="br">${p.raca||'-'}</div>
         </div>
-        ${seloBanho(k)}${seloAdapt(ex)}${neon}${info}
+        ${seloBanho(k)}${seloAnsioso(p,!!dcBanho[k])}${seloAdapt(ex)}${neon}${info}
         <div class="dc-actions alm-actions">
           <button class="alm-btn tudo ${m==='tudo'?'on':''}" onclick="marcarAlmoco('${k}','tudo')">Comeu tudo</button>
           <button class="alm-btn metade ${m==='metade'?'on':''}" onclick="marcarAlmoco('${k}','metade')">Metade</button>
