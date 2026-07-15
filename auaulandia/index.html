@@ -580,8 +580,10 @@
   .medgrid-head{background:var(--z-blue);color:var(--z-cream);font-size:10.5px;font-weight:700;letter-spacing:.4px}
   .medgrid-head span{padding:7px 9px}
   .meditem{border-top:1px solid var(--line)}
-  .medrow input{border:none;border-right:1px solid var(--line);padding:10px 9px;font-family:var(--font-ui);font-size:13.5px;background:var(--z-cream);width:100%;color:#234D67}
-  .medrow input:last-child{border-right:none}
+  .mfield{display:block;min-width:0;border-right:1px solid var(--line)}
+  .mfield:last-child{border-right:none}
+  .mf-lab{display:none}
+  .medrow input{border:none;padding:10px 9px;font-family:var(--font-ui);font-size:13.5px;background:var(--z-cream);width:100%;color:#234D67}
   .medrow input:focus{outline:none;background:#fff;box-shadow:inset 0 0 0 2px rgba(222,180,40,.5)}
   /* Quantidade = número + unidade escolhida no botão (não aceita texto livre) */
   .medunits{display:flex;flex-wrap:wrap;gap:6px;padding:8px 9px;background:var(--z-cream-warm);border-top:1px dashed var(--line)}
@@ -589,6 +591,19 @@
   .medunits button.on{background:var(--z-gold);border-color:var(--z-gold);color:var(--z-blue)}
   .medunits .mu-lab{align-self:center;font-size:10.5px;font-weight:800;letter-spacing:.4px;color:var(--muted);text-transform:uppercase;margin-right:2px}
   .medgrid.dim{opacity:.45;pointer-events:none}
+  /* Celular: a tabela de 3 colunas não cabe — o nome do remédio ficava cortado.
+     Cada linha vira um bloco empilhado, com rótulo em cada campo e botão no tamanho do dedo. */
+  @media (max-width:560px){
+    .medgrid-head{display:none}
+    .medrow{grid-template-columns:1fr}
+    .mfield{border-right:none;border-bottom:1px solid var(--line);padding:7px 9px 8px}
+    .mfield:last-child{border-bottom:none}
+    .mf-lab{display:block;font-size:10.5px;font-weight:800;letter-spacing:.4px;color:var(--muted);text-transform:uppercase;margin-bottom:2px}
+    .medrow input{padding:7px 0;font-size:15px;background:transparent}
+    .medrow input:focus{background:transparent;box-shadow:none;border-bottom:2px solid var(--z-gold)}
+    .medunits{padding:9px}
+    .medunits button{min-height:40px;padding:8px 13px;font-size:13.5px}
+  }
 
   /* ===== Diária Avulsa — tela grande de busca (à prova de baixa leitura) ===== */
   #avulsaModal{display:none;position:fixed;inset:0;z-index:70;background:rgba(26,58,79,.55)}
@@ -1506,13 +1521,15 @@
     if(!c.classList.contains('collapsed')){ if(!LEITURA_T0[tp]) LEITURA_T0[tp]=Date.now(); observarFimLeitura(tp); } }
   // ---- Medicação/Suplementação à prova de erro: tabela direcionada (nome · horário · quantidade) ----
   // Unidades fechadas: a quantidade NUNCA é texto livre (evita "." e afins). Número + unidade, sempre.
-  const MED_UNIDADES=['comprimido','cápsula','ml','gota','sachê','colher'];
-  const MED_PLURAL={'comprimido':'comprimidos','cápsula':'cápsulas','gota':'gotas','sachê':'sachês','colher':'colheres'};
+  // "aplicação" cobre pomada, spray e pipeta (o que foi aplicado já está no nome).
+  // "unidade" é a medida da insulina — é o que está marcado na seringa.
+  const MED_UNIDADES=['comprimido','cápsula','ml','gota','sachê','colher','aplicação','unidade'];
+  const MED_PLURAL={'comprimido':'comprimidos','cápsula':'cápsulas','gota':'gotas','sachê':'sachês','colher':'colheres','aplicação':'aplicações','unidade':'unidades'};
   function semAcento(s){ return String(s||'').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,''); }
   function qtdNum(q){ const n=parseFloat(String(q||'').replace(',','.')); return (isFinite(n)&&n>0)?n:null; }
   // "1"+"comprimido" -> "1 comprimido" | "2"+"gota" -> "2 gotas". Formato igual ao histórico já salvo.
   function fmtQtd(q,u){ const n=qtdNum(q); if(n==null||!u) return ''; const s=String(q).trim().replace('.',','); if(u==='ml') return s+' ml'; return s+' '+((n>1&&MED_PLURAL[u])?MED_PLURAL[u]:u); }
-  function unidadeDe(txt){ const t=semAcento(txt).trim(); if(/^(ml|mililitro)/.test(t)) return 'ml'; if(/^comprimido/.test(t)) return 'comprimido'; if(/^capsula/.test(t)) return 'cápsula'; if(/^gota/.test(t)) return 'gota'; if(/^sache/.test(t)) return 'sachê'; if(/^colher/.test(t)) return 'colher'; return ''; }
+  function unidadeDe(txt){ const t=semAcento(txt).trim(); if(/^(ml|mililitro)/.test(t)) return 'ml'; if(/^comprimido/.test(t)) return 'comprimido'; if(/^capsula/.test(t)) return 'cápsula'; if(/^gota/.test(t)) return 'gota'; if(/^sache/.test(t)) return 'sachê'; if(/^colher/.test(t)) return 'colher'; if(/^aplicac/.test(t)) return 'aplicação'; if(/^(unidade|ui\b)/.test(t)) return 'unidade'; return ''; }
   function parseQtd(d){ const m=String(d||'').trim().match(/^(\d+(?:[.,]\d+)?)\s*(.*)$/); return m?{q:m[1],u:unidadeDe(m[2])}:{q:'',u:''}; }
   // Horário: aceita 7, 730, 7h30, 7:30 -> normaliza para 07:30. Inválido volta '' e o salvar bloqueia.
   function normHora(v){ const d=String(v||'').replace(/\D/g,''); if(!d) return ''; let H,M;
@@ -1525,15 +1542,24 @@
   function pickUnit(btn){ const w=btn.parentElement; const on=btn.classList.contains('on'); w.querySelectorAll('button').forEach(b=>b.classList.remove('on')); if(!on) btn.classList.add('on'); }
   function medRowHTML(kind){ const ph=(kind==='sup')?'Nome do suplemento':'Nome do medicamento';
     const units=MED_UNIDADES.map(u=>'<button type="button" onclick="pickUnit(this)">'+u+'</button>').join('');
+    const cab=(kind==='sup')?'Suplemento':'Medicamento';
+    // os .mf-lab só aparecem no celular, onde o cabeçalho da tabela não cabe
     return '<div class="meditem">'
-      +'<div class="medrow"><input data-c="m" placeholder="'+ph+'"><input data-c="h" inputmode="numeric" placeholder="07:30" onblur="normalizarHoraMed(this)"><input data-c="q" inputmode="decimal" placeholder="1"></div>'
-      +'<div class="medunits"><span class="mu-lab">Unidade</span>'+units+'</div>'
+      +'<div class="medrow">'
+        +'<label class="mfield"><span class="mf-lab">'+cab+'</span><input data-c="m" placeholder="'+ph+'"></label>'
+        +'<label class="mfield"><span class="mf-lab">Horário</span><input data-c="h" inputmode="numeric" placeholder="07:30" onblur="normalizarHoraMed(this)"></label>'
+        +'<label class="mfield"><span class="mf-lab">Quantidade</span><input data-c="q" inputmode="decimal" placeholder="1"></label>'
+      +'</div>'
+      +'<div class="medunits"><span class="mu-lab">Medida</span>'+units+'</div>'
     +'</div>'; }
-  function medgridHTML(kind){ const cab=(kind==='sup')?'Suplemento':'Medicamento'; const nome=(kind==='sup')?'suplemento':'medicamento'; let rows=''; for(let i=0;i<5;i++){ rows+=medRowHTML(kind); } return '<div class="medhint">Para cada '+nome+': escreva o nome, o horário em que você deu (ex: 07:30) e a quantidade — o número e a unidade (1 comprimido, 10 ml, 2 gotas).</div>'+'<div class="medgrid-head"><span>'+cab+'</span><span>Horário</span><span>Quantidade</span></div>'+'<div class="medrows">'+rows+'</div>'+'<button type="button" class="med-add" onclick="addMedRow(this)">+ Acrescentar '+nome+'</button>'; }
+  // 2 linhas de partida: quase todo FILHOt toma 1 ou 2 remédios, e no celular cada linha
+  // ocupa muito espaço. Quem precisa de mais usa "+ Acrescentar".
+  const MED_LINHAS=2;
+  function medgridHTML(kind){ const cab=(kind==='sup')?'Suplemento':'Medicamento'; const nome=(kind==='sup')?'suplemento':'medicamento'; let rows=''; for(let i=0;i<MED_LINHAS;i++){ rows+=medRowHTML(kind); } return '<div class="medhint">Para cada '+nome+': escreva o nome, o horário em que você deu (ex: 07:30) e a quantidade — o número e a medida (1 comprimido, 10 ml, 2 gotas, 1 aplicação de pomada, 4 unidades de insulina).</div>'+'<div class="medgrid-head"><span>'+cab+'</span><span>Horário</span><span>Quantidade</span></div>'+'<div class="medrows">'+rows+'</div>'+'<button type="button" class="med-add" onclick="addMedRow(this)">+ Acrescentar '+nome+'</button>'; }
   function montarMedgrids(){ document.querySelectorAll('.medgrid-slot').forEach(s=>{ if(s.dataset.done) return; s.classList.add('medgrid'); s.innerHTML=medgridHTML(s.dataset.kind||'med'); s.style.display='none'; s.dataset.done='1'; }); }
   function addMedRow(btn){ const grid=btn.closest('.medgrid'); if(!grid) return; const rows=grid.querySelector('.medrows'); const kind=grid.dataset.kind==='sup'?'sup':'med'; if(rows) rows.insertAdjacentHTML('beforeend', medRowHTML(kind)); }
   function coletarMedgrids(cardId){ const out={med:[],sup:[]}; document.querySelectorAll('#'+cardId+' .medgrid').forEach(g=>{ const kind=g.dataset.kind==='sup'?'sup':'med'; const rows=[]; g.querySelectorAll('.meditem').forEach(r=>{ const m=(r.querySelector('[data-c=m]').value||'').trim(); const h=(r.querySelector('[data-c=h]').value||'').trim(); const q=(r.querySelector('[data-c=q]').value||'').trim(); const ub=r.querySelector('.medunits button.on'); const u=ub?ub.textContent.trim():''; if(m||h||q||u) rows.push({m:m,h:normHora(h)||h,q:q,u:u,d:fmtQtd(q,u)}); }); out[kind]=rows; }); return out; }
-  function aplicarMedgrids(cardId,d){ d=d||{}; montarMedgrids(); document.querySelectorAll('#'+cardId+' .medgrid').forEach(g=>{ const kind=g.dataset.kind==='sup'?'sup':'med'; let arr=(kind==='sup'?(d.sups||[]):(d.meds||[])); if(!arr||!arr.length){ const ba=d.byArea||{}; const old=(kind==='sup')?ba.suplemento:ba.medicamento; if(old) arr=[{m:old,h:'',d:''}]; } const rowsEl=g.querySelector('.medrows'); if(rowsEl){ const n=Math.max(5,(arr||[]).length); rowsEl.innerHTML=''; for(let i=0;i<n;i++) rowsEl.insertAdjacentHTML('beforeend', medRowHTML(kind)); rowsEl.querySelectorAll('.meditem').forEach((r,i)=>{ const o=(arr&&arr[i])||{}; r.querySelector('[data-c=m]').value=o.m||''; r.querySelector('[data-c=h]').value=o.h?(normHora(o.h)||o.h):'';
+  function aplicarMedgrids(cardId,d){ d=d||{}; montarMedgrids(); document.querySelectorAll('#'+cardId+' .medgrid').forEach(g=>{ const kind=g.dataset.kind==='sup'?'sup':'med'; let arr=(kind==='sup'?(d.sups||[]):(d.meds||[])); if(!arr||!arr.length){ const ba=d.byArea||{}; const old=(kind==='sup')?ba.suplemento:ba.medicamento; if(old) arr=[{m:old,h:'',d:''}]; } const rowsEl=g.querySelector('.medrows'); if(rowsEl){ const n=Math.max(MED_LINHAS,(arr||[]).length); rowsEl.innerHTML=''; for(let i=0;i<n;i++) rowsEl.insertAdjacentHTML('beforeend', medRowHTML(kind)); rowsEl.querySelectorAll('.meditem').forEach((r,i)=>{ const o=(arr&&arr[i])||{}; r.querySelector('[data-c=m]').value=o.m||''; r.querySelector('[data-c=h]').value=o.h?(normHora(o.h)||o.h):'';
       // registros antigos guardavam só o texto da quantidade ("1 comprimido") — separa em número + unidade
       let q=o.q||'', u=o.u||''; if(!q&&!u&&o.d){ const pq=parseQtd(o.d); q=pq.q; u=pq.u; }
       r.querySelector('[data-c=q]').value=q; r.querySelectorAll('.medunits button').forEach(b=>b.classList.toggle('on', !!u&&b.textContent.trim()===u)); }); } }); sincMedVis(cardId); }
@@ -1709,7 +1735,7 @@
         if(!nomeMedOk(o.m)) return ln+'escreva o NOME por extenso (um ponto ou uma letra solta não vale).';
         if(!horaOk(o.h)) return ln+'escreva o HORÁRIO em que você deu — hora de verdade, ex: 07:30.';
         if(qtdNum(o.q)==null) return ln+'escreva a QUANTIDADE em número — ex: 1, 0,5 ou 10.';
-        if(!o.u) return ln+'toque na UNIDADE da quantidade (comprimido, ml, gota…).'; }
+        if(!o.u) return ln+'toque na MEDIDA da quantidade (comprimido, ml, gota, aplicação…).'; }
       return ''; }
     const _medResp=valDe(card,'Tem medicação?'); const _supResp=valDe(card,'Tem suplementação?');
     const _eMed=_vMed('med','medicação',_medResp); if(_eMed){ if(st){ st.style.color='var(--crm-critico)'; st.textContent='✋ '+_eMed; } return; }
