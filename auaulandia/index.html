@@ -429,6 +429,9 @@
   .alm-legenda .lg-nota{display:block;margin-top:5px;font-size:11.5px;color:var(--muted)}
   /* achado pela busca mas não é da turma do dia (reposição, avulso, urgência) */
   /* contagem de matriculados por dia na subnav (só Gestão/Supervisão) */
+  /* peludinho que saiu do Day Care — fica no banco, mas nao se confunde com quem esta na ativa */
+  .pel-inativo{opacity:.55}
+  .pel-saiu{display:inline-block;font-size:9.5px;font-weight:800;color:var(--z-cream);background:var(--z-blue);padding:2px 7px;border-radius:7px;margin-left:6px;letter-spacing:.3px}
   .dia-n{float:right;background:var(--z-gold);color:var(--z-blue);font-size:10.5px;font-weight:800;border-radius:999px;padding:1px 7px;margin-left:6px}
   .mini-fora{position:absolute;top:8px;right:8px;font-size:9.5px;font-weight:800;color:var(--z-cream);background:var(--z-daycare,#E08856);padding:3px 8px;border-radius:8px;z-index:3;letter-spacing:.3px}
   .alm-card .mini-fora,.dc-card .mini-fora{top:32px}
@@ -2275,6 +2278,7 @@
   function naoAlmoca(p){ const a=almCad(p); return !!(a&&a.nao); }
   // Inativar, nunca excluir: "quero todo o banco de dados sempre". Quem saiu (Bud e Stella —
   // brigas) ou faleceu sai das listas do dia, mas o cadastro e o histórico ficam inteiros.
+  function abrirTodosPeludinhos(){ const a=document.querySelector('[data-v="ficha"]'); if(a) a.click(); if(typeof closeNav==='function') closeNav(); }
   function pelInativo(p){ const ex=pelExtra(p); return !!(ex&&ex.inativo==='Sim'); }
   // Quantos aulunos estão matriculados em cada dia — só Gestão e Supervisão (Adriana, Márcia,
   // Amanda). Para o monitor seria ruído; para elas é ocupação da turma.
@@ -2402,11 +2406,15 @@
   function renderPel(){
     const inp=document.getElementById('pelSearch'); if(!inp) return;
     const q=jsNorm(inp.value);
-    const list=PELUDINHOS.map((p,i)=>({p,i})).filter(o=>!q||jsNorm([o.p.n,o.p.raca,o.p.tutor].join(' ')).indexOf(q)>=0);
-    document.getElementById('pelCount').textContent=`${PELUDINHOS.length} matriculados`+(q?` · ${list.length} na busca`:'');
-    document.getElementById('pelBody').innerHTML=list.map((o,row)=>{ const p=o.p; return `<tr onclick="abrirPeludinhoLista(${o.i})" style="cursor:pointer">
+    // Inativos continuam na lista (o banco e' historico), mas vao para o fim e marcados —
+    // senao Bud e Stella apareceriam misturados com quem esta na ativa.
+    const list=PELUDINHOS.map((p,i)=>({p,i})).filter(o=>!q||jsNorm([o.p.n,o.p.raca,o.p.tutor].join(' ')).indexOf(q)>=0)
+      .sort((a,b)=>{ const ia=pelInativo(a.p)?1:0, ib=pelInativo(b.p)?1:0; if(ia!==ib) return ia-ib; return jsNorm(pelNome(a.p)).localeCompare(jsNorm(pelNome(b.p))); });
+    const nAtivos=PELUDINHOS.filter(p=>!pelInativo(p)).length, nInat=PELUDINHOS.length-nAtivos;
+    document.getElementById('pelCount').textContent=`${nAtivos} matriculados`+(nInat?` · ${nInat} inativo${nInat>1?'s':''}`:'')+(q?` · ${list.length} na busca`:'');
+    document.getElementById('pelBody').innerHTML=list.map((o,row)=>{ const p=o.p; const inat=pelInativo(p); const exI=pelExtra(p); return `<tr onclick="abrirPeludinhoLista(${o.i})" style="cursor:pointer" class="${inat?'pel-inativo':''}">
       <td class="pel-num">${row+1}</td>
-      <td><span class="pel-nome">${pelNome(p)}</span>${p.apelido?` <span class="pel-obs">${p.apelido}</span>`:''}${((pelExtra(p).castrado||p.castrado)==='Não')?' <span class="pel-obs">Não castrado</span>':''}</td>
+      <td><span class="pel-nome">${pelNome(p)}</span>${inat?` <span class="pel-saiu">SAIU${exI.motivoSaida?' &middot; '+escAttr(exI.motivoSaida):''}</span>`:''}${p.apelido?` <span class="pel-obs">${p.apelido}</span>`:''}${((pelExtra(p).castrado||p.castrado)==='Não')?' <span class="pel-obs">Não castrado</span>':''}</td>
       <td>${pelGet(p,'raca')||'—'}</td>
       <td><span class="pel-freq">${pelFreq(p)}</span></td>
       <td class="dias-cell">${diasHtml(pelDias(p))}</td>
@@ -2593,6 +2601,9 @@
       h+='<div class="subnav-grp">Turminhas</div>';
       // Nº de matriculados por dia — só Gestão e Supervisão veem (decisão de Adriana).
       h+=ORDEM_DIAS.map(d=>`<a data-d="${d}" onclick="setDcDia('${d}')">${DIA_FULL[d]}${d===HOJE_DIA?' · hoje':''}${vePorDia()?`<span class="dia-n">${nMatriculados(d)}</span>`:''}</a>`).join('');
+      // "Todos": achar e completar cadastro sem depender do dia ("hoje quero completar o da Flor").
+      // Reusa a tela Peludinhos, que ja lista todos com busca — em vez de duplicar a grade.
+      if(vePorDia()) h+=`<a onclick="abrirTodosPeludinhos()">Todos<span class="dia-n">${PELUDINHOS.filter(p=>!pelInativo(p)).length}</span></a>`;
     }
     h+='<div class="subnav-grp">Atividades</div>';
     h+=ativs.map(a=>`<a data-a="${a.s}" onclick="abrirAtividade('${a.s}')">${a.t}</a>`).join('');
