@@ -324,6 +324,10 @@
   .rel-card.receb-done .receb-box{border:2px solid var(--crm-ok);background:rgba(20,140,90,.06)}
   .rel-card.receb-done .receb-aviso{display:none}
   .rel-card.receb-done .rel-head h2::after{content:' — RECEBIDO';color:var(--crm-ok);font-size:12px;font-weight:800;letter-spacing:.5px}
+  /* trava de leitura — só em FILHOt crítico: assinar só depois de rolar o relatório até o fim */
+  .fim-leitura{height:1px}
+  .trava-aviso{display:none;margin:10px 0;padding:11px 13px;border-radius:10px;background:rgba(222,180,40,.16);border:1.5px solid var(--z-gold);color:var(--z-blue);font-size:13.5px;font-weight:600;line-height:1.45}
+  .btn.btn-travado{opacity:.45;cursor:not-allowed;filter:grayscale(.6)}
 
   /* ===== tabela de Peludinhos (turma) ===== */
   .pel-toolbar{display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin-bottom:14px}
@@ -951,6 +955,7 @@
         <div class="obsline"><span class="q">Coleira repelente?</span><div class="seg" data-single><button data-tone="ok" onclick="pick(this)">Sim</button><button data-tone="warn" onclick="pick(this)">Não</button></div></div>
         <div class="obsline"><span class="q">Coleira de identificação?</span><div class="seg" data-single><button data-tone="ok" onclick="pick(this)">Sim</button><button data-tone="warn" onclick="pick(this)">Não</button></div></div>
         <div class="field" style="margin-top:14px"><label>Observação</label><textarea style="width:100%;font-family:var(--font-ui);font-size:14px;padding:12px;border:1.5px solid var(--line);border-radius:11px;background:var(--z-cream);min-height:70px" placeholder="Algo do dia que seja importante"></textarea></div>
+        <div class="fim-leitura" id="fim-leitura-dia"></div>
         <div class="rel-assina">
           <div class="field"><label>Quem passou — Monitora (assina) *</label><input id="passou-dia" class="cad-in"></div>
           <div class="actions"><button class="btn btn-primary" onclick="salvarRelatorioCard('dia')">Passar plantão (salvar)</button></div>
@@ -958,7 +963,8 @@
           <div class="receb-box" id="receb-dia">
             <div class="receb-aviso">🔴 Aguardando o Plantonista LER e assinar o recebimento — um por um.</div>
             <div class="field"><label>Quem recebeu — Plantonista (lê e assina)</label><input id="recebeu-dia" class="cad-in"></div>
-            <div class="actions"><button class="btn btn-gold" onclick="confirmarRecebimento('dia')">Li tudo — confirmar recebimento</button></div>
+            <div class="trava-aviso" id="trava-dia"></div>
+            <div class="actions"><button class="btn btn-gold" id="btn-receb-dia" onclick="confirmarRecebimento('dia')">Li tudo — confirmar recebimento</button></div>
             <div id="status-receb-dia" class="rel-status"></div>
           </div>
         </div>
@@ -1007,6 +1013,7 @@
         <div class="obsline"><span class="q">Tem suplementação?</span><div class="seg" data-single><button data-tone="ok" onclick="pick(this);onMedQ(this)">Não</button><button data-tone="warn" onclick="pick(this);onMedQ(this)">Sim</button></div></div>
         <div class="medgrid-slot" data-kind="sup"></div>
         <div class="field" style="margin-top:14px"><label>Observação</label><textarea style="width:100%;font-family:var(--font-ui);font-size:14px;padding:12px;border:1.5px solid var(--line);border-radius:11px;background:var(--z-cream);min-height:70px" placeholder="Algo da noite que seja importante e não foi perguntado"></textarea></div>
+        <div class="fim-leitura" id="fim-leitura-noite"></div>
         <div class="rel-assina">
           <div class="field"><label>Quem passou o plantão — Plantonista (assina) *</label><input id="passou-noite" class="cad-in"></div>
           <div class="actions"><button class="btn btn-primary" onclick="salvarRelatorioCard('noite')">Passar plantão (salvar)</button></div>
@@ -1014,7 +1021,8 @@
           <div class="receb-box" id="receb-noite">
             <div class="receb-aviso">🔴 Aguardando quem vai pegar o plantão LER e assinar o recebimento — um por um.</div>
             <div class="field"><label>Quem recebeu — Monitor(a) que pega o plantão (lê e assina)</label><input id="recebeu-noite" class="cad-in"></div>
-            <div class="actions"><button class="btn btn-gold" onclick="confirmarRecebimento('noite')">Li tudo — confirmar recebimento</button></div>
+            <div class="trava-aviso" id="trava-noite"></div>
+            <div class="actions"><button class="btn btn-gold" id="btn-receb-noite" onclick="confirmarRecebimento('noite')">Li tudo — confirmar recebimento</button></div>
             <div id="status-receb-noite" class="rel-status"></div>
           </div>
         </div>
@@ -1481,7 +1489,10 @@
 
   // ---- Relatórios da ficha: coletar, aplicar, salvar no banco, limpar ----
   function fichaKey(){ const p=x=>String(x).padStart(2,'0'); const d=selectedDate; const pk=currentHosp?currentHosp.nome+'__'+currentHosp.tutor:''; return (pk+'__'+d.getFullYear()+'-'+p(d.getMonth()+1)+'-'+p(d.getDate())).toLowerCase().replace(/[.#$\[\]\/]/g,'-'); }
-  function toggleRel(cardId){ const c=document.getElementById(cardId); if(c) c.classList.toggle('collapsed'); }
+  function toggleRel(cardId){ const c=document.getElementById(cardId); if(!c) return; c.classList.toggle('collapsed');
+    // cronometro de leitura: comeca a contar quando o card e ABERTO para leitura
+    const tp=cardId.replace('card-','');
+    if(!c.classList.contains('collapsed')){ if(!LEITURA_T0[tp]) LEITURA_T0[tp]=Date.now(); observarFimLeitura(tp); } }
   // ---- Medicação/Suplementação à prova de erro: tabela direcionada (nome · horário · quantidade) ----
   function medRowHTML(kind){ const ph=(kind==='sup')?'Nome do suplemento':'Nome do medicamento'; return '<div class="medrow"><input data-c="m" placeholder="'+ph+'"><input data-c="h" placeholder="Horário que deu"><input data-c="d" placeholder="Quantidade"></div>'; }
   function medgridHTML(kind){ const cab=(kind==='sup')?'Suplemento':'Medicamento'; const nome=(kind==='sup')?'suplemento':'medicamento'; let rows=''; for(let i=0;i<5;i++){ rows+=medRowHTML(kind); } return '<div class="medhint">Para cada '+nome+': escreva o nome, o horário em que você deu e a quantidade.</div>'+'<div class="medgrid-head"><span>'+cab+'</span><span>Horário</span><span>Quantidade</span></div>'+'<div class="medrows">'+rows+'</div>'+'<button type="button" class="med-add" onclick="addMedRow(this)">+ Acrescentar '+nome+'</button>'; }
@@ -1551,30 +1562,69 @@
       el.style.display='block'; el.innerHTML='⚠ <strong>'+((currentHosp&&currentHosp.nome)||'Este FILHOt')+'</strong> teve <strong>medicação registrada nesta estadia</strong> (dia '+medHistEstadia.quando+'). '+(hoje?'Continue registrando o horário e a quantidade.':'Se ainda toma, registre. Se acabou ou foi suspenso, confirme ao salvar.'); }
     else { el.style.display='none'; el.innerHTML=''; } }
   function coletarCard(cardId){ const byQ={}; document.querySelectorAll('#'+cardId+' .obsline').forEach(l=>{ const q=l.querySelector('.q'); const on=l.querySelector('button.on'); if(q) byQ[q.textContent.trim()]= on?on.textContent.trim():''; }); const areas=[]; const byArea={}; document.querySelectorAll('#'+cardId+' textarea').forEach(t=>{ areas.push(t.value||''); const ph=(t.placeholder||'').toLowerCase(); if(ph.indexOf('medicamento')>=0) byArea.medicamento=t.value||''; else if(ph.indexOf('suplemento')>=0) byArea.suplemento=t.value||''; }); const mg=coletarMedgrids(cardId); return {byQ:byQ,areas:areas,byArea:byArea,meds:mg.med,sups:mg.sup}; }
-  function aplicarCard(cardId,d){ d=d||{}; const byQ=d.byQ||{}; document.querySelectorAll('#'+cardId+' .obsline').forEach(l=>{ const q=l.querySelector('.q'); const val=q?byQ[q.textContent.trim()]:''; l.querySelectorAll('button').forEach(b=>{ b.classList.remove('on','t-ok','t-bad','t-warn'); if(val&&b.textContent.trim()===val){ b.classList.add('on'); if(b.dataset.tone) b.classList.add('t-'+b.dataset.tone);} }); }); const areas=d.areas||[]; document.querySelectorAll('#'+cardId+' textarea').forEach((t,i)=>t.value=areas[i]||''); const tipo=cardId.replace('card-',''); const sp=document.getElementById('passou-'+tipo); if(sp) sp.value=d.passou||''; const sr=document.getElementById('recebeu-'+tipo); if(sr) sr.value=d.recebeu||''; aplicarMedgrids(cardId,d); sincVomVis(cardId); sincCocoVis(cardId); sincXixiVis(cardId); RELSTATE[tipo]={passou:d.passou||'',recebeu:d.recebeu||''}; sincRecebVis(tipo); }
+  function aplicarCard(cardId,d){ d=d||{}; const byQ=d.byQ||{}; document.querySelectorAll('#'+cardId+' .obsline').forEach(l=>{ const q=l.querySelector('.q'); const val=q?byQ[q.textContent.trim()]:''; l.querySelectorAll('button').forEach(b=>{ b.classList.remove('on','t-ok','t-bad','t-warn'); if(val&&b.textContent.trim()===val){ b.classList.add('on'); if(b.dataset.tone) b.classList.add('t-'+b.dataset.tone);} }); }); const areas=d.areas||[]; document.querySelectorAll('#'+cardId+' textarea').forEach((t,i)=>t.value=areas[i]||''); const tipo=cardId.replace('card-',''); const sp=document.getElementById('passou-'+tipo); if(sp) sp.value=d.passou||''; const sr=document.getElementById('recebeu-'+tipo); if(sr) sr.value=d.recebeu||''; aplicarMedgrids(cardId,d); sincVomVis(cardId); sincCocoVis(cardId); sincXixiVis(cardId); RELSTATE[tipo]={passou:d.passou||'',recebeu:d.recebeu||''};
+    // troca de FILHOt = leitura recomeça do zero (senão o "rolou até o fim" do anterior destravaria este,
+    // e o cronômetro contaria o tempo do FILHOt errado)
+    LEITURA_ROLOU[tipo]=false; LEITURA_T0[tipo]=0;
+    sincRecebVis(tipo); }
   // ---- Passagem de plantao: quem passa NAO preenche quem recebeu. O card pisca ate o recebedor ler e assinar ----
   // Dia: Monitora passa -> Plantonista recebe. Jantar: so a Plantonista assina (sem recebedor). Noite: Plantonista passa -> Monitor(a) que pega o plantao recebe.
   const RELSTATE={dia:{passou:'',recebeu:''},inicio:{passou:'',recebeu:''},noite:{passou:'',recebeu:''}};
   // quem e esperado para receber cada plantao — vira o aviso "AGUARDANDO ..." no titulo do card
   const QUEM_RECEBE={dia:'PLANTONISTA',noite:'MONITOR(A)'};
+  // ---- Prova de leitura ----
+  // Cronometro: conta do momento em que o card e aberto ate a assinatura do recebimento.
+  // Grava _segLeitura junto com a assinatura — a Gestora ve no Resumo de hoje quem assinou sem ler.
+  const LEITURA_T0={}; const LEITURA_ROLOU={};
+  // FILHOt critico: e onde um erro machuca. So nele a assinatura fica travada ate rolar o relatorio inteiro.
+  // Criterio: qualquer resposta marcada como "bad" (vomitou, diarreia, desentendimento),
+  // medicacao ou alergia, ou uma observacao escrita a mao pela monitora.
+  function ehCritico(cardId){ const c=document.getElementById(cardId); if(!c) return false;
+    if(c.querySelector('.obsline button.on[data-tone="bad"]')) return true;
+    if(valDe(cardId,'Tem medicação?')==='Sim') return true;
+    if(valDe(cardId,'Tem alergia?')==='Sim') return true;
+    for(const t of c.querySelectorAll('textarea')){ if((t.value||'').trim()) return true; }
+    return false; }
+  function motivoCritico(cardId){ const m=[];
+    if(valDe(cardId,'Tem medicação?')==='Sim') m.push('medicação');
+    if(valDe(cardId,'Tem alergia?')==='Sim') m.push('alergia');
+    const c=document.getElementById(cardId);
+    if(c){ c.querySelectorAll('.obsline button.on[data-tone="bad"]').forEach(b=>{ const l=b.closest('.obsline'); const q=l&&l.querySelector('.q'); if(q) m.push(q.textContent.trim().replace(/\?$/,'').toLowerCase()+': '+b.textContent.trim()); });
+      for(const t of c.querySelectorAll('textarea')){ if((t.value||'').trim()){ m.push('observação escrita'); break; } } }
+    return m.filter((v,i)=>m.indexOf(v)===i); }
+  // Libera a assinatura quando o fim do relatorio entra na tela (so importa em FILHOt critico)
+  function observarFimLeitura(tipo){ const alvo=document.getElementById('fim-leitura-'+tipo); if(!alvo||alvo._obs) return;
+    alvo._obs=new IntersectionObserver(function(es){ es.forEach(function(e){ if(e.isIntersecting){ LEITURA_ROLOU[tipo]=true; sincTravaLeitura(tipo); } }); },{threshold:0.9});
+    alvo._obs.observe(alvo); }
+  function sincTravaLeitura(tipo){ const btn=document.getElementById('btn-receb-'+tipo); if(!btn) return;
+    const card='card-'+tipo; const critico=ehCritico(card); const trava=critico && !LEITURA_ROLOU[tipo];
+    btn.disabled=trava; btn.classList.toggle('btn-travado', trava);
+    const av=document.getElementById('trava-'+tipo);
+    if(av){ if(trava){ const mot=motivoCritico(card); av.style.display='block';
+        av.innerHTML='🔒 Este FILHOt precisa de atenção ('+mot.join(' · ')+'). <strong>Role o relatório até o fim</strong> para liberar a assinatura.'; }
+      else av.style.display='none'; } }
   function sincRecebVis(tipo){ const c=document.getElementById('card-'+tipo); if(!c) return;
     const temBox=!!document.getElementById('receb-'+tipo); const st=RELSTATE[tipo]||{};
     const h2=c.querySelector('.rel-head h2'); if(h2&&QUEM_RECEBE[tipo]) h2.dataset.aguarda=QUEM_RECEBE[tipo];
     c.classList.toggle('aguarda-receb', temBox && !!st.passou && !st.recebeu);
     c.classList.toggle('receb-done', temBox && !!st.recebeu);
     const sr=document.getElementById('status-receb-'+tipo);
-    if(sr){ if(st.recebeu){ sr.style.color='var(--crm-ok)'; sr.textContent='✅ Recebimento assinado por '+st.recebeu+'.'; } else sr.textContent=''; } }
+    if(sr){ if(st.recebeu){ sr.style.color='var(--crm-ok)'; sr.textContent='✅ Recebimento assinado por '+st.recebeu+'.'; } else sr.textContent=''; }
+    sincTravaLeitura(tipo); }
   function confirmarRecebimento(tipo){ if(!currentHosp) return; const st=document.getElementById('status-receb-'+tipo);
     const el=document.getElementById('recebeu-'+tipo); const nome=((el&&el.value)||'').trim();
     const quemPassou=(RELSTATE[tipo]||{}).passou||'';
     if(!quemPassou){ if(st){ st.style.color='var(--crm-critico)'; st.textContent='✋ Ninguém passou este plantão ainda — não há o que receber.'; } return; }
     if(!nome){ if(st){ st.style.color='var(--crm-critico)'; st.textContent='✋ Escreva o seu nome para assinar o recebimento.'; } return; }
+    if(ehCritico('card-'+tipo) && !LEITURA_ROLOU[tipo]){ if(st){ st.style.color='var(--crm-critico)'; st.textContent='🔒 Role o relatório até o fim antes de assinar — este FILHOt precisa de atenção.'; } return; }
     if(!confirm('Você leu TODO o relatório de '+((currentHosp&&currentHosp.nome)||'este FILHOt')+'?\n\nAo assinar, você assume o cuidado dele a partir de agora.\n\nOK = li tudo e assino\nCancelar = vou ler antes')) return;
     if(!DB){ if(st){ st.style.color='var(--crm-atencao-text)'; st.textContent='Banco conectando...'; } return; }
     if(st){ st.style.color='var(--muted)'; st.textContent='Salvando...'; }
-    DB.ref('auaulandia/relatorios/'+fichaKey()+'/'+tipo).update({recebeu:nome,_tsReceb:Date.now()}).then(function(){
+    const _seg=LEITURA_T0[tipo]?Math.round((Date.now()-LEITURA_T0[tipo])/1000):0;
+    DB.ref('auaulandia/relatorios/'+fichaKey()+'/'+tipo).update({recebeu:nome,_tsReceb:Date.now(),_segLeitura:_seg}).then(function(){
       RELSTATE[tipo].recebeu=nome; sincRecebVis(tipo);
-      if(typeof audit==='function') audit('recebimento', tipo, {pet:(currentHosp&&currentHosp.nome)||'', assinou:nome});
+      LEITURA_T0[tipo]=0;
+      if(typeof audit==='function') audit('recebimento', tipo, {pet:(currentHosp&&currentHosp.nome)||'', assinou:nome, leituraSeg:_seg});
     }).catch(function(e){ if(st){ st.style.color='var(--crm-critico)'; st.textContent='⚠️ Erro: '+e.message; } }); }
   // mapeamento do formato ANTIGO (campos c0..c21 da ficha de 1 salvar so) para os relatorios novos
   const MAP_DIA_ANTIGO=['Gastou energia?','Teve desentendimento?','Precisa ficar separado?','Tem irmão hospedado?','Tem alergia?','Tem medicação?','Trouxe roupa de frio?','Fez cocô?','Consistência','Coleira repelente?','Coleira de identificação?'];
@@ -1701,6 +1751,25 @@
     if(!DB||!reais.length){ el.innerHTML=''; return; }
     Promise.all(reais.map(h=>{ const base='auaulandia/relatorios/'+fichaKeyDe(h,selectedDate); return Promise.all([ DB.ref(base+'/dia').once('value').then(s=>s.val()).catch(()=>null), DB.ref(base+'/inicio').once('value').then(s=>s.val()).catch(()=>null), DB.ref(base+'/noite').once('value').then(s=>s.val()).catch(()=>null), DB.ref(base).once('value').then(s=>s.val()).catch(()=>null) ]).then(function(r){ const ant=migrarAntigo(r[3]); return {h:h, dia:r[0]||(ant?ant.dia:null), inicio:r[1]||(ant?ant.inicio:null), noite:r[2]||r[1]||(ant?ant.inicio:null)}; }); })).then(renderPainelGestora).catch(()=>{});
   }
+  // ---- Passagem de plantão: quem assinou o recebimento, e em quanto tempo ----
+  // Só observa. Assinatura em menos de LEITURA_MIN_SEG = leu rápido demais para ter lido de verdade
+  // (o relatório tem ~16 perguntas). Não bloqueia ninguém: entrega o fato para a Gestora conversar.
+  const LEITURA_MIN_SEG=15;
+  function fmtSeg(s){ if(!s&&s!==0) return '—'; if(s<60) return s+'s'; const m=Math.floor(s/60); return m+'min'+(s%60?' '+(s%60)+'s':''); }
+  function blocoPassagemPlantao(arr){
+    const linhas=[]; let pend=0, corridos=0;
+    arr.forEach(function(o){ [['dia','Dia'],['noite','Noite']].forEach(function(par){ const r=o[par[0]]; if(!r||!r.passou) return;
+      if(!r.recebeu){ pend++; linhas.push({nv:2,html:'<strong>'+o.h.nome+'</strong> · '+par[1]+' — passou <strong>'+r.passou+'</strong>, ainda <strong>ninguém recebeu</strong>'}); return; }
+      const seg=r._segLeitura; const rapido=(typeof seg==='number'&&seg>0&&seg<LEITURA_MIN_SEG); if(rapido) corridos++;
+      linhas.push({nv:rapido?3:1,html:'<strong>'+o.h.nome+'</strong> · '+par[1]+' — '+r.passou+' → <strong>'+r.recebeu+'</strong>'+(seg?' · leu em '+fmtSeg(seg)+(rapido?' <strong>(rápido demais)</strong>':''):'')}); }); });
+    if(!linhas.length) return '';
+    linhas.sort(function(a,b){ return b.nv-a.nv; });
+    const cor={3:'var(--crm-critico)',2:'var(--crm-atencao-text)',1:'var(--muted)'};
+    let h='<div class="hint" style="margin-top:14px;font-weight:700">Passagem de plantão — quem leu e assinou:</div>';
+    if(pend||corridos){ h+='<div class="dc-faltas" style="margin-top:8px"><div style="font-weight:800;font-size:14px;color:var(--crm-critico)">'
+      +[pend?pend+' sem recebedor':'', corridos?corridos+' assinado'+(corridos>1?'s':'')+' em menos de '+LEITURA_MIN_SEG+'s':''].filter(Boolean).join(' · ')+'</div></div>'; }
+    h+=linhas.map(function(l){ return '<div style="margin-top:6px;font-size:13.5px;color:'+cor[l.nv]+'">'+l.html+'</div>'; }).join('');
+    return h; }
   function renderPainelGestora(arr){
     const el=document.getElementById('painelGestora'); if(!el) return;
     const petsAlerta=[]; let prontos=0,pendentes=0;
@@ -1718,6 +1787,7 @@
     } else {
       html+='<div class="dc-pend-note" style="margin-top:10px;background:rgba(39,174,96,.1);border-color:rgba(39,174,96,.35);color:var(--crm-ok)">Sem alertas vermelhos hoje.</div>';
     }
+    html+=blocoPassagemPlantao(arr);
     html+='<div class="hint" style="margin-top:12px;font-weight:700">Textos prontos para enviar ao tutor:</div>';
     // Ordena por GRAVIDADE: vermelho (alerta) primeiro, amarelo (sem relatório) depois, verde por último.
     arr.forEach(o=>{ let al=alertasDoItem(o);
