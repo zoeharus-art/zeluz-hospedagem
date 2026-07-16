@@ -2366,7 +2366,7 @@
              mesRenov:mesAnoDe(fim), quando:hojeISO() };
   }
   // ---- mensagens para o tutor (com emoji: WhatsApp, decisão de Adriana) ----
-  function primeiroNome(t){ return String(t||'').split(/[\/,e]| e /i)[0].trim().split(' ')[0]||'tutor'; }
+  // primeiroNome() já existe acima (usado no relatório do tutor)
   const DIA_EXT={seg:'segunda',ter:'terça',qua:'quarta',qui:'quinta',sex:'sexta'};
   function diasPorExtenso(p){ const d=(pelDias(p)||[]).map(x=>DIA_EXT[x]||x);
     if(!d.length) return ''; if(d.length===1) return d[0];
