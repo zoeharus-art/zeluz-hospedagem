@@ -3698,6 +3698,33 @@
   }
   function pillPrazo(p){ if(p==='ok') return '<span class="p-pill ok">no prazo</span>'; if(p==='fora') return '<span class="p-pill warn">fora do horário</span>'; return '<span class="p-pill neutro">sem registro de hora</span>'; }
   function pillFeito(ok){ return ok?'<span class="p-pill ok">cumprido</span>':'<span class="p-pill bad">pendente</span>'; }
+  // Varre TODAS as fichas e junta o que exige ação da Gestão: prevenção vencida (bloqueia
+  // frequentar), peso sem registro no mês, e saídas a contatar (D9). É o "urgente a resolver".
+  function urgenciasGestao(){
+    const venc=[], semPeso=[], saiu=[];
+    PELUDINHOS.forEach(p=>{
+      const ex=pelExtra(p);
+      if(pelInativo(p)){ saiu.push({nome:p.n, motivo:ex.motivoSaida||'', quando:ex.dataSaida||''}); return; }
+      const r=prevPendencias(ex);
+      if(r.venc.length) venc.push({nome:p.n, itens:r.venc});
+      if(!pesouEsteMes(ex)) semPeso.push(p.n);
+    });
+    return {venc:venc, semPeso:semPeso, saiu:saiu};
+  }
+  function cardUrgenciasHTML(){
+    const u=urgenciasGestao();
+    const total=u.venc.length+u.saiu.length;
+    let h='<div class="card"><h2>Urgente a resolver</h2>'
+      +'<div class="hint">Prevenção vencida, saídas a contatar e peso do mês. Para Gestão, Supervisora e Consultora.</div>';
+    if(u.saiu.length) h+='<div class="dc-faltas"><strong>SAÍRAM &mdash; a Márcia precisa entrar em contato ('+u.saiu.length+'):</strong> '
+      +u.saiu.map(function(s){ return s.nome+(s.motivo?' ('+s.motivo+')':''); }).join(' · ')+'</div>';
+    if(u.venc.length) h+='<div class="dc-faltas"><strong>PREVENÇÃO VENCIDA &mdash; não podem frequentar ('+u.venc.length+'):</strong> '
+      +u.venc.map(function(v){ return v.nome+': '+v.itens.map(function(i){ return i.nome; }).join(', '); }).join(' · ')+'</div>';
+    if(u.semPeso.length) h+='<div class="dc-meia"><strong>Falta pesar este mês ('+u.semPeso.length+'):</strong> '
+      +u.semPeso.slice(0,30).join(', ')+(u.semPeso.length>30?' e mais '+(u.semPeso.length-30):'')+'</div>';
+    if(!u.saiu.length && !u.venc.length && !u.semPeso.length) h+='<div class="alm-fora">Nada urgente: prevenção em dia, todos pesados, nenhuma saída pendente.</div>';
+    return h+'</div>';
+  }
   function renderPainelDia(){
     const wrap=document.getElementById('painelWrap'); if(!wrap) return;
     const lab=document.getElementById('painelDateLabel'); if(lab) lab.textContent=pLabel();
@@ -3740,6 +3767,8 @@
     </div>`;
     // ---- Quem não comeu e quem comeu metade — por NOME, para a Gestão agir ----
     html+=relAlmocoHTML();
+    // ---- Urgente a resolver: prevenção vencida, saídas a contatar, peso do mês ----
+    html+=cardUrgenciasHTML();
     // ---- Plantão agora (escala de monitores × hora atual) ----
     const agora=horaAgora();
     html+=`<div class="card"><h2>Plantão agora <span style="font-size:12px;color:var(--z-blue)">${agora}</span></h2><div class="hint">Quem deveria estar no Day Care neste horário, pela escala de monitores.</div>`;
