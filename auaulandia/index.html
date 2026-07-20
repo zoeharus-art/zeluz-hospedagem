@@ -320,6 +320,20 @@
   body[data-role="plantonista"] .so-equipe,
   body[data-role="aprendiz"] .so-equipe,
   body[data-role="tutor"]   .so-equipe{display:none !important}
+  /* .so-medadmin = quem pode CRIAR/ALTERAR/REMOVER a ficha de medicação na operação diária:
+     Veterinária + Gestão + Supervisão (Amanda) + Diretoria (Fundação 1 do Design). Monitor e plantonista
+     só LEEM e registram a dose ("Dei agora"). A Consultora cadastra no Check-in, não no card diário. */
+  body[data-role="monitor"] .so-medadmin,
+  body[data-role="plantonista"] .so-medadmin,
+  body[data-role="aprendiz"] .so-medadmin,
+  body[data-role="tutor"] .so-medadmin,
+  body[data-role="consultora"] .so-medadmin,
+  body[data-role="conferencia"] .so-medadmin{display:none !important}
+  /* Card diário: só quem pode alterar medicação vê o botão "Remover item" de cada remédio.
+     (No Check-in, dentro de #ciMeds, a Consultora continua vendo — regra abaixo não alcança #ciMeds.) */
+  body[data-role="monitor"] #magItens .magitem .ativ-del,
+  body[data-role="consultora"] #magItens .magitem .ativ-del,
+  body[data-role="conferencia"] #magItens .magitem .ativ-del{display:none !important}
   /* .so-master = SÓ a Gestora (Márcia) e a Diretoria (Adriana). Supervisão (Amanda) e equipe não veem. */
   body:not([data-role="gestao"]):not([data-role="diretoria"]) .so-master{display:none !important}
   /* mensagem para quem entra em Pessoas mas não é a Gestora (ex: Amanda) */
@@ -1207,8 +1221,8 @@
         <div class="hint">Cadastre o medicamento ou suplemento e os horários fixos (ex.: colírio às 10:30, 16:30, 22:30 e 04:30). Salva sozinho — não precisa abrir o relatório do plantão nem assinar.</div>
         <div id="magSoLeituraAviso" class="hint" style="background:var(--z-cream-warm);border:1px solid var(--line);border-radius:10px;padding:10px 12px;font-weight:700;color:var(--z-blue)">🔒 Você só registra as doses abaixo (Dei agora / dose avulsa). Acrescentar, alterar ou remover medicamento é papel da Consultora, da Gestão/Supervisão ou da Veterinária.</div>
         <div id="magItens"></div>
-        <button type="button" class="med-add so-equipe" onclick="magAddNovoItem()">+ Acrescentar medicamento ou suplemento</button>
-        <div class="actions so-equipe" style="margin-top:12px"><button class="btn btn-primary" onclick="salvarMedAgenda()">Salvar agenda</button></div>
+        <button type="button" class="med-add so-medadmin" onclick="magAddNovoItem()">+ Acrescentar medicamento ou suplemento</button>
+        <div class="actions so-medadmin" style="margin-top:12px"><button class="btn btn-primary" onclick="salvarMedAgenda()">Salvar agenda</button></div>
         <div id="mag-status" class="rel-status"></div>
 
         <h3 class="cad-sub" style="margin-top:18px">Horários de hoje</h3>
@@ -1464,7 +1478,7 @@
         <h2>Medicação e suplementos</h2>
         <div class="hint">Cadastre cada medicamento/suplemento com o <strong>nome</strong>, a <strong>quantidade (número + medida)</strong> e os <strong>horários reais</strong>. Isso alimenta o despertador da AuAulândia. À prova de erro — sem número e medida não salva.</div>
         <div id="ciMeds"></div>
-        <button type="button" class="med-add" onclick="ciAddMed()">+ Acrescentar medicamento ou suplemento</button>
+        <button type="button" class="med-add" onclick="ciAddMedBtn()">+ Acrescentar medicamento ou suplemento</button>
         <div id="ci-med-status" class="rel-status"></div>
       </div>
 
@@ -1670,6 +1684,8 @@
             <div class="field"><label>Reavaliar em</label><input id="vcReaval" class="cad-in" type="date"></div>
             <div class="field"><label>Motivo da reavaliação</label><input id="vcReavalMotivo" class="cad-in" placeholder="Ex: reavaliar a córnea" autocomplete="off"></div>
           </div>
+          <div class="hint" style="margin-top:6px">Deixar em branco NÃO apaga a reavaliação já marcada — para remover, use o botão abaixo.</div>
+          <div id="vcReavalAtual" style="margin-top:8px"></div>
         </div>
         <div class="vet-sec">
           <h3>Fotos da consulta</h3>
@@ -2376,6 +2392,30 @@
   function magDoseId(itemId,horario){ return itemId+'_'+String(horario||'').replace(':','-'); }
   let MED_AGENDA_ITENS={}; // itens salvos da agenda do FILHOt aberto na ficha: {itemId:{nome,q,u,horarios}}
   let MED_AGENDA_LOG={};   // doses já registradas HOJE para o FILHOt aberto: {doseId:{quem,ts,...}}
+  // ===== Gate de papel na edição de medicação (Fundação 1 do Design) =====
+  // Só a Veterinária, a Gestão, a Supervisão (Amanda) e a Diretoria podem CRIAR/ALTERAR/REMOVER a
+  // ficha de medicação na operação diária. Monitor e plantonista só LEEM e registram a dose ("Dei agora").
+  function canEditMed(){ const r=document.body.dataset.role; return r==='gestao'||r==='supervisor'||r==='diretoria'||r==='vet'; }
+  // No Check-in, a Consultora também cadastra as fichas de remédio (seção Check-in do Design).
+  function canEditCheckinMed(){ return canEditMed()||document.body.dataset.role==='consultora'; }
+  // Guarda para os toggles compartilhados (medAgendaRowHTML é reusado no card diário e no Check-in):
+  // se o botão está dentro do editor de Check-in (#ciMeds), aceita a Consultora; senão exige canEditMed.
+  function podeEditarLinhaMed(node){
+    const el=(node&&node.closest)?node.closest('.magitem'):null;
+    if(el&&el.closest&&el.closest('#ciMeds')) return canEditCheckinMed();
+    return canEditMed();
+  }
+  // Compara a ficha anterior com a nova e devolve o texto do histórico ({acao}) — ou null se nada mudou.
+  function medDiffAcao(prev,it){
+    if(!prev || (!(prev.nome||'').trim() && !((prev.horarios||[]).length))) return 'Criou';
+    const mud=[];
+    if((prev.nome||'')!==(it.nome||'') || String(prev.q||'')!==String(it.q||'') || (prev.u||'')!==(it.u||'')) mud.push('dose');
+    if(JSON.stringify(prev.horarios||[])!==JSON.stringify(it.horarios||[])) mud.push('horário');
+    if((prev.origem||'tutor')!==(it.origem||'tutor')) mud.push('origem');
+    if(JSON.stringify(prev.estoque||{})!==JSON.stringify(it.estoque||{})) mud.push('estoque');
+    if(!mud.length) return null;
+    return 'Alterou '+mud.join(', ');
+  }
   function medAgendaRowHTML(id,item){
     item=item||{nome:'',q:'',u:'',horarios:[''],tipo:'medicamento'};
     const tipo=item.tipo||'medicamento';
@@ -2418,23 +2458,37 @@
     +'</div>';
   }
   // alterna Medicamento/Suplemento na linha (só 1 fica aceso)
-  function magPickTipo(btn){ const wrap=btn.parentElement; if(!wrap) return; wrap.querySelectorAll('button').forEach(function(b){ b.classList.remove('on'); }); btn.classList.add('on'); }
+  function magPickTipo(btn){ if(!podeEditarLinhaMed(btn)) return; const wrap=btn.parentElement; if(!wrap) return; wrap.querySelectorAll('button').forEach(function(b){ b.classList.remove('on'); }); btn.classList.add('on'); }
   // alterna a Origem (só 1 acesa)
-  function magPickOrigem(btn){ const wrap=btn.parentElement; if(!wrap) return; wrap.querySelectorAll('button').forEach(function(b){ b.classList.remove('on'); }); btn.classList.add('on'); }
+  function magPickOrigem(btn){ if(!podeEditarLinhaMed(btn)) return; const wrap=btn.parentElement; if(!wrap) return; wrap.querySelectorAll('button').forEach(function(b){ b.classList.remove('on'); }); btn.classList.add('on'); }
   // alterna o modo do estoque e mostra o campo certo (contável x não contável)
-  function magPickEstModo(btn,modo){ const box=btn.closest('.mag-estoque'); if(!box) return; box.dataset.modo=modo; box.querySelectorAll('.mag-est-modo button').forEach(function(b){ b.classList.toggle('on', b.dataset.modo===modo); }); box.querySelector('.mag-est-contavel').classList.toggle('on', modo==='contavel'); box.querySelector('.mag-est-naocontavel').classList.toggle('on', modo==='naocontavel'); }
+  function magPickEstModo(btn,modo){ if(!podeEditarLinhaMed(btn)) return; const box=btn.closest('.mag-estoque'); if(!box) return; box.dataset.modo=modo; box.querySelectorAll('.mag-est-modo button').forEach(function(b){ b.classList.toggle('on', b.dataset.modo===modo); }); box.querySelector('.mag-est-contavel').classList.toggle('on', modo==='contavel'); box.querySelector('.mag-est-naocontavel').classList.toggle('on', modo==='naocontavel'); }
   // alterna o nível (cheio/metade) do frasco não contável
-  function magPickNivel(btn){ const wrap=btn.parentElement; if(!wrap) return; wrap.querySelectorAll('button').forEach(function(b){ b.classList.remove('on'); }); btn.classList.add('on'); }
+  function magPickNivel(btn){ if(!podeEditarLinhaMed(btn)) return; const wrap=btn.parentElement; if(!wrap) return; wrap.querySelectorAll('button').forEach(function(b){ b.classList.remove('on'); }); btn.classList.add('on'); }
   function magAddHorario(btn){ const wrap=btn.parentElement.querySelector('.mag-horarios-list'); if(wrap) wrap.insertAdjacentHTML('beforeend','<span class="magHorario"><input data-c="h" inputmode="numeric" placeholder="07:30" onblur="normalizarHoraMed(this)"><button type="button" class="mag-rm-h" title="Remover horário" onclick="this.parentElement.remove()">×</button></span>'); }
-  // Remove só a linha da tela — não mexe em MED_AGENDA_ITENS nem re-renderiza a lista inteira,
-  // senão outros medicamentos ainda não salvos (rascunho) seriam perdidos junto.
-  // Onda 5 — guarda dupla (igual cancelarHospedeManual): CSS já esconde/trava para o Plantonista,
-  // aqui é o JS que garante — mesmo que alguém force o clique, a função não executa.
+  // Remoção EXPLÍCITA, item a item (Fundação 1 — anti-Hulk). Como o "Salvar agenda" nunca mais
+  // sobrescreve o nó inteiro, apagar um remédio precisa deletar SÓ aquele item no banco. Um rascunho
+  // ainda não salvo é só removido da tela (não existe no banco). Guarda de papel: só quem edita medicação.
   function magRemoverItem(id){
-    if(document.body.dataset.role==='plantonista') return;
-    const el=document.querySelector('#magItens .magitem[data-id="'+id+'"]'); if(!el) return; if(!confirm('Remover este medicamento da agenda?')) return; el.remove(); }
+    const el=document.querySelector('.magitem[data-id="'+id+'"]'); if(!el) return;
+    const noCard=!!(el.closest&&el.closest('#magItens'));
+    if(noCard){ if(!canEditMed()){ alert('Apenas a Veterinária, a Gestão ou a Supervisão podem remover medicação.'); return; } }
+    else if(!podeEditarLinhaMed(el)){ alert('Você não tem permissão para remover medicação.'); return; }
+    if(!confirm('Remover este medicamento da agenda?')) return;
+    el.remove();
+    // Card diário: se o item já estava persistido, remove DELE no banco (nunca via sobrescrita do nó).
+    if(noCard && DB && currentHosp && MED_AGENDA_ITENS && MED_AGENDA_ITENS[id]){
+      const key=medAgendaKey(); if(!key) return;
+      DB.ref('auaulandia/medicacao-agenda/'+key+'/itens/'+id).remove().then(function(){
+        delete MED_AGENDA_ITENS[id];
+        if(typeof renderMedAgendaHoje==='function') renderMedAgendaHoje();
+        if(typeof audit==='function') audit('medicacao-agenda-remover',key,{pet:currentHosp.nome||'',item:id});
+        if(typeof carregarAgendaMedTodos==='function') carregarAgendaMedTodos();
+      }).catch(function(){});
+    }
+  }
   function magAddNovoItem(){
-    if(document.body.dataset.role==='plantonista') return;
+    if(!canEditMed()) return;
     const wrap=document.getElementById('magItens'); if(!wrap) return; const id='novo_'+Date.now()+'_'+Math.random().toString(36).slice(2,6); wrap.insertAdjacentHTML('beforeend', medAgendaRowHTML(id,{nome:'',q:'',u:'',horarios:['']})); }
   function renderMedAgenda(){
     const wrap=document.getElementById('magItens'); if(!wrap) return;
@@ -2455,8 +2509,14 @@
       const n=parseInt(String(raw).replace(/\D/g,''),10);
       const inicial=(isFinite(n)&&n>=0)?n:null;
       let restante;
-      if(pe.modo==='contavel' && pe.inicial===inicial && typeof pe.restante==='number') restante=pe.restante;
-      else restante=(inicial!=null?inicial:null);
+      // PRESERVA o consumo já registrado: mesmo que a entrada seja corrigida (ex.: veio 30, não 20),
+      // desconta as doses já dadas do novo total. Nunca reseta o restante zerando o consumo.
+      if(pe.modo==='contavel' && typeof pe.restante==='number' && typeof pe.inicial==='number'){
+        const consumido=Math.max(0, pe.inicial - pe.restante);
+        restante=(inicial!=null)?Math.max(0, inicial - consumido):pe.restante;
+      } else {
+        restante=(inicial!=null?inicial:null);
+      }
       const est={modo:'contavel'};
       if(inicial!=null) est.inicial=inicial;
       if(restante!=null) est.restante=restante;
@@ -2491,7 +2551,7 @@
     return out;
   }
   function salvarMedAgenda(){
-    if(document.body.dataset.role==='plantonista') return; // Onda 5 — plantonista só relata/regista dose, não altera a agenda
+    if(!canEditMed()) return; // Fundação 1 — só Vet/Gestão/Supervisão/Diretoria alteram a ficha de medicação
     if(!currentHosp) return;
     const st=document.getElementById('mag-status');
     const itens=coletarMedAgendaForm();
@@ -2506,10 +2566,27 @@
     if(!DB){ if(st){ st.style.color='var(--crm-atencao-text)'; st.textContent='Banco conectando...'; } return; }
     const key=medAgendaKey(); if(!key) return;
     if(st){ st.style.color='var(--muted)'; st.textContent='Salvando...'; }
-    DB.ref('auaulandia/medicacao-agenda/'+key).set({itens:itens, nome:currentHosp.nome||'', tutor:currentHosp.tutor||'', _ts:Date.now(), _quem:quemSou()}).then(function(){
-      MED_AGENDA_ITENS=itens; renderMedAgenda();
+    const quem=quemSou();
+    const ids=Object.keys(itens);
+    const ops=[];
+    // ANTI-HULK: NUNCA sobrescreve o nó inteiro. Atualiza só os metadados no topo (sem tocar em /itens)
+    // e grava CADA remédio item a item. Assim, um remédio que a Vet acabou de adicionar/mudar (que não
+    // está neste formulário) NÃO é apagado em silêncio. Remoção é explícita (magRemoverItem).
+    ops.push(DB.ref('auaulandia/medicacao-agenda/'+key).update({nome:currentHosp.nome||'', tutor:currentHosp.tutor||'', _ts:Date.now(), _quem:quem}));
+    ids.forEach(function(id){
+      const it=itens[id];
+      // Histórico por remédio (Fundação 1): cada mudança vira uma linha {quem, quando, acao}.
+      const acao=medDiffAcao(MED_AGENDA_ITENS[id], it);
+      if(acao){ const hist=Array.isArray(it.historico)?it.historico.slice():[]; hist.push({quem:quem, quando:(typeof agoraBR==='function'?agoraBR():new Date().toLocaleString('pt-BR')), acao:acao}); it.historico=hist; }
+      ops.push(DB.ref('auaulandia/medicacao-agenda/'+key+'/itens/'+id).update(it));
+    });
+    Promise.all(ops).then(function(){
+      // recarrega os itens do banco (traz de volta o que outro papel gravou em paralelo) e re-renderiza
+      return DB.ref('auaulandia/medicacao-agenda/'+key+'/itens').once('value');
+    }).then(function(s){
+      MED_AGENDA_ITENS=s.val()||{}; renderMedAgenda();
       if(st){ st.style.color='var(--crm-ok)'; st.textContent='✅ Agenda de medicação salva.'; }
-      if(typeof audit==='function') audit('medicacao-agenda',key,{pet:currentHosp.nome||'',itens:Object.keys(itens).length});
+      if(typeof audit==='function') audit('medicacao-agenda',key,{pet:currentHosp.nome||'',itens:ids.length});
       if(typeof carregarAgendaMedTodos==='function') carregarAgendaMedTodos();
     }).catch(function(e){ if(st){ st.style.color='var(--crm-critico)'; st.textContent='⚠️ Erro: '+e.message; } });
   }
@@ -4191,6 +4268,27 @@
       +'<div style="margin-top:7px;font-size:11.5px;font-weight:700;color:var(--muted)">— '+escAttr(r.por||'Veterinária')+(r.ts?(' · '+new Date(r.ts).toLocaleDateString('pt-BR')):'')+'</div></div>';
   }
 
+  // ---- Reavaliação atual no formulário da vet + remoção EXPLÍCITA (anti-Hulk) ----
+  function renderVcReavalAtual(h){
+    var el=document.getElementById('vcReavalAtual'); if(!el) return;
+    var reav=h?VET_REAVAL_CACHE[vetKey(h)]:null;
+    if(!reav||!reav.data){ el.innerHTML=''; return; }
+    el.innerHTML='<div class="vet-instr-box" style="border-color:var(--z-gold)"><div style="font-size:12.5px;font-weight:800;color:var(--z-gold-deep)">Reavaliação marcada: '+escAttr(fmtBR(reav.data))+(reav.motivo?(' — '+escAttr(reav.motivo)):'')+'</div>'
+      +'<div class="actions" style="margin-top:8px"><button type="button" class="btn" style="background:var(--z-cream-warm);color:var(--crm-critico);border:1.5px solid var(--crm-critico)" onclick="vetRemoverReavaliacao()">Remover reavaliação</button></div></div>';
+  }
+  function vetRemoverReavaliacao(){
+    if(!vetHosp||!podeAlterarVet()){ alert('Apenas a Veterinária, a Gestão ou a Supervisão podem remover a reavaliação.'); return; }
+    var reav=VET_REAVAL_CACHE[vetKey(vetHosp)]; if(!reav||!reav.data){ return; }
+    if(!confirm('Remover a reavaliação marcada de '+(vetHosp.nome||'este peludinho')+'?')) return;
+    if(!DB) return; var key=vetKey(vetHosp);
+    DB.ref('auaulandia/vet-reavaliacao/'+key).remove().then(function(){
+      if(typeof audit==='function') audit('vet-reavaliacao-removida',key,{pet:vetHosp.nome||'',quem:(typeof quemSou==='function'?quemSou():'Veterinária')});
+      var el=document.getElementById('vcReavalAtual'); if(el) el.innerHTML='';
+      renderVetInstrucoesFicha(vetHosp,'vf-instr');
+      if(typeof checarReavaliacoesHoje==='function') checarReavaliacoesHoje();
+    }).catch(function(e){ alert('Erro ao remover reavaliação: '+e.message); });
+  }
+
   // ---- Abrir a tela e listar TODOS os hóspedes ----
   function abrirCuidadoVet(){
     document.getElementById('vet-lista').style.display='block';
@@ -4230,6 +4328,7 @@
     var ex=(typeof extraDoHosp==='function')?extraDoHosp(h):{};
     document.getElementById('vf-pills').innerHTML=(typeof alertPills==='function')?alertPills(ex):'';
     renderVetInstrucoesFicha(h,'vf-instr');
+    renderVcReavalAtual(h);
     // formulário de consulta — reset
     var hj=(typeof hojeISO==='function')?hojeISO():'';
     var d=document.getElementById('vcData'); if(d) d.value=hj;
@@ -4403,16 +4502,18 @@
     // recomendações + cuidados viram instruções ativas na ficha do peludinho
     var temInstr=!!(recom||cuidados.length);
     ops.push(DB.ref('auaulandia/vet-recomendacoes/'+key).set({texto:recom,cuidados:cuidados,por:quem,ts:Date.now(),consultaId:consultaId,ativo:temInstr}));
-    // reavaliação (avisa no dia). Se em branco, limpa a marcação anterior.
+    // reavaliação (avisa no dia). ANTI-HULK: só grava quando há data válida. Campo em branco PRESERVA a
+    // reavaliação existente — nunca apaga automaticamente. Para remover, a Vet usa "Remover reavaliação".
     if(reaval&&/^\d{4}-\d{2}-\d{2}$/.test(reaval)) ops.push(DB.ref('auaulandia/vet-reavaliacao/'+key).set({data:reaval,motivo:reavalMotivo,por:quem,ts:Date.now()}));
-    else ops.push(DB.ref('auaulandia/vet-reavaliacao/'+key).set(null));
     Promise.all(ops).then(function(){
       if(typeof audit==='function') audit('vet-consulta',key,{pet:vetHosp.nome||'',quem:quem,reavaliacao:reaval||''});
       if(st){ st.style.color='var(--crm-ok)'; st.textContent='✅ Consulta salva. Recomendações já visíveis na ficha do peludinho.'; }
       vcFotosBuf=[]; renderVcFotos();
       ['vcTemp','vcPeso','vcCuidadoLivre','vcRecom','vcObs','vcReavalMotivo'].forEach(function(id){ var e=document.getElementById(id); if(e) e.value=''; });
       document.querySelectorAll('#vcCuidados button').forEach(function(b){ b.classList.remove('on'); });
+      var rv=document.getElementById('vcReaval'); if(rv) rv.value='';
       renderVetInstrucoesFicha(vetHosp,'vf-instr');
+      renderVcReavalAtual(vetHosp);
       vetCarregarConsultas(vetHosp);
     }).catch(function(e){ if(st){ st.style.color='var(--crm-critico)'; st.textContent='⚠️ Erro: '+e.message; } });
   }
@@ -6060,6 +6161,9 @@
     const id='ci_'+Date.now()+'_'+Math.random().toString(36).slice(2,6);
     wrap.insertAdjacentHTML('beforeend', medAgendaRowHTML(id, item||{nome:'',q:'',u:'',horarios:[''],tipo:'medicamento'}));
   }
+  // Ação do BOTÃO "+ Acrescentar" no Check-in — gate de papel (Consultora/Gestão/Supervisão/Diretoria/Vet).
+  // As chamadas programáticas de ciAddMed (linha inicial, pré-preenchimento) continuam livres.
+  function ciAddMedBtn(){ if(!canEditCheckinMed()){ alert('Apenas a Consultora, a Gestão, a Supervisão ou a Veterinária cadastram medicação no check-in.'); return; } ciAddMed(); }
   function ciColetarMeds(){
     const out={};
     document.querySelectorAll('#ciMeds .magitem').forEach(function(el){
@@ -6073,6 +6177,8 @@
         // No check-in o estoque é sempre "fresco" (a consultora acabou de contar/receber) — prev=null.
         const item={nome:nome,q:q,u:u,horarios:horarios,tipo:tipo,origem:coletarOrigemEl(el)};
         const est=coletarEstoqueEl(el, null); if(est) item.estoque=est;
+        // Histórico por remédio (Fundação 1): a criação no check-in já é a 1ª linha {quem, quando, acao}.
+        item.historico=[{quem:(typeof quemSou==='function'?quemSou():'-'), quando:(typeof agoraBR==='function'?agoraBR():new Date().toLocaleString('pt-BR')), acao:'Criou (check-in)'}];
         out[id]=item;
       }
     });
@@ -6156,8 +6262,8 @@
   function ciRenderGate(){
     const el=document.getElementById('ciGate'); if(!el) return;
     el.innerHTML='<div class="gtit">Antes de salvar — conferência de segurança</div>'+
-      '<div class="hint">Leia em voz alta para o tutor cada medicamento, suplemento, a dosagem e os horários. Só marque depois de confirmar com ele. Isso evita o erro de medicar errado durante a estadia.</div>'+
-      '<label class="todo-item" style="cursor:pointer;margin-top:8px"><input type="checkbox" id="ciGateChk" style="width:20px;height:20px;flex:0 0 auto"><span>Conferi com o tutor os medicamentos, suplementos, dosagens e horários.</span></label>';
+      '<div class="hint">Leia em voz alta para o tutor cada medicamento, suplemento, a dosagem, os horários e também as ALERGIAS e RESTRIÇÕES alimentares. Só marque depois de confirmar com ele. Isso evita medicar errado e servir comida que desencadeie uma crise durante a estadia.</div>'+
+      '<label class="todo-item" style="cursor:pointer;margin-top:8px"><input type="checkbox" id="ciGateChk" style="width:20px;height:20px;flex:0 0 auto"><span>Conferi com o tutor os medicamentos, suplementos, dosagens, horários e as ALERGIAS / RESTRIÇÕES alimentares.</span></label>';
   }
 
   // ---- Assinatura (canvas, dedo no tablet) ----
@@ -6205,6 +6311,9 @@
     if(temMed){ const chk=document.getElementById('ciGateChk'); if(!chk||!chk.checked){ if(st){ st.style.color='var(--crm-critico)'; st.textContent='✋ Conferiu os dados com o tutor? Marque a conferência de segurança antes de salvar.'; } const g=document.getElementById('ciGate'); if(g) g.scrollIntoView({behavior:'smooth',block:'center'}); return; } }
     const assina=(document.getElementById('ciAssinaNome').value||'').trim();
     if(!assina){ if(st){ st.style.color='var(--crm-critico)'; st.textContent='✋ Escreva o nome de quem assinou (o tutor).'; } document.getElementById('ciAssinaNome').focus(); return; }
+    // Defeito #6 — assinatura de dedo OBRIGATÓRIA: não salva só com o nome em texto.
+    const sig=ciAssinaturaDataURL();
+    if(!sig){ if(st){ st.style.color='var(--crm-critico)'; st.textContent='✋ Peça para o tutor ASSINAR com o dedo no quadro antes de salvar.'; } const sc=document.getElementById('ciSig'); if(sc) sc.scrollIntoView({behavior:'smooth',block:'center'}); return; }
     if(!DB){ if(st){ st.style.color='var(--crm-atencao-text)'; st.textContent='Banco conectando… tente de novo em alguns segundos.'; } return; }
     const key=ciKey();
     const estadia={
@@ -6212,14 +6321,19 @@
       entrada:dados.entrada, saida:dados.saida, status:'ativa',
       ficha:dados.ficha, pertences:dados.pertences,
       medicacao:ciMedsToLista(meds),
-      gate_conferido:temMed, assinatura:ciAssinaturaDataURL(), assinado_por:assina,
+      gate_conferido:temMed, assinatura:sig, assinado_por:assina,
       criado_por:quemSou(), _ts:Date.now()
     };
     if(st){ st.style.color='var(--muted)'; st.textContent='Salvando estadia…'; }
     const ref=DB.ref('auaulandia/estadias').push();
     const ops=[ ref.set(estadia) ];
     // Liga a medicação à espinha (mesmo nó do despertador) para já disparar os alarmes.
-    if(temMed) ops.push(DB.ref('auaulandia/medicacao-agenda/'+key).set({ itens:meds, nome:ciHosp.nome||'', tutor:ciHosp.tutor||'', estadiaId:ref.key, _ts:Date.now(), _quem:quemSou() }));
+    // ANTI-HULK: grava metadados + CADA remédio item a item (update), nunca sobrescreve o nó inteiro —
+    // se a Vet já lançou algo nesta ficha, não é apagado por um re-check-in.
+    if(temMed){
+      ops.push(DB.ref('auaulandia/medicacao-agenda/'+key).update({ nome:ciHosp.nome||'', tutor:ciHosp.tutor||'', estadiaId:ref.key, _ts:Date.now(), _quem:quemSou() }));
+      Object.keys(meds).forEach(function(mid){ ops.push(DB.ref('auaulandia/medicacao-agenda/'+key+'/itens/'+mid).update(meds[mid])); });
+    }
     Promise.all(ops).then(function(){
       if(st){ st.style.color='var(--crm-ok)'; st.textContent='✅ Check-in salvo na pasta da estadia de '+ciHosp.nome+'.'; }
       if(typeof audit==='function') audit('checkin','estadia criada',{pet:ciHosp.nome||'',entrada:dados.entrada,meds:Object.keys(meds).length});
