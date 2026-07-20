@@ -741,6 +741,54 @@
   body[data-role="gestao"] .nav a.so-recepcao,
   body[data-role="supervisor"] .nav a.so-recepcao,
   body[data-role="diretoria"] .nav a.so-recepcao{display:flex}
+  /* Cuidado Vet: no menu só para a Veterinária + Gestão/Supervisão/Diretoria */
+  .nav a.so-vet{display:none}
+  body[data-role="vet"] .nav a.so-vet,
+  body[data-role="gestao"] .nav a.so-vet,
+  body[data-role="supervisor"] .nav a.so-vet,
+  body[data-role="diretoria"] .nav a.so-vet{display:flex}
+  /* A Veterinária só enxerga o Cuidado Vet e o Sair — mesma trava do plantonista */
+  body[data-role="vet"] .nav a,body[data-role="vet"] .nav .grp,body[data-role="vet"] .nav .subnav{display:none !important}
+  body[data-role="vet"] .nav a[data-v="cuidadovet"],body[data-role="vet"] .nav a[data-v="sair"]{display:flex !important}
+  /* ===== Onda 3 — Cuidado Vet ===== */
+  .vet-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:14px;margin-top:6px}
+  .vet-pet{position:relative;background:var(--z-white);border:2px solid var(--line);border-radius:18px;padding:16px 12px 18px;text-align:center;cursor:pointer;transition:transform .12s,border-color .15s,box-shadow .2s}
+  .vet-pet:active{transform:scale(.97)}
+  .vet-pet:hover{border-color:var(--z-blue-soft);box-shadow:var(--shadow-lg)}
+  .vet-pet .ph{width:74px;height:74px;border-radius:50%;margin:0 auto 10px;background-size:cover;background-position:center;display:grid;place-items:center;font-size:30px;font-weight:800;color:#fff}
+  .vet-pet .nm{font-size:16px;font-weight:800;color:var(--z-blue);line-height:1.15}
+  .vet-pet .br{font-size:12.5px;color:var(--muted);font-weight:600;margin-top:3px}
+  .vet-pet .tt{font-size:12.5px;color:var(--z-blue-soft);font-weight:700;margin-top:4px;line-height:1.2}
+  .vet-pet .mini-alert{position:absolute;top:9px;left:9px;font-size:10px;font-weight:800;color:#fff;background:var(--crm-critico);padding:3px 8px;border-radius:8px;z-index:2;animation:piscaAlerta 1.5s ease-in-out infinite}
+  .vet-pet .mini-med{position:absolute;top:9px;right:9px;font-size:10px;font-weight:800;color:var(--z-blue);background:var(--z-gold);padding:3px 8px;border-radius:8px;z-index:2}
+  .vet-sec{margin-top:16px}
+  .vet-sec h3{font-size:14px;font-weight:800;letter-spacing:.3px;color:var(--z-blue);text-transform:uppercase;margin:0 0 10px;padding-top:12px;border-top:1.5px dashed var(--line)}
+  .vet-row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  @media(max-width:520px){ .vet-row{grid-template-columns:1fr} }
+  .vet-med-item{border:1.5px solid var(--line);border-radius:12px;padding:13px 14px;margin-bottom:10px;background:var(--z-cream)}
+  .vet-med-item.suspenso{opacity:.66;border-style:dashed}
+  .vet-med-top{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+  .vet-med-nome{font-weight:800;color:var(--z-blue);font-size:15px}
+  .vet-med-orig{font-size:11px;font-weight:800;padding:2px 8px;border-radius:999px;background:rgba(41,128,185,.14);color:var(--crm-info)}
+  .vet-med-orig.vet{background:rgba(192,57,43,.13);color:var(--crm-critico)}
+  .vet-med-det{font-size:13px;color:var(--z-blue-soft);font-weight:600;margin-top:4px}
+  .vet-med-susp{font-size:12px;font-weight:800;color:var(--crm-critico);margin-top:5px}
+  .vet-med-btns{display:flex;gap:8px;flex-wrap:wrap;margin-top:9px}
+  .vet-hist-line{border-left:3px solid var(--z-gold);padding:2px 0 2px 12px;margin:6px 0;font-size:12.5px;color:var(--z-blue-soft)}
+  .vet-hist-line strong{color:var(--z-blue)}
+  .vet-recom-pill{display:inline-block;background:rgba(41,128,185,.13);color:var(--crm-info);border:1.5px solid var(--crm-info);font-size:12px;font-weight:800;border-radius:999px;padding:4px 11px;margin:3px 5px 3px 0}
+  .vet-recom-pill.cuidado{background:rgba(222,180,40,.16);color:var(--z-gold-deep);border-color:var(--z-gold)}
+  .vet-instr-box{background:rgba(41,128,185,.08);border:1.5px solid var(--crm-info);border-radius:12px;padding:12px 14px;margin-top:10px}
+  .vet-instr-box .vt{font-size:12px;font-weight:800;color:var(--crm-info);text-transform:uppercase;letter-spacing:.4px;margin-bottom:7px}
+  .vet-reaval-banner{background:rgba(222,180,40,.2);border:2px solid var(--z-gold);border-radius:14px;padding:14px 16px;margin-bottom:16px;font-weight:700;color:var(--z-blue);display:flex;gap:11px;align-items:flex-start}
+  .vet-reaval-banner .rr-tit{font-weight:800;color:var(--z-gold-deep)}
+  .vet-consulta-card{border:1.5px solid var(--line);border-radius:12px;padding:13px 14px;margin-bottom:10px;background:var(--z-cream-warm)}
+  .vet-consulta-card .cc-data{font-weight:800;color:var(--z-blue);font-size:14px}
+  .vet-consulta-card .cc-meta{font-size:12px;color:var(--muted);font-weight:700;margin-top:2px}
+  .vet-consulta-card .cc-body{font-size:13.5px;color:var(--z-blue-soft);margin-top:6px;line-height:1.5}
+  .vet-fotos{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
+  .vet-fotos img{width:74px;height:74px;object-fit:cover;border-radius:10px;border:1.5px solid var(--line)}
+  .pet .mini-recom{position:absolute;top:34px;right:9px;font-size:10px;font-weight:800;color:#fff;background:var(--crm-info);padding:3px 8px;border-radius:8px;z-index:2}
   /* botão de cancelar hóspede/pernoite do dia — canto do card, só Gestão/Supervisão/Diretoria */
   .pet-x{position:absolute;top:-8px;right:-8px;width:27px;height:27px;border-radius:50%;border:2px solid #fff;background:var(--crm-critico);color:#fff;font-size:16px;font-weight:800;line-height:1;cursor:pointer;z-index:4;display:grid;place-items:center;box-shadow:0 2px 6px rgba(0,0,0,.25)}
   .pet-x:hover{background:#a53125}
@@ -850,6 +898,7 @@
     <a data-v="checkin"><span data-icon="paw"></span><span>Check-in</span></a>
     <a data-v="recepcao" class="so-recepcao"><span data-icon="paw"></span><span>Recepção</span></a>
     <a data-v="hospedagem"><span data-icon="moon"></span><span>AuAulândia</span></a>
+    <a data-v="cuidadovet" class="so-vet"><span data-icon="heart"></span><span>Cuidado Vet</span></a>
     <a data-v="agenda"><span data-icon="cal"></span><span>Agenda</span><span class="soon">em breve</span></a>
     <div class="grp so-master">Gestão</div>
     <a data-v="painel" class="so-master"><span data-icon="star"></span><span>Painel do Dia</span></a>
@@ -1081,6 +1130,7 @@
           <div class="hf-meta" id="hf-meta"></div>
           <div class="hf-estadia" id="hf-estadia"></div>
           <div id="hf-pills"></div>
+          <div id="hf-vet-instr"></div>
           <div id="hf-alergia-block"></div>
           <div class="so-gestao" style="margin-top:10px">
             <button class="btn-foto-mini" style="background:var(--z-gold);color:var(--z-blue)" onclick="toggleCadastro()">✏️ Editar cadastro</button>
@@ -1418,6 +1468,110 @@
     <div id="avisosEstoqueList"></div>
   </section>
 
+  <!-- ===== Onda 3 — CUIDADO VET (veterinária) ===== -->
+  <section class="view" id="v-cuidadovet">
+    <!-- LISTA de todos os hóspedes (como o almoço) -->
+    <div id="vet-lista">
+      <div id="vetReavalBanner"></div>
+      <div class="role-note"><span data-icon="heart"></span><span><strong>Cuidado Vet.</strong> Selecione o hóspede para ver a ficha, registrar a <strong>consulta</strong> (temperatura, peso, cuidados, recomendações) e prescrever. A consulta é a <strong>fonte</strong> que cria, altera ou suspende a medicação — a mudança desce viva para a ficha do peludinho e dispara os alarmes na hora.</span></div>
+      <div class="vet-grid" id="vetGrid"></div>
+    </div>
+
+    <!-- FICHA / consulta do hóspede -->
+    <div id="vet-ficha" style="display:none">
+      <button class="back-btn" onclick="fecharVetFicha()">← Voltar aos hóspedes</button>
+
+      <div class="card hosp-head">
+        <div class="hf-photo-wrap"><div class="ph" id="vf-av">T</div><span class="chip-serv chip-on-photo">Cuidado Vet</span></div>
+        <div style="flex:1">
+          <div class="hf-nome" id="vf-nome">—</div>
+          <div class="hf-chipline" id="vf-chipline">Microchip: --</div>
+          <div class="hf-meta" id="vf-meta"></div>
+          <div id="vf-pills"></div>
+          <div id="vf-instr"></div>
+        </div>
+      </div>
+
+      <!-- Medicação-fonte: cria / altera / suspende as fichas que disparam os alarmes -->
+      <div class="card">
+        <h2 style="font-size:19px">Medicação em vigor</h2>
+        <div class="hint">Esta lista é a MESMA ficha que dispara os alarmes de medicação do peludinho. Alterar ou suspender aqui muda na hora — para todos os aparelhos. Toda mudança exige o motivo e fica assinada no histórico.</div>
+        <div id="vetMedList"></div>
+        <button type="button" class="med-add" onclick="vetAbrirNovaMed()">+ Prescrever nova medicação (receita da vet)</button>
+
+        <!-- Formulário de nova medicação / alteração (à prova de erro: número + unidade obrigatórios) -->
+        <div id="vetMedForm" style="display:none;margin-top:12px" class="vet-med-item">
+          <div class="cad-sub" style="margin-top:0;border-top:none;padding-top:0" id="vetMedFormTit">Nova medicação</div>
+          <div class="medhint">Escreva o nome, a quantidade (número + medida) e os horários fixos. A origem é sempre "Receita da vet".</div>
+          <div class="vet-row">
+            <label class="mfield"><span class="mf-lab">Nome do medicamento / suplemento</span><input id="vmNome" class="cad-in" placeholder="Ex: Protetor gástrico (omeprazol)" autocomplete="off"></label>
+            <div class="field"><label>Tipo</label><div class="mag-tipo" id="vmTipo"><button type="button" class="on" onclick="magPickTipo(this)">Medicamento</button><button type="button" onclick="magPickTipo(this)">Suplemento</button></div></div>
+          </div>
+          <div class="vet-row" style="margin-top:8px">
+            <label class="mfield"><span class="mf-lab">Quantidade</span><input id="vmQtd" class="cad-in" inputmode="decimal" placeholder="Ex: 1, 0,5, 10" autocomplete="off"></label>
+            <div class="field"><label>Medida</label><div class="medunits" id="vmUnidades" style="margin-top:0">
+              <button type="button" onclick="pickUnit(this)">comprimido</button><button type="button" onclick="pickUnit(this)">cápsula</button><button type="button" onclick="pickUnit(this)">ml</button><button type="button" onclick="pickUnit(this)">gota</button><button type="button" onclick="pickUnit(this)">sachê</button><button type="button" onclick="pickUnit(this)">colher</button><button type="button" onclick="pickUnit(this)">aplicação</button><button type="button" onclick="pickUnit(this)">unidade</button>
+            </div></div>
+          </div>
+          <div class="mag-horarios" style="margin-top:10px"><span class="mu-lab">Horários</span><span class="mag-horarios-list" id="vmHorarios"><span class="magHorario"><input data-c="h" inputmode="numeric" placeholder="07:30" onblur="normalizarHoraMed(this)"><button type="button" class="mag-rm-h" onclick="this.parentElement.remove()">×</button></span></span><button type="button" class="med-add" style="width:auto;margin-top:0" onclick="vetAddHorario(this)">+ horário</button></div>
+          <div class="field" style="margin-top:10px"><label>Motivo da prescrição / alteração (fica registrado e assinado)</label><input id="vmMotivo" class="cad-in" placeholder="Ex: vomitou após o almoço — proteger a mucosa" autocomplete="off"></div>
+          <div class="actions" style="margin-top:12px"><button class="btn btn-primary" onclick="vetSalvarMed()">Salvar na ficha do peludinho</button><button class="btn" style="background:var(--z-cream-warm);color:var(--z-blue);border:1.5px solid var(--line)" onclick="vetFecharMedForm()">Cancelar</button></div>
+          <div id="vetMed-status" class="rel-status"></div>
+        </div>
+      </div>
+
+      <!-- Nova consulta (receituário datado) -->
+      <div class="card">
+        <h2 style="font-size:19px">Registrar consulta</h2>
+        <div class="hint">O receituário no sistema. Fica datado e assinado na pasta da estadia. As recomendações e os cuidados viram instruções visíveis na ficha do peludinho para a plantonista e a monitora.</div>
+        <div class="vet-row">
+          <div class="field"><label>Data da consulta</label><input id="vcData" class="cad-in" type="date"></div>
+          <div class="field"><label>Assinatura</label><input id="vcAssina" class="cad-in" readonly></div>
+        </div>
+        <div class="vet-row" style="margin-top:10px">
+          <div class="field"><label>Temperatura (°C)</label><input id="vcTemp" class="cad-in" inputmode="decimal" placeholder="Ex: 38,5" autocomplete="off"></div>
+          <div class="field"><label>Peso (kg)</label><input id="vcPeso" class="cad-in" inputmode="decimal" placeholder="Ex: 7,2" autocomplete="off"></div>
+        </div>
+        <div class="vet-sec">
+          <h3>Cuidados especiais (viram instruções na ficha)</h3>
+          <div class="seg" id="vcCuidados" style="flex-wrap:wrap">
+            <button type="button" onclick="this.classList.toggle('on')">Colar elizabetano</button>
+            <button type="button" onclick="this.classList.toggle('on')">Não deixar na matilha</button>
+            <button type="button" onclick="this.classList.toggle('on')">Isolamento</button>
+            <button type="button" onclick="this.classList.toggle('on')">Repouso</button>
+            <button type="button" onclick="this.classList.toggle('on')">Compressa</button>
+            <button type="button" onclick="this.classList.toggle('on')">Não molhar a região</button>
+          </div>
+          <div class="field" style="margin-top:10px"><label>Outro cuidado (livre)</label><input id="vcCuidadoLivre" class="cad-in" placeholder="Ex: limpar o olho 3x ao dia com soro" autocomplete="off"></div>
+        </div>
+        <div class="field" style="margin-top:12px"><label>Recomendações (aparecem como instrução na ficha do peludinho)</label><textarea id="vcRecom" class="cad-in" style="min-height:70px" placeholder="Ex: observar se volta a vomitar; oferecer água em pequenas doses"></textarea></div>
+        <div class="field" style="margin-top:10px"><label>Observações da consulta (histórico clínico)</label><textarea id="vcObs" class="cad-in" style="min-height:70px" placeholder="Diagnóstico, evolução, conduta"></textarea></div>
+        <div class="vet-sec">
+          <h3>Reavaliação</h3>
+          <div class="hint" style="margin-top:0">No dia marcado, o sistema avisa a Veterinária e a Gestão que este peludinho tem reavaliação. Fim da dependência da memória.</div>
+          <div class="vet-row" style="margin-top:8px">
+            <div class="field"><label>Reavaliar em</label><input id="vcReaval" class="cad-in" type="date"></div>
+            <div class="field"><label>Motivo da reavaliação</label><input id="vcReavalMotivo" class="cad-in" placeholder="Ex: reavaliar a córnea" autocomplete="off"></div>
+          </div>
+        </div>
+        <div class="vet-sec">
+          <h3>Fotos da consulta</h3>
+          <input id="vcFotoFile" type="file" accept="image/*" capture="environment" multiple style="display:none" onchange="vetAddFoto(event)">
+          <button type="button" class="btn-foto-mini" onclick="document.getElementById('vcFotoFile').click()">📷 Adicionar foto</button>
+          <div class="vet-fotos" id="vcFotos"></div>
+        </div>
+        <div class="actions" style="margin-top:14px"><button class="btn btn-primary" style="width:100%" onclick="salvarConsultaVet()">Salvar consulta</button></div>
+        <div id="vc-status" class="rel-status"></div>
+      </div>
+
+      <!-- Histórico de consultas -->
+      <div class="card">
+        <h2 style="font-size:19px">Histórico de consultas</h2>
+        <div id="vetConsultasList"><div class="hint">Nenhuma consulta registrada ainda.</div></div>
+      </div>
+    </div>
+  </section>
+
   <section class="view" id="v-agenda"><div class="soon-box"><img class="ic-st" src="assets/stickers/coleira.png" alt=""><div class="t">Agenda</div><div class="d">Calendário de frequência e reservas — próxima etapa.</div></div></section>
   <section class="view" id="v-abertura">
     <div class="role-note"><span data-icon="sun"></span><span><strong>Rotina de abertura do turno — Monitor 1.</strong> Marque cada item conforme executa. Fica registrado com horário e quem fez.</span></div>
@@ -1531,6 +1685,17 @@
         try{ const v=document.getElementById('v-recepcao'); if(v&&v.classList.contains('active')&&typeof renderAvisosEstoque==='function') renderAvisosEstoque(); }catch(e){}
         try{ if(currentHosp&&typeof renderMedAgendaHoje==='function'){ const fv=document.getElementById('v-hospedagem'); if(fv&&fv.classList.contains('active')) renderMedAgendaHoje(); } }catch(e){}
       });
+      // Onda 3 — Cuidado Vet. Recomendações/cuidados ativos (viram instruções na ficha/card, como a
+      // tarja de alergia) e datas de reavaliação (avisam no dia). Em tempo real em todos os aparelhos.
+      DB.ref('auaulandia/vet-recomendacoes').on('value', s=>{ VET_RECOM_CACHE=s.val()||{};
+        try{ if(typeof renderHosp==='function') renderHosp(); }catch(e){}
+        try{ if(currentHosp&&typeof renderVetInstrucoesFicha==='function') renderVetInstrucoesFicha(currentHosp); }catch(e){}
+        try{ const v=document.getElementById('v-cuidadovet'); if(v&&v.classList.contains('active')&&typeof renderVetLista==='function') renderVetLista(); }catch(e){}
+      });
+      DB.ref('auaulandia/vet-reavaliacao').on('value', s=>{ VET_REAVAL_CACHE=s.val()||{};
+        try{ if(typeof checarReavaliacoesHoje==='function') checarReavaliacoesHoje(); }catch(e){}
+        try{ if(typeof renderHosp==='function') renderHosp(); }catch(e){}
+      });
     }).catch(e=>console.warn('Firebase auth:',e));
   }catch(e){ console.warn('Firebase init:',e); }
 
@@ -1546,7 +1711,8 @@
       cal:'M3 9h18M7 3v3M17 3v3M5 5h14v16H5z',
       users:'M16 18v-2a4 4 0 00-8 0v2M12 11a3.5 3.5 0 100-7 3.5 3.5 0 000 7M20 18v-1.5a3 3 0 00-2.5-3M4 18v-1.5a3 3 0 012.5-3',
       exit:'M16 17l5-5-5-5M21 12H9M12 19H5V5h7',
-      lock:'M6 11h12v9H6zM9 11V8a3 3 0 016 0v3'
+      lock:'M6 11h12v9H6zM9 11V8a3 3 0 016 0v3',
+      heart:'M12 20l-7-7a4 4 0 015.7-5.7L12 8.6l1.3-1.3A4 4 0 0119 13z'
     }[n]||'';
     return `<svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">${p.split('M').filter(Boolean).map(d=>'<path d="M'+d+'"/>').join('')}</svg>`;
   }
@@ -1597,6 +1763,7 @@
   const titles={inicio:['Início','Visão geral do dia'],ficha:['Peludinhos','Matriculados'],
     renovacao:['Renovação de Planos','Planos a vencer e renovações'],adaptacao:['Adaptação · 1º mês','Como está se adaptando'],
     daycare:['Day Care','Chamada e atividades'],hospedagem:['AuAulândia','Passagem de plantão'],
+    cuidadovet:['Cuidado Vet','Consulta, receituário e reavaliação'],
     checkin:['Check-in','Entrada da estadia — ficha, pertences e assinatura'],
     recepcao:['Recepção','Avisos de estoque de medicação'],
     agenda:['Agenda','Frequência e reservas'],pessoas:['Pessoas & Turnos','Equipe e tarefas'],
@@ -1614,6 +1781,7 @@
     document.getElementById('head-title').childNodes[0].nodeValue=titles[v][0]+' ';
     document.getElementById('head-sub').textContent=titles[v][1];
     if(v==='hospedagem') fecharPlantao();
+    if(v==='cuidadovet'){ if(typeof abrirCuidadoVet==='function') abrirCuidadoVet(); }
     if(v==='checkin'){ if(typeof abrirCheckin==='function') abrirCheckin(); }
     if(v==='recepcao'){ if(typeof carregarAvisosEstoque==='function') carregarAvisosEstoque(); }
     if(v==='ficha'){ const l=document.getElementById('pel-lista'),fi=document.getElementById('pel-ficha'); if(l&&fi){ l.style.display='block'; fi.style.display='none'; } }
@@ -1847,12 +2015,14 @@
         const ex = extraDoHosp(h);
         const alertaFoto = (ex.alergia||ex.restricao) ? `<span class="mini-alert">${ex.alergia&&ex.restricao?'ALÉRGICO/RESTRIÇÃO':(ex.alergia?'ALÉRGICO':'RESTRIÇÃO')}</span>` : '';
         const medFoto = ex.medicacao ? '<span class="mini-med">MEDICAÇÃO</span>' : '';
+        // Onda 3 — selo azul de recomendação da vet (instruções: elizabetano, não deixar na matilha...)
+        const recFoto = (typeof temRecomAtiva==='function' && temRecomAtiva(h)) ? '<span class="mini-recom">VET</span>' : '';
         // Cancelar lançamento do dia — só quem foi adicionado manualmente hoje (tem manualKey) tem
         // como cancelar; quem vem da planilha não tem essa opção aqui. Gestão/Supervisão/Diretoria/Monitor
         // (reversível e de baixo risco — remove só o lançamento de hoje, não mexe no cadastro). Plantonista fora.
         const cancelBtn = h.manualKey ? `<button type="button" class="pet-x so-equipe" title="Cancelar hóspede/pernoite de hoje" onclick="event.stopPropagation();cancelarHospedeManual(${i})">×</button>` : '';
         return `<div class="pet" onclick="abrirPlantao(${i})">
-          ${cancelBtn}${alertaFoto}${medFoto}${ph}
+          ${cancelBtn}${alertaFoto}${medFoto}${recFoto}${ph}
           <div class="nm">${cad.nome||h.nome}</div>
           <div class="br">${raca}</div>
           <div class="hosp-tutor">${h.mascote?'Nossa Zelozinha':(tutor?'Tutor: '+tutor:'Tutor a confirmar')}</div>
@@ -1861,6 +2031,7 @@
         </div>`;
       }).join('');
     renderKPIs();
+    try{ const vv=document.getElementById('v-cuidadovet'); if(vv&&vv.classList.contains('active')&&typeof renderVetLista==='function') renderVetLista(); }catch(e){}
   }
   renderHosp();
 
@@ -1879,6 +2050,7 @@
     document.getElementById('hf-estadia').innerHTML=`Na AuAulândia · <strong>estadia a confirmar na ficha</strong>`;
     // alergia/medicação em destaque no topo da ficha — mesma trava de segurança do Day Care (alertPills)
     const _pillsEl=document.getElementById('hf-pills'); if(_pillsEl) _pillsEl.innerHTML=(typeof alertPills==='function')?alertPills(extraDoHosp(h)):'';
+    if(typeof renderVetInstrucoesFicha==='function') renderVetInstrucoesFicha(h,'hf-vet-instr'); // Onda 3: instruções da vet (elizabetano, não deixar na matilha...)
     if(typeof renderHospAlergiaBlock==='function') renderHospAlergiaBlock(h);
     document.getElementById('hfRaca').value=raca;
     document.getElementById('hosp-lista').style.display='none';
@@ -2098,7 +2270,9 @@
       +'<div class="mag-est-campo mag-est-contavel'+(modo==='contavel'?' on':'')+'"><label>Quantas unidades vieram? (a consultora conta)</label><input data-c="einicial" inputmode="numeric" placeholder="Ex: 20" value="'+escAttr(est.inicial!=null?est.inicial:'')+'"></div>'
       +'<div class="mag-est-campo mag-est-naocontavel'+(modo==='naocontavel'?' on':'')+'"><label>Como veio o frasco/pote?</label><div class="mag-est-nivel">'+nivBtn('cheio','Veio cheio')+nivBtn('metade','Pela metade')+'</div></div>'
       +'</div>';
+    const suspBanner=item.suspenso?'<div style="background:rgba(192,57,43,.1);border:1.5px solid var(--crm-critico);border-radius:9px;padding:8px 11px;margin-bottom:8px;font-size:12.5px;font-weight:800;color:var(--crm-critico)">SUSPENSO pela Veterinária'+(item.suspensoPor?(' · '+escAttr(item.suspensoPor)):'')+(item.suspensoMotivo?('<span style="display:block;font-weight:600;margin-top:2px">Motivo: '+escAttr(item.suspensoMotivo)+'</span>'):'')+'<span style="display:block;font-weight:600;margin-top:2px">Não gera alarme. Reativação só pela vet, no Cuidado Vet.</span></div>':'';
     return '<div class="magitem" data-id="'+id+'">'
+      +suspBanner
       +tipoToggle
       +origemToggle
       +'<div class="medrow">'
@@ -2168,6 +2342,11 @@
       if(nome||q||u||horarios.length){
         const item={nome:nome,q:q,u:u,horarios:horarios,tipo:tipo,origem:coletarOrigemEl(el)};
         const est=coletarEstoqueEl(el, MED_AGENDA_ITENS[id]); if(est) item.estoque=est;
+        // Onda 3: preserva a suspensão e o histórico da vet — re-salvar a agenda pela recepção
+        // NUNCA pode ressuscitar uma medicação que a veterinária suspendeu (mata o caso Hulk).
+        const prev=MED_AGENDA_ITENS[id]||{};
+        if(prev.suspenso){ item.suspenso=true; if(prev.suspensoPor)item.suspensoPor=prev.suspensoPor; if(prev.suspensoMotivo)item.suspensoMotivo=prev.suspensoMotivo; if(prev.suspensoTs)item.suspensoTs=prev.suspensoTs; }
+        if(prev.historico) item.historico=prev.historico;
         out[id]=item;
       }
     });
@@ -2225,7 +2404,7 @@
   // que abre um aviso rastreado para a Recepção. Contável mostra "acaba em ~X dias".
   function renderEstoqueResumo(){
     const key=medAgendaKey();
-    const ids=Object.keys(MED_AGENDA_ITENS).filter(function(id){ return MED_AGENDA_ITENS[id] && MED_AGENDA_ITENS[id].estoque; });
+    const ids=Object.keys(MED_AGENDA_ITENS).filter(function(id){ return MED_AGENDA_ITENS[id] && MED_AGENDA_ITENS[id].estoque && !MED_AGENDA_ITENS[id].suspenso; });
     if(!ids.length) return '';
     const linhas=ids.map(function(id){
       const it=MED_AGENDA_ITENS[id]; const est=it.estoque||{};
@@ -2395,6 +2574,7 @@
     const rows=[];
     Object.keys(MED_AGENDA_ITENS).forEach(function(id){
       const it=MED_AGENDA_ITENS[id]||{};
+      if(it.suspenso) return; // Onda 3: suspensa pela vet — não pede dose nem entra no placar do dia
       (it.horarios||[]).forEach(function(h){
         const doseId=magDoseId(id,h); const log=MED_AGENDA_LOG[doseId];
         rows.push({id:id,doseId:doseId,nome:it.nome,q:it.q,u:it.u,h:h,tipo:it.tipo||'medicamento',feito:!!log,quem:log&&log.quem,ts:log&&log.ts});
@@ -2865,6 +3045,10 @@
     '0902':{role:'gestao',      nome:'Márcia · Gestora', avisoSonoro:true},
     '0912':{role:'supervisor',  nome:'Amanda · Supervisora'},
     '0913':{role:'consultora',  nome:'Consultora · Recepção'},
+    // VETERINÁRIA — senha própria (Onda 3, Cuidado Vet). Vê todos os hóspedes, faz a consulta datada
+    // (receituário) e é a FONTE que cria/altera/suspende as fichas de medicação. Senha provisória —
+    // a Gestão troca em Pessoas assim que possível.
+    '0914':{role:'vet',         nome:'Veterinária · Cuidado Vet'},
     '1002':{role:'aprendiz',    nome:'Monitor Aprendiz'},
     // DIRETORIA — nível acima da Gestão, exclusiva da Adriana. Enxerga tudo que a Gestão
     // enxerga e, além disso, é a única que pode EXCLUIR um cadastro de verdade (a Gestão
@@ -2898,7 +3082,7 @@
   // ===== RELATÓRIO DE SENHAS (só Gestão vê) — gerado do cadastro acima =====
   function renderSenhas(){
     const el=document.getElementById('senhasList'); if(!el) return;
-    const ordem={diretoria:-1, gestao:0, supervisor:1, monitor:2, plantonista:3, aprendiz:4};
+    const ordem={diretoria:-1, gestao:0, supervisor:1, vet:1.5, consultora:1.7, monitor:2, plantonista:3, aprendiz:4};
     const SR=senhasRuntime();
     const lista=Object.keys(SR).map(pwd=>({pwd, ...SR[pwd]}))
       .sort((a,b)=>(ordem[a.role]??9)-(ordem[b.role]??9) || String(a.nome).localeCompare(String(b.nome)));
@@ -2949,7 +3133,7 @@
     const v=(document.getElementById('loginPwd').value||'').trim();
     const u=senhasRuntime()[v]; const err=document.getElementById('loginErr'); err.style.color='';
     if(!u){ err.textContent='Senha incorreta. Tente de novo.'; return; }
-    const ehGestao=(u.role==='gestao'||u.role==='supervisor'||u.role==='consultora'||u.role==='diretoria');
+    const ehGestao=(u.role==='gestao'||u.role==='supervisor'||u.role==='consultora'||u.role==='diretoria'||u.role==='vet');
     deviceAutorizado(function(ok){
       if(ok || ehGestao){ sessionStorage.setItem('zeluz_login', JSON.stringify(u)); aplicarLogin(u); return; }
       // Aparelho não autorizado e não é gestão → bloqueia
@@ -2980,6 +3164,7 @@
   function telaInicialDe(u){
     const r=((u&&u.role)||'').toLowerCase();
     if(r==='consultora') return 'renovacao'; // recepção trabalha nos planos
+    if(r==='vet') return 'cuidadovet'; // a Veterinária cai direto na sua tela
     if(r==='gestao'||r==='supervisor'||r==='diretoria') return 'inicio';
     return 'hospedagem'; // plantonista, monitor, aprendiz
   }
@@ -3693,6 +3878,7 @@
         const itens=s.val(); if(!itens) return;
         Object.keys(itens).forEach(function(id){
           const it=itens[id]||{};
+          if(it.suspenso) return; // Onda 3: medicação suspensa pela vet não gera alarme (mata o caso Hulk)
           (it.horarios||[]).forEach(function(hr){ MED_AGENDA_TODOS.push({hospNome:h.nome||'', key:key, itemId:id, nome:it.nome||'', q:it.q||'', u:it.u||'', horario:hr}); });
         });
       }).catch(function(){});
@@ -3741,6 +3927,317 @@
   // "atrasada" só porque o horário passou) — por isso o painel da Gestora tem seu próprio timer,
   // além de ser recarregado toda vez que a agenda muda ou uma dose é registrada.
   setInterval(function(){ if(typeof carregarMedAtrasadaGestora==='function') carregarMedAtrasadaGestora(); }, 60000);
+
+  // ==================================================================================
+  // ===== ONDA 3 — CUIDADO VET (veterinária) =========================================
+  // A consulta datada é o receituário no sistema e a FONTE das fichas de medicação:
+  // criar/alterar/suspender aqui desce VIVO para a ficha do peludinho e dispara/silencia
+  // os alarmes na hora (mata o caso Hulk). Recomendações/cuidados viram instruções na
+  // ficha (como a tarja de alergia). Reavaliação avisa no dia. Só vet+gestão+supervisão+
+  // diretoria alteram, sempre com motivo registrado.
+  // ==================================================================================
+  var VET_RECOM_CACHE={};      // {key:{texto,cuidados[],por,ts,consultaId,ativo}} — instruções ativas
+  var VET_REAVAL_CACHE={};     // {key:{data:'YYYY-MM-DD',motivo,por,ts}} — reavaliação marcada
+  var VET_MED_CACHE={};        // {itemId:item} — medicação do hóspede aberto no Cuidado Vet
+  var VET_CONSULTAS_CACHE={};  // {consultaId:consulta} — histórico do hóspede aberto
+  var vetHosp=null;            // hóspede aberto no Cuidado Vet
+  var vetMedEditId=null;       // id do item sendo alterado (null = nova prescrição)
+  var vcFotosBuf=[];           // fotos (base64) da consulta em edição
+
+  // Quem pode alterar/cancelar medicação e cancelar consultas — só estes papéis, sempre com motivo.
+  function podeAlterarVet(){ var r=document.body.dataset.role; return r==='vet'||r==='gestao'||r==='supervisor'||r==='diretoria'; }
+  function vetKey(h){ return medAgendaKey(h); } // mesma chave da agenda de medicação (uma ficha por remédio)
+
+  // ---- Instruções ativas (recomendações + cuidados) viram tarja na ficha/card ----
+  function recomAtivaDe(h){ if(!h) return null; var r=VET_RECOM_CACHE[vetKey(h)]; if(!r||r.ativo===false) return null; var temCuid=Array.isArray(r.cuidados)&&r.cuidados.length; if(!(r.texto&&r.texto.trim())&&!temCuid) return null; return r; }
+  function temRecomAtiva(h){ return !!recomAtivaDe(h); }
+  function renderVetInstrucoesFicha(h,elId){
+    var el=document.getElementById(elId||'vf-instr'); if(!el) return;
+    var r=recomAtivaDe(h);
+    if(!r){ el.innerHTML=''; return; }
+    var pills='';
+    (r.cuidados||[]).forEach(function(c){ pills+='<span class="vet-recom-pill cuidado">'+escAttr(c)+'</span>'; });
+    var reav=VET_REAVAL_CACHE[vetKey(h)];
+    var reavLine=(reav&&reav.data)?'<div style="margin-top:7px;font-size:12.5px;font-weight:700;color:var(--z-gold-deep)">Reavaliação marcada: '+escAttr(fmtBR(reav.data))+(reav.motivo?(' — '+escAttr(reav.motivo)):'')+'</div>':'';
+    el.innerHTML='<div class="vet-instr-box"><div class="vt">Instruções da Veterinária</div>'
+      +(pills?('<div style="margin-bottom:'+(r.texto?'7px':'0')+'">'+pills+'</div>'):'')
+      +(r.texto?('<div style="font-size:13.5px;font-weight:600;color:var(--z-blue-soft);line-height:1.5">'+escAttr(r.texto)+'</div>'):'')
+      +reavLine
+      +'<div style="margin-top:7px;font-size:11.5px;font-weight:700;color:var(--muted)">— '+escAttr(r.por||'Veterinária')+(r.ts?(' · '+new Date(r.ts).toLocaleDateString('pt-BR')):'')+'</div></div>';
+  }
+
+  // ---- Abrir a tela e listar TODOS os hóspedes ----
+  function abrirCuidadoVet(){
+    document.getElementById('vet-lista').style.display='block';
+    document.getElementById('vet-ficha').style.display='none';
+    if(typeof carregarHospedes==='function') carregarHospedes(); // garante a lista do dia
+    renderVetLista();
+    checarReavaliacoesHoje();
+  }
+  function renderVetLista(){
+    var el=document.getElementById('vetGrid'); if(!el) return;
+    if(!hospedes||!hospedes.length){ el.innerHTML='<div class="av-empty" style="grid-column:1/-1"><div class="big">Sem hóspedes hoje</div>Quando houver peludinhos hospedados, eles aparecem aqui para a consulta.</div>'; return; }
+    el.innerHTML=hospedes.map(function(h,i){
+      var cad=(typeof getCad==='function')?getCad(h):{};
+      var ph=cad.foto?('<div class="ph" style="background-image:url(\''+cad.foto+'\');background-size:cover;background-position:center"></div>'):('<div class="ph" style="background:'+(h.cor||'#234D67')+'">'+escAttr((h.ini||(h.nome||'?')[0]||'?'))+'</div>');
+      var ex=(typeof extraDoHosp==='function')?extraDoHosp(h):{};
+      var alerta=(ex.alergia||ex.restricao)?'<span class="mini-alert">'+(ex.alergia&&ex.restricao?'ALÉRGICO/RESTR.':(ex.alergia?'ALÉRGICO':'RESTRIÇÃO'))+'</span>':'';
+      var med=temRecomAtiva(h)?'<span class="mini-med">VET</span>':'';
+      var tutor=(typeof tutorDe==='function')?tutorDe(h):(h.tutor||'');
+      return '<div class="vet-pet" onclick="abrirVetFicha('+i+')">'+alerta+med+ph
+        +'<div class="nm">'+escAttr((cad.nome||h.nome||'—'))+'</div>'
+        +'<div class="br">'+((cad.raca||h.raca)?escAttr(cad.raca||h.raca):'—')+'</div>'
+        +'<div class="tt">'+(h.mascote?'Nossa Zelozinha':(tutor?'Tutor: '+escAttr(tutor):'Tutor a confirmar'))+'</div></div>';
+    }).join('');
+  }
+  function fecharVetFicha(){ document.getElementById('vet-ficha').style.display='none'; document.getElementById('vet-lista').style.display='block'; renderVetLista(); }
+
+  function abrirVetFicha(i){
+    var h=hospedes[i]; if(!h) return; vetHosp=h; vcFotosBuf=[]; vetMedEditId=null;
+    var cad=(typeof getCad==='function')?getCad(h):{};
+    var av=document.getElementById('vf-av');
+    if(cad.foto){ av.style.backgroundImage="url('"+cad.foto+"')"; av.style.backgroundSize='cover'; av.style.backgroundPosition='center'; av.textContent=''; }
+    else { av.style.backgroundImage='none'; av.textContent=(h.ini||(h.nome||'?')[0]||'?'); av.style.background=(h.cor||'#234D67'); }
+    document.getElementById('vf-nome').textContent=cad.nome||h.nome||'—';
+    document.getElementById('vf-chipline').textContent='Microchip: '+((cad.chip||cad.microchip)?(cad.chip||cad.microchip):'--');
+    var tutor=(typeof tutorDe==='function')?tutorDe(h):(h.tutor||'');
+    document.getElementById('vf-meta').innerHTML=((cad.raca||h.raca)?escAttr(cad.raca||h.raca)+' · ':'')+(h.mascote?'Nossa Zelozinha':(tutor?'Tutor: '+escAttr(tutor):'Tutor a confirmar'));
+    var ex=(typeof extraDoHosp==='function')?extraDoHosp(h):{};
+    document.getElementById('vf-pills').innerHTML=(typeof alertPills==='function')?alertPills(ex):'';
+    renderVetInstrucoesFicha(h,'vf-instr');
+    // formulário de consulta — reset
+    var hj=(typeof hojeISO==='function')?hojeISO():'';
+    var d=document.getElementById('vcData'); if(d) d.value=hj;
+    ['vcTemp','vcPeso','vcCuidadoLivre','vcRecom','vcObs','vcReaval','vcReavalMotivo'].forEach(function(id){ var e=document.getElementById(id); if(e) e.value=''; });
+    document.querySelectorAll('#vcCuidados button').forEach(function(b){ b.classList.remove('on'); });
+    document.getElementById('vcAssina').value=(typeof quemSou==='function')?quemSou():'';
+    var st=document.getElementById('vc-status'); if(st) st.textContent='';
+    renderVcFotos();
+    vetFecharMedForm();
+    vetCarregarMed(h);
+    vetCarregarConsultas(h);
+    document.getElementById('vet-lista').style.display='none';
+    document.getElementById('vet-ficha').style.display='block';
+    window.scrollTo({top:0,behavior:'smooth'});
+  }
+
+  // ---- Medicação em vigor (a fonte que dispara os alarmes) ----
+  function vetCarregarMed(h){
+    VET_MED_CACHE={}; var wrap=document.getElementById('vetMedList');
+    if(wrap) wrap.innerHTML='<div class="hint">Carregando medicação…</div>';
+    if(!DB||!h){ renderVetMedList(); return; }
+    DB.ref('auaulandia/medicacao-agenda/'+vetKey(h)+'/itens').once('value').then(function(s){ VET_MED_CACHE=s.val()||{}; renderVetMedList(); }).catch(function(){ VET_MED_CACHE={}; renderVetMedList(); });
+  }
+  function renderVetMedList(){
+    var wrap=document.getElementById('vetMedList'); if(!wrap) return;
+    var ids=Object.keys(VET_MED_CACHE||{});
+    if(!ids.length){ wrap.innerHTML='<div class="hint">Nenhuma medicação em vigor. Use o botão abaixo para prescrever.</div>'; return; }
+    wrap.innerHTML=ids.map(function(id){
+      var it=VET_MED_CACHE[id]||{};
+      var qtd=(typeof fmtQtd==='function')?fmtQtd(it.q,it.u):((it.q||'')+' '+(it.u||''));
+      var hor=(it.horarios||[]).join(' · ');
+      var origLbl=it.origem==='vet'?'Receita da vet':(it.origem==='familia'?'Autorizado pela família':'Rotina do tutor');
+      var hist=(Array.isArray(it.historico)&&it.historico.length)?('<div style="margin-top:8px">'+it.historico.slice(-4).map(function(x){ return '<div class="vet-hist-line"><strong>'+escAttr(x.acao||'')+'</strong>'+(x.motivo?(' — '+escAttr(x.motivo)):'')+' <span style="color:var(--muted)">('+escAttr(x.quem||'')+(x.quando?(' · '+escAttr(x.quando)):'')+')</span></div>'; }).join('')+'</div>'):'';
+      var btns;
+      if(it.suspenso){
+        btns='<div class="vet-med-susp">SUSPENSO'+(it.suspensoPor?(' · '+escAttr(it.suspensoPor)):'')+(it.suspensoMotivo?(' — '+escAttr(it.suspensoMotivo)):'')+'</div>'
+          +'<div class="vet-med-btns">'+(podeAlterarVet()?'<button type="button" class="btn btn-gold" onclick="vetReativarMed(\''+id+'\')">Reativar</button>':'')+'</div>';
+      } else {
+        btns=podeAlterarVet()?('<div class="vet-med-btns"><button type="button" class="btn btn-primary" onclick="vetAbrirAlterarMed(\''+id+'\')">Alterar</button><button type="button" class="btn" style="background:var(--crm-critico);color:#fff" onclick="vetSuspenderMed(\''+id+'\')">Suspender</button></div>'):'';
+      }
+      return '<div class="vet-med-item'+(it.suspenso?' suspenso':'')+'"><div class="vet-med-top"><span class="vet-med-nome">'+escAttr(it.nome||'Medicamento')+'</span><span class="vet-med-orig'+(it.origem==='vet'?' vet':'')+'">'+origLbl+'</span></div>'
+        +'<div class="vet-med-det">'+(qtd?escAttr(qtd):'quantidade não informada')+(hor?(' · '+escAttr(hor)):'')+'</div>'+hist+btns+'</div>';
+    }).join('');
+  }
+  function vetAddHorario(btn){ var wrap=document.getElementById('vmHorarios'); if(wrap) wrap.insertAdjacentHTML('beforeend','<span class="magHorario"><input data-c="h" inputmode="numeric" placeholder="07:30" onblur="normalizarHoraMed(this)"><button type="button" class="mag-rm-h" onclick="this.parentElement.remove()">×</button></span>'); }
+  function vetLimparMedForm(){
+    document.getElementById('vmNome').value=''; document.getElementById('vmQtd').value=''; document.getElementById('vmMotivo').value='';
+    document.querySelectorAll('#vmUnidades button').forEach(function(b){ b.classList.remove('on'); });
+    var t=document.getElementById('vmTipo'); if(t) t.querySelectorAll('button').forEach(function(b,i){ b.classList.toggle('on',i===0); });
+    document.getElementById('vmHorarios').innerHTML='<span class="magHorario"><input data-c="h" inputmode="numeric" placeholder="07:30" onblur="normalizarHoraMed(this)"><button type="button" class="mag-rm-h" onclick="this.parentElement.remove()">×</button></span>';
+    var st=document.getElementById('vetMed-status'); if(st) st.textContent='';
+  }
+  function vetAbrirNovaMed(){
+    if(!podeAlterarVet()){ alert('Apenas a Veterinária, a Gestão ou a Supervisão podem prescrever medicação.'); return; }
+    vetMedEditId=null; vetLimparMedForm();
+    document.getElementById('vetMedFormTit').textContent='Nova medicação (receita da vet)';
+    document.getElementById('vetMedForm').style.display='block';
+    document.getElementById('vmNome').focus();
+  }
+  function vetAbrirAlterarMed(id){
+    if(!podeAlterarVet()){ alert('Apenas a Veterinária, a Gestão ou a Supervisão podem alterar medicação.'); return; }
+    var it=VET_MED_CACHE[id]; if(!it) return; vetMedEditId=id; vetLimparMedForm();
+    document.getElementById('vetMedFormTit').textContent='Alterar: '+(it.nome||'medicamento');
+    document.getElementById('vmNome').value=it.nome||'';
+    document.getElementById('vmQtd').value=it.q||'';
+    document.querySelectorAll('#vmUnidades button').forEach(function(b){ b.classList.toggle('on', b.textContent.trim()===it.u); });
+    var t=document.getElementById('vmTipo'); if(t) t.querySelectorAll('button').forEach(function(b){ b.classList.toggle('on', /supl/i.test(b.textContent)===(it.tipo==='suplemento')); });
+    var hw=document.getElementById('vmHorarios'); hw.innerHTML=((it.horarios&&it.horarios.length)?it.horarios:['']).map(function(h){ return '<span class="magHorario"><input data-c="h" inputmode="numeric" placeholder="07:30" value="'+escAttr(h||'')+'" onblur="normalizarHoraMed(this)"><button type="button" class="mag-rm-h" onclick="this.parentElement.remove()">×</button></span>'; }).join('');
+    document.getElementById('vetMedForm').style.display='block';
+    document.getElementById('vetMedForm').scrollIntoView({behavior:'smooth',block:'center'});
+  }
+  function vetFecharMedForm(){ var f=document.getElementById('vetMedForm'); if(f) f.style.display='none'; vetMedEditId=null; }
+  function vetSalvarMed(){
+    if(!vetHosp||!podeAlterarVet()) return;
+    var st=document.getElementById('vetMed-status');
+    var nome=(document.getElementById('vmNome').value||'').trim();
+    var q=(document.getElementById('vmQtd').value||'').trim();
+    var ub=document.querySelector('#vmUnidades button.on'); var u=ub?ub.textContent.trim():'';
+    var tb=document.querySelector('#vmTipo button.on'); var tipo=(tb&&/supl/i.test(tb.textContent))?'suplemento':'medicamento';
+    var horarios=Array.prototype.map.call(document.querySelectorAll('#vmHorarios [data-c=h]'),function(inp){ return normHora(inp.value)||''; }).filter(Boolean);
+    var motivo=(document.getElementById('vmMotivo').value||'').trim();
+    if(!nomeMedOk(nome)){ if(st){ st.style.color='var(--crm-critico)'; st.textContent='✋ Escreva o nome do medicamento por extenso.'; } return; }
+    if(qtdNum(q)==null){ if(st){ st.style.color='var(--crm-critico)'; st.textContent='✋ Escreva a quantidade em número (ex: 1, 0,5, 10).'; } return; }
+    if(!u){ if(st){ st.style.color='var(--crm-critico)'; st.textContent='✋ Toque na medida (comprimido, ml, gota...).'; } return; }
+    if(!horarios.length){ if(st){ st.style.color='var(--crm-critico)'; st.textContent='✋ Cadastre pelo menos 1 horário válido (ex: 07:30).'; } return; }
+    if(!motivo){ if(st){ st.style.color='var(--crm-critico)'; st.textContent='✋ Escreva o motivo da prescrição/alteração — fica registrado e assinado.'; } return; }
+    if(!DB){ if(st){ st.style.color='var(--crm-atencao-text)'; st.textContent='Banco conectando…'; } return; }
+    var key=vetKey(vetHosp); var quem=(typeof quemSou==='function')?quemSou():'Veterinária';
+    var acao=vetMedEditId?'Alterou a prescrição':'Prescreveu';
+    var id=vetMedEditId||('vet_'+Date.now()+'_'+Math.random().toString(36).slice(2,6));
+    var prev=VET_MED_CACHE[id]||{};
+    var hist=(Array.isArray(prev.historico)?prev.historico.slice():[]);
+    hist.push({quem:quem,quando:agoraBR(),acao:acao,motivo:motivo});
+    var item={nome:nome,q:q,u:u,horarios:horarios,tipo:tipo,origem:'vet',historico:hist};
+    if(prev.estoque) item.estoque=prev.estoque; // preserva estoque já contado, se houver
+    // reativa se estava suspenso e a vet salvou uma alteração
+    if(st){ st.style.color='var(--muted)'; st.textContent='Salvando na ficha do peludinho…'; }
+    DB.ref('auaulandia/medicacao-agenda/'+key+'/itens/'+id).set(item).then(function(){
+      DB.ref('auaulandia/medicacao-agenda/'+key).update({nome:vetHosp.nome||'',tutor:vetHosp.tutor||'',_ts:Date.now(),_quem:quem}).catch(function(){});
+      if(typeof audit==='function') audit('vet-medicacao',key,{pet:vetHosp.nome||'',med:nome,acao:acao,quem:quem});
+      if(st){ st.style.color='var(--crm-ok)'; st.textContent='✅ '+acao+' — já vale na ficha e nos alarmes.'; }
+      vetFecharMedForm();
+      vetCarregarMed(vetHosp);
+      if(typeof carregarAgendaMedTodos==='function') carregarAgendaMedTodos(); // desce viva: rearma os alarmes
+    }).catch(function(e){ if(st){ st.style.color='var(--crm-critico)'; st.textContent='⚠️ Erro: '+e.message; } });
+  }
+  function vetSuspenderMed(id){
+    if(!vetHosp||!podeAlterarVet()) return;
+    var it=VET_MED_CACHE[id]; if(!it) return;
+    var motivo=(prompt('Suspender "'+(it.nome||'este medicamento')+'". Motivo (fica registrado e assinado):')||'').trim();
+    if(!motivo){ alert('É preciso informar o motivo para suspender.'); return; }
+    if(!DB) return; var key=vetKey(vetHosp); var quem=(typeof quemSou==='function')?quemSou():'Veterinária';
+    var hist=(Array.isArray(it.historico)?it.historico.slice():[]); hist.push({quem:quem,quando:agoraBR(),acao:'Suspendeu',motivo:motivo});
+    DB.ref('auaulandia/medicacao-agenda/'+key+'/itens/'+id).update({suspenso:true,suspensoPor:quem,suspensoMotivo:motivo,suspensoTs:Date.now(),historico:hist}).then(function(){
+      if(typeof audit==='function') audit('vet-medicacao-suspensa',key,{pet:vetHosp.nome||'',med:it.nome||'',quem:quem,motivo:motivo});
+      vetCarregarMed(vetHosp);
+      if(typeof carregarAgendaMedTodos==='function') carregarAgendaMedTodos(); // some dos alarmes na hora
+    }).catch(function(e){ alert('Erro ao suspender: '+e.message); });
+  }
+  function vetReativarMed(id){
+    if(!vetHosp||!podeAlterarVet()) return;
+    var it=VET_MED_CACHE[id]; if(!it) return;
+    var motivo=(prompt('Reativar "'+(it.nome||'este medicamento')+'". Motivo (fica registrado):')||'').trim();
+    if(!motivo){ alert('É preciso informar o motivo para reativar.'); return; }
+    if(!DB) return; var key=vetKey(vetHosp); var quem=(typeof quemSou==='function')?quemSou():'Veterinária';
+    var hist=(Array.isArray(it.historico)?it.historico.slice():[]); hist.push({quem:quem,quando:agoraBR(),acao:'Reativou',motivo:motivo});
+    DB.ref('auaulandia/medicacao-agenda/'+key+'/itens/'+id).update({suspenso:null,suspensoPor:null,suspensoMotivo:null,suspensoTs:null,historico:hist}).then(function(){
+      if(typeof audit==='function') audit('vet-medicacao-reativada',key,{pet:vetHosp.nome||'',med:it.nome||'',quem:quem,motivo:motivo});
+      vetCarregarMed(vetHosp);
+      if(typeof carregarAgendaMedTodos==='function') carregarAgendaMedTodos();
+    }).catch(function(e){ alert('Erro ao reativar: '+e.message); });
+  }
+
+  // ---- Fotos da consulta ----
+  function vetAddFoto(e){
+    var files=(e.target&&e.target.files)?Array.prototype.slice.call(e.target.files):[];
+    files.forEach(function(f){
+      var r=new FileReader();
+      r.onload=function(){ vcFotosBuf.push(r.result); renderVcFotos(); };
+      r.readAsDataURL(f);
+    });
+    e.target.value='';
+  }
+  function renderVcFotos(){
+    var el=document.getElementById('vcFotos'); if(!el) return;
+    el.innerHTML=vcFotosBuf.map(function(src,i){ return '<div style="position:relative"><img src="'+src+'" alt=""><button type="button" onclick="vcFotosBuf.splice('+i+',1);renderVcFotos()" style="position:absolute;top:-7px;right:-7px;width:22px;height:22px;border-radius:50%;border:2px solid #fff;background:var(--crm-critico);color:#fff;font-weight:800;cursor:pointer;line-height:1">×</button></div>'; }).join('');
+  }
+
+  // ---- Salvar a consulta (receituário) + instruções + reavaliação ----
+  function salvarConsultaVet(){
+    if(!vetHosp||!podeAlterarVet()) return;
+    var st=document.getElementById('vc-status');
+    var data=(document.getElementById('vcData').value||'').trim();
+    if(!/^\d{4}-\d{2}-\d{2}$/.test(data)){ if(st){ st.style.color='var(--crm-critico)'; st.textContent='✋ Informe a data da consulta.'; } return; }
+    var temp=(document.getElementById('vcTemp').value||'').trim();
+    var peso=(document.getElementById('vcPeso').value||'').trim();
+    var cuidados=Array.prototype.map.call(document.querySelectorAll('#vcCuidados button.on'),function(b){ return b.textContent.trim(); });
+    var cuidadoLivre=(document.getElementById('vcCuidadoLivre').value||'').trim();
+    if(cuidadoLivre) cuidados.push(cuidadoLivre);
+    var recom=(document.getElementById('vcRecom').value||'').trim();
+    var obs=(document.getElementById('vcObs').value||'').trim();
+    var reaval=(document.getElementById('vcReaval').value||'').trim();
+    var reavalMotivo=(document.getElementById('vcReavalMotivo').value||'').trim();
+    if(!temp&&!peso&&!cuidados.length&&!recom&&!obs){ if(st){ st.style.color='var(--crm-critico)'; st.textContent='✋ Registre ao menos temperatura, peso, um cuidado, recomendação ou observação.'; } return; }
+    if(!DB){ if(st){ st.style.color='var(--crm-atencao-text)'; st.textContent='Banco conectando…'; } return; }
+    var key=vetKey(vetHosp); var quem=(typeof quemSou==='function')?quemSou():'Veterinária';
+    var consultaId='c_'+Date.now();
+    var consulta={data:data,temperatura:temp,peso:peso,cuidados:cuidados,recomendacoes:recom,obs:obs,reavaliacao:(reaval||''),reavaliacaoMotivo:reavalMotivo,fotos:vcFotosBuf.slice(),por:quem,ts:Date.now()};
+    if(st){ st.style.color='var(--muted)'; st.textContent='Salvando consulta…'; }
+    var ops=[ DB.ref('auaulandia/vet-consultas/'+key+'/'+consultaId).set(consulta) ];
+    // recomendações + cuidados viram instruções ativas na ficha do peludinho
+    var temInstr=!!(recom||cuidados.length);
+    ops.push(DB.ref('auaulandia/vet-recomendacoes/'+key).set({texto:recom,cuidados:cuidados,por:quem,ts:Date.now(),consultaId:consultaId,ativo:temInstr}));
+    // reavaliação (avisa no dia). Se em branco, limpa a marcação anterior.
+    if(reaval&&/^\d{4}-\d{2}-\d{2}$/.test(reaval)) ops.push(DB.ref('auaulandia/vet-reavaliacao/'+key).set({data:reaval,motivo:reavalMotivo,por:quem,ts:Date.now()}));
+    else ops.push(DB.ref('auaulandia/vet-reavaliacao/'+key).set(null));
+    Promise.all(ops).then(function(){
+      if(typeof audit==='function') audit('vet-consulta',key,{pet:vetHosp.nome||'',quem:quem,reavaliacao:reaval||''});
+      if(st){ st.style.color='var(--crm-ok)'; st.textContent='✅ Consulta salva. Recomendações já visíveis na ficha do peludinho.'; }
+      vcFotosBuf=[]; renderVcFotos();
+      ['vcTemp','vcPeso','vcCuidadoLivre','vcRecom','vcObs','vcReavalMotivo'].forEach(function(id){ var e=document.getElementById(id); if(e) e.value=''; });
+      document.querySelectorAll('#vcCuidados button').forEach(function(b){ b.classList.remove('on'); });
+      renderVetInstrucoesFicha(vetHosp,'vf-instr');
+      vetCarregarConsultas(vetHosp);
+    }).catch(function(e){ if(st){ st.style.color='var(--crm-critico)'; st.textContent='⚠️ Erro: '+e.message; } });
+  }
+  function vetCarregarConsultas(h){
+    VET_CONSULTAS_CACHE={}; var el=document.getElementById('vetConsultasList');
+    if(el) el.innerHTML='<div class="hint">Carregando…</div>';
+    if(!DB||!h){ renderVetConsultas(); return; }
+    DB.ref('auaulandia/vet-consultas/'+vetKey(h)).once('value').then(function(s){ VET_CONSULTAS_CACHE=s.val()||{}; renderVetConsultas(); }).catch(function(){ VET_CONSULTAS_CACHE={}; renderVetConsultas(); });
+  }
+  function renderVetConsultas(){
+    var el=document.getElementById('vetConsultasList'); if(!el) return;
+    var ids=Object.keys(VET_CONSULTAS_CACHE||{});
+    if(!ids.length){ el.innerHTML='<div class="hint">Nenhuma consulta registrada ainda.</div>'; return; }
+    ids.sort(function(a,b){ return (VET_CONSULTAS_CACHE[b].ts||0)-(VET_CONSULTAS_CACHE[a].ts||0); });
+    el.innerHTML=ids.map(function(id){
+      var c=VET_CONSULTAS_CACHE[id]||{};
+      var linha=[];
+      if(c.temperatura) linha.push('Temp: '+escAttr(c.temperatura)+' °C');
+      if(c.peso) linha.push('Peso: '+escAttr(c.peso)+' kg');
+      var body='';
+      if(linha.length) body+='<div class="cc-body"><strong>'+linha.join(' · ')+'</strong></div>';
+      if(Array.isArray(c.cuidados)&&c.cuidados.length) body+='<div class="cc-body">Cuidados: '+c.cuidados.map(escAttr).join(', ')+'</div>';
+      if(c.recomendacoes) body+='<div class="cc-body">Recomendações: '+escAttr(c.recomendacoes)+'</div>';
+      if(c.obs) body+='<div class="cc-body">'+escAttr(c.obs)+'</div>';
+      if(c.reavaliacao) body+='<div class="cc-body" style="color:var(--z-gold-deep);font-weight:700">Reavaliar em '+escAttr(fmtBR(c.reavaliacao))+(c.reavaliacaoMotivo?(' — '+escAttr(c.reavaliacaoMotivo)):'')+'</div>';
+      var fotos=(Array.isArray(c.fotos)&&c.fotos.length)?('<div class="vet-fotos">'+c.fotos.map(function(src){ return '<img src="'+src+'" alt="">'; }).join('')+'</div>'):'';
+      return '<div class="vet-consulta-card"><div class="cc-data">'+escAttr(fmtBR(c.data)||c.data||'')+'</div><div class="cc-meta">— '+escAttr(c.por||'Veterinária')+'</div>'+body+fotos+'</div>';
+    }).join('');
+  }
+
+  // ---- Reavaliação: avisa no dia (vet + gestão) ----
+  function checarReavaliacoesHoje(){
+    var el=document.getElementById('vetReavalBanner'); if(!el) return;
+    var role=document.body.dataset.role;
+    if(!(role==='vet'||role==='gestao'||role==='supervisor'||role==='diretoria')){ el.innerHTML=''; return; }
+    var hj=(typeof hojeISO==='function')?hojeISO():'';
+    var pend=[];
+    Object.keys(VET_REAVAL_CACHE||{}).forEach(function(key){
+      var r=VET_REAVAL_CACHE[key]; if(r&&r.data&&r.data<=hj) pend.push({key:key,r:r});
+    });
+    if(!pend.length){ el.innerHTML=''; return; }
+    // tenta descobrir o nome pelo hóspede do dia
+    function nomeDaKey(k){ var found=''; (hospedes||[]).forEach(function(h){ if(vetKey(h)===k) found=h.nome||''; }); return found; }
+    var linhas=pend.map(function(p){
+      var nome=nomeDaKey(p.key)||''; var venceu=p.r.data<hj;
+      return '<div style="margin-top:6px">'+(nome?('<strong>'+escAttr(nome)+'</strong> — '):'')+'reavaliação '+(venceu?'venceu em ':'marcada para ')+escAttr(fmtBR(p.r.data))+(p.r.motivo?(' ('+escAttr(p.r.motivo)+')'):'')+'</div>';
+    }).join('');
+    el.innerHTML='<div class="vet-reaval-banner"><span data-icon="star"></span><div><div class="rr-tit">Reavaliação de hoje</div>'+linhas+'</div></div>';
+    try{ el.querySelectorAll('[data-icon]').forEach(function(x){ x.innerHTML=ic(x.dataset.icon); x.style.display='inline-flex'; }); }catch(e){}
+  }
 
   function pelInativo(p){ const ex=pelExtra(p); return !!(ex&&ex.inativo==='Sim'); }
   // Quantos aulunos estão matriculados em cada dia — só Gestão e Supervisão (Adriana, Márcia,
