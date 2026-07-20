@@ -1784,7 +1784,9 @@
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
 <script>
   // ---- Firebase (banco gratuito que já temos) ----
-  let DB=null, cadCache={}, fotoPendente=null;
+  // Declarados AQUI (antes dos ouvintes do Firebase abaixo) para não caírem na zona morta temporal:
+  // os listeners em ~1801 mutam estas variáveis e podem disparar antes das declarações originais lá embaixo.
+  let DB=null, cadCache={}, fotoPendente=null, pelCadCache={}, almCadCache={}, despBaixa={}, VET_RECOM_CACHE={}, MONITORES=[], NAOCOMEU_HOJE={};
   try{
     firebase.initializeApp({
       apiKey:"AIzaSyD3udp47XruRAEeIYWNGn0ICGCX3a1qr28",
@@ -1796,7 +1798,13 @@
       appId:"1:199129329105:web:22d0995972c197e24644f0"
     });
     firebase.auth().signInAnonymously().then(()=>{
-      DB=firebase.database();
+      DB=firebase.database(); __fbReady=true; wireFirebaseListeners();
+    }).catch(e=>console.warn('Firebase auth:',e));
+  }catch(e){ console.warn('Firebase init:',e); }
+  // Ouvintes do Firebase só são ligados quando o banco E o script inteiro estão prontos —
+  // evita 'Cannot access X before initialization' (zona morta temporal) na carga.
+  var __fbReady=false, __scriptReady=false, __fbWired=false;
+  function wireFirebaseListeners(){ if(__fbWired||!__fbReady||!__scriptReady||!DB) return; __fbWired=true;
       if(typeof preCadastro==='function') preCadastro();
       DB.ref('auaulandia/cadastro').on('value', s=>{ cadCache=s.val()||{}; if(typeof renderHosp==='function') renderHosp(); });
       DB.ref('daycare/config/sensiveis').on('value', s=>{ const v=s.val(); if(Array.isArray(v)){ try{ SENS=new Set(v); }catch(e){} } });
@@ -1837,8 +1845,7 @@
         try{ if(typeof atualizarBadgeRecepcao==='function') atualizarBadgeRecepcao(); }catch(e){}
         try{ const v=document.getElementById('v-recepcao'); if(v&&v.classList.contains('active')&&typeof renderAvisosRacao==='function') renderAvisosRacao(); }catch(e){}
       });
-    }).catch(e=>console.warn('Firebase auth:',e));
-  }catch(e){ console.warn('Firebase init:',e); }
+  }
 
   // ---- ícones SVG (line) ----
   function ic(n){
@@ -3256,7 +3263,7 @@
   // da Gestora (que é so-gestao — o plantonista não vê). Lê o relatório de HOJE (dia + noite/início) e
   // marca quando "Almoçou?" ou "Jantou?" = "Não". "Metade" já tem aviso amarelo em outro lugar — aqui
   // é só o vermelho de quem não comeu nada. Moradora (Repolho) fica de fora, igual ao painel da Gestora.
-  let NAOCOMEU_HOJE={};
+  NAOCOMEU_HOJE={};
   function carregarRiscoNaoComer(){
     const reais=(hospedes||[]).filter(h=>!h.mascote);
     if(!DB||!reais.length){ NAOCOMEU_HOJE={}; return; }
@@ -3369,7 +3376,7 @@
     {id:'m5', nome:'Monitor 5', senha:'1009', entrada:'10:00', saida:'19:00'},
     {id:'m6', nome:'Monitor 6', senha:'1010', entrada:'10:15', saida:'19:15'}
   ];
-  let MONITORES = MONITORES_DEFAULT.map(m=>Object.assign({},m));
+  MONITORES = MONITORES_DEFAULT.map(m=>Object.assign({},m));
   // Mapa de senhas em runtime = SENHAS fixas (gestão/supervisão/etc) + monitores editáveis
   function senhasRuntime(){
     const map={}; Object.keys(SENHAS).forEach(k=>{ map[k]=SENHAS[k]; });
@@ -3837,7 +3844,7 @@
   // Antes o almoço vivia só na constante: editar a ficha não mudava a grade, e peludinho fora
   // da lista ficava "Almoço não cadastrado" para sempre (Zen, Kako, Stopa, Repolho).
   // Agora daycare/almoco-cad sobrepõe campo a campo e o que a Gestão edita vale na hora.
-  let almCadCache={};
+  almCadCache={};
   function almCad(p){ const k=pelKey(p); const seed=ALMOCO_SEED[k], over=almCadCache[k];
     if(!seed&&!over) return null;
     return Object.assign({}, seed||{}, over||{}); }
@@ -4108,7 +4115,7 @@
   // hora; o app avisa 5 minutos antes. Qualquer monitor pode receber e dar baixa — quando
   // um dá, para de tocar em todos os aparelhos (o aviso vive no Firebase).
   const DESP_ANTES_MIN=5;
-  let despBaixa={};   // {chave: quem desceu} — vem do Firebase
+  despBaixa={};   // {chave: quem desceu} — vem do Firebase
   let despNaTela=null;
   function minutosAte(hhmm){ const m=/^(\d{2}):(\d{2})$/.exec(hhmm||''); if(!m) return null;
     const d=new Date(); const alvo=(+m[1])*60+(+m[2]); const agora=d.getHours()*60+d.getMinutes();
@@ -4238,7 +4245,7 @@
   // ficha (como a tarja de alergia). Reavaliação avisa no dia. Só vet+gestão+supervisão+
   // diretoria alteram, sempre com motivo registrado.
   // ==================================================================================
-  var VET_RECOM_CACHE={};      // {key:{texto,cuidados[],por,ts,consultaId,ativo}} — instruções ativas
+  VET_RECOM_CACHE={};      // {key:{texto,cuidados[],por,ts,consultaId,ativo}} — instruções ativas
   var VET_REAVAL_CACHE={};     // {key:{data:'YYYY-MM-DD',motivo,por,ts}} — reavaliação marcada
   var VET_MED_CACHE={};        // {itemId:item} — medicação do hóspede aberto no Cuidado Vet
   var VET_CONSULTAS_CACHE={};  // {consultaId:consulta} — histórico do hóspede aberto
@@ -4251,7 +4258,7 @@
   function vetKey(h){ return medAgendaKey(h); } // mesma chave da agenda de medicação (uma ficha por remédio)
 
   // ---- Instruções ativas (recomendações + cuidados) viram tarja na ficha/card ----
-  function recomAtivaDe(h){ if(!h) return null; var r=VET_RECOM_CACHE[vetKey(h)]; if(!r||r.ativo===false) return null; var temCuid=Array.isArray(r.cuidados)&&r.cuidados.length; if(!(r.texto&&r.texto.trim())&&!temCuid) return null; return r; }
+  function recomAtivaDe(h){ if(!h) return null; var r=(VET_RECOM_CACHE||{})[vetKey(h)]; if(!r||r.ativo===false) return null; var temCuid=Array.isArray(r.cuidados)&&r.cuidados.length; if(!(r.texto&&r.texto.trim())&&!temCuid) return null; return r; }
   function temRecomAtiva(h){ return !!recomAtivaDe(h); }
   function renderVetInstrucoesFicha(h,elId){
     var el=document.getElementById(elId||'vf-instr'); if(!el) return;
@@ -4588,7 +4595,7 @@
 
   // --- ficha mestre: campos extras editáveis (persistem local + Firebase) ---
   function pelKey(p){ return ((p.n||'')+'__'+(p.tutor||'')).toLowerCase().replace(/[.#$\[\]\/]/g,'-'); }
-  let pelCadCache={};
+  pelCadCache={};
   function pelExtra(p){ const k=pelKey(p); let local={}; try{ local=JSON.parse(localStorage.getItem('zeluz_pel_'+k)||'{}'); }catch(e){} const remote=pelCadCache[k]||{}; return Object.assign({},local,remote); }
   function setPelExtra(p,patch){
     const o=pelExtra(p); Object.assign(o,patch); localStorage.setItem('zeluz_pel_'+pelKey(p),JSON.stringify(o));
@@ -6700,6 +6707,8 @@
   // Painel do Dia ao vivo — atualiza sozinho a cada 30s enquanto estiver aberto no dia de hoje (sala da gestão)
   setInterval(function(){ try{ const v=document.getElementById('v-painel'); if(v && getComputedStyle(v).display!=='none' && typeof carregarPainel==='function' && pKey(painelDate)===pKey(new Date())) carregarPainel(); }catch(e){} }, 30000);
   montarMedgrids();
+  // Script inteiro carregado: seguro ligar os ouvintes do Firebase (todas as variaveis existem).
+  __scriptReady=true; if(typeof wireFirebaseListeners==='function') wireFirebaseListeners();
 </script>
 </body>
 </html><div class="ppanel2 so-gestao" id="ps-plano"><div class="card">
