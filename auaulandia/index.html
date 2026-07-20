@@ -750,6 +750,15 @@
   /* A Veterinária só enxerga o Cuidado Vet e o Sair — mesma trava do plantonista */
   body[data-role="vet"] .nav a,body[data-role="vet"] .nav .grp,body[data-role="vet"] .nav .subnav{display:none !important}
   body[data-role="vet"] .nav a[data-v="cuidadovet"],body[data-role="vet"] .nav a[data-v="sair"]{display:flex !important}
+  /* Onda 4 — Conferência Check-in: no menu só para a Wandela (papel "conferencia") + Gestão/Supervisão/Diretoria */
+  .nav a.so-conferencia{display:none}
+  body[data-role="conferencia"] .nav a.so-conferencia,
+  body[data-role="gestao"] .nav a.so-conferencia,
+  body[data-role="supervisor"] .nav a.so-conferencia,
+  body[data-role="diretoria"] .nav a.so-conferencia{display:flex}
+  /* A Wandela (conferência) só enxerga a Conferência Check-in e o Sair — mesma trava do plantonista/vet */
+  body[data-role="conferencia"] .nav a,body[data-role="conferencia"] .nav .grp,body[data-role="conferencia"] .nav .subnav{display:none !important}
+  body[data-role="conferencia"] .nav a[data-v="conferencia"],body[data-role="conferencia"] .nav a[data-v="sair"]{display:flex !important}
   /* ===== Onda 3 — Cuidado Vet ===== */
   .vet-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:14px;margin-top:6px}
   .vet-pet{position:relative;background:var(--z-white);border:2px solid var(--line);border-radius:18px;padding:16px 12px 18px;text-align:center;cursor:pointer;transition:transform .12s,border-color .15s,box-shadow .2s}
@@ -792,6 +801,27 @@
   /* botão de cancelar hóspede/pernoite do dia — canto do card, só Gestão/Supervisão/Diretoria */
   .pet-x{position:absolute;top:-8px;right:-8px;width:27px;height:27px;border-radius:50%;border:2px solid #fff;background:var(--crm-critico);color:#fff;font-size:16px;font-weight:800;line-height:1;cursor:pointer;z-index:4;display:grid;place-items:center;box-shadow:0 2px 6px rgba(0,0,0,.25)}
   .pet-x:hover{background:#a53125}
+
+  /* ===== Onda 4 — Conferência Check-in (Wandela) ===== */
+  .cf-item{border:1.5px solid var(--line);border-radius:12px;margin-bottom:9px;background:var(--z-white);overflow:hidden}
+  .cf-item.critico{border-color:var(--crm-critico);box-shadow:0 0 0 2px rgba(192,57,43,.18)}
+  .cf-item.on{border-color:var(--crm-ok);box-shadow:none}
+  .cf-top{display:flex;align-items:center;gap:11px;padding:11px 14px;cursor:pointer;font-weight:700;color:var(--z-blue)}
+  .cf-box{width:24px;height:24px;border-radius:7px;border:2px solid var(--line);display:grid;place-items:center;font-weight:800;color:#fff;background:#fff;flex:0 0 auto;font-size:14px}
+  .cf-item.on .cf-box{background:var(--crm-ok);border-color:var(--crm-ok)}
+  .cf-tag-critico{margin-left:auto;font-size:9.5px;font-weight:800;letter-spacing:.3px;background:var(--crm-critico);color:#fff;padding:2px 8px;border-radius:7px}
+  .cf-med-item{border:1.5px solid var(--line);border-radius:12px;padding:13px 14px;margin-bottom:10px;background:var(--z-cream)}
+  .cf-med-item.ok{border-color:var(--crm-ok)}
+  .cf-med-top{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}
+  .cf-med-nome{font-weight:800;color:var(--z-blue);font-size:15px}
+  .cf-med-det{font-size:12.5px;color:var(--z-blue-soft);font-weight:600;margin-top:3px}
+  .cf-med-actions{display:flex;gap:10px;align-items:center;margin-top:9px;flex-wrap:wrap}
+  .cf-ouviu{display:flex;align-items:center;gap:8px;font-size:12.5px;font-weight:700;color:var(--z-blue);cursor:pointer}
+  .cf-ouviu input{width:19px;height:19px}
+  .cf-ok-badge{font-size:10.5px;font-weight:800;color:#fff;background:var(--crm-ok);padding:3px 9px;border-radius:8px}
+  .cf-resultado{display:flex;justify-content:space-between;gap:10px;padding:11px 14px;border-radius:11px;font-weight:800;margin-top:10px}
+  .cf-resultado.alerta{background:rgba(192,57,43,.08);border:1.5px solid var(--crm-critico);color:var(--crm-critico)}
+  .cf-resultado.ok{background:rgba(39,174,96,.08);border:1.5px solid var(--crm-ok);color:var(--crm-ok)}
 
   /* ===== Diária Avulsa — tela grande de busca (à prova de baixa leitura) ===== */
   #avulsaModal{display:none;position:fixed;inset:0;z-index:70;background:rgba(26,58,79,.55)}
@@ -896,6 +926,7 @@
     <a data-v="abertura" class="so-abertura"><span data-icon="sun"></span><span>Atividades Monitor 1</span></a>
     <div class="subnav so-day" id="dcSubnav" style="display:none"></div>
     <a data-v="checkin"><span data-icon="paw"></span><span>Check-in</span></a>
+    <a data-v="conferencia" class="so-conferencia"><span data-icon="check"></span><span>Conferência Check-in</span></a>
     <a data-v="recepcao" class="so-recepcao"><span data-icon="paw"></span><span>Recepção</span></a>
     <a data-v="hospedagem"><span data-icon="moon"></span><span>AuAulândia</span></a>
     <a data-v="cuidadovet" class="so-vet"><span data-icon="heart"></span><span>Cuidado Vet</span></a>
@@ -1463,9 +1494,86 @@
   <!-- Área de impressão do PDF do check-in (preenchida por JS) -->
   <div id="ci-print"></div>
 
+  <!-- ===== Onda 4 — CONFERÊNCIA CHECK-IN (Wandela) ===== -->
+  <section class="view" id="v-conferencia">
+    <!-- LISTA de hóspedes com check-in salvo, aguardando conferência -->
+    <div id="cf-lista">
+      <div class="role-note"><span data-icon="check"></span><span><strong>Conferência do check-in.</strong> Confira pertences, ração e medicação de cada hóspede antes de liberar a estadia. Nenhum item crítico fecha sem o V verde — e fica registrado quem conferiu e quando.</span></div>
+      <div class="vet-grid" id="cfGrid"></div>
+    </div>
+
+    <!-- FICHA — checklist do hóspede -->
+    <div id="cf-ficha" style="display:none">
+      <button class="back-btn" onclick="fecharCfFicha()">← Voltar aos hóspedes</button>
+
+      <div class="card hosp-head">
+        <div class="hf-photo-wrap"><div class="ph" id="cf-av">T</div><span class="chip-serv chip-on-photo">Conferência</span></div>
+        <div style="flex:1">
+          <div class="hf-nome" id="cf-nome">—</div>
+          <div class="hf-meta" id="cf-meta"></div>
+          <div id="cf-pills"></div>
+        </div>
+      </div>
+
+      <div class="card" id="cf-semestadia" style="display:none">
+        <div class="hint" style="margin-bottom:0">Este hóspede ainda não tem check-in salvo. Vá em <strong>Check-in</strong> primeiro e depois volte para conferir.</div>
+      </div>
+
+      <div id="cf-corpo" style="display:none">
+        <!-- Pertences + etiquetagem de ração/medicação -->
+        <div class="card">
+          <h2 style="font-size:19px">Pertences — conferir e etiquetar</h2>
+          <div class="hint">Toque em cada item para marcar o V verde. <strong>Ração e medicação ficam em vermelho</strong> até serem etiquetadas com o nome do FILHOt — não pode esquecer.</div>
+          <div id="cfPertList"></div>
+        </div>
+
+        <!-- Ração: conferir quantidade + pesar (absorve a calculadora do sistema antigo) -->
+        <div class="card" id="cf-racao-card">
+          <h2 style="font-size:19px">Ração — conferir e pesar</h2>
+          <div class="hint">Pese a ração trazida na balança e informe o peso. O sistema calcula se é suficiente para os dias da estadia — a mesma conta do antigo painel de ração, agora dentro daqui.</div>
+          <div id="cfRacaoInfo" class="hint" style="margin-bottom:6px"></div>
+          <div class="vet-row">
+            <div class="field"><label>Ração pesada agora</label><input class="cad-in" id="cfRacaoPeso" inputmode="decimal" placeholder="Ex: 1200" oninput="cfCalcRacao()"></div>
+            <div class="field"><label>Necessário para a estadia</label><input class="cad-in" id="cfRacaoNecessario" readonly></div>
+          </div>
+          <div id="cfRacaoResultado"></div>
+          <button type="button" class="btn btn-primary" style="margin-top:10px" onclick="cfConfirmarRacao()">Confirmar pesagem</button>
+          <div id="cf-racao-status" class="rel-status"></div>
+        </div>
+
+        <!-- Medicação — testar os alarmes -->
+        <div class="card" id="cf-med-card" style="display:none">
+          <h2 style="font-size:19px">Medicação — testar os alarmes</h2>
+          <div class="hint">Para cada medicamento, toque em <strong>testar alarme</strong> e só marque "confirmo que tocou" depois de realmente ouvir o aviso sonoro.</div>
+          <div id="cfMedList"></div>
+        </div>
+
+        <!-- Fotos -->
+        <div class="card">
+          <h2 style="font-size:19px">Fotos da conferência</h2>
+          <div class="hint">Fotografe pertences, ração pesada e o hóspede — tudo vai para a pasta desta estadia.</div>
+          <input id="cfFotoFile" type="file" accept="image/*" capture="environment" multiple style="display:none" onchange="cfAddFoto(event)">
+          <button type="button" class="btn-foto-mini" onclick="document.getElementById('cfFotoFile').click()">📷 Adicionar foto</button>
+          <div class="vet-fotos" id="cfFotos"></div>
+        </div>
+
+        <!-- Gate + fechamento -->
+        <div class="card">
+          <div id="cfPendHint" class="hint" style="margin-bottom:0"></div>
+          <div class="field" style="margin-top:12px"><label>Quem está conferindo (assinatura) *</label><input class="cad-in" id="cfAssina" placeholder="Seu nome" autocomplete="off"></div>
+          <button type="button" class="btn btn-primary" style="width:100%;margin-top:6px" onclick="cfFecharConferencia()">✅ Fechar conferência</button>
+          <div id="cf-status" class="rel-status" style="margin-top:8px"></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
   <section class="view" id="v-recepcao">
     <div class="role-note"><span data-icon="paw"></span><span><strong>Avisos de estoque de medicação.</strong> Quando um remédio de um hóspede está acabando, o aviso chega aqui — rastreado. Registre cada providência (liguei para o tutor, ele traz amanhã) até resolver. Nada verbal: tudo fica escrito, com quem, quando e o que foi feito.</span></div>
     <div id="avisosEstoqueList"></div>
+    <h2 style="font-size:19px;margin-top:22px">Avisos de ração</h2>
+    <div class="role-note"><span data-icon="paw"></span><span><strong>Ração insuficiente para a estadia.</strong> Gerado pela Conferência Check-in quando a ração pesada não cobre os dias hospedados. Mesmo padrão pendente → resolvido — registre a providência até resolver.</span></div>
+    <div id="avisosRacaoList"></div>
   </section>
 
   <!-- ===== Onda 3 — CUIDADO VET (veterinária) ===== -->
@@ -1696,6 +1804,14 @@
         try{ if(typeof checarReavaliacoesHoje==='function') checarReavaliacoesHoje(); }catch(e){}
         try{ if(typeof renderHosp==='function') renderHosp(); }catch(e){}
       });
+      // Onda 4 — Conferência Check-in (Wandela). Índice vivo das estadias por refKey (a mais
+      // recente de cada hóspede), pra badge no menu e pra lista de quem ainda falta conferir.
+      DB.ref('auaulandia/estadias').on('value', s=>{ if(typeof _cfIndexarEstadias==='function') _cfIndexarEstadias(s.val()||{}); });
+      // Onda 4 — avisos de ração (Recepção), em tempo real em todos os aparelhos.
+      DB.ref('auaulandia/avisos-racao').on('value', s=>{ AVISOS_RACAO_CACHE=s.val()||{};
+        try{ if(typeof atualizarBadgeRecepcao==='function') atualizarBadgeRecepcao(); }catch(e){}
+        try{ const v=document.getElementById('v-recepcao'); if(v&&v.classList.contains('active')&&typeof renderAvisosRacao==='function') renderAvisosRacao(); }catch(e){}
+      });
     }).catch(e=>console.warn('Firebase auth:',e));
   }catch(e){ console.warn('Firebase init:',e); }
 
@@ -1712,7 +1828,8 @@
       users:'M16 18v-2a4 4 0 00-8 0v2M12 11a3.5 3.5 0 100-7 3.5 3.5 0 000 7M20 18v-1.5a3 3 0 00-2.5-3M4 18v-1.5a3 3 0 012.5-3',
       exit:'M16 17l5-5-5-5M21 12H9M12 19H5V5h7',
       lock:'M6 11h12v9H6zM9 11V8a3 3 0 016 0v3',
-      heart:'M12 20l-7-7a4 4 0 015.7-5.7L12 8.6l1.3-1.3A4 4 0 0119 13z'
+      heart:'M12 20l-7-7a4 4 0 015.7-5.7L12 8.6l1.3-1.3A4 4 0 0119 13z',
+      check:'M4 12.5l5 5L20 6'
     }[n]||'';
     return `<svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">${p.split('M').filter(Boolean).map(d=>'<path d="M'+d+'"/>').join('')}</svg>`;
   }
@@ -1765,7 +1882,8 @@
     daycare:['Day Care','Chamada e atividades'],hospedagem:['AuAulândia','Passagem de plantão'],
     cuidadovet:['Cuidado Vet','Consulta, receituário e reavaliação'],
     checkin:['Check-in','Entrada da estadia — ficha, pertences e assinatura'],
-    recepcao:['Recepção','Avisos de estoque de medicação'],
+    conferencia:['Conferência Check-in','Pertences etiquetados, ração pesada e alarmes testados'],
+    recepcao:['Recepção','Avisos de estoque de medicação e de ração'],
     agenda:['Agenda','Frequência e reservas'],pessoas:['Pessoas & Turnos','Equipe e tarefas'],
     painel:['Painel do Dia','Auditoria e cumprimento de protocolos'],
     abertura:['Atividades Monitor 1','Rotina de abertura do turno'],sair:['Sair','']};
@@ -1783,6 +1901,7 @@
     if(v==='hospedagem') fecharPlantao();
     if(v==='cuidadovet'){ if(typeof abrirCuidadoVet==='function') abrirCuidadoVet(); }
     if(v==='checkin'){ if(typeof abrirCheckin==='function') abrirCheckin(); }
+    if(v==='conferencia'){ if(typeof abrirConferencia==='function') abrirConferencia(); }
     if(v==='recepcao'){ if(typeof carregarAvisosEstoque==='function') carregarAvisosEstoque(); }
     if(v==='ficha'){ const l=document.getElementById('pel-lista'),fi=document.getElementById('pel-ficha'); if(l&&fi){ l.style.display='block'; fi.style.display='none'; } }
     if(v==='daycare'){ if(typeof abrirDayCare==='function') abrirDayCare(); } else { const sm=document.getElementById('dcSubnav'); if(sm) sm.style.display='none'; }
@@ -2435,6 +2554,10 @@
   // ===== Onda 2 — Estoque: desconto por dose + Aviso RASTREADO para a Recepção =====
   // Espelho vivo dos avisos (nó auaulandia/avisos-estoque). Alimentado pelo listener no init.
   var AVISOS_ESTOQUE_CACHE={};
+  // Onda 4 — espelho vivo dos avisos de ração (nó auaulandia/avisos-racao). Absorve o alerta do
+  // sistema antigo de ração (zeluz-hospedagem/index.html) pra dentro deste sistema — mesmo padrão
+  // pendente→resolvido, gerado pela Conferência Check-in quando a pesagem acusa deficit.
+  var AVISOS_RACAO_CACHE={};
   function agoraBR(){ var d=new Date(),p=function(x){return String(x).padStart(2,'0');}; return p(d.getDate())+'/'+p(d.getMonth()+1)+' '+p(d.getHours())+':'+p(d.getMinutes()); }
   // Existe aviso NÃO resolvido para este remédio? (evita duplicar e mostra "já enviado")
   function avisoAbertoDoItem(key,itemId){
@@ -2508,9 +2631,10 @@
   }
 
   // ---- Recepção: lista e trilha dos avisos de estoque (mesmo padrão pendente→resolvido da ração) ----
-  function carregarAvisosEstoque(){ renderAvisosEstoque(); }
+  function carregarAvisosEstoque(){ renderAvisosEstoque(); renderAvisosRacao(); }
   function atualizarBadgeRecepcao(){
     var n=0; Object.keys(AVISOS_ESTOQUE_CACHE||{}).forEach(function(id){ if(AVISOS_ESTOQUE_CACHE[id].status!=='resolvido') n++; });
+    Object.keys(AVISOS_RACAO_CACHE||{}).forEach(function(id){ if(AVISOS_RACAO_CACHE[id].status!=='resolvido') n++; });
     var link=document.querySelector('#nav a[data-v="recepcao"]'); if(!link) return;
     var b=link.querySelector('.nav-badge');
     if(n>0){ if(!b){ b=document.createElement('span'); b.className='nav-badge'; link.appendChild(b); } b.textContent=n; }
@@ -2566,6 +2690,56 @@
   function avisoReabrir(id){
     if(!DB) return; var a=AVISOS_ESTOQUE_CACHE[id]; if(!a) return;
     DB.ref('auaulandia/avisos-estoque/'+id).update({status:'em_processo'}).catch(function(){});
+  }
+
+  // ---- Recepção: avisos de RAÇÃO (Onda 4 — absorve o alerta do sistema antigo) ----
+  // Mesmo padrão pendente→resolvido, gerado pela Conferência Check-in (cfCriarAvisoRacao) quando a
+  // pesagem acusa que a ração trazida não cobre os dias da estadia.
+  function avisoRacaoCardHTML(id){
+    var a=AVISOS_RACAO_CACHE[id]||{};
+    var status=a.status||'pendente';
+    var chip=status==='resolvido'?'<span class="avr-chip resolvido">RESOLVIDO</span>':status==='em_processo'?'<span class="avr-chip processo">EM PROCESSO</span>':'<span class="avr-chip pendente">PENDENTE</span>';
+    var cls=status==='resolvido'?'resolvido':status==='em_processo'?'processo':'pendente';
+    var det='Faltam '+escAttr(a.deficit!=null?a.deficit:'?')+' '+(a.unidade||'g')+' para a estadia';
+    var trilha=(a.entries&&a.entries.length)?'<div class="avr-trilha">'+a.entries.map(function(e){
+      return '<div class="avr-tl'+(e.resolucao?' resol':'')+'"><div class="avr-tl-meta">'+escAttr(e.quando||'')+'</div><div class="avr-tl-acao">"'+escAttr(e.acao||'')+'"</div><div class="avr-tl-assina">— '+escAttr(e.assinatura||'')+'</div></div>';
+    }).join('')+'</div>':'';
+    var form=status!=='resolvido'
+      ? '<div class="avr-form"><div class="ff-tit">Registrar providência</div><textarea id="avrr_acao_'+id+'" placeholder="O que foi feito? (ex.: liguei para o tutor, ele traz amanhã)"></textarea><input id="avrr_assina_'+id+'" placeholder="Seu nome (assinatura)"><div class="avr-form-btns"><button class="btn btn-primary" onclick="avisoRacaoAddEntrada(\''+id+'\')">Registrar</button><button class="btn btn-gold" onclick="avisoRacaoResolver(\''+id+'\')">Marcar como resolvido</button></div></div>'
+      : '<div class="avr-resolvido-banner">Resolvido — ração encaminhada.</div><div style="text-align:right;margin-top:8px"><button class="btn" style="background:var(--z-cream-warm);color:var(--z-blue);border:1.5px solid var(--line)" onclick="avisoRacaoReabrir(\''+id+'\')">Reabrir</button></div>';
+    return '<div class="avr-card '+cls+'"><div class="avr-head"><div class="avr-info"><div class="avr-nome">Ração — '+escAttr(a.hospNome||'Hóspede')+'</div><div class="avr-sub">'+(a.tutor?('Tutor: '+escAttr(a.tutor)+' — '):'')+escAttr(det)+'</div></div>'+chip+'</div><div class="avr-body">'+trilha+form+'</div></div>';
+  }
+  function renderAvisosRacao(){
+    var el=document.getElementById('avisosRacaoList'); if(!el) return;
+    var ids=Object.keys(AVISOS_RACAO_CACHE||{});
+    ids.sort(function(a,b){ return (AVISOS_RACAO_CACHE[b]._ts||0)-(AVISOS_RACAO_CACHE[a]._ts||0); });
+    var abertos=ids.filter(function(id){ return AVISOS_RACAO_CACHE[id].status!=='resolvido'; });
+    var fechados=ids.filter(function(id){ return AVISOS_RACAO_CACHE[id].status==='resolvido'; });
+    var ordered=abertos.concat(fechados);
+    if(!ordered.length){ el.innerHTML='<div class="avr-empty">Nenhum aviso de ração. Tudo em dia por aqui.</div>'; return; }
+    el.innerHTML=ordered.map(avisoRacaoCardHTML).join('');
+  }
+  function avisoRacaoAddEntrada(id){
+    var acao=((document.getElementById('avrr_acao_'+id)||{}).value||'').trim();
+    var assina=((document.getElementById('avrr_assina_'+id)||{}).value||'').trim();
+    if(!acao||!assina){ alert('Escreva o que foi feito e o seu nome para registrar.'); return; }
+    if(!DB) return; var a=AVISOS_RACAO_CACHE[id]; if(!a) return;
+    var entries=(a.entries||[]).slice(); entries.push({acao:acao,assinatura:assina,quando:agoraBR(),ts:Date.now()});
+    DB.ref('auaulandia/avisos-racao/'+id).update({entries:entries, status:(a.status==='resolvido'?'resolvido':'em_processo')}).catch(function(){});
+    if(typeof audit==='function') audit('racao-aviso-entrada',id,{quem:assina});
+  }
+  function avisoRacaoResolver(id){
+    var acao=((document.getElementById('avrr_acao_'+id)||{}).value||'').trim();
+    var assina=((document.getElementById('avrr_assina_'+id)||{}).value||'').trim();
+    if(!acao||!assina){ alert('Descreva o que foi feito e assine para marcar como resolvido.'); return; }
+    if(!DB) return; var a=AVISOS_RACAO_CACHE[id]; if(!a) return;
+    var entries=(a.entries||[]).slice(); entries.push({acao:acao,assinatura:assina,quando:agoraBR(),ts:Date.now(),resolucao:true});
+    DB.ref('auaulandia/avisos-racao/'+id).update({entries:entries, status:'resolvido'}).catch(function(){});
+    if(typeof audit==='function') audit('racao-aviso-resolvido',id,{quem:assina});
+  }
+  function avisoRacaoReabrir(id){
+    if(!DB) return; var a=AVISOS_RACAO_CACHE[id]; if(!a) return;
+    DB.ref('auaulandia/avisos-racao/'+id).update({status:'em_processo'}).catch(function(){});
   }
 
   function renderMedAgendaHoje(){
@@ -3049,6 +3223,9 @@
     // (receituário) e é a FONTE que cria/altera/suspende as fichas de medicação. Senha provisória —
     // a Gestão troca em Pessoas assim que possível.
     '0914':{role:'vet',         nome:'Veterinária · Cuidado Vet'},
+    // CONFERÊNCIA CHECK-IN — senha própria da Wandela (Onda 4). Confere pertences, ração e medicação
+    // depois do check-in: checklist com V verde, etiquetagem, pesagem e teste dos alarmes.
+    '0915':{role:'conferencia', nome:'Wandela · Conferência Check-in'},
     '1002':{role:'aprendiz',    nome:'Monitor Aprendiz'},
     // DIRETORIA — nível acima da Gestão, exclusiva da Adriana. Enxerga tudo que a Gestão
     // enxerga e, além disso, é a única que pode EXCLUIR um cadastro de verdade (a Gestão
@@ -3082,7 +3259,7 @@
   // ===== RELATÓRIO DE SENHAS (só Gestão vê) — gerado do cadastro acima =====
   function renderSenhas(){
     const el=document.getElementById('senhasList'); if(!el) return;
-    const ordem={diretoria:-1, gestao:0, supervisor:1, vet:1.5, consultora:1.7, monitor:2, plantonista:3, aprendiz:4};
+    const ordem={diretoria:-1, gestao:0, supervisor:1, vet:1.5, conferencia:1.6, consultora:1.7, monitor:2, plantonista:3, aprendiz:4};
     const SR=senhasRuntime();
     const lista=Object.keys(SR).map(pwd=>({pwd, ...SR[pwd]}))
       .sort((a,b)=>(ordem[a.role]??9)-(ordem[b.role]??9) || String(a.nome).localeCompare(String(b.nome)));
@@ -3165,6 +3342,7 @@
     const r=((u&&u.role)||'').toLowerCase();
     if(r==='consultora') return 'renovacao'; // recepção trabalha nos planos
     if(r==='vet') return 'cuidadovet'; // a Veterinária cai direto na sua tela
+    if(r==='conferencia') return 'conferencia'; // a Wandela cai direto na conferência
     if(r==='gestao'||r==='supervisor'||r==='diretoria') return 'inicio';
     return 'hospedagem'; // plantonista, monitor, aprendiz
   }
@@ -6039,6 +6217,317 @@
     h+='<div class="pf-sec"><h3>Assinatura do tutor</h3>'+(sig?('<img class="pf-sig-img" src="'+sig+'">'):'<div class="pf-row">(sem assinatura)</div>')+'<div class="pf-row" style="margin-top:6px">'+esc(assina||'—')+'</div></div>';
     const pr=document.getElementById('ci-print'); if(pr) pr.innerHTML=h;
     setTimeout(function(){ window.print(); },60);
+  }
+
+  // ==================================================================================
+  // ===== ONDA 4 — CONFERÊNCIA CHECK-IN (Wandela) ====================================
+  // Checklist de segurança depois do check-in: pertences etiquetados (ração e medicação
+  // ficam em vermelho até etiquetar), ração conferida e PESADA (absorve a calculadora e o
+  // aviso ao tutor do sistema antigo — auaulandia/avisos-racao, mesmo padrão pendente→
+  // resolvido já aprovado para o estoque de medicação), medicação com o alarme TESTADO de
+  // verdade (bipDespertador + confirmação humana) e fotos de tudo na pasta da estadia.
+  // Não fecha "conferido" enquanto faltar item crítico — fica registrado quem e quando.
+  // ==================================================================================
+  var CF_ESTADIAS={};   // {refKey: {id, e}} — estadia mais recente de cada hóspede
+  var cfHosp=null;      // hóspede aberto na Conferência
+  var cfEstadiaId=null; // id da estadia (auaulandia/estadias/{id}) sendo conferida
+  var cfEstadia=null;   // objeto da estadia carregado do Firebase
+  var cfConf=null;      // objeto "conferencia" em edição (espelho local do que já foi salvo)
+
+  function _cfIndexarEstadias(v){
+    CF_ESTADIAS={};
+    Object.keys(v||{}).forEach(function(id){
+      var e=v[id]||{}; var k=e.refKey; if(!k) return;
+      var atual=CF_ESTADIAS[k];
+      if(!atual || (e._ts||0)>(atual.e._ts||0)) CF_ESTADIAS[k]={id:id,e:e};
+    });
+    try{ if(typeof atualizarBadgeConferencia==='function') atualizarBadgeConferencia(); }catch(e){}
+    try{
+      var v2=document.getElementById('v-conferencia');
+      var lista=document.getElementById('cf-lista');
+      if(v2&&v2.classList.contains('active')&&lista&&lista.style.display!=='none'&&typeof renderCfLista==='function') renderCfLista();
+    }catch(e){}
+  }
+  function cfPendente(h){
+    var k=(typeof medAgendaKey==='function')?medAgendaKey(h):''; var reg=k?CF_ESTADIAS[k]:null; if(!reg) return null;
+    var c=reg.e.conferencia||{};
+    return {id:reg.id, e:reg.e, concluida:!!c.concluida};
+  }
+  function atualizarBadgeConferencia(){
+    var n=0;
+    (hospedes||[]).forEach(function(h){ var p=cfPendente(h); if(p&&!p.concluida) n++; });
+    var link=document.querySelector('#nav a[data-v="conferencia"]'); if(!link) return;
+    var b=link.querySelector('.nav-badge');
+    if(n>0){ if(!b){ b=document.createElement('span'); b.className='nav-badge'; link.appendChild(b); } b.textContent=n; }
+    else if(b){ b.remove(); }
+  }
+
+  function abrirConferencia(){
+    document.getElementById('cf-lista').style.display='block';
+    document.getElementById('cf-ficha').style.display='none';
+    if(typeof carregarHospedes==='function') carregarHospedes();
+    renderCfLista();
+  }
+  function renderCfLista(){
+    var el=document.getElementById('cfGrid'); if(!el) return;
+    if(!hospedes||!hospedes.length){ el.innerHTML='<div class="av-empty" style="grid-column:1/-1"><div class="big">Sem hóspedes hoje</div>Quando houver check-in feito, ele aparece aqui para conferência.</div>'; return; }
+    el.innerHTML=hospedes.map(function(h,i){
+      var cad=(typeof getCad==='function')?getCad(h):{};
+      var ph=cad.foto?('<div class="ph" style="background-image:url(\''+cad.foto+'\');background-size:cover;background-position:center"></div>'):('<div class="ph" style="background:'+(h.cor||'#234D67')+'">'+escAttr((h.ini||(h.nome||'?')[0]||'?'))+'</div>');
+      var ex=(typeof extraDoHosp==='function')?extraDoHosp(h):{};
+      var alerta=(ex.alergia||ex.restricao)?'<span class="mini-alert">'+(ex.alergia&&ex.restricao?'ALÉRGICO/RESTR.':(ex.alergia?'ALÉRGICO':'RESTRIÇÃO'))+'</span>':'';
+      var tutor=(typeof tutorDe==='function')?tutorDe(h):(h.tutor||'');
+      var pend=cfPendente(h);
+      var selo=!pend
+        ?'<span class="mini-med" style="background:var(--muted)">SEM CHECK-IN</span>'
+        :(pend.concluida
+          ?'<span class="mini-med" style="background:var(--crm-ok);color:#fff">CONFERIDO</span>'
+          :'<span class="mini-med" style="background:var(--crm-critico);color:#fff;animation:piscaAlerta 1.5s ease-in-out infinite">CONFERIR</span>');
+      return '<div class="vet-pet" onclick="abrirCfFicha('+i+')">'+alerta+selo+ph
+        +'<div class="nm">'+escAttr((cad.nome||h.nome||'—'))+'</div>'
+        +'<div class="br">'+((cad.raca||h.raca)?escAttr(cad.raca||h.raca):'—')+'</div>'
+        +'<div class="tt">'+(h.mascote?'Nossa Zelozinha':(tutor?'Tutor: '+escAttr(tutor):'Tutor a confirmar'))+'</div></div>';
+    }).join('');
+  }
+  function fecharCfFicha(){ document.getElementById('cf-ficha').style.display='none'; document.getElementById('cf-lista').style.display='block'; renderCfLista(); }
+
+  function abrirCfFicha(i){
+    var h=hospedes[i]; if(!h) return; cfHosp=h;
+    var cad=(typeof getCad==='function')?getCad(h):{};
+    var av=document.getElementById('cf-av');
+    if(cad.foto){ av.style.backgroundImage="url('"+cad.foto+"')"; av.style.backgroundSize='cover'; av.style.backgroundPosition='center'; av.textContent=''; }
+    else { av.style.backgroundImage='none'; av.textContent=(h.ini||(h.nome||'?')[0]||'?'); av.style.background=(h.cor||'#234D67'); }
+    document.getElementById('cf-nome').textContent=cad.nome||h.nome||'—';
+    var tutor=(typeof tutorDe==='function')?tutorDe(h):(h.tutor||'');
+    document.getElementById('cf-meta').innerHTML=((cad.raca||h.raca)?escAttr(cad.raca||h.raca)+' · ':'')+(h.mascote?'Nossa Zelozinha':(tutor?'Tutor: '+escAttr(tutor):'Tutor a confirmar'));
+    var ex=(typeof extraDoHosp==='function')?extraDoHosp(h):{};
+    document.getElementById('cf-pills').innerHTML=(typeof alertPills==='function')?alertPills(ex):'';
+
+    var pend=cfPendente(h);
+    var semEst=document.getElementById('cf-semestadia'), corpo=document.getElementById('cf-corpo');
+    document.getElementById('cf-lista').style.display='none';
+    document.getElementById('cf-ficha').style.display='block';
+    if(!pend){ semEst.style.display='block'; corpo.style.display='none'; window.scrollTo({top:0,behavior:'smooth'}); return; }
+    semEst.style.display='none'; corpo.style.display='block';
+    cfEstadiaId=pend.id; cfEstadia=pend.e||{};
+    cfConf=Object.assign({pertences:{},medicacaoEtiqueta:{},medicacao:{},racao:{},fotos:[]}, cfEstadia.conferencia||{});
+    var assEl=document.getElementById('cfAssina'); if(assEl) assEl.value=cfConf.concluida?(cfConf.concluida_por||''):((typeof quemSou==='function')?quemSou():'');
+    renderCfPert();
+    cfPreencherRacao();
+    renderCfMed();
+    renderCfFotos();
+    renderCfGate();
+    var st=document.getElementById('cf-status'); if(st) st.textContent='';
+    window.scrollTo({top:0,behavior:'smooth'});
+  }
+
+  // ---- Pertences + etiquetagem de ração/medicação (checklist com V verde) ----
+  function cfListaItens(){
+    var pert=Array.isArray(cfEstadia.pertences)?cfEstadia.pertences:[];
+    var meds=Array.isArray(cfEstadia.medicacao)?cfEstadia.medicacao:[];
+    var itens=pert.map(function(p){ return {tipo:'pertence', k:p.k, label:p.nome+(p.spec?(' — '+p.spec):''), critico:(p.k==='racao'||p.k==='natural')}; });
+    meds.forEach(function(m,idx){ itens.push({tipo:'med', k:'med_'+idx+'_'+(typeof ciSlug==='function'?ciSlug(m.nome||''):idx), label:'Etiquetar remédio: '+(m.nome||'medicamento'), critico:true}); });
+    return itens;
+  }
+  function renderCfPert(){
+    var el=document.getElementById('cfPertList'); if(!el) return;
+    var itens=cfListaItens();
+    if(!itens.length){ el.innerHTML='<div class="hint">Nenhum pertence ou medicação registrada no check-in.</div>'; return; }
+    el.innerHTML=itens.map(function(it){
+      var store=(it.tipo==='med')?(cfConf.medicacaoEtiqueta||{}):(cfConf.pertences||{});
+      var salvo=store[it.k]||{}; var on=!!salvo.etiquetado;
+      return '<div class="cf-item'+(on?' on':'')+(it.critico&&!on?' critico':'')+'" data-t="'+it.tipo+'" data-k="'+escAttr(it.k)+'">'
+        +'<div class="cf-top" onclick="cfToggleItem(this)"><span class="cf-box">'+(on?'&#10003;':'')+'</span>'+escAttr(it.label)
+        +(it.critico&&!on?'<span class="cf-tag-critico">ETIQUETAR</span>':'')+'</div></div>';
+    }).join('');
+  }
+  function cfToggleItem(top){
+    var it=top.closest('.cf-item'); if(!it||!cfEstadiaId) return;
+    var tipo=it.dataset.t, k=it.dataset.k;
+    var campo=(tipo==='med')?'medicacaoEtiqueta':'pertences';
+    cfConf[campo]=cfConf[campo]||{};
+    var atual=cfConf[campo][k]||{};
+    var novoOn=!atual.etiquetado;
+    var reg=novoOn?{etiquetado:true,quem:(typeof quemSou==='function'?quemSou():'-'),ts:Date.now()}:null;
+    cfConf[campo][k]=reg;
+    if(DB) DB.ref('auaulandia/estadias/'+cfEstadiaId+'/conferencia/'+campo+'/'+k).set(reg).catch(function(){});
+    if(typeof audit==='function'&&novoOn) audit('conferencia-etiqueta','etiquetou '+k,{pet:(cfHosp&&cfHosp.nome)||''});
+    renderCfPert(); renderCfGate();
+  }
+
+  // ---- Ração: conferir quantidade + PESAR (absorve a calculadora do sistema antigo) ----
+  function cfDiasEstadia(){
+    var ent=cfEstadia.entrada, sai=cfEstadia.saida;
+    if(!ent||!sai) return null;
+    var dEnt=new Date(ent+'T00:00:00'), dSai=new Date(sai+'T00:00:00');
+    var diff=Math.round((dSai-dEnt)/86400000);
+    return diff<0?null:(diff+1); // o dia da chegada conta como Dia 1 — mesma regra do sistema antigo
+  }
+  function cfMinimoRacao(){
+    var a=(cfEstadia.ficha&&cfEstadia.ficha.alim)||{};
+    var qtd=qtdNum(a.qtd); var ref=parseInt(a.refeicoes,10)||0; var dias=cfDiasEstadia();
+    if(!qtd||!ref||!dias) return null;
+    return {minimo:Math.round(qtd*ref*dias), dias:dias, unidade:a.unidade||'g'};
+  }
+  function cfPreencherRacao(){
+    var info=document.getElementById('cfRacaoInfo'); var a=(cfEstadia.ficha&&cfEstadia.ficha.alim)||{};
+    var linhas=[];
+    if(a.tipo) linhas.push(escAttr(a.tipo));
+    if(a.marca) linhas.push('Marca: '+escAttr(a.marca));
+    if(a.qtd) linhas.push(escAttr(a.qtd)+' '+(a.unidade||'')+'/refeição');
+    if(a.refeicoes) linhas.push(escAttr(a.refeicoes)+'x ao dia');
+    if(info) info.innerHTML=linhas.length?linhas.join(' · '):'<span style="color:var(--crm-atencao-text)">Alimentação não informada no check-in.</span>';
+    var m=cfMinimoRacao();
+    var elNec=document.getElementById('cfRacaoNecessario');
+    if(elNec) elNec.value=m?(m.minimo+' '+(m.unidade||'g')+' para '+m.dias+' dia(s)'):'Informe entrada, saída, quantidade e refeições/dia no check-in';
+    var salvo=cfConf.racao||{};
+    var elPeso=document.getElementById('cfRacaoPeso'); if(elPeso) elPeso.value=(salvo.pesoTrazido!=null)?salvo.pesoTrazido:'';
+    cfCalcRacao();
+  }
+  function cfCalcRacao(){
+    var el=document.getElementById('cfRacaoResultado'); if(!el) return;
+    var elPeso=document.getElementById('cfRacaoPeso'); var peso=elPeso?qtdNum(elPeso.value):null;
+    var m=cfMinimoRacao();
+    if(!m){ el.innerHTML=''; return; }
+    if(peso==null){ el.innerHTML='<div class="hint" style="margin-bottom:0">Pese a ração e informe o valor.</div>'; return; }
+    var def=m.minimo-peso;
+    if(def>0) el.innerHTML='<div class="cf-resultado alerta"><span>⚠️ Faltam</span><span>'+def+' '+(m.unidade||'g')+'</span></div>';
+    else el.innerHTML='<div class="cf-resultado ok"><span>✅ Suficiente</span><span>sobram '+(-def)+' '+(m.unidade||'g')+'</span></div>';
+  }
+  function cfConfirmarRacao(){
+    var st=document.getElementById('cf-racao-status'); if(!cfEstadiaId) return;
+    var elPeso=document.getElementById('cfRacaoPeso'); var peso=elPeso?qtdNum(elPeso.value):null;
+    if(peso==null){ if(st){ st.style.color='var(--crm-critico)'; st.textContent='✋ Pese a ração e informe o valor em número.'; } return; }
+    var m=cfMinimoRacao();
+    var def=m?(m.minimo-peso):null;
+    var reg={pesoTrazido:peso, minimoNecessario:m?m.minimo:null, dias:m?m.dias:null, unidade:m?m.unidade:'g', deficit:def, pesado:true, quem:(typeof quemSou==='function'?quemSou():'-'), ts:Date.now()};
+    if(!DB){ if(st){ st.style.color='var(--crm-atencao-text)'; st.textContent='Banco conectando…'; } return; }
+    if(st){ st.style.color='var(--muted)'; st.textContent='Salvando…'; }
+    DB.ref('auaulandia/estadias/'+cfEstadiaId+'/conferencia/racao').set(reg).then(function(){
+      cfConf.racao=reg;
+      if(st){ st.style.color='var(--crm-ok)'; st.textContent='✅ Pesagem registrada.'; }
+      if(typeof audit==='function') audit('conferencia-racao',cfEstadiaId,{pet:(cfHosp&&cfHosp.nome)||'',peso:peso,deficit:def});
+      if(def!=null&&def>0) cfCriarAvisoRacao(def, reg.unidade);
+      renderCfGate();
+    }).catch(function(e){ if(st){ st.style.color='var(--crm-critico)'; st.textContent='⚠️ Erro: '+e.message; } });
+  }
+  function cfCriarAvisoRacao(deficit, unidade){
+    if(!DB||!cfHosp) return;
+    var aviso={ hospNome:cfHosp.nome||'', tutor:cfHosp.tutor||'', estadiaId:cfEstadiaId,
+      deficit:deficit, unidade:unidade||'g', status:'pendente', entries:[], criado_por:(typeof quemSou==='function'?quemSou():'-'), _ts:Date.now() };
+    DB.ref('auaulandia/avisos-racao').push(aviso).catch(function(){});
+    if(typeof audit==='function') audit('racao-aviso',cfEstadiaId,{pet:cfHosp.nome||'',deficit:deficit});
+  }
+
+  // ---- Medicação: testar os alarmes (bipDespertador de verdade + confirmação humana) ----
+  function renderCfMed(){
+    var el=document.getElementById('cfMedList'); var card=document.getElementById('cf-med-card'); if(!el||!card) return;
+    var meds=Array.isArray(cfEstadia.medicacao)?cfEstadia.medicacao:[];
+    if(!meds.length){ card.style.display='none'; el.innerHTML=''; return; }
+    card.style.display='block';
+    el.innerHTML=meds.map(function(m,idx){
+      var k='med_'+idx+'_'+(typeof ciSlug==='function'?ciSlug(m.nome||''):idx);
+      var salvo=(cfConf.medicacao||{})[k]||{};
+      var ok=!!(salvo.testado&&salvo.confirmado);
+      var qtd=(typeof fmtQtd==='function')?fmtQtd(m.q,m.u):((m.q||'')+' '+(m.u||''));
+      return '<div class="cf-med-item'+(ok?' ok':'')+'">'
+        +'<div class="cf-med-top"><span class="cf-med-nome">'+escAttr(m.nome||'Medicamento')+'</span>'+(ok?'<span class="cf-ok-badge">TESTADO</span>':'')+'</div>'
+        +'<div class="cf-med-det">'+(qtd?escAttr(qtd):'quantidade não informada')+((m.horarios&&m.horarios.length)?(' · '+escAttr(m.horarios.join(', '))):'')+'</div>'
+        +'<div class="cf-med-actions">'
+          +'<button type="button" class="btn btn-gold" style="padding:7px 14px;font-size:12.5px" onclick="cfTestarAlarme(\''+k+'\')">🔊 Testar alarme</button>'
+          +'<label class="cf-ouviu"><input type="checkbox" id="cf-ouviu-'+k+'" '+(ok?'checked':'')+' onchange="cfConfirmarAlarme(\''+k+'\')"><span>Confirmo que tocou</span></label>'
+        +'</div></div>';
+    }).join('');
+  }
+  function cfTestarAlarme(k){
+    if(typeof bipDespertador==='function') bipDespertador();
+    var chk=document.getElementById('cf-ouviu-'+k); if(chk) chk.focus();
+  }
+  function cfConfirmarAlarme(k){
+    if(!cfEstadiaId) return;
+    var chk=document.getElementById('cf-ouviu-'+k); var confirmado=!!(chk&&chk.checked);
+    cfConf.medicacao=cfConf.medicacao||{};
+    var reg=confirmado?{testado:true,confirmado:true,quem:(typeof quemSou==='function'?quemSou():'-'),ts:Date.now()}:null;
+    cfConf.medicacao[k]=reg;
+    if(DB) DB.ref('auaulandia/estadias/'+cfEstadiaId+'/conferencia/medicacao/'+k).set(reg).catch(function(){});
+    if(typeof audit==='function'&&confirmado) audit('conferencia-alarme','testou e confirmou o alarme',{pet:(cfHosp&&cfHosp.nome)||'',med:k});
+    renderCfMed(); renderCfGate();
+  }
+
+  // ---- Fotos da conferência (mesmo padrão das fotos da consulta do Cuidado Vet) ----
+  function cfAddFoto(e){
+    var files=(e.target&&e.target.files)?Array.prototype.slice.call(e.target.files):[];
+    files.forEach(function(f){
+      var r=new FileReader();
+      r.onload=function(){
+        var img=new Image();
+        img.onload=function(){
+          var max=700; var w=img.width,h=img.height;
+          if(w>h){ if(w>max){ h=Math.round(h*max/w); w=max; } } else { if(h>max){ w=Math.round(w*max/h); h=max; } }
+          var c=document.createElement('canvas'); c.width=w; c.height=h; c.getContext('2d').drawImage(img,0,0,w,h);
+          var url=c.toDataURL('image/jpeg',0.7);
+          cfConf.fotos=(cfConf.fotos||[]).slice(); cfConf.fotos.push(url);
+          if(DB&&cfEstadiaId) DB.ref('auaulandia/estadias/'+cfEstadiaId+'/conferencia/fotos').set(cfConf.fotos).catch(function(){});
+          renderCfFotos(); renderCfGate();
+        };
+        img.src=r.result;
+      };
+      r.readAsDataURL(f);
+    });
+    e.target.value='';
+  }
+  function renderCfFotos(){
+    var el=document.getElementById('cfFotos'); if(!el) return;
+    var fotos=cfConf.fotos||[];
+    el.innerHTML=fotos.map(function(src,i){ return '<div style="position:relative"><img src="'+src+'" alt=""><button type="button" onclick="cfRemoverFoto('+i+')" style="position:absolute;top:-7px;right:-7px;width:22px;height:22px;border-radius:50%;border:2px solid #fff;background:var(--crm-critico);color:#fff;font-weight:800;cursor:pointer;line-height:1">×</button></div>'; }).join('');
+  }
+  function cfRemoverFoto(i){
+    cfConf.fotos=(cfConf.fotos||[]).slice(); cfConf.fotos.splice(i,1);
+    if(DB&&cfEstadiaId) DB.ref('auaulandia/estadias/'+cfEstadiaId+'/conferencia/fotos').set(cfConf.fotos.length?cfConf.fotos:null).catch(function(){});
+    renderCfFotos(); renderCfGate();
+  }
+
+  // ---- GATE — não fecha "conferido" enquanto faltar item crítico ----
+  function cfPendencias(){
+    var out=[];
+    var itens=cfListaItens();
+    itens.forEach(function(it){
+      if(!it.critico) return;
+      var store=(it.tipo==='med')?(cfConf.medicacaoEtiqueta||{}):(cfConf.pertences||{});
+      var salvo=store[it.k];
+      if(!salvo||!salvo.etiquetado) out.push(it.label);
+    });
+    var meds=Array.isArray(cfEstadia.medicacao)?cfEstadia.medicacao:[];
+    meds.forEach(function(m,idx){
+      var k='med_'+idx+'_'+(typeof ciSlug==='function'?ciSlug(m.nome||''):idx);
+      var te=(cfConf.medicacao||{})[k];
+      if(!te||!te.testado||!te.confirmado) out.push('Testar alarme: '+(m.nome||'medicamento'));
+    });
+    var a=(cfEstadia.ficha&&cfEstadia.ficha.alim)||{};
+    if(a.qtd&&a.refeicoes){ if(!cfConf.racao||!cfConf.racao.pesado) out.push('Pesar a ração'); }
+    if(!(cfConf.fotos&&cfConf.fotos.length)) out.push('Adicionar ao menos 1 foto');
+    return out;
+  }
+  function renderCfGate(){
+    var hintEl=document.getElementById('cfPendHint'); if(!hintEl) return;
+    var pend=cfPendencias();
+    if(!pend.length) hintEl.innerHTML='<span style="color:var(--crm-ok);font-weight:800">✅ Tudo certo. Pode fechar a conferência.</span>';
+    else hintEl.innerHTML='<span style="color:var(--crm-critico);font-weight:800">Falta:</span> '+pend.map(escAttr).join(' · ');
+  }
+  function cfFecharConferencia(){
+    var st=document.getElementById('cf-status'); if(!cfEstadiaId) return;
+    var pend=cfPendencias();
+    if(pend.length){ if(st){ st.style.color='var(--crm-critico)'; st.textContent='✋ Ainda falta: '+pend[0]; } renderCfGate(); return; }
+    var assina=(document.getElementById('cfAssina').value||'').trim();
+    if(!assina){ if(st){ st.style.color='var(--crm-critico)'; st.textContent='✋ Escreva quem está conferindo.'; } return; }
+    if(!DB){ if(st){ st.style.color='var(--crm-atencao-text)'; st.textContent='Banco conectando…'; } return; }
+    if(st){ st.style.color='var(--muted)'; st.textContent='Fechando conferência…'; }
+    var dados={concluida:true, concluida_por:assina, concluida_ts:Date.now()};
+    DB.ref('auaulandia/estadias/'+cfEstadiaId+'/conferencia').update(dados).then(function(){
+      cfConf=Object.assign({},cfConf,dados);
+      if(st){ st.style.color='var(--crm-ok)'; st.textContent='✅ Conferência fechada por '+assina+'.'; }
+      if(typeof audit==='function') audit('conferencia-fechada',cfEstadiaId,{pet:(cfHosp&&cfHosp.nome)||'',quem:assina});
+    }).catch(function(e){ if(st){ st.style.color='var(--crm-critico)'; st.textContent='⚠️ Erro: '+e.message; } });
   }
 
   // INIT do Day Care (no fim: garante todas as variaveis e funcoes definidas)
