@@ -214,6 +214,11 @@
   body[data-role="monitor"] #card-texto, body[data-role="plantonista"] #card-texto, body[data-role="tutor"] #card-texto{display:none}
   /* Protocolo do Plantão = SÓ o plantonista (monitor, gestão, supervisão e tutor não veem) */
   body:not([data-role="plantonista"]) #card-checkout-plantao{display:none !important}
+  /* Onda 5 — Plantonista só RELATA: lê a Agenda de Medicação e registra a dose ("Dei agora" / avulsa),
+     mas não acrescenta, edita nem remove item (isso é da Consultora/Gestão/Supervisão/Vet). Guarda dupla:
+     CSS aqui (visual + trava de clique) + JS nas funções (salvarMedAgenda/magAddNovoItem/magRemoverItem). */
+  body:not([data-role="plantonista"]) #magSoLeituraAviso{display:none !important}
+  body[data-role="plantonista"] #magItens{pointer-events:none;opacity:.72}
   /* Foto (trocar/salvar): Gestão, Supervisão e Monitor podem. Plantonista e tutor NÃO (só recebem).
      !important vence o style inline display:flex. */
   body[data-role="plantonista"] .so-foto, body[data-role="tutor"] .so-foto{display:none !important}
@@ -857,6 +862,9 @@
   .hb-novo-warn{font-size:12px;font-weight:700;color:var(--crm-critico);min-height:16px}
   /* selo de medicação sobre a foto do hóspede — irmão do .mini-alert (alergia/restrição) já usado no Day Care */
   .pet .mini-med{position:absolute;top:9px;right:9px;font-size:10px;font-weight:800;color:var(--crm-atencao-text);background:var(--z-gold);padding:3px 8px;border-radius:8px;z-index:2}
+  /* Onda 5 — 3º risco que precisa gritar no card: NÃO COMEU hoje (junto com alergia/medicação).
+     Mesma posição/tom do .mini-alert, só que embaixo dele (não colidir com .mini-recom, que é à direita). */
+  .pet .mini-naocomeu{position:absolute;top:34px;left:9px;font-size:10px;font-weight:800;color:#fff;background:var(--crm-critico);padding:3px 8px;border-radius:8px;z-index:2;animation:piscaAlerta 1.5s ease-in-out infinite}
 
   /* ===== Novo AULUNO — telinha de 2 campos antes da ficha completa ===== */
   #novoAlunoModal{display:none;position:fixed;inset:0;z-index:75;background:rgba(26,58,79,.55);padding:20px;overflow-y:auto}
@@ -1197,9 +1205,10 @@
       <div class="card" id="card-medagenda">
         <h2 style="font-size:19px">💊 Agenda de Medicação e Suplementação</h2>
         <div class="hint">Cadastre o medicamento ou suplemento e os horários fixos (ex.: colírio às 10:30, 16:30, 22:30 e 04:30). Salva sozinho — não precisa abrir o relatório do plantão nem assinar.</div>
+        <div id="magSoLeituraAviso" class="hint" style="background:var(--z-cream-warm);border:1px solid var(--line);border-radius:10px;padding:10px 12px;font-weight:700;color:var(--z-blue)">🔒 Você só registra as doses abaixo (Dei agora / dose avulsa). Acrescentar, alterar ou remover medicamento é papel da Consultora, da Gestão/Supervisão ou da Veterinária.</div>
         <div id="magItens"></div>
-        <button type="button" class="med-add" onclick="magAddNovoItem()">+ Acrescentar medicamento ou suplemento</button>
-        <div class="actions" style="margin-top:12px"><button class="btn btn-primary" onclick="salvarMedAgenda()">Salvar agenda</button></div>
+        <button type="button" class="med-add so-equipe" onclick="magAddNovoItem()">+ Acrescentar medicamento ou suplemento</button>
+        <div class="actions so-equipe" style="margin-top:12px"><button class="btn btn-primary" onclick="salvarMedAgenda()">Salvar agenda</button></div>
         <div id="mag-status" class="rel-status"></div>
 
         <h3 class="cad-sub" style="margin-top:18px">Horários de hoje</h3>
@@ -2136,12 +2145,16 @@
         const medFoto = ex.medicacao ? '<span class="mini-med">MEDICAÇÃO</span>' : '';
         // Onda 3 — selo azul de recomendação da vet (instruções: elizabetano, não deixar na matilha...)
         const recFoto = (typeof temRecomAtiva==='function' && temRecomAtiva(h)) ? '<span class="mini-recom">VET</span>' : '';
+        // Onda 5 — 3º risco que precisa gritar no card, junto com alergia e medicação: NÃO COMEU hoje
+        // (não almoçou ou não jantou, pelo relatório de hoje). A moradora Repolho fica de fora, igual
+        // ao painel da Gestora (ver alerta-moradora, 23/jun).
+        const naoComeuFoto = (!h.mascote && NAOCOMEU_HOJE[cadKey(h)]) ? '<span class="mini-naocomeu">NÃO COMEU</span>' : '';
         // Cancelar lançamento do dia — só quem foi adicionado manualmente hoje (tem manualKey) tem
         // como cancelar; quem vem da planilha não tem essa opção aqui. Gestão/Supervisão/Diretoria/Monitor
         // (reversível e de baixo risco — remove só o lançamento de hoje, não mexe no cadastro). Plantonista fora.
         const cancelBtn = h.manualKey ? `<button type="button" class="pet-x so-equipe" title="Cancelar hóspede/pernoite de hoje" onclick="event.stopPropagation();cancelarHospedeManual(${i})">×</button>` : '';
         return `<div class="pet" onclick="abrirPlantao(${i})">
-          ${cancelBtn}${alertaFoto}${medFoto}${recFoto}${ph}
+          ${cancelBtn}${alertaFoto}${medFoto}${recFoto}${naoComeuFoto}${ph}
           <div class="nm">${cad.nome||h.nome}</div>
           <div class="br">${raca}</div>
           <div class="hosp-tutor">${h.mascote?'Nossa Zelozinha':(tutor?'Tutor: '+tutor:'Tutor a confirmar')}</div>
@@ -2401,7 +2414,7 @@
       +'<div class="medunits"><span class="mu-lab">Medida</span>'+units+'</div>'
       +'<div class="mag-horarios"><span class="mu-lab">Horários</span><span class="mag-horarios-list">'+horariosHTML+'</span><button type="button" class="med-add" style="width:auto;margin-top:0" onclick="magAddHorario(this)">+ horário</button></div>'
       +estoqueBlock
-      +'<div style="text-align:right;margin-top:6px"><button type="button" class="ativ-del" title="Remover este item da lista" onclick="magRemoverItem(\''+id+'\')">🗑️ Remover item</button></div>'
+      +'<div style="text-align:right;margin-top:6px"><button type="button" class="ativ-del so-equipe" title="Remover este item da lista" onclick="magRemoverItem(\''+id+'\')">🗑️ Remover item</button></div>'
     +'</div>';
   }
   // alterna Medicamento/Suplemento na linha (só 1 fica aceso)
@@ -2415,8 +2428,14 @@
   function magAddHorario(btn){ const wrap=btn.parentElement.querySelector('.mag-horarios-list'); if(wrap) wrap.insertAdjacentHTML('beforeend','<span class="magHorario"><input data-c="h" inputmode="numeric" placeholder="07:30" onblur="normalizarHoraMed(this)"><button type="button" class="mag-rm-h" title="Remover horário" onclick="this.parentElement.remove()">×</button></span>'); }
   // Remove só a linha da tela — não mexe em MED_AGENDA_ITENS nem re-renderiza a lista inteira,
   // senão outros medicamentos ainda não salvos (rascunho) seriam perdidos junto.
-  function magRemoverItem(id){ const el=document.querySelector('#magItens .magitem[data-id="'+id+'"]'); if(!el) return; if(!confirm('Remover este medicamento da agenda?')) return; el.remove(); }
-  function magAddNovoItem(){ const wrap=document.getElementById('magItens'); if(!wrap) return; const id='novo_'+Date.now()+'_'+Math.random().toString(36).slice(2,6); wrap.insertAdjacentHTML('beforeend', medAgendaRowHTML(id,{nome:'',q:'',u:'',horarios:['']})); }
+  // Onda 5 — guarda dupla (igual cancelarHospedeManual): CSS já esconde/trava para o Plantonista,
+  // aqui é o JS que garante — mesmo que alguém force o clique, a função não executa.
+  function magRemoverItem(id){
+    if(document.body.dataset.role==='plantonista') return;
+    const el=document.querySelector('#magItens .magitem[data-id="'+id+'"]'); if(!el) return; if(!confirm('Remover este medicamento da agenda?')) return; el.remove(); }
+  function magAddNovoItem(){
+    if(document.body.dataset.role==='plantonista') return;
+    const wrap=document.getElementById('magItens'); if(!wrap) return; const id='novo_'+Date.now()+'_'+Math.random().toString(36).slice(2,6); wrap.insertAdjacentHTML('beforeend', medAgendaRowHTML(id,{nome:'',q:'',u:'',horarios:['']})); }
   function renderMedAgenda(){
     const wrap=document.getElementById('magItens'); if(!wrap) return;
     const ids=Object.keys(MED_AGENDA_ITENS);
@@ -2472,6 +2491,7 @@
     return out;
   }
   function salvarMedAgenda(){
+    if(document.body.dataset.role==='plantonista') return; // Onda 5 — plantonista só relata/regista dose, não altera a agenda
     if(!currentHosp) return;
     const st=document.getElementById('mag-status');
     const itens=coletarMedAgendaForm();
@@ -3091,7 +3111,7 @@
         const _quemRecebe=(tipo==='dia')?'o Plantonista':'quem pega o plantão';
         if(st){ st.style.color='var(--crm-ok)'; st.textContent=(tipo==='inicio')?'✅ Jantar salvo! A Noite será preenchida amanhã de manhã, na passagem do plantão.'
           : (_rSalvo?'✅ Salvo!':'✅ Plantão passado! Agora fica piscando em vermelho até '+_quemRecebe+' ler e assinar o recebimento.'); }
-        if(typeof audit==='function') audit('relatorio', tipo, {pet:(currentHosp&&currentHosp.nome)||'', assinou:passou}); const c=document.getElementById(card); if(c) c.classList.add('collapsed'); }).catch(e=>{ if(st){ st.style.color='var(--crm-critico)'; st.textContent='⚠️ Erro: '+e.message; } }); } else { if(st){ st.style.color='var(--crm-atencao-text)'; st.textContent='Banco conectando...'; } } }
+        if(typeof audit==='function') audit('relatorio', tipo, {pet:(currentHosp&&currentHosp.nome)||'', assinou:passou}); const c=document.getElementById(card); if(c) c.classList.add('collapsed'); if(typeof carregarRiscoNaoComer==='function') carregarRiscoNaoComer(); }).catch(e=>{ if(st){ st.style.color='var(--crm-critico)'; st.textContent='⚠️ Erro: '+e.message; } }); } else { if(st){ st.style.color='var(--crm-atencao-text)'; st.textContent='Banco conectando...'; } } }
   function valDe(cardId,perg){ for(const l of document.querySelectorAll('#'+cardId+' .obsline')){ const q=l.querySelector('.q'); if(q&&q.textContent.trim()===perg){ const on=l.querySelector('button.on'); return on?on.textContent.trim():''; } } return ''; }
   // ---- gerador de texto para o tutor: personalizado, em parágrafos, sempre diferente ----
   function rnd(arr){ return arr[Math.floor(Math.random()*arr.length)]; }
@@ -3138,6 +3158,7 @@
     document.getElementById('hosp-ficha').style.display='none';
     document.getElementById('hosp-lista').style.display='block';
     if(typeof carregarPainelGestora==='function') carregarPainelGestora();
+    if(typeof carregarRiscoNaoComer==='function') carregarRiscoNaoComer();
   }
   // ---- Resumo da Gestora (AuAulândia) ----
   function fichaKeyDe(h,d){ const p=x=>String(x).padStart(2,'0'); const pk=(h&&h.nome||'')+'__'+(h&&h.tutor||''); return (pk+'__'+d.getFullYear()+'-'+p(d.getMonth()+1)+'-'+p(d.getDate())).toLowerCase().replace(/[.#$\[\]\/]/g,'-'); }
@@ -3153,6 +3174,28 @@
     const reais=(hospedes||[]); // inclui a moradora (Repolho): a Gestora precisa ver alertas dela também
     if(!DB||!reais.length){ el.innerHTML=''; return; }
     Promise.all(reais.map(h=>{ const base='auaulandia/relatorios/'+fichaKeyDe(h,selectedDate); return Promise.all([ DB.ref(base+'/dia').once('value').then(s=>s.val()).catch(()=>null), DB.ref(base+'/inicio').once('value').then(s=>s.val()).catch(()=>null), DB.ref(base+'/noite').once('value').then(s=>s.val()).catch(()=>null), DB.ref(base).once('value').then(s=>s.val()).catch(()=>null) ]).then(function(r){ const ant=migrarAntigo(r[3]); return {h:h, dia:r[0]||(ant?ant.dia:null), inicio:r[1]||(ant?ant.inicio:null), noite:r[2]||r[1]||(ant?ant.inicio:null)}; }); })).then(renderPainelGestora).catch(()=>{});
+  }
+  // ---- Onda 5 — Risco "NÃO COMEU" precisa gritar no CARD do hóspede (hospGrid), não só no painel
+  // da Gestora (que é so-gestao — o plantonista não vê). Lê o relatório de HOJE (dia + noite/início) e
+  // marca quando "Almoçou?" ou "Jantou?" = "Não". "Metade" já tem aviso amarelo em outro lugar — aqui
+  // é só o vermelho de quem não comeu nada. Moradora (Repolho) fica de fora, igual ao painel da Gestora.
+  let NAOCOMEU_HOJE={};
+  function carregarRiscoNaoComer(){
+    const reais=(hospedes||[]).filter(h=>!h.mascote);
+    if(!DB||!reais.length){ NAOCOMEU_HOJE={}; return; }
+    Promise.all(reais.map(h=>{
+      const base='auaulandia/relatorios/'+fichaKeyDe(h,new Date());
+      return Promise.all([
+        DB.ref(base+'/dia').once('value').then(s=>s.val()).catch(()=>null),
+        DB.ref(base+'/inicio').once('value').then(s=>s.val()).catch(()=>null),
+        DB.ref(base+'/noite').once('value').then(s=>s.val()).catch(()=>null)
+      ]).then(function(r){
+        const byQdia=(r[0]&&r[0].byQ)||{}, byQini=(r[1]&&r[1].byQ)||{}, byQnoite=(r[2]&&r[2].byQ)||{};
+        const naoAlmocou = byQdia['Almoçou?']==='Não';
+        const naoJantou = (byQnoite['Jantou?']||byQini['Jantou?'])==='Não';
+        NAOCOMEU_HOJE[cadKey(h)] = (naoAlmocou||naoJantou);
+      });
+    })).then(function(){ try{ renderHosp(); }catch(e){} }).catch(()=>{});
   }
   // ---- Passagem de plantão: quem assinou o recebimento, e em quanto tempo ----
   // Só observa. Assinatura em menos de LEITURA_MIN_SEG = leu rápido demais para ter lido de verdade
@@ -3411,6 +3454,7 @@
         }
       }
       renderHosp(); carregarManuais(); if(typeof carregarPainelGestora==='function') carregarPainelGestora();
+      if(typeof carregarRiscoNaoComer==='function') carregarRiscoNaoComer();
     }catch(e){ console.warn('Planilha indisponível — usando lista de exemplo.', e); carregarManuais(); }
   }
   function dataKeyAtual(){ const p=x=>String(x).padStart(2,'0'); const d=selectedDate; return d.getFullYear()+'-'+p(d.getMonth()+1)+'-'+p(d.getDate()); }
@@ -4105,6 +4149,9 @@
   // "atrasada" só porque o horário passou) — por isso o painel da Gestora tem seu próprio timer,
   // além de ser recarregado toda vez que a agenda muda ou uma dose é registrada.
   setInterval(function(){ if(typeof carregarMedAtrasadaGestora==='function') carregarMedAtrasadaGestora(); }, 60000);
+  // Onda 5 — mantém o selo "NÃO COMEU" do card vivo mesmo sem navegar (ex.: plantonista com a lista
+  // aberta a noite toda, esperando alguém marcar o relatório do jantar).
+  setInterval(function(){ if(typeof carregarRiscoNaoComer==='function') carregarRiscoNaoComer(); }, 60000);
 
   // ==================================================================================
   // ===== ONDA 3 — CUIDADO VET (veterinária) =========================================
