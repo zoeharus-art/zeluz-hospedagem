@@ -786,6 +786,7 @@
     <a data-v="daycare" class="so-day"><span data-icon="sun"></span><span>Day Care</span></a>
     <a data-v="abertura" class="so-abertura"><span data-icon="sun"></span><span>Atividades Monitor 1</span></a>
     <div class="subnav so-day" id="dcSubnav" style="display:none"></div>
+    <a data-v="checkin"><span data-icon="paw"></span><span>Check-in</span></a>
     <a data-v="hospedagem"><span data-icon="moon"></span><span>AuAulândia</span></a>
     <a data-v="agenda"><span data-icon="cal"></span><span>Agenda</span><span class="soon">em breve</span></a>
     <div class="grp so-master">Gestão</div>
@@ -1202,6 +1203,154 @@
 
     </div>
   </section>
+
+  <!-- ============ CHECK-IN — entrada da estadia (ficha + pertences + assinatura + PDF) ============ -->
+  <style>
+    /* Check-in — reaproveita tokens e classes existentes; só o que é novo aqui */
+    #v-checkin .ci-result{display:flex;align-items:center;gap:12px;padding:12px 14px;border:1.5px solid var(--line);border-radius:12px;background:#fff;margin-bottom:8px;cursor:pointer}
+    #v-checkin .ci-result:hover{border-color:var(--z-gold);background:rgba(222,180,40,.06)}
+    #v-checkin .ci-ph{width:44px;height:44px;border-radius:11px;display:grid;place-items:center;color:#fff;font-weight:800;flex:0 0 auto;background-size:cover;background-position:center}
+    #v-checkin .ci-nm{font-weight:800;color:var(--z-blue)}
+    #v-checkin .ci-br{font-size:12px;color:var(--muted);font-weight:600}
+    #v-checkin .ci-alert{margin-left:auto;font-size:10px;font-weight:800;letter-spacing:.4px;background:var(--crm-critico);color:#fff;padding:3px 9px;border-radius:7px}
+    #v-checkin .ci-head{display:flex;align-items:center;gap:14px;margin-bottom:6px}
+    #v-checkin .ci-av{width:60px;height:60px;border-radius:14px;display:grid;place-items:center;color:#fff;font-weight:800;font-size:22px;flex:0 0 auto;background-size:cover;background-position:center}
+    #v-checkin .ci-h-nome{font-size:20px;font-weight:800;color:var(--z-blue)}
+    #v-checkin .ci-h-meta{font-size:13px;color:var(--muted);font-weight:600}
+    #v-checkin .pert-item{border:1.5px solid var(--line);border-radius:12px;margin-bottom:9px;background:#fff;overflow:hidden}
+    #v-checkin .pert-top{display:flex;align-items:center;gap:11px;padding:11px 14px;cursor:pointer;font-weight:700;color:var(--z-blue)}
+    #v-checkin .pert-item.on .pert-top{background:rgba(39,174,96,.08)}
+    #v-checkin .pert-box{width:24px;height:24px;border-radius:7px;border:2px solid var(--line);display:grid;place-items:center;font-weight:800;color:#fff;background:#fff;flex:0 0 auto;font-size:14px}
+    #v-checkin .pert-item.on .pert-box{background:var(--crm-ok);border-color:var(--crm-ok)}
+    #v-checkin .pert-spec{display:none;padding:0 14px 12px}
+    #v-checkin .pert-item.on .pert-spec{display:block}
+    #v-checkin .pert-spec input{width:100%;font-family:var(--font-ui);font-size:14px;padding:9px 12px;border:1.5px solid var(--line);border-radius:10px;background:var(--z-cream);color:var(--z-blue)}
+    #v-checkin .pert-spec .hint{margin:2px 0 7px}
+    #v-checkin .sig-wrap{border:2px dashed var(--z-gold);border-radius:14px;background:var(--z-cream-warm);position:relative}
+    #v-checkin canvas#ciSig{width:100%;height:190px;display:block;border-radius:12px;touch-action:none;cursor:crosshair;background:#fff}
+    #v-checkin .sig-hint{position:absolute;top:50%;left:0;right:0;transform:translateY(-50%);text-align:center;color:#c9bfa8;font-weight:700;pointer-events:none;font-size:14px}
+    #v-checkin .ci-gate{background:rgba(222,180,40,.14);border:2px solid var(--z-gold);border-radius:14px;padding:16px;margin-top:6px}
+    #v-checkin .ci-gate .gtit{font-weight:800;color:var(--z-blue);margin-bottom:8px;font-size:15px}
+    #v-checkin .ci-gate ul{margin:8px 0 12px;padding-left:18px;color:var(--z-blue)}
+    #v-checkin .ci-gate li{margin-bottom:5px;font-weight:600}
+    #v-checkin .ci-actions{display:flex;flex-wrap:wrap;gap:10px;margin-top:10px}
+    #v-checkin .ci-actions .btn{flex:1 1 auto;min-width:150px}
+    #v-checkin .btn-wa{background:#25D366;color:#08351b}
+    #v-checkin .med-destaque{background:rgba(192,57,43,.06);border:1.5px solid var(--crm-critico);border-radius:12px;padding:12px 14px;margin-top:10px}
+    #v-checkin .med-destaque .mdh{font-weight:800;color:var(--crm-critico);font-size:12px;letter-spacing:.4px;margin-bottom:6px}
+    /* Área de impressão do PDF — invisível na tela, some no print o resto */
+    #ci-print{display:none}
+    @media print{
+      body *{visibility:hidden !important}
+      #ci-print,#ci-print *{visibility:visible !important}
+      #ci-print{display:block !important;position:absolute;left:0;top:0;width:100%;padding:24px 30px}
+      #ci-print .pf-h1{font-size:22px;font-weight:800;color:#234D67;margin-bottom:2px}
+      #ci-print .pf-sub{font-size:13px;color:#555;margin-bottom:14px}
+      #ci-print .pf-sec{margin-bottom:12px;border:1px solid #ddd;border-radius:10px;padding:12px 14px}
+      #ci-print .pf-sec h3{font-size:13px;color:#234D67;margin:0 0 6px;letter-spacing:.3px}
+      #ci-print .pf-med{border:2px solid #C0392B;border-radius:10px;padding:12px 14px;margin-bottom:12px}
+      #ci-print .pf-med h3{color:#C0392B;font-weight:800}
+      #ci-print .pf-med .pf-mrow{font-size:15px;font-weight:700;color:#111;margin-bottom:4px}
+      #ci-print .pf-sig-img{max-width:320px;border-bottom:2px solid #234D67}
+      #ci-print .pf-row{font-size:13.5px;color:#222;margin-bottom:3px}
+    }
+  </style>
+  <section class="view" id="v-checkin">
+    <!-- PASSO 1 — escolher o peludinho -->
+    <div id="ci-escolha">
+      <div class="role-note"><span data-icon="paw"></span><span><strong>Check-in da estadia.</strong> Escolha o FILHOt que está chegando. No retorno, a ficha já vem pré-preenchida da última estadia — a Consultora só confere e ajusta.</span></div>
+      <div class="card">
+        <div class="field"><label>Quem está chegando?</label>
+          <input class="cad-in" id="ciBusca" placeholder="Nome do FILHOt, tutor ou raça…" autocomplete="off" oninput="renderCiBusca()"></div>
+        <div class="hint">Busca no cadastro-mestre (mesmo do Day Care). Não achou? Cadastre pela AuAulândia primeiro.</div>
+        <div id="ciResults" style="margin-top:12px"></div>
+      </div>
+    </div>
+
+    <!-- PASSO 2 — ficha de check-in -->
+    <div id="ci-ficha" style="display:none">
+      <button class="back-btn" onclick="ciVoltar()">← Trocar FILHOt</button>
+      <div class="card">
+        <div class="ci-head">
+          <div class="ci-av" id="ciAv"></div>
+          <div>
+            <div class="ci-h-nome" id="ciNome">—</div>
+            <div class="ci-h-meta" id="ciMeta">—</div>
+          </div>
+        </div>
+        <div id="ciPills"></div>
+      </div>
+
+      <div class="card">
+        <h2>Datas da estadia</h2>
+        <div class="hint">Cada estadia é uma pasta separada — ração, remédio e pertences nunca se misturam entre uma vez e outra.</div>
+        <div class="cad-grid">
+          <div class="field"><label>Entrada *</label><input type="date" class="cad-in" id="ciEntrada"></div>
+          <div class="field"><label>Saída prevista</label><input type="date" class="cad-in" id="ciSaida"></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>Alimentação</h2>
+        <div class="hint">O que ele come nesta estadia. <strong>Nenhuma alimentação pode ser trocada.</strong></div>
+        <div class="field"><label>Tipo</label>
+          <div class="seg" id="ciAlimTipo" data-single><button onclick="pick(this)">Ração</button><button onclick="pick(this)">Comida natural</button><button onclick="pick(this)">Ração + natural</button></div></div>
+        <div class="cad-grid">
+          <div class="field"><label>Marca</label><input class="cad-in" id="ciAlimMarca" placeholder="Ex: marca da ração ou da comida natural" autocomplete="off"></div>
+          <div class="field"><label>Refeições por dia</label><input class="cad-in" id="ciAlimRefeicoes" inputmode="numeric" placeholder="Ex: 2" autocomplete="off"></div>
+        </div>
+        <div class="cad-grid">
+          <div class="field"><label>Quantidade por refeição</label><input class="cad-in" id="ciAlimQtd" inputmode="decimal" placeholder="Ex: 40" autocomplete="off"></div>
+          <div class="field"><label>Medida</label>
+            <div class="seg" id="ciAlimUnid" data-single><button onclick="pick(this)">gramas</button><button onclick="pick(this)">medidor</button><button onclick="pick(this)">lata</button><button onclick="pick(this)">sachê</button></div></div>
+        </div>
+        <div class="field"><label>Banho na saída?</label>
+          <div class="seg gold" id="ciBanho" data-single><button onclick="pick(this)">Sim</button><button onclick="pick(this)">Não</button></div></div>
+      </div>
+
+      <div class="card">
+        <h2>Medicação e suplementos</h2>
+        <div class="hint">Cadastre cada medicamento/suplemento com o <strong>nome</strong>, a <strong>quantidade (número + medida)</strong> e os <strong>horários reais</strong>. Isso alimenta o despertador da AuAulândia. À prova de erro — sem número e medida não salva.</div>
+        <div id="ciMeds"></div>
+        <button type="button" class="med-add" onclick="ciAddMed()">+ Acrescentar medicamento ou suplemento</button>
+        <div id="ci-med-status" class="rel-status"></div>
+      </div>
+
+      <div class="card">
+        <h2>Pertences</h2>
+        <div class="hint">Marque tudo que veio. Cada item pede a especificação (cor, marca, material) para nunca perder o que é de cada um. Não achou na lista? Acrescente — vai para o banco e aparece para todos.</div>
+        <div id="ciPertList"></div>
+        <div class="field" style="margin-top:10px"><label>Acrescentar item ao banco de pertences</label>
+          <div style="display:flex;gap:8px"><input class="cad-in" id="ciPertNovo" placeholder="Ex: Cobertor" autocomplete="off" onkeydown="if(event.key==='Enter'){event.preventDefault();ciAddPertItem();}"><button class="btn btn-gold" style="flex:0 0 auto" onclick="ciAddPertItem()">Adicionar</button></div></div>
+      </div>
+
+      <div class="card">
+        <h2>Assinatura do tutor</h2>
+        <div class="hint">Peça para o tutor assinar com o dedo no tablet, confirmando os dados e os horários de medicação.</div>
+        <div class="sig-wrap">
+          <canvas id="ciSig" width="600" height="190"></canvas>
+          <div class="sig-hint" id="ciSigHint">Assine aqui com o dedo</div>
+        </div>
+        <div class="actions" style="margin-top:10px"><button class="btn" style="background:var(--z-cream-warm);color:var(--z-blue);border:1.5px solid var(--line)" onclick="ciLimparAssinatura()">Limpar assinatura</button></div>
+        <div class="field" style="margin-top:12px"><label>Nome de quem assinou (tutor) *</label><input class="cad-in" id="ciAssinaNome" placeholder="Nome e sobrenome do tutor" autocomplete="off"></div>
+      </div>
+
+      <div class="ci-gate" id="ciGate"></div>
+
+      <div class="card">
+        <div class="ci-actions">
+          <button class="btn btn-primary" onclick="ciSalvar()">💾 Salvar no sistema</button>
+          <button class="btn btn-gold" onclick="ciGerarPDF()">🖨️ Gerar PDF</button>
+          <button class="btn btn-wa" onclick="ciEnviarWhatsApp()">WhatsApp</button>
+          <button class="btn" style="background:var(--z-cream-warm);color:var(--z-blue);border:1.5px solid var(--line)" onclick="ciEnviarEmail()">E-mail</button>
+        </div>
+        <div id="ci-status" class="rel-status" style="margin-top:10px"></div>
+      </div>
+    </div>
+  </section>
+  <!-- Área de impressão do PDF do check-in (preenchida por JS) -->
+  <div id="ci-print"></div>
+
   <section class="view" id="v-agenda"><div class="soon-box"><img class="ic-st" src="assets/stickers/coleira.png" alt=""><div class="t">Agenda</div><div class="d">Calendário de frequência e reservas — próxima etapa.</div></div></section>
   <section class="view" id="v-abertura">
     <div class="role-note"><span data-icon="sun"></span><span><strong>Rotina de abertura do turno — Monitor 1.</strong> Marque cada item conforme executa. Fica registrado com horário e quem fez.</span></div>
@@ -1375,6 +1524,7 @@
   const titles={inicio:['Início','Visão geral do dia'],ficha:['Peludinhos','Matriculados'],
     renovacao:['Renovação de Planos','Planos a vencer e renovações'],adaptacao:['Adaptação · 1º mês','Como está se adaptando'],
     daycare:['Day Care','Chamada e atividades'],hospedagem:['AuAulândia','Passagem de plantão'],
+    checkin:['Check-in','Entrada da estadia — ficha, pertences e assinatura'],
     agenda:['Agenda','Frequência e reservas'],pessoas:['Pessoas & Turnos','Equipe e tarefas'],
     painel:['Painel do Dia','Auditoria e cumprimento de protocolos'],
     abertura:['Atividades Monitor 1','Rotina de abertura do turno'],sair:['Sair','']};
@@ -1390,6 +1540,7 @@
     document.getElementById('head-title').childNodes[0].nodeValue=titles[v][0]+' ';
     document.getElementById('head-sub').textContent=titles[v][1];
     if(v==='hospedagem') fecharPlantao();
+    if(v==='checkin'){ if(typeof abrirCheckin==='function') abrirCheckin(); }
     if(v==='ficha'){ const l=document.getElementById('pel-lista'),fi=document.getElementById('pel-ficha'); if(l&&fi){ l.style.display='block'; fi.style.display='none'; } }
     if(v==='daycare'){ if(typeof abrirDayCare==='function') abrirDayCare(); } else { const sm=document.getElementById('dcSubnav'); if(sm) sm.style.display='none'; }
     const pn=document.getElementById('pSubnav'); if(pn) pn.style.display=(v==='pessoas')?'block':'none';
@@ -4767,6 +4918,314 @@
     el.innerHTML=h;
   }
   function setAuditCfg(k,campo,val){ if(!AUDIT_CFG[k]) return; AUDIT_CFG[k][campo]=val; salvarAuditCfg(); }
+
+  // ===================================================================
+  // ===== CHECK-IN — Estadia + ficha + pertences + assinatura + PDF ====
+  // ===================================================================
+  // Modelo de ESTADIA (a "pasta" por hospedagem): auaulandia/estadias/{id} guarda SÓ daquela vez
+  // (entrada/saída, alimentação, pertences, medicação, assinatura) ligada ao cadastro permanente
+  // do FILHOt pelo refKey. No retorno, a ficha vem pré-preenchida da última estadia + da agenda de
+  // medicação viva. A medicação também é gravada em auaulandia/medicacao-agenda/{key} — o mesmo nó
+  // que dispara o despertador — para já ficar ligada à espinha (aprofundada na Onda 2).
+  let ciHosp=null;               // {nome,tutor,raca,refKey,ini,cor}
+  let ciPertBanco=[];            // banco de pertences (default + custom do Firebase)
+  let ciSigCtx=null, ciSigDrawing=false, ciSigHasInk=false, ciSigReady=false;
+  const CI_PERT_DEFAULT=[
+    {k:'coleira',nome:'Coleira',spec:'Cor e marca (ex: vermelha Zeedog)'},
+    {k:'guia',nome:'Guia',spec:'Cor e marca'},
+    {k:'peitoral',nome:'Peitoral',spec:'Cor e marca'},
+    {k:'roupa',nome:'Roupa',spec:'Ex: vestido rosa, casaco de frio vermelho'},
+    {k:'cama',nome:'Cama',spec:'Cor e tamanho'},
+    {k:'bolsa',nome:'Bolsa / mala',spec:'Cor e marca'},
+    {k:'racao',nome:'Ração',spec:'Marca'},
+    {k:'natural',nome:'Comida natural',spec:'Marca'},
+    {k:'pote',nome:'Pote',spec:'Material e cor (ex: inox rosa)'},
+    {k:'petisco',nome:'Petiscos',spec:'Marca'},
+    {k:'brinquedo',nome:'Brinquedo',spec:'Qual'},
+    {k:'tapete',nome:'Tapete higiênico',spec:'Marca / quantidade'}
+  ];
+  function ciSlug(s){ return jsNorm(s).replace(/[^a-z0-9]+/g,'-').replace(/^-+|-+$/g,'')||('item-'+Date.now()); }
+  function ciKey(){ if(!ciHosp) return ''; const base=ciHosp.refKey||((ciHosp.nome||'')+'__'+(ciHosp.tutor||'')); return String(base).toLowerCase().replace(/[.#$\[\]\/]/g,'-'); }
+  function ciHoje(){ const p=x=>String(x).padStart(2,'0'); const d=new Date(); return d.getFullYear()+'-'+p(d.getMonth()+1)+'-'+p(d.getDate()); }
+
+  function abrirCheckin(){
+    // volta sempre para o passo de escolha (evita ficar numa ficha antiga)
+    const esc=document.getElementById('ci-escolha'), fic=document.getElementById('ci-ficha');
+    if(esc&&fic){ esc.style.display='block'; fic.style.display='none'; }
+    const b=document.getElementById('ciBusca'); if(b) b.value='';
+    carregarPertBanco();
+    renderCiBusca();
+    setTimeout(function(){ try{ b&&b.focus(); }catch(e){} },120);
+  }
+  function carregarPertBanco(){
+    ciPertBanco=CI_PERT_DEFAULT.map(function(o){ return Object.assign({},o); });
+    if(!DB) return;
+    DB.ref('auaulandia/pertences-banco').once('value').then(function(s){
+      const v=s.val()||{};
+      Object.keys(v).forEach(function(k){ const it=v[k]||{}; if(!ciPertBanco.some(function(o){ return o.k===k; })) ciPertBanco.push({k:k,nome:it.nome||k,spec:it.spec||'Especificação'}); });
+    }).catch(function(){});
+  }
+  function renderCiBusca(){
+    const box=document.getElementById('ciResults'); if(!box) return;
+    if(typeof PELUDINHOS==='undefined'){ box.innerHTML='<div class="hint">Carregando cadastro…</div>'; return; }
+    const q=jsNorm(document.getElementById('ciBusca')?document.getElementById('ciBusca').value:'');
+    const list=PELUDINHOS.map(function(p,i){ return {p:p,i:i}; })
+      .filter(function(o){ return !q || jsNorm([pelNome(o.p),pelGet(o.p,'raca'),pelGet(o.p,'tutor')].join(' ')).indexOf(q)>=0; })
+      .sort(function(x,y){ return jsNorm(pelNome(x.p)).localeCompare(jsNorm(pelNome(y.p))); });
+    if(!list.length){ box.innerHTML='<div class="hint">'+(q?'Não encontrei esse FILHOt.':'Comece a digitar o nome.')+'</div>'; return; }
+    box.innerHTML=list.slice(0,50).map(function(o){
+      const p=o.p; const ex=pelExtra(p); const foto=ex.foto;
+      const nome=pelNome(p), raca=pelGet(p,'raca')||'—', tutor=pelGet(p,'tutor')||'tutor a confirmar';
+      const alerta=(ex.alergia||ex.restricao)?'<span class="ci-alert">ALÉRGICO</span>':'';
+      const ph=foto?'<div class="ci-ph" style="background-image:url(\''+foto+'\')"></div>'
+                   :'<div class="ci-ph" style="background:'+corPel(o.i)+'">'+((nome[0]||'?').toUpperCase())+'</div>';
+      return '<div class="ci-result" onclick="ciEscolher('+o.i+')">'+ph+
+        '<div><div class="ci-nm">'+esc(nome)+'</div><div class="ci-br">'+esc(raca)+' · '+esc(tutor)+'</div></div>'+alerta+'</div>';
+    }).join('');
+  }
+  function esc(s){ return (s||'').toString().replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+  function ciEscolher(i){
+    const p=PELUDINHOS[i]; if(!p) return;
+    ciHosp={ nome:pelNome(p), tutor:pelGet(p,'tutor')||'', raca:pelGet(p,'raca')||'', refKey:pelKey(p), ini:(pelNome(p)[0]||'?').toUpperCase(), cor:corPel(i) };
+    document.getElementById('ci-escolha').style.display='none';
+    document.getElementById('ci-ficha').style.display='block';
+    // header
+    const ex=pelExtra(p);
+    const av=document.getElementById('ciAv');
+    if(ex.foto){ av.style.backgroundImage='url(\''+ex.foto+'\')'; av.textContent=''; } else { av.style.backgroundImage='none'; av.style.background=ciHosp.cor; av.textContent=ciHosp.ini; }
+    document.getElementById('ciNome').textContent=ciHosp.nome;
+    document.getElementById('ciMeta').innerHTML=(ciHosp.raca?esc(ciHosp.raca)+' · ':'')+'Tutor: '+(esc(ciHosp.tutor)||'a confirmar');
+    document.getElementById('ciPills').innerHTML=(typeof alertPills==='function')?alertPills(ex):'';
+    // datas
+    document.getElementById('ciEntrada').value=ciHoje();
+    document.getElementById('ciSaida').value='';
+    // reset alimentação
+    setSeg('ciAlimTipo',''); setSeg('ciAlimUnid',''); setSeg('ciBanho','');
+    document.getElementById('ciAlimMarca').value=''; document.getElementById('ciAlimRefeicoes').value=''; document.getElementById('ciAlimQtd').value='';
+    // gate + assinatura + status
+    document.getElementById('ciAssinaNome').value=ciHosp.tutor||'';
+    ciRenderGate();
+    ciInitSig(); ciLimparAssinatura();
+    const st=document.getElementById('ci-status'); if(st) st.textContent='';
+    const ms=document.getElementById('ci-med-status'); if(ms) ms.textContent='';
+    // pertences (banco)
+    ciRenderPert({});
+    // medicação vazia por padrão (1 linha)
+    document.getElementById('ciMeds').innerHTML=''; ciAddMed();
+    // pré-preenchimento: agenda de medicação viva + última estadia
+    ciPreencherMedicacao();
+    ciPreencherUltimaEstadia();
+    window.scrollTo({top:0,behavior:'smooth'});
+  }
+  function ciVoltar(){ document.getElementById('ci-ficha').style.display='none'; document.getElementById('ci-escolha').style.display='block'; renderCiBusca(); }
+
+  // ---- Medicação (reaproveita medAgendaRowHTML — mesma trava à prova de erro) ----
+  function ciAddMed(item){
+    const wrap=document.getElementById('ciMeds'); if(!wrap) return;
+    const id='ci_'+Date.now()+'_'+Math.random().toString(36).slice(2,6);
+    wrap.insertAdjacentHTML('beforeend', medAgendaRowHTML(id, item||{nome:'',q:'',u:'',horarios:[''],tipo:'medicamento'}));
+  }
+  function ciColetarMeds(){
+    const out={};
+    document.querySelectorAll('#ciMeds .magitem').forEach(function(el){
+      const id=el.dataset.id;
+      const nome=(el.querySelector('[data-c=m]').value||'').trim();
+      const q=(el.querySelector('[data-c=q]').value||'').trim();
+      const ub=el.querySelector('.medunits button.on'); const u=ub?ub.textContent.trim():'';
+      const tb=el.querySelector('.mag-tipo button.on'); const tipo=(tb&&/supl/i.test(tb.textContent))?'suplemento':'medicamento';
+      const horarios=Array.prototype.map.call(el.querySelectorAll('[data-c=h]'), function(inp){ return normHora(inp.value)||''; }).filter(Boolean);
+      if(nome||q||u||horarios.length) out[id]={nome:nome,q:q,u:u,horarios:horarios,tipo:tipo};
+    });
+    return out;
+  }
+  function ciValidarMeds(itens){
+    const probs=[];
+    Object.values(itens).forEach(function(it){
+      if(!nomeMedOk(it.nome)) probs.push('escreva o NOME do medicamento ou suplemento por extenso.');
+      else if(qtdNum(it.q)==null) probs.push('"'+it.nome+'": escreva a QUANTIDADE em número (ex: 1, 0,5, 10).');
+      else if(!it.u) probs.push('"'+it.nome+'": toque na MEDIDA (comprimido, ml, gota...).');
+      else if(!it.horarios.length) probs.push('"'+it.nome+'": cadastre pelo menos 1 HORÁRIO válido (ex: 07:30).');
+    });
+    return probs;
+  }
+  function ciPreencherMedicacao(){
+    if(!DB) return; const key=ciKey(); if(!key) return;
+    DB.ref('auaulandia/medicacao-agenda/'+key+'/itens').once('value').then(function(s){
+      const itens=s.val()||{}; const ids=Object.keys(itens);
+      if(!ids.length) return;
+      const wrap=document.getElementById('ciMeds'); if(!wrap) return; wrap.innerHTML='';
+      ids.forEach(function(id){ ciAddMed(itens[id]); });
+      const ms=document.getElementById('ci-med-status'); if(ms){ ms.style.color='var(--muted)'; ms.textContent='Medicação trazida da última vez — confira com o tutor se continua igual.'; }
+    }).catch(function(){});
+  }
+
+  // ---- Pertences (banco checklist + especificação) ----
+  function ciRenderPert(saved){
+    saved=saved||{};
+    const el=document.getElementById('ciPertList'); if(!el) return;
+    el.innerHTML=ciPertBanco.map(function(o){
+      const sv=saved[o.k]||null; const on=!!sv; const spec=(sv&&sv.spec)||'';
+      return '<div class="pert-item '+(on?'on':'')+'" data-k="'+o.k+'">'+
+        '<div class="pert-top" onclick="ciTogglePert(this)"><span class="pert-box">'+(on?'&#10003;':'')+'</span>'+esc(o.nome)+'</div>'+
+        '<div class="pert-spec"><div class="hint">'+esc(o.spec)+'</div><input value="'+escAttr(spec)+'" placeholder="'+escAttr(o.spec)+'"></div>'+
+      '</div>';
+    }).join('');
+  }
+  function ciTogglePert(top){ const it=top.closest('.pert-item'); if(!it) return; const on=it.classList.toggle('on'); const box=it.querySelector('.pert-box'); if(box) box.innerHTML=on?'&#10003;':''; if(on){ const inp=it.querySelector('.pert-spec input'); if(inp) setTimeout(function(){ inp.focus(); },30); } }
+  function ciColetarPert(){
+    const out=[];
+    document.querySelectorAll('#ciPertList .pert-item.on').forEach(function(it){
+      const k=it.dataset.k; const nome=(ciPertBanco.find(function(o){ return o.k===k; })||{}).nome||k;
+      const spec=(it.querySelector('.pert-spec input')||{}).value||'';
+      out.push({k:k,nome:nome,spec:spec.trim(),etiquetado:false});
+    });
+    return out;
+  }
+  function ciAddPertItem(){
+    const inp=document.getElementById('ciPertNovo'); if(!inp) return;
+    const nome=(inp.value||'').trim(); if(!nome){ inp.focus(); return; }
+    const k=ciSlug(nome);
+    if(ciPertBanco.some(function(o){ return o.k===k; })){ alert('Esse item já está no banco de pertences.'); inp.value=''; return; }
+    const novo={k:k,nome:nome,spec:'Especificação (cor, marca, material)'};
+    ciPertBanco.push(novo);
+    if(DB) DB.ref('auaulandia/pertences-banco/'+k).set({nome:nome,spec:novo.spec,_ts:Date.now(),_quem:quemSou()}).catch(function(){});
+    // preserva o que já estava marcado e re-renderiza com o novo item
+    const atual={}; ciColetarPert().forEach(function(p){ atual[p.k]={spec:p.spec}; });
+    ciRenderPert(atual);
+    inp.value='';
+    // marca o novo item já aberto para especificar
+    const it=document.querySelector('#ciPertList .pert-item[data-k="'+k+'"]'); if(it){ it.classList.add('on'); const box=it.querySelector('.pert-box'); if(box) box.innerHTML='&#10003;'; const i2=it.querySelector('.pert-spec input'); if(i2) i2.focus(); }
+  }
+
+  // ---- Última estadia → pré-preenche alimentação + pertences ----
+  function ciPreencherUltimaEstadia(){
+    if(!DB) return; const key=ciKey(); if(!key) return;
+    DB.ref('auaulandia/estadias').orderByChild('refKey').equalTo(key).limitToLast(1).once('value').then(function(s){
+      const v=s.val()||{}; const ids=Object.keys(v); if(!ids.length) return;
+      const e=v[ids[ids.length-1]]||{}; const f=e.ficha||{};
+      if(f.alim){ setSeg('ciAlimTipo',f.alim.tipo||''); setSeg('ciAlimUnid',f.alim.unidade||''); setSeg('ciBanho',f.banho||'');
+        if(f.alim.marca) document.getElementById('ciAlimMarca').value=f.alim.marca;
+        if(f.alim.refeicoes) document.getElementById('ciAlimRefeicoes').value=f.alim.refeicoes;
+        if(f.alim.qtd) document.getElementById('ciAlimQtd').value=f.alim.qtd; }
+      if(Array.isArray(e.pertences)&&e.pertences.length){ const saved={}; e.pertences.forEach(function(p){ if(p&&p.k) saved[p.k]={spec:p.spec||''}; }); ciRenderPert(saved); }
+      const st=document.getElementById('ci-status'); if(st){ st.style.color='var(--muted)'; st.textContent='Ficha pré-preenchida da última estadia — confira e ajuste.'; }
+    }).catch(function(){ /* sem índice/sem estadia anterior — tudo bem */ });
+  }
+
+  // ---- GATE de segurança ----
+  function ciRenderGate(){
+    const el=document.getElementById('ciGate'); if(!el) return;
+    el.innerHTML='<div class="gtit">Antes de salvar — conferência de segurança</div>'+
+      '<div class="hint">Leia em voz alta para o tutor cada medicamento, suplemento, a dosagem e os horários. Só marque depois de confirmar com ele. Isso evita o erro de medicar errado durante a estadia.</div>'+
+      '<label class="todo-item" style="cursor:pointer;margin-top:8px"><input type="checkbox" id="ciGateChk" style="width:20px;height:20px;flex:0 0 auto"><span>Conferi com o tutor os medicamentos, suplementos, dosagens e horários.</span></label>';
+  }
+
+  // ---- Assinatura (canvas, dedo no tablet) ----
+  function ciInitSig(){
+    const c=document.getElementById('ciSig'); if(!c) return;
+    // ajusta resolução ao tamanho real na tela (nitidez)
+    const w=c.offsetWidth||600; c.width=w; c.height=190;
+    ciSigCtx=c.getContext('2d'); ciSigCtx.lineWidth=2.5; ciSigCtx.lineCap='round'; ciSigCtx.lineJoin='round'; ciSigCtx.strokeStyle='#234D67';
+    if(ciSigReady) return; ciSigReady=true;
+    function pos(ev){ const r=c.getBoundingClientRect(); const t=ev.touches&&ev.touches[0]; const x=(t?t.clientX:ev.clientX)-r.left; const y=(t?t.clientY:ev.clientY)-r.top; return {x:x,y:y}; }
+    function start(ev){ ev.preventDefault(); ciSigDrawing=true; const p=pos(ev); ciSigCtx.beginPath(); ciSigCtx.moveTo(p.x,p.y); }
+    function move(ev){ if(!ciSigDrawing) return; ev.preventDefault(); const p=pos(ev); ciSigCtx.lineTo(p.x,p.y); ciSigCtx.stroke(); ciSigHasInk=true; const h=document.getElementById('ciSigHint'); if(h) h.style.display='none'; }
+    function end(){ ciSigDrawing=false; }
+    c.addEventListener('mousedown',start); c.addEventListener('mousemove',move); window.addEventListener('mouseup',end);
+    c.addEventListener('touchstart',start,{passive:false}); c.addEventListener('touchmove',move,{passive:false}); c.addEventListener('touchend',end);
+  }
+  function ciLimparAssinatura(){ const c=document.getElementById('ciSig'); if(c&&ciSigCtx) ciSigCtx.clearRect(0,0,c.width,c.height); ciSigHasInk=false; const h=document.getElementById('ciSigHint'); if(h) h.style.display='block'; }
+  function ciAssinaturaDataURL(){ const c=document.getElementById('ciSig'); return (c&&ciSigHasInk)?c.toDataURL('image/png'):''; }
+
+  // ---- Coleta da ficha inteira ----
+  function ciColetarFicha(){
+    return {
+      entrada:document.getElementById('ciEntrada').value||'',
+      saida:document.getElementById('ciSaida').value||'',
+      ficha:{
+        alim:{ tipo:segVal('ciAlimTipo'), marca:(document.getElementById('ciAlimMarca').value||'').trim(),
+               refeicoes:(document.getElementById('ciAlimRefeicoes').value||'').trim(),
+               qtd:(document.getElementById('ciAlimQtd').value||'').trim(), unidade:segVal('ciAlimUnid') },
+        banho:segVal('ciBanho')
+      },
+      pertences:ciColetarPert()
+    };
+  }
+  function ciMedsToLista(itens){ return Object.values(itens).map(function(it){ return { nome:it.nome, tipo:it.tipo, q:it.q, u:it.u, horarios:it.horarios }; }); }
+
+  // ---- Salvar no sistema ----
+  function ciSalvar(){
+    const st=document.getElementById('ci-status'); if(!ciHosp){ return; }
+    const dados=ciColetarFicha();
+    if(!dados.entrada){ if(st){ st.style.color='var(--crm-critico)'; st.textContent='✋ Informe a data de ENTRADA da estadia.'; } document.getElementById('ciEntrada').focus(); return; }
+    const meds=ciColetarMeds();
+    const probs=ciValidarMeds(meds);
+    if(probs.length){ if(st){ st.style.color='var(--crm-critico)'; st.textContent='✋ '+probs[0]; } return; }
+    const temMed=Object.keys(meds).length>0;
+    if(temMed){ const chk=document.getElementById('ciGateChk'); if(!chk||!chk.checked){ if(st){ st.style.color='var(--crm-critico)'; st.textContent='✋ Conferiu os dados com o tutor? Marque a conferência de segurança antes de salvar.'; } const g=document.getElementById('ciGate'); if(g) g.scrollIntoView({behavior:'smooth',block:'center'}); return; } }
+    const assina=(document.getElementById('ciAssinaNome').value||'').trim();
+    if(!assina){ if(st){ st.style.color='var(--crm-critico)'; st.textContent='✋ Escreva o nome de quem assinou (o tutor).'; } document.getElementById('ciAssinaNome').focus(); return; }
+    if(!DB){ if(st){ st.style.color='var(--crm-atencao-text)'; st.textContent='Banco conectando… tente de novo em alguns segundos.'; } return; }
+    const key=ciKey();
+    const estadia={
+      refKey:ciHosp.refKey||'', nome:ciHosp.nome||'', tutor:ciHosp.tutor||'', raca:ciHosp.raca||'',
+      entrada:dados.entrada, saida:dados.saida, status:'ativa',
+      ficha:dados.ficha, pertences:dados.pertences,
+      medicacao:ciMedsToLista(meds),
+      gate_conferido:temMed, assinatura:ciAssinaturaDataURL(), assinado_por:assina,
+      criado_por:quemSou(), _ts:Date.now()
+    };
+    if(st){ st.style.color='var(--muted)'; st.textContent='Salvando estadia…'; }
+    const ref=DB.ref('auaulandia/estadias').push();
+    const ops=[ ref.set(estadia) ];
+    // Liga a medicação à espinha (mesmo nó do despertador) para já disparar os alarmes.
+    if(temMed) ops.push(DB.ref('auaulandia/medicacao-agenda/'+key).set({ itens:meds, nome:ciHosp.nome||'', tutor:ciHosp.tutor||'', estadiaId:ref.key, _ts:Date.now(), _quem:quemSou() }));
+    Promise.all(ops).then(function(){
+      if(st){ st.style.color='var(--crm-ok)'; st.textContent='✅ Check-in salvo na pasta da estadia de '+ciHosp.nome+'.'; }
+      if(typeof audit==='function') audit('checkin','estadia criada',{pet:ciHosp.nome||'',entrada:dados.entrada,meds:Object.keys(meds).length});
+      if(typeof carregarAgendaMedTodos==='function') carregarAgendaMedTodos();
+    }).catch(function(e){ if(st){ st.style.color='var(--crm-critico)'; st.textContent='⚠️ Erro ao salvar: '+(e&&e.message||e); } });
+  }
+
+  // ---- Resumo em texto (WhatsApp / e-mail) ----
+  function ciBRdata(iso){ if(!iso) return '—'; const p=iso.split('-'); return p.length===3?(p[2]+'/'+p[1]+'/'+p[0]):iso; }
+  function ciResumoTexto(){
+    const d=ciColetarFicha(); const meds=ciColetarMeds();
+    const L=[];
+    L.push('Zêluz AuAulândia — Check-in');
+    L.push(ciHosp.nome+(ciHosp.tutor?(' · Tutor: '+ciHosp.tutor):''));
+    L.push('Estadia: '+ciBRdata(d.entrada)+(d.saida?(' até '+ciBRdata(d.saida)):''));
+    const a=d.ficha.alim;
+    if(a.tipo||a.marca||a.qtd){ L.push(''); L.push('Alimentação: '+[a.tipo,a.marca,(a.qtd?(a.qtd+' '+(a.unidade||'')):''),(a.refeicoes?(a.refeicoes+'x/dia'):'')].filter(Boolean).join(' · ')); }
+    if(d.ficha.banho) L.push('Banho na saída: '+d.ficha.banho);
+    const mv=Object.values(meds);
+    if(mv.length){ L.push(''); L.push('*MEDICAÇÃO / SUPLEMENTOS — HORÁRIOS*'); mv.forEach(function(it){ L.push('- '+it.nome+' — '+it.q+' '+it.u+' — '+ (it.horarios||[]).join(', ')); }); }
+    if(d.pertences.length){ L.push(''); L.push('Pertences: '+d.pertences.map(function(p){ return p.nome+(p.spec?(' ('+p.spec+')'):''); }).join('; ')); }
+    const assina=(document.getElementById('ciAssinaNome').value||'').trim();
+    if(assina){ L.push(''); L.push('Conferido e assinado por: '+assina); }
+    return L.join('\n');
+  }
+  function ciEnviarWhatsApp(){ if(!ciHosp) return; const txt=ciResumoTexto(); window.open('https://wa.me/?text='+encodeURIComponent(txt),'_blank'); }
+  function ciEnviarEmail(){ if(!ciHosp) return; const txt=ciResumoTexto(); const assunto='Check-in AuAulândia — '+ciHosp.nome; location.href='mailto:?subject='+encodeURIComponent(assunto)+'&body='+encodeURIComponent(txt); }
+
+  // ---- PDF via window.print (offline, sem lib) ----
+  function ciGerarPDF(){
+    if(!ciHosp) return;
+    const d=ciColetarFicha(); const meds=ciColetarMeds(); const mv=Object.values(meds);
+    const assina=(document.getElementById('ciAssinaNome').value||'').trim();
+    const sig=ciAssinaturaDataURL();
+    const a=d.ficha.alim;
+    let h='<div class="pf-h1">Zêluz · AuAulândia — Ficha de Check-in</div>';
+    h+='<div class="pf-sub">'+esc(ciHosp.nome)+(ciHosp.raca?(' · '+esc(ciHosp.raca)):'')+(ciHosp.tutor?(' · Tutor: '+esc(ciHosp.tutor)):'')+'</div>';
+    h+='<div class="pf-sec"><h3>Estadia</h3><div class="pf-row">Entrada: <strong>'+ciBRdata(d.entrada)+'</strong>'+(d.saida?('  ·  Saída prevista: <strong>'+ciBRdata(d.saida)+'</strong>'):'')+'</div></div>';
+    if(a.tipo||a.marca||a.qtd){ h+='<div class="pf-sec"><h3>Alimentação</h3><div class="pf-row">'+esc([a.tipo,a.marca,(a.qtd?(a.qtd+' '+(a.unidade||'')):''),(a.refeicoes?(a.refeicoes+'x/dia'):'')].filter(Boolean).join(' · '))+'</div>'+(d.ficha.banho?('<div class="pf-row">Banho na saída: '+esc(d.ficha.banho)+'</div>'):'')+'</div>'; }
+    if(mv.length){ h+='<div class="pf-med"><h3>⚠ MEDICAÇÃO / SUPLEMENTOS — HORÁRIOS</h3>'; mv.forEach(function(it){ h+='<div class="pf-mrow">'+esc(it.nome)+' — '+esc(it.q+' '+it.u)+' — '+esc((it.horarios||[]).join(', '))+'</div>'; }); h+='</div>'; }
+    if(d.pertences.length){ h+='<div class="pf-sec"><h3>Pertences</h3>'+d.pertences.map(function(p){ return '<div class="pf-row">• '+esc(p.nome)+(p.spec?(' — '+esc(p.spec)):'')+'</div>'; }).join('')+'</div>'; }
+    h+='<div class="pf-sec"><h3>Assinatura do tutor</h3>'+(sig?('<img class="pf-sig-img" src="'+sig+'">'):'<div class="pf-row">(sem assinatura)</div>')+'<div class="pf-row" style="margin-top:6px">'+esc(assina||'—')+'</div></div>';
+    const pr=document.getElementById('ci-print'); if(pr) pr.innerHTML=h;
+    setTimeout(function(){ window.print(); },60);
+  }
 
   // INIT do Day Care (no fim: garante todas as variaveis e funcoes definidas)
   montarSubnav();
