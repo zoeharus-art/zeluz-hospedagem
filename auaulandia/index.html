@@ -4499,9 +4499,12 @@
     var consulta={data:data,temperatura:temp,peso:peso,cuidados:cuidados,recomendacoes:recom,obs:obs,reavaliacao:(reaval||''),reavaliacaoMotivo:reavalMotivo,fotos:vcFotosBuf.slice(),por:quem,ts:Date.now()};
     if(st){ st.style.color='var(--muted)'; st.textContent='Salvando consulta…'; }
     var ops=[ DB.ref('auaulandia/vet-consultas/'+key+'/'+consultaId).set(consulta) ];
-    // recomendações + cuidados viram instruções ativas na ficha do peludinho
+    // recomendações + cuidados viram instruções ativas na ficha do peludinho.
+    // ANTI-HULK: só grava quando HÁ recomendação/cuidado nesta consulta. Consulta sem recomendação
+    // PRESERVA a instrução ativa que já existia (ex.: "usar elizabetano") — nunca desativa em silêncio.
+    // Para retirar uma instrução, a Vet usa "Remover recomendação".
     var temInstr=!!(recom||cuidados.length);
-    ops.push(DB.ref('auaulandia/vet-recomendacoes/'+key).set({texto:recom,cuidados:cuidados,por:quem,ts:Date.now(),consultaId:consultaId,ativo:temInstr}));
+    if(temInstr) ops.push(DB.ref('auaulandia/vet-recomendacoes/'+key).set({texto:recom,cuidados:cuidados,por:quem,ts:Date.now(),consultaId:consultaId,ativo:true}));
     // reavaliação (avisa no dia). ANTI-HULK: só grava quando há data válida. Campo em branco PRESERVA a
     // reavaliação existente — nunca apaga automaticamente. Para remover, a Vet usa "Remover reavaliação".
     if(reaval&&/^\d{4}-\d{2}-\d{2}$/.test(reaval)) ops.push(DB.ref('auaulandia/vet-reavaliacao/'+key).set({data:reaval,motivo:reavalMotivo,por:quem,ts:Date.now()}));
