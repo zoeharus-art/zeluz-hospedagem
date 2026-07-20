@@ -310,10 +310,11 @@
   body[data-role="plantonista"] .so-gestao,
   body[data-role="aprendiz"] .so-gestao,
   body[data-role="tutor"]   .so-gestao{display:none !important}
-  /* .so-master = SÓ a Gestora (Márcia). Supervisão (Amanda) e equipe não veem. */
-  body:not([data-role="gestao"]) .so-master{display:none !important}
+  /* .so-master = SÓ a Gestora (Márcia) e a Diretoria (Adriana). Supervisão (Amanda) e equipe não veem. */
+  body:not([data-role="gestao"]):not([data-role="diretoria"]) .so-master{display:none !important}
   /* mensagem para quem entra em Pessoas mas não é a Gestora (ex: Amanda) */
-  body[data-role="gestao"] .so-supervisor-only{display:none !important}
+  body[data-role="gestao"] .so-supervisor-only,
+  body[data-role="diretoria"] .so-supervisor-only{display:none !important}
   /* abas internas de Pessoas (handler próprio, não colide com a Ficha) */
   .ppanel{display:none}.ppanel.active{display:block}
   /* Passagem de plantão — aguardando recebimento (pisca em vermelho até quem recebe ler e assinar) */
@@ -449,6 +450,9 @@
   .desp-tx{font-size:15px;font-weight:700;line-height:1.4}
   .desp-tx span{display:block;font-size:12.5px;font-weight:600;opacity:.85}
   @keyframes despPisca{0%,100%{background:var(--z-gold)}50%{background:#f0cc55}}
+  /* despertador da medicação — mesmo padrão do banho, mas vermelho (crítico) e por cima dele */
+  .desp-med{z-index:95;background:var(--crm-critico);color:#fff;animation:despPiscaMed 1.1s ease-in-out infinite}
+  @keyframes despPiscaMed{0%,100%{background:var(--crm-critico)}50%{background:#d9584a}}
   /* legenda da ordem de servir — a lista não é alfabética, é por ordem de servir */
   .alm-legenda{background:var(--z-cream-warm);border:1.5px solid var(--line);border-radius:11px;padding:10px 14px;font-size:12.5px;color:var(--z-blue);margin-bottom:10px;line-height:1.7}
   .alm-legenda .lg-g{display:inline-block;background:var(--z-cream);border:1px solid var(--line);border-radius:999px;padding:2px 10px;margin:0 4px;font-weight:600}
@@ -651,6 +655,27 @@
     .medunits button{min-height:40px;padding:8px 13px;font-size:13.5px}
   }
 
+  /* ===== Agenda de Medicação — horários fixos + registro na hora (independente do relatório) ===== */
+  .magitem{border:1px solid var(--line);border-radius:11px;padding:12px;margin-bottom:12px;background:var(--z-white)}
+  .mag-horarios{margin-top:8px}
+  .mag-horarios-list{display:inline-flex;flex-wrap:wrap;gap:6px;margin:0 8px 6px}
+  .magHorario{display:inline-flex;align-items:center;gap:2px;background:var(--z-cream);border:1.5px solid var(--line);border-radius:999px;padding:4px 4px 4px 10px}
+  .magHorario input{border:none;background:transparent;width:58px;font-family:var(--font-ui);font-size:13.5px;color:#234D67;text-align:center}
+  .magHorario input:focus{outline:none}
+  .mag-rm-h{border:none;background:none;color:var(--crm-critico);font-weight:800;font-size:16px;cursor:pointer;padding:2px 6px;line-height:1}
+  .mag-dose{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;padding:10px 12px;border:1.5px solid var(--crm-critico);background:rgba(192,57,43,.06);border-radius:11px;margin-bottom:8px}
+  .mag-dose.feito{border-color:var(--crm-ok);background:rgba(46,157,109,.07)}
+  .mag-dose-info{font-size:13.5px;font-weight:600;color:#234D67}
+  .mag-dose-ok{font-size:12.5px;font-weight:700;color:var(--crm-ok)}
+  /* Camada 4 — placar do dia (histórico por medicamento, dentro da ficha) */
+  .mag-placar{margin-bottom:10px}
+  .mag-placar-linha{font-size:13px;font-weight:600;color:#234D67;padding:7px 0;border-bottom:1px dashed var(--line)}
+  .mag-placar-linha:last-child{border-bottom:none}
+  .mag-placar-linha.atraso{color:var(--crm-critico);font-weight:800}
+  /* botão de cancelar hóspede/pernoite do dia — canto do card, só Gestão/Supervisão/Diretoria */
+  .pet-x{position:absolute;top:-8px;right:-8px;width:27px;height:27px;border-radius:50%;border:2px solid #fff;background:var(--crm-critico);color:#fff;font-size:16px;font-weight:800;line-height:1;cursor:pointer;z-index:4;display:grid;place-items:center;box-shadow:0 2px 6px rgba(0,0,0,.25)}
+  .pet-x:hover{background:#a53125}
+
   /* ===== Diária Avulsa — tela grande de busca (à prova de baixa leitura) ===== */
   #avulsaModal{display:none;position:fixed;inset:0;z-index:70;background:rgba(26,58,79,.55)}
   #avulsaModal.show{display:block}
@@ -673,6 +698,18 @@
   .av-empty{grid-column:1/-1;text-align:center;padding:46px 18px;color:var(--muted);font-size:14px;font-weight:600;line-height:1.5}
   .av-empty .big{font-size:19px;font-weight:800;color:var(--z-blue);margin-bottom:8px}
   @media(max-width:480px){ .av-results{grid-template-columns:1fr 1fr} .av-head .av-t{font-size:19px} }
+
+  /* ===== Hospedagem — busca no cadastro-mestre ao adicionar hóspede/pernoite (reusa o "esqueleto" .av-* da Diária Avulsa, só troca a cor do topo para o tom da AuAulândia) ===== */
+  #hospBuscaModal{display:none;position:fixed;inset:0;z-index:70;background:rgba(26,58,79,.55)}
+  #hospBuscaModal.show{display:block}
+  .hb-head{background:linear-gradient(135deg,var(--z-auaulandia),var(--z-blue));color:#fff;padding:16px 18px;display:flex;align-items:center;gap:14px;flex-shrink:0}
+  .hb-alertbadge{display:block;margin:0 0 6px;font-size:9.5px;font-weight:800;letter-spacing:.3px;color:#fff;background:var(--crm-critico);padding:2px 7px;border-radius:7px}
+  .hb-novo{grid-column:1/-1;border-top:2px dashed var(--line);margin-top:10px;padding-top:16px}
+  .hb-novo-tit{font-size:13px;font-weight:700;color:var(--z-blue);margin-bottom:8px}
+  .hb-novo-in{width:100%;padding:12px 14px;font-size:14px;border:1.5px solid var(--line);border-radius:10px;font-family:var(--font-ui);color:var(--z-blue);margin-bottom:8px}
+  .hb-novo-warn{font-size:12px;font-weight:700;color:var(--crm-critico);min-height:16px}
+  /* selo de medicação sobre a foto do hóspede — irmão do .mini-alert (alergia/restrição) já usado no Day Care */
+  .pet .mini-med{position:absolute;top:9px;right:9px;font-size:10px;font-weight:800;color:var(--crm-atencao-text);background:var(--z-gold);padding:3px 8px;border-radius:8px;z-index:2}
 
   /* ===== Novo AULUNO — telinha de 2 campos antes da ficha completa ===== */
   #novoAlunoModal{display:none;position:fixed;inset:0;z-index:75;background:rgba(26,58,79,.55);padding:20px;overflow-y:auto}
@@ -773,6 +810,21 @@
   </div>
 </div>
 
+<!-- ============ HOSPEDAGEM — busca no cadastro-mestre (evita duplicar peludinho) ============ -->
+<div id="hospBuscaModal" onclick="if(event.target===this)fecharHospBuscaModal()">
+  <div class="av-sheet">
+    <div class="hb-head">
+      <button class="av-close" onclick="fecharHospBuscaModal()" aria-label="Fechar">✕</button>
+      <div class="av-t" id="hbTitulo">Adicionar Pernoite<br><span style="font-size:14px;font-weight:600;opacity:.92">Aluno do Day Care que ficou hospedado. Toque no FILHOt.</span></div>
+    </div>
+    <div class="av-searchwrap">
+      <input class="av-search" id="hbBusca" placeholder="Nome do FILHOt, tutor ou raça…" autocomplete="off" oninput="renderHospBuscaResults()">
+      <div class="av-hint">Busca no mesmo cadastro-mestre do Day Care — nome, tutor e raça já vêm de lá. Não achou? Cadastre no fim da lista.</div>
+    </div>
+    <div class="av-results" id="hbResults"></div>
+  </div>
+</div>
+
 <!-- ============ NOVO AULUNO — 2 campos → ficha completa ============ -->
 <div id="novoAlunoModal" onclick="if(event.target===this)fecharNovoAluno()">
   <div class="na-card">
@@ -811,6 +863,7 @@
 
   <!-- ===== INÍCIO ===== -->
   <div id="despBanho" class="desp-banho" style="display:none"></div>
+  <div id="despMed" class="desp-banho desp-med" style="display:none"></div>
   <section class="view active" id="v-inicio">
     <div class="kpis">
       <div class="kpi"><img class="kpi-st" src="assets/stickers/pata.png" alt=""><div><div class="v" id="kpiTotal">—</div><div class="l">Peludinhos hoje</div></div></div>
@@ -907,6 +960,7 @@
   <section class="view" id="v-hospedagem">
     <!-- LISTA de peludinhos em hospedagem -->
     <div id="hosp-lista">
+      <div id="painelMedAtrasada" class="so-gestao"></div>
       <div id="painelGestora" class="so-gestao"></div>
       <div class="kpis">
         <div class="kpi"><img class="kpi-st" src="assets/stickers/coracao.png" alt=""><div><div class="v" id="kpiHosp">0</div><div class="l">Hóspedes hoje</div></div></div>
@@ -955,6 +1009,7 @@
           <div class="hf-chipline" id="hf-chipline">Microchip: --</div>
           <div class="hf-meta" id="hf-meta"></div>
           <div class="hf-estadia" id="hf-estadia"></div>
+          <div id="hf-pills"></div>
           <div class="so-gestao" style="margin-top:10px">
             <button class="btn-foto-mini" style="background:var(--z-gold);color:var(--z-blue)" onclick="toggleCadastro()">✏️ Editar cadastro</button>
           </div>
@@ -985,6 +1040,41 @@
         <div class="actions" style="margin-top:8px"><button class="btn btn-primary" onclick="onCad();this.textContent='✅ Cadastro salvo';setTimeout(()=>this.textContent='Salvar cadastro',1500)">Salvar cadastro</button><button class="btn" style="background:var(--z-cream-warm);color:var(--z-blue);border:1.5px solid var(--line)" onclick="toggleCadastro()">Fechar</button></div>
       </div>
       <datalist id="racasList"></datalist>
+
+      <div class="card" id="card-medagenda">
+        <h2 style="font-size:19px">💊 Agenda de Medicação</h2>
+        <div class="hint">Cadastre o medicamento e os horários fixos (ex.: colírio às 10:30, 16:30, 22:30 e 04:30). Salva sozinho — não precisa abrir o relatório do plantão nem assinar.</div>
+        <div id="magItens"></div>
+        <button type="button" class="med-add" onclick="magAddNovoItem()">+ Acrescentar medicamento</button>
+        <div class="actions" style="margin-top:12px"><button class="btn btn-primary" onclick="salvarMedAgenda()">Salvar agenda de medicação</button></div>
+        <div id="mag-status" class="rel-status"></div>
+
+        <h3 class="cad-sub" style="margin-top:18px">Horários de hoje</h3>
+        <div class="hint">Toque em "Dei agora" na hora certa — a plantonista de qualquer aparelho vê que já foi dado.</div>
+        <div id="magHoje"></div>
+
+        <h3 class="cad-sub" style="margin-top:18px">Registrar dose avulsa (deu agora, sem estar agendada)</h3>
+        <div class="medgrid" style="margin-bottom:0">
+          <div class="medrow">
+            <label class="mfield"><span class="mf-lab">Medicamento</span><input id="magAvNome" placeholder="Nome do medicamento" autocomplete="off"></label>
+            <label class="mfield"><span class="mf-lab">Horário</span><input id="magAvHora" inputmode="numeric" placeholder="12:30" autocomplete="off" onblur="normalizarHoraMed(this)"></label>
+            <label class="mfield"><span class="mf-lab">Quantidade</span><input id="magAvQtd" inputmode="decimal" placeholder="1" autocomplete="off"></label>
+          </div>
+          <div class="medunits" id="magAvUnidades">
+            <span class="mu-lab">Medida</span>
+            <button type="button" onclick="pickUnit(this)">comprimido</button>
+            <button type="button" onclick="pickUnit(this)">cápsula</button>
+            <button type="button" onclick="pickUnit(this)">ml</button>
+            <button type="button" onclick="pickUnit(this)">gota</button>
+            <button type="button" onclick="pickUnit(this)">sachê</button>
+            <button type="button" onclick="pickUnit(this)">colher</button>
+            <button type="button" onclick="pickUnit(this)">aplicação</button>
+            <button type="button" onclick="pickUnit(this)">unidade</button>
+          </div>
+        </div>
+        <div class="actions" style="margin-top:12px"><button class="btn btn-gold" onclick="registrarDoseAvulsa()">Registrar dose dada agora</button></div>
+        <div id="mag-avulsa-status" class="rel-status"></div>
+      </div>
 
       <div class="checklist-note">📋 O Check-list de hospedagem é o seu material de trabalho principal. <strong>LEIA-O!</strong><br><span style="font-size:14px;font-weight:800;color:var(--crm-critico)">DÚVIDAS? LIGUE: 31 99764-4296 / 31 99111-1826</span></div>
 
@@ -1199,7 +1289,7 @@
       DB.ref('auaulandia/cadastro').on('value', s=>{ cadCache=s.val()||{}; if(typeof renderHosp==='function') renderHosp(); });
       DB.ref('daycare/config/sensiveis').on('value', s=>{ const v=s.val(); if(Array.isArray(v)){ try{ SENS=new Set(v); }catch(e){} } });
       DB.ref('daycare/config/atividades').on('value', s=>{ const v=s.val(); if(Array.isArray(v)&&v.length){ ATIVIDADES=v; if(typeof renderAtiv==='function') renderAtiv(); } });
-      DB.ref('daycare/cadastro').on('value', s=>{ pelCadCache=s.val()||{}; if(typeof mergeNovosAlunos==='function') mergeNovosAlunos(); if(typeof renderPel==='function') renderPel(); if(typeof renderDaycare==='function') renderDaycare(); if(typeof renderKPIs==='function') renderKPIs(); });
+      DB.ref('daycare/cadastro').on('value', s=>{ pelCadCache=s.val()||{}; if(typeof mergeNovosAlunos==='function') mergeNovosAlunos(); if(typeof aplicarExclusoes==='function') aplicarExclusoes(); if(typeof renderPel==='function') renderPel(); if(typeof renderDaycare==='function') renderDaycare(); if(typeof renderKPIs==='function') renderKPIs(); });
       // cadastro de almoço editável (sobrepõe a semente) — reflete na grade em tempo real
       // quem já desceu para o banho — um monitor dá baixa e o aviso some em todos os aparelhos
       DB.ref('daycare/banho-aviso/'+dcDataKey()).on('value', s=>{ despBaixa=s.val()||{};
@@ -1412,6 +1502,39 @@
       el('kpiAdapt').textContent=nAdapt;
     }catch(e){ /* nunca derrubar a tela por causa de um contador */ }
   }
+  // ---- Cadastro-mestre ligado ao hóspede (refKey = pelKey do peludinho escolhido na busca) ----
+  // Tutor e alergia/medicação SEMPRE vêm daqui quando existe refKey — nunca mais digitados 2x.
+  // Tudo em try/catch: PELUDINHOS e pelCadCache só existem depois que o script inteiro carrega
+  // (são declarados mais abaixo no arquivo) e renderHosp() já roda uma vez antes disso — sem o
+  // try/catch essas 2 funções derrubariam a tela inteira na 1ª renderização.
+  function extraDoHosp(h){
+    if(!h||!h.refKey) return {};
+    try{
+      let local={}; try{ local=JSON.parse(localStorage.getItem('zeluz_pel_'+h.refKey)||'{}'); }catch(e){}
+      const remote=(typeof pelCadCache!=='undefined'&&pelCadCache[h.refKey])||{};
+      return Object.assign({},local,remote);
+    }catch(e){ return {}; }
+  }
+  // Bug histórico: adicionarPernoite/adicionarHospede pediam nome+tutor por prompt() cru, sem
+  // ligação com o cadastro-mestre — em alguns registros antigos de auaulandia/manuais a RAÇA
+  // acabou digitada no prompt do tutor por engano, e a tela mostrava a raça no lugar do tutor.
+  // Agora: 1º tenta o cadastro-mestre pelo refKey (sempre correto, não depende de digitação);
+  // 2º o cadastro próprio da AuAulândia (ficha editada); 3º o campo bruto — mas só se ele NÃO
+  // bater com o nome de uma raça conhecida (senão é o bug antigo, melhor mostrar vazio que errado).
+  function tutorDe(h){
+    if(!h) return '';
+    if(h.mascote) return 'Nossa Zelozinha';
+    try{
+      if(h.refKey){
+        if(typeof pelCadCache!=='undefined'&&pelCadCache[h.refKey]&&pelCadCache[h.refKey].tutor) return pelCadCache[h.refKey].tutor;
+        if(typeof PELUDINHOS!=='undefined'){ const pel=PELUDINHOS.find(p=>pelKey(p)===h.refKey); if(pel) return pelGet(pel,'tutor')||''; }
+      }
+    }catch(e){}
+    const cad=getCad(h); if(cad&&cad.tutor) return cad.tutor;
+    const raw=(h.tutor||'').trim();
+    try{ if(raw && typeof RACAS!=='undefined' && RACAS.some(r=>r.toLowerCase()===raw.toLowerCase())) return ''; }catch(e){}
+    return raw;
+  }
   function renderHosp(){
     // ordem alfabética (a moradora Repolho por último)
     hospedes.sort((a,b)=>{ if(!!a.mascote!==!!b.mascote) return a.mascote?1:-1; return (a.nome||'').localeCompare((b.nome||''),'pt',{sensitivity:'base'}); });
@@ -1430,11 +1553,21 @@
         const raca = cad.raca || h.raca || racasMap[(h.nome+'__'+h.tutor).toLowerCase()] || (h.mascote?'Moradora Zêluz':'<span style="color:#b6ad9c;font-style:italic">Raça a cadastrar</span>');
         const tp = h.mascote ? 'moradora' : (h.hospede ? 'hospede' : (h.pernoite ? 'pernoite' : 'hospede'));
         const tj = {hospede:['t-hospede','HÓSPEDE'], pernoite:['t-pernoite','PERNOITE'], moradora:['t-moradora','MORADORA']}[tp];
+        const tutor = tutorDe(h);
+        // SEGURANÇA — tarja vermelha sobre a foto quando há alergia/restrição (a mesma lógica
+        // do Day Care, .mini-alert). Não é decoração: é o que impede a gambiarra de escrever
+        // "RESTRIÇÃO A TUDO" dentro do NOME do FILHOt (ver Ragnar/Luke no cadastro-mestre).
+        const ex = extraDoHosp(h);
+        const alertaFoto = (ex.alergia||ex.restricao) ? `<span class="mini-alert">${ex.alergia&&ex.restricao?'ALÉRGICO/RESTRIÇÃO':(ex.alergia?'ALÉRGICO':'RESTRIÇÃO')}</span>` : '';
+        const medFoto = ex.medicacao ? '<span class="mini-med">MEDICAÇÃO</span>' : '';
+        // Cancelar lançamento do dia — só quem foi adicionado manualmente hoje (tem manualKey) tem
+        // como cancelar; quem vem da planilha não tem essa opção aqui. Só Gestão/Supervisão/Diretoria.
+        const cancelBtn = h.manualKey ? `<button type="button" class="pet-x so-gestao" title="Cancelar hóspede/pernoite de hoje" onclick="event.stopPropagation();cancelarHospedeManual(${i})">×</button>` : '';
         return `<div class="pet" onclick="abrirPlantao(${i})">
-          ${ph}
+          ${cancelBtn}${alertaFoto}${medFoto}${ph}
           <div class="nm">${cad.nome||h.nome}</div>
           <div class="br">${raca}</div>
-          <div class="hosp-tutor">${h.mascote?'Nossa Zelozinha':'Tutor: '+h.tutor}</div>
+          <div class="hosp-tutor">${h.mascote?'Nossa Zelozinha':(tutor?'Tutor: '+tutor:'Tutor a confirmar')}</div>
           <div class="tarja ${tj[0]}">${tj[1]}</div>
           ${h.saidaHoje?'<div class="saida-hoje">Dormiu · sai hoje</div>':''}
         </div>`;
@@ -1453,8 +1586,11 @@
     document.getElementById('hf-nome').textContent=(getCad(h)&&getCad(h).nome)||h.nome;
     const raca=info.raca||h.raca||racasMap[(h.nome+'__'+h.tutor).toLowerCase()]||'';
     const _tp=h.mascote?'Moradora':(h.hospede?'Hóspede':(h.pernoite?'Pernoite':'Hóspede'));
-    document.getElementById('hf-meta').innerHTML=`${raca?raca+' · ':''}<strong>${_tp}</strong> · ${h.mascote?'Nossa Zelozinha':'Tutor: '+h.tutor}`;
+    const _tutor=tutorDe(h);
+    document.getElementById('hf-meta').innerHTML=`${raca?raca+' · ':''}<strong>${_tp}</strong> · ${h.mascote?'Nossa Zelozinha':(_tutor?'Tutor: '+_tutor:'Tutor a confirmar')}`;
     document.getElementById('hf-estadia').innerHTML=`Na AuAulândia · <strong>estadia a confirmar na ficha</strong>`;
+    // alergia/medicação em destaque no topo da ficha — mesma trava de segurança do Day Care (alertPills)
+    const _pillsEl=document.getElementById('hf-pills'); if(_pillsEl) _pillsEl.innerHTML=(typeof alertPills==='function')?alertPills(extraDoHosp(h)):'';
     document.getElementById('hfRaca').value=raca;
     document.getElementById('hosp-lista').style.display='none';
     document.getElementById('hosp-ficha').style.display='block';
@@ -1491,7 +1627,8 @@
   function onRaca(v){
     if(!currentHosp) return;
     setInfo(currentHosp,{raca:v}); renderHosp();
-    document.getElementById('hf-meta').innerHTML=`${v?v+' · ':''}<strong>${currentHosp.mascote?'Moradora':(currentHosp.hospede?'Hóspede':(currentHosp.pernoite?'Pernoite':'Hóspede'))}</strong> · ${currentHosp.mascote?'Nossa Zelozinha':'Tutor: '+currentHosp.tutor}`;
+    const _tutor2=tutorDe(currentHosp);
+    document.getElementById('hf-meta').innerHTML=`${v?v+' · ':''}<strong>${currentHosp.mascote?'Moradora':(currentHosp.hospede?'Hóspede':(currentHosp.pernoite?'Pernoite':'Hóspede'))}</strong> · ${currentHosp.mascote?'Nossa Zelozinha':(_tutor2?'Tutor: '+_tutor2:'Tutor a confirmar')}`;
   }
   function onChip(v){ onCad(); }
   function toggleCadastro(){ const c=document.getElementById('card-cadastro'); if(!c) return; c.style.display=(c.style.display==='block'?'none':'block'); if(c.style.display==='block') c.scrollIntoView({behavior:'smooth',block:'center'}); }
@@ -1520,8 +1657,8 @@
     if(cad.sexo)p.push(cad.sexo);
     const id=calcIdade(cad.nasc); if(id)p.push(id); if(cad.castrado==='Sim')p.push('Castrado');
     const tp=h.mascote?'Moradora':(h.hospede?'Hóspede':(h.pernoite?'Pernoite':'Hóspede'));
-    const tut=cad.tutor||(currentHosp&&currentHosp.tutor)||'';
-    document.getElementById('hf-meta').innerHTML = (p.length?p.join(' · ')+' · ':'') + '<strong>'+tp+'</strong>' + (tut?' · '+(h.mascote?'Nossa Zelozinha':'Tutor: '+tut):'');
+    const tut=cad.tutor||tutorDe(h);
+    document.getElementById('hf-meta').innerHTML = (p.length?p.join(' · ')+' · ':'') + '<strong>'+tp+'</strong>' + (h.mascote?' · Nossa Zelozinha':(tut?' · Tutor: '+tut:' · Tutor a confirmar'));
     const cl=document.getElementById('hf-chipline'); if(cl) cl.textContent='Microchip: '+(cad.chip||'--');
   }
   function onCad(){
@@ -1630,6 +1767,249 @@
   function medsToTxt(arr){ return (arr||[]).map(o=>[o.m,o.d,o.h].filter(Boolean).join(' ')).filter(Boolean).join('; '); }
   // detecta se um relatório (novo ou antigo) registrou medicação
   function temMedEm(rel){ if(!rel) return false; if(rel.meds&&rel.meds.length) return true; if(rel.byQ&&rel.byQ['Tem medicação?']==='Sim') return true; if(rel.byArea&&rel.byArea.medicamento) return true; return false; }
+
+  // ===== Agenda de Medicação — horários fixos + registro na hora (independente do relatório) =====
+  // Dor real: só dava pra registrar remédio dentro do relatório de plantão (salvarRelatorioCard),
+  // que exige TODAS as perguntas respondidas + assinatura. Não tinha como registrar "dei o colírio
+  // às 12h30" avulso. Aqui: agenda por FILHOt (nome do remédio + 1 ou + horários + quantidade),
+  // guardada em nó PRÓPRIO — nunca dentro de auaulandia/relatorios — e um "Dei agora" que salva
+  // sozinho, na hora, sem relatório nem assinatura. Junto com o despertador (mais abaixo).
+  // Nós no Firebase:
+  //   auaulandia/medicacao-agenda/{chaveFILHOt}/itens/{itemId} = {nome,q,u,horarios:[...]}
+  //   auaulandia/medicacao-log/{dataKeyAtual}/{chaveFILHOt}/{itemId_HH-MM} = {nome,q,u,horario,quem,ts,avulso}
+  // chaveFILHOt = refKey (cadastro-mestre) quando existe — assim a agenda segue o FILHOt entre
+  // estadias — senão nome__tutor, igual ao resto do arquivo (pelKey/fichaKey).
+  function medAgendaKey(h){ h=h||currentHosp; if(!h) return ''; const base=h.refKey||((h.nome||'')+'__'+(h.tutor||'')); return String(base).toLowerCase().replace(/[.#$\[\]\/]/g,'-'); }
+  function magDoseId(itemId,horario){ return itemId+'_'+String(horario||'').replace(':','-'); }
+  let MED_AGENDA_ITENS={}; // itens salvos da agenda do FILHOt aberto na ficha: {itemId:{nome,q,u,horarios}}
+  let MED_AGENDA_LOG={};   // doses já registradas HOJE para o FILHOt aberto: {doseId:{quem,ts,...}}
+  function medAgendaRowHTML(id,item){
+    item=item||{nome:'',q:'',u:'',horarios:['']};
+    const units=MED_UNIDADES.map(u=>'<button type="button" onclick="pickUnit(this)" class="'+(u===item.u?'on':'')+'">'+u+'</button>').join('');
+    const horariosHTML=(item.horarios&&item.horarios.length?item.horarios:['']).map(function(h){
+      return '<span class="magHorario"><input data-c="h" inputmode="numeric" placeholder="07:30" value="'+escAttr(h||'')+'" onblur="normalizarHoraMed(this)"><button type="button" class="mag-rm-h" title="Remover horário" onclick="this.parentElement.remove()">×</button></span>';
+    }).join('');
+    return '<div class="magitem" data-id="'+id+'">'
+      +'<div class="medrow">'
+        +'<label class="mfield"><span class="mf-lab">Medicamento</span><input data-c="m" placeholder="Nome do medicamento" value="'+escAttr(item.nome||'')+'"></label>'
+        +'<label class="mfield"><span class="mf-lab">Quantidade</span><input data-c="q" inputmode="decimal" placeholder="1" value="'+escAttr(item.q||'')+'"></label>'
+      +'</div>'
+      +'<div class="medunits"><span class="mu-lab">Medida</span>'+units+'</div>'
+      +'<div class="mag-horarios"><span class="mu-lab">Horários</span><span class="mag-horarios-list">'+horariosHTML+'</span><button type="button" class="med-add" style="width:auto;margin-top:0" onclick="magAddHorario(this)">+ horário</button></div>'
+      +'<div style="text-align:right;margin-top:6px"><button type="button" class="ativ-del" title="Remover este medicamento da lista" onclick="magRemoverItem(\''+id+'\')">🗑️ Remover medicamento</button></div>'
+    +'</div>';
+  }
+  function magAddHorario(btn){ const wrap=btn.parentElement.querySelector('.mag-horarios-list'); if(wrap) wrap.insertAdjacentHTML('beforeend','<span class="magHorario"><input data-c="h" inputmode="numeric" placeholder="07:30" onblur="normalizarHoraMed(this)"><button type="button" class="mag-rm-h" title="Remover horário" onclick="this.parentElement.remove()">×</button></span>'); }
+  // Remove só a linha da tela — não mexe em MED_AGENDA_ITENS nem re-renderiza a lista inteira,
+  // senão outros medicamentos ainda não salvos (rascunho) seriam perdidos junto.
+  function magRemoverItem(id){ const el=document.querySelector('#magItens .magitem[data-id="'+id+'"]'); if(!el) return; if(!confirm('Remover este medicamento da agenda?')) return; el.remove(); }
+  function magAddNovoItem(){ const wrap=document.getElementById('magItens'); if(!wrap) return; const id='novo_'+Date.now()+'_'+Math.random().toString(36).slice(2,6); wrap.insertAdjacentHTML('beforeend', medAgendaRowHTML(id,{nome:'',q:'',u:'',horarios:['']})); }
+  function renderMedAgenda(){
+    const wrap=document.getElementById('magItens'); if(!wrap) return;
+    const ids=Object.keys(MED_AGENDA_ITENS);
+    wrap.innerHTML = ids.length ? ids.map(id=>medAgendaRowHTML(id,MED_AGENDA_ITENS[id])).join('') : '<div class="hint">Nenhum medicamento agendado ainda.</div>';
+    renderMedAgendaHoje();
+  }
+  function coletarMedAgendaForm(){
+    const out={};
+    document.querySelectorAll('#magItens .magitem').forEach(function(el){
+      const id=el.dataset.id;
+      const nome=(el.querySelector('[data-c=m]').value||'').trim();
+      const q=(el.querySelector('[data-c=q]').value||'').trim();
+      const ub=el.querySelector('.medunits button.on'); const u=ub?ub.textContent.trim():'';
+      const horarios=Array.prototype.map.call(el.querySelectorAll('[data-c=h]'), function(inp){ return normHora(inp.value)||''; }).filter(Boolean);
+      if(nome||q||u||horarios.length) out[id]={nome:nome,q:q,u:u,horarios:horarios};
+    });
+    return out;
+  }
+  function salvarMedAgenda(){
+    if(!currentHosp) return;
+    const st=document.getElementById('mag-status');
+    const itens=coletarMedAgendaForm();
+    const probs=[];
+    Object.values(itens).forEach(function(it){
+      if(!nomeMedOk(it.nome)) probs.push('escreva o NOME do medicamento por extenso.');
+      else if(qtdNum(it.q)==null) probs.push('"'+it.nome+'": escreva a QUANTIDADE em número (ex: 1, 0,5, 10).');
+      else if(!it.u) probs.push('"'+it.nome+'": toque na MEDIDA (comprimido, ml, gota...).');
+      else if(!it.horarios.length) probs.push('"'+it.nome+'": cadastre pelo menos 1 HORÁRIO válido (ex: 07:30).');
+    });
+    if(probs.length){ if(st){ st.style.color='var(--crm-critico)'; st.textContent='✋ '+probs[0]; } return; }
+    if(!DB){ if(st){ st.style.color='var(--crm-atencao-text)'; st.textContent='Banco conectando...'; } return; }
+    const key=medAgendaKey(); if(!key) return;
+    if(st){ st.style.color='var(--muted)'; st.textContent='Salvando...'; }
+    DB.ref('auaulandia/medicacao-agenda/'+key).set({itens:itens, nome:currentHosp.nome||'', tutor:currentHosp.tutor||'', _ts:Date.now(), _quem:quemSou()}).then(function(){
+      MED_AGENDA_ITENS=itens; renderMedAgenda();
+      if(st){ st.style.color='var(--crm-ok)'; st.textContent='✅ Agenda de medicação salva.'; }
+      if(typeof audit==='function') audit('medicacao-agenda',key,{pet:currentHosp.nome||'',itens:Object.keys(itens).length});
+      if(typeof carregarAgendaMedTodos==='function') carregarAgendaMedTodos();
+    }).catch(function(e){ if(st){ st.style.color='var(--crm-critico)'; st.textContent='⚠️ Erro: '+e.message; } });
+  }
+  function carregarMedAgenda(){
+    MED_AGENDA_ITENS={}; MED_AGENDA_LOG={};
+    const wrap=document.getElementById('magItens'); if(wrap) wrap.innerHTML='';
+    const hoje=document.getElementById('magHoje'); if(hoje) hoje.innerHTML='';
+    const stA=document.getElementById('mag-status'); if(stA) stA.textContent='';
+    const stB=document.getElementById('mag-avulsa-status'); if(stB) stB.textContent='';
+    if(!DB||!currentHosp) return;
+    const key=medAgendaKey(); if(!key) return;
+    Promise.all([
+      DB.ref('auaulandia/medicacao-agenda/'+key+'/itens').once('value').then(s=>s.val()||{}).catch(()=>({})),
+      DB.ref('auaulandia/medicacao-log/'+dataKeyAtual()+'/'+key).once('value').then(s=>s.val()||{}).catch(()=>({}))
+    ]).then(function(r){ MED_AGENDA_ITENS=r[0]||{}; MED_AGENDA_LOG=r[1]||{}; renderMedAgenda(); });
+  }
+  function renderMedAgendaHoje(){
+    const el=document.getElementById('magHoje'); if(!el) return;
+    const rows=[];
+    Object.keys(MED_AGENDA_ITENS).forEach(function(id){
+      const it=MED_AGENDA_ITENS[id]||{};
+      (it.horarios||[]).forEach(function(h){
+        const doseId=magDoseId(id,h); const log=MED_AGENDA_LOG[doseId];
+        rows.push({id:id,doseId:doseId,nome:it.nome,q:it.q,u:it.u,h:h,feito:!!log,quem:log&&log.quem,ts:log&&log.ts});
+      });
+    });
+    // Camada 4 — placar do dia: "Optivet — 3 de 4 doses dadas: 10:32 (Giulia), 16:30 (—faltou—)...".
+    // Calculado ANTES de somar as avulsas (o placar é só das doses agendadas de verdade).
+    const placarHTML=renderPlacarMedDia(rows);
+    // doses avulsas de hoje (não agendadas) — só para conferência, não têm "Dei agora"
+    Object.keys(MED_AGENDA_LOG).forEach(function(doseId){
+      const log=MED_AGENDA_LOG[doseId]; if(log&&log.avulso) rows.push({id:null,doseId:doseId,nome:log.nome,q:log.q,u:log.u,h:log.horario,feito:true,quem:log.quem,ts:log.ts,avulso:true});
+    });
+    if(!rows.length){ el.innerHTML=placarHTML+'<div class="hint">Nenhum horário agendado para hoje.</div>'; return; }
+    rows.sort(function(a,b){ return (a.h||'').localeCompare(b.h||''); });
+    el.innerHTML=placarHTML+rows.map(function(r){
+      const qtd=fmtQtd(r.q,r.u);
+      return '<div class="mag-dose'+(r.feito?' feito':'')+'">'
+        +'<div class="mag-dose-info"><strong>'+escAttr(r.h||'--:--')+'</strong> — '+escAttr(r.nome||'')+(qtd?' · '+escAttr(qtd):'')+(r.avulso?' <span style="font-weight:800;color:var(--muted)">(avulsa)</span>':'')+'</div>'
+        +(r.feito
+          ? '<div class="mag-dose-ok">✅ Dado por '+escAttr(r.quem||'?')+(r.ts?' às '+new Date(r.ts).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'}):'')+'</div>'
+          : '<button type="button" class="btn btn-gold" onclick="registrarDoseAgendada(\''+r.id+'\',\''+r.h+'\')">Dei agora</button>')
+      +'</div>';
+    }).join('');
+  }
+  // Registro pela FICHA aberta (currentHosp) — usado tanto pelo botão "Dei agora" da agenda
+  // quanto internamente. Sem relatório, sem assinatura: salva direto, na hora.
+  function registrarDoseAgendada(itemId,horario){
+    if(!currentHosp) return;
+    const it=MED_AGENDA_ITENS[itemId]; if(!it) return;
+    if(!confirm('Confirmar: deu '+it.nome+' ('+(fmtQtd(it.q,it.u)||'quantidade não informada')+') agora — horário agendado '+horario+'?')) return;
+    const key=medAgendaKey(); if(!key||!DB) return;
+    registrarDoseAgendadaGlobal({key:key,itemId:itemId,nome:it.nome,q:it.q,u:it.u,horario:horario,hospNome:currentHosp.nome||''}, magDoseId(itemId,horario));
+  }
+  // Registro "de fora" da ficha — usado pelo despertador (confirmarDoseDespertador), que pode
+  // disparar mesmo com outro FILHOt (ou nenhum) aberto na tela.
+  function registrarDoseAgendadaGlobal(it,doseId){
+    if(!DB||!it) return;
+    const reg={itemId:it.itemId,nome:it.nome,q:it.q,u:it.u,horario:it.horario,quem:quemSou(),ts:Date.now(),avulso:false};
+    DB.ref('auaulandia/medicacao-log/'+dataKeyAtual()+'/'+it.key+'/'+doseId).set(reg).then(function(){
+      if(currentHosp && medAgendaKey(currentHosp)===it.key){ MED_AGENDA_LOG[doseId]=reg; renderMedAgendaHoje(); }
+      if(typeof audit==='function') audit('medicacao-dose',it.key,{pet:it.hospNome||'',med:it.nome,horario:it.horario,quem:reg.quem});
+      if(typeof fecharDespertadorMed==='function') fecharDespertadorMed();
+      if(typeof carregarMedAtrasadaGestora==='function') carregarMedAtrasadaGestora(); // dose registrada: some do alerta da Gestora sozinho
+    }).catch(function(e){ alert('Erro ao registrar a dose: '+e.message); });
+  }
+  // Dose AVULSA — remédio dado que NÃO estava na agenda (ex.: prescrição de última hora do vet).
+  // Mesma trava à prova de erro do relatório: nome por extenso, horário de verdade, quantidade
+  // em número + medida obrigatória (nunca texto livre).
+  function registrarDoseAvulsa(){
+    if(!currentHosp) return;
+    const st=document.getElementById('mag-avulsa-status');
+    const nomeEl=document.getElementById('magAvNome'), horaEl=document.getElementById('magAvHora'), qtdEl=document.getElementById('magAvQtd');
+    const nome=(nomeEl&&nomeEl.value||'').trim();
+    const h=normHora(horaEl&&horaEl.value||'');
+    const q=(qtdEl&&qtdEl.value||'').trim();
+    const ub=document.querySelector('#magAvUnidades button.on'); const u=ub?ub.textContent.trim():'';
+    if(!nomeMedOk(nome)){ if(st){ st.style.color='var(--crm-critico)'; st.textContent='✋ Escreva o nome do medicamento por extenso.'; } return; }
+    if(!horaOk(h)){ if(st){ st.style.color='var(--crm-critico)'; st.textContent='✋ Escreva um horário de verdade (ex: 12:30).'; } return; }
+    if(qtdNum(q)==null){ if(st){ st.style.color='var(--crm-critico)'; st.textContent='✋ Escreva a quantidade em número (ex: 1, 0,5, 10).'; } return; }
+    if(!u){ if(st){ st.style.color='var(--crm-critico)'; st.textContent='✋ Toque na medida (comprimido, ml, gota...).'; } return; }
+    const key=medAgendaKey(); if(!key||!DB){ if(st){ st.style.color='var(--crm-atencao-text)'; st.textContent='Banco conectando...'; } return; }
+    const doseId='avulso_'+Date.now();
+    const reg={itemId:null,nome:nome,q:q,u:u,horario:h,quem:quemSou(),ts:Date.now(),avulso:true};
+    if(st){ st.style.color='var(--muted)'; st.textContent='Salvando...'; }
+    DB.ref('auaulandia/medicacao-log/'+dataKeyAtual()+'/'+key+'/'+doseId).set(reg).then(function(){
+      MED_AGENDA_LOG[doseId]=reg;
+      if(nomeEl) nomeEl.value=''; if(horaEl) horaEl.value=''; if(qtdEl) qtdEl.value='';
+      document.querySelectorAll('#magAvUnidades button').forEach(b=>b.classList.remove('on'));
+      if(st){ st.style.color='var(--crm-ok)'; st.textContent='✅ Dose avulsa registrada.'; }
+      if(typeof audit==='function') audit('medicacao-dose-avulsa',key,{pet:currentHosp.nome||'',med:nome,horario:h,quem:reg.quem});
+      renderMedAgendaHoje();
+      if(typeof carregarMedAtrasadaGestora==='function') carregarMedAtrasadaGestora();
+    }).catch(function(e){ if(st){ st.style.color='var(--crm-critico)'; st.textContent='⚠️ Erro: '+e.message; } });
+  }
+
+  // ===== CAMADA 4 — Medicação atrasada vira ALERTA que sobe pra Gestora =====
+  // Dor real: dose agendada que passou do horário e ninguém registrou não podia "sumir" —
+  // e ninguém além de quem estava na tela do despertador via isso. Aqui cruzamos a MESMA
+  // fonte de verdade das camadas 1-3 (agenda + log de hoje) e escalamos pra Gestão/Diretoria
+  // (Márcia/Adriana) num bloco próprio, vermelho, que só some quando a dose é registrada.
+  // Placar do dia (dentro da ficha): "Optivet — 3 de 4 doses dadas: 10:32 (Giulia), 16:30
+  // (—faltou—), 22:30 (Ana), 04:33 (Ana)" — a prova de que foi feito, ou de que falhou.
+  function renderPlacarMedDia(rows){
+    if(!rows||!rows.length) return '';
+    const porMed={};
+    rows.forEach(function(r){ const k=r.nome||'Medicamento'; (porMed[k]=porMed[k]||[]).push(r); });
+    const linhas=Object.keys(porMed).sort(function(a,b){ return a.localeCompare(b,'pt-BR'); }).map(function(nome){
+      const doses=porMed[nome].slice().sort(function(a,b){ return (a.h||'').localeCompare(b.h||''); });
+      const feitas=doses.filter(function(d){ return d.feito; }).length;
+      let temAtraso=false;
+      const detalhe=doses.map(function(d){
+        if(d.feito) return escAttr(d.h||'--:--')+' ('+escAttr(d.quem||'?')+')';
+        if(statusDoseMed(d.h,false)==='atrasada'){ temAtraso=true; return escAttr(d.h||'--:--')+' (—faltou—)'; }
+        return escAttr(d.h||'--:--')+' (—pendente—)';
+      }).join(', ');
+      return '<div class="mag-placar-linha'+(temAtraso?' atraso':'')+'"><strong>'+escAttr(nome)+'</strong> — '+feitas+' de '+doses.length+' dose'+(doses.length>1?'s':'')+' dada'+(feitas===1?'':'s')+': '+detalhe+'</div>';
+    }).join('');
+    return '<div class="mag-placar">'+linhas+'</div>';
+  }
+  // Classifica UMA dose de hoje: 'cumprida' (tem registro) | 'atrasada' (horário já passou, sem
+  // registro) | 'pendente' (horário ainda não chegou). É a régua única — despertador, placar da
+  // ficha e painel da Gestora usam a mesma função, nunca reinventam o cálculo.
+  function statusDoseMed(horario,feito){
+    if(feito) return 'cumprida';
+    const m=minutosAte(horario);
+    if(m===null) return 'pendente';
+    return m<0 ? 'atrasada' : 'pendente';
+  }
+  // Cruza a agenda de TODOS os hóspedes de hoje (MED_AGENDA_TODOS, mesma lista do despertador)
+  // com o log de hoje e devolve cada dose já classificada — fonte única para o painel da Gestora.
+  function dosesMedDoDia(){
+    if(!DB||!MED_AGENDA_TODOS||!MED_AGENDA_TODOS.length) return Promise.resolve([]);
+    return DB.ref('auaulandia/medicacao-log/'+dataKeyAtual()).once('value').then(function(snap){
+      const log=snap.val()||{};
+      return MED_AGENDA_TODOS.map(function(it){
+        const doseId=magDoseId(it.itemId,it.horario);
+        const reg=log[it.key]&&log[it.key][doseId];
+        const status=statusDoseMed(it.horario,!!reg);
+        const m=minutosAte(it.horario);
+        return Object.assign({},it,{doseId:doseId,status:status,quem:reg&&reg.quem,ts:reg&&reg.ts,atrasoMin:(status==='atrasada'&&m!==null)?-m:0});
+      });
+    }).catch(function(){ return []; });
+  }
+  function fmtAtrasoMin(min){ if(!min||min<0) return '0min'; if(min<60) return min+'min'; const h=Math.floor(min/60),r=min%60; return h+'h'+(r?(' '+r+'min'):''); }
+  // Só faz sentido em tempo real, no dia de hoje (ehHojeAua já existe — despertador da medicação
+  // usa a mesma trava) — e só para quem pode agir: Gestão, Supervisão, Diretoria.
+  function carregarMedAtrasadaGestora(){
+    const el=document.getElementById('painelMedAtrasada'); if(!el) return;
+    const role=document.body.dataset.role;
+    if(role!=='gestao'&&role!=='supervisor'&&role!=='diretoria'){ el.innerHTML=''; return; }
+    if(typeof ehHojeAua==='function' && !ehHojeAua()){ el.innerHTML=''; return; }
+    dosesMedDoDia().then(function(doses){
+      renderMedAtrasadaGestora(doses.filter(function(d){ return d.status==='atrasada'; }));
+    });
+  }
+  function renderMedAtrasadaGestora(atrasadas){
+    const el=document.getElementById('painelMedAtrasada'); if(!el) return;
+    if(!atrasadas||!atrasadas.length){ el.innerHTML='<div class="card gest-card"><div class="hint" style="margin:0">Medicação: todas as doses em dia.</div></div>'; return; }
+    atrasadas=atrasadas.slice().sort(function(a,b){ return b.atrasoMin-a.atrasoMin; });
+    const linhas=atrasadas.map(function(it){
+      const qtd=fmtQtd(it.q,it.u);
+      return '<div class="gest-item alerta"><div class="gest-head"><strong>'+escAttr(it.hospNome||'')+'</strong>'
+        +' <span style="color:var(--muted);font-size:12px">'+escAttr(it.nome||'')+(qtd?' · '+escAttr(qtd):'')+' — agendado às '+escAttr(it.horario||'')+'</span>'
+        +' <span class="gest-badge">atrasada '+fmtAtrasoMin(it.atrasoMin)+'</span></div></div>';
+    }).join('');
+    el.innerHTML='<div class="card gest-card"><div class="gest-nivel gn-urgente">⚠ Medicação atrasada: '+atrasadas.length+' dose'+(atrasadas.length>1?'s':'')+' sem registro</div>'+linhas+'</div>';
+  }
+
   // Parte 2: histórico de medicação na estadia atual do FILHOt aberto (preenchido ao abrir a ficha)
   let medHistEstadia={tinha:false};
   // "Tem medicação/suplementação? Sim" abre a tabela; "Não" esconde. Estadia com histórico de medicação força mostrar (Parte 2).
@@ -1768,6 +2148,7 @@
              noite:null }; }
   function carregarFicha(){
     carregarCadastro();
+    carregarMedAgenda();
     medHistEstadia={tinha:false}; renderMedHistBanner();
     ['dia','inicio','noite'].forEach(tp=>{ const c=document.getElementById('card-'+tp); if(c) c.classList.add('collapsed'); });
     if(!DB){ ['dia','inicio','noite'].forEach(tp=>aplicarCard('card-'+tp,{})); return; }
@@ -1880,7 +2261,7 @@
     return { nome:h.nome, tutor:primeiroNome(h.tutor), fem:cad.sexo==='Fêmea', brinq:cad.brinquedos||'', energia:byQ['Gastou energia?']||'', noite:byQ['Como passou a noite?']||'', jant:byQ['Jantou?']||'', xixi:byQ['Fez xixi?']||'', coco:byQ['Fez cocô?']||'', med:byQ['Tem medicação?']||'', sup:byQ['Tem suplementação?']||'', medTxt:medsToTxt((rel&&rel.meds)||[])||areas.medicamento||'', supTxt:medsToTxt((rel&&rel.sups)||[])||areas.suplemento||'' }; }
   function carregarPainelGestora(){
     const el=document.getElementById('painelGestora'); if(!el) return;
-    const role=document.body.dataset.role; if(role!=='gestao'&&role!=='supervisor'){ el.innerHTML=''; return; }
+    const role=document.body.dataset.role; if(role!=='gestao'&&role!=='supervisor'&&role!=='diretoria'){ el.innerHTML=''; return; }
     const reais=(hospedes||[]); // inclui a moradora (Repolho): a Gestora precisa ver alertas dela também
     if(!DB||!reais.length){ el.innerHTML=''; return; }
     Promise.all(reais.map(h=>{ const base='auaulandia/relatorios/'+fichaKeyDe(h,selectedDate); return Promise.all([ DB.ref(base+'/dia').once('value').then(s=>s.val()).catch(()=>null), DB.ref(base+'/inicio').once('value').then(s=>s.val()).catch(()=>null), DB.ref(base+'/noite').once('value').then(s=>s.val()).catch(()=>null), DB.ref(base).once('value').then(s=>s.val()).catch(()=>null) ]).then(function(r){ const ant=migrarAntigo(r[3]); return {h:h, dia:r[0]||(ant?ant.dia:null), inicio:r[1]||(ant?ant.inicio:null), noite:r[2]||r[1]||(ant?ant.inicio:null)}; }); })).then(renderPainelGestora).catch(()=>{});
@@ -1950,7 +2331,12 @@
     '0902':{role:'gestao',      nome:'Márcia · Gestora', avisoSonoro:true},
     '0912':{role:'supervisor',  nome:'Amanda · Supervisora'},
     '0913':{role:'consultora',  nome:'Consultora · Recepção'},
-    '1002':{role:'aprendiz',    nome:'Monitor Aprendiz'}
+    '1002':{role:'aprendiz',    nome:'Monitor Aprendiz'},
+    // DIRETORIA — nível acima da Gestão, exclusiva da Adriana. Enxerga tudo que a Gestão
+    // enxerga e, além disso, é a única que pode EXCLUIR um cadastro de verdade (a Gestão
+    // continua com o poder de inativar, que é o uso do dia a dia). Senha provisória —
+    // Adriana deve trocar em Pessoas → Monitores/Senhas assim que possível.
+    '7788':{role:'diretoria',   nome:'Adriana · Diretoria', avisoSonoro:true}
   };
   // ===== ESCOPO DE ATIVIDADES POR PESSOA =====
   // Se o usuário logado tem `atividades:[...]`, ele só enxerga essas atividades do Day Care
@@ -1978,7 +2364,7 @@
   // ===== RELATÓRIO DE SENHAS (só Gestão vê) — gerado do cadastro acima =====
   function renderSenhas(){
     const el=document.getElementById('senhasList'); if(!el) return;
-    const ordem={gestao:0, supervisor:1, monitor:2, plantonista:3, aprendiz:4};
+    const ordem={diretoria:-1, gestao:0, supervisor:1, monitor:2, plantonista:3, aprendiz:4};
     const SR=senhasRuntime();
     const lista=Object.keys(SR).map(pwd=>({pwd, ...SR[pwd]}))
       .sort((a,b)=>(ordem[a.role]??9)-(ordem[b.role]??9) || String(a.nome).localeCompare(String(b.nome)));
@@ -2020,7 +2406,7 @@
   function mostrarStatusDevice(){ const el=document.getElementById('deviceStatus'); if(!el) return; deviceAutorizado(function(ok){ el.innerHTML= ok?'Este aparelho está autorizado &#10003;':'Este aparelho ainda <strong>não está autorizado</strong>. A Gestão precisa autorizar.'; el.style.color= ok?'var(--crm-ok)':'var(--crm-atencao-text)'; }); }
   function autorizarAparelho(){ const err=document.getElementById('loginErr'); err.style.color='';
     const v=(document.getElementById('loginPwd').value||'').trim(); const u=senhasRuntime()[v];
-    if(!u||u.role!=='gestao'){ err.style.color='var(--crm-critico)'; err.textContent='Digite a senha da GESTÃO no campo acima e toque em Autorizar.'; return; }
+    if(!u||(u.role!=='gestao'&&u.role!=='diretoria')){ err.style.color='var(--crm-critico)'; err.textContent='Digite a senha da GESTÃO no campo acima e toque em Autorizar.'; return; }
     const nome=(prompt('Dê um nome para ESTE aparelho (ex: iPhone Daycare 1):')||'').trim(); if(!nome) return;
     const id=getDeviceId(); const reg={nome:nome, por:u.nome, ts:Date.now()};
     if(DB){ DB.ref('auaulandia/aparelhos/'+id).set(reg).then(()=>{ try{ localStorage.setItem('zeluz_device_ok','1'); }catch(e){} err.style.color='var(--crm-ok)'; err.textContent='✅ Aparelho "'+nome+'" autorizado! Agora a equipe entra normalmente neste celular.'; mostrarStatusDevice(); }).catch(e=>{ err.style.color='var(--crm-critico)'; err.textContent='Erro ao autorizar: '+e.message; }); }
@@ -2029,7 +2415,7 @@
     const v=(document.getElementById('loginPwd').value||'').trim();
     const u=senhasRuntime()[v]; const err=document.getElementById('loginErr'); err.style.color='';
     if(!u){ err.textContent='Senha incorreta. Tente de novo.'; return; }
-    const ehGestao=(u.role==='gestao'||u.role==='supervisor'||u.role==='consultora');
+    const ehGestao=(u.role==='gestao'||u.role==='supervisor'||u.role==='consultora'||u.role==='diretoria');
     deviceAutorizado(function(ok){
       if(ok || ehGestao){ sessionStorage.setItem('zeluz_login', JSON.stringify(u)); aplicarLogin(u); return; }
       // Aparelho não autorizado e não é gestão → bloqueia
@@ -2060,7 +2446,7 @@
   function telaInicialDe(u){
     const r=((u&&u.role)||'').toLowerCase();
     if(r==='consultora') return 'renovacao'; // recepção trabalha nos planos
-    if(r==='gestao'||r==='supervisor') return 'inicio';
+    if(r==='gestao'||r==='supervisor'||r==='diretoria') return 'inicio';
     return 'hospedagem'; // plantonista, monitor, aprendiz
   }
   function logout(){
@@ -2140,24 +2526,147 @@
     const _ehHoje = selectedDate.getFullYear()===_ag.getFullYear() && selectedDate.getMonth()===_ag.getMonth() && selectedDate.getDate()===_ag.getDate();
     const _antesCorte = !(_ag.getHours()>11 || (_ag.getHours()===11 && _ag.getMinutes()>=30));
     const incluiVesp = _ehHoje && _antesCorte; // pernoite que dormiu aparece de manhã, igual aos hóspedes
-    const add=(m,saida)=>{ if(m&&m.nome && !hospedes.some(h=>h.nome===m.nome&&h.tutor===(m.tutor||''))){ hospedes.push({nome:m.nome, tutor:m.tutor||'', raca:'', ini:(m.nome[0]||'?').toUpperCase(), cor:CORES[hospedes.length%CORES.length], pernoite:!m.hospede, hospede:!!m.hospede, saidaHoje:!!saida}); } };
+    // manualKey/manualDia = chave real do Firebase (pushKey) + o dia (hoje ou véspera) onde o
+    // registro vive em auaulandia/manuais/{dia}/{pushKey}. É o que permite CANCELAR o lançamento
+    // certo depois (ver cancelarHospedeManual) — nunca remover pelo índice do array, que desalinha.
+    const add=(m,saida,dia,key)=>{ if(m&&m.nome && !hospedes.some(h=>h.nome===m.nome&&h.tutor===(m.tutor||''))){ hospedes.push({nome:m.nome, tutor:m.tutor||'', raca:m.raca||'', refKey:m.refKey||'', ini:(m.nome[0]||'?').toUpperCase(), cor:CORES[hospedes.length%CORES.length], pernoite:!m.hospede, hospede:!!m.hospede, saidaHoje:!!saida, manualKey:key||'', manualDia:dia||''}); } };
     Promise.all([
       DB.ref('auaulandia/manuais/'+hojeK).once('value').then(s=>s.val()||{}).catch(()=>({})),
       incluiVesp ? DB.ref('auaulandia/manuais/'+vespK).once('value').then(s=>s.val()||{}).catch(()=>({})) : Promise.resolve({})
-    ]).then(function(r){ Object.values(r[0]||{}).forEach(m=>add(m,false)); Object.values(r[1]||{}).forEach(m=>add(m,true)); renderHosp(); }).catch(()=>{});
+    ]).then(function(r){
+      Object.entries(r[0]||{}).forEach(([k,m])=>add(m,false,hojeK,k));
+      Object.entries(r[1]||{}).forEach(([k,m])=>add(m,true,vespK,k));
+      renderHosp();
+      if(typeof carregarAgendaMedTodos==='function') carregarAgendaMedTodos();
+    }).catch(()=>{});
   }
-  function adicionarPernoite(){
-    const nome=prompt('Pernoite — nome do peludinho (aluno do Day Care que ficou hospedado):'); if(!nome||!nome.trim()) return;
-    const tutor=(prompt('Nome do tutor:')||'').trim();
-    if(DB){ DB.ref('auaulandia/manuais/'+dataKeyAtual()).push({nome:nome.trim(),tutor:tutor}).then(()=>carregarManuais()).catch(e=>alert('Erro ao adicionar: '+e.message)); }
-    else { hospedes.push({nome:nome.trim(),tutor:tutor,raca:'',ini:(nome.trim()[0]||'?').toUpperCase(),cor:CORES[hospedes.length%CORES.length],pernoite:true}); renderHosp(); }
+  // ===== Adicionar hóspede/pernoite — busca no cadastro-mestre, NUNCA prompt() cru =====
+  // Antes: 2 prompt()s pediam nome e tutor soltos, sem ligação com o cadastro-mestre. Resultado:
+  // peludinho duplicado (o mesmo FILHOt cadastrado de novo do zero) e, em pelo menos 1 registro
+  // antigo, a RAÇA foi digitada por engano no prompt do tutor (ver tutorDe() acima). Agora os 2
+  // botões abrem a mesma busca grande — o mesmo padrão já usado na Diária Avulsa do Day Care —
+  // e só se o FILHOt de verdade nunca veio à Zêluz é que se cadastra um registro novo.
+  let hospBuscaTipo='pernoite';
+  function adicionarPernoite(){ abrirHospBuscaModal('pernoite'); }
+  function adicionarHospede(){ abrirHospBuscaModal('hospede'); }
+  function abrirHospBuscaModal(tipo){
+    hospBuscaTipo=tipo;
+    const m=document.getElementById('hospBuscaModal'); if(!m) return;
+    const b=document.getElementById('hbBusca'); if(b) b.value='';
+    const t=document.getElementById('hbTitulo');
+    if(t) t.innerHTML = tipo==='hospede'
+      ? 'Adicionar Hóspede<br><span style="font-size:14px;font-weight:600;opacity:.92">Quem chegou? Toque no FILHOt já cadastrado.</span>'
+      : 'Adicionar Pernoite<br><span style="font-size:14px;font-weight:600;opacity:.92">Aluno do Day Care que ficou hospedado. Toque no FILHOt.</span>';
+    m.classList.add('show');
+    renderHospBuscaResults();
+    setTimeout(()=>{ try{ b&&b.focus(); }catch(e){} },150);
   }
-  // Gestão/Supervisão insere um hóspede novo (ex.: chegou à noite e o administrativo não registrou)
-  function adicionarHospede(){
-    const nome=(prompt('Novo hóspede — nome do peludinho:')||'').trim(); if(!nome) return;
-    const tutor=(prompt('Nome do tutor:')||'').trim();
-    if(DB){ DB.ref('auaulandia/manuais/'+dataKeyAtual()).push({nome:nome,tutor:tutor,hospede:true}).then(()=>carregarManuais()).catch(e=>alert('Erro ao adicionar: '+e.message)); }
-    else { hospedes.push({nome:nome,tutor:tutor,raca:'',ini:(nome[0]||'?').toUpperCase(),cor:CORES[hospedes.length%CORES.length],pernoite:true}); renderHosp(); }
+  function fecharHospBuscaModal(){ const m=document.getElementById('hospBuscaModal'); if(m) m.classList.remove('show'); }
+  function renderHospBuscaResults(){
+    const box=document.getElementById('hbResults'); if(!box) return;
+    const q=jsNorm(document.getElementById('hbBusca')?document.getElementById('hbBusca').value:'');
+    const list=PELUDINHOS.map((p,i)=>({p,i}))
+      .filter(o=>!q || jsNorm([pelNome(o.p),pelGet(o.p,'raca'),pelGet(o.p,'tutor')].join(' ')).indexOf(q)>=0)
+      .sort((x,y)=>jsNorm(pelNome(x.p)).localeCompare(jsNorm(pelNome(y.p))));
+    // fallback: FILHOt que nunca veio à Zêluz — cadastra no cadastro-mestre (mesma trava de
+    // duplicidade do "Novo AULUNO" do Day Care) e já entra hospedado
+    const novoBloco = `<div class="hb-novo">
+        <div class="hb-novo-tit">Não achou${q?' esse FILHOt':''}? Cadastre um peludinho novo (nunca veio à Zêluz):</div>
+        <input class="hb-novo-in" id="hbNovoNome" placeholder="Nome do FILHOt" autocomplete="off">
+        <input class="hb-novo-in" id="hbNovoTutor" placeholder="Nome do tutor" autocomplete="off">
+        <div class="hb-novo-warn" id="hbNovoWarn"></div>
+        <button class="btn btn-primary" style="width:100%" onclick="criarPeludinhoENovoHospede()">Cadastrar e adicionar</button>
+      </div>`;
+    if(list.length===0){
+      box.innerHTML=`<div class="av-empty"><div class="big">${q?'Não encontrei esse FILHOt':'Comece a digitar o nome'}</div>Pode buscar por nome do FILHOt, tutor ou raça.</div>`+novoBloco;
+      return;
+    }
+    box.innerHTML=list.slice(0,60).map(o=>{
+      const p=o.p; const ex=pelExtra(p); const foto=ex.foto;
+      const nome=pelNome(p), raca=pelGet(p,'raca')||'—', tutor=pelGet(p,'tutor')||'tutor a confirmar';
+      const alerta=(ex.alergia||ex.restricao)?`<span class="hb-alertbadge">ALÉRGICO</span>`:'';
+      const ph=foto?`<div class="av-ph" style="background-image:url('${foto}')"></div>`
+                   :`<div class="av-ph" style="background:${corPel(o.i)}">${(nome[0]||'?').toUpperCase()}</div>`;
+      return `<div class="av-card" onclick="escolherHospede(${o.i})">
+        ${alerta}${ph}
+        <div class="av-nm">${nome}</div>
+        <div class="av-br">${raca}</div>
+        <div class="av-tt">${tutor}</div>
+      </div>`;
+    }).join('') + novoBloco;
+  }
+  // Cadastra no cadastro-mestre (mesmo lugar que o Day Care usa) só quando o FILHOt realmente
+  // nunca veio à Zêluz. Trava idêntica ao criarAluno(): nome+tutor iguais bloqueia; só o nome
+  // bater (outro tutor) avisa e deixa o humano confirmar — nunca bloqueia sozinho.
+  function criarPeludinhoENovoHospede(){
+    const nEl=document.getElementById('hbNovoNome'), tEl=document.getElementById('hbNovoTutor'), w=document.getElementById('hbNovoWarn');
+    const nome=((nEl&&nEl.value)||'').trim(), tutor=((tEl&&tEl.value)||'').trim();
+    if(!nome){ if(w) w.textContent='Escreva o nome do FILHOt.'; return; }
+    const novo={n:nome,raca:'',freq:'',tutor:tutor,nasc:'',dias:[]};
+    const key=pelKey(novo);
+    if(PELUDINHOS.some(p=>pelKey(p)===key)){ if(w) w.textContent='Já existe um cadastro com esse nome e tutor — busque acima em vez de duplicar.'; return; }
+    const homonimo=PELUDINHOS.find(p=>jsNorm(p.n)===jsNorm(nome));
+    if(homonimo && !confirm('Já existe um(a) '+nome+' cadastrado(a) com o(a) tutor(a) "'+(pelGet(homonimo,'tutor')||'sem tutor informado')+'".\n\nEste é outro FILHOt, de outra família? Clique OK para cadastrar mesmo assim, ou Cancelar para conferir antes.')){
+      if(w) w.textContent='Cadastro não concluído — confira se não é o mesmo FILHOt já cadastrado.';
+      return;
+    }
+    PELUDINHOS.push(novo);
+    PELUDINHOS.sort((a,b)=>jsNorm(a.n).localeCompare(jsNorm(b.n))||jsNorm(a.tutor).localeCompare(jsNorm(b.tutor)));
+    const reg={_novo:true,n:nome,tutor:tutor,raca:'',nasc:'',dias:[],freq:''};
+    try{ localStorage.setItem('zeluz_pel_'+key,JSON.stringify(reg)); }catch(e){}
+    if(DB) DB.ref('daycare/cadastro/'+key).update(reg).catch(()=>{});
+    const idx=PELUDINHOS.findIndex(p=>pelKey(p)===key);
+    if(idx>=0) escolherHospede(idx);
+  }
+  // Toque num FILHOt da busca → cria o registro de hospedagem JÁ LIGADO ao cadastro-mestre
+  // (refKey=pelKey). Raça, alergia e medicação passam a vir sempre de lá — nunca mais digitadas.
+  function escolherHospede(i){
+    const p=PELUDINHOS[i]; if(!p) return;
+    const nome=pelNome(p), tutor=pelGet(p,'tutor')||'', raca=pelGet(p,'raca')||'';
+    const refKey=pelKey(p);
+    const chaveH=o=>jsNorm((o.nome||'')+'__'+(o.tutor||''));
+    if((hospedes||[]).some(h=>chaveH(h)===chaveH({nome,tutor}))){
+      alert(nome+' já está hospedado(a) hoje — não precisa adicionar de novo.');
+      fecharHospBuscaModal();
+      return;
+    }
+    // Alergia/restrição em destaque ANTES de confirmar a entrada — é questão de segurança do FILHOt
+    const ex=pelExtra(p);
+    if(ex.alergia||ex.restricao){
+      const detalhe=(ex.alergia?('Alergia: '+ex.alergia+'\n'):'')+(ex.restricao?('Restrição: '+ex.restricao+'\n'):'');
+      if(!confirm('⚠ ATENÇÃO — '+nome+' é ALÉRGICO(A) / tem RESTRIÇÃO:\n'+detalhe+'\nConfirme para prosseguir com o registro da hospedagem.')) return;
+    }
+    const tipo=hospBuscaTipo;
+    const reg={nome:nome,tutor:tutor,raca:raca,refKey:refKey};
+    if(tipo==='hospede') reg.hospede=true;
+    if(DB){
+      DB.ref('auaulandia/manuais/'+dataKeyAtual()).push(reg)
+        .then(()=>{ fecharHospBuscaModal(); carregarManuais(); })
+        .catch(e=>alert('Erro ao adicionar: '+e.message));
+    } else {
+      hospedes.push({nome:nome,tutor:tutor,raca:raca,refKey:refKey,ini:(nome[0]||'?').toUpperCase(),cor:CORES[hospedes.length%CORES.length],pernoite:tipo!=='hospede',hospede:tipo==='hospede'});
+      fecharHospBuscaModal(); renderHosp();
+    }
+  }
+  // ===== Cancelar hóspede/pernoite lançado hoje — reversível, só o lançamento do dia =====
+  // Diferente de excluirCadastroPel (que apaga o cadastro-mestre pra sempre): aqui só remove o
+  // nó auaulandia/manuais/{dia}/{pushKey} — o FILHOt continua cadastrado, só some da lista de hoje.
+  // Só Gestão/Supervisão/Diretoria (mesma trava do "Adicionar hóspede"): guarda dupla — CSS
+  // (.so-gestao esconde o botão) + JS (aqui embaixo), pra não depender só do CSS.
+  function cancelarHospedeManual(i){
+    const r=(document.body.dataset.role||'');
+    if(!(r==='gestao'||r==='supervisor'||r==='diretoria')) return;
+    const h=hospedes[i]; if(!h) return;
+    if(!h.manualKey){ alert('Este registro não pode ser cancelado por aqui — ele veio da planilha, não foi lançado manualmente hoje.'); return; }
+    if(!confirm('Cancelar a pernoite/hospedagem de '+(h.nome||'?')+' de hoje?\n\nIsso remove só o lançamento de hoje — não mexe no cadastro do FILHOt. Se ele voltar outro dia, é só adicionar de novo.')) return;
+    const dia=h.manualDia||dataKeyAtual();
+    if(!DB){ hospedes.splice(i,1); renderHosp(); return; }
+    DB.ref('auaulandia/manuais/'+dia+'/'+h.manualKey).remove()
+      .then(function(){
+        if(typeof audit==='function') audit('hospede-cancelado','cancelou lançamento do dia',{pet:h.nome||'',tutor:h.tutor||'',dia:dia});
+        carregarManuais();
+      })
+      .catch(e=>alert('Erro ao cancelar: '+e.message));
   }
   // Lê a aba "Cadastro" (colunas Nome · Tutor · Raça) e cruza pelo nome+tutor
   async function carregarRacas(){
@@ -2629,17 +3138,89 @@
     }catch(e){}
   }
   setInterval(checarDespertadorBanho, 30000);
+
+  // ===== DESPERTADOR DA MEDICAÇÃO =====
+  // Mesmo padrão do despertador do banho, mas para os horários da Agenda de Medicação — e mais
+  // crítico: remédio não pode "sumir" sozinho da tela (diferente do banho, aqui NÃO há limite de
+  // atraso — continua alertando até alguém dar baixa). Roda para QUALQUER perfil logado (inclusive
+  // Plantonista, que é quem está de plantão à noite) e para TODOS os hóspedes de hoje, não só o
+  // FILHOt que estiver com a ficha aberta no momento — por isso mantém uma lista própria
+  // (MED_AGENDA_TODOS), recarregada sempre que a lista de hóspedes do dia muda.
+  let MED_AGENDA_TODOS=[]; // [{hospNome,key,itemId,nome,q,u,horario}]
+  let despMedNaTela=null, despMedAtual=null, despMedAtualDoseId=null;
+  function ehHojeAua(){ const d=selectedDate, n=new Date(); return d.getFullYear()===n.getFullYear() && d.getMonth()===n.getMonth() && d.getDate()===n.getDate(); }
+  function carregarAgendaMedTodos(){
+    MED_AGENDA_TODOS=[];
+    if(!DB) return;
+    const jobs=(hospedes||[]).map(function(h){
+      const key=medAgendaKey(h); if(!key) return Promise.resolve();
+      return DB.ref('auaulandia/medicacao-agenda/'+key+'/itens').once('value').then(function(s){
+        const itens=s.val(); if(!itens) return;
+        Object.keys(itens).forEach(function(id){
+          const it=itens[id]||{};
+          (it.horarios||[]).forEach(function(hr){ MED_AGENDA_TODOS.push({hospNome:h.nome||'', key:key, itemId:id, nome:it.nome||'', q:it.q||'', u:it.u||'', horario:hr}); });
+        });
+      }).catch(function(){});
+    });
+    Promise.all(jobs).catch(function(){}).then(function(){ if(typeof carregarMedAtrasadaGestora==='function') carregarMedAtrasadaGestora(); });
+  }
+  function checarDespertadorMed(){
+    try{
+      if(!ehHojeAua()) return;
+      if(despMedNaTela) return; // já tem um na tela
+      if(!MED_AGENDA_TODOS.length||!DB) return;
+      DB.ref('auaulandia/medicacao-log/'+dataKeyAtual()).once('value').then(function(snap){
+        const log=snap.val()||{};
+        const fila=MED_AGENDA_TODOS.slice().sort((a,b)=>(a.horario||'').localeCompare(b.horario||''));
+        for(const it of fila){
+          const doseId=magDoseId(it.itemId,it.horario);
+          const feito=log[it.key]&&log[it.key][doseId];
+          if(feito) continue;
+          const m=minutosAte(it.horario);
+          if(m===null) continue;
+          if(m<=DESP_ANTES_MIN){ mostrarDespertadorMed(it,doseId); return; } // sem limite de atraso — remédio não some sozinho
+        }
+      }).catch(function(){});
+    }catch(e){}
+  }
+  function mostrarDespertadorMed(it,doseId){
+    const el=document.getElementById('despMed'); if(!el) return;
+    despMedNaTela=it.key+'__'+doseId; despMedAtual=it; despMedAtualDoseId=doseId;
+    const qtd=fmtQtd(it.q,it.u);
+    el.innerHTML='<div class="desp-in"><div class="desp-tx"><strong>'+escAttr(it.hospNome||'')+'</strong> toma <strong>'+escAttr(it.nome||'')+'</strong>'+(qtd?' — '+escAttr(qtd):'')+' às <strong>'+escAttr(it.horario||'')+'</strong>'
+      +'<span>Dê o remédio agora — este alarme não desaparece sozinho.</span></div>'
+      +'<button class="btn" style="background:#fff;color:var(--crm-critico);font-weight:800" onclick="confirmarDoseDespertador()">Dei o remédio</button></div>';
+    el.style.display='block';
+    bipDespertador();
+  }
+  function confirmarDoseDespertador(){
+    if(!despMedAtual||!despMedAtualDoseId) return;
+    registrarDoseAgendadaGlobal(despMedAtual, despMedAtualDoseId);
+  }
+  function fecharDespertadorMed(){
+    const el=document.getElementById('despMed'); if(el) el.style.display='none';
+    despMedNaTela=null; despMedAtual=null; despMedAtualDoseId=null;
+  }
+  setInterval(checarDespertadorMed, 30000);
+  // Camada 4: o relógio passa mesmo sem nenhum dado mudar no Firebase (uma dose "pendente" vira
+  // "atrasada" só porque o horário passou) — por isso o painel da Gestora tem seu próprio timer,
+  // além de ser recarregado toda vez que a agenda muda ou uma dose é registrada.
+  setInterval(function(){ if(typeof carregarMedAtrasadaGestora==='function') carregarMedAtrasadaGestora(); }, 60000);
+
   function pelInativo(p){ const ex=pelExtra(p); return !!(ex&&ex.inativo==='Sim'); }
   // Quantos aulunos estão matriculados em cada dia — só Gestão e Supervisão (Adriana, Márcia,
   // Amanda). Para o monitor seria ruído; para elas é ocupação da turma.
-  function vePorDia(){ const r=(document.body.dataset.role||''); return r==='gestao'||r==='supervisor'; }
+  function vePorDia(){ const r=(document.body.dataset.role||''); return r==='gestao'||r==='supervisor'||r==='diretoria'; }
   function nMatriculados(d){ return PELUDINHOS.filter(p=>!pelInativo(p)&&pelDias(p).indexOf(d)>=0).length; }
   const ORDEM_DIAS=['seg','ter','qua','qui','sex'];
   const DIA_LBL={seg:'Seg',ter:'Ter',qua:'Qua',qui:'Qui',sex:'Sex'};
   const DIA_FULL={seg:'Segunda',ter:'Terça',qua:'Quarta',qui:'Quinta',sex:'Sexta'};
   const CORES_PEL=['#E08856','#5AABB5','#5E9B6B','#2E7D8A','#B8A9C9','#234D67'];
   function corPel(i){ return CORES_PEL[i%CORES_PEL.length]; }
-  function jsNorm(s){ return (s||'').normalize('NFD').replace(/[̀-ͯ]/g,'').toLowerCase(); }
+  // Normaliza p/ comparar identidade: sem acento, minúsculo, sem espaço sobrando nas pontas
+  // nem duplicado no meio (ex: "  Ozzy  " e "Ozzy" comparam iguais). Usado tanto em busca/
+  // ordenação quanto na trava de cadastro duplicado (chaveIdNR/chaveNomeRaca abaixo).
+  function jsNorm(s){ return (s||'').normalize('NFD').replace(/[̀-ͯ]/g,'').toLowerCase().trim().replace(/\s+/g,' '); }
   function fmtNasc(iso){ if(!iso) return '—'; const a=iso.split('-'); return a.length===3?`${a[2]}/${a[1]}/${a[0]}`:iso; }
   function diasHtml(dias){ return ORDEM_DIAS.map(d=>`<span class="dia${(dias||[]).indexOf(d)>=0?' on':''}">${DIA_LBL[d]}</span>`).join(''); }
   function escAttr(s){ return (s||'').toString().replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;'); }
@@ -2656,12 +3237,52 @@
   function segBtnsPel(field,val,opts){ return opts.map(o=>`<button class="${val===o?'on':''}" onclick="pick(this);setPelExtra(pelAtual,{${field}:this.textContent.trim()})">${o}</button>`).join(''); }
 
   // --- leitura unificada: o valor editado (extra/Firebase) vence o valor base hardcoded ---
-  function canEditPel(){ const r=document.body.dataset.role; return r==='gestao'||r==='supervisor'; }
+  function canEditPel(){ const r=document.body.dataset.role; return r==='gestao'||r==='supervisor'||r==='diretoria'; }
   function pelGet(p,campo){ const ex=pelExtra(p); const v=ex[campo]; return (v!=null&&v!=='')?v:(p[campo]!=null?p[campo]:''); }
   function pelDias(p){ const ex=pelExtra(p); return Array.isArray(ex.dias)?ex.dias:(Array.isArray(p.dias)?p.dias:[]); }
   function pelFreq(p){ const n=pelDias(p).length; if(n>0) return n+'x'; const f=pelGet(p,'freq'); return f||'—'; }
   function pelNome(p){ return pelGet(p,'n')||p.n||''; }
   function pelNasc(p){ const ex=pelExtra(p); return ex.nasc||p.nasc||''; }
+
+  // ===== TRAVA DE CADASTRO DUPLICADO — chave = nome + tutor + raça (decisão da Adriana) =====
+  // Base real (118 peludinhos) tem 10 nomes repetidos de verdade (3 "Ozzy" de famílias
+  // diferentes) e 1 caso de nome+raça iguais com tutor diferente ("Maya SRD" da Luciana e
+  // "Maya SRD" da Marcela — duas FILHOts reais). Por isso nome+raça NUNCA bloqueia sozinho,
+  // só avisa. O caso que motivou a trava — Stopa cadastrada 2x como tutor "Mont Serrat" e
+  // "Montserrat" — é pego pelo nível 2 (nome+raça batem, tutor escrito diferente).
+  function chaveIdNR(nome,tutor,raca){ return jsNorm(nome)+'__'+jsNorm(tutor)+'__'+jsNorm(raca); }
+  function chaveNomeRaca(nome,raca){ return jsNorm(nome)+'__'+jsNorm(raca); }
+  function achaPorNomeRaca(nome,raca,ignorarKey){
+    return PELUDINHOS.find(p=>pelKey(p)!==ignorarKey && chaveNomeRaca(pelNome(p),pelGet(p,'raca'))===chaveNomeRaca(nome,raca));
+  }
+  function achaPorIdNR(nome,tutor,raca,ignorarKey){
+    return PELUDINHOS.find(p=>pelKey(p)!==ignorarKey && chaveIdNR(pelNome(p),pelGet(p,'tutor'),pelGet(p,'raca'))===chaveIdNR(nome,tutor,raca));
+  }
+  // O cadastro rápido (Novo AULUNO) só pede nome+tutor — a raça é preenchida aqui, na ficha
+  // completa. É aqui que os níveis 1 e 2 da trava ficam ativos de verdade.
+  function onRacaPel(v){
+    if(!pelAtual) return;
+    const raca=(v||'').trim(), nome=pelNome(pelAtual), tutor=pelGet(pelAtual,'tutor'), minhaKey=pelKey(pelAtual);
+    if(raca){
+      // Nível 1 — nome+tutor+raça idênticos a OUTRO cadastro: é o mesmo FILHOt já existente
+      // em duplicidade. Bloqueia, sem opção de forçar.
+      const gemeoExato=achaPorIdNR(nome,tutor,raca,minhaKey);
+      if(gemeoExato){
+        alert('Já existe um cadastro idêntico: "'+pelNome(gemeoExato)+'" · '+(pelGet(gemeoExato,'raca')||'—')+' · tutor '+(pelGet(gemeoExato,'tutor')||'—')+'.\n\nEste FILHOt já está cadastrado — não salvei a raça de novo. Abra o cadastro existente em vez de duplicar.');
+        const el=document.getElementById('pelFichaRaca'); if(el) el.value=pelGet(pelAtual,'raca')||'';
+        return;
+      }
+      // Nível 2 — nome+raça batem, tutor diferente: pode ser outro FILHOt de verdade (ex.: as
+      // duas "Maya SRD" reais, uma da Luciana e outra da Marcela) — avisa mostrando o
+      // cadastro parecido, mas NUNCA bloqueia. Só o humano confirma.
+      const parecido=achaPorNomeRaca(nome,raca,minhaKey);
+      if(parecido && !confirm('Já existe outro(a) "'+nome+'" · '+raca+' cadastrado(a) com o(a) tutor(a) "'+(pelGet(parecido,'tutor')||'sem tutor informado')+'".\n\nÉ um FILHOt diferente, de outra família? Clique OK para confirmar, ou Cancelar para conferir antes.')){
+        const el=document.getElementById('pelFichaRaca'); if(el) el.value=pelGet(pelAtual,'raca')||'';
+        return;
+      }
+    }
+    setPelExtra(pelAtual,{raca:raca});
+  }
   // chips de dias clicáveis (frequência recalcula sozinha)
   function diasEditInner(p){
     const dias=pelDias(p), can=canEditPel();
@@ -2680,13 +3301,29 @@
   }
   function onNomePel(v){ if(!pelAtual) return; setPelExtra(pelAtual,{n:(v||'').trim()}); renderPel(); if(typeof renderDaycare==='function') renderDaycare(); }
   // alunos novos cadastrados pela equipe vivem no Firebase (daycare/cadastro com _novo) e entram na lista base
+  // Trava nível 1 embutida de graça: criarAluno grava em daycare/cadastro/{pelKey(nome+tutor)} —
+  // chave determinística (mesmo padrão de escolherAvulso). Dois Zelosos cadastrando o mesmo
+  // nome+tutor ao mesmo tempo gravam no MESMO nó do Firebase — nunca cria 2 registros — e o
+  // baseKeys abaixo ainda impede a mesclagem local duplicar o que já está em PELUDINHOS.
   function mergeNovosAlunos(){
     try{
       const baseKeys=new Set(PELUDINHOS.map(p=>pelKey(p)));
       Object.keys(pelCadCache||{}).forEach(k=>{ const c=pelCadCache[k];
-        if(c&&c._novo&&!baseKeys.has(k)){ PELUDINHOS.push({n:c.n||'',raca:c.raca||'',freq:c.freq||'',tutor:c.tutor||'',nasc:c.nasc||'',dias:Array.isArray(c.dias)?c.dias:[]}); baseKeys.add(k); }
+        if(c&&c._novo&&!c.excluido&&!baseKeys.has(k)){ PELUDINHOS.push({n:c.n||'',raca:c.raca||'',freq:c.freq||'',tutor:c.tutor||'',nasc:c.nasc||'',dias:Array.isArray(c.dias)?c.dias:[]}); baseKeys.add(k); }
       });
       PELUDINHOS.sort((a,b)=>jsNorm(a.n).localeCompare(jsNorm(b.n))||jsNorm(a.tutor).localeCompare(jsNorm(b.tutor)));
+    }catch(e){}
+  }
+  // Exclusão definitiva (só Diretoria, ver excluirCadastroPel) — a base de PELUDINHOS vem
+  // fixa no código, então "apagar de verdade" é marcar excluido:true em daycare/cadastro
+  // e tirar da lista em memória aqui. Roda toda vez que o cadastro sincroniza — assim a
+  // exclusão feita num aparelho some em todos os outros também, não só no de quem excluiu.
+  function aplicarExclusoes(){
+    try{
+      for(let i=PELUDINHOS.length-1;i>=0;i--){
+        const k=pelKey(PELUDINHOS[i]);
+        if(pelCadCache[k]&&pelCadCache[k].excluido===true) PELUDINHOS.splice(i,1);
+      }
     }catch(e){}
   }
 
@@ -2694,7 +3331,8 @@
   let SENS=new Set();
   (function(){ const raw=localStorage.getItem('zeluz_daycare_sens'); if(raw){ try{ SENS=new Set(JSON.parse(raw)); }catch(e){} } else { SENS=new Set(['tel']); } })();
   function salvarSens(){ const a=[...SENS]; localStorage.setItem('zeluz_daycare_sens',JSON.stringify(a)); if(DB) DB.ref('daycare/config/sensiveis').set(a).catch(()=>{}); }
-  function ehGestaoRole(){ return document.body.dataset.role==='gestao'; }
+  function ehGestaoRole(){ const r=document.body.dataset.role; return r==='gestao'||r==='diretoria'; }
+  function ehDiretoriaRole(){ return document.body.dataset.role==='diretoria'; } // só Adriana — poder de excluir cadastro
   function toggleSens(fid){ if(SENS.has(fid)) SENS.delete(fid); else SENS.add(fid); salvarSens(); if(pelAtualIdx!=null) abrirPeludinho(pelAtualIdx); }
   function fLock(fid){
     const on=SENS.has(fid);
@@ -2954,7 +3592,11 @@
       <div class="field"><label>Saiu do Day Care?</label><div class="seg gold" data-single>${segBtnsPel('inativo',ex.inativo||'',['Sim','Nao'])}</div></div>
       <div class="field"><label>Data da saída</label><input class="cad-in" value="${escAttr(ex.dataSaida||'')}" placeholder="dd/mm/aaaa" onchange="setPelExtra(pelAtual,{dataSaida:this.value})"></div>
       <div class="field" style="grid-column:1/-1"><label>Motivo da saída${on?' <span style="color:var(--crm-critico)">— obrigatório</span>':''}</label><input class="cad-in" value="${escAttr(ex.motivoSaida||'')}" placeholder="Ex: brigas — Stella ciumenta com o Bud · falecido · mudança" onchange="setPelExtra(pelAtual,{motivoSaida:this.value});refreshPills()"></div>
-      ${on?`<div class="field" style="grid-column:1/-1"><div class="dc-faltas" style="margin:0">Inativo: sai das listas do dia, mas o cadastro e o histórico ficam guardados. Aparece para a Márcia no painel da Gestão como contato a fazer.</div></div>`:''}`;
+      ${on?`<div class="field" style="grid-column:1/-1"><div class="dc-faltas" style="margin:0">Inativo: sai das listas do dia, mas o cadastro e o histórico ficam guardados. Aparece para a Márcia no painel da Gestão como contato a fazer.</div></div>`:''}
+      ${ehDiretoriaRole()?`<div class="field" style="grid-column:1/-1">
+        <div class="dc-faltas" style="margin:0;border-color:var(--crm-critico);color:var(--crm-critico)"><strong>Zona de risco — só a Diretoria vê isto.</strong> Excluir apaga o cadastro de verdade: some das listas, da busca e da chamada, em todos os aparelhos. É diferente de "Saiu do Day Care" — se o FILHOt pode voltar ou a família continua tutora, cancele e use "Saiu do Day Care? Sim" acima. Na dúvida, INATIVE, não exclua.</div>
+        <button class="btn" style="background:var(--crm-critico);color:#fff;margin-top:8px" onclick="excluirCadastroPel()">🗑️ Excluir cadastro definitivamente</button>
+      </div>`:''}`;
   }
   function renderAlmSeFor(){ try{ if(dcAtiv==='almoco'&&typeof renderAlmStep==='function') renderAlmStep(); }catch(e){} }
   function renderPel(){
@@ -3060,7 +3702,7 @@
 
       <div class="ppanel2 active" id="ps-ident"><div class="card">
         <div class="cad-grid">
-          <div class="field"><label>Raça</label><input class="cad-in" list="racasList" value="${escAttr(pelGet(p,'raca'))}" onchange="setPelExtra(pelAtual,{raca:this.value})"></div>
+          <div class="field"><label>Raça</label><input id="pelFichaRaca" class="cad-in" list="racasList" value="${escAttr(pelGet(p,'raca'))}" onchange="onRacaPel(this.value)"></div>
           <div class="field"><label>Data de nascimento</label><input type="date" class="cad-in" value="${pelNasc(p)||''}" onchange="setPelExtra(pelAtual,{nasc:this.value})"></div>
           <div class="field"><label>Sexo</label><div class="seg" data-single>${segBtnsPel('sexo',sexo,['Macho','Fêmea'])}</div></div>
           <div class="field"><label>Castrado?</label><div class="seg gold" data-single>${segBtnsPel('castrado',castr,['Sim','Não'])}</div></div>
@@ -3152,7 +3794,19 @@
     if(!nome){ if(w) w.textContent='Escreva o nome do FILHOt.'; return; }
     const novo={n:nome,raca:'',freq:'',tutor:tutor,nasc:'',dias:[]};
     const key=pelKey(novo);
+    // Nível 1 (nome+tutor+raça) — aqui a raça ainda não existe (só entra na ficha completa,
+    // ver onRacaPel), então neste passo a chave equivale a nome+tutor: bloqueia sem opção
+    // de forçar, porque é o mesmo FILHOt tentando cadastrar de novo.
     if(PELUDINHOS.some(p=>pelKey(p)===key)){ if(w) w.textContent='Já existe um AULUNO com esse nome e tutor.'; return; }
+    // Nível 3 — só o nome bate, tutor diferente: pode ser outro FILHOt de verdade (a Zêluz já
+    // tem 3 "Ozzy" de famílias diferentes) — avisa e deixa o humano confirmar, nunca bloqueia
+    // nem funde sozinho. (O nível 2, nome+raça, roda em onRacaPel — na hora de completar a
+    // ficha — porque aqui ainda não há raça para comparar.)
+    const homonimo=PELUDINHOS.find(p=>jsNorm(p.n)===jsNorm(nome));
+    if(homonimo && !confirm('Já existe um(a) '+nome+' cadastrado(a) com o(a) tutor(a) "'+(pelGet(homonimo,'tutor')||'sem tutor informado')+'".\n\nEste é outro FILHOt, de outra família? Clique OK para cadastrar mesmo assim, ou Cancelar para conferir antes.')){
+      if(w) w.textContent='Cadastro não concluído — confira se não é o mesmo FILHOt já cadastrado.';
+      return;
+    }
     PELUDINHOS.push(novo);
     PELUDINHOS.sort((a,b)=>jsNorm(a.n).localeCompare(jsNorm(b.n))||jsNorm(a.tutor).localeCompare(jsNorm(b.tutor)));
     // grava no banco para não sumir ao recarregar (e aparecer em todos os aparelhos)
@@ -3163,6 +3817,40 @@
     renderPel();
     const idx=PELUDINHOS.findIndex(p=>pelKey(p)===key);
     if(idx>=0){ pelOrigem='peludinhos'; abrirPeludinho(idx); }
+  }
+  // Excluir cadastro DE VERDADE — só Diretoria (ver ehDiretoriaRole/botão em camposSaidaFicha).
+  // Diferente de inativar: aqui o registro some do sistema. Por segurança: 2 confirmações
+  // (a 2ª pede o nome exato) + cópia integral gravada em daycare/excluidos ANTES de sumir —
+  // "quero todo o banco de dados sempre" continua valendo, só que agora fora da lista ativa.
+  function excluirCadastroPel(){
+    if(!ehDiretoriaRole()){ alert('Somente a Diretoria pode excluir um cadastro definitivamente.'); return; }
+    if(!pelAtual){ return; }
+    if(!DB){ alert('Sem conexão com o banco agora. A exclusão precisa gravar no Firebase antes de sumir da tela — tente de novo com internet.'); return; }
+    const nome=pelNome(pelAtual);
+    const motivo=(prompt('Motivo da exclusão de '+nome+' (obrigatório — fica registrado no histórico):')||'').trim();
+    if(!motivo){ alert('Sem motivo escrito, o cadastro não é excluído.'); return; }
+    const confNome=(prompt('CONFIRMAÇÃO FINAL — isso é IRREVERSÍVEL e diferente de inativar.\n\nSe o FILHOt pode voltar ou a família continua tutora, CANCELE aqui e use "Saiu do Day Care? Sim" em vez de excluir.\n\nPara excluir '+nome+' de verdade, digite o nome exato do FILHOt:')||'').trim();
+    if(confNome!==nome){ alert('O nome digitado não confere com "'+nome+'". Cadastro NÃO excluído.'); return; }
+    const key=pelKey(pelAtual);
+    const backup={
+      registro: Object.assign({}, pelAtual),      // dados base (n, raça, tutor, dias, nasc...)
+      extra: pelExtra(pelAtual),                   // ficha completa (alergias, vacinas, etc.)
+      motivo: motivo,
+      excluidoPor: quemSou(),
+      excluidoEm: Date.now(),
+      excluidoHora: horaAgora()
+    };
+    DB.ref('daycare/excluidos/'+key).set(backup)
+      .then(()=>DB.ref('daycare/cadastro/'+key).update({excluido:true, motivoExclusao:motivo, excluidoPor:backup.excluidoPor, excluidoEm:backup.excluidoEm}))
+      .then(()=>{
+        if(typeof audit==='function') audit('exclusao_cadastro','excluiu cadastro definitivamente — motivo: '+motivo, {alvo:nome});
+        try{ localStorage.removeItem('zeluz_pel_'+key); }catch(e){}
+        aplicarExclusoes();
+        alert('Cadastro de '+nome+' excluído. Uma cópia completa (com data, motivo e quem excluiu) ficou guardada em daycare/excluidos.');
+        voltarPel();
+        renderPel();
+      })
+      .catch(e=>alert('Erro ao excluir: '+e.message+'\n\nO cadastro NÃO foi apagado — tente novamente.'));
   }
   renderPel();
 
@@ -3196,11 +3884,17 @@
   function renderAtual(){ mostrarScr(); if(dcAtiv==='chamada') carregarChamada(); else if(dcAtiv==='almoco') carregarAlmoco(); else carregarGenerico(); if(typeof renderAdaptBanner==='function') renderAdaptBanner(); }
   function turmaDoDia(){
     const base=PELUDINHOS.map((p,i)=>({p,i})).filter(o=>pelDias(o.p).indexOf(dcDia)>=0 && !pelInativo(o.p));
-    dcAvulsos.forEach((a,k)=>base.push({p:{n:a.nome,raca:a.raca||'',tutor:a.tutor||'',freq:'avulso',dias:[dcDia],nasc:''},i:'av'+k,avulso:true}));
+    // controla quem já está na lista — evita que o mesmo FILHOt entre 2x (fixo do dia + avulso)
+    const jaTem=new Set(base.map(o=>dcKey(o.p.n,o.p.tutor)));
+    dcAvulsos.forEach((a,k)=>{
+      const key=dcKey(a.nome,a.tutor);
+      if(jaTem.has(key)) return; // já é aluno fixo do dia — diária avulsa não duplica
+      jaTem.add(key);
+      base.push({p:{n:a.nome,raca:a.raca||'',tutor:a.tutor||'',freq:'avulso',dias:[dcDia],nasc:''},i:'av'+k,avulso:true});
+    });
     // A planilha manda: Reposição (não é do dia mas veio hoje) e Avulso (pagou diária)
     // entram na lista do dia — na chamada e no almoço. Só vale para hoje.
     if(ehHoje()){
-      const jaTem=new Set(base.map(o=>dcKey(o.p.n,o.p.tutor)));
       ['reposicao','avulso'].forEach(campo=>{
         (planDia[campo]||[]).forEach(it=>{
           if(!it.p) return;
@@ -3212,7 +3906,10 @@
         });
       });
     }
-    return base.sort((x,y)=>jsNorm(x.p.n).localeCompare(jsNorm(y.p.n)));
+    // defesa final: nunca deixar duas entradas do mesmo FILHOt escaparem juntas na lista
+    const vistos=new Set(), unicos=[];
+    base.forEach(o=>{ const k=dcKey(o.p.n,o.p.tutor); if(vistos.has(k)) return; vistos.add(k); unicos.push(o); });
+    return unicos.sort((x,y)=>jsNorm(x.p.n).localeCompare(jsNorm(y.p.n)));
   }
   // Falta avisada na planilha: sai do almoço (não adianta servir para quem não veio).
   function faltouHoje(o){ if(!ehHoje()) return false;
@@ -3317,12 +4014,26 @@
   function escolherAvulso(i){
     const p=PELUDINHOS[i]; if(!p) return;
     const nome=pelNome(p), tutor=pelGet(p,'tutor')||'', raca=pelGet(p,'raca')||'';
-    const reg={nome:nome,tutor:tutor,raca:raca,key:pelKey(p)};
+    const chave=pelKey(p);
+    // já está na turma do dia (fixo, reposição da planilha ou avulso já marcado)? é o mesmo
+    // FILHOt — deixar adicionar de novo é o bug que fazia o Stopa aparecer várias vezes no almoço.
+    if(turmaDoDia().some(o=>dcKey(o.p.n,o.p.tutor)===dcKey(nome,tutor))){
+      alert(nome+' já está na turma de hoje — não precisa marcar diária avulsa de novo.');
+      fecharAvulsaModal();
+      return;
+    }
+    const reg={nome:nome,tutor:tutor,raca:raca,key:chave};
     if(DB){
-      DB.ref('daycare/avulsos/'+dcDataKey()).push(reg)
+      // chave determinística = o próprio FILHOt (pelKey), nunca push(). Dois cliques ou dois
+      // Zelosos adicionando o mesmo peludinho sempre gravam no mesmo lugar — duplicar vira impossível.
+      DB.ref('daycare/avulsos/'+dcDataKey()+'/'+chave).set(reg)
         .then(()=>{ fecharAvulsaModal(); if(typeof audit==='function') audit('avulsa','adicionou diária avulsa',{alvo:nome}); carregarChamada(); })
         .catch(e=>alert('Erro: '+e.message));
-    } else { (dcAvulsos=dcAvulsos||[]).push(reg); fecharAvulsaModal(); renderDaycare(); }
+    } else {
+      dcAvulsos=dcAvulsos||[];
+      if(!dcAvulsos.some(a=>pelKey({n:a.nome,tutor:a.tutor})===chave)) dcAvulsos.push(reg);
+      fecharAvulsaModal(); renderDaycare();
+    }
   }
   function abrirPeludinhoDay(i){ pelOrigem='daycare'; irParaView('ficha'); abrirPeludinho(i); }
 
@@ -3358,7 +4069,7 @@
   function salvarAtiv(){ localStorage.setItem('zeluz_daycare_ativ',JSON.stringify(ATIVIDADES)); if(DB) DB.ref('daycare/config/atividades').set(ATIVIDADES).catch(()=>{}); }
   function renderAtiv(){
     const el=document.getElementById('ativList'); if(!el) return;
-    const ger=(document.body.dataset.role==='gestao');
+    const ger=(document.body.dataset.role==='gestao'||document.body.dataset.role==='diretoria');
     document.getElementById('ativCount').textContent=`${ATIVIDADES.length} atividades no banco`;
     el.innerHTML=ATIVIDADES.map((a,i)=>`<div class="ativ-card">
       <div class="ativ-head"><span class="ativ-num">${String(i+1).padStart(2,'0')}</span><span class="ativ-tit">${a.t}</span>${ger?`<button class="ativ-del" title="Remover" onclick="removerAtividade(${i})">×</button>`:''}</div>
