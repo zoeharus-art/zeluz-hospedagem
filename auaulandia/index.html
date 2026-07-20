@@ -645,6 +645,9 @@
   .medunits button{border:1.5px solid var(--line);background:var(--z-cream);color:var(--z-blue);border-radius:999px;padding:6px 11px;font-size:12.5px;font-weight:700;font-family:var(--font-ui);cursor:pointer}
   .medunits button.on{background:var(--z-gold);border-color:var(--z-gold);color:var(--z-blue)}
   .medunits .mu-lab{align-self:center;font-size:10.5px;font-weight:800;letter-spacing:.4px;color:var(--muted);text-transform:uppercase;margin-right:2px}
+  .mag-tipo{display:flex;gap:6px;padding:8px 9px 0}
+  .mag-tipo button{flex:1;border:1.5px solid var(--line);background:var(--z-cream);color:var(--z-blue);border-radius:999px;padding:7px 11px;font-size:12.5px;font-weight:700;font-family:var(--font-ui);cursor:pointer}
+  .mag-tipo button.on{background:var(--z-gold);border-color:var(--z-gold);color:var(--z-blue)}
   .medgrid.dim{opacity:.45;pointer-events:none}
   /* Celular: a tabela de 3 colunas não cabe — o nome do remédio ficava cortado.
      Cada linha vira um bloco empilhado, com rótulo em cada campo e botão no tamanho do dedo. */
@@ -1048,11 +1051,11 @@
       <datalist id="racasList"></datalist>
 
       <div class="card" id="card-medagenda">
-        <h2 style="font-size:19px">💊 Agenda de Medicação</h2>
-        <div class="hint">Cadastre o medicamento e os horários fixos (ex.: colírio às 10:30, 16:30, 22:30 e 04:30). Salva sozinho — não precisa abrir o relatório do plantão nem assinar.</div>
+        <h2 style="font-size:19px">💊 Agenda de Medicação e Suplementação</h2>
+        <div class="hint">Cadastre o medicamento ou suplemento e os horários fixos (ex.: colírio às 10:30, 16:30, 22:30 e 04:30). Salva sozinho — não precisa abrir o relatório do plantão nem assinar.</div>
         <div id="magItens"></div>
-        <button type="button" class="med-add" onclick="magAddNovoItem()">+ Acrescentar medicamento</button>
-        <div class="actions" style="margin-top:12px"><button class="btn btn-primary" onclick="salvarMedAgenda()">Salvar agenda de medicação</button></div>
+        <button type="button" class="med-add" onclick="magAddNovoItem()">+ Acrescentar medicamento ou suplemento</button>
+        <div class="actions" style="margin-top:12px"><button class="btn btn-primary" onclick="salvarMedAgenda()">Salvar agenda</button></div>
         <div id="mag-status" class="rel-status"></div>
 
         <h3 class="cad-sub" style="margin-top:18px">Horários de hoje</h3>
@@ -1516,14 +1519,27 @@
   function extraDoHosp(h){
     if(!h) return {};
     try{
-      if(h.refKey){
-        let local={}; try{ local=JSON.parse(localStorage.getItem('zeluz_pel_'+h.refKey)||'{}'); }catch(e){}
-        const remote=(typeof pelCadCache!=='undefined'&&pelCadCache[h.refKey])||{};
-        return Object.assign({},local,remote);
+      const acc={};
+      // 1) cadastro-mestre — pela chave de vínculo (refKey) E pela chave nome+tutor. Ler pelos dois
+      //    garante que a tarja de alergia/restrição seja a MESMA que aparece na busca, mesmo em
+      //    hóspede antigo lançado sem refKey (era o caso do Ragnar: aparecia na busca, sumia no card).
+      const keys=[];
+      if(h.refKey) keys.push(h.refKey);
+      const k2=((h.nome||'')+'__'+(h.tutor||'')).toLowerCase().replace(/[.#$\[\]\/]/g,'-');
+      if(k2 && keys.indexOf(k2)<0) keys.push(k2);
+      keys.forEach(function(k){
+        try{ Object.assign(acc, JSON.parse(localStorage.getItem('zeluz_pel_'+k)||'{}')); }catch(e){}
+        const remote=(typeof pelCadCache!=='undefined'&&pelCadCache[k])||{};
+        Object.assign(acc, remote);
+      });
+      // 2) registro manual do próprio hóspede — só preenche o que estiver vazio (não apaga o mestre)
+      const info=getInfo(h)||{};
+      Object.keys(info).forEach(function(k){ if(info[k]!=='' && info[k]!=null) acc[k]=info[k]; });
+      // 3) restrição do almoço (daycare/almoco-cad → campo restr) também é restrição de segurança
+      if(!acc.restricao){
+        try{ const a=(typeof almCad==='function')?almCad({n:h.nome,tutor:h.tutor}):null; if(a&&a.restr) acc.restricao=a.restr; }catch(e){}
       }
-      // Hóspede manual sem vínculo ao cadastro-mestre (ex.: lançamento antigo, antes de existir
-      // refKey) — alergia/restrição ficam gravadas no próprio registro do hóspede (getInfo/setInfo).
-      return getInfo(h)||{};
+      return acc;
     }catch(e){ return {}; }
   }
   // Alergia/restrição é dado de segurança — Monitora também marca, não só Gestão/Supervisão/Diretoria.
@@ -1831,21 +1847,28 @@
   let MED_AGENDA_ITENS={}; // itens salvos da agenda do FILHOt aberto na ficha: {itemId:{nome,q,u,horarios}}
   let MED_AGENDA_LOG={};   // doses já registradas HOJE para o FILHOt aberto: {doseId:{quem,ts,...}}
   function medAgendaRowHTML(id,item){
-    item=item||{nome:'',q:'',u:'',horarios:['']};
+    item=item||{nome:'',q:'',u:'',horarios:[''],tipo:'medicamento'};
+    const tipo=item.tipo||'medicamento';
     const units=MED_UNIDADES.map(u=>'<button type="button" onclick="pickUnit(this)" class="'+(u===item.u?'on':'')+'">'+u+'</button>').join('');
     const horariosHTML=(item.horarios&&item.horarios.length?item.horarios:['']).map(function(h){
       return '<span class="magHorario"><input data-c="h" inputmode="numeric" placeholder="07:30" value="'+escAttr(h||'')+'" onblur="normalizarHoraMed(this)"><button type="button" class="mag-rm-h" title="Remover horário" onclick="this.parentElement.remove()">×</button></span>';
     }).join('');
+    // Medicamento ou Suplemento — o resto do fluxo (horários, despertador, dose atrasada) é igual
+    const tipoToggle='<div class="mag-tipo"><button type="button" class="'+(tipo==='medicamento'?'on':'')+'" onclick="magPickTipo(this)">Medicamento</button>'
+      +'<button type="button" class="'+(tipo==='suplemento'?'on':'')+'" onclick="magPickTipo(this)">Suplemento</button></div>';
     return '<div class="magitem" data-id="'+id+'">'
+      +tipoToggle
       +'<div class="medrow">'
-        +'<label class="mfield"><span class="mf-lab">Medicamento</span><input data-c="m" placeholder="Nome do medicamento" value="'+escAttr(item.nome||'')+'"></label>'
-        +'<label class="mfield"><span class="mf-lab">Quantidade</span><input data-c="q" inputmode="decimal" placeholder="1" value="'+escAttr(item.q||'')+'"></label>'
+        +'<label class="mfield"><span class="mf-lab">Nome</span><input data-c="m" placeholder="Nome do medicamento ou suplemento" value="'+escAttr(item.nome||'')+'"></label>'
+        +'<label class="mfield"><span class="mf-lab">Quantidade</span><input data-c="q" inputmode="decimal" placeholder="Digite a quantidade" value="'+escAttr(item.q||'')+'"></label>'
       +'</div>'
       +'<div class="medunits"><span class="mu-lab">Medida</span>'+units+'</div>'
       +'<div class="mag-horarios"><span class="mu-lab">Horários</span><span class="mag-horarios-list">'+horariosHTML+'</span><button type="button" class="med-add" style="width:auto;margin-top:0" onclick="magAddHorario(this)">+ horário</button></div>'
-      +'<div style="text-align:right;margin-top:6px"><button type="button" class="ativ-del" title="Remover este medicamento da lista" onclick="magRemoverItem(\''+id+'\')">🗑️ Remover medicamento</button></div>'
+      +'<div style="text-align:right;margin-top:6px"><button type="button" class="ativ-del" title="Remover este item da lista" onclick="magRemoverItem(\''+id+'\')">🗑️ Remover item</button></div>'
     +'</div>';
   }
+  // alterna Medicamento/Suplemento na linha (só 1 fica aceso)
+  function magPickTipo(btn){ const wrap=btn.parentElement; if(!wrap) return; wrap.querySelectorAll('button').forEach(function(b){ b.classList.remove('on'); }); btn.classList.add('on'); }
   function magAddHorario(btn){ const wrap=btn.parentElement.querySelector('.mag-horarios-list'); if(wrap) wrap.insertAdjacentHTML('beforeend','<span class="magHorario"><input data-c="h" inputmode="numeric" placeholder="07:30" onblur="normalizarHoraMed(this)"><button type="button" class="mag-rm-h" title="Remover horário" onclick="this.parentElement.remove()">×</button></span>'); }
   // Remove só a linha da tela — não mexe em MED_AGENDA_ITENS nem re-renderiza a lista inteira,
   // senão outros medicamentos ainda não salvos (rascunho) seriam perdidos junto.
@@ -1864,8 +1887,9 @@
       const nome=(el.querySelector('[data-c=m]').value||'').trim();
       const q=(el.querySelector('[data-c=q]').value||'').trim();
       const ub=el.querySelector('.medunits button.on'); const u=ub?ub.textContent.trim():'';
+      const tb=el.querySelector('.mag-tipo button.on'); const tipo=(tb&&/supl/i.test(tb.textContent))?'suplemento':'medicamento';
       const horarios=Array.prototype.map.call(el.querySelectorAll('[data-c=h]'), function(inp){ return normHora(inp.value)||''; }).filter(Boolean);
-      if(nome||q||u||horarios.length) out[id]={nome:nome,q:q,u:u,horarios:horarios};
+      if(nome||q||u||horarios.length) out[id]={nome:nome,q:q,u:u,horarios:horarios,tipo:tipo};
     });
     return out;
   }
@@ -1875,7 +1899,7 @@
     const itens=coletarMedAgendaForm();
     const probs=[];
     Object.values(itens).forEach(function(it){
-      if(!nomeMedOk(it.nome)) probs.push('escreva o NOME do medicamento por extenso.');
+      if(!nomeMedOk(it.nome)) probs.push('escreva o NOME do medicamento ou suplemento por extenso.');
       else if(qtdNum(it.q)==null) probs.push('"'+it.nome+'": escreva a QUANTIDADE em número (ex: 1, 0,5, 10).');
       else if(!it.u) probs.push('"'+it.nome+'": toque na MEDIDA (comprimido, ml, gota...).');
       else if(!it.horarios.length) probs.push('"'+it.nome+'": cadastre pelo menos 1 HORÁRIO válido (ex: 07:30).');
@@ -1911,7 +1935,7 @@
       const it=MED_AGENDA_ITENS[id]||{};
       (it.horarios||[]).forEach(function(h){
         const doseId=magDoseId(id,h); const log=MED_AGENDA_LOG[doseId];
-        rows.push({id:id,doseId:doseId,nome:it.nome,q:it.q,u:it.u,h:h,feito:!!log,quem:log&&log.quem,ts:log&&log.ts});
+        rows.push({id:id,doseId:doseId,nome:it.nome,q:it.q,u:it.u,h:h,tipo:it.tipo||'medicamento',feito:!!log,quem:log&&log.quem,ts:log&&log.ts});
       });
     });
     // Camada 4 — placar do dia: "Optivet — 3 de 4 doses dadas: 10:32 (Giulia), 16:30 (—faltou—)...".
