@@ -680,6 +680,67 @@
   .mag-placar-linha{font-size:13px;font-weight:600;color:#234D67;padding:7px 0;border-bottom:1px dashed var(--line)}
   .mag-placar-linha:last-child{border-bottom:none}
   .mag-placar-linha.atraso{color:var(--crm-critico);font-weight:800}
+  /* Onda 2 — Origem da medicação (tutor/vet/família) e Estoque (2 modos) na ficha viva do remédio */
+  .mag-origem{display:flex;gap:6px;flex-wrap:wrap;align-items:center;padding:10px 9px 0}
+  .mag-origem .mo-lab{font-size:10.5px;font-weight:800;letter-spacing:.4px;color:var(--muted);text-transform:uppercase;margin-right:2px}
+  .mag-origem button{border:1.5px solid var(--line);background:var(--z-cream);color:var(--z-blue);border-radius:999px;padding:6px 12px;font-size:12.5px;font-weight:700;font-family:var(--font-ui);cursor:pointer}
+  .mag-origem button.on{background:var(--z-blue);border-color:var(--z-blue);color:var(--z-cream)}
+  .mag-estoque{margin:10px 9px 2px;padding:11px 12px;border:1.5px dashed var(--line);border-radius:11px;background:var(--z-cream-warm)}
+  .mag-est-lab{font-size:10.5px;font-weight:800;letter-spacing:.4px;color:var(--muted);text-transform:uppercase;margin-bottom:7px}
+  .mag-est-modo{display:flex;gap:6px;margin-bottom:9px}
+  .mag-est-modo button{flex:1;border:1.5px solid var(--line);background:var(--z-cream);color:var(--z-blue);border-radius:999px;padding:7px 11px;font-size:12.5px;font-weight:700;font-family:var(--font-ui);cursor:pointer}
+  .mag-est-modo button.on{background:var(--z-gold);border-color:var(--z-gold);color:var(--z-blue)}
+  .mag-est-campo{display:none}
+  .mag-est-campo.on{display:block}
+  .mag-est-campo label{display:block;font-size:12px;font-weight:700;color:var(--z-blue);margin-bottom:5px}
+  .mag-est-campo input{width:120px;max-width:100%;padding:9px 11px;border:1.5px solid var(--line);border-radius:9px;background:var(--z-cream);font-family:var(--font-ui);font-size:14px;font-weight:700;color:var(--z-blue)}
+  .mag-est-nivel{display:flex;gap:6px}
+  .mag-est-nivel button{flex:1;border:1.5px solid var(--line);background:var(--z-cream);color:var(--z-blue);border-radius:999px;padding:8px 11px;font-size:12.5px;font-weight:700;font-family:var(--font-ui);cursor:pointer}
+  .mag-est-nivel button.on{background:var(--z-gold);border-color:var(--z-gold);color:var(--z-blue)}
+  /* Resumo de estoque (dentro dos "Horários de hoje") */
+  .mag-est-resumo{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;padding:10px 12px;border:1.5px solid var(--line);border-radius:11px;margin-bottom:8px;background:var(--z-white)}
+  .mag-est-resumo.baixo{border-color:var(--crm-critico);background:rgba(192,57,43,.06)}
+  .mag-est-resumo-info{font-size:13px;font-weight:700;color:#234D67}
+  .mag-est-resumo-info .sub{display:block;font-size:11.5px;font-weight:600;color:var(--muted);margin-top:2px}
+  .mag-est-resumo-info .sub.alerta{color:var(--crm-critico);font-weight:800}
+  .btn-acabando{border:1.5px solid var(--crm-critico);background:var(--z-cream);color:var(--crm-critico);border-radius:999px;padding:8px 13px;font-size:12.5px;font-weight:800;font-family:var(--font-ui);cursor:pointer}
+  .btn-acabando:hover{background:rgba(192,57,43,.09)}
+  .est-flag{display:inline-block;font-size:10.5px;font-weight:800;color:#fff;background:var(--crm-critico);padding:3px 9px;border-radius:8px}
+  /* ===== Avisos de Estoque rastreados (Recepção) — mesmo padrão da ração ===== */
+  .avr-empty{text-align:center;padding:46px 20px;color:var(--muted);font-size:14px;font-weight:600;font-style:italic}
+  .avr-card{border:1.5px solid var(--line);border-radius:14px;margin-bottom:16px;background:var(--z-white);overflow:hidden;box-shadow:var(--shadow)}
+  .avr-card.pendente{border-color:var(--crm-critico)}
+  .avr-card.processo{border-color:var(--z-gold-deep)}
+  .avr-card.resolvido{border-color:var(--crm-ok)}
+  .avr-head{display:flex;align-items:center;gap:11px;padding:14px 16px;border-bottom:1px solid var(--line)}
+  .avr-info{flex:1;min-width:0}
+  .avr-nome{font-size:16px;font-weight:800;color:var(--z-blue)}
+  .avr-sub{font-size:12px;font-weight:600;color:var(--muted);margin-top:2px}
+  .avr-chip{font-size:10.5px;font-weight:800;padding:4px 10px;border-radius:9px;white-space:nowrap}
+  .avr-chip.pendente{background:rgba(192,57,43,.12);color:var(--crm-critico);animation:piscaAlerta 1s infinite}
+  .avr-chip.processo{background:rgba(184,150,31,.16);color:var(--z-gold-deep)}
+  .avr-chip.resolvido{background:rgba(39,174,96,.14);color:var(--crm-ok)}
+  .avr-body{padding:14px 16px;display:flex;flex-direction:column;gap:13px}
+  .avr-trilha{border-left:2.5px solid var(--line);padding-left:13px;display:flex;flex-direction:column;gap:11px}
+  .avr-tl{position:relative}
+  .avr-tl::before{content:'';position:absolute;left:-19px;top:3px;width:11px;height:11px;border-radius:50%;background:var(--z-gold);border:2px solid var(--z-white)}
+  .avr-tl.resol::before{background:var(--crm-ok)}
+  .avr-tl-meta{font-size:11px;font-weight:700;color:var(--muted)}
+  .avr-tl-acao{font-size:13.5px;font-weight:600;color:#234D67;margin:2px 0}
+  .avr-tl-assina{font-size:12px;font-weight:700;color:var(--z-blue)}
+  .avr-form{background:var(--z-cream-warm);border-radius:11px;padding:12px 13px}
+  .avr-form .ff-tit{font-size:13px;font-weight:800;color:var(--z-blue);margin-bottom:8px}
+  .avr-form textarea{width:100%;min-height:60px;padding:10px 12px;border:1.5px solid var(--line);border-radius:9px;background:var(--z-cream);font-family:var(--font-ui);font-size:14px;color:var(--z-blue);margin-bottom:8px}
+  .avr-form input{width:100%;padding:10px 12px;border:1.5px solid var(--line);border-radius:9px;background:var(--z-cream);font-family:var(--font-ui);font-size:14px;font-weight:700;color:var(--z-blue);margin-bottom:8px}
+  .avr-form-btns{display:flex;gap:8px;flex-wrap:wrap}
+  .avr-resolvido-banner{background:rgba(39,174,96,.1);border:1.5px solid var(--crm-ok);border-radius:11px;padding:12px 14px;font-weight:800;color:var(--crm-ok);text-align:center}
+  .nav-badge{background:var(--crm-critico);color:#fff;font-size:11px;font-weight:800;border-radius:999px;padding:1px 8px;margin-left:auto}
+  /* Recepção: nav só para consultora + gestão/supervisão/diretoria */
+  .nav a.so-recepcao{display:none}
+  body[data-role="consultora"] .nav a.so-recepcao,
+  body[data-role="gestao"] .nav a.so-recepcao,
+  body[data-role="supervisor"] .nav a.so-recepcao,
+  body[data-role="diretoria"] .nav a.so-recepcao{display:flex}
   /* botão de cancelar hóspede/pernoite do dia — canto do card, só Gestão/Supervisão/Diretoria */
   .pet-x{position:absolute;top:-8px;right:-8px;width:27px;height:27px;border-radius:50%;border:2px solid #fff;background:var(--crm-critico);color:#fff;font-size:16px;font-weight:800;line-height:1;cursor:pointer;z-index:4;display:grid;place-items:center;box-shadow:0 2px 6px rgba(0,0,0,.25)}
   .pet-x:hover{background:#a53125}
@@ -787,6 +848,7 @@
     <a data-v="abertura" class="so-abertura"><span data-icon="sun"></span><span>Atividades Monitor 1</span></a>
     <div class="subnav so-day" id="dcSubnav" style="display:none"></div>
     <a data-v="checkin"><span data-icon="paw"></span><span>Check-in</span></a>
+    <a data-v="recepcao" class="so-recepcao"><span data-icon="paw"></span><span>Recepção</span></a>
     <a data-v="hospedagem"><span data-icon="moon"></span><span>AuAulândia</span></a>
     <a data-v="agenda"><span data-icon="cal"></span><span>Agenda</span><span class="soon">em breve</span></a>
     <div class="grp so-master">Gestão</div>
@@ -1351,6 +1413,11 @@
   <!-- Área de impressão do PDF do check-in (preenchida por JS) -->
   <div id="ci-print"></div>
 
+  <section class="view" id="v-recepcao">
+    <div class="role-note"><span data-icon="paw"></span><span><strong>Avisos de estoque de medicação.</strong> Quando um remédio de um hóspede está acabando, o aviso chega aqui — rastreado. Registre cada providência (liguei para o tutor, ele traz amanhã) até resolver. Nada verbal: tudo fica escrito, com quem, quando e o que foi feito.</span></div>
+    <div id="avisosEstoqueList"></div>
+  </section>
+
   <section class="view" id="v-agenda"><div class="soon-box"><img class="ic-st" src="assets/stickers/coleira.png" alt=""><div class="t">Agenda</div><div class="d">Calendário de frequência e reservas — próxima etapa.</div></div></section>
   <section class="view" id="v-abertura">
     <div class="role-note"><span data-icon="sun"></span><span><strong>Rotina de abertura do turno — Monitor 1.</strong> Marque cada item conforme executa. Fica registrado com horário e quem fez.</span></div>
@@ -1458,6 +1525,12 @@
       // Sincronização em tempo real das pernoites/hóspedes manuais entre TODOS os aparelhos.
       // (antes usava .once() e quem já estava com o app aberto não via a inserção do outro celular)
       DB.ref('auaulandia/manuais').on('value', ()=>{ try{ const ls=document.getElementById('loginScreen'); if(ls && ls.style.display==='none' && typeof carregarHospedes==='function') carregarHospedes(); }catch(e){} });
+      // Onda 2 — avisos de estoque de medicação (Recepção), em tempo real em todos os aparelhos.
+      DB.ref('auaulandia/avisos-estoque').on('value', s=>{ AVISOS_ESTOQUE_CACHE=s.val()||{};
+        try{ if(typeof atualizarBadgeRecepcao==='function') atualizarBadgeRecepcao(); }catch(e){}
+        try{ const v=document.getElementById('v-recepcao'); if(v&&v.classList.contains('active')&&typeof renderAvisosEstoque==='function') renderAvisosEstoque(); }catch(e){}
+        try{ if(currentHosp&&typeof renderMedAgendaHoje==='function'){ const fv=document.getElementById('v-hospedagem'); if(fv&&fv.classList.contains('active')) renderMedAgendaHoje(); } }catch(e){}
+      });
     }).catch(e=>console.warn('Firebase auth:',e));
   }catch(e){ console.warn('Firebase init:',e); }
 
@@ -1525,6 +1598,7 @@
     renovacao:['Renovação de Planos','Planos a vencer e renovações'],adaptacao:['Adaptação · 1º mês','Como está se adaptando'],
     daycare:['Day Care','Chamada e atividades'],hospedagem:['AuAulândia','Passagem de plantão'],
     checkin:['Check-in','Entrada da estadia — ficha, pertences e assinatura'],
+    recepcao:['Recepção','Avisos de estoque de medicação'],
     agenda:['Agenda','Frequência e reservas'],pessoas:['Pessoas & Turnos','Equipe e tarefas'],
     painel:['Painel do Dia','Auditoria e cumprimento de protocolos'],
     abertura:['Atividades Monitor 1','Rotina de abertura do turno'],sair:['Sair','']};
@@ -1541,6 +1615,7 @@
     document.getElementById('head-sub').textContent=titles[v][1];
     if(v==='hospedagem') fecharPlantao();
     if(v==='checkin'){ if(typeof abrirCheckin==='function') abrirCheckin(); }
+    if(v==='recepcao'){ if(typeof carregarAvisosEstoque==='function') carregarAvisosEstoque(); }
     if(v==='ficha'){ const l=document.getElementById('pel-lista'),fi=document.getElementById('pel-ficha'); if(l&&fi){ l.style.display='block'; fi.style.display='none'; } }
     if(v==='daycare'){ if(typeof abrirDayCare==='function') abrirDayCare(); } else { const sm=document.getElementById('dcSubnav'); if(sm) sm.style.display='none'; }
     const pn=document.getElementById('pSubnav'); if(pn) pn.style.display=(v==='pessoas')?'block':'none';
@@ -2007,19 +2082,43 @@
     // Medicamento ou Suplemento — o resto do fluxo (horários, despertador, dose atrasada) é igual
     const tipoToggle='<div class="mag-tipo"><button type="button" class="'+(tipo==='medicamento'?'on':'')+'" onclick="magPickTipo(this)">Medicamento</button>'
       +'<button type="button" class="'+(tipo==='suplemento'?'on':'')+'" onclick="magPickTipo(this)">Suplemento</button></div>';
+    // Origem — de onde veio o remédio (mas TODA medicação tem controle máximo). Fundação 1 do Design.
+    const origem=item.origem||'tutor';
+    const origBtn=function(v,rot){ return '<button type="button" class="'+(origem===v?'on':'')+'" onclick="magPickOrigem(this)" data-o="'+v+'">'+rot+'</button>'; };
+    const origemToggle='<div class="mag-origem"><span class="mo-lab">Origem</span>'+origBtn('tutor','Rotina do tutor')+origBtn('vet','Receita da vet')+origBtn('familia','Autorizado pela família')+'</div>';
+    // Estoque — 2 modos. Contável (comprimido/cápsula/sachê): conta na entrada, desconta por dose.
+    // Não-contável (líquido/pote/manipulado): "veio cheio/metade", qualquer um toca "está acabando".
+    const est=item.estoque||{}; const modo=est.modo||'contavel';
+    const nivel=est.nivel||'cheio';
+    const nivBtn=function(v,rot){ return '<button type="button" class="'+(nivel===v?'on':'')+'" onclick="magPickNivel(this)" data-n="'+v+'">'+rot+'</button>'; };
+    const estoqueBlock='<div class="mag-estoque" data-modo="'+modo+'">'
+      +'<div class="mag-est-lab">Estoque na entrada</div>'
+      +'<div class="mag-est-modo"><button type="button" class="'+(modo==='contavel'?'on':'')+'" onclick="magPickEstModo(this,\'contavel\')" data-modo="contavel">Contável (comprimido, cápsula, sachê)</button>'
+        +'<button type="button" class="'+(modo==='naocontavel'?'on':'')+'" onclick="magPickEstModo(this,\'naocontavel\')" data-modo="naocontavel">Não contável (líquido, pote, manipulado)</button></div>'
+      +'<div class="mag-est-campo mag-est-contavel'+(modo==='contavel'?' on':'')+'"><label>Quantas unidades vieram? (a consultora conta)</label><input data-c="einicial" inputmode="numeric" placeholder="Ex: 20" value="'+escAttr(est.inicial!=null?est.inicial:'')+'"></div>'
+      +'<div class="mag-est-campo mag-est-naocontavel'+(modo==='naocontavel'?' on':'')+'"><label>Como veio o frasco/pote?</label><div class="mag-est-nivel">'+nivBtn('cheio','Veio cheio')+nivBtn('metade','Pela metade')+'</div></div>'
+      +'</div>';
     return '<div class="magitem" data-id="'+id+'">'
       +tipoToggle
+      +origemToggle
       +'<div class="medrow">'
         +'<label class="mfield"><span class="mf-lab">Nome</span><input data-c="m" placeholder="Nome do medicamento ou suplemento" value="'+escAttr(item.nome||'')+'"></label>'
         +'<label class="mfield"><span class="mf-lab">Quantidade</span><input data-c="q" inputmode="decimal" placeholder="Digite a quantidade" value="'+escAttr(item.q||'')+'"></label>'
       +'</div>'
       +'<div class="medunits"><span class="mu-lab">Medida</span>'+units+'</div>'
       +'<div class="mag-horarios"><span class="mu-lab">Horários</span><span class="mag-horarios-list">'+horariosHTML+'</span><button type="button" class="med-add" style="width:auto;margin-top:0" onclick="magAddHorario(this)">+ horário</button></div>'
+      +estoqueBlock
       +'<div style="text-align:right;margin-top:6px"><button type="button" class="ativ-del" title="Remover este item da lista" onclick="magRemoverItem(\''+id+'\')">🗑️ Remover item</button></div>'
     +'</div>';
   }
   // alterna Medicamento/Suplemento na linha (só 1 fica aceso)
   function magPickTipo(btn){ const wrap=btn.parentElement; if(!wrap) return; wrap.querySelectorAll('button').forEach(function(b){ b.classList.remove('on'); }); btn.classList.add('on'); }
+  // alterna a Origem (só 1 acesa)
+  function magPickOrigem(btn){ const wrap=btn.parentElement; if(!wrap) return; wrap.querySelectorAll('button').forEach(function(b){ b.classList.remove('on'); }); btn.classList.add('on'); }
+  // alterna o modo do estoque e mostra o campo certo (contável x não contável)
+  function magPickEstModo(btn,modo){ const box=btn.closest('.mag-estoque'); if(!box) return; box.dataset.modo=modo; box.querySelectorAll('.mag-est-modo button').forEach(function(b){ b.classList.toggle('on', b.dataset.modo===modo); }); box.querySelector('.mag-est-contavel').classList.toggle('on', modo==='contavel'); box.querySelector('.mag-est-naocontavel').classList.toggle('on', modo==='naocontavel'); }
+  // alterna o nível (cheio/metade) do frasco não contável
+  function magPickNivel(btn){ const wrap=btn.parentElement; if(!wrap) return; wrap.querySelectorAll('button').forEach(function(b){ b.classList.remove('on'); }); btn.classList.add('on'); }
   function magAddHorario(btn){ const wrap=btn.parentElement.querySelector('.mag-horarios-list'); if(wrap) wrap.insertAdjacentHTML('beforeend','<span class="magHorario"><input data-c="h" inputmode="numeric" placeholder="07:30" onblur="normalizarHoraMed(this)"><button type="button" class="mag-rm-h" title="Remover horário" onclick="this.parentElement.remove()">×</button></span>'); }
   // Remove só a linha da tela — não mexe em MED_AGENDA_ITENS nem re-renderiza a lista inteira,
   // senão outros medicamentos ainda não salvos (rascunho) seriam perdidos junto.
@@ -2031,6 +2130,32 @@
     wrap.innerHTML = ids.length ? ids.map(id=>medAgendaRowHTML(id,MED_AGENDA_ITENS[id])).join('') : '<div class="hint">Nenhum medicamento agendado ainda.</div>';
     renderMedAgendaHoje();
   }
+  // Coleta a Origem selecionada na linha (default tutor)
+  function coletarOrigemEl(el){ const ob=el.querySelector('.mag-origem button.on'); return ob?(ob.dataset.o||'tutor'):'tutor'; }
+  // Coleta o Estoque da linha. `prev` = item salvo antes, para PRESERVAR o "restante" já descontado
+  // (só reseta o restante quando o item é novo ou a quantidade inicial mudou).
+  function coletarEstoqueEl(el, prev){
+    const box=el.querySelector('.mag-estoque'); if(!box) return null;
+    const modo=box.dataset.modo||'contavel';
+    const pe=(prev&&prev.estoque)||{};
+    if(modo==='contavel'){
+      const raw=((box.querySelector('[data-c=einicial]')||{}).value||'');
+      const n=parseInt(String(raw).replace(/\D/g,''),10);
+      const inicial=(isFinite(n)&&n>=0)?n:null;
+      let restante;
+      if(pe.modo==='contavel' && pe.inicial===inicial && typeof pe.restante==='number') restante=pe.restante;
+      else restante=(inicial!=null?inicial:null);
+      const est={modo:'contavel'};
+      if(inicial!=null) est.inicial=inicial;
+      if(restante!=null) est.restante=restante;
+      if(pe.modo==='contavel' && pe.acabando) est.acabando=true;
+      return est;
+    }
+    const nb=box.querySelector('.mag-est-nivel button.on'); const nivel=nb?(nb.dataset.n||'cheio'):'cheio';
+    const est={modo:'naocontavel', nivel:nivel};
+    if(pe.modo==='naocontavel' && pe.acabando) est.acabando=true;
+    return est;
+  }
   function coletarMedAgendaForm(){
     const out={};
     document.querySelectorAll('#magItens .magitem').forEach(function(el){
@@ -2040,7 +2165,11 @@
       const ub=el.querySelector('.medunits button.on'); const u=ub?ub.textContent.trim():'';
       const tb=el.querySelector('.mag-tipo button.on'); const tipo=(tb&&/supl/i.test(tb.textContent))?'suplemento':'medicamento';
       const horarios=Array.prototype.map.call(el.querySelectorAll('[data-c=h]'), function(inp){ return normHora(inp.value)||''; }).filter(Boolean);
-      if(nome||q||u||horarios.length) out[id]={nome:nome,q:q,u:u,horarios:horarios,tipo:tipo};
+      if(nome||q||u||horarios.length){
+        const item={nome:nome,q:q,u:u,horarios:horarios,tipo:tipo,origem:coletarOrigemEl(el)};
+        const est=coletarEstoqueEl(el, MED_AGENDA_ITENS[id]); if(est) item.estoque=est;
+        out[id]=item;
+      }
     });
     return out;
   }
@@ -2079,8 +2208,190 @@
       DB.ref('auaulandia/medicacao-log/'+dataKeyAtual()+'/'+key).once('value').then(s=>s.val()||{}).catch(()=>({}))
     ]).then(function(r){ MED_AGENDA_ITENS=r[0]||{}; MED_AGENDA_LOG=r[1]||{}; renderMedAgenda(); });
   }
+  // Quantos dias de folga antes de acabar já dispara o alerta (contável).
+  const ESTOQUE_DIAS_ALERTA=2;
+  // Projeção de estoque de um item contável: quantas doses/dia, consumo/dia e dias restantes.
+  function projecaoEstoque(it){
+    const est=it.estoque||{}; if(est.modo!=='contavel') return null;
+    const restante=(typeof est.restante==='number')?est.restante:(typeof est.inicial==='number'?est.inicial:null);
+    if(restante==null) return null;
+    const qd=qtdNum(it.q)||0; const nH=(it.horarios||[]).length||0;
+    const consumoDia=qd*nH;
+    const diasRestantes=consumoDia>0?Math.floor(restante/consumoDia):null;
+    const baixo=(consumoDia>0 && diasRestantes!=null && diasRestantes<=ESTOQUE_DIAS_ALERTA) || restante<=3;
+    return {restante:restante, unidade:est.inicial!=null?it.u:it.u, consumoDia:consumoDia, diasRestantes:diasRestantes, baixo:baixo};
+  }
+  // Resumo de estoque por medicamento (dentro dos "Horários de hoje"), com botão "Está acabando"
+  // que abre um aviso rastreado para a Recepção. Contável mostra "acaba em ~X dias".
+  function renderEstoqueResumo(){
+    const key=medAgendaKey();
+    const ids=Object.keys(MED_AGENDA_ITENS).filter(function(id){ return MED_AGENDA_ITENS[id] && MED_AGENDA_ITENS[id].estoque; });
+    if(!ids.length) return '';
+    const linhas=ids.map(function(id){
+      const it=MED_AGENDA_ITENS[id]; const est=it.estoque||{};
+      const aviso=avisoAbertoDoItem(key,id);
+      let info='', subCls='', sub='';
+      if(est.modo==='contavel'){
+        const p=projecaoEstoque(it);
+        if(p){
+          info='Estoque: <strong>'+p.restante+'</strong> '+escAttr((p.restante>1&&MED_PLURAL[it.u])?MED_PLURAL[it.u]:(it.u||'unidades'));
+          if(p.diasRestantes!=null){ sub='Acaba em ~'+p.diasRestantes+' dia'+(p.diasRestantes===1?'':'s')+' no ritmo atual.'; if(p.baixo) subCls=' alerta'; }
+          else { sub='Sem horários fixos para projetar o consumo.'; }
+        } else { info='Estoque contável — informe quantas unidades vieram no check-in.'; }
+      } else {
+        info='Frasco/pote: <strong>'+(est.nivel==='metade'?'veio pela metade':'veio cheio')+'</strong>';
+        sub='Não dá para contar — toque "Está acabando" quando estiver no fim.';
+      }
+      const baixo=(est.modo==='contavel' && projecaoEstoque(it) && projecaoEstoque(it).baixo);
+      const acao = aviso
+        ? '<span class="est-flag">Aviso enviado à Recepção</span>'
+        : '<button type="button" class="btn-acabando" onclick="tocarEstoqueAcabando(\''+id+'\')">Está acabando</button>';
+      return '<div class="mag-est-resumo'+(baixo?' baixo':'')+'">'
+        +'<div class="mag-est-resumo-info">'+escAttr(it.nome||'Medicamento')+' — '+info+(sub?'<span class="sub'+subCls+'">'+escAttr(sub)+'</span>':'')+'</div>'
+        +acao+'</div>';
+    }).join('');
+    return '<div style="margin-bottom:10px">'+linhas+'</div>';
+  }
+
+  // ===== Onda 2 — Estoque: desconto por dose + Aviso RASTREADO para a Recepção =====
+  // Espelho vivo dos avisos (nó auaulandia/avisos-estoque). Alimentado pelo listener no init.
+  var AVISOS_ESTOQUE_CACHE={};
+  function agoraBR(){ var d=new Date(),p=function(x){return String(x).padStart(2,'0');}; return p(d.getDate())+'/'+p(d.getMonth()+1)+' '+p(d.getHours())+':'+p(d.getMinutes()); }
+  // Existe aviso NÃO resolvido para este remédio? (evita duplicar e mostra "já enviado")
+  function avisoAbertoDoItem(key,itemId){
+    var out=null;
+    Object.keys(AVISOS_ESTOQUE_CACHE||{}).forEach(function(id){
+      var a=AVISOS_ESTOQUE_CACHE[id];
+      if(a && a.key===key && a.itemId===itemId && a.status!=='resolvido') out=Object.assign({id:id},a);
+    });
+    return out;
+  }
+  // Desconta 1 dose do estoque contável, de forma idempotente (transação + marca por dia+dose,
+  // para o mesmo horário poder ser descontado dia após dia sem contar 2x no mesmo dia).
+  function descontarEstoquePorDose(key,itemId,doseId,q){
+    if(!DB||!key||!itemId) return;
+    var qNum=qtdNum(q)||0;
+    var ck=dataKeyAtual()+'__'+doseId;
+    DB.ref('auaulandia/medicacao-agenda/'+key+'/itens/'+itemId+'/estoque').transaction(function(est){
+      if(!est || est.modo!=='contavel') return; // aborta
+      est.contados=est.contados||{};
+      if(est.contados[ck]) return; // já contado hoje — aborta
+      var base=(typeof est.restante==='number')?est.restante:(typeof est.inicial==='number'?est.inicial:null);
+      if(base==null) return; // sem quantidade inicial — nada a descontar
+      est.contados[ck]=true;
+      est.restante=Math.max(0, base-qNum);
+      return est;
+    }).then(function(res){
+      if(res && res.committed && res.snapshot){
+        var nova=res.snapshot.val();
+        if(MED_AGENDA_ITENS[itemId]) MED_AGENDA_ITENS[itemId].estoque=nova;
+        if(currentHosp && medAgendaKey(currentHosp)===key && typeof renderMedAgendaHoje==='function') renderMedAgendaHoje();
+        avaliarEstoqueAlerta(key,itemId);
+      }
+    }).catch(function(){});
+  }
+  // Depois de descontar, projeta: se está baixo e ainda não há aviso, abre um automaticamente.
+  function avaliarEstoqueAlerta(key,itemId){
+    if(!DB) return;
+    DB.ref('auaulandia/medicacao-agenda/'+key+'/itens/'+itemId).once('value').then(function(s){
+      var it=s.val(); if(!it||!it.estoque||it.estoque.modo!=='contavel') return;
+      var p=projecaoEstoque(it); if(!p||!p.baixo) return;
+      if(avisoAbertoDoItem(key,itemId)) return;
+      DB.ref('auaulandia/medicacao-agenda/'+key).once('value').then(function(s2){
+        var ag=s2.val()||{};
+        criarAvisoEstoque({key:key,itemId:itemId,medNome:it.nome||'',hospNome:ag.nome||'',tutor:ag.tutor||'',modo:'contavel',unidade:it.u||'',restante:p.restante,motivo:'projecao'});
+      });
+    }).catch(function(){});
+  }
+  // Cria o aviso rastreado (não duplica se já houver um aberto para o mesmo remédio).
+  function criarAvisoEstoque(d){
+    if(!DB) return;
+    if(avisoAbertoDoItem(d.key,d.itemId)) return;
+    var aviso={
+      key:d.key, itemId:d.itemId, medNome:d.medNome||'', hospNome:d.hospNome||'', tutor:d.tutor||'',
+      modo:d.modo||'', unidade:d.unidade||'', motivo:d.motivo||'manual',
+      status:'pendente', entries:[], criado_por:quemSou(), _ts:Date.now()
+    };
+    if(typeof d.restante==='number') aviso.restante=d.restante;
+    DB.ref('auaulandia/avisos-estoque').push(aviso).catch(function(){});
+    if(typeof audit==='function') audit('estoque-aviso',d.key,{med:d.medNome||'',motivo:aviso.motivo});
+  }
+  // Botão "Está acabando" (qualquer um pode tocar) — marca o item e abre o aviso à Recepção.
+  function tocarEstoqueAcabando(itemId){
+    var it=MED_AGENDA_ITENS[itemId]; if(!it) return;
+    if(!confirm('Avisar a Recepção que "'+(it.nome||'este medicamento')+'" está acabando?')) return;
+    var key=medAgendaKey(); if(!key||!DB){ alert('Banco conectando… tente de novo em instantes.'); return; }
+    it.estoque=Object.assign({}, it.estoque||{}, {acabando:true});
+    DB.ref('auaulandia/medicacao-agenda/'+key+'/itens/'+itemId+'/estoque').update({acabando:true}).catch(function(){});
+    var est=it.estoque||{};
+    criarAvisoEstoque({key:key,itemId:itemId,medNome:it.nome||'',hospNome:(currentHosp&&currentHosp.nome)||'',tutor:(currentHosp&&currentHosp.tutor)||'',modo:est.modo||'',unidade:it.u||'',restante:(typeof est.restante==='number')?est.restante:undefined,motivo:'manual'});
+    if(typeof renderMedAgendaHoje==='function') renderMedAgendaHoje();
+  }
+
+  // ---- Recepção: lista e trilha dos avisos de estoque (mesmo padrão pendente→resolvido da ração) ----
+  function carregarAvisosEstoque(){ renderAvisosEstoque(); }
+  function atualizarBadgeRecepcao(){
+    var n=0; Object.keys(AVISOS_ESTOQUE_CACHE||{}).forEach(function(id){ if(AVISOS_ESTOQUE_CACHE[id].status!=='resolvido') n++; });
+    var link=document.querySelector('#nav a[data-v="recepcao"]'); if(!link) return;
+    var b=link.querySelector('.nav-badge');
+    if(n>0){ if(!b){ b=document.createElement('span'); b.className='nav-badge'; link.appendChild(b); } b.textContent=n; }
+    else if(b){ b.remove(); }
+  }
+  function avisoCardHTML(id){
+    var a=AVISOS_ESTOQUE_CACHE[id]||{};
+    var status=a.status||'pendente';
+    var chip=status==='resolvido'?'<span class="avr-chip resolvido">RESOLVIDO</span>':status==='em_processo'?'<span class="avr-chip processo">EM PROCESSO</span>':'<span class="avr-chip pendente">PENDENTE</span>';
+    var cls=status==='resolvido'?'resolvido':status==='em_processo'?'processo':'pendente';
+    var motivo=a.motivo==='projecao'?'Estoque projetado para acabar':'Marcado como "está acabando"';
+    var det=[];
+    if(a.modo==='contavel' && typeof a.restante==='number') det.push('Restam ~'+a.restante+' '+((a.restante>1&&MED_PLURAL[a.unidade])?MED_PLURAL[a.unidade]:(a.unidade||'unidades')));
+    det.push(motivo);
+    var trilha=(a.entries&&a.entries.length)?'<div class="avr-trilha">'+a.entries.map(function(e){
+      return '<div class="avr-tl'+(e.resolucao?' resol':'')+'"><div class="avr-tl-meta">'+escAttr(e.quando||'')+'</div><div class="avr-tl-acao">"'+escAttr(e.acao||'')+'"</div><div class="avr-tl-assina">— '+escAttr(e.assinatura||'')+'</div></div>';
+    }).join('')+'</div>':'';
+    var form=status!=='resolvido'
+      ? '<div class="avr-form"><div class="ff-tit">Registrar providência</div><textarea id="avr_acao_'+id+'" placeholder="O que foi feito? (ex.: liguei para o tutor, ele traz amanhã)"></textarea><input id="avr_assina_'+id+'" placeholder="Seu nome (assinatura)"><div class="avr-form-btns"><button class="btn btn-primary" onclick="avisoAddEntrada(\''+id+'\')">Registrar</button><button class="btn btn-gold" onclick="avisoResolver(\''+id+'\')">Marcar como resolvido</button></div></div>'
+      : '<div class="avr-resolvido-banner">Resolvido — estoque encaminhado.</div><div style="text-align:right;margin-top:8px"><button class="btn" style="background:var(--z-cream-warm);color:var(--z-blue);border:1.5px solid var(--line)" onclick="avisoReabrir(\''+id+'\')">Reabrir</button></div>';
+    return '<div class="avr-card '+cls+'"><div class="avr-head"><div class="avr-info"><div class="avr-nome">'+escAttr(a.medNome||'Medicamento')+'</div><div class="avr-sub">'+escAttr(a.hospNome||'')+(a.tutor?(' · Tutor: '+escAttr(a.tutor)):'')+' — '+escAttr(det.join(' · '))+'</div></div>'+chip+'</div><div class="avr-body">'+trilha+form+'</div></div>';
+  }
+  function renderAvisosEstoque(){
+    var el=document.getElementById('avisosEstoqueList'); if(!el) return;
+    var ids=Object.keys(AVISOS_ESTOQUE_CACHE||{});
+    ids.sort(function(a,b){ return (AVISOS_ESTOQUE_CACHE[b]._ts||0)-(AVISOS_ESTOQUE_CACHE[a]._ts||0); });
+    var abertos=ids.filter(function(id){ return AVISOS_ESTOQUE_CACHE[id].status!=='resolvido'; });
+    var fechados=ids.filter(function(id){ return AVISOS_ESTOQUE_CACHE[id].status==='resolvido'; });
+    var ordered=abertos.concat(fechados);
+    if(!ordered.length){ el.innerHTML='<div class="avr-empty">Nenhum aviso de estoque de medicação. Tudo em dia por aqui.</div>'; return; }
+    el.innerHTML=ordered.map(avisoCardHTML).join('');
+  }
+  function avisoAddEntrada(id){
+    var acao=((document.getElementById('avr_acao_'+id)||{}).value||'').trim();
+    var assina=((document.getElementById('avr_assina_'+id)||{}).value||'').trim();
+    if(!acao||!assina){ alert('Escreva o que foi feito e o seu nome para registrar.'); return; }
+    if(!DB) return; var a=AVISOS_ESTOQUE_CACHE[id]; if(!a) return;
+    var entries=(a.entries||[]).slice(); entries.push({acao:acao,assinatura:assina,quando:agoraBR(),ts:Date.now()});
+    DB.ref('auaulandia/avisos-estoque/'+id).update({entries:entries, status:(a.status==='resolvido'?'resolvido':'em_processo')}).catch(function(){});
+    if(typeof audit==='function') audit('estoque-aviso-entrada',a.key,{med:a.medNome||'',quem:assina});
+  }
+  function avisoResolver(id){
+    var acao=((document.getElementById('avr_acao_'+id)||{}).value||'').trim();
+    var assina=((document.getElementById('avr_assina_'+id)||{}).value||'').trim();
+    if(!acao||!assina){ alert('Descreva o que foi feito e assine para marcar como resolvido.'); return; }
+    if(!DB) return; var a=AVISOS_ESTOQUE_CACHE[id]; if(!a) return;
+    var entries=(a.entries||[]).slice(); entries.push({acao:acao,assinatura:assina,quando:agoraBR(),ts:Date.now(),resolucao:true});
+    DB.ref('auaulandia/avisos-estoque/'+id).update({entries:entries, status:'resolvido'}).catch(function(){});
+    // baixa a flag "acabando" do item, já que foi resolvido
+    if(a.key&&a.itemId) DB.ref('auaulandia/medicacao-agenda/'+a.key+'/itens/'+a.itemId+'/estoque/acabando').set(null).catch(function(){});
+    if(typeof audit==='function') audit('estoque-aviso-resolvido',a.key,{med:a.medNome||'',quem:assina});
+  }
+  function avisoReabrir(id){
+    if(!DB) return; var a=AVISOS_ESTOQUE_CACHE[id]; if(!a) return;
+    DB.ref('auaulandia/avisos-estoque/'+id).update({status:'em_processo'}).catch(function(){});
+  }
+
   function renderMedAgendaHoje(){
     const el=document.getElementById('magHoje'); if(!el) return;
+    const estoqueHTML=renderEstoqueResumo();
     const rows=[];
     Object.keys(MED_AGENDA_ITENS).forEach(function(id){
       const it=MED_AGENDA_ITENS[id]||{};
@@ -2096,9 +2407,9 @@
     Object.keys(MED_AGENDA_LOG).forEach(function(doseId){
       const log=MED_AGENDA_LOG[doseId]; if(log&&log.avulso) rows.push({id:null,doseId:doseId,nome:log.nome,q:log.q,u:log.u,h:log.horario,feito:true,quem:log.quem,ts:log.ts,avulso:true});
     });
-    if(!rows.length){ el.innerHTML=placarHTML+'<div class="hint">Nenhum horário agendado para hoje.</div>'; return; }
+    if(!rows.length){ el.innerHTML=estoqueHTML+placarHTML+'<div class="hint">Nenhum horário agendado para hoje.</div>'; return; }
     rows.sort(function(a,b){ return (a.h||'').localeCompare(b.h||''); });
-    el.innerHTML=placarHTML+rows.map(function(r){
+    el.innerHTML=estoqueHTML+placarHTML+rows.map(function(r){
       const qtd=fmtQtd(r.q,r.u);
       return '<div class="mag-dose'+(r.feito?' feito':'')+'">'
         +'<div class="mag-dose-info"><strong>'+escAttr(r.h||'--:--')+'</strong> — '+escAttr(r.nome||'')+(qtd?' · '+escAttr(qtd):'')+(r.avulso?' <span style="font-weight:800;color:var(--muted)">(avulsa)</span>':'')+'</div>'
@@ -2125,6 +2436,7 @@
     DB.ref('auaulandia/medicacao-log/'+dataKeyAtual()+'/'+it.key+'/'+doseId).set(reg).then(function(){
       if(currentHosp && medAgendaKey(currentHosp)===it.key){ MED_AGENDA_LOG[doseId]=reg; renderMedAgendaHoje(); }
       if(typeof audit==='function') audit('medicacao-dose',it.key,{pet:it.hospNome||'',med:it.nome,horario:it.horario,quem:reg.quem});
+      if(typeof descontarEstoquePorDose==='function') descontarEstoquePorDose(it.key,it.itemId,doseId,it.q); // Onda 2: desconta do estoque contável e projeta o fim
       if(typeof fecharDespertadorMed==='function') fecharDespertadorMed();
       if(typeof carregarMedAtrasadaGestora==='function') carregarMedAtrasadaGestora(); // dose registrada: some do alerta da Gestora sozinho
     }).catch(function(e){ alert('Erro ao registrar a dose: '+e.message); });
@@ -5035,7 +5347,12 @@
       const ub=el.querySelector('.medunits button.on'); const u=ub?ub.textContent.trim():'';
       const tb=el.querySelector('.mag-tipo button.on'); const tipo=(tb&&/supl/i.test(tb.textContent))?'suplemento':'medicamento';
       const horarios=Array.prototype.map.call(el.querySelectorAll('[data-c=h]'), function(inp){ return normHora(inp.value)||''; }).filter(Boolean);
-      if(nome||q||u||horarios.length) out[id]={nome:nome,q:q,u:u,horarios:horarios,tipo:tipo};
+      if(nome||q||u||horarios.length){
+        // No check-in o estoque é sempre "fresco" (a consultora acabou de contar/receber) — prev=null.
+        const item={nome:nome,q:q,u:u,horarios:horarios,tipo:tipo,origem:coletarOrigemEl(el)};
+        const est=coletarEstoqueEl(el, null); if(est) item.estoque=est;
+        out[id]=item;
+      }
     });
     return out;
   }
@@ -5152,7 +5469,7 @@
       pertences:ciColetarPert()
     };
   }
-  function ciMedsToLista(itens){ return Object.values(itens).map(function(it){ return { nome:it.nome, tipo:it.tipo, q:it.q, u:it.u, horarios:it.horarios }; }); }
+  function ciMedsToLista(itens){ return Object.values(itens).map(function(it){ const o={ nome:it.nome, tipo:it.tipo, q:it.q, u:it.u, horarios:it.horarios, origem:it.origem||'tutor' }; if(it.estoque) o.estoque=it.estoque; return o; }); }
 
   // ---- Salvar no sistema ----
   function ciSalvar(){
