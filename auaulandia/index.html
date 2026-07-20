@@ -310,6 +310,11 @@
   body[data-role="plantonista"] .so-gestao,
   body[data-role="aprendiz"] .so-gestao,
   body[data-role="tutor"]   .so-gestao{display:none !important}
+  /* .so-equipe = Gestão + Supervisão + Diretoria + Monitor (quem recebe/cuida do FILHOt no dia a dia).
+     Plantonista, aprendiz e tutor ficam de fora — ex.: cancelar um lançamento do dia. */
+  body[data-role="plantonista"] .so-equipe,
+  body[data-role="aprendiz"] .so-equipe,
+  body[data-role="tutor"]   .so-equipe{display:none !important}
   /* .so-master = SÓ a Gestora (Márcia) e a Diretoria (Adriana). Supervisão (Amanda) e equipe não veem. */
   body:not([data-role="gestao"]):not([data-role="diretoria"]) .so-master{display:none !important}
   /* mensagem para quem entra em Pessoas mas não é a Gestora (ex: Amanda) */
@@ -1010,6 +1015,7 @@
           <div class="hf-meta" id="hf-meta"></div>
           <div class="hf-estadia" id="hf-estadia"></div>
           <div id="hf-pills"></div>
+          <div id="hf-alergia-block"></div>
           <div class="so-gestao" style="margin-top:10px">
             <button class="btn-foto-mini" style="background:var(--z-gold);color:var(--z-blue)" onclick="toggleCadastro()">✏️ Editar cadastro</button>
           </div>
@@ -1508,12 +1514,51 @@
   // (são declarados mais abaixo no arquivo) e renderHosp() já roda uma vez antes disso — sem o
   // try/catch essas 2 funções derrubariam a tela inteira na 1ª renderização.
   function extraDoHosp(h){
-    if(!h||!h.refKey) return {};
+    if(!h) return {};
     try{
-      let local={}; try{ local=JSON.parse(localStorage.getItem('zeluz_pel_'+h.refKey)||'{}'); }catch(e){}
-      const remote=(typeof pelCadCache!=='undefined'&&pelCadCache[h.refKey])||{};
-      return Object.assign({},local,remote);
+      if(h.refKey){
+        let local={}; try{ local=JSON.parse(localStorage.getItem('zeluz_pel_'+h.refKey)||'{}'); }catch(e){}
+        const remote=(typeof pelCadCache!=='undefined'&&pelCadCache[h.refKey])||{};
+        return Object.assign({},local,remote);
+      }
+      // Hóspede manual sem vínculo ao cadastro-mestre (ex.: lançamento antigo, antes de existir
+      // refKey) — alergia/restrição ficam gravadas no próprio registro do hóspede (getInfo/setInfo).
+      return getInfo(h)||{};
     }catch(e){ return {}; }
+  }
+  // Alergia/restrição é dado de segurança — Monitora também marca, não só Gestão/Supervisão/Diretoria.
+  // Plantonista fica de fora (só cuida à noite, não é quem recebe o FILHOt na chegada).
+  function canEditHospAlergia(){ const r=document.body.dataset.role; return r==='gestao'||r==='supervisor'||r==='diretoria'||r==='monitor'; }
+  // Grava a alergia/restrição do hóspede. Se ele é um FILHOt do cadastro-mestre (refKey), grava lá —
+  // vale em todo lugar (Day Care e AuAulândia, em qualquer aparelho). Se é hóspede manual sem
+  // vínculo, grava só no registro deste hóspede na AuAulândia (mesmo esquema do getInfo/setInfo).
+  function setHospAlergia(campo,val){
+    if(!currentHosp) return;
+    const key=currentHosp.refKey;
+    if(key){
+      let local={}; try{ local=JSON.parse(localStorage.getItem('zeluz_pel_'+key)||'{}'); }catch(e){}
+      local[campo]=val;
+      try{ localStorage.setItem('zeluz_pel_'+key,JSON.stringify(local)); }catch(e){}
+      if(DB) DB.ref('daycare/cadastro/'+key).update({[campo]:val}).catch(()=>{});
+      if(typeof pelCadCache!=='undefined') pelCadCache[key]=Object.assign({},pelCadCache[key]||{},{[campo]:val});
+    } else {
+      setInfo(currentHosp,{[campo]:val});
+    }
+    const _pillsEl=document.getElementById('hf-pills'); if(_pillsEl) _pillsEl.innerHTML=(typeof alertPills==='function')?alertPills(extraDoHosp(currentHosp)):'';
+    renderHosp();
+  }
+  // Bloco "Alergia / Restrição" na ficha do hóspede — achável e editável por quem recebe o
+  // FILHOt (Monitora, Gestão, Supervisão, Diretoria). Quem não pode editar não vê o bloco vazio
+  // (a tarja vermelha em hf-pills já mostra o dado a todos, inclusive plantonista, em modo leitura).
+  function renderHospAlergiaBlock(h){
+    const el=document.getElementById('hf-alergia-block'); if(!el) return;
+    if(!canEditHospAlergia()){ el.innerHTML=''; return; }
+    const ex=extraDoHosp(h);
+    el.innerHTML=`
+      <div class="cad-grid" style="margin-top:8px">
+        <div class="field"><label>Alergia (aparece em vermelho para todos)</label><input class="cad-in" value="${escAttr(ex.alergia||'')}" placeholder="Ex: frango — ou deixe vazio" onchange="setHospAlergia('alergia',this.value)"></div>
+        <div class="field"><label>Restrição alimentar (aparece em vermelho para todos)</label><input class="cad-in" value="${escAttr(ex.restricao||'')}" placeholder="Ex: sem grãos" onchange="setHospAlergia('restricao',this.value)"></div>
+      </div>`;
   }
   // Bug histórico: adicionarPernoite/adicionarHospede pediam nome+tutor por prompt() cru, sem
   // ligação com o cadastro-mestre — em alguns registros antigos de auaulandia/manuais a RAÇA
@@ -1561,8 +1606,9 @@
         const alertaFoto = (ex.alergia||ex.restricao) ? `<span class="mini-alert">${ex.alergia&&ex.restricao?'ALÉRGICO/RESTRIÇÃO':(ex.alergia?'ALÉRGICO':'RESTRIÇÃO')}</span>` : '';
         const medFoto = ex.medicacao ? '<span class="mini-med">MEDICAÇÃO</span>' : '';
         // Cancelar lançamento do dia — só quem foi adicionado manualmente hoje (tem manualKey) tem
-        // como cancelar; quem vem da planilha não tem essa opção aqui. Só Gestão/Supervisão/Diretoria.
-        const cancelBtn = h.manualKey ? `<button type="button" class="pet-x so-gestao" title="Cancelar hóspede/pernoite de hoje" onclick="event.stopPropagation();cancelarHospedeManual(${i})">×</button>` : '';
+        // como cancelar; quem vem da planilha não tem essa opção aqui. Gestão/Supervisão/Diretoria/Monitor
+        // (reversível e de baixo risco — remove só o lançamento de hoje, não mexe no cadastro). Plantonista fora.
+        const cancelBtn = h.manualKey ? `<button type="button" class="pet-x so-equipe" title="Cancelar hóspede/pernoite de hoje" onclick="event.stopPropagation();cancelarHospedeManual(${i})">×</button>` : '';
         return `<div class="pet" onclick="abrirPlantao(${i})">
           ${cancelBtn}${alertaFoto}${medFoto}${ph}
           <div class="nm">${cad.nome||h.nome}</div>
@@ -1591,6 +1637,7 @@
     document.getElementById('hf-estadia').innerHTML=`Na AuAulândia · <strong>estadia a confirmar na ficha</strong>`;
     // alergia/medicação em destaque no topo da ficha — mesma trava de segurança do Day Care (alertPills)
     const _pillsEl=document.getElementById('hf-pills'); if(_pillsEl) _pillsEl.innerHTML=(typeof alertPills==='function')?alertPills(extraDoHosp(h)):'';
+    if(typeof renderHospAlergiaBlock==='function') renderHospAlergiaBlock(h);
     document.getElementById('hfRaca').value=raca;
     document.getElementById('hosp-lista').style.display='none';
     document.getElementById('hosp-ficha').style.display='block';
@@ -2651,11 +2698,12 @@
   // ===== Cancelar hóspede/pernoite lançado hoje — reversível, só o lançamento do dia =====
   // Diferente de excluirCadastroPel (que apaga o cadastro-mestre pra sempre): aqui só remove o
   // nó auaulandia/manuais/{dia}/{pushKey} — o FILHOt continua cadastrado, só some da lista de hoje.
-  // Só Gestão/Supervisão/Diretoria (mesma trava do "Adicionar hóspede"): guarda dupla — CSS
-  // (.so-gestao esconde o botão) + JS (aqui embaixo), pra não depender só do CSS.
+  // Gestão/Supervisão/Diretoria/Monitor (mesmo grupo do "Adicionar pernoite"): guarda dupla — CSS
+  // (.so-equipe esconde o botão para plantonista/aprendiz/tutor) + JS (aqui embaixo), pra não
+  // depender só do CSS.
   function cancelarHospedeManual(i){
     const r=(document.body.dataset.role||'');
-    if(!(r==='gestao'||r==='supervisor'||r==='diretoria')) return;
+    if(!(r==='gestao'||r==='supervisor'||r==='diretoria'||r==='monitor')) return;
     const h=hospedes[i]; if(!h) return;
     if(!h.manualKey){ alert('Este registro não pode ser cancelado por aqui — ele veio da planilha, não foi lançado manualmente hoje.'); return; }
     if(!confirm('Cancelar a pernoite/hospedagem de '+(h.nome||'?')+' de hoje?\n\nIsso remove só o lançamento de hoje — não mexe no cadastro do FILHOt. Se ele voltar outro dia, é só adicionar de novo.')) return;
