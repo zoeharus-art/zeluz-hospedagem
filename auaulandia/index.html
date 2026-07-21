@@ -1367,6 +1367,15 @@
         </div>
       </div>
 
+      <!-- Zona de risco — deletar o lançamento do dia. Fica no rodapé da ficha, longe do toque
+           acidental. Só a equipe (.so-equipe: gestão/supervisão/diretoria/monitor) vê; plantonista não.
+           Cancela SÓ a pernoite de hoje — o cadastro do FILHOt continua salvo. Ver cancelarPernoiteFicha(). -->
+      <div class="card so-equipe" id="hf-zonarisco" style="display:none;border:1.5px solid var(--crm-critico);background:rgba(197,49,37,.05);margin-top:14px">
+        <h2 style="font-size:16px;color:var(--crm-critico);margin-bottom:6px">Zona de risco</h2>
+        <div class="hint" style="margin-bottom:10px">Cancela apenas a pernoite/hospedagem de hoje. O cadastro do FILHOt continua salvo — se ele voltar outro dia, é só adicionar de novo.</div>
+        <button class="btn" style="background:var(--crm-critico);color:#fff;font-weight:800" onclick="cancelarPernoiteFicha()">🗑️ Deletar este peludinho do Hotel (hoje)</button>
+      </div>
+
     </div>
   </section>
 
@@ -2172,12 +2181,11 @@
         // (não almoçou ou não jantou, pelo relatório de hoje). A moradora Repolho fica de fora, igual
         // ao painel da Gestora (ver alerta-moradora, 23/jun).
         const naoComeuFoto = (!h.mascote && NAOCOMEU_HOJE[cadKey(h)]) ? '<span class="mini-naocomeu">NÃO COMEU</span>' : '';
-        // Cancelar lançamento do dia — só quem foi adicionado manualmente hoje (tem manualKey) tem
-        // como cancelar; quem vem da planilha não tem essa opção aqui. Gestão/Supervisão/Diretoria/Monitor
-        // (reversível e de baixo risco — remove só o lançamento de hoje, não mexe no cadastro). Plantonista fora.
-        const cancelBtn = h.manualKey ? `<button type="button" class="pet-x so-equipe" title="Cancelar hóspede/pernoite de hoje" onclick="event.stopPropagation();cancelarHospedeManual(${i})">×</button>` : '';
+        // O "×" de cancelar saiu do card (risco de apertar sem querer). A ação de deletar a pernoite
+        // do dia agora vive DENTRO da ficha do hóspede, na "Zona de risco" (só equipe, com dupla
+        // confirmação) — ver cancelarPernoiteFicha().
         return `<div class="pet" onclick="abrirPlantao(${i})">
-          ${cancelBtn}${alertaFoto}${medFoto}${recFoto}${naoComeuFoto}${ph}
+          ${alertaFoto}${medFoto}${recFoto}${naoComeuFoto}${ph}
           <div class="nm">${cad.nome||h.nome}</div>
           <div class="br">${raca}</div>
           <div class="hosp-tutor">${h.mascote?'Nossa Zelozinha':(tutor?'Tutor: '+tutor:'Tutor a confirmar')}</div>
@@ -2212,6 +2220,9 @@
     document.getElementById('hosp-ficha').style.display='block';
     const _hs=document.getElementById('hf-status'); if(_hs) _hs.textContent='';
     const cc=document.getElementById('card-cadastro'); if(cc) cc.style.display='none'; // cadastro começa fechado
+    // Zona de risco (deletar pernoite do dia): só aparece para lançamento manual de hoje (tem manualKey);
+    // quem veio da planilha não pode ser deletado por aqui. O .so-equipe já esconde para plantonista.
+    const zr=document.getElementById('hf-zonarisco'); if(zr) zr.style.display=(h.manualKey?'block':'none');
     updateDateLabel(); // sincroniza o navegador de dia dentro da ficha
     carregarFicha();
     window.scrollTo({top:0,behavior:'smooth'});
@@ -2730,7 +2741,7 @@
     it.estoque=Object.assign({}, it.estoque||{}, {acabando:true});
     DB.ref('auaulandia/medicacao-agenda/'+key+'/itens/'+itemId+'/estoque').update({acabando:true}).catch(function(){});
     var est=it.estoque||{};
-    criarAvisoEstoque({key:key,itemId:itemId,medNome:it.nome||'',hospNome:(currentHosp&&currentHosp.nome)||'',tutor:(currentHosp&&currentHosp.tutor)||'',modo:est.modo||'',unidade:it.u||'',restante:(typeof est.restante==='number')?est.restante:undefined,motivo:'manual'});
+    criarAvisoEstoque({key:key,itemId:itemId,medNome:it.nome||'',hospNome:(currentHosp&&currentHosp.nome)||'',tutor:(typeof tutorDe==='function'?tutorDe(currentHosp):(currentHosp&&currentHosp.tutor)||''),modo:est.modo||'',unidade:it.u||'',restante:(typeof est.restante==='number')?est.restante:undefined,motivo:'manual'});
     if(typeof renderMedAgendaHoje==='function') renderMedAgendaHoje();
   }
 
@@ -3694,6 +3705,26 @@
       })
       .catch(e=>alert('Erro ao cancelar: '+e.message));
   }
+  // Deletar a pernoite do dia a partir da FICHA (não do card) — evita o toque acidental do antigo "×".
+  // Dificuldade proposital: dupla confirmação. Só equipe (gestão/supervisão/diretoria/monitor).
+  // Remove só auaulandia/manuais/{dia}/{key}; o cadastro-mestre do FILHOt fica intacto.
+  function cancelarPernoiteFicha(){
+    const r=(document.body.dataset.role||'');
+    if(!(r==='gestao'||r==='supervisor'||r==='diretoria'||r==='monitor')){ alert('Só a Gestão, a Supervisão, a Diretoria ou o Monitor podem deletar uma pernoite.'); return; }
+    const h=currentHosp; if(!h) return;
+    if(!h.manualKey){ alert('Este registro veio da planilha — não foi lançado manualmente hoje e não pode ser deletado por aqui.'); return; }
+    if(!confirm('Tem certeza que quer deletar esse peludinho do Hotel?\n\n'+(h.nome||'Este FILHOt')+' sai da lista de hoje. O cadastro dele continua salvo.')) return;
+    if(!confirm('Confirmação final: deletar '+(h.nome||'este FILHOt')+' da AuAulândia de hoje?')) return;
+    const dia=h.manualDia||dataKeyAtual();
+    if(!DB){ const i=hospedes.indexOf(h); if(i>=0) hospedes.splice(i,1); if(typeof fecharPlantao==='function') fecharPlantao(); renderHosp(); return; }
+    DB.ref('auaulandia/manuais/'+dia+'/'+h.manualKey).remove()
+      .then(function(){
+        if(typeof audit==='function') audit('hospede-cancelado','deletou lançamento do dia (pela ficha)',{pet:h.nome||'',tutor:(typeof tutorDe==='function'?tutorDe(h):(h.tutor||'')),dia:dia});
+        if(typeof fecharPlantao==='function') fecharPlantao();
+        carregarManuais();
+      })
+      .catch(function(e){ alert('Erro ao deletar: '+e.message); });
+  }
   // Lê a aba "Cadastro" (colunas Nome · Tutor · Raça) e cruza pelo nome+tutor
   async function carregarRacas(){
     try{
@@ -4133,6 +4164,35 @@
       setTimeout(()=>{ try{ ac.close(); }catch(e){} }, 1500);
     }catch(e){ /* som é bônus; o banner é o que importa */ }
   }
+  // ===== Despertador da MEDICAÇÃO — som ALTO e INSISTENTE (loop até uma ação humana) =====
+  // Diferente do bip curto do banho: aqui o padrão de bipes REPETE a cada ~2,5s enquanto o alarme
+  // está na tela, com volume mais alto. Só para quando a pessoa toca "Dei o remédio" ou "ADIAR 5 min".
+  // Dose atrasada é segurança: o alarme não some sozinho nem cala sozinho.
+  let despMedAC=null, despMedLoopTimer=null, despMedSnooze={};
+  function bipMedPadrao(ac){
+    try{
+      [0,0.3,0.6].forEach(function(t){ const o=ac.createOscillator(), g=ac.createGain();
+        o.type='square'; o.frequency.value=980; g.gain.value=0.0001;
+        o.connect(g); g.connect(ac.destination);
+        const t0=ac.currentTime+t;
+        g.gain.exponentialRampToValueAtTime(0.6, t0+0.02);
+        g.gain.exponentialRampToValueAtTime(0.0001, t0+0.26);
+        o.start(t0); o.stop(t0+0.28); });
+    }catch(e){}
+  }
+  function bipMedLoopStart(){
+    bipMedLoopStop();
+    try{ const AC=window.AudioContext||window.webkitAudioContext; if(!AC) return;
+      despMedAC=new AC();
+      try{ if(despMedAC.state==='suspended') despMedAC.resume(); }catch(e){}
+      bipMedPadrao(despMedAC);
+      despMedLoopTimer=setInterval(function(){ if(despMedAC) bipMedPadrao(despMedAC); }, 2500);
+    }catch(e){ /* som é reforço; o banner que não some é a segurança */ }
+  }
+  function bipMedLoopStop(){
+    if(despMedLoopTimer){ clearInterval(despMedLoopTimer); despMedLoopTimer=null; }
+    if(despMedAC){ try{ despMedAC.close(); }catch(e){} despMedAC=null; }
+  }
   function fecharDespertador(k){
     const el=document.getElementById('despBanho'); if(el) el.style.display='none';
     despNaTela=null;
@@ -4203,6 +4263,8 @@
           const doseId=magDoseId(it.itemId,it.horario);
           const feito=log[it.key]&&log[it.key][doseId];
           if(feito) continue;
+          const sk=it.key+'__'+doseId;
+          if(despMedSnooze[sk] && Date.now()<despMedSnooze[sk]) continue; // adiado — aguarda os 5 min
           const m=minutosAte(it.horario);
           if(m===null) continue;
           if(m<=DESP_ANTES_MIN){ mostrarDespertadorMed(it,doseId); return; } // sem limite de atraso — remédio não some sozinho
@@ -4216,15 +4278,31 @@
     const qtd=fmtQtd(it.q,it.u);
     el.innerHTML='<div class="desp-in"><div class="desp-tx"><strong>'+escAttr(it.hospNome||'')+'</strong> toma <strong>'+escAttr(it.nome||'')+'</strong>'+(qtd?' — '+escAttr(qtd):'')+' às <strong>'+escAttr(it.horario||'')+'</strong>'
       +'<span>Dê o remédio agora — este alarme não desaparece sozinho.</span></div>'
-      +'<button class="btn" style="background:#fff;color:var(--crm-critico);font-weight:800" onclick="confirmarDoseDespertador()">Dei o remédio</button></div>';
+      +'<div style="display:flex;gap:8px;flex-wrap:wrap">'
+      +'<button class="btn" style="background:#fff;color:var(--crm-critico);font-weight:800" onclick="confirmarDoseDespertador()">Dei o remédio</button>'
+      +'<button class="btn" style="background:var(--z-blue);color:var(--z-cream);font-weight:800" onclick="adiarDoseDespertador()">ADIAR 5 min</button>'
+      +'</div></div>';
     el.style.display='block';
-    bipDespertador();
+    bipMedLoopStart();
   }
   function confirmarDoseDespertador(){
     if(!despMedAtual||!despMedAtualDoseId) return;
+    bipMedLoopStop();
     registrarDoseAgendadaGlobal(despMedAtual, despMedAtualDoseId);
   }
+  // ADIAR 5 min: cala o som e fecha o banner agora, mas NÃO marca a dose. A mesma dose volta a
+  // alarmar (com som de novo) daqui a 5 minutos — o checarDespertadorMed respeita o snooze abaixo.
+  function adiarDoseDespertador(){
+    bipMedLoopStop();
+    if(despMedAtual&&despMedAtualDoseId){
+      const sk=despMedAtual.key+'__'+despMedAtualDoseId;
+      despMedSnooze[sk]=Date.now()+5*60*1000;
+      if(typeof audit==='function') audit('med-alarme-adiado','adiou o alarme de '+(despMedAtual.nome||'medicação')+' de '+(despMedAtual.hospNome||''),{pet:despMedAtual.hospNome||'',med:despMedAtual.nome||'',horario:despMedAtual.horario||''});
+    }
+    fecharDespertadorMed();
+  }
   function fecharDespertadorMed(){
+    bipMedLoopStop();
     const el=document.getElementById('despMed'); if(el) el.style.display='none';
     despMedNaTela=null; despMedAtual=null; despMedAtualDoseId=null;
   }
@@ -4434,7 +4512,7 @@
     // reativa se estava suspenso e a vet salvou uma alteração
     if(st){ st.style.color='var(--muted)'; st.textContent='Salvando na ficha do peludinho…'; }
     DB.ref('auaulandia/medicacao-agenda/'+key+'/itens/'+id).set(item).then(function(){
-      DB.ref('auaulandia/medicacao-agenda/'+key).update({nome:vetHosp.nome||'',tutor:vetHosp.tutor||'',_ts:Date.now(),_quem:quem}).catch(function(){});
+      DB.ref('auaulandia/medicacao-agenda/'+key).update({nome:vetHosp.nome||'',tutor:(typeof tutorDe==='function'?tutorDe(vetHosp):(vetHosp.tutor||'')),_ts:Date.now(),_quem:quem}).catch(function(){});
       if(typeof audit==='function') audit('vet-medicacao',key,{pet:vetHosp.nome||'',med:nome,acao:acao,quem:quem});
       if(st){ st.style.color='var(--crm-ok)'; st.textContent='✅ '+acao+' — já vale na ficha e nos alarmes.'; }
       vetFecharMedForm();
@@ -5439,8 +5517,13 @@
     const el=document.getElementById('ativList'); if(!el) return;
     const ger=(document.body.dataset.role==='gestao'||document.body.dataset.role==='diretoria');
     document.getElementById('ativCount').textContent=`${ATIVIDADES.length} atividades no banco`;
-    el.innerHTML=ATIVIDADES.map((a,i)=>`<div class="ativ-card">
-      <div class="ativ-head"><span class="ativ-num">${String(i+1).padStart(2,'0')}</span><span class="ativ-tit">${a.t}</span>${ger?`<button class="ativ-del" title="Remover" onclick="removerAtividade(${i})">×</button>`:''}</div>
+    // Banco de atividades = LISTA de consulta/escolha do monitor → ordem alfabética (A→Z) para ele
+    // ACHAR pelo nome. Preserva o índice original (i) para o botão remover, que usa ATIVIDADES[i].
+    // OBS: NÃO confundir com a subnav ATIVS_DC/montarSubnav, que é o fluxo cronológico do dia e
+    // permanece na ordem do plantão.
+    const ordenadas=ATIVIDADES.map((a,i)=>({a,i})).sort((x,y)=>(x.a.t||'').localeCompare((y.a.t||''),'pt',{sensitivity:'base'}));
+    el.innerHTML=ordenadas.map(({a,i},pos)=>`<div class="ativ-card">
+      <div class="ativ-head"><span class="ativ-num">${String(pos+1).padStart(2,'0')}</span><span class="ativ-tit">${a.t}</span>${ger?`<button class="ativ-del" title="Remover" onclick="removerAtividade(${i})">×</button>`:''}</div>
       ${(a.itens&&a.itens.length)?`<ul class="ativ-itens">${a.itens.map(x=>`<li>${x}</li>`).join('')}</ul>`:''}
     </div>`).join('');
   }
