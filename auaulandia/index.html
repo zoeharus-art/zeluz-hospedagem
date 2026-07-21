@@ -1685,7 +1685,7 @@
       <div class="card">
         <h2>Pertences</h2>
         <div class="hint">Toque no tipo de item para adicionar o que o tutor trouxe. Pode adicionar <strong>vários do mesmo tipo</strong> (ex: 2 peitorais, 5 roupas) — cada um com a sua especificação. Depois é só editar ou remover cada um. Não achou na lista? Acrescente — vai para o banco e aparece para todos.</div>
-        <button type="button" class="ci-toggle-novo so-medadmin" id="ciPertManageBtn" style="margin-top:0" onclick="ciTogglePertManage()"><span data-icon="paw"></span><span id="ciPertManageTxt">Gerenciar itens do banco (editar / excluir)</span></button>
+        <button type="button" class="ci-toggle-novo" id="ciPertManageBtn" style="margin-top:0;display:none" onclick="ciTogglePertManage()"><span data-icon="paw"></span><span id="ciPertManageTxt">Gerenciar itens do banco (editar / excluir)</span></button>
         <div id="ciPertGrid" class="pert-grid"></div>
         <div id="ciPertSel"></div>
         <div class="field" style="margin-top:12px"><label>Acrescentar item ao banco de pertences</label>
@@ -3752,7 +3752,10 @@
     // sanfona: preferencia + esconde vazios + garante tela unica. Roda AGORA e DE NOVO no proximo
     // frame: no F5 (sessao restaurada) o aplicarLogin roda antes do navegador desenhar, e ai
     // offsetParent media 0 filhos -> escondia o Day Care por engano. O rAF remede apos o desenho.
-    try{ carregarEstadoAcordeoes(); ajustarAcordeoes(); if(typeof requestAnimationFrame==='function') requestAnimationFrame(function(){ try{ ajustarAcordeoes(); }catch(e){} }); }catch(e){}
+    // Na ENTRADA, todo mundo começa com a sanfona FECHADA — a pessoa clica no que quer.
+    // (Não restaura a preferência salva: evita ter que fechar a AuAulândia pra abrir o Day Care.)
+    // O ajustarAcordeoes só reabre o accordion de quem enxerga um único serviço (ex.: vet).
+    try{ document.querySelectorAll('#nav .acc').forEach(function(a){ a.classList.remove('acc-open'); }); ajustarAcordeoes(); if(typeof requestAnimationFrame==='function') requestAnimationFrame(function(){ try{ ajustarAcordeoes(); }catch(e){} }); }catch(e){}
     try{ if(localStorage.getItem('zeluz_sidebar_collapsed')==='1') document.body.classList.add('nav-collapsed'); }catch(e){} // barra recolhida (desktop)
     // Quem tem escopo restrito (ex.: Amanda Barbosa, só almoço) cai direto na atividade dela.
     if(escopo && typeof abrirAtividade==='function'){ abrirAtividade(escopo[0]); return; }
@@ -3760,6 +3763,9 @@
     // tinha de navegar até o Início toda vez.
     const v=telaInicialDe(u);
     const a=document.querySelector('[data-v="'+v+'"]'); if(a) a.click();
+    // Se a tela inicial cai DENTRO de um serviço (ex.: operação → Plantão), abre só aquele
+    // accordion para o item ativo aparecer. Gestão cai no Início (fora de accordion) → segue tudo fechado.
+    if(a){ const _accIni=a.closest('.acc'); if(_accIni) _accIni.classList.add('acc-open'); }
   }
   // Gestão e Supervisão abrem no Início (visão do dia); quem é da operação abre na AuAulândia.
   function telaInicialDe(u){
@@ -6767,6 +6773,9 @@
     document.getElementById('ciMeta').innerHTML=[ (ciHosp.raca?esc(ciHosp.raca):''), (ciHosp.idade?esc(ciHosp.idade):''), 'Tutor: '+(esc(ciHosp.tutor)||'a confirmar') ].filter(Boolean).join(' · ');
     document.getElementById('ciPills').innerHTML=(typeof alertPills==='function')?alertPills(ex):'';
     ciRenderRestricao(ex);
+    // Botão "Gerenciar itens do banco" só para quem edita o check-in (Consultora/Gestão/Supervisão/Diretoria/Vet)
+    var _pmb=document.getElementById('ciPertManageBtn'); if(_pmb) _pmb.style.display=(typeof canEditCheckinMed==='function'&&canEditCheckinMed())?'':'none';
+    ciPertManage=false; var _pmt=document.getElementById('ciPertManageTxt'); if(_pmt) _pmt.textContent='Gerenciar itens do banco (editar / excluir)';
     // datas
     document.getElementById('ciEntrada').value=ciHoje();
     document.getElementById('ciSaida').value='';
@@ -7050,14 +7059,14 @@
   let ciPertManage=false;
   function ciPertEhDefault(k){ return CI_PERT_DEFAULT.some(function(o){ return o.k===k; }); }
   function ciTogglePertManage(){
-    if(!canEditMed()){ alert('Apenas a Gestão, a Supervisão ou a Diretoria podem gerenciar o banco de pertences.'); return; }
+    if(!canEditCheckinMed()){ alert('Apenas a Consultora, a Gestão, a Supervisão ou a Diretoria podem gerenciar o banco de pertences.'); return; }
     ciPertManage=!ciPertManage;
     const t=document.getElementById('ciPertManageTxt'); if(t) t.textContent=ciPertManage?'Concluir gerenciamento':'Gerenciar itens do banco (editar / excluir)';
     ciDrawPert();
   }
   function ciDrawPert(){
     const grid=document.getElementById('ciPertGrid');
-    const manage=ciPertManage&&canEditMed();
+    const manage=ciPertManage&&canEditCheckinMed();
     if(grid){ grid.innerHTML=ciPertBancoSorted().map(function(o){
       const n=ciPertSel.filter(function(p){ return p.k===o.k; }).length;
       if(manage){
@@ -7088,7 +7097,7 @@
   function ciRemovePertUnit(uid){ ciPertSel=ciPertSel.filter(function(x){ return x.uid!==uid; }); ciDrawPert(); }
   // Gestão: renomear um item do banco de pertences (mantém a mesma chave).
   function ciRenomearPertBanco(k){
-    if(!canEditMed()){ alert('Sem permissão para editar o banco.'); return; }
+    if(!canEditCheckinMed()){ alert('Sem permissão para editar o banco.'); return; }
     const def=ciPertDef(k); if(!def) return;
     const novo=(prompt('Editar o nome do item "'+def.nome+'":', def.nome)||'').trim();
     if(!novo||novo===def.nome) return;
@@ -7101,7 +7110,7 @@
   }
   // Gestão: excluir um item do banco de pertences (some para todos). Remove também as unidades soltas.
   function ciExcluirPertBanco(k){
-    if(!canEditMed()){ alert('Sem permissão para excluir do banco.'); return; }
+    if(!canEditCheckinMed()){ alert('Sem permissão para excluir do banco.'); return; }
     const def=ciPertDef(k); if(!def) return;
     if(!confirm('Excluir "'+def.nome+'" do banco de pertences? Some da lista para todos.'+(ciPertEhDefault(k)?'\n\n(É um item padrão — ele pode voltar em atualizações futuras.)':''))) return;
     ciPertBanco=ciPertBanco.filter(function(o){ return o.k!==k; });
@@ -7486,9 +7495,26 @@
     var c=reg.e.conferencia||{};
     return {id:reg.id, e:reg.e, concluida:!!c.concluida};
   }
+  var CF_LISTA=[]; // lista efetiva da Conferência (check-ins reais + hóspedes do dia) — abrirCfFicha indexa aqui
+  // A Conferência é sobre CHECK-INS: mostra todo check-in salvo (CF_ESTADIAS), mesmo que o FILHOt
+  // não esteja na lista estática de hóspedes do dia. Depois acrescenta os hóspedes do dia sem check-in.
+  function cfListaHospedes(){
+    var out=[], seen={};
+    Object.keys(CF_ESTADIAS||{}).forEach(function(k){
+      var reg=CF_ESTADIAS[k]||{}; var e=reg.e||{};
+      var h={nome:e.nome||'', tutor:e.tutor||'', raca:e.raca||'', refKey:e.refKey||k, ini:((e.nome||'?')[0]||'?').toUpperCase(), cor:'#234D67'};
+      var mk=(typeof medAgendaKey==='function')?medAgendaKey(h):k;
+      if(seen[mk]) return; seen[mk]=1; out.push(h);
+    });
+    (hospedes||[]).forEach(function(h){
+      var mk=(typeof medAgendaKey==='function')?medAgendaKey(h):'';
+      if(mk&&seen[mk]) return; if(mk) seen[mk]=1; out.push(h);
+    });
+    return out;
+  }
   function atualizarBadgeConferencia(){
     var n=0;
-    (hospedes||[]).forEach(function(h){ var p=cfPendente(h); if(p&&!p.concluida) n++; });
+    (cfListaHospedes()).forEach(function(h){ var p=cfPendente(h); if(p&&!p.concluida) n++; });
     var link=document.querySelector('#nav a[data-v="conferencia"]'); if(!link) return;
     var b=link.querySelector('.nav-badge');
     if(n>0){ if(!b){ b=document.createElement('span'); b.className='nav-badge'; link.appendChild(b); } b.textContent=n; }
@@ -7503,8 +7529,9 @@
   }
   function renderCfLista(){
     var el=document.getElementById('cfGrid'); if(!el) return;
-    if(!hospedes||!hospedes.length){ el.innerHTML='<div class="av-empty" style="grid-column:1/-1"><div class="big">Sem hóspedes hoje</div>Quando houver check-in feito, ele aparece aqui para conferência.</div>'; return; }
-    el.innerHTML=hospedes.map(function(h,i){
+    CF_LISTA=cfListaHospedes();
+    if(!CF_LISTA.length){ el.innerHTML='<div class="av-empty" style="grid-column:1/-1"><div class="big">Sem hóspedes hoje</div>Quando houver check-in feito, ele aparece aqui para conferência.</div>'; return; }
+    el.innerHTML=CF_LISTA.map(function(h,i){
       var cad=(typeof getCad==='function')?getCad(h):{};
       var ph=cad.foto?('<div class="ph" style="background-image:url(\''+cad.foto+'\');background-size:cover;background-position:center"></div>'):('<div class="ph" style="background:'+(h.cor||'#234D67')+'">'+escAttr((h.ini||(h.nome||'?')[0]||'?'))+'</div>');
       var ex=(typeof extraDoHosp==='function')?extraDoHosp(h):{};
@@ -7525,7 +7552,7 @@
   function fecharCfFicha(){ document.getElementById('cf-ficha').style.display='none'; document.getElementById('cf-lista').style.display='block'; renderCfLista(); }
 
   function abrirCfFicha(i){
-    var h=hospedes[i]; if(!h) return; cfHosp=h;
+    var h=(CF_LISTA&&CF_LISTA[i])||hospedes[i]; if(!h) return; cfHosp=h;
     var cad=(typeof getCad==='function')?getCad(h):{};
     var av=document.getElementById('cf-av');
     if(cad.foto){ av.style.backgroundImage="url('"+cad.foto+"')"; av.style.backgroundSize='cover'; av.style.backgroundPosition='center'; av.textContent=''; }
