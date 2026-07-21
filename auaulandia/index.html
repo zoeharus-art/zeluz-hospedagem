@@ -94,6 +94,41 @@
   .nav a svg{width:19px;height:19px;flex:0 0 auto}
   .nav a .soon{margin-left:auto;font-size:9px;background:rgba(255,255,255,.14);padding:2px 7px;border-radius:999px;font-weight:600;letter-spacing:.3px}
 
+  /* ===== Accordion (menu sanfona) ===== */
+  .nav .acc{margin-bottom:2px}
+  .nav a.nav-parent{position:relative}
+  .acc-caret{margin-left:auto;width:0;height:0;border-left:5px solid currentColor;
+    border-top:4px solid transparent;border-bottom:4px solid transparent;opacity:.7;
+    transition:transform .18s ease;flex:0 0 auto}
+  .acc.acc-open > .nav-parent .acc-caret{transform:rotate(90deg)}
+  .acc:not(.acc-open) > .acc-panel{display:none}
+  .acc-panel{margin:1px 0 5px}
+  .acc-panel > a{margin-left:10px}
+  .acc.acc-open > .nav-parent{background:rgba(255,255,255,.06);opacity:1}
+  /* botão de recolher a barra inteira */
+  .nav-collapse-btn{display:flex;align-items:center;justify-content:flex-end;gap:8px;width:100%;
+    background:none;border:none;color:var(--z-cream);opacity:.5;cursor:pointer;padding:0 8px 8px;font:inherit}
+  .nav-collapse-btn:hover{opacity:1}
+  .nav-collapse-btn svg{width:18px;height:18px;transition:transform .2s ease}
+  body.nav-collapsed .nav-collapse-btn svg{transform:rotate(180deg)}
+  /* barra recolhida — só desktop (mobile já usa off-canvas) */
+  @media(min-width:861px){
+    body.nav-collapsed{--sidebar:76px}
+    body.nav-collapsed .brand{padding:18px 6px 6px}
+    body.nav-collapsed .brand-logo{display:none}
+    body.nav-collapsed .brand-sub,
+    body.nav-collapsed .who,
+    body.nav-collapsed .nav .grp,
+    body.nav-collapsed .subnav,
+    body.nav-collapsed .nav a > span:not([data-icon]),
+    body.nav-collapsed .nav a .soon,
+    body.nav-collapsed .acc-caret{display:none}
+    body.nav-collapsed .nav a,
+    body.nav-collapsed .nav a.nav-parent{justify-content:center;padding:11px 0;gap:0}
+    body.nav-collapsed .acc-panel > a{margin-left:0}
+    body.nav-collapsed .nav-collapse-btn{justify-content:center}
+  }
+
   .who{padding:13px 16px;border-top:1px solid rgba(255,255,255,.1)}
   .who .lab{font-size:10px;opacity:.6;font-weight:600;text-transform:uppercase;letter-spacing:.6px;margin-bottom:6px}
   .who select{
@@ -941,24 +976,45 @@
   </div>
   <div class="brand-sub">Sistema DayCare</div>
   <nav class="nav" id="nav">
+    <button class="nav-collapse-btn" onclick="toggleSidebarColapso()" title="Recolher menu" aria-label="Recolher menu"><span data-icon="chevron"></span></button>
+
     <div class="grp grp-operacao">Operação</div>
     <a class="active op-only" data-v="inicio"><span data-icon="home"></span><span>Início</span></a>
+
     <div class="grp">Serviços</div>
-    <a data-v="daycare" class="so-day"><span data-icon="sun"></span><span>Day Care</span></a>
-    <a data-v="abertura" class="so-abertura"><span data-icon="sun"></span><span>Atividades Monitor 1</span></a>
-    <div class="subnav so-day" id="dcSubnav" style="display:none"></div>
-    <a data-v="checkin"><span data-icon="paw"></span><span>Check-in</span></a>
-    <a data-v="conferencia" class="so-conferencia"><span data-icon="check"></span><span>Conferência Check-in</span></a>
-    <a data-v="recepcao" class="so-recepcao"><span data-icon="paw"></span><span>Recepção</span></a>
-    <a data-v="hospedagem"><span data-icon="moon"></span><span>AuAulândia</span></a>
-    <a data-v="cuidadovet" class="so-vet"><span data-icon="heart"></span><span>Cuidado Vet</span></a>
+    <!-- AuAulândia — PAI accordion (não é tela; abre/fecha os filhos) -->
+    <div class="acc acc-open" data-acc="auaulandia">
+      <a class="nav-parent" data-acc-toggle="auaulandia"><span data-icon="moon"></span><span>AuAulândia</span><span class="acc-caret" aria-hidden="true"></span></a>
+      <div class="acc-panel">
+        <a data-v="checkin"><span data-icon="paw"></span><span>Check-in</span></a>
+        <a data-v="conferencia" class="so-conferencia"><span data-icon="check"></span><span>Conferência Check-in</span></a>
+        <a data-v="recepcao" class="so-recepcao"><span data-icon="paw"></span><span>Recepção</span></a>
+        <a data-v="cuidadovet" class="so-vet"><span data-icon="heart"></span><span>Cuidado Vet</span></a>
+        <a data-v="hospedagem"><span data-icon="moon"></span><span>Plantão AuAulândia</span></a>
+      </div>
+    </div>
+    <!-- Day Care — PAI accordion. Turminhas (dias) + Atividades vivem no #dcSubnav (montarSubnav). -->
+    <div class="acc acc-open so-day" data-acc="daycare">
+      <a class="nav-parent" data-acc-toggle="daycare"><span data-icon="sun"></span><span>Day Care</span><span class="acc-caret" aria-hidden="true"></span></a>
+      <div class="acc-panel">
+        <a data-v="abertura" class="so-abertura"><span data-icon="sun"></span><span>Atividades Monitor 1</span></a>
+        <div class="subnav so-day" id="dcSubnav"></div>
+      </div>
+    </div>
+
     <a data-v="agenda"><span data-icon="cal"></span><span>Agenda</span><span class="soon">em breve</span></a>
+
     <div class="grp so-master">Gestão</div>
-    <a data-v="painel" class="so-master"><span data-icon="star"></span><span>Painel do Dia</span></a>
+    <a data-v="painel" class="so-master"><span data-icon="star"></span><span>Painel</span></a>
     <a data-v="ficha" class="so-gestao"><span data-icon="paw"></span><span>Peludinhos</span></a>
-    <a data-v="renovacao" class="so-gestao"><span data-icon="star"></span><span>Renovação de Planos</span></a>
     <a data-v="pessoas" class="so-master"><span data-icon="users"></span><span>Pessoas</span></a>
     <div class="subnav so-master" id="pSubnav" style="display:none"></div>
+    <a data-v="renovacao" class="so-gestao"><span data-icon="star"></span><span>Renovação de Planos</span></a>
+
+    <div class="grp so-gestao">Relatórios</div>
+    <a data-v="aulunos" class="so-gestao"><span data-icon="users"></span><span>Aulunos</span><span class="soon">em breve</span></a>
+    <a data-v="vacinas" class="so-gestao"><span data-icon="heart"></span><span>Vacinas</span><span class="soon">em breve</span></a>
+
     <a data-v="sair"><span data-icon="exit"></span><span>Sair</span></a>
   </nav>
   <div class="who">
@@ -1784,6 +1840,8 @@
   </section>
 
   <section class="view" id="v-agenda"><div class="soon-box"><img class="ic-st" src="assets/stickers/coleira.png" alt=""><div class="t">Agenda</div><div class="d">Calendário de frequência e reservas — próxima etapa.</div></div></section>
+  <section class="view" id="v-aulunos"><div class="soon-box"><img class="ic-st" src="assets/simbolo.png" alt=""><div class="t">Relatório de Aulunos</div><div class="d">Frequência e presença dos aulunos do Day Care — próxima etapa.</div></div></section>
+  <section class="view" id="v-vacinas"><div class="soon-box"><img class="ic-st" src="assets/simbolo.png" alt=""><div class="t">Relatório de Vacinas</div><div class="d">Carteira de vacinação e vencimentos — próxima etapa.</div></div></section>
   <section class="view" id="v-abertura">
     <div class="role-note"><span data-icon="sun"></span><span><strong>Rotina de abertura do turno — Monitor 1.</strong> Marque cada item conforme executa. Fica registrado com horário e quem fez.</span></div>
     <div class="card"><div id="aberturaM1Prog" class="hint" style="margin-bottom:10px"></div><div id="aberturaM1List"></div></div>
@@ -1939,7 +1997,8 @@
       exit:'M16 17l5-5-5-5M21 12H9M12 19H5V5h7',
       lock:'M6 11h12v9H6zM9 11V8a3 3 0 016 0v3',
       heart:'M12 20l-7-7a4 4 0 015.7-5.7L12 8.6l1.3-1.3A4 4 0 0119 13z',
-      check:'M4 12.5l5 5L20 6'
+      check:'M4 12.5l5 5L20 6',
+      chevron:'M9 6l6 6-6 6'
     }[n]||'';
     return `<svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">${p.split('M').filter(Boolean).map(d=>'<path d="M'+d+'"/>').join('')}</svg>`;
   }
@@ -1989,7 +2048,8 @@
 
   const titles={inicio:['Início','Visão geral do dia'],ficha:['Peludinhos','Matriculados'],
     renovacao:['Renovação de Planos','Planos a vencer e renovações'],adaptacao:['Adaptação · 1º mês','Como está se adaptando'],
-    daycare:['Day Care','Chamada e atividades'],hospedagem:['AuAulândia','Passagem de plantão'],
+    daycare:['Day Care','Chamada e atividades'],hospedagem:['Plantão AuAulândia','Passagem de plantão'],
+    aulunos:['Aulunos','Relatório de frequência dos aulunos'],vacinas:['Vacinas','Relatório de vacinação'],
     cuidadovet:['Cuidado Vet','Consulta, receituário e reavaliação'],
     checkin:['Check-in','Entrada da estadia — ficha, pertences e assinatura'],
     conferencia:['Conferência Check-in','Pertences etiquetados, ração pesada e alarmes testados'],
@@ -2000,6 +2060,8 @@
 
   document.getElementById('nav').addEventListener('click',e=>{
     const a=e.target.closest('a'); if(!a) return;
+    // Clique num PAI do accordion → abre/fecha os filhos (sem navegar).
+    if(a.classList.contains('nav-parent')){ toggleAcc(a); return; }
     const v=a.dataset.v;
     if(!v) return; // sub-links (dias do Day Care) tratam o próprio clique
     document.querySelectorAll('#nav a').forEach(x=>x.classList.remove('active'));
@@ -2014,7 +2076,7 @@
     if(v==='conferencia'){ if(typeof abrirConferencia==='function') abrirConferencia(); }
     if(v==='recepcao'){ if(typeof carregarAvisosEstoque==='function') carregarAvisosEstoque(); }
     if(v==='ficha'){ const l=document.getElementById('pel-lista'),fi=document.getElementById('pel-ficha'); if(l&&fi){ l.style.display='block'; fi.style.display='none'; } }
-    if(v==='daycare'){ if(typeof abrirDayCare==='function') abrirDayCare(); } else { const sm=document.getElementById('dcSubnav'); if(sm) sm.style.display='none'; }
+    if(v==='daycare'){ if(typeof abrirDayCare==='function') abrirDayCare(); }
     const pn=document.getElementById('pSubnav'); if(pn) pn.style.display=(v==='pessoas')?'block':'none';
     if(v==='pessoas'){ if(typeof montarPSubnav==='function') montarPSubnav(); if(typeof abrirPessoas==='function') abrirPessoas('ativ'); return; }
     if(v==='painel'){ if(typeof carregarPainel==='function') carregarPainel(); }
@@ -3537,6 +3599,8 @@
     const escopo=(Array.isArray(u.atividades)&&u.atividades.length)?u.atividades:null;
     if(escopo) document.body.dataset.scope='atividade'; else document.body.removeAttribute('data-scope');
     try{ if(typeof montarSubnav==='function') montarSubnav(); }catch(e){} // sempre remonta (evita subnav preso de outra sessão)
+    try{ carregarEstadoAcordeoes(); ajustarAcordeoes(); }catch(e){} // sanfona: preferência + esconde vazios + garante tela única
+    try{ if(localStorage.getItem('zeluz_sidebar_collapsed')==='1') document.body.classList.add('nav-collapsed'); }catch(e){} // barra recolhida (desktop)
     // Quem tem escopo restrito (ex.: Amanda Barbosa, só almoço) cai direto na atividade dela.
     if(escopo && typeof abrirAtividade==='function'){ abrirAtividade(escopo[0]); return; }
     // Cada perfil cai na tela onde trabalha. Antes todo mundo caía na AuAulândia — a Gestão
@@ -5532,9 +5596,50 @@
     sm.innerHTML=h;
   }
   function marcarSubnavAtivo(){ document.querySelectorAll('#dcSubnav a').forEach(a=>{ if(a.dataset.d!=null) a.classList.toggle('active', a.dataset.d===dcDia); if(a.dataset.a!=null) a.classList.toggle('active', a.dataset.a===dcAtiv); }); }
-  function abrirDayCare(){ const sm=document.getElementById('dcSubnav'); if(sm) sm.style.display='block'; marcarSubnavAtivo(); renderAtual(); }
-  function setDcDia(d){ dcDia=d; if(typeof irParaView==='function') irParaView('daycare'); const sm=document.getElementById('dcSubnav'); if(sm) sm.style.display='block'; marcarSubnavAtivo(); renderAtual(); if(typeof closeNav==='function') closeNav(); }
-  function abrirAtividade(slug){ const escopo=(typeof atividadesPermitidas==='function')?atividadesPermitidas():null; if(escopo&&escopo.indexOf(slug)<0) slug=escopo[0]; dcAtiv=slug; if(typeof irParaView==='function') irParaView('daycare'); const sm=document.getElementById('dcSubnav'); if(sm) sm.style.display='block'; marcarSubnavAtivo(); renderAtual(); if(typeof closeNav==='function') closeNav(); }
+  // ===== Accordion do sidebar (menu sanfona) =====
+  function toggleAcc(parentEl){
+    const acc=parentEl.closest('.acc'); if(!acc) return;
+    const aberto=acc.classList.toggle('acc-open');
+    const k=parentEl.dataset.accToggle;
+    if(k){ try{ localStorage.setItem('zeluz_acc_'+k, aberto?'1':'0'); }catch(e){} }
+  }
+  function abrirAccDaycare(){ const acc=document.querySelector('#nav .acc[data-acc="daycare"]'); if(acc) acc.classList.add('acc-open'); }
+  // Restaura a preferência de aberto/fechado por accordion (localStorage).
+  function carregarEstadoAcordeoes(){
+    document.querySelectorAll('#nav .acc').forEach(acc=>{
+      let s=null; try{ s=localStorage.getItem('zeluz_acc_'+acc.dataset.acc); }catch(e){}
+      if(s==='0') acc.classList.remove('acc-open');
+      else if(s==='1') acc.classList.add('acc-open');
+    });
+  }
+  // Depois de aplicar o papel: esconde accordion sem filho visível e garante que
+  // papéis de tela única (vet/conferência/plantonista) sempre tenham o pai aberto.
+  function ajustarAcordeoes(){
+    document.querySelectorAll('#nav .acc').forEach(acc=>{
+      const wasOpen=acc.classList.contains('acc-open');
+      acc.style.display=''; // limpa medição anterior (re-run/troca de papel) antes de aferir
+      acc.classList.add('acc-open'); // neutraliza o colapso para ler só a visibilidade por papel
+      // Conta QUALQUER link renderizado no painel (inclui dias/atividades do #dcSubnav,
+      // que usam data-d/data-a e não data-v). offsetParent!==null = realmente visível
+      // (respeita display:none de ancestral, ex.: .subnav oculto ou wrapper so-day).
+      let vis=0;
+      acc.querySelectorAll('.acc-panel a').forEach(l=>{ if(l.offsetParent!==null) vis++; });
+      acc.classList.toggle('acc-open', wasOpen); // restaura estado do usuário
+      acc.style.display = vis>0 ? '' : 'none';
+      // Se o cabeçalho do pai está oculto pela regra de papel mas há filho visível,
+      // força aberto para o filho continuar acessível.
+      const parent=acc.querySelector('.nav-parent');
+      if(vis>0 && parent && getComputedStyle(parent).display==='none') acc.classList.add('acc-open');
+    });
+  }
+  // ===== Recolher/expandir a barra inteira =====
+  function toggleSidebarColapso(){
+    const c=document.body.classList.toggle('nav-collapsed');
+    try{ localStorage.setItem('zeluz_sidebar_collapsed', c?'1':'0'); }catch(e){}
+  }
+  function abrirDayCare(){ abrirAccDaycare(); marcarSubnavAtivo(); renderAtual(); }
+  function setDcDia(d){ dcDia=d; if(typeof irParaView==='function') irParaView('daycare'); abrirAccDaycare(); marcarSubnavAtivo(); renderAtual(); if(typeof closeNav==='function') closeNav(); }
+  function abrirAtividade(slug){ const escopo=(typeof atividadesPermitidas==='function')?atividadesPermitidas():null; if(escopo&&escopo.indexOf(slug)<0) slug=escopo[0]; dcAtiv=slug; if(typeof irParaView==='function') irParaView('daycare'); abrirAccDaycare(); marcarSubnavAtivo(); renderAtual(); if(typeof closeNav==='function') closeNav(); }
   function mostrarScr(){ const esp=(dcAtiv==='chamada'||dcAtiv==='almoco'); const a=document.getElementById('scr-chamada'),b=document.getElementById('scr-almoco'),c=document.getElementById('scr-generic'); if(a)a.style.display=dcAtiv==='chamada'?'block':'none'; if(b)b.style.display=dcAtiv==='almoco'?'block':'none'; if(c)c.style.display=esp?'none':'block'; const lbl=document.getElementById('dcAtivLabel'); if(lbl){ const f=ATIVS_DC.find(x=>x.s===dcAtiv); lbl.textContent=f?f.t:'Chamada'; } const dl=document.getElementById('dcDiaLabel'); if(dl) dl.textContent=DIA_FULL[dcDia]; }
   function renderAtual(){ mostrarScr(); if(dcAtiv==='chamada') carregarChamada(); else if(dcAtiv==='almoco') carregarAlmoco(); else carregarGenerico(); if(typeof renderAdaptBanner==='function') renderAdaptBanner(); }
   function turmaDoDia(){
