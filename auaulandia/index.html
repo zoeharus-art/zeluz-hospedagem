@@ -397,7 +397,9 @@
   .pel-wrap{overflow-x:auto;border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);background:var(--z-white)}
   table.pel{width:100%;border-collapse:collapse;font-size:13.5px;min-width:680px}
   table.pel thead th{background:var(--z-blue);color:var(--z-cream);font-weight:700;font-size:11.5px;text-transform:uppercase;letter-spacing:.5px;padding:11px 12px;text-align:left;white-space:nowrap}
-  table.pel tbody td{padding:11px 12px;border-bottom:1px solid #f1ebde;color:var(--z-blue-deep);white-space:nowrap}
+  table.pel tbody td{padding:11px 14px;border-bottom:1px solid #f1ebde;color:var(--z-blue-deep);white-space:nowrap}
+  /* Tutor pode ter nome longo: deixa quebrar em 2 linhas e reserva largura, para nunca ser cortado pela margem. */
+  table.pel .pel-tutor{white-space:normal;min-width:150px;word-break:break-word;padding-right:16px}
   table.pel tbody tr:last-child td{border-bottom:none}
   table.pel tbody tr:hover{background:rgba(222,180,40,.07)}
   table.pel .pel-nome{font-weight:700;color:var(--z-blue)}
@@ -1012,6 +1014,7 @@
     <a data-v="renovacao" class="so-gestao"><span data-icon="star"></span><span>Renovação de Planos</span></a>
 
     <div class="grp so-gestao">Relatórios</div>
+    <a data-v="inativos" class="so-gestao"><span data-icon="paw"></span><span>Inativos</span></a>
     <a data-v="aulunos" class="so-gestao"><span data-icon="users"></span><span>Aulunos</span><span class="soon">em breve</span></a>
     <a data-v="vacinas" class="so-gestao"><span data-icon="heart"></span><span>Vacinas</span><span class="soon">em breve</span></a>
 
@@ -1106,7 +1109,7 @@
   <!-- ===== PELUDINHOS (cadastro mestre) ===== -->
   <section class="view" id="v-ficha">
     <div id="pel-lista">
-      <div class="role-note"><span data-icon="paw"></span><span>Todos os peludinhos <strong>matriculados</strong> no Day Care. Clique no nome para ver e editar a ficha completa.</span></div>
+      <div class="role-note"><span data-icon="paw"></span><span>Peludinhos <strong>frequentes</strong> do Day Care. Clique no nome para ver e editar a ficha completa. Quem saiu fica em <strong>Relatórios › Inativos</strong>.</span></div>
       <div class="pel-toolbar">
         <input class="search" id="pelSearch" placeholder="Buscar peludinho, raça ou tutor..." style="width:300px;max-width:100%" oninput="renderPel()">
         <span class="pel-count" id="pelCount"></span>
@@ -1448,15 +1451,23 @@
     #v-checkin .ci-av{width:60px;height:60px;border-radius:14px;display:grid;place-items:center;color:#fff;font-weight:800;font-size:22px;flex:0 0 auto;background-size:cover;background-position:center}
     #v-checkin .ci-h-nome{font-size:20px;font-weight:800;color:var(--z-blue)}
     #v-checkin .ci-h-meta{font-size:13px;color:var(--muted);font-weight:600}
-    #v-checkin .pert-item{border:1.5px solid var(--line);border-radius:12px;margin-bottom:9px;background:#fff;overflow:hidden}
-    #v-checkin .pert-top{display:flex;align-items:center;gap:11px;padding:11px 14px;cursor:pointer;font-weight:700;color:var(--z-blue)}
-    #v-checkin .pert-item.on .pert-top{background:rgba(39,174,96,.08)}
-    #v-checkin .pert-box{width:24px;height:24px;border-radius:7px;border:2px solid var(--line);display:grid;place-items:center;font-weight:800;color:#fff;background:#fff;flex:0 0 auto;font-size:14px}
-    #v-checkin .pert-item.on .pert-box{background:var(--crm-ok);border-color:var(--crm-ok)}
-    #v-checkin .pert-spec{display:none;padding:0 14px 12px}
-    #v-checkin .pert-item.on .pert-spec{display:block}
-    #v-checkin .pert-spec input{width:100%;font-family:var(--font-ui);font-size:14px;padding:9px 12px;border:1.5px solid var(--line);border-radius:10px;background:var(--z-cream);color:var(--z-blue)}
-    #v-checkin .pert-spec .hint{margin:2px 0 7px}
+    /* Banco de pertences — grade de tipos (3 colunas, A→Z) + lista de unidades adicionadas */
+    #v-checkin .pert-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:14px}
+    @media(max-width:640px){#v-checkin .pert-grid{grid-template-columns:repeat(2,1fr)}}
+    @media(max-width:400px){#v-checkin .pert-grid{grid-template-columns:1fr}}
+    #v-checkin .pert-chip{display:flex;align-items:center;justify-content:center;gap:7px;text-align:center;padding:11px 10px;border:1.5px solid var(--line);border-radius:12px;background:#fff;color:var(--z-blue);font-family:var(--font-ui);font-weight:700;font-size:13.5px;cursor:pointer;transition:.12s}
+    #v-checkin .pert-chip:hover{border-color:var(--z-gold);background:var(--z-cream)}
+    #v-checkin .pert-chip.on{border-color:var(--crm-ok);background:rgba(39,174,96,.08)}
+    #v-checkin .pert-chip-n{display:inline-grid;place-items:center;min-width:20px;height:20px;padding:0 5px;border-radius:999px;background:var(--crm-ok);color:#fff;font-size:11.5px;font-weight:800}
+    #v-checkin .pert-empty{margin:0 0 4px}
+    #v-checkin .pert-row{display:flex;align-items:center;gap:9px;border:1.5px solid var(--line);border-radius:12px;background:#fff;padding:9px 11px;margin-bottom:8px}
+    #v-checkin .pert-row-nome{flex:0 0 auto;min-width:98px;font-weight:700;color:var(--z-blue);font-size:13.5px}
+    #v-checkin .pert-row-n{color:var(--muted);font-weight:800;font-size:12px}
+    #v-checkin .pert-row-spec{flex:1 1 auto;min-width:0;font-family:var(--font-ui);font-size:14px;padding:9px 12px;border:1.5px solid var(--line);border-radius:10px;background:var(--z-cream);color:var(--z-blue)}
+    #v-checkin .pert-row-spec:focus{border-color:var(--z-gold);outline:none}
+    #v-checkin .pert-row-del{flex:0 0 auto;width:34px;height:34px;border-radius:9px;border:1.5px solid var(--line);background:#fff;color:var(--crm-critico);font-weight:800;font-size:15px;cursor:pointer;line-height:1}
+    #v-checkin .pert-row-del:hover{background:rgba(192,57,43,.08);border-color:var(--crm-critico)}
+    @media(max-width:480px){#v-checkin .pert-row{flex-wrap:wrap}#v-checkin .pert-row-spec{flex:1 1 100%;order:3}}
     #v-checkin .sig-wrap{border:2px dashed var(--z-gold);border-radius:14px;background:var(--z-cream-warm);position:relative}
     #v-checkin canvas#ciSig{width:100%;height:190px;display:block;border-radius:12px;touch-action:none;cursor:crosshair;background:#fff}
     #v-checkin .sig-hint{position:absolute;top:50%;left:0;right:0;transform:translateY(-50%);text-align:center;color:#c9bfa8;font-weight:700;pointer-events:none;font-size:14px}
@@ -1618,9 +1629,10 @@
 
       <div class="card">
         <h2>Pertences</h2>
-        <div class="hint">Marque tudo que veio. Cada item pede a especificação (cor, marca, material) para nunca perder o que é de cada um. Não achou na lista? Acrescente — vai para o banco e aparece para todos.</div>
-        <div id="ciPertList"></div>
-        <div class="field" style="margin-top:10px"><label>Acrescentar item ao banco de pertences</label>
+        <div class="hint">Toque no tipo de item para adicionar o que o tutor trouxe. Pode adicionar <strong>vários do mesmo tipo</strong> (ex: 2 peitorais, 5 roupas) — cada um com a sua especificação. Depois é só editar ou remover cada um. Não achou na lista? Acrescente — vai para o banco e aparece para todos.</div>
+        <div id="ciPertGrid" class="pert-grid"></div>
+        <div id="ciPertSel"></div>
+        <div class="field" style="margin-top:12px"><label>Acrescentar item ao banco de pertences</label>
           <div style="display:flex;gap:8px"><input class="cad-in" id="ciPertNovo" placeholder="Ex: Cobertor" autocomplete="off" onkeydown="if(event.key==='Enter'){event.preventDefault();ciAddPertItem();}"><button class="btn btn-gold" style="flex:0 0 auto" onclick="ciAddPertItem()">Adicionar</button></div></div>
       </div>
 
@@ -1840,6 +1852,16 @@
   </section>
 
   <section class="view" id="v-agenda"><div class="soon-box"><img class="ic-st" src="assets/stickers/coleira.png" alt=""><div class="t">Agenda</div><div class="d">Calendário de frequência e reservas — próxima etapa.</div></div></section>
+  <section class="view" id="v-inativos">
+    <div class="role-note so-gestao"><span data-icon="paw"></span><span>Peludinhos que <strong>saíram do Day Care</strong>. O cadastro e o histórico ficam guardados aqui. Clique no nome para ver a ficha completa.</span></div>
+    <div class="pel-toolbar"><span class="pel-count" id="inativosCount"></span></div>
+    <div class="pel-wrap">
+      <table class="pel">
+        <thead><tr><th>Nº</th><th>Peludinho</th><th>Tutor</th><th>Data da saída</th><th>Motivo da saída</th></tr></thead>
+        <tbody id="inativosBody"></tbody>
+      </table>
+    </div>
+  </section>
   <section class="view" id="v-aulunos"><div class="soon-box"><img class="ic-st" src="assets/simbolo.png" alt=""><div class="t">Relatório de Aulunos</div><div class="d">Frequência e presença dos aulunos do Day Care — próxima etapa.</div></div></section>
   <section class="view" id="v-vacinas"><div class="soon-box"><img class="ic-st" src="assets/simbolo.png" alt=""><div class="t">Relatório de Vacinas</div><div class="d">Carteira de vacinação e vencimentos — próxima etapa.</div></div></section>
   <section class="view" id="v-abertura">
@@ -2046,7 +2068,7 @@
   function goToToday(){ selectedDate=new Date(); updateDateLabel(); carregarHospedes(); if(fichaAberta()) carregarFicha(); }
   updateDateLabel();
 
-  const titles={inicio:['Início','Visão geral do dia'],ficha:['Peludinhos','Matriculados'],
+  const titles={inicio:['Início','Visão geral do dia'],ficha:['Peludinhos','Frequentes'],inativos:['Inativos','Peludinhos que saíram do Day Care'],
     renovacao:['Renovação de Planos','Planos a vencer e renovações'],adaptacao:['Adaptação · 1º mês','Como está se adaptando'],
     daycare:['Day Care','Chamada e atividades'],hospedagem:['Plantão AuAulândia','Passagem de plantão'],
     aulunos:['Aulunos','Relatório de frequência dos aulunos'],vacinas:['Vacinas','Relatório de vacinação'],
@@ -2075,7 +2097,8 @@
     if(v==='checkin'){ if(typeof abrirCheckin==='function') abrirCheckin(); }
     if(v==='conferencia'){ if(typeof abrirConferencia==='function') abrirConferencia(); }
     if(v==='recepcao'){ if(typeof carregarAvisosEstoque==='function') carregarAvisosEstoque(); }
-    if(v==='ficha'){ const l=document.getElementById('pel-lista'),fi=document.getElementById('pel-ficha'); if(l&&fi){ l.style.display='block'; fi.style.display='none'; } }
+    if(v==='ficha'){ const l=document.getElementById('pel-lista'),fi=document.getElementById('pel-ficha'); if(l&&fi){ l.style.display='block'; fi.style.display='none'; } if(typeof renderPel==='function') renderPel(); }
+    if(v==='inativos'){ if(typeof renderInativos==='function') renderInativos(); }
     if(v==='daycare'){ if(typeof abrirDayCare==='function') abrirDayCare(); }
     const pn=document.getElementById('pSubnav'); if(pn) pn.style.display=(v==='pessoas')?'block':'none';
     if(v==='pessoas'){ if(typeof montarPSubnav==='function') montarPSubnav(); if(typeof abrirPessoas==='function') abrirPessoas('ativ'); return; }
@@ -5321,20 +5344,35 @@
   function renderPel(){
     const inp=document.getElementById('pelSearch'); if(!inp) return;
     const q=jsNorm(inp.value);
-    // Inativos continuam na lista (o banco e' historico), mas vao para o fim e marcados —
-    // senao Bud e Stella apareceriam misturados com quem esta na ativa.
-    const list=PELUDINHOS.map((p,i)=>({p,i})).filter(o=>!q||jsNorm([o.p.n,o.p.raca,o.p.tutor].join(' ')).indexOf(q)>=0)
-      .sort((a,b)=>{ const ia=pelInativo(a.p)?1:0, ib=pelInativo(b.p)?1:0; if(ia!==ib) return ia-ib; return jsNorm(pelNome(a.p)).localeCompare(jsNorm(pelNome(b.p))); });
-    const nAtivos=PELUDINHOS.filter(p=>!pelInativo(p)).length, nInat=PELUDINHOS.length-nAtivos;
-    document.getElementById('pelCount').textContent=`${nAtivos} matriculados`+(nInat?` · ${nInat} inativo${nInat>1?'s':''}`:'')+(q?` · ${list.length} na busca`:'');
-    document.getElementById('pelBody').innerHTML=list.map((o,row)=>{ const p=o.p; const inat=pelInativo(p); const exI=pelExtra(p); return `<tr onclick="abrirPeludinhoLista(${o.i})" style="cursor:pointer" class="${inat?'pel-inativo':''}">
+    // Só os FREQUENTES (ativos) aparecem aqui. Os inativos saíram da tela Peludinhos —
+    // o histórico deles vive em Relatórios › Inativos, para não misturar quem está na ativa.
+    const list=PELUDINHOS.map((p,i)=>({p,i})).filter(o=>!pelInativo(o.p)).filter(o=>!q||jsNorm([o.p.n,o.p.raca,o.p.tutor].join(' ')).indexOf(q)>=0)
+      .sort((a,b)=>jsNorm(pelNome(a.p)).localeCompare(jsNorm(pelNome(b.p)),'pt'));
+    const nFreq=PELUDINHOS.filter(p=>!pelInativo(p)).length;
+    document.getElementById('pelCount').textContent=`${nFreq} peludinhos frequentes`+(q?` · ${list.length} na busca`:'');
+    document.getElementById('pelBody').innerHTML=list.map((o,row)=>{ const p=o.p; return `<tr onclick="abrirPeludinhoLista(${o.i})" style="cursor:pointer">
       <td class="pel-num">${row+1}</td>
-      <td><span class="pel-nome">${pelNome(p)}</span>${inat?` <span class="pel-saiu">SAIU${exI.motivoSaida?' &middot; '+escAttr(exI.motivoSaida):''}</span>`:''}${p.apelido?` <span class="pel-obs">${p.apelido}</span>`:''}${((pelExtra(p).castrado||p.castrado)==='Não')?' <span class="pel-obs">Não castrado</span>':''}</td>
+      <td><span class="pel-nome">${pelNome(p)}</span>${p.apelido?` <span class="pel-obs">${p.apelido}</span>`:''}${((pelExtra(p).castrado||p.castrado)==='Não')?' <span class="pel-obs">Não castrado</span>':''}</td>
       <td>${pelGet(p,'raca')||'—'}</td>
       <td><span class="pel-freq">${pelFreq(p)}</span></td>
       <td class="dias-cell">${diasHtml(pelDias(p))}</td>
-      <td>${pelGet(p,'tutor')||'—'}</td>
+      <td class="pel-tutor">${pelGet(p,'tutor')||'—'}</td>
       <td>${calcIdade(pelNasc(p))||'—'}</td>
+    </tr>`; }).join('');
+  }
+  // Relatório de Inativos — peludinhos que saíram do Day Care (histórico preservado).
+  function renderInativos(){
+    const body=document.getElementById('inativosBody'); if(!body) return;
+    const list=PELUDINHOS.map((p,i)=>({p,i})).filter(o=>pelInativo(o.p))
+      .sort((a,b)=>jsNorm(pelNome(a.p)).localeCompare(jsNorm(pelNome(b.p)),'pt'));
+    const cnt=document.getElementById('inativosCount'); if(cnt) cnt.textContent=list.length?`${list.length} peludinho${list.length>1?'s':''} inativo${list.length>1?'s':''}`:'Nenhum peludinho inativo';
+    if(!list.length){ body.innerHTML=`<tr><td colspan="5" style="text-align:center;color:var(--muted);padding:22px">Nenhum peludinho inativo no momento.</td></tr>`; return; }
+    body.innerHTML=list.map((o,row)=>{ const p=o.p; const ex=pelExtra(p); return `<tr onclick="abrirPeludinhoLista(${o.i})" style="cursor:pointer" class="pel-inativo">
+      <td class="pel-num">${row+1}</td>
+      <td><span class="pel-nome">${pelNome(p)}</span>${p.apelido?` <span class="pel-obs">${p.apelido}</span>`:''}</td>
+      <td class="pel-tutor">${pelGet(p,'tutor')||'—'}</td>
+      <td>${ex.dataSaida?escAttr(ex.dataSaida):'—'}</td>
+      <td class="pel-tutor">${ex.motivoSaida?escAttr(ex.motivoSaida):'—'}</td>
     </tr>`; }).join('');
   }
 
@@ -6471,6 +6509,7 @@
   // que dispara o despertador — para já ficar ligada à espinha (aprofundada na Onda 2).
   let ciHosp=null;               // {nome,tutor,raca,refKey,ini,cor}
   let ciPertBanco=[];            // banco de pertences (default + custom do Firebase)
+  let ciPertSel=[];              // unidades adicionadas nesta estadia: [{uid,k,nome,spec}] — permite vários do mesmo tipo
   let ciSigCtx=null, ciSigDrawing=false, ciSigHasInk=false, ciSigReady=false;
   const CI_PERT_DEFAULT=[
     {k:'coleira',nome:'Coleira',spec:'Cor e marca (ex: vermelha Zeedog)'},
@@ -6724,42 +6763,55 @@
     }).catch(function(){});
   }
 
-  // ---- Pertences (banco checklist + especificação) ----
+  // ---- Pertences (grade de tipos A→Z + várias unidades por tipo, editáveis) ----
+  function ciUid(){ return 'p'+Date.now().toString(36)+Math.random().toString(36).slice(2,6); }
+  function ciPertDef(k){ return ciPertBanco.find(function(o){ return o.k===k; })||null; }
+  function ciPertNome(k){ const o=ciPertDef(k); return o?o.nome:k; }
+  function ciPertSpecPh(k){ const o=ciPertDef(k); return o?o.spec:'Especificação (cor, marca, material)'; }
+  function ciPertBancoSorted(){ return ciPertBanco.slice().sort(function(a,b){ return jsNorm(a.nome||'').localeCompare(jsNorm(b.nome||''),'pt'); }); }
+  // saved: array [{k,nome,spec}] (nova estadia/retorno) OU mapa legado {k:{spec}} OU vazio.
   function ciRenderPert(saved){
-    saved=saved||{};
-    const el=document.getElementById('ciPertList'); if(!el) return;
-    el.innerHTML=ciPertBanco.map(function(o){
-      const sv=saved[o.k]||null; const on=!!sv; const spec=(sv&&sv.spec)||'';
-      return '<div class="pert-item '+(on?'on':'')+'" data-k="'+o.k+'">'+
-        '<div class="pert-top" onclick="ciTogglePert(this)"><span class="pert-box">'+(on?'&#10003;':'')+'</span>'+esc(o.nome)+'</div>'+
-        '<div class="pert-spec"><div class="hint">'+esc(o.spec)+'</div><input value="'+escAttr(spec)+'" placeholder="'+escAttr(o.spec)+'"></div>'+
+    if(Array.isArray(saved)){ ciPertSel=saved.filter(function(p){ return p&&p.k; }).map(function(p){ return {uid:ciUid(),k:p.k,nome:p.nome||ciPertNome(p.k),spec:p.spec||''}; }); }
+    else if(saved&&typeof saved==='object'&&Object.keys(saved).length){ ciPertSel=Object.keys(saved).map(function(k){ return {uid:ciUid(),k:k,nome:ciPertNome(k),spec:(saved[k]&&saved[k].spec)||''}; }); }
+    else { ciPertSel=[]; }
+    ciDrawPert();
+  }
+  function ciDrawPert(){
+    const grid=document.getElementById('ciPertGrid');
+    if(grid){ grid.innerHTML=ciPertBancoSorted().map(function(o){
+      const n=ciPertSel.filter(function(p){ return p.k===o.k; }).length;
+      return '<button type="button" class="pert-chip'+(n?' on':'')+'" onclick="ciAddPertUnit(\''+o.k+'\')">'+esc(o.nome)+(n?' <span class="pert-chip-n">'+n+'</span>':'')+'</button>';
+    }).join(''); }
+    const list=document.getElementById('ciPertSel'); if(!list) return;
+    if(!ciPertSel.length){ list.innerHTML='<div class="hint pert-empty">Nada adicionado ainda. Toque nos itens acima — pode adicionar vários do mesmo tipo (ex: 2 peitorais).</div>'; return; }
+    const sorted=ciPertSel.slice().sort(function(a,b){ return jsNorm(a.nome||'').localeCompare(jsNorm(b.nome||''),'pt'); });
+    list.innerHTML=sorted.map(function(p){
+      const same=ciPertSel.filter(function(x){ return x.k===p.k; }); const multi=same.length>1; const idx=same.indexOf(p)+1;
+      return '<div class="pert-row" data-uid="'+p.uid+'">'+
+        '<div class="pert-row-nome">'+esc(p.nome)+(multi?' <span class="pert-row-n">#'+idx+'</span>':'')+'</div>'+
+        '<input class="pert-row-spec" value="'+escAttr(p.spec)+'" placeholder="'+escAttr(ciPertSpecPh(p.k))+'" oninput="ciEditPertSpec(\''+p.uid+'\',this.value)">'+
+        '<button type="button" class="pert-row-del" title="Remover" aria-label="Remover" onclick="ciRemovePertUnit(\''+p.uid+'\')">&#10005;</button>'+
       '</div>';
     }).join('');
   }
-  function ciTogglePert(top){ const it=top.closest('.pert-item'); if(!it) return; const on=it.classList.toggle('on'); const box=it.querySelector('.pert-box'); if(box) box.innerHTML=on?'&#10003;':''; if(on){ const inp=it.querySelector('.pert-spec input'); if(inp) setTimeout(function(){ inp.focus(); },30); } }
+  function ciAddPertUnit(k){ const uid=ciUid(); ciPertSel.push({uid:uid,k:k,nome:ciPertNome(k),spec:''}); ciDrawPert();
+    const el=document.querySelector('#ciPertSel .pert-row[data-uid="'+uid+'"] .pert-row-spec'); if(el) setTimeout(function(){ try{ el.focus(); }catch(e){} },30); }
+  function ciEditPertSpec(uid,val){ const p=ciPertSel.find(function(x){ return x.uid===uid; }); if(p) p.spec=val; }
+  function ciRemovePertUnit(uid){ ciPertSel=ciPertSel.filter(function(x){ return x.uid!==uid; }); ciDrawPert(); }
   function ciColetarPert(){
-    const out=[];
-    document.querySelectorAll('#ciPertList .pert-item.on').forEach(function(it){
-      const k=it.dataset.k; const nome=(ciPertBanco.find(function(o){ return o.k===k; })||{}).nome||k;
-      const spec=(it.querySelector('.pert-spec input')||{}).value||'';
-      out.push({k:k,nome:nome,spec:spec.trim(),etiquetado:false});
-    });
-    return out;
+    return ciPertSel.filter(function(p){ return p&&p.k; }).map(function(p){ return {k:p.k,nome:p.nome,spec:(p.spec||'').trim(),uid:p.uid,etiquetado:false}; });
   }
   function ciAddPertItem(){
     const inp=document.getElementById('ciPertNovo'); if(!inp) return;
     const nome=(inp.value||'').trim(); if(!nome){ inp.focus(); return; }
     const k=ciSlug(nome);
-    if(ciPertBanco.some(function(o){ return o.k===k; })){ alert('Esse item já está no banco de pertences.'); inp.value=''; return; }
-    const novo={k:k,nome:nome,spec:'Especificação (cor, marca, material)'};
-    ciPertBanco.push(novo);
-    if(DB) DB.ref('auaulandia/pertences-banco/'+k).set({nome:nome,spec:novo.spec,_ts:Date.now(),_quem:quemSou()}).catch(function(){});
-    // preserva o que já estava marcado e re-renderiza com o novo item
-    const atual={}; ciColetarPert().forEach(function(p){ atual[p.k]={spec:p.spec}; });
-    ciRenderPert(atual);
+    if(!ciPertDef(k)){
+      const novo={k:k,nome:nome,spec:'Especificação (cor, marca, material)'};
+      ciPertBanco.push(novo);
+      if(DB) DB.ref('auaulandia/pertences-banco/'+k).set({nome:nome,spec:novo.spec,_ts:Date.now(),_quem:quemSou()}).catch(function(){});
+    }
     inp.value='';
-    // marca o novo item já aberto para especificar
-    const it=document.querySelector('#ciPertList .pert-item[data-k="'+k+'"]'); if(it){ it.classList.add('on'); const box=it.querySelector('.pert-box'); if(box) box.innerHTML='&#10003;'; const i2=it.querySelector('.pert-spec input'); if(i2) i2.focus(); }
+    ciAddPertUnit(k); // já adiciona uma unidade e redesenha a grade em ordem alfabética
   }
 
   // ---- Última estadia → pré-preenche alimentação + pertences ----
@@ -6782,7 +6834,7 @@
       const _bc=document.getElementById('ciBanhoConfirmar'); if(_bc) _bc.checked=!!spa.aConfirmar;
       if(typeof ciBanhoChange==='function') ciBanhoChange();
       if(typeof ciCalcRacao==='function') ciCalcRacao();
-      if(Array.isArray(e.pertences)&&e.pertences.length){ const saved={}; e.pertences.forEach(function(p){ if(p&&p.k) saved[p.k]={spec:p.spec||''}; }); ciRenderPert(saved); }
+      if(Array.isArray(e.pertences)&&e.pertences.length){ ciRenderPert(e.pertences); }
       const st=document.getElementById('ci-status'); if(st){ st.style.color='var(--muted)'; st.textContent='Ficha pré-preenchida da última estadia — confira e ajuste.'; }
     }).catch(function(){ /* sem índice/sem estadia anterior — tudo bem */ });
   }
@@ -7132,7 +7184,7 @@
   function cfListaItens(){
     var pert=Array.isArray(cfEstadia.pertences)?cfEstadia.pertences:[];
     var meds=Array.isArray(cfEstadia.medicacao)?cfEstadia.medicacao:[];
-    var itens=pert.map(function(p){ return {tipo:'pertence', k:p.k, label:p.nome+(p.spec?(' — '+p.spec):''), critico:(p.k==='racao'||p.k==='natural')}; });
+    var itens=pert.map(function(p){ return {tipo:'pertence', k:(p.uid||p.k), label:p.nome+(p.spec?(' — '+p.spec):''), critico:(p.k==='racao'||p.k==='natural')}; });
     meds.forEach(function(m,idx){ itens.push({tipo:'med', k:'med_'+idx+'_'+(typeof ciSlug==='function'?ciSlug(m.nome||''):idx), label:'Etiquetar remédio: '+(m.nome||'medicamento'), critico:true}); });
     return itens;
   }
