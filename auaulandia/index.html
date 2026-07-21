@@ -1510,6 +1510,10 @@
     #v-checkin .ci-alim-summary{margin-top:10px;background:rgba(222,180,40,.12);border:1.5px solid var(--z-gold);border-radius:12px;padding:11px 14px;font-weight:700;color:var(--z-blue);font-size:14px}
     #v-checkin .ci-alim-summary .def-falta{color:var(--crm-critico)}
     #v-checkin .ci-alim-summary .def-ok{color:var(--crm-ok)}
+    /* Comida natural (Ração + natural) — painel verde, mesmo padrão do sistema antigo */
+    #v-checkin .ci-comida-painel{background:#F1F7F3;border:1.5px solid #cfe6da;border-radius:12px;padding:12px 14px;margin:8px 0 2px}
+    #v-checkin .ci-comida-painel .ci-comida-tit{font-weight:800;color:#2B7A4B;font-size:13.5px;margin-bottom:8px}
+    #v-checkin .ci-comida-painel .ci-meal-btn.on{background:#2B7A4B;border-color:#1E5A36;color:#fff}
     /* Spa Dermoprotetor — box próprio (banho na saída) */
     #v-checkin .ci-spa-conf{display:flex;align-items:center;gap:9px;margin-top:10px;font-weight:600;color:var(--z-blue);cursor:pointer;font-size:14px}
     #v-checkin .ci-spa-conf input{width:20px;height:20px;flex:0 0 auto}
@@ -1582,7 +1586,7 @@
         <h2>Alimentação</h2>
         <div class="hint">O que ele come nesta estadia. <strong>Nenhuma alimentação pode ser trocada.</strong> Preencha com o tutor — a conferência só pesa a ração e confere se cobre a estadia.</div>
         <div class="field"><label>Tipo</label>
-          <div class="seg" id="ciAlimTipo" data-single><button onclick="pick(this)">Ração</button><button onclick="pick(this)">Comida natural</button><button onclick="pick(this)">Ração + natural</button></div></div>
+          <div class="seg" id="ciAlimTipo" data-single><button onclick="pick(this);ciAlimTipoChange()">Ração</button><button onclick="pick(this);ciAlimTipoChange()">Comida natural</button><button onclick="pick(this);ciAlimTipoChange()">Ração + natural</button></div></div>
         <div class="cad-grid">
           <div class="field"><label>Marca</label><input class="cad-in" id="ciAlimMarca" placeholder="Ex: marca da ração ou da comida natural" autocomplete="off"></div>
           <div class="field"><label>Medida</label>
@@ -1597,6 +1601,22 @@
           <div class="field"><label>Ração trazida (g)</label><input class="cad-in" id="ciAlimTraz" inputmode="numeric" placeholder="Ex: 500" autocomplete="off" oninput="ciCalcRacao()"></div>
         </div>
         <div class="ci-dias-erro" id="ciDiasErro" style="display:none"></div>
+
+        <!-- Comida natural (Ração + natural) — quantidade e EM QUAIS refeições ela entra -->
+        <div class="ci-comida-painel" id="ciComidaPainel" style="display:none">
+          <div class="ci-comida-tit">🍲 Comida natural — além da ração</div>
+          <div class="cad-grid">
+            <div class="field"><label>Comida por refeição (g)</label><input class="cad-in" id="ciComidaQtd" inputmode="decimal" placeholder="Ex: 100" autocomplete="off" oninput="ciCalcRacao()"></div>
+            <div class="field"><label>Comida trazida (g)</label><input class="cad-in" id="ciComidaTraz" inputmode="numeric" placeholder="Ex: 600" autocomplete="off" oninput="ciCalcRacao()"></div>
+          </div>
+          <div class="ci-meal-lbl" style="margin-top:8px">Em quais refeições tem comida natural?</div>
+          <div class="hint" style="margin:-2px 0 6px">Tem peludinho que come 3x ao dia, mas a comida natural entra só no café e no jantar — marque exatamente em quais.</div>
+          <div class="ci-meal-btns" id="ciComidaRef">
+            <div class="ci-meal-btn" data-m="cafe" onclick="ciToggleMeal(this)">☕ Café da manhã</div>
+            <div class="ci-meal-btn" data-m="almoco" onclick="ciToggleMeal(this)">🍽️ Almoço</div>
+            <div class="ci-meal-btn" data-m="jantar" onclick="ciToggleMeal(this)">🌙 Jantar</div>
+          </div>
+        </div>
 
         <div class="ci-meal-row">
           <div class="ci-meal-lbl">Dia de Entrada <span class="ci-meal-tag">Dia 1</span> — o FILHOt vai comer nesse dia:</div>
@@ -6630,7 +6650,10 @@
     document.getElementById('ciAlimMarca').value=''; document.getElementById('ciAlimRefeicoes').value=''; document.getElementById('ciAlimQtd').value='';
     var _at=document.getElementById('ciAlimTraz'); if(_at) _at.value='';
     var _ad=document.getElementById('ciAlimDias'); if(_ad) _ad.value='';
-    document.querySelectorAll('#ciMealEnt .ci-meal-btn.on, #ciMealSai .ci-meal-btn.on').forEach(function(b){ b.classList.remove('on'); });
+    document.querySelectorAll('#ciMealEnt .ci-meal-btn.on, #ciMealSai .ci-meal-btn.on, #ciComidaRef .ci-meal-btn.on').forEach(function(b){ b.classList.remove('on'); });
+    var _cq=document.getElementById('ciComidaQtd'); if(_cq) _cq.value='';
+    var _ct=document.getElementById('ciComidaTraz'); if(_ct) _ct.value='';
+    var _cp=document.getElementById('ciComidaPainel'); if(_cp) _cp.style.display='none';
     var _bh=document.getElementById('ciBanhoHora'); if(_bh){ _bh.value=''; _bh.disabled=false; }
     var _bc=document.getElementById('ciBanhoConfirmar'); if(_bc) _bc.checked=false;
     var _sp=document.getElementById('ciSpaPainel'); if(_sp) _sp.style.display='none';
@@ -6717,6 +6740,26 @@
     return { entrada:cnt('ciMealEnt'), saida:cnt('ciMealSai') };
   }
   function ciToggleMeal(el){ if(el) el.classList.toggle('on'); ciCalcRacao(); }
+
+  // ---- Comida natural (Ração + natural) — igual ao sistema antigo, mas marcando EM QUAIS refeições ----
+  function ciTemNatural(){ return segVal('ciAlimTipo')==='Ração + natural'; }
+  function ciAlimTipoChange(){
+    const p=document.getElementById('ciComidaPainel');
+    if(p) p.style.display=ciTemNatural()?'block':'none';
+    ciCalcRacao();
+  }
+  function ciComidaRefObj(){ const o={cafe:false,almoco:false,jantar:false}; document.querySelectorAll('#ciComidaRef .ci-meal-btn.on').forEach(function(b){ o[b.dataset.m]=true; }); return o; }
+  function ciComidaRefNomes(o){ o=o||{}; const out=[]; if(o.cafe) out.push('café'); if(o.almoco) out.push('almoço'); if(o.jantar) out.push('jantar'); return out; }
+  // Total de refeições COM comida natural na estadia: interseção real entre as refeições
+  // marcadas com natural e as que acontecem nos dias de entrada/saída; dias do meio têm todas.
+  function ciTotalRefNatural(dias){
+    const nat=ciComidaRefObj(); const nNat=(nat.cafe?1:0)+(nat.almoco?1:0)+(nat.jantar?1:0);
+    if(!nNat||!dias) return 0;
+    const inter=function(id){ let n=0; document.querySelectorAll('#'+id+' .ci-meal-btn.on').forEach(function(b){ if(nat[b.dataset.m]) n++; }); return n; };
+    if(dias===1) return inter('ciMealEnt');
+    if(dias===2) return inter('ciMealEnt')+inter('ciMealSai');
+    return inter('ciMealEnt')+((dias-2)*nNat)+inter('ciMealSai');
+  }
   function ciCalcRacao(){
     const qtd=parseFloat(String(((document.getElementById('ciAlimQtd')||{}).value)||'').replace(',','.'))||0;
     const ref=parseInt((document.getElementById('ciAlimRefeicoes')||{}).value,10)||0;
@@ -6730,6 +6773,13 @@
     const minimo=Math.round(qtd*total);
     const def=minimo-traz;
     const unid=ciUnidLbl(segVal('ciAlimUnid'));
+    // Comida natural (Ração + natural) — gramas × refeições marcadas com natural
+    const temNat=(typeof ciTemNatural==='function')&&ciTemNatural();
+    const cQtd=temNat?(parseFloat(String(((document.getElementById('ciComidaQtd')||{}).value)||'').replace(',','.'))||0):0;
+    const cTraz=temNat?(parseFloat(String(((document.getElementById('ciComidaTraz')||{}).value)||'').replace(',','.'))||0):0;
+    const refNat=temNat?ciTotalRefNatural(dias):0;
+    const minimoComida=temNat?Math.round(cQtd*refNat):0;
+    const defComida=minimoComida-cTraz;
     const el=document.getElementById('ciAlimSummary');
     if(el){
       if(qtd>0&&dias>0&&total>0){
@@ -6739,12 +6789,19 @@
         else det='Entrada: '+m.entrada+' ref · '+(dias-2)+' dias × '+ref+' ref · Saída: '+m.saida+' ref';
         let linhaDef='';
         if(traz>0) linhaDef = def>0 ? '<span class="def-falta">Faltam '+def+unid+' na ração trazida.</span>' : '<span class="def-ok">Ração trazida cobre a estadia (sobram '+(-def)+unid+').</span>';
-        el.innerHTML='📊 <strong>'+minimo+unid+' necessários</strong> — '+qtd+unid+' × '+total+' refeições<br><span style="font-size:12px;color:var(--muted);font-weight:600">'+det+'</span>'+(linhaDef?('<br>'+linhaDef):'');
+        let linhaComida='';
+        if(temNat&&cQtd>0&&refNat>0){
+          linhaComida='<br>🍲 Comida natural: <strong>'+cQtd+'g</strong> × '+refNat+' refeições = <strong>'+minimoComida+'g</strong> ('+ciComidaRefNomes(ciComidaRefObj()).join(', ')+')';
+          if(cTraz>0) linhaComida += defComida>0 ? ' — <span class="def-falta">faltam '+defComida+'g</span>' : ' — <span class="def-ok">cobre (sobram '+(-defComida)+'g)</span>';
+        } else if(temNat){
+          linhaComida='<br>🍲 <span class="def-falta">Comida natural: preencha as gramas e marque em quais refeições.</span>';
+        }
+        el.innerHTML='📊 <strong>'+minimo+unid+' necessários</strong> — '+qtd+unid+' × '+total+' refeições<br><span style="font-size:12px;color:var(--muted);font-weight:600">'+det+'</span>'+(linhaDef?('<br>'+linhaDef):'')+linhaComida;
       } else {
         el.textContent='Preencha as datas, a quantidade por refeição e marque as refeições para calcular o necessário.';
       }
     }
-    return { minimo:minimo, deficit:def, total:total, dias:dias };
+    return { minimo:minimo, deficit:def, total:total, dias:dias, comidaMinimo:minimoComida, comidaDeficit:defComida, comidaRef:refNat };
   }
 
   // ---- Spa Dermoprotetor (banho na saída) ----
@@ -6870,6 +6927,13 @@
         // marcas de refeição Dia 1 / Último dia (se salvas na última estadia)
         const marcar=function(id,obj){ if(!obj) return; document.querySelectorAll('#'+id+' .ci-meal-btn').forEach(function(b){ if(obj[b.dataset.m]) b.classList.add('on'); }); };
         marcar('ciMealEnt',f.alim.entrada); marcar('ciMealSai',f.alim.saida);
+        // Comida natural da última estadia (Ração + natural)
+        if(f.alim.comida){
+          const _cq=document.getElementById('ciComidaQtd'); if(_cq&&f.alim.comida.qtd) _cq.value=f.alim.comida.qtd;
+          const _ct=document.getElementById('ciComidaTraz'); if(_ct&&f.alim.comida.trazida) _ct.value=f.alim.comida.trazida;
+          marcar('ciComidaRef',f.alim.comida.refeicoes);
+        }
+        if(typeof ciAlimTipoChange==='function') ciAlimTipoChange();
       }
       // Spa Dermoprotetor — restaura horário / a confirmar da última vez
       const _bh=document.getElementById('ciBanhoHora'); if(_bh&&spa.horario) _bh.value=spa.horario;
@@ -6922,7 +6986,14 @@
                qtd:(document.getElementById('ciAlimQtd').value||'').trim(), unidade:segVal('ciAlimUnid'),
                trazida:(document.getElementById('ciAlimTraz')?(document.getElementById('ciAlimTraz').value||'').trim():''),
                dias:(calc.dias||''), entrada:mealObj('ciMealEnt'), saida:mealObj('ciMealSai'),
-               minimo:(calc.minimo||0), deficit:(calc.deficit||0) },
+               minimo:(calc.minimo||0), deficit:(calc.deficit||0),
+               // Comida natural (Ração + natural): quantidade + EM QUAIS refeições ela entra
+               comida:(ciTemNatural()?{
+                 qtd:(document.getElementById('ciComidaQtd')?(document.getElementById('ciComidaQtd').value||'').trim():''),
+                 trazida:(document.getElementById('ciComidaTraz')?(document.getElementById('ciComidaTraz').value||'').trim():''),
+                 refeicoes:ciComidaRefObj(),
+                 minimo:(calc.comidaMinimo||0), deficit:(calc.comidaDeficit||0)
+               }:null) },
         // Spa Dermoprotetor (banho na saída) — box próprio. banho mantido em ficha.banho p/ compatibilidade.
         banho:banho,
         spa:{ banho:banho, horario:horario, aConfirmar:(banho==='Sim'&&aConfirmar) }
@@ -6937,6 +7008,13 @@
     const st=document.getElementById('ci-status'); if(!ciHosp){ return; }
     const dados=ciColetarFicha();
     if(!dados.entrada){ if(st){ st.style.color='var(--crm-critico)'; st.textContent='✋ Informe a data de ENTRADA da estadia.'; } document.getElementById('ciEntrada').focus(); return; }
+    // Ração + natural: não salva sem as gramas e sem marcar EM QUAIS refeições entra a natural
+    if(ciTemNatural()){
+      const _cq=parseFloat(String(((document.getElementById('ciComidaQtd')||{}).value)||'').replace(',','.'))||0;
+      const _nRef=document.querySelectorAll('#ciComidaRef .ci-meal-btn.on').length;
+      if(!_cq){ if(st){ st.style.color='var(--crm-critico)'; st.textContent='✋ Você marcou Ração + natural. Preencha as gramas de comida natural por refeição.'; } const c=document.getElementById('ciComidaQtd'); if(c){ c.scrollIntoView({behavior:'smooth',block:'center'}); c.focus(); } return; }
+      if(!_nRef){ if(st){ st.style.color='var(--crm-critico)'; st.textContent='✋ Marque em quais refeições entra a comida natural (café, almoço e/ou jantar).'; } const p=document.getElementById('ciComidaRef'); if(p) p.scrollIntoView({behavior:'smooth',block:'center'}); return; }
+    }
     const meds=ciColetarMeds();
     const probs=ciValidarMeds(meds);
     if(probs.length){ if(st){ st.style.color='var(--crm-critico)'; st.textContent='✋ '+probs[0]; } return; }
@@ -6984,7 +7062,8 @@
     L.push('Estadia: '+ciBRdata(d.entrada)+(d.saida?(' até '+ciBRdata(d.saida)):''));
     const a=d.ficha.alim;
     if(a.tipo||a.marca||a.qtd){ L.push(''); L.push('Alimentação: '+[a.tipo,a.marca,(a.qtd?(a.qtd+' '+(a.unidade||'')):''),(a.refeicoes?(a.refeicoes+'x/dia'):'')].filter(Boolean).join(' · '));
-      if(a.dias) L.push('Estadia: '+a.dias+' dia(s) · ração necessária aprox.: '+(a.minimo||0)+ciUnidLbl(a.unidade)+(a.trazida?(' · trazido: '+a.trazida+'g'):'')); }
+      if(a.dias) L.push('Estadia: '+a.dias+' dia(s) · ração necessária aprox.: '+(a.minimo||0)+ciUnidLbl(a.unidade)+(a.trazida?(' · trazido: '+a.trazida+'g'):''));
+      if(a.comida&&a.comida.qtd){ L.push('Comida natural: '+a.comida.qtd+'g/refeição · em: '+ciComidaRefNomes(a.comida.refeicoes).join(', ')+(a.comida.trazida?(' · trazido: '+a.comida.trazida+'g'):'')+(a.comida.minimo?(' · necessária aprox.: '+a.comida.minimo+'g'):'')); } }
     const spa=(d.ficha.spa)||{};
     if(spa.banho){ let bl='Banho na saída (Spa Dermoprotetor): '+spa.banho; if(spa.banho==='Sim'){ bl += spa.aConfirmar?' — horário a confirmar':(spa.horario?(' — '+spa.horario):''); } L.push(bl); }
     const mv=Object.values(meds);
@@ -7023,7 +7102,8 @@
     if(a.tipo||a.marca||a.qtd){
       add('Alimentacao',{bold:true,size:12});
       add([a.tipo,a.marca,(a.qtd?(a.qtd+' '+(a.unidade||'')):''),(a.refeicoes?(a.refeicoes+'x/dia'):'')].filter(Boolean).join(' - '),{});
-      if(a.dias) add('Racao necessaria aprox.: '+(a.minimo||0)+ciUnidLbl(a.unidade)+(a.trazida?('    Trazido: '+a.trazida+'g'):''),{gap:8});
+      if(a.dias) add('Racao necessaria aprox.: '+(a.minimo||0)+ciUnidLbl(a.unidade)+(a.trazida?('    Trazido: '+a.trazida+'g'):''),{gap:(a.comida&&a.comida.qtd)?4:8});
+      if(a.comida&&a.comida.qtd) add('Comida natural: '+a.comida.qtd+'g/refeicao - em: '+ciComidaRefNomes(a.comida.refeicoes).join(', ')+(a.comida.trazida?('    Trazido: '+a.comida.trazida+'g'):'')+(a.comida.minimo?('    Necessaria aprox.: '+a.comida.minimo+'g'):''),{gap:8});
     }
     if(spa.banho){ add('Spa Dermoprotetor',{bold:true,size:12}); add('Banho na saida: '+spa.banho+(spa.banho==='Sim'?(spa.aConfirmar?' - horario a confirmar':(spa.horario?(' - '+spa.horario):'')):''),{gap:8}); }
     if(meds.length){ add('MEDICACAO / SUPLEMENTOS - HORARIOS',{bold:true,size:12,red:true}); meds.forEach(function(it){ add('- '+it.nome+' - '+it.q+' '+it.u+' - '+((it.horarios||[]).join(', ')),{red:true}); }); lines.push({t:'',size:6,gap:2}); }
@@ -7110,7 +7190,7 @@
     let h='<div class="pf-h1">Zêluz · AuAulândia — Ficha de Check-in</div>';
     h+='<div class="pf-sub">'+esc(ciHosp.nome)+(ciHosp.raca?(' · '+esc(ciHosp.raca)):'')+(ciHosp.tutor?(' · Tutor: '+esc(ciHosp.tutor)):'')+'</div>';
     h+='<div class="pf-sec"><h3>Estadia</h3><div class="pf-row">Entrada: <strong>'+ciBRdata(d.entrada)+'</strong>'+(d.saida?('  ·  Saída prevista: <strong>'+ciBRdata(d.saida)+'</strong>'):'')+'</div></div>';
-    if(a.tipo||a.marca||a.qtd){ h+='<div class="pf-sec"><h3>Alimentação</h3><div class="pf-row">'+esc([a.tipo,a.marca,(a.qtd?(a.qtd+' '+(a.unidade||'')):''),(a.refeicoes?(a.refeicoes+'x/dia'):'')].filter(Boolean).join(' · '))+'</div>'+(a.dias?('<div class="pf-row">Estadia: '+esc(a.dias)+' dia(s) · ração necessária aprox.: '+esc((a.minimo||0)+ciUnidLbl(a.unidade))+(a.trazida?(' · trazido: '+esc(a.trazida)+'g'):'')+'</div>'):'')+'</div>'; }
+    if(a.tipo||a.marca||a.qtd){ h+='<div class="pf-sec"><h3>Alimentação</h3><div class="pf-row">'+esc([a.tipo,a.marca,(a.qtd?(a.qtd+' '+(a.unidade||'')):''),(a.refeicoes?(a.refeicoes+'x/dia'):'')].filter(Boolean).join(' · '))+'</div>'+(a.dias?('<div class="pf-row">Estadia: '+esc(a.dias)+' dia(s) · ração necessária aprox.: '+esc((a.minimo||0)+ciUnidLbl(a.unidade))+(a.trazida?(' · trazido: '+esc(a.trazida)+'g'):'')+'</div>'):'')+((a.comida&&a.comida.qtd)?('<div class="pf-row">🍲 Comida natural: '+esc(a.comida.qtd)+'g/refeição · em: '+esc(ciComidaRefNomes(a.comida.refeicoes).join(', '))+(a.comida.trazida?(' · trazido: '+esc(a.comida.trazida)+'g'):'')+(a.comida.minimo?(' · necessária aprox.: '+esc(a.comida.minimo)+'g'):'')+'</div>'):'')+'</div>'; }
     var spa=(d.ficha.spa)||{};
     if(spa.banho){ var bl='Banho na saída: '+esc(spa.banho); if(spa.banho==='Sim'){ bl += spa.aConfirmar?' — horário a confirmar':(spa.horario?(' — '+esc(spa.horario)):''); } h+='<div class="pf-sec"><h3>Spa Dermoprotetor</h3><div class="pf-row">'+bl+'</div></div>'; }
     if(mv.length){ h+='<div class="pf-med"><h3>⚠ MEDICAÇÃO / SUPLEMENTOS — HORÁRIOS</h3>'; mv.forEach(function(it){ h+='<div class="pf-mrow">'+esc(it.nome)+' — '+esc(it.q+' '+it.u)+' — '+esc((it.horarios||[]).join(', '))+'</div>'; }); h+='</div>'; }
@@ -7277,6 +7357,7 @@
     if(a.marca) linhas.push('Marca: '+escAttr(a.marca));
     if(a.qtd) linhas.push(escAttr(a.qtd)+' '+(a.unidade||'')+'/refeição');
     if(a.refeicoes) linhas.push(escAttr(a.refeicoes)+'x ao dia');
+    if(a.comida&&a.comida.qtd) linhas.push('🍲 Comida natural: '+escAttr(a.comida.qtd)+'g/refeição em '+escAttr(ciComidaRefNomes(a.comida.refeicoes).join(', ')));
     if(info) info.innerHTML=linhas.length?linhas.join(' · '):'<span style="color:var(--crm-atencao-text)">Alimentação não informada no check-in.</span>';
     var m=cfMinimoRacao();
     var elNec=document.getElementById('cfRacaoNecessario');
