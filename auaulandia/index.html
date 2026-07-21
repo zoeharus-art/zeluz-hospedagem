@@ -446,7 +446,15 @@
   .dc-present{position:absolute;top:9px;right:9px;width:30px;height:30px;border-radius:50%;border:2px solid var(--line);background:#fff;display:grid;place-items:center;cursor:pointer;font-size:15px;font-weight:800;color:#c9c2b2;z-index:2}
   .dc-present.veio{background:var(--crm-ok);border-color:var(--crm-ok);color:#fff}
   .dc-present.faltou{background:var(--crm-critico);border-color:var(--crm-critico);color:#fff}
-  .pet .mini-alert{position:absolute;top:9px;left:9px;font-size:10px;font-weight:800;color:#fff;background:var(--crm-critico);padding:3px 8px;border-radius:8px;z-index:2;animation:piscaAlerta 1.5s ease-in-out infinite}
+  /* SEGURANÇA — tarja de restrição/alergia. Fica ABAIXO da foto (nunca sobre o rosto do FILHOt),
+     em banda vermelha piscante, óbvia. Vale para .pet, .pet.dc-card e .vet-pet. */
+  .pet .mini-alert,.vet-pet .mini-alert{display:block;margin:1px auto 7px;max-width:calc(100% - 6px);font-size:10.5px;font-weight:800;letter-spacing:.3px;color:#fff;background:var(--crm-critico);padding:5px 9px;border-radius:8px;text-align:center;line-height:1.2;animation:piscaAlerta 1.5s ease-in-out infinite}
+  /* selos de status (medicação, vet, não comeu) — chips no fluxo, abaixo da foto, sem cobrir o rosto */
+  .pet .mini-med,.pet .mini-recom,.pet .mini-naocomeu,.vet-pet .mini-med{display:inline-block;vertical-align:middle;margin:0 3px 7px;font-size:9.5px;font-weight:800;letter-spacing:.2px;padding:3px 8px;border-radius:7px;line-height:1.2}
+  .pet .mini-med{color:var(--crm-atencao-text);background:var(--z-gold)}
+  .pet .mini-recom{color:#fff;background:var(--crm-info)}
+  .pet .mini-naocomeu{color:#fff;background:var(--crm-critico);animation:piscaAlerta 1.5s ease-in-out infinite}
+  .vet-pet .mini-med{color:var(--z-blue);background:var(--z-gold)}
   body[data-role="plantonista"] .so-day,body[data-role="tutor"] .so-day{display:none !important}
   /* Plantonista: só AuAulândia e Sair */
   body[data-role="plantonista"] .nav a,body[data-role="plantonista"] .nav .grp,body[data-role="plantonista"] .nav .subnav{display:none !important}
@@ -536,7 +544,7 @@
   .dc-ribbon.faltou{background:var(--crm-critico);color:#fff}
   .dc-card.veio{border-color:var(--crm-ok);box-shadow:0 0 0 2px rgba(39,174,96,.32)}
   .dc-card.faltou{border-color:var(--crm-critico);box-shadow:0 0 0 2px rgba(192,57,43,.32);opacity:.88}
-  .dc-card .mini-alert{top:32px;left:8px}
+  /* .dc-card: tarja de restrição agora é banda no fluxo (abaixo da foto) — sem override de posição */
   .dc-actions{display:flex;gap:6px;margin-top:11px}
   .dc-btn{flex:1;border:1.5px solid var(--line);background:#fff;border-radius:9px;padding:10px 6px;font-family:var(--font-ui);font-weight:700;font-size:13.5px;cursor:pointer;color:var(--z-blue)}
   .dc-btn.veio.on{background:var(--crm-ok);color:#fff;border-color:var(--crm-ok)}
@@ -824,8 +832,7 @@
   .vet-pet .nm{font-size:16px;font-weight:800;color:var(--z-blue);line-height:1.15}
   .vet-pet .br{font-size:12.5px;color:var(--muted);font-weight:600;margin-top:3px}
   .vet-pet .tt{font-size:12.5px;color:var(--z-blue-soft);font-weight:700;margin-top:4px;line-height:1.2}
-  .vet-pet .mini-alert{position:absolute;top:9px;left:9px;font-size:10px;font-weight:800;color:#fff;background:var(--crm-critico);padding:3px 8px;border-radius:8px;z-index:2;animation:piscaAlerta 1.5s ease-in-out infinite}
-  .vet-pet .mini-med{position:absolute;top:9px;right:9px;font-size:10px;font-weight:800;color:var(--z-blue);background:var(--z-gold);padding:3px 8px;border-radius:8px;z-index:2}
+  /* .vet-pet .mini-alert / .mini-med: agora no fluxo abaixo da foto (regras unificadas acima) */
   .vet-sec{margin-top:16px}
   .vet-sec h3{font-size:14px;font-weight:800;letter-spacing:.3px;color:var(--z-blue);text-transform:uppercase;margin:0 0 10px;padding-top:12px;border-top:1.5px dashed var(--line)}
   .vet-row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
@@ -853,7 +860,7 @@
   .vet-consulta-card .cc-body{font-size:13.5px;color:var(--z-blue-soft);margin-top:6px;line-height:1.5}
   .vet-fotos{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
   .vet-fotos img{width:74px;height:74px;object-fit:cover;border-radius:10px;border:1.5px solid var(--line)}
-  .pet .mini-recom{position:absolute;top:34px;right:9px;font-size:10px;font-weight:800;color:#fff;background:var(--crm-info);padding:3px 8px;border-radius:8px;z-index:2}
+  /* .pet .mini-recom: agora chip no fluxo abaixo da foto (regra unificada acima) */
   /* botão de cancelar hóspede/pernoite do dia — canto do card, só Gestão/Supervisão/Diretoria */
   .pet-x{position:absolute;top:-8px;right:-8px;width:27px;height:27px;border-radius:50%;border:2px solid #fff;background:var(--crm-critico);color:#fff;font-size:16px;font-weight:800;line-height:1;cursor:pointer;z-index:4;display:grid;place-items:center;box-shadow:0 2px 6px rgba(0,0,0,.25)}
   .pet-x:hover{background:#a53125}
@@ -911,11 +918,8 @@
   .hb-novo-tit{font-size:13px;font-weight:700;color:var(--z-blue);margin-bottom:8px}
   .hb-novo-in{width:100%;padding:12px 14px;font-size:14px;border:1.5px solid var(--line);border-radius:10px;font-family:var(--font-ui);color:var(--z-blue);margin-bottom:8px}
   .hb-novo-warn{font-size:12px;font-weight:700;color:var(--crm-critico);min-height:16px}
-  /* selo de medicação sobre a foto do hóspede — irmão do .mini-alert (alergia/restrição) já usado no Day Care */
-  .pet .mini-med{position:absolute;top:9px;right:9px;font-size:10px;font-weight:800;color:var(--crm-atencao-text);background:var(--z-gold);padding:3px 8px;border-radius:8px;z-index:2}
-  /* Onda 5 — 3º risco que precisa gritar no card: NÃO COMEU hoje (junto com alergia/medicação).
-     Mesma posição/tom do .mini-alert, só que embaixo dele (não colidir com .mini-recom, que é à direita). */
-  .pet .mini-naocomeu{position:absolute;top:34px;left:9px;font-size:10px;font-weight:800;color:#fff;background:var(--crm-critico);padding:3px 8px;border-radius:8px;z-index:2;animation:piscaAlerta 1.5s ease-in-out infinite}
+  /* selos de medicação / não comeu: agora chips no fluxo abaixo da foto (regras unificadas acima),
+     nunca sobre o rosto do FILHOt. Ondas 3/5 preservadas — só mudou a posição, não a lógica. */
 
   /* ===== Novo AULUNO — telinha de 2 campos antes da ficha completa ===== */
   #novoAlunoModal{display:none;position:fixed;inset:0;z-index:75;background:rgba(26,58,79,.55);padding:20px;overflow-y:auto}
@@ -2339,7 +2343,7 @@
         // do dia agora vive DENTRO da ficha do hóspede, na "Zona de risco" (só equipe, com dupla
         // confirmação) — ver cancelarPernoiteFicha().
         return `<div class="pet" onclick="abrirPlantao(${i})">
-          ${alertaFoto}${medFoto}${recFoto}${naoComeuFoto}${ph}
+          ${ph}${alertaFoto}${medFoto}${recFoto}${naoComeuFoto}
           <div class="nm">${cad.nome||h.nome}</div>
           <div class="br">${raca}</div>
           <div class="hosp-tutor">${h.mascote?'Nossa Zelozinha':(tutor?'Tutor: '+tutor:'Tutor a confirmar')}</div>
@@ -4041,6 +4045,24 @@
     if(typeof audit==='function') audit('almoco_cad','alterou o cadastro de almoço: '+Object.keys(patch).join(', '),{alvo:k});
   }
   function naoAlmoca(p){ const a=almCad(p); return !!(a&&a.nao); }
+  // ── SEGURANÇA: restrição/alergia lida de TODAS as fontes ─────────────────────
+  // A restrição de um FILHOt pode viver em dois lugares: na ficha (pelExtra:
+  // alergia/restricao) OU só no cadastro de almoço (almCad.restr — ex.: Ragnar,
+  // "RESTRIÇÃO A TUDO"). Telas que liam apenas pelExtra não mostravam a tarja de
+  // quem tinha restrição só no almoço. Este helper unifica as fontes para que a
+  // tarja apareça em TODAS as telas (Day Care, Peludinhos, hospedagem, vet, conferência).
+  // Aceita peludinho {n,tutor} ou hóspede {nome,tutor}. Alinhado ao extraDoHosp (que já lê o almoço).
+  function _petNT(x){ if(!x) return null;
+    return { n:(x.n!=null?x.n:(x.nome!=null?x.nome:''))||'', tutor:x.tutor||'' }; }
+  function restricaoDe(x){ const p=_petNT(x); const r={alergia:'',restricao:''}; if(!p) return r;
+    try{ const ex=pelExtra(p); if(ex){ r.alergia=ex.alergia||''; r.restricao=ex.restricao||''; } }catch(e){}
+    if(!r.restricao){ try{ const a=almCad(p); if(a&&a.restr) r.restricao=a.restr; }catch(e){} }
+    return r; }
+  function temRestricao(x){ const r=restricaoDe(x); return !!(r.alergia||r.restricao); }
+  function tarjaRestricao(x){ const r=restricaoDe(x);
+    if(!(r.alergia||r.restricao)) return '';
+    const txt=(r.alergia&&r.restricao)?'ALÉRGICO / RESTRIÇÃO':(r.alergia?'ALÉRGICO':'RESTRIÇÃO');
+    return '<span class="mini-alert">'+txt+'</span>'; }
   // Inativar, nunca excluir: "quero todo o banco de dados sempre". Quem saiu (Bud e Stella —
   // brigas) ou faleceu sai das listas do dia, mas o cadastro e o histórico ficam inteiros.
   function abrirTodosPeludinhos(){ const a=document.querySelector('[data-v="ficha"]'); if(a) a.click(); if(typeof closeNav==='function') closeNav(); }
@@ -4548,7 +4570,7 @@
       var alerta=(ex.alergia||ex.restricao)?'<span class="mini-alert">'+(ex.alergia&&ex.restricao?'ALÉRGICO/RESTR.':(ex.alergia?'ALÉRGICO':'RESTRIÇÃO'))+'</span>':'';
       var med=temRecomAtiva(h)?'<span class="mini-med">VET</span>':'';
       var tutor=(typeof tutorDe==='function')?tutorDe(h):(h.tutor||'');
-      return '<div class="vet-pet" onclick="abrirVetFicha('+i+')">'+alerta+med+ph
+      return '<div class="vet-pet" onclick="abrirVetFicha('+i+')">'+ph+alerta+med
         +'<div class="nm">'+escAttr((cad.nome||h.nome||'—'))+'</div>'
         +'<div class="br">'+((cad.raca||h.raca)?escAttr(cad.raca||h.raca):'—')+'</div>'
         +'<div class="tt">'+(h.mascote?'Nossa Zelozinha':(tutor?'Tutor: '+escAttr(tutor):'Tutor a confirmar'))+'</div></div>';
@@ -5734,14 +5756,14 @@
       `<div class="pet add" onclick="adicionarAvulsa()"><div class="plus">+</div><div class="t">Diária avulsa<br><span style="font-size:10px;font-weight:600;color:var(--muted)">aulino do dia</span></div></div>`+
       filtraLista(list).map(o=>{ const p=o.p; const ex=(typeof o.i==='number')?pelExtra(p):{}; const foto=ex.foto;
         const k=dcKey(p.n,p.tutor); const st=dcChamada[k]||'pend';
-        const alerta=(ex.alergia||ex.restricao)?`<span class="mini-alert">RESTRIÇÃO</span>`:'';
+        const alerta=tarjaRestricao(p);
         const ph=foto?`<div class="ph" style="background-image:url('${foto}');background-size:cover;background-position:center"></div>`:`<div class="ph" style="background:${corPel(typeof o.i==='number'?o.i:0)}">${(p.n[0]||'?')}</div>`;
         const clickFicha=(typeof o.i==='number')?`onclick="abrirPeludinhoDay(${o.i})" style="cursor:pointer"`:'';
         const ribbon=st==='veio'?'<div class="dc-ribbon veio">PRESENTE</div>':(st==='faltou'?'<div class="dc-ribbon faltou">FALTOU</div>':'<div class="dc-ribbon pend">PENDENTE — marque</div>');
         return `<div class="pet dc-card ${st}${o.foraDia?' fora-dia':''}">
-          ${ribbon}${alerta}${o.daPlanilha?seloPlanilha(o):(o.foraDia?seloForaDia(o):seloAdapt(ex))}
+          ${ribbon}${o.daPlanilha?seloPlanilha(o):(o.foraDia?seloForaDia(o):seloAdapt(ex))}
           <div ${clickFicha}>
-            ${ph}
+            ${ph}${alerta}
             <div class="nm">${(typeof o.i==='number')?pelNome(p):p.n}</div>
             <div class="br">${((typeof o.i==='number')?pelGet(p,'raca'):p.raca)||'—'}</div>
             <div class="hosp-tutor">${o.avulso?'Diária avulsa':'Tutor: '+((typeof o.i==='number')?pelGet(p,'tutor'):p.tutor)}</div>
@@ -6047,11 +6069,11 @@
       ? (list.length?`${list.length} para o 2º horário — nao comeram no 1º`:'Ninguem ficou para o 2º horário')
       : `${list.length} aulunos · ${f?f.t:''}`;
     document.getElementById('genGrid').innerHTML=filtraLista(list).map(o=>{ const p=o.p; const ex=(typeof o.i==='number')?pelExtra(p):{}; const foto=ex.foto; const k=dcKey(p.n,p.tutor); const ok=genMarcas[k]==='feito';
-      const restr=(ex.restricao||ex.alergia)?`<span class="mini-alert">RESTRICAO</span>`:'';
+      const restr=tarjaRestricao(p);
       const ph=foto?`<div class="ph" style="background-image:url('${foto}');background-size:cover;background-position:center"></div>`:`<div class="ph" style="background:${corPel(typeof o.i==='number'?o.i:0)}">${(p.n[0]||'?')}</div>`;
       return `<div class="pet dc-card ${ok?'veio':''}">
-        <div class="dc-ribbon ${ok?'veio':'pend'}">${ok?'FEITO':'PENDENTE'}</div>${restr}${seloAdapt(ex)}
-        <div ${typeof o.i==='number'?`onclick="abrirPeludinhoDay(${o.i})" style="cursor:pointer"`:''}>${ph}<div class="nm">${p.n}</div><div class="br">${p.raca||'-'}</div></div>
+        <div class="dc-ribbon ${ok?'veio':'pend'}">${ok?'FEITO':'PENDENTE'}</div>${seloAdapt(ex)}
+        <div ${typeof o.i==='number'?`onclick="abrirPeludinhoDay(${o.i})" style="cursor:pointer"`:''}>${ph}${restr}<div class="nm">${p.n}</div><div class="br">${p.raca||'-'}</div></div>
         <div class="dc-actions"><button class="dc-btn veio ${ok?'on':''}" style="flex:1" onclick="marcarGenerico('${k}')">${ok?'&#10003; Feito':'Marcar feito'}</button></div>
       </div>`;
     }).join('');
@@ -7142,7 +7164,7 @@
         :(pend.concluida
           ?'<span class="mini-med" style="background:var(--crm-ok);color:#fff">CONFERIDO</span>'
           :'<span class="mini-med" style="background:var(--crm-critico);color:#fff;animation:piscaAlerta 1.5s ease-in-out infinite">CONFERIR</span>');
-      return '<div class="vet-pet" onclick="abrirCfFicha('+i+')">'+alerta+selo+ph
+      return '<div class="vet-pet" onclick="abrirCfFicha('+i+')">'+ph+alerta+selo
         +'<div class="nm">'+escAttr((cad.nome||h.nome||'—'))+'</div>'
         +'<div class="br">'+((cad.raca||h.raca)?escAttr(cad.raca||h.raca):'—')+'</div>'
         +'<div class="tt">'+(h.mascote?'Nossa Zelozinha':(tutor?'Tutor: '+escAttr(tutor):'Tutor a confirmar'))+'</div></div>';
