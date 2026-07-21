@@ -102,6 +102,12 @@
     transition:transform .18s ease;flex:0 0 auto}
   .acc.acc-open > .nav-parent .acc-caret{transform:rotate(90deg)}
   .acc:not(.acc-open) > .acc-panel{display:none}
+  .dcsub-head{cursor:pointer;display:flex;align-items:center;justify-content:space-between;user-select:none}
+  .dcsub-caret{display:inline-flex;transition:transform .2s;opacity:.65}
+  .dcsub-caret svg{width:13px;height:13px}
+  .dcsub.dcsub-open > .dcsub-head .dcsub-caret{transform:rotate(90deg)}
+  .dcsub-panel{overflow:hidden;max-height:0;transition:max-height .25s ease}
+  .dcsub.dcsub-open > .dcsub-panel{max-height:1500px}
   .acc-panel{margin:1px 0 5px}
   .acc-panel > a{margin-left:10px}
   .acc.acc-open > .nav-parent{background:rgba(255,255,255,.06);opacity:1}
@@ -5641,22 +5647,25 @@
   function dcKey(name,tutor){ return jsNorm((name||'')+'__'+(tutor||'')).replace(/[.#$\[\]\/ ]/g,'-'); }
   function montarSubnav(){ const sm=document.getElementById('dcSubnav'); if(!sm) return;
     const escopo=(typeof atividadesPermitidas==='function')?atividadesPermitidas():null;
-    const ativs=escopo?ATIVS_DC.filter(a=>escopo.indexOf(a.s)>=0):ATIVS_DC;
+    let ativs=escopo?ATIVS_DC.filter(a=>escopo.indexOf(a.s)>=0):ATIVS_DC;
+    // Atividades em ordem ALFABETICA (Adriana 21/jul). EXCECAO: "2º Horário de Almoço" logo abaixo de "Almoço".
+    ativs=ativs.slice().sort((a,b)=>(a.t||'').localeCompare((b.t||''),'pt',{sensitivity:'base'}));
+    var _i2=ativs.findIndex(a=>a.s==='almoco2');
+    if(_i2>=0){ var _x=ativs.splice(_i2,1)[0]; var _iA=ativs.findIndex(a=>a.s==='almoco'); ativs.splice(_iA>=0?_iA+1:ativs.length,0,_x); }
+    var _car='<span class="dcsub-caret">'+(typeof ic==='function'?ic('chevron'):'')+'</span>';
     let h='';
-    if(!escopo){ // no modo restrito, sem seletor de dia — foco só na atividade
-      h+='<div class="subnav-grp">Turminhas</div>';
-      // Nº de matriculados por dia — só Gestão e Supervisão veem (decisão de Adriana).
-      h+=ORDEM_DIAS.map(d=>`<a data-d="${d}" onclick="setDcDia('${d}')">${DIA_FULL[d]}${d===HOJE_DIA?' · hoje':''}${vePorDia()?`<span class="dia-n">${nMatriculados(d)}</span>`:''}</a>`).join('');
-      // "Todos": achar e completar cadastro sem depender do dia ("hoje quero completar o da Flor").
-      // Reusa a tela Peludinhos, que ja lista todos com busca — em vez de duplicar a grade.
-      if(vePorDia()) h+=`<a onclick="abrirTodosPeludinhos()">Todos<span class="dia-n">${PELUDINHOS.filter(p=>!pelInativo(p)).length}</span></a>`;
+    if(!escopo){
+      // Turminhas = sub-sanfona recolhivel (Adriana: seta em Turminhas p/ a barra nao ficar enorme).
+      let dias=ORDEM_DIAS.map(d=>`<a data-d="${d}" onclick="setDcDia('${d}')">${DIA_FULL[d]}${d===HOJE_DIA?' · hoje':''}${vePorDia()?`<span class="dia-n">${nMatriculados(d)}</span>`:''}</a>`).join('');
+      if(vePorDia()) dias+=`<a onclick="abrirTodosPeludinhos()">Todos<span class="dia-n">${PELUDINHOS.filter(p=>!pelInativo(p)).length}</span></a>`;
+      h+='<div class="dcsub" data-dcsub="turminhas"><div class="subnav-grp dcsub-head" onclick="toggleDcSub(this)">Turminhas'+_car+'</div><div class="dcsub-panel">'+dias+'</div></div>';
     }
-    h+='<div class="subnav-grp">Atividades</div>';
-    // Atividades em ordem ALFABETICA (decisao de Adriana 21/jul - menos atrito, achar rapido).
-    // As Turminhas/dias acima seguem a ordem natural da semana (ORDEM_DIAS), nao alfabetica.
-    h+=ativs.slice().sort((a,b)=>(a.t||'').localeCompare((b.t||''),'pt',{sensitivity:'base'})).map(a=>`<a data-a="${a.s}" onclick="abrirAtividade('${a.s}')">${a.t}</a>`).join('');
+    // Atividades = sub-sanfona recolhivel.
+    var _atv=ativs.map(a=>`<a data-a="${a.s}" onclick="abrirAtividade('${a.s}')">${a.t}</a>`).join('');
+    h+='<div class="dcsub" data-dcsub="atividades"><div class="subnav-grp dcsub-head" onclick="toggleDcSub(this)">Atividades'+_car+'</div><div class="dcsub-panel">'+_atv+'</div></div>';
     sm.innerHTML=h;
   }
+  function toggleDcSub(head){ var sub=(head&&head.closest)?head.closest('.dcsub'):null; if(sub) sub.classList.toggle('dcsub-open'); }
   function marcarSubnavAtivo(){ document.querySelectorAll('#dcSubnav a').forEach(a=>{ if(a.dataset.d!=null) a.classList.toggle('active', a.dataset.d===dcDia); if(a.dataset.a!=null) a.classList.toggle('active', a.dataset.a===dcAtiv); }); }
   // ===== Accordion do sidebar (menu sanfona) =====
   function toggleAcc(parentEl){
@@ -5681,11 +5690,13 @@
       const wasOpen=acc.classList.contains('acc-open');
       acc.style.display=''; // limpa medição anterior (re-run/troca de papel) antes de aferir
       acc.classList.add('acc-open'); // neutraliza o colapso para ler só a visibilidade por papel
-      // Conta QUALQUER link renderizado no painel (inclui dias/atividades do #dcSubnav,
-      // que usam data-d/data-a e não data-v). offsetParent!==null = realmente visível
-      // (respeita display:none de ancestral, ex.: .subnav oculto ou wrapper so-day).
+      // abre tambem as sub-sanfonas (Turminhas/Atividades) so para MEDIR — senao Day Care
+      // "sem filhos visiveis" e seria escondido por engano. Restaura o estado logo abaixo.
+      var _subs=[].slice.call(acc.querySelectorAll('.dcsub')); var _ss=_subs.map(function(x){return x.classList.contains('dcsub-open');});
+      _subs.forEach(function(x){ x.classList.add('dcsub-open'); });
       let vis=0;
       acc.querySelectorAll('.acc-panel a').forEach(l=>{ if(l.offsetParent!==null) vis++; });
+      _subs.forEach(function(x,i){ x.classList.toggle('dcsub-open', _ss[i]); }); // restaura sub-sanfonas
       acc.classList.toggle('acc-open', wasOpen); // restaura estado do usuário
       acc.style.display = vis>0 ? '' : 'none';
       // Se o cabeçalho do pai está oculto pela regra de papel mas há filho visível,
