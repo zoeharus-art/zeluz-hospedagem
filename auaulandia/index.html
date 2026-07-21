@@ -1413,6 +1413,29 @@
     #v-checkin .btn-wa{background:#25D366;color:#08351b}
     #v-checkin .med-destaque{background:rgba(192,57,43,.06);border:1.5px solid var(--crm-critico);border-radius:12px;padding:12px 14px;margin-top:10px}
     #v-checkin .med-destaque .mdh{font-weight:800;color:var(--crm-critico);font-size:12px;letter-spacing:.4px;margin-bottom:6px}
+    /* Novo Hóspede — cadastro do zero no próprio Check-in */
+    #v-checkin .ci-novo{border:1.5px dashed var(--z-gold);border-radius:14px;background:var(--z-cream-warm);padding:14px;margin-top:12px}
+    #v-checkin .ci-novo .cnt{font-weight:800;color:var(--z-blue);margin-bottom:4px}
+    #v-checkin .ci-novo .cn-warn{color:var(--crm-critico);font-weight:700;font-size:13px;margin:6px 0 2px;min-height:1px}
+    #v-checkin .ci-toggle-novo{display:inline-flex;align-items:center;gap:8px;margin-top:12px;background:transparent;border:none;color:var(--z-gold-deep);font-family:var(--font-ui);font-weight:800;font-size:14px;cursor:pointer;padding:4px 2px}
+    /* Alimentação — cálculo por dias (igual ao sistema antigo) */
+    #v-checkin .ci-dias{display:flex;align-items:center;gap:12px;background:var(--z-cream-warm);border:1.5px solid var(--line);border-radius:12px;padding:10px 14px;margin:2px 0 6px}
+    #v-checkin .ci-dias .n{font-size:26px;font-weight:800;color:var(--z-gold-deep);line-height:1}
+    #v-checkin .ci-dias .l{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:var(--muted)}
+    #v-checkin .ci-dias-erro{color:var(--crm-critico);font-weight:700;font-size:13px;margin-top:4px}
+    #v-checkin .ci-meal-row{margin-top:8px}
+    #v-checkin .ci-meal-lbl{font-weight:700;color:var(--z-blue);font-size:13px;margin-bottom:6px;display:flex;align-items:center;gap:8px}
+    #v-checkin .ci-meal-tag{font-size:10px;font-weight:800;letter-spacing:.4px;color:#fff;background:var(--crm-ok);padding:2px 8px;border-radius:7px}
+    #v-checkin .ci-meal-tag.fim{background:var(--crm-critico)}
+    #v-checkin .ci-meal-btns{display:flex;gap:8px;flex-wrap:wrap}
+    #v-checkin .ci-meal-btn{flex:1 1 auto;min-width:96px;border:1.5px solid var(--line);background:#fff;border-radius:10px;padding:9px 6px;font-family:var(--font-ui);font-weight:700;font-size:13px;color:var(--z-blue);cursor:pointer;text-align:center}
+    #v-checkin .ci-meal-btn.on{background:var(--z-gold);border-color:var(--z-gold-deep);color:var(--z-blue)}
+    #v-checkin .ci-alim-summary{margin-top:10px;background:rgba(222,180,40,.12);border:1.5px solid var(--z-gold);border-radius:12px;padding:11px 14px;font-weight:700;color:var(--z-blue);font-size:14px}
+    #v-checkin .ci-alim-summary .def-falta{color:var(--crm-critico)}
+    #v-checkin .ci-alim-summary .def-ok{color:var(--crm-ok)}
+    /* Spa Dermoprotetor — box próprio (banho na saída) */
+    #v-checkin .ci-spa-conf{display:flex;align-items:center;gap:9px;margin-top:10px;font-weight:600;color:var(--z-blue);cursor:pointer;font-size:14px}
+    #v-checkin .ci-spa-conf input{width:20px;height:20px;flex:0 0 auto}
     /* Área de impressão do PDF — invisível na tela, some no print o resto */
     #ci-print{display:none}
     @media print{
@@ -1433,12 +1456,25 @@
   <section class="view" id="v-checkin">
     <!-- PASSO 1 — escolher o peludinho -->
     <div id="ci-escolha">
-      <div class="role-note"><span data-icon="paw"></span><span><strong>Check-in da estadia.</strong> Escolha o FILHOt que está chegando. No retorno, a ficha já vem pré-preenchida da última estadia — a Consultora só confere e ajusta.</span></div>
+      <div class="role-note"><span data-icon="paw"></span><span><strong>Check-in da estadia.</strong> Busque o FILHOt que está chegando. No retorno, a ficha já vem pré-preenchida da última estadia — a Consultora só confere e ajusta. Se for a primeira vez dele na Zêluz, use <strong>Novo Hóspede</strong>.</span></div>
       <div class="card">
         <div class="field"><label>Quem está chegando?</label>
-          <input class="cad-in" id="ciBusca" placeholder="Nome do FILHOt, tutor ou raça…" autocomplete="off" oninput="renderCiBusca()"></div>
-        <div class="hint">Busca no cadastro-mestre (mesmo do Day Care). Não achou? Cadastre pela AuAulândia primeiro.</div>
+          <input class="cad-in" id="ciBusca" placeholder="Digite o nome do FILHOt, tutor ou raça…" autocomplete="off" oninput="renderCiBusca()"></div>
+        <div class="hint">Busca no cadastro-mestre (mesmo do Day Care). A lista aparece conforme você digita.</div>
         <div id="ciResults" style="margin-top:12px"></div>
+
+        <button type="button" class="ci-toggle-novo" onclick="ciToggleNovo()"><span data-icon="paw"></span><span id="ciToggleNovoTxt">Novo Hóspede — cadastrar do zero</span></button>
+        <div class="ci-novo" id="ciNovoPainel" style="display:none">
+          <div class="cnt">Cadastrar um FILHOt novo (nunca veio à Zêluz)</div>
+          <div class="hint">Preencha o essencial. O resto da ficha (alimentação, medicação, pertences) é preenchido na sequência do check-in.</div>
+          <div class="field" style="margin-top:8px"><label>Nome do FILHOt *</label><input class="cad-in" id="ciNovoNome" placeholder="Ex: Thor" autocomplete="off"></div>
+          <div class="cad-grid">
+            <div class="field"><label>Tutor</label><input class="cad-in" id="ciNovoTutor" placeholder="Nome do tutor" autocomplete="off"></div>
+            <div class="field"><label>Raça</label><input class="cad-in" id="ciNovoRaca" placeholder="Ex: Spitz Alemão, SRD…" autocomplete="off"></div>
+          </div>
+          <div class="cn-warn" id="ciNovoWarn"></div>
+          <button class="btn btn-primary" style="width:100%;margin-top:6px" onclick="ciCriarNovoHospede()">Cadastrar e iniciar check-in</button>
+        </div>
       </div>
     </div>
 
@@ -1460,27 +1496,60 @@
         <h2>Datas da estadia</h2>
         <div class="hint">Cada estadia é uma pasta separada — ração, remédio e pertences nunca se misturam entre uma vez e outra.</div>
         <div class="cad-grid">
-          <div class="field"><label>Entrada *</label><input type="date" class="cad-in" id="ciEntrada"></div>
-          <div class="field"><label>Saída prevista</label><input type="date" class="cad-in" id="ciSaida"></div>
+          <div class="field"><label>Entrada *</label><input type="date" class="cad-in" id="ciEntrada" onchange="ciCalcDias()"></div>
+          <div class="field"><label>Saída prevista</label><input type="date" class="cad-in" id="ciSaida" onchange="ciCalcDias()"></div>
         </div>
       </div>
 
       <div class="card">
         <h2>Alimentação</h2>
-        <div class="hint">O que ele come nesta estadia. <strong>Nenhuma alimentação pode ser trocada.</strong></div>
+        <div class="hint">O que ele come nesta estadia. <strong>Nenhuma alimentação pode ser trocada.</strong> Preencha com o tutor — a conferência só pesa a ração e confere se cobre a estadia.</div>
         <div class="field"><label>Tipo</label>
           <div class="seg" id="ciAlimTipo" data-single><button onclick="pick(this)">Ração</button><button onclick="pick(this)">Comida natural</button><button onclick="pick(this)">Ração + natural</button></div></div>
         <div class="cad-grid">
           <div class="field"><label>Marca</label><input class="cad-in" id="ciAlimMarca" placeholder="Ex: marca da ração ou da comida natural" autocomplete="off"></div>
-          <div class="field"><label>Refeições por dia</label><input class="cad-in" id="ciAlimRefeicoes" inputmode="numeric" placeholder="Ex: 2" autocomplete="off"></div>
-        </div>
-        <div class="cad-grid">
-          <div class="field"><label>Quantidade por refeição</label><input class="cad-in" id="ciAlimQtd" inputmode="decimal" placeholder="Ex: 40" autocomplete="off"></div>
           <div class="field"><label>Medida</label>
             <div class="seg" id="ciAlimUnid" data-single><button onclick="pick(this)">gramas</button><button onclick="pick(this)">medidor</button><button onclick="pick(this)">lata</button><button onclick="pick(this)">sachê</button></div></div>
         </div>
+        <div class="cad-grid">
+          <div class="field"><label>Quantidade por refeição</label><input class="cad-in" id="ciAlimQtd" inputmode="decimal" placeholder="Ex: 40" autocomplete="off" oninput="ciCalcRacao()"></div>
+          <div class="field"><label>Refeições por dia</label><input class="cad-in" id="ciAlimRefeicoes" inputmode="numeric" placeholder="Ex: 2" autocomplete="off" oninput="ciCalcRacao()"></div>
+        </div>
+        <div class="cad-grid">
+          <div class="field"><label>Dias (automático)</label><input class="cad-in" id="ciAlimDias" readonly tabindex="-1" placeholder="—" style="background:var(--z-cream-warm)"></div>
+          <div class="field"><label>Ração trazida (g)</label><input class="cad-in" id="ciAlimTraz" inputmode="numeric" placeholder="Ex: 500" autocomplete="off" oninput="ciCalcRacao()"></div>
+        </div>
+        <div class="ci-dias-erro" id="ciDiasErro" style="display:none"></div>
+
+        <div class="ci-meal-row">
+          <div class="ci-meal-lbl">Dia de Entrada <span class="ci-meal-tag">Dia 1</span> — o FILHOt vai comer nesse dia:</div>
+          <div class="hint" style="margin:-2px 0 6px">Depende da hora que é entregue: se chega à tarde, pode ser só o jantar.</div>
+          <div class="ci-meal-btns" id="ciMealEnt">
+            <div class="ci-meal-btn" data-m="cafe" onclick="ciToggleMeal(this)">☕ Café da manhã</div>
+            <div class="ci-meal-btn" data-m="almoco" onclick="ciToggleMeal(this)">🍽️ Almoço</div>
+            <div class="ci-meal-btn" data-m="jantar" onclick="ciToggleMeal(this)">🌙 Jantar</div>
+          </div>
+        </div>
+        <div class="ci-meal-row">
+          <div class="ci-meal-lbl">Dia de Saída <span class="ci-meal-tag fim">Último dia</span> — refeições até ir embora:</div>
+          <div class="ci-meal-btns" id="ciMealSai">
+            <div class="ci-meal-btn" data-m="cafe" onclick="ciToggleMeal(this)">☕ Café da manhã</div>
+            <div class="ci-meal-btn" data-m="almoco" onclick="ciToggleMeal(this)">🍽️ Almoço</div>
+            <div class="ci-meal-btn" data-m="jantar" onclick="ciToggleMeal(this)">🌙 Jantar</div>
+          </div>
+        </div>
+        <div class="ci-alim-summary" id="ciAlimSummary">Preencha as datas, a quantidade por refeição e marque as refeições para calcular o necessário.</div>
+      </div>
+
+      <div class="card">
+        <h2>Spa Dermoprotetor</h2>
+        <div class="hint">Banho de saída para o FILHOt voltar para casa cuidado e cheiroso.</div>
         <div class="field"><label>Banho na saída?</label>
-          <div class="seg gold" id="ciBanho" data-single><button onclick="pick(this)">Sim</button><button onclick="pick(this)">Não</button></div></div>
+          <div class="seg gold" id="ciBanho" data-single><button onclick="pick(this);ciBanhoChange()">Sim</button><button onclick="pick(this);ciBanhoChange()">Não</button></div></div>
+        <div id="ciSpaPainel" style="display:none">
+          <div class="field"><label>Horário do banho</label><input type="time" class="cad-in" id="ciBanhoHora"></div>
+          <label class="ci-spa-conf"><input type="checkbox" id="ciBanhoConfirmar" onchange="ciBanhoChange()"><span>O tutor ainda não sabe a hora que chega — deixar <strong>a confirmar</strong></span></label>
+        </div>
       </div>
 
       <div class="card">
@@ -6197,10 +6266,12 @@
     const box=document.getElementById('ciResults'); if(!box) return;
     if(typeof PELUDINHOS==='undefined'){ box.innerHTML='<div class="hint">Carregando cadastro…</div>'; return; }
     const q=jsNorm(document.getElementById('ciBusca')?document.getElementById('ciBusca').value:'');
+    // Tela clean — a lista só aparece quando a Consultora começa a digitar (menos poluição visual).
+    if(!q){ box.innerHTML=''; return; }
     const list=PELUDINHOS.map(function(p,i){ return {p:p,i:i}; })
-      .filter(function(o){ return !q || jsNorm([pelNome(o.p),pelGet(o.p,'raca'),pelGet(o.p,'tutor')].join(' ')).indexOf(q)>=0; })
+      .filter(function(o){ return jsNorm([pelNome(o.p),pelGet(o.p,'raca'),pelGet(o.p,'tutor')].join(' ')).indexOf(q)>=0; })
       .sort(function(x,y){ return jsNorm(pelNome(x.p)).localeCompare(jsNorm(pelNome(y.p))); });
-    if(!list.length){ box.innerHTML='<div class="hint">'+(q?'Não encontrei esse FILHOt.':'Comece a digitar o nome.')+'</div>'; return; }
+    if(!list.length){ box.innerHTML='<div class="hint">Não encontrei esse FILHOt. Se for a primeira vez dele, use <strong>Novo Hóspede</strong> abaixo.</div>'; return; }
     box.innerHTML=list.slice(0,50).map(function(o){
       const p=o.p; const ex=pelExtra(p); const foto=ex.foto;
       const nome=pelNome(p), raca=pelGet(p,'raca')||'—', tutor=pelGet(p,'tutor')||'tutor a confirmar';
@@ -6228,9 +6299,16 @@
     // datas
     document.getElementById('ciEntrada').value=ciHoje();
     document.getElementById('ciSaida').value='';
-    // reset alimentação
+    // reset alimentação (inclui calc por dias) + Spa
     setSeg('ciAlimTipo',''); setSeg('ciAlimUnid',''); setSeg('ciBanho','');
     document.getElementById('ciAlimMarca').value=''; document.getElementById('ciAlimRefeicoes').value=''; document.getElementById('ciAlimQtd').value='';
+    var _at=document.getElementById('ciAlimTraz'); if(_at) _at.value='';
+    var _ad=document.getElementById('ciAlimDias'); if(_ad) _ad.value='';
+    document.querySelectorAll('#ciMealEnt .ci-meal-btn.on, #ciMealSai .ci-meal-btn.on').forEach(function(b){ b.classList.remove('on'); });
+    var _bh=document.getElementById('ciBanhoHora'); if(_bh){ _bh.value=''; _bh.disabled=false; }
+    var _bc=document.getElementById('ciBanhoConfirmar'); if(_bc) _bc.checked=false;
+    var _sp=document.getElementById('ciSpaPainel'); if(_sp) _sp.style.display='none';
+    ciCalcDias();
     // gate + assinatura + status
     document.getElementById('ciAssinaNome').value=ciHosp.tutor||'';
     ciRenderGate();
@@ -6247,6 +6325,109 @@
     window.scrollTo({top:0,behavior:'smooth'});
   }
   function ciVoltar(){ document.getElementById('ci-ficha').style.display='none'; document.getElementById('ci-escolha').style.display='block'; renderCiBusca(); }
+
+  // ---- Novo Hóspede — cadastrar do zero (mesma trava de duplicidade nome+tutor+raça) ----
+  function ciToggleNovo(){
+    const p=document.getElementById('ciNovoPainel'); const t=document.getElementById('ciToggleNovoTxt'); if(!p) return;
+    const open=(p.style.display==='none'||!p.style.display);
+    p.style.display=open?'block':'none';
+    if(t) t.textContent=open?'Fechar cadastro de novo hóspede':'Novo Hóspede — cadastrar do zero';
+    if(open){ const n=document.getElementById('ciNovoNome'); if(n) setTimeout(function(){ try{ n.focus(); }catch(e){} },40); }
+  }
+  function ciCriarNovoHospede(){
+    const nEl=document.getElementById('ciNovoNome'), tEl=document.getElementById('ciNovoTutor'), rEl=document.getElementById('ciNovoRaca'), w=document.getElementById('ciNovoWarn');
+    const nome=((nEl&&nEl.value)||'').trim(), tutor=((tEl&&tEl.value)||'').trim(), raca=((rEl&&rEl.value)||'').trim();
+    if(w) w.textContent='';
+    if(!nome){ if(w) w.textContent='Escreva o nome do FILHOt.'; if(nEl) nEl.focus(); return; }
+    // Nível 1 — nome+tutor+raça idênticos a OUTRO cadastro: é o mesmo FILHOt em duplicidade. Bloqueia.
+    const gemeo=(typeof achaPorIdNR==='function')?achaPorIdNR(nome,tutor,raca,'__none__'):null;
+    const exatoNT=PELUDINHOS.find(function(p){ return pelKey(p)===pelKey({n:nome,tutor:tutor}); });
+    if(gemeo||(raca===''&&exatoNT)){
+      const g=gemeo||exatoNT;
+      if(w) w.innerHTML='Já existe um cadastro idêntico: "'+esc(pelNome(g))+'"'+(pelGet(g,'raca')?(' · '+esc(pelGet(g,'raca'))):'')+' · tutor '+(esc(pelGet(g,'tutor'))||'—')+'. Busque acima em vez de duplicar.';
+      return;
+    }
+    // Nível 2 — mesmo nome (homônimo), tutor/raça diferentes: pode ser outro FILHOt real. Só avisa.
+    const parecido=PELUDINHOS.find(function(p){ return jsNorm(pelNome(p))===jsNorm(nome) && pelKey(p)!==pelKey({n:nome,tutor:tutor}); });
+    if(parecido && !confirm('Já existe "'+nome+'"'+(raca?(' · '+raca):'')+' com o tutor "'+(pelGet(parecido,'tutor')||'sem tutor informado')+'".\n\nÉ um FILHOt diferente, de outra família? OK para cadastrar mesmo assim, ou Cancelar para conferir antes.')){
+      if(w) w.textContent='Cadastro não concluído — confira se não é o mesmo FILHOt já cadastrado.';
+      return;
+    }
+    const novo={n:nome,raca:raca,freq:'',tutor:tutor,nasc:'',dias:[]};
+    const key=pelKey(novo);
+    PELUDINHOS.push(novo);
+    PELUDINHOS.sort(function(a,b){ return jsNorm(a.n).localeCompare(jsNorm(b.n))||jsNorm(a.tutor).localeCompare(jsNorm(b.tutor)); });
+    const regCad={_novo:true,n:nome,tutor:tutor,raca:raca,nasc:'',dias:[],freq:''};
+    try{ localStorage.setItem('zeluz_pel_'+key,JSON.stringify(regCad)); }catch(e){}
+    if(typeof DB!=='undefined'&&DB) DB.ref('daycare/cadastro/'+key).update(regCad).catch(function(){});
+    if(typeof audit==='function') audit('checkin','novo hóspede cadastrado no check-in',{pet:nome,tutor:tutor,raca:raca});
+    if(nEl) nEl.value=''; if(tEl) tEl.value=''; if(rEl) rEl.value='';
+    const p=document.getElementById('ciNovoPainel'); if(p) p.style.display='none';
+    const t=document.getElementById('ciToggleNovoTxt'); if(t) t.textContent='Novo Hóspede — cadastrar do zero';
+    const idx=PELUDINHOS.findIndex(function(p2){ return pelKey(p2)===key; });
+    if(idx>=0) ciEscolher(idx);
+  }
+
+  // ---- Alimentação: dias automáticos + necessário de ração (igual ao sistema antigo) ----
+  function ciUnidLbl(u){ return (!u||u==='gramas')?'g':(' '+u); }
+  function ciCalcDias(){
+    const ent=((document.getElementById('ciEntrada')||{}).value)||'';
+    const sai=((document.getElementById('ciSaida')||{}).value)||'';
+    const elD=document.getElementById('ciAlimDias'); const elErr=document.getElementById('ciDiasErro');
+    let dias=0;
+    if(elErr){ elErr.style.display='none'; elErr.textContent=''; }
+    if(ent&&sai){
+      const dEnt=new Date(ent+'T00:00:00'), dSai=new Date(sai+'T00:00:00');
+      const diff=Math.round((dSai-dEnt)/86400000);
+      if(diff<0){ if(elErr){ elErr.style.display='block'; elErr.textContent='⚠️ A saída está antes da entrada. Confira as datas.'; } dias=0; }
+      else dias=diff+1; // o dia da chegada conta como Dia 1 (o do jantar) — mesma regra do sistema antigo
+    }
+    if(elD) elD.value=dias||'';
+    ciCalcRacao();
+    return dias;
+  }
+  function ciMealCounts(){
+    const cnt=function(id){ return document.querySelectorAll('#'+id+' .ci-meal-btn.on').length; };
+    return { entrada:cnt('ciMealEnt'), saida:cnt('ciMealSai') };
+  }
+  function ciToggleMeal(el){ if(el) el.classList.toggle('on'); ciCalcRacao(); }
+  function ciCalcRacao(){
+    const qtd=parseFloat(String(((document.getElementById('ciAlimQtd')||{}).value)||'').replace(',','.'))||0;
+    const ref=parseInt((document.getElementById('ciAlimRefeicoes')||{}).value,10)||0;
+    const dias=parseInt((document.getElementById('ciAlimDias')||{}).value,10)||0;
+    const traz=parseFloat(String(((document.getElementById('ciAlimTraz')||{}).value)||'').replace(',','.'))||0;
+    const m=ciMealCounts();
+    let total=0;
+    if(dias===1) total=m.entrada;
+    else if(dias===2) total=m.entrada+m.saida;
+    else if(dias>=3) total=m.entrada+((dias-2)*ref)+m.saida;
+    const minimo=Math.round(qtd*total);
+    const def=minimo-traz;
+    const unid=ciUnidLbl(segVal('ciAlimUnid'));
+    const el=document.getElementById('ciAlimSummary');
+    if(el){
+      if(qtd>0&&dias>0&&total>0){
+        let det='';
+        if(dias===1) det='Dia 1: '+m.entrada+' ref';
+        else if(dias===2) det='Entrada: '+m.entrada+' ref · Saída: '+m.saida+' ref';
+        else det='Entrada: '+m.entrada+' ref · '+(dias-2)+' dias × '+ref+' ref · Saída: '+m.saida+' ref';
+        let linhaDef='';
+        if(traz>0) linhaDef = def>0 ? '<span class="def-falta">Faltam '+def+unid+' na ração trazida.</span>' : '<span class="def-ok">Ração trazida cobre a estadia (sobram '+(-def)+unid+').</span>';
+        el.innerHTML='📊 <strong>'+minimo+unid+' necessários</strong> — '+qtd+unid+' × '+total+' refeições<br><span style="font-size:12px;color:var(--muted);font-weight:600">'+det+'</span>'+(linhaDef?('<br>'+linhaDef):'');
+      } else {
+        el.textContent='Preencha as datas, a quantidade por refeição e marque as refeições para calcular o necessário.';
+      }
+    }
+    return { minimo:minimo, deficit:def, total:total, dias:dias };
+  }
+
+  // ---- Spa Dermoprotetor (banho na saída) ----
+  function ciBanhoChange(){
+    const sim=(segVal('ciBanho')==='Sim');
+    const pn=document.getElementById('ciSpaPainel'); if(pn) pn.style.display=sim?'block':'none';
+    const conf=document.getElementById('ciBanhoConfirmar'); const hora=document.getElementById('ciBanhoHora');
+    if(hora) hora.disabled=!!(conf&&conf.checked);
+  }
 
   // ---- Medicação (reaproveita medAgendaRowHTML — mesma trava à prova de erro) ----
   function ciAddMed(item){
@@ -6342,10 +6523,20 @@
     DB.ref('auaulandia/estadias').orderByChild('refKey').equalTo(key).limitToLast(1).once('value').then(function(s){
       const v=s.val()||{}; const ids=Object.keys(v); if(!ids.length) return;
       const e=v[ids[ids.length-1]]||{}; const f=e.ficha||{};
-      if(f.alim){ setSeg('ciAlimTipo',f.alim.tipo||''); setSeg('ciAlimUnid',f.alim.unidade||''); setSeg('ciBanho',f.banho||'');
+      const spa=f.spa||{};
+      if(f.alim){ setSeg('ciAlimTipo',f.alim.tipo||''); setSeg('ciAlimUnid',f.alim.unidade||''); setSeg('ciBanho',(spa.banho||f.banho||''));
         if(f.alim.marca) document.getElementById('ciAlimMarca').value=f.alim.marca;
         if(f.alim.refeicoes) document.getElementById('ciAlimRefeicoes').value=f.alim.refeicoes;
-        if(f.alim.qtd) document.getElementById('ciAlimQtd').value=f.alim.qtd; }
+        if(f.alim.qtd) document.getElementById('ciAlimQtd').value=f.alim.qtd;
+        // marcas de refeição Dia 1 / Último dia (se salvas na última estadia)
+        const marcar=function(id,obj){ if(!obj) return; document.querySelectorAll('#'+id+' .ci-meal-btn').forEach(function(b){ if(obj[b.dataset.m]) b.classList.add('on'); }); };
+        marcar('ciMealEnt',f.alim.entrada); marcar('ciMealSai',f.alim.saida);
+      }
+      // Spa Dermoprotetor — restaura horário / a confirmar da última vez
+      const _bh=document.getElementById('ciBanhoHora'); if(_bh&&spa.horario) _bh.value=spa.horario;
+      const _bc=document.getElementById('ciBanhoConfirmar'); if(_bc) _bc.checked=!!spa.aConfirmar;
+      if(typeof ciBanhoChange==='function') ciBanhoChange();
+      if(typeof ciCalcRacao==='function') ciCalcRacao();
       if(Array.isArray(e.pertences)&&e.pertences.length){ const saved={}; e.pertences.forEach(function(p){ if(p&&p.k) saved[p.k]={spec:p.spec||''}; }); ciRenderPert(saved); }
       const st=document.getElementById('ci-status'); if(st){ st.style.color='var(--muted)'; st.textContent='Ficha pré-preenchida da última estadia — confira e ajuste.'; }
     }).catch(function(){ /* sem índice/sem estadia anterior — tudo bem */ });
@@ -6378,14 +6569,24 @@
 
   // ---- Coleta da ficha inteira ----
   function ciColetarFicha(){
+    const mealObj=function(id){ const o={cafe:false,almoco:false,jantar:false}; document.querySelectorAll('#'+id+' .ci-meal-btn.on').forEach(function(b){ o[b.dataset.m]=true; }); return o; };
+    const calc=ciCalcRacao();
+    const banho=segVal('ciBanho');
+    const aConfirmar=!!(document.getElementById('ciBanhoConfirmar')&&document.getElementById('ciBanhoConfirmar').checked);
+    const horario=(banho==='Sim'&&!aConfirmar)?((document.getElementById('ciBanhoHora')||{}).value||''):'';
     return {
       entrada:document.getElementById('ciEntrada').value||'',
       saida:document.getElementById('ciSaida').value||'',
       ficha:{
         alim:{ tipo:segVal('ciAlimTipo'), marca:(document.getElementById('ciAlimMarca').value||'').trim(),
                refeicoes:(document.getElementById('ciAlimRefeicoes').value||'').trim(),
-               qtd:(document.getElementById('ciAlimQtd').value||'').trim(), unidade:segVal('ciAlimUnid') },
-        banho:segVal('ciBanho')
+               qtd:(document.getElementById('ciAlimQtd').value||'').trim(), unidade:segVal('ciAlimUnid'),
+               trazida:(document.getElementById('ciAlimTraz')?(document.getElementById('ciAlimTraz').value||'').trim():''),
+               dias:(calc.dias||''), entrada:mealObj('ciMealEnt'), saida:mealObj('ciMealSai'),
+               minimo:(calc.minimo||0), deficit:(calc.deficit||0) },
+        // Spa Dermoprotetor (banho na saída) — box próprio. banho mantido em ficha.banho p/ compatibilidade.
+        banho:banho,
+        spa:{ banho:banho, horario:horario, aConfirmar:(banho==='Sim'&&aConfirmar) }
       },
       pertences:ciColetarPert()
     };
@@ -6443,8 +6644,10 @@
     L.push(ciHosp.nome+(ciHosp.tutor?(' · Tutor: '+ciHosp.tutor):''));
     L.push('Estadia: '+ciBRdata(d.entrada)+(d.saida?(' até '+ciBRdata(d.saida)):''));
     const a=d.ficha.alim;
-    if(a.tipo||a.marca||a.qtd){ L.push(''); L.push('Alimentação: '+[a.tipo,a.marca,(a.qtd?(a.qtd+' '+(a.unidade||'')):''),(a.refeicoes?(a.refeicoes+'x/dia'):'')].filter(Boolean).join(' · ')); }
-    if(d.ficha.banho) L.push('Banho na saída: '+d.ficha.banho);
+    if(a.tipo||a.marca||a.qtd){ L.push(''); L.push('Alimentação: '+[a.tipo,a.marca,(a.qtd?(a.qtd+' '+(a.unidade||'')):''),(a.refeicoes?(a.refeicoes+'x/dia'):'')].filter(Boolean).join(' · '));
+      if(a.dias) L.push('Estadia: '+a.dias+' dia(s) · ração necessária aprox.: '+(a.minimo||0)+ciUnidLbl(a.unidade)+(a.trazida?(' · trazido: '+a.trazida+'g'):'')); }
+    const spa=(d.ficha.spa)||{};
+    if(spa.banho){ let bl='Banho na saída (Spa Dermoprotetor): '+spa.banho; if(spa.banho==='Sim'){ bl += spa.aConfirmar?' — horário a confirmar':(spa.horario?(' — '+spa.horario):''); } L.push(bl); }
     const mv=Object.values(meds);
     if(mv.length){ L.push(''); L.push('*MEDICAÇÃO / SUPLEMENTOS — HORÁRIOS*'); mv.forEach(function(it){ L.push('- '+it.nome+' — '+it.q+' '+it.u+' — '+ (it.horarios||[]).join(', ')); }); }
     if(d.pertences.length){ L.push(''); L.push('Pertences: '+d.pertences.map(function(p){ return p.nome+(p.spec?(' ('+p.spec+')'):''); }).join('; ')); }
@@ -6452,8 +6655,111 @@
     if(assina){ L.push(''); L.push('Conferido e assinado por: '+assina); }
     return L.join('\n');
   }
-  function ciEnviarWhatsApp(){ if(!ciHosp) return; const txt=ciResumoTexto(); window.open('https://wa.me/?text='+encodeURIComponent(txt),'_blank'); }
-  function ciEnviarEmail(){ if(!ciHosp) return; const txt=ciResumoTexto(); const assunto='Check-in AuAulândia — '+ciHosp.nome; location.href='mailto:?subject='+encodeURIComponent(assunto)+'&body='+encodeURIComponent(txt); }
+  // ================================================================================
+  // PDF REAL (Blob) sem biblioteca — para anexar no WhatsApp (Web Share API) e Gmail.
+  // Texto em Helvetica (WinAnsi) + assinatura embutida como imagem JPEG (DCTDecode).
+  // ================================================================================
+  function ciPdfLatin1(str){ let out=''; const s=String(str); for(let i=0;i<s.length;i++){ const c=s.codePointAt(i); if(c>0xFFFF) i++; out += (c<=0xFF? String.fromCharCode(c) : '?'); } return out; }
+  function ciPdfEsc(s){ return ciPdfLatin1(s).replace(/\\/g,'\\\\').replace(/\(/g,'\\(').replace(/\)/g,'\\)'); }
+  function ciPdfFileName(){ const nm=((ciHosp&&ciHosp.nome)?ciHosp.nome:'checkin').replace(/[^a-zA-Z0-9]+/g,'-').replace(/^-+|-+$/g,''); return 'checkin-'+(nm||'filhot')+'-'+ciHoje()+'.pdf'; }
+  function ciAssinaturaJpeg(){
+    try{
+      const c=document.getElementById('ciSig'); if(!c||!ciSigHasInk) return null;
+      const off=document.createElement('canvas'); off.width=c.width; off.height=c.height;
+      const x=off.getContext('2d'); x.fillStyle='#ffffff'; x.fillRect(0,0,off.width,off.height); x.drawImage(c,0,0);
+      const durl=off.toDataURL('image/jpeg',0.9); const b64=durl.split(',')[1]; if(!b64) return null;
+      const bin=atob(b64); const bytes=new Uint8Array(bin.length); for(let i=0;i<bin.length;i++) bytes[i]=bin.charCodeAt(i);
+      return { bytes:bytes, w:off.width, h:off.height };
+    }catch(e){ return null; }
+  }
+  function ciBuildPdfBlob(){
+    const d=ciColetarFicha(); const meds=Object.values(ciColetarMeds());
+    const assina=(document.getElementById('ciAssinaNome').value||'').trim();
+    const a=d.ficha.alim||{}; const spa=d.ficha.spa||{};
+    const lines=[]; const add=function(t,o){ o=o||{}; lines.push({t:t,bold:!!o.bold,size:o.size||11,red:!!o.red,gap:(o.gap!=null?o.gap:4)}); };
+    add('Zeluz - AuAulandia - Ficha de Check-in',{bold:true,size:17,gap:8});
+    add(ciHosp.nome+(ciHosp.raca?(' - '+ciHosp.raca):'')+(ciHosp.tutor?(' - Tutor: '+ciHosp.tutor):''),{gap:10});
+    add('Estadia',{bold:true,size:12});
+    add('Entrada: '+ciBRdata(d.entrada)+(d.saida?('    Saida prevista: '+ciBRdata(d.saida)):'')+(a.dias?('    ('+a.dias+' dia(s))'):''),{gap:8});
+    if(a.tipo||a.marca||a.qtd){
+      add('Alimentacao',{bold:true,size:12});
+      add([a.tipo,a.marca,(a.qtd?(a.qtd+' '+(a.unidade||'')):''),(a.refeicoes?(a.refeicoes+'x/dia'):'')].filter(Boolean).join(' - '),{});
+      if(a.dias) add('Racao necessaria aprox.: '+(a.minimo||0)+ciUnidLbl(a.unidade)+(a.trazida?('    Trazido: '+a.trazida+'g'):''),{gap:8});
+    }
+    if(spa.banho){ add('Spa Dermoprotetor',{bold:true,size:12}); add('Banho na saida: '+spa.banho+(spa.banho==='Sim'?(spa.aConfirmar?' - horario a confirmar':(spa.horario?(' - '+spa.horario):'')):''),{gap:8}); }
+    if(meds.length){ add('MEDICACAO / SUPLEMENTOS - HORARIOS',{bold:true,size:12,red:true}); meds.forEach(function(it){ add('- '+it.nome+' - '+it.q+' '+it.u+' - '+((it.horarios||[]).join(', ')),{red:true}); }); lines.push({t:'',size:6,gap:2}); }
+    if(d.pertences.length){ add('Pertences',{bold:true,size:12}); d.pertences.forEach(function(p){ add('- '+p.nome+(p.spec?(' - '+p.spec):''),{}); }); lines.push({t:'',size:6,gap:2}); }
+    add('Assinatura do tutor',{bold:true,size:12,gap:6});
+
+    // ---- content stream (texto) ----
+    let y=800; const ops=[];
+    lines.forEach(function(ln){ y-=(ln.size+ln.gap); if(y<70) return; const font=ln.bold?'F2':'F1'; const col=ln.red?'0.753 0.224 0.169 rg':'0.137 0.302 0.404 rg'; if(ln.t) ops.push(col+'\nBT /'+font+' '+ln.size+' Tf 1 0 0 1 56 '+y.toFixed(1)+' Tm ('+ciPdfEsc(ln.t)+') Tj ET'); });
+    // ---- assinatura (JPEG) ----
+    const sig=ciAssinaturaJpeg();
+    if(sig){ const W2=240, H2=Math.min(120, W2*(sig.h/sig.w)); const yb=Math.max(60, y-14-H2); ops.push('q '+W2.toFixed(2)+' 0 0 '+H2.toFixed(2)+' 56 '+yb.toFixed(2)+' cm /Im0 Do Q'); }
+    else { y-=16; if(y>70) ops.push('0.4 0.4 0.4 rg\nBT /F1 11 Tf 1 0 0 1 56 '+y.toFixed(1)+' Tm ((sem assinatura no quadro)) Tj ET'); }
+    if(assina){ y-=(sig?90:20); if(y>60) ops.push('0.137 0.302 0.404 rg\nBT /F2 11 Tf 1 0 0 1 56 '+y.toFixed(1)+' Tm ('+ciPdfEsc(assina)+') Tj ET'); }
+    const content=ops.join('\n');
+
+    // ---- montagem dos objetos ----
+    const hasImg=!!sig;
+    const objs=[];
+    objs.push('<< /Type /Catalog /Pages 2 0 R >>');
+    objs.push('<< /Type /Pages /Kids [3 0 R] /Count 1 >>');
+    objs.push('<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 5 0 R /F2 6 0 R >>'+(hasImg?' /XObject << /Im0 7 0 R >>':'')+' >> /Contents 4 0 R >>');
+    objs.push('<< /Length '+content.length+' >>\nstream\n'+content+'\nendstream');
+    objs.push('<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>');
+    objs.push('<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold /Encoding /WinAnsiEncoding >>');
+    if(hasImg){ objs.push({ pre:'<< /Type /XObject /Subtype /Image /Width '+sig.w+' /Height '+sig.h+' /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode /Length '+sig.bytes.length+' >>\nstream\n', bin:sig.bytes, post:'\nendstream' }); }
+
+    // ---- assembler (offsets em bytes) ----
+    const enc=function(s){ const u=new Uint8Array(s.length); for(let i=0;i<s.length;i++) u[i]=s.charCodeAt(i)&0xff; return u; };
+    const chunks=[]; let len=0; const offsets=[];
+    const push=function(x){ const u=(x instanceof Uint8Array)?x:enc(x); chunks.push(u); len+=u.length; };
+    push('%PDF-1.4\n%âãÏÓ\n');
+    for(let i=0;i<objs.length;i++){ offsets[i]=len; push((i+1)+' 0 obj\n'); const o=objs[i]; if(typeof o==='string') push(o); else { push(o.pre); push(o.bin); push(o.post); } push('\nendobj\n'); }
+    const xrefOff=len;
+    let xref='xref\n0 '+(objs.length+1)+'\n0000000000 65535 f \n';
+    for(let i=0;i<objs.length;i++){ xref += (('0000000000'+offsets[i]).slice(-10))+' 00000 n \n'; }
+    push(xref);
+    push('trailer\n<< /Size '+(objs.length+1)+' /Root 1 0 R >>\nstartxref\n'+xrefOff+'\n%%EOF');
+    return new Blob(chunks,{type:'application/pdf'});
+  }
+  function ciBaixarBlob(blob,nome){ try{ const u=URL.createObjectURL(blob); const a=document.createElement('a'); a.href=u; a.download=nome; document.body.appendChild(a); a.click(); setTimeout(function(){ try{ document.body.removeChild(a); }catch(e){} URL.revokeObjectURL(u); },1500); }catch(e){} }
+
+  // ---- WhatsApp: manda o PDF como ANEXO (Web Share API com arquivo) ----
+  function ciEnviarWhatsApp(){
+    if(!ciHosp) return; const st=document.getElementById('ci-status');
+    let blob=null; try{ blob=ciBuildPdfBlob(); }catch(e){ blob=null; }
+    const nome=ciPdfFileName(); const txt=ciResumoTexto();
+    if(blob){
+      let file=null; try{ file=new File([blob],nome,{type:'application/pdf'}); }catch(e){ file=null; }
+      if(file && navigator.canShare && navigator.canShare({files:[file]}) && navigator.share){
+        navigator.share({files:[file], title:'Check-in AuAulândia — '+ciHosp.nome, text:txt})
+          .then(function(){ if(st){ st.style.color='var(--crm-ok)'; st.textContent='✅ PDF pronto para enviar. Escolha o WhatsApp e o contato do tutor.'; } })
+          .catch(function(){ /* tutor/usuário cancelou — sem erro */ });
+        return;
+      }
+      // FALLBACK (desktop / share sem suporte a arquivo): baixa o PDF e abre o WhatsApp para anexar
+      ciBaixarBlob(blob,nome);
+      window.open('https://wa.me/?text='+encodeURIComponent(txt),'_blank');
+      if(st){ st.style.color='var(--crm-atencao-text)'; st.textContent='📎 PDF baixado. No WhatsApp que abriu, anexe o arquivo "'+nome+'" (este aparelho não compartilha PDF direto).'; }
+      return;
+    }
+    window.open('https://wa.me/?text='+encodeURIComponent(txt),'_blank');
+    if(st){ st.style.color='var(--crm-atencao-text)'; st.textContent='Não foi possível gerar o PDF neste aparelho — enviei o resumo em texto.'; }
+  }
+  // ---- E-mail: baixa o PDF e abre o compositor do Gmail (a Zêluz usa Gmail) ----
+  function ciEnviarEmail(){
+    if(!ciHosp) return; const st=document.getElementById('ci-status');
+    const assunto='Check-in AuAulândia — '+ciHosp.nome;
+    const corpo=ciResumoTexto()+'\n\n— Anexe ao e-mail o PDF da ficha que acabou de ser baixado.';
+    let blob=null; try{ blob=ciBuildPdfBlob(); }catch(e){ blob=null; }
+    const nome=ciPdfFileName(); if(blob) ciBaixarBlob(blob,nome);
+    const url='https://mail.google.com/mail/?view=cm&fs=1&to=&su='+encodeURIComponent(assunto)+'&body='+encodeURIComponent(corpo);
+    window.open(url,'_blank');
+    if(st){ st.style.color='var(--crm-atencao-text)'; st.textContent=(blob?('📎 PDF "'+nome+'" baixado e '):'')+'Gmail aberto — anexe o PDF ao e-mail. (Anexar automático pela URL não é possível.)'; }
+  }
 
   // ---- PDF via window.print (offline, sem lib) ----
   function ciGerarPDF(){
@@ -6465,7 +6771,9 @@
     let h='<div class="pf-h1">Zêluz · AuAulândia — Ficha de Check-in</div>';
     h+='<div class="pf-sub">'+esc(ciHosp.nome)+(ciHosp.raca?(' · '+esc(ciHosp.raca)):'')+(ciHosp.tutor?(' · Tutor: '+esc(ciHosp.tutor)):'')+'</div>';
     h+='<div class="pf-sec"><h3>Estadia</h3><div class="pf-row">Entrada: <strong>'+ciBRdata(d.entrada)+'</strong>'+(d.saida?('  ·  Saída prevista: <strong>'+ciBRdata(d.saida)+'</strong>'):'')+'</div></div>';
-    if(a.tipo||a.marca||a.qtd){ h+='<div class="pf-sec"><h3>Alimentação</h3><div class="pf-row">'+esc([a.tipo,a.marca,(a.qtd?(a.qtd+' '+(a.unidade||'')):''),(a.refeicoes?(a.refeicoes+'x/dia'):'')].filter(Boolean).join(' · '))+'</div>'+(d.ficha.banho?('<div class="pf-row">Banho na saída: '+esc(d.ficha.banho)+'</div>'):'')+'</div>'; }
+    if(a.tipo||a.marca||a.qtd){ h+='<div class="pf-sec"><h3>Alimentação</h3><div class="pf-row">'+esc([a.tipo,a.marca,(a.qtd?(a.qtd+' '+(a.unidade||'')):''),(a.refeicoes?(a.refeicoes+'x/dia'):'')].filter(Boolean).join(' · '))+'</div>'+(a.dias?('<div class="pf-row">Estadia: '+esc(a.dias)+' dia(s) · ração necessária aprox.: '+esc((a.minimo||0)+ciUnidLbl(a.unidade))+(a.trazida?(' · trazido: '+esc(a.trazida)+'g'):'')+'</div>'):'')+'</div>'; }
+    var spa=(d.ficha.spa)||{};
+    if(spa.banho){ var bl='Banho na saída: '+esc(spa.banho); if(spa.banho==='Sim'){ bl += spa.aConfirmar?' — horário a confirmar':(spa.horario?(' — '+esc(spa.horario)):''); } h+='<div class="pf-sec"><h3>Spa Dermoprotetor</h3><div class="pf-row">'+bl+'</div></div>'; }
     if(mv.length){ h+='<div class="pf-med"><h3>⚠ MEDICAÇÃO / SUPLEMENTOS — HORÁRIOS</h3>'; mv.forEach(function(it){ h+='<div class="pf-mrow">'+esc(it.nome)+' — '+esc(it.q+' '+it.u)+' — '+esc((it.horarios||[]).join(', '))+'</div>'; }); h+='</div>'; }
     if(d.pertences.length){ h+='<div class="pf-sec"><h3>Pertences</h3>'+d.pertences.map(function(p){ return '<div class="pf-row">• '+esc(p.nome)+(p.spec?(' — '+esc(p.spec)):'')+'</div>'; }).join('')+'</div>'; }
     h+='<div class="pf-sec"><h3>Assinatura do tutor</h3>'+(sig?('<img class="pf-sig-img" src="'+sig+'">'):'<div class="pf-row">(sem assinatura)</div>')+'<div class="pf-row" style="margin-top:6px">'+esc(assina||'—')+'</div></div>';
