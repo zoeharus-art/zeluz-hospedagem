@@ -1695,12 +1695,18 @@
       <div class="card">
         <h2>Assinatura do tutor</h2>
         <div class="hint">Peça para o tutor assinar com o dedo no tablet, confirmando os dados e os horários de medicação.</div>
-        <div class="sig-wrap">
-          <canvas id="ciSig" width="600" height="190"></canvas>
-          <div class="sig-hint" id="ciSigHint">Assine aqui com o dedo</div>
+        <label class="ci-spa-conf" style="margin:0 0 10px"><input type="checkbox" id="ciSemTutor" onchange="ciSemTutorChange()"><span>O tutor <strong>não veio</strong> — outra pessoa deixou (taxi dog, vizinho…). <strong>Dispensa assinatura.</strong></span></label>
+        <div id="ciSemTutorBox" style="display:none">
+          <div class="field"><label>Quem deixou o FILHOt? (taxi dog, nome de quem trouxe)</label><input class="cad-in" id="ciQuemDeixou" placeholder="Ex: Taxi Dog · Pet Express · vizinho João" autocomplete="off"></div>
         </div>
-        <div class="actions" style="margin-top:10px"><button class="btn" style="background:var(--z-cream-warm);color:var(--z-blue);border:1.5px solid var(--line)" onclick="ciLimparAssinatura()">Limpar assinatura</button></div>
-        <div class="field" style="margin-top:12px"><label>Nome de quem assinou (tutor) *</label><input class="cad-in" id="ciAssinaNome" placeholder="Nome e sobrenome do tutor" autocomplete="off"></div>
+        <div id="ciSigArea">
+          <div class="sig-wrap">
+            <canvas id="ciSig" width="600" height="190"></canvas>
+            <div class="sig-hint" id="ciSigHint">Assine aqui com o dedo</div>
+          </div>
+          <div class="actions" style="margin-top:10px"><button class="btn" style="background:var(--z-cream-warm);color:var(--z-blue);border:1.5px solid var(--line)" onclick="ciLimparAssinatura()">Limpar assinatura</button></div>
+          <div class="field" style="margin-top:12px"><label>Nome de quem assinou (tutor) *</label><input class="cad-in" id="ciAssinaNome" placeholder="Nome e sobrenome do tutor" autocomplete="off"></div>
+        </div>
       </div>
 
       <div class="ci-gate" id="ciGate"></div>
@@ -2574,13 +2580,16 @@
   const MED_PLURAL={'comprimido':'comprimidos','cápsula':'cápsulas','gota':'gotas','sachê':'sachês','colher':'colheres','aplicação':'aplicações','unidade':'unidades','medidor do cliente':'medidores do cliente'};
   // Medida em que a "quantidade" é substituída pelo LOCAL de aplicação (não é número).
   function medEhLocal(u){ return u==='pomada'; }
+  // Medida em que a "quantidade" é uma DESCRIÇÃO por escrito (não exige número).
+  // Ex.: "medidor do cliente" → "1 medida de Super Poder no medidor que o tutor trouxe".
+  function medEhTextoLivre(u){ return u==='medidor do cliente'; }
   function semAcento(s){ return String(s||'').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,''); }
   function qtdNum(q){ const n=parseFloat(String(q||'').replace(',','.')); return (isFinite(n)&&n>0)?n:null; }
   // "1"+"comprimido" -> "1 comprimido" | "2"+"gota" -> "2 gotas". Formato igual ao histórico já salvo.
   function fmtQtd(q,u){ if(medEhLocal(u)) return 'pomada'; const n=qtdNum(q); if(n==null||!u) return ''; const s=String(q).trim().replace('.',','); if(u==='ml') return s+' ml'; return s+' '+((n>1&&MED_PLURAL[u])?MED_PLURAL[u]:u); }
   function unidadeDe(txt){ const t=semAcento(txt).trim(); if(/^(ml|mililitro)/.test(t)) return 'ml'; if(/^comprimido/.test(t)) return 'comprimido'; if(/^capsula/.test(t)) return 'cápsula'; if(/^gota/.test(t)) return 'gota'; if(/^sache/.test(t)) return 'sachê'; if(/^colher/.test(t)) return 'colher'; if(/^aplicac/.test(t)) return 'aplicação'; if(/^medidor/.test(t)) return 'medidor do cliente'; if(/^pomada/.test(t)) return 'pomada'; if(/^(unidade|ui\b)/.test(t)) return 'unidade'; return ''; }
   // Texto da dose para exibição (WhatsApp, PDF, listas): pomada mostra o local; resto mostra número+medida.
-  function medDoseTxt(it){ it=it||{}; if(medEhLocal(it.u)) return 'Pomada'+(it.local?(' — aplicar em: '+it.local):''); return fmtQtd(it.q,it.u)||((it.q||'')+' '+(it.u||'')).trim(); }
+  function medDoseTxt(it){ it=it||{}; if(medEhLocal(it.u)) return 'Pomada'+(it.local?(' — aplicar em: '+it.local):''); if(medEhTextoLivre(it.u)) return (it.q?String(it.q).trim()+' ':'')+'(medidor do cliente)'; return fmtQtd(it.q,it.u)||((it.q||'')+' '+(it.u||'')).trim(); }
   // Período de uso: dd/mm → dd/mm, ou "uso contínuo".
   function medBRdata(iso){ if(!iso) return ''; const p=String(iso).split('-'); return p.length===3?(p[2]+'/'+p[1]+'/'+p[0]):iso; }
   function medPeriodoTxt(it){ it=it||{}; if(it.continuo) return 'uso contínuo'; const i=medBRdata(it.dataInicio), f=medBRdata(it.dataFim); if(i&&f) return i+' a '+f; if(i) return 'início '+i; if(f) return 'até '+f; return ''; }
@@ -2739,10 +2748,17 @@
   function medSyncRow(node){
     const sc=medScope(node); if(!sc) return;
     const btnOn=sc.querySelector('.medunits button.on'); const u=btnOn?btnOn.textContent.trim():'';
-    const ehLocal=medEhLocal(u);
+    const ehLocal=medEhLocal(u); const ehTexto=medEhTextoLivre(u);
     const qw=sc.querySelector('.mag-qtd-wrap'); const lw=sc.querySelector('.mag-local-wrap');
     if(qw) qw.style.display=ehLocal?'none':'';
     if(lw) lw.style.display=ehLocal?'':'none';
+    // Medidor do cliente: a "Quantidade" vira descrição por escrito (teclado de texto, sem exigir número).
+    const qi=qw?qw.querySelector('[data-c=q]'):null;
+    const ql=qw?qw.querySelector('.mf-lab'):null;
+    if(qi){
+      if(ehTexto){ qi.setAttribute('inputmode','text'); qi.setAttribute('placeholder','Ex: 1 medida de Super Poder (no medidor que o tutor trouxe)'); if(ql) ql.textContent='Descrição da dose'; }
+      else { qi.setAttribute('inputmode','decimal'); qi.setAttribute('placeholder','Digite a quantidade'); if(ql) ql.textContent='Quantidade'; }
+    }
   }
   // Uso contínuo: liga/desliga e esconde a data de Fim (contínuo não tem término).
   function medToggleContinuo(btn){
@@ -2857,7 +2873,8 @@
       if(!nomeMedOk(it.nome)) probs.push('escreva o NOME do medicamento ou suplemento por extenso.');
       else if(!it.u) probs.push('"'+it.nome+'": toque na MEDIDA (comprimido, ml, gota, pomada...).');
       else if(medEhLocal(it.u) && !(it.local||'').trim()) probs.push('"'+it.nome+'" (pomada): escreva o LOCAL de aplicação.');
-      else if(!medEhLocal(it.u) && qtdNum(it.q)==null) probs.push('"'+it.nome+'": escreva a QUANTIDADE em número (ex: 1, 0,5, 10).');
+      else if(medEhTextoLivre(it.u) && !(it.q||'').trim()) probs.push('"'+it.nome+'": escreva a DESCRIÇÃO da dose (ex: 1 medida no medidor do tutor).');
+      else if(!medEhLocal(it.u) && !medEhTextoLivre(it.u) && qtdNum(it.q)==null) probs.push('"'+it.nome+'": escreva a QUANTIDADE em número (ex: 1, 0,5, 10).');
       else if(!it.horarios.length) probs.push('"'+it.nome+'": cadastre pelo menos 1 HORÁRIO válido (ex: 07:30).');
     });
     if(probs.length){ if(st){ st.style.color='var(--crm-critico)'; st.textContent='✋ '+probs[0]; } return; }
@@ -4832,6 +4849,7 @@
     if(!nomeMedOk(nome)){ if(st){ st.style.color='var(--crm-critico)'; st.textContent='✋ Escreva o nome do medicamento por extenso.'; } return; }
     if(!u){ if(st){ st.style.color='var(--crm-critico)'; st.textContent='✋ Toque na medida (comprimido, ml, gota, pomada...).'; } return; }
     if(medEhLocal(u)){ if(!local){ if(st){ st.style.color='var(--crm-critico)'; st.textContent='✋ Pomada: escreva o LOCAL de aplicação.'; } return; } }
+    else if(medEhTextoLivre(u)){ if(!q){ if(st){ st.style.color='var(--crm-critico)'; st.textContent='✋ Escreva a descrição da dose (ex: 1 medida no medidor do tutor).'; } return; } }
     else if(qtdNum(q)==null){ if(st){ st.style.color='var(--crm-critico)'; st.textContent='✋ Escreva a quantidade em número (ex: 1, 0,5, 10).'; } return; }
     if(!horarios.length){ if(st){ st.style.color='var(--crm-critico)'; st.textContent='✋ Cadastre pelo menos 1 horário válido (ex: 07:30).'; } return; }
     if(!dataInicio){ if(st){ st.style.color='var(--crm-critico)'; st.textContent='✋ Informe a data de INÍCIO do medicamento.'; } return; }
@@ -6799,6 +6817,7 @@
     document.getElementById('ciAssinaNome').value=ciHosp.tutor||'';
     ciRenderGate();
     ciInitSig(); ciLimparAssinatura();
+    var _stq=document.getElementById('ciSemTutor'); if(_stq) _stq.checked=false; var _qd=document.getElementById('ciQuemDeixou'); if(_qd) _qd.value=''; if(typeof ciSemTutorChange==='function') ciSemTutorChange();
     const st=document.getElementById('ci-status'); if(st) st.textContent='';
     const ms=document.getElementById('ci-med-status'); if(ms) ms.textContent='';
     // pertences (banco)
@@ -7028,7 +7047,8 @@
       if(!nomeMedOk(it.nome)) probs.push('escreva o NOME do medicamento ou suplemento por extenso.');
       else if(!it.u) probs.push('"'+it.nome+'": toque na MEDIDA (comprimido, ml, gota, pomada...).');
       else if(medEhLocal(it.u) && !(it.local||'').trim()) probs.push('"'+it.nome+'" (pomada): escreva o LOCAL de aplicação.');
-      else if(!medEhLocal(it.u) && qtdNum(it.q)==null) probs.push('"'+it.nome+'": escreva a QUANTIDADE em número (ex: 1, 0,5, 10).');
+      else if(medEhTextoLivre(it.u) && !(it.q||'').trim()) probs.push('"'+it.nome+'": escreva a DESCRIÇÃO da dose (ex: 1 medida no medidor do tutor).');
+      else if(!medEhLocal(it.u) && !medEhTextoLivre(it.u) && qtdNum(it.q)==null) probs.push('"'+it.nome+'": escreva a QUANTIDADE em número (ex: 1, 0,5, 10).');
       else if(!it.horarios.length) probs.push('"'+it.nome+'": cadastre pelo menos 1 HORÁRIO válido (ex: 07:30).');
       else if(!it.dataInicio) probs.push('"'+it.nome+'": informe a DATA DE INÍCIO do medicamento.');
       else if(!it.continuo && !it.dataFim) probs.push('"'+it.nome+'": informe a DATA DE FIM ou marque "Uso contínuo".');
@@ -7193,6 +7213,13 @@
     c.addEventListener('touchstart',start,{passive:false}); c.addEventListener('touchmove',move,{passive:false}); c.addEventListener('touchend',end);
   }
   function ciLimparAssinatura(){ const c=document.getElementById('ciSig'); if(c&&ciSigCtx) ciSigCtx.clearRect(0,0,c.width,c.height); ciSigHasInk=false; const h=document.getElementById('ciSigHint'); if(h) h.style.display='block'; }
+  // "Outros deixaram" (taxi dog): esconde a assinatura e mostra o campo de quem deixou.
+  function ciSemTutorChange(){
+    const on=!!(document.getElementById('ciSemTutor')&&document.getElementById('ciSemTutor').checked);
+    const area=document.getElementById('ciSigArea'); if(area) area.style.display=on?'none':'block';
+    const box=document.getElementById('ciSemTutorBox'); if(box) box.style.display=on?'block':'none';
+    if(on){ const q=document.getElementById('ciQuemDeixou'); if(q) setTimeout(function(){ try{ q.focus(); }catch(e){} },40); }
+  }
   function ciAssinaturaDataURL(){ const c=document.getElementById('ciSig'); return (c&&ciSigHasInk)?c.toDataURL('image/png'):''; }
 
   // ---- Coleta da ficha inteira ----
@@ -7245,11 +7272,20 @@
     if(probs.length){ if(st){ st.style.color='var(--crm-critico)'; st.textContent='✋ '+probs[0]; } return; }
     const temMed=Object.keys(meds).length>0;
     if(temMed){ const chk=document.getElementById('ciGateChk'); if(!chk||!chk.checked){ if(st){ st.style.color='var(--crm-critico)'; st.textContent='✋ Conferiu os dados com o tutor? Marque a conferência de segurança antes de salvar.'; } const g=document.getElementById('ciGate'); if(g) g.scrollIntoView({behavior:'smooth',block:'center'}); return; } }
-    const assina=(document.getElementById('ciAssinaNome').value||'').trim();
-    if(!assina){ if(st){ st.style.color='var(--crm-critico)'; st.textContent='✋ Escreva o nome de quem assinou (o tutor).'; } document.getElementById('ciAssinaNome').focus(); return; }
-    // Defeito #6 — assinatura de dedo OBRIGATÓRIA: não salva só com o nome em texto.
-    const sig=ciAssinaturaDataURL();
-    if(!sig){ if(st){ st.style.color='var(--crm-critico)'; st.textContent='✋ Peça para o tutor ASSINAR com o dedo no quadro antes de salvar.'; } const sc=document.getElementById('ciSig'); if(sc) sc.scrollIntoView({behavior:'smooth',block:'center'}); return; }
+    // "Outros deixaram" (taxi dog / terceiro): o tutor não veio — dispensa assinatura e nome do tutor.
+    const semTutor=!!(document.getElementById('ciSemTutor')&&document.getElementById('ciSemTutor').checked);
+    let assina='', sig='';
+    if(semTutor){
+      assina='';
+      sig='';
+    } else {
+      assina=(document.getElementById('ciAssinaNome').value||'').trim();
+      if(!assina){ if(st){ st.style.color='var(--crm-critico)'; st.textContent='✋ Escreva o nome de quem assinou (o tutor). Se ninguém veio, marque "O tutor não veio".'; } document.getElementById('ciAssinaNome').focus(); return; }
+      // Defeito #6 — assinatura de dedo OBRIGATÓRIA quando o tutor está presente.
+      sig=ciAssinaturaDataURL();
+      if(!sig){ if(st){ st.style.color='var(--crm-critico)'; st.textContent='✋ Peça para o tutor ASSINAR com o dedo no quadro. Se ninguém veio, marque "O tutor não veio".'; } const sc=document.getElementById('ciSig'); if(sc) sc.scrollIntoView({behavior:'smooth',block:'center'}); return; }
+    }
+    const quemDeixou=semTutor?((document.getElementById('ciQuemDeixou')&&document.getElementById('ciQuemDeixou').value||'').trim()):'';
     if(!DB){ if(st){ st.style.color='var(--crm-atencao-text)'; st.textContent='Banco conectando… tente de novo em alguns segundos.'; } return; }
     const key=ciKey();
     const estadia={
@@ -7257,7 +7293,8 @@
       entrada:dados.entrada, saida:dados.saida, status:'ativa',
       ficha:dados.ficha, pertences:dados.pertences,
       medicacao:ciMedsToLista(meds),
-      gate_conferido:temMed, assinatura:sig, assinado_por:assina,
+      gate_conferido:temMed, assinatura:sig, assinado_por:(semTutor?('Entregue sem o tutor'+(quemDeixou?(' — '+quemDeixou):'')):assina),
+      entregaSemTutor:semTutor, quemDeixou:(quemDeixou||null),
       criado_por:quemSou(), _ts:Date.now()
     };
     if(st){ st.style.color='var(--muted)'; st.textContent='Salvando estadia…'; }
@@ -7589,6 +7626,12 @@
     var pert=Array.isArray(cfEstadia.pertences)?cfEstadia.pertences:[];
     var meds=Array.isArray(cfEstadia.medicacao)?cfEstadia.medicacao:[];
     var itens=pert.map(function(p){ return {tipo:'pertence', k:(p.uid||p.k), label:p.nome+(p.spec?(' — '+p.spec):''), critico:(p.k==='racao'||p.k==='natural')}; });
+    // Comida natural do check-in — item CRÍTICO na conferência (aparece para ser conferido item a item).
+    var a=(cfEstadia.ficha&&cfEstadia.ficha.alim)||{};
+    if(a.comida&&a.comida.qtd){
+      var refs=(typeof ciComidaRefNomes==='function')?ciComidaRefNomes(a.comida.refeicoes).join(', '):'';
+      itens.push({tipo:'pertence', k:'comida-natural', label:'Comida natural — '+a.comida.qtd+'g/refeição'+(refs?(' em '+refs):'')+(a.comida.minimo?(' · necessária aprox. '+a.comida.minimo+'g'):''), critico:true});
+    }
     meds.forEach(function(m,idx){ itens.push({tipo:'med', k:'med_'+idx+'_'+(typeof ciSlug==='function'?ciSlug(m.nome||''):idx), label:'Etiquetar remédio: '+(m.nome||'medicamento'), critico:true}); });
     return itens;
   }
