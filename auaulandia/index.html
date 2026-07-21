@@ -718,6 +718,14 @@
   .mag-tipo{display:flex;gap:6px;padding:8px 9px 0}
   .mag-tipo button{flex:1;border:1.5px solid var(--line);background:var(--z-cream);color:var(--z-blue);border-radius:999px;padding:7px 11px;font-size:12.5px;font-weight:700;font-family:var(--font-ui);cursor:pointer}
   .mag-tipo button.on{background:var(--z-gold);border-color:var(--z-gold);color:var(--z-blue)}
+  .mag-datas{display:flex;flex-wrap:wrap;align-items:flex-end;gap:8px;padding:8px 9px;background:var(--z-cream-warm);border-top:1px dashed var(--line)}
+  .mag-datas .mu-lab{align-self:center;font-size:10.5px;font-weight:800;letter-spacing:.4px;color:var(--muted);text-transform:uppercase}
+  .mag-data-f{display:flex;flex-direction:column;gap:3px}
+  .mag-data-f span{font-size:10.5px;font-weight:700;color:var(--muted)}
+  .mag-data-f input{border:1.5px solid var(--line);border-radius:9px;padding:7px 9px;font-family:var(--font-ui);font-size:13.5px;color:var(--z-blue);background:#fff}
+  .mag-data-fim.off{display:none}
+  .mag-continuo{border:1.5px solid var(--line);background:var(--z-cream);color:var(--z-blue);border-radius:999px;padding:7px 13px;font-size:12.5px;font-weight:700;font-family:var(--font-ui);cursor:pointer;align-self:center}
+  .mag-continuo.on{background:var(--z-gold);border-color:var(--z-gold);color:var(--z-blue)}
   .medgrid.dim{opacity:.45;pointer-events:none}
   /* Celular: a tabela de 3 colunas não cabe — o nome do remédio ficava cortado.
      Cada linha vira um bloco empilhado, com rótulo em cada campo e botão no tamanho do dedo. */
@@ -1574,6 +1582,17 @@
       </div>
 
       <div class="card">
+        <h2>Restrição / Alergia</h2>
+        <div class="hint">Segurança do FILHOt. Se ele tem QUALQUER restrição ou alergia — alimentar, ambiental, de manejo — registre aqui. Aparece em vermelho para toda a equipe.</div>
+        <div class="field"><label>Tem restrição ou alergia?</label>
+          <div class="seg" id="ciRestricaoTem" data-single><button onclick="pick(this);ciRestricaoChange()">Não</button><button onclick="pick(this);ciRestricaoChange()">Sim</button></div></div>
+        <div id="ciRestricaoDetalhe" style="display:none">
+          <div class="field" style="margin-top:8px"><label>O que ele NÃO pode? (escreva TUDO se for tudo, ou liste os itens específicos)</label>
+            <textarea class="cad-in" id="ciRestricaoTexto" style="min-height:64px" placeholder="Ex: TUDO fora da ração dele · ou: sem frango, sem grãos, não pode subir escada" onchange="ciSalvarRestricao()"></textarea></div>
+        </div>
+      </div>
+
+      <div class="card">
         <h2>Datas da estadia</h2>
         <div class="hint">Cada estadia é uma pasta separada — ração, remédio e pertences nunca se misturam entre uma vez e outra.</div>
         <div class="cad-grid">
@@ -1815,10 +1834,17 @@
             <div class="field"><label>Tipo</label><div class="mag-tipo" id="vmTipo"><button type="button" class="on" onclick="magPickTipo(this)">Medicamento</button><button type="button" onclick="magPickTipo(this)">Suplemento</button></div></div>
           </div>
           <div class="vet-row" style="margin-top:8px">
-            <label class="mfield"><span class="mf-lab">Quantidade</span><input id="vmQtd" class="cad-in" inputmode="decimal" placeholder="Ex: 1, 0,5, 10" autocomplete="off"></label>
+            <label class="mfield mag-qtd-wrap"><span class="mf-lab">Quantidade</span><input id="vmQtd" class="cad-in" inputmode="decimal" placeholder="Ex: 1, 0,5, 10" autocomplete="off"></label>
+            <label class="mfield mag-local-wrap" style="display:none"><span class="mf-lab">Local de aplicação</span><input id="vmLocal" class="cad-in" placeholder="Ex: orelha esquerda, patinha, dobra da pele" autocomplete="off"></label>
             <div class="field"><label>Medida</label><div class="medunits" id="vmUnidades" style="margin-top:0">
-              <button type="button" onclick="pickUnit(this)">comprimido</button><button type="button" onclick="pickUnit(this)">cápsula</button><button type="button" onclick="pickUnit(this)">ml</button><button type="button" onclick="pickUnit(this)">gota</button><button type="button" onclick="pickUnit(this)">sachê</button><button type="button" onclick="pickUnit(this)">colher</button><button type="button" onclick="pickUnit(this)">aplicação</button><button type="button" onclick="pickUnit(this)">unidade</button>
+              <button type="button" onclick="pickUnit(this);medSyncRow(this)">comprimido</button><button type="button" onclick="pickUnit(this);medSyncRow(this)">cápsula</button><button type="button" onclick="pickUnit(this);medSyncRow(this)">ml</button><button type="button" onclick="pickUnit(this);medSyncRow(this)">gota</button><button type="button" onclick="pickUnit(this);medSyncRow(this)">sachê</button><button type="button" onclick="pickUnit(this);medSyncRow(this)">colher</button><button type="button" onclick="pickUnit(this);medSyncRow(this)">aplicação</button><button type="button" onclick="pickUnit(this);medSyncRow(this)">unidade</button><button type="button" onclick="pickUnit(this);medSyncRow(this)">medidor do cliente</button><button type="button" onclick="pickUnit(this);medSyncRow(this)">pomada</button>
             </div></div>
+          </div>
+          <div class="mag-datas" style="margin-top:10px">
+            <span class="mu-lab">Período</span>
+            <label class="mag-data-f"><span>Início</span><input type="date" id="vmIni" data-c="ini"></label>
+            <label class="mag-data-f mag-data-fim"><span>Fim (término)</span><input type="date" id="vmFim" data-c="fim"></label>
+            <button type="button" class="mag-continuo" onclick="medToggleContinuo(this)">Uso contínuo</button>
           </div>
           <div class="mag-horarios" style="margin-top:10px"><span class="mu-lab">Horários</span><span class="mag-horarios-list" id="vmHorarios"><span class="magHorario"><input data-c="h" inputmode="numeric" placeholder="07:30" onblur="normalizarHoraMed(this)"><button type="button" class="mag-rm-h" onclick="this.parentElement.remove()">×</button></span></span><button type="button" class="med-add" style="width:auto;margin-top:0" onclick="vetAddHorario(this)">+ horário</button></div>
           <div class="field" style="margin-top:10px"><label>Motivo da prescrição / alteração (fica registrado e assinado)</label><input id="vmMotivo" class="cad-in" placeholder="Ex: vomitou após o almoço — proteger a mucosa" autocomplete="off"></div>
@@ -2535,13 +2561,30 @@
   // Unidades fechadas: a quantidade NUNCA é texto livre (evita "." e afins). Número + unidade, sempre.
   // "aplicação" cobre pomada, spray e pipeta (o que foi aplicado já está no nome).
   // "unidade" é a medida da insulina — é o que está marcado na seringa.
-  const MED_UNIDADES=['comprimido','cápsula','ml','gota','sachê','colher','aplicação','unidade'];
-  const MED_PLURAL={'comprimido':'comprimidos','cápsula':'cápsulas','gota':'gotas','sachê':'sachês','colher':'colheres','aplicação':'aplicações','unidade':'unidades'};
+  // 'medidor do cliente' = dose sem medida exata, no medidor que o próprio tutor trouxe.
+  // 'pomada' = uso tópico: não cabe quantidade, cabe o LOCAL de aplicação (campo próprio).
+  const MED_UNIDADES=['comprimido','cápsula','ml','gota','sachê','colher','aplicação','unidade','medidor do cliente','pomada'];
+  const MED_PLURAL={'comprimido':'comprimidos','cápsula':'cápsulas','gota':'gotas','sachê':'sachês','colher':'colheres','aplicação':'aplicações','unidade':'unidades','medidor do cliente':'medidores do cliente'};
+  // Medida em que a "quantidade" é substituída pelo LOCAL de aplicação (não é número).
+  function medEhLocal(u){ return u==='pomada'; }
   function semAcento(s){ return String(s||'').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,''); }
   function qtdNum(q){ const n=parseFloat(String(q||'').replace(',','.')); return (isFinite(n)&&n>0)?n:null; }
   // "1"+"comprimido" -> "1 comprimido" | "2"+"gota" -> "2 gotas". Formato igual ao histórico já salvo.
-  function fmtQtd(q,u){ const n=qtdNum(q); if(n==null||!u) return ''; const s=String(q).trim().replace('.',','); if(u==='ml') return s+' ml'; return s+' '+((n>1&&MED_PLURAL[u])?MED_PLURAL[u]:u); }
-  function unidadeDe(txt){ const t=semAcento(txt).trim(); if(/^(ml|mililitro)/.test(t)) return 'ml'; if(/^comprimido/.test(t)) return 'comprimido'; if(/^capsula/.test(t)) return 'cápsula'; if(/^gota/.test(t)) return 'gota'; if(/^sache/.test(t)) return 'sachê'; if(/^colher/.test(t)) return 'colher'; if(/^aplicac/.test(t)) return 'aplicação'; if(/^(unidade|ui\b)/.test(t)) return 'unidade'; return ''; }
+  function fmtQtd(q,u){ if(medEhLocal(u)) return 'pomada'; const n=qtdNum(q); if(n==null||!u) return ''; const s=String(q).trim().replace('.',','); if(u==='ml') return s+' ml'; return s+' '+((n>1&&MED_PLURAL[u])?MED_PLURAL[u]:u); }
+  function unidadeDe(txt){ const t=semAcento(txt).trim(); if(/^(ml|mililitro)/.test(t)) return 'ml'; if(/^comprimido/.test(t)) return 'comprimido'; if(/^capsula/.test(t)) return 'cápsula'; if(/^gota/.test(t)) return 'gota'; if(/^sache/.test(t)) return 'sachê'; if(/^colher/.test(t)) return 'colher'; if(/^aplicac/.test(t)) return 'aplicação'; if(/^medidor/.test(t)) return 'medidor do cliente'; if(/^pomada/.test(t)) return 'pomada'; if(/^(unidade|ui\b)/.test(t)) return 'unidade'; return ''; }
+  // Texto da dose para exibição (WhatsApp, PDF, listas): pomada mostra o local; resto mostra número+medida.
+  function medDoseTxt(it){ it=it||{}; if(medEhLocal(it.u)) return 'Pomada'+(it.local?(' — aplicar em: '+it.local):''); return fmtQtd(it.q,it.u)||((it.q||'')+' '+(it.u||'')).trim(); }
+  // Período de uso: dd/mm → dd/mm, ou "uso contínuo".
+  function medBRdata(iso){ if(!iso) return ''; const p=String(iso).split('-'); return p.length===3?(p[2]+'/'+p[1]+'/'+p[0]):iso; }
+  function medPeriodoTxt(it){ it=it||{}; if(it.continuo) return 'uso contínuo'; const i=medBRdata(it.dataInicio), f=medBRdata(it.dataFim); if(i&&f) return i+' a '+f; if(i) return 'início '+i; if(f) return 'até '+f; return ''; }
+  // Lê os campos extras (local da pomada + período) de uma linha .magitem compartilhada.
+  function coletarExtrasMed(el){
+    if(!el) return {};
+    const g=function(sel){ const e=el.querySelector(sel); return e?(e.value||'').trim():''; };
+    const continuo=!!el.querySelector('.mag-continuo.on');
+    const o={ local:g('[data-c=local]'), dataInicio:g('[data-c=ini]'), dataFim:continuo?'':g('[data-c=fim]'), continuo:continuo };
+    return o;
+  }
   function parseQtd(d){ const m=String(d||'').trim().match(/^(\d+(?:[.,]\d+)?)\s*(.*)$/); return m?{q:m[1],u:unidadeDe(m[2])}:{q:'',u:''}; }
   // Horário: aceita 7, 730, 7h30, 7:30 -> normaliza para 07:30. Inválido volta '' e o salvar bloqueia.
   function normHora(v){ const d=String(v||'').replace(/\D/g,''); if(!d) return ''; let H,M;
@@ -2621,7 +2664,16 @@
   function medAgendaRowHTML(id,item){
     item=item||{nome:'',q:'',u:'',horarios:[''],tipo:'medicamento'};
     const tipo=item.tipo||'medicamento';
-    const units=MED_UNIDADES.map(u=>'<button type="button" onclick="pickUnit(this)" class="'+(u===item.u?'on':'')+'">'+u+'</button>').join('');
+    const units=MED_UNIDADES.map(u=>'<button type="button" onclick="pickUnit(this);medSyncRow(this)" class="'+(u===item.u?'on':'')+'">'+u+'</button>').join('');
+    const ehLocal=medEhLocal(item.u);
+    const cont=!!item.continuo;
+    // Bloco de período (início / fim / uso contínuo) — igual no Check-in e no Cuidado Vet.
+    const datasBlock='<div class="mag-datas">'
+      +'<span class="mu-lab">Período</span>'
+      +'<label class="mag-data-f"><span>Início</span><input type="date" data-c="ini" value="'+escAttr(item.dataInicio||'')+'"></label>'
+      +'<label class="mag-data-f mag-data-fim'+(cont?' off':'')+'"><span>Fim</span><input type="date" data-c="fim" value="'+escAttr(item.dataFim||'')+'"></label>'
+      +'<button type="button" class="mag-continuo'+(cont?' on':'')+'" onclick="medToggleContinuo(this)">Uso contínuo</button>'
+      +'</div>';
     const horariosHTML=(item.horarios&&item.horarios.length?item.horarios:['']).map(function(h){
       return '<span class="magHorario"><input data-c="h" inputmode="numeric" placeholder="07:30" value="'+escAttr(h||'')+'" onblur="normalizarHoraMed(this)"><button type="button" class="mag-rm-h" title="Remover horário" onclick="this.parentElement.remove()">×</button></span>';
     }).join('');
@@ -2651,9 +2703,11 @@
       +origemToggle
       +'<div class="medrow">'
         +'<label class="mfield"><span class="mf-lab">Nome</span><input data-c="m" placeholder="Nome do medicamento ou suplemento" value="'+escAttr(item.nome||'')+'"></label>'
-        +'<label class="mfield"><span class="mf-lab">Quantidade</span><input data-c="q" inputmode="decimal" placeholder="Digite a quantidade" value="'+escAttr(item.q||'')+'"></label>'
+        +'<label class="mfield mag-qtd-wrap"'+(ehLocal?' style="display:none"':'')+'><span class="mf-lab">Quantidade</span><input data-c="q" inputmode="decimal" placeholder="Digite a quantidade" value="'+escAttr(item.q||'')+'"></label>'
+        +'<label class="mfield mag-local-wrap"'+(ehLocal?'':' style="display:none"')+'><span class="mf-lab">Local de aplicação</span><input data-c="local" placeholder="Ex: orelha esquerda, patinha, dobra da pele" value="'+escAttr(item.local||'')+'"></label>'
       +'</div>'
       +'<div class="medunits"><span class="mu-lab">Medida</span>'+units+'</div>'
+      +datasBlock
       +'<div class="mag-horarios"><span class="mu-lab">Horários</span><span class="mag-horarios-list">'+horariosHTML+'</span><button type="button" class="med-add" style="width:auto;margin-top:0" onclick="magAddHorario(this)">+ horário</button></div>'
       +estoqueBlock
       +'<div style="text-align:right;margin-top:6px"><button type="button" class="ativ-del so-equipe" title="Remover este item da lista" onclick="magRemoverItem(\''+id+'\')">🗑️ Remover item</button></div>'
@@ -2661,6 +2715,25 @@
   }
   // alterna Medicamento/Suplemento na linha (só 1 fica aceso)
   function magPickTipo(btn){ if(!podeEditarLinhaMed(btn)) return; const wrap=btn.parentElement; if(!wrap) return; wrap.querySelectorAll('button').forEach(function(b){ b.classList.remove('on'); }); btn.classList.add('on'); }
+  // Escopo de uma linha de medicação (funciona no Check-in/card diário e no formulário do Cuidado Vet).
+  function medScope(node){ return (node&&node.closest)?(node.closest('.magitem')||node.closest('#vetMedForm')):null; }
+  // Ao escolher a medida: se for POMADA, esconde Quantidade e mostra Local de aplicação (e vice-versa).
+  function medSyncRow(node){
+    const sc=medScope(node); if(!sc) return;
+    const btnOn=sc.querySelector('.medunits button.on'); const u=btnOn?btnOn.textContent.trim():'';
+    const ehLocal=medEhLocal(u);
+    const qw=sc.querySelector('.mag-qtd-wrap'); const lw=sc.querySelector('.mag-local-wrap');
+    if(qw) qw.style.display=ehLocal?'none':'';
+    if(lw) lw.style.display=ehLocal?'':'none';
+  }
+  // Uso contínuo: liga/desliga e esconde a data de Fim (contínuo não tem término).
+  function medToggleContinuo(btn){
+    if(!podeEditarLinhaMed(btn)&&!(btn.closest&&btn.closest('#vetMedForm'))) return;
+    const on=btn.classList.toggle('on');
+    const sc=medScope(btn); if(!sc) return;
+    const fim=sc.querySelector('.mag-data-fim'); if(fim) fim.classList.toggle('off',on);
+    if(on){ const fi=sc.querySelector('[data-c=fim]'); if(fi) fi.value=''; }
+  }
   // alterna a Origem (só 1 acesa)
   function magPickOrigem(btn){ if(!podeEditarLinhaMed(btn)) return; const wrap=btn.parentElement; if(!wrap) return; wrap.querySelectorAll('button').forEach(function(b){ b.classList.remove('on'); }); btn.classList.add('on'); }
   // alterna o modo do estoque e mostra o campo certo (contável x não contável)
@@ -2739,8 +2812,12 @@
       const ub=el.querySelector('.medunits button.on'); const u=ub?ub.textContent.trim():'';
       const tb=el.querySelector('.mag-tipo button.on'); const tipo=(tb&&/supl/i.test(tb.textContent))?'suplemento':'medicamento';
       const horarios=Array.prototype.map.call(el.querySelectorAll('[data-c=h]'), function(inp){ return normHora(inp.value)||''; }).filter(Boolean);
-      if(nome||q||u||horarios.length){
-        const item={nome:nome,q:q,u:u,horarios:horarios,tipo:tipo,origem:coletarOrigemEl(el)};
+      const exM=coletarExtrasMed(el);
+      if(nome||q||u||horarios.length||exM.local){
+        const item={nome:nome,q:(medEhLocal(u)?'':q),u:u,horarios:horarios,tipo:tipo,origem:coletarOrigemEl(el)};
+        if(medEhLocal(u)) item.local=exM.local;
+        if(exM.dataInicio) item.dataInicio=exM.dataInicio;
+        if(exM.continuo) item.continuo=true; else if(exM.dataFim) item.dataFim=exM.dataFim;
         const est=coletarEstoqueEl(el, MED_AGENDA_ITENS[id]); if(est) item.estoque=est;
         // Onda 3: preserva a suspensão e o histórico da vet — re-salvar a agenda pela recepção
         // NUNCA pode ressuscitar uma medicação que a veterinária suspendeu (mata o caso Hulk).
@@ -2760,8 +2837,9 @@
     const probs=[];
     Object.values(itens).forEach(function(it){
       if(!nomeMedOk(it.nome)) probs.push('escreva o NOME do medicamento ou suplemento por extenso.');
-      else if(qtdNum(it.q)==null) probs.push('"'+it.nome+'": escreva a QUANTIDADE em número (ex: 1, 0,5, 10).');
-      else if(!it.u) probs.push('"'+it.nome+'": toque na MEDIDA (comprimido, ml, gota...).');
+      else if(!it.u) probs.push('"'+it.nome+'": toque na MEDIDA (comprimido, ml, gota, pomada...).');
+      else if(medEhLocal(it.u) && !(it.local||'').trim()) probs.push('"'+it.nome+'" (pomada): escreva o LOCAL de aplicação.');
+      else if(!medEhLocal(it.u) && qtdNum(it.q)==null) probs.push('"'+it.nome+'": escreva a QUANTIDADE em número (ex: 1, 0,5, 10).');
       else if(!it.horarios.length) probs.push('"'+it.nome+'": cadastre pelo menos 1 HORÁRIO válido (ex: 07:30).');
     });
     if(probs.length){ if(st){ st.style.color='var(--crm-critico)'; st.textContent='✋ '+probs[0]; } return; }
@@ -4616,7 +4694,8 @@
     document.getElementById('vf-nome').textContent=cad.nome||h.nome||'—';
     document.getElementById('vf-chipline').textContent='Microchip: '+((cad.chip||cad.microchip)?(cad.chip||cad.microchip):'--');
     var tutor=(typeof tutorDe==='function')?tutorDe(h):(h.tutor||'');
-    document.getElementById('vf-meta').innerHTML=((cad.raca||h.raca)?escAttr(cad.raca||h.raca)+' · ':'')+(h.mascote?'Nossa Zelozinha':(tutor?'Tutor: '+escAttr(tutor):'Tutor a confirmar'));
+    var _vidade=(typeof calcIdade==='function')?calcIdade(cad.nasc||h.nasc||''):'';
+    document.getElementById('vf-meta').innerHTML=[ ((cad.raca||h.raca)?escAttr(cad.raca||h.raca):''), (_vidade?escAttr(_vidade):''), (h.mascote?'Nossa Zelozinha':(tutor?'Tutor: '+escAttr(tutor):'Tutor a confirmar')) ].filter(Boolean).join(' · ');
     var ex=(typeof extraDoHosp==='function')?extraDoHosp(h):{};
     document.getElementById('vf-pills').innerHTML=(typeof alertPills==='function')?alertPills(ex):'';
     renderVetInstrucoesFicha(h,'vf-instr');
@@ -4650,8 +4729,9 @@
     if(!ids.length){ wrap.innerHTML='<div class="hint">Nenhuma medicação em vigor. Use o botão abaixo para prescrever.</div>'; return; }
     wrap.innerHTML=ids.map(function(id){
       var it=VET_MED_CACHE[id]||{};
-      var qtd=(typeof fmtQtd==='function')?fmtQtd(it.q,it.u):((it.q||'')+' '+(it.u||''));
-      var hor=(it.horarios||[]).join(' · ');
+      var qtd=(typeof medDoseTxt==='function')?medDoseTxt(it):((it.q||'')+' '+(it.u||''));
+      var per=(typeof medPeriodoTxt==='function')?medPeriodoTxt(it):'';
+      var hor=(it.horarios||[]).join(' · ')+(per?(' · '+per):'');
       var origLbl=it.origem==='vet'?'Receita da vet':(it.origem==='familia'?'Autorizado pela família':'Rotina do tutor');
       var hist=(Array.isArray(it.historico)&&it.historico.length)?('<div style="margin-top:8px">'+it.historico.slice(-4).map(function(x){ return '<div class="vet-hist-line"><strong>'+escAttr(x.acao||'')+'</strong>'+(x.motivo?(' — '+escAttr(x.motivo)):'')+' <span style="color:var(--muted)">('+escAttr(x.quem||'')+(x.quando?(' · '+escAttr(x.quando)):'')+')</span></div>'; }).join('')+'</div>'):'';
       var btns;
@@ -4668,7 +4748,13 @@
   function vetAddHorario(btn){ var wrap=document.getElementById('vmHorarios'); if(wrap) wrap.insertAdjacentHTML('beforeend','<span class="magHorario"><input data-c="h" inputmode="numeric" placeholder="07:30" onblur="normalizarHoraMed(this)"><button type="button" class="mag-rm-h" onclick="this.parentElement.remove()">×</button></span>'); }
   function vetLimparMedForm(){
     document.getElementById('vmNome').value=''; document.getElementById('vmQtd').value=''; document.getElementById('vmMotivo').value='';
+    var _vl=document.getElementById('vmLocal'); if(_vl) _vl.value='';
+    var _vi=document.getElementById('vmIni'); if(_vi) _vi.value=((typeof hojeISO==='function')?hojeISO():'');
+    var _vf=document.getElementById('vmFim'); if(_vf) _vf.value='';
     document.querySelectorAll('#vmUnidades button').forEach(function(b){ b.classList.remove('on'); });
+    var _cont=document.querySelector('#vetMedForm .mag-continuo'); if(_cont) _cont.classList.remove('on');
+    var _fw=document.querySelector('#vetMedForm .mag-data-fim'); if(_fw) _fw.classList.remove('off');
+    medSyncRow(document.getElementById('vmUnidades'));
     var t=document.getElementById('vmTipo'); if(t) t.querySelectorAll('button').forEach(function(b,i){ b.classList.toggle('on',i===0); });
     document.getElementById('vmHorarios').innerHTML='<span class="magHorario"><input data-c="h" inputmode="numeric" placeholder="07:30" onblur="normalizarHoraMed(this)"><button type="button" class="mag-rm-h" onclick="this.parentElement.remove()">×</button></span>';
     var st=document.getElementById('vetMed-status'); if(st) st.textContent='';
@@ -4686,7 +4772,13 @@
     document.getElementById('vetMedFormTit').textContent='Alterar: '+(it.nome||'medicamento');
     document.getElementById('vmNome').value=it.nome||'';
     document.getElementById('vmQtd').value=it.q||'';
+    var _vl=document.getElementById('vmLocal'); if(_vl) _vl.value=it.local||'';
+    var _vi=document.getElementById('vmIni'); if(_vi) _vi.value=it.dataInicio||'';
+    var _vf=document.getElementById('vmFim'); if(_vf) _vf.value=it.dataFim||'';
+    var _cont=document.querySelector('#vetMedForm .mag-continuo'); if(_cont) _cont.classList.toggle('on',!!it.continuo);
+    var _fw=document.querySelector('#vetMedForm .mag-data-fim'); if(_fw) _fw.classList.toggle('off',!!it.continuo);
     document.querySelectorAll('#vmUnidades button').forEach(function(b){ b.classList.toggle('on', b.textContent.trim()===it.u); });
+    medSyncRow(document.getElementById('vmUnidades'));
     var t=document.getElementById('vmTipo'); if(t) t.querySelectorAll('button').forEach(function(b){ b.classList.toggle('on', /supl/i.test(b.textContent)===(it.tipo==='suplemento')); });
     var hw=document.getElementById('vmHorarios'); hw.innerHTML=((it.horarios&&it.horarios.length)?it.horarios:['']).map(function(h){ return '<span class="magHorario"><input data-c="h" inputmode="numeric" placeholder="07:30" value="'+escAttr(h||'')+'" onblur="normalizarHoraMed(this)"><button type="button" class="mag-rm-h" onclick="this.parentElement.remove()">×</button></span>'; }).join('');
     document.getElementById('vetMedForm').style.display='block';
@@ -4699,13 +4791,20 @@
     var nome=(document.getElementById('vmNome').value||'').trim();
     var q=(document.getElementById('vmQtd').value||'').trim();
     var ub=document.querySelector('#vmUnidades button.on'); var u=ub?ub.textContent.trim():'';
+    var local=(document.getElementById('vmLocal')?(document.getElementById('vmLocal').value||'').trim():'');
+    var dataInicio=(document.getElementById('vmIni')?(document.getElementById('vmIni').value||''):'');
+    var continuo=!!document.querySelector('#vetMedForm .mag-continuo.on');
+    var dataFim=continuo?'':(document.getElementById('vmFim')?(document.getElementById('vmFim').value||''):'');
     var tb=document.querySelector('#vmTipo button.on'); var tipo=(tb&&/supl/i.test(tb.textContent))?'suplemento':'medicamento';
     var horarios=Array.prototype.map.call(document.querySelectorAll('#vmHorarios [data-c=h]'),function(inp){ return normHora(inp.value)||''; }).filter(Boolean);
     var motivo=(document.getElementById('vmMotivo').value||'').trim();
     if(!nomeMedOk(nome)){ if(st){ st.style.color='var(--crm-critico)'; st.textContent='✋ Escreva o nome do medicamento por extenso.'; } return; }
-    if(qtdNum(q)==null){ if(st){ st.style.color='var(--crm-critico)'; st.textContent='✋ Escreva a quantidade em número (ex: 1, 0,5, 10).'; } return; }
-    if(!u){ if(st){ st.style.color='var(--crm-critico)'; st.textContent='✋ Toque na medida (comprimido, ml, gota...).'; } return; }
+    if(!u){ if(st){ st.style.color='var(--crm-critico)'; st.textContent='✋ Toque na medida (comprimido, ml, gota, pomada...).'; } return; }
+    if(medEhLocal(u)){ if(!local){ if(st){ st.style.color='var(--crm-critico)'; st.textContent='✋ Pomada: escreva o LOCAL de aplicação.'; } return; } }
+    else if(qtdNum(q)==null){ if(st){ st.style.color='var(--crm-critico)'; st.textContent='✋ Escreva a quantidade em número (ex: 1, 0,5, 10).'; } return; }
     if(!horarios.length){ if(st){ st.style.color='var(--crm-critico)'; st.textContent='✋ Cadastre pelo menos 1 horário válido (ex: 07:30).'; } return; }
+    if(!dataInicio){ if(st){ st.style.color='var(--crm-critico)'; st.textContent='✋ Informe a data de INÍCIO do medicamento.'; } return; }
+    if(!continuo && !dataFim){ if(st){ st.style.color='var(--crm-critico)'; st.textContent='✋ Informe a data de TÉRMINO ou marque "Uso contínuo".'; } return; }
     if(!motivo){ if(st){ st.style.color='var(--crm-critico)'; st.textContent='✋ Escreva o motivo da prescrição/alteração — fica registrado e assinado.'; } return; }
     if(!DB){ if(st){ st.style.color='var(--crm-atencao-text)'; st.textContent='Banco conectando…'; } return; }
     var key=vetKey(vetHosp); var quem=(typeof quemSou==='function')?quemSou():'Veterinária';
@@ -4714,7 +4813,9 @@
     var prev=VET_MED_CACHE[id]||{};
     var hist=(Array.isArray(prev.historico)?prev.historico.slice():[]);
     hist.push({quem:quem,quando:agoraBR(),acao:acao,motivo:motivo});
-    var item={nome:nome,q:q,u:u,horarios:horarios,tipo:tipo,origem:'vet',historico:hist};
+    var item={nome:nome,q:(medEhLocal(u)?'':q),u:u,horarios:horarios,tipo:tipo,origem:'vet',historico:hist,dataInicio:dataInicio,continuo:continuo};
+    if(medEhLocal(u)) item.local=local;
+    if(!continuo) item.dataFim=dataFim; else item.dataFim=null;
     if(prev.estoque) item.estoque=prev.estoque; // preserva estoque já contado, se houver
     // reativa se estava suspenso e a vet salvou uma alteração
     if(st){ st.style.color='var(--muted)'; st.textContent='Salvando na ficha do peludinho…'; }
@@ -6632,7 +6733,8 @@
 
   function ciEscolher(i){
     const p=PELUDINHOS[i]; if(!p) return;
-    ciHosp={ nome:pelNome(p), tutor:pelGet(p,'tutor')||'', raca:pelGet(p,'raca')||'', refKey:pelKey(p), ini:(pelNome(p)[0]||'?').toUpperCase(), cor:corPel(i) };
+    const _nasc=(typeof pelNasc==='function')?pelNasc(p):(pelGet(p,'nasc')||'');
+    ciHosp={ nome:pelNome(p), tutor:pelGet(p,'tutor')||'', raca:pelGet(p,'raca')||'', refKey:pelKey(p), nasc:_nasc, idade:(typeof calcIdade==='function'?calcIdade(_nasc):''), ini:(pelNome(p)[0]||'?').toUpperCase(), cor:corPel(i) };
     document.getElementById('ci-escolha').style.display='none';
     document.getElementById('ci-ficha').style.display='block';
     // header
@@ -6640,8 +6742,9 @@
     const av=document.getElementById('ciAv');
     if(ex.foto){ av.style.backgroundImage='url(\''+ex.foto+'\')'; av.textContent=''; } else { av.style.backgroundImage='none'; av.style.background=ciHosp.cor; av.textContent=ciHosp.ini; }
     document.getElementById('ciNome').textContent=ciHosp.nome;
-    document.getElementById('ciMeta').innerHTML=(ciHosp.raca?esc(ciHosp.raca)+' · ':'')+'Tutor: '+(esc(ciHosp.tutor)||'a confirmar');
+    document.getElementById('ciMeta').innerHTML=[ (ciHosp.raca?esc(ciHosp.raca):''), (ciHosp.idade?esc(ciHosp.idade):''), 'Tutor: '+(esc(ciHosp.tutor)||'a confirmar') ].filter(Boolean).join(' · ');
     document.getElementById('ciPills').innerHTML=(typeof alertPills==='function')?alertPills(ex):'';
+    ciRenderRestricao(ex);
     // datas
     document.getElementById('ciEntrada').value=ciHoje();
     document.getElementById('ciSaida').value='';
@@ -6674,6 +6777,41 @@
     window.scrollTo({top:0,behavior:'smooth'});
   }
   function ciVoltar(){ document.getElementById('ci-ficha').style.display='none'; document.getElementById('ci-escolha').style.display='block'; renderCiBusca(); }
+
+  // ---- Restrição / Alergia no Check-in (grava no cadastro-mestre e dispara a tarja vermelha) ----
+  function ciRenderRestricao(ex){
+    ex=ex||{};
+    const atual=[ex.restricao||'', ex.alergia||''].filter(Boolean).join(' · ');
+    const seg=document.getElementById('ciRestricaoTem');
+    const det=document.getElementById('ciRestricaoDetalhe');
+    const txt=document.getElementById('ciRestricaoTexto');
+    if(txt) txt.value=atual;
+    if(seg){ setSeg('ciRestricaoTem', atual?'Sim':''); }
+    if(det) det.style.display=atual?'block':'none';
+  }
+  function ciRestricaoChange(){
+    const sim=(segVal('ciRestricaoTem')==='Sim');
+    const det=document.getElementById('ciRestricaoDetalhe'); if(det) det.style.display=sim?'block':'none';
+    if(!sim){ const txt=document.getElementById('ciRestricaoTexto'); if(txt && txt.value){ txt.value=''; ciSalvarRestricao(); } }
+    else { const txt=document.getElementById('ciRestricaoTexto'); if(txt) setTimeout(function(){ try{ txt.focus(); }catch(e){} },40); }
+  }
+  function ciSalvarRestricao(){
+    if(!ciHosp) return;
+    const txt=document.getElementById('ciRestricaoTexto');
+    const val=(txt?(txt.value||'').trim():'');
+    const key=ciHosp.refKey;
+    if(key){
+      let local={}; try{ local=JSON.parse(localStorage.getItem('zeluz_pel_'+key)||'{}'); }catch(e){}
+      local.restricao=val;
+      try{ localStorage.setItem('zeluz_pel_'+key,JSON.stringify(local)); }catch(e){}
+      if(DB) DB.ref('daycare/cadastro/'+key).update({restricao:val}).catch(function(){});
+      if(typeof pelCadCache!=='undefined') pelCadCache[key]=Object.assign({},pelCadCache[key]||{},{restricao:val});
+    }
+    // atualiza a tarja na hora
+    const p=(PELUDINHOS||[]).find(function(x){ return pelKey(x)===key; });
+    if(p) document.getElementById('ciPills').innerHTML=(typeof alertPills==='function')?alertPills(pelExtra(p)):'';
+    if(typeof audit==='function') audit('checkin','restrição/alergia atualizada',{pet:ciHosp.nome||'',restricao:val});
+  }
 
   // ---- Novo Hóspede — cadastrar do zero (mesma trava de duplicidade nome+tutor+raça) ----
   function ciToggleNovo(){
@@ -6816,7 +6954,11 @@
   function ciAddMed(item){
     const wrap=document.getElementById('ciMeds'); if(!wrap) return;
     const id='ci_'+Date.now()+'_'+Math.random().toString(36).slice(2,6);
-    wrap.insertAdjacentHTML('beforeend', medAgendaRowHTML(id, item||{nome:'',q:'',u:'',horarios:[''],tipo:'medicamento'}));
+    // Início já vem com a data de entrada da estadia (a Consultora só ajusta se for outro dia).
+    const ent=(document.getElementById('ciEntrada')||{}).value||'';
+    const base=item||{nome:'',q:'',u:'',horarios:[''],tipo:'medicamento'};
+    if(!base.dataInicio && ent) base.dataInicio=ent;
+    wrap.insertAdjacentHTML('beforeend', medAgendaRowHTML(id, base));
   }
   // Ação do BOTÃO "+ Acrescentar" no Check-in — gate de papel (Consultora/Gestão/Supervisão/Diretoria/Vet).
   // As chamadas programáticas de ciAddMed (linha inicial, pré-preenchimento) continuam livres.
@@ -6830,9 +6972,13 @@
       const ub=el.querySelector('.medunits button.on'); const u=ub?ub.textContent.trim():'';
       const tb=el.querySelector('.mag-tipo button.on'); const tipo=(tb&&/supl/i.test(tb.textContent))?'suplemento':'medicamento';
       const horarios=Array.prototype.map.call(el.querySelectorAll('[data-c=h]'), function(inp){ return normHora(inp.value)||''; }).filter(Boolean);
-      if(nome||q||u||horarios.length){
+      const ex=coletarExtrasMed(el);
+      if(nome||q||u||horarios.length||ex.local){
         // No check-in o estoque é sempre "fresco" (a consultora acabou de contar/receber) — prev=null.
-        const item={nome:nome,q:q,u:u,horarios:horarios,tipo:tipo,origem:coletarOrigemEl(el)};
+        const item={nome:nome,q:(medEhLocal(u)?'':q),u:u,horarios:horarios,tipo:tipo,origem:coletarOrigemEl(el)};
+        if(medEhLocal(u)) item.local=ex.local;
+        if(ex.dataInicio) item.dataInicio=ex.dataInicio;
+        if(ex.continuo) item.continuo=true; else if(ex.dataFim) item.dataFim=ex.dataFim;
         const est=coletarEstoqueEl(el, null); if(est) item.estoque=est;
         // Histórico por remédio (Fundação 1): a criação no check-in já é a 1ª linha {quem, quando, acao}.
         item.historico=[{quem:(typeof quemSou==='function'?quemSou():'-'), quando:(typeof agoraBR==='function'?agoraBR():new Date().toLocaleString('pt-BR')), acao:'Criou (check-in)'}];
@@ -6845,9 +6991,12 @@
     const probs=[];
     Object.values(itens).forEach(function(it){
       if(!nomeMedOk(it.nome)) probs.push('escreva o NOME do medicamento ou suplemento por extenso.');
-      else if(qtdNum(it.q)==null) probs.push('"'+it.nome+'": escreva a QUANTIDADE em número (ex: 1, 0,5, 10).');
-      else if(!it.u) probs.push('"'+it.nome+'": toque na MEDIDA (comprimido, ml, gota...).');
+      else if(!it.u) probs.push('"'+it.nome+'": toque na MEDIDA (comprimido, ml, gota, pomada...).');
+      else if(medEhLocal(it.u) && !(it.local||'').trim()) probs.push('"'+it.nome+'" (pomada): escreva o LOCAL de aplicação.');
+      else if(!medEhLocal(it.u) && qtdNum(it.q)==null) probs.push('"'+it.nome+'": escreva a QUANTIDADE em número (ex: 1, 0,5, 10).');
       else if(!it.horarios.length) probs.push('"'+it.nome+'": cadastre pelo menos 1 HORÁRIO válido (ex: 07:30).');
+      else if(!it.dataInicio) probs.push('"'+it.nome+'": informe a DATA DE INÍCIO do medicamento.');
+      else if(!it.continuo && !it.dataFim) probs.push('"'+it.nome+'": informe a DATA DE FIM ou marque "Uso contínuo".');
     });
     return probs;
   }
@@ -7001,7 +7150,7 @@
       pertences:ciColetarPert()
     };
   }
-  function ciMedsToLista(itens){ return Object.values(itens).map(function(it){ const o={ nome:it.nome, tipo:it.tipo, q:it.q, u:it.u, horarios:it.horarios, origem:it.origem||'tutor' }; if(it.estoque) o.estoque=it.estoque; return o; }); }
+  function ciMedsToLista(itens){ return Object.values(itens).map(function(it){ const o={ nome:it.nome, tipo:it.tipo, q:it.q, u:it.u, horarios:it.horarios, origem:it.origem||'tutor' }; if(it.estoque) o.estoque=it.estoque; if(it.local) o.local=it.local; if(it.dataInicio) o.dataInicio=it.dataInicio; if(it.continuo) o.continuo=true; else if(it.dataFim) o.dataFim=it.dataFim; return o; }); }
 
   // ---- Salvar no sistema ----
   function ciSalvar(){
@@ -7067,7 +7216,7 @@
     const spa=(d.ficha.spa)||{};
     if(spa.banho){ let bl='Banho na saída (Spa Dermoprotetor): '+spa.banho; if(spa.banho==='Sim'){ bl += spa.aConfirmar?' — horário a confirmar':(spa.horario?(' — '+spa.horario):''); } L.push(bl); }
     const mv=Object.values(meds);
-    if(mv.length){ L.push(''); L.push('*MEDICAÇÃO / SUPLEMENTOS — HORÁRIOS*'); mv.forEach(function(it){ L.push('- '+it.nome+' — '+it.q+' '+it.u+' — '+ (it.horarios||[]).join(', ')); }); }
+    if(mv.length){ L.push(''); L.push('*MEDICAÇÃO / SUPLEMENTOS — HORÁRIOS*'); mv.forEach(function(it){ var per=medPeriodoTxt(it); L.push('- '+it.nome+' — '+medDoseTxt(it)+' — '+ (it.horarios||[]).join(', ')+(per?(' — '+per):'')); }); }
     if(d.pertences.length){ L.push(''); L.push('Pertences: '+d.pertences.map(function(p){ return p.nome+(p.spec?(' ('+p.spec+')'):''); }).join('; ')); }
     const assina=(document.getElementById('ciAssinaNome').value||'').trim();
     if(assina){ L.push(''); L.push('Conferido e assinado por: '+assina); }
@@ -7106,7 +7255,7 @@
       if(a.comida&&a.comida.qtd) add('Comida natural: '+a.comida.qtd+'g/refeicao - em: '+ciComidaRefNomes(a.comida.refeicoes).join(', ')+(a.comida.trazida?('    Trazido: '+a.comida.trazida+'g'):'')+(a.comida.minimo?('    Necessaria aprox.: '+a.comida.minimo+'g'):''),{gap:8});
     }
     if(spa.banho){ add('Spa Dermoprotetor',{bold:true,size:12}); add('Banho na saida: '+spa.banho+(spa.banho==='Sim'?(spa.aConfirmar?' - horario a confirmar':(spa.horario?(' - '+spa.horario):'')):''),{gap:8}); }
-    if(meds.length){ add('MEDICACAO / SUPLEMENTOS - HORARIOS',{bold:true,size:12,red:true}); meds.forEach(function(it){ add('- '+it.nome+' - '+it.q+' '+it.u+' - '+((it.horarios||[]).join(', ')),{red:true}); }); lines.push({t:'',size:6,gap:2}); }
+    if(meds.length){ add('MEDICACAO / SUPLEMENTOS - HORARIOS',{bold:true,size:12,red:true}); meds.forEach(function(it){ var per=medPeriodoTxt(it); add('- '+it.nome+' - '+medDoseTxt(it)+' - '+((it.horarios||[]).join(', '))+(per?(' - '+per):''),{red:true}); }); lines.push({t:'',size:6,gap:2}); }
     if(d.pertences.length){ add('Pertences',{bold:true,size:12}); d.pertences.forEach(function(p){ add('- '+p.nome+(p.spec?(' - '+p.spec):''),{}); }); lines.push({t:'',size:6,gap:2}); }
     add('Assinatura do tutor',{bold:true,size:12,gap:6});
 
@@ -7193,7 +7342,7 @@
     if(a.tipo||a.marca||a.qtd){ h+='<div class="pf-sec"><h3>Alimentação</h3><div class="pf-row">'+esc([a.tipo,a.marca,(a.qtd?(a.qtd+' '+(a.unidade||'')):''),(a.refeicoes?(a.refeicoes+'x/dia'):'')].filter(Boolean).join(' · '))+'</div>'+(a.dias?('<div class="pf-row">Estadia: '+esc(a.dias)+' dia(s) · ração necessária aprox.: '+esc((a.minimo||0)+ciUnidLbl(a.unidade))+(a.trazida?(' · trazido: '+esc(a.trazida)+'g'):'')+'</div>'):'')+((a.comida&&a.comida.qtd)?('<div class="pf-row">🍲 Comida natural: '+esc(a.comida.qtd)+'g/refeição · em: '+esc(ciComidaRefNomes(a.comida.refeicoes).join(', '))+(a.comida.trazida?(' · trazido: '+esc(a.comida.trazida)+'g'):'')+(a.comida.minimo?(' · necessária aprox.: '+esc(a.comida.minimo)+'g'):'')+'</div>'):'')+'</div>'; }
     var spa=(d.ficha.spa)||{};
     if(spa.banho){ var bl='Banho na saída: '+esc(spa.banho); if(spa.banho==='Sim'){ bl += spa.aConfirmar?' — horário a confirmar':(spa.horario?(' — '+esc(spa.horario)):''); } h+='<div class="pf-sec"><h3>Spa Dermoprotetor</h3><div class="pf-row">'+bl+'</div></div>'; }
-    if(mv.length){ h+='<div class="pf-med"><h3>⚠ MEDICAÇÃO / SUPLEMENTOS — HORÁRIOS</h3>'; mv.forEach(function(it){ h+='<div class="pf-mrow">'+esc(it.nome)+' — '+esc(it.q+' '+it.u)+' — '+esc((it.horarios||[]).join(', '))+'</div>'; }); h+='</div>'; }
+    if(mv.length){ h+='<div class="pf-med"><h3>⚠ MEDICAÇÃO / SUPLEMENTOS — HORÁRIOS</h3>'; mv.forEach(function(it){ var per=medPeriodoTxt(it); h+='<div class="pf-mrow">'+esc(it.nome)+' — '+esc(medDoseTxt(it))+' — '+esc((it.horarios||[]).join(', '))+(per?(' — '+esc(per)):'')+'</div>'; }); h+='</div>'; }
     if(d.pertences.length){ h+='<div class="pf-sec"><h3>Pertences</h3>'+d.pertences.map(function(p){ return '<div class="pf-row">• '+esc(p.nome)+(p.spec?(' — '+esc(p.spec)):'')+'</div>'; }).join('')+'</div>'; }
     h+='<div class="pf-sec"><h3>Assinatura do tutor</h3>'+(sig?('<img class="pf-sig-img" src="'+sig+'">'):'<div class="pf-row">(sem assinatura)</div>')+'<div class="pf-row" style="margin-top:6px">'+esc(assina||'—')+'</div></div>';
     const pr=document.getElementById('ci-print'); if(pr) pr.innerHTML=h;
@@ -7411,10 +7560,11 @@
       var k='med_'+idx+'_'+(typeof ciSlug==='function'?ciSlug(m.nome||''):idx);
       var salvo=(cfConf.medicacao||{})[k]||{};
       var ok=!!(salvo.testado&&salvo.confirmado);
-      var qtd=(typeof fmtQtd==='function')?fmtQtd(m.q,m.u):((m.q||'')+' '+(m.u||''));
+      var qtd=(typeof medDoseTxt==='function')?medDoseTxt(m):((m.q||'')+' '+(m.u||''));
+      var per=(typeof medPeriodoTxt==='function')?medPeriodoTxt(m):'';
       return '<div class="cf-med-item'+(ok?' ok':'')+'">'
         +'<div class="cf-med-top"><span class="cf-med-nome">'+escAttr(m.nome||'Medicamento')+'</span>'+(ok?'<span class="cf-ok-badge">TESTADO</span>':'')+'</div>'
-        +'<div class="cf-med-det">'+(qtd?escAttr(qtd):'quantidade não informada')+((m.horarios&&m.horarios.length)?(' · '+escAttr(m.horarios.join(', '))):'')+'</div>'
+        +'<div class="cf-med-det">'+(qtd?escAttr(qtd):'quantidade não informada')+((m.horarios&&m.horarios.length)?(' · '+escAttr(m.horarios.join(', '))):'')+(per?(' · '+escAttr(per)):'')+'</div>'
         +'<div class="cf-med-actions">'
           +'<button type="button" class="btn btn-gold" style="padding:7px 14px;font-size:12.5px" onclick="cfTestarAlarme(\''+k+'\')">🔊 Testar alarme</button>'
           +'<label class="cf-ouviu"><input type="checkbox" id="cf-ouviu-'+k+'" '+(ok?'checked':'')+' onchange="cfConfirmarAlarme(\''+k+'\')"><span>Confirmo que tocou</span></label>'
