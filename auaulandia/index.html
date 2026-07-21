@@ -81,7 +81,7 @@
     opacity:.7;font-weight:600;margin:0 0 8px}
 
   .brand-sub{position:relative;z-index:1}
-  .nav{flex:1;overflow-y:auto;padding:8px 12px;scrollbar-width:thin;position:relative;z-index:1}
+  .nav{flex:1;min-height:0;overflow-y:auto;padding:8px 12px;scrollbar-width:thin;position:relative;z-index:1}
   .who{position:relative;z-index:1}
   .nav .grp{font-size:10px;text-transform:uppercase;letter-spacing:1.2px;opacity:.5;font-weight:700;margin:16px 12px 7px}
   .nav a{
@@ -989,7 +989,7 @@
 
     <div class="grp">Serviços</div>
     <!-- AuAulândia — PAI accordion (não é tela; abre/fecha os filhos) -->
-    <div class="acc acc-open" data-acc="auaulandia">
+    <div class="acc" data-acc="auaulandia">
       <a class="nav-parent" data-acc-toggle="auaulandia"><span data-icon="moon"></span><span>AuAulândia</span><span class="acc-caret" aria-hidden="true"></span></a>
       <div class="acc-panel">
         <a data-v="checkin"><span data-icon="paw"></span><span>Check-in</span></a>
@@ -1000,7 +1000,7 @@
       </div>
     </div>
     <!-- Day Care — PAI accordion. Turminhas (dias) + Atividades vivem no #dcSubnav (montarSubnav). -->
-    <div class="acc acc-open so-day" data-acc="daycare">
+    <div class="acc so-day" data-acc="daycare">
       <a class="nav-parent" data-acc-toggle="daycare"><span data-icon="sun"></span><span>Day Care</span><span class="acc-caret" aria-hidden="true"></span></a>
       <div class="acc-panel">
         <a data-v="abertura" class="so-abertura"><span data-icon="sun"></span><span>Atividades Monitor 1</span></a>
@@ -5691,6 +5691,10 @@
       const parent=acc.querySelector('.nav-parent');
       if(vis>0 && parent && getComputedStyle(parent).display==='none') acc.classList.add('acc-open');
     });
+    // Se o papel enxerga só UM serviço (vet, conferência, plantonista…), abre o accordion dele
+    // sozinho — não faz sentido a pessoa ter que abrir para achar o único item que ela usa.
+    var _accsVis=[...document.querySelectorAll('#nav .acc')].filter(a=>getComputedStyle(a).display!=='none');
+    if(_accsVis.length===1) _accsVis[0].classList.add('acc-open');
   }
   // ===== Recolher/expandir a barra inteira =====
   function toggleSidebarColapso(){
