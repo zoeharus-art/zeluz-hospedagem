@@ -1471,6 +1471,12 @@
     #v-checkin .ci-h-meta{font-size:13px;color:var(--muted);font-weight:600}
     /* Banco de pertences — grade de tipos (3 colunas, A→Z) + lista de unidades adicionadas */
     #v-checkin .pert-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:14px}
+    #v-checkin .pert-chip-manage{display:flex;align-items:center;justify-content:space-between;gap:6px;padding:8px 10px;border:1.5px solid var(--crm-critico);border-radius:12px;background:rgba(192,57,43,.05);color:var(--z-blue);font-family:var(--font-ui);font-weight:700;font-size:13px}
+    #v-checkin .pert-chip-manage .pcm-nome{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+    #v-checkin .pert-chip-manage .pcm-acts{display:flex;gap:4px;flex:0 0 auto}
+    #v-checkin .pert-chip-manage .pcm-edit,#v-checkin .pert-chip-manage .pcm-del{width:30px;height:30px;border-radius:8px;border:1.5px solid var(--line);background:#fff;cursor:pointer;font-weight:800;font-size:14px;line-height:1}
+    #v-checkin .pert-chip-manage .pcm-del{color:var(--crm-critico);border-color:var(--crm-critico)}
+    #v-checkin .pert-chip-manage .pcm-edit{color:var(--z-blue)}
     @media(max-width:640px){#v-checkin .pert-grid{grid-template-columns:repeat(2,1fr)}}
     @media(max-width:400px){#v-checkin .pert-grid{grid-template-columns:1fr}}
     #v-checkin .pert-chip{display:flex;align-items:center;justify-content:center;gap:7px;text-align:center;padding:11px 10px;border:1.5px solid var(--line);border-radius:12px;background:#fff;color:var(--z-blue);font-family:var(--font-ui);font-weight:700;font-size:13.5px;cursor:pointer;transition:.12s}
@@ -1617,7 +1623,7 @@
         </div>
         <div class="cad-grid">
           <div class="field"><label>Dias (automático)</label><input class="cad-in" id="ciAlimDias" readonly tabindex="-1" placeholder="—" style="background:var(--z-cream-warm)"></div>
-          <div class="field"><label>Ração trazida (g)</label><input class="cad-in" id="ciAlimTraz" inputmode="numeric" placeholder="Ex: 500" autocomplete="off" oninput="ciCalcRacao()"></div>
+          <div class="field"><label>Ração trazida (g) <span style="font-weight:600;color:var(--muted)">— não obrigatório aqui (é pesado na Conferência)</span></label><input class="cad-in" id="ciAlimTraz" inputmode="numeric" placeholder="Opcional — deixe vazio se ainda não pesou" autocomplete="off" oninput="ciCalcRacao()"></div>
         </div>
         <div class="ci-dias-erro" id="ciDiasErro" style="display:none"></div>
 
@@ -1679,6 +1685,7 @@
       <div class="card">
         <h2>Pertences</h2>
         <div class="hint">Toque no tipo de item para adicionar o que o tutor trouxe. Pode adicionar <strong>vários do mesmo tipo</strong> (ex: 2 peitorais, 5 roupas) — cada um com a sua especificação. Depois é só editar ou remover cada um. Não achou na lista? Acrescente — vai para o banco e aparece para todos.</div>
+        <button type="button" class="ci-toggle-novo so-medadmin" id="ciPertManageBtn" style="margin-top:0" onclick="ciTogglePertManage()"><span data-icon="paw"></span><span id="ciPertManageTxt">Gerenciar itens do banco (editar / excluir)</span></button>
         <div id="ciPertGrid" class="pert-grid"></div>
         <div id="ciPertSel"></div>
         <div class="field" style="margin-top:12px"><label>Acrescentar item ao banco de pertences</label>
@@ -2577,6 +2584,17 @@
   // Período de uso: dd/mm → dd/mm, ou "uso contínuo".
   function medBRdata(iso){ if(!iso) return ''; const p=String(iso).split('-'); return p.length===3?(p[2]+'/'+p[1]+'/'+p[0]):iso; }
   function medPeriodoTxt(it){ it=it||{}; if(it.continuo) return 'uso contínuo'; const i=medBRdata(it.dataInicio), f=medBRdata(it.dataFim); if(i&&f) return i+' a '+f; if(i) return 'início '+i; if(f) return 'até '+f; return ''; }
+  // Vigência: o remédio está ativo (gera alarme / pede dose) na data refISO?
+  // Uso contínuo = sempre. Sem datas (legado) = sempre. Fora da janela início→fim = inativo.
+  function medVigenteEm(it, refISO){
+    it=it||{};
+    refISO=refISO||((typeof dataKeyAtual==='function')?dataKeyAtual():'');
+    if(!refISO) return true;
+    if(it.dataInicio && refISO < it.dataInicio) return false; // ainda não começou
+    if(it.continuo) return true;
+    if(it.dataFim && refISO > it.dataFim) return false;       // já terminou (para o alarme sozinho)
+    return true;
+  }
   // Lê os campos extras (local da pomada + período) de uma linha .magitem compartilhada.
   function coletarExtrasMed(el){
     if(!el) return {};
@@ -3126,6 +3144,7 @@
     Object.keys(MED_AGENDA_ITENS).forEach(function(id){
       const it=MED_AGENDA_ITENS[id]||{};
       if(it.suspenso) return; // Onda 3: suspensa pela vet — não pede dose nem entra no placar do dia
+      if(!medVigenteEm(it)) return; // fora da janela início→fim (ou uso encerrado) — não pede dose hoje
       (it.horarios||[]).forEach(function(h){
         const doseId=magDoseId(id,h); const log=MED_AGENDA_LOG[doseId];
         rows.push({id:id,doseId:doseId,nome:it.nome,q:it.q,u:it.u,h:h,tipo:it.tipo||'medicamento',feito:!!log,quem:log&&log.quem,ts:log&&log.ts});
@@ -4530,6 +4549,7 @@
         Object.keys(itens).forEach(function(id){
           const it=itens[id]||{};
           if(it.suspenso) return; // Onda 3: medicação suspensa pela vet não gera alarme (mata o caso Hulk)
+          if(!medVigenteEm(it)) return; // parou no dia do término (ou ainda não começou) — não gera alarme
           (it.horarios||[]).forEach(function(hr){ MED_AGENDA_TODOS.push({hospNome:h.nome||'', key:key, itemId:id, nome:it.nome||'', q:it.q||'', u:it.u||'', horario:hr}); });
         });
       }).catch(function(){});
@@ -4731,6 +4751,8 @@
       var it=VET_MED_CACHE[id]||{};
       var qtd=(typeof medDoseTxt==='function')?medDoseTxt(it):((it.q||'')+' '+(it.u||''));
       var per=(typeof medPeriodoTxt==='function')?medPeriodoTxt(it):'';
+      var encerrado=(typeof medVigenteEm==='function')&&!it.suspenso&&!medVigenteEm(it)&&!!it.dataFim;
+      if(encerrado) per=(per?per+' · ':'')+'ENCERRADO (não gera mais alarme)';
       var hor=(it.horarios||[]).join(' · ')+(per?(' · '+per):'');
       var origLbl=it.origem==='vet'?'Receita da vet':(it.origem==='familia'?'Autorizado pela família':'Rotina do tutor');
       var hist=(Array.isArray(it.historico)&&it.historico.length)?('<div style="margin-top:8px">'+it.historico.slice(-4).map(function(x){ return '<div class="vet-hist-line"><strong>'+escAttr(x.acao||'')+'</strong>'+(x.motivo?(' — '+escAttr(x.motivo)):'')+' <span style="color:var(--muted)">('+escAttr(x.quem||'')+(x.quando?(' · '+escAttr(x.quando)):'')+')</span></div>'; }).join('')+'</div>'):'';
@@ -6888,6 +6910,7 @@
   }
   function ciComidaRefObj(){ const o={cafe:false,almoco:false,jantar:false}; document.querySelectorAll('#ciComidaRef .ci-meal-btn.on').forEach(function(b){ o[b.dataset.m]=true; }); return o; }
   function ciComidaRefNomes(o){ o=o||{}; const out=[]; if(o.cafe) out.push('café'); if(o.almoco) out.push('almoço'); if(o.jantar) out.push('jantar'); return out; }
+  function ciComidaRefNomesCap(o){ o=o||{}; const out=[]; if(o.cafe) out.push('Café da manhã'); if(o.almoco) out.push('Almoço'); if(o.jantar) out.push('Jantar'); return out; }
   // Total de refeições COM comida natural na estadia: interseção real entre as refeições
   // marcadas com natural e as que acontecem nos dias de entrada/saída; dias do meio têm todas.
   function ciTotalRefNatural(dias){
@@ -7024,10 +7047,27 @@
     else { ciPertSel=[]; }
     ciDrawPert();
   }
+  let ciPertManage=false;
+  function ciPertEhDefault(k){ return CI_PERT_DEFAULT.some(function(o){ return o.k===k; }); }
+  function ciTogglePertManage(){
+    if(!canEditMed()){ alert('Apenas a Gestão, a Supervisão ou a Diretoria podem gerenciar o banco de pertences.'); return; }
+    ciPertManage=!ciPertManage;
+    const t=document.getElementById('ciPertManageTxt'); if(t) t.textContent=ciPertManage?'Concluir gerenciamento':'Gerenciar itens do banco (editar / excluir)';
+    ciDrawPert();
+  }
   function ciDrawPert(){
     const grid=document.getElementById('ciPertGrid');
+    const manage=ciPertManage&&canEditMed();
     if(grid){ grid.innerHTML=ciPertBancoSorted().map(function(o){
       const n=ciPertSel.filter(function(p){ return p.k===o.k; }).length;
+      if(manage){
+        // Modo gerenciar: editar o nome e excluir o item do banco (não adiciona ao tocar).
+        return '<div class="pert-chip pert-chip-manage">'+
+          '<span class="pcm-nome">'+esc(o.nome)+'</span>'+
+          '<span class="pcm-acts"><button type="button" class="pcm-edit" title="Editar nome" onclick="ciRenomearPertBanco(\''+o.k+'\')">✎</button>'+
+          '<button type="button" class="pcm-del" title="Excluir do banco" onclick="ciExcluirPertBanco(\''+o.k+'\')">&#10005;</button></span>'+
+        '</div>';
+      }
       return '<button type="button" class="pert-chip'+(n?' on':'')+'" onclick="ciAddPertUnit(\''+o.k+'\')">'+esc(o.nome)+(n?' <span class="pert-chip-n">'+n+'</span>':'')+'</button>';
     }).join(''); }
     const list=document.getElementById('ciPertSel'); if(!list) return;
@@ -7046,6 +7086,30 @@
     const el=document.querySelector('#ciPertSel .pert-row[data-uid="'+uid+'"] .pert-row-spec'); if(el) setTimeout(function(){ try{ el.focus(); }catch(e){} },30); }
   function ciEditPertSpec(uid,val){ const p=ciPertSel.find(function(x){ return x.uid===uid; }); if(p) p.spec=val; }
   function ciRemovePertUnit(uid){ ciPertSel=ciPertSel.filter(function(x){ return x.uid!==uid; }); ciDrawPert(); }
+  // Gestão: renomear um item do banco de pertences (mantém a mesma chave).
+  function ciRenomearPertBanco(k){
+    if(!canEditMed()){ alert('Sem permissão para editar o banco.'); return; }
+    const def=ciPertDef(k); if(!def) return;
+    const novo=(prompt('Editar o nome do item "'+def.nome+'":', def.nome)||'').trim();
+    if(!novo||novo===def.nome) return;
+    def.nome=novo;
+    if(DB) DB.ref('auaulandia/pertences-banco/'+k).update({nome:novo,_ts:Date.now(),_quem:quemSou()}).catch(function(){});
+    // atualiza o nome nas unidades já selecionadas deste tipo
+    ciPertSel.forEach(function(p){ if(p.k===k) p.nome=novo; });
+    if(typeof audit==='function') audit('checkin','pertence do banco renomeado',{de:def.nome,para:novo});
+    ciDrawPert();
+  }
+  // Gestão: excluir um item do banco de pertences (some para todos). Remove também as unidades soltas.
+  function ciExcluirPertBanco(k){
+    if(!canEditMed()){ alert('Sem permissão para excluir do banco.'); return; }
+    const def=ciPertDef(k); if(!def) return;
+    if(!confirm('Excluir "'+def.nome+'" do banco de pertences? Some da lista para todos.'+(ciPertEhDefault(k)?'\n\n(É um item padrão — ele pode voltar em atualizações futuras.)':''))) return;
+    ciPertBanco=ciPertBanco.filter(function(o){ return o.k!==k; });
+    ciPertSel=ciPertSel.filter(function(p){ return p.k!==k; });
+    if(DB) DB.ref('auaulandia/pertences-banco/'+k).remove().catch(function(){});
+    if(typeof audit==='function') audit('checkin','pertence excluído do banco',{item:def.nome});
+    ciDrawPert();
+  }
   function ciColetarPert(){
     return ciPertSel.filter(function(p){ return p&&p.k; }).map(function(p){ return {k:p.k,nome:p.nome,spec:(p.spec||'').trim(),uid:p.uid,etiquetado:false}; });
   }
@@ -7247,14 +7311,34 @@
     add('Zeluz - AuAulandia - Ficha de Check-in',{bold:true,size:17,gap:8});
     add(ciHosp.nome+(ciHosp.raca?(' - '+ciHosp.raca):'')+(ciHosp.tutor?(' - Tutor: '+ciHosp.tutor):''),{gap:10});
     add('Estadia',{bold:true,size:12});
-    add('Entrada: '+ciBRdata(d.entrada)+(d.saida?('    Saida prevista: '+ciBRdata(d.saida)):'')+(a.dias?('    ('+a.dias+' dia(s))'):''),{gap:8});
+    add('Entrada: '+ciBRdata(d.entrada)+(a.dias?('    ('+a.dias+' dia(s))'):''),{gap:3});
+    add('SAIDA: '+(d.saida?ciBRdata(d.saida):'a confirmar'),{bold:true,size:12,gap:8});
     if(a.tipo||a.marca||a.qtd){
-      add('Alimentacao',{bold:true,size:12});
-      add([a.tipo,a.marca,(a.qtd?(a.qtd+' '+(a.unidade||'')):''),(a.refeicoes?(a.refeicoes+'x/dia'):'')].filter(Boolean).join(' - '),{});
-      if(a.dias) add('Racao necessaria aprox.: '+(a.minimo||0)+ciUnidLbl(a.unidade)+(a.trazida?('    Trazido: '+a.trazida+'g'):''),{gap:(a.comida&&a.comida.qtd)?4:8});
-      if(a.comida&&a.comida.qtd) add('Comida natural: '+a.comida.qtd+'g/refeicao - em: '+ciComidaRefNomes(a.comida.refeicoes).join(', ')+(a.comida.trazida?('    Trazido: '+a.comida.trazida+'g'):'')+(a.comida.minimo?('    Necessaria aprox.: '+a.comida.minimo+'g'):''),{gap:8});
+      var uni=ciUnidLbl(a.unidade);
+      var temNat=!!(a.comida&&a.comida.qtd);
+      var racaoQ=(a.qtd?(a.qtd+uni):'(quantidade nao informada)');
+      add('Alimentacao',{bold:true,size:12,gap:3});
+      add('Tipo: '+(a.tipo||'-')+(a.marca?('    Marca: '+a.marca):''),{gap:temNat?5:3});
+      if(temNat){
+        var meals=ciComidaRefNomesCap(a.comida.refeicoes);
+        var comQ=a.comida.qtd+'g';
+        add('COMO ALIMENTAR (leia com atencao - nao trocar):',{bold:true,size:11,gap:4});
+        add('1) RACAO: '+racaoQ+' por refeicao'+(a.refeicoes?('  ('+a.refeicoes+'x ao dia)'):''),{size:11,gap:3});
+        add('2) COMIDA NATURAL: '+comQ+' por refeicao - SOMENTE nestas refeicoes: '+(meals.length?meals.join(', '):'(marcar quais)'),{size:11,gap:4});
+        add('   >> Nas refeicoes com comida natural ('+(meals.length?meals.join(', '):'-')+'):',{size:11,gap:2});
+        add('      dar '+racaoQ+' de RACAO  +  '+comQ+' de COMIDA NATURAL.',{bold:true,size:11,gap:2});
+        add('   >> Nas outras refeicoes: SO a racao ('+racaoQ+').',{size:11,gap:6});
+        if(a.dias){
+          add('Para a estadia ('+a.dias+' dia(s)): racao aprox. '+(a.minimo||0)+uni+(a.trazida?('  (trazido '+a.trazida+'g)'):'')+'  |  comida natural aprox. '+(a.comida.minimo||0)+'g'+(a.comida.trazida?('  (trazido '+a.comida.trazida+'g)'):''),{size:10,gap:8});
+        }
+      } else {
+        add('Racao: '+racaoQ+' por refeicao'+(a.refeicoes?('  ('+a.refeicoes+'x ao dia)'):''),{gap:3});
+        if(a.dias) add('Racao necessaria aprox.: '+(a.minimo||0)+uni+(a.trazida?('    Trazido: '+a.trazida+'g'):''),{gap:8});
+      }
     }
-    if(spa.banho){ add('Spa Dermoprotetor',{bold:true,size:12}); add('Banho na saida: '+spa.banho+(spa.banho==='Sim'?(spa.aConfirmar?' - horario a confirmar':(spa.horario?(' - '+spa.horario):'')):''),{gap:8}); }
+    add('Banho na saida (Spa Dermoprotetor)',{bold:true,size:12,gap:3});
+    add('Banho na saida: '+(spa.banho||'nao informado')+(spa.banho==='Sim'?(spa.aConfirmar?' - horario a confirmar':(spa.horario?(' - as '+spa.horario):'')):''),{gap:3});
+    add('DIA DA SAIDA: '+(d.saida?ciBRdata(d.saida):'a confirmar'),{bold:true,gap:8});
     if(meds.length){ add('MEDICACAO / SUPLEMENTOS - HORARIOS',{bold:true,size:12,red:true}); meds.forEach(function(it){ var per=medPeriodoTxt(it); add('- '+it.nome+' - '+medDoseTxt(it)+' - '+((it.horarios||[]).join(', '))+(per?(' - '+per):''),{red:true}); }); lines.push({t:'',size:6,gap:2}); }
     if(d.pertences.length){ add('Pertences',{bold:true,size:12}); d.pertences.forEach(function(p){ add('- '+p.nome+(p.spec?(' - '+p.spec):''),{}); }); lines.push({t:'',size:6,gap:2}); }
     add('Assinatura do tutor',{bold:true,size:12,gap:6});
@@ -7338,10 +7422,29 @@
     const a=d.ficha.alim;
     let h='<div class="pf-h1">Zêluz · AuAulândia — Ficha de Check-in</div>';
     h+='<div class="pf-sub">'+esc(ciHosp.nome)+(ciHosp.raca?(' · '+esc(ciHosp.raca)):'')+(ciHosp.tutor?(' · Tutor: '+esc(ciHosp.tutor)):'')+'</div>';
-    h+='<div class="pf-sec"><h3>Estadia</h3><div class="pf-row">Entrada: <strong>'+ciBRdata(d.entrada)+'</strong>'+(d.saida?('  ·  Saída prevista: <strong>'+ciBRdata(d.saida)+'</strong>'):'')+'</div></div>';
-    if(a.tipo||a.marca||a.qtd){ h+='<div class="pf-sec"><h3>Alimentação</h3><div class="pf-row">'+esc([a.tipo,a.marca,(a.qtd?(a.qtd+' '+(a.unidade||'')):''),(a.refeicoes?(a.refeicoes+'x/dia'):'')].filter(Boolean).join(' · '))+'</div>'+(a.dias?('<div class="pf-row">Estadia: '+esc(a.dias)+' dia(s) · ração necessária aprox.: '+esc((a.minimo||0)+ciUnidLbl(a.unidade))+(a.trazida?(' · trazido: '+esc(a.trazida)+'g'):'')+'</div>'):'')+((a.comida&&a.comida.qtd)?('<div class="pf-row">🍲 Comida natural: '+esc(a.comida.qtd)+'g/refeição · em: '+esc(ciComidaRefNomes(a.comida.refeicoes).join(', '))+(a.comida.trazida?(' · trazido: '+esc(a.comida.trazida)+'g'):'')+(a.comida.minimo?(' · necessária aprox.: '+esc(a.comida.minimo)+'g'):'')+'</div>'):'')+'</div>'; }
+    h+='<div class="pf-sec"><h3>Estadia</h3><div class="pf-row">Entrada: <strong>'+ciBRdata(d.entrada)+'</strong>'+(a.dias?('  ·  '+esc(a.dias)+' dia(s)'):'')+'</div><div class="pf-row" style="font-size:15px"><strong>SAÍDA: '+(d.saida?ciBRdata(d.saida):'a confirmar')+'</strong></div></div>';
+    if(a.tipo||a.marca||a.qtd){
+      var uni=ciUnidLbl(a.unidade); var temNat=!!(a.comida&&a.comida.qtd);
+      var racaoQ=a.qtd?(a.qtd+uni):'(quantidade não informada)';
+      h+='<div class="pf-sec"><h3>Alimentação</h3>';
+      h+='<div class="pf-row"><strong>Tipo:</strong> '+esc(a.tipo||'—')+(a.marca?('  ·  <strong>Marca:</strong> '+esc(a.marca)):'')+'</div>';
+      if(temNat){
+        var meals=ciComidaRefNomesCap(a.comida.refeicoes); var comQ=a.comida.qtd+'g';
+        h+='<div class="pf-row" style="margin-top:6px;font-weight:800;color:#234D67">COMO ALIMENTAR (leia com atenção — não trocar):</div>';
+        h+='<div class="pf-row"><strong>1) Ração:</strong> '+esc(racaoQ)+' por refeição'+(a.refeicoes?('  ('+esc(a.refeicoes)+'x ao dia)'):'')+'</div>';
+        h+='<div class="pf-row"><strong>2) Comida natural:</strong> '+esc(comQ)+' por refeição — <strong>SOMENTE em: '+(meals.length?esc(meals.join(', ')):'(marcar quais)')+'</strong></div>';
+        h+='<div class="pf-row" style="margin-top:4px">▸ Nas refeições com comida natural ('+(meals.length?esc(meals.join(', ')):'—')+'): dar <strong>'+esc(racaoQ)+' de ração + '+esc(comQ)+' de comida natural</strong>.</div>';
+        h+='<div class="pf-row">▸ Nas outras refeições: <strong>só a ração ('+esc(racaoQ)+')</strong>.</div>';
+        if(a.dias) h+='<div class="pf-row" style="margin-top:4px;color:#555">Para a estadia ('+esc(a.dias)+' dia(s)): ração aprox. '+esc((a.minimo||0)+uni)+(a.trazida?(' (trazido '+esc(a.trazida)+'g)'):'')+' · comida natural aprox. '+esc((a.comida.minimo||0)+'g')+(a.comida.trazida?(' (trazido '+esc(a.comida.trazida)+'g)'):'')+'</div>';
+      } else {
+        h+='<div class="pf-row"><strong>Ração:</strong> '+esc(racaoQ)+' por refeição'+(a.refeicoes?('  ('+esc(a.refeicoes)+'x ao dia)'):'')+'</div>';
+        if(a.dias) h+='<div class="pf-row" style="color:#555">Estadia: '+esc(a.dias)+' dia(s) · ração necessária aprox.: '+esc((a.minimo||0)+uni)+(a.trazida?(' · trazido: '+esc(a.trazida)+'g'):'')+'</div>';
+      }
+      h+='</div>';
+    }
     var spa=(d.ficha.spa)||{};
-    if(spa.banho){ var bl='Banho na saída: '+esc(spa.banho); if(spa.banho==='Sim'){ bl += spa.aConfirmar?' — horário a confirmar':(spa.horario?(' — '+esc(spa.horario)):''); } h+='<div class="pf-sec"><h3>Spa Dermoprotetor</h3><div class="pf-row">'+bl+'</div></div>'; }
+    var bl='<strong>Banho na saída:</strong> '+esc(spa.banho||'não informado'); if(spa.banho==='Sim'){ bl += spa.aConfirmar?' — horário a confirmar':(spa.horario?(' — às '+esc(spa.horario)):''); }
+    h+='<div class="pf-sec"><h3>Spa Dermoprotetor — Banho na saída</h3><div class="pf-row">'+bl+'</div><div class="pf-row" style="margin-top:4px;font-size:15px"><strong>DIA DA SAÍDA: '+(d.saida?ciBRdata(d.saida):'a confirmar')+'</strong></div></div>';
     if(mv.length){ h+='<div class="pf-med"><h3>⚠ MEDICAÇÃO / SUPLEMENTOS — HORÁRIOS</h3>'; mv.forEach(function(it){ var per=medPeriodoTxt(it); h+='<div class="pf-mrow">'+esc(it.nome)+' — '+esc(medDoseTxt(it))+' — '+esc((it.horarios||[]).join(', '))+(per?(' — '+esc(per)):'')+'</div>'; }); h+='</div>'; }
     if(d.pertences.length){ h+='<div class="pf-sec"><h3>Pertences</h3>'+d.pertences.map(function(p){ return '<div class="pf-row">• '+esc(p.nome)+(p.spec?(' — '+esc(p.spec)):'')+'</div>'; }).join('')+'</div>'; }
     h+='<div class="pf-sec"><h3>Assinatura do tutor</h3>'+(sig?('<img class="pf-sig-img" src="'+sig+'">'):'<div class="pf-row">(sem assinatura)</div>')+'<div class="pf-row" style="margin-top:6px">'+esc(assina||'—')+'</div></div>';
