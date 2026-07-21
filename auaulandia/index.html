@@ -4697,8 +4697,148 @@
       if(c.obs) body+='<div class="cc-body">'+escAttr(c.obs)+'</div>';
       if(c.reavaliacao) body+='<div class="cc-body" style="color:var(--z-gold-deep);font-weight:700">Reavaliar em '+escAttr(fmtBR(c.reavaliacao))+(c.reavaliacaoMotivo?(' — '+escAttr(c.reavaliacaoMotivo)):'')+'</div>';
       var fotos=(Array.isArray(c.fotos)&&c.fotos.length)?('<div class="vet-fotos">'+c.fotos.map(function(src){ return '<img src="'+src+'" alt="">'; }).join('')+'</div>'):'';
-      return '<div class="vet-consulta-card"><div class="cc-data">'+escAttr(fmtBR(c.data)||c.data||'')+'</div><div class="cc-meta">— '+escAttr(c.por||'Veterinária')+'</div>'+body+fotos+'</div>';
+      var pdf='<div class="cc-pdf" style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px">'
+        +'<button type="button" class="btn" style="background:var(--z-cream-warm);color:var(--z-blue);border:1.5px solid var(--line)" onclick="vetPdfImprimir(\''+id+'\')">PDF / Imprimir</button>'
+        +'<button type="button" class="btn btn-wa" onclick="vetPdfWhatsApp(\''+id+'\')">WhatsApp</button>'
+        +'<button type="button" class="btn" style="background:var(--z-cream-warm);color:var(--z-blue);border:1.5px solid var(--line)" onclick="vetPdfEmail(\''+id+'\')">E-mail (Gmail)</button>'
+        +'</div>';
+      return '<div class="vet-consulta-card"><div class="cc-data">'+escAttr(fmtBR(c.data)||c.data||'')+'</div><div class="cc-meta">— '+escAttr(c.por||'Veterinária')+'</div>'+body+fotos+pdf+'</div>';
     }).join('');
+  }
+
+  // ================================================================================
+  // Cuidado Vet — Consulta em PDF (Receituário). Reaproveita a infraestrutura de PDF
+  // do Check-in: as primitivas ciPdfEsc/ciPdfLatin1 e ciBaixarBlob (todas declarações
+  // de função, portanto hoisted — seguras de chamar aqui, sem risco de ordem/TDZ).
+  // zPdfTextBlob é a GENERALIZAÇÃO só-texto do montador de ciBuildPdfBlob (o Check-in
+  // continua com o seu próprio montador com imagem/assinatura, intacto).
+  // ================================================================================
+  function zPdfTextBlob(lines){
+    var ops=[]; var y=800;
+    (lines||[]).forEach(function(ln){
+      var size=ln.size||11, gap=(ln.gap!=null?ln.gap:4);
+      y-=(size+gap); if(y<60) return;
+      if(!ln.t) return;
+      var font=ln.bold?'F2':'F1';
+      var col=ln.red?'0.753 0.224 0.169 rg':'0.137 0.302 0.404 rg';
+      ops.push(col+'\nBT /'+font+' '+size+' Tf 1 0 0 1 56 '+y.toFixed(1)+' Tm ('+ciPdfEsc(ln.t)+') Tj ET');
+    });
+    var content=ops.join('\n');
+    var objs=[];
+    objs.push('<< /Type /Catalog /Pages 2 0 R >>');
+    objs.push('<< /Type /Pages /Kids [3 0 R] /Count 1 >>');
+    objs.push('<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 5 0 R /F2 6 0 R >> >> /Contents 4 0 R >>');
+    objs.push('<< /Length '+content.length+' >>\nstream\n'+content+'\nendstream');
+    objs.push('<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>');
+    objs.push('<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold /Encoding /WinAnsiEncoding >>');
+    var enc=function(s){ var u=new Uint8Array(s.length); for(var i=0;i<s.length;i++) u[i]=s.charCodeAt(i)&0xff; return u; };
+    var chunks=[]; var len=0; var offsets=[];
+    var push=function(x){ var u=(x instanceof Uint8Array)?x:enc(x); chunks.push(u); len+=u.length; };
+    push('%PDF-1.4\n%âãÏÓ\n');
+    for(var i=0;i<objs.length;i++){ offsets[i]=len; push((i+1)+' 0 obj\n'); push(objs[i]); push('\nendobj\n'); }
+    var xrefOff=len;
+    var xref='xref\n0 '+(objs.length+1)+'\n0000000000 65535 f \n';
+    for(var j=0;j<objs.length;j++){ xref += (('0000000000'+offsets[j]).slice(-10))+' 00000 n \n'; }
+    push(xref);
+    push('trailer\n<< /Size '+(objs.length+1)+' /Root 1 0 R >>\nstartxref\n'+xrefOff+'\n%%EOF');
+    return new Blob(chunks,{type:'application/pdf'});
+  }
+  // Medicação prescrita atualmente para este FILHOt (não suspensa), da agenda de medicação.
+  function vetMedsAtivas(){
+    var out=[];
+    Object.keys(VET_MED_CACHE||{}).forEach(function(id){
+      var it=VET_MED_CACHE[id]||{}; if(it.suspenso) return;
+      out.push({nome:it.nome||'', q:it.q||'', u:it.u||'', horarios:(it.horarios||[])});
+    });
+    return out;
+  }
+  function vetConsultaFileName(c){
+    var nm=(((vetHosp&&vetHosp.nome)?vetHosp.nome:'consulta')||'').replace(/[^a-zA-Z0-9]+/g,'-').replace(/^-+|-+$/g,'');
+    return 'receituario-'+(nm||'filhot')+'-'+((c&&c.data)||ciHoje())+'.pdf';
+  }
+  function vetConsultaLines(c){
+    c=c||{};
+    var tutor=(typeof tutorDe==='function')?tutorDe(vetHosp):((vetHosp&&vetHosp.tutor)||'');
+    var lines=[]; var add=function(t,o){ o=o||{}; lines.push({t:t,bold:!!o.bold,size:o.size||11,red:!!o.red,gap:(o.gap!=null?o.gap:4)}); };
+    add('Zeluz - Cuidado Veterinario - Receituario',{bold:true,size:17,gap:8});
+    add(((vetHosp&&vetHosp.nome)||'')+((vetHosp&&vetHosp.raca)?(' - '+vetHosp.raca):'')+(tutor?(' - Tutor: '+tutor):''),{gap:6});
+    add('Data da consulta: '+(c.data?(fmtBR(c.data)||c.data):'-'),{gap:8});
+    var sinais=[]; if(c.temperatura) sinais.push('Temperatura: '+c.temperatura+' C'); if(c.peso) sinais.push('Peso: '+c.peso+' kg');
+    if(sinais.length){ add('Sinais',{bold:true,size:12}); add(sinais.join('    '),{gap:8}); }
+    var meds=vetMedsAtivas();
+    if(meds.length){ add('MEDICACAO PRESCRITA - HORARIOS',{bold:true,size:12,red:true}); meds.forEach(function(m){ add('- '+m.nome+' - '+m.q+' '+m.u+' - '+((m.horarios||[]).join(', ')),{red:true}); }); lines.push({t:'',size:6,gap:2}); }
+    if(Array.isArray(c.cuidados)&&c.cuidados.length){ add('Cuidados',{bold:true,size:12}); c.cuidados.forEach(function(cu){ add('- '+cu,{}); }); lines.push({t:'',size:6,gap:2}); }
+    if(c.recomendacoes){ add('Recomendacoes',{bold:true,size:12}); add(c.recomendacoes,{gap:8}); }
+    if(c.obs){ add('Observacoes',{bold:true,size:12}); add(c.obs,{gap:8}); }
+    if(c.reavaliacao){ add('Reavaliacao',{bold:true,size:12}); add('Reavaliar em '+(fmtBR(c.reavaliacao)||c.reavaliacao)+(c.reavaliacaoMotivo?(' - '+c.reavaliacaoMotivo):''),{gap:8}); }
+    var quando=''; try{ if(c.ts) quando='   '+new Date(c.ts).toLocaleString('pt-BR'); }catch(e){}
+    lines.push({t:'',size:8,gap:4});
+    add('Assinado por: '+(c.por||'Veterinaria')+quando,{bold:true,size:11,gap:6});
+    return lines;
+  }
+  function vetConsultaResumoTexto(c){
+    c=c||{};
+    var tutor=(typeof tutorDe==='function')?tutorDe(vetHosp):((vetHosp&&vetHosp.tutor)||'');
+    var L=[];
+    L.push('Zêluz · Cuidado Veterinário — Receituário');
+    L.push(((vetHosp&&vetHosp.nome)||'')+(tutor?(' · Tutor: '+tutor):''));
+    if(c.data) L.push('Consulta: '+(fmtBR(c.data)||c.data));
+    var sinais=[]; if(c.temperatura) sinais.push('Temp: '+c.temperatura+' °C'); if(c.peso) sinais.push('Peso: '+c.peso+' kg');
+    if(sinais.length){ L.push(''); L.push(sinais.join(' · ')); }
+    var meds=vetMedsAtivas();
+    if(meds.length){ L.push(''); L.push('*MEDICAÇÃO PRESCRITA — HORÁRIOS*'); meds.forEach(function(m){ L.push('- '+m.nome+' — '+m.q+' '+m.u+' — '+((m.horarios||[]).join(', '))); }); }
+    if(Array.isArray(c.cuidados)&&c.cuidados.length){ L.push(''); L.push('Cuidados: '+c.cuidados.join('; ')); }
+    if(c.recomendacoes){ L.push(''); L.push('Recomendações: '+c.recomendacoes); }
+    if(c.obs){ L.push(''); L.push('Observações: '+c.obs); }
+    if(c.reavaliacao){ L.push(''); L.push('Reavaliar em '+(fmtBR(c.reavaliacao)||c.reavaliacao)+(c.reavaliacaoMotivo?(' — '+c.reavaliacaoMotivo):'')); }
+    L.push(''); L.push('Assinado por: '+(c.por||'Veterinária'));
+    return L.join('\n');
+  }
+  function vetConsultaBlob(c){ return zPdfTextBlob(vetConsultaLines(c)); }
+  function vetPdfStatus(){ return document.getElementById('vc-status'); }
+  // PDF / Imprimir — offline: abre o PDF gerado numa aba (Imprimir / Salvar como PDF do navegador).
+  function vetPdfImprimir(id){
+    var c=VET_CONSULTAS_CACHE[id]; if(!c) return; var st=vetPdfStatus();
+    var blob=null; try{ blob=vetConsultaBlob(c); }catch(e){ blob=null; }
+    if(!blob){ if(st){ st.style.color='var(--crm-critico)'; st.textContent='Não foi possível gerar o PDF neste aparelho.'; } return; }
+    try{
+      var u=URL.createObjectURL(blob); var w=window.open(u,'_blank');
+      if(!w){ ciBaixarBlob(blob,vetConsultaFileName(c)); }
+      setTimeout(function(){ try{ URL.revokeObjectURL(u); }catch(e){} },60000);
+      if(st){ st.style.color='var(--crm-ok)'; st.textContent='📄 Receituário aberto — use Imprimir / Salvar como PDF (funciona sem internet).'; }
+    }catch(e){ ciBaixarBlob(blob,vetConsultaFileName(c)); }
+  }
+  // WhatsApp — anexa o PDF (Web Share API); fallback baixa + abre wa.me. Mesmo padrão do Check-in.
+  function vetPdfWhatsApp(id){
+    var c=VET_CONSULTAS_CACHE[id]; if(!c) return; var st=vetPdfStatus();
+    var blob=null; try{ blob=vetConsultaBlob(c); }catch(e){ blob=null; }
+    var nome=vetConsultaFileName(c); var txt=vetConsultaResumoTexto(c);
+    if(blob){
+      var file=null; try{ file=new File([blob],nome,{type:'application/pdf'}); }catch(e){ file=null; }
+      if(file && navigator.canShare && navigator.canShare({files:[file]}) && navigator.share){
+        navigator.share({files:[file], title:'Receituário — '+((vetHosp&&vetHosp.nome)||''), text:txt})
+          .then(function(){ if(st){ st.style.color='var(--crm-ok)'; st.textContent='✅ PDF pronto para enviar. Escolha o WhatsApp e o contato do tutor.'; } })
+          .catch(function(){ /* usuário cancelou — sem erro */ });
+        return;
+      }
+      ciBaixarBlob(blob,nome);
+      window.open('https://wa.me/?text='+encodeURIComponent(txt),'_blank');
+      if(st){ st.style.color='var(--crm-atencao-text)'; st.textContent='📎 PDF baixado. No WhatsApp que abriu, anexe o arquivo "'+nome+'" e envie ao tutor.'; }
+      return;
+    }
+    window.open('https://wa.me/?text='+encodeURIComponent(txt),'_blank');
+    if(st){ st.style.color='var(--crm-atencao-text)'; st.textContent='Não foi possível gerar o PDF neste aparelho — enviei o resumo em texto.'; }
+  }
+  // E-mail (Gmail) — baixa o PDF e abre o compositor do Gmail. Mesmo padrão do Check-in.
+  function vetPdfEmail(id){
+    var c=VET_CONSULTAS_CACHE[id]; if(!c) return; var st=vetPdfStatus();
+    var assunto='Receituário — Cuidado Veterinário Zêluz — '+((vetHosp&&vetHosp.nome)||'');
+    var corpo=vetConsultaResumoTexto(c)+'\n\n— Anexe ao e-mail o PDF do receituário que acabou de ser baixado.';
+    var blob=null; try{ blob=vetConsultaBlob(c); }catch(e){ blob=null; }
+    var nome=vetConsultaFileName(c); if(blob) ciBaixarBlob(blob,nome);
+    var url='https://mail.google.com/mail/?view=cm&fs=1&to=&su='+encodeURIComponent(assunto)+'&body='+encodeURIComponent(corpo);
+    window.open(url,'_blank');
+    if(st){ st.style.color='var(--crm-atencao-text)'; st.textContent=(blob?('📎 PDF "'+nome+'" baixado e '):'')+'Gmail aberto — anexe o PDF ao e-mail. (Anexar automático pela URL não é possível.)'; }
   }
 
   // ---- Reavaliação: avisa no dia (vet + gestão) ----
