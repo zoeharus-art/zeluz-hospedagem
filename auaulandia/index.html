@@ -3632,7 +3632,10 @@
     const escopo=(Array.isArray(u.atividades)&&u.atividades.length)?u.atividades:null;
     if(escopo) document.body.dataset.scope='atividade'; else document.body.removeAttribute('data-scope');
     try{ if(typeof montarSubnav==='function') montarSubnav(); }catch(e){} // sempre remonta (evita subnav preso de outra sessão)
-    try{ carregarEstadoAcordeoes(); ajustarAcordeoes(); }catch(e){} // sanfona: preferência + esconde vazios + garante tela única
+    // sanfona: preferencia + esconde vazios + garante tela unica. Roda AGORA e DE NOVO no proximo
+    // frame: no F5 (sessao restaurada) o aplicarLogin roda antes do navegador desenhar, e ai
+    // offsetParent media 0 filhos -> escondia o Day Care por engano. O rAF remede apos o desenho.
+    try{ carregarEstadoAcordeoes(); ajustarAcordeoes(); if(typeof requestAnimationFrame==='function') requestAnimationFrame(function(){ try{ ajustarAcordeoes(); }catch(e){} }); }catch(e){}
     try{ if(localStorage.getItem('zeluz_sidebar_collapsed')==='1') document.body.classList.add('nav-collapsed'); }catch(e){} // barra recolhida (desktop)
     // Quem tem escopo restrito (ex.: Amanda Barbosa, só almoço) cai direto na atividade dela.
     if(escopo && typeof abrirAtividade==='function'){ abrirAtividade(escopo[0]); return; }
