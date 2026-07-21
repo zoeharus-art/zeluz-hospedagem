@@ -3645,6 +3645,8 @@
     // CONFERÊNCIA CHECK-IN — senha própria da Wandela (Onda 4). Confere pertences, ração e medicação
     // depois do check-in: checklist com V verde, etiquetagem, pesagem e teste dos alarmes.
     '0915':{role:'conferencia', nome:'Wandela · Conferência Check-in'},
+    // Senha própria da Wandela para a Conferência (autorizada a pedido da Adriana).
+    '1006':{role:'conferencia', nome:'Wandela · Conferência Check-in'},
     '1002':{role:'aprendiz',    nome:'Monitor Aprendiz'},
     // DIRETORIA — nível acima da Gestão, exclusiva da Adriana. Enxerga tudo que a Gestão
     // enxerga e, além disso, é a única que pode EXCLUIR um cadastro de verdade (a Gestão
@@ -3662,7 +3664,7 @@
   // Persistidos no Firebase (daycare/config/monitores). Se offline, valem os defaults abaixo.
   const MONITORES_DEFAULT=[
     {id:'m1', nome:'Monitor 1', senha:'1005', entrada:'06:50', saida:'15:50', abertura:true},
-    {id:'m2', nome:'Monitor 2', senha:'1006', entrada:'07:00', saida:'16:00'},
+    {id:'m2', nome:'Monitor 2', senha:'1011', entrada:'07:00', saida:'16:00'},
     {id:'m3', nome:'Monitor 3', senha:'1007', entrada:'08:00', saida:'17:00'},
     {id:'m4', nome:'Monitor 4', senha:'1008', entrada:'09:00', saida:'18:00'},
     {id:'m5', nome:'Monitor 5', senha:'1009', entrada:'10:00', saida:'19:00'},
@@ -3672,7 +3674,8 @@
   // Mapa de senhas em runtime = SENHAS fixas (gestão/supervisão/etc) + monitores editáveis
   function senhasRuntime(){
     const map={}; Object.keys(SENHAS).forEach(k=>{ map[k]=SENHAS[k]; });
-    (MONITORES||[]).forEach(m=>{ if(m&&m.senha){ map[String(m.senha).trim()]={ role:'monitor', nome:m.nome, monId:m.id, entrada:m.entrada, saida:m.saida, abertura:!!m.abertura, atividades:(Array.isArray(m.atividades)&&m.atividades.length)?m.atividades:undefined }; } });
+    // Monitor NUNCA sobrescreve uma senha fixa do sistema (ex.: 1006 = Wandela/Conferência).
+    (MONITORES||[]).forEach(m=>{ if(m&&m.senha){ const s=String(m.senha).trim(); if(SENHAS[s]) return; map[s]={ role:'monitor', nome:m.nome, monId:m.id, entrada:m.entrada, saida:m.saida, abertura:!!m.abertura, atividades:(Array.isArray(m.atividades)&&m.atividades.length)?m.atividades:undefined }; } });
     return map;
   }
   // ===== RELATÓRIO DE SENHAS (só Gestão vê) — gerado do cadastro acima =====
