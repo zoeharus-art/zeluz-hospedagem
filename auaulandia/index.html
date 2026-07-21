@@ -5652,7 +5652,9 @@
       if(vePorDia()) h+=`<a onclick="abrirTodosPeludinhos()">Todos<span class="dia-n">${PELUDINHOS.filter(p=>!pelInativo(p)).length}</span></a>`;
     }
     h+='<div class="subnav-grp">Atividades</div>';
-    h+=ativs.map(a=>`<a data-a="${a.s}" onclick="abrirAtividade('${a.s}')">${a.t}</a>`).join('');
+    // Atividades em ordem ALFABETICA (decisao de Adriana 21/jul - menos atrito, achar rapido).
+    // As Turminhas/dias acima seguem a ordem natural da semana (ORDEM_DIAS), nao alfabetica.
+    h+=ativs.slice().sort((a,b)=>(a.t||'').localeCompare((b.t||''),'pt',{sensitivity:'base'})).map(a=>`<a data-a="${a.s}" onclick="abrirAtividade('${a.s}')">${a.t}</a>`).join('');
     sm.innerHTML=h;
   }
   function marcarSubnavAtivo(){ document.querySelectorAll('#dcSubnav a').forEach(a=>{ if(a.dataset.d!=null) a.classList.toggle('active', a.dataset.d===dcDia); if(a.dataset.a!=null) a.classList.toggle('active', a.dataset.a===dcAtiv); }); }
