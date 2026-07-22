@@ -1008,7 +1008,7 @@
       <div class="acc-panel">
         <a data-v="checkin"><span data-icon="paw"></span><span>Check-in</span></a>
         <a data-v="conferencia" class="so-conferencia"><span data-icon="check"></span><span>Conferência Check-in</span></a>
-        <a data-v="recepcao" class="so-recepcao"><span data-icon="paw"></span><span>Recepção</span></a>
+        <a data-v="recepcao" class="so-recepcao"><span data-icon="paw"></span><span>Atenção Recepção</span></a>
         <a data-v="cuidadovet" class="so-vet"><span data-icon="heart"></span><span>Cuidado Vet</span></a>
         <a data-v="hospedagem"><span data-icon="moon"></span><span>Plantão AuAulândia</span></a>
       </div>
@@ -1831,6 +1831,15 @@
           <div id="cfMedList"></div>
         </div>
 
+        <!-- Ocorrências / itens adicionais — pode adicionar A QUALQUER MOMENTO, mesmo após fechar o checklist -->
+        <div class="card">
+          <h2 style="font-size:19px">Ocorrências e itens que chegaram depois</h2>
+          <div class="hint">Tudo que não estava no check-in ou que chegou durante: item comprado aqui (ex.: vermífugo Endogard), ração/medicamento que o tutor mandou entregar, roupinha porque esfriou… Registre aqui — não some e vai junto no Check-out.</div>
+          <div class="field" style="margin-top:8px"><input class="cad-in" id="cfOcorrTexto" placeholder="Ex: tutor comprou Endogard aqui · tutor mandou +1kg de ração · roupinha de frio" autocomplete="off" onkeydown="if(event.key==='Enter'){event.preventDefault();cfAddOcorrencia();}"></div>
+          <div class="actions" style="margin-top:8px"><button type="button" class="btn btn-gold" onclick="cfAddOcorrencia()">Adicionar ocorrência</button></div>
+          <div id="cfOcorrList" style="margin-top:10px"></div>
+        </div>
+
         <!-- Fotos -->
         <div class="card">
           <h2 style="font-size:19px">Fotos da conferência</h2>
@@ -2212,7 +2221,7 @@
     cuidadovet:['Cuidado Vet','Consulta, receituário e reavaliação'],
     checkin:['Check-in','Entrada da estadia — ficha, pertences e assinatura'],
     conferencia:['Conferência Check-in','Pertences etiquetados, ração pesada e alarmes testados'],
-    recepcao:['Recepção','Avisos de estoque de medicação e de ração'],
+    recepcao:['Atenção Recepção','Faltas e avisos: ração, medicação e itens da estadia'],
     agenda:['Agenda','Frequência e reservas'],pessoas:['Pessoas & Turnos','Equipe e tarefas'],
     painel:['Painel do Dia','Auditoria e cumprimento de protocolos'],
     abertura:['Atividades Monitor 1','Rotina de abertura do turno'],sair:['Sair','']};
@@ -7768,6 +7777,7 @@
     cfPreencherRacao();
     renderCfMed();
     renderCfFotos();
+    var _oc=document.getElementById('cfOcorrTexto'); if(_oc) _oc.value=''; if(typeof renderCfOcorrencias==='function') renderCfOcorrencias();
     renderCfGate();
     var st=document.getElementById('cf-status'); if(st) st.textContent='';
     window.scrollTo({top:0,behavior:'smooth'});
@@ -7990,6 +8000,34 @@
     renderCfMed(); renderCfGate();
   }
 
+  // ---- Ocorrências / itens que chegaram depois (adicionáveis a qualquer momento) ----
+  function cfOcorrListaDe(){ var o=(cfEstadia&&cfEstadia.ocorrencias)||{}; return Object.keys(o).map(function(k){ var v=o[k]||{}; v._id=k; return v; }).sort(function(a,b){ return (a.ts||0)-(b.ts||0); }); }
+  function renderCfOcorrencias(){
+    var el=document.getElementById('cfOcorrList'); if(!el) return;
+    var lista=cfOcorrListaDe();
+    if(!lista.length){ el.innerHTML='<div class="hint" style="margin-bottom:0">Nenhuma ocorrência registrada.</div>'; return; }
+    el.innerHTML=lista.map(function(o){ return '<div class="vet-hist-line" style="display:flex;align-items:center;gap:8px"><span style="flex:1">• '+escAttr(o.texto||'')+' <span style="color:var(--muted)">(— '+escAttr(o.quem||'-')+(o.ts?(' · '+new Date(o.ts).toLocaleString('pt-BR')):'')+')</span></span><button type="button" class="pert-row-del" title="Remover" onclick="cfRemoverOcorrencia(\''+o._id+'\')">&#10005;</button></div>'; }).join('');
+  }
+  function cfAddOcorrencia(){
+    if(!cfEstadiaId||!DB) return;
+    var inp=document.getElementById('cfOcorrTexto'); var txt=inp?(inp.value||'').trim():'';
+    if(!txt){ if(inp) inp.focus(); return; }
+    var reg={texto:txt, quem:(typeof quemSou==='function'?quemSou():'-'), ts:Date.now()};
+    var ref=DB.ref('auaulandia/estadias/'+cfEstadiaId+'/ocorrencias').push();
+    ref.set(reg).then(function(){
+      cfEstadia.ocorrencias=cfEstadia.ocorrencias||{}; cfEstadia.ocorrencias[ref.key]=reg;
+      if(inp) inp.value=''; renderCfOcorrencias();
+      if(typeof audit==='function') audit('conferencia-ocorrencia',cfEstadiaId,{pet:(cfHosp&&cfHosp.nome)||'',texto:txt});
+    }).catch(function(e){ alert('Erro ao registrar: '+(e&&e.message||e)); });
+  }
+  function cfRemoverOcorrencia(id){
+    if(!cfEstadiaId||!DB||!id) return;
+    if(!confirm('Remover esta ocorrência?')) return;
+    DB.ref('auaulandia/estadias/'+cfEstadiaId+'/ocorrencias/'+id).remove().then(function(){
+      if(cfEstadia&&cfEstadia.ocorrencias) delete cfEstadia.ocorrencias[id];
+      renderCfOcorrencias();
+    }).catch(function(){});
+  }
   // ---- Fotos da conferência (mesmo padrão das fotos da consulta do Cuidado Vet) ----
   function cfAddFoto(e){
     var files=(e.target&&e.target.files)?Array.prototype.slice.call(e.target.files):[];
