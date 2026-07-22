@@ -1931,6 +1931,16 @@
         </div>
       </div>
 
+      <!-- Observação / exame rápido para o tutor (vai para a ficha, visível a todos) -->
+      <div class="card">
+        <h2 style="font-size:19px">Observação para o tutor (exame do dia)</h2>
+        <div class="hint">Anote o que observou mesmo que não seja nada (ex.: "olhei o ouvido, era só sujeira, limpei"). Vai para a ficha do peludinho, fica visível para todos e serve para a Márcia dar retorno ao tutor.</div>
+        <div class="field" style="margin-top:8px"><textarea id="vetObsTexto" class="cad-in" style="min-height:64px" placeholder="Ex: ouvido esquerdo com um pouco de cera, sem inflamação — limpei; olhos e patinhas ok"></textarea></div>
+        <div class="actions" style="margin-top:10px"><button class="btn btn-primary" onclick="vetSalvarObs()">Registrar observação na ficha</button></div>
+        <div id="vetObs-status" class="rel-status"></div>
+        <div id="vetObsList" style="margin-top:10px"></div>
+      </div>
+
       <!-- Nova consulta (receituário datado) -->
       <div class="card">
         <h2 style="font-size:19px">Registrar consulta</h2>
@@ -2078,7 +2088,7 @@
   // ---- Firebase (banco gratuito que já temos) ----
   // Declarados AQUI (antes dos ouvintes do Firebase abaixo) para não caírem na zona morta temporal:
   // os listeners em ~1801 mutam estas variáveis e podem disparar antes das declarações originais lá embaixo.
-  let DB=null, cadCache={}, fotoPendente=null, pelCadCache={}, almCadCache={}, despBaixa={}, VET_RECOM_CACHE={}, MONITORES=[], NAOCOMEU_HOJE={};
+  let DB=null, cadCache={}, fotoPendente=null, pelCadCache={}, almCadCache={}, despBaixa={}, VET_RECOM_CACHE={}, VET_OBS_CACHE={}, MONITORES=[], NAOCOMEU_HOJE={};
   try{
     firebase.initializeApp({
       apiKey:"AIzaSyD3udp47XruRAEeIYWNGn0ICGCX3a1qr28",
@@ -2128,6 +2138,12 @@
       DB.ref('auaulandia/vet-reavaliacao').on('value', s=>{ VET_REAVAL_CACHE=s.val()||{};
         try{ if(typeof checarReavaliacoesHoje==='function') checarReavaliacoesHoje(); }catch(e){}
         try{ if(typeof renderHosp==='function') renderHosp(); }catch(e){}
+      });
+      // Observações/exames da Veterinária para o tutor (ex.: "ouvido só com sujeira"). Visível a todos,
+      // alimenta o retorno da Marcia ao cliente e o futuro módulo do cliente.
+      DB.ref('auaulandia/vet-observacoes').on('value', s=>{ VET_OBS_CACHE=s.val()||{};
+        try{ if(currentHosp&&typeof renderVetInstrucoesFicha==='function') renderVetInstrucoesFicha(currentHosp); }catch(e){}
+        try{ var vf=document.getElementById('vet-ficha'); if(vf&&vf.style.display!=='none'&&typeof renderVetObsList==='function') renderVetObsList(); }catch(e){}
       });
       // Onda 4 — Conferência Check-in (Wandela). Índice vivo das estadias por refKey (a mais
       // recente de cada hóspede), pra badge no menu e pra lista de quem ainda falta conferir.
@@ -4763,19 +4779,51 @@
   // ---- Instruções ativas (recomendações + cuidados) viram tarja na ficha/card ----
   function recomAtivaDe(h){ if(!h) return null; var r=(VET_RECOM_CACHE||{})[vetKey(h)]; if(!r||r.ativo===false) return null; var temCuid=Array.isArray(r.cuidados)&&r.cuidados.length; if(!(r.texto&&r.texto.trim())&&!temCuid) return null; return r; }
   function temRecomAtiva(h){ return !!recomAtivaDe(h); }
+  // Lista de observações/exames da vet para um FILHOt (mais recente primeiro).
+  function vetObsListaDe(h){ if(!h) return []; var o=(VET_OBS_CACHE||{})[vetKey(h)]||{}; return Object.keys(o).map(function(k){ var v=o[k]||{}; v._id=k; return v; }).sort(function(a,b){ return (b.ts||0)-(a.ts||0); }); }
   function renderVetInstrucoesFicha(h,elId){
     var el=document.getElementById(elId||'vf-instr'); if(!el) return;
+    var html='';
     var r=recomAtivaDe(h);
-    if(!r){ el.innerHTML=''; return; }
-    var pills='';
-    (r.cuidados||[]).forEach(function(c){ pills+='<span class="vet-recom-pill cuidado">'+escAttr(c)+'</span>'; });
-    var reav=VET_REAVAL_CACHE[vetKey(h)];
-    var reavLine=(reav&&reav.data)?'<div style="margin-top:7px;font-size:12.5px;font-weight:700;color:var(--z-gold-deep)">Reavaliação marcada: '+escAttr(fmtBR(reav.data))+(reav.motivo?(' — '+escAttr(reav.motivo)):'')+'</div>':'';
-    el.innerHTML='<div class="vet-instr-box"><div class="vt">Instruções da Veterinária</div>'
-      +(pills?('<div style="margin-bottom:'+(r.texto?'7px':'0')+'">'+pills+'</div>'):'')
-      +(r.texto?('<div style="font-size:13.5px;font-weight:600;color:var(--z-blue-soft);line-height:1.5">'+escAttr(r.texto)+'</div>'):'')
-      +reavLine
-      +'<div style="margin-top:7px;font-size:11.5px;font-weight:700;color:var(--muted)">— '+escAttr(r.por||'Veterinária')+(r.ts?(' · '+new Date(r.ts).toLocaleDateString('pt-BR')):'')+'</div></div>';
+    if(r){
+      var pills='';
+      (r.cuidados||[]).forEach(function(c){ pills+='<span class="vet-recom-pill cuidado">'+escAttr(c)+'</span>'; });
+      var reav=VET_REAVAL_CACHE[vetKey(h)];
+      var reavLine=(reav&&reav.data)?'<div style="margin-top:7px;font-size:12.5px;font-weight:700;color:var(--z-gold-deep)">Reavaliação marcada: '+escAttr(fmtBR(reav.data))+(reav.motivo?(' — '+escAttr(reav.motivo)):'')+'</div>':'';
+      html+='<div class="vet-instr-box"><div class="vt">Instruções da Veterinária</div>'
+        +(pills?('<div style="margin-bottom:'+(r.texto?'7px':'0')+'">'+pills+'</div>'):'')
+        +(r.texto?('<div style="font-size:13.5px;font-weight:600;color:var(--z-blue-soft);line-height:1.5">'+escAttr(r.texto)+'</div>'):'')
+        +reavLine
+        +'<div style="margin-top:7px;font-size:11.5px;font-weight:700;color:var(--muted)">— '+escAttr(r.por||'Veterinária')+(r.ts?(' · '+new Date(r.ts).toLocaleDateString('pt-BR')):'')+'</div></div>';
+    }
+    // Observações/exames para o tutor (as 3 mais recentes) — visível a todos
+    var obs=vetObsListaDe(h);
+    if(obs.length){
+      html+='<div class="vet-instr-box" style="border-color:var(--crm-info);margin-top:'+(r?'8px':'0')+'"><div class="vt" style="color:var(--crm-info)">Observações da Veterinária (para o tutor)</div>'
+        +obs.slice(0,3).map(function(o){ return '<div style="font-size:13px;font-weight:600;color:var(--z-blue-soft);line-height:1.5;margin-top:4px">• '+escAttr(o.texto||'')+' <span style="color:var(--muted);font-weight:700;font-size:11px">(— '+escAttr(o.quem||'Vet')+(o.ts?(' · '+new Date(o.ts).toLocaleDateString('pt-BR')):'')+')</span></div>'; }).join('')
+        +'</div>';
+    }
+    el.innerHTML=html;
+  }
+  function renderVetObsList(){
+    var el=document.getElementById('vetObsList'); if(!el) return;
+    var obs=vetHosp?vetObsListaDe(vetHosp):[];
+    if(!obs.length){ el.innerHTML='<div class="hint" style="margin-bottom:0">Nenhuma observação registrada ainda.</div>'; return; }
+    el.innerHTML=obs.map(function(o){ return '<div class="vet-hist-line"><strong>'+escAttr(o.texto||'')+'</strong> <span style="color:var(--muted)">(— '+escAttr(o.quem||'Vet')+(o.ts?(' · '+new Date(o.ts).toLocaleString('pt-BR')):'')+')</span></div>'; }).join('');
+  }
+  function vetSalvarObs(){
+    var st=document.getElementById('vetObs-status'); if(!vetHosp) return;
+    if(!podeAlterarVet()){ if(st){ st.style.color='var(--crm-critico)'; st.textContent='✋ Apenas a Veterinária, a Gestão ou a Supervisão registram observações.'; } return; }
+    var txt=((document.getElementById('vetObsTexto')||{}).value||'').trim();
+    if(!txt){ if(st){ st.style.color='var(--crm-critico)'; st.textContent='✋ Escreva a observação antes de registrar.'; } return; }
+    if(!DB){ if(st){ st.style.color='var(--crm-atencao-text)'; st.textContent='Banco conectando…'; } return; }
+    var key=vetKey(vetHosp); var quem=(typeof quemSou==='function'?quemSou():'Veterinária');
+    if(st){ st.style.color='var(--muted)'; st.textContent='Salvando…'; }
+    DB.ref('auaulandia/vet-observacoes/'+key).push({texto:txt, quem:quem, ts:Date.now()}).then(function(){
+      var t=document.getElementById('vetObsTexto'); if(t) t.value='';
+      if(st){ st.style.color='var(--crm-ok)'; st.textContent='✅ Observação registrada na ficha do peludinho.'; }
+      if(typeof audit==='function') audit('vet-observacao',key,{pet:vetHosp.nome||'',quem:quem});
+    }).catch(function(e){ if(st){ st.style.color='var(--crm-critico)'; st.textContent='⚠️ Erro: '+(e&&e.message||e); } });
   }
 
   // ---- Reavaliação atual no formulário da vet + remoção EXPLÍCITA (anti-Hulk) ----
@@ -4840,6 +4888,7 @@
     document.getElementById('vf-pills').innerHTML=(typeof alertPills==='function')?alertPills(ex):'';
     renderVetInstrucoesFicha(h,'vf-instr');
     renderVcReavalAtual(h);
+    var _vo=document.getElementById('vetObsTexto'); if(_vo) _vo.value=''; if(typeof renderVetObsList==='function') renderVetObsList();
     // formulário de consulta — reset
     var hj=(typeof hojeISO==='function')?hojeISO():'';
     var d=document.getElementById('vcData'); if(d) d.value=hj;
