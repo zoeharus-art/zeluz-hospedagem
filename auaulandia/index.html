@@ -1793,16 +1793,48 @@
 
         <!-- Ração: conferir quantidade + pesar (absorve a calculadora do sistema antigo) -->
         <div class="card" id="cf-racao-card">
-          <h2 style="font-size:19px">Ração — conferir e pesar</h2>
-          <div class="hint">Pese a ração trazida na balança e informe o peso. O sistema calcula se é suficiente para os dias da estadia — a mesma conta do antigo painel de ração, agora dentro daqui.</div>
-          <div id="cfRacaoInfo" class="hint" style="margin-bottom:6px"></div>
-          <div class="vet-row">
-            <div class="field"><label>Ração pesada agora</label><input class="cad-in" id="cfRacaoPeso" inputmode="decimal" placeholder="Ex: 1200" oninput="cfCalcRacao()"></div>
-            <div class="field"><label>Necessário para a estadia</label><input class="cad-in" id="cfRacaoNecessario" readonly></div>
+          <h2 style="font-size:19px">Alimentação — conferir e pesar</h2>
+          <div class="hint">Confira o que o tutor trouxe. Pode ser <strong>por peso</strong> (pesa na balança) ou <strong>por quantidade</strong> (pacotes/porções separadas). Se come ração <strong>e</strong> comida natural, confira as duas.</div>
+
+          <!-- RAÇÃO -->
+          <div style="border:1.5px solid var(--line);border-radius:12px;padding:12px 14px;margin-top:6px">
+            <div style="font-weight:800;color:var(--z-blue);margin-bottom:6px">🥣 Ração</div>
+            <div id="cfRacaoInfo" class="hint" style="margin-bottom:8px"></div>
+            <div class="field"><label>Como o tutor trouxe?</label>
+              <div class="seg gold" id="cfRacaoModo" data-single><button type="button" onclick="pick(this);cfCalcRacao()">Por peso (g)</button><button type="button" onclick="pick(this);cfCalcRacao()">Por quantidade (pacotes)</button></div></div>
+            <div class="vet-row" id="cfRacaoPesoRow" style="margin-top:8px">
+              <div class="field"><label>Ração pesada agora (g)</label><input class="cad-in" id="cfRacaoPeso" inputmode="decimal" placeholder="Ex: 1200" oninput="cfCalcRacao()"></div>
+              <div class="field"><label>Necessário para a estadia</label><input class="cad-in" id="cfRacaoNecessario" readonly></div>
+            </div>
+            <div class="vet-row" id="cfRacaoQtdRow" style="margin-top:8px;display:none">
+              <div class="field"><label>Quantidade trazida (pacotes/porções)</label><input class="cad-in" id="cfRacaoQtd" inputmode="text" placeholder="Ex: 12 pacotes · 1 pacote + 2kg"></div>
+              <div class="field"><label>Necessário (se souber)</label><input class="cad-in" id="cfRacaoQtdNec" inputmode="text" placeholder="Ex: 12 dias × 1/2 pacote = 6 pacotes"></div>
+            </div>
+            <div class="field" style="margin-top:8px"><label>Observação (como vem / como dividir)</label><input class="cad-in" id="cfRacaoObs" placeholder="Ex: pacote fechado + 2kg soltos · cada pacote rende 3 dias"></div>
+            <div id="cfRacaoResultado"></div>
+            <button type="button" class="btn btn-primary" style="margin-top:10px" onclick="cfConfirmarRacao()">Confirmar ração</button>
+            <div id="cf-racao-status" class="rel-status"></div>
           </div>
-          <div id="cfRacaoResultado"></div>
-          <button type="button" class="btn btn-primary" style="margin-top:10px" onclick="cfConfirmarRacao()">Confirmar pesagem</button>
-          <div id="cf-racao-status" class="rel-status"></div>
+
+          <!-- COMIDA NATURAL (só aparece se o check-in tem comida natural) -->
+          <div id="cf-comida-block" style="border:1.5px solid #cfe6da;border-radius:12px;padding:12px 14px;margin-top:12px;background:#F1F7F3;display:none">
+            <div style="font-weight:800;color:#2B7A4B;margin-bottom:6px">🍲 Comida natural</div>
+            <div id="cfComidaInfo" class="hint" style="margin-bottom:8px"></div>
+            <div class="field"><label>Como o tutor trouxe?</label>
+              <div class="seg gold" id="cfComidaModo" data-single><button type="button" onclick="pick(this);cfCalcComida()">Por peso (g)</button><button type="button" onclick="pick(this);cfCalcComida()">Por quantidade (pacotes)</button></div></div>
+            <div class="vet-row" id="cfComidaPesoRow" style="margin-top:8px">
+              <div class="field"><label>Comida pesada agora (g)</label><input class="cad-in" id="cfComidaPeso" inputmode="decimal" placeholder="Ex: 900" oninput="cfCalcComida()"></div>
+              <div class="field"><label>Necessária para a estadia</label><input class="cad-in" id="cfComidaNecessario" readonly></div>
+            </div>
+            <div class="vet-row" id="cfComidaQtdRow" style="margin-top:8px;display:none">
+              <div class="field"><label>Quantidade trazida (pacotes/porções)</label><input class="cad-in" id="cfComidaQtd" inputmode="text" placeholder="Ex: 12 pacotes congelados"></div>
+              <div class="field"><label>Necessária (se souber)</label><input class="cad-in" id="cfComidaQtdNec" inputmode="text" placeholder="Ex: 1 pacote/dia × 12 dias = 12 pacotes"></div>
+            </div>
+            <div class="field" style="margin-top:8px"><label>Observação (como vem / como dividir)</label><input class="cad-in" id="cfComidaObs" placeholder="Ex: cada pacote congelado divide em 3 partes · 1 pacote por dia"></div>
+            <div id="cfComidaResultado"></div>
+            <button type="button" class="btn btn-primary" style="margin-top:10px;background:#2B7A4B" onclick="cfConfirmarComida()">Confirmar comida natural</button>
+            <div id="cf-comida-status" class="rel-status"></div>
+          </div>
         </div>
 
         <!-- Medicação — testar os alarmes -->
@@ -7690,7 +7722,7 @@
     if(!pend){ semEst.style.display='block'; corpo.style.display='none'; window.scrollTo({top:0,behavior:'smooth'}); return; }
     semEst.style.display='none'; corpo.style.display='block';
     cfEstadiaId=pend.id; cfEstadia=pend.e||{};
-    cfConf=Object.assign({pertences:{},medicacaoEtiqueta:{},medicacao:{},racao:{},fotos:[]}, cfEstadia.conferencia||{});
+    cfConf=Object.assign({pertences:{},medicacaoEtiqueta:{},medicacao:{},racao:{},comida:{},fotos:[]}, cfEstadia.conferencia||{});
     var assEl=document.getElementById('cfAssina'); if(assEl) assEl.value=cfConf.concluida?(cfConf.concluida_por||''):((typeof quemSou==='function')?quemSou():'');
     renderCfPert();
     cfPreencherRacao();
@@ -7755,27 +7787,51 @@
     if(!qtd||!ref||!dias) return null;
     return {minimo:Math.round(qtd*ref*dias), dias:dias, unidade:a.unidade||'g'};
   }
+  function cfModoQtd(segId){ return (typeof segVal==='function')&&segVal(segId)==='Por quantidade (pacotes)'; }
+  function cfRacaoModoSync(){ var q=cfModoQtd('cfRacaoModo'); var pr=document.getElementById('cfRacaoPesoRow'), qr=document.getElementById('cfRacaoQtdRow'); if(pr) pr.style.display=q?'none':''; if(qr) qr.style.display=q?'':'none'; }
+  function cfComidaModoSync(){ var q=cfModoQtd('cfComidaModo'); var pr=document.getElementById('cfComidaPesoRow'), qr=document.getElementById('cfComidaQtdRow'); if(pr) pr.style.display=q?'none':''; if(qr) qr.style.display=q?'':'none'; }
   function cfPreencherRacao(){
-    var info=document.getElementById('cfRacaoInfo'); var a=(cfEstadia.ficha&&cfEstadia.ficha.alim)||{};
+    var a=(cfEstadia.ficha&&cfEstadia.ficha.alim)||{};
+    var info=document.getElementById('cfRacaoInfo');
     var linhas=[];
     if(a.tipo) linhas.push(escAttr(a.tipo));
     if(a.marca) linhas.push('Marca: '+escAttr(a.marca));
     if(a.qtd) linhas.push(escAttr(a.qtd)+' '+(a.unidade||'')+'/refeição');
     if(a.refeicoes) linhas.push(escAttr(a.refeicoes)+'x ao dia');
-    if(a.comida&&a.comida.qtd) linhas.push('🍲 Comida natural: '+escAttr(a.comida.qtd)+'g/refeição em '+escAttr(ciComidaRefNomes(a.comida.refeicoes).join(', ')));
     if(info) info.innerHTML=linhas.length?linhas.join(' · '):'<span style="color:var(--crm-atencao-text)">Alimentação não informada no check-in.</span>';
     var m=cfMinimoRacao();
     var elNec=document.getElementById('cfRacaoNecessario');
     if(elNec) elNec.value=m?(m.minimo+' '+(m.unidade||'g')+' para '+m.dias+' dia(s)'):'Informe entrada, saída, quantidade e refeições/dia no check-in';
     var salvo=cfConf.racao||{};
+    if(typeof setSeg==='function') setSeg('cfRacaoModo', salvo.modo==='quantidade'?'Por quantidade (pacotes)':'Por peso (g)');
     var elPeso=document.getElementById('cfRacaoPeso'); if(elPeso) elPeso.value=(salvo.pesoTrazido!=null)?salvo.pesoTrazido:'';
-    cfCalcRacao();
+    var eq=document.getElementById('cfRacaoQtd'); if(eq) eq.value=salvo.qtdTrazida||'';
+    var eqn=document.getElementById('cfRacaoQtdNec'); if(eqn) eqn.value=salvo.qtdNecessaria||'';
+    var eo=document.getElementById('cfRacaoObs'); if(eo) eo.value=salvo.obs||'';
+    cfRacaoModoSync(); cfCalcRacao();
+    // Comida natural — só aparece quando o check-in tem comida natural
+    var block=document.getElementById('cf-comida-block');
+    if(a.comida&&a.comida.qtd){
+      if(block) block.style.display='block';
+      var ci=document.getElementById('cfComidaInfo');
+      if(ci) ci.innerHTML='🍲 '+escAttr(a.comida.qtd)+'g/refeição em '+escAttr((typeof ciComidaRefNomes==='function'?ciComidaRefNomes(a.comida.refeicoes).join(', '):''))+(a.comida.minimo?(' · necessária aprox. '+a.comida.minimo+'g'):'');
+      var cn=document.getElementById('cfComidaNecessario'); if(cn) cn.value=a.comida.minimo?(a.comida.minimo+'g para a estadia'):'informe no check-in';
+      var cs=cfConf.comida||{};
+      if(typeof setSeg==='function') setSeg('cfComidaModo', cs.modo==='quantidade'?'Por quantidade (pacotes)':'Por peso (g)');
+      var cp=document.getElementById('cfComidaPeso'); if(cp) cp.value=(cs.pesoTrazido!=null)?cs.pesoTrazido:'';
+      var cq=document.getElementById('cfComidaQtd'); if(cq) cq.value=cs.qtdTrazida||'';
+      var cqn=document.getElementById('cfComidaQtdNec'); if(cqn) cqn.value=cs.qtdNecessaria||'';
+      var co=document.getElementById('cfComidaObs'); if(co) co.value=cs.obs||'';
+      cfComidaModoSync(); cfCalcComida();
+    } else { if(block) block.style.display='none'; }
   }
   function cfCalcRacao(){
     var el=document.getElementById('cfRacaoResultado'); if(!el) return;
+    cfRacaoModoSync();
+    if(cfModoQtd('cfRacaoModo')){ el.innerHTML='<div class="hint" style="margin-bottom:0">Confira a quantidade trazida × o necessário e registre (ex.: 12 dias × 1/2 pacote = 6 pacotes).</div>'; return; }
     var elPeso=document.getElementById('cfRacaoPeso'); var peso=elPeso?qtdNum(elPeso.value):null;
     var m=cfMinimoRacao();
-    if(!m){ el.innerHTML=''; return; }
+    if(!m){ el.innerHTML='<div class="hint" style="margin-bottom:0">Sem cálculo automático — use o modo por quantidade ou confira manualmente.</div>'; return; }
     if(peso==null){ el.innerHTML='<div class="hint" style="margin-bottom:0">Pese a ração e informe o valor.</div>'; return; }
     var def=m.minimo-peso;
     if(def>0) el.innerHTML='<div class="cf-resultado alerta"><span>⚠️ Faltam</span><span>'+def+' '+(m.unidade||'g')+'</span></div>';
@@ -7783,18 +7839,65 @@
   }
   function cfConfirmarRacao(){
     var st=document.getElementById('cf-racao-status'); if(!cfEstadiaId) return;
-    var elPeso=document.getElementById('cfRacaoPeso'); var peso=elPeso?qtdNum(elPeso.value):null;
-    if(peso==null){ if(st){ st.style.color='var(--crm-critico)'; st.textContent='✋ Pese a ração e informe o valor em número.'; } return; }
-    var m=cfMinimoRacao();
-    var def=m?(m.minimo-peso):null;
-    var reg={pesoTrazido:peso, minimoNecessario:m?m.minimo:null, dias:m?m.dias:null, unidade:m?m.unidade:'g', deficit:def, pesado:true, quem:(typeof quemSou==='function'?quemSou():'-'), ts:Date.now()};
+    var obs=((document.getElementById('cfRacaoObs')||{}).value||'').trim();
+    var quem=(typeof quemSou==='function'?quemSou():'-');
+    var reg, def=null, unidade='g';
+    if(cfModoQtd('cfRacaoModo')){
+      var qtd=((document.getElementById('cfRacaoQtd')||{}).value||'').trim();
+      if(!qtd){ if(st){ st.style.color='var(--crm-critico)'; st.textContent='✋ Informe a quantidade trazida (pacotes/porções).'; } return; }
+      var qnec=((document.getElementById('cfRacaoQtdNec')||{}).value||'').trim();
+      reg={modo:'quantidade', qtdTrazida:qtd, qtdNecessaria:qnec, obs:obs, pesado:true, quem:quem, ts:Date.now()};
+    } else {
+      var peso=qtdNum((document.getElementById('cfRacaoPeso')||{}).value);
+      if(peso==null){ if(st){ st.style.color='var(--crm-critico)'; st.textContent='✋ Pese a ração e informe o valor (aceita 1/2, números).'; } return; }
+      var m=cfMinimoRacao(); def=m?(m.minimo-peso):null; unidade=m?m.unidade:'g';
+      reg={modo:'peso', pesoTrazido:peso, minimoNecessario:m?m.minimo:null, dias:m?m.dias:null, unidade:unidade, deficit:def, obs:obs, pesado:true, quem:quem, ts:Date.now()};
+    }
     if(!DB){ if(st){ st.style.color='var(--crm-atencao-text)'; st.textContent='Banco conectando…'; } return; }
     if(st){ st.style.color='var(--muted)'; st.textContent='Salvando…'; }
     DB.ref('auaulandia/estadias/'+cfEstadiaId+'/conferencia/racao').set(reg).then(function(){
       cfConf.racao=reg;
-      if(st){ st.style.color='var(--crm-ok)'; st.textContent='✅ Pesagem registrada.'; }
-      if(typeof audit==='function') audit('conferencia-racao',cfEstadiaId,{pet:(cfHosp&&cfHosp.nome)||'',peso:peso,deficit:def});
-      if(def!=null&&def>0) cfCriarAvisoRacao(def, reg.unidade);
+      if(st){ st.style.color='var(--crm-ok)'; st.textContent='✅ Ração conferida.'; }
+      if(typeof audit==='function') audit('conferencia-racao',cfEstadiaId,{pet:(cfHosp&&cfHosp.nome)||'',modo:reg.modo});
+      if(def!=null&&def>0) cfCriarAvisoRacao(def, unidade);
+      renderCfGate();
+    }).catch(function(e){ if(st){ st.style.color='var(--crm-critico)'; st.textContent='⚠️ Erro: '+e.message; } });
+  }
+  function cfComidaNec(){ var a=(cfEstadia.ficha&&cfEstadia.ficha.alim)||{}; return (a.comida&&a.comida.minimo)?a.comida.minimo:null; }
+  function cfCalcComida(){
+    var el=document.getElementById('cfComidaResultado'); if(!el) return;
+    cfComidaModoSync();
+    if(cfModoQtd('cfComidaModo')){ el.innerHTML='<div class="hint" style="margin-bottom:0">Confira os pacotes/porções × o necessário e registre (ex.: 1 pacote/dia × 12 dias = 12 pacotes).</div>'; return; }
+    var peso=qtdNum((document.getElementById('cfComidaPeso')||{}).value);
+    var nec=cfComidaNec();
+    if(!nec){ el.innerHTML='<div class="hint" style="margin-bottom:0">Sem cálculo automático — confira pela quantidade ou observação.</div>'; return; }
+    if(peso==null){ el.innerHTML='<div class="hint" style="margin-bottom:0">Pese a comida e informe o valor.</div>'; return; }
+    var def=nec-peso;
+    if(def>0) el.innerHTML='<div class="cf-resultado alerta"><span>⚠️ Faltam</span><span>'+def+' g</span></div>';
+    else el.innerHTML='<div class="cf-resultado ok"><span>✅ Suficiente</span><span>sobram '+(-def)+' g</span></div>';
+  }
+  function cfConfirmarComida(){
+    var st=document.getElementById('cf-comida-status'); if(!cfEstadiaId) return;
+    var obs=((document.getElementById('cfComidaObs')||{}).value||'').trim();
+    var quem=(typeof quemSou==='function'?quemSou():'-');
+    var reg, def=null;
+    if(cfModoQtd('cfComidaModo')){
+      var qtd=((document.getElementById('cfComidaQtd')||{}).value||'').trim();
+      if(!qtd){ if(st){ st.style.color='var(--crm-critico)'; st.textContent='✋ Informe a quantidade trazida (pacotes/porções).'; } return; }
+      var qnec=((document.getElementById('cfComidaQtdNec')||{}).value||'').trim();
+      reg={modo:'quantidade', qtdTrazida:qtd, qtdNecessaria:qnec, obs:obs, pesado:true, quem:quem, ts:Date.now()};
+    } else {
+      var peso=qtdNum((document.getElementById('cfComidaPeso')||{}).value);
+      if(peso==null){ if(st){ st.style.color='var(--crm-critico)'; st.textContent='✋ Pese a comida e informe o valor.'; } return; }
+      var nec=cfComidaNec(); def=(nec!=null)?(nec-peso):null;
+      reg={modo:'peso', pesoTrazido:peso, minimoNecessario:nec, unidade:'g', deficit:def, obs:obs, pesado:true, quem:quem, ts:Date.now()};
+    }
+    if(!DB){ if(st){ st.style.color='var(--crm-atencao-text)'; st.textContent='Banco conectando…'; } return; }
+    if(st){ st.style.color='var(--muted)'; st.textContent='Salvando…'; }
+    DB.ref('auaulandia/estadias/'+cfEstadiaId+'/conferencia/comida').set(reg).then(function(){
+      cfConf.comida=reg;
+      if(st){ st.style.color='var(--crm-ok)'; st.textContent='✅ Comida natural conferida.'; }
+      if(typeof audit==='function') audit('conferencia-comida',cfEstadiaId,{pet:(cfHosp&&cfHosp.nome)||'',modo:reg.modo});
       renderCfGate();
     }).catch(function(e){ if(st){ st.style.color='var(--crm-critico)'; st.textContent='⚠️ Erro: '+e.message; } });
   }
@@ -7805,7 +7908,6 @@
     DB.ref('auaulandia/avisos-racao').push(aviso).catch(function(){});
     if(typeof audit==='function') audit('racao-aviso',cfEstadiaId,{pet:cfHosp.nome||'',deficit:deficit});
   }
-
   // ---- Medicação: testar os alarmes (bipDespertador de verdade + confirmação humana) ----
   function renderCfMed(){
     var el=document.getElementById('cfMedList'); var card=document.getElementById('cf-med-card'); if(!el||!card) return;
@@ -7892,7 +7994,8 @@
       if(!te||!te.testado||!te.confirmado) out.push('Testar alarme: '+(m.nome||'medicamento'));
     });
     var a=(cfEstadia.ficha&&cfEstadia.ficha.alim)||{};
-    if(a.qtd&&a.refeicoes){ if(!cfConf.racao||!cfConf.racao.pesado) out.push('Pesar a ração'); }
+    if(a.qtd&&a.refeicoes){ if(!cfConf.racao||!cfConf.racao.pesado) out.push('Conferir a ração'); }
+    if(a.comida&&a.comida.qtd){ if(!cfConf.comida||!cfConf.comida.pesado) out.push('Conferir a comida natural'); }
     if(!(cfConf.fotos&&cfConf.fotos.length)) out.push('Adicionar ao menos 1 foto');
     return out;
   }
