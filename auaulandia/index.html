@@ -1561,11 +1561,23 @@
         <button type="button" class="ci-toggle-novo" onclick="ciToggleNovo()"><span data-icon="paw"></span><span id="ciToggleNovoTxt">Novo Hóspede — cadastrar do zero</span></button>
         <div class="ci-novo" id="ciNovoPainel" style="display:none">
           <div class="cnt">Cadastrar um FILHOt novo (nunca veio à Zêluz)</div>
-          <div class="hint">Preencha o essencial. O resto da ficha (alimentação, medicação, pertences) é preenchido na sequência do check-in.</div>
+          <div class="hint">Cadastro COMPLETO — os mesmos dados do Day Care. Vale no Day Care e na AuAulândia, é o mesmo cadastro-mestre.</div>
           <div class="field" style="margin-top:8px"><label>Nome do FILHOt *</label><input class="cad-in" id="ciNovoNome" placeholder="Ex: Thor" autocomplete="off"></div>
           <div class="cad-grid">
-            <div class="field"><label>Tutor</label><input class="cad-in" id="ciNovoTutor" placeholder="Nome do tutor" autocomplete="off"></div>
-            <div class="field"><label>Raça</label><input class="cad-in" id="ciNovoRaca" placeholder="Ex: Spitz Alemão, SRD…" autocomplete="off"></div>
+            <div class="field"><label>Nome do tutor</label><input class="cad-in" id="ciNovoTutor" placeholder="Nome do tutor" autocomplete="off"></div>
+            <div class="field"><label>Raça</label><input class="cad-in" id="ciNovoRaca" list="racasList" placeholder="wes → West Terrier" autocomplete="off"></div>
+          </div>
+          <div class="cad-grid">
+            <div class="field"><label>Data de nascimento</label><input type="text" class="cad-in" id="ciNovoNasc" inputmode="numeric" placeholder="dd/mm/aaaa" maxlength="10" autocomplete="off" oninput="ciNovoCalcIdade()" onblur="ciNovoNormNasc()"></div>
+            <div class="field"><label>Idade</label><input type="text" class="cad-in" id="ciNovoIdade" readonly placeholder="—"></div>
+          </div>
+          <div class="cad-grid">
+            <div class="field"><label>Sexo</label><div class="seg" id="ciNovoSexo" data-single><button onclick="pick(this)">Macho</button><button onclick="pick(this)">Fêmea</button></div></div>
+            <div class="field"><label>Castrado?</label><div class="seg gold" id="ciNovoCast" data-single><button onclick="pick(this)">Sim</button><button onclick="pick(this)">Não</button></div></div>
+          </div>
+          <div class="cad-grid">
+            <div class="field"><label>Peso (kg)</label><input class="cad-in" id="ciNovoPeso" inputmode="decimal" placeholder="Ex: 7,2" autocomplete="off"></div>
+            <div class="field"><label>Nº Microchip · últimos do visor</label><input class="cad-in" id="ciNovoChip" maxlength="6" inputmode="numeric" placeholder="000000" autocomplete="off"></div>
           </div>
           <div class="cn-warn" id="ciNovoWarn"></div>
           <button class="btn btn-primary" style="width:100%;margin-top:6px" onclick="ciCriarNovoHospede()">Cadastrar e iniciar check-in</button>
@@ -6874,9 +6886,19 @@
     if(t) t.textContent=open?'Fechar cadastro de novo hóspede':'Novo Hóspede — cadastrar do zero';
     if(open){ const n=document.getElementById('ciNovoNome'); if(n) setTimeout(function(){ try{ n.focus(); }catch(e){} },40); }
   }
+  // Idade ao vivo no cadastro Novo Hóspede (mesma regra do Day Care)
+  function ciNovoCalcIdade(){ const el=document.getElementById('ciNovoNasc'); const out=document.getElementById('ciNovoIdade'); if(!el||!out) return; const nasc=(typeof parseNascToISO==='function'?parseNascToISO(el.value):'')||el.value.trim(); out.value=(typeof calcIdade==='function')?calcIdade(nasc):''; }
+  function ciNovoNormNasc(){ const el=document.getElementById('ciNovoNasc'); if(!el) return; const iso=(typeof parseNascToISO==='function')?parseNascToISO(el.value):''; if(iso&&typeof isoParaBR==='function') el.value=isoParaBR(iso); }
   function ciCriarNovoHospede(){
     const nEl=document.getElementById('ciNovoNome'), tEl=document.getElementById('ciNovoTutor'), rEl=document.getElementById('ciNovoRaca'), w=document.getElementById('ciNovoWarn');
     const nome=((nEl&&nEl.value)||'').trim(), tutor=((tEl&&tEl.value)||'').trim(), raca=((rEl&&rEl.value)||'').trim();
+    // Cadastro COMPLETO — os mesmos campos do Day Care
+    const nascRaw=((document.getElementById('ciNovoNasc')||{}).value||'').trim();
+    const nasc=(typeof parseNascToISO==='function'?parseNascToISO(nascRaw):'')||nascRaw;
+    const sexo=(typeof segVal==='function')?segVal('ciNovoSexo'):'';
+    const castrado=(typeof segVal==='function')?segVal('ciNovoCast'):'';
+    const peso=((document.getElementById('ciNovoPeso')||{}).value||'').trim();
+    const chip=((document.getElementById('ciNovoChip')||{}).value||'').trim();
     if(w) w.textContent='';
     if(!nome){ if(w) w.textContent='Escreva o nome do FILHOt.'; if(nEl) nEl.focus(); return; }
     // Nível 1 — nome+tutor+raça idênticos a OUTRO cadastro: é o mesmo FILHOt em duplicidade. Bloqueia.
@@ -6893,15 +6915,18 @@
       if(w) w.textContent='Cadastro não concluído — confira se não é o mesmo FILHOt já cadastrado.';
       return;
     }
-    const novo={n:nome,raca:raca,freq:'',tutor:tutor,nasc:'',dias:[]};
+    const novo={n:nome,raca:raca,freq:'',tutor:tutor,nasc:nasc,sexo:sexo,castrado:castrado,peso:peso,chip:chip,dias:[]};
     const key=pelKey(novo);
     PELUDINHOS.push(novo);
     PELUDINHOS.sort(function(a,b){ return jsNorm(a.n).localeCompare(jsNorm(b.n))||jsNorm(a.tutor).localeCompare(jsNorm(b.tutor)); });
-    const regCad={_novo:true,n:nome,tutor:tutor,raca:raca,nasc:'',dias:[],freq:''};
+    // Cadastro-mestre COMPLETO (mesmos campos do Day Care) — vale no Day Care e na AuAulândia
+    const regCad={_novo:true,n:nome,tutor:tutor,raca:raca,nasc:nasc,sexo:sexo,castrado:castrado,peso:peso,chip:chip,dias:[],freq:''};
     try{ localStorage.setItem('zeluz_pel_'+key,JSON.stringify(regCad)); }catch(e){}
     if(typeof DB!=='undefined'&&DB) DB.ref('daycare/cadastro/'+key).update(regCad).catch(function(){});
-    if(typeof audit==='function') audit('checkin','novo hóspede cadastrado no check-in',{pet:nome,tutor:tutor,raca:raca});
+    if(typeof pelCadCache!=='undefined') pelCadCache[key]=Object.assign({},pelCadCache[key]||{},regCad);
+    if(typeof audit==='function') audit('checkin','novo hóspede cadastrado no check-in (completo)',{pet:nome,tutor:tutor,raca:raca});
     if(nEl) nEl.value=''; if(tEl) tEl.value=''; if(rEl) rEl.value='';
+    var _clr=['ciNovoNasc','ciNovoIdade','ciNovoPeso','ciNovoChip']; _clr.forEach(function(id){ var e=document.getElementById(id); if(e) e.value=''; }); if(typeof setSeg==='function'){ setSeg('ciNovoSexo',''); setSeg('ciNovoCast',''); }
     const p=document.getElementById('ciNovoPainel'); if(p) p.style.display='none';
     const t=document.getElementById('ciToggleNovoTxt'); if(t) t.textContent='Novo Hóspede — cadastrar do zero';
     const idx=PELUDINHOS.findIndex(function(p2){ return pelKey(p2)===key; });
