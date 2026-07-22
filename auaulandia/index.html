@@ -1687,6 +1687,21 @@
         <div class="field"><label>Banho na saída?</label>
           <div class="seg gold" id="ciBanho" data-single><button onclick="pick(this);ciBanhoChange()">Sim</button><button onclick="pick(this);ciBanhoChange()">Não</button></div></div>
         <div id="ciSpaPainel" style="display:none">
+          <div class="field"><label>Qual banho?</label>
+            <input class="cad-in" id="ciBanhoTipo" list="banhosList" placeholder="Ex: Banho Dermoprotetor · Hidratante · Ozônio · Tosa Higiênica" autocomplete="off">
+            <datalist id="banhosList">
+              <option value="Banho Dermoprotetor"></option>
+              <option value="Banho Hidratante"></option>
+              <option value="Banho de Ozônio"></option>
+              <option value="Banho Clareador"></option>
+              <option value="Banho Antipulgas"></option>
+              <option value="Banho + Tosa Higiênica"></option>
+              <option value="Banho + Tosa na Máquina"></option>
+              <option value="Banho + Tosa na Tesoura"></option>
+              <option value="Hidratação"></option>
+              <option value="Desembolo"></option>
+            </datalist>
+          </div>
           <div class="field"><label>Horário do banho</label><input type="time" class="cad-in" id="ciBanhoHora"></div>
           <label class="ci-spa-conf"><input type="checkbox" id="ciBanhoConfirmar" onchange="ciBanhoChange()"><span>O tutor ainda não sabe a hora que chega — deixar <strong>a confirmar</strong></span></label>
         </div>
@@ -4535,15 +4550,24 @@
   // está na tela, com volume mais alto. Só para quando a pessoa toca "Dei o remédio" ou "ADIAR 5 min".
   // Dose atrasada é segurança: o alarme não some sozinho nem cala sozinho.
   let despMedAC=null, despMedLoopTimer=null, despMedSnooze={};
+  // Sirene "despertador antigo": rajada de pulsos alternando 2 tons, volume ALTO e estridente.
+  // Toca em loop até uma ação humana ("Dei o remédio" ou "ADIAR 5 min"). Vibra o aparelho junto.
   function bipMedPadrao(ac){
     try{
-      [0,0.3,0.6].forEach(function(t){ const o=ac.createOscillator(), g=ac.createGain();
-        o.type='square'; o.frequency.value=980; g.gain.value=0.0001;
-        o.connect(g); g.connect(ac.destination);
+      const freqs=[880,1245,880,1245,880,1245,880];
+      freqs.forEach(function(f,i){
+        const t=i*0.155;
+        const o=ac.createOscillator(), o2=ac.createOscillator(), g=ac.createGain();
+        o.type='square'; o2.type='sawtooth';
+        o.frequency.value=f; o2.frequency.value=f*1.008; // leve dissonância = mais penetrante
+        g.gain.value=0.0001; o.connect(g); o2.connect(g); g.connect(ac.destination);
         const t0=ac.currentTime+t;
-        g.gain.exponentialRampToValueAtTime(0.6, t0+0.02);
-        g.gain.exponentialRampToValueAtTime(0.0001, t0+0.26);
-        o.start(t0); o.stop(t0+0.28); });
+        g.gain.exponentialRampToValueAtTime(0.92, t0+0.008);
+        g.gain.setValueAtTime(0.92, t0+0.11);
+        g.gain.exponentialRampToValueAtTime(0.0001, t0+0.145);
+        o.start(t0); o2.start(t0); o.stop(t0+0.155); o2.stop(t0+0.155);
+      });
+      if(navigator.vibrate){ try{ navigator.vibrate([250,90,250,90,250,90,250]); }catch(e){} }
     }catch(e){}
   }
   function bipMedLoopStart(){
@@ -4552,11 +4576,13 @@
       despMedAC=new AC();
       try{ if(despMedAC.state==='suspended') despMedAC.resume(); }catch(e){}
       bipMedPadrao(despMedAC);
-      despMedLoopTimer=setInterval(function(){ if(despMedAC) bipMedPadrao(despMedAC); }, 2500);
+      // rajada dura ~1,1s; repete a cada 1,3s → praticamente contínuo, como um despertador tocando
+      despMedLoopTimer=setInterval(function(){ if(despMedAC){ try{ if(despMedAC.state==='suspended') despMedAC.resume(); }catch(e){} bipMedPadrao(despMedAC); } }, 1300);
     }catch(e){ /* som é reforço; o banner que não some é a segurança */ }
   }
   function bipMedLoopStop(){
     if(despMedLoopTimer){ clearInterval(despMedLoopTimer); despMedLoopTimer=null; }
+    if(navigator.vibrate){ try{ navigator.vibrate(0); }catch(e){} }
     if(despMedAC){ try{ despMedAC.close(); }catch(e){} despMedAC=null; }
   }
   function fecharDespertador(k){
@@ -6846,6 +6872,7 @@
     var _cq=document.getElementById('ciComidaQtd'); if(_cq) _cq.value='';
     var _ct=document.getElementById('ciComidaTraz'); if(_ct) _ct.value='';
     var _cp=document.getElementById('ciComidaPainel'); if(_cp) _cp.style.display='none';
+    var _bt=document.getElementById('ciBanhoTipo'); if(_bt) _bt.value='';
     var _bh=document.getElementById('ciBanhoHora'); if(_bh){ _bh.value=''; _bh.disabled=false; }
     var _bc=document.getElementById('ciBanhoConfirmar'); if(_bc) _bc.checked=false;
     var _sp=document.getElementById('ciSpaPainel'); if(_sp) _sp.style.display='none';
@@ -7232,7 +7259,8 @@
         }
         if(typeof ciAlimTipoChange==='function') ciAlimTipoChange();
       }
-      // Spa Dermoprotetor — restaura horário / a confirmar da última vez
+      // Spa Dermoprotetor — restaura tipo / horário / a confirmar da última vez
+      const _bt=document.getElementById('ciBanhoTipo'); if(_bt&&spa.tipo) _bt.value=spa.tipo;
       const _bh=document.getElementById('ciBanhoHora'); if(_bh&&spa.horario) _bh.value=spa.horario;
       const _bc=document.getElementById('ciBanhoConfirmar'); if(_bc) _bc.checked=!!spa.aConfirmar;
       if(typeof ciBanhoChange==='function') ciBanhoChange();
@@ -7300,7 +7328,7 @@
                }:null) },
         // Spa Dermoprotetor (banho na saída) — box próprio. banho mantido em ficha.banho p/ compatibilidade.
         banho:banho,
-        spa:{ banho:banho, horario:horario, aConfirmar:(banho==='Sim'&&aConfirmar) }
+        spa:{ banho:banho, tipo:(banho==='Sim'?((document.getElementById('ciBanhoTipo')||{}).value||'').trim():''), horario:horario, aConfirmar:(banho==='Sim'&&aConfirmar) }
       },
       pertences:ciColetarPert()
     };
@@ -7379,7 +7407,7 @@
       if(a.dias) L.push('Estadia: '+a.dias+' dia(s) · ração necessária aprox.: '+(a.minimo||0)+ciUnidLbl(a.unidade)+(a.trazida?(' · trazido: '+a.trazida+'g'):''));
       if(a.comida&&a.comida.qtd){ L.push('Comida natural: '+a.comida.qtd+'g/refeição · em: '+ciComidaRefNomes(a.comida.refeicoes).join(', ')+(a.comida.trazida?(' · trazido: '+a.comida.trazida+'g'):'')+(a.comida.minimo?(' · necessária aprox.: '+a.comida.minimo+'g'):'')); } }
     const spa=(d.ficha.spa)||{};
-    if(spa.banho){ let bl='Banho na saída (Spa Dermoprotetor): '+spa.banho; if(spa.banho==='Sim'){ bl += spa.aConfirmar?' — horário a confirmar':(spa.horario?(' — '+spa.horario):''); } L.push(bl); }
+    if(spa.banho){ let bl='Banho na saída (Spa Dermoprotetor): '+spa.banho; if(spa.banho==='Sim'){ if(spa.tipo) bl+=' — '+spa.tipo; bl += spa.aConfirmar?' — horário a confirmar':(spa.horario?(' — '+spa.horario):''); } L.push(bl); }
     const mv=Object.values(meds);
     if(mv.length){ L.push(''); L.push('*MEDICAÇÃO / SUPLEMENTOS — HORÁRIOS*'); mv.forEach(function(it){ var per=medPeriodoTxt(it); L.push('- '+it.nome+' — '+medDoseTxt(it)+' — '+ (it.horarios||[]).join(', ')+(per?(' — '+per):'')); }); }
     if(d.pertences.length){ L.push(''); L.push('Pertences: '+d.pertences.map(function(p){ return p.nome+(p.spec?(' ('+p.spec+')'):''); }).join('; ')); }
@@ -7438,7 +7466,7 @@
       }
     }
     add('Banho na saida (Spa Dermoprotetor)',{bold:true,size:12,gap:3});
-    add('Banho na saida: '+(spa.banho||'nao informado')+(spa.banho==='Sim'?(spa.aConfirmar?' - horario a confirmar':(spa.horario?(' - as '+spa.horario):'')):''),{gap:3});
+    add('Banho na saida: '+(spa.banho||'nao informado')+(spa.banho==='Sim'?((spa.tipo?(' - '+spa.tipo):'')+(spa.aConfirmar?' - horario a confirmar':(spa.horario?(' - as '+spa.horario):''))):''),{gap:3});
     add('DIA DA SAIDA: '+(d.saida?ciBRdata(d.saida):'a confirmar'),{bold:true,gap:8});
     if(meds.length){ add('MEDICACAO / SUPLEMENTOS - HORARIOS',{bold:true,size:12,red:true}); meds.forEach(function(it){ var per=medPeriodoTxt(it); add('- '+it.nome+' - '+medDoseTxt(it)+' - '+((it.horarios||[]).join(', '))+(per?(' - '+per):''),{red:true}); }); lines.push({t:'',size:6,gap:2}); }
     if(d.pertences.length){ add('Pertences',{bold:true,size:12}); d.pertences.forEach(function(p){ add('- '+p.nome+(p.spec?(' - '+p.spec):''),{}); }); lines.push({t:'',size:6,gap:2}); }
@@ -7544,7 +7572,7 @@
       h+='</div>';
     }
     var spa=(d.ficha.spa)||{};
-    var bl='<strong>Banho na saída:</strong> '+esc(spa.banho||'não informado'); if(spa.banho==='Sim'){ bl += spa.aConfirmar?' — horário a confirmar':(spa.horario?(' — às '+esc(spa.horario)):''); }
+    var bl='<strong>Banho na saída:</strong> '+esc(spa.banho||'não informado'); if(spa.banho==='Sim'){ if(spa.tipo) bl+=' — <strong>'+esc(spa.tipo)+'</strong>'; bl += spa.aConfirmar?' — horário a confirmar':(spa.horario?(' — às '+esc(spa.horario)):''); }
     h+='<div class="pf-sec"><h3>Spa Dermoprotetor — Banho na saída</h3><div class="pf-row">'+bl+'</div><div class="pf-row" style="margin-top:4px;font-size:15px"><strong>DIA DA SAÍDA: '+(d.saida?ciBRdata(d.saida):'a confirmar')+'</strong></div></div>';
     if(mv.length){ h+='<div class="pf-med"><h3>⚠ MEDICAÇÃO / SUPLEMENTOS — HORÁRIOS</h3>'; mv.forEach(function(it){ var per=medPeriodoTxt(it); h+='<div class="pf-mrow">'+esc(it.nome)+' — '+esc(medDoseTxt(it))+' — '+esc((it.horarios||[]).join(', '))+(per?(' — '+esc(per)):'')+'</div>'; }); h+='</div>'; }
     if(d.pertences.length){ h+='<div class="pf-sec"><h3>Pertences</h3>'+d.pertences.map(function(p){ return '<div class="pf-row">• '+esc(p.nome)+(p.spec?(' — '+esc(p.spec)):'')+'</div>'; }).join('')+'</div>'; }
