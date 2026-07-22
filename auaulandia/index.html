@@ -1687,21 +1687,8 @@
         <div class="field"><label>Banho na saída?</label>
           <div class="seg gold" id="ciBanho" data-single><button onclick="pick(this);ciBanhoChange()">Sim</button><button onclick="pick(this);ciBanhoChange()">Não</button></div></div>
         <div id="ciSpaPainel" style="display:none">
-          <div class="field"><label>Qual banho?</label>
-            <input class="cad-in" id="ciBanhoTipo" list="banhosList" placeholder="Ex: Banho Dermoprotetor · Hidratante · Ozônio · Tosa Higiênica" autocomplete="off">
-            <datalist id="banhosList">
-              <option value="Banho Dermoprotetor"></option>
-              <option value="Banho Hidratante"></option>
-              <option value="Banho de Ozônio"></option>
-              <option value="Banho Clareador"></option>
-              <option value="Banho Antipulgas"></option>
-              <option value="Banho + Tosa Higiênica"></option>
-              <option value="Banho + Tosa na Máquina"></option>
-              <option value="Banho + Tosa na Tesoura"></option>
-              <option value="Hidratação"></option>
-              <option value="Desembolo"></option>
-            </datalist>
-          </div>
+          <div class="field"><label>Qual banho? <span style="font-weight:600;color:var(--muted)">(opcional — pode deixar em branco)</span></label>
+            <input class="cad-in" id="ciBanhoTipo" placeholder="Escreva o banho, se souber" autocomplete="off"></div>
           <div class="field"><label>Horário do banho</label><input type="time" class="cad-in" id="ciBanhoHora"></div>
           <label class="ci-spa-conf"><input type="checkbox" id="ciBanhoConfirmar" onchange="ciBanhoChange()"><span>O tutor ainda não sabe a hora que chega — deixar <strong>a confirmar</strong></span></label>
         </div>
@@ -4692,8 +4679,12 @@
     });
     Promise.all(jobs).catch(function(){}).then(function(){ if(typeof carregarMedAtrasadaGestora==='function') carregarMedAtrasadaGestora(); });
   }
+  // Quem RECEBE o despertador de dose de medicação: só quem DÁ o remédio —
+  // monitores, plantonistas e a gestora (Marcia). NUNCA a veterinária, nem consultora/conferência.
+  function papelRecebeAlarmeMed(){ var r=document.body.dataset.role; return r==='monitor'||r==='plantonista'||r==='gestao'||r==='diretoria'; }
   function checarDespertadorMed(){
     try{
+      if(!papelRecebeAlarmeMed()) return; // vet/consultora/supervisora/conferência não recebem alarme de dose
       if(!ehHojeAua()) return;
       if(despMedNaTela) return; // já tem um na tela
       if(!MED_AGENDA_TODOS.length||!DB) return;
@@ -7832,7 +7823,13 @@
   }
   function cfMinimoRacao(){
     var a=(cfEstadia.ficha&&cfEstadia.ficha.alim)||{};
-    var qtd=qtdNum(a.qtd); var ref=parseInt(a.refeicoes,10)||0; var dias=cfDiasEstadia();
+    var dias=cfDiasEstadia();
+    // USA o necessário JÁ CALCULADO no check-in (a.minimo) — ele respeita os dias parciais:
+    // dia de entrada e de saída só contam as refeições marcadas (ex.: chega só p/ o jantar,
+    // sai só depois do café). Recalcular aqui com qtd×ref×dias inflava o total (contava dias
+    // cheios) e gerava falso "faltando". Fallback ao cálculo antigo só se o check-in não trouxe minimo.
+    if(a.minimo && a.minimo>0) return {minimo:Math.round(a.minimo), dias:dias, unidade:a.unidade||'g'};
+    var qtd=qtdNum(a.qtd); var ref=parseInt(a.refeicoes,10)||0;
     if(!qtd||!ref||!dias) return null;
     return {minimo:Math.round(qtd*ref*dias), dias:dias, unidade:a.unidade||'g'};
   }
