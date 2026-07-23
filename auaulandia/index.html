@@ -4393,7 +4393,12 @@
   carregarRacas();
 
   // ===== PELUDINHOS — cadastro mestre (118, consolidado das 5 turmas) =====
-  const PELUDINHOS=[
+  // var (não const) de propósito: PELUDINHOS é lido por guards `typeof PELUDINHOS!=='undefined'`
+  // em código que roda no carregamento (ex.: renderHosp → temRecomAtiva → medAgendaKey). Com const,
+  // esse typeof estoura por TDZ antes desta linha e aborta o resto do init (matava o login). Com var,
+  // PELUDINHOS vale undefined até aqui e os guards funcionam como o autor pretendia. Nunca é reatribuída
+  // (só .push/.sort/.splice), então é equivalente ao const em comportamento.
+  var PELUDINHOS=[
     {n:"Amora",raca:"SRD",freq:"1x",tutor:"Cristiane",nasc:"2020-07-01",dias:["qua"]},
     {n:"Backer",raca:"Spitz",freq:"2x",tutor:"Fernanda",nasc:"2017-07-20",dias:["seg","qua"]},
     {n:"Bartolomeu",raca:"Buldogue Francês",freq:"2x",tutor:"Isac",nasc:"2023-10-11",dias:["ter","qui"]},
