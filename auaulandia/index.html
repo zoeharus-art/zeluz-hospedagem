@@ -2527,14 +2527,30 @@
     try{
       if(h.refKey){
         if(typeof pelCadCache!=='undefined'&&pelCadCache[h.refKey]&&pelCadCache[h.refKey].tutor) return pelCadCache[h.refKey].tutor;
-        if(typeof PELUDINHOS!=='undefined'){ const pel=PELUDINHOS.find(p=>pelKey(p)===h.refKey); if(pel) return pelGet(pel,'tutor')||''; }
+        if(typeof PELUDINHOS!=='undefined'){ const pel=PELUDINHOS.find(p=>pelKey(p)===h.refKey); if(pel&&pelGet(pel,'tutor')) return pelGet(pel,'tutor'); }
+      }
+      // sem refKey ou refKey sem tutor: casa por NOME (+raça) no cadastro-mestre — recupera
+      // o tutor certo de hóspede antigo lançado sem vínculo (era o caso do Dolly/Luna/Ragnar).
+      if(typeof PELUDINHOS!=='undefined'&&h.nome){
+        const pel=PELUDINHOS.find(p=>jsNorm(p.n)===jsNorm(h.nome)&&(!h.raca||jsNorm(pelGet(p,'raca'))===jsNorm(h.raca)));
+        if(pel&&pelGet(pel,'tutor')) return pelGet(pel,'tutor');
       }
     }catch(e){}
     const cad=getCad(h); if(cad&&cad.tutor) return cad.tutor;
     const raw=(h.tutor||'').trim();
-    try{ if(raw && typeof RACAS!=='undefined' && RACAS.some(r=>r.toLowerCase()===raw.toLowerCase())) return ''; }catch(e){}
+    // NUNCA devolver a raça como se fosse tutor (dado antigo com a raça no campo tutor —
+    // por isso apareciam Westie/Cocker/SRD no lugar do nome do tutor).
+    try{
+      if(raw){
+        if(h.raca && raw.toLowerCase()===String(h.raca).trim().toLowerCase()) return '';
+        if(typeof RACAS!=='undefined' && RACAS.some(r=>r.toLowerCase()===raw.toLowerCase())) return '';
+      }
+    }catch(e){}
     return raw;
   }
+  // Resolvedores robustos (usam extraDoHosp, que casa refKey + nome__tutor + mestre + local).
+  function fotoDe(h){ try{ const ex=extraDoHosp(h); if(ex&&ex.foto) return ex.foto; const c=getCad(h); if(c&&c.foto) return c.foto; }catch(e){} return ''; }
+  function chipDe(h){ try{ const ex=extraDoHosp(h); return String((ex&&(ex.chip||ex.microchip))||'').trim(); }catch(e){ return ''; } }
   function renderHosp(){
     // ordem alfabética (a moradora Repolho por último)
     hospedes.sort((a,b)=>{ if(!!a.mascote!==!!b.mascote) return a.mascote?1:-1; return (a.nome||'').localeCompare((b.nome||''),'pt',{sensitivity:'base'}); });
@@ -2548,8 +2564,9 @@
          <div class="plus">+</div><div class="t">Adicionar pernoite<br><span style="font-size:10px;font-weight:600;color:var(--muted)">aluno do Day Care</span></div></div>`+
       hospedes.map((h,i)=>{
         const cad=getCad(h);
-        const ph = cad.foto
-          ? `<div class="ph" style="background-image:url('${cad.foto}');background-size:cover;background-position:center"></div>`
+        const _fotoCard = fotoDe(h);
+        const ph = _fotoCard
+          ? `<div class="ph" style="background-image:url('${_fotoCard}');background-size:cover;background-position:center"></div>`
           : `<div class="ph" style="background:${h.cor}">${h.ini}</div>`;
         const raca = cad.raca || h.raca || racasMap[(h.nome+'__'+h.tutor).toLowerCase()] || (h.mascote?'Moradora Zêluz':'<span style="color:#b6ad9c;font-style:italic">Raça a cadastrar</span>');
         const tp = h.mascote ? 'moradora' : (h.hospede ? 'hospede' : (h.pernoite ? 'pernoite' : 'hospede'));
@@ -2576,6 +2593,7 @@
           <div class="nm">${cad.nome||h.nome}</div>
           <div class="br">${raca}</div>
           <div class="hosp-tutor">${h.mascote?'Nossa Zelozinha':(tutor?'Tutor: '+tutor:'Tutor a confirmar')}</div>
+          ${(function(){var mc=chipDe(h); return (!h.mascote&&mc)?`<div class="hosp-chip" style="font-size:11px;font-weight:800;color:var(--z-gold-deep);margin-top:2px">Microchip: ${mc}</div>`:'';})()}
           <div class="tarja ${tj[0]}">${tj[1]}</div>
           ${h.saidaHoje?'<div class="saida-hoje">Dormiu · sai hoje</div>':''}
         </div>`;
@@ -2681,7 +2699,7 @@
     const tp=h.mascote?'Moradora':(h.hospede?'Hóspede':(h.pernoite?'Pernoite':'Hóspede'));
     const tut=cad.tutor||tutorDe(h);
     document.getElementById('hf-meta').innerHTML = (p.length?p.join(' · ')+' · ':'') + '<strong>'+tp+'</strong>' + (h.mascote?' · Nossa Zelozinha':(tut?' · Tutor: '+tut:' · Tutor a confirmar'));
-    const cl=document.getElementById('hf-chipline'); if(cl) cl.textContent='Microchip: '+(cad.chip||'--');
+    const cl=document.getElementById('hf-chipline'); if(cl) cl.textContent='Microchip: '+(cad.chip||cad.microchip||(typeof chipDe==='function'?chipDe(h):'')||'--');
   }
   function onCad(){
     if(!currentHosp) return;
@@ -2723,7 +2741,7 @@
     document.getElementById('hf-tutor').value=cad.tutor||(currentHosp&&currentHosp.tutor)||'';
     document.getElementById('hf-chip').value=cad.chip||'';
     const b=document.getElementById('hf-brinq'); if(b) b.value=cad.brinquedos||'';
-    if(cad.foto){ const av=document.getElementById('hf-av'); av.style.backgroundImage=`url('${cad.foto}')`; av.style.backgroundSize='cover'; av.style.backgroundPosition='center'; av.textContent=''; }
+    { const _f=cad.foto||((currentHosp&&typeof fotoDe==='function')?fotoDe(currentHosp):''); const av=document.getElementById('hf-av'); if(av&&_f){ av.style.backgroundImage=`url('${_f}')`; av.style.backgroundSize='cover'; av.style.backgroundPosition='center'; av.textContent=''; } }
     atualizarHeader(cad);
   }
   function onBrinq(){ if(!currentHosp) return; const v=document.getElementById('hf-brinq').value||''; setInfo(currentHosp,{brinquedos:v}); if(DB) DB.ref('auaulandia/cadastro/'+cadKey(currentHosp)).update({brinquedos:v}).catch(()=>{}); }
