@@ -3333,14 +3333,26 @@
       const log=MED_AGENDA_LOG[doseId]; if(log&&log.avulso) rows.push({id:null,doseId:doseId,nome:log.nome,q:log.q,u:log.u,h:log.horario,feito:true,quem:log.quem,ts:log.ts,avulso:true});
     });
     if(!rows.length){ el.innerHTML=estoqueHTML+placarHTML+'<div class="hint">Nenhum horário agendado para hoje.</div>'; return; }
-    rows.sort(function(a,b){ return (a.h||'').localeCompare(b.h||''); });
-    el.innerHTML=estoqueHTML+placarHTML+rows.map(function(r){
-      const qtd=fmtQtd(r.q,r.u);
+    // ANTI-DUPLICAÇÃO: se a agenda tem itens repetidos (mesmo nome+dose no mesmo horário), mostra
+    // UMA linha só. Se qualquer cópia já foi dada, a linha aparece como "dado" (prefere o registro feito).
+    var vistos={}; var unicas=[];
+    rows.forEach(function(r){
+      var k=jsNorm(r.nome||'')+'|'+(r.h||'')+'|'+jsNorm(String(r.q||''))+'|'+jsNorm(String(r.u||''))+'|'+(r.avulso?'av':'ag');
+      if(vistos[k]!=null){ var ex=unicas[vistos[k]]; if(r.feito && !ex.feito){ unicas[vistos[k]]=r; } return; }
+      vistos[k]=unicas.length; unicas.push(r);
+    });
+    unicas.sort(function(a,b){ return (a.h||'').localeCompare(b.h||''); });
+    el.innerHTML=estoqueHTML+placarHTML+unicas.map(function(r){
+      const dose=(typeof medDoseTxt==='function')?medDoseTxt({nome:r.nome,q:r.q,u:r.u,local:r.local}):fmtQtd(r.q,r.u);
       return '<div class="mag-dose'+(r.feito?' feito':'')+'">'
-        +'<div class="mag-dose-info"><strong>'+escAttr(r.h||'--:--')+'</strong> — '+escAttr(r.nome||'')+(qtd?' · '+escAttr(qtd):'')+(r.avulso?' <span style="font-weight:800;color:var(--muted)">(avulsa)</span>':'')+'</div>'
+        +'<div class="mag-dose-info" style="flex:1;min-width:0">'
+          +'<div style="font-size:11px;font-weight:800;color:var(--muted)">'+escAttr(r.h||'--:--')+(r.avulso?' · avulsa':'')+'</div>'
+          +'<div style="font-size:16px;font-weight:800;color:var(--z-blue);line-height:1.2">'+escAttr(r.nome||'')+'</div>'
+          +(dose?'<div style="font-size:14px;font-weight:700;color:var(--z-gold-deep)">'+escAttr(dose)+'</div>':'')
+        +'</div>'
         +(r.feito
           ? '<div class="mag-dose-ok">✅ Dado por '+escAttr(r.quem||'?')+(r.ts?' às '+new Date(r.ts).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'}):'')+'</div>'
-          : '<button type="button" class="btn btn-gold" onclick="registrarDoseAgendada(\''+r.id+'\',\''+r.h+'\')">Dei agora</button>')
+          : (r.id?'<button type="button" class="btn btn-gold" onclick="registrarDoseAgendada(\''+r.id+'\',\''+r.h+'\')">Dei agora</button>':'<span class="mag-dose-ok" style="color:var(--muted)">registrada</span>'))
       +'</div>';
     }).join('');
   }
