@@ -1920,7 +1920,8 @@
     <!-- LISTA de todos os hóspedes (como o almoço) -->
     <div id="vet-lista">
       <div id="vetReavalBanner"></div>
-      <div class="role-note"><span data-icon="heart"></span><span><strong>Cuidado Vet.</strong> Selecione o hóspede para ver a ficha, registrar a <strong>consulta</strong> (temperatura, peso, cuidados, recomendações) e prescrever. A consulta é a <strong>fonte</strong> que cria, altera ou suspende a medicação — a mudança desce viva para a ficha do peludinho e dispara os alarmes na hora.</span></div>
+      <div class="role-note"><span data-icon="heart"></span><span><strong>Cuidado Vet.</strong> Busque o FILHOt que você vai examinar — hóspede ou aluno do Day Care. Abra a ficha para registrar a <strong>consulta</strong>, a <strong>observação para o tutor</strong> e prescrever. A consulta é a <strong>fonte</strong> que cria, altera ou suspende a medicação — desce viva e dispara os alarmes.</span></div>
+      <div class="card" style="margin-bottom:12px"><div class="field"><label>Buscar no hotel / Day Care</label><input class="cad-in" id="vetBusca" placeholder="Digite o nome do FILHOt, tutor ou raça…" autocomplete="off" oninput="renderVetLista()"></div></div>
       <div class="vet-grid" id="vetGrid"></div>
     </div>
 
@@ -4953,10 +4954,24 @@
     renderVetLista();
     checarReavaliacoesHoje();
   }
+  var VET_LISTA=[]; // lista efetiva mostrada na busca da vet — abrirVetFicha indexa aqui
   function renderVetLista(){
     var el=document.getElementById('vetGrid'); if(!el) return;
-    if(!hospedes||!hospedes.length){ el.innerHTML='<div class="av-empty" style="grid-column:1/-1"><div class="big">Sem hóspedes hoje</div>Quando houver peludinhos hospedados, eles aparecem aqui para a consulta.</div>'; return; }
-    el.innerHTML=hospedes.map(function(h,i){
+    var q=(document.getElementById('vetBusca')&&document.getElementById('vetBusca').value)?jsNorm(document.getElementById('vetBusca').value):'';
+    // Base: hóspedes de hoje. Ao buscar, inclui TODO o cadastro-mestre (Day Care também) que casar.
+    var base=(hospedes||[]).slice();
+    if(q && typeof PELUDINHOS!=='undefined'){
+      var jaK={}; base.forEach(function(h){ jaK[dcKey(h.nome,h.tutor)]=1; });
+      PELUDINHOS.forEach(function(p){ if(pelInativo&&pelInativo(p)) return; var k=dcKey(p.n,p.tutor); if(jaK[k]) return;
+        var nome=pelNome(p), tutor=pelGet(p,'tutor')||'', raca=pelGet(p,'raca')||'';
+        if(jsNorm(nome+' '+tutor+' '+raca).indexOf(q)<0) return;
+        jaK[k]=1; base.push({nome:nome, tutor:tutor, raca:raca, refKey:pelKey(p), ini:(nome[0]||'?').toUpperCase(), cor:'#234D67'});
+      });
+    }
+    var lista=base.filter(function(h){ if(!q) return true; var cad=(typeof getCad==='function')?getCad(h):{}; return jsNorm((cad.nome||h.nome||'')+' '+((typeof tutorDe==='function'?tutorDe(h):h.tutor)||'')+' '+(cad.raca||h.raca||'')).indexOf(q)>=0; });
+    VET_LISTA=lista;
+    if(!lista.length){ el.innerHTML='<div class="av-empty" style="grid-column:1/-1"><div class="big">'+(q?'Nada encontrado':'Sem hóspedes hoje')+'</div>'+(q?'Tente outro nome ou tutor.':'Busque acima um FILHOt do hotel ou do Day Care.')+'</div>'; return; }
+    el.innerHTML=lista.map(function(h,i){
       var cad=(typeof getCad==='function')?getCad(h):{};
       var ph=cad.foto?('<div class="ph" style="background-image:url(\''+cad.foto+'\');background-size:cover;background-position:center"></div>'):('<div class="ph" style="background:'+(h.cor||'#234D67')+'">'+escAttr((h.ini||(h.nome||'?')[0]||'?'))+'</div>');
       var ex=(typeof extraDoHosp==='function')?extraDoHosp(h):{};
@@ -4972,7 +4987,7 @@
   function fecharVetFicha(){ document.getElementById('vet-ficha').style.display='none'; document.getElementById('vet-lista').style.display='block'; renderVetLista(); }
 
   function abrirVetFicha(i){
-    var h=hospedes[i]; if(!h) return; vetHosp=h; vcFotosBuf=[]; vetMedEditId=null;
+    var h=(VET_LISTA&&VET_LISTA[i])||hospedes[i]; if(!h) return; vetHosp=h; vcFotosBuf=[]; vetMedEditId=null;
     var cad=(typeof getCad==='function')?getCad(h):{};
     var av=document.getElementById('vf-av');
     if(cad.foto){ av.style.backgroundImage="url('"+cad.foto+"')"; av.style.backgroundSize='cover'; av.style.backgroundPosition='center'; av.textContent=''; }
