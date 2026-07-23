@@ -2825,7 +2825,22 @@
   //   auaulandia/medicacao-log/{dataKeyAtual}/{chaveFILHOt}/{itemId_HH-MM} = {nome,q,u,horario,quem,ts,avulso}
   // chaveFILHOt = refKey (cadastro-mestre) quando existe — assim a agenda segue o FILHOt entre
   // estadias — senão nome__tutor, igual ao resto do arquivo (pelKey/fichaKey).
-  function medAgendaKey(h){ h=h||currentHosp; if(!h) return ''; const base=h.refKey||((h.nome||'')+'__'+(h.tutor||'')); return String(base).toLowerCase().replace(/[.#$\[\]\/]/g,'-'); }
+  // Chave CANÔNICA da agenda de medicação — vet, check-in e plantonista SEMPRE caem no MESMO
+  // FILHOt (nunca "dois Zeus"). Prioridade: refKey → casar no cadastro-mestre (PELUDINHOS) por
+  // nome+tutor (ou só nome) → nome__tutor. Assim uma prescrição da vet e a medicação do check-in
+  // vão para o mesmo nó, e a plantonista vê tudo junto num lugar só.
+  function medAgendaKey(h){
+    h=h||currentHosp; if(!h) return '';
+    var base=h.refKey;
+    if(!base && typeof PELUDINHOS!=='undefined' && typeof jsNorm==='function' && typeof pelKey==='function'){
+      var nN=jsNorm(h.nome||''), nT=jsNorm(h.tutor||'');
+      var m=PELUDINHOS.find(function(p){ return jsNorm(p.n)===nN && jsNorm(p.tutor||'')===nT; })
+          || PELUDINHOS.find(function(p){ return jsNorm(p.n)===nN; });
+      if(m) base=pelKey(m);
+    }
+    if(!base) base=(h.nome||'')+'__'+(h.tutor||'');
+    return String(base).toLowerCase().replace(/[.#$\[\]\/]/g,'-');
+  }
   function magDoseId(itemId,horario){ return itemId+'_'+String(horario||'').replace(':','-'); }
   let MED_AGENDA_ITENS={}; // itens salvos da agenda do FILHOt aberto na ficha: {itemId:{nome,q,u,horarios}}
   let MED_AGENDA_LOG={};   // doses já registradas HOJE para o FILHOt aberto: {doseId:{quem,ts,...}}
@@ -7041,7 +7056,7 @@
     {k:'tapete',nome:'Tapete higiênico',spec:'Marca / quantidade'}
   ];
   function ciSlug(s){ return jsNorm(s).replace(/[^a-z0-9]+/g,'-').replace(/^-+|-+$/g,'')||('item-'+Date.now()); }
-  function ciKey(){ if(!ciHosp) return ''; const base=ciHosp.refKey||((ciHosp.nome||'')+'__'+(ciHosp.tutor||'')); return String(base).toLowerCase().replace(/[.#$\[\]\/]/g,'-'); }
+  function ciKey(){ if(!ciHosp) return ''; return (typeof medAgendaKey==='function')?medAgendaKey(ciHosp):String(ciHosp.refKey||((ciHosp.nome||'')+'__'+(ciHosp.tutor||''))).toLowerCase().replace(/[.#$\[\]\/]/g,'-'); }
   function ciHoje(){ const p=x=>String(x).padStart(2,'0'); const d=new Date(); return d.getFullYear()+'-'+p(d.getMonth()+1)+'-'+p(d.getDate()); }
 
   function abrirCheckin(){
