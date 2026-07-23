@@ -2718,7 +2718,8 @@
   const MED_UNIDADES=['comprimido','cápsula','ml','gota','sachê','colher','aplicação','unidade','medidor do cliente','pomada'];
   const MED_PLURAL={'comprimido':'comprimidos','cápsula':'cápsulas','gota':'gotas','sachê':'sachês','colher':'colheres','aplicação':'aplicações','unidade':'unidades','medidor do cliente':'medidores do cliente'};
   // Medida em que a "quantidade" é substituída pelo LOCAL de aplicação (não é número).
-  function medEhLocal(u){ return u==='pomada'; }
+  function medEhLocal(u){ return u==='pomada'||u==='aplicação'; }
+  function medLocalLabel(u){ return u==='aplicação'?'Aplicação':'Pomada'; }
   // Medida em que a "quantidade" é uma DESCRIÇÃO por escrito (não exige número).
   // Ex.: "medidor do cliente" → "1 medida de Super Poder no medidor que o tutor trouxe".
   function medEhTextoLivre(u){ return u==='medidor do cliente'; }
@@ -2744,10 +2745,10 @@
     return (any&&total>0)?total:null;
   }
   // "1"+"comprimido" -> "1 comprimido" | "2"+"gota" -> "2 gotas". Formato igual ao histórico já salvo.
-  function fmtQtd(q,u){ if(medEhLocal(u)) return 'pomada'; const n=qtdNum(q); if(n==null||!u) return ''; const s=String(q).trim().replace('.',','); if(u==='ml') return s+' ml'; return s+' '+((n>1&&MED_PLURAL[u])?MED_PLURAL[u]:u); }
+  function fmtQtd(q,u){ if(medEhLocal(u)) return medLocalLabel(u).toLowerCase(); const n=qtdNum(q); if(n==null||!u) return ''; const s=String(q).trim().replace('.',','); if(u==='ml') return s+' ml'; return s+' '+((n>1&&MED_PLURAL[u])?MED_PLURAL[u]:u); }
   function unidadeDe(txt){ const t=semAcento(txt).trim(); if(/^(ml|mililitro)/.test(t)) return 'ml'; if(/^comprimido/.test(t)) return 'comprimido'; if(/^capsula/.test(t)) return 'cápsula'; if(/^gota/.test(t)) return 'gota'; if(/^sache/.test(t)) return 'sachê'; if(/^colher/.test(t)) return 'colher'; if(/^aplicac/.test(t)) return 'aplicação'; if(/^medidor/.test(t)) return 'medidor do cliente'; if(/^pomada/.test(t)) return 'pomada'; if(/^(unidade|ui\b)/.test(t)) return 'unidade'; return ''; }
   // Texto da dose para exibição (WhatsApp, PDF, listas): pomada mostra o local; resto mostra número+medida.
-  function medDoseTxt(it){ it=it||{}; if(medEhLocal(it.u)) return 'Pomada'+(it.local?(' — aplicar em: '+it.local):''); if(medEhTextoLivre(it.u)) return (it.q?String(it.q).trim()+' ':'')+'(medidor do cliente)'; return fmtQtd(it.q,it.u)||((it.q||'')+' '+(it.u||'')).trim(); }
+  function medDoseTxt(it){ it=it||{}; if(medEhLocal(it.u)) return medLocalLabel(it.u)+(it.local?(' — '+it.local):''); if(medEhTextoLivre(it.u)) return (it.q?String(it.q).trim()+' ':'')+'(medidor do cliente)'; return fmtQtd(it.q,it.u)||((it.q||'')+' '+(it.u||'')).trim(); }
   // Período de uso: dd/mm → dd/mm, ou "uso contínuo".
   function medBRdata(iso){ if(!iso) return ''; const p=String(iso).split('-'); return p.length===3?(p[2]+'/'+p[1]+'/'+p[0]):iso; }
   function medPeriodoTxt(it){ it=it||{}; if(it.continuo) return 'uso contínuo'; const i=medBRdata(it.dataInicio), f=medBRdata(it.dataFim); if(i&&f) return i+' a '+f; if(i) return 'início '+i; if(f) return 'até '+f; return ''; }
@@ -2912,6 +2913,9 @@
     const qw=sc.querySelector('.mag-qtd-wrap'); const lw=sc.querySelector('.mag-local-wrap');
     if(qw) qw.style.display=ehLocal?'none':'';
     if(lw) lw.style.display=ehLocal?'':'none';
+    // Pomada e Aplicação (ex.: removedor de ouvido) usam descrição/local — sem quantidade.
+    const li=lw?lw.querySelector('[data-c=local],#vmLocal'):null; const ll=lw?lw.querySelector('.mf-lab'):null;
+    if(ehLocal&&li){ if(u==='aplicação'){ if(ll) ll.textContent='Descrição / onde aplicar'; li.setAttribute('placeholder','Ex: aplicar no ouvido · passar na pata · limpar a dobra'); } else { if(ll) ll.textContent='Local de aplicação'; li.setAttribute('placeholder','Ex: orelha esquerda, patinha, dobra da pele'); } }
     // Medidor do cliente: a "Quantidade" vira descrição por escrito (teclado de texto, sem exigir número).
     const qi=qw?qw.querySelector('[data-c=q]'):null;
     const ql=qw?qw.querySelector('.mf-lab'):null;
