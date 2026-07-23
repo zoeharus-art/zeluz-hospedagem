@@ -2825,7 +2825,7 @@
     if(!el) return {};
     const g=function(sel){ const e=el.querySelector(sel); return e?(e.value||'').trim():''; };
     const continuo=!!el.querySelector('.mag-continuo.on');
-    const o={ local:g('[data-c=local]'), dataInicio:g('[data-c=ini]'), dataFim:continuo?'':g('[data-c=fim]'), continuo:continuo };
+    const o={ local:g('[data-c=local]'), obs:g('[data-c=obs]'), dataInicio:g('[data-c=ini]'), dataFim:continuo?'':g('[data-c=fim]'), continuo:continuo };
     return o;
   }
   function parseQtd(d){ const m=String(d||'').trim().match(/^(\d+(?:[.,]\d+)?)\s*(.*)$/); return m?{q:m[1],u:unidadeDe(m[2])}:{q:'',u:''}; }
@@ -2983,6 +2983,7 @@
       +datasBlock
       +freqBlock
       +'<div class="mag-horarios"><span class="mu-lab">Horários</span><span class="mag-horarios-list">'+horariosHTML+'</span><button type="button" class="med-add" style="width:auto;margin-top:0" onclick="magAddHorario(this)">+ horário</button></div>'
+      +'<div class="medrow" style="margin-top:8px"><label class="mfield" style="flex:1"><span class="mf-lab">Como dar / observação (aparece para quem cuida)</span><input data-c="obs" placeholder="Ex: antes do almoço · de estômago cheio · misturar na comida" value="'+escAttr(item.obs||'')+'"></label></div>'
       +estoqueBlock
       +'<div style="text-align:right;margin-top:6px"><button type="button" class="ativ-del so-equipe" title="Remover este item da lista" onclick="magRemoverItem(\''+id+'\')">🗑️ Remover item</button></div>'
     +'</div>';
@@ -3445,7 +3446,7 @@
       if(!medVigenteEm(it)) return; // fora da janela início→fim (ou uso encerrado) — não pede dose hoje
       (it.horarios||[]).forEach(function(h){
         const doseId=magDoseId(id,h); const log=MED_AGENDA_LOG[doseId];
-        rows.push({id:id,doseId:doseId,nome:it.nome,q:it.q,u:it.u,local:it.local,continuo:it.continuo,dataInicio:it.dataInicio,dataFim:it.dataFim,freq:it.freq,h:h,tipo:it.tipo||'medicamento',feito:!!log,quem:log&&log.quem,ts:log&&log.ts});
+        rows.push({id:id,doseId:doseId,nome:it.nome,q:it.q,u:it.u,local:it.local,obs:it.obs,continuo:it.continuo,dataInicio:it.dataInicio,dataFim:it.dataFim,freq:it.freq,h:h,tipo:it.tipo||'medicamento',feito:!!log,quem:log&&log.quem,ts:log&&log.ts});
       });
     });
     // Camada 4 — placar do dia: "Optivet — 3 de 4 doses dadas: 10:32 (Giulia), 16:30 (—faltou—)...".
@@ -3473,6 +3474,7 @@
           +'<div style="font-size:17px;font-weight:800;color:var(--z-blue);line-height:1.2">'+escAttr(r.nome||'')+'</div>'
           +(dose?'<div style="font-size:14px;font-weight:700;color:var(--z-gold-deep)">'+escAttr(dose)+'</div>':'')
           +(function(){ var per=(typeof medPeriodoTxt==='function')?medPeriodoTxt(r):''; return per?'<div style="font-size:12.5px;font-weight:700;color:var(--muted)">'+escAttr(per)+'</div>':''; })()
+          +(r.obs?'<div style="font-size:13.5px;font-weight:700;color:var(--z-blue);margin-top:3px;line-height:1.25">▸ '+escAttr(r.obs)+'</div>':'')
         +'</div>'
         +(r.feito
           ? '<div class="mag-dose-ok">✅ Dado por '+escAttr(r.quem||'?')+(r.ts?' às '+new Date(r.ts).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'}):'')+'</div>'
@@ -7513,6 +7515,7 @@
         // No check-in o estoque é sempre "fresco" (a consultora acabou de contar/receber) — prev=null.
         const item={nome:nome,q:(medEhLocal(u)?'':q),u:u,horarios:horarios,tipo:tipo,origem:coletarOrigemEl(el)};
         if(medEhLocal(u)) item.local=ex.local;
+        if(ex.obs) item.obs=ex.obs;
         if(ex.dataInicio) item.dataInicio=ex.dataInicio;
         if(ex.continuo) item.continuo=true; else if(ex.dataFim) item.dataFim=ex.dataFim;
         const _fq=coletarFreqMed(el); if(_fq && _fq.tipo!=='diario') item.freq=_fq;
