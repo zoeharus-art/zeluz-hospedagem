@@ -2503,7 +2503,15 @@
       Object.keys(info).forEach(function(k){ if(info[k]!=='' && info[k]!=null) acc[k]=info[k]; });
       // 3) restrição do almoço (daycare/almoco-cad → campo restr) também é restrição de segurança
       if(!acc.restricao){
-        try{ const a=(typeof almCad==='function')?almCad({n:h.nome,tutor:h.tutor}):null; if(a&&a.restr) acc.restricao=a.restr; }catch(e){}
+        try{
+          // usa o NOME CANÔNICO do mestre (o hóspede pode ter nome/tutor trocado ou com sufixo
+          // "- RESTRIÇÃO A TUDO" no nome) para achar a restrição no cadastro de almoço.
+          var _pmR=(typeof pelMestreDe==='function')?pelMestreDe(h):null;
+          var _nmR=_pmR?_pmR.n:h.nome, _ttR=_pmR?(typeof pelGet==='function'?pelGet(_pmR,'tutor'):h.tutor):h.tutor;
+          var a=(typeof almCad==='function')?almCad({n:_nmR,tutor:_ttR}):null; if(a&&a.restr) acc.restricao=a.restr;
+          // rede de segurança: restrição escrita no NOME do FILHOt (gambiarra) — nunca deixar passar.
+          if(!acc.restricao && /restri[çc]/i.test(h.nome||'')) acc.restricao='RESTRIÇÃO (corrigir no cadastro)';
+        }catch(e){}
       }
       return acc;
     }catch(e){ return {}; }
@@ -2607,6 +2615,9 @@
         const tp = h.mascote ? 'moradora' : (h.hospede ? 'hospede' : (h.pernoite ? 'pernoite' : 'hospede'));
         const tj = {hospede:['t-hospede','HÓSPEDE'], pernoite:['t-pernoite','PERNOITE'], moradora:['t-moradora','MORADORA']}[tp];
         const tutor = tutorDe(h);
+        // Nome do tutor é sigiloso: para quem cuida (plantonista/monitor/aprendiz) mostra só o 1º nome.
+        const _roleC=(document.body.dataset.role||'');
+        const tutorShow=(_roleC==='plantonista'||_roleC==='monitor'||_roleC==='aprendiz')?String(tutor||'').trim().split(/\s+/)[0]:tutor;
         // SEGURANÇA — tarja vermelha sobre a foto quando há alergia/restrição (a mesma lógica
         // do Day Care, .mini-alert). Não é decoração: é o que impede a gambiarra de escrever
         // "RESTRIÇÃO A TUDO" dentro do NOME do FILHOt (ver Ragnar/Luke no cadastro-mestre).
@@ -2627,7 +2638,7 @@
           ${delBtn}${ph}${alertaFoto}${medFoto}${recFoto}${naoComeuFoto}
           <div class="nm">${cad.nome||h.nome}</div>
           <div class="br">${raca}</div>
-          <div class="hosp-tutor">${h.mascote?'Nossa Zelozinha':(tutor?'Tutor: '+tutor:'Tutor a confirmar')}</div>
+          <div class="hosp-tutor">${h.mascote?'Nossa Zelozinha':(tutorShow?'Tutor: '+tutorShow:'Tutor a confirmar')}</div>
           ${(function(){var mc=chipDe(h); return (!h.mascote&&mc)?`<div class="hosp-chip" style="font-size:11px;font-weight:800;color:var(--z-gold-deep);margin-top:2px">Microchip: ${mc}</div>`:'';})()}
           <div class="tarja ${tj[0]}">${tj[1]}</div>
           ${h.saidaHoje?'<div class="saida-hoje">Dormiu · sai hoje</div>':''}
