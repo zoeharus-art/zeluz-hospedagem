@@ -1778,6 +1778,14 @@
       </div>
 
       <div id="cf-corpo" style="display:none">
+        <!-- FICHA COMPLETA do hóspede (como ficou no check-in) — o monitor lê e valida antes de tudo -->
+        <div class="card">
+          <div class="rel-head" onclick="cfToggleFicha()" style="cursor:pointer;display:flex;align-items:center;gap:8px">
+            <h2 style="font-size:19px;margin:0;flex:1">📋 Ficha completa do hóspede</h2><span class="rel-caret" id="cfFichaCaret">▾</span>
+          </div>
+          <div class="hint">Confira como ficou a ficha inteira (alimentação, medicação, pertences, banho). Se tiver qualquer problema, avise a Recepção ANTES de mandar para a plantonista.</div>
+          <div id="cfFichaCompleta" style="margin-top:8px"></div>
+        </div>
         <!-- Pertences + etiquetagem de ração/medicação -->
         <div class="card">
           <h2 style="font-size:19px">Pertences — conferir e etiquetar</h2>
@@ -7953,6 +7961,7 @@
     cfEstadiaId=pend.id; cfEstadia=pend.e||{};
     cfConf=Object.assign({pertences:{},medicacaoEtiqueta:{},medicacao:{},racao:{},comida:{},fotos:[]}, cfEstadia.conferencia||{});
     var assEl=document.getElementById('cfAssina'); if(assEl) assEl.value=cfConf.concluida?(cfConf.concluida_por||''):((typeof quemSou==='function')?quemSou():'');
+    renderCfFichaCompleta();
     renderCfPert();
     cfPreencherRacao();
     renderCfMed();
@@ -7976,6 +7985,38 @@
     }
     meds.forEach(function(m,idx){ itens.push({tipo:'med', k:'med_'+idx+'_'+(typeof ciSlug==='function'?ciSlug(m.nome||''):idx), label:'Etiquetar remédio: '+(m.nome||'medicamento'), critico:true}); });
     return itens;
+  }
+  var cfFichaAberta=true;
+  function cfToggleFicha(){ cfFichaAberta=!cfFichaAberta; var el=document.getElementById('cfFichaCompleta'); if(el) el.style.display=cfFichaAberta?'block':'none'; var c=document.getElementById('cfFichaCaret'); if(c) c.style.transform=cfFichaAberta?'none':'rotate(-90deg)'; }
+  function renderCfFichaCompleta(){
+    var el=document.getElementById('cfFichaCompleta'); if(!el) return;
+    var f=cfEstadia.ficha||{}; var a=f.alim||{}; var spa=f.spa||{};
+    var meds=Array.isArray(cfEstadia.medicacao)?cfEstadia.medicacao:[];
+    var pert=Array.isArray(cfEstadia.pertences)?cfEstadia.pertences:[];
+    var box=function(tit,inner){ return '<div style="border:1.5px solid var(--line);border-radius:12px;padding:10px 12px;margin-bottom:8px"><div style="font-weight:800;color:var(--z-blue);font-size:13.5px;margin-bottom:4px">'+tit+'</div>'+inner+'</div>'; };
+    var h='';
+    // Estadia
+    h+=box('Estadia', '<div style="font-size:13px;color:var(--z-blue-soft)">Entrada: <strong>'+(cfEstadia.entrada?ciBRdata(cfEstadia.entrada):'—')+'</strong> · Saída: <strong>'+(cfEstadia.saida?ciBRdata(cfEstadia.saida):'—')+'</strong>'+(a.dias?(' · '+escAttr(a.dias)+' dia(s)'):'')+'</div>');
+    // Alimentação
+    if(a.tipo||a.marca||a.qtd){
+      var lin='<div style="font-size:13px;color:var(--z-blue-soft)"><strong>Tipo:</strong> '+escAttr(a.tipo||'—')+(a.marca?(' · Marca: '+escAttr(a.marca)):'')+'</div>';
+      if(a.qtd) lin+='<div style="font-size:13px;color:var(--z-blue-soft)"><strong>Ração:</strong> '+escAttr(a.qtd)+' '+escAttr(a.unidade||'g')+'/refeição'+(a.refeicoes?(' · '+escAttr(a.refeicoes)+'x/dia'):'')+(a.minimo?(' · necessário aprox. '+a.minimo+(a.unidade&&a.unidade!=='gramas'?(' '+a.unidade):'g')):'')+'</div>';
+      if(a.comida&&a.comida.qtd) lin+='<div style="font-size:13px;color:#2B7A4B"><strong>Comida natural:</strong> '+escAttr(a.comida.qtd)+'g/refeição em '+escAttr((typeof ciComidaRefNomes==='function'?ciComidaRefNomes(a.comida.refeicoes).join(', '):''))+(a.comida.minimo?(' · necessária aprox. '+a.comida.minimo+'g'):'')+'</div>';
+      h+=box('Alimentação', lin);
+    }
+    // Medicação
+    if(meds.length){
+      var ml=meds.map(function(m){ var dose=(typeof medDoseTxt==='function')?medDoseTxt(m):((m.q||'')+' '+(m.u||'')); var per=(typeof medPeriodoTxt==='function')?medPeriodoTxt(m):''; return '<div style="font-size:13px;color:var(--z-blue-soft);margin-top:3px"><strong>'+escAttr(m.nome||'—')+'</strong>'+(dose?' · '+escAttr(dose):'')+((m.horarios&&m.horarios.length)?(' · '+escAttr(m.horarios.join(', '))):'')+(per?(' · '+escAttr(per)):'')+'</div>'; }).join('');
+      h+=box('Medicação / Suplementos', ml);
+    }
+    // Spa
+    if(spa.banho){ h+=box('Spa Dermoprotetor', '<div style="font-size:13px;color:var(--z-blue-soft)">Banho na saída: <strong>'+escAttr(spa.banho)+'</strong>'+(spa.tipo?(' — '+escAttr(spa.tipo)):'')+(spa.aConfirmar?' (horário a confirmar)':(spa.horario?(' — '+escAttr(spa.horario)):''))+'</div>'); }
+    // Pertences
+    if(pert.length){ h+=box('Pertences', pert.map(function(p){ return '<div style="font-size:13px;color:var(--z-blue-soft)">• '+escAttr(p.nome||'')+(p.spec?(' — '+escAttr(p.spec)):'')+'</div>'; }).join('')); }
+    // Assinatura
+    h+=box('Check-in assinado por', '<div style="font-size:13px;color:var(--z-blue-soft)">'+escAttr(cfEstadia.assinado_por||'—')+(cfEstadia.entregaSemTutor?' (entregue sem o tutor)':'')+'</div>');
+    el.innerHTML=h; cfFichaAberta=true; el.style.display='block';
+    var c=document.getElementById('cfFichaCaret'); if(c) c.style.transform='none';
   }
   function renderCfPert(){
     var el=document.getElementById('cfPertList'); if(!el) return;
