@@ -1638,7 +1638,13 @@
         </div>
         <div class="cad-grid">
           <div class="field"><label>Quantidade por refeição</label><input class="cad-in" id="ciAlimQtd" inputmode="decimal" placeholder="Ex: 40" autocomplete="off" oninput="ciCalcRacao()"></div>
-          <div class="field"><label>Refeições por dia</label><input class="cad-in" id="ciAlimRefeicoes" inputmode="numeric" placeholder="Ex: 2" autocomplete="off" oninput="ciCalcRacao()"></div>
+          <div class="field"><label>Refeições por dia <span style="font-weight:600;color:var(--muted)">(preenche sozinho pelas refeições marcadas)</span></label><input class="cad-in" id="ciAlimRefeicoes" inputmode="numeric" placeholder="Ex: 2" autocomplete="off" oninput="ciCalcRacao()"></div>
+        </div>
+        <div class="ci-meal-lbl" style="margin-top:6px">Em quais refeições a ração é dada?</div>
+        <div class="ci-meal-btns" id="ciAlimRef">
+          <div class="ci-meal-btn" data-m="cafe" onclick="ciAlimRefToggle(this)">☕ Café da manhã</div>
+          <div class="ci-meal-btn" data-m="almoco" onclick="ciAlimRefToggle(this)">🍽️ Almoço</div>
+          <div class="ci-meal-btn" data-m="jantar" onclick="ciAlimRefToggle(this)">🌙 Jantar</div>
         </div>
         <div class="cad-grid">
           <div class="field"><label>Dias (automático)</label><input class="cad-in" id="ciAlimDias" readonly tabindex="-1" placeholder="—" style="background:var(--z-cream-warm)"></div>
@@ -7103,7 +7109,7 @@
     document.getElementById('ciAlimMarca').value=''; document.getElementById('ciAlimRefeicoes').value=''; document.getElementById('ciAlimQtd').value='';
     var _at=document.getElementById('ciAlimTraz'); if(_at) _at.value='';
     var _ad=document.getElementById('ciAlimDias'); if(_ad) _ad.value='';
-    document.querySelectorAll('#ciMealEnt .ci-meal-btn.on, #ciMealSai .ci-meal-btn.on, #ciComidaRef .ci-meal-btn.on').forEach(function(b){ b.classList.remove('on'); });
+    document.querySelectorAll('#ciMealEnt .ci-meal-btn.on, #ciMealSai .ci-meal-btn.on, #ciComidaRef .ci-meal-btn.on, #ciAlimRef .ci-meal-btn.on').forEach(function(b){ b.classList.remove('on'); });
     var _cq=document.getElementById('ciComidaQtd'); if(_cq) _cq.value='';
     var _ct=document.getElementById('ciComidaTraz'); if(_ct) _ct.value='';
     var _cp=document.getElementById('ciComidaPainel'); if(_cp) _cp.style.display='none';
@@ -7254,6 +7260,9 @@
     ciCalcRacao();
   }
   function ciComidaRefObj(){ const o={cafe:false,almoco:false,jantar:false}; document.querySelectorAll('#ciComidaRef .ci-meal-btn.on').forEach(function(b){ o[b.dataset.m]=true; }); return o; }
+  // Ração: em quais refeições é dada (café/almoço/jantar). Preenche "Refeições por dia" sozinho.
+  function ciAlimRefObj(){ const o={cafe:false,almoco:false,jantar:false}; document.querySelectorAll('#ciAlimRef .ci-meal-btn.on').forEach(function(b){ o[b.dataset.m]=true; }); return o; }
+  function ciAlimRefToggle(el){ if(el) el.classList.toggle('on'); const n=document.querySelectorAll('#ciAlimRef .ci-meal-btn.on').length; const rf=document.getElementById('ciAlimRefeicoes'); if(rf&&n>0) rf.value=n; ciCalcRacao(); }
   function ciComidaRefNomes(o){ o=o||{}; const out=[]; if(o.cafe) out.push('café'); if(o.almoco) out.push('almoço'); if(o.jantar) out.push('jantar'); return out; }
   function ciComidaRefNomesCap(o){ o=o||{}; const out=[]; if(o.cafe) out.push('Café da manhã'); if(o.almoco) out.push('Almoço'); if(o.jantar) out.push('Jantar'); return out; }
   // Total de refeições COM comida natural na estadia: interseção real entre as refeições
@@ -7486,6 +7495,7 @@
         // marcas de refeição Dia 1 / Último dia (se salvas na última estadia)
         const marcar=function(id,obj){ if(!obj) return; document.querySelectorAll('#'+id+' .ci-meal-btn').forEach(function(b){ if(obj[b.dataset.m]) b.classList.add('on'); }); };
         marcar('ciMealEnt',f.alim.entrada); marcar('ciMealSai',f.alim.saida);
+        marcar('ciAlimRef',f.alim.racaoRefeicoes);
         // Comida natural da última estadia (Ração + natural)
         if(f.alim.comida){
           const _cq=document.getElementById('ciComidaQtd'); if(_cq&&f.alim.comida.qtd) _cq.value=f.alim.comida.qtd;
@@ -7553,6 +7563,7 @@
                qtd:(document.getElementById('ciAlimQtd').value||'').trim(), unidade:segVal('ciAlimUnid'),
                trazida:(document.getElementById('ciAlimTraz')?(document.getElementById('ciAlimTraz').value||'').trim():''),
                dias:(calc.dias||''), entrada:mealObj('ciMealEnt'), saida:mealObj('ciMealSai'),
+               racaoRefeicoes:ciAlimRefObj(),
                minimo:(calc.minimo||0), deficit:(calc.deficit||0),
                // Comida natural (Ração + natural): quantidade + EM QUAIS refeições ela entra
                comida:(ciTemNatural()?{
