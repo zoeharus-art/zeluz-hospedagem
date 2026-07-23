@@ -2571,7 +2571,10 @@
     const cc=document.getElementById('card-cadastro'); if(cc) cc.style.display='none'; // cadastro começa fechado
     // Zona de risco (deletar pernoite do dia): só aparece para lançamento manual de hoje (tem manualKey);
     // quem veio da planilha não pode ser deletado por aqui. O .so-equipe já esconde para plantonista.
-    const zr=document.getElementById('hf-zonarisco'); if(zr) zr.style.display=(h.manualKey?'block':'none');
+    // Zona de risco: aparece para a equipe (gestão/supervisão/diretoria/monitor) em QUALQUER hóspede —
+    // manual (deleta o lançamento) ou da planilha/estadia (remove do Plantão de hoje via override).
+    const _rzr=(document.body.dataset.role||''); const _podeRem=(_rzr==='gestao'||_rzr==='supervisor'||_rzr==='diretoria'||_rzr==='monitor');
+    const zr=document.getElementById('hf-zonarisco'); if(zr) zr.style.display=_podeRem?'block':'none';
     updateDateLabel(); // sincroniza o navegador de dia dentro da ficha
     carregarFicha();
     window.scrollTo({top:0,behavior:'smooth'});
@@ -4035,7 +4038,9 @@
       // Estadias do Check-in (auaulandia/estadias): o hóspede que fez check-in aparece no Plantão
       // com ficha + medicação + alimentação, mesmo sem estar na planilha. Ativa = status 'ativa' e
       // hoje dentro de entrada→saída. Dedupe por nome+tutor (o `add` já protege).
-      DB.ref('auaulandia/estadias').once('value').then(s=>s.val()||{}).catch(()=>({}))
+      DB.ref('auaulandia/estadias').once('value').then(s=>s.val()||{}).catch(()=>({})),
+      // Removidos de hoje (override da Gestão): tira do Plantão quem foi removido manualmente.
+      DB.ref('auaulandia/removidos/'+hojeK).once('value').then(s=>s.val()||{}).catch(()=>({}))
     ]).then(function(r){
       Object.entries(r[0]||{}).forEach(([k,m])=>add(m,false,hojeK,k));
       Object.entries(r[1]||{}).forEach(([k,m])=>add(m,true,vespK,k));
@@ -4053,6 +4058,11 @@
         if(hospedes.some(function(h){ return jsNorm(h.nome||'')===jsNorm(e.nome||''); })) return;
         add({nome:e.nome, tutor:e.tutor||'', raca:e.raca||'', refKey:e.refKey||'', hospede:true}, (sai&&hojeISOk===sai), '', '');
       });
+      // Aplica o override "removidos hoje" (Gestão tirou do Plantão): remove da lista final.
+      var rem=r[3]||{};
+      if(Object.keys(rem).length){
+        hospedes=hospedes.filter(function(h){ return !rem[hospRemKey(h)]; });
+      }
       renderHosp();
       if(typeof carregarAgendaMedTodos==='function') carregarAgendaMedTodos();
     }).catch(()=>{});
@@ -4189,11 +4199,25 @@
   // Deletar a pernoite do dia a partir da FICHA (não do card) — evita o toque acidental do antigo "×".
   // Dificuldade proposital: dupla confirmação. Só equipe (gestão/supervisão/diretoria/monitor).
   // Remove só auaulandia/manuais/{dia}/{key}; o cadastro-mestre do FILHOt fica intacto.
+  // chave de remoção do dia (normalizada) para o override "removidos hoje"
+  function hospRemKey(h){ return ((h&&h.nome||'')+'__'+(h&&h.tutor||'')).toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/[.#$\[\]\/]/g,'-'); }
   function cancelarPernoiteFicha(){
     const r=(document.body.dataset.role||'');
     if(!(r==='gestao'||r==='supervisor'||r==='diretoria'||r==='monitor')){ alert('Só a Gestão, a Supervisão, a Diretoria ou o Monitor podem deletar uma pernoite.'); return; }
     const h=currentHosp; if(!h) return;
-    if(!h.manualKey){ alert('Este registro veio da planilha — não foi lançado manualmente hoje e não pode ser deletado por aqui.'); return; }
+    // Registro que NÃO é manual (veio da planilha ou de uma estadia): a Gestão tem autonomia de
+    // tirá-lo do Plantão de hoje via override "removidos" (não mexe na planilha nem no cadastro).
+    if(!h.manualKey){
+      if(!confirm('Remover '+(h.nome||'este FILHOt')+' do Hotel de hoje?\n\nEle sai da lista de hoje. O cadastro continua salvo. (Registro da planilha/estadia — removido só para hoje.)')) return;
+      if(!DB){ const i=hospedes.indexOf(h); if(i>=0) hospedes.splice(i,1); if(typeof fecharPlantao==='function') fecharPlantao(); renderHosp(); return; }
+      const dk=dataKeyAtual();
+      DB.ref('auaulandia/removidos/'+dk+'/'+hospRemKey(h)).set({nome:h.nome||'', tutor:h.tutor||'', quem:(typeof quemSou==='function'?quemSou():'-'), ts:Date.now()}).then(function(){
+        if(typeof audit==='function') audit('hospede-removido','removeu do Plantão (override)',{pet:h.nome||'',dia:dk});
+        if(typeof fecharPlantao==='function') fecharPlantao();
+        carregarHospedes();
+      }).catch(function(e){ alert('Erro ao remover: '+(e&&e.message||e)); });
+      return;
+    }
     if(!confirm('Tem certeza que quer deletar esse peludinho do Hotel?\n\n'+(h.nome||'Este FILHOt')+' sai da lista de hoje. O cadastro dele continua salvo.')) return;
     if(!confirm('Confirmação final: deletar '+(h.nome||'este FILHOt')+' da AuAulândia de hoje?')) return;
     const dia=h.manualDia||dataKeyAtual();
