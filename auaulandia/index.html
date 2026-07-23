@@ -2595,8 +2595,13 @@
     const st=document.getElementById('hf-fotostatus');
     setInfo(currentHosp,{foto:fotoPendente});
     if(DB){ st.style.color='var(--muted)'; st.textContent='Salvando foto...';
-      DB.ref('auaulandia/cadastro/'+cadKey(currentHosp)).update({foto:fotoPendente})
-        .then(()=>{ st.style.color='var(--crm-ok)'; st.textContent='✅ Foto salva! Aparece em todos os aparelhos.'; fotoPendente=null; renderHosp(); })
+      var _ck=cadKey(currentHosp);
+      // Cadastro é ÚNICO: grava a foto no nó da hospedagem E no cadastro-mestre do Day Care
+      // (daycare/cadastro), que é de onde a chamada do Day Care lê. Assim a foto vale nos dois.
+      DB.ref('daycare/cadastro/'+_ck).update({foto:fotoPendente}).catch(function(){});
+      if(typeof pelCadCache!=='undefined') pelCadCache[_ck]=Object.assign({},pelCadCache[_ck]||{},{foto:fotoPendente});
+      DB.ref('auaulandia/cadastro/'+_ck).update({foto:fotoPendente})
+        .then(()=>{ st.style.color='var(--crm-ok)'; st.textContent='✅ Foto salva! Aparece em todos os aparelhos (Day Care e AuAulândia).'; fotoPendente=null; renderHosp(); if(typeof renderDaycare==='function') renderDaycare(); })
         .catch(e=>{ st.style.color='var(--crm-critico)'; st.textContent='⚠️ Erro ao salvar a foto: '+e.message; });
     } else { st.style.color='var(--crm-atencao-text)'; st.textContent='Banco conectando... tente de novo em 5s.'; }
   }
@@ -2647,7 +2652,9 @@
     const cad={ nome:nomeEdit, nasc:nasc, idadeAprox:((document.getElementById('hf-idadeaprox')||{}).value||'').trim(), raca:document.getElementById('hfRaca').value||'', corPelo:((document.getElementById('hf-corpelo')||{}).value||'').trim(), sexo:segVal('hf-sexo'),
       castrado:segVal('hf-cast'), tutor:document.getElementById('hf-tutor').value||'', chip:document.getElementById('hf-chip').value||'', dias:dias };
     setInfo(currentHosp,cad);
-    if(DB) DB.ref('auaulandia/cadastro/'+cadKey(currentHosp)).update(cad).catch(()=>{});
+    var _ck=cadKey(currentHosp);
+    if(DB){ DB.ref('auaulandia/cadastro/'+_ck).update(cad).catch(()=>{}); DB.ref('daycare/cadastro/'+_ck).update(cad).catch(()=>{}); } // cadastro ÚNICO: espelha no mestre do Day Care
+    if(typeof pelCadCache!=='undefined') pelCadCache[_ck]=Object.assign({},pelCadCache[_ck]||{},cad);
     atualizarHeader(cad);
   }
   // Editar o nome do FILHOt — só Gestão/Supervisão (o card-cadastro já é restrito a esses perfis).
@@ -2656,7 +2663,7 @@
     if(!currentHosp) return;
     const v=((document.getElementById('hf-nome-edit')||{}).value||'').trim();
     setInfo(currentHosp,{nome:v});
-    if(DB) DB.ref('auaulandia/cadastro/'+cadKey(currentHosp)).update({nome:v}).catch(()=>{});
+    if(DB){ DB.ref('auaulandia/cadastro/'+cadKey(currentHosp)).update({nome:v}).catch(()=>{}); DB.ref('daycare/cadastro/'+cadKey(currentHosp)).update({nome:v}).catch(()=>{}); }
     const disp=v||currentHosp.nome||'';
     const t=document.getElementById('hf-nome'); if(t) t.textContent=disp;
     renderHosp();
@@ -4041,6 +4048,9 @@
         var ent=e.entrada||'', sai=e.saida||'';
         if(ent && hojeISOk < ent) return;         // ainda não chegou
         if(sai && hojeISOk > sai) return;          // já passou a saída prevista
+        // Anti-duplicação: se o FILHOt já está no Plantão (planilha/manuais/outra estadia),
+        // por nome normalizado, NÃO adiciona de novo (evita Zeus aparecendo 2x).
+        if(hospedes.some(function(h){ return jsNorm(h.nome||'')===jsNorm(e.nome||''); })) return;
         add({nome:e.nome, tutor:e.tutor||'', raca:e.raca||'', refKey:e.refKey||'', hospede:true}, (sai&&hojeISOk===sai), '', '');
       });
       renderHosp();
