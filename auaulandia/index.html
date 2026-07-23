@@ -7948,14 +7948,18 @@
   // ---- PDF via window.print (offline, sem lib) ----
   function ciGerarPDF(){
     if(!ciHosp) return;
+    // Blindagem: NADA pode deixar o PDF em branco. Qualquer erro ao montar os detalhes é
+    // capturado, o PDF sai com o cabeçalho + o que deu certo, e a mensagem do erro aparece
+    // na tela (ci-status) para a Adriana reportar — é a evidência para achar a raiz exata.
+    var h='', __err='';
+    try{
     const d=ciColetarFicha(); const meds=ciColetarMeds(); const mv=Object.values(meds);
     const assina=(document.getElementById('ciAssinaNome').value||'').trim();
     const sig=ciAssinaturaDataURL();
-    // ||{} obrigatório: hóspede sem alimentação preenchida (ex.: Novo Hóspede) deixava alim
-    // indefinido e a leitura a.tipo estourava TypeError, abortando o PDF (saía em branco).
-    // Mesmo guard que o ciBuildPdfBlob já usa.
+    // ||{} obrigatório: hóspede sem alimentação preenchida deixava alim indefinido e a leitura
+    // a.tipo estourava TypeError. Mesmo guard que o ciBuildPdfBlob já usa.
     const a=(d.ficha&&d.ficha.alim)||{};
-    let h='<div class="pf-h1">Zêluz · AuAulândia — Ficha de Check-in</div>';
+    h='<div class="pf-h1">Zêluz · AuAulândia — Ficha de Check-in</div>';
     h+='<div class="pf-sub">'+esc(ciHosp.nome)+(ciHosp.raca?(' · '+esc(ciHosp.raca)):'')+(ciHosp.tutor?(' · Tutor: '+esc(ciHosp.tutor)):'')+'</div>';
     h+='<div class="pf-sec"><h3>Estadia</h3><div class="pf-row">Entrada: <strong>'+ciBRdata(d.entrada)+'</strong>'+(a.dias?('  ·  '+esc(a.dias)+' dia(s)'):'')+'</div><div class="pf-row" style="font-size:15px"><strong>SAÍDA: '+(d.saida?ciBRdata(d.saida):'a confirmar')+'</strong></div></div>';
     if(a.tipo||a.marca||a.qtd){
@@ -7983,7 +7987,14 @@
     if(mv.length){ h+='<div class="pf-med"><h3>⚠ MEDICAÇÃO / SUPLEMENTOS — HORÁRIOS</h3>'; mv.forEach(function(it){ var per=medPeriodoTxt(it); h+='<div class="pf-mrow">'+esc(it.nome)+' — '+esc(medDoseTxt(it))+' — '+esc((it.horarios||[]).join(', '))+(per?(' — '+esc(per)):'')+'</div>'; }); h+='</div>'; }
     if(d.pertences.length){ h+='<div class="pf-sec"><h3>Pertences</h3>'+d.pertences.map(function(p){ return '<div class="pf-row">• '+esc(p.nome)+(p.spec?(' — '+esc(p.spec)):'')+'</div>'; }).join('')+'</div>'; }
     h+='<div class="pf-sec"><h3>Assinatura do tutor</h3>'+(sig?('<img class="pf-sig-img" src="'+sig+'">'):'<div class="pf-row">(sem assinatura)</div>')+'<div class="pf-row" style="margin-top:6px">'+esc(assina||'—')+'</div></div>';
+    }catch(e){ __err=(e&&e.message)||String(e); }
+    if(!h || h.indexOf('pf-h1')<0){
+      h='<div class="pf-h1">Zêluz · AuAulândia — Ficha de Check-in</div>'
+       +'<div class="pf-sub">'+esc((ciHosp&&ciHosp.nome)||'')+((ciHosp&&ciHosp.raca)?(' · '+esc(ciHosp.raca)):'')+((ciHosp&&ciHosp.tutor)?(' · Tutor: '+esc(ciHosp.tutor)):'')+'</div>';
+    }
+    if(__err) h+='<div class="pf-row" style="color:#C0392B;margin-top:8px">Aviso: alguns detalhes nao puderam ser montados ('+esc(__err)+'). Avise a Adriana.</div>';
     const pr=document.getElementById('ci-print'); if(pr) pr.innerHTML=h;
+    var __st=document.getElementById('ci-status'); if(__st&&__err){ __st.style.color='var(--crm-critico)'; __st.textContent='PDF gerado com aviso — me mande esta mensagem: '+__err; }
     setTimeout(function(){ window.print(); },60);
   }
 
