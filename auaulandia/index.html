@@ -6074,6 +6074,23 @@
         });
       });
     }
+    // Hóspedes da AuAulândia participam do Day Care DURANTE a estadia (de dia): entram na chamada,
+    // no almoço e nas atividades, mesmo não sendo alunos fixos do dia. Só HOJE e enquanto a estadia
+    // está ativa (hoje entre entrada→saída). Assim o monitor que cuida da medicação de dia os vê.
+    if(ehHoje() && typeof CF_ESTADIAS!=='undefined' && CF_ESTADIAS){
+      const hojeK=(typeof dataKeyAtual==='function')?dataKeyAtual():'';
+      Object.keys(CF_ESTADIAS).forEach(function(rk){
+        const e=(CF_ESTADIAS[rk]&&CF_ESTADIAS[rk].e)||{};
+        if((e.status||'ativa')!=='ativa') return;
+        if(e.entrada && hojeK < e.entrada) return;
+        if(e.saida && hojeK > e.saida) return;
+        const pReal=PELUDINHOS.find(function(p){ return pelKey(p)===rk || dcKey(p.n,p.tutor)===dcKey(e.nome,e.tutor); });
+        const p = pReal || {n:e.nome, raca:e.raca||'', tutor:e.tutor||'', freq:'hospede', dias:[dcDia], nasc:''};
+        const k=dcKey(p.n,p.tutor);
+        if(jaTem.has(k)) return; jaTem.add(k);
+        base.push({ p:p, i:(pReal?PELUDINHOS.indexOf(pReal):('hosp'+rk)), hospede:true });
+      });
+    }
     // defesa final: nunca deixar duas entradas do mesmo FILHOt escaparem juntas na lista
     const vistos=new Set(), unicos=[];
     base.forEach(o=>{ const k=dcKey(o.p.n,o.p.tutor); if(vistos.has(k)) return; vistos.add(k); unicos.push(o); });
@@ -6109,7 +6126,7 @@
         const clickFicha=(typeof o.i==='number')?`onclick="abrirPeludinhoDay(${o.i})" style="cursor:pointer"`:'';
         const ribbon=st==='veio'?'<div class="dc-ribbon veio">PRESENTE</div>':(st==='faltou'?'<div class="dc-ribbon faltou">FALTOU</div>':'<div class="dc-ribbon pend">PENDENTE — marque</div>');
         return `<div class="pet dc-card ${st}${o.foraDia?' fora-dia':''}">
-          ${ribbon}${o.daPlanilha?seloPlanilha(o):(o.foraDia?seloForaDia(o):seloAdapt(ex))}
+          ${ribbon}${o.hospede?'<span class="mini-fora" style="background:var(--z-gold);color:var(--z-blue)">HÓSPEDE</span>':(o.daPlanilha?seloPlanilha(o):(o.foraDia?seloForaDia(o):seloAdapt(ex)))}
           <div ${clickFicha}>
             ${ph}${alerta}
             <div class="nm">${(typeof o.i==='number')?pelNome(p):p.n}</div>
