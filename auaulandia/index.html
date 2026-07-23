@@ -3204,6 +3204,7 @@
 
   // ---- Recepção: lista e trilha dos avisos de estoque (mesmo padrão pendente→resolvido da ração) ----
   function carregarAvisosEstoque(){ renderAvisosEstoque(); renderAvisosRacao(); }
+  var _recepcaoPrevN=null;
   function atualizarBadgeRecepcao(){
     var n=0; Object.keys(AVISOS_ESTOQUE_CACHE||{}).forEach(function(id){ if(AVISOS_ESTOQUE_CACHE[id].status!=='resolvido') n++; });
     Object.keys(AVISOS_RACAO_CACHE||{}).forEach(function(id){ if(AVISOS_RACAO_CACHE[id].status!=='resolvido') n++; });
@@ -3211,6 +3212,11 @@
     var b=link.querySelector('.nav-badge');
     if(n>0){ if(!b){ b=document.createElement('span'); b.className='nav-badge'; link.appendChild(b); } b.textContent=n; }
     else if(b){ b.remove(); }
+    // ALARME quando FALTA algo (a contagem subiu) — só para quem trata a falta: Supervisão, Consultora, Gestão.
+    var r=(document.body.dataset.role||'');
+    var alvo=(r==='supervisor'||r==='consultora'||r==='gestao'||r==='diretoria');
+    if(_recepcaoPrevN!=null && n>_recepcaoPrevN && alvo){ try{ if(typeof bipDespertador==='function') bipDespertador(); }catch(e){} if(navigator.vibrate){ try{ navigator.vibrate([200,80,200]); }catch(e){} } }
+    _recepcaoPrevN=n;
   }
   function avisoCardHTML(id){
     var a=AVISOS_ESTOQUE_CACHE[id]||{};
