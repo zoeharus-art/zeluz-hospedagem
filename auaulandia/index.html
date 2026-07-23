@@ -3436,7 +3436,8 @@
 
   function renderMedAgendaHoje(){
     const el=document.getElementById('magHoje'); if(!el) return;
-    const estoqueHTML=renderEstoqueResumo();
+    // Estoque de entrada não interessa a quem só dá o remédio (plantonista): esconde pra ela.
+    const _magRole=(document.body.dataset.role||''); const estoqueHTML=(_magRole==='plantonista')?'':renderEstoqueResumo();
     const rows=[];
     Object.keys(MED_AGENDA_ITENS).forEach(function(id){
       const it=MED_AGENDA_ITENS[id]||{};
@@ -3444,7 +3445,7 @@
       if(!medVigenteEm(it)) return; // fora da janela início→fim (ou uso encerrado) — não pede dose hoje
       (it.horarios||[]).forEach(function(h){
         const doseId=magDoseId(id,h); const log=MED_AGENDA_LOG[doseId];
-        rows.push({id:id,doseId:doseId,nome:it.nome,q:it.q,u:it.u,h:h,tipo:it.tipo||'medicamento',feito:!!log,quem:log&&log.quem,ts:log&&log.ts});
+        rows.push({id:id,doseId:doseId,nome:it.nome,q:it.q,u:it.u,local:it.local,continuo:it.continuo,dataInicio:it.dataInicio,dataFim:it.dataFim,freq:it.freq,h:h,tipo:it.tipo||'medicamento',feito:!!log,quem:log&&log.quem,ts:log&&log.ts});
       });
     });
     // Camada 4 — placar do dia: "Optivet — 3 de 4 doses dadas: 10:32 (Giulia), 16:30 (—faltou—)...".
@@ -3469,8 +3470,9 @@
       return '<div class="mag-dose'+(r.feito?' feito':'')+'">'
         +'<div class="mag-dose-info" style="flex:1;min-width:0">'
           +'<div style="font-size:11px;font-weight:800;color:var(--muted)">'+escAttr(r.h||'--:--')+(r.avulso?' · avulsa':'')+'</div>'
-          +'<div style="font-size:16px;font-weight:800;color:var(--z-blue);line-height:1.2">'+escAttr(r.nome||'')+'</div>'
+          +'<div style="font-size:17px;font-weight:800;color:var(--z-blue);line-height:1.2">'+escAttr(r.nome||'')+'</div>'
           +(dose?'<div style="font-size:14px;font-weight:700;color:var(--z-gold-deep)">'+escAttr(dose)+'</div>':'')
+          +(function(){ var per=(typeof medPeriodoTxt==='function')?medPeriodoTxt(r):''; return per?'<div style="font-size:12.5px;font-weight:700;color:var(--muted)">'+escAttr(per)+'</div>':''; })()
         +'</div>'
         +(r.feito
           ? '<div class="mag-dose-ok">✅ Dado por '+escAttr(r.quem||'?')+(r.ts?' às '+new Date(r.ts).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'}):'')+'</div>'
