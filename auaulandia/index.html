@@ -5559,6 +5559,12 @@
   function vePorDia(){ const r=(document.body.dataset.role||''); return r==='gestao'||r==='supervisor'||r==='diretoria'; }
   function nMatriculados(d){ return PELUDINHOS.filter(p=>!pelInativo(p)&&pelDias(p).indexOf(d)>=0).length; }
   const ORDEM_DIAS=['seg','ter','qua','qui','sex'];
+  // ===== ATIVIDADES SELETIVAS (Márcia decide quem faz) — item D =====
+  // As demais atividades (chamada, check-in/out, livre, EA, almoço...) são ABERTAS: todos participam.
+  // Estas são SELETIVAS: o peludinho só entra na lista se estiver marcado no cadastro (chips).
+  const ATIVS_SELETIVAS=[{s:'aucademia',t:'Aucademia'},{s:'aulinha',t:'Aulinha'},{s:'jogos',t:'Jogos'},{s:'agility',t:'Agility'},{s:'massagem',t:'Massagem'},{s:'escova',t:'Escova de dentes'}];
+  const ATIVS_SELETIVAS_SLUGS=ATIVS_SELETIVAS.map(a=>a.s);
+  function ehAtivSeletiva(s){ return ATIVS_SELETIVAS_SLUGS.indexOf(s)>=0; }
   const DIA_LBL={seg:'Seg',ter:'Ter',qua:'Qua',qui:'Qui',sex:'Sex'};
   const DIA_FULL={seg:'Segunda',ter:'Terça',qua:'Quarta',qui:'Quinta',sex:'Sexta'};
   const CORES_PEL=['#E08856','#5AABB5','#5E9B6B','#2E7D8A','#B8A9C9','#234D67'];
@@ -5645,6 +5651,19 @@
     const fi=document.getElementById('pelFreqInput'); if(fi) fi.value=pelFreq(pelAtual)+' por semana';
     renderPel(); if(typeof renderDaycare==='function') renderDaycare();
   }
+  // ===== Atividades por peludinho (item D) — quem faz cada atividade seletiva =====
+  function pelAtividades(p){ const ex=pelExtra(p); return Array.isArray(ex.atividades)?ex.atividades:[]; }
+  // Atividade aberta → devolve a lista inteira. Atividade seletiva → só quem tem ela marcada.
+  function filtrarAtividadeSeletiva(list, ativ){ if(!ehAtivSeletiva(ativ)) return list; return (list||[]).filter(o=>pelAtividades(o.p).indexOf(ativ)>=0); }
+  // chips de atividades seletivas clicáveis (mesmo padrão dos dias)
+  function ativsEditInner(p){ const set=pelAtividades(p), can=canEditPel();
+    return ATIVS_SELETIVAS.map(a=>`<span class="dia${set.indexOf(a.s)>=0?' on':''}${can?' clic':''}"${can?` onclick="toggleAtivPel('${a.s}')"`:''}>${a.t}</span>`).join(''); }
+  function toggleAtivPel(s){ if(!canEditPel()||!pelAtual) return;
+    const arr=pelAtividades(pelAtual).slice(); const i=arr.indexOf(s);
+    if(i>=0) arr.splice(i,1); else arr.push(s);
+    setPelExtra(pelAtual,{atividades:arr});
+    const w=document.getElementById('pelAtivsEdit'); if(w) w.innerHTML=ativsEditInner(pelAtual);
+    try{ if(typeof renderAtual==='function') renderAtual(); }catch(e){} }
   function onNomePel(v){ if(!pelAtual) return; setPelExtra(pelAtual,{n:(v||'').trim()}); renderPel(); if(typeof renderDaycare==='function') renderDaycare(); }
   // alunos novos cadastrados pela equipe vivem no Firebase (daycare/cadastro com _novo) e entram na lista base
   // Trava nível 1 embutida de graça: criarAluno grava em daycare/cadastro/{pelKey(nome+tutor)} —
@@ -6021,6 +6040,8 @@
           <div class="hf-estadia">Tutor: ${escAttr(pelGet(p,'tutor'))}</div>
           <div id="pelDiasEdit" style="margin-top:9px">${diasEditInner(p)}</div>
           ${can?'<div class="hint" style="margin-top:4px;font-size:11px">Toque nos dias para marcar quando o peludinho vem — a frequência ajusta sozinha.</div>':''}
+          ${(can||pelAtividades(p).length)?`<div style="margin-top:11px"><div style="font-size:11px;font-weight:700;color:var(--z-blue);margin-bottom:5px">Atividades seletivas</div><div id="pelAtivsEdit">${ativsEditInner(p)}</div></div>`:''}
+          ${can?'<div class="hint" style="margin-top:4px;font-size:11px">Marque as atividades que este peludinho faz (Aucademia, Aulinha, Jogos, Agility, Massagem, Escova). As demais valem para todos.</div>':''}
           <div class="so-gestao" style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px">
             <button class="btn-foto-mini" onclick="document.getElementById('pelFotoFile').click()">📷 Inserir foto</button>
             <button class="btn-foto-mini" style="background:var(--z-blue);color:var(--z-cream)" onclick="salvarFotoPel()">💾 Salvar foto</button>
@@ -6218,7 +6239,7 @@
   // ===== DAY CARE — chamada visual a prova de burros (Aulunos do dia) =====
   const HOJE_DIA=(()=>{ const d=new Date().getDay(); return (d>=1&&d<=5)?ORDEM_DIAS[d-1]:'seg'; })();
   let dcDia=HOJE_DIA, dcChamada={}, dcAvulsos=[], dcAtiv='chamada';
-  const ATIVS_DC=[{s:'checkin-corpo',t:'Check-in do corpo'},{s:'checkin-pert',t:'Check-in dos pertences'},{s:'chamada',t:'Chamada',esp:1},{s:'livre',t:'Atividade livre'},{s:'ea',t:'Enriquecimento Ambiental (EA)'},{s:'aucademia',t:'Aucademia'},{s:'almoco',t:'Almoço',esp:1},{s:'almoco2',t:'2º Horário de Almoço'},{s:'massagem',t:'Massagem Dessensibilizadora'},{s:'jogos',t:'Jogos Cognitivos'},{s:'aulinha',t:'Aulinha de Disciplina'},{s:'agility',t:'Agility Funcional'},{s:'musicoterapia',t:'Musicoterapia'},{s:'checkout-pert',t:'Check-out dos pertences'},{s:'checkout-corpo',t:'Check-out do corpinho'}];
+  const ATIVS_DC=[{s:'checkin-corpo',t:'Check-in do corpo'},{s:'checkin-pert',t:'Check-in dos pertences'},{s:'chamada',t:'Chamada',esp:1},{s:'livre',t:'Atividade livre'},{s:'ea',t:'Enriquecimento Ambiental (EA)'},{s:'aucademia',t:'Aucademia'},{s:'almoco',t:'Almoço',esp:1},{s:'almoco2',t:'2º Horário de Almoço'},{s:'massagem',t:'Massagem Dessensibilizadora'},{s:'escova',t:'Escova de Dentes'},{s:'jogos',t:'Jogos Cognitivos'},{s:'aulinha',t:'Aulinha de Disciplina'},{s:'agility',t:'Agility Funcional'},{s:'musicoterapia',t:'Musicoterapia'},{s:'checkout-pert',t:'Check-out dos pertences'},{s:'checkout-corpo',t:'Check-out do corpinho'}];
   function dcDataKey(){ const p=x=>String(x).padStart(2,'0'); const d=new Date(); return d.getFullYear()+'-'+p(d.getMonth()+1)+'-'+p(d.getDate()); }
   function dcKey(name,tutor){ return jsNorm((name||'')+'__'+(tutor||'')).replace(/[.#$\[\]\/ ]/g,'-'); }
   function montarSubnav(){ const sm=document.getElementById('dcSubnav'); if(!sm) return;
@@ -6670,7 +6691,7 @@
   }
   function renderGenerico(){
     if(!document.getElementById('genGrid')) return;
-    const list=ehAlmoco2()?listaSegundoHorario():turmaDoDia(); let feito=0;
+    let list=ehAlmoco2()?listaSegundoHorario():turmaDoDia(); list=filtrarAtividadeSeletiva(list,dcAtiv); let feito=0;
     list.forEach(o=>{ if(genMarcas[dcKey(o.p.n,o.p.tutor)]==='feito')feito++; });
     const f=ATIVS_DC.find(a=>a.s===dcAtiv);
     document.getElementById('genResumo').innerHTML=`<div class="dc-resumo"><div class="dc-stat ok"><b>${feito}</b>feito</div><div class="dc-stat pend"><b>${list.length-feito}</b>pendente</div></div>`
