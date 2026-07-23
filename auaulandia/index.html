@@ -3975,10 +3975,25 @@
     const add=(m,saida,dia,key)=>{ if(m&&m.nome && !hospedes.some(h=>h.nome===m.nome&&h.tutor===(m.tutor||''))){ hospedes.push({nome:m.nome, tutor:m.tutor||'', raca:m.raca||'', refKey:m.refKey||'', ini:(m.nome[0]||'?').toUpperCase(), cor:CORES[hospedes.length%CORES.length], pernoite:!m.hospede, hospede:!!m.hospede, saidaHoje:!!saida, manualKey:key||'', manualDia:dia||''}); } };
     Promise.all([
       DB.ref('auaulandia/manuais/'+hojeK).once('value').then(s=>s.val()||{}).catch(()=>({})),
-      incluiVesp ? DB.ref('auaulandia/manuais/'+vespK).once('value').then(s=>s.val()||{}).catch(()=>({})) : Promise.resolve({})
+      incluiVesp ? DB.ref('auaulandia/manuais/'+vespK).once('value').then(s=>s.val()||{}).catch(()=>({})) : Promise.resolve({}),
+      // Estadias do Check-in (auaulandia/estadias): o hóspede que fez check-in aparece no Plantão
+      // com ficha + medicação + alimentação, mesmo sem estar na planilha. Ativa = status 'ativa' e
+      // hoje dentro de entrada→saída. Dedupe por nome+tutor (o `add` já protege).
+      DB.ref('auaulandia/estadias').once('value').then(s=>s.val()||{}).catch(()=>({}))
     ]).then(function(r){
       Object.entries(r[0]||{}).forEach(([k,m])=>add(m,false,hojeK,k));
       Object.entries(r[1]||{}).forEach(([k,m])=>add(m,true,vespK,k));
+      // Só a estadia mais recente de cada FILHOt (evita reaparecer estadias antigas do mesmo pet)
+      var maisRecente={};
+      Object.values(r[2]||{}).forEach(function(e){ if(!e||!e.nome) return; var kk=((e.refKey||(e.nome+'__'+(e.tutor||'')))+'').toLowerCase(); if(!maisRecente[kk]||(e._ts||0)>(maisRecente[kk]._ts||0)) maisRecente[kk]=e; });
+      var hojeISOk=dataKeyAtual();
+      Object.values(maisRecente).forEach(function(e){
+        if((e.status||'ativa')!=='ativa') return; // check-out feito → sai do plantão
+        var ent=e.entrada||'', sai=e.saida||'';
+        if(ent && hojeISOk < ent) return;         // ainda não chegou
+        if(sai && hojeISOk > sai) return;          // já passou a saída prevista
+        add({nome:e.nome, tutor:e.tutor||'', raca:e.raca||'', refKey:e.refKey||'', hospede:true}, (sai&&hojeISOk===sai), '', '');
+      });
       renderHosp();
       if(typeof carregarAgendaMedTodos==='function') carregarAgendaMedTodos();
     }).catch(()=>{});
