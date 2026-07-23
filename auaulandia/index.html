@@ -726,6 +726,15 @@
   .mag-data-fim.off{display:none}
   .mag-continuo{border:1.5px solid var(--line);background:var(--z-cream);color:var(--z-blue);border-radius:999px;padding:7px 13px;font-size:12.5px;font-weight:700;font-family:var(--font-ui);cursor:pointer;align-self:center}
   .mag-continuo.on{background:var(--z-gold);border-color:var(--z-gold);color:var(--z-blue)}
+  .mag-freq{display:flex;flex-wrap:wrap;align-items:center;gap:8px;padding:8px 9px;background:var(--z-cream-warm);border-top:1px dashed var(--line)}
+  .mag-freq .mu-lab{align-self:center;font-size:10.5px;font-weight:800;letter-spacing:.4px;color:var(--muted);text-transform:uppercase}
+  .mag-freq-opts{display:flex;gap:6px;flex-wrap:wrap}
+  .mag-freq-opts button{border:1.5px solid var(--line);background:var(--z-cream);color:var(--z-blue);border-radius:999px;padding:6px 11px;font-size:12.5px;font-weight:700;font-family:var(--font-ui);cursor:pointer}
+  .mag-freq-opts button.on{background:var(--z-gold);border-color:var(--z-gold);color:var(--z-blue)}
+  .mag-freq-dias{display:none;flex-wrap:wrap;gap:5px;width:100%}
+  .mag-freq-dias.on{display:flex}
+  .mag-diaw{width:42px;height:38px;border:1.5px solid var(--line);background:#fff;border-radius:9px;font-size:12px;font-weight:800;color:var(--z-blue);cursor:pointer}
+  .mag-diaw.on{background:var(--z-blue);border-color:var(--z-blue);color:#fff}
   .medgrid.dim{opacity:.45;pointer-events:none}
   /* Celular: a tabela de 3 colunas não cabe — o nome do remédio ficava cortado.
      Cada linha vira um bloco empilhado, com rótulo em cada campo e botão no tamanho do dedo. */
@@ -1982,6 +1991,15 @@
             <label class="mag-data-f mag-data-fim"><span>Fim (término)</span><input type="date" id="vmFim" data-c="fim"></label>
             <button type="button" class="mag-continuo" onclick="medToggleContinuo(this)">Uso contínuo</button>
           </div>
+          <div class="mag-freq" data-freqtipo="diario" style="margin-top:8px;border-radius:10px;border-top:none;border:1.5px solid var(--line)">
+            <span class="mu-lab">Frequência</span>
+            <div class="mag-freq-opts">
+              <button type="button" class="on" onclick="medFreqTipo(this,'diario')">Todos os dias</button>
+              <button type="button" onclick="medFreqTipo(this,'dias')">Dias específicos</button>
+              <button type="button" onclick="medFreqTipo(this,'alternado')">Dia sim, dia não</button>
+            </div>
+            <div class="mag-freq-dias"><span style="font-size:11px;font-weight:700;color:var(--muted);align-self:center">Nos dias:</span><button type="button" class="mag-diaw" data-dw="dom" onclick="medToggleDiaW(this)">Dom</button><button type="button" class="mag-diaw" data-dw="seg" onclick="medToggleDiaW(this)">Seg</button><button type="button" class="mag-diaw" data-dw="ter" onclick="medToggleDiaW(this)">Ter</button><button type="button" class="mag-diaw" data-dw="qua" onclick="medToggleDiaW(this)">Qua</button><button type="button" class="mag-diaw" data-dw="qui" onclick="medToggleDiaW(this)">Qui</button><button type="button" class="mag-diaw" data-dw="sex" onclick="medToggleDiaW(this)">Sex</button><button type="button" class="mag-diaw" data-dw="sab" onclick="medToggleDiaW(this)">Sáb</button></div>
+          </div>
           <div class="mag-horarios" style="margin-top:10px"><span class="mu-lab">Horários</span><span class="mag-horarios-list" id="vmHorarios"><span class="magHorario"><input data-c="h" inputmode="numeric" placeholder="07:30" onblur="normalizarHoraMed(this)"><button type="button" class="mag-rm-h" onclick="this.parentElement.remove()">×</button></span></span><button type="button" class="med-add" style="width:auto;margin-top:0" onclick="vetAddHorario(this)">+ horário</button></div>
           <div class="field" style="margin-top:10px"><label>Motivo da prescrição / alteração (fica registrado e assinado)</label><input id="vmMotivo" class="cad-in" placeholder="Ex: vomitou após o almoço — proteger a mucosa" autocomplete="off"></div>
           <div class="actions" style="margin-top:12px"><button class="btn btn-primary" onclick="vetSalvarMed()">Salvar na ficha do peludinho</button><button class="btn" style="background:var(--z-cream-warm);color:var(--z-blue);border:1.5px solid var(--line)" onclick="vetFecharMedForm()">Cancelar</button></div>
@@ -2765,16 +2783,17 @@
   function medDoseTxt(it){ it=it||{}; if(medEhLocal(it.u)) return medLocalLabel(it.u)+(it.local?(' — '+it.local):''); if(medEhTextoLivre(it.u)) return (it.q?String(it.q).trim()+' ':'')+'(medidor do cliente)'; return fmtQtd(it.q,it.u)||((it.q||'')+' '+(it.u||'')).trim(); }
   // Período de uso: dd/mm → dd/mm, ou "uso contínuo".
   function medBRdata(iso){ if(!iso) return ''; const p=String(iso).split('-'); return p.length===3?(p[2]+'/'+p[1]+'/'+p[0]):iso; }
-  function medPeriodoTxt(it){ it=it||{}; if(it.continuo) return 'uso contínuo'; const i=medBRdata(it.dataInicio), f=medBRdata(it.dataFim); if(i&&f) return i+' a '+f; if(i) return 'início '+i; if(f) return 'até '+f; return ''; }
+  function medFreqTxt(it){ var f=it&&it.freq; if(!f||!f.tipo||f.tipo==='diario') return ''; if(f.tipo==='alternado') return 'dia sim, dia não'; if(f.tipo==='dias'){ var lbl={dom:'dom',seg:'seg',ter:'ter',qua:'qua',qui:'qui',sex:'sex',sab:'sáb'}; return (f.dias||[]).map(function(d){ return lbl[d]||d; }).join(', '); } return ''; }
+  function medPeriodoTxt(it){ it=it||{}; var per=''; if(it.continuo) per='uso contínuo'; else { const i=medBRdata(it.dataInicio), f=medBRdata(it.dataFim); if(i&&f) per=i+' a '+f; else if(i) per='início '+i; else if(f) per='até '+f; } var fq=medFreqTxt(it); return [per,fq].filter(Boolean).join(' · '); }
   // Vigência: o remédio está ativo (gera alarme / pede dose) na data refISO?
   // Uso contínuo = sempre. Sem datas (legado) = sempre. Fora da janela início→fim = inativo.
   function medVigenteEm(it, refISO){
     it=it||{};
     refISO=refISO||((typeof dataKeyAtual==='function')?dataKeyAtual():'');
     if(!refISO) return true;
-    if(it.dataInicio && refISO < it.dataInicio) return false; // ainda não começou
-    if(it.continuo) return true;
-    if(it.dataFim && refISO > it.dataFim) return false;       // já terminou (para o alarme sozinho)
+    if(it.dataInicio && refISO < it.dataInicio) return false;              // ainda não começou
+    if(!it.continuo && it.dataFim && refISO > it.dataFim) return false;    // já terminou (para o alarme sozinho)
+    if(typeof medFreqHoje==='function' && !medFreqHoje(it, refISO)) return false; // não é dia dele (dias específicos / dia sim-dia não)
     return true;
   }
   // Lê os campos extras (local da pomada + período) de uma linha .magitem compartilhada.
@@ -2889,6 +2908,19 @@
       +'<label class="mag-data-f mag-data-fim'+(cont?' off':'')+'"><span>Fim</span><input type="date" data-c="fim" value="'+escAttr(item.dataFim||'')+'"></label>'
       +'<button type="button" class="mag-continuo'+(cont?' on':'')+'" onclick="medToggleContinuo(this)">Uso contínuo</button>'
       +'</div>';
+    // Frequência: todos os dias, dias específicos da semana (2x/semana, 1x/semana…) ou dia sim/dia não.
+    const freq=item.freq||{tipo:'diario',dias:[]};
+    const DIASW=[['dom','Dom'],['seg','Seg'],['ter','Ter'],['qua','Qua'],['qui','Qui'],['sex','Sex'],['sab','Sáb']];
+    const diasChips=DIASW.map(function(d){ return '<button type="button" class="mag-diaw'+(((freq.dias||[]).indexOf(d[0])>=0)?' on':'')+'" data-dw="'+d[0]+'" onclick="medToggleDiaW(this)">'+d[1]+'</button>'; }).join('');
+    const freqBlock='<div class="mag-freq" data-freqtipo="'+(freq.tipo||'diario')+'">'
+      +'<span class="mu-lab">Frequência</span>'
+      +'<div class="mag-freq-opts">'
+        +'<button type="button" class="'+(!freq.tipo||freq.tipo==='diario'?'on':'')+'" onclick="medFreqTipo(this,\'diario\')">Todos os dias</button>'
+        +'<button type="button" class="'+(freq.tipo==='dias'?'on':'')+'" onclick="medFreqTipo(this,\'dias\')">Dias específicos</button>'
+        +'<button type="button" class="'+(freq.tipo==='alternado'?'on':'')+'" onclick="medFreqTipo(this,\'alternado\')">Dia sim, dia não</button>'
+      +'</div>'
+      +'<div class="mag-freq-dias'+(freq.tipo==='dias'?' on':'')+'"><span style="font-size:11px;font-weight:700;color:var(--muted);align-self:center">Nos dias:</span>'+diasChips+'</div>'
+      +'</div>';
     const horariosHTML=(item.horarios&&item.horarios.length?item.horarios:['']).map(function(h){
       return '<span class="magHorario"><input data-c="h" inputmode="numeric" placeholder="07:30" value="'+escAttr(h||'')+'" onblur="normalizarHoraMed(this)"><button type="button" class="mag-rm-h" title="Remover horário" onclick="this.parentElement.remove()">×</button></span>';
     }).join('');
@@ -2925,6 +2957,7 @@
       +'</div>'
       +'<div class="medunits"><span class="mu-lab">Medida</span>'+units+'</div>'
       +datasBlock
+      +freqBlock
       +'<div class="mag-horarios"><span class="mu-lab">Horários</span><span class="mag-horarios-list">'+horariosHTML+'</span><button type="button" class="med-add" style="width:auto;margin-top:0" onclick="magAddHorario(this)">+ horário</button></div>'
       +estoqueBlock
       +'<div style="text-align:right;margin-top:6px"><button type="button" class="ativ-del so-equipe" title="Remover este item da lista" onclick="magRemoverItem(\''+id+'\')">🗑️ Remover item</button></div>'
@@ -2932,6 +2965,29 @@
   }
   // alterna Medicamento/Suplemento na linha (só 1 fica aceso)
   function magPickTipo(btn){ if(!podeEditarLinhaMed(btn)) return; const wrap=btn.parentElement; if(!wrap) return; wrap.querySelectorAll('button').forEach(function(b){ b.classList.remove('on'); }); btn.classList.add('on'); }
+  // ---- Frequência da medicação (todos os dias / dias específicos / dia sim-dia não) ----
+  function medFreqTipo(btn,tipo){ if(!podeEditarLinhaMed(btn)&&!(btn.closest&&btn.closest('#vetMedForm'))) return; const box=btn.closest('.mag-freq'); if(!box) return; box.dataset.freqtipo=tipo; box.querySelectorAll('.mag-freq-opts button').forEach(function(b){ b.classList.remove('on'); }); btn.classList.add('on'); const dias=box.querySelector('.mag-freq-dias'); if(dias) dias.classList.toggle('on', tipo==='dias'); }
+  function medToggleDiaW(btn){ if(!podeEditarLinhaMed(btn)&&!(btn.closest&&btn.closest('#vetMedForm'))) return; btn.classList.toggle('on'); }
+  // Lê a frequência de uma linha .magitem (ou do formulário da vet).
+  function coletarFreqMed(el){
+    if(!el) return {tipo:'diario',dias:[]};
+    var box=el.querySelector('.mag-freq'); if(!box) return {tipo:'diario',dias:[]};
+    var tipo=box.dataset.freqtipo||'diario';
+    var dias=[]; box.querySelectorAll('.mag-freq-dias .mag-diaw.on').forEach(function(b){ dias.push(b.dataset.dw); });
+    if(tipo==='dias' && !dias.length) tipo='diario'; // marcou "dias" mas não escolheu nenhum → trata como diário
+    return {tipo:tipo, dias:dias};
+  }
+  const _DIAW_IDX=['dom','seg','ter','qua','qui','sex','sab'];
+  // O remédio é dado HOJE, dada a frequência? (usado junto de medVigenteEm)
+  function medFreqHoje(it, refISO){
+    var f=it&&it.freq; if(!f||!f.tipo||f.tipo==='diario') return true;
+    refISO=refISO||((typeof dataKeyAtual==='function')?dataKeyAtual():'');
+    if(!refISO) return true;
+    var d=new Date(refISO+'T00:00:00'); if(isNaN(d.getTime())) return true;
+    if(f.tipo==='dias'){ if(!f.dias||!f.dias.length) return true; return f.dias.indexOf(_DIAW_IDX[d.getDay()])>=0; }
+    if(f.tipo==='alternado'){ var base=it.dataInicio||refISO; var d0=new Date(base+'T00:00:00'); if(isNaN(d0.getTime())) return true; var dif=Math.round((d-d0)/86400000); return (dif%2)===0; } // dia do início = sim, depois alterna
+    return true;
+  }
   // Escopo de uma linha de medicação (funciona no Check-in/card diário e no formulário do Cuidado Vet).
   function medScope(node){ return (node&&node.closest)?(node.closest('.magitem')||node.closest('#vetMedForm')):null; }
   // Ao escolher a medida: se for POMADA, esconde Quantidade e mostra Local de aplicação (e vice-versa).
@@ -3045,6 +3101,7 @@
         if(medEhLocal(u)) item.local=exM.local;
         if(exM.dataInicio) item.dataInicio=exM.dataInicio;
         if(exM.continuo) item.continuo=true; else if(exM.dataFim) item.dataFim=exM.dataFim;
+        const _fqM=coletarFreqMed(el); if(_fqM && _fqM.tipo!=='diario') item.freq=_fqM;
         const est=coletarEstoqueEl(el, MED_AGENDA_ITENS[id]); if(est) item.estoque=est;
         // Onda 3: preserva a suspensão e o histórico da vet — re-salvar a agenda pela recepção
         // NUNCA pode ressuscitar uma medicação que a veterinária suspendeu (mata o caso Hulk).
@@ -5111,6 +5168,7 @@
     document.querySelectorAll('#vmUnidades button').forEach(function(b){ b.classList.remove('on'); });
     var _cont=document.querySelector('#vetMedForm .mag-continuo'); if(_cont) _cont.classList.remove('on');
     var _fw=document.querySelector('#vetMedForm .mag-data-fim'); if(_fw) _fw.classList.remove('off');
+    var _fb=document.querySelector('#vetMedForm .mag-freq'); if(_fb){ _fb.dataset.freqtipo='diario'; _fb.querySelectorAll('.mag-freq-opts button').forEach(function(b,i){ b.classList.toggle('on',i===0); }); var _fd=_fb.querySelector('.mag-freq-dias'); if(_fd){ _fd.classList.remove('on'); _fd.querySelectorAll('.mag-diaw').forEach(function(b){ b.classList.remove('on'); }); } }
     medSyncRow(document.getElementById('vmUnidades'));
     var t=document.getElementById('vmTipo'); if(t) t.querySelectorAll('button').forEach(function(b,i){ b.classList.toggle('on',i===0); });
     document.getElementById('vmHorarios').innerHTML='<span class="magHorario"><input data-c="h" inputmode="numeric" placeholder="07:30" onblur="normalizarHoraMed(this)"><button type="button" class="mag-rm-h" onclick="this.parentElement.remove()">×</button></span>';
@@ -5134,6 +5192,7 @@
     var _vf=document.getElementById('vmFim'); if(_vf) _vf.value=it.dataFim||'';
     var _cont=document.querySelector('#vetMedForm .mag-continuo'); if(_cont) _cont.classList.toggle('on',!!it.continuo);
     var _fw=document.querySelector('#vetMedForm .mag-data-fim'); if(_fw) _fw.classList.toggle('off',!!it.continuo);
+    var _fb=document.querySelector('#vetMedForm .mag-freq'); if(_fb){ var fr=it.freq||{tipo:'diario',dias:[]}; _fb.dataset.freqtipo=fr.tipo||'diario'; _fb.querySelectorAll('.mag-freq-opts button').forEach(function(b){ b.classList.remove('on'); }); var idx=(fr.tipo==='dias')?1:(fr.tipo==='alternado'?2:0); var opts=_fb.querySelectorAll('.mag-freq-opts button'); if(opts[idx]) opts[idx].classList.add('on'); var _fd=_fb.querySelector('.mag-freq-dias'); if(_fd){ _fd.classList.toggle('on',fr.tipo==='dias'); _fd.querySelectorAll('.mag-diaw').forEach(function(b){ b.classList.toggle('on',(fr.dias||[]).indexOf(b.dataset.dw)>=0); }); } }
     document.querySelectorAll('#vmUnidades button').forEach(function(b){ b.classList.toggle('on', b.textContent.trim()===it.u); });
     medSyncRow(document.getElementById('vmUnidades'));
     var t=document.getElementById('vmTipo'); if(t) t.querySelectorAll('button').forEach(function(b){ b.classList.toggle('on', /supl/i.test(b.textContent)===(it.tipo==='suplemento')); });
@@ -5174,6 +5233,7 @@
     var item={nome:nome,q:(medEhLocal(u)?'':q),u:u,horarios:horarios,tipo:tipo,origem:'vet',historico:hist,dataInicio:dataInicio,continuo:continuo};
     if(medEhLocal(u)) item.local=local;
     if(!continuo) item.dataFim=dataFim; else item.dataFim=null;
+    var _fqV=coletarFreqMed(document.getElementById('vetMedForm')); if(_fqV && _fqV.tipo!=='diario') item.freq=_fqV; else item.freq=null;
     if(prev.estoque) item.estoque=prev.estoque; // preserva estoque já contado, se houver
     // reativa se estava suspenso e a vet salvou uma alteração
     if(st){ st.style.color='var(--muted)'; st.textContent='Salvando na ficha do peludinho…'; }
@@ -7379,6 +7439,7 @@
         if(medEhLocal(u)) item.local=ex.local;
         if(ex.dataInicio) item.dataInicio=ex.dataInicio;
         if(ex.continuo) item.continuo=true; else if(ex.dataFim) item.dataFim=ex.dataFim;
+        const _fq=coletarFreqMed(el); if(_fq && _fq.tipo!=='diario') item.freq=_fq;
         const est=coletarEstoqueEl(el, null); if(est) item.estoque=est;
         // Histórico por remédio (Fundação 1): a criação no check-in já é a 1ª linha {quem, quando, acao}.
         item.historico=[{quem:(typeof quemSou==='function'?quemSou():'-'), quando:(typeof agoraBR==='function'?agoraBR():new Date().toLocaleString('pt-BR')), acao:'Criou (check-in)'}];
