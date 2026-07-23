@@ -1272,6 +1272,7 @@
           <div class="hf-chipline" id="hf-chipline">Microchip: --</div>
           <div class="hf-meta" id="hf-meta"></div>
           <div class="hf-estadia" id="hf-estadia"></div>
+          <button type="button" onclick="reemitirFichaAtual()" style="margin-top:8px;background:var(--z-gold);color:var(--z-blue);border:none;border-radius:10px;padding:8px 14px;font-weight:800;font-size:12.5px;cursor:pointer">🖨️ Reemitir ficha de check-in (PDF)</button>
           <div id="hf-pills"></div>
           <div id="hf-vet-instr"></div>
           <div id="hf-alergia-block"></div>
@@ -7995,6 +7996,48 @@
     if(__err) h+='<div class="pf-row" style="color:#C0392B;margin-top:8px">Aviso: alguns detalhes nao puderam ser montados ('+esc(__err)+'). Avise a Adriana.</div>';
     const pr=document.getElementById('ci-print'); if(pr) pr.innerHTML=h;
     var __st=document.getElementById('ci-status'); if(__st&&__err){ __st.style.color='var(--crm-critico)'; __st.textContent='PDF gerado com aviso — me mande esta mensagem: '+__err; }
+    setTimeout(function(){ window.print(); },60);
+  }
+  // ===== Reemitir a ficha de check-in (PDF) a qualquer momento, a partir dos dados SALVOS na
+  // estadia (auaulandia/estadias) — sem precisar refazer o check-in. Botão na ficha do hóspede.
+  function reemitirFichaAtual(){
+    var h=(typeof currentHosp!=='undefined')?currentHosp:null; if(!h){ return; }
+    var k=(typeof medAgendaKey==='function')?medAgendaKey(h):'';
+    var reg=(k&&typeof CF_ESTADIAS!=='undefined')?CF_ESTADIAS[k]:null;
+    var est=reg&&reg.e;
+    if(!est){ alert('Ainda não há um check-in salvo para reemitir a ficha deste hóspede.'); return; }
+    reemitirFichaPdf(est);
+  }
+  function reemitirFichaPdf(est){
+    if(!est) return; var h='', __err='';
+    try{
+      var f=est.ficha||{}; var a=f.alim||{}; var spa=f.spa||{}; var mv=est.medicacao||[];
+      h='<div class="pf-h1">Zêluz · AuAulândia — Ficha de Check-in</div>';
+      h+='<div class="pf-sub">'+esc(est.nome||'')+(est.raca?(' · '+esc(est.raca)):'')+(est.tutor?(' · Tutor: '+esc(est.tutor)):'')+'</div>';
+      h+='<div class="pf-sec"><h3>Estadia</h3><div class="pf-row">Entrada: <strong>'+ciBRdata(est.entrada)+'</strong>'+(a.dias?('  ·  '+esc(a.dias)+' dia(s)'):'')+'</div><div class="pf-row" style="font-size:15px"><strong>SAÍDA: '+(est.saida?ciBRdata(est.saida):'a confirmar')+'</strong></div></div>';
+      if(a.tipo||a.marca||a.qtd){
+        var uni=ciUnidLbl(a.unidade); var temNat=!!(a.comida&&a.comida.qtd); var racaoQ=a.qtd?(a.qtd+uni):'(quantidade não informada)';
+        h+='<div class="pf-sec"><h3>Alimentação</h3>';
+        h+='<div class="pf-row"><strong>Tipo:</strong> '+esc(a.tipo||'—')+(a.marca?('  ·  <strong>Marca:</strong> '+esc(a.marca)):'')+'</div>';
+        if(temNat){
+          var meals=ciComidaRefNomesCap(a.comida.refeicoes); var comQ=a.comida.qtd+'g';
+          h+='<div class="pf-row" style="margin-top:6px;font-weight:800;color:#234D67">COMO ALIMENTAR (leia com atenção — não trocar):</div>';
+          h+='<div class="pf-row"><strong>1) Ração:</strong> '+esc(racaoQ)+' por refeição'+(a.refeicoes?('  ('+esc(a.refeicoes)+'x ao dia)'):'')+'</div>';
+          h+='<div class="pf-row"><strong>2) Comida natural:</strong> '+esc(comQ)+' por refeição — <strong>SOMENTE em: '+(meals.length?esc(meals.join(', ')):'(marcar quais)')+'</strong></div>';
+        } else {
+          h+='<div class="pf-row"><strong>Ração:</strong> '+esc(racaoQ)+' por refeição'+(a.refeicoes?('  ('+esc(a.refeicoes)+'x ao dia)'):'')+'</div>';
+        }
+        h+='</div>';
+      }
+      var bl='<strong>Banho na saída:</strong> '+esc(spa.banho||'não informado'); if(spa.banho==='Sim'){ if(spa.tipo) bl+=' — <strong>'+esc(spa.tipo)+'</strong>'; bl+= spa.aConfirmar?' — horário a confirmar':(spa.horario?(' — às '+esc(spa.horario)):''); }
+      h+='<div class="pf-sec"><h3>Spa Dermoprotetor — Banho na saída</h3><div class="pf-row">'+bl+'</div></div>';
+      if(mv.length){ h+='<div class="pf-med"><h3>⚠ MEDICAÇÃO / SUPLEMENTOS — HORÁRIOS</h3>'; mv.forEach(function(it){ var per=medPeriodoTxt(it); h+='<div class="pf-mrow">'+esc(it.nome)+' — '+esc(medDoseTxt(it))+' — '+esc((it.horarios||[]).join(', '))+(per?(' — '+esc(per)):'')+'</div>'; }); h+='</div>'; }
+      if((est.pertences||[]).length){ h+='<div class="pf-sec"><h3>Pertences</h3>'+est.pertences.map(function(p){ return '<div class="pf-row">• '+esc(p.nome)+(p.spec?(' — '+esc(p.spec)):'')+'</div>'; }).join('')+'</div>'; }
+      h+='<div class="pf-sec"><h3>Assinatura do tutor</h3>'+(est.assinatura?('<img class="pf-sig-img" src="'+est.assinatura+'">'):'<div class="pf-row">(sem assinatura)</div>')+'<div class="pf-row" style="margin-top:6px">'+esc(est.assinado_por||'—')+'</div></div>';
+    }catch(e){ __err=(e&&e.message)||String(e); }
+    if(!h || h.indexOf('pf-h1')<0){ h='<div class="pf-h1">Zêluz · AuAulândia — Ficha de Check-in</div><div class="pf-sub">'+esc((est&&est.nome)||'')+'</div>'; }
+    if(__err) h+='<div class="pf-row" style="color:#C0392B;margin-top:8px">Aviso: '+esc(__err)+'</div>';
+    var pr=document.getElementById('ci-print'); if(pr) pr.innerHTML=h;
     setTimeout(function(){ window.print(); },60);
   }
 
