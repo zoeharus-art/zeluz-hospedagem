@@ -7951,7 +7951,10 @@
     const d=ciColetarFicha(); const meds=ciColetarMeds(); const mv=Object.values(meds);
     const assina=(document.getElementById('ciAssinaNome').value||'').trim();
     const sig=ciAssinaturaDataURL();
-    const a=d.ficha.alim;
+    // ||{} obrigatório: hóspede sem alimentação preenchida (ex.: Novo Hóspede) deixava alim
+    // indefinido e a leitura a.tipo estourava TypeError, abortando o PDF (saía em branco).
+    // Mesmo guard que o ciBuildPdfBlob já usa.
+    const a=(d.ficha&&d.ficha.alim)||{};
     let h='<div class="pf-h1">Zêluz · AuAulândia — Ficha de Check-in</div>';
     h+='<div class="pf-sub">'+esc(ciHosp.nome)+(ciHosp.raca?(' · '+esc(ciHosp.raca)):'')+(ciHosp.tutor?(' · Tutor: '+esc(ciHosp.tutor)):'')+'</div>';
     h+='<div class="pf-sec"><h3>Estadia</h3><div class="pf-row">Entrada: <strong>'+ciBRdata(d.entrada)+'</strong>'+(a.dias?('  ·  '+esc(a.dias)+' dia(s)'):'')+'</div><div class="pf-row" style="font-size:15px"><strong>SAÍDA: '+(d.saida?ciBRdata(d.saida):'a confirmar')+'</strong></div></div>';
