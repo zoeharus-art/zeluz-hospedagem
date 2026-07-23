@@ -463,6 +463,11 @@
   .pet .mini-naocomeu{color:#fff;background:var(--crm-critico);animation:piscaAlerta 1.5s ease-in-out infinite}
   .vet-pet .mini-med{color:var(--z-blue);background:var(--z-gold)}
   body[data-role="plantonista"] .so-day,body[data-role="tutor"] .so-day{display:none !important}
+  /* Plantonista na medicação: vê SÓ o plano do dia (o que dar, quando, como) — NUNCA o cadastro,
+     nem separação medicamento/suplemento. Ela só executa: "Dei agora". À prova de falha. */
+  body[data-role="plantonista"] #magItens,
+  body[data-role="plantonista"] #card-medagenda>h2+.hint,
+  body[data-role="plantonista"] #magSoLeituraAviso{display:none !important}
   /* Plantonista: só AuAulândia e Sair */
   body[data-role="plantonista"] .nav a,body[data-role="plantonista"] .nav .grp,body[data-role="plantonista"] .nav .subnav{display:none !important}
   body[data-role="plantonista"] .nav a[data-v="hospedagem"],body[data-role="plantonista"] .nav a[data-v="sair"]{display:flex !important}
@@ -2543,33 +2548,41 @@
   // Agora: 1º tenta o cadastro-mestre pelo refKey (sempre correto, não depende de digitação);
   // 2º o cadastro próprio da AuAulândia (ficha editada); 3º o campo bruto — mas só se ele NÃO
   // bater com o nome de uma raça conhecida (senão é o bug antigo, melhor mostrar vazio que errado).
-  function tutorDe(h){
-    if(!h) return '';
-    if(h.mascote) return 'Nossa Zelozinha';
+  // ===== Resolvedores de RAÇA e TUTOR robustos a dados TROCADOS =====
+  // Em muitos hóspedes os campos raca/tutor vieram invertidos (ex.: Dolly com raca="Marguita"
+  // [tutora] e tutor="Westie" [raça]). A verdade é o cadastro-mestre (PELUDINHOS): resolvemos por
+  // refKey ou por NOME e ignoramos os campos trocados. Sem mestre, decidimos pelo que PARECE raça.
+  var _RACAS_EXTRA=['corgi','welsh corgi','westie','west terrier','west highland','spitz','lulu','pomerania','pomsky','cocker','lhasa','shih tzu','shihtzu','maltes','poodle','yorkshire','yorky','pug','buldogue','bulldog','pinscher','dachshund','daschund','salsicha','teckel','schnauzer','shiba','beagle','labrador','golden','border collie','pastor','chihuahua','pequines','papillon','fox paulistinha','spaniel','srd','vira lata','vira-lata','viralata','bichon','husky','akita','boston'];
+  function ehRacaLike(x){ x=(typeof jsNorm==='function')?jsNorm(x||''):String(x||'').toLowerCase().trim(); if(!x) return false;
+    if(_RACAS_EXTRA.indexOf(x)>=0) return true;
+    if(_RACAS_EXTRA.some(function(r){ return r.length>=4 && (x.indexOf(r)>=0||r.indexOf(x)>=0); })) return true;
+    try{ return RACAS.some(function(r){ var rn=jsNorm(r); var w=rn.split(' ')[0]; return rn===x||w===x||(w.length>=4&&x.indexOf(w)>=0); }); }catch(e){ return false; } }
+  function pelMestreDe(h){ if(!h||!h.nome||typeof PELUDINHOS==='undefined') return null;
     try{
-      if(h.refKey){
-        if(typeof pelCadCache!=='undefined'&&pelCadCache[h.refKey]&&pelCadCache[h.refKey].tutor) return pelCadCache[h.refKey].tutor;
-        if(typeof PELUDINHOS!=='undefined'){ const pel=PELUDINHOS.find(p=>pelKey(p)===h.refKey); if(pel&&pelGet(pel,'tutor')) return pelGet(pel,'tutor'); }
-      }
-      // sem refKey ou refKey sem tutor: casa por NOME (+raça) no cadastro-mestre — recupera
-      // o tutor certo de hóspede antigo lançado sem vínculo (era o caso do Dolly/Luna/Ragnar).
-      if(typeof PELUDINHOS!=='undefined'&&h.nome){
-        const pel=PELUDINHOS.find(p=>jsNorm(p.n)===jsNorm(h.nome)&&(!h.raca||jsNorm(pelGet(p,'raca'))===jsNorm(h.raca)));
-        if(pel&&pelGet(pel,'tutor')) return pelGet(pel,'tutor');
-      }
+      if(h.refKey){ var pk=PELUDINHOS.find(function(p){ return pelKey(p)===h.refKey; }); if(pk) return pk; }
+      var n=jsNorm(h.nome);
+      var ex=PELUDINHOS.filter(function(p){ return jsNorm(p.n)===n; });
+      if(ex.length===1) return ex[0];
+      if(ex.length>1){ var ht=jsNorm(h.tutor||''), hr=jsNorm(h.raca||'');
+        var d=ex.find(function(p){ var pt=jsNorm(pelGet(p,'tutor')), pr=jsNorm(pelGet(p,'raca')); return (pt&&(pt===ht||pt===hr))||(pr&&(pr===ht||pr===hr)); });
+        return d||ex[0]; }
+      var pref=PELUDINHOS.filter(function(p){ var pn=jsNorm(p.n); return pn&&n.indexOf(pn)===0; });
+      if(pref.length===1) return pref[0];
     }catch(e){}
-    const cad=getCad(h); if(cad&&cad.tutor) return cad.tutor;
-    const raw=(h.tutor||'').trim();
-    // NUNCA devolver a raça como se fosse tutor (dado antigo com a raça no campo tutor —
-    // por isso apareciam Westie/Cocker/SRD no lugar do nome do tutor).
-    try{
-      if(raw){
-        if(h.raca && raw.toLowerCase()===String(h.raca).trim().toLowerCase()) return '';
-        if(typeof RACAS!=='undefined' && RACAS.some(r=>r.toLowerCase()===raw.toLowerCase())) return '';
-      }
-    }catch(e){}
-    return raw;
-  }
+    return null; }
+  function racaDe(h){ if(!h) return ''; if(h.mascote) return 'Moradora Zêluz';
+    var pm=pelMestreDe(h); if(pm){ var r=pelGet(pm,'raca'); if(r) return r; }
+    var hr=(h.raca||'').trim(), ht=(h.tutor||'').trim();
+    if(hr && ehRacaLike(hr)) return hr;
+    if(ht && ehRacaLike(ht)) return ht;   // dados trocados: a raça estava no campo tutor
+    return hr||''; }
+  function tutorDe(h){ if(!h) return ''; if(h.mascote) return 'Nossa Zelozinha';
+    var pm=pelMestreDe(h); if(pm){ var t=pelGet(pm,'tutor'); if(t) return t; }
+    var hr=(h.raca||'').trim(), ht=(h.tutor||'').trim();
+    // dados trocados: tutor parece raça e raca parece nome de pessoa → o tutor real está no campo raca
+    if(ht && ehRacaLike(ht)){ return (hr && !ehRacaLike(hr))?hr:''; }
+    try{ var cad=getCad(h); if(cad&&cad.tutor&&!ehRacaLike(cad.tutor)) return cad.tutor; }catch(e){}
+    return ht; }
   // Resolvedores robustos (usam extraDoHosp, que casa refKey + nome__tutor + mestre + local).
   function fotoDe(h){ try{ const ex=extraDoHosp(h); if(ex&&ex.foto) return ex.foto; const c=getCad(h); if(c&&c.foto) return c.foto; }catch(e){} return ''; }
   function chipDe(h){ try{ const ex=extraDoHosp(h); return String((ex&&(ex.chip||ex.microchip))||'').trim(); }catch(e){ return ''; } }
@@ -2590,7 +2603,7 @@
         const ph = _fotoCard
           ? `<div class="ph" style="background-image:url('${_fotoCard}');background-size:cover;background-position:center"></div>`
           : `<div class="ph" style="background:${h.cor}">${h.ini}</div>`;
-        const raca = cad.raca || h.raca || racasMap[(h.nome+'__'+h.tutor).toLowerCase()] || (h.mascote?'Moradora Zêluz':'<span style="color:#b6ad9c;font-style:italic">Raça a cadastrar</span>');
+        const raca = racaDe(h) || racasMap[(h.nome+'__'+h.tutor).toLowerCase()] || (h.mascote?'Moradora Zêluz':'<span style="color:#b6ad9c;font-style:italic">Raça a cadastrar</span>');
         const tp = h.mascote ? 'moradora' : (h.hospede ? 'hospede' : (h.pernoite ? 'pernoite' : 'hospede'));
         const tj = {hospede:['t-hospede','HÓSPEDE'], pernoite:['t-pernoite','PERNOITE'], moradora:['t-moradora','MORADORA']}[tp];
         const tutor = tutorDe(h);
@@ -2633,7 +2646,7 @@
     if(info.foto){ av.style.backgroundImage=`url('${info.foto}')`; av.style.backgroundSize='cover'; av.style.backgroundPosition='center'; av.textContent=''; }
     else { av.style.backgroundImage='none'; av.textContent=h.ini; av.style.background=h.cor; }
     document.getElementById('hf-nome').textContent=(getCad(h)&&getCad(h).nome)||h.nome;
-    const raca=info.raca||h.raca||racasMap[(h.nome+'__'+h.tutor).toLowerCase()]||'';
+    const raca=racaDe(h)||racasMap[(h.nome+'__'+h.tutor).toLowerCase()]||'';
     const _tp=h.mascote?'Moradora':(h.hospede?'Hóspede':(h.pernoite?'Pernoite':'Hóspede'));
     const _tutor=tutorDe(h);
     document.getElementById('hf-meta').innerHTML=`${raca?raca+' · ':''}<strong>${_tp}</strong> · ${h.mascote?'Nossa Zelozinha':(_tutor?'Tutor: '+_tutor:'Tutor a confirmar')}`;
@@ -2717,11 +2730,11 @@
   function setSeg(id,val){ const g=document.getElementById(id); if(!g)return; g.querySelectorAll('button').forEach(b=>{ b.classList.remove('on','t-ok','t-bad','t-warn'); if(val&&b.textContent.trim()===val) b.classList.add('on'); }); }
   function atualizarHeader(cad){
     cad=cad||{}; const p=[]; const h=currentHosp||{};
-    const rc=cad.raca||h.raca||racasMap[((h.nome||'')+'__'+(h.tutor||'')).toLowerCase()]||''; if(rc)p.push(rc);
+    const rc=racaDe(h)||racasMap[((h.nome||'')+'__'+(h.tutor||'')).toLowerCase()]||''; if(rc)p.push(rc);
     if(cad.sexo)p.push(cad.sexo);
     const id=calcIdade(cad.nasc)||cad.idadeAprox||''; if(id)p.push(id); if(cad.corPelo)p.push(cad.corPelo); if(cad.castrado==='Sim')p.push('Castrado');
     const tp=h.mascote?'Moradora':(h.hospede?'Hóspede':(h.pernoite?'Pernoite':'Hóspede'));
-    const tut=cad.tutor||tutorDe(h);
+    const tut=tutorDe(h)||cad.tutor;
     document.getElementById('hf-meta').innerHTML = (p.length?p.join(' · ')+' · ':'') + '<strong>'+tp+'</strong>' + (h.mascote?' · Nossa Zelozinha':(tut?' · Tutor: '+tut:' · Tutor a confirmar'));
     const cl=document.getElementById('hf-chipline'); if(cl) cl.textContent='Microchip: '+(cad.chip||cad.microchip||(typeof chipDe==='function'?chipDe(h):'')||'--');
   }
@@ -5170,7 +5183,7 @@
       var tutor=(typeof tutorDe==='function')?tutorDe(h):(h.tutor||'');
       return '<div class="vet-pet" onclick="abrirVetFicha('+i+')">'+ph+alerta+med
         +'<div class="nm">'+escAttr((cad.nome||h.nome||'—'))+'</div>'
-        +'<div class="br">'+((cad.raca||h.raca)?escAttr(cad.raca||h.raca):'—')+'</div>'
+        +'<div class="br">'+(racaDe(h)?escAttr(racaDe(h)):'—')+'</div>'
         +'<div class="tt">'+(h.mascote?'Nossa Zelozinha':(tutor?'Tutor: '+escAttr(tutor):'Tutor a confirmar'))+'</div></div>';
     }).join('');
   }
@@ -5186,7 +5199,7 @@
     document.getElementById('vf-chipline').textContent='Microchip: '+((cad.chip||cad.microchip)?(cad.chip||cad.microchip):'--');
     var tutor=(typeof tutorDe==='function')?tutorDe(h):(h.tutor||'');
     var _vidade=(typeof calcIdade==='function')?calcIdade(cad.nasc||h.nasc||''):'';
-    document.getElementById('vf-meta').innerHTML=[ ((cad.raca||h.raca)?escAttr(cad.raca||h.raca):''), (_vidade?escAttr(_vidade):''), (h.mascote?'Nossa Zelozinha':(tutor?'Tutor: '+escAttr(tutor):'Tutor a confirmar')) ].filter(Boolean).join(' · ');
+    document.getElementById('vf-meta').innerHTML=[ (racaDe(h)?escAttr(racaDe(h)):''), (_vidade?escAttr(_vidade):''), (h.mascote?'Nossa Zelozinha':(tutor?'Tutor: '+escAttr(tutor):'Tutor a confirmar')) ].filter(Boolean).join(' · ');
     var ex=(typeof extraDoHosp==='function')?extraDoHosp(h):{};
     document.getElementById('vf-pills').innerHTML=(typeof alertPills==='function')?alertPills(ex):'';
     renderVetInstrucoesFicha(h,'vf-instr');
@@ -8154,7 +8167,7 @@
           :'<span class="mini-med" style="background:var(--crm-critico);color:#fff;animation:piscaAlerta 1.5s ease-in-out infinite">CONFERIR</span>');
       return '<div class="vet-pet" onclick="abrirCfFicha('+i+')">'+ph+alerta+selo
         +'<div class="nm">'+escAttr((cad.nome||h.nome||'—'))+'</div>'
-        +'<div class="br">'+((cad.raca||h.raca)?escAttr(cad.raca||h.raca):'—')+'</div>'
+        +'<div class="br">'+(racaDe(h)?escAttr(racaDe(h)):'—')+'</div>'
         +'<div class="tt">'+(h.mascote?'Nossa Zelozinha':(tutor?'Tutor: '+escAttr(tutor):'Tutor a confirmar'))+'</div></div>';
     }).join('');
   }
@@ -8168,7 +8181,7 @@
     else { av.style.backgroundImage='none'; av.textContent=(h.ini||(h.nome||'?')[0]||'?'); av.style.background=(h.cor||'#234D67'); }
     document.getElementById('cf-nome').textContent=cad.nome||h.nome||'—';
     var tutor=(typeof tutorDe==='function')?tutorDe(h):(h.tutor||'');
-    document.getElementById('cf-meta').innerHTML=((cad.raca||h.raca)?escAttr(cad.raca||h.raca)+' · ':'')+(h.mascote?'Nossa Zelozinha':(tutor?'Tutor: '+escAttr(tutor):'Tutor a confirmar'));
+    document.getElementById('cf-meta').innerHTML=(racaDe(h)?escAttr(racaDe(h))+' · ':'')+(h.mascote?'Nossa Zelozinha':(tutor?'Tutor: '+escAttr(tutor):'Tutor a confirmar'));
     var ex=(typeof extraDoHosp==='function')?extraDoHosp(h):{};
     document.getElementById('cf-pills').innerHTML=(typeof alertPills==='function')?alertPills(ex):'';
 
