@@ -1011,6 +1011,7 @@
         <a data-v="recepcao" class="so-recepcao"><span data-icon="paw"></span><span>Atenção Recepção</span></a>
         <a data-v="cuidadovet" class="so-vet"><span data-icon="heart"></span><span>Cuidado Vet</span></a>
         <a data-v="hospedagem"><span data-icon="moon"></span><span>Plantão AuAulândia</span></a>
+        <a data-v="checkout"><span data-icon="check"></span><span>Check-out (saída)</span></a>
       </div>
     </div>
     <!-- Day Care — PAI accordion. Turminhas (dias) + Atividades vivem no #dcSubnav (montarSubnav). -->
@@ -1860,6 +1861,52 @@
     </div>
   </section>
 
+  <!-- ===== CHECK-OUT (saída) — fluxo inverso do check-in ===== -->
+  <section class="view" id="v-checkout">
+    <div id="co-lista">
+      <div class="role-note"><span data-icon="paw"></span><span><strong>Check-out da estadia.</strong> O caminho inverso: o monitor confere tudo que vai voltar (pertences, ração/medicação que sobrou, o que o tutor mandou e o que foi comprado aqui) e desce com o FILHOt para a recepção. A recepção confere junto com o tutor, o tutor assina e recebe o PDF.</span></div>
+      <div id="coGrid" class="vet-grid" style="margin-top:6px"></div>
+    </div>
+    <div id="co-ficha" style="display:none">
+      <button class="back-btn" onclick="coVoltar()">← Voltar</button>
+      <div class="card">
+        <div class="ci-head">
+          <div class="ci-av" id="coAv"></div>
+          <div><div class="ci-h-nome" id="coNome">—</div><div class="ci-h-meta" id="coMeta">—</div></div>
+        </div>
+      </div>
+      <div class="card">
+        <h2 style="font-size:19px">Tudo que VOLTA com o tutor</h2>
+        <div class="hint">Confira item a item. Junta o que entrou no check-in + o que foi adquirido ou o tutor mandou durante a estadia. Marque conforme entrega para não esquecer nada.</div>
+        <div id="coItens" style="margin-top:8px"></div>
+      </div>
+      <div class="card">
+        <h2 style="font-size:19px">Observações da saída</h2>
+        <div class="field"><input class="cad-in" id="coObs" placeholder="Ex: devolvido 1 pacote de ração fechado · levou o casaco vermelho" autocomplete="off"></div>
+      </div>
+      <div class="card">
+        <h2>Assinatura do tutor (saída)</h2>
+        <div class="hint">O tutor confere junto e assina a retirada. Se ninguém veio (taxi dog), marque abaixo.</div>
+        <label class="ci-spa-conf" style="margin:0 0 10px"><input type="checkbox" id="coSemTutor" onchange="coSemTutorChange()"><span>O tutor <strong>não veio</strong> — retirada por terceiro (taxi dog). <strong>Dispensa assinatura.</strong></span></label>
+        <div id="coSemTutorBox" style="display:none"><div class="field"><label>Quem retirou?</label><input class="cad-in" id="coQuemRetirou" placeholder="Ex: Taxi Dog · vizinho João" autocomplete="off"></div></div>
+        <div id="coSigArea">
+          <div class="sig-wrap"><canvas id="coSig" width="600" height="190"></canvas><div class="sig-hint" id="coSigHint">Assine aqui com o dedo</div></div>
+          <div class="actions" style="margin-top:10px"><button class="btn" style="background:var(--z-cream-warm);color:var(--z-blue);border:1.5px solid var(--line)" onclick="coLimparAssinatura()">Limpar assinatura</button></div>
+          <div class="field" style="margin-top:12px"><label>Nome de quem assinou (tutor) *</label><input class="cad-in" id="coAssinaNome" placeholder="Nome e sobrenome" autocomplete="off"></div>
+        </div>
+      </div>
+      <div class="card">
+        <div id="coPendHint" class="hint" style="margin-bottom:10px"></div>
+        <div class="ci-actions">
+          <button class="btn btn-primary" onclick="coFinalizar()">✅ Finalizar check-out</button>
+          <button class="btn btn-gold" onclick="coGerarPDF()">🖨️ Gerar PDF</button>
+          <button class="btn" style="background:#25D366;color:#08351b" onclick="coEnviarWhats()">📲 Enviar ao tutor</button>
+        </div>
+        <div id="co-status" class="rel-status" style="margin-top:8px"></div>
+      </div>
+    </div>
+  </section>
+
   <section class="view" id="v-recepcao">
     <div class="role-note"><span data-icon="paw"></span><span><strong>Avisos de estoque de medicação.</strong> Quando um remédio de um hóspede está acabando, o aviso chega aqui — rastreado. Registre cada providência (liguei para o tutor, ele traz amanhã) até resolver. Nada verbal: tudo fica escrito, com quem, quando e o que foi feito.</span></div>
     <div id="avisosEstoqueList"></div>
@@ -2221,6 +2268,7 @@
     cuidadovet:['Cuidado Vet','Consulta, receituário e reavaliação'],
     checkin:['Check-in','Entrada da estadia — ficha, pertences e assinatura'],
     conferencia:['Conferência Check-in','Pertences etiquetados, ração pesada e alarmes testados'],
+    checkout:['Check-out (saída)','Confere o que volta, tutor assina e recebe o PDF'],
     recepcao:['Atenção Recepção','Faltas e avisos: ração, medicação e itens da estadia'],
     agenda:['Agenda','Frequência e reservas'],pessoas:['Pessoas & Turnos','Equipe e tarefas'],
     painel:['Painel do Dia','Auditoria e cumprimento de protocolos'],
@@ -2242,6 +2290,7 @@
     if(v==='cuidadovet'){ if(typeof abrirCuidadoVet==='function') abrirCuidadoVet(); }
     if(v==='checkin'){ if(typeof abrirCheckin==='function') abrirCheckin(); }
     if(v==='conferencia'){ if(typeof abrirConferencia==='function') abrirConferencia(); }
+    if(v==='checkout'){ if(typeof abrirCheckout==='function') abrirCheckout(); }
     if(v==='recepcao'){ if(typeof carregarAvisosEstoque==='function') carregarAvisosEstoque(); }
     if(v==='ficha'){ const l=document.getElementById('pel-lista'),fi=document.getElementById('pel-ficha'); if(l&&fi){ l.style.display='block'; fi.style.display='none'; } if(typeof renderPel==='function') renderPel(); }
     if(v==='inativos'){ if(typeof renderInativos==='function') renderInativos(); }
@@ -8136,6 +8185,113 @@
       if(typeof audit==='function') audit('conferencia-fechada',cfEstadiaId,{pet:(cfHosp&&cfHosp.nome)||'',quem:assina});
     }).catch(function(e){ if(st){ st.style.color='var(--crm-critico)'; st.textContent='⚠️ Erro: '+e.message; } });
   }
+
+  // ================= CHECK-OUT (saída) — fluxo inverso do check-in =================
+  var coEstadiaId=null, coEstadia=null, coHosp=null, coConf={}, coSigCtx=null, coSigDrawing=false, coSigHasInk=false, coSigReady=false;
+  function abrirCheckout(){ document.getElementById('co-lista').style.display='block'; document.getElementById('co-ficha').style.display='none'; coRenderLista(); }
+  function coRenderLista(){
+    var el=document.getElementById('coGrid'); if(!el) return;
+    var lista=Object.keys(CF_ESTADIAS||{}).map(function(rk){ return {rk:rk, e:(CF_ESTADIAS[rk]&&CF_ESTADIAS[rk].e)||{}, id:(CF_ESTADIAS[rk]&&CF_ESTADIAS[rk].id)||''}; })
+      .filter(function(o){ return (o.e.status||'ativa')==='ativa'; })
+      .sort(function(a,b){ return jsNorm(a.e.nome||'').localeCompare(jsNorm(b.e.nome||'')); });
+    if(!lista.length){ el.innerHTML='<div class="av-empty" style="grid-column:1/-1"><div class="big">Nenhuma estadia ativa</div>Quando houver hóspede para sair, ele aparece aqui.</div>'; return; }
+    el.innerHTML=lista.map(function(o){ var e=o.e; var ini=((e.nome||'?')[0]||'?').toUpperCase();
+      return '<div class="vet-pet" onclick="coAbrirFicha(\''+escAttr(o.rk)+'\')"><div class="ph" style="background:#234D67">'+escAttr(ini)+'</div>'
+        +'<div class="nm">'+escAttr(e.nome||'—')+'</div><div class="br">'+escAttr(e.raca||'—')+'</div>'
+        +'<div class="tt">'+(e.tutor?'Tutor: '+escAttr(e.tutor):'—')+(e.saida?' · sai '+ciBRdata(e.saida):'')+'</div></div>';
+    }).join('');
+  }
+  function coAbrirFicha(rk){
+    var reg=CF_ESTADIAS[rk]; if(!reg) return; coEstadiaId=reg.id; coEstadia=reg.e||{}; coHosp={nome:coEstadia.nome,tutor:coEstadia.tutor,raca:coEstadia.raca}; coConf={};
+    document.getElementById('co-lista').style.display='none'; document.getElementById('co-ficha').style.display='block';
+    var av=document.getElementById('coAv'); if(av){ av.style.background='#234D67'; av.textContent=((coEstadia.nome||'?')[0]||'?').toUpperCase(); }
+    document.getElementById('coNome').textContent=coEstadia.nome||'—';
+    document.getElementById('coMeta').innerHTML=(coEstadia.raca?escAttr(coEstadia.raca)+' · ':'')+(coEstadia.tutor?'Tutor: '+escAttr(coEstadia.tutor):'—')+(coEstadia.saida?' · saída '+ciBRdata(coEstadia.saida):'');
+    coRenderItens();
+    document.getElementById('coObs').value='';
+    document.getElementById('coSemTutor').checked=false; document.getElementById('coQuemRetirou').value=''; coSemTutorChange();
+    document.getElementById('coAssinaNome').value=coEstadia.tutor||'';
+    coInitSig(); coLimparAssinatura();
+    var st=document.getElementById('co-status'); if(st) st.textContent='';
+    coRenderPend(); window.scrollTo({top:0,behavior:'smooth'});
+  }
+  function coItensLista(){
+    var out=[];
+    (Array.isArray(coEstadia.pertences)?coEstadia.pertences:[]).forEach(function(p){ out.push({k:'pert_'+(p.uid||p.k), label:'Pertence: '+(p.nome||'')+(p.spec?(' — '+p.spec):'')}); });
+    (Array.isArray(coEstadia.medicacao)?coEstadia.medicacao:[]).forEach(function(m,idx){ out.push({k:'med_'+idx, label:'Devolver medicação: '+(m.nome||'medicamento')+(m.origem==='vet'?'':' (do tutor)')}); });
+    var a=(coEstadia.ficha&&coEstadia.ficha.alim)||{};
+    if(a.tipo||a.marca) out.push({k:'racao', label:'Devolver sobra de ração/comida: '+[a.tipo,a.marca].filter(Boolean).join(' · ')});
+    var oc=coEstadia.ocorrencias||{}; Object.keys(oc).forEach(function(id){ out.push({k:'oc_'+id, label:'Item da estadia: '+((oc[id]&&oc[id].texto)||'')}); });
+    return out;
+  }
+  function coRenderItens(){
+    var el=document.getElementById('coItens'); if(!el) return; var itens=coItensLista();
+    if(!itens.length){ el.innerHTML='<div class="hint">Nada registrado para voltar.</div>'; return; }
+    el.innerHTML=itens.map(function(it){ var on=!!coConf[it.k];
+      return '<div class="cf-item'+(on?' on':'')+(on?'':' critico')+'" data-k="'+escAttr(it.k)+'"><div class="cf-top" onclick="coToggleItem(this)"><span class="cf-box">'+(on?'&#10003;':'')+'</span>'+escAttr(it.label)+(on?'':'<span class="cf-tag-critico">ENTREGAR</span>')+'</div></div>';
+    }).join('');
+  }
+  function coToggleItem(top){ var it=top.closest('.cf-item'); if(!it) return; var k=it.dataset.k; coConf[k]=!coConf[k]; coRenderItens(); coRenderPend(); }
+  function coRenderPend(){
+    var el=document.getElementById('coPendHint'); if(!el) return; var itens=coItensLista(); var falta=itens.filter(function(it){ return !coConf[it.k]; });
+    if(!falta.length) el.innerHTML='<span style="color:var(--crm-ok);font-weight:800">✅ Tudo conferido. Pode finalizar.</span>';
+    else el.innerHTML='<span style="color:var(--crm-critico);font-weight:800">Falta entregar/conferir:</span> '+falta.map(function(f){ return escAttr(f.label); }).join(' · ');
+  }
+  function coInitSig(){ var c=document.getElementById('coSig'); if(!c) return; var w=c.offsetWidth||600; c.width=w; c.height=190; coSigCtx=c.getContext('2d'); coSigCtx.lineWidth=2.5; coSigCtx.lineCap='round'; coSigCtx.lineJoin='round'; coSigCtx.strokeStyle='#234D67'; if(coSigReady) return; coSigReady=true;
+    function pos(ev){ var r=c.getBoundingClientRect(); var t=ev.touches&&ev.touches[0]; return {x:(t?t.clientX:ev.clientX)-r.left, y:(t?t.clientY:ev.clientY)-r.top}; }
+    function start(ev){ ev.preventDefault(); coSigDrawing=true; var p=pos(ev); coSigCtx.beginPath(); coSigCtx.moveTo(p.x,p.y); }
+    function move(ev){ if(!coSigDrawing) return; ev.preventDefault(); var p=pos(ev); coSigCtx.lineTo(p.x,p.y); coSigCtx.stroke(); coSigHasInk=true; var hh=document.getElementById('coSigHint'); if(hh) hh.style.display='none'; }
+    function end(){ coSigDrawing=false; }
+    c.addEventListener('mousedown',start); c.addEventListener('mousemove',move); window.addEventListener('mouseup',end);
+    c.addEventListener('touchstart',start,{passive:false}); c.addEventListener('touchmove',move,{passive:false}); c.addEventListener('touchend',end);
+  }
+  function coLimparAssinatura(){ var c=document.getElementById('coSig'); if(c&&coSigCtx) coSigCtx.clearRect(0,0,c.width,c.height); coSigHasInk=false; var hh=document.getElementById('coSigHint'); if(hh) hh.style.display='block'; }
+  function coSemTutorChange(){ var on=!!(document.getElementById('coSemTutor')&&document.getElementById('coSemTutor').checked); var a=document.getElementById('coSigArea'); if(a) a.style.display=on?'none':'block'; var b=document.getElementById('coSemTutorBox'); if(b) b.style.display=on?'block':'none'; }
+  function coVoltar(){ document.getElementById('co-ficha').style.display='none'; document.getElementById('co-lista').style.display='block'; coRenderLista(); }
+  function coFinalizar(){
+    var st=document.getElementById('co-status'); if(!coEstadiaId) return;
+    var itens=coItensLista(); var falta=itens.filter(function(it){ return !coConf[it.k]; });
+    if(falta.length){ if(st){ st.style.color='var(--crm-critico)'; st.textContent='✋ Confira/entregue todos os itens antes de finalizar.'; } return; }
+    var semTutor=!!(document.getElementById('coSemTutor')&&document.getElementById('coSemTutor').checked);
+    var assina='', sig='';
+    if(semTutor){ var qr=(document.getElementById('coQuemRetirou').value||'').trim(); assina='Retirada sem o tutor'+(qr?(' — '+qr):''); }
+    else {
+      assina=(document.getElementById('coAssinaNome').value||'').trim();
+      if(!assina){ if(st){ st.style.color='var(--crm-critico)'; st.textContent='✋ Escreva o nome de quem assinou. Se ninguém veio, marque "O tutor não veio".'; } return; }
+      sig=(coSigHasInk?document.getElementById('coSig').toDataURL('image/png'):'');
+      if(!sig){ if(st){ st.style.color='var(--crm-critico)'; st.textContent='✋ Peça para o tutor ASSINAR a retirada.'; } return; }
+    }
+    if(!DB){ if(st){ st.style.color='var(--crm-atencao-text)'; st.textContent='Banco conectando…'; } return; }
+    var reg={ conferido:coConf, obs:(document.getElementById('coObs').value||'').trim(), assinado_por:assina, assinatura:sig, semTutor:semTutor, quem:(typeof quemSou==='function'?quemSou():'-'), ts:Date.now() };
+    if(st){ st.style.color='var(--muted)'; st.textContent='Salvando check-out…'; }
+    DB.ref('auaulandia/estadias/'+coEstadiaId).update({ status:'finalizada', checkout:reg }).then(function(){
+      coEstadia.status='finalizada';
+      if(st){ st.style.color='var(--crm-ok)'; st.textContent='✅ Check-out finalizado. '+(coHosp&&coHosp.nome||'')+' liberado.'; }
+      if(typeof audit==='function') audit('checkout','estadia finalizada',{pet:(coHosp&&coHosp.nome)||''});
+      if(typeof carregarAgendaMedTodos==='function') carregarAgendaMedTodos();
+      setTimeout(coVoltar, 900);
+    }).catch(function(e){ if(st){ st.style.color='var(--crm-critico)'; st.textContent='⚠️ Erro: '+(e&&e.message||e); } });
+  }
+  function coResumoTexto(){
+    var L=[]; L.push('Zêluz AuAulândia — Check-out'); L.push((coEstadia.nome||'')+(coEstadia.tutor?(' · Tutor: '+coEstadia.tutor):''));
+    L.push('Saída: '+(coEstadia.saida?ciBRdata(coEstadia.saida):'hoje'));
+    var itens=coItensLista(); if(itens.length){ L.push(''); L.push('Itens que voltaram:'); itens.forEach(function(it){ L.push('- '+it.label); }); }
+    var obs=(document.getElementById('coObs').value||'').trim(); if(obs){ L.push(''); L.push('Obs: '+obs); }
+    var assina=(document.getElementById('coAssinaNome').value||'').trim(); if(assina){ L.push(''); L.push('Conferido e assinado por: '+assina); }
+    return L.join('\n');
+  }
+  function coGerarPDF(){
+    if(!coEstadia) return;
+    var h='<div class="pf-h1">Zêluz · AuAulândia — Check-out</div>';
+    h+='<div class="pf-sub">'+esc(coEstadia.nome||'')+(coEstadia.raca?(' · '+esc(coEstadia.raca)):'')+(coEstadia.tutor?(' · Tutor: '+esc(coEstadia.tutor)):'')+'</div>';
+    h+='<div class="pf-sec"><h3>Saída</h3><div class="pf-row">'+(coEstadia.saida?esc(ciBRdata(coEstadia.saida)):'hoje')+'</div></div>';
+    var itens=coItensLista(); if(itens.length){ h+='<div class="pf-sec"><h3>Itens que voltaram</h3>'+itens.map(function(it){ return '<div class="pf-row">• '+esc(it.label)+'</div>'; }).join('')+'</div>'; }
+    var obs=(document.getElementById('coObs').value||'').trim(); if(obs) h+='<div class="pf-sec"><h3>Observações</h3><div class="pf-row">'+esc(obs)+'</div></div>';
+    var assina=(document.getElementById('coAssinaNome').value||'').trim(); var sig=(coSigHasInk?document.getElementById('coSig').toDataURL('image/png'):'');
+    h+='<div class="pf-sec"><h3>Assinatura do tutor</h3>'+(sig?('<img class="pf-sig-img" src="'+sig+'">'):'<div class="pf-row">(sem assinatura)</div>')+'<div class="pf-row" style="margin-top:6px">'+esc(assina||'—')+'</div></div>';
+    var pr=document.getElementById('ci-print'); if(pr) pr.innerHTML=h; setTimeout(function(){ window.print(); },60);
+  }
+  function coEnviarWhats(){ window.open('https://wa.me/?text='+encodeURIComponent(coResumoTexto()),'_blank'); }
 
   // INIT do Day Care (no fim: garante todas as variaveis e funcoes definidas)
   montarSubnav();
