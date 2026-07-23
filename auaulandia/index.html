@@ -2479,6 +2479,20 @@
         const remote=(typeof pelCadCache!=='undefined'&&pelCadCache[k])||{};
         Object.assign(acc, remote);
       });
+      // 1c) SEGURANÇA acompanha o perfil SEMPRE — casa por NOME (+raça) no cadastro-mestre.
+      // Hóspede lançado com chave diferente do mestre (ex.: "Lana Cooker" vs "Lana", ou sem refKey)
+      // continua herdando restrição/alergia/medicação/foto do peludinho. Só preenche o que está vazio.
+      try{
+        if(typeof PELUDINHOS!=='undefined' && h.nome && typeof jsNorm==='function'){
+          var _n=jsNorm(h.nome), _r=h.raca?jsNorm(h.raca):'';
+          var _pm=PELUDINHOS.find(function(p){ var pn=jsNorm(p.n); if(!pn) return false;
+            var nomeOk=(pn===_n)||(_n.indexOf(pn)===0)||(pn.indexOf(_n)===0);
+            if(!nomeOk) return false;
+            var pr=(typeof pelGet==='function')?jsNorm(pelGet(p,'raca')||''):'';
+            return (!_r||!pr||pr===_r); });
+          if(_pm){ var _pe=(typeof pelExtra==='function')?pelExtra(_pm):{}; Object.keys(_pe||{}).forEach(function(k){ if(acc[k]==null||acc[k]==='') acc[k]=_pe[k]; }); }
+        }
+      }catch(e){}
       // 2) registro manual do próprio hóspede — só preenche o que estiver vazio (não apaga o mestre)
       const info=getInfo(h)||{};
       Object.keys(info).forEach(function(k){ if(info[k]!=='' && info[k]!=null) acc[k]=info[k]; });
