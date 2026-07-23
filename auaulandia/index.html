@@ -173,6 +173,7 @@
   /* ===== cards peludinhos (Início) ===== */
   .pets-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(165px,1fr));gap:16px}
   .pet{
+    position:relative;
     background:var(--z-white);border:1px solid var(--line);border-radius:var(--radius);
     padding:18px 14px;text-align:center;cursor:pointer;transition:.18s;box-shadow:var(--shadow);
   }
@@ -668,6 +669,8 @@
   .p-tl-a{font-size:13px;color:var(--z-blue-deep)}
   .p-empty{text-align:center;padding:40px 20px;color:var(--muted);font-size:14px;font-weight:600}
   .saida-hoje{display:inline-block;margin-top:8px;font-size:10px;font-weight:800;letter-spacing:.3px;color:var(--crm-atencao-text);background:rgba(222,180,40,.2);border:1px solid rgba(222,180,40,.5);padding:3px 9px;border-radius:7px}
+  .hosp-del{position:absolute;top:6px;right:6px;z-index:3;width:30px;height:30px;border-radius:50%;border:2px solid #fff;background:var(--crm-critico);color:#fff;font-weight:800;font-size:15px;line-height:1;cursor:pointer;box-shadow:0 1px 4px rgba(0,0,0,.25)}
+  .hosp-del:hover{transform:scale(1.08)}
   /* Tarjas de tipo do hóspede (HÓSPEDE / PERNOITE / MORADORA) */
   .tarja{display:inline-block;margin-top:8px;font-size:10px;font-weight:800;letter-spacing:.4px;padding:3px 9px;border-radius:7px}
   .tarja.t-hospede{background:#234D67;color:#FFFDF6}
@@ -2535,6 +2538,7 @@
   function renderHosp(){
     // ordem alfabética (a moradora Repolho por último)
     hospedes.sort((a,b)=>{ if(!!a.mascote!==!!b.mascote) return a.mascote?1:-1; return (a.nome||'').localeCompare((b.nome||''),'pt',{sensitivity:'base'}); });
+    const _rHosp=(document.body.dataset.role||''); const _podeRemHosp=(_rHosp==='gestao'||_rHosp==='supervisor'||_rHosp==='diretoria'||_rHosp==='monitor');
     document.getElementById('kpiHosp').textContent   = hospedes.filter(h=>!h.mascote).length;
     document.getElementById('kpiMorada').textContent = hospedes.filter(h=>h.mascote).length;
     document.getElementById('hospGrid').innerHTML =
@@ -2566,8 +2570,9 @@
         // O "×" de cancelar saiu do card (risco de apertar sem querer). A ação de deletar a pernoite
         // do dia agora vive DENTRO da ficha do hóspede, na "Zona de risco" (só equipe, com dupla
         // confirmação) — ver cancelarPernoiteFicha().
+        const delBtn=(_podeRemHosp && !h.mascote) ? `<button type="button" class="hosp-del" title="Remover do Plantão de hoje" onclick="event.stopPropagation();removerHospedeCard(${i})">&#10005;</button>` : '';
         return `<div class="pet" onclick="abrirPlantao(${i})">
-          ${ph}${alertaFoto}${medFoto}${recFoto}${naoComeuFoto}
+          ${delBtn}${ph}${alertaFoto}${medFoto}${recFoto}${naoComeuFoto}
           <div class="nm">${cad.nome||h.nome}</div>
           <div class="br">${raca}</div>
           <div class="hosp-tutor">${h.mascote?'Nossa Zelozinha':(tutor?'Tutor: '+tutor:'Tutor a confirmar')}</div>
@@ -4312,6 +4317,30 @@
   // Remove só auaulandia/manuais/{dia}/{key}; o cadastro-mestre do FILHOt fica intacto.
   // chave de remoção do dia (normalizada) para o override "removidos hoje"
   function hospRemKey(h){ return ((h&&h.nome||'')+'__'+(h&&h.tutor||'')).toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/[.#$\[\]\/]/g,'-'); }
+  // Remover DIRETO do card do Plantão (equipe): funciona para QUALQUER hóspede, de qualquer origem.
+  // Manual (pernoite/hóspede lançado à mão) → deleta o lançamento. Planilha/estadia → override "removidos".
+  function removerHospedeCard(i){
+    const r=(document.body.dataset.role||'');
+    if(!(r==='gestao'||r==='supervisor'||r==='diretoria'||r==='monitor')){ alert('Só a Gestão, a Supervisão, a Diretoria ou o Monitor podem remover.'); return; }
+    const h=hospedes[i]; if(!h) return;
+    if(h.mascote){ alert('A moradora Repolho não é removida.'); return; }
+    if(!confirm('Remover '+(h.nome||'este FILHOt')+' do Plantão de hoje?\n\nSai da lista de hoje. O cadastro continua salvo.')) return;
+    if(h.manualKey){
+      const dia=h.manualDia||dataKeyAtual();
+      if(!DB){ hospedes.splice(i,1); renderHosp(); return; }
+      DB.ref('auaulandia/manuais/'+dia+'/'+h.manualKey).remove().then(function(){
+        if(typeof audit==='function') audit('hospede-cancelado','removeu lançamento do dia (card)',{pet:h.nome||'',tutor:h.tutor||'',dia:dia});
+        carregarHospedes();
+      }).catch(function(e){ alert('Erro ao remover: '+(e&&e.message||e)); });
+      return;
+    }
+    if(!DB){ hospedes.splice(i,1); renderHosp(); return; }
+    const dk=dataKeyAtual();
+    DB.ref('auaulandia/removidos/'+dk+'/'+hospRemKey(h)).set({nome:h.nome||'', tutor:h.tutor||'', quem:(typeof quemSou==='function'?quemSou():'-'), ts:Date.now()}).then(function(){
+      if(typeof audit==='function') audit('hospede-removido','removeu do Plantão (card/override)',{pet:h.nome||'',dia:dk});
+      carregarHospedes();
+    }).catch(function(e){ alert('Erro ao remover: '+(e&&e.message||e)); });
+  }
   function cancelarPernoiteFicha(){
     const r=(document.body.dataset.role||'');
     if(!(r==='gestao'||r==='supervisor'||r==='diretoria'||r==='monitor')){ alert('Só a Gestão, a Supervisão, a Diretoria ou o Monitor podem deletar uma pernoite.'); return; }
