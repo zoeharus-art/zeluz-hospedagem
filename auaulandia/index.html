@@ -2673,7 +2673,9 @@
     const _tp=h.mascote?'Moradora':(h.hospede?'Hóspede':(h.pernoite?'Pernoite':'Hóspede'));
     const _tutor=tutorDe(h);
     document.getElementById('hf-meta').innerHTML=`${raca?raca+' · ':''}<strong>${_tp}</strong> · ${h.mascote?'Nossa Zelozinha':(_tutor?'Tutor: '+_tutor:'Tutor a confirmar')}`;
-    document.getElementById('hf-estadia').innerHTML=`Na AuAulândia · <strong>estadia a confirmar na ficha</strong>`;
+    var _jHtml='';
+    if(h.pernoite||h.janta){ var _j=h.jantar||{}; _jHtml='<div style="margin-top:6px;background:rgba(46,125,138,.12);border-left:4px solid var(--z-auaulandia,#2E7D8A);border-radius:8px;padding:8px 11px;font-size:13px;color:var(--z-blue);font-weight:600">🌙 <strong>Jantar (pernoite):</strong> '+esc(_j.comida||'a confirmar com a monitora')+(_j.onde?(' · <span style="font-weight:700">'+esc(_j.onde)+'</span>'):'')+'</div>'; }
+    document.getElementById('hf-estadia').innerHTML='Na AuAulândia · <strong>estadia a confirmar na ficha</strong>'+_jHtml;
     // alergia/medicação em destaque no topo da ficha — mesma trava de segurança do Day Care (alertPills)
     const _pillsEl=document.getElementById('hf-pills'); if(_pillsEl) _pillsEl.innerHTML=(typeof alertPills==='function')?alertPills(extraDoHosp(h)):'';
     // Observação geral da estadia (ex.: "tutor pediu pra ver se manca à noite") — destaque pra quem cuida.
@@ -4229,7 +4231,7 @@
     // manualKey/manualDia = chave real do Firebase (pushKey) + o dia (hoje ou véspera) onde o
     // registro vive em auaulandia/manuais/{dia}/{pushKey}. É o que permite CANCELAR o lançamento
     // certo depois (ver cancelarHospedeManual) — nunca remover pelo índice do array, que desalinha.
-    const add=(m,saida,dia,key)=>{ if(m&&m.nome && !hospedes.some(h=>h.nome===m.nome&&h.tutor===(m.tutor||''))){ hospedes.push({nome:m.nome, tutor:m.tutor||'', raca:m.raca||'', refKey:m.refKey||'', ini:(m.nome[0]||'?').toUpperCase(), cor:CORES[hospedes.length%CORES.length], pernoite:!m.hospede, hospede:!!m.hospede, saidaHoje:!!saida, manualKey:key||'', manualDia:dia||''}); } };
+    const add=(m,saida,dia,key)=>{ if(m&&m.nome && !hospedes.some(h=>h.nome===m.nome&&h.tutor===(m.tutor||''))){ hospedes.push({nome:m.nome, tutor:m.tutor||'', raca:m.raca||'', refKey:m.refKey||'', ini:(m.nome[0]||'?').toUpperCase(), cor:CORES[hospedes.length%CORES.length], pernoite:!m.hospede, hospede:!!m.hospede, saidaHoje:!!saida, manualKey:key||'', manualDia:dia||'', janta:!!m.janta, jantar:m.jantar||null}); } };
     Promise.all([
       DB.ref('auaulandia/manuais/'+hojeK).once('value').then(s=>s.val()||{}).catch(()=>({})),
       incluiVesp ? DB.ref('auaulandia/manuais/'+vespK).once('value').then(s=>s.val()||{}).catch(()=>({})) : Promise.resolve({}),
@@ -4364,6 +4366,15 @@
     const tipo=hospBuscaTipo;
     const reg={nome:nome,tutor:tutor,raca:raca,refKey:refKey};
     if(tipo==='hospede') reg.hospede=true;
+    if(tipo==='pernoite'){
+      // Todo pernoite JANTA. A monitora informa o que dar (sugestão: a comida do Day Care) e onde fica.
+      var _a=(typeof almCad==='function')?almCad({n:nome,tutor:tutor}):null;
+      var _sug=(_a&&_a.alim)?((_a.alim||'')+(_a.quant?(' · '+_a.quant):'')):'';
+      var _com=(prompt('JANTAR do '+nome+' — todo pernoite janta.\nO que dar e quanto? (ex.: Ração 50g · Comida natural 100g)', _sug)||'').trim();
+      var _onde=(prompt('Onde fica a comida do '+nome+'?\n(ex.: Comida natural na GELADEIRA · Ração no ARMÁRIO)', (_a&&_a.extra)||'')||'').trim();
+      reg.janta=true;
+      if(_com||_onde) reg.jantar={comida:_com, onde:_onde};
+    }
     if(DB){
       DB.ref('auaulandia/manuais/'+dataKeyAtual()).push(reg)
         .then(()=>{ fecharHospBuscaModal(); carregarManuais(); })
