@@ -1367,6 +1367,7 @@
         <div class="obsline"><span class="q">Precisa ficar separado?</span><div class="seg" data-single><button data-tone="ok" onclick="pick(this)">Não</button><button data-tone="bad" onclick="pick(this)">Sim</button></div></div>
         <div class="obsline"><span class="q">Tem irmão hospedado?</span><div class="seg" data-single><button data-tone="warn" onclick="pick(this)">Não</button><button data-tone="ok" onclick="pick(this)">Sim</button></div></div>
         <div class="obsline"><span class="q">Tem alergia?</span><div class="seg" data-single><button data-tone="ok" onclick="pick(this)">Não</button><button data-tone="warn" onclick="pick(this)">Sim</button></div></div>
+        <div class="med-confirm-slot"></div>
         <div class="obsline"><span class="q">Tem medicação?</span><div class="seg" data-single><button data-tone="ok" onclick="pick(this);onMedQ(this)">Não</button><button data-tone="warn" onclick="pick(this);onMedQ(this)">Sim</button></div></div>
         <div class="medgrid-slot" data-kind="med"></div>
         <div class="obsline"><span class="q">Tem suplementação?</span><div class="seg" data-single><button data-tone="ok" onclick="pick(this);onMedQ(this)">Não</button><button data-tone="warn" onclick="pick(this);onMedQ(this)">Sim</button></div></div>
@@ -1408,6 +1409,7 @@
         <div class="obsline"><span class="q">Consistência</span><div class="seg" data-single><button data-tone="ok" onclick="pick(this)">Normal</button><button data-tone="bad" onclick="pick(this)">Pastoso</button><button data-tone="bad" onclick="pick(this)">Diarreia</button><button data-tone="warn" onclick="pick(this)">Não vi</button></div></div>
         <div class="obsline"><span class="q">Vomitou?</span><div class="seg" data-single><button data-tone="ok" onclick="pick(this);onVomQ(this)">Não</button><button data-tone="bad" onclick="pick(this);onVomQ(this)">Sim</button></div></div>
         <div class="obsline vom-tipo" style="display:none"><span class="q">Tipo de vômito</span><div class="seg" data-single><button data-tone="warn" onclick="pick(this)">Amarelo (bile)</button><button data-tone="warn" onclick="pick(this)">Branco / espumoso (água)</button><button data-tone="warn" onclick="pick(this)">Comida / ração</button></div></div>
+        <div class="med-confirm-slot"></div>
         <div class="obsline"><span class="q">Tem medicação?</span><div class="seg" data-single><button data-tone="ok" onclick="pick(this);onMedQ(this)">Não</button><button data-tone="warn" onclick="pick(this);onMedQ(this)">Sim</button></div></div>
         <div class="medgrid-slot" data-kind="med"></div>
         <div class="obsline"><span class="q">Tem suplementação?</span><div class="seg" data-single><button data-tone="ok" onclick="pick(this);onMedQ(this)">Não</button><button data-tone="warn" onclick="pick(this);onMedQ(this)">Sim</button></div></div>
@@ -1432,6 +1434,7 @@
         <div class="obsline"><span class="q">Aspecto do xixi</span><div class="seg" data-single><button data-tone="ok" onclick="pick(this)">Claro</button><button data-tone="warn" onclick="pick(this)">Amarelo escuro</button><button data-tone="bad" onclick="pick(this)">Com sangue</button></div></div>
         <div class="obsline"><span class="q">Jantou?</span><div class="seg" data-single><button data-tone="ok" onclick="pick(this)">Sim</button><button data-tone="bad" onclick="pick(this)">Não</button><button data-tone="warn" onclick="pick(this)">Metade</button><button data-tone="warn" onclick="pick(this)">Não se aplica</button></div></div>
         <div class="obsline"><span class="q">Almoçou?</span><div class="seg" data-single><button data-tone="ok" onclick="pick(this)">Sim</button><button data-tone="bad" onclick="pick(this)">Não</button><button data-tone="warn" onclick="pick(this)">Metade</button><button data-tone="warn" onclick="pick(this)">Não se aplica</button></div></div>
+        <div class="med-confirm-slot"></div>
         <div class="obsline"><span class="q">Tem medicação?</span><div class="seg" data-single><button data-tone="ok" onclick="pick(this);onMedQ(this)">Não</button><button data-tone="warn" onclick="pick(this);onMedQ(this)">Sim</button></div></div>
         <div class="medgrid-slot" data-kind="med"></div>
         <div class="obsline"><span class="q">Tem suplementação?</span><div class="seg" data-single><button data-tone="ok" onclick="pick(this);onMedQ(this)">Não</button><button data-tone="warn" onclick="pick(this);onMedQ(this)">Sim</button></div></div>
@@ -3507,7 +3510,35 @@
     DB.ref('auaulandia/avisos-racao/'+id).update({status:'em_processo'}).catch(function(){});
   }
 
+  // ===== Relatório do turno: medicação em SIM/NÃO (item 3) =====
+  // No relatório, em vez de digitar nome/quantidade, a plantonista só CONFIRMA cada remédio do
+  // turno: "Betaina — deu? Sim/Não". Lê a MESMA fonte da agenda (MED_AGENDA_ITENS) e injeta obslines
+  // (que o próprio relatório já salva). Esconde o campo de texto livre quando há remédios de verdade.
+  function renderRelMedConfirm(){
+    var slots=document.querySelectorAll('.med-confirm-slot'); if(!slots.length) return;
+    var meds=[];
+    try{ Object.keys(MED_AGENDA_ITENS||{}).forEach(function(id){ var it=MED_AGENDA_ITENS[id]||{}; if(it.suspenso) return; if(typeof medVigenteEm==='function' && !medVigenteEm(it)) return; meds.push(it); }); }catch(e){}
+    var temMeds=meds.length>0;
+    slots.forEach(function(slot){
+      if(!temMeds){ slot.innerHTML=''; return; }
+      var h='<div style="margin:8px 0 4px;font-weight:800;color:var(--z-blue);font-size:14px">Medicações deste turno — foi dada?</div>';
+      meds.forEach(function(it){
+        var nome=(it.nome||'medicamento'); var hor=(it.horarios||[]).join(', ');
+        var comoDar=(typeof medDoseTxt==='function')?medDoseTxt(it):''; var obs=(it.obs||'').trim();
+        var det=[comoDar,obs].filter(Boolean).join(' · ');
+        h+='<div class="obsline"><span class="q"><strong>'+escAttr(nome)+'</strong>'+(hor?(' <span style="font-size:11px;color:var(--muted)">'+escAttr(hor)+'</span>'):'')+(det?('<br><span style="font-size:11.5px;color:var(--z-gold-deep);font-weight:600">'+escAttr(det)+'</span>'):'')+' — deu?</span><div class="seg" data-single><button data-tone="ok" onclick="pick(this)">Sim</button><button data-tone="bad" onclick="pick(this)">Não</button></div></div>';
+      });
+      slot.innerHTML=h;
+    });
+    try{
+      document.querySelectorAll('.rel-card').forEach(function(card){
+        card.querySelectorAll('.obsline').forEach(function(l){ var qn=l.querySelector('.q'); if(qn){ var t=qn.textContent.trim(); if(t==='Tem medicação?'||t==='Tem suplementação?') l.style.display=temMeds?'none':''; } });
+        card.querySelectorAll('.medgrid-slot').forEach(function(g){ if(temMeds) g.style.display='none'; });
+      });
+    }catch(e){}
+  }
   function renderMedAgendaHoje(){
+    try{ if(typeof renderRelMedConfirm==='function') renderRelMedConfirm(); }catch(e){}
     const el=document.getElementById('magHoje'); if(!el) return;
     // Estoque de entrada não interessa a quem só dá o remédio (plantonista): esconde pra ela.
     const _magRole=(document.body.dataset.role||''); const estoqueHTML=(_magRole==='plantonista')?'':renderEstoqueResumo();
