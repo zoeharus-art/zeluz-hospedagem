@@ -7837,6 +7837,18 @@
     const quemDeixou=semTutor?((document.getElementById('ciQuemDeixou')&&document.getElementById('ciQuemDeixou').value||'').trim()):'';
     if(!DB){ if(st){ st.style.color='var(--crm-atencao-text)'; st.textContent='Banco conectando… tente de novo em alguns segundos.'; } return; }
     const key=ciKey();
+    // TRAVA anti-duplicidade: já existe uma estadia EM CURSO deste peludinho? (foi assim que o Zeus
+    // ganhou medicação dobrada — lançaram um 2º check-in sem querer). Confirma antes de criar outro.
+    try{
+      var _exist=(typeof CF_ESTADIAS!=='undefined'&&CF_ESTADIAS[key]&&CF_ESTADIAS[key].e)?CF_ESTADIAS[key].e:null;
+      if(_exist && (_exist.status||'ativa')==='ativa'){
+        var _ent=(typeof ciBRdata==='function')?ciBRdata(_exist.entrada):(_exist.entrada||'');
+        if(!confirm('⚠️ JÁ EXISTE um check-in EM CURSO do '+(ciHosp.nome||'peludinho')+(_ent?(' (entrada '+_ent+')'):'')+'.\n\nCriar OUTRO agora vai DUPLICAR medicação e pertences — foi o que aconteceu com o Zeus.\n\n• OK = criar mesmo assim um novo check-in.\n• Cancelar = voltar e EDITAR o check-in que já existe (na ficha do peludinho).')){
+          if(st){ st.style.color='var(--crm-atencao-text)'; st.textContent='Check-in cancelado — edite o que já existe na ficha do peludinho (Agenda de Medicação, Pertences...).'; }
+          return;
+        }
+      }
+    }catch(e){}
     const estadia={
       refKey:ciHosp.refKey||'', nome:ciHosp.nome||'', tutor:ciHosp.tutor||'', raca:ciHosp.raca||'',
       entrada:dados.entrada, saida:dados.saida, status:'ativa',
