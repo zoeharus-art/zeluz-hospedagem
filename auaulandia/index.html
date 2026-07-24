@@ -2582,17 +2582,22 @@
     }catch(e){}
     return null; }
   function racaDe(h){ if(!h) return ''; if(h.mascote) return 'Moradora Zêluz';
+    var c=(typeof getCad==='function')?(getCad(h)||{}):{};
+    // A EDIÇÃO da ficha vence: raça de verdade (ou o campo tutor é claramente uma pessoa → raca é raça).
+    if(c.raca && (ehRacaLike(c.raca) || (c.tutor && !ehRacaLike(c.tutor)))) return c.raca;
     var pm=pelMestreDe(h); if(pm){ var r=pelGet(pm,'raca'); if(r) return r; }
-    var hr=(h.raca||'').trim(), ht=(h.tutor||'').trim();
+    var hr=(c.raca||h.raca||'').trim(), ht=(c.tutor||h.tutor||'').trim();
     if(hr && ehRacaLike(hr)) return hr;
     if(ht && ehRacaLike(ht)) return ht;   // dados trocados: a raça estava no campo tutor
     return hr||''; }
   function tutorDe(h){ if(!h) return ''; if(h.mascote) return 'Nossa Zelozinha';
+    var c=(typeof getCad==='function')?(getCad(h)||{}):{};
+    // A EDIÇÃO da ficha vence: se o campo tutor tem um nome de pessoa (não é raça), é ele.
+    if(c.tutor && !ehRacaLike(c.tutor)) return c.tutor;
     var pm=pelMestreDe(h); if(pm){ var t=pelGet(pm,'tutor'); if(t) return t; }
-    var hr=(h.raca||'').trim(), ht=(h.tutor||'').trim();
+    var hr=(c.raca||h.raca||'').trim(), ht=(c.tutor||h.tutor||'').trim();
     // dados trocados: tutor parece raça e raca parece nome de pessoa → o tutor real está no campo raca
     if(ht && ehRacaLike(ht)){ return (hr && !ehRacaLike(hr))?hr:''; }
-    try{ var cad=getCad(h); if(cad&&cad.tutor&&!ehRacaLike(cad.tutor)) return cad.tutor; }catch(e){}
     return ht; }
   // Resolvedores robustos (usam extraDoHosp, que casa refKey + nome__tutor + mestre + local).
   function fotoDe(h){ try{
@@ -2779,7 +2784,10 @@
     var _ck=cadKey(currentHosp);
     if(DB){ DB.ref('auaulandia/cadastro/'+_ck).update(cad).catch(()=>{}); DB.ref('daycare/cadastro/'+_ck).update(cad).catch(()=>{}); } // cadastro ÚNICO: espelha no mestre do Day Care
     if(typeof pelCadCache!=='undefined') pelCadCache[_ck]=Object.assign({},pelCadCache[_ck]||{},cad);
+    // reflete a edição no card do Plantão na hora (antes só atualizava a ficha aberta)
+    try{ if(currentHosp){ if(cad.raca) currentHosp.raca=cad.raca; if(cad.tutor) currentHosp.tutor=cad.tutor; } }catch(e){}
     atualizarHeader(cad);
+    try{ if(typeof renderHosp==='function') renderHosp(); }catch(e){}
   }
   // Editar o nome do FILHOt — só Gestão/Supervisão (o card-cadastro já é restrito a esses perfis).
   // O nome editado VENCE na exibição; o vínculo interno dos dados (relatórios/fotos) continua pela etiqueta original — nada se desliga.
