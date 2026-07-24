@@ -4145,21 +4145,39 @@
   }
   function toggleMonPerm(i){ const w=document.getElementById('monPerm-'+i); if(!w) return; const open=w.style.display!=='none'; w.style.display=open?'none':'block'; if(!open) w.innerHTML=permEditInner(i,MONITORES[i]); }
   // ===== EDIÇÃO DE MONITORES (Gestão) — nome, senha e horário =====
+  // Papéis que a Gestão pode atribuir a uma pessoa no cadastro (Adriana/Márcia = Gestão, fixos).
+  const ROLE_OPCOES=[
+    {k:'monitor', t:'Monitor(a)'}, {k:'consultora', t:'Consultora (Recepção)'}, {k:'vet', t:'Veterinária'},
+    {k:'conferencia', t:'Conferência (Wandela)'}, {k:'supervisor', t:'Supervisão (vê tudo)'},
+    {k:'plantonista', t:'Plantonista'}, {k:'aprendiz', t:'Aprendiz'}
+  ];
   function renderMonitores(){
     const el=document.getElementById('monitoresList'); if(!el) return;
-    el.innerHTML=(MONITORES||[]).map((m,i)=>`
+    el.innerHTML=(MONITORES||[]).map((m,i)=>{
+      const roleAtual=m.role||'monitor';
+      const roleOpts=ROLE_OPCOES.map(o=>`<option value="${o.k}"${o.k===roleAtual?' selected':''}>${o.t}</option>`).join('');
+      const chefe=(roleAtual==='supervisor');
+      return `
       <div class="mon-row" style="padding:12px;border:1px solid var(--z-line,#e7e0d2);border-radius:12px;margin-bottom:10px">
-        <div style="display:grid;grid-template-columns:1.6fr .8fr .8fr .8fr;gap:8px;align-items:end">
-          <div class="field"><label style="font-size:12px;color:var(--z-blue)">Nome do monitor</label><input class="cad-in" value="${(m.nome||'').replace(/"/g,'&quot;')}" oninput="setMon(${i},'nome',this.value)"></div>
+        <div style="display:grid;grid-template-columns:1.4fr 1fr .7fr;gap:8px;align-items:end">
+          <div class="field"><label style="font-size:12px;color:var(--z-blue)">Nome</label><input class="cad-in" value="${(m.nome||'').replace(/"/g,'&quot;')}" oninput="setMon(${i},'nome',this.value)"></div>
+          <div class="field"><label style="font-size:12px;color:var(--z-blue)">Papel</label><select class="cad-in" onchange="setMon(${i},'role',this.value)">${roleOpts}</select></div>
           <div class="field"><label style="font-size:12px;color:var(--z-blue)">Senha</label><input class="cad-in" inputmode="numeric" maxlength="6" value="${m.senha||''}" oninput="setMon(${i},'senha',this.value)"></div>
+        </div>
+        <div style="display:grid;grid-template-columns:.8fr .8fr;gap:8px;align-items:end;margin-top:8px">
           <div class="field"><label style="font-size:12px;color:var(--z-blue)">Entrada</label><input class="cad-in" type="time" value="${m.entrada||''}" onchange="setMon(${i},'entrada',this.value)"></div>
           <div class="field"><label style="font-size:12px;color:var(--z-blue)">Saída</label><input class="cad-in" type="time" value="${m.saida||''}" onchange="setMon(${i},'saida',this.value)"></div>
         </div>
-        <button type="button" class="med-add" style="width:auto;margin-top:8px" onclick="toggleMonPerm(${i})">🔐 Permissões — o que ${(m.nome||'esta pessoa')} vê no menu</button>
-        <div id="monPerm-${i}" style="display:none"></div>
-      </div>`).join('');
+        ${chefe
+          ? `<div class="hint" style="margin-top:8px;background:rgba(39,174,96,.1);border:1px solid var(--crm-ok);border-radius:9px;padding:8px 11px;font-weight:700;color:var(--crm-ok)">Supervisão vê TUDO — não precisa configurar permissões.</div>`
+          : `<button type="button" class="med-add" style="width:auto;margin-top:8px" onclick="toggleMonPerm(${i})">🔐 Permissões — o que ${(m.nome||'esta pessoa')} vê no menu</button><div id="monPerm-${i}" style="display:none"></div>`}
+        <div style="text-align:right;margin-top:8px"><button type="button" class="ativ-del" style="font-size:12px" onclick="removerPessoa(${i})">🗑️ Remover pessoa</button></div>
+      </div>`;
+    }).join('') + `<button type="button" class="btn btn-gold" style="width:100%;margin-top:6px" onclick="addPessoa()">+ Adicionar pessoa</button>`;
   }
-  function setMon(i,campo,val){ if(!MONITORES[i]) return; MONITORES[i][campo]=(campo==='senha')?String(val).replace(/\D/g,''):val; if(campo==='senha'||campo==='nome') { try{ renderSenhas(); }catch(e){} } }
+  function setMon(i,campo,val){ if(!MONITORES[i]) return; MONITORES[i][campo]=(campo==='senha')?String(val).replace(/\D/g,''):val; if(campo==='senha'||campo==='nome') { try{ renderSenhas(); }catch(e){} } if(campo==='role') { try{ renderMonitores(); }catch(e){} try{ renderSenhas(); }catch(e){} } }
+  function addPessoa(){ if(!Array.isArray(MONITORES)) MONITORES=[]; MONITORES.push({id:'p'+((typeof Date!=='undefined'?Date.now():MONITORES.length)), nome:'', role:'monitor', senha:'', entrada:'', saida:''}); try{ renderMonitores(); }catch(e){} }
+  function removerPessoa(i){ if(!MONITORES[i]) return; if(!confirm('Remover '+(MONITORES[i].nome||'esta pessoa')+' do cadastro? (Não apaga histórico — só tira o acesso.)')) return; MONITORES.splice(i,1); try{ renderMonitores(); }catch(e){} try{ renderSenhas(); }catch(e){} }
   function salvarMonitores(){
     const st=document.getElementById('monitoresStatus'); if(st) st.style.color='';
     const senhas=(MONITORES||[]).map(m=>String(m.senha||'').trim());
