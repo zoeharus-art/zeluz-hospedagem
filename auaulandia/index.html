@@ -377,7 +377,7 @@
   body[data-role="consultora"] #magItens .magitem .ativ-del,
   body[data-role="conferencia"] #magItens .magitem .ativ-del{display:none !important}
   /* .so-master = SÓ a Gestora (Márcia) e a Diretoria (Adriana). Supervisão (Amanda) e equipe não veem. */
-  body:not([data-role="gestao"]):not([data-role="diretoria"]) .so-master{display:none !important}
+  body:not([data-role="gestao"]):not([data-role="diretoria"]):not([data-role="supervisor"]) .so-master{display:none !important}
   /* mensagem para quem entra em Pessoas mas não é a Gestora (ex: Amanda) */
   body[data-role="gestao"] .so-supervisor-only,
   body[data-role="diretoria"] .so-supervisor-only{display:none !important}
@@ -4050,7 +4050,7 @@
   // ===== LOGIN (senhas de teste — depois cada pessoa terá a sua) =====
   const SENHAS={
     '1001':{role:'plantonista', nome:'Plantonista'},
-    '0901':{role:'gestao',      nome:'Adriana · Gestão Total', avisoSonoro:true},
+    '0901':{role:'gestao',      nome:'Adriana · Gestão Total', avisoSonoro:true, souAdriana:true},
     '0902':{role:'gestao',      nome:'Márcia · Gestora', avisoSonoro:true},
     '0912':{role:'supervisor',  nome:'Amanda · Supervisora'},
     '0913':{role:'consultora',  nome:'Consultora · Recepção'},
@@ -4088,7 +4088,7 @@
   function senhasRuntime(){
     const map={}; Object.keys(SENHAS).forEach(k=>{ map[k]=SENHAS[k]; });
     // Monitor NUNCA sobrescreve uma senha fixa do sistema (ex.: 1006 = Wandela/Conferência).
-    (MONITORES||[]).forEach(m=>{ if(m&&m.senha){ const s=String(m.senha).trim(); if(SENHAS[s]) return; map[s]={ role:'monitor', nome:m.nome, monId:m.id, entrada:m.entrada, saida:m.saida, abertura:!!m.abertura, atividades:(Array.isArray(m.atividades)&&m.atividades.length)?m.atividades:undefined }; } });
+    (MONITORES||[]).forEach(m=>{ if(m&&m.senha){ const s=String(m.senha).trim(); if(SENHAS[s]) return; map[s]={ role:'monitor', nome:m.nome, monId:m.id, entrada:m.entrada, saida:m.saida, abertura:!!m.abertura, atividades:(Array.isArray(m.atividades)&&m.atividades.length)?m.atividades:undefined, paginas:(Array.isArray(m.paginas)&&m.paginas.length)?m.paginas:undefined }; } });
     return map;
   }
   // ===== RELATÓRIO DE SENHAS (só Gestão vê) — gerado do cadastro acima =====
@@ -4103,15 +4103,59 @@
       '<span class="val" style="font-family:var(--font-marca);font-size:18px;letter-spacing:3px;color:var(--z-gold-deep)">'+p.pwd+'</span></div>'
     ).join('');
   }
+  // ===== PERMISSÕES POR PESSOA (item C) — editor granular sobre o roster de MONITORES =====
+  // Padrão: sem 'paginas'/'atividades' configurado = pessoa vê tudo que o papel monitor já mostra
+  // (comportamento de hoje, sem mudança). A Gestão DESLIGA o que não quer — nunca o contrário.
+  // AuAulândia + Gestão ficam em 'paginas' (nav[data-v]); Day Care fica em 'atividades' (já existia).
+  const NAV_PAGINAS_ALL=[
+    {grp:'AuAulândia', itens:[
+      {k:'checkin', t:'Check-in'}, {k:'conferencia', t:'Conferência Check-in'}, {k:'recepcao', t:'Atenção Recepção'},
+      {k:'cuidadovet', t:'Cuidado Vet'}, {k:'hospedagem', t:'Plantão AuAulândia'}, {k:'checkout', t:'Check-out (saída)'}
+    ]},
+    {grp:'Gestão', itens:[
+      {k:'painel', t:'Painel'}, {k:'ficha', t:'Peludinhos'}, {k:'pessoas', t:'Pessoas'}, {k:'renovacao', t:'Renovação de Planos'}
+    ]}
+  ];
+  const NAV_PAGINAS_KEYS=NAV_PAGINAS_ALL.reduce((a,g)=>a.concat(g.itens.map(x=>x.k)),[]);
+  function monPaginasSet(m){ return Array.isArray(m.paginas)&&m.paginas.length?m.paginas:NAV_PAGINAS_KEYS.slice(); }
+  function toggleMonPagina(i,key){ const m=MONITORES[i]; if(!m) return;
+    const arr=monPaginasSet(m).slice(); const idx=arr.indexOf(key);
+    if(idx>=0) arr.splice(idx,1); else arr.push(key);
+    m.paginas=arr; const w=document.getElementById('monPerm-'+i); if(w) w.innerHTML=permEditInner(i,m); }
+  function monAtividadesSet(m){ return Array.isArray(m.atividades)&&m.atividades.length?m.atividades:ATIVS_DC.map(a=>a.s); }
+  function toggleMonAtividade(i,slug){ const m=MONITORES[i]; if(!m) return;
+    const arr=monAtividadesSet(m).slice(); const idx=arr.indexOf(slug);
+    if(idx>=0) arr.splice(idx,1); else arr.push(slug);
+    m.atividades=arr; const w=document.getElementById('monPerm-'+i); if(w) w.innerHTML=permEditInner(i,m); }
+  function permEditInner(i,m){
+    const pset=monPaginasSet(m), aset=monAtividadesSet(m);
+    let h='<div style="margin-top:10px;padding-top:10px;border-top:1px dashed var(--z-line,#e7e0d2)">';
+    NAV_PAGINAS_ALL.forEach(function(g){
+      h+='<div style="font-size:11px;font-weight:800;color:var(--z-blue);text-transform:uppercase;letter-spacing:.4px;margin:8px 0 4px">'+g.grp+'</div><div style="display:flex;flex-wrap:wrap;gap:6px">';
+      g.itens.forEach(function(it){ const on=pset.indexOf(it.k)>=0;
+        h+='<span class="dia'+(on?' on':'')+' clic" onclick="toggleMonPagina('+i+',\''+it.k+'\')">'+it.t+'</span>'; });
+      h+='</div>';
+    });
+    h+='<div style="font-size:11px;font-weight:800;color:var(--z-blue);text-transform:uppercase;letter-spacing:.4px;margin:8px 0 4px">Day Care — Atividades</div><div style="display:flex;flex-wrap:wrap;gap:6px">';
+    ATIVS_DC.forEach(function(a){ const on=aset.indexOf(a.s)>=0;
+      h+='<span class="dia'+(on?' on':'')+' clic" onclick="toggleMonAtividade('+i+',\''+a.s+'\')">'+a.t+'</span>'; });
+    h+='</div></div>';
+    return h;
+  }
+  function toggleMonPerm(i){ const w=document.getElementById('monPerm-'+i); if(!w) return; const open=w.style.display!=='none'; w.style.display=open?'none':'block'; if(!open) w.innerHTML=permEditInner(i,MONITORES[i]); }
   // ===== EDIÇÃO DE MONITORES (Gestão) — nome, senha e horário =====
   function renderMonitores(){
     const el=document.getElementById('monitoresList'); if(!el) return;
     el.innerHTML=(MONITORES||[]).map((m,i)=>`
-      <div class="mon-row" style="display:grid;grid-template-columns:1.6fr .8fr .8fr .8fr;gap:8px;align-items:end;padding:12px;border:1px solid var(--z-line,#e7e0d2);border-radius:12px;margin-bottom:10px">
-        <div class="field"><label style="font-size:12px;color:var(--z-blue)">Nome do monitor</label><input class="cad-in" value="${(m.nome||'').replace(/"/g,'&quot;')}" oninput="setMon(${i},'nome',this.value)"></div>
-        <div class="field"><label style="font-size:12px;color:var(--z-blue)">Senha</label><input class="cad-in" inputmode="numeric" maxlength="6" value="${m.senha||''}" oninput="setMon(${i},'senha',this.value)"></div>
-        <div class="field"><label style="font-size:12px;color:var(--z-blue)">Entrada</label><input class="cad-in" type="time" value="${m.entrada||''}" onchange="setMon(${i},'entrada',this.value)"></div>
-        <div class="field"><label style="font-size:12px;color:var(--z-blue)">Saída</label><input class="cad-in" type="time" value="${m.saida||''}" onchange="setMon(${i},'saida',this.value)"></div>
+      <div class="mon-row" style="padding:12px;border:1px solid var(--z-line,#e7e0d2);border-radius:12px;margin-bottom:10px">
+        <div style="display:grid;grid-template-columns:1.6fr .8fr .8fr .8fr;gap:8px;align-items:end">
+          <div class="field"><label style="font-size:12px;color:var(--z-blue)">Nome do monitor</label><input class="cad-in" value="${(m.nome||'').replace(/"/g,'&quot;')}" oninput="setMon(${i},'nome',this.value)"></div>
+          <div class="field"><label style="font-size:12px;color:var(--z-blue)">Senha</label><input class="cad-in" inputmode="numeric" maxlength="6" value="${m.senha||''}" oninput="setMon(${i},'senha',this.value)"></div>
+          <div class="field"><label style="font-size:12px;color:var(--z-blue)">Entrada</label><input class="cad-in" type="time" value="${m.entrada||''}" onchange="setMon(${i},'entrada',this.value)"></div>
+          <div class="field"><label style="font-size:12px;color:var(--z-blue)">Saída</label><input class="cad-in" type="time" value="${m.saida||''}" onchange="setMon(${i},'saida',this.value)"></div>
+        </div>
+        <button type="button" class="med-add" style="width:auto;margin-top:8px" onclick="toggleMonPerm(${i})">🔐 Permissões — o que ${(m.nome||'esta pessoa')} vê no menu</button>
+        <div id="monPerm-${i}" style="display:none"></div>
       </div>`).join('');
   }
   function setMon(i,campo,val){ if(!MONITORES[i]) return; MONITORES[i][campo]=(campo==='senha')?String(val).replace(/\D/g,''):val; if(campo==='senha'||campo==='nome') { try{ renderSenhas(); }catch(e){} } }
@@ -4153,6 +4197,19 @@
       err.innerHTML='Este aparelho não está autorizado.<br>Peça à <strong>Gestão</strong> para autorizar (botão abaixo).';
     });
   }
+  // Item C — permissões por pessoa. Quando a pessoa TEM 'paginas' configurado (editor em Pessoas >
+  // Monitores), força cada item de AuAulândia/Gestão a aparecer OU sumir, por cima das regras de
+  // papel (so-vet/so-conferencia/so-recepcao/so-master) — tanto para RESTRINGIR quanto para LIBERAR
+  // (ex.: dar Cuidado Vet a um monitor de confiança). Sem 'paginas' = nada muda (vale o papel, como hoje).
+  function aplicarPaginasPessoa(u){
+    if(!u||!Array.isArray(u.paginas)) return; // não configurado: comportamento de sempre
+    NAV_PAGINAS_KEYS.forEach(function(k){
+      document.querySelectorAll('#nav a[data-v="'+k+'"]').forEach(function(a){
+        var pode=u.paginas.indexOf(k)>=0;
+        a.style.setProperty('display', pode?'flex':'none', 'important');
+      });
+    });
+  }
   function aplicarLogin(u){
     try{ sessionStorage.setItem('zeluz_login', JSON.stringify(u)); }catch(e){} // fonte única do escopo (montarSubnav/abrirAtividade leem daqui)
     document.body.dataset.role=u.role;
@@ -4165,6 +4222,7 @@
     const escopo=(Array.isArray(u.atividades)&&u.atividades.length)?u.atividades:null;
     if(escopo) document.body.dataset.scope='atividade'; else document.body.removeAttribute('data-scope');
     try{ if(typeof montarSubnav==='function') montarSubnav(); }catch(e){} // sempre remonta (evita subnav preso de outra sessão)
+    try{ aplicarPaginasPessoa(u); }catch(e){} // item C — permissões por pessoa
     // sanfona: preferencia + esconde vazios + garante tela unica. Roda AGORA e DE NOVO no proximo
     // frame: no F5 (sessao restaurada) o aplicarLogin roda antes do navegador desenhar, e ai
     // offsetParent media 0 filhos -> escondia o Day Care por engano. O rAF remede apos o desenho.
@@ -4177,7 +4235,8 @@
     if(escopo && typeof abrirAtividade==='function'){ abrirAtividade(escopo[0]); return; }
     // Cada perfil cai na tela onde trabalha. Antes todo mundo caía na AuAulândia — a Gestão
     // tinha de navegar até o Início toda vez.
-    const v=telaInicialDe(u);
+    var v=telaInicialDe(u);
+    if(Array.isArray(u.paginas)&&u.paginas.length&&u.paginas.indexOf(v)<0) v=u.paginas[0]; // pousa numa página permitida
     const a=document.querySelector('[data-v="'+v+'"]'); if(a) a.click();
     // Se a tela inicial cai DENTRO de um serviço (ex.: operação → Plantão), abre só aquele
     // accordion para o item ativo aparecer. Gestão cai no Início (fora de accordion) → segue tudo fechado.
@@ -5849,7 +5908,8 @@
   (function(){ const raw=localStorage.getItem('zeluz_daycare_sens'); if(raw){ try{ SENS=new Set(JSON.parse(raw)); }catch(e){} } else { SENS=new Set(['tel']); } })();
   function salvarSens(){ const a=[...SENS]; localStorage.setItem('zeluz_daycare_sens',JSON.stringify(a)); if(DB) DB.ref('daycare/config/sensiveis').set(a).catch(()=>{}); }
   function ehGestaoRole(){ const r=document.body.dataset.role; return r==='gestao'||r==='diretoria'; }
-  function ehDiretoriaRole(){ const r=document.body.dataset.role; return r==='diretoria'||r==='gestao'; } // Adriana (Gestão 0901) — poder de excluir cadastro
+  // Excluir cadastro é IRREVERSÍVEL — restrito à Adriana (0901), mesmo Márcia sendo 'gestao' também.
+  function ehDiretoriaRole(){ const r=document.body.dataset.role; if(r==='diretoria') return true; const u=(typeof usuarioAtual==='function')?usuarioAtual():null; return r==='gestao'&&!!(u&&u.souAdriana); }
   function toggleSens(fid){ if(SENS.has(fid)) SENS.delete(fid); else SENS.add(fid); salvarSens(); if(pelAtualIdx!=null) abrirPeludinho(pelAtualIdx); }
   function fLock(fid){
     const on=SENS.has(fid);
