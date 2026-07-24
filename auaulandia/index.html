@@ -4449,6 +4449,23 @@
     const r=(document.body.dataset.role||'');
     if(!(r==='gestao'||r==='supervisor'||r==='diretoria'||r==='monitor')){ alert('Só a Gestão, a Supervisão, a Diretoria ou o Monitor podem deletar uma pernoite.'); return; }
     const h=currentHosp; if(!h) return;
+    // LANÇADO ERRADO? Se este FILHOt tem uma ESTADIA (check-in) em curso, CANCELA a estadia inteira
+    // (não só hoje) — some do Plantão e do Day Care. O cadastro do FILHOt continua salvo.
+    try{
+      var _ck=(typeof medAgendaKey==='function')?medAgendaKey(h):'';
+      var _cr=(_ck&&typeof CF_ESTADIAS!=='undefined')?CF_ESTADIAS[_ck]:null;
+      if(_cr&&_cr.id&&_cr.e&&((_cr.e.status||'ativa')==='ativa')){
+        if(!confirm('CANCELAR a estadia de '+(h.nome||'este FILHOt')+'?\n\nUse quando o check-in foi lançado ERRADO. Cancela a estadia inteira (sai do Plantão e do Day Care). O cadastro do FILHOt continua salvo.')) return;
+        if(!confirm('Confirmação final: cancelar a estadia de '+(h.nome||'este FILHOt')+'?')) return;
+        if(!DB){ alert('Sem internet agora — tente de novo em instantes.'); return; }
+        DB.ref('auaulandia/estadias/'+_cr.id).update({status:'cancelada', canceladaPor:(typeof quemSou==='function'?quemSou():'-'), canceladaTs:Date.now()}).then(function(){
+          if(typeof audit==='function') audit('estadia-cancelada','cancelou estadia (lancamento errado) pela ficha',{pet:h.nome||'',id:_cr.id});
+          if(typeof fecharPlantao==='function') fecharPlantao();
+          carregarHospedes();
+        }).catch(function(e){ alert('Erro ao cancelar a estadia: '+(e&&e.message||e)); });
+        return;
+      }
+    }catch(e){}
     // Registro que NÃO é manual (veio da planilha ou de uma estadia): a Gestão tem autonomia de
     // tirá-lo do Plantão de hoje via override "removidos" (não mexe na planilha nem no cadastro).
     if(!h.manualKey){
