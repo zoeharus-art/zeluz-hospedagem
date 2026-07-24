@@ -2592,7 +2592,18 @@
     try{ var cad=getCad(h); if(cad&&cad.tutor&&!ehRacaLike(cad.tutor)) return cad.tutor; }catch(e){}
     return ht; }
   // Resolvedores robustos (usam extraDoHosp, que casa refKey + nome__tutor + mestre + local).
-  function fotoDe(h){ try{ const ex=extraDoHosp(h); if(ex&&ex.foto) return ex.foto; const c=getCad(h); if(c&&c.foto) return c.foto; }catch(e){} return ''; }
+  function fotoDe(h){ try{
+    const ex=extraDoHosp(h); if(ex&&ex.foto) return ex.foto;
+    const c=getCad(h); if(c&&c.foto) return c.foto;
+    // último recurso: a foto é salva por nome__tutor, mas o tutor pode estar trocado/inconsistente
+    // (chave muda e a foto "some"). Acha por NOME em qualquer chave dos caches de cadastro.
+    if(h&&h.nome&&typeof jsNorm==='function'){
+      var alvo=jsNorm(h.nome);
+      var caches=[]; if(typeof pelCadCache!=='undefined'&&pelCadCache) caches.push(pelCadCache); if(typeof cadCache!=='undefined'&&cadCache) caches.push(cadCache);
+      for(var ci=0;ci<caches.length;ci++){ var cc=caches[ci]; for(var k in cc){ if(!cc[k]||!cc[k].foto) continue; if(jsNorm((k.split('__')[0]||''))===alvo) return cc[k].foto; } }
+      var pm=(typeof pelMestreDe==='function')?pelMestreDe(h):null; if(pm){ var pe=(typeof pelExtra==='function')?pelExtra(pm):null; if(pe&&pe.foto) return pe.foto; }
+    }
+  }catch(e){} return ''; }
   function chipDe(h){ try{ const ex=extraDoHosp(h); return String((ex&&(ex.chip||ex.microchip))||'').trim(); }catch(e){ return ''; } }
   function renderHosp(){
     // ordem alfabética (a moradora Repolho por último)
@@ -2654,7 +2665,8 @@
     const h=hospedes[i]; currentHosp=h;
     const info=getInfo(h);
     const av=document.getElementById('hf-av');
-    if(info.foto){ av.style.backgroundImage=`url('${info.foto}')`; av.style.backgroundSize='cover'; av.style.backgroundPosition='center'; av.textContent=''; }
+    const _favIni=(typeof fotoDe==='function')?fotoDe(h):(info.foto||'');
+    if(_favIni){ av.style.backgroundImage=`url('${_favIni}')`; av.style.backgroundSize='cover'; av.style.backgroundPosition='center'; av.textContent=''; }
     else { av.style.backgroundImage='none'; av.textContent=h.ini; av.style.background=h.cor; }
     document.getElementById('hf-nome').textContent=(getCad(h)&&getCad(h).nome)||h.nome;
     const raca=racaDe(h)||racasMap[(h.nome+'__'+h.tutor).toLowerCase()]||'';
