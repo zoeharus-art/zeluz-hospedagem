@@ -1803,14 +1803,8 @@
       </div>
 
       <div id="cf-corpo" style="display:none">
-        <!-- FICHA COMPLETA do hóspede (como ficou no check-in) — o monitor lê e valida antes de tudo -->
-        <div class="card">
-          <div class="rel-head" onclick="cfToggleFicha()" style="cursor:pointer;display:flex;align-items:center;gap:8px">
-            <h2 style="font-size:19px;margin:0;flex:1">📋 Ficha completa do hóspede</h2><span class="rel-caret" id="cfFichaCaret">▾</span>
-          </div>
-          <div class="hint">Confira como ficou a ficha inteira (alimentação, medicação, pertences, banho). Se tiver qualquer problema, avise a Recepção ANTES de mandar para a plantonista.</div>
-          <div id="cfFichaCompleta" style="margin-top:8px"></div>
-        </div>
+        <!-- Topo: Estadia + Alimentação (o essencial primeiro) -->
+        <div class="card" id="cf-resumo-topo"></div>
         <!-- Pertences + etiquetagem de ração/medicação -->
         <div class="card">
           <h2 style="font-size:19px">Pertences — conferir e etiquetar</h2>
@@ -1871,15 +1865,6 @@
           <div id="cfMedList"></div>
         </div>
 
-        <!-- Ocorrências / itens adicionais — pode adicionar A QUALQUER MOMENTO, mesmo após fechar o checklist -->
-        <div class="card">
-          <h2 style="font-size:19px">Ocorrências e itens que chegaram depois</h2>
-          <div class="hint">Tudo que não estava no check-in ou que chegou durante: item comprado aqui (ex.: vermífugo Endogard), ração/medicamento que o tutor mandou entregar, roupinha porque esfriou… Registre aqui — não some e vai junto no Check-out.</div>
-          <div class="field" style="margin-top:8px"><input class="cad-in" id="cfOcorrTexto" placeholder="Ex: tutor comprou Endogard aqui · tutor mandou +1kg de ração · roupinha de frio" autocomplete="off" onkeydown="if(event.key==='Enter'){event.preventDefault();cfAddOcorrencia();}"></div>
-          <div class="actions" style="margin-top:8px"><button type="button" class="btn btn-gold" onclick="cfAddOcorrencia()">Adicionar ocorrência</button></div>
-          <div id="cfOcorrList" style="margin-top:10px"></div>
-        </div>
-
         <!-- Fotos -->
         <div class="card">
           <h2 style="font-size:19px">Fotos da conferência</h2>
@@ -1895,6 +1880,24 @@
           <div class="field" style="margin-top:12px"><label>Quem está conferindo (assinatura) *</label><input class="cad-in" id="cfAssina" placeholder="Seu nome" autocomplete="off"></div>
           <button type="button" class="btn btn-primary" style="width:100%;margin-top:6px" onclick="cfFecharConferencia()">✅ Fechar conferência</button>
           <div id="cf-status" class="rel-status" style="margin-top:8px"></div>
+        </div>
+
+        <!-- Ocorrências / itens que chegaram depois — conferir + assinar sempre que inserir -->
+        <div class="card">
+          <h2 style="font-size:19px">Ocorrências e itens que chegaram depois</h2>
+          <div class="hint">Tudo que não estava no check-in ou que chegou durante: item comprado aqui (ex.: vermífugo Endogard), ração/medicamento que o tutor mandou entregar, roupinha porque esfriou… Registre aqui — não some e vai junto no Check-out.</div>
+          <div class="field" style="margin-top:8px"><input class="cad-in" id="cfOcorrTexto" placeholder="Ex: tutor comprou Endogard aqui · tutor mandou +1kg de ração · roupinha de frio" autocomplete="off" onkeydown="if(event.key==='Enter'){event.preventDefault();cfAddOcorrencia();}"></div>
+          <div class="actions" style="margin-top:8px"><button type="button" class="btn btn-gold" onclick="cfAddOcorrencia()">Adicionar ocorrência</button></div>
+          <div id="cfOcorrList" style="margin-top:10px"></div>
+        </div>
+
+        <!-- Ficha completa do hóspede — POR ÚLTIMO, só para consulta (começa recolhida) -->
+        <div class="card">
+          <div class="rel-head" onclick="cfToggleFicha()" style="cursor:pointer;display:flex;align-items:center;gap:8px">
+            <h2 style="font-size:19px;margin:0;flex:1">📋 Ficha completa do hóspede</h2><span class="rel-caret" id="cfFichaCaret">▾</span>
+          </div>
+          <div class="hint">Toda a ficha do check-in (alimentação, medicação, pertences, banho). Toque para abrir. Se algo estiver errado, avise a Recepção ANTES de mandar para a plantonista.</div>
+          <div id="cfFichaCompleta" style="margin-top:8px;display:none"></div>
         </div>
       </div>
     </div>
@@ -8294,8 +8297,21 @@
     if(pert.length){ h+=box('Pertences', pert.map(function(p){ return '<div style="font-size:13px;color:var(--z-blue-soft)">• '+escAttr(p.nome||'')+(p.spec?(' — '+escAttr(p.spec)):'')+'</div>'; }).join('')); }
     // Assinatura
     h+=box('Check-in assinado por', '<div style="font-size:13px;color:var(--z-blue-soft)">'+escAttr(cfEstadia.assinado_por||'—')+(cfEstadia.entregaSemTutor?' (entregue sem o tutor)':'')+'</div>');
-    el.innerHTML=h; cfFichaAberta=true; el.style.display='block';
-    var c=document.getElementById('cfFichaCaret'); if(c) c.style.transform='none';
+    el.innerHTML=h; cfFichaAberta=false; el.style.display='none';
+    var c=document.getElementById('cfFichaCaret'); if(c) c.style.transform='rotate(-90deg)';
+    // Resumo no TOPO: Estadia + Alimentação (o essencial primeiro, sem precisar abrir a ficha)
+    var topo=document.getElementById('cf-resumo-topo');
+    if(topo){
+      var te='<div style="font-size:13px;color:var(--z-blue-soft)">Entrada: <strong>'+(cfEstadia.entrada?ciBRdata(cfEstadia.entrada):'—')+'</strong> · Saída: <strong>'+(cfEstadia.saida?ciBRdata(cfEstadia.saida):'—')+'</strong>'+(a.dias?(' · '+escAttr(a.dias)+' dia(s)'):'')+'</div>';
+      var ht='<div style="font-weight:800;color:var(--z-blue);font-size:16px;margin-bottom:6px">Estadia e Alimentação</div>'+box('Estadia',te);
+      if(a.tipo||a.marca||a.qtd){
+        var la='<div style="font-size:13px;color:var(--z-blue-soft)"><strong>Tipo:</strong> '+escAttr(a.tipo||'—')+(a.marca?(' · Marca: '+escAttr(a.marca)):'')+'</div>';
+        if(a.qtd) la+='<div style="font-size:13px;color:var(--z-blue-soft)"><strong>Ração:</strong> '+escAttr(a.qtd)+' '+escAttr(a.unidade||'g')+'/refeição'+(a.refeicoes?(' · '+escAttr(a.refeicoes)+'x/dia'):'')+'</div>';
+        if(a.comida&&a.comida.qtd) la+='<div style="font-size:13px;color:#2B7A4B"><strong>Comida natural:</strong> '+escAttr(a.comida.qtd)+'g/refeição</div>';
+        ht+=box('Alimentação',la);
+      }
+      topo.innerHTML=ht;
+    }
   }
   function renderCfPert(){
     var el=document.getElementById('cfPertList'); if(!el) return;
