@@ -4071,7 +4071,8 @@
   // Se o usuário logado tem `atividades:[...]`, ele só enxerga essas atividades do Day Care
   // e entra direto na primeira delas. Sem o campo = acesso normal (todas as atividades).
   function usuarioAtual(){ try{ return JSON.parse(sessionStorage.getItem('zeluz_login')||'null'); }catch(e){ return null; } }
-  function atividadesPermitidas(){ const u=usuarioAtual(); return (u&&Array.isArray(u.atividades)&&u.atividades.length)?u.atividades:null; }
+  // Array presente (mesmo vazio) = escopo explícito. Vazio = NENHUMA atividade. Ausente (null) = todas (papéis fixos).
+  function atividadesPermitidas(){ const u=usuarioAtual(); return (u&&Array.isArray(u.atividades))?u.atividades:null; }
   // ===== MONITORES EDITÁVEIS PELA GESTÃO (nome/senha/horário) — igual ao Ágora nomeia consultores =====
   // Slots de turno com horário. A Gestão renomeia e ajusta senha/horário pela tela Pessoas -> Monitores.
   // Persistidos no Firebase (daycare/config/monitores). Se offline, valem os defaults abaixo.
@@ -4088,7 +4089,7 @@
   function senhasRuntime(){
     const map={}; Object.keys(SENHAS).forEach(k=>{ map[k]=SENHAS[k]; });
     // Monitor NUNCA sobrescreve uma senha fixa do sistema (ex.: 1006 = Wandela/Conferência).
-    (MONITORES||[]).forEach(m=>{ if(m&&m.senha){ const s=String(m.senha).trim(); if(SENHAS[s]) return; map[s]={ role:'monitor', nome:m.nome, monId:m.id, entrada:m.entrada, saida:m.saida, abertura:!!m.abertura, atividades:(Array.isArray(m.atividades)&&m.atividades.length)?m.atividades:undefined, paginas:(Array.isArray(m.paginas)&&m.paginas.length)?m.paginas:undefined }; } });
+    (MONITORES||[]).forEach(m=>{ if(m&&m.senha){ const s=String(m.senha).trim(); if(SENHAS[s]) return; map[s]={ role:(m.role||'monitor'), nome:m.nome, monId:m.id, entrada:m.entrada, saida:m.saida, abertura:!!m.abertura, atividades:Array.isArray(m.atividades)?m.atividades:[], paginas:Array.isArray(m.paginas)?m.paginas:[] }; } });
     return map;
   }
   // ===== RELATÓRIO DE SENHAS (só Gestão vê) — gerado do cadastro acima =====
@@ -4117,12 +4118,12 @@
     ]}
   ];
   const NAV_PAGINAS_KEYS=NAV_PAGINAS_ALL.reduce((a,g)=>a.concat(g.itens.map(x=>x.k)),[]);
-  function monPaginasSet(m){ return Array.isArray(m.paginas)&&m.paginas.length?m.paginas:NAV_PAGINAS_KEYS.slice(); }
+  function monPaginasSet(m){ return Array.isArray(m.paginas)?m.paginas:[]; } // padrão: NADA (a Gestão concede)
   function toggleMonPagina(i,key){ const m=MONITORES[i]; if(!m) return;
     const arr=monPaginasSet(m).slice(); const idx=arr.indexOf(key);
     if(idx>=0) arr.splice(idx,1); else arr.push(key);
     m.paginas=arr; const w=document.getElementById('monPerm-'+i); if(w) w.innerHTML=permEditInner(i,m); }
-  function monAtividadesSet(m){ return Array.isArray(m.atividades)&&m.atividades.length?m.atividades:ATIVS_DC.map(a=>a.s); }
+  function monAtividadesSet(m){ return Array.isArray(m.atividades)?m.atividades:[]; } // padrão: NADA (a Gestão concede)
   function toggleMonAtividade(i,slug){ const m=MONITORES[i]; if(!m) return;
     const arr=monAtividadesSet(m).slice(); const idx=arr.indexOf(slug);
     if(idx>=0) arr.splice(idx,1); else arr.push(slug);
@@ -4202,13 +4203,20 @@
   // papel (so-vet/so-conferencia/so-recepcao/so-master) — tanto para RESTRINGIR quanto para LIBERAR
   // (ex.: dar Cuidado Vet a um monitor de confiança). Sem 'paginas' = nada muda (vale o papel, como hoje).
   function aplicarPaginasPessoa(u){
-    if(!u||!Array.isArray(u.paginas)) return; // não configurado: comportamento de sempre
+    // Gestão/Supervisão/Diretoria SEMPRE veem tudo — nunca restringidos (exceção pedida pela Adriana).
+    var isChefe=(u&&(u.role==='gestao'||u.role==='supervisor'||u.role==='diretoria'));
+    var restrito=(u&&Array.isArray(u.paginas)&&!isChefe);
     NAV_PAGINAS_KEYS.forEach(function(k){
       document.querySelectorAll('#nav a[data-v="'+k+'"]').forEach(function(a){
+        if(!restrito){ a.style.removeProperty('display'); return; } // sem restrição: volta ao CSS do papel
         var pode=u.paginas.indexOf(k)>=0;
         a.style.setProperty('display', pode?'flex':'none', 'important');
       });
     });
+    // Day Care: com permissões granulares, só vê o Day Care quem tiver ao menos 1 atividade.
+    try{ var acc=document.querySelector('#nav .acc[data-acc="daycare"]');
+      if(acc){ if(restrito && !(Array.isArray(u.atividades)&&u.atividades.length)) acc.style.setProperty('display','none','important'); else acc.style.removeProperty('display'); }
+    }catch(e){}
   }
   function aplicarLogin(u){
     try{ sessionStorage.setItem('zeluz_login', JSON.stringify(u)); }catch(e){} // fonte única do escopo (montarSubnav/abrirAtividade leem daqui)
@@ -4220,7 +4228,9 @@
     try{ selectedDate=new Date(); if(typeof updateDateLabel==='function') updateDateLabel(); }catch(e){} // sempre abre no dia de hoje
     // Escopo restrito (ex.: monitora só do almoço): esconde o resto e entra direto na atividade
     const escopo=(Array.isArray(u.atividades)&&u.atividades.length)?u.atividades:null;
-    if(escopo) document.body.dataset.scope='atividade'; else document.body.removeAttribute('data-scope');
+    const _temPag=(Array.isArray(u.paginas)&&u.paginas.length>0);
+    // data-scope (atividade única, ex.: Amanda Barbosa só almoço) só quando a pessoa NÃO tem páginas.
+    if(escopo && !_temPag) document.body.dataset.scope='atividade'; else document.body.removeAttribute('data-scope');
     try{ if(typeof montarSubnav==='function') montarSubnav(); }catch(e){} // sempre remonta (evita subnav preso de outra sessão)
     try{ aplicarPaginasPessoa(u); }catch(e){} // item C — permissões por pessoa
     // sanfona: preferencia + esconde vazios + garante tela unica. Roda AGORA e DE NOVO no proximo
@@ -4232,15 +4242,15 @@
     try{ document.querySelectorAll('#nav .acc').forEach(function(a){ a.classList.remove('acc-open'); }); ajustarAcordeoes(); if(typeof requestAnimationFrame==='function') requestAnimationFrame(function(){ try{ ajustarAcordeoes(); }catch(e){} }); }catch(e){}
     try{ if(localStorage.getItem('zeluz_sidebar_collapsed')==='1') document.body.classList.add('nav-collapsed'); }catch(e){} // barra recolhida (desktop)
     // Quem tem escopo restrito (ex.: Amanda Barbosa, só almoço) cai direto na atividade dela.
-    if(escopo && typeof abrirAtividade==='function'){ abrirAtividade(escopo[0]); return; }
-    // Cada perfil cai na tela onde trabalha. Antes todo mundo caía na AuAulândia — a Gestão
-    // tinha de navegar até o Início toda vez.
+    // Pessoa só com atividade (sem páginas) cai direto na atividade dela (Amanda Barbosa etc.).
+    if(escopo && !_temPag && typeof abrirAtividade==='function'){ abrirAtividade(escopo[0]); return; }
+    // Cada perfil cai na tela onde trabalha.
     var v=telaInicialDe(u);
-    if(Array.isArray(u.paginas)&&u.paginas.length&&u.paginas.indexOf(v)<0) v=u.paginas[0]; // pousa numa página permitida
-    const a=document.querySelector('[data-v="'+v+'"]'); if(a) a.click();
-    // Se a tela inicial cai DENTRO de um serviço (ex.: operação → Plantão), abre só aquele
-    // accordion para o item ativo aparecer. Gestão cai no Início (fora de accordion) → segue tudo fechado.
-    if(a){ const _accIni=a.closest('.acc'); if(_accIni) _accIni.classList.add('acc-open'); }
+    if(Array.isArray(u.paginas)){
+      if(u.paginas.length){ if(u.paginas.indexOf(v)<0) v=u.paginas[0]; } // pousa numa página permitida
+      else { v=null; } // nada concedido (e sem atividade) → não navega; a Gestão precisa conceder acesso
+    }
+    if(v){ const a=document.querySelector('[data-v="'+v+'"]'); if(a){ a.click(); const _accIni=a.closest('.acc'); if(_accIni) _accIni.classList.add('acc-open'); } }
   }
   // Gestão e Supervisão abrem no Início (visão do dia); quem é da operação abre na AuAulândia.
   function telaInicialDe(u){
