@@ -1714,6 +1714,7 @@
           </div>
         </div>
         <div class="ci-alim-summary" id="ciAlimSummary">Preencha as datas, a quantidade por refeição e marque as refeições para calcular o necessário.</div>
+        <div class="field" style="margin-top:10px"><label>Observação da alimentação <span style="font-weight:600;color:var(--muted)">(como dar, misturas, manias)</span></label><input class="cad-in" id="ciAlimObs" placeholder="Ex: dar metade do Veggidente junto com o café; se não comer, misturar patê" autocomplete="off"></div>
       </div>
 
       <div class="card">
@@ -1735,6 +1736,7 @@
         <div id="ciMeds"></div>
         <button type="button" class="med-add" onclick="ciAddMedBtn()">+ Acrescentar medicamento ou suplemento</button>
         <div id="ci-med-status" class="rel-status"></div>
+        <div class="field" style="margin-top:10px"><label>Observação da medicação <span style="font-weight:600;color:var(--muted)">(recados do tutor, remédio de urgência)</span></label><input class="cad-in" id="ciMedObs" placeholder="Ex: tutor mandou Buscopan em caso de urgência — só se necessário" autocomplete="off"></div>
       </div>
 
       <div class="card">
@@ -2690,7 +2692,11 @@
     // alergia/medicação em destaque no topo da ficha — mesma trava de segurança do Day Care (alertPills)
     const _pillsEl=document.getElementById('hf-pills'); if(_pillsEl) _pillsEl.innerHTML=(typeof alertPills==='function')?alertPills(extraDoHosp(h)):'';
     // Observação geral da estadia (ex.: "tutor pediu pra ver se manca à noite") — destaque pra quem cuida.
-    try{ var _obsG=''; var _rk=(typeof medAgendaKey==='function')?medAgendaKey(h):''; var _reg=(_rk&&typeof CF_ESTADIAS!=='undefined')?CF_ESTADIAS[_rk]:null; if(_reg&&_reg.e&&_reg.e.ficha) _obsG=_reg.e.ficha.obsGeral||''; var _oe=document.getElementById('hf-obsgeral'); if(_oe) _oe.innerHTML=_obsG?('<div style="background:rgba(222,180,40,.14);border-left:4px solid var(--z-gold);border-radius:8px;padding:9px 12px;margin-top:8px;font-size:13.5px;color:var(--z-blue);font-weight:600"><strong>Observação:</strong> '+esc(_obsG)+'</div>'):''; }catch(e){}
+    try{ var _rk=(typeof medAgendaKey==='function')?medAgendaKey(h):''; var _reg=(_rk&&typeof CF_ESTADIAS!=='undefined')?CF_ESTADIAS[_rk]:null; var _fc=(_reg&&_reg.e&&_reg.e.ficha)?_reg.e.ficha:{};
+      var _nota=function(rot,txt){ return txt?('<div style="background:rgba(222,180,40,.14);border-left:4px solid var(--z-gold);border-radius:8px;padding:9px 12px;margin-top:8px;font-size:13.5px;color:var(--z-blue);font-weight:600"><strong>'+rot+':</strong> '+esc(txt)+'</div>'):''; };
+      var _html=_nota('Observação',_fc.obsGeral||'')+_nota('Alimentação',(_fc.alim&&_fc.alim.obs)||'')+_nota('Medicação',_fc.medObs||'');
+      var _oe=document.getElementById('hf-obsgeral'); if(_oe) _oe.innerHTML=_html;
+    }catch(e){}
     if(typeof renderVetInstrucoesFicha==='function') renderVetInstrucoesFicha(h,'hf-vet-instr'); // Onda 3: instruções da vet (elizabetano, não deixar na matilha...)
     if(typeof renderHospAlergiaBlock==='function') renderHospAlergiaBlock(h);
     document.getElementById('hfRaca').value=raca;
@@ -7942,7 +7948,8 @@
       saida:document.getElementById('ciSaida').value||'',
       ficha:{
         obsGeral:((document.getElementById('ciObsGeral')||{}).value||'').trim(),
-        alim:{ tipo:segVal('ciAlimTipo'), marca:(document.getElementById('ciAlimMarca').value||'').trim(),
+        medObs:((document.getElementById('ciMedObs')||{}).value||'').trim(),
+        alim:{ obs:((document.getElementById('ciAlimObs')||{}).value||'').trim(), tipo:segVal('ciAlimTipo'), marca:(document.getElementById('ciAlimMarca').value||'').trim(),
                refeicoes:(document.getElementById('ciAlimRefeicoes').value||'').trim(),
                qtd:(document.getElementById('ciAlimQtd').value||'').trim(), unidade:segVal('ciAlimUnid'),
                trazida:(document.getElementById('ciAlimTraz')?(document.getElementById('ciAlimTraz').value||'').trim():''),
