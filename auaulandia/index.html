@@ -4831,6 +4831,8 @@
   }
   // ---- renovação por FILHOt ----
   function renovDe(ex){ return (ex&&ex.renov)||{}; }
+  // Grava início/fim do plano na ficha SEM apagar o resto do renov (plano, aulas...). Alimenta o statusRenov.
+  function setPelRenov(campo,val){ if(!pelAtual) return; var cur=Object.assign({}, renovDe(pelExtra(pelAtual))); cur[campo]=val; setPelExtra(pelAtual,{renov:cur}); try{ if(typeof renderPelFicha==='function') renderPelFicha(); }catch(e){} }
   function statusRenov(ex){
     const r=renovDe(ex); if(!r.fim) return {estado:'sem', label:'sem plano ativo'};
     const dias=diasAteISO(r.fim);
@@ -6346,6 +6348,8 @@
           ${fieldSens('bairro','Bairro',`<input class="cad-in" value="${escAttr(ex.bairro||'')}" placeholder="Bairro" onchange="setPelExtra(pelAtual,{bairro:this.value})">`)}
           ${fieldSens('indicou','Quem indicou',`<input class="cad-in" value="${escAttr(ex.indicou||'')}" placeholder="Indicação" onchange="setPelExtra(pelAtual,{indicou:this.value})">`)}
           <div class="field"><label>Data de matrícula</label><input type="date" class="cad-in" value="${ex.matricula||''}" onchange="setPelExtra(pelAtual,{matricula:this.value})"></div>
+          <div class="field"><label>Plano Day Care — início</label><input type="date" class="cad-in" value="${(ex.renov&&ex.renov.inicio)||''}" onchange="setPelRenov('inicio',this.value)"></div>
+          <div class="field"><label>Plano Day Care — fim (vencimento)</label><input type="date" class="cad-in" value="${(ex.renov&&ex.renov.fim)||''}" onchange="setPelRenov('fim',this.value)"></div>
           <div class="field"><label>Frequência (automática pelos dias)</label><input id="pelFreqInput" class="cad-in" value="${escAttr(pelFreq(p))} por semana" readonly></div>
         </div>
         <div id="pel-saved" style="font-size:12px;color:var(--crm-ok);font-weight:700;margin-top:8px"></div>
