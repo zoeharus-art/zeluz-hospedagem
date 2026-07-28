@@ -2145,6 +2145,11 @@
     <div class="card">
       <h2 style="font-size:20px">Renovação de Planos</h2>
       <div class="hint">Vencidos primeiro. Toque no peludinho para abrir a ficha na aba Plano e renovar.</div>
+      <div class="so-master" style="margin:6px 0 10px;padding:10px 12px;border:1px dashed var(--z-gold);border-radius:10px;background:rgba(222,180,40,.08)">
+        <div style="font-size:12.5px;color:var(--z-blue);font-weight:600;margin-bottom:6px">Importar início/fim dos planos da planilha do Day Care (cruza por nome + tutor).</div>
+        <button type="button" class="btn btn-gold" onclick="importarPlanosPlanilha()">⬇️ Importar planos da planilha</button>
+        <div id="importPlanosStatus" style="font-size:13px;font-weight:700;margin-top:8px"></div>
+      </div>
       <div id="renovLista"></div>
     </div>
   </section>
@@ -4833,6 +4838,57 @@
   function renovDe(ex){ return (ex&&ex.renov)||{}; }
   // Grava início/fim do plano na ficha SEM apagar o resto do renov (plano, aulas...). Alimenta o statusRenov.
   function setPelRenov(campo,val){ if(!pelAtual) return; var cur=Object.assign({}, renovDe(pelExtra(pelAtual))); cur[campo]=val; setPelExtra(pelAtual,{renov:cur}); try{ if(typeof renderPelFicha==='function') renderPelFicha(); }catch(e){} }
+  // ===== IMPORTAR PLANOS DA PLANILHA (Gestão) — colunas: Peludo · Raça · Tutor · Começo · Fim =====
+  const PLANOS_SHEET_ID='1XwvjuMK-qI56jHE8KKQGpf2PTGg413d851-VEE-R_lE';
+  function _csvLinha(linha){ var out=[], cur='', q=false; for(var i=0;i<linha.length;i++){ var c=linha[i]; if(q){ if(c==='"'){ if(linha[i+1]==='"'){ cur+='"'; i++; } else q=false; } else cur+=c; } else { if(c==='"') q=true; else if(c===',') { out.push(cur); cur=''; } else cur+=c; } } out.push(cur); return out; }
+  function _csv(txt){ return String(txt||'').split(/\r?\n/).filter(function(l){ return l.trim()!==''; }).map(_csvLinha); }
+  // Casa a linha da planilha (nome + tutor) ao cadastro-mestre. Só assume quando tem certeza:
+  // nome único, OU nome repetido com o 1º nome do tutor batendo. Ambíguo/sem achar → não importa.
+  function _acharPelPlano(nome,tutor){
+    if(typeof PELUDINHOS==='undefined'||typeof jsNorm!=='function') return null;
+    var n=jsNorm((nome||'').trim()); if(!n) return null;
+    var tf=jsNorm(primeiroNome(tutor||''));
+    var exatos=PELUDINHOS.filter(function(p){ return jsNorm(p.n)===n; });
+    if(exatos.length===1) return exatos[0];
+    if(exatos.length>1){ var byT=exatos.find(function(p){ var pt=jsNorm(primeiroNome(pelGet(p,'tutor')||'')); return pt&&tf&&pt===tf; }); return byT||null; }
+    return null;
+  }
+  async function importarPlanosPlanilha(){
+    var r=document.body.dataset.role;
+    if(!(r==='gestao'||r==='supervisor'||r==='diretoria')){ alert('Só a Gestão/Supervisão importa os planos.'); return; }
+    var st=document.getElementById('importPlanosStatus');
+    var setSt=function(cor,t){ if(st){ st.style.color=cor; st.innerHTML=t; } };
+    if(!DB){ setSt('var(--crm-critico)','Sem conexão com o banco agora — tente com internet.'); return; }
+    setSt('var(--muted)','Buscando a planilha…');
+    try{
+      var res=await fetch('https://docs.google.com/spreadsheets/d/'+PLANOS_SHEET_ID+'/gviz/tq?tqx=out:csv&gid=0&_='+Date.now());
+      var rows=_csv(await res.text());
+      if(rows.length<2){ setSt('var(--crm-critico)','Planilha vazia ou sem acesso. Confirme que está como "Qualquer pessoa com o link — Leitor".'); return; }
+      rows.shift(); // cabeçalho
+      var ok=0, naoAchou=[], semData=0, ops=[];
+      rows.forEach(function(row){
+        var nome=(row[0]||'').trim(), tutor=(row[2]||'').trim();
+        var ini=(row[3]||'').trim(), fim=(row[4]||'').trim();
+        if(!nome) return;
+        var iniISO=(typeof parseNascToISO==='function')?parseNascToISO(ini):''; var fimISO=(typeof parseNascToISO==='function')?parseNascToISO(fim):'';
+        if(!iniISO && !fimISO){ semData++; return; }
+        var pel=_acharPelPlano(nome,tutor);
+        if(!pel){ naoAchou.push(nome+(tutor?(' ('+tutor+')'):'')); return; }
+        var ex=pelExtra(pel); var renov=Object.assign({}, (ex&&ex.renov)||{});
+        if(iniISO) renov.inicio=iniISO; if(fimISO) renov.fim=fimISO;
+        var key=pelKey(pel);
+        ops.push(DB.ref('daycare/cadastro/'+key).update({renov:renov}));
+        try{ if(typeof pelCadCache!=='undefined') pelCadCache[key]=Object.assign({},pelCadCache[key]||{},{renov:renov}); }catch(e){}
+        ok++;
+      });
+      await Promise.all(ops);
+      try{ if(typeof renderRenovacao==='function') renderRenovacao(); }catch(e){}
+      var msg='✅ '+ok+' plano(s) importado(s).';
+      if(naoAchou.length) msg+='<br><span style="color:var(--crm-atencao-text)">Não encontrei no cadastro ('+naoAchou.length+'): '+naoAchou.slice(0,15).join(', ')+(naoAchou.length>15?'…':'')+' — confira o nome/tutor.</span>';
+      if(semData) msg+='<br><span style="color:var(--muted)">'+semData+' linha(s) sem datas de plano — ignoradas.</span>';
+      setSt('var(--crm-ok)',msg);
+    }catch(e){ setSt('var(--crm-critico)','Erro ao importar: '+((e&&e.message)||e)); }
+  }
   function statusRenov(ex){
     const r=renovDe(ex); if(!r.fim) return {estado:'sem', label:'sem plano ativo'};
     const dias=diasAteISO(r.fim);
