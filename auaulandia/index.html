@@ -3526,7 +3526,7 @@
         var nome=(it.nome||'medicamento'); var hor=(it.horarios||[]).join(', ');
         var comoDar=(typeof medDoseTxt==='function')?medDoseTxt(it):''; var obs=(it.obs||'').trim();
         var det=[comoDar,obs].filter(Boolean).join(' · ');
-        h+='<div class="obsline"><span class="q"><strong>'+escAttr(nome)+'</strong>'+(hor?(' <span style="font-size:11px;color:var(--muted)">'+escAttr(hor)+'</span>'):'')+(det?('<br><span style="font-size:11.5px;color:var(--z-gold-deep);font-weight:600">'+escAttr(det)+'</span>'):'')+' — deu?</span><div class="seg" data-single><button data-tone="ok" onclick="pick(this)">Sim</button><button data-tone="bad" onclick="pick(this)">Não</button></div></div>';
+        h+='<div class="obsline med-confirm-obs"><span class="q"><strong>'+escAttr(nome)+'</strong>'+(hor?(' <span style="font-size:11px;color:var(--muted)">'+escAttr(hor)+'</span>'):'')+(det?('<br><span style="font-size:11.5px;color:var(--z-gold-deep);font-weight:600">'+escAttr(det)+'</span>'):'')+' — deu?</span><div class="seg" data-single><button data-tone="ok" onclick="pick(this)">Sim</button><button data-tone="bad" onclick="pick(this)">Não</button></div></div>';
       });
       slot.innerHTML=h;
     });
@@ -3868,7 +3868,7 @@
   function salvarRelatorioCard(tipo){ if(!currentHosp) return; const card='card-'+tipo; const st=document.getElementById('status-'+tipo);
     const passouEl=document.getElementById('passou-'+tipo);
     const passou=((passouEl&&passouEl.value)||'').trim();
-    const falt=[]; document.querySelectorAll('#'+card+' .obsline').forEach(l=>{ if(l.style.display==='none') return; /* pula perguntas condicionais escondidas (ex.: Tipo de vômito quando "Vomitou? Não") */ if(!l.querySelector('button.on')){ const q=l.querySelector('.q'); if(q) falt.push(q.textContent.trim()); } });
+    const falt=[]; document.querySelectorAll('#'+card+' .obsline').forEach(l=>{ if(l.style.display==='none') return; /* pula perguntas condicionais escondidas (ex.: Tipo de vômito quando "Vomitou? Não") */ if(l.classList.contains('med-confirm-obs')) return; /* confirmação de remédio (Sim/Não) é opcional — não bloqueia salvar */ if(!l.querySelector('button.on')){ const q=l.querySelector('.q'); if(q) falt.push(q.textContent.trim()); } });
     if(falt.length){ if(st){ st.style.color='var(--crm-critico)'; st.textContent='✋ Antes de passar para o próximo peludinho, responda TODAS as perguntas! Faltou: '+falt.slice(0,6).join(', ')+(falt.length>6?'…':''); } return; }
     // ---- Medicação/Suplementação à prova de erro: "Tem? Sim" exige tabela preenchida ----
     const _mg=coletarMedgrids(card);
@@ -3885,9 +3885,12 @@
     const _medResp=valDe(card,'Tem medicação?'); const _supResp=valDe(card,'Tem suplementação?');
     const _eMed=_vMed('med','medicação',_medResp); if(_eMed){ if(st){ st.style.color='var(--crm-critico)'; st.textContent='✋ '+_eMed; } return; }
     const _eSup=_vMed('sup','suplementação',_supResp); if(_eSup){ if(st){ st.style.color='var(--crm-critico)'; st.textContent='✋ '+_eSup; } return; }
-    // ---- Parte 2 — cross-check de medicação: era esperada (Dia disse Sim OU histórico da estadia) e agora foi marcada como não ----
+    // ---- Parte 2 — cross-check de medicação (SÓ no modo antigo de texto livre) ----
+    // Com a confirmação Sim/Não por remédio (agenda), a medicação já é tratada ali. O cross-check
+    // antigo lia "Tem medicação?" — agora ESCONDIDO — e travava sem saída (era o bug do Felix).
+    const _medConfAtivo=!!document.querySelector('#'+card+' .med-confirm-obs');
     const _esperaDia=(tipo!=='dia' && valDe('card-dia','Tem medicação?')==='Sim');
-    if((_esperaDia||medHistEstadia.tinha) && _medResp!=='Sim'){
+    if(!_medConfAtivo && (_esperaDia||medHistEstadia.tinha) && _medResp!=='Sim'){
       const _motivo=_esperaDia ? ('O Relatório do Dia indicou que '+(currentHosp.nome||'este FILHOt')+' TEM medicação.')
         : ((currentHosp.nome||'Este FILHOt')+' teve medicação registrada nesta estadia (dia '+medHistEstadia.quando+').');
       if(!confirm('⚠ '+_motivo+'\n\nVocê marcou que NÃO há medicação agora. O remédio ACABOU ou foi suspenso?\n\nOK = Sim, acabou / foi suspenso\nCancelar = não — vou registrar a medicação')){
