@@ -1965,6 +1965,9 @@
     <h2 style="font-size:19px;margin-top:22px">Avisos de ração</h2>
     <div class="role-note"><span data-icon="paw"></span><span><strong>Ração insuficiente para a estadia.</strong> Gerado pela Conferência Check-in quando a ração pesada não cobre os dias hospedados. Mesmo padrão pendente → resolvido — registre a providência até resolver.</span></div>
     <div id="avisosRacaoList"></div>
+    <h2 style="font-size:19px;margin-top:22px">Ocorrências dos hóspedes</h2>
+    <div class="role-note"><span data-icon="paw"></span><span><strong>O que aconteceu com o FILHOt durante a estadia.</strong> Registrado por quem viu — na Conferência do check-in ou no plantão — e chega aqui para quem fala com o tutor (Consultoras e Supervisão). Depois de ligar, registre <strong>o que foi dito</strong> e marque "avisei o tutor". Nada verbal: fica escrito, com quem e quando.</span></div>
+    <div id="ocorrRecepcaoList"></div>
   </section>
 
   <!-- ===== Onda 3 — CUIDADO VET (veterinária) ===== -->
@@ -3453,11 +3456,12 @@
   }
 
   // ---- Recepção: lista e trilha dos avisos de estoque (mesmo padrão pendente→resolvido da ração) ----
-  function carregarAvisosEstoque(){ renderAvisosEstoque(); renderAvisosRacao(); }
+  function carregarAvisosEstoque(){ renderAvisosEstoque(); renderAvisosRacao(); renderOcorrenciasRecepcao(); }
   var _recepcaoPrevN=null;
   function atualizarBadgeRecepcao(){
     var n=0; Object.keys(AVISOS_ESTOQUE_CACHE||{}).forEach(function(id){ if(AVISOS_ESTOQUE_CACHE[id].status!=='resolvido') n++; });
     Object.keys(AVISOS_RACAO_CACHE||{}).forEach(function(id){ if(AVISOS_RACAO_CACHE[id].status!=='resolvido') n++; });
+    n+=ocorrenciasLoja().filter(function(o){ return !o.avisado; }).length; // ocorrência sem tutor avisado também é pendência da loja
     var link=document.querySelector('#nav a[data-v="recepcao"]'); if(!link) return;
     var b=link.querySelector('.nav-badge');
     if(n>0){ if(!b){ b=document.createElement('span'); b.className='nav-badge'; link.appendChild(b); } b.textContent=n; }
@@ -3523,6 +3527,68 @@
   function avisoReabrir(id){
     if(!DB) return; var a=AVISOS_ESTOQUE_CACHE[id]; if(!a) return;
     DB.ref('auaulandia/avisos-estoque/'+id).update({status:'em_processo'}).catch(function(){});
+  }
+
+  // ---- Recepção: OCORRÊNCIAS dos hóspedes (item 3 — a loja precisa ver) ----
+  // A ocorrência nasce onde alguém VÊ o fato (Conferência do check-in, plantão) e precisa chegar em
+  // quem FALA com o tutor — Consultoras e Amanda (Supervisão). Elas já vivem na Recepção (é lá que
+  // recebem falta de ração e de remédio, com badge e alarme). Então a ocorrência entra aqui, no mesmo
+  // padrão pendente→resolvido, em vez de virar uma tela nova que ninguém abre. Enquanto o tutor não
+  // for avisado, conta no badge da Recepção.
+  var OCORR_JANELA_DIAS=30;
+  function ocorrenciasLoja(){
+    var out=[];
+    if(typeof CF_ESTADIAS==='undefined' || !CF_ESTADIAS) return out;
+    var limite=Date.now()-OCORR_JANELA_DIAS*86400000;
+    Object.keys(CF_ESTADIAS).forEach(function(rk){
+      var reg=CF_ESTADIAS[rk]||{}; var e=reg.e||{}; var oc=e.ocorrencias||{};
+      Object.keys(oc).forEach(function(ocId){
+        var o=oc[ocId]||{};
+        if(!o.texto) return;
+        if(o.ts && o.ts<limite) return;
+        out.push({estadiaId:reg.id, ocId:ocId, pet:e.nome||'', tutor:e.tutor||'', texto:o.texto,
+                  quem:o.quem||'-', ts:o.ts||0, avisado:o.avisadoTutor||null});
+      });
+    });
+    return out.sort(function(a,b){ return (b.ts||0)-(a.ts||0); });
+  }
+  function ocorrCardHTML(o){
+    var id=o.estadiaId+'__'+o.ocId;
+    var quando=o.ts?new Date(o.ts).toLocaleString('pt-BR'):'';
+    var chip=o.avisado?'<span class="avr-chip resolvido">TUTOR AVISADO</span>':'<span class="avr-chip pendente">FALTA AVISAR</span>';
+    var corpo=o.avisado
+      ? '<div class="avr-trilha"><div class="avr-tl resol"><div class="avr-tl-meta">'+escAttr(o.avisado.quando||'')+'</div><div class="avr-tl-acao">"'+escAttr(o.avisado.acao||'')+'"</div><div class="avr-tl-assina">— '+escAttr(o.avisado.assinatura||'')+'</div></div></div>'
+        +'<div style="text-align:right;margin-top:8px"><button class="btn" style="background:var(--z-cream-warm);color:var(--z-blue);border:1.5px solid var(--line)" onclick="ocorrReabrir(\''+id+'\')">Reabrir</button></div>'
+      : '<div class="avr-form"><div class="ff-tit">Registrar o contato com o tutor</div><textarea id="ocr_acao_'+id+'" placeholder="O que você falou com o tutor? (ex.: liguei, expliquei o ocorrido, ele ficou ciente)"></textarea><input id="ocr_assina_'+id+'" placeholder="Seu nome (assinatura)"><div class="avr-form-btns"><button class="btn btn-primary" onclick="ocorrAvisarTutor(\''+id+'\')">Avisei o tutor</button></div></div>';
+    return '<div class="avr-card '+(o.avisado?'resolvido':'pendente')+'"><div class="avr-head"><div class="avr-info">'
+      +'<div class="avr-nome">'+escAttr(o.pet||'FILHOt')+'</div>'
+      +'<div class="avr-sub">'+(o.tutor?('Tutor: '+escAttr(o.tutor)+' — '):'')+escAttr(o.texto)+'</div>'
+      +'<div class="avr-sub">Registrado por '+escAttr(o.quem)+(quando?(' · '+escAttr(quando)):'')+'</div>'
+      +'</div>'+chip+'</div><div class="avr-body">'+corpo+'</div></div>';
+  }
+  function renderOcorrenciasRecepcao(){
+    var el=document.getElementById('ocorrRecepcaoList'); if(!el) return;
+    var lista=ocorrenciasLoja();
+    if(!lista.length){ el.innerHTML='<div class="avr-empty">Nenhuma ocorrência registrada nos últimos '+OCORR_JANELA_DIAS+' dias.</div>'; return; }
+    var abertas=lista.filter(function(o){ return !o.avisado; });
+    var fechadas=lista.filter(function(o){ return !!o.avisado; });
+    el.innerHTML=abertas.concat(fechadas).map(ocorrCardHTML).join('');
+  }
+  function _ocorrSplit(id){ var i=(id||'').indexOf('__'); return i<0?null:{estadiaId:id.slice(0,i), ocId:id.slice(i+2)}; }
+  function ocorrAvisarTutor(id){
+    var r=_ocorrSplit(id); if(!r||!DB) return;
+    var acao=((document.getElementById('ocr_acao_'+id)||{}).value||'').trim();
+    var assina=((document.getElementById('ocr_assina_'+id)||{}).value||'').trim();
+    if(!acao||!assina){ alert('Escreva o que foi falado com o tutor e o seu nome para registrar.'); return; }
+    var reg={acao:acao, assinatura:assina, quando:agoraBR(), ts:Date.now()};
+    DB.ref('auaulandia/estadias/'+r.estadiaId+'/ocorrencias/'+r.ocId+'/avisadoTutor').set(reg).then(function(){
+      if(typeof audit==='function') audit('ocorrencia-tutor-avisado',r.estadiaId,{quem:assina});
+    }).catch(function(e){ alert('Erro ao registrar: '+(e&&e.message||e)); });
+  }
+  function ocorrReabrir(id){
+    var r=_ocorrSplit(id); if(!r||!DB) return;
+    if(!confirm('Reabrir esta ocorrência? Ela volta a aparecer como "falta avisar".')) return;
+    DB.ref('auaulandia/estadias/'+r.estadiaId+'/ocorrencias/'+r.ocId+'/avisadoTutor').set(null).catch(function(){});
   }
 
   // ---- Recepção: avisos de RAÇÃO (Onda 4 — absorve o alerta do sistema antigo) ----
@@ -8483,6 +8549,9 @@
       if(!atual || (e._ts||0)>(atual.e._ts||0)) CF_ESTADIAS[k]={id:id,e:e};
     });
     try{ if(typeof atualizarBadgeConferencia==='function') atualizarBadgeConferencia(); }catch(e){}
+    // Item 3 — ocorrência registrada em qualquer aparelho chega viva na Recepção (badge + lista).
+    try{ if(typeof atualizarBadgeRecepcao==='function') atualizarBadgeRecepcao(); }catch(e){}
+    try{ var vr=document.getElementById('v-recepcao'); if(vr&&vr.classList.contains('active')&&typeof renderOcorrenciasRecepcao==='function') renderOcorrenciasRecepcao(); }catch(e){}
     try{
       var v2=document.getElementById('v-conferencia');
       var lista=document.getElementById('cf-lista');
