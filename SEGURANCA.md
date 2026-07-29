@@ -44,7 +44,25 @@ nada quebrou. Liga sozinho quando a chave for colada.
 
 ## O que só a Adriana pode fazer (Console do Firebase)
 
-### Passo 1 — Publicar as regras  ·  ~2 minutos
+### ✅ Passo 1 — Publicar as regras  ·  FEITO em 29/jul/2026
+
+Publicado pela Adriana no Console. **Testado de fora na sequência, com login anônimo:**
+
+| Tentativa de ataque | Antes | Agora |
+|---|---|---|
+| Ler a raiz do banco | lia tudo | **401 negado** |
+| Criar ramo novo (`/hackeado`) | criava | **401 negado** |
+| Apagar uma coleção inteira | apagava | **401 negado** |
+| Sobrescrever `/auaulandia` | sobrescrevia | **401 negado** |
+| Ler sem login nenhum | — | **401 negado** |
+
+E o app segue funcionando: leitura de cadastro, agenda de medicação, gravação e exclusão item a
+item — todos 200. Confirmado também que **não existe no código nenhuma escrita no nível de topo nem
+exclusão de coleção**, então nada da operação foi afetado.
+
+> Instruções originais, mantidas para referência:
+
+### Passo 1 (referência) — Publicar as regras  ·  ~2 minutos
 
 1. Abrir https://console.firebase.google.com/project/hospedagem-zeluz/database/hospedagem-zeluz-default-rtdb/rules
 2. Apagar o conteúdo e colar o conteúdo de `database.rules.json` (o arquivo na raiz deste repositório).
