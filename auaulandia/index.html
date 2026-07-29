@@ -2198,11 +2198,17 @@
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-database-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-check-compat.js"></script>
 <script>
   // ---- Firebase (banco gratuito que já temos) ----
   // Declarados AQUI (antes dos ouvintes do Firebase abaixo) para não caírem na zona morta temporal:
   // os listeners em ~1801 mutam estas variáveis e podem disparar antes das declarações originais lá embaixo.
   let DB=null, cadCache={}, fotoPendente=null, pelCadCache={}, almCadCache={}, despBaixa={}, VET_RECOM_CACHE={}, VET_OBS_CACHE={}, MONITORES=[], NAOCOMEU_HOJE={};
+  // Chave pública do reCAPTCHA v3 do App Check. VAZIA = App Check desligado (nada muda no app).
+  // Cole aqui a chave gerada no Console do Firebase para ligar — instruções em SEGURANCA.md.
+  // É `var` de propósito: com `const` a leitura lá embaixo cairia na zona morta temporal e
+  // travaria a carga inteira do app, igual ao caso do PELUDINHOS.
+  var APPCHECK_SITE_KEY='';
   try{
     firebase.initializeApp({
       apiKey:"AIzaSyD3udp47XruRAEeIYWNGn0ICGCX3a1qr28",
@@ -2213,6 +2219,18 @@
       messagingSenderId:"199129329105",
       appId:"1:199129329105:web:22d0995972c197e24644f0"
     });
+    // ---- App Check: só o app da Zêluz fala com o banco ----
+    // A chave do Firebase acima é PÚBLICA por natureza (está no HTML, que qualquer um lê). Sem App
+    // Check, qualquer pessoa com o endereço faz login anônimo e enxerga o banco inteiro de fora —
+    // por curl, por um HTML copiado, de qualquer lugar. O App Check exige uma prova de que a
+    // requisição veio DESTE site; quem não tem a prova é barrado pelo Firebase, antes das regras.
+    // Fica INERTE até a chave reCAPTCHA ser colada abaixo — assim nada quebra enquanto não ligarmos.
+    // Passo a passo em SEGURANCA.md (raiz do repo).
+    if(APPCHECK_SITE_KEY && typeof firebase.appCheck==='function'){
+      try{
+        firebase.appCheck().activate(new firebase.appCheck.ReCaptchaV3Provider(APPCHECK_SITE_KEY), true);
+      }catch(e){ console.warn('App Check:',e); }
+    }
     firebase.auth().signInAnonymously().then(()=>{
       DB=firebase.database(); __fbReady=true; wireFirebaseListeners();
     }).catch(e=>console.warn('Firebase auth:',e));

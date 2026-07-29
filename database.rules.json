@@ -1,0 +1,51 @@
+{
+  "rules": {
+    "//": "Realtime Database — hospedagem-zeluz. Escritas em 28/jul/2026.",
+    "//1": "ANTES: qualquer pessoa na internet fazia login anonimo (a chave do app esta no HTML, e",
+    "//2": "publica por natureza) e lia/escrevia o banco INTEIRO — inclusive apagar tudo num comando.",
+    "//3": "AGORA: raiz fechada, ninguem cria ramo novo, ninguem apaga uma colecao inteira.",
+    "//4": "Item por item continua liberado — e disso que o app vive.",
+    "//5": "Isto NAO separa papeis (plantonista x vet): senha por papel e checada no navegador e",
+    "//6": "nao vale como seguranca. A trava real de quem-acessa vem do App Check + PIN no servidor.",
+    "//7": "Ver SEGURANCA.md na raiz do repo.",
+
+    ".read": false,
+    ".write": false,
+
+    "auaulandia": {
+      ".read": "auth != null",
+      ".write": false,
+      "$colecao": {
+        ".write": "auth != null && newData.exists()",
+        "$item": { ".write": "auth != null" }
+      }
+    },
+
+    "daycare": {
+      ".read": "auth != null",
+      ".write": false,
+      "$colecao": {
+        ".write": "auth != null && newData.exists()",
+        "$item": { ".write": "auth != null" }
+      }
+    },
+
+    "filhots": {
+      ".read": "auth != null",
+      ".write": false,
+      "$colecao": {
+        ".write": "auth != null && newData.exists()",
+        "$item": { ".write": "auth != null" }
+      }
+    },
+
+    "racao": {
+      ".read": "auth != null",
+      ".write": false,
+      "$colecao": {
+        ".write": "auth != null && newData.exists()",
+        "$item": { ".write": "auth != null" }
+      }
+    }
+  }
+}
