@@ -888,6 +888,13 @@
   /* Item 4 — remédio prescrito pela vet que chegou na data de término (última dose dada). */
   .vet-fimmed-banner{background:rgba(41,128,185,.12);border:2px solid var(--crm-info);border-radius:14px;padding:14px 16px;margin-bottom:16px;font-weight:700;color:var(--z-blue);display:flex;gap:11px;align-items:flex-start}
   .vet-fimmed-banner .rr-tit{font-weight:800;color:var(--crm-info)}
+  /* Aviso de sessão prestes a expirar por inatividade */
+  .inat-aviso{position:fixed;left:0;right:0;bottom:0;z-index:9999;background:var(--z-blue);color:var(--z-cream);
+    padding:14px 18px;display:flex;gap:14px;align-items:center;justify-content:center;flex-wrap:wrap;
+    font-weight:700;font-size:14.5px;box-shadow:0 -4px 18px rgba(0,0,0,.25)}
+  .inat-aviso b{color:var(--z-gold)}
+  .inat-aviso button{background:var(--z-gold);color:var(--z-blue);border:none;border-radius:10px;
+    padding:9px 18px;font-weight:800;font-size:14px;cursor:pointer;font-family:inherit}
   .vet-fimmed-line{margin-top:8px;display:flex;gap:10px;align-items:center;flex-wrap:wrap}
   .vet-fimmed-line .btn{padding:6px 13px;font-size:12.5px}
   .vet-consulta-card{border:1.5px solid var(--line);border-radius:12px;padding:13px 14px;margin-bottom:10px;background:var(--z-cream-warm)}
@@ -2203,6 +2210,11 @@
     <div class="kf-text"><strong>by Adriana Duarte<span class="kf-tripontos">.&#x27;.</span></strong></div>
   </div>
 </main>
+
+<div class="inat-aviso" id="inatAviso" style="display:none">
+  <span>Você será desconectado em <b id="inatSeg">30</b>s por inatividade.</span>
+  <button type="button" onclick="inatMarcarAtividade()">Continuar conectado</button>
+</div>
 
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-database-compat.js"></script>
@@ -4404,6 +4416,7 @@
     document.getElementById('whoName').textContent=u.nome;
     document.getElementById('loginScreen').style.display='none';
     document.getElementById('loginErr').textContent='';
+    try{ inatIniciar(); }catch(e){} // relógio de inatividade começa (e zera) a cada entrada
     try{ selectedDate=new Date(); if(typeof updateDateLabel==='function') updateDateLabel(); }catch(e){} // sempre abre no dia de hoje
     // Escopo restrito (ex.: monitora só do almoço): esconde o resto e entra direto na atividade
     const escopo=(Array.isArray(u.atividades)&&u.atividades.length)?u.atividades:null;
@@ -4444,7 +4457,59 @@
     sessionStorage.removeItem('zeluz_login');
     document.getElementById('loginPwd').value='';
     document.getElementById('loginScreen').style.display='flex';
+    var _ia=document.getElementById('inatAviso'); if(_ia) _ia.style.display='none';
     if(typeof mostrarStatusDevice==='function') mostrarStatusDevice();
+  }
+
+  // ===== SAIR SOZINHO DEPOIS DE 5 MINUTOS PARADO =====
+  // Pedido da Adriana (29/jul/2026): monitores e gestores ficavam logados direto, sem sair. Em uso,
+  // continua logado; parado 5 minutos, volta para a tela de login.
+  //
+  // A PLANTONISTA FICA DE FORA, de propósito. O despertador de dose só toca com o app aberto E
+  // logado (papelRecebeAlarmeMed lê o papel do body). Ela passa a noite com o celular parado ao lado
+  // dos FILHOts — deslogar depois de 5 minutos mataria o alarme do remédio das 2h da manhã. É o caso
+  // Hulk voltando pela porta dos fundos. Se um dia isso mudar, o alarme noturno precisa de outra
+  // garantia ANTES de tirar a isenção.
+  //
+  // Avisa 30s antes em vez de cortar seco: quem estiver no meio de um check-in perderia tudo que
+  // digitou. Qualquer toque na tela cancela o aviso e zera a contagem.
+  var INAT_LIMITE_MS=5*60*1000, INAT_AVISO_MS=30*1000;
+  var _inatUltimo=Date.now(), _inatTick=null;
+  function inatIsento(){ return document.body.dataset.role==='plantonista'; }
+  function inatLogado(){ try{ return !!JSON.parse(sessionStorage.getItem('zeluz_login')||'null'); }catch(e){ return false; } }
+  function inatMarcarAtividade(){
+    _inatUltimo=Date.now();
+    var el=document.getElementById('inatAviso');
+    if(el && el.style.display!=='none') el.style.display='none';
+  }
+  function inatChecar(){
+    var el=document.getElementById('inatAviso');
+    if(!inatLogado() || inatIsento()){ if(el && el.style.display!=='none') el.style.display='none'; return; }
+    var resta=INAT_LIMITE_MS-(Date.now()-_inatUltimo);
+    if(resta<=0){ if(el) el.style.display='none'; inatEncerrarSessao(); return; }
+    if(resta<=INAT_AVISO_MS){
+      if(el){
+        var s=document.getElementById('inatSeg'); if(s) s.textContent=Math.ceil(resta/1000);
+        if(el.style.display==='none') el.style.display='flex';
+      }
+    } else if(el && el.style.display!=='none') el.style.display='none';
+  }
+  function inatEncerrarSessao(){
+    try{ if(typeof audit==='function') audit('logout-inatividade',(typeof quemSou==='function'?quemSou():'-'),{minutos:INAT_LIMITE_MS/60000}); }catch(e){}
+    logout();
+    var err=document.getElementById('loginErr');
+    if(err) err.textContent='Sessão encerrada — '+(INAT_LIMITE_MS/60000)+' minutos sem uso. Digite sua senha de novo.';
+  }
+  function inatIniciar(){
+    if(!_inatTick){
+      ['pointerdown','keydown','touchstart','wheel','scroll','input','change'].forEach(function(ev){
+        try{ document.addEventListener(ev, inatMarcarAtividade, {passive:true, capture:true}); }catch(e){ document.addEventListener(ev, inatMarcarAtividade, true); }
+      });
+      // Voltar para o app depois de trocar de aba/apagar a tela também conta como uso.
+      try{ document.addEventListener('visibilitychange', function(){ if(!document.hidden) inatMarcarAtividade(); }); }catch(e){}
+      _inatTick=setInterval(inatChecar, 1000);
+    }
+    inatMarcarAtividade();
   }
   (function(){ try{ renderSenhas(); }catch(e){} try{ renderMonitores(); }catch(e){} try{ const u=JSON.parse(sessionStorage.getItem('zeluz_login')||'null'); if(u&&u.role) aplicarLogin(u); else if(typeof mostrarStatusDevice==='function') mostrarStatusDevice(); }catch(e){} })();
 
