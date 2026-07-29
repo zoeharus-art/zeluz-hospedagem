@@ -526,13 +526,29 @@
     .peso-hist{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
   .peso-hist span{font-size:11.5px;font-weight:600;color:var(--z-blue);background:var(--z-cream-warm);border:1px solid var(--line);border-radius:7px;padding:2px 8px}
   /* despertador do banho — 5 min antes, para ninguem esquecer de descer com o FILHOt */
-  .desp-banho{position:fixed;left:0;right:0;top:0;z-index:90;background:var(--z-gold);color:var(--z-blue);box-shadow:0 4px 18px rgba(0,0,0,.22);animation:despPisca 1.1s ease-in-out infinite}
+  /* Os alarmes ficam ACIMA da tela trancada (z-index 180): tela bloqueada não pode esconder um
+     remédio na hora. Continuam ABAIXO da tela de login (200) — deslogado não existe alarme. */
+  .desp-banho{position:fixed;left:0;right:0;top:0;z-index:185;background:var(--z-gold);color:var(--z-blue);box-shadow:0 4px 18px rgba(0,0,0,.22);animation:despPisca 1.1s ease-in-out infinite}
   .desp-in{display:flex;align-items:center;justify-content:center;gap:14px;flex-wrap:wrap;padding:12px 16px;max-width:900px;margin:0 auto}
   .desp-tx{font-size:15px;font-weight:700;line-height:1.4}
   .desp-tx span{display:block;font-size:12.5px;font-weight:600;opacity:.85}
   @keyframes despPisca{0%,100%{background:var(--z-gold)}50%{background:#f0cc55}}
   /* despertador da medicação — mesmo padrão do banho, mas vermelho (crítico) e por cima dele */
-  .desp-med{z-index:95;background:var(--crm-critico);color:#fff;animation:despPiscaMed 1.1s ease-in-out infinite}
+  .desp-med{z-index:190;background:var(--crm-critico);color:#fff;animation:despPiscaMed 1.1s ease-in-out infinite}
+  /* Tela trancada — a sessão continua VIVA por baixo (o alarme de dose depende disso). */
+  .lock-screen{position:fixed;inset:0;z-index:180;display:none;align-items:center;justify-content:center;
+    background:linear-gradient(160deg,var(--z-blue),var(--z-blue-deep));padding:24px}
+  .lock-box{background:var(--z-cream);border-radius:20px;padding:30px 26px;width:100%;max-width:390px;
+    text-align:center;box-shadow:0 18px 50px rgba(0,0,0,.35)}
+  .lock-tit{font-size:13px;font-weight:700;letter-spacing:.6px;text-transform:uppercase;color:var(--z-blue-soft)}
+  .lock-nome{font-size:23px;font-weight:800;color:var(--z-blue);margin:6px 0 2px;line-height:1.25}
+  .lock-sub{font-size:14px;color:var(--z-blue-soft);font-weight:600;margin-bottom:20px}
+  .lock-box input{width:100%;padding:15px;font-size:24px;text-align:center;letter-spacing:9px;
+    border:2px solid var(--line);border-radius:13px;background:#fff;color:var(--z-blue);font-family:inherit}
+  .lock-box .login-btn,.lock-btn{width:100%;margin-top:13px;padding:15px;border:none;border-radius:13px;
+    background:var(--z-gold);color:var(--z-blue);font-weight:800;font-size:16px;cursor:pointer;font-family:inherit}
+  .lock-sair{margin-top:15px;font-size:13.5px;color:var(--z-blue-soft);text-decoration:underline;cursor:pointer;font-weight:600}
+  .lock-err{margin-top:11px;font-size:13.5px;font-weight:700;color:var(--crm-critico);min-height:19px}
   @keyframes despPiscaMed{0%,100%{background:var(--crm-critico)}50%{background:#d9584a}}
   /* legenda da ordem de servir — a lista não é alfabética, é por ordem de servir */
   .alm-legenda{background:var(--z-cream-warm);border:1.5px solid var(--line);border-radius:11px;padding:10px 14px;font-size:12.5px;color:var(--z-blue);margin-bottom:10px;line-height:1.7}
@@ -2210,6 +2226,20 @@
     <div class="kf-text"><strong>by Adriana Duarte<span class="kf-tripontos">.&#x27;.</span></strong></div>
   </div>
 </main>
+
+<!-- Tela trancada por inatividade. NÃO desloga: a sessão segue viva para o alarme de dose tocar. -->
+<div class="lock-screen" id="lockScreen">
+  <div class="lock-box">
+    <div class="lock-tit">Tela bloqueada</div>
+    <div class="lock-nome" id="lockNome">—</div>
+    <div class="lock-sub">Digite sua senha para continuar.<br>Se não for você, digite a <strong>SUA</strong> senha — o sistema troca de pessoa.</div>
+    <input id="lockPwd" type="password" inputmode="numeric" maxlength="6" placeholder="• • • •"
+      onkeydown="if(event.key==='Enter')destrancarApp()">
+    <button class="lock-btn" onclick="destrancarApp()">Entrar</button>
+    <div class="lock-err" id="lockErr"></div>
+    <div class="lock-sair" onclick="logout()">Sair desta conta</div>
+  </div>
+</div>
 
 <div class="inat-aviso" id="inatAviso" style="display:none">
   <span>Você será desconectado em <b id="inatSeg">30</b>s por inatividade.</span>
@@ -4458,25 +4488,58 @@
     document.getElementById('loginPwd').value='';
     document.getElementById('loginScreen').style.display='flex';
     var _ia=document.getElementById('inatAviso'); if(_ia) _ia.style.display='none';
+    var _ls=document.getElementById('lockScreen'); if(_ls) _ls.style.display='none';
+    _appTrancado=false;
     if(typeof mostrarStatusDevice==='function') mostrarStatusDevice();
   }
 
-  // ===== SAIR SOZINHO DEPOIS DE 5 MINUTOS PARADO =====
-  // Pedido da Adriana (29/jul/2026): monitores e gestores ficavam logados direto, sem sair. Em uso,
-  // continua logado; parado 5 minutos, volta para a tela de login.
+  // ===== TRANCAR A TELA DEPOIS DE 5 MINUTOS PARADO =====
+  // O problema real (Adriana, 29/jul/2026): o celular é COMPARTILHADO. A pessoa vai embora e deixa
+  // logado; a próxima pega, vê o nome de outra e as telas erradas, e conclui que o app está com
+  // defeito — em vez de sair e entrar com a senha dela.
   //
-  // A PLANTONISTA FICA DE FORA, de propósito. O despertador de dose só toca com o app aberto E
-  // logado (papelRecebeAlarmeMed lê o papel do body). Ela passa a noite com o celular parado ao lado
-  // dos FILHOts — deslogar depois de 5 minutos mataria o alarme do remédio das 2h da manhã. É o caso
-  // Hulk voltando pela porta dos fundos. Se um dia isso mudar, o alarme noturno precisa de outra
-  // garantia ANTES de tirar a isenção.
+  // TRANCAR, NÃO DESLOGAR. A sessão continua VIVA por baixo, porque o despertador de dose só toca
+  // com o app logado (papelRecebeAlarmeMed lê o papel do body): deslogar mataria o alarme do remédio
+  // das 2h da manhã da plantonista — o caso Hulk voltando pela porta dos fundos. Com a tela trancada
+  // o alarme toca normalmente (os alarmes têm z-index ACIMA do bloqueio) e ninguém usa o app sem se
+  // identificar. Por isso a plantonista NÃO precisa mais de exceção: vale para todos os papéis.
   //
-  // Avisa 30s antes em vez de cortar seco: quem estiver no meio de um check-in perderia tudo que
+  // A tela mostra QUEM está logado — é isso que mata o "achei que era erro". Digitar a própria senha
+  // troca de pessoa na hora, sem precisar achar o botão de sair.
+  //
+  // Avisa 30s antes em vez de cortar seco: quem estiver no meio de um check-in perderia o que
   // digitou. Qualquer toque na tela cancela o aviso e zera a contagem.
   var INAT_LIMITE_MS=5*60*1000, INAT_AVISO_MS=30*1000;
-  var _inatUltimo=Date.now(), _inatTick=null;
-  function inatIsento(){ return document.body.dataset.role==='plantonista'; }
+  var _inatUltimo=Date.now(), _inatTick=null, _appTrancado=false;
   function inatLogado(){ try{ return !!JSON.parse(sessionStorage.getItem('zeluz_login')||'null'); }catch(e){ return false; } }
+  function trancarApp(){
+    if(_appTrancado || !inatLogado()) return;
+    _appTrancado=true;
+    var u=(typeof usuarioAtual==='function'?usuarioAtual():null)||{};
+    var n=document.getElementById('lockNome'); if(n) n.textContent=u.nome||'—';
+    var e=document.getElementById('lockErr'); if(e) e.textContent='';
+    var i=document.getElementById('lockPwd'); if(i) i.value='';
+    var el=document.getElementById('lockScreen'); if(el) el.style.display='flex';
+    try{ if(typeof audit==='function') audit('tela-trancada',(u.nome||'-'),{minutos:INAT_LIMITE_MS/60000}); }catch(e2){}
+    try{ if(i) i.focus(); }catch(e2){}
+  }
+  function destrancarApp(){
+    var inp=document.getElementById('lockPwd'), err=document.getElementById('lockErr');
+    var v=inp?(inp.value||'').trim():'';
+    var u=(typeof senhasRuntime==='function')?senhasRuntime()[v]:null;
+    if(!u){ if(err) err.textContent='Senha incorreta. Tente de novo.'; if(inp){ inp.value=''; try{ inp.focus(); }catch(e){} } return; }
+    var antes=(typeof usuarioAtual==='function'?usuarioAtual():null)||{};
+    var trocou=(antes.nome!==u.nome);
+    if(inp) inp.value=''; if(err) err.textContent='';
+    _appTrancado=false;
+    var el=document.getElementById('lockScreen'); if(el) el.style.display='none';
+    // O aparelho já foi validado no login original — aqui só reaplica a pessoa. Se for OUTRA, as
+    // telas viram as dela na hora (aplicarLogin refaz papel, menus e permissões).
+    try{ sessionStorage.setItem('zeluz_login', JSON.stringify(u)); }catch(e){}
+    aplicarLogin(u);
+    if(trocou){ try{ if(typeof audit==='function') audit('troca-de-pessoa-no-aparelho',(u.nome||'-'),{saiu:(antes.nome||'-')}); }catch(e){} }
+    inatMarcarAtividade();
+  }
   function inatMarcarAtividade(){
     _inatUltimo=Date.now();
     var el=document.getElementById('inatAviso');
@@ -4484,21 +4547,16 @@
   }
   function inatChecar(){
     var el=document.getElementById('inatAviso');
-    if(!inatLogado() || inatIsento()){ if(el && el.style.display!=='none') el.style.display='none'; return; }
+    // Já trancado, ou ninguém logado: nada a contar.
+    if(!inatLogado() || _appTrancado){ if(el && el.style.display!=='none') el.style.display='none'; return; }
     var resta=INAT_LIMITE_MS-(Date.now()-_inatUltimo);
-    if(resta<=0){ if(el) el.style.display='none'; inatEncerrarSessao(); return; }
+    if(resta<=0){ if(el) el.style.display='none'; trancarApp(); return; }
     if(resta<=INAT_AVISO_MS){
       if(el){
         var s=document.getElementById('inatSeg'); if(s) s.textContent=Math.ceil(resta/1000);
         if(el.style.display==='none') el.style.display='flex';
       }
     } else if(el && el.style.display!=='none') el.style.display='none';
-  }
-  function inatEncerrarSessao(){
-    try{ if(typeof audit==='function') audit('logout-inatividade',(typeof quemSou==='function'?quemSou():'-'),{minutos:INAT_LIMITE_MS/60000}); }catch(e){}
-    logout();
-    var err=document.getElementById('loginErr');
-    if(err) err.textContent='Sessão encerrada — '+(INAT_LIMITE_MS/60000)+' minutos sem uso. Digite sua senha de novo.';
   }
   function inatIniciar(){
     if(!_inatTick){
@@ -5521,6 +5579,15 @@
   }
   function confirmarDoseDespertador(){
     if(!despMedAtual||!despMedAtualDoseId) return;
+    // Tela trancada: o alarme APARECE e TOCA (não pode esconder remédio), mas quem deu a dose
+    // precisa se identificar antes — senão a dose fica registrada no nome de quem saiu do plantão.
+    if(typeof _appTrancado!=='undefined' && _appTrancado){
+      bipMedLoopStop();
+      var e=document.getElementById('lockErr');
+      if(e) e.textContent='Digite sua senha para registrar o remédio.';
+      var i=document.getElementById('lockPwd'); if(i){ try{ i.focus(); }catch(x){} }
+      return;
+    }
     bipMedLoopStop();
     registrarDoseAgendadaGlobal(despMedAtual, despMedAtualDoseId);
   }
