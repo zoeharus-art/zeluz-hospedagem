@@ -2018,7 +2018,7 @@
           <div class="mag-datas" style="margin-top:10px">
             <span class="mu-lab">Período</span>
             <label class="mag-data-f"><span>Início</span><input type="date" id="vmIni" data-c="ini"></label>
-            <label class="mag-data-f mag-data-fim"><span>Fim (término)</span><input type="date" id="vmFim" data-c="fim"></label>
+            <label class="mag-data-f mag-data-fim"><span>Tomar até (término)</span><input type="date" id="vmFim" data-c="fim"></label>
             <button type="button" class="mag-continuo" onclick="medToggleContinuo(this)">Uso contínuo</button>
           </div>
           <div class="mag-freq" data-freqtipo="diario" style="margin-top:8px;border-radius:10px;border-top:none;border:1.5px solid var(--line)">
@@ -3027,7 +3027,7 @@
     const datasBlock='<div class="mag-datas">'
       +'<span class="mu-lab">Período</span>'
       +'<label class="mag-data-f"><span>Início</span><input type="date" data-c="ini" value="'+escAttr(item.dataInicio||'')+'"></label>'
-      +'<label class="mag-data-f mag-data-fim'+(cont?' off':'')+'"><span>Fim</span><input type="date" data-c="fim" value="'+escAttr(item.dataFim||'')+'"></label>'
+      +'<label class="mag-data-f mag-data-fim'+(cont?' off':'')+'"><span>Tomar até</span><input type="date" data-c="fim" value="'+escAttr(item.dataFim||'')+'"></label>'
       +'<button type="button" class="mag-continuo'+(cont?' on':'')+'" onclick="medToggleContinuo(this)">Uso contínuo</button>'
       +'</div>';
     // Frequência: todos os dias, dias específicos da semana (2x/semana, 1x/semana…) ou dia sim/dia não.
@@ -3304,6 +3304,38 @@
     const baixo=(consumoDia>0 && diasRestantes!=null && diasRestantes<=ESTOQUE_DIAS_ALERTA) || restante<=3;
     return {restante:restante, unidade:est.inicial!=null?it.u:it.u, consumoDia:consumoDia, diasRestantes:diasRestantes, baixo:baixo};
   }
+  // ===== Item 5 — o que o tutor mandou COBRE a estadia? =====
+  // O caso real é o blister: "1 comprimido por dia, tomar até dia 30". O tutor manda 5 e a estadia
+  // tem 12 dias — falta no meio do caminho e ninguém percebe na entrada. Aqui a conta é feita dose
+  // a dose, dia a dia, com o MESMO medVigenteEm dos alarmes: assim "dia sim, dia não" e "só seg/qua/sex"
+  // dão contas diferentes, como na vida real. "Tomar até dia xx" é o dataFim do remédio — depois dele
+  // não se cobra mais nada do tutor, mesmo que a estadia siga.
+  // Retorna null (sem conta, sem palpite) quando não dá para calcular: pomada/medidor do cliente
+  // (dose sem número), frasco não contável, ninguém contou o que veio, ou estadia sem datas.
+  function medCoberturaEstadia(it, entrada, saida){
+    it=it||{};
+    var est=it.estoque||{};
+    if(est.modo!=='contavel') return null;              // líquido/pote: não se conta unidade
+    if(typeof est.inicial!=='number') return null;      // ninguém contou o que o tutor trouxe
+    if(it.suspenso) return null;
+    var qd=(typeof qtdNum==='function')?qtdNum(it.q):null;
+    if(qd==null||qd<=0) return null;                    // pomada / medidor do cliente: dose sem número
+    var nH=(it.horarios||[]).length; if(!nH) return null;
+    if(!entrada||!saida) return null;
+    var fim=saida;
+    if(!it.continuo && it.dataFim && it.dataFim<fim) fim=it.dataFim; // não cobra depois do fim do tratamento
+    if(fim<entrada) return null;
+    var doses=0, dias=0, iso=entrada, guarda=0;
+    while(iso && iso<=fim && guarda++<400){
+      if(typeof medVigenteEm!=='function' || medVigenteEm(it, iso)){ doses+=nH; dias++; }
+      iso=addDiasISO(iso,1);
+    }
+    if(!doses) return null;
+    var necessario=Math.ceil((doses*qd)-0.0001);        // meia unidade por dose já entra na soma
+    return {necessario:necessario, trazido:est.inicial, deficit:necessario-est.inicial,
+            cobre:(est.inicial>=necessario), dias:dias, doses:doses, ate:fim, unidade:it.u||''};
+  }
+  function medUnidLbl(n,u){ return (n>1&&MED_PLURAL[u])?MED_PLURAL[u]:(u||'unidade(s)'); }
   // Resumo de estoque por medicamento (dentro dos "Horários de hoje"), com botão "Está acabando"
   // que abre um aviso rastreado para a Recepção. Contável mostra "acaba em ~X dias".
   function renderEstoqueResumo(){
@@ -3400,6 +3432,11 @@
       status:'pendente', entries:[], criado_por:quemSou(), _ts:Date.now()
     };
     if(typeof d.restante==='number') aviso.restante=d.restante;
+    // Item 5 — quando o aviso nasce da Conferência ("não cobre a estadia"), leva a conta junto:
+    // quanto falta, quanto precisa e até que dia. A Recepção liga para o tutor com o número na mão.
+    if(typeof d.deficit==='number') aviso.deficit=d.deficit;
+    if(typeof d.necessario==='number') aviso.necessario=d.necessario;
+    if(d.ate) aviso.ate=d.ate;
     DB.ref('auaulandia/avisos-estoque').push(aviso).catch(function(){});
     if(typeof audit==='function') audit('estoque-aviso',d.key,{med:d.medNome||'',motivo:aviso.motivo});
   }
@@ -3436,9 +3473,14 @@
     var status=a.status||'pendente';
     var chip=status==='resolvido'?'<span class="avr-chip resolvido">RESOLVIDO</span>':status==='em_processo'?'<span class="avr-chip processo">EM PROCESSO</span>':'<span class="avr-chip pendente">PENDENTE</span>';
     var cls=status==='resolvido'?'resolvido':status==='em_processo'?'processo':'pendente';
-    var motivo=a.motivo==='projecao'?'Estoque projetado para acabar':'Marcado como "está acabando"';
+    var motivo=a.motivo==='projecao'?'Estoque projetado para acabar':(a.motivo==='naocobre'?'Não cobre a estadia — conferido na entrada':'Marcado como "está acabando"');
     var det=[];
-    if(a.modo==='contavel' && typeof a.restante==='number') det.push('Restam ~'+a.restante+' '+((a.restante>1&&MED_PLURAL[a.unidade])?MED_PLURAL[a.unidade]:(a.unidade||'unidades')));
+    if(a.motivo==='naocobre'){
+      if(typeof a.deficit==='number') det.push('Faltam '+a.deficit+' '+((a.deficit>1&&MED_PLURAL[a.unidade])?MED_PLURAL[a.unidade]:(a.unidade||'unidades')));
+      if(typeof a.necessario==='number') det.push('precisa de '+a.necessario+(a.ate?(' até '+medBRdata(a.ate)):''));
+      if(typeof a.restante==='number') det.push('o tutor mandou '+a.restante);
+    }
+    else if(a.modo==='contavel' && typeof a.restante==='number') det.push('Restam ~'+a.restante+' '+((a.restante>1&&MED_PLURAL[a.unidade])?MED_PLURAL[a.unidade]:(a.unidade||'unidades')));
     det.push(motivo);
     var trilha=(a.entries&&a.entries.length)?'<div class="avr-trilha">'+a.entries.map(function(e){
       return '<div class="avr-tl'+(e.resolucao?' resol':'')+'"><div class="avr-tl-meta">'+escAttr(e.quando||'')+'</div><div class="avr-tl-acao">"'+escAttr(e.acao||'')+'"</div><div class="avr-tl-assina">— '+escAttr(e.assinatura||'')+'</div></div>';
@@ -8102,7 +8144,7 @@
       pertences:ciColetarPert()
     };
   }
-  function ciMedsToLista(itens){ return Object.values(itens).map(function(it){ const o={ nome:it.nome, tipo:it.tipo, q:it.q, u:it.u, horarios:it.horarios, origem:it.origem||'tutor' }; if(it.estoque) o.estoque=it.estoque; if(it.local) o.local=it.local; if(it.dataInicio) o.dataInicio=it.dataInicio; if(it.continuo) o.continuo=true; else if(it.dataFim) o.dataFim=it.dataFim; return o; }); }
+  function ciMedsToLista(itens){ return Object.values(itens).map(function(it){ const o={ nome:it.nome, tipo:it.tipo, q:it.q, u:it.u, horarios:it.horarios, origem:it.origem||'tutor' }; if(it.estoque) o.estoque=it.estoque; if(it.freq) o.freq=it.freq; if(it.local) o.local=it.local; if(it.dataInicio) o.dataInicio=it.dataInicio; if(it.continuo) o.continuo=true; else if(it.dataFim) o.dataFim=it.dataFim; return o; }); }
 
   // ---- Salvar no sistema ----
   function ciSalvar(){
@@ -8781,11 +8823,55 @@
       return '<div class="cf-med-item'+(ok?' ok':'')+'">'
         +'<div class="cf-med-top"><span class="cf-med-nome">'+escAttr(m.nome||'Medicamento')+'</span>'+(ok?'<span class="cf-ok-badge">TESTADO</span>':'')+'</div>'
         +'<div class="cf-med-det">'+(qtd?escAttr(qtd):'quantidade não informada')+((m.horarios&&m.horarios.length)?(' · '+escAttr(m.horarios.join(', '))):'')+(per?(' · '+escAttr(per)):'')+'</div>'
+        +cfCoberturaHTML(m,idx)
         +'<div class="cf-med-actions">'
           +'<button type="button" class="btn btn-gold" style="padding:7px 14px;font-size:12.5px" onclick="cfTestarAlarme(\''+k+'\')">🔊 Testar alarme</button>'
           +'<label class="cf-ouviu"><input type="checkbox" id="cf-ouviu-'+k+'" '+(ok?'checked':'')+' onchange="cfConfirmarAlarme(\''+k+'\')"><span>Confirmo que tocou</span></label>'
         +'</div></div>';
     }).join('');
+  }
+  // Item 5 — a conta do blister na Conferência: o que o tutor mandou cobre até a saída?
+  function cfCoberturaHTML(m, idx){
+    var c=(typeof medCoberturaEstadia==='function')?medCoberturaEstadia(m, cfEstadia.entrada, cfEstadia.saida):null;
+    if(!c) return '';
+    var uNec=medUnidLbl(c.necessario,c.unidade), uTraz=medUnidLbl(c.trazido,c.unidade);
+    var base='Precisa de <strong>'+c.necessario+' '+escAttr(uNec)+'</strong> ('+c.dias+' dia(s) até '+escAttr(medBRdata(c.ate))+') · o tutor mandou <strong>'+c.trazido+' '+escAttr(uTraz)+'</strong>';
+    if(c.cobre) return '<div class="cf-resultado ok" style="margin-top:9px"><span>✅ Cobre a estadia</span><span>sobram '+(c.trazido-c.necessario)+'</span></div><div class="cf-med-det">'+base+'</div>';
+    var ja=cfAvisoCoberturaAberto(m);
+    return '<div class="cf-resultado alerta" style="margin-top:9px"><span>⚠️ Não cobre a estadia</span><span>faltam '+c.deficit+' '+escAttr(medUnidLbl(c.deficit,c.unidade))+'</span></div>'
+      +'<div class="cf-med-det">'+base+'</div>'
+      +'<div class="cf-med-actions">'+(ja
+        ? '<span class="p-pill warn">Recepção já avisada — acompanhe em Recepção</span>'
+        : '<button type="button" class="btn btn-primary" style="padding:7px 14px;font-size:12.5px" onclick="cfAvisarFaltaMed('+idx+')">Avisar a Recepção</button>')+'</div>';
+  }
+  // Liga o remédio da estadia ao item vivo da agenda (para o aviso ser rastreado no MESMO item que
+  // a Recepção resolve). Se não achar pelo nome, cai numa chave estável por nome — o aviso continua
+  // rastreado, só não conversa com o estoque do item.
+  function cfMedRefs(m){
+    var key=(typeof medAgendaKey==='function')?medAgendaKey(cfHosp):'';
+    var itemId='';
+    try{
+      var itens=((MED_AGENDA_GERAL||{})[key]||{}).itens||{};
+      Object.keys(itens).forEach(function(id){ if(!itemId && jsNorm(((itens[id]||{}).nome)||'')===jsNorm(m.nome||'')) itemId=id; });
+    }catch(e){}
+    if(!itemId) itemId='cf_'+((typeof ciSlug==='function')?ciSlug(m.nome||''):'med');
+    return {key:key, itemId:itemId};
+  }
+  function cfAvisoCoberturaAberto(m){
+    var r=cfMedRefs(m); if(!r.key) return null;
+    return (typeof avisoAbertoDoItem==='function')?avisoAbertoDoItem(r.key,r.itemId):null;
+  }
+  function cfAvisarFaltaMed(idx){
+    var meds=Array.isArray(cfEstadia.medicacao)?cfEstadia.medicacao:[];
+    var m=meds[idx]; if(!m) return;
+    var c=medCoberturaEstadia(m, cfEstadia.entrada, cfEstadia.saida); if(!c||c.cobre) return;
+    if(!DB){ alert('Banco conectando… tente de novo em instantes.'); return; }
+    if(!confirm('Avisar a Recepção que faltam '+c.deficit+' '+medUnidLbl(c.deficit,c.unidade)+' de "'+(m.nome||'medicamento')+'" para cobrir a estadia?')) return;
+    var r=cfMedRefs(m);
+    criarAvisoEstoque({key:r.key, itemId:r.itemId, medNome:m.nome||'', hospNome:(cfHosp&&cfHosp.nome)||'',
+      tutor:(cfHosp&&cfHosp.tutor)||'', modo:'contavel', unidade:c.unidade, restante:c.trazido,
+      deficit:c.deficit, necessario:c.necessario, ate:c.ate, motivo:'naocobre'});
+    renderCfMed();
   }
   function cfTestarAlarme(k){
     if(typeof bipDespertador==='function') bipDespertador();
