@@ -885,6 +885,11 @@
   .vet-instr-box .vt{font-size:12px;font-weight:800;color:var(--crm-info);text-transform:uppercase;letter-spacing:.4px;margin-bottom:7px}
   .vet-reaval-banner{background:rgba(222,180,40,.2);border:2px solid var(--z-gold);border-radius:14px;padding:14px 16px;margin-bottom:16px;font-weight:700;color:var(--z-blue);display:flex;gap:11px;align-items:flex-start}
   .vet-reaval-banner .rr-tit{font-weight:800;color:var(--z-gold-deep)}
+  /* Item 4 — remédio prescrito pela vet que chegou na data de término (última dose dada). */
+  .vet-fimmed-banner{background:rgba(41,128,185,.12);border:2px solid var(--crm-info);border-radius:14px;padding:14px 16px;margin-bottom:16px;font-weight:700;color:var(--z-blue);display:flex;gap:11px;align-items:flex-start}
+  .vet-fimmed-banner .rr-tit{font-weight:800;color:var(--crm-info)}
+  .vet-fimmed-line{margin-top:8px;display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+  .vet-fimmed-line .btn{padding:6px 13px;font-size:12.5px}
   .vet-consulta-card{border:1.5px solid var(--line);border-radius:12px;padding:13px 14px;margin-bottom:10px;background:var(--z-cream-warm)}
   .vet-consulta-card .cc-data{font-weight:800;color:var(--z-blue);font-size:14px}
   .vet-consulta-card .cc-meta{font-size:12px;color:var(--muted);font-weight:700;margin-top:2px}
@@ -1967,6 +1972,7 @@
     <!-- LISTA de todos os hóspedes (como o almoço) -->
     <div id="vet-lista">
       <div id="vetReavalBanner"></div>
+      <div id="vetFimMedBanner"></div>
       <div class="role-note"><span data-icon="heart"></span><span><strong>Cuidado Vet.</strong> Busque o FILHOt que você vai examinar — hóspede ou aluno do Day Care. Abra a ficha para registrar a <strong>consulta</strong>, a <strong>observação para o tutor</strong> e prescrever. A consulta é a <strong>fonte</strong> que cria, altera ou suspende a medicação — desce viva e dispara os alarmes.</span></div>
       <div class="card" style="margin-bottom:12px"><div class="field"><label>Buscar no hotel / Day Care</label><input class="cad-in" id="vetBusca" placeholder="Digite o nome do FILHOt, tutor ou raça…" autocomplete="off" oninput="renderVetLista()"></div></div>
       <div class="vet-grid" id="vetGrid"></div>
@@ -2243,6 +2249,12 @@
       DB.ref('auaulandia/vet-reavaliacao').on('value', s=>{ VET_REAVAL_CACHE=s.val()||{};
         try{ if(typeof checarReavaliacoesHoje==='function') checarReavaliacoesHoje(); }catch(e){}
         try{ if(typeof renderHosp==='function') renderHosp(); }catch(e){}
+      });
+      // Item 4 — remédio PRESCRITO PELA VET que chegou na data de término. A agenda inteira fica em
+      // memória (só muda quando alguém prescreve/altera — não é o log de doses), para o aviso valer
+      // mesmo para quem já foi embora, não só para os hóspedes de hoje.
+      DB.ref('auaulandia/medicacao-agenda').on('value', s=>{ MED_AGENDA_GERAL=s.val()||{};
+        try{ if(typeof checarMedsEncerradas==='function') checarMedsEncerradas(); }catch(e){}
       });
       // Observações/exames da Veterinária para o tutor (ex.: "ouvido só com sujeira"). Visível a todos,
       // alimenta o retorno da Marcia ao cliente e o futuro módulo do cliente.
@@ -5315,6 +5327,7 @@
   // ==================================================================================
   VET_RECOM_CACHE={};      // {key:{texto,cuidados[],por,ts,consultaId,ativo}} — instruções ativas
   var VET_REAVAL_CACHE={};     // {key:{data:'YYYY-MM-DD',motivo,por,ts}} — reavaliação marcada
+  var MED_AGENDA_GERAL={};     // {key:{nome,tutor,itens:{id:item}}} — TODA a agenda de medicação (item 4)
   var VET_MED_CACHE={};        // {itemId:item} — medicação do hóspede aberto no Cuidado Vet
   var VET_CONSULTAS_CACHE={};  // {consultaId:consulta} — histórico do hóspede aberto
   var vetHosp=null;            // hóspede aberto no Cuidado Vet
@@ -5403,6 +5416,7 @@
     if(typeof carregarHospedes==='function') carregarHospedes(); // garante a lista do dia
     renderVetLista();
     checarReavaliacoesHoje();
+    checarMedsEncerradas();
   }
   var VET_LISTA=[]; // lista efetiva mostrada na busca da vet — abrirVetFicha indexa aqui
   function renderVetLista(){
@@ -5857,6 +5871,64 @@
     }).join('');
     el.innerHTML='<div class="vet-reaval-banner"><span data-icon="star"></span><div><div class="rr-tit">Reavaliação de hoje</div>'+linhas+'</div></div>';
     try{ el.querySelectorAll('[data-icon]').forEach(function(x){ x.innerHTML=ic(x.dataset.icon); x.style.display='inline-flex'; }); }catch(e){}
+  }
+
+  // ---- Item 4: remédio prescrito pela vet ACABOU (chegou no dataFim) ----
+  // Só medicação com origem 'vet' (receita dela) e com término marcado — uso contínuo nunca acaba,
+  // e remédio de rotina do tutor não é decisão dela. A última dose é a do PRÓPRIO dia do término,
+  // por isso o aviso aparece quando hoje >= dataFim. Some quando a vet marca "Ciente" (fica
+  // assinado no histórico do medicamento, igual prescrever/suspender). A janela de 30 dias evita
+  // que receita antiga do banco entupa a tela.
+  var MED_FIM_JANELA_DIAS=30;
+  function medFimForaDaJanela(dataFim,hoje){
+    if(!dataFim||!hoje) return true;
+    var a=Date.parse(dataFim+'T00:00:00'), b=Date.parse(hoje+'T00:00:00');
+    if(isNaN(a)||isNaN(b)) return true;
+    return (b-a) > MED_FIM_JANELA_DIAS*86400000;
+  }
+  function medsEncerradasPend(){
+    var hj=(typeof hojeISO==='function')?hojeISO():''; var out=[];
+    if(!hj) return out;
+    Object.keys(MED_AGENDA_GERAL||{}).forEach(function(key){
+      var ficha=MED_AGENDA_GERAL[key]||{}; var itens=ficha.itens||{};
+      Object.keys(itens).forEach(function(id){
+        var it=itens[id]||{};
+        if(it.origem!=='vet') return;          // rotina do tutor / autorizado pela família: não é receita dela
+        if(it.continuo) return;                // uso contínuo não acaba
+        if(it.suspenso) return;                // já foi suspenso — a vet decidiu, não precisa avisar
+        if(!it.dataFim) return;
+        if(hj < it.dataFim) return;            // ainda está em uso
+        if(it.fimCiente) return;               // vet já deu ciência
+        if(medFimForaDaJanela(it.dataFim,hj)) return;
+        out.push({key:key, id:id, pet:(ficha.nome||''), med:(it.nome||'medicamento'), dataFim:it.dataFim});
+      });
+    });
+    return out.sort(function(a,b){ return (b.dataFim||'').localeCompare(a.dataFim||''); });
+  }
+  function checarMedsEncerradas(){
+    var el=document.getElementById('vetFimMedBanner'); if(!el) return;
+    var role=document.body.dataset.role;
+    if(!(role==='vet'||role==='gestao'||role==='supervisor'||role==='diretoria')){ el.innerHTML=''; return; }
+    var pend=medsEncerradasPend();
+    if(!pend.length){ el.innerHTML=''; return; }
+    var linhas=pend.map(function(p){
+      return '<div class="vet-fimmed-line"><span><strong>'+escAttr(p.pet||'FILHOt')+'</strong> tomou a última dose de <strong>'+escAttr(p.med)+'</strong> em '+escAttr(medBRdata(p.dataFim))+'.</span>'
+        +'<button type="button" class="btn btn-primary" onclick="vetCienteFimMed(\''+escAttr(p.key)+'\',\''+escAttr(p.id)+'\')">Ciente</button></div>';
+    }).join('');
+    el.innerHTML='<div class="vet-fimmed-banner"><span data-icon="heart"></span><div><div class="rr-tit">Receita encerrada — precisa de nova avaliação?</div>'+linhas+'</div></div>';
+    try{ el.querySelectorAll('[data-icon]').forEach(function(x){ x.innerHTML=ic(x.dataset.icon); x.style.display='inline-flex'; }); }catch(e){}
+  }
+  function vetCienteFimMed(key,id){
+    if(!podeAlterarVet()){ alert('Apenas a Veterinária, a Gestão ou a Supervisão podem dar ciência do término.'); return; }
+    if(!DB||!key||!id) return;
+    var ficha=(MED_AGENDA_GERAL||{})[key]||{}; var it=(ficha.itens||{})[id]||{};
+    var quem=(typeof quemSou==='function')?quemSou():'Veterinária';
+    var hist=(Array.isArray(it.historico)?it.historico.slice():[]);
+    hist.push({quem:quem,quando:agoraBR(),acao:'Ciente do término',motivo:'Última dose em '+medBRdata(it.dataFim||'')});
+    DB.ref('auaulandia/medicacao-agenda/'+key+'/itens/'+id).update({fimCiente:true,fimCientePor:quem,fimCienteTs:Date.now(),historico:hist}).then(function(){
+      if(typeof audit==='function') audit('vet-medicacao-fim-ciente',key,{pet:ficha.nome||'',med:it.nome||'',quem:quem});
+      if(vetHosp && vetKey(vetHosp)===key) vetCarregarMed(vetHosp);
+    }).catch(function(e){ alert('Erro ao registrar ciência: '+e.message); });
   }
 
   function pelInativo(p){ const ex=pelExtra(p); return !!(ex&&ex.inativo==='Sim'); }
