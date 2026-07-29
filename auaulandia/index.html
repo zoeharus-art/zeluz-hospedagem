@@ -4982,13 +4982,43 @@
   function _csv(txt){ return String(txt||'').split(/\r?\n/).filter(function(l){ return l.trim()!==''; }).map(_csvLinha); }
   // Casa a linha da planilha (nome + tutor) ao cadastro-mestre. Só assume quando tem certeza:
   // nome único, OU nome repetido com o 1º nome do tutor batendo. Ambíguo/sem achar → não importa.
-  function _acharPelPlano(nome,tutor){
+  // Distância de edição — quantas letras separam o que foi digitado do que está cadastrado.
+  // "Sebatião" → "Sebastião" é 1. Serve para não travar a importação por erro de digitação.
+  function _distNome(a,b){
+    a=jsNorm(a); b=jsNorm(b);
+    if(Math.abs(a.length-b.length)>2) return 99;
+    var m=[]; for(var i=0;i<=b.length;i++) m[i]=[i];
+    for(var j=0;j<=a.length;j++) m[0][j]=j;
+    for(i=1;i<=b.length;i++) for(j=1;j<=a.length;j++)
+      m[i][j]=(b[i-1]===a[j-1])?m[i-1][j-1]:Math.min(m[i-1][j-1]+1,m[i][j-1]+1,m[i-1][j]+1);
+    return m[b.length][a.length];
+  }
+  function _acharPelPlano(nome,tutor,raca){
     if(typeof PELUDINHOS==='undefined'||typeof jsNorm!=='function') return null;
     var n=jsNorm((nome||'').trim()); if(!n) return null;
     var tf=jsNorm(primeiroNome(tutor||''));
+    var rn=jsNorm(raca||'');
+    var bateTutor=function(p){ var pt=jsNorm(primeiroNome(pelGet(p,'tutor')||'')); return !!pt&&!!tf&&pt===tf; };
+    var bateRaca=function(p){ var pr=jsNorm(pelGet(p,'raca')||''); return !!pr&&!!rn&&pr===rn; };
     var exatos=PELUDINHOS.filter(function(p){ return jsNorm(p.n)===n; });
     if(exatos.length===1) return exatos[0];
-    if(exatos.length>1){ var byT=exatos.find(function(p){ var pt=jsNorm(primeiroNome(pelGet(p,'tutor')||'')); return pt&&tf&&pt===tf; }); return byT||null; }
+    // Nome repetido no cadastro (há 3 "Ozzy" de famílias diferentes): tutor ou raça desempata.
+    if(exatos.length>1) return exatos.find(function(p){ return bateTutor(p)||bateRaca(p); })||null;
+    // Nome não bate letra por letra. Erro de digitação não pode travar a importação (decisão da
+    // Adriana, 28/jul/2026: "esse erro bobo pode ir... porque o tutor bate, a raça bate").
+    // Mas a trava é APERTADA de propósito — importar o plano no FILHOt errado é pior que não
+    // importar. Só passa quando: 1 letra de diferença, TUDO que a planilha informou confirma
+    // (tutor E raça), e resta um único candidato.
+    // "Sebatião · SRD · Mariana Miska" → "Sebastião · SRD · Mariana": 1 letra, os dois batem. Passa.
+    // "Zury · SRD · Amanda" NÃO vira "Zara · SRD · Milena": 2 letras e o tutor não bate. Barrado —
+    // são FILHOts diferentes, e a Zury precisa é de cadastro.
+    var perto=PELUDINHOS.filter(function(p){
+      if(_distNome(p.n,nome)>1) return false;
+      if(tf && !bateTutor(p)) return false;
+      if(rn && !bateRaca(p)) return false;
+      return !!(tf||rn); // sem tutor nem raça na planilha não há como confirmar — não arrisca
+    });
+    if(perto.length===1){ perto[0]._aprox=nome; return perto[0]; }
     return null;
   }
   async function importarPlanosPlanilha(){
@@ -5003,15 +5033,16 @@
       var rows=_csv(await res.text());
       if(rows.length<2){ setSt('var(--crm-critico)','Planilha vazia ou sem acesso. Confirme que está como "Qualquer pessoa com o link — Leitor".'); return; }
       rows.shift(); // cabeçalho
-      var ok=0, naoAchou=[], semData=0, ops=[];
+      var ok=0, naoAchou=[], aprox=[], semData=0, ops=[];
       rows.forEach(function(row){
-        var nome=(row[0]||'').trim(), tutor=(row[2]||'').trim();
+        var nome=(row[0]||'').trim(), raca=(row[1]||'').trim(), tutor=(row[2]||'').trim();
         var ini=(row[3]||'').trim(), fim=(row[4]||'').trim();
         if(!nome) return;
         var iniISO=(typeof parseNascToISO==='function')?parseNascToISO(ini):''; var fimISO=(typeof parseNascToISO==='function')?parseNascToISO(fim):'';
         if(!iniISO && !fimISO){ semData++; return; }
-        var pel=_acharPelPlano(nome,tutor);
+        var pel=_acharPelPlano(nome,tutor,raca);
         if(!pel){ naoAchou.push(nome+(tutor?(' ('+tutor+')'):'')); return; }
+        if(pel._aprox){ aprox.push(pel._aprox+' → '+pelNome(pel)); delete pel._aprox; }
         var ex=pelExtra(pel); var renov=Object.assign({}, (ex&&ex.renov)||{});
         if(iniISO) renov.inicio=iniISO; if(fimISO) renov.fim=fimISO;
         var key=pelKey(pel);
@@ -5022,6 +5053,7 @@
       await Promise.all(ops);
       try{ if(typeof renderRenovacao==='function') renderRenovacao(); }catch(e){}
       var msg='✅ '+ok+' plano(s) importado(s).';
+      if(aprox.length) msg+='<br><span style="color:var(--crm-info)">Nome escrito diferente, reconhecido pelo tutor/raça ('+aprox.length+'): '+aprox.slice(0,15).join(', ')+(aprox.length>15?'…':'')+' — importado normalmente, não precisa mexer na planilha.</span>';
       if(naoAchou.length) msg+='<br><span style="color:var(--crm-atencao-text)">Não encontrei no cadastro ('+naoAchou.length+'): '+naoAchou.slice(0,15).join(', ')+(naoAchou.length>15?'…':'')+' — confira o nome/tutor.</span>';
       if(semData) msg+='<br><span style="color:var(--muted)">'+semData+' linha(s) sem datas de plano — ignoradas.</span>';
       setSt('var(--crm-ok)',msg);
