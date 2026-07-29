@@ -2807,7 +2807,11 @@
     const f=e.target.files&&e.target.files[0]; if(!f||!currentHosp) return;
     const r=new FileReader();
     r.onload=()=>{ const img=new Image(); img.onload=()=>{
-      const max=400; let w=img.width,h=img.height;
+      /* 160px, não 400 (29/jul/2026). O app baixa auaulandia/cadastro INTEIRO a cada
+         abertura, e a foto era 99% do peso desse ramo — sozinha, quase metade do
+         consumo mensal do plano gratuito. O maior avatar que exibe a foto tem 78px,
+         então 160 cobre tela de alta resolução sem perda visível. Não aumentar. */
+      const max=160; let w=img.width,h=img.height;
       if(w>h){ if(w>max){ h=Math.round(h*max/w); w=max; } } else { if(h>max){ w=Math.round(w*max/h); h=max; } }
       const c=document.createElement('canvas'); c.width=w; c.height=h; c.getContext('2d').drawImage(img,0,0,w,h);
       fotoPendente=c.toDataURL('image/jpeg',0.72);
@@ -6604,7 +6608,9 @@
   </div>`; }
   let pelFotoPend=null;
   function onPhotoPel(e){ const fl=e.target.files&&e.target.files[0]; if(!fl) return; const r=new FileReader();
-    r.onload=()=>{ const img=new Image(); img.onload=()=>{ const max=400; let w=img.width,h=img.height;
+    /* 160px pelo mesmo motivo do onPhoto acima: daycare/cadastro também é baixado
+       inteiro a cada abertura e a foto era 97% do peso dele. */
+    r.onload=()=>{ const img=new Image(); img.onload=()=>{ const max=160; let w=img.width,h=img.height;
       if(w>h){ if(w>max){ h=Math.round(h*max/w); w=max; } } else { if(h>max){ w=Math.round(w*max/h); h=max; } }
       const c=document.createElement('canvas'); c.width=w; c.height=h; c.getContext('2d').drawImage(img,0,0,w,h);
       pelFotoPend=c.toDataURL('image/jpeg',0.72);
@@ -8906,6 +8912,12 @@
     semEst.style.display='none'; corpo.style.display='block';
     cfEstadiaId=pend.id; cfEstadia=pend.e||{};
     cfConf=Object.assign({pertences:{},medicacaoEtiqueta:{},medicacao:{},racao:{},comida:{},fotos:[]}, cfEstadia.conferencia||{});
+    /* As fotos da conferência moraram dentro de estadias até 29/jul/2026. O app escuta
+       auaulandia/estadias INTEIRA, então toda abertura arrastava 1,5 MB de fotos que
+       quase ninguém ia olhar. Agora vivem em auaulandia/conferencia-fotos e só descem
+       quando esta conferência é aberta. */
+    cfConf.fotos=[];
+    cfCarregarFotos(cfEstadiaId);
     var assEl=document.getElementById('cfAssina'); if(assEl) assEl.value=cfConf.concluida?(cfConf.concluida_por||''):((typeof quemSou==='function')?quemSou():'');
     renderCfFichaCompleta();
     renderCfPert();
@@ -9265,7 +9277,7 @@
           var c=document.createElement('canvas'); c.width=w; c.height=h; c.getContext('2d').drawImage(img,0,0,w,h);
           var url=c.toDataURL('image/jpeg',0.7);
           cfConf.fotos=(cfConf.fotos||[]).slice(); cfConf.fotos.push(url);
-          if(DB&&cfEstadiaId) DB.ref('auaulandia/estadias/'+cfEstadiaId+'/conferencia/fotos').set(cfConf.fotos).catch(function(){});
+          cfSalvarFotos();
           renderCfFotos(); renderCfGate();
         };
         img.src=r.result;
@@ -9274,6 +9286,22 @@
     });
     e.target.value='';
   }
+  /* Ramo próprio das fotos da conferência — fora de estadias, que o app escuta inteira. */
+  function cfRefFotos(id){ return DB.ref('auaulandia/conferencia-fotos/'+id); }
+  function cfCarregarFotos(id){
+    if(!DB||!id) return;
+    cfRefFotos(id).once('value').then(function(s){
+      if(cfEstadiaId!==id) return;            /* trocou de estadia enquanto carregava */
+      var v=s.val();
+      cfConf.fotos=Array.isArray(v)?v:(v?Object.keys(v).sort().map(function(k){return v[k];}):[]);
+      renderCfFotos(); renderCfGate();        /* o gate exige ao menos 1 foto — reavalia */
+    }).catch(function(e){ console.warn('conferencia-fotos:',e); });
+  }
+  function cfSalvarFotos(){
+    if(!DB||!cfEstadiaId) return;
+    var f=cfConf.fotos||[];
+    cfRefFotos(cfEstadiaId).set(f.length?f:null).catch(function(){});
+  }
   function renderCfFotos(){
     var el=document.getElementById('cfFotos'); if(!el) return;
     var fotos=cfConf.fotos||[];
@@ -9281,7 +9309,7 @@
   }
   function cfRemoverFoto(i){
     cfConf.fotos=(cfConf.fotos||[]).slice(); cfConf.fotos.splice(i,1);
-    if(DB&&cfEstadiaId) DB.ref('auaulandia/estadias/'+cfEstadiaId+'/conferencia/fotos').set(cfConf.fotos.length?cfConf.fotos:null).catch(function(){});
+    cfSalvarFotos();
     renderCfFotos(); renderCfGate();
   }
 
