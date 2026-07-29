@@ -1633,6 +1633,15 @@
         <div id="ciPills"></div>
       </div>
 
+      <!-- Cadastro incompleto — o check-in é o momento de completar (decisão da Adriana, 29/jul/2026) -->
+      <div class="card" id="ciCadFaltaCard" style="display:none">
+        <h2 style="font-size:19px">Cadastro incompleto</h2>
+        <div class="hint">O FILHOt está aqui agora — é a hora de completar. Preencha o que souber e salve; o que ficar em branco continua pendente para a próxima vez.</div>
+        <div id="ciCadFaltaCampos"></div>
+        <button type="button" class="btn btn-primary" style="margin-top:10px" onclick="ciSalvarCadastroFalta()">Salvar no cadastro</button>
+        <div id="ciCadFaltaStatus" class="rel-status"></div>
+      </div>
+
       <div class="card">
         <h2>Restrição / Alergia</h2>
         <div class="hint">Segurança do FILHOt. Se ele tem QUALQUER restrição ou alergia — alimentar, ambiental, de manejo — registre aqui. Aparece em vermelho para toda a equipe.</div>
@@ -7760,8 +7769,83 @@
   }
   function esc(s){ return (s||'').toString().replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 
+  // ===== CADASTRO INCOMPLETO — o check-in é o momento de completar =====
+  // Decisão da Adriana (29/jul/2026): "Quando hospedarem novamente, iremos fazer o check-in e aí
+  // completamos o cadastro. Mostre que o cadastro não está completo e que precisa completar."
+  // Nada de lista para alguém caçar depois: o aviso aparece com o FILHOt na frente da pessoa, e os
+  // campos que faltam são preenchidos ali mesmo. O que ficar em branco continua pendente.
+  // Raça e Tutor são CRÍTICOS (sem eles a ficha não identifica o FILHOt). Nascimento e microchip
+  // são complementares — aparecem, mas em tom menor, para o aviso não virar ruído e ser ignorado.
+  var CI_CAD_CAMPOS=[
+    {c:'raca',  t:'Raça',                critico:true },
+    {c:'tutor', t:'Tutor',               critico:true },
+    {c:'nasc',  t:'Nascimento',          tipo:'date'  },
+    {c:'chip',  t:'Microchip'                          }
+  ];
+  function ciCadValor(p,campo){
+    var ex=(typeof pelExtra==='function')?pelExtra(p):{};
+    if(campo==='nasc') return String((typeof pelNasc==='function'?pelNasc(p):'')||'').trim();
+    if(campo==='chip') return String(ex.chip||ex.microchip||p.chip||p.microchip||'').trim();
+    return String((typeof pelGet==='function'?pelGet(p,campo):'')||'').trim();
+  }
+  function cadastroFaltando(p){
+    if(!p) return [];
+    return CI_CAD_CAMPOS.filter(function(f){ return !ciCadValor(p,f.c); });
+  }
+  function ciRenderCadastroFalta(p){
+    var card=document.getElementById('ciCadFaltaCard'), wrap=document.getElementById('ciCadFaltaCampos');
+    if(!card||!wrap) return;
+    var st=document.getElementById('ciCadFaltaStatus'); if(st) st.textContent='';
+    var falta=cadastroFaltando(p);
+    if(!falta.length){ card.style.display='none'; wrap.innerHTML=''; return; }
+    var criticos=falta.filter(function(f){ return f.critico; });
+    var aviso=criticos.length
+      ? '<div class="role-note" style="border-color:var(--crm-critico)"><span data-icon="paw"></span><span>Falta o essencial: <strong>'+criticos.map(function(f){ return escAttr(f.t); }).join(' e ')+'</strong>. Sem isso a ficha não identifica o FILHOt direito.</span></div>'
+      : '<div class="role-note"><span data-icon="paw"></span><span>Falta pouco para o cadastro ficar completo.</span></div>';
+    wrap.innerHTML=aviso+falta.map(function(f){
+      return '<div class="field"><label>'+escAttr(f.t)+(f.critico?' <span style="color:var(--crm-critico)">(essencial)</span>':'')+'</label>'
+        +'<input class="cad-in" id="ciCadF_'+f.c+'" type="'+(f.tipo||'text')+'" placeholder="'+escAttr(f.tipo==='date'?'':('Informe '+f.t.toLowerCase()))+'"></div>';
+    }).join('');
+    card.style.display='block';
+    try{ wrap.querySelectorAll('[data-icon]').forEach(function(x){ x.innerHTML=ic(x.dataset.icon); x.style.display='inline-flex'; }); }catch(e){}
+  }
+  function ciSalvarCadastroFalta(){
+    var st=document.getElementById('ciCadFaltaStatus');
+    var p=(typeof ciPelAtual!=='undefined'&&ciPelAtual)?ciPelAtual:null;
+    if(!p){ if(st){ st.style.color='var(--crm-critico)'; st.textContent='Abra a ficha de um FILHOt primeiro.'; } return; }
+    var patch={}, n=0;
+    cadastroFaltando(p).forEach(function(f){
+      var el=document.getElementById('ciCadF_'+f.c); var v=el?(el.value||'').trim():'';
+      if(v){ patch[f.c]=v; n++; }
+    });
+    if(!n){ if(st){ st.style.color='var(--crm-atencao-text)'; st.textContent='Preencha ao menos um campo antes de salvar.'; } return; }
+    try{ setPelExtra(p,patch); }catch(e){}
+    // Espelha no cadastro da AuAulândia — o cadastro é ÚNICO, mesmo padrão do resto do arquivo.
+    try{
+      if(DB){
+        var kAua=(typeof cadKey==='function')?cadKey({nome:pelNome(p),tutor:pelGet(p,'tutor')||''}):'';
+        if(kAua) DB.ref('auaulandia/cadastro/'+kAua).update(patch).catch(function(){});
+      }
+    }catch(e){}
+    if(typeof audit==='function') audit('cadastro-completado-checkin',pelNome(p),{campos:Object.keys(patch).join(', ')});
+    // Atualiza o cabeçalho na hora se raça/tutor entraram agora
+    try{
+      if(patch.raca||patch.tutor){
+        if(ciHosp){ if(patch.raca) ciHosp.raca=patch.raca; if(patch.tutor) ciHosp.tutor=patch.tutor; }
+        var _m=document.getElementById('ciMeta');
+        if(_m) _m.innerHTML=[ (ciHosp&&ciHosp.raca?esc(ciHosp.raca):''), (ciHosp&&ciHosp.idade?esc(ciHosp.idade):''), 'Tutor: '+((ciHosp&&esc(ciHosp.tutor))||'a confirmar') ].filter(Boolean).join(' · ');
+        var _a=document.getElementById('ciAssinaNome'); if(_a&&!_a.value&&patch.tutor) _a.value=patch.tutor;
+      }
+    }catch(e){}
+    ciRenderCadastroFalta(p);
+    var st2=document.getElementById('ciCadFaltaStatus');
+    if(st2){ st2.style.color='var(--crm-ok)'; st2.textContent='✅ '+n+' campo(s) salvo(s) no cadastro.'+(cadastroFaltando(p).length?' Ainda falta o resto — dá para completar na próxima.':' Cadastro completo.'); }
+  }
+
+  var ciPelAtual=null; // FILHOt aberto na ficha de check-in (para completar o cadastro na hora)
   function ciEscolher(i){
     const p=PELUDINHOS[i]; if(!p) return;
+    ciPelAtual=p;
     const _nasc=(typeof pelNasc==='function')?pelNasc(p):(pelGet(p,'nasc')||'');
     const _idade=(typeof calcIdade==='function'?calcIdade(_nasc):'')||(pelGet(p,'idadeAprox')||'');
     ciHosp={ nome:pelNome(p), tutor:pelGet(p,'tutor')||'', raca:pelGet(p,'raca')||'', refKey:pelKey(p), nasc:_nasc, idade:_idade, ini:(pelNome(p)[0]||'?').toUpperCase(), cor:corPel(i) };
@@ -7774,6 +7858,7 @@
     document.getElementById('ciNome').textContent=ciHosp.nome;
     document.getElementById('ciMeta').innerHTML=[ (ciHosp.raca?esc(ciHosp.raca):''), (ciHosp.idade?esc(ciHosp.idade):''), 'Tutor: '+(esc(ciHosp.tutor)||'a confirmar') ].filter(Boolean).join(' · ');
     document.getElementById('ciPills').innerHTML=(typeof alertPills==='function')?alertPills(ex):'';
+    ciRenderCadastroFalta(p);
     ciRenderRestricao(ex);
     // Botão "Gerenciar itens do banco" só para quem edita o check-in (Consultora/Gestão/Supervisão/Diretoria/Vet)
     var _pmb=document.getElementById('ciPertManageBtn'); if(_pmb) _pmb.style.display=(typeof canEditCheckinMed==='function'&&canEditCheckinMed())?'':'none';
