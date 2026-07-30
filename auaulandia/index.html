@@ -2458,6 +2458,11 @@
     if(a.classList.contains('nav-parent')){ toggleAcc(a); return; }
     const v=a.dataset.v;
     if(!v) return; // sub-links (dias do Day Care) tratam o próprio clique
+    // Não deixa sair do Check-in com a ficha preenchida e não salva (caso Mulan/Lisa, 30/jul).
+    try{
+      const vc=document.getElementById('v-checkin');
+      if(v!=='checkin' && vc && vc.classList.contains('active') && typeof ciPodeSairDoCheckin==='function' && !ciPodeSairDoCheckin()) return;
+    }catch(e){}
     document.querySelectorAll('#nav a').forEach(x=>x.classList.remove('active'));
     a.classList.add('active');
     document.querySelectorAll('.view').forEach(x=>x.classList.remove('active'));
@@ -8065,6 +8070,7 @@
   var ciPelAtual=null; // FILHOt aberto na ficha de check-in (para completar o cadastro na hora)
   function ciEscolher(i){
     const p=PELUDINHOS[i]; if(!p) return;
+    ciSalvoAgora=false;   // a partir daqui existe um check-in em andamento que ainda não foi salvo
     ciPelAtual=p;
     const _nasc=(typeof pelNasc==='function')?pelNasc(p):(pelGet(p,'nasc')||'');
     const _idade=(typeof calcIdade==='function'?calcIdade(_nasc):'')||(pelGet(p,'idadeAprox')||'');
@@ -8692,34 +8698,64 @@
   function ciMedsToLista(itens){ return Object.values(itens).map(function(it){ const o={ nome:it.nome, tipo:it.tipo, q:it.q, u:it.u, horarios:it.horarios, origem:it.origem||'tutor' }; if(it.estoque) o.estoque=it.estoque; if(it.freq) o.freq=it.freq; if(it.local) o.local=it.local; if(it.dataInicio) o.dataInicio=it.dataInicio; if(it.continuo) o.continuo=true; else if(it.dataFim) o.dataFim=it.dataFim; return o; }); }
 
   // ---- Salvar no sistema ----
+  // ==================================================================================
+  // ===== POR QUE UM CHECK-IN "FEITO" PODE NÃO EXISTIR ===============================
+  // 30/jul/2026: a Amanda fez o check-in da Mulan e da Lisa e as duas apareceram na
+  // Conferência como SEM check-in. No banco não havia estadia nenhuma das duas — o
+  // salvamento nunca chegou a acontecer. O motivo é o desenho antigo desta função: cada
+  // validação escrevia um texto pequeno embaixo dos botões E ROLAVA A TELA para o campo
+  // que faltava — ou seja, levava a pessoa para LONGE da mensagem que explicava o erro.
+  // Quem estava com o tutor na frente via a tela pular, achava que tinha salvo e saía.
+  // Agora todo bloqueio: (1) avisa em alerta que precisa de OK, (2) fica escrito em
+  // vermelho, (3) FICA REGISTRADO na auditoria — para nunca mais depender da memória de
+  // ninguém para saber onde travou.
+  // ==================================================================================
+  // Guarda de saída: sair do Check-in sem salvar joga fora tudo o que foi preenchido, e a
+  // pessoa só descobre dias depois, na Conferência. Agora o app avisa antes de deixar sair.
+  var ciSalvoAgora=true;
+  function ciTemRascunhoNaoSalvo(){
+    try{
+      if(ciSalvoAgora || !ciHosp) return false;
+      const f=document.getElementById('ci-ficha');
+      if(!f || f.style.display==='none') return false;
+      const ent=((document.getElementById('ciEntrada')||{}).value)||'';
+      const temRef=(typeof ciRefsAtivas==='function') && ciRefsAtivas().length>0;
+      const assina=((document.getElementById('ciAssinaNome')||{}).value||'').trim();
+      return !!(ent||temRef||assina);
+    }catch(e){ return false; }
+  }
+  function ciPodeSairDoCheckin(){
+    if(!ciTemRascunhoNaoSalvo()) return true;
+    return confirm('⚠️ O check-in de '+((ciHosp&&ciHosp.nome)||'este FILHOt')+' ainda NÃO FOI SALVO.\n\nSe sair agora, ele não existe no sistema — não vai aparecer na Conferência nem no Plantão, e tudo o que você preencheu se perde.\n\nSair mesmo assim?');
+  }
+  function ciBloqueia(motivo, texto, focoId){
+    const st=document.getElementById('ci-status');
+    if(st){ st.style.color='var(--crm-critico)'; st.textContent='✋ '+texto; }
+    try{ if(typeof audit==='function') audit('checkin-bloqueado', motivo, {pet:(ciHosp&&ciHosp.nome)||'', tutor:(ciHosp&&ciHosp.tutor)||''}); }catch(e){}
+    alert('CHECK-IN NÃO SALVO\n\n'+texto+'\n\nCorrija e toque em "Salvar no sistema" de novo. Enquanto isso, este check-in NÃO existe no sistema.');
+    if(focoId){ const el=document.getElementById(focoId); if(el){ try{ el.scrollIntoView({behavior:'smooth',block:'center'}); }catch(e){} try{ el.focus(); }catch(e){} } }
+  }
   function ciSalvar(){
-    const st=document.getElementById('ci-status'); if(!ciHosp){ return; }
+    const st=document.getElementById('ci-status');
+    if(!ciHosp){ alert('CHECK-IN NÃO SALVO\n\nNenhum FILHOt está aberto. Volte, toque no peludinho e refaça o check-in.'); return; }
     const dados=ciColetarFicha();
-    if(!dados.entrada){ if(st){ st.style.color='var(--crm-critico)'; st.textContent='✋ Informe a data de ENTRADA da estadia.'; } document.getElementById('ciEntrada').focus(); return; }
+    if(!dados.entrada){ ciBloqueia('sem data de entrada','Informe a data de ENTRADA da estadia.','ciEntrada'); return; }
     // Ração + natural: não salva sem as gramas e sem marcar EM QUAIS refeições entra a natural
     // Nenhuma refeição marcada = não dá para saber o que o FILHOt come. Não salva.
     const _ativas=ciRefsAtivas();
-    if(!_ativas.length){
-      if(st){ st.style.color='var(--crm-critico)'; st.textContent='✋ Marque as refeições que o FILHOt faz e quanto ele come em cada uma.'; }
-      const _rb=document.getElementById('ciRefBlocos'); if(_rb) _rb.scrollIntoView({behavior:'smooth',block:'center'});
-      return;
-    }
+    if(!_ativas.length){ ciBloqueia('sem refeicao marcada','Marque as refeições que o FILHOt faz e quanto ele come em cada uma.','ciRefBlocos'); return; }
     // Refeição marcada e vazia é pior que refeição não marcada: quem cuida fica sem saber a quantidade.
     const _vazia=_ativas.find(function(r){ return !ciNum(r.racao) && !ciNum(r.natural) && !String(r.extra||'').trim(); });
-    if(_vazia){
-      if(st){ st.style.color='var(--crm-critico)'; st.textContent='✋ Falta a quantidade de: '+_vazia.nome+'. Preencha a ração, a comida natural ou o complemento dessa refeição.'; }
-      const _rb=document.getElementById('ciRefBlocos'); if(_rb) _rb.scrollIntoView({behavior:'smooth',block:'center'});
-      return;
-    }
+    if(_vazia){ ciBloqueia('refeicao sem quantidade','Falta a quantidade de: '+_vazia.nome+'. Preencha a ração, a comida natural ou o complemento dessa refeição.','ciRefBlocos'); return; }
     if(ciTemNatural()){
       const _temNat=_ativas.some(function(r){ return ciNum(r.natural)>0; });
-      if(!_temNat){ if(st){ st.style.color='var(--crm-critico)'; st.textContent='✋ Você marcou comida natural. Preencha as gramas de natural em pelo menos uma refeição.'; } const _rb=document.getElementById('ciRefBlocos'); if(_rb) _rb.scrollIntoView({behavior:'smooth',block:'center'}); return; }
+      if(!_temNat){ ciBloqueia('natural sem gramas','Você marcou comida natural. Preencha as gramas de natural em pelo menos uma refeição.','ciRefBlocos'); return; }
     }
     const meds=ciColetarMeds();
     const probs=ciValidarMeds(meds);
-    if(probs.length){ if(st){ st.style.color='var(--crm-critico)'; st.textContent='✋ '+probs[0]; } return; }
+    if(probs.length){ ciBloqueia('medicacao invalida', probs[0], 'ciMedLista'); return; }
     const temMed=Object.keys(meds).length>0;
-    if(temMed){ const chk=document.getElementById('ciGateChk'); if(!chk||!chk.checked){ if(st){ st.style.color='var(--crm-critico)'; st.textContent='✋ Conferiu os dados com o tutor? Marque a conferência de segurança antes de salvar.'; } const g=document.getElementById('ciGate'); if(g) g.scrollIntoView({behavior:'smooth',block:'center'}); return; } }
+    if(temMed){ const chk=document.getElementById('ciGateChk'); if(!chk||!chk.checked){ ciBloqueia('gate de medicacao nao marcado','Conferiu os dados da medicação com o tutor? Marque a conferência de segurança antes de salvar.','ciGate'); return; } }
     // "Outros deixaram" (taxi dog / terceiro): o tutor não veio — dispensa assinatura e nome do tutor.
     const semTutor=!!(document.getElementById('ciSemTutor')&&document.getElementById('ciSemTutor').checked);
     let assina='', sig='';
@@ -8728,13 +8764,13 @@
       sig='';
     } else {
       assina=(document.getElementById('ciAssinaNome').value||'').trim();
-      if(!assina){ if(st){ st.style.color='var(--crm-critico)'; st.textContent='✋ Escreva o nome de quem assinou (o tutor). Se ninguém veio, marque "O tutor não veio".'; } document.getElementById('ciAssinaNome').focus(); return; }
+      if(!assina){ ciBloqueia('sem nome de quem assinou','Escreva o nome de quem assinou (o tutor). Se ninguém veio, marque "O tutor não veio".','ciAssinaNome'); return; }
       // Defeito #6 — assinatura de dedo OBRIGATÓRIA quando o tutor está presente.
       sig=ciAssinaturaDataURL();
-      if(!sig){ if(st){ st.style.color='var(--crm-critico)'; st.textContent='✋ Peça para o tutor ASSINAR com o dedo no quadro. Se ninguém veio, marque "O tutor não veio".'; } const sc=document.getElementById('ciSig'); if(sc) sc.scrollIntoView({behavior:'smooth',block:'center'}); return; }
+      if(!sig){ ciBloqueia('sem assinatura do tutor','Peça para o tutor ASSINAR com o dedo no quadro. Se ninguém veio, marque "O tutor não veio".','ciSig'); return; }
     }
     const quemDeixou=semTutor?((document.getElementById('ciQuemDeixou')&&document.getElementById('ciQuemDeixou').value||'').trim()):'';
-    if(!DB){ if(st){ st.style.color='var(--crm-atencao-text)'; st.textContent='Banco conectando… tente de novo em alguns segundos.'; } return; }
+    if(!DB){ ciBloqueia('banco desconectado','O sistema está sem conexão com o banco agora. Confira a internet e toque em Salvar de novo em alguns segundos.','ci-status'); return; }
     const key=ciKey();
     // TRAVA anti-duplicidade: já existe uma estadia EM CURSO deste peludinho? (foi assim que o Zeus
     // ganhou medicação dobrada — lançaram um 2º check-in sem querer). Confirma antes de criar outro.
@@ -8771,7 +8807,16 @@
       if(st){ st.style.color='var(--crm-ok)'; st.textContent='✅ Check-in salvo na pasta da estadia de '+ciHosp.nome+'.'; }
       if(typeof audit==='function') audit('checkin','estadia criada',{pet:ciHosp.nome||'',entrada:dados.entrada,meds:Object.keys(meds).length});
       if(typeof carregarAgendaMedTodos==='function') carregarAgendaMedTodos();
-    }).catch(function(e){ if(st){ st.style.color='var(--crm-critico)'; st.textContent='⚠️ Erro ao salvar: '+(e&&e.message||e); } });
+      ciSalvoAgora=true;   // libera a saída da tela sem o aviso de "não salvo"
+      // Confirmação que precisa de OK: é a única forma de a pessoa sair da tela SABENDO
+      // que salvou. Antes, sucesso e erro tinham o mesmo peso visual — um texto pequeno.
+      alert('✅ CHECK-IN SALVO\n\n'+(ciHosp.nome||'O FILHOt')+' — estadia de '+ciBRdata(dados.entrada)+' até '+(dados.saida?ciBRdata(dados.saida):'data a confirmar')+'.\n\nJá aparece na Conferência e no Plantão.');
+    }).catch(function(e){
+      const msg=(e&&e.message)||String(e);
+      if(st){ st.style.color='var(--crm-critico)'; st.textContent='⚠️ Erro ao salvar: '+msg; }
+      try{ if(typeof audit==='function') audit('checkin-bloqueado','erro do banco ao salvar: '+msg,{pet:(ciHosp&&ciHosp.nome)||''}); }catch(x){}
+      alert('CHECK-IN NÃO SALVO\n\nO banco recusou a gravação:\n'+msg+'\n\nNÃO saia da tela: confira a internet e toque em "Salvar no sistema" de novo.');
+    });
   }
 
   // ---- Resumo em texto (WhatsApp / e-mail) ----
