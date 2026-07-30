@@ -862,6 +862,37 @@
   body[data-role="vet"] .nav a,body[data-role="vet"] .nav .grp,body[data-role="vet"] .nav .subnav{display:none !important}
   body[data-role="vet"] .nav a[data-v="cuidadovet"],body[data-role="vet"] .nav a[data-v="sair"]{display:flex !important}
   /* Onda 4 — Conferência Check-in: no menu só para a Wandela (papel "conferencia") + Gestão/Supervisão/Diretoria */
+  /* Peludinhos Hóspedes — quem mexe em data de estadia: Gestão, Supervisão, Consultora e Diretoria */
+  .nav a.so-hosp{display:none}
+  body[data-role="consultora"] .nav a.so-hosp,
+  body[data-role="gestao"] .nav a.so-hosp,
+  body[data-role="supervisor"] .nav a.so-hosp,
+  body[data-role="diretoria"] .nav a.so-hosp{display:flex}
+  /* Check-in — uma caixa por refeição, cada uma com a sua quantidade */
+  .ci-refb{border:1.5px solid var(--line);border-radius:12px;padding:11px 13px;margin-bottom:8px;background:var(--z-white)}
+  .ci-refb.on{border-color:var(--z-gold);background:var(--z-cream)}
+  .ci-refb-head{display:flex;align-items:center;gap:10px;cursor:pointer;font-weight:800;color:var(--z-blue);font-size:14.5px}
+  .ci-refb-box{width:22px;height:22px;border-radius:6px;border:2px solid var(--line);display:flex;align-items:center;justify-content:center;font-size:13px;color:#fff;flex:none;background:transparent}
+  .ci-refb.on .ci-refb-box{background:var(--z-gold);border-color:var(--z-gold)}
+  .ci-refb-campos{margin-top:10px}
+  .ci-refb-campos label{display:block;font-size:12px;font-weight:700;color:var(--muted);margin-bottom:3px}
+  .ci-refb-del{margin-left:auto;background:none;border:none;color:var(--crm-critico);font-weight:800;cursor:pointer;font-size:12.5px;padding:2px 6px}
+  .ci-refb-tot{font-size:12.5px;font-weight:700;color:var(--z-gold-deep);margin-left:auto}
+  /* linhas da aba de hospedagens */
+  .hosp-est{display:flex;align-items:center;gap:12px;padding:13px 14px;border:1.5px solid var(--line);border-radius:12px;background:var(--z-white);margin-bottom:9px;flex-wrap:wrap}
+  .hosp-est .he-av{width:42px;height:42px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:800;color:#fff;background-size:cover;background-position:center;flex:none}
+  .hosp-est .he-main{flex:1;min-width:180px}
+  .hosp-est .he-nome{font-weight:800;color:var(--z-blue);font-size:15px}
+  .hosp-est .he-sub{font-size:12.5px;color:var(--muted);font-weight:600;margin-top:2px}
+  .hosp-est .he-datas{font-size:13.5px;font-weight:800;color:var(--z-blue);white-space:nowrap}
+  .hosp-est .he-acoes{display:flex;gap:7px;flex-wrap:wrap}
+  .hosp-est .he-acoes button{padding:7px 13px;font-size:12.5px}
+  .he-tag{display:inline-block;font-size:10.5px;font-weight:800;letter-spacing:.04em;padding:3px 8px;border-radius:999px;margin-left:6px}
+  .he-tag.agora{background:rgba(46,125,138,.15);color:#2E7D8A}
+  .he-tag.achegar{background:rgba(222,180,40,.2);color:var(--z-gold-deep)}
+  .he-tag.saiu{background:var(--z-cream-warm);color:var(--muted)}
+  .he-grp{font-size:13px;font-weight:800;color:var(--z-blue);margin:18px 0 9px;letter-spacing:.02em}
+  .he-edit{border-color:var(--z-gold);background:var(--z-cream)}
   .nav a.so-conferencia{display:none}
   body[data-role="conferencia"] .nav a.so-conferencia,
   body[data-role="gestao"] .nav a.so-conferencia,
@@ -1056,6 +1087,7 @@
         <a data-v="recepcao" class="so-recepcao"><span data-icon="paw"></span><span>Atenção Recepção</span></a>
         <a data-v="cuidadovet" class="so-vet"><span data-icon="heart"></span><span>Cuidado Vet</span></a>
         <a data-v="hospedagem"><span data-icon="moon"></span><span>Plantão AuAulândia</span></a>
+        <a data-v="hospedes" class="so-hosp"><span data-icon="paw"></span><span>Peludinhos Hóspedes</span></a>
         <a data-v="checkout"><span data-icon="check"></span><span>Check-out (saída)</span></a>
       </div>
     </div>
@@ -1701,37 +1733,23 @@
           <div class="field"><label>Medida</label>
             <div class="seg" id="ciAlimUnid" data-single><button onclick="pick(this)">gramas</button><button onclick="pick(this)">medidor</button><button onclick="pick(this)">lata</button><button onclick="pick(this)">sachê</button></div></div>
         </div>
-        <div class="cad-grid">
-          <div class="field"><label>Quantidade por refeição</label><input class="cad-in" id="ciAlimQtd" inputmode="decimal" placeholder="Ex: 40" autocomplete="off" oninput="ciCalcRacao()"></div>
-          <div class="field"><label>Refeições por dia <span style="font-weight:600;color:var(--muted)">(preenche sozinho pelas refeições marcadas)</span></label><input class="cad-in" id="ciAlimRefeicoes" inputmode="numeric" placeholder="Ex: 2" autocomplete="off" oninput="ciCalcRacao()"></div>
-        </div>
-        <div class="ci-meal-lbl" style="margin-top:6px">Em quais refeições a ração é dada?</div>
-        <div class="ci-meal-btns" id="ciAlimRef">
-          <div class="ci-meal-btn" data-m="cafe" onclick="ciAlimRefToggle(this)">☕ Café da manhã</div>
-          <div class="ci-meal-btn" data-m="almoco" onclick="ciAlimRefToggle(this)">🍽️ Almoço</div>
-          <div class="ci-meal-btn" data-m="jantar" onclick="ciAlimRefToggle(this)">🌙 Jantar</div>
-        </div>
-        <div class="cad-grid">
+        <!-- CADA refeição tem a SUA quantidade. Tem FILHOt que come ração no café, só comida
+             natural no almoço e ração + iogurte no jantar — e tem quem faça 4, 5 refeições.
+             Por isso a quantidade vive dentro de cada refeição, nunca num campo único. -->
+        <div class="ci-meal-lbl" style="margin-top:10px">Quanto ele come em CADA refeição?</div>
+        <div class="hint" style="margin:-2px 0 8px">Toque na refeição que ele faz e diga a quantidade dela. Cada refeição pode ser diferente — ração, comida natural e um complemento (iogurte, patê, suplemento).</div>
+        <div id="ciRefBlocos"></div>
+        <button type="button" class="btn" onclick="ciAddRefExtra()" style="margin-top:2px">+ Mais refeições</button>
+        <div class="hint" style="margin-top:5px">Para quem faz 4 ou mais refeições: dê um nome (ex.: lanche da tarde), o horário e a quantidade.</div>
+
+        <div class="cad-grid" style="margin-top:12px">
           <div class="field"><label>Dias (automático)</label><input class="cad-in" id="ciAlimDias" readonly tabindex="-1" placeholder="—" style="background:var(--z-cream-warm)"></div>
           <div class="field"><label>Ração trazida (g) <span style="font-weight:600;color:var(--muted)">— não obrigatório aqui (é pesado na Conferência)</span></label><input class="cad-in" id="ciAlimTraz" inputmode="numeric" placeholder="Opcional — deixe vazio se ainda não pesou" autocomplete="off" oninput="ciCalcRacao()"></div>
         </div>
-        <div class="ci-dias-erro" id="ciDiasErro" style="display:none"></div>
-
-        <!-- Comida natural (Ração + natural) — quantidade e EM QUAIS refeições ela entra -->
-        <div class="ci-comida-painel" id="ciComidaPainel" style="display:none">
-          <div class="ci-comida-tit">🍲 Comida natural — além da ração</div>
-          <div class="cad-grid">
-            <div class="field"><label>Comida por refeição (g)</label><input class="cad-in" id="ciComidaQtd" inputmode="decimal" placeholder="Ex: 100" autocomplete="off" oninput="ciCalcRacao()"></div>
-            <div class="field"><label>Comida trazida (g)</label><input class="cad-in" id="ciComidaTraz" inputmode="numeric" placeholder="Ex: 600" autocomplete="off" oninput="ciCalcRacao()"></div>
-          </div>
-          <div class="ci-meal-lbl" style="margin-top:8px">Em quais refeições tem comida natural?</div>
-          <div class="hint" style="margin:-2px 0 6px">Tem peludinho que come 3x ao dia, mas a comida natural entra só no café e no jantar — marque exatamente em quais.</div>
-          <div class="ci-meal-btns" id="ciComidaRef">
-            <div class="ci-meal-btn" data-m="cafe" onclick="ciToggleMeal(this)">☕ Café da manhã</div>
-            <div class="ci-meal-btn" data-m="almoco" onclick="ciToggleMeal(this)">🍽️ Almoço</div>
-            <div class="ci-meal-btn" data-m="jantar" onclick="ciToggleMeal(this)">🌙 Jantar</div>
-          </div>
+        <div class="cad-grid" id="ciComidaTrazWrap" style="display:none">
+          <div class="field"><label>Comida natural trazida (g)</label><input class="cad-in" id="ciComidaTraz" inputmode="numeric" placeholder="Ex: 600" autocomplete="off" oninput="ciCalcRacao()"></div>
         </div>
+        <div class="ci-dias-erro" id="ciDiasErro" style="display:none"></div>
 
         <div class="ci-meal-row">
           <div class="ci-meal-lbl">Dia de Entrada <span class="ci-meal-tag">Dia 1</span> — o FILHOt vai comer nesse dia:</div>
@@ -1946,6 +1964,19 @@
   </section>
 
   <!-- ===== CHECK-OUT (saída) — fluxo inverso do check-in ===== -->
+  <!-- ============ PELUDINHOS HÓSPEDES — as estadias, com data editável ============ -->
+  <!-- A planilha da recepção diz quem está HOJE. Esta tela diz de QUANDO A QUANDO cada FILHOt
+       fica — e é o que manda. Se a tutora estender a estadia e ninguém mexer na planilha, é aqui
+       que se corrige (foi o caso do Ragnar, 30/jul/2026). -->
+  <section class="view" id="v-hospedes">
+    <div class="role-note"><span data-icon="paw"></span><span>Todas as <strong>hospedagens</strong>: quem está agora, quem chega e quem já saiu. Mudou a data com a tutora? Corrija em <strong>Mudar datas</strong> — o que está aqui vale mais que a planilha. Toque no nome para abrir a <strong>ficha completa</strong> do peludinho.</span></div>
+    <div class="pel-toolbar" style="gap:10px;flex-wrap:wrap">
+      <input id="hospAbaBusca" class="cad-in" style="max-width:280px" placeholder="Buscar por nome ou tutor" autocomplete="off" oninput="renderHospedesAba()">
+      <button class="btn btn-primary" onclick="novaHospedagem()">+ Nova hospedagem</button>
+      <span class="pel-count" id="hospAbaCount"></span>
+    </div>
+    <div id="hospAbaLista"></div>
+  </section>
   <section class="view" id="v-checkout">
     <div id="co-lista">
       <div class="role-note"><span data-icon="paw"></span><span><strong>Check-out da estadia.</strong> O caminho inverso: o monitor confere tudo que vai voltar (pertences, ração/medicação que sobrou, o que o tutor mandou e o que foi comprado aqui) e desce com o FILHOt para a recepção. A recepção confere junto com o tutor, o tutor assina e recebe o PDF.</span></div>
@@ -2138,11 +2169,11 @@
 
   <section class="view" id="v-agenda"><div class="soon-box"><img class="ic-st" src="assets/stickers/coleira.png" alt=""><div class="t">Agenda</div><div class="d">Calendário de frequência e reservas — próxima etapa.</div></div></section>
   <section class="view" id="v-inativos">
-    <div class="role-note so-gestao"><span data-icon="paw"></span><span>Peludinhos que <strong>saíram do Day Care</strong>. O cadastro e o histórico ficam guardados aqui. Clique no nome para ver a ficha completa.</span></div>
+    <div class="role-note so-gestao"><span data-icon="paw"></span><span>Peludinhos que <strong>saíram do Day Care</strong>. O cadastro e o histórico ficam guardados aqui. Clique no nome para abrir a ficha completa — ou toque em <strong>Voltou</strong> para reativar o peludinho de uma vez.</span></div>
     <div class="pel-toolbar"><span class="pel-count" id="inativosCount"></span></div>
     <div class="pel-wrap">
       <table class="pel">
-        <thead><tr><th>Nº</th><th>Peludinho</th><th>Tutor</th><th>Data da saída</th><th>Motivo da saída</th></tr></thead>
+        <thead><tr><th>Nº</th><th>Peludinho</th><th>Tutor</th><th>Data da saída</th><th>Motivo da saída</th><th>Voltou?</th></tr></thead>
         <tbody id="inativosBody"></tbody>
       </table>
     </div>
@@ -2415,6 +2446,7 @@
     checkin:['Check-in','Entrada da estadia — ficha, pertences e assinatura'],
     conferencia:['Conferência Check-in','Pertences etiquetados, ração pesada e alarmes testados'],
     checkout:['Check-out (saída)','Confere o que volta, tutor assina e recebe o PDF'],
+    hospedes:['Peludinhos Hóspedes','Estadias: quem está, quem chega e quem já saiu'],
     recepcao:['Atenção Recepção','Faltas e avisos: ração, medicação e itens da estadia'],
     agenda:['Agenda','Frequência e reservas'],pessoas:['Pessoas & Turnos','Equipe e tarefas'],
     painel:['Painel do Dia','Auditoria e cumprimento de protocolos'],
@@ -2437,6 +2469,7 @@
     if(v==='checkin'){ if(typeof abrirCheckin==='function') abrirCheckin(); }
     if(v==='conferencia'){ if(typeof abrirConferencia==='function') abrirConferencia(); }
     if(v==='checkout'){ if(typeof abrirCheckout==='function') abrirCheckout(); }
+    if(v==='hospedes'){ if(typeof renderHospedesAba==='function') renderHospedesAba(); }
     if(v==='recepcao'){ if(typeof carregarAvisosEstoque==='function') carregarAvisosEstoque(); }
     if(v==='ficha'){ const l=document.getElementById('pel-lista'),fi=document.getElementById('pel-ficha'); if(l&&fi){ l.style.display='block'; fi.style.display='none'; } if(typeof renderPel==='function') renderPel(); }
     if(v==='inativos'){ if(typeof renderInativos==='function') renderInativos(); }
@@ -4698,9 +4731,11 @@
     const m=document.getElementById('hospBuscaModal'); if(!m) return;
     const b=document.getElementById('hbBusca'); if(b) b.value='';
     const t=document.getElementById('hbTitulo');
-    if(t) t.innerHTML = tipo==='hospede'
+    if(t) t.innerHTML = tipo==='estadia'
+      ? 'Nova Hospedagem<br><span style="font-size:14px;font-weight:600;opacity:.92">Quem vai ficar hospedado? Toque no FILHOt — depois você informa de quando a quando.</span>'
+      : (tipo==='hospede'
       ? 'Adicionar Hóspede<br><span style="font-size:14px;font-weight:600;opacity:.92">Quem chegou? Toque no FILHOt já cadastrado.</span>'
-      : 'Adicionar Pernoite<br><span style="font-size:14px;font-weight:600;opacity:.92">Aluno do Day Care que ficou hospedado. Toque no FILHOt.</span>';
+      : 'Adicionar Pernoite<br><span style="font-size:14px;font-weight:600;opacity:.92">Aluno do Day Care que ficou hospedado. Toque no FILHOt.</span>');
     m.classList.add('show');
     renderHospBuscaResults();
     setTimeout(()=>{ try{ b&&b.focus(); }catch(e){} },150);
@@ -4769,6 +4804,21 @@
     const nome=pelNome(p), tutor=pelGet(p,'tutor')||'', raca=pelGet(p,'raca')||'';
     const refKey=pelKey(p);
     const chaveH=o=>jsNorm((o.nome||'')+'__'+(o.tutor||''));
+    // Tipo 'estadia' (aba Peludinhos Hóspedes): não é lançamento de hoje — é uma hospedagem
+    // com data de entrada e saída. Segue para o formulário de datas na própria aba.
+    if(hospBuscaTipo==='estadia'){
+      const exE=pelExtra(p);
+      if(exE.alergia||exE.restricao){
+        const det=(exE.alergia?('Alergia: '+exE.alergia+'\n'):'')+(exE.restricao?('Restrição: '+exE.restricao+'\n'):'');
+        if(!confirm('⚠ ATENÇÃO — '+nome+' é ALÉRGICO(A) / tem RESTRIÇÃO:\n'+det+'\nConfirme para lançar a hospedagem.')) return;
+      }
+      hospNovaPend={nome:nome, tutor:tutor, raca:raca, refKey:refKey};
+      fecharHospBuscaModal();
+      irParaView('hospedes');
+      renderHospedesAba();
+      setTimeout(function(){ try{ const el=document.getElementById('hospNovaFim'); if(el){ el.scrollIntoView({behavior:'smooth',block:'center'}); el.focus(); } }catch(e){} },60);
+      return;
+    }
     if((hospedes||[]).some(h=>chaveH(h)===chaveH({nome,tutor}))){
       alert(nome+' já está hospedado(a) hoje — não precisa adicionar de novo.');
       fecharHospBuscaModal();
@@ -6673,18 +6723,47 @@
     const list=PELUDINHOS.map((p,i)=>({p,i})).filter(o=>pelInativo(o.p))
       .sort((a,b)=>jsNorm(pelNome(a.p)).localeCompare(jsNorm(pelNome(b.p)),'pt'));
     const cnt=document.getElementById('inativosCount'); if(cnt) cnt.textContent=list.length?`${list.length} peludinho${list.length>1?'s':''} inativo${list.length>1?'s':''}`:'Nenhum peludinho inativo';
-    if(!list.length){ body.innerHTML=`<tr><td colspan="5" style="text-align:center;color:var(--muted);padding:22px">Nenhum peludinho inativo no momento.</td></tr>`; return; }
-    body.innerHTML=list.map((o,row)=>{ const p=o.p; const ex=pelExtra(p); return `<tr onclick="abrirPeludinhoLista(${o.i})" style="cursor:pointer" class="pel-inativo">
+    if(!list.length){ body.innerHTML=`<tr><td colspan="6" style="text-align:center;color:var(--muted);padding:22px">Nenhum peludinho inativo no momento.</td></tr>`; return; }
+    const _podeReat=canEditPel();
+    body.innerHTML=list.map((o,row)=>{ const p=o.p; const ex=pelExtra(p); return `<tr onclick="abrirPeludinhoInativo(${o.i})" style="cursor:pointer" class="pel-inativo">
       <td class="pel-num">${row+1}</td>
       <td><span class="pel-nome">${pelNome(p)}</span>${p.apelido?` <span class="pel-obs">${p.apelido}</span>`:''}</td>
       <td class="pel-tutor">${pelGet(p,'tutor')||'—'}</td>
       <td>${ex.dataSaida?escAttr(ex.dataSaida):'—'}</td>
       <td class="pel-tutor">${ex.motivoSaida?escAttr(ex.motivoSaida):'—'}</td>
+      <td>${_podeReat?`<button type="button" class="btn btn-primary" style="padding:7px 14px;font-size:13px" onclick="event.stopPropagation();reativarPeludinho(${o.i})">Voltou</button>`:'—'}</td>
     </tr>`; }).join('');
+  }
+  // O FILHOt voltou para o Day Care. Reativa em 1 toque, direto da lista — sem precisar
+  // abrir a ficha e caçar o campo "Saiu do Day Care?". A saída anterior NÃO se perde:
+  // vira uma linha do histórico (ex.saidas), porque "quero todo o banco de dados sempre".
+  function reativarPeludinho(i){
+    if(!canEditPel()){ alert('Apenas Gestão e Supervisão podem reativar um peludinho.'); return; }
+    const p=PELUDINHOS[i]; if(!p) return;
+    const nome=pelNome(p)||'este FILHOt';
+    if(!confirm(nome+' voltou para o Day Care?\n\nEle volta para a lista de Peludinhos frequentes e para as chamadas do dia. A saída anterior fica guardada no histórico da ficha.')) return;
+    const ex=pelExtra(p)||{};
+    const hist=Array.isArray(ex.saidas)?ex.saidas.slice():[];
+    if(ex.dataSaida||ex.motivoSaida) hist.push({quando:ex.dataSaida||'', motivo:ex.motivoSaida||'', retornoEm:agoraBR(), retornoPor:(typeof quemSou==='function'?quemSou():'-')});
+    setPelExtra(p,{inativo:'Nao', dataSaida:'', motivoSaida:'', saidas:hist});
+    if(typeof audit==='function') audit('peludinho-reativado','FILHOt voltou para o Day Care',{pet:nome});
+    renderInativos();
+    if(typeof renderPel==='function'){ try{ renderPel(); }catch(e){} }
+    alert(nome+' voltou para a ativa. Já aparece em Peludinhos e nas chamadas do dia.');
   }
 
   let pelAtual=null, pelAtualIdx=null, pelOrigem='peludinhos';
   function abrirPeludinhoLista(i){ pelOrigem='peludinhos'; abrirPeludinho(i); }
+  // Vindo de Relatórios › Inativos: a ficha vive DENTRO da tela Peludinhos, então é preciso
+  // trocar de tela antes (igual abrirPeludinhoDay/abrirPeludinhoRenov fazem). Sem isso o clique
+  // abria a ficha atrás da tela de Inativos e parecia que nada acontecia.
+  function abrirPeludinhoInativo(i){
+    pelOrigem='inativos'; irParaView('ficha'); abrirPeludinho(i);
+    setTimeout(function(){ try{
+      const el=Array.prototype.find.call(document.querySelectorAll('#pel-ficha .cad-sub'), function(h){ return (h.textContent||'').indexOf('Saída do Day Care')>=0; });
+      if(el) el.scrollIntoView({behavior:'smooth',block:'center'});
+    }catch(e){} }, 60);
+  }
   function irParaView(v){
     document.querySelectorAll('#nav a').forEach(x=>x.classList.remove('active'));
     const a=document.querySelector('#nav a[data-v="'+v+'"]'); if(a) a.classList.add('active');
@@ -6844,7 +6923,10 @@
   }
   function salvarFichaPel(){ if(document.activeElement&&document.activeElement.blur) document.activeElement.blur(); const s=document.getElementById('pel-saved2'); if(s){ s.textContent='✓ Ficha salva! Disponível em todos os aparelhos.'; setTimeout(()=>{ if(s) s.textContent=''; },2200); } if(typeof renderDaycare==='function') renderDaycare(); }
   function pelSubtab(el,id){ el.parentNode.querySelectorAll('.subtab2').forEach(x=>x.classList.remove('active')); el.classList.add('active'); document.querySelectorAll('.ppanel2').forEach(x=>x.classList.remove('active')); const t=document.getElementById(id); if(t) t.classList.add('active'); }
-  function voltarPel(){ if(pelOrigem==='renovacao'){ irParaView('renovacao'); return; } if(pelOrigem==='daycare'){ irParaView('daycare'); if(typeof carregarChamada==='function') carregarChamada(); } else { document.getElementById('pel-ficha').style.display='none'; document.getElementById('pel-lista').style.display='block'; } }
+  function voltarPel(){ if(pelOrigem==='renovacao'){ irParaView('renovacao'); return; }
+    if(pelOrigem==='inativos'){ document.getElementById('pel-ficha').style.display='none'; document.getElementById('pel-lista').style.display='block'; irParaView('inativos'); if(typeof renderInativos==='function') renderInativos(); return; }
+    if(pelOrigem==='hospedes'){ document.getElementById('pel-ficha').style.display='none'; document.getElementById('pel-lista').style.display='block'; irParaView('hospedes'); if(typeof renderHospedesAba==='function') renderHospedesAba(); return; }
+    if(pelOrigem==='daycare'){ irParaView('daycare'); if(typeof carregarChamada==='function') carregarChamada(); } else { document.getElementById('pel-ficha').style.display='none'; document.getElementById('pel-lista').style.display='block'; } }
   // Novo AULUNO: telinha de 2 campos (nome + tutor) → abre a FICHA COMPLETA para o resto
   function inserirAluno(){
     if(!canEditPel()){ alert('Apenas Gestão e Supervisão podem cadastrar um novo aluno.'); return; }
@@ -8006,13 +8088,13 @@
     document.getElementById('ciSaida').value='';
     // reset alimentação (inclui calc por dias) + Spa
     setSeg('ciAlimTipo',''); setSeg('ciAlimUnid',''); setSeg('ciBanho','');
-    document.getElementById('ciAlimMarca').value=''; document.getElementById('ciAlimRefeicoes').value=''; document.getElementById('ciAlimQtd').value='';
+    document.getElementById('ciAlimMarca').value='';
     var _at=document.getElementById('ciAlimTraz'); if(_at) _at.value='';
     var _ad=document.getElementById('ciAlimDias'); if(_ad) _ad.value='';
-    document.querySelectorAll('#ciMealEnt .ci-meal-btn.on, #ciMealSai .ci-meal-btn.on, #ciComidaRef .ci-meal-btn.on, #ciAlimRef .ci-meal-btn.on').forEach(function(b){ b.classList.remove('on'); });
-    var _cq=document.getElementById('ciComidaQtd'); if(_cq) _cq.value='';
+    document.querySelectorAll('#ciMealEnt .ci-meal-btn.on, #ciMealSai .ci-meal-btn.on').forEach(function(b){ b.classList.remove('on'); });
     var _ct=document.getElementById('ciComidaTraz'); if(_ct) _ct.value='';
-    var _cp=document.getElementById('ciComidaPainel'); if(_cp) _cp.style.display='none';
+    var _cw=document.getElementById('ciComidaTrazWrap'); if(_cw) _cw.style.display='none';
+    if(typeof ciRefsZerar==='function') ciRefsZerar();
     var _bt=document.getElementById('ciBanhoTipo'); if(_bt) _bt.value='';
     var _bh=document.getElementById('ciBanhoHora'); if(_bh){ _bh.value=''; _bh.disabled=false; }
     var _bc=document.getElementById('ciBanhoConfirmar'); if(_bc) _bc.checked=false;
@@ -8146,77 +8228,202 @@
     ciCalcRacao();
     return dias;
   }
-  function ciMealCounts(){
-    const cnt=function(id){ return document.querySelectorAll('#'+id+' .ci-meal-btn.on').length; };
-    return { entrada:cnt('ciMealEnt'), saida:cnt('ciMealSai') };
-  }
   function ciToggleMeal(el){ if(el) el.classList.toggle('on'); ciCalcRacao(); }
 
-  // ---- Comida natural (Ração + natural) — igual ao sistema antigo, mas marcando EM QUAIS refeições ----
-  function ciTemNatural(){ return segVal('ciAlimTipo')==='Ração + natural'; }
+  // ---- Comida natural (Ração + natural) ----
+  function ciTemNatural(){ const t=segVal('ciAlimTipo'); return t==='Ração + natural'||t==='Comida natural'; }
+  function ciSoNatural(){ return segVal('ciAlimTipo')==='Comida natural'; }
   function ciAlimTipoChange(){
-    const p=document.getElementById('ciComidaPainel');
-    if(p) p.style.display=ciTemNatural()?'block':'none';
+    const w=document.getElementById('ciComidaTrazWrap');
+    if(w) w.style.display=ciTemNatural()?'grid':'none';
+    ciRenderRefs();
+  }
+
+  // ==================================================================================
+  // ===== QUANTIDADE POR REFEIÇÃO ====================================================
+  // Antes existia UMA quantidade para todas as refeições. Na vida real não é assim: tem
+  // FILHOt que come ração no café, só comida natural no almoço e ração com iogurte no
+  // jantar — e tem quem faça 4 ou mais refeições. Cada refeição guarda a SUA quantidade.
+  // ==================================================================================
+  var CI_REF_FIXAS=[{k:'cafe',n:'Café da manhã',i:'☕'},{k:'almoco',n:'Almoço',i:'🍽️'},{k:'jantar',n:'Jantar',i:'🌙'}];
+  var ciRefs={cafe:{on:false,racao:'',natural:'',extra:''},almoco:{on:false,racao:'',natural:'',extra:''},jantar:{on:false,racao:'',natural:'',extra:''}};
+  var ciRefsExtras=[]; // {nome,hora,racao,natural,extra} — a 4ª refeição em diante
+  function ciRefsZerar(){
+    ciRefs={cafe:{on:false,racao:'',natural:'',extra:''},almoco:{on:false,racao:'',natural:'',extra:''},jantar:{on:false,racao:'',natural:'',extra:''}};
+    ciRefsExtras=[]; ciRenderRefs();
+  }
+  function ciNum(v){ return parseFloat(String(v==null?'':v).replace(',','.'))||0; }
+  // Refeições que realmente acontecem, na ordem do dia. Extras entram como refeição própria.
+  function ciRefsAtivas(){
+    const out=[];
+    CI_REF_FIXAS.forEach(function(f){ const r=ciRefs[f.k]||{}; if(r.on) out.push({k:f.k,nome:f.n,hora:'',racao:r.racao||'',natural:r.natural||'',extra:r.extra||'',fixa:true}); });
+    (ciRefsExtras||[]).forEach(function(e,i){ out.push({k:'extra'+i,nome:(e.nome||'Refeição extra'),hora:e.hora||'',racao:e.racao||'',natural:e.natural||'',extra:e.extra||'',fixa:false}); });
+    return out;
+  }
+  function ciRefTotalDia(){
+    let racao=0, natural=0;
+    ciRefsAtivas().forEach(function(r){ racao+=ciNum(r.racao); natural+=ciNum(r.natural); });
+    return {racao:racao, natural:natural, n:ciRefsAtivas().length};
+  }
+  // Quanto se come no dia de entrada / de saída: só as refeições fixas marcadas naqueles
+  // botões (o FILHOt que chega à tarde não toma café). As extras contam todos os dias.
+  function ciRefTotalDiaParcial(idBotoes){
+    let racao=0, natural=0, n=0;
+    const marcadas={};
+    document.querySelectorAll('#'+idBotoes+' .ci-meal-btn.on').forEach(function(b){ marcadas[b.dataset.m]=true; });
+    CI_REF_FIXAS.forEach(function(f){ const r=ciRefs[f.k]||{}; if(r.on&&marcadas[f.k]){ racao+=ciNum(r.racao); natural+=ciNum(r.natural); n++; } });
+    (ciRefsExtras||[]).forEach(function(e){ racao+=ciNum(e.racao); natural+=ciNum(e.natural); n++; });
+    return {racao:racao, natural:natural, n:n};
+  }
+  // Campo "quantidade por refeição" das telas antigas: só faz sentido quando TODAS as refeições
+  // têm a mesma quantidade. Sendo diferentes, fica vazio — quem lê usa o detalhe por refeição.
+  // Carrega o que come em cada refeição a partir de uma ficha salva. Aceita os dois formatos:
+  // o novo (`refs`) e o antigo (uma quantidade só + em quais refeições era dada).
+  function ciCarregarRefs(a){
+    a=a||{};
+    ciRefs={cafe:{on:false,racao:'',natural:'',extra:''},almoco:{on:false,racao:'',natural:'',extra:''},jantar:{on:false,racao:'',natural:'',extra:''}};
+    ciRefsExtras=[];
+    if(a.refs&&a.refs.fixas){
+      CI_REF_FIXAS.forEach(function(f){ const r=a.refs.fixas[f.k]; if(r) ciRefs[f.k]={on:!!r.on, racao:r.racao||'', natural:r.natural||'', extra:r.extra||''}; });
+      ciRefsExtras=Array.isArray(a.refs.extras)?a.refs.extras.map(function(e){ return {nome:e.nome||'',hora:e.hora||'',racao:e.racao||'',natural:e.natural||'',extra:e.extra||''}; }):[];
+    } else {
+      const rr=a.racaoRefeicoes||{}, nn=(a.comida&&a.comida.refeicoes)||{};
+      CI_REF_FIXAS.forEach(function(f){
+        const temR=!!rr[f.k], temN=!!nn[f.k];
+        if(!temR&&!temN) return;
+        ciRefs[f.k]={on:true, racao:temR?(a.qtd||''):'', natural:temN?((a.comida&&a.comida.qtd)||''):'', extra:''};
+      });
+      // Ficha muito antiga: sem marcação de refeição, mas com quantidade e nº de refeições.
+      const nenhuma=CI_REF_FIXAS.every(function(f){ return !ciRefs[f.k].on; });
+      if(nenhuma && a.qtd){
+        const n=parseInt(a.refeicoes,10)||1;
+        const ordem=['almoco','jantar','cafe'];
+        for(let i=0;i<Math.min(n,3);i++) ciRefs[ordem[i]]={on:true, racao:a.qtd||'', natural:'', extra:''};
+      }
+    }
+    ciRenderRefs();
+    const w=document.getElementById('ciComidaTrazWrap'); if(w) w.style.display=ciTemNatural()?'grid':'none';
+  }
+  function ciQtdLegado(campo){
+    const vals=ciRefsAtivas().map(function(r){ return String(r[campo]||'').trim(); }).filter(function(v){ return v && ciNum(v)>0; });
+    if(!vals.length) return '';
+    const iguais=vals.every(function(v){ return v===vals[0]; });
+    return iguais?vals[0]:'';
+  }
+  function ciRefToggle(k){ if(!ciRefs[k]) return; ciRefs[k].on=!ciRefs[k].on; ciRenderRefs(); }
+  function ciRefSet(k,campo,v){ if(!ciRefs[k]) return; ciRefs[k][campo]=v; ciCalcRacao(); }
+  function ciExtraSet(i,campo,v){ if(!ciRefsExtras[i]) return; ciRefsExtras[i][campo]=v; ciCalcRacao(); }
+  function ciAddRefExtra(){ ciRefsExtras.push({nome:'',hora:'',racao:'',natural:'',extra:''}); ciRenderRefs();
+    setTimeout(function(){ try{ const el=document.getElementById('ciExNome'+(ciRefsExtras.length-1)); if(el){ el.scrollIntoView({behavior:'smooth',block:'center'}); el.focus(); } }catch(e){} },40); }
+  function ciRemoveRefExtra(i){ ciRefsExtras.splice(i,1); ciRenderRefs(); }
+  function ciRenderRefs(){
+    const box=document.getElementById('ciRefBlocos'); if(!box) return;
+    const unid=ciUnidLbl(segVal('ciAlimUnid'));
+    const temNat=ciTemNatural(), soNat=ciSoNatural();
+    const campos=function(pref,r,idx){
+      let s='<div class="ci-refb-campos cad-grid">';
+      if(!soNat) s+='<div class="field"><label>Ração ('+unid.trim()+')</label><input class="cad-in" inputmode="decimal" value="'+escAttr(r.racao||'')+'" placeholder="Ex: 80" autocomplete="off" oninput="'+pref+'(\'racao\',this.value)"></div>';
+      if(temNat) s+='<div class="field"><label>Comida natural (g)</label><input class="cad-in" inputmode="decimal" value="'+escAttr(r.natural||'')+'" placeholder="Ex: 100" autocomplete="off" oninput="'+pref+'(\'natural\',this.value)"></div>';
+      s+='<div class="field" style="grid-column:1/-1"><label>Complemento (escreva do jeito que é)</label><input class="cad-in" value="'+escAttr(r.extra||'')+'" placeholder="Ex: 1 colher de iogurte · meio patê · 1 cápsula de ômega" autocomplete="off" oninput="'+pref+'(\'extra\',this.value)"></div>';
+      return s+'</div>';
+    };
+    let h='';
+    CI_REF_FIXAS.forEach(function(f){
+      const r=ciRefs[f.k]||{};
+      const resumo=r.on?'':'<span class="ci-refb-tot">não faz</span>';
+      h+='<div class="ci-refb'+(r.on?' on':'')+'">'
+        + '<div class="ci-refb-head" onclick="ciRefToggle(\''+f.k+'\')"><span class="ci-refb-box">'+(r.on?'&#10003;':'')+'</span><span>'+f.i+' '+f.n+'</span>'+resumo+'</div>'
+        + (r.on?campos('ciRefSet.bind(null,\''+f.k+'\')',r):'')
+        + '</div>';
+    });
+    (ciRefsExtras||[]).forEach(function(e,i){
+      h+='<div class="ci-refb on">'
+        + '<div class="ci-refb-head"><span class="ci-refb-box">&#10003;</span><span>Refeição extra</span>'
+        + '<button type="button" class="ci-refb-del" onclick="ciRemoveRefExtra('+i+')">remover</button></div>'
+        + '<div class="ci-refb-campos cad-grid">'
+        + '<div class="field"><label>Nome da refeição</label><input class="cad-in" id="ciExNome'+i+'" value="'+escAttr(e.nome||'')+'" placeholder="Ex: lanche da tarde · ceia" autocomplete="off" oninput="ciExtraSet('+i+',\'nome\',this.value)"></div>'
+        + '<div class="field"><label>Horário</label><input type="time" class="cad-in" value="'+escAttr(e.hora||'')+'" oninput="ciExtraSet('+i+',\'hora\',this.value)"></div>'
+        + '</div>'
+        + campos('ciExtraSet.bind(null,'+i+')',e)
+        + '</div>';
+    });
+    box.innerHTML=h;
     ciCalcRacao();
   }
-  function ciComidaRefObj(){ const o={cafe:false,almoco:false,jantar:false}; document.querySelectorAll('#ciComidaRef .ci-meal-btn.on').forEach(function(b){ o[b.dataset.m]=true; }); return o; }
-  // Ração: em quais refeições é dada (café/almoço/jantar). Preenche "Refeições por dia" sozinho.
-  function ciAlimRefObj(){ const o={cafe:false,almoco:false,jantar:false}; document.querySelectorAll('#ciAlimRef .ci-meal-btn.on').forEach(function(b){ o[b.dataset.m]=true; }); return o; }
-  function ciAlimRefToggle(el){ if(el) el.classList.toggle('on'); const n=document.querySelectorAll('#ciAlimRef .ci-meal-btn.on').length; const rf=document.getElementById('ciAlimRefeicoes'); if(rf&&n>0) rf.value=n; ciCalcRacao(); }
+  // Compatibilidade com quem lê a ficha antiga: em quais refeições entra ração / comida natural.
+  function ciAlimRefObj(){ const o={cafe:false,almoco:false,jantar:false}; CI_REF_FIXAS.forEach(function(f){ const r=ciRefs[f.k]||{}; if(r.on&&ciNum(r.racao)>0) o[f.k]=true; }); return o; }
+  function ciComidaRefObj(){ const o={cafe:false,almoco:false,jantar:false}; CI_REF_FIXAS.forEach(function(f){ const r=ciRefs[f.k]||{}; if(r.on&&ciNum(r.natural)>0) o[f.k]=true; }); return o; }
   function ciComidaRefNomes(o){ o=o||{}; const out=[]; if(o.cafe) out.push('café'); if(o.almoco) out.push('almoço'); if(o.jantar) out.push('jantar'); return out; }
   function ciComidaRefNomesCap(o){ o=o||{}; const out=[]; if(o.cafe) out.push('Café da manhã'); if(o.almoco) out.push('Almoço'); if(o.jantar) out.push('Jantar'); return out; }
   // Total de refeições COM comida natural na estadia: interseção real entre as refeições
   // marcadas com natural e as que acontecem nos dias de entrada/saída; dias do meio têm todas.
-  function ciTotalRefNatural(dias){
-    const nat=ciComidaRefObj(); const nNat=(nat.cafe?1:0)+(nat.almoco?1:0)+(nat.jantar?1:0);
-    if(!nNat||!dias) return 0;
-    const inter=function(id){ let n=0; document.querySelectorAll('#'+id+' .ci-meal-btn.on').forEach(function(b){ if(nat[b.dataset.m]) n++; }); return n; };
-    if(dias===1) return inter('ciMealEnt');
-    if(dias===2) return inter('ciMealEnt')+inter('ciMealSai');
-    return inter('ciMealEnt')+((dias-2)*nNat)+inter('ciMealSai');
-  }
+  // Soma a estadia inteira somando REFEIÇÃO POR REFEIÇÃO (cada uma tem a sua quantidade).
+  // Dia de entrada e dia de saída contam só as refeições marcadas naqueles botões; os dias
+  // do meio contam o dia inteiro. As refeições extras contam todos os dias.
   function ciCalcRacao(){
-    const qtd=parseFloat(String(((document.getElementById('ciAlimQtd')||{}).value)||'').replace(',','.'))||0;
-    const ref=parseInt((document.getElementById('ciAlimRefeicoes')||{}).value,10)||0;
     const dias=parseInt((document.getElementById('ciAlimDias')||{}).value,10)||0;
-    const traz=parseFloat(String(((document.getElementById('ciAlimTraz')||{}).value)||'').replace(',','.'))||0;
-    const m=ciMealCounts();
-    let total=0;
-    if(dias===1) total=m.entrada;
-    else if(dias===2) total=m.entrada+m.saida;
-    else if(dias>=3) total=m.entrada+((dias-2)*ref)+m.saida;
-    const minimo=Math.round(qtd*total);
-    const def=minimo-traz;
+    const traz=ciNum(((document.getElementById('ciAlimTraz')||{}).value)||'');
+    const cTraz=ciNum(((document.getElementById('ciComidaTraz')||{}).value)||'');
     const unid=ciUnidLbl(segVal('ciAlimUnid'));
-    // Comida natural (Ração + natural) — gramas × refeições marcadas com natural
-    const temNat=(typeof ciTemNatural==='function')&&ciTemNatural();
-    const cQtd=temNat?(parseFloat(String(((document.getElementById('ciComidaQtd')||{}).value)||'').replace(',','.'))||0):0;
-    const cTraz=temNat?(parseFloat(String(((document.getElementById('ciComidaTraz')||{}).value)||'').replace(',','.'))||0):0;
-    const refNat=temNat?ciTotalRefNatural(dias):0;
-    const minimoComida=temNat?Math.round(cQtd*refNat):0;
-    const defComida=minimoComida-cTraz;
+    const temNat=ciTemNatural();
+    const dia=ciRefTotalDia();
+    const ent=ciRefTotalDiaParcial('ciMealEnt');
+    const sai=ciRefTotalDiaParcial('ciMealSai');
+    let racao=0, natural=0, total=0;
+    if(dias===1){ racao=ent.racao; natural=ent.natural; total=ent.n; }
+    else if(dias===2){ racao=ent.racao+sai.racao; natural=ent.natural+sai.natural; total=ent.n+sai.n; }
+    else if(dias>=3){ racao=ent.racao+((dias-2)*dia.racao)+sai.racao; natural=ent.natural+((dias-2)*dia.natural)+sai.natural; total=ent.n+((dias-2)*dia.n)+sai.n; }
+    const minimo=Math.round(racao), minimoComida=Math.round(natural);
+    const def=minimo-traz, defComida=minimoComida-cTraz;
     const el=document.getElementById('ciAlimSummary');
     if(el){
-      if(qtd>0&&dias>0&&total>0){
+      if(dias>0 && total>0 && (minimo>0||minimoComida>0)){
         let det='';
-        if(dias===1) det='Dia 1: '+m.entrada+' ref';
-        else if(dias===2) det='Entrada: '+m.entrada+' ref · Saída: '+m.saida+' ref';
-        else det='Entrada: '+m.entrada+' ref · '+(dias-2)+' dias × '+ref+' ref · Saída: '+m.saida+' ref';
-        let linhaDef='';
-        if(traz>0) linhaDef = def>0 ? '<span class="def-falta">Faltam '+def+unid+' na ração trazida.</span>' : '<span class="def-ok">Ração trazida cobre a estadia (sobram '+(-def)+unid+').</span>';
-        let linhaComida='';
-        if(temNat&&cQtd>0&&refNat>0){
-          linhaComida='<br>🍲 Comida natural: <strong>'+cQtd+'g</strong> × '+refNat+' refeições = <strong>'+minimoComida+'g</strong> ('+ciComidaRefNomes(ciComidaRefObj()).join(', ')+')';
-          if(cTraz>0) linhaComida += defComida>0 ? ' — <span class="def-falta">faltam '+defComida+'g</span>' : ' — <span class="def-ok">cobre (sobram '+(-defComida)+'g)</span>';
-        } else if(temNat){
-          linhaComida='<br>🍲 <span class="def-falta">Comida natural: preencha as gramas e marque em quais refeições.</span>';
+        if(dias===1) det='Dia 1: '+ent.n+' refeição(ões)';
+        else if(dias===2) det='Entrada: '+ent.n+' ref · Saída: '+sai.n+' ref';
+        else det='Entrada: '+ent.n+' ref · '+(dias-2)+' dias × '+dia.n+' ref · Saída: '+sai.n+' ref';
+        const porRef=ciRefsAtivas().map(function(r){
+          const p=[]; if(ciNum(r.racao)>0) p.push(r.racao+unid.trim()+' ração'); if(ciNum(r.natural)>0) p.push(r.natural+'g natural'); if(r.extra) p.push(r.extra);
+          return r.nome+(r.hora?(' ('+r.hora+')'):'')+': '+(p.length?p.join(' + '):'a definir');
+        }).join(' · ');
+        let linhas='';
+        if(minimo>0){
+          linhas+='📊 Ração: <strong>'+minimo+unid+'</strong> na estadia inteira';
+          if(traz>0) linhas += def>0 ? ' — <span class="def-falta">faltam '+def+unid+'</span>' : ' — <span class="def-ok">o que veio cobre (sobram '+(-def)+unid+')</span>';
         }
-        el.innerHTML='📊 <strong>'+minimo+unid+' necessários</strong> — '+qtd+unid+' × '+total+' refeições<br><span style="font-size:12px;color:var(--muted);font-weight:600">'+det+'</span>'+(linhaDef?('<br>'+linhaDef):'')+linhaComida;
+        if(temNat&&minimoComida>0){
+          linhas+=(linhas?'<br>':'')+'🍲 Comida natural: <strong>'+minimoComida+'g</strong> na estadia inteira';
+          if(cTraz>0) linhas += defComida>0 ? ' — <span class="def-falta">faltam '+defComida+'g</span>' : ' — <span class="def-ok">o que veio cobre (sobram '+(-defComida)+'g)</span>';
+        }
+        el.innerHTML=linhas
+          +'<br><span style="font-size:12px;color:var(--muted);font-weight:600">'+det+'</span>'
+          +'<br><span style="font-size:12px;color:var(--z-blue);font-weight:700">'+esc(porRef)+'</span>'
+          +((ciRefsExtras&&ciRefsExtras.length)?'<br><span style="font-size:11.5px;color:var(--muted);font-weight:600">As refeições extras foram contadas em todos os dias da estadia.</span>':'');
       } else {
-        el.textContent='Preencha as datas, a quantidade por refeição e marque as refeições para calcular o necessário.';
+        el.textContent='Preencha as datas, marque as refeições que ele faz e a quantidade de cada uma para calcular o necessário.';
       }
     }
-    return { minimo:minimo, deficit:def, total:total, dias:dias, comidaMinimo:minimoComida, comidaDeficit:defComida, comidaRef:refNat };
+    return { minimo:minimo, deficit:def, total:total, dias:dias, comidaMinimo:minimoComida, comidaDeficit:defComida, comidaRef:total, racaoDia:dia.racao, naturalDia:dia.natural, refDia:dia.n };
+  }
+  // Texto único "o que come em cada refeição" — usado no PDF, no resumo, no Plantão e na
+  // Conferência, para todo mundo ler exatamente a mesma coisa.
+  function ciAlimPorRefTexto(a){
+    a=a||{}; const refs=a.refs; if(!refs) return '';
+    const unid=(!a.unidade||a.unidade==='gramas')?'g':(' '+a.unidade);
+    const linhas=[];
+    const monta=function(nome,hora,r){
+      const p=[];
+      if(r.racao&&parseFloat(String(r.racao).replace(',','.'))>0) p.push(r.racao+unid.trim()+' de ração');
+      if(r.natural&&parseFloat(String(r.natural).replace(',','.'))>0) p.push(r.natural+'g de comida natural');
+      if(r.extra) p.push(r.extra);
+      if(!p.length) return;
+      linhas.push(nome+(hora?(' ('+hora+')'):'')+': '+p.join(' + '));
+    };
+    [{k:'cafe',n:'Café da manhã'},{k:'almoco',n:'Almoço'},{k:'jantar',n:'Jantar'}].forEach(function(f){
+      const r=(refs.fixas||{})[f.k]; if(r&&r.on) monta(f.n,'',r);
+    });
+    (refs.extras||[]).forEach(function(e){ monta(e.nome||'Refeição extra', e.hora||'', e); });
+    return linhas.join(' · ');
   }
 
   // ---- Spa Dermoprotetor (banho na saída) ----
@@ -8392,19 +8599,15 @@
       const spa=f.spa||{};
       if(f.alim){ setSeg('ciAlimTipo',f.alim.tipo||''); setSeg('ciAlimUnid',f.alim.unidade||''); setSeg('ciBanho',(spa.banho||f.banho||''));
         if(f.alim.marca) document.getElementById('ciAlimMarca').value=f.alim.marca;
-        if(f.alim.refeicoes) document.getElementById('ciAlimRefeicoes').value=f.alim.refeicoes;
-        if(f.alim.qtd) document.getElementById('ciAlimQtd').value=f.alim.qtd;
         // marcas de refeição Dia 1 / Último dia (se salvas na última estadia)
         const marcar=function(id,obj){ if(!obj) return; document.querySelectorAll('#'+id+' .ci-meal-btn').forEach(function(b){ if(obj[b.dataset.m]) b.classList.add('on'); }); };
         marcar('ciMealEnt',f.alim.entrada); marcar('ciMealSai',f.alim.saida);
-        marcar('ciAlimRef',f.alim.racaoRefeicoes);
-        // Comida natural da última estadia (Ração + natural)
-        if(f.alim.comida){
-          const _cq=document.getElementById('ciComidaQtd'); if(_cq&&f.alim.comida.qtd) _cq.value=f.alim.comida.qtd;
-          const _ct=document.getElementById('ciComidaTraz'); if(_ct&&f.alim.comida.trazida) _ct.value=f.alim.comida.trazida;
-          marcar('ciComidaRef',f.alim.comida.refeicoes);
-        }
-        if(typeof ciAlimTipoChange==='function') ciAlimTipoChange();
+        if(f.alim.comida){ const _ct=document.getElementById('ciComidaTraz'); if(_ct&&f.alim.comida.trazida) _ct.value=f.alim.comida.trazida; }
+        // Quantidade de cada refeição. Ficha nova traz `refs`; ficha antiga tinha uma quantidade
+        // só — nesse caso ela é espalhada nas refeições que estavam marcadas, para a consultora
+        // conferir com a tutora em vez de digitar tudo de novo.
+        if(typeof ciCarregarRefs==='function') ciCarregarRefs(f.alim);
+        else if(typeof ciAlimTipoChange==='function') ciAlimTipoChange();
       }
       // Spa Dermoprotetor — restaura tipo / horário / a confirmar da última vez
       const _bt=document.getElementById('ciBanhoTipo'); if(_bt&&spa.tipo) _bt.value=spa.tipo;
@@ -8463,15 +8666,18 @@
         obsGeral:((document.getElementById('ciObsGeral')||{}).value||'').trim(),
         medObs:((document.getElementById('ciMedObs')||{}).value||'').trim(),
         alim:{ obs:((document.getElementById('ciAlimObs')||{}).value||'').trim(), tipo:segVal('ciAlimTipo'), marca:(document.getElementById('ciAlimMarca').value||'').trim(),
-               refeicoes:(document.getElementById('ciAlimRefeicoes').value||'').trim(),
-               qtd:(document.getElementById('ciAlimQtd').value||'').trim(), unidade:segVal('ciAlimUnid'),
+               // NOVO: a quantidade de CADA refeição (é esta a verdade). Os campos abaixo são
+               // derivados dela, só para as telas antigas continuarem lendo a ficha.
+               refs:{ fixas:JSON.parse(JSON.stringify(ciRefs)), extras:JSON.parse(JSON.stringify(ciRefsExtras||[])) },
+               refeicoes:String(ciRefsAtivas().length||''),
+               qtd:ciQtdLegado('racao'), unidade:segVal('ciAlimUnid'),
                trazida:(document.getElementById('ciAlimTraz')?(document.getElementById('ciAlimTraz').value||'').trim():''),
                dias:(calc.dias||''), entrada:mealObj('ciMealEnt'), saida:mealObj('ciMealSai'),
                racaoRefeicoes:ciAlimRefObj(),
                minimo:(calc.minimo||0), deficit:(calc.deficit||0),
                // Comida natural (Ração + natural): quantidade + EM QUAIS refeições ela entra
                comida:(ciTemNatural()?{
-                 qtd:(document.getElementById('ciComidaQtd')?(document.getElementById('ciComidaQtd').value||'').trim():''),
+                 qtd:ciQtdLegado('natural'),
                  trazida:(document.getElementById('ciComidaTraz')?(document.getElementById('ciComidaTraz').value||'').trim():''),
                  refeicoes:ciComidaRefObj(),
                  minimo:(calc.comidaMinimo||0), deficit:(calc.comidaDeficit||0)
@@ -8491,11 +8697,23 @@
     const dados=ciColetarFicha();
     if(!dados.entrada){ if(st){ st.style.color='var(--crm-critico)'; st.textContent='✋ Informe a data de ENTRADA da estadia.'; } document.getElementById('ciEntrada').focus(); return; }
     // Ração + natural: não salva sem as gramas e sem marcar EM QUAIS refeições entra a natural
+    // Nenhuma refeição marcada = não dá para saber o que o FILHOt come. Não salva.
+    const _ativas=ciRefsAtivas();
+    if(!_ativas.length){
+      if(st){ st.style.color='var(--crm-critico)'; st.textContent='✋ Marque as refeições que o FILHOt faz e quanto ele come em cada uma.'; }
+      const _rb=document.getElementById('ciRefBlocos'); if(_rb) _rb.scrollIntoView({behavior:'smooth',block:'center'});
+      return;
+    }
+    // Refeição marcada e vazia é pior que refeição não marcada: quem cuida fica sem saber a quantidade.
+    const _vazia=_ativas.find(function(r){ return !ciNum(r.racao) && !ciNum(r.natural) && !String(r.extra||'').trim(); });
+    if(_vazia){
+      if(st){ st.style.color='var(--crm-critico)'; st.textContent='✋ Falta a quantidade de: '+_vazia.nome+'. Preencha a ração, a comida natural ou o complemento dessa refeição.'; }
+      const _rb=document.getElementById('ciRefBlocos'); if(_rb) _rb.scrollIntoView({behavior:'smooth',block:'center'});
+      return;
+    }
     if(ciTemNatural()){
-      const _cq=parseFloat(String(((document.getElementById('ciComidaQtd')||{}).value)||'').replace(',','.'))||0;
-      const _nRef=document.querySelectorAll('#ciComidaRef .ci-meal-btn.on').length;
-      if(!_cq){ if(st){ st.style.color='var(--crm-critico)'; st.textContent='✋ Você marcou Ração + natural. Preencha as gramas de comida natural por refeição.'; } const c=document.getElementById('ciComidaQtd'); if(c){ c.scrollIntoView({behavior:'smooth',block:'center'}); c.focus(); } return; }
-      if(!_nRef){ if(st){ st.style.color='var(--crm-critico)'; st.textContent='✋ Marque em quais refeições entra a comida natural (café, almoço e/ou jantar).'; } const p=document.getElementById('ciComidaRef'); if(p) p.scrollIntoView({behavior:'smooth',block:'center'}); return; }
+      const _temNat=_ativas.some(function(r){ return ciNum(r.natural)>0; });
+      if(!_temNat){ if(st){ st.style.color='var(--crm-critico)'; st.textContent='✋ Você marcou comida natural. Preencha as gramas de natural em pelo menos uma refeição.'; } const _rb=document.getElementById('ciRefBlocos'); if(_rb) _rb.scrollIntoView({behavior:'smooth',block:'center'}); return; }
     }
     const meds=ciColetarMeds();
     const probs=ciValidarMeds(meds);
@@ -8565,7 +8783,8 @@
     L.push(ciHosp.nome+(ciHosp.tutor?(' · Tutor: '+ciHosp.tutor):''));
     L.push('Estadia: '+ciBRdata(d.entrada)+(d.saida?(' até '+ciBRdata(d.saida)):''));
     const a=d.ficha.alim;
-    if(a.tipo||a.marca||a.qtd){ L.push(''); L.push('Alimentação: '+[a.tipo,a.marca,(a.qtd?(a.qtd+' '+(a.unidade||'')):''),(a.refeicoes?(a.refeicoes+'x/dia'):'')].filter(Boolean).join(' · '));
+    if(a.tipo||a.marca||a.qtd||a.refs){ L.push(''); L.push('Alimentação: '+[a.tipo,a.marca,(a.qtd?(a.qtd+' '+(a.unidade||'')):''),(a.refeicoes?(a.refeicoes+'x/dia'):'')].filter(Boolean).join(' · '));
+      var _prTxt=(typeof ciAlimPorRefTexto==='function')?ciAlimPorRefTexto(a):''; if(_prTxt) L.push('Em cada refeição: '+_prTxt);
       if(a.dias) L.push('Estadia: '+a.dias+' dia(s) · ração necessária aprox.: '+(a.minimo||0)+ciUnidLbl(a.unidade)+(a.trazida?(' · trazido: '+a.trazida+'g'):''));
       if(a.comida&&a.comida.qtd){ L.push('Comida natural: '+a.comida.qtd+'g/refeição · em: '+ciComidaRefNomes(a.comida.refeicoes).join(', ')+(a.comida.trazida?(' · trazido: '+a.comida.trazida+'g'):'')+(a.comida.minimo?(' · necessária aprox.: '+a.comida.minimo+'g'):'')); } }
     const spa=(d.ficha.spa)||{};
@@ -8604,12 +8823,14 @@
     add('Estadia',{bold:true,size:12});
     add('Entrada: '+ciBRdata(d.entrada)+(a.dias?('    ('+a.dias+' dia(s))'):''),{gap:3});
     add('SAIDA: '+(d.saida?ciBRdata(d.saida):'a confirmar'),{bold:true,size:12,gap:8});
-    if(a.tipo||a.marca||a.qtd){
+    if(a.tipo||a.marca||a.qtd||a.refs){
       var uni=ciUnidLbl(a.unidade);
       var temNat=!!(a.comida&&a.comida.qtd);
       var racaoQ=(a.qtd?(a.qtd+uni):'(quantidade nao informada)');
       add('Alimentacao',{bold:true,size:12,gap:3});
       add('Tipo: '+(a.tipo||'-')+(a.marca?('    Marca: '+a.marca):''),{gap:temNat?5:3});
+      var _prPdf=(typeof ciAlimPorRefTexto==='function')?ciAlimPorRefTexto(a):'';
+      if(_prPdf){ add('EM CADA REFEICAO:',{bold:true,size:11,gap:3}); ciAlimPorRefTexto(a).split(' · ').forEach(function(l){ add('- '+l,{gap:2}); }); }
       if(temNat){
         var meals=ciComidaRefNomesCap(a.comida.refeicoes);
         var comQ=a.comida.qtd+'g';
@@ -8721,11 +8942,14 @@
     h='<div class="pf-h1">Zêluz · AuAulândia — Ficha de Check-in</div>';
     h+='<div class="pf-sub">'+esc(ciHosp.nome)+(ciHosp.raca?(' · '+esc(ciHosp.raca)):'')+(ciHosp.tutor?(' · Tutor: '+esc(ciHosp.tutor)):'')+'</div>';
     h+='<div class="pf-sec"><h3>Estadia</h3><div class="pf-row">Entrada: <strong>'+ciBRdata(d.entrada)+'</strong>'+(a.dias?('  ·  '+esc(a.dias)+' dia(s)'):'')+'</div><div class="pf-row" style="font-size:15px"><strong>SAÍDA: '+(d.saida?ciBRdata(d.saida):'a confirmar')+'</strong></div></div>';
-    if(a.tipo||a.marca||a.qtd){
+    if(a.tipo||a.marca||a.qtd||a.refs){
       var uni=ciUnidLbl(a.unidade); var temNat=!!(a.comida&&a.comida.qtd);
       var racaoQ=a.qtd?(a.qtd+uni):'(quantidade não informada)';
       h+='<div class="pf-sec"><h3>Alimentação</h3>';
       h+='<div class="pf-row"><strong>Tipo:</strong> '+esc(a.tipo||'—')+(a.marca?('  ·  <strong>Marca:</strong> '+esc(a.marca)):'')+'</div>';
+        (function(){ var pr=(typeof ciAlimPorRefTexto==='function')?ciAlimPorRefTexto(a):''; if(!pr) return;
+          h+='<div class="pf-row" style="margin-top:5px;font-weight:800;color:#234D67">EM CADA REFEIÇÃO:</div>';
+          pr.split(' · ').forEach(function(l){ h+='<div class="pf-row">• '+esc(l)+'</div>'; }); })();
       if(temNat){
         var meals=ciComidaRefNomesCap(a.comida.refeicoes); var comQ=a.comida.qtd+'g';
         h+='<div class="pf-row" style="margin-top:6px;font-weight:800;color:#234D67">COMO ALIMENTAR (leia com atenção — não trocar):</div>';
@@ -8773,10 +8997,13 @@
       h='<div class="pf-h1">Zêluz · AuAulândia — Ficha de Check-in</div>';
       h+='<div class="pf-sub">'+esc(est.nome||'')+(est.raca?(' · '+esc(est.raca)):'')+(est.tutor?(' · Tutor: '+esc(est.tutor)):'')+'</div>';
       h+='<div class="pf-sec"><h3>Estadia</h3><div class="pf-row">Entrada: <strong>'+ciBRdata(est.entrada)+'</strong>'+(a.dias?('  ·  '+esc(a.dias)+' dia(s)'):'')+'</div><div class="pf-row" style="font-size:15px"><strong>SAÍDA: '+(est.saida?ciBRdata(est.saida):'a confirmar')+'</strong></div></div>';
-      if(a.tipo||a.marca||a.qtd){
+      if(a.tipo||a.marca||a.qtd||a.refs){
         var uni=ciUnidLbl(a.unidade); var temNat=!!(a.comida&&a.comida.qtd); var racaoQ=a.qtd?(a.qtd+uni):'(quantidade não informada)';
         h+='<div class="pf-sec"><h3>Alimentação</h3>';
         h+='<div class="pf-row"><strong>Tipo:</strong> '+esc(a.tipo||'—')+(a.marca?('  ·  <strong>Marca:</strong> '+esc(a.marca)):'')+'</div>';
+        (function(){ var pr=(typeof ciAlimPorRefTexto==='function')?ciAlimPorRefTexto(a):''; if(!pr) return;
+          h+='<div class="pf-row" style="margin-top:5px;font-weight:800;color:#234D67">EM CADA REFEIÇÃO:</div>';
+          pr.split(' · ').forEach(function(l){ h+='<div class="pf-row">• '+esc(l)+'</div>'; }); })();
         if(temNat){
           var meals=ciComidaRefNomesCap(a.comida.refeicoes); var comQ=a.comida.qtd+'g';
           h+='<div class="pf-row" style="margin-top:6px;font-weight:800;color:#234D67">COMO ALIMENTAR (leia com atenção — não trocar):</div>';
@@ -8816,6 +9043,8 @@
 
   function _cfIndexarEstadias(v){
     CF_ESTADIAS={};
+    EST_TODAS=v||{};   // guarda TODAS (a aba Peludinhos Hóspedes precisa do histórico, não só da última)
+    try{ var vh=document.getElementById('v-hospedes'); if(vh&&vh.classList.contains('active')&&typeof renderHospedesAba==='function') renderHospedesAba(); }catch(e){}
     Object.keys(v||{}).forEach(function(id){
       var e=v[id]||{}; var k=e.refKey; if(!k) return;
       var atual=CF_ESTADIAS[k];
@@ -8830,6 +9059,231 @@
       var lista=document.getElementById('cf-lista');
       if(v2&&v2.classList.contains('active')&&lista&&lista.style.display!=='none'&&typeof renderCfLista==='function') renderCfLista();
     }catch(e){}
+  }
+  // ==================================================================================
+  // ===== PELUDINHOS HÓSPEDES — a tela das ESTADIAS (entrada → saída) ================
+  // A planilha da recepção só sabe quem está HOJE. Quando a tutora estende a estadia e
+  // ninguém atualiza a planilha, o FILHOt some do Plantão (foi o Ragnar, 30/jul/2026).
+  // Decisão de Adriana: a estadia passa a viver aqui — o que for alterado no app MANDA e a
+  // planilha não desfaz. Fica gravado quem mudou, quando e qual era a data anterior.
+  // ==================================================================================
+  var EST_TODAS={};       // {id: estadia} — todas as estadias (o listener já baixa tudo)
+  var hospAbaEdit=null;   // id da estadia sendo editada na própria linha
+  var hospNovaPend=null;  // FILHOt escolhido para uma hospedagem nova, esperando as datas
+  var HOSP_SO_PLANILHA=[]; // hóspedes do dia que vieram só da planilha (ainda sem estadia no app)
+
+  function hospAbaPode(){ const r=document.body.dataset.role||''; return r==='gestao'||r==='supervisor'||r==='diretoria'||r==='consultora'; }
+  function hospHojeISO(){ const d=new Date(),p=function(x){return String(x).padStart(2,'0');}; return d.getFullYear()+'-'+p(d.getMonth()+1)+'-'+p(d.getDate()); }
+  function estStatusDe(e){
+    e=e||{}; const st=(e.status||'ativa');
+    if(st==='cancelada') return 'cancelada';
+    if(st!=='ativa') return 'saiu';
+    const hj=hospHojeISO();
+    if(e.entrada && hj<e.entrada) return 'achegar';
+    if(e.saida && hj>e.saida) return 'saiu';
+    return 'agora';
+  }
+  function hospEstFoto(e){ try{ return (typeof fotoDe==='function')?fotoDe({nome:e.nome,tutor:e.tutor,refKey:e.refKey}):''; }catch(x){ return ''; } }
+  // Uma linha da lista. Em edição, a própria linha vira o formulário das datas — sem modal novo,
+  // que em celular some atrás do teclado.
+  function hospAbaLinha(o,row){
+    const e=o.e||{}, id=o.id, st=estStatusDe(e);
+    const tag={agora:['agora','HOSPEDADO'],achegar:['achegar','A CHEGAR'],saiu:['saiu','JÁ SAIU'],cancelada:['saiu','CANCELADA']}[st]||['saiu',''];
+    const foto=hospEstFoto(e);
+    const av=foto?'<div class="he-av" style="background-image:url(\''+foto+'\')"></div>'
+                 :'<div class="he-av" style="background:'+((typeof corPel==='function')?corPel(row):'#5AABB5')+'">'+escAttr((e.nome||'?').charAt(0).toUpperCase())+'</div>';
+    if(hospAbaEdit===id){
+      return '<div class="hosp-est he-edit">'
+        + av
+        + '<div class="he-main"><div class="he-nome">'+escAttr(e.nome||'')+'</div>'
+        + '<div class="he-sub">Mudando as datas da hospedagem. A planilha não desfaz o que for salvo aqui.</div></div>'
+        + '<label style="font-size:12px;font-weight:700;color:var(--muted)">Entrada<br><input type="date" class="cad-in" id="hospEdIni" value="'+escAttr(e.entrada||'')+'"></label>'
+        + '<label style="font-size:12px;font-weight:700;color:var(--muted)">Saída<br><input type="date" class="cad-in" id="hospEdFim" value="'+escAttr(e.saida||'')+'"></label>'
+        + '<div class="he-acoes"><button class="btn btn-primary" onclick="hospSalvarDatas(\''+id+'\')">Salvar</button>'
+        + '<button class="btn" onclick="hospCancelarEdicao()">Cancelar</button></div></div>';
+    }
+    // Hóspede que só existe na planilha de hoje: ainda não tem estadia com data no app.
+    // Sem estadia não há o que editar — o botão registra as datas e cria a pasta da estadia.
+    if(e._soPlanilha){
+      return '<div class="hosp-est">'
+        + av
+        + '<div class="he-main"><div class="he-nome">'+escAttr(e.nome||'')+'<span class="he-tag saiu">SÓ NA PLANILHA</span></div>'
+        + '<div class="he-sub">'+escAttr(e.raca||'raça a cadastrar')+' · Tutor: '+escAttr(e.tutor||'a confirmar')+'</div>'
+        + '<div class="he-sub">Está no Plantão de hoje pela planilha, mas sem datas registradas no app. Registre para ele não sumir se a planilha não for atualizada.</div></div>'
+        + '<div class="he-datas" style="color:var(--muted)">sem datas</div>'
+        + '<div class="he-acoes">'
+        + (hospAbaPode()?'<button class="btn btn-primary" onclick="hospRegistrarDaPlanilha('+(e._spIdx||0)+')">Registrar datas</button>':'')
+        + '</div></div>';
+    }
+    const ent=(typeof ciBRdata==='function')?ciBRdata(e.entrada):(e.entrada||'—');
+    const sai=e.saida?((typeof ciBRdata==='function')?ciBRdata(e.saida):e.saida):'a confirmar';
+    const temFicha=!!(e.ficha&&e.ficha.alim&&(e.ficha.alim.tipo||e.ficha.alim.qtd));
+    const nMed=Array.isArray(e.medicacao)?e.medicacao.length:0;
+    const selos=(temFicha?'<span class="he-tag agora">ALIMENTAÇÃO NA FICHA</span>':'<span class="he-tag saiu">SEM FICHA DE CHECK-IN</span>')
+              + (nMed?'<span class="he-tag achegar">'+nMed+' MEDICAÇÃO'+(nMed>1?'S':'')+'</span>':'');
+    const alt=e.alterado_por?('<div class="he-sub" style="color:var(--z-gold-deep)">Data alterada por '+escAttr(e.alterado_por)+(e.alteracao_anterior&&e.alteracao_anterior.saida?(' — antes saía '+((typeof ciBRdata==='function')?ciBRdata(e.alteracao_anterior.saida):e.alteracao_anterior.saida)):'')+'</div>'):'';
+    return '<div class="hosp-est">'
+      + av
+      + '<div class="he-main" style="cursor:pointer" onclick="hospAbrirFicha(\''+id+'\')">'
+      + '<div class="he-nome">'+escAttr(e.nome||'')+'<span class="he-tag '+tag[0]+'">'+tag[1]+'</span></div>'
+      + '<div class="he-sub">'+escAttr(e.raca||'raça a cadastrar')+' · Tutor: '+escAttr(e.tutor||'a confirmar')+'</div>'
+      + '<div class="he-sub">'+selos+'</div>'+alt+'</div>'
+      + '<div class="he-datas">'+ent+' &rarr; '+sai+'</div>'
+      + '<div class="he-acoes">'
+      + (hospAbaPode()?'<button class="btn btn-primary" onclick="hospEditarDatas(\''+id+'\')">Mudar datas</button>':'')
+      + '<button class="btn" onclick="hospAbrirFicha(\''+id+'\')">Abrir ficha</button>'
+      + '</div></div>';
+  }
+  function renderHospedesAba(){
+    const box=document.getElementById('hospAbaLista'); if(!box) return;
+    const q=(typeof jsNorm==='function')?jsNorm((document.getElementById('hospAbaBusca')||{}).value||''):'';
+    const todas=Object.keys(EST_TODAS||{}).map(function(id){ return {id:id,e:EST_TODAS[id]||{}}; })
+      .filter(function(o){ return o.e && o.e.nome; })
+      .filter(function(o){ return !q || jsNorm([o.e.nome,o.e.tutor,o.e.raca].join(' ')).indexOf(q)>=0; })
+      .sort(function(a,b){ return String(b.e.entrada||'').localeCompare(String(a.e.entrada||'')) || ((b.e._ts||0)-(a.e._ts||0)); });
+    HOSP_SO_PLANILHA=[];
+    const g={agora:[],achegar:[],saiu:[]};
+    todas.forEach(function(o){ const s=estStatusDe(o.e); if(s==='agora') g.agora.push(o); else if(s==='achegar') g.achegar.push(o); else g.saiu.push(o); });
+    // Quem está no Plantão de hoje SÓ pela planilha (nunca teve check-in) também precisa aparecer —
+    // senão não há como corrigir a data dele por aqui. Entra como "só na planilha", sem id de estadia.
+    try{
+      (hospedes||[]).forEach(function(h){
+        if(!h || h.mascote) return;
+        const jaTem=g.agora.some(function(o){ return jsNorm(o.e.nome||'')===jsNorm(h.nome||''); });
+        if(jaTem) return;
+        if(q && jsNorm([h.nome,tutorDe(h),h.raca].join(' ')).indexOf(q)<0) return;
+        const reg={nome:h.nome, tutor:(typeof tutorDe==='function'?tutorDe(h):(h.tutor||'')), raca:h.raca||'', refKey:h.refKey||''};
+        HOSP_SO_PLANILHA.push(reg);
+        g.agora.push({id:'', e:Object.assign({}, reg, {entrada:'', saida:'', status:'ativa', _soPlanilha:true, _spIdx:HOSP_SO_PLANILHA.length-1})});
+      });
+    }catch(e){}
+    const cnt=document.getElementById('hospAbaCount');
+    if(cnt) cnt.textContent=g.agora.length+' hospedado'+(g.agora.length===1?'':'s')+' agora · '+g.achegar.length+' a chegar · '+g.saiu.length+' no histórico';
+    let h='';
+    if(hospNovaPend){
+      h+='<div class="hosp-est he-edit">'
+        + '<div class="he-main"><div class="he-nome">Nova hospedagem — '+escAttr(hospNovaPend.nome||'')+'</div>'
+        + '<div class="he-sub">Tutor: '+escAttr(hospNovaPend.tutor||'a confirmar')+'. Informe de quando a quando o FILHOt fica.</div></div>'
+        + '<label style="font-size:12px;font-weight:700;color:var(--muted)">Entrada<br><input type="date" class="cad-in" id="hospNovaIni" value="'+escAttr(hospHojeISO())+'"></label>'
+        + '<label style="font-size:12px;font-weight:700;color:var(--muted)">Saída<br><input type="date" class="cad-in" id="hospNovaFim" value=""></label>'
+        + '<div class="he-acoes"><button class="btn btn-primary" onclick="hospSalvarNova()">Salvar hospedagem</button>'
+        + '<button class="btn" onclick="hospNovaPend=null;renderHospedesAba()">Cancelar</button></div></div>';
+    }
+    const bloco=function(titulo,lista,vazio,limite){
+      let s='<div class="he-grp">'+titulo+' ('+lista.length+')</div>';
+      if(!lista.length) return s+'<div class="he-sub" style="color:var(--muted);padding:4px 2px 10px">'+vazio+'</div>';
+      const mostrar=(limite&&!q)?lista.slice(0,limite):lista;
+      s+=mostrar.map(function(o,i){ return hospAbaLinha(o,i); }).join('');
+      if(mostrar.length<lista.length) s+='<div class="he-sub" style="padding:2px 2px 10px">Mostrando as '+mostrar.length+' hospedagens mais recentes. Use a busca para achar as outras.</div>';
+      return s;
+    };
+    h+=bloco('Hospedados agora',g.agora,'Ninguém hospedado no momento.');
+    h+=bloco('A chegar',g.achegar,'Nenhum check-in agendado para os próximos dias.');
+    h+=bloco('Já saíram — histórico',g.saiu,'Nenhuma hospedagem encerrada ainda.',40);
+    box.innerHTML=h;
+  }
+  function hospEditarDatas(id){
+    if(!hospAbaPode()){ alert('Só a Gestão, a Supervisão, a Consultora ou a Diretoria podem mudar as datas de uma hospedagem.'); return; }
+    hospAbaEdit=id; hospNovaPend=null; renderHospedesAba();
+    setTimeout(function(){ try{ const el=document.getElementById('hospEdFim'); if(el){ el.scrollIntoView({behavior:'smooth',block:'center'}); el.focus(); } }catch(e){} },50);
+  }
+  function hospCancelarEdicao(){ hospAbaEdit=null; renderHospedesAba(); }
+  // "Registrar datas" de quem está hoje só pela planilha: abre o mesmo formulário da hospedagem nova,
+  // já com o FILHOt escolhido. A partir daí a estadia passa a ser do app.
+  function hospRegistrarDaPlanilha(i){
+    if(!hospAbaPode()){ alert('Só a Gestão, a Supervisão, a Consultora ou a Diretoria podem registrar as datas.'); return; }
+    const reg=HOSP_SO_PLANILHA[i]; if(!reg) return;
+    hospAbaEdit=null; hospNovaPend=Object.assign({},reg);
+    renderHospedesAba();
+    setTimeout(function(){ try{ const el=document.getElementById('hospNovaFim'); if(el){ el.scrollIntoView({behavior:'smooth',block:'center'}); el.focus(); } }catch(e){} },50);
+  }
+  function hospSalvarDatas(id){
+    if(!hospAbaPode()){ alert('Sem permissão para mudar as datas.'); return; }
+    const e=EST_TODAS[id]||{};
+    const ent=(document.getElementById('hospEdIni')||{}).value||'';
+    const sai=(document.getElementById('hospEdFim')||{}).value||'';
+    if(!ent){ alert('Informe a data de ENTRADA da hospedagem.'); return; }
+    if(sai && sai<ent){ alert('A saída não pode ser antes da entrada. Confira as datas.'); return; }
+    if(!sai && !confirm('Sem data de saída, '+(e.nome||'o FILHOt')+' fica no Plantão todos os dias até alguém encerrar a hospedagem.\n\nSalvar assim mesmo?')) return;
+    const patch={ entrada:ent, saida:sai,
+      alterado_por:(typeof quemSou==='function'?quemSou():'-'), alterado_ts:Date.now(),
+      alteracao_anterior:{entrada:e.entrada||'', saida:e.saida||''} };
+    // Estadia já encerrada e datas esticadas para a frente = o FILHOt continua aqui. Reabre.
+    const st=(e.status||'ativa');
+    if(st!=='ativa'){
+      if(!confirm('Esta hospedagem está marcada como '+(st==='cancelada'?'CANCELADA':'encerrada')+'.\n\nReabrir '+(e.nome||'a hospedagem')+' com as novas datas? Ele volta a aparecer no Plantão.')) return;
+      patch.status='ativa'; patch.reabertaPor=(typeof quemSou==='function'?quemSou():'-'); patch.reabertaTs=Date.now();
+    }
+    if(!DB){ alert('Sem conexão com o banco agora — tente de novo em instantes.'); return; }
+    DB.ref('auaulandia/estadias/'+id).update(patch).then(function(){
+      if(typeof audit==='function') audit('estadia-datas','mudou as datas da hospedagem',{pet:e.nome||'',de:(e.entrada||'')+'>'+(e.saida||''),para:ent+'>'+sai});
+      hospAbaEdit=null;
+      if(typeof carregarHospedes==='function') carregarHospedes();
+      renderHospedesAba();
+      alert('Datas salvas. '+(e.nome||'O FILHOt')+' fica de '+((typeof ciBRdata==='function')?ciBRdata(ent):ent)+' até '+(sai?((typeof ciBRdata==='function')?ciBRdata(sai):sai):'data a confirmar')+'.\n\nEle já aparece no Plantão nesses dias, mesmo que a planilha não tenha sido atualizada.');
+    }).catch(function(err){ alert('Erro ao salvar as datas: '+((err&&err.message)||err)); });
+  }
+  // Nova hospedagem: reaproveita a MESMA busca do "Adicionar hóspede" (cadastro-mestre,
+  // com aviso de alergia) — o tipo 'estadia' faz o escolherHospede cair aqui em vez de
+  // criar um lançamento solto de hoje.
+  function novaHospedagem(){
+    if(!hospAbaPode()){ alert('Só a Gestão, a Supervisão, a Consultora ou a Diretoria podem lançar uma hospedagem.'); return; }
+    hospAbaEdit=null;
+    if(typeof abrirHospBuscaModal==='function') abrirHospBuscaModal('estadia');
+  }
+  function hospSalvarNova(){
+    const p=hospNovaPend; if(!p) return;
+    const ent=(document.getElementById('hospNovaIni')||{}).value||'';
+    const sai=(document.getElementById('hospNovaFim')||{}).value||'';
+    if(!ent){ alert('Informe a data de ENTRADA.'); return; }
+    if(sai && sai<ent){ alert('A saída não pode ser antes da entrada.'); return; }
+    if(!DB){ alert('Sem conexão com o banco agora — tente de novo em instantes.'); return; }
+    // Hóspede recorrente (a Lisa hospeda toda quinta e sai sábado): a ALIMENTAÇÃO da última
+    // estadia vem junto, para não redigitar tudo. MEDICAÇÃO nunca é copiada — remédio muda de
+    // uma semana para a outra e dose repetida às cegas foi o que dobrou a medicação do Zeus.
+    let fichaAnterior=null, deQuando='';
+    Object.keys(EST_TODAS||{}).forEach(function(id){
+      const e=EST_TODAS[id]||{};
+      const mesmo = (p.refKey && e.refKey===p.refKey) || (jsNorm(e.nome||'')===jsNorm(p.nome||''));
+      if(!mesmo || !e.ficha) return;
+      if(!fichaAnterior || (e._ts||0)>(fichaAnterior._ts||0)){ fichaAnterior=Object.assign({},e.ficha,{_ts:e._ts||0}); deQuando=e.entrada||''; }
+    });
+    const est={ refKey:p.refKey||'', nome:p.nome||'', tutor:p.tutor||'', raca:p.raca||'',
+      entrada:ent, saida:sai, status:'ativa',
+      origem:'aba-hospedes', criado_por:(typeof quemSou==='function'?quemSou():'-'), _ts:Date.now() };
+    if(fichaAnterior){ delete fichaAnterior._ts; est.ficha=fichaAnterior; est.ficha_copiada_de=deQuando||'estadia anterior'; }
+    DB.ref('auaulandia/estadias').push(est).then(function(){
+      if(typeof audit==='function') audit('estadia-criada','hospedagem lançada pela aba Peludinhos Hóspedes',{pet:p.nome||'',entrada:ent,saida:sai});
+      hospNovaPend=null;
+      if(typeof carregarHospedes==='function') carregarHospedes();
+      renderHospedesAba();
+      alert(p.nome+' hospedado(a) de '+((typeof ciBRdata==='function')?ciBRdata(ent):ent)+' até '+(sai?((typeof ciBRdata==='function')?ciBRdata(sai):sai):'data a confirmar')+'.'
+        + (fichaAnterior?'\n\nA ALIMENTAÇÃO da última hospedagem veio junto — confira se a tutora mudou algo.\nA MEDICAÇÃO não é copiada: se ele estiver tomando algo agora, lance no Check-in.':'\n\nAinda sem ficha de alimentação: faça o Check-in para registrar comida, pertences e medicação.'));
+    }).catch(function(err){ alert('Erro ao lançar a hospedagem: '+((err&&err.message)||err)); });
+  }
+  // Abre a FICHA COMPLETA do peludinho (a mesma do Day Care: vacinas, carrapaticida, tudo).
+  // Hóspede que nunca foi auluno pode não ter cadastro-mestre ainda — aí oferece criar na hora.
+  function hospAbrirFicha(id){
+    const e=EST_TODAS[id]||{}; if(!e.nome) return;
+    let p=(typeof pelMestreDe==='function')?pelMestreDe({nome:e.nome,tutor:e.tutor,raca:e.raca,refKey:e.refKey}):null;
+    if(!p){
+      if(!canEditPel()){ alert(e.nome+' ainda não tem ficha no cadastro de peludinhos. Peça à Gestão ou à Supervisão para criar.'); return; }
+      if(!confirm(e.nome+' ainda não tem ficha no cadastro de peludinhos.\n\nCriar a ficha agora com os dados da hospedagem (nome, tutor e raça)? Depois é só completar vacinas, carrapaticida e o resto.')) return;
+      const novo={n:e.nome, raca:e.raca||'', freq:'', tutor:e.tutor||'', nasc:'', dias:[]};
+      const key=pelKey(novo);
+      if(!PELUDINHOS.some(function(x){ return pelKey(x)===key; })){
+        PELUDINHOS.push(novo);
+        PELUDINHOS.sort(function(a,b){ return jsNorm(a.n).localeCompare(jsNorm(b.n))||jsNorm(a.tutor||'').localeCompare(jsNorm(b.tutor||'')); });
+        const reg={_novo:true,n:e.nome,tutor:e.tutor||'',raca:e.raca||'',nasc:'',dias:[],freq:''};
+        try{ localStorage.setItem('zeluz_pel_'+key,JSON.stringify(reg)); }catch(x){}
+        if(DB) DB.ref('daycare/cadastro/'+key).update(reg).catch(function(){});
+        if(DB && !e.refKey) DB.ref('auaulandia/estadias/'+id).update({refKey:key}).catch(function(){});
+      }
+      p=PELUDINHOS.find(function(x){ return pelKey(x)===key; });
+      if(!p) return;
+    }
+    const i=PELUDINHOS.indexOf(p); if(i<0) return;
+    pelOrigem='hospedes'; irParaView('ficha'); abrirPeludinho(i);
   }
   function cfPendente(h){
     var k=(typeof medAgendaKey==='function')?medAgendaKey(h):''; var reg=k?CF_ESTADIAS[k]:null; if(!reg) return null;
@@ -8956,8 +9410,10 @@
     // Estadia
     h+=box('Estadia', '<div style="font-size:13px;color:var(--z-blue-soft)">Entrada: <strong>'+(cfEstadia.entrada?ciBRdata(cfEstadia.entrada):'—')+'</strong> · Saída: <strong>'+(cfEstadia.saida?ciBRdata(cfEstadia.saida):'—')+'</strong>'+(a.dias?(' · '+escAttr(a.dias)+' dia(s)'):'')+'</div>');
     // Alimentação
-    if(a.tipo||a.marca||a.qtd){
+    if(a.tipo||a.marca||a.qtd||a.refs){
       var lin='<div style="font-size:13px;color:var(--z-blue-soft)"><strong>Tipo:</strong> '+escAttr(a.tipo||'—')+(a.marca?(' · Marca: '+escAttr(a.marca)):'')+'</div>';
+      var _prBox=(typeof ciAlimPorRefTexto==='function')?ciAlimPorRefTexto(a):'';
+      if(_prBox) lin+='<div style="font-size:13px;color:var(--z-blue);font-weight:700;margin-top:3px">Em cada refeição: '+escAttr(_prBox)+'</div>';
       if(a.qtd) lin+='<div style="font-size:13px;color:var(--z-blue-soft)"><strong>Ração:</strong> '+escAttr(a.qtd)+' '+escAttr(a.unidade||'g')+'/refeição'+(a.refeicoes?(' · '+escAttr(a.refeicoes)+'x/dia'):'')+(a.minimo?(' · necessário aprox. '+a.minimo+(a.unidade&&a.unidade!=='gramas'?(' '+a.unidade):'g')):'')+'</div>';
       if(a.comida&&a.comida.qtd) lin+='<div style="font-size:13px;color:#2B7A4B"><strong>Comida natural:</strong> '+escAttr(a.comida.qtd)+'g/refeição em '+escAttr((typeof ciComidaRefNomes==='function'?ciComidaRefNomes(a.comida.refeicoes).join(', '):''))+(a.comida.minimo?(' · necessária aprox. '+a.comida.minimo+'g'):'')+'</div>';
       h+=box('Alimentação', lin);
@@ -8980,7 +9436,7 @@
     if(topo){
       var te='<div style="font-size:13px;color:var(--z-blue-soft)">Entrada: <strong>'+(cfEstadia.entrada?ciBRdata(cfEstadia.entrada):'—')+'</strong> · Saída: <strong>'+(cfEstadia.saida?ciBRdata(cfEstadia.saida):'—')+'</strong>'+(a.dias?(' · '+escAttr(a.dias)+' dia(s)'):'')+'</div>';
       var ht='<div style="font-weight:800;color:var(--z-blue);font-size:16px;margin-bottom:6px">Estadia e Alimentação</div>'+box('Estadia',te);
-      if(a.tipo||a.marca||a.qtd){
+      if(a.tipo||a.marca||a.qtd||a.refs){
         var la='<div style="font-size:13px;color:var(--z-blue-soft)"><strong>Tipo:</strong> '+escAttr(a.tipo||'—')+(a.marca?(' · Marca: '+escAttr(a.marca)):'')+'</div>';
         if(a.qtd) la+='<div style="font-size:13px;color:var(--z-blue-soft)"><strong>Ração:</strong> '+escAttr(a.qtd)+' '+escAttr(a.unidade||'g')+'/refeição'+(a.refeicoes?(' · '+escAttr(a.refeicoes)+'x/dia'):'')+'</div>';
         if(a.comida&&a.comida.qtd) la+='<div style="font-size:13px;color:#2B7A4B"><strong>Comida natural:</strong> '+escAttr(a.comida.qtd)+'g/refeição</div>';
