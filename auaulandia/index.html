@@ -5259,10 +5259,20 @@
     return {estado:'ok', label:'ativo até '+fmtBR(r.fim), dias:dias};
   }
   // aplica uma renovação: calcula fim e mês da próxima a partir do início e do plano
+  // O plano é pago ANTECIPADAMENTE e vale até o ÚLTIMO DIA DO MÊS de vigência — não são
+  // "6 meses corridos a partir do dia". Renovou em 05/08 no semestral: vale agosto, setembro,
+  // outubro, novembro, dezembro e janeiro, terminando em 31/01. (Regra da Adriana, 30/jul/2026.)
+  function fimVigenciaISO(iniISO, meses){
+    if(!/^\d{4}-\d{2}-\d{2}$/.test(iniISO||'')) return '';
+    const a=iniISO.split('-').map(Number);
+    const d=new Date(a[0], (a[1]-1)+(meses||1), 0); // dia 0 do mês seguinte = último dia do mês final
+    const p=x=>String(x).padStart(2,'0');
+    return d.getFullYear()+'-'+p(d.getMonth()+1)+'-'+p(d.getDate());
+  }
   function aplicarRenovacao(planoKey, aulas, iniISO){
     const pl=planos()[planoKey]; if(!pl||!iniISO) return null;
     const meses=PLANO_MESES[pl.compromisso]||1;
-    const fim=addMesesISO(iniISO, meses);
+    const fim=fimVigenciaISO(iniISO, meses);
     return { plano:planoKey, aulas:aulas, inicio:iniISO, fim:fim,
              mesRenov:mesAnoDe(fim), quando:hojeISO() };
   }
