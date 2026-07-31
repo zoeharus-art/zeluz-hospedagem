@@ -868,6 +868,14 @@
   body[data-role="gestao"] .nav a.so-hosp,
   body[data-role="supervisor"] .nav a.so-hosp,
   body[data-role="diretoria"] .nav a.so-hosp{display:flex}
+  /* Renovação de Planos — filtros e linha da lista */
+  .renov-filtros{display:flex;gap:8px;flex-wrap:wrap;margin:10px 0 14px}
+  .renov-f{padding:9px 14px;border-radius:999px;border:1.5px solid var(--line);background:var(--z-white);
+    font-size:12.5px;font-weight:700;color:var(--muted);cursor:pointer}
+  .renov-f b{font-size:15px;margin-right:4px}
+  .renov-f.on{border-color:var(--z-gold);background:var(--z-cream);color:var(--z-blue)}
+  .renov-tutor{font-size:11.5px;font-weight:600;color:var(--muted);margin-top:2px}
+  .renov-per{font-size:11.5px;font-weight:600;color:var(--muted);margin-top:2px}
   /* Check-in — uma caixa por refeição, cada uma com a sua quantidade */
   .ci-refb{border:1.5px solid var(--line);border-radius:12px;padding:11px 13px;margin-bottom:8px;background:var(--z-white)}
   .ci-refb.on{border-color:var(--z-gold);background:var(--z-cream)}
@@ -2216,12 +2224,8 @@
   <section class="view" id="v-renovacao">
     <div class="card">
       <h2 style="font-size:20px">Renovação de Planos</h2>
-      <div class="hint">Vencidos primeiro. Toque no peludinho para abrir a ficha na aba Plano e renovar.</div>
-      <div class="so-master" style="margin:6px 0 10px;padding:10px 12px;border:1px dashed var(--z-gold);border-radius:10px;background:rgba(222,180,40,.08)">
-        <div style="font-size:12.5px;color:var(--z-blue);font-weight:600;margin-bottom:6px">Importar início/fim dos planos da planilha do Day Care (cruza por nome + tutor).</div>
-        <button type="button" class="btn btn-gold" onclick="importarPlanosPlanilha()">⬇️ Importar planos da planilha</button>
-        <div id="importPlanosStatus" style="font-size:13px;font-weight:700;margin-top:8px"></div>
-      </div>
+      <div class="hint">Quem precisa ser cobrado aparece primeiro. Toque no peludinho para abrir a ficha na aba Plano, renovar e copiar a mensagem para o tutor.</div>
+      <div class="renov-filtros" id="renovFiltros"></div>
       <div id="renovLista"></div>
     </div>
   </section>
@@ -2478,6 +2482,9 @@
     if(v==='recepcao'){ if(typeof carregarAvisosEstoque==='function') carregarAvisosEstoque(); }
     if(v==='ficha'){ const l=document.getElementById('pel-lista'),fi=document.getElementById('pel-ficha'); if(l&&fi){ l.style.display='block'; fi.style.display='none'; } if(typeof renderPel==='function') renderPel(); }
     if(v==='inativos'){ if(typeof renderInativos==='function') renderInativos(); }
+    // Faltava esta linha: a lista de renovação só era montada quando outra parte do código
+    // chamava irParaView('renovacao'). Clicando no menu, a tela abria VAZIA (30/jul/2026).
+    if(v==='renovacao'){ if(typeof renderRenovacao==='function') renderRenovacao(); }
     if(v==='daycare'){ if(typeof abrirDayCare==='function') abrirDayCare(); }
     const pn=document.getElementById('pSubnav'); if(pn) pn.style.display=(v==='pessoas')?'block':'none';
     if(v==='pessoas'){ if(typeof montarPSubnav==='function') montarPSubnav(); if(typeof abrirPessoas==='function') abrirPessoas('ativ'); return; }
@@ -5255,6 +5262,7 @@
     const dias=diasAteISO(r.fim);
     if(dias==null) return {estado:'sem', label:'sem plano ativo'};
     if(dias<0) return {estado:'vencido', label:'venceu há '+(-dias)+' dia'+((-dias)>1?'s':''), dias:dias};
+    if(dias===0) return {estado:'vence', label:'vence HOJE', dias:0};
     if(dias<=15) return {estado:'vence', label:'vence em '+dias+' dia'+(dias>1?'s':''), dias:dias};
     return {estado:'ok', label:'ativo até '+fmtBR(r.fim), dias:dias};
   }
@@ -5307,14 +5315,18 @@
   // ---- aba PLANO na ficha ----
   function blocoPlano(ex,p){
     const r=renovDe(ex), st=statusRenov(ex), aulas=r.aulas||nAulasDe(p);
+    // A consultora fala com o tutor em MENSAL / TRIMESTRAL / SEMESTRAL — é isso que precisa
+    // estar na frente. Silver/Gold/Black continuam sendo o nome comercial (e definem o valor),
+    // mas cada um tem um compromisso fixo, então marcar o tipo já escolhe o plano.
     const selPlano=function(k){ const pl=planos()[k];
-      return '<button class="'+(r.plano===k?'on':'')+'" onclick="pick(this);setRenov({plano:\''+k+'\'})">'+pl.rotulo+' · '+pl.compromisso+'</button>'; };
+      const tipo=(pl.compromisso||'').charAt(0).toUpperCase()+(pl.compromisso||'').slice(1);
+      return '<button class="'+(r.plano===k?'on':'')+'" onclick="pick(this);setRenov({plano:\''+k+'\'})">'+tipo+' · '+pl.rotulo+'</button>'; };
     const clsSt=st.estado==='vencido'?'vd-venc':(st.estado==='vence'?'vd-perto':(st.estado==='ok'?'vd-ok':'vd-sem'));
     const mens=r.plano?mensalidade(r.plano,aulas,r.ordemPet||1):0;
     return '<div class="prev-bloco">'
       +'<div class="prev-tit">Plano <span class="vd '+clsSt+'">'+st.label+'</span></div>'
       +'<div class="cad-grid">'
-        +'<div class="field" style="grid-column:1/-1"><label>Plano</label><div class="seg gold" data-single>'
+        +'<div class="field" style="grid-column:1/-1"><label>Tipo de plano <span style="font-weight:600;color:var(--muted)">(define até quando vale)</span></label><div class="seg gold" data-single>'
           +['Silver','Gold','Black'].map(selPlano).join('')+'</div></div>'
         +'<div class="field"><label>Aulas por semana (dos dias marcados)</label><input class="cad-in" value="'+aulas+'x" readonly></div>'
         +'<div class="field"><label>Nº do peludinho na família</label><div class="seg gold" data-single>'
@@ -5341,27 +5353,49 @@
 
   // ---- TELA "Renovação de Planos" (sidebar) ----
   // Lista quem está com plano vencido/vencendo primeiro. A consultora abre a ficha para renovar.
+  // A tela existe para a consultora COBRAR a renovação. Por isso abre já filtrada em "a cobrar
+  // agora" (vencidos + vencendo em 15 dias): com 222 peludinhos ativos, jogar todo mundo numa
+  // lista só esconde justamente quem precisa de ligação hoje.
+  var renovFiltro='cobrar';
+  function setRenovFiltro(f){ renovFiltro=f; renderRenovacao(); }
   function renderRenovacao(){
     const el=document.getElementById('renovLista'); if(!el) return;
     const itens=PELUDINHOS.map(function(p,i){ const ex=pelExtra(p); return {p:p,i:i,ex:ex,st:statusRenov(ex)}; })
       .filter(function(o){ return !pelInativo(o.p); });
     const ordem={vencido:0, vence:1, sem:2, ok:3};
     itens.sort(function(a,b){ if(ordem[a.st.estado]!==ordem[b.st.estado]) return ordem[a.st.estado]-ordem[b.st.estado];
-      return jsNorm(a.p.n).localeCompare(jsNorm(b.p.n)); });
+      const fa=(renovDe(a.ex).fim||''), fb=(renovDe(b.ex).fim||'');
+      if(fa!==fb) return fa.localeCompare(fb);   // quem vence antes, primeiro
+      return jsNorm(pelNome(a.p)).localeCompare(jsNorm(pelNome(b.p)),'pt'); });
     const cont={vencido:0,vence:0,sem:0,ok:0}; itens.forEach(function(o){ cont[o.st.estado]++; });
-    let h='<div class="dc-resumo">'
-      +'<div class="dc-stat bad"><b>'+cont.vencido+'</b>vencidos</div>'
-      +'<div class="dc-stat pend"><b>'+cont.vence+'</b>vencem em 15 dias</div>'
-      +'<div class="dc-stat"><b style="color:var(--z-blue)">'+cont.sem+'</b>sem plano</div>'
-      +'<div class="dc-stat ok"><b>'+cont.ok+'</b>em dia</div></div>';
+    const fl=document.getElementById('renovFiltros');
+    if(fl){
+      const bt=function(k,rot,n,cor){ return '<button type="button" class="renov-f'+(renovFiltro===k?' on':'')+'" onclick="setRenovFiltro(\''+k+'\')">'
+        +'<b style="color:'+cor+'">'+n+'</b> '+rot+'</button>'; };
+      fl.innerHTML=bt('cobrar','a cobrar agora',cont.vencido+cont.vence,'var(--crm-critico)')
+        +bt('ok','em dia',cont.ok,'var(--crm-ok)')
+        +bt('sem','sem plano',cont.sem,'var(--z-blue)')
+        +bt('todos','todos',itens.length,'var(--z-gold-deep)');
+    }
+    const visiveis=itens.filter(function(o){
+      if(renovFiltro==='todos') return true;
+      if(renovFiltro==='cobrar') return o.st.estado==='vencido'||o.st.estado==='vence';
+      if(renovFiltro==='sem') return o.st.estado==='sem';
+      return o.st.estado==='ok';
+    });
+    const vazio={cobrar:'Ninguém para cobrar agora — nenhum plano vencido ou vencendo nos próximos 15 dias.',
+      ok:'Nenhum plano em dia no momento.', sem:'Todos os peludinhos ativos têm plano lançado.', todos:'Nenhum peludinho ativo.'};
+    if(!visiveis.length){ el.innerHTML='<div class="hint" style="padding:16px 2px">'+vazio[renovFiltro]+'</div>'; return; }
     const clsSt={vencido:'vd-venc',vence:'vd-perto',sem:'vd-sem',ok:'vd-ok'};
-    h+='<div class="renov-list">'+itens.map(function(o){ const r=renovDe(o.ex);
+    el.innerHTML='<div class="renov-list">'+visiveis.map(function(o){ const r=renovDe(o.ex);
+      const periodo=(r.inicio&&r.fim)?(fmtBR(r.inicio)+' a '+fmtBR(r.fim)):(r.fim?('até '+fmtBR(r.fim)):'sem vigência lançada');
       return '<div class="renov-item" onclick="abrirPeludinhoRenov('+o.i+')">'
-        +'<div class="renov-nome">'+o.p.n+' <span class="pel-obs">'+(o.p.raca||'')+'</span></div>'
-        +'<div class="renov-meta">'+(r.plano?r.plano+' · '+(r.aulas||nAulasDe(o.p))+'x':'sem plano')+'</div>'
+        +'<div class="renov-nome">'+escAttr(pelNome(o.p))+' <span class="pel-obs">'+escAttr(pelGet(o.p,'raca')||'')+'</span>'
+        +'<div class="renov-tutor">'+escAttr(pelGet(o.p,'tutor')||'tutor a confirmar')+'</div></div>'
+        +'<div class="renov-meta">'+(r.plano?escAttr(r.plano)+' · '+(r.aulas||nAulasDe(o.p))+'x':'plano a definir')
+        +'<div class="renov-per">'+periodo+'</div></div>'
         +'<span class="vd '+clsSt[o.st.estado]+'">'+o.st.label+'</span></div>';
     }).join('')+'</div>';
-    el.innerHTML=h;
   }
   function abrirPeludinhoRenov(i){ pelOrigem='renovacao'; irParaView('ficha'); abrirPeludinho(i);
     setTimeout(function(){ try{ const bt=Array.prototype.find.call(document.querySelectorAll('.subtab2'), function(b){ return (b.getAttribute('onclick')||'').indexOf("'ps-plano'")>=0; }); if(bt) pelSubtab(bt,'ps-plano'); }catch(e){} }, 30); }
