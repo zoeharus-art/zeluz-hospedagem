@@ -6959,6 +6959,21 @@
         </div>
       </div></div>
 
+      <div class="ppanel2 so-gestao" id="ps-plano"><div class="card">
+        <h2 style="font-size:20px">Plano</h2>
+        <div class="hint">Planos DayCare 2026. Valor mensal; o tipo do plano muda até quando ele vale. Desconto: 2º peludinho 7%, 3º 12%.</div>
+        ${blocoPlano(ex,p)}
+        <h3 class="cad-sub">Mensagens para o tutor</h3>
+        <div class="renov-msgs">
+          <div class="renov-msg"><div class="renov-msg-tit">Plano finalizou &mdash; oferecer renovação</div>
+            <textarea class="gest-txt" readonly>${escAttr(msgPlanoFinalizou(p,ex))}</textarea>
+            <button class="btn btn-gold" style="padding:7px 14px;font-size:13px;margin-top:6px" onclick="copiarGest(this)">Copiar para o tutor</button></div>
+          <div class="renov-msg"><div class="renov-msg-tit">Renovação confirmada</div>
+            <textarea class="gest-txt" readonly>${escAttr(msgRenovado(p,ex))}</textarea>
+            <button class="btn btn-gold" style="padding:7px 14px;font-size:13px;margin-top:6px" onclick="copiarGest(this)">Copiar para o tutor</button></div>
+        </div>
+      </div></div>
+
       <div class="actions" style="margin-top:4px">
         <button class="btn btn-primary" onclick="salvarFichaPel()">💾 Salvar ficha</button>
         <button class="btn" style="background:var(--z-cream-warm);color:var(--z-blue);border:1.5px solid var(--line)" onclick="voltarPel()">Voltar</button>
@@ -10019,19 +10034,4 @@
   __scriptReady=true; if(typeof wireFirebaseListeners==='function') wireFirebaseListeners();
 </script>
 </body>
-</html><div class="ppanel2 so-gestao" id="ps-plano"><div class="card">
-        <h2 style="font-size:20px">Plano</h2>
-        <div class="hint">Planos DayCare 2026. Valor mensal; o compromisso muda a validade. Desconto: 2º peludinho 7%, 3º 12%.</div>
-        ${blocoPlano(ex,p)}
-        <h3 class="cad-sub">Mensagens para o tutor</h3>
-        <div class="renov-msgs">
-          <div class="renov-msg"><div class="renov-msg-tit">Plano finalizou &mdash; oferecer renovação</div>
-            <textarea class="gest-txt" readonly>${escAttr(msgPlanoFinalizou(p,ex))}</textarea>
-            <button class="btn btn-gold" style="padding:7px 14px;font-size:13px;margin-top:6px" onclick="copiarGest(this)">Copiar para o tutor</button></div>
-          <div class="renov-msg"><div class="renov-msg-tit">Renovação confirmada</div>
-            <textarea class="gest-txt" readonly>${escAttr(msgRenovado(p,ex))}</textarea>
-            <button class="btn btn-gold" style="padding:7px 14px;font-size:13px;margin-top:6px" onclick="copiarGest(this)">Copiar para o tutor</button></div>
-        </div>
-      </div></div>
-
-      
+</html>
