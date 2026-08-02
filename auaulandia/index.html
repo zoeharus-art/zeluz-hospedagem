@@ -645,6 +645,9 @@
   .alm-btn.tudo.on{background:var(--crm-ok);color:#fff;border-color:var(--crm-ok)}
   .alm-btn.metade.on{background:var(--crm-atencao);color:var(--crm-atencao-text);border-color:var(--crm-atencao)}
   .alm-btn.nao.on{background:var(--crm-critico);color:#fff;border-color:var(--crm-critico)}
+  /* Item 12 — "Não se aplica": tem FILHOt que não almoça (come só fruta, está de jejum,
+     comeu com o tutor). Não é falha, então não vai para o 2º horário nem avisa o tutor. */
+  .alm-btn.na.on{background:#7C8B99;color:#fff;border-color:#7C8B99}
   .alm-card.tudo{border-color:var(--crm-ok)} .alm-card.metade{border-color:var(--crm-atencao)} .alm-card.nao{border-color:var(--crm-critico);box-shadow:0 0 0 2px rgba(192,57,43,.3)}
   .role-note{font-size:12px;background:var(--z-cream-warm);border:1px solid var(--line);border-radius:10px;
     padding:10px 14px;color:var(--z-blue-soft);margin-bottom:18px;display:flex;gap:8px;align-items:center}
@@ -1685,6 +1688,8 @@
     <!-- PASSO 2 — ficha de check-in -->
     <div id="ci-ficha" style="display:none">
       <button class="back-btn" onclick="ciVoltar()">← Trocar FILHOt</button>
+      <!-- Item 6: aviso de FILHOt já hospedado + botão de acrescentar no mesmo check-in -->
+      <div id="ciJaHospedado" style="display:none"></div>
       <div class="card">
         <div class="ci-head">
           <div class="ci-av" id="ciAv"></div>
@@ -2890,8 +2895,24 @@
   function onChip(v){ onCad(); }
   function toggleCadastro(){ const c=document.getElementById('card-cadastro'); if(!c) return; c.style.display=(c.style.display==='block'?'none':'block'); if(c.style.display==='block') c.scrollIntoView({behavior:'smooth',block:'center'}); }
   // ---- Cadastro do peludinho (só Gestão edita) ----
-  function cadKey(h){ return ((h&&h.nome||'')+'__'+(h&&h.tutor||'')).toLowerCase().replace(/[.#$\[\]\/]/g,'-'); }
-  function getCad(h){ return (h&&cadCache[cadKey(h)]) || (h?getInfo(h):{}) || {}; }
+  // ===== ITEM 14 (Adriana 02/ago/2026) — a foto do Ozzy Spitz mostrava o Ozzy Lhasa ==========
+  // A estadia guarda o tutor COMPLETO ("Zuleica Reis Avila"); o cadastro-mestre foi importado
+  // com o primeiro nome ("Zuleica"). Montar a chave por nome+tutor nunca casava, o app caía no
+  // "primeiro Ozzy que achar" e trazia a foto de outro FILHOt. A refKey já é a chave certa —
+  // quando ela existe, é ela que manda. Sem refKey, tenta nome+tutor e depois nome+1º nome.
+  function cadKey(h){
+    if(h&&h.refKey) return String(h.refKey).toLowerCase().replace(/[.#$\[\]\/]/g,'-');
+    return ((h&&h.nome||'')+'__'+(h&&h.tutor||'')).toLowerCase().replace(/[.#$\[\]\/]/g,'-');
+  }
+  function getCad(h){
+    if(!h) return {};
+    var c=cadCache[cadKey(h)];
+    if(!c && h.tutor){ // cadastro antigo gravado com o PRIMEIRO NOME do tutor
+      var k2=((h.nome||'')+'__'+String(h.tutor).trim().split(/\s+/)[0]).toLowerCase().replace(/[.#$\[\]\/]/g,'-');
+      c=cadCache[k2];
+    }
+    return c || getInfo(h) || {};
+  }
   // Aceita data digitada OU colada de outro cadastro: dd/mm/aaaa, dd-mm-aaaa, dd.mm.aaaa, dd/mm/aa ou ISO aaaa-mm-dd → devolve ISO (aaaa-mm-dd) ou '' se ainda incompleta
   function parseNascToISO(v){
     if(!v) return ''; v=String(v).trim(); let m;
@@ -3103,9 +3124,13 @@
     h=h||currentHosp; if(!h) return '';
     var base=h.refKey;
     if(!base && typeof PELUDINHOS!=='undefined' && typeof jsNorm==='function' && typeof pelKey==='function'){
-      var nN=jsNorm(h.nome||''), nT=jsNorm(h.tutor||'');
+      var nN=jsNorm(h.nome||''), nT=jsNorm(h.tutor||''), nT1=nT.split(/\s+/)[0]||'';
+      // 1) nome + tutor exato. 2) nome + PRIMEIRO nome do tutor (cadastro importado assim).
       var m=PELUDINHOS.find(function(p){ return jsNorm(p.n)===nN && jsNorm(p.tutor||'')===nT; })
-          || PELUDINHOS.find(function(p){ return jsNorm(p.n)===nN; });
+          || (nT1?PELUDINHOS.find(function(p){ return jsNorm(p.n)===nN && (jsNorm(p.tutor||'').split(/\s+/)[0]||'')===nT1; }):null);
+      // 3) só o nome — SÓ se existir UM único FILHOt com esse nome. Com 5 "Ozzy" no cadastro,
+      //    o antigo "pega o primeiro" podia jogar o remédio de um na ficha do outro.
+      if(!m){ var iguais=PELUDINHOS.filter(function(p){ return jsNorm(p.n)===nN; }); if(iguais.length===1) m=iguais[0]; }
       if(m) base=pelKey(m);
     }
     if(!base) base=(h.nome||'')+'__'+(h.tutor||'');
@@ -4436,7 +4461,16 @@
     // valida senhas: 4-6 dígitos, sem duplicar entre si nem com as senhas fixas
     for(const m of MONITORES){ const s=String(m.senha||'').trim(); if(!/^[0-9]{4,6}$/.test(s)){ if(st){ st.style.color='var(--crm-critico)'; st.textContent='Senha inválida em "'+(m.nome||'?')+'": use 4 a 6 dígitos.'; } return; } if(SENHAS[s]){ if(st){ st.style.color='var(--crm-critico)'; st.textContent='A senha '+s+' já é usada pela Gestão/equipe fixa. Escolha outra.'; } return; } }
     if(new Set(senhas).size!==senhas.length){ if(st){ st.style.color='var(--crm-critico)'; st.textContent='Há senhas repetidas entre os monitores. Cada um precisa de uma senha única.'; } return; }
-    if(DB){ DB.ref('daycare/config/monitores').set(MONITORES).then(()=>{ if(st){ st.style.color='var(--crm-ok)'; st.textContent='✅ Monitores salvos! Já valem em todos os aparelhos.'; } }).catch(e=>{ if(st){ st.style.color='var(--crm-critico)'; st.textContent='Erro ao salvar: '+e.message; } }); }
+    if(DB){ DB.ref('daycare/config/monitores').set(MONITORES).then(()=>{
+      if(st){ st.style.color='var(--crm-ok)'; st.textContent='✅ Monitores salvos! Já valem em todos os aparelhos.'; }
+      // Item 1 (Adriana 02/ago/2026): a Letícya recebeu senha e permissão, mas não conseguia
+      // entrar — o CELULAR dela não estava autorizado. Dar permissão e não avisar disso fazia
+      // parecer defeito do sistema. Agora o lembrete vem junto com o "salvo".
+      if(typeof zAlertao==='function') zAlertao('✅ PERMISSÕES SALVAS',
+        ['A senha e o que cada pessoa vê já valem em todos os aparelhos.',
+         'ATENÇÃO: monitor(a), plantonista e aprendiz só entram em CELULAR AUTORIZADO. Se a pessoa digitar a senha e aparecer "aparelho não autorizado", pegue o celular dela, digite a SUA senha da Gestão na tela de entrada e toque em "Autorizar este aparelho".'],
+        {ok:true, botao:'Entendi', rodape:'Gestão, Supervisão, Recepção e Veterinária entram em qualquer aparelho — a trava vale só para a equipe de campo.'});
+    }).catch(e=>{ if(st){ st.style.color='var(--crm-critico)'; st.textContent='Erro ao salvar: '+e.message; } }); }
     else { if(st){ st.style.color='var(--crm-atencao-text)'; st.textContent='Salvo localmente (sem internet agora).'; } }
     try{ renderSenhas(); }catch(e){}
   }
@@ -4466,6 +4500,12 @@
       // Aparelho não autorizado e não é gestão → bloqueia
       err.style.color='var(--crm-critico)';
       err.innerHTML='Este aparelho não está autorizado.<br>Peça à <strong>Gestão</strong> para autorizar (botão abaixo).';
+      // Cartaz na tela: o textinho vermelho passava despercebido e a pessoa achava que a
+      // senha estava errada (caso Letícya, 02/ago/2026).
+      if(typeof zAlertao==='function') zAlertao('SUA SENHA ESTÁ CERTA — O CELULAR É QUE NÃO ESTÁ LIBERADO',
+        ['Você é '+((u&&u.nome)||'da equipe')+' e sua senha foi reconhecida.',
+         'Este celular ainda não foi autorizado pela Zêluz. Chame a Adriana ou a Márcia: elas digitam a senha da Gestão aqui nesta tela e tocam em "Autorizar este aparelho". Leva 10 segundos e é só uma vez por celular.'],
+        {botao:'Entendi'});
     });
   }
   // Item C — permissões por pessoa. Quando a pessoa TEM 'paginas' configurado (editor em Pessoas >
@@ -4511,6 +4551,11 @@
     // (Não restaura a preferência salva: evita ter que fechar a AuAulândia pra abrir o Day Care.)
     // O ajustarAcordeoes só reabre o accordion de quem enxerga um único serviço (ex.: vet).
     try{ document.querySelectorAll('#nav .acc').forEach(function(a){ a.classList.remove('acc-open'); }); ajustarAcordeoes(); if(typeof requestAnimationFrame==='function') requestAnimationFrame(function(){ try{ ajustarAcordeoes(); }catch(e){} }); }catch(e){}
+    // Item 1 — quem recebeu atividade do Day Care (ex.: Almoço) precisa VER a atividade ao
+    // entrar. Antes o Day Care ficava fechado na sanfona e a pessoa jurava que "não apareceu".
+    try{ if(Array.isArray(u.atividades)&&u.atividades.length){
+      var _accDC=document.querySelector('#nav .acc[data-acc="daycare"]'); if(_accDC) _accDC.classList.add('acc-open');
+    } }catch(e){}
     try{ if(localStorage.getItem('zeluz_sidebar_collapsed')==='1') document.body.classList.add('nav-collapsed'); }catch(e){} // barra recolhida (desktop)
     // Quem tem escopo restrito (ex.: Amanda Barbosa, só almoço) cai direto na atividade dela.
     // Pessoa só com atividade (sem páginas) cai direto na atividade dela (Amanda Barbosa etc.).
@@ -7618,7 +7663,7 @@
   function ehHoje(){ return dcDia===HOJE_DIA; }
   function marcarAlmoco(k,val){
     if(!ehHoje()){ alert('Você está vendo a turma de '+DIA_FULL[dcDia]+', que não é hoje.\n\nO almoço é registrado no dia em que acontece. Volte para '+DIA_FULL[HOJE_DIA]+' (hoje) para marcar.'); return; }
-    const cur=almMarcas[k]; const nx=(cur===val)?'':val; if(nx) almMarcas[k]=nx; else delete almMarcas[k]; if(DB) DB.ref('daycare/almoco/'+dcDataKey()+'/'+k).set(nx||null).catch(()=>{}); if(typeof audit==='function'&&nx) audit('almoco_grade', nx==='tudo'?'comeu tudo':(nx==='metade'?'comeu metade':'não comeu'), {alvo:k}); renderAlmoco(); }
+    const cur=almMarcas[k]; const nx=(cur===val)?'':val; if(nx) almMarcas[k]=nx; else delete almMarcas[k]; if(DB) DB.ref('daycare/almoco/'+dcDataKey()+'/'+k).set(nx||null).catch(()=>{}); if(typeof audit==='function'&&nx) audit('almoco_grade', nx==='tudo'?'comeu tudo':(nx==='metade'?'comeu metade':(nx==='na'?'não se aplica (não almoça hoje)':'não comeu')), {alvo:k}); renderAlmoco(); }
   // ===== TEMPOS DAS ETAPAS — Banco de Tempo (Preparação e Finalização, mesmo padrão do Almoço) =====
   let almPrepTurno={}, almFinalTurno={};
   function diffMin(ini,fim){ if(!ini||!fim) return null; const a=ini.split(':'),b=fim.split(':'); if(a.length<2||b.length<2) return null; let m=(+b[0]*60+ +b[1])-(+a[0]*60+ +a[1]); if(m<0) m+=1440; return m; }
@@ -7687,15 +7732,17 @@
         <button class="btn btn-gold" onclick="iniciarAlmoco()">&#9654; Iniciar almoco</button>
         <button class="btn" style="background:rgba(255,255,255,.14);color:var(--z-cream);border:1px solid rgba(255,255,255,.25)" onclick="encerrarAlmoco()">&#9632; Encerrar</button>
       </div></div>`;
-    let tudo=0,metade=0,nao=0; const naoList=[], metList=[];
+    let tudo=0,metade=0,nao=0,naAp=0; const naoList=[], metList=[], naList=[];
     list.forEach(o=>{ const m=marcaDe(o); const nm=nomeDesamb(o,list);
-      if(m==='tudo')tudo++; else if(m==='metade'){metade++;metList.push(nm);} else if(m==='nao'){nao++;naoList.push(nm);} });
+      if(m==='tudo')tudo++; else if(m==='metade'){metade++;metList.push(nm);} else if(m==='nao'){nao++;naoList.push(nm);} else if(m==='na'){naAp++;naList.push(nm);} });
     document.getElementById('almResumo').innerHTML=`
       <div class="dc-resumo">
         <div class="dc-stat ok"><b>${tudo}</b>comeram tudo</div>
         <div class="dc-stat pend"><b>${metade}</b>metade</div>
         <div class="dc-stat bad"><b>${nao}</b>nao comeram</div>
+        ${naAp?`<div class="dc-stat"><b>${naAp}</b>não se aplica</div>`:''}
       </div>
+      ${naList.length?`<div class="alm-fora"><strong>NÃO SE APLICA (${naList.length}):</strong> ${naList.join(', ')} &mdash; hoje não almoçam (comem outra coisa, jejum ou já comeram). Não vão para o 2º horário e não precisa avisar o tutor.</div>`:''}
       ${naoList.length?`<div class="dc-faltas"><strong>NAO COMERAM - vao para o 2&ordm; horario (${naoList.length}):</strong> ${naoList.join(', ')}</div>`:''}
       ${metList.length?`<div class="dc-meia"><strong>COMERAM METADE (${metList.length}):</strong> ${metList.join(', ')}</div>`:''}
       ${faltouList.length?`<div class="alm-fora"><strong>FALTARAM HOJE (${faltouList.length}):</strong> ${faltouList.map(o=>nomeDesamb(o,faltouList)).join(', ')} &mdash; a planilha avisou a falta, entao sairam do almoco.</div>`:''}
@@ -7732,6 +7779,7 @@
           <button class="alm-btn tudo ${m==='tudo'?'on':''}" onclick="marcarAlmoco('${k}','tudo')">Comeu tudo</button>
           <button class="alm-btn metade ${m==='metade'?'on':''}" onclick="marcarAlmoco('${k}','metade')">Metade</button>
           <button class="alm-btn nao ${m==='nao'?'on':''}" onclick="marcarAlmoco('${k}','nao')">Nao comeu</button>
+          <button class="alm-btn na ${m==='na'?'on':''}" onclick="marcarAlmoco('${k}','na')">Não se aplica</button>
         </div>
       </div>`;
     }).join('');
@@ -8179,6 +8227,7 @@
     // pré-preenchimento: agenda de medicação viva + última estadia
     ciPreencherMedicacao();
     ciPreencherUltimaEstadia();
+    ciChecarHospedado();   // item 6 — avisa se ele JÁ está hospedado e oferece acrescentar
     window.scrollTo({top:0,behavior:'smooth'});
   }
   function ciVoltar(){ document.getElementById('ci-ficha').style.display='none'; document.getElementById('ci-escolha').style.display='block'; renderCiBusca(); }
@@ -8389,7 +8438,9 @@
       let s='<div class="ci-refb-campos cad-grid">';
       if(!soNat) s+='<div class="field"><label>Ração ('+unid.trim()+')</label><input class="cad-in" inputmode="decimal" value="'+escAttr(r.racao||'')+'" placeholder="Ex: 80" autocomplete="off" oninput="'+pref+'(\'racao\',this.value)"></div>';
       if(temNat) s+='<div class="field"><label>Comida natural (g)</label><input class="cad-in" inputmode="decimal" value="'+escAttr(r.natural||'')+'" placeholder="Ex: 100" autocomplete="off" oninput="'+pref+'(\'natural\',this.value)"></div>';
-      s+='<div class="field" style="grid-column:1/-1"><label>Complemento (escreva do jeito que é)</label><input class="cad-in" value="'+escAttr(r.extra||'')+'" placeholder="Ex: 1 colher de iogurte · meio patê · 1 cápsula de ômega" autocomplete="off" oninput="'+pref+'(\'extra\',this.value)"></div>';
+      // Item 13 — tem FILHOt cujo almoço NÃO é ração nem comida natural (o Ozzy come 1/4 de
+      // pera). Este campo sozinho já vale como refeição: dá para marcar o almoço só com ele.
+      s+='<div class="field" style="grid-column:1/-1"><label>O que ele come nesta refeição além (ou no lugar) da ração</label><input class="cad-in" value="'+escAttr(r.extra||'')+'" placeholder="Ex: 1/4 de pera picadinha · 1 petisco Cannix · 1 colher de patê" autocomplete="off" oninput="'+pref+'(\'extra\',this.value)"></div>';
       return s+'</div>';
     };
     let h='';
@@ -8660,8 +8711,17 @@
     if(!DB) return; const key=ciKey(); if(!key) return;
     DB.ref('auaulandia/estadias').orderByChild('refKey').equalTo(key).limitToLast(1).once('value').then(function(s){
       const v=s.val()||{}; const ids=Object.keys(v); if(!ids.length) return;
-      const e=v[ids[ids.length-1]]||{}; const f=e.ficha||{};
+      ciAplicarEstadiaNaFicha(v[ids[ids.length-1]]||{}, 'Ficha pré-preenchida da última estadia — confira e ajuste.');
+    }).catch(function(){ /* sem índice/sem estadia anterior — tudo bem */ });
+  }
+  // Joga uma estadia inteira nos campos do Check-in (usado tanto para pré-preencher da última
+  // vez quanto para ACRESCENTAR na estadia em curso — item 6).
+  function ciAplicarEstadiaNaFicha(e, mensagem){
+    return Promise.resolve().then(function(){
+      e=e||{}; const f=e.ficha||{};
       const spa=f.spa||{};
+      if(e.entrada){ const _e=document.getElementById('ciEntrada'); if(_e) _e.value=e.entrada; }
+      if(e.saida){ const _s=document.getElementById('ciSaida'); if(_s) _s.value=e.saida; }
       if(f.alim){ setSeg('ciAlimTipo',f.alim.tipo||''); setSeg('ciAlimUnid',f.alim.unidade||''); setSeg('ciBanho',(spa.banho||f.banho||''));
         if(f.alim.marca) document.getElementById('ciAlimMarca').value=f.alim.marca;
         // marcas de refeição Dia 1 / Último dia (se salvas na última estadia)
@@ -8680,9 +8740,44 @@
       const _bc=document.getElementById('ciBanhoConfirmar'); if(_bc) _bc.checked=!!spa.aConfirmar;
       if(typeof ciBanhoChange==='function') ciBanhoChange();
       if(typeof ciCalcRacao==='function') ciCalcRacao();
+      if(typeof ciCalcDias==='function') ciCalcDias();
       if(Array.isArray(e.pertences)&&e.pertences.length){ ciRenderPert(e.pertences); }
-      const st=document.getElementById('ci-status'); if(st){ st.style.color='var(--muted)'; st.textContent='Ficha pré-preenchida da última estadia — confira e ajuste.'; }
-    }).catch(function(){ /* sem índice/sem estadia anterior — tudo bem */ });
+      const st=document.getElementById('ci-status'); if(st&&mensagem){ st.style.color='var(--muted)'; st.textContent=mensagem; }
+    });
+  }
+  // ===== ITEM 6 — o FILHOt JÁ está hospedado ========================================
+  // Adriana: "o tutor comprou um suplemento; tem que entrar no check-in dos hóspedes e ser
+  // conferido — está duplicando os cadastros". Agora, ao abrir o Check-in de quem já está
+  // hospedado, o app avisa em cima e oferece ACRESCENTAR no mesmo check-in.
+  function ciChecarHospedado(){
+    const box=document.getElementById('ciJaHospedado'); if(box){ box.style.display='none'; box.innerHTML=''; }
+    ciEditandoId=null;
+    if(!DB||!ciHosp) return;
+    __ciEstadiaAtivaNoBanco(ciKey(), ciHosp).then(function(ativa){
+      if(!ativa) return;
+      const el=document.getElementById('ciJaHospedado'); if(!el) return;
+      const ent=ativa.e.entrada?ciBRdata(ativa.e.entrada):'';
+      el.style.display='block';
+      el.innerHTML='<div style="background:#FDF3D6;border:2px solid #DEB428;border-radius:14px;padding:14px 16px;margin-bottom:14px">'
+        +'<div style="font-weight:800;font-size:17px;color:#234D67;margin-bottom:4px">'+esc(ciHosp.nome||'Este FILHOt')+' já está hospedado'+(ent?(' desde '+esc(ent)):'')+'.</div>'
+        +'<div style="font-size:14px;color:#6b5f4b;font-weight:600;margin-bottom:10px">Comprou um suplemento, o tutor trouxe mais alguma coisa ou faltou registrar algo? Acrescente no MESMO check-in — assim não vira um segundo cadastro e volta para a Conferência.</div>'
+        +'<button type="button" class="btn btn-primary" style="width:100%" onclick="ciAcrescentarNoExistente(\''+escAttr(ativa.id)+'\')">➕ Acrescentar ao check-in dele</button>'
+        +'</div>';
+    }).catch(function(){});
+  }
+  function ciAcrescentarNoExistente(id){
+    if(!DB) return;
+    DB.ref('auaulandia/estadias/'+id).once('value').then(function(s){
+      const e=s.val()||{}; if(!e.nome) return;
+      return ciAplicarEstadiaNaFicha(e,'Você está ACRESCENTANDO no check-in que já existe. Complete o que falta e salve.').then(function(){
+        ciEditandoId=id; ciSalvoAgora=false;
+        const el=document.getElementById('ciJaHospedado');
+        if(el) el.innerHTML='<div style="background:#E8F5EC;border:2px solid #1E8449;border-radius:14px;padding:14px 16px;margin-bottom:14px">'
+          +'<div style="font-weight:800;font-size:17px;color:#1E8449;margin-bottom:4px">✅ Modo ACRESCENTAR ligado</div>'
+          +'<div style="font-size:14px;color:#234D67;font-weight:600">Tudo que você mudar aqui entra no check-in que já existe de '+esc(e.nome)+' — nada é duplicado. O que for novo volta para a Conferência.</div></div>';
+        window.scrollTo({top:0,behavior:'smooth'});
+      });
+    }).catch(function(err){ zAlertao('Não consegui abrir o check-in',[String((err&&err.message)||err)]); });
   }
 
   // ---- GATE de segurança ----
@@ -8787,94 +8882,241 @@
     if(!ciTemRascunhoNaoSalvo()) return true;
     return confirm('⚠️ O check-in de '+((ciHosp&&ciHosp.nome)||'este FILHOt')+' ainda NÃO FOI SALVO.\n\nSe sair agora, ele não existe no sistema — não vai aparecer na Conferência nem no Plantão, e tudo o que você preencheu se perde.\n\nSair mesmo assim?');
   }
+  // ===== CARTAZ NA TELA (item 5, Adriana 02/ago/2026) ================================
+  // O alert() do celular é uma caixinha cinza que some com um toque — duas estadias
+  // ficaram sem check-in porque ninguém leu. Agora o aviso ocupa a tela inteira, em
+  // vermelho, listando O QUE FALTA item por item, e só sai quando a pessoa toca em
+  // "Entendi". Serve para erro (vermelho) e para confirmação de salvo (verde).
+  // ==================================================================================
+  function zAlertao(titulo, linhas, op){
+    op=op||{};
+    var old=document.getElementById('zAlertaoBox'); if(old) old.remove();
+    var cor=op.ok?'#1E8449':'#B3261E';
+    var itens=Array.isArray(linhas)?linhas:[linhas];
+    var d=document.createElement('div'); d.id='zAlertaoBox';
+    d.style.cssText='position:fixed;inset:0;z-index:99999;background:rgba(16,10,8,.78);display:flex;align-items:center;justify-content:center;padding:16px;font-family:Poppins,system-ui,-apple-system,sans-serif';
+    d.innerHTML='<div style="background:#FFFDF6;border-radius:20px;max-width:580px;width:100%;box-shadow:0 24px 70px rgba(0,0,0,.45);overflow:hidden;max-height:92vh;display:flex;flex-direction:column">'
+      +'<div style="background:'+cor+';color:#FFFDF6;padding:20px 22px;font-weight:800;font-size:26px;line-height:1.15;letter-spacing:-.5px">'+esc(titulo)+'</div>'
+      +'<div style="padding:20px 22px;overflow:auto;color:#234D67;font-size:18px;line-height:1.5;font-weight:600">'
+      + itens.filter(Boolean).map(function(t,i){
+          return '<div style="display:flex;gap:10px;align-items:flex-start;margin-bottom:12px">'
+            +'<span style="flex:0 0 26px;height:26px;border-radius:50%;background:'+cor+';color:#FFFDF6;font-size:14px;font-weight:800;display:flex;align-items:center;justify-content:center">'+(op.ok?'&#10003;':(i+1))+'</span>'
+            +'<span>'+esc(t)+'</span></div>';
+        }).join('')
+      + (op.rodape?'<div style="margin-top:14px;padding-top:14px;border-top:1px dashed #e7e0d2;font-size:15px;font-weight:600;color:#6b5f4b">'+esc(op.rodape)+'</div>':'')
+      +'</div>'
+      +'<div style="padding:0 22px 22px"><button type="button" id="zAlertaoOk" style="width:100%;border:0;border-radius:14px;background:'+cor+';color:#FFFDF6;font-family:inherit;font-weight:800;font-size:19px;padding:16px;cursor:pointer">'+esc(op.botao||'Entendi')+'</button></div>'
+      +'</div>';
+    document.body.appendChild(d);
+    var fechar=function(){ d.remove(); if(typeof op.aoFechar==='function') op.aoFechar(); };
+    d.querySelector('#zAlertaoOk').addEventListener('click',fechar);
+    try{ if(navigator.vibrate && !op.ok) navigator.vibrate([180,90,180]); }catch(e){}
+  }
+  // Mesmo cartaz, com botões de decisão (usado na trava de duplicidade do check-in).
+  function zEscolha(titulo, linhas, botoes){
+    var old=document.getElementById('zAlertaoBox'); if(old) old.remove();
+    var d=document.createElement('div'); d.id='zAlertaoBox';
+    d.style.cssText='position:fixed;inset:0;z-index:99999;background:rgba(16,10,8,.78);display:flex;align-items:center;justify-content:center;padding:16px;font-family:Poppins,system-ui,-apple-system,sans-serif';
+    d.innerHTML='<div style="background:#FFFDF6;border-radius:20px;max-width:580px;width:100%;box-shadow:0 24px 70px rgba(0,0,0,.45);overflow:hidden;max-height:92vh;display:flex;flex-direction:column">'
+      +'<div style="background:#B3261E;color:#FFFDF6;padding:20px 22px;font-weight:800;font-size:24px;line-height:1.15">'+esc(titulo)+'</div>'
+      +'<div style="padding:20px 22px;overflow:auto;color:#234D67;font-size:17px;line-height:1.5;font-weight:600">'
+      + (Array.isArray(linhas)?linhas:[linhas]).map(function(t){ return '<div style="margin-bottom:10px">'+esc(t)+'</div>'; }).join('')
+      +'</div><div style="padding:0 22px 22px;display:flex;flex-direction:column;gap:9px" id="zEscolhaBts"></div></div>';
+    document.body.appendChild(d);
+    var wrap=d.querySelector('#zEscolhaBts');
+    (botoes||[]).forEach(function(b){
+      var el=document.createElement('button'); el.type='button'; el.textContent=b.t;
+      el.style.cssText='width:100%;border:0;border-radius:14px;background:'+(b.cor||'#234D67')+';color:#FFFDF6;font-family:inherit;font-weight:800;font-size:17px;padding:15px;cursor:pointer;text-align:center';
+      el.addEventListener('click',function(){ d.remove(); if(typeof b.fn==='function') b.fn(); });
+      wrap.appendChild(el);
+    });
+    try{ if(navigator.vibrate) navigator.vibrate([180,90,180]); }catch(e){}
+  }
+  var ciEditandoId=null; // quando setado, o Salvar ACRESCENTA nesta estadia em vez de criar outra
   function ciBloqueia(motivo, texto, focoId){
     const st=document.getElementById('ci-status');
     if(st){ st.style.color='var(--crm-critico)'; st.textContent='✋ '+texto; }
     try{ if(typeof audit==='function') audit('checkin-bloqueado', motivo, {pet:(ciHosp&&ciHosp.nome)||'', tutor:(ciHosp&&ciHosp.tutor)||''}); }catch(e){}
-    alert('CHECK-IN NÃO SALVO\n\n'+texto+'\n\nCorrija e toque em "Salvar no sistema" de novo. Enquanto isso, este check-in NÃO existe no sistema.');
-    if(focoId){ const el=document.getElementById(focoId); if(el){ try{ el.scrollIntoView({behavior:'smooth',block:'center'}); }catch(e){} try{ el.focus(); }catch(e){} } }
+    zAlertao('O CHECK-IN NÃO FOI SALVO', [texto], {
+      rodape:'Enquanto isso, '+((ciHosp&&ciHosp.nome)||'este FILHOt')+' NÃO existe no sistema: não aparece na Conferência nem no Plantão. Corrija e toque em "Salvar no sistema" de novo.',
+      botao:'Corrigir agora',
+      aoFechar:function(){ if(focoId){ const el=document.getElementById(focoId); if(el){ try{ el.scrollIntoView({behavior:'smooth',block:'center'}); }catch(e){} try{ el.focus(); }catch(e){} } } }
+    });
   }
+  // Lista TUDO o que falta de uma vez (Adriana: "precisa dizer: falta isso e isso").
+  // Antes o app mostrava só o primeiro erro — a pessoa corrigia, tentava de novo, batia no
+  // segundo, e desistia achando que tinha salvo.
+  function ciFaltando(){
+    const F=[]; // {texto, foco}
+    const dados=ciColetarFicha();
+    if(!dados.entrada) F.push({t:'Falta a data de ENTRADA da estadia.', f:'ciEntrada'});
+    const _ativas=ciRefsAtivas();
+    if(!_ativas.length) F.push({t:'Nenhuma refeição foi marcada. Marque o que o FILHOt come (café, almoço, jantar ou refeição extra).', f:'ciRefBlocos'});
+    _ativas.forEach(function(r){
+      if(!ciNum(r.racao) && !ciNum(r.natural) && !String(r.extra||'').trim())
+        F.push({t:'A refeição "'+r.nome+'" está marcada mas vazia: escreva a ração, a comida natural OU o que ele come nela (ex.: 1/4 de pera picadinha).', f:'ciRefBlocos'});
+    });
+    if(ciTemNatural() && _ativas.length && !_ativas.some(function(r){ return ciNum(r.natural)>0; }))
+      F.push({t:'Você marcou comida natural, mas não colocou as gramas em nenhuma refeição.', f:'ciRefBlocos'});
+    const meds=ciColetarMeds();
+    ciValidarMeds(meds).forEach(function(p){ F.push({t:p, f:'ciMedLista'}); });
+    if(Object.keys(meds).length>0){
+      const chk=document.getElementById('ciGateChk');
+      if(!chk||!chk.checked) F.push({t:'Falta marcar a conferência de segurança da medicação (você conferiu os remédios com o tutor).', f:'ciGate'});
+    }
+    const semTutor=!!(document.getElementById('ciSemTutor')&&document.getElementById('ciSemTutor').checked);
+    if(!semTutor){
+      if(!((document.getElementById('ciAssinaNome')||{}).value||'').trim())
+        F.push({t:'Falta o nome de quem está entregando o FILHOt. Se ninguém veio, marque "O tutor não veio".', f:'ciAssinaNome'});
+      if(!ciAssinaturaDataURL())
+        F.push({t:'Falta a ASSINATURA com o dedo no quadro. Se ninguém veio, marque "O tutor não veio".', f:'ciSig'});
+    }
+    return F;
+  }
+  var __ciSalvando=false;
   function ciSalvar(){
     const st=document.getElementById('ci-status');
-    if(!ciHosp){ alert('CHECK-IN NÃO SALVO\n\nNenhum FILHOt está aberto. Volte, toque no peludinho e refaça o check-in.'); return; }
+    if(__ciSalvando){ return; } // trava anti-duplo-toque: 2 toques = 2 check-ins (caso Ozzy, 01/ago)
+    if(!ciHosp){ zAlertao('O CHECK-IN NÃO FOI SALVO',['Nenhum FILHOt está aberto. Volte, toque no peludinho e refaça o check-in.']); return; }
     const dados=ciColetarFicha();
-    if(!dados.entrada){ ciBloqueia('sem data de entrada','Informe a data de ENTRADA da estadia.','ciEntrada'); return; }
-    // Ração + natural: não salva sem as gramas e sem marcar EM QUAIS refeições entra a natural
-    // Nenhuma refeição marcada = não dá para saber o que o FILHOt come. Não salva.
-    const _ativas=ciRefsAtivas();
-    if(!_ativas.length){ ciBloqueia('sem refeicao marcada','Marque as refeições que o FILHOt faz e quanto ele come em cada uma.','ciRefBlocos'); return; }
-    // Refeição marcada e vazia é pior que refeição não marcada: quem cuida fica sem saber a quantidade.
-    const _vazia=_ativas.find(function(r){ return !ciNum(r.racao) && !ciNum(r.natural) && !String(r.extra||'').trim(); });
-    if(_vazia){ ciBloqueia('refeicao sem quantidade','Falta a quantidade de: '+_vazia.nome+'. Preencha a ração, a comida natural ou o complemento dessa refeição.','ciRefBlocos'); return; }
-    if(ciTemNatural()){
-      const _temNat=_ativas.some(function(r){ return ciNum(r.natural)>0; });
-      if(!_temNat){ ciBloqueia('natural sem gramas','Você marcou comida natural. Preencha as gramas de natural em pelo menos uma refeição.','ciRefBlocos'); return; }
+    const _faltas=ciFaltando();
+    if(_faltas.length){
+      if(st){ st.style.color='var(--crm-critico)'; st.textContent='✋ '+_faltas.length+' item(ns) faltando — veja o aviso.'; }
+      try{ if(typeof audit==='function') audit('checkin-bloqueado', _faltas.map(function(x){return x.t;}).join(' | '), {pet:(ciHosp&&ciHosp.nome)||'', tutor:(ciHosp&&ciHosp.tutor)||''}); }catch(e){}
+      zAlertao('O CHECK-IN NÃO FOI SALVO', _faltas.map(function(x){ return x.t; }), {
+        rodape:(_faltas.length===1?'Falta 1 coisa. ':'Faltam '+_faltas.length+' coisas. ')+(ciHosp&&ciHosp.nome||'Este FILHOt')+' ainda NÃO existe no sistema — não aparece na Conferência nem no Plantão.',
+        botao:'Corrigir agora',
+        aoFechar:function(){ const el=document.getElementById(_faltas[0].f); if(el){ try{ el.scrollIntoView({behavior:'smooth',block:'center'}); }catch(e){} try{ el.focus(); }catch(e){} } }
+      });
+      return;
     }
     const meds=ciColetarMeds();
-    const probs=ciValidarMeds(meds);
-    if(probs.length){ ciBloqueia('medicacao invalida', probs[0], 'ciMedLista'); return; }
     const temMed=Object.keys(meds).length>0;
-    if(temMed){ const chk=document.getElementById('ciGateChk'); if(!chk||!chk.checked){ ciBloqueia('gate de medicacao nao marcado','Conferiu os dados da medicação com o tutor? Marque a conferência de segurança antes de salvar.','ciGate'); return; } }
-    // "Outros deixaram" (taxi dog / terceiro): o tutor não veio — dispensa assinatura e nome do tutor.
     const semTutor=!!(document.getElementById('ciSemTutor')&&document.getElementById('ciSemTutor').checked);
     let assina='', sig='';
-    if(semTutor){
-      assina='';
-      sig='';
-    } else {
-      assina=(document.getElementById('ciAssinaNome').value||'').trim();
-      if(!assina){ ciBloqueia('sem nome de quem assinou','Escreva o nome de quem assinou (o tutor). Se ninguém veio, marque "O tutor não veio".','ciAssinaNome'); return; }
-      // Defeito #6 — assinatura de dedo OBRIGATÓRIA quando o tutor está presente.
-      sig=ciAssinaturaDataURL();
-      if(!sig){ ciBloqueia('sem assinatura do tutor','Peça para o tutor ASSINAR com o dedo no quadro. Se ninguém veio, marque "O tutor não veio".','ciSig'); return; }
-    }
+    if(!semTutor){ assina=(document.getElementById('ciAssinaNome').value||'').trim(); sig=ciAssinaturaDataURL(); }
     const quemDeixou=semTutor?((document.getElementById('ciQuemDeixou')&&document.getElementById('ciQuemDeixou').value||'').trim()):'';
     if(!DB){ ciBloqueia('banco desconectado','O sistema está sem conexão com o banco agora. Confira a internet e toque em Salvar de novo em alguns segundos.','ci-status'); return; }
     const key=ciKey();
-    // TRAVA anti-duplicidade: já existe uma estadia EM CURSO deste peludinho? (foi assim que o Zeus
-    // ganhou medicação dobrada — lançaram um 2º check-in sem querer). Confirma antes de criar outro.
-    try{
-      var _exist=(typeof CF_ESTADIAS!=='undefined'&&CF_ESTADIAS[key]&&CF_ESTADIAS[key].e)?CF_ESTADIAS[key].e:null;
-      if(_exist && (_exist.status||'ativa')==='ativa'){
-        var _ent=(typeof ciBRdata==='function')?ciBRdata(_exist.entrada):(_exist.entrada||'');
-        if(!confirm('⚠️ JÁ EXISTE um check-in EM CURSO do '+(ciHosp.nome||'peludinho')+(_ent?(' (entrada '+_ent+')'):'')+'.\n\nCriar OUTRO agora vai DUPLICAR medicação e pertences — foi o que aconteceu com o Zeus.\n\n• OK = criar mesmo assim um novo check-in.\n• Cancelar = voltar e EDITAR o check-in que já existe (na ficha do peludinho).')){
-          if(st){ st.style.color='var(--crm-atencao-text)'; st.textContent='Check-in cancelado — edite o que já existe na ficha do peludinho (Agenda de Medicação, Pertences...).'; }
-          return;
-        }
+    const pacote={ dados:dados, meds:meds, temMed:temMed, semTutor:semTutor, assina:assina, sig:sig, quemDeixou:quemDeixou, key:key };
+    // TRAVA DURA anti-duplicidade (item 15, caso Ozzy 01/ago/2026: 3 check-ins do mesmo dia).
+    // O cache local pode estar atrasado, então a checagem vai ao BANCO antes de criar qualquer coisa.
+    __ciTravar(true);
+    __ciEstadiaAtivaNoBanco(key, ciHosp).then(function(ativa){
+      if(ciEditandoId){ __ciGravar('acrescentar', ciEditandoId, pacote); return; }
+      if(!ativa){ __ciGravar('novo', null, pacote); return; }
+      __ciTravar(false);
+      const entTxt=ativa.e.entrada?ciBRdata(ativa.e.entrada):'';
+      zEscolha('⚠️ '+(ciHosp.nome||'Este FILHOt')+' JÁ ESTÁ HOSPEDADO',
+        ['Existe um check-in em curso'+(entTxt?(' (entrada '+entTxt+')'):'')+(ativa.e.criado_por?(', feito por '+ativa.e.criado_por):'')+'.',
+         'Se criar OUTRO agora, a medicação e os pertences ficam duplicados — foi o que aconteceu com o Zeus e com o Ozzy.'],
+        [ {t:'✅ ACRESCENTAR ao check-in que já existe', cor:'#1E8449', fn:function(){ __ciTravar(true); __ciGravar('acrescentar', ativa.id, pacote); }},
+          {t:'Criar mesmo assim um 2º check-in separado', cor:'#B3261E', fn:function(){ __ciTravar(true); __ciGravar('novo', null, pacote); }},
+          {t:'Cancelar', cor:'#6b5f4b', fn:function(){ if(st){ st.style.color='var(--crm-atencao-text)'; st.textContent='Nada foi salvo — o check-in que já existe continua como estava.'; } }} ]);
+    }).catch(function(e){ __ciTravar(false); ciBloqueia('erro ao checar duplicidade','Não consegui conferir se ele já está hospedado: '+((e&&e.message)||e)+'. Tente de novo em instantes.','ci-status'); });
+  }
+  // Desabilita o botão enquanto grava (2 toques = 2 check-ins).
+  function __ciTravar(on){
+    __ciSalvando=!!on;
+    try{ document.querySelectorAll('button').forEach(function(b){
+      if(/Salvar no sistema/i.test(b.textContent||'')){ b.disabled=!!on; b.style.opacity=on?'.55':''; b.textContent=on?'⏳ Salvando…':'💾 Salvar no sistema'; }
+    }); }catch(e){}
+  }
+  // Vai ao banco (fonte da verdade) procurar estadia ATIVA deste FILHOt.
+  function __ciEstadiaAtivaNoBanco(key, h){
+    if(!DB) return Promise.resolve(null);
+    return DB.ref('auaulandia/estadias').once('value').then(function(s){
+      const v=s.val()||{}; let achou=null;
+      Object.keys(v).forEach(function(id){
+        const e=v[id]||{}; if((e.status||'ativa')!=='ativa') return;
+        const mesmo = (e.refKey && e.refKey===(h.refKey||'')) ||
+                      (jsNorm(e.nome||'')===jsNorm(h.nome||'') && jsNorm(e.tutor||'')===jsNorm(h.tutor||''));
+        if(!mesmo) return;
+        if(!achou || (e._ts||0)>(achou.e._ts||0)) achou={id:id, e:e};
+      });
+      return achou;
+    });
+  }
+  // Grava: 'novo' cria estadia; 'acrescentar' funde na que já existe e REABRE a conferência
+  // (item 6 — o tutor comprou um suplemento no meio da estadia: entra no MESMO check-in e
+  // volta para a Wandela conferir, em vez de virar um cadastro paralelo).
+  function __ciGravar(modo, estadiaId, P){
+    const st=document.getElementById('ci-status');
+    const dados=P.dados, meds=P.meds, key=P.key;
+    const assinado=(P.semTutor?('Entregue sem o tutor'+(P.quemDeixou?(' — '+P.quemDeixou):'')):P.assina);
+    if(st){ st.style.color='var(--muted)'; st.textContent=(modo==='acrescentar'?'Acrescentando ao check-in…':'Salvando estadia…'); }
+    // Em 'acrescentar' lê o que JÁ está gravado (banco, não cache) antes de fundir.
+    (modo==='acrescentar'
+      ? DB.ref('auaulandia/estadias/'+estadiaId).once('value').then(function(s){ return s.val()||{}; })
+      : Promise.resolve({})
+    ).then(function(antes){
+    const ops=[]; let ref=null, novosItens=[];
+    if(modo==='acrescentar'){
+      ref=DB.ref('auaulandia/estadias/'+estadiaId);
+      const pertAntes=Array.isArray(antes.pertences)?antes.pertences:[];
+      const chaveP=function(p){ return jsNorm((p&&(p.nome||p.k))||'')+'|'+jsNorm((p&&p.spec)||''); };
+      const jaTem={}; pertAntes.forEach(function(p){ jaTem[chaveP(p)]=1; });
+      (dados.pertences||[]).forEach(function(p){ if(!jaTem[chaveP(p)]) novosItens.push((p.nome||p.k||'item')+(p.spec?(' — '+p.spec):'')); });
+      const pertFinal=pertAntes.concat((dados.pertences||[]).filter(function(p){ return !jaTem[chaveP(p)]; }));
+      const medAntes=Array.isArray(antes.medicacao)?antes.medicacao:[];
+      const medNomes={}; medAntes.forEach(function(m){ medNomes[jsNorm(m.nome||'')]=1; });
+      const medNovas=ciMedsToLista(meds).filter(function(m){ return !medNomes[jsNorm(m.nome||'')]; });
+      medNovas.forEach(function(m){ novosItens.push('Medicação: '+(m.nome||'')); });
+      ops.push(ref.update({
+        entrada:dados.entrada, saida:dados.saida, ficha:dados.ficha,
+        pertences:pertFinal, medicacao:medAntes.concat(medNovas),
+        gate_conferido:P.temMed||!!antes.gate_conferido,
+        _ts:Date.now(), _ultimaEdicao:{quem:quemSou(), ts:Date.now(), acrescentou:novosItens}
+      }));
+      // Voltou a ter coisa para conferir → a conferência REABRE e a Wandela vê de novo.
+      if(novosItens.length){
+        ops.push(DB.ref('auaulandia/estadias/'+estadiaId+'/conferencia').update({
+          concluida:false, reaberta_em:Date.now(), reaberta_por:quemSou(), reaberta_motivo:novosItens.join(' · ')
+        }));
       }
-    }catch(e){}
-    const estadia={
-      refKey:ciHosp.refKey||'', nome:ciHosp.nome||'', tutor:ciHosp.tutor||'', raca:ciHosp.raca||'',
-      entrada:dados.entrada, saida:dados.saida, status:'ativa',
-      ficha:dados.ficha, pertences:dados.pertences,
-      medicacao:ciMedsToLista(meds),
-      gate_conferido:temMed, assinatura:sig, assinado_por:(semTutor?('Entregue sem o tutor'+(quemDeixou?(' — '+quemDeixou):'')):assina),
-      entregaSemTutor:semTutor, quemDeixou:(quemDeixou||null),
-      criado_por:quemSou(), _ts:Date.now()
-    };
-    if(st){ st.style.color='var(--muted)'; st.textContent='Salvando estadia…'; }
-    const ref=DB.ref('auaulandia/estadias').push();
-    const ops=[ ref.set(estadia) ];
+    } else {
+      ref=DB.ref('auaulandia/estadias').push();
+      ops.push(ref.set({
+        refKey:ciHosp.refKey||'', nome:ciHosp.nome||'', tutor:ciHosp.tutor||'', raca:ciHosp.raca||'',
+        entrada:dados.entrada, saida:dados.saida, status:'ativa',
+        ficha:dados.ficha, pertences:dados.pertences, medicacao:ciMedsToLista(meds),
+        gate_conferido:P.temMed, assinatura:P.sig, assinado_por:assinado,
+        entregaSemTutor:P.semTutor, quemDeixou:(P.quemDeixou||null),
+        criado_por:quemSou(), _ts:Date.now()
+      }));
+    }
     // Liga a medicação à espinha (mesmo nó do despertador) para já disparar os alarmes.
-    // ANTI-HULK: grava metadados + CADA remédio item a item (update), nunca sobrescreve o nó inteiro —
-    // se a Vet já lançou algo nesta ficha, não é apagado por um re-check-in.
-    if(temMed){
-      ops.push(DB.ref('auaulandia/medicacao-agenda/'+key).update({ nome:ciHosp.nome||'', tutor:ciHosp.tutor||'', estadiaId:ref.key, _ts:Date.now(), _quem:quemSou() }));
+    // ANTI-HULK: grava metadados + CADA remédio item a item (update), nunca sobrescreve o nó inteiro.
+    if(P.temMed){
+      const eid=(modo==='acrescentar')?estadiaId:ref.key;
+      ops.push(DB.ref('auaulandia/medicacao-agenda/'+key).update({ nome:ciHosp.nome||'', tutor:ciHosp.tutor||'', estadiaId:eid, _ts:Date.now(), _quem:quemSou() }));
       Object.keys(meds).forEach(function(mid){ ops.push(DB.ref('auaulandia/medicacao-agenda/'+key+'/itens/'+mid).update(meds[mid])); });
     }
     Promise.all(ops).then(function(){
-      if(st){ st.style.color='var(--crm-ok)'; st.textContent='✅ Check-in salvo na pasta da estadia de '+ciHosp.nome+'.'; }
-      if(typeof audit==='function') audit('checkin','estadia criada',{pet:ciHosp.nome||'',entrada:dados.entrada,meds:Object.keys(meds).length});
+      __ciTravar(false); ciSalvoAgora=true; ciEditandoId=null;
+      if(typeof audit==='function') audit('checkin', modo==='acrescentar'?('acrescentou ao check-in: '+(novosItens.join(', ')||'ajuste de ficha')):'estadia criada',{pet:ciHosp.nome||'',entrada:dados.entrada,meds:Object.keys(meds).length});
       if(typeof carregarAgendaMedTodos==='function') carregarAgendaMedTodos();
-      ciSalvoAgora=true;   // libera a saída da tela sem o aviso de "não salvo"
-      // Confirmação que precisa de OK: é a única forma de a pessoa sair da tela SABENDO
-      // que salvou. Antes, sucesso e erro tinham o mesmo peso visual — um texto pequeno.
-      alert('✅ CHECK-IN SALVO\n\n'+(ciHosp.nome||'O FILHOt')+' — estadia de '+ciBRdata(dados.entrada)+' até '+(dados.saida?ciBRdata(dados.saida):'data a confirmar')+'.\n\nJá aparece na Conferência e no Plantão.');
+      if(st){ st.style.color='var(--crm-ok)'; st.textContent='✅ Salvo.'; }
+      if(modo==='acrescentar'){
+        zAlertao('✅ ACRESCENTADO AO CHECK-IN DE '+((ciHosp.nome||'').toUpperCase()),
+          novosItens.length?novosItens:['A ficha foi atualizada.'],
+          {ok:true, botao:'Fechar', rodape:novosItens.length?'Voltou para a Conferência: a conferente vai ver o que entrou de novo e conferir.':'Nada novo para conferir.'});
+      } else {
+        zAlertao('✅ CHECK-IN SALVO',
+          [(ciHosp.nome||'O FILHOt')+' — estadia de '+ciBRdata(dados.entrada)+' até '+(dados.saida?ciBRdata(dados.saida):'data a confirmar')+'.',
+           'Já aparece na Conferência e no Plantão.'],
+          {ok:true, botao:'Fechar'});
+      }
     }).catch(function(e){
+      __ciTravar(false);
       const msg=(e&&e.message)||String(e);
       if(st){ st.style.color='var(--crm-critico)'; st.textContent='⚠️ Erro ao salvar: '+msg; }
       try{ if(typeof audit==='function') audit('checkin-bloqueado','erro do banco ao salvar: '+msg,{pet:(ciHosp&&ciHosp.nome)||''}); }catch(x){}
-      alert('CHECK-IN NÃO SALVO\n\nO banco recusou a gravação:\n'+msg+'\n\nNÃO saia da tela: confira a internet e toque em "Salvar no sistema" de novo.');
+      zAlertao('O CHECK-IN NÃO FOI SALVO',['O banco recusou a gravação: '+msg],{rodape:'NÃO saia da tela: confira a internet e toque em "Salvar no sistema" de novo.',botao:'Tentar de novo'});
+    });
+    }).catch(function(e){
+      __ciTravar(false);
+      zAlertao('O CHECK-IN NÃO FOI SALVO',['Não consegui ler o check-in que já existe: '+((e&&e.message)||e)],{botao:'Tentar de novo'});
     });
   }
 
@@ -9544,8 +9786,15 @@
         var la='<div style="font-size:13px;color:var(--z-blue-soft)"><strong>Tipo:</strong> '+escAttr(a.tipo||'—')+(a.marca?(' · Marca: '+escAttr(a.marca)):'')+'</div>';
         if(a.qtd) la+='<div style="font-size:13px;color:var(--z-blue-soft)"><strong>Ração:</strong> '+escAttr(a.qtd)+' '+escAttr(a.unidade||'g')+'/refeição'+(a.refeicoes?(' · '+escAttr(a.refeicoes)+'x/dia'):'')+'</div>';
         if(a.comida&&a.comida.qtd) la+='<div style="font-size:13px;color:#2B7A4B"><strong>Comida natural:</strong> '+escAttr(a.comida.qtd)+'g/refeição</div>';
+        // Item 13 — quando o FILHOt come OUTRA coisa (o almoço do Ozzy é 1/4 de pera), a
+        // instrução tem que estar aqui, onde a pessoa lê antes de servir — não escondida
+        // dentro da ficha. Mostra refeição por refeição e a observação escrita no check-in.
+        var _pr=(typeof ciAlimPorRefTexto==='function')?ciAlimPorRefTexto(a):'';
+        if(_pr) la+='<div style="font-size:13px;color:var(--z-blue);font-weight:700;margin-top:4px">Em cada refeição: '+escAttr(_pr)+'</div>';
         ht+=box('Alimentação',la);
       }
+      if(a.obs) ht+='<div style="background:rgba(222,180,40,.16);border-left:4px solid var(--z-gold);border-radius:10px;padding:10px 12px;margin-bottom:8px;font-size:14px;color:var(--z-blue);font-weight:700">🍽️ Como servir: '+escAttr(a.obs)+'</div>';
+      if(f.obsGeral) ht+='<div style="background:rgba(35,77,103,.10);border-left:4px solid var(--z-blue);border-radius:10px;padding:10px 12px;margin-bottom:8px;font-size:14px;color:var(--z-blue);font-weight:700">📝 Observação do check-in: '+escAttr(f.obsGeral)+'</div>';
       topo.innerHTML=ht;
     }
   }
