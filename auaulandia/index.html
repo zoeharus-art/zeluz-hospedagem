@@ -1997,6 +1997,7 @@
     <div class="pel-toolbar" style="gap:10px;flex-wrap:wrap">
       <input id="hospAbaBusca" class="cad-in" style="max-width:280px" placeholder="Buscar por nome ou tutor" autocomplete="off" oninput="renderHospedesAba()">
       <button class="btn btn-primary" onclick="novaHospedagem()">+ Nova hospedagem</button>
+      <button class="btn" style="background:#2E7D8A;color:#FFFDF6" onclick="novaPernoiteHoje()">🌙 Pernoite de hoje</button>
       <span class="pel-count" id="hospAbaCount"></span>
     </div>
     <div id="hospAbaLista"></div>
@@ -2014,16 +2015,22 @@
           <div><div class="ci-h-nome" id="coNome">—</div><div class="ci-h-meta" id="coMeta">—</div></div>
         </div>
       </div>
+      <!-- Item 2: o check-out tem DUAS etapas. Etapa 1 = monitor junta tudo lá dentro.
+           Etapa 2 = recepção confere com o tutor na frente, ele assina e leva o PDF. -->
+      <div id="coEtapaBanner"></div>
       <div class="card">
-        <h2 style="font-size:19px">Tudo que VOLTA com o tutor</h2>
-        <div class="hint">Confira item a item. Junta o que entrou no check-in + o que foi adquirido ou o tutor mandou durante a estadia. Marque conforme entrega para não esquecer nada.</div>
+        <h2 style="font-size:19px" id="coItensTitulo">Tudo que VOLTA com o tutor</h2>
+        <div class="hint" id="coItensHint">Confira item a item. Junta o que entrou no check-in + o que foi adquirido ou o tutor mandou durante a estadia. Marque conforme entrega para não esquecer nada.</div>
         <div id="coItens" style="margin-top:8px"></div>
+        <div id="coEtapa1Acao" style="margin-top:12px;display:none">
+          <button class="btn btn-primary" style="width:100%" onclick="coFecharEtapa1()">✅ Juntei tudo — mandar para a recepção</button>
+        </div>
       </div>
       <div class="card">
         <h2 style="font-size:19px">Observações da saída</h2>
         <div class="field"><input class="cad-in" id="coObs" placeholder="Ex: devolvido 1 pacote de ração fechado · levou o casaco vermelho" autocomplete="off"></div>
       </div>
-      <div class="card">
+      <div class="card" id="coCardAssinatura">
         <h2>Assinatura do tutor (saída)</h2>
         <div class="hint">O tutor confere junto e assina a retirada. Se ninguém veio (taxi dog), marque abaixo.</div>
         <label class="ci-spa-conf" style="margin:0 0 10px"><input type="checkbox" id="coSemTutor" onchange="coSemTutorChange()"><span>O tutor <strong>não veio</strong> — retirada por terceiro (taxi dog). <strong>Dispensa assinatura.</strong></span></label>
@@ -2034,7 +2041,7 @@
           <div class="field" style="margin-top:12px"><label>Nome de quem assinou (tutor) *</label><input class="cad-in" id="coAssinaNome" placeholder="Nome e sobrenome" autocomplete="off"></div>
         </div>
       </div>
-      <div class="card">
+      <div class="card" id="coCardFinal">
         <div id="coPendHint" class="hint" style="margin-bottom:10px"></div>
         <div class="ci-actions">
           <button class="btn btn-primary" onclick="coFinalizar()">✅ Finalizar check-out</button>
@@ -4501,7 +4508,8 @@
       {k:'cuidadovet', t:'Cuidado Vet'}, {k:'hospedagem', t:'Plantão AuAulândia'}, {k:'checkout', t:'Check-out (saída)'}
     ]},
     {grp:'Gestão', itens:[
-      {k:'painel', t:'Painel'}, {k:'ficha', t:'Peludinhos'}, {k:'pessoas', t:'Pessoas'}, {k:'renovacao', t:'Renovação de Planos'}
+      {k:'painel', t:'Painel'}, {k:'ficha', t:'Peludinhos'}, {k:'hospedes', t:'Peludinhos Hóspedes (estadias)'},
+      {k:'pessoas', t:'Pessoas'}, {k:'renovacao', t:'Renovação de Planos'}
     ]}
   ];
   const NAV_PAGINAS_KEYS=NAV_PAGINAS_ALL.reduce((a,g)=>a.concat(g.itens.map(x=>x.k)),[]);
@@ -9623,11 +9631,12 @@
     if(cnt) cnt.textContent=g.agora.length+' hospedado'+(g.agora.length===1?'':'s')+' agora · '+g.achegar.length+' a chegar · '+g.saiu.length+' no histórico';
     let h='';
     if(hospNovaPend){
+      var _amanha=(function(){ var d=new Date(); d.setDate(d.getDate()+1); var p=function(x){return String(x).padStart(2,'0');}; return d.getFullYear()+'-'+p(d.getMonth()+1)+'-'+p(d.getDate()); })();
       h+='<div class="hosp-est he-edit">'
-        + '<div class="he-main"><div class="he-nome">Nova hospedagem — '+escAttr(hospNovaPend.nome||'')+'</div>'
-        + '<div class="he-sub">Tutor: '+escAttr(hospNovaPend.tutor||'a confirmar')+'. Informe de quando a quando o FILHOt fica.</div></div>'
+        + '<div class="he-main"><div class="he-nome">'+(hospNovaPernoite?'🌙 Pernoite de hoje — ':'Nova hospedagem — ')+escAttr(hospNovaPend.nome||'')+'</div>'
+        + '<div class="he-sub">Tutor: '+escAttr(hospNovaPend.tutor||'a confirmar')+'. '+(hospNovaPernoite?'Entra hoje e sai amanhã — confira as datas e salve. A monitora recebe na Conferência.':'Informe de quando a quando o FILHOt fica.')+'</div></div>'
         + '<label style="font-size:12px;font-weight:700;color:var(--muted)">Entrada<br><input type="date" class="cad-in" id="hospNovaIni" value="'+escAttr(hospHojeISO())+'"></label>'
-        + '<label style="font-size:12px;font-weight:700;color:var(--muted)">Saída<br><input type="date" class="cad-in" id="hospNovaFim" value=""></label>'
+        + '<label style="font-size:12px;font-weight:700;color:var(--muted)">Saída<br><input type="date" class="cad-in" id="hospNovaFim" value="'+(hospNovaPernoite?escAttr(_amanha):'')+'"></label>'
         + '<div class="he-acoes"><button class="btn btn-primary" onclick="hospSalvarNova()">Salvar hospedagem</button>'
         + '<button class="btn" onclick="hospNovaPend=null;renderHospedesAba()">Cancelar</button></div></div>';
     }
@@ -9688,9 +9697,19 @@
   // Nova hospedagem: reaproveita a MESMA busca do "Adicionar hóspede" (cadastro-mestre,
   // com aviso de alergia) — o tipo 'estadia' faz o escolherHospede cair aqui em vez de
   // criar um lançamento solto de hoje.
+  var hospNovaPernoite=false;
   function novaHospedagem(){
     if(!hospAbaPode()){ alert('Só a Gestão, a Supervisão, a Consultora ou a Diretoria podem lançar uma hospedagem.'); return; }
-    hospAbaEdit=null;
+    hospAbaEdit=null; hospNovaPernoite=false;
+    if(typeof abrirHospBuscaModal==='function') abrirHospBuscaModal('estadia');
+  }
+  // ===== ITEM 7 (Adriana 02/ago/2026) — PERNOITE LANÇADA PELA RECEPÇÃO ================
+  // "Tem tutor que chega de manhã e já pede a pernoite porque não vai pegar à noite."
+  // A recepção lança em dois toques (entra hoje, sai amanhã) e o FILHOt já cai na
+  // Conferência para a monitora conferir e contar como foi o dia.
+  function novaPernoiteHoje(){
+    if(!hospAbaPode()){ alert('Só a Gestão, a Supervisão, a Consultora ou a Diretoria podem lançar uma pernoite.'); return; }
+    hospAbaEdit=null; hospNovaPernoite=true;
     if(typeof abrirHospBuscaModal==='function') abrirHospBuscaModal('estadia');
   }
   function hospSalvarNova(){
@@ -9712,7 +9731,8 @@
     });
     const est={ refKey:p.refKey||'', nome:p.nome||'', tutor:p.tutor||'', raca:p.raca||'',
       entrada:ent, saida:sai, status:'ativa',
-      origem:'aba-hospedes', criado_por:(typeof quemSou==='function'?quemSou():'-'), _ts:Date.now() };
+      origem:(hospNovaPernoite?'pernoite-recepcao':'aba-hospedes'), criado_por:(typeof quemSou==='function'?quemSou():'-'), _ts:Date.now() };
+    if(hospNovaPernoite){ est.pernoite=true; est.pernoite_pedida_por=(typeof quemSou==='function'?quemSou():'-'); }
     if(fichaAnterior){ delete fichaAnterior._ts; est.ficha=fichaAnterior; est.ficha_copiada_de=deQuando||'estadia anterior'; }
     DB.ref('auaulandia/estadias').push(est).then(function(){
       if(typeof audit==='function') audit('estadia-criada','hospedagem lançada pela aba Peludinhos Hóspedes',{pet:p.nome||'',entrada:ent,saida:sai});
@@ -9784,11 +9804,34 @@
     if(typeof carregarHospedes==='function') carregarHospedes();
     renderCfLista();
   }
+  var cfMostrarConferidos=false;
+  function cfToggleConferidos(){ cfMostrarConferidos=!cfMostrarConferidos; renderCfLista(); }
+  // ===== ITEM 2 (Adriana 02/ago/2026) ================================================
+  // "Preciso ser rápido: quem NÃO está conferido tem que aparecer." Os conferidos não
+  // somem — eles continuam ali embaixo, recolhidos, porque na saída tudo volta a ser
+  // conferido no Check-out (o caminho inverso). Quem falta fica em cima, sozinho.
   function renderCfLista(){
     var el=document.getElementById('cfGrid'); if(!el) return;
     CF_LISTA=cfListaHospedes();
     if(!CF_LISTA.length){ el.innerHTML='<div class="av-empty" style="grid-column:1/-1"><div class="big">Sem hóspedes hoje</div>Quando houver check-in feito, ele aparece aqui para conferência.</div>'; return; }
-    el.innerHTML=CF_LISTA.map(function(h,i){
+    var idxPend=[], idxOk=[], idxSem=[];
+    CF_LISTA.forEach(function(h,i){ var p=cfPendente(h); if(!p) idxSem.push(i); else if(p.concluida) idxOk.push(i); else idxPend.push(i); });
+    var cardHTML=function(i){ return cfCardHTML(CF_LISTA[i], i); };
+    var grade=function(ids){ return '<div style="grid-column:1/-1;display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:12px">'+ids.map(cardHTML).join('')+'</div>'; };
+    var tit=function(txt,cor,sub){ return '<div style="grid-column:1/-1;margin:4px 0 2px"><div style="font-weight:800;font-size:16px;color:'+cor+'">'+txt+'</div>'+(sub?'<div style="font-size:12.5px;color:var(--muted);font-weight:600">'+sub+'</div>':'')+'</div>'; };
+    var h='';
+    if(idxPend.length) h+=tit('⚠️ FALTA CONFERIR ('+idxPend.length+')','#B3261E','Confira estes antes de qualquer outra coisa.')+grade(idxPend);
+    if(idxSem.length) h+=tit('Sem check-in ('+idxSem.length+')','var(--muted)','Estão hospedados mas ninguém fez o check-in — avise a recepção.')+grade(idxSem);
+    if(!idxPend.length && !idxSem.length) h+='<div style="grid-column:1/-1;background:rgba(30,132,73,.10);border:1.5px solid #1E8449;border-radius:12px;padding:14px;font-weight:800;color:#1E8449;text-align:center">✅ Tudo conferido. Nada pendente agora.</div>';
+    if(idxOk.length){
+      h+='<div style="grid-column:1/-1;margin-top:14px"><button type="button" class="med-add" style="width:100%" onclick="cfToggleConferidos()">'
+        +(cfMostrarConferidos?'▾':'▸')+' Já conferidos ('+idxOk.length+') — eles voltam a ser conferidos no Check-out</button></div>';
+      if(cfMostrarConferidos) h+=grade(idxOk);
+    }
+    el.innerHTML=h;
+  }
+  function cfCardHTML(h,i){
+    return [CF_LISTA[i]].map(function(h){
       var cad=(typeof getCad==='function')?getCad(h):{};
       var ph=cad.foto?('<div class="ph" style="background-image:url(\''+cad.foto+'\');background-size:cover;background-position:center"></div>'):('<div class="ph" style="background:'+(h.cor||'#234D67')+'">'+escAttr((h.ini||(h.nome||'?')[0]||'?'))+'</div>');
       var ex=(typeof extraDoHosp==='function')?extraDoHosp(h):{};
@@ -9800,7 +9843,9 @@
         :(pend.concluida
           ?'<span class="mini-med" style="background:var(--crm-ok);color:#fff">CONFERIDO</span>'
           :'<span class="mini-med" style="background:var(--crm-critico);color:#fff;animation:piscaAlerta 1.5s ease-in-out infinite">CONFERIR</span>');
-      return '<div class="vet-pet" onclick="abrirCfFicha('+i+')">'+ph+alerta+selo
+      // Item 7 — pernoite lançada pela recepção chega marcada para a monitora conferir.
+      var _pern=(pend&&pend.e&&pend.e.pernoite)?'<span class="mini-med" style="background:#2E7D8A;color:#fff">PERNOITE</span>':'';
+      return '<div class="vet-pet" onclick="abrirCfFicha('+i+')">'+ph+alerta+selo+_pern
         +'<div class="nm">'+escAttr((cad.nome||h.nome||'—'))+'</div>'
         +'<div class="br">'+(racaDe(h)?escAttr(racaDe(h)):'—')+'</div>'
         +'<div class="tt">'+(h.mascote?'Nossa Zelozinha':(tutor?'Tutor: '+escAttr(tutor):'Tutor a confirmar'))+'</div></div>';
@@ -9909,6 +9954,10 @@
         if(_pr) la+='<div style="font-size:13px;color:var(--z-blue);font-weight:700;margin-top:4px">Em cada refeição: '+escAttr(_pr)+'</div>';
         ht+=box('Alimentação',la);
       }
+      // Item 7 — a recepção lançou a pernoite de manhã: a monitora precisa saber disso e
+      // contar como foi o dia dele (usa o campo de ocorrência logo abaixo, que já chega na
+      // Recepção e no Plantão).
+      if(cfEstadia.pernoite) ht='<div style="background:rgba(46,125,138,.14);border-left:4px solid #2E7D8A;border-radius:10px;padding:11px 13px;margin-bottom:10px;font-size:14px;color:var(--z-blue);font-weight:700">🌙 <strong>Pernoite pedida pelo tutor hoje de manhã</strong>'+(cfEstadia.pernoite_pedida_por?(' — lançada por '+escAttr(cfEstadia.pernoite_pedida_por)):'')+'.<br>Confira o que ele tem e escreva no campo de ocorrência como foi o dia dele.</div>'+ht;
       if(a.obs) ht+='<div style="background:rgba(222,180,40,.16);border-left:4px solid var(--z-gold);border-radius:10px;padding:10px 12px;margin-bottom:8px;font-size:14px;color:var(--z-blue);font-weight:700">🍽️ Como servir: '+escAttr(a.obs)+'</div>';
       if(f.obsGeral) ht+='<div style="background:rgba(35,77,103,.10);border-left:4px solid var(--z-blue);border-radius:10px;padding:10px 12px;margin-bottom:8px;font-size:14px;color:var(--z-blue);font-weight:700">📝 Observação do check-in: '+escAttr(f.obsGeral)+'</div>';
       topo.innerHTML=ht;
@@ -10291,14 +10340,38 @@
       .filter(function(o){ return (o.e.status||'ativa')==='ativa'; })
       .sort(function(a,b){ return jsNorm(a.e.nome||'').localeCompare(jsNorm(b.e.nome||'')); });
     if(!lista.length){ el.innerHTML='<div class="av-empty" style="grid-column:1/-1"><div class="big">Nenhuma estadia ativa</div>Quando houver hóspede para sair, ele aparece aqui.</div>'; return; }
-    el.innerHTML=lista.map(function(o){ var e=o.e; var ini=((e.nome||'?')[0]||'?').toUpperCase();
-      return '<div class="vet-pet" onclick="coAbrirFicha(\''+escAttr(o.rk)+'\')"><div class="ph" style="background:#234D67">'+escAttr(ini)+'</div>'
+    var hoje=(function(){ var d=new Date(),p=function(x){return String(x).padStart(2,'0');}; return d.getFullYear()+'-'+p(d.getMonth()+1)+'-'+p(d.getDate()); })();
+    var card=function(o){ var e=o.e; var ini=((e.nome||'?')[0]||'?').toUpperCase();
+      var et=coEtapaDe(e);
+      var selo=(et===2)
+        ?'<span class="mini-med" style="background:#1E8449;color:#fff">NA RECEPÇÃO</span>'
+        :((e.saida===hoje)?'<span class="mini-med" style="background:var(--crm-critico);color:#fff">SAI HOJE</span>':'');
+      return '<div class="vet-pet" onclick="coAbrirFicha(\''+escAttr(o.rk)+'\')"><div class="ph" style="background:#234D67">'+escAttr(ini)+'</div>'+selo
         +'<div class="nm">'+escAttr(e.nome||'—')+'</div><div class="br">'+escAttr(e.raca||'—')+'</div>'
-        +'<div class="tt">'+(e.tutor?'Tutor: '+escAttr(e.tutor):'—')+(e.saida?' · sai '+ciBRdata(e.saida):'')+'</div></div>';
-    }).join('');
+        +'<div class="tt">'+(e.tutor?'Tutor: '+escAttr(e.tutor):'—')+(e.saida?' · sai '+ciBRdata(e.saida):' · sem data de saída')+'</div></div>'; };
+    var prontos=lista.filter(function(o){ return coEtapaDe(o.e)===2; });
+    var saiHoje=lista.filter(function(o){ return coEtapaDe(o.e)===1 && o.e.saida===hoje; });
+    var resto=lista.filter(function(o){ return coEtapaDe(o.e)===1 && o.e.saida!==hoje; });
+    var tit=function(txt,cor,sub){ return '<div style="grid-column:1/-1;margin:4px 0 2px"><div style="font-weight:800;font-size:16px;color:'+cor+'">'+txt+'</div>'+(sub?'<div style="font-size:12.5px;color:var(--muted);font-weight:600">'+sub+'</div>':'')+'</div>'; };
+    var grade=function(arr){ return '<div style="grid-column:1/-1;display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:12px">'+arr.map(card).join('')+'</div>'; };
+    var h='';
+    if(prontos.length) h+=tit('✅ Prontos — a recepção confere com o tutor ('+prontos.length+')','#1E8449','A bolsa já foi montada pela monitora. Falta conferir com o tutor e colher a assinatura.')+grade(prontos);
+    if(saiHoje.length) h+=tit('🔴 Saem HOJE — juntar as coisas ('+saiHoje.length+')','#B3261E','Etapa 1: a monitora junta tudo e manda para a recepção.')+grade(saiHoje);
+    if(resto.length) h+=tit('Outras estadias em curso ('+resto.length+')','var(--muted)','Ainda não é o dia da saída — só entre aqui se o tutor antecipou.')+grade(resto);
+    el.innerHTML=h;
   }
+  // ===== ITEM 2 — CHECK-OUT EM DUAS ETAPAS ==========================================
+  // Adriana: "quando vai embora, o peludinho passa por um check-out (pelos monitores,
+  // para juntar tudo que ele levou), e na recepção ele é conferido junto com o tutor,
+  // que assina que recebeu tudo. O movimento é inverso."
+  // Etapa 1 = quem trabalha lá dentro (monitor/plantonista/aprendiz/conferência).
+  // Etapa 2 = recepção/gestão/supervisão, com o tutor na frente e assinatura.
+  function coEhRecepcao(){ var r=document.body.dataset.role||''; return r==='consultora'||r==='gestao'||r==='supervisor'||r==='diretoria'; }
+  function coEtapaDe(e){ return (e&&e.checkout_etapa1&&e.checkout_etapa1.ts)?2:1; }
   function coAbrirFicha(rk){
     var reg=CF_ESTADIAS[rk]; if(!reg) return; coEstadiaId=reg.id; coEstadia=reg.e||{}; coHosp={nome:coEstadia.nome,tutor:coEstadia.tutor,raca:coEstadia.raca}; coConf={};
+    // Retoma o que o monitor já marcou na etapa 1 — a recepção não remarca tudo do zero.
+    try{ if(coEstadia.checkout_etapa1&&coEstadia.checkout_etapa1.conferido) coConf=Object.assign({},coEstadia.checkout_etapa1.conferido); }catch(e){}
     document.getElementById('co-lista').style.display='none'; document.getElementById('co-ficha').style.display='block';
     var av=document.getElementById('coAv'); if(av){ av.style.background='#234D67'; av.textContent=((coEstadia.nome||'?')[0]||'?').toUpperCase(); }
     document.getElementById('coNome').textContent=coEstadia.nome||'—';
@@ -10309,7 +10382,62 @@
     document.getElementById('coAssinaNome').value=coEstadia.tutor||'';
     coInitSig(); coLimparAssinatura();
     var st=document.getElementById('co-status'); if(st) st.textContent='';
+    coRenderEtapa();
     coRenderPend(); window.scrollTo({top:0,behavior:'smooth'});
+  }
+  // Mostra a tela conforme a etapa e quem está logado.
+  function coRenderEtapa(){
+    var etapa=coEtapaDe(coEstadia), recep=coEhRecepcao();
+    var ban=document.getElementById('coEtapaBanner');
+    var e1=document.getElementById('coEtapa1Acao');
+    var assina=document.getElementById('coCardAssinatura');
+    var final=document.getElementById('coCardFinal');
+    var tit=document.getElementById('coItensTitulo'), hint=document.getElementById('coItensHint');
+    var caixa=function(cor,fundo,titulo,txt){ return '<div style="background:'+fundo+';border:2px solid '+cor+';border-radius:14px;padding:14px 16px;margin-bottom:14px">'
+      +'<div style="font-weight:800;font-size:17px;color:'+cor+';margin-bottom:3px">'+titulo+'</div>'
+      +'<div style="font-size:14px;color:var(--z-blue);font-weight:600">'+txt+'</div></div>'; };
+    if(etapa===1){
+      // Ninguém juntou as coisas ainda.
+      if(ban) ban.innerHTML=caixa('#DEB428','#FDF3D6','Etapa 1 de 2 — juntar tudo lá dentro',
+        recep?'A monitora ainda não fez esta etapa. Peça para ela juntar os pertences, a ração e a medicação que sobrou e marcar aqui — depois você confere com o tutor.'
+             :'Junte tudo que é de '+esc(coEstadia.nome||'')+' (pertences, sobra de ração, remédios, o que o tutor mandou e o que foi comprado aqui) e marque item por item. Depois desça com ele para a recepção.');
+      if(tit) tit.textContent='Junte tudo que é dele';
+      if(hint) hint.textContent='Marque cada item conforme for colocando na bolsa. O que ficar sem marcar aparece em vermelho.';
+      if(e1) e1.style.display=recep?'none':'block';
+      if(assina) assina.style.display='none';
+      if(final) final.style.display=recep?'':'none';
+    } else {
+      var q1=(coEstadia.checkout_etapa1||{});
+      var quando=q1.ts?new Date(q1.ts).toLocaleString('pt-BR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}):'';
+      if(ban) ban.innerHTML=caixa('#1E8449','#E8F5EC','Etapa 2 de 2 — conferir com o tutor',
+        'A bolsa foi montada por <strong>'+esc(q1.quem||'—')+'</strong>'+(quando?(' em '+esc(quando)):'')+'.'
+        +(recep?' Confira item por item COM O TUTOR na frente, peça a assinatura e finalize.'
+               :' Agora é com a recepção: ela confere com o tutor e colhe a assinatura.'));
+      if(tit) tit.textContent='Conferir com o tutor';
+      if(hint) hint.textContent='Passe item por item com o tutor. Ele assina confirmando que recebeu tudo.';
+      if(e1) e1.style.display='none';
+      if(assina) assina.style.display=recep?'':'none';
+      if(final) final.style.display=recep?'':'none';
+    }
+  }
+  function coFecharEtapa1(){
+    if(!coEstadiaId||!DB) return;
+    var st=document.getElementById('co-status');
+    var itens=coItensLista(), falta=itens.filter(function(it){ return !coConf[it.k]; });
+    if(falta.length){
+      zAlertao('AINDA FALTA JUNTAR', falta.map(function(f){ return f.label; }),
+        {rodape:'Marque tudo que você já separou. Se alguma coisa não vai voltar (ração consumida, remédio acabado), marque assim mesmo e escreva na observação.', botao:'Voltar e conferir'});
+      return;
+    }
+    var reg={conferido:coConf, quem:(typeof quemSou==='function'?quemSou():'-'), ts:Date.now(), obs:(document.getElementById('coObs').value||'').trim()};
+    if(st){ st.style.color='var(--muted)'; st.textContent='Salvando…'; }
+    DB.ref('auaulandia/estadias/'+coEstadiaId+'/checkout_etapa1').set(reg).then(function(){
+      coEstadia.checkout_etapa1=reg;
+      if(typeof audit==='function') audit('checkout','etapa 1: bolsa montada',{pet:(coHosp&&coHosp.nome)||''});
+      zAlertao('✅ PRONTO PARA A RECEPÇÃO',
+        [(coEstadia.nome||'O FILHOt')+' já pode descer com a bolsa.','A recepção vai conferir tudo com o tutor e colher a assinatura.'],
+        {ok:true, botao:'Fechar', aoFechar:function(){ coRenderEtapa(); coVoltar(); }});
+    }).catch(function(e){ if(st){ st.style.color='var(--crm-critico)'; st.textContent='⚠️ Erro: '+((e&&e.message)||e); } });
   }
   function coItensLista(){
     var out=[];
@@ -10346,8 +10474,21 @@
   function coVoltar(){ document.getElementById('co-ficha').style.display='none'; document.getElementById('co-lista').style.display='block'; coRenderLista(); }
   function coFinalizar(){
     var st=document.getElementById('co-status'); if(!coEstadiaId) return;
+    // Etapa 1 obrigatória: ninguém entrega o FILHOt sem alguém lá dentro ter juntado as coisas.
+    if(coEtapaDe(coEstadia)!==2){
+      zAlertao('A BOLSA AINDA NÃO FOI MONTADA',
+        ['Nenhuma monitora marcou que juntou os pertences, a sobra de ração e a medicação de '+((coEstadia&&coEstadia.nome)||'este FILHOt')+'.',
+         'Peça para fazer a Etapa 1 no celular dela (Check-out → o nome dele → "Juntei tudo"). Sem isso, alguma coisa fica para trás.'],
+        {botao:'Entendi'});
+      return;
+    }
     var itens=coItensLista(); var falta=itens.filter(function(it){ return !coConf[it.k]; });
-    if(falta.length){ if(st){ st.style.color='var(--crm-critico)'; st.textContent='✋ Confira/entregue todos os itens antes de finalizar.'; } return; }
+    if(falta.length){
+      zAlertao('FALTA CONFERIR COM O TUTOR', falta.map(function(f){ return f.label; }),
+        {rodape:'Marque cada item junto com o tutor antes de finalizar a saída.', botao:'Voltar e conferir'});
+      if(st){ st.style.color='var(--crm-critico)'; st.textContent='✋ Confira/entregue todos os itens antes de finalizar.'; }
+      return;
+    }
     var semTutor=!!(document.getElementById('coSemTutor')&&document.getElementById('coSemTutor').checked);
     var assina='', sig='';
     if(semTutor){ var qr=(document.getElementById('coQuemRetirou').value||'').trim(); assina='Retirada sem o tutor'+(qr?(' — '+qr):''); }
@@ -10358,7 +10499,8 @@
       if(!sig){ if(st){ st.style.color='var(--crm-critico)'; st.textContent='✋ Peça para o tutor ASSINAR a retirada.'; } return; }
     }
     if(!DB){ if(st){ st.style.color='var(--crm-atencao-text)'; st.textContent='Banco conectando…'; } return; }
-    var reg={ conferido:coConf, obs:(document.getElementById('coObs').value||'').trim(), assinado_por:assina, assinatura:sig, semTutor:semTutor, quem:(typeof quemSou==='function'?quemSou():'-'), ts:Date.now() };
+    var reg={ conferido:coConf, obs:(document.getElementById('coObs').value||'').trim(), assinado_por:assina, assinatura:sig, semTutor:semTutor, quem:(typeof quemSou==='function'?quemSou():'-'), ts:Date.now(),
+              bolsa_montada_por:((coEstadia.checkout_etapa1||{}).quem||''), bolsa_montada_em:((coEstadia.checkout_etapa1||{}).ts||null) };
     if(st){ st.style.color='var(--muted)'; st.textContent='Salvando check-out…'; }
     DB.ref('auaulandia/estadias/'+coEstadiaId).update({ status:'finalizada', checkout:reg }).then(function(){
       coEstadia.status='finalizada';
