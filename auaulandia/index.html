@@ -1400,22 +1400,33 @@
         <div id="magHoje"></div>
 
         <h3 class="cad-sub" style="margin-top:18px">Registrar dose avulsa (deu agora, sem estar agendada)</h3>
+        <!-- Item 11 (Adriana 02/ago/2026): aconteceu alguma coisa no dia e passaram Nebacetin.
+             Precisa dizer ONDE: "na patinha", "no pescoço, lado direito". Pomada e aplicação
+             não têm quantidade — têm LOCAL. -->
+        <div class="hint">Aconteceu algo durante o dia e você passou alguma coisa (pomada, spray, curativo)? Registre aqui — escreva ONDE passou.</div>
         <div class="medgrid" style="margin-bottom:0">
           <div class="medrow">
-            <label class="mfield"><span class="mf-lab">Medicamento</span><input id="magAvNome" placeholder="Nome do medicamento" autocomplete="off"></label>
+            <label class="mfield"><span class="mf-lab">Medicamento</span><input id="magAvNome" placeholder="Ex: Nebacetin" autocomplete="off"></label>
             <label class="mfield"><span class="mf-lab">Horário</span><input id="magAvHora" inputmode="numeric" placeholder="12:30" autocomplete="off" onblur="normalizarHoraMed(this)"></label>
             <label class="mfield"><span class="mf-lab">Quantidade</span><input id="magAvQtd" inputmode="decimal" placeholder="1" autocomplete="off"></label>
           </div>
           <div class="medunits" id="magAvUnidades">
             <span class="mu-lab">Medida</span>
-            <button type="button" onclick="pickUnit(this)">comprimido</button>
-            <button type="button" onclick="pickUnit(this)">cápsula</button>
-            <button type="button" onclick="pickUnit(this)">ml</button>
-            <button type="button" onclick="pickUnit(this)">gota</button>
-            <button type="button" onclick="pickUnit(this)">sachê</button>
-            <button type="button" onclick="pickUnit(this)">colher</button>
-            <button type="button" onclick="pickUnit(this)">aplicação</button>
-            <button type="button" onclick="pickUnit(this)">unidade</button>
+            <button type="button" onclick="pickUnit(this);magAvUnidadeMudou()">comprimido</button>
+            <button type="button" onclick="pickUnit(this);magAvUnidadeMudou()">cápsula</button>
+            <button type="button" onclick="pickUnit(this);magAvUnidadeMudou()">ml</button>
+            <button type="button" onclick="pickUnit(this);magAvUnidadeMudou()">gota</button>
+            <button type="button" onclick="pickUnit(this);magAvUnidadeMudou()">sachê</button>
+            <button type="button" onclick="pickUnit(this);magAvUnidadeMudou()">colher</button>
+            <button type="button" onclick="pickUnit(this);magAvUnidadeMudou()">aplicação</button>
+            <button type="button" onclick="pickUnit(this);magAvUnidadeMudou()">unidade</button>
+            <button type="button" onclick="pickUnit(this);magAvUnidadeMudou()">pomada</button>
+          </div>
+          <div class="medrow" id="magAvLocalWrap" style="display:none">
+            <label class="mfield" style="grid-column:1/-1"><span class="mf-lab">Onde você passou</span><input id="magAvLocal" placeholder="Ex: na patinha da frente direita · no pescoço, lado direito" autocomplete="off"></label>
+          </div>
+          <div class="medrow">
+            <label class="mfield" style="grid-column:1/-1"><span class="mf-lab">O que aconteceu (opcional)</span><input id="magAvMotivo" placeholder="Ex: apareceu um machucadinho brincando no pátio" autocomplete="off"></label>
           </div>
         </div>
         <div class="actions" style="margin-top:12px"><button class="btn btn-gold" onclick="registrarDoseAvulsa()">Registrar dose dada agora</button></div>
@@ -3791,17 +3802,65 @@
   function renderRelMedConfirm(){
     var slots=document.querySelectorAll('.med-confirm-slot'); if(!slots.length) return;
     var meds=[];
-    try{ Object.keys(MED_AGENDA_ITENS||{}).forEach(function(id){ var it=MED_AGENDA_ITENS[id]||{}; if(it.suspenso) return; if(typeof medVigenteEm==='function' && !medVigenteEm(it)) return; meds.push(it); }); }catch(e){}
-    var temMeds=meds.length>0;
+    var medsForaDeVigencia=[];
+    try{ Object.keys(MED_AGENDA_ITENS||{}).forEach(function(id){ var it=MED_AGENDA_ITENS[id]||{};
+      if(it.suspenso){ medsForaDeVigencia.push(Object.assign({__id:id,__motivo:'suspensa pela veterinária'}, it)); return; }
+      // Item 10 — a pomada Crema 64 da Dolly "sumiu" do plantão porque o período dela terminou
+      // em 29/07. Sumir sem dizer nada parece defeito do sistema: agora aparece como ENCERRADA.
+      if(typeof medVigenteEm==='function' && !medVigenteEm(it)){ medsForaDeVigencia.push(Object.assign({__id:id,__motivo:(it.dataFim?('terminou em '+((typeof ciBRdata==='function')?ciBRdata(it.dataFim):it.dataFim)):'fora do período')}, it)); return; }
+      meds.push(Object.assign({__id:id}, it)); }); }catch(e){}
+    var temMeds=meds.length>0||medsForaDeVigencia.length>0;
     slots.forEach(function(slot){
       if(!temMeds){ slot.innerHTML=''; return; }
-      var h='<div style="margin:8px 0 4px;font-weight:800;color:var(--z-blue);font-size:14px">Medicações deste turno — foi dada?</div>';
+      // ===== ITEM 9 (Adriana 02/ago/2026) ==========================================
+      // Antes: "Dolly — Betaína 07:00, 12:00, 19:00 — deu? Sim/Não". Quem escreve o
+      // relatório às 15h não tem como responder isso: as 7h e as 12h já foram dadas por
+      // outra pessoa e as 19h ainda são da plantonista. Agora cada horário é uma linha
+      // com o estado de verdade — e só pergunta o que realmente está em aberto.
+      var agoraMin=(function(){ var d=new Date(); return d.getHours()*60+d.getMinutes(); })();
+      var hMin=function(s){ var p=String(s||'').split(':'); return p.length>=2?(parseInt(p[0],10)*60+parseInt(p[1],10)):null; };
+      var linhas=[];
       meds.forEach(function(it){
-        var nome=(it.nome||'medicamento'); var hor=(it.horarios||[]).join(', ');
         var comoDar=(typeof medDoseTxt==='function')?medDoseTxt(it):''; var obs=(it.obs||'').trim();
-        var det=[comoDar,obs].filter(Boolean).join(' · ');
-        h+='<div class="obsline med-confirm-obs"><span class="q"><strong>'+escAttr(nome)+'</strong>'+(hor?(' <span style="font-size:11px;color:var(--muted)">'+escAttr(hor)+'</span>'):'')+(det?('<br><span style="font-size:11.5px;color:var(--z-gold-deep);font-weight:600">'+escAttr(det)+'</span>'):'')+' — deu?</span><div class="seg" data-single><button data-tone="ok" onclick="pick(this)">Sim</button><button data-tone="bad" onclick="pick(this)">Não</button></div></div>';
+        (it.horarios&&it.horarios.length?it.horarios:['']).forEach(function(hr){
+          var doseId=(typeof magDoseId==='function'&&it.__id)?magDoseId(it.__id,hr):null;
+          var log=null; try{ log=doseId?MED_AGENDA_LOG[doseId]:null; }catch(e){}
+          if(!log){ // procura por equivalência (cópias da mesma dose gravadas em outro item)
+            try{ Object.keys(MED_AGENDA_LOG||{}).forEach(function(d){ var L=MED_AGENDA_LOG[d];
+              if(L&&!L.avulso&&jsNorm(L.nome||'')===jsNorm(it.nome||'')&&String(L.horario||'')===String(hr)) log=L; }); }catch(e){}
+          }
+          var m=hMin(hr);
+          linhas.push({nome:it.nome||'medicamento', hr:hr, det:[comoDar,obs].filter(Boolean).join(' · '),
+                       log:log, futuro:(m!==null&&m>agoraMin+15)});
+        });
       });
+      linhas.sort(function(a,b){ return String(a.hr).localeCompare(String(b.hr)); });
+      var h='<div style="margin:8px 0 4px;font-weight:800;color:var(--z-blue);font-size:14px">Medicações de hoje — horário por horário</div>';
+      linhas.forEach(function(L){
+        var cab='<strong>'+escAttr(L.nome)+'</strong>'+(L.hr?(' <span style="font-size:12px;font-weight:800;color:var(--z-blue)">'+escAttr(L.hr)+'</span>'):'')
+              +(L.det?('<br><span style="font-size:11.5px;color:var(--z-gold-deep);font-weight:600">'+escAttr(L.det)+'</span>'):'');
+        if(L.log){
+          var hora=L.log.ts?new Date(L.log.ts).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'}):'';
+          h+='<div class="obsline med-confirm-obs" style="background:rgba(30,132,73,.10);border-radius:9px"><span class="q">'+cab+'</span>'
+            +'<span style="font-weight:800;color:#1E8449;font-size:13px;white-space:nowrap">✅ já dado — '+escAttr(L.log.quem||'?')+(hora?(' às '+hora):'')+'</span></div>';
+        } else if(L.futuro){
+          h+='<div class="obsline med-confirm-obs" style="background:rgba(35,77,103,.08);border-radius:9px"><span class="q">'+cab+'</span>'
+            +'<span style="font-weight:800;color:var(--z-blue);font-size:13px;white-space:nowrap">🕒 ainda vai ser dado — avise quem entra no plantão</span></div>';
+        } else {
+          h+='<div class="obsline med-confirm-obs" style="background:rgba(179,38,30,.08);border-radius:9px"><span class="q">'+cab
+            +'<br><span style="font-size:11.5px;color:#B3261E;font-weight:800">Passou do horário e ninguém registrou. Foi dado?</span></span>'
+            +'<div class="seg" data-single><button data-tone="ok" onclick="pick(this)">Sim</button><button data-tone="bad" onclick="pick(this)">Não</button></div></div>';
+        }
+      });
+      if(medsForaDeVigencia.length){
+        h+='<div style="margin:10px 0 4px;font-weight:800;color:var(--muted);font-size:13px">Não dar hoje (continuam na ficha só para você saber que existem)</div>';
+        medsForaDeVigencia.forEach(function(it){
+          var como=(typeof medDoseTxt==='function')?medDoseTxt(it):'';
+          h+='<div class="obsline med-confirm-obs" style="opacity:.75"><span class="q"><strong>'+escAttr(it.nome||'')+'</strong>'
+            +(como?('<br><span style="font-size:11.5px;color:var(--muted);font-weight:600">'+escAttr(como)+'</span>'):'')
+            +'</span><span style="font-weight:800;color:var(--muted);font-size:12.5px;white-space:nowrap">⛔ '+escAttr(it.__motivo||'')+'</span></div>';
+        });
+      }
       slot.innerHTML=h;
     });
     try{
@@ -3810,6 +3869,28 @@
         card.querySelectorAll('.medgrid-slot').forEach(function(g){ if(temMeds) g.style.display='none'; });
       });
     }catch(e){}
+  }
+  // ===== ITEM 8 (Adriana 02/ago/2026) — "se foi dada, não pode aparecer para mais ninguém" ====
+  // A Dolly tem DUAS fichas de Betaína (12:00 e 19:00 nas duas) e duas de Neurexan. Quem dá o
+  // remédio marca uma; a cópia continua pendente e volta a alarmar — o remédio parece nunca ter
+  // sido dado. A dose é a MESMA coisa quando nome + quantidade + medida + LOCAL + horário batem.
+  // O local entra na conta de propósito: Cortavance no ouvido e Cortavance na patinha, ambos às
+  // 14:00, são DUAS aplicações de verdade e não podem se anular.
+  function medDoseChave(it){
+    it=it||{};
+    return [jsNorm(it.nome||''), jsNorm(String(it.q||'')), jsNorm(String(it.u||'')),
+            jsNorm(String(it.local||'')), String(it.h||it.horario||'')].join('|');
+  }
+  // Todas as cópias da agenda que representam ESTA MESMA dose (para marcar todas de uma vez).
+  function medIrmasDaDose(itens, alvo){
+    var out=[], chave=medDoseChave(alvo);
+    Object.keys(itens||{}).forEach(function(id){
+      var it=itens[id]||{}; if(it.suspenso) return;
+      (it.horarios||[]).forEach(function(h){
+        if(medDoseChave({nome:it.nome,q:it.q,u:it.u,local:it.local,h:h})===chave) out.push({itemId:id, horario:h});
+      });
+    });
+    return out;
   }
   function renderMedAgendaHoje(){
     try{ if(typeof renderRelMedConfirm==='function') renderRelMedConfirm(); }catch(e){}
@@ -3831,14 +3912,16 @@
     const placarHTML=renderPlacarMedDia(rows);
     // doses avulsas de hoje (não agendadas) — só para conferência, não têm "Dei agora"
     Object.keys(MED_AGENDA_LOG).forEach(function(doseId){
-      const log=MED_AGENDA_LOG[doseId]; if(log&&log.avulso) rows.push({id:null,doseId:doseId,nome:log.nome,q:log.q,u:log.u,h:log.horario,feito:true,quem:log.quem,ts:log.ts,avulso:true});
+      const log=MED_AGENDA_LOG[doseId]; if(log&&log.avulso) rows.push({id:null,doseId:doseId,nome:log.nome,q:log.q,u:log.u,local:log.local||'',obs:log.motivo||'',h:log.horario,feito:true,quem:log.quem,ts:log.ts,avulso:true});
     });
     if(!rows.length){ el.innerHTML=estoqueHTML+placarHTML+'<div class="hint">Nenhum horário agendado para hoje.</div>'; return; }
     // ANTI-DUPLICAÇÃO: se a agenda tem itens repetidos (mesmo nome+dose no mesmo horário), mostra
     // UMA linha só. Se qualquer cópia já foi dada, a linha aparece como "dado" (prefere o registro feito).
+    // O LOCAL entra na chave: o Romeo toma Cortavance às 14:00 nos OUVIDOS e às 14:00 nas
+    // PATINHAS. Sem o local, as duas viravam uma linha só e uma aplicação sumia da tela.
     var vistos={}; var unicas=[];
     rows.forEach(function(r){
-      var k=jsNorm(r.nome||'')+'|'+(r.h||'')+'|'+jsNorm(String(r.q||''))+'|'+jsNorm(String(r.u||''))+'|'+(r.avulso?'av':'ag');
+      var k=medDoseChave(r)+'|'+(r.avulso?'av':'ag');
       if(vistos[k]!=null){ var ex=unicas[vistos[k]]; if(r.feito && !ex.feito){ unicas[vistos[k]]=r; } return; }
       vistos[k]=unicas.length; unicas.push(r);
     });
@@ -3866,13 +3949,25 @@
     const it=MED_AGENDA_ITENS[itemId]; if(!it) return;
     if(!confirm('Confirmar: deu '+it.nome+' ('+(fmtQtd(it.q,it.u)||'quantidade não informada')+') agora — horário agendado '+horario+'?')) return;
     const key=medAgendaKey(); if(!key||!DB) return;
-    registrarDoseAgendadaGlobal({key:key,itemId:itemId,nome:it.nome,q:it.q,u:it.u,horario:horario,hospNome:currentHosp.nome||''}, magDoseId(itemId,horario));
+    registrarDoseAgendadaGlobal({key:key,itemId:itemId,nome:it.nome,q:it.q,u:it.u,local:it.local||'',horario:horario,hospNome:currentHosp.nome||''}, magDoseId(itemId,horario));
   }
   // Registro "de fora" da ficha — usado pelo despertador (confirmarDoseDespertador), que pode
   // disparar mesmo com outro FILHOt (ou nenhum) aberto na tela.
   function registrarDoseAgendadaGlobal(it,doseId){
     if(!DB||!it) return;
-    const reg={itemId:it.itemId,nome:it.nome,q:it.q,u:it.u,horario:it.horario,quem:quemSou(),ts:Date.now(),avulso:false};
+    const reg={itemId:it.itemId,nome:it.nome,q:it.q,u:it.u,local:it.local||null,horario:it.horario,quem:quemSou(),ts:Date.now(),avulso:false};
+    // Item 8 — marca a dose em TODAS as fichas iguais deste FILHOt (mesmo remédio, mesma dose,
+    // mesmo local, mesmo horário). Sem isso, a cópia da Betaína da Dolly voltava a alarmar
+    // depois de a plantonista já ter dado o comprimido.
+    DB.ref('auaulandia/medicacao-agenda/'+it.key+'/itens').once('value').then(function(s){
+      const irmas=medIrmasDaDose(s.val()||{}, {nome:it.nome,q:it.q,u:it.u,local:it.local,h:it.horario});
+      const extras={};
+      irmas.forEach(function(x){
+        const did=magDoseId(x.itemId,x.horario);
+        if(did!==doseId) extras[did]=Object.assign({},reg,{itemId:x.itemId, espelho_de:doseId});
+      });
+      if(Object.keys(extras).length) return DB.ref('auaulandia/medicacao-log/'+dataKeyAtual()+'/'+it.key).update(extras);
+    }).catch(function(){});
     DB.ref('auaulandia/medicacao-log/'+dataKeyAtual()+'/'+it.key+'/'+doseId).set(reg).then(function(){
       if(currentHosp && medAgendaKey(currentHosp)===it.key){ MED_AGENDA_LOG[doseId]=reg; renderMedAgendaHoje(); }
       if(typeof audit==='function') audit('medicacao-dose',it.key,{pet:it.hospNome||'',med:it.nome,horario:it.horario,quem:reg.quem});
@@ -3880,6 +3975,13 @@
       if(typeof fecharDespertadorMed==='function') fecharDespertadorMed();
       if(typeof carregarMedAtrasadaGestora==='function') carregarMedAtrasadaGestora(); // dose registrada: some do alerta da Gestora sozinho
     }).catch(function(e){ alert('Erro ao registrar a dose: '+e.message); });
+  }
+  // Pomada/aplicação avulsa pede o LOCAL e esconde a quantidade (item 11).
+  function magAvUnidadeMudou(){
+    var ub=document.querySelector('#magAvUnidades button.on'); var u=ub?ub.textContent.trim():'';
+    var ehLocal=(typeof medEhLocal==='function')&&medEhLocal(u);
+    var w=document.getElementById('magAvLocalWrap'); if(w) w.style.display=ehLocal?'':'none';
+    var q=document.getElementById('magAvQtd'); if(q){ q.disabled=!!ehLocal; q.placeholder=ehLocal?'(não precisa)':'1'; if(ehLocal) q.value=''; }
   }
   // Dose AVULSA — remédio dado que NÃO estava na agenda (ex.: prescrição de última hora do vet).
   // Mesma trava à prova de erro do relatório: nome por extenso, horário de verdade, quantidade
@@ -3892,20 +3994,28 @@
     const h=normHora(horaEl&&horaEl.value||'');
     const q=(qtdEl&&qtdEl.value||'').trim();
     const ub=document.querySelector('#magAvUnidades button.on'); const u=ub?ub.textContent.trim():'';
+    const local=((document.getElementById('magAvLocal')||{}).value||'').trim();
+    const motivo=((document.getElementById('magAvMotivo')||{}).value||'').trim();
+    const ehLocal=(typeof medEhLocal==='function')&&medEhLocal(u); // pomada / aplicação
     if(!nomeMedOk(nome)){ if(st){ st.style.color='var(--crm-critico)'; st.textContent='✋ Escreva o nome do medicamento por extenso.'; } return; }
     if(!horaOk(h)){ if(st){ st.style.color='var(--crm-critico)'; st.textContent='✋ Escreva um horário de verdade (ex: 12:30).'; } return; }
-    if(qtdNum(q)==null){ if(st){ st.style.color='var(--crm-critico)'; st.textContent='✋ Escreva a quantidade em número (ex: 1, 0,5, 10).'; } return; }
-    if(!u){ if(st){ st.style.color='var(--crm-critico)'; st.textContent='✋ Toque na medida (comprimido, ml, gota...).'; } return; }
+    if(!u){ if(st){ st.style.color='var(--crm-critico)'; st.textContent='✋ Toque na medida (comprimido, ml, gota, pomada...).'; } return; }
+    // Pomada/aplicação: o que importa não é o número, é ONDE foi passado (item 11).
+    if(ehLocal){ if(!local){ if(st){ st.style.color='var(--crm-critico)'; st.textContent='✋ Escreva ONDE você passou (ex: na patinha da frente direita).'; } return; } }
+    else if(qtdNum(q)==null){ if(st){ st.style.color='var(--crm-critico)'; st.textContent='✋ Escreva a quantidade em número (ex: 1, 0,5, 10).'; } return; }
     const key=medAgendaKey(); if(!key||!DB){ if(st){ st.style.color='var(--crm-atencao-text)'; st.textContent='Banco conectando...'; } return; }
     const doseId='avulso_'+Date.now();
-    const reg={itemId:null,nome:nome,q:q,u:u,horario:h,quem:quemSou(),ts:Date.now(),avulso:true};
+    const reg={itemId:null,nome:nome,q:(ehLocal?'':q),u:u,local:local||null,motivo:motivo||null,horario:h,quem:quemSou(),ts:Date.now(),avulso:true};
     if(st){ st.style.color='var(--muted)'; st.textContent='Salvando...'; }
     DB.ref('auaulandia/medicacao-log/'+dataKeyAtual()+'/'+key+'/'+doseId).set(reg).then(function(){
       MED_AGENDA_LOG[doseId]=reg;
       if(nomeEl) nomeEl.value=''; if(horaEl) horaEl.value=''; if(qtdEl) qtdEl.value='';
+      var _lo=document.getElementById('magAvLocal'); if(_lo) _lo.value='';
+      var _mo=document.getElementById('magAvMotivo'); if(_mo) _mo.value='';
+      var _lw=document.getElementById('magAvLocalWrap'); if(_lw) _lw.style.display='none';
       document.querySelectorAll('#magAvUnidades button').forEach(b=>b.classList.remove('on'));
       if(st){ st.style.color='var(--crm-ok)'; st.textContent='✅ Dose avulsa registrada.'; }
-      if(typeof audit==='function') audit('medicacao-dose-avulsa',key,{pet:currentHosp.nome||'',med:nome,horario:h,quem:reg.quem});
+      if(typeof audit==='function') audit('medicacao-dose-avulsa',key,{pet:currentHosp.nome||'',med:nome+(local?(' — '+local):''),horario:h,quem:reg.quem,motivo:motivo||''});
       renderMedAgendaHoje();
       if(typeof carregarMedAtrasadaGestora==='function') carregarMedAtrasadaGestora();
     }).catch(function(e){ if(st){ st.style.color='var(--crm-critico)'; st.textContent='⚠️ Erro: '+e.message; } });
@@ -5681,7 +5791,7 @@
           const it=itens[id]||{};
           if(it.suspenso) return; // Onda 3: medicação suspensa pela vet não gera alarme (mata o caso Hulk)
           if(!medVigenteEm(it)) return; // parou no dia do término (ou ainda não começou) — não gera alarme
-          (it.horarios||[]).forEach(function(hr){ MED_AGENDA_TODOS.push({hospNome:h.nome||'', key:key, itemId:id, nome:it.nome||'', q:it.q||'', u:it.u||'', horario:hr}); });
+          (it.horarios||[]).forEach(function(hr){ MED_AGENDA_TODOS.push({hospNome:h.nome||'', key:key, itemId:id, nome:it.nome||'', q:it.q||'', u:it.u||'', local:it.local||'', obs:it.obs||'', horario:hr}); });
         });
       }).catch(function(){});
     });
@@ -5716,7 +5826,13 @@
     const el=document.getElementById('despMed'); if(!el) return;
     despMedNaTela=it.key+'__'+doseId; despMedAtual=it; despMedAtualDoseId=doseId;
     const qtd=fmtQtd(it.q,it.u);
+    // Item 10 — pomada/aplicação SEM o local é instrução pela metade: a plantonista das 2h da
+    // manhã não tem como adivinhar que o Crema 64 da Dolly é no machucado do lado esquerdo do
+    // pescoço. O local vai no alarme, em destaque.
+    const _loc=(it.local||'').trim();
     el.innerHTML='<div class="desp-in"><div class="desp-tx"><strong>'+escAttr(it.hospNome||'')+'</strong> toma <strong>'+escAttr(it.nome||'')+'</strong>'+(qtd?' — '+escAttr(qtd):'')+' às <strong>'+escAttr(it.horario||'')+'</strong>'
+      +(_loc?'<span style="display:block;background:rgba(255,255,255,.22);border-radius:8px;padding:6px 9px;margin-top:5px;font-weight:800;font-size:15px">📍 Onde aplicar: '+escAttr(_loc)+'</span>':'')
+      +((it.obs||'').trim()?'<span style="display:block;margin-top:4px;font-weight:700">▸ '+escAttr(it.obs)+'</span>':'')
       +'<span>Dê o remédio agora — este alarme não desaparece sozinho.</span></div>'
       +'<div style="display:flex;gap:8px;flex-wrap:wrap">'
       +'<button class="btn" style="background:#fff;color:var(--crm-critico);font-weight:800" onclick="confirmarDoseDespertador()">Dei o remédio</button>'
