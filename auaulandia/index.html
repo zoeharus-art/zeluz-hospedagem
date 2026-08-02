@@ -3224,10 +3224,12 @@
     const nivBtn=function(v,rot){ return '<button type="button" class="'+(nivel===v?'on':'')+'" onclick="magPickNivel(this)" data-n="'+v+'">'+rot+'</button>'; };
     const estoqueBlock='<div class="mag-estoque" data-modo="'+modo+'">'
       +'<div class="mag-est-lab">Estoque na entrada</div>'
-      +'<div class="mag-est-modo"><button type="button" class="'+(modo==='contavel'?'on':'')+'" onclick="magPickEstModo(this,\'contavel\')" data-modo="contavel">Contável (comprimido, cápsula, sachê)</button>'
-        +'<button type="button" class="'+(modo==='naocontavel'?'on':'')+'" onclick="magPickEstModo(this,\'naocontavel\')" data-modo="naocontavel">Não contável (líquido, pote, manipulado)</button></div>'
-      +'<div class="mag-est-campo mag-est-contavel'+(modo==='contavel'?' on':'')+'"><label>Quantas unidades vieram? (a consultora conta)</label><input data-c="einicial" inputmode="numeric" placeholder="Ex: 20" value="'+escAttr(est.inicial!=null?est.inicial:'')+'"></div>'
-      +'<div class="mag-est-campo mag-est-naocontavel'+(modo==='naocontavel'?' on':'')+'"><label>Como veio o frasco/pote?</label><div class="mag-est-nivel">'+nivBtn('cheio','Veio cheio')+nivBtn('metade','Pela metade')+nivBtn('poucos','Poucas unidades')+'</div></div>'
+      // Regra da Adriana (02/ago/2026): só se conta o que está em BLISTER ou CAIXA FECHADA.
+      // Pote e frasco NÃO se abre para contar — danifica o remédio. Neles vale o nível.
+      +'<div class="mag-est-modo"><button type="button" class="'+(modo==='contavel'?'on':'')+'" onclick="magPickEstModo(this,\'contavel\')" data-modo="contavel">Blister ou caixa fechada (dá para contar)</button>'
+        +'<button type="button" class="'+(modo==='naocontavel'?'on':'')+'" onclick="magPickEstModo(this,\'naocontavel\')" data-modo="naocontavel">Pote ou frasco (NÃO abrir para contar)</button></div>'
+      +'<div class="mag-est-campo mag-est-contavel'+(modo==='contavel'?' on':'')+'"><label>Quantas unidades vieram? (conte o blister/a caixa)</label><input data-c="einicial" inputmode="numeric" placeholder="Ex: 20" value="'+escAttr(est.inicial!=null?est.inicial:'')+'"></div>'
+      +'<div class="mag-est-campo mag-est-naocontavel'+(modo==='naocontavel'?' on':'')+'"><label>Não abra para contar — só olhe e diga como está</label><div class="mag-est-nivel">'+nivBtn('cheio','Cheio / lacrado')+nivBtn('metade','Pela metade')+nivBtn('poucos','Está terminando')+'</div></div>'
       +'</div>';
     const suspBanner=item.suspenso?'<div style="background:rgba(192,57,43,.1);border:1.5px solid var(--crm-critico);border-radius:9px;padding:8px 11px;margin-bottom:8px;font-size:12.5px;font-weight:800;color:var(--crm-critico)">SUSPENSO pela Veterinária'+(item.suspensoPor?(' · '+escAttr(item.suspensoPor)):'')+(item.suspensoMotivo?('<span style="display:block;font-weight:600;margin-top:2px">Motivo: '+escAttr(item.suspensoMotivo)+'</span>'):'')+'<span style="display:block;font-weight:600;margin-top:2px">Não gera alarme. Reativação só pela vet, no Cuidado Vet.</span></div>':'';
     const contBadge=cont?'<div style="background:var(--z-gold);color:var(--z-blue);font-weight:800;font-size:12px;letter-spacing:.4px;border-radius:8px;padding:5px 10px;margin-bottom:8px;display:inline-block">♾️ USO CONTÍNUO — sem data de término</div>':'';
@@ -9707,13 +9709,21 @@
       // Dá para contar (comprimido/cápsula com dose e horário) mas NINGUÉM contou quantos o
       // tutor mandou: sem esse número o sistema não tem como avisar que vai faltar. Foi esse
       // buraco que deixou o Apoquel do Arthur passar. Hoje só 5 de 19 remédios estão contados.
+      // ATENÇÃO (Adriana, 02/ago/2026): NUNCA cobrar contagem de pote/frasco — abrir para
+      // contar DANIFICA o remédio. Só é contável o que vem em BLISTER ou CAIXA FECHADA, e
+      // quem diz isso é a pessoa que recebeu o remédio, não o sistema pela unidade.
+      // Pote/frasco: o que se registra é o NÍVEL (cheio / metade / terminando).
       try{
         var est2=m.estoque||{}; var qd=(typeof qtdNum==='function')?qtdNum(m.q):null;
-        var contavel=(m.u==='comprimido'||m.u==='cápsula'||m.u==='sachê'||m.u==='unidade');
-        if(contavel && qd>0 && (m.horarios||[]).length && typeof est2.inicial!=='number' && est.saida){
+        var daParaCalcular=(qd>0 && (m.horarios||[]).length && est.saida);
+        if(!daParaCalcular) return;
+        if(est2.modo==='naocontavel') return;                       // pote: nunca cobra contagem
+        if(est2.modo==='contavel' && typeof est2.inicial!=='number')
           achados.push({tipo:'medicacao-sem-contagem', nome:m.nome||'medicamento', deficit:'?', unidade:m.u||'',
-                        necessario:'?', trazido:'não contado', ate:est.saida});
-        }
+                        necessario:'?', trazido:'não contado', ate:est.saida, subtipo:'contar'});
+        else if(!est2.modo)                                          // ninguém disse COMO veio
+          achados.push({tipo:'medicacao-sem-contagem', nome:m.nome||'medicamento', deficit:'?', unidade:m.u||'',
+                        necessario:'?', trazido:'sem registro', ate:est.saida, subtipo:'como-veio'});
       }catch(e){}
     });
     // --- Comida: o que o tutor mandou contra o que a estadia consome
@@ -9751,8 +9761,12 @@
       if(novos.length && typeof zAlertao==='function'){
         zAlertao('⚠️ VAI FALTAR PARA '+String(nome||'ESTE FILHOt').toUpperCase(),
           novos.map(function(f){
-            if(f.tipo==='medicacao-sem-contagem')
-              return 'Remédio '+f.nome+': ninguém contou quantos o tutor mandou. Sem esse número não dá para saber se cobre a estadia até '+((typeof ciBRdata==='function')?ciBRdata(f.ate):f.ate)+'. Conte e lance na ficha.';
+            if(f.tipo==='medicacao-sem-contagem'){
+              var _ate=((typeof ciBRdata==='function')?ciBRdata(f.ate):f.ate);
+              return (f.subtipo==='como-veio')
+                ? 'Remédio '+f.nome+': ninguém registrou COMO ele veio. Se for blister ou caixa fechada, conte as unidades. Se for pote ou frasco, NÃO abra para contar — só diga se está cheio, pela metade ou terminando.'
+                : 'Remédio '+f.nome+' (blister/caixa): ninguém contou quantas unidades o tutor mandou. Sem esse número não dá para saber se cobre a estadia até '+_ate+'.';
+            }
             return (f.tipo==='medicacao'?'Remédio ':'Comida ')+f.nome+': o tutor mandou '+f.trazido+' '+f.unidade
               +', mas a estadia precisa de '+f.necessario+' '+f.unidade+'. Faltam '+f.deficit+' '+f.unidade+'.'; }),
           {rodape:'Já registrei na tela "Atenção Recepção" para alguém falar com o tutor'+(motivoTexto?(' — '+motivoTexto):'')+'.', botao:'Entendi'});
