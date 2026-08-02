@@ -3760,14 +3760,21 @@
     var status=a.status||'pendente';
     var chip=status==='resolvido'?'<span class="avr-chip resolvido">RESOLVIDO</span>':status==='em_processo'?'<span class="avr-chip processo">EM PROCESSO</span>':'<span class="avr-chip pendente">PENDENTE</span>';
     var cls=status==='resolvido'?'resolvido':status==='em_processo'?'processo':'pendente';
-    var det='Faltam '+escAttr(a.deficit!=null?a.deficit:'?')+' '+(a.unidade||'g')+' para a estadia';
+    var det=(a.tipo==='medicacao-sem-contagem')
+      ? ('Ninguém contou quantos o tutor mandou — conte e lance na ficha'+(a.ate?(' (estadia até '+escAttr((typeof ciBRdata==='function')?ciBRdata(a.ate):a.ate)+')'):''))
+      : ('Faltam '+escAttr(a.deficit!=null?a.deficit:'?')+' '+(a.unidade||'g')+' para a estadia'
+          +(a.trazido!=null&&a.necessario!=null?(' (mandaram '+escAttr(a.trazido)+', precisa de '+escAttr(a.necessario)+')'):''))
+          +(a.motivo?(' — '+escAttr(a.motivo)):'');
     var trilha=(a.entries&&a.entries.length)?'<div class="avr-trilha">'+a.entries.map(function(e){
       return '<div class="avr-tl'+(e.resolucao?' resol':'')+'"><div class="avr-tl-meta">'+escAttr(e.quando||'')+'</div><div class="avr-tl-acao">"'+escAttr(e.acao||'')+'"</div><div class="avr-tl-assina">— '+escAttr(e.assinatura||'')+'</div></div>';
     }).join('')+'</div>':'';
     var form=status!=='resolvido'
       ? '<div class="avr-form"><div class="ff-tit">Registrar providência</div><textarea id="avrr_acao_'+id+'" placeholder="O que foi feito? (ex.: liguei para o tutor, ele traz amanhã)"></textarea><input id="avrr_assina_'+id+'" placeholder="Seu nome (assinatura)"><div class="avr-form-btns"><button class="btn btn-primary" onclick="avisoRacaoAddEntrada(\''+id+'\')">Registrar</button><button class="btn btn-gold" onclick="avisoRacaoResolver(\''+id+'\')">Marcar como resolvido</button></div></div>'
       : '<div class="avr-resolvido-banner">Resolvido — ração encaminhada.</div><div style="text-align:right;margin-top:8px"><button class="btn" style="background:var(--z-cream-warm);color:var(--z-blue);border:1.5px solid var(--line)" onclick="avisoRacaoReabrir(\''+id+'\')">Reabrir</button></div>';
-    return '<div class="avr-card '+cls+'"><div class="avr-head"><div class="avr-info"><div class="avr-nome">Ração — '+escAttr(a.hospNome||'Hóspede')+'</div><div class="avr-sub">'+(a.tutor?('Tutor: '+escAttr(a.tutor)+' — '):'')+escAttr(det)+'</div></div>'+chip+'</div><div class="avr-body">'+trilha+form+'</div></div>';
+    // O mesmo canal atende ração e medicação (itens 3 e 4) — o título diz qual é qual.
+    var _rot=(a.tipo==='medicacao')?('💊 Remédio '+escAttr(a.itemNome||''))
+            :(a.tipo==='medicacao-sem-contagem')?('❓ Contar remédio '+escAttr(a.itemNome||'')):'🍖 Ração/comida';
+    return '<div class="avr-card '+cls+'"><div class="avr-head"><div class="avr-info"><div class="avr-nome">'+_rot+' — '+escAttr(a.hospNome||'Hóspede')+'</div><div class="avr-sub">'+(a.tutor?('Tutor: '+escAttr(a.tutor)+' — '):'')+escAttr(det)+'</div></div>'+chip+'</div><div class="avr-body">'+trilha+form+'</div></div>';
   }
   function renderAvisosRacao(){
     var el=document.getElementById('avisosRacaoList'); if(!el) return;
@@ -9217,7 +9224,15 @@
       Object.keys(meds).forEach(function(mid){ ops.push(DB.ref('auaulandia/medicacao-agenda/'+key+'/itens/'+mid).update(meds[mid])); });
     }
     Promise.all(ops).then(function(){
-      __ciTravar(false); ciSalvoAgora=true; ciEditandoId=null;
+      __ciTravar(false); ciSalvoAgora=true;
+      // Itens 3/4 — já na entrada: o que o tutor trouxe cobre a estadia inteira?
+      try{
+        var _idEst=(modo==='acrescentar')?estadiaId:ref.key;
+        var _estCalc={ nome:ciHosp.nome||'', tutor:ciHosp.tutor||'', entrada:dados.entrada, saida:dados.saida,
+                       ficha:dados.ficha, medicacao:ciMedsToLista(meds) };
+        setTimeout(function(){ checarFaltasDaEstadia(_idEst,_estCalc,'conferido na entrada'); }, 800);
+      }catch(e){}
+      ciEditandoId=null;
       if(typeof audit==='function') audit('checkin', modo==='acrescentar'?('acrescentou ao check-in: '+(novosItens.join(', ')||'ajuste de ficha')):'estadia criada',{pet:ciHosp.nome||'',entrada:dados.entrada,meds:Object.keys(meds).length});
       if(typeof carregarAgendaMedTodos==='function') carregarAgendaMedTodos();
       if(st){ st.style.color='var(--crm-ok)'; st.textContent='✅ Salvo.'; }
@@ -9668,6 +9683,83 @@
     renderHospedesAba();
     setTimeout(function(){ try{ const el=document.getElementById('hospNovaFim'); if(el){ el.scrollIntoView({behavior:'smooth',block:'center'}); el.focus(); } }catch(e){} },50);
   }
+  // ===== ITENS 3 e 4 (Adriana 02/ago/2026) ==========================================
+  // Item 4: "o Arthur toma Apoquel, levou 10 unidades, mas ficaria 11 dias — precisa ter
+  // um alerta que está faltando, indo para a recepção."
+  // Item 3: "o peludinho ia embora dia 10, o cliente perdeu o voo e não vai — precisa criar
+  // alerta" (o que o tutor trouxe foi contado para a data antiga).
+  // A conta de cobertura já existia na Conferência, mas dependia de alguém tocar em "Avisar
+  // a Recepção". Agora ela roda sozinha sempre que a estadia muda e cria o aviso na Recepção.
+  function checarFaltasDaEstadia(id, est, motivoTexto){
+    if(!DB||!est) return;
+    var nome=est.nome||'', tutor=est.tutor||'';
+    var achados=[];
+    // --- Medicação: cada remédio contra os dias que faltam até a NOVA saída
+    var meds=Array.isArray(est.medicacao)?est.medicacao:[];
+    meds.forEach(function(m){
+      var c=(typeof medCoberturaEstadia==='function')?medCoberturaEstadia(m, est.entrada, est.saida):null;
+      if(c && !c.cobre){
+        achados.push({tipo:'medicacao', nome:m.nome||'medicamento', deficit:c.deficit, unidade:c.unidade,
+                      necessario:c.necessario, trazido:c.trazido, ate:c.ate});
+        return;
+      }
+      if(c) return; // cobre a estadia inteira: nada a avisar
+      // Dá para contar (comprimido/cápsula com dose e horário) mas NINGUÉM contou quantos o
+      // tutor mandou: sem esse número o sistema não tem como avisar que vai faltar. Foi esse
+      // buraco que deixou o Apoquel do Arthur passar. Hoje só 5 de 19 remédios estão contados.
+      try{
+        var est2=m.estoque||{}; var qd=(typeof qtdNum==='function')?qtdNum(m.q):null;
+        var contavel=(m.u==='comprimido'||m.u==='cápsula'||m.u==='sachê'||m.u==='unidade');
+        if(contavel && qd>0 && (m.horarios||[]).length && typeof est2.inicial!=='number' && est.saida){
+          achados.push({tipo:'medicacao-sem-contagem', nome:m.nome||'medicamento', deficit:'?', unidade:m.u||'',
+                        necessario:'?', trazido:'não contado', ate:est.saida});
+        }
+      }catch(e){}
+    });
+    // --- Comida: o que o tutor mandou contra o que a estadia consome
+    try{
+      var a=(est.ficha&&est.ficha.alim)||{};
+      var traz=parseFloat(String(a.trazida||'').replace(',','.'))||0;
+      var min=parseFloat(String(a.minimo||'').replace(',','.'))||0;
+      var dias=(function(){ if(!est.entrada||!est.saida) return 0;
+        var d1=new Date(est.entrada+'T00:00:00'), d2=new Date(est.saida+'T00:00:00');
+        return Math.max(1, Math.round((d2-d1)/86400000)+1); })();
+      // Refaz o mínimo com os dias NOVOS quando dá para saber o consumo diário.
+      if(min && a.dias && dias && parseFloat(a.dias)>0){ min = (min/parseFloat(a.dias))*dias; }
+      if(traz>0 && min>0 && traz < min-0.5){
+        achados.push({tipo:'racao', nome:(a.tipo||'Ração/comida'), deficit:Math.ceil(min-traz),
+                      unidade:(a.unidade&&a.unidade!=='gramas')?a.unidade:'g', necessario:Math.ceil(min), trazido:traz, ate:est.saida});
+      }
+    }catch(e){}
+    if(!achados.length) return;
+    // Não repete aviso já aberto para o mesmo FILHOt + mesmo item.
+    DB.ref('auaulandia/avisos-racao').once('value').then(function(s){
+      var v=s.val()||{}, jaAberto={};
+      Object.keys(v).forEach(function(k){ var x=v[k]||{};
+        if((x.status||'pendente')!=='resolvido' && x.estadiaId===id) jaAberto[(x.tipo||'racao')+'|'+jsNorm(x.itemNome||'')]=1; });
+      achados.forEach(function(f){
+        var ch=f.tipo+'|'+jsNorm(f.nome);
+        if(jaAberto[ch]) return;
+        DB.ref('auaulandia/avisos-racao').push({
+          hospNome:nome, tutor:tutor, estadiaId:id, tipo:f.tipo, itemNome:f.nome,
+          deficit:f.deficit, unidade:f.unidade, necessario:f.necessario, trazido:f.trazido, ate:f.ate||'',
+          motivo:(motivoTexto||''), status:'pendente', entries:[],
+          criado_por:(typeof quemSou==='function'?quemSou():'sistema'), automatico:true, _ts:Date.now()
+        }).catch(function(){});
+      });
+      var novos=achados.filter(function(f){ return !jaAberto[f.tipo+'|'+jsNorm(f.nome)]; });
+      if(novos.length && typeof zAlertao==='function'){
+        zAlertao('⚠️ VAI FALTAR PARA '+String(nome||'ESTE FILHOt').toUpperCase(),
+          novos.map(function(f){
+            if(f.tipo==='medicacao-sem-contagem')
+              return 'Remédio '+f.nome+': ninguém contou quantos o tutor mandou. Sem esse número não dá para saber se cobre a estadia até '+((typeof ciBRdata==='function')?ciBRdata(f.ate):f.ate)+'. Conte e lance na ficha.';
+            return (f.tipo==='medicacao'?'Remédio ':'Comida ')+f.nome+': o tutor mandou '+f.trazido+' '+f.unidade
+              +', mas a estadia precisa de '+f.necessario+' '+f.unidade+'. Faltam '+f.deficit+' '+f.unidade+'.'; }),
+          {rodape:'Já registrei na tela "Atenção Recepção" para alguém falar com o tutor'+(motivoTexto?(' — '+motivoTexto):'')+'.', botao:'Entendi'});
+      }
+      if(typeof audit==='function') audit('falta-cobertura', id, {pet:nome, itens:achados.map(function(f){return f.nome;}).join(', '), motivo:motivoTexto||''});
+    }).catch(function(){});
+  }
   function hospSalvarDatas(id){
     if(!hospAbaPode()){ alert('Sem permissão para mudar as datas.'); return; }
     const e=EST_TODAS[id]||{};
@@ -9686,11 +9778,16 @@
       patch.status='ativa'; patch.reabertaPor=(typeof quemSou==='function'?quemSou():'-'); patch.reabertaTs=Date.now();
     }
     if(!DB){ alert('Sem conexão com o banco agora — tente de novo em instantes.'); return; }
+    // Item 3 — a estadia esticou (o tutor perdeu o voo): o remédio e a comida que ele trouxe
+    // foram contados para a data ANTIGA. Guarda o quanto esticou para o alerta explicar.
+    var _esticou=(!!sai && !!e.saida && sai>e.saida);
     DB.ref('auaulandia/estadias/'+id).update(patch).then(function(){
       if(typeof audit==='function') audit('estadia-datas','mudou as datas da hospedagem',{pet:e.nome||'',de:(e.entrada||'')+'>'+(e.saida||''),para:ent+'>'+sai});
       hospAbaEdit=null;
       if(typeof carregarHospedes==='function') carregarHospedes();
       renderHospedesAba();
+      var _est=Object.assign({},e,patch);
+      checarFaltasDaEstadia(id,_est,(_esticou?('a estadia foi esticada de '+((typeof ciBRdata==='function')?ciBRdata(e.saida):e.saida)+' para '+((typeof ciBRdata==='function')?ciBRdata(sai):sai)):'as datas mudaram'));
       alert('Datas salvas. '+(e.nome||'O FILHOt')+' fica de '+((typeof ciBRdata==='function')?ciBRdata(ent):ent)+' até '+(sai?((typeof ciBRdata==='function')?ciBRdata(sai):sai):'data a confirmar')+'.\n\nEle já aparece no Plantão nesses dias, mesmo que a planilha não tenha sido atualizada.');
     }).catch(function(err){ alert('Erro ao salvar as datas: '+((err&&err.message)||err)); });
   }
