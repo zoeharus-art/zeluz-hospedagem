@@ -3882,7 +3882,11 @@
     try{
       document.querySelectorAll('.rel-card').forEach(function(card){
         card.querySelectorAll('.obsline').forEach(function(l){ var qn=l.querySelector('.q'); if(qn){ var t=qn.textContent.trim(); if(t==='Tem medicação?'||t==='Tem suplementação?') l.style.display=temMeds?'none':''; } });
-        card.querySelectorAll('.medgrid-slot').forEach(function(g){ if(temMeds) g.style.display='none'; });
+        // A grade ANTIGA de medicação (texto livre) tem que sumir quando a confirmação por
+        // remédio está ativa. Se as duas ficam na tela, a validação cobra o preenchimento de
+        // uma grade que ninguém deveria usar — e a pessoa não consegue salvar nem entender
+        // por quê (era o bug do Felix; voltou em 02/ago com a Dolly).
+        card.querySelectorAll('.medgrid-slot').forEach(function(g){ g.style.display=temMeds?'none':''; });
       });
     }catch(e){}
   }
@@ -4221,9 +4225,30 @@
   function confirmarRecebimento(tipo){ if(!currentHosp) return; const st=document.getElementById('status-receb-'+tipo);
     const el=document.getElementById('recebeu-'+tipo); const nome=((el&&el.value)||'').trim();
     const quemPassou=(RELSTATE[tipo]||{}).passou||'';
-    if(!quemPassou){ if(st){ st.style.color='var(--crm-critico)'; st.textContent='✋ Ninguém passou este plantão ainda — não há o que receber.'; } return; }
-    if(!nome){ if(st){ st.style.color='var(--crm-critico)'; st.textContent='✋ Escreva o seu nome para assinar o recebimento.'; } return; }
-    if(ehCritico('card-'+tipo) && !LEITURA_ROLOU[tipo]){ if(st){ st.style.color='var(--crm-critico)'; st.textContent='🔒 Role o relatório até o fim antes de assinar — este FILHOt precisa de atenção.'; } return; }
+    // Cada motivo de bloqueio agora aparece em cartaz, dizendo O QUE fazer (03/ago/2026:
+    // a equipe não conseguiu assinar a passagem de plantão e não sabia o motivo).
+    if(!quemPassou){
+      if(st){ st.style.color='var(--crm-critico)'; st.textContent='✋ Ninguém passou este plantão ainda.'; }
+      if(typeof zAlertao==='function') zAlertao('AINDA NÃO HÁ O QUE ASSINAR',
+        ['Ninguém passou o plantão de '+((currentHosp&&currentHosp.nome)||'este FILHOt')+' ainda.',
+         'Quem está saindo precisa responder o relatório, escrever o nome dela em "quem passou o plantão" e salvar. Só depois disso você assina o recebimento.'],
+        {botao:'Entendi'});
+      return;
+    }
+    if(!nome){
+      if(st){ st.style.color='var(--crm-critico)'; st.textContent='✋ Escreva o seu nome para assinar.'; }
+      if(typeof zAlertao==='function') zAlertao('FALTA O SEU NOME',['Escreva o seu nome no campo de assinatura para confirmar que você recebeu o plantão de '+((currentHosp&&currentHosp.nome)||'este FILHOt')+'.'],
+        {botao:'Escrever agora', aoFechar:function(){ try{ const e2=document.getElementById('recebeu-'+tipo); if(e2){ e2.scrollIntoView({behavior:'smooth',block:'center'}); e2.focus(); } }catch(e){} }});
+      return;
+    }
+    if(ehCritico('card-'+tipo) && !LEITURA_ROLOU[tipo]){
+      if(st){ st.style.color='var(--crm-critico)'; st.textContent='🔒 Role o relatório até o fim antes de assinar.'; }
+      if(typeof zAlertao==='function') zAlertao('ROLE O RELATÓRIO ATÉ O FIM',
+        [((currentHosp&&currentHosp.nome)||'Este FILHOt')+' precisa de atenção hoje ('+((typeof motivoCritico==='function'?motivoCritico('card-'+tipo):[]).join(' · ')||'tem observação da monitora')+').',
+         'Desça a tela e leia o relatório inteiro. A assinatura libera sozinha quando você chegar no fim.'],
+        {botao:'Vou ler'});
+      return;
+    }
     if(!confirm('Você leu TODO o relatório de '+((currentHosp&&currentHosp.nome)||'este FILHOt')+'?\n\nAo assinar, você assume o cuidado dele a partir de agora.\n\nOK = li tudo e assino\nCancelar = vou ler antes')) return;
     if(!DB){ if(st){ st.style.color='var(--crm-atencao-text)'; st.textContent='Banco conectando...'; } return; }
     if(st){ st.style.color='var(--muted)'; st.textContent='Salvando...'; }
@@ -4265,11 +4290,26 @@
       checarHistMedEstadia(currentHosp, function(){ ['dia','inicio','noite'].forEach(tp=>sincMedVis('card-'+tp)); renderMedHistBanner(); });
     }).catch(function(){ ['dia','inicio','noite'].forEach(tp=>aplicarCard('card-'+tp,{})); });
   }
+  // Todo bloqueio do relatório vira CARTAZ na tela (mesma lição do check-in, item 5 de
+  // 02/ago): mensagem pequena embaixo do botão ninguém lê, e a pessoa conclui que "não dava
+  // para salvar/assinar" — foi o que aconteceu com a passagem de plantão em 03/ago.
+  function relBloqueio(st, texto, tipo, titulo){
+    if(st){ st.style.color='var(--crm-critico)'; st.textContent='✋ '+texto; }
+    if(typeof zAlertao==='function') zAlertao(titulo||'NÃO DEU PARA SALVAR O RELATÓRIO',[texto],
+      {rodape:'Corrija o que está acima e toque de novo. Enquanto isso, o plantão de '+((currentHosp&&currentHosp.nome)||'este FILHOt')+' NÃO foi passado.',botao:'Corrigir agora'});
+    try{ if(typeof audit==='function') audit('relatorio-bloqueado', (tipo||'')+': '+texto, {pet:(currentHosp&&currentHosp.nome)||''}); }catch(e){}
+  }
   function salvarRelatorioCard(tipo){ if(!currentHosp) return; const card='card-'+tipo; const st=document.getElementById('status-'+tipo);
     const passouEl=document.getElementById('passou-'+tipo);
     const passou=((passouEl&&passouEl.value)||'').trim();
     const falt=[]; document.querySelectorAll('#'+card+' .obsline').forEach(l=>{ if(l.style.display==='none') return; /* pula perguntas condicionais escondidas (ex.: Tipo de vômito quando "Vomitou? Não") */ if(l.classList.contains('med-confirm-obs')) return; /* confirmação de remédio (Sim/Não) é opcional — não bloqueia salvar */ if(!l.querySelector('button.on')){ const q=l.querySelector('.q'); if(q) falt.push(q.textContent.trim()); } });
-    if(falt.length){ if(st){ st.style.color='var(--crm-critico)'; st.textContent='✋ Antes de passar para o próximo peludinho, responda TODAS as perguntas! Faltou: '+falt.slice(0,6).join(', ')+(falt.length>6?'…':''); } return; }
+    if(falt.length){
+      if(st){ st.style.color='var(--crm-critico)'; st.textContent='✋ Faltou responder: '+falt.slice(0,6).join(', ')+(falt.length>6?'…':''); }
+      if(typeof zAlertao==='function') zAlertao('FALTA RESPONDER '+falt.length+(falt.length===1?' PERGUNTA':' PERGUNTAS'), falt,
+        {rodape:'O plantão de '+((currentHosp&&currentHosp.nome)||'este FILHOt')+' só é passado depois que todas forem respondidas.',botao:'Responder agora'});
+      try{ if(typeof audit==='function') audit('relatorio-bloqueado', tipo+': faltou '+falt.join(', '), {pet:(currentHosp&&currentHosp.nome)||''}); }catch(e){}
+      return;
+    }
     // ---- Medicação/Suplementação à prova de erro: "Tem? Sim" exige tabela preenchida ----
     const _mg=coletarMedgrids(card);
     // Não basta ter algo escrito: o nome precisa ser um nome, o horário uma hora e a quantidade um
@@ -4283,8 +4323,14 @@
         if(!o.u) return ln+'toque na MEDIDA da quantidade (comprimido, ml, gota, aplicação…).'; }
       return ''; }
     const _medResp=valDe(card,'Tem medicação?'); const _supResp=valDe(card,'Tem suplementação?');
-    const _eMed=_vMed('med','medicação',_medResp); if(_eMed){ if(st){ st.style.color='var(--crm-critico)'; st.textContent='✋ '+_eMed; } return; }
-    const _eSup=_vMed('sup','suplementação',_supResp); if(_eSup){ if(st){ st.style.color='var(--crm-critico)'; st.textContent='✋ '+_eSup; } return; }
+    // NUNCA travar por causa de um campo ESCONDIDO. Quando a confirmação por remédio está
+    // ativa, a pergunta "Tem medicação?" e a grade antiga ficam ocultas — cobrar o
+    // preenchimento delas deixava a pessoa presa sem ter o que corrigir na tela.
+    const _confirmacaoNovaAtiva=!!document.querySelector('#'+card+' .med-confirm-obs');
+    if(!_confirmacaoNovaAtiva){
+      const _eMed=_vMed('med','medicação',_medResp); if(_eMed){ relBloqueio(st,_eMed,tipo); return; }
+      const _eSup=_vMed('sup','suplementação',_supResp); if(_eSup){ relBloqueio(st,_eSup,tipo); return; }
+    }
     // ---- Parte 2 — cross-check de medicação (SÓ no modo antigo de texto livre) ----
     // Com a confirmação Sim/Não por remédio (agenda), a medicação já é tratada ali. O cross-check
     // antigo lia "Tem medicação?" — agora ESCONDIDO — e travava sem saída (era o bug do Felix).
@@ -4298,7 +4344,9 @@
       if(!confirm('Tem CERTEZA de que o medicamento de '+(currentHosp.nome||'este FILHOt')+' acabou ou foi suspenso?\n\nNa dúvida, LIGUE 31 99764-4296.\n\nOK = tenho certeza\nCancelar = vou confirmar antes')){
         if(st){ st.style.color='var(--crm-critico)'; st.textContent='Na dúvida sobre a medicação, ligue 31 99764-4296 antes de salvar.'; } return; }
     }
-    if(!passou){ if(st){ st.style.color='var(--crm-critico)'; st.textContent='✋ Agora é só assinar: escreva o seu nome em quem passou o plantão.'; } return; }
+    if(!passou){ relBloqueio(st,'Agora é só assinar: escreva o SEU NOME no campo "quem passou o plantão", logo acima do botão.',tipo,'FALTA A SUA ASSINATURA');
+      try{ const el=document.getElementById('passou-'+tipo); if(el){ el.scrollIntoView({behavior:'smooth',block:'center'}); el.focus(); } }catch(e){}
+      return; }
     // quem passa NAO preenche quem recebeu — o recebimento e assinado depois, por quem pega o plantao
     const dados=coletarCard(card); dados.passou=passou; const _rSalvo=(RELSTATE[tipo]||{}).recebeu||''; if(_rSalvo){ dados.recebeu=_rSalvo; dados._tsReceb=(RELSTATE[tipo]||{})._tsReceb||Date.now(); } dados._ts=Date.now();
     if(DB){ if(st){ st.style.color='var(--muted)'; st.textContent='Salvando...'; } DB.ref('auaulandia/relatorios/'+fichaKey()+'/'+tipo).set(dados).then(()=>{
@@ -4962,17 +5010,38 @@
   // nunca veio à Zêluz. Trava idêntica ao criarAluno(): nome+tutor iguais bloqueia; só o nome
   // bater (outro tutor) avisa e deixa o humano confirmar — nunca bloqueia sozinho.
   function criarPeludinhoENovoHospede(){
+    if(!gateCadastro()) return;   // LEI do cadastro único — monitor não cadastra
     const nEl=document.getElementById('hbNovoNome'), tEl=document.getElementById('hbNovoTutor'), w=document.getElementById('hbNovoWarn');
     const nome=((nEl&&nEl.value)||'').trim(), tutor=((tEl&&tEl.value)||'').trim();
     if(!nome){ if(w) w.textContent='Escreva o nome do FILHOt.'; return; }
     const novo={n:nome,raca:'',freq:'',tutor:tutor,nasc:'',dias:[]};
     const key=pelKey(novo);
     if(PELUDINHOS.some(p=>pelKey(p)===key)){ if(w) w.textContent='Já existe um cadastro com esse nome e tutor — busque acima em vez de duplicar.'; return; }
-    const homonimo=PELUDINHOS.find(p=>jsNorm(p.n)===jsNorm(nome));
-    if(homonimo && !confirm('Já existe um(a) '+nome+' cadastrado(a) com o(a) tutor(a) "'+(pelGet(homonimo,'tutor')||'sem tutor informado')+'".\n\nEste é outro FILHOt, de outra família? Clique OK para cadastrar mesmo assim, ou Cancelar para conferir antes.')){
-      if(w) w.textContent='Cadastro não concluído — confira se não é o mesmo FILHOt já cadastrado.';
+    // Cadastro é UM SÓ. Quando já existe alguém com esse nome, o caminho FÁCIL passa a ser
+    // "usar o que já existe" — cadastrar de novo fica como segunda opção, e só quando é
+    // mesmo outro FILHOt de outra família (a Zêluz tem 3 "Ozzy" reais).
+    const homonimos=PELUDINHOS.filter(p=>jsNorm(p.n)===jsNorm(nome));
+    if(homonimos.length && typeof zEscolha==='function'){
+      const btns=homonimos.slice(0,3).map(function(hm){
+        const idx=PELUDINHOS.indexOf(hm);
+        return {t:'✅ É esse: '+pelNome(hm)+' — tutor '+(pelGet(hm,'tutor')||'não informado'), cor:'#1E8449',
+                fn:function(){ if(idx>=0 && typeof escolherHospede==='function') escolherHospede(idx); }};
+      });
+      btns.push({t:'É OUTRO FILHOt, de outra família — cadastrar novo', cor:'#B3261E', fn:function(){ criarPeludinhoENovoHospedeForcado(); }});
+      btns.push({t:'Cancelar', cor:'#6b5f4b', fn:function(){ if(w) w.textContent='Cadastro não concluído.'; }});
+      zEscolha('JÁ EXISTE UM(A) '+String(nome).toUpperCase()+' CADASTRADO(A)',
+        ['O cadastro do FILHOt é UM SÓ: se ele já veio à Zêluz, use o que já existe.',
+         'Cadastrar de novo parte a ficha dele em duas — a medicação vai para uma, o histórico para a outra, e ninguém percebe.'], btns);
       return;
     }
+    criarPeludinhoENovoHospedeForcado();
+  }
+  function criarPeludinhoENovoHospedeForcado(){
+    const nEl=document.getElementById('hbNovoNome'), tEl=document.getElementById('hbNovoTutor'), w=document.getElementById('hbNovoWarn');
+    const nome=((nEl&&nEl.value)||'').trim(), tutor=((tEl&&tEl.value)||'').trim();
+    if(!nome) return;
+    const novo={n:nome,raca:'',freq:'',tutor:tutor,nasc:'',dias:[]};
+    const key=pelKey(novo);
     PELUDINHOS.push(novo);
     PELUDINHOS.sort((a,b)=>jsNorm(a.n).localeCompare(jsNorm(b.n))||jsNorm(a.tutor).localeCompare(jsNorm(b.tutor)));
     const reg={_novo:true,n:nome,tutor:tutor,raca:'',nasc:'',dias:[],freq:''};
@@ -6548,6 +6617,22 @@
 
   // --- leitura unificada: o valor editado (extra/Firebase) vence o valor base hardcoded ---
   function canEditPel(){ const r=document.body.dataset.role; return r==='gestao'||r==='supervisor'||r==='diretoria'; }
+  // ===== LEI DO CADASTRO ÚNICO (Adriana, 03/ago/2026) ================================
+  // "O cadastro é UM SÓ, e sempre será feito pelas consultoras, gestoras ou pela Amanda
+  //  supervisora. NUNCA os monitores. Eles podem apenas trazer um peludinho JÁ CADASTRADO
+  //  para a pernoite. Não pode duplicar nunca."
+  function canCriarCadastro(){ const r=document.body.dataset.role;
+    return r==='gestao'||r==='supervisor'||r==='diretoria'||r==='consultora'; }
+  // Porteiro único de toda criação de cadastro-mestre. Devolve false e explica quando barra.
+  function gateCadastro(){
+    if(canCriarCadastro()) return true;
+    if(typeof zAlertao==='function') zAlertao('SÓ A RECEPÇÃO E A GESTÃO CADASTRAM',
+      ['O cadastro do FILHOt é UM SÓ e quem cria é a consultora da recepção, a Gestão ou a Supervisão.',
+       'Se ele já veio à Zêluz alguma vez, ele JÁ ESTÁ cadastrado — procure pelo nome dele na busca. Se não achar, chame a recepção: cadastrar de novo cria um FILHOt duplicado, com a ficha e o remédio partidos em dois.'],
+      {botao:'Entendi'});
+    else alert('Só a recepção, a Gestão ou a Supervisão podem cadastrar um FILHOt.');
+    return false;
+  }
   function pelGet(p,campo){ const ex=pelExtra(p); const v=ex[campo]; return (v!=null&&v!=='')?v:(p[campo]!=null?p[campo]:''); }
   function pelDias(p){ const ex=pelExtra(p); return Array.isArray(ex.dias)?ex.dias:(Array.isArray(p.dias)?p.dias:[]); }
   function pelFreq(p){ const n=pelDias(p).length; if(n>0) return n+'x'; const f=pelGet(p,'freq'); return f||'—'; }
@@ -7180,6 +7265,7 @@
   }
   function fecharNovoAluno(){ const m=document.getElementById('novoAlunoModal'); if(m) m.classList.remove('show'); }
   function criarAluno(){
+    if(!gateCadastro()) return;   // LEI do cadastro único — monitor não cadastra
     const nome=(document.getElementById('naNome').value||'').trim();
     const tutor=(document.getElementById('naTutor').value||'').trim();
     const w=document.getElementById('naWarn');
@@ -8412,6 +8498,7 @@
   function ciNovoCalcIdade(){ const el=document.getElementById('ciNovoNasc'); const out=document.getElementById('ciNovoIdade'); if(!el||!out) return; const nasc=(typeof parseNascToISO==='function'?parseNascToISO(el.value):'')||el.value.trim(); out.value=(typeof calcIdade==='function')?calcIdade(nasc):''; }
   function ciNovoNormNasc(){ const el=document.getElementById('ciNovoNasc'); if(!el) return; const iso=(typeof parseNascToISO==='function')?parseNascToISO(el.value):''; if(iso&&typeof isoParaBR==='function') el.value=isoParaBR(iso); }
   function ciCriarNovoHospede(){
+    if(!gateCadastro()) return;   // LEI do cadastro único — monitor não cadastra
     const nEl=document.getElementById('ciNovoNome'), tEl=document.getElementById('ciNovoTutor'), rEl=document.getElementById('ciNovoRaca'), w=document.getElementById('ciNovoWarn');
     const nome=((nEl&&nEl.value)||'').trim(), tutor=((tEl&&tEl.value)||'').trim(), raca=((rEl&&rEl.value)||'').trim();
     // Cadastro COMPLETO — os mesmos campos do Day Care
@@ -9860,7 +9947,7 @@
     const e=EST_TODAS[id]||{}; if(!e.nome) return;
     let p=(typeof pelMestreDe==='function')?pelMestreDe({nome:e.nome,tutor:e.tutor,raca:e.raca,refKey:e.refKey}):null;
     if(!p){
-      if(!canEditPel()){ alert(e.nome+' ainda não tem ficha no cadastro de peludinhos. Peça à Gestão ou à Supervisão para criar.'); return; }
+      if(!gateCadastro()) return;   // LEI do cadastro único — monitor não cadastra
       if(!confirm(e.nome+' ainda não tem ficha no cadastro de peludinhos.\n\nCriar a ficha agora com os dados da hospedagem (nome, tutor e raça)? Depois é só completar vacinas, carrapaticida e o resto.')) return;
       const novo={n:e.nome, raca:e.raca||'', freq:'', tutor:e.tutor||'', nasc:'', dias:[]};
       const key=pelKey(novo);
