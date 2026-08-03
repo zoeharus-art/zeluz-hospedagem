@@ -5605,7 +5605,12 @@
     }catch(e){ setSt('var(--crm-critico)','Erro ao importar: '+((e&&e.message)||e)); }
   }
   function statusRenov(ex){
-    const r=renovDe(ex); if(!r.fim) return {estado:'sem', label:'sem plano ativo'};
+    const r=renovDe(ex);
+    // Só hospedagem (Adriana, 03/ago/2026): o Zeus da Alessandra nunca vem ao Day Care, só
+    // se hospeda. Ele precisa da mesma ficha, mas NÃO tem plano mensal para vencer nem para
+    // cobrar — então nunca aparece como pendência na Renovação.
+    if(r.plano==='auaulandia') return {estado:'auaulandia', label:'só AuAulândia (hospedagem)'};
+    if(!r.fim) return {estado:'sem', label:'sem plano ativo'};
     const dias=diasAteISO(r.fim);
     if(dias==null) return {estado:'sem', label:'sem plano ativo'};
     if(dias<0) return {estado:'vencido', label:'venceu há '+(-dias)+' dia'+((-dias)>1?'s':''), dias:dias};
@@ -5669,24 +5674,36 @@
       const tipo=(pl.compromisso||'').charAt(0).toUpperCase()+(pl.compromisso||'').slice(1);
       return '<button class="'+(r.plano===k?'on':'')+'" onclick="pick(this);setRenov({plano:\''+k+'\'})">'+tipo+' · '+pl.rotulo+'</button>'; };
     const clsSt=st.estado==='vencido'?'vd-venc':(st.estado==='vence'?'vd-perto':(st.estado==='ok'?'vd-ok':'vd-sem'));
-    const mens=r.plano?mensalidade(r.plano,aulas,r.ordemPet||1):0;
+    const mens=(r.plano&&r.plano!=='auaulandia')?mensalidade(r.plano,aulas,r.ordemPet||1):0;
+    // Botão "só AuAulândia" — o FILHOt que não é auluno, só se hospeda (Zeus da Alessandra).
+    const btnAua='<button class="'+(r.plano==='auaulandia'?'on':'')+'" onclick="pick(this);setRenov({plano:\'auaulandia\'})">Só AuAulândia · hospedagem</button>';
+    const soHosp=(r.plano==='auaulandia');
     return '<div class="prev-bloco">'
-      +'<div class="prev-tit">Plano <span class="vd '+clsSt+'">'+st.label+'</span></div>'
+      +'<div class="prev-tit">Plano <span class="vd '+(soHosp?'vd-ok':clsSt)+'">'+st.label+'</span></div>'
       +'<div class="cad-grid">'
         +'<div class="field" style="grid-column:1/-1"><label>Tipo de plano <span style="font-weight:600;color:var(--muted)">(define até quando vale)</span></label><div class="seg gold" data-single>'
-          +['Silver','Gold','Black'].map(selPlano).join('')+'</div></div>'
-        +'<div class="field"><label>Aulas por semana (dos dias marcados)</label><input class="cad-in" value="'+aulas+'x" readonly></div>'
-        +'<div class="field"><label>Nº do peludinho na família</label><div class="seg gold" data-single>'
-          +[1,2,3].map(function(n){ return '<button class="'+((r.ordemPet||1)===n?'on':'')+'" onclick="pick(this);setRenov({ordemPet:'+n+'})">'+n+'º</button>'; }).join('')+'</div></div>'
-        +'<div class="field"><label>Início da vigência</label><input type="date" class="cad-in" value="'+(r.inicio||'')+'" onchange="setRenovInicio(this.value)"></div>'
-        +'<div class="field"><label>Mensalidade'+((r.ordemPet||1)>1?' (com desconto)':'')+'</label><div class="prev-calc">'+(mens?fmtCent(mens):'escolha o plano')+'</div></div>'
-        +'<div class="field"><label>Vence em</label><div class="prev-calc">'+(r.fim?fmtBR(r.fim)+' · renova em '+(r.mesRenov||'—'):'informe início e plano')+'</div></div>'
+          +['Silver','Gold','Black'].map(selPlano).join('')+btnAua+'</div></div>'
+      + (soHosp
+          ? '<div class="field" style="grid-column:1/-1"><div class="hint" style="background:rgba(46,125,138,.12);border-left:4px solid #2E7D8A;border-radius:10px;padding:11px 13px;font-weight:700;color:var(--z-blue)">'
+            +'🌙 Este FILHOt é <strong>só da AuAulândia</strong> — não é auluno do Day Care.<br>'
+            +'A ficha dele é a mesma (vacinas, alimentação, medicação, alergias), mas não tem plano mensal, não entra na chamada do Day Care e nunca aparece na Renovação de Planos. A cobrança é por diária de hospedagem.'
+            +'</div></div>'
+          : '<div class="field"><label>Aulas por semana (dos dias marcados)</label><input class="cad-in" value="'+aulas+'x" readonly></div>'
+            +'<div class="field"><label>Nº do peludinho na família</label><div class="seg gold" data-single>'
+              +[1,2,3].map(function(n){ return '<button class="'+((r.ordemPet||1)===n?'on':'')+'" onclick="pick(this);setRenov({ordemPet:'+n+'})">'+n+'º</button>'; }).join('')+'</div></div>'
+            +'<div class="field"><label>Início da vigência</label><input type="date" class="cad-in" value="'+(r.inicio||'')+'" onchange="setRenovInicio(this.value)"></div>'
+            +'<div class="field"><label>Mensalidade'+((r.ordemPet||1)>1?' (com desconto)':'')+'</label><div class="prev-calc">'+(mens?fmtCent(mens):'escolha o plano')+'</div></div>'
+            +'<div class="field"><label>Vence em</label><div class="prev-calc">'+(r.fim?fmtBR(r.fim)+' · renova em '+(r.mesRenov||'—'):'informe início e plano')+'</div></div>')
       +'</div>'
-      +'<div class="alm-next" style="margin-top:8px"><button class="btn btn-gold" onclick="confirmarRenovacao()">Confirmar / renovar plano</button></div>'
+      + (soHosp ? '' : '<div class="alm-next" style="margin-top:8px"><button class="btn btn-gold" onclick="confirmarRenovacao()">Confirmar / renovar plano</button></div>')
       +'</div>';
   }
   function setRenov(patch){ const r=Object.assign({}, renovDe(pelExtra(pelAtual)), patch);
-    setPelExtra(pelAtual,{renov:r}); renderPelFicha(); }
+    setPelExtra(pelAtual,{renov:r}); renderPelFicha();
+    // O cache do cadastro só é atualizado quando o banco confirma. Sem este segundo
+    // desenho, quem clicava em "Só AuAulândia" via o bloco continuar igual e achava que
+    // não tinha pego — só mudava ao reabrir a ficha.
+    setTimeout(function(){ try{ renderPelFicha(); }catch(e){} }, 400); }
   function setRenovInicio(iso){ const r=renovDe(pelExtra(pelAtual));
     const calc=r.plano?aplicarRenovacao(r.plano, r.aulas||nAulasDe(pelAtual), iso):{inicio:iso};
     setRenov(Object.assign({inicio:iso}, calc||{})); }
@@ -5708,7 +5725,8 @@
   function renderRenovacao(){
     const el=document.getElementById('renovLista'); if(!el) return;
     const itens=PELUDINHOS.map(function(p,i){ const ex=pelExtra(p); return {p:p,i:i,ex:ex,st:statusRenov(ex)}; })
-      .filter(function(o){ return !pelInativo(o.p); });
+      .filter(function(o){ return !pelInativo(o.p); })
+      .filter(function(o){ return o.st.estado!=='auaulandia'; }); // só hospedagem: não tem plano a renovar
     const ordem={vencido:0, vence:1, sem:2, ok:3};
     itens.sort(function(a,b){ if(ordem[a.st.estado]!==ordem[b.st.estado]) return ordem[a.st.estado]-ordem[b.st.estado];
       const fa=(renovDe(a.ex).fim||''), fb=(renovDe(b.ex).fim||'');
