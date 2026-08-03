@@ -909,9 +909,23 @@
   body[data-role="gestao"] .nav a.so-conferencia,
   body[data-role="supervisor"] .nav a.so-conferencia,
   body[data-role="diretoria"] .nav a.so-conferencia{display:flex}
-  /* A Wandela (conferência) só enxerga a Conferência Check-in e o Sair — mesma trava do plantonista/vet */
+  /* Conferência da SAÍDA — é das consultoras (recepção), mais a conferente e a gestão.
+     Sempre existem 2 conferências: uma na entrada e uma na saída (Adriana, 03/ago/2026). */
+  .nav a.so-conf-saida{display:none}
+  body[data-role="consultora"] .nav a.so-conf-saida,
+  body[data-role="conferencia"] .nav a.so-conf-saida,
+  body[data-role="gestao"] .nav a.so-conf-saida,
+  body[data-role="supervisor"] .nav a.so-conf-saida,
+  body[data-role="diretoria"] .nav a.so-conf-saida{display:flex}
+  /* Empório — quem avisa o tutor é a consultora (a gestão também acompanha) */
+  .nav .acc.so-emporio{display:none}
+  body[data-role="consultora"] .nav .acc.so-emporio,
+  body[data-role="gestao"] .nav .acc.so-emporio,
+  body[data-role="supervisor"] .nav .acc.so-emporio,
+  body[data-role="diretoria"] .nav .acc.so-emporio{display:block}
+  /* A Wandela (conferência) enxerga as DUAS conferências (entrada e saída) e o Sair */
   body[data-role="conferencia"] .nav a,body[data-role="conferencia"] .nav .grp,body[data-role="conferencia"] .nav .subnav{display:none !important}
-  body[data-role="conferencia"] .nav a[data-v="conferencia"],body[data-role="conferencia"] .nav a[data-v="sair"]{display:flex !important}
+  body[data-role="conferencia"] .nav a[data-v="conferencia"],body[data-role="conferencia"] .nav a[data-v="checkoutconf"],body[data-role="conferencia"] .nav a[data-v="sair"]{display:flex !important}
   /* ===== Onda 3 — Cuidado Vet ===== */
   .vet-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:14px;margin-top:6px}
   .vet-pet{position:relative;background:var(--z-white);border:2px solid var(--line);border-radius:18px;padding:16px 12px 18px;text-align:center;cursor:pointer;transition:transform .12s,border-color .15s,box-shadow .2s}
@@ -1099,7 +1113,18 @@
         <a data-v="cuidadovet" class="so-vet"><span data-icon="heart"></span><span>Cuidado Vet</span></a>
         <a data-v="hospedagem"><span data-icon="moon"></span><span>Plantão AuAulândia</span></a>
         <a data-v="hospedes" class="so-hosp"><span data-icon="paw"></span><span>Peludinhos Hóspedes</span></a>
-        <a data-v="checkout"><span data-icon="check"></span><span>Check-out (saída)</span></a>
+        <!-- SEMPRE 2 conferências: uma na ENTRADA e uma na SAÍDA (Adriana, 03/ago/2026).
+             Check-out = os monitores juntam. Conferência Check-out = as consultoras
+             conferem com o tutor e colhem a assinatura. -->
+        <a data-v="checkout"><span data-icon="check"></span><span>Check-out (monitores)</span></a>
+        <a data-v="checkoutconf" class="so-conf-saida"><span data-icon="check"></span><span>Conferência Check-out</span></a>
+      </div>
+    </div>
+    <!-- Empório — a consultora avisa os tutores de quem não comeu -->
+    <div class="acc so-emporio" data-acc="emporio">
+      <a class="nav-parent" data-acc-toggle="emporio"><span data-icon="star"></span><span>Empório</span><span class="acc-caret" aria-hidden="true"></span></a>
+      <div class="acc-panel">
+        <a data-v="emporio"><span data-icon="paw"></span><span>Avisar tutores — não comeu</span></a>
       </div>
     </div>
     <!-- Day Care — PAI accordion. Turminhas (dias) + Atividades vivem no #dcSubnav (montarSubnav). -->
@@ -2002,6 +2027,17 @@
     </div>
     <div id="hospAbaLista"></div>
   </section>
+  <!-- EMPÓRIO — a consultora liga para os tutores de quem não comeu (Adriana, 03/ago/2026) -->
+  <section class="view" id="v-emporio">
+    <div class="role-note"><span data-icon="paw"></span><span><strong>Quem não comeu hoje.</strong> Vem do 1º e do 2º horário do almoço. Ligue para o tutor, conte como foi e registre aqui — assim ninguém liga duas vezes e ninguém fica sem aviso.</span></div>
+    <div class="card" style="margin-top:12px">
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap">
+        <h2 style="font-size:19px;margin:0">Avisar os tutores</h2>
+        <span class="pel-count" id="empCount"></span>
+      </div>
+      <div id="empList" style="margin-top:12px"></div>
+    </div>
+  </section>
   <section class="view" id="v-checkout">
     <div id="co-lista">
       <div class="role-note"><span data-icon="paw"></span><span><strong>Check-out da estadia.</strong> O caminho inverso: o monitor confere tudo que vai voltar (pertences, ração/medicação que sobrou, o que o tutor mandou e o que foi comprado aqui) e desce com o FILHOt para a recepção. A recepção confere junto com o tutor, o tutor assina e recebe o PDF.</span></div>
@@ -2479,7 +2515,9 @@
     cuidadovet:['Cuidado Vet','Consulta, receituário e reavaliação'],
     checkin:['Check-in','Entrada da estadia — ficha, pertences e assinatura'],
     conferencia:['Conferência Check-in','Pertences etiquetados, ração pesada e alarmes testados'],
-    checkout:['Check-out (saída)','Confere o que volta, tutor assina e recebe o PDF'],
+    checkout:['Check-out (monitores)','Juntar tudo que volta com o FILHOt e mandar para a recepção'],
+    checkoutconf:['Conferência Check-out','Conferir com o tutor na saída, colher a assinatura e entregar o PDF'],
+    emporio:['Empório','Avisar os tutores de quem não comeu hoje'],
     hospedes:['Peludinhos Hóspedes','Estadias: quem está, quem chega e quem já saiu'],
     recepcao:['Atenção Recepção','Faltas e avisos: ração, medicação e itens da estadia'],
     agenda:['Agenda','Frequência e reservas'],pessoas:['Pessoas & Turnos','Equipe e tarefas'],
@@ -2500,14 +2538,18 @@
     document.querySelectorAll('#nav a').forEach(x=>x.classList.remove('active'));
     a.classList.add('active');
     document.querySelectorAll('.view').forEach(x=>x.classList.remove('active'));
-    document.getElementById('v-'+v).classList.add('active');
+    // "Conferência Check-out" usa a MESMA tela do Check-out, em outro modo: a lista muda
+    // (só quem já foi juntado pelos monitores) e a assinatura do tutor aparece.
+    document.getElementById('v-'+(v==='checkoutconf'?'checkout':v)).classList.add('active');
     document.getElementById('head-title').childNodes[0].nodeValue=titles[v][0]+' ';
     document.getElementById('head-sub').textContent=titles[v][1];
     if(v==='hospedagem') fecharPlantao();
     if(v==='cuidadovet'){ if(typeof abrirCuidadoVet==='function') abrirCuidadoVet(); }
     if(v==='checkin'){ if(typeof abrirCheckin==='function') abrirCheckin(); }
     if(v==='conferencia'){ if(typeof abrirConferencia==='function') abrirConferencia(); }
-    if(v==='checkout'){ if(typeof abrirCheckout==='function') abrirCheckout(); }
+    if(v==='checkout'){ coModo='monitor'; if(typeof abrirCheckout==='function') abrirCheckout(); }
+    if(v==='checkoutconf'){ coModo='conferencia'; if(typeof abrirCheckout==='function') abrirCheckout(); }
+    if(v==='emporio'){ if(typeof abrirEmporio==='function') abrirEmporio(); }
     if(v==='hospedes'){ if(typeof renderHospedesAba==='function') renderHospedesAba(); }
     if(v==='recepcao'){ if(typeof carregarAvisosEstoque==='function') carregarAvisosEstoque(); }
     if(v==='ficha'){ const l=document.getElementById('pel-lista'),fi=document.getElementById('pel-ficha'); if(l&&fi){ l.style.display='block'; fi.style.display='none'; } if(typeof renderPel==='function') renderPel(); }
@@ -4615,8 +4657,10 @@
   const NAV_PAGINAS_ALL=[
     {grp:'AuAulândia', itens:[
       {k:'checkin', t:'Check-in'}, {k:'conferencia', t:'Conferência Check-in'}, {k:'recepcao', t:'Atenção Recepção'},
-      {k:'cuidadovet', t:'Cuidado Vet'}, {k:'hospedagem', t:'Plantão AuAulândia'}, {k:'checkout', t:'Check-out (saída)'}
+      {k:'cuidadovet', t:'Cuidado Vet'}, {k:'hospedagem', t:'Plantão AuAulândia'},
+      {k:'checkout', t:'Check-out (monitores)'}, {k:'checkoutconf', t:'Conferência Check-out'}
     ]},
+    {grp:'Empório', itens:[ {k:'emporio', t:'Avisar tutores — não comeu'} ]},
     {grp:'Gestão', itens:[
       {k:'painel', t:'Painel'}, {k:'ficha', t:'Peludinhos'}, {k:'hospedes', t:'Peludinhos Hóspedes (estadias)'},
       {k:'pessoas', t:'Pessoas'}, {k:'renovacao', t:'Renovação de Planos'}
@@ -10639,8 +10683,87 @@
     }).catch(function(e){ if(st){ st.style.color='var(--crm-critico)'; st.textContent='⚠️ Erro: '+e.message; } });
   }
 
+  // ================= EMPÓRIO — avisar os tutores de quem não comeu =================
+  // Adriana, 03/ago/2026: quem não comeu (1º e 2º horário) tem que chegar na consultora.
+  // Ela liga, conta como foi e marca aqui — sem isso, ou ninguém avisa ou avisam duas vezes.
+  var EMP_AVISOS={};
+  function empDataKey(){ return (typeof dcDataKey==='function')?dcDataKey():''; }
+  function abrirEmporio(){
+    if(!DB){ renderEmporio(); return; }
+    Promise.all([
+      DB.ref('daycare/almoco/'+empDataKey()).once('value').then(s=>s.val()||{}).catch(()=>({})),
+      DB.ref('daycare/atividade/'+empDataKey()+'/almoco2').once('value').then(s=>s.val()||{}).catch(()=>({})),
+      DB.ref('daycare/avisos-comida/'+empDataKey()).once('value').then(s=>s.val()||{}).catch(()=>({}))
+    ]).then(function(r){
+      window.__empAlm1=r[0]; window.__empAlm2=r[1]; EMP_AVISOS=r[2]||{};
+      renderEmporio();
+    }).catch(function(){ renderEmporio(); });
+  }
+  function empLista(){
+    const a1=window.__empAlm1||{}, a2=window.__empAlm2||{};
+    const turma=(typeof turmaDoDia==='function')?turmaDoDia():[];
+    const out=[];
+    turma.forEach(function(o){
+      const k=dcKey(o.p.n,o.p.tutor);
+      const m1=a1[k]||'', m2=a2[k]||'';
+      // "não se aplica" NUNCA vira aviso ao tutor — ele não almoça e isso é combinado.
+      if(m1==='na'||m2==='na') return;
+      let motivo='';
+      if(m2==='nao') motivo='não comeu nem no 2º horário';
+      else if(m1==='nao'&&!m2) motivo='não comeu no 1º horário (ainda não passou pelo 2º)';
+      else if(m1==='metade'&&m2!=='comeu') motivo='comeu só metade';
+      if(!motivo) return;
+      out.push({k:k, nome:o.p.n, tutor:o.p.tutor||'', raca:o.p.raca||'', motivo:motivo,
+                grave:(m2==='nao'), aviso:EMP_AVISOS[k]||null});
+    });
+    // Quem não comeu de verdade primeiro; depois os "metade"; avisados vão para o fim.
+    return out.sort(function(a,b){ return (a.aviso?1:0)-(b.aviso?1:0) || (b.grave?1:0)-(a.grave?1:0) || jsNorm(a.nome).localeCompare(jsNorm(b.nome)); });
+  }
+  function renderEmporio(){
+    const el=document.getElementById('empList'); if(!el) return;
+    const lista=empLista();
+    const cnt=document.getElementById('empCount');
+    const faltam=lista.filter(function(x){ return !x.aviso; }).length;
+    if(cnt) cnt.textContent=lista.length?(faltam+' para avisar · '+(lista.length-faltam)+' já avisado(s)'):'ninguém para avisar';
+    if(!lista.length){ el.innerHTML='<div class="av-empty"><div class="big">Todos comeram hoje</div>Nenhum tutor para avisar por causa de comida.</div>'; return; }
+    el.innerHTML=lista.map(function(x){
+      const av=x.aviso;
+      const cor=av?'#1E8449':(x.grave?'#B3261E':'#DEB428');
+      const fundo=av?'rgba(30,132,73,.08)':(x.grave?'rgba(179,38,30,.07)':'rgba(222,180,40,.10)');
+      return '<div style="border:2px solid '+cor+';background:'+fundo+';border-radius:13px;padding:13px;margin-bottom:10px">'
+        +'<div style="font-weight:800;font-size:17px;color:var(--z-blue)">'+escAttr(x.nome)+(x.raca?(' <span style="font-size:12.5px;color:var(--muted);font-weight:600">'+escAttr(x.raca)+'</span>'):'')+'</div>'
+        +'<div style="font-size:13.5px;color:var(--muted);font-weight:600">Tutor: '+escAttr(x.tutor||'a confirmar')+'</div>'
+        +'<div style="font-weight:800;font-size:14.5px;color:'+cor+';margin:6px 0 9px">'+escAttr(x.motivo)+'</div>'
+        +(av
+          ? '<div style="font-size:13.5px;font-weight:700;color:#1E8449">✅ Tutor avisado por '+escAttr(av.quem||'?')+(av.hora?(' às '+escAttr(av.hora)):'')+(av.obs?('<br><span style="color:var(--z-blue);font-weight:600">"'+escAttr(av.obs)+'"</span>'):'')+'</div>'
+            +'<div style="text-align:right;margin-top:6px"><button type="button" class="ativ-del" style="font-size:12px" onclick="empDesfazer(\''+escAttr(x.k)+'\')">desfazer</button></div>'
+          : '<input class="cad-in" id="empObs_'+escAttr(x.k)+'" placeholder="O que o tutor disse? (opcional)" autocomplete="off" style="margin-bottom:8px">'
+            +'<button type="button" class="btn btn-primary" style="width:100%" onclick="empAvisar(\''+escAttr(x.k)+'\')">✅ Avisei o tutor</button>')
+        +'</div>';
+    }).join('');
+  }
+  function empAvisar(k){
+    if(!DB) return;
+    const inp=document.getElementById('empObs_'+k);
+    const reg={quem:(typeof quemSou==='function'?quemSou():'-'), hora:(typeof horaAgora==='function'?horaAgora():''), ts:Date.now(), obs:((inp&&inp.value)||'').trim()};
+    DB.ref('daycare/avisos-comida/'+empDataKey()+'/'+k).set(reg).then(function(){
+      EMP_AVISOS[k]=reg;
+      if(typeof audit==='function') audit('emporio-aviso-tutor', k, {quem:reg.quem, obs:reg.obs});
+      renderEmporio();
+    }).catch(function(e){ alert('Erro ao registrar: '+((e&&e.message)||e)); });
+  }
+  function empDesfazer(k){
+    if(!DB) return;
+    DB.ref('daycare/avisos-comida/'+empDataKey()+'/'+k).remove().then(function(){
+      delete EMP_AVISOS[k]; renderEmporio();
+    }).catch(function(){});
+  }
+
   // ================= CHECK-OUT (saída) — fluxo inverso do check-in =================
   var coEstadiaId=null, coEstadia=null, coHosp=null, coConf={}, coSigCtx=null, coSigDrawing=false, coSigHasInk=false, coSigReady=false;
+  // 'monitor' = tela "Check-out (monitores)": juntar as coisas.
+  // 'conferencia' = tela "Conferência Check-out": conferir com o tutor e assinar.
+  var coModo='monitor';
   function abrirCheckout(){ document.getElementById('co-lista').style.display='block'; document.getElementById('co-ficha').style.display='none'; coRenderLista(); }
   function coRenderLista(){
     var el=document.getElementById('coGrid'); if(!el) return;
@@ -10663,9 +10786,22 @@
     var tit=function(txt,cor,sub){ return '<div style="grid-column:1/-1;margin:4px 0 2px"><div style="font-weight:800;font-size:16px;color:'+cor+'">'+txt+'</div>'+(sub?'<div style="font-size:12.5px;color:var(--muted);font-weight:600">'+sub+'</div>':'')+'</div>'; };
     var grade=function(arr){ return '<div style="grid-column:1/-1;display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:12px">'+arr.map(card).join('')+'</div>'; };
     var h='';
-    if(prontos.length) h+=tit('✅ Prontos — a recepção confere com o tutor ('+prontos.length+')','#1E8449','A bolsa já foi montada pela monitora. Falta conferir com o tutor e colher a assinatura.')+grade(prontos);
-    if(saiHoje.length) h+=tit('🔴 Saem HOJE — juntar as coisas ('+saiHoje.length+')','#B3261E','Etapa 1: a monitora junta tudo e manda para a recepção.')+grade(saiHoje);
+    if(coModo==='conferencia'){
+      // Tela das consultoras: só quem os monitores já juntaram.
+      if(!prontos.length){
+        h='<div class="av-empty" style="grid-column:1/-1"><div class="big">Nada para conferir agora</div>Quando a monitora terminar de juntar as coisas de um FILHOt, ele aparece aqui para você conferir com o tutor.'
+          +(saiHoje.length?('<br><br><strong>'+saiHoje.length+'</strong> sai(em) hoje e ainda está(ão) sendo preparado(s) lá dentro.'):'')+'</div>';
+      } else {
+        h+=tit('Conferir com o tutor e assinar ('+prontos.length+')','#1E8449','A bolsa já foi montada. Passe item por item COM O TUTOR, colha a assinatura e entregue o PDF.')+grade(prontos);
+        if(saiHoje.length) h+=tit('Ainda sendo preparados lá dentro ('+saiHoje.length+')','var(--muted)','Saem hoje, mas a monitora ainda não terminou de juntar.')+grade(saiHoje);
+      }
+      el.innerHTML=h; return;
+    }
+    // Tela dos monitores: o que precisa ser juntado.
+    if(saiHoje.length) h+=tit('🔴 Saem HOJE — juntar as coisas ('+saiHoje.length+')','#B3261E','Junte tudo que é do FILHOt e toque em "Juntei tudo" para mandar à recepção.')+grade(saiHoje);
     if(resto.length) h+=tit('Outras estadias em curso ('+resto.length+')','var(--muted)','Ainda não é o dia da saída — só entre aqui se o tutor antecipou.')+grade(resto);
+    if(prontos.length) h+=tit('✅ Já entregues à recepção ('+prontos.length+')','#1E8449','Você já juntou. Agora é a consultora que confere com o tutor.')+grade(prontos);
+    if(!h) h='<div class="av-empty" style="grid-column:1/-1"><div class="big">Nenhum hóspede para sair</div>Quando alguém tiver saída marcada, ele aparece aqui.</div>';
     el.innerHTML=h;
   }
   // ===== ITEM 2 — CHECK-OUT EM DUAS ETAPAS ==========================================
@@ -10674,7 +10810,10 @@
   // que assina que recebeu tudo. O movimento é inverso."
   // Etapa 1 = quem trabalha lá dentro (monitor/plantonista/aprendiz/conferência).
   // Etapa 2 = recepção/gestão/supervisão, com o tutor na frente e assinatura.
-  function coEhRecepcao(){ var r=document.body.dataset.role||''; return r==='consultora'||r==='gestao'||r==='supervisor'||r==='diretoria'; }
+  // Na tela "Conferência Check-out" quem manda é o MODO (é a tela das consultoras).
+  // Na tela "Check-out (monitores)" vale o papel de quem está logado.
+  function coEhRecepcao(){ if(coModo==='conferencia') return true; if(coModo==='monitor') return false;
+    var r=document.body.dataset.role||''; return r==='consultora'||r==='gestao'||r==='supervisor'||r==='diretoria'; }
   function coEtapaDe(e){ return (e&&e.checkout_etapa1&&e.checkout_etapa1.ts)?2:1; }
   function coAbrirFicha(rk){
     var reg=CF_ESTADIAS[rk]; if(!reg) return; coEstadiaId=reg.id; coEstadia=reg.e||{}; coHosp={nome:coEstadia.nome,tutor:coEstadia.tutor,raca:coEstadia.raca}; coConf={};
