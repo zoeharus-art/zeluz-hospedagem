@@ -7837,7 +7837,7 @@
     const cur=genMarcas[k]; const nx=(cur===val)?'':val;
     if(nx) genMarcas[k]=nx; else delete genMarcas[k];
     if(DB) DB.ref('daycare/atividade/'+dcDataKey()+'/almoco2/'+k).set(nx||null).catch(()=>{});
-    if(typeof audit==='function'&&nx) audit('almoco2', nx==='comeu'?'comeu no 2º horário':'NÃO comeu nem no 2º horário', {alvo:k});
+    if(typeof audit==='function'&&nx) audit('almoco2', nx==='comeu'?'comeu no 2º horário':(nx==='na'?'não se aplica (não almoça)':'NÃO comeu nem no 2º horário'), {alvo:k});
     renderGenerico();
   }
   function nomeAtiv(slug){ try{ const a=(typeof ATIVS_DC!=='undefined'?ATIVS_DC:[]).find(x=>x.s===slug); return a?a.t:slug; }catch(e){ return slug; } }
@@ -7864,16 +7864,20 @@
     const f=ATIVS_DC.find(a=>a.s===dcAtiv);
     if(ehAlmoco2()){
       // No 2º horário o placar é COMEU × NÃO COMEU (não "feito").
-      let comeu=0, naoC=0; const naoNomes=[];
+      let comeu=0, naoC=0, naAp=0; const naoNomes=[], naNomes=[];
       list.forEach(o=>{ const m=genMarcas[dcKey(o.p.n,o.p.tutor)];
-        if(m==='comeu') comeu++; else if(m==='nao'){ naoC++; naoNomes.push(nomeDesamb(o,list)); } });
+        if(m==='comeu') comeu++;
+        else if(m==='nao'){ naoC++; naoNomes.push(nomeDesamb(o,list)); }
+        else if(m==='na'){ naAp++; naNomes.push(nomeDesamb(o,list)); } });
       document.getElementById('genResumo').innerHTML=`
         <div class="dc-resumo">
           <div class="dc-stat ok"><b>${comeu}</b>comeram</div>
           <div class="dc-stat bad"><b>${naoC}</b>nao comeram</div>
-          <div class="dc-stat pend"><b>${list.length-comeu-naoC}</b>falta servir</div>
+          ${naAp?`<div class="dc-stat"><b>${naAp}</b>não se aplica</div>`:''}
+          <div class="dc-stat pend"><b>${list.length-comeu-naoC-naAp}</b>falta servir</div>
         </div>
-        ${naoNomes.length?`<div class="dc-faltas"><strong>NAO COMERAM NEM NO 2&ordm; HORARIO (${naoNomes.length}):</strong> ${naoNomes.join(', ')} &mdash; avisar os tutores.</div>`:''}`
+        ${naoNomes.length?`<div class="dc-faltas"><strong>NAO COMERAM NEM NO 2&ordm; HORARIO (${naoNomes.length}):</strong> ${naoNomes.join(', ')} &mdash; avisar os tutores.</div>`:''}
+        ${naNomes.length?`<div class="alm-fora"><strong>NAO SE APLICA (${naNomes.length}):</strong> ${naNomes.join(', ')} &mdash; hoje nao almocam. Nao precisa avisar o tutor.</div>`:''}`
         +avisoAlmoco2(list);
       document.getElementById('genCount').textContent=list.length
         ? `${list.length} para o 2º horário — nao comeram no 1º`
@@ -7891,15 +7895,17 @@
       const m=genMarcas[k]||'';
       const ok=_a2?(m==='comeu'):(m==='feito');
       const naoComeu=_a2&&m==='nao';
+      const naAplica=_a2&&m==='na';
       const restr=tarjaRestricao(p);
       const ph=foto?`<div class="ph" style="background-image:url('${foto}');background-size:cover;background-position:center"></div>`:`<div class="ph" style="background:${corPel(typeof o.i==='number'?o.i:0)}">${(p.n[0]||'?')}</div>`;
       const fita=_a2
-        ? `<div class="dc-ribbon ${ok?'veio':'pend'}" ${naoComeu?'style="background:var(--crm-critico);color:#fff"':''}>${ok?'COMEU':(naoComeu?'NAO COMEU':'FALTA SERVIR')}</div>`
+        ? `<div class="dc-ribbon ${ok?'veio':'pend'}" ${naoComeu?'style="background:var(--crm-critico);color:#fff"':(naAplica?'style="background:#7C8B99;color:#fff"':'')}>${ok?'COMEU':(naoComeu?'NAO COMEU':(naAplica?'NAO SE APLICA':'FALTA SERVIR'))}</div>`
         : `<div class="dc-ribbon ${ok?'veio':'pend'}">${ok?'FEITO':'PENDENTE'}</div>`;
       const acoes=_a2
         ? `<div class="dc-actions alm-actions">
             <button class="alm-btn tudo ${ok?'on':''}" onclick="marcarAlmoco2('${k}','comeu')">Comeu</button>
             <button class="alm-btn nao ${naoComeu?'on':''}" onclick="marcarAlmoco2('${k}','nao')">Nao comeu</button>
+            <button class="alm-btn na ${naAplica?'on':''}" onclick="marcarAlmoco2('${k}','na')">Não se aplica</button>
           </div>`
         : `<div class="dc-actions"><button class="dc-btn veio ${ok?'on':''}" style="flex:1" onclick="marcarGenerico('${k}')">${ok?'&#10003; Feito':'Marcar feito'}</button></div>`;
       return `<div class="pet dc-card ${ok?'veio':''}${naoComeu?' nao':''}">
