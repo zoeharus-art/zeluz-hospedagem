@@ -2240,6 +2240,13 @@
         <div class="hint">A senha que cada pessoa digita para entrar no sistema, da Gestão à equipe. Esta lista é gerada automaticamente do cadastro — sempre atualizada.</div>
         <div id="senhasList"></div>
       </div>
+      <!-- Quem tentou entrar e o aparelho barrou (03/ago/2026) — a Gestão autoriza daqui,
+           sem precisar pegar o celular da pessoa. -->
+      <div class="card" style="margin-top:14px">
+        <h2>Quem tentou entrar e não conseguiu</h2>
+        <div class="hint">Quando alguém da equipe digita a senha certa num celular que ainda não foi liberado, a tentativa aparece aqui. Toque em "Liberar este celular" e ela já entra na próxima vez — sem você precisar ir até lá.</div>
+        <div id="loginsBarradosList" style="margin-top:10px"></div>
+      </div>
     </div>
 
   </section>
@@ -2544,7 +2551,7 @@
     const map={ativ:'p-ativ',monitores:'p-monitores',senhas:'p-senhas'};
     document.querySelectorAll('#v-pessoas .ppanel').forEach(x=>x.classList.remove('active'));
     const el=document.getElementById(map[k]||'p-ativ'); if(el) el.classList.add('active');
-    try{ if(k==='monitores') renderMonitores(); else if(k==='senhas') renderSenhas(); else renderAtiv(); }catch(e){}
+    try{ if(k==='monitores') renderMonitores(); else if(k==='senhas'){ renderSenhas(); if(typeof renderLoginsBarrados==='function') renderLoginsBarrados(); } else renderAtiv(); }catch(e){}
     marcarPSubnavAtivo(k);
     if(typeof closeNav==='function') closeNav(); window.scrollTo({top:0,behavior:'smooth'});
   }
@@ -4555,6 +4562,52 @@
       '<span class="val" style="font-family:var(--font-marca);font-size:18px;letter-spacing:3px;color:var(--z-gold-deep)">'+p.pwd+'</span></div>'
     ).join('');
   }
+  // ===== TENTATIVAS DE ENTRADA BARRADAS (Gestão) =====================================
+  // A Letícya e o Octávio ficaram dias sem trabalhar porque o celular deles não estava
+  // liberado — e nada disso aparecia para a Gestão. Agora aparece, com o botão de liberar.
+  function renderLoginsBarrados(){
+    const el=document.getElementById('loginsBarradosList'); if(!el||!DB) return;
+    const dias=[]; const d=new Date(); const p=n=>String(n).padStart(2,'0');
+    for(let i=0;i<7;i++){ const x=new Date(d.getTime()-i*86400000); dias.push(x.getFullYear()+'-'+p(x.getMonth()+1)+'-'+p(x.getDate())); }
+    Promise.all(dias.map(k=>DB.ref('daycare/auditoria/'+k).once('value').then(s=>({k:k,v:s.val()||{}})).catch(()=>({k:k,v:{}}))))
+    .then(function(res){
+      const porAparelho={};
+      res.forEach(function(r){
+        Object.values(r.v).forEach(function(x){
+          if(!x||x.acao!=='login-barrado'||!x.aparelho) return;
+          const k=x.aparelho;
+          if(!porAparelho[k]||porAparelho[k].ts<x.ts) porAparelho[k]={quem:x.quem||'?', ts:x.ts, dia:r.k, hora:x.hora||'', aparelho:k};
+          porAparelho[k].tentativas=(porAparelho[k].tentativas||0)+1;
+        });
+      });
+      // Já autorizados saem da lista sozinhos.
+      DB.ref('auaulandia/aparelhos').once('value').then(function(s){
+        const ja=s.val()||{};
+        const lista=Object.keys(porAparelho).filter(k=>!ja[k]).map(k=>porAparelho[k]).sort((a,b)=>b.ts-a.ts);
+        if(!lista.length){ el.innerHTML='<div class="hint" style="color:var(--crm-ok);font-weight:700">Ninguém ficou barrado nos últimos 7 dias.</div>'; return; }
+        el.innerHTML=lista.map(function(o){
+          const quando=(o.dia?ciBRdata(o.dia):'')+(o.hora?(' às '+o.hora):'');
+          return '<div style="border:2px solid var(--crm-critico);border-radius:12px;padding:12px;margin-bottom:9px">'
+            +'<div style="font-weight:800;color:var(--z-blue);font-size:16px">'+escAttr(o.quem)+' não conseguiu entrar</div>'
+            +'<div style="font-size:13px;color:var(--muted);font-weight:600;margin:3px 0 9px">'+escAttr(quando)+' · '+o.tentativas+' tentativa(s) · a senha estava certa, o celular é que não está liberado</div>'
+            +'<button type="button" class="btn btn-primary" style="width:100%" onclick="liberarAparelhoDaLista(\''+escAttr(o.aparelho)+'\',\''+escAttr(o.quem)+'\')">✅ Liberar este celular para '+escAttr(o.quem)+'</button>'
+            +'</div>';
+        }).join('');
+      }).catch(function(){});
+    }).catch(function(){});
+  }
+  function liberarAparelhoDaLista(id,quem){
+    if(!DB) return;
+    const nome=(prompt('Dê um nome para este celular (ex.: "Celular do Octávio"):', 'Celular de '+(quem||''))||'').trim();
+    if(!nome) return;
+    const u=(typeof usuarioAtual==='function')?usuarioAtual():null;
+    DB.ref('auaulandia/aparelhos/'+id).set({nome:nome, por:((u&&u.nome)||'Gestão'), ts:Date.now(), liberadoPara:quem||''}).then(function(){
+      if(typeof audit==='function') audit('aparelho-liberado', nome, {para:quem||''});
+      if(typeof zAlertao==='function') zAlertao('✅ CELULAR LIBERADO',
+        [(quem||'A pessoa')+' já pode entrar neste celular — é só digitar a senha dela de novo.'], {ok:true, botao:'Fechar'});
+      renderLoginsBarrados();
+    }).catch(function(e){ alert('Erro ao liberar: '+((e&&e.message)||e)); });
+  }
   // ===== PERMISSÕES POR PESSOA (item C) — editor granular sobre o roster de MONITORES =====
   // Padrão: sem 'paginas'/'atividades' configurado = pessoa vê tudo que o papel monitor já mostra
   // (comportamento de hoje, sem mudança). A Gestão DESLIGA o que não quer — nunca o contrário.
@@ -4673,6 +4726,15 @@
     deviceAutorizado(function(ok){
       if(ok || ehGestao){ sessionStorage.setItem('zeluz_login', JSON.stringify(u)); aplicarLogin(u); return; }
       // Aparelho não autorizado e não é gestão → bloqueia
+      // FICA REGISTRADO (03/ago/2026): a Letícya e o Octávio ficaram dias sem conseguir
+      // trabalhar e ninguém sabia por quê — a tentativa barrada não deixava rastro nenhum.
+      // Agora a Gestão vê no Painel quem tentou entrar, em qual aparelho e a que horas.
+      try{ if(DB) DB.ref('daycare/auditoria/'+_audKey()).push({
+        ts:Date.now(), hora:(typeof horaAgora==='function'?horaAgora():''),
+        quem:(u.nome||'?'), role:(u.role||'?'), acao:'login-barrado',
+        detalhe:'aparelho não autorizado — '+(u.nome||'?')+' digitou a senha certa e não conseguiu entrar',
+        aparelho:(typeof getDeviceId==='function'?getDeviceId():'')
+      }).catch(function(){}); }catch(e){}
       err.style.color='var(--crm-critico)';
       err.innerHTML='Este aparelho não está autorizado.<br>Peça à <strong>Gestão</strong> para autorizar (botão abaixo).';
       // Cartaz na tela: o textinho vermelho passava despercebido e a pessoa achava que a
