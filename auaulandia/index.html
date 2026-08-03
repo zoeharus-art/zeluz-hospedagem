@@ -1290,7 +1290,7 @@
       <div id="alm-final" class="alm-step" style="display:none"></div>
     </div>
     <div id="scr-generic" class="dc-scr" style="display:none">
-      <div class="role-note"><span data-icon="star"></span><span>Marque <strong>Feito</strong> em cada peludinho que passou por esta atividade. Cada atividade terá seu protocolo próprio em breve.</span></div>
+      <div class="role-note" id="genNota"><span data-icon="star"></span><span id="genNotaTxt">Marque <strong>Feito</strong> em cada peludinho que passou por esta atividade. Cada atividade terá seu protocolo próprio em breve.</span></div>
       <div id="genResumo"></div>
       <div class="pel-toolbar"><span class="pel-count" id="genCount"></span></div>
       <div class="pets-grid" id="genGrid"></div>
@@ -7830,6 +7830,16 @@
     if(ehAlmoco2()) jobs.push( DB.ref('daycare/almoco/'+dcDataKey()).once('value').then(s=>{ almMarcas=s.val()||{}; }) );
     Promise.all(jobs).then(renderGenerico).catch(renderGenerico); }
   function marcarGenerico(k){ const cur=genMarcas[k]; const nx=(cur==='feito')?'':'feito'; if(nx) genMarcas[k]=nx; else delete genMarcas[k]; if(DB) DB.ref('daycare/atividade/'+dcDataKey()+'/'+dcAtiv+'/'+k).set(nx||null).catch(()=>{}); if(typeof audit==='function'&&nx) audit('atividade', (nomeAtiv(dcAtiv)||dcAtiv)+': feito', {alvo:k, slug:dcAtiv}); renderGenerico(); }
+  // 2º Horário de Almoço (Adriana, 03/ago/2026): "feito" não diz nada — o que importa é se
+  // ele COMEU nesta segunda chance. Quem não comeu nem aqui é quem a Consultora precisa
+  // avisar ao tutor.
+  function marcarAlmoco2(k,val){
+    const cur=genMarcas[k]; const nx=(cur===val)?'':val;
+    if(nx) genMarcas[k]=nx; else delete genMarcas[k];
+    if(DB) DB.ref('daycare/atividade/'+dcDataKey()+'/almoco2/'+k).set(nx||null).catch(()=>{});
+    if(typeof audit==='function'&&nx) audit('almoco2', nx==='comeu'?'comeu no 2º horário':'NÃO comeu nem no 2º horário', {alvo:k});
+    renderGenerico();
+  }
   function nomeAtiv(slug){ try{ const a=(typeof ATIVS_DC!=='undefined'?ATIVS_DC:[]).find(x=>x.s===slug); return a?a.t:slug; }catch(e){ return slug; } }
   // 2º Horário de Almoço (Monitor: Octávio) — recebe só quem NÃO comeu no 1º horário.
   // Trazer a turma inteira faria o monitor procurar quem precisa entre dezenas de cards.
@@ -7850,20 +7860,52 @@
   function renderGenerico(){
     if(!document.getElementById('genGrid')) return;
     let list=ehAlmoco2()?listaSegundoHorario():turmaDoDia(); list=filtrarAtividadeSeletiva(list,dcAtiv); let feito=0;
-    list.forEach(o=>{ if(genMarcas[dcKey(o.p.n,o.p.tutor)]==='feito')feito++; });
+    list.forEach(o=>{ const m=genMarcas[dcKey(o.p.n,o.p.tutor)]; if(m==='feito'||m==='comeu')feito++; });
     const f=ATIVS_DC.find(a=>a.s===dcAtiv);
-    document.getElementById('genResumo').innerHTML=`<div class="dc-resumo"><div class="dc-stat ok"><b>${feito}</b>feito</div><div class="dc-stat pend"><b>${list.length-feito}</b>pendente</div></div>`
-      +(ehAlmoco2()?avisoAlmoco2(list):'');
-    document.getElementById('genCount').textContent=ehAlmoco2()
-      ? (list.length?`${list.length} para o 2º horário — nao comeram no 1º`:'Ninguem ficou para o 2º horário')
-      : `${list.length} aulunos · ${f?f.t:''}`;
-    document.getElementById('genGrid').innerHTML=filtraLista(list).map(o=>{ const p=o.p; const ex=(typeof o.i==='number')?pelExtra(p):{}; const foto=ex.foto; const k=dcKey(p.n,p.tutor); const ok=genMarcas[k]==='feito';
+    if(ehAlmoco2()){
+      // No 2º horário o placar é COMEU × NÃO COMEU (não "feito").
+      let comeu=0, naoC=0; const naoNomes=[];
+      list.forEach(o=>{ const m=genMarcas[dcKey(o.p.n,o.p.tutor)];
+        if(m==='comeu') comeu++; else if(m==='nao'){ naoC++; naoNomes.push(nomeDesamb(o,list)); } });
+      document.getElementById('genResumo').innerHTML=`
+        <div class="dc-resumo">
+          <div class="dc-stat ok"><b>${comeu}</b>comeram</div>
+          <div class="dc-stat bad"><b>${naoC}</b>nao comeram</div>
+          <div class="dc-stat pend"><b>${list.length-comeu-naoC}</b>falta servir</div>
+        </div>
+        ${naoNomes.length?`<div class="dc-faltas"><strong>NAO COMERAM NEM NO 2&ordm; HORARIO (${naoNomes.length}):</strong> ${naoNomes.join(', ')} &mdash; avisar os tutores.</div>`:''}`
+        +avisoAlmoco2(list);
+      document.getElementById('genCount').textContent=list.length
+        ? `${list.length} para o 2º horário — nao comeram no 1º`
+        : 'Ninguem ficou para o 2º horário';
+    } else {
+      document.getElementById('genResumo').innerHTML=`<div class="dc-resumo"><div class="dc-stat ok"><b>${feito}</b>feito</div><div class="dc-stat pend"><b>${list.length-feito}</b>pendente</div></div>`;
+      document.getElementById('genCount').textContent=`${list.length} aulunos · ${f?f.t:''}`;
+    }
+    const _a2=ehAlmoco2();
+    const _nota=document.getElementById('genNotaTxt');
+    if(_nota) _nota.innerHTML=_a2
+      ? 'Ofereça a comida de novo e marque <strong>Comeu</strong> ou <strong>Nao comeu</strong>. Quem não comeu nem aqui entra na lista de avisar o tutor.'
+      : 'Marque <strong>Feito</strong> em cada peludinho que passou por esta atividade. Cada atividade terá seu protocolo próprio em breve.';
+    document.getElementById('genGrid').innerHTML=filtraLista(list).map(o=>{ const p=o.p; const ex=(typeof o.i==='number')?pelExtra(p):{}; const foto=ex.foto; const k=dcKey(p.n,p.tutor);
+      const m=genMarcas[k]||'';
+      const ok=_a2?(m==='comeu'):(m==='feito');
+      const naoComeu=_a2&&m==='nao';
       const restr=tarjaRestricao(p);
       const ph=foto?`<div class="ph" style="background-image:url('${foto}');background-size:cover;background-position:center"></div>`:`<div class="ph" style="background:${corPel(typeof o.i==='number'?o.i:0)}">${(p.n[0]||'?')}</div>`;
-      return `<div class="pet dc-card ${ok?'veio':''}">
-        <div class="dc-ribbon ${ok?'veio':'pend'}">${ok?'FEITO':'PENDENTE'}</div>${seloAdapt(ex)}
+      const fita=_a2
+        ? `<div class="dc-ribbon ${ok?'veio':'pend'}" ${naoComeu?'style="background:var(--crm-critico);color:#fff"':''}>${ok?'COMEU':(naoComeu?'NAO COMEU':'FALTA SERVIR')}</div>`
+        : `<div class="dc-ribbon ${ok?'veio':'pend'}">${ok?'FEITO':'PENDENTE'}</div>`;
+      const acoes=_a2
+        ? `<div class="dc-actions alm-actions">
+            <button class="alm-btn tudo ${ok?'on':''}" onclick="marcarAlmoco2('${k}','comeu')">Comeu</button>
+            <button class="alm-btn nao ${naoComeu?'on':''}" onclick="marcarAlmoco2('${k}','nao')">Nao comeu</button>
+          </div>`
+        : `<div class="dc-actions"><button class="dc-btn veio ${ok?'on':''}" style="flex:1" onclick="marcarGenerico('${k}')">${ok?'&#10003; Feito':'Marcar feito'}</button></div>`;
+      return `<div class="pet dc-card ${ok?'veio':''}${naoComeu?' nao':''}">
+        ${fita}${seloAdapt(ex)}
         <div ${typeof o.i==='number'?`onclick="abrirPeludinhoDay(${o.i})" style="cursor:pointer"`:''}>${ph}${restr}<div class="nm">${p.n}</div><div class="br">${p.raca||'-'}</div></div>
-        <div class="dc-actions"><button class="dc-btn veio ${ok?'on':''}" style="flex:1" onclick="marcarGenerico('${k}')">${ok?'&#10003; Feito':'Marcar feito'}</button></div>
+        ${acoes}
       </div>`;
     }).join('');
   }
