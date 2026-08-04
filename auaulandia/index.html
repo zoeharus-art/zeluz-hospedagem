@@ -917,6 +917,12 @@
   body[data-role="gestao"] .nav a.so-conf-saida,
   body[data-role="supervisor"] .nav a.so-conf-saida,
   body[data-role="diretoria"] .nav a.so-conf-saida{display:flex}
+  /* Carteira de planos no Início — informação comercial: recepção e gestão */
+  .so-carteira{display:none}
+  body[data-role="consultora"] .so-carteira,
+  body[data-role="gestao"] .so-carteira,
+  body[data-role="supervisor"] .so-carteira,
+  body[data-role="diretoria"] .so-carteira{display:block}
   /* Empório — quem avisa o tutor é a consultora (a gestão também acompanha) */
   .nav .acc.so-emporio{display:none}
   body[data-role="consultora"] .nav .acc.so-emporio,
@@ -1234,6 +1240,17 @@
       <div class="kpi"><img class="kpi-st" src="assets/stickers/vasilha.png" alt=""><div><div class="v coral" id="kpiDay">—</div><div class="l">No Day Care</div></div></div>
       <div class="kpi"><img class="kpi-st" src="assets/stickers/osso.png" alt=""><div><div class="v" id="kpiAua">—</div><div class="l">Na Auaulândia</div></div></div>
       <div class="kpi"><img class="kpi-st" src="assets/stickers/coracao.png" alt=""><div><div class="v" id="kpiAdapt">—</div><div class="l">Em adaptação</div></div></div>
+    </div>
+    <!-- Carteira: quem paga o quê (Adriana, 04/ago/2026) — a cobrar, em dia, sem plano,
+         e a quebra por tipo: mensal, trimestral, semestral, avulso, hospedagem, moradores. -->
+    <div class="card so-carteira" id="cardCarteira" style="margin-bottom:16px">
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:4px">
+        <h2 style="font-size:19px;margin:0">Carteira de planos</h2>
+        <span class="pel-count" id="cartTotal"></span>
+      </div>
+      <div class="hint">Quantos peludinhos ativos em cada situação. Toque em qualquer quadro para abrir a lista na Renovação de Planos.</div>
+      <div id="cartCobranca" style="margin-top:12px"></div>
+      <div id="cartTipos" style="margin-top:14px"></div>
     </div>
     <div class="pets-grid" id="petsGrid"></div>
   </section>
@@ -2676,6 +2693,95 @@
       el('kpiAua').textContent=nAua;
       el('kpiAdapt').textContent=nAdapt;
     }catch(e){ /* nunca derrubar a tela por causa de um contador */ }
+    try{ renderCarteira(); }catch(e){}
+  }
+  // ===== CARTEIRA DE PLANOS (Adriana, 04/ago/2026) ===================================
+  // "Preciso saber a quantidade de avulsos, de hóspedes que não fazem parte do Day Care,
+  //  e de planos mensais, trimestrais e semestrais — isso vai para o Início, como um
+  //  dashboard." Conta só peludinho ATIVO (inativo não entra).
+  function carteiraResumo(){
+    const R={ total:0, cobrar:0, vencido:0, vence:0, emdia:0, semplano:0,
+              mensal:0, trimestral:0, semestral:0, avulso:0, hospedagem:0, morador:0,
+              deduzidos:0, semTipo:0 };
+    if(typeof PELUDINHOS==='undefined') return R;
+    PELUDINHOS.forEach(function(p){
+      try{
+        if(typeof pelInativo==='function' && pelInativo(p)) return;
+        R.total++;
+        const ex=pelExtra(p), st=statusRenov(ex), r=renovDe(ex)||{};
+        // Situação de cobrança
+        if(st.estado==='vencido'){ R.vencido++; R.cobrar++; }
+        else if(st.estado==='vence'){ R.vence++; R.cobrar++; }
+        else if(st.estado==='ok'){ R.emdia++; }
+        else if(st.estado==='sem'){ R.semplano++; }
+        // Tipo — usa a categoria da ficha; quem é auluno cai no compromisso do plano
+        const cat=(typeof pelCategoria==='function')?pelCategoria(p):'auluno';
+        if(cat==='avulso'){ R.avulso++; return; }
+        if(cat==='hospede'){ R.hospedagem++; return; }
+        if(cat==='morador'){ R.morador++; return; }
+        const pl=(typeof planos==='function')?(planos()[r.plano]||null):null;
+        let comp=pl?(pl.compromisso||''):'';
+        // A maior parte da carteira veio da planilha com início e fim, mas SEM o tipo do
+        // plano gravado. Sem deduzir, o dashboard mostraria 96 peludinhos "sem tipo".
+        // A duração da vigência diz o compromisso: ~1 mês = mensal, ~3 = trimestral, ~6 = semestral.
+        if(!comp && r.inicio && r.fim){
+          const a=new Date(r.inicio+'T00:00:00'), b=new Date(r.fim+'T00:00:00');
+          if(!isNaN(a)&&!isNaN(b)){
+            const meses=(b.getFullYear()-a.getFullYear())*12+(b.getMonth()-a.getMonth())+1;
+            if(meses<=1) comp='mensal';
+            else if(meses<=4) comp='trimestral';
+            else comp='semestral';
+            R.deduzidos=(R.deduzidos||0)+1;
+          }
+        }
+        if(comp==='mensal') R.mensal++;
+        else if(comp==='trimestral') R.trimestral++;
+        else if(comp==='semestral') R.semestral++;
+        else R.semTipo=(R.semTipo||0)+1;
+      }catch(e){}
+    });
+    return R;
+  }
+  function irParaRenovacao(filtro){
+    try{ if(typeof setRenovFiltro==='function') renovFiltro=filtro; }catch(e){}
+    const a=document.querySelector('#nav a[data-v="renovacao"]');
+    if(a) a.click(); else if(typeof irParaView==='function') irParaView('renovacao');
+    setTimeout(function(){ try{ if(typeof setRenovFiltro==='function') setRenovFiltro(filtro); }catch(e){} }, 250);
+  }
+  function renderCarteira(){
+    const box=document.getElementById('cartCobranca'); if(!box) return;
+    const R=carteiraResumo();
+    const tt=document.getElementById('cartTotal');
+    if(tt) tt.textContent=R.total+' peludinho'+(R.total===1?'':'s')+' ativo'+(R.total===1?'':'s');
+    const quadro=function(n,rot,sub,cor,filtro){
+      return '<div onclick="irParaRenovacao(\''+filtro+'\')" style="cursor:pointer;flex:1 1 150px;min-width:140px;border:2px solid '+cor+';border-radius:14px;padding:12px 14px;background:#fff">'
+        +'<div style="font-size:30px;font-weight:800;line-height:1;color:'+cor+'">'+n+'</div>'
+        +'<div style="font-size:13.5px;font-weight:800;color:var(--z-blue);margin-top:3px">'+rot+'</div>'
+        +(sub?'<div style="font-size:11.5px;color:var(--muted);font-weight:600;margin-top:2px">'+sub+'</div>':'')+'</div>';
+    };
+    box.innerHTML='<div style="display:flex;gap:11px;flex-wrap:wrap">'
+      + quadro(R.cobrar,'A COBRAR', (R.vencido?R.vencido+' vencido(s)':'')+(R.vencido&&R.vence?' · ':'')+(R.vence?R.vence+' vencendo':'') || 'nada a cobrar agora', '#B3261E','cobrar')
+      + quadro(R.emdia,'Em dia','plano ativo','#1E8449','ok')
+      + quadro(R.semplano,'Sem plano','nunca lançaram vigência','#DEB428','sem')
+      + '</div>';
+    const tipos=document.getElementById('cartTipos'); if(!tipos) return;
+    const linha=function(n,rot,sub,cor){
+      return '<div style="flex:1 1 130px;min-width:120px;border:1.5px solid var(--line);border-left:5px solid '+cor+';border-radius:12px;padding:10px 12px;background:#fff">'
+        +'<div style="font-size:24px;font-weight:800;line-height:1;color:var(--z-blue)">'+n+'</div>'
+        +'<div style="font-size:13px;font-weight:800;color:var(--z-blue);margin-top:2px">'+rot+'</div>'
+        +'<div style="font-size:11px;color:var(--muted);font-weight:600">'+sub+'</div></div>';
+    };
+    tipos.innerHTML='<div style="font-size:12px;font-weight:800;color:var(--z-blue);text-transform:uppercase;letter-spacing:.4px;margin-bottom:7px">Por tipo de cliente</div>'
+      +'<div style="display:flex;gap:10px;flex-wrap:wrap">'
+      + linha(R.mensal,'Mensal','plano Silver','#C0C0C0')
+      + linha(R.trimestral,'Trimestral','plano Gold','#DEB428')
+      + linha(R.semestral,'Semestral','plano Black','#234D67')
+      + linha(R.avulso,'Avulsos','diária, sem plano','#E08856')
+      + linha(R.hospedagem,'Só hospedagem','AuAulândia, fora do Day Care','#2E7D8A')
+      + (R.morador?linha(R.morador,'Moradores','nossos — sem cobrança','#6b5f4b'):'')
+      + (R.semTipo?linha(R.semTipo,'Sem tipo','falta lançar o plano na ficha','#B3261E'):'')
+      +'</div>'
+      + (R.deduzidos?'<div class="hint" style="margin-top:8px;font-size:11.5px">'+R.deduzidos+' peludinho(s) vieram da planilha sem o tipo do plano gravado — o sistema deduziu pelo tempo de vigência (1 mês = mensal, 3 = trimestral, 6 = semestral). Ao renovar, escolha o plano na ficha para ficar registrado de verdade.</div>':'');
   }
   // ---- Cadastro-mestre ligado ao hóspede (refKey = pelKey do peludinho escolhido na busca) ----
   // Tutor e alergia/medicação SEMPRE vêm daqui quando existe refKey — nunca mais digitados 2x.
@@ -5792,6 +5898,14 @@
         +bt('ok','em dia',cont.ok,'var(--crm-ok)')
         +bt('sem','sem plano',cont.sem,'var(--z-blue)')
         +bt('todos','todos',itens.length,'var(--z-gold-deep)');
+      // Quebra por tipo de cliente, do lado dos filtros — a mesma conta do Início.
+      try{
+        const R=carteiraResumo();
+        const chip=function(n,rot,cor){ return n?('<span style="display:inline-flex;align-items:center;gap:5px;border:1.5px solid var(--line);border-left:4px solid '+cor+';border-radius:9px;padding:5px 10px;font-size:12.5px;font-weight:700;color:var(--z-blue);background:#fff"><b style="font-size:15px">'+n+'</b> '+rot+'</span>'):''; };
+        const linha=chip(R.mensal,'mensais','#C0C0C0')+chip(R.trimestral,'trimestrais','#DEB428')+chip(R.semestral,'semestrais','#234D67')
+                   +chip(R.avulso,'avulsos','#E08856')+chip(R.hospedagem,'só hospedagem','#2E7D8A')+chip(R.morador,'moradores','#6b5f4b');
+        if(linha) fl.innerHTML+='<div style="width:100%;display:flex;gap:7px;flex-wrap:wrap;margin-top:9px">'+linha+'</div>';
+      }catch(e){}
     }
     const visiveis=itens.filter(function(o){
       if(renovFiltro==='todos') return true;
