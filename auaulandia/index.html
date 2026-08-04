@@ -5610,6 +5610,8 @@
     // se hospeda. Ele precisa da mesma ficha, mas NÃO tem plano mensal para vencer nem para
     // cobrar — então nunca aparece como pendência na Renovação.
     if(r.plano==='auaulandia') return {estado:'auaulandia', label:'só AuAulândia (hospedagem)'};
+    if(r.plano==='avulso') return {estado:'avulso', label:'avulso (diária)'};
+    if(r.plano==='morador') return {estado:'morador', label:'morador(a) Zêluz — sem plano'};
     if(!r.fim) return {estado:'sem', label:'sem plano ativo'};
     const dias=diasAteISO(r.fim);
     if(dias==null) return {estado:'sem', label:'sem plano ativo'};
@@ -5674,19 +5676,33 @@
       const tipo=(pl.compromisso||'').charAt(0).toUpperCase()+(pl.compromisso||'').slice(1);
       return '<button class="'+(r.plano===k?'on':'')+'" onclick="pick(this);setRenov({plano:\''+k+'\'})">'+tipo+' · '+pl.rotulo+'</button>'; };
     const clsSt=st.estado==='vencido'?'vd-venc':(st.estado==='vence'?'vd-perto':(st.estado==='ok'?'vd-ok':'vd-sem'));
-    const mens=(r.plano&&r.plano!=='auaulandia')?mensalidade(r.plano,aulas,r.ordemPet||1):0;
-    // Botão "só AuAulândia" — o FILHOt que não é auluno, só se hospeda (Zeus da Alessandra).
-    const btnAua='<button class="'+(r.plano==='auaulandia'?'on':'')+'" onclick="pick(this);setRenov({plano:\'auaulandia\'})">Só AuAulândia · hospedagem</button>';
-    const soHosp=(r.plano==='auaulandia');
+    const mens=(r.plano&&r.plano!=='auaulandia'&&r.plano!=='avulso')?mensalidade(r.plano,aulas,r.ordemPet||1):0;
+    // A categoria escolhida no TOPO da ficha manda aqui. Hóspede e avulso não têm plano
+    // mensal — em vez de campos vazios, o bloco explica o que vale para cada um.
+    const cat=pelCategoria(p);
+    const btnAua='<button class="'+(cat==='hospede'?'on':'')+'" onclick="setPelCategoria(\'hospede\')">Só AuAulândia · hospedagem</button>';
+    const btnAvu='<button class="'+(cat==='avulso'?'on':'')+'" onclick="setPelCategoria(\'avulso\')">Avulso · diária</button>';
+    const btnMor='<button class="'+(cat==='morador'?'on':'')+'" onclick="setPelCategoria(\'morador\')">Morador(a) Zêluz</button>';
+    const soHosp=(cat==='hospede'), soAvulso=(cat==='avulso'), soMorador=(cat==='morador');
     return '<div class="prev-bloco">'
-      +'<div class="prev-tit">Plano <span class="vd '+(soHosp?'vd-ok':clsSt)+'">'+st.label+'</span></div>'
+      +'<div class="prev-tit">Plano <span class="vd '+((soHosp||soAvulso)?'vd-ok':clsSt)+'">'+st.label+'</span></div>'
       +'<div class="cad-grid">'
         +'<div class="field" style="grid-column:1/-1"><label>Tipo de plano <span style="font-weight:600;color:var(--muted)">(define até quando vale)</span></label><div class="seg gold" data-single>'
-          +['Silver','Gold','Black'].map(selPlano).join('')+btnAua+'</div></div>'
+          +['Silver','Gold','Black'].map(selPlano).join('')+btnAvu+btnAua+btnMor+'</div></div>'
       + (soHosp
           ? '<div class="field" style="grid-column:1/-1"><div class="hint" style="background:rgba(46,125,138,.12);border-left:4px solid #2E7D8A;border-radius:10px;padding:11px 13px;font-weight:700;color:var(--z-blue)">'
             +'🌙 Este FILHOt é <strong>só da AuAulândia</strong> — não é auluno do Day Care.<br>'
             +'A ficha dele é a mesma (vacinas, alimentação, medicação, alergias), mas não tem plano mensal, não entra na chamada do Day Care e nunca aparece na Renovação de Planos. A cobrança é por diária de hospedagem.'
+            +'</div></div>'
+          : soAvulso
+          ? '<div class="field" style="grid-column:1/-1"><div class="hint" style="background:rgba(222,180,40,.16);border-left:4px solid var(--z-gold);border-radius:10px;padding:11px 13px;font-weight:700;color:var(--z-blue)">'
+            +'📅 Este FILHOt é <strong>avulso</strong> — vem em diária, sem plano mensal.<br>'
+            +'A ficha dele é a mesma (vacinas, alimentação, medicação, alergias) e ele pode fazer as atividades no dia em que vier. Não tem dias fixos na semana, não tem mensalidade e nunca aparece na Renovação de Planos — a cobrança é por diária.'
+            +'</div></div>'
+          : soMorador
+          ? '<div class="field" style="grid-column:1/-1"><div class="hint" style="background:rgba(35,77,103,.10);border-left:4px solid var(--z-blue);border-radius:10px;padding:11px 13px;font-weight:700;color:var(--z-blue)">'
+            +'🏠 Este FILHOt é <strong>nosso</strong> — mora com a equipe Zêluz.<br>'
+            +'Vem com a gente, ajuda a Márcia na avaliação e participa da rotina. A ficha de saúde é a mesma de todos (vacinas, alimentação, medicação, alergias), mas <strong>não gera cobrança nem plano</strong> e nunca aparece na Renovação.'
             +'</div></div>'
           : '<div class="field"><label>Aulas por semana (dos dias marcados)</label><input class="cad-in" value="'+aulas+'x" readonly></div>'
             +'<div class="field"><label>Nº do peludinho na família</label><div class="seg gold" data-single>'
@@ -5695,7 +5711,7 @@
             +'<div class="field"><label>Mensalidade'+((r.ordemPet||1)>1?' (com desconto)':'')+'</label><div class="prev-calc">'+(mens?fmtCent(mens):'escolha o plano')+'</div></div>'
             +'<div class="field"><label>Vence em</label><div class="prev-calc">'+(r.fim?fmtBR(r.fim)+' · renova em '+(r.mesRenov||'—'):'informe início e plano')+'</div></div>')
       +'</div>'
-      + (soHosp ? '' : '<div class="alm-next" style="margin-top:8px"><button class="btn btn-gold" onclick="confirmarRenovacao()">Confirmar / renovar plano</button></div>')
+      + ((soHosp||soAvulso||soMorador) ? '' : '<div class="alm-next" style="margin-top:8px"><button class="btn btn-gold" onclick="confirmarRenovacao()">Confirmar / renovar plano</button></div>')
       +'</div>';
   }
   function setRenov(patch){ const r=Object.assign({}, renovDe(pelExtra(pelAtual)), patch);
@@ -5726,7 +5742,8 @@
     const el=document.getElementById('renovLista'); if(!el) return;
     const itens=PELUDINHOS.map(function(p,i){ const ex=pelExtra(p); return {p:p,i:i,ex:ex,st:statusRenov(ex)}; })
       .filter(function(o){ return !pelInativo(o.p); })
-      .filter(function(o){ return o.st.estado!=='auaulandia'; }); // só hospedagem: não tem plano a renovar
+      // Sem plano a renovar: só hospedagem, avulso e os moradores da casa (Repolho, Stopa, Kako).
+      .filter(function(o){ return ['auaulandia','avulso','morador'].indexOf(o.st.estado)<0; });
     const ordem={vencido:0, vence:1, sem:2, ok:3};
     itens.sort(function(a,b){ if(ordem[a.st.estado]!==ordem[b.st.estado]) return ordem[a.st.estado]-ordem[b.st.estado];
       const fa=(renovDe(a.ex).fim||''), fb=(renovDe(b.ex).fim||'');
@@ -6831,7 +6848,33 @@
     setPelExtra(pelAtual,{atividades:arr});
     const w=document.getElementById('pelAtivsEdit'); if(w) w.innerHTML=ativsEditInner(pelAtual);
     try{ if(typeof renderAtual==='function') renderAtual(); }catch(e){} }
-  function onNomePel(v){ if(!pelAtual) return; setPelExtra(pelAtual,{n:(v||'').trim()}); renderPel(); if(typeof renderDaycare==='function') renderDaycare(); }
+  // ===== RENOMEAR NÃO PODE CRIAR OUTRO FILHOt (Adriana, 04/ago/2026: "temos 4 Stopa") =====
+  // A chave do cadastro é nome__tutor. Ao editar o NOME ou o TUTOR, o app gravava na chave
+  // nova e deixava a antiga órfã — quem digitava "Marian", saía do campo e depois completava
+  // "Mariane" acabava com DOIS cadastros. Daí vieram chico__marian + chico__mariane,
+  // felix__an + felix__ana, felix__ana beatri + felix__ana beatriz, stopa__… e zeus__…
+  // Agora renomear MOVE o cadastro: leva todos os dados para a chave nova e fecha a antiga.
+  function renomearCadastroPel(p, patch){
+    if(!p) return Promise.resolve();
+    const kA=pelKey(p);
+    const alvo={ n:(patch.n!=null?String(patch.n).trim():p.n),
+                 tutor:(patch.tutor!=null?String(patch.tutor).trim():(p.tutor||'')) };
+    if(!alvo.n){ return Promise.resolve(); }           // nome vazio: não mexe em nada
+    const kB=pelKey(alvo);
+    if(kA===kB){ setPelExtra(p,patch); return Promise.resolve(); }   // só trocou maiúscula/acento
+    const dados=Object.assign({}, pelExtra(p), patch, {n:alvo.n, tutor:alvo.tutor, _novo:true, _renomeado_de:kA, _renomeado_em:Date.now()});
+    delete dados.excluido;
+    p.n=alvo.n; p.tutor=alvo.tutor;
+    try{ localStorage.setItem('zeluz_pel_'+kB, JSON.stringify(dados)); localStorage.removeItem('zeluz_pel_'+kA); }catch(e){}
+    if(typeof audit==='function') audit('cadastro-renomeado', kA+' → '+kB, {pet:alvo.n});
+    if(!DB) return Promise.resolve();
+    return DB.ref('daycare/cadastro/'+kB).update(dados)
+      .then(function(){ return DB.ref('daycare/cadastro/'+kA).update({excluido:true, movido_para:kB, movido_em:Date.now()}); })
+      .then(function(){ try{ renderPel(); if(typeof renderDaycare==='function') renderDaycare(); }catch(e){} })
+      .catch(function(e){ console.warn('renomear:',e); });
+  }
+  function onNomePel(v){ if(!pelAtual) return; renomearCadastroPel(pelAtual,{n:(v||'').trim()}).then(function(){ renderPel(); if(typeof renderDaycare==='function') renderDaycare(); }); }
+  function onTutorPel(v){ if(!pelAtual) return; renomearCadastroPel(pelAtual,{tutor:(v||'').trim()}).then(function(){ renderPel(); if(typeof renderDaycare==='function') renderDaycare(); }); }
   // alunos novos cadastrados pela equipe vivem no Firebase (daycare/cadastro com _novo) e entram na lista base
   // Trava nível 1 embutida de graça: criarAluno grava em daycare/cadastro/{pelKey(nome+tutor)} —
   // chave determinística (mesmo padrão de escolherAvulso). Dois Zelosos cadastrando o mesmo
@@ -7220,6 +7263,51 @@
       if(bt) pelSubtab(bt, ativa);
     }catch(e){}
   }
+  // ===== CATEGORIA DO PELUDINHO (Adriana, 03/ago/2026) ===============================
+  // "Já nessa primeira parte poderíamos escolher entre Auluno · Hóspede (AuAulândia) ·
+  //  Auluno Avulso — para marcarmos no primeiro momento da ficha em qual categoria ele
+  //  se encontra." O Fred da Fátima, por exemplo, só vem em diária avulsa.
+  const CATEGORIAS=[
+    {k:'auluno',  t:'Auluno',                sub:'Day Care com plano (Mensal · Trimestral · Semestral)'},
+    {k:'hospede', t:'Hóspede (AuAulândia)',  sub:'Só se hospeda — não é auluno do Day Care'},
+    {k:'avulso',  t:'Auluno Avulso',         sub:'Vem em diária avulsa, sem plano mensal'},
+    // Repolho, Stopa e Kako: são nossos, vêm com a gente e ajudam a Márcia na avaliação.
+    // Nunca geram cobrança nem pendência de plano (Adriana, 03/ago/2026).
+    {k:'morador', t:'Morador(a) Zêluz',      sub:'Nosso FILHOt — vem com a equipe, ajuda na avaliação. Sem plano e sem cobrança.'}
+  ];
+  function pelCategoria(p){
+    const ex=pelExtra(p)||{};
+    if(ex.categoria) return ex.categoria;
+    const pl=(renovDe(ex)||{}).plano||'';          // fichas antigas: deduz pelo plano
+    if(pl==='auaulandia') return 'hospede';
+    if(pl==='avulso') return 'avulso';
+    if(pl==='morador') return 'morador';
+    if(/repolho/i.test(pelNome(p)||'')) return 'morador';   // a Repolho sempre foi moradora
+    return 'auluno';
+  }
+  function categoriaEditInner(p){
+    const atual=pelCategoria(p), can=canEditPel();
+    const bt=CATEGORIAS.map(function(c){
+      return '<button type="button" class="'+(atual===c.k?'on':'')+'"'+(can?(' onclick="setPelCategoria(\''+c.k+'\')"'):' disabled')+'>'+c.t+'</button>';
+    }).join('');
+    const info=(CATEGORIAS.find(function(c){ return c.k===atual; })||{}).sub||'';
+    return '<div style="font-size:11px;font-weight:700;color:var(--z-blue);margin-bottom:5px">Categoria</div>'
+      +'<div class="seg gold" data-single>'+bt+'</div>'
+      +'<div class="hint" style="margin-top:4px;font-size:11px">'+esc(info)+'</div>';
+  }
+  function setPelCategoria(cat){
+    if(!pelAtual||!canEditPel()) return;
+    const ex=pelExtra(pelAtual)||{}; const r=Object.assign({}, renovDe(ex));
+    // A categoria manda no plano: hóspede e avulso não têm mensalidade nem vencimento.
+    if(cat==='hospede') r.plano='auaulandia';
+    else if(cat==='avulso') r.plano='avulso';
+    else if(cat==='morador') r.plano='morador';
+    else if(r.plano==='auaulandia'||r.plano==='avulso'||r.plano==='morador') r.plano='';
+    setPelExtra(pelAtual,{categoria:cat, renov:r});
+    if(typeof audit==='function') audit('categoria-peludinho', cat, {alvo:dcKey(pelAtual.n,pelAtual.tutor)});
+    renderPelFicha();
+    setTimeout(function(){ try{ renderPelFicha(); }catch(e){} }, 400);
+  }
   function abrirPeludinho(i){
     const p=PELUDINHOS[i]; pelAtual=p; pelAtualIdx=i; pelFotoPend=null; const ex=pelExtra(p);
     const idade=calcIdade(pelNasc(p)); const can=canEditPel();
@@ -7237,6 +7325,7 @@
           <div class="hf-nome">${can?`<input class="pel-nome-input" value="${escAttr(pelNome(p))}" onchange="onNomePel(this.value)" aria-label="Nome do peludinho">`:`${pelNome(p)}`}${p.apelido?` <span style="font-size:14px;color:var(--muted)">(${p.apelido})</span>`:''}</div>
           <div class="hf-meta">${[pelGet(p,'raca'),sexo,idade].filter(Boolean).join(' · ')}${castr==='Não'?' · <strong style="color:var(--z-daycare)">Não castrado</strong>':''}</div>
           <div class="hf-estadia">Tutor: ${escAttr(pelGet(p,'tutor'))}</div>
+          <div id="pelCategoriaEdit" style="margin-top:11px">${categoriaEditInner(p)}</div>
           <div id="pelDiasEdit" style="margin-top:9px">${diasEditInner(p)}</div>
           ${can?'<div class="hint" style="margin-top:4px;font-size:11px">Toque nos dias para marcar quando o peludinho vem — a frequência ajusta sozinha.</div>':''}
           ${(can||pelAtividades(p).length)?`<div style="margin-top:11px"><div style="font-size:11px;font-weight:700;color:var(--z-blue);margin-bottom:5px">Atividades seletivas</div><div id="pelAtivsEdit">${ativsEditInner(p)}</div></div>`:''}
@@ -7288,7 +7377,7 @@
           <div class="field"><label>Sexo</label><div class="seg" data-single>${segBtnsPel('sexo',sexo,['Macho','Fêmea'])}</div></div>
           <div class="field"><label>Castrado?</label><div class="seg gold" data-single>${segBtnsPel('castrado',castr,['Sim','Não'])}</div></div>
           <div class="field"><label>Microchip</label><input class="cad-in" value="${escAttr(ex.microchip||'')}" placeholder="Número do microchip" onchange="setPelExtra(pelAtual,{microchip:this.value})"></div>
-          <div class="field"><label>Tutor 1 (nome)</label><input class="cad-in" value="${escAttr(pelGet(p,'tutor'))}" onchange="setPelExtra(pelAtual,{tutor:this.value})"></div>
+          <div class="field"><label>Tutor 1 (nome)</label><input class="cad-in" value="${escAttr(pelGet(p,'tutor'))}" onchange="onTutorPel(this.value)"></div>
           ${fieldSens('tel','Tutor 1 — Telefone / WhatsApp',`<input class="cad-in" value="${escAttr(ex.tel||'')}" placeholder="(31) 9____-____" onchange="setPelExtra(pelAtual,{tel:this.value})">`)}
           <div class="field"><label>Tutor 2 (nome) &mdash; guarda compartilhada</label><input class="cad-in" value="${escAttr(ex.tutor2||'')}" placeholder="Opcional — outro responsável" onchange="setPelExtra(pelAtual,{tutor2:this.value})"></div>
           ${fieldSens('tel2','Tutor 2 — Telefone / WhatsApp',`<input class="cad-in" value="${escAttr(ex.tel2||'')}" placeholder="(31) 9____-____" onchange="setPelExtra(pelAtual,{tel2:this.value})">`)}
