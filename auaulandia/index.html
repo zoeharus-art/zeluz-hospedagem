@@ -1264,7 +1264,13 @@
       <div id="cartCobranca" style="margin-top:12px"></div>
       <div id="cartTipos" style="margin-top:14px"></div>
     </div>
-    <div class="pets-grid" id="petsGrid"></div>
+    <div class="card" id="cardPendencias" style="margin-bottom:16px">
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:4px">
+        <h2 style="font-size:19px;margin:0">O que precisa de você hoje</h2>
+        <span class="pel-count" id="pendAtualizado"></span>
+      </div>
+      <div id="pendGrid" style="margin-top:12px"></div>
+    </div>
   </section>
 
   <!-- ===== PELUDINHOS (cadastro mestre) ===== -->
@@ -2636,16 +2642,10 @@
   function openNav(){document.getElementById('sidebar').classList.add('open');document.getElementById('overlay').classList.add('show');}
   function closeNav(){document.getElementById('sidebar').classList.remove('open');document.getElementById('overlay').classList.remove('show');}
 
-  // cards de peludinhos (exemplo)
+  // A lista de "peludinhos" do Início era EXEMPLO fixo no código (Amora, Fox, Thor, Luna…)
+  // com a etiqueta "No Day Care" — dado falso que parecia real. Saiu em 04/ago/2026 e deu
+  // lugar ao painel de pendências do dia (Adriana: "o Início tem que ter meu dashboard").
   const cores=['#E08856','#5AABB5','#5E9B6B','#2E7D8A','#B8A9C9','#234D67'];
-  const pets=[['Amora','Spitz Alemão'],['Ozzy','Golden'],['Fox','Vira-lata caramelo'],['Arena','Border Collie'],
-    ['Thor','Pastor Alemão'],['Nina','Poodle'],['Bento','Beagle'],['Luna','Shih-tzu']];
-  document.getElementById('petsGrid').innerHTML =
-    `<div class="pet add so-gestao" onclick="alert('No sistema real: nova ficha (só Gestão e Supervisor).')"><div class="plus">+</div><div class="t">Nova ficha</div></div>`+
-    pets.map((p,i)=>`<div class="pet" onclick="document.querySelector('[data-v=ficha]').click()">
-      <div class="ph" style="background:${cores[i%cores.length]}">${p[0][0]}</div>
-      <div class="nm">${p[0]}</div><div class="br">${p[1]}</div>
-      <div class="tag">No Day Care</div></div>`).join('');
 
   // ===== HOSPEDAGEM — peludinhos hospedados hoje (04/06), dados reais da planilha =====
   let hospedes=[
@@ -2706,6 +2706,58 @@
       el('kpiAdapt').textContent=nAdapt;
     }catch(e){ /* nunca derrubar a tela por causa de um contador */ }
     try{ renderCarteira(); }catch(e){}
+    try{ renderPendencias(); }catch(e){}
+  }
+  // ===== O QUE PRECISA DE VOCÊ HOJE — pendências reais, clicáveis =====================
+  // Substituiu a lista de peludinhos de exemplo que ficava no Início (04/ago/2026).
+  // Usa só dado que o app já tem em memória — não faz consulta nova ao banco.
+  function renderPendencias(){
+    const el=document.getElementById('pendGrid'); if(!el) return;
+    const hoje=(function(){ const d=new Date(),p=x=>String(x).padStart(2,'0'); return d.getFullYear()+'-'+p(d.getMonth()+1)+'-'+p(d.getDate()); })();
+    let conferir=0, saemHoje=0, naRecepcao=0, semCheckin=0;
+    try{
+      Object.keys(CF_ESTADIAS||{}).forEach(function(k){
+        const e=(CF_ESTADIAS[k]||{}).e||{}; if((e.status||'ativa')!=='ativa') return;
+        if(!(e.conferencia&&e.conferencia.concluida)) conferir++;
+        if(e.saida===hoje){ if(typeof coEtapaDe==='function'&&coEtapaDe(e)===2) naRecepcao++; else saemHoje++; }
+      });
+      (hospedes||[]).forEach(function(h){
+        const k=(typeof medAgendaKey==='function')?medAgendaKey(h):'';
+        if(k && !(CF_ESTADIAS||{})[k]) semCheckin++;
+      });
+    }catch(e){}
+    // Medicação em atraso: horário já passou e ninguém registrou
+    let medAtrasada=0;
+    try{
+      const agoraMin=(function(){ const d=new Date(); return d.getHours()*60+d.getMinutes(); })();
+      (MED_AGENDA_TODOS||[]).forEach(function(it){
+        const p=String(it.horario||'').split(':'); if(p.length<2) return;
+        const m=parseInt(p[0],10)*60+parseInt(p[1],10);
+        if(m<agoraMin-20) medAtrasada++;   // aproximação: o número exato vive no alerta da gestora
+      });
+    }catch(e){}
+    // Tutores a avisar (Empório) e avisos de falta na recepção
+    let avisar=0, faltas=0;
+    try{ avisar=(typeof empLista==='function')?empLista().filter(function(x){ return !x.aviso; }).length:0; }catch(e){}
+    try{ Object.keys(AVISOS_RACAO_CACHE||{}).forEach(function(k){ if((AVISOS_RACAO_CACHE[k]||{}).status!=='resolvido') faltas++; }); }catch(e){}
+    const q=function(n,rot,sub,cor,destino){
+      if(!n) return '';
+      return '<div onclick="irParaView(\''+destino+'\')" style="cursor:pointer;flex:1 1 160px;min-width:150px;border:2px solid '+cor+';border-radius:14px;padding:12px 14px;background:#fff">'
+        +'<div style="font-size:28px;font-weight:800;line-height:1;color:'+cor+'">'+n+'</div>'
+        +'<div style="font-size:13.5px;font-weight:800;color:var(--z-blue);margin-top:3px">'+rot+'</div>'
+        +'<div style="font-size:11.5px;color:var(--muted);font-weight:600">'+sub+'</div></div>';
+    };
+    const cards=[ q(conferir,'A conferir','check-in esperando conferência','#B3261E','conferencia'),
+                  q(semCheckin,'Sem check-in','hospedados sem ficha lançada','#B3261E','checkin'),
+                  q(saemHoje,'Saem hoje','a monitora precisa juntar as coisas','#DEB428','checkout'),
+                  q(naRecepcao,'Na recepção','conferir com o tutor e assinar','#1E8449','checkoutconf'),
+                  q(avisar,'Avisar tutores','não comeram hoje','#E08856','emporio'),
+                  q(faltas,'Faltas em aberto','ração ou remédio que não cobre','#B3261E','recepcao') ].filter(Boolean).join('');
+    el.innerHTML=cards
+      ? '<div style="display:flex;gap:11px;flex-wrap:wrap">'+cards+'</div>'
+      : '<div style="background:rgba(30,132,73,.10);border:1.5px solid #1E8449;border-radius:12px;padding:14px;font-weight:800;color:#1E8449;text-align:center">✅ Nada pendente agora. Tudo em dia.</div>';
+    const st=document.getElementById('pendAtualizado');
+    if(st){ const d=new Date(); st.textContent='atualizado às '+String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0'); }
   }
   // ===== CARTEIRA DE PLANOS (Adriana, 04/ago/2026) ===================================
   // "Preciso saber a quantidade de avulsos, de hóspedes que não fazem parte do Day Care,
@@ -4982,6 +5034,13 @@
       else { v=null; } // nada concedido (e sem atividade) → não navega; a Gestão precisa conceder acesso
     }
     if(v){ const a=document.querySelector('[data-v="'+v+'"]'); if(a){ a.click(); const _accIni=a.closest('.acc'); if(_accIni) _accIni.classList.add('acc-open'); } }
+    // O dashboard do Início tem que estar FRESCO a cada entrada (Adriana, 04/ago/2026:
+    // "precisa ser atualizado toda vez que a pessoa entra com a senha, porque não está
+    // atualizando"). Roda agora e de novo quando os dados do banco terminarem de chegar.
+    const _redesenhar=function(){ try{ renderKPIs(); }catch(e){} try{ renderCarteira(); }catch(e){} try{ renderPendencias(); }catch(e){} };
+    _redesenhar();
+    setTimeout(_redesenhar, 2500);
+    setTimeout(_redesenhar, 6000);
   }
   // Gestão e Supervisão abrem no Início (visão do dia); quem é da operação abre na AuAulândia.
   function telaInicialDe(u){
@@ -8409,14 +8468,14 @@
   }
   function renderAlmoco(){
     if(!document.getElementById('almGrid')) return;
-    // Quem não almoça sai da atividade — antes ficava na fila só com um selo, e a monitora
-    // tinha de lembrar de pular. Os nomes seguem visíveis num aviso, para ninguém achar
-    // que o peludinho foi esquecido.
+    // Quem "não almoça" FICA na grade (Adriana, 04/ago/2026): "por mais que não almocem,
+    // pode ser que acabem almoçando um dia. A Lisa toma café e janta — um dia ela não tomou
+    // café e a tutora pediu para dar comida. Precisa aparecer, e o monitor clicar em
+    // Não se aplica." Some da grade só quem FALTOU hoje (não veio).
     const turma=turmaDoDia();
     const foraList=turma.filter(o=>typeof o.i==='number'&&naoAlmoca(o.p));
     const faltouList=turma.filter(o=>faltouHoje(o)); // falta avisada na planilha
-    const fora=o=>(typeof o.i==='number'&&naoAlmoca(o.p))||faltouHoje(o);
-    const list=ordemAlmoco(turma.filter(o=>!fora(o)));
+    const list=ordemAlmoco(turma.filter(o=>!faltouHoje(o)));
     const t=almTurno||{}; const durAlm=diffMin(t.inicio,t.fim);
     document.getElementById('almTurno').innerHTML=`<div class="alm-turno">
       <div><div class="tb-lab">Almoco - ${DIA_FULL[dcDia]}</div>
@@ -8440,7 +8499,7 @@
       ${naoList.length?`<div class="dc-faltas"><strong>NAO COMERAM - vao para o 2&ordm; horario (${naoList.length}):</strong> ${naoList.join(', ')}</div>`:''}
       ${metList.length?`<div class="dc-meia"><strong>COMERAM METADE (${metList.length}):</strong> ${metList.join(', ')}</div>`:''}
       ${faltouList.length?`<div class="alm-fora"><strong>FALTARAM HOJE (${faltouList.length}):</strong> ${faltouList.map(o=>nomeDesamb(o,faltouList)).join(', ')} &mdash; a planilha avisou a falta, entao sairam do almoco.</div>`:''}
-      ${foraList.length?`<div class="alm-fora"><strong>NAO ALMOCAM (${foraList.length}):</strong> ${foraList.map(o=>nomeDesamb(o,foraList)).join(', ')} &mdash; fora da lista de propósito, nao precisa servir.</div>`:''}
+      ${foraList.length?`<div class="alm-fora"><strong>NAO ALMOCAM NORMALMENTE (${foraList.length}):</strong> ${foraList.map(o=>nomeDesamb(o,foraList)).join(', ')} &mdash; continuam na lista abaixo. Se hoje nao comerem, toque em <strong>Nao se aplica</strong>; se a tutora pedir para dar comida, marque normalmente.</div>`:''}
       ${!ehHoje()?`<div class="dc-meia"><strong>Você está vendo a turma de ${DIA_FULL[dcDia]}, que não é hoje.</strong> Isto é só planejamento: o almoço se marca no dia em que acontece. Para registrar, volte para ${DIA_FULL[HOJE_DIA]} (hoje).</div>`:''}
       ${avisoPlanilha()}
       <div class="alm-legenda"><strong>Ordem de servir</strong> &mdash; a lista já vem nesta ordem, de cima para baixo:
@@ -8464,11 +8523,14 @@
         </div>`; }
       else info=`<div class="alm-info"><div class="alm-extra" style="color:var(--muted)">Almoco nao cadastrado</div></div>`;
       const neon=restrRaw?`<div class="alm-restr">&#9888; ${/restri/i.test(restrRaw)?restrRaw:('RESTRICAO: '+restrRaw)}</div>`:'';
+      // Quem normalmente não almoça fica na grade com aviso — o monitor decide no dia.
+      const _naoAlm=(typeof o.i==='number'&&typeof naoAlmoca==='function'&&naoAlmoca(p));
+      const avisoNaoAlm=(_naoAlm&&!m)?`<div style="background:rgba(124,139,153,.16);border-radius:8px;padding:6px 9px;margin-top:6px;font-size:11.5px;font-weight:800;color:var(--z-blue)">Normalmente NÃO almoça — toque em "Não se aplica" ou sirva se a tutora pedir</div>`:'';
       return `<div class="pet alm-card ${m}${o.foraDia?' fora-dia':''}">
         <div ${typeof o.i==='number'?`onclick="abrirPeludinhoDay(${o.i})" style="cursor:pointer"`:''}>
           ${ph}<div class="nm">${nomeDesamb(o,list)}</div><div class="br">${p.raca||'-'}</div>
         </div>
-        ${seloBanho(k)}${seloAnsioso(p,temBanho(k))}${o.daPlanilha?seloPlanilha(o):(o.foraDia?seloForaDia(o):seloAdapt(ex))}${neon}${info}
+        ${seloBanho(k)}${seloAnsioso(p,temBanho(k))}${o.daPlanilha?seloPlanilha(o):(o.foraDia?seloForaDia(o):seloAdapt(ex))}${neon}${info}${avisoNaoAlm}
         <div class="dc-actions alm-actions">
           <button class="alm-btn tudo ${m==='tudo'?'on':''}" onclick="marcarAlmoco('${k}','tudo')">Comeu tudo</button>
           <button class="alm-btn metade ${m==='metade'?'on':''}" onclick="marcarAlmoco('${k}','metade')">Metade</button>
@@ -11029,28 +11091,50 @@
       const m1=a1[k]||'', m2=a2[k]||'';
       // "não se aplica" NUNCA vira aviso ao tutor — ele não almoça e isso é combinado.
       if(m1==='na'||m2==='na') return;
-      let motivo='';
+      if(m2==='comeu') return;                       // comeu no 2º horário: nada a avisar
+      let motivo='', pronto=true;
       if(m2==='nao') motivo='não comeu nem no 2º horário';
-      else if(m1==='nao'&&!m2) motivo='não comeu no 1º horário (ainda não passou pelo 2º)';
-      else if(m1==='metade'&&m2!=='comeu') motivo='comeu só metade';
+      else if(m1==='nao'&&!m2){
+        // O 2º horário é por volta das 15h30 e ainda não aconteceu — avisar agora seria
+        // errado: ele ainda pode comer (Adriana, 04/ago/2026).
+        motivo='não comeu no 1º horário — aguardando o 2º horário (por volta das 15h30)';
+        pronto=false;
+      }
+      else if(m1==='metade') motivo='comeu só metade';   // quem come metade não vai ao 2º horário
       if(!motivo) return;
-      out.push({k:k, nome:o.p.n, tutor:o.p.tutor||'', raca:o.p.raca||'', motivo:motivo,
+      out.push({k:k, nome:o.p.n, tutor:o.p.tutor||'', raca:o.p.raca||'', motivo:motivo, pronto:pronto,
                 grave:(m2==='nao'), aviso:EMP_AVISOS[k]||null});
     });
-    // Quem não comeu de verdade primeiro; depois os "metade"; avisados vão para o fim.
-    return out.sort(function(a,b){ return (a.aviso?1:0)-(b.aviso?1:0) || (b.grave?1:0)-(a.grave?1:0) || jsNorm(a.nome).localeCompare(jsNorm(b.nome)); });
+    // Prontos para avisar primeiro; depois quem espera o 2º horário; avisados vão para o fim.
+    return out.sort(function(a,b){ return (a.aviso?1:0)-(b.aviso?1:0) || (a.pronto?0:1)-(b.pronto?0:1) || (b.grave?1:0)-(a.grave?1:0) || jsNorm(a.nome).localeCompare(jsNorm(b.nome)); });
+  }
+  // Mensagem pronta para o tutor — a consultora (ou a SDR no futuro) copia e envia.
+  // Modelo dado pela Adriana em 04/ago/2026.
+  function empMensagem(x){
+    const tutor=String(x.tutor||'').trim().split(/\s+/)[0]||'';
+    const nome=String(x.nome||'').trim();
+    const ola='Olá'+(tutor?(' '+tutor):'')+', como está?';
+    if(/metade/.test(x.motivo||''))
+      return ola+'\n\nPassando para pedir que reforce a comidinha do '+nome+'. Hoje o pequeno comeu só metade do potinho.';
+    return ola+'\n\nPassando para pedir que reforce a comidinha do '+nome+'. Hoje o pequeno não quis comer.';
+  }
+  function empCopiar(btn){
+    const ta=btn.parentNode.querySelector('.emp-msg'); if(!ta) return;
+    ta.select(); try{ document.execCommand('copy'); }catch(e){}
+    const t=btn.textContent; btn.textContent='✅ Copiado!'; setTimeout(function(){ btn.textContent=t; },1600);
   }
   function renderEmporio(){
     const el=document.getElementById('empList'); if(!el) return;
     const lista=empLista();
     const cnt=document.getElementById('empCount');
-    const faltam=lista.filter(function(x){ return !x.aviso; }).length;
-    if(cnt) cnt.textContent=lista.length?(faltam+' para avisar · '+(lista.length-faltam)+' já avisado(s)'):'ninguém para avisar';
+    const faltam=lista.filter(function(x){ return !x.aviso && x.pronto; }).length;
+    const esperando=lista.filter(function(x){ return !x.aviso && !x.pronto; }).length;
+    if(cnt) cnt.textContent=lista.length?(faltam+' para avisar'+(esperando?(' · '+esperando+' aguardando o 2º horário'):'')+' · '+lista.filter(function(x){return !!x.aviso;}).length+' já avisado(s)'):'ninguém para avisar';
     if(!lista.length){ el.innerHTML='<div class="av-empty"><div class="big">Todos comeram hoje</div>Nenhum tutor para avisar por causa de comida.</div>'; return; }
     el.innerHTML=lista.map(function(x){
       const av=x.aviso;
-      const cor=av?'#1E8449':(x.grave?'#B3261E':'#DEB428');
-      const fundo=av?'rgba(30,132,73,.08)':(x.grave?'rgba(179,38,30,.07)':'rgba(222,180,40,.10)');
+      const cor=av?'#1E8449':(!x.pronto?'#7C8B99':(x.grave?'#B3261E':'#DEB428'));
+      const fundo=av?'rgba(30,132,73,.08)':(!x.pronto?'rgba(124,139,153,.10)':(x.grave?'rgba(179,38,30,.07)':'rgba(222,180,40,.10)'));
       return '<div style="border:2px solid '+cor+';background:'+fundo+';border-radius:13px;padding:13px;margin-bottom:10px">'
         +'<div style="font-weight:800;font-size:17px;color:var(--z-blue)">'+escAttr(x.nome)+(x.raca?(' <span style="font-size:12.5px;color:var(--muted);font-weight:600">'+escAttr(x.raca)+'</span>'):'')+'</div>'
         +'<div style="font-size:13.5px;color:var(--muted);font-weight:600">Tutor: '+escAttr(x.tutor||'a confirmar')+'</div>'
@@ -11058,8 +11142,14 @@
         +(av
           ? '<div style="font-size:13.5px;font-weight:700;color:#1E8449">✅ Tutor avisado por '+escAttr(av.quem||'?')+(av.hora?(' às '+escAttr(av.hora)):'')+(av.obs?('<br><span style="color:var(--z-blue);font-weight:600">"'+escAttr(av.obs)+'"</span>'):'')+'</div>'
             +'<div style="text-align:right;margin-top:6px"><button type="button" class="ativ-del" style="font-size:12px" onclick="empDesfazer(\''+escAttr(x.k)+'\')">desfazer</button></div>'
-          : '<input class="cad-in" id="empObs_'+escAttr(x.k)+'" placeholder="O que o tutor disse? (opcional)" autocomplete="off" style="margin-bottom:8px">'
-            +'<button type="button" class="btn btn-primary" style="width:100%" onclick="empAvisar(\''+escAttr(x.k)+'\')">✅ Avisei o tutor</button>')
+          : (!x.pronto
+             // Ainda não passou pelo 2º horário: não libera o aviso — ele ainda pode comer.
+             ? '<div style="font-size:13px;font-weight:700;color:var(--z-blue)">⏳ Espere o 2º horário do almoço. Se ele comer lá, não precisa avisar ninguém; se não comer, o aviso e a mensagem aparecem aqui sozinhos.</div>'
+             : '<div style="font-size:11.5px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;margin-bottom:4px">Mensagem para o tutor</div>'
+               +'<textarea class="gest-txt emp-msg" readonly rows="4" style="width:100%">'+escAttr(empMensagem(x))+'</textarea>'
+               +'<button type="button" class="btn btn-gold" style="width:100%;margin:7px 0" onclick="empCopiar(this)">📋 Copiar mensagem</button>'
+               +'<input class="cad-in" id="empObs_'+escAttr(x.k)+'" placeholder="O que o tutor respondeu? (opcional)" autocomplete="off" style="margin-bottom:8px">'
+               +'<button type="button" class="btn btn-primary" style="width:100%" onclick="empAvisar(\''+escAttr(x.k)+'\')">✅ Avisei o tutor</button>'))
         +'</div>';
     }).join('');
   }
