@@ -5700,7 +5700,7 @@
     return '<div class="prev-bloco">'
       +'<div class="prev-tit">Plano <span class="vd '+((soHosp||soAvulso)?'vd-ok':clsSt)+'">'+st.label+'</span></div>'
       +'<div class="cad-grid">'
-        +'<div class="field" style="grid-column:1/-1"><label>Tipo de plano <span style="font-weight:600;color:var(--muted)">(define até quando vale)</span></label><div class="seg gold" data-single>'
+        +'<div class="field" style="grid-column:1/-1"><label>Tipo de plano <span style="font-weight:600;color:'+(!r.plano?'var(--crm-critico)':'var(--muted)')+'">'+(!r.plano?'— OBRIGATÓRIO: escolha antes de lançar a vigência':'(define até quando vale)')+'</span></label><div class="seg gold" data-single'+(!r.plano?' style="outline:2px solid var(--crm-critico);outline-offset:3px;border-radius:11px"':'')+'>'
           +['Silver','Gold','Black'].map(selPlano).join('')+btnAvu+btnAua+btnMor+'</div></div>'
       + (soHosp
           ? '<div class="field" style="grid-column:1/-1"><div class="hint" style="background:rgba(46,125,138,.12);border-left:4px solid #2E7D8A;border-radius:10px;padding:11px 13px;font-weight:700;color:var(--z-blue)">'
@@ -5720,7 +5720,11 @@
           : '<div class="field"><label>Aulas por semana (dos dias marcados)</label><input class="cad-in" value="'+aulas+'x" readonly></div>'
             +'<div class="field"><label>Nº do peludinho na família</label><div class="seg gold" data-single>'
               +[1,2,3].map(function(n){ return '<button class="'+((r.ordemPet||1)===n?'on':'')+'" onclick="pick(this);setRenov({ordemPet:'+n+'})">'+n+'º</button>'; }).join('')+'</div></div>'
-            +'<div class="field"><label>Início da vigência</label><input type="date" class="cad-in" value="'+(r.inicio||'')+'" onchange="setRenovInicio(this.value)"></div>'
+            // Sem plano escolhido a data não calcula vencimento nenhum — e a consultora
+            // achava que tinha lançado (Adriana, 04/ago/2026). O campo fica travado e diz
+            // o que falta, em vez de aceitar uma data que não vira nada.
+            +'<div class="field"><label>Início da vigência'+(!r.plano?' <span style="color:var(--crm-critico);font-weight:800">— escolha o plano primeiro</span>':'')+'</label>'
+              +'<input type="date" class="cad-in" value="'+(r.inicio||'')+'"'+(!r.plano?' disabled style="opacity:.55;cursor:not-allowed" onclick="avisoEscolhaPlano()"':'')+' onchange="setRenovInicio(this.value)"></div>'
             +'<div class="field"><label>Mensalidade'+((r.ordemPet||1)>1?' (com desconto)':'')+'</label><div class="prev-calc">'+(mens?fmtCent(mens):'escolha o plano')+'</div></div>'
             +'<div class="field"><label>Vence em</label><div class="prev-calc">'+(r.fim?fmtBR(r.fim)+' · renova em '+(r.mesRenov||'—'):'informe início e plano')+'</div></div>')
       +'</div>'
@@ -5733,11 +5737,28 @@
     // desenho, quem clicava em "Só AuAulândia" via o bloco continuar igual e achava que
     // não tinha pego — só mudava ao reabrir a ficha.
     setTimeout(function(){ try{ renderPelFicha(); }catch(e){} }, 400); }
+  // Alerta único de "falta escolher o plano" — usado pelo campo de data e pelo Confirmar.
+  function avisoEscolhaPlano(){
+    if(typeof zAlertao!=='function'){ alert('Escolha o plano (Mensal, Trimestral ou Semestral) antes de lançar a vigência.'); return; }
+    zAlertao('FALTA ESCOLHER O PLANO',
+      ['Escolha primeiro se é <b>Mensal (Silver)</b>, <b>Trimestral (Gold)</b> ou <b>Semestral (Black)</b>.'.replace(/<\/?b>/g,''),
+       'É o plano que define até quando a vigência vale. Sem ele, a data de início não gera vencimento nenhum — o plano fica lançado pela metade e ninguém percebe na hora de cobrar.'],
+      {rodape:'Se este FILHOt não tem plano mensal, use "Avulso · diária", "Só AuAulândia · hospedagem" ou "Morador(a) Zêluz".', botao:'Escolher o plano'});
+  }
   function setRenovInicio(iso){ const r=renovDe(pelExtra(pelAtual));
-    const calc=r.plano?aplicarRenovacao(r.plano, r.aulas||nAulasDe(pelAtual), iso):{inicio:iso};
+    if(!r.plano){ avisoEscolhaPlano(); renderPelFicha(); return; }   // data sem plano não vira vencimento
+    const calc=aplicarRenovacao(r.plano, r.aulas||nAulasDe(pelAtual), iso);
     setRenov(Object.assign({inicio:iso}, calc||{})); }
   function confirmarRenovacao(){ const ex=pelExtra(pelAtual), r=renovDe(ex);
-    if(!r.plano||!r.inicio){ alert('Escolha o plano e a data de início antes de confirmar.'); return; }
+    if(!r.plano){ avisoEscolhaPlano(); return; }
+    if(!r.inicio){
+      if(typeof zAlertao==='function') zAlertao('FALTA A DATA DE INÍCIO',
+        ['O plano está escolhido, mas falta dizer a partir de QUANDO ele vale.',
+         'Preencha o "Início da vigência" — é dele que sai a data de vencimento e o mês da próxima renovação.'],
+        {botao:'Preencher a data'});
+      else alert('Preencha a data de início da vigência.');
+      return;
+    }
     const calc=aplicarRenovacao(r.plano, r.aulas||nAulasDe(pelAtual), r.inicio);
     setPelExtra(pelAtual,{renov:Object.assign({}, r, calc, {ordemPet:r.ordemPet||1})});
     if(typeof audit==='function') audit('renovacao','renovou o plano '+r.plano+' ('+(r.aulas||nAulasDe(pelAtual))+'x) até '+(calc?fmtBR(calc.fim):''),{alvo:dcKey(pelAtual.n,pelAtual.tutor)});
