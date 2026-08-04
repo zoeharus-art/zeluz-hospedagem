@@ -2882,6 +2882,7 @@
   let currentHosp=null;
   function abrirPlantao(i){
     const h=hospedes[i]; currentHosp=h;
+    if(typeof fixarCadKey==='function') fixarCadKey(h);   // trava a chave do cadastro desta ficha
     const info=getInfo(h);
     const av=document.getElementById('hf-av');
     const _favIni=(typeof fotoDe==='function')?fotoDe(h):(info.foto||'');
@@ -3006,7 +3007,18 @@
     document.getElementById('hf-meta').innerHTML = (p.length?p.join(' · ')+' · ':'') + '<strong>'+tp+'</strong>' + (h.mascote?' · Nossa Zelozinha':(tut?' · Tutor: '+tut:' · Tutor a confirmar'));
     const cl=document.getElementById('hf-chipline'); if(cl) cl.textContent='Microchip: '+(cad.chip||cad.microchip||(typeof chipDe==='function'?chipDe(h):'')||'--');
   }
-  function onCad(){
+  // ===== A FÁBRICA DE DUPLICADOS (achada em 04/ago/2026) =============================
+  // Esta função roda a CADA TECLA (oninput) e gravava em daycare/cadastro/{cadKey}. Como o
+  // cadKey é nome__tutor e a linha lá embaixo altera currentHosp.tutor, cada letra digitada
+  // no campo do tutor criava um cadastro NOVO: chico__m, chico__ma, chico__mar, chico__mari…
+  // até chico__mariane. Foram 16 cadastros-lixo do Chico e 16 do Félix — e foi daí que
+  // vieram os "4 Stopa" que a Adriana viu.
+  // Correção: a chave é FIXADA quando a ficha abre e nunca mais muda enquanto se digita,
+  // e a gravação espera a pessoa parar de digitar (0,9s).
+  var __cadKeyFixa=null, __cadTimer=null;
+  function fixarCadKey(h){ try{ __cadKeyFixa=(typeof cadKey==='function')?cadKey(h):null; }catch(e){ __cadKeyFixa=null; } }
+  function onCad(){ clearTimeout(__cadTimer); __cadTimer=setTimeout(onCadGravar, 900); }
+  function onCadGravar(){
     if(!currentHosp) return;
     const rawNasc=document.getElementById('hf-nasc').value;
     const nasc=parseNascToISO(rawNasc) || rawNasc.trim(); // guarda ISO quando válida; mantém o que foi digitado enquanto incompleta
@@ -3016,7 +3028,8 @@
     const cad={ nome:nomeEdit, nasc:nasc, idadeAprox:((document.getElementById('hf-idadeaprox')||{}).value||'').trim(), raca:document.getElementById('hfRaca').value||'', corPelo:((document.getElementById('hf-corpelo')||{}).value||'').trim(), sexo:segVal('hf-sexo'),
       castrado:segVal('hf-cast'), tutor:document.getElementById('hf-tutor').value||'', chip:document.getElementById('hf-chip').value||'', dias:dias };
     setInfo(currentHosp,cad);
-    var _ck=cadKey(currentHosp);
+    // Chave FIXA da ficha aberta — nunca recalculada a partir do que está sendo digitado.
+    var _ck=__cadKeyFixa||cadKey(currentHosp);
     if(DB){ DB.ref('auaulandia/cadastro/'+_ck).update(cad).catch(()=>{}); DB.ref('daycare/cadastro/'+_ck).update(cad).catch(()=>{}); } // cadastro ÚNICO: espelha no mestre do Day Care
     if(typeof pelCadCache!=='undefined') pelCadCache[_ck]=Object.assign({},pelCadCache[_ck]||{},cad);
     // reflete a edição no card do Plantão na hora (antes só atualizava a ficha aberta)
