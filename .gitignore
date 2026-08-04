@@ -3,3 +3,27 @@ Fotos da tabela/
 Foto do Dashboard atual de hospedagem.jpeg
 ideias-crm-controle-humano.md
 *.jsonl
+
+# === Segurança — segredos e credenciais (REPO PÚBLICO: NUNCA versionar) ===
+# Adicionado pela auditoria de segurança (Fable 5) — 2026-07-19
+.env
+.env.*
+!.env.example
+*.key
+*.pem
+*.p12
+*.pfx
+id_rsa
+id_ed25519
+id_ecdsa
+credentials*
+credenciais*
+API-KEYS*
+api-keys*
+senhas*
+*-recovery-codes*
+*recovery-codes*
+secret*
+secrets*
+service-account*.json
+serviceAccount*.json
