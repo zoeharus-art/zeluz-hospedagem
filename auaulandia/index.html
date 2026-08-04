@@ -357,6 +357,18 @@
   body[data-role="plantonista"] .so-gestao,
   body[data-role="aprendiz"] .so-gestao,
   body[data-role="tutor"]   .so-gestao{display:none !important}
+  /* .so-sensivel = DADO SENSÍVEL (plano, valores, cobrança). Só Gestão, Supervisão,
+     Diretoria e Consultora — ninguém mais (Adriana, 04/ago/2026). */
+  .so-sensivel{display:none !important}
+  body[data-role="gestao"] .so-sensivel,
+  body[data-role="supervisor"] .so-sensivel,
+  body[data-role="diretoria"] .so-sensivel,
+  body[data-role="consultora"] .so-sensivel{display:block !important}
+  .subtabs .subtab2.so-sensivel{display:none !important}
+  body[data-role="gestao"] .subtabs .subtab2.so-sensivel,
+  body[data-role="supervisor"] .subtabs .subtab2.so-sensivel,
+  body[data-role="diretoria"] .subtabs .subtab2.so-sensivel,
+  body[data-role="consultora"] .subtabs .subtab2.so-sensivel{display:inline-flex !important}
   /* .so-equipe = Gestão + Supervisão + Diretoria + Monitor (quem recebe/cuida do FILHOt no dia a dia).
      Plantonista, aprendiz e tutor ficam de fora — ex.: cancelar um lançamento do dia. */
   body[data-role="plantonista"] .so-equipe,
@@ -2699,6 +2711,15 @@
   // "Preciso saber a quantidade de avulsos, de hóspedes que não fazem parte do Day Care,
   //  e de planos mensais, trimestrais e semestrais — isso vai para o Início, como um
   //  dashboard." Conta só peludinho ATIVO (inativo não entra).
+  // Início + fim = o plano está definido. 1 mês = Silver (mensal), até 4 = Gold (trimestral),
+  // acima disso = Black (semestral). Regra única, usada na importação e na leitura da carteira.
+  function planoPelaVigencia(inicio, fim){
+    if(!inicio||!fim) return null;
+    const a=new Date(inicio+'T00:00:00'), b=new Date(fim+'T00:00:00');
+    if(isNaN(a)||isNaN(b)) return null;
+    const meses=(b.getFullYear()-a.getFullYear())*12+(b.getMonth()-a.getMonth())+1;
+    return {meses:meses, plano:(meses<=1?'Silver':(meses<=4?'Gold':'Black'))};
+  }
   function carteiraResumo(){
     const R={ total:0, cobrar:0, vencido:0, vence:0, emdia:0, semplano:0,
               mensal:0, trimestral:0, semestral:0, avulso:0, hospedagem:0, morador:0,
@@ -2724,15 +2745,9 @@
         // A maior parte da carteira veio da planilha com início e fim, mas SEM o tipo do
         // plano gravado. Sem deduzir, o dashboard mostraria 96 peludinhos "sem tipo".
         // A duração da vigência diz o compromisso: ~1 mês = mensal, ~3 = trimestral, ~6 = semestral.
-        if(!comp && r.inicio && r.fim){
-          const a=new Date(r.inicio+'T00:00:00'), b=new Date(r.fim+'T00:00:00');
-          if(!isNaN(a)&&!isNaN(b)){
-            const meses=(b.getFullYear()-a.getFullYear())*12+(b.getMonth()-a.getMonth())+1;
-            if(meses<=1) comp='mensal';
-            else if(meses<=4) comp='trimestral';
-            else comp='semestral';
-            R.deduzidos=(R.deduzidos||0)+1;
-          }
+        if(!comp){
+          const d=planoPelaVigencia(r.inicio, r.fim);
+          if(d){ comp=(d.plano==='Silver'?'mensal':(d.plano==='Gold'?'trimestral':'semestral')); R.deduzidos=(R.deduzidos||0)+1; }
         }
         if(comp==='mensal') R.mensal++;
         else if(comp==='trimestral') R.trimestral++;
@@ -2781,7 +2796,7 @@
       + (R.morador?linha(R.morador,'Moradores','nossos — sem cobrança','#6b5f4b'):'')
       + (R.semTipo?linha(R.semTipo,'Sem tipo','falta lançar o plano na ficha','#B3261E'):'')
       +'</div>'
-      + (R.deduzidos?'<div class="hint" style="margin-top:8px;font-size:11.5px">'+R.deduzidos+' peludinho(s) vieram da planilha sem o tipo do plano gravado — o sistema deduziu pelo tempo de vigência (1 mês = mensal, 3 = trimestral, 6 = semestral). Ao renovar, escolha o plano na ficha para ficar registrado de verdade.</div>':'');
+      + (R.semTipo?'<div class="hint" style="margin-top:8px;font-size:11.5px">'+R.semTipo+' peludinho(s) sem vigência lançada — é neles que falta escolher o plano na ficha.</div>':'');
   }
   // ---- Cadastro-mestre ligado ao hóspede (refKey = pelKey do peludinho escolhido na busca) ----
   // Tutor e alergia/medicação SEMPRE vêm daqui quando existe refKey — nunca mais digitados 2x.
@@ -5709,6 +5724,10 @@
         if(pel._aprox){ aprox.push(pel._aprox+' → '+pelNome(pel)); delete pel._aprox; }
         var ex=pelExtra(pel); var renov=Object.assign({}, (ex&&ex.renov)||{});
         if(iniISO) renov.inicio=iniISO; if(fimISO) renov.fim=fimISO;
+        // A planilha traz início e fim — logo o TIPO do plano já está definido pela duração.
+        // Importar sem gravar isso jogava o trabalho de volta para a recepção, ficha por
+        // ficha (Adriana, 04/ago/2026). Agora o plano entra junto, na hora da importação.
+        if(!renov.plano) { var _p=planoPelaVigencia(renov.inicio, renov.fim); if(_p){ renov.plano=_p.plano; renov.plano_deduzido=true; renov.plano_deduzido_meses=_p.meses; } }
         var key=pelKey(pel);
         ops.push(DB.ref('daycare/cadastro/'+key).update({renov:renov}));
         try{ if(typeof pelCadCache!=='undefined') pelCadCache[key]=Object.assign({},pelCadCache[key]||{},{renov:renov}); }catch(e){}
@@ -7299,6 +7318,23 @@
 
   // Campos do almoço direto na ficha. Antes só existiam na constante do código: quem não
   // estivesse lá ficava "Almoço não cadastrado" e não havia como corrigir pelo app.
+  // "Almoça na creche?" é DERIVADO do cadastro de almoço — não é um campo paralelo.
+  // A Corina tinha "Ração 30g" preenchido e mesmo assim não dizia se almoça (Adriana,
+  // 04/ago/2026). Quem tem alimentação e quantidade lançadas E não está marcado como
+  // "NÃO almoça" está almoçando — o aviso diz isso em vez de deixar o campo mudo.
+  function almocaNaCreche(p){
+    const a=(typeof almCad==='function')?(almCad(p)||{}):{};
+    if(a.nao===true) return {almoca:false, motivo:'marcado como NÃO almoça'};
+    const temDados=!!(String(a.alim||'').trim()||String(a.quant||'').trim());
+    if(temDados) return {almoca:true, motivo:'tem alimentação e quantidade lançadas'};
+    return {almoca:null, motivo:'ninguém lançou o almoço deste peludinho'};
+  }
+  function avisoAlmocoFicha(){
+    const r=almocaNaCreche(pelAtual);
+    if(r.almoca===true) return '<div class="hint" style="background:rgba(30,132,73,.10);border-left:4px solid #1E8449;border-radius:9px;padding:9px 12px;font-weight:700;color:#1E8449">✅ Almoça na creche — '+esc(r.motivo)+'. Ele aparece na grade do Almoço.</div>';
+    if(r.almoca===false) return '<div class="hint" style="background:rgba(124,139,153,.14);border-left:4px solid #7C8B99;border-radius:9px;padding:9px 12px;font-weight:700;color:var(--z-blue)">Não almoça na creche — sai da grade do Almoço de propósito.</div>';
+    return '<div class="hint" style="background:rgba(179,38,30,.08);border-left:4px solid #B3261E;border-radius:9px;padding:9px 12px;font-weight:700;color:#B3261E">⚠️ Falta lançar o almoço deste peludinho. Preencha a alimentação e a quantidade abaixo — sem isso a monitora serve no escuro.</div>';
+  }
   function camposAlmocoFicha(){
     const a=almCad(pelAtual)||{};
     const seg=(campo,val,opts)=>opts.map(o=>`<button class="${val===o?'on':''}" onclick="pick(this);setAlmCad(pelAtual,{${campo}:${o==='Sim'?'true':'false'}});renderAlmSeFor()">${o}</button>`).join('');
@@ -7487,7 +7523,7 @@
         <span class="chip-serv" style="background:rgba(224,136,86,.16);color:#a85a2e">Day Care</span>
       </div>
 
-      <div class="alert-card">
+      <div class="alert-card" id="pelAtencaoTopo" style="display:none">
         <h2 style="font-size:19px;margin-bottom:3px">Atenção · Saúde e Cuidados</h2>
         <div class="hint">Tudo que o monitor precisa saber antes de cuidar e dar o almoço.</div>
         <div id="pelPills">${alertPills(ex)}</div>
@@ -7510,12 +7546,16 @@
         </div>
       </div>
 
+      <!-- A ficha abre na aba que a pessoa escolher. O "Atenção · Saúde e Cuidados" saiu do
+           topo fixo e virou aba: quem cuida do plano não precisa passar por ele toda vez
+           (Adriana, 04/ago/2026). -->
       <div class="subtabs">
         <div class="subtab2 active" onclick="pelSubtab(this,'ps-ident')">Identificação</div>
         <div class="subtab2" onclick="pelSubtab(this,'ps-comp')">Comportamento</div>
-        <div class="subtab2 so-gestao" onclick="pelSubtab(this,'ps-plano')">Plano</div>
+        <div class="subtab2 so-sensivel" onclick="pelSubtab(this,'ps-plano')">Plano</div>
         <div class="subtab2" onclick="pelSubtab(this,'ps-saude')">Prevenção &amp; Cuidados Vacinais</div>
         <div class="subtab2" onclick="pelSubtab(this,'ps-rotina')">Rotina</div>
+        <div class="subtab2" onclick="pelSubtab(this,'ps-atencao')">Atenção · Saúde e Cuidados</div>
       </div>
 
       <div class="ppanel2 active" id="ps-ident"><div class="card">
@@ -7564,10 +7604,16 @@
       <div class="ppanel2" id="ps-rotina"><div class="card">
         <h2 style="font-size:20px">Rotina &amp; alimentação</h2>
         <div class="cad-grid">
-          <div class="field"><label>Alimentação (ração / dose)</label><input class="cad-in" value="${escAttr(ex.alimentacao||'')}" placeholder="Ex: Ração X · 80g 2x/dia" onchange="setPelExtra(pelAtual,{alimentacao:this.value})"></div>
-          <div class="field"><label>Almoça na creche?</label><div class="seg gold" data-single>${segBtnsPel('almoca',ex.almoca||'',['Sim','Não'])}</div></div>
+          <div class="field"><label>Alimentação em casa (ração / dose)</label><input class="cad-in" value="${escAttr(ex.alimentacao||'')}" placeholder="Ex: Ração X · 80g 2x/dia" onchange="setPelExtra(pelAtual,{alimentacao:this.value})"></div>
           <div class="field"><label>Passeia?</label><div class="seg gold" data-single>${segBtnsPel('passeia',ex.passeia||'',['Sim','Não'])}</div></div>
           <div class="field"><label>Xixi e cocô</label><input class="cad-in" value="${escAttr(ex.banheiro||'')}" placeholder="Ex: fora de casa" onchange="setPelExtra(pelAtual,{banheiro:this.value})"></div>
+        </div>
+        <!-- O almoço da creche mora AQUI, junto da rotina — é onde a consultora procura.
+             É o MESMO dado que aparece na grade do Day Care, não uma cópia. -->
+        <h3 class="cad-sub">Almoço na creche &mdash; é o que aparece na grade do Day Care</h3>
+        <div id="pelAlmocoAviso">${avisoAlmocoFicha()}</div>
+        <div class="cad-grid">
+          ${camposAlmocoFicha()}
         </div>
       </div></div>
 
@@ -7583,7 +7629,7 @@
         </div>
       </div></div>
 
-      <div class="ppanel2 so-gestao" id="ps-plano"><div class="card">
+      <div class="ppanel2 so-sensivel" id="ps-plano"><div class="card">
         <h2 style="font-size:20px">Plano</h2>
         <div class="hint">Planos DayCare 2026. Valor mensal; o tipo do plano muda até quando ele vale. Desconto: 2º peludinho 7%, 3º 12%.</div>
         ${blocoPlano(ex,p)}
@@ -7595,6 +7641,26 @@
           <div class="renov-msg"><div class="renov-msg-tit">Renovação confirmada</div>
             <textarea class="gest-txt" readonly>${escAttr(msgRenovado(p,ex))}</textarea>
             <button class="btn btn-gold" style="padding:7px 14px;font-size:13px;margin-top:6px" onclick="copiarGest(this)">Copiar para o tutor</button></div>
+        </div>
+      </div></div>
+
+      <!-- Atenção · Saúde e Cuidados — agora é aba, não mais um bloco fixo no topo -->
+      <div class="ppanel2" id="ps-atencao"><div class="alert-card" style="margin-bottom:0">
+        <h2 style="font-size:19px;margin-bottom:3px">Atenção · Saúde e Cuidados</h2>
+        <div class="hint">Tudo que o monitor precisa saber antes de cuidar e dar o almoço.</div>
+        <div id="pelPills2">${alertPills(ex)}</div>
+        <div class="cad-grid">
+          <div class="field"><label>Alergia</label><input class="cad-in" value="${escAttr(ex.alergia||'')}" placeholder="Ex: frango — ou deixe vazio" onchange="setPelExtra(pelAtual,{alergia:this.value});refreshPills()"></div>
+          <div class="field"><label>Restrição alimentar</label><input class="cad-in" value="${escAttr(ex.restricao||'')}" placeholder="Ex: sem grãos" onchange="setPelExtra(pelAtual,{restricao:this.value});refreshPills()"></div>
+          <div class="field"><label>Medicação</label><input class="cad-in" value="${escAttr(ex.medicacao||'')}" placeholder="Nome, dose, horário" onchange="setPelExtra(pelAtual,{medicacao:this.value});refreshPills()"></div>
+          <div class="field"><label>Algum problema de saúde</label><input class="cad-in" value="${escAttr(ex.problema||'')}" placeholder="Ex: cardíaco — ou vazio" onchange="setPelExtra(pelAtual,{problema:this.value});refreshPills()"></div>
+          <div class="field"><label>Manias</label><input class="cad-in" value="${escAttr(ex.manias||'')}" placeholder="Ex: protege a comida" onchange="setPelExtra(pelAtual,{manias:this.value});refreshPills()"></div>
+          <div class="field"><label>Em adaptacao (1&ordm; mes)?</label><div class="seg gold" data-single>${segBtnsPel('adaptacao',ex.adaptacao||'',['Sim','Nao'])}</div></div>
+          <div class="field"><label>Come em comedouro lento?</label><div class="seg gold" data-single>${segBtnsPel('ansioso',ex.ansioso||'',['Sim','Nao'])}</div></div>
+        </div>
+        <h3 class="cad-sub">Saída do Day Care</h3>
+        <div class="cad-grid">
+          ${camposSaidaFicha()}
         </div>
       </div></div>
 
