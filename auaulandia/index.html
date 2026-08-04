@@ -189,6 +189,77 @@
   .pet.add .plus{font-size:30px;color:var(--z-gold-deep);font-weight:300}
   .pet.add .t{font-size:13px;font-weight:700;color:var(--z-blue-soft);margin-top:6px}
 
+  /* ===== DASHBOARD DO INÍCIO (Adriana, 04/ago/2026: "sem estrutura... horrível") =====
+     Regra do redesenho: hierarquia antes de enfeite. Uma seção por pergunta, com
+     sobrancelha + título; a cor entra só onde ela informa (urgência, ecossistema).
+     Nada de borda grossa colorida em tudo — isso é o que fazia tudo gritar igual. */
+  .dash{display:flex;flex-direction:column;gap:32px;max-width:1120px}
+  .dash-h{display:flex;align-items:flex-end;justify-content:space-between;gap:14px;flex-wrap:wrap;margin-bottom:14px}
+  .dash-eyebrow{font-size:10.5px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--z-gold-deep)}
+  .dash-t{font-size:24px;font-weight:700;letter-spacing:-.025em;color:var(--z-blue);margin-top:3px;line-height:1.1}
+  .dash-meta{font-size:12.5px;font-weight:500;color:var(--muted)}
+
+  /* A casa hoje — uma faixa só, com divisórias. Quatro caixas soltas viravam ruído. */
+  .dash-strip{display:grid;grid-template-columns:repeat(4,1fr);background:var(--z-white);
+    border:1px solid var(--line);border-radius:18px;box-shadow:var(--shadow);overflow:hidden}
+  .ds-item{padding:18px 14px 16px;text-align:center;border-left:1px solid var(--line)}
+  .ds-item:first-child{border-left:none}
+  .ds-st{width:34px;height:34px;object-fit:contain;margin:0 auto 7px;display:block;opacity:.92}
+  .ds-n{font-size:30px;font-weight:800;letter-spacing:-.035em;line-height:1;color:var(--z-blue);font-variant-numeric:tabular-nums}
+  .ds-n.coral{color:var(--z-daycare)} .ds-n.aqua{color:var(--z-auaulandia)} .ds-n.gold{color:var(--z-gold-deep)}
+  .ds-l{font-size:12px;font-weight:600;color:var(--muted);margin-top:5px;letter-spacing:-.005em}
+  @media(max-width:640px){
+    .dash-strip{grid-template-columns:repeat(2,1fr)}
+    .ds-item:nth-child(3){border-left:none}
+    .ds-item:nth-child(n+3){border-top:1px solid var(--line)}
+  }
+
+  /* Pendências — número, rótulo e para onde vai. Urgência é um filete, não uma moldura. */
+  .dash-tiles{display:grid;grid-template-columns:repeat(auto-fill,minmax(228px,1fr));gap:12px}
+  .dt{position:relative;display:flex;align-items:center;gap:13px;background:var(--z-white);
+    border:1px solid var(--line);border-radius:16px;padding:15px 16px;cursor:pointer;text-align:left;
+    box-shadow:var(--shadow);width:100%;font-family:inherit;overflow:hidden;
+    transition:transform .14s,box-shadow .18s,border-color .18s}
+  .dt:hover{transform:translateY(-2px);box-shadow:var(--shadow-lg);border-color:var(--z-blue-soft)}
+  .dt:active{transform:scale(.985)}
+  .dt::before{content:'';position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--dt-cor,var(--line))}
+  .dt-n{display:block;font-size:29px;font-weight:800;letter-spacing:-.035em;line-height:1;min-width:42px;
+    color:var(--dt-cor,var(--z-blue));font-variant-numeric:tabular-nums}
+  .dt-txt{display:block;flex:1;min-width:0}
+  .dt-l{display:block;font-size:14px;font-weight:700;color:var(--z-blue);letter-spacing:-.012em;line-height:1.2}
+  .dt-s{display:block;font-size:12px;font-weight:500;color:var(--muted);margin-top:3px;line-height:1.35}
+  .dt-go{font-size:17px;font-weight:700;color:var(--line);flex:0 0 auto}
+  .dt:hover .dt-go{color:var(--z-gold)}
+  .dash-zen{display:flex;align-items:center;gap:13px;background:rgba(39,174,96,.07);
+    border:1px solid rgba(39,174,96,.28);border-radius:16px;padding:18px 20px}
+  .dash-zen .zt{font-size:15px;font-weight:700;color:#1E8449;letter-spacing:-.015em}
+  .dash-zen .zs{font-size:13px;font-weight:500;color:var(--z-blue-soft);margin-top:2px}
+
+  /* Carteira — 3 situações + a proporção numa barra, e os tipos como lista, não como grade */
+  .cart-top{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+  @media(max-width:620px){ .cart-top{grid-template-columns:1fr} }
+  .cart-q{background:var(--z-white);border:1px solid var(--line);border-radius:16px;padding:16px 18px;
+    cursor:pointer;text-align:left;box-shadow:var(--shadow);font-family:inherit;width:100%;
+    transition:transform .14s,box-shadow .18s,border-color .18s}
+  .cart-q:hover{transform:translateY(-2px);box-shadow:var(--shadow-lg);border-color:var(--z-blue-soft)}
+  .cq-l{display:flex;align-items:center;gap:7px;font-size:11px;font-weight:700;letter-spacing:.1em;
+    text-transform:uppercase;color:var(--muted)}
+  .cq-dot{width:8px;height:8px;border-radius:50%;flex:0 0 auto}
+  .cq-n{display:block;font-size:34px;font-weight:800;letter-spacing:-.04em;line-height:1;margin-top:9px;font-variant-numeric:tabular-nums}
+  .cq-s{display:block;font-size:12.5px;font-weight:500;color:var(--muted);margin-top:5px;line-height:1.35;min-height:17px}
+  .cart-bar{display:flex;height:7px;border-radius:999px;overflow:hidden;margin-top:14px;background:var(--z-cream-warm)}
+  .cart-bar i{display:block;height:100%}
+  .cart-tipos{background:var(--z-white);border:1px solid var(--line);border-radius:16px;
+    box-shadow:var(--shadow);margin-top:14px;overflow:hidden}
+  .ct-h{font-size:10.5px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);
+    padding:15px 18px 11px}
+  .ct-row{display:flex;align-items:center;gap:12px;padding:11px 18px;border-top:1px solid var(--line)}
+  .ct-dot{width:9px;height:9px;border-radius:3px;flex:0 0 auto}
+  .ct-l{flex:1;min-width:0;font-size:14px;font-weight:700;color:var(--z-blue);letter-spacing:-.012em}
+  .ct-l small{display:block;font-size:11.5px;font-weight:500;color:var(--muted);letter-spacing:0;margin-top:1px}
+  .ct-n{font-size:19px;font-weight:800;color:var(--z-blue);letter-spacing:-.025em;font-variant-numeric:tabular-nums}
+  .ct-nota{padding:11px 18px 14px;border-top:1px solid var(--line);font-size:12px;color:var(--muted);font-weight:500}
+
   .kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:14px;margin-bottom:24px}
   .kpi{background:var(--z-white);border:1px solid var(--line);border-radius:var(--radius);padding:14px 16px;box-shadow:var(--shadow);display:flex;align-items:center;gap:12px}
   .kpi-st{width:46px;height:46px;object-fit:contain;flex:0 0 auto}
@@ -652,14 +723,34 @@
   .alm-badge{display:inline-block;margin-top:6px;margin-right:4px;font-size:10.5px;font-weight:800;color:var(--z-blue);background:rgba(222,180,40,.22);padding:3px 9px;border-radius:7px;letter-spacing:.3px}
   .alm-extra{margin-top:6px;font-size:11.5px;color:var(--z-blue-deep);background:var(--z-cream-warm);border-radius:8px;padding:6px 9px;line-height:1.4}
   .alm-restr{margin-top:8px;font-size:12px;font-weight:800;color:#fff;background:var(--crm-critico);padding:7px 10px;border-radius:9px;text-align:center;animation:piscaAlerta 1.2s ease-in-out infinite}
-  .alm-actions{margin-top:10px}
-  .alm-btn{flex:1;border:1.5px solid var(--line);background:#fff;border-radius:9px;padding:9px 3px;font-family:var(--font-ui);font-weight:700;font-size:12px;cursor:pointer;color:var(--z-blue)}
-  .alm-btn.tudo.on{background:var(--crm-ok);color:#fff;border-color:var(--crm-ok)}
-  .alm-btn.metade.on{background:var(--crm-atencao);color:var(--crm-atencao-text);border-color:var(--crm-atencao)}
-  .alm-btn.nao.on{background:var(--crm-critico);color:#fff;border-color:var(--crm-critico)}
+  /* ===== A COMIDA — controle segmentado (Adriana, 04/ago/2026) =======================
+     Eram 4 botões de borda grossa espremidos numa linha só: "Comeu tudo · Metade ·
+     Nao comeu · Não se aplica". Quebrava feio e ocupava meio card.
+     Agora: UMA trilha cinza com as 3 respostas do dia (Comeu · Metade · Não comeu) e,
+     embaixo, "Não se aplica" discreto — que é exceção, não resposta de rotina.
+     Só a opção escolhida ganha cor; as outras ficam quietas. */
+  .alm-actions{display:block;margin-top:9px}
+  .alm-seg{display:grid;grid-template-columns:repeat(3,1fr);gap:3px;background:rgba(35,77,103,.07);
+    border-radius:11px;padding:3px}
+  .alm-seg.duo{grid-template-columns:repeat(2,1fr)}
+  /* flex + min-height: "Não comeu" quebra em duas linhas em card estreito; sem isto os três
+     rótulos ficam em alturas diferentes e a trilha parece torta. */
+  .alm-btn{display:flex;align-items:center;justify-content:center;text-align:center;min-height:36px;
+    border:none;background:transparent;border-radius:8px;padding:6px 1px;
+    font-family:var(--font-ui);font-weight:600;font-size:11.5px;letter-spacing:-.015em;line-height:1.15;
+    color:var(--z-blue-soft);cursor:pointer;-webkit-tap-highlight-color:transparent;
+    transition:background .14s,color .14s,box-shadow .14s}
+  .alm-btn:active{transform:scale(.97)}
+  .alm-btn.on{font-weight:800;box-shadow:0 1px 2px rgba(26,58,79,.18)}
+  .alm-btn.tudo.on{background:var(--crm-ok);color:#fff}
+  .alm-btn.metade.on{background:var(--crm-atencao);color:var(--crm-atencao-text)}
+  .alm-btn.nao.on{background:var(--crm-critico);color:#fff}
   /* Item 12 — "Não se aplica": tem FILHOt que não almoça (come só fruta, está de jejum,
      comeu com o tutor). Não é falha, então não vai para o 2º horário nem avisa o tutor. */
-  .alm-btn.na.on{background:#7C8B99;color:#fff;border-color:#7C8B99}
+  .alm-na{display:block;width:100%;margin-top:5px;border:1px solid var(--line);background:transparent;
+    border-radius:9px;padding:6px 4px;font-family:var(--font-ui);font-weight:600;font-size:11.5px;
+    color:var(--muted);cursor:pointer;-webkit-tap-highlight-color:transparent;transition:.14s}
+  .alm-na.on{background:#7C8B99;border-color:#7C8B99;color:#fff;font-weight:800}
   .alm-card.tudo{border-color:var(--crm-ok)} .alm-card.metade{border-color:var(--crm-atencao)} .alm-card.nao{border-color:var(--crm-critico);box-shadow:0 0 0 2px rgba(192,57,43,.3)}
   .role-note{font-size:12px;background:var(--z-cream-warm);border:1px solid var(--line);border-radius:10px;
     padding:10px 14px;color:var(--z-blue-soft);margin-bottom:18px;display:flex;gap:8px;align-items:center}
@@ -1246,30 +1337,55 @@
   <!-- ===== INÍCIO ===== -->
   <div id="despBanho" class="desp-banho" style="display:none"></div>
   <div id="despMed" class="desp-banho desp-med" style="display:none"></div>
+  <!-- ===== DASHBOARD DO INÍCIO (redesenho 04/ago/2026) =============================
+       Adriana: "que Dashboard mais feio... e sem estrutura". Antes eram três blocos de
+       quadros coloridos empilhados sem ordem de leitura, todos gritando igual.
+       Agora tem hierarquia: 1) o que precisa de você AGORA · 2) a casa hoje ·
+       3) a carteira. A cor só aparece onde ela informa alguma coisa. -->
   <section class="view active" id="v-inicio">
-    <div class="kpis">
-      <div class="kpi"><img class="kpi-st" src="assets/stickers/pata.png" alt=""><div><div class="v" id="kpiTotal">—</div><div class="l">Peludinhos hoje</div></div></div>
-      <div class="kpi"><img class="kpi-st" src="assets/stickers/vasilha.png" alt=""><div><div class="v coral" id="kpiDay">—</div><div class="l">No Day Care</div></div></div>
-      <div class="kpi"><img class="kpi-st" src="assets/stickers/osso.png" alt=""><div><div class="v" id="kpiAua">—</div><div class="l">Na Auaulândia</div></div></div>
-      <div class="kpi"><img class="kpi-st" src="assets/stickers/coracao.png" alt=""><div><div class="v" id="kpiAdapt">—</div><div class="l">Em adaptação</div></div></div>
-    </div>
-    <!-- Carteira: quem paga o quê (Adriana, 04/ago/2026) — a cobrar, em dia, sem plano,
-         e a quebra por tipo: mensal, trimestral, semestral, avulso, hospedagem, moradores. -->
-    <div class="card so-carteira" id="cardCarteira" style="margin-bottom:16px">
-      <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:4px">
-        <h2 style="font-size:19px;margin:0">Carteira de planos</h2>
-        <span class="pel-count" id="cartTotal"></span>
-      </div>
-      <div class="hint">Quantos peludinhos ativos em cada situação. Toque em qualquer quadro para abrir a lista na Renovação de Planos.</div>
-      <div id="cartCobranca" style="margin-top:12px"></div>
-      <div id="cartTipos" style="margin-top:14px"></div>
-    </div>
-    <div class="card" id="cardPendencias" style="margin-bottom:16px">
-      <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:4px">
-        <h2 style="font-size:19px;margin:0">O que precisa de você hoje</h2>
-        <span class="pel-count" id="pendAtualizado"></span>
-      </div>
-      <div id="pendGrid" style="margin-top:12px"></div>
+    <div class="dash">
+
+      <section class="dash-sec" id="cardPendencias">
+        <div class="dash-h">
+          <div>
+            <div class="dash-eyebrow">Agora</div>
+            <h2 class="dash-t">O que precisa de você</h2>
+          </div>
+          <span class="dash-meta" id="pendAtualizado"></span>
+        </div>
+        <div id="pendGrid"></div>
+      </section>
+
+      <section class="dash-sec">
+        <div class="dash-h">
+          <div>
+            <div class="dash-eyebrow">Hoje</div>
+            <h2 class="dash-t">A casa</h2>
+          </div>
+          <span class="dash-meta">quem está aqui neste momento</span>
+        </div>
+        <div class="dash-strip">
+          <div class="ds-item"><img class="ds-st" src="assets/stickers/pata.png" alt=""><div class="ds-n" id="kpiTotal">—</div><div class="ds-l">Peludinhos</div></div>
+          <div class="ds-item"><img class="ds-st" src="assets/stickers/vasilha.png" alt=""><div class="ds-n coral" id="kpiDay">—</div><div class="ds-l">No Day Care</div></div>
+          <div class="ds-item"><img class="ds-st" src="assets/stickers/osso.png" alt=""><div class="ds-n aqua" id="kpiAua">—</div><div class="ds-l">Na AuAulândia</div></div>
+          <div class="ds-item"><img class="ds-st" src="assets/stickers/coracao.png" alt=""><div class="ds-n gold" id="kpiAdapt">—</div><div class="ds-l">Em adaptação</div></div>
+        </div>
+      </section>
+
+      <!-- Carteira: quem paga o quê (Adriana, 04/ago/2026) — a cobrar, em dia, sem plano,
+           e a quebra por tipo: mensal, trimestral, semestral, avulso, hospedagem, moradores. -->
+      <section class="dash-sec so-carteira" id="cardCarteira">
+        <div class="dash-h">
+          <div>
+            <div class="dash-eyebrow">Comercial</div>
+            <h2 class="dash-t">Carteira de planos</h2>
+          </div>
+          <span class="dash-meta" id="cartTotal"></span>
+        </div>
+        <div id="cartCobranca"></div>
+        <div id="cartTipos"></div>
+      </section>
+
     </div>
   </section>
 
@@ -1325,7 +1441,10 @@
   <section class="view" id="v-daycare">
     <div id="dcAdaptBanner"></div>
     <div class="dc-titulo"><span id="dcAtivLabel">Chamada</span> · <span id="dcDiaLabel">hoje</span></div>
-    <div class="pel-toolbar"><input class="search" id="dcBusca" placeholder="Buscar peludinho, raça ou tutor..." style="width:300px;max-width:100%" oninput="onDcBusca()"></div>
+    <div class="pel-toolbar"><input class="search" id="dcBusca" placeholder="Buscar peludinho, raça ou tutor..." style="width:300px;max-width:100%" oninput="onDcBusca()">
+      <!-- A folha de contingência: se o app cair no horário do almoço, a monitora serve pelo papel. -->
+      <button class="btn btn-gold" style="margin-left:auto;padding:10px 16px;flex:0 0 auto" onclick="baixarGradeAlmoco()" title="Baixa a grade de segunda a sexta em Excel — nome, raça, se almoça, comedouro, o que come e quanto come">Baixar Excel &mdash; grade de almoço</button>
+    </div>
     <div id="scr-chamada" class="dc-scr">
       <div class="role-note"><span data-icon="sun"></span><span>Toque <strong>VEIO</strong> ou <strong>FALTOU</strong> em cada peludinho. A lista de faltas vai para a Gestão. Toque no card para ver a ficha.</span></div>
       <div id="dcResumo"></div>
@@ -2391,6 +2510,51 @@
   // Declarados AQUI (antes dos ouvintes do Firebase abaixo) para não caírem na zona morta temporal:
   // os listeners em ~1801 mutam estas variáveis e podem disparar antes das declarações originais lá embaixo.
   let DB=null, cadCache={}, fotoPendente=null, pelCadCache={}, almCadCache={}, despBaixa={}, VET_RECOM_CACHE={}, VET_OBS_CACHE={}, MONITORES=[], NAOCOMEU_HOJE={};
+
+  // ===== AS FOTOS SAÍRAM DO CADASTRO (04/ago/2026) ===================================
+  // Medição de 04/ago: cada abertura do app baixava 609 KB, e 296 KB eram FOTOS — quase
+  // metade. Elas moravam dentro de `daycare/cadastro`, que tem ouvinte permanente
+  // (`on('value')`): qualquer mudança em qualquer ficha rebaixava o pacote inteiro, fotos
+  // e tudo. É a mesma armadilha já corrigida nas fotos da conferência em 29/jul.
+  //
+  // Agora as fotos moram em `daycare/fotos`, SEM ouvinte. O aparelho guarda a cópia dele e
+  // só baixa de novo quando alguém troca uma foto — o que sobe o carimbo `daycare/fotos-v`.
+  // Dia normal (ninguém trocou foto): 0 KB de foto. Dia com troca: baixa uma vez.
+  var FOTOS={}, __fotosV=null;
+  function fotoCad(k){ if(!k) return ''; var v=FOTOS[k]; return (typeof v==='string')?v:((v&&v.f)||''); }
+  function _fotosDoCache(){
+    try{ var v=localStorage.getItem('zeluz_fotos_v'), d=localStorage.getItem('zeluz_fotos');
+      if(v&&d){ __fotosV=v; FOTOS=JSON.parse(d)||{}; return true; } }catch(e){}
+    return false;
+  }
+  function _fotosGuardar(){
+    // Aparelho sem espaço não pode derrubar o app: sem a cópia local ele só baixa de novo.
+    try{ localStorage.setItem('zeluz_fotos',JSON.stringify(FOTOS)); localStorage.setItem('zeluz_fotos_v',String(__fotosV||'')); }catch(e){}
+  }
+  function _fotosRedesenhar(){
+    ['renderPel','renderDaycare','renderHosp','renderAlmStep','renderKPIs'].forEach(function(f){
+      try{ if(typeof window[f]==='function') window[f](); }catch(e){}
+    });
+  }
+  function carregarFotos(){
+    if(!DB) return;
+    if(_fotosDoCache()) _fotosRedesenhar();     // pinta na hora com o que já está no aparelho
+    DB.ref('daycare/fotos-v').on('value', function(s){
+      var v=String(s.val()||'0');
+      if(v===String(__fotosV||'')) return;      // nada mudou desde a última vez: não baixa nada
+      DB.ref('daycare/fotos').once('value').then(function(sn){
+        FOTOS=sn.val()||{}; __fotosV=v; _fotosGuardar(); _fotosRedesenhar();
+      }).catch(function(e){ console.warn('fotos:',e); });
+    });
+  }
+  // Ponto ÚNICO de gravação de foto. Sobe o carimbo para os outros aparelhos atualizarem.
+  function salvarFotoCad(k,dataUrl){
+    if(!k||!dataUrl) return Promise.resolve();
+    FOTOS[k]=dataUrl; __fotosV=String(Date.now()); _fotosGuardar();
+    if(!DB) return Promise.resolve();
+    return DB.ref('daycare/fotos/'+k).set(dataUrl)
+      .then(function(){ return DB.ref('daycare/fotos-v').set(__fotosV); });
+  }
   // Chave pública do reCAPTCHA v3 do App Check. VAZIA = App Check desligado (nada muda no app).
   // Cole aqui a chave gerada no Console do Firebase para ligar — instruções em SEGURANCA.md.
   // É `var` de propósito: com `const` a leitura lá embaixo cairia na zona morta temporal e
@@ -2431,6 +2595,8 @@
       DB.ref('daycare/config/sensiveis').on('value', s=>{ const v=s.val(); if(Array.isArray(v)){ try{ SENS=new Set(v); }catch(e){} } });
       DB.ref('daycare/config/atividades').on('value', s=>{ const v=s.val(); if(Array.isArray(v)&&v.length){ ATIVIDADES=v; if(typeof renderAtiv==='function') renderAtiv(); } });
       DB.ref('daycare/cadastro').on('value', s=>{ pelCadCache=s.val()||{}; if(typeof mergeNovosAlunos==='function') mergeNovosAlunos(); if(typeof aplicarExclusoes==='function') aplicarExclusoes(); if(typeof renderPel==='function') renderPel(); if(typeof renderDaycare==='function') renderDaycare(); if(typeof renderKPIs==='function') renderKPIs(); });
+      // As fotos vêm de um nó separado, sem ouvinte — ver o comentário lá em cima.
+      try{ carregarFotos(); }catch(e){ console.warn('fotos:',e); }
       // cadastro de almoço editável (sobrepõe a semente) — reflete na grade em tempo real
       // quem já desceu para o banho — um monitor dá baixa e o aviso some em todos os aparelhos
       DB.ref('daycare/banho-aviso/'+dcDataKey()).on('value', s=>{ despBaixa=s.val()||{};
@@ -2740,22 +2906,25 @@
     let avisar=0, faltas=0;
     try{ avisar=(typeof empLista==='function')?empLista().filter(function(x){ return !x.aviso; }).length:0; }catch(e){}
     try{ Object.keys(AVISOS_RACAO_CACHE||{}).forEach(function(k){ if((AVISOS_RACAO_CACHE[k]||{}).status!=='resolvido') faltas++; }); }catch(e){}
+    // Um quadro por pendência. Ordem = urgência real, não ordem de programação:
+    // o que trava a operação vem primeiro, o que é rotina do fim do dia vem depois.
     const q=function(n,rot,sub,cor,destino){
       if(!n) return '';
-      return '<div onclick="irParaView(\''+destino+'\')" style="cursor:pointer;flex:1 1 160px;min-width:150px;border:2px solid '+cor+';border-radius:14px;padding:12px 14px;background:#fff">'
-        +'<div style="font-size:28px;font-weight:800;line-height:1;color:'+cor+'">'+n+'</div>'
-        +'<div style="font-size:13.5px;font-weight:800;color:var(--z-blue);margin-top:3px">'+rot+'</div>'
-        +'<div style="font-size:11.5px;color:var(--muted);font-weight:600">'+sub+'</div></div>';
+      return '<button class="dt" style="--dt-cor:'+cor+'" onclick="irParaView(\''+destino+'\')">'
+        +'<span class="dt-n">'+n+'</span>'
+        +'<span class="dt-txt"><span class="dt-l">'+rot+'</span><span class="dt-s">'+sub+'</span></span>'
+        +'<span class="dt-go">&rsaquo;</span></button>';
     };
-    const cards=[ q(conferir,'A conferir','check-in esperando conferência','#B3261E','conferencia'),
-                  q(semCheckin,'Sem check-in','hospedados sem ficha lançada','#B3261E','checkin'),
-                  q(saemHoje,'Saem hoje','a monitora precisa juntar as coisas','#DEB428','checkout'),
+    const cards=[ q(semCheckin,'Sem check-in','hospedado sem ficha lançada','#B3261E','checkin'),
+                  q(conferir,'A conferir','check-in esperando conferência','#B3261E','conferencia'),
+                  q(faltas,'Faltas em aberto','ração ou remédio que não cobre','#B3261E','recepcao'),
                   q(naRecepcao,'Na recepção','conferir com o tutor e assinar','#1E8449','checkoutconf'),
-                  q(avisar,'Avisar tutores','não comeram hoje','#E08856','emporio'),
-                  q(faltas,'Faltas em aberto','ração ou remédio que não cobre','#B3261E','recepcao') ].filter(Boolean).join('');
+                  q(saemHoje,'Saem hoje','a monitora precisa juntar as coisas','#DEB428','checkout'),
+                  q(avisar,'Avisar tutores','não comeram hoje','#E08856','emporio') ].filter(Boolean).join('');
     el.innerHTML=cards
-      ? '<div style="display:flex;gap:11px;flex-wrap:wrap">'+cards+'</div>'
-      : '<div style="background:rgba(30,132,73,.10);border:1.5px solid #1E8449;border-radius:12px;padding:14px;font-weight:800;color:#1E8449;text-align:center">✅ Nada pendente agora. Tudo em dia.</div>';
+      ? '<div class="dash-tiles">'+cards+'</div>'
+      : '<div class="dash-zen"><span style="font-size:22px">✓</span><span><span class="zt">Nada pendente agora</span>'
+        +'<span class="zs">Conferências feitas, ninguém esperando na recepção e nenhum tutor a avisar.</span></span></div>';
     const st=document.getElementById('pendAtualizado');
     if(st){ const d=new Date(); st.textContent='atualizado às '+String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0'); }
   }
@@ -2821,34 +2990,45 @@
     const tt=document.getElementById('cartTotal');
     if(tt) tt.textContent=R.total+' peludinho'+(R.total===1?'':'s')+' ativo'+(R.total===1?'':'s');
     const quadro=function(n,rot,sub,cor,filtro){
-      return '<div onclick="irParaRenovacao(\''+filtro+'\')" style="cursor:pointer;flex:1 1 150px;min-width:140px;border:2px solid '+cor+';border-radius:14px;padding:12px 14px;background:#fff">'
-        +'<div style="font-size:30px;font-weight:800;line-height:1;color:'+cor+'">'+n+'</div>'
-        +'<div style="font-size:13.5px;font-weight:800;color:var(--z-blue);margin-top:3px">'+rot+'</div>'
-        +(sub?'<div style="font-size:11.5px;color:var(--muted);font-weight:600;margin-top:2px">'+sub+'</div>':'')+'</div>';
+      return '<button class="cart-q" onclick="irParaRenovacao(\''+filtro+'\')">'
+        +'<span class="cq-l"><i class="cq-dot" style="background:'+cor+'"></i>'+rot+'</span>'
+        +'<span class="cq-n" style="color:'+cor+'">'+n+'</span>'
+        +'<span class="cq-s">'+(sub||'')+'</span></button>';
     };
-    box.innerHTML='<div style="display:flex;gap:11px;flex-wrap:wrap">'
-      + quadro(R.cobrar,'A COBRAR', (R.vencido?R.vencido+' vencido(s)':'')+(R.vencido&&R.vence?' · ':'')+(R.vence?R.vence+' vencendo':'') || 'nada a cobrar agora', '#B3261E','cobrar')
-      + quadro(R.emdia,'Em dia','plano ativo','#1E8449','ok')
+    // A barra mostra a proporção da carteira de um golpe de vista — é o que a tabela
+    // de números sozinha não dava: 12 a cobrar em 130 é muito diferente de 12 em 20.
+    const somaSit=(R.cobrar+R.emdia+R.semplano)||1;
+    const pct=function(v){ return (v*100/somaSit).toFixed(2)+'%'; };
+    box.innerHTML='<div class="cart-top">'
+      + quadro(R.cobrar,'A cobrar',
+          (R.vencido&&R.vence) ? (R.vencido+' vencidos · '+R.vence+' vencendo')
+          : (R.vencido ? 'a vigência já venceu'
+          : (R.vence ? 'vencem nos próximos dias' : 'nada a cobrar agora')), '#B3261E','cobrar')
+      + quadro(R.emdia,'Em dia','plano ativo, sem pendência','#1E8449','ok')
       + quadro(R.semplano,'Sem plano','nunca lançaram vigência','#DEB428','sem')
+      + '</div>'
+      + '<div class="cart-bar" title="A cobrar · Em dia · Sem plano">'
+      +   '<i style="background:#B3261E;width:'+pct(R.cobrar)+'"></i>'
+      +   '<i style="background:#1E8449;width:'+pct(R.emdia)+'"></i>'
+      +   '<i style="background:#DEB428;width:'+pct(R.semplano)+'"></i>'
       + '</div>';
     const tipos=document.getElementById('cartTipos'); if(!tipos) return;
     const linha=function(n,rot,sub,cor){
-      return '<div style="flex:1 1 130px;min-width:120px;border:1.5px solid var(--line);border-left:5px solid '+cor+';border-radius:12px;padding:10px 12px;background:#fff">'
-        +'<div style="font-size:24px;font-weight:800;line-height:1;color:var(--z-blue)">'+n+'</div>'
-        +'<div style="font-size:13px;font-weight:800;color:var(--z-blue);margin-top:2px">'+rot+'</div>'
-        +'<div style="font-size:11px;color:var(--muted);font-weight:600">'+sub+'</div></div>';
+      if(!n) return '';
+      return '<div class="ct-row"><i class="ct-dot" style="background:'+cor+'"></i>'
+        +'<span class="ct-l">'+rot+'<small>'+sub+'</small></span>'
+        +'<span class="ct-n">'+n+'</span></div>';
     };
-    tipos.innerHTML='<div style="font-size:12px;font-weight:800;color:var(--z-blue);text-transform:uppercase;letter-spacing:.4px;margin-bottom:7px">Por tipo de cliente</div>'
-      +'<div style="display:flex;gap:10px;flex-wrap:wrap">'
-      + linha(R.mensal,'Mensal','plano Silver','#C0C0C0')
+    tipos.innerHTML='<div class="cart-tipos"><div class="ct-h">Por tipo de cliente</div>'
+      + linha(R.mensal,'Mensal','plano Silver','#B9BFC4')
       + linha(R.trimestral,'Trimestral','plano Gold','#DEB428')
       + linha(R.semestral,'Semestral','plano Black','#234D67')
       + linha(R.avulso,'Avulsos','diária, sem plano','#E08856')
       + linha(R.hospedagem,'Só hospedagem','AuAulândia, fora do Day Care','#2E7D8A')
-      + (R.morador?linha(R.morador,'Moradores','nossos — sem cobrança','#6b5f4b'):'')
-      + (R.semTipo?linha(R.semTipo,'Sem tipo','falta lançar o plano na ficha','#B3261E'):'')
-      +'</div>'
-      + (R.semTipo?'<div class="hint" style="margin-top:8px;font-size:11.5px">'+R.semTipo+' peludinho(s) sem vigência lançada — é neles que falta escolher o plano na ficha.</div>':'');
+      + linha(R.morador,'Moradores','nossos — sem cobrança','#6b5f4b')
+      + linha(R.semTipo,'Sem tipo','falta lançar o plano na ficha','#B3261E')
+      + (R.semTipo?'<div class="ct-nota">'+R.semTipo+' peludinho'+(R.semTipo>1?'s':'')+' sem vigência lançada — é neles que falta escolher o plano na ficha.</div>':'')
+      +'</div>';
   }
   // ---- Cadastro-mestre ligado ao hóspede (refKey = pelKey do peludinho escolhido na busca) ----
   // Tutor e alergia/medicação SEMPRE vêm daqui quando existe refKey — nunca mais digitados 2x.
@@ -2991,6 +3171,8 @@
     // (chave muda e a foto "some"). Acha por NOME em qualquer chave dos caches de cadastro.
     if(h&&h.nome&&typeof jsNorm==='function'){
       var alvo=jsNorm(h.nome);
+      // o nó das fotos vem primeiro: é onde elas moram desde 04/ago/2026
+      try{ for(var fk in FOTOS){ if(jsNorm((fk.split('__')[0]||''))===alvo){ var ff=fotoCad(fk); if(ff) return ff; } } }catch(e){}
       var caches=[]; if(typeof pelCadCache!=='undefined'&&pelCadCache) caches.push(pelCadCache); if(typeof cadCache!=='undefined'&&cadCache) caches.push(cadCache);
       for(var ci=0;ci<caches.length;ci++){ var cc=caches[ci]; for(var k in cc){ if(!cc[k]||!cc[k].foto) continue; if(jsNorm((k.split('__')[0]||''))===alvo) return cc[k].foto; } }
       var pm=(typeof pelMestreDe==='function')?pelMestreDe(h):null; if(pm){ var pe=(typeof pelExtra==='function')?pelExtra(pm):null; if(pe&&pe.foto) return pe.foto; }
@@ -3115,14 +3297,12 @@
     if(!currentHosp) return;
     if(!fotoPendente){ alert('Tire ou escolha a foto primeiro (📷 Trocar foto).'); return; }
     const st=document.getElementById('hf-fotostatus');
-    setInfo(currentHosp,{foto:fotoPendente});
     if(DB){ st.style.color='var(--muted)'; st.textContent='Salvando foto...';
+      // Cadastro é ÚNICO e a foto tem lugar ÚNICO: daycare/fotos. Antes ela era gravada
+      // em daycare/cadastro E em auaulandia/cadastro — duas cópias pesadas, nos dois nós
+      // que o app baixa inteiros a cada abertura. Uma cópia só, fora dos ouvintes.
       var _ck=cadKey(currentHosp);
-      // Cadastro é ÚNICO: grava a foto no nó da hospedagem E no cadastro-mestre do Day Care
-      // (daycare/cadastro), que é de onde a chamada do Day Care lê. Assim a foto vale nos dois.
-      DB.ref('daycare/cadastro/'+_ck).update({foto:fotoPendente}).catch(function(){});
-      if(typeof pelCadCache!=='undefined') pelCadCache[_ck]=Object.assign({},pelCadCache[_ck]||{},{foto:fotoPendente});
-      DB.ref('auaulandia/cadastro/'+_ck).update({foto:fotoPendente})
+      salvarFotoCad(_ck, fotoPendente)
         .then(()=>{ st.style.color='var(--crm-ok)'; st.textContent='✅ Foto salva! Aparece em todos os aparelhos (Day Care e AuAulândia).'; fotoPendente=null; renderHosp(); if(typeof renderDaycare==='function') renderDaycare(); })
         .catch(e=>{ st.style.color='var(--crm-critico)'; st.textContent='⚠️ Erro ao salvar a foto: '+e.message; });
     } else { st.style.color='var(--crm-atencao-text)'; st.textContent='Banco conectando... tente de novo em 5s.'; }
@@ -3147,12 +3327,16 @@
   }
   function getCad(h){
     if(!h) return {};
-    var c=cadCache[cadKey(h)];
+    var _k=cadKey(h);
+    var c=cadCache[_k], _k2='';
     if(!c && h.tutor){ // cadastro antigo gravado com o PRIMEIRO NOME do tutor
-      var k2=((h.nome||'')+'__'+String(h.tutor).trim().split(/\s+/)[0]).toLowerCase().replace(/[.#$\[\]\/]/g,'-');
-      c=cadCache[k2];
+      _k2=((h.nome||'')+'__'+String(h.tutor).trim().split(/\s+/)[0]).toLowerCase().replace(/[.#$\[\]\/]/g,'-');
+      c=cadCache[_k2];
     }
-    return c || getInfo(h) || {};
+    var r=c || getInfo(h) || {};
+    // Foto vem do nó próprio (ver "AS FOTOS SAÍRAM DO CADASTRO"). Cópia — nunca mexer no cache.
+    if(!r.foto){ try{ var f=fotoCad(_k)||(_k2?fotoCad(_k2):''); if(f) r=Object.assign({},r,{foto:f}); }catch(e){} }
+    return r;
   }
   // Aceita data digitada OU colada de outro cadastro: dd/mm/aaaa, dd-mm-aaaa, dd.mm.aaaa, dd/mm/aa ou ISO aaaa-mm-dd → devolve ISO (aaaa-mm-dd) ou '' se ainda incompleta
   function parseNascToISO(v){
@@ -6974,10 +7158,26 @@
   // --- ficha mestre: campos extras editáveis (persistem local + Firebase) ---
   function pelKey(p){ return ((p.n||'')+'__'+(p.tutor||'')).toLowerCase().replace(/[.#$\[\]\/]/g,'-'); }
   pelCadCache={};
-  function pelExtra(p){ const k=pelKey(p); let local={}; try{ local=JSON.parse(localStorage.getItem('zeluz_pel_'+k)||'{}'); }catch(e){} const remote=pelCadCache[k]||{}; return Object.assign({},local,remote); }
+  function pelExtra(p){ const k=pelKey(p); let local={}; try{ local=JSON.parse(localStorage.getItem('zeluz_pel_'+k)||'{}'); }catch(e){} const remote=pelCadCache[k]||{};
+    const o=Object.assign({},local,remote);
+    // A foto não mora mais na ficha (ver "AS FOTOS SAÍRAM DO CADASTRO"). Cadastro antigo que
+    // ainda tem `foto` gravada continua valendo — a mudança é invisível para quem usa.
+    if(!o.foto){ try{ const f=fotoCad(k); if(f) o.foto=f; }catch(e){} }
+    return o; }
   function setPelExtra(p,patch){
-    const o=pelExtra(p); Object.assign(o,patch); localStorage.setItem('zeluz_pel_'+pelKey(p),JSON.stringify(o));
-    if(DB) DB.ref('daycare/cadastro/'+pelKey(p)).update(patch).catch(()=>{});
+    const k=pelKey(p);
+    // Foto é o único campo que não vai para o cadastro nem para a cópia local da ficha:
+    // ela é pesada e tem nó próprio, que só desce quando muda.
+    if(patch && patch.foto){
+      try{ salvarFotoCad(k, patch.foto); }catch(e){}
+      patch=Object.assign({},patch); delete patch.foto;
+      if(!Object.keys(patch).length){
+        const s0=document.getElementById('pel-saved'); if(s0){ s0.textContent='✓ Salvo'; setTimeout(()=>{ if(s0) s0.textContent=''; },1200); }
+        return;
+      }
+    }
+    const o=pelExtra(p); Object.assign(o,patch); delete o.foto; localStorage.setItem('zeluz_pel_'+k,JSON.stringify(o));
+    if(DB) DB.ref('daycare/cadastro/'+k).update(patch).catch(()=>{});
     const s=document.getElementById('pel-saved'); if(s){ s.textContent='✓ Salvo'; setTimeout(()=>{ if(s) s.textContent=''; },1200); }
   }
   function segBtnsPel(field,val,opts){ return opts.map(o=>`<button class="${val===o?'on':''}" onclick="pick(this);setPelExtra(pelAtual,{${field}:this.textContent.trim()})">${o}</button>`).join(''); }
@@ -7090,6 +7290,10 @@
     if(kA===kB){ setPelExtra(p,patch); return Promise.resolve(); }   // só trocou maiúscula/acento
     const dados=Object.assign({}, pelExtra(p), patch, {n:alvo.n, tutor:alvo.tutor, _novo:true, _renomeado_de:kA, _renomeado_em:Date.now()});
     delete dados.excluido;
+    // A foto tem nó próprio desde 04/ago/2026: ela é MOVIDA junto, mas nunca volta para
+    // dentro do cadastro (senão o app recomeçaria a baixar foto a cada abertura).
+    const _fotoMove=dados.foto; delete dados.foto;
+    if(_fotoMove){ try{ salvarFotoCad(kB,_fotoMove); delete FOTOS[kA]; if(DB) DB.ref('daycare/fotos/'+kA).remove().catch(function(){}); }catch(e){} }
     p.n=alvo.n; p.tutor=alvo.tutor;
     try{ localStorage.setItem('zeluz_pel_'+kB, JSON.stringify(dados)); localStorage.removeItem('zeluz_pel_'+kA); }catch(e){}
     if(typeof audit==='function') audit('cadastro-renomeado', kA+' → '+kB, {pet:alvo.n});
@@ -8326,10 +8530,12 @@
         ? `<div class="dc-ribbon ${ok?'veio':'pend'}" ${naoComeu?'style="background:var(--crm-critico);color:#fff"':(naAplica?'style="background:#7C8B99;color:#fff"':'')}>${ok?'COMEU':(naoComeu?'NAO COMEU':(naAplica?'NAO SE APLICA':'FALTA SERVIR'))}</div>`
         : `<div class="dc-ribbon ${ok?'veio':'pend'}">${ok?'FEITO':'PENDENTE'}</div>`;
       const acoes=_a2
-        ? `<div class="dc-actions alm-actions">
-            <button class="alm-btn tudo ${ok?'on':''}" onclick="marcarAlmoco2('${k}','comeu')">Comeu</button>
-            <button class="alm-btn nao ${naoComeu?'on':''}" onclick="marcarAlmoco2('${k}','nao')">Nao comeu</button>
-            <button class="alm-btn na ${naAplica?'on':''}" onclick="marcarAlmoco2('${k}','na')">Não se aplica</button>
+        ? `<div class="alm-actions">
+            <div class="alm-seg duo">
+              <button class="alm-btn tudo ${ok?'on':''}" onclick="marcarAlmoco2('${k}','comeu')">Comeu</button>
+              <button class="alm-btn nao ${naoComeu?'on':''}" onclick="marcarAlmoco2('${k}','nao')">Não comeu</button>
+            </div>
+            <button class="alm-na ${naAplica?'on':''}" onclick="marcarAlmoco2('${k}','na')">Não se aplica</button>
           </div>`
         : `<div class="dc-actions"><button class="dc-btn veio ${ok?'on':''}" style="flex:1" onclick="marcarGenerico('${k}')">${ok?'&#10003; Feito':'Marcar feito'}</button></div>`;
       return `<div class="pet dc-card ${ok?'veio':''}${naoComeu?' nao':''}">
@@ -8466,6 +8672,89 @@
       +' &mdash; confira o nome na planilha ou marque à mão aqui. Não apliquei sozinho para não trocar o peludinho.</div>';
     return h;
   }
+  // ===== EXCEL DA GRADE DE ALMOÇO — a contingência de papel ==========================
+  // Adriana, 04/ago/2026: "preciso que as turminhas gerem relatório em Excel completo,
+  // com nome, raça, dia da semana, se come, comedouro lento ou não, o que come e quanto
+  // come — para termos impresso caso dê erro no almoço."
+  // Sai a semana INTEIRA (segunda a sexta), na ordem de servir. A ordem do banho NÃO entra:
+  // ela muda toda semana pela planilha, e uma folha impressa não pode mentir sobre isso —
+  // por isso vai como aviso no cabeçalho, não como ordenação.
+  function _gaPrio(o){
+    try{ if(typeof ehAnsioso==='function' && ehAnsioso(o.p)) return 0; }catch(e){}      // comedouro lento
+    try{ if(typeof temGeladeira==='function' && temGeladeira(almCad(o.p))) return 1; }catch(e){} // natural/geladeira
+    return 2;
+  }
+  function gradeAlmocoDados(){
+    const out=[];
+    ORDEM_DIAS.forEach(function(d){
+      const lista=PELUDINHOS.map(function(p,i){ return {p:p,i:i}; })
+        .filter(function(o){ return pelDias(o.p).indexOf(d)>=0 && !pelInativo(o.p); })
+        .sort(function(x,y){ const px=_gaPrio(x),py=_gaPrio(y); if(px!==py) return px-py;
+          return jsNorm(x.p.n).localeCompare(jsNorm(y.p.n),'pt',{sensitivity:'base'}); });
+      lista.forEach(function(o,idx){
+        const p=o.p, a=almCad(p), ex=pelExtra(p);
+        out.push({ dia:DIA_FULL[d], ordem:idx+1,
+          nome:pelNome(p)||p.n||'', raca:pelGet(p,'raca')||'', tutor:pelGet(p,'tutor')||'',
+          almoca:(a ? (a.nao?'NÃO almoça':'Sim') : 'não cadastrado'),
+          lento:(a&&a.lento)?'LENTO':'normal',
+          oque:(a&&a.alim)||'', quanto:(a&&a.quant)||'',
+          obs:(a&&a.extra)||'',
+          restr:((a&&a.restr)||ex.restricao||ex.alergia||'') });
+      });
+    });
+    return out;
+  }
+  function gradeAlmocoHTML(){
+    const dados=gradeAlmocoDados();
+    if(!dados.length) return '';
+    const e=function(v){ return escAttr(v==null?'':String(v)); };
+    const hoje=new Date(), p2=function(x){ return String(x).padStart(2,'0'); };
+    const carimbo=p2(hoje.getDate())+'/'+p2(hoje.getMonth()+1)+'/'+hoje.getFullYear()+' às '+p2(hoje.getHours())+':'+p2(hoje.getMinutes());
+    const COLS=['#','Peludinho','Raça','Tutor','Almoça?','Comedouro','O que come','Quanto come','Observações','RESTRIÇÃO'];
+    let h='<html xmlns:x="urn:schemas-microsoft-com:office:excel"><head><meta charset="UTF-8">'
+      +'<style>body{font-family:Calibri,Arial,sans-serif}'
+      +'td,th{border:1px solid #b6c2cc;padding:4px 7px;font-size:11pt;vertical-align:top}'
+      +'th{background:#234D67;color:#FFFDF6;font-weight:bold;text-align:left}'
+      +'.dia{background:#DEB428;color:#234D67;font-weight:bold;font-size:13pt}'
+      +'.na{color:#7C8B99}.lento{background:#FBF3D2;font-weight:bold}'
+      +'.restr{background:#F6D8D4;color:#8E1B10;font-weight:bold}</style></head><body>';
+    h+='<table><tr><td colspan="10" style="border:none;font-size:16pt;font-weight:bold;color:#234D67">Zêluz &middot; Grade de almoço das turminhas</td></tr>'
+      +'<tr><td colspan="10" style="border:none;font-size:10pt;color:#555">Gerado em '+e(carimbo)+' &middot; '+dados.length+' linhas &middot; '
+      +'ordem de servir: comedouro lento, depois comida natural/geladeira, depois os outros. '
+      +'Quem tem <b>banho no dia</b> almoça ANTES de todos &mdash; isso muda toda semana, confira a planilha do dia.</td></tr></table><br>';
+    let diaAtual='';
+    dados.forEach(function(r){
+      if(r.dia!==diaAtual){
+        if(diaAtual) h+='</table><br>';
+        diaAtual=r.dia;
+        h+='<table><tr><td class="dia" colspan="10">'+e(r.dia)+'</td></tr><tr>'
+          +COLS.map(function(c){ return '<th>'+e(c)+'</th>'; }).join('')+'</tr>';
+      }
+      const naoAlm=(r.almoca!=='Sim');
+      h+='<tr'+(naoAlm?' class="na"':'')+'>'
+        +'<td>'+r.ordem+'</td><td><b>'+e(r.nome)+'</b></td><td>'+e(r.raca)+'</td><td>'+e(r.tutor)+'</td>'
+        +'<td'+(naoAlm?' style="font-weight:bold"':'')+'>'+e(r.almoca)+'</td>'
+        +'<td'+(r.lento==='LENTO'?' class="lento"':'')+'>'+e(r.lento)+'</td>'
+        +'<td>'+e(r.oque)+'</td><td><b>'+e(r.quanto)+'</b></td><td>'+e(r.obs)+'</td>'
+        +'<td'+(r.restr?' class="restr"':'')+'>'+e(r.restr)+'</td></tr>';
+    });
+    h+='</table></body></html>';
+    return h;
+  }
+  function baixarGradeAlmoco(){
+    const h=gradeAlmocoHTML();
+    if(!h){ alert('A grade ainda não carregou. Espere alguns segundos e tente de novo.'); return; }
+    const hoje=new Date(), p2=function(x){ return String(x).padStart(2,'0'); };
+    const dados=gradeAlmocoDados();
+    const nome='Zeluz-grade-almoco-'+hoje.getFullYear()+'-'+p2(hoje.getMonth()+1)+'-'+p2(hoje.getDate())+'.xls';
+    try{
+      const blob=new Blob(['﻿'+h],{type:'application/vnd.ms-excel;charset=utf-8'});
+      const url=URL.createObjectURL(blob), a=document.createElement('a');
+      a.href=url; a.download=nome; document.body.appendChild(a); a.click();
+      setTimeout(function(){ URL.revokeObjectURL(url); a.remove(); },1500);
+      if(typeof audit==='function') audit('grade-almoco-excel', dados.length+' linhas', {arquivo:nome});
+    }catch(err){ alert('Não consegui gerar o arquivo: '+err.message); }
+  }
   function renderAlmoco(){
     if(!document.getElementById('almGrid')) return;
     // Quem "não almoça" FICA na grade (Adriana, 04/ago/2026): "por mais que não almocem,
@@ -8531,11 +8820,13 @@
           ${ph}<div class="nm">${nomeDesamb(o,list)}</div><div class="br">${p.raca||'-'}</div>
         </div>
         ${seloBanho(k)}${seloAnsioso(p,temBanho(k))}${o.daPlanilha?seloPlanilha(o):(o.foraDia?seloForaDia(o):seloAdapt(ex))}${neon}${info}${avisoNaoAlm}
-        <div class="dc-actions alm-actions">
-          <button class="alm-btn tudo ${m==='tudo'?'on':''}" onclick="marcarAlmoco('${k}','tudo')">Comeu tudo</button>
-          <button class="alm-btn metade ${m==='metade'?'on':''}" onclick="marcarAlmoco('${k}','metade')">Metade</button>
-          <button class="alm-btn nao ${m==='nao'?'on':''}" onclick="marcarAlmoco('${k}','nao')">Nao comeu</button>
-          <button class="alm-btn na ${m==='na'?'on':''}" onclick="marcarAlmoco('${k}','na')">Não se aplica</button>
+        <div class="alm-actions">
+          <div class="alm-seg">
+            <button class="alm-btn tudo ${m==='tudo'?'on':''}" onclick="marcarAlmoco('${k}','tudo')">Comeu</button>
+            <button class="alm-btn metade ${m==='metade'?'on':''}" onclick="marcarAlmoco('${k}','metade')">Metade</button>
+            <button class="alm-btn nao ${m==='nao'?'on':''}" onclick="marcarAlmoco('${k}','nao')">Não comeu</button>
+          </div>
+          <button class="alm-na ${m==='na'?'on':''}" onclick="marcarAlmoco('${k}','na')">Não se aplica</button>
         </div>
       </div>`;
     }).join('');
