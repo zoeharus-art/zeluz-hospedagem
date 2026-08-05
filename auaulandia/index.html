@@ -4194,8 +4194,21 @@
       : '<div class="avr-resolvido-banner">Resolvido — ração encaminhada.</div><div style="text-align:right;margin-top:8px"><button class="btn" style="background:var(--z-cream-warm);color:var(--z-blue);border:1.5px solid var(--line)" onclick="avisoRacaoReabrir(\''+id+'\')">Reabrir</button></div>';
     // O mesmo canal atende ração e medicação (itens 3 e 4) — o título diz qual é qual.
     var _rot=(a.tipo==='medicacao')?('💊 Remédio '+escAttr(a.itemNome||''))
-            :(a.tipo==='medicacao-sem-contagem')?('❓ Contar remédio '+escAttr(a.itemNome||'')):'🍖 Ração/comida';
-    return '<div class="avr-card '+cls+'"><div class="avr-head"><div class="avr-info"><div class="avr-nome">'+_rot+' — '+escAttr(a.hospNome||'Hóspede')+'</div><div class="avr-sub">'+(a.tutor?('Tutor: '+escAttr(a.tutor)+' — '):'')+escAttr(det)+'</div></div>'+chip+'</div><div class="avr-body">'+trilha+form+'</div></div>';
+            :(a.tipo==='medicacao-sem-contagem')?('❓ Contar remédio '+escAttr(a.itemNome||''))
+            :(a.tipo==='comida-natural')?'🥩 Comida natural':'🍖 Ração/comida';
+    // Aviso antigo não guardava o que faltou — a Recepção lia "ração" mesmo quando era
+    // remédio (o caso do Arthur). Quem está com o chamado na mão corrige aqui.
+    var _corrige=(status!=='resolvido' && a.tipo!=='medicacao-sem-contagem')
+      ? '<div class="avr-corrige" style="margin-bottom:8px;font-size:12px;color:var(--muted);font-weight:600">O que faltou? '
+        +[['racao','Ração/comida'],['comida-natural','Comida natural'],['medicacao','Remédio']].map(function(t){
+            var on=((a.tipo||'racao')===t[0]);
+            return '<button type="button" onclick="avisoTrocarTipo(\''+id+'\',\''+t[0]+'\')" style="margin-left:5px;padding:3px 10px;border-radius:999px;cursor:pointer;font-family:inherit;font-size:12px;font-weight:700;'
+              +(on?'background:var(--z-blue);color:var(--z-cream);border:1px solid var(--z-blue)':'background:#fff;color:var(--z-blue-soft);border:1px solid var(--line)')+'">'+t[1]+'</button>';
+          }).join('')
+        +(a.tipoCorrigidoPor?'<div style="margin-top:4px;font-size:11px">corrigido por '+escAttr(a.tipoCorrigidoPor)+'</div>':'')
+        +'</div>'
+      : '';
+    return '<div class="avr-card '+cls+'"><div class="avr-head"><div class="avr-info"><div class="avr-nome">'+_rot+' — '+escAttr(a.hospNome||'Hóspede')+'</div><div class="avr-sub">'+(a.tutor?('Tutor: '+escAttr(a.tutor)+' — '):'')+escAttr(det)+'</div></div>'+chip+'</div><div class="avr-body">'+trilha+_corrige+form+'</div></div>';
   }
   function renderAvisosRacao(){
     var el=document.getElementById('avisosRacaoList'); if(!el) return;
@@ -5063,6 +5076,27 @@
     return h;
   }
   function toggleMonPerm(i){ const w=document.getElementById('monPerm-'+i); if(!w) return; const open=w.style.display!=='none'; w.style.display=open?'none':'block'; if(!open) w.innerHTML=permEditInner(i,MONITORES[i]); }
+  // ===== O QUE A PESSOA VÊ, SEM PRECISAR ABRIR (Adriana, 05/ago/2026) ================
+  // "Não aparece nas Pessoas & Turnos permissão para Plantão AuAulândia... a Giulia hoje faz
+  //  isso, mas preciso deixar com pessoas para fazerem."
+  // A permissão EXISTIA e 6 das 7 pessoas já a tinham — só que ficava escondida atrás do
+  // botão "🔐 Permissões", um a um. Quem abria a tela via só nome, papel, senha e horário e
+  // concluía que a permissão não existia. Agora o resumo vem na própria linha.
+  function permResumoInner(m){
+    const rot={}; NAV_PAGINAS_ALL.forEach(function(g){ g.itens.forEach(function(it){ rot[it.k]=it.t; }); });
+    const pset=monPaginasSet(m), aset=monAtividadesSet(m);
+    if(!pset.length && !aset.length)
+      return '<div style="margin-top:8px;background:rgba(222,180,40,.14);border:1px solid var(--z-gold);border-radius:9px;padding:8px 11px;font-size:12.5px;font-weight:700;color:var(--z-blue)">'
+        +'Sem nenhuma tela liberada — '+escAttr(m.nome||'esta pessoa')+' entra e não vê nada para fazer. Abra as permissões abaixo e marque o que ela faz.</div>';
+    const chip=function(t,cor){ return '<span style="display:inline-block;background:'+cor+';border-radius:999px;padding:3px 10px;margin:2px 4px 2px 0;font-size:11.5px;font-weight:700;color:var(--z-blue)">'+escAttr(t)+'</span>'; };
+    let h='<div style="margin-top:8px"><div style="font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin-bottom:4px">Hoje esta pessoa vê</div>';
+    h+=pset.map(function(k){ return chip(rot[k]||k, 'rgba(35,77,103,.10)'); }).join('');
+    if(aset.length){
+      const rotA={}; ATIVS_DC.forEach(function(a){ rotA[a.s]=a.t; });
+      h+=aset.map(function(s){ return chip('Day Care: '+(rotA[s]||s), 'rgba(222,180,40,.20)'); }).join('');
+    }
+    return h+'</div>';
+  }
   // ===== EDIÇÃO DE MONITORES (Gestão) — nome, senha e horário =====
   // Papéis que a Gestão pode atribuir a uma pessoa no cadastro (Adriana/Márcia = Gestão, fixos).
   const ROLE_OPCOES=[
@@ -5089,7 +5123,7 @@
         </div>
         ${chefe
           ? `<div class="hint" style="margin-top:8px;background:rgba(39,174,96,.1);border:1px solid var(--crm-ok);border-radius:9px;padding:8px 11px;font-weight:700;color:var(--crm-ok)">Supervisão vê TUDO — não precisa configurar permissões.</div>`
-          : `<button type="button" class="med-add" style="width:auto;margin-top:8px" onclick="toggleMonPerm(${i})">🔐 Permissões — o que ${(m.nome||'esta pessoa')} vê no menu</button><div id="monPerm-${i}" style="display:none"></div>`}
+          : `${permResumoInner(m)}<button type="button" class="med-add" style="width:auto;margin-top:8px" onclick="toggleMonPerm(${i})">🔐 Permissões — o que ${(m.nome||'esta pessoa')} vê no menu</button><div id="monPerm-${i}" style="display:none"></div>`}
         <div style="text-align:right;margin-top:8px"><button type="button" class="ativ-del" style="font-size:12px" onclick="removerPessoa(${i})">🗑️ Remover pessoa</button></div>
       </div>`;
     }).join('') + `<button type="button" class="btn btn-gold" style="width:100%;margin-top:6px" onclick="addPessoa()">+ Adicionar pessoa</button>`;
@@ -5121,9 +5155,11 @@
     if(!id){ id=(self.crypto&&crypto.randomUUID)?crypto.randomUUID():('dev-'+Date.now()+'-'+Math.floor(Math.random()*1e9)); try{ localStorage.setItem('zeluz_device_id',id); }catch(e){} }
     return id; }
   function deviceLocalOk(){ try{ return localStorage.getItem('zeluz_device_ok')==='1'; }catch(e){ return false; } }
+  // cb(autorizado, semResposta) — semResposta=true quando não deu para perguntar ao banco
+  // (sem internet). Quem chama decide o que fazer nesse caso; ver doLogin.
   function deviceAutorizado(cb){ const id=getDeviceId();
-    if(DB){ DB.ref('auaulandia/aparelhos/'+id).once('value').then(s=>{ const ok=!!s.val(); try{ if(ok) localStorage.setItem('zeluz_device_ok','1'); else localStorage.removeItem('zeluz_device_ok'); }catch(e){} cb(ok); }).catch(()=>cb(deviceLocalOk())); }
-    else { cb(deviceLocalOk()); } }
+    if(DB){ DB.ref('auaulandia/aparelhos/'+id).once('value').then(s=>{ const ok=!!s.val(); try{ if(ok) localStorage.setItem('zeluz_device_ok','1'); else localStorage.removeItem('zeluz_device_ok'); }catch(e){} cb(ok,false); }).catch(()=>cb(deviceLocalOk(),true)); }
+    else { cb(deviceLocalOk(),true); } }
   function mostrarStatusDevice(){ const el=document.getElementById('deviceStatus'); if(!el) return; deviceAutorizado(function(ok){ el.innerHTML= ok?'Este aparelho está autorizado &#10003;':'Este aparelho ainda <strong>não está autorizado</strong>. A Gestão precisa autorizar.'; el.style.color= ok?'var(--crm-ok)':'var(--crm-atencao-text)'; }); }
   function autorizarAparelho(){ const err=document.getElementById('loginErr'); err.style.color='';
     const v=(document.getElementById('loginPwd').value||'').trim(); const u=senhasRuntime()[v];
@@ -5136,9 +5172,18 @@
     const v=(document.getElementById('loginPwd').value||'').trim();
     const u=senhasRuntime()[v]; const err=document.getElementById('loginErr'); err.style.color='';
     if(!u){ err.textContent='Senha incorreta. Tente de novo.'; return; }
-    const ehGestao=(u.role==='gestao'||u.role==='supervisor'||u.role==='consultora'||u.role==='diretoria'||u.role==='vet');
-    deviceAutorizado(function(ok){
-      if(ok || ehGestao){ sessionStorage.setItem('zeluz_login', JSON.stringify(u)); aplicarLogin(u); return; }
+    // ===== TRAVA DE APARELHO PARA TODOS (Adriana, 05/ago/2026) =======================
+    // "Qualquer aparelho para acessar precisa ser autorizado pela Gestão — senha minha ou
+    //  da Márcia." Antes Gestão, Supervisão, Recepção e Veterinária entravam em QUALQUER
+    //  celular: bastava a senha vazar para o sistema abrir em um aparelho de fora.
+    // Agora a trava vale para todo mundo. Quem autoriza continua sendo só a Gestão, na
+    // própria tela de entrada — então a Adriana e a Márcia nunca ficam trancadas fora:
+    // digitam a senha delas e tocam em "Autorizar este aparelho".
+    const ehGestaoPura=(u.role==='gestao'||u.role==='diretoria');
+    deviceAutorizado(function(ok, semResposta){
+      // Sem internet para consultar a lista de aparelhos: a Gestão ainda entra, senão um
+      // problema de rede tranca a dona do negócio fora do próprio sistema.
+      if(ok || (semResposta && ehGestaoPura)){ sessionStorage.setItem('zeluz_login', JSON.stringify(u)); aplicarLogin(u); return; }
       // Aparelho não autorizado e não é gestão → bloqueia
       // FICA REGISTRADO (03/ago/2026): a Letícya e o Octávio ficaram dias sem conseguir
       // trabalhar e ninguém sabia por quê — a tentativa barrada não deixava rastro nenhum.
@@ -7609,6 +7654,35 @@
       <div class="field"><label>Comedouro lento?</label><div class="seg gold" data-single>${seg('lento',a.lento?'Sim':'Nao',['Sim','Nao'])}</div></div>
       <div class="field"><label>NÃO almoça na creche?</label><div class="seg gold" data-single>${seg('nao',a.nao?'Sim':'Nao',['Sim','Nao'])}</div></div>`;
   }
+  // ===== INATIVAR EM UM CAMINHO SÓ (Adriana, 05/ago/2026) ============================
+  // O campo existia, mas no FIM da aba "Atenção · Saúde e Cuidados" — o último lugar onde
+  // alguém procura por "inativar" — e clicar em "Sim" não dizia nada: nenhuma confirmação,
+  // nenhum motivo cobrado, e a pessoa não sabia se tinha funcionado.
+  // Agora: botão no topo da ficha, motivo OBRIGATÓRIO (é ele que a Márcia lê depois) e
+  // confirmação na tela, voltando para a lista já sem o FILHOt.
+  function inativarPeludinhoRapido(){
+    if(!pelAtual) return;
+    if(!canEditPel()){ alert('Só a Gestão, a Supervisão ou a Diretoria podem inativar um FILHOt.'); return; }
+    const ex=pelExtra(pelAtual)||{}; const nome=pelNome(pelAtual)||pelAtual.n||'este FILHOt';
+    if(ex.inativo==='Sim'){
+      if(!confirm(nome+' está inativo.\n\nReativar? Ele volta para as listas do dia e para a chamada.')) return;
+      const hist=Array.isArray(ex.saidas)?ex.saidas.slice():[];
+      setPelExtra(pelAtual,{inativo:'Nao'});
+      if(typeof audit==='function') audit('peludinho-reativado', nome);
+      alert('✅ '+nome+' voltou. Ele já aparece de novo nas listas do dia.');
+      renderPelFicha(); if(typeof renderPel==='function') renderPel(); return;
+    }
+    const motivo=(prompt('Inativar '+nome+' — por que ele saiu do Day Care?\n\nO motivo é obrigatório: é ele que a Márcia lê no painel da Gestão para saber quem contatar.\n\nEx.: mudou de cidade · brigas · falecido · parou de vir','')||'').trim();
+    if(!motivo){ alert('Sem o motivo eu não inativo. Se não souber ainda, pergunte antes — o cadastro continua ativo.'); return; }
+    const hoje=new Date(), p2=x=>String(x).padStart(2,'0');
+    const data=p2(hoje.getDate())+'/'+p2(hoje.getMonth()+1)+'/'+hoje.getFullYear();
+    setPelExtra(pelAtual,{inativo:'Sim', motivoSaida:motivo, dataSaida:data});
+    if(typeof audit==='function') audit('peludinho-inativado', nome, {motivo:motivo});
+    alert('✅ '+nome+' foi inativado.\n\nMotivo: '+motivo+'\nData: '+data+'\n\nEle sai das listas do dia e da chamada. O cadastro e todo o histórico continuam guardados em Relatórios › Inativos — nada foi apagado.');
+    if(typeof renderPel==='function') renderPel();
+    if(typeof renderKPIs==='function') renderKPIs();
+    voltarPel();
+  }
   // Saída do Day Care — inativa sem apagar nada.
   function camposSaidaFicha(){
     const ex=pelExtra(pelAtual)||{};
@@ -7780,6 +7854,10 @@
           <div class="so-gestao" style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px">
             <button class="btn-foto-mini" onclick="document.getElementById('pelFotoFile').click()">📷 Inserir foto</button>
             <button class="btn-foto-mini" style="background:var(--z-blue);color:var(--z-cream)" onclick="salvarFotoPel()">💾 Salvar foto</button>
+            <!-- Adriana, 05/ago/2026: "tínhamos uma caixa para inativar e o porquê — onde está?
+                 Estou tentando inativar um e não consigo." O campo existia, mas enterrado no fim
+                 da aba "Atenção", sem nenhum retorno ao clicar. Agora o caminho é este botão. -->
+            <button class="btn-foto-mini" style="background:var(--crm-critico);color:#fff" onclick="inativarPeludinhoRapido()">${pelExtra(p).inativo==='Sim'?'↩ Reativar (voltou)':'Saiu do Day Care — inativar'}</button>
           </div>
           <div id="pelFotoSt" style="font-size:11.5px;font-weight:700;margin-top:5px"></div>
         </div>
@@ -7818,7 +7896,7 @@
         <div class="subtab2 so-sensivel" onclick="pelSubtab(this,'ps-plano')">Plano</div>
         <div class="subtab2" onclick="pelSubtab(this,'ps-saude')">Prevenção &amp; Cuidados Vacinais</div>
         <div class="subtab2" onclick="pelSubtab(this,'ps-rotina')">Rotina</div>
-        <div class="subtab2" onclick="pelSubtab(this,'ps-atencao')">Atenção · Saúde e Cuidados</div>
+        <div class="subtab2" onclick="pelSubtab(this,'ps-atencao')">Atenção · Saúde e Saída</div>
       </div>
 
       <div class="ppanel2 active" id="ps-ident"><div class="card">
@@ -10801,15 +10879,64 @@
   var CF_LISTA=[]; // lista efetiva da Conferência (check-ins reais + hóspedes do dia) — abrirCfFicha indexa aqui
   // A Conferência é sobre CHECK-INS: mostra todo check-in salvo (CF_ESTADIAS), mesmo que o FILHOt
   // não esteja na lista estática de hóspedes do dia. Depois acrescenta os hóspedes do dia sem check-in.
+  // ===== QUEM ESTÁ DE FATO HOSPEDADO HOJE (Adriana, 05/ago/2026) ======================
+  // "Entrei em conferência de check-in e consta a Stopa, e ela não está hospedada... ela é
+  //  da casa (às vezes fica hospedada mas não tem check-in, nem ela nem o Kako). Arthur pode
+  //  tirar porque já foi embora. Somente o Pufe está para conferir."
+  //
+  // Causa: NADA encerra a estadia quando a data de saída passa. A estadia fica `ativa` para
+  // sempre e o FILHOt continua aparecendo na Conferência e no Check-out — a Stopa saiu em
+  // 25/jul e ainda estava lá. Agora as telas olham a JANELA da estadia, não só o status.
+  function hojeISO(){ var d=new Date(),p=function(x){return String(x).padStart(2,'0');}; return d.getFullYear()+'-'+p(d.getMonth()+1)+'-'+p(d.getDate()); }
+  function diasISO(n){ var d=new Date(); d.setDate(d.getDate()+n); var p=function(x){return String(x).padStart(2,'0');}; return d.getFullYear()+'-'+p(d.getMonth()+1)+'-'+p(d.getDate()); }
+  // FILHOt da casa (Repolho, Stopa, Kako): nossos. Nunca passam por check-in, conferência ou
+  // check-out — mesmo quando dormem aqui. Casa pela categoria da ficha e, se a chave da estadia
+  // não bater com a do cadastro, pelo nome.
+  function ehMoradorDaCasa(nome, refKey){
+    try{
+      var c=(refKey&&(pelCadCache||{})[refKey])||null;
+      if(c&&c.categoria) return c.categoria==='morador';
+      if(nome&&typeof jsNorm==='function'&&typeof PELUDINHOS!=='undefined'){
+        var alvo=jsNorm(nome);
+        for(var i=0;i<PELUDINHOS.length;i++){
+          if(jsNorm(PELUDINHOS[i].n||'')===alvo)
+            return (typeof pelCategoria==='function') && pelCategoria(PELUDINHOS[i])==='morador';
+        }
+      }
+    }catch(e){}
+    return false;
+  }
+  // Passou da data de saída e ninguém encerrou. Não é "a conferir" — é saída em aberto.
+  function estadiaVencida(e){ var s=(e&&e.saida)||''; return !!(s && s < hojeISO()); }
+  function estadiaFutura(e){ var i=(e&&e.entrada)||''; return !!(i && i > hojeISO()); }
+  // Pernoite = o peludinho estava na creche e o tutor não conseguiu buscar. Não é hospedagem:
+  // não entra no check-out (Adriana, 05/ago/2026).
+  function ehPernoite(e){ return !!(e&&(e.pernoite||e.tipo==='pernoite')); }
+  // Quantas estadias estão com a saída vencida — vira aviso nas telas, não some calado.
+  function estadiasVencidas(){
+    var out=[];
+    Object.keys(CF_ESTADIAS||{}).forEach(function(k){
+      var reg=CF_ESTADIAS[k]||{}, e=reg.e||{};
+      if((e.status||'ativa')!=='ativa') return;
+      if(ehMoradorDaCasa(e.nome,k)) return;
+      if(estadiaVencida(e)) out.push({rk:k, id:reg.id, e:e});
+    });
+    return out;
+  }
   function cfListaHospedes(){
     var out=[], seen={};
     Object.keys(CF_ESTADIAS||{}).forEach(function(k){
       var reg=CF_ESTADIAS[k]||{}; var e=reg.e||{};
+      if((e.status||'ativa')!=='ativa') return;      // encerrada não volta para a fila
+      if(ehMoradorDaCasa(e.nome,k)) return;          // Repolho, Stopa e Kako são da casa
+      if(estadiaVencida(e)||estadiaFutura(e)) return;// só quem está aqui HOJE
       var h={nome:e.nome||'', tutor:e.tutor||'', raca:e.raca||'', refKey:e.refKey||k, ini:((e.nome||'?')[0]||'?').toUpperCase(), cor:'#234D67'};
       var mk=(typeof medAgendaKey==='function')?medAgendaKey(h):k;
       if(seen[mk]) return; seen[mk]=1; out.push(h);
     });
     (hospedes||[]).forEach(function(h){
+      if(ehMoradorDaCasa(h.nome,h.refKey)) return;
+      if(h.mascote) return;
       var mk=(typeof medAgendaKey==='function')?medAgendaKey(h):'';
       if(mk&&seen[mk]) return; if(mk) seen[mk]=1; out.push(h);
     });
@@ -10848,6 +10975,14 @@
     var h='';
     if(idxPend.length) h+=tit('⚠️ FALTA CONFERIR ('+idxPend.length+')','#B3261E','Confira estes antes de qualquer outra coisa.')+grade(idxPend);
     if(idxSem.length) h+=tit('Sem check-in ('+idxSem.length+')','var(--muted)','Estão hospedados mas ninguém fez o check-in — avise a recepção.')+grade(idxSem);
+    // Quem já foi embora sai daqui, mas não some calado: a saída em aberto é trabalho da recepção.
+    try{
+      var _venc=estadiasVencidas();
+      if(_venc.length) h+='<div style="grid-column:1/-1;background:rgba(222,180,40,.14);border:1.5px solid var(--z-gold);border-radius:12px;padding:12px 15px;margin:6px 0;font-size:13px;font-weight:600;color:var(--z-blue)">'
+        +'<strong>'+_venc.length+' estadia'+(_venc.length>1?'s':'')+' passou da data de saída e continua aberta</strong> ('
+        +_venc.slice(0,6).map(function(o){ return escAttr(o.e.nome||'?'); }).join(', ')+(_venc.length>6?' e mais '+(_venc.length-6):'')
+        +'). Eles saíram desta lista porque não estão mais aqui — quem encerra é o <strong>Check-out</strong>.</div>';
+    }catch(e){}
     if(!idxPend.length && !idxSem.length) h+='<div style="grid-column:1/-1;background:rgba(30,132,73,.10);border:1.5px solid #1E8449;border-radius:12px;padding:14px;font-weight:800;color:#1E8449;text-align:center">✅ Tudo conferido. Nada pendente agora.</div>';
     if(idxOk.length){
       h+='<div style="grid-column:1/-1;margin-top:14px"><button type="button" class="med-add" style="width:100%" onclick="cfToggleConferidos()">'
@@ -11107,7 +11242,7 @@
       cfConf.racao=reg;
       if(st){ st.style.color='var(--crm-ok)'; st.textContent='✅ Ração conferida.'; }
       if(typeof audit==='function') audit('conferencia-racao',cfEstadiaId,{pet:(cfHosp&&cfHosp.nome)||'',modo:reg.modo});
-      if(def!=null&&def>0) cfCriarAvisoRacao(def, unidade);
+      if(def!=null&&def>0) cfCriarAvisoRacao(def, unidade, 'racao', 'Ração/comida');
       renderCfGate();
     }).catch(function(e){ if(st){ st.style.color='var(--crm-critico)'; st.textContent='⚠️ Erro: '+e.message; } });
   }
@@ -11149,12 +11284,46 @@
       renderCfGate();
     }).catch(function(e){ if(st){ st.style.color='var(--crm-critico)'; st.textContent='⚠️ Erro: '+e.message; } });
   }
-  function cfCriarAvisoRacao(deficit, unidade){
+  // ===== O AVISO PRECISA DIZER O QUE FALTOU (Adriana, 05/ago/2026) ====================
+  // Dois defeitos, ambos vistos na tela dela:
+  // 1) "O Romeo está com dois chamados abertos, sendo que um já foi respondido — por que
+  //    duplicado?" Os dois foram criados pela mesma pessoa com 1 SEGUNDO de diferença: duplo
+  //    toque no Confirmar, sem trava. Agora trava o botão e não abre um 2º aviso do mesmo
+  //    item se já houver um em aberto na mesma estadia.
+  // 2) "No Arthur o que faltou foi o comprimido, não ração — por que deu erro?" Este caminho
+  //    gravava o aviso SEM dizer o que era, e a Recepção rotula tudo como ração por falta de
+  //    informação. Agora vai com `tipo` e `itemNome`, e a Recepção pode corrigir o item.
+  var __avisoTravado={};
+  function cfCriarAvisoRacao(deficit, unidade, tipo, itemNome){
     if(!DB||!cfHosp) return;
-    var aviso={ hospNome:cfHosp.nome||'', tutor:cfHosp.tutor||'', estadiaId:cfEstadiaId,
-      deficit:deficit, unidade:unidade||'g', status:'pendente', entries:[], criado_por:(typeof quemSou==='function'?quemSou():'-'), _ts:Date.now() };
-    DB.ref('auaulandia/avisos-racao').push(aviso).catch(function(){});
-    if(typeof audit==='function') audit('racao-aviso',cfEstadiaId,{pet:cfHosp.nome||'',deficit:deficit});
+    tipo=tipo||'racao'; itemNome=itemNome||'Ração/comida';
+    var trava=cfEstadiaId+'|'+tipo+'|'+jsNorm(itemNome);
+    if(__avisoTravado[trava]) return;                 // duplo toque no mesmo Confirmar
+    __avisoTravado[trava]=1; setTimeout(function(){ delete __avisoTravado[trava]; }, 15000);
+    DB.ref('auaulandia/avisos-racao').once('value').then(function(s){
+      var v=s.val()||{}, jaAberto=false;
+      Object.keys(v).forEach(function(k){ var x=v[k]||{};
+        if((x.status||'pendente')==='resolvido') return;
+        if(x.estadiaId!==cfEstadiaId) return;
+        if((x.tipo||'racao')===tipo && jsNorm(x.itemNome||'Ração/comida')===jsNorm(itemNome)) jaAberto=true;
+      });
+      if(jaAberto) return;                            // já existe chamado aberto para o mesmo item
+      var aviso={ hospNome:cfHosp.nome||'', tutor:cfHosp.tutor||'', estadiaId:cfEstadiaId,
+        tipo:tipo, itemNome:itemNome,
+        deficit:deficit, unidade:unidade||'g', status:'pendente', entries:[],
+        criado_por:(typeof quemSou==='function'?quemSou():'-'), _ts:Date.now() };
+      DB.ref('auaulandia/avisos-racao').push(aviso).catch(function(){});
+      if(typeof audit==='function') audit('racao-aviso',cfEstadiaId,{pet:cfHosp.nome||'',deficit:deficit,tipo:tipo});
+    }).catch(function(){});
+  }
+  // A Recepção corrige o item quando o aviso nasceu com o rótulo errado (o caso do Arthur:
+  // o chamado dizia ração e o que faltava era comprimido).
+  function avisoTrocarTipo(id, novo){
+    if(!DB||!id) return;
+    var rot={racao:'Ração/comida', 'comida-natural':'Comida natural', medicacao:'Remédio'};
+    var patch={tipo:novo, itemNome:rot[novo]||'Ração/comida', tipoCorrigidoPor:(typeof quemSou==='function'?quemSou():'-'), tipoCorrigidoEm:Date.now()};
+    DB.ref('auaulandia/avisos-racao/'+id).update(patch).catch(function(){});
+    if(typeof audit==='function') audit('aviso-tipo-corrigido', id, {para:novo});
   }
   // ---- Medicação: testar os alarmes (bipDespertador de verdade + confirmação humana) ----
   function renderCfMed(){
@@ -11469,11 +11638,17 @@
   function abrirCheckout(){ document.getElementById('co-lista').style.display='block'; document.getElementById('co-ficha').style.display='none'; coRenderLista(); }
   function coRenderLista(){
     var el=document.getElementById('coGrid'); if(!el) return;
-    var lista=Object.keys(CF_ESTADIAS||{}).map(function(rk){ return {rk:rk, e:(CF_ESTADIAS[rk]&&CF_ESTADIAS[rk].e)||{}, id:(CF_ESTADIAS[rk]&&CF_ESTADIAS[rk].id)||''}; })
+    // Fora do check-out: FILHOt da casa (Repolho, Stopa, Kako) e PERNOITE — pernoite é quem
+    // estava na creche e o tutor não conseguiu buscar; ele não montou bolsa nenhuma para
+    // conferir na saída (Adriana, 05/ago/2026).
+    var todas=Object.keys(CF_ESTADIAS||{}).map(function(rk){ return {rk:rk, e:(CF_ESTADIAS[rk]&&CF_ESTADIAS[rk].e)||{}, id:(CF_ESTADIAS[rk]&&CF_ESTADIAS[rk].id)||''}; })
       .filter(function(o){ return (o.e.status||'ativa')==='ativa'; })
+      .filter(function(o){ return !ehMoradorDaCasa(o.e.nome,o.rk) && !ehPernoite(o.e); })
       .sort(function(a,b){ return jsNorm(a.e.nome||'').localeCompare(jsNorm(b.e.nome||'')); });
-    if(!lista.length){ el.innerHTML='<div class="av-empty" style="grid-column:1/-1"><div class="big">Nenhuma estadia ativa</div>Quando houver hóspede para sair, ele aparece aqui.</div>'; return; }
-    var hoje=(function(){ var d=new Date(),p=function(x){return String(x).padStart(2,'0');}; return d.getFullYear()+'-'+p(d.getMonth()+1)+'-'+p(d.getDate()); })();
+    var vencidas=todas.filter(function(o){ return estadiaVencida(o.e); });
+    var lista=todas.filter(function(o){ return !estadiaVencida(o.e); });
+    if(!todas.length){ el.innerHTML='<div class="av-empty" style="grid-column:1/-1"><div class="big">Nenhuma estadia ativa</div>Quando houver hóspede para sair, ele aparece aqui.</div>'; return; }
+    var hoje=hojeISO(), amanha=diasISO(1);
     var card=function(o){ var e=o.e; var ini=((e.nome||'?')[0]||'?').toUpperCase();
       var et=coEtapaDe(e);
       var selo=(et===2)
@@ -11484,7 +11659,10 @@
         +'<div class="tt">'+(e.tutor?'Tutor: '+escAttr(e.tutor):'—')+(e.saida?' · sai '+ciBRdata(e.saida):' · sem data de saída')+'</div></div>'; };
     var prontos=lista.filter(function(o){ return coEtapaDe(o.e)===2; });
     var saiHoje=lista.filter(function(o){ return coEtapaDe(o.e)===1 && o.e.saida===hoje; });
-    var resto=lista.filter(function(o){ return coEtapaDe(o.e)===1 && o.e.saida!==hoje; });
+    // "Em check-out aparecer quem está para sair — amanhã, por exemplo, sai a Cristal da Ana
+    // Paula." A saída se prepara na véspera; antes só aparecia no próprio dia (Adriana, 05/ago).
+    var saiAmanha=lista.filter(function(o){ return coEtapaDe(o.e)===1 && o.e.saida===amanha; });
+    var resto=lista.filter(function(o){ return coEtapaDe(o.e)===1 && o.e.saida!==hoje && o.e.saida!==amanha; });
     var tit=function(txt,cor,sub){ return '<div style="grid-column:1/-1;margin:4px 0 2px"><div style="font-weight:800;font-size:16px;color:'+cor+'">'+txt+'</div>'+(sub?'<div style="font-size:12.5px;color:var(--muted);font-weight:600">'+sub+'</div>':'')+'</div>'; };
     var grade=function(arr){ return '<div style="grid-column:1/-1;display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:12px">'+arr.map(card).join('')+'</div>'; };
     var h='';
@@ -11497,14 +11675,26 @@
         h+=tit('Conferir com o tutor e assinar ('+prontos.length+')','#1E8449','A bolsa já foi montada. Passe item por item COM O TUTOR, colha a assinatura e entregue o PDF.')+grade(prontos);
         if(saiHoje.length) h+=tit('Ainda sendo preparados lá dentro ('+saiHoje.length+')','var(--muted)','Saem hoje, mas a monitora ainda não terminou de juntar.')+grade(saiHoje);
       }
+      if(saiAmanha.length) h+=tit('Saem AMANHÃ ('+saiAmanha.length+')','#DEB428','Avise a monitora para começar a juntar hoje — a saída se prepara na véspera.')+grade(saiAmanha);
+      h+=coAvisoVencidas(vencidas,tit,grade);
       el.innerHTML=h; return;
     }
     // Tela dos monitores: o que precisa ser juntado.
     if(saiHoje.length) h+=tit('🔴 Saem HOJE — juntar as coisas ('+saiHoje.length+')','#B3261E','Junte tudo que é do FILHOt e toque em "Juntei tudo" para mandar à recepção.')+grade(saiHoje);
+    if(saiAmanha.length) h+=tit('Saem AMANHÃ — já pode ir juntando ('+saiAmanha.length+')','#DEB428','Adiantar hoje evita correria na entrega.')+grade(saiAmanha);
     if(resto.length) h+=tit('Outras estadias em curso ('+resto.length+')','var(--muted)','Ainda não é o dia da saída — só entre aqui se o tutor antecipou.')+grade(resto);
     if(prontos.length) h+=tit('✅ Já entregues à recepção ('+prontos.length+')','#1E8449','Você já juntou. Agora é a consultora que confere com o tutor.')+grade(prontos);
+    h+=coAvisoVencidas(vencidas,tit,grade);
     if(!h) h='<div class="av-empty" style="grid-column:1/-1"><div class="big">Nenhum hóspede para sair</div>Quando alguém tiver saída marcada, ele aparece aqui.</div>';
     el.innerHTML=h;
+  }
+  // Estadia que passou da data e ninguém encerrou. Não pode sumir calada — é trabalho em
+  // aberto que estava entupindo a Conferência (Stopa saiu em 25/jul e ainda aparecia).
+  function coAvisoVencidas(vencidas,tit,grade){
+    if(!vencidas||!vencidas.length) return '';
+    return tit('⏳ Passaram da data e continuam abertas ('+vencidas.length+')','#B3261E',
+      'A saída nunca foi registrada. Enquanto ficarem assim, eles voltam a aparecer nas listas do dia. Abra cada um e finalize o check-out — ou corrija a data em Peludinhos Hóspedes.')
+      +grade(vencidas);
   }
   // ===== ITEM 2 — CHECK-OUT EM DUAS ETAPAS ==========================================
   // Adriana: "quando vai embora, o peludinho passa por um check-out (pelos monitores,
