@@ -10102,7 +10102,27 @@
   var __ciSalvando=false;
   function ciSalvar(){
     const st=document.getElementById('ci-status');
-    if(__ciSalvando){ return; } // trava anti-duplo-toque: 2 toques = 2 check-ins (caso Ozzy, 01/ago)
+    // ===== A TRAVA MUDA (Adriana, 06/ago/2026 — check-in do Toddy) ===================
+    // "Estamos tentando fazer check-in e não nos deixa salvar. Gera o PDF, mas não dá as
+    //  condições de salvar."
+    // Esta linha era `if(__ciSalvando) return;` — SEM DIZER NADA. A trava anti-duplo-toque
+    // liga antes de consultar o banco; se a consulta não voltar (a rede oscila e o
+    // once('value') do Firebase espera para sempre), o botão fica "⏳ Salvando…"
+    // desabilitado e todo toque cai neste return calado. O PDF, que é outro botão,
+    // continua funcionando — daí a sensação de "gera o PDF mas não salva".
+    // Agora a trava fala, e dá saída.
+    if(__ciSalvando){
+      const _preso=(Date.now()-(__ciTravadoDesde||0))>15000;
+      zAlertao(_preso?'O SALVAMENTO TRAVOU':'CALMA — JÁ ESTOU SALVANDO',
+        _preso
+          ? ['O sistema começou a salvar há mais de 15 segundos e o banco não respondeu. Quase sempre é a internet do aparelho.',
+             'Nada foi perdido: a ficha continua preenchida na tela. Toque em "Destravar e tentar de novo".']
+          : ['O check-in está sendo gravado agora. Espere o aviso verde de confirmação antes de tocar de novo — dois toques criam dois check-ins.'],
+        _preso
+          ? {botao:'Destravar e tentar de novo', aoFechar:function(){ __ciTravar(false); }}
+          : {botao:'Entendi'});
+      return;
+    }
     if(!ciHosp){ zAlertao('O CHECK-IN NÃO FOI SALVO',['Nenhum FILHOt está aberto. Volte, toque no peludinho e refaça o check-in.']); return; }
     const dados=ciColetarFicha();
     const _faltas=ciFaltando();
@@ -10139,11 +10159,38 @@
         [ {t:'✅ ACRESCENTAR ao check-in que já existe', cor:'#1E8449', fn:function(){ __ciTravar(true); __ciGravar('acrescentar', ativa.id, pacote); }},
           {t:'Criar mesmo assim um 2º check-in separado', cor:'#B3261E', fn:function(){ __ciTravar(true); __ciGravar('novo', null, pacote); }},
           {t:'Cancelar', cor:'#6b5f4b', fn:function(){ if(st){ st.style.color='var(--crm-atencao-text)'; st.textContent='Nada foi salvo — o check-in que já existe continua como estava.'; } }} ]);
-    }).catch(function(e){ __ciTravar(false); ciBloqueia('erro ao checar duplicidade','Não consegui conferir se ele já está hospedado: '+((e&&e.message)||e)+'. Tente de novo em instantes.','ci-status'); });
+    }).catch(function(e){
+      // Não deu para conferir duplicidade (rede). Não pode virar beco sem saída: a consultora
+      // está com o tutor na frente e precisa fechar o check-in (caso Toddy, 06/ago/2026).
+      __ciTravar(false);
+      zEscolha('NÃO CONSEGUI CONFERIR SE ELE JÁ ESTÁ HOSPEDADO',
+        ['Motivo: '+((e&&e.message)||e)+'.',
+         'Nada foi salvo ainda e a ficha continua preenchida. Você escolhe: tentar de novo (o normal) ou salvar assim mesmo — neste caso confira depois, na Conferência, se ele não ficou com dois check-ins.'],
+        [ {t:'Tentar de novo', cor:'#1E8449', fn:function(){ ciSalvar(); }},
+          {t:'Salvar assim mesmo', cor:'#DEB428', fn:function(){ __ciTravar(true); __ciGravar('novo', null, pacote); }},
+          {t:'Cancelar', cor:'#6b5f4b', fn:function(){ if(st){ st.style.color='var(--crm-atencao-text)'; st.textContent='Nada foi salvo. A ficha continua aqui — é só tocar em Salvar quando a internet voltar.'; } }} ]);
+    });
   }
   // Desabilita o botão enquanto grava (2 toques = 2 check-ins).
+  var __ciTravadoDesde=0, __ciTimerPreso=null;
   function __ciTravar(on){
     __ciSalvando=!!on;
+    __ciTravadoDesde=on?Date.now():0;
+    // Rede de segurança: trava é temporária por natureza. Se em 25s ninguém destravou, o
+    // salvamento morreu no meio — libera o botão e diz o que fazer, em vez de deixar a
+    // consultora tocando num botão morto (caso Toddy, 06/ago/2026).
+    try{ clearTimeout(__ciTimerPreso); }catch(e){}
+    if(on){
+      __ciTimerPreso=setTimeout(function(){
+        if(!__ciSalvando) return;
+        __ciTravar(false);
+        if(typeof zAlertao==='function') zAlertao('O CHECK-IN NÃO FOI SALVO',
+          ['O banco não respondeu em 25 segundos — quase sempre é a internet do aparelho.',
+           'A ficha continua preenchida na tela, nada se perdeu. Confira a conexão e toque em "Salvar no sistema" de novo.'],
+          {botao:'Tentar de novo'});
+        try{ if(typeof audit==='function') audit('checkin-bloqueado','salvamento sem resposta do banco em 25s',{pet:(typeof ciHosp!=='undefined'&&ciHosp&&ciHosp.nome)||''}); }catch(e){}
+      }, 25000);
+    }
     try{ document.querySelectorAll('button').forEach(function(b){
       if(/Salvar no sistema/i.test(b.textContent||'')){ b.disabled=!!on; b.style.opacity=on?'.55':''; b.textContent=on?'⏳ Salvando…':'💾 Salvar no sistema'; }
     }); }catch(e){}
@@ -10151,7 +10198,13 @@
   // Vai ao banco (fonte da verdade) procurar estadia ATIVA deste FILHOt.
   function __ciEstadiaAtivaNoBanco(key, h){
     if(!DB) return Promise.resolve(null);
-    return DB.ref('auaulandia/estadias').once('value').then(function(s){
+    // O `once('value')` do Firebase NÃO tem timeout: se o socket cair, ele espera reconectar
+    // para sempre — e aqui isso segurava o botão de salvar travado sem explicação nenhuma
+    // (caso Toddy, 06/ago/2026). Este nó tem ~200 KB, então numa rede ruim é o passo mais
+    // provável de pendurar. 12s e desiste: quem chama trata como "não deu para conferir".
+    var _consulta=DB.ref('auaulandia/estadias').once('value');
+    var _prazo=new Promise(function(_,rej){ setTimeout(function(){ rej(new Error('o banco não respondeu a tempo (12s)')); }, 12000); });
+    return Promise.race([_consulta,_prazo]).then(function(s){
       const v=s.val()||{}; let achou=null;
       Object.keys(v).forEach(function(id){
         const e=v[id]||{}; if((e.status||'ativa')!=='ativa') return;
@@ -10924,7 +10977,7 @@
     return out;
   }
   function cfListaHospedes(){
-    var out=[], seen={};
+    var out=[], seen={}, seenNome={};
     Object.keys(CF_ESTADIAS||{}).forEach(function(k){
       var reg=CF_ESTADIAS[k]||{}; var e=reg.e||{};
       if((e.status||'ativa')!=='ativa') return;      // encerrada não volta para a fila
@@ -10932,15 +10985,38 @@
       if(estadiaVencida(e)||estadiaFutura(e)) return;// só quem está aqui HOJE
       var h={nome:e.nome||'', tutor:e.tutor||'', raca:e.raca||'', refKey:e.refKey||k, ini:((e.nome||'?')[0]||'?').toUpperCase(), cor:'#234D67'};
       var mk=(typeof medAgendaKey==='function')?medAgendaKey(h):k;
-      if(seen[mk]) return; seen[mk]=1; out.push(h);
+      if(seen[mk]) return; seen[mk]=1; seenNome[jsNorm(h.nome||'')]=1; out.push(h);
     });
     (hospedes||[]).forEach(function(h){
       if(ehMoradorDaCasa(h.nome,h.refKey)) return;
       if(h.mascote) return;
-      var mk=(typeof medAgendaKey==='function')?medAgendaKey(h):'';
-      if(mk&&seen[mk]) return; if(mk) seen[mk]=1; out.push(h);
+      var mk=cfChaveIdentidade(h);
+      if(mk&&seen[mk]) return; if(mk) seen[mk]=1;
+      // Último filtro: mesmo NOME de alguém que já entrou pela estadia, e o "tutor" da
+      // planilha é na verdade uma RAÇA. É o mesmo FILHOt com o campo trocado — não duplica.
+      if(seenNome[jsNorm(h.nome||'')] && ehRacaLike(h.tutor||'')) return;
+      out.push(h);
     });
     return out;
+  }
+  // ===== O OZZY QUE APARECIA DUAS VEZES (Adriana, 06/ago/2026) ========================
+  // "Em check-in está a conferência do Ozzy Spitz, mas também aparece como conferido."
+  // Causa: na planilha da recepção os campos vieram TROCADOS — tutor="Spitz" (que é a raça)
+  // e raca="Zuleica". A chave de dedupe é nome+tutor, então "ozzy__spitz" nunca casou com
+  // "ozzy__zuleica" da estadia real: o mesmo FILHOt aparecia conferido E sem check-in.
+  // O mesmo aconteceu com o Toddy (tutor="ShihTzu", raca="Roberta").
+  // Aqui a identidade é resolvida ANTES da chave: quando o "tutor" é uma raça, ele é tratado
+  // como raça e o FILHOt é procurado no cadastro-mestre por nome + raça.
+  function cfChaveIdentidade(h){
+    try{
+      if(h && h.tutor && ehRacaLike(h.tutor) && !ehRacaLike(h.nome||'') && typeof PELUDINHOS!=='undefined'){
+        var nN=jsNorm(h.nome||''), nR=jsNorm(h.tutor);   // o "tutor" é a raça
+        var m=PELUDINHOS.find(function(p){ return jsNorm(p.n)===nN && jsNorm(p.raca||'')===nR; })
+           || PELUDINHOS.find(function(p){ return jsNorm(p.n)===nN && jsNorm(p.raca||'').replace(/\s+/g,'')===nR.replace(/\s+/g,''); });
+        if(m) return pelKey(m);
+      }
+    }catch(e){}
+    return (typeof medAgendaKey==='function')?medAgendaKey(h):'';
   }
   function atualizarBadgeConferencia(){
     var n=0;
@@ -11562,7 +11638,10 @@
       }
       else if(m1==='metade') motivo='comeu só metade';   // quem come metade não vai ao 2º horário
       if(!motivo) return;
-      out.push({k:k, nome:o.p.n, tutor:o.p.tutor||'', raca:o.p.raca||'', motivo:motivo, pronto:pronto,
+      // O sexo vem da ficha: é o que faz a mensagem sair "o Toddy… ele" ou "a Dolly… ela",
+      // em vez do "o(a)" e "ele(a)" que o tutor recebe como texto de formulário.
+      var _sexo=''; try{ _sexo=(pelExtra(o.p)||{}).sexo||''; }catch(e){}
+      out.push({k:k, nome:o.p.n, tutor:o.p.tutor||'', raca:o.p.raca||'', sexo:_sexo, motivo:motivo, pronto:pronto,
                 grave:(m2==='nao'), aviso:EMP_AVISOS[k]||null});
     });
     // Prontos para avisar primeiro; depois quem espera o 2º horário; avisados vão para o fim.
@@ -11570,13 +11649,22 @@
   }
   // Mensagem pronta para o tutor — a consultora (ou a SDR no futuro) copia e envia.
   // Modelo dado pela Adriana em 04/ago/2026.
+  // Texto dado pela Adriana em 06/ago/2026. Nome do FILHOt e do tutor entram sozinhos, e o
+  // gênero também: quem recebe a mensagem lê "o Toddy… ele" ou "a Dolly… ela", nunca o
+  // "o(a)"/"ele(a)" de formulário. Sem sexo na ficha, cai no neutro "o pequeno / ele".
   function empMensagem(x){
     const tutor=String(x.tutor||'').trim().split(/\s+/)[0]||'';
     const nome=String(x.nome||'').trim();
-    const ola='Olá'+(tutor?(' '+tutor):'')+', como está?';
+    const f=/^f/i.test(String(x.sexo||''));           // Fêmea
+    const o=f?'a':'o', ele=f?'ela':'ele', pequeno=f?'a pequena':'o pequeno';
+    const ola='Oi'+(tutor?(', '+tutor):'')+', como está?';
     if(/metade/.test(x.motivo||''))
-      return ola+'\n\nPassando para pedir que reforce a comidinha do '+nome+'. Hoje o pequeno comeu só metade do potinho.';
-    return ola+'\n\nPassando para pedir que reforce a comidinha do '+nome+'. Hoje o pequeno não quis comer.';
+      return ola+'\n\nHoje '+o+' '+nome+' comeu só metade da comidinha por aqui. 🐶\n'
+        +'Oferecemos de novo no segundo horário, mas '+ele+' não quis mais.\n\n'
+        +'Gentileza, reforçar a comidinha em casa mais tarde.';
+    return ola+'\n\nHoje '+o+' '+nome+' não quis comer por aqui. 🐶\n'
+      +'Tentamos no primeiro horário e oferecemos novamente no segundo, mas '+ele+' não aceitou.\n\n'
+      +'Gentileza, reforçar a comidinha em casa mais tarde.';
   }
   function empCopiar(btn){
     const ta=btn.parentNode.querySelector('.emp-msg'); if(!ta) return;
