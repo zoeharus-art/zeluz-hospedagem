@@ -5396,7 +5396,19 @@
       const rows=table.rows||[]; const p=x=>String(x).padStart(2,'0');
       function listaDe(dt){ const alvo=`${dt.getFullYear()}-${p(dt.getMonth()+1)}-${p(dt.getDate())}`;
         for(const r of rows){ const c=r.c||[]; const d=cellDate(c[0]); if(d && `${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())}`===alvo){
-          const out=[]; c.slice(1).forEach(x=>{ const raw=x&&x.v; if(raw&&typeof raw==='string'&&raw.trim()){ const parts=raw.trim().split('/'); out.push({nome:(parts[0]||raw).trim(), tutor:(parts[1]||'').trim(), raca:(parts[2]||'').trim()}); } }); return out; } }
+          const out=[]; c.slice(1).forEach(x=>{ const raw=x&&x.v; if(raw&&typeof raw==='string'&&raw.trim()){
+            const parts=raw.trim().split('/');
+            let _nome=(parts[0]||raw).trim(), _tutor=(parts[1]||'').trim(), _raca=(parts[2]||'').trim();
+            // A célula da planilha é "Nome / Tutor / Raça", lida por POSIÇÃO. Quando alguém
+            // digita na ordem trocada ("Ozzy / Spitz / Zuleica"), a raça vira tutor e o app
+            // passa a tratar o mesmo FILHOt como duas pessoas diferentes — foi o Ozzy que
+            // aparecia conferido E sem check-in, e o Toddy (Adriana, 06/ago/2026).
+            // Se o campo do tutor é uma raça conhecida e o da raça não é, eles trocam de lugar.
+            try{
+              if(_tutor && ehRacaLike(_tutor) && _raca && !ehRacaLike(_raca)){ const t=_tutor; _tutor=_raca; _raca=t; }
+            }catch(e){}
+            out.push({nome:_nome, tutor:_tutor, raca:_raca});
+          } }); return out; } }
         return null; }
       const hoje=listaDe(selectedDate);
       // Quem DORMIU na noite anterior e ainda não saiu (os FILHOts só vão embora depois das 8h30):
