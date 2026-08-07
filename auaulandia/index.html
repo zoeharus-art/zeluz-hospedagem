@@ -1020,6 +1020,64 @@
   body[data-role="gestao"] .nav a.so-conf-saida,
   body[data-role="supervisor"] .nav a.so-conf-saida,
   body[data-role="diretoria"] .nav a.so-conf-saida{display:flex}
+  /* ===== REPOSIÇÕES ===== */
+  #repModal,#repExtratoModal{display:none;position:fixed;inset:0;background:rgba(26,58,79,.55);z-index:120;
+    align-items:center;justify-content:center;padding:18px;overflow-y:auto}
+  #repModal.on,#repExtratoModal.on{display:flex}
+  .rep-card{background:var(--z-cream);border-radius:20px;padding:24px;width:100%;max-width:560px;
+    box-shadow:0 24px 70px rgba(0,0,0,.35);max-height:92vh;overflow-y:auto}
+  .rep-tit{font-size:21px;font-weight:800;color:var(--z-blue);letter-spacing:-.02em}
+  .rep-sub{font-size:13.5px;color:var(--muted);font-weight:500;margin:5px 0 16px;line-height:1.45}
+  .rep-lb{display:block;font-size:12px;font-weight:700;color:var(--z-blue);margin:14px 0 5px;
+    text-transform:uppercase;letter-spacing:.06em}
+  .rep-in{width:100%;border:1.5px solid var(--line);border-radius:11px;padding:11px 13px;
+    font-family:var(--font-ui);font-size:14.5px;color:var(--z-blue);background:var(--z-white);outline:none}
+  .rep-in:focus{border-color:var(--z-gold)}
+  .rep-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  .rep-results{max-height:190px;overflow-y:auto;margin-top:6px}
+  .rep-res-item{display:flex;align-items:center;gap:10px;padding:9px 11px;border:1px solid var(--line);
+    border-radius:11px;margin-bottom:6px;cursor:pointer;background:var(--z-white)}
+  .rep-res-item:hover{border-color:var(--z-gold);background:var(--z-cream-warm)}
+  .rep-res-nome{font-weight:700;color:var(--z-blue);font-size:14.5px}
+  .rep-res-sub{font-size:12px;color:var(--muted);font-weight:500}
+  .rep-escolhido{background:rgba(39,174,96,.10);border:1.5px solid var(--crm-ok);border-radius:12px;
+    padding:11px 14px;margin-top:8px;font-weight:700;color:var(--z-blue);font-size:14.5px}
+  .rep-atalhos{display:flex;gap:7px;flex-wrap:wrap;margin-top:9px}
+  .rep-previa{margin-top:11px;background:var(--z-cream-warm);border:1.5px solid var(--line);
+    border-radius:12px;padding:12px 14px;font-size:13.5px;color:var(--z-blue);font-weight:600;line-height:1.5}
+  .rep-previa b{color:var(--z-gold-deep)}
+  .rep-warn{min-height:20px;font-size:13px;font-weight:700;color:var(--crm-critico);margin-top:10px}
+  .rep-btns{display:flex;gap:10px;margin-top:14px}
+  .rep-cancel,.rep-ok{flex:1;border-radius:12px;padding:13px;font-family:var(--font-ui);font-weight:700;
+    font-size:14.5px;cursor:pointer;border:none}
+  .rep-cancel{background:var(--z-cream-warm);color:var(--z-blue);border:1.5px solid var(--line)}
+  .rep-ok{background:var(--z-blue);color:var(--z-cream)}
+  .rep-row{display:flex;align-items:center;gap:13px;background:var(--z-white);border:1px solid var(--line);
+    border-radius:14px;padding:13px 15px;margin-bottom:9px;box-shadow:var(--shadow)}
+  .rep-row .rp-n{font-size:26px;font-weight:800;letter-spacing:-.03em;color:var(--z-gold-deep);min-width:38px;
+    font-variant-numeric:tabular-nums;text-align:center}
+  .rep-row .rp-txt{flex:1;min-width:0}
+  .rep-row .rp-nome{font-size:15px;font-weight:700;color:var(--z-blue);letter-spacing:-.01em}
+  .rep-row .rp-sub{font-size:12px;color:var(--muted);font-weight:500;margin-top:2px}
+  .rep-row .rp-acoes{display:flex;gap:7px;flex-wrap:wrap}
+  .rep-row .rp-acoes button{border-radius:9px;padding:8px 13px;font-family:var(--font-ui);font-weight:700;
+    font-size:12.5px;cursor:pointer;border:1.5px solid var(--line);background:#fff;color:var(--z-blue)}
+  .rep-row .rp-acoes button.usar{background:var(--crm-ok);color:#fff;border-color:var(--crm-ok)}
+  .rep-lanc{display:flex;gap:11px;align-items:flex-start;padding:10px 0;border-bottom:1px solid var(--line);font-size:13.5px}
+  .rep-lanc:last-child{border-bottom:none}
+  .rep-lanc .lc-tipo{font-size:11px;font-weight:800;border-radius:999px;padding:3px 9px;flex:0 0 auto;letter-spacing:.03em}
+  .rep-lanc .lc-tipo.credito{background:rgba(39,174,96,.16);color:#1E8449}
+  .rep-lanc .lc-tipo.uso{background:rgba(41,128,185,.14);color:var(--crm-info)}
+  .rep-lanc .lc-tipo.estorno{background:rgba(192,57,43,.13);color:var(--crm-critico)}
+  .rep-lanc .lc-corpo{flex:1;min-width:0;color:var(--z-blue);font-weight:600}
+  .rep-lanc .lc-meta{font-size:11.5px;color:var(--muted);font-weight:500;margin-top:2px}
+  /* Reposições — quem lança é a RECEPÇÃO: o tutor avisa no telefone da loja e a consultora
+     registra na hora (Adriana, 06/ago/2026). Gestão e Supervisão acompanham. */
+  .nav a.so-recepcao{display:none}
+  body[data-role="consultora"] .nav a.so-recepcao,
+  body[data-role="gestao"] .nav a.so-recepcao,
+  body[data-role="supervisor"] .nav a.so-recepcao,
+  body[data-role="diretoria"] .nav a.so-recepcao{display:flex}
   /* Carteira de planos no Início — informação comercial: recepção e gestão */
   .so-carteira{display:none}
   body[data-role="consultora"] .so-carteira,
@@ -1253,6 +1311,7 @@
     <a data-v="pessoas" class="so-master"><span data-icon="users"></span><span>Pessoas</span></a>
     <div class="subnav so-master" id="pSubnav" style="display:none"></div>
     <a data-v="renovacao" class="so-gestao"><span data-icon="star"></span><span>Renovação de Planos</span></a>
+    <a data-v="reposicao" class="so-recepcao"><span data-icon="star"></span><span>Reposições</span></a>
 
     <div class="grp so-gestao">Relatórios</div>
     <a data-v="inativos" class="so-gestao"><span data-icon="paw"></span><span>Inativos</span></a>
@@ -2450,6 +2509,96 @@
     </div>
   </section>
 
+  <!-- ===== REPOSIÇÕES — o banco de dias (Adriana, 06/ago/2026) =====================
+       "O peludinho entra no cio, fica 30 dias sem frequentar, e todas essas datas ficam
+        em reposição. Preciso lançar de forma fácil e ágil, e lançar o consumo também."
+       Regra dela: TODA falta que o tutor AVISA vira reposição. Quem lança é a recepção —
+       é para o telefone da loja que o tutor avisa. O crédito NÃO vence. -->
+  <section class="view" id="v-reposicao">
+    <div class="role-note"><span data-icon="star"></span><span>O tutor avisou que não vem? <strong>Lance aqui</strong> — vira um dia de reposição para ele usar depois. Quando ele vier repor, marque o uso. Nada se apaga: todo lançamento fica no extrato com a data, o motivo e quem lançou.</span></div>
+    <div class="card">
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap">
+        <h2 style="font-size:20px;margin:0">Reposições</h2>
+        <button class="btn btn-gold" style="padding:10px 18px" onclick="repAbrirLancar()">+ Lançar falta avisada</button>
+      </div>
+      <div id="repResumo" style="margin-top:12px"></div>
+      <div class="pel-toolbar" style="margin-top:12px">
+        <input class="search" id="repBusca" placeholder="Buscar peludinho ou tutor..." style="width:300px;max-width:100%" oninput="renderReposicao()">
+        <span class="pel-count" id="repCount"></span>
+      </div>
+      <div id="repLista"></div>
+    </div>
+  </section>
+
+  <!-- Modal: lançar falta avisada (1 dia ou período, ex.: 30 dias de cio) -->
+  <div id="repModal" onclick="if(event.target===this)repFechar()">
+    <div class="rep-card">
+      <div class="rep-tit" id="repTitulo">Lançar falta avisada</div>
+      <div class="rep-sub">O tutor avisou que o peludinho não vem. Isso vira <strong>crédito de reposição</strong> — ele usa em outro dia.</div>
+
+      <label class="rep-lb">Qual peludinho?</label>
+      <input class="rep-in" id="repPelBusca" placeholder="Digite o nome do FILHOt ou do tutor…" autocomplete="off" oninput="repBuscarPel()">
+      <div class="rep-results" id="repPelResults"></div>
+      <div class="rep-escolhido" id="repEscolhido" style="display:none"></div>
+
+      <div id="repFormulario" style="display:none">
+        <label class="rep-lb">É um dia só ou um período?</label>
+        <div class="seg gold" data-single id="repModo">
+          <button class="on" onclick="pick(this);repSetModo('dia')">Um dia só</button>
+          <button onclick="pick(this);repSetModo('periodo')">Um período (cio, viagem…)</button>
+        </div>
+
+        <div id="repBlocoDia">
+          <label class="rep-lb">Que dia ele não vem?</label>
+          <input type="date" class="rep-in" id="repData">
+        </div>
+
+        <div id="repBlocoPeriodo" style="display:none">
+          <div class="rep-grid">
+            <div><label class="rep-lb">A partir de</label><input type="date" class="rep-in" id="repDe" onchange="repPreverDias()"></div>
+            <div><label class="rep-lb">Até</label><input type="date" class="rep-in" id="repAte" onchange="repPreverDias()"></div>
+          </div>
+          <div class="rep-atalhos">
+            <span class="dia clic" onclick="repAtalho(30)">Cio — 30 dias</span>
+            <span class="dia clic" onclick="repAtalho(15)">15 dias</span>
+            <span class="dia clic" onclick="repAtalho(7)">1 semana</span>
+          </div>
+          <div class="rep-previa" id="repPrevia"></div>
+        </div>
+
+        <label class="rep-lb">Por que ele não vem?</label>
+        <div class="seg gold" data-single id="repMotivo">
+          <button onclick="pick(this);repMotivoSel('cio')">Cio</button>
+          <button onclick="pick(this);repMotivoSel('doente')">Doente / internado</button>
+          <button onclick="pick(this);repMotivoSel('viagem')">Tutor viajou</button>
+          <button onclick="pick(this);repMotivoSel('fora')">Tutor está fora</button>
+          <button onclick="pick(this);repMotivoSel('atrasado')">Tutor não conseguiu trazer</button>
+          <button onclick="pick(this);repMotivoSel('zeluz')">Zêluz fechada</button>
+          <button onclick="pick(this);repMotivoSel('outro')">Outro</button>
+        </div>
+
+        <label class="rep-lb">Detalhe (o que o tutor falou)</label>
+        <textarea class="rep-in" id="repObs" rows="2" placeholder="Ex.: tutora ligou às 7h, viajou para Vitória e volta dia 20"></textarea>
+
+        <div class="rep-warn" id="repWarn"></div>
+        <div class="rep-btns">
+          <button class="rep-cancel" onclick="repFechar()">Cancelar</button>
+          <button class="rep-ok" onclick="repConfirmar()">Lançar reposição</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Extrato de um peludinho -->
+  <div id="repExtratoModal" onclick="if(event.target===this)repFecharExtrato()">
+    <div class="rep-card">
+      <div class="rep-tit" id="repExtTit">Extrato</div>
+      <div class="rep-sub" id="repExtSub"></div>
+      <div id="repExtLista"></div>
+      <div class="rep-btns"><button class="rep-cancel" onclick="repFecharExtrato()">Fechar</button></div>
+    </div>
+  </div>
+
   <section class="view" id="v-painel">
     <div class="role-note so-gestao"><span data-icon="star"></span><span><strong>Painel do Dia.</strong> Visão completa de como o dia transcorreu: presença, almoço, atividades e — o mais importante — <strong>se cada protocolo foi cumprido, no horário, e por quem</strong>. Esta tela só observa: não altera nada.</span></div>
     <div class="p-datenav">
@@ -2597,6 +2746,11 @@
       DB.ref('daycare/cadastro').on('value', s=>{ pelCadCache=s.val()||{}; if(typeof mergeNovosAlunos==='function') mergeNovosAlunos(); if(typeof aplicarExclusoes==='function') aplicarExclusoes(); if(typeof renderPel==='function') renderPel(); if(typeof renderDaycare==='function') renderDaycare(); if(typeof renderKPIs==='function') renderKPIs(); });
       // As fotos vêm de um nó separado, sem ouvinte — ver o comentário lá em cima.
       try{ carregarFotos(); }catch(e){ console.warn('fotos:',e); }
+      // Banco de reposição: leve (só lançamentos), então pode ter ouvinte — a recepção
+      // lança num aparelho e a gestão vê no outro na hora.
+      DB.ref('daycare/reposicao').on('value', s=>{ REPO_CACHE=s.val()||{};
+        try{ const v=document.getElementById('v-reposicao'); if(v&&v.classList.contains('active')) renderReposicao(); }catch(e){}
+        try{ if(typeof renderPendencias==='function') renderPendencias(); }catch(e){} });
       // cadastro de almoço editável (sobrepõe a semente) — reflete na grade em tempo real
       // quem já desceu para o banho — um monitor dá baixa e o aviso some em todos os aparelhos
       DB.ref('daycare/banho-aviso/'+dcDataKey()).on('value', s=>{ despBaixa=s.val()||{};
@@ -2711,6 +2865,7 @@
 
   const titles={inicio:['Início','Visão geral do dia'],ficha:['Peludinhos','Frequentes'],inativos:['Inativos','Peludinhos que saíram do Day Care'],
     renovacao:['Renovação de Planos','Planos a vencer e renovações'],adaptacao:['Adaptação · 1º mês','Como está se adaptando'],
+    reposicao:['Reposições','Faltas avisadas viram dias a repor'],
     daycare:['Day Care','Chamada e atividades'],hospedagem:['Plantão AuAulândia','Passagem de plantão'],
     aulunos:['Aulunos','Relatório de frequência dos aulunos'],vacinas:['Vacinas','Relatório de vacinação'],
     cuidadovet:['Cuidado Vet','Consulta, receituário e reavaliação'],
@@ -2755,6 +2910,7 @@
     if(v==='recepcao'){ if(typeof carregarAvisosEstoque==='function') carregarAvisosEstoque(); }
     if(v==='ficha'){ const l=document.getElementById('pel-lista'),fi=document.getElementById('pel-ficha'); if(l&&fi){ l.style.display='block'; fi.style.display='none'; } if(typeof renderPel==='function') renderPel(); }
     if(v==='inativos'){ if(typeof renderInativos==='function') renderInativos(); }
+    if(v==='reposicao'){ if(typeof renderReposicao==='function') renderReposicao(); }
     // Faltava esta linha: a lista de renovação só era montada quando outra parte do código
     // chamava irParaView('renovacao'). Clicando no menu, a tela abria VAZIA (30/jul/2026).
     if(v==='renovacao'){ if(typeof renderRenovacao==='function') renderRenovacao(); }
@@ -2905,6 +3061,10 @@
     // Tutores a avisar (Empório) e avisos de falta na recepção
     let avisar=0, faltas=0;
     try{ avisar=(typeof empLista==='function')?empLista().filter(function(x){ return !x.aviso; }).length:0; }catch(e){}
+    // Quantos peludinhos têm dias a repor — é receita já paga que ainda não foi entregue.
+    let repComSaldo=0;
+    try{ if(typeof repSaldo==='function'&&typeof PELUDINHOS!=='undefined')
+      repComSaldo=PELUDINHOS.filter(function(p){ return !pelInativo(p) && repSaldo(p)>0; }).length; }catch(e){}
     try{ Object.keys(AVISOS_RACAO_CACHE||{}).forEach(function(k){ if((AVISOS_RACAO_CACHE[k]||{}).status!=='resolvido') faltas++; }); }catch(e){}
     // Um quadro por pendência. Ordem = urgência real, não ordem de programação:
     // o que trava a operação vem primeiro, o que é rotina do fim do dia vem depois.
@@ -2920,7 +3080,8 @@
                   q(faltas,'Faltas em aberto','ração ou remédio que não cobre','#B3261E','recepcao'),
                   q(naRecepcao,'Na recepção','conferir com o tutor e assinar','#1E8449','checkoutconf'),
                   q(saemHoje,'Saem hoje','a monitora precisa juntar as coisas','#DEB428','checkout'),
-                  q(avisar,'Avisar tutores','não comeram hoje','#E08856','emporio') ].filter(Boolean).join('');
+                  q(avisar,'Avisar tutores','não comeram hoje','#E08856','emporio'),
+                  q(repComSaldo,'Dias a repor','faltas avisadas ainda não repostas','#2E7D8A','reposicao') ].filter(Boolean).join('');
     el.innerHTML=cards
       ? '<div class="dash-tiles">'+cards+'</div>'
       : '<div class="dash-zen"><span style="font-size:22px">✓</span><span><span class="zt">Nada pendente agora</span>'
@@ -2928,6 +3089,257 @@
     const st=document.getElementById('pendAtualizado');
     if(st){ const d=new Date(); st.textContent='atualizado às '+String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0'); }
   }
+  // ===================================================================================
+  // ===== BANCO DE REPOSIÇÃO (Adriana, 06/ago/2026) ===================================
+  // "O peludinho entra no cio e fica 30 dias sem frequentar. Todas essas datas ficam em
+  //  reposição. Preciso lançar de forma fácil e ágil — e lançar o consumo também."
+  //
+  // As três regras que ela definiu:
+  //  1. TODA falta que o tutor AVISA vira reposição. O gatilho é o aviso, não o motivo —
+  //     o tutor liga para o telefone da loja e a consultora registra na hora.
+  //  2. O crédito NÃO vence.
+  //  3. Afastamento longo (cio) credita TODOS os dias em que ele viria.
+  //
+  // Conta corrente: crédito entra quando falta avisada, sai quando ele vem repor. Nada é
+  // apagado — errou, lança um ESTORNO. O extrato conta a história inteira.
+  var REPO_CACHE={};
+  const REP_MOTIVOS={ cio:'Cio', doente:'Doente / internado', viagem:'Tutor viajou',
+    fora:'Tutor está fora', atrasado:'Tutor não conseguiu trazer', zeluz:'Zêluz fechada', outro:'Outro' };
+  function repLancamentos(p){
+    try{ const o=(REPO_CACHE[pelKey(p)]||{}).lancamentos||{};
+      return Object.keys(o).map(function(k){ return Object.assign({_id:k}, o[k]); })
+        .sort(function(a,b){ return (b.ts||0)-(a.ts||0); });
+    }catch(e){ return []; }
+  }
+  // Saldo = créditos − usos − estornos. Calculado, nunca guardado: número guardado
+  // diverge do extrato no primeiro erro de rede, e aí ninguém sabe qual dos dois vale.
+  function repSaldo(p){
+    let s=0;
+    repLancamentos(p).forEach(function(l){ if(l.tipo==='credito') s++; else s--; });
+    return s;
+  }
+  function repPodeLancar(){ const r=document.body.dataset.role||'';
+    return r==='consultora'||r==='gestao'||r==='supervisor'||r==='diretoria'; }
+  function repGravar(p,reg){
+    if(!p) return Promise.resolve();
+    const k=pelKey(p);
+    reg.quem=(typeof quemSou==='function')?quemSou():'-';
+    reg.ts=Date.now();
+    if(!DB){ return Promise.reject(new Error('sem conexão com o banco')); }
+    return DB.ref('daycare/reposicao/'+k+'/lancamentos').push(reg);
+  }
+  // Os dias em que ELE viria no período — é isto que transforma "30 dias de cio" em
+  // 12 créditos com um toque só, em vez de a recepção lançar data por data.
+  const REP_DIAKEY=['dom','seg','ter','qua','qui','sex','sab'];
+  function repDiasQueViria(p, de, ate){
+    const out=[];
+    try{
+      const dias=(typeof pelDias==='function')?pelDias(p):[];
+      if(!dias.length) return out;
+      const d1=new Date(de+'T00:00:00'), d2=new Date(ate+'T00:00:00');
+      if(isNaN(d1)||isNaN(d2)||d2<d1) return out;
+      const lim=new Date(d1); lim.setDate(lim.getDate()+400);   // trava de sanidade
+      for(let d=new Date(d1); d<=d2 && d<=lim; d.setDate(d.getDate()+1)){
+        if(dias.indexOf(REP_DIAKEY[d.getDay()])>=0){
+          const p2=function(x){ return String(x).padStart(2,'0'); };
+          out.push(d.getFullYear()+'-'+p2(d.getMonth()+1)+'-'+p2(d.getDate()));
+        }
+      }
+    }catch(e){}
+    return out;
+  }
+  function repBRdata(iso){ const a=String(iso||'').split('-'); return a.length===3?(a[2]+'/'+a[1]+'/'+a[0]):(iso||''); }
+  function repHojeISO(){ const d=new Date(),p=function(x){return String(x).padStart(2,'0');}; return d.getFullYear()+'-'+p(d.getMonth()+1)+'-'+p(d.getDate()); }
+
+  // ---- Modal de lançamento ----
+  var repPelSel=null, repModoAtual='dia', repMotivoAtual='';
+  function repAbrirLancar(pel){
+    if(!repPodeLancar()){ alert('Só a recepção, a Gestão ou a Supervisão lançam reposição.'); return; }
+    repPelSel=pel||null; repModoAtual='dia'; repMotivoAtual='';
+    document.getElementById('repModal').classList.add('on');
+    document.getElementById('repPelBusca').value='';
+    document.getElementById('repPelResults').innerHTML='';
+    document.getElementById('repObs').value='';
+    document.getElementById('repWarn').textContent='';
+    document.getElementById('repData').value=repHojeISO();
+    document.getElementById('repDe').value=repHojeISO();
+    document.getElementById('repAte').value='';
+    document.getElementById('repPrevia').innerHTML='';
+    document.querySelectorAll('#repMotivo button').forEach(function(b){ b.classList.remove('on'); });
+    document.querySelectorAll('#repModo button').forEach(function(b,i){ b.classList.toggle('on', i===0); });
+    document.getElementById('repBlocoDia').style.display='block';
+    document.getElementById('repBlocoPeriodo').style.display='none';
+    if(repPelSel) repMostrarEscolhido(); else {
+      document.getElementById('repEscolhido').style.display='none';
+      document.getElementById('repFormulario').style.display='none';
+      setTimeout(function(){ try{ document.getElementById('repPelBusca').focus(); }catch(e){} },120);
+    }
+  }
+  function repFechar(){ document.getElementById('repModal').classList.remove('on'); }
+  function repBuscarPel(){
+    const q=jsNorm((document.getElementById('repPelBusca')||{}).value||'');
+    const box=document.getElementById('repPelResults');
+    if(q.length<2){ box.innerHTML=''; return; }
+    const lista=PELUDINHOS.map(function(p,i){ return {p:p,i:i}; })
+      .filter(function(o){ return !pelInativo(o.p) && jsNorm([o.p.n,pelGet(o.p,'tutor'),o.p.raca].join(' ')).indexOf(q)>=0; })
+      .slice(0,8);
+    box.innerHTML=lista.length?lista.map(function(o){
+      return '<div class="rep-res-item" onclick="repEscolher('+o.i+')">'
+        +'<div><div class="rep-res-nome">'+escAttr(pelNome(o.p))+'</div>'
+        +'<div class="rep-res-sub">'+escAttr(pelGet(o.p,'raca')||'—')+' · '+escAttr(pelGet(o.p,'tutor')||'sem tutor')
+        +' · saldo '+repSaldo(o.p)+'</div></div></div>';
+    }).join(''):'<div class="rep-res-sub" style="padding:8px 2px">Nenhum peludinho ativo com esse nome.</div>';
+  }
+  function repEscolher(i){ repPelSel=PELUDINHOS[i]; repMostrarEscolhido(); }
+  function repMostrarEscolhido(){
+    const p=repPelSel; if(!p) return;
+    const dias=(typeof pelDias==='function')?pelDias(p):[];
+    const el=document.getElementById('repEscolhido');
+    el.style.display='block';
+    el.innerHTML=escAttr(pelNome(p))+' <span style="font-weight:500;color:var(--muted);font-size:13px">· '
+      +escAttr(pelGet(p,'tutor')||'sem tutor')+' · vem '
+      +(dias.length?dias.map(function(d){ return DIA_LBL[d]||d; }).join(', '):'sem dias na ficha')
+      +' · saldo atual <b>'+repSaldo(p)+'</b></span>';
+    document.getElementById('repPelResults').innerHTML='';
+    document.getElementById('repPelBusca').value='';
+    document.getElementById('repFormulario').style.display='block';
+    if(!dias.length){
+      document.getElementById('repWarn').textContent='Atenção: este peludinho não tem os dias da semana marcados na ficha. No modo "período" eu não consigo calcular quantos dias ele viria — lance dia a dia ou preencha a ficha primeiro.';
+    }
+  }
+  function repSetModo(m){
+    repModoAtual=m;
+    document.getElementById('repBlocoDia').style.display=(m==='dia')?'block':'none';
+    document.getElementById('repBlocoPeriodo').style.display=(m==='periodo')?'block':'none';
+    if(m==='periodo') repPreverDias();
+  }
+  function repMotivoSel(m){ repMotivoAtual=m; }
+  function repAtalho(n){
+    const de=(document.getElementById('repDe').value||repHojeISO());
+    const d=new Date(de+'T00:00:00'); d.setDate(d.getDate()+n-1);
+    const p2=function(x){ return String(x).padStart(2,'0'); };
+    document.getElementById('repDe').value=de;
+    document.getElementById('repAte').value=d.getFullYear()+'-'+p2(d.getMonth()+1)+'-'+p2(d.getDate());
+    repPreverDias();
+  }
+  // A prévia é o que dá segurança para confirmar: ela mostra EXATAMENTE quantos e quais
+  // dias vão virar crédito, antes de gravar qualquer coisa.
+  function repPreverDias(){
+    const el=document.getElementById('repPrevia'); if(!el) return;
+    const p=repPelSel, de=(document.getElementById('repDe')||{}).value, ate=(document.getElementById('repAte')||{}).value;
+    if(!p||!de||!ate){ el.innerHTML='Escolha o peludinho e as duas datas para eu calcular.'; return; }
+    const dias=repDiasQueViria(p,de,ate);
+    if(!dias.length){ el.innerHTML='Nesse período ele não teria nenhum dia de Day Care — confira as datas e os dias dele na ficha.'; return; }
+    const most=dias.slice(0,10).map(repBRdata).join(' · ');
+    el.innerHTML='De '+repBRdata(de)+' a '+repBRdata(ate)+', '+escAttr(pelNome(p))+' viria em <b>'+dias.length+' dia'+(dias.length>1?'s':'')+'</b>:<br>'
+      +most+(dias.length>10?(' <b>e mais '+(dias.length-10)+'</b>'):'')
+      +'<br><span style="color:var(--muted);font-weight:500">Vou gerar '+dias.length+' crédito'+(dias.length>1?'s':'')+' de reposição.</span>';
+  }
+  function repConfirmar(){
+    const w=document.getElementById('repWarn'); w.textContent='';
+    const p=repPelSel;
+    if(!p){ w.textContent='Escolha o peludinho primeiro.'; return; }
+    if(!repMotivoAtual){ w.textContent='Diga por que ele não vem — é isso que a gestão lê depois.'; return; }
+    const obs=(document.getElementById('repObs').value||'').trim();
+    const btn=document.querySelector('#repModal .rep-ok'); if(btn){ btn.disabled=true; btn.textContent='Lançando…'; }
+    const soltar=function(){ if(btn){ btn.disabled=false; btn.textContent='Lançar reposição'; } };
+    let regs=[];
+    if(repModoAtual==='dia'){
+      const d=(document.getElementById('repData').value||'').trim();
+      if(!d){ w.textContent='Informe o dia em que ele não vem.'; soltar(); return; }
+      regs=[{tipo:'credito', data:d, motivo:repMotivoAtual, obs:obs}];
+    } else {
+      const de=(document.getElementById('repDe').value||''), ate=(document.getElementById('repAte').value||'');
+      if(!de||!ate){ w.textContent='Informe as duas datas do período.'; soltar(); return; }
+      const dias=repDiasQueViria(p,de,ate);
+      if(!dias.length){ w.textContent='Nesse período ele não teria nenhum dia de Day Care. Confira as datas e os dias dele na ficha.'; soltar(); return; }
+      const lote='L'+Date.now();
+      regs=dias.map(function(d){ return {tipo:'credito', data:d, motivo:repMotivoAtual, obs:obs, lote:lote, periodo:{de:de,ate:ate}}; });
+    }
+    Promise.all(regs.map(function(r){ return repGravar(p,r); })).then(function(){
+      if(typeof audit==='function') audit('reposicao-credito', pelNome(p)+' · '+regs.length+' dia(s) · '+(REP_MOTIVOS[repMotivoAtual]||repMotivoAtual), {obs:obs});
+      repFechar(); soltar();
+      zAlertao('✅ REPOSIÇÃO LANÇADA',
+        [escAttr(pelNome(p))+' ganhou <b>'+regs.length+' dia'+(regs.length>1?'s':'')+'</b> de reposição.',
+         'Motivo: '+(REP_MOTIVOS[repMotivoAtual]||repMotivoAtual)+(obs?(' — '+obs):'')+'.',
+         'Saldo agora: <b>'+(repSaldo(p)+regs.length)+'</b>. Quando ele vier repor, marque o uso na tela de Reposições.'],
+        {ok:true, botao:'Fechar'});
+      setTimeout(renderReposicao, 400);
+    }).catch(function(e){
+      soltar();
+      w.textContent='Não consegui lançar: '+((e&&e.message)||e)+'. Nada foi salvo — tente de novo.';
+    });
+  }
+  // ---- Consumo ----
+  function repUsar(i){
+    const p=PELUDINHOS[i]; if(!p) return;
+    if(!repPodeLancar()){ alert('Só a recepção, a Gestão ou a Supervisão marcam o uso da reposição.'); return; }
+    const s=repSaldo(p);
+    if(s<=0){ alert(pelNome(p)+' não tem saldo de reposição.'); return; }
+    if(!confirm('Marcar que '+pelNome(p)+' veio REPOR hoje?\n\nSaldo agora: '+s+'\nDepois de marcar: '+(s-1))) return;
+    const obs=(prompt('Alguma observação? (opcional)','')||'').trim();
+    repGravar(p,{tipo:'uso', data:repHojeISO(), motivo:'reposicao', obs:obs}).then(function(){
+      if(typeof audit==='function') audit('reposicao-uso', pelNome(p), {obs:obs});
+      setTimeout(renderReposicao, 300);
+    }).catch(function(e){ alert('Não consegui marcar: '+((e&&e.message)||e)); });
+  }
+  function repEstornar(i,id){
+    const p=PELUDINHOS[i]; if(!p||!id) return;
+    if(!repPodeLancar()){ alert('Só a recepção, a Gestão ou a Supervisão estornam.'); return; }
+    const motivo=(prompt('Estornar este lançamento — por quê?\n\nO lançamento original NÃO é apagado: fica no extrato, e o estorno entra como uma linha nova explicando o erro.','')||'').trim();
+    if(!motivo) return;
+    repGravar(p,{tipo:'estorno', data:repHojeISO(), motivo:'estorno', obs:motivo, estornaId:id}).then(function(){
+      if(typeof audit==='function') audit('reposicao-estorno', pelNome(p), {motivo:motivo});
+      setTimeout(function(){ renderReposicao(); repAbrirExtrato(i); }, 300);
+    }).catch(function(e){ alert('Não consegui estornar: '+((e&&e.message)||e)); });
+  }
+  // ---- Telas ----
+  function renderReposicao(){
+    const el=document.getElementById('repLista'); if(!el) return;
+    const q=jsNorm((document.getElementById('repBusca')||{}).value||'');
+    const todos=PELUDINHOS.map(function(p,i){ return {p:p,i:i,saldo:repSaldo(p)}; }).filter(function(o){ return !pelInativo(o.p); });
+    const comSaldo=todos.filter(function(o){ return o.saldo>0; });
+    const totalDias=comSaldo.reduce(function(a,o){ return a+o.saldo; },0);
+    const rs=document.getElementById('repResumo');
+    if(rs) rs.innerHTML='<div class="dc-resumo">'
+      +'<div class="dc-stat pend"><b>'+comSaldo.length+'</b>com dias a repor</div>'
+      +'<div class="dc-stat"><b>'+totalDias+'</b>dias no total</div></div>';
+    const lista=(q?todos.filter(function(o){ return jsNorm([o.p.n,pelGet(o.p,'tutor')].join(' ')).indexOf(q)>=0; })
+                  :comSaldo).sort(function(a,b){ return b.saldo-a.saldo || jsNorm(pelNome(a.p)).localeCompare(jsNorm(pelNome(b.p))); });
+    const c=document.getElementById('repCount');
+    if(c) c.textContent=q?(lista.length+' na busca'):(comSaldo.length+' peludinho'+(comSaldo.length===1?'':'s')+' com saldo');
+    if(!lista.length){ el.innerHTML='<div class="alm-fora" style="margin-top:12px">'+(q?'Nenhum peludinho com esse nome.':'Ninguém tem dias a repor agora. Quando um tutor avisar que não vem, lance aqui.')+'</div>'; return; }
+    el.innerHTML=lista.map(function(o){
+      const ult=repLancamentos(o.p)[0];
+      return '<div class="rep-row"><div class="rp-n">'+o.saldo+'</div>'
+        +'<div class="rp-txt"><div class="rp-nome">'+escAttr(pelNome(o.p))+'</div>'
+        +'<div class="rp-sub">'+escAttr(pelGet(o.p,'tutor')||'sem tutor')
+        +(ult?(' · último: '+(ult.tipo==='credito'?'faltou':(ult.tipo==='uso'?'repôs':'estorno'))+' em '+repBRdata(ult.data)):'')+'</div></div>'
+        +'<div class="rp-acoes">'
+        +(o.saldo>0?'<button class="usar" onclick="repUsar('+o.i+')">Veio repor hoje</button>':'')
+        +'<button onclick="repAbrirExtrato('+o.i+')">Extrato</button>'
+        +'<button onclick="repAbrirLancar(PELUDINHOS['+o.i+'])">+ Falta</button>'
+        +'</div></div>';
+    }).join('');
+  }
+  function repAbrirExtrato(i){
+    const p=PELUDINHOS[i]; if(!p) return;
+    const L=repLancamentos(p);
+    document.getElementById('repExtTit').textContent='Extrato — '+pelNome(p);
+    document.getElementById('repExtSub').innerHTML='Saldo atual: <b>'+repSaldo(p)+'</b> dia(s) de reposição. Nada aqui é apagado — um erro se corrige com estorno.';
+    document.getElementById('repExtLista').innerHTML=L.length?L.map(function(l){
+      const rot=(l.tipo==='credito')?'+1 CRÉDITO':(l.tipo==='uso'?'−1 USO':'−1 ESTORNO');
+      return '<div class="rep-lanc"><span class="lc-tipo '+l.tipo+'">'+rot+'</span>'
+        +'<span class="lc-corpo">'+repBRdata(l.data)+' · '+(REP_MOTIVOS[l.motivo]||l.motivo||'—')
+        +(l.obs?('<div style="font-weight:500;color:var(--z-blue-soft);margin-top:2px">"'+escAttr(l.obs)+'"</div>'):'')
+        +'<div class="lc-meta">'+escAttr(l.quem||'—')+(l.periodo?(' · período '+repBRdata(l.periodo.de)+' a '+repBRdata(l.periodo.ate)):'')+'</div></span>'
+        +(l.tipo==='credito'?'<button onclick="repEstornar('+i+',\''+l._id+'\')" style="border:1px solid var(--line);background:#fff;border-radius:8px;padding:5px 10px;font-size:11.5px;font-weight:700;color:var(--crm-critico);cursor:pointer;font-family:inherit">Estornar</button>':'')
+        +'</div>';
+    }).join(''):'<div class="alm-fora">Nenhum lançamento ainda.</div>';
+    document.getElementById('repExtratoModal').classList.add('on');
+  }
+  function repFecharExtrato(){ document.getElementById('repExtratoModal').classList.remove('on'); }
+
   // ===== CARTEIRA DE PLANOS (Adriana, 04/ago/2026) ===================================
   // "Preciso saber a quantidade de avulsos, de hóspedes que não fazem parte do Day Care,
   //  e de planos mensais, trimestrais e semestrais — isso vai para o Início, como um
@@ -5046,7 +5458,7 @@
     {grp:'Empório', itens:[ {k:'emporio', t:'Avisar tutores — não comeu'} ]},
     {grp:'Gestão', itens:[
       {k:'painel', t:'Painel'}, {k:'ficha', t:'Peludinhos'}, {k:'hospedes', t:'Peludinhos Hóspedes (estadias)'},
-      {k:'pessoas', t:'Pessoas'}, {k:'renovacao', t:'Renovação de Planos'}
+      {k:'pessoas', t:'Pessoas'}, {k:'renovacao', t:'Renovação de Planos'}, {k:'reposicao', t:'Reposições'}
     ]}
   ];
   const NAV_PAGINAS_KEYS=NAV_PAGINAS_ALL.reduce((a,g)=>a.concat(g.itens.map(x=>x.k)),[]);
@@ -9900,8 +10312,62 @@
         +'<div style="font-weight:800;font-size:17px;color:#234D67;margin-bottom:4px">'+esc(ciHosp.nome||'Este FILHOt')+' já está hospedado'+(ent?(' desde '+esc(ent)):'')+'.</div>'
         +'<div style="font-size:14px;color:#6b5f4b;font-weight:600;margin-bottom:10px">Comprou um suplemento, o tutor trouxe mais alguma coisa ou faltou registrar algo? Acrescente no MESMO check-in — assim não vira um segundo cadastro e volta para a Conferência.</div>'
         +'<button type="button" class="btn btn-primary" style="width:100%" onclick="ciAcrescentarNoExistente(\''+escAttr(ativa.id)+'\')">➕ Acrescentar ao check-in dele</button>'
+        // Adriana, 06/ago/2026: "a tutora do Toddy ligou que o filho passou informação
+        // errada, então precisamos editar". Acrescentar SOMA; corrigir SUBSTITUI — e a
+        // medicação errada só sai por aqui.
+        +'<button type="button" class="btn" style="width:100%;margin-top:8px;background:#B3261E;color:#fff" onclick="ciCorrigirExistente(\''+escAttr(ativa.id)+'\')">✎ Corrigir informação errada</button>'
         +'</div>';
     }).catch(function(){});
+  }
+  // ===== CORRIGIR INFORMAÇÃO ERRADA (Adriana, 06/ago/2026) ===========================
+  // "Hoje a tutora do Toddy ligou que o filho passou informação errada, então precisamos
+  //  editar. Tem que aparecer quem editou e por quê, ficar registrado, e subir novamente
+  //  para o check-in com as novas informações salvas — exemplo, o Toddy foi a alimentação."
+  //
+  // Diferença para o ACRESCENTAR: acrescentar SOMA (pertence novo, remédio novo) e nunca
+  // tira nada — foi feito para o tutor que trouxe mais coisas. Quando a informação está
+  // ERRADA isso não serve: a medicação errada continuaria lá. Corrigir SUBSTITUI, exige o
+  // motivo, guarda o antes e o depois, e devolve para a Conferência.
+  var ciCorrigindoId=null;
+  function ciCorrigirExistente(id){
+    if(!DB) return;
+    DB.ref('auaulandia/estadias/'+id).once('value').then(function(s){
+      const e=s.val()||{}; if(!e.nome) return;
+      return ciAplicarEstadiaNaFicha(e,'Você está CORRIGINDO o check-in. Ajuste o que estava errado e salve — vou pedir o motivo.').then(function(){
+        ciEditandoId=null; ciCorrigindoId=id; ciSalvoAgora=false;
+        window.__ciAntes=JSON.parse(JSON.stringify({ficha:e.ficha||{}, medicacao:e.medicacao||[], pertences:e.pertences||[], entrada:e.entrada||'', saida:e.saida||''}));
+        const el=document.getElementById('ciJaHospedado');
+        if(el) el.innerHTML='<div style="background:#FDECEA;border:2px solid #B3261E;border-radius:14px;padding:14px 16px;margin-bottom:14px">'
+          +'<div style="font-weight:800;font-size:17px;color:#B3261E;margin-bottom:4px">✎ Modo CORRIGIR ligado</div>'
+          +'<div style="font-size:14px;color:#234D67;font-weight:600">O que você mudar aqui <strong>substitui</strong> o que estava no check-in de '+esc(e.nome)+' — inclusive a medicação e a alimentação. Ao salvar eu peço <strong>o motivo</strong> e o seu nome, guardo o antes e o depois, e devolvo para a Conferência.</div></div>';
+        window.scrollTo({top:0,behavior:'smooth'});
+      });
+    }).catch(function(err){ zAlertao('Não consegui abrir o check-in',[String((err&&err.message)||err)]); });
+  }
+  // O que mudou, em português — é isto que a Wandela e o Plantão leem depois.
+  function ciDiffCorrecao(antes, dados, meds){
+    const D=[];
+    try{
+      const a=(antes&&antes.ficha)||{}, b=dados.ficha||{};
+      const cmp=function(rot, x, y){
+        const sx=JSON.stringify(x==null?'':x), sy=JSON.stringify(y==null?'':y);
+        if(sx!==sy) D.push(rot+': "'+String(x==null?'—':(typeof x==='object'?JSON.stringify(x):x)).slice(0,90)+'" → "'+String(y==null?'—':(typeof y==='object'?JSON.stringify(y):y)).slice(0,90)+'"');
+      };
+      cmp('Entrada', antes.entrada, dados.entrada);
+      cmp('Saída', antes.saida, dados.saida);
+      Object.keys(Object.assign({},a,b)).forEach(function(k){
+        if(k==='alim'){ cmp('Alimentação', JSON.stringify(a[k]||{}), JSON.stringify(b[k]||{})); return; }
+        cmp(k, a[k], b[k]);
+      });
+      const ma=(antes.medicacao||[]).map(function(m){ return (m.nome||'')+' '+(m.q||'')+(m.u||'')+' '+((m.horarios||[]).join(',')); }).sort();
+      const mb=(ciMedsToLista(meds)||[]).map(function(m){ return (m.nome||'')+' '+(m.q||'')+(m.u||'')+' '+((m.horarios||[]).join(',')); }).sort();
+      if(JSON.stringify(ma)!==JSON.stringify(mb)){
+        const saiu=ma.filter(function(x){ return mb.indexOf(x)<0; }), entrou=mb.filter(function(x){ return ma.indexOf(x)<0; });
+        if(saiu.length) D.push('Medicação REMOVIDA: '+saiu.join(' · '));
+        if(entrou.length) D.push('Medicação NOVA: '+entrou.join(' · '));
+      }
+    }catch(e){}
+    return D;
   }
   function ciAcrescentarNoExistente(id){
     if(!DB) return;
@@ -10159,6 +10625,23 @@
     const pacote={ dados:dados, meds:meds, temMed:temMed, semTutor:semTutor, assina:assina, sig:sig, quemDeixou:quemDeixou, key:key };
     // TRAVA DURA anti-duplicidade (item 15, caso Ozzy 01/ago/2026: 3 check-ins do mesmo dia).
     // O cache local pode estar atrasado, então a checagem vai ao BANCO antes de criar qualquer coisa.
+    // Modo CORRIGIR: não checa duplicidade (a estadia é conhecida) e exige o motivo antes
+    // de tocar em qualquer coisa.
+    if(ciCorrigindoId){
+      const _diff=ciDiffCorrecao(window.__ciAntes||{}, dados, meds);
+      if(!_diff.length){
+        zAlertao('NADA MUDOU',['Você abriu o modo corrigir mas não alterou nenhum campo. Ajuste o que estava errado e salve de novo, ou volte.'],{botao:'Voltar e corrigir'});
+        return;
+      }
+      const _motivo=(prompt('CORREÇÃO — por que esta informação está sendo alterada?\n\nO motivo fica gravado no check-in e a Conferência é reaberta.\n\nEx.: a tutora ligou às 10h, o filho havia passado a alimentação errada.','')||'').trim();
+      if(!_motivo){ zAlertao('CORREÇÃO CANCELADA',['Sem o motivo eu não altero o check-in. Nada foi mudado — a ficha continua preenchida aqui na tela.'],{botao:'Entendi'}); return; }
+      const _quem=(prompt('Seu nome (quem está corrigindo):', (typeof quemSou==='function'?quemSou():'')||'')||'').trim();
+      if(!_quem){ zAlertao('CORREÇÃO CANCELADA',['Falta dizer quem está corrigindo. Nada foi alterado.'],{botao:'Entendi'}); return; }
+      pacote.correcao={motivo:_motivo, quem:_quem, diff:_diff};
+      __ciTravar(true);
+      __ciGravar('corrigir', ciCorrigindoId, pacote);
+      return;
+    }
     __ciTravar(true);
     __ciEstadiaAtivaNoBanco(key, ciHosp).then(function(ativa){
       if(ciEditandoId){ __ciGravar('acrescentar', ciEditandoId, pacote); return; }
@@ -10236,13 +10719,39 @@
     const dados=P.dados, meds=P.meds, key=P.key;
     const assinado=(P.semTutor?('Entregue sem o tutor'+(P.quemDeixou?(' — '+P.quemDeixou):'')):P.assina);
     if(st){ st.style.color='var(--muted)'; st.textContent=(modo==='acrescentar'?'Acrescentando ao check-in…':'Salvando estadia…'); }
-    // Em 'acrescentar' lê o que JÁ está gravado (banco, não cache) antes de fundir.
-    (modo==='acrescentar'
+    // Em 'acrescentar' e 'corrigir' lê o que JÁ está gravado (banco, não cache) antes.
+    ((modo==='acrescentar'||modo==='corrigir')
       ? DB.ref('auaulandia/estadias/'+estadiaId).once('value').then(function(s){ return s.val()||{}; })
       : Promise.resolve({})
     ).then(function(antes){
     const ops=[]; let ref=null, novosItens=[];
-    if(modo==='acrescentar'){
+    if(modo==='corrigir'){
+      // SUBSTITUI. É a diferença que faz a correção existir: aqui a medicação e a
+      // alimentação erradas SAEM, em vez de conviverem com as certas.
+      ref=DB.ref('auaulandia/estadias/'+estadiaId);
+      const hist=Array.isArray(antes.correcoes)?antes.correcoes.slice():[];
+      hist.push({ quando:Date.now(), quem:(P.correcao&&P.correcao.quem)||quemSou(),
+                  motivo:(P.correcao&&P.correcao.motivo)||'', mudou:(P.correcao&&P.correcao.diff)||[],
+                  antes:{ ficha:antes.ficha||{}, medicacao:antes.medicacao||[], entrada:antes.entrada||'', saida:antes.saida||'' } });
+      ops.push(ref.update({
+        entrada:dados.entrada, saida:dados.saida, ficha:dados.ficha,
+        pertences:dados.pertences, medicacao:ciMedsToLista(meds),
+        gate_conferido:P.temMed,
+        correcoes:hist, _ts:Date.now(),
+        _ultimaEdicao:{quem:(P.correcao&&P.correcao.quem)||quemSou(), ts:Date.now(), corrigiu:(P.correcao&&P.correcao.diff)||[]}
+      }));
+      // Volta para a Conferência SEMPRE: informação corrigida é informação não conferida.
+      ops.push(DB.ref('auaulandia/estadias/'+estadiaId+'/conferencia').update({
+        concluida:false, reaberta_em:Date.now(), reaberta_por:(P.correcao&&P.correcao.quem)||quemSou(),
+        reaberta_motivo:'CORREÇÃO — '+((P.correcao&&P.correcao.motivo)||'')+' · '+(((P.correcao&&P.correcao.diff)||[]).join(' · '))
+      }));
+      // A agenda de medicação é reescrita do zero: se um remédio saiu, o alarme dele
+      // precisa sumir junto — senão o despertador continua tocando por um remédio que
+      // não existe mais.
+      ops.push(DB.ref('auaulandia/medicacao-agenda/'+key+'/itens').set(P.temMed?meds:null));
+      if(P.temMed) ops.push(DB.ref('auaulandia/medicacao-agenda/'+key).update({ nome:ciHosp.nome||'', tutor:ciHosp.tutor||'', estadiaId:estadiaId, _ts:Date.now(), _quem:quemSou() }));
+    }
+    else if(modo==='acrescentar'){
       ref=DB.ref('auaulandia/estadias/'+estadiaId);
       const pertAntes=Array.isArray(antes.pertences)?antes.pertences:[];
       const chaveP=function(p){ return jsNorm((p&&(p.nome||p.k))||'')+'|'+jsNorm((p&&p.spec)||''); };
@@ -10278,7 +10787,7 @@
     }
     // Liga a medicação à espinha (mesmo nó do despertador) para já disparar os alarmes.
     // ANTI-HULK: grava metadados + CADA remédio item a item (update), nunca sobrescreve o nó inteiro.
-    if(P.temMed){
+    if(P.temMed && modo!=='corrigir'){   // no corrigir a agenda já foi reescrita acima
       const eid=(modo==='acrescentar')?estadiaId:ref.key;
       ops.push(DB.ref('auaulandia/medicacao-agenda/'+key).update({ nome:ciHosp.nome||'', tutor:ciHosp.tutor||'', estadiaId:eid, _ts:Date.now(), _quem:quemSou() }));
       Object.keys(meds).forEach(function(mid){ ops.push(DB.ref('auaulandia/medicacao-agenda/'+key+'/itens/'+mid).update(meds[mid])); });
@@ -10293,10 +10802,20 @@
         setTimeout(function(){ checarFaltasDaEstadia(_idEst,_estCalc,'conferido na entrada'); }, 800);
       }catch(e){}
       ciEditandoId=null;
-      if(typeof audit==='function') audit('checkin', modo==='acrescentar'?('acrescentou ao check-in: '+(novosItens.join(', ')||'ajuste de ficha')):'estadia criada',{pet:ciHosp.nome||'',entrada:dados.entrada,meds:Object.keys(meds).length});
+      if(typeof audit==='function') audit('checkin',
+        modo==='corrigir'?('CORREÇÃO: '+(((P.correcao&&P.correcao.diff)||[]).join(' | '))+' — motivo: '+((P.correcao&&P.correcao.motivo)||''))
+        :(modo==='acrescentar'?('acrescentou ao check-in: '+(novosItens.join(', ')||'ajuste de ficha')):'estadia criada'),
+        {pet:ciHosp.nome||'',entrada:dados.entrada,meds:Object.keys(meds).length,quem:(P.correcao&&P.correcao.quem)||undefined});
       if(typeof carregarAgendaMedTodos==='function') carregarAgendaMedTodos();
       if(st){ st.style.color='var(--crm-ok)'; st.textContent='✅ Salvo.'; }
-      if(modo==='acrescentar'){
+      if(modo==='corrigir'){
+        ciCorrigindoId=null; window.__ciAntes=null;
+        zAlertao('✅ CORREÇÃO SALVA — '+((ciHosp.nome||'').toUpperCase()),
+          ((P.correcao&&P.correcao.diff)||['A ficha foi atualizada.']),
+          {ok:true, botao:'Fechar',
+           rodape:'Motivo: '+((P.correcao&&P.correcao.motivo)||'—')+' · registrado por '+((P.correcao&&P.correcao.quem)||'—')+'. Voltou para a Conferência: alguém precisa conferir de novo o que mudou, e o alarme da medicação já foi refeito.'});
+      }
+      else if(modo==='acrescentar'){
         zAlertao('✅ ACRESCENTADO AO CHECK-IN DE '+((ciHosp.nome||'').toUpperCase()),
           novosItens.length?novosItens:['A ficha foi atualizada.'],
           {ok:true, botao:'Fechar', rodape:novosItens.length?'Voltou para a Conferência: a conferente vai ver o que entrou de novo e conferir.':'Nada novo para conferir.'});
