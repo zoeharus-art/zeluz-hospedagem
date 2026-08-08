@@ -1970,6 +1970,21 @@
         </div>
       </div>
 
+      <!-- PERNOITE (Adriana, 08/ago/2026). "O tutor já chega de manhã dizendo que só pega amanhã.
+           E também quando não conseguiu vir buscar. Ele é mais enxuto que a hospedagem: comida,
+           medicação se tiver, uma roupa, a mochila do Day Care. Quem lança é a recepção, porque
+           tem que lançar valor." Marcar aqui é o que faz a pernoite nascer com ficha de comida e
+           remédio — antes ela só existia como lançamento solto no Plantão. -->
+      <div class="card">
+        <h2>Hospedagem ou pernoite?</h2>
+        <div class="hint">Pernoite é a noite única: dorme hoje e vai embora amanhã. Marque aqui — a saída já vem preenchida e a ficha fica enxuta.</div>
+        <div class="seg gold" id="ciTipoEstadia" data-single style="margin-top:8px">
+          <button onclick="pick(this);ciTipoEstadiaChange('hospedagem')">Hospedagem</button>
+          <button onclick="pick(this);ciTipoEstadiaChange('pernoite')">Pernoite (uma noite)</button>
+        </div>
+        <div id="ciPernoiteBox" style="display:none;margin-top:10px"></div>
+      </div>
+
       <div class="card">
         <h2>Datas da estadia</h2>
         <div class="hint">Cada estadia é uma pasta separada — ração, remédio e pertences nunca se misturam entre uma vez e outra.</div>
@@ -2571,9 +2586,7 @@
           <button onclick="pick(this);repMotivoSel('cio')">Cio</button>
           <button onclick="pick(this);repMotivoSel('doente')">Doente / internado</button>
           <button onclick="pick(this);repMotivoSel('viagem')">Tutor viajou</button>
-          <button onclick="pick(this);repMotivoSel('fora')">Tutor está fora</button>
           <button onclick="pick(this);repMotivoSel('atrasado')">Tutor não conseguiu trazer</button>
-          <button onclick="pick(this);repMotivoSel('zeluz')">Zêluz fechada</button>
           <button onclick="pick(this);repMotivoSel('outro')">Outro</button>
         </div>
 
@@ -3103,8 +3116,14 @@
   // Conta corrente: crédito entra quando falta avisada, sai quando ele vem repor. Nada é
   // apagado — errou, lança um ESTORNO. O extrato conta a história inteira.
   var REPO_CACHE={};
+  // MOTIVOS (Adriana, 08/ago/2026): saíram da tela "Zêluz fechada" — não é motivo de falta do
+  // tutor, a casa fechada é problema nosso e não vira crédito — e "Tutor está fora", que dizia a
+  // mesma coisa que "Tutor viajou" e "Tutor não conseguiu trazer".
+  // Os dois continuam AQUI, e só aqui, para os lançamentos antigos seguirem legíveis no extrato:
+  // apagar a legenda faria o histórico exibir o código cru. Nada do extrato se reescreve.
   const REP_MOTIVOS={ cio:'Cio', doente:'Doente / internado', viagem:'Tutor viajou',
-    fora:'Tutor está fora', atrasado:'Tutor não conseguiu trazer', zeluz:'Zêluz fechada', outro:'Outro' };
+    atrasado:'Tutor não conseguiu trazer', outro:'Outro',
+    fora:'Tutor está fora', zeluz:'Zêluz fechada' };
   function repLancamentos(p){
     try{ const o=(REPO_CACHE[pelKey(p)]||{}).lancamentos||{};
       return Object.keys(o).map(function(k){ return Object.assign({_id:k}, o[k]); })
@@ -5742,11 +5761,18 @@
     if(inp) inp.value=''; if(err) err.textContent='';
     _appTrancado=false;
     var el=document.getElementById('lockScreen'); if(el) el.style.display='none';
-    // O aparelho já foi validado no login original — aqui só reaplica a pessoa. Se for OUTRA, as
-    // telas viram as dela na hora (aplicarLogin refaz papel, menus e permissões).
     try{ sessionStorage.setItem('zeluz_login', JSON.stringify(u)); }catch(e){}
-    aplicarLogin(u);
-    if(trocou){ try{ if(typeof audit==='function') audit('troca-de-pessoa-no-aparelho',(u.nome||'-'),{saiu:(antes.nome||'-')}); }catch(e){} }
+    // DESTRANCAR NÃO É ENTRAR DE NOVO (Adriana, 08/ago/2026: "o almoço reiniciava").
+    // Antes chamávamos aplicarLogin() sempre — e aplicarLogin joga quem tem escopo de atividade
+    // direto em abrirAtividade(), que remonta a tela do zero. No almoço de 07/08 a tela trancou 4x
+    // (11:54, 12:09, 12:26, 12:35) e a monitora foi reiniciada 4x: por isso ela marcava 14
+    // peludinhos de uma vez, de memória, depois de destrancar. A trava é uma CORTINA por cima do
+    // trabalho — tirar a cortina tem que devolver a tela exatamente onde estava.
+    // Só quando é OUTRA pessoa refazemos o login (papel, menus e permissões mudam de verdade).
+    if(trocou){
+      aplicarLogin(u);
+      try{ if(typeof audit==='function') audit('troca-de-pessoa-no-aparelho',(u.nome||'-'),{saiu:(antes.nome||'-')}); }catch(e){}
+    }
     inatMarcarAtividade();
   }
   function inatMarcarAtividade(){
@@ -5754,10 +5780,23 @@
     var el=document.getElementById('inatAviso');
     if(el && el.style.display!=='none') el.style.display='none';
   }
+  // O ALMOÇO NÃO TRANCA (Adriana, 08/ago/2026: "pode deixar o aplicativo aberto para almoço —
+  // não trancando"). O protocolo manda ficar ATÉ 10 MINUTOS com cada peludinho, mexendo a comida
+  // com a colher — o celular fica na bancada esse tempo todo. Com 5 minutos de trava, a tela
+  // fechava no meio de cada peludinho: 20 travas em 07/08, 29 em 04/08. As outras telas continuam
+  // trancando normalmente; aqui a monitora está de pé na frente do aparelho o tempo inteiro.
+  function almocoEmUso(){
+    try{
+      if(typeof dcAtiv==='undefined' || dcAtiv!=='almoco') return false;
+      var el=document.getElementById('scr-almoco');
+      return !!(el && el.offsetParent!==null);   // está mesmo desenhada na tela
+    }catch(e){ return false; }
+  }
   function inatChecar(){
     var el=document.getElementById('inatAviso');
     // Já trancado, ou ninguém logado: nada a contar.
     if(!inatLogado() || _appTrancado){ if(el && el.style.display!=='none') el.style.display='none'; return; }
+    if(almocoEmUso()){ _inatUltimo=Date.now(); if(el && el.style.display!=='none') el.style.display='none'; return; }
     var resta=INAT_LIMITE_MS-(Date.now()-_inatUltimo);
     if(resta<=0){ if(el) el.style.display='none'; trancarApp(); return; }
     if(resta<=INAT_AVISO_MS){
@@ -6024,8 +6063,16 @@
       setTimeout(function(){ try{ const el=document.getElementById('hospNovaFim'); if(el){ el.scrollIntoView({behavior:'smooth',block:'center'}); el.focus(); } }catch(e){} },60);
       return;
     }
-    if((hospedes||[]).some(h=>chaveH(h)===chaveH({nome,tutor}))){
-      alert(nome+' já está hospedado(a) hoje — não precisa adicionar de novo.');
+    // NÃO EXISTE LANÇAR DUAS VEZES (Adriana, 08/ago/2026). A lista de hoje já funde as três
+    // fontes (planilha, lançamento manual daqui e estadia do Check-in), então dá para dizer
+    // DE ONDE veio — antes só dizia "já está hospedado" e a pessoa ficava sem saber se o
+    // registro dela tinha entrado.
+    var _ja=(hospedes||[]).find(h=>chaveH(h)===chaveH({nome,tutor}));
+    if(_ja){
+      alert(nome+' JÁ está na lista de hoje — '
+        +(_ja.manualKey?'lançado(a) aqui no Plantão mesmo.':'lançado(a) pela RECEPÇÃO, no check-in.')
+        +'\n\nNão precisa lançar de novo: lançar duas vezes faz o mesmo FILHOt aparecer em dois lugares, com a comida e o remédio partidos entre os dois.'
+        +'\n\nSe faltou alguma coisa (o jantar, a comida, o remédio), abra a ficha dele na lista e complete ali.');
       fecharHospBuscaModal();
       return;
     }
@@ -9098,26 +9145,89 @@
   function setDcAba(t){ abrirAtividade(t); }
   function horaAgora(){ const d=new Date(),p=x=>String(x).padStart(2,'0'); return p(d.getHours())+':'+p(d.getMinutes()); }
   function quemSou(){ try{ const u=JSON.parse(sessionStorage.getItem('zeluz_login')||'null'); return (u&&u.nome)||'-'; }catch(e){ return '-'; } }
+  // A GRADE NUNCA MAIS APARECE VAZIA POR FALHA DE REDE (Adriana, 08/ago/2026: "as marcações
+  // sumiam"). Antes esta função ZERAVA tudo na primeira linha e só depois ia buscar no banco —
+  // e cada leitura terminava em .catch(()=>{}), que engole o erro sem dizer nada. Com o Wi-Fi da
+  // loja oscilando, o resultado era uma grade em branco SEM AVISO NENHUM: a monitora achava que
+  // tinha perdido o trabalho e remarcava tudo por cima.
+  // Agora: só substitui o que CHEGOU do banco. O que falhar mantém o que já está na tela, e a
+  // falha vira um aviso visível — porque tela em branco mentindo é pior que erro assumido.
+  var almSemRede=false;
   function carregarAlmoco(){
-    almMarcas={}; almTurno={}; almPrep={}; almFinal={}; almExecOk=false; almPrepTurno={}; almFinalTurno={};
     function decideStep(){ if(isAprendiz()){ almStep = !prepCompleto()?'prep':(!almExecOk?'exec':'grade'); } else { almStep='grade'; } renderAlmStep(); }
     if(DB){
+      almSemRede=false;
+      const falhou=function(){ almSemRede=true; };
+      const pronto=function(){ try{ almVigiar(); }catch(e){} decideStep(); };
       Promise.all([
-        DB.ref('daycare/almoco/'+dcDataKey()).once('value').then(s=>{ almMarcas=s.val()||{}; }).catch(()=>{}),
-        DB.ref('daycare/almoco-turno/'+dcDataKey()).once('value').then(s=>{ almTurno=s.val()||{}; }).catch(()=>{}),
-        DB.ref('daycare/almoco-prep-turno/'+dcDataKey()).once('value').then(s=>{ almPrepTurno=s.val()||{}; }).catch(()=>{}),
-        DB.ref('daycare/almoco-final-turno/'+dcDataKey()).once('value').then(s=>{ almFinalTurno=s.val()||{}; }).catch(()=>{}),
-        DB.ref('daycare/almoco-prep/'+dcDataKey()).once('value').then(s=>{ almPrep=s.val()||{}; }).catch(()=>{}),
-        DB.ref('daycare/almoco-final/'+dcDataKey()).once('value').then(s=>{ almFinal=s.val()||{}; }).catch(()=>{}),
-        DB.ref('daycare/almoco-exec/'+dcDataKey()).once('value').then(s=>{ almExecOk=!!s.val(); }).catch(()=>{}),
-        DB.ref('daycare/banho/'+dcDataKey()).once('value').then(s=>{ dcBanho=s.val()||{}; }).catch(()=>{}),
+        DB.ref('daycare/almoco/'+dcDataKey()).once('value').then(s=>{ almMarcas=s.val()||{}; }).catch(falhou),
+        DB.ref('daycare/almoco-turno/'+dcDataKey()).once('value').then(s=>{ almTurno=s.val()||{}; }).catch(falhou),
+        DB.ref('daycare/almoco-prep-turno/'+dcDataKey()).once('value').then(s=>{ almPrepTurno=s.val()||{}; }).catch(falhou),
+        DB.ref('daycare/almoco-final-turno/'+dcDataKey()).once('value').then(s=>{ almFinalTurno=s.val()||{}; }).catch(falhou),
+        DB.ref('daycare/almoco-prep/'+dcDataKey()).once('value').then(s=>{ almPrep=s.val()||{}; }).catch(falhou),
+        DB.ref('daycare/almoco-final/'+dcDataKey()).once('value').then(s=>{ almFinal=s.val()||{}; }).catch(falhou),
+        DB.ref('daycare/almoco-exec/'+dcDataKey()).once('value').then(s=>{ almExecOk=!!s.val(); }).catch(falhou),
+        DB.ref('daycare/banho/'+dcDataKey()).once('value').then(s=>{ dcBanho=s.val()||{}; }).catch(falhou),
         // a planilha da recepção define quem tem banho — e banho é o 1º da ordem de servir
         carregarPlanilhaDia().catch(()=>{})
-      ]).then(decideStep).catch(decideStep);
+      ]).then(pronto).catch(pronto);
     } else decideStep();
   }
-  function iniciarAlmoco(){ const h=horaAgora(),q=quemSou(); almTurno=Object.assign({},almTurno,{inicio:h,quemInicio:q}); if(DB) DB.ref('daycare/almoco-turno/'+dcDataKey()).update({inicio:h,quemInicio:q}).catch(()=>{}); if(typeof audit==='function') audit('almoco_ini','iniciou o almoço às '+h); renderAlmoco(); }
-  function encerrarAlmoco(){ const h=horaAgora(),q=quemSou(); almTurno=Object.assign({},almTurno,{fim:h,quemFim:q}); if(DB) DB.ref('daycare/almoco-turno/'+dcDataKey()).update({fim:h,quemFim:q}).catch(()=>{}); if(typeof audit==='function') audit('almoco_fim','encerrou o almoço às '+h); renderAlmoco(); }
+  // A GRADE AO VIVO ENTRE OS APARELHOS.
+  // As marcações eram lidas UMA VEZ só, ao abrir a tela. Dois aparelhos servindo ao mesmo tempo
+  // (o do Day Care e o da Supervisão) não enxergavam um ao outro: cada um via a grade do momento
+  // em que abriu. Foi assim que, em 03/08, a mesma pessoa tocou "Iniciar almoço" achando que ele
+  // não tinha começado — o início da colega estava no banco, mas não na tela dela.
+  // O turno também vigiado: quem chega no meio VÊ que o almoço já começou, e às ordens de quem.
+  var _almVigiaRefs=[], _almVigiaDia='';
+  function almVigiar(){
+    if(!DB) return;
+    const dia=dcDataKey();
+    if(_almVigiaDia===dia && _almVigiaRefs.length) return;   // já vigiando este dia
+    _almVigiaRefs.forEach(function(r){ try{ r.off(); }catch(e){} });
+    _almVigiaRefs=[]; _almVigiaDia=dia;
+    const redesenhar=function(){
+      // Só redesenha se a pessoa estiver OLHANDO a grade — nunca puxar o tapete de outra tela.
+      if(typeof dcAtiv!=='undefined' && dcAtiv==='almoco' && almStep==='grade'){ try{ renderAlmoco(); }catch(e){} }
+    };
+    const vigiar=function(caminho, aplicar){
+      const ref=DB.ref(caminho);
+      ref.on('value', function(s){
+        const novo=s.val()||{};
+        // Vem eco da própria marcação a cada toque: se nada mudou de verdade, não redesenha
+        // (redesenhar embaralha a ordem da lista debaixo do dedo de quem está marcando).
+        if(JSON.stringify(novo)===JSON.stringify(aplicar())) return;
+        aplicar(novo); almSemRede=false; redesenhar();
+      }, function(){ almSemRede=true; redesenhar(); });
+      _almVigiaRefs.push(ref);
+    };
+    vigiar('daycare/almoco/'+dia, function(v){ if(arguments.length){ almMarcas=v; } return almMarcas; });
+    vigiar('daycare/almoco-turno/'+dia, function(v){ if(arguments.length){ almTurno=v; } return almTurno; });
+  }
+  // NINGUÉM APAGA O RELÓGIO DE QUEM COMEÇOU (Adriana, 08/ago/2026).
+  // O estrago documentado em 03/08: Amanda Barbosa iniciou o almoço às 11:47. Às 12:32 outra
+  // pessoa assumiu o aparelho e tocou "Iniciar almoço" — o update() gravou por cima e o 11:47
+  // deixou de existir. O Banco de Tempo passou a dizer 1h40 num almoço que levou 2h25, e quem
+  // realmente começou sumiu do relatório. Um toque, sem pergunta nenhuma, apagava o dia.
+  // Agora o botão mostra o que já está gravado; se a pessoa confirmar mesmo assim, o horário
+  // antigo vai para um histórico em vez de virar pó.
+  function turnoTrocar(caminho, campo, campoQuem, turno, rotulo){
+    const h=horaAgora(), q=quemSou(), atual=(turno||{})[campo], quemAtual=(turno||{})[campoQuem];
+    if(atual){
+      if(!confirm(rotulo+' de hoje JÁ foi registrado às '+atual+(quemAtual?' por '+quemAtual:'')+'.\n\n'
+        +'Se continuar, o horário passa a ser o seu ('+h+') e o de '+(quemAtual||'quem registrou')+' sai do relatório.\n\n'
+        +'Quer mesmo trocar?')) return null;
+      if(DB) DB.ref(caminho+'/historico').push({campo:campo, era:atual, eraQuem:(quemAtual||'-'), virou:h, virouQuem:q, ts:Date.now()}).catch(()=>{});
+      try{ if(typeof audit==='function') audit('turno-sobrescrito', rotulo+': '+atual+' ('+(quemAtual||'-')+') passou para '+h+' ('+q+')'); }catch(e){}
+    }
+    const patch={}; patch[campo]=h; patch[campoQuem]=q;
+    if(DB) DB.ref(caminho).update(patch).catch(()=>{});
+    return {h:h, patch:patch};
+  }
+  function iniciarAlmoco(){ const r=turnoTrocar('daycare/almoco-turno/'+dcDataKey(),'inicio','quemInicio',almTurno,'O início do almoço'); if(!r) return;
+    almTurno=Object.assign({},almTurno,r.patch); if(typeof audit==='function') audit('almoco_ini','iniciou o almoço às '+r.h); renderAlmoco(); }
+  function encerrarAlmoco(){ const r=turnoTrocar('daycare/almoco-turno/'+dcDataKey(),'fim','quemFim',almTurno,'O fim do almoço'); if(!r) return;
+    almTurno=Object.assign({},almTurno,r.patch); if(typeof audit==='function') audit('almoco_fim','encerrou o almoço às '+r.h); renderAlmoco(); }
   // A marcação é do DIA de hoje (daycare/almoco/{data}), não do dia da semana. Navegar para
   // "Segunda" troca só a turma exibida — marcar ali gravaria na data de hoje e faria o
   // peludinho de seg+qua aparecer "comeu" na segunda. Em dia que não é hoje, é só consulta.
@@ -9139,10 +9249,14 @@
         <button class="btn" style="background:rgba(255,255,255,.14);color:var(--z-cream);border:1px solid rgba(255,255,255,.25)" onclick="${fnFim}()">&#9632; Encerrar</button>
       </div></div>`;
   }
-  function iniciarPrep(){ const h=horaAgora(),q=quemSou(); almPrepTurno=Object.assign({},almPrepTurno,{inicio:h,quemInicio:q}); if(DB) DB.ref('daycare/almoco-prep-turno/'+dcDataKey()).update({inicio:h,quemInicio:q}).catch(()=>{}); if(typeof audit==='function') audit('prep_ini','iniciou a preparação às '+h); renderAlmPrep(); }
-  function encerrarPrep(){ const h=horaAgora(),q=quemSou(); almPrepTurno=Object.assign({},almPrepTurno,{fim:h,quemFim:q}); if(DB) DB.ref('daycare/almoco-prep-turno/'+dcDataKey()).update({fim:h,quemFim:q}).catch(()=>{}); if(typeof audit==='function') audit('prep_fim','encerrou a preparação às '+h); renderAlmPrep(); }
-  function iniciarFinal(){ const h=horaAgora(),q=quemSou(); almFinalTurno=Object.assign({},almFinalTurno,{inicio:h,quemInicio:q}); if(DB) DB.ref('daycare/almoco-final-turno/'+dcDataKey()).update({inicio:h,quemInicio:q}).catch(()=>{}); if(typeof audit==='function') audit('final_ini','iniciou a finalização às '+h); renderAlmFinal(); }
-  function encerrarFinal(){ const h=horaAgora(),q=quemSou(); almFinalTurno=Object.assign({},almFinalTurno,{fim:h,quemFim:q}); if(DB) DB.ref('daycare/almoco-final-turno/'+dcDataKey()).update({fim:h,quemFim:q}).catch(()=>{}); if(typeof audit==='function') audit('final_fim','encerrou a finalização às '+h); renderAlmFinal(); }
+  function iniciarPrep(){ const r=turnoTrocar('daycare/almoco-prep-turno/'+dcDataKey(),'inicio','quemInicio',almPrepTurno,'O início da preparação'); if(!r) return;
+    almPrepTurno=Object.assign({},almPrepTurno,r.patch); if(typeof audit==='function') audit('prep_ini','iniciou a preparação às '+r.h); renderAlmPrep(); }
+  function encerrarPrep(){ const r=turnoTrocar('daycare/almoco-prep-turno/'+dcDataKey(),'fim','quemFim',almPrepTurno,'O fim da preparação'); if(!r) return;
+    almPrepTurno=Object.assign({},almPrepTurno,r.patch); if(typeof audit==='function') audit('prep_fim','encerrou a preparação às '+r.h); renderAlmPrep(); }
+  function iniciarFinal(){ const r=turnoTrocar('daycare/almoco-final-turno/'+dcDataKey(),'inicio','quemInicio',almFinalTurno,'O início da finalização'); if(!r) return;
+    almFinalTurno=Object.assign({},almFinalTurno,r.patch); if(typeof audit==='function') audit('final_ini','iniciou a finalização às '+r.h); renderAlmFinal(); }
+  function encerrarFinal(){ const r=turnoTrocar('daycare/almoco-final-turno/'+dcDataKey(),'fim','quemFim',almFinalTurno,'O fim da finalização'); if(!r) return;
+    almFinalTurno=Object.assign({},almFinalTurno,r.patch); if(typeof audit==='function') audit('final_fim','encerrou a finalização às '+r.h); renderAlmFinal(); }
   function bancoTempoHTML(){
     const p=diffMin(almPrepTurno.inicio,almPrepTurno.fim);
     const a=diffMin((almTurno||{}).inicio,(almTurno||{}).fim);
@@ -9292,10 +9406,12 @@
       ${faltouList.length?`<div class="alm-fora"><strong>FALTARAM HOJE (${faltouList.length}):</strong> ${faltouList.map(o=>nomeDesamb(o,faltouList)).join(', ')} &mdash; a planilha avisou a falta, entao sairam do almoco.</div>`:''}
       ${foraList.length?`<div class="alm-fora"><strong>NAO ALMOCAM NORMALMENTE (${foraList.length}):</strong> ${foraList.map(o=>nomeDesamb(o,foraList)).join(', ')} &mdash; continuam na lista abaixo. Se hoje nao comerem, toque em <strong>Nao se aplica</strong>; se a tutora pedir para dar comida, marque normalmente.</div>`:''}
       ${!ehHoje()?`<div class="dc-meia"><strong>Você está vendo a turma de ${DIA_FULL[dcDia]}, que não é hoje.</strong> Isto é só planejamento: o almoço se marca no dia em que acontece. Para registrar, volte para ${DIA_FULL[HOJE_DIA]} (hoje).</div>`:''}
+      ${almSemRede?`<div class="dc-faltas" style="border-color:#B3261E;color:#B3261E"><strong>SEM CONEXÃO COM O BANCO AGORA.</strong> A lista pode estar desatualizada. <strong>Não remarque nada:</strong> o que você já marcou está guardado e sobe sozinho assim que a internet voltar. Se algum peludinho aparecer em branco, é a internet — não é o seu trabalho.</div>`:''}
       ${avisoPlanilha()}
       <div class="alm-legenda"><strong>Ordem de servir</strong> &mdash; a lista já vem nesta ordem, de cima para baixo:
         <span class="lg-g"><b>1º</b> quem tem banho</span><span class="lg-g"><b>2º</b> comedouro lento</span><span class="lg-g"><b>3º</b> comida natural/geladeira</span><span class="lg-g"><b>4º</b> os outros</span>
         <span class="lg-nota">Dentro de cada grupo, alfabética. Por isso um peludinho de comida natural aparece depois de um "S" — não é erro.</span>
+        <span class="lg-nota"><strong>Enquanto esta tela do Almoço estiver aberta, o aparelho não tranca.</strong> Sirva com calma — a tela espera por você. Ao terminar, saia do Almoço para o aparelho voltar a se proteger.</span>
       </div>`;
     const faltam=list.filter(o=>!jaComeu(o)).length;
     document.getElementById('almCount').textContent=faltam
@@ -9611,6 +9727,58 @@
   function ciKey(){ if(!ciHosp) return ''; return (typeof medAgendaKey==='function')?medAgendaKey(ciHosp):String(ciHosp.refKey||((ciHosp.nome||'')+'__'+(ciHosp.tutor||''))).toLowerCase().replace(/[.#$\[\]\/]/g,'-'); }
   function ciHoje(){ const p=x=>String(x).padStart(2,'0'); const d=new Date(); return d.getFullYear()+'-'+p(d.getMonth()+1)+'-'+p(d.getDate()); }
 
+  // ===== PERNOITE NO CHECK-IN (Adriana, 08/ago/2026) ==================================
+  // "Quem coloca é a recepção porque tem que lançar valor." A pernoite já existia solta no
+  // Plantão (Adicionar pernoite) e na aba Hóspedes, mas não no Check-in — e é no Check-in que
+  // se registra a comida e o remédio. Sem isso, a pernoite chegava no plantão sem ficha.
+  // A saída já vem preenchida com amanhã porque pernoite é UMA noite: obrigar a recepção a
+  // calcular a data é o tipo de campo que fica em branco na correria.
+  var ciTipoEstadia='hospedagem';
+  function ciEhPernoite(){ return ciTipoEstadia==='pernoite'; }
+  function ciMaisUmDia(iso){
+    const p2=x=>String(x).padStart(2,'0');
+    const d=new Date((iso||ciHoje())+'T00:00:00'); if(isNaN(d)) return '';
+    d.setDate(d.getDate()+1);
+    return d.getFullYear()+'-'+p2(d.getMonth()+1)+'-'+p2(d.getDate());
+  }
+  function ciTipoEstadiaChange(t){
+    ciTipoEstadia=(t==='pernoite')?'pernoite':'hospedagem';
+    const box=document.getElementById('ciPernoiteBox');
+    if(!ciEhPernoite()){ if(box){ box.style.display='none'; box.innerHTML=''; } return; }
+    const ent=((document.getElementById('ciEntrada')||{}).value)||ciHoje();
+    const s=document.getElementById('ciSaida');
+    if(s && (!s.value || s.value<=ent)) s.value=ciMaisUmDia(ent);
+    if(typeof ciCalcDias==='function') try{ ciCalcDias(); }catch(e){}
+    if(box){
+      box.style.display='block';
+      box.innerHTML='<div style="background:rgba(46,125,138,.12);border-left:4px solid #2E7D8A;border-radius:10px;padding:11px 13px">'
+        +'<div style="font-weight:800;color:#234D67;font-size:14px">Pernoite — sai amanhã ('+((typeof ciBRdata==='function')?ciBRdata(s?s.value:'') : (s?s.value:''))+')</div>'
+        +'<div style="font-size:12.5px;color:var(--muted);font-weight:600;margin-top:5px">O tutor costuma trazer pouca coisa: <strong>a comida</strong>, <strong>o remédio se estiver tomando</strong>, uma roupa e a mochila do Day Care. Preencha só o que ele trouxe — o resto pode ficar em branco.</div>'
+        +'<div style="font-size:12.5px;color:var(--muted);font-weight:600;margin-top:5px">Isto cai direto no <strong>Plantão da AuAulândia</strong>. O plantonista não precisa lançar de novo.</div>'
+        +'<div id="ciPernoiteDup" style="margin-top:8px"></div></div>';
+    }
+    ciChecarPernoiteJaLancada();
+  }
+  // NÃO EXISTE LANÇAR DUAS VEZES (Adriana, 08/ago/2026): "se o plantão adicionar, aparece para a
+  // recepção que já foi lançado". O Plantão já barra o caminho contrário (a lista dele funde as
+  // estadias do Check-in). Aqui fechamos o outro lado: se o plantonista já lançou a pernoite à
+  // mão hoje, a recepção VÊ isso antes de salvar, em vez de criar o segundo registro.
+  function ciChecarPernoiteJaLancada(){
+    const alvo=document.getElementById('ciPernoiteDup');
+    if(!alvo || !DB || !ciHosp) return;
+    DB.ref('auaulandia/manuais/'+ciHoje()).once('value').then(function(s){
+      const v=s.val()||{}; let achou=null;
+      Object.keys(v).forEach(function(k){
+        const m=v[k]||{};
+        if(jsNorm(m.nome||'')===jsNorm(ciHosp.nome||'')) achou=m;
+      });
+      if(!achou){ alvo.innerHTML=''; return; }
+      alvo.innerHTML='<div style="background:#FBF3D2;border-left:4px solid #DEB428;border-radius:9px;padding:9px 11px;font-size:12.5px;font-weight:700;color:#234D67">'
+        +'O Plantão JÁ lançou a pernoite de '+esc(ciHosp.nome||'')+' hoje'+(achou.jantar&&achou.jantar.comida?(' (jantar: '+esc(achou.jantar.comida)+')'):'')+'.'
+        +'<br>Pode salvar este check-in normalmente: ele completa a ficha com comida e remédio, e <strong>não cria uma segunda pernoite</strong> — o Plantão mostra um FILHOt só.</div>';
+    }).catch(function(){ alvo.innerHTML=''; });
+  }
+
   function abrirCheckin(){
     // volta sempre para o passo de escolha (evita ficar numa ficha antiga)
     const esc=document.getElementById('ci-escolha'), fic=document.getElementById('ci-ficha');
@@ -9748,6 +9916,8 @@
     // datas
     document.getElementById('ciEntrada').value=ciHoje();
     document.getElementById('ciSaida').value='';
+    setSeg('ciTipoEstadia',''); ciTipoEstadia='hospedagem';
+    var _pnb=document.getElementById('ciPernoiteBox'); if(_pnb){ _pnb.style.display='none'; _pnb.innerHTML=''; }
     // reset alimentação (inclui calc por dias) + Spa
     setSeg('ciAlimTipo',''); setSeg('ciAlimUnid',''); setSeg('ciBanho','');
     document.getElementById('ciAlimMarca').value='';
@@ -10272,6 +10442,9 @@
       const spa=f.spa||{};
       if(e.entrada){ const _e=document.getElementById('ciEntrada'); if(_e) _e.value=e.entrada; }
       if(e.saida){ const _s=document.getElementById('ciSaida'); if(_s) _s.value=e.saida; }
+      // Reabrir uma pernoite tem que mostrar que ela É pernoite — senão a recepção corrige a
+      // ficha e o botão volta calado para "Hospedagem", mudando o que ninguém pediu para mudar.
+      if(typeof ehPernoite==='function' && ehPernoite(e)){ setSeg('ciTipoEstadia','Pernoite (uma noite)'); ciTipoEstadia='pernoite'; try{ ciTipoEstadiaChange('pernoite'); }catch(x){} }
       if(f.alim){ setSeg('ciAlimTipo',f.alim.tipo||''); setSeg('ciAlimUnid',f.alim.unidade||''); setSeg('ciBanho',(spa.banho||f.banho||''));
         if(f.alim.marca) document.getElementById('ciAlimMarca').value=f.alim.marca;
         // marcas de refeição Dia 1 / Último dia (se salvas na última estadia)
@@ -10776,12 +10949,17 @@
       }
     } else {
       ref=DB.ref('auaulandia/estadias').push();
+      const _ehPern=(typeof ciEhPernoite==='function' && ciEhPernoite());
       ops.push(ref.set({
         refKey:ciHosp.refKey||'', nome:ciHosp.nome||'', tutor:ciHosp.tutor||'', raca:ciHosp.raca||'',
         entrada:dados.entrada, saida:dados.saida, status:'ativa',
         ficha:dados.ficha, pertences:dados.pertences, medicacao:ciMedsToLista(meds),
         gate_conferido:P.temMed, assinatura:P.sig, assinado_por:assinado,
         entregaSemTutor:P.semTutor, quemDeixou:(P.quemDeixou||null),
+        // Pernoite marcada na recepção: a tarja PERNOITE, o "fora do check-out" e a conferência
+        // enxuta já leem esta bandeira — é a mesma que a aba Hóspedes grava.
+        pernoite:(_ehPern||null), pernoite_pedida_por:(_ehPern?quemSou():null),
+        origem:(_ehPern?'pernoite-checkin':'checkin'),
         criado_por:quemSou(), _ts:Date.now()
       }));
     }
@@ -12108,7 +12286,14 @@
     var a=(cfEstadia.ficha&&cfEstadia.ficha.alim)||{};
     if(a.qtd&&a.refeicoes){ if(!cfConf.racao||!cfConf.racao.pesado) out.push('Conferir a ração'); }
     if(a.comida&&a.comida.qtd){ if(!cfConf.comida||!cfConf.comida.pesado) out.push('Conferir a comida natural'); }
-    if(!(cfConf.fotos&&cfConf.fotos.length)) out.push('Adicionar ao menos 1 foto');
+    // PERNOITE NÃO PEDE SUPER CONFERÊNCIA (Adriana, 08/ago/2026): "não precisa necessariamente
+    // conferir o check-in, até porque não tem [o que conferir]... mas precisa da comida, da
+    // medicação se tiver". A comida e o remédio acima continuam obrigatórios QUANDO existem —
+    // isso é segurança do FILHOt e não se negocia. O que sai é a foto obrigatória: numa noite em
+    // que o tutor não mandou nada, não há o que fotografar, e a conferência ficava presa por isso
+    // — travando também o Plantão, que espera a conferência para saber o que dar de comida.
+    var _pern=(typeof ehPernoite==='function') && ehPernoite(cfEstadia);
+    if(!_pern && !(cfConf.fotos&&cfConf.fotos.length)) out.push('Adicionar ao menos 1 foto');
     return out;
   }
   function renderCfGate(){
