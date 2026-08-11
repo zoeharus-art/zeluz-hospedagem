@@ -5076,7 +5076,7 @@
   // disparar mesmo com outro FILHOt (ou nenhum) aberto na tela.
   function registrarDoseAgendadaGlobal(it,doseId){
     if(!DB||!it) return;
-    const reg={itemId:it.itemId,nome:it.nome,q:it.q,u:it.u,local:it.local||null,horario:it.horario,quem:quemSou(),ts:Date.now(),avulso:false};
+    const reg={itemId:it.itemId,nome:it.nome,q:it.q,u:it.u,local:it.local||null,horario:it.horario,quem:pessoaDoTurno(),ts:Date.now(),avulso:false};
     // Item 8 — marca a dose em TODAS as fichas iguais deste FILHOt (mesmo remédio, mesma dose,
     // mesmo local, mesmo horário). Sem isso, a cópia da Betaína da Dolly voltava a alarmar
     // depois de a plantonista já ter dado o comprimido.
@@ -5091,7 +5091,7 @@
     }).catch(function(){});
     DB.ref('auaulandia/medicacao-log/'+dataKeyAtual()+'/'+it.key+'/'+doseId).set(reg).then(function(){
       if(currentHosp && medAgendaKey(currentHosp)===it.key){ MED_AGENDA_LOG[doseId]=reg; renderMedAgendaHoje(); }
-      if(typeof audit==='function') audit('medicacao-dose',it.key,{pet:it.hospNome||'',med:it.nome,horario:it.horario,quem:reg.quem});
+      if(typeof audit==='function') audit('medicacao-dose',it.key,{pet:it.hospNome||'',med:it.nome,horario:it.horario,quem:reg.quem,assinou:reg.quem});
       if(typeof descontarEstoquePorDose==='function') descontarEstoquePorDose(it.key,it.itemId,doseId,it.q); // Onda 2: desconta do estoque contável e projeta o fim
       if(typeof fecharDespertadorMed==='function') fecharDespertadorMed();
       if(typeof carregarMedAtrasadaGestora==='function') carregarMedAtrasadaGestora(); // dose registrada: some do alerta da Gestora sozinho
@@ -5126,7 +5126,7 @@
     else if(qtdNum(q)==null){ if(st){ st.style.color='var(--crm-critico)'; st.textContent='✋ Escreva a quantidade em número (ex: 1, 0,5, 10).'; } return; }
     const key=medAgendaKey(); if(!key||!DB){ if(st){ st.style.color='var(--crm-atencao-text)'; st.textContent='Banco conectando...'; } return; }
     const doseId='avulso_'+Date.now();
-    const reg={itemId:null,nome:nome,q:(ehLocal?'':q),u:u,local:local||null,motivo:motivo||null,horario:h,quem:quemSou(),ts:Date.now(),avulso:true};
+    const reg={itemId:null,nome:nome,q:(ehLocal?'':q),u:u,local:local||null,motivo:motivo||null,horario:h,quem:pessoaDoTurno(),ts:Date.now(),avulso:true};
     if(st){ st.style.color='var(--muted)'; st.textContent='Salvando...'; }
     DB.ref('auaulandia/medicacao-log/'+dataKeyAtual()+'/'+key+'/'+doseId).set(reg).then(function(){
       MED_AGENDA_LOG[doseId]=reg;
@@ -5136,7 +5136,7 @@
       var _lw=document.getElementById('magAvLocalWrap'); if(_lw) _lw.style.display='none';
       document.querySelectorAll('#magAvUnidades button').forEach(b=>b.classList.remove('on'));
       if(st){ st.style.color='var(--crm-ok)'; st.textContent='✅ Dose avulsa registrada.'; }
-      if(typeof audit==='function') audit('medicacao-dose-avulsa',key,{pet:currentHosp.nome||'',med:nome+(local?(' — '+local):''),horario:h,quem:reg.quem,motivo:motivo||''});
+      if(typeof audit==='function') audit('medicacao-dose-avulsa',key,{pet:currentHosp.nome||'',med:nome+(local?(' — '+local):''),horario:h,quem:reg.quem,assinou:reg.quem,motivo:motivo||''});
       renderMedAgendaHoje();
       if(typeof carregarMedAtrasadaGestora==='function') carregarMedAtrasadaGestora();
     }).catch(function(e){ if(st){ st.style.color='var(--crm-critico)'; st.textContent='⚠️ Erro: '+e.message; } });
@@ -5336,6 +5336,14 @@
         {botao:'Entendi'});
       return;
     }
+    if(nome && !nomeAssinaturaValido(nome)){
+      if(st){ st.style.color='var(--crm-critico)'; st.textContent='✋ A assinatura precisa ser o seu NOME.'; }
+      if(typeof zAlertao==='function') zAlertao('ASSINATURA INVÁLIDA',
+        ['"'+nome+'" não serve como assinatura.',
+         'Um ponto, uma letra solta ou o nome de um FILHOt não dizem quem recebeu o plantão. Escreva o seu nome.'],
+        {botao:'Corrigir', aoFechar:function(){ try{ const e2=document.getElementById('recebeu-'+tipo); if(e2){ e2.focus(); e2.select&&e2.select(); } }catch(e){} }});
+      return;
+    }
     if(!nome){
       if(st){ st.style.color='var(--crm-critico)'; st.textContent='✋ Escreva o seu nome para assinar.'; }
       if(typeof zAlertao==='function') zAlertao('FALTA O SEU NOME',['Escreva o seu nome no campo de assinatura para confirmar que você recebeu o plantão de '+((currentHosp&&currentHosp.nome)||'este FILHOt')+'.'],
@@ -5445,6 +5453,10 @@
       if(!confirm('Tem CERTEZA de que o medicamento de '+(currentHosp.nome||'este FILHOt')+' acabou ou foi suspenso?\n\nNa dúvida, LIGUE 31 99764-4296.\n\nOK = tenho certeza\nCancelar = vou confirmar antes')){
         if(st){ st.style.color='var(--crm-critico)'; st.textContent='Na dúvida sobre a medicação, ligue 31 99764-4296 antes de salvar.'; } return; }
     }
+    if(passou && !nomeAssinaturaValido(passou)){
+      relBloqueio(st,'A assinatura precisa ser o SEU NOME — um ponto ou uma letra solta não identifica quem passou o plantão.',tipo,'ASSINATURA INVÁLIDA');
+      try{ const el=document.getElementById('passou-'+tipo); if(el){ el.scrollIntoView({behavior:'smooth',block:'center'}); el.focus(); el.select&&el.select(); } }catch(e){}
+      return; }
     if(!passou){ relBloqueio(st,'Agora é só assinar: escreva o SEU NOME no campo "quem passou o plantão", logo acima do botão.',tipo,'FALTA A SUA ASSINATURA');
       try{ const el=document.getElementById('passou-'+tipo); if(el){ el.scrollIntoView({behavior:'smooth',block:'center'}); el.focus(); } }catch(e){}
       return; }
@@ -9389,7 +9401,7 @@
     const cur=genMarcas[k]; const nx=(cur===val)?'':val;
     if(nx) genMarcas[k]=nx; else delete genMarcas[k];
     if(DB) DB.ref('daycare/atividade/'+dcDataKey()+'/almoco2/'+k).set(nx||null).catch(()=>{});
-    if(typeof audit==='function'&&nx) audit('almoco2', nx==='comeu'?'comeu no 2º horário':(nx==='na'?'não se aplica (não almoça)':'NÃO comeu nem no 2º horário'), {alvo:k});
+    if(typeof audit==='function'&&nx) audit('almoco2', nx==='comeu'?'comeu no 2º horário':(nx==='na'?'não se aplica (não almoça)':'NÃO comeu nem no 2º horário'), {alvo:k, assinou:pessoaDoTurno()});
     renderGenerico();
   }
   function nomeAtiv(slug){ try{ const a=(typeof ATIVS_DC!=='undefined'?ATIVS_DC:[]).find(x=>x.s===slug); return a?a.t:slug; }catch(e){ return slug; } }
@@ -9519,6 +9531,56 @@
   let dcAba='chamada', almMarcas={}, almTurno={};
   function setDcAba(t){ abrirAtividade(t); }
   function horaAgora(){ const d=new Date(),p=x=>String(x).padStart(2,'0'); return p(d.getHours())+':'+p(d.getMinutes()); }
+  // ===== ASSINATURA: QUEM FEZ TEM NOME ==================================================
+  // Adriana, 11/ago/2026: "nao pode aceitar um . apenas" — e "isso para qualquer medicacao,
+  // e no caso do almoco dos peludinhos tambem".
+  // Nome de gente: pelo menos 3 caracteres e 2 letras seguidas. Ponto, traco, "x" ou "ok"
+  // nao assinam nada. Nome de FILHOt tambem nao — ja apareceram "Cereja" e "Fofuxo"
+  // assinando plantao.
+  function nomeAssinaturaValido(s){
+    const v=String(s||'').trim();
+    if(v.length<3) return false;
+    if(!/[a-zà-ÿ]{2,}/i.test(v)) return false;
+    if(/^(ok|sim|nao|não|x|xx|teste|aaa|abc)$/i.test(v)) return false;
+    // frase colada no campo da assinatura: ja entrou "A alimentacao sera oferecida novamente
+    // as 22:00" como se fosse gente. Assinatura e nome, nao recado.
+    if(v.length>40) return false;
+    if(v.split(/\s+/).length>5) return false;
+    if(/\d{1,2}:\d{2}/.test(v)) return false;
+    try{ if(typeof PELUDINHOS!=='undefined'){ const n=jsNorm(v);
+      for(let i=0;i<PELUDINHOS.length;i++){ if(jsNorm(pelNome(PELUDINHOS[i])||'')===n) return false; } } }catch(e){}
+    return true;
+  }
+  function avisoAssinaturaInvalida(nome){
+    return 'A assinatura precisa ser o SEU NOME.\n\n"'+String(nome||'').trim()+'" nao serve — um ponto, uma letra solta '
+      +'ou o nome de um FILHOt nao identificam quem fez.\n\nEscreva o seu nome como voce assina.';
+  }
+  // ===== QUEM ESTA NO TURNO AGORA =======================================================
+  // O aparelho do plantao entra com um login de PAPEL ("Plantonista"), e o mesmo vale para
+  // logins genericos de monitor. Entao a dose de medicacao saia gravada como "Plantonista":
+  // 257 doses num mes sem o nome de ninguem. Agora o app pergunta UMA VEZ por sessao quem
+  // esta no turno e usa esse nome em tudo que exige responsavel.
+  const LOGIN_GENERICO=/^(plantonista|monitor(\s*\d+)?|encantador(a)?|recep(c|ç)(a|ã)o|vet(erin(a|á)ria)?|equipe|-)$/i;
+  function pessoaDoTurno(forcar){
+    let atual='';
+    try{ atual=sessionStorage.getItem('zeluz_pessoa_turno')||''; }catch(e){}
+    if(atual && !forcar) return atual;
+    const login=quemSou();
+    if(!forcar && login && !LOGIN_GENERICO.test(String(login).trim()) && nomeAssinaturaValido(login)){
+      try{ sessionStorage.setItem('zeluz_pessoa_turno',login); }catch(e){}
+      return login;
+    }
+    for(let i=0;i<3;i++){
+      const r=prompt('QUEM ESTA NO TURNO AGORA?\n\nEscreva o seu nome. Ele fica registrado em tudo o que voce fizer neste aparelho — '
+        +'medicacao, almoco e atividades — ate voce sair.\n\nSem isto, o remedio fica registrado sem responsavel.', atual||'');
+      if(r===null) break;
+      const v=String(r).trim();
+      if(nomeAssinaturaValido(v)){ try{ sessionStorage.setItem('zeluz_pessoa_turno',v); }catch(e){} return v; }
+      alert(avisoAssinaturaInvalida(v));
+    }
+    return atual||login||'-';
+  }
+  function trocarPessoaDoTurno(){ const n=pessoaDoTurno(true); if(n) alert('Turno agora com: '+n); return n; }
   function quemSou(){ try{ const u=JSON.parse(sessionStorage.getItem('zeluz_login')||'null'); return (u&&u.nome)||'-'; }catch(e){ return '-'; } }
   // A GRADE NUNCA MAIS APARECE VAZIA POR FALHA DE REDE (Adriana, 08/ago/2026: "as marcações
   // sumiam"). Antes esta função ZERAVA tudo na primeira linha e só depois ia buscar no banco —
@@ -9609,7 +9671,7 @@
   function ehHoje(){ return dcDia===HOJE_DIA; }
   function marcarAlmoco(k,val){
     if(!ehHoje()){ alert('Você está vendo a turma de '+DIA_FULL[dcDia]+', que não é hoje.\n\nO almoço é registrado no dia em que acontece. Volte para '+DIA_FULL[HOJE_DIA]+' (hoje) para marcar.'); return; }
-    const cur=almMarcas[k]; const nx=(cur===val)?'':val; if(nx) almMarcas[k]=nx; else delete almMarcas[k]; if(DB) DB.ref('daycare/almoco/'+dcDataKey()+'/'+k).set(nx||null).catch(()=>{}); if(typeof audit==='function'&&nx) audit('almoco_grade', nx==='tudo'?'comeu tudo':(nx==='metade'?'comeu metade':(nx==='na'?'não se aplica (não almoça hoje)':'não comeu')), {alvo:k}); renderAlmoco(); }
+    const cur=almMarcas[k]; const nx=(cur===val)?'':val; if(nx) almMarcas[k]=nx; else delete almMarcas[k]; if(DB) DB.ref('daycare/almoco/'+dcDataKey()+'/'+k).set(nx||null).catch(()=>{}); if(typeof audit==='function'&&nx) audit('almoco_grade', nx==='tudo'?'comeu tudo':(nx==='metade'?'comeu metade':(nx==='na'?'não se aplica (não almoça hoje)':'não comeu')), {alvo:k, assinou:pessoaDoTurno()}); renderAlmoco(); }
   // ===== TEMPOS DAS ETAPAS — Banco de Tempo (Preparação e Finalização, mesmo padrão do Almoço) =====
   let almPrepTurno={}, almFinalTurno={};
   function diffMin(ini,fim){ if(!ini||!fim) return null; const a=ini.split(':'),b=fim.split(':'); if(a.length<2||b.length<2) return null; let m=(+b[0]*60+ +b[1])-(+a[0]*60+ +a[1]); if(m<0) m+=1440; return m; }
@@ -9890,6 +9952,11 @@
   // o fim da atividade, o tempo total, e dentro disso os passos — montagem, almoço e final —
   // quanto tempo em cada um."
   // O app já cronometra as 3 etapas (início, fim e quem). Faltava a leitura. Só observa.
+  // "Monitor 6" era um login de aparelho, nao uma pessoa — a Giulia, que entrega o plantao
+  // durante a semana (Adriana, 11/ago/2026). O historico ja gravado nao se reescreve: o nome
+  // e traduzido na LEITURA. Se aparecer outro login de aparelho, e so acrescentar aqui.
+  const LOGIN_ERA={'monitor 6':'Giulia'};
+  function nomeReal(n){ const v=String(n||'').trim(); return LOGIN_ERA[v.toLowerCase()]||v; }
   var monDias=30, monCache=null, monAud=null;
   const MON_ETAPAS=[
     {k:'prep',   t:'Montagem',    no:'daycare/almoco-prep-turno/',  cor:'#2E7D8A'},
@@ -9955,7 +10022,7 @@
         if(!o) return;
         const acao=o.acao;
         if(acao==='relatorio-bloqueado'){ bloqueios++; bloqPorDia[d.dia]=(bloqPorDia[d.dia]||0)+1; return; }
-        const nome=String(o.assinou||'').trim();
+        const nome=nomeReal(o.assinou);   // vale para relatorio, recebimento e dose
         if(acao==='relatorio' && nome){
           const x=pega(nome); x.relatorios++; x.dias[d.dia]=1;
           const t=String(o.detalhe||'').split(':')[0].trim(); if(t) x.turnos[t]=(x.turnos[t]||0)+1;
@@ -9963,10 +10030,11 @@
           const x=pega(nome); x.recebimentos++; x.dias[d.dia]=1;
           const seg=(typeof o.leituraSeg==='number')?o.leituraSeg:null;
           if(seg!=null){ x.leituras.push(seg); if(seg<=0) x.leiturasZero++; }
-        } else if(acao==='medicacao-dose'){
-          // A dose NAO grava quem deu — so o papel "Plantonista" (11/ago/2026). E a acao mais
-          // critica do plantao e a unica sem nome. Conta o total para o buraco ficar visivel.
-          dosesSemDono++;
+        } else if(acao==='medicacao-dose'||acao==='medicacao-dose-avulsa'){
+          // Desde 11/ago/2026 a dose grava QUEM deu. Os registros antigos so tem o papel
+          // ("Plantonista") — esses continuam contados a parte, para o buraco nao sumir.
+          if(nome){ const x=pega(nome); x.doses++; x.dias[d.dia]=1; }
+          else dosesSemDono++;
         }
       });
     });
@@ -9975,7 +10043,7 @@
     const med=function(a){ return a.length?Math.round(a.reduce(function(x,y){return x+y;},0)/a.length):null; };
     let h='<div class="mon-tabwrap" style="margin-top:10px"><table class="mon-tab"><thead><tr>'
       +'<th>Plantonista</th><th>Plantões</th><th>Turnos</th><th>Relatórios</th>'
-      +'<th>Passagens recebidas</th><th>Leitura média</th><th>Leitura 0s</th>'
+      +'<th>Passagens recebidas</th><th>Leitura média</th><th>Leitura 0s</th><th>Doses dadas</th>'
       +'</tr></thead><tbody>';
     // Nome que nao e de pessoa: frase inteira colada no campo, ou nome de FILHOt. Nao some da
     // tabela — fica marcado, porque e assim que a Gestao ve o campo sendo preenchido errado.
@@ -10001,6 +10069,7 @@
         +'<td>'+(x.recebimentos||'—')+'</td>'
         +'<td>'+(ml!=null?(ml+'s'):'—')+'</td>'
         +'<td'+(x.leiturasZero?' class="mon-aberta"':'')+'>'+(x.leiturasZero||'—')+'</td>'
+        +'<td>'+(x.doses||'—')+'</td>'
       +'</tr>';
     });
     h+='</tbody></table></div>';
@@ -10011,9 +10080,9 @@
       h+='<div class="dc-meia" style="margin-top:10px"><strong>'+totZero+' passage'+(totZero>1?'ns':'m')+' assinada'+(totZero>1?'s':'')+' com leitura de 0 segundo</strong> no período. Vale conversar antes de virar hábito.</div>';
     }
     if(dosesSemDono){
-      h+='<div class="dc-faltas" style="margin-top:10px"><strong>'+dosesSemDono+' dose'+(dosesSemDono>1?'s':'')+' de medicação no período — nenhuma com o nome de quem deu.</strong> '
-        +'O registro guarda o remédio, o FILHOt, a hora e o horário previsto, mas grava só "Plantonista" no lugar da pessoa. '
-        +'Dar remédio é a coisa mais crítica do plantão e é a única ação sem responsável.</div>';
+      h+='<div class="dc-faltas" style="margin-top:10px"><strong>'+dosesSemDono+' dose'+(dosesSemDono>1?'s':'')+' de medicação SEM o nome de quem deu.</strong> '
+        +'O registro guardava o remédio, o FILHOt, a hora e o horário previsto — mas gravava só "Plantonista" no lugar da pessoa. '
+        +'São registros de ANTES de 11/ago/2026 — a partir dessa data toda dose grava quem deu, e aparece na coluna ao lado.</div>';
     }
     if(bloqueios){
       const dias=Object.keys(bloqPorDia).sort().reverse().slice(0,6)
@@ -10073,7 +10142,7 @@
     monCache.slice().sort(function(a,b){ return a.dia<b.dia?1:-1; }).forEach(function(d){
       const ini=d.prep.inicio||d.almoco.inicio, fim=d.final.fim||d.almoco.fim;
       const quem={};
-      MON_ETAPAS.forEach(function(e){ const q=d[e.k].quemInicio; if(q) quem[String(q).trim()]=1; });
+      MON_ETAPAS.forEach(function(e){ const q=d[e.k].quemInicio; if(q) quem[nomeReal(q)]=1; });
       const nomes=Object.keys(quem).join(', ')||'—';
       const tot=totalDoDia(d);
       h+='<tr><td class="mon-dia">'+fmtBR(d.dia)+'</td>'
@@ -10092,7 +10161,7 @@
     monCache.forEach(function(d){
       MON_ETAPAS.forEach(function(e){
         const q=d[e.k].quemInicio; if(!q) return;
-        const nome=String(q).trim(), k=jsNorm(nome);
+        const nome=nomeReal(q), k=jsNorm(nome);
         if(!porPessoa[k]) porPessoa[k]={nome:nome, grafias:{}, etapas:{}};
         const P=porPessoa[k]; P.grafias[nome]=(P.grafias[nome]||0)+1;
         if(P.grafias[nome]>=(P.grafias[P.nome]||0)) P.nome=nome;
