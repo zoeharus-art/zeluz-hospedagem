@@ -2739,6 +2739,17 @@
       </div>
       <div id="monEquipeWrap"><div class="p-empty">Carregando…</div></div>
     </div>
+
+    <!-- PLANTÃO — as plantonistas são FREELANCE (Adriana, 11/ago/2026): não entram em cargos e
+         salários, mas o trabalho delas precisa ser visto. Aqui não é produtividade: é
+         confiabilidade — assumiu, entregou o relatório, LEU a passagem e deu a medicação. -->
+    <div class="card so-master" style="margin-top:16px">
+      <div>
+        <h2 style="font-size:20px;margin:0">Plantão AuAulândia</h2>
+        <div class="hint" style="margin-top:2px">As plantonistas são freelance — isto não é produtividade, é <strong>confiabilidade</strong>: quem assumiu, entregou o relatório, leu a passagem e deu a medicação. Mesmo período escolhido acima.</div>
+      </div>
+      <div id="monPlantaoWrap"><div class="p-empty">Carregando…</div></div>
+    </div>
   </section>
   <section class="view" id="v-sair"><div class="soon-box"><img class="ic-st" src="assets/simbolo.png" alt=""><div class="t">Sair</div><div class="d">No sistema real, encerra a sessão com segurança.</div></div></section>
 
@@ -9879,7 +9890,7 @@
   // o fim da atividade, o tempo total, e dentro disso os passos — montagem, almoço e final —
   // quanto tempo em cada um."
   // O app já cronometra as 3 etapas (início, fim e quem). Faltava a leitura. Só observa.
-  var monDias=30, monCache=null;
+  var monDias=30, monCache=null, monAud=null;
   const MON_ETAPAS=[
     {k:'prep',   t:'Montagem',    no:'daycare/almoco-prep-turno/',  cor:'#2E7D8A'},
     {k:'almoco', t:'Almoço',      no:'daycare/almoco-turno/',       cor:'#DEB428'},
@@ -9905,16 +9916,112 @@
     Promise.all(dias.map(function(k){
       return Promise.all([
         get('daycare/almoco-prep-turno/'+k), get('daycare/almoco-turno/'+k),
-        get('daycare/almoco-final-turno/'+k), get('daycare/almoco/'+k)
+        get('daycare/almoco-final-turno/'+k), get('daycare/almoco/'+k),
+        get('daycare/auditoria/'+k)
       ]).then(function(r){
         // quantos FILHOts o dia teve de verdade: quem foi marcado no almoço (a chamada quase
         // não é preenchida, então ela não serve de base). É CONTEXTO do tempo, não pontuação.
         const marcas=r[3]||{};
-        return { dia:k, prep:r[0]||{}, almoco:r[1]||{}, final:r[2]||{}, caes:Object.keys(marcas).length };
+        return { dia:k, prep:r[0]||{}, almoco:r[1]||{}, final:r[2]||{}, caes:Object.keys(marcas).length, aud:r[4]||{} };
       });
-    })).then(function(res){ monCache=res.filter(function(d){ return d.prep.inicio||d.almoco.inicio||d.final.inicio||d.caes; });
-      renderEquipe();
+    })).then(function(res){
+      monAud=res;   // a auditoria completa fica para a visão de plantão
+      monCache=res.filter(function(d){ return d.prep.inicio||d.almoco.inicio||d.final.inicio||d.caes; });
+      renderEquipe(); renderPlantao();
     }).catch(function(){ box.innerHTML='<div class="p-empty">Não consegui ler o histórico agora.</div>'; });
+  }
+  // ===== PLANTÃO — confiabilidade das freelance ========================================
+  // Adriana, 11/ago/2026: "as plantonistas são freelance, não entram em cargos e salários.
+  // Temos que ver outra forma de ver como está o trabalho delas."
+  // Então aqui NÃO se mede produtividade. Mede-se o que uma freelance precisa entregar para
+  // ser chamada de novo: assumiu o plantão, entregou o relatório, LEU a passagem de quem
+  // saiu e deu a medicação. A leitura de 0 segundo é o ponto cego: assinar sem ler é receber
+  // o plantão no escuro — e é o tipo de coisa que só aparece quando alguém olha.
+  function renderPlantao(){
+    const box=document.getElementById('monPlantaoWrap'); if(!box) return;
+    if(!monAud){ box.innerHTML='<div class="p-empty">Carregando…</div>'; return; }
+    const P={};   // por pessoa (quem assinou)
+    const pega=function(nome){
+      const k=jsNorm(nome);
+      if(!P[k]) P[k]={nome:nome, grafias:{}, dias:{}, relatorios:0, recebimentos:0,
+                      leituras:[], leiturasZero:0, doses:0, turnos:{}};
+      const x=P[k]; x.grafias[nome]=(x.grafias[nome]||0)+1;
+      if(x.grafias[nome]>=(x.grafias[x.nome]||0)) x.nome=nome;
+      return x;
+    };
+    let bloqueios=0, dosesSemDono=0; const bloqPorDia={};
+    monAud.forEach(function(d){
+      Object.values(d.aud||{}).forEach(function(o){
+        if(!o) return;
+        const acao=o.acao;
+        if(acao==='relatorio-bloqueado'){ bloqueios++; bloqPorDia[d.dia]=(bloqPorDia[d.dia]||0)+1; return; }
+        const nome=String(o.assinou||'').trim();
+        if(acao==='relatorio' && nome){
+          const x=pega(nome); x.relatorios++; x.dias[d.dia]=1;
+          const t=String(o.detalhe||'').split(':')[0].trim(); if(t) x.turnos[t]=(x.turnos[t]||0)+1;
+        } else if(acao==='recebimento' && nome){
+          const x=pega(nome); x.recebimentos++; x.dias[d.dia]=1;
+          const seg=(typeof o.leituraSeg==='number')?o.leituraSeg:null;
+          if(seg!=null){ x.leituras.push(seg); if(seg<=0) x.leiturasZero++; }
+        } else if(acao==='medicacao-dose'){
+          // A dose NAO grava quem deu — so o papel "Plantonista" (11/ago/2026). E a acao mais
+          // critica do plantao e a unica sem nome. Conta o total para o buraco ficar visivel.
+          dosesSemDono++;
+        }
+      });
+    });
+    const lista=Object.values(P).sort(function(a,b){ return Object.keys(b.dias).length-Object.keys(a.dias).length; });
+    if(!lista.length){ box.innerHTML='<div class="p-empty">Nenhum plantão registrado no período.</div>'; return; }
+    const med=function(a){ return a.length?Math.round(a.reduce(function(x,y){return x+y;},0)/a.length):null; };
+    let h='<div class="mon-tabwrap" style="margin-top:10px"><table class="mon-tab"><thead><tr>'
+      +'<th>Plantonista</th><th>Plantões</th><th>Turnos</th><th>Relatórios</th>'
+      +'<th>Passagens recebidas</th><th>Leitura média</th><th>Leitura 0s</th>'
+      +'</tr></thead><tbody>';
+    // Nome que nao e de pessoa: frase inteira colada no campo, ou nome de FILHOt. Nao some da
+    // tabela — fica marcado, porque e assim que a Gestao ve o campo sendo preenchido errado.
+    const ehFilhot=function(nome){
+      try{ const n=jsNorm(nome);
+        for(let i=0;i<PELUDINHOS.length;i++){ if(jsNorm(pelNome(PELUDINHOS[i])||'')===n) return true; }
+      }catch(e){}
+      return false;
+    };
+    lista.forEach(function(x){
+      const nDias=Object.keys(x.dias).length;
+      x.invalido = (x.nome.length>26) || ehFilhot(x.nome);
+      const ml=med(x.leituras);
+      const turnos=Object.keys(x.turnos).sort(function(a,b){ return x.turnos[b]-x.turnos[a]; }).join(', ')||'—';
+      const outras=Object.keys(x.grafias).filter(function(g){ return g!==x.nome; });
+      h+='<tr>'
+        +'<td class="mon-dia">'+escAttr(x.nome)
+          +(x.invalido?'<span class="mon-flag">não é nome de pessoa</span>':'')
+          +(outras.length?'<small class="mon-alias">também: '+outras.map(escAttr).join(' · ')+'</small>':'')+'</td>'
+        +'<td><b>'+nDias+'</b></td>'
+        +'<td class="mon-quem">'+escAttr(turnos)+'</td>'
+        +'<td>'+(x.relatorios||'—')+'</td>'
+        +'<td>'+(x.recebimentos||'—')+'</td>'
+        +'<td>'+(ml!=null?(ml+'s'):'—')+'</td>'
+        +'<td'+(x.leiturasZero?' class="mon-aberta"':'')+'>'+(x.leiturasZero||'—')+'</td>'
+      +'</tr>';
+    });
+    h+='</tbody></table></div>';
+    const totZero=lista.reduce(function(t,x){ return t+x.leiturasZero; },0);
+    h+='<div class="hint" style="margin-top:9px"><strong>Leitura 0s</strong> = a pessoa abriu a passagem de plantão e assinou na mesma hora, sem tempo de ler o que o turno anterior deixou escrito. '
+      +'Não é falta grave sozinha — pode ser um FILHOt que ela já conhecia. Repetido, é plantão assumido no escuro.</div>';
+    if(totZero){
+      h+='<div class="dc-meia" style="margin-top:10px"><strong>'+totZero+' passage'+(totZero>1?'ns':'m')+' assinada'+(totZero>1?'s':'')+' com leitura de 0 segundo</strong> no período. Vale conversar antes de virar hábito.</div>';
+    }
+    if(dosesSemDono){
+      h+='<div class="dc-faltas" style="margin-top:10px"><strong>'+dosesSemDono+' dose'+(dosesSemDono>1?'s':'')+' de medicação no período — nenhuma com o nome de quem deu.</strong> '
+        +'O registro guarda o remédio, o FILHOt, a hora e o horário previsto, mas grava só "Plantonista" no lugar da pessoa. '
+        +'Dar remédio é a coisa mais crítica do plantão e é a única ação sem responsável.</div>';
+    }
+    if(bloqueios){
+      const dias=Object.keys(bloqPorDia).sort().reverse().slice(0,6)
+        .map(function(k){ return fmtBR(k)+' ('+bloqPorDia[k]+')'; }).join(' · ');
+      h+='<div class="dc-meia" style="margin-top:10px"><strong>'+bloqueios+' tentativa'+(bloqueios>1?'s':'')+' de fechar relatório incompleto</strong> — o app barrou e cobrou o que faltava. Dias: '+dias
+        +'<div style="font-weight:600;margin-top:4px">Isso é o app funcionando: ninguém passou plantão pela metade. Se um dia concentra muitas, o formulário pode estar confuso naquele ponto.</div></div>';
+    }
+    box.innerHTML=h;
   }
   function renderEquipe(){
     const box=document.getElementById('monEquipeWrap'); if(!box||!monCache) return;
