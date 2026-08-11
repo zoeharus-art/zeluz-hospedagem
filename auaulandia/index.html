@@ -259,6 +259,31 @@
   .ct-l small{display:block;font-size:11.5px;font-weight:500;color:var(--muted);letter-spacing:0;margin-top:1px}
   .ct-n{font-size:19px;font-weight:800;color:var(--z-blue);letter-spacing:-.025em;font-variant-numeric:tabular-nums}
   .ct-nota{padding:11px 18px 14px;border-top:1px solid var(--line);font-size:12px;color:var(--muted);font-weight:500}
+  .ct-row:hover{background:var(--z-cream-warm)}
+
+  /* Entrou / saiu no mes — a cor so aparece no marcador do dia e no numero: o resto e neutro,
+     senao a lista inteira grita e nada tem destaque (Adriana, 04/ago/2026). */
+  .mov-topo{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:12px}
+  .mov-kpi{flex:1;min-width:120px;background:var(--z-white);border:1px solid var(--line);border-radius:14px;
+    box-shadow:var(--shadow);padding:12px 15px;font-size:12px;font-weight:700;color:var(--muted)}
+  .mov-kpi b{display:block;font-size:25px;font-weight:800;color:var(--z-blue);letter-spacing:-.03em;
+    font-variant-numeric:tabular-nums;line-height:1.1}
+  .mov-kpi small{display:block;font-size:11px;font-weight:600;color:var(--muted);margin-top:2px}
+  .mov-kpi.ok b{color:#1E8449} .mov-kpi.bad b{color:#B3261E}
+  .mov-cols{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:14px}
+  .mov-h{font-size:10.5px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);padding:2px 2px 8px}
+  .mov-row{display:flex;align-items:center;gap:10px;width:100%;text-align:left;background:var(--z-white);
+    border:1px solid var(--line);border-radius:12px;padding:9px 12px;margin-bottom:7px;cursor:pointer;font:inherit}
+  .mov-row:hover{background:var(--z-cream-warm)}
+  .mov-dia{flex:0 0 auto;min-width:26px;text-align:center;color:#fff;border-radius:7px;padding:3px 5px;
+    font-size:12px;font-weight:800;font-variant-numeric:tabular-nums}
+  .mov-nome{flex:1;min-width:0;font-size:13.5px;font-weight:700;color:var(--z-blue);letter-spacing:-.012em}
+  .mov-nome small{display:block;font-size:11.5px;font-weight:500;color:var(--muted);letter-spacing:0;margin-top:1px;
+    overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .mov-tag{flex:0 0 auto;font-size:10.5px;font-weight:800;color:var(--muted);border:1px solid var(--line);
+    border-radius:6px;padding:2px 6px;text-transform:uppercase;letter-spacing:.04em}
+  .mov-tag.pausa{color:#B3261E;border-color:#B3261E}
+  .mov-motivo{flex:0 0 100%;font-size:11.5px;font-weight:500;color:var(--muted);margin-top:3px}
 
   .kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:14px;margin-bottom:24px}
   .kpi{background:var(--z-white);border:1px solid var(--line);border-radius:var(--radius);padding:14px 16px;box-shadow:var(--shadow);display:flex;align-items:center;gap:12px}
@@ -1445,6 +1470,24 @@
         <div id="cartTipos"></div>
       </section>
 
+      <!-- Entrou / Saiu no mês (Adriana, 11/ago/2026): "quem entrou no mês e quem saiu —
+           importantíssimo para aparecer no dashboard — e quem suspendeu conta como saiu". -->
+      <section class="dash-sec so-carteira" id="cardMovimento">
+        <div class="dash-h">
+          <div>
+            <div class="dash-eyebrow">Comercial</div>
+            <h2 class="dash-t">Entrou e saiu no mês</h2>
+          </div>
+          <span class="dash-meta" id="movMesLabel"></span>
+        </div>
+        <div style="display:flex;gap:8px;align-items:center;margin-bottom:10px">
+          <button class="btn" type="button" style="padding:6px 12px;background:var(--z-cream-warm);color:var(--z-blue);border:1.5px solid var(--line)" onclick="movMes(-1)">&lsaquo; mês anterior</button>
+          <button class="btn" type="button" style="padding:6px 12px;background:var(--z-cream-warm);color:var(--z-blue);border:1.5px solid var(--line)" onclick="movMes(1)">próximo mês &rsaquo;</button>
+          <button class="btn" type="button" style="padding:6px 12px;background:var(--z-cream-warm);color:var(--z-blue);border:1.5px solid var(--line)" onclick="movMes(0)">hoje</button>
+        </div>
+        <div id="movBody"></div>
+      </section>
+
     </div>
   </section>
 
@@ -2520,6 +2563,7 @@
       <h2 style="font-size:20px">Renovação de Planos</h2>
       <div class="hint">Quem precisa ser cobrado aparece primeiro. Toque no peludinho para abrir a ficha na aba Plano, renovar e copiar a mensagem para o tutor.</div>
       <div class="renov-filtros" id="renovFiltros"></div>
+      <div id="renovTipoTit" class="hint" style="display:none;background:var(--z-cream-warm);border-left:4px solid var(--z-gold);border-radius:9px;padding:9px 12px;margin-bottom:10px;font-weight:700;color:var(--z-blue)"></div>
       <div id="renovLista"></div>
     </div>
   </section>
@@ -3041,6 +3085,7 @@
       el('kpiAdapt').textContent=nAdapt;
     }catch(e){ /* nunca derrubar a tela por causa de um contador */ }
     try{ renderCarteira(); }catch(e){}
+    try{ renderMovimento(); }catch(e){}
     try{ renderPendencias(); }catch(e){}
   }
   // ===== O QUE PRECISA DE VOCÊ HOJE — pendências reais, clicáveis =====================
@@ -3372,6 +3417,33 @@
     const meses=(b.getFullYear()-a.getFullYear())*12+(b.getMonth()-a.getMonth())+1;
     return {meses:meses, plano:(meses<=1?'Silver':(meses<=4?'Gold':'Black'))};
   }
+  // ===== TIPO DE CLIENTE — uma conta só, usada pelo Início e pela Renovação ==============
+  // Adriana, 11/ago/2026: "não estou conseguindo clicar e aparecer os mensais, trimestrais,
+  // semestrais, avulsos, hospedagem e moradores — preciso clicar e aparecer quais são".
+  // Antes o número existia mas não levava a lugar nenhum. Agora este helper é a fonte única:
+  // o resumo conta com ele e o filtro da Renovação seleciona com ele — nunca podem divergir.
+  // Devolve: mensal · trimestral · semestral · avulso · hospedagem · morador · semtipo
+  function tipoDoPel(p){
+    try{
+      const cat=(typeof pelCategoria==='function')?pelCategoria(p):'auluno';
+      if(cat==='avulso') return 'avulso';
+      if(cat==='hospede') return 'hospedagem';
+      if(cat==='morador') return 'morador';
+      const r=renovDe(pelExtra(p))||{};
+      const pl=(typeof planos==='function')?(planos()[r.plano]||null):null;
+      let comp=pl?(pl.compromisso||''):'';
+      // A maior parte da carteira veio da planilha com início e fim, mas SEM o tipo do
+      // plano gravado. Sem deduzir, o dashboard mostraria 96 peludinhos "sem tipo".
+      // A duração da vigência diz o compromisso: ~1 mês = mensal, ~3 = trimestral, ~6 = semestral.
+      if(!comp){
+        const d=planoPelaVigencia(r.inicio, r.fim);
+        if(d) comp=(d.plano==='Silver'?'mensal':(d.plano==='Gold'?'trimestral':'semestral'));
+      }
+      return comp||'semtipo';
+    }catch(e){ return 'semtipo'; }
+  }
+  const TIPO_ROTULO={ mensal:'Mensais', trimestral:'Trimestrais', semestral:'Semestrais',
+    avulso:'Avulsos', hospedagem:'Só hospedagem', morador:'Moradores', semtipo:'Sem tipo' };
   function carteiraResumo(){
     const R={ total:0, cobrar:0, vencido:0, vence:0, emdia:0, semplano:0,
               mensal:0, trimestral:0, semestral:0, avulso:0, hospedagem:0, morador:0,
@@ -3387,27 +3459,91 @@
         else if(st.estado==='vence'){ R.vence++; R.cobrar++; }
         else if(st.estado==='ok'){ R.emdia++; }
         else if(st.estado==='sem'){ R.semplano++; }
-        // Tipo — usa a categoria da ficha; quem é auluno cai no compromisso do plano
-        const cat=(typeof pelCategoria==='function')?pelCategoria(p):'auluno';
-        if(cat==='avulso'){ R.avulso++; return; }
-        if(cat==='hospede'){ R.hospedagem++; return; }
-        if(cat==='morador'){ R.morador++; return; }
-        const pl=(typeof planos==='function')?(planos()[r.plano]||null):null;
-        let comp=pl?(pl.compromisso||''):'';
-        // A maior parte da carteira veio da planilha com início e fim, mas SEM o tipo do
-        // plano gravado. Sem deduzir, o dashboard mostraria 96 peludinhos "sem tipo".
-        // A duração da vigência diz o compromisso: ~1 mês = mensal, ~3 = trimestral, ~6 = semestral.
-        if(!comp){
-          const d=planoPelaVigencia(r.inicio, r.fim);
-          if(d){ comp=(d.plano==='Silver'?'mensal':(d.plano==='Gold'?'trimestral':'semestral')); R.deduzidos=(R.deduzidos||0)+1; }
-        }
-        if(comp==='mensal') R.mensal++;
-        else if(comp==='trimestral') R.trimestral++;
-        else if(comp==='semestral') R.semestral++;
-        else R.semTipo=(R.semTipo||0)+1;
+        const t=tipoDoPel(p);
+        if(t==='hospedagem') R.hospedagem++;
+        else if(t==='semtipo') R.semTipo=(R.semTipo||0)+1;
+        else R[t]=(R[t]||0)+1;
+        if(t!=='semtipo' && ['mensal','trimestral','semestral'].indexOf(t)>=0 && !(planos()[r.plano]||null)) R.deduzidos=(R.deduzidos||0)+1;
       }catch(e){}
     });
     return R;
+  }
+  // ===== ENTROU / SAIU NO MÊS ===========================================================
+  // Adriana, 11/ago/2026: "quem entrou no mês e quem saiu — importantíssimo para aparecer no
+  // dashboard — e quem SUSPENDEU conta como saiu."
+  // ENTROU  = data de matrícula dentro do mês.
+  // SAIU    = data de saída dentro do mês (é o que a inativação grava).
+  // SUSPENDEU = uma saída como qualquer outra; o motivo diz que foi pausa e a linha vem
+  //             marcada como PAUSA, porque para a carteira o efeito é o mesmo: ele parou.
+  var movRef=null; // {a:ano, m:mes 0-11} — null = mês de hoje
+  function movMesAtual(){ if(movRef) return movRef; const d=new Date(); return {a:d.getFullYear(), m:d.getMonth()}; }
+  function movMes(passo){
+    const c=movMesAtual();
+    if(passo===0){ movRef=null; } else { const d=new Date(c.a, c.m+passo, 1); movRef={a:d.getFullYear(), m:d.getMonth()}; }
+    renderMovimento();
+  }
+  // Aceita "2024-01-09" (input date) e "09/01/2024" (o que a inativação grava).
+  function movData(v){ v=String(v||'').trim(); if(!v) return null;
+    let m=/^(\d{4})-(\d{2})-(\d{2})$/.exec(v); if(m) return {a:+m[1], m:+m[2]-1, d:+m[3]};
+    m=/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/.exec(v); if(m) return {a:+m[3], m:+m[2]-1, d:+m[1]};
+    return null; }
+  // Quem MARCOU pausa na hora de inativar manda (ex.tipoSaida). Para as saidas antigas,
+  // gravadas antes de existir a marcacao, o texto do motivo e o unico sinal — entao
+  // vale como palpite: 'viagem', 'volta em setembro', 'tratamento' sao pausa na pratica.
+  function ehPausa(ex){
+    const t=(ex&&ex.tipoSaida)||'';
+    if(t==='pausa') return true;
+    if(t==='definitiva') return false;
+    return /suspend|suspens|pausa|pausou|parou por|f[ée]rias|viaj|volta em|retorna|tempor[áa]ri|tratamento|fisioterap|cirurgia|cio/i.test(String((ex&&ex.motivoSaida)||''));
+  }
+  function movimentoDoMes(){
+    const ref=movMesAtual(); const ent=[], sai=[];
+    if(typeof PELUDINHOS==='undefined') return {ent:ent, sai:sai, ref:ref};
+    PELUDINHOS.forEach(function(p,i){
+      try{
+        const ex=pelExtra(p)||{};
+        const dm=movData(ex.matricula||p.matricula);
+        if(dm && dm.a===ref.a && dm.m===ref.m) ent.push({p:p,i:i,dia:dm.d,tipo:tipoDoPel(p)});
+        const ds=movData(ex.dataSaida);
+        if(ds && ds.a===ref.a && ds.m===ref.m) sai.push({p:p,i:i,dia:ds.d,motivo:ex.motivoSaida||'',pausa:ehPausa(ex)});
+      }catch(e){}
+    });
+    const porDia=function(a,b){ return a.dia-b.dia; };
+    return {ent:ent.sort(porDia), sai:sai.sort(porDia), ref:ref};
+  }
+  function renderMovimento(){
+    const box=document.getElementById('movBody'); if(!box) return;
+    const M=movimentoDoMes();
+    const lb=document.getElementById('movMesLabel');
+    if(lb) lb.textContent=MES_NOME[M.ref.m]+' de '+M.ref.a;
+    const saldo=M.ent.length-M.sai.length;
+    const pausas=M.sai.filter(function(o){ return o.pausa; }).length;
+    const linha=function(o,cor,extra){
+      return '<button type="button" class="mov-row" onclick="abrirPeludinhoRenov('+o.i+')">'
+        +'<span class="mov-dia" style="background:'+cor+'">'+String(o.dia).padStart(2,'0')+'</span>'
+        +'<span class="mov-nome">'+escAttr(pelNome(o.p))
+        +'<small>'+escAttr(pelGet(o.p,'tutor')||'tutor a confirmar')+'</small></span>'
+        +(extra||'')+'</button>';
+    };
+    box.innerHTML=
+      '<div class="mov-topo">'
+      +  '<div class="mov-kpi ok"><b>'+M.ent.length+'</b>entraram</div>'
+      +  '<div class="mov-kpi bad"><b>'+M.sai.length+'</b>saíram'+(pausas?'<small>'+pausas+' por pausa</small>':'')+'</div>'
+      +  '<div class="mov-kpi '+(saldo>0?'ok':(saldo<0?'bad':''))+'"><b>'+(saldo>0?'+':'')+saldo+'</b>saldo do mês</div>'
+      +'</div>'
+      +'<div class="mov-cols">'
+      +  '<div><div class="mov-h">Entraram</div>'
+      +    (M.ent.length?M.ent.map(function(o){ return linha(o,'#1E8449','<span class="mov-tag">'+(TIPO_ROTULO[o.tipo]||o.tipo)+'</span>'); }).join('')
+          :'<div class="hint" style="padding:10px 2px">Nenhuma matrícula neste mês.</div>')
+      +  '</div>'
+      +  '<div><div class="mov-h">Saíram</div>'
+      +    (M.sai.length?M.sai.map(function(o){ return linha(o,'#B3261E',
+            (o.pausa?'<span class="mov-tag pausa">PAUSA</span>':'')
+            +(o.motivo?'<span class="mov-motivo">'+escAttr(o.motivo)+'</span>':'')); }).join('')
+          :'<div class="hint" style="padding:10px 2px">Ninguém saiu neste mês.</div>')
+      +  '</div>'
+      +'</div>'
+      +'<div class="ct-nota">Saiu = a ficha foi inativada com data de saída. Quem <strong>suspendeu / pausou</strong> conta como saída e vem marcado com PAUSA — para a carteira o efeito é o mesmo: ele parou de vir. Toque no nome para abrir a ficha.</div>';
   }
   function irParaRenovacao(filtro){
     try{ if(typeof setRenovFiltro==='function') renovFiltro=filtro; }catch(e){}
@@ -3444,20 +3580,23 @@
       +   '<i style="background:#DEB428;width:'+pct(R.semplano)+'"></i>'
       + '</div>';
     const tipos=document.getElementById('cartTipos'); if(!tipos) return;
-    const linha=function(n,rot,sub,cor){
+    // Cada linha agora é BOTÃO: clicar abre a Renovação já filtrada, mostrando QUEM são
+    // (Adriana, 11/ago/2026). Antes era só número — não dava para saber quem estava ali.
+    const linha=function(n,rot,sub,cor,tipo){
       if(!n) return '';
-      return '<div class="ct-row"><i class="ct-dot" style="background:'+cor+'"></i>'
+      return '<button type="button" class="ct-row" style="width:100%;text-align:left;background:none;border:0;border-bottom:1px solid var(--line);cursor:pointer;font:inherit" onclick="irParaRenovacao(\'tipo:'+tipo+'\')" title="Ver quem são">'
+        +'<i class="ct-dot" style="background:'+cor+'"></i>'
         +'<span class="ct-l">'+rot+'<small>'+sub+'</small></span>'
-        +'<span class="ct-n">'+n+'</span></div>';
+        +'<span class="ct-n">'+n+' &rsaquo;</span></button>';
     };
-    tipos.innerHTML='<div class="cart-tipos"><div class="ct-h">Por tipo de cliente</div>'
-      + linha(R.mensal,'Mensal','plano Silver','#B9BFC4')
-      + linha(R.trimestral,'Trimestral','plano Gold','#DEB428')
-      + linha(R.semestral,'Semestral','plano Black','#234D67')
-      + linha(R.avulso,'Avulsos','diária, sem plano','#E08856')
-      + linha(R.hospedagem,'Só hospedagem','AuAulândia, fora do Day Care','#2E7D8A')
-      + linha(R.morador,'Moradores','nossos — sem cobrança','#6b5f4b')
-      + linha(R.semTipo,'Sem tipo','falta lançar o plano na ficha','#B3261E')
+    tipos.innerHTML='<div class="cart-tipos"><div class="ct-h">Por tipo de cliente <small style="font-weight:600;color:var(--muted)">— toque para ver quem são</small></div>'
+      + linha(R.mensal,'Mensal','plano Silver','#B9BFC4','mensal')
+      + linha(R.trimestral,'Trimestral','plano Gold','#DEB428','trimestral')
+      + linha(R.semestral,'Semestral','plano Black','#234D67','semestral')
+      + linha(R.avulso,'Avulsos','diária, sem plano','#E08856','avulso')
+      + linha(R.hospedagem,'Só hospedagem','AuAulândia, fora do Day Care','#2E7D8A','hospedagem')
+      + linha(R.morador,'Moradores','nossos — sem cobrança','#6b5f4b','morador')
+      + linha(R.semTipo,'Sem tipo','falta lançar o plano na ficha','#B3261E','semtipo')
       + (R.semTipo?'<div class="ct-nota">'+R.semTipo+' peludinho'+(R.semTipo>1?'s':'')+' sem vigência lançada — é neles que falta escolher o plano na ficha.</div>':'')
       +'</div>';
   }
@@ -5697,7 +5836,7 @@
     // O dashboard do Início tem que estar FRESCO a cada entrada (Adriana, 04/ago/2026:
     // "precisa ser atualizado toda vez que a pessoa entra com a senha, porque não está
     // atualizando"). Roda agora e de novo quando os dados do banco terminarem de chegar.
-    const _redesenhar=function(){ try{ renderKPIs(); }catch(e){} try{ renderCarteira(); }catch(e){} try{ renderPendencias(); }catch(e){} };
+    const _redesenhar=function(){ try{ renderKPIs(); }catch(e){} try{ renderCarteira(); }catch(e){} try{ renderMovimento(); }catch(e){} try{ renderPendencias(); }catch(e){} };
     _redesenhar();
     setTimeout(_redesenhar, 2500);
     setTimeout(_redesenhar, 6000);
@@ -6658,10 +6797,15 @@
   function setRenovFiltro(f){ renovFiltro=f; renderRenovacao(); }
   function renderRenovacao(){
     const el=document.getElementById('renovLista'); if(!el) return;
-    const itens=PELUDINHOS.map(function(p,i){ const ex=pelExtra(p); return {p:p,i:i,ex:ex,st:statusRenov(ex)}; })
-      .filter(function(o){ return !pelInativo(o.p); })
-      // Sem plano a renovar: só hospedagem, avulso e os moradores da casa (Repolho, Stopa, Kako).
-      .filter(function(o){ return ['auaulandia','avulso','morador'].indexOf(o.st.estado)<0; });
+    const ehTipo=renovFiltro.indexOf('tipo:')===0;
+    const tipoAlvo=ehTipo?renovFiltro.slice(5):'';
+    const ativos=PELUDINHOS.map(function(p,i){ const ex=pelExtra(p); return {p:p,i:i,ex:ex,st:statusRenov(ex)}; })
+      .filter(function(o){ return !pelInativo(o.p); });
+    // Nos filtros de COBRANÇA a lista é só de quem tem plano a renovar — hospedagem, avulso e
+    // moradores não têm mensalidade para vencer. Mas quando a pessoa clica em "Moradores" ou
+    // "Só hospedagem" ela quer justamente ver ESSES: aí a lista abre para todos (11/ago/2026).
+    const itens=ehTipo ? ativos.filter(function(o){ return tipoDoPel(o.p)===tipoAlvo; })
+      : ativos.filter(function(o){ return ['auaulandia','avulso','morador'].indexOf(o.st.estado)<0; });
     const ordem={vencido:0, vence:1, sem:2, ok:3};
     itens.sort(function(a,b){ if(ordem[a.st.estado]!==ordem[b.st.estado]) return ordem[a.st.estado]-ordem[b.st.estado];
       const fa=(renovDe(a.ex).fim||''), fb=(renovDe(b.ex).fim||'');
@@ -6672,20 +6816,28 @@
     if(fl){
       const bt=function(k,rot,n,cor){ return '<button type="button" class="renov-f'+(renovFiltro===k?' on':'')+'" onclick="setRenovFiltro(\''+k+'\')">'
         +'<b style="color:'+cor+'">'+n+'</b> '+rot+'</button>'; };
-      fl.innerHTML=bt('cobrar','a cobrar agora',cont.vencido+cont.vence,'var(--crm-critico)')
-        +bt('ok','em dia',cont.ok,'var(--crm-ok)')
-        +bt('sem','sem plano',cont.sem,'var(--z-blue)')
-        +bt('todos','todos',itens.length,'var(--z-gold-deep)');
-      // Quebra por tipo de cliente, do lado dos filtros — a mesma conta do Início.
+      const nSit=ehTipo?ativos.filter(function(o){ return ['auaulandia','avulso','morador'].indexOf(o.st.estado)<0; }):itens;
+      const cSit={vencido:0,vence:0,sem:0,ok:0}; nSit.forEach(function(o){ cSit[o.st.estado]++; });
+      fl.innerHTML=bt('cobrar','a cobrar agora',cSit.vencido+cSit.vence,'var(--crm-critico)')
+        +bt('ok','em dia',cSit.ok,'var(--crm-ok)')
+        +bt('sem','sem plano',cSit.sem,'var(--z-blue)')
+        +bt('todos','todos',nSit.length,'var(--z-gold-deep)');
+      // Quebra por tipo de cliente — agora CLICÁVEL: toca e a lista abaixo mostra quem são
+      // (Adriana, 11/ago/2026). Antes eram etiquetas mudas com um número.
       try{
         const R=carteiraResumo();
-        const chip=function(n,rot,cor){ return n?('<span style="display:inline-flex;align-items:center;gap:5px;border:1.5px solid var(--line);border-left:4px solid '+cor+';border-radius:9px;padding:5px 10px;font-size:12.5px;font-weight:700;color:var(--z-blue);background:#fff"><b style="font-size:15px">'+n+'</b> '+rot+'</span>'):''; };
-        const linha=chip(R.mensal,'mensais','#C0C0C0')+chip(R.trimestral,'trimestrais','#DEB428')+chip(R.semestral,'semestrais','#234D67')
-                   +chip(R.avulso,'avulsos','#E08856')+chip(R.hospedagem,'só hospedagem','#2E7D8A')+chip(R.morador,'moradores','#6b5f4b');
-        if(linha) fl.innerHTML+='<div style="width:100%;display:flex;gap:7px;flex-wrap:wrap;margin-top:9px">'+linha+'</div>';
+        const chip=function(n,rot,cor,tipo){ if(!n) return '';
+          const on=(renovFiltro==='tipo:'+tipo);
+          return '<button type="button" onclick="setRenovFiltro(\'tipo:'+tipo+'\')" style="display:inline-flex;align-items:center;gap:5px;border:1.5px solid '+(on?cor:'var(--line)')+';border-left:4px solid '+cor+';border-radius:9px;padding:5px 10px;font-size:12.5px;font-weight:700;color:var(--z-blue);background:'+(on?'var(--z-cream-warm)':'#fff')+';cursor:pointer;font-family:inherit"><b style="font-size:15px">'+n+'</b> '+rot+'</button>'; };
+        const linha=chip(R.mensal,'mensais','#C0C0C0','mensal')+chip(R.trimestral,'trimestrais','#DEB428','trimestral')+chip(R.semestral,'semestrais','#234D67','semestral')
+                   +chip(R.avulso,'avulsos','#E08856','avulso')+chip(R.hospedagem,'só hospedagem','#2E7D8A','hospedagem')+chip(R.morador,'moradores','#6b5f4b','morador')
+                   +chip(R.semTipo,'sem tipo','#B3261E','semtipo');
+        if(linha) fl.innerHTML+='<div style="width:100%;display:flex;gap:7px;flex-wrap:wrap;margin-top:9px">'
+          +'<span style="width:100%;font-size:11.5px;font-weight:700;color:var(--muted);margin-bottom:1px">Por tipo de cliente — toque para ver quem são</span>'+linha+'</div>';
       }catch(e){}
     }
     const visiveis=itens.filter(function(o){
+      if(ehTipo) return true;                       // já filtrado pelo tipo na montagem
       if(renovFiltro==='todos') return true;
       if(renovFiltro==='cobrar') return o.st.estado==='vencido'||o.st.estado==='vence';
       if(renovFiltro==='sem') return o.st.estado==='sem';
@@ -6693,7 +6845,13 @@
     });
     const vazio={cobrar:'Ninguém para cobrar agora — nenhum plano vencido ou vencendo nos próximos 15 dias.',
       ok:'Nenhum plano em dia no momento.', sem:'Todos os peludinhos ativos têm plano lançado.', todos:'Nenhum peludinho ativo.'};
-    if(!visiveis.length){ el.innerHTML='<div class="hint" style="padding:16px 2px">'+vazio[renovFiltro]+'</div>'; return; }
+    if(ehTipo){
+      const titulo=document.getElementById('renovTipoTit');
+      if(titulo){ titulo.style.display='block';
+        titulo.innerHTML='<strong>'+(TIPO_ROTULO[tipoAlvo]||tipoAlvo)+'</strong> — '+visiveis.length+' peludinho'+(visiveis.length===1?'':'s')
+          +'. <button type="button" onclick="setRenovFiltro(\'cobrar\')" style="background:none;border:0;color:var(--z-blue);font-weight:800;text-decoration:underline;cursor:pointer;font-family:inherit;font-size:inherit">Voltar para a cobrança</button>'; }
+    } else { const t=document.getElementById('renovTipoTit'); if(t) t.style.display='none'; }
+    if(!visiveis.length){ el.innerHTML='<div class="hint" style="padding:16px 2px">'+(ehTipo?('Nenhum peludinho em "'+(TIPO_ROTULO[tipoAlvo]||tipoAlvo)+'" no momento.'):vazio[renovFiltro])+'</div>'; return; }
     const clsSt={vencido:'vd-venc',vence:'vd-perto',sem:'vd-sem',ok:'vd-ok'};
     el.innerHTML='<div class="renov-list">'+visiveis.map(function(o){ const r=renovDe(o.ex);
       const periodo=(r.inicio&&r.fim)?(fmtBR(r.inicio)+' a '+fmtBR(r.fim)):(r.fim?('até '+fmtBR(r.fim)):'sem vigência lançada');
@@ -8174,11 +8332,22 @@
       alert('✅ '+nome+' voltou. Ele já aparece de novo nas listas do dia.');
       renderPelFicha(); if(typeof renderPel==='function') renderPel(); return;
     }
-    const motivo=(prompt('Inativar '+nome+' — por que ele saiu do Day Care?\n\nO motivo é obrigatório: é ele que a Márcia lê no painel da Gestão para saber quem contatar.\n\nEx.: mudou de cidade · brigas · falecido · parou de vir','')||'').trim();
+    // Pausa x saida definitiva (Adriana, 11/ago/2026): "quem suspendeu conta como saiu".
+    // Conta como saida nas duas, mas o dashboard precisa saber qual e qual — quem pausou
+    // volta, e e quem a consultora liga para trazer de volta. Perguntar e melhor do que
+    // adivinhar pelo texto do motivo.
+    const ehPausaResp=confirm(nome+' — este é um caso de PAUSA (o tutor suspendeu por um tempo e ele volta)?\n\n'
+      +'OK = PAUSA / SUSPENSÃO (viagem, dinheiro, tratamento, cio — ele volta)\n'
+      +'Cancelar = SAÍDA DEFINITIVA (mudou de cidade, brigas, falecido, parou de vir)\n\n'
+      +'Nos dois casos ele sai das listas do dia e conta como saída do mês.');
+    const motivo=(prompt('Inativar '+nome+' — '+(ehPausaResp?'por que ele vai PAUSAR?':'por que ele saiu do Day Care?')
+      +'\n\nO motivo é obrigatório: é ele que a Márcia lê no painel da Gestão para saber quem contatar.\n\n'
+      +(ehPausaResp?'Ex.: viagem da família — volta em setembro · tratamento · cio'
+                   :'Ex.: mudou de cidade · brigas · falecido · parou de vir'),'')||'').trim();
     if(!motivo){ alert('Sem o motivo eu não inativo. Se não souber ainda, pergunte antes — o cadastro continua ativo.'); return; }
     const hoje=new Date(), p2=x=>String(x).padStart(2,'0');
     const data=p2(hoje.getDate())+'/'+p2(hoje.getMonth()+1)+'/'+hoje.getFullYear();
-    setPelExtra(pelAtual,{inativo:'Sim', motivoSaida:motivo, dataSaida:data});
+    setPelExtra(pelAtual,{inativo:'Sim', motivoSaida:motivo, dataSaida:data, tipoSaida:(ehPausaResp?'pausa':'definitiva')});
     if(typeof audit==='function') audit('peludinho-inativado', nome, {motivo:motivo});
     alert('✅ '+nome+' foi inativado.\n\nMotivo: '+motivo+'\nData: '+data+'\n\nEle sai das listas do dia e da chamada. O cadastro e todo o histórico continuam guardados em Relatórios › Inativos — nada foi apagado.');
     if(typeof renderPel==='function') renderPel();
