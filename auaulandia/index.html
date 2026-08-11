@@ -2812,7 +2812,7 @@
       DB.ref('auaulandia/cadastro').on('value', s=>{ cadCache=s.val()||{}; if(typeof renderHosp==='function') renderHosp(); });
       DB.ref('daycare/config/sensiveis').on('value', s=>{ const v=s.val(); if(Array.isArray(v)){ try{ SENS=new Set(v); }catch(e){} } });
       DB.ref('daycare/config/atividades').on('value', s=>{ const v=s.val(); if(Array.isArray(v)&&v.length){ ATIVIDADES=v; if(typeof renderAtiv==='function') renderAtiv(); } });
-      DB.ref('daycare/cadastro').on('value', s=>{ pelCadCache=s.val()||{}; if(typeof mergeNovosAlunos==='function') mergeNovosAlunos(); if(typeof aplicarExclusoes==='function') aplicarExclusoes(); if(typeof renderPel==='function') renderPel(); if(typeof renderDaycare==='function') renderDaycare(); if(typeof renderKPIs==='function') renderKPIs(); });
+      DB.ref('daycare/cadastro').on('value', s=>{ pelCadCache=s.val()||{}; CARTEIRA_CARREGADA=true; try{ if(typeof renderRenovacao==='function') renderRenovacao(); }catch(e){} if(typeof mergeNovosAlunos==='function') mergeNovosAlunos(); if(typeof aplicarExclusoes==='function') aplicarExclusoes(); if(typeof renderPel==='function') renderPel(); if(typeof renderDaycare==='function') renderDaycare(); if(typeof renderKPIs==='function') renderKPIs(); });
       // As fotos vêm de um nó separado, sem ouvinte — ver o comentário lá em cima.
       try{ carregarFotos(); }catch(e){ console.warn('fotos:',e); }
       // Banco de reposição: leve (só lançamentos), então pode ter ouvinte — a recepção
@@ -3429,6 +3429,22 @@
     const meses=(b.getFullYear()-a.getFullYear())*12+(b.getMonth()-a.getMonth())+1;
     return {meses:meses, plano:(meses<=1?'Silver':(meses<=4?'Gold':'Black'))};
   }
+  // ===== A CARTEIRA JÁ CHEGOU DO BANCO? =================================================
+  // Adriana, 11/ago/2026: "abri e não tinha renovados... o meu abriu sem nada."
+  // O plano de cada FILHOt mora no Firebase. Se o banco ainda não respondeu, TODO mundo fica
+  // sem vigência — e a Renovação, que abre no filtro "a cobrar", mostrava a frase
+  // "Ninguém para cobrar agora": uma mensagem tranquilizadora que era MENTIRA. Pior: dava para
+  // concluir que a carteira inteira tinha renovado. Enquanto o banco não chega, a tela avisa
+  // em vermelho e não afirma nada.
+  var CARTEIRA_CARREGADA=false;
+  function avisoCarteiraCarregando(){
+    if(CARTEIRA_CARREGADA) return '';
+    return '<div class="dc-faltas" style="border-color:#B3261E;color:#B3261E;margin-bottom:10px">'
+      +'<strong>AINDA CARREGANDO A CARTEIRA DO BANCO.</strong> Os planos de cada peludinho vêm do banco '
+      +'e ainda não chegaram neste aparelho. <strong>Não conclua nada enquanto este aviso estiver aqui</strong> — '
+      +'quem já renovou pode aparecer como pendente, e a lista pode aparecer vazia. Se não sumir em alguns '
+      +'segundos, é a internet: puxe a tela para baixo para recarregar.</div>';
+  }
   // ===== TIPO DE CLIENTE — uma conta só, usada pelo Início e pela Renovação ==============
   // Adriana, 11/ago/2026: "não estou conseguindo clicar e aparecer os mensais, trimestrais,
   // semestrais, avulsos, hospedagem e moradores — preciso clicar e aparecer quais são".
@@ -3537,7 +3553,7 @@
         +'<small>'+escAttr(pelGet(o.p,'tutor')||'tutor a confirmar')+'</small></span>'
         +(extra||'')+'</button>';
     };
-    box.innerHTML=
+    box.innerHTML=avisoCarteiraCarregando()+
       '<div class="mov-topo">'
       +  '<div class="mov-kpi ok"><b>'+M.ent.length+'</b>entraram</div>'
       +  '<div class="mov-kpi bad"><b>'+M.sai.length+'</b>saíram'+(pausas?'<small>'+pausas+' por pausa</small>':'')+'</div>'
@@ -3578,7 +3594,7 @@
     // de números sozinha não dava: 12 a cobrar em 130 é muito diferente de 12 em 20.
     const somaSit=(R.cobrar+R.emdia+R.semplano)||1;
     const pct=function(v){ return (v*100/somaSit).toFixed(2)+'%'; };
-    box.innerHTML='<div class="cart-top">'
+    box.innerHTML=avisoCarteiraCarregando()+'<div class="cart-top">'
       + quadro(R.cobrar,'A cobrar',
           (R.vencido&&R.vence) ? (R.vencido+' vencidos · '+R.vence+' vencendo')
           : (R.vencido ? 'a vigência já venceu'
@@ -6863,9 +6879,9 @@
         titulo.innerHTML='<strong>'+(TIPO_ROTULO[tipoAlvo]||tipoAlvo)+'</strong> — '+visiveis.length+' peludinho'+(visiveis.length===1?'':'s')
           +'. <button type="button" onclick="setRenovFiltro(\'cobrar\')" style="background:none;border:0;color:var(--z-blue);font-weight:800;text-decoration:underline;cursor:pointer;font-family:inherit;font-size:inherit">Voltar para a cobrança</button>'; }
     } else { const t=document.getElementById('renovTipoTit'); if(t) t.style.display='none'; }
-    if(!visiveis.length){ el.innerHTML='<div class="hint" style="padding:16px 2px">'+(ehTipo?('Nenhum peludinho em "'+(TIPO_ROTULO[tipoAlvo]||tipoAlvo)+'" no momento.'):vazio[renovFiltro])+'</div>'; return; }
+    if(!visiveis.length){ el.innerHTML=avisoCarteiraCarregando()+'<div class="hint" style="padding:16px 2px">'+(CARTEIRA_CARREGADA?(ehTipo?('Nenhum peludinho em "'+(TIPO_ROTULO[tipoAlvo]||tipoAlvo)+'" no momento.'):vazio[renovFiltro])                     :'A lista chega assim que o banco responder.')+'</div>'; return; }
     const clsSt={vencido:'vd-venc',vence:'vd-perto',sem:'vd-sem',ok:'vd-ok'};
-    el.innerHTML='<div class="renov-list">'+visiveis.map(function(o){ const r=renovDe(o.ex);
+    el.innerHTML=avisoCarteiraCarregando()+'<div class="renov-list">'+visiveis.map(function(o){ const r=renovDe(o.ex);
       const periodo=(r.inicio&&r.fim)?(fmtBR(r.inicio)+' a '+fmtBR(r.fim)):(r.fim?('até '+fmtBR(r.fim)):'sem vigência lançada');
       return '<div class="renov-item" onclick="abrirPeludinhoRenov('+o.i+')">'
         +'<div class="renov-nome">'+escAttr(pelNome(o.p))+' <span class="pel-obs">'+escAttr(pelGet(o.p,'raca')||'')+'</span>'
