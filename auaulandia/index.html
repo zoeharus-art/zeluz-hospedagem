@@ -6774,10 +6774,20 @@
             // Sem plano escolhido a data não calcula vencimento nenhum — e a consultora
             // achava que tinha lançado (Adriana, 04/ago/2026). O campo fica travado e diz
             // o que falta, em vez de aceitar uma data que não vira nada.
-            +'<div class="field"><label>Início da vigência'+(!r.plano?' <span style="color:var(--crm-critico);font-weight:800">— escolha o plano primeiro</span>':'')+'</label>'
-              +'<input type="date" class="cad-in" value="'+(r.inicio||'')+'"'+(!r.plano?' disabled style="opacity:.55;cursor:not-allowed" onclick="avisoEscolhaPlano()"':'')+' onchange="setRenovInicio(this.value)"></div>'
+            // DATA DO PAGAMENTO, não "início da vigência" (Adriana, 11/ago/2026): é o que o
+            // consultor tem na mão. O vencimento sai daqui sozinho — ele não digita, não calcula
+            // e não erra. O mês do pagamento conta como o 1º mês do plano.
+            +'<div class="field"><label>Data do pagamento'+(!r.plano?' <span style="color:var(--crm-critico);font-weight:800">— escolha o plano primeiro</span>':'')+'</label>'
+              +'<input type="date" class="cad-in" value="'+(r.inicio||'')+'"'+(!r.plano?' disabled style="opacity:.55;cursor:not-allowed" onclick="avisoEscolhaPlano()"':'')+' onchange="setRenovInicio(this.value)">'
+              +(r.plano?'<div class="hint" style="font-size:11px;margin-top:3px">O mês deste pagamento já conta como o 1º mês do plano. O vencimento é calculado sozinho.</div>':'')+'</div>'
             +'<div class="field"><label>Mensalidade'+((r.ordemPet||1)>1?' (com desconto)':'')+'</label><div class="prev-calc">'+(mens?fmtCent(mens):'escolha o plano')+'</div></div>'
-            +'<div class="field"><label>Vence em</label><div class="prev-calc">'+(r.fim?fmtBR(r.fim)+' · renova em '+(r.mesRenov||'—'):'informe início e plano')+'</div></div>')
+            // O vencimento em destaque: é o número que a consultora confere antes de confirmar.
+            +'<div class="field" style="grid-column:1/-1"><label>Vale até '+(r.plano?'<span style="font-weight:600;color:var(--muted)">— calculado pelo sistema</span>':'')+'</label>'
+              +'<div class="prev-calc" style="font-size:19px;font-weight:800;'+(r.fim&&r.fim<hojeISO()?'color:var(--crm-critico)':'')+'">'
+              +(r.fim?(fmtBR(r.fim)+(r.fim<hojeISO()?' — JÁ VENCIDO':'')+' <span style="font-size:12.5px;font-weight:600;color:var(--muted)">· renova em '+(r.mesRenov||'—')+'</span>'):'preencha o plano e a data do pagamento')
+              +'</div>'
+              +(r.fim&&r.fim<hojeISO()?'<div class="dc-faltas" style="margin-top:6px;border-color:#B3261E;color:#B3261E"><strong>Esta vigência já nasceu vencida.</strong> Confira a data do pagamento — provavelmente é de um mês anterior. Enquanto ficar assim, ele continua aparecendo na lista de cobrança.</div>':'')
+              +'</div>')
       +'</div>'
       + ((soHosp||soAvulso||soMorador) ? '' : '<div class="alm-next" style="margin-top:8px"><button class="btn btn-gold" onclick="confirmarRenovacao()">Confirmar / renovar plano</button></div>')
       +'</div>';
@@ -6798,19 +6808,49 @@
   }
   function setRenovInicio(iso){ const r=renovDe(pelExtra(pelAtual));
     if(!r.plano){ avisoEscolhaPlano(); renderPelFicha(); return; }   // data sem plano não vira vencimento
-    const calc=aplicarRenovacao(r.plano, r.aulas||nAulasDe(pelAtual), iso);
-    setRenov(Object.assign({inicio:iso}, calc||{})); }
+    let calc=aplicarRenovacao(r.plano, r.aulas||nAulasDe(pelAtual), iso);
+    // TRAVA CONTRA VIGÊNCIA NASCIDA VENCIDA (Adriana, 11/ago/2026).
+    // Caso real: o Beau foi renovado em 04/ago, mas a data lançada foi 01/jul — o plano nasceu
+    // vencido em 31/jul e ele continuou na lista de cobrança como se nada tivesse sido feito.
+    // O sistema aceitou calado. Agora ele pergunta, e a decisão continua sendo do consultor.
+    if(calc && calc.fim && calc.fim < hojeISO()){
+      const pl=planos()[r.plano]||{};
+      const meses=PLANO_MESES[pl.compromisso]||1;
+      // mesmo pagamento, começando no mês seguinte ao lançado
+      const a=iso.split('-').map(Number);
+      const p2=x=>String(x).padStart(2,'0');
+      const isoProx=(a[1]===12? (a[0]+1)+'-01-01' : a[0]+'-'+p2(a[1]+1)+'-01');
+      const fimProx=fimVigenciaISO(isoProx, meses);
+      const usarProx=confirm('ATENÇÃO — esta vigência já nasce VENCIDA.\n\n'
+        +'Data do pagamento: '+fmtBR(iso)+'\n'
+        +'Plano: '+(pl.rotulo||r.plano)+' ('+(pl.compromisso||'')+')\n'
+        +'Vale até: '+fmtBR(calc.fim)+' — que já passou.\n\n'
+        +'Assim ele CONTINUA na lista de cobrança, como se não tivesse renovado.\n\n'
+        +'OK = começar em '+fmtBR(isoProx)+', valendo até '+fmtBR(fimProx)+'\n'
+        +'Cancelar = manter '+fmtBR(iso)+' mesmo assim (ex.: lançamento atrasado de um mês antigo)');
+      if(usarProx) calc=aplicarRenovacao(r.plano, r.aulas||nAulasDe(pelAtual), isoProx);
+    }
+    setRenov(Object.assign({inicio:(calc&&calc.inicio)||iso}, calc||{})); }
   function confirmarRenovacao(){ const ex=pelExtra(pelAtual), r=renovDe(ex);
     if(!r.plano){ avisoEscolhaPlano(); return; }
     if(!r.inicio){
-      if(typeof zAlertao==='function') zAlertao('FALTA A DATA DE INÍCIO',
-        ['O plano está escolhido, mas falta dizer a partir de QUANDO ele vale.',
-         'Preencha o "Início da vigência" — é dele que sai a data de vencimento e o mês da próxima renovação.'],
+      if(typeof zAlertao==='function') zAlertao('FALTA A DATA DO PAGAMENTO',
+        ['O plano está escolhido, mas falta dizer QUANDO o tutor pagou.',
+         'Preencha a "Data do pagamento" — é dela que o sistema calcula sozinho o vencimento e o mês da próxima renovação.'],
         {botao:'Preencher a data'});
-      else alert('Preencha a data de início da vigência.');
+      else alert('Preencha a data do pagamento.');
       return;
     }
     const calc=aplicarRenovacao(r.plano, r.aulas||nAulasDe(pelAtual), r.inicio);
+    // Última barreira: confirmar uma renovação que já nasce vencida é registrar um trabalho
+    // que não vale (Adriana, 11/ago/2026 — caso Beau). Avisa antes de gravar.
+    if(calc && calc.fim && calc.fim < hojeISO()){
+      if(!confirm('ATENÇÃO — você está confirmando uma renovação JÁ VENCIDA.\n\n'
+        +'Pagamento em '+fmtBR(r.inicio)+' · vale até '+fmtBR(calc.fim)+', que já passou.\n\n'
+        +'Ele vai continuar aparecendo na lista de cobrança, como se não tivesse renovado.\n\n'
+        +'OK = gravar assim mesmo (lançamento atrasado)\n'
+        +'Cancelar = voltar e corrigir a data do pagamento')) return;
+    }
     setPelExtra(pelAtual,{renov:Object.assign({}, r, calc, {ordemPet:r.ordemPet||1})});
     if(typeof audit==='function') audit('renovacao','renovou o plano '+r.plano+' ('+(r.aulas||nAulasDe(pelAtual))+'x) até '+(calc?fmtBR(calc.fim):''),{alvo:dcKey(pelAtual.n,pelAtual.tutor)});
     renderPelFicha();
