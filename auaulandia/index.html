@@ -465,6 +465,18 @@
   body[data-role="supervisor"] .subtabs .subtab2.so-sensivel,
   body[data-role="diretoria"] .subtabs .subtab2.so-sensivel,
   body[data-role="consultora"] .subtabs .subtab2.so-sensivel{display:inline-flex !important}
+  /* PAINEL DE ABA sensível: quem manda é a ABA ATIVA, nunca o "pode ver" (Adriana, 11/ago/2026).
+     A regra acima liberava display:block para quem tem permissão — e o painel do Plano passou a
+     aparecer embaixo de Rotina & Almoço e de Atenção & Cuidados, em toda aba. Agora ele só
+     aparece quando é a aba escolhida. */
+  body[data-role="gestao"] .ppanel2.so-sensivel,
+  body[data-role="supervisor"] .ppanel2.so-sensivel,
+  body[data-role="diretoria"] .ppanel2.so-sensivel,
+  body[data-role="consultora"] .ppanel2.so-sensivel{display:none !important}
+  body[data-role="gestao"] .ppanel2.so-sensivel.active,
+  body[data-role="supervisor"] .ppanel2.so-sensivel.active,
+  body[data-role="diretoria"] .ppanel2.so-sensivel.active,
+  body[data-role="consultora"] .ppanel2.so-sensivel.active{display:block !important}
   /* .so-equipe = Gestão + Supervisão + Diretoria + Monitor (quem recebe/cuida do FILHOt no dia a dia).
      Plantonista, aprendiz e tutor ficam de fora — ex.: cancelar um lançamento do dia. */
   body[data-role="plantonista"] .so-equipe,
