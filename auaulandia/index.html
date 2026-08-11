@@ -7892,7 +7892,11 @@
     if(ex.ansioso==='Sim') P.push(`<span class="alert-pill warn">ANSIOSO: come em caixa própria — servir logo após quem tem banho</span>`);
     return P.length?`<div class="alert-pills">${P.join('')}</div>`:'';
   }
-  function refreshPills(){ const el=document.getElementById('pelPills'); if(el&&pelAtual) el.innerHTML=alertPills(pelExtra(pelAtual)); }
+  // As tarjas (alérgico, restrição, medicação) vivem na aba "Atenção & Cuidados", no elemento
+  // pelPills2. O código antigo só atualizava um "pelPills" que ficava num bloco escondido —
+  // então digitar uma alergia não acendia a tarja na hora (11/ago/2026). Atualiza os dois.
+  function refreshPills(){ if(!pelAtual) return; const html=alertPills(pelExtra(pelAtual));
+    ['pelPills','pelPills2'].forEach(function(id){ const el=document.getElementById(id); if(el) el.innerHTML=html; }); }
   // ===== PREVENÇÃO & CUIDADOS VACINAIS — o sistema calcula a próxima data =====
   // Regras dadas pela Adriana. A monitora/consultora informa o que deu e quando;
   // a data da próxima sai sozinha (errar isso é FILHOt desprotegido).
@@ -8362,42 +8366,23 @@
         <span class="chip-serv" style="background:rgba(224,136,86,.16);color:#a85a2e">Day Care</span>
       </div>
 
-      <div class="alert-card" id="pelAtencaoTopo" style="display:none">
-        <h2 style="font-size:19px;margin-bottom:3px">Atenção · Saúde e Cuidados</h2>
-        <div class="hint">Tudo que o monitor precisa saber antes de cuidar e dar o almoço.</div>
-        <div id="pelPills">${alertPills(ex)}</div>
-        <div class="cad-grid">
-          <div class="field"><label>Alergia</label><input class="cad-in" value="${escAttr(ex.alergia||'')}" placeholder="Ex: frango — ou deixe vazio" onchange="setPelExtra(pelAtual,{alergia:this.value});refreshPills()"></div>
-          <div class="field"><label>Restrição alimentar</label><input class="cad-in" value="${escAttr(ex.restricao||'')}" placeholder="Ex: sem grãos" onchange="setPelExtra(pelAtual,{restricao:this.value});refreshPills()"></div>
-          <div class="field"><label>Medicação</label><input class="cad-in" value="${escAttr(ex.medicacao||'')}" placeholder="Nome, dose, horário" onchange="setPelExtra(pelAtual,{medicacao:this.value});refreshPills()"></div>
-          <div class="field"><label>Algum problema de saúde</label><input class="cad-in" value="${escAttr(ex.problema||'')}" placeholder="Ex: cardíaco — ou vazio" onchange="setPelExtra(pelAtual,{problema:this.value});refreshPills()"></div>
-          <div class="field"><label>Manias</label><input class="cad-in" value="${escAttr(ex.manias||'')}" placeholder="Ex: protege a comida" onchange="setPelExtra(pelAtual,{manias:this.value});refreshPills()"></div>
-          <div class="field"><label>Em adaptacao (1&ordm; mes)?</label><div class="seg gold" data-single>${segBtnsPel('adaptacao',ex.adaptacao||'',['Sim','Nao'])}</div></div>
-          <div class="field"><label>Come em comedouro lento?</label><div class="seg gold" data-single>${segBtnsPel('ansioso',ex.ansioso||'',['Sim','Nao'])}</div></div>
-        </div>
-        <h3 class="cad-sub">Almoço &mdash; o que aparece na grade do Day Care</h3>
-        <div class="cad-grid">
-          ${camposAlmocoFicha()}
-        </div>
-        <h3 class="cad-sub">Saída do Day Care</h3>
-        <div class="cad-grid">
-          ${camposSaidaFicha()}
-        </div>
-      </div>
-
-      <!-- A ficha abre na aba que a pessoa escolher. O "Atenção · Saúde e Cuidados" saiu do
-           topo fixo e virou aba: quem cuida do plano não precisa passar por ele toda vez
-           (Adriana, 04/ago/2026). -->
+      <!-- ORDEM DAS ABAS (Adriana, 11/ago/2026): "ao abrir a ficha, a primeira coisa que
+           precisa aparecer para consultoras, gestão e supervisão é o PLANO".
+           Plano · Identificação · Comportamento · Prevenção · Rotina & Almoço · Atenção & Cuidados.
+           Quem NÃO pode ver plano (monitor, Encantador, plantonista, vet) abre em Identificação —
+           senão a ficha abriria numa aba invisível e pareceria vazia. Quem decide isso é
+           abaInicialPel(), logo abaixo do render. O bloco duplicado de "Atenção" que existia
+           escondido aqui foi removido: eram os MESMOS campos duas vezes na mesma página. -->
       <div class="subtabs">
-        <div class="subtab2 active" onclick="pelSubtab(this,'ps-ident')">Identificação</div>
-        <div class="subtab2" onclick="pelSubtab(this,'ps-comp')">Comportamento</div>
         <div class="subtab2 so-sensivel" onclick="pelSubtab(this,'ps-plano')">Plano</div>
+        <div class="subtab2" onclick="pelSubtab(this,'ps-ident')">Identificação</div>
+        <div class="subtab2" onclick="pelSubtab(this,'ps-comp')">Comportamento</div>
         <div class="subtab2" onclick="pelSubtab(this,'ps-saude')">Prevenção &amp; Cuidados Vacinais</div>
-        <div class="subtab2" onclick="pelSubtab(this,'ps-rotina')">Rotina</div>
-        <div class="subtab2" onclick="pelSubtab(this,'ps-atencao')">Atenção · Saúde e Saída</div>
+        <div class="subtab2" onclick="pelSubtab(this,'ps-rotina')">Rotina &amp; Almoço</div>
+        <div class="subtab2" onclick="pelSubtab(this,'ps-atencao')">Atenção &amp; Cuidados</div>
       </div>
 
-      <div class="ppanel2 active" id="ps-ident"><div class="card">
+      <div class="ppanel2" id="ps-ident"><div class="card">
         <div class="cad-grid">
           <div class="field"><label>Raça</label><input id="pelFichaRaca" class="cad-in" list="racasList" value="${escAttr(pelGet(p,'raca'))}" onchange="onRacaPel(this.value)"></div>
           <div class="field"><label>Data de nascimento</label><input type="date" class="cad-in" value="${pelNasc(p)||''}" onchange="setPelExtra(pelAtual,{nasc:this.value})"></div>
@@ -8481,6 +8466,16 @@
             <textarea class="gest-txt" readonly>${escAttr(msgRenovado(p,ex))}</textarea>
             <button class="btn btn-gold" style="padding:7px 14px;font-size:13px;margin-top:6px" onclick="copiarGest(this)">Copiar para o tutor</button></div>
         </div>
+        <!-- Sair do Day Care ENCERRA o plano — por isso mora aqui (Adriana, 11/ago/2026).
+             Mas em bloco próprio, separado por linha e no FIM da aba: nunca misturado com os
+             campos de plano, que era o que confundia. -->
+        <div style="border-top:2px solid var(--line);margin-top:22px;padding-top:16px">
+          <h3 class="cad-sub" style="margin-top:0">Saída do Day Care</h3>
+          <div class="hint" style="margin-bottom:8px">Só quando o FILHOt deixa de ser auluno. Ele sai das listas do dia, mas o cadastro e todo o histórico continuam guardados em Relatórios › Inativos.</div>
+          <div class="cad-grid">
+            ${camposSaidaFicha()}
+          </div>
+        </div>
       </div></div>
 
       <!-- Atenção · Saúde e Cuidados — agora é aba, não mais um bloco fixo no topo -->
@@ -8497,10 +8492,6 @@
           <div class="field"><label>Em adaptacao (1&ordm; mes)?</label><div class="seg gold" data-single>${segBtnsPel('adaptacao',ex.adaptacao||'',['Sim','Nao'])}</div></div>
           <div class="field"><label>Come em comedouro lento?</label><div class="seg gold" data-single>${segBtnsPel('ansioso',ex.ansioso||'',['Sim','Nao'])}</div></div>
         </div>
-        <h3 class="cad-sub">Saída do Day Care</h3>
-        <div class="cad-grid">
-          ${camposSaidaFicha()}
-        </div>
       </div></div>
 
       <div class="actions" style="margin-top:4px">
@@ -8512,7 +8503,25 @@
       f.querySelectorAll('input,select,textarea').forEach(el=>{ el.disabled=true; });
       f.querySelectorAll('.seg button, .vac-row button').forEach(el=>{ el.disabled=true; });
     }
+    abrirAbaInicialPel();
     window.scrollTo({top:0,behavior:'smooth'});
+  }
+  // A ficha abre no PLANO para quem cuida de plano (Diretoria, Gestão, Supervisão e
+  // Consultoria) — é a primeira coisa que a consultora precisa ver (Adriana, 11/ago/2026).
+  // Para monitor, Encantador, plantonista e veterinária a aba Plano nem existe (dado
+  // sensível): eles abrem em Identificação. Sem isto a ficha abriria numa aba invisível
+  // e pareceria vazia para metade da equipe.
+  function podeVerPlano(){ const r=document.body.dataset.role;
+    return r==='gestao'||r==='supervisor'||r==='diretoria'||r==='consultora'; }
+  function abrirAbaInicialPel(){
+    try{
+      const alvo=podeVerPlano()?'ps-plano':'ps-ident';
+      document.querySelectorAll('.ppanel2').forEach(function(x){ x.classList.remove('active'); });
+      const p=document.getElementById(alvo); if(p) p.classList.add('active');
+      const tabs=document.querySelectorAll('.subtab2');
+      tabs.forEach(function(t){ t.classList.remove('active');
+        if((t.getAttribute('onclick')||'').indexOf("'"+alvo+"'")>=0) t.classList.add('active'); });
+    }catch(e){}
   }
   function salvarFichaPel(){ if(document.activeElement&&document.activeElement.blur) document.activeElement.blur(); const s=document.getElementById('pel-saved2'); if(s){ s.textContent='✓ Ficha salva! Disponível em todos os aparelhos.'; setTimeout(()=>{ if(s) s.textContent=''; },2200); } if(typeof renderDaycare==='function') renderDaycare(); }
   function pelSubtab(el,id){ el.parentNode.querySelectorAll('.subtab2').forEach(x=>x.classList.remove('active')); el.classList.add('active'); document.querySelectorAll('.ppanel2').forEach(x=>x.classList.remove('active')); const t=document.getElementById(id); if(t) t.classList.add('active'); }
