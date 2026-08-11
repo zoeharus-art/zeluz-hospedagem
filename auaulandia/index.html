@@ -306,6 +306,21 @@
   .mon-det span{display:inline-flex;align-items:center;gap:5px}
   .mon-det i{width:8px;height:8px;border-radius:2px;flex:0 0 auto}
   .mon-det b{color:var(--z-blue);font-weight:800;font-variant-numeric:tabular-nums}
+  .mon-sec{font-size:10.5px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);margin-bottom:6px}
+  .mon-tabwrap{overflow-x:auto;border:1px solid var(--line);border-radius:14px;background:var(--z-white)}
+  .mon-tab{width:100%;border-collapse:collapse;font-size:13px;min-width:640px}
+  .mon-tab th{text-align:left;font-size:10.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;
+    color:var(--muted);padding:10px 12px;border-bottom:1px solid var(--line);white-space:nowrap}
+  .mon-tab th i{display:inline-block;width:8px;height:8px;border-radius:2px;margin-right:5px;vertical-align:middle}
+  .mon-tab td{padding:9px 12px;border-bottom:1px solid var(--line);color:var(--z-blue);font-weight:600;
+    font-variant-numeric:tabular-nums;white-space:nowrap}
+  .mon-tab tbody tr:last-child td{border-bottom:0}
+  .mon-tab tbody tr:hover{background:var(--z-cream-warm)}
+  .mon-tab td b{font-weight:800}
+  .mon-dia{font-weight:800}
+  .mon-vezes{color:var(--muted);font-weight:600}
+  .mon-quem{white-space:normal;font-weight:600;color:var(--muted);font-size:12px}
+  .mon-aberta{color:#B3261E;font-weight:800}
   .mon-card.fora{border-style:dashed}
   .mon-flag{display:inline-block;margin-left:7px;font-size:10px;font-weight:800;color:#B3261E;border:1px solid #B3261E;
     border-radius:5px;padding:1px 5px;text-transform:uppercase;letter-spacing:.03em;vertical-align:middle}
@@ -2713,12 +2728,12 @@
     <div class="card so-master" style="margin-top:16px">
       <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap">
         <div>
-          <h2 style="font-size:20px;margin:0">Quem fez o quê</h2>
-          <div class="hint" style="margin-top:2px">Cada atividade tem um responsável. Aqui aparece quem conduziu, quantas vezes e quanto tempo levou.</div>
+          <h2 style="font-size:20px;margin:0">Tempo das atividades</h2>
+          <div class="hint" style="margin-top:2px">Quanto tempo cada etapa leva — montagem, almoço e finalização — por dia da semana, dia a dia e por quem conduziu.</div>
         </div>
         <div class="seg gold" data-single id="monPeriodo">
-          <button class="on" onclick="setMonPeriodo(this,7)">7 dias</button>
-          <button onclick="setMonPeriodo(this,30)">30 dias</button>
+          <button onclick="setMonPeriodo(this,7)">7 dias</button>
+          <button class="on" onclick="setMonPeriodo(this,30)">30 dias</button>
           <button onclick="setMonPeriodo(this,90)">90 dias</button>
         </div>
       </div>
@@ -9858,21 +9873,19 @@
     carregarEquipe();
   }
 
-  // ===== QUEM FEZ O QUÊ — desempenho por monitor ========================================
-  // Adriana, 11/ago/2026: "cada atividade é feita por uma pessoa. A Amanda é quem está fazendo
-  // o Almoço; a Leticya fez porque a Amanda estava de atestado. No dashboard temos que ter
-  // gráficos de cada monitor."
-  // Primeiro tijolo do sistema de protocolos: quem conduziu, quantas vezes, quanto tempo levou
-  // e o que ficou sem fechar. Só observa — não altera nada.
-  var monDias=7, monCache=null;
-  const MON_GRUPOS=[
-    {k:'almoco',    t:'Almoço — pratos servidos', acoes:['almoco_grade'],            cor:'#DEB428'},
-    {k:'almoco2',   t:'2º horário do almoço',     acoes:['almoco2'],                 cor:'#E08856'},
-    {k:'chamada',   t:'Chamada',                  acoes:['chamada'],                 cor:'#2E7D8A'},
-    {k:'atividade', t:'Atividades',               acoes:['atividade'],               cor:'#7C8B99'},
-    {k:'banho',     t:'Banho',                    acoes:['banho','banho_desceu'],    cor:'#234D67'},
-    {k:'plantao',   t:'Relatórios e passagem de plantão', acoes:['relatorio','recebimento'], cor:'#6b5f4b'}
+  // ===== TEMPO DAS ATIVIDADES — por etapa, por dia da semana e por pessoa ===============
+  // Adriana, 11/ago/2026: "preciso saber a média de tempo por dia da semana — tem dia que temos
+  // 40 cães, outros 50. Não preciso da soma dos pratos, é um dado irrelevante: quero o início e
+  // o fim da atividade, o tempo total, e dentro disso os passos — montagem, almoço e final —
+  // quanto tempo em cada um."
+  // O app já cronometra as 3 etapas (início, fim e quem). Faltava a leitura. Só observa.
+  var monDias=30, monCache=null;
+  const MON_ETAPAS=[
+    {k:'prep',   t:'Montagem',    no:'daycare/almoco-prep-turno/',  cor:'#2E7D8A'},
+    {k:'almoco', t:'Almoço',      no:'daycare/almoco-turno/',       cor:'#DEB428'},
+    {k:'final',  t:'Finalização', no:'daycare/almoco-final-turno/', cor:'#7C8B99'}
   ];
+  const MON_SEMANA=[{i:1,t:'Segunda'},{i:2,t:'Terça'},{i:3,t:'Quarta'},{i:4,t:'Quinta'},{i:5,t:'Sexta'},{i:6,t:'Sábado'},{i:0,t:'Domingo'}];
   function setMonPeriodo(bt,n){
     monDias=n;
     try{ const p=document.getElementById('monPeriodo'); if(p) p.querySelectorAll('button').forEach(b=>b.classList.remove('on')); if(bt) bt.classList.add('on'); }catch(e){}
@@ -9880,123 +9893,133 @@
   }
   function monMin(h){ const m=/^(\d{1,2}):(\d{2})$/.exec(String(h||'')); return m?(+m[1]*60+ +m[2]):null; }
   function monDur(a,b){ const x=monMin(a), y=monMin(b); return (x==null||y==null||y<x)?null:(y-x); }
-  function monFmtDur(m){ return m==null?'—':(Math.floor(m/60)+'h'+String(m%60).padStart(2,'0')); }
+  function monFmt(m){ if(m==null) return '—'; const h=Math.floor(m/60), r=Math.round(m%60);
+    return h?(h+'h'+String(r).padStart(2,'0')):(r+'min'); }
+  function monMedia(a){ return a.length?Math.round(a.reduce(function(x,y){return x+y;},0)/a.length):null; }
   function carregarEquipe(){
     const box=document.getElementById('monEquipeWrap'); if(!box) return;
     if(!DB){ box.innerHTML='<div class="p-empty">Sem conexão com o banco agora.</div>'; return; }
     const dias=[]; const hoje=new Date(); const p=n=>String(n).padStart(2,'0');
     for(let i=0;i<monDias;i++){ const d=new Date(hoje.getTime()-i*86400000); dias.push(d.getFullYear()+'-'+p(d.getMonth()+1)+'-'+p(d.getDate())); }
     const get=path=>DB.ref(path).once('value').then(s=>s.val()).catch(()=>null);
-    Promise.all([
-      Promise.all(dias.map(k=>get('daycare/auditoria/'+k).then(v=>({k:k,v:v||{}})))),
-      Promise.all(dias.map(k=>get('daycare/almoco-turno/'+k).then(v=>({k:k,v:v||{}}))))
-    ]).then(function(r){ monCache={aud:r[0], turno:r[1], dias:dias}; renderEquipe(); })
-      .catch(function(){ box.innerHTML='<div class="p-empty">Não consegui ler o histórico agora.</div>'; });
+    Promise.all(dias.map(function(k){
+      return Promise.all([
+        get('daycare/almoco-prep-turno/'+k), get('daycare/almoco-turno/'+k),
+        get('daycare/almoco-final-turno/'+k), get('daycare/almoco/'+k)
+      ]).then(function(r){
+        // quantos FILHOts o dia teve de verdade: quem foi marcado no almoço (a chamada quase
+        // não é preenchida, então ela não serve de base). É CONTEXTO do tempo, não pontuação.
+        const marcas=r[3]||{};
+        return { dia:k, prep:r[0]||{}, almoco:r[1]||{}, final:r[2]||{}, caes:Object.keys(marcas).length };
+      });
+    })).then(function(res){ monCache=res.filter(function(d){ return d.prep.inicio||d.almoco.inicio||d.final.inicio||d.caes; });
+      renderEquipe();
+    }).catch(function(){ box.innerHTML='<div class="p-empty">Não consegui ler o histórico agora.</div>'; });
   }
   function renderEquipe(){
     const box=document.getElementById('monEquipeWrap'); if(!box||!monCache) return;
-    const pessoas={};   // nome -> {total, grupos:{}, dias:Set, almocosConduzidos:[min], papeis:Set}
-    const achaGrupo=function(acao){ for(let i=0;i<MON_GRUPOS.length;i++){ if(MON_GRUPOS[i].acoes.indexOf(acao)>=0) return MON_GRUPOS[i].k; } return null; };
-    // "Wândela" e "Wandela", "Octávio" e "Octavio", "Letícya" e "Leticya" são a MESMA pessoa —
-    // o nome é digitado à mão em cada plantão. Agrupa por nome sem acento e guarda a grafia
-    // mais usada para mostrar. Erro de digitação de verdade (Carpl, Caroo, Jessuca) continua
-    // separado de propósito: é assim que a Gestão enxerga que o dado está sujo.
-    const pega=function(nome){
-      const k=jsNorm(nome);
-      if(!pessoas[k]) pessoas[k]={nome:nome,grafias:{},total:0,grupos:{},dias:{},almocos:[],papeis:{}};
-      const P=pessoas[k];
-      P.grafias[nome]=(P.grafias[nome]||0)+1;
-      if(P.grafias[nome]>=(P.grafias[P.nome]||0)) P.nome=nome;   // mostra a grafia mais usada
-      return P;
+    if(!monCache.length){ box.innerHTML='<div class="p-empty">Nenhuma atividade cronometrada nos últimos '+monDias+' dias.</div>'; return; }
+    const dur=function(d,et){ return monDur(d[et].inicio, d[et].fim); };
+    // total do dia: do começo da montagem ao fim da finalização (é o tempo que a operação toma)
+    const totalDoDia=function(d){
+      const ini=d.prep.inicio||d.almoco.inicio;
+      const fim=d.final.fim||d.almoco.fim;
+      return monDur(ini,fim);
     };
-    // QUEM É A PESSOA, não o papel (Adriana, 11/ago/2026: "gráficos de CADA MONITOR").
-    // No plantão o campo `quem` grava "Plantonista" — o nome real de quem trabalhou está em
-    // `assinou` (Wândela, Carol, Jessica...). Sem isto o plantão inteiro virava um balde só
-    // chamado "Plantonista" e ninguém aparecia individualmente.
-    const GENERICO=/^(plantonista|monitor(\s*\d+)?|encantador(a)?|recep(c|ç)(a|ã)o|vet(erin(a|á)ria)?|gestor(a)?|supervisor(a)?|consultor(a)?|diretoria|equipe|-)$/i;
-    const quemDeVerdade=function(o){
-      const q=String(o.quem||'').trim();
-      const a=String(o.assinou||'').trim();
-      if(a && (!q || GENERICO.test(q))) return a;
-      return q;
-    };
-    monCache.aud.forEach(function(d){
-      Object.values(d.v||{}).forEach(function(o){
-        if(!o) return;
-        const nome=quemDeVerdade(o); if(!nome) return;
-        const g=achaGrupo(o.acao); if(!g) return;
-        const P=pega(nome);
-        P.total++; P.grupos[g]=(P.grupos[g]||0)+1; P.dias[d.k]=1;
-        if(o.role) P.papeis[o.role]=1;
+    const abertas=[];
+    MON_ETAPAS.forEach(function(et){
+      monCache.forEach(function(d){ if(d[et.k].inicio && !d[et.k].fim) abertas.push({dia:d.dia, etapa:et.t, hora:d[et.k].inicio, quem:d[et.k].quemInicio||'—'}); });
+    });
+
+    // ---- A) MÉDIA POR DIA DA SEMANA (o pedido central) --------------------------------
+    let h='<div class="mon-sec">Média por dia da semana</div>'
+      +'<div class="hint" style="margin-bottom:9px">O tempo muda com o movimento — por isso a média vem junto com quantos FILHOts o dia teve. <strong>Min/FILHOt</strong> é o que compara dias de 40 e de 50 de forma justa. O <strong>Total</strong> vai do começo da montagem ao fim da finalização — por isso costuma ser maior que a soma das três: no meio há o tempo parado entre uma etapa e outra.</div>'
+      +'<div class="mon-tabwrap"><table class="mon-tab"><thead><tr><th>Dia</th>'
+      +MON_ETAPAS.map(function(e){ return '<th><i style="background:'+e.cor+'"></i>'+e.t+'</th>'; }).join('')
+      +'<th>Total</th><th>FILHOts</th><th>Min/FILHOt</th><th>Vezes</th></tr></thead><tbody>';
+    let temSemana=false;
+    MON_SEMANA.forEach(function(s){
+      const doDia=monCache.filter(function(d){ return new Date(d.dia+'T12:00:00').getDay()===s.i; });
+      if(!doDia.length) return;
+      const med={}; MON_ETAPAS.forEach(function(e){ med[e.k]=monMedia(doDia.map(function(d){ return dur(d,e.k); }).filter(function(x){ return x!=null; })); });
+      const tot=monMedia(doDia.map(totalDoDia).filter(function(x){ return x!=null; }));
+      const caes=monMedia(doDia.map(function(d){ return d.caes; }).filter(function(x){ return x>0; }));
+      const alm=med.almoco;
+      const porCao=(alm!=null&&caes)?(alm/caes):null;
+      if(tot==null&&alm==null&&!caes) return;
+      temSemana=true;
+      h+='<tr><td class="mon-dia">'+s.t+'</td>'
+        +MON_ETAPAS.map(function(e){ return '<td>'+monFmt(med[e.k])+'</td>'; }).join('')
+        +'<td><b>'+monFmt(tot)+'</b></td>'
+        +'<td>'+(caes||'—')+'</td>'
+        +'<td>'+(porCao!=null?(porCao.toFixed(1).replace('.',',')+' min'):'—')+'</td>'
+        +'<td class="mon-vezes">'+doDia.length+'</td></tr>';
+    });
+    h+='</tbody></table></div>';
+    if(!temSemana) h='<div class="p-empty">Ainda não há tempo cronometrado suficiente no período.</div>';
+
+    // ---- B) DIA A DIA ------------------------------------------------------------------
+    h+='<div class="mon-sec" style="margin-top:20px">Dia a dia</div>'
+      +'<div class="mon-tabwrap"><table class="mon-tab"><thead><tr><th>Data</th><th>Dia</th>'
+      +MON_ETAPAS.map(function(e){ return '<th><i style="background:'+e.cor+'"></i>'+e.t+'</th>'; }).join('')
+      +'<th>Começou</th><th>Terminou</th><th>Total</th><th>FILHOts</th><th>Quem conduziu</th></tr></thead><tbody>';
+    monCache.slice().sort(function(a,b){ return a.dia<b.dia?1:-1; }).forEach(function(d){
+      const ini=d.prep.inicio||d.almoco.inicio, fim=d.final.fim||d.almoco.fim;
+      const quem={};
+      MON_ETAPAS.forEach(function(e){ const q=d[e.k].quemInicio; if(q) quem[String(q).trim()]=1; });
+      const nomes=Object.keys(quem).join(', ')||'—';
+      const tot=totalDoDia(d);
+      h+='<tr><td class="mon-dia">'+fmtBR(d.dia)+'</td>'
+        +'<td>'+(MON_SEMANA.filter(function(s){ return s.i===new Date(d.dia+'T12:00:00').getDay(); })[0]||{t:'—'}).t.slice(0,3)+'</td>'
+        +MON_ETAPAS.map(function(e){ const x=dur(d,e.k);
+            return '<td'+(d[e.k].inicio&&!d[e.k].fim?' class="mon-aberta" title="começou e não encerrou"':'')+'>'+(d[e.k].inicio&&!d[e.k].fim?'aberta':monFmt(x))+'</td>'; }).join('')
+        +'<td>'+(ini||'—')+'</td><td>'+(fim||'—')+'</td>'
+        +'<td><b>'+monFmt(tot)+'</b></td>'
+        +'<td>'+(d.caes||'—')+'</td>'
+        +'<td class="mon-quem">'+escAttr(nomes)+'</td></tr>';
+    });
+    h+='</tbody></table></div>';
+
+    // ---- C) QUEM CONDUZIU CADA ETAPA ---------------------------------------------------
+    const porPessoa={};
+    monCache.forEach(function(d){
+      MON_ETAPAS.forEach(function(e){
+        const q=d[e.k].quemInicio; if(!q) return;
+        const nome=String(q).trim(), k=jsNorm(nome);
+        if(!porPessoa[k]) porPessoa[k]={nome:nome, grafias:{}, etapas:{}};
+        const P=porPessoa[k]; P.grafias[nome]=(P.grafias[nome]||0)+1;
+        if(P.grafias[nome]>=(P.grafias[P.nome]||0)) P.nome=nome;
+        if(!P.etapas[e.k]) P.etapas[e.k]={n:0, temp:[]};
+        P.etapas[e.k].n++;
+        const x=dur(d,e.k); if(x!=null) P.etapas[e.k].temp.push(x);
       });
     });
-    // quem conduziu o almoço (abriu E fechou) e quanto tempo levou
-    const semFechar=[];
-    monCache.turno.forEach(function(d){
-      const t=d.v||{};
-      if(t.inicio && !t.fim) semFechar.push({dia:d.k, quem:t.quemInicio||'—', inicio:t.inicio});
-      const dur=monDur(t.inicio,t.fim);
-      if(dur!=null && t.quemInicio) pega(String(t.quemInicio).trim()).almocos.push(dur);
-    });
-    // Quem NÃO está na lista de Pessoas & Turnos: ou é erro de digitação, ou é alguém
-    // trabalhando sem cadastro. Nos dois casos a Gestão precisa ver — não pode passar batido.
-    const cadastrados={};
-    try{ (MONITORES||[]).forEach(function(m){ if(m&&m.nome) cadastrados[jsNorm(m.nome)]=1; }); }catch(e){}
-    const naLista=function(nome){
-      const n=jsNorm(nome); if(cadastrados[n]) return true;
-      for(const c in cadastrados){ if(c.indexOf(n)===0||n.indexOf(c)===0) return true; }  // "Márcia" x "Márcia · Gestora"
-      return false;
-    };
-    const lista=Object.values(pessoas).filter(function(p){ return p.total>0; })
-      .sort(function(a,b){ return b.total-a.total; });
-    lista.forEach(function(P){ P.fora=!naLista(P.nome); });
-    if(!lista.length){ box.innerHTML='<div class="p-empty">Nenhum registro nos últimos '+monDias+' dias.</div>'; return; }
-    const maior=lista[0].total||1;
-    const media=function(a){ return a.length?Math.round(a.reduce(function(x,y){return x+y;},0)/a.length):null; };
-    let h='<div class="mon-legenda">';
-    MON_GRUPOS.forEach(function(g){ h+='<span><i style="background:'+g.cor+'"></i>'+g.t+'</span>'; });
-    h+='</div>';
-    h+='<div class="mon-lista">';
-    lista.forEach(function(P){
-      const nDias=Object.keys(P.dias).length;
-      const md=media(P.almocos);
-      // barra empilhada: cada pedaço é uma atividade, na proporção do que a pessoa fez
-      let barra='';
-      MON_GRUPOS.forEach(function(g){
-        const n=P.grupos[g.k]||0; if(!n) return;
-        barra+='<i title="'+g.t+': '+n+'" style="background:'+g.cor+';width:'+(n*100/P.total).toFixed(2)+'%"></i>';
+    const pessoas=Object.values(porPessoa).sort(function(a,b){
+      const s=function(P){ return MON_ETAPAS.reduce(function(t,e){ return t+((P.etapas[e.k]||{}).n||0); },0); };
+      return s(b)-s(a); });
+    if(pessoas.length){
+      h+='<div class="mon-sec" style="margin-top:20px">Quem conduziu cada etapa</div>'
+        +'<div class="hint" style="margin-bottom:9px">Quem iniciou a etapa é quem responde por ela. O tempo é o daquela etapa, não do dia inteiro.</div>'
+        +'<div class="mon-lista">';
+      pessoas.forEach(function(P){
+        const outras=Object.keys(P.grafias).filter(function(g){ return g!==P.nome; });
+        h+='<div class="mon-card"><div class="mon-top"><span class="mon-nome">'+escAttr(P.nome)
+          +(outras.length?'<small class="mon-alias">também escrito: '+outras.map(escAttr).join(' · ')+'</small>':'')
+          +'</span></div><div class="mon-det" style="border:0;padding:0;margin-top:6px">';
+        MON_ETAPAS.forEach(function(e){
+          const E=P.etapas[e.k]; if(!E) return;
+          const md=monMedia(E.temp);
+          h+='<span><i style="background:'+e.cor+'"></i>'+e.t+': <b>'+E.n+'</b>x'+(md!=null?(' · média <b>'+monFmt(md)+'</b>'):'')+'</span>';
+        });
+        h+='</div></div>';
       });
-      const escala=(P.total*100/maior).toFixed(2);
-      const outrasGrafias=Object.keys(P.grafias).filter(function(g){ return g!==P.nome; });
-      h+='<div class="mon-card'+(P.fora?' fora':'')+'">'
-        +'<div class="mon-top"><span class="mon-nome">'+escAttr(P.nome)
-          +(P.fora?'<span class="mon-flag">fora da lista de Pessoas</span>':'')
-          +(outrasGrafias.length?'<small class="mon-alias">também escrito: '+outrasGrafias.map(escAttr).join(' · ')+'</small>':'')
-          +'</span>'
-          +'<span class="mon-tot">'+P.total+' <small>registros</small></span></div>'
-        +'<div class="mon-barra" style="width:'+escala+'%">'+barra+'</div>'
-        +'<div class="mon-nums">'
-          +'<span><b>'+nDias+'</b> dia'+(nDias>1?'s':'')+' com registro</span>'
-          +(P.almocos.length?'<span><b>'+P.almocos.length+'</b> almoço'+(P.almocos.length>1?'s':'')+' conduzido'+(P.almocos.length>1?'s':'')+'</span>':'')
-          +(md!=null?'<span>tempo médio do almoço: <b>'+monFmtDur(md)+'</b></span>':'')
-        +'</div>'
-        +'<div class="mon-det">'
-          +MON_GRUPOS.filter(function(g){ return P.grupos[g.k]; })
-            .map(function(g){ return '<span><i style="background:'+g.cor+'"></i>'+g.t+': <b>'+P.grupos[g.k]+'</b></span>'; }).join('')
-        +'</div>'
-      +'</div>';
-    });
-    h+='</div>';
-    if(semFechar.length){
-      h+='<div class="dc-faltas" style="margin-top:12px"><strong>ALMOÇO ABERTO SEM ENCERRAR ('+semFechar.length+'):</strong> '
-        +semFechar.sort(function(a,b){return a.dia<b.dia?1:-1;}).map(function(s){ return fmtBR(s.dia)+' — começou '+s.inicio+' ('+escAttr(s.quem)+')'; }).join(' · ')
-        +'<div style="font-weight:600;margin-top:4px">Sem o encerramento não dá para saber quanto tempo o almoço levou nesses dias.</div></div>';
+      h+='</div>';
     }
-    const fora=lista.filter(function(P){ return P.fora; });
-    if(fora.length){
-      h+='<div class="dc-meia" style="margin-top:12px"><strong>'+fora.length+' nome'+(fora.length>1?'s':'')+' fora de Pessoas &amp; Turnos:</strong> '
-        +fora.map(function(P){ return escAttr(P.nome)+' ('+P.total+')'; }).join(' · ')
-        +'<div style="font-weight:600;margin-top:4px">O nome de quem assina o plantão é digitado à mão — então entra erro de digitação e até nome de FILHOt. Enquanto for texto livre, a conta por pessoa não fecha: o certo é escolher da lista.</div></div>';
+
+    if(abertas.length){
+      h+='<div class="dc-faltas" style="margin-top:14px"><strong>ETAPAS QUE COMEÇARAM E NINGUÉM ENCERROU ('+abertas.length+'):</strong> '
+        +abertas.sort(function(a,b){ return a.dia<b.dia?1:-1; }).map(function(s){ return fmtBR(s.dia)+' · '+s.etapa+' às '+s.hora+' ('+escAttr(s.quem)+')'; }).join(' · ')
+        +'<div style="font-weight:600;margin-top:4px">Sem o encerramento não existe tempo naquele dia — o dia sai da média.</div></div>';
     }
     box.innerHTML=h;
   }
