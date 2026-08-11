@@ -285,6 +285,32 @@
   .mov-tag.pausa{color:#B3261E;border-color:#B3261E}
   .mov-motivo{flex:0 0 100%;font-size:11.5px;font-weight:500;color:var(--muted);margin-top:3px}
 
+  /* Quem fez o que — desempenho por monitor. A cor identifica a ATIVIDADE (e so isso):
+     o nome, os numeros e o fundo ficam neutros, senao a tela vira arco-iris e nada se destaca. */
+  .mon-legenda{display:flex;gap:12px;flex-wrap:wrap;margin:12px 0 10px;font-size:11.5px;font-weight:600;color:var(--muted)}
+  .mon-legenda span{display:inline-flex;align-items:center;gap:5px}
+  .mon-legenda i{width:9px;height:9px;border-radius:3px;flex:0 0 auto}
+  .mon-lista{display:flex;flex-direction:column;gap:10px}
+  .mon-card{border:1px solid var(--line);border-radius:14px;padding:12px 14px;background:var(--z-white)}
+  .mon-top{display:flex;justify-content:space-between;align-items:baseline;gap:10px}
+  .mon-nome{font-size:15.5px;font-weight:800;color:var(--z-blue);letter-spacing:-.015em}
+  .mon-tot{font-size:19px;font-weight:800;color:var(--z-blue);font-variant-numeric:tabular-nums}
+  .mon-tot small{font-size:11px;font-weight:600;color:var(--muted)}
+  .mon-barra{display:flex;height:11px;border-radius:6px;overflow:hidden;margin:9px 0 8px;min-width:44px;
+    background:var(--z-cream-warm)}
+  .mon-barra i{display:block;height:100%}
+  .mon-nums{display:flex;gap:14px;flex-wrap:wrap;font-size:12px;font-weight:600;color:var(--muted)}
+  .mon-nums b{color:var(--z-blue);font-weight:800;font-variant-numeric:tabular-nums}
+  .mon-det{display:flex;gap:12px;flex-wrap:wrap;margin-top:7px;padding-top:7px;border-top:1px dashed var(--line);
+    font-size:11.5px;font-weight:600;color:var(--muted)}
+  .mon-det span{display:inline-flex;align-items:center;gap:5px}
+  .mon-det i{width:8px;height:8px;border-radius:2px;flex:0 0 auto}
+  .mon-det b{color:var(--z-blue);font-weight:800;font-variant-numeric:tabular-nums}
+  .mon-card.fora{border-style:dashed}
+  .mon-flag{display:inline-block;margin-left:7px;font-size:10px;font-weight:800;color:#B3261E;border:1px solid #B3261E;
+    border-radius:5px;padding:1px 5px;text-transform:uppercase;letter-spacing:.03em;vertical-align:middle}
+  .mon-alias{display:block;font-size:11px;font-weight:500;color:var(--muted);margin-top:2px}
+
   .kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:14px;margin-bottom:24px}
   .kpi{background:var(--z-white);border:1px solid var(--line);border-radius:var(--radius);padding:14px 16px;box-shadow:var(--shadow);display:flex;align-items:center;gap:12px}
   .kpi-st{width:46px;height:46px;object-fit:contain;flex:0 0 auto}
@@ -2679,6 +2705,25 @@
     </div>
     <div id="painelCfg" class="card so-master" style="display:none"></div>
     <div id="painelWrap"><div class="p-empty">Carregando o dia…</div></div>
+
+    <!-- QUEM FEZ O QUÊ — por monitor (Adriana, 11/ago/2026): "cada atividade é feita por uma
+         pessoa. A Amanda é quem está fazendo o Almoço; a Leticya fez porque a Amanda estava de
+         atestado. No dashboard temos que ter gráficos de cada monitor." Esta seção olha para
+         PESSOAS, não para o dia: quem conduziu, quantas vezes e quanto tempo levou. -->
+    <div class="card so-master" style="margin-top:16px">
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap">
+        <div>
+          <h2 style="font-size:20px;margin:0">Quem fez o quê</h2>
+          <div class="hint" style="margin-top:2px">Cada atividade tem um responsável. Aqui aparece quem conduziu, quantas vezes e quanto tempo levou.</div>
+        </div>
+        <div class="seg gold" data-single id="monPeriodo">
+          <button class="on" onclick="setMonPeriodo(this,7)">7 dias</button>
+          <button onclick="setMonPeriodo(this,30)">30 dias</button>
+          <button onclick="setMonPeriodo(this,90)">90 dias</button>
+        </div>
+      </div>
+      <div id="monEquipeWrap"><div class="p-empty">Carregando…</div></div>
+    </div>
   </section>
   <section class="view" id="v-sair"><div class="soon-box"><img class="ic-st" src="assets/simbolo.png" alt=""><div class="t">Sair</div><div class="d">No sistema real, encerra a sessão com segurança.</div></div></section>
 
@@ -9810,6 +9855,150 @@
         auditoria:r[9]||{}, checkout:r[10]||{}, almPrepTurno:r[11]||{}, almFinalTurno:r[12]||{} };
       renderPainelDia();
     }).catch(()=>{ painelData={}; renderPainelDia(); });
+    carregarEquipe();
+  }
+
+  // ===== QUEM FEZ O QUÊ — desempenho por monitor ========================================
+  // Adriana, 11/ago/2026: "cada atividade é feita por uma pessoa. A Amanda é quem está fazendo
+  // o Almoço; a Leticya fez porque a Amanda estava de atestado. No dashboard temos que ter
+  // gráficos de cada monitor."
+  // Primeiro tijolo do sistema de protocolos: quem conduziu, quantas vezes, quanto tempo levou
+  // e o que ficou sem fechar. Só observa — não altera nada.
+  var monDias=7, monCache=null;
+  const MON_GRUPOS=[
+    {k:'almoco',    t:'Almoço — pratos servidos', acoes:['almoco_grade'],            cor:'#DEB428'},
+    {k:'almoco2',   t:'2º horário do almoço',     acoes:['almoco2'],                 cor:'#E08856'},
+    {k:'chamada',   t:'Chamada',                  acoes:['chamada'],                 cor:'#2E7D8A'},
+    {k:'atividade', t:'Atividades',               acoes:['atividade'],               cor:'#7C8B99'},
+    {k:'banho',     t:'Banho',                    acoes:['banho','banho_desceu'],    cor:'#234D67'},
+    {k:'plantao',   t:'Relatórios e passagem de plantão', acoes:['relatorio','recebimento'], cor:'#6b5f4b'}
+  ];
+  function setMonPeriodo(bt,n){
+    monDias=n;
+    try{ const p=document.getElementById('monPeriodo'); if(p) p.querySelectorAll('button').forEach(b=>b.classList.remove('on')); if(bt) bt.classList.add('on'); }catch(e){}
+    carregarEquipe();
+  }
+  function monMin(h){ const m=/^(\d{1,2}):(\d{2})$/.exec(String(h||'')); return m?(+m[1]*60+ +m[2]):null; }
+  function monDur(a,b){ const x=monMin(a), y=monMin(b); return (x==null||y==null||y<x)?null:(y-x); }
+  function monFmtDur(m){ return m==null?'—':(Math.floor(m/60)+'h'+String(m%60).padStart(2,'0')); }
+  function carregarEquipe(){
+    const box=document.getElementById('monEquipeWrap'); if(!box) return;
+    if(!DB){ box.innerHTML='<div class="p-empty">Sem conexão com o banco agora.</div>'; return; }
+    const dias=[]; const hoje=new Date(); const p=n=>String(n).padStart(2,'0');
+    for(let i=0;i<monDias;i++){ const d=new Date(hoje.getTime()-i*86400000); dias.push(d.getFullYear()+'-'+p(d.getMonth()+1)+'-'+p(d.getDate())); }
+    const get=path=>DB.ref(path).once('value').then(s=>s.val()).catch(()=>null);
+    Promise.all([
+      Promise.all(dias.map(k=>get('daycare/auditoria/'+k).then(v=>({k:k,v:v||{}})))),
+      Promise.all(dias.map(k=>get('daycare/almoco-turno/'+k).then(v=>({k:k,v:v||{}}))))
+    ]).then(function(r){ monCache={aud:r[0], turno:r[1], dias:dias}; renderEquipe(); })
+      .catch(function(){ box.innerHTML='<div class="p-empty">Não consegui ler o histórico agora.</div>'; });
+  }
+  function renderEquipe(){
+    const box=document.getElementById('monEquipeWrap'); if(!box||!monCache) return;
+    const pessoas={};   // nome -> {total, grupos:{}, dias:Set, almocosConduzidos:[min], papeis:Set}
+    const achaGrupo=function(acao){ for(let i=0;i<MON_GRUPOS.length;i++){ if(MON_GRUPOS[i].acoes.indexOf(acao)>=0) return MON_GRUPOS[i].k; } return null; };
+    // "Wândela" e "Wandela", "Octávio" e "Octavio", "Letícya" e "Leticya" são a MESMA pessoa —
+    // o nome é digitado à mão em cada plantão. Agrupa por nome sem acento e guarda a grafia
+    // mais usada para mostrar. Erro de digitação de verdade (Carpl, Caroo, Jessuca) continua
+    // separado de propósito: é assim que a Gestão enxerga que o dado está sujo.
+    const pega=function(nome){
+      const k=jsNorm(nome);
+      if(!pessoas[k]) pessoas[k]={nome:nome,grafias:{},total:0,grupos:{},dias:{},almocos:[],papeis:{}};
+      const P=pessoas[k];
+      P.grafias[nome]=(P.grafias[nome]||0)+1;
+      if(P.grafias[nome]>=(P.grafias[P.nome]||0)) P.nome=nome;   // mostra a grafia mais usada
+      return P;
+    };
+    // QUEM É A PESSOA, não o papel (Adriana, 11/ago/2026: "gráficos de CADA MONITOR").
+    // No plantão o campo `quem` grava "Plantonista" — o nome real de quem trabalhou está em
+    // `assinou` (Wândela, Carol, Jessica...). Sem isto o plantão inteiro virava um balde só
+    // chamado "Plantonista" e ninguém aparecia individualmente.
+    const GENERICO=/^(plantonista|monitor(\s*\d+)?|encantador(a)?|recep(c|ç)(a|ã)o|vet(erin(a|á)ria)?|gestor(a)?|supervisor(a)?|consultor(a)?|diretoria|equipe|-)$/i;
+    const quemDeVerdade=function(o){
+      const q=String(o.quem||'').trim();
+      const a=String(o.assinou||'').trim();
+      if(a && (!q || GENERICO.test(q))) return a;
+      return q;
+    };
+    monCache.aud.forEach(function(d){
+      Object.values(d.v||{}).forEach(function(o){
+        if(!o) return;
+        const nome=quemDeVerdade(o); if(!nome) return;
+        const g=achaGrupo(o.acao); if(!g) return;
+        const P=pega(nome);
+        P.total++; P.grupos[g]=(P.grupos[g]||0)+1; P.dias[d.k]=1;
+        if(o.role) P.papeis[o.role]=1;
+      });
+    });
+    // quem conduziu o almoço (abriu E fechou) e quanto tempo levou
+    const semFechar=[];
+    monCache.turno.forEach(function(d){
+      const t=d.v||{};
+      if(t.inicio && !t.fim) semFechar.push({dia:d.k, quem:t.quemInicio||'—', inicio:t.inicio});
+      const dur=monDur(t.inicio,t.fim);
+      if(dur!=null && t.quemInicio) pega(String(t.quemInicio).trim()).almocos.push(dur);
+    });
+    // Quem NÃO está na lista de Pessoas & Turnos: ou é erro de digitação, ou é alguém
+    // trabalhando sem cadastro. Nos dois casos a Gestão precisa ver — não pode passar batido.
+    const cadastrados={};
+    try{ (MONITORES||[]).forEach(function(m){ if(m&&m.nome) cadastrados[jsNorm(m.nome)]=1; }); }catch(e){}
+    const naLista=function(nome){
+      const n=jsNorm(nome); if(cadastrados[n]) return true;
+      for(const c in cadastrados){ if(c.indexOf(n)===0||n.indexOf(c)===0) return true; }  // "Márcia" x "Márcia · Gestora"
+      return false;
+    };
+    const lista=Object.values(pessoas).filter(function(p){ return p.total>0; })
+      .sort(function(a,b){ return b.total-a.total; });
+    lista.forEach(function(P){ P.fora=!naLista(P.nome); });
+    if(!lista.length){ box.innerHTML='<div class="p-empty">Nenhum registro nos últimos '+monDias+' dias.</div>'; return; }
+    const maior=lista[0].total||1;
+    const media=function(a){ return a.length?Math.round(a.reduce(function(x,y){return x+y;},0)/a.length):null; };
+    let h='<div class="mon-legenda">';
+    MON_GRUPOS.forEach(function(g){ h+='<span><i style="background:'+g.cor+'"></i>'+g.t+'</span>'; });
+    h+='</div>';
+    h+='<div class="mon-lista">';
+    lista.forEach(function(P){
+      const nDias=Object.keys(P.dias).length;
+      const md=media(P.almocos);
+      // barra empilhada: cada pedaço é uma atividade, na proporção do que a pessoa fez
+      let barra='';
+      MON_GRUPOS.forEach(function(g){
+        const n=P.grupos[g.k]||0; if(!n) return;
+        barra+='<i title="'+g.t+': '+n+'" style="background:'+g.cor+';width:'+(n*100/P.total).toFixed(2)+'%"></i>';
+      });
+      const escala=(P.total*100/maior).toFixed(2);
+      const outrasGrafias=Object.keys(P.grafias).filter(function(g){ return g!==P.nome; });
+      h+='<div class="mon-card'+(P.fora?' fora':'')+'">'
+        +'<div class="mon-top"><span class="mon-nome">'+escAttr(P.nome)
+          +(P.fora?'<span class="mon-flag">fora da lista de Pessoas</span>':'')
+          +(outrasGrafias.length?'<small class="mon-alias">também escrito: '+outrasGrafias.map(escAttr).join(' · ')+'</small>':'')
+          +'</span>'
+          +'<span class="mon-tot">'+P.total+' <small>registros</small></span></div>'
+        +'<div class="mon-barra" style="width:'+escala+'%">'+barra+'</div>'
+        +'<div class="mon-nums">'
+          +'<span><b>'+nDias+'</b> dia'+(nDias>1?'s':'')+' com registro</span>'
+          +(P.almocos.length?'<span><b>'+P.almocos.length+'</b> almoço'+(P.almocos.length>1?'s':'')+' conduzido'+(P.almocos.length>1?'s':'')+'</span>':'')
+          +(md!=null?'<span>tempo médio do almoço: <b>'+monFmtDur(md)+'</b></span>':'')
+        +'</div>'
+        +'<div class="mon-det">'
+          +MON_GRUPOS.filter(function(g){ return P.grupos[g.k]; })
+            .map(function(g){ return '<span><i style="background:'+g.cor+'"></i>'+g.t+': <b>'+P.grupos[g.k]+'</b></span>'; }).join('')
+        +'</div>'
+      +'</div>';
+    });
+    h+='</div>';
+    if(semFechar.length){
+      h+='<div class="dc-faltas" style="margin-top:12px"><strong>ALMOÇO ABERTO SEM ENCERRAR ('+semFechar.length+'):</strong> '
+        +semFechar.sort(function(a,b){return a.dia<b.dia?1:-1;}).map(function(s){ return fmtBR(s.dia)+' — começou '+s.inicio+' ('+escAttr(s.quem)+')'; }).join(' · ')
+        +'<div style="font-weight:600;margin-top:4px">Sem o encerramento não dá para saber quanto tempo o almoço levou nesses dias.</div></div>';
+    }
+    const fora=lista.filter(function(P){ return P.fora; });
+    if(fora.length){
+      h+='<div class="dc-meia" style="margin-top:12px"><strong>'+fora.length+' nome'+(fora.length>1?'s':'')+' fora de Pessoas &amp; Turnos:</strong> '
+        +fora.map(function(P){ return escAttr(P.nome)+' ('+P.total+')'; }).join(' · ')
+        +'<div style="font-weight:600;margin-top:4px">O nome de quem assina o plantão é digitado à mão — então entra erro de digitação e até nome de FILHOt. Enquanto for texto livre, a conta por pessoa não fecha: o certo é escolher da lista.</div></div>';
+    }
+    box.innerHTML=h;
   }
   // As marcações do almoço são gravadas por chave (nome__tutor normalizado). Para a Gestão
   // ler, a chave precisa virar nome de novo.
