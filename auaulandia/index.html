@@ -6151,7 +6151,7 @@
       return;
     }
     box.innerHTML=list.slice(0,60).map(o=>{
-      const p=o.p; const ex=pelExtra(p); const foto=ex.foto;
+      const p=o.p; const ex=pelExtra(p); const foto=fotoDoPel(p);
       const nome=pelNome(p), raca=pelGet(p,'raca')||'—', tutor=pelGet(p,'tutor')||'tutor a confirmar';
       const alerta=(ex.alergia||ex.restricao)?`<span class="hb-alertbadge">ALÉRGICO</span>`:'';
       const ph=foto?`<div class="av-ph" style="background-image:url('${foto}')"></div>`
@@ -7950,6 +7950,31 @@
   // O que a busca varre: nome, APELIDO, raça e tutor. O apelido entrou em 11/ago/2026 —
   // a Repolho é chamada de "Zelozinha" pela casa inteira e procurar por esse nome não
   // achava ninguém (Adriana). Quem tem dois nomes precisa ser achado pelos dois.
+  // ===== FOTO DO PELUDINHO — nunca mais "sem foto tendo foto" ==========================
+  // Adriana, 11/ago/2026: "tem um monte de peludinho sem foto, mesmo tendo fotos".
+  // A foto mora em daycare/fotos/{nome__tutor}. Só que muitas foram salvas com nome__RAÇA
+  // ("arthur__shihtzu", "repolho__srd") ou com o tutor escrito diferente — e aí ninguém
+  // achava. As telas da hospedagem já tinham um plano B por nome; as do Day Care não tinham
+  // NENHUM: o FILHOt aparecia sem foto na chamada, no almoço e na ficha.
+  // Agora todas usam este resolvedor. O plano B só vale quando o nome é ÚNICO na base —
+  // com xarás (3 "Ozzy", 2 "Chico") mostrar a foto do outro seria pior que não mostrar.
+  function fotoDoPel(p){
+    if(!p) return '';
+    try{
+      const ex=pelExtra(p)||{}; if(ex.foto) return ex.foto;
+      const k=pelKey(p); const direta=(typeof fotoCad==='function')?fotoCad(k):''; if(direta) return direta;
+      const alvo=jsNorm(pelNome(p)||'');
+      if(!alvo || typeof FOTOS==='undefined') return '';
+      // xará? então não arrisca
+      let xaras=0;
+      for(let i=0;i<PELUDINHOS.length;i++){ if(jsNorm(pelNome(PELUDINHOS[i])||'')===alvo) xaras++; }
+      if(xaras>1) return '';
+      for(const fk in FOTOS){
+        if(jsNorm((fk.split('__')[0]||''))===alvo){ const f=fotoCad(fk); if(f) return f; }
+      }
+    }catch(e){}
+    return '';
+  }
   function termosBuscaPel(p){ if(!p) return '';
     let ap=''; try{ ap=(pelExtra(p)||{}).apelido||p.apelido||''; }catch(e){ ap=p.apelido||''; }
     return jsNorm([pelNome(p), ap, pelGet(p,'raca'), pelGet(p,'tutor')].join(' ')); }
@@ -8574,7 +8599,7 @@
     document.getElementById('pel-lista').style.display='none';
     const f=document.getElementById('pel-ficha'); f.style.display='block';
     const sexo=ex.sexo||'', castr=ex.castrado||p.castrado||'';
-    const foto=ex.foto;
+    const foto=fotoDoPel(p)||ex.foto;   // ficha do peludinho: mesmo resolvedor das listas
     const ph=foto?`<div class="ph" id="pelAv" style="background-image:url('${foto}');background-size:cover;background-position:center"></div>`:`<div class="ph" id="pelAv" style="background:${corPel(i)}">${(p.n[0]||'?')}</div>`;
     f.innerHTML=`
       <button class="back-btn" onclick="voltarPel()">← Voltar</button>
@@ -8999,7 +9024,7 @@
       ${nPend?`<div class="dc-pend-note"><strong>Ainda sem chamada (${nPend}):</strong> ${pendentes.join(', ')}</div>`:''}`;
     document.getElementById('dcGrid').innerHTML =
       `<div class="pet add" onclick="adicionarAvulsa()"><div class="plus">+</div><div class="t">Diária avulsa<br><span style="font-size:10px;font-weight:600;color:var(--muted)">aulino do dia</span></div></div>`+
-      filtraLista(list).map(o=>{ const p=o.p; const ex=(typeof o.i==='number')?pelExtra(p):{}; const foto=ex.foto;
+      filtraLista(list).map(o=>{ const p=o.p; const ex=(typeof o.i==='number')?pelExtra(p):{}; const foto=(typeof o.i==='number')?fotoDoPel(p):'';
         const k=dcKey(p.n,p.tutor); const st=dcChamada[k]||'pend';
         const alerta=tarjaRestricao(p);
         const ph=foto?`<div class="ph" style="background-image:url('${foto}');background-size:cover;background-position:center"></div>`:`<div class="ph" style="background:${corPel(typeof o.i==='number'?o.i:0)}">${(p.n[0]||'?')}</div>`;
@@ -9063,7 +9088,7 @@
       return;
     }
     box.innerHTML=list.slice(0,60).map(o=>{
-      const p=o.p; const ex=pelExtra(p); const foto=ex.foto;
+      const p=o.p; const ex=pelExtra(p); const foto=fotoDoPel(p);
       const nome=pelNome(p), raca=pelGet(p,'raca')||'—', tutor=pelGet(p,'tutor')||'tutor a confirmar';
       const marcado=jaHoje.has(jsNorm(nome+'__'+(pelGet(p,'tutor')||'')));
       const ph=foto?`<div class="av-ph" style="background-image:url('${foto}')"></div>`
@@ -9347,7 +9372,7 @@
     if(_nota) _nota.innerHTML=_a2
       ? 'Ofereça a comida de novo e marque <strong>Comeu</strong> ou <strong>Nao comeu</strong>. Quem não comeu nem aqui entra na lista de avisar o tutor.'
       : 'Marque <strong>Feito</strong> em cada peludinho que passou por esta atividade. Cada atividade terá seu protocolo próprio em breve.';
-    document.getElementById('genGrid').innerHTML=filtraLista(list).map(o=>{ const p=o.p; const ex=(typeof o.i==='number')?pelExtra(p):{}; const foto=ex.foto; const k=dcKey(p.n,p.tutor);
+    document.getElementById('genGrid').innerHTML=filtraLista(list).map(o=>{ const p=o.p; const ex=(typeof o.i==='number')?pelExtra(p):{}; const foto=(typeof o.i==='number')?fotoDoPel(p):''; const k=dcKey(p.n,p.tutor);
       const m=genMarcas[k]||'';
       const ok=_a2?(m==='comeu'):(m==='feito');
       const naoComeu=_a2&&m==='nao';
@@ -9697,7 +9722,7 @@
       ? `Faltam ${faltam} de ${list.length} — os já servidos vão para o fim da lista`
       : `Todos os ${list.length} aulunos foram servidos`;
     document.getElementById('almGrid').innerHTML=filtraLista(list).map(o=>{ const p=o.p; const ex=(typeof o.i==='number')?pelExtra(p):{};
-      const a=(typeof o.i==='number')?almCad(p):null; const foto=ex.foto; const k=dcKey(p.n,p.tutor); const m=marcaDe(o);
+      const a=(typeof o.i==='number')?almCad(p):null; const foto=(typeof o.i==='number')?fotoDoPel(p):''; const k=dcKey(p.n,p.tutor); const m=marcaDe(o);
       const restrRaw=(a&&a.restr)||ex.restricao||ex.alergia||'';
       const ph=foto?`<div class="ph" style="background-image:url('${foto}');background-size:cover;background-position:center"></div>`:`<div class="ph" style="background:${corPel(typeof o.i==='number'?o.i:0)}">${(p.n[0]||'?')}</div>`;
       let info;
@@ -10086,7 +10111,7 @@
       .sort(function(x,y){ return jsNorm(pelNome(x.p)).localeCompare(jsNorm(pelNome(y.p))); });
     if(!list.length){ box.innerHTML='<div class="hint">Não encontrei esse FILHOt. Se for a primeira vez dele, use <strong>Novo Hóspede</strong> abaixo.</div>'; return; }
     box.innerHTML=list.slice(0,50).map(function(o){
-      const p=o.p; const ex=pelExtra(p); const foto=ex.foto;
+      const p=o.p; const ex=pelExtra(p); const foto=fotoDoPel(p);
       const nome=pelNome(p), raca=pelGet(p,'raca')||'—', tutor=pelGet(p,'tutor')||'tutor a confirmar';
       const alerta=(ex.alergia||ex.restricao)?'<span class="ci-alert">ALÉRGICO</span>':'';
       const ph=foto?'<div class="ci-ph" style="background-image:url(\''+foto+'\')"></div>'
