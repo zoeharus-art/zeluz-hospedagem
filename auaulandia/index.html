@@ -7616,6 +7616,8 @@
   }
   function checarDespertadorBanho(){
     try{
+      // Só quem desce com o FILHOt para o banho é acordado (monitor/plantonista).
+      if(typeof papelRecebeAlarme==='function' && !papelRecebeAlarme()) return;
       if(!ehHoje()||!planDia.lida) return;
       if(despNaTela) return; // já tem um na tela
       const fila=(planDia.banho||[]).filter(it=>it.p&&it.hora).sort((a,b)=>a.hora.localeCompare(b.hora));
@@ -7657,9 +7659,19 @@
     });
     Promise.all(jobs).catch(function(){}).then(function(){ if(typeof carregarMedAtrasadaGestora==='function') carregarMedAtrasadaGestora(); });
   }
-  // Quem RECEBE o despertador de dose de medicação: só quem DÁ o remédio —
-  // monitores, plantonistas e a gestora (Marcia). NUNCA a veterinária, nem consultora/conferência.
-  function papelRecebeAlarmeMed(){ var r=document.body.dataset.role; return r==='monitor'||r==='plantonista'||r==='gestao'||r==='diretoria'; }
+  // ===== QUEM O ALARME ACORDA (Adriana, 12/ago/2026) =================================
+  // "Preciso que o alarme não toque para os gestores (Adriana e Márcia), não toque para a
+  //  veterinária, nem para a Amanda supervisora, nem para os consultores. Apenas e tão somente
+  //  para os membros do Day Care: monitores e plantonistas."
+  //
+  // O alarme é uma ORDEM DE TRABALHO com som, não um informativo. Quem não vai levantar e
+  // executar não pode ser interrompido por ele — senão o alarme vira ruído e para de ser levado
+  // a sério por quem PRECISA obedecer. Gestão, Supervisão, Veterinária, Consultora e Conferência
+  // continuam vendo tudo na tela (painel, badges, medicação atrasada) — só não são acordadas.
+  // Fonte única: qualquer alarme sonoro novo DEVE passar por aqui.
+  function papelRecebeAlarme(){ var r=document.body.dataset.role; return r==='monitor'||r==='plantonista'; }
+  // Dose de medicação: mesmo critério — só quem DÁ o remédio é acordado.
+  function papelRecebeAlarmeMed(){ return papelRecebeAlarme(); }
   function checarDespertadorMed(){
     try{
       if(!papelRecebeAlarmeMed()) return; // vet/consultora/supervisora/conferência não recebem alarme de dose
@@ -11808,8 +11820,11 @@
   function ciPertSpecPh(k){ const o=ciPertDef(k); return o?o.spec:'Especificação (cor, marca, material)'; }
   function ciPertBancoSorted(){ return ciPertBanco.slice().sort(function(a,b){ return jsNorm(a.nome||'').localeCompare(jsNorm(b.nome||''),'pt'); }); }
   // saved: array [{k,nome,spec}] (nova estadia/retorno) OU mapa legado {k:{spec}} OU vazio.
+  // O uid ORIGINAL é preservado (Adriana, 12/ago/2026): a Conferência guarda o V verde por uid.
+  // Gerando uid novo a cada abertura, todo item corrigido virava "outro item" — o conferido
+  // sumia e o pertence voltava a pedir conferência sem nada ter mudado nele.
   function ciRenderPert(saved){
-    if(Array.isArray(saved)){ ciPertSel=saved.filter(function(p){ return p&&p.k; }).map(function(p){ return {uid:ciUid(),k:p.k,nome:p.nome||ciPertNome(p.k),spec:p.spec||''}; }); }
+    if(Array.isArray(saved)){ ciPertSel=saved.filter(function(p){ return p&&p.k; }).map(function(p){ return {uid:(p.uid||ciUid()),k:p.k,nome:p.nome||ciPertNome(p.k),spec:p.spec||''}; }); }
     else if(saved&&typeof saved==='object'&&Object.keys(saved).length){ ciPertSel=Object.keys(saved).map(function(k){ return {uid:ciUid(),k:k,nome:ciPertNome(k),spec:(saved[k]&&saved[k].spec)||''}; }); }
     else { ciPertSel=[]; }
     ciDrawPert();
@@ -12380,11 +12395,48 @@
         correcoes:hist, _ts:Date.now(),
         _ultimaEdicao:{quem:(P.correcao&&P.correcao.quem)||quemSou(), ts:Date.now(), corrigiu:(P.correcao&&P.correcao.diff)||[]}
       }));
-      // Volta para a Conferência SEMPRE: informação corrigida é informação não conferida.
-      ops.push(DB.ref('auaulandia/estadias/'+estadiaId+'/conferencia').update({
-        concluida:false, reaberta_em:Date.now(), reaberta_por:(P.correcao&&P.correcao.quem)||quemSou(),
-        reaberta_motivo:'CORREÇÃO — '+((P.correcao&&P.correcao.motivo)||'')+' · '+(((P.correcao&&P.correcao.diff)||[]).join(' · '))
-      }));
+      // ===== RESOLVIDO NÃO VOLTA PARA A CONFERÊNCIA (Adriana, 12/ago/2026) ==============
+      // "O Otávio viu que faltou a roupa, escreveu que faltou, a Amanda corrigiu e disse:
+      //  resolvido. No entanto isso voltou à conferência do check-in, está dando retrabalho.
+      //  Deveria ficar na conferência e ir para o check-out com aquela solução, e não ficar
+      //  indo e voltando... a não ser que chegou material novo."
+      //
+      // Antes a correção reabria SEMPRE — então descrever a roupa bege que já estava lá
+      // devolvia a estadia para a fila e alguém conferia de novo o que ninguém mexeu.
+      // Agora só CHEGADA DE COISA NOVA reabre. Corrigir a descrição, tirar um item que não
+      // existia ou ajustar datas fica registrado na Conferência como RESOLVIDO e segue para
+      // o Check-out — que é onde a conferência de verdade acontece de novo, na saída.
+      //
+      // O critério é a CONTAGEM POR TIPO (e o nome do remédio), não o texto: assim descrever
+      // "roupa bege" numa roupa que já estava não conta como item novo, e remover não reabre.
+      const contaPorTipo=function(arr){ const m={}; (arr||[]).forEach(function(p){ const k=jsNorm((p&&(p.k||p.nome))||''); if(k) m[k]=(m[k]||0)+1; }); return m; };
+      const _antesPert=contaPorTipo(antes.pertences), _agoraPert=contaPorTipo(dados.pertences);
+      const chegouNovo=[];
+      Object.keys(_agoraPert).forEach(function(k){
+        if(_agoraPert[k]>(_antesPert[k]||0)){
+          const ex=(dados.pertences||[]).find(function(p){ return jsNorm((p.k||p.nome)||'')===k; });
+          chegouNovo.push((ex&&(ex.nome||ex.k))||k);
+        }
+      });
+      const _medAntesNomes={}; (antes.medicacao||[]).forEach(function(m){ _medAntesNomes[jsNorm(m.nome||'')]=1; });
+      ciMedsToLista(meds).forEach(function(m){ if(!_medAntesNomes[jsNorm(m.nome||'')]) chegouNovo.push('Medicação: '+(m.nome||'')); });
+      P.chegouNovo=chegouNovo;
+      if(chegouNovo.length){
+        // Material novo de verdade → volta para a fila, com o nome do que chegou.
+        ops.push(DB.ref('auaulandia/estadias/'+estadiaId+'/conferencia').update({
+          concluida:false, reaberta_em:Date.now(), reaberta_por:(P.correcao&&P.correcao.quem)||quemSou(),
+          reaberta_motivo:'CHEGOU MATERIAL NOVO — '+chegouNovo.join(' · ')
+        }));
+      } else {
+        // Nada novo entrou: a conferência CONTINUA como estava e a solução fica anexada,
+        // visível na Conferência e no Check-out. Ninguém confere duas vezes a mesma coisa.
+        // Grava CADA solução na própria chave (nunca sobrescreve o array inteiro): duas pessoas
+        // resolvendo coisas diferentes no mesmo minuto não apagam o registro uma da outra.
+        const _sol={ quando:Date.now(), quem:(P.correcao&&P.correcao.quem)||quemSou(),
+                     motivo:(P.correcao&&P.correcao.motivo)||'', mudou:(P.correcao&&P.correcao.diff)||[] };
+        ops.push(DB.ref('auaulandia/estadias/'+estadiaId+'/conferencia/resolvidos/'+_sol.quando).set(_sol));
+        ops.push(DB.ref('auaulandia/estadias/'+estadiaId+'/conferencia').update({ ultima_solucao:_sol }));
+      }
       // A agenda de medicação é reescrita do zero: se um remédio saiu, o alarme dele
       // precisa sumir junto — senão o despertador continua tocando por um remédio que
       // não existe mais.
@@ -12402,6 +12454,15 @@
       const medNomes={}; medAntes.forEach(function(m){ medNomes[jsNorm(m.nome||'')]=1; });
       const medNovas=ciMedsToLista(meds).filter(function(m){ return !medNomes[jsNorm(m.nome||'')]; });
       medNovas.forEach(function(m){ novosItens.push('Medicação: '+(m.nome||'')); });
+      // ===== O ITEM APAGADO QUE NÃO SUMIA (Adriana, 12/ago/2026) =======================
+      // "A Amanda deletou o item e continua aparecendo 3x." Ela apagou pela tela de EDITAR,
+      // que grava em modo ACRESCENTAR — e acrescentar só SOMA, nunca tira. A remoção sumia
+      // em silêncio: a tela dizia "salvo", o item continuava lá e ninguém era avisado.
+      // Continua sem remover aqui (é a proteção que impede perder pertence do tutor), mas
+      // agora ela SABE, na hora, o que não saiu e o que fazer para tirar de verdade.
+      const _agoraCh={}; (dados.pertences||[]).forEach(function(p){ _agoraCh[chaveP(p)]=1; });
+      P.naoRemovidos=pertAntes.filter(function(p){ return !_agoraCh[chaveP(p)]; })
+                              .map(function(p){ return (p.nome||p.k||'item')+(p.spec?(' — '+p.spec):''); });
       ops.push(ref.update({
         entrada:dados.entrada, saida:dados.saida, ficha:dados.ficha,
         pertences:pertFinal, medicacao:medAntes.concat(medNovas),
@@ -12458,12 +12519,29 @@
         zAlertao('✅ CORREÇÃO SALVA — '+((ciHosp.nome||'').toUpperCase()),
           ((P.correcao&&P.correcao.diff)||['A ficha foi atualizada.']),
           {ok:true, botao:'Fechar',
-           rodape:'Motivo: '+((P.correcao&&P.correcao.motivo)||'—')+' · registrado por '+((P.correcao&&P.correcao.quem)||'—')+'. Voltou para a Conferência: alguém precisa conferir de novo o que mudou, e o alarme da medicação já foi refeito.'});
+           rodape:'Motivo: '+((P.correcao&&P.correcao.motivo)||'—')+' · registrado por '+((P.correcao&&P.correcao.quem)||'—')+'. '
+                 +((P.chegouNovo&&P.chegouNovo.length)
+                    ? ('CHEGOU MATERIAL NOVO ('+P.chegouNovo.join(', ')+'): voltou para a Conferência para alguém conferir o que entrou.')
+                    : 'RESOLVIDO — não volta para a Conferência. A solução ficou anexada e segue para o Check-out.')
+                 +' O alarme da medicação já foi refeito.'});
       }
       else if(modo==='acrescentar'){
-        zAlertao('✅ ACRESCENTADO AO CHECK-IN DE '+((ciHosp.nome||'').toUpperCase()),
-          novosItens.length?novosItens:['A ficha foi atualizada.'],
-          {ok:true, botao:'Fechar', rodape:novosItens.length?'Voltou para a Conferência: a conferente vai ver o que entrou de novo e conferir.':'Nada novo para conferir.'});
+        const _nr=(P.naoRemovidos||[]);
+        if(_nr.length){
+          // A remoção NÃO acontece no acrescentar. Ela precisa saber agora, e não descobrir
+          // depois na Conferência que o item continua lá.
+          zAlertao('⚠️ ACRESCENTADO — MAS NADA FOI REMOVIDO',
+            (novosItens.length?novosItens:[]).concat(
+              ['———', 'Estes itens você tirou da tela, mas eles CONTINUAM no check-in:']
+            ).concat(_nr.map(function(x){ return '• '+x; })),
+            {botao:'Entendi',
+             rodape:'Esta tela só ACRESCENTA — ela nunca apaga, para não perder pertence do tutor. Para TIRAR um item de verdade, abra o check-in em CORRIGIR: lá você diz o motivo, assina, e o item sai.'});
+          if(typeof audit==='function') audit('checkin-remocao-ignorada','tentou remover no modo acrescentar: '+_nr.join(' | '),{pet:ciHosp.nome||''});
+        } else {
+          zAlertao('✅ ACRESCENTADO AO CHECK-IN DE '+((ciHosp.nome||'').toUpperCase()),
+            novosItens.length?novosItens:['A ficha foi atualizada.'],
+            {ok:true, botao:'Fechar', rodape:novosItens.length?'Voltou para a Conferência: a conferente vai ver o que entrou de novo e conferir.':'Nada novo para conferir.'});
+        }
       } else {
         zAlertao('✅ CHECK-IN SALVO',
           [(ciHosp.nome||'O FILHOt')+' — estadia de '+ciBRdata(dados.entrada)+' até '+(dados.saida?ciBRdata(dados.saida):'data a confirmar')+'.',
@@ -13373,8 +13451,32 @@
       if(cfEstadia.pernoite) ht='<div style="background:rgba(46,125,138,.14);border-left:4px solid #2E7D8A;border-radius:10px;padding:11px 13px;margin-bottom:10px;font-size:14px;color:var(--z-blue);font-weight:700">🌙 <strong>Pernoite pedida pelo tutor hoje de manhã</strong>'+(cfEstadia.pernoite_pedida_por?(' — lançada por '+escAttr(cfEstadia.pernoite_pedida_por)):'')+'.<br>Confira o que ele tem e escreva no campo de ocorrência como foi o dia dele.</div>'+ht;
       if(a.obs) ht+='<div style="background:rgba(222,180,40,.16);border-left:4px solid var(--z-gold);border-radius:10px;padding:10px 12px;margin-bottom:8px;font-size:14px;color:var(--z-blue);font-weight:700">🍽️ Como servir: '+escAttr(a.obs)+'</div>';
       if(f.obsGeral) ht+='<div style="background:rgba(35,77,103,.10);border-left:4px solid var(--z-blue);border-radius:10px;padding:10px 12px;margin-bottom:8px;font-size:14px;color:var(--z-blue);font-weight:700">📝 Observação do check-in: '+escAttr(f.obsGeral)+'</div>';
+      // O que JÁ FOI RESOLVIDO (Adriana, 12/ago/2026): a conferência apontou, alguém corrigiu.
+      // Fica aqui, à vista, para ninguém conferir de novo o que já tem desfecho — e segue igual
+      // para o Check-out, que é onde se confere de novo, na saída.
+      ht+=cfResolvidosHTML();
       topo.innerHTML=ht;
     }
+  }
+  // Bloco "já resolvido" — usado na Conferência e no Check-out. Lê tanto o histórico novo
+  // (conferencia/resolvidos) quanto a última solução, e funciona com a estadia passada por
+  // parâmetro (Check-out) ou com a que está aberta na Conferência.
+  function cfResolvidosHTML(est){
+    var c=(est&&est.conferencia)||(typeof cfConf!=='undefined'?cfConf:null); if(!c) return '';
+    var lista=[];
+    if(c.resolvidos&&typeof c.resolvidos==='object'){ Object.keys(c.resolvidos).forEach(function(k){ if(c.resolvidos[k]) lista.push(c.resolvidos[k]); }); }
+    else if(c.ultima_solucao) lista.push(c.ultima_solucao);
+    if(!lista.length) return '';
+    lista.sort(function(a,b){ return (a.quando||0)-(b.quando||0); });
+    var dt=function(ts){ try{ var d=new Date(ts); var p=function(x){return String(x).padStart(2,'0');}; return p(d.getDate())+'/'+p(d.getMonth()+1)+' '+p(d.getHours())+':'+p(d.getMinutes()); }catch(e){ return ''; } };
+    return '<div style="background:rgba(39,174,96,.10);border-left:4px solid var(--crm-ok);border-radius:10px;padding:11px 13px;margin-bottom:10px">'
+      +'<div style="font-weight:800;color:var(--crm-ok);font-size:13.5px;margin-bottom:5px">✅ Já resolvido — não precisa conferir de novo</div>'
+      +lista.map(function(s){
+         var mud=Array.isArray(s.mudou)?s.mudou.join(' · '):'';
+         return '<div style="font-size:13px;color:var(--z-blue);margin-top:4px"><strong>'+escAttr(s.quem||'—')+'</strong> · '+dt(s.quando)
+           +(s.motivo?('<br>'+escAttr(s.motivo)):'')+(mud?('<br><span style="color:var(--z-blue-soft)">'+escAttr(mud)+'</span>'):'')+'</div>';
+       }).join('')
+      +'</div>';
   }
   function renderCfPert(){
     var el=document.getElementById('cfPertList'); if(!el) return;
@@ -14060,8 +14162,11 @@
   }
   function coRenderItens(){
     var el=document.getElementById('coItens'); if(!el) return; var itens=coItensLista();
-    if(!itens.length){ el.innerHTML='<div class="hint">Nada registrado para voltar.</div>'; return; }
-    el.innerHTML=itens.map(function(it){ var on=!!coConf[it.k];
+    // O que a Conferência já resolveu chega junto na saída (Adriana, 12/ago/2026): a solução
+    // acompanha o FILHOt até o check-out em vez de virar uma nova rodada de conferência.
+    var resolvido=(typeof cfResolvidosHTML==='function')?cfResolvidosHTML(coEstadia):'';
+    if(!itens.length){ el.innerHTML=resolvido+'<div class="hint">Nada registrado para voltar.</div>'; return; }
+    el.innerHTML=resolvido+itens.map(function(it){ var on=!!coConf[it.k];
       return '<div class="cf-item'+(on?' on':'')+(on?'':' critico')+'" data-k="'+escAttr(it.k)+'"><div class="cf-top" onclick="coToggleItem(this)"><span class="cf-box">'+(on?'&#10003;':'')+'</span>'+escAttr(it.label)+(on?'':'<span class="cf-tag-critico">ENTREGAR</span>')+'</div></div>';
     }).join('');
   }
