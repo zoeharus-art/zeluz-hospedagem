@@ -1103,6 +1103,22 @@
   .avr-card{border:1.5px solid var(--line);border-radius:14px;margin-bottom:16px;background:var(--z-white);overflow:hidden;box-shadow:var(--shadow)}
   .avr-card.pendente{border-color:var(--crm-critico)}
   .avr-card.processo{border-color:var(--z-gold-deep)}
+  /* Orçamento de hospedagem */
+  .orc-check{display:flex;align-items:center;gap:10px;cursor:pointer;background:var(--z-cream-warm);border:1.5px solid var(--line);border-radius:12px;padding:12px 14px;font-weight:700;color:var(--z-blue)}
+  .orc-check input{width:20px;height:20px;flex:0 0 auto}
+  .orc-preco-lb{display:block;font-weight:600;font-size:12.5px;color:var(--z-blue-soft);margin-top:2px}
+  .orc-pet{display:flex;align-items:center;gap:10px;background:var(--z-cream-warm);border:1.5px solid var(--line);border-radius:12px;padding:10px 12px;margin-bottom:8px}
+  .orc-pet .x{margin-left:auto;background:none;border:none;color:var(--crm-critico);font-weight:800;font-size:18px;cursor:pointer;padding:0 6px}
+  .orc-sug{border:1.5px solid var(--line);border-radius:12px;margin-top:6px;overflow:hidden}
+  .orc-sug div{padding:10px 12px;cursor:pointer;border-bottom:1px solid var(--line);font-size:14px;color:var(--z-blue)}
+  .orc-sug div:last-child{border-bottom:none}
+  .orc-sug div:hover{background:var(--z-cream-warm)}
+  .orc-linha{display:flex;justify-content:space-between;gap:12px;padding:7px 0;border-bottom:1px dashed var(--line);font-size:14px;color:var(--z-blue)}
+  .orc-total{display:flex;justify-content:space-between;gap:12px;padding:12px 0 2px;font-size:19px;font-weight:800;color:var(--z-blue)}
+  .orc-noites{display:flex;flex-wrap:wrap;gap:5px;margin-top:8px}
+  .orc-n{font-size:11.5px;padding:3px 7px;border-radius:7px;font-weight:700}
+  .orc-n.d{background:rgba(35,77,103,.12);color:var(--z-blue)}
+  .orc-n.p{background:rgba(222,180,40,.24);color:#8A6D0B}
   .avr-card.resolvido{border-color:var(--crm-ok)}
   .avr-head{display:flex;align-items:center;gap:11px;padding:14px 16px;border-bottom:1px solid var(--line)}
   .avr-info{flex:1;min-width:0}
@@ -1487,6 +1503,7 @@
     <div class="subnav so-master" id="pSubnav" style="display:none"></div>
     <a data-v="renovacao" class="so-gestao"><span data-icon="star"></span><span>Renovação de Planos</span></a>
     <a data-v="reposicao" class="so-recepcao"><span data-icon="star"></span><span>Reposições</span></a>
+    <a data-v="orcamento" class="so-recepcao"><span data-icon="star"></span><span>Orçamento de Hospedagem</span></a>
 
     <div class="grp so-gestao">Relatórios</div>
     <a data-v="inativos" class="so-gestao"><span data-icon="paw"></span><span>Inativos</span></a>
@@ -2719,6 +2736,64 @@
 
   </section>
   <!-- ===== PAINEL DO DIA (Dashboard de Gestão — só observa) ===== -->
+  <!-- ===== ORÇAMENTO DE HOSPEDAGEM (Adriana, 12/ago/2026) ==========================
+       A conta que hoje é feita de cabeça no balcão. Cada NOITE é contada: a noite que
+       COMEÇA num dia de Day Care do FILHOt é PERNOITE (ele já viria mesmo); as outras
+       são DIÁRIA de hotel. O desconto do plano cai só na diária — pernoite nunca.
+       Aparece só para quem atende no balcão: consultoras, supervisão e gestão. -->
+  <section class="view" id="v-orcamento">
+    <div class="role-note"><span data-icon="star"></span><span><strong>Orçamento de hospedagem.</strong> Escolha o FILHOt, as datas e o sistema conta noite por noite: <strong>pernoite</strong> nos dias em que ele já viria ao Day Care, <strong>diária</strong> nos demais. O desconto do plano entra sozinho — e sai a mensagem pronta para mandar ao tutor.</span></div>
+
+    <div class="card">
+      <h2 style="font-size:19px">Quem vai ficar</h2>
+      <div class="hint">Busque pelo nome do FILHOt. O plano e os dias dele vêm do cadastro — se estiver errado, corrija na ficha.</div>
+      <input class="cad-in" id="orcBusca" placeholder="Nome do peludinho…" autocomplete="off" oninput="orcBuscar(this.value)">
+      <div id="orcSug"></div>
+      <div id="orcSelecionados" style="margin-top:10px"></div>
+      <div class="hint" style="margin-top:8px">Dois FILHOts do mesmo tutor? Adicione os dois — o desconto do 2º entra sozinho.</div>
+    </div>
+
+    <div class="card">
+      <h2 style="font-size:19px">Período</h2>
+      <div class="cad-grid2">
+        <div><label class="cad-lb">Entrada</label><input class="cad-in" type="date" id="orcEntrada" onchange="orcCalcular()"></div>
+        <div><label class="cad-lb">Saída</label><input class="cad-in" type="date" id="orcSaida" onchange="orcCalcular()"></div>
+      </div>
+      <div id="orcAvisoData"></div>
+      <div style="margin-top:12px">
+        <label class="orc-check"><input type="checkbox" id="orcAlta" onchange="orcCalcular()"><span><strong>Alta temporada</strong><span id="orcPrecoLb" class="orc-preco-lb"></span></span></label>
+      </div>
+    </div>
+
+    <div class="card" id="orcCardResultado" style="display:none">
+      <h2 style="font-size:19px">A conta</h2>
+      <div id="orcResultado"></div>
+    </div>
+
+    <div class="card" id="orcCardMsg" style="display:none">
+      <h2 style="font-size:19px">Mensagem para o tutor</h2>
+      <div class="hint">Confira, copie e mande. Nada é enviado automaticamente.</div>
+      <textarea id="orcMsg" class="gest-txt" style="min-height:230px" readonly></textarea>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px">
+        <button class="btn btn-gold" onclick="orcCopiar()">Copiar mensagem</button>
+        <button class="btn btn-primary" onclick="orcSalvar()">Salvar orçamento</button>
+      </div>
+      <div id="orcSalvoStatus" class="hint" style="margin-top:6px"></div>
+    </div>
+
+    <div class="card">
+      <h2 style="font-size:19px">Orçamentos feitos</h2>
+      <div class="hint">Todo orçamento salvo fica aqui com o desfecho: <strong>aguardando</strong>, <strong>fechado</strong> ou <strong>não fechou</strong>. É esta lista que vai alimentar o CRM.</div>
+      <div id="orcLista"></div>
+    </div>
+
+    <div class="card so-master">
+      <h2 style="font-size:19px">Tabela e feriados</h2>
+      <div class="hint">Só a Gestão altera. Os valores valem para todos os orçamentos novos — os já salvos guardam o preço da época.</div>
+      <div id="orcConfig"></div>
+    </div>
+  </section>
+
   <section class="view" id="v-renovacao">
     <div class="card">
       <h2 style="font-size:20px">Renovação de Planos</h2>
@@ -3133,6 +3208,7 @@
     cuidadovet:['Cuidado Vet','Consulta, receituário e reavaliação'],
     checkin:['Check-in','Entrada da estadia — ficha, pertences e assinatura'],
     conferencia:['Conferência Check-in','Pertences etiquetados, ração pesada e alarmes testados'],
+    orcamento:['Orçamento de Hospedagem','Diárias, pernoites e desconto do plano — com a mensagem pronta para o tutor'],
     checkout:['Check-out (monitores)','Juntar tudo que volta com o FILHOt e mandar para a recepção'],
     checkoutconf:['Conferência Check-out','Conferir com o tutor na saída, colher a assinatura e entregar o PDF'],
     emporio:['Empório','Avisar os tutores de quem não comeu hoje'],
@@ -5002,9 +5078,11 @@
     var b=link.querySelector('.nav-badge');
     if(n>0){ if(!b){ b=document.createElement('span'); b.className='nav-badge'; link.appendChild(b); } b.textContent=n; }
     else if(b){ b.remove(); }
-    // ALARME quando FALTA algo (a contagem subiu) — só para quem trata a falta: Supervisão, Consultora, Gestão.
+    // ALARME quando FALTA algo (a contagem subiu) — só para quem TRATA a falta: Supervisão e
+    // Consultora. A Gestão (Adriana e Márcia) saiu daqui em 12/ago/2026: "a gestão não precisa".
+    // Elas continuam vendo o número vermelho no menu — só não são interrompidas por som.
     var r=(document.body.dataset.role||'');
-    var alvo=(r==='supervisor'||r==='consultora'||r==='gestao'||r==='diretoria');
+    var alvo=(r==='supervisor'||r==='consultora');
     if(_recepcaoPrevN!=null && n>_recepcaoPrevN && alvo){ try{ if(typeof bipDespertador==='function') bipDespertador(); }catch(e){} if(navigator.vibrate){ try{ navigator.vibrate([200,80,200]); }catch(e){} } }
     _recepcaoPrevN=n;
   }
@@ -6008,6 +6086,331 @@
     html+='</div>'; el.innerHTML=html;
   }
   function copiarGest(btn){ const ta=btn.parentNode.querySelector('.gest-txt'); if(ta){ ta.select(); try{document.execCommand('copy');}catch(e){} btn.textContent='Copiado!'; setTimeout(()=>btn.textContent='Copiar texto',1500);} }
+
+  // ================= ORÇAMENTO DE HOSPEDAGEM (Adriana, 12/ago/2026) =================
+  // A conta do balcão virou tela. A regra, na palavra dela:
+  //   "de quarta para quinta - será pernoite (1) ... quinta para sexta - hospedagem (1)"
+  // Ou seja: conta-se NOITE por NOITE. A noite que COMEÇA num dia de Day Care do FILHOt é
+  // PERNOITE (ele já viria mesmo, o tutor só não conseguiu buscar); toda outra noite é
+  // DIÁRIA de hotel. O desconto do plano cai SÓ na diária — pernoite nunca tem desconto.
+  //
+  // Preços em CENTAVOS (nunca float: R$ 0,01 de erro em orçamento é dinheiro real).
+  const ORC_PRECOS_PADRAO={ pernoite:{baixa:8500, alta:9700}, diaria:{baixa:13000, alta:15000} };
+  let orcPrecosCfg=null;
+  function orcPrecos(){ return orcPrecosCfg||ORC_PRECOS_PADRAO; }
+  // Não entregamos domingo nem feriado. Feriados nacionais + estaduais (MG) + municipais de
+  // Belo Horizonte — 15/08 (Assunção de Nossa Senhora) e 08/12 (Imaculada Conceição) são os
+  // dois municipais de BH; 12/12 (aniversário da cidade) NÃO é feriado, foi unificado ao 08/12
+  // em 1967. A Gestão acrescenta recesso e datas próprias da Zêluz na tela.
+  const ORC_FERIADOS_PADRAO={
+    '2026-01-01':'Confraternização Universal', '2026-02-16':'Carnaval', '2026-02-17':'Carnaval',
+    '2026-04-03':'Sexta-feira Santa', '2026-04-21':'Tiradentes', '2026-05-01':'Dia do Trabalho',
+    '2026-06-04':'Corpus Christi', '2026-08-15':'Assunção de Nossa Senhora (BH)',
+    '2026-09-07':'Independência', '2026-10-12':'Nossa Senhora Aparecida', '2026-11-02':'Finados',
+    '2026-11-15':'Proclamação da República', '2026-11-20':'Consciência Negra',
+    '2026-12-08':'Imaculada Conceição (BH)', '2026-12-25':'Natal',
+    '2027-01-01':'Confraternização Universal', '2027-02-08':'Carnaval', '2027-02-09':'Carnaval',
+    '2027-03-26':'Sexta-feira Santa', '2027-04-21':'Tiradentes', '2027-05-01':'Dia do Trabalho',
+    '2027-05-27':'Corpus Christi', '2027-08-15':'Assunção de Nossa Senhora (BH)',
+    '2027-09-07':'Independência', '2027-10-12':'Nossa Senhora Aparecida', '2027-11-02':'Finados',
+    '2027-11-15':'Proclamação da República', '2027-11-20':'Consciência Negra',
+    '2027-12-08':'Imaculada Conceição (BH)', '2027-12-25':'Natal'
+  };
+  let orcFeriadosCfg=null;
+  function orcFeriados(){ return orcFeriadosCfg||ORC_FERIADOS_PADRAO; }
+  function orcEhFeriado(iso){ return orcFeriados()[iso]||''; }
+  function orcEhDomingo(iso){ return orcDiaSemana(iso)==='dom'; }
+  function orcFechado(iso){ return orcEhDomingo(iso) ? 'domingo' : (orcEhFeriado(iso)||''); }
+  const ORC_DIAW=['dom','seg','ter','qua','qui','sex','sab'];
+  const ORC_DIAW_LB={dom:'domingo',seg:'segunda',ter:'terça',qua:'quarta',qui:'quinta',sex:'sexta',sab:'sábado'};
+  function orcDiaSemana(iso){ try{ return ORC_DIAW[new Date(iso+'T12:00:00').getDay()]; }catch(e){ return ''; } }
+  function orcMaisDias(iso,n){ var d=new Date(iso+'T12:00:00'); d.setDate(d.getDate()+n);
+    var p=function(x){return String(x).padStart(2,'0');}; return d.getFullYear()+'-'+p(d.getMonth()+1)+'-'+p(d.getDate()); }
+  function orcBR(iso){ if(!iso) return '—'; var x=iso.split('-'); return x[2]+'/'+x[1]+'/'+x[0]; }
+  // Empurra para o próximo dia em que a loja abre (domingo e feriado não entregam).
+  function orcProximoAberto(iso){ var d=iso, guarda=0; while(orcFechado(d)&&guarda<20){ d=orcMaisDias(d,1); guarda++; } return d; }
+
+  var ORC_SEL=[];   // [{key,nome,tutor,dias:[],planoKey,hospOff}]
+  function orcPlanoDoPet(p){
+    try{
+      var ex=(typeof pelExtra==='function')?pelExtra(p):{};
+      var key=((typeof renovDe==='function'?renovDe(ex):null)||{}).plano||'';
+      var cfg=(typeof planos==='function')?planos()[key]:null;
+      if(cfg) return {planoKey:key, rotulo:cfg.rotulo||key, compromisso:cfg.compromisso||'', hospOff:(cfg.hospOff||0)};
+    }catch(e){}
+    return {planoKey:'', rotulo:'sem plano', compromisso:'', hospOff:0};
+  }
+  function orcBuscar(termo){
+    var el=document.getElementById('orcSug'); if(!el) return;
+    var t=(termo||'').trim(); if(t.length<2){ el.innerHTML=''; return; }
+    var n=jsNorm(t);
+    var achados=(typeof PELUDINHOS!=='undefined'?PELUDINHOS:[]).filter(function(p){
+      return jsNorm(p.n||'').indexOf(n)>=0 || jsNorm(p.tutor||'').indexOf(n)>=0;
+    }).slice(0,8);
+    if(!achados.length){ el.innerHTML='<div class="hint">Ninguém com esse nome no cadastro.</div>'; return; }
+    el.innerHTML='<div class="orc-sug">'+achados.map(function(p){
+      var pl=orcPlanoDoPet(p);
+      return '<div onclick="orcAdd(\''+escAttr(pelKey(p))+'\')"><strong>'+escAttr(p.n||'')+'</strong> · '+escAttr(p.tutor||'sem tutor')
+        +' <span style="color:var(--muted);font-size:12px">('+escAttr(pl.rotulo)+')</span></div>';
+    }).join('')+'</div>';
+  }
+  function orcAdd(key){
+    var p=(typeof PELUDINHOS!=='undefined'?PELUDINHOS:[]).find(function(x){ return pelKey(x)===key; }); if(!p) return;
+    if(ORC_SEL.some(function(s){ return s.key===key; })) return;
+    var pl=orcPlanoDoPet(p);
+    ORC_SEL.push({key:key, nome:p.n||'', tutor:p.tutor||'', dias:((typeof pelDias==='function')?pelDias(p):[])||[],
+                  planoKey:pl.planoKey, rotulo:pl.rotulo, compromisso:pl.compromisso, hospOff:pl.hospOff});
+    var b=document.getElementById('orcBusca'); if(b) b.value='';
+    var s=document.getElementById('orcSug'); if(s) s.innerHTML='';
+    orcRenderSel(); orcCalcular();
+  }
+  function orcRemover(key){ ORC_SEL=ORC_SEL.filter(function(s){ return s.key!==key; }); orcRenderSel(); orcCalcular(); }
+  function orcRenderSel(){
+    var el=document.getElementById('orcSelecionados'); if(!el) return;
+    if(!ORC_SEL.length){ el.innerHTML='<div class="hint">Nenhum FILHOt escolhido ainda.</div>'; return; }
+    el.innerHTML=ORC_SEL.map(function(s,i){
+      var dias=(s.dias||[]).length?(s.dias.map(function(d){ return ORC_DIAW_LB[d]||d; }).join(', ')):'sem dias fixos — todas as noites contam como diária';
+      var ord=(i===0?'1º FILHOt':(i+1)+'º FILHOt');
+      return '<div class="orc-pet"><div><strong>'+escAttr(s.nome)+'</strong> <span style="color:var(--muted);font-size:12px">'+escAttr(ord)+'</span>'
+        +'<div style="font-size:12.5px;color:var(--z-blue-soft)">'+escAttr(s.rotulo)+(s.compromisso?(' · '+escAttr(s.compromisso)):'')+' · vem '+escAttr(dias)+'</div></div>'
+        +'<button class="x" title="tirar" onclick="orcRemover(\''+escAttr(s.key)+'\')">&times;</button></div>';
+    }).join('');
+  }
+  // Desconto da diária: vale o MAIOR entre o desconto do plano e o do 2º/3º FILHOt —
+  // nunca soma (decisão da Adriana, 12/ago/2026). Assim o mensal (0%) ganha os 7% do 2º,
+  // e o semestral (15%) continua com 15% nos dois.
+  function orcDescontoDe(sel, ordem){
+    var doPlano=sel.hospOff||0;
+    var daFamilia=(typeof DESC_PET!=='undefined'&&DESC_PET[ordem])?DESC_PET[ordem]:(ordem>=3?12:0);
+    return Math.max(doPlano, daFamilia||0);
+  }
+  var ORC_CALC=null;
+  function orcCalcular(){
+    var cardR=document.getElementById('orcCardResultado'), cardM=document.getElementById('orcCardMsg');
+    var av=document.getElementById('orcAvisoData'); if(av) av.innerHTML='';
+    var pl=document.getElementById('orcPrecoLb');
+    var alta=!!(document.getElementById('orcAlta')||{}).checked;
+    var P=orcPrecos();
+    if(pl) pl.textContent=alta
+      ? ('ALTA: diária '+fmtCent(P.diaria.alta)+' · pernoite '+fmtCent(P.pernoite.alta))
+      : ('BAIXA: diária '+fmtCent(P.diaria.baixa)+' · pernoite '+fmtCent(P.pernoite.baixa)+'  (marque para ver a alta)');
+    var ent=(document.getElementById('orcEntrada')||{}).value||'';
+    var sai=(document.getElementById('orcSaida')||{}).value||'';
+    ORC_CALC=null;
+    if(!ORC_SEL.length||!ent||!sai){ if(cardR) cardR.style.display='none'; if(cardM) cardM.style.display='none'; return; }
+    // Domingo e feriado não entregam: a saída anda para o próximo dia aberto, e a tela DIZ isso.
+    var saiReal=orcProximoAberto(sai), avisos=[];
+    if(saiReal!==sai) avisos.push('A saída em '+orcBR(sai)+' cai em <strong>'+(orcFechado(sai)==='domingo'?'domingo':('feriado — '+orcFechado(sai)))+'</strong> e nós não entregamos. Passou para <strong>'+orcBR(saiReal)+' ('+ORC_DIAW_LB[orcDiaSemana(saiReal)]+')</strong> — as noites a mais já estão na conta.');
+    var fechEnt=orcFechado(ent);
+    if(fechEnt) avisos.push('Atenção: a entrada em '+orcBR(ent)+' cai em <strong>'+(fechEnt==='domingo'?'domingo':('feriado — '+fechEnt))+'</strong>. Confirme com a Gestão se dá para receber nesse dia.');
+    if(saiReal<=ent){ if(cardR) cardR.style.display='none'; if(cardM) cardM.style.display='none';
+      if(av) av.innerHTML='<div class="avr-chip pendente" style="display:inline-block;margin-top:8px">A saída precisa ser depois da entrada.</div>'; return; }
+    if(av&&avisos.length) av.innerHTML=avisos.map(function(t){ return '<div style="background:rgba(222,180,40,.16);border-left:4px solid var(--z-gold);border-radius:10px;padding:10px 12px;margin-top:10px;font-size:13.5px;color:var(--z-blue);font-weight:600">'+t+'</div>'; }).join('');
+    // Noite a noite: a noite do dia D vai de D para D+1. A última noite começa no dia anterior à saída.
+    var noites=[], d=ent, guarda=0;
+    while(d<saiReal&&guarda<400){ noites.push({iso:d, dw:orcDiaSemana(d)}); d=orcMaisDias(d,1); guarda++; }
+    var pets=ORC_SEL.map(function(s,i){
+      var ordem=i+1, off=orcDescontoDe(s,ordem);
+      var dias=(s.dias||[]);
+      var lista=noites.map(function(n){ return {iso:n.iso, dw:n.dw, pernoite:dias.indexOf(n.dw)>=0}; });
+      var nPer=lista.filter(function(x){ return x.pernoite; }).length;
+      var nDia=lista.length-nPer;
+      var vDia=alta?P.diaria.alta:P.diaria.baixa, vPer=alta?P.pernoite.alta:P.pernoite.baixa;
+      var brutoDia=nDia*vDia, brutoPer=nPer*vPer;
+      var descValor=Math.round(brutoDia*off/100);
+      var liqDia=brutoDia-descValor;
+      return {sel:s, ordem:ordem, off:off, noites:lista, nPer:nPer, nDia:nDia,
+              vDia:vDia, vPer:vPer, brutoDia:brutoDia, brutoPer:brutoPer, descValor:descValor,
+              liqDia:liqDia, total:liqDia+brutoPer};
+    });
+    var total=pets.reduce(function(a,p){ return a+p.total; },0);
+    var p1=Math.ceil(total/2), p2=total-p1;
+    ORC_CALC={entrada:ent, saida:saiReal, saidaPedida:sai, alta:alta, noites:noites.length, pets:pets, total:total, p1:p1, p2:p2};
+    orcRenderResultado(); orcRenderMsg();
+    if(cardR) cardR.style.display='block'; if(cardM) cardM.style.display='block';
+  }
+  function orcRenderResultado(){
+    var el=document.getElementById('orcResultado'); if(!el||!ORC_CALC) return;
+    var C=ORC_CALC, h='';
+    h+='<div class="hint" style="margin-bottom:10px">De <strong>'+orcBR(C.entrada)+'</strong> a <strong>'+orcBR(C.saida)+'</strong> · '+C.noites+' noite'+(C.noites>1?'s':'')+' · '+(C.alta?'ALTA temporada':'baixa temporada')+'</div>';
+    C.pets.forEach(function(p){
+      h+='<div style="border:1.5px solid var(--line);border-radius:12px;padding:12px 14px;margin-bottom:10px">';
+      h+='<div style="font-weight:800;color:var(--z-blue);font-size:15px;margin-bottom:6px">'+escAttr(p.sel.nome)+' <span style="font-weight:600;font-size:12.5px;color:var(--z-blue-soft)">'+escAttr(p.sel.rotulo)+(p.ordem>1?(' · '+p.ordem+'º FILHOt'):'')+'</span></div>';
+      h+='<div class="orc-linha"><span>'+p.nDia+' diária'+(p.nDia===1?'':'s')+' de hotel × '+fmtCent(p.vDia)+'</span><strong>'+fmtCent(p.brutoDia)+'</strong></div>';
+      if(p.off>0) h+='<div class="orc-linha"><span>Desconto de '+p.off+'% na diária'+(p.sel.compromisso?(' (plano '+escAttr(p.sel.compromisso)+')'):'')+(p.ordem>1&&p.off===((typeof DESC_PET!=='undefined'&&DESC_PET[p.ordem])||0)?(' — '+p.ordem+'º FILHOt'):'')+'</span><strong style="color:var(--crm-ok)">− '+fmtCent(p.descValor)+'</strong></div>';
+      h+='<div class="orc-linha"><span>'+p.nPer+' pernoite'+(p.nPer===1?'':'s')+' × '+fmtCent(p.vPer)+' <span style="color:var(--muted);font-size:12px">(pernoite não tem desconto)</span></span><strong>'+fmtCent(p.brutoPer)+'</strong></div>';
+      h+='<div class="orc-linha" style="border-bottom:none"><span><strong>Subtotal '+escAttr(p.sel.nome)+'</strong></span><strong>'+fmtCent(p.total)+'</strong></div>';
+      h+='<div class="orc-noites">'+p.noites.map(function(n){
+            return '<span class="orc-n '+(n.pernoite?'p':'d')+'" title="'+(n.pernoite?'pernoite — dia dele no Day Care':'diária de hotel')+'">'+orcBR(n.iso).slice(0,5)+' '+n.dw+'</span>';
+          }).join('')+'</div>';
+      h+='<div class="hint" style="margin-top:6px">Dourado = pernoite (dia dele no Day Care) · azul = diária de hotel.</div>';
+      h+='</div>';
+    });
+    h+='<div class="orc-total"><span>Total</span><span>'+fmtCent(C.total)+'</span></div>';
+    h+='<div class="orc-linha" style="border-bottom:none;margin-top:6px"><span>Na reserva da data (50%)</span><strong>'+fmtCent(C.p1)+'</strong></div>';
+    h+='<div class="orc-linha" style="border-bottom:none"><span>No dia da hospedagem (50%)</span><strong>'+fmtCent(C.p2)+'</strong></div>';
+    el.innerHTML=h;
+  }
+  function orcRenderMsg(){
+    var el=document.getElementById('orcMsg'); if(!el||!ORC_CALC) return;
+    var C=ORC_CALC;
+    var tutor=(C.pets[0]&&C.pets[0].sel.tutor)||'';
+    var nomes=C.pets.map(function(p){ return p.sel.nome; }).join(' e ');
+    var L=[];
+    L.push(tutor+', segue orçamento da hospedagem para '+nomes);
+    L.push('Do dia '+orcBR(C.entrada)+' a '+orcBR(C.saida));
+    C.pets.forEach(function(p){
+      var pre=(C.pets.length>1)?(p.sel.nome+': '):'';
+      L.push(pre+'Total de '+p.nDia+' diária'+(p.nDia===1?'':'s')+' e '+p.nPer+' pernoite'+(p.nPer===1?'':'s'));
+    });
+    var descs=C.pets.filter(function(p){ return p.off>0; });
+    var linhaTotal='Total: '+fmtCent(C.total);
+    if(descs.length===1&&C.pets.length===1){
+      var p=descs[0];
+      linhaTotal+=' Com desconto de '+p.off+'% do plano '+(p.sel.compromisso||p.sel.rotulo)+' do '+p.sel.nome;
+    } else if(descs.length){
+      linhaTotal+=' Já com o desconto de '+descs.map(function(p){ return p.off+'% do '+p.sel.nome; }).join(' e ');
+    }
+    L.push('');
+    L.push(linhaTotal);
+    L.push('');
+    L.push('Pagamento: '+fmtCent(C.p1)+' na reserva da data e o restante '+fmtCent(C.p2)+' no dia da hospedagem.');
+    el.value=L.join('\n');
+  }
+  function orcCopiar(){
+    var t=document.getElementById('orcMsg'); if(!t) return;
+    t.removeAttribute('readonly'); t.select();
+    try{ document.execCommand('copy'); }catch(e){}
+    t.setAttribute('readonly','readonly');
+    var s=document.getElementById('orcSalvoStatus'); if(s){ s.style.color='var(--crm-ok)'; s.textContent='Mensagem copiada — é só colar no WhatsApp do tutor.'; }
+  }
+  // ===== O ORÇAMENTO FICA SALVO (é a semente do CRM) ================================
+  // Cada orçamento guarda o PREÇO DA ÉPOCA e o desfecho: aguardando → fechado / não fechou.
+  // Quando o CRM existir, ele lê daqui: quem pediu, quanto, quando e se fechou.
+  function orcSalvar(){
+    if(!ORC_CALC){ return; }
+    if(!DB){ var s0=document.getElementById('orcSalvoStatus'); if(s0){ s0.style.color='var(--crm-critico)'; s0.textContent='Sem conexão com o banco — o orçamento NÃO foi salvo. Copie a mensagem e tente de novo quando a internet voltar.'; } return; }
+    var C=ORC_CALC;
+    var reg={
+      criado_em:Date.now(), criado_por:(typeof quemSou==='function'?quemSou():'-'),
+      entrada:C.entrada, saida:C.saida, saida_pedida:C.saidaPedida, noites:C.noites,
+      alta_temporada:!!C.alta, total_cent:C.total, parcela1_cent:C.p1, parcela2_cent:C.p2,
+      tutor:(C.pets[0]&&C.pets[0].sel.tutor)||'',
+      precos_da_epoca:orcPrecos(),
+      status:'aguardando',                       // aguardando · fechado · nao_fechou
+      pets:C.pets.map(function(p){ return {
+        key:p.sel.key, nome:p.sel.nome, plano:p.sel.rotulo, compromisso:p.sel.compromisso||'',
+        ordem:p.ordem, desconto_pct:p.off, diarias:p.nDia, pernoites:p.nPer,
+        subtotal_cent:p.total }; }),
+      mensagem:(document.getElementById('orcMsg')||{}).value||''
+    };
+    var st=document.getElementById('orcSalvoStatus');
+    if(st){ st.style.color='var(--muted)'; st.textContent='Salvando…'; }
+    DB.ref('auaulandia/orcamentos').push(reg).then(function(){
+      if(st){ st.style.color='var(--crm-ok)'; st.textContent='✅ Orçamento salvo. Está na lista abaixo como "aguardando" — marque lá quando o tutor fechar ou desistir.'; }
+      if(typeof audit==='function') audit('orcamento-criado','orçamento de '+reg.pets.map(function(p){return p.nome;}).join(' e ')+' — '+fmtCent(reg.total_cent),{pet:(reg.pets[0]||{}).nome||''});
+      orcCarregarLista();
+    }).catch(function(e){
+      if(st){ st.style.color='var(--crm-critico)'; st.textContent='⚠️ NÃO foi salvo: '+((e&&e.message)||e)+'. Copie a mensagem antes de sair da tela.'; }
+    });
+  }
+  var ORC_LISTA_CACHE={};
+  function orcCarregarLista(){
+    if(!DB) return;
+    DB.ref('auaulandia/orcamentos').limitToLast(60).once('value').then(function(s){
+      ORC_LISTA_CACHE=s.val()||{}; orcRenderLista();
+    }).catch(function(){});
+  }
+  function orcRenderLista(){
+    var el=document.getElementById('orcLista'); if(!el) return;
+    var ids=Object.keys(ORC_LISTA_CACHE||{}).sort(function(a,b){ return (ORC_LISTA_CACHE[b].criado_em||0)-(ORC_LISTA_CACHE[a].criado_em||0); });
+    if(!ids.length){ el.innerHTML='<div class="hint">Nenhum orçamento salvo ainda.</div>'; return; }
+    var lb={aguardando:['PENDENTE','pendente'], fechado:['FECHOU','resolvido'], nao_fechou:['NÃO FECHOU','processo']};
+    el.innerHTML=ids.map(function(id){
+      var o=ORC_LISTA_CACHE[id]||{}, stt=o.status||'aguardando', L=lb[stt]||lb.aguardando;
+      var nomes=(o.pets||[]).map(function(p){ return p.nome; }).join(' e ');
+      var dt=''; try{ var d=new Date(o.criado_em); var pp=function(x){return String(x).padStart(2,'0');}; dt=pp(d.getDate())+'/'+pp(d.getMonth()+1)+'/'+d.getFullYear(); }catch(e){}
+      var btns=(stt==='aguardando')
+        ? '<div class="avr-form-btns" style="margin-top:8px"><button class="btn btn-primary" onclick="orcStatus(\''+id+'\',\'fechado\')">Fechou</button><button class="btn" style="background:var(--z-cream-warm);color:var(--z-blue);border:1.5px solid var(--line)" onclick="orcStatus(\''+id+'\',\'nao_fechou\')">Não fechou</button></div>'
+        : '<div style="text-align:right;margin-top:6px"><button class="btn" style="background:var(--z-cream-warm);color:var(--z-blue);border:1.5px solid var(--line)" onclick="orcStatus(\''+id+'\',\'aguardando\')">Voltar para pendente</button></div>';
+      return '<div class="avr-card '+L[1]+'"><div class="avr-head"><div class="avr-info">'
+        +'<strong>'+escAttr(nomes||'—')+'</strong> <span style="color:var(--muted);font-size:12px">'+escAttr(o.tutor||'')+'</span>'
+        +'<div style="font-size:12.5px;color:var(--z-blue-soft)">'+orcBR(o.entrada||'')+' a '+orcBR(o.saida||'')+' · '+(o.noites||0)+' noites'+(o.alta_temporada?' · ALTA':'')+' · feito em '+dt+' por '+escAttr(o.criado_por||'-')+'</div>'
+        +'<div style="font-size:15px;font-weight:800;color:var(--z-blue);margin-top:3px">'+fmtCent(o.total_cent||0)+'</div>'
+        +'</div><span class="avr-chip '+L[1]+'">'+L[0]+'</span></div>'+btns+'</div>';
+    }).join('');
+  }
+  function orcStatus(id,novo){
+    if(!DB) return;
+    DB.ref('auaulandia/orcamentos/'+id).update({status:novo, status_em:Date.now(), status_por:(typeof quemSou==='function'?quemSou():'-')}).then(function(){
+      if(ORC_LISTA_CACHE[id]) ORC_LISTA_CACHE[id].status=novo;
+      orcRenderLista();
+      if(typeof audit==='function') audit('orcamento-status','orçamento marcado como '+novo,{});
+    }).catch(function(){});
+  }
+  // ---- Tabela de preços e feriados (só Gestão) ----
+  function orcRenderConfig(){
+    var el=document.getElementById('orcConfig'); if(!el) return;
+    var P=orcPrecos();
+    var campo=function(id,lb,v){ return '<div><label class="cad-lb">'+lb+'</label><input class="cad-in" id="'+id+'" value="'+(v/100).toFixed(2).replace('.',',')+'" inputmode="decimal"></div>'; };
+    var F=orcFeriados();
+    var hoje=(typeof hojeISO==='function')?hojeISO():'';
+    var futuros=Object.keys(F).filter(function(d){ return !hoje||d>=hoje; }).sort();
+    el.innerHTML='<div class="cad-grid2">'
+      +campo('orcPvBaixa','Pernoite — baixa temporada',P.pernoite.baixa)
+      +campo('orcPvAlta','Pernoite — alta temporada',P.pernoite.alta)
+      +campo('orcDvBaixa','Diária de hotel — baixa temporada',P.diaria.baixa)
+      +campo('orcDvAlta','Diária de hotel — alta temporada',P.diaria.alta)
+      +'</div>'
+      +'<button class="btn btn-gold" style="margin-top:10px" onclick="orcSalvarPrecos()">Salvar tabela</button>'
+      +'<div id="orcCfgStatus" class="hint" style="margin-top:6px"></div>'
+      +'<div style="margin-top:16px"><div class="ff-tit">Feriados (não entregamos)</div>'
+      +'<div class="hint">Nacionais, de Minas e os dois municipais de BH — 15/08 e 08/12 — já vêm prontos. Acrescente recesso e datas próprias da Zêluz.</div>'
+      +'<div class="cad-grid2" style="margin-top:8px"><div><label class="cad-lb">Data</label><input class="cad-in" type="date" id="orcFerData"></div>'
+      +'<div><label class="cad-lb">Nome</label><input class="cad-in" id="orcFerNome" placeholder="Ex: recesso da Zêluz"></div></div>'
+      +'<button class="btn btn-primary" style="margin-top:8px" onclick="orcAddFeriado()">Acrescentar feriado</button>'
+      +'<div style="margin-top:10px">'+(futuros.length?futuros.map(function(d){
+          return '<div class="pair"><span class="k">'+orcBR(d)+' — '+escAttr(F[d])+'</span><span class="val"><button class="x" style="background:none;border:none;color:var(--crm-critico);font-weight:800;cursor:pointer" onclick="orcDelFeriado(\''+d+'\')">tirar</button></span></div>';
+        }).join(''):'<div class="hint">Nenhum feriado daqui para a frente.</div>')+'</div></div>';
+  }
+  function orcLerReal(id){ var v=((document.getElementById(id)||{}).value||'').replace(/\./g,'').replace(',','.'); var n=parseFloat(v); return isNaN(n)?null:Math.round(n*100); }
+  function orcSalvarPrecos(){
+    var pb=orcLerReal('orcPvBaixa'), pa=orcLerReal('orcPvAlta'), db=orcLerReal('orcDvBaixa'), da=orcLerReal('orcDvAlta');
+    var st=document.getElementById('orcCfgStatus');
+    if(pb==null||pa==null||db==null||da==null){ if(st){ st.style.color='var(--crm-critico)'; st.textContent='Algum valor está em branco ou inválido. Nada foi salvo.'; } return; }
+    var novo={pernoite:{baixa:pb,alta:pa}, diaria:{baixa:db,alta:da}};
+    if(!DB){ orcPrecosCfg=novo; if(st){ st.style.color='var(--crm-atencao-text)'; st.textContent='Sem banco: vale só neste aparelho até a internet voltar.'; } orcCalcular(); return; }
+    DB.ref('auaulandia/config/orcamento/precos').set(novo).then(function(){
+      orcPrecosCfg=novo; if(st){ st.style.color='var(--crm-ok)'; st.textContent='✅ Tabela salva — vale para todos os orçamentos novos.'; }
+      if(typeof audit==='function') audit('orcamento-precos','alterou a tabela de hospedagem',{});
+      orcCalcular();
+    }).catch(function(e){ if(st){ st.style.color='var(--crm-critico)'; st.textContent='⚠️ NÃO salvou: '+((e&&e.message)||e); } });
+  }
+  function orcAddFeriado(){
+    var d=((document.getElementById('orcFerData')||{}).value||'').trim();
+    var n=((document.getElementById('orcFerNome')||{}).value||'').trim();
+    if(!d||!n){ alert('Preencha a data e o nome do feriado.'); return; }
+    var F=Object.assign({},orcFeriados()); F[d]=n;
+    if(!DB){ orcFeriadosCfg=F; orcRenderConfig(); orcCalcular(); return; }
+    DB.ref('auaulandia/config/orcamento/feriados').set(F).then(function(){ orcFeriadosCfg=F; orcRenderConfig(); orcCalcular(); }).catch(function(){});
+  }
+  function orcDelFeriado(d){
+    var F=Object.assign({},orcFeriados()); delete F[d];
+    if(!DB){ orcFeriadosCfg=F; orcRenderConfig(); orcCalcular(); return; }
+    DB.ref('auaulandia/config/orcamento/feriados').set(F).then(function(){ orcFeriadosCfg=F; orcRenderConfig(); orcCalcular(); }).catch(function(){});
+  }
+  function orcInit(){
+    if(DB){
+      DB.ref('auaulandia/config/orcamento').once('value').then(function(s){
+        var v=s.val()||{};
+        if(v.precos) orcPrecosCfg=v.precos;
+        if(v.feriados) orcFeriadosCfg=v.feriados;
+        orcRenderConfig(); orcCalcular();
+      }).catch(function(){ orcRenderConfig(); });
+      orcCarregarLista();
+    } else { orcRenderConfig(); }
+    orcRenderSel(); orcCalcular();
+  }
 
   // ===== LOGIN (senhas de teste — depois cada pessoa terá a sua) =====
   const SENHAS={
@@ -9029,6 +9432,7 @@
     if(typeof titles!=='undefined'&&titles[v]){ document.getElementById('head-title').childNodes[0].nodeValue=titles[v][0]+' '; document.getElementById('head-sub').textContent=titles[v][1]; }
     window.scrollTo({top:0,behavior:'smooth'});
     if(v==='renovacao' && typeof renderRenovacao==='function') renderRenovacao();
+    if(v==='orcamento' && typeof orcInit==='function') orcInit();
   }
   // Redesenha a ficha aberta mantendo a aba atual. Os blocos de prevenção calculam a
   // próxima data ao salvar, e o resultado precisa aparecer na hora.
