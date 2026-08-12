@@ -4775,7 +4775,7 @@
   }
 
   // ---- Recepção: lista e trilha dos avisos de estoque (mesmo padrão pendente→resolvido da ração) ----
-  function carregarAvisosEstoque(){ renderAvisosEstoque(); renderAvisosRacao(); renderOcorrenciasRecepcao(); }
+  function carregarAvisosEstoque(){ renderAvisosEstoque(); renderAvisosRacao(); renderOcorrenciasRecepcao(); try{ carregarOcorrenciasDayCare(); }catch(e){} }
   var _recepcaoPrevN=null;
   function atualizarBadgeRecepcao(){
     var n=0; Object.keys(AVISOS_ESTOQUE_CACHE||{}).forEach(function(id){ if(AVISOS_ESTOQUE_CACHE[id].status!=='resolvido') n++; });
@@ -4871,14 +4871,104 @@
     });
     return out.sort(function(a,b){ return (b.ts||0)-(a.ts||0); });
   }
+  // ===== OCORRÊNCIAS DO DAY CARE CHEGAM NA RECEPÇÃO =====================================
+  // O check-in e o check-out abrem ocorrência quando acham alteração. Ela NÃO ganha tela nova:
+  // entra na mesma lista da Recepção onde as ocorrências da hospedagem já vivem, porque é lá
+  // que estão as Consultoras e a Amanda — quem fala com o tutor (Adriana, 11-12/ago/2026).
+  var DC_OCORR={};
+  function carregarOcorrenciasDayCare(){
+    if(!DB) return;
+    const dias=[]; const hoje=new Date(); const p=n=>String(n).padStart(2,'0');
+    for(let i=0;i<OCORR_JANELA_DIAS;i++){ const d=new Date(hoje.getTime()-i*86400000); dias.push(d.getFullYear()+'-'+p(d.getMonth()+1)+'-'+p(d.getDate())); }
+    Promise.all(dias.map(function(k){
+      return DB.ref('daycare/ocorrencias/'+k).once('value').then(function(s){ return {k:k, v:s.val()||{}}; }).catch(function(){ return {k:k, v:{}}; });
+    })).then(function(res){
+      const novo={};
+      res.forEach(function(r){ if(Object.keys(r.v).length) novo[r.k]=r.v; });
+      DC_OCORR=novo;
+      try{ if(typeof renderOcorrenciasRecepcao==='function') renderOcorrenciasRecepcao(); }catch(e){}
+      try{ if(typeof renderKPIs==='function') renderKPIs(); }catch(e){}
+    }).catch(function(){});
+  }
+  function ocorrenciasDayCare(){
+    const out=[];
+    Object.keys(DC_OCORR||{}).forEach(function(dia){
+      const doDia=DC_OCORR[dia]||{};
+      Object.keys(doDia).forEach(function(id){
+        const o=doDia[id]||{};
+        if(!o.pet) return;
+        const itens=Array.isArray(o.itens)?o.itens:[];
+        const texto=(o.origem||'check-in')+': '+(itens.join(' · ')||'')+(o.coco?((itens.length?' · ':'')+o.coco):'');
+        out.push({ dcDia:dia, dcId:id, estadiaId:'dc:'+dia, ocId:id,
+          pet:o.pet, tutor:o.tutor||'', texto:texto, quem:o.quem||'-', ts:o.ts||0,
+          avisado:o.desfecho||null, daycare:true });
+      });
+    });
+    return out;
+  }
+  // Desfechos que a Coordenação pode dar (Adriana pediu que a ocorrência não morra sem desfecho).
+  const OCORR_DESFECHOS=[
+    {k:'tutor', t:'Avisei o tutor'},
+    {k:'vet',   t:'Levei à veterinária'},
+    {k:'acomp', t:'Estou acompanhando'},
+    {k:'nada',  t:'Sem intervenção necessária'}
+  ];
+
+  // ===== FALTA AUTOMÁTICA ÀS 12h ========================================================
+  // Adriana: "deixe em aberto e coloque falta automaticamente se não apareceu até as 12h."
+  // Antes das 12h quem não chegou fica EM ABERTO — muita gente chega atrasada e entra.
+  // Passou das 12h, quem não passou pelo check-in de entrada vira falta. Grava uma vez só,
+  // e nunca por cima de quem já tem marcação (o humano sempre vence o automático).
+  const CK_HORA_FALTA=12;
+  var _faltaAutoFeita='';
+  function aplicarFaltaAutomatica(){
+    if(!DB) return;
+    const hoje=dcDataKey();
+    if(_faltaAutoFeita===hoje) return;
+    const agora=new Date();
+    if(agora.getHours()<CK_HORA_FALTA) return;          // ainda dá tempo de chegar
+    if(dcDia!==HOJE_DIA) return;                        // só o dia de hoje
+    _faltaAutoFeita=hoje;
+    Promise.all([
+      DB.ref('daycare/checkin-corpo/'+hoje).once('value').then(function(s){ return s.val()||{}; }).catch(function(){ return {}; }),
+      DB.ref('daycare/chamada/'+hoje).once('value').then(function(s){ return s.val()||{}; }).catch(function(){ return {}; })
+    ]).then(function(r){
+      const fezCheckin=r[0], chamada=r[1];
+      const marcados=[];
+      turmaDoDia().forEach(function(o){
+        const k=dcKey(o.p.n,o.p.tutor);
+        if(fezCheckin[k]) return;                       // passou pelo check-in: está aqui
+        if(chamada[k]) return;                          // alguém já marcou algo: não sobrescreve
+        if(typeof ehMoradorZeluz==='function' && ehMoradorZeluz(o.p)) return;  // mora aqui
+        if(typeof faltouHoje==='function' && faltouHoje(o)) return;            // a planilha já avisou
+        marcados.push({k:k, nome:pelNome(o.p)});
+      });
+      if(!marcados.length) return;
+      const patch={}; marcados.forEach(function(m){ patch[m.k]='faltou'; });
+      DB.ref('daycare/chamada/'+hoje).update(patch).then(function(){
+        if(typeof audit==='function') audit('falta-automatica',
+          marcados.length+' sem check-in até as '+CK_HORA_FALTA+'h: '+marcados.map(function(m){ return m.nome; }).join(', '),
+          {assinou:'sistema'});
+        try{ if(dcAtiv==='checkin-corpo') renderCheckin(); }catch(e){}
+      }).catch(function(){});
+    }).catch(function(){});
+  }
+  // Quem ainda não chegou, na visão de quem está na porta.
+  function ckAindaNaoChegou(){
+    const agora=new Date(), limite=(agora.getHours()>=CK_HORA_FALTA);
+    const lista=turmaDoDia().filter(function(o){ return !ckFeito(o); });
+    return {lista:lista, virouFalta:limite};
+  }
   function ocorrCardHTML(o){
     var id=o.estadiaId+'__'+o.ocId;
     var quando=o.ts?new Date(o.ts).toLocaleString('pt-BR'):'';
-    var chip=o.avisado?'<span class="avr-chip resolvido">TUTOR AVISADO</span>':'<span class="avr-chip pendente">FALTA AVISAR</span>';
+    var chip=o.avisado?'<span class="avr-chip resolvido">RESOLVIDA</span>':'<span class="avr-chip pendente">'+(o.daycare?'SEM DESFECHO':'FALTA AVISAR')+'</span>';
     var corpo=o.avisado
       ? '<div class="avr-trilha"><div class="avr-tl resol"><div class="avr-tl-meta">'+escAttr(o.avisado.quando||'')+'</div><div class="avr-tl-acao">"'+escAttr(o.avisado.acao||'')+'"</div><div class="avr-tl-assina">— '+escAttr(o.avisado.assinatura||'')+'</div></div></div>'
         +'<div style="text-align:right;margin-top:8px"><button class="btn" style="background:var(--z-cream-warm);color:var(--z-blue);border:1.5px solid var(--line)" onclick="ocorrReabrir(\''+id+'\')">Reabrir</button></div>'
-      : '<div class="avr-form"><div class="ff-tit">Registrar o contato com o tutor</div><textarea id="ocr_acao_'+id+'" placeholder="O que você falou com o tutor? (ex.: liguei, expliquei o ocorrido, ele ficou ciente)"></textarea><input id="ocr_assina_'+id+'" placeholder="Seu nome (assinatura)"><div class="avr-form-btns"><button class="btn btn-primary" onclick="ocorrAvisarTutor(\''+id+'\')">Avisei o tutor</button></div></div>';
+      : '<div class="avr-form"><div class="ff-tit">O que foi feito?</div><textarea id="ocr_acao_'+id+'" placeholder="Descreva: liguei para o tutor e expliquei &middot; levei &agrave; vet, ela avaliou &middot; estou de olho hoje"></textarea><input id="ocr_assina_'+id+'" placeholder="Seu nome (assinatura)"><div class="avr-form-btns">'
+        +OCORR_DESFECHOS.map(function(d){ return '<button class="btn '+(d.k==='tutor'?'btn-primary':'')+'" '+(d.k==='tutor'?'':'style="background:var(--z-cream-warm);color:var(--z-blue);border:1.5px solid var(--line)" ')+'onclick="ocorrResolver(\''+id+'\',\''+d.k+'\')">'+d.t+'</button>'; }).join('')
+        +'</div></div>';
     return '<div class="avr-card '+(o.avisado?'resolvido':'pendente')+'"><div class="avr-head"><div class="avr-info">'
       +'<div class="avr-nome">'+escAttr(o.pet||'FILHOt')+'</div>'
       +'<div class="avr-sub">'+(o.tutor?('Tutor: '+escAttr(o.tutor)+' — '):'')+escAttr(o.texto)+'</div>'
@@ -4887,13 +4977,36 @@
   }
   function renderOcorrenciasRecepcao(){
     var el=document.getElementById('ocorrRecepcaoList'); if(!el) return;
-    var lista=ocorrenciasLoja();
+    var lista=ocorrenciasLoja().concat(ocorrenciasDayCare()).sort(function(a,b){ return (b.ts||0)-(a.ts||0); });
     if(!lista.length){ el.innerHTML='<div class="avr-empty">Nenhuma ocorrência registrada nos últimos '+OCORR_JANELA_DIAS+' dias.</div>'; return; }
     var abertas=lista.filter(function(o){ return !o.avisado; });
     var fechadas=lista.filter(function(o){ return !!o.avisado; });
     el.innerHTML=abertas.concat(fechadas).map(ocorrCardHTML).join('');
   }
   function _ocorrSplit(id){ var i=(id||'').indexOf('__'); return i<0?null:{estadiaId:id.slice(0,i), ocId:id.slice(i+2)}; }
+  // Desfecho da ocorrência — vale para as duas origens (hospedagem e Day Care).
+  // Adriana pediu que a ocorrência não morra sem desfecho: quem resolveu, o que fez e quando.
+  function ocorrResolver(id,tipo){
+    var r=_ocorrSplit(id); if(!r||!DB) return;
+    var acao=((document.getElementById('ocr_acao_'+id)||{}).value||'').trim();
+    var assina=((document.getElementById('ocr_assina_'+id)||{}).value||'').trim();
+    if(!acao){ alert('Escreva o que foi feito. É isso que a próxima pessoa vai ler.'); return; }
+    if(!assina || (typeof nomeAssinaturaValido==='function' && !nomeAssinaturaValido(assina))){
+      alert('Assine com o SEU NOME — um ponto ou uma letra solta não diz quem resolveu.'); return; }
+    var reg={acao:acao, assinatura:assina, desfecho:tipo, quando:agoraBR(), ts:Date.now()};
+    var ehDayCare=(r.estadiaId||'').indexOf('dc:')===0;
+    var caminho = ehDayCare
+      ? ('daycare/ocorrencias/'+r.estadiaId.slice(3)+'/'+r.ocId+'/desfecho')
+      : ('auaulandia/estadias/'+r.estadiaId+'/ocorrencias/'+r.ocId+'/avisadoTutor');
+    DB.ref(caminho).set(reg).then(function(){
+      if(ehDayCare){
+        DB.ref('daycare/ocorrencias/'+r.estadiaId.slice(3)+'/'+r.ocId+'/status').set('resolvida').catch(function(){});
+        try{ (DC_OCORR[r.estadiaId.slice(3)]||{})[r.ocId].desfecho=reg; }catch(e){}
+        try{ renderOcorrenciasRecepcao(); }catch(e){}
+      }
+      if(typeof audit==='function') audit('ocorrencia-desfecho', tipo+': '+acao.slice(0,60), {assinou:assina});
+    }).catch(function(e){ alert('Erro ao registrar: '+(e&&e.message||e)); });
+  }
   function ocorrAvisarTutor(id){
     var r=_ocorrSplit(id); if(!r||!DB) return;
     var acao=((document.getElementById('ocr_acao_'+id)||{}).value||'').trim();
@@ -9529,6 +9642,7 @@
   }
   function carregarCheckin(){
     if(!document.getElementById('ckGrid')) return;
+    try{ aplicarFaltaAutomatica(); }catch(e){}
     ckFrase=CK_FRASES[Math.floor(Date.now()/3600000)%CK_FRASES.length];
     if(!DB){ ckDados={}; renderCheckin(); return; }
     DB.ref(ckNo()).once('value').then(function(s){ ckDados=s.val()||{}; renderCheckin(); })
@@ -9558,6 +9672,17 @@
       +(comAlerta?'<div class="dc-stat bad"><b>'+comAlerta+'</b>com alteração</div>':'')
       +'</div>'
       +'<div class="ck-frase">'+ckFrase+'</div>'
+      +(function(){
+          // Quem ainda nao passou: antes das 12h e "a chegar"; depois disso o app ja marcou falta.
+          if(!entrada || !ehHoje()) return '';
+          const f=ckAindaNaoChegou(); if(!f.lista.length) return '';
+          const nomes=f.lista.map(function(x){ return nomeDesamb(x,lista); }).join(', ');
+          return f.virouFalta
+            ? '<div class="dc-faltas"><strong>FALTARAM HOJE ('+f.lista.length+'):</strong> '+nomes
+              +'<div style="font-weight:600;margin-top:4px">Passou das '+CK_HORA_FALTA+'h e nao fizeram o check-in &mdash; entraram como falta. Se algum chegou e ninguem registrou, faca o check-in dele que a falta cai sozinha.</div></div>'
+            : '<div class="dc-meia"><strong>AINDA NAO CHEGARAM ('+f.lista.length+'):</strong> '+nomes
+              +'<div style="font-weight:600;margin-top:4px">Fica em aberto ate as '+CK_HORA_FALTA+'h. Depois disso, quem nao passar pelo check-in entra como falta.</div></div>';
+        })()
       +avisoPlanilha();
     document.getElementById('ckCount').textContent=feitos+' de '+lista.length+' — toque no peludinho para examinar';
     grid.innerHTML=filtraLista(lista).map(function(o){
