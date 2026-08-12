@@ -306,6 +306,63 @@
   .mon-det span{display:inline-flex;align-items:center;gap:5px}
   .mon-det i{width:8px;height:8px;border-radius:2px;flex:0 0 auto}
   .mon-det b{color:var(--z-blue);font-weight:800;font-variant-numeric:tabular-nums}
+  /* Check-in / check-out do corpo. Cor so onde ela informa: verde = olhado e normal,
+     vermelho = alteracao. O resto e neutro. */
+  .ck-frase{background:var(--z-cream-warm);border-left:4px solid var(--z-gold);border-radius:10px;
+    padding:10px 13px;margin:10px 0;font-size:13.5px;font-weight:600;color:var(--z-blue);font-style:italic}
+  .ck-card{position:relative}
+  .ck-card.ok{border-color:#1E8449}
+  .ck-card.alerta{border-color:#B3261E;border-width:2px}
+  .ck-tag{margin-top:6px;font-size:10.5px;font-weight:800;text-transform:uppercase;letter-spacing:.04em;color:var(--muted)}
+  .ck-tag.ok{color:#1E8449} .ck-tag.bad{color:#B3261E}
+  .ck-quem{font-size:11px;font-weight:600;color:var(--muted);margin-top:2px}
+  .ck-ficha{max-width:720px;margin:0 auto}
+  .ck-topo{display:flex;align-items:center;gap:12px;margin-bottom:10px}
+  .ck-av{width:64px;height:64px;border-radius:16px;background-size:cover;background-position:center;flex:0 0 auto}
+  .ck-nome{font-size:21px;font-weight:800;color:var(--z-blue);letter-spacing:-.02em}
+  .ck-sub{font-size:12.5px;font-weight:600;color:var(--muted)}
+  .ck-vem{background:rgba(222,180,40,.16);border-radius:10px;padding:10px 13px;margin-bottom:10px;
+    font-size:13.5px;font-weight:600;color:var(--z-blue)}
+  .ck-entrada{background:var(--z-cream-warm);border-left:4px solid var(--z-blue);border-radius:10px;
+    padding:10px 13px;margin-bottom:10px;font-size:13px;font-weight:600;color:var(--z-blue)}
+  .ck-entrada.ok{border-left-color:#1E8449}
+  .ck-entrada.sem{border-left-color:#B3261E;color:#B3261E}
+  .ck-ponto{border:1px solid var(--line);border-radius:14px;padding:12px 14px;margin-bottom:9px;background:var(--z-white)}
+  .ck-ponto.ok{border-color:rgba(30,132,73,.45)}
+  .ck-ponto.alt{border-color:#B3261E;border-width:2px}
+  .ck-ph{display:flex;gap:10px;align-items:flex-start;margin-bottom:9px}
+  .ck-num{flex:0 0 auto;width:24px;height:24px;border-radius:8px;background:var(--z-cream-warm);color:var(--z-blue);
+    font-size:12.5px;font-weight:800;display:flex;align-items:center;justify-content:center}
+  .ck-pt{font-size:15.5px;font-weight:800;color:var(--z-blue);letter-spacing:-.015em}
+  .ck-ver{font-size:12.5px;font-weight:500;color:var(--muted);margin-top:1px}
+  .ck-btns{display:flex;gap:8px}
+  .ck-b{flex:1;padding:13px 10px;border-radius:11px;border:1.5px solid var(--line);background:#fff;
+    font-family:inherit;font-size:14.5px;font-weight:800;color:var(--muted);cursor:pointer}
+  .ck-b.ok.on{background:#1E8449;border-color:#1E8449;color:#fff}
+  .ck-b.bad.on{background:#B3261E;border-color:#B3261E;color:#fff}
+  .ck-alertas{display:flex;gap:7px;flex-wrap:wrap;margin-top:10px}
+  .ck-chip{padding:8px 12px;border-radius:9px;border:1.5px solid var(--line);background:#fff;font-family:inherit;
+    font-size:13px;font-weight:700;color:var(--z-blue);cursor:pointer}
+  .ck-chip.on{background:#B3261E;border-color:#B3261E;color:#fff}
+  .ck-ponto .cad-in{margin-top:9px}
+  .ck-foto{display:flex;align-items:center;gap:10px;margin-top:9px;flex-wrap:wrap}
+  .ck-foto img{width:84px;height:84px;object-fit:cover;border-radius:11px;border:1px solid var(--line)}
+  .ck-foto-falta{font-size:12.5px;font-weight:800;color:#B3261E}
+  .ck-bloco{border:1px solid var(--line);border-radius:14px;padding:12px 14px;margin-bottom:9px;background:var(--z-white)}
+  .ck-bt{font-size:15px;font-weight:800;color:var(--z-blue);margin-bottom:3px}
+  .ck-hint{font-size:12px;font-weight:500;color:var(--muted);margin-bottom:8px}
+  .ck-opts{display:flex;gap:8px;flex-wrap:wrap}
+  .ck-opt{padding:11px 14px;border-radius:11px;border:1.5px solid var(--line);background:#fff;font-family:inherit;
+    font-size:14px;font-weight:800;color:var(--z-blue);cursor:pointer;text-align:center;line-height:1.2}
+  .ck-opt small{display:block;font-size:11px;font-weight:600;color:var(--muted);margin-top:1px}
+  .ck-opt.on{background:var(--z-blue);border-color:var(--z-blue);color:#fff}
+  .ck-opt.on small{color:rgba(255,255,255,.75)}
+  .ck-opt.grave.on{background:#B3261E;border-color:#B3261E}
+  .ck-criticos{background:rgba(179,38,30,.08);border-left:4px solid #B3261E;border-radius:10px;padding:10px 13px;
+    margin:12px 0;font-size:12.5px;font-weight:600;color:#B3261E}
+  .ck-salvar{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-top:6px}
+  .ck-progress{font-size:12.5px;font-weight:700;color:var(--muted)}
+  .ck-salvar .btn{margin-left:auto}
   .mon-sec{font-size:10.5px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);margin-bottom:6px}
   .mon-tabwrap{overflow-x:auto;border:1px solid var(--line);border-radius:14px;background:var(--z-white)}
   .mon-tab{width:100%;border-collapse:collapse;font-size:13px;min-width:640px}
@@ -1622,6 +1679,17 @@
         <div class="pets-grid" id="almGrid"></div>
       </div>
       <div id="alm-final" class="alm-step" style="display:none"></div>
+    </div>
+    <!-- CHECK-IN / CHECK-OUT do corpo (Adriana, 11-12/ago/2026) — o protocolo em papel virou tela.
+         Entrada: 7h-10h30, quem passa por aqui esta PRESENTE. Saida: no fim do dia.
+         Ponto a ponto, foto obrigatoria em qualquer alteracao, alerta com desfecho na Coordenacao. -->
+    <div id="scr-checkin" class="dc-scr" style="display:none">
+      <div class="role-note"><span data-icon="heart"></span><span id="ckNota"></span></div>
+      <div id="ckResumo"></div>
+      <div class="pel-toolbar"><span class="pel-count" id="ckCount"></span></div>
+      <div class="pets-grid" id="ckGrid"></div>
+      <!-- ficha de um FILHOt -->
+      <div id="ckFicha" style="display:none"></div>
     </div>
     <div id="scr-generic" class="dc-scr" style="display:none">
       <div class="role-note" id="genNota"><span data-icon="star"></span><span id="genNotaTxt">Marque <strong>Feito</strong> em cada peludinho que passou por esta atividade. Cada atividade terá seu protocolo próprio em breve.</span></div>
@@ -9030,8 +9098,8 @@
   function abrirDayCare(){ abrirAccDaycare(); marcarSubnavAtivo(); renderAtual(); }
   function setDcDia(d){ dcDia=d; if(typeof irParaView==='function') irParaView('daycare'); abrirAccDaycare(); marcarSubnavAtivo(); renderAtual(); if(typeof closeNav==='function') closeNav(); }
   function abrirAtividade(slug){ const escopo=(typeof atividadesPermitidas==='function')?atividadesPermitidas():null; if(escopo&&escopo.indexOf(slug)<0) slug=escopo[0]; dcAtiv=slug; if(typeof irParaView==='function') irParaView('daycare'); abrirAccDaycare(); marcarSubnavAtivo(); renderAtual(); if(typeof closeNav==='function') closeNav(); }
-  function mostrarScr(){ const esp=(dcAtiv==='chamada'||dcAtiv==='almoco'); const a=document.getElementById('scr-chamada'),b=document.getElementById('scr-almoco'),c=document.getElementById('scr-generic'); if(a)a.style.display=dcAtiv==='chamada'?'block':'none'; if(b)b.style.display=dcAtiv==='almoco'?'block':'none'; if(c)c.style.display=esp?'none':'block'; const lbl=document.getElementById('dcAtivLabel'); if(lbl){ const f=ATIVS_DC.find(x=>x.s===dcAtiv); lbl.textContent=f?f.t:'Chamada'; } const dl=document.getElementById('dcDiaLabel'); if(dl) dl.textContent=DIA_FULL[dcDia]; }
-  function renderAtual(){ mostrarScr(); if(dcAtiv==='chamada') carregarChamada(); else if(dcAtiv==='almoco') carregarAlmoco(); else carregarGenerico(); if(typeof renderAdaptBanner==='function') renderAdaptBanner(); }
+  function mostrarScr(){ const ehCk=(dcAtiv==='checkin-corpo'||dcAtiv==='checkout-corpo'); const esp=(dcAtiv==='chamada'||dcAtiv==='almoco'||ehCk); const a=document.getElementById('scr-chamada'),b=document.getElementById('scr-almoco'),c=document.getElementById('scr-generic'); if(a)a.style.display=dcAtiv==='chamada'?'block':'none'; if(b)b.style.display=dcAtiv==='almoco'?'block':'none'; if(c)c.style.display=esp?'none':'block'; const k=document.getElementById('scr-checkin'); if(k)k.style.display=ehCk?'block':'none'; const lbl=document.getElementById('dcAtivLabel'); if(lbl){ const f=ATIVS_DC.find(x=>x.s===dcAtiv); lbl.textContent=f?f.t:'Chamada'; } const dl=document.getElementById('dcDiaLabel'); if(dl) dl.textContent=DIA_FULL[dcDia]; }
+  function renderAtual(){ mostrarScr(); if(dcAtiv==='chamada') carregarChamada(); else if(dcAtiv==='almoco') carregarAlmoco(); else if(dcAtiv==='checkin-corpo'||dcAtiv==='checkout-corpo'){ carregarCheckin(); if(dcAtiv==='checkout-corpo') ckCarregarEntradaDoDia(); } else carregarGenerico(); if(typeof renderAdaptBanner==='function') renderAdaptBanner(); }
   // Morador(a) Zêluz (Repolho, Stopa, Kako) MORA aqui: está todo dia, sem exceção. Não pode
   // depender de alguém lembrar de marcar os dias na ficha — a Repolho ficou com os dias em
   // branco e sumiu da chamada e do almoço por dias (Adriana, 11/ago/2026). Agora quem é
@@ -9386,6 +9454,303 @@
     return '<span class="mini-fora">'+(o.daPlanilha==='avulso'?'AVULSO':'REPOSICAO')+'</span>'; }
   function seloForaDia(o){ return o&&o.foraDia?`<span class="mini-fora">NAO E DE ${(DIA_LBL[dcDia]||'HOJE').toUpperCase()}</span>`:''; }
   function onDcBusca(){ const el=document.getElementById('dcBusca'); dcBuscaVal=el?el.value:''; if(dcAtiv==='chamada')renderDaycare(); else if(dcAtiv==='almoco')renderAlmoco(); else renderGenerico(); }
+  // ===== CHECK-IN / CHECK-OUT DO CORPO ==================================================
+  // O protocolo em papel da Zêluz virou tela (Adriana, 11-12/ago/2026). Regras que vieram dela
+  // e do documento impresso:
+  //  · 2 check-ins por dia, os DOIS obrigatórios. Entrada 7h-10h30; saída no fim do dia.
+  //  · Chame pelo nome com o comando VEM — já testa consciência e reforça a liderança.
+  //  · Cada check-in dura ~2 minutos. O exame leva o tempo que leva; o que tem que ser rápido
+  //    é o REGISTRO. Por isso: um toque por ponto, sem digitar nada quando está tudo bem.
+  //  · PONTO A PONTO (decisão dela): todos os pontos precisam ser olhados e marcados.
+  //  · Achou uma alteração? Confira as outras — o app lembra, não obriga.
+  //  · Foto é OBRIGATÓRIA em qualquer alteração: é o que vira prova quando o tutor perguntar.
+  //  · Quem faz o check-in de entrada ESTÁ PRESENTE. Acabou a chamada em separado, que
+  //    ninguém preenchia (5 dias preenchidos em meses inteiros).
+  const CK_PONTOS=[
+    {k:'consciencia', t:'Consciência', ver:'Responde ao nome e ao comando VEM',
+     alertas:['Sem resposta','Letargia','Parece com dor']},
+    {k:'patas', t:'Patas e coxins', ver:'Anda equilibrado, sem dor, patas secas',
+     alertas:['Mancando','Passada incomum','Lambendo demais','Patas úmidas','Unha quebrada','Coxim ferido']},
+    {k:'pele', t:'Pele e pelagem', ver:'Sem ferimento, seca, limpa e sem nós',
+     alertas:['Área úmida','Tufo de pelo','Pulga','Carrapato','Machucado','Arranhão','Falha de pelo','Cor anormal','Odor forte']},
+    {k:'orelhas', t:'Orelhas', ver:'Limpas, secas e sem algodão',
+     alertas:['Avermelhada','Odor forte','Sujeira preta','Lesão','Secreção']},
+    {k:'olhos', t:'Olhos', ver:'Faz contato visual, olhos limpos',
+     alertas:['Olho fechado','Piscando demais','Pupila dilatada','Secreção','Vermelhidão']},
+    {k:'boca', t:'Boca e focinho', ver:'Respiração normal, gengiva e língua rosadas, sem papiloma',
+     alertas:['Mucosa pálida','Papiloma','Respiração alterada','Secreção','Mau hálito forte','Dente quebrado']},
+    {k:'agua', t:'Alimentação e água', ver:'Bebeu água conforme o calor e a atividade do dia',
+     alertas:['Bebeu demais','Não bebeu','Comeu menos de 50% — NÃO COMEU','Recusou comida']},
+    {k:'eliminacao', t:'Eliminação (urina e fezes)', ver:'Urina e fezes de aparência normal, sem vômito',
+     alertas:['Urina pouca e frequente','Cor alterada','Objeto estranho','Vomitou','Não urinou']},
+    {k:'rabo', t:'Rabo e bumbum', ver:'Sem vermelhidão, inchaço ou secreção',
+     alertas:['Vermelhidão','Inchaço','Secreção','Glândula cheia','Sujo']},
+    {k:'intimo', t:'', ver:'', alertas:[], intimo:true}   // vulva OU pênis, conforme o sexo
+  ];
+  // Item 10 escrito à mão no protocolo + a resposta da Adriana sobre os machos.
+  const CK_INTIMO={
+    femea:{t:'Vulva', ver:'Sem inchaço e sem vermelhidão', alertas:['Inchaço','Vermelhidão','CIO','Irritação por friccionar','Secreção']},
+    macho:{t:'Pênis e saco escrotal', ver:'Sem inchaço, vermelhidão ou secreção', alertas:['Inchaço','Vermelhidão','Secreção','Lambendo demais']}
+  };
+  // Coleiras: a cor diz a MARCA (Adriana). A verde ficou sem marca de propósito — quando
+  // souberem qual é, é só escrever aqui.
+  const CK_COLEIRAS=[
+    {k:'nao', t:'Não veio'}, {k:'cinza', t:'Cinza', sub:'Seresto'},
+    {k:'transparente', t:'Transparente', sub:'Leevre'}, {k:'branca', t:'Branca', sub:'Scalibor'},
+    {k:'verde', t:'Verde'}
+  ];
+  const CK_COCO=[{k:'nao', t:'Não fez'}, {k:'normal', t:'Normal'}, {k:'mole', t:'Mole'}, {k:'diarreia', t:'DIARREIA', grave:1}];
+  // O protocolo manda comunicar ao supervisor a QUALQUER momento — não só no check-in.
+  const CK_CRITICOS=['Respiração alterada','Alteração da consciência','Inchaço','Tremores'];
+  // A monitora está cuidando de quem não sabe falar. A tela lembra disso (pedido da Adriana).
+  const CK_FRASES=[
+    'Ele não sabe dizer onde dói. Os seus olhos são a voz dele.',
+    'Dois minutos de atenção agora evitam um problema grande depois.',
+    'Você é a primeira pessoa a perceber. Por isso este momento existe.',
+    'O que você vir aqui, ninguém mais vai ver hoje.',
+    'Olhar com calma é cuidar. Obrigada por fazer isso bem feito.',
+    'Quem não fala depende de quem observa.'
+  ];
+  function ckEhEntrada(){ return dcAtiv==='checkin-corpo'; }
+  function ckNo(){ return 'daycare/'+(ckEhEntrada()?'checkin':'checkout')+'-corpo/'+dcDataKey(); }
+  var ckDados={}, ckAtual=null, ckRascunho=null, ckFrase='';
+  function ckSexo(p){ try{ const s=String(pelGet(p,'sexo')||'').toLowerCase();
+    if(s.indexOf('f')===0||s.indexOf('fê')===0||s.indexOf('fe')===0) return 'femea';
+    if(s.indexOf('m')===0) return 'macho'; }catch(e){}
+    return ''; }
+  function ckPontosDe(p){
+    const sexo=ckSexo(p);
+    return CK_PONTOS.map(function(pt){
+      if(!pt.intimo) return pt;
+      if(!sexo) return null;                       // sexo não cadastrado: não inventa o ponto
+      const c=CK_INTIMO[sexo];
+      return {k:'intimo', t:c.t, ver:c.ver, alertas:c.alertas};
+    }).filter(Boolean);
+  }
+  function carregarCheckin(){
+    if(!document.getElementById('ckGrid')) return;
+    ckFrase=CK_FRASES[Math.floor(Date.now()/3600000)%CK_FRASES.length];
+    if(!DB){ ckDados={}; renderCheckin(); return; }
+    DB.ref(ckNo()).once('value').then(function(s){ ckDados=s.val()||{}; renderCheckin(); })
+      .catch(function(){ ckDados={}; renderCheckin(); });
+  }
+  function ckDe(o){ return ckDados[dcKey(o.p.n,o.p.tutor)]||null; }
+  function ckFeito(o){ const r=ckDe(o); return !!(r&&r.fim); }
+  function ckTemAlerta(o){ const r=ckDe(o); if(!r||!r.pontos) return false;
+    return Object.keys(r.pontos).some(function(k){ return r.pontos[k]&&r.pontos[k].alterado; }); }
+  function renderCheckin(){
+    const grid=document.getElementById('ckGrid'); if(!grid) return;
+    const ficha=document.getElementById('ckFicha');
+    if(ckAtual){ grid.style.display='none'; if(ficha){ ficha.style.display='block'; ficha.innerHTML=ckFichaHtml(); } return; }
+    if(ficha){ ficha.style.display='none'; ficha.innerHTML=''; }
+    grid.style.display='';
+    const entrada=ckEhEntrada();
+    const nota=document.getElementById('ckNota');
+    if(nota) nota.innerHTML=entrada
+      ? '<strong>Check-in de entrada — 7h às 10h30.</strong> Chame cada um pelo nome com o comando <strong>VEM</strong> e olhe ponto a ponto. Quem passa por aqui fica <strong>presente</strong> no dia. Quem não passar até as 12h entra como falta.'
+      : '<strong>Check-out — antes do banho ou no fim do dia.</strong> A pergunta agora é outra: <strong>aconteceu algo enquanto ele estava conosco?</strong> Compare com o que foi visto na entrada.';
+    const lista=turmaDoDia();
+    const feitos=lista.filter(ckFeito).length, comAlerta=lista.filter(ckTemAlerta).length;
+    document.getElementById('ckResumo').innerHTML=
+      '<div class="dc-resumo">'
+      +'<div class="dc-stat ok"><b>'+feitos+'</b>'+(entrada?'chegaram':'conferidos')+'</div>'
+      +'<div class="dc-stat pend"><b>'+(lista.length-feitos)+'</b>'+(entrada?'faltam chegar':'faltam conferir')+'</div>'
+      +(comAlerta?'<div class="dc-stat bad"><b>'+comAlerta+'</b>com alteração</div>':'')
+      +'</div>'
+      +'<div class="ck-frase">'+ckFrase+'</div>'
+      +avisoPlanilha();
+    document.getElementById('ckCount').textContent=feitos+' de '+lista.length+' — toque no peludinho para examinar';
+    grid.innerHTML=filtraLista(lista).map(function(o){
+      const p=o.p, k=dcKey(p.n,p.tutor), r=ckDados[k], feito=!!(r&&r.fim), alerta=ckTemAlerta(o);
+      const foto=(typeof o.i==='number')?fotoDoPel(p):'';
+      const ph=foto?'<div class="ph" style="background-image:url(\''+foto+'\');background-size:cover;background-position:center"></div>'
+                   :'<div class="ph" style="background:'+corPel(typeof o.i==='number'?o.i:0)+'">'+(p.n[0]||'?')+'</div>';
+      return '<div class="pet ck-card'+(feito?' ok':'')+(alerta?' alerta':'')+'" onclick="ckAbrir(\''+k+'\')">'
+        +ph+'<div class="nm">'+nomeDesamb(o,lista)+'</div><div class="br">'+(p.raca||'-')+'</div>'
+        +(alerta?'<div class="ck-tag bad">COM ALTERAÇÃO</div>':(feito?'<div class="ck-tag ok">✓ '+(r.hora||'feito')+'</div>':'<div class="ck-tag">a examinar</div>'))
+        +(feito&&r.quem?'<div class="ck-quem">'+escAttr(r.quem)+'</div>':'')
+        +'</div>';
+    }).join('');
+  }
+  function ckAbrir(k){
+    const o=turmaDoDia().filter(function(x){ return dcKey(x.p.n,x.p.tutor)===k; })[0];
+    if(!o) return;
+    ckAtual=o;
+    const salvo=ckDados[k];
+    ckRascunho=salvo?JSON.parse(JSON.stringify(salvo)):{pontos:{}, coleiraRep:'', coleiraId:'', coco:''};
+    if(!ckRascunho.pontos) ckRascunho.pontos={};
+    renderCheckin(); window.scrollTo({top:0,behavior:'smooth'});
+  }
+  function ckVoltar(){ ckAtual=null; ckRascunho=null; renderCheckin(); }
+  function ckMarcar(pk,alterado){
+    if(!ckRascunho) return;
+    const at=ckRascunho.pontos[pk]||{};
+    ckRascunho.pontos[pk]=Object.assign({},at,{alterado:!!alterado});
+    if(!alterado){ delete ckRascunho.pontos[pk].alertas; delete ckRascunho.pontos[pk].foto; delete ckRascunho.pontos[pk].obs; }
+    renderCheckin();
+  }
+  function ckAlerta(pk,txt){
+    const pt=ckRascunho.pontos[pk]||{alterado:true};
+    const arr=Array.isArray(pt.alertas)?pt.alertas.slice():[];
+    const i=arr.indexOf(txt); if(i>=0) arr.splice(i,1); else arr.push(txt);
+    pt.alertas=arr; pt.alterado=true; ckRascunho.pontos[pk]=pt; renderCheckin();
+  }
+  function ckObs(pk,v){ const pt=ckRascunho.pontos[pk]||{alterado:true}; pt.obs=v; ckRascunho.pontos[pk]=pt; }
+  function ckSet(campo,v){ if(!ckRascunho) return; ckRascunho[campo]=v; renderCheckin(); }
+  // A foto é a prova. Comprimida para 640px: o app já apanhou de foto pesada antes.
+  function ckFoto(pk,input){
+    const f=input&&input.files&&input.files[0]; if(!f) return;
+    const fr=new FileReader();
+    fr.onload=function(e){
+      const img=new Image();
+      img.onload=function(){
+        const max=640, esc=Math.min(1,max/Math.max(img.width,img.height));
+        const c=document.createElement('canvas'); c.width=Math.round(img.width*esc); c.height=Math.round(img.height*esc);
+        c.getContext('2d').drawImage(img,0,0,c.width,c.height);
+        const pt=ckRascunho.pontos[pk]||{alterado:true};
+        pt.foto=c.toDataURL('image/jpeg',0.72); pt.alterado=true;
+        ckRascunho.pontos[pk]=pt; renderCheckin();
+      };
+      img.src=e.target.result;
+    };
+    fr.readAsDataURL(f);
+  }
+  function ckFichaHtml(){
+    const o=ckAtual, p=o.p, k=dcKey(p.n,p.tutor), entrada=ckEhEntrada();
+    const pontos=ckPontosDe(p), R=ckRascunho;
+    const foto=(typeof o.i==='number')?fotoDoPel(p):'';
+    const ph=foto?'<div class="ck-av" style="background-image:url(\''+foto+'\')"></div>'
+                 :'<div class="ck-av" style="background:'+corPel(typeof o.i==='number'?o.i:0)+';display:flex;align-items:center;justify-content:center;font-size:28px;font-weight:800;color:#fff">'+(p.n[0]||'?')+'</div>';
+    // o que a entrada viu — para o check-out comparar (a pergunta dele é "aconteceu algo aqui?")
+    let daEntrada='';
+    if(!entrada){
+      const e=(ckEntradaCache||{})[k];
+      if(e&&e.pontos){
+        const alt=Object.keys(e.pontos).filter(function(x){ return e.pontos[x]&&e.pontos[x].alterado; });
+        daEntrada=alt.length
+          ? '<div class="ck-entrada"><strong>Na entrada, hoje '+(e.hora||'')+':</strong> '+alt.map(function(x){
+              const t=(pontos.filter(function(y){return y.k===x;})[0]||{t:x}).t;
+              const al=(e.pontos[x].alertas||[]).join(', ');
+              return t+(al?' ('+al+')':''); }).join(' · ')+'</div>'
+          : '<div class="ck-entrada ok"><strong>Na entrada, hoje '+(e.hora||'')+': tudo normal.</strong> Qualquer alteração agora aconteceu aqui com a gente.</div>';
+      } else {
+        daEntrada='<div class="ck-entrada sem"><strong>Ele não passou pelo check-in de entrada hoje.</strong> Sem isso não dá para saber se a alteração veio de casa ou daqui.</div>';
+      }
+    }
+    const marcados=pontos.filter(function(pt){ return R.pontos[pt.k] && typeof R.pontos[pt.k].alterado==='boolean'; }).length;
+    const alterados=pontos.filter(function(pt){ return (R.pontos[pt.k]||{}).alterado; });
+    let h='<div class="card ck-ficha">'
+      +'<div class="ck-topo">'+ph+'<div><div class="ck-nome">'+escAttr(pelNome(p))+'</div>'
+      +'<div class="ck-sub">'+escAttr(p.raca||'')+(p.tutor?(' · '+escAttr(p.tutor)):'')+'</div></div>'
+      +'<button class="btn" style="margin-left:auto;background:var(--z-cream-warm);color:var(--z-blue);border:1.5px solid var(--line)" onclick="ckVoltar()">Voltar</button></div>'
+      +(entrada?'<div class="ck-vem">Chame <strong>'+escAttr(pelNome(p))+'</strong> pelo nome com o comando <strong>VEM</strong> e observe como ele responde.</div>':'')
+      +daEntrada
+      +tarjaRestricao({n:p.n,tutor:p.tutor});
+    pontos.forEach(function(pt,i){
+      const at=R.pontos[pt.k]||{};
+      const marc=(typeof at.alterado==='boolean');
+      h+='<div class="ck-ponto'+(at.alterado?' alt':(marc?' ok':''))+'">'
+        +'<div class="ck-ph"><span class="ck-num">'+(i+1)+'</span><div><div class="ck-pt">'+pt.t+'</div><div class="ck-ver">'+pt.ver+'</div></div></div>'
+        +'<div class="ck-btns">'
+          +'<button type="button" class="ck-b ok'+(marc&&!at.alterado?' on':'')+'" onclick="ckMarcar(\''+pt.k+'\',false)">Normal</button>'
+          +'<button type="button" class="ck-b bad'+(at.alterado?' on':'')+'" onclick="ckMarcar(\''+pt.k+'\',true)">Alterado</button>'
+        +'</div>';
+      if(at.alterado){
+        h+='<div class="ck-alertas">'+pt.alertas.map(function(a){
+          const on=(at.alertas||[]).indexOf(a)>=0;
+          return '<button type="button" class="ck-chip'+(on?' on':'')+'" onclick="ckAlerta(\''+pt.k+'\',\''+String(a).replace(/'/g,"\\'")+'\')">'+a+'</button>'; }).join('')+'</div>'
+        +'<input class="cad-in" placeholder="Descreva o que você viu (opcional)" value="'+escAttr(at.obs||'')+'" oninput="ckObs(\''+pt.k+'\',this.value)">'
+        +'<div class="ck-foto">'
+          +(at.foto?'<img src="'+at.foto+'" alt="">':'<div class="ck-foto-falta">Foto obrigatória</div>')
+          +'<label class="btn btn-gold" style="padding:9px 14px;font-size:13px;cursor:pointer">'+(at.foto?'Trocar foto':'Tirar foto')
+            +'<input type="file" accept="image/*" capture="environment" style="display:none" onchange="ckFoto(\''+pt.k+'\',this)"></label>'
+        +'</div>';
+      }
+      h+='</div>';
+    });
+    if(entrada){
+      h+='<div class="ck-bloco"><div class="ck-bt">Coleira repelente</div>'
+        +'<div class="ck-opts">'+CK_COLEIRAS.map(function(c){
+          return '<button type="button" class="ck-opt'+(R.coleiraRep===c.k?' on':'')+'" onclick="ckSet(\'coleiraRep\',\''+c.k+'\')">'+c.t
+            +(c.sub?'<small>'+c.sub+'</small>':'')+'</button>'; }).join('')+'</div></div>'
+      +'<div class="ck-bloco"><div class="ck-bt">Coleira de identificação</div>'
+        +'<div class="ck-opts">'
+          +'<button type="button" class="ck-opt'+(R.coleiraId==='sim'?' on':'')+'" onclick="ckSet(\'coleiraId\',\'sim\')">Veio</button>'
+          +'<button type="button" class="ck-opt'+(R.coleiraId==='nao'?' on':'')+'" onclick="ckSet(\'coleiraId\',\'nao\')">Não veio</button>'
+        +'</div></div>'
+      +'<div class="ck-bloco"><div class="ck-bt">Fez cocô?</div>'
+        +'<div class="ck-hint">Esperamos de 10 a 15 minutos. Diarreia: ligar para o tutor buscar.</div>'
+        +'<div class="ck-opts">'+CK_COCO.map(function(c){
+          return '<button type="button" class="ck-opt'+(R.coco===c.k?' on':'')+(c.grave?' grave':'')+'" onclick="ckSet(\'coco\',\''+c.k+'\')">'+c.t+'</button>'; }).join('')+'</div>'
+        +(R.coco==='diarreia'?'<div class="dc-faltas" style="margin-top:8px"><strong>DIARREIA — ligue para o tutor agora.</strong> Ele precisa vir buscar. Se o FILHOt já tem histórico (intestino irritável), registre na observação e avise a Coordenação mesmo assim.</div>':'')
+        +'</div>';
+    }
+    if(alterados.length){
+      h+='<div class="dc-meia"><strong>Você marcou '+alterados.length+' alteração'+(alterados.length>1?'ões':'')+'.</strong> '
+        +'O protocolo pede: achou uma, confira se não há outra. Passe os olhos nos demais pontos antes de salvar.</div>';
+    }
+    h+='<div class="ck-criticos"><strong>A qualquer momento, avise o supervisor na hora:</strong> '+CK_CRITICOS.join(' · ')+'.</div>';
+    h+='<div class="ck-salvar"><span class="ck-progress">'+marcados+' de '+pontos.length+' pontos olhados</span>'
+      +'<button class="btn btn-primary" onclick="ckSalvar()">'+(entrada?'Salvar check-in — ele está presente':'Salvar check-out')+'</button></div>';
+    h+='</div>';
+    return h;
+  }
+  var ckEntradaCache={};
+  function ckSalvar(){
+    if(!ckAtual||!ckRascunho) return;
+    const o=ckAtual, p=o.p, k=dcKey(p.n,p.tutor), entrada=ckEhEntrada();
+    const pontos=ckPontosDe(p), R=ckRascunho;
+    // 1) ponto a ponto: nenhum pode ficar sem resposta (decisão da Adriana)
+    const faltando=pontos.filter(function(pt){ return typeof (R.pontos[pt.k]||{}).alterado!=='boolean'; });
+    if(faltando.length){
+      alert('Faltam '+faltando.length+' ponto'+(faltando.length>1?'s':'')+' para olhar:\n\n'
+        +faltando.map(function(x){ return '· '+x.t; }).join('\n')
+        +'\n\nO check-in é ponto a ponto — cada um precisa de Normal ou Alterado.');
+      return;
+    }
+    // 2) alteração sem foto não fecha
+    const semFoto=pontos.filter(function(pt){ const a=R.pontos[pt.k]||{}; return a.alterado && !a.foto; });
+    if(semFoto.length){
+      alert('Falta a foto de: '+semFoto.map(function(x){ return x.t; }).join(', ')
+        +'\n\nToda alteração precisa de foto. É ela que mostra ao tutor e à veterinária o que você viu.');
+      return;
+    }
+    if(entrada && !R.coleiraRep){ alert('Diga qual coleira repelente ele está usando — ou marque "Não veio".'); return; }
+    if(entrada && !R.coleiraId){ alert('Diga se ele veio com a coleira de identificação.'); return; }
+    if(entrada && !R.coco){ alert('Falta registrar o cocô. Se ainda não fez, marque "Não fez" — dá para voltar e corrigir depois.'); return; }
+    const quem=pessoaDoTurno();
+    const reg=Object.assign({}, R, {nome:pelNome(p), tutor:p.tutor||'', quem:quem, hora:horaAgora(), fim:Date.now(), tipo:entrada?'entrada':'saida'});
+    ckDados[k]=reg;
+    const alterados=pontos.filter(function(pt){ return (R.pontos[pt.k]||{}).alterado; });
+    if(DB){
+      DB.ref(ckNo()+'/'+k).set(reg).catch(function(e){ alert('Erro ao salvar: '+e.message); });
+      // presença: quem passou pelo check-in de entrada está aqui (acaba a chamada em separado)
+      if(entrada) DB.ref('daycare/chamada/'+dcDataKey()+'/'+k).set('veio').catch(function(){});
+      // histórico do FILHOt: a segunda dor da Adriana — a folha não deixa ver o passado dele
+      DB.ref('daycare/checkin-hist/'+k).push({data:dcDataKey(), tipo:entrada?'entrada':'saida', hora:reg.hora,
+        quem:quem, alteracoes:alterados.map(function(pt){ return {ponto:pt.t, alertas:(R.pontos[pt.k].alertas||[]), obs:(R.pontos[pt.k].obs||'')}; }),
+        coco:R.coco||'', ts:Date.now()}).catch(function(){});
+      // alerta para a Coordenação — fica PENDENTE até alguém dizer o que foi feito
+      if(alterados.length||R.coco==='diarreia'){
+        DB.ref('daycare/ocorrencias/'+dcDataKey()).push({
+          pet:pelNome(p), tutor:p.tutor||'', refKey:k, hora:reg.hora, quem:quem,
+          origem:entrada?'check-in de entrada':'check-out',
+          itens:alterados.map(function(pt){ return pt.t+((R.pontos[pt.k].alertas||[]).length?(': '+R.pontos[pt.k].alertas.join(', ')):''); }),
+          coco:R.coco==='diarreia'?'DIARREIA':'', status:'aberta', ts:Date.now()
+        }).catch(function(){});
+      }
+    }
+    if(typeof audit==='function') audit(entrada?'checkin-corpo':'checkout-corpo',
+      pelNome(p)+(alterados.length?(' — '+alterados.length+' alteração(ões)'):' — tudo normal'), {alvo:k, assinou:quem});
+    ckAtual=null; ckRascunho=null; renderCheckin();
+  }
+  // O check-out precisa do que a entrada viu para poder comparar.
+  function ckCarregarEntradaDoDia(){
+    if(!DB) return;
+    DB.ref('daycare/checkin-corpo/'+dcDataKey()).once('value')
+      .then(function(s){ ckEntradaCache=s.val()||{}; if(dcAtiv==='checkout-corpo') renderCheckin(); })
+      .catch(function(){});
+  }
   function carregarGenerico(){ genMarcas={};
     if(!DB){ renderGenerico(); return; }
     // o 2º horário se monta a partir de quem não comeu, então precisa das marcações do
