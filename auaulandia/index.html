@@ -308,6 +308,23 @@
   .mon-det b{color:var(--z-blue);font-weight:800;font-variant-numeric:tabular-nums}
   /* Check-in / check-out do corpo. Cor so onde ela informa: verde = olhado e normal,
      vermelho = alteracao. O resto e neutro. */
+  /* Historico de check-ins do FILHOt. Vermelho SO no que teve alteracao. */
+  .hist-resumo{display:flex;gap:14px;flex-wrap:wrap;margin-bottom:9px;font-size:12.5px;font-weight:600;color:var(--muted)}
+  .hist-resumo b{font-size:17px;font-weight:800;color:var(--z-blue);margin-right:4px;font-variant-numeric:tabular-nums}
+  .hist-resumo .bad b{color:#B3261E}
+  .hist-lista{display:flex;flex-direction:column;gap:7px;max-height:420px;overflow-y:auto}
+  .hist-item{border:1px solid var(--line);border-left:4px solid var(--line);border-radius:11px;padding:9px 12px;background:var(--z-white)}
+  .hist-item.alt{border-left-color:#B3261E}
+  .hist-topo{display:flex;gap:9px;align-items:baseline;flex-wrap:wrap}
+  .hist-data{font-size:13.5px;font-weight:800;color:var(--z-blue);font-variant-numeric:tabular-nums}
+  .hist-tipo{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--muted)}
+  .hist-quem{margin-left:auto;font-size:11.5px;font-weight:600;color:var(--muted)}
+  .hist-ok{font-size:12.5px;font-weight:600;color:#1E8449;margin-top:3px}
+  .hist-alts{display:flex;flex-direction:column;gap:3px;margin-top:5px}
+  .hist-alt{font-size:12.5px;font-weight:600;color:var(--z-blue)}
+  .hist-alt b{font-weight:800}
+  .hist-coco{margin-top:4px;font-size:11.5px;font-weight:700;color:var(--muted)}
+  .hist-coco.bad{color:#B3261E}
   .ck-frase{background:var(--z-cream-warm);border-left:4px solid var(--z-gold);border-radius:10px;
     padding:10px 13px;margin:10px 0;font-size:13.5px;font-weight:600;color:var(--z-blue);font-style:italic}
   .ck-card{position:relative}
@@ -9018,6 +9035,11 @@
           <div class="field"><label>Em adaptacao (1&ordm; mes)?</label><div class="seg gold" data-single>${segBtnsPel('adaptacao',ex.adaptacao||'',['Sim','Nao'])}</div></div>
           <div class="field"><label>Come em comedouro lento?</label><div class="seg gold" data-single>${segBtnsPel('ansioso',ex.ansioso||'',['Sim','Nao'])}</div></div>
         </div>
+        <!-- HISTORICO DO FILHOt (Adriana, 11/ago/2026: "nao tem historico do filhote").
+             A folha de papel nunca deixou ver o passado dele. Aqui esta a linha do tempo dos
+             check-ins: quando, quem olhou, o que foi encontrado e como estava o coco. -->
+        <h3 class="cad-sub">Histórico de check-ins</h3>
+        <div id="pelHistCk"><div class="hint">Carregando…</div></div>
       </div></div>
 
       <div class="actions" style="margin-top:4px">
@@ -9030,6 +9052,7 @@
       f.querySelectorAll('.seg button, .vac-row button').forEach(el=>{ el.disabled=true; });
     }
     abrirAbaInicialPel();
+    try{ carregarHistCheckin(p); }catch(e){}
     window.scrollTo({top:0,behavior:'smooth'});
   }
   // A ficha abre no PLANO para quem cuida de plano (Diretoria, Gestão, Supervisão e
@@ -9039,6 +9062,68 @@
   // e pareceria vazia para metade da equipe.
   function podeVerPlano(){ const r=document.body.dataset.role;
     return r==='gestao'||r==='supervisor'||r==='diretoria'||r==='consultora'; }
+  // ===== HISTÓRICO DE CHECK-INS DO FILHOt ===============================================
+  // Adriana, 11/ago/2026, sobre a planilha de papel: "a letra de quem escreveu... e não tem
+  // histórico do filhote". A letra já foi resolvida. Isto resolve o resto: a linha do tempo
+  // dele, com o que foi encontrado em cada dia, quem olhou e como estava o cocô.
+  // Serve para a conversa com o tutor ("a orelha dele ficou vermelha 3 vezes este mês") e
+  // para a veterinária ver o padrão, não o episódio isolado.
+  var PEL_HIST_CACHE={}, PEL_HIST_VER=0;
+  function carregarHistCheckin(p){
+    const box=document.getElementById('pelHistCk'); if(!box||!p) return;
+    const k=dcKey(p.n,p.tutor), meu=++PEL_HIST_VER;
+    if(!DB){ box.innerHTML='<div class="hint">Sem conexão com o banco agora.</div>'; return; }
+    if(PEL_HIST_CACHE[k]){ renderHistCheckin(PEL_HIST_CACHE[k]); return; }
+    box.innerHTML='<div class="hint">Carregando…</div>';
+    DB.ref('daycare/checkin-hist/'+k).limitToLast(60).once('value').then(function(s){
+      if(meu!==PEL_HIST_VER) return;              // trocou de FILHOt no meio do caminho
+      const v=s.val()||{};
+      const lista=Object.keys(v).map(function(id){ return v[id]; })
+        .filter(Boolean).sort(function(a,b){ return (b.ts||0)-(a.ts||0); });
+      PEL_HIST_CACHE[k]=lista; renderHistCheckin(lista);
+    }).catch(function(){ if(meu===PEL_HIST_VER) box.innerHTML='<div class="hint">Não consegui ler o histórico agora.</div>'; });
+  }
+  const CK_COCO_ROTULO={nao:'Não fez', normal:'Cocô normal', mole:'Cocô mole', diarreia:'DIARREIA'};
+  function renderHistCheckin(lista){
+    const box=document.getElementById('pelHistCk'); if(!box) return;
+    if(!lista.length){
+      box.innerHTML='<div class="hint">Ainda não há check-in registrado para este FILHOt. '
+        +'A partir de agora, cada entrada e cada saída entram aqui.</div>';
+      return;
+    }
+    // o resumo é o que responde de imediato: em quantos dias houve alteração e qual repete
+    const comAlt=lista.filter(function(h){ return (h.alteracoes||[]).length; });
+    const cont={};
+    comAlt.forEach(function(h){ (h.alteracoes||[]).forEach(function(a){ cont[a.ponto]=(cont[a.ponto]||0)+1; }); });
+    const repete=Object.keys(cont).sort(function(a,b){ return cont[b]-cont[a]; })
+      .filter(function(x){ return cont[x]>1; }).slice(0,4);
+    let h='<div class="hist-resumo">'
+      +'<span><b>'+lista.length+'</b> check-in'+(lista.length>1?'s':'')+'</span>'
+      +'<span'+(comAlt.length?' class="bad"':'')+'><b>'+comAlt.length+'</b> com alteração</span>'
+      +'</div>';
+    if(repete.length){
+      h+='<div class="dc-meia" style="margin-bottom:9px"><strong>Repete:</strong> '
+        +repete.map(function(x){ return x+' ('+cont[x]+'x)'; }).join(' · ')
+        +'<div style="font-weight:600;margin-top:3px">O que aparece mais de uma vez merece a veterinária olhar — não é episódio, é padrão.</div></div>';
+    }
+    h+='<div class="hist-lista">'+lista.map(function(r){
+      const alt=r.alteracoes||[];
+      const grave=(r.coco==='diarreia');
+      return '<div class="hist-item'+(alt.length||grave?' alt':'')+'">'
+        +'<div class="hist-topo"><span class="hist-data">'+fmtBR(r.data||'')+'</span>'
+          +'<span class="hist-tipo">'+(r.tipo==='entrada'?'entrada':'saída')+(r.hora?(' · '+r.hora):'')+'</span>'
+          +'<span class="hist-quem">'+escAttr(r.quem||'-')+'</span></div>'
+        +(alt.length
+            ? '<div class="hist-alts">'+alt.map(function(a){
+                return '<span class="hist-alt"><b>'+escAttr(a.ponto)+'</b>'
+                  +((a.alertas||[]).length?(': '+escAttr(a.alertas.join(', '))):'')
+                  +(a.obs?(' — '+escAttr(a.obs)):'')+'</span>'; }).join('')+'</div>'
+            : '<div class="hist-ok">tudo normal</div>')
+        +(r.coco?('<div class="hist-coco'+(grave?' bad':'')+'">'+(CK_COCO_ROTULO[r.coco]||r.coco)+'</div>'):'')
+        +'</div>';
+    }).join('')+'</div>';
+    box.innerHTML=h;
+  }
   function abrirAbaInicialPel(){
     try{
       const alvo=podeVerPlano()?'ps-plano':'ps-ident';
