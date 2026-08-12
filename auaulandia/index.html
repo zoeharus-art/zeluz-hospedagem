@@ -309,6 +309,29 @@
   /* Check-in / check-out do corpo. Cor so onde ela informa: verde = olhado e normal,
      vermelho = alteracao. O resto e neutro. */
   /* Historico de check-ins do FILHOt. Vermelho SO no que teve alteracao. */
+  /* Lista de troca: verde/vermelho so na VAGA, que e a informacao que decide. */
+  .troca-dias{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px}
+  .troca-dia{border:1px solid var(--line);border-radius:14px;padding:11px 13px;background:var(--z-white)}
+  .troca-dia.cheio{border-color:#B3261E}
+  .troca-dh{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap;margin-bottom:7px}
+  .troca-data{font-size:14.5px;font-weight:800;color:var(--z-blue);font-variant-numeric:tabular-nums}
+  .troca-sem{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--muted)}
+  .troca-vagas{margin-left:auto;font-size:11.5px;font-weight:800;color:#1E8449}
+  .troca-vagas.zero{color:#B3261E}
+  .troca-nomes{display:flex;gap:6px;flex-wrap:wrap}
+  .troca-nome{display:inline-flex;align-items:center;gap:5px;background:var(--z-cream-warm);border-radius:8px;
+    padding:4px 8px;font-size:12.5px;font-weight:700;color:var(--z-blue)}
+  .troca-nome.ped{border:1px dashed #B3261E;color:#B3261E;background:#fff}
+  .troca-nome button{background:none;border:0;color:var(--muted);font-size:15px;line-height:1;cursor:pointer;padding:0 1px}
+  .troca-vazio{font-size:12px;font-weight:500;color:var(--muted)}
+  .troca-pedidos{display:flex;flex-direction:column;gap:8px;margin-bottom:12px}
+  .troca-ped{display:flex;align-items:center;gap:10px;flex-wrap:wrap;border:1px solid #B3261E;border-radius:12px;
+    padding:10px 13px;background:var(--z-white)}
+  .troca-ped strong{font-size:14.5px;font-weight:800;color:var(--z-blue);display:block}
+  .troca-ped small{font-size:12px;font-weight:600;color:var(--muted)}
+  .troca-acoes{margin-left:auto;display:flex;gap:7px;flex-wrap:wrap}
+  .troca-chip{margin-left:auto;font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.04em;
+    color:#B3261E;border:1px solid #B3261E;border-radius:6px;padding:3px 8px}
   .hist-resumo{display:flex;gap:14px;flex-wrap:wrap;margin-bottom:9px;font-size:12.5px;font-weight:600;color:var(--muted)}
   .hist-resumo b{font-size:17px;font-weight:800;color:var(--z-blue);margin-right:4px;font-variant-numeric:tabular-nums}
   .hist-resumo .bad b{color:#B3261E}
@@ -2725,6 +2748,19 @@
       </div>
       <div id="repLista"></div>
     </div>
+
+    <!-- LISTA DE TROCA (Adriana, 12/ago/2026): "nao vai amanha e ira na sexta, isso e comum".
+         5 vagas/dia a recepcao marca sozinha; acima disso o pedido sobe para a Gestora. -->
+    <div class="card" style="margin-top:16px">
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap">
+        <div>
+          <h2 style="font-size:20px;margin:0">Lista de troca</h2>
+          <div class="hint" style="margin-top:2px">O tutor avisou que nao vem num dia e quer repor em outro. Veja onde tem vaga e marque na hora, com o tutor no telefone.</div>
+        </div>
+        <button class="btn btn-gold" style="padding:10px 18px" onclick="trocaAbrirLancar()">+ Marcar troca</button>
+      </div>
+      <div id="trocaWrap" style="margin-top:12px"></div>
+    </div>
   </section>
 
   <!-- Modal: lançar falta avisada (1 dia ou período, ex.: 30 dias de cio) -->
@@ -2973,6 +3009,7 @@
       try{ carregarFotos(); }catch(e){ console.warn('fotos:',e); }
       // Banco de reposição: leve (só lançamentos), então pode ter ouvinte — a recepção
       // lança num aparelho e a gestão vê no outro na hora.
+      try{ trocaCarregar(); }catch(e){}
       DB.ref('daycare/reposicao').on('value', s=>{ REPO_CACHE=s.val()||{};
         try{ const v=document.getElementById('v-reposicao'); if(v&&v.classList.contains('active')) renderReposicao(); }catch(e){}
         try{ if(typeof renderPendencias==='function') renderPendencias(); }catch(e){} });
@@ -3526,7 +3563,170 @@
     }).catch(function(e){ alert('Não consegui estornar: '+((e&&e.message)||e)); });
   }
   // ---- Telas ----
+  // ===== LISTA DE TROCA — "não vem amanhã, vem na sexta" ================================
+  // Adriana, 12/ago/2026: "temos que ter uma lista de troca. Peludinho não vai amanhã e irá na
+  // sexta, isso é comum de ocorrer. Se tiver vaga — temos 5 vagas por dia, que não precisa falar
+  // com a gestora. E se precisar de mais, tem que entrar em contato com a gestora, que irá
+  // avaliar matilha, o comportamento do peludinho que precisa e etc."
+  // NÃO recria o Banco de Reposição: a troca É uma falta avisada (crédito) mais um dia marcado
+  // para repor. O crédito só é consumido quando ele aparece de verdade, no check-in de entrada —
+  // se marcou e não veio, o crédito continua dele.
+  const TROCA_VAGAS_DIA=5;
+  var TROCA_CACHE={};
+  function trocaCarregar(){
+    if(!DB) return;
+    DB.ref('daycare/trocas').on('value', function(s){
+      TROCA_CACHE=s.val()||{};
+      try{ if(document.getElementById('repLista')) renderReposicao(); }catch(e){}
+      try{ if(dcAtiv==='checkin-corpo') renderCheckin(); }catch(e){}
+    });
+  }
+  function trocaDoDia(dataISO){
+    const d=TROCA_CACHE[dataISO]||{};
+    return Object.keys(d).map(function(k){ return Object.assign({_k:k}, d[k]); })
+      .filter(function(t){ return t.status!=='cancelada' && t.status!=='recusada'; });
+  }
+  function trocaVagasLivres(dataISO){
+    const usadas=trocaDoDia(dataISO).filter(function(t){ return t.status==='confirmada'; }).length;
+    return Math.max(0, TROCA_VAGAS_DIA-usadas);
+  }
+  function trocaEhGestora(){ const r=document.body.dataset.role||''; return r==='gestao'||r==='diretoria'; }
+  function trocaDiaSemana(iso){
+    const D=['dom','seg','ter','qua','qui','sex','sab'];
+    try{ return D[new Date(iso+'T12:00:00').getDay()]; }catch(e){ return ''; }
+  }
+  // A troca só faz sentido num dia em que o Day Care funciona e em que ele NÃO viria.
+  function trocaValidar(p, paraISO){
+    const dia=trocaDiaSemana(paraISO);
+    if(!dia) return 'Data inválida.';
+    if(dia==='dom'||dia==='sab') return 'O Day Care não funciona no fim de semana. Escolha um dia de semana.';
+    const hoje=(typeof hojeISO==='function')?hojeISO():'';
+    if(hoje && paraISO<hoje) return 'Essa data já passou.';
+    try{ if((pelDias(p)||[]).indexOf(dia)>=0) return 'Ele já vem nesse dia da semana — não precisa de troca.'; }catch(e){}
+    try{ const k=pelKey(p); if((TROCA_CACHE[paraISO]||{})[k]) return 'Ele já tem troca marcada nesse dia.'; }catch(e){}
+    return '';
+  }
+  function trocaLancar(p, deISO, paraISO, motivo){
+    if(!p||!DB) return Promise.reject(new Error('sem conexão'));
+    const erro=trocaValidar(p, paraISO);
+    if(erro) return Promise.reject(new Error(erro));
+    const livres=trocaVagasLivres(paraISO);
+    const confirmada=(livres>0);
+    const k=pelKey(p);
+    const reg={ nome:pelNome(p), tutor:pelGet(p,'tutor')||'', de:deISO||'', para:paraISO,
+                motivo:motivo||'', quem:(typeof pessoaDoTurno==='function')?pessoaDoTurno():quemSou(),
+                status: confirmada?'confirmada':'pedido', ts:Date.now() };
+    return DB.ref('daycare/trocas/'+paraISO+'/'+k).set(reg).then(function(){
+      if(typeof audit==='function') audit('troca-'+reg.status,
+        pelNome(p)+': '+(deISO?fmtBR(deISO)+' → ':'')+fmtBR(paraISO), {alvo:dcKey(p.n,p.tutor), assinou:reg.quem});
+      return reg;
+    });
+  }
+  // A Gestora decide o que passa das 5. Ela avalia matilha e comportamento — o app só pergunta.
+  function trocaDecidir(dataISO,k,ok){
+    if(!DB) return;
+    if(!trocaEhGestora()){ alert('Só a Gestão ou a Diretoria decide uma troca acima das '+TROCA_VAGAS_DIA+' vagas.'); return; }
+    const t=(TROCA_CACHE[dataISO]||{})[k]||{};
+    if(!ok){
+      const motivo=(prompt('Recusar a troca de '+(t.nome||'')+' para '+fmtBR(dataISO)+'.\n\nPor quê? A recepção precisa saber o que dizer ao tutor.','')||'').trim();
+      if(!motivo) return;
+      DB.ref('daycare/trocas/'+dataISO+'/'+k).update({status:'recusada', motivoDecisao:motivo,
+        decidiuQuem:(typeof pessoaDoTurno==='function')?pessoaDoTurno():quemSou(), decidiuTs:Date.now()}).catch(function(){});
+      if(typeof audit==='function') audit('troca-recusada',(t.nome||'')+' em '+fmtBR(dataISO)+': '+motivo,{});
+      return;
+    }
+    DB.ref('daycare/trocas/'+dataISO+'/'+k).update({status:'confirmada', acimaDaVaga:true,
+      decidiuQuem:(typeof pessoaDoTurno==='function')?pessoaDoTurno():quemSou(), decidiuTs:Date.now()}).catch(function(){});
+    if(typeof audit==='function') audit('troca-confirmada',(t.nome||'')+' em '+fmtBR(dataISO)+' (acima das '+TROCA_VAGAS_DIA+' vagas)',{});
+  }
+  function trocaCancelar(dataISO,k){
+    if(!DB) return;
+    if(!confirm('Cancelar esta troca? A vaga volta a ficar livre e o crédito continua com ele.')) return;
+    DB.ref('daycare/trocas/'+dataISO+'/'+k).update({status:'cancelada',
+      canceladaQuem:(typeof pessoaDoTurno==='function')?pessoaDoTurno():quemSou(), canceladaTs:Date.now()}).catch(function(){});
+  }
+  // Próximos dias úteis com as vagas — é o que a recepção olha com o tutor no telefone.
+  function trocaProximosDias(n){
+    const out=[]; const d=new Date();
+    while(out.length<(n||10)){
+      d.setDate(d.getDate()+1);
+      const p=function(x){ return String(x).padStart(2,'0'); };
+      const iso=d.getFullYear()+'-'+p(d.getMonth()+1)+'-'+p(d.getDate());
+      const dia=trocaDiaSemana(iso);
+      if(dia!=='sab'&&dia!=='dom') out.push({iso:iso, dia:dia, livres:trocaVagasLivres(iso), lista:trocaDoDia(iso)});
+    }
+    return out;
+  }
+  function renderTrocas(){
+    const box=document.getElementById('trocaWrap'); if(!box) return;
+    const dias=trocaProximosDias(10);
+    const pedidos=[];
+    Object.keys(TROCA_CACHE||{}).forEach(function(dt){
+      Object.keys(TROCA_CACHE[dt]||{}).forEach(function(k){
+        const t=TROCA_CACHE[dt][k]||{};
+        if(t.status==='pedido') pedidos.push(Object.assign({_dt:dt,_k:k},t));
+      });
+    });
+    let h='';
+    if(pedidos.length){
+      h+='<div class="dc-faltas" style="margin-bottom:10px"><strong>'+pedidos.length+' pedido'+(pedidos.length>1?'s':'')+' esperando a Gestora</strong> — dia já com as '+TROCA_VAGAS_DIA+' vagas cheias.</div>'
+        +'<div class="troca-pedidos">'+pedidos.sort(function(a,b){ return a._dt<b._dt?-1:1; }).map(function(t){
+          return '<div class="troca-ped"><div><strong>'+escAttr(t.nome)+'</strong>'
+            +'<small>'+escAttr(t.tutor||'')+' · para '+fmtBR(t._dt)+(t.motivo?(' · '+escAttr(t.motivo)):'')+'</small></div>'
+            +(trocaEhGestora()
+              ? '<div class="troca-acoes"><button class="btn btn-primary" style="padding:7px 12px;font-size:13px" onclick="trocaDecidir(\''+t._dt+'\',\''+t._k+'\',true)">Abrir vaga</button>'
+                +'<button class="btn" style="padding:7px 12px;font-size:13px;background:var(--z-cream-warm);color:var(--z-blue);border:1.5px solid var(--line)" onclick="trocaDecidir(\''+t._dt+'\',\''+t._k+'\',false)">Recusar</button></div>'
+              : '<span class="troca-chip pedido">com a Gestora</span>')
+            +'</div>'; }).join('')+'</div>';
+    }
+    h+='<div class="troca-dias">'+dias.map(function(d){
+      const cheio=(d.livres<=0);
+      const nomes=d.lista.map(function(t){
+        return '<span class="troca-nome'+(t.status==='pedido'?' ped':'')+'">'+escAttr(t.nome)
+          +(trocaPodeMexer()?'<button title="cancelar" onclick="trocaCancelar(\''+d.iso+'\',\''+t._k+'\')">&times;</button>':'')+'</span>'; }).join('');
+      return '<div class="troca-dia'+(cheio?' cheio':'')+'">'
+        +'<div class="troca-dh"><span class="troca-data">'+fmtBR(d.iso)+'</span>'
+          +'<span class="troca-sem">'+(DIA_FULL[d.dia]||d.dia)+'</span>'
+          +'<span class="troca-vagas'+(cheio?' zero':'')+'">'+(cheio?'sem vaga livre':d.livres+' de '+TROCA_VAGAS_DIA+' vagas')+'</span></div>'
+        +(nomes?('<div class="troca-nomes">'+nomes+'</div>'):'<div class="troca-vazio">ninguém marcado</div>')
+        +'</div>'; }).join('')+'</div>';
+    h+='<div class="hint" style="margin-top:9px">São <strong>'+TROCA_VAGAS_DIA+' vagas por dia</strong> que a recepção marca sem precisar falar com a Gestora. '
+      +'Passou disso, o pedido sobe para ela — que avalia a matilha e o comportamento do FILHOt antes de abrir a vaga.</div>';
+    box.innerHTML=h;
+  }
+  function trocaPodeMexer(){ const r=document.body.dataset.role||'';
+    return r==='consultora'||r==='gestao'||r==='supervisor'||r==='diretoria'; }
+  // Marcar a troca com o tutor no telefone: quem, para quando e por quê.
+  function trocaAbrirLancar(){
+    if(!trocaPodeMexer()){ alert('Só a Recepção, a Supervisão ou a Gestão marcam troca.'); return; }
+    const nome=(prompt('Marcar troca — qual FILHOt?\n\nEscreva o nome (ou nome e tutor, se houver xará).','')||'').trim();
+    if(!nome) return;
+    const achados=PELUDINHOS.filter(function(x){ return !pelInativo(x) && termosBuscaPel(x).indexOf(jsNorm(nome))>=0; });
+    if(!achados.length){ alert('Não achei "'+nome+'" no cadastro.'); return; }
+    if(achados.length>1){
+      alert('Achei mais de um:\n\n'+achados.slice(0,6).map(function(x){ return '· '+pelNome(x)+' — '+(x.tutor||'sem tutor'); }).join('\n')
+        +'\n\nEscreva o nome com o tutor para eu saber qual é.');
+      return;
+    }
+    const p=achados[0];
+    const jaVem=(pelDias(p)||[]).map(function(d){ return DIA_FULL[d]||d; }).join(', ')||'nenhum dia fixo';
+    const para=(prompt('Troca de '+pelNome(p)+'\n\nPara qual dia ele vem? Escreva no formato aaaa-mm-dd.\n\nDias em que ele já vem: '+jaVem,'')||'').trim();
+    if(!para) return;
+    const erro=trocaValidar(p,para);
+    if(erro){ alert(erro); return; }
+    const livres=trocaVagasLivres(para);
+    const aviso=livres>0
+      ? 'Há '+livres+' vaga(s) livre(s) em '+fmtBR(para)+' — dá para marcar na hora.'
+      : 'SEM VAGA em '+fmtBR(para)+'. Vai virar um PEDIDO para a Gestora avaliar.';
+    const motivo=(prompt('Por que a troca? (ex.: viagem do tutor, consulta, cio)\n\n'+aviso,'')||'').trim();
+    trocaLancar(p,'',para,motivo).then(function(reg){
+      alert(reg.status==='confirmada'
+        ? 'Troca marcada: '+pelNome(p)+' vem em '+fmtBR(para)+'.\n\nSobraram '+trocaVagasLivres(para)+' vaga(s) nesse dia.'
+        : 'Pedido enviado para a Gestora.\n\n'+fmtBR(para)+' já está com as '+TROCA_VAGAS_DIA+' vagas cheias. Ela avalia a matilha e o comportamento antes de abrir mais uma.');
+    }).catch(function(e){ alert(e.message||'Não consegui marcar.'); });
+  }
   function renderReposicao(){
+    try{ renderTrocas(); }catch(e){}
     const el=document.getElementById('repLista'); if(!el) return;
     const q=jsNorm((document.getElementById('repBusca')||{}).value||'');
     const todos=PELUDINHOS.map(function(p,i){ return {p:p,i:i,saldo:repSaldo(p)}; }).filter(function(o){ return !pelInativo(o.p); });
