@@ -382,6 +382,21 @@
   .ck-cartao-frase{font-size:17px;line-height:1.45;font-weight:700;color:#FFFDF6}
   @media(max-width:520px){ .ck-cartao-frase{font-size:15.5px} }
   .ck-btns{display:flex;gap:8px}
+  .ck-btns.quatro{flex-wrap:wrap}
+  .ck-btns.quatro .ck-b{flex:1 1 calc(50% - 4px);min-width:0;font-size:13.5px;padding-left:6px;padding-right:6px}
+  .ck-b.neu{background:var(--z-cream-warm);color:var(--z-blue);border:1.5px solid var(--line)}
+  .ck-b.neu.on{background:var(--z-blue);color:#FFFDF6;border-color:var(--z-blue)}
+  /* A pergunta da ligação, em toda alteração */
+  .ck-ligar{margin-top:9px;background:rgba(192,57,43,.08);border:1.5px solid var(--crm-critico);border-radius:11px;padding:10px 12px}
+  .ck-ligar .lg-q{font-size:13.5px;font-weight:800;color:var(--crm-critico);margin-bottom:7px}
+  .ck-ligar .lg-b{display:flex;gap:8px;flex-wrap:wrap}
+  .ck-ligar .lg-ok{background:rgba(39,174,96,.12);border-color:var(--crm-ok);color:var(--crm-ok)}
+  /* Fotos extras */
+  .ck-extras{display:flex;flex-wrap:wrap;gap:7px;margin-top:9px;align-items:center}
+  .ck-extras .ex-item{position:relative}
+  .ck-extras .ex-item img{width:66px;height:66px;object-fit:cover;border-radius:9px;border:1.5px solid var(--line);display:block}
+  .ck-extras .ex-item button{position:absolute;top:-6px;right:-6px;width:22px;height:22px;border-radius:50%;border:none;background:var(--crm-critico);color:#fff;font-weight:800;cursor:pointer;line-height:1}
+  .ck-extras .ex-add{display:inline-flex;align-items:center;justify-content:center;width:66px;height:66px;border:1.5px dashed var(--z-gold);border-radius:9px;font-size:11.5px;font-weight:700;color:var(--z-blue);text-align:center;cursor:pointer;padding:4px}
   .ck-b{flex:1;padding:13px 10px;border-radius:11px;border:1.5px solid var(--line);background:#fff;
     font-family:inherit;font-size:14.5px;font-weight:800;color:var(--muted);cursor:pointer}
   .ck-b.ok.on{background:#1E8449;border-color:#1E8449;color:#fff}
@@ -1125,6 +1140,12 @@
   .ck-coco-proto ol{margin:0;padding-left:20px}
   .ck-coco-proto li{font-size:13.5px;line-height:1.5;color:var(--z-blue);margin-bottom:6px}
   .ck-coco-proto .cp-rod{margin-top:8px;padding-top:7px;border-top:1px dashed var(--crm-critico);font-size:12.5px;color:var(--z-blue-soft)}
+  .ck-coco-proto .cp-sub{font-size:12.5px;color:var(--z-blue-soft);margin-bottom:9px;font-weight:600}
+  .cp-passo{display:flex;gap:9px;align-items:flex-start;background:#fff;border:1.5px solid var(--line);border-radius:10px;padding:9px 11px;margin-bottom:6px;cursor:pointer;font-size:13.5px;line-height:1.45;color:var(--z-blue)}
+  .cp-passo.on{border-color:var(--crm-ok);background:rgba(39,174,96,.09)}
+  .cp-passo.on span{text-decoration:line-through;opacity:.72}
+  .cp-passo input{width:19px;height:19px;flex:0 0 auto;margin-top:1px}
+  .cp-timer{background:var(--z-gold);color:var(--z-blue);border-radius:10px;padding:10px 12px;margin:8px 0;font-size:13.5px;font-weight:700}
   .ck-proto-destaque{margin-top:10px;background:var(--z-blue);color:#FFFDF6;border-radius:11px;padding:12px 14px;font-size:14.5px;font-weight:700;line-height:1.45;text-align:center}
   /* Machucado: as duas fotos, lado a lado */
   .ck-foto2{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px}
@@ -1149,6 +1170,11 @@
   .pt-etiq input{width:19px;height:19px;flex:0 0 auto}
   .pt-chamado{margin-top:12px;border:2.5px solid var(--z-gold);background:rgba(222,180,40,.14);border-radius:13px;padding:13px 15px;font-size:13.5px;color:var(--z-blue)}
   .pt-chamado.ok{border-color:var(--crm-ok);background:rgba(39,174,96,.1)}
+  /* A exceção do dia, na hora de servir */
+  .alm-excecao{background:var(--z-gold);border-radius:10px;padding:9px 11px;margin-top:7px;text-align:left}
+  .alm-excecao .ax-tit{font-size:10.5px;font-weight:800;letter-spacing:.06em;color:var(--z-blue);opacity:.8}
+  .alm-excecao .ax-o{font-size:14px;font-weight:800;color:var(--z-blue);margin-top:2px;line-height:1.35}
+  .alm-excecao .ax-q{font-size:11px;color:var(--z-blue);opacity:.85;margin-top:3px;line-height:1.35}
   @keyframes ptPisca{0%,100%{opacity:1}50%{opacity:.35}}
   .pt-pisca{animation:ptPisca 1.1s ease-in-out infinite}
   .orc-temp{display:grid;grid-template-columns:1fr 1fr;gap:10px}
@@ -2776,7 +2802,7 @@
     <div class="ppanel so-master" id="p-monitores">
       <div class="role-note"><span data-icon="users"></span><span><strong>Gestão dos colaboradores.</strong> Nomeie cada pessoa, defina a senha, o horário de entrada e saída, os dias em que ela trabalha e o que ela enxerga no sistema. As mudanças valem na hora, em todos os aparelhos — sem precisar de programador.</span></div>
       <div id="monitoresList"></div>
-      <div class="actions" style="margin-top:12px"><button class="btn btn-primary" onclick="salvarMonitores()">Salvar monitores</button><span id="monitoresStatus" class="rel-status"></span></div>
+      <div class="actions" style="margin-top:12px"><button class="btn btn-primary" onclick="salvarMonitores()">Salvar colaboradores</button><span id="monitoresStatus" class="rel-status"></span></div>
     </div>
 
     <!-- SENHAS — área restrita à Gestão (Adriana e Márcia) -->
@@ -2888,8 +2914,8 @@
       <!-- Data SÓ pelo calendário (Adriana, 13/ago/2026): digitar é onde nasce o erro de ano
            e de mês. O campo abre o calendário ao toque e não aceita digitação. -->
       <div class="cad-grid2">
-        <div><label class="cad-lb">Entrada</label><input class="cad-in" type="date" id="orcEntrada" readonly onfocus="orcAbrirCalendario(this)" onclick="orcAbrirCalendario(this)" onchange="orcCalcular()"></div>
-        <div><label class="cad-lb">Saída</label><input class="cad-in" type="date" id="orcSaida" readonly onfocus="orcAbrirCalendario(this)" onclick="orcAbrirCalendario(this)" onchange="orcCalcular()"></div>
+        <div><label class="cad-lb">Entrada</label><input class="cad-in" type="date" id="orcEntrada" onkeydown="return orcBloquearDigitacao(event)" onpaste="return false" onfocus="orcAbrirCalendario(this)" onclick="orcAbrirCalendario(this)" onchange="orcCalcular()"></div>
+        <div><label class="cad-lb">Saída</label><input class="cad-in" type="date" id="orcSaida" onkeydown="return orcBloquearDigitacao(event)" onpaste="return false" onfocus="orcAbrirCalendario(this)" onclick="orcAbrirCalendario(this)" onchange="orcCalcular()"></div>
       </div>
       <div class="hint" style="margin-top:6px">Toque no campo e escolha no calendário — não dá para digitar, é assim que o ano errado não passa.</div>
       <div id="orcAvisoData"></div>
@@ -5249,14 +5275,22 @@
           ? '<div class="avr-resolvido-banner" style="text-align:left">'+escAttr(c.resposta)+'<div style="font-weight:600;font-size:12.5px;margin-top:4px">por '+escAttr(c.respondido_por||'-')+'</div></div>'
           : '<div class="avr-form"><div class="ff-tit">O que a monitora deve fazer?</div>'
             +'<div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:7px">'
-            +['O tutor deixou comida guardada aqui — pegue na recepção',
-              'Autorizado dar comida natural da casa',
-              'Autorizado dar ração da casa',
+            +['O tutor autorizou pegar na loja. Favor pegar na recepção',
+              'O tutor autorizou comida natural da casa',
+              'O tutor autorizou ração da casa',
+              'O tutor autorizou petisco',
               'Já liguei para o tutor, ele vai trazer'].map(function(t){
                 return '<button type="button" class="ck-chip" onclick="chamadoSugestao(\''+k+'\',this)">'+t+'</button>'; }).join('')
             +'</div>'
             +'<textarea id="chresp_'+k+'" placeholder="Escreva a solução para quem está com ele"></textarea>'
-            +'<input id="chquem_'+k+'" placeholder="Seu nome">'
+            // O que muda no almoço DE HOJE — a ficha dele continua como está.
+            +'<div class="ff-tit" style="margin-top:9px">O que ele vai comer hoje</div>'
+            +'<div class="hint">Preencha quando a comida de hoje for diferente da ficha. Aparece em destaque na hora de servir e vale só hoje.</div>'
+            +'<div class="cad-grid2" style="margin-top:6px">'
+            +'<div><label class="cad-lb">O quê</label><input class="cad-in" id="chalim_'+k+'" placeholder="Ex: Livelong lata"></div>'
+            +'<div><label class="cad-lb">Quanto</label><input class="cad-in" id="chqtd_'+k+'" placeholder="Ex: meia lata"></div>'
+            +'</div>'
+            +'<input id="chquem_'+k+'" style="margin-top:8px" placeholder="Seu nome">'
             +'<div class="avr-form-btns"><button class="btn btn-primary" onclick="chamadoResponder(\''+k+'\')">Responder ao Day Care</button></div></div>')
         +'</div>';
     }).join('');
@@ -5268,10 +5302,18 @@
     if(!r){ alert('Escreva a solução — é isso que a monitora vai ler.'); return; }
     if(!/[a-zA-ZÀ-ÿ]{2,}/.test(q)){ alert('Assine com o seu nome. Quem respondeu responde pela solução.'); return; }
     if(!DB) return;
-    DB.ref('daycare/chamados-recepcao/'+dcDataKey()+'/'+k).update({
-      resposta:r, respondido_por:q, respondido_em:Date.now(), status:'respondido'
-    }).then(function(){
-      if(typeof audit==='function') audit('chamado-respondido','respondeu ao Day Care: '+r,{quem:q});
+    var alim=((document.getElementById('chalim_'+k)||{}).value||'').trim();
+    var qtd=((document.getElementById('chqtd_'+k)||{}).value||'').trim();
+    var ops=[DB.ref('daycare/chamados-recepcao/'+dcDataKey()+'/'+k).update({
+      resposta:r, respondido_por:nomeProprio(q), respondido_em:Date.now(), status:'respondido',
+      alimento_hoje:alim, quantidade_hoje:qtd
+    })];
+    // A comida diferente vira EXCEÇÃO DO DIA — a ficha permanente não é tocada.
+    if(alim) ops.push(DB.ref('daycare/almoco-excecao/'+dcDataKey()+'/'+k).set({
+      oque:alim, quanto:qtd, quem:nomeProprio(q), ts:Date.now()
+    }));
+    Promise.all(ops).then(function(){
+      if(typeof audit==='function') audit('chamado-respondido','respondeu ao Day Care: '+r+(alim?(' · hoje come '+alim+' '+qtd):''),{quem:q});
     }).catch(function(e){ alert('Não consegui responder: '+((e&&e.message)||e)); });
   }
   var _recepcaoPrevN=null;
@@ -6359,7 +6401,14 @@
     var s=document.getElementById('orcSug'); if(s) s.innerHTML='';
     orcRenderTipo(); orcCalcular();
   }
-  // O campo é readonly para ninguém digitar, mas o calendário precisa abrir mesmo assim.
+  // Data SÓ pelo calendário (Adriana, 13/ago/2026 — segunda cobrança). `readonly` não bastou:
+  // o campo de data continua aceitando dígitos em vários navegadores. Aqui o teclado é
+  // bloqueado de fato — só Tab, setas e Esc passam — e colar também não vale.
+  function orcBloquearDigitacao(ev){
+    var ok=['Tab','Escape','Enter','ArrowUp','ArrowDown','ArrowLeft','ArrowRight'];
+    if(ok.indexOf(ev.key)>=0) return true;
+    ev.preventDefault(); return false;
+  }
   function orcAbrirCalendario(el){
     try{ if(el.showPicker) el.showPicker(); }catch(e){}
   }
@@ -6512,7 +6561,10 @@
     // Quem entra 07/09 (feriado) na verdade entra 06/09 — e paga essa noite a mais.
     var entReal=orcAnteriorAberto(ent), saiReal=orcProximoAberto(sai), avisos=[];
     var fechEnt=orcFechado(ent);
-    if(entReal!==ent) avisos.push('A entrada em '+orcBR(ent)+' cai em <strong>'+(fechEnt==='domingo'?'domingo':('feriado — '+fechEnt))+'</strong> e a casa não abre para receber. Passou para <strong>'+orcBR(entReal)+' ('+ORC_DIAW_LB[orcDiaSemana(entReal)]+')</strong> — ele entra antes, e essa noite já está na conta.');
+    // Não existe "confirme se dá para receber": em domingo e feriado a casa não recebe.
+    // Exceção é decisão da Adriana ou da Márcia, direto com elas — e o lançamento é feito
+    // por elas ou pela recepção no primeiro dia útil (Adriana, 13/ago/2026).
+    if(entReal!==ent) avisos.push('A entrada em '+orcBR(ent)+' cai em <strong>'+(fechEnt==='domingo'?'domingo':('feriado — '+fechEnt))+'</strong> e a casa não recebe nesse dia. Passou para <strong>'+orcBR(entReal)+' ('+ORC_DIAW_LB[orcDiaSemana(entReal)]+')</strong> — ele entra antes, e essa noite já está na conta.<br>Caso excepcional (luto, emergência) é decidido pela Adriana ou pela Márcia, direto com elas.');
     if(saiReal!==sai) avisos.push('A saída em '+orcBR(sai)+' cai em <strong>'+(orcFechado(sai)==='domingo'?'domingo':('feriado — '+orcFechado(sai)))+'</strong> e nós não entregamos. Passou para <strong>'+orcBR(saiReal)+' ('+ORC_DIAW_LB[orcDiaSemana(saiReal)]+')</strong> — as noites a mais já estão na conta.');
     ent=entReal;
     // ===== DATA QUE JÁ PASSOU NÃO É ORÇAMENTO (Adriana, 13/ago/2026) ================
@@ -6639,7 +6691,9 @@
     }
     L.push('');
     L.push('Podemos confirmar a Colônia de Férias '+orcPequeno(C.pets,true)+'?');
-    L.push('Temos certeza de que '+ele+' e os aumiguinhos vão se divertir muito!');
+    // "vão se divertir" está correto (divertir-se é pronominal), mas o "se" incomodou a
+    // Adriana. Trocamos o verbo por um que dispensa o pronome: fica natural E correto.
+    L.push('Temos certeza de que '+ele+' e os aumiguinhos vão aproveitar muito!');
     el.value=L.join('\n');
   }
   function orcArtigoDe(sel){ return orcEhFemea(sel)?'da':'do'; }
@@ -7070,19 +7124,19 @@
   // sem nome de gente, que ninguém sabe quem usou. Login de papel não responde por nada.
   // Ficam aqui só os acessos com dono; todo o resto é cadastrado em Time → Colaboradores,
   // com nome, horário e dias.
+  // ===== SÓ A GESTÃO É FIXA (Adriana, 13/ago/2026) ==================================
+  // Aqui ficam apenas os acessos que não podem depender de cadastro nenhum — se o Firebase
+  // cair, a dona do negócio ainda entra. TODO o resto da equipe (supervisão, veterinária,
+  // conferência, recepção, monitores, plantonistas) é cadastrado em Time → Colaboradores,
+  // com nome, papel, senha, horário e dias. Um lugar só para cadastrar gente.
   const SENHAS={
-    '1001':{role:'plantonista', nome:'Plantonista'},
-    // Senha da Adriana trocada para 1101 a pedido dela (13/ago/2026).
-    '1101':{role:'gestao',      nome:'Adriana · Gestão Total', avisoSonoro:true, souAdriana:true},
-    '0902':{role:'gestao',      nome:'Márcia · Gestora', avisoSonoro:true},
-    '0912':{role:'supervisor',  nome:'Amanda · Supervisora'},
-    // VETERINÁRIA — a Zêluz tem UMA veterinária: a Suellen. O acesso é dela, com nome.
-    '0914':{role:'vet',         nome:'Suellen · Veterinária'},
-    // CONFERÊNCIA CHECK-IN — Wandela. UMA senha só (a 0915 foi removida: era a mesma pessoa
-    // com dois acessos, e dois acessos para a mesma pessoa quebram a conta de quem fez o quê).
-    '1006':{role:'conferencia', nome:'Wandela · Conferência Check-in'}
-    // Removidos em 13/ago/2026: 0901 (senha antiga da Adriana), 0913 "Consultora · Recepção"
-    // e 1002 "Monitor Aprendiz" — logins sem nome de pessoa. Quem precisar entra pelo Time.
+    '1101':{role:'gestao',   nome:'Adriana · Gestão Total', avisoSonoro:true, souAdriana:true},
+    '0902':{role:'gestao',   nome:'Márcia · Gestora', avisoSonoro:true},
+    // Plantão genérico — mantido até cada plantonista ter o seu cadastro no Time.
+    '1001':{role:'plantonista', nome:'Plantonista'}
+    // Removidos em 13/ago/2026, a pedido da Adriana: 0912 (Amanda), 0914 (Suellen) e
+    // 1006 (Wandela) — elas entram pelo Time, como todo mundo. Antes já tinham saído 0901,
+    // 0913 "Consultora · Recepção", 0915 e 1002 "Monitor Aprendiz".
   };
   // ===== ESCOPO DE ATIVIDADES POR PESSOA =====
   // Se o usuário logado tem `atividades:[...]`, ele só enxerga essas atividades do Day Care
@@ -7106,7 +7160,7 @@
   function senhasRuntime(){
     const map={}; Object.keys(SENHAS).forEach(k=>{ map[k]=SENHAS[k]; });
     // Monitor NUNCA sobrescreve uma senha fixa do sistema (ex.: 1006 = Wandela/Conferência).
-    (MONITORES||[]).forEach(m=>{ if(m&&m.senha){ const s=String(m.senha).trim(); if(SENHAS[s]) return; map[s]={ role:(m.role||'monitor'), nome:m.nome, monId:m.id, entrada:m.entrada, saida:m.saida, abertura:!!m.abertura, atividades:Array.isArray(m.atividades)?m.atividades:[], paginas:Array.isArray(m.paginas)?m.paginas:[] }; } });
+    (MONITORES||[]).forEach(m=>{ if(m&&m.senha){ const s=String(m.senha).trim(); if(SENHAS[s]) return; map[s]={ role:(m.role||'monitor'), nome:m.nome, monId:m.id, entrada:m.entrada, saida:m.saida, entradaSab:m.entradaSab||'', saidaSab:m.saidaSab||'', dias:Array.isArray(m.dias)?m.dias:[], abertura:!!m.abertura, atividades:Array.isArray(m.atividades)?m.atividades:[], paginas:Array.isArray(m.paginas)?m.paginas:[] }; } });
     return map;
   }
   // ===== RELATÓRIO DE SENHAS (só Gestão vê) — gerado do cadastro acima =====
@@ -7245,7 +7299,7 @@
   function monTodasAtividades(i,ligar){
     const m=MONITORES[i]; if(!m) return;
     m.atividades=ligar?ATIVS_DC.map(function(a){ return a.s; }):[];
-    if(typeof salvarMonitores==='function') salvarMonitores();
+    monMarcarPendente();
     const w=document.getElementById('monPerm-'+i); if(w) w.innerHTML=permEditInner(i,m);
     if(typeof renderMonitores==='function') renderMonitores();
   }
@@ -7273,9 +7327,12 @@
   }
   // ===== EDIÇÃO DE MONITORES (Gestão) — nome, senha e horário =====
   // Papéis que a Gestão pode atribuir a uma pessoa no cadastro (Adriana/Márcia = Gestão, fixos).
+  // Papel é FUNÇÃO, não nome de pessoa nem grau de acesso (Adriana, 13/ago/2026): a
+  // supervisão não "vê tudo" por decreto — a Gestão escolhe o que ela vê, item a item. E
+  // "Conferência" é o posto, não a Wandela: amanhã pode ser outra pessoa.
   const ROLE_OPCOES=[
     {k:'monitor', t:'Monitor(a)'}, {k:'consultora', t:'Consultora (Recepção)'}, {k:'vet', t:'Veterinária'},
-    {k:'conferencia', t:'Conferência (Wandela)'}, {k:'supervisor', t:'Supervisão (vê tudo)'},
+    {k:'conferencia', t:'Conferência de Check-in'}, {k:'supervisor', t:'Supervisão'},
     {k:'plantonista', t:'Plantonista'}, {k:'aprendiz', t:'Aprendiz'}
   ];
   // ===== OS DIAS DE CADA PESSOA (Adriana, 13/ago/2026) ==============================
@@ -7294,13 +7351,21 @@
                  :'Nenhum dia marcado = entra todos os dias.')
       +'</div></div>';
   }
+  // Marcar dia NÃO salva na hora (Adriana, 13/ago/2026: "toda vez que clico em 1 dia aparece
+  // a tela de permissão salva — só apareça quando eu salvar!"). A mudança fica na tela e só
+  // vai para o banco quando ela tocar em Salvar.
   function toggleMonDia(i,d){
     const m=MONITORES[i]; if(!m) return;
     const arr=monDiasSet(m).slice(), idx=arr.indexOf(d);
     if(idx>=0) arr.splice(idx,1); else arr.push(d);
     m.dias=arr;
-    if(typeof salvarMonitores==='function') salvarMonitores();
+    monMarcarPendente();
     renderMonitores();
+  }
+  // Aviso discreto de que há coisa por salvar — em vez de um "salvo!" a cada toque.
+  function monMarcarPendente(){
+    var st=document.getElementById('monitoresStatus');
+    if(st){ st.style.color='var(--crm-atencao-text)'; st.textContent='Há mudanças não salvas. Toque em "Salvar colaboradores" quando terminar.'; }
   }
   function renderMonitores(){
     const el=document.getElementById('monitoresList'); if(!el) return;
@@ -7316,9 +7381,15 @@
           <div class="field"><label style="font-size:12px;color:var(--z-blue)">Senha</label><input class="cad-in" inputmode="numeric" maxlength="6" value="${m.senha||''}" oninput="setMon(${i},'senha',this.value)"></div>
         </div>
         <div style="display:grid;grid-template-columns:.8fr .8fr;gap:8px;align-items:end;margin-top:8px">
-          <div class="field"><label style="font-size:12px;color:var(--z-blue)">Entrada</label><input class="cad-in" type="time" value="${m.entrada||''}" onchange="setMon(${i},'entrada',this.value)"></div>
-          <div class="field"><label style="font-size:12px;color:var(--z-blue)">Saída</label><input class="cad-in" type="time" value="${m.saida||''}" onchange="setMon(${i},'saida',this.value)"></div>
+          <div class="field"><label style="font-size:12px;color:var(--z-blue)">Entrada (seg a sex)</label><input class="cad-in" type="time" value="${m.entrada||''}" onchange="setMon(${i},'entrada',this.value)"></div>
+          <div class="field"><label style="font-size:12px;color:var(--z-blue)">Saída (seg a sex)</label><input class="cad-in" type="time" value="${m.saida||''}" onchange="setMon(${i},'saida',this.value)"></div>
         </div>
+        <!-- Sábado tem horário próprio (Adriana, 13/ago/2026). Em branco = igual ao da semana. -->
+        <div style="display:grid;grid-template-columns:.8fr .8fr;gap:8px;align-items:end;margin-top:8px">
+          <div class="field"><label style="font-size:12px;color:var(--z-blue)">Entrada no sábado</label><input class="cad-in" type="time" value="${m.entradaSab||''}" onchange="setMon(${i},'entradaSab',this.value)"></div>
+          <div class="field"><label style="font-size:12px;color:var(--z-blue)">Saída no sábado</label><input class="cad-in" type="time" value="${m.saidaSab||''}" onchange="setMon(${i},'saidaSab',this.value)"></div>
+        </div>
+        <div class="hint" style="margin-top:4px">Sábado em branco = mesmo horário da semana.</div>
         ${monDiasHTML(i,m)}
         ${chefe?`<div class="hint" style="margin-top:8px;background:rgba(222,180,40,.14);border:1px solid var(--z-gold);border-radius:9px;padding:8px 11px;font-weight:700;color:var(--z-blue)">Supervisão: enquanto nada estiver marcado abaixo, ela vê tudo. Marcou o primeiro item, passa a ver só o que estiver marcado. <strong>Senhas nunca</strong> — isso é só da Gestão.</div>`:''}
         ${permResumoInner(m)}<button type="button" class="med-add" style="width:auto;margin-top:8px" onclick="toggleMonPerm(${i})">🔐 Permissões — o que ${(m.nome||'esta pessoa')} vê no menu</button><div id="monPerm-${i}" style="display:none"></div>
@@ -7334,16 +7405,16 @@
     const senhas=(MONITORES||[]).map(m=>String(m.senha||'').trim());
     // valida senhas: 4-6 dígitos, sem duplicar entre si nem com as senhas fixas
     for(const m of MONITORES){ const s=String(m.senha||'').trim(); if(!/^[0-9]{4,6}$/.test(s)){ if(st){ st.style.color='var(--crm-critico)'; st.textContent='Senha inválida em "'+(m.nome||'?')+'": use 4 a 6 dígitos.'; } return; } if(SENHAS[s]){ if(st){ st.style.color='var(--crm-critico)'; st.textContent='A senha '+s+' já é usada pela Gestão/equipe fixa. Escolha outra.'; } return; } }
-    if(new Set(senhas).size!==senhas.length){ if(st){ st.style.color='var(--crm-critico)'; st.textContent='Há senhas repetidas entre os monitores. Cada um precisa de uma senha única.'; } return; }
+    if(new Set(senhas).size!==senhas.length){ if(st){ st.style.color='var(--crm-critico)'; st.textContent='Há senhas repetidas entre os colaboradores. Cada um precisa de uma senha única.'; } return; }
     if(DB){ DB.ref('daycare/config/monitores').set(MONITORES).then(()=>{
-      if(st){ st.style.color='var(--crm-ok)'; st.textContent='✅ Monitores salvos! Já valem em todos os aparelhos.'; }
+      if(st){ st.style.color='var(--crm-ok)'; st.textContent='✅ Colaboradores salvos! Já valem em todos os aparelhos.'; }
       // Item 1 (Adriana 02/ago/2026): a Letícya recebeu senha e permissão, mas não conseguia
       // entrar — o CELULAR dela não estava autorizado. Dar permissão e não avisar disso fazia
       // parecer defeito do sistema. Agora o lembrete vem junto com o "salvo".
       if(typeof zAlertao==='function') zAlertao('✅ PERMISSÕES SALVAS',
         ['A senha e o que cada pessoa vê já valem em todos os aparelhos.',
-         'ATENÇÃO: monitor(a), plantonista e aprendiz só entram em CELULAR AUTORIZADO. Se a pessoa digitar a senha e aparecer "aparelho não autorizado", pegue o celular dela, digite a SUA senha da Gestão na tela de entrada e toque em "Autorizar este aparelho".'],
-        {ok:true, botao:'Entendi', rodape:'Gestão, Supervisão, Recepção e Veterinária entram em qualquer aparelho — a trava vale só para a equipe de campo.'});
+         'ATENÇÃO: TODA a equipe só entra em CELULAR AUTORIZADO. Se a pessoa digitar a senha e aparecer "aparelho não autorizado", pegue o celular dela, digite a SUA senha da Gestão na tela de entrada e toque em "Autorizar este aparelho".'],
+        {ok:true, botao:'Entendi', rodape:'A trava por aparelho vale para todos — supervisão, recepção e veterinária inclusive. Só a Gestão autoriza um celular novo.'});
     }).catch(e=>{ if(st){ st.style.color='var(--crm-critico)'; st.textContent='Erro ao salvar: '+e.message; } }); }
     else { if(st){ st.style.color='var(--crm-atencao-text)'; st.textContent='Salvo localmente (sem internet agora).'; } }
     try{ renderSenhas(); }catch(e){}
@@ -10902,6 +10973,7 @@
   renderAtiv();
   try{ if(typeof tgCarregarCfg==='function') tgCarregarCfg(); }catch(e){}
   try{ if(typeof ptEscutarChamados==='function') ptEscutarChamados(); }catch(e){}
+  try{ if(typeof almEscutarExcecoes==='function') almEscutarExcecoes(); }catch(e){}
 
   // ===== ADAPTACAO NAO PODE SER ETERNA (Adriana, 12/ago/2026) =======================
   // "EM ADAPTAÇÃO HOJE: Bruce, Hulk, Yumi — essa informação não é real, de onde está tirando
@@ -11116,9 +11188,17 @@
     {k:'agua', t:'Alimentação e água', ver:'Ele bebeu água e comeu como sempre?',
      como:'Olhe o pote e lembre como foi o dia dele. Em dia quente ou de muita corrida, beber mais é normal. Beber muito mais que o normal sem motivo, ou não encostar na água, é alerta. Se ele comeu menos da metade, conta como NÃO COMEU — anote assim mesmo.',
      alertas:['Bebeu muito mais que o normal','Não bebeu água','Comeu menos da metade — NÃO COMEU','Recusou a comida']},
-    {k:'eliminacao', t:'Xixi e cocô', ver:'O xixi e o cocô estão normais?',
-     como:'Repare na cor e na quantidade. Xixi pouquinho e toda hora, xixi muito escuro ou avermelhado são alerta. No cocô, procure sangue, cocô muito mole e qualquer coisa estranha dentro (pedaço de pano, brinquedo, pedra). Vômito também entra aqui.',
-     alertas:['Xixi pouco e toda hora','Cor diferente do normal','Coisa estranha no cocô','Vomitou','Não fez xixi']},
+    // Xixi, cocô e vômito são TRÊS coisas (Adriana, 13/ago/2026). Estavam num ponto só, e
+    // "não vi" não existia — com dois irmãos no mesmo espaço, muitas vezes não dá para saber
+    // quem fez. Obrigar a escolher "fez" ou "não fez" força a pessoa a inventar.
+    {k:'xixi', t:'Xixi', ver:'Como está o xixi dele?',
+     como:'Repare na cor e na quantidade. Xixi pouquinho e toda hora, muito escuro ou avermelhado são alerta. Se ele divide o espaço com outro e você não viu, marque "Não vi" — é melhor do que chutar.',
+     naoVi:1, naoFez:1,
+     alertas:['Pouco e toda hora','Cor muito escura','Cor avermelhada','Fez no lugar errado','Parece sentir dor ao fazer']},
+    {k:'vomito', t:'Vômito', ver:'Ele vomitou, ou chegou com cara de ter vomitado no caminho?',
+     como:'Olhe a boca, o peito e o pelo do pescoço: resto de comida, baba grossa ou pelo molhado e sujo indicam que ele vomitou antes de chegar. Isso é informação importante mesmo quando ninguém viu acontecer — anote sempre.',
+     naoVi:1,
+     alertas:['Vomitou aqui','Chegou com cara de ter vomitado','Vomitou várias vezes','Vômito com sangue','Vômito com coisa estranha']},
     {k:'rabo', t:'Rabo e bumbum', ver:'A região do bumbum está limpa e sem inchaço?',
      como:'Levante o rabo e olhe. Tem que estar limpo, sem vermelhidão, sem inchaço e sem cheiro muito forte. Se ele arrasta o bumbum no chão ou lambe muito ali, pode ser a glândula cheia — anote.',
      alertas:['Vermelhidão','Inchaço','Saindo secreção','Arrasta o bumbum no chão','Sujo']},
@@ -11154,20 +11234,44 @@
   ];
   function ckCocoGrave(k){ return CK_COCO.some(function(c){ return c.k===k&&c.grave; }); }
   // O protocolo aparece NA HORA em que ela marca — não adianta estar num manual.
-  // A desinfecção detalhada a Adriana vai passar; o que está aqui é o que ela já definiu.
+  // Os passos de desinfecção são o Procedimento Padrão com Fezes da casa, ditado pela
+  // Adriana em 13/ago/2026, palavra por palavra. Cada passo tem um toque: quem está com
+  // as mãos ocupadas precisa saber onde parou.
+  const CK_COCO_PASSOS=[
+    'Isolar a área, retirando os peludinhos.',
+    'Tirar foto antes de recolher — é o que a veterinária vai olhar.',
+    'LIGAR para o supervisor direto ou para a Márcia. Ligação, não mensagem.',
+    'Retirar as fezes sem espalhar no chão, colocando um pouco de terra. Retirar o máximo possível com a pá e a vassoura.',
+    'Lavar o local, sem deixar espalhar, com sabão rosa. Esfregar.',
+    'Tirar o sabão com água e pano.',
+    'Borrifar AMÔNIA QUATERNÁRIA.',
+    'Deixar agir por 20 minutos.',
+    'Retirar a amônia com pano limpo e úmido, sem espalhar: passar o pano, enxaguar e passar de novo.',
+    'Lavar os panos e deixá-los de molho no cloro.',
+    'Com o local já limpo, aplicar HERBALVET onde estavam as fezes.'
+  ];
+  function ckCocoPasso(i){
+    if(!ckRascunho) return;
+    ckRascunho.cocoPassos=ckRascunho.cocoPassos||{};
+    ckRascunho.cocoPassos[i]=!ckRascunho.cocoPassos[i];
+    renderCheckin();
+  }
   function ckProtocoloCocoHTML(k){
     if(!ckCocoGrave(k)) return '';
     var titulo={diarreia:'DIARREIA', sangue:'COCÔ COM SANGUE', estranho:'COCÔ COM ASPECTO ESTRANHO', objeto:'OBJETO ESTRANHO NO COCÔ'}[k]||'ALERTA';
+    var M=(ckRascunho&&ckRascunho.cocoPassos)||{};
+    var feitos=CK_COCO_PASSOS.filter(function(_,i){ return M[i]; }).length;
+    // O cronômetro dos 20 minutos da amônia: quem borrifou precisa saber quando voltar.
+    var amonia=M[6]?('<div class="cp-timer">Amônia quaternária aplicada. <strong>Deixe agir 20 minutos</strong> antes de retirar.</div>'):'';
     return '<div class="ck-coco-proto">'
       +'<div class="cp-tit">'+titulo+' — pare e faça nesta ordem</div>'
-      +'<ol>'
-      +'<li><strong>Isole a área agora.</strong> Ninguém passa por ali até a desinfecção terminar. Pode contaminar os outros FILHOts.</li>'
-      +'<li><strong>Tire foto do cocô</strong> antes de recolher. É o que a veterinária vai olhar.</li>'
-      +'<li><strong>LIGUE</strong> para o seu supervisor direto ou para a Márcia. Ligação, não mensagem — e agora, não no fim do check-in.</li>'
-      +'<li><strong>Faça a desinfecção</strong> conforme o protocolo da casa e só depois libere a área.</li>'
-      +'<li><strong>Continue o check-in</strong> deste FILHOt e observe os outros do mesmo espaço.</li>'
-      +'</ol>'
-      +'<div class="cp-rod">Quem fala com o tutor é a Coordenação — você não precisa (nem deve) ligar para ele.</div>'
+      +'<div class="cp-sub">Procedimento Padrão com Fezes · '+feitos+' de '+CK_COCO_PASSOS.length+' passos. Toque em cada um conforme for fazendo.</div>'
+      +CK_COCO_PASSOS.map(function(t,i){
+          return '<label class="cp-passo'+(M[i]?' on':'')+'"><input type="checkbox"'+(M[i]?' checked':'')
+            +' onchange="ckCocoPasso('+i+')"><span><strong>'+(i+1)+'.</strong> '+t+'</span></label>';
+        }).join('')
+      +amonia
+      +'<div class="cp-rod">Só libere a área depois do último passo. Quem fala com o tutor é a Coordenação.</div>'
       +'</div>';
   }
   // O protocolo manda comunicar ao supervisor a QUALQUER momento — não só no check-in.
@@ -11187,8 +11291,46 @@
     'Quem não fala depende de quem observa. Hoje, quem observa é você.',
     'Ele confia em você sem saber explicar por quê. Retribua com atenção.'
   ];
-  const CK_FRASES_NOITE=[
-    'Boa noite. Enquanto a casa dorme, é o seu olhar que cuida deles.',
+  // ===== CADA FRASE PERTENCE À SUA ATIVIDADE (Adriana, 13/ago/2026) =================
+  // "Essa frase não tem nada a ver com essa atividade, ou com o porquê dela existir — tudo
+  //  na Zêluz tem um porquê." A frase da plantonista ("ninguém dorme sozinho") é linda, mas
+  //  aparecia no check-in do corpo, que é sobre OBSERVAR. Agora cada atividade tem as suas,
+  //  ligadas ao motivo de ela existir. Atividade nova entra aqui com o seu porquê.
+  const FRASES_ATIV={
+    'checkin-corpo':CK_FRASES,
+    'checkout-corpo':[
+      'O que ele leva para casa hoje é o que o tutor vai ver. Olhe como se fosse o seu.',
+      'A saída é a última chance de perceber. Depois daqui, ninguém mais olha.',
+      'Se apareceu agora e não estava de manhã, aconteceu aqui. Registre sem medo.',
+      'Devolver bem é tão importante quanto receber bem.'
+    ],
+    'checkin-pert':[
+      'O que ele traz de casa é o cheiro da casa dele. Cuide como coisa de gente.',
+      'Descrever bem hoje é devolver certo depois. A memória falha; o registro não.',
+      'Perder a roupinha dele parece pequeno — para o tutor, não é.'
+    ],
+    'checkout-pert':[
+      'Tudo que veio, volta. Conferir agora evita a ligação difícil depois.',
+      'O remédio que fica para trás é uma dose que ele não vai tomar em casa.',
+      'Guardar é parte do cuidado, não o fim dele.'
+    ],
+    'almoco':[
+      'Comer bem aqui é ter energia para brincar. O prato dele é cuidado, não tarefa.',
+      'Cada um come o que é dele, na quantidade dele. É assim que respeitamos o corpo de cada um.',
+      '"Faça do alimento o seu remédio." A comida certa é o primeiro tratamento.'
+    ],
+    'almoco2':[
+      'Segundo horário existe porque nem todos comem no mesmo ritmo. Respeitar isso é cuidar.',
+      'Quem come depois merece a mesma atenção de quem comeu primeiro.'
+    ],
+    'chamada':[
+      'Saber quem está aqui é saber por quem respondemos hoje.',
+      'A conta tem que fechar: cada FILHOt que entra é um que precisa voltar.'
+    ]
+  };
+  // Plantonista: o porquê da noite é outro — companhia, não observação.
+  const FRASES_PLANTAO=[
+    'Enquanto a casa dorme, é o seu olhar que cuida deles.',
     'A noite é quando eles mais sentem falta de casa. Você é o colo que ficou.',
     'Ninguém dorme sozinho na AuAulândia — é isso que você garante hoje.',
     'Aqui, cada cuidado é ÚNICO. À noite, esse cuidado tem o seu nome.',
@@ -11205,9 +11347,12 @@
       return p?(p.charAt(0).toLocaleUpperCase('pt-BR')+p.slice(1)):'';
     }catch(e){ return ''; }
   }
-  function ckCartaoFrase(){
-    var noite=(new Date().getHours()>=18||new Date().getHours()<6);
-    var lista=noite?CK_FRASES_NOITE:CK_FRASES;
+  // A frase vem da ATIVIDADE em que a pessoa está — não da hora do relógio. A saudação, sim,
+  // vem da hora. Plantonista tem o seu próprio conjunto, porque o porquê da noite é outro.
+  function ckCartaoFrase(ativ){
+    var a=ativ||(typeof dcAtiv!=='undefined'?dcAtiv:'checkin-corpo');
+    var papel=document.body.dataset.role;
+    var lista=(papel==='plantonista')?FRASES_PLANTAO:(FRASES_ATIV[a]||CK_FRASES);
     var frase=lista[Math.floor(Date.now()/3600000)%lista.length];
     var nome=ckPrimeiroNome();
     return '<div class="ck-cartao">'
@@ -11301,9 +11446,27 @@
   function ckMarcar(pk,alterado){
     if(!ckRascunho) return;
     const at=ckRascunho.pontos[pk]||{};
-    ckRascunho.pontos[pk]=Object.assign({},at,{alterado:!!alterado});
-    if(!alterado){ delete ckRascunho.pontos[pk].alertas; delete ckRascunho.pontos[pk].foto; delete ckRascunho.pontos[pk].obs; }
+    ckRascunho.pontos[pk]=Object.assign({},at,{alterado:!!alterado, semDado:''});
+    if(!alterado){ delete ckRascunho.pontos[pk].alertas; delete ckRascunho.pontos[pk].foto; delete ckRascunho.pontos[pk].foto2; delete ckRascunho.pontos[pk].obs; delete ckRascunho.pontos[pk].ligou; }
     renderCheckin();
+  }
+  // "Não vi" e "Não fez" contam como ponto RESPONDIDO — não são alteração e não pedem foto.
+  function ckSemDado(pk,tipo){
+    if(!ckRascunho) return;
+    const at=ckRascunho.pontos[pk]||{};
+    ckRascunho.pontos[pk]=Object.assign({},at,{alterado:false, semDado:tipo});
+    delete ckRascunho.pontos[pk].alertas; delete ckRascunho.pontos[pk].foto; delete ckRascunho.pontos[pk].foto2; delete ckRascunho.pontos[pk].ligou;
+    renderCheckin();
+  }
+  // ===== NEM TODA ALTERAÇÃO É LIGAÇÃO (Adriana, 13/ago/2026) ========================
+  // "Tudo que tiver alterado precisa ter uma pergunta: ligar para o supervisor? Nem tudo
+  //  liga — exemplo, um não fez xixi ou não vi." A decisão fica registrada: quem marcou
+  //  "não precisou" responde por isso depois.
+  function ckLigou(pk,v){
+    if(!ckRascunho) return;
+    const at=ckRascunho.pontos[pk]||{};
+    at.ligou=v; at.ligou_quem=(typeof quemSou==='function'?quemSou():'-'); at.ligou_ts=Date.now();
+    ckRascunho.pontos[pk]=at; renderCheckin();
   }
   function ckAlerta(pk,txt){
     const pt=ckRascunho.pontos[pk]||{alterado:true};
@@ -11317,6 +11480,69 @@
   function ckSetTexto(campo,v){ if(!ckRascunho) return; ckRascunho[campo]=v; }
   // A foto é a prova. Comprimida para 640px: o app já apanhou de foto pesada antes.
   // Machucado, ferida, corte, arranhão: o que precisa de DUAS fotos e da parte do corpo.
+  // ---- Fotos extras: quantas forem necessárias, em qualquer ponto ----
+  function ckFotoExtra(pk,input){
+    const f=input&&input.files&&input.files[0]; if(!f) return;
+    const fr=new FileReader();
+    fr.onload=function(e){
+      const img=new Image();
+      img.onload=function(){
+        const max=640, esc=Math.min(1,max/Math.max(img.width,img.height));
+        const c=document.createElement('canvas'); c.width=Math.round(img.width*esc); c.height=Math.round(img.height*esc);
+        c.getContext('2d').drawImage(img,0,0,c.width,c.height);
+        const pt=ckRascunho.pontos[pk]||{alterado:true};
+        pt.extras=Array.isArray(pt.extras)?pt.extras:[];
+        pt.extras.push(c.toDataURL('image/jpeg',0.72));
+        ckRascunho.pontos[pk]=pt; renderCheckin();
+      };
+      img.src=e.target.result;
+    };
+    fr.readAsDataURL(f);
+  }
+  function ckDelExtra(pk,i){ if(!ckRascunho) return; var pt=ckRascunho.pontos[pk]||{}; (pt.extras||[]).splice(i,1); ckRascunho.pontos[pk]=pt; renderCheckin(); }
+  function ckFotosExtraHTML(pt,at){
+    var ex=Array.isArray(at.extras)?at.extras:[];
+    return '<div class="ck-extras">'
+      +ex.map(function(src,i){ return '<div class="ex-item"><img src="'+src+'" alt=""><button type="button" onclick="ckDelExtra(\''+pt.k+'\','+i+')">&times;</button></div>'; }).join('')
+      +'<label class="ex-add">+ outra foto<input type="file" accept="image/*" capture="environment" style="display:none" onchange="ckFotoExtra(\''+pt.k+'\',this)"></label>'
+      +'</div>';
+  }
+  // ---- Para quem esta alteração vai ----
+  const CK_DESTINOS=[
+    {k:'tutor', t:'Tutor'},
+    {k:'vet_zeluz', t:'Veterinária da Zêluz'},
+    {k:'vet_externo', t:'Veterinário externo'}
+  ];
+  function ckDestino(pk,d){
+    if(!ckRascunho) return;
+    var pt=ckRascunho.pontos[pk]||{alterado:true};
+    pt.destinos=Array.isArray(pt.destinos)?pt.destinos:[];
+    var i=pt.destinos.indexOf(d);
+    if(i>=0) pt.destinos.splice(i,1); else pt.destinos.push(d);
+    ckRascunho.pontos[pk]=pt; renderCheckin();
+  }
+  function ckDestinoHTML(pt,at){
+    var d=Array.isArray(at.destinos)?at.destinos:[];
+    return '<div style="margin-top:9px"><div style="font-size:12.5px;font-weight:800;color:var(--z-blue);margin-bottom:5px">Quem precisa ver isto?</div>'
+      +'<div class="ck-alertas">'+CK_DESTINOS.map(function(x){
+          return '<button type="button" class="ck-chip'+(d.indexOf(x.k)>=0?' on':'')+'" onclick="ckDestino(\''+pt.k+'\',\''+x.k+'\')">'+x.t+'</button>'; }).join('')+'</div></div>';
+  }
+  // ---- Ligar ou não ligar: a decisão fica registrada ----
+  function ckLigarHTML(pt,at){
+    if(at.ligou==='sim') return '<div class="ck-ligar" style="border-color:var(--crm-ok);background:rgba(39,174,96,.09)">'
+      +'<div class="lg-q" style="color:var(--crm-ok)">Supervisor avisado por telefone.</div>'
+      +'<div style="font-size:12.5px;color:var(--z-blue-soft)">Registrado no nome de '+escAttr(at.ligou_quem||'-')+'.</div>'
+      +'<button type="button" class="btn" style="margin-top:7px;padding:5px 11px;font-size:12px;background:var(--z-cream-warm);color:var(--z-blue);border:1.5px solid var(--line)" onclick="ckLigou(\''+pt.k+'\',\'\')">desfazer</button></div>';
+    if(at.ligou==='nao') return '<div class="ck-ligar" style="border-color:var(--line);background:var(--z-cream-warm)">'
+      +'<div class="lg-q" style="color:var(--z-blue)">Você decidiu que não precisa ligar.</div>'
+      +'<div style="font-size:12.5px;color:var(--z-blue-soft)">Fica registrado no seu nome. Se piorar, ligue.</div>'
+      +'<button type="button" class="btn" style="margin-top:7px;padding:5px 11px;font-size:12px;background:var(--z-cream-warm);color:var(--z-blue);border:1.5px solid var(--line)" onclick="ckLigou(\''+pt.k+'\',\'\')">mudei de ideia</button></div>';
+    return '<div class="ck-ligar"><div class="lg-q">Precisa ligar para o supervisor agora?</div>'
+      +'<div class="lg-b">'
+      +'<button type="button" class="ck-b bad" onclick="ckLigou(\''+pt.k+'\',\'sim\')">Liguei agora</button>'
+      +'<button type="button" class="ck-b neu" onclick="ckLigou(\''+pt.k+'\',\'nao\')">Não precisa</button>'
+      +'</div><div style="font-size:12px;color:var(--z-blue-soft);margin-top:6px">Na dúvida, ligue. Nunca vai sobrar ligação por causa de um FILHOt.</div></div>';
+  }
   function ckEhMachucado(at){
     var a=(at&&at.alertas)||[];
     return a.some(function(x){ return /machuc|ferid|corte|arranh|lesão|lesao|inchaç|inchac/i.test(String(x)); });
@@ -11442,9 +11668,13 @@
         +'<div class="ck-ph"><span class="ck-num">'+(i+1)+'</span><div><div class="ck-pt">'+pt.t+'</div><div class="ck-ver">'+pt.ver+'</div></div></div>'
         // COMO olhar — o passo a passo fica junto da pergunta, não escondido num manual.
         +(pt.como?'<div class="ck-como">'+pt.como+'</div>':'')
-        +'<div class="ck-btns">'
-          +'<button type="button" class="ck-b ok'+(marc&&!at.alterado?' on':'')+'" onclick="ckMarcar(\''+pt.k+'\',false)">Normal</button>'
+        // "Não vi" e "Não fez" existem só onde fazem sentido (xixi, cocô, vômito): com dois
+        // irmãos no mesmo espaço, obrigar a escolher "fez" ou "não fez" força a inventar.
+        +'<div class="ck-btns'+((pt.naoVi||pt.naoFez)?' quatro':'')+'">'
+          +'<button type="button" class="ck-b ok'+(marc&&!at.alterado&&!at.semDado?' on':'')+'" onclick="ckMarcar(\''+pt.k+'\',false)">Normal</button>'
           +'<button type="button" class="ck-b bad'+(at.alterado?' on':'')+'" onclick="ckMarcar(\''+pt.k+'\',true)">Alterado</button>'
+          +(pt.naoVi?'<button type="button" class="ck-b neu'+(at.semDado==='naovi'?' on':'')+'" onclick="ckSemDado(\''+pt.k+'\',\'naovi\')">Não vi</button>':'')
+          +(pt.naoFez?'<button type="button" class="ck-b neu'+(at.semDado==='naofez'?' on':'')+'" onclick="ckSemDado(\''+pt.k+'\',\'naofez\')">Não fez</button>':'')
         +'</div>';
       if(at.alterado){
         h+='<div class="ck-alertas">'+pt.alertas.map(function(a){
@@ -11484,12 +11714,25 @@
               +(at.foto?'<img src="'+at.foto+'" alt="">':'<div class="ck-foto-falta">Foto obrigatória</div>')
               +'<label class="btn btn-gold" style="padding:9px 14px;font-size:13px;cursor:pointer">'+(at.foto?'Trocar foto':'Tirar foto')
                 +'<input type="file" accept="image/*" capture="environment" style="display:none" onchange="ckFoto(\''+pt.k+'\',this)"></label>'
-            +'</div>');
+            +'</div>')
+        // Fotos EXTRAS: qualquer ponto pode ter mais de um ângulo. E cada alteração diz
+        // PARA QUEM vai — tutor, veterinária da Zêluz ou veterinário externo (Adriana).
+        +ckFotosExtraHTML(pt,at)
+        +ckDestinoHTML(pt,at)
+        // Nem toda alteração é ligação — mas toda alteração exige a DECISÃO registrada.
+        +ckLigarHTML(pt,at);
       }
       h+='</div>';
     });
     if(entrada){
-      h+='<div class="ck-bloco"><div class="ck-bt">Coleira repelente</div>'
+      // O cocô vem ANTES das coleiras (Adriana, 13/ago/2026): é o que pode virar urgência.
+      h+='<div class="ck-bloco"><div class="ck-bt">Fez cocô?</div>'
+        +'<div class="ck-hint">Esperamos de 10 a 15 minutos para ele fazer. Diarreia, sangue, aspecto estranho ou objeto no cocô: o protocolo aparece aqui na hora — siga na ordem.</div>'
+        +'<div class="ck-opts">'+CK_COCO.map(function(c){
+          return '<button type="button" class="ck-opt'+(R.coco===c.k?' on':'')+(c.grave?' grave':'')+'" onclick="ckSet(\'coco\',\''+c.k+'\')">'+c.t+'</button>'; }).join('')+'</div>'
+        +ckProtocoloCocoHTML(R.coco)
+        +'</div>'
+      +'<div class="ck-bloco"><div class="ck-bt">Coleira repelente</div>'
         +'<div class="ck-opts">'+CK_COLEIRAS.map(function(c){
           return '<button type="button" class="ck-opt'+(R.coleiraRep===c.k?' on':'')+'" onclick="ckSet(\'coleiraRep\',\''+c.k+'\')">'+c.t
             +(c.sub?'<small>'+c.sub+'</small>':'')+'</button>'; }).join('')+'</div></div>'
@@ -11508,17 +11751,11 @@
             +'<div><label class="cad-lb">Marca / detalhe</label><input class="cad-in" placeholder="Ex: Zêluz, com plaquinha" value="'+escAttr(R.coleiraIdMarca||'')+'" oninput="ckSetTexto(\'coleiraIdMarca\',this.value)"></div>'
             +'</div>'
           : '')
-        +'</div>'
-      +'<div class="ck-bloco"><div class="ck-bt">Fez cocô?</div>'
-        +'<div class="ck-hint">Esperamos de 10 a 15 minutos para ele fazer. Diarreia, sangue, aspecto estranho ou objeto no cocô: o protocolo aparece aqui na hora — siga na ordem.</div>'
-        +'<div class="ck-opts">'+CK_COCO.map(function(c){
-          return '<button type="button" class="ck-opt'+(R.coco===c.k?' on':'')+(c.grave?' grave':'')+'" onclick="ckSet(\'coco\',\''+c.k+'\')">'+c.t+'</button>'; }).join('')+'</div>'
-        +ckProtocoloCocoHTML(R.coco)
         +'</div>';
     }
     if(alterados.length){
       h+='<div class="dc-meia"><strong>Você marcou '+alterados.length+' alteração'+(alterados.length>1?'ões':'')+'.</strong> '
-        +'O protocolo pede: achou uma, confira se não há outra. Passe os olhos nos demais pontos antes de salvar.</div>';
+        +'O protocolo pede: achou uma, confira se não há outra. <strong>Reveja com atenção os demais tópicos antes de salvar.</strong></div>';
     }
     h+='<div class="ck-criticos"><strong>A qualquer momento, avise o supervisor na hora:</strong> '+CK_CRITICOS.join(' · ')+'.</div>';
     h+='<div class="ck-salvar"><span class="ck-progress">'+marcados+' de '+pontos.length+' pontos olhados</span>'
@@ -12614,6 +12851,28 @@
         +'<button class="btn btn-gold" onclick="'+r.fn+'">Baixar Excel</button></div>';
     }).join('');
   }
+  // ===== A EXCEÇÃO DE HOJE, SEM MEXER NA FICHA (Adriana, 13/ago/2026) ===============
+  // "Se ele esqueceu, não é mais o que foi cadastrado na ficha: hoje será Livelong meia lata
+  //  e não a ração habitual. Qual a solução para isso?"
+  // A ficha continua sendo a verdade permanente. O que muda é SÓ HOJE — então a exceção vive
+  // no dia, gravada pela Recepção ao responder, e aparece EM CIMA da alimentação normal na
+  // hora de servir. Amanhã ela some sozinha e a ficha volta a valer.
+  var ALM_EXCECOES={};
+  function almEscutarExcecoes(){
+    if(!DB) return;
+    try{
+      DB.ref('daycare/almoco-excecao/'+dcDataKey()).on('value',function(s){
+        ALM_EXCECOES=s.val()||{};
+        try{ if(dcAtiv==='almoco'||dcAtiv==='almoco2') renderAlmoco(); }catch(e){}
+      });
+    }catch(e){}
+  }
+  function almExcecaoHTML(k){
+    var e=ALM_EXCECOES[k]; if(!e||!e.oque) return '';
+    return '<div class="alm-excecao"><div class="ax-tit">SÓ HOJE — autorizado pelo tutor</div>'
+      +'<div class="ax-o">'+escAttr(e.oque)+(e.quanto?(' · <strong>'+escAttr(e.quanto)+'</strong>'):'')+'</div>'
+      +'<div class="ax-q">Liberado por '+escAttr(e.quem||'Recepção')+'. A ficha dele continua como está — isto vale só para hoje.</div></div>';
+  }
   function renderAlmoco(){
     if(!document.getElementById('almGrid')) return;
     // Quem "não almoça" FICA na grade (Adriana, 04/ago/2026): "por mais que não almocem,
@@ -12680,7 +12939,7 @@
         <div ${typeof o.i==='number'?`onclick="abrirPeludinhoDay(${o.i})" style="cursor:pointer"`:''}>
           ${ph}<div class="nm">${nomeDesamb(o,list)}</div><div class="br">${p.raca||'-'}</div>
         </div>
-        ${seloBanho(k)}${seloAnsioso(p,temBanho(k))}${o.daPlanilha?seloPlanilha(o):(o.foraDia?seloForaDia(o):seloAdapt(ex))}${neon}${info}${avisoNaoAlm}
+        ${seloBanho(k)}${seloAnsioso(p,temBanho(k))}${o.daPlanilha?seloPlanilha(o):(o.foraDia?seloForaDia(o):seloAdapt(ex))}${neon}${info}${avisoNaoAlm}${almExcecaoHTML(k)}
         <div class="alm-actions">
           <div class="alm-seg">
             <button class="alm-btn tudo ${m==='tudo'?'on':''}" onclick="marcarAlmoco('${k}','tudo')">Comeu</button>
