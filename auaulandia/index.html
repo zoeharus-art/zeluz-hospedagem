@@ -376,6 +376,11 @@
   .ck-pt{font-size:15.5px;font-weight:800;color:var(--z-blue);letter-spacing:-.015em}
   .ck-ver{font-size:13.5px;font-weight:700;color:var(--z-blue);margin-top:1px}
   .ck-como{font-size:13px;line-height:1.55;color:var(--z-blue-soft);background:var(--z-cream-warm);border-left:3px solid var(--z-gold);border-radius:9px;padding:9px 11px;margin:8px 0 2px}
+  /* O cartão que fala com quem está ali — não é enfeite, é o lembrete do porquê */
+  .ck-cartao{background:linear-gradient(135deg,var(--z-blue) 0%,#1b3c52 100%);border-radius:16px;padding:16px 18px;margin:12px 0;box-shadow:0 4px 14px rgba(35,77,103,.22)}
+  .ck-cartao-oi{font-family:var(--font-marca),Poppins,sans-serif;font-size:15px;font-weight:700;color:var(--z-gold);letter-spacing:.01em;margin-bottom:6px}
+  .ck-cartao-frase{font-size:17px;line-height:1.45;font-weight:700;color:#FFFDF6}
+  @media(max-width:520px){ .ck-cartao-frase{font-size:15.5px} }
   .ck-btns{display:flex;gap:8px}
   .ck-b{flex:1;padding:13px 10px;border-radius:11px;border:1.5px solid var(--line);background:#fff;
     font-family:inherit;font-size:14.5px;font-weight:800;color:var(--muted);cursor:pointer}
@@ -1113,6 +1118,21 @@
   .ck-proto-corpo ol{margin:0;padding-left:20px}
   .ck-proto-corpo li{font-size:13.5px;color:var(--z-blue);margin-bottom:7px;line-height:1.5}
   .ck-proto-rod{margin-top:8px;font-size:13px;color:var(--z-blue-soft);border-top:1px dashed var(--z-gold);padding-top:8px}
+  .ck-proto-porque{background:#fff;border-radius:11px;padding:11px 13px;margin-bottom:11px;font-size:13.5px;line-height:1.55;color:var(--z-blue);border-left:4px solid var(--z-blue)}
+  /* Protocolo do cocô — aparece na hora em que marca, com cara de urgência */
+  .ck-coco-proto{margin-top:10px;border:2.5px solid var(--crm-critico);background:rgba(192,57,43,.07);border-radius:13px;padding:13px 15px}
+  .ck-coco-proto .cp-tit{font-weight:800;color:var(--crm-critico);font-size:15px;margin-bottom:8px;letter-spacing:.02em}
+  .ck-coco-proto ol{margin:0;padding-left:20px}
+  .ck-coco-proto li{font-size:13.5px;line-height:1.5;color:var(--z-blue);margin-bottom:6px}
+  .ck-coco-proto .cp-rod{margin-top:8px;padding-top:7px;border-top:1px dashed var(--crm-critico);font-size:12.5px;color:var(--z-blue-soft)}
+  .ck-proto-destaque{margin-top:10px;background:var(--z-blue);color:#FFFDF6;border-radius:11px;padding:12px 14px;font-size:14.5px;font-weight:700;line-height:1.45;text-align:center}
+  /* Machucado: as duas fotos, lado a lado */
+  .ck-foto2{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px}
+  .ck-foto2 .cx{border:1.5px dashed var(--line);border-radius:11px;padding:9px;text-align:center}
+  .ck-foto2 .cx.ok{border-style:solid;border-color:var(--crm-ok)}
+  .ck-foto2 .cx img{width:100%;max-width:110px;height:88px;object-fit:cover;border-radius:9px;display:block;margin:0 auto 6px}
+  .ck-foto2 .cx .lb{font-size:12px;font-weight:800;color:var(--z-blue);margin-bottom:5px}
+  .ck-foto2 .cx .dc{font-size:11.5px;color:var(--muted);margin-bottom:6px;line-height:1.35}
   .orc-temp{display:grid;grid-template-columns:1fr 1fr;gap:10px}
   @media(max-width:520px){ .orc-temp{grid-template-columns:1fr} }
   .orc-temp button{text-align:left;background:var(--z-cream-warm);border:2px solid var(--line);border-radius:13px;padding:13px 15px;cursor:pointer;font-family:inherit;color:var(--z-blue)}
@@ -2800,9 +2820,9 @@
       <div id="orcTipoNota" class="hint"></div>
       <input class="cad-in" id="orcBusca" style="margin-top:10px" placeholder="Nome do peludinho…" autocomplete="off" oninput="orcBuscar(this.value)">
       <div id="orcSug"></div>
-      <div id="orcAvulsoBox" style="display:none;margin-top:10px;border:1.5px dashed var(--line);border-radius:12px;padding:12px 14px">
-        <div class="ff-tit">Não está no cadastro? Escreva aqui</div>
-        <div class="hint">Dá para orçar sem cadastro. O cadastro completo fica para quando ele fechar.</div>
+      <div id="orcAvulsoBox" style="display:none;margin-top:12px;border:2.5px solid var(--z-gold);background:rgba(222,180,40,.12);border-radius:14px;padding:14px 16px">
+        <div style="font-weight:800;color:var(--z-blue);font-size:16px;margin-bottom:2px">Nunca hospedou? Escreva aqui!</div>
+        <div class="hint">Dá para fazer o orçamento sem cadastro nenhum. O cadastro completo fica para quando ele fechar.</div>
         <div class="cad-grid2" style="margin-top:8px">
           <div><label class="cad-lb">Nome do peludinho</label><input class="cad-in" id="orcAvNome" placeholder="Ex: Thor"></div>
           <div><label class="cad-lb">Nome do tutor</label><input class="cad-in" id="orcAvTutor" placeholder="Ex: Renata"></div>
@@ -2820,10 +2840,13 @@
 
     <div class="card">
       <h2 style="font-size:19px">Período</h2>
+      <!-- Data SÓ pelo calendário (Adriana, 13/ago/2026): digitar é onde nasce o erro de ano
+           e de mês. O campo abre o calendário ao toque e não aceita digitação. -->
       <div class="cad-grid2">
-        <div><label class="cad-lb">Entrada</label><input class="cad-in" type="date" id="orcEntrada" onchange="orcCalcular()"></div>
-        <div><label class="cad-lb">Saída</label><input class="cad-in" type="date" id="orcSaida" onchange="orcCalcular()"></div>
+        <div><label class="cad-lb">Entrada</label><input class="cad-in" type="date" id="orcEntrada" readonly onfocus="orcAbrirCalendario(this)" onclick="orcAbrirCalendario(this)" onchange="orcCalcular()"></div>
+        <div><label class="cad-lb">Saída</label><input class="cad-in" type="date" id="orcSaida" readonly onfocus="orcAbrirCalendario(this)" onclick="orcAbrirCalendario(this)" onchange="orcCalcular()"></div>
       </div>
+      <div class="hint" style="margin-top:6px">Toque no campo e escolha no calendário — não dá para digitar, é assim que o ano errado não passa.</div>
       <div id="orcAvisoData"></div>
       <div style="margin-top:14px">
         <label class="cad-lb">Temporada</label>
@@ -6218,6 +6241,14 @@
   function orcBR(iso){ if(!iso) return '—'; var x=iso.split('-'); return x[2]+'/'+x[1]+'/'+x[0]; }
   // Empurra para o próximo dia em que a loja abre (domingo e feriado não entregam).
   function orcProximoAberto(iso){ var d=iso, guarda=0; while(orcFechado(d)&&guarda<20){ d=orcMaisDias(d,1); guarda++; } return d; }
+  // Para a ENTRADA: se o dia está fechado, ele precisa chegar ANTES — anda para trás.
+  function orcAnteriorAberto(iso){ var d=iso, guarda=0; while(orcFechado(d)&&guarda<20){ d=orcMaisDias(d,-1); guarda++; } return d; }
+  // Os feriados que caem DENTRO da estadia — viram um aviso gentil na mensagem ao tutor.
+  function orcFeriadosNoPeriodo(ini,fim){
+    var out=[], d=ini, g=0;
+    while(d<=fim&&g<400){ var f=orcEhFeriado(d); if(f) out.push({iso:d, nome:f}); d=orcMaisDias(d,1); g++; }
+    return out;
+  }
 
   // ===== AULUNO OU NÃO (Adriana, 13/ago/2026) =======================================
   // Quem é auluno do Day Care tem o desconto do plano na diária, e as noites que caem nos
@@ -6233,6 +6264,10 @@
     var b=document.getElementById('orcBusca'); if(b) b.value='';
     var s=document.getElementById('orcSug'); if(s) s.innerHTML='';
     orcRenderTipo(); orcCalcular();
+  }
+  // O campo é readonly para ninguém digitar, mas o calendário precisa abrir mesmo assim.
+  function orcAbrirCalendario(el){
+    try{ if(el.showPicker) el.showPicker(); }catch(e){}
   }
   function orcRenderTipo(){
     var el=document.getElementById('orcTipoCliente'); if(!el) return;
@@ -6253,9 +6288,25 @@
     var m=document.getElementById('orcAvSexoM'), f=document.getElementById('orcAvSexoF');
     if(m) m.className=(s==='Macho')?'on':''; if(f) f.className=(s==='Fêmea')?'on':'';
   }
+  // ===== NOME PRÓPRIO SE ESCREVE COM MAIÚSCULA (Adriana, 13/ago/2026) ===============
+  // "Digitei renata — sempre colocar o R maiúsculo." Quem digita com pressa no balcão escreve
+  // minúsculo, e o nome sai assim na mensagem para o tutor. O sistema arruma: cada palavra
+  // ganha a primeira letra maiúscula. As partículas ficam minúsculas ("Maria da Silva"), e
+  // quem escreve TUDO EM CAIXA ALTA também é corrigido.
+  var ORC_PARTICULAS=['da','de','do','das','dos','e','di','du','del','della','van','von','y'];
+  function nomeProprio(s){
+    s=String(s||'').trim().replace(/\s+/g,' ');
+    if(!s) return '';
+    return s.split(' ').map(function(p,i){
+      var b=p.toLocaleLowerCase('pt-BR');
+      if(i>0&&ORC_PARTICULAS.indexOf(b)>=0) return b;                 // "Maria da Silva"
+      if(/^[dol]'/.test(b)) return b[0]+"'"+b.slice(2,3).toLocaleUpperCase('pt-BR')+b.slice(3); // D'Ávila
+      return b.charAt(0).toLocaleUpperCase('pt-BR')+b.slice(1);
+    }).join(' ');
+  }
   function orcAddAvulso(){
-    var n=((document.getElementById('orcAvNome')||{}).value||'').trim();
-    var t=((document.getElementById('orcAvTutor')||{}).value||'').trim();
+    var n=nomeProprio(((document.getElementById('orcAvNome')||{}).value||''));
+    var t=nomeProprio(((document.getElementById('orcAvTutor')||{}).value||''));
     if(!n||!t){ alert('Escreva o nome do peludinho e o nome do tutor.'); return; }
     var key='avulso__'+jsNorm(n)+'__'+jsNorm(t);
     if(ORC_SEL.some(function(s){ return s.key===key; })){ alert('Ele já está neste orçamento.'); return; }
@@ -6266,14 +6317,24 @@
     orcRenderSel(); orcCalcular();
   }
   var ORC_SEL=[];   // [{key,nome,tutor,dias:[],planoKey,hospOff}]
+  // ===== SEM PLANO ATIVO NÃO É AULUNO (Adriana, 13/ago/2026) ========================
+  // "Escolhi o Hulk, sem plano de Day Care, e ele apareceu vindo quarta e sexta. Se o Hulk
+  //  está sem plano, ele não está no Day Care."
+  // Os dias na ficha são a MEMÓRIA de quando ele tinha plano — não valem mais quando o plano
+  // venceu. Sem plano ativo: sem desconto e sem pernoite (toda noite é diária de hotel).
   function orcPlanoDoPet(p){
     try{
       var ex=(typeof pelExtra==='function')?pelExtra(p):{};
+      var st=(typeof statusRenov==='function')?statusRenov(ex):null;
+      var ativo=!!(st&&(st.estado==='ok'||st.estado==='vence'));
       var key=((typeof renovDe==='function'?renovDe(ex):null)||{}).plano||'';
       var cfg=(typeof planos==='function')?planos()[key]:null;
-      if(cfg) return {planoKey:key, rotulo:cfg.rotulo||key, compromisso:cfg.compromisso||'', hospOff:(cfg.hospOff||0)};
+      if(cfg&&ativo) return {planoKey:key, rotulo:cfg.rotulo||key, compromisso:cfg.compromisso||'', hospOff:(cfg.hospOff||0), ativo:true};
+      // Tem plano cadastrado, mas venceu (ou nunca começou): a tela DIZ isso, em vez de
+      // aplicar um desconto que a Zêluz não deve mais.
+      if(cfg&&!ativo) return {planoKey:'', rotulo:'plano '+(cfg.rotulo||key)+' — '+((st&&st.label)||'sem plano ativo'), compromisso:'', hospOff:0, ativo:false, vencido:true};
     }catch(e){}
-    return {planoKey:'', rotulo:'sem plano', compromisso:'', hospOff:0};
+    return {planoKey:'', rotulo:'sem plano ativo', compromisso:'', hospOff:0, ativo:false};
   }
   function orcBuscar(termo){
     var el=document.getElementById('orcSug'); if(!el) return;
@@ -6294,11 +6355,14 @@
     if(ORC_SEL.some(function(s){ return s.key===key; })) return;
     var pl=orcPlanoDoPet(p);
     // Não-auluno não usa plano nem dias, mesmo que exista cadastro antigo com plano vencido.
-    ORC_SEL.push(ORC_AULUNO
+    // Sem plano ATIVO os dias não valem: quem não tem plano não vem ao Day Care, então não
+    // existe pernoite para ele — toda noite é diária.
+    ORC_SEL.push((ORC_AULUNO&&pl.ativo)
       ? {key:key, nome:p.n||'', tutor:p.tutor||'', dias:((typeof pelDias==='function')?pelDias(p):[])||[],
          planoKey:pl.planoKey, rotulo:pl.rotulo, compromisso:pl.compromisso, hospOff:pl.hospOff}
-      : {key:key, nome:p.n||'', tutor:p.tutor||'', dias:[], planoKey:'', rotulo:'não é auluno',
-         compromisso:'', hospOff:0});
+      : {key:key, nome:p.n||'', tutor:p.tutor||'', dias:[], planoKey:'',
+         rotulo:(ORC_AULUNO?pl.rotulo:'não é auluno'), compromisso:'', hospOff:0,
+         semPlano:ORC_AULUNO&&!pl.ativo});
     var b=document.getElementById('orcBusca'); if(b) b.value='';
     var s=document.getElementById('orcSug'); if(s) s.innerHTML='';
     orcRenderSel(); orcCalcular();
@@ -6308,10 +6372,11 @@
     var el=document.getElementById('orcSelecionados'); if(!el) return;
     if(!ORC_SEL.length){ el.innerHTML='<div class="hint">Nenhum FILHOt escolhido ainda.</div>'; return; }
     el.innerHTML=ORC_SEL.map(function(s,i){
-      var dias=(s.dias||[]).length?(s.dias.map(function(d){ return ORC_DIAW_LB[d]||d; }).join(', ')):'sem dias fixos — todas as noites contam como diária';
+      var dias=(s.dias||[]).length?('vem '+s.dias.map(function(d){ return ORC_DIAW_LB[d]||d; }).join(', ')):'sem dias no Day Care — todas as noites são diária';
       var ord=(i===0?'1º FILHOt':(i+1)+'º FILHOt');
+      var aviso=s.semPlano?'<div style="font-size:12.5px;color:var(--crm-critico);font-weight:700;margin-top:2px">Sem plano ativo: sem desconto e sem pernoite. Se ele renovou, atualize a ficha antes de orçar.</div>':'';
       return '<div class="orc-pet"><div><strong>'+escAttr(s.nome)+'</strong> <span style="color:var(--muted);font-size:12px">'+escAttr(ord)+'</span>'
-        +'<div style="font-size:12.5px;color:var(--z-blue-soft)">'+escAttr(s.rotulo)+(s.compromisso?(' · '+escAttr(s.compromisso)):'')+' · vem '+escAttr(dias)+'</div></div>'
+        +'<div style="font-size:12.5px;color:var(--z-blue-soft)">'+escAttr(s.rotulo)+(s.compromisso?(' · '+escAttr(s.compromisso)):'')+' · '+escAttr(dias)+'</div>'+aviso+'</div>'
         +'<button class="x" title="tirar" onclick="orcRemover(\''+escAttr(s.key)+'\')">&times;</button></div>';
     }).join('');
   }
@@ -6348,10 +6413,14 @@
     ORC_CALC=null;
     if(!ORC_SEL.length||!ent||!sai){ if(cardR) cardR.style.display='none'; if(cardM) cardM.style.display='none'; return; }
     // Domingo e feriado não entregam: a saída anda para o próximo dia aberto, e a tela DIZ isso.
-    var saiReal=orcProximoAberto(sai), avisos=[];
-    if(saiReal!==sai) avisos.push('A saída em '+orcBR(sai)+' cai em <strong>'+(orcFechado(sai)==='domingo'?'domingo':('feriado — '+orcFechado(sai)))+'</strong> e nós não entregamos. Passou para <strong>'+orcBR(saiReal)+' ('+ORC_DIAW_LB[orcDiaSemana(saiReal)]+')</strong> — as noites a mais já estão na conta.');
+    // Domingo e feriado a casa não abre: não entrega E NÃO RECEBE (Adriana, 13/ago/2026).
+    // A entrada ANTECIPA para o último dia aberto antes; a saída ADIA para o próximo depois.
+    // Quem entra 07/09 (feriado) na verdade entra 06/09 — e paga essa noite a mais.
+    var entReal=orcAnteriorAberto(ent), saiReal=orcProximoAberto(sai), avisos=[];
     var fechEnt=orcFechado(ent);
-    if(fechEnt) avisos.push('Atenção: a entrada em '+orcBR(ent)+' cai em <strong>'+(fechEnt==='domingo'?'domingo':('feriado — '+fechEnt))+'</strong>. Confirme com a Gestão se dá para receber nesse dia.');
+    if(entReal!==ent) avisos.push('A entrada em '+orcBR(ent)+' cai em <strong>'+(fechEnt==='domingo'?'domingo':('feriado — '+fechEnt))+'</strong> e a casa não abre para receber. Passou para <strong>'+orcBR(entReal)+' ('+ORC_DIAW_LB[orcDiaSemana(entReal)]+')</strong> — ele entra antes, e essa noite já está na conta.');
+    if(saiReal!==sai) avisos.push('A saída em '+orcBR(sai)+' cai em <strong>'+(orcFechado(sai)==='domingo'?'domingo':('feriado — '+orcFechado(sai)))+'</strong> e nós não entregamos. Passou para <strong>'+orcBR(saiReal)+' ('+ORC_DIAW_LB[orcDiaSemana(saiReal)]+')</strong> — as noites a mais já estão na conta.');
+    ent=entReal;
     // ===== DATA QUE JÁ PASSOU NÃO É ORÇAMENTO (Adriana, 13/ago/2026) ================
     // "Digitei 13/06/2026 — essa data já passou, o sistema não pode aceitar." Orçamento é
     // sempre para frente: não dá para reservar ontem. O calendário já não deixa escolher
@@ -6443,8 +6512,8 @@
   function orcRenderMsg(){
     var el=document.getElementById('orcMsg'); if(!el||!ORC_CALC) return;
     var C=ORC_CALC;
-    var tutor=(typeof primeiroNome==='function')?primeiroNome(C.pets[0]&&C.pets[0].sel.tutor||''):((C.pets[0]&&C.pets[0].sel.tutor)||'');
-    var nomes=C.pets.map(function(p){ return p.sel.nome; }).join(' e ');
+    var tutor=nomeProprio((typeof primeiroNome==='function')?primeiroNome(C.pets[0]&&C.pets[0].sel.tutor||''):((C.pets[0]&&C.pets[0].sel.tutor)||''));
+    var nomes=C.pets.map(function(p){ return nomeProprio(p.sel.nome); }).join(' e ');
     var um=(C.pets.length===1);
     var ele=um?(orcEhFemea(C.pets[0].sel)?'ela':'ele'):'eles';
     var L=[];
@@ -6466,6 +6535,14 @@
       else L.push('Já com o desconto de '+descs.map(function(p){ return p.off+'% '+orcArtigoDe(p.sel)+' '+p.sel.nome; }).join(' e ')+'.');
     }
     L.push('Forma de pagamento: '+fmtCent(C.p1)+' na reserva da data e '+fmtCent(C.p2)+' no dia da hospedagem.');
+    // Feriado dentro da estadia: o tutor precisa saber ANTES de fechar, sem susto na saída.
+    var fer=orcFeriadosNoPeriodo(C.entrada,C.saida);
+    if(fer.length){
+      L.push('');
+      L.push('Um detalhe importante: '+(fer.length===1?'o dia ':'os dias ')
+        +fer.map(function(f){ return orcBR(f.iso)+' ('+f.nome+')'; }).join(' e ')
+        +(fer.length===1?' é feriado':' são feriados')+' e a AuAulândia não faz entrada nem saída nesses dias. Por isso as datas acima já estão ajustadas — assim '+(um?'ele fica':'eles ficam')+' bem acomodad'+(um?(orcEhFemea(C.pets[0].sel)?'a':'o'):'os')+' e ninguém precisa correr.');
+    }
     L.push('');
     L.push('Podemos confirmar a Colônia de Férias '+orcPequeno(C.pets,true)+'?');
     L.push('Temos certeza de que '+ele+' e os aumiguinhos vão se divertir muito!');
@@ -10791,18 +10868,80 @@
     {k:'transparente', t:'Transparente', sub:'Leevre'}, {k:'branca', t:'Branca', sub:'Scalibor'},
     {k:'verde', t:'Verde'}
   ];
-  const CK_COCO=[{k:'nao', t:'Não fez'}, {k:'normal', t:'Normal'}, {k:'mole', t:'Mole'}, {k:'diarreia', t:'DIARREIA', grave:1}];
+  // ===== O COCÔ QUE ACENDE O ALERTA (Adriana, 13/ago/2026) ==========================
+  // "Diarreia, cocô com sangue, aspecto estranho, objeto estranho no cocô: precisa ser
+  //  fotografado e avisado imediatamente ao supervisor ou gestor POR TELEFONE. A área
+  //  precisa ser fechada e a desinfecção feita conforme o protocolo — é urgente, porque
+  //  pode infectar os outros."
+  const CK_COCO=[
+    {k:'nao', t:'Não fez'}, {k:'normal', t:'Normal'}, {k:'mole', t:'Mole'},
+    {k:'diarreia', t:'DIARREIA', grave:1},
+    {k:'sangue', t:'COM SANGUE', grave:1},
+    {k:'estranho', t:'ASPECTO ESTRANHO', grave:1},
+    {k:'objeto', t:'OBJETO ESTRANHO', grave:1}
+  ];
+  function ckCocoGrave(k){ return CK_COCO.some(function(c){ return c.k===k&&c.grave; }); }
+  // O protocolo aparece NA HORA em que ela marca — não adianta estar num manual.
+  // A desinfecção detalhada a Adriana vai passar; o que está aqui é o que ela já definiu.
+  function ckProtocoloCocoHTML(k){
+    if(!ckCocoGrave(k)) return '';
+    var titulo={diarreia:'DIARREIA', sangue:'COCÔ COM SANGUE', estranho:'COCÔ COM ASPECTO ESTRANHO', objeto:'OBJETO ESTRANHO NO COCÔ'}[k]||'ALERTA';
+    return '<div class="ck-coco-proto">'
+      +'<div class="cp-tit">'+titulo+' — pare e faça nesta ordem</div>'
+      +'<ol>'
+      +'<li><strong>Isole a área agora.</strong> Ninguém passa por ali até a desinfecção terminar. Pode contaminar os outros FILHOts.</li>'
+      +'<li><strong>Tire foto do cocô</strong> antes de recolher. É o que a veterinária vai olhar.</li>'
+      +'<li><strong>LIGUE</strong> para o seu supervisor direto ou para a Márcia. Ligação, não mensagem — e agora, não no fim do check-in.</li>'
+      +'<li><strong>Faça a desinfecção</strong> conforme o protocolo da casa e só depois libere a área.</li>'
+      +'<li><strong>Continue o check-in</strong> deste FILHOt e observe os outros do mesmo espaço.</li>'
+      +'</ol>'
+      +'<div class="cp-rod">Quem fala com o tutor é a Coordenação — você não precisa (nem deve) ligar para ele.</div>'
+      +'</div>';
+  }
   // O protocolo manda comunicar ao supervisor a QUALQUER momento — não só no check-in.
   const CK_CRITICOS=['Respiração alterada','Alteração da consciência','Inchaço','Tremores'];
-  // A monitora está cuidando de quem não sabe falar. A tela lembra disso (pedido da Adriana).
+  // ===== A FRASE FALA COM A PESSOA, PELO NOME (Adriana, 13/ago/2026) ================
+  // "A frase precisa de destaque e precisa conversar, estimular a pessoa que faz a atividade."
+  // Antes era uma linha cinza no meio da tela, que ninguém lia. Agora é um cartão com o NOME
+  // de quem está ali e a saudação da hora — e a frase vem do DNA da casa: os FILHOts em
+  // primeiro lugar, quem não fala depende de quem observa, cuidar é o verbo.
   const CK_FRASES=[
     'Ele não sabe dizer onde dói. Os seus olhos são a voz dele.',
+    'Olhar com calma é CUIDAR. Obrigada por fazer isso bem feito — os peludinhos agradecem primeiro.',
     'Dois minutos de atenção agora evitam um problema grande depois.',
-    'Você é a primeira pessoa a perceber. Por isso este momento existe.',
-    'O que você vir aqui, ninguém mais vai ver hoje.',
-    'Olhar com calma é cuidar. Obrigada por fazer isso bem feito.',
-    'Quem não fala depende de quem observa.'
+    'Você é a primeira pessoa a perceber. É por isso que este momento existe.',
+    'O que você vir aqui hoje, ninguém mais vai ver. Ele conta com você.',
+    'Aqui, cada cuidado é ÚNICO — e o cuidado dele começa neste minuto, com você.',
+    'Quem não fala depende de quem observa. Hoje, quem observa é você.',
+    'Ele confia em você sem saber explicar por quê. Retribua com atenção.'
   ];
+  const CK_FRASES_NOITE=[
+    'Boa noite. Enquanto a casa dorme, é o seu olhar que cuida deles.',
+    'A noite é quando eles mais sentem falta de casa. Você é o colo que ficou.',
+    'Ninguém dorme sozinho na AuAulândia — é isso que você garante hoje.',
+    'Aqui, cada cuidado é ÚNICO. À noite, esse cuidado tem o seu nome.',
+    'Eles não sabem que horas são: sabem que alguém ficou. Obrigada por ficar.'
+  ];
+  function ckSaudacao(){ var h=new Date().getHours();
+    if(h<12) return 'bom dia'; if(h<18) return 'boa tarde'; return 'boa noite'; }
+  // O primeiro nome de quem está logada — a frase chama a pessoa, não "o usuário".
+  function ckPrimeiroNome(){
+    try{
+      var q=(typeof quemSou==='function')?quemSou():'';
+      q=String(q||'').split('·')[0].trim();
+      var p=q.split(/\s+/)[0]||'';
+      return p?(p.charAt(0).toLocaleUpperCase('pt-BR')+p.slice(1)):'';
+    }catch(e){ return ''; }
+  }
+  function ckCartaoFrase(){
+    var noite=(new Date().getHours()>=18||new Date().getHours()<6);
+    var lista=noite?CK_FRASES_NOITE:CK_FRASES;
+    var frase=lista[Math.floor(Date.now()/3600000)%lista.length];
+    var nome=ckPrimeiroNome();
+    return '<div class="ck-cartao">'
+      +'<div class="ck-cartao-oi">'+(nome?escAttr(nome)+', ':'')+ckSaudacao()+'!</div>'
+      +'<div class="ck-cartao-frase">'+frase+'</div></div>';
+  }
   function ckEhEntrada(){ return dcAtiv==='checkin-corpo'; }
   function ckNo(){ return 'daycare/'+(ckEhEntrada()?'checkin':'checkout')+'-corpo/'+dcDataKey(); }
   var ckDados={}, ckAtual=null, ckRascunho=null, ckFrase='';
@@ -10850,8 +10989,8 @@
       +'<div class="dc-stat pend"><b>'+(lista.length-feitos)+'</b>'+(entrada?'faltam chegar':'faltam conferir')+'</div>'
       +(comAlerta?'<div class="dc-stat bad"><b>'+comAlerta+'</b>com alteração</div>':'')
       +'</div>'
+      +ckCartaoFrase()
       +ckProtocoloHTML(entrada)
-      +'<div class="ck-frase">'+ckFrase+'</div>'
       +(function(){
           // Quem ainda nao passou: antes das 12h e "a chegar"; depois disso o app ja marcou falta.
           if(!entrada || !ehHoje()) return '';
@@ -10905,8 +11044,15 @@
   // Campo de texto: grava SEM redesenhar — redesenhar a cada letra tira o foco de quem digita.
   function ckSetTexto(campo,v){ if(!ckRascunho) return; ckRascunho[campo]=v; }
   // A foto é a prova. Comprimida para 640px: o app já apanhou de foto pesada antes.
-  function ckFoto(pk,input){
+  // Machucado, ferida, corte, arranhão: o que precisa de DUAS fotos e da parte do corpo.
+  function ckEhMachucado(at){
+    var a=(at&&at.alertas)||[];
+    return a.some(function(x){ return /machuc|ferid|corte|arranh|lesão|lesao|inchaç|inchac/i.test(String(x)); });
+  }
+  function ckCampo(pk,campo,v){ if(!ckRascunho) return; var pt=ckRascunho.pontos[pk]||{alterado:true}; pt[campo]=v; ckRascunho.pontos[pk]=pt; }
+  function ckFoto(pk,input,campo){
     const f=input&&input.files&&input.files[0]; if(!f) return;
+    const alvo=campo||'foto';
     const fr=new FileReader();
     fr.onload=function(e){
       const img=new Image();
@@ -10915,10 +11061,31 @@
         const c=document.createElement('canvas'); c.width=Math.round(img.width*esc); c.height=Math.round(img.height*esc);
         c.getContext('2d').drawImage(img,0,0,c.width,c.height);
         const pt=ckRascunho.pontos[pk]||{alterado:true};
-        pt.foto=c.toDataURL('image/jpeg',0.72); pt.alterado=true;
+        pt[alvo]=c.toDataURL('image/jpeg',0.72); pt.alterado=true;
         ckRascunho.pontos[pk]=pt; renderCheckin();
       };
       img.src=e.target.result;
+    };
+    fr.readAsDataURL(f);
+  }
+  // ===== VÍDEO NA CONSCIÊNCIA (Adriana, 13/ago/2026) ================================
+  // "No caso da consciência, tem como gravar em vez de tirar foto?" A resposta dele ao VEM
+  // é movimento: andar torto, demorar, cambalear. Foto parada não mostra isso.
+  // O celular já grava; o app só GUARDA — e vídeo pesado mata o banco (o app já apanhou de
+  // foto grande). Por isso: teto de 8 MB e aviso claro de como gravar curto.
+  const CK_VIDEO_MAX_MB=8;
+  function ckVideo(pk,input){
+    const f=input&&input.files&&input.files[0]; if(!f) return;
+    const mb=f.size/1048576;
+    if(mb>CK_VIDEO_MAX_MB){
+      alert('Este vídeo tem '+mb.toFixed(1)+' MB e é grande demais para guardar ('+CK_VIDEO_MAX_MB+' MB é o limite).\n\nGrave de novo com 5 a 10 segundos — é o bastante para mostrar como ele respondeu ao VEM. Se o seu celular grava em 4K, mude para a qualidade normal (HD).');
+      input.value=''; return;
+    }
+    const fr=new FileReader();
+    fr.onload=function(e){
+      const pt=ckRascunho.pontos[pk]||{alterado:true};
+      pt.video=e.target.result; pt.alterado=true;
+      ckRascunho.pontos[pk]=pt; renderCheckin();
     };
     fr.readAsDataURL(f);
   }
@@ -10937,25 +11104,32 @@
   function ckProtocoloHTML(entrada){
     var passos=entrada
       ? ['<strong>Chame pelo nome com o comando VEM.</strong> Já testa a consciência dele e reforça a sua liderança. Não vá até ele: peça que venha.',
-         '<strong>Olhe ponto a ponto, na ordem da tela.</strong> Não existe "está tudo bem" num toque só — cada ponto precisa do seu olho.',
+         '<strong>Olhe ponto a ponto, na ordem da tela.</strong> Não existe "está tudo bem" num toque só — cada ponto precisa da sua atenção. ELE depende e confia no seu olhar atento.',
          '<strong>Leva cerca de 2 minutos.</strong> O exame demora o que tiver que demorar; o que é rápido é o registro: um toque por ponto quando está normal.',
          '<strong>Achou uma alteração? Confira as outras.</strong> Quem tem uma coisa costuma ter outra — o corpo avisa em mais de um lugar.',
-         '<strong>Toda alteração leva FOTO.</strong> É a foto que responde ao tutor depois. Sem ela, é a sua palavra contra a lembrança dele.',
-         '<strong>Avise a Coordenação na hora</strong> em qualquer anormalidade — não espere o fim do check-in.',
-         '<strong>Cocô:</strong> esperamos de 10 a 15 minutos na entrada. Diarreia é ligação para o tutor buscar.',
-         '<strong>Quem passa por aqui está presente.</strong> Não existe mais chamada separada. Quem não passar até as 12h entra como falta.']
+         '<strong>Toda alteração leva FOTO — e machucado leva DUAS:</strong> uma de perto, para ver como é, e uma de longe, para saber onde fica no corpo dele. E escreva a parte do corpo: "no dorso, perto da escápula", "na patinha dianteira".',
+         '<strong>LIGUE para a Coordenação na hora</strong> em qualquer anormalidade — não mande mensagem e não espere o fim do check-in. Ligue.',
+         '<strong>Cocô:</strong> esperamos de 10 a 15 minutos na entrada. Diarreia, sangue, aspecto estranho ou objeto estranho no cocô: <strong>foto + ligação imediata</strong> ao supervisor ou gestor, e a área é fechada e desinfetada.']
       : ['<strong>A pergunta agora é outra:</strong> aconteceu alguma coisa enquanto ele estava conosco?',
          '<strong>Compare com a entrada.</strong> A tela mostra o que foi visto de manhã — o que é novo apareceu aqui, com a gente.',
          '<strong>Olhe ponto a ponto de novo.</strong> O check-out é o que o tutor vai ver; nada pode passar.',
-         '<strong>Toda alteração leva FOTO</strong> e vai para a Coordenação antes de o tutor chegar.',
+         '<strong>Toda alteração leva FOTO</strong> (machucado, duas: perto e longe) e vai para a Coordenação antes de o tutor chegar.',
          '<strong>Achou uma, confira as outras.</strong>'];
     var cab='<div class="ck-proto-cab" onclick="ckToggleProto()">'
       +'<span>Como fazer este check-in — o protocolo</span>'
       +'<span class="ck-proto-seta">'+(CK_PROTO_ABERTO?'esconder':'ler')+'</span></div>';
     if(!CK_PROTO_ABERTO) return '<div class="ck-proto fechado">'+cab+'</div>';
+    // ===== POR QUE EXISTE UM MÉTODO (Adriana, 13/ago/2026) ==========================
+    // "Preciso que a pessoa se conscientize sobre a importância do protocolo — que tome
+    //  consciência de que tem um método." Sem isto, o protocolo vira uma lista de tarefas
+    //  a vencer. Com isto, vira o motivo de a pessoa estar ali.
+    var porque='<div class="ck-proto-porque">'
+      +'<strong>Por que existe um método</strong><br>'
+      +'Ele não sabe dizer onde dói. Se ninguém olhar sempre do mesmo jeito, a mesma coisa passa despercebida hoje e vira um problema grande semana que vem. O método existe para que <strong>qualquer pessoa</strong>, em <strong>qualquer dia</strong>, enxergue a mesma coisa — e para que a alteração de hoje possa ser comparada com a de ontem. Pular um ponto não economiza tempo: transfere o risco para o FILHOt.'
+      +'</div>';
     return '<div class="ck-proto">'+cab
-      +'<div class="ck-proto-corpo"><ol>'+passos.map(function(x){ return '<li>'+x+'</li>'; }).join('')+'</ol>'
-      +'<div class="ck-proto-rod">O check-in acontece <strong>duas vezes por dia</strong> e os dois são obrigatórios: na chegada e no fim da tarde, antes do banho ou da saída.</div></div></div>';
+      +'<div class="ck-proto-corpo">'+porque+'<ol>'+passos.map(function(x){ return '<li>'+x+'</li>'; }).join('')+'</ol>'
+      +'<div class="ck-proto-destaque">O check-in acontece <strong>DUAS VEZES POR DIA</strong> — e os dois são obrigatórios: na chegada e no fim da tarde, antes do banho ou da saída.</div></div></div>';
   }
   function ckFichaHtml(){
     const o=ckAtual, p=o.p, k=dcKey(p.n,p.tutor), entrada=ckEhEntrada();
@@ -11004,12 +11178,41 @@
         h+='<div class="ck-alertas">'+pt.alertas.map(function(a){
           const on=(at.alertas||[]).indexOf(a)>=0;
           return '<button type="button" class="ck-chip'+(on?' on':'')+'" onclick="ckAlerta(\''+pt.k+'\',\''+String(a).replace(/'/g,"\\'")+'\')">'+a+'</button>'; }).join('')+'</div>'
-        +'<input class="cad-in" placeholder="Descreva o que você viu (opcional)" value="'+escAttr(at.obs||'')+'" oninput="ckObs(\''+pt.k+'\',this.value)">'
-        +'<div class="ck-foto">'
-          +(at.foto?'<img src="'+at.foto+'" alt="">':'<div class="ck-foto-falta">Foto obrigatória</div>')
-          +'<label class="btn btn-gold" style="padding:9px 14px;font-size:13px;cursor:pointer">'+(at.foto?'Trocar foto':'Tirar foto')
-            +'<input type="file" accept="image/*" capture="environment" style="display:none" onchange="ckFoto(\''+pt.k+'\',this)"></label>'
-        +'</div>';
+        // Machucado precisa dizer ONDE fica no corpo — "machucado" sozinho não localiza nada
+        // depois (Adriana, 13/ago/2026).
+        +(ckEhMachucado(at)
+          ? '<input class="cad-in" style="margin-top:8px;border-color:var(--crm-critico)" placeholder="EM QUE PARTE DO CORPO? Ex: no dorso, perto da escápula" value="'+escAttr(at.local||'')+'" oninput="ckCampo(\''+pt.k+'\',\'local\',this.value)">'
+          : '')
+        +'<input class="cad-in" style="margin-top:8px" placeholder="Descreva o que você viu (opcional)" value="'+escAttr(at.obs||'')+'" oninput="ckObs(\''+pt.k+'\',this.value)">'
+        // Vídeo para consciência: a reação dele ao VEM não cabe numa foto parada.
+        +(pt.k==='consciencia'
+          ? '<div class="ck-foto2"><div class="cx'+(at.foto?' ok':'')+'">'
+              +(at.foto?'<img src="'+at.foto+'" alt="">':'')
+              +'<div class="lb">Foto</div><div class="dc">Como ele está agora</div>'
+              +'<label class="btn btn-gold" style="padding:7px 12px;font-size:12.5px;cursor:pointer">'+(at.foto?'Trocar':'Tirar')
+                +'<input type="file" accept="image/*" capture="environment" style="display:none" onchange="ckFoto(\''+pt.k+'\',this)"></label></div>'
+            +'<div class="cx'+(at.video?' ok':'')+'">'
+              +(at.video?'<video src="'+at.video+'" controls playsinline style="width:100%;max-width:110px;height:88px;border-radius:9px;display:block;margin:0 auto 6px"></video>':'')
+              +'<div class="lb">Vídeo (melhor)</div><div class="dc">Chame e grave a resposta — 5 a 10 segundos bastam</div>'
+              +'<label class="btn" style="padding:7px 12px;font-size:12.5px;cursor:pointer;background:var(--z-cream-warm);color:var(--z-blue);border:1.5px solid var(--line)">'+(at.video?'Trocar':'Gravar')
+                +'<input type="file" accept="video/*" capture="environment" style="display:none" onchange="ckVideo(\''+pt.k+'\',this)"></label></div></div>'
+          : ckEhMachucado(at)
+          // Machucado: DUAS fotos — de perto para ver como é, de longe para achar no corpo.
+          ? '<div class="ck-foto2"><div class="cx'+(at.foto?' ok':'')+'">'
+              +(at.foto?'<img src="'+at.foto+'" alt="">':'')
+              +'<div class="lb">1 · De perto</div><div class="dc">Bem próximo, para ver como é</div>'
+              +'<label class="btn btn-gold" style="padding:7px 12px;font-size:12.5px;cursor:pointer">'+(at.foto?'Trocar':'Tirar')
+                +'<input type="file" accept="image/*" capture="environment" style="display:none" onchange="ckFoto(\''+pt.k+'\',this)"></label></div>'
+            +'<div class="cx'+(at.foto2?' ok':'')+'">'
+              +(at.foto2?'<img src="'+at.foto2+'" alt="">':'')
+              +'<div class="lb">2 · De longe</div><div class="dc">Afaste, para saber onde fica no corpo</div>'
+              +'<label class="btn btn-gold" style="padding:7px 12px;font-size:12.5px;cursor:pointer">'+(at.foto2?'Trocar':'Tirar')
+                +'<input type="file" accept="image/*" capture="environment" style="display:none" onchange="ckFoto(\''+pt.k+'\',this,\'foto2\')"></label></div></div>'
+          : '<div class="ck-foto">'
+              +(at.foto?'<img src="'+at.foto+'" alt="">':'<div class="ck-foto-falta">Foto obrigatória</div>')
+              +'<label class="btn btn-gold" style="padding:9px 14px;font-size:13px;cursor:pointer">'+(at.foto?'Trocar foto':'Tirar foto')
+                +'<input type="file" accept="image/*" capture="environment" style="display:none" onchange="ckFoto(\''+pt.k+'\',this)"></label>'
+            +'</div>');
       }
       h+='</div>';
     });
@@ -11035,13 +11238,10 @@
           : '')
         +'</div>'
       +'<div class="ck-bloco"><div class="ck-bt">Fez cocô?</div>'
-        +'<div class="ck-hint">Esperamos de 10 a 15 minutos para ele fazer. Diarreia: ligue na hora para o seu supervisor direto ou para a Márcia.</div>'
+        +'<div class="ck-hint">Esperamos de 10 a 15 minutos para ele fazer. Diarreia, sangue, aspecto estranho ou objeto no cocô: o protocolo aparece aqui na hora — siga na ordem.</div>'
         +'<div class="ck-opts">'+CK_COCO.map(function(c){
           return '<button type="button" class="ck-opt'+(R.coco===c.k?' on':'')+(c.grave?' grave':'')+'" onclick="ckSet(\'coco\',\''+c.k+'\')">'+c.t+'</button>'; }).join('')+'</div>'
-        // Quem decide o que fazer com diarreia é a chefia, não a monitora — e nunca o tutor
-        // direto (Adriana, 13/ago/2026). A monitora avisa e CONTINUA o check-in.
-        +(R.coco==='diarreia'?'<div class="dc-faltas" style="margin-top:8px"><strong>DIARREIA — ligue AGORA para o seu supervisor direto ou para a Márcia.</strong>'
-          +'<div style="font-weight:600;margin-top:4px">Não ligue para o tutor: quem fala com ele é a chefia. Depois de avisar, <strong>continue o check-in normalmente</strong> e termine de olhar os outros pontos. Se ele já tem histórico de intestino irritável, escreva isso na observação — mas avise do mesmo jeito.</div></div>':'')
+        +ckProtocoloCocoHTML(R.coco)
         +'</div>';
     }
     if(alterados.length){
@@ -11097,11 +11297,24 @@
         +'\n\nO check-in é ponto a ponto — cada um precisa de Normal ou Alterado.');
       return;
     }
-    // 2) alteração sem foto não fecha
-    const semFoto=pontos.filter(function(pt){ const a=R.pontos[pt.k]||{}; return a.alterado && !a.foto; });
+    // 2) alteração sem foto não fecha (na consciência, o vídeo vale pela foto)
+    const semFoto=pontos.filter(function(pt){ const a=R.pontos[pt.k]||{}; return a.alterado && !a.foto && !(pt.k==='consciencia'&&a.video); });
     if(semFoto.length){
       alert('Falta a foto de: '+semFoto.map(function(x){ return x.t; }).join(', ')
         +'\n\nToda alteração precisa de foto. É ela que mostra ao tutor e à veterinária o que você viu.');
+      return;
+    }
+    // 2b) machucado: a segunda foto (de longe) e a parte do corpo são obrigatórias
+    const semSegunda=pontos.filter(function(pt){ const a=R.pontos[pt.k]||{}; return a.alterado && ckEhMachucado(a) && !a.foto2; });
+    if(semSegunda.length){
+      alert('Falta a foto DE LONGE de: '+semSegunda.map(function(x){ return x.t; }).join(', ')
+        +'\n\nMachucado leva duas fotos: uma de perto, para ver como é, e uma de longe, para a vet saber onde fica no corpo dele.');
+      return;
+    }
+    const semLocal=pontos.filter(function(pt){ const a=R.pontos[pt.k]||{}; return a.alterado && ckEhMachucado(a) && !String(a.local||'').trim(); });
+    if(semLocal.length){
+      alert('Falta dizer EM QUE PARTE DO CORPO: '+semLocal.map(function(x){ return x.t; }).join(', ')
+        +'\n\nEscreva onde fica — "no dorso, perto da escápula", "na patinha dianteira". Sem isso, ninguém acha depois.');
       return;
     }
     if(entrada && !R.coleiraRep){ alert('Diga qual coleira repelente ele está usando — ou marque "Não veio".'); return; }
