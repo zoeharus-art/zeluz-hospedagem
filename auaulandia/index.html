@@ -6142,6 +6142,7 @@
     '2027-12-08':'Imaculada Conceição (BH)', '2027-12-25':'Natal'
   };
   let orcFeriadosCfg=null;
+  let orcSheetsCfg=null;   // {url, token} — a ponte com a planilha de Hospedagem
   function orcFeriados(){ return orcFeriadosCfg||ORC_FERIADOS_PADRAO; }
   function orcEhFeriado(iso){ return orcFeriados()[iso]||''; }
   function orcEhDomingo(iso){ return orcDiaSemana(iso)==='dom'; }
@@ -6396,6 +6397,14 @@
       var dt=''; try{ var d=new Date(o.criado_em); var pp=function(x){return String(x).padStart(2,'0');}; dt=pp(d.getDate())+'/'+pp(d.getMonth()+1)+'/'+d.getFullYear(); }catch(e){}
       var apagar=(document.body.dataset.role==='gestao'||document.body.dataset.role==='diretoria'||document.body.dataset.role==='supervisor')
         ? '<button class="btn" style="background:none;border:none;color:var(--crm-critico);font-weight:700;padding:0 4px" onclick="orcApagar(\''+id+'\')">apagar</button>' : '';
+      // Fechou mas a planilha não recebeu: a falha aparece e dá para reenviar. Nunca some.
+      var planilha='';
+      if(stt==='fechado'){
+        planilha=(o.planilha_ok===true)
+          ? '<div style="font-size:12px;color:var(--crm-ok);margin-top:4px">Lançado na planilha</div>'
+          : '<div style="font-size:12px;color:var(--crm-critico);margin-top:4px">NÃO entrou na planilha'+(o.planilha_msg?(' — '+escAttr(o.planilha_msg)):'')
+            +' <button class="btn" style="background:none;border:none;color:var(--z-blue);font-weight:700;text-decoration:underline;padding:0 4px" onclick="orcEnviarPlanilha(\''+id+'\')">reenviar</button></div>';
+      }
       var btns=(stt==='aguardando')
         ? '<div class="avr-form-btns" style="margin-top:8px"><button class="btn btn-primary" onclick="orcStatus(\''+id+'\',\'fechado\')">Fechou</button><button class="btn" style="background:var(--z-cream-warm);color:var(--z-blue);border:1.5px solid var(--line)" onclick="orcStatus(\''+id+'\',\'nao_fechou\')">Não fechou</button>'+apagar+'</div>'
         : '<div style="text-align:right;margin-top:6px">'+apagar+'<button class="btn" style="background:var(--z-cream-warm);color:var(--z-blue);border:1.5px solid var(--line)" onclick="orcStatus(\''+id+'\',\'aguardando\')">Voltar para pendente</button></div>';
@@ -6403,6 +6412,7 @@
         +'<strong>'+escAttr(nomes||'—')+'</strong> <span style="color:var(--muted);font-size:12px">'+escAttr(o.tutor||'')+'</span>'
         +'<div style="font-size:12.5px;color:var(--z-blue-soft)">'+orcBR(o.entrada||'')+' a '+orcBR(o.saida||'')+' · '+(o.noites||0)+' noites'+(o.alta_temporada?' · ALTA':'')+' · feito em '+dt+' por '+escAttr(o.criado_por||'-')+'</div>'
         +'<div style="font-size:15px;font-weight:800;color:var(--z-blue);margin-top:3px">'+fmtCent(o.total_cent||0)+'</div>'
+        +planilha
         +'</div><span class="avr-chip '+L[1]+'">'+L[0]+'</span></div>'+btns+'</div>';
     }).join('');
   }
@@ -6424,7 +6434,55 @@
       if(ORC_LISTA_CACHE[id]) ORC_LISTA_CACHE[id].status=novo;
       orcRenderLista();
       if(typeof audit==='function') audit('orcamento-status','orçamento marcado como '+novo,{});
+      if(novo==='fechado') orcEnviarPlanilha(id);
     }).catch(function(){});
+  }
+  // ===== A PLANILHA SE PREENCHE SOZINHA (Adriana, 12/ago/2026) =======================
+  // "Duas abas precisam ser preenchidas e temos diversos erros humanos de esquecimento."
+  // Fechou o orçamento → o app escreve nas duas abas (Hospedagem e Calendario Hospedagem
+  // para Dash). O dashboard da Gestão NÃO muda: ele continua lendo a mesma planilha, do
+  // mesmo jeito — a diferença é que agora ninguém precisa lembrar de digitar.
+  // A ponte é um Apps Script publicado na própria planilha (integracao-planilha/Codigo.gs).
+  function orcEnviarPlanilha(id){
+    var o=ORC_LISTA_CACHE[id]||{};
+    var cfg=(orcSheetsCfg||{});
+    if(!cfg.url){
+      zAlertao('FECHADO — MAS A PLANILHA NÃO FOI PREENCHIDA',
+        ['A ponte com a planilha ainda não foi configurada neste sistema.'],
+        {botao:'Entendi', rodape:'Enquanto isso, lance à mão nas abas Hospedagem e Calendario Hospedagem para Dash. Para ligar de vez: Orçamento → Tabela e feriados → Ponte com a planilha.'});
+      return;
+    }
+    var pets=(o.pets||[]);
+    var peludoTutor=pets.map(function(p){ return p.nome; }).join(' e ')+'/'+(o.tutor||'');
+    var noites=o.noites||0;
+    var payload={
+      token:cfg.token||'', hospedes:pets.length||1, peludoTutor:peludoTutor,
+      entrada:o.entrada||'', saida:o.saida||'', noites:noites,
+      reserva:(o.parcela1_cent||0)/100, dataReserva:(typeof hojeISO==='function')?hojeISO():'',
+      total:(o.total_cent||0)/100,
+      valorDiaria: noites? Math.round(((o.total_cent||0)/noites))/100 : 0,
+      aPagar:(o.parcela2_cent||0)/100, dataAPagar:o.entrada||''
+    };
+    // no-cors não deixa ler a resposta; por isso a confirmação é o registro no Firebase
+    // e o aviso na tela. Falha de rede NUNCA vira silêncio.
+    fetch(cfg.url,{method:'POST', headers:{'Content-Type':'text/plain;charset=utf-8'}, body:JSON.stringify(payload)})
+      .then(function(r){ return r.text().catch(function(){ return ''; }); })
+      .then(function(txt){
+        var ok=true, msg='';
+        try{ var j=JSON.parse(txt); ok=!!j.ok; msg=(j.abas||[]).join(' · ')||j.erro||''; }catch(e){}
+        DB.ref('auaulandia/orcamentos/'+id).update({planilha_em:Date.now(), planilha_ok:ok, planilha_msg:msg}).catch(function(){});
+        if(ok) zAlertao('✅ FECHADO E LANÇADO NA PLANILHA',
+              [peludoTutor+' — '+orcBR(o.entrada)+' a '+orcBR(o.saida)+' · '+fmtCent(o.total_cent||0)],
+              {ok:true, botao:'Fechar', rodape:'Entrou nas duas abas: Hospedagem e Calendario Hospedagem para Dash. O dashboard da Gestão já mostra.'+(msg?(' ('+msg+')'):'')});
+        else zAlertao('FECHADO — MAS A PLANILHA RECUSOU',[msg||'A ponte respondeu com erro.'],
+              {botao:'Entendi', rodape:'Lance à mão nas duas abas e avise a Gestão para conferir a ponte.'});
+      })
+      .catch(function(e){
+        DB.ref('auaulandia/orcamentos/'+id).update({planilha_em:Date.now(), planilha_ok:false, planilha_msg:String((e&&e.message)||e)}).catch(function(){});
+        zAlertao('FECHADO — MAS NÃO CONSEGUI FALAR COM A PLANILHA',
+          ['Motivo: '+((e&&e.message)||e)],
+          {botao:'Entendi', rodape:'O orçamento está salvo como FECHADO. Lance à mão nas duas abas — ou tente de novo pelo botão "reenviar" na lista.'});
+      });
   }
   // ---- Tabela de preços e feriados (só Gestão) ----
   function orcRenderConfig(){
@@ -6449,7 +6507,50 @@
       +'<button class="btn btn-primary" style="margin-top:8px" onclick="orcAddFeriado()">Acrescentar feriado</button>'
       +'<div style="margin-top:10px">'+(futuros.length?futuros.map(function(d){
           return '<div class="pair"><span class="k">'+orcBR(d)+' — '+escAttr(F[d])+'</span><span class="val"><button class="x" style="background:none;border:none;color:var(--crm-critico);font-weight:800;cursor:pointer" onclick="orcDelFeriado(\''+d+'\')">tirar</button></span></div>';
-        }).join(''):'<div class="hint">Nenhum feriado daqui para a frente.</div>')+'</div></div>';
+        }).join(''):'<div class="hint">Nenhum feriado daqui para a frente.</div>')+'</div></div>'
+      // Ponte com a planilha de Hospedagem
+      +'<div style="margin-top:18px;padding-top:14px;border-top:1.5px solid var(--line)">'
+      +'<div class="ff-tit">Ponte com a planilha</div>'
+      +'<div class="hint">Quando alguém marca <strong>Fechou</strong> num orçamento, o sistema escreve sozinho nas duas abas da planilha de Hospedagem — <strong>Hospedagem</strong> e <strong>Calendario Hospedagem para Dash</strong>. O dashboard da Gestão continua igual: ele lê a mesma planilha. Acaba o esquecimento de lançar à mão.</div>'
+      +'<div class="hint" style="margin-top:6px">Para ligar: abra a planilha → <strong>Extensões → Apps Script</strong>, cole o arquivo <code>integracao-planilha/Codigo.gs</code>, publique como <strong>App da Web</strong> (executar como você, acesso "qualquer pessoa") e cole aqui a URL que termina em <code>/exec</code>.</div>'
+      +'<div style="margin-top:8px"><label class="cad-lb">URL do App da Web</label><input class="cad-in" id="orcShUrl" placeholder="https://script.google.com/macros/s/.../exec" value="'+escAttr((orcSheetsCfg&&orcSheetsCfg.url)||'')+'"></div>'
+      +'<div style="margin-top:8px"><label class="cad-lb">Palavra-chave (a mesma do TOKEN no script)</label><input class="cad-in" id="orcShToken" placeholder="zeluz-auaulandia" value="'+escAttr((orcSheetsCfg&&orcSheetsCfg.token)||'')+'"></div>'
+      +'<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px">'
+      +'<button class="btn btn-gold" onclick="orcSalvarSheets()">Salvar ponte</button>'
+      +'<button class="btn" style="background:var(--z-cream-warm);color:var(--z-blue);border:1.5px solid var(--line)" onclick="orcTestarSheets()">Testar agora</button></div>'
+      +'<div id="orcShStatus" class="hint" style="margin-top:6px">'+((orcSheetsCfg&&orcSheetsCfg.url)?'Ponte configurada.':'Ainda não configurada — hoje o lançamento continua sendo à mão.')+'</div>'
+      +'</div>';
+  }
+  function orcSalvarSheets(){
+    var url=((document.getElementById('orcShUrl')||{}).value||'').trim();
+    var tok=((document.getElementById('orcShToken')||{}).value||'').trim();
+    var st=document.getElementById('orcShStatus');
+    if(url&&!/^https:\/\/script\.google\.com\/.*\/exec$/.test(url)){
+      if(st){ st.style.color='var(--crm-critico)'; st.textContent='Essa URL não parece a do App da Web. Ela começa com https://script.google.com/ e termina em /exec.'; } return;
+    }
+    var novo={url:url, token:tok};
+    if(!DB){ orcSheetsCfg=novo; if(st){ st.textContent='Sem banco: vale só neste aparelho.'; } return; }
+    DB.ref('auaulandia/config/orcamento/sheets').set(novo).then(function(){
+      orcSheetsCfg=novo;
+      if(st){ st.style.color='var(--crm-ok)'; st.textContent=url?'✅ Ponte salva. O próximo orçamento marcado como "Fechou" já cai na planilha.':'Ponte desligada — o lançamento volta a ser à mão.'; }
+      if(typeof audit==='function') audit('orcamento-ponte-planilha',url?'ligou a ponte com a planilha':'desligou a ponte',{});
+    }).catch(function(e){ if(st){ st.style.color='var(--crm-critico)'; st.textContent='Não salvou: '+((e&&e.message)||e); } });
+  }
+  function orcTestarSheets(){
+    var url=((document.getElementById('orcShUrl')||{}).value||'').trim();
+    var st=document.getElementById('orcShStatus');
+    if(!url){ if(st){ st.style.color='var(--crm-critico)'; st.textContent='Cole a URL primeiro.'; } return; }
+    // Só o Apps Script do Google é chamado — a URL não pode apontar para outro lugar.
+    if(!/^https:\/\/script\.google\.com\/[\w\-\/]*\/exec$/.test(url)){
+      if(st){ st.style.color='var(--crm-critico)'; st.textContent='Essa URL não é a do App da Web do Google. Ela começa com https://script.google.com/ e termina em /exec.'; } return;
+    }
+    if(st){ st.style.color='var(--muted)'; st.textContent='Testando…'; }
+    fetch(url).then(function(r){ return r.text(); }).then(function(t){
+      if(st){ st.style.color=(t.indexOf('no ar')>=0)?'var(--crm-ok)':'var(--crm-atencao-text)';
+        st.textContent=(t.indexOf('no ar')>=0)?'✅ A planilha respondeu. A ponte está de pé.':'Respondeu, mas não do jeito esperado: '+t.slice(0,120); }
+    }).catch(function(e){
+      if(st){ st.style.color='var(--crm-critico)'; st.textContent='Não consegui falar com a planilha: '+((e&&e.message)||e)+'. Confira se publicou como "qualquer pessoa".'; }
+    });
   }
   function orcLerReal(id){ var v=((document.getElementById(id)||{}).value||'').replace(/\./g,'').replace(',','.'); var n=parseFloat(v); return isNaN(n)?null:Math.round(n*100); }
   function orcSalvarPrecos(){
@@ -6483,6 +6584,7 @@
         var v=s.val()||{};
         if(v.precos) orcPrecosCfg=v.precos;
         if(v.feriados) orcFeriadosCfg=v.feriados;
+        if(v.sheets) orcSheetsCfg=v.sheets;
         orcRenderConfig(); orcRenderTemporada(); orcCalcular();
       }).catch(function(){ orcRenderConfig(); orcRenderTemporada(); });
       orcCarregarLista();
