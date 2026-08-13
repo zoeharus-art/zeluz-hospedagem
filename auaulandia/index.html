@@ -1587,7 +1587,7 @@
     <a data-v="painel" class="so-master"><span data-icon="star"></span><span>Painel</span></a>
     <!-- Saiu do menu "Empório", que foi deletado: ninguém procuraria a mensagem do tutor
          ali dentro (Adriana, 13/ago/2026). Agora mora na Gestão, ao lado do Painel. -->
-    <a data-v="emporio" class="so-emporio"><span data-icon="paw"></span><span>Avisar tutores — não comeu</span></a>
+    <a data-v="emporio" class="so-emporio"><span data-icon="paw"></span><span>Aviso de quem não almoçou</span></a>
     <a data-v="ficha" class="so-gestao"><span data-icon="paw"></span><span>Peludinhos</span></a>
     <a data-v="pessoas" class="so-master"><span data-icon="users"></span><span>Time</span></a>
     <div class="subnav so-master" id="pSubnav" style="display:none"></div>
@@ -2588,7 +2588,7 @@
   </section>
   <!-- EMPÓRIO — a consultora liga para os tutores de quem não comeu (Adriana, 03/ago/2026) -->
   <section class="view" id="v-emporio">
-    <div class="role-note"><span data-icon="paw"></span><span><strong>Quem não comeu hoje.</strong> Vem do 1º e do 2º horário do almoço. Ligue para o tutor, conte como foi e registre aqui — assim ninguém liga duas vezes e ninguém fica sem aviso.</span></div>
+    <div class="role-note"><span data-icon="paw"></span><span><strong>Aviso de quem não almoçou.</strong> Vem do 1º e do 2º horário. A mensagem para cada tutor já está pronta — copie, mande e registre aqui, para ninguém avisar duas vezes nem ficar sem aviso.</span></div>
     <div class="card" style="margin-top:12px">
       <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap">
         <h2 style="font-size:19px;margin:0">Avisar os tutores</h2>
@@ -3422,7 +3422,7 @@
     ritmo:['Ritmo do Time','Quanto tempo cada atividade leva, por pessoa e por dia da semana'],
     checkout:['Check-out (monitores)','Juntar tudo que volta com o FILHOt e mandar para a recepção'],
     checkoutconf:['Conferência Check-out','Conferir com o tutor na saída, colher a assinatura e entregar o PDF'],
-    emporio:['Empório','Avisar os tutores de quem não comeu hoje'],
+    emporio:['Aviso de quem não almoçou','A mensagem pronta para cada tutor'],
     hospedes:['Peludinhos Hóspedes','Estadias: quem está, quem chega e quem já saiu'],
     recepcao:['Atenção Recepção','Faltas e avisos: ração, medicação e itens da estadia'],
     agenda:['Agenda','Frequência e reservas'],pessoas:['Time','Quem é quem, o que cada um vê e quando trabalha'],
@@ -7294,7 +7294,7 @@
   // Agora existe um carimbo: esta constante é a versão que o aparelho está rodando, e o
   // Firebase guarda a versão publicada. Quando as duas diferem, aparece o aviso — mas
   // NUNCA recarrega sozinho: recarregar no meio de um check-in perderia o trabalho.
-  const APP_VERSAO='2026-08-13-09';
+  const APP_VERSAO='2026-08-13-10';
   function vigiarVersao(){
     if(!DB) return;
     try{
@@ -7445,7 +7445,7 @@
       {k:'cuidadovet', t:'Cuidado Vet'}, {k:'hospedagem', t:'Plantão AuAulândia'},
       {k:'checkout', t:'Check-out (monitores)'}, {k:'checkoutconf', t:'Conferência Check-out'}
     ]},
-    {grp:'Empório', itens:[ {k:'emporio', t:'Avisar tutores — não comeu'} ]},
+    {grp:'Day Care', itens:[ {k:'emporio', t:'Aviso de quem não almoçou'} ]},
     {grp:'Gestão', itens:[
       {k:'painel', t:'Painel'}, {k:'ficha', t:'Peludinhos'}, {k:'hospedes', t:'Peludinhos Hóspedes (estadias)'},
       {k:'pessoas', t:'Time'}, {k:'renovacao', t:'Renovação de Planos'}, {k:'reposicao', t:'Reposições'},
