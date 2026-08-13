@@ -1511,7 +1511,7 @@
     <div class="grp so-master">Gestão</div>
     <a data-v="painel" class="so-master"><span data-icon="star"></span><span>Painel</span></a>
     <a data-v="ficha" class="so-gestao"><span data-icon="paw"></span><span>Peludinhos</span></a>
-    <a data-v="pessoas" class="so-master"><span data-icon="users"></span><span>Pessoas</span></a>
+    <a data-v="pessoas" class="so-master"><span data-icon="users"></span><span>Time</span></a>
     <div class="subnav so-master" id="pSubnav" style="display:none"></div>
     <a data-v="renovacao" class="so-gestao"><span data-icon="star"></span><span>Renovação de Planos</span></a>
     <a data-v="reposicao" class="so-recepcao"><span data-icon="star"></span><span>Reposições</span></a>
@@ -2721,7 +2721,7 @@
 
     <!-- MONITORES — área restrita à Gestão: nomear, senha e horário sem entrar no código -->
     <div class="ppanel so-master" id="p-monitores">
-      <div class="role-note"><span data-icon="users"></span><span><strong>Gestão dos monitores.</strong> Nomeie cada monitor, defina a senha e o horário de entrada/saída. As mudanças valem na hora, em todos os aparelhos — sem precisar de programador.</span></div>
+      <div class="role-note"><span data-icon="users"></span><span><strong>Gestão dos colaboradores.</strong> Nomeie cada pessoa, defina a senha, o horário de entrada e saída, os dias em que ela trabalha e o que ela enxerga no sistema. As mudanças valem na hora, em todos os aparelhos — sem precisar de programador.</span></div>
       <div id="monitoresList"></div>
       <div class="actions" style="margin-top:12px"><button class="btn btn-primary" onclick="salvarMonitores()">Salvar monitores</button><span id="monitoresStatus" class="rel-status"></span></div>
     </div>
@@ -3259,7 +3259,7 @@
     emporio:['Empório','Avisar os tutores de quem não comeu hoje'],
     hospedes:['Peludinhos Hóspedes','Estadias: quem está, quem chega e quem já saiu'],
     recepcao:['Atenção Recepção','Faltas e avisos: ração, medicação e itens da estadia'],
-    agenda:['Agenda','Frequência e reservas'],pessoas:['Pessoas & Turnos','Equipe e tarefas'],
+    agenda:['Agenda','Frequência e reservas'],pessoas:['Time','Quem é quem, o que cada um vê e quando trabalha'],
     painel:['Painel do Dia','Auditoria e cumprimento de protocolos'],
     abertura:['Atividades Monitor 1','Rotina de abertura do turno'],sair:['Sair','']};
 
@@ -3330,17 +3330,25 @@
     t.classList.add('active'); const el=document.getElementById(t.dataset.p); if(el) el.classList.add('active');
   });
   // ===== Submenu de Pessoas no sidebar (Atividades / Monitores / Senhas) =====
-  const PESSOAS_SUB=[['ativ','p-ativ','Atividades'],['monitores','p-monitores','Monitores'],['senhas','p-senhas','Senhas']];
-  function montarPSubnav(){ const sm=document.getElementById('pSubnav'); if(!sm) return; sm.innerHTML=PESSOAS_SUB.map(([k,,t])=>`<a data-pp="${k}" onclick="abrirPessoas('${k}')">${t}</a>`).join(''); }
+  // "Pessoas" virou TIME e "Monitores" virou COLABORADORES (Adriana, 13/ago/2026): a tela
+  // já não é só dos monitores — tem consultora, veterinária, supervisão, plantonista.
+  const PESSOAS_SUB=[['ativ','p-ativ','Atividades'],['monitores','p-monitores','Colaboradores'],['senhas','p-senhas','Senhas']];
+  // Senhas só para quem manda de verdade. A Supervisão vê o time e as permissões, mas NÃO
+  // as senhas — isso muda no dia em que ela virar gerente (Adriana, 13/ago/2026).
+  function podeVerSenhas(){ var r=document.body.dataset.role; return r==='gestao'||r==='diretoria'; }
+  function montarPSubnav(){ const sm=document.getElementById('pSubnav'); if(!sm) return;
+    sm.innerHTML=PESSOAS_SUB.filter(([k])=>k!=='senhas'||podeVerSenhas())
+      .map(([k,,t])=>`<a data-pp="${k}" onclick="abrirPessoas('${k}')">${t}</a>`).join(''); }
   function marcarPSubnavAtivo(k){ document.querySelectorAll('#pSubnav a').forEach(a=>a.classList.toggle('active', a.dataset.pp===k)); }
   function abrirPessoas(k){
     document.querySelectorAll('#nav a').forEach(x=>x.classList.remove('active'));
     const pa=document.querySelector('#nav a[data-v="pessoas"]'); if(pa) pa.classList.add('active');
     document.querySelectorAll('.view').forEach(x=>x.classList.remove('active'));
     document.getElementById('v-pessoas').classList.add('active');
-    document.getElementById('head-title').childNodes[0].nodeValue='Pessoas & Turnos ';
-    document.getElementById('head-sub').textContent='Equipe e tarefas';
+    document.getElementById('head-title').childNodes[0].nodeValue='Time ';
+    document.getElementById('head-sub').textContent='Quem é quem, o que cada um vê e quando trabalha';
     const sm=document.getElementById('pSubnav'); if(sm) sm.style.display='block';
+    if(k==='senhas'&&!podeVerSenhas()) k='monitores';   // a Supervisão não entra nas senhas
     const map={ativ:'p-ativ',monitores:'p-monitores',senhas:'p-senhas'};
     document.querySelectorAll('#v-pessoas .ppanel').forEach(x=>x.classList.remove('active'));
     const el=document.getElementById(map[k]||'p-ativ'); if(el) el.classList.add('active');
@@ -6707,24 +6715,25 @@
   }
 
   // ===== LOGIN (senhas de teste — depois cada pessoa terá a sua) =====
+  // ===== FAXINA NAS SENHAS FIXAS (Adriana, 13/ago/2026) =============================
+  // O relatório de senhas virou um monte de acesso sem dono: a Wandela tinha DUAS senhas
+  // (0915 e 1006), existia "Monitor Aprendiz" e "Consultora · Recepção" — logins de PAPEL,
+  // sem nome de gente, que ninguém sabe quem usou. Login de papel não responde por nada.
+  // Ficam aqui só os acessos com dono; todo o resto é cadastrado em Time → Colaboradores,
+  // com nome, horário e dias.
   const SENHAS={
     '1001':{role:'plantonista', nome:'Plantonista'},
-    '0901':{role:'gestao',      nome:'Adriana · Gestão Total', avisoSonoro:true, souAdriana:true},
+    // Senha da Adriana trocada para 1101 a pedido dela (13/ago/2026).
+    '1101':{role:'gestao',      nome:'Adriana · Gestão Total', avisoSonoro:true, souAdriana:true},
     '0902':{role:'gestao',      nome:'Márcia · Gestora', avisoSonoro:true},
     '0912':{role:'supervisor',  nome:'Amanda · Supervisora'},
-    '0913':{role:'consultora',  nome:'Consultora · Recepção'},
-    // VETERINÁRIA — senha própria (Onda 3, Cuidado Vet). Vê todos os hóspedes, faz a consulta datada
-    // (receituário) e é a FONTE que cria/altera/suspende as fichas de medicação. Senha provisória —
-    // a Gestão troca em Pessoas assim que possível.
-    '0914':{role:'vet',         nome:'Veterinária · Cuidado Vet'},
-    // CONFERÊNCIA CHECK-IN — senha própria da Wandela (Onda 4). Confere pertences, ração e medicação
-    // depois do check-in: checklist com V verde, etiquetagem, pesagem e teste dos alarmes.
-    '0915':{role:'conferencia', nome:'Wandela · Conferência Check-in'},
-    // Senha própria da Wandela para a Conferência (autorizada a pedido da Adriana).
-    '1006':{role:'conferencia', nome:'Wandela · Conferência Check-in'},
-    '1002':{role:'aprendiz',    nome:'Monitor Aprendiz'}
-    // Adriana usa APENAS a 0901 (Gestão Total) — a Gestão já tem TODOS os poderes, inclusive
-    // excluir cadastro (ehDiretoriaRole inclui gestao). A antiga senha 7788 (Diretoria) foi removida.
+    // VETERINÁRIA — a Zêluz tem UMA veterinária: a Suellen. O acesso é dela, com nome.
+    '0914':{role:'vet',         nome:'Suellen · Veterinária'},
+    // CONFERÊNCIA CHECK-IN — Wandela. UMA senha só (a 0915 foi removida: era a mesma pessoa
+    // com dois acessos, e dois acessos para a mesma pessoa quebram a conta de quem fez o quê).
+    '1006':{role:'conferencia', nome:'Wandela · Conferência Check-in'}
+    // Removidos em 13/ago/2026: 0901 (senha antiga da Adriana), 0913 "Consultora · Recepção"
+    // e 1002 "Monitor Aprendiz" — logins sem nome de pessoa. Quem precisar entra pelo Time.
   };
   // ===== ESCOPO DE ATIVIDADES POR PESSOA =====
   // Se o usuário logado tem `atividades:[...]`, ele só enxerga essas atividades do Day Care
@@ -6766,6 +6775,18 @@
   // ===== TENTATIVAS DE ENTRADA BARRADAS (Gestão) =====================================
   // A Letícya e o Octávio ficaram dias sem trabalhar porque o celular deles não estava
   // liberado — e nada disso aparecia para a Gestão. Agora aparece, com o botão de liberar.
+  // Tirar o aviso SEM liberar o aparelho: o caso já foi resolvido de outro jeito. Fica
+  // guardado quem dispensou e quando — dispensar não apaga a história, só limpa a tela.
+  function dispensarAvisoBarrado(aparelho,quem){
+    if(!DB) return;
+    if(!confirm('Tirar o aviso de "'+quem+'"?\n\nO celular NÃO será liberado — só o aviso sai da lista.')) return;
+    DB.ref('auaulandia/avisos-barrados-dispensados/'+aparelho).set({
+      quem:quem, dispensado_em:Date.now(), dispensado_por:(typeof quemSou==='function'?quemSou():'-')
+    }).then(function(){
+      if(typeof audit==='function') audit('aviso-barrado-dispensado','dispensou o aviso de '+quem,{});
+      renderLoginsBarrados();
+    }).catch(function(){});
+  }
   function renderLoginsBarrados(){
     const el=document.getElementById('loginsBarradosList'); if(!el||!DB) return;
     const dias=[]; const d=new Date(); const p=n=>String(n).padStart(2,'0');
@@ -6781,10 +6802,13 @@
           porAparelho[k].tentativas=(porAparelho[k].tentativas||0)+1;
         });
       });
-      // Já autorizados saem da lista sozinhos.
-      DB.ref('auaulandia/aparelhos').once('value').then(function(s){
-        const ja=s.val()||{};
-        const lista=Object.keys(porAparelho).filter(k=>!ja[k]).map(k=>porAparelho[k]).sort((a,b)=>b.ts-a.ts);
+      // Já autorizados saem da lista sozinhos — e os dispensados também.
+      Promise.all([
+        DB.ref('auaulandia/aparelhos').once('value').then(function(s){ return s.val()||{}; }).catch(function(){ return {}; }),
+        DB.ref('auaulandia/avisos-barrados-dispensados').once('value').then(function(s){ return s.val()||{}; }).catch(function(){ return {}; })
+      ]).then(function(r){
+        const ja=r[0], disp=r[1];
+        const lista=Object.keys(porAparelho).filter(k=>!ja[k]&&!disp[k]).map(k=>porAparelho[k]).sort((a,b)=>b.ts-a.ts);
         if(!lista.length){ el.innerHTML='<div class="hint" style="color:var(--crm-ok);font-weight:700">Ninguém ficou barrado nos últimos 7 dias.</div>'; return; }
         el.innerHTML=lista.map(function(o){
           const quando=(o.dia?ciBRdata(o.dia):'')+(o.hora?(' às '+o.hora):'');
@@ -6792,6 +6816,9 @@
             +'<div style="font-weight:800;color:var(--z-blue);font-size:16px">'+escAttr(o.quem)+' não conseguiu entrar</div>'
             +'<div style="font-size:13px;color:var(--muted);font-weight:600;margin:3px 0 9px">'+escAttr(quando)+' · '+o.tentativas+' tentativa(s) · a senha estava certa, o celular é que não está liberado</div>'
             +'<button type="button" class="btn btn-primary" style="width:100%" onclick="liberarAparelhoDaLista(\''+escAttr(o.aparelho)+'\',\''+escAttr(o.quem)+'\')">✅ Liberar este celular para '+escAttr(o.quem)+'</button>'
+            // "Como deleto isso? Já foi resolvido." Resolvido em outro caminho (a pessoa
+            // entrou de outro jeito) deixava o aviso encalhado para sempre. Agora some.
+            +'<button type="button" class="btn" style="width:100%;margin-top:6px;background:var(--z-cream-warm);color:var(--z-blue);border:1.5px solid var(--line)" onclick="dispensarAvisoBarrado(\''+escAttr(o.aparelho)+'\',\''+escAttr(o.quem)+'\')">Já resolvi — tirar este aviso</button>'
             +'</div>';
         }).join('');
       }).catch(function(){});
@@ -6822,7 +6849,13 @@
     {grp:'Empório', itens:[ {k:'emporio', t:'Avisar tutores — não comeu'} ]},
     {grp:'Gestão', itens:[
       {k:'painel', t:'Painel'}, {k:'ficha', t:'Peludinhos'}, {k:'hospedes', t:'Peludinhos Hóspedes (estadias)'},
-      {k:'pessoas', t:'Pessoas'}, {k:'renovacao', t:'Renovação de Planos'}, {k:'reposicao', t:'Reposições'}
+      {k:'pessoas', t:'Time'}, {k:'renovacao', t:'Renovação de Planos'}, {k:'reposicao', t:'Reposições'},
+      // Faltavam aqui (Adriana, 13/ago/2026): "não consegui dar permissão para Orçamento
+      // Hospedagem". A tela existia no menu, mas não nesta lista — e o que não está aqui
+      // NÃO PODE ser concedido a ninguém. Tela nova precisa nascer nos dois lugares.
+      {k:'orcamento', t:'Orçamento Hospedagem'}, {k:'relatorios', t:'Relatórios'}
+      // "Senhas" não entra aqui de propósito: não é item de menu e não se concede a ninguém.
+      // Quem vê senhas é só Gestão e Diretoria — a trava está em podeVerSenhas().
     ]}
   ];
   const NAV_PAGINAS_KEYS=NAV_PAGINAS_ALL.reduce((a,g)=>a.concat(g.itens.map(x=>x.k)),[]);
@@ -6896,6 +6929,30 @@
     {k:'conferencia', t:'Conferência (Wandela)'}, {k:'supervisor', t:'Supervisão (vê tudo)'},
     {k:'plantonista', t:'Plantonista'}, {k:'aprendiz', t:'Aprendiz'}
   ];
+  // ===== OS DIAS DE CADA PESSOA (Adriana, 13/ago/2026) ==============================
+  // "Adicionar os dias da semana que estão liberados para essas pessoas, como no peludinho
+  //  do Day Care que marca que dia vai." A Amanda tem horário E dias na empresa; a freelance
+  //  também. Sem nada marcado, a pessoa entra todos os dias — marcar é RESTRINGIR.
+  const MON_DIAS=[['seg','Seg'],['ter','Ter'],['qua','Qua'],['qui','Qui'],['sex','Sex'],['sab','Sáb'],['dom','Dom']];
+  function monDiasSet(m){ return Array.isArray(m.dias)?m.dias:[]; }
+  function monDiasHTML(i,m){
+    const on=monDiasSet(m);
+    return '<div style="margin-top:8px"><label style="font-size:12px;color:var(--z-blue)">Dias que trabalha</label>'
+      +'<div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:4px">'
+      +MON_DIAS.map(function(d){ return '<span class="dia'+(on.indexOf(d[0])>=0?' on':'')+' clic" onclick="toggleMonDia('+i+',\''+d[0]+'\')">'+d[1]+'</span>'; }).join('')
+      +'</div><div class="hint" style="margin-top:4px">'
+      +(on.length?('Entra '+on.length+' dia'+(on.length>1?'s':'')+' por semana. Nos outros dias a senha dela não abre o sistema.')
+                 :'Nenhum dia marcado = entra todos os dias.')
+      +'</div></div>';
+  }
+  function toggleMonDia(i,d){
+    const m=MONITORES[i]; if(!m) return;
+    const arr=monDiasSet(m).slice(), idx=arr.indexOf(d);
+    if(idx>=0) arr.splice(idx,1); else arr.push(d);
+    m.dias=arr;
+    if(typeof salvarMonitores==='function') salvarMonitores();
+    renderMonitores();
+  }
   function renderMonitores(){
     const el=document.getElementById('monitoresList'); if(!el) return;
     el.innerHTML=(MONITORES||[]).map((m,i)=>{
@@ -6913,9 +6970,9 @@
           <div class="field"><label style="font-size:12px;color:var(--z-blue)">Entrada</label><input class="cad-in" type="time" value="${m.entrada||''}" onchange="setMon(${i},'entrada',this.value)"></div>
           <div class="field"><label style="font-size:12px;color:var(--z-blue)">Saída</label><input class="cad-in" type="time" value="${m.saida||''}" onchange="setMon(${i},'saida',this.value)"></div>
         </div>
-        ${chefe
-          ? `<div class="hint" style="margin-top:8px;background:rgba(39,174,96,.1);border:1px solid var(--crm-ok);border-radius:9px;padding:8px 11px;font-weight:700;color:var(--crm-ok)">Supervisão vê TUDO — não precisa configurar permissões.</div>`
-          : `${permResumoInner(m)}<button type="button" class="med-add" style="width:auto;margin-top:8px" onclick="toggleMonPerm(${i})">🔐 Permissões — o que ${(m.nome||'esta pessoa')} vê no menu</button><div id="monPerm-${i}" style="display:none"></div>`}
+        ${monDiasHTML(i,m)}
+        ${chefe?`<div class="hint" style="margin-top:8px;background:rgba(222,180,40,.14);border:1px solid var(--z-gold);border-radius:9px;padding:8px 11px;font-weight:700;color:var(--z-blue)">Supervisão: enquanto nada estiver marcado abaixo, ela vê tudo. Marcou o primeiro item, passa a ver só o que estiver marcado. <strong>Senhas nunca</strong> — isso é só da Gestão.</div>`:''}
+        ${permResumoInner(m)}<button type="button" class="med-add" style="width:auto;margin-top:8px" onclick="toggleMonPerm(${i})">🔐 Permissões — o que ${(m.nome||'esta pessoa')} vê no menu</button><div id="monPerm-${i}" style="display:none"></div>
         <div style="text-align:right;margin-top:8px"><button type="button" class="ativ-del" style="font-size:12px" onclick="removerPessoa(${i})">🗑️ Remover pessoa</button></div>
       </div>`;
     }).join('') + `<button type="button" class="btn btn-gold" style="width:100%;margin-top:6px" onclick="addPessoa()">+ Adicionar pessoa</button>`;
@@ -7001,8 +7058,11 @@
   // papel (so-vet/so-conferencia/so-recepcao/so-master) — tanto para RESTRINGIR quanto para LIBERAR
   // (ex.: dar Cuidado Vet a um monitor de confiança). Sem 'paginas' = nada muda (vale o papel, como hoje).
   function aplicarPaginasPessoa(u){
-    // Gestão/Supervisão/Diretoria SEMPRE veem tudo — nunca restringidos (exceção pedida pela Adriana).
-    var isChefe=(u&&(u.role==='gestao'||u.role==='supervisor'||u.role==='diretoria'));
+    // Gestão e Diretoria SEMPRE veem tudo. A SUPERVISÃO saiu desta lista em 13/ago/2026:
+    // "Amanda supervisora não pode ver tudo — preciso dar a ela o que ela vê; senhas por
+    //  exemplo ela não vê ainda, só quando for a gerente." Enquanto a Gestão não marcar
+    //  nada para ela, nada muda; a partir do primeiro item marcado, ela vê só o marcado.
+    var isChefe=(u&&(u.role==='gestao'||u.role==='diretoria'));
     var restrito=(u&&Array.isArray(u.paginas)&&!isChefe);
     NAV_PAGINAS_KEYS.forEach(function(k){
       document.querySelectorAll('#nav a[data-v="'+k+'"]').forEach(function(a){
