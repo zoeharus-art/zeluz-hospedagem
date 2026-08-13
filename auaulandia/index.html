@@ -1355,11 +1355,11 @@
   body[data-role="supervisor"] .so-carteira,
   body[data-role="diretoria"] .so-carteira{display:block}
   /* Empório — quem avisa o tutor é a consultora (a gestão também acompanha) */
-  .nav .acc.so-emporio{display:none}
-  body[data-role="consultora"] .nav .acc.so-emporio,
-  body[data-role="gestao"] .nav .acc.so-emporio,
-  body[data-role="supervisor"] .nav .acc.so-emporio,
-  body[data-role="diretoria"] .nav .acc.so-emporio{display:block}
+  .nav a.so-emporio{display:none}
+  body[data-role="consultora"] .nav a.so-emporio,
+  body[data-role="gestao"] .nav a.so-emporio,
+  body[data-role="supervisor"] .nav a.so-emporio,
+  body[data-role="diretoria"] .nav a.so-emporio{display:flex}
   /* A Wandela (conferência) enxerga as DUAS conferências (entrada e saída) e o Sair */
   body[data-role="conferencia"] .nav a,body[data-role="conferencia"] .nav .grp,body[data-role="conferencia"] .nav .subnav{display:none !important}
   body[data-role="conferencia"] .nav a[data-v="conferencia"],body[data-role="conferencia"] .nav a[data-v="checkoutconf"],body[data-role="conferencia"] .nav a[data-v="sair"]{display:flex !important}
@@ -1572,13 +1572,6 @@
         <a data-v="checkoutconf" class="so-conf-saida"><span data-icon="check"></span><span>Conferência Check-out</span></a>
       </div>
     </div>
-    <!-- Empório — a consultora avisa os tutores de quem não comeu -->
-    <div class="acc so-emporio" data-acc="emporio">
-      <a class="nav-parent" data-acc-toggle="emporio"><span data-icon="star"></span><span>Empório</span><span class="acc-caret" aria-hidden="true"></span></a>
-      <div class="acc-panel">
-        <a data-v="emporio"><span data-icon="paw"></span><span>Avisar tutores — não comeu</span></a>
-      </div>
-    </div>
     <!-- Day Care — PAI accordion. Turminhas (dias) + Atividades vivem no #dcSubnav (montarSubnav). -->
     <div class="acc so-day" data-acc="daycare">
       <a class="nav-parent" data-acc-toggle="daycare"><span data-icon="sun"></span><span>Day Care</span><span class="acc-caret" aria-hidden="true"></span></a>
@@ -1592,6 +1585,9 @@
 
     <div class="grp so-master">Gestão</div>
     <a data-v="painel" class="so-master"><span data-icon="star"></span><span>Painel</span></a>
+    <!-- Saiu do menu "Empório", que foi deletado: ninguém procuraria a mensagem do tutor
+         ali dentro (Adriana, 13/ago/2026). Agora mora na Gestão, ao lado do Painel. -->
+    <a data-v="emporio" class="so-emporio"><span data-icon="paw"></span><span>Avisar tutores — não comeu</span></a>
     <a data-v="ficha" class="so-gestao"><span data-icon="paw"></span><span>Peludinhos</span></a>
     <a data-v="pessoas" class="so-master"><span data-icon="users"></span><span>Time</span></a>
     <div class="subnav so-master" id="pSubnav" style="display:none"></div>
@@ -7298,7 +7294,7 @@
   // Agora existe um carimbo: esta constante é a versão que o aparelho está rodando, e o
   // Firebase guarda a versão publicada. Quando as duas diferem, aparece o aviso — mas
   // NUNCA recarrega sozinho: recarregar no meio de um check-in perderia o trabalho.
-  const APP_VERSAO='2026-08-13-06';
+  const APP_VERSAO='2026-08-13-07';
   function vigiarVersao(){
     if(!DB) return;
     try{
@@ -12533,7 +12529,9 @@
           ${naAp?`<div class="dc-stat"><b>${naAp}</b>não se aplica</div>`:''}
           <div class="dc-stat pend"><b>${list.length-comeu-naoC-naAp}</b>falta servir</div>
         </div>
-        ${naoNomes.length?`<div class="dc-faltas"><strong>NAO COMERAM NEM NO 2&ordm; HORARIO (${naoNomes.length}):</strong> ${naoNomes.join(', ')} &mdash; avisar os tutores.</div>`:''}
+        ${naoNomes.length?`<div class="dc-faltas"><strong>NÃO COMERAM NEM NO 2º HORÁRIO (${naoNomes.length}):</strong> ${naoNomes.join(", ")}
+          <div style="font-weight:600;margin-top:6px">A mensagem para cada tutor já está pronta — é só copiar e mandar.</div>
+          <button type="button" class="btn btn-primary" style="width:100%;margin-top:8px" onclick="irParaAvisarTutores()">Ver as mensagens para os tutores</button></div>`:""}
         ${naNomes.length?`<div class="alm-fora"><strong>NAO SE APLICA (${naNomes.length}):</strong> ${naNomes.join(', ')} &mdash; hoje nao almocam. Nao precisa avisar o tutor.</div>`:''}`
         +avisoAlmoco2(list);
       document.getElementById('genCount').textContent=list.length
@@ -16667,19 +16665,31 @@
     const nome=String(x.nome||'').trim();
     const f=/^f/i.test(String(x.sexo||''));           // Fêmea
     const o=f?'a':'o', ele=f?'ela':'ele', pequeno=f?'a pequena':'o pequeno';
-    const ola='Oi'+(tutor?(', '+tutor):'')+', como está?';
+    // Sem emoji: a comunicação da marca não usa (regra da Zêluz). E o texto conta o que
+    // FOI FEITO aqui — o tutor precisa saber que ofereceram duas vezes, não que desistiram.
+    const ola=(tutor?(tutor+', '):'')+'tudo bem?';
     if(/metade/.test(x.motivo||''))
-      return ola+'\n\nHoje '+o+' '+nome+' comeu só metade da comidinha por aqui. 🐶\n'
+      return ola+'\n\nPassando para contar: hoje '+o+' '+nome+' comeu só metade da comidinha aqui na Zêluz.\n'
         +'Oferecemos de novo no segundo horário, mas '+ele+' não quis mais.\n\n'
-        +'Gentileza, reforçar a comidinha em casa mais tarde.';
-    return ola+'\n\nHoje '+o+' '+nome+' não quis comer por aqui. 🐶\n'
-      +'Tentamos no primeiro horário e oferecemos novamente no segundo, mas '+ele+' não aceitou.\n\n'
-      +'Gentileza, reforçar a comidinha em casa mais tarde.';
+        +'Não é motivo para preocupação, mas vale reforçar a comidinha em casa hoje à noite — e ficar de olho se acontecer de novo amanhã.';
+    return ola+'\n\nPassando para contar: hoje '+o+' '+nome+' não quis comer aqui na Zêluz.\n'
+      +'Oferecemos no primeiro horário e novamente no segundo, com calma, e '+ele+' não aceitou.\n\n'
+      +'No mais, '+ele+' está bem e participou da rotina normalmente. Vale reforçar a comidinha em casa hoje à noite. Se '+ele+' também recusar aí, é bom conversarmos.';
   }
   function empCopiar(btn){
     const ta=btn.parentNode.querySelector('.emp-msg'); if(!ta) return;
     ta.select(); try{ document.execCommand('copy'); }catch(e){}
     const t=btn.textContent; btn.textContent='✅ Copiado!'; setTimeout(function(){ btn.textContent=t; },1600);
+  }
+  // Atalho do 2o horario para as mensagens: e ali que a pessoa descobre que ele nao comeu,
+  // e ali que ela precisa do caminho — nao num menu que ela vai procurar depois (Adriana).
+  function irParaAvisarTutores(){
+    document.querySelectorAll(".view").forEach(function(x){ x.classList.remove("active"); });
+    var sec=document.getElementById("v-emporio"); if(sec) sec.classList.add("active");
+    try{ document.getElementById("head-title").childNodes[0].nodeValue=titles.emporio[0]+" ";
+         document.getElementById("head-sub").textContent=titles.emporio[1]; }catch(e){}
+    if(typeof abrirEmporio==="function") abrirEmporio();
+    window.scrollTo({top:0,behavior:"smooth"});
   }
   function renderEmporio(){
     const el=document.getElementById('empList'); if(!el) return;
