@@ -1757,6 +1757,15 @@
       <!-- ficha de um FILHOt -->
       <div id="ckFicha" style="display:none"></div>
     </div>
+    <!-- CHECK-IN DOS PERTENCES (Adriana, 13/ago/2026) — a tabela de papel virou tela.
+         13 itens, item a item: trouxe ou não trouxe. Trouxe ABRE o detalhe, igual ao corpo. -->
+    <div id="scr-pert" class="dc-scr" style="display:none">
+      <div class="role-note"><span data-icon="paw"></span><span id="ptNota"></span></div>
+      <div id="ptResumo"></div>
+      <div class="pel-toolbar"><span class="pel-count" id="ptCount"></span></div>
+      <div class="pets-grid" id="ptGrid"></div>
+      <div id="ptFicha" style="display:none"></div>
+    </div>
     <div id="scr-generic" class="dc-scr" style="display:none">
       <div class="role-note" id="genNota"><span data-icon="star"></span><span id="genNotaTxt">Marque <strong>Feito</strong> em cada peludinho que passou por esta atividade. Cada atividade terá seu protocolo próprio em breve.</span></div>
       <div id="genResumo"></div>
@@ -10288,8 +10297,8 @@
   function abrirDayCare(){ abrirAccDaycare(); marcarSubnavAtivo(); renderAtual(); }
   function setDcDia(d){ dcDia=d; if(typeof irParaView==='function') irParaView('daycare'); abrirAccDaycare(); marcarSubnavAtivo(); renderAtual(); if(typeof closeNav==='function') closeNav(); }
   function abrirAtividade(slug){ const escopo=(typeof atividadesPermitidas==='function')?atividadesPermitidas():null; if(escopo&&escopo.indexOf(slug)<0) slug=escopo[0]; dcAtiv=slug; if(typeof irParaView==='function') irParaView('daycare'); abrirAccDaycare(); marcarSubnavAtivo(); renderAtual(); if(typeof closeNav==='function') closeNav(); }
-  function mostrarScr(){ const ehCk=(dcAtiv==='checkin-corpo'||dcAtiv==='checkout-corpo'); const esp=(dcAtiv==='chamada'||dcAtiv==='almoco'||ehCk); const a=document.getElementById('scr-chamada'),b=document.getElementById('scr-almoco'),c=document.getElementById('scr-generic'); if(a)a.style.display=dcAtiv==='chamada'?'block':'none'; if(b)b.style.display=dcAtiv==='almoco'?'block':'none'; if(c)c.style.display=esp?'none':'block'; const k=document.getElementById('scr-checkin'); if(k)k.style.display=ehCk?'block':'none'; const lbl=document.getElementById('dcAtivLabel'); if(lbl){ const f=ATIVS_DC.find(x=>x.s===dcAtiv); lbl.textContent=f?f.t:'Chamada'; } const dl=document.getElementById('dcDiaLabel'); if(dl) dl.textContent=DIA_FULL[dcDia]; }
-  function renderAtual(){ mostrarScr(); if(dcAtiv==='chamada') carregarChamada(); else if(dcAtiv==='almoco') carregarAlmoco(); else if(dcAtiv==='checkin-corpo'||dcAtiv==='checkout-corpo'){ carregarCheckin(); if(dcAtiv==='checkout-corpo') ckCarregarEntradaDoDia(); } else carregarGenerico(); if(typeof renderAdaptBanner==='function') renderAdaptBanner(); }
+  function mostrarScr(){ const ehCk=(dcAtiv==='checkin-corpo'||dcAtiv==='checkout-corpo'); const ehPt=(dcAtiv==='checkin-pert'||dcAtiv==='checkout-pert'); const esp=(dcAtiv==='chamada'||dcAtiv==='almoco'||ehCk||ehPt); const a=document.getElementById('scr-chamada'),b=document.getElementById('scr-almoco'),c=document.getElementById('scr-generic'); if(a)a.style.display=dcAtiv==='chamada'?'block':'none'; if(b)b.style.display=dcAtiv==='almoco'?'block':'none'; if(c)c.style.display=esp?'none':'block'; const k=document.getElementById('scr-checkin'); if(k)k.style.display=ehCk?'block':'none'; const pt=document.getElementById('scr-pert'); if(pt)pt.style.display=ehPt?'block':'none'; const lbl=document.getElementById('dcAtivLabel'); if(lbl){ const f=ATIVS_DC.find(x=>x.s===dcAtiv); lbl.textContent=f?f.t:'Chamada'; } const dl=document.getElementById('dcDiaLabel'); if(dl) dl.textContent=DIA_FULL[dcDia]; }
+  function renderAtual(){ mostrarScr(); if(dcAtiv==='chamada') carregarChamada(); else if(dcAtiv==='almoco') carregarAlmoco(); else if(dcAtiv==='checkin-corpo'||dcAtiv==='checkout-corpo'){ carregarCheckin(); if(dcAtiv==='checkout-corpo') ckCarregarEntradaDoDia(); } else if(dcAtiv==='checkin-pert'||dcAtiv==='checkout-pert'){ carregarPertences(); } else carregarGenerico(); if(typeof renderAdaptBanner==='function') renderAdaptBanner(); }
   // Morador(a) Zêluz (Repolho, Stopa, Kako) MORA aqui: está todo dia, sem exceção. Não pode
   // depender de alguém lembrar de marcar os dias na ficha — a Repolho ficou com os dias em
   // branco e sumiu da chamada e do almoço por dias (Adriana, 11/ago/2026). Agora quem é
@@ -11087,6 +11096,146 @@
       .then(function(s){ ckEntradaCache=s.val()||{}; if(dcAtiv==='checkout-corpo') renderCheckin(); })
       .catch(function(){});
   }
+  // ================= CHECK-IN DOS PERTENCES DO DAY CARE ==============================
+  // A tabela de papel virou tela (Adriana, 13/ago/2026). Os 13 itens e a legenda vieram da
+  // planilha que a equipe já usa: "Pertences: P – Pote, S – Sacola, M – Mochila" e
+  // "(OK) – Trouxe, (–) – Não trouxe".
+  //
+  // A diferença para o papel: no papel escreve-se "OK" e pronto. Aqui, TROUXE ABRE — a
+  // pessoa descreve o que veio. É a descrição que devolve a coisa certa na saída e responde
+  // ao tutor quando ele pergunta. Mesma ideia do check-in do corpo.
+  const PT_ITENS=[
+    {k:'comida_seca', t:'Comida seca', emb:1, ph:'Quanto veio? Ex: 2 porções'},
+    {k:'comida_gel',  t:'Comida da geladeira', emb:1, ph:'O que é e quanto. Ex: 1 pote de patê'},
+    {k:'vasilhas',    t:'Vasilhas', qtd:1, ph:'Como são? Ex: 2 inox, uma com o nome'},
+    {k:'petisco',     t:'Petisco', emb:1, ph:'Qual e quanto. Ex: 3 bifinhos'},
+    {k:'bolsa',       t:'Bolsa', ph:'Cor e marca. Ex: bolsa azul da Zêluz'},
+    {k:'guia',        t:'Guia', ph:'Cor e tipo. Ex: guia preta retrátil'},
+    {k:'peitoral',    t:'Peitoral', ph:'Cor e marca. Ex: peitoral vermelho'},
+    {k:'roupa',       t:'Roupa', ph:'Quantas e como são. Ex: 1 blusa bege de tricô'},
+    {k:'suplemento',  t:'Suplemento', ph:'Qual e como dar. Ex: Ograx 1 cápsula no almoço'},
+    {k:'medicacao',   t:'Medicação', ph:'Qual, onde e quando. Ex: colírio, 1 gota em cada olho às 14h'},
+    {k:'banho_seco',  t:'Banho seco', ph:'Marca. Ex: banho seco Zêluz'},
+    {k:'hidrat',      t:'Hidratante de patinhas', ph:'Marca'},
+    {k:'bucal',       t:'Higiene bucal', ph:'O que veio. Ex: creme dental + Periovet'}
+  ];
+  // Em que embalagem o item chegou — a legenda da planilha, tal e qual.
+  const PT_EMB=[{k:'P',t:'Pote'},{k:'S',t:'Sacola'},{k:'M',t:'Mochila'}];
+  var ptDados={}, ptAtual=null, ptRascunho=null;
+  function ptEhEntrada(){ return dcAtiv==='checkin-pert'; }
+  function ptNo(){ return 'daycare/'+(ptEhEntrada()?'checkin':'checkout')+'-pertences/'+dcDataKey(); }
+  function carregarPertences(){
+    if(!document.getElementById('ptGrid')) return;
+    if(!DB){ ptDados={}; renderPertences(); return; }
+    DB.ref(ptNo()).once('value').then(function(s){ ptDados=s.val()||{}; renderPertences(); })
+      .catch(function(){ ptDados={}; renderPertences(); });
+  }
+  function ptDe(o){ return ptDados[dcKey(o.p.n,o.p.tutor)]||null; }
+  function ptFeito(o){ var r=ptDe(o); return !!(r&&r.fim); }
+  function renderPertences(){
+    var grid=document.getElementById('ptGrid'); if(!grid) return;
+    var ficha=document.getElementById('ptFicha');
+    if(ptAtual){ grid.style.display='none'; if(ficha){ ficha.style.display='block'; ficha.innerHTML=ptFichaHtml(); } return; }
+    if(ficha){ ficha.style.display='none'; ficha.innerHTML=''; }
+    grid.style.display='';
+    var entrada=ptEhEntrada();
+    var nota=document.getElementById('ptNota');
+    if(nota) nota.innerHTML=entrada
+      ? '<strong>O que ele trouxe de casa.</strong> Item por item: <strong>trouxe</strong> ou <strong>não trouxe</strong>. Quando trouxe, escreva COMO é — cor, marca, quantidade. É essa descrição que devolve a coisa certa na saída e responde ao tutor.'
+      : '<strong>O que volta para casa.</strong> Confira contra o que entrou de manhã. Faltou alguma coisa? Avise a Coordenação antes de o tutor chegar.';
+    var lista=turmaDoDia();
+    var feitos=lista.filter(ptFeito).length;
+    var el=document.getElementById('ptResumo');
+    if(el) el.innerHTML='<div class="dc-resumo">'
+      +'<div class="dc-stat ok"><b>'+feitos+'</b>conferidos</div>'
+      +'<div class="dc-stat pend"><b>'+(lista.length-feitos)+'</b>faltam</div></div>';
+    var c=document.getElementById('ptCount'); if(c) c.textContent=lista.length+' peludinhos hoje';
+    grid.innerHTML=lista.map(function(o,i){
+      var feito=ptFeito(o), r=ptDe(o);
+      var nTrouxe=r&&r.itens?Object.keys(r.itens).filter(function(k){ return r.itens[k]&&r.itens[k].trouxe; }).length:0;
+      var foto=(typeof o.i==='number')?fotoDoPel(o.p):'';
+      var av=foto?'<div class="pet-ph" style="background-image:url(\''+foto+'\')"></div>'
+                 :'<div class="pet-ph" style="background:'+corPel(typeof o.i==='number'?o.i:0)+';display:flex;align-items:center;justify-content:center;color:#fff;font-weight:800">'+((o.p.n||'?')[0]||'?')+'</div>';
+      return '<div class="pet'+(feito?' on':'')+'" onclick="ptAbrir('+i+')">'+av
+        +'<div class="pet-n">'+escAttr(pelNome(o.p))+'</div>'
+        +'<div class="pet-s">'+(feito?(nTrouxe+' item'+(nTrouxe===1?'':'s')+' · conferido'):'a conferir')+'</div></div>';
+    }).join('');
+  }
+  function ptAbrir(i){
+    var lista=turmaDoDia(); var o=lista[i]; if(!o) return;
+    ptAtual=o;
+    var salvo=ptDe(o);
+    ptRascunho=salvo?JSON.parse(JSON.stringify(salvo)):{itens:{}};
+    ptRascunho.itens=ptRascunho.itens||{};
+    renderPertences(); window.scrollTo({top:0,behavior:'smooth'});
+  }
+  function ptVoltar(){ ptAtual=null; ptRascunho=null; renderPertences(); }
+  function ptMarcar(k,trouxe){
+    if(!ptRascunho) return;
+    var a=ptRascunho.itens[k]||{};
+    a.trouxe=!!trouxe; if(!trouxe){ a.det=''; a.emb=''; a.qtd=''; }
+    ptRascunho.itens[k]=a; renderPertences();
+  }
+  function ptTexto(k,campo,v){ if(!ptRascunho) return; var a=ptRascunho.itens[k]||{}; a[campo]=v; ptRascunho.itens[k]=a; }
+  function ptEmb(k,e){ if(!ptRascunho) return; var a=ptRascunho.itens[k]||{}; a.emb=(a.emb===e)?'':e; ptRascunho.itens[k]=a; renderPertences(); }
+  function ptFichaHtml(){
+    var o=ptAtual, p=o.p, R=ptRascunho, entrada=ptEhEntrada();
+    var foto=(typeof o.i==='number')?fotoDoPel(p):'';
+    var ph=foto?'<div class="ck-av" style="background-image:url(\''+foto+'\')"></div>'
+               :'<div class="ck-av" style="background:'+corPel(typeof o.i==='number'?o.i:0)+';display:flex;align-items:center;justify-content:center;font-size:28px;font-weight:800;color:#fff">'+((p.n||'?')[0]||'?')+'</div>';
+    var h='<div class="card ck-ficha">'
+      +'<div class="ck-topo">'+ph+'<div><div class="ck-nome">'+escAttr(pelNome(p))+'</div>'
+      +'<div class="ck-sub">'+escAttr(p.raca||'')+(p.tutor?(' · '+escAttr(p.tutor)):'')+'</div></div>'
+      +'<button class="btn" style="margin-left:auto;background:var(--z-cream-warm);color:var(--z-blue);border:1.5px solid var(--line)" onclick="ptVoltar()">Voltar</button></div>';
+    h+='<div class="ck-proto"><div class="ck-proto-cab" style="cursor:default"><span>Como preencher</span></div>'
+      +'<div class="ck-proto-corpo"><ol>'
+      +'<li>Passe item por item, <strong>na ordem</strong>. Não pule o que ele não trouxe — marcar "não trouxe" também é informação.</li>'
+      +'<li>Quando <strong>trouxe</strong>, escreva COMO é: cor, marca, quantidade. "Roupa" não devolve nada; "1 blusa bege de tricô" devolve.</li>'
+      +'<li>Comida, petisco e vasilha: marque também <strong>em que veio</strong> — pote, sacola ou mochila.</li>'
+      +'<li>Medicação e suplemento: escreva <strong>o que é, quanto e a que horas</strong>. Se tiver dúvida, pergunte ao tutor antes de ele ir embora.</li>'
+      +'</ol></div></div>';
+    var marcados=0;
+    PT_ITENS.forEach(function(it){
+      var a=R.itens[it.k]||{}, marc=(typeof a.trouxe==='boolean');
+      if(marc) marcados++;
+      h+='<div class="ck-ponto'+(a.trouxe?' ok':(marc?'':''))+'">'
+        +'<div class="ck-ph"><div><div class="ck-pt">'+it.t+'</div><div class="ck-ver">Ele trouxe '+(it.t.toLowerCase().indexOf('vasilha')>=0?'vasilhas':'isto')+'?</div></div></div>'
+        +'<div class="ck-btns">'
+          +'<button type="button" class="ck-b ok'+(a.trouxe===true?' on':'')+'" onclick="ptMarcar(\''+it.k+'\',true)">Trouxe</button>'
+          +'<button type="button" class="ck-b bad'+(a.trouxe===false?' on':'')+'" onclick="ptMarcar(\''+it.k+'\',false)">Não trouxe</button>'
+        +'</div>';
+      if(a.trouxe){
+        if(it.qtd) h+='<input class="cad-in" style="margin-top:8px" inputmode="numeric" placeholder="Quantas?" value="'+escAttr(a.qtd||'')+'" oninput="ptTexto(\''+it.k+'\',\'qtd\',this.value)">';
+        h+='<input class="cad-in" style="margin-top:8px" placeholder="'+escAttr(it.ph||'Descreva')+'" value="'+escAttr(a.det||'')+'" oninput="ptTexto(\''+it.k+'\',\'det\',this.value)">';
+        if(it.emb) h+='<div class="ck-alertas" style="margin-top:8px">'+PT_EMB.map(function(e){
+            return '<button type="button" class="ck-chip'+(a.emb===e.k?' on':'')+'" onclick="ptEmb(\''+it.k+'\',\''+e.k+'\')">'+e.t+'</button>'; }).join('')+'</div>';
+      }
+      h+='</div>';
+    });
+    h+='<div class="ck-salvar"><span class="ck-progress">'+marcados+' de '+PT_ITENS.length+' itens conferidos</span>'
+      +'<button class="btn btn-primary" onclick="ptSalvar()">'+(entrada?'Salvar o que ele trouxe':'Salvar o que volta')+'</button></div>';
+    h+='</div>';
+    return h;
+  }
+  function ptSalvar(){
+    if(!ptAtual||!ptRascunho) return;
+    var faltam=PT_ITENS.filter(function(it){ return typeof (ptRascunho.itens[it.k]||{}).trouxe!=='boolean'; });
+    if(faltam.length){ alert('Falta responder: '+faltam.map(function(x){ return x.t; }).join(', ')+'.\n\nMarcar "não trouxe" também conta — é assim que a saída sabe o que não pode cobrar.'); return; }
+    var o=ptAtual, k=dcKey(o.p.n,o.p.tutor);
+    var d=new Date(), p2=function(x){ return String(x).padStart(2,'0'); };
+    var reg=Object.assign({},ptRascunho,{
+      nome:o.p.n||'', tutor:o.p.tutor||'', raca:o.p.raca||'',
+      fim:Date.now(), hora:p2(d.getHours())+':'+p2(d.getMinutes()),
+      quem:(typeof quemSou==='function'?quemSou():'-')
+    });
+    if(!DB){ alert('Sem conexão — não deu para salvar. Tente de novo quando a internet voltar.'); return; }
+    DB.ref(ptNo()+'/'+k).set(reg).then(function(){
+      ptDados[k]=reg; ptAtual=null; ptRascunho=null;
+      if(typeof audit==='function') audit(ptEhEntrada()?'checkin-pertences':'checkout-pertences',
+        'conferiu os pertences de '+(o.p.n||''),{pet:o.p.n||''});
+      renderPertences();
+    }).catch(function(e){ alert('Não salvou: '+((e&&e.message)||e)); });
+  }
   function carregarGenerico(){ genMarcas={};
     if(!DB){ renderGenerico(); return; }
     // o 2º horário se monta a partir de quem não comeu, então precisa das marcações do
@@ -11581,8 +11730,34 @@
         linhas), 'checkin-corpo', linhas.length);
     }).catch(function(e){ alert('Não consegui ler os dados: '+((e&&e.message)||e)); });
   }
+  // ---- Relatório: pertences do dia (a tabela de papel, agora gerada) ----
+  function relPertencesHoje(){
+    if(!DB){ alert('Sem conexão com o banco.'); return; }
+    var dia=dcDataKey();
+    DB.ref('daycare/checkin-pertences/'+dia).once('value').then(function(s){
+      var d=s.val()||{}, linhas=[];
+      Object.keys(d).forEach(function(k){
+        var r=d[k]||{}, it=r.itens||{};
+        var cel=function(key){
+          var a=it[key]; if(!a||typeof a.trouxe!=='boolean') return '';
+          if(!a.trouxe) return '—';
+          var partes=[]; if(a.qtd) partes.push(a.qtd); if(a.det) partes.push(a.det); if(a.emb) partes.push('('+a.emb+')');
+          return partes.length?partes.join(' '):'OK';
+        };
+        linhas.push([r.nome||k, r.raca||''].concat(PT_ITENS.map(function(x){ return cel(x.k); }))
+          .concat([r.hora||'', r.quem||'']));
+      });
+      if(!linhas.length){ alert('Nenhum check-in de pertences registrado hoje ainda.'); return; }
+      linhas.sort(function(a,b){ return String(a[0]).localeCompare(String(b[0]),'pt'); });
+      relBaixarXLS(relTabelaHTML('Pertences do dia — '+orcBR(dia),
+        linhas.length+' peludinhos · legenda: (P) pote, (S) sacola, (M) mochila · "—" = não trouxe · gerado em '+new Date().toLocaleString('pt-BR'),
+        ['Nome','Raça'].concat(PT_ITENS.map(function(x){ return x.t; })).concat(['Hora','Quem conferiu']),
+        linhas), 'pertences-daycare', linhas.length);
+    }).catch(function(e){ alert('Não consegui ler os dados: '+((e&&e.message)||e)); });
+  }
   const RELATORIOS=[
     {t:'Grade de almoço das turminhas', d:'Segunda a sexta: nome, raça, se almoça, comedouro lento, o que come e quanto come. É a contingência de papel — se o sistema cair, a comida sai igual.', fn:'baixarGradeAlmoco()'},
+    {t:'Pertences do dia', d:'A tabela que hoje é preenchida à mão: item por item, o que cada FILHOt trouxe, como é e em que veio (pote, sacola ou mochila).', fn:'relPertencesHoje()'},
     {t:'Check-in do corpo de hoje', d:'Quem passou, a que horas, quem fez, o que foi encontrado de alteração, cocô e as coleiras que entraram.', fn:'relCheckinHoje()'},
     {t:'Orçamentos de hospedagem', d:'Todo orçamento feito, com plano, desconto, diárias, pernoites, valor e se o tutor fechou. Uma linha por FILHOt.', fn:'relOrcamentos()'}
   ];
