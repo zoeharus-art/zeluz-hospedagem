@@ -374,7 +374,8 @@
   .ck-num{flex:0 0 auto;width:24px;height:24px;border-radius:8px;background:var(--z-cream-warm);color:var(--z-blue);
     font-size:12.5px;font-weight:800;display:flex;align-items:center;justify-content:center}
   .ck-pt{font-size:15.5px;font-weight:800;color:var(--z-blue);letter-spacing:-.015em}
-  .ck-ver{font-size:12.5px;font-weight:500;color:var(--muted);margin-top:1px}
+  .ck-ver{font-size:13.5px;font-weight:700;color:var(--z-blue);margin-top:1px}
+  .ck-como{font-size:13px;line-height:1.55;color:var(--z-blue-soft);background:var(--z-cream-warm);border-left:3px solid var(--z-gold);border-radius:9px;padding:9px 11px;margin:8px 0 2px}
   .ck-btns{display:flex;gap:8px}
   .ck-b{flex:1;padding:13px 10px;border-radius:11px;border:1.5px solid var(--line);background:#fff;
     font-family:inherit;font-size:14.5px;font-weight:800;color:var(--muted);cursor:pointer}
@@ -1516,11 +1517,7 @@
     <a data-v="reposicao" class="so-recepcao"><span data-icon="star"></span><span>Reposições</span></a>
     <a data-v="orcamento" class="so-recepcao"><span data-icon="star"></span><span>Orçamento de Hospedagem</span></a>
 
-    <div class="grp so-gestao">Relatórios</div>
-    <a data-v="relatorios" class="so-gestao"><span data-icon="star"></span><span>Baixar relatórios</span></a>
-    <a data-v="inativos" class="so-gestao"><span data-icon="paw"></span><span>Inativos</span></a>
-    <a data-v="aulunos" class="so-gestao"><span data-icon="users"></span><span>Aulunos</span><span class="soon">em breve</span></a>
-    <a data-v="vacinas" class="so-gestao"><span data-icon="heart"></span><span>Vacinas</span><span class="soon">em breve</span></a>
+    <a data-v="relatorios" class="so-gestao"><span data-icon="star"></span><span>Relatórios</span></a>
 
     <a data-v="sair"><span data-icon="exit"></span><span>Sair</span></a>
   </nav>
@@ -1724,7 +1721,7 @@
     <div class="dc-titulo"><span id="dcAtivLabel">Chamada</span> · <span id="dcDiaLabel">hoje</span></div>
     <div class="pel-toolbar"><input class="search" id="dcBusca" placeholder="Buscar peludinho, raça ou tutor..." style="width:300px;max-width:100%" oninput="onDcBusca()">
       <!-- A folha de contingência: se o app cair no horário do almoço, a monitora serve pelo papel. -->
-      <button class="btn btn-gold" style="margin-left:auto;padding:10px 16px;flex:0 0 auto" onclick="baixarGradeAlmoco()" title="Baixa a grade de segunda a sexta em Excel — nome, raça, se almoça, comedouro, o que come e quanto come">Baixar Excel &mdash; grade de almoço</button>
+      <!-- O Excel da grade mudou de lugar (13/ago/2026): agora mora em Relatórios, com os outros. -->
     </div>
     <div id="scr-chamada" class="dc-scr">
       <div class="role-note"><span data-icon="sun"></span><span>Toque <strong>VEIO</strong> ou <strong>FALTOU</strong> em cada peludinho. A lista de faltas vai para a Gestão. Toque no card para ver a ficha.</span></div>
@@ -2753,8 +2750,17 @@
        relatórios disponíveis (vamos criar diversos)." Relatório escondido dentro de uma
        tela é relatório que ninguém acha. Aqui todos moram juntos. -->
   <section class="view" id="v-relatorios">
-    <div class="role-note so-gestao"><span data-icon="star"></span><span>Tudo que dá para <strong>baixar em Excel</strong>, num lugar só. Abrem no Excel, no Google Planilhas ou no celular. Novos relatórios vão aparecendo aqui.</span></div>
+    <div class="role-note so-gestao"><span data-icon="star"></span><span>Tudo que dá para <strong>baixar</strong> e todas as <strong>listas</strong>, num lugar só. Ficam aqui para o menu não virar uma lista sem fim.</span></div>
     <div id="relGrid"></div>
+    <div class="card">
+      <h2 style="font-size:19px">Listas</h2>
+      <div class="hint">Saíram do menu e vieram para cá.</div>
+      <div id="relListas" style="display:flex;flex-wrap:wrap;gap:8px;margin-top:8px">
+        <button class="btn btn-primary" onclick="relAbrirLista('inativos')">Inativos</button>
+        <button class="btn" style="background:var(--z-cream-warm);color:var(--z-blue);border:1.5px solid var(--line)" disabled title="Ainda não existe">Aulunos — em breve</button>
+        <button class="btn" style="background:var(--z-cream-warm);color:var(--z-blue);border:1.5px solid var(--line)" disabled title="Ainda não existe">Vacinas — em breve</button>
+      </div>
+    </div>
   </section>
 
   <!-- ===== ORÇAMENTO DE HOSPEDAGEM (Adriana, 12/ago/2026) ==========================
@@ -3260,7 +3266,18 @@
     document.getElementById('v-'+(v==='checkoutconf'?'checkout':v)).classList.add('active');
     document.getElementById('head-title').childNodes[0].nodeValue=titles[v][0]+' ';
     document.getElementById('head-sub').textContent=titles[v][1];
-    if(v==='hospedagem') fecharPlantao();
+    if(aoAbrirView(v)==='parar') return;
+    closeNav(); window.scrollTo({top:0,behavior:'smooth'});
+  });
+  // ===== UM LUGAR SÓ PARA "AO ABRIR A TELA X, FAÇA Y" (Adriana, 13/ago/2026) ========
+  // Existiam DUAS listas de ganchos: uma aqui, no clique do menu, e outra dentro de
+  // irParaView (usada quando o próprio código troca de tela). Toda tela nova precisava ser
+  // lembrada nos dois lugares — e quem esquecia via a tela abrir VAZIA. Já tinha acontecido
+  // com a Renovação em 30/jul, e aconteceu de novo com Relatórios (tela em branco) e com o
+  // Orçamento (a Temporada aparecia sem os botões). Agora é UMA lista só: os dois caminhos
+  // passam por aqui. Tela nova = uma linha, num lugar só.
+  function aoAbrirView(v){
+    if(v==='hospedagem'){ if(typeof fecharPlantao==='function') fecharPlantao(); }
     if(v==='cuidadovet'){ if(typeof abrirCuidadoVet==='function') abrirCuidadoVet(); }
     if(v==='checkin'){ if(typeof abrirCheckin==='function') abrirCheckin(); }
     if(v==='conferencia'){ if(typeof abrirConferencia==='function') abrirConferencia(); }
@@ -3272,16 +3289,16 @@
     if(v==='ficha'){ const l=document.getElementById('pel-lista'),fi=document.getElementById('pel-ficha'); if(l&&fi){ l.style.display='block'; fi.style.display='none'; } if(typeof renderPel==='function') renderPel(); }
     if(v==='inativos'){ if(typeof renderInativos==='function') renderInativos(); }
     if(v==='reposicao'){ if(typeof renderReposicao==='function') renderReposicao(); }
-    // Faltava esta linha: a lista de renovação só era montada quando outra parte do código
-    // chamava irParaView('renovacao'). Clicando no menu, a tela abria VAZIA (30/jul/2026).
     if(v==='renovacao'){ if(typeof renderRenovacao==='function') renderRenovacao(); }
     if(v==='daycare'){ if(typeof abrirDayCare==='function') abrirDayCare(); }
+    if(v==='orcamento'){ if(typeof orcInit==='function') orcInit(); }
+    if(v==='relatorios'){ if(typeof renderRelatorios==='function') renderRelatorios(); if(typeof orcCarregarLista==='function') orcCarregarLista(); }
     const pn=document.getElementById('pSubnav'); if(pn) pn.style.display=(v==='pessoas')?'block':'none';
-    if(v==='pessoas'){ if(typeof montarPSubnav==='function') montarPSubnav(); if(typeof abrirPessoas==='function') abrirPessoas('ativ'); return; }
+    if(v==='pessoas'){ if(typeof montarPSubnav==='function') montarPSubnav(); if(typeof abrirPessoas==='function') abrirPessoas('ativ'); return 'parar'; }
     if(v==='painel'){ if(typeof carregarPainel==='function') carregarPainel(); }
     if(v==='abertura'){ if(typeof carregarAberturaM1==='function') carregarAberturaM1(); }
-    closeNav(); window.scrollTo({top:0,behavior:'smooth'});
-  });
+    return '';
+  }
 
   // subtabs da ficha
   document.querySelectorAll('.subtab').forEach(t=>t.onclick=()=>{
@@ -9627,9 +9644,12 @@
     const sec=document.getElementById('v-'+v); if(sec) sec.classList.add('active');
     if(typeof titles!=='undefined'&&titles[v]){ document.getElementById('head-title').childNodes[0].nodeValue=titles[v][0]+' '; document.getElementById('head-sub').textContent=titles[v][1]; }
     window.scrollTo({top:0,behavior:'smooth'});
+    // A lista COMPLETA de ganchos vive em aoAbrirView (usada pelo clique no menu). Aqui
+    // disparamos só as telas que o próprio código abre por dentro — chamar a lista inteira
+    // reabriria telas que quem chamou já preparou (ex.: abre a ficha e some com o FILHOt).
     if(v==='renovacao' && typeof renderRenovacao==='function') renderRenovacao();
     if(v==='orcamento' && typeof orcInit==='function') orcInit();
-    if(v==='relatorios' && typeof renderRelatorios==='function'){ renderRelatorios(); if(typeof orcCarregarLista==='function') orcCarregarLista(); }
+    if(v==='relatorios' && typeof renderRelatorios==='function') renderRelatorios();
   }
   // Redesenha a ficha aberta mantendo a aba atual. Os blocos de prevenção calculam a
   // próxima data ao salvar, e o resultado precisa aparecer na hora.
@@ -10539,31 +10559,50 @@
   //  · Foto é OBRIGATÓRIA em qualquer alteração: é o que vira prova quando o tutor perguntar.
   //  · Quem faz o check-in de entrada ESTÁ PRESENTE. Acabou a chamada em separado, que
   //    ninguém preenchia (5 dias preenchidos em meses inteiros).
+  // ===== CADA PONTO É UMA PERGUNTA, E ENSINA COMO OLHAR (Adriana, 13/ago/2026) ======
+  // "Cada um desses é uma pergunta e precisa de mais detalhes — reescreva para que uma
+  //  criança de 12 anos compreenda perfeitamente."
+  // Antes o texto era um lembrete para quem JÁ sabia ("Anda equilibrado, sem dor").
+  // Quem está começando lia aquilo e não sabia o que fazer com as mãos. Agora cada ponto
+  // tem a PERGUNTA (o que responder) e o COMO (o que fazer, passo a passo, sem palavra difícil).
   const CK_PONTOS=[
-    {k:'consciencia', t:'Consciência', ver:'Responde ao nome e ao comando VEM',
-     alertas:['Sem resposta','Letargia','Parece com dor']},
-    {k:'patas', t:'Patas e coxins', ver:'Anda equilibrado, sem dor, patas secas',
-     alertas:['Mancando','Passada incomum','Lambendo demais','Patas úmidas','Unha quebrada','Coxim ferido']},
-    {k:'pele', t:'Pele e pelagem', ver:'Sem ferimento, seca, limpa e sem nós',
-     alertas:['Área úmida','Tufo de pelo','Pulga','Carrapato','Machucado','Arranhão','Falha de pelo','Cor anormal','Odor forte']},
-    {k:'orelhas', t:'Orelhas', ver:'Limpas, secas e sem algodão',
-     alertas:['Avermelhada','Odor forte','Sujeira preta','Lesão','Secreção']},
-    {k:'olhos', t:'Olhos', ver:'Faz contato visual, olhos limpos',
-     alertas:['Olho fechado','Piscando demais','Pupila dilatada','Secreção','Vermelhidão']},
-    {k:'boca', t:'Boca e focinho', ver:'Respiração normal, gengiva e língua rosadas, sem papiloma',
-     alertas:['Mucosa pálida','Papiloma','Respiração alterada','Secreção','Mau hálito forte','Dente quebrado']},
-    {k:'agua', t:'Alimentação e água', ver:'Bebeu água conforme o calor e a atividade do dia',
-     alertas:['Bebeu demais','Não bebeu','Comeu menos de 50% — NÃO COMEU','Recusou comida']},
-    {k:'eliminacao', t:'Eliminação (urina e fezes)', ver:'Urina e fezes de aparência normal, sem vômito',
-     alertas:['Urina pouca e frequente','Cor alterada','Objeto estranho','Vomitou','Não urinou']},
-    {k:'rabo', t:'Rabo e bumbum', ver:'Sem vermelhidão, inchaço ou secreção',
-     alertas:['Vermelhidão','Inchaço','Secreção','Glândula cheia','Sujo']},
+    {k:'consciencia', t:'Consciência', ver:'Ele veio quando você chamou?',
+     como:'Chame o nome dele e diga VEM. Ele deve levantar a cabeça, olhar para você e vir. Não vá até ele — espere ele vir. Se ignorar, demorar muito, andar torto ou ficar parado olhando o nada, não está bem. Isso não é preguiça.',
+     alertas:['Não respondeu ao nome','Muito parado / sem ânimo','Anda torto ou cambaleia','Parece sentir dor']},
+    {k:'patas', t:'Patas e coxins', ver:'As quatro patas estão boas e ele anda normal?',
+     como:'Veja ele dar alguns passos. Depois levante uma pata de cada vez e olhe embaixo — o coxim é a almofadinha do pé. Passe o dedo entre os dedinhos. Procure corte, vermelhidão, unha quebrada, carrapato e pelo molhado. Se ele puxar a pata ou reclamar, é porque dói ali.',
+     alertas:['Mancando','Anda diferente do normal','Lambe a pata sem parar','Pata molhada','Unha quebrada','Machucado no coxim']},
+    {k:'pele', t:'Pele e pelagem', ver:'A pele está limpa, seca e sem ferida?',
+     como:'Passe a mão devagar do pescoço até o rabo, no sentido contrário ao pelo, para enxergar a pele por baixo. Sinta se tem caroço ou lugar quente. Procure ferida, casquinha, falha de pelo, nó de pelo, pulga (bichinho preto que corre) e carrapato (bolinha grudada). Cheiro forte na pele também é sinal.',
+     alertas:['Pele molhada ou vermelha','Nó de pelo','Pulga','Carrapato','Machucado','Arranhão','Falha de pelo','Cor estranha','Cheiro forte']},
+    {k:'orelhas', t:'Orelhas', ver:'As duas orelhas estão limpas, secas e sem cheiro?',
+     como:'Levante uma orelha de cada vez e olhe por dentro. Tem que estar rosinha e seca. Sujeira preta ou marrom, cheiro azedo, vermelhidão ou líquido são alerta. Se ele balança muito a cabeça ou coça a orelha, olhe com mais calma.',
+     alertas:['Vermelha por dentro','Cheiro forte','Sujeira preta','Ferida','Saindo líquido','Balança muito a cabeça']},
+    {k:'olhos', t:'Olhos', ver:'Os dois olhos estão limpos e ele olha para você?',
+     como:'Fique de frente e chame o nome. Ele deve encarar você. Os olhos devem estar brilhantes, abertos do mesmo tamanho, sem remela grossa e sem vermelhidão. Um olho mais fechado que o outro é alerta, mesmo que ele esteja bem no resto.',
+     alertas:['Um olho mais fechado','Piscando muito','Remela ou secreção','Vermelhidão','Pupilas de tamanhos diferentes']},
+    {k:'boca', t:'Boca e focinho', ver:'A boca está normal e ele respira sem esforço?',
+     como:'Levante o beiço com cuidado. A gengiva tem que ser rosa — nunca branca, roxa nem muito vermelha. Veja se falta dente, se tem dente quebrado ou bolinha na boca. Sinta o cheiro do hálito. Repare também se ele respira com barulho, muito rápido, ou de boca aberta mesmo parado.',
+     alertas:['Gengiva pálida ou roxa','Bolinha na boca (papiloma)','Respiração com barulho ou rápida','Saindo secreção','Hálito muito forte','Dente quebrado']},
+    {k:'agua', t:'Alimentação e água', ver:'Ele bebeu água e comeu como sempre?',
+     como:'Olhe o pote e lembre como foi o dia dele. Em dia quente ou de muita corrida, beber mais é normal. Beber muito mais que o normal sem motivo, ou não encostar na água, é alerta. Se ele comeu menos da metade, conta como NÃO COMEU — anote assim mesmo.',
+     alertas:['Bebeu muito mais que o normal','Não bebeu água','Comeu menos da metade — NÃO COMEU','Recusou a comida']},
+    {k:'eliminacao', t:'Xixi e cocô', ver:'O xixi e o cocô estão normais?',
+     como:'Repare na cor e na quantidade. Xixi pouquinho e toda hora, xixi muito escuro ou avermelhado são alerta. No cocô, procure sangue, cocô muito mole e qualquer coisa estranha dentro (pedaço de pano, brinquedo, pedra). Vômito também entra aqui.',
+     alertas:['Xixi pouco e toda hora','Cor diferente do normal','Coisa estranha no cocô','Vomitou','Não fez xixi']},
+    {k:'rabo', t:'Rabo e bumbum', ver:'A região do bumbum está limpa e sem inchaço?',
+     como:'Levante o rabo e olhe. Tem que estar limpo, sem vermelhidão, sem inchaço e sem cheiro muito forte. Se ele arrasta o bumbum no chão ou lambe muito ali, pode ser a glândula cheia — anote.',
+     alertas:['Vermelhidão','Inchaço','Saindo secreção','Arrasta o bumbum no chão','Sujo']},
     {k:'intimo', t:'', ver:'', alertas:[], intimo:true}   // vulva OU pênis, conforme o sexo
   ];
   // Item 10 escrito à mão no protocolo + a resposta da Adriana sobre os machos.
   const CK_INTIMO={
-    femea:{t:'Vulva', ver:'Sem inchaço e sem vermelhidão', alertas:['Inchaço','Vermelhidão','CIO','Irritação por friccionar','Secreção']},
-    macho:{t:'Pênis e saco escrotal', ver:'Sem inchaço, vermelhidão ou secreção', alertas:['Inchaço','Vermelhidão','Secreção','Lambendo demais']}
+    femea:{t:'Vulva', ver:'A vulva está normal, sem inchaço e sem sangue?',
+      como:'Olhe rápido e com respeito — é só uma conferida. Inchaço, vermelhidão ou qualquer sinal de sangue podem ser CIO. Cio muda a rotina dela e mexe com a matilha inteira, então avise na hora, mesmo em dúvida.',
+      alertas:['Inchaço','Vermelhidão','CIO','Irritada de tanto se esfregar','Saindo secreção']},
+    macho:{t:'Pênis e saco escrotal', ver:'A região está normal, sem inchaço nem secreção?',
+      como:'Olhe rápido e com respeito — é só uma conferida. Procure inchaço, vermelhidão ou secreção amarelada. Se ele lambe muito ali, olhe com mais atenção.',
+      alertas:['Inchaço','Vermelhidão','Saindo secreção','Lambe sem parar']}
   };
   // Coleiras: a cor diz a MARCA (Adriana). A verde ficou sem marca de propósito — quando
   // souberem qual é, é só escrever aqui.
@@ -10631,6 +10670,7 @@
       +'<div class="dc-stat pend"><b>'+(lista.length-feitos)+'</b>'+(entrada?'faltam chegar':'faltam conferir')+'</div>'
       +(comAlerta?'<div class="dc-stat bad"><b>'+comAlerta+'</b>com alteração</div>':'')
       +'</div>'
+      +ckProtocoloHTML(entrada)
       +'<div class="ck-frase">'+ckFrase+'</div>'
       +(function(){
           // Quem ainda nao passou: antes das 12h e "a chegar"; depois disso o app ja marcou falta.
@@ -10774,6 +10814,8 @@
       const marc=(typeof at.alterado==='boolean');
       h+='<div class="ck-ponto'+(at.alterado?' alt':(marc?' ok':''))+'">'
         +'<div class="ck-ph"><span class="ck-num">'+(i+1)+'</span><div><div class="ck-pt">'+pt.t+'</div><div class="ck-ver">'+pt.ver+'</div></div></div>'
+        // COMO olhar — o passo a passo fica junto da pergunta, não escondido num manual.
+        +(pt.como?'<div class="ck-como">'+pt.como+'</div>':'')
         +'<div class="ck-btns">'
           +'<button type="button" class="ck-b ok'+(marc&&!at.alterado?' on':'')+'" onclick="ckMarcar(\''+pt.k+'\',false)">Normal</button>'
           +'<button type="button" class="ck-b bad'+(at.alterado?' on':'')+'" onclick="ckMarcar(\''+pt.k+'\',true)">Alterado</button>'
@@ -10813,10 +10855,13 @@
           : '')
         +'</div>'
       +'<div class="ck-bloco"><div class="ck-bt">Fez cocô?</div>'
-        +'<div class="ck-hint">Esperamos de 10 a 15 minutos. Diarreia: ligar para o tutor buscar.</div>'
+        +'<div class="ck-hint">Esperamos de 10 a 15 minutos para ele fazer. Diarreia: ligue na hora para o seu supervisor direto ou para a Márcia.</div>'
         +'<div class="ck-opts">'+CK_COCO.map(function(c){
           return '<button type="button" class="ck-opt'+(R.coco===c.k?' on':'')+(c.grave?' grave':'')+'" onclick="ckSet(\'coco\',\''+c.k+'\')">'+c.t+'</button>'; }).join('')+'</div>'
-        +(R.coco==='diarreia'?'<div class="dc-faltas" style="margin-top:8px"><strong>DIARREIA — ligue para o tutor agora.</strong> Ele precisa vir buscar. Se o FILHOt já tem histórico (intestino irritável), registre na observação e avise a Coordenação mesmo assim.</div>':'')
+        // Quem decide o que fazer com diarreia é a chefia, não a monitora — e nunca o tutor
+        // direto (Adriana, 13/ago/2026). A monitora avisa e CONTINUA o check-in.
+        +(R.coco==='diarreia'?'<div class="dc-faltas" style="margin-top:8px"><strong>DIARREIA — ligue AGORA para o seu supervisor direto ou para a Márcia.</strong>'
+          +'<div style="font-weight:600;margin-top:4px">Não ligue para o tutor: quem fala com ele é a chefia. Depois de avisar, <strong>continue o check-in normalmente</strong> e termine de olhar os outros pontos. Se ele já tem histórico de intestino irritável, escreva isso na observação — mas avise do mesmo jeito.</div></div>':'')
         +'</div>';
     }
     if(alterados.length){
@@ -11384,6 +11429,15 @@
     {t:'Check-in do corpo de hoje', d:'Quem passou, a que horas, quem fez, o que foi encontrado de alteração, cocô e as coleiras que entraram.', fn:'relCheckinHoje()'},
     {t:'Orçamentos de hospedagem', d:'Todo orçamento feito, com plano, desconto, diárias, pernoites, valor e se o tutor fechou. Uma linha por FILHOt.', fn:'relOrcamentos()'}
   ];
+  // As listas saíram do menu (que estava enorme) e viraram botões daqui.
+  function relAbrirLista(v){
+    document.querySelectorAll('.view').forEach(function(x){ x.classList.remove('active'); });
+    var sec=document.getElementById('v-'+v); if(sec) sec.classList.add('active');
+    try{ document.getElementById('head-title').childNodes[0].nodeValue=titles[v][0]+' ';
+         document.getElementById('head-sub').textContent=titles[v][1]; }catch(e){}
+    if(typeof aoAbrirView==='function') aoAbrirView(v);
+    window.scrollTo({top:0,behavior:'smooth'});
+  }
   function renderRelatorios(){
     var el=document.getElementById('relGrid'); if(!el) return;
     el.innerHTML=RELATORIOS.map(function(r){
