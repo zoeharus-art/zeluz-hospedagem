@@ -1635,6 +1635,10 @@
       <div class="av-hint">Busca no mesmo cadastro-mestre do Day Care — nome, tutor e raça já vêm de lá. Não achou? Cadastre no fim da lista.</div>
     </div>
     <div class="av-results" id="hbResults"></div>
+    <!-- 2º passo do pernoite: quando entra, quantas noites e o jantar. Substituiu dois
+         prompt() que só serviam para HOJE — a recepção precisa agendar com antecedência
+         (Adriana, 13/ago/2026: o tutor da Ella avisou na semana passada da cirurgia). -->
+    <div class="av-results" id="hbPernForm" style="display:none"></div>
   </div>
 </div>
 
@@ -4462,7 +4466,7 @@
     var cur=cafeEstado(k), nx=(cur===val)?'':val;
     if(nx) cafeMarcas[k]={estado:nx}; else delete cafeMarcas[k];
     if(DB) DB.ref('auaulandia/cafe/'+cafeDataKey()+'/'+k).set(nx?{estado:nx, quem:(typeof quemSou==='function'?quemSou():'-'), hora:(typeof horaAgora==='function'?horaAgora():'')}:null).catch(function(){});
-    if(typeof audit==='function'&&nx) audit('cafe', nx==='tudo'?'tomou o café todo':(nx==='metade'?'tomou metade':'não tomou'), {alvo:k});
+    if(typeof audit==='function'&&nx) audit('cafe', nx==='tudo'?'tomou o café todo':(nx==='metade'?'tomou metade':(nx==='naochegou'?'ainda não tinha chegado':'não tomou')), {alvo:k});
     renderCafe();
   }
   function iniciarCafe(){
@@ -4492,9 +4496,17 @@
       +'</div></div>';
     var rz=document.getElementById('cafeResumo');
     if(!hospedes.length){ grid.innerHTML='<div class="hint" style="grid-column:1/-1">Ninguém dormiu aqui esta noite — sem café da manhã hoje.</div>'; if(rz) rz.innerHTML=''; return; }
-    var servidos=hospedes.filter(function(h){ return cafeEstado(cafeKey(h)); }).length;
+    // Adriana, 13/ago/2026: "tem que dar a opção — não chegou ainda". A Ella e o Toddy entram
+    // hoje mas só chegam à tarde: apareciam na lista do café como pendência, e quem serve fica
+    // sem saber se esqueceu alguém. "Não chegou" não é falta de café — sai da conta de quem
+    // falta, mas continua contado à parte, para ninguém achar que o FILHOt foi esquecido.
+    var _est=hospedes.map(function(h){ return cafeEstado(cafeKey(h)); });
+    var naochegou=_est.filter(function(e){ return e==='naochegou'; }).length;
+    var servidos=_est.filter(function(e){ return e && e!=='naochegou'; }).length;
+    var faltam=hospedes.length-servidos-naochegou;
     if(rz) rz.innerHTML='<div class="dc-resumo"><div class="dc-stat ok"><b>'+servidos+'</b>servidos</div>'
-      +'<div class="dc-stat pend"><b>'+(hospedes.length-servidos)+'</b>faltam</div></div>';
+      +'<div class="dc-stat pend"><b>'+faltam+'</b>faltam</div>'
+      +(naochegou?'<div class="dc-stat"><b>'+naochegou+'</b>não chegou ainda</div>':'')+'</div>';
     grid.innerHTML=hospedes.map(function(h){
       var k=cafeKey(h), m=cafeEstado(k);
       var cad=(typeof getCad==='function')?(getCad(h)||{}):{};
@@ -4512,7 +4524,11 @@
         +'<button class="alm-btn tudo '+(m==='tudo'?'on':'')+'" onclick="marcarCafe(\''+k+'\',\'tudo\')">Comeu</button>'
         +'<button class="alm-btn metade '+(m==='metade'?'on':'')+'" onclick="marcarCafe(\''+k+'\',\'metade\')">Metade</button>'
         +'<button class="alm-btn nao '+(m==='nao'?'on':'')+'" onclick="marcarCafe(\''+k+'\',\'nao\')">Não comeu</button>'
-        +'</div></div></div>';
+        +'</div>'
+        +'<button class="alm-btn'+(m==='naochegou'?' on':'')+'" style="width:100%;margin-top:6px;'
+        +(m==='naochegou'?'background:var(--z-blue);color:var(--z-cream);border-color:var(--z-blue)':'')
+        +'" onclick="marcarCafe(\''+k+'\',\'naochegou\')">Não chegou ainda</button>'
+        +'</div></div>';
     }).join('');
   }
   function renderHosp(){
@@ -6546,7 +6562,7 @@
     var nota=document.getElementById('orcTipoNota');
     if(nota) nota.innerHTML=ORC_AULUNO
       ? 'Busque pelo nome. O plano e os dias vêm do cadastro — se estiverem errados, corrija na ficha do FILHOt.'
-      : 'Busque pelo nome (alguns já estão no cadastro). Se não achar, escreva o nome logo abaixo. <strong>Sem desconto de plano</strong> — só os 7% do 2º FILHOt da mesma família.';
+      : 'Busque pelo nome (alguns já estão no cadastro). Se não achar, escreva o nome logo abaixo. <strong>Sem desconto de plano</strong> — só os 5% do 2º FILHOt da mesma família em diante.';
     var box=document.getElementById('orcAvulsoBox'); if(box) box.style.display=ORC_AULUNO?'none':'block';
   }
   function orcAvSexoSet(s){
@@ -6647,13 +6663,16 @@
     }).join('');
   }
   // Desconto da diária: vale o MAIOR entre o desconto do plano e o do 2º/3º FILHOt —
-  // nunca soma (decisão da Adriana, 12/ago/2026). Assim o mensal (0%) ganha os 7% do 2º,
+  // nunca soma (decisão da Adriana, 12/ago/2026). Assim o mensal (0%) ganha os 5% do 2º,
   // e o semestral (15%) continua com 15% nos dois.
   function orcDescontoDe(sel, ordem){
     var doPlano=sel.hospOff||0;
-    var daFamilia=(typeof DESC_PET!=='undefined'&&DESC_PET[ordem])?DESC_PET[ordem]:(ordem>=3?12:0);
+    var daFamilia=descFamiliaHosp(ordem);
     return Math.max(doPlano, daFamilia||0);
   }
+  // Desconto de irmão na HOSPEDAGEM: 5% do 2º FILHOt em diante. Uma função só para que o
+  // cálculo e o texto do resumo nunca discordem sobre o valor.
+  function descFamiliaHosp(ordem){ return (ordem>=2)?DESC_PET_HOSP:0; }
   // Temporada é ESCOLHA explícita — nunca um checkbox que fica desmarcado por esquecimento.
   // Os dois preços ficam à vista o tempo todo: quem faz o orçamento confere antes de mandar.
   var ORC_ALTA=false;
@@ -6740,7 +6759,7 @@
       h+='<div style="border:1.5px solid var(--line);border-radius:12px;padding:12px 14px;margin-bottom:10px">';
       h+='<div style="font-weight:800;color:var(--z-blue);font-size:15px;margin-bottom:6px">'+escAttr(p.sel.nome)+' <span style="font-weight:600;font-size:12.5px;color:var(--z-blue-soft)">'+escAttr(p.sel.rotulo)+(p.ordem>1?(' · '+p.ordem+'º FILHOt'):'')+'</span></div>';
       h+='<div class="orc-linha"><span>'+p.nDia+' diária'+(p.nDia===1?'':'s')+' de hotel × '+fmtCent(p.vDia)+'</span><strong>'+fmtCent(p.brutoDia)+'</strong></div>';
-      if(p.off>0) h+='<div class="orc-linha"><span>Desconto de '+p.off+'% na diária'+(p.sel.compromisso?(' (plano '+escAttr(p.sel.compromisso)+')'):'')+(p.ordem>1&&p.off===((typeof DESC_PET!=='undefined'&&DESC_PET[p.ordem])||0)?(' — '+p.ordem+'º FILHOt'):'')+'</span><strong style="color:var(--crm-ok)">− '+fmtCent(p.descValor)+'</strong></div>';
+      if(p.off>0) h+='<div class="orc-linha"><span>Desconto de '+p.off+'% na diária'+(p.sel.compromisso?(' (plano '+escAttr(p.sel.compromisso)+')'):'')+(p.ordem>1&&p.off===descFamiliaHosp(p.ordem)?(' — '+p.ordem+'º FILHOt'):'')+'</span><strong style="color:var(--crm-ok)">− '+fmtCent(p.descValor)+'</strong></div>';
       h+='<div class="orc-linha"><span>'+p.nPer+' pernoite'+(p.nPer===1?'':'s')+' × '+fmtCent(p.vPer)+' <span style="color:var(--muted);font-size:12px">(pernoite não tem desconto)</span></span><strong>'+fmtCent(p.brutoPer)+'</strong></div>';
       h+='<div class="orc-linha" style="border-bottom:none"><span><strong>Subtotal '+escAttr(p.sel.nome)+'</strong></span><strong>'+fmtCent(p.total)+'</strong></div>';
       h+='<div class="orc-noites">'+p.noites.map(function(n){
@@ -7294,7 +7313,7 @@
   // Agora existe um carimbo: esta constante é a versão que o aparelho está rodando, e o
   // Firebase guarda a versão publicada. Quando as duas diferem, aparece o aviso — mas
   // NUNCA recarrega sozinho: recarregar no meio de um check-in perderia o trabalho.
-  const APP_VERSAO='2026-08-13-11';
+  const APP_VERSAO='2026-08-13-12';
   function vigiarVersao(){
     if(!DB) return;
     try{
@@ -7938,25 +7957,55 @@
     const _ehHoje = selectedDate.getFullYear()===_ag.getFullYear() && selectedDate.getMonth()===_ag.getMonth() && selectedDate.getDate()===_ag.getDate();
     const _antesCorte = !(_ag.getHours()>11 || (_ag.getHours()===11 && _ag.getMinutes()>=30));
     const incluiVesp = _ehHoje && _antesCorte; // pernoite que dormiu aparece de manhã, igual aos hóspedes
+    // ===== JANELA DO PERNOITE — Adriana, 13/ago/2026 ================================
+    // O Theo e o Rafael dormiram aqui e não apareceram no café da manhã. Estavam lançados
+    // CERTO, como pernoite do dia 12, com jantar e tudo. O que falhou foi a leitura: ela só
+    // olhava "os lançamentos de ontem, e só antes das 11h30" — uma regra que presume que todo
+    // pernoite dura exatamente uma noite e que ninguém avisa com antecedência.
+    // Agora cada lançamento carrega quantas NOITES são, e a leitura varre os últimos dias
+    // perguntando se hoje cai dentro da janela dele. Lançar para uma data futura passa a
+    // funcionar de graça: o registro fica quieto em manuais/{data} e acorda sozinho no dia.
+    const PERN_MAX_NOITES=7;
+    const _diasJanela=[]; for(let _i=0;_i<=PERN_MAX_NOITES;_i++) _diasJanela.push(orcMaisDias(hojeK,-_i));
+    // Devolve null (não é hoje) ou {saida:bool}. saida=true → é a manhã de ir embora.
+    function pernJanela(m, diaLancado){
+      const n=Math.max(1,parseInt(m&&m.noites,10)||1);
+      const fim=orcMaisDias(diaLancado,n);        // manhã seguinte à última noite
+      if(hojeK<diaLancado) return null;           // ainda não chegou o dia
+      if(hojeK>fim) return null;                  // a estadia dele já terminou
+      if(hojeK===fim) return (_ehHoje&&_antesCorte)?{saida:true}:null;  // manhã da saída, até 11h30
+      return {saida:false};                       // está aqui
+    }
     // manualKey/manualDia = chave real do Firebase (pushKey) + o dia (hoje ou véspera) onde o
     // registro vive em auaulandia/manuais/{dia}/{pushKey}. É o que permite CANCELAR o lançamento
     // certo depois (ver cancelarHospedeManual) — nunca remover pelo índice do array, que desalinha.
     const add=(m,saida,dia,key)=>{ if(m&&m.nome && !hospedes.some(h=>h.nome===m.nome&&h.tutor===(m.tutor||''))){ hospedes.push({nome:m.nome, tutor:m.tutor||'', raca:m.raca||'', refKey:m.refKey||'', ini:(m.nome[0]||'?').toUpperCase(), cor:CORES[hospedes.length%CORES.length], pernoite:!m.hospede, hospede:!!m.hospede, saidaHoje:!!saida, manualKey:key||'', manualDia:dia||'', janta:!!m.janta, jantar:m.jantar||null}); } };
+    // Sem `.catch` por leitura: se uma delas falhar, quem trata é o catch lá embaixo, que
+    // AVISA. Engolir aqui era o que fazia a lista ficar curta em silêncio (caso Dolly).
     Promise.all([
-      DB.ref('auaulandia/manuais/'+hojeK).once('value').then(s=>s.val()||{}).catch(()=>({})),
-      incluiVesp ? DB.ref('auaulandia/manuais/'+vespK).once('value').then(s=>s.val()||{}).catch(()=>({})) : Promise.resolve({}),
+      // Lançamentos manuais dos últimos dias. Cada registro decide sozinho, pela sua janela
+      // de noites, se cai no dia de hoje. Do dia atual para trás, para o lançamento mais
+      // recente ganhar de um antigo em caso de repetição (o `add` protege por nome+tutor).
+      Promise.all(_diasJanela.map(function(d){
+        return DB.ref('auaulandia/manuais/'+d).once('value').then(function(s){ return {dia:d, v:s.val()||{}}; });
+      })),
       // Estadias do Check-in (auaulandia/estadias): o hóspede que fez check-in aparece no Plantão
       // com ficha + medicação + alimentação, mesmo sem estar na planilha. Ativa = status 'ativa' e
       // hoje dentro de entrada→saída. Dedupe por nome+tutor (o `add` já protege).
-      DB.ref('auaulandia/estadias').once('value').then(s=>s.val()||{}).catch(()=>({})),
+      DB.ref('auaulandia/estadias').once('value').then(s=>s.val()||{}),
       // Removidos de hoje (override da Gestão): tira do Plantão quem foi removido manualmente.
-      DB.ref('auaulandia/removidos/'+hojeK).once('value').then(s=>s.val()||{}).catch(()=>({}))
+      DB.ref('auaulandia/removidos/'+hojeK).once('value').then(s=>s.val()||{})
     ]).then(function(r){
-      Object.entries(r[0]||{}).forEach(([k,m])=>add(m,false,hojeK,k));
-      Object.entries(r[1]||{}).forEach(([k,m])=>add(m,true,vespK,k));
+      (r[0]||[]).forEach(function(o){
+        Object.keys(o.v||{}).forEach(function(k){
+          const m=o.v[k]; const j=pernJanela(m,o.dia);
+          if(!j) return;                       // não é hoje: ou ainda não chegou, ou já foi
+          add(m, j.saida, o.dia, k);
+        });
+      });
       // Só a estadia mais recente de cada FILHOt (evita reaparecer estadias antigas do mesmo pet)
       var maisRecente={};
-      Object.values(r[2]||{}).forEach(function(e){ if(!e||!e.nome) return; var kk=((e.refKey||(e.nome+'__'+(e.tutor||'')))+'').toLowerCase(); if(!maisRecente[kk]||(e._ts||0)>(maisRecente[kk]._ts||0)) maisRecente[kk]=e; });
+      Object.values(r[1]||{}).forEach(function(e){ if(!e||!e.nome) return; var kk=((e.refKey||(e.nome+'__'+(e.tutor||'')))+'').toLowerCase(); if(!maisRecente[kk]||(e._ts||0)>(maisRecente[kk]._ts||0)) maisRecente[kk]=e; });
       var hojeISOk=dataKeyAtual();
       Object.values(maisRecente).forEach(function(e){
         if((e.status||'ativa')!=='ativa') return; // check-out feito → sai do plantão
@@ -7969,7 +8018,7 @@
         add({nome:e.nome, tutor:e.tutor||'', raca:e.raca||'', refKey:e.refKey||'', hospede:true}, (sai&&hojeISOk===sai), '', '');
       });
       // Aplica o override "removidos hoje" (Gestão tirou do Plantão): remove da lista final.
-      var rem=r[3]||{};
+      var rem=r[2]||{};
       if(Object.keys(rem).length){
         hospedes=hospedes.filter(function(h){ return !rem[hospRemKey(h)]; });
       }
@@ -8155,15 +8204,7 @@
     const tipo=hospBuscaTipo;
     const reg={nome:nome,tutor:tutor,raca:raca,refKey:refKey};
     if(tipo==='hospede') reg.hospede=true;
-    if(tipo==='pernoite'){
-      // Todo pernoite JANTA. A monitora informa o que dar (sugestão: a comida do Day Care) e onde fica.
-      var _a=(typeof almCad==='function')?almCad({n:nome,tutor:tutor}):null;
-      var _sug=(_a&&_a.alim)?((_a.alim||'')+(_a.quant?(' · '+_a.quant):'')):'';
-      var _com=(prompt('JANTAR do '+nome+' — todo pernoite janta.\nO que dar e quanto? (ex.: Ração 50g · Comida natural 100g)', _sug)||'').trim();
-      var _onde=(prompt('Onde fica a comida do '+nome+'?\n(ex.: Comida natural na GELADEIRA · Ração no ARMÁRIO)', (_a&&_a.extra)||'')||'').trim();
-      reg.janta=true;
-      if(_com||_onde) reg.jantar={comida:_com, onde:_onde};
-    }
+    if(tipo==='pernoite'){ abrirPernForm(reg); return; }   // 2º passo: quando entra, noites e jantar
     if(DB){
       DB.ref('auaulandia/manuais/'+dataKeyAtual()).push(reg)
         .then(()=>{ fecharHospBuscaModal(); carregarManuais(); })
@@ -8172,6 +8213,76 @@
       hospedes.push({nome:nome,tutor:tutor,raca:raca,refKey:refKey,ini:(nome[0]||'?').toUpperCase(),cor:CORES[hospedes.length%CORES.length],pernoite:tipo!=='hospede',hospede:tipo==='hospede'});
       fecharHospBuscaModal(); renderHosp();
     }
+  }
+  // ===== PERNOITE AGENDADO — Adriana, 13/ago/2026 ====================================
+  // "o tutor da Ella avisou na semana passada que iria submeter a uma cirurgia e precisaria
+  //  que a Ella dormisse depois do daycare. A recepção precisa lançar, com a data. Aí a
+  //  Giulia já sabe, e todos podem se programar antes."
+  // Antes isso vivia num grupo de WhatsApp e o lançamento no app só existia para HOJE (dois
+  // prompt() em sequência). Agora tem data, número de noites e o jantar num formulário só.
+  // O FILHOt chega como auluno normal e faz o check-in do corpo e dos pertences do Day Care;
+  // ao anoitecer ele entra sozinho na lista da plantonista.
+  var PERN_PEND=null;
+  function abrirPernForm(reg){
+    PERN_PEND=reg;
+    const box=document.getElementById('hbPernForm'), res=document.getElementById('hbResults');
+    const sw=document.querySelector('#hospBuscaModal .av-searchwrap');
+    if(!box) return;
+    if(res) res.style.display='none';
+    if(sw) sw.style.display='none';
+    const a=(typeof almCad==='function')?almCad({n:reg.nome,tutor:reg.tutor}):null;
+    const sug=(a&&a.alim)?((a.alim||'')+(a.quant?(' · '+a.quant):'')):'';
+    const hoje=(typeof hospHojeISO==='function')?hospHojeISO():'';
+    box.style.display='block';
+    box.innerHTML='<div style="padding:4px 2px">'
+      +'<div style="font-weight:800;font-size:17px;color:var(--z-blue);margin-bottom:2px">Pernoite de '+escAttr(reg.nome||'')+'</div>'
+      +'<div style="font-size:13.5px;color:var(--muted);font-weight:600;margin-bottom:12px">Pode ser hoje ou um dia combinado com o tutor. Quem estiver de plantão nessa noite já vai ver na lista dele.</div>'
+      +'<div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:10px">'
+      +'<label style="flex:1;min-width:150px;font-size:12px;font-weight:700;color:var(--muted)">Entra no dia<br><input type="date" class="cad-in" id="pfData" value="'+escAttr(hoje)+'" min="'+escAttr(hoje)+'"></label>'
+      +'<label style="flex:1;min-width:110px;font-size:12px;font-weight:700;color:var(--muted)">Quantas noites<br><input type="number" class="cad-in" id="pfNoites" value="1" min="1" max="7"></label>'
+      +'</div>'
+      +'<div style="font-size:13.5px;font-weight:700;color:var(--z-blue);margin:14px 0 6px">Todo pernoite janta</div>'
+      +'<label style="font-size:12px;font-weight:700;color:var(--muted)">O que dar e quanto<br><input class="cad-in" id="pfComida" value="'+escAttr(sug)+'" placeholder="ex.: Ração 50g · Comida natural 100g"></label>'
+      +'<label style="font-size:12px;font-weight:700;color:var(--muted);display:block;margin-top:8px">Onde fica a comida<br><input class="cad-in" id="pfOnde" value="'+escAttr((a&&a.extra)||'')+'" placeholder="ex.: Comida natural na GELADEIRA"></label>'
+      +'<label style="font-size:12px;font-weight:700;color:var(--muted);display:block;margin-top:8px">Recado para quem vai receber (opcional)<br><input class="cad-in" id="pfObs" placeholder="ex.: o tutor opera de manhã, busca no fim da tarde"></label>'
+      +'<div style="display:flex;gap:8px;margin-top:16px">'
+      +'<button class="btn btn-primary" style="flex:1" onclick="salvarPernAgendado()">Salvar pernoite</button>'
+      +'<button class="btn" onclick="fecharPernForm()">Voltar</button>'
+      +'</div></div>';
+    setTimeout(function(){ try{ document.getElementById('pfData').focus(); }catch(e){} },80);
+  }
+  function fecharPernForm(){
+    PERN_PEND=null;
+    const box=document.getElementById('hbPernForm'), res=document.getElementById('hbResults');
+    const sw=document.querySelector('#hospBuscaModal .av-searchwrap');
+    if(box){ box.style.display='none'; box.innerHTML=''; }
+    if(res) res.style.display='';
+    if(sw) sw.style.display='';
+  }
+  function salvarPernAgendado(){
+    if(!PERN_PEND) return;
+    const dia=(document.getElementById('pfData')||{}).value||'';
+    const noites=Math.max(1,Math.min(7,parseInt((document.getElementById('pfNoites')||{}).value,10)||1));
+    const comida=((document.getElementById('pfComida')||{}).value||'').trim();
+    const onde=((document.getElementById('pfOnde')||{}).value||'').trim();
+    const obs=((document.getElementById('pfObs')||{}).value||'').trim();
+    if(!dia){ alert('Diga em que dia '+(PERN_PEND.nome||'ele')+' entra.'); return; }
+    const hoje=(typeof hospHojeISO==='function')?hospHojeISO():'';
+    if(hoje&&dia<hoje){ alert('A data já passou. Um pernoite só pode ser lançado para hoje ou para um dia à frente.'); return; }
+    if(!DB){ alert('Sem conexão com o banco agora — o pernoite não foi lançado. Tente de novo em instantes.'); return; }
+    const reg=Object.assign({},PERN_PEND,{ janta:true, noites:noites,
+      criadoPor:(typeof quemSou==='function'?quemSou():'-'), criadoTs:Date.now() });
+    if(comida||onde) reg.jantar={comida:comida, onde:onde};
+    if(obs) reg.obs=obs;
+    DB.ref('auaulandia/manuais/'+dia).push(reg).then(function(){
+      if(typeof audit==='function') audit('pernoite-agendado','lançou pernoite de '+(reg.nome||'')+' para '+dia+' ('+noites+' noite'+(noites>1?'s':'')+')',{pet:reg.nome||''});
+      const qdo=(dia===hoje)?'hoje à noite':('no dia '+((typeof orcBR==='function')?orcBR(dia):dia));
+      fecharPernForm(); fecharHospBuscaModal();
+      if(typeof carregarManuais==='function') carregarManuais();
+      alert('Pernoite de '+(reg.nome||'')+' lançado para '+qdo+'.\n\n'
+        +(dia===hoje?'Ele já aparece na lista do plantão.'
+                    :'Ele aparece sozinho na lista do plantão naquele dia — ninguém precisa lembrar.'));
+    }).catch(function(e){ alert('NÃO consegui lançar o pernoite: '+((e&&e.message)||e)+'\n\nNada foi salvo. Confira a internet e tente de novo.'); });
   }
   // ===== Cancelar hóspede/pernoite lançado hoje — reversível, só o lançamento do dia =====
   // Diferente de excluirCadastroPel (que apaga o cadastro-mestre pra sempre): aqui só remove o
@@ -8467,7 +8578,14 @@
       valores:{1:33800,2:56800,3:67800,4:81800,5:95800} }
   };
   const PLANO_MESES={ mensal:1, trimestral:3, semestral:6 };
-  const DESC_PET={ 2:7, 3:12 };   // 2º peludinho 7%, 3º 12%
+  // Adriana, 13/ago/2026: "desconto de hospedagem é uma coisa, de daycare é outro". Eram a
+  // MESMA constante servindo os dois — trocar um valor mexia no boleto de quem tem plano.
+  // Agora são duas, separadas de propósito.
+  // Day Care (mensalidade do plano, mensal/trimestral/semestral): 2º peludinho da família 7%.
+  const DESC_PET_PLANO={ 2:7, 3:12 };
+  // Hospedagem (diária): TODO irmão a partir do 2º ganha 5% — "se tiver 3, do terceiro
+  // também". Não é escala crescente; é 5% do 2º em diante.
+  const DESC_PET_HOSP=5;
   let planosCfg=null;   // vem do Firebase (config editável); null = usar padrão
   function planos(){ return planosCfg||PLANOS_PADRAO; }
   // valores em centavos para não ter erro de ponto flutuante
@@ -8477,7 +8595,7 @@
   function mensalidade(planoKey, aulas, ordemPet){
     const pl=planos()[planoKey]; if(!pl) return 0;
     const base=pl.valores[aulas]||0;
-    const pct=DESC_PET[ordemPet]|| (ordemPet>=3?12:0);
+    const pct=DESC_PET_PLANO[ordemPet]|| (ordemPet>=3?12:0);
     return Math.round(base*(100-pct)/100);
   }
   // ---- renovação por FILHOt ----
@@ -12097,10 +12215,31 @@
     // reforço, nunca condição.
     try{
       if(alterados.length && TG_CFG && TG_CFG.url){
-        alterados.forEach(function(pt){
-          tgAvisarAlteracao(p, pt, R.pontos[pt.k]||{}, reg.hora).then(function(r){
-            if(typeof audit==='function') audit('telegram-aviso',(r&&r.ok?'avisou o grupo sobre ':'NÃO avisou o grupo sobre ')+(pt.t||'')+' de '+(p.n||''),{pet:p.n||''});
-          });
+        // Adriana, 13/ago/2026: "foi tirada foto, mas não chegou no grupo do Telegram."
+        // O resultado do envio só existia na auditoria — e ninguém na operação lê aquilo.
+        // Quem acabou de fotografar um machucado precisa saber NA HORA se a veterinária foi
+        // avisada: se não foi, ela manda pelo próprio celular e o FILHOt não fica esperando.
+        Promise.all(alterados.map(function(pt){
+          return tgAvisarAlteracao(p, pt, R.pontos[pt.k]||{}, reg.hora).then(function(r){
+            const ok=!!(r&&r.ok);
+            if(typeof audit==='function') audit('telegram-aviso',(ok?'avisou o grupo sobre ':'NÃO avisou o grupo sobre ')+(pt.t||'')+' de '+(p.n||''),{pet:p.n||''});
+            return {ponto:pt.t||'', ok:ok, erro:(r&&r.erro)||''};
+          }).catch(function(e){ return {ponto:pt.t||'', ok:false, erro:String((e&&e.message)||e)}; });
+        })).then(function(res){
+          const ruins=res.filter(function(x){ return !x.ok; });
+          if(typeof zAlertao!=='function') return;
+          if(!ruins.length){
+            zAlertao('A VETERINÁRIA JÁ FOI AVISADA',
+              ['Mandei para o grupo do Telegram, com as fotos: '+res.map(function(x){ return x.ponto; }).join(', ')+' de '+(p.n||'')+'.',
+               'Não precisa mandar de novo pelo seu celular.'],{botao:'Certo'});
+            return;
+          }
+          zAlertao('⚠ O GRUPO NÃO FOI AVISADO',
+            ['O check-in de '+(p.n||'')+' está salvo — isso não se perdeu.',
+             'Mas NÃO consegui mandar para o grupo do Telegram: '+ruins.map(function(x){ return x.ponto; }).join(', ')+'.',
+             'Motivo: '+(ruins[0].erro||'a ponte não respondeu')+'.',
+             'MANDE A FOTO NO GRUPO PELO SEU CELULAR AGORA — a veterinária precisa ver hoje.'],
+            {botao:'Vou mandar agora'});
         });
       }
     }catch(e){}
