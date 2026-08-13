@@ -7294,7 +7294,7 @@
   // Agora existe um carimbo: esta constante é a versão que o aparelho está rodando, e o
   // Firebase guarda a versão publicada. Quando as duas diferem, aparece o aviso — mas
   // NUNCA recarrega sozinho: recarregar no meio de um check-in perderia o trabalho.
-  const APP_VERSAO='2026-08-13-08';
+  const APP_VERSAO='2026-08-13-09';
   function vigiarVersao(){
     if(!DB) return;
     try{
@@ -12491,7 +12491,31 @@
     if(nx) genMarcas[k]=nx; else delete genMarcas[k];
     if(DB) DB.ref('daycare/atividade/'+dcDataKey()+'/almoco2/'+k).set(nx||null).catch(()=>{});
     if(typeof audit==='function'&&nx) audit('almoco2', nx==='comeu'?'comeu no 2º horário':(nx==='na'?'não se aplica (não almoça)':'NÃO comeu nem no 2º horário'), {alvo:k, assinou:pessoaDoTurno()});
+    // Não comeu nem na segunda chance: o grupo da comida fica sabendo na hora, sem depender
+    // de ninguém lembrar de contar (Adriana, 13/ago/2026).
+    if(nx==='nao'){ try{ avisarGrupoComida(k); }catch(e){} }
     renderGenerico();
+  }
+  // Manda UMA vez por FILHOt por dia — marcar e desmarcar não vira enxurrada no grupo.
+  function avisarGrupoComida(k){
+    if(!DB||!TG_CFG||!TG_CFG.url) return;
+    var dia=dcDataKey();
+    DB.ref('daycare/avisos-telegram-comida/'+dia+'/'+k).once('value').then(function(s){
+      if(s.val()) return;                       // já foi avisado hoje
+      var o=(turmaDoDia()||[]).find(function(x){ return dcKey(x.p.n,x.p.tutor)===k; });
+      var nome=o?pelNome(o.p):k;
+      var raca=(o&&o.p.raca)||'';
+      var texto='<b>'+nome+'</b>'+(raca?(' · '+raca):'')
+        +'\nNão comeu no 1º nem no 2º horário.'
+        +'\nQuem serviu: '+(typeof pessoaDoTurno==='function'?pessoaDoTurno():'-')
+        +' às '+(typeof horaAgora==='function'?horaAgora():'')
+        +'\n\nA mensagem para o tutor já está pronta no sistema, em Avisar tutores.';
+      tgAvisar({grupo:'comida', texto:texto}).then(function(r){
+        DB.ref('daycare/avisos-telegram-comida/'+dia+'/'+k).set({
+          ts:Date.now(), ok:!!(r&&r.ok), quem:(typeof quemSou==='function'?quemSou():'-')
+        }).catch(function(){});
+      });
+    }).catch(function(){});
   }
   function nomeAtiv(slug){ try{ const a=(typeof ATIVS_DC!=='undefined'?ATIVS_DC:[]).find(x=>x.s===slug); return a?a.t:slug; }catch(e){ return slug; } }
   // 2º Horário de Almoço (Monitor: Octávio) — recebe só quem NÃO comeu no 1º horário.

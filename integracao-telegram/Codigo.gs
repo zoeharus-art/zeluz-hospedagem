@@ -1,24 +1,23 @@
 /**
- * ZÊLUZ · AuAulândia — ponte para o grupo do Telegram
+ * ZÊLUZ · AuAulândia — ponte para os grupos do Telegram
  *
- * Versão 2 (13/ago/2026). O que mudou depois do primeiro teste:
+ * Versão 3 (13/ago/2026) — vários grupos, um bot só.
  *
- *  · ACENTO virava "?". O Apps Script manda o formulário em latin-1, e "ê", "ç",
- *    "ã" se perdiam no caminho. Como já usamos parse_mode HTML, agora todo
- *    caractere fora do ASCII vira uma entidade numérica (&#234; para "ê"). O
- *    Telegram converte de volta e o acento aparece certo. Vale para texto e para
- *    a legenda da foto.
+ * O mesmo bot atende quantos grupos forem precisos: cada aviso diz para QUAL
+ * grupo vai. Grupo novo = uma linha na lista GRUPOS aqui embaixo.
  *
- *  · A foto agora respeita o TIPO real do arquivo (jpeg, png...), em vez de
- *    dizer "jpeg" para tudo.
- *
- *  · Se o Telegram recusar, a resposta dele vem inteira — sem cortar em 300
- *    letras, que escondia justamente o motivo do erro.
+ * Se o aviso não disser o grupo, vai para o da veterinária (o primeiro que
+ * existiu) — assim nada se perde por engano de configuração.
  */
 
 var TOKEN_BOT = 'COLE_AQUI_O_TOKEN';
-var ID_GRUPO  = '-5484669898';
 var SENHA     = 'zeluz-auaulandia';
+
+var GRUPOS = {
+  vet:    '-5484669898',   // Zêluz Daycare Vet — alterações do check-in do corpo
+  comida: '-5460714392'    // Daycare - Quem não almoçou
+};
+var GRUPO_PADRAO = 'vet';
 
 function doPost(e) {
   try {
@@ -26,29 +25,35 @@ function doPost(e) {
     if (String(d.senha || '') !== SENHA) {
       return _resp({ ok: false, erro: 'senha invalida' });
     }
-    var legenda = _montarLegenda(d);
-    if (d.fotoBase64) return _resp(_mandarFoto(legenda, d.fotoBase64));
-    return _resp(_mandarTexto(legenda));
+    var destino = GRUPOS[String(d.grupo || GRUPO_PADRAO)] || GRUPOS[GRUPO_PADRAO];
+    var texto = d.texto ? String(d.texto) : _montarLegenda(d);
+    if (d.fotoBase64) return _resp(_mandarFoto(destino, texto, d.fotoBase64));
+    return _resp(_mandarTexto(destino, texto));
   } catch (err) {
     return _resp({ ok: false, erro: String(err) });
   }
 }
 
+/** Abra a URL /exec no navegador: manda um teste para CADA grupo configurado. */
 function doGet() {
-  var r = _mandarTexto('<b>Zêluz · AuAulândia</b>\nPonte de testes: está tudo funcionando. Acentuação: ação, coração, Zêluz, José.');
-  return _resp({ ok: true, msg: 'ponte do telegram no ar', envio: r });
+  var out = { ok: true, msg: 'ponte do telegram no ar', grupos: {} };
+  Object.keys(GRUPOS).forEach(function (nome) {
+    out.grupos[nome] = _mandarTexto(GRUPOS[nome],
+      '<b>Zêluz · AuAulândia</b>\nPonte de testes: está tudo funcionando. Acentuação: ação, coração, Zêluz, José.');
+  });
+  return _resp(out);
 }
 
-function _mandarTexto(texto) {
+function _mandarTexto(destino, texto) {
   var r = UrlFetchApp.fetch('https://api.telegram.org/bot' + TOKEN_BOT + '/sendMessage', {
     method: 'post',
-    payload: { chat_id: ID_GRUPO, text: _paraHtml(texto), parse_mode: 'HTML' },
+    payload: { chat_id: destino, text: _paraHtml(texto), parse_mode: 'HTML' },
     muteHttpExceptions: true
   });
   return { ok: r.getResponseCode() === 200, resposta: r.getContentText() };
 }
 
-function _mandarFoto(legenda, dataUri) {
+function _mandarFoto(destino, legenda, dataUri) {
   var tipo = 'image/jpeg', nome = 'filhot.jpg';
   var m = String(dataUri).match(/^data:(image\/(\w+));base64,/);
   if (m) {
@@ -59,16 +64,13 @@ function _mandarFoto(legenda, dataUri) {
   var blob = Utilities.newBlob(Utilities.base64Decode(limpo), tipo, nome);
   var r = UrlFetchApp.fetch('https://api.telegram.org/bot' + TOKEN_BOT + '/sendPhoto', {
     method: 'post',
-    payload: { chat_id: ID_GRUPO, caption: _paraHtml(legenda), parse_mode: 'HTML', photo: blob },
+    payload: { chat_id: destino, caption: _paraHtml(legenda), parse_mode: 'HTML', photo: blob },
     muteHttpExceptions: true
   });
   return { ok: r.getResponseCode() === 200, resposta: r.getContentText() };
 }
 
-/**
- * Acento sobrevive à viagem: tudo que não é ASCII vira &#numero;.
- * As tags <b> que a gente mesmo põe continuam funcionando.
- */
+/** Acento sobrevive à viagem: tudo que não é ASCII vira &#numero;. */
 function _paraHtml(s) {
   var t = String(s == null ? '' : s), out = '';
   for (var i = 0; i < t.length; i++) {
@@ -90,7 +92,6 @@ function _montarLegenda(d) {
   return L.join('\n');
 }
 
-/** Só os três que o HTML do Telegram exige — o acento é tratado no _paraHtml. */
 function _esc(s) {
   return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 }
