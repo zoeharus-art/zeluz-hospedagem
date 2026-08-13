@@ -86,7 +86,7 @@ function _acharAba(ss, nome) {
 
 function _chave(s) {
   return String(s || '')
-    .normalize('NFD').replace(/[̀-ͯ]/g, '')  // tira acento
+    .normalize('NFD').replace(new RegExp('[' + String.fromCharCode(0x300) + '-' + String.fromCharCode(0x36f) + ']', 'g'), '')
     .replace(/\s+/g, ' ').trim().toLowerCase();
 }
 
