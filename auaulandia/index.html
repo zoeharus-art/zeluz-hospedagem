@@ -6998,15 +6998,58 @@
     });
     return out;
   }
-  var ACERTO_REG={};
+  var ACERTO_REG={}, ACERTO_QUEM={};
+  // ===== O NOME VEM SOZINHO (Adriana, 13/ago/2026) ==================================
+  // "Ao assinarem o nome delas no recebimento, no jantar, no relatório da noite, já vem
+  //  automaticamente — a pessoa tem que conferir apenas."
+  // Toda ação do app já grava QUEM fez. Então a plantonista da noite não precisa ser
+  // digitada: ela é deduzida de quem trabalhou na madrugada. A Gestão só confere.
+  //
+  // A noite de 12/08 vai das 18h50 de 12/08 às 07h de 13/08. Como a auditoria é guardada por
+  // DIA, olhamos as ações do próprio dia depois das 18h e as da madrugada seguinte.
+  function acertoDeduzirQuem(){
+    if(!DB) return Promise.resolve({});
+    var hoje=(typeof hojeISO==='function')?hojeISO():'';
+    var dias=[]; for(var i=0;i<=30;i++) dias.push(orcMaisDias(hoje,-i));
+    return Promise.all(dias.map(function(d){
+      return DB.ref('daycare/auditoria/'+d).once('value')
+        .then(function(s){ return {d:d, v:s.val()||{}}; }).catch(function(){ return {d:d, v:{}}; });
+    })).then(function(res){
+      var porNoite={};
+      // Nome que não é pessoa não serve para pagar ninguém.
+      var ehGenerico=function(n){ return !n || /plantonista|gest[ãa]o|supervisor|monitor\s*\d|recep|veterin/i.test(n); };
+      res.forEach(function(r){
+        Object.keys(r.v).forEach(function(id){
+          var x=r.v[id]||{}; if(!x.quem||ehGenerico(x.quem)) return;
+          var hh=parseInt(String(x.hora||'').slice(0,2),10);
+          if(isNaN(hh)) return;
+          // Depois das 18h → noite do próprio dia. Antes das 7h → noite do dia anterior.
+          var noite=null;
+          if(hh>=18) noite=r.d;
+          else if(hh<7) noite=orcMaisDias(r.d,-1);
+          if(!noite) return;
+          porNoite[noite]=porNoite[noite]||{};
+          porNoite[noite][x.quem]=(porNoite[noite][x.quem]||0)+1;
+        });
+      });
+      var out={};
+      Object.keys(porNoite).forEach(function(n){
+        var m=porNoite[n], nomes=Object.keys(m).sort(function(a,b){ return m[b]-m[a]; });
+        if(nomes.length) out[n]={nome:nomes[0], acoes:m[nomes[0]], outros:nomes.slice(1,3)};
+      });
+      return out;
+    });
+  }
   function acertoCarregar(){
     if(!DB){ renderAcerto(); return; }
     Promise.all([
       DB.ref('auaulandia/config/acerto-plantao').once('value').then(function(s){ return s.val(); }).catch(function(){ return null; }),
-      DB.ref('auaulandia/acerto-plantao').limitToLast(60).once('value').then(function(s){ return s.val()||{}; }).catch(function(){ return {}; })
+      DB.ref('auaulandia/acerto-plantao').limitToLast(60).once('value').then(function(s){ return s.val()||{}; }).catch(function(){ return {}; }),
+      acertoDeduzirQuem()
     ]).then(function(r){
       if(r[0]) acertoCfg=r[0];
       ACERTO_REG=r[1];
+      ACERTO_QUEM=r[2]||{};
       renderAcerto();
     });
   }
@@ -7037,8 +7080,16 @@
         +' <span style="font-weight:600;font-size:12px;color:var(--muted)">('+fmtCent(v.base)+' + '+fmtCent(v.ajuda)+' de ajuda)</span></div>'
         +((feriado||dom)?'<div style="font-size:12px;color:var(--z-blue-soft)">'+(feriado?'Feriado':'Domingo')+': há também o plantão de dia (06h50 às 19h). Se alguém cobriu, lance como uma noite à parte.</div>':'')
         +'</div><span class="avr-chip '+L[1]+'">'+L[0]+'</span></div>'
+        // O nome já vem do sistema — a Gestão confere, não digita.
         +'<div class="avr-form"><div class="ff-tit">Quem passou esta noite</div>'
-        +'<input id="acq_'+o.iso+'" placeholder="Nome da plantonista" value="'+escAttr(o.reg.quem||'')+'">'
+        +(function(){
+            var d=ACERTO_QUEM[o.iso];
+            if(o.reg.quem) return '';
+            if(!d) return '<div class="hint" style="margin-bottom:5px">Ninguém assinou nada nesta noite — escreva o nome à mão.</div>';
+            return '<div class="hint" style="margin-bottom:5px">O sistema reconheceu <strong>'+escAttr(d.nome)+'</strong> ('+d.acoes+' registros na madrugada)'
+              +(d.outros&&d.outros.length?(' · também apareceram: '+escAttr(d.outros.join(', '))):'')+'. Confira antes de marcar.</div>';
+          })()
+        +'<input id="acq_'+o.iso+'" placeholder="Nome da plantonista" value="'+escAttr(o.reg.quem||((ACERTO_QUEM[o.iso]||{}).nome)||'')+'">'
         +'<div class="avr-form-btns">'
         +'<button class="btn btn-primary" onclick="acertoMarcar(\''+o.iso+'\',\'pago\')">Pago</button>'
         +'<button class="btn btn-gold" onclick="acertoMarcar(\''+o.iso+'\',\'acumulado\')">Acumular</button>'
@@ -7054,7 +7105,7 @@
     noites.forEach(function(o){
       var st=o.reg.status||'apagar';
       if(st==='pago') return;
-      var nome=(o.reg.quem||'').trim()||'(sem nome)';
+      var nome=(o.reg.quem||'').trim()||((ACERTO_QUEM[o.iso]||{}).nome)||'(sem nome)';
       var v=o.reg.valor_total_cent!=null?o.reg.valor_total_cent:acertoValorPara(o.n).total;
       por[nome]=por[nome]||{total:0, noites:0, acum:0};
       por[nome].total+=v; por[nome].noites++;
