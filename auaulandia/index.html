@@ -7294,7 +7294,7 @@
   // Agora existe um carimbo: esta constante é a versão que o aparelho está rodando, e o
   // Firebase guarda a versão publicada. Quando as duas diferem, aparece o aviso — mas
   // NUNCA recarrega sozinho: recarregar no meio de um check-in perderia o trabalho.
-  const APP_VERSAO='2026-08-13-07';
+  const APP_VERSAO='2026-08-13-08';
   function vigiarVersao(){
     if(!DB) return;
     try{
@@ -16665,16 +16665,18 @@
     const nome=String(x.nome||'').trim();
     const f=/^f/i.test(String(x.sexo||''));           // Fêmea
     const o=f?'a':'o', ele=f?'ela':'ele', pequeno=f?'a pequena':'o pequeno';
-    // Sem emoji: a comunicação da marca não usa (regra da Zêluz). E o texto conta o que
-    // FOI FEITO aqui — o tutor precisa saber que ofereceram duas vezes, não que desistiram.
-    const ola=(tutor?(tutor+', '):'')+'tudo bem?';
+    // ===== TEXTO DA ADRIANA, PALAVRA POR PALAVRA (13/ago/2026) ======================
+    // Eu tinha reescrito por conta propria e inventei um fecho que ela nunca escreveu.
+    // Este e o texto ORIGINAL dela, restaurado. A unica mudanca pedida: um coracao
+    // amarelo no fim da ultima frase. NAO reescrever sem ela pedir.
+    const ola='Oi'+(tutor?(', '+tutor):'')+', como está?';
     if(/metade/.test(x.motivo||''))
-      return ola+'\n\nPassando para contar: hoje '+o+' '+nome+' comeu só metade da comidinha aqui na Zêluz.\n'
+      return ola+'\n\nHoje '+o+' '+nome+' comeu só metade da comidinha por aqui. 🐶\n'
         +'Oferecemos de novo no segundo horário, mas '+ele+' não quis mais.\n\n'
-        +'Não é motivo para preocupação, mas vale reforçar a comidinha em casa hoje à noite — e ficar de olho se acontecer de novo amanhã.';
-    return ola+'\n\nPassando para contar: hoje '+o+' '+nome+' não quis comer aqui na Zêluz.\n'
-      +'Oferecemos no primeiro horário e novamente no segundo, com calma, e '+ele+' não aceitou.\n\n'
-      +'No mais, '+ele+' está bem e participou da rotina normalmente. Vale reforçar a comidinha em casa hoje à noite. Se '+ele+' também recusar aí, é bom conversarmos.';
+        +'Gentileza, reforçar a comidinha em casa mais tarde. 💛';
+    return ola+'\n\nHoje '+o+' '+nome+' não quis comer por aqui. 🐶\n'
+      +'Tentamos no primeiro horário e oferecemos novamente no segundo, mas '+ele+' não aceitou.\n\n'
+      +'Gentileza, reforçar a comidinha em casa mais tarde. 💛';
   }
   function empCopiar(btn){
     const ta=btn.parentNode.querySelector('.emp-msg'); if(!ta) return;
