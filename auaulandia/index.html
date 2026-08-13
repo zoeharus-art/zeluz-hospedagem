@@ -1133,6 +1133,24 @@
   .ck-foto2 .cx img{width:100%;max-width:110px;height:88px;object-fit:cover;border-radius:9px;display:block;margin:0 auto 6px}
   .ck-foto2 .cx .lb{font-size:12px;font-weight:800;color:var(--z-blue);margin-bottom:5px}
   .ck-foto2 .cx .dc{font-size:11.5px;color:var(--muted);margin-bottom:6px;line-height:1.35}
+  /* Pertences: listas de medicação/suplemento, etiqueta e chamado da Recepção */
+  .pt-lista{margin-top:8px}
+  .pt-linha{border:1.5px solid var(--line);border-radius:11px;padding:10px 11px;margin-bottom:8px;background:#fff}
+  .pt-linha-top{display:flex;gap:8px;align-items:center}
+  .pt-linha-top .x{background:none;border:none;color:var(--crm-critico);font-weight:800;font-size:20px;cursor:pointer;padding:0 4px;flex:0 0 auto}
+  .pt-horas{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-top:7px}
+  .pt-hora{background:var(--z-blue);color:#FFFDF6;border-radius:8px;padding:4px 6px 4px 9px;font-weight:800;font-size:13px;display:inline-flex;align-items:center;gap:3px}
+  .pt-hora button{background:none;border:none;color:#FFFDF6;font-size:16px;cursor:pointer;padding:0 3px;line-height:1}
+  .pt-hin{width:120px;padding:7px 9px}
+  .pt-hadd{padding:7px 12px;font-size:12.5px}
+  .pt-alarme{margin-top:7px;background:rgba(222,180,40,.2);border-radius:9px;padding:8px 10px;font-size:12.5px;font-weight:700;color:var(--z-blue)}
+  .pt-etiq{display:flex;align-items:center;gap:9px;margin-top:9px;background:var(--z-cream-warm);border:1.5px solid var(--line);border-radius:10px;padding:9px 11px;cursor:pointer;font-size:13px;font-weight:700;color:var(--z-blue)}
+  .pt-etiq.on{border-color:var(--crm-ok);background:rgba(39,174,96,.1)}
+  .pt-etiq input{width:19px;height:19px;flex:0 0 auto}
+  .pt-chamado{margin-top:12px;border:2.5px solid var(--z-gold);background:rgba(222,180,40,.14);border-radius:13px;padding:13px 15px;font-size:13.5px;color:var(--z-blue)}
+  .pt-chamado.ok{border-color:var(--crm-ok);background:rgba(39,174,96,.1)}
+  @keyframes ptPisca{0%,100%{opacity:1}50%{opacity:.35}}
+  .pt-pisca{animation:ptPisca 1.1s ease-in-out infinite}
   .orc-temp{display:grid;grid-template-columns:1fr 1fr;gap:10px}
   @media(max-width:520px){ .orc-temp{grid-template-columns:1fr} }
   .orc-temp button{text-align:left;background:var(--z-cream-warm);border:2px solid var(--line);border-radius:13px;padding:13px 15px;cursor:pointer;font-family:inherit;color:var(--z-blue)}
@@ -2577,6 +2595,11 @@
   </section>
 
   <section class="view" id="v-recepcao">
+    <h2 style="font-size:19px;margin-top:2px">Perguntas do Day Care</h2>
+    <div class="role-note"><span data-icon="star"></span><span><strong>O Day Care precisa de uma resposta agora.</strong> Quando um FILHOt chega sem o que precisa — comida, por exemplo — a monitora pergunta aqui. Quase sempre a resposta já existe: o tutor deixou comida guardada. Responda e o nome dele aparece piscando na tela de quem está com ele.</span></div>
+    <div id="chamadosRecepcaoList"></div>
+
+    <h2 style="font-size:19px;margin-top:22px">Avisos de estoque de medicação</h2>
     <div class="role-note"><span data-icon="paw"></span><span><strong>Avisos de estoque de medicação.</strong> Quando um remédio de um hóspede está acabando, o aviso chega aqui — rastreado. Registre cada providência (liguei para o tutor, ele traz amanhã) até resolver. Nada verbal: tudo fica escrito, com quem, quando e o que foi feito.</span></div>
     <div id="avisosEstoqueList"></div>
     <h2 style="font-size:19px;margin-top:22px">Avisos de ração</h2>
@@ -5179,7 +5202,54 @@
   }
 
   // ---- Recepção: lista e trilha dos avisos de estoque (mesmo padrão pendente→resolvido da ração) ----
-  function carregarAvisosEstoque(){ renderAvisosEstoque(); renderAvisosRacao(); renderOcorrenciasRecepcao(); try{ carregarOcorrenciasDayCare(); }catch(e){} }
+  function carregarAvisosEstoque(){ renderAvisosEstoque(); renderAvisosRacao(); renderOcorrenciasRecepcao(); try{ carregarOcorrenciasDayCare(); }catch(e){} try{ renderChamadosRecepcao(); }catch(e){} }
+  // ===== O QUE O DAY CARE PERGUNTOU À RECEPÇÃO (Adriana, 13/ago/2026) ===============
+  // "Kakinho veio para o Day Care, pela ficha ele almoça, mas não trouxe comida. Qual a
+  //  solução? Na maioria das vezes o tutor já deixou comida — a recepção responde."
+  // A pergunta chega aqui e a resposta volta piscando na tela de quem perguntou.
+  function renderChamadosRecepcao(){
+    var el=document.getElementById('chamadosRecepcaoList'); if(!el) return;
+    var ids=Object.keys(PT_CHAMADOS||{});
+    if(!ids.length){ el.innerHTML='<div class="hint" style="color:var(--crm-ok);font-weight:700">Nenhuma pergunta do Day Care agora.</div>'; return; }
+    ids.sort(function(a,b){ return (PT_CHAMADOS[a].ts||0)-(PT_CHAMADOS[b].ts||0); });
+    el.innerHTML=ids.map(function(k){
+      var c=PT_CHAMADOS[k]||{};
+      var respondido=!!c.resposta;
+      var hora=''; try{ var d=new Date(c.ts), p=function(x){return String(x).padStart(2,'0');}; hora=p(d.getHours())+':'+p(d.getMinutes()); }catch(e){}
+      return '<div class="avr-card '+(respondido?'resolvido':'pendente')+'"><div class="avr-head"><div class="avr-info">'
+        +'<strong>'+escAttr(c.pet||'')+'</strong> <span style="color:var(--muted);font-size:12px">'+escAttr(c.tutor||'')+'</span>'
+        +'<div style="font-size:13px;color:var(--z-blue)">'+escAttr(c.motivo||'')+'</div>'
+        +'<div style="font-size:12px;color:var(--muted)">perguntado por '+escAttr(c.quem||'-')+(hora?(' às '+hora):'')+'</div>'
+        +'</div><span class="avr-chip '+(respondido?'resolvido':'pendente')+'">'+(respondido?'RESPONDIDO':'AGUARDANDO')+'</span></div>'
+        +(respondido
+          ? '<div class="avr-resolvido-banner" style="text-align:left">'+escAttr(c.resposta)+'<div style="font-weight:600;font-size:12.5px;margin-top:4px">por '+escAttr(c.respondido_por||'-')+'</div></div>'
+          : '<div class="avr-form"><div class="ff-tit">O que a monitora deve fazer?</div>'
+            +'<div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:7px">'
+            +['O tutor deixou comida guardada aqui — pegue na recepção',
+              'Autorizado dar comida natural da casa',
+              'Autorizado dar ração da casa',
+              'Já liguei para o tutor, ele vai trazer'].map(function(t){
+                return '<button type="button" class="ck-chip" onclick="chamadoSugestao(\''+k+'\',this)">'+t+'</button>'; }).join('')
+            +'</div>'
+            +'<textarea id="chresp_'+k+'" placeholder="Escreva a solução para quem está com ele"></textarea>'
+            +'<input id="chquem_'+k+'" placeholder="Seu nome">'
+            +'<div class="avr-form-btns"><button class="btn btn-primary" onclick="chamadoResponder(\''+k+'\')">Responder ao Day Care</button></div></div>')
+        +'</div>';
+    }).join('');
+  }
+  function chamadoSugestao(k,btn){ var t=document.getElementById('chresp_'+k); if(t) t.value=btn.textContent; }
+  function chamadoResponder(k){
+    var r=((document.getElementById('chresp_'+k)||{}).value||'').trim();
+    var q=((document.getElementById('chquem_'+k)||{}).value||'').trim();
+    if(!r){ alert('Escreva a solução — é isso que a monitora vai ler.'); return; }
+    if(!/[a-zA-ZÀ-ÿ]{2,}/.test(q)){ alert('Assine com o seu nome. Quem respondeu responde pela solução.'); return; }
+    if(!DB) return;
+    DB.ref('daycare/chamados-recepcao/'+dcDataKey()+'/'+k).update({
+      resposta:r, respondido_por:q, respondido_em:Date.now(), status:'respondido'
+    }).then(function(){
+      if(typeof audit==='function') audit('chamado-respondido','respondeu ao Day Care: '+r,{quem:q});
+    }).catch(function(e){ alert('Não consegui responder: '+((e&&e.message)||e)); });
+  }
   var _recepcaoPrevN=null;
   function atualizarBadgeRecepcao(){
     var n=0; Object.keys(AVISOS_ESTOQUE_CACHE||{}).forEach(function(id){ if(AVISOS_ESTOQUE_CACHE[id].status!=='resolvido') n++; });
@@ -8529,7 +8599,28 @@
         });
       }).catch(function(){});
     });
-    Promise.all(jobs).catch(function(){}).then(function(){ if(typeof carregarMedAtrasadaGestora==='function') carregarMedAtrasadaGestora(); });
+    Promise.all(jobs).catch(function(){}).then(function(){
+      // ===== A MEDICAÇÃO DO DAY CARE ENTRA NO MESMO ALARME (Adriana, 13/ago/2026) ====
+      // "O horário precisa virar alarme — isso é importantíssimo." O remédio que o tutor
+      // manda com o auluno do dia é tão remédio quanto o do hóspede. Em vez de um segundo
+      // despertador (que ninguém manteria), a dose do Day Care entra na MESMA fila: mesmo
+      // som, mesma confirmação, mesmo registro de quem deu.
+      if(DB){
+        DB.ref('daycare/med-dia/'+dcDataKey()).once('value').then(function(s){
+          var v=s.val()||{};
+          Object.keys(v).forEach(function(k){
+            var reg=v[k]||{}, itens=reg.itens||{};
+            Object.keys(itens).forEach(function(id){
+              var it=itens[id]||{};
+              (it.horarios||[]).forEach(function(hr){
+                MED_AGENDA_TODOS.push({hospNome:reg.nome||'', key:'dc__'+k, itemId:id,
+                  nome:it.nome||'', q:it.dose||'', u:'', local:'Day Care', obs:it.obs||'', horario:hr});
+              });
+            });
+          });
+        }).catch(function(){}).then(function(){ if(typeof carregarMedAtrasadaGestora==='function') carregarMedAtrasadaGestora(); });
+      } else if(typeof carregarMedAtrasadaGestora==='function') carregarMedAtrasadaGestora();
+    });
   }
   // ===== QUEM O ALARME ACORDA (Adriana, 12/ago/2026) =================================
   // "Preciso que o alarme não toque para os gestores (Adriana e Márcia), não toque para a
@@ -10630,6 +10721,7 @@
   function removerAtividade(i){ if(!confirm('Remover a atividade \"'+ATIVIDADES[i].t+'\"?')) return; ATIVIDADES.splice(i,1); salvarAtiv(); renderAtiv(); }
   renderAtiv();
   try{ if(typeof tgCarregarCfg==='function') tgCarregarCfg(); }catch(e){}
+  try{ if(typeof ptEscutarChamados==='function') ptEscutarChamados(); }catch(e){}
 
   // ===== ADAPTACAO NAO PODE SER ETERNA (Adriana, 12/ago/2026) =======================
   // "EM ADAPTAÇÃO HOJE: Bruce, Hulk, Yumi — essa informação não é real, de onde está tirando
@@ -11382,8 +11474,10 @@
     {k:'guia',        t:'Guia', ph:'Cor e tipo. Ex: guia preta retrátil'},
     {k:'peitoral',    t:'Peitoral', ph:'Cor e marca. Ex: peitoral vermelho'},
     {k:'roupa',       t:'Roupa', ph:'Quantas e como são. Ex: 1 blusa bege de tricô'},
-    {k:'suplemento',  t:'Suplemento', ph:'Qual e como dar. Ex: Ograx 1 cápsula no almoço'},
-    {k:'medicacao',   t:'Medicação', ph:'Qual, onde e quando. Ex: colírio, 1 gota em cada olho às 14h'},
+    // Suplemento e medicação são LISTAS: podem vir vários, cada um com o seu horário — e o
+    // horário vira alarme de verdade (Adriana, 13/ago/2026: "isso é importantíssimo").
+    {k:'suplemento',  t:'Suplemento', lista:1, ph:'Ex: Ograx'},
+    {k:'medicacao',   t:'Medicação', lista:1, ph:'Ex: colírio, 1 gota em cada olho'},
     {k:'banho_seco',  t:'Banho seco', ph:'Marca. Ex: banho seco Zêluz'},
     {k:'hidrat',      t:'Hidratante de patinhas', ph:'Marca'},
     {k:'bucal',       t:'Higiene bucal', ph:'O que veio. Ex: creme dental + Periovet'}
@@ -11396,8 +11490,23 @@
   function carregarPertences(){
     if(!document.getElementById('ptGrid')) return;
     if(!DB){ ptDados={}; renderPertences(); return; }
-    DB.ref(ptNo()).once('value').then(function(s){ ptDados=s.val()||{}; renderPertences(); })
+    DB.ref(ptNo()).once('value').then(function(s){ ptDados=s.val()||{};
+      // Na saída, a lista nasce do que entrou de manhã — carrega os dois.
+      if(!ptEhEntrada()) return ptCarregarEntradaDoDia();
+    }).then(function(){ renderPertences(); })
       .catch(function(){ ptDados={}; renderPertences(); });
+  }
+  // Chamados abertos com a Recepção — quando ela responde, o nome pisca no card do FILHOt.
+  var PT_CHAMADOS={};
+  function ptEscutarChamados(){
+    if(!DB) return;
+    try{
+      DB.ref('daycare/chamados-recepcao/'+dcDataKey()).on('value',function(s){
+        PT_CHAMADOS=s.val()||{};
+        try{ if(dcAtiv==='checkin-pert'||dcAtiv==='checkout-pert') renderPertences(); }catch(e){}
+        try{ if(typeof renderChamadosRecepcao==='function') renderChamadosRecepcao(); }catch(e){}
+      });
+    }catch(e){}
   }
   function ptDe(o){ return ptDados[dcKey(o.p.n,o.p.tutor)]||null; }
   function ptFeito(o){ var r=ptDe(o); return !!(r&&r.fim); }
@@ -11425,9 +11534,13 @@
       var foto=(typeof o.i==='number')?fotoDoPel(o.p):'';
       var av=foto?'<div class="pet-ph" style="background-image:url(\''+foto+'\')"></div>'
                  :'<div class="pet-ph" style="background:'+corPel(typeof o.i==='number'?o.i:0)+';display:flex;align-items:center;justify-content:center;color:#fff;font-weight:800">'+((o.p.n||'?')[0]||'?')+'</div>';
-      return '<div class="pet'+(feito?' on':'')+'" onclick="ptAbrir('+i+')">'+av
+      // Recepção respondeu: o nome PISCA até a monitora abrir e ver a solução.
+      var ch=PT_CHAMADOS[dcKey(o.p.n,o.p.tutor)];
+      var respondido=!!(ch&&ch.resposta&&ch.status!=='visto');
+      return '<div class="pet'+(feito?' on':'')+(respondido?' pt-pisca':'')+'" onclick="ptAbrir('+i+')">'+av
         +'<div class="pet-n">'+escAttr(pelNome(o.p))+'</div>'
-        +'<div class="pet-s">'+(feito?(nTrouxe+' item'+(nTrouxe===1?'':'s')+' · conferido'):'a conferir')+'</div></div>';
+        +'<div class="pet-s">'+(respondido?'<strong style="color:var(--crm-ok)">A Recepção respondeu!</strong>'
+          :(feito?(nTrouxe+(nTrouxe===1?' item':' itens')+' · conferido'):'a conferir'))+'</div></div>';
     }).join('');
   }
   function ptAbrir(i){
@@ -11447,6 +11560,68 @@
   }
   function ptTexto(k,campo,v){ if(!ptRascunho) return; var a=ptRascunho.itens[k]||{}; a[campo]=v; ptRascunho.itens[k]=a; }
   function ptEmb(k,e){ if(!ptRascunho) return; var a=ptRascunho.itens[k]||{}; a.emb=(a.emb===e)?'':e; ptRascunho.itens[k]=a; renderPertences(); }
+  // ===== CHECK-OUT DOS PERTENCES (Adriana, 13/ago/2026) =============================
+  // "Precisamos que esteja em uma lista e que o monitor possa clicar que encontrou e
+  //  guardou. Ele precisa dar check em tudo — é a forma de responsabilizarmos quem esqueceu,
+  //  quem não guardou, o remédio que precisa voltar para a bolsa."
+  // A lista da saída NÃO é digitada de novo: ela nasce do que ENTROU de manhã. Cada item tem
+  // dois cliques — achei e guardei — porque achar e não guardar é o erro que chega ao tutor.
+  var ptEntradaCache={};
+  function ptCarregarEntradaDoDia(){
+    if(!DB) return Promise.resolve({});
+    return DB.ref('daycare/checkin-pertences/'+dcDataKey()).once('value')
+      .then(function(s){ ptEntradaCache=s.val()||{}; return ptEntradaCache; }).catch(function(){ return {}; });
+  }
+  function ptItensDaEntrada(o){
+    var e=ptEntradaCache[dcKey(o.p.n,o.p.tutor)];
+    if(!e||!e.itens) return null;
+    var out=[];
+    PT_ITENS.forEach(function(it){
+      var a=e.itens[it.k]; if(!a||!a.trouxe) return;
+      if(it.lista){
+        (a.linhas||[]).forEach(function(L,i){ if(L&&L.nome) out.push({k:it.k+'_'+i, t:it.t+': '+L.nome, det:L.dose||''}); });
+        if(!(a.linhas||[]).length) out.push({k:it.k, t:it.t, det:a.det||''});
+      } else {
+        var det=[]; if(a.qtd) det.push(a.qtd); if(a.det) det.push(a.det); if(a.emb) det.push('('+a.emb+')');
+        out.push({k:it.k, t:it.t, det:det.join(' ')});
+      }
+    });
+    return out;
+  }
+  function ptSaidaMarcar(k,campo){
+    if(!ptRascunho) return;
+    ptRascunho.saida=ptRascunho.saida||{};
+    var a=ptRascunho.saida[k]||{};
+    a[campo]=!a[campo];
+    if(campo==='achei'&&!a.achei) a.guardei=false;   // não achou, não pode ter guardado
+    ptRascunho.saida[k]=a; renderPertences();
+  }
+  function ptSaidaHtml(o){
+    var itens=ptItensDaEntrada(o);
+    if(itens===null) return '<div class="dc-faltas"><strong>Não há check-in de pertences dele hoje.</strong>'
+      +'<div style="font-weight:600;margin-top:4px">Sem saber o que entrou, não dá para conferir o que sai. Faça o check-in dos pertences primeiro — ou, se ele chegou sem nada, registre assim mesmo.</div></div>';
+    if(!itens.length) return '<div class="hint" style="background:rgba(39,174,96,.1);border-radius:10px;padding:11px 13px;font-weight:700;color:var(--crm-ok)">Ele não trouxe nada de casa hoje. Nada para devolver.</div>';
+    var S=(ptRascunho&&ptRascunho.saida)||{};
+    var h='<div class="hint" style="margin-bottom:8px">Dois cliques em cada item: <strong>achei</strong> e <strong>guardei na bolsa</strong>. Achar e não guardar é o que chega ao tutor como "sumiu".</div>';
+    itens.forEach(function(it){
+      var a=S[it.k]||{};
+      h+='<div class="ck-ponto'+(a.guardei?' ok':'')+'">'
+        +'<div class="ck-ph"><div><div class="ck-pt">'+escAttr(it.t)+'</div>'
+        +(it.det?'<div class="ck-ver" style="font-weight:500;color:var(--muted)">'+escAttr(it.det)+'</div>':'')+'</div></div>'
+        +'<div class="ck-btns">'
+          +'<button type="button" class="ck-b ok'+(a.achei?' on':'')+'" onclick="ptSaidaMarcar(\''+it.k+'\',\'achei\')">Achei</button>'
+          +'<button type="button" class="ck-b ok'+(a.guardei?' on':'')+'" onclick="ptSaidaMarcar(\''+it.k+'\',\'guardei\')"'+(a.achei?'':' disabled style="opacity:.45"')+'>Guardei na bolsa</button>'
+        +'</div>'
+        +(a.achei&&!a.guardei?'<div class="ck-hint" style="color:var(--crm-atencao-text);font-weight:700;margin-top:6px">Achou mas ainda não guardou.</div>':'')
+        +(!a.achei?'<input class="cad-in" style="margin-top:8px" placeholder="Não achou? Escreva onde procurou" value="'+escAttr(a.obs||'')+'" oninput="ptSaidaObs(\''+it.k+'\',this.value)">':'')
+        +'</div>';
+    });
+    var faltando=itens.filter(function(it){ return !((S[it.k]||{}).guardei); });
+    if(faltando.length) h+='<div class="dc-meia" style="margin-top:10px"><strong>Faltam '+faltando.length+' item'+(faltando.length>1?'ns':'')+' para guardar:</strong> '
+      +faltando.map(function(x){ return x.t; }).join(', ')+'</div>';
+    return h;
+  }
+  function ptSaidaObs(k,v){ if(!ptRascunho) return; ptRascunho.saida=ptRascunho.saida||{}; var a=ptRascunho.saida[k]||{}; a.obs=v; ptRascunho.saida[k]=a; }
   function ptFichaHtml(){
     var o=ptAtual, p=o.p, R=ptRascunho, entrada=ptEhEntrada();
     var foto=(typeof o.i==='number')?fotoDoPel(p):'';
@@ -11456,35 +11631,167 @@
       +'<div class="ck-topo">'+ph+'<div><div class="ck-nome">'+escAttr(pelNome(p))+'</div>'
       +'<div class="ck-sub">'+escAttr(p.raca||'')+(p.tutor?(' · '+escAttr(p.tutor)):'')+'</div></div>'
       +'<button class="btn" style="margin-left:auto;background:var(--z-cream-warm);color:var(--z-blue);border:1.5px solid var(--line)" onclick="ptVoltar()">Voltar</button></div>';
+    if(!entrada){
+      // Saída: a lista vem do que entrou. Nada de recomeçar do zero.
+      h+='<div class="ck-proto"><div class="ck-proto-cab" style="cursor:default"><span>O que volta para casa</span></div>'
+        +'<div class="ck-proto-corpo">'+ptSaidaHtml(o)+'</div></div>';
+      h+='<div class="ck-salvar"><button class="btn btn-primary" onclick="ptSalvarSaida()">Salvar — está tudo guardado</button></div></div>';
+      return h;
+    }
     h+='<div class="ck-proto"><div class="ck-proto-cab" style="cursor:default"><span>Como preencher</span></div>'
       +'<div class="ck-proto-corpo"><ol>'
       +'<li>Passe item por item, <strong>na ordem</strong>. Não pule o que ele não trouxe — marcar "não trouxe" também é informação.</li>'
       +'<li>Quando <strong>trouxe</strong>, escreva COMO é: cor, marca, quantidade. "Roupa" não devolve nada; "1 blusa bege de tricô" devolve.</li>'
       +'<li>Comida, petisco e vasilha: marque também <strong>em que veio</strong> — pote, sacola ou mochila.</li>'
-      +'<li>Medicação e suplemento: escreva <strong>o que é, quanto e a que horas</strong>. Se tiver dúvida, pergunte ao tutor antes de ele ir embora.</li>'
+      +'<li>Medicação e suplemento: pode acrescentar <strong>vários</strong>. Com horário, o sistema <strong>toca o alarme</strong> na hora certa.</li>'
+      +'<li><strong>Tudo que fica aqui leva etiqueta com o nome dele</strong> — roupa, coleira, pote, escova, remédio. É a etiqueta que devolve a coisa certa ao dono certo.</li>'
       +'</ol></div></div>';
     var marcados=0;
     PT_ITENS.forEach(function(it){
       var a=R.itens[it.k]||{}, marc=(typeof a.trouxe==='boolean');
       if(marc) marcados++;
       h+='<div class="ck-ponto'+(a.trouxe?' ok':(marc?'':''))+'">'
-        +'<div class="ck-ph"><div><div class="ck-pt">'+it.t+'</div><div class="ck-ver">Ele trouxe '+(it.t.toLowerCase().indexOf('vasilha')>=0?'vasilhas':'isto')+'?</div></div></div>'
+        +'<div class="ck-ph"><div><div class="ck-pt">'+it.t+'</div></div></div>'
         +'<div class="ck-btns">'
           +'<button type="button" class="ck-b ok'+(a.trouxe===true?' on':'')+'" onclick="ptMarcar(\''+it.k+'\',true)">Trouxe</button>'
           +'<button type="button" class="ck-b bad'+(a.trouxe===false?' on':'')+'" onclick="ptMarcar(\''+it.k+'\',false)">Não trouxe</button>'
         +'</div>';
       if(a.trouxe){
-        if(it.qtd) h+='<input class="cad-in" style="margin-top:8px" inputmode="numeric" placeholder="Quantas?" value="'+escAttr(a.qtd||'')+'" oninput="ptTexto(\''+it.k+'\',\'qtd\',this.value)">';
-        h+='<input class="cad-in" style="margin-top:8px" placeholder="'+escAttr(it.ph||'Descreva')+'" value="'+escAttr(a.det||'')+'" oninput="ptTexto(\''+it.k+'\',\'det\',this.value)">';
-        if(it.emb) h+='<div class="ck-alertas" style="margin-top:8px">'+PT_EMB.map(function(e){
-            return '<button type="button" class="ck-chip'+(a.emb===e.k?' on':'')+'" onclick="ptEmb(\''+it.k+'\',\''+e.k+'\')">'+e.t+'</button>'; }).join('')+'</div>';
+        if(it.lista){
+          h+=ptListaHTML(it,a);
+        } else {
+          if(it.qtd) h+='<input class="cad-in" style="margin-top:8px" inputmode="numeric" placeholder="Quantas?" value="'+escAttr(a.qtd||'')+'" oninput="ptTexto(\''+it.k+'\',\'qtd\',this.value)">';
+          h+='<input class="cad-in" style="margin-top:8px" placeholder="'+escAttr(it.ph||'Descreva')+'" value="'+escAttr(a.det||'')+'" oninput="ptTexto(\''+it.k+'\',\'det\',this.value)">';
+          if(it.emb) h+='<div class="ck-alertas" style="margin-top:8px">'+PT_EMB.map(function(e){
+              return '<button type="button" class="ck-chip'+(a.emb===e.k?' on':'')+'" onclick="ptEmb(\''+it.k+'\',\''+e.k+'\')">'+e.t+'</button>'; }).join('')+'</div>';
+        }
+        // Tudo que fica na casa precisa de etiqueta com o nome — é assim que volta certo.
+        h+='<label class="pt-etiq'+(a.etiquetado?' on':'')+'"><input type="checkbox"'+(a.etiquetado?' checked':'')
+          +' onchange="ptEtiqueta(\''+it.k+'\',this.checked)"><span>Etiquetado com o nome '
+          +(ptEhFemea(ptAtual&&ptAtual.p)?'dela':'dele')+'</span></label>';
       }
       h+='</div>';
     });
+    // O que ele precisa e não veio: vira chamado para a Recepção, não fica só na cabeça.
+    h+=ptPendenciaComidaHTML();
     h+='<div class="ck-salvar"><span class="ck-progress">'+marcados+' de '+PT_ITENS.length+' itens conferidos</span>'
       +'<button class="btn btn-primary" onclick="ptSalvar()">'+(entrada?'Salvar o que ele trouxe':'Salvar o que volta')+'</button></div>';
     h+='</div>';
     return h;
+  }
+  function ptEhFemea(p){ try{ return String((typeof pelGet==='function'?pelGet(p,'sexo'):'')||'').toLowerCase().indexOf('f')===0; }catch(e){ return false; } }
+  function ptEtiqueta(k,v){ if(!ptRascunho) return; var a=ptRascunho.itens[k]||{}; a.etiquetado=!!v; ptRascunho.itens[k]=a; renderPertences(); }
+  // ---- Suplemento e medicação: lista com horário que vira ALARME ----
+  function ptLinhas(k){ var a=(ptRascunho&&ptRascunho.itens[k])||{}; return Array.isArray(a.linhas)?a.linhas:[]; }
+  function ptAddLinha(k){
+    if(!ptRascunho) return;
+    var a=ptRascunho.itens[k]||{}; a.linhas=Array.isArray(a.linhas)?a.linhas:[];
+    a.linhas.push({nome:'', dose:'', horarios:[]}); ptRascunho.itens[k]=a; renderPertences();
+  }
+  function ptDelLinha(k,i){ if(!ptRascunho) return; var a=ptRascunho.itens[k]||{}; (a.linhas||[]).splice(i,1); ptRascunho.itens[k]=a; renderPertences(); }
+  function ptSetLinha(k,i,campo,v){ if(!ptRascunho) return; var a=ptRascunho.itens[k]||{}; if(!a.linhas||!a.linhas[i]) return; a.linhas[i][campo]=v; ptRascunho.itens[k]=a; }
+  function ptAddHora(k,i){
+    if(!ptRascunho) return;
+    var el=document.getElementById('ptHora_'+k+'_'+i); var v=(el&&el.value)||'';
+    if(!/^\d{2}:\d{2}$/.test(v)){ alert('Escolha o horário no relógio antes de acrescentar.'); return; }
+    var a=ptRascunho.itens[k]||{}; var L=a.linhas[i]; L.horarios=Array.isArray(L.horarios)?L.horarios:[];
+    if(L.horarios.indexOf(v)<0) L.horarios.push(v);
+    L.horarios.sort(); ptRascunho.itens[k]=a; renderPertences();
+  }
+  function ptDelHora(k,i,hh){
+    if(!ptRascunho) return;
+    var a=ptRascunho.itens[k]||{}; var L=a.linhas[i]; L.horarios=(L.horarios||[]).filter(function(x){ return x!==hh; });
+    ptRascunho.itens[k]=a; renderPertences();
+  }
+  function ptListaHTML(it,a){
+    var linhas=Array.isArray(a.linhas)?a.linhas:[];
+    var h='<div class="pt-lista">';
+    if(!linhas.length) h+='<div class="hint">Nenhum ainda. Toque em "acrescentar" — pode ter mais de um.</div>';
+    linhas.forEach(function(L,i){
+      h+='<div class="pt-linha">'
+        +'<div class="pt-linha-top"><input class="cad-in" placeholder="'+escAttr(it.ph||'Qual?')+'" value="'+escAttr(L.nome||'')+'" oninput="ptSetLinha(\''+it.k+'\','+i+',\'nome\',this.value)">'
+        +'<button type="button" class="x" title="tirar" onclick="ptDelLinha(\''+it.k+'\','+i+')">&times;</button></div>'
+        +'<input class="cad-in" style="margin-top:6px" placeholder="Quanto e como. Ex: 1 cápsula junto com a comida" value="'+escAttr(L.dose||'')+'" oninput="ptSetLinha(\''+it.k+'\','+i+',\'dose\',this.value)">'
+        +'<div class="pt-horas">'
+          +(L.horarios||[]).map(function(hh){ return '<span class="pt-hora">'+hh+'<button type="button" onclick="ptDelHora(\''+it.k+'\','+i+',\''+hh+'\')">&times;</button></span>'; }).join('')
+          +'<input type="time" class="cad-in pt-hin" id="ptHora_'+it.k+'_'+i+'">'
+          +'<button type="button" class="btn btn-gold pt-hadd" onclick="ptAddHora(\''+it.k+'\','+i+')">+ horário</button>'
+        +'</div>'
+        +((L.horarios&&L.horarios.length)
+          ? '<div class="pt-alarme">Vai tocar o alarme '+(L.horarios.length===1?'às ':'às ')+L.horarios.join(', ')+' — em todos os aparelhos, até alguém dar e confirmar.</div>'
+          : '<div class="hint" style="margin-top:4px">Sem horário não toca alarme nenhum. Se é para dar em hora certa, acrescente o horário.</div>')
+        +'</div>';
+    });
+    h+='<button type="button" class="med-add" style="width:auto;margin-top:8px" onclick="ptAddLinha(\''+it.k+'\')">+ acrescentar '+(it.k==='medicacao'?'medicação':'suplemento')+'</button></div>';
+    return h;
+  }
+  // ===== NÃO TROUXE COMIDA, MAS ELE ALMOÇA (Adriana, 13/ago/2026) ===================
+  // "Kakinho veio para o Day Care, pela ficha ele almoça, mas não trouxe comida. Qual a
+  //  solução?" Antes isso morria na cabeça de quem conferiu. Agora vira um CHAMADO para a
+  //  Recepção — que quase sempre já tem a resposta (o tutor deixou comida guardada). A
+  //  Recepção responde no sistema e o nome do FILHOt fica PISCANDO na tela da monitora.
+  function ptAlmoca(p){
+    try{
+      var ex=(typeof pelExtra==='function')?pelExtra(p):{};
+      var v=ex.almoca||ex.almoco||'';
+      return String(v).toLowerCase().indexOf('s')===0;   // "Sim"
+    }catch(e){ return false; }
+  }
+  function ptPendenciaComidaHTML(){
+    if(!ptAtual||!ptRascunho) return '';
+    if(!ptAlmoca(ptAtual.p)) return '';
+    var seca=(ptRascunho.itens['comida_seca']||{}).trouxe;
+    var gel=(ptRascunho.itens['comida_gel']||{}).trouxe;
+    if(seca!==false||gel===true) return '';   // trouxe alguma coisa, ou ainda não respondeu
+    var ch=PT_CHAMADOS[dcKey(ptAtual.p.n,ptAtual.p.tutor)];
+    if(ch){
+      if(ch.resposta){
+        // A monitora viu: para de piscar.
+        if(ch.status!=='visto'&&DB) DB.ref('daycare/chamados-recepcao/'+dcDataKey()+'/'+dcKey(ptAtual.p.n,ptAtual.p.tutor)).update({status:'visto', visto_por:(typeof quemSou==='function'?quemSou():'-'), visto_em:Date.now()}).catch(function(){});
+        return '<div class="pt-chamado ok"><strong>A Recepção respondeu:</strong>'
+          +'<div style="font-size:15px;font-weight:800;margin-top:5px">'+escAttr(ch.resposta)+'</div>'
+          +'<div style="font-weight:600;margin-top:5px">Respondido por '+escAttr(ch.respondido_por||'Recepção')+'. Pegue na recepção e siga com a rotina dele.</div></div>';
+      }
+      return '<div class="pt-chamado ok"><strong>Recepção avisada.</strong>'
+        +'<div style="font-weight:600;margin-top:4px">Assim que responderem, o nome dele fica piscando na lista e a solução aparece aqui.</div></div>';
+    }
+    return '<div class="pt-chamado"><strong>'+escAttr(pelNome(ptAtual.p))+' almoça, mas não veio comida.</strong>'
+      +'<div style="font-weight:600;margin-top:4px">Na maioria das vezes o tutor já deixou comida guardada. Avise a Recepção agora — eles conferem e respondem aqui mesmo.</div>'
+      +'<button type="button" class="btn btn-primary" style="width:100%;margin-top:8px" onclick="ptAvisarRecepcao()">Avisar a Recepção — falta a comida ' +escAttr(ptEhFemea(ptAtual.p)?'dela':'dele')+ '</button></div>';
+  }
+  function ptAvisarRecepcao(){
+    if(!ptAtual||!DB) return;
+    var p=ptAtual.p, k=dcKey(p.n,p.tutor);
+    var reg={ pet:p.n||'', tutor:p.tutor||'', raca:p.raca||'', dia:dcDataKey(),
+              motivo:'almoça pela ficha, mas não trouxe comida',
+              quem:(typeof quemSou==='function'?quemSou():'-'), ts:Date.now(), status:'aberto' };
+    DB.ref('daycare/chamados-recepcao/'+dcDataKey()+'/'+k).set(reg).then(function(){
+      renderPertences();
+      if(typeof audit==='function') audit('chamado-recepcao','avisou a Recepção: falta comida de '+(p.n||''),{pet:p.n||''});
+    }).catch(function(e){ alert('Não consegui avisar: '+((e&&e.message)||e)+'. Ligue para a Recepção.'); });
+  }
+  function ptSalvarSaida(){
+    if(!ptAtual||!ptRascunho) return;
+    var o=ptAtual, k=dcKey(o.p.n,o.p.tutor);
+    var itens=ptItensDaEntrada(o)||[];
+    var S=ptRascunho.saida||{};
+    var naoGuardados=itens.filter(function(it){ return !((S[it.k]||{}).guardei); });
+    if(naoGuardados.length){
+      if(!confirm('Ainda não foram guardados:\n\n'+naoGuardados.map(function(x){ return '· '+x.t; }).join('\n')
+        +'\n\nSalvar assim mesmo? Fica registrado no seu nome que estes itens não voltaram para a bolsa.')) return;
+    }
+    var d=new Date(), p2=function(x){ return String(x).padStart(2,'0'); };
+    var reg={ nome:o.p.n||'', tutor:o.p.tutor||'', raca:o.p.raca||'', saida:S,
+      pendentes:naoGuardados.map(function(x){ return x.t; }),
+      fim:Date.now(), hora:p2(d.getHours())+':'+p2(d.getMinutes()),
+      quem:(typeof quemSou==='function'?quemSou():'-') };
+    if(!DB){ alert('Sem conexão — não deu para salvar.'); return; }
+    DB.ref(ptNo()+'/'+k).set(reg).then(function(){
+      ptDados[k]=reg; ptAtual=null; ptRascunho=null;
+      if(typeof audit==='function') audit('checkout-pertences','devolveu os pertences de '+(o.p.n||'')
+        +(naoGuardados.length?(' — NÃO guardou: '+naoGuardados.map(function(x){ return x.t; }).join(', ')):' — tudo guardado'),{pet:o.p.n||''});
+      renderPertences();
+    }).catch(function(e){ alert('Não salvou: '+((e&&e.message)||e)); });
   }
   function ptSalvar(){
     if(!ptAtual||!ptRascunho) return;
@@ -11498,11 +11805,31 @@
       quem:(typeof quemSou==='function'?quemSou():'-')
     });
     if(!DB){ alert('Sem conexão — não deu para salvar. Tente de novo quando a internet voltar.'); return; }
-    DB.ref(ptNo()+'/'+k).set(reg).then(function(){
+    // As linhas com horário viram doses de verdade: entram na agenda do dia e disparam o
+    // alarme, igual às da AuAulândia. Sem horário, ficam só como registro do que veio.
+    var doses={}, nDoses=0;
+    ['medicacao','suplemento'].forEach(function(campo){
+      var a=reg.itens[campo]||{};
+      (a.linhas||[]).forEach(function(L,i){
+        if(!L||!L.nome||!(L.horarios&&L.horarios.length)) return;
+        doses[campo+'_'+i]={nome:L.nome, dose:L.dose||'', horarios:L.horarios, obs:(campo==='suplemento'?'suplemento':'')};
+        nDoses+=L.horarios.length;
+      });
+    });
+    var ops=[DB.ref(ptNo()+'/'+k).set(reg)];
+    if(ptEhEntrada()){
+      ops.push(DB.ref('daycare/med-dia/'+dcDataKey()+'/'+k).set(
+        Object.keys(doses).length?{nome:o.p.n||'', tutor:o.p.tutor||'', itens:doses, _ts:Date.now(), _quem:reg.quem}:null));
+    }
+    Promise.all(ops).then(function(){
       ptDados[k]=reg; ptAtual=null; ptRascunho=null;
       if(typeof audit==='function') audit(ptEhEntrada()?'checkin-pertences':'checkout-pertences',
-        'conferiu os pertences de '+(o.p.n||''),{pet:o.p.n||''});
+        'conferiu os pertences de '+(o.p.n||'')+(nDoses?(' · '+nDoses+' dose(s) com alarme'):''),{pet:o.p.n||''});
+      if(nDoses&&typeof carregarAgendaMedTodos==='function') carregarAgendaMedTodos();  // rearma os alarmes
       renderPertences();
+      if(nDoses) zAlertao('✅ PERTENCES SALVOS — E O ALARME ESTÁ ARMADO',
+        ['O remédio de '+(o.p.n||'')+' vai tocar '+nDoses+' vez'+(nDoses>1?'es':'')+' hoje, em todos os aparelhos.'],
+        {ok:true, botao:'Fechar', rodape:'O alarme não some sozinho: só para quando alguém der a dose e confirmar com o nome.'});
     }).catch(function(e){ alert('Não salvou: '+((e&&e.message)||e)); });
   }
   function carregarGenerico(){ genMarcas={};
@@ -12024,9 +12351,35 @@
         linhas), 'pertences-daycare', linhas.length);
     }).catch(function(e){ alert('Não consegui ler os dados: '+((e&&e.message)||e)); });
   }
+  // ===== A TABELA EM BRANCO, PARA IMPRIMIR (Adriana, 13/ago/2026) ===================
+  // "Às vezes eu preciso imprimir ela em branco para preencherem à mão, como é feito hoje.
+  //  Ficamos sem internet, por exemplo." Papel é a contingência: sai com os nomes do dia já
+  //  escritos e as colunas vazias, no mesmo formato da planilha.
+  function relPertencesBranco(dia){
+    var d=dia||dcDia;
+    var lista=PELUDINHOS.map(function(p,i){ return {p:p,i:i}; })
+      .filter(function(o){ return (pelDias(o.p).indexOf(d)>=0 || (typeof ehMoradorZeluz==='function'&&ehMoradorZeluz(o.p))) && !pelInativo(o.p); })
+      .sort(function(a,b){ return jsNorm(a.p.n||'').localeCompare(jsNorm(b.p.n||''),'pt'); });
+    if(!lista.length){ alert('Não há peludinhos marcados para '+(DIA_FULL[d]||d)+'.'); return; }
+    var linhas=lista.map(function(o){ return [pelNome(o.p), o.p.raca||''].concat(PT_ITENS.map(function(){ return ''; })); });
+    relBaixarXLS(relTabelaHTML('Tabela de pertences do peludinho — '+(DIA_FULL[d]||d),
+      'PARA PREENCHER À MÃO · legenda: (P) pote, (S) sacola, (M) mochila · (OK) trouxe, (–) não trouxe · '+lista.length+' peludinhos',
+      ['Nome','Raça'].concat(PT_ITENS.map(function(x){ return x.t; })),
+      linhas), 'pertences-em-branco-'+d, linhas.length);
+  }
+  function relPertencesBrancoEscolher(){
+    var opc=ORDEM_DIAS.map(function(d){ return DIA_FULL[d]; }).join(', ');
+    var r=(prompt('Qual dia da semana?\n\n'+opc+'\n\n(escreva o dia, ex: quarta)','')||'').trim();
+    if(!r) return;
+    var n=jsNorm(r);
+    var achou=ORDEM_DIAS.find(function(d){ return jsNorm(DIA_FULL[d]).indexOf(n)===0 || d===n.slice(0,3); });
+    if(!achou){ alert('Não entendi "'+r+'". Escreva o dia da semana: '+opc+'.'); return; }
+    relPertencesBranco(achou);
+  }
   const RELATORIOS=[
     {t:'Grade de almoço das turminhas', d:'Segunda a sexta: nome, raça, se almoça, comedouro lento, o que come e quanto come. É a contingência de papel — se o sistema cair, a comida sai igual.', fn:'baixarGradeAlmoco()'},
     {t:'Pertences do dia', d:'A tabela que hoje é preenchida à mão: item por item, o que cada FILHOt trouxe, como é e em que veio (pote, sacola ou mochila).', fn:'relPertencesHoje()'},
+    {t:'Pertences EM BRANCO — para imprimir', d:'A mesma tabela, com os nomes do dia já escritos e as colunas vazias, para preencher à mão. É a contingência de quando falta internet.', fn:'relPertencesBrancoEscolher()'},
     {t:'Check-in do corpo de hoje', d:'Quem passou, a que horas, quem fez, o que foi encontrado de alteração, cocô e as coleiras que entraram.', fn:'relCheckinHoje()'},
     {t:'Orçamentos de hospedagem', d:'Todo orçamento feito, com plano, desconto, diárias, pernoites, valor e se o tutor fechou. Uma linha por FILHOt.', fn:'relOrcamentos()'}
   ];
