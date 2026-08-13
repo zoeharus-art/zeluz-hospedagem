@@ -1511,6 +1511,21 @@
 </style>
 </head>
 <body data-role="gestao">
+<!-- ===== AVISO DE VERSÃO NOVA (Adriana, 13/ago/2026) =============================
+     A Amanda estava usando o app com uma versão antiga e trombou num erro que já
+     tinha sido corrigido. O celular guarda a página e não avisa ninguém. Agora o
+     app compara a sua versão com a publicada e mostra este aviso — sem nunca
+     recarregar sozinho: recarregar no meio de um check-in perderia o trabalho. -->
+<div id="avisoVersao" style="display:none;position:fixed;left:0;right:0;bottom:0;z-index:190;background:var(--z-gold);color:var(--z-blue);padding:12px 14px;box-shadow:0 -3px 14px rgba(0,0,0,.2)">
+  <div style="max-width:560px;margin:0 auto;display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+    <div style="flex:1;min-width:180px;font-size:13.5px;line-height:1.4">
+      <strong>Tem versão nova do sistema.</strong><br>
+      <span style="font-size:12.5px">Salve o que estiver fazendo e toque em atualizar.</span>
+    </div>
+    <button onclick="aplicarVersaoNova()" style="background:var(--z-blue);color:#FFFDF6;border:none;border-radius:10px;padding:11px 18px;font-weight:800;font-size:14px;cursor:pointer;flex:0 0 auto">Atualizar agora</button>
+    <button onclick="document.getElementById('avisoVersao').style.display='none'" style="background:none;border:none;color:var(--z-blue);font-size:12.5px;text-decoration:underline;cursor:pointer;flex:0 0 auto">agora não</button>
+  </div>
+</div>
 
 <!-- ============ LOGIN ============ -->
 <div class="login-screen" id="loginScreen">
@@ -7275,6 +7290,33 @@
     }).catch(function(e){ if(st){ st.style.color='var(--crm-critico)'; st.textContent='Não salvou: '+((e&&e.message)||e); } });
   }
 
+  // ================= VERSÃO DO APP ====================================================
+  // Adriana, 13/ago/2026: "atualize o app da monitora Amanda — ela estava fazendo e
+  // descobriu o erro". O celular guarda a página e continua rodando a versão antiga por
+  // dias. Quem usa não tem como saber, e reclama de um problema que já foi resolvido.
+  //
+  // Agora existe um carimbo: esta constante é a versão que o aparelho está rodando, e o
+  // Firebase guarda a versão publicada. Quando as duas diferem, aparece o aviso — mas
+  // NUNCA recarrega sozinho: recarregar no meio de um check-in perderia o trabalho.
+  const APP_VERSAO='2026-08-13-06';
+  function vigiarVersao(){
+    if(!DB) return;
+    try{
+      DB.ref('daycare/config/versao-app').on('value',function(s){
+        var pub=s.val();
+        if(!pub||pub===APP_VERSAO) return;
+        var el=document.getElementById('avisoVersao'); if(el) el.style.display='block';
+      });
+    }catch(e){}
+  }
+  // Recarrega furando o cache do navegador — sem isso ele serve a mesma página velha.
+  function aplicarVersaoNova(){
+    try{
+      var u=location.href.split('#')[0].split('?')[0];
+      location.replace(u+'?v='+Date.now());
+    }catch(e){ location.reload(true); }
+  }
+
   // ===== LOGIN (senhas de teste — depois cada pessoa terá a sua) =====
   // ===== FAXINA NAS SENHAS FIXAS (Adriana, 13/ago/2026) =============================
   // O relatório de senhas virou um monte de acesso sem dono: a Wandela tinha DUAS senhas
@@ -11133,6 +11175,7 @@
   try{ if(typeof ptEscutarChamados==='function') ptEscutarChamados(); }catch(e){}
   try{ if(typeof almEscutarExcecoes==='function') almEscutarExcecoes(); }catch(e){}
   try{ if(typeof ativCarregarTempo==='function') ativCarregarTempo(); }catch(e){}
+  try{ if(typeof vigiarVersao==='function') vigiarVersao(); }catch(e){}
 
   // ===== ADAPTACAO NAO PODE SER ETERNA (Adriana, 12/ago/2026) =======================
   // "EM ADAPTAÇÃO HOJE: Bruce, Hulk, Yumi — essa informação não é real, de onde está tirando
