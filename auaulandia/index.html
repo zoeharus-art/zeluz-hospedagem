@@ -1175,6 +1175,9 @@
   .alm-excecao .ax-tit{font-size:10.5px;font-weight:800;letter-spacing:.06em;color:var(--z-blue);opacity:.8}
   .alm-excecao .ax-o{font-size:14px;font-weight:800;color:var(--z-blue);margin-top:2px;line-height:1.35}
   .alm-excecao .ax-q{font-size:11px;color:var(--z-blue);opacity:.85;margin-top:3px;line-height:1.35}
+  .alm-semcomida{background:var(--crm-critico);border-radius:10px;padding:9px 11px;margin-top:7px;text-align:left;animation:ptPisca 1.4s ease-in-out infinite}
+  .alm-semcomida .ax-tit{font-size:11px;font-weight:800;letter-spacing:.06em;color:#fff}
+  .alm-semcomida .ax-o{font-size:12.5px;font-weight:700;color:#fff;margin-top:3px;line-height:1.4}
   @keyframes ptPisca{0%,100%{opacity:1}50%{opacity:.35}}
   .pt-pisca{animation:ptPisca 1.1s ease-in-out infinite}
   .orc-temp{display:grid;grid-template-columns:1fr 1fr;gap:10px}
@@ -1583,6 +1586,7 @@
 
     <a data-v="relatorios" class="so-gestao"><span data-icon="star"></span><span>Relatórios</span></a>
     <a data-v="acerto" class="so-master"><span data-icon="star"></span><span>Acerto das Plantonistas</span></a>
+    <a data-v="ritmo" class="so-gestao"><span data-icon="star"></span><span>Ritmo do Time</span></a>
 
     <a data-v="sair"><span data-icon="exit"></span><span>Sair</span></a>
   </nav>
@@ -1788,6 +1792,8 @@
       <!-- A folha de contingência: se o app cair no horário do almoço, a monitora serve pelo papel. -->
       <!-- O Excel da grade mudou de lugar (13/ago/2026): agora mora em Relatórios, com os outros. -->
     </div>
+    <!-- Cronômetro da atividade (Adriana, 13/ago/2026): toda atividade tem início e fim. -->
+    <div id="ativBarraTempo"></div>
     <div id="scr-chamada" class="dc-scr">
       <div class="role-note"><span data-icon="sun"></span><span>Toque <strong>VEIO</strong> ou <strong>FALTOU</strong> em cada peludinho. A lista de faltas vai para a Gestão. Toque no card para ver a ficha.</span></div>
       <div id="dcResumo"></div>
@@ -2824,6 +2830,27 @@
 
   </section>
   <!-- ===== PAINEL DO DIA (Dashboard de Gestão — só observa) ===== -->
+  <!-- ===== RITMO DO TIME (Adriana, 13/ago/2026) ====================================
+       "Hoje a Amanda esta mais lenta: o que ocorreu? A gestao tem como agir antes que seja
+       tarde demais." Nao e para punir — e para PERGUNTAR a tempo. -->
+  <section class="view" id="v-ritmo">
+    <div class="role-note so-gestao"><span data-icon="star"></span><span><strong>Isto não mede pessoas — mede o dia.</strong> O tempo sozinho não diz nada: 40 minutos com 50 FILHOts é ótimo; com 12, é sinal de alguma coisa. Por isso a conta é <strong>minutos por FILHOt</strong>, comparada com a média da mesma atividade no mesmo dia da semana.</span></div>
+    <div class="card">
+      <h2 style="font-size:19px">Hoje</h2>
+      <div id="ritmoHoje"></div>
+    </div>
+    <div class="card">
+      <h2 style="font-size:19px">Quem está fora da média</h2>
+      <div class="hint">Até <strong>12%</strong> de diferença é variação normal do dia. Acima disso, vale uma conversa — sempre em forma de pergunta, nunca de acusação.</div>
+      <div id="ritmoDesvios" style="margin-top:10px"></div>
+    </div>
+    <div class="card">
+      <h2 style="font-size:19px">Média por atividade e dia da semana</h2>
+      <div class="hint">Quanto mais dias medidos, mais confiável a média. Atividade com menos de 3 medições ainda não tem base.</div>
+      <div id="ritmoMedias" style="margin-top:10px"></div>
+    </div>
+  </section>
+
   <!-- ===== ACERTO DAS PLANTONISTAS (Adriana, 13/ago/2026) ==========================
        O acerto é por NOITE e depende de quantos FILHOts dormiram aqui. Só a Gestão vê:
        a Supervisão não precisa (nem deve) enxergar o que cada plantonista recebe. -->
@@ -3371,6 +3398,7 @@
     orcamento:['Orçamento de Hospedagem','Diárias, pernoites e desconto do plano — com a mensagem pronta para o tutor'],
     relatorios:['Relatórios','Tudo que dá para baixar em Excel, num lugar só'],
     acerto:['Acerto das Plantonistas','Quanto cada noite vale, quem dormiu aqui e o que está a pagar'],
+    ritmo:['Ritmo do Time','Quanto tempo cada atividade leva, por pessoa e por dia da semana'],
     checkout:['Check-out (monitores)','Juntar tudo que volta com o FILHOt e mandar para a recepção'],
     checkoutconf:['Conferência Check-out','Conferir com o tutor na saída, colher a assinatura e entregar o PDF'],
     emporio:['Empório','Avisar os tutores de quem não comeu hoje'],
@@ -3427,6 +3455,7 @@
     if(v==='orcamento'){ if(typeof orcInit==='function') orcInit(); }
     if(v==='relatorios'){ if(typeof renderRelatorios==='function') renderRelatorios(); if(typeof orcCarregarLista==='function') orcCarregarLista(); }
     if(v==='acerto'){ if(typeof acertoCarregar==='function') acertoCarregar(); }
+    if(v==='ritmo'){ if(typeof ritmoCarregar==='function') ritmoCarregar(); }
     const pn=document.getElementById('pSubnav'); if(pn) pn.style.display=(v==='pessoas')?'block':'none';
     if(v==='pessoas'){ if(typeof montarPSubnav==='function') montarPSubnav(); if(typeof abrirPessoas==='function') abrirPessoas('ativ'); return 'parar'; }
     if(v==='painel'){ if(typeof carregarPainel==='function') carregarPainel(); }
@@ -6681,14 +6710,9 @@
       else L.push('Já com o desconto de '+descs.map(function(p){ return p.off+'% '+orcArtigoDe(p.sel)+' '+p.sel.nome; }).join(' e ')+'.');
     }
     L.push('Forma de pagamento: '+fmtCent(C.p1)+' na reserva da data e '+fmtCent(C.p2)+' no dia da hospedagem.');
-    // Feriado dentro da estadia: o tutor precisa saber ANTES de fechar, sem susto na saída.
-    var fer=orcFeriadosNoPeriodo(C.entrada,C.saida);
-    if(fer.length){
-      L.push('');
-      L.push('Um detalhe importante: '+(fer.length===1?'o dia ':'os dias ')
-        +fer.map(function(f){ return orcBR(f.iso)+' ('+f.nome+')'; }).join(' e ')
-        +(fer.length===1?' é feriado':' são feriados')+' e a AuAulândia não faz entrada nem saída nesses dias. Por isso as datas acima já estão ajustadas — assim '+(um?'ele fica':'eles ficam')+' bem acomodad'+(um?(orcEhFemea(C.pets[0].sel)?'a':'o'):'os')+' e ninguém precisa correr.');
-    }
+    // O aviso de feriado saiu da mensagem em 13/ago/2026 ("tire esse detalhe por enquanto,
+    // vejo em que momento iremos introduzir"). O AJUSTE das datas continua acontecendo — só
+    // não é explicado ao tutor. A consultora continua vendo o aviso na tela do orçamento.
     L.push('');
     L.push('Podemos confirmar a Colônia de Férias '+orcPequeno(C.pets,true)+'?');
     // "vão se divertir" está correto (divertir-se é pronominal), mas o "se" incomodou a
@@ -10705,7 +10729,7 @@
   // ===== DAY CARE — chamada visual a prova de burros (Aulunos do dia) =====
   const HOJE_DIA=(()=>{ const d=new Date().getDay(); return (d>=1&&d<=5)?ORDEM_DIAS[d-1]:'seg'; })();
   let dcDia=HOJE_DIA, dcChamada={}, dcAvulsos=[], dcAtiv='chamada';
-  const ATIVS_DC=[{s:'checkin-corpo',t:'Check-in do corpo'},{s:'checkin-pert',t:'Check-in dos pertences'},{s:'chamada',t:'Chamada',esp:1},{s:'livre',t:'Atividade livre'},{s:'ea',t:'Enriquecimento Ambiental (EA)'},{s:'aucademia',t:'Aucademia'},{s:'almoco',t:'Almoço',esp:1},{s:'almoco2',t:'2º Horário de Almoço'},{s:'massagem',t:'Massagem Dessensibilizadora'},{s:'escova',t:'Escova de Dentes'},{s:'jogos',t:'Jogos Cognitivos'},{s:'aulinha',t:'Aulinha de Disciplina'},{s:'agility',t:'Agility Funcional'},{s:'musicoterapia',t:'Musicoterapia'},{s:'checkout-pert',t:'Check-out dos pertences'},{s:'checkout-corpo',t:'Check-out do corpinho'}];
+  const ATIVS_DC=[{s:'checkin-corpo',t:'Check-in do corpo'},{s:'checkin-pert',t:'Check-in dos pertences'},{s:'chamada',t:'Chamada',esp:1},{s:'livre',t:'Atividade livre'},{s:'ea',t:'Enriquecimento Ambiental (EA)'},{s:'aucademia',t:'Aucademia'},{s:'cafe',t:'Café da manhã (hóspedes)'},{s:'almoco',t:'Almoço',esp:1},{s:'almoco2',t:'2º Horário de Almoço'},{s:'massagem',t:'Massagem Dessensibilizadora'},{s:'escova',t:'Escova de Dentes'},{s:'jogos',t:'Jogos Cognitivos'},{s:'aulinha',t:'Aulinha de Disciplina'},{s:'agility',t:'Agility Funcional'},{s:'musicoterapia',t:'Musicoterapia'},{s:'checkout-pert',t:'Check-out dos pertences'},{s:'checkout-corpo',t:'Check-out do corpinho'}];
   function dcDataKey(){ const p=x=>String(x).padStart(2,'0'); const d=new Date(); return d.getFullYear()+'-'+p(d.getMonth()+1)+'-'+p(d.getDate()); }
   function dcKey(name,tutor){ return jsNorm((name||'')+'__'+(tutor||'')).replace(/[.#$\[\]\/ ]/g,'-'); }
   function montarSubnav(){ const sm=document.getElementById('dcSubnav'); if(!sm) return;
@@ -10781,7 +10805,7 @@
   function setDcDia(d){ dcDia=d; if(typeof irParaView==='function') irParaView('daycare'); abrirAccDaycare(); marcarSubnavAtivo(); renderAtual(); if(typeof closeNav==='function') closeNav(); }
   function abrirAtividade(slug){ const escopo=(typeof atividadesPermitidas==='function')?atividadesPermitidas():null; if(escopo&&escopo.indexOf(slug)<0) slug=escopo[0]; dcAtiv=slug; if(typeof irParaView==='function') irParaView('daycare'); abrirAccDaycare(); marcarSubnavAtivo(); renderAtual(); if(typeof closeNav==='function') closeNav(); }
   function mostrarScr(){ const ehCk=(dcAtiv==='checkin-corpo'||dcAtiv==='checkout-corpo'); const ehPt=(dcAtiv==='checkin-pert'||dcAtiv==='checkout-pert'); const esp=(dcAtiv==='chamada'||dcAtiv==='almoco'||ehCk||ehPt); const a=document.getElementById('scr-chamada'),b=document.getElementById('scr-almoco'),c=document.getElementById('scr-generic'); if(a)a.style.display=dcAtiv==='chamada'?'block':'none'; if(b)b.style.display=dcAtiv==='almoco'?'block':'none'; if(c)c.style.display=esp?'none':'block'; const k=document.getElementById('scr-checkin'); if(k)k.style.display=ehCk?'block':'none'; const pt=document.getElementById('scr-pert'); if(pt)pt.style.display=ehPt?'block':'none'; const lbl=document.getElementById('dcAtivLabel'); if(lbl){ const f=ATIVS_DC.find(x=>x.s===dcAtiv); lbl.textContent=f?f.t:'Chamada'; } const dl=document.getElementById('dcDiaLabel'); if(dl) dl.textContent=DIA_FULL[dcDia]; }
-  function renderAtual(){ mostrarScr(); if(dcAtiv==='chamada') carregarChamada(); else if(dcAtiv==='almoco') carregarAlmoco(); else if(dcAtiv==='checkin-corpo'||dcAtiv==='checkout-corpo'){ carregarCheckin(); if(dcAtiv==='checkout-corpo') ckCarregarEntradaDoDia(); } else if(dcAtiv==='checkin-pert'||dcAtiv==='checkout-pert'){ carregarPertences(); } else carregarGenerico(); if(typeof renderAdaptBanner==='function') renderAdaptBanner(); }
+  function renderAtual(){ mostrarScr(); if(dcAtiv==='chamada') carregarChamada(); else if(dcAtiv==='almoco') carregarAlmoco(); else if(dcAtiv==='checkin-corpo'||dcAtiv==='checkout-corpo'){ carregarCheckin(); if(dcAtiv==='checkout-corpo') ckCarregarEntradaDoDia(); } else if(dcAtiv==='checkin-pert'||dcAtiv==='checkout-pert'){ carregarPertences(); } else carregarGenerico(); if(typeof renderAdaptBanner==='function') renderAdaptBanner(); try{ if(typeof renderBarraAtiv==='function') renderBarraAtiv(); }catch(e){} }
   // Morador(a) Zêluz (Repolho, Stopa, Kako) MORA aqui: está todo dia, sem exceção. Não pode
   // depender de alguém lembrar de marcar os dias na ficha — a Repolho ficou com os dias em
   // branco e sumiu da chamada e do almoço por dias (Adriana, 11/ago/2026). Agora quem é
@@ -11025,6 +11049,7 @@
   try{ if(typeof tgCarregarCfg==='function') tgCarregarCfg(); }catch(e){}
   try{ if(typeof ptEscutarChamados==='function') ptEscutarChamados(); }catch(e){}
   try{ if(typeof almEscutarExcecoes==='function') almEscutarExcecoes(); }catch(e){}
+  try{ if(typeof ativCarregarTempo==='function') ativCarregarTempo(); }catch(e){}
 
   // ===== ADAPTACAO NAO PODE SER ETERNA (Adriana, 12/ago/2026) =======================
   // "EM ADAPTAÇÃO HOJE: Bruce, Hulk, Yumi — essa informação não é real, de onde está tirando
@@ -11246,9 +11271,17 @@
      como:'Repare na cor e na quantidade. Xixi pouquinho e toda hora, muito escuro ou avermelhado são alerta. Se ele divide o espaço com outro e você não viu, marque "Não vi" — é melhor do que chutar.',
      naoVi:1, naoFez:1,
      alertas:['Pouco e toda hora','Cor muito escura','Cor avermelhada','Fez no lugar errado','Parece sentir dor ao fazer']},
+    // O cocô é um PONTO como os outros (Adriana, 13/ago/2026), logo depois do xixi, no mesmo
+    // estilo: Normal · Alterado · Não vi · Não fez. Marcar "Alterado" abre o que há de errado
+    // — e diarreia, sangue, aspecto estranho ou objeto acendem o protocolo das fezes na hora.
+    {k:'coco', t:'Cocô', ver:'Como está o cocô dele?',
+     como:'Esperamos de 10 a 15 minutos na entrada para ele fazer. Olhe a consistência, a cor e se tem alguma coisa dentro (pano, brinquedo, pedra). Se ele divide o espaço com outro e você não viu quem fez, marque "Não vi".',
+     naoVi:1, naoFez:1,
+     alertas:['Mole','DIARREIA','COM SANGUE','ASPECTO ESTRANHO','OBJETO ESTRANHO','Cor diferente do normal']},
+    // Vômito NÃO tem "Não vi" (a pessoa está com ele). Tem a dúvida honesta: babou ou vomitou?
     {k:'vomito', t:'Vômito', ver:'Ele vomitou, ou chegou com cara de ter vomitado no caminho?',
-     como:'Olhe a boca, o peito e o pelo do pescoço: resto de comida, baba grossa ou pelo molhado e sujo indicam que ele vomitou antes de chegar. Isso é informação importante mesmo quando ninguém viu acontecer — anote sempre.',
-     naoVi:1,
+     como:'Olhe a boca, o peito e o pelo do pescoço: resto de comida, baba grossa ou pelo molhado e sujo indicam que ele vomitou antes de chegar. Se você ficou na dúvida entre baba e vômito, marque "Parece que sim" — a dúvida também é informação.',
+     talvez:1, rotNormal:'Não', rotAlterado:'Sim',
      alertas:['Vomitou aqui','Chegou com cara de ter vomitado','Vomitou várias vezes','Vômito com sangue','Vômito com coisa estranha']},
     {k:'rabo', t:'Rabo e bumbum', ver:'A região do bumbum está limpa e sem inchaço?',
      como:'Levante o rabo e olhe. Tem que estar limpo, sem vermelhidão, sem inchaço e sem cheiro muito forte. Se ele arrasta o bumbum no chão ou lambe muito ali, pode ser a glândula cheia — anote.',
@@ -11284,6 +11317,15 @@
     {k:'objeto', t:'OBJETO ESTRANHO', grave:1}
   ];
   function ckCocoGrave(k){ return CK_COCO.some(function(c){ return c.k===k&&c.grave; }); }
+  // Agora o cocô é um ponto: o que acende o protocolo são os ALERTAS marcados nele.
+  function ckCocoGraveNosAlertas(at){
+    var a=(at&&at.alertas)||[];
+    if(a.indexOf('DIARREIA')>=0) return 'diarreia';
+    if(a.indexOf('COM SANGUE')>=0) return 'sangue';
+    if(a.indexOf('ASPECTO ESTRANHO')>=0) return 'estranho';
+    if(a.indexOf('OBJETO ESTRANHO')>=0) return 'objeto';
+    return '';
+  }
   // O protocolo aparece NA HORA em que ela marca — não adianta estar num manual.
   // Os passos de desinfecção são o Procedimento Padrão com Fezes da casa, ditado pela
   // Adriana em 13/ago/2026, palavra por palavra. Cada passo tem um toque: quem está com
@@ -11721,12 +11763,20 @@
         +(pt.como?'<div class="ck-como">'+pt.como+'</div>':'')
         // "Não vi" e "Não fez" existem só onde fazem sentido (xixi, cocô, vômito): com dois
         // irmãos no mesmo espaço, obrigar a escolher "fez" ou "não fez" força a inventar.
-        +'<div class="ck-btns'+((pt.naoVi||pt.naoFez)?' quatro':'')+'">'
-          +'<button type="button" class="ck-b ok'+(marc&&!at.alterado&&!at.semDado?' on':'')+'" onclick="ckMarcar(\''+pt.k+'\',false)">Normal</button>'
-          +'<button type="button" class="ck-b bad'+(at.alterado?' on':'')+'" onclick="ckMarcar(\''+pt.k+'\',true)">Alterado</button>'
+        +'<div class="ck-btns'+((pt.naoVi||pt.naoFez||pt.talvez)?' quatro':'')+'">'
+          +'<button type="button" class="ck-b ok'+(marc&&!at.alterado&&!at.semDado?' on':'')+'" onclick="ckMarcar(\''+pt.k+'\',false)">'+(pt.rotNormal||'Normal')+'</button>'
+          +'<button type="button" class="ck-b bad'+(at.alterado?' on':'')+'" onclick="ckMarcar(\''+pt.k+'\',true)">'+(pt.rotAlterado||'Alterado')+'</button>'
           +(pt.naoVi?'<button type="button" class="ck-b neu'+(at.semDado==='naovi'?' on':'')+'" onclick="ckSemDado(\''+pt.k+'\',\'naovi\')">Não vi</button>':'')
           +(pt.naoFez?'<button type="button" class="ck-b neu'+(at.semDado==='naofez'?' on':'')+'" onclick="ckSemDado(\''+pt.k+'\',\'naofez\')">Não fez</button>':'')
-        +'</div>';
+          // A dúvida honesta vale como resposta: babou ou vomitou? Melhor registrar a dúvida
+          // do que forçar um "não" que esconde a informação.
+          +(pt.talvez?'<button type="button" class="ck-b neu'+(at.semDado==='talvez'?' on':'')+'" onclick="ckSemDado(\''+pt.k+'\',\'talvez\')">Parece que sim</button>':'')
+        +'</div>'
+        +(at.semDado==='talvez'
+          ? '<div class="ck-hint" style="margin-top:7px;color:var(--crm-atencao-text);font-weight:700">Na dúvida, avise a Coordenação e observe ao longo do dia.</div>'
+            +'<input class="cad-in" style="margin-top:7px" placeholder="O que te deixou em dúvida? Ex: pelo do peito molhado" value="'+escAttr(at.obs||'')+'" oninput="ckObs(\''+pt.k+'\',this.value)">'
+            +ckFotosExtraHTML(pt,at)
+          : '');
       if(at.alterado){
         h+='<div class="ck-alertas">'+pt.alertas.map(function(a){
           const on=(at.alertas||[]).indexOf(a)>=0;
@@ -11770,20 +11820,16 @@
         // PARA QUEM vai — tutor, veterinária da Zêluz ou veterinário externo (Adriana).
         +ckFotosExtraHTML(pt,at)
         +ckDestinoHTML(pt,at)
+        // Cocô grave acende o protocolo das fezes aqui mesmo, dentro do ponto.
+        +(pt.k==='coco'?ckProtocoloCocoHTML(ckCocoGraveNosAlertas(at)):'')
         // Nem toda alteração é ligação — mas toda alteração exige a DECISÃO registrada.
         +ckLigarHTML(pt,at);
       }
       h+='</div>';
     });
     if(entrada){
-      // O cocô vem ANTES das coleiras (Adriana, 13/ago/2026): é o que pode virar urgência.
-      h+='<div class="ck-bloco"><div class="ck-bt">Fez cocô?</div>'
-        +'<div class="ck-hint">Esperamos de 10 a 15 minutos para ele fazer. Diarreia, sangue, aspecto estranho ou objeto no cocô: o protocolo aparece aqui na hora — siga na ordem.</div>'
-        +'<div class="ck-opts">'+CK_COCO.map(function(c){
-          return '<button type="button" class="ck-opt'+(R.coco===c.k?' on':'')+(c.grave?' grave':'')+'" onclick="ckSet(\'coco\',\''+c.k+'\')">'+c.t+'</button>'; }).join('')+'</div>'
-        +ckProtocoloCocoHTML(R.coco)
-        +'</div>'
-      +'<div class="ck-bloco"><div class="ck-bt">Coleira repelente</div>'
+      // O cocô saiu daqui em 13/ago/2026: virou ponto do exame, logo depois do xixi.
+      h+='<div class="ck-bloco"><div class="ck-bt">Coleira repelente</div>'
         +'<div class="ck-opts">'+CK_COLEIRAS.map(function(c){
           return '<button type="button" class="ck-opt'+(R.coleiraRep===c.k?' on':'')+'" onclick="ckSet(\'coleiraRep\',\''+c.k+'\')">'+c.t
             +(c.sub?'<small>'+c.sub+'</small>':'')+'</button>'; }).join('')+'</div></div>'
@@ -11879,7 +11925,7 @@
     }
     if(entrada && !R.coleiraRep){ alert('Diga qual coleira repelente ele está usando — ou marque "Não veio".'); return; }
     if(entrada && !R.coleiraId){ alert('Diga se ele veio com a coleira de identificação.'); return; }
-    if(entrada && !R.coco){ alert('Falta registrar o cocô. Se ainda não fez, marque "Não fez" — dá para voltar e corrigir depois.'); return; }
+    // O cocô virou ponto do exame — a validação de "ponto a ponto" já cobre.
     const quem=pessoaDoTurno();
     const reg=Object.assign({}, R, {nome:pelNome(p), tutor:p.tutor||'', quem:quem, hora:horaAgora(), fim:Date.now(), tipo:entrada?'entrada':'saida'});
     ckDados[k]=reg;
@@ -12575,6 +12621,176 @@
     if(DB) DB.ref(caminho).update(patch).catch(()=>{});
     return {h:h, patch:patch};
   }
+  // ================= CRONÔMETRO DE TODAS AS ATIVIDADES ==============================
+  // Adriana, 13/ago/2026: "assim como no almoço, todas as atividades precisam startar o
+  // início e o fim — isso é importantíssimo para o nosso dashboard. Hoje a Amanda está mais
+  // lenta: o que ocorreu? Ela teve dificuldades? Está bem? A gestão tem como agir antes que
+  // seja tarde demais."
+  //
+  // O tempo sozinho não diz nada: 40 minutos com 50 FILHOts é ótimo, com 12 é ruim. Por isso
+  // guardamos SEMPRE o número de FILHOts do dia junto — e a análise é feita em MINUTOS POR
+  // FILHOt, comparando cada pessoa com a média da MESMA atividade no MESMO dia da semana.
+  //
+  // ATIVIDADES SIMULTÂNEAS: o 2º horário de almoço é dado pela mesma pessoa que guarda os
+  // pertences, no mesmo espaço. São dois cronômetros rodando juntos, de propósito — e a
+  // análise sabe disso: não soma o tempo dela duas vezes.
+  var ATIV_TEMPO={};   // {slug:{inicio,fim,quemInicio,quemFim,caes}}
+  const ATIV_SIMULTANEAS=[['almoco2','checkout-pert']];
+  function ativTempoNo(slug){ return 'daycare/tempo-atividade/'+dcDataKey()+'/'+slug; }
+  function ativCarregarTempo(){
+    if(!DB) return;
+    DB.ref('daycare/tempo-atividade/'+dcDataKey()).once('value').then(function(s){
+      ATIV_TEMPO=s.val()||{};
+      try{ if(typeof renderAtual==='function' && dcAtiv) renderBarraAtiv(); }catch(e){}
+    }).catch(function(){});
+  }
+  function ativIniciar(slug){
+    var t=ATIV_TEMPO[slug]||{};
+    var r=turnoTrocar(ativTempoNo(slug),'inicio','quemInicio',t,'O início desta atividade');
+    if(!r) return;
+    ATIV_TEMPO[slug]=Object.assign({},t,r.patch,{caes:(typeof turmaDoDia==='function')?turmaDoDia().length:0});
+    if(DB) DB.ref(ativTempoNo(slug)).update({caes:ATIV_TEMPO[slug].caes}).catch(function(){});
+    if(typeof audit==='function') audit('ativ_ini','iniciou '+ativNome(slug)+' às '+r.h,{});
+    renderBarraAtiv();
+  }
+  function ativEncerrar(slug){
+    var t=ATIV_TEMPO[slug]||{};
+    if(!t.inicio){ alert('Esta atividade ainda não foi iniciada. Toque em "Iniciar" primeiro — sem o começo não dá para medir o tempo.'); return; }
+    var r=turnoTrocar(ativTempoNo(slug),'fim','quemFim',t,'O fim desta atividade');
+    if(!r) return;
+    ATIV_TEMPO[slug]=Object.assign({},t,r.patch);
+    if(typeof audit==='function') audit('ativ_fim','encerrou '+ativNome(slug)+' às '+r.h,{});
+    renderBarraAtiv();
+  }
+  function ativNome(slug){ var f=ATIVS_DC.find(function(a){ return a.s===slug; }); return f?f.t:slug; }
+  function ativPar(slug){
+    var p=ATIV_SIMULTANEAS.find(function(x){ return x.indexOf(slug)>=0; });
+    if(!p) return '';
+    return p[0]===slug?p[1]:p[0];
+  }
+  function renderBarraAtiv(){
+    var el=document.getElementById('ativBarraTempo'); if(!el) return;
+    // Almoço e chamada já têm as suas barras próprias — não duplicar.
+    if(!dcAtiv||dcAtiv==='almoco'||dcAtiv==='chamada'){ el.innerHTML=''; return; }
+    var t=ATIV_TEMPO[dcAtiv]||{};
+    var dur=diffMin(t.inicio,t.fim);
+    var n=(typeof turmaDoDia==='function')?turmaDoDia().length:0;
+    var porPet=(dur!=null&&n)?(dur/n):null;
+    var par=ativPar(dcAtiv), tp=par?(ATIV_TEMPO[par]||{}):null;
+    el.innerHTML='<div class="alm-turno">'
+      +'<div><div class="tb-lab">'+escAttr(ativNome(dcAtiv))+' — '+DIA_FULL[dcDia]+'</div>'
+      +'<div style="font-size:13px;margin-top:3px">Início: <strong>'+(t.inicio||'-')+'</strong>'+(t.quemInicio?(' ('+escAttr(t.quemInicio)+')'):'')
+      +' · Fim: <strong>'+(t.fim||'-')+'</strong>'+(t.quemFim?(' ('+escAttr(t.quemFim)+')'):'')
+      +(dur!=null?(' · Duração: <strong>'+fmtDur(dur)+'</strong>'):'')
+      +(porPet!=null?(' · <strong>'+porPet.toFixed(1)+' min por FILHOt</strong>'):'')+'</div>'
+      +(!t.inicio?'<div style="font-size:12.5px;margin-top:4px;opacity:.9">Toque em Iniciar ao começar. Sem isso, esta atividade não entra no acompanhamento do time.</div>':'')
+      +(par&&tp&&tp.inicio&&!tp.fim?'<div style="font-size:12.5px;margin-top:4px;opacity:.9">'+escAttr(ativNome(par))+' está rodando ao mesmo tempo — é assim mesmo: mesma pessoa, mesmo espaço.</div>':'')
+      +'</div>'
+      +'<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:flex-start">'
+      +'<button class="btn btn-gold" onclick="ativIniciar(\''+dcAtiv+'\')">&#9654; Iniciar</button>'
+      +'<button class="btn" style="background:rgba(255,255,255,.14);color:var(--z-cream);border:1px solid rgba(255,255,255,.25)" onclick="ativEncerrar(\''+dcAtiv+'\')">&#9632; Encerrar</button>'
+      +'</div></div>';
+  }
+  // ================= RITMO DO TIME — a leitura dos tempos =============================
+  // A regra da Adriana: até 12% de diferença é variação normal do dia. Acima disso, vale
+  // perguntar. E ela deu as três leituras possíveis para quem foge muito da média:
+  //   1) teve dificuldade — o que aconteceu?
+  //   2) é muito rápida — como fez? vamos aprender.
+  //   3) está pulando o protocolo ou matando tempo.
+  // O sistema NÃO escolhe qual é. Ele mostra o desvio e faz a pergunta certa à gestão.
+  const RITMO_TOLERANCIA=12;   // %
+  const RITMO_GRAVE=30;        // %
+  var RITMO_DADOS=null;
+  function ritmoCarregar(){
+    if(!DB){ renderRitmo(); return; }
+    var hoje=(typeof hojeISO==='function')?hojeISO():'';
+    var dias=[]; for(var i=0;i<60;i++) dias.push(orcMaisDias(hoje,-i));
+    Promise.all(dias.map(function(d){
+      return DB.ref('daycare/tempo-atividade/'+d).once('value')
+        .then(function(s){ return {dia:d, v:s.val()||{}}; }).catch(function(){ return {dia:d, v:{}}; });
+    })).then(function(res){
+      var regs=[];
+      res.forEach(function(r){
+        Object.keys(r.v).forEach(function(slug){
+          var t=r.v[slug]||{};
+          var dur=diffMin(t.inicio,t.fim);
+          if(dur==null||!t.caes) return;                 // sem fim ou sem nº de FILHOts não entra
+          regs.push({dia:r.dia, dw:orcDiaSemana(r.dia), slug:slug, dur:dur, caes:t.caes,
+                     porPet:dur/t.caes, quem:(t.quemInicio||t.quemFim||'—')});
+        });
+      });
+      RITMO_DADOS=regs; renderRitmo();
+    });
+  }
+  // Média de minutos por FILHOt, por atividade e dia da semana. Sem a medição do próprio dia
+  // que está sendo julgado — senão a pessoa entra na conta contra a qual é comparada.
+  function ritmoMedia(regs, slug, dw, excluirDia){
+    var l=regs.filter(function(r){ return r.slug===slug && r.dw===dw && r.dia!==excluirDia; });
+    if(l.length<3) return null;                          // menos de 3 medições: ainda sem base
+    var soma=l.reduce(function(a,r){ return a+r.porPet; },0);
+    return {media:soma/l.length, n:l.length};
+  }
+  function renderRitmo(){
+    var elH=document.getElementById('ritmoHoje'); if(!elH) return;
+    var regs=RITMO_DADOS||[];
+    var hoje=(typeof hojeISO==='function')?hojeISO():'';
+    var doDia=regs.filter(function(r){ return r.dia===hoje; });
+    if(!doDia.length){
+      elH.innerHTML='<div class="hint">Nenhuma atividade cronometrada hoje ainda. Cada uma entra aqui assim que alguém tocar em <strong>Iniciar</strong> e <strong>Encerrar</strong>.</div>';
+    } else {
+      elH.innerHTML=doDia.sort(function(a,b){ return a.slug.localeCompare(b.slug); }).map(function(r){
+        var m=ritmoMedia(regs,r.slug,r.dw,hoje);
+        var dif=m?((r.porPet-m.media)/m.media*100):null;
+        var cor=(dif==null)?'var(--muted)':(Math.abs(dif)<=RITMO_TOLERANCIA?'var(--crm-ok)':(Math.abs(dif)>=RITMO_GRAVE?'var(--crm-critico)':'var(--crm-atencao-text)'));
+        return '<div class="pair"><span class="k"><strong>'+escAttr(ativNome(r.slug))+'</strong>'
+          +' <span style="color:var(--muted);font-size:12px">'+escAttr(r.quem)+' · '+fmtDur(r.dur)+' · '+r.caes+' FILHOts</span></span>'
+          +'<span class="val" style="color:'+cor+';font-weight:800">'+r.porPet.toFixed(1)+' min/FILHOt'
+          +(dif!=null?('<span style="font-weight:600;font-size:12px"> ('+(dif>0?'+':'')+dif.toFixed(0)+'%)</span>'):'<span style="font-weight:600;font-size:12px"> (sem base ainda)</span>')+'</span></div>';
+      }).join('');
+    }
+    var elD=document.getElementById('ritmoDesvios');
+    var fora=[];
+    regs.forEach(function(r){
+      var m=ritmoMedia(regs,r.slug,r.dw,r.dia); if(!m) return;
+      var dif=(r.porPet-m.media)/m.media*100;
+      if(Math.abs(dif)>RITMO_TOLERANCIA) fora.push({r:r, dif:dif, media:m.media, n:m.n});
+    });
+    fora.sort(function(a,b){ return (a.r.dia===b.r.dia)?(Math.abs(b.dif)-Math.abs(a.dif)):(a.r.dia<b.r.dia?1:-1); });
+    if(elD){
+      if(!fora.length) elD.innerHTML='<div class="hint" style="color:var(--crm-ok);font-weight:700">Ninguém fora da média nos últimos 60 dias. O time está com ritmo constante.</div>';
+      else elD.innerHTML=fora.slice(0,25).map(function(f){
+        var lento=f.dif>0;
+        var grave=Math.abs(f.dif)>=RITMO_GRAVE;
+        var perguntas=lento
+          ? ['Ela teve alguma dificuldade nesse dia? Está tudo bem com ela?',
+             'Aconteceu algo com algum FILHOt que tomou mais tempo?',
+             'Faltou material, ou ela estava sozinha em duas atividades ao mesmo tempo?']
+          : ['Faltaram muitos FILHOts nesse dia? Isso explica sozinho.',
+             'Ela descobriu um jeito melhor de fazer? Vale aprender e ensinar aos outros.',
+             'Ou algum passo do protocolo está sendo pulado?'];
+        return '<div class="avr-card '+(grave?'pendente':'processo')+'"><div class="avr-head"><div class="avr-info">'
+          +'<strong>'+escAttr(f.r.quem)+'</strong> · '+escAttr(ativNome(f.r.slug))
+          +'<div style="font-size:12.5px;color:var(--z-blue-soft)">'+orcBR(f.r.dia)+' ('+(ORC_DIAW_LB[f.r.dw]||'')+') · '
+          +f.r.porPet.toFixed(1)+' min/FILHOt contra média de '+f.media.toFixed(1)+' em '+f.n+' dias</div>'
+          +'</div><span class="avr-chip '+(grave?'pendente':'processo')+'">'+(lento?'+':'')+f.dif.toFixed(0)+'%</span></div>'
+          +'<div class="avr-form" style="padding-top:8px"><div class="ff-tit">'+(lento?'Mais lenta que o normal — o que perguntar':'Mais rápida que o normal — o que perguntar')+'</div>'
+          +'<ul style="margin:0;padding-left:18px;font-size:13px;color:var(--z-blue);line-height:1.6">'
+          +perguntas.map(function(p){ return '<li>'+p+'</li>'; }).join('')+'</ul></div></div>';
+      }).join('');
+    }
+    var elM=document.getElementById('ritmoMedias');
+    if(elM){
+      var chaves={};
+      regs.forEach(function(r){ var k=r.slug+'|'+r.dw; chaves[k]=chaves[k]||[]; chaves[k].push(r.porPet); });
+      var linhas=Object.keys(chaves).sort().map(function(k){
+        var p=k.split('|'), l=chaves[k];
+        var med=l.reduce(function(a,x){ return a+x; },0)/l.length;
+        return '<div class="pair"><span class="k">'+escAttr(ativNome(p[0]))+' <span style="color:var(--muted);font-size:12px">'+(ORC_DIAW_LB[p[1]]||p[1])+'</span></span>'
+          +'<span class="val">'+med.toFixed(1)+' min/FILHOt <span style="color:var(--muted);font-size:12px">('+l.length+(l.length<3?' — sem base':' dias')+')</span></span></div>';
+      });
+      elM.innerHTML=linhas.length?linhas.join(''):'<div class="hint">Ainda não há atividades cronometradas. Comece a marcar Iniciar e Encerrar — em uma semana já dá para comparar.</div>';
+    }
+  }
   function iniciarAlmoco(){ const r=turnoTrocar('daycare/almoco-turno/'+dcDataKey(),'inicio','quemInicio',almTurno,'O início do almoço'); if(!r) return;
     almTurno=Object.assign({},almTurno,r.patch); if(typeof audit==='function') audit('almoco_ini','iniciou o almoço às '+r.h); renderAlmoco(); }
   function encerrarAlmoco(){ const r=turnoTrocar('daycare/almoco-turno/'+dcDataKey(),'fim','quemFim',almTurno,'O fim do almoço'); if(!r) return;
@@ -12919,10 +13135,21 @@
     }catch(e){}
   }
   function almExcecaoHTML(k){
-    var e=ALM_EXCECOES[k]; if(!e||!e.oque) return '';
-    return '<div class="alm-excecao"><div class="ax-tit">SÓ HOJE — autorizado pelo tutor</div>'
+    var h='';
+    // Quem chegou sem a comida aparece com tarja NA HORA DE SERVIR — senão a monitora do
+    // almoço serviria a ração habitual sem saber que ela não veio (Adriana, 13/ago/2026:
+    // "e como a pessoa do almoço saberá?").
+    var ch=(typeof PT_CHAMADOS!=='undefined')?PT_CHAMADOS[k]:null;
+    if(ch&&!ch.resposta) h+='<div class="alm-semcomida"><div class="ax-tit">NÃO TROUXE COMIDA</div>'
+      +'<div class="ax-o">A Recepção já foi avisada e está conferindo. Não sirva ainda — aguarde a resposta.</div></div>';
+    var e=ALM_EXCECOES[k];
+    if(e&&e.oque) h+='<div class="alm-excecao"><div class="ax-tit">SÓ HOJE — autorizado pelo tutor</div>'
       +'<div class="ax-o">'+escAttr(e.oque)+(e.quanto?(' · <strong>'+escAttr(e.quanto)+'</strong>'):'')+'</div>'
       +'<div class="ax-q">Liberado por '+escAttr(e.quem||'Recepção')+'. A ficha dele continua como está — isto vale só para hoje.</div></div>';
+    else if(ch&&ch.resposta) h+='<div class="alm-excecao"><div class="ax-tit">RESPOSTA DA RECEPÇÃO</div>'
+      +'<div class="ax-o">'+escAttr(ch.resposta)+'</div>'
+      +'<div class="ax-q">Respondido por '+escAttr(ch.respondido_por||'Recepção')+'.</div></div>';
+    return h;
   }
   function renderAlmoco(){
     if(!document.getElementById('almGrid')) return;
