@@ -11966,11 +11966,18 @@
   // Manda uma alteração do check-in para o grupo. Falha não trava o salvamento — o registro
   // no app é a verdade; o Telegram é o aviso.
   function tgAvisarAlteracao(p, ponto, at, hora){
-    return tgAvisar({
+    var base={
       pet:p.n||'', raca:p.raca||'', tutor:p.tutor||'',
       ponto:ponto.t||'', alertas:(at.alertas||[]).join(', '),
-      obs:at.obs||'', quem:(typeof quemSou==='function'?quemSou():'-'), hora:hora||'',
-      fotoBase64:at.foto||''
+      local:at.local||'',                                   // onde fica no corpo
+      obs:at.obs||'', quem:(typeof quemSou==='function'?quemSou():'-'), hora:hora||''
+    };
+    // A primeira foto vai com a legenda completa. Machucado tem uma segunda (de longe):
+    // ela vai logo atrás, para a vet ver o lugar no corpo — sem repetir o texto todo.
+    return tgAvisar(Object.assign({}, base, {fotoBase64:at.foto||''})).then(function(r){
+      if(!at.foto2) return r;
+      return tgAvisar({ pet:p.n||'', ponto:(ponto.t||'')+' — foto de longe',
+                        local:at.local||'', fotoBase64:at.foto2 }).then(function(){ return r; });
     });
   }
   var ckEntradaCache={};
