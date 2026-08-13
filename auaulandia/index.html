@@ -2761,6 +2761,19 @@
   <section class="view" id="v-relatorios">
     <div class="role-note so-gestao"><span data-icon="star"></span><span>Tudo que dá para <strong>baixar</strong> e todas as <strong>listas</strong>, num lugar só. Ficam aqui para o menu não virar uma lista sem fim.</span></div>
     <div id="relGrid"></div>
+    <div class="card so-master">
+      <h2 style="font-size:19px">Avisos no Telegram</h2>
+      <div class="hint">Quando a monitora marca uma alteração no check-in e tira a foto, a foto vai <strong>sozinha</strong> para o grupo da veterinária — com o nome do FILHOt, o que foi encontrado e quem viu. Ninguém precisa lembrar de mandar.</div>
+      <div class="hint" style="margin-top:6px">Para ligar: crie o bot no <strong>@BotFather</strong>, coloque-o no grupo e publique a ponte <code>integracao-telegram/Codigo.gs</code> como App da Web. O passo a passo está dentro do arquivo. O token do bot fica na ponte, <strong>nunca aqui</strong> — esta página é pública.</div>
+      <div style="margin-top:10px"><label class="cad-lb">URL do App da Web</label><input class="cad-in" id="tgUrl" placeholder="https://script.google.com/macros/s/.../exec"></div>
+      <div style="margin-top:8px"><label class="cad-lb">Palavra-chave (a mesma do SENHA no script)</label><input class="cad-in" id="tgSenha" placeholder="zeluz-auaulandia"></div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px">
+        <button class="btn btn-gold" onclick="tgSalvarCfg()">Salvar</button>
+        <button class="btn" style="background:var(--z-cream-warm);color:var(--z-blue);border:1.5px solid var(--line)" onclick="tgTestar()">Mandar mensagem de teste</button>
+      </div>
+      <div id="tgStatus" class="hint" style="margin-top:6px"></div>
+    </div>
+
     <div class="card">
       <h2 style="font-size:19px">Listas</h2>
       <div class="hint">Saíram do menu e vieram para cá.</div>
@@ -10539,6 +10552,7 @@
   function acrescentarAtividade(){ const t=(prompt('Nome da nova atividade:')||'').trim(); if(!t) return; ATIVIDADES.push({t:t}); salvarAtiv(); renderAtiv(); }
   function removerAtividade(i){ if(!confirm('Remover a atividade \"'+ATIVIDADES[i].t+'\"?')) return; ATIVIDADES.splice(i,1); salvarAtiv(); renderAtiv(); }
   renderAtiv();
+  try{ if(typeof tgCarregarCfg==='function') tgCarregarCfg(); }catch(e){}
 
   // ===== ADAPTACAO NAO PODE SER ETERNA (Adriana, 12/ago/2026) =======================
   // "EM ADAPTAÇÃO HOJE: Bruce, Hulk, Yumi — essa informação não é real, de onde está tirando
@@ -11040,6 +11054,36 @@
     h+='</div>';
     return h;
   }
+  // ===== A FOTO VAI SOZINHA PARA O GRUPO DA VET (Adriana, 13/ago/2026) ==============
+  // Hoje a monitora tira a foto no check-in e DEPOIS precisa lembrar de mandar no grupo do
+  // WhatsApp. Com a casa cheia, é o primeiro passo que cai — e a vet fica sabendo tarde.
+  // Agora o próprio check-in manda: foto + nome + o que foi encontrado + quem viu.
+  // O token do bot NUNCA fica aqui (esta página é pública): quem guarda é a ponte
+  // (integracao-telegram/Codigo.gs). O app só conversa com a ponte.
+  var TG_CFG=null;
+  function tgCarregarCfg(){
+    if(!DB) return;
+    DB.ref('auaulandia/config/telegram').once('value').then(function(s){ TG_CFG=s.val()||null; }).catch(function(){});
+  }
+  function tgAvisar(dados){
+    var c=TG_CFG||{};
+    if(!c.url) return Promise.resolve({ok:false, erro:'ponte não configurada'});
+    return fetch(c.url,{method:'POST', headers:{'Content-Type':'text/plain;charset=utf-8'},
+      body:JSON.stringify(Object.assign({senha:c.senha||''},dados))})
+      .then(function(r){ return r.text().catch(function(){ return ''; }); })
+      .then(function(t){ try{ return JSON.parse(t); }catch(e){ return {ok:false, erro:t.slice(0,120)}; } })
+      .catch(function(e){ return {ok:false, erro:String((e&&e.message)||e)}; });
+  }
+  // Manda uma alteração do check-in para o grupo. Falha não trava o salvamento — o registro
+  // no app é a verdade; o Telegram é o aviso.
+  function tgAvisarAlteracao(p, ponto, at, hora){
+    return tgAvisar({
+      pet:p.n||'', raca:p.raca||'', tutor:p.tutor||'',
+      ponto:ponto.t||'', alertas:(at.alertas||[]).join(', '),
+      obs:at.obs||'', quem:(typeof quemSou==='function'?quemSou():'-'), hora:hora||'',
+      fotoBase64:at.foto||''
+    });
+  }
   var ckEntradaCache={};
   function ckSalvar(){
     if(!ckAtual||!ckRascunho) return;
@@ -11067,6 +11111,18 @@
     const reg=Object.assign({}, R, {nome:pelNome(p), tutor:p.tutor||'', quem:quem, hora:horaAgora(), fim:Date.now(), tipo:entrada?'entrada':'saida'});
     ckDados[k]=reg;
     const alterados=pontos.filter(function(pt){ return (R.pontos[pt.k]||{}).alterado; });
+    // Cada alteração vira um aviso no grupo da veterinária, com a foto. Se a ponte não
+    // estiver ligada ou a internet falhar, o check-in é salvo do mesmo jeito — o aviso é
+    // reforço, nunca condição.
+    try{
+      if(alterados.length && TG_CFG && TG_CFG.url){
+        alterados.forEach(function(pt){
+          tgAvisarAlteracao(p, pt, R.pontos[pt.k]||{}, reg.hora).then(function(r){
+            if(typeof audit==='function') audit('telegram-aviso',(r&&r.ok?'avisou o grupo sobre ':'NÃO avisou o grupo sobre ')+(pt.t||'')+' de '+(p.n||''),{pet:p.n||''});
+          });
+        });
+      }
+    }catch(e){}
     if(DB){
       DB.ref(ckNo()+'/'+k).set(reg).catch(function(e){ alert('Erro ao salvar: '+e.message); });
       // presença: quem passou pelo check-in de entrada está aqui (acaba a chamada em separado)
@@ -11770,8 +11826,42 @@
     if(typeof aoAbrirView==='function') aoAbrirView(v);
     window.scrollTo({top:0,behavior:'smooth'});
   }
+  function tgSalvarCfg(){
+    var url=((document.getElementById('tgUrl')||{}).value||'').trim();
+    var sen=((document.getElementById('tgSenha')||{}).value||'').trim();
+    var st=document.getElementById('tgStatus');
+    if(url&&!/^https:\/\/script\.google\.com\/[\w\-\/]*\/exec$/.test(url)){
+      if(st){ st.style.color='var(--crm-critico)'; st.textContent='Essa URL não é a do App da Web do Google. Começa com https://script.google.com/ e termina em /exec.'; } return;
+    }
+    if(!DB){ TG_CFG={url:url,senha:sen}; if(st) st.textContent='Sem banco: vale só neste aparelho.'; return; }
+    DB.ref('auaulandia/config/telegram').set({url:url,senha:sen}).then(function(){
+      TG_CFG={url:url,senha:sen};
+      if(st){ st.style.color='var(--crm-ok)'; st.textContent=url?'✅ Ligado. A próxima alteração com foto já cai no grupo.':'Desligado — os avisos voltam a ser manuais.'; }
+      if(typeof audit==='function') audit('telegram-config',url?'ligou os avisos do Telegram':'desligou os avisos',{});
+    }).catch(function(e){ if(st){ st.style.color='var(--crm-critico)'; st.textContent='Não salvou: '+((e&&e.message)||e); } });
+  }
+  function tgTestar(){
+    var url=((document.getElementById('tgUrl')||{}).value||'').trim();
+    var st=document.getElementById('tgStatus');
+    if(!/^https:\/\/script\.google\.com\/[\w\-\/]*\/exec$/.test(url)){
+      if(st){ st.style.color='var(--crm-critico)'; st.textContent='Cole primeiro a URL do App da Web.'; } return;
+    }
+    if(st){ st.style.color='var(--muted)'; st.textContent='Mandando…'; }
+    fetch(url).then(function(r){ return r.text(); }).then(function(t){
+      var ok=t.indexOf('no ar')>=0;
+      if(st){ st.style.color=ok?'var(--crm-ok)':'var(--crm-atencao-text)';
+        st.textContent=ok?'✅ Mandei. Confira se a mensagem chegou no grupo do Telegram.':'Respondeu, mas não do jeito esperado: '+t.slice(0,140); }
+    }).catch(function(e){ if(st){ st.style.color='var(--crm-critico)'; st.textContent='Não consegui falar com a ponte: '+((e&&e.message)||e); } });
+  }
   function renderRelatorios(){
     var el=document.getElementById('relGrid'); if(!el) return;
+    // Preenche os campos da ponte do Telegram com o que já está salvo.
+    try{
+      var u=document.getElementById('tgUrl'), s=document.getElementById('tgSenha');
+      if(u&&TG_CFG) u.value=TG_CFG.url||''; if(s&&TG_CFG) s.value=TG_CFG.senha||'';
+      var st=document.getElementById('tgStatus');
+      if(st&&!st.textContent) st.textContent=(TG_CFG&&TG_CFG.url)?'Ligado.':'Ainda não ligado — os avisos continuam sendo mandados à mão.';
+    }catch(e){}
     el.innerHTML=RELATORIOS.map(function(r){
       return '<div class="card" style="margin-bottom:12px"><h2 style="font-size:17px">'+relEsc(r.t)+'</h2>'
         +'<div class="hint" style="margin-bottom:10px">'+relEsc(r.d)+'</div>'
