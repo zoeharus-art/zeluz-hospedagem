@@ -7294,7 +7294,7 @@
   // Agora existe um carimbo: esta constante é a versão que o aparelho está rodando, e o
   // Firebase guarda a versão publicada. Quando as duas diferem, aparece o aviso — mas
   // NUNCA recarrega sozinho: recarregar no meio de um check-in perderia o trabalho.
-  const APP_VERSAO='2026-08-13-10';
+  const APP_VERSAO='2026-08-13-11';
   function vigiarVersao(){
     if(!DB) return;
     try{
@@ -7973,9 +7973,42 @@
       if(Object.keys(rem).length){
         hospedes=hospedes.filter(function(h){ return !rem[hospRemKey(h)]; });
       }
+      hospAvisoFalha('');                       // deu certo: tira qualquer aviso anterior
+      __hospTentativas=0;
       renderHosp();
       if(typeof carregarAgendaMedTodos==='function') carregarAgendaMedTodos();
-    }).catch(()=>{});
+    }).catch(function(err){
+      // Adriana, 13/ago/2026: a Dolly sumiu do Plantão. Ela estava certa no banco — hospedada
+      // até o dia 14 — mas tinha caído da coluna de hoje na planilha, então quem a trazia de
+      // volta era ESTA leitura. Ela falhou, o `.catch` vazio engoliu o erro, e a lista ficou
+      // curta SEM AVISO NENHUM: a plantonista olha a tela e conclui que o FILHOt não está na
+      // casa. Lista incompleta em silêncio é pior que erro na cara. Agora avisa e tenta de novo.
+      __hospTentativas=(__hospTentativas||0)+1;
+      if(__hospTentativas<=3){
+        hospAvisoFalha('Ainda carregando a lista completa… (tentativa '+__hospTentativas+' de 3)');
+        setTimeout(function(){ carregarManuais(); }, 3000*__hospTentativas);
+      } else {
+        hospAvisoFalha('ESTA LISTA PODE ESTAR INCOMPLETA. Não consegui ler as hospedagens do sistema — '
+          +'quem está aqui só pelo check-in (sem estar na planilha do dia) pode não aparecer. '
+          +'Confira a internet e recarregue antes de passar o plantão.');
+      }
+    });
+  }
+  // Banner de aviso sobre a lista do Plantão. Fica FORA do #hospGrid porque o render reescreve
+  // o grid inteiro — se morasse dentro, sumiria no próximo desenho. String vazia = remove.
+  var __hospTentativas=0;
+  function hospAvisoFalha(msg){
+    try{
+      var grid=document.getElementById('hospGrid'); if(!grid||!grid.parentNode) return;
+      var el=document.getElementById('hospAvisoFalha');
+      if(!msg){ if(el) el.remove(); return; }
+      var grave=/INCOMPLETA/.test(msg);
+      if(!el){ el=document.createElement('div'); el.id='hospAvisoFalha'; grid.parentNode.insertBefore(el,grid); }
+      el.style.cssText='margin:0 0 12px;padding:12px 14px;border-radius:12px;font-weight:700;font-size:14px;'
+        +(grave?'background:#FDECEA;border:2px solid #B3261E;color:#B3261E'
+               :'background:#FDF3D6;border:2px solid #DEB428;color:#234D67');
+      el.textContent=(grave?'⚠ ':'')+msg;
+    }catch(e){}
   }
   // ===== Adicionar hóspede/pernoite — busca no cadastro-mestre, NUNCA prompt() cru =====
   // Antes: 2 prompt()s pediam nome e tutor soltos, sem ligação com o cadastro-mestre. Resultado:
@@ -15067,8 +15100,16 @@
     var _prazo=new Promise(function(_,rej){ setTimeout(function(){ rej(new Error('o banco não respondeu a tempo (12s)')); }, 12000); });
     return Promise.race([_consulta,_prazo]).then(function(s){
       const v=s.val()||{}; let achou=null;
+      // Adriana, 13/ago/2026: o Chico do Juliano voltou e o check-in acusou "já está
+      // hospedado" — a estadia dele tinha acabado no dia 10 e ninguém deu baixa. A aba de
+      // Hospedagens já mostrava "JÁ SAIU" (estStatusDe olha a data), mas AQUI só se olhava
+      // o status — e como nada fecha estadia sozinho, 'ativa' era eterno. Duas telas, duas
+      // verdades. Agora vale a MESMA regra: hospedagem cuja saída já passou não conta como
+      // em curso. Isso destravou o Chico e outras 29 estadias abertas no mesmo dia.
+      const _hj=(typeof hospHojeISO==='function')?hospHojeISO():'';
       Object.keys(v).forEach(function(id){
         const e=v[id]||{}; if((e.status||'ativa')!=='ativa') return;
+        if(_hj && e.saida && e.saida<_hj) return;          // já saiu — não trava um check-in novo
         const mesmo = (e.refKey && e.refKey===(h.refKey||'')) ||
                       (jsNorm(e.nome||'')===jsNorm(h.nome||'') && jsNorm(e.tutor||'')===jsNorm(h.tutor||''));
         if(!mesmo) return;
@@ -15594,6 +15635,7 @@
   // ==================================================================================
   var EST_TODAS={};       // {id: estadia} — todas as estadias (o listener já baixa tudo)
   var hospAbaEdit=null;   // id da estadia sendo editada na própria linha
+  var hospAbaBaixa=null;  // id da estadia recebendo BAIXA (check-out) na própria linha
   var hospNovaPend=null;  // FILHOt escolhido para uma hospedagem nova, esperando as datas
   var HOSP_SO_PLANILHA=[]; // hóspedes do dia que vieram só da planilha (ainda sem estadia no app)
 
@@ -15627,6 +15669,22 @@
         + '<div class="he-acoes"><button class="btn btn-primary" onclick="hospSalvarDatas(\''+id+'\')">Salvar</button>'
         + '<button class="btn" onclick="hospCancelarEdicao()">Cancelar</button></div></div>';
     }
+    // ===== DAR BAIXA (check-out) — Adriana, 13/ago/2026 ==============================
+    // "quem dá baixa precisa ser a recepção, colocando a data que terminou."
+    // Até hoje NÃO existia como encerrar uma hospedagem: 29 estadias estavam abertas, uma
+    // delas do Zeus, que tinha ido embora fazia 16 dias. O estrago não é cosmético — o
+    // check-in recusava um FILHOt que voltava, dizendo que ele já estava hospedado (o Chico
+    // do Juliano, hoje). A data é digitável de propósito: a baixa quase sempre é retroativa,
+    // porque ninguém para de atender o tutor para mexer no sistema na hora da saída.
+    if(hospAbaBaixa===id){
+      return '<div class="hosp-est he-edit">'
+        + av
+        + '<div class="he-main"><div class="he-nome">Dar baixa — '+escAttr(e.nome||'')+'</div>'
+        + '<div class="he-sub">Em que dia ele foi embora? Pode ser uma data passada. Depois da baixa ele sai do Plantão e deixa de bloquear um check-in novo.</div></div>'
+        + '<label style="font-size:12px;font-weight:700;color:var(--muted)">Foi embora em<br><input type="date" class="cad-in" id="hospBxData" value="'+escAttr(e.saida||hospHojeISO())+'" max="'+escAttr(hospHojeISO())+'"></label>'
+        + '<div class="he-acoes"><button class="btn btn-primary" onclick="hospConfirmarBaixa(\''+id+'\')">Confirmar baixa</button>'
+        + '<button class="btn" onclick="hospCancelarBaixa()">Cancelar</button></div></div>';
+    }
     // Hóspede que só existe na planilha de hoje: ainda não tem estadia com data no app.
     // Sem estadia não há o que editar — o botão registra as datas e cria a pasta da estadia.
     if(e._soPlanilha){
@@ -15656,8 +15714,40 @@
       + '<div class="he-datas">'+ent+' &rarr; '+sai+'</div>'
       + '<div class="he-acoes">'
       + (hospAbaPode()?'<button class="btn btn-primary" onclick="hospEditarDatas(\''+id+'\')">Mudar datas</button>':'')
+      + ((hospAbaPode()&&(e.status||'ativa')==='ativa')
+          ?'<button class="btn" style="background:#1E8449;color:#fff" onclick="hospDarBaixa(\''+id+'\')">Dar baixa</button>':'')
       + '<button class="btn" onclick="hospAbrirFicha(\''+id+'\')">Abrir ficha</button>'
+      + ((e.status||'ativa')!=='ativa'&&e.encerradaEm
+          ?'<div class="he-sub" style="width:100%;color:var(--muted)">Baixa em '+((typeof ciBRdata==='function')?ciBRdata(e.encerradaEm):e.encerradaEm)+(e.encerradaPor?(' — '+escAttr(e.encerradaPor)):'')+'</div>':'')
       + '</div></div>';
+  }
+  function hospDarBaixa(id){
+    if(!hospAbaPode()){ alert('Só a Recepção, a Supervisão, a Gestão ou a Diretoria podem dar baixa numa hospedagem.'); return; }
+    hospAbaBaixa=id; hospAbaEdit=null; hospNovaPend=null; renderHospedesAba();
+    setTimeout(function(){ try{ const el=document.getElementById('hospBxData'); if(el){ el.scrollIntoView({behavior:'smooth',block:'center'}); el.focus(); } }catch(e){} },50);
+  }
+  function hospCancelarBaixa(){ hospAbaBaixa=null; renderHospedesAba(); }
+  function hospConfirmarBaixa(id){
+    if(!hospAbaPode()){ alert('Sem permissão para dar baixa.'); return; }
+    const e=EST_TODAS[id]||{};
+    const dt=(document.getElementById('hospBxData')||{}).value||'';
+    if(!dt){ alert('Informe o dia em que '+(e.nome||'o FILHOt')+' foi embora.'); return; }
+    if(dt>hospHojeISO()){ alert('A baixa não pode ser numa data futura. Se ele ainda está aqui, use "Mudar datas".'); return; }
+    if(e.entrada && dt<e.entrada){ alert('A saída não pode ser antes da entrada ('+((typeof ciBRdata==='function')?ciBRdata(e.entrada):e.entrada)+'). Confira a data.'); return; }
+    if(!DB){ alert('Sem conexão com o banco agora — a baixa não foi dada. Tente de novo em instantes.'); return; }
+    const quem=(typeof quemSou==='function'?quemSou():'-');
+    if(!confirm('Dar baixa em '+(e.nome||'esta hospedagem')+'?\n\nFoi embora em: '+((typeof ciBRdata==='function')?ciBRdata(dt):dt)
+      +'\nQuem deu a baixa: '+quem+'\n\nEle sai do Plantão. Se voltar, é um check-in novo.')) return;
+    DB.ref('auaulandia/estadias/'+id).update({
+      status:'encerrada', saida:dt, encerradaEm:dt, encerradaPor:quem, encerradaTs:Date.now()
+    }).then(function(){
+      if(typeof audit==='function') audit('estadia-baixa','deu baixa na hospedagem de '+(e.nome||'')+' — foi embora em '+dt,{pet:e.nome||''});
+      hospAbaBaixa=null;
+      if(typeof carregarHospedes==='function') carregarHospedes();
+      renderHospedesAba();
+    }).catch(function(err){
+      alert('NÃO consegui dar a baixa: '+((err&&err.message)||err)+'\n\nNada foi alterado. Confira a internet e tente de novo.');
+    });
   }
   function renderHospedesAba(){
     const box=document.getElementById('hospAbaLista'); if(!box) return;
