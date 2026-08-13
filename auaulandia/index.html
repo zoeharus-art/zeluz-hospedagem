@@ -1870,6 +1870,16 @@
         <button class="btn btn-primary" style="margin-top:14px;width:100%" onclick="salvarCheckoutPlantao()">Salvar check-list do plantão</button>
         <div id="status-checkout" class="rel-status"></div>
       </div>
+      <!-- ===== CAFE DA MANHA (Adriana, 13/ago/2026) ==============================
+           Mora na AuAulandia, nao no Day Care: "so pega hospedes e e focada na
+           AuAulandia". Mesmo protocolo do almoco — cada um come o que e dele. -->
+      <div class="card" id="card-cafe" style="margin-bottom:18px">
+        <h2 style="font-size:19px">Café da manhã</h2>
+        <div class="hint">Só quem dormiu aqui. Cada um come <strong>o que está na ficha dele</strong> — nenhuma alimentação pode ser trocada. Marque conforme for servindo.</div>
+        <div id="cafeBarraTempo"></div>
+        <div id="cafeResumo"></div>
+        <div class="pets-grid" id="cafeGrid"></div>
+      </div>
       <div class="pets-grid" id="hospGrid"></div>
     </div>
 
@@ -4422,7 +4432,80 @@
     }
   }catch(e){} return ''; }
   function chipDe(h){ try{ const ex=extraDoHosp(h); return String((ex&&(ex.chip||ex.microchip))||'').trim(); }catch(e){ return ''; } }
+  // ================= CAFÉ DA MANHÃ DOS HÓSPEDES =====================================
+  // Mora na AuAulândia porque é só de quem dormiu aqui (Adriana, 13/ago/2026: "só pega
+  // hóspedes e é focada na AuAulândia"). Mesmo protocolo do almoço: cada um come o que
+  // está na ficha dele, e NADA se troca.
+  var cafeMarcas={}, cafeTempo={};
+  function cafeDataKey(){ return (typeof dcDataKey==='function')?dcDataKey():''; }
+  function cafeCarregar(){
+    if(!DB){ renderCafe(); return; }
+    Promise.all([
+      DB.ref('auaulandia/cafe/'+cafeDataKey()).once('value').then(function(s){ return s.val()||{}; }).catch(function(){ return {}; }),
+      DB.ref('auaulandia/cafe-turno/'+cafeDataKey()).once('value').then(function(s){ return s.val()||{}; }).catch(function(){ return {}; })
+    ]).then(function(r){ cafeMarcas=r[0]; cafeTempo=r[1]; renderCafe(); });
+  }
+  function cafeKey(h){ return (typeof medAgendaKey==='function')?medAgendaKey(h):((h.nome||'')+'__'+(h.tutor||'')).toLowerCase(); }
+  function cafeEstado(k){ var v=cafeMarcas[k]; return (v&&v.estado)||(typeof v==='string'?v:''); }
+  function marcarCafe(k,val){
+    var cur=cafeEstado(k), nx=(cur===val)?'':val;
+    if(nx) cafeMarcas[k]={estado:nx}; else delete cafeMarcas[k];
+    if(DB) DB.ref('auaulandia/cafe/'+cafeDataKey()+'/'+k).set(nx?{estado:nx, quem:(typeof quemSou==='function'?quemSou():'-'), hora:(typeof horaAgora==='function'?horaAgora():'')}:null).catch(function(){});
+    if(typeof audit==='function'&&nx) audit('cafe', nx==='tudo'?'tomou o café todo':(nx==='metade'?'tomou metade':'não tomou'), {alvo:k});
+    renderCafe();
+  }
+  function iniciarCafe(){
+    var r=turnoTrocar('auaulandia/cafe-turno/'+cafeDataKey(),'inicio','quemInicio',cafeTempo,'O início do café da manhã'); if(!r) return;
+    cafeTempo=Object.assign({},cafeTempo,r.patch,{caes:hospedes.length});
+    if(DB) DB.ref('auaulandia/cafe-turno/'+cafeDataKey()).update({caes:hospedes.length}).catch(function(){});
+    if(typeof audit==='function') audit('cafe_ini','iniciou o café da manhã às '+r.h); renderCafe();
+  }
+  function encerrarCafe(){
+    var r=turnoTrocar('auaulandia/cafe-turno/'+cafeDataKey(),'fim','quemFim',cafeTempo,'O fim do café da manhã'); if(!r) return;
+    cafeTempo=Object.assign({},cafeTempo,r.patch);
+    if(typeof audit==='function') audit('cafe_fim','encerrou o café da manhã às '+r.h); renderCafe();
+  }
+  function renderCafe(){
+    var grid=document.getElementById('cafeGrid'); if(!grid) return;
+    var barra=document.getElementById('cafeBarraTempo');
+    var dur=diffMin(cafeTempo.inicio,cafeTempo.fim);
+    var n=hospedes.length;
+    if(barra) barra.innerHTML='<div class="alm-turno" style="margin-bottom:10px">'
+      +'<div><div class="tb-lab">Café da manhã</div>'
+      +'<div style="font-size:13px;margin-top:3px">Início: <strong>'+(cafeTempo.inicio||'-')+'</strong>'+(cafeTempo.quemInicio?(' ('+escAttr(cafeTempo.quemInicio)+')'):'')
+      +' · Fim: <strong>'+(cafeTempo.fim||'-')+'</strong>'+(dur!=null?(' · '+fmtDur(dur)):'')
+      +(dur!=null&&n?(' · <strong>'+(dur/n).toFixed(1)+' min por FILHOt</strong>'):'')+'</div></div>'
+      +'<div style="display:flex;gap:8px;flex-wrap:wrap">'
+      +'<button class="btn btn-gold" onclick="iniciarCafe()">&#9654; Iniciar</button>'
+      +'<button class="btn" style="background:rgba(255,255,255,.14);color:var(--z-cream);border:1px solid rgba(255,255,255,.25)" onclick="encerrarCafe()">&#9632; Encerrar</button>'
+      +'</div></div>';
+    var rz=document.getElementById('cafeResumo');
+    if(!hospedes.length){ grid.innerHTML='<div class="hint" style="grid-column:1/-1">Ninguém dormiu aqui esta noite — sem café da manhã hoje.</div>'; if(rz) rz.innerHTML=''; return; }
+    var servidos=hospedes.filter(function(h){ return cafeEstado(cafeKey(h)); }).length;
+    if(rz) rz.innerHTML='<div class="dc-resumo"><div class="dc-stat ok"><b>'+servidos+'</b>servidos</div>'
+      +'<div class="dc-stat pend"><b>'+(hospedes.length-servidos)+'</b>faltam</div></div>';
+    grid.innerHTML=hospedes.map(function(h){
+      var k=cafeKey(h), m=cafeEstado(k);
+      var cad=(typeof getCad==='function')?(getCad(h)||{}):{};
+      var foto=(typeof fotoDe==='function')?fotoDe(h):'';
+      var ph=foto?'<div class="ph" style="background-image:url(\''+foto+'\');background-size:cover;background-position:center"></div>'
+                 :'<div class="ph" style="background:'+(h.cor||'#234D67')+'">'+(h.ini||'?')+'</div>';
+      var alim=cad.alim||cad.alimentacao||'';
+      var restr=cad.restricao||cad.alergia||'';
+      return '<div class="pet alm-card '+(m||'')+'">'+ph
+        +'<div class="nm">'+escAttr(h.nome||'')+'</div>'
+        +'<div class="br">'+escAttr((typeof racaDe==='function'?(racaDe(h)||''):''))+'</div>'
+        +(restr?'<div class="alm-restr">&#9888; '+escAttr(restr)+'</div>':'')
+        +(alim?'<div class="alm-info"><div class="alm-line"><span>Come</span><b>'+escAttr(alim)+'</b></div></div>':'')
+        +'<div class="alm-actions"><div class="alm-seg">'
+        +'<button class="alm-btn tudo '+(m==='tudo'?'on':'')+'" onclick="marcarCafe(\''+k+'\',\'tudo\')">Comeu</button>'
+        +'<button class="alm-btn metade '+(m==='metade'?'on':'')+'" onclick="marcarCafe(\''+k+'\',\'metade\')">Metade</button>'
+        +'<button class="alm-btn nao '+(m==='nao'?'on':'')+'" onclick="marcarCafe(\''+k+'\',\'nao\')">Não comeu</button>'
+        +'</div></div></div>';
+    }).join('');
+  }
   function renderHosp(){
+    try{ cafeCarregar(); }catch(e){}
     // ordem alfabética (a moradora Repolho por último)
     hospedes.sort((a,b)=>{ if(!!a.mascote!==!!b.mascote) return a.mascote?1:-1; return (a.nome||'').localeCompare((b.nome||''),'pt',{sensitivity:'base'}); });
     const _rHosp=(document.body.dataset.role||''); const _podeRemHosp=(_rHosp==='gestao'||_rHosp==='supervisor'||_rHosp==='diretoria'||_rHosp==='monitor');
@@ -10729,7 +10812,7 @@
   // ===== DAY CARE — chamada visual a prova de burros (Aulunos do dia) =====
   const HOJE_DIA=(()=>{ const d=new Date().getDay(); return (d>=1&&d<=5)?ORDEM_DIAS[d-1]:'seg'; })();
   let dcDia=HOJE_DIA, dcChamada={}, dcAvulsos=[], dcAtiv='chamada';
-  const ATIVS_DC=[{s:'checkin-corpo',t:'Check-in do corpo'},{s:'checkin-pert',t:'Check-in dos pertences'},{s:'chamada',t:'Chamada',esp:1},{s:'livre',t:'Atividade livre'},{s:'ea',t:'Enriquecimento Ambiental (EA)'},{s:'aucademia',t:'Aucademia'},{s:'cafe',t:'Café da manhã (hóspedes)'},{s:'almoco',t:'Almoço',esp:1},{s:'almoco2',t:'2º Horário de Almoço'},{s:'massagem',t:'Massagem Dessensibilizadora'},{s:'escova',t:'Escova de Dentes'},{s:'jogos',t:'Jogos Cognitivos'},{s:'aulinha',t:'Aulinha de Disciplina'},{s:'agility',t:'Agility Funcional'},{s:'musicoterapia',t:'Musicoterapia'},{s:'checkout-pert',t:'Check-out dos pertences'},{s:'checkout-corpo',t:'Check-out do corpinho'}];
+  const ATIVS_DC=[{s:'checkin-corpo',t:'Check-in do corpo'},{s:'checkin-pert',t:'Check-in dos pertences'},{s:'chamada',t:'Chamada',esp:1},{s:'livre',t:'Atividade livre'},{s:'ea',t:'Enriquecimento Ambiental (EA)'},{s:'aucademia',t:'Aucademia'},{s:'almoco',t:'Almoço',esp:1},{s:'almoco2',t:'2º Horário de Almoço'},{s:'massagem',t:'Massagem Dessensibilizadora'},{s:'escova',t:'Escova de Dentes'},{s:'jogos',t:'Jogos Cognitivos'},{s:'aulinha',t:'Aulinha de Disciplina'},{s:'agility',t:'Agility Funcional'},{s:'musicoterapia',t:'Musicoterapia'},{s:'checkout-pert',t:'Check-out dos pertences'},{s:'checkout-corpo',t:'Check-out do corpinho'}];
   function dcDataKey(){ const p=x=>String(x).padStart(2,'0'); const d=new Date(); return d.getFullYear()+'-'+p(d.getMonth()+1)+'-'+p(d.getDate()); }
   function dcKey(name,tutor){ return jsNorm((name||'')+'__'+(tutor||'')).replace(/[.#$\[\]\/ ]/g,'-'); }
   function montarSubnav(){ const sm=document.getElementById('dcSubnav'); if(!sm) return;
