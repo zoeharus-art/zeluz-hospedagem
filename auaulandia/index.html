@@ -1104,9 +1104,20 @@
   .avr-card.pendente{border-color:var(--crm-critico)}
   .avr-card.processo{border-color:var(--z-gold-deep)}
   /* Orçamento de hospedagem */
-  .orc-check{display:flex;align-items:center;gap:10px;cursor:pointer;background:var(--z-cream-warm);border:1.5px solid var(--line);border-radius:12px;padding:12px 14px;font-weight:700;color:var(--z-blue)}
-  .orc-check input{width:20px;height:20px;flex:0 0 auto}
-  .orc-preco-lb{display:block;font-weight:600;font-size:12.5px;color:var(--z-blue-soft);margin-top:2px}
+  /* Protocolo dentro do check-in */
+  .ck-proto{border:1.5px solid var(--z-gold);border-radius:13px;margin:10px 0;overflow:hidden;background:rgba(222,180,40,.09)}
+  .ck-proto-cab{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:11px 14px;cursor:pointer;font-weight:800;color:var(--z-blue);font-size:14px}
+  .ck-proto-seta{font-size:12px;font-weight:700;color:var(--z-gold-deep);text-transform:uppercase;letter-spacing:.04em}
+  .ck-proto-corpo{padding:0 14px 12px}
+  .ck-proto-corpo ol{margin:0;padding-left:20px}
+  .ck-proto-corpo li{font-size:13.5px;color:var(--z-blue);margin-bottom:7px;line-height:1.5}
+  .ck-proto-rod{margin-top:8px;font-size:13px;color:var(--z-blue-soft);border-top:1px dashed var(--z-gold);padding-top:8px}
+  .orc-temp{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  @media(max-width:520px){ .orc-temp{grid-template-columns:1fr} }
+  .orc-temp button{text-align:left;background:var(--z-cream-warm);border:2px solid var(--line);border-radius:13px;padding:13px 15px;cursor:pointer;font-family:inherit;color:var(--z-blue)}
+  .orc-temp button.on{border-color:var(--z-gold);background:rgba(222,180,40,.14)}
+  .orc-temp .tt{display:block;font-weight:800;font-size:15px}
+  .orc-temp .vv{display:block;font-size:13px;color:var(--z-blue-soft);margin-top:4px;line-height:1.5}
   .orc-pet{display:flex;align-items:center;gap:10px;background:var(--z-cream-warm);border:1.5px solid var(--line);border-radius:12px;padding:10px 12px;margin-bottom:8px}
   .orc-pet .x{margin-left:auto;background:none;border:none;color:var(--crm-critico);font-weight:800;font-size:18px;cursor:pointer;padding:0 6px}
   .orc-sug{border:1.5px solid var(--line);border-radius:12px;margin-top:6px;overflow:hidden}
@@ -1506,6 +1517,7 @@
     <a data-v="orcamento" class="so-recepcao"><span data-icon="star"></span><span>Orçamento de Hospedagem</span></a>
 
     <div class="grp so-gestao">Relatórios</div>
+    <a data-v="relatorios" class="so-gestao"><span data-icon="star"></span><span>Baixar relatórios</span></a>
     <a data-v="inativos" class="so-gestao"><span data-icon="paw"></span><span>Inativos</span></a>
     <a data-v="aulunos" class="so-gestao"><span data-icon="users"></span><span>Aulunos</span><span class="soon">em breve</span></a>
     <a data-v="vacinas" class="so-gestao"><span data-icon="heart"></span><span>Vacinas</span><span class="soon">em breve</span></a>
@@ -2736,6 +2748,15 @@
 
   </section>
   <!-- ===== PAINEL DO DIA (Dashboard de Gestão — só observa) ===== -->
+  <!-- ===== CENTRAL DE RELATÓRIOS (Adriana, 12/ago/2026) ============================
+       "Baixar Excel do almoço — criar no sidebar, em relatórios, e colocar todos os
+       relatórios disponíveis (vamos criar diversos)." Relatório escondido dentro de uma
+       tela é relatório que ninguém acha. Aqui todos moram juntos. -->
+  <section class="view" id="v-relatorios">
+    <div class="role-note so-gestao"><span data-icon="star"></span><span>Tudo que dá para <strong>baixar em Excel</strong>, num lugar só. Abrem no Excel, no Google Planilhas ou no celular. Novos relatórios vão aparecendo aqui.</span></div>
+    <div id="relGrid"></div>
+  </section>
+
   <!-- ===== ORÇAMENTO DE HOSPEDAGEM (Adriana, 12/ago/2026) ==========================
        A conta que hoje é feita de cabeça no balcão. Cada NOITE é contada: a noite que
        COMEÇA num dia de Day Care do FILHOt é PERNOITE (ele já viria mesmo); as outras
@@ -2760,8 +2781,9 @@
         <div><label class="cad-lb">Saída</label><input class="cad-in" type="date" id="orcSaida" onchange="orcCalcular()"></div>
       </div>
       <div id="orcAvisoData"></div>
-      <div style="margin-top:12px">
-        <label class="orc-check"><input type="checkbox" id="orcAlta" onchange="orcCalcular()"><span><strong>Alta temporada</strong><span id="orcPrecoLb" class="orc-preco-lb"></span></span></label>
+      <div style="margin-top:14px">
+        <label class="cad-lb">Temporada</label>
+        <div id="orcTemporada" class="orc-temp"></div>
       </div>
     </div>
 
@@ -3209,6 +3231,7 @@
     checkin:['Check-in','Entrada da estadia — ficha, pertences e assinatura'],
     conferencia:['Conferência Check-in','Pertences etiquetados, ração pesada e alarmes testados'],
     orcamento:['Orçamento de Hospedagem','Diárias, pernoites e desconto do plano — com a mensagem pronta para o tutor'],
+    relatorios:['Relatórios','Tudo que dá para baixar em Excel, num lugar só'],
     checkout:['Check-out (monitores)','Juntar tudo que volta com o FILHOt e mandar para a recepção'],
     checkoutconf:['Conferência Check-out','Conferir com o tutor na saída, colher a assinatura e entregar o PDF'],
     emporio:['Empório','Avisar os tutores de quem não comeu hoje'],
@@ -3359,7 +3382,9 @@
       const turma=(typeof turmaDoDia==='function')?turmaDoDia():[];
       const nDay=turma.length;
       const nAua=Array.isArray(hospedes)?hospedes.length:0;
-      const nAdapt=turma.filter(o=>{ const ex=pelExtra(o.p); return ex&&ex.adaptacao==='Sim'; }).length;
+      // Mesma regra do banner: adaptação vale 30 dias contados da data. Sem data, não conta.
+      const nAdapt=turma.filter(o=>{ const ex=pelExtra(o.p);
+        return (typeof pelEmAdaptacao==='function')?pelEmAdaptacao(ex):(ex&&ex.adaptacao==='Sim'); }).length;
       el('kpiTotal').textContent=nDay+nAua;
       el('kpiDay').textContent=nDay;
       el('kpiAua').textContent=nAua;
@@ -6184,16 +6209,26 @@
     var daFamilia=(typeof DESC_PET!=='undefined'&&DESC_PET[ordem])?DESC_PET[ordem]:(ordem>=3?12:0);
     return Math.max(doPlano, daFamilia||0);
   }
+  // Temporada é ESCOLHA explícita — nunca um checkbox que fica desmarcado por esquecimento.
+  // Os dois preços ficam à vista o tempo todo: quem faz o orçamento confere antes de mandar.
+  var ORC_ALTA=false;
+  function orcSetTemporada(alta){ ORC_ALTA=!!alta; orcRenderTemporada(); orcCalcular(); }
+  function orcRenderTemporada(){
+    var el=document.getElementById('orcTemporada'); if(!el) return;
+    var P=orcPrecos();
+    var bt=function(alta,tit){
+      var d=alta?P.diaria.alta:P.diaria.baixa, p=alta?P.pernoite.alta:P.pernoite.baixa;
+      return '<button type="button" class="'+((ORC_ALTA===alta)?'on':'')+'" onclick="orcSetTemporada('+(alta?'true':'false')+')">'
+        +'<span class="tt">'+tit+'</span><span class="vv">Diária de hotel <strong>'+fmtCent(d)+'</strong><br>Pernoite <strong>'+fmtCent(p)+'</strong></span></button>';
+    };
+    el.innerHTML=bt(false,'Baixa temporada')+bt(true,'Alta temporada');
+  }
   var ORC_CALC=null;
   function orcCalcular(){
     var cardR=document.getElementById('orcCardResultado'), cardM=document.getElementById('orcCardMsg');
     var av=document.getElementById('orcAvisoData'); if(av) av.innerHTML='';
-    var pl=document.getElementById('orcPrecoLb');
-    var alta=!!(document.getElementById('orcAlta')||{}).checked;
+    var alta=ORC_ALTA;
     var P=orcPrecos();
-    if(pl) pl.textContent=alta
-      ? ('ALTA: diária '+fmtCent(P.diaria.alta)+' · pernoite '+fmtCent(P.pernoite.alta))
-      : ('BAIXA: diária '+fmtCent(P.diaria.baixa)+' · pernoite '+fmtCent(P.pernoite.baixa)+'  (marque para ver a alta)');
     var ent=(document.getElementById('orcEntrada')||{}).value||'';
     var sai=(document.getElementById('orcSaida')||{}).value||'';
     ORC_CALC=null;
@@ -6251,32 +6286,61 @@
     h+='<div class="orc-linha" style="border-bottom:none"><span>No dia da hospedagem (50%)</span><strong>'+fmtCent(C.p2)+'</strong></div>';
     el.innerHTML=h;
   }
+  // ===== A MENSAGEM TEM QUE TER A ALMA DA CASA (Adriana, 12/ago/2026) ================
+  // "Achei sem encanto, sem a essência da Zêluz, está fria." Aqui não se vende diária:
+  // convida-se para a AuAulândia. O nome próprio entra (AuAulândia · Colônia de Férias),
+  // o gênero do FILHOt é respeitado (o pequeno / a pequena / os pequenos) e a mensagem
+  // termina com um CONVITE, não com um número solto.
+  function orcArtigo(sel){ return orcEhFemea(sel)?'a':'o'; }
+  function orcEhFemea(sel){
+    try{
+      var p=(typeof PELUDINHOS!=='undefined'?PELUDINHOS:[]).find(function(x){ return pelKey(x)===sel.key; });
+      if(!p) return false;
+      var s=((typeof pelGet==='function'?pelGet(p,'sexo'):'')||(pelExtra(p)||{}).sexo||'');
+      return String(s).toLowerCase().indexOf('f')===0;
+    }catch(e){ return false; }
+  }
+  // "do pequeno" · "da pequena" · "dos pequenos" · "das pequenas"
+  function orcPequeno(pets, comDe){
+    var fem=pets.every(function(p){ return orcEhFemea(p.sel); });
+    var pl=pets.length>1;
+    var art=pl?(fem?'as':'os'):(fem?'a':'o');
+    var pal=(fem?'pequena':'pequeno')+(pl?'s':'');
+    if(!comDe) return art+' '+pal;
+    return (art==='a'?'da ':art==='o'?'do ':art==='as'?'das ':'dos ')+pal;
+  }
   function orcRenderMsg(){
     var el=document.getElementById('orcMsg'); if(!el||!ORC_CALC) return;
     var C=ORC_CALC;
-    var tutor=(C.pets[0]&&C.pets[0].sel.tutor)||'';
+    var tutor=(typeof primeiroNome==='function')?primeiroNome(C.pets[0]&&C.pets[0].sel.tutor||''):((C.pets[0]&&C.pets[0].sel.tutor)||'');
     var nomes=C.pets.map(function(p){ return p.sel.nome; }).join(' e ');
+    var um=(C.pets.length===1);
     var L=[];
-    L.push(tutor+', segue orçamento da hospedagem para '+nomes);
-    L.push('Do dia '+orcBR(C.entrada)+' a '+orcBR(C.saida));
+    L.push(tutor+', que alegria receber '+(um?(orcArtigo(C.pets[0].sel)==='a'?'a ':'o '):'')+nomes+' na AuAulândia.');
+    L.push('');
+    L.push('Segue o orçamento da Colônia de Férias:');
+    L.push('');
+    L.push('Período: '+orcBR(C.entrada)+' a '+orcBR(C.saida));
     C.pets.forEach(function(p){
-      var pre=(C.pets.length>1)?(p.sel.nome+': '):'';
-      L.push(pre+'Total de '+p.nDia+' diária'+(p.nDia===1?'':'s')+' e '+p.nPer+' pernoite'+(p.nPer===1?'':'s'));
+      var pre=um?'':(p.sel.nome+' — ');
+      L.push(pre+p.nDia+' diária'+(p.nDia===1?'':'s')+' e '+p.nPer+' pernoite'+(p.nPer===1?'':'s'));
     });
+    L.push('');
+    L.push('Total: '+fmtCent(C.total));
     var descs=C.pets.filter(function(p){ return p.off>0; });
-    var linhaTotal='Total: '+fmtCent(C.total);
-    if(descs.length===1&&C.pets.length===1){
-      var p=descs[0];
-      linhaTotal+=' Com desconto de '+p.off+'% do plano '+(p.sel.compromisso||p.sel.rotulo)+' do '+p.sel.nome;
-    } else if(descs.length){
-      linhaTotal+=' Já com o desconto de '+descs.map(function(p){ return p.off+'% do '+p.sel.nome; }).join(' e ');
+    if(descs.length){
+      if(um) L.push('Já com o desconto de '+descs[0].off+'% do plano '+(descs[0].sel.compromisso||descs[0].sel.rotulo)+' '+orcArtigoDe(descs[0].sel)+' '+descs[0].sel.nome+'.');
+      else L.push('Já com o desconto de '+descs.map(function(p){ return p.off+'% '+orcArtigoDe(p.sel)+' '+p.sel.nome; }).join(' e ')+'.');
     }
     L.push('');
-    L.push(linhaTotal);
+    L.push('Pagamento facilitado: '+fmtCent(C.p1)+' na reserva da data e '+fmtCent(C.p2)+' no dia da hospedagem.');
     L.push('');
-    L.push('Pagamento: '+fmtCent(C.p1)+' na reserva da data e o restante '+fmtCent(C.p2)+' no dia da hospedagem.');
+    L.push('Na AuAulândia ninguém dorme sozinho: nossas plantonistas passam a noite junto '+(um?(orcEhFemea(C.pets[0].sel)?'dela':'dele'):'deles')+', com monitoramento 24 horas. Aqui, cada cuidado é ÚNICO.');
+    L.push('');
+    L.push('Podemos confirmar a Colônia de Férias '+orcPequeno(C.pets,true)+'?');
     el.value=L.join('\n');
   }
+  function orcArtigoDe(sel){ return orcEhFemea(sel)?'da':'do'; }
   function orcCopiar(){
     var t=document.getElementById('orcMsg'); if(!t) return;
     t.removeAttribute('readonly'); t.select();
@@ -6330,15 +6394,29 @@
       var o=ORC_LISTA_CACHE[id]||{}, stt=o.status||'aguardando', L=lb[stt]||lb.aguardando;
       var nomes=(o.pets||[]).map(function(p){ return p.nome; }).join(' e ');
       var dt=''; try{ var d=new Date(o.criado_em); var pp=function(x){return String(x).padStart(2,'0');}; dt=pp(d.getDate())+'/'+pp(d.getMonth()+1)+'/'+d.getFullYear(); }catch(e){}
+      var apagar=(document.body.dataset.role==='gestao'||document.body.dataset.role==='diretoria'||document.body.dataset.role==='supervisor')
+        ? '<button class="btn" style="background:none;border:none;color:var(--crm-critico);font-weight:700;padding:0 4px" onclick="orcApagar(\''+id+'\')">apagar</button>' : '';
       var btns=(stt==='aguardando')
-        ? '<div class="avr-form-btns" style="margin-top:8px"><button class="btn btn-primary" onclick="orcStatus(\''+id+'\',\'fechado\')">Fechou</button><button class="btn" style="background:var(--z-cream-warm);color:var(--z-blue);border:1.5px solid var(--line)" onclick="orcStatus(\''+id+'\',\'nao_fechou\')">Não fechou</button></div>'
-        : '<div style="text-align:right;margin-top:6px"><button class="btn" style="background:var(--z-cream-warm);color:var(--z-blue);border:1.5px solid var(--line)" onclick="orcStatus(\''+id+'\',\'aguardando\')">Voltar para pendente</button></div>';
+        ? '<div class="avr-form-btns" style="margin-top:8px"><button class="btn btn-primary" onclick="orcStatus(\''+id+'\',\'fechado\')">Fechou</button><button class="btn" style="background:var(--z-cream-warm);color:var(--z-blue);border:1.5px solid var(--line)" onclick="orcStatus(\''+id+'\',\'nao_fechou\')">Não fechou</button>'+apagar+'</div>'
+        : '<div style="text-align:right;margin-top:6px">'+apagar+'<button class="btn" style="background:var(--z-cream-warm);color:var(--z-blue);border:1.5px solid var(--line)" onclick="orcStatus(\''+id+'\',\'aguardando\')">Voltar para pendente</button></div>';
       return '<div class="avr-card '+L[1]+'"><div class="avr-head"><div class="avr-info">'
         +'<strong>'+escAttr(nomes||'—')+'</strong> <span style="color:var(--muted);font-size:12px">'+escAttr(o.tutor||'')+'</span>'
         +'<div style="font-size:12.5px;color:var(--z-blue-soft)">'+orcBR(o.entrada||'')+' a '+orcBR(o.saida||'')+' · '+(o.noites||0)+' noites'+(o.alta_temporada?' · ALTA':'')+' · feito em '+dt+' por '+escAttr(o.criado_por||'-')+'</div>'
         +'<div style="font-size:15px;font-weight:800;color:var(--z-blue);margin-top:3px">'+fmtCent(o.total_cent||0)+'</div>'
         +'</div><span class="avr-chip '+L[1]+'">'+L[0]+'</span></div>'+btns+'</div>';
     }).join('');
+  }
+  // Apagar orçamento (teste, duplicado, erro). A trava de verdade são as regras do Firebase —
+  // esconder o botão por papel é só para não tentar quem não deve.
+  function orcApagar(id){
+    var o=ORC_LISTA_CACHE[id]||{};
+    var nomes=(o.pets||[]).map(function(p){ return p.nome; }).join(' e ');
+    if(!confirm('Apagar de vez o orçamento de '+(nomes||'—')+' ('+fmtCent(o.total_cent||0)+')?\n\nNão dá para desfazer.')) return;
+    if(!DB) return;
+    DB.ref('auaulandia/orcamentos/'+id).remove().then(function(){
+      delete ORC_LISTA_CACHE[id]; orcRenderLista();
+      if(typeof audit==='function') audit('orcamento-apagado','apagou o orçamento de '+nomes,{});
+    }).catch(function(){});
   }
   function orcStatus(id,novo){
     if(!DB) return;
@@ -6405,11 +6483,11 @@
         var v=s.val()||{};
         if(v.precos) orcPrecosCfg=v.precos;
         if(v.feriados) orcFeriadosCfg=v.feriados;
-        orcRenderConfig(); orcCalcular();
-      }).catch(function(){ orcRenderConfig(); });
+        orcRenderConfig(); orcRenderTemporada(); orcCalcular();
+      }).catch(function(){ orcRenderConfig(); orcRenderTemporada(); });
       orcCarregarLista();
     } else { orcRenderConfig(); }
-    orcRenderSel(); orcCalcular();
+    orcRenderTemporada(); orcRenderSel(); orcCalcular();
   }
 
   // ===== LOGIN (senhas de teste — depois cada pessoa terá a sua) =====
@@ -6551,11 +6629,27 @@
         h+='<span class="dia'+(on?' on':'')+' clic" onclick="toggleMonPagina('+i+',\''+it.k+'\')">'+it.t+'</span>'; });
       h+='</div>';
     });
-    h+='<div style="font-size:11px;font-weight:800;color:var(--z-blue);text-transform:uppercase;letter-spacing:.4px;margin:8px 0 4px">Day Care — Atividades</div><div style="display:flex;flex-wrap:wrap;gap:6px">';
+    // Day Care — TODAS as atividades, inclusive as novas (check-in do corpo e dos pertences).
+    // Com "marcar todas" ao lado: quem faz o dia inteiro não precisa de 16 toques.
+    h+='<div style="display:flex;align-items:center;gap:8px;margin:10px 0 4px;flex-wrap:wrap">'
+      +'<span style="font-size:11px;font-weight:800;color:var(--z-blue);text-transform:uppercase;letter-spacing:.4px">Day Care — Atividades ('+ATIVS_DC.length+')</span>'
+      +'<button type="button" class="btn" style="padding:4px 10px;font-size:11.5px;background:var(--z-cream-warm);color:var(--z-blue);border:1.5px solid var(--line)" onclick="monTodasAtividades('+i+',true)">marcar todas</button>'
+      +'<button type="button" class="btn" style="padding:4px 10px;font-size:11.5px;background:var(--z-cream-warm);color:var(--z-blue);border:1.5px solid var(--line)" onclick="monTodasAtividades('+i+',false)">limpar</button>'
+      +'</div><div style="display:flex;flex-wrap:wrap;gap:6px">';
     ATIVS_DC.forEach(function(a){ const on=aset.indexOf(a.s)>=0;
       h+='<span class="dia'+(on?' on':'')+' clic" onclick="toggleMonAtividade('+i+',\''+a.s+'\')">'+a.t+'</span>'; });
-    h+='</div></div>';
+    h+='</div>';
+    h+='<div class="hint" style="margin-top:8px">Nada marcado aqui = esta pessoa vê <strong>todas</strong> as atividades do Day Care. Marcar é RESTRINGIR: ela passa a ver só o que estiver aceso.</div>';
+    h+='</div>';
     return h;
+  }
+  // Marcar/limpar todas as atividades do Day Care de uma pessoa.
+  function monTodasAtividades(i,ligar){
+    const m=MONITORES[i]; if(!m) return;
+    m.atividades=ligar?ATIVS_DC.map(function(a){ return a.s; }):[];
+    if(typeof salvarMonitores==='function') salvarMonitores();
+    const w=document.getElementById('monPerm-'+i); if(w) w.innerHTML=permEditInner(i,m);
+    if(typeof renderMonitores==='function') renderMonitores();
   }
   function toggleMonPerm(i){ const w=document.getElementById('monPerm-'+i); if(!w) return; const open=w.style.display!=='none'; w.style.display=open?'none':'block'; if(!open) w.innerHTML=permEditInner(i,MONITORES[i]); }
   // ===== O QUE A PESSOA VÊ, SEM PRECISAR ABRIR (Adriana, 05/ago/2026) ================
@@ -9433,6 +9527,7 @@
     window.scrollTo({top:0,behavior:'smooth'});
     if(v==='renovacao' && typeof renderRenovacao==='function') renderRenovacao();
     if(v==='orcamento' && typeof orcInit==='function') orcInit();
+    if(v==='relatorios' && typeof renderRelatorios==='function'){ renderRelatorios(); if(typeof orcCarregarLista==='function') orcCarregarLista(); }
   }
   // Redesenha a ficha aberta mantendo a aba atual. Os blocos de prevenção calculam a
   // próxima data ao salvar, e o resultado precisa aparecer na hora.
@@ -9649,6 +9744,8 @@
           <div class="field"><label>Algum problema de saúde</label><input class="cad-in" value="${escAttr(ex.problema||'')}" placeholder="Ex: cardíaco — ou vazio" onchange="setPelExtra(pelAtual,{problema:this.value});refreshPills()"></div>
           <div class="field"><label>Manias</label><input class="cad-in" value="${escAttr(ex.manias||'')}" placeholder="Ex: protege a comida" onchange="setPelExtra(pelAtual,{manias:this.value});refreshPills()"></div>
           <div class="field"><label>Em adaptacao (1&ordm; mes)?</label><div class="seg gold" data-single>${segBtnsPel('adaptacao',ex.adaptacao||'',['Sim','Nao'])}</div></div>
+          <div class="field"><label>Adaptacao comecou em</label><input type="date" class="cad-in" value="${escAttr(ex.adaptacao_desde||'')}" onchange="setPelExtra(pelAtual,{adaptacao_desde:this.value});renderPelFicha()">
+            <div class="hint" style="margin-top:4px">${adaptTextoFicha(ex)}</div></div>
           <div class="field"><label>Come em comedouro lento?</label><div class="seg gold" data-single>${segBtnsPel('ansioso',ex.ansioso||'',['Sim','Nao'])}</div></div>
         </div>
         <!-- HISTORICO DO FILHOt (Adriana, 11/ago/2026: "nao tem historico do filhote").
@@ -10120,7 +10217,22 @@
     {t:'Rotina de Sabado'}
   ];
   let ATIVIDADES=ATIVIDADES_DEFAULT.slice();
-  (function(){ const raw=localStorage.getItem('zeluz_daycare_ativ'); if(raw){ try{ const a=JSON.parse(raw); if(Array.isArray(a)&&a.length) ATIVIDADES=a; }catch(e){} } })();
+  // ===== ATIVIDADE NOVA NÃO PODE NASCER INVISÍVEL (Adriana, 12/ago/2026) ============
+  // A lista salva SUBSTITUÍA a lista do sistema. Resultado: toda atividade nova que eu
+  // acrescentava aqui nunca aparecia para quem já tinha salvado a lista uma vez — ficava
+  // congelada na versão antiga. Agora é MERGE: o que ela criou fica, e o que o sistema
+  // ganha de novo entra junto.
+  (function(){
+    const raw=localStorage.getItem('zeluz_daycare_ativ');
+    if(!raw) return;
+    try{
+      const a=JSON.parse(raw);
+      if(!Array.isArray(a)||!a.length) return;
+      const tem={}; a.forEach(function(x){ if(x&&x.t) tem[jsNorm(x.t)]=1; });
+      const faltando=ATIVIDADES_DEFAULT.filter(function(x){ return x&&x.t&&!tem[jsNorm(x.t)]; });
+      ATIVIDADES=a.concat(faltando);
+    }catch(e){}
+  })();
   function salvarAtiv(){ localStorage.setItem('zeluz_daycare_ativ',JSON.stringify(ATIVIDADES)); if(DB) DB.ref('daycare/config/atividades').set(ATIVIDADES).catch(()=>{}); }
   function renderAtiv(){
     const el=document.getElementById('ativList'); if(!el) return;
@@ -10140,11 +10252,56 @@
   function removerAtividade(i){ if(!confirm('Remover a atividade \"'+ATIVIDADES[i].t+'\"?')) return; ATIVIDADES.splice(i,1); salvarAtiv(); renderAtiv(); }
   renderAtiv();
 
-  // ===== ADAPTACAO + ATIVIDADE GENERICA (To-Do por peludinho) =====
-  function seloAdapt(ex){ return (ex&&ex.adaptacao==='Sim')?'<span class="mini-adapt">ADAPTACAO</span>':''; }
+  // ===== ADAPTACAO NAO PODE SER ETERNA (Adriana, 12/ago/2026) =======================
+  // "EM ADAPTAÇÃO HOJE: Bruce, Hulk, Yumi — essa informação não é real, de onde está tirando
+  //  isso?" Vinha do campo "Em adaptação (1º mês)?" da ficha, marcado como Sim e NUNCA
+  //  desmarcado. Adaptação é o PRIMEIRO MÊS: ou tem data de início e vence sozinha em 30
+  //  dias, ou o app não afirma nada. Informação velha na tela do time é pior que informação
+  //  nenhuma — o time para de acreditar no que lê.
+  const ADAPT_DIAS=30;
+  function adaptDiasDe(ex){
+    var d=(ex&&ex.adaptacao_desde)||''; if(!d) return null;
+    try{ var ini=new Date(d+'T12:00:00'), hoje=new Date();
+      return Math.floor((hoje-ini)/86400000); }catch(e){ return null; }
+  }
+  // Só é adaptação de verdade quando está marcada E dentro dos 30 dias contados da data.
+  function pelEmAdaptacao(ex){
+    if(!ex||ex.adaptacao!=='Sim') return false;
+    var n=adaptDiasDe(ex);
+    if(n===null) return false;              // sem data = o app NÃO afirma
+    return n>=0 && n<=ADAPT_DIAS;
+  }
+  // Marcada como Sim mas sem data, ou já passou do mês: a Gestão precisa resolver.
+  function adaptPendente(ex){
+    if(!ex||ex.adaptacao!=='Sim') return false;
+    var n=adaptDiasDe(ex);
+    return (n===null)||(n>ADAPT_DIAS);
+  }
+  function adaptTextoFicha(ex){
+    if(!ex||ex.adaptacao!=='Sim') return 'Só vale quando "Em adaptação" está como Sim.';
+    var n=adaptDiasDe(ex);
+    if(n===null) return 'Sem esta data o time NÃO vê o aviso de adaptação — o app não afirma o que não sabe.';
+    if(n<0) return 'A data está no futuro. A adaptação começa em '+(typeof fmtBR==='function'?fmtBR(ex.adaptacao_desde):ex.adaptacao_desde)+'.';
+    if(n>ADAPT_DIAS) return 'Já são '+n+' dias — o primeiro mês terminou. Mude "Em adaptação" para Não.';
+    return n+'º dia de adaptação. Termina sozinha depois de '+ADAPT_DIAS+' dias.';
+  }
+  function seloAdapt(ex){ return pelEmAdaptacao(ex)?'<span class="mini-adapt">ADAPTACAO</span>':''; }
   function renderAdaptBanner(){ const el=document.getElementById('dcAdaptBanner'); if(!el) return;
-    const nomes=turmaDoDia().filter(o=>typeof o.i==='number').filter(o=>{ const ex=pelExtra(o.p); return ex&&ex.adaptacao==='Sim'; }).map(o=>o.p.n);
-    el.innerHTML=nomes.length?`<div class="adapt-banner">&#9733; EM ADAPTACAO HOJE: ${nomes.join(', ')} &mdash; foco de todo o time!</div>`:'';
+    const turma=turmaDoDia().filter(o=>typeof o.i==='number');
+    const emAdapt=turma.filter(o=>pelEmAdaptacao(pelExtra(o.p)));
+    const pendentes=turma.filter(o=>adaptPendente(pelExtra(o.p)));
+    let h='';
+    if(emAdapt.length){
+      h+=`<div class="adapt-banner">&#9733; EM ADAPTACAO HOJE: ${emAdapt.map(o=>{
+            const n=adaptDiasDe(pelExtra(o.p)); return o.p.n+(n!=null?` (${n}º dia)`:''); }).join(', ')} &mdash; foco de todo o time!</div>`;
+    }
+    // Aviso só para quem resolve — o time não precisa ver pendência de cadastro.
+    const r=document.body.dataset.role;
+    if(pendentes.length&&(r==='gestao'||r==='diretoria'||r==='supervisor')){
+      h+=`<div class="dc-meia"><strong>Adaptação sem data ou vencida (${pendentes.length}):</strong> ${pendentes.map(o=>o.p.n).join(', ')}.
+        <div style="font-weight:600;margin-top:4px">Estes estão marcados como "em adaptação" na ficha, mas sem data de início ou já passaram do primeiro mês. Enquanto isso o time NÃO vê o aviso deles — abra a ficha e resolva.</div></div>`;
+    }
+    el.innerHTML=h;
   }
   let genMarcas={}, dcBuscaVal='', dcBanho={};
   // --- Protocolo de Almoço (maio 2025) ---
@@ -10423,6 +10580,8 @@
   }
   function ckObs(pk,v){ const pt=ckRascunho.pontos[pk]||{alterado:true}; pt.obs=v; ckRascunho.pontos[pk]=pt; }
   function ckSet(campo,v){ if(!ckRascunho) return; ckRascunho[campo]=v; renderCheckin(); }
+  // Campo de texto: grava SEM redesenhar — redesenhar a cada letra tira o foco de quem digita.
+  function ckSetTexto(campo,v){ if(!ckRascunho) return; ckRascunho[campo]=v; }
   // A foto é a prova. Comprimida para 640px: o app já apanhou de foto pesada antes.
   function ckFoto(pk,input){
     const f=input&&input.files&&input.files[0]; if(!f) return;
@@ -10440,6 +10599,41 @@
       img.src=e.target.result;
     };
     fr.readAsDataURL(f);
+  }
+  // ===== O PROTOCOLO MORA DENTRO DA TELA (Adriana, 12/ago/2026) =====================
+  // "Eu preciso que o protocolo esteja dentro — a pessoa precisa saber como faz e o que deve
+  //  fazer." Antes ele vivia no papel e na cabeça de quem treinou. Quem entra hoje abre o
+  //  check-in e lê o passo a passo ali, sem procurar ninguém. Fica RECOLHIDO depois da
+  //  primeira vez (o app lembra no aparelho): quem já sabe não é atrapalhado, quem esqueceu
+  //  toca e relê.
+  var CK_PROTO_ABERTO=(function(){ try{ return localStorage.getItem('zeluz_ck_proto_lido')!=='1'; }catch(e){ return true; } })();
+  function ckToggleProto(){
+    CK_PROTO_ABERTO=!CK_PROTO_ABERTO;
+    try{ localStorage.setItem('zeluz_ck_proto_lido', CK_PROTO_ABERTO?'0':'1'); }catch(e){}
+    renderCheckin();
+  }
+  function ckProtocoloHTML(entrada){
+    var passos=entrada
+      ? ['<strong>Chame pelo nome com o comando VEM.</strong> Já testa a consciência dele e reforça a sua liderança. Não vá até ele: peça que venha.',
+         '<strong>Olhe ponto a ponto, na ordem da tela.</strong> Não existe "está tudo bem" num toque só — cada ponto precisa do seu olho.',
+         '<strong>Leva cerca de 2 minutos.</strong> O exame demora o que tiver que demorar; o que é rápido é o registro: um toque por ponto quando está normal.',
+         '<strong>Achou uma alteração? Confira as outras.</strong> Quem tem uma coisa costuma ter outra — o corpo avisa em mais de um lugar.',
+         '<strong>Toda alteração leva FOTO.</strong> É a foto que responde ao tutor depois. Sem ela, é a sua palavra contra a lembrança dele.',
+         '<strong>Avise a Coordenação na hora</strong> em qualquer anormalidade — não espere o fim do check-in.',
+         '<strong>Cocô:</strong> esperamos de 10 a 15 minutos na entrada. Diarreia é ligação para o tutor buscar.',
+         '<strong>Quem passa por aqui está presente.</strong> Não existe mais chamada separada. Quem não passar até as 12h entra como falta.']
+      : ['<strong>A pergunta agora é outra:</strong> aconteceu alguma coisa enquanto ele estava conosco?',
+         '<strong>Compare com a entrada.</strong> A tela mostra o que foi visto de manhã — o que é novo apareceu aqui, com a gente.',
+         '<strong>Olhe ponto a ponto de novo.</strong> O check-out é o que o tutor vai ver; nada pode passar.',
+         '<strong>Toda alteração leva FOTO</strong> e vai para a Coordenação antes de o tutor chegar.',
+         '<strong>Achou uma, confira as outras.</strong>'];
+    var cab='<div class="ck-proto-cab" onclick="ckToggleProto()">'
+      +'<span>Como fazer este check-in — o protocolo</span>'
+      +'<span class="ck-proto-seta">'+(CK_PROTO_ABERTO?'esconder':'ler')+'</span></div>';
+    if(!CK_PROTO_ABERTO) return '<div class="ck-proto fechado">'+cab+'</div>';
+    return '<div class="ck-proto">'+cab
+      +'<div class="ck-proto-corpo"><ol>'+passos.map(function(x){ return '<li>'+x+'</li>'; }).join('')+'</ol>'
+      +'<div class="ck-proto-rod">O check-in acontece <strong>duas vezes por dia</strong> e os dois são obrigatórios: na chegada e no fim da tarde, antes do banho ou da saída.</div></div></div>';
   }
   function ckFichaHtml(){
     const o=ckAtual, p=o.p, k=dcKey(p.n,p.tutor), entrada=ckEhEntrada();
@@ -10469,6 +10663,7 @@
       +'<div class="ck-topo">'+ph+'<div><div class="ck-nome">'+escAttr(pelNome(p))+'</div>'
       +'<div class="ck-sub">'+escAttr(p.raca||'')+(p.tutor?(' · '+escAttr(p.tutor)):'')+'</div></div>'
       +'<button class="btn" style="margin-left:auto;background:var(--z-cream-warm);color:var(--z-blue);border:1.5px solid var(--line)" onclick="ckVoltar()">Voltar</button></div>'
+      +ckProtocoloHTML(entrada)
       +(entrada?'<div class="ck-vem">Chame <strong>'+escAttr(pelNome(p))+'</strong> pelo nome com o comando <strong>VEM</strong> e observe como ele responde.</div>':'')
       +daEntrada
       +tarjaRestricao({n:p.n,tutor:p.tutor});
@@ -10499,11 +10694,22 @@
         +'<div class="ck-opts">'+CK_COLEIRAS.map(function(c){
           return '<button type="button" class="ck-opt'+(R.coleiraRep===c.k?' on':'')+'" onclick="ckSet(\'coleiraRep\',\''+c.k+'\')">'+c.t
             +(c.sub?'<small>'+c.sub+'</small>':'')+'</button>'; }).join('')+'</div></div>'
+      // Coleira de identificação: "veio" sozinho não devolve nada ao tutor. Quando veio, a
+      // monitora DESCREVE (cor e marca) — é isso que prova, na saída, que voltou a mesma
+      // coleira que entrou. Pedido da Adriana, 12/ago/2026.
       +'<div class="ck-bloco"><div class="ck-bt">Coleira de identificação</div>'
         +'<div class="ck-opts">'
           +'<button type="button" class="ck-opt'+(R.coleiraId==='sim'?' on':'')+'" onclick="ckSet(\'coleiraId\',\'sim\')">Veio</button>'
           +'<button type="button" class="ck-opt'+(R.coleiraId==='nao'?' on':'')+'" onclick="ckSet(\'coleiraId\',\'nao\')">Não veio</button>'
-        +'</div></div>'
+        +'</div>'
+        +(R.coleiraId==='sim'
+          ? '<div class="ck-hint" style="margin-top:8px">Descreva a coleira que entrou. Sem isso, na saída ninguém sabe qual era.</div>'
+            +'<div class="cad-grid2" style="margin-top:6px">'
+            +'<div><label class="cad-lb">Cor</label><input class="cad-in" placeholder="Ex: vermelha" value="'+escAttr(R.coleiraIdCor||'')+'" oninput="ckSetTexto(\'coleiraIdCor\',this.value)"></div>'
+            +'<div><label class="cad-lb">Marca / detalhe</label><input class="cad-in" placeholder="Ex: Zêluz, com plaquinha" value="'+escAttr(R.coleiraIdMarca||'')+'" oninput="ckSetTexto(\'coleiraIdMarca\',this.value)"></div>'
+            +'</div>'
+          : '')
+        +'</div>'
       +'<div class="ck-bloco"><div class="ck-bt">Fez cocô?</div>'
         +'<div class="ck-hint">Esperamos de 10 a 15 minutos. Diarreia: ligar para o tutor buscar.</div>'
         +'<div class="ck-opts">'+CK_COCO.map(function(c){
@@ -10998,6 +11204,91 @@
       setTimeout(function(){ URL.revokeObjectURL(url); a.remove(); },1500);
       if(typeof audit==='function') audit('grade-almoco-excel', dados.length+' linhas', {arquivo:nome});
     }catch(err){ alert('Não consegui gerar o arquivo: '+err.message); }
+  }
+  // ===== CENTRAL DE RELATÓRIOS ======================================================
+  // Um lugar só para tudo que se baixa. Cada relatório se declara aqui: título, para que
+  // serve e a função que gera. Relatório novo = uma entrada nesta lista, nada mais.
+  function relBaixarXLS(html, nomeBase, quantas){
+    if(!html){ alert('Os dados ainda não carregaram. Espere alguns segundos e tente de novo.'); return; }
+    var hoje=new Date(), p2=function(x){ return String(x).padStart(2,'0'); };
+    var nome='Zeluz-'+nomeBase+'-'+hoje.getFullYear()+'-'+p2(hoje.getMonth()+1)+'-'+p2(hoje.getDate())+'.xls';
+    try{
+      var blob=new Blob(['﻿'+html],{type:'application/vnd.ms-excel;charset=utf-8'});
+      var url=URL.createObjectURL(blob), a=document.createElement('a');
+      a.href=url; a.download=nome; document.body.appendChild(a); a.click();
+      setTimeout(function(){ URL.revokeObjectURL(url); a.remove(); },1500);
+      if(typeof audit==='function') audit('relatorio-baixado', nomeBase+(quantas!=null?(' — '+quantas+' linhas'):''), {arquivo:nome});
+    }catch(err){ alert('Não consegui gerar o arquivo: '+err.message); }
+  }
+  function relEsc(v){ return String(v==null?'':v).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+  function relTabelaHTML(titulo, subtitulo, colunas, linhas){
+    var h='<html xmlns:x="urn:schemas-microsoft-com:office:excel"><head><meta charset="UTF-8">'
+      +'<style>table{border-collapse:collapse}td,th{border:1px solid #C9C0AC;padding:5px 8px;font-family:Calibri,Arial;font-size:11pt}'
+      +'th{background:#234D67;color:#FFFDF6;font-weight:bold;text-align:left}</style></head><body>';
+    h+='<table><tr><td colspan="'+colunas.length+'" style="border:none;font-size:16pt;font-weight:bold;color:#234D67">Zêluz &middot; '+relEsc(titulo)+'</td></tr>';
+    if(subtitulo) h+='<tr><td colspan="'+colunas.length+'" style="border:none;font-size:10pt;color:#555">'+relEsc(subtitulo)+'</td></tr>';
+    h+='</table><br><table><tr>'+colunas.map(function(c){ return '<th>'+relEsc(c)+'</th>'; }).join('')+'</tr>';
+    linhas.forEach(function(L){ h+='<tr>'+L.map(function(c){ return '<td>'+relEsc(c)+'</td>'; }).join('')+'</tr>'; });
+    return h+'</table></body></html>';
+  }
+  // ---- Relatório: orçamentos de hospedagem ----
+  function relOrcamentos(){
+    var ids=Object.keys(ORC_LISTA_CACHE||{});
+    if(!ids.length){ alert('Nenhum orçamento salvo ainda. Abra "Orçamento de Hospedagem" primeiro para carregar a lista.'); return; }
+    ids.sort(function(a,b){ return (ORC_LISTA_CACHE[b].criado_em||0)-(ORC_LISTA_CACHE[a].criado_em||0); });
+    var stt={aguardando:'Aguardando', fechado:'FECHOU', nao_fechou:'Não fechou'};
+    var linhas=[];
+    ids.forEach(function(id){
+      var o=ORC_LISTA_CACHE[id]||{};
+      var dt=''; try{ var d=new Date(o.criado_em), p=function(x){return String(x).padStart(2,'0');}; dt=p(d.getDate())+'/'+p(d.getMonth()+1)+'/'+d.getFullYear(); }catch(e){}
+      (o.pets||[]).forEach(function(p){
+        linhas.push([dt, o.tutor||'', p.nome||'', p.plano||'', p.compromisso||'', p.desconto_pct+'%',
+          orcBR(o.entrada||''), orcBR(o.saida||''), o.noites||0, p.diarias||0, p.pernoites||0,
+          o.alta_temporada?'ALTA':'baixa',
+          ((p.subtotal_cent||0)/100).toFixed(2).replace('.',','),
+          ((o.total_cent||0)/100).toFixed(2).replace('.',','),
+          stt[o.status||'aguardando']||'', o.criado_por||'']);
+      });
+    });
+    relBaixarXLS(relTabelaHTML('Orçamentos de hospedagem',
+      linhas.length+' linhas · uma por FILHOt de cada orçamento · gerado em '+new Date().toLocaleString('pt-BR'),
+      ['Feito em','Tutor','FILHOt','Plano','Compromisso','Desconto','Entrada','Saída','Noites','Diárias','Pernoites','Temporada','Subtotal R$','Total do orçamento R$','Situação','Quem fez'],
+      linhas), 'orcamentos-hospedagem', linhas.length);
+  }
+  // ---- Relatório: check-in do corpo de hoje ----
+  function relCheckinHoje(){
+    if(!DB){ alert('Sem conexão com o banco.'); return; }
+    var dia=dcDataKey();
+    DB.ref('daycare/checkin-corpo/'+dia).once('value').then(function(s){
+      var d=s.val()||{}, linhas=[];
+      Object.keys(d).forEach(function(k){
+        var r=d[k]||{}, pts=r.pontos||{};
+        var alt=Object.keys(pts).filter(function(x){ return pts[x]&&pts[x].alterado; });
+        linhas.push([r.nome||k, r.tutor||'', r.hora||'', r.fim?'feito':'em aberto',
+          alt.length?alt.map(function(x){ return x+' ('+((pts[x].alertas||[]).join(', ')||'sem detalhe')+')'; }).join(' · '):'sem alteração',
+          r.coco||'', r.coleiraRep||'', r.coleiraId||'',
+          [r.coleiraIdCor,r.coleiraIdMarca].filter(Boolean).join(' '), r.quem||'']);
+      });
+      if(!linhas.length){ alert('Nenhum check-in registrado hoje ainda.'); return; }
+      linhas.sort(function(a,b){ return String(a[2]).localeCompare(String(b[2])); });
+      relBaixarXLS(relTabelaHTML('Check-in do corpo — '+orcBR(dia),
+        linhas.length+' FILHOts · gerado em '+new Date().toLocaleString('pt-BR'),
+        ['FILHOt','Tutor','Hora','Situação','Alterações','Cocô','Coleira repelente','Coleira de identificação','Descrição da coleira','Quem fez'],
+        linhas), 'checkin-corpo', linhas.length);
+    }).catch(function(e){ alert('Não consegui ler os dados: '+((e&&e.message)||e)); });
+  }
+  const RELATORIOS=[
+    {t:'Grade de almoço das turminhas', d:'Segunda a sexta: nome, raça, se almoça, comedouro lento, o que come e quanto come. É a contingência de papel — se o sistema cair, a comida sai igual.', fn:'baixarGradeAlmoco()'},
+    {t:'Check-in do corpo de hoje', d:'Quem passou, a que horas, quem fez, o que foi encontrado de alteração, cocô e as coleiras que entraram.', fn:'relCheckinHoje()'},
+    {t:'Orçamentos de hospedagem', d:'Todo orçamento feito, com plano, desconto, diárias, pernoites, valor e se o tutor fechou. Uma linha por FILHOt.', fn:'relOrcamentos()'}
+  ];
+  function renderRelatorios(){
+    var el=document.getElementById('relGrid'); if(!el) return;
+    el.innerHTML=RELATORIOS.map(function(r){
+      return '<div class="card" style="margin-bottom:12px"><h2 style="font-size:17px">'+relEsc(r.t)+'</h2>'
+        +'<div class="hint" style="margin-bottom:10px">'+relEsc(r.d)+'</div>'
+        +'<button class="btn btn-gold" onclick="'+r.fn+'">Baixar Excel</button></div>';
+    }).join('');
   }
   function renderAlmoco(){
     if(!document.getElementById('almGrid')) return;
@@ -12770,6 +13061,23 @@
       return achou;
     });
   }
+  // ===== QUEM RECEBEU O MATERIAL QUE CHEGOU DEPOIS (Adriana, 12/ago/2026) ============
+  // "O tutor mandou um remédio e foi entregue depois, chega na recepção, que terá que colocar
+  //  no check-in e ser validado por quem recebeu o produto."
+  // Regra dela: material novo SEMPRE chega na recepção. A exceção é urgência em fim de semana
+  // ou feriado, sem recepção na casa — aí monitor ou plantonista recebe e lança. Por isso o
+  // campo não pergunta o papel: pergunta o NOME de quem pegou na mão. Login é papel, não pessoa.
+  function ciQuemRecebeu(itens){
+    var msg='CHEGOU MATERIAL NOVO\n\n'+itens.join('\n')
+      +'\n\nQuem RECEBEU isto na porta? Escreva o nome da pessoa.\n(Se foi você mesma, escreva o seu nome.)';
+    for(var t=0;t<3;t++){
+      var q=(prompt(msg)||'').trim();
+      if(q===''&&t>=0) { if(!confirm('Sem o nome de quem recebeu, ninguém sabe quem pegou o material na mão.\n\nCancelar o lançamento?')) { continue; } return null; }
+      if(/[a-zA-ZÀ-ÿ]{2,}/.test(q)&&q.length>=3) return q;
+      msg='Precisa ser um NOME DE GENTE — não vale ponto, traço ou uma letra só.\n\n'+itens.join('\n')+'\n\nQuem recebeu isto na porta?';
+    }
+    return null;
+  }
   // Grava: 'novo' cria estadia; 'acrescentar' funde na que já existe e REABRE a conferência
   // (item 6 — o tutor comprou um suplemento no meio da estadia: entra no MESMO check-in e
   // volta para a Wandela conferir, em vez de virar um cadastro paralelo).
@@ -12826,10 +13134,14 @@
       ciMedsToLista(meds).forEach(function(m){ if(!_medAntesNomes[jsNorm(m.nome||'')]) chegouNovo.push('Medicação: '+(m.nome||'')); });
       P.chegouNovo=chegouNovo;
       if(chegouNovo.length){
-        // Material novo de verdade → volta para a fila, com o nome do que chegou.
+        // Material novo de verdade → volta para a fila, com o nome do que chegou e de quem recebeu.
+        var _rec=ciQuemRecebeu(chegouNovo);
+        if(_rec===null){ __ciTravar(false); if(st){ st.style.color='var(--crm-atencao-text)'; st.textContent='Nada foi salvo — falta dizer quem recebeu o material.'; } return; }
+        P.recebidoPor=_rec;
         ops.push(DB.ref('auaulandia/estadias/'+estadiaId+'/conferencia').update({
           concluida:false, reaberta_em:Date.now(), reaberta_por:(P.correcao&&P.correcao.quem)||quemSou(),
-          reaberta_motivo:'CHEGOU MATERIAL NOVO — '+chegouNovo.join(' · ')
+          recebido_por:_rec, recebido_em:Date.now(), recebido_lancado_por:quemSou(),
+          reaberta_motivo:'CHEGOU MATERIAL NOVO — '+chegouNovo.join(' · ')+' · recebido por '+_rec
         }));
       } else {
         // Nada novo entrou: a conferência CONTINUA como estava e a solução fica anexada,
@@ -12873,10 +13185,16 @@
         gate_conferido:P.temMed||!!antes.gate_conferido,
         _ts:Date.now(), _ultimaEdicao:{quem:quemSou(), ts:Date.now(), acrescentou:novosItens}
       }));
-      // Voltou a ter coisa para conferir → a conferência REABRE e a Wandela vê de novo.
+      // Voltou a ter coisa para conferir → a conferência REABRE e a Wandela vê de novo,
+      // sabendo O QUE chegou e QUEM pegou na mão.
       if(novosItens.length){
+        var _rec2=ciQuemRecebeu(novosItens);
+        if(_rec2===null){ __ciTravar(false); if(st){ st.style.color='var(--crm-atencao-text)'; st.textContent='Nada foi salvo — falta dizer quem recebeu o material.'; } return; }
+        P.recebidoPor=_rec2;
         ops.push(DB.ref('auaulandia/estadias/'+estadiaId+'/conferencia').update({
-          concluida:false, reaberta_em:Date.now(), reaberta_por:quemSou(), reaberta_motivo:novosItens.join(' · ')
+          concluida:false, reaberta_em:Date.now(), reaberta_por:quemSou(),
+          recebido_por:_rec2, recebido_em:Date.now(), recebido_lancado_por:quemSou(),
+          reaberta_motivo:novosItens.join(' · ')+' · recebido por '+_rec2
         }));
       }
     } else {
@@ -13867,13 +14185,22 @@
   // parâmetro (Check-out) ou com a que está aberta na Conferência.
   function cfResolvidosHTML(est){
     var c=(est&&est.conferencia)||(typeof cfConf!=='undefined'?cfConf:null); if(!c) return '';
+    var pre='';
+    // Material que chegou depois: quem recebeu na porta fica à vista de quem vai conferir.
+    if(c.recebido_por && !c.concluida){
+      pre='<div style="background:rgba(222,180,40,.18);border-left:4px solid var(--z-gold);border-radius:10px;padding:11px 13px;margin-bottom:10px">'
+        +'<div style="font-weight:800;color:var(--z-blue);font-size:13.5px;margin-bottom:4px">Chegou material novo — confira o que entrou</div>'
+        +'<div style="font-size:13px;color:var(--z-blue)">'+escAttr(c.reaberta_motivo||'')+'</div>'
+        +'<div style="font-size:12.5px;color:var(--z-blue-soft);margin-top:4px">Recebido por <strong>'+escAttr(c.recebido_por)+'</strong>'
+        +(c.recebido_lancado_por?(' · lançado por '+escAttr(c.recebido_lancado_por)):'')+'</div></div>';
+    }
     var lista=[];
     if(c.resolvidos&&typeof c.resolvidos==='object'){ Object.keys(c.resolvidos).forEach(function(k){ if(c.resolvidos[k]) lista.push(c.resolvidos[k]); }); }
     else if(c.ultima_solucao) lista.push(c.ultima_solucao);
-    if(!lista.length) return '';
+    if(!lista.length) return pre;
     lista.sort(function(a,b){ return (a.quando||0)-(b.quando||0); });
     var dt=function(ts){ try{ var d=new Date(ts); var p=function(x){return String(x).padStart(2,'0');}; return p(d.getDate())+'/'+p(d.getMonth()+1)+' '+p(d.getHours())+':'+p(d.getMinutes()); }catch(e){ return ''; } };
-    return '<div style="background:rgba(39,174,96,.10);border-left:4px solid var(--crm-ok);border-radius:10px;padding:11px 13px;margin-bottom:10px">'
+    return pre+'<div style="background:rgba(39,174,96,.10);border-left:4px solid var(--crm-ok);border-radius:10px;padding:11px 13px;margin-bottom:10px">'
       +'<div style="font-weight:800;color:var(--crm-ok);font-size:13.5px;margin-bottom:5px">✅ Já resolvido — não precisa conferir de novo</div>'
       +lista.map(function(s){
          var mud=Array.isArray(s.mudou)?s.mudou.join(' · '):'';
