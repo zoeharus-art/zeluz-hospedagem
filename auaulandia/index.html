@@ -2773,11 +2773,27 @@
 
     <div class="card">
       <h2 style="font-size:19px">Quem vai ficar</h2>
-      <div class="hint">Busque pelo nome do FILHOt. O plano e os dias dele vêm do cadastro — se estiver errado, corrija na ficha.</div>
-      <input class="cad-in" id="orcBusca" placeholder="Nome do peludinho…" autocomplete="off" oninput="orcBuscar(this.value)">
+      <div class="hint">Primeiro: ele é auluno do Day Care? É isso que decide o desconto e quais noites são pernoite.</div>
+      <div id="orcTipoCliente" class="orc-temp" style="margin:10px 0 4px"></div>
+      <div id="orcTipoNota" class="hint"></div>
+      <input class="cad-in" id="orcBusca" style="margin-top:10px" placeholder="Nome do peludinho…" autocomplete="off" oninput="orcBuscar(this.value)">
       <div id="orcSug"></div>
+      <div id="orcAvulsoBox" style="display:none;margin-top:10px;border:1.5px dashed var(--line);border-radius:12px;padding:12px 14px">
+        <div class="ff-tit">Não está no cadastro? Escreva aqui</div>
+        <div class="hint">Dá para orçar sem cadastro. O cadastro completo fica para quando ele fechar.</div>
+        <div class="cad-grid2" style="margin-top:8px">
+          <div><label class="cad-lb">Nome do peludinho</label><input class="cad-in" id="orcAvNome" placeholder="Ex: Thor"></div>
+          <div><label class="cad-lb">Nome do tutor</label><input class="cad-in" id="orcAvTutor" placeholder="Ex: Renata"></div>
+        </div>
+        <div style="margin-top:8px"><label class="cad-lb">É macho ou fêmea?</label>
+          <div class="orc-temp" id="orcAvSexo" style="grid-template-columns:1fr 1fr">
+            <button type="button" onclick="orcAvSexoSet('Macho')" id="orcAvSexoM"><span class="tt">Macho</span></button>
+            <button type="button" onclick="orcAvSexoSet('Fêmea')" id="orcAvSexoF"><span class="tt">Fêmea</span></button>
+          </div></div>
+        <button class="btn btn-gold" style="margin-top:10px" onclick="orcAddAvulso()">Acrescentar ao orçamento</button>
+      </div>
       <div id="orcSelecionados" style="margin-top:10px"></div>
-      <div class="hint" style="margin-top:8px">Dois FILHOts do mesmo tutor? Adicione os dois — o desconto do 2º entra sozinho.</div>
+      <div class="hint" style="margin-top:8px">Dois FILHOts do mesmo tutor? Acrescente os dois — o desconto do 2º entra sozinho.</div>
     </div>
 
     <div class="card">
@@ -6173,6 +6189,52 @@
   // Empurra para o próximo dia em que a loja abre (domingo e feriado não entregam).
   function orcProximoAberto(iso){ var d=iso, guarda=0; while(orcFechado(d)&&guarda<20){ d=orcMaisDias(d,1); guarda++; } return d; }
 
+  // ===== AULUNO OU NÃO (Adriana, 13/ago/2026) =======================================
+  // Quem é auluno do Day Care tem o desconto do plano na diária, e as noites que caem nos
+  // dias dele viram PERNOITE (ele já viria mesmo). Quem não é auluno não tem plano: todas
+  // as noites são diária de hotel e o único desconto possível é o do 2º FILHOt da família.
+  // Alguns não-aulunos já estão no cadastro; outros não — e dá para orçar mesmo assim,
+  // escrevendo nome e tutor. O cadastro completo fica para quando ele fechar.
+  var ORC_AULUNO=true;
+  var ORC_AV_SEXO='';
+  function orcSetTipo(auluno){
+    ORC_AULUNO=!!auluno;
+    ORC_SEL=[]; orcRenderSel();
+    var b=document.getElementById('orcBusca'); if(b) b.value='';
+    var s=document.getElementById('orcSug'); if(s) s.innerHTML='';
+    orcRenderTipo(); orcCalcular();
+  }
+  function orcRenderTipo(){
+    var el=document.getElementById('orcTipoCliente'); if(!el) return;
+    var bt=function(v,tit,sub){
+      return '<button type="button" class="'+((ORC_AULUNO===v)?'on':'')+'" onclick="orcSetTipo('+(v?'true':'false')+')">'
+        +'<span class="tt">'+tit+'</span><span class="vv">'+sub+'</span></button>';
+    };
+    el.innerHTML=bt(true,'Auluno do Day Care','Tem plano: o desconto entra sozinho e os dias dele viram pernoite')
+                +bt(false,'Não é auluno','Sem plano e sem pernoite — todas as noites são diária');
+    var nota=document.getElementById('orcTipoNota');
+    if(nota) nota.innerHTML=ORC_AULUNO
+      ? 'Busque pelo nome. O plano e os dias vêm do cadastro — se estiverem errados, corrija na ficha do FILHOt.'
+      : 'Busque pelo nome (alguns já estão no cadastro). Se não achar, escreva o nome logo abaixo. <strong>Sem desconto de plano</strong> — só os 7% do 2º FILHOt da mesma família.';
+    var box=document.getElementById('orcAvulsoBox'); if(box) box.style.display=ORC_AULUNO?'none':'block';
+  }
+  function orcAvSexoSet(s){
+    ORC_AV_SEXO=s;
+    var m=document.getElementById('orcAvSexoM'), f=document.getElementById('orcAvSexoF');
+    if(m) m.className=(s==='Macho')?'on':''; if(f) f.className=(s==='Fêmea')?'on':'';
+  }
+  function orcAddAvulso(){
+    var n=((document.getElementById('orcAvNome')||{}).value||'').trim();
+    var t=((document.getElementById('orcAvTutor')||{}).value||'').trim();
+    if(!n||!t){ alert('Escreva o nome do peludinho e o nome do tutor.'); return; }
+    var key='avulso__'+jsNorm(n)+'__'+jsNorm(t);
+    if(ORC_SEL.some(function(s){ return s.key===key; })){ alert('Ele já está neste orçamento.'); return; }
+    ORC_SEL.push({key:key, nome:n, tutor:t, dias:[], planoKey:'', rotulo:'sem plano', compromisso:'',
+                  hospOff:0, semCadastro:true, sexo:ORC_AV_SEXO});
+    document.getElementById('orcAvNome').value=''; document.getElementById('orcAvTutor').value='';
+    ORC_AV_SEXO=''; orcAvSexoSet('');
+    orcRenderSel(); orcCalcular();
+  }
   var ORC_SEL=[];   // [{key,nome,tutor,dias:[],planoKey,hospOff}]
   function orcPlanoDoPet(p){
     try{
@@ -6201,8 +6263,12 @@
     var p=(typeof PELUDINHOS!=='undefined'?PELUDINHOS:[]).find(function(x){ return pelKey(x)===key; }); if(!p) return;
     if(ORC_SEL.some(function(s){ return s.key===key; })) return;
     var pl=orcPlanoDoPet(p);
-    ORC_SEL.push({key:key, nome:p.n||'', tutor:p.tutor||'', dias:((typeof pelDias==='function')?pelDias(p):[])||[],
-                  planoKey:pl.planoKey, rotulo:pl.rotulo, compromisso:pl.compromisso, hospOff:pl.hospOff});
+    // Não-auluno não usa plano nem dias, mesmo que exista cadastro antigo com plano vencido.
+    ORC_SEL.push(ORC_AULUNO
+      ? {key:key, nome:p.n||'', tutor:p.tutor||'', dias:((typeof pelDias==='function')?pelDias(p):[])||[],
+         planoKey:pl.planoKey, rotulo:pl.rotulo, compromisso:pl.compromisso, hospOff:pl.hospOff}
+      : {key:key, nome:p.n||'', tutor:p.tutor||'', dias:[], planoKey:'', rotulo:'não é auluno',
+         compromisso:'', hospOff:0});
     var b=document.getElementById('orcBusca'); if(b) b.value='';
     var s=document.getElementById('orcSug'); if(s) s.innerHTML='';
     orcRenderSel(); orcCalcular();
@@ -6256,8 +6322,24 @@
     if(saiReal!==sai) avisos.push('A saída em '+orcBR(sai)+' cai em <strong>'+(orcFechado(sai)==='domingo'?'domingo':('feriado — '+orcFechado(sai)))+'</strong> e nós não entregamos. Passou para <strong>'+orcBR(saiReal)+' ('+ORC_DIAW_LB[orcDiaSemana(saiReal)]+')</strong> — as noites a mais já estão na conta.');
     var fechEnt=orcFechado(ent);
     if(fechEnt) avisos.push('Atenção: a entrada em '+orcBR(ent)+' cai em <strong>'+(fechEnt==='domingo'?'domingo':('feriado — '+fechEnt))+'</strong>. Confirme com a Gestão se dá para receber nesse dia.');
-    if(saiReal<=ent){ if(cardR) cardR.style.display='none'; if(cardM) cardM.style.display='none';
-      if(av) av.innerHTML='<div class="avr-chip pendente" style="display:inline-block;margin-top:8px">A saída precisa ser depois da entrada.</div>'; return; }
+    // ===== DATA QUE JÁ PASSOU NÃO É ORÇAMENTO (Adriana, 13/ago/2026) ================
+    // "Digitei 13/06/2026 — essa data já passou, o sistema não pode aceitar." Orçamento é
+    // sempre para frente: não dá para reservar ontem. O calendário já não deixa escolher
+    // trás (min = hoje), e aqui a conta se recusa a fazer de conta que está tudo certo.
+    var hj=(typeof hojeISO==='function')?hojeISO():'';
+    var barrar=function(txt){
+      if(cardR) cardR.style.display='none'; if(cardM) cardM.style.display='none';
+      if(av) av.innerHTML='<div class="dc-faltas" style="margin-top:10px">'+txt+'</div>';
+    };
+    if(hj&&ent<hj){ barrar('<strong>A entrada em '+orcBR(ent)+' já passou.</strong><div style="font-weight:600;margin-top:4px">Orçamento é sempre para frente — não dá para reservar um dia que já foi. Confira se o ano está certo.</div>'); return; }
+    if(hj&&sai<hj){ barrar('<strong>A saída em '+orcBR(sai)+' já passou.</strong><div style="font-weight:600;margin-top:4px">Confira a data — provavelmente o mês ou o ano saiu errado.</div>'); return; }
+    if(saiReal<=ent){ barrar('<strong>A saída tem que ser depois da entrada.</strong><div style="font-weight:600;margin-top:4px">Entrada '+orcBR(ent)+' · saída '+orcBR(sai)+'. Confira as duas datas.</div>'); return; }
+    // Estadia muito longa ou muito distante: não bloqueia, mas PERGUNTA. Quase sempre é
+    // dedo trocado no ano — e o tutor recebe um orçamento absurdo se ninguém reparar.
+    var diasAte=Math.round((new Date(ent+'T12:00:00')-new Date((hj||ent)+'T12:00:00'))/86400000);
+    var duracao=Math.round((new Date(saiReal+'T12:00:00')-new Date(ent+'T12:00:00'))/86400000);
+    if(diasAte>365) avisos.push('A entrada está a mais de <strong>um ano</strong> daqui ('+orcBR(ent)+'). Confira o ano antes de mandar para o tutor.');
+    if(duracao>60) avisos.push('São <strong>'+duracao+' noites</strong> seguidas. É isso mesmo? Estadia assim longa costuma ser mês ou ano digitado errado.');
     if(av&&avisos.length) av.innerHTML=avisos.map(function(t){ return '<div style="background:rgba(222,180,40,.16);border-left:4px solid var(--z-gold);border-radius:10px;padding:10px 12px;margin-top:10px;font-size:13.5px;color:var(--z-blue);font-weight:600">'+t+'</div>'; }).join('');
     // Noite a noite: a noite do dia D vai de D para D+1. A última noite começa no dia anterior à saída.
     var noites=[], d=ent, guarda=0;
@@ -6312,6 +6394,7 @@
   function orcArtigo(sel){ return orcEhFemea(sel)?'a':'o'; }
   function orcEhFemea(sel){
     try{
+      if(sel&&sel.sexo) return String(sel.sexo).toLowerCase().indexOf('f')===0;   // digitado na hora (sem cadastro)
       var p=(typeof PELUDINHOS!=='undefined'?PELUDINHOS:[]).find(function(x){ return pelKey(x)===sel.key; });
       if(!p) return false;
       var s=((typeof pelGet==='function'?pelGet(p,'sexo'):'')||(pelExtra(p)||{}).sexo||'');
@@ -6333,29 +6416,29 @@
     var tutor=(typeof primeiroNome==='function')?primeiroNome(C.pets[0]&&C.pets[0].sel.tutor||''):((C.pets[0]&&C.pets[0].sel.tutor)||'');
     var nomes=C.pets.map(function(p){ return p.sel.nome; }).join(' e ');
     var um=(C.pets.length===1);
+    var ele=um?(orcEhFemea(C.pets[0].sel)?'ela':'ele'):'eles';
     var L=[];
-    L.push(tutor+', que alegria receber '+(um?(orcArtigo(C.pets[0].sel)==='a'?'a ':'o '):'')+nomes+' na AuAulândia.');
-    L.push('');
-    L.push('Segue o orçamento da Colônia de Férias:');
-    L.push('');
+    L.push(tutor+', será uma alegria receber '+(um?(orcArtigo(C.pets[0].sel)==='a'?'a ':'o '):'')+nomes+' em nossa AuAulândia.');
+    L.push('Segue o orçamento:');
     L.push('Período: '+orcBR(C.entrada)+' a '+orcBR(C.saida));
     C.pets.forEach(function(p){
       var pre=um?'':(p.sel.nome+' — ');
-      L.push(pre+p.nDia+' diária'+(p.nDia===1?'':'s')+' e '+p.nPer+' pernoite'+(p.nPer===1?'':'s'));
+      var partes=[];
+      if(p.nDia) partes.push(p.nDia+' diária'+(p.nDia===1?'':'s'));
+      if(p.nPer) partes.push(p.nPer+' pernoite'+(p.nPer===1?'':'s'));
+      L.push(pre+'Total de '+partes.join(' e '));
     });
     L.push('');
     L.push('Total: '+fmtCent(C.total));
     var descs=C.pets.filter(function(p){ return p.off>0; });
     if(descs.length){
-      if(um) L.push('Já com o desconto de '+descs[0].off+'% do plano '+(descs[0].sel.compromisso||descs[0].sel.rotulo)+' '+orcArtigoDe(descs[0].sel)+' '+descs[0].sel.nome+'.');
+      if(um&&descs[0].sel.compromisso) L.push('Já com o desconto de '+descs[0].off+'% do plano '+descs[0].sel.compromisso+' '+orcArtigoDe(descs[0].sel)+' '+descs[0].sel.nome+'.');
       else L.push('Já com o desconto de '+descs.map(function(p){ return p.off+'% '+orcArtigoDe(p.sel)+' '+p.sel.nome; }).join(' e ')+'.');
     }
-    L.push('');
-    L.push('Pagamento facilitado: '+fmtCent(C.p1)+' na reserva da data e '+fmtCent(C.p2)+' no dia da hospedagem.');
-    L.push('');
-    L.push('Na AuAulândia ninguém dorme sozinho: nossas plantonistas passam a noite junto '+(um?(orcEhFemea(C.pets[0].sel)?'dela':'dele'):'deles')+', com monitoramento 24 horas. Aqui, cada cuidado é ÚNICO.');
+    L.push('Forma de pagamento: '+fmtCent(C.p1)+' na reserva da data e '+fmtCent(C.p2)+' no dia da hospedagem.');
     L.push('');
     L.push('Podemos confirmar a Colônia de Férias '+orcPequeno(C.pets,true)+'?');
+    L.push('Temos certeza de que '+ele+' e os aumiguinhos vão se divertir muito!');
     el.value=L.join('\n');
   }
   function orcArtigoDe(sel){ return orcEhFemea(sel)?'da':'do'; }
@@ -6380,9 +6463,13 @@
       tutor:(C.pets[0]&&C.pets[0].sel.tutor)||'',
       precos_da_epoca:orcPrecos(),
       status:'aguardando',                       // aguardando · fechado · nao_fechou
+      auluno:!!ORC_AULUNO,
       pets:C.pets.map(function(p){ return {
         key:p.sel.key, nome:p.sel.nome, plano:p.sel.rotulo, compromisso:p.sel.compromisso||'',
         ordem:p.ordem, desconto_pct:p.off, diarias:p.nDia, pernoites:p.nPer,
+        sem_cadastro:!!p.sel.semCadastro,
+        // Quebra guardada: a planilha recebe só a hospedagem; a pernoite tem outra conta.
+        subtotal_diarias_cent:p.liqDia, subtotal_pernoites_cent:p.brutoPer,
         subtotal_cent:p.total }; }),
       mensagem:(document.getElementById('orcMsg')||{}).value||''
     };
@@ -6471,14 +6558,19 @@
     }
     var pets=(o.pets||[]);
     var peludoTutor=pets.map(function(p){ return p.nome; }).join(' e ')+'/'+(o.tutor||'');
-    var noites=o.noites||0;
+    // PERNOITE NÃO VAI PARA A PLANILHA (Adriana, 13/ago/2026): ela é lançada pela recepção
+    // ou pela plantonista da noite e serve para outra conta — o acerto de quem dorme aqui.
+    // Na planilha entra só a HOSPEDAGEM: as diárias de hotel e o dinheiro delas.
+    var diarias=0, valorDiarias=0;
+    pets.forEach(function(p){ diarias+=(p.diarias||0); valorDiarias+=(p.subtotal_diarias_cent||0); });
+    if(!valorDiarias) valorDiarias=(o.total_cent||0);   // orçamento antigo, sem a quebra salva
     var payload={
       token:cfg.token||'', hospedes:pets.length||1, peludoTutor:peludoTutor,
-      entrada:o.entrada||'', saida:o.saida||'', noites:noites,
-      reserva:(o.parcela1_cent||0)/100, dataReserva:(typeof hojeISO==='function')?hojeISO():'',
-      total:(o.total_cent||0)/100,
-      valorDiaria: noites? Math.round(((o.total_cent||0)/noites))/100 : 0,
-      aPagar:(o.parcela2_cent||0)/100, dataAPagar:o.entrada||''
+      entrada:o.entrada||'', saida:o.saida||'', noites:diarias,
+      reserva:Math.ceil(valorDiarias/2)/100, dataReserva:(typeof hojeISO==='function')?hojeISO():'',
+      total:valorDiarias/100,
+      valorDiaria: diarias? Math.round(valorDiarias/diarias)/100 : 0,
+      aPagar:(valorDiarias-Math.ceil(valorDiarias/2))/100, dataAPagar:o.entrada||''
     };
     // no-cors não deixa ler a resposta; por isso a confirmação é o registro no Firebase
     // e o aviso na tela. Falha de rede NUNCA vira silêncio.
@@ -6606,7 +6698,12 @@
       }).catch(function(){ orcRenderConfig(); orcRenderTemporada(); });
       orcCarregarLista();
     } else { orcRenderConfig(); }
-    orcRenderTemporada(); orcRenderSel(); orcCalcular();
+    // O calendário só abre de hoje para a frente — o erro é impedido antes de acontecer.
+    try{
+      var hj=(typeof hojeISO==='function')?hojeISO():'';
+      ['orcEntrada','orcSaida'].forEach(function(id){ var el=document.getElementById(id); if(el&&hj) el.min=hj; });
+    }catch(e){}
+    orcRenderTipo(); orcRenderTemporada(); orcRenderSel(); orcCalcular();
   }
 
   // ===== LOGIN (senhas de teste — depois cada pessoa terá a sua) =====
