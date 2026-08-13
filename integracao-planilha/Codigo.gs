@@ -10,7 +10,9 @@
 
 var TOKEN = 'zeluz-auaulandia';
 var ABA_FINANCEIRO = 'Hospedagem';
-var ABA_DASHBOARD  = 'Calendario Hospedagem para Dash';
+// Nome REAL confirmado em 13/ago/2026: 'Calendário Hospedagem para dash' (com acento, dash
+// minusculo). _acharAba tolera as duas formas — mas fica aqui o nome certo, para quem ler.
+var ABA_DASHBOARD  = 'Calendário Hospedagem para dash';
 
 function doPost(e) {
   try {
