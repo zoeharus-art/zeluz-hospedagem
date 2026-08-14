@@ -54,6 +54,15 @@ function doPost(e) {
       return _resposta({ ok: false, erro: 'token invalido' });
     }
     var ss = SpreadsheetApp.getActiveSpreadsheet();
+    // acao 'cancelar' desfaz o que a reserva escreveu: libera as noites no calendario e
+    // marca a linha do financeiro como CANCELADA (Adriana, 14/ago/2026). Sem 'acao' o
+    // comportamento e o de sempre — gravar a reserva.
+    if (String(d.acao || '') === 'cancelar') {
+      var rc = { ok: true, financeiro: '', calendario: '' };
+      try { rc.calendario = _apagarDoCalendario(ss, d); } catch (c1) { rc.calendario = 'ERRO - ' + String(c1); }
+      try { rc.financeiro = _marcarCancelado(ss, d); } catch (c2) { rc.financeiro = 'ERRO - ' + String(c2); }
+      return _resposta(rc);
+    }
     var r = { ok: true, financeiro: '', calendario: '' };
     try { r.financeiro = _gravarTabela(ss, d); } catch (e1) { r.financeiro = 'ERRO - ' + String(e1); }
     try { r.calendario = _gravarCalendario(ss, d); } catch (e2) { r.calendario = 'ERRO - ' + String(e2); }
@@ -101,6 +110,46 @@ function _gravarTabela(ss, d) {
   aba.appendRow(linha.valores);
   _ajustarFormatos(aba, aba.getLastRow(), linha.formatos);
   return 'ok (' + linha.usadas + ' campos)';
+}
+
+/** Marca a linha da reserva como CANCELADA na aba do financeiro, sem apagar o historico:
+ *  o dinheiro que entrou (ou nao entrou) precisa continuar auditavel. Acrescenta quem
+ *  cancelou e quando na propria celula do nome. */
+function _marcarCancelado(ss, d) {
+  var aba = _acharAba(ss, ABA_FINANCEIRO);
+  if (!aba) return 'ABA NAO ENCONTRADA';
+  var cab = _cabecalho(aba);
+  if (!cab.linha) return 'NAO ACHEI O CABECALHO';
+  var iNome = cab.chaves.indexOf('tutor peludo');
+  if (iNome < 0) iNome = cab.chaves.indexOf('peludo tutor');
+  var iEnt = cab.chaves.indexOf('entrada');
+  if (iNome < 0 || iEnt < 0) return 'NAO ACHEI as colunas de nome e entrada';
+  var ultima = aba.getLastRow();
+  if (ultima <= cab.linha) return 'aba vazia';
+
+  var vals = aba.getRange(cab.linha + 1, 1, ultima - cab.linha, cab.chaves.length).getValues();
+  var alvo = String(d.peludoTutor || '').trim().toLowerCase();
+  var dt0 = _data(d.entrada);
+  var alvoDt = (dt0 instanceof Date) ? dt0.toDateString() : '';
+  var quem = String(d.canceladoPor || '').trim();
+  var quando = String(d.canceladoEm || '').trim();
+
+  for (var i = 0; i < vals.length; i++) {
+    var nome = String(vals[i][iNome] || '').trim();
+    var dt = vals[i][iEnt];
+    var dtStr = (dt instanceof Date) ? dt.toDateString() : '';
+    if (!nome || nome.toLowerCase() !== alvo || dtStr !== alvoDt) continue;
+    if (nome.indexOf('CANCELADO') === 0) return 'ja estava cancelada';
+    var linhaReal = cab.linha + 1 + i;
+    var marca = 'CANCELADO' + (quem ? ' por ' + quem : '') + (quando ? ' em ' + quando : '') + ' - ' + nome;
+    var cel = aba.getRange(linhaReal, iNome + 1);
+    cel.setValue(marca);
+    // Riscado e cinza: quem abre a planilha ve na hora que aquela linha nao vale mais.
+    aba.getRange(linhaReal, 1, 1, cab.chaves.length)
+       .setFontLine('line-through').setFontColor('#999999');
+    return 'linha ' + linhaReal + ' marcada como CANCELADA';
+  }
+  return 'NAO ACHEI a linha desta reserva no financeiro';
 }
 
 function _cabecalho(aba) {
@@ -208,37 +257,116 @@ function _gravarCalendario(ss, d) {
   var porDia = {};
   cal.datas.forEach(function (x) { porDia[_diaChave(x.data)] = x.linha; });
 
-  var escritos = 0, jaEstavam = 0, semLinha = [], semVaga = [];
+  // ===== UMA COLUNA SO, DO COMECO AO FIM DA ESTADIA ==============================
+  // Adriana, 14/ago/2026: "thor 21 a 23 - na mesma coluna... o sistema esta jogando em
+  // colunas diferentes."
+  // O erro era decidir a coluna DIA A DIA: para cada dia, a primeira vazia daquele dia.
+  // No dia 21 a coluna 1 estava livre; no dia 22 ela ja tinha outro hospede que entrou
+  // antes, entao o Thor ia para a 2; no dia 23, para a 3. Cada dia decidido isolado
+  // produzia uma escada, e no calendario o mesmo FILHOt parecia tres hospedes diferentes.
+  // Agora a coluna e escolhida UMA VEZ, olhando o periodo inteiro: a primeira que esteja
+  // livre em TODOS os dias. Se ele ja estiver em alguma coluna (reenvio do mesmo orcamento),
+  // essa coluna e reaproveitada em vez de abrir outra.
+  var linhas = [], semLinha = [];
   var dia = new Date(ini.getTime());
   var guarda = 0;
   while (guarda < 400) {
     guarda++;
     var passou = CONTAR_DIA_DA_SAIDA ? (dia.getTime() > fim.getTime()) : (dia.getTime() >= fim.getTime());
     if (passou) break;
-
     var linha = porDia[_diaChave(dia)];
-    if (!linha) { semLinha.push(Utilities.formatDate(dia, 'GMT-3', 'dd/MM')); }
-    else {
-      var faixa = aba.getRange(linha, cal.col1, 1, cal.nCols);
-      var vals = faixa.getValues()[0];
-      var jaTem = false, vaga = -1;
-      for (var c = 0; c < vals.length; c++) {
-        var atual = String(vals[c] || '').trim();
-        if (atual === '') { if (vaga < 0) vaga = c; }
-        else if (atual.toLowerCase() === nome.toLowerCase()) { jaTem = true; break; }
+    if (!linha) semLinha.push(Utilities.formatDate(dia, 'GMT-3', 'dd/MM'));
+    else linhas.push(linha);
+    dia = new Date(dia.getFullYear(), dia.getMonth(), dia.getDate() + 1);
+  }
+  if (!linhas.length) {
+    return 'NENHUMA das datas da estadia existe no calendario' +
+      (semLinha.length ? ' (' + semLinha.join(', ') + ')' : '');
+  }
+
+  // Le o bloco de hospedes de cada dia da estadia de uma vez so.
+  var grade = linhas.map(function (l) {
+    return aba.getRange(l, cal.col1, 1, cal.nCols).getValues()[0];
+  });
+  var alvo = nome.toLowerCase();
+
+  // 1) Ele ja esta em alguma coluna? Reaproveita — nao abre vaga nova no reenvio.
+  var escolhida = -1;
+  for (var c = 0; c < cal.nCols && escolhida < 0; c++) {
+    for (var r = 0; r < grade.length; r++) {
+      if (String(grade[r][c] || '').trim().toLowerCase() === alvo) { escolhida = c; break; }
+    }
+  }
+
+  // 2) Senao, a primeira coluna livre em TODOS os dias.
+  if (escolhida < 0) {
+    for (var c2 = 0; c2 < cal.nCols; c2++) {
+      var livreSempre = true;
+      for (var r2 = 0; r2 < grade.length; r2++) {
+        if (String(grade[r2][c2] || '').trim() !== '') { livreSempre = false; break; }
       }
-      if (jaTem) jaEstavam++;
-      else if (vaga < 0) semVaga.push(Utilities.formatDate(dia, 'GMT-3', 'dd/MM'));
-      else { aba.getRange(linha, cal.col1 + vaga).setValue(nome); escritos++; }
+      if (livreSempre) { escolhida = c2; break; }
+    }
+  }
+
+  // 3) Nenhuma coluna atravessa a estadia inteira: NAO espalha em escada. Diz o que houve,
+  //    para a Gestao abrir uma coluna nova — melhor um aviso que um calendario mentiroso.
+  if (escolhida < 0) {
+    return 'CALENDARIO SEM COLUNA LIVRE para a estadia inteira (' +
+      Utilities.formatDate(ini, 'GMT-3', 'dd/MM') + ' a ' + Utilities.formatDate(fim, 'GMT-3', 'dd/MM') +
+      '). Acrescente uma coluna de hospede ou lance a mao.';
+  }
+
+  var escritos = 0, jaEstavam = 0;
+  for (var i = 0; i < linhas.length; i++) {
+    if (String(grade[i][escolhida] || '').trim().toLowerCase() === alvo) { jaEstavam++; continue; }
+    aba.getRange(linhas[i], cal.col1 + escolhida).setValue(nome);
+    escritos++;
+  }
+
+  var msg = escritos + ' noite(s) marcada(s) na coluna Hospede ' + (escolhida + 1);
+  if (jaEstavam) msg += ', ' + jaEstavam + ' ja estavam';
+  if (semLinha.length) msg += '. SEM LINHA NO CALENDARIO: ' + semLinha.join(', ');
+  return msg;
+}
+
+/** Apaga o FILHOt do calendario no periodo — usado quando o tutor CANCELA a reserva.
+ *  Adriana, 14/ago/2026: "tem situacao que o tutor faz reserva, esta tudo preparado, mas
+ *  algo impede a viagem". Sem isto a vaga fica presa a uma hospedagem que nao vai acontecer
+ *  e ninguem consegue colocar outro FILHOt no lugar. */
+function _apagarDoCalendario(ss, d) {
+  var aba = _acharAba(ss, ABA_DASHBOARD);
+  if (!aba) return 'ABA NAO ENCONTRADA';
+  var cal = _lerCalendario(aba);
+  if (!cal.linhaCab) return 'NAO ACHEI a linha "Hospede 1"';
+
+  var ini = _data(d.entrada), fim = _data(d.saida);
+  if (!(ini instanceof Date) || !(fim instanceof Date)) return 'datas invalidas';
+  var alvo = String(d.peludoTutor || '').trim().toLowerCase();
+  if (!alvo) return 'sem nome do FILHOt';
+
+  var porDia = {};
+  cal.datas.forEach(function (x) { porDia[_diaChave(x.data)] = x.linha; });
+
+  var apagados = 0;
+  var dia = new Date(ini.getTime()), guarda = 0;
+  while (guarda < 400) {
+    guarda++;
+    var passou = CONTAR_DIA_DA_SAIDA ? (dia.getTime() > fim.getTime()) : (dia.getTime() >= fim.getTime());
+    if (passou) break;
+    var linha = porDia[_diaChave(dia)];
+    if (linha) {
+      var vals = aba.getRange(linha, cal.col1, 1, cal.nCols).getValues()[0];
+      for (var c = 0; c < vals.length; c++) {
+        if (String(vals[c] || '').trim().toLowerCase() === alvo) {
+          aba.getRange(linha, cal.col1 + c).setValue('');
+          apagados++;
+        }
+      }
     }
     dia = new Date(dia.getFullYear(), dia.getMonth(), dia.getDate() + 1);
   }
-
-  var msg = escritos + ' noite(s) marcada(s)';
-  if (jaEstavam) msg += ', ' + jaEstavam + ' ja estavam';
-  if (semLinha.length) msg += '. SEM LINHA NO CALENDARIO: ' + semLinha.join(', ');
-  if (semVaga.length) msg += '. CALENDARIO CHEIO em: ' + semVaga.join(', ');
-  return msg;
+  return apagados + ' noite(s) liberada(s) no calendario';
 }
 
 function _diaChave(dt) {

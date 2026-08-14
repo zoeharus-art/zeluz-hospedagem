@@ -6639,10 +6639,14 @@
     // Não-auluno não usa plano nem dias, mesmo que exista cadastro antigo com plano vencido.
     // Sem plano ATIVO os dias não valem: quem não tem plano não vem ao Day Care, então não
     // existe pernoite para ele — toda noite é diária.
+    // A RAÇA entra aqui (Adriana, 14/ago/2026): sem ela, a planilha recebia só "Romeo/Jeanine"
+    // e o dashboard ficava sem saber a raça do FILHOt. A ordem na planilha é Nome/Raça/Tutor.
+    var _raca=(typeof pelGet==='function')?(pelGet(p,'raca')||''):(p.raca||'');
     ORC_SEL.push((ORC_AULUNO&&pl.ativo)
-      ? {key:key, nome:p.n||'', tutor:p.tutor||'', dias:((typeof pelDias==='function')?pelDias(p):[])||[],
+      ? {key:key, nome:p.n||'', tutor:p.tutor||'', raca:_raca,
+         dias:((typeof pelDias==='function')?pelDias(p):[])||[], trocas:{},
          planoKey:pl.planoKey, rotulo:pl.rotulo, compromisso:pl.compromisso, hospOff:pl.hospOff}
-      : {key:key, nome:p.n||'', tutor:p.tutor||'', dias:[], planoKey:'',
+      : {key:key, nome:p.n||'', tutor:p.tutor||'', raca:_raca, dias:[], trocas:{}, planoKey:'',
          rotulo:(ORC_AULUNO?pl.rotulo:'não é auluno'), compromisso:'', hospOff:0,
          semPlano:ORC_AULUNO&&!pl.ativo});
     var b=document.getElementById('orcBusca'); if(b) b.value='';
@@ -6657,10 +6661,52 @@
       var dias=(s.dias||[]).length?('vem '+s.dias.map(function(d){ return ORC_DIAW_LB[d]||d; }).join(', ')):'sem dias no Day Care — todas as noites são diária';
       var ord=(i===0?'1º FILHOt':(i+1)+'º FILHOt');
       var aviso=s.semPlano?'<div style="font-size:12.5px;color:var(--crm-critico);font-weight:700;margin-top:2px">Sem plano ativo: sem desconto e sem pernoite. Se ele renovou, atualize a ficha antes de orçar.</div>':'';
-      return '<div class="orc-pet"><div><strong>'+escAttr(s.nome)+'</strong> <span style="color:var(--muted);font-size:12px">'+escAttr(ord)+'</span>'
-        +'<div style="font-size:12.5px;color:var(--z-blue-soft)">'+escAttr(s.rotulo)+(s.compromisso?(' · '+escAttr(s.compromisso)):'')+' · '+escAttr(dias)+'</div>'+aviso+'</div>'
+      return '<div class="orc-pet"><div style="flex:1"><strong>'+escAttr(s.nome)+'</strong> <span style="color:var(--muted);font-size:12px">'+escAttr(ord)+'</span>'
+        +'<div style="font-size:12.5px;color:var(--z-blue-soft)">'+escAttr(s.rotulo)+(s.compromisso?(' · '+escAttr(s.compromisso)):'')+' · '+escAttr(dias)+'</div>'+aviso
+        +orcTrocaHtml(s,i)+'</div>'
         +'<button class="x" title="tirar" onclick="orcRemover(\''+escAttr(s.key)+'\')">&times;</button></div>';
     }).join('');
+  }
+  // ===== TROCA DE DIA SÓ NESTE ORÇAMENTO — Adriana, 14/ago/2026 =====================
+  // "o Peter vem às quintas, plano uma vez na semana. A tutora pediu para trocar o dia de
+  //  quinta para sexta, e ele fica até segunda. Então na sexta não seria diária e sim uma
+  //  pernoite, e as diárias de sábado e domingo."
+  // O dia do plano é o que decide se a noite é PERNOITE (ele já viria ao Day Care) ou DIÁRIA
+  // de hotel. Quando a tutora troca o dia daquela semana, a conta inteira muda — e não havia
+  // como dizer isso. A troca vale SÓ para este orçamento: a grade do Day Care não é tocada.
+  function orcTrocaHtml(s,i){
+    if(!(s.dias||[]).length) return '';
+    var tr=s.trocas||{};
+    var opc=function(de){
+      var para=tr[de]||de;
+      return '<label style="display:inline-flex;align-items:center;gap:4px;font-size:12px;font-weight:600;color:var(--muted);margin-right:10px">'
+        +escAttr(ORC_DIAW_LB[de]||de)+' &rarr; '
+        +'<select onchange="orcTrocarDia('+i+',\''+de+'\',this.value)" style="font-size:12px;padding:2px 4px;border-radius:6px;border:1px solid var(--z-blue-soft)">'
+        +ORC_DIAS_ESCOLHA.map(function(d){
+            return '<option value="'+d+'"'+(d===para?' selected':'')+'>'+(ORC_DIAW_LB[d]||d)+'</option>'; }).join('')
+        +'</select></label>';
+    };
+    var trocados=Object.keys(tr).filter(function(k){ return tr[k]&&tr[k]!==k; });
+    return '<details style="margin-top:6px"'+(trocados.length?' open':'')+'>'
+      +'<summary style="font-size:12.5px;font-weight:700;color:var(--z-gold-deep);cursor:pointer">'
+      +(trocados.length
+        ? ('Dia trocado nesta hospedagem: '+trocados.map(function(k){ return (ORC_DIAW_LB[k]||k)+' &rarr; '+(ORC_DIAW_LB[tr[k]]||tr[k]); }).join(', '))
+        : 'A tutora pediu para trocar o dia dele?')
+      +'</summary>'
+      +'<div style="margin-top:6px">'+(s.dias||[]).map(opc).join('')
+      +'<div style="font-size:11.5px;color:var(--muted);font-weight:600;margin-top:4px">Vale só para este orçamento — a grade do Day Care não muda.</div></div></details>';
+  }
+  const ORC_DIAS_ESCOLHA=['seg','ter','qua','qui','sex','sab','dom'];
+  function orcTrocarDia(i,de,para){
+    var s=ORC_SEL[i]; if(!s) return;
+    s.trocas=s.trocas||{};
+    if(para===de) delete s.trocas[de]; else s.trocas[de]=para;
+    orcRenderSel(); orcCalcular();
+  }
+  // Os dias que valem NESTE orçamento: o do plano, ou o que a tutora pediu no lugar dele.
+  function orcDiasEfetivos(s){
+    var tr=s.trocas||{};
+    return (s.dias||[]).map(function(d){ return tr[d]||d; });
   }
   // Desconto da diária: vale o MAIOR entre o desconto do plano e o do 2º/3º FILHOt —
   // nunca soma (decisão da Adriana, 12/ago/2026). Assim o mensal (0%) ganha os 5% do 2º,
@@ -6733,7 +6779,9 @@
     while(d<saiReal&&guarda<400){ noites.push({iso:d, dw:orcDiaSemana(d)}); d=orcMaisDias(d,1); guarda++; }
     var pets=ORC_SEL.map(function(s,i){
       var ordem=i+1, off=orcDescontoDe(s,ordem);
-      var dias=(s.dias||[]);
+      // Dias EFETIVOS: se a tutora trocou a quinta pela sexta nesta hospedagem, é a sexta que
+      // vira pernoite e a quinta que passa a ser diária de hotel.
+      var dias=orcDiasEfetivos(s);
       var lista=noites.map(function(n){ return {iso:n.iso, dw:n.dw, pernoite:dias.indexOf(n.dw)>=0}; });
       var nPer=lista.filter(function(x){ return x.pernoite; }).length;
       var nDia=lista.length-nPer;
@@ -6857,7 +6905,9 @@
       status:'aguardando',                       // aguardando · fechado · nao_fechou
       auluno:!!ORC_AULUNO,
       pets:C.pets.map(function(p){ return {
-        key:p.sel.key, nome:p.sel.nome, plano:p.sel.rotulo, compromisso:p.sel.compromisso||'',
+        key:p.sel.key, nome:p.sel.nome, raca:p.sel.raca||'', tutor:p.sel.tutor||'',
+        plano:p.sel.rotulo, compromisso:p.sel.compromisso||'',
+        trocas:p.sel.trocas||{},
         ordem:p.ordem, desconto_pct:p.off, diarias:p.nDia, pernoites:p.nPer,
         sem_cadastro:!!p.sel.semCadastro,
         // Quebra guardada: a planilha recebe só a hospedagem; a pernoite tem outra conta.
@@ -6886,7 +6936,7 @@
     var el=document.getElementById('orcLista'); if(!el) return;
     var ids=Object.keys(ORC_LISTA_CACHE||{}).sort(function(a,b){ return (ORC_LISTA_CACHE[b].criado_em||0)-(ORC_LISTA_CACHE[a].criado_em||0); });
     if(!ids.length){ el.innerHTML='<div class="hint">Nenhum orçamento salvo ainda.</div>'; return; }
-    var lb={aguardando:['PENDENTE','pendente'], fechado:['FECHOU','resolvido'], nao_fechou:['NÃO FECHOU','processo']};
+    var lb={aguardando:['PENDENTE','pendente'], fechado:['FECHOU','resolvido'], nao_fechou:['NÃO FECHOU','processo'], cancelado:['CANCELADO','processo']};
     el.innerHTML=ids.map(function(id){
       var o=ORC_LISTA_CACHE[id]||{}, stt=o.status||'aguardando', L=lb[stt]||lb.aguardando;
       var nomes=(o.pets||[]).map(function(p){ return p.nome; }).join(' e ');
@@ -6901,9 +6951,25 @@
           : '<div style="font-size:12px;color:var(--crm-critico);margin-top:4px">NÃO entrou na planilha'+(o.planilha_msg?(' — '+escAttr(o.planilha_msg)):'')
             +' <button class="btn" style="background:none;border:none;color:var(--z-blue);font-weight:700;text-decoration:underline;padding:0 4px" onclick="orcEnviarPlanilha(\''+id+'\')">reenviar</button></div>';
       }
-      var btns=(stt==='aguardando')
-        ? '<div class="avr-form-btns" style="margin-top:8px"><button class="btn btn-primary" onclick="orcStatus(\''+id+'\',\'fechado\')">Fechou</button><button class="btn" style="background:var(--z-cream-warm);color:var(--z-blue);border:1.5px solid var(--line)" onclick="orcStatus(\''+id+'\',\'nao_fechou\')">Não fechou</button>'+apagar+'</div>'
-        : '<div style="text-align:right;margin-top:6px">'+apagar+'<button class="btn" style="background:var(--z-cream-warm);color:var(--z-blue);border:1.5px solid var(--line)" onclick="orcStatus(\''+id+'\',\'aguardando\')">Voltar para pendente</button></div>';
+      // O tutor desistiu da viagem: CANCELAR libera a vaga na planilha e risca a linha do
+      // financeiro. Diferente de "não fechou" (nunca virou reserva) e de "apagar" (some o
+      // registro). Cancelar guarda o histórico e desfaz o que a reserva ocupou.
+      var cancelar=(stt==='fechado'||stt==='aguardando')
+        ? '<button class="btn" style="background:var(--crm-critico);color:#fff" onclick="orcCancelar(\''+id+'\')">Cancelar reserva</button>' : '';
+      var btns;
+      if(stt==='cancelado'){
+        btns='<div style="text-align:right;margin-top:6px">'+apagar+'</div>';
+      } else if(stt==='aguardando'){
+        btns='<div class="avr-form-btns" style="margin-top:8px"><button class="btn btn-primary" onclick="orcStatus(\''+id+'\',\'fechado\')">Fechou</button><button class="btn" style="background:var(--z-cream-warm);color:var(--z-blue);border:1.5px solid var(--line)" onclick="orcStatus(\''+id+'\',\'nao_fechou\')">Não fechou</button>'+cancelar+apagar+'</div>';
+      } else {
+        btns='<div class="avr-form-btns" style="margin-top:8px;justify-content:flex-end">'+apagar+cancelar
+          +'<button class="btn" style="background:var(--z-cream-warm);color:var(--z-blue);border:1.5px solid var(--line)" onclick="orcStatus(\''+id+'\',\'aguardando\')">Voltar para pendente</button></div>';
+      }
+      if(stt==='cancelado'&&o.cancelado_por){
+        planilha='<div style="font-size:12px;color:var(--crm-critico);margin-top:4px;font-weight:700">Cancelado por '+escAttr(o.cancelado_por)+(o.cancelado_em_br?(' em '+escAttr(o.cancelado_em_br)):'')
+          +(o.cancelado_motivo?('<div style="font-weight:600;color:var(--muted)">Motivo: '+escAttr(o.cancelado_motivo)+'</div>'):'')
+          +(o.cancelado_planilha_msg?('<div style="font-weight:600;color:var(--muted)">Planilha: '+escAttr(o.cancelado_planilha_msg)+'</div>'):'')+'</div>';
+      }
       return '<div class="avr-card '+L[1]+'"><div class="avr-head"><div class="avr-info">'
         +'<strong>'+escAttr(nomes||'—')+'</strong> <span style="color:var(--muted);font-size:12px">'+escAttr(o.tutor||'')+'</span>'
         +'<div style="font-size:12.5px;color:var(--z-blue-soft)">'+orcBR(o.entrada||'')+' a '+orcBR(o.saida||'')+' · '+(o.noites||0)+' noites'+(o.alta_temporada?' · ALTA':'')+' · feito em '+dt+' por '+escAttr(o.criado_por||'-')+'</div>'
@@ -6923,6 +6989,93 @@
       delete ORC_LISTA_CACHE[id]; orcRenderLista();
       if(typeof audit==='function') audit('orcamento-apagado','apagou o orçamento de '+nomes,{});
     }).catch(function(){});
+  }
+  // ===== CANCELAR RESERVA — Adriana, 14/ago/2026 ===================================
+  // "tem situação que o tutor faz reserva, está tudo preparado, mas algo acontece que impede
+  //  a viagem. A possibilidade de cancelamento hoje não existe. Mesmo depois dele confirmar e
+  //  até pagar. E quando alguém cancelar, precisa salvar com o nome e a senha de quem cancelou."
+  //
+  // A SENHA É CONFERIDA, NUNCA GUARDADA. Guardar senha num banco que a equipe inteira alcança
+  // significa que qualquer um pode operar como outro — e um vazamento levaria todas de uma vez.
+  // O que fica registrado é o NOME de quem digitou a senha, a hora e o motivo. A senha serve
+  // para provar que é a pessoa, não o celular que ficou destravado em cima do balcão.
+  function orcQuemPelaSenha(senha){
+    var s=String(senha||'').trim(); if(!s) return null;
+    try{ var m=(typeof senhasRuntime==='function')?senhasRuntime():SENHAS; var u=m[s];
+      if(u&&u.nome) return {nome:u.nome, role:u.role||''}; }catch(e){}
+    try{ var f=(MONITORES||[]).find(function(x){ return x&&String(x.senha||'').trim()===s; });
+      if(f) return {nome:f.nome||'', role:f.role||'monitor'}; }catch(e){}
+    return null;
+  }
+  function orcCancelar(id){
+    var o=ORC_LISTA_CACHE[id]||{};
+    var nomes=(o.pets||[]).map(function(p){ return p.nome; }).join(' e ')||'esta reserva';
+    if(!confirm('CANCELAR a reserva de '+nomes+'?\n\n'+orcBR(o.entrada||'')+' a '+orcBR(o.saida||'')+'\n\n'
+      +'As noites dele saem do calendário e a linha do financeiro é riscada como CANCELADA.\n'
+      +'A vaga volta a ficar livre para outro FILHOt.')) return;
+    var motivo=(prompt('Por que a reserva foi cancelada?\n(ex.: a viagem foi desmarcada, o tutor adiou)','')||'').trim();
+    if(!motivo){ alert('Escreva o motivo — é ele que explica o cancelamento quando alguém for conferir depois.'); return; }
+    var senha=(prompt('Digite a SUA senha para confirmar o cancelamento.\n\nÉ o seu nome que vai ficar registrado.','')||'').trim();
+    if(!senha){ alert('Cancelamento não confirmado — a senha é obrigatória.'); return; }
+    var quem=orcQuemPelaSenha(senha);
+    if(!quem){ alert('Essa senha não é de ninguém cadastrado. A reserva NÃO foi cancelada.\n\nConfira a senha e tente de novo.'); return; }
+    if(!DB){ alert('Sem conexão com o banco agora — a reserva não foi cancelada. Tente de novo em instantes.'); return; }
+    var agora=new Date();
+    var pp=function(x){ return String(x).padStart(2,'0'); };
+    var brDataHora=pp(agora.getDate())+'/'+pp(agora.getMonth()+1)+'/'+agora.getFullYear()+' às '+pp(agora.getHours())+':'+pp(agora.getMinutes());
+    DB.ref('auaulandia/orcamentos/'+id).update({
+      status:'cancelado', status_em:Date.now(), status_por:quem.nome,
+      cancelado_por:quem.nome, cancelado_role:quem.role||'', cancelado_ts:Date.now(),
+      cancelado_em_br:brDataHora, cancelado_motivo:motivo
+    }).then(function(){
+      if(ORC_LISTA_CACHE[id]) ORC_LISTA_CACHE[id].status='cancelado';
+      if(typeof audit==='function') audit('orcamento-cancelado','cancelou a reserva de '+nomes+' ('+orcBR(o.entrada||'')+' a '+orcBR(o.saida||'')+') — '+motivo,{pet:(o.pets&&o.pets[0]&&o.pets[0].nome)||'',quem:quem.nome});
+      orcCarregarLista();
+      orcTirarDaPlanilha(id, quem.nome, brDataHora);
+    }).catch(function(e){
+      alert('NÃO consegui cancelar: '+((e&&e.message)||e)+'\n\nNada foi alterado. Confira a internet e tente de novo.');
+    });
+  }
+  // Desfaz na planilha o que a reserva escreveu: libera as noites do calendário e risca a
+  // linha do financeiro. Se a ponte falhar, a tela DIZ o que precisa ser feito à mão.
+  function orcTirarDaPlanilha(id, quem, quando){
+    var o=ORC_LISTA_CACHE[id]||{}, cfg=(orcSheetsCfg||{});
+    var pets=(o.pets||[]);
+    var peludoTutor=pets.map(function(p){
+      var partes=[String(p.nome||'').trim()];
+      var r=String(p.raca||'').trim(); if(r) partes.push(r);
+      return partes.join('/');
+    }).join(' e ')+'/'+(o.tutor||'');
+    if(!cfg.url){
+      zAlertao('RESERVA CANCELADA — TIRE DA PLANILHA À MÃO',
+        ['A ponte com a planilha não está configurada neste sistema.',
+         'Apague '+peludoTutor+' das linhas de '+orcBR(o.entrada||'')+' a '+orcBR(o.saida||'')+' na aba do calendário, e risque a linha na aba Hospedagem.'],
+        {botao:'Entendi'});
+      return;
+    }
+    fetch(cfg.url,{method:'POST', headers:{'Content-Type':'text/plain;charset=utf-8'},
+      body:JSON.stringify({ token:cfg.token||'', acao:'cancelar', peludoTutor:peludoTutor,
+        entrada:o.entrada||'', saida:o.saida||'', canceladoPor:quem||'', canceladoEm:quando||'' })})
+      .then(function(r){ return r.text().catch(function(){ return ''; }); })
+      .then(function(txt){
+        var ok=true, msg='';
+        try{ var j=JSON.parse(txt); ok=!!j.ok; msg=[j.calendario,j.financeiro].filter(Boolean).join(' · ')||j.erro||''; }catch(e){}
+        DB.ref('auaulandia/orcamentos/'+id).update({cancelado_planilha_ok:ok, cancelado_planilha_msg:msg}).catch(function(){});
+        orcCarregarLista();
+        if(ok) zAlertao('✅ RESERVA CANCELADA',
+          [peludoTutor+' saiu do calendário e a linha do financeiro foi riscada.','A vaga está livre para outro FILHOt.'],
+          {ok:true, botao:'Fechar', rodape:msg||''});
+        else zAlertao('CANCELADA NO SISTEMA — MAS A PLANILHA RECUSOU',
+          [msg||'A ponte respondeu com erro.','Apague '+peludoTutor+' das linhas de '+orcBR(o.entrada||'')+' a '+orcBR(o.saida||'')+' à mão.'],
+          {botao:'Entendi'});
+      })
+      .catch(function(e){
+        DB.ref('auaulandia/orcamentos/'+id).update({cancelado_planilha_ok:false, cancelado_planilha_msg:String((e&&e.message)||e)}).catch(function(){});
+        orcCarregarLista();
+        zAlertao('CANCELADA NO SISTEMA — MAS NÃO FALEI COM A PLANILHA',
+          ['Motivo: '+((e&&e.message)||e),'A vaga continua ocupada na planilha. Apague '+peludoTutor+' das linhas de '+orcBR(o.entrada||'')+' a '+orcBR(o.saida||'')+' à mão.'],
+          {botao:'Entendi'});
+      });
   }
   function orcStatus(id,novo){
     if(!DB) return;
@@ -6949,7 +7102,15 @@
       return;
     }
     var pets=(o.pets||[]);
-    var peludoTutor=pets.map(function(p){ return p.nome; }).join(' e ')+'/'+(o.tutor||'');
+    // Adriana, 14/ago/2026: "está colocando apenas o nome do peludo e do tutor, precisamos da
+    // raça. Primeiro vem o nome do peludo, depois a raça e depois tutor = Romeo/SRD/Jeanine."
+    // Orçamentos antigos não guardavam a raça — para esses, cai para Nome/Tutor, que é o que
+    // se tinha. Nunca escreve "//" nem deixa a raça vazia entre duas barras.
+    var peludoTutor=pets.map(function(p){
+      var partes=[String(p.nome||'').trim()];
+      var r=String(p.raca||'').trim(); if(r) partes.push(r);
+      return partes.join('/');
+    }).join(' e ')+'/'+(o.tutor||'');
     // PERNOITE NÃO VAI PARA A PLANILHA (Adriana, 13/ago/2026): ela é lançada pela recepção
     // ou pela plantonista da noite e serve para outra conta — o acerto de quem dorme aqui.
     // Na planilha entra só a HOSPEDAGEM: as diárias de hotel e o dinheiro delas.
@@ -7313,7 +7474,7 @@
   // Agora existe um carimbo: esta constante é a versão que o aparelho está rodando, e o
   // Firebase guarda a versão publicada. Quando as duas diferem, aparece o aviso — mas
   // NUNCA recarrega sozinho: recarregar no meio de um check-in perderia o trabalho.
-  const APP_VERSAO='2026-08-13-12';
+  const APP_VERSAO='2026-08-14-01';
   function vigiarVersao(){
     if(!DB) return;
     try{
