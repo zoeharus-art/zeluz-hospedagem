@@ -1537,6 +1537,28 @@
     background:#C0392B !important; color:#fff !important; border-color:#C0392B !important;
   }
   @media (prefers-reduced-motion: reduce){ .z-falta{ animation:none } }
+
+  /* ===== PENDÊNCIA NO MENU — Adriana, 15/ago/2026 ==============================
+     "ao invés de colocar apenas a numeração na frente, quero que tudo que esteja
+      pendente apareça em vermelho pulsando, na sidebar, dentro de um retângulo.
+      Então tudo que a Amanda tem à disposição com algo devendo, ela entra e vê."
+     Antes só a Recepção e a Conferência de check-in tinham contador, e um número
+     pequeno ao lado do nome não chama a atenção de quem passa correndo. Agora o
+     ITEM INTEIRO do menu vira um retângulo vermelho pulsando. */
+  @keyframes zNavPulso{
+    0%,100%{ box-shadow:0 0 0 0 rgba(192,57,43,.50) }
+    50%    { box-shadow:0 0 0 6px rgba(192,57,43,0) }
+  }
+  .nav a.nav-pend{
+    background:rgba(192,57,43,.14) !important;
+    border:2px solid #C0392B !important;
+    border-radius:10px !important;
+    color:#fff !important;
+    font-weight:800 !important;
+    animation:zNavPulso 1.6s ease-in-out infinite;
+  }
+  .nav a.nav-pend .nav-badge{ background:#fff; color:#B3261E; }
+  @media (prefers-reduced-motion: reduce){ .nav a.nav-pend{ animation:none } }
 </style>
 </head>
 <body data-role="gestao">
@@ -3636,24 +3658,82 @@
     try{ renderMovimento(); }catch(e){}
     try{ renderPendencias(); }catch(e){}
   }
+  // ===== PENDÊNCIAS NO MENU — Adriana, 15/ago/2026 ==================================
+  // "no sidebar, a conferência de check-out não aparece como pendente. Ao invés de colocar
+  //  apenas a numeração na frente, quero que tudo que esteja pendente apareça em vermelho
+  //  pulsando, dentro de um retângulo. Então tudo que a Amanda tem à disposição com algo
+  //  devendo, ela entra e vê."
+  //
+  // Antes existiam dois contadores soltos — Recepção e Conferência de check-in — cada um
+  // pintando o seu badge por conta própria. A Conferência de CHECK-OUT, que é onde o tutor
+  // espera de pé para assinar, não tinha nenhum. E um número pequeno ao lado do nome não
+  // para quem passa correndo. Agora existe uma conta só, e o item inteiro do menu acende.
+  function navPend(view, n, titulo){
+    try{
+      var link=document.querySelector('#nav a[data-v="'+view+'"]'); if(!link) return;
+      var b=link.querySelector('.nav-badge');
+      if(n>0){
+        if(!b){ b=document.createElement('span'); b.className='nav-badge'; link.appendChild(b); }
+        b.textContent=n;
+        link.classList.add('nav-pend');
+        if(titulo) link.title=titulo.replace('{n}', n);
+      } else {
+        if(b) b.remove();
+        link.classList.remove('nav-pend');
+        link.removeAttribute('title');
+      }
+    }catch(e){}
+  }
+  // Uma conta só, para o menu e para o painel do Início não discordarem entre si.
+  function contarPendencias(){
+    var hoje=(function(){ var d=new Date(),p=function(x){return String(x).padStart(2,'0');};
+      return d.getFullYear()+'-'+p(d.getMonth()+1)+'-'+p(d.getDate()); })();
+    var r={conferir:0, saemHoje:0, naRecepcao:0, semCheckin:0, avisar:0, faltas:0, repComSaldo:0};
+    try{
+      Object.keys(CF_ESTADIAS||{}).forEach(function(k){
+        var e=(CF_ESTADIAS[k]||{}).e||{}; if((e.status||'ativa')!=='ativa') return;
+        if(!(e.conferencia&&e.conferencia.concluida)) r.conferir++;
+        // Etapa 2 = o Day Care já conferiu e o tutor espera na recepção para assinar.
+        if(e.saida===hoje){ if(typeof coEtapaDe==='function'&&coEtapaDe(e)===2) r.naRecepcao++; else r.saemHoje++; }
+      });
+      (hospedes||[]).forEach(function(h){
+        var k=(typeof medAgendaKey==='function')?medAgendaKey(h):'';
+        if(k && !(CF_ESTADIAS||{})[k]) r.semCheckin++;
+      });
+    }catch(e){}
+    try{ r.avisar=(typeof empLista==='function')?empLista().filter(function(x){ return !x.aviso; }).length:0; }catch(e){}
+    try{
+      Object.keys(AVISOS_ESTOQUE_CACHE||{}).forEach(function(id){ if(AVISOS_ESTOQUE_CACHE[id].status!=='resolvido') r.faltas++; });
+      Object.keys(AVISOS_RACAO_CACHE||{}).forEach(function(id){ if(AVISOS_RACAO_CACHE[id].status!=='resolvido') r.faltas++; });
+      if(typeof ocorrenciasLoja==='function') r.faltas+=ocorrenciasLoja().filter(function(o){ return !o.avisado; }).length;
+    }catch(e){}
+    try{ if(typeof repSaldo==='function'&&typeof PELUDINHOS!=='undefined')
+      r.repComSaldo=PELUDINHOS.filter(function(p){ return !pelInativo(p) && repSaldo(p)>0; }).length; }catch(e){}
+    return r;
+  }
+  function atualizarPendenciasNav(){
+    var r=contarPendencias();
+    navPend('conferencia',  r.conferir,    '{n} check-in esperando conferência');
+    navPend('checkoutconf', r.naRecepcao,  '{n} tutor esperando na recepção para conferir e assinar');
+    navPend('checkout',     r.saemHoje,    '{n} saem hoje — a monitora precisa juntar as coisas');
+    navPend('checkin',      r.semCheckin,  '{n} hospedado sem check-in lançado');
+    navPend('recepcao',     r.faltas,      '{n} falta em aberto — ração ou remédio que não cobre');
+    navPend('emporio',      r.avisar,      '{n} tutor a avisar — não comeram hoje');
+    navPend('reposicao',    r.repComSaldo, '{n} peludinho com dia a repor');
+  }
   // ===== O QUE PRECISA DE VOCÊ HOJE — pendências reais, clicáveis =====================
   // Substituiu a lista de peludinhos de exemplo que ficava no Início (04/ago/2026).
   // Usa só dado que o app já tem em memória — não faz consulta nova ao banco.
   function renderPendencias(){
     const el=document.getElementById('pendGrid'); if(!el) return;
     const hoje=(function(){ const d=new Date(),p=x=>String(x).padStart(2,'0'); return d.getFullYear()+'-'+p(d.getMonth()+1)+'-'+p(d.getDate()); })();
-    let conferir=0, saemHoje=0, naRecepcao=0, semCheckin=0;
-    try{
-      Object.keys(CF_ESTADIAS||{}).forEach(function(k){
-        const e=(CF_ESTADIAS[k]||{}).e||{}; if((e.status||'ativa')!=='ativa') return;
-        if(!(e.conferencia&&e.conferencia.concluida)) conferir++;
-        if(e.saida===hoje){ if(typeof coEtapaDe==='function'&&coEtapaDe(e)===2) naRecepcao++; else saemHoje++; }
-      });
-      (hospedes||[]).forEach(function(h){
-        const k=(typeof medAgendaKey==='function')?medAgendaKey(h):'';
-        if(k && !(CF_ESTADIAS||{})[k]) semCheckin++;
-      });
-    }catch(e){}
+    // A MESMA conta do menu (contarPendencias). Antes este painel somava por conta própria,
+    // com um critério quase igual mas não idêntico — e "quase igual" é como nascem duas telas
+    // dizendo números diferentes sobre o mesmo dia. Uma conta só, dois lugares que a mostram.
+    const _p=contarPendencias();
+    const conferir=_p.conferir, saemHoje=_p.saemHoje, naRecepcao=_p.naRecepcao,
+          semCheckin=_p.semCheckin, avisar=_p.avisar, faltas=_p.faltas, repComSaldo=_p.repComSaldo;
+    try{ atualizarPendenciasNav(); }catch(e){}
     // Medicação em atraso: horário já passou e ninguém registrou
     let medAtrasada=0;
     try{
@@ -3664,14 +3744,7 @@
         if(m<agoraMin-20) medAtrasada++;   // aproximação: o número exato vive no alerta da gestora
       });
     }catch(e){}
-    // Tutores a avisar (Empório) e avisos de falta na recepção
-    let avisar=0, faltas=0;
-    try{ avisar=(typeof empLista==='function')?empLista().filter(function(x){ return !x.aviso; }).length:0; }catch(e){}
-    // Quantos peludinhos têm dias a repor — é receita já paga que ainda não foi entregue.
-    let repComSaldo=0;
-    try{ if(typeof repSaldo==='function'&&typeof PELUDINHOS!=='undefined')
-      repComSaldo=PELUDINHOS.filter(function(p){ return !pelInativo(p) && repSaldo(p)>0; }).length; }catch(e){}
-    try{ Object.keys(AVISOS_RACAO_CACHE||{}).forEach(function(k){ if((AVISOS_RACAO_CACHE[k]||{}).status!=='resolvido') faltas++; }); }catch(e){}
+    // (avisar, faltas e repComSaldo vêm de contarPendencias, lá em cima)
     // Um quadro por pendência. Ordem = urgência real, não ordem de programação:
     // o que trava a operação vem primeiro, o que é rotina do fim do dia vem depois.
     const q=function(n,rot,sub,cor,destino){
@@ -5490,10 +5563,9 @@
     var n=0; Object.keys(AVISOS_ESTOQUE_CACHE||{}).forEach(function(id){ if(AVISOS_ESTOQUE_CACHE[id].status!=='resolvido') n++; });
     Object.keys(AVISOS_RACAO_CACHE||{}).forEach(function(id){ if(AVISOS_RACAO_CACHE[id].status!=='resolvido') n++; });
     n+=ocorrenciasLoja().filter(function(o){ return !o.avisado; }).length; // ocorrência sem tutor avisado também é pendência da loja
-    var link=document.querySelector('#nav a[data-v="recepcao"]'); if(!link) return;
-    var b=link.querySelector('.nav-badge');
-    if(n>0){ if(!b){ b=document.createElement('span'); b.className='nav-badge'; link.appendChild(b); } b.textContent=n; }
-    else if(b){ b.remove(); }
+    // O menu inteiro é repintado por atualizarPendenciasNav — assim a Recepção e as outras
+    // telas nunca discordam sobre o que está pendente.
+    try{ atualizarPendenciasNav(); }catch(e){}
     // ALARME quando FALTA algo (a contagem subiu) — só para quem TRATA a falta: Supervisão e
     // Consultora. A Gestão (Adriana e Márcia) saiu daqui em 12/ago/2026: "a gestão não precisa".
     // Elas continuam vendo o número vermelho no menu — só não são interrompidas por som.
@@ -7504,7 +7576,7 @@
   // Agora existe um carimbo: esta constante é a versão que o aparelho está rodando, e o
   // Firebase guarda a versão publicada. Quando as duas diferem, aparece o aviso — mas
   // NUNCA recarrega sozinho: recarregar no meio de um check-in perderia o trabalho.
-  const APP_VERSAO='2026-08-15-02';
+  const APP_VERSAO='2026-08-15-03';
   function vigiarVersao(){
     if(!DB) return;
     try{
@@ -12527,9 +12599,15 @@
   // O token do bot NUNCA fica aqui (esta página é pública): quem guarda é a ponte
   // (integracao-telegram/Codigo.gs). O app só conversa com a ponte.
   var TG_CFG=null;
+  // `on` e não `once`: a leitura de uma vez só morria calada se a rede piscasse na abertura
+  // do app — e TG_CFG ficava null pelo resto do dia, derrubando TODO aviso do Telegram sem
+  // deixar rastro (caso do grupo "Quem não almoçou", 14/ago/2026). Com o listener, ela se
+  // recupera sozinha quando a conexão volta e acompanha mudanças feitas pela Gestão.
   function tgCarregarCfg(){
     if(!DB) return;
-    DB.ref('auaulandia/config/telegram').once('value').then(function(s){ TG_CFG=s.val()||null; }).catch(function(){});
+    DB.ref('auaulandia/config/telegram').on('value',
+      function(s){ TG_CFG=s.val()||null; },
+      function(e){ try{ if(typeof audit==='function') audit('telegram-config','NÃO consegui ler a configuração do Telegram: '+((e&&e.message)||e),{}); }catch(x){} });
   }
   function tgAvisar(dados){
     var c=TG_CFG||{};
@@ -13053,11 +13131,32 @@
     renderGenerico();
   }
   // Manda UMA vez por FILHOt por dia — marcar e desmarcar não vira enxurrada no grupo.
+  //
+  // Adriana, 15/ago/2026: "não recebemos no grupo do Telegram quem não almoçou, nem ontem
+  // nem hoje". O 2º horário tinha sido feito CERTO — o Octávio marcou os cinco às 16h19 de
+  // 14/ago. O que falhou foi este aviso, e falhou CALADO: a primeira linha era
+  //   if(!DB||!TG_CFG||!TG_CFG.url) return;
+  // TG_CFG vem de uma leitura assíncrona que roda uma única vez, na abertura do app. Se ela
+  // ainda não tinha voltado — ou se falhou, porque o .catch dela também é vazio — TG_CFG
+  // ficava null para sempre e todo aviso do dia morria aqui, sem registro nenhum. A ponte
+  // sempre esteve no ar: testada em 15/ago, a mensagem chegou ao grupo na hora.
+  // Agora: se a config não está carregada, ela é buscada NA HORA; e o que não deu certo fica
+  // gravado com o motivo, para aparecer na tela e ser reenviado.
   function avisarGrupoComida(k){
-    if(!DB||!TG_CFG||!TG_CFG.url) return;
+    if(!DB) return;
+    if(!TG_CFG||!TG_CFG.url){
+      // Sem config em memória: busca agora e tenta de novo. Nunca mais desiste em silêncio.
+      DB.ref('auaulandia/config/telegram').once('value').then(function(s){
+        TG_CFG=s.val()||null;
+        if(TG_CFG&&TG_CFG.url) avisarGrupoComida(k);
+        else _comidaFalhou(k,'a ponte do Telegram não está configurada neste sistema');
+      }).catch(function(e){ _comidaFalhou(k,'não consegui ler a configuração do Telegram: '+((e&&e.message)||e)); });
+      return;
+    }
     var dia=dcDataKey();
     DB.ref('daycare/avisos-telegram-comida/'+dia+'/'+k).once('value').then(function(s){
-      if(s.val()) return;                       // já foi avisado hoje
+      var ja=s.val();
+      if(ja&&ja.ok) return;                     // já avisado com sucesso hoje
       var o=(turmaDoDia()||[]).find(function(x){ return dcKey(x.p.n,x.p.tutor)===k; });
       var nome=o?pelNome(o.p):k;
       var raca=(o&&o.p.raca)||'';
@@ -13067,11 +13166,37 @@
         +' às '+(typeof horaAgora==='function'?horaAgora():'')
         +'\n\nA mensagem para o tutor já está pronta no sistema, em Avisar tutores.';
       tgAvisar({grupo:'comida', texto:texto}).then(function(r){
+        var ok=!!(r&&r.ok);
         DB.ref('daycare/avisos-telegram-comida/'+dia+'/'+k).set({
-          ts:Date.now(), ok:!!(r&&r.ok), quem:(typeof quemSou==='function'?quemSou():'-')
+          ts:Date.now(), ok:ok, nome:nome, quem:(typeof quemSou==='function'?quemSou():'-'),
+          erro: ok?'':String((r&&r.erro)||'a ponte não respondeu como esperado')
         }).catch(function(){});
-      });
-    }).catch(function(){});
+        if(typeof audit==='function') audit('telegram-comida',(ok?'avisou o grupo que ':'NÃO avisou o grupo que ')+nome+' não almoçou',{pet:nome});
+        if(!ok) _comidaAvisoNaTela(nome, String((r&&r.erro)||'a ponte não respondeu'));
+      }).catch(function(e){ _comidaFalhou(k,String((e&&e.message)||e), nome); });
+    }).catch(function(e){ _comidaFalhou(k,String((e&&e.message)||e)); });
+  }
+  // Registra a falha e AVISA na tela: quem serviu precisa saber que o grupo não soube, para
+  // contar à mão. Antes isto sumia — e ninguém no Day Care ficava sabendo.
+  function _comidaFalhou(k, motivo, nome){
+    try{
+      if(DB) DB.ref('daycare/avisos-telegram-comida/'+dcDataKey()+'/'+k).set({
+        ts:Date.now(), ok:false, nome:nome||'', erro:motivo||'',
+        quem:(typeof quemSou==='function'?quemSou():'-')
+      }).catch(function(){});
+      if(typeof audit==='function') audit('telegram-comida','NÃO avisou o grupo — '+(motivo||''),{alvo:k});
+    }catch(e){}
+    _comidaAvisoNaTela(nome||'', motivo||'');
+  }
+  function _comidaAvisoNaTela(nome, motivo){
+    try{
+      if(typeof zAlertao==='function') zAlertao('⚠ O GRUPO NÃO FOI AVISADO',
+        ['A marcação está salva — '+(nome||'ele')+' consta como quem não almoçou.',
+         'Mas NÃO consegui mandar para o grupo "Quem não almoçou" no Telegram.',
+         'Motivo: '+(motivo||'a ponte não respondeu')+'.',
+         'AVISE NO GRUPO PELO SEU CELULAR. A recepção precisa falar com o tutor hoje.'],
+        {botao:'Vou avisar'});
+    }catch(e){}
   }
   function nomeAtiv(slug){ try{ const a=(typeof ATIVS_DC!=='undefined'?ATIVS_DC:[]).find(x=>x.s===slug); return a?a.t:slug; }catch(e){ return slug; } }
   // 2º Horário de Almoço (Monitor: Octávio) — recebe só quem NÃO comeu no 1º horário.
@@ -16632,13 +16757,10 @@
     }catch(e){}
     return (typeof medAgendaKey==='function')?medAgendaKey(h):'';
   }
+  // Passou a atualizar o menu INTEIRO: a Conferência de check-out (onde o tutor espera de pé
+  // para assinar) não tinha aviso nenhum, e era a que mais fazia falta — Adriana, 15/ago/2026.
   function atualizarBadgeConferencia(){
-    var n=0;
-    (cfListaHospedes()).forEach(function(h){ var p=cfPendente(h); if(p&&!p.concluida) n++; });
-    var link=document.querySelector('#nav a[data-v="conferencia"]'); if(!link) return;
-    var b=link.querySelector('.nav-badge');
-    if(n>0){ if(!b){ b=document.createElement('span'); b.className='nav-badge'; link.appendChild(b); } b.textContent=n; }
-    else if(b){ b.remove(); }
+    try{ atualizarPendenciasNav(); }catch(e){}
   }
 
   function abrirConferencia(){
