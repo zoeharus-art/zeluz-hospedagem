@@ -1508,6 +1508,35 @@
   .kairos-footer-horizontal .kf-text{font-family:'Manrope','Poppins',sans-serif;font-size:15px;color:rgba(35,77,103,0.50)}
   .kairos-footer-horizontal .kf-text strong{font-weight:600;color:rgba(35,77,103,0.70)}
   .kairos-footer-horizontal .kf-tripontos{color:#DEB428;font-weight:700;margin-left:1px}
+
+  /* ===== O QUE FALTA — Adriana, 14/ago/2026 =====================================
+     "nao deixa facil intuitivo... mostra em vermelho o que esta faltando... eu tive
+      que ficar procurando, foi uma merda."
+     O app dizia "Falta a foto de: Pele" num alerta que a pessoa fecha, e depois ela
+     tinha que caçar o campo numa tela de rolagem longa, com o tutor esperando na
+     frente. Agora o campo se ACUSA: fica vermelho, pulsa, diz o que fazer logo
+     abaixo, e a tela rola sozinha até ele. Quem opera nunca mais procura. */
+  @keyframes zFaltaPulso{
+    0%,100%{ box-shadow:0 0 0 0 rgba(192,57,43,.55); border-color:#C0392B }
+    50%    { box-shadow:0 0 0 7px rgba(192,57,43,0);  border-color:#E74C3C }
+  }
+  .z-falta{
+    border:2.5px solid #C0392B !important;
+    border-radius:10px !important;
+    background:#FDECEA !important;
+    animation:zFaltaPulso 1.25s ease-in-out 6;
+    scroll-margin-top:96px;   /* não fica escondido atrás da barra de cima */
+  }
+  .z-falta-msg{
+    display:block; margin:5px 0 12px;
+    color:#B3261E; font-weight:800; font-size:13.5px; line-height:1.35;
+  }
+  .z-falta-msg::before{ content:'▲  '; }
+  /* Contador no botão: "Faltam 2 · Salvar no sistema" */
+  .z-btn-falta{
+    background:#C0392B !important; color:#fff !important; border-color:#C0392B !important;
+  }
+  @media (prefers-reduced-motion: reduce){ .z-falta{ animation:none } }
 </style>
 </head>
 <body data-role="gestao">
@@ -2437,7 +2466,7 @@
 
       <div class="card">
         <div class="ci-actions">
-          <button class="btn btn-primary" onclick="ciSalvar()">💾 Salvar no sistema</button>
+          <button id="ciBtnSalvar" class="btn btn-primary" onclick="ciSalvar()">💾 Salvar no sistema</button>
           <button class="btn btn-gold" onclick="ciGerarPDF()">🖨️ Gerar PDF</button>
           <button class="btn btn-wa" onclick="ciEnviarWhatsApp()">WhatsApp</button>
           <button class="btn" style="background:var(--z-cream-warm);color:var(--z-blue);border:1.5px solid var(--line)" onclick="ciEnviarEmail()">E-mail</button>
@@ -7475,7 +7504,7 @@
   // Agora existe um carimbo: esta constante é a versão que o aparelho está rodando, e o
   // Firebase guarda a versão publicada. Quando as duas diferem, aparece o aviso — mas
   // NUNCA recarrega sozinho: recarregar no meio de um check-in perderia o trabalho.
-  const APP_VERSAO='2026-08-15-01';
+  const APP_VERSAO='2026-08-15-02';
   function vigiarVersao(){
     if(!DB) return;
     try{
@@ -8428,9 +8457,10 @@
     const comida=((document.getElementById('pfComida')||{}).value||'').trim();
     const onde=((document.getElementById('pfOnde')||{}).value||'').trim();
     const obs=((document.getElementById('pfObs')||{}).value||'').trim();
-    if(!dia){ alert('Diga em que dia '+(PERN_PEND.nome||'ele')+' entra.'); return; }
     const hoje=(typeof hospHojeISO==='function')?hospHojeISO():'';
-    if(hoje&&dia<hoje){ alert('A data já passou. Um pernoite só pode ser lançado para hoje ou para um dia à frente.'); return; }
+    if(zFalta1('pfData', !dia
+        ? ('Falta dizer em que dia '+(PERN_PEND.nome||'ele')+' entra.')
+        : ((hoje&&dia<hoje)?'Essa data já passou. Um pernoite só entra para hoje ou para um dia à frente.':''))) return;
     if(!DB){ alert('Sem conexão com o banco agora — o pernoite não foi lançado. Tente de novo em instantes.'); return; }
     const reg=Object.assign({},PERN_PEND,{ janta:true, noites:noites,
       criadoPor:(typeof quemSou==='function'?quemSou():'-'), criadoTs:Date.now() });
@@ -10224,6 +10254,83 @@
   // Normaliza p/ comparar identidade: sem acento, minúsculo, sem espaço sobrando nas pontas
   // nem duplicado no meio (ex: "  Ozzy  " e "Ozzy" comparam iguais). Usado tanto em busca/
   // ordenação quanto na trava de cadastro duplicado (chaveIdNR/chaveNomeRaca abaixo).
+  // ===== O QUE FALTA — motor único de validação visível ==============================
+  // Adriana, 14/ago/2026: "deu erros, erro de confirmação e etc... só que não deixa fácil,
+  // intuitivo. Mostra em vermelho o que está faltando. Eu tive que ficar procurando, foi uma
+  // merda. Vasculhe todo o app: qualquer área que faltar dado e não conseguir fechar, você
+  // precisa mostrar o que precisa fazer."
+  //
+  // O padrão antigo era `alert('Falta a foto de: Pele'); return;` — a pessoa fecha o aviso e
+  // fica caçando o campo numa tela longa, com o tutor na frente esperando. O texto do alerta
+  // some no momento em que ela mais precisa dele.
+  //
+  // Agora quem se acusa é o CAMPO: vermelho, pulsando, com a frase do que fazer logo abaixo,
+  // e a tela rola sozinha até o primeiro. Uma função só, usada por todas as telas.
+  //
+  // Uso:  if(zFalta([{el:'ciPeso', msg:'Escreva o peso dele em quilos'}, ...])) return;
+  //       O `el` aceita id, o próprio elemento, ou uma função que devolve o elemento.
+  var Z_FALTA_MARCADOS=[];
+  function zLimparFalta(){
+    Z_FALTA_MARCADOS.forEach(function(el){
+      try{ el.classList.remove('z-falta');
+        var m=el.nextElementSibling;
+        if(m&&m.classList&&m.classList.contains('z-falta-msg')) m.remove();
+      }catch(e){}
+    });
+    Z_FALTA_MARCADOS=[];
+    try{ document.querySelectorAll('.z-falta').forEach(function(e){ e.classList.remove('z-falta'); }); }catch(e){}
+    try{ document.querySelectorAll('.z-falta-msg').forEach(function(e){ e.remove(); }); }catch(e){}
+    try{ document.querySelectorAll('.z-btn-falta').forEach(function(b){
+      b.classList.remove('z-btn-falta');
+      if(b.dataset.zLabel){ b.textContent=b.dataset.zLabel; delete b.dataset.zLabel; }
+    }); }catch(e){}
+  }
+  function _zEl(x){
+    try{
+      if(!x) return null;
+      if(typeof x==='function') return x();
+      if(typeof x==='string') return document.getElementById(x);
+      return x;
+    }catch(e){ return null; }
+  }
+  // faltas = [{el, msg}]. Devolve true se falta alguma coisa (quem chama dá return).
+  // opcoes.botao = id do botão de salvar, que passa a mostrar "Faltam N · <texto original>".
+  function zFalta(faltas, opcoes){
+    zLimparFalta();
+    var lista=(faltas||[]).filter(function(f){ return f && f.msg; });
+    if(!lista.length) return false;
+    var primeiro=null;
+    lista.forEach(function(f){
+      var el=_zEl(f.el);
+      if(!el){ return; }                       // campo não está na tela agora
+      el.classList.add('z-falta');
+      Z_FALTA_MARCADOS.push(el);
+      // A frase do que fazer vai logo ABAIXO do campo — onde o olho já está.
+      var msg=document.createElement('div');
+      msg.className='z-falta-msg';
+      msg.textContent=f.msg;
+      try{ el.parentNode.insertBefore(msg, el.nextSibling); }catch(e){}
+      if(!primeiro) primeiro=el;
+    });
+    // Nenhum campo na tela (validação sem campo visível): aí sim, o aviso escrito.
+    if(!primeiro){
+      alert((lista.length>1?'Faltam '+lista.length+' coisas:\n\n':'Falta:\n\n')
+        +lista.map(function(f){ return '· '+f.msg; }).join('\n'));
+      return true;
+    }
+    var op=opcoes||{};
+    var btn=_zEl(op.botao);
+    if(btn){
+      btn.dataset.zLabel=btn.textContent;
+      btn.textContent=(lista.length>1?('Faltam '+lista.length+' · '):'Falta 1 · ')+btn.dataset.zLabel;
+      btn.classList.add('z-btn-falta');
+    }
+    try{ primeiro.scrollIntoView({behavior:'smooth', block:'center'}); }catch(e){ try{ primeiro.scrollIntoView(); }catch(e2){} }
+    try{ if(primeiro.focus && /INPUT|TEXTAREA|SELECT/.test(primeiro.tagName)) setTimeout(function(){ try{ primeiro.focus({preventScroll:true}); }catch(e){} }, 420); }catch(e){}
+    return true;
+  }
+  // Atalho para o caso mais comum: um campo só.
+  function zFalta1(el, msg, botao){ return zFalta([{el:el, msg:msg}], {botao:botao}); }
   function jsNorm(s){ return (s||'').normalize('NFD').replace(/[̀-ͯ]/g,'').toLowerCase().trim().replace(/\s+/g,' '); }
   function fmtNasc(iso){ if(!iso) return '—'; const a=iso.split('-'); return a.length===3?`${a[2]}/${a[1]}/${a[0]}`:iso; }
   function diasHtml(dias){ return ORDEM_DIAS.map(d=>`<span class="dia${(dias||[]).indexOf(d)>=0?' on':''}">${DIA_LBL[d]}</span>`).join(''); }
@@ -12308,7 +12415,9 @@
     pontos.forEach(function(pt,i){
       const at=R.pontos[pt.k]||{};
       const marc=(typeof at.alterado==='boolean');
-      h+='<div class="ck-ponto'+(at.alterado?' alt':(marc?' ok':''))+'">'
+      // id por ponto: é o que permite pintar de vermelho exatamente o que falta e rolar
+      // a tela até ele, em vez de dizer "Falta a foto de: Pele" e deixar a pessoa caçando.
+      h+='<div id="ckPt-'+pt.k+'" class="ck-ponto'+(at.alterado?' alt':(marc?' ok':''))+'">'
         +'<div class="ck-ph"><span class="ck-num">'+(i+1)+'</span><div><div class="ck-pt">'+pt.t+'</div><div class="ck-ver">'+pt.ver+'</div></div></div>'
         // COMO olhar — o passo a passo fica junto da pergunta, não escondido num manual.
         +(pt.como?'<div class="ck-como">'+pt.como+'</div>':'')
@@ -12380,14 +12489,14 @@
     });
     if(entrada){
       // O cocô saiu daqui em 13/ago/2026: virou ponto do exame, logo depois do xixi.
-      h+='<div class="ck-bloco"><div class="ck-bt">Coleira repelente</div>'
+      h+='<div id="ckColeiraRep" class="ck-bloco"><div class="ck-bt">Coleira repelente</div>'
         +'<div class="ck-opts">'+CK_COLEIRAS.map(function(c){
           return '<button type="button" class="ck-opt'+(R.coleiraRep===c.k?' on':'')+'" onclick="ckSet(\'coleiraRep\',\''+c.k+'\')">'+c.t
             +(c.sub?'<small>'+c.sub+'</small>':'')+'</button>'; }).join('')+'</div></div>'
       // Coleira de identificação: "veio" sozinho não devolve nada ao tutor. Quando veio, a
       // monitora DESCREVE (cor e marca) — é isso que prova, na saída, que voltou a mesma
       // coleira que entrou. Pedido da Adriana, 12/ago/2026.
-      +'<div class="ck-bloco"><div class="ck-bt">Coleira de identificação</div>'
+      +'<div id="ckColeiraId" class="ck-bloco"><div class="ck-bt">Coleira de identificação</div>'
         +'<div class="ck-opts">'
           +'<button type="button" class="ck-opt'+(R.coleiraId==='sim'?' on':'')+'" onclick="ckSet(\'coleiraId\',\'sim\')">Veio</button>'
           +'<button type="button" class="ck-opt'+(R.coleiraId==='nao'?' on':'')+'" onclick="ckSet(\'coleiraId\',\'nao\')">Não veio</button>'
@@ -12407,7 +12516,7 @@
     }
     h+='<div class="ck-criticos"><strong>A qualquer momento, avise o supervisor na hora:</strong> '+CK_CRITICOS.join(' · ')+'.</div>';
     h+='<div class="ck-salvar"><span class="ck-progress">'+marcados+' de '+pontos.length+' pontos olhados</span>'
-      +'<button class="btn btn-primary" onclick="ckSalvar()">'+(entrada?'Salvar check-in — ele está presente':'Salvar check-out')+'</button></div>';
+      +'<button id="ckBtnSalvar" class="btn btn-primary" onclick="ckSalvar()">'+(entrada?'Salvar check-in — ele está presente':'Salvar check-out')+'</button></div>';
     h+='</div>';
     return h;
   }
@@ -12453,36 +12562,33 @@
     if(!ckAtual||!ckRascunho) return;
     const o=ckAtual, p=o.p, k=dcKey(p.n,p.tutor), entrada=ckEhEntrada();
     const pontos=ckPontosDe(p), R=ckRascunho;
-    // 1) ponto a ponto: nenhum pode ficar sem resposta (decisão da Adriana)
-    const faltando=pontos.filter(function(pt){ return typeof (R.pontos[pt.k]||{}).alterado!=='boolean'; });
-    if(faltando.length){
-      alert('Faltam '+faltando.length+' ponto'+(faltando.length>1?'s':'')+' para olhar:\n\n'
-        +faltando.map(function(x){ return '· '+x.t; }).join('\n')
-        +'\n\nO check-in é ponto a ponto — cada um precisa de Normal ou Alterado.');
-      return;
-    }
-    // 2) alteração sem foto não fecha (na consciência, o vídeo vale pela foto)
-    const semFoto=pontos.filter(function(pt){ const a=R.pontos[pt.k]||{}; return a.alterado && !a.foto && !(pt.k==='consciencia'&&a.video); });
-    if(semFoto.length){
-      alert('Falta a foto de: '+semFoto.map(function(x){ return x.t; }).join(', ')
-        +'\n\nToda alteração precisa de foto. É ela que mostra ao tutor e à veterinária o que você viu.');
-      return;
-    }
-    // 2b) machucado: a segunda foto (de longe) e a parte do corpo são obrigatórias
-    const semSegunda=pontos.filter(function(pt){ const a=R.pontos[pt.k]||{}; return a.alterado && ckEhMachucado(a) && !a.foto2; });
-    if(semSegunda.length){
-      alert('Falta a foto DE LONGE de: '+semSegunda.map(function(x){ return x.t; }).join(', ')
-        +'\n\nMachucado leva duas fotos: uma de perto, para ver como é, e uma de longe, para a vet saber onde fica no corpo dele.');
-      return;
-    }
-    const semLocal=pontos.filter(function(pt){ const a=R.pontos[pt.k]||{}; return a.alterado && ckEhMachucado(a) && !String(a.local||'').trim(); });
-    if(semLocal.length){
-      alert('Falta dizer EM QUE PARTE DO CORPO: '+semLocal.map(function(x){ return x.t; }).join(', ')
-        +'\n\nEscreva onde fica — "no dorso, perto da escápula", "na patinha dianteira". Sem isso, ninguém acha depois.');
-      return;
-    }
-    if(entrada && !R.coleiraRep){ alert('Diga qual coleira repelente ele está usando — ou marque "Não veio".'); return; }
-    if(entrada && !R.coleiraId){ alert('Diga se ele veio com a coleira de identificação.'); return; }
+    // ===== TUDO QUE FALTA, DE UMA VEZ, EM VERMELHO, NO PRÓPRIO CAMPO ================
+    // Adriana, 14/ago/2026: "deu erro de confirmação e etc, mas não deixa fácil, intuitivo.
+    // Eu tive que ficar procurando, foi uma merda."
+    // Antes eram quatro alertas em fila: a pessoa corrigia um, salvava, batia no próximo, e
+    // a cada vez tinha que caçar o campo numa tela longa. Agora tudo que falta é apontado
+    // JUNTO, cada ponto fica vermelho no lugar dele, e a tela rola até o primeiro.
+    var faltas=[];
+    pontos.forEach(function(pt){
+      var a=R.pontos[pt.k]||{};
+      var alvo='ckPt-'+pt.k;
+      if(typeof a.alterado!=='boolean'){
+        faltas.push({el:alvo, msg:'Falta olhar: '+pt.t+'. Toque em Normal ou em Alterado.'}); return;
+      }
+      if(a.alterado && !a.foto && !(pt.k==='consciencia'&&a.video)){
+        faltas.push({el:alvo, msg:'Falta a foto de '+pt.t+'. É ela que mostra ao tutor e à veterinária o que você viu.'});
+      }
+      if(a.alterado && ckEhMachucado(a) && !a.foto2){
+        faltas.push({el:alvo, msg:'Falta a foto DE LONGE de '+pt.t+' — a de perto mostra como é, a de longe mostra onde fica no corpo.'});
+      }
+      if(a.alterado && ckEhMachucado(a) && !String(a.local||'').trim()){
+        faltas.push({el:alvo, msg:'Falta dizer em que parte do corpo é o machucado de '+pt.t+' — "no dorso, perto da escápula", "na patinha dianteira".'});
+      }
+    });
+    if(entrada && !R.coleiraRep) faltas.push({el:'ckColeiraRep', msg:'Falta dizer qual coleira repelente ele está usando — ou marcar "Não veio".'});
+    if(entrada && !R.coleiraId)  faltas.push({el:'ckColeiraId',  msg:'Falta dizer se ele veio com a coleira de identificação.'});
+    if(zFalta(faltas, {botao:'ckBtnSalvar'})) return;
+    zLimparFalta();
     // O cocô virou ponto do exame — a validação de "ponto a ponto" já cobre.
     const quem=pessoaDoTurno();
     const reg=Object.assign({}, R, {nome:pelNome(p), tutor:p.tutor||'', quem:quem, hora:horaAgora(), fim:Date.now(), tipo:entrada?'entrada':'saida'});
@@ -15379,7 +15485,10 @@
     if(ciTemNatural() && _ativas.length && !_ativas.some(function(r){ return ciNum(r.natural)>0; }))
       F.push({t:'Você marcou comida natural, mas não colocou as gramas em nenhuma refeição.', f:'ciRefBlocos'});
     const meds=ciColetarMeds();
-    ciValidarMeds(meds).forEach(function(p){ F.push({t:p, f:'ciMedLista'}); });
+    // 'ciMedLista' não existe no HTML — o campo real é 'ciMeds'. Com o id errado, o motor do
+    // "o que falta" não achava o bloco e caía no aviso escrito, justamente na medicação, que
+    // é onde mais se erra (a Giullian bateu 3 vezes seguidas nisto em 13/ago, com a Lisa).
+    ciValidarMeds(meds).forEach(function(p){ F.push({t:p, f:'ciMeds'}); });
     if(Object.keys(meds).length>0){
       const chk=document.getElementById('ciGateChk');
       if(!chk||!chk.checked) F.push({t:'Falta marcar a conferência de segurança da medicação (você conferiu os remédios com o tutor).', f:'ciGate'});
@@ -15421,15 +15530,17 @@
     const dados=ciColetarFicha();
     const _faltas=ciFaltando();
     if(_faltas.length){
-      if(st){ st.style.color='var(--crm-critico)'; st.textContent='✋ '+_faltas.length+' item(ns) faltando — veja o aviso.'; }
+      // Adriana, 14/ago/2026: "eu tive que ficar procurando, foi uma merda."
+      // Antes: um alerta listava o que faltava, a pessoa fechava — e o texto sumia junto.
+      // Só o PRIMEIRO campo recebia rolagem, os outros ela tinha que caçar sozinha numa
+      // tela longa, com o tutor na frente. Agora TODOS ficam vermelhos, cada um com a frase
+      // do que fazer embaixo, a tela rola até o primeiro e o botão mostra quantos faltam.
+      if(st){ st.style.color='var(--crm-critico)'; st.textContent='✋ '+_faltas.length+' item(ns) em vermelho na tela.'; }
       try{ if(typeof audit==='function') audit('checkin-bloqueado', _faltas.map(function(x){return x.t;}).join(' | '), {pet:(ciHosp&&ciHosp.nome)||'', tutor:(ciHosp&&ciHosp.tutor)||''}); }catch(e){}
-      zAlertao('O CHECK-IN NÃO FOI SALVO', _faltas.map(function(x){ return x.t; }), {
-        rodape:(_faltas.length===1?'Falta 1 coisa. ':'Faltam '+_faltas.length+' coisas. ')+(ciHosp&&ciHosp.nome||'Este FILHOt')+' ainda NÃO existe no sistema — não aparece na Conferência nem no Plantão.',
-        botao:'Corrigir agora',
-        aoFechar:function(){ const el=document.getElementById(_faltas[0].f); if(el){ try{ el.scrollIntoView({behavior:'smooth',block:'center'}); }catch(e){} try{ el.focus(); }catch(e){} } }
-      });
+      zFalta(_faltas.map(function(x){ return {el:x.f, msg:x.t}; }), {botao:'ciBtnSalvar'});
       return;
     }
+    zLimparFalta();   // passou: tira o vermelho e devolve o texto do botão
     const meds=ciColetarMeds();
     const temMed=Object.keys(meds).length>0;
     const semTutor=!!(document.getElementById('ciSemTutor')&&document.getElementById('ciSemTutor').checked);
@@ -16148,9 +16259,13 @@
     if(!hospAbaPode()){ alert('Sem permissão para dar baixa.'); return; }
     const e=EST_TODAS[id]||{};
     const dt=(document.getElementById('hospBxData')||{}).value||'';
-    if(!dt){ alert('Informe o dia em que '+(e.nome||'o FILHOt')+' foi embora.'); return; }
-    if(dt>hospHojeISO()){ alert('A baixa não pode ser numa data futura. Se ele ainda está aqui, use "Mudar datas".'); return; }
-    if(e.entrada && dt<e.entrada){ alert('A saída não pode ser antes da entrada ('+((typeof ciBRdata==='function')?ciBRdata(e.entrada):e.entrada)+'). Confira a data.'); return; }
+    if(zFalta1('hospBxData', !dt
+        ? ('Falta o dia em que '+(e.nome||'o FILHOt')+' foi embora.')
+        : (dt>hospHojeISO()
+            ? 'Essa data ainda não chegou. Se ele continua aqui, use "Mudar datas" em vez de dar baixa.'
+            : ((e.entrada&&dt<e.entrada)
+                ? ('A saída não pode ser antes da entrada ('+((typeof ciBRdata==='function')?ciBRdata(e.entrada):e.entrada)+').')
+                : '')))) return;
     if(!DB){ alert('Sem conexão com o banco agora — a baixa não foi dada. Tente de novo em instantes.'); return; }
     const quem=(typeof quemSou==='function'?quemSou():'-');
     if(!confirm('Dar baixa em '+(e.nome||'esta hospedagem')+'?\n\nFoi embora em: '+((typeof ciBRdata==='function')?ciBRdata(dt):dt)
