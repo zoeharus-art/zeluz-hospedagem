@@ -7620,7 +7620,7 @@
   // Agora existe um carimbo: esta constante é a versão que o aparelho está rodando, e o
   // Firebase guarda a versão publicada. Quando as duas diferem, aparece o aviso — mas
   // NUNCA recarrega sozinho: recarregar no meio de um check-in perderia o trabalho.
-  const APP_VERSAO='2026-08-15-04';
+  const APP_VERSAO='2026-08-15-05';
   function vigiarVersao(){
     if(!DB) return;
     try{
@@ -8076,6 +8076,13 @@
   }
   function logout(){
     sessionStorage.removeItem('zeluz_login');
+    // O NOME DO TURNO SAI JUNTO (achado da auditoria do manual, 15/ago/2026).
+    // `zeluz_pessoa_turno` é quem assina medicação, almoço e atividades. Era gravado ao assumir
+    // o turno e NUNCA apagado: nem ao sair, nem quando outra pessoa destrancava a tela com a
+    // própria senha. No tablet da casa, compartilhado e sempre aberto, a próxima pessoa herdava
+    // a assinatura da anterior — e a dose sairia no nome de quem já tinha ido embora. Sair do
+    // sistema agora encerra o turno de verdade.
+    sessionStorage.removeItem('zeluz_pessoa_turno');
     document.getElementById('loginPwd').value='';
     document.getElementById('loginScreen').style.display='flex';
     var _ia=document.getElementById('inatAviso'); if(_ia) _ia.style.display='none';
@@ -8133,6 +8140,13 @@
     // trabalho — tirar a cortina tem que devolver a tela exatamente onde estava.
     // Só quando é OUTRA pessoa refazemos o login (papel, menus e permissões mudam de verdade).
     if(trocou){
+      // Outra pessoa assumiu o aparelho: a assinatura do turno anterior TEM que morrer aqui.
+      // Sem isto, a próxima dose, o próximo almoço e a próxima atividade continuavam saindo no
+      // nome de quem acabou de sair — no aparelho da casa, que passa de mão em mão o dia
+      // inteiro. Quem assumiu tem nome próprio: assina. Quem entrou por um login de papel
+      // ("Plantonista", "Monitor 2") vai ser perguntado uma vez, na primeira ação que exigir
+      // responsável. Ver a lei: toda ação crítica grava QUEM fez.
+      try{ sessionStorage.removeItem('zeluz_pessoa_turno'); }catch(e){}
       aplicarLogin(u);
       try{ if(typeof audit==='function') audit('troca-de-pessoa-no-aparelho',(u.nome||'-'),{saiu:(antes.nome||'-')}); }catch(e){}
     }
