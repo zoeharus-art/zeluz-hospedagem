@@ -4533,6 +4533,7 @@
   }
   function renderHosp(){
     try{ cafeCarregar(); }catch(e){}
+    try{ renderRemovidosHoje(); }catch(e){}
     // ordem alfabética (a moradora Repolho por último)
     hospedes.sort((a,b)=>{ if(!!a.mascote!==!!b.mascote) return a.mascote?1:-1; return (a.nome||'').localeCompare((b.nome||''),'pt',{sensitivity:'base'}); });
     const _rHosp=(document.body.dataset.role||''); const _podeRemHosp=(_rHosp==='gestao'||_rHosp==='supervisor'||_rHosp==='diretoria'||_rHosp==='monitor');
@@ -7474,7 +7475,7 @@
   // Agora existe um carimbo: esta constante é a versão que o aparelho está rodando, e o
   // Firebase guarda a versão publicada. Quando as duas diferem, aparece o aviso — mas
   // NUNCA recarrega sozinho: recarregar no meio de um check-in perderia o trabalho.
-  const APP_VERSAO='2026-08-14-01';
+  const APP_VERSAO='2026-08-15-01';
   function vigiarVersao(){
     if(!DB) return;
     try{
@@ -8478,22 +8479,137 @@
     if(!(r==='gestao'||r==='supervisor'||r==='diretoria'||r==='monitor')){ alert('Só a Gestão, a Supervisão, a Diretoria ou o Monitor podem remover.'); return; }
     const h=hospedes[i]; if(!h) return;
     if(h.mascote){ alert('A moradora Repolho não é removida.'); return; }
-    if(!confirm('Remover '+(h.nome||'este FILHOt')+' do Plantão de hoje?\n\nSai da lista de hoje. O cadastro continua salvo.')) return;
-    if(h.manualKey){
-      const dia=h.manualDia||dataKeyAtual();
-      if(!DB){ hospedes.splice(i,1); renderHosp(); return; }
-      DB.ref('auaulandia/manuais/'+dia+'/'+h.manualKey).remove().then(function(){
-        if(typeof audit==='function') audit('hospede-cancelado','removeu lançamento do dia (card)',{pet:h.nome||'',tutor:h.tutor||'',dia:dia});
-        carregarHospedes();
-      }).catch(function(e){ alert('Erro ao remover: '+(e&&e.message||e)); });
+    // ===== Adriana, 14/ago/2026 — O × NÃO PODE SER ARMADILHA ========================
+    // O Theo entrou às 12h40, foi conferido inteiro às 16h31 e sumiu às 17h29: alguém tocou
+    // no × enquanto encerrava o dia de quem ia embora. Ele ficava até domingo. O × gravava um
+    // "removido de hoje" que vence TUDO — planilha, estadia ativa, conferência concluída — e
+    // o FILHOt não voltava sozinho nunca. Botão perigoso com cara de botão comum.
+    // Agora: AVISA que ele está hospedado e até quando, EXIGE o motivo por escrito, pede
+    // confirmação final, e o que sai por engano volta com um toque (ver hospTrazerDeVolta).
+    const est=hospEstadiaAtivaDe(h);
+    const nome=h.nome||'este FILHOt';
+    const hojeI=(typeof hospHojeISO==='function')?hospHojeISO():'';
+    const chegouHoje=!!(est&&est.entrada&&est.entrada===hojeI);
+    const ate=(est&&est.saida)?((typeof ciBRdata==='function')?ciBRdata(est.saida):est.saida):'';
+    var cabeca='Tirar '+nome+' do Plantão de hoje?';
+    var corpo='Ele sai da lista de hoje. O cadastro continua salvo.';
+    if(est){
+      cabeca='⚠ '+nome.toUpperCase()+' ESTÁ HOSPEDADO'+(ate?(' ATÉ '+ate):'')+'.';
+      corpo=(chegouHoje?'Ele CHEGOU HOJE. ':'')
+        +'Se você tirar, ele some da lista da plantonista: ninguém vê a comida, o remédio nem o alarme dele.\n\n'
+        +'Isto NÃO é o check-out. Só use se o lançamento foi errado.';
+    }
+    if(!confirm(cabeca+'\n\n'+corpo)) return;
+    // O MOTIVO é obrigatório — é ele que explica, depois, por que o FILHOt sumiu da lista.
+    var motivo=(prompt('Por que '+nome+' está saindo do Plantão?\n\n'
+      +'Escreva com suas palavras, por exemplo:\n'
+      +'· "lancei a Maya da tutora errada"\n'
+      +'· "esta pernoite foi lançada em duplicidade"\n'
+      +'· "o tutor desmarcou e ele não vem"','')||'').trim();
+    if(motivo.length<8){
+      alert('Preciso do motivo escrito para tirar '+nome+' da lista.\n\n'
+        +'É o que explica, depois, por que ele sumiu — e é o que permite trazê-lo de volta se for engano.');
       return;
     }
-    if(!DB){ hospedes.splice(i,1); renderHosp(); return; }
+    if(est && !confirm('CONFIRMAÇÃO FINAL\n\n'+nome+' está hospedado'+(ate?(' até '+ate):'')+'.\n\n'
+      +'Motivo: '+motivo+'\n\nTirar mesmo assim?')) return;
+    const quem=(typeof quemSou==='function'?quemSou():'-');
     const dk=dataKeyAtual();
-    DB.ref('auaulandia/removidos/'+dk+'/'+hospRemKey(h)).set({nome:h.nome||'', tutor:h.tutor||'', quem:(typeof quemSou==='function'?quemSou():'-'), ts:Date.now()}).then(function(){
-      if(typeof audit==='function') audit('hospede-removido','removeu do Plantão (card/override)',{pet:h.nome||'',dia:dk});
+    if(h.manualKey){
+      const dia=h.manualDia||dk;
+      if(!DB){ alert('Sem conexão com o banco agora — nada foi alterado. Tente de novo em instantes.'); return; }
+      // Guarda o lançamento apagado, para a Supervisão conseguir desfazer depois.
+      DB.ref('auaulandia/removidos/'+dk+'/'+hospRemKey(h)).set({
+        nome:h.nome||'', tutor:h.tutor||'', quem:quem, ts:Date.now(), motivo:motivo,
+        origem:'manual', manualDia:dia,
+        registro:{nome:h.nome||'',tutor:h.tutor||'',raca:h.raca||'',refKey:h.refKey||'',
+                  janta:!!h.janta, jantar:h.jantar||null, hospede:!!h.hospede}
+      }).catch(function(){});
+      DB.ref('auaulandia/manuais/'+dia+'/'+h.manualKey).remove().then(function(){
+        if(typeof audit==='function') audit('hospede-removido','tirou '+nome+' do Plantão — '+motivo,{pet:h.nome||'',tutor:h.tutor||'',dia:dia,motivo:motivo});
+        carregarHospedes();
+      }).catch(function(e){ alert('NÃO consegui tirar: '+(e&&e.message||e)+'\n\nNada foi alterado.'); });
+      return;
+    }
+    if(!DB){ alert('Sem conexão com o banco agora — nada foi alterado. Tente de novo em instantes.'); return; }
+    DB.ref('auaulandia/removidos/'+dk+'/'+hospRemKey(h)).set({
+      nome:h.nome||'', tutor:h.tutor||'', quem:quem, ts:Date.now(), motivo:motivo,
+      origem:'override', tinha_estadia:!!est, estadia_ate:(est&&est.saida)||''
+    }).then(function(){
+      if(typeof audit==='function') audit('hospede-removido','tirou '+nome+' do Plantão'+(est?(' MESMO HOSPEDADO até '+(est.saida||'?')):'')+' — '+motivo,{pet:h.nome||'',dia:dk,motivo:motivo});
       carregarHospedes();
-    }).catch(function(e){ alert('Erro ao remover: '+(e&&e.message||e)); });
+    }).catch(function(e){ alert('NÃO consegui tirar: '+(e&&e.message||e)+'\n\nNada foi alterado.'); });
+  }
+  // Estadia em curso deste FILHOt hoje — é ela que faz o × gritar antes de tirar alguém
+  // que está mesmo hospedado.
+  function hospEstadiaAtivaDe(h){
+    try{
+      if(typeof EST_TODAS==='undefined'||!EST_TODAS||!h) return null;
+      var hoje=(typeof hospHojeISO==='function')?hospHojeISO():'';
+      var achou=null;
+      Object.keys(EST_TODAS).forEach(function(id){
+        var e=EST_TODAS[id]||{};
+        if((e.status||'ativa')!=='ativa') return;
+        var mesmo=(e.refKey&&h.refKey&&e.refKey===h.refKey)||
+                  (jsNorm(e.nome||'')===jsNorm(h.nome||'')&&jsNorm(e.tutor||'')===jsNorm(h.tutor||''));
+        if(!mesmo) return;
+        if(hoje&&e.entrada&&hoje<e.entrada) return;
+        if(hoje&&e.saida&&hoje>e.saida) return;
+        if(!achou||(e._ts||0)>(achou._ts||0)) achou=e;
+      });
+      return achou;
+    }catch(e){ return null; }
+  }
+  // ===== TRAZER DE VOLTA — a saída de emergência ====================================
+  // "a Amanda supervisora e os gestores podem voltar com ele, no aplicativo, facilmente."
+  // Sem isto, um toque errado só se desfazia mexendo no banco — foi o que aconteceu com o
+  // Theo. Agora quem foi tirado hoje aparece numa faixa, com quem tirou e o motivo escrito.
+  var REMOVIDOS_HOJE={};
+  function hospPodeDesfazer(){ const r=(document.body.dataset.role||''); return r==='gestao'||r==='supervisor'||r==='diretoria'; }
+  function carregarRemovidosHoje(){
+    if(!DB) return;
+    DB.ref('auaulandia/removidos/'+dataKeyAtual()).on('value',function(s){
+      REMOVIDOS_HOJE=s.val()||{}; try{ renderRemovidosHoje(); }catch(e){}
+    });
+  }
+  function renderRemovidosHoje(){
+    var grid=document.getElementById('hospGrid'); if(!grid||!grid.parentNode) return;
+    var el=document.getElementById('hospRemovidos');
+    var ks=Object.keys(REMOVIDOS_HOJE||{});
+    if(!ks.length||!hospPodeDesfazer()){ if(el) el.remove(); return; }
+    if(!el){ el=document.createElement('div'); el.id='hospRemovidos'; grid.parentNode.insertBefore(el,grid); }
+    el.style.cssText='margin:0 0 14px;padding:12px 14px;border-radius:12px;background:var(--z-cream-warm);border:1.5px solid var(--z-gold)';
+    el.innerHTML='<div style="font-weight:800;font-size:14px;color:var(--z-blue);margin-bottom:8px">Tirados do Plantão hoje ('+ks.length+')</div>'
+      +ks.map(function(k){
+        var v=REMOVIDOS_HOJE[k]||{};
+        var hora=''; try{ var d=new Date(v.ts); var p=function(x){return String(x).padStart(2,'0');}; hora=p(d.getHours())+':'+p(d.getMinutes()); }catch(e){}
+        return '<div style="display:flex;gap:10px;align-items:center;justify-content:space-between;padding:7px 0;border-top:1px solid rgba(0,0,0,.07)">'
+          +'<div style="flex:1;min-width:0"><strong style="font-size:14px">'+escAttr(v.nome||'?')+'</strong>'
+          +'<div style="font-size:12.5px;color:var(--muted);font-weight:600">tirado por '+escAttr(v.quem||'-')+(hora?(' às '+hora):'')
+          +(v.tinha_estadia?' · <span style="color:var(--crm-critico);font-weight:700">estava hospedado</span>':'')+'</div>'
+          +(v.motivo?('<div style="font-size:12.5px;color:var(--z-blue)">Motivo: '+escAttr(v.motivo)+'</div>')
+                    :'<div style="font-size:12.5px;color:var(--muted)">sem motivo registrado</div>')
+          +'</div>'
+          +'<button class="btn btn-gold" style="white-space:nowrap" onclick="hospTrazerDeVolta(\''+escAttr(k)+'\')">Trazer de volta</button></div>';
+      }).join('');
+  }
+  function hospTrazerDeVolta(k){
+    if(!hospPodeDesfazer()){ alert('Só a Supervisão, a Gestão ou a Diretoria podem trazer um FILHOt de volta ao Plantão.'); return; }
+    var v=REMOVIDOS_HOJE[k]||{};
+    if(!confirm('Trazer '+(v.nome||'este FILHOt')+' de volta ao Plantão de hoje?\n\n'
+      +'Ele volta para a lista da plantonista, com comida, remédio e alarme.')) return;
+    if(!DB){ alert('Sem conexão com o banco agora — tente de novo em instantes.'); return; }
+    var dk=dataKeyAtual();
+    var passos=[DB.ref('auaulandia/removidos/'+dk+'/'+k).remove()];
+    // Se o que sumiu era um lançamento manual (pernoite/hóspede do dia), recria o lançamento.
+    if(v.origem==='manual'&&v.registro&&v.manualDia){
+      passos.push(DB.ref('auaulandia/manuais/'+v.manualDia).push(v.registro));
+    }
+    Promise.all(passos).then(function(){
+      if(typeof audit==='function') audit('hospede-restaurado','trouxe '+(v.nome||'')+' de volta ao Plantão (tinha sido tirado por '+(v.quem||'-')+')',{pet:v.nome||''});
+      carregarHospedes();
+      alert((v.nome||'Ele')+' voltou para o Plantão.\n\nPeça para a plantonista atualizar a tela.');
+    }).catch(function(e){ alert('NÃO consegui trazer de volta: '+((e&&e.message)||e)+'\n\nNada foi alterado.'); });
   }
   function cancelarPernoiteFicha(){
     const r=(document.body.dataset.role||'');
@@ -8561,6 +8677,7 @@
     }catch(e){ /* aba "Cadastro" ainda não existe — tudo bem, é opcional */ }
   }
   carregarHospedes();
+  try{ carregarRemovidosHoje(); }catch(e){}
   carregarRacas();
 
   // ===== PELUDINHOS — cadastro mestre (118, consolidado das 5 turmas) =====
