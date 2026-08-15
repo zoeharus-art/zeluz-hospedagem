@@ -1558,7 +1558,20 @@
     animation:zNavPulso 1.6s ease-in-out infinite;
   }
   .nav a.nav-pend .nav-badge{ background:#fff; color:#B3261E; }
-  @media (prefers-reduced-motion: reduce){ .nav a.nav-pend{ animation:none } }
+  /* O PAI da sanfona acende junto. Sem isto, pendência dentro de um submenu FECHADO não é
+     vista por ninguém — foi o que a captura de tela mostrou em 15/ago/2026: o Check-in tinha
+     11 pendências e morava dentro do grupo "AuAulândia", recolhido. O vermelho existia e
+     ninguém nunca ia ver. */
+  .nav .acc > a.nav-parent.nav-pend{
+    background:rgba(192,57,43,.14) !important;
+    border:2px solid #C0392B !important;
+    border-radius:10px !important;
+    color:#fff !important;
+    font-weight:800 !important;
+    animation:zNavPulso 1.6s ease-in-out infinite;
+  }
+  .nav .acc > a.nav-parent.nav-pend .nav-badge{ background:#fff; color:#B3261E; margin-left:auto; margin-right:6px; }
+  @media (prefers-reduced-motion: reduce){ .nav a.nav-pend, .nav .acc > a.nav-parent.nav-pend{ animation:none } }
 </style>
 </head>
 <body data-role="gestao">
@@ -3720,6 +3733,37 @@
     navPend('recepcao',     r.faltas,      '{n} falta em aberto — ração ou remédio que não cobre');
     navPend('emporio',      r.avisar,      '{n} tutor a avisar — não comeram hoje');
     navPend('reposicao',    r.repComSaldo, '{n} peludinho com dia a repor');
+    navPendSubirParaOPai();
+  }
+  // A pendência SOBE até o grupo do menu. Descoberto em 15/ago/2026 abrindo o app de verdade:
+  // o Check-in estava com 11 pendências e vive dentro do grupo "AuAulândia", que fica
+  // recolhido. O item acendia — dentro de uma gaveta fechada. Ninguém veria nunca.
+  // Agora o grupo mostra a soma do que está escondido dentro dele; ao abrir, some do pai e
+  // aparece no item certo.
+  function navPendSubirParaOPai(){
+    try{
+      document.querySelectorAll('#nav .acc').forEach(function(acc){
+        var pai=acc.querySelector(':scope > a.nav-parent'); if(!pai) return;
+        var aberto=acc.classList.contains('acc-open');
+        var soma=0;
+        acc.querySelectorAll('.acc-panel a.nav-pend').forEach(function(f){
+          var b=f.querySelector('.nav-badge');
+          soma+=Math.max(1, parseInt((b&&b.textContent)||'1',10)||1);
+        });
+        var b=pai.querySelector('.nav-badge');
+        // Grupo aberto: quem manda é o filho, o pai não repete o número.
+        if(soma>0 && !aberto){
+          if(!b){ b=document.createElement('span'); b.className='nav-badge'; pai.insertBefore(b, pai.querySelector('.acc-caret')||null); }
+          b.textContent=soma;
+          pai.classList.add('nav-pend');
+          pai.title='Tem '+soma+' coisa'+(soma>1?'s':'')+' esperando aqui dentro — toque para abrir';
+        } else {
+          if(b) b.remove();
+          pai.classList.remove('nav-pend');
+          pai.removeAttribute('title');
+        }
+      });
+    }catch(e){}
   }
   // ===== O QUE PRECISA DE VOCÊ HOJE — pendências reais, clicáveis =====================
   // Substituiu a lista de peludinhos de exemplo que ficava no Início (04/ago/2026).
@@ -7576,7 +7620,7 @@
   // Agora existe um carimbo: esta constante é a versão que o aparelho está rodando, e o
   // Firebase guarda a versão publicada. Quando as duas diferem, aparece o aviso — mas
   // NUNCA recarrega sozinho: recarregar no meio de um check-in perderia o trabalho.
-  const APP_VERSAO='2026-08-15-03';
+  const APP_VERSAO='2026-08-15-04';
   function vigiarVersao(){
     if(!DB) return;
     try{
@@ -11489,6 +11533,8 @@
     const aberto=acc.classList.toggle('acc-open');
     const k=parentEl.dataset.accToggle;
     if(k){ try{ localStorage.setItem('zeluz_acc_'+k, aberto?'1':'0'); }catch(e){} }
+    // Abriu: o aviso passa do grupo para o item de dentro. Fechou: volta para o grupo.
+    try{ if(typeof navPendSubirParaOPai==='function') navPendSubirParaOPai(); }catch(e){}
   }
   function abrirAccDaycare(){ const acc=document.querySelector('#nav .acc[data-acc="daycare"]'); if(acc) acc.classList.add('acc-open'); }
   // Restaura a preferência de aberto/fechado por accordion (localStorage).
