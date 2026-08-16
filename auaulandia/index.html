@@ -1933,6 +1933,13 @@
         <div class="kpi"><img class="kpi-st" src="assets/stickers/auau.png" alt=""><div><div class="v coral" id="kpiMorada">0</div><div class="l">Moradora · Repolho</div></div></div>
       </div>
       <div class="role-note"><span data-icon="moon"></span><span>Selecione o peludinho hospedado para registrar a <strong>passagem de plantão</strong>. Turnos: Diurno 07h–19h · Noturno 19h–07h.</span></div>
+      <!-- Fecha o turno INTEIRO e manda o resumo à Gestão. A passagem de plantão continua
+           sendo por FILHOt; isto é o fecho de tudo, no fim (Adriana, 15/ago/2026). -->
+      <div class="card" style="margin-bottom:18px;border-left:4px solid var(--z-gold)">
+        <h2 style="font-size:18px">Terminou o seu turno?</h2>
+        <div class="hint">Passe o plantão de cada peludinho primeiro. Depois toque aqui: eu monto o resumo do turno, mostro para você conferir e mando ao grupo da Gestão.</div>
+        <button id="btnFecharTurno" class="btn btn-primary" style="width:100%;margin-top:12px" onclick="fecharTurnoEAvisar()">Fechar o turno e avisar a Gestão</button>
+      </div>
       <div class="card" id="card-checkout-plantao" style="margin-bottom:18px">
         <h2 style="font-size:19px">Protocolo do Plantão</h2>
         <div class="hint">Regras imprescindíveis — valem durante todo o plantão.</div>
@@ -6518,6 +6525,113 @@
       med:valDe('card-noite','Tem medicação?'), sup:valDe('card-noite','Tem suplementação?'), medTxt:medsToTxt(coletarMedgrids('card-noite').med), supTxt:medsToTxt(coletarMedgrids('card-noite').sup) }; }
   function gerarTexto(){ if(!currentHosp) return; document.getElementById('hf-txt').value=montarTextoTutor(ctxDoDOM()); }
   function copiarTexto(){ const t=document.getElementById('hf-txt'); if(!t.value){ gerarTexto(); } t.select(); try{ document.execCommand('copy'); }catch(e){} alert('Texto copiado! Cole no WhatsApp do tutor.'); }
+  // ===== FECHAR O TURNO E AVISAR A GESTÃO — Adriana, 15/ago/2026 ===================
+  // "precisamos criar um grupo para passar os dados do plantão para a Gestão e quem mais em
+  //  algum momento convier — se tiver um dia um supervisor, gerente."
+  // A passagem de plantão já existia, mas era UM FILHOt por vez: ninguém enxergava o turno
+  // inteiro. Quem não está na casa dependia de perguntar. Agora, ao fechar o turno, sai um
+  // resumo no grupo do Telegram — com o que foi feito e, principalmente, com o que FALTOU.
+  // Só lê dado que já existe: não estima e não inventa nada.
+  function _turnoAgora(){ var h=new Date().getHours(); return (h>=7&&h<19)?'dia':'noite'; }
+  function _brDia(d){ var p=function(x){return String(x).padStart(2,'0');}; return p(d.getDate())+'/'+p(d.getMonth()+1); }
+  function resumoDoTurno(){
+    return new Promise(function(resolve){
+      if(!DB){ resolve(null); return; }
+      var turno=_turnoAgora(), dia=dataKeyAtual();
+      var reais=(hospedes||[]).filter(function(h){ return !h.mascote; });
+      var jobs=[
+        DB.ref('auaulandia/medicacao-log/'+dia).once('value').then(function(s){ return s.val()||{}; }).catch(function(){ return {}; }),
+        DB.ref('auaulandia/estadias').once('value').then(function(s){ return s.val()||{}; }).catch(function(){ return {}; })
+      ].concat(reais.map(function(h){
+        return DB.ref('auaulandia/relatorios/'+fichaKeyDe(h,selectedDate)).once('value')
+          .then(function(s){ return {h:h, v:s.val()||{}}; }).catch(function(){ return {h:h, v:{}}; });
+      }));
+      Promise.all(jobs).then(function(r){
+        var medLog=r[0], estadias=r[1], fichas=r.slice(2);
+        var doses=0;
+        Object.keys(medLog).forEach(function(k){ doses+=Object.keys(medLog[k]||{}).length; });
+        var passados=[], faltando=[], naoComeu=[], atencao=[];
+        fichas.forEach(function(f){
+          var nome=f.h.nome||'?';
+          var t=f.v[turno]||f.v[turno==='noite'?'inicio':'dia']||null;
+          if(t&&t.passou) passados.push(nome); else faltando.push(nome);
+          var q=(t&&t.byQ)||{};
+          Object.keys(q).forEach(function(perg){
+            var resp=String(q[perg]||'').trim();
+            if(/almo(ç|c)ou|jantou|comeu/i.test(perg) && /^n(ã|a)o$/i.test(resp)){
+              if(naoComeu.indexOf(nome)<0) naoComeu.push(nome);
+            }
+            if(/vomitou|diarreia|machuc/i.test(perg) && /^sim$/i.test(resp)){
+              atencao.push(nome+' — '+perg.replace('?','').toLowerCase());
+            }
+          });
+        });
+        var ocs=[];
+        Object.keys(estadias).forEach(function(id){
+          var e=estadias[id]||{}; if((e.status||'ativa')!=='ativa'||!e.ocorrencias) return;
+          Object.keys(e.ocorrencias).forEach(function(oid){
+            var o=e.ocorrencias[oid]||{};
+            if(o.avisadoTutor) return;                    // já resolvida com o tutor
+            ocs.push((e.nome||'?')+' — '+String(o.texto||'').slice(0,70));
+          });
+        });
+        resolve({turno:turno, quem:(typeof quemSou==='function'?quemSou():'-'),
+          total:reais.length, doses:doses, passados:passados, faltando:faltando,
+          naoComeu:naoComeu, atencao:atencao, ocorrencias:ocs});
+      }).catch(function(){ resolve(null); });
+    });
+  }
+  function textoResumoTurno(R){
+    var hoje=new Date(), amanha=new Date(hoje.getTime()+86400000);
+    var per=(R.turno==='noite')?(_brDia(hoje)+' → '+_brDia(amanha)):_brDia(hoje);
+    var L=[];
+    L.push('<b>PLANTÃO '+(R.turno==='noite'?'DA NOITE':'DO DIA')+' · '+per+'</b>');
+    L.push(R.quem);
+    L.push('');
+    L.push('<b>'+R.total+'</b> FILHOt'+(R.total===1?'':'s')+(R.turno==='noite'?' dormiram aqui':' na casa'));
+    L.push('Doses de remédio registradas: <b>'+R.doses+'</b>');
+    L.push('Relatórios passados: <b>'+R.passados.length+' de '+R.total+'</b>');
+    if(R.faltando.length){ L.push(''); L.push('<b>SEM RELATÓRIO ('+R.faltando.length+')</b>'); L.push(R.faltando.join(', ')); }
+    if(R.naoComeu.length){ L.push(''); L.push('<b>NÃO COMERAM ('+R.naoComeu.length+')</b>'); L.push(R.naoComeu.join(', ')); }
+    if(R.atencao.length){ L.push(''); L.push('<b>PRECISA DE ATENÇÃO</b>'); R.atencao.slice(0,8).forEach(function(x){ L.push('• '+x); }); }
+    if(R.ocorrencias.length){ L.push(''); L.push('<b>OCORRÊNCIAS SEM O TUTOR AVISADO ('+R.ocorrencias.length+')</b>'); R.ocorrencias.slice(0,8).forEach(function(x){ L.push('• '+x); }); }
+    if(!R.faltando.length&&!R.naoComeu.length&&!R.atencao.length&&!R.ocorrencias.length){
+      L.push(''); L.push('Nada pendente. Todos com relatório, todos comeram.');
+    }
+    return L.join('\n');
+  }
+  function fecharTurnoEAvisar(){
+    var btn=document.getElementById('btnFecharTurno');
+    var voltar=function(){ if(btn){ btn.disabled=false; btn.textContent='Fechar o turno e avisar a Gestão'; } };
+    if(btn){ btn.disabled=true; btn.textContent='Montando o resumo…'; }
+    resumoDoTurno().then(function(R){
+      if(!R){ voltar(); alert('Não consegui montar o resumo agora — confira a internet e tente de novo.'); return; }
+      var texto=textoResumoTurno(R);
+      // Quem passa o plantão LÊ antes o que vai ser enviado. Nada sai do turno dela sem ela ver.
+      if(!confirm('Vai para o grupo da Gestão:\n\n'+texto.replace(/<\/?b>/g,'')+'\n\nMandar?')){ voltar(); return; }
+      var manda=function(){
+        return tgAvisar({grupo:'gestao', texto:texto}).then(function(r){
+          var ok=!!(r&&r.ok);
+          if(typeof audit==='function') audit('plantao-resumo',(ok?'mandou':'NÃO mandou')+' o resumo do turno para a Gestão — '+R.total+' FILHOts, '+R.faltando.length+' sem relatório',{});
+          voltar();
+          if(ok) zAlertao('RESUMO ENVIADO À GESTÃO',['O resumo do seu turno está no grupo.','Pode passar o plantão tranquila.'],{ok:true,botao:'Fechar'});
+          else zAlertao('⚠ O RESUMO NÃO FOI ENVIADO',
+            ['Motivo: '+((r&&r.erro)||'a ponte não respondeu')+'.',
+             'O plantão está salvo — isso não se perdeu.',
+             'Mande o resumo no grupo pelo seu celular, ou avise a Gestão.'],{botao:'Entendi'});
+        });
+      };
+      if(!TG_CFG||!TG_CFG.url){
+        DB.ref('auaulandia/config/telegram').once('value').then(function(s){
+          TG_CFG=s.val()||null;
+          if(TG_CFG&&TG_CFG.url) manda();
+          else { voltar(); alert('A ponte do Telegram não está configurada neste sistema. Avise a Gestão.'); }
+        }).catch(function(){ voltar(); alert('Não consegui ler a configuração do Telegram. Tente de novo.'); });
+        return;
+      }
+      manda();
+    }).catch(function(){ voltar(); alert('Não consegui montar o resumo agora. Tente de novo.'); });
+  }
   function fecharPlantao(){
     document.getElementById('hosp-ficha').style.display='none';
     document.getElementById('hosp-lista').style.display='block';
@@ -7620,7 +7734,7 @@
   // Agora existe um carimbo: esta constante é a versão que o aparelho está rodando, e o
   // Firebase guarda a versão publicada. Quando as duas diferem, aparece o aviso — mas
   // NUNCA recarrega sozinho: recarregar no meio de um check-in perderia o trabalho.
-  const APP_VERSAO='2026-08-15-05';
+  const APP_VERSAO='2026-08-15-06';
   function vigiarVersao(){
     if(!DB) return;
     try{

@@ -15,7 +15,14 @@ var SENHA     = 'zeluz-auaulandia';
 
 var GRUPOS = {
   vet:    '-5484669898',   // Zêluz Daycare Vet — alterações do check-in do corpo
-  comida: '-5460714392'    // Daycare - Quem não almoçou
+  comida: '-5460714392',   // Daycare - Quem não almoçou
+  // Gestão — o resumo fechado de cada plantão (Adriana, 15/ago/2026: "precisamos criar um
+  // grupo para passar os dados do plantão para a Gestão e quem mais em algum momento
+  // convier — se tiver um dia um supervisor, gerente"). Começa só com a Adriana e a Márcia.
+  // PARA LIGAR: crie o grupo no Telegram, ponha o bot dentro, mande qualquer mensagem lá e
+  // troque o COLE_AQUI pelo id do grupo (começa com sinal de menos).
+  // Quem entra e quem sai depois é decidido no próprio Telegram, sem mexer no sistema.
+  gestao: 'COLE_AQUI_O_ID_DO_GRUPO_DA_GESTAO'
 };
 var GRUPO_PADRAO = 'vet';
 
