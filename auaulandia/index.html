@@ -4341,8 +4341,17 @@
   // Quem MARCOU pausa na hora de inativar manda (ex.tipoSaida). Para as saidas antigas,
   // gravadas antes de existir a marcacao, o texto do motivo e o unico sinal — entao
   // vale como palpite: 'viagem', 'volta em setembro', 'tratamento' sao pausa na pratica.
+  // ===== ÓBITO — Adriana, 17/ago/2026 ("a Stopinha faleceu") ========================
+  // Antes, um FILHOt que morria era inativado como "saída definitiva", com o motivo escrito
+  // à mão. Isso o jogava na MESMA lista de quem parou de vir — a lista que a Consultora usa
+  // para ligar e tentar trazer de volta. Ligar para a família de um FILHOt que morreu é o
+  // pior erro que este sistema poderia cometer.
+  // Agora o falecimento tem tipo próprio e data própria, nunca entra em lista de recontato,
+  // e não pode ser "reativado" por um toque errado.
+  function ehObito(ex){ return String((ex&&ex.tipoSaida)||'')==='obito'; }
   function ehPausa(ex){
     const t=(ex&&ex.tipoSaida)||'';
+    if(t==='obito') return false;                 // quem faleceu nunca é "vai voltar"
     if(t==='pausa') return true;
     if(t==='definitiva') return false;
     return /suspend|suspens|pausa|pausou|parou por|f[ée]rias|viaj|volta em|retorna|tempor[áa]ri|tratamento|fisioterap|cirurgia|cio/i.test(String((ex&&ex.motivoSaida)||''));
@@ -4356,7 +4365,7 @@
         const dm=movData(ex.matricula||p.matricula);
         if(dm && dm.a===ref.a && dm.m===ref.m) ent.push({p:p,i:i,dia:dm.d,tipo:tipoDoPel(p)});
         const ds=movData(ex.dataSaida);
-        if(ds && ds.a===ref.a && ds.m===ref.m) sai.push({p:p,i:i,dia:ds.d,motivo:ex.motivoSaida||'',pausa:ehPausa(ex)});
+        if(ds && ds.a===ref.a && ds.m===ref.m) sai.push({p:p,i:i,dia:ds.d,motivo:ex.motivoSaida||'',pausa:ehPausa(ex),obito:ehObito(ex)});
       }catch(e){}
     });
     const porDia=function(a,b){ return a.dia-b.dia; };
@@ -4389,7 +4398,10 @@
       +  '</div>'
       +  '<div><div class="mov-h">Saíram</div>'
       +    (M.sai.length?M.sai.map(function(o){ return linha(o,'#B3261E',
-            (o.pausa?'<span class="mov-tag pausa">PAUSA</span>':'')
+            // Faleceu vem marcado à parte, em azul: a Consultora precisa ver ANTES de pensar
+            // em ligar. Ligar para a família de um FILHOt que morreu é imperdoável.
+            (o.obito?'<span class="mov-tag" style="color:var(--z-blue);border-color:var(--z-blue)">FALECEU</span>'
+                    :(o.pausa?'<span class="mov-tag pausa">PAUSA</span>':''))
             +(o.motivo?'<span class="mov-motivo">'+escAttr(o.motivo)+'</span>':'')); }).join('')
           :'<div class="hint" style="padding:10px 2px">Ninguém saiu neste mês.</div>')
       +  '</div>'
@@ -7301,11 +7313,22 @@
   function orcTirarDaPlanilha(id, quem, quando){
     var o=ORC_LISTA_CACHE[id]||{}, cfg=(orcSheetsCfg||{});
     var pets=(o.pets||[]);
-    var peludoTutor=pets.map(function(p){
+    // Cada FILHOt tem a SUA coluna no calendário — então cada um precisa ser apagado.
+    var nomes=pets.map(function(p){
+      var partes=[String(p.nome||'').trim()];
+      var r=String(p.raca||'').trim(); if(r) partes.push(r);
+      var t=String(p.tutor||o.tutor||'').trim(); if(t) partes.push(t);
+      return partes.join('/');
+    });
+    // Orçamento antigo (antes de 17/ago) foi escrito com os dois juntos numa célula: para
+    // esses, o nome combinado ainda precisa ser tentado, senão a vaga não se libera.
+    var combinado=pets.map(function(p){
       var partes=[String(p.nome||'').trim()];
       var r=String(p.raca||'').trim(); if(r) partes.push(r);
       return partes.join('/');
     }).join(' e ')+'/'+(o.tutor||'');
+    if(pets.length>1 && nomes.indexOf(combinado)<0) nomes.push(combinado);
+    var peludoTutor=nomes.join(' e ');
     if(!cfg.url){
       zAlertao('RESERVA CANCELADA — TIRE DA PLANILHA À MÃO',
         ['A ponte com a planilha não está configurada neste sistema.',
@@ -7313,13 +7336,19 @@
         {botao:'Entendi'});
       return;
     }
-    fetch(cfg.url,{method:'POST', headers:{'Content-Type':'text/plain;charset=utf-8'},
-      body:JSON.stringify({ token:cfg.token||'', acao:'cancelar', peludoTutor:peludoTutor,
-        entrada:o.entrada||'', saida:o.saida||'', canceladoPor:quem||'', canceladoEm:quando||'' })})
-      .then(function(r){ return r.text().catch(function(){ return ''; }); })
-      .then(function(txt){
-        var ok=true, msg='';
-        try{ var j=JSON.parse(txt); ok=!!j.ok; msg=[j.calendario,j.financeiro].filter(Boolean).join(' · ')||j.erro||''; }catch(e){}
+    // Um cancelamento por FILHOt: cada um está numa coluna. O 1º também risca a linha do
+    // financeiro; os demais só liberam as noites deles no calendário.
+    Promise.all(nomes.map(function(n,i){
+      return fetch(cfg.url,{method:'POST', headers:{'Content-Type':'text/plain;charset=utf-8'},
+        body:JSON.stringify({ token:cfg.token||'', acao:'cancelar', peludoTutor:n,
+          soCalendario:(i>0), entrada:o.entrada||'', saida:o.saida||'',
+          canceladoPor:quem||'', canceladoEm:quando||'' })})
+        .then(function(r){ return r.text().catch(function(){ return ''; }); })
+        .then(function(txt){ try{ return JSON.parse(txt); }catch(e){ return {ok:false, erro:String(txt).slice(0,120)}; } });
+    }))
+      .then(function(js){
+        var ok=js.every(function(j){ return j && j.ok; });
+        var msg=js.map(function(j,i){ return nomes[i]+': '+[(j&&j.calendario)||'',(j&&j.financeiro)||''].filter(Boolean).join(' · '); }).join(' | ');
         DB.ref('auaulandia/orcamentos/'+id).update({cancelado_planilha_ok:ok, cancelado_planilha_msg:msg}).catch(function(){});
         orcCarregarLista();
         if(ok) zAlertao('✅ RESERVA CANCELADA',
@@ -7366,11 +7395,18 @@
     // raça. Primeiro vem o nome do peludo, depois a raça e depois tutor = Romeo/SRD/Jeanine."
     // Orçamentos antigos não guardavam a raça — para esses, cai para Nome/Tutor, que é o que
     // se tinha. Nunca escreve "//" nem deixa a raça vazia entre duas barras.
-    var peludoTutor=pets.map(function(p){
+    var nomeDe=function(p){
       var partes=[String(p.nome||'').trim()];
       var r=String(p.raca||'').trim(); if(r) partes.push(r);
+      var t=String(p.tutor||o.tutor||'').trim(); if(t) partes.push(t);
       return partes.join('/');
-    }).join(' e ')+'/'+(o.tutor||'');
+    };
+    var nomes=pets.map(nomeDe);
+    // Uma linha no financeiro para a reserva inteira (o dinheiro é um só). No calendário,
+    // cada FILHOt ocupa a SUA coluna — Adriana, 17/ago/2026: "cada um fica em uma coluna".
+    // Antes os dois iam juntos numa célula ("Romeo/SRD e Thor/Golden/Jeanine") e o dashboard
+    // contava um hóspede onde havia dois.
+    var peludoTutor=nomes.join(' e ');
     // PERNOITE NÃO VAI PARA A PLANILHA (Adriana, 13/ago/2026): ela é lançada pela recepção
     // ou pela plantonista da noite e serve para outra conta — o acerto de quem dorme aqui.
     // Na planilha entra só a HOSPEDAGEM: as diárias de hotel e o dinheiro delas.
@@ -7385,13 +7421,27 @@
       valorDiaria: diarias? Math.round(valorDiarias/diarias)/100 : 0,
       aPagar:(valorDiarias-Math.ceil(valorDiarias/2))/100, dataAPagar:o.entrada||''
     };
+    // O 1º envio grava o financeiro E o calendário do 1º FILHOt. Os demais só o calendário,
+    // cada um na sua coluna — sem repetir a linha do dinheiro, que é uma só para a reserva.
+    var mandar=function(corpo){
+      return fetch(cfg.url,{method:'POST', headers:{'Content-Type':'text/plain;charset=utf-8'}, body:JSON.stringify(corpo)})
+        .then(function(r){ return r.text().catch(function(){ return ''; }); })
+        .then(function(txt){ try{ return JSON.parse(txt); }catch(e){ return {ok:false, erro:String(txt).slice(0,120)}; } });
+    };
     // no-cors não deixa ler a resposta; por isso a confirmação é o registro no Firebase
     // e o aviso na tela. Falha de rede NUNCA vira silêncio.
-    fetch(cfg.url,{method:'POST', headers:{'Content-Type':'text/plain;charset=utf-8'}, body:JSON.stringify(payload)})
-      .then(function(r){ return r.text().catch(function(){ return ''; }); })
-      .then(function(txt){
-        var ok=true, msg='';
-        try{ var j=JSON.parse(txt); ok=!!j.ok; msg=(j.abas||[]).join(' · ')||j.erro||''; }catch(e){}
+    mandar(Object.assign({}, payload, {peludoTutor:(nomes[0]||peludoTutor)}))
+      .then(function(j1){
+        var extras=nomes.slice(1);
+        if(!extras.length) return [j1];
+        return Promise.all(extras.map(function(n){
+          return mandar({ token:cfg.token||'', acao:'calendario', peludoTutor:n,
+                          entrada:o.entrada||'', saida:o.saida||'' });
+        })).then(function(rs){ return [j1].concat(rs); });
+      })
+      .then(function(js){
+        var ok=js.every(function(j){ return j && j.ok; });
+        var msg=js.map(function(j,i){ return (nomes[i]||'')+': '+[(j&&j.calendario)||'',(j&&j.financeiro)||''].filter(Boolean).join(' · '); }).join(' | ');
         DB.ref('auaulandia/orcamentos/'+id).update({planilha_em:Date.now(), planilha_ok:ok, planilha_msg:msg}).catch(function(){});
         if(ok) zAlertao('✅ FECHADO E LANÇADO NA PLANILHA',
               [peludoTutor+' — '+orcBR(o.entrada)+' a '+orcBR(o.saida)+' · '+fmtCent(o.total_cent||0)],
@@ -7734,7 +7784,7 @@
   // Agora existe um carimbo: esta constante é a versão que o aparelho está rodando, e o
   // Firebase guarda a versão publicada. Quando as duas diferem, aparece o aviso — mas
   // NUNCA recarrega sozinho: recarregar no meio de um check-in perderia o trabalho.
-  const APP_VERSAO='2026-08-15-06';
+  const APP_VERSAO='2026-08-17-01';
   function vigiarVersao(){
     if(!DB) return;
     try{
@@ -11096,10 +11146,67 @@
   // nenhum motivo cobrado, e a pessoa não sabia se tinha funcionado.
   // Agora: botão no topo da ficha, motivo OBRIGATÓRIO (é ele que a Márcia lê depois) e
   // confirmação na tela, voltando para a lista já sem o FILHOt.
+  // ===== REGISTRAR FALECIMENTO — Adriana, 17/ago/2026 ==============================
+  // "A Stopinha faleceu, não encontrei aqui a opção de óbito. Precisamos criar. Precisa
+  //  criar a data do óbito também."
+  // A data é digitável porque quase nunca se registra no mesmo dia — a notícia chega depois,
+  // e a data que importa é a que a família viveu, não a que alguém teve tempo de abrir o app.
+  function registrarObito(){
+    if(!pelAtual) return;
+    if(!canEditPel()){ alert('Só a Gestão, a Supervisão ou a Diretoria podem registrar um falecimento.'); return; }
+    const ex=pelExtra(pelAtual)||{}; const nome=pelNome(pelAtual)||pelAtual.n||'este FILHOt';
+    if(ehObito(ex)){
+      alert(nome+' já está registrado como falecido'+(ex.dataObito?(' em '+ex.dataObito):'')+'.\n\n'
+        +'Se a data estiver errada, corrija em Saída, no campo "Data do falecimento".');
+      return;
+    }
+    if(!confirm('Registrar o falecimento de '+nome+'?\n\n'
+      +'Ele sai das listas do dia e da chamada, e NUNCA entra na lista de quem a recepção liga para trazer de volta.\n\n'
+      +'Todo o histórico dele continua guardado.')) return;
+    const hoje=new Date(), p2=function(x){ return String(x).padStart(2,'0'); };
+    const hojeBR=p2(hoje.getDate())+'/'+p2(hoje.getMonth()+1)+'/'+hoje.getFullYear();
+    // Data digitável: a notícia quase sempre chega depois do dia.
+    var data='';
+    for(var tent=0; tent<3; tent++){
+      const r=prompt('Em que dia '+nome+' faleceu?\n\n'
+        +'Escreva no formato dia/mês/ano — por exemplo '+hojeBR+'.\n'
+        +'Se foi há alguns dias, escreva a data certa: é ela que fica no histórico dele.', data||hojeBR);
+      if(r===null) return;                                  // desistiu — nada é gravado
+      const v=String(r).trim();
+      const m=/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/.exec(v);
+      if(!m){ alert('Não entendi a data "'+v+'".\n\nEscreva assim: '+hojeBR); data=v; continue; }
+      const d=new Date(+m[3], +m[2]-1, +m[1]);
+      if(d.getDate()!==+m[1]||d.getMonth()!==+m[2]-1){ alert('Essa data não existe no calendário. Confira o dia e o mês.'); data=v; continue; }
+      if(d.getTime()>hoje.getTime()+86400000){ alert('Essa data ainda não chegou. Confira o ano.'); data=v; continue; }
+      data=p2(+m[1])+'/'+p2(+m[2])+'/'+m[3];
+      break;
+    }
+    if(!data) return;
+    // Observação é opcional: ninguém deve ser obrigado a escrever num momento desses.
+    const obs=(prompt('Quer deixar alguma observação? (opcional)\n\n'
+      +'Ex.: a tutora avisou por telefone · estava em tratamento havia meses\n\n'
+      +'Pode deixar em branco e tocar em OK.','')||'').trim();
+    setPelExtra(pelAtual,{ inativo:'Sim', tipoSaida:'obito', dataObito:data, dataSaida:data,
+      motivoSaida:'Faleceu em '+data+(obs?(' — '+obs):''), obsObito:obs,
+      obitoPor:(typeof quemSou==='function'?quemSou():'-'), obitoTs:Date.now() });
+    if(typeof audit==='function') audit('peludinho-obito','registrou o falecimento de '+nome+' em '+data,{pet:nome});
+    alert(nome+' foi registrado como falecido em '+data+'.\n\n'
+      +'Ele sai das listas do dia e não aparece para a recepção como cliente a recuperar.\n'
+      +'O cadastro, as fotos e todo o histórico continuam guardados.');
+    if(typeof renderPel==='function') renderPel();
+    if(typeof renderKPIs==='function') renderKPIs();
+    voltarPel();
+  }
   function inativarPeludinhoRapido(){
     if(!pelAtual) return;
     if(!canEditPel()){ alert('Só a Gestão, a Supervisão ou a Diretoria podem inativar um FILHOt.'); return; }
     const ex=pelExtra(pelAtual)||{}; const nome=pelNome(pelAtual)||pelAtual.n||'este FILHOt';
+    // Quem faleceu não é "reativado" por um toque errado no botão de inativar.
+    if(ehObito(ex)){
+      alert(nome+' está registrado como falecido'+(ex.dataObito?(' em '+ex.dataObito):'')+'.\n\n'
+        +'Se isto foi um engano, chame a Diretoria — não se desfaz por aqui.');
+      return;
+    }
     if(ex.inativo==='Sim'){
       if(!confirm(nome+' está inativo.\n\nReativar? Ele volta para as listas do dia e para a chamada.')) return;
       const hist=Array.isArray(ex.saidas)?ex.saidas.slice():[];
@@ -11135,6 +11242,13 @@
     const ex=pelExtra(pelAtual)||{};
     const on=ex.inativo==='Sim';
     return `
+      ${ehObito(ex)?`<div class="field" style="grid-column:1/-1">
+        <div class="dc-faltas" style="margin:0;background:rgba(35,77,103,.10);border-color:var(--z-blue);color:var(--z-blue)">
+          <strong>Faleceu em ${escAttr(ex.dataObito||'—')}.</strong>
+          ${ex.obsObito?('<div style="font-weight:600;margin-top:3px">'+escAttr(ex.obsObito)+'</div>'):''}
+          <div style="font-weight:600;margin-top:3px">Registrado por ${escAttr(ex.obitoPor||'-')}. Ele não aparece nas listas do dia nem na lista de quem a recepção liga para trazer de volta.</div>
+        </div></div>
+      <div class="field" style="grid-column:1/-1"><label>Data do falecimento</label><input class="cad-in" value="${escAttr(ex.dataObito||'')}" placeholder="dd/mm/aaaa" onchange="setPelExtra(pelAtual,{dataObito:this.value,dataSaida:this.value})"></div>`:''}
       <div class="field"><label>Saiu do Day Care?</label><div class="seg gold" data-single>${segBtnsPel('inativo',ex.inativo||'',['Sim','Nao'])}</div></div>
       <div class="field"><label>Data da saída</label><input class="cad-in" value="${escAttr(ex.dataSaida||'')}" placeholder="dd/mm/aaaa" onchange="setPelExtra(pelAtual,{dataSaida:this.value})"></div>
       <div class="field" style="grid-column:1/-1"><label>Motivo da saída${on?' <span style="color:var(--crm-critico)">— obrigatório</span>':''}</label><input class="cad-in" value="${escAttr(ex.motivoSaida||'')}" placeholder="Ex: brigas — Stella ciumenta com o Bud · falecido · mudança" onchange="setPelExtra(pelAtual,{motivoSaida:this.value});refreshPills()"></div>
@@ -11309,7 +11423,10 @@
             <!-- Adriana, 05/ago/2026: "tínhamos uma caixa para inativar e o porquê — onde está?
                  Estou tentando inativar um e não consigo." O campo existia, mas enterrado no fim
                  da aba "Atenção", sem nenhum retorno ao clicar. Agora o caminho é este botão. -->
-            <button class="btn-foto-mini" style="background:var(--crm-critico);color:#fff" onclick="inativarPeludinhoRapido()">${pelExtra(p).inativo==='Sim'?'↩ Reativar (voltou)':'Saiu do Day Care — inativar'}</button>
+            ${ehObito(pelExtra(p))
+              ? `<span class="btn-foto-mini" style="background:var(--z-blue);color:var(--z-cream);cursor:default">Faleceu em ${escAttr(pelExtra(p).dataObito||'—')}</span>`
+              : `<button class="btn-foto-mini" style="background:var(--crm-critico);color:#fff" onclick="inativarPeludinhoRapido()">${pelExtra(p).inativo==='Sim'?'↩ Reativar (voltou)':'Saiu do Day Care — inativar'}</button>
+                 <button class="btn-foto-mini" style="background:var(--z-blue);color:var(--z-cream)" onclick="registrarObito()">Registrar falecimento</button>`}
           </div>
           <div id="pelFotoSt" style="font-size:11.5px;font-weight:700;margin-top:5px"></div>
         </div>
@@ -13095,7 +13212,7 @@
       +'<li>Quando <strong>trouxe</strong>, escreva COMO é: cor, marca, quantidade. "Roupa" não devolve nada; "1 blusa bege de tricô" devolve.</li>'
       +'<li>Comida, petisco e vasilha: marque também <strong>em que veio</strong> — pote, sacola ou mochila.</li>'
       +'<li>Medicação e suplemento: pode acrescentar <strong>vários</strong>. Com horário, o sistema <strong>toca o alarme</strong> na hora certa.</li>'
-      +'<li><strong>Tudo que fica aqui leva etiqueta com o nome dele</strong> — roupa, coleira, pote, escova, remédio. É a etiqueta que devolve a coisa certa ao dono certo.</li>'
+      +'<li><strong>Tudo que fica aqui leva etiqueta com o nome dele</strong> — roupa, coleira, pote, escova, remédio. É a etiqueta que devolve a coisa certa ao tutor certo.</li>'
       +'</ol></div></div>';
     var marcados=0;
     PT_ITENS.forEach(function(it){
@@ -16786,9 +16903,52 @@
     const p=hospNovaPend; if(!p) return;
     const ent=(document.getElementById('hospNovaIni')||{}).value||'';
     const sai=(document.getElementById('hospNovaFim')||{}).value||'';
-    if(!ent){ alert('Informe a data de ENTRADA.'); return; }
-    if(sai && sai<ent){ alert('A saída não pode ser antes da entrada.'); return; }
+    if(zFalta1('hospNovaIni', !ent?'Falta a data de ENTRADA.':((sai&&sai<ent)?'A saída não pode ser antes da entrada. Confira as duas datas.':''))) return;
     if(!DB){ alert('Sem conexão com o banco agora — tente de novo em instantes.'); return; }
+    // ===== TRAVA CONTRA HOSPEDAGEM EM DOBRO — Adriana, 17/ago/2026 ==================
+    // "O sistema tem que fazer uma trava, não pode ocorrer isso. Se está ativo, nunca pode
+    //  abrir outro... tem que dar a opção: a Dolly, Westie da Marguita, hospedada — é a mesma
+    //  que você quer inserir agora? Se for, clique aqui. No entanto, tem que dar a opção da
+    //  pessoa ler e dizer: é uma outra Dolly que está entrando."
+    // A Dolly ficou com SEIS estadias do mesmo período, criadas em 21/07 entre 15h31 e 17h01.
+    // Este caminho gravava direto, sem perguntar nada — quantas vezes tocassem no botão.
+    // O check-in já tinha essa proteção; a aba de Hospedagens, não.
+    var _jaTem=null;
+    try{
+      Object.keys(EST_TODAS||{}).forEach(function(id){
+        var e=EST_TODAS[id]||{};
+        if((e.status||'ativa')!=='ativa') return;
+        var mesmo=(p.refKey&&e.refKey&&e.refKey===p.refKey)||
+                  (jsNorm(e.nome||'')===jsNorm(p.nome||'')&&jsNorm(e.tutor||'')===jsNorm(p.tutor||''));
+        if(!mesmo) return;
+        // Só conta como "em curso" o que ainda não terminou — hospedagem antiga não trava
+        // uma nova (foi o caso do Chico do Juliano, 14/ago).
+        var hj=(typeof hospHojeISO==='function')?hospHojeISO():'';
+        if(hj&&e.saida&&e.saida<hj) return;
+        if(!_jaTem||(e._ts||0)>(_jaTem.e._ts||0)) _jaTem={id:id, e:e};
+      });
+    }catch(e){}
+    if(_jaTem){
+      var _e=_jaTem.e;
+      var _quem=(_e.raca?(_e.raca+' '):'')+'de '+(_e.tutor||'tutor a confirmar');
+      var _per=((typeof ciBRdata==='function')?ciBRdata(_e.entrada):_e.entrada)+' a '+((typeof ciBRdata==='function')?ciBRdata(_e.saida):(_e.saida||'sem data de saída'));
+      zEscolha('⚠️ '+(p.nome||'ESTE FILHOt').toUpperCase()+' JÁ TEM HOSPEDAGEM ABERTA',
+        ['<strong>'+esc(_e.nome||'')+'</strong>, '+esc(_quem)+', está lançado de <strong>'+esc(_per)+'</strong>'
+          +(_e.criado_por?(', por '+esc(_e.criado_por)):'')+'.',
+         'É o mesmo FILHOt que você quer lançar agora?'],
+        [ {t:'É O MESMO — abrir a hospedagem dele', cor:'#1E8449', fn:function(){
+             hospNovaPend=null; renderHospedesAba();
+             try{ hospAbrirFicha(_jaTem.id); }catch(e){ try{ hospEditarDatas(_jaTem.id); }catch(x){} }
+           }},
+          {t:'É OUTRO FILHOt com o mesmo nome — lançar assim mesmo', cor:'#B3261E', fn:function(){
+             _hospGravarNova(p, ent, sai, true);
+           }},
+          {t:'Cancelar', cor:'#6b5f4b', fn:function(){}} ]);
+      return;
+    }
+    _hospGravarNova(p, ent, sai, false);
+  }
+  function _hospGravarNova(p, ent, sai, forcado){
     // Hóspede recorrente (a Lisa hospeda toda quinta e sai sábado): a ALIMENTAÇÃO da última
     // estadia vem junto, para não redigitar tudo. MEDICAÇÃO nunca é copiada — remédio muda de
     // uma semana para a outra e dose repetida às cegas foi o que dobrou a medicação do Zeus.
@@ -16803,9 +16963,12 @@
       entrada:ent, saida:sai, status:'ativa',
       origem:(hospNovaPernoite?'pernoite-recepcao':'aba-hospedes'), criado_por:(typeof quemSou==='function'?quemSou():'-'), _ts:Date.now() };
     if(hospNovaPernoite){ est.pernoite=true; est.pernoite_pedida_por=(typeof quemSou==='function'?quemSou():'-'); }
+    // Quem lançou sabendo que já havia outra aberta fica registrado: se virar duplicata, dá
+    // para saber que foi decidido, não que escapou.
+    if(forcado){ est.lancado_mesmo_com_outra_aberta=true; }
     if(fichaAnterior){ delete fichaAnterior._ts; est.ficha=fichaAnterior; est.ficha_copiada_de=deQuando||'estadia anterior'; }
     DB.ref('auaulandia/estadias').push(est).then(function(){
-      if(typeof audit==='function') audit('estadia-criada','hospedagem lançada pela aba Peludinhos Hóspedes',{pet:p.nome||'',entrada:ent,saida:sai});
+      if(typeof audit==='function') audit('estadia-criada','hospedagem lançada pela aba Peludinhos Hóspedes'+(forcado?' — MESMO COM OUTRA ABERTA (confirmado que é outro FILHOt)':''),{pet:p.nome||'',entrada:ent,saida:sai});
       hospNovaPend=null;
       if(typeof carregarHospedes==='function') carregarHospedes();
       renderHospedesAba();

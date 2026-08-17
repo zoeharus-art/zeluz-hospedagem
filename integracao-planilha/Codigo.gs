@@ -60,8 +60,19 @@ function doPost(e) {
     if (String(d.acao || '') === 'cancelar') {
       var rc = { ok: true, financeiro: '', calendario: '' };
       try { rc.calendario = _apagarDoCalendario(ss, d); } catch (c1) { rc.calendario = 'ERRO - ' + String(c1); }
-      try { rc.financeiro = _marcarCancelado(ss, d); } catch (c2) { rc.financeiro = 'ERRO - ' + String(c2); }
+      // soCalendario: o 2o FILHOt em diante so libera a coluna dele. A linha do dinheiro e
+      // uma so para a reserva inteira e ja foi riscada no primeiro (Adriana, 17/ago/2026).
+      if (!d.soCalendario) {
+        try { rc.financeiro = _marcarCancelado(ss, d); } catch (c2) { rc.financeiro = 'ERRO - ' + String(c2); }
+      } else { rc.financeiro = '(nao mexe: linha unica da reserva)'; }
       return _resposta(rc);
+    }
+    // acao 'calendario': grava SO no calendario. E como o 2o, 3o... FILHOt de um mesmo
+    // orcamento entra, cada um na sua propria coluna ("cada um fica em uma coluna").
+    if (String(d.acao || '') === 'calendario') {
+      var rk = { ok: true, financeiro: '(nao mexe: linha unica da reserva)', calendario: '' };
+      try { rk.calendario = _gravarCalendario(ss, d); } catch (k1) { rk.calendario = 'ERRO - ' + String(k1); rk.ok = false; }
+      return _resposta(rk);
     }
     var r = { ok: true, financeiro: '', calendario: '' };
     try { r.financeiro = _gravarTabela(ss, d); } catch (e1) { r.financeiro = 'ERRO - ' + String(e1); }
