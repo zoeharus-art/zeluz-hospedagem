@@ -4746,10 +4746,78 @@
           ${(function(){var mc=chipDe(h); return (!h.mascote&&mc)?`<div class="hosp-chip" style="font-size:11px;font-weight:800;color:var(--z-gold-deep);margin-top:2px">Microchip: ${mc}</div>`:'';})()}
           <div class="tarja ${tj[0]}">${tj[1]}</div>
           ${h.saidaHoje?'<div class="saida-hoje">Dormiu · sai hoje</div>':''}
+          ${relMarcaDoCard(h)}
         </div>`;
       }).join('');
     renderKPIs();
+    try{ relCarregarDoDia(); }catch(e){}
     try{ const vv=document.getElementById('v-cuidadovet'); if(vv&&vv.classList.contains('active')&&typeof renderVetLista==='function') renderVetLista(); }catch(e){}
+  }
+  // ===== QUEM AINDA ESTÁ SEM RELATÓRIO — Adriana, 17/ago/2026 =====================
+  // O Theo passou três noites sem relatório nenhum, enquanto os outros dez tiveram todos.
+  // A gestora só descobriu no fim do fim de semana: "não foi feito dele porque não tinha
+  // nada no app". Ninguém enxergava, durante o turno, que faltava alguém.
+  // Agora cada card diz se o relatório DESTE turno já foi passado, e uma faixa no topo conta
+  // quantos faltam. A plantonista vê enquanto ainda dá tempo — não no dia seguinte.
+  var REL_DO_DIA={};                 // {chaveDaFicha: {dia:bool, inicio:bool, noite:bool}}
+  var _relCarregando=false;
+  function relTurnoAgora(){ var h=new Date().getHours(); return (h>=7&&h<19)?'dia':'noite'; }
+  function relCarregarDoDia(){
+    if(!DB||_relCarregando) return;
+    var reais=(hospedes||[]).filter(function(h){ return !h.mascote; });
+    if(!reais.length) return;
+    _relCarregando=true;
+    Promise.all(reais.map(function(h){
+      var k=fichaKeyDe(h,selectedDate);
+      return DB.ref('auaulandia/relatorios/'+k).once('value')
+        .then(function(s){ return {k:k, v:s.val()||{}}; }).catch(function(){ return null; });
+    })).then(function(rs){
+      var mudou=false;
+      rs.filter(Boolean).forEach(function(r){
+        var novo={ dia:!!(r.v.dia&&r.v.dia.passou), inicio:!!(r.v.inicio&&r.v.inicio.passou), noite:!!(r.v.noite&&r.v.noite.passou) };
+        var ant=REL_DO_DIA[r.k];
+        if(!ant||ant.dia!==novo.dia||ant.inicio!==novo.inicio||ant.noite!==novo.noite){ REL_DO_DIA[r.k]=novo; mudou=true; }
+      });
+      _relCarregando=false;
+      if(mudou){ try{ relPintarCards(); }catch(e){} }
+      try{ relFaixaFaltando(); }catch(e){}
+    }).catch(function(){ _relCarregando=false; });
+  }
+  function relFaltaDe(h){
+    if(!h||h.mascote) return false;
+    var r=REL_DO_DIA[fichaKeyDe(h,selectedDate)];
+    if(!r) return null;                                  // ainda não sei — não afirmo nada
+    return relTurnoAgora()==='noite' ? !(r.noite||r.inicio) : !r.dia;
+  }
+  function relMarcaDoCard(h){
+    var f=relFaltaDe(h);
+    if(f!==true) return '';
+    return '<div class="saida-hoje" style="background:var(--crm-critico);color:#fff">Sem relatório '+(relTurnoAgora()==='noite'?'da noite':'do dia')+'</div>';
+  }
+  // Repinta sem redesenhar a lista inteira (a lista pisca e perde o scroll).
+  function relPintarCards(){
+    try{
+      var grid=document.getElementById('hospGrid'); if(!grid) return;
+      var cards=grid.querySelectorAll('.pet:not(.add)');
+      var reais=(hospedes||[]);
+      for(var i=0;i<cards.length&&i<reais.length;i++){
+        var velho=cards[i].querySelector('.rel-falta'); if(velho) velho.remove();
+        var html=relMarcaDoCard(reais[i]);
+        if(html){ var d=document.createElement('div'); d.className='rel-falta'; d.innerHTML=html; cards[i].appendChild(d.firstChild); }
+      }
+    }catch(e){}
+  }
+  function relFaixaFaltando(){
+    var grid=document.getElementById('hospGrid'); if(!grid||!grid.parentNode) return;
+    var el=document.getElementById('relFaixaFalta');
+    var faltam=(hospedes||[]).filter(function(h){ return relFaltaDe(h)===true; });
+    if(!faltam.length){ if(el) el.remove(); return; }
+    if(!el){ el=document.createElement('div'); el.id='relFaixaFalta'; grid.parentNode.insertBefore(el,grid); }
+    var turno=relTurnoAgora()==='noite'?'da noite':'do dia';
+    el.style.cssText='margin:0 0 14px;padding:12px 14px;border-radius:12px;background:#FDECEA;border:2px solid #C0392B;color:#8C2B21;font-weight:700;font-size:14px';
+    el.innerHTML='Falta o relatório '+turno+' de <strong>'+faltam.length+'</strong> FILHOt'+(faltam.length>1?'s':'')+': '
+      +faltam.map(function(h){ return escAttr(h.nome||'?'); }).join(', ')
+      +'<div style="font-weight:600;font-size:12.5px;margin-top:4px">Toque no card de cada um para passar o plantão. Ninguém deve ficar sem.</div>';
   }
   renderHosp();
 
@@ -6491,6 +6559,9 @@
     const dados=coletarCard(card); dados.passou=passou; const _rSalvo=(RELSTATE[tipo]||{}).recebeu||''; if(_rSalvo){ dados.recebeu=_rSalvo; dados._tsReceb=(RELSTATE[tipo]||{})._tsReceb||Date.now(); } dados._ts=Date.now();
     if(DB){ if(st){ st.style.color='var(--muted)'; st.textContent='Salvando...'; } DB.ref('auaulandia/relatorios/'+fichaKey()+'/'+tipo).set(dados).then(()=>{
         RELSTATE[tipo]={passou:passou,recebeu:_rSalvo,_tsReceb:dados._tsReceb||0}; sincRecebVis(tipo);
+        // Tira o "Sem relatório" do card na hora, sem esperar recarregar a lista.
+        try{ var _k=fichaKey(); REL_DO_DIA[_k]=Object.assign({dia:false,inicio:false,noite:false},REL_DO_DIA[_k]||{}); REL_DO_DIA[_k][tipo]=!!passou;
+             relPintarCards(); relFaixaFaltando(); }catch(e){}
         const _quemRecebe=(tipo==='dia')?'o Plantonista':'quem pega o plantão';
         if(st){ st.style.color='var(--crm-ok)'; st.textContent=(tipo==='inicio')?'✅ Jantar salvo! A Noite será preenchida amanhã de manhã, na passagem do plantão.'
           : (_rSalvo?'✅ Salvo!':'✅ Plantão passado! Agora fica piscando em vermelho até '+_quemRecebe+' ler e assinar o recebimento.'); }
@@ -7784,7 +7855,7 @@
   // Agora existe um carimbo: esta constante é a versão que o aparelho está rodando, e o
   // Firebase guarda a versão publicada. Quando as duas diferem, aparece o aviso — mas
   // NUNCA recarrega sozinho: recarregar no meio de um check-in perderia o trabalho.
-  const APP_VERSAO='2026-08-17-01';
+  const APP_VERSAO='2026-08-17-02';
   function vigiarVersao(){
     if(!DB) return;
     try{
