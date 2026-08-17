@@ -19,10 +19,8 @@ var GRUPOS = {
   // Gestão — o resumo fechado de cada plantão (Adriana, 15/ago/2026: "precisamos criar um
   // grupo para passar os dados do plantão para a Gestão e quem mais em algum momento
   // convier — se tiver um dia um supervisor, gerente"). Começa só com a Adriana e a Márcia.
-  // PARA LIGAR: crie o grupo no Telegram, ponha o bot dentro, mande qualquer mensagem lá e
-  // troque o COLE_AQUI pelo id do grupo (começa com sinal de menos).
   // Quem entra e quem sai depois é decidido no próprio Telegram, sem mexer no sistema.
-  gestao: 'COLE_AQUI_O_ID_DO_GRUPO_DA_GESTAO'
+  gestao: '-5388577278'    // Zêluz - Plantão AuAulândia
 };
 var GRUPO_PADRAO = 'vet';
 
@@ -42,13 +40,46 @@ function doPost(e) {
 }
 
 /** Abra a URL /exec no navegador: manda um teste para CADA grupo configurado. */
-function doGet() {
+function doGet(e) {
+  // ?listar=1 → NÃO manda nada: só diz em que grupos o bot está e qual é o id de cada um.
+  // É assim que se descobre o número de um grupo novo, sem precisar do token na mão: crie o
+  // grupo, ponha o bot dentro, mande uma mensagem qualquer lá e abra a URL da ponte com
+  // ?listar=1 no fim. (Adriana, 15/ago/2026 — grupo da Gestão.)
+  if (e && e.parameter && e.parameter.listar) return _resp(_listarGrupos());
   var out = { ok: true, msg: 'ponte do telegram no ar', grupos: {} };
   Object.keys(GRUPOS).forEach(function (nome) {
+    // Grupo ainda não configurado não recebe teste — e não vira erro escondido.
+    if (String(GRUPOS[nome]).indexOf('COLE_AQUI') === 0) { out.grupos[nome] = 'AINDA NAO CONFIGURADO'; return; }
     out.grupos[nome] = _mandarTexto(GRUPOS[nome],
       '<b>Zêluz · AuAulândia</b>\nPonte de testes: está tudo funcionando. Acentuação: ação, coração, Zêluz, José.');
   });
   return _resp(out);
+}
+
+/** Onde o bot está: nome do grupo + id, lidos das mensagens recentes. Não envia nada. */
+function _listarGrupos() {
+  try {
+    var r = UrlFetchApp.fetch('https://api.telegram.org/bot' + TOKEN_BOT + '/getUpdates',
+      { muteHttpExceptions: true });
+    var j = JSON.parse(r.getContentText());
+    if (!j.ok) return { ok: false, erro: j.description || 'o Telegram recusou' };
+    var vistos = {}, achados = [];
+    (j.result || []).forEach(function (u) {
+      var m = u.message || u.channel_post || u.my_chat_member || null;
+      var c = m && m.chat; if (!c || vistos[c.id]) return;
+      vistos[c.id] = true;
+      achados.push({ id: String(c.id), titulo: c.title || c.first_name || '(sem titulo)', tipo: c.type });
+    });
+    var jaTem = {};
+    Object.keys(GRUPOS).forEach(function (n) { jaTem[String(GRUPOS[n])] = n; });
+    achados.forEach(function (a) { a.jaConfigurado = jaTem[a.id] || null; });
+    return {
+      ok: true,
+      instrucao: 'Copie o "id" do grupo novo e cole na lista GRUPOS, no lugar do COLE_AQUI. Depois publique uma versao nova.',
+      grupos_encontrados: achados,
+      grupos_configurados: GRUPOS
+    };
+  } catch (err) { return { ok: false, erro: String(err) }; }
 }
 
 function _mandarTexto(destino, texto) {
