@@ -7708,14 +7708,32 @@
   }
   // Quantos FILHOts dormiram na noite que COMEÇA em `iso` (ele está aqui se a estadia já
   // começou e ainda não terminou naquele dia). Morador da casa fora da conta.
+  // ===== QUEM DORMIU AQUI NESTA NOITE ==============================================
+  // Adriana, 18/ago/2026: "encontrei um erro enorme. Dia 06/08 tinha Pufe, Toddy, Ozzy,
+  // Romeo, Cristal e Dolly. No entanto não é a lista que você me deu."
+  //
+  // ERRO: esta função lia CF_ESTADIAS, que guarda só a estadia MAIS RECENTE de cada FILHOt.
+  // O Toddy tem duas (06→10/ago e 13→14/ago); o app só enxergava a segunda, então ele
+  // sumia da noite de 06/08 — e a plantonista era paga por um FILHOt a menos. Vale para
+  // todo FILHOt que voltou: Toddy, Chico, Brad.
+  //
+  // Agora lê TODAS as estadias. E conta cada FILHOt UMA vez por noite: a Dolly tem 6
+  // estadias idênticas no banco (resto da fábrica de duplicados de 04/ago) e sem essa
+  // trava ela valeria por seis.
   function acertoHospedesNaNoite(iso){
-    var out=[];
-    Object.keys(CF_ESTADIAS||{}).forEach(function(k){
-      var reg=CF_ESTADIAS[k]||{}, e=reg.e||{};
-      if(!e.entrada) return;
-      if(typeof ehMoradorDaCasa==='function' && ehMoradorDaCasa(e.nome,k)) return;  // a Repolho não conta
+    var out=[], vistos={}, lista=[];
+    var todas=(typeof EST_TODAS!=='undefined'&&EST_TODAS&&Object.keys(EST_TODAS).length)?EST_TODAS:null;
+    if(todas) Object.keys(todas).forEach(function(id){ lista.push(todas[id]||{}); });
+    else Object.keys(CF_ESTADIAS||{}).forEach(function(k){ lista.push((CF_ESTADIAS[k]||{}).e||{}); });
+    lista.forEach(function(e){
+      if(!e||!e.entrada) return;
+      if(String(e.status||'')==='cancelada') return;
+      if(typeof ehMoradorDaCasa==='function' && ehMoradorDaCasa(e.nome,e.refKey)) return;  // a Repolho não conta
       var fim=e.saida||'9999-12-31';
-      if(e.entrada<=iso && iso<fim) out.push(e.nome||'?');
+      if(!(e.entrada<=iso && iso<fim)) return;
+      var k=e.refKey||((typeof jsNorm==='function')?jsNorm(e.nome||''):(e.nome||''));
+      if(vistos[k]) return;                 // a mesma estadia gravada várias vezes conta UMA
+      vistos[k]=true; out.push(e.nome||'?');
     });
     return out;
   }
@@ -8414,7 +8432,7 @@
   // Agora existe um carimbo: esta constante é a versão que o aparelho está rodando, e o
   // Firebase guarda a versão publicada. Quando as duas diferem, aparece o aviso — mas
   // NUNCA recarrega sozinho: recarregar no meio de um check-in perderia o trabalho.
-  const APP_VERSAO='2026-08-18-05';
+  const APP_VERSAO='2026-08-18-06';
   function vigiarVersao(){
     if(!DB) return;
     try{
