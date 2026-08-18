@@ -8514,7 +8514,7 @@
   // Agora existe um carimbo: esta constante é a versão que o aparelho está rodando, e o
   // Firebase guarda a versão publicada. Quando as duas diferem, aparece o aviso — mas
   // NUNCA recarrega sozinho: recarregar no meio de um check-in perderia o trabalho.
-  const APP_VERSAO='2026-08-18-07';
+  const APP_VERSAO='2026-08-18-08';
   function vigiarVersao(){
     if(!DB) return;
     try{
@@ -9871,6 +9871,25 @@
   function almCad(p){ const k=pelKey(p); const seed=ALMOCO_SEED[k], over=almCadCache[k];
     if(!seed&&!over) return null;
     return Object.assign({}, seed||{}, over||{}); }
+  // ===== A OBSERVAÇÃO NÃO REPETE O QUE JÁ TEM COLUNA — Adriana, 18/ago/2026 =======
+  // "está duplicando a informação do comedouro, tem uma aba específica, e aí nas observações
+  //  aparece novamente lento e restrição a tudo... o Chico Cavalier: observação sem nada, e
+  //  não repetir o comedouro e restrição."
+  // O texto foi digitado quando não havia coluna de comedouro nem de restrição. Hoje há as
+  // duas, e repetir só faz a monitora ler a mesma coisa três vezes — e perder no meio o que
+  // é só daquele FILHOt ("quando tiver comida natural 100g", "primeiro a comer").
+  // Limpa na LEITURA: o dado antigo continua intacto no banco.
+  function almObsLimpa(extra, restr){
+    var r=(typeof jsNorm==='function')?jsNorm(String(restr||'')):String(restr||'').toLowerCase();
+    return String(extra||'').split(/\s*[·|;]\s*/).filter(function(t){
+      var n=(typeof jsNorm==='function')?jsNorm(t):String(t||'').trim().toLowerCase();
+      if(!n) return false;
+      if(n==='lento'||n==='come lento'||n==='comedouro lento'||n==='comedouro lento?') return false;
+      if(/^restri(c|ç)/.test(n)) return false;      // "RESTRIÇÃO A TUDO" tem coluna própria
+      if(r&&n===r) return false;
+      return true;
+    }).join(' · ');
+  }
   function setAlmCad(p,patch){ const k=pelKey(p);
     almCadCache[k]=Object.assign({}, almCadCache[k]||{}, patch);
     if(DB) DB.ref('daycare/almoco-cad/'+k).update(patch).catch(()=>{});
@@ -11865,7 +11884,8 @@
       <div class="field" style="grid-column:1/-1"><label>Alimentação</label><input class="cad-in" value="${escAttr(a.alim||'')}" placeholder="Ex: Ração · Comida Natural · Ração + Patê" onchange="setAlmCad(pelAtual,{alim:this.value});renderAlmSeFor()"></div>
       <div class="field"><label>Quantidade</label><input class="cad-in" value="${escAttr(a.quant||'')}" placeholder="Ex: 75g · Total · Metade" onchange="setAlmCad(pelAtual,{quant:this.value});renderAlmSeFor()"></div>
       <div class="field"><label>Restrição (aparece em vermelho)</label><input class="cad-in" value="${escAttr(a.restr||'')}" placeholder="Ex: RESTRIÇÃO A TUDO" onchange="setAlmCad(pelAtual,{restr:this.value});renderAlmSeFor()"></div>
-      <div class="field" style="grid-column:1/-1"><label>Complemento / observação do almoço</label><input class="cad-in" value="${escAttr(a.extra||'')}" placeholder="Ex: Quando for só comida = 100g · Come no corredor · Almoçar com Juju" onchange="setAlmCad(pelAtual,{extra:this.value});renderAlmSeFor()"></div>
+      <div class="field" style="grid-column:1/-1"><label>Complemento / observação do almoço</label><input class="cad-in" value="${escAttr(almObsLimpa(a.extra,a.restr))}" placeholder="Só o que NÃO está nos campos acima. Ex: Quando for só comida = 100g · Come no corredor · Almoçar com Juju" onchange="setAlmCad(pelAtual,{extra:this.value});renderAlmSeFor()"></div>
+      <div class="hint" style="grid-column:1/-1;margin-top:-4px">Não repita aqui o comedouro lento nem a restrição — cada um já tem o seu campo e aparece sozinho na lista e no relatório.</div>
       <div class="field"><label>Comedouro lento?</label><div class="seg gold" data-single>${seg('lento',a.lento?'Sim':'Nao',['Sim','Nao'])}</div></div>
       <div class="field"><label>Almoça na creche?</label><div class="seg gold" data-single>${segAlmoca(a.nao?'Nao':'Sim',['Sim','Nao'])}</div>
         <div class="hint" style="margin-top:4px;font-size:11px">Mesmo marcando <strong>Não</strong>, ele continua aparecendo na grade do Almoço todos os dias — o tutor pode mandar comida um dia.</div></div>`;
@@ -14738,7 +14758,7 @@
           almoca:(a ? (a.nao?'NÃO almoça':'Sim') : 'não cadastrado'),
           lento:(a&&a.lento)?'LENTO':'normal',
           oque:(a&&a.alim)||'', quanto:(a&&a.quant)||'',
-          obs:(a&&a.extra)||'',
+          obs:almObsLimpa((a&&a.extra)||'', (a&&a.restr)||ex.restricao||ex.alergia||''),
           restr:((a&&a.restr)||ex.restricao||ex.alergia||'') });
       });
     });
@@ -15063,7 +15083,7 @@
           <div class="alm-line"><span>Alimentacao</span><b>${a.alim||'-'}</b></div>
           <div class="alm-line"><span>Quantidade</span><b>${a.quant||'-'}</b></div>
           ${a.lento?'<div class="alm-badge">Comedouro LENTO</div>':''}${a.nao?'<div class="alm-badge" style="background:rgba(35,77,103,.12);color:var(--z-blue)">NAO ALMOCA</div>':''}
-          ${a.extra?`<div class="alm-extra">${a.extra}</div>`:''}
+          ${(function(){ const _o=almObsLimpa(a.extra,restrRaw); return _o?`<div class="alm-extra">${_o}</div>`:''; })()}
         </div>`; }
       else info=`<div class="alm-info"><div class="alm-extra" style="color:var(--muted)">Almoco nao cadastrado</div></div>`;
       const neon=restrRaw?`<div class="alm-restr">&#9888; ${/restri/i.test(restrRaw)?restrRaw:('RESTRICAO: '+restrRaw)}</div>`:'';
