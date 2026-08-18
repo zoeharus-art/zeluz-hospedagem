@@ -2955,6 +2955,8 @@
     <div class="card">
       <h2 style="font-size:19px">Noites</h2>
       <div class="hint">Últimos 30 dias. Escreva quem passou a noite e marque como <strong>pago</strong> ou <strong>acumulado</strong> (quando ela prefere receber depois).</div>
+      <!-- A Gestão ensina o sistema quem é quem, uma vez (Adriana, 17/ago/2026). -->
+      <div id="acertoNomes" style="margin-top:10px;display:none"></div>
       <div id="acertoLista" style="margin-top:10px"></div>
     </div>
     <div class="card">
@@ -6511,7 +6513,7 @@
   }
   function salvarRelatorioCard(tipo){ if(!currentHosp) return; const card='card-'+tipo; const st=document.getElementById('status-'+tipo);
     const passouEl=document.getElementById('passou-'+tipo);
-    const passou=((passouEl&&passouEl.value)||'').trim();
+    let passou=((passouEl&&passouEl.value)||'').trim();   // let: a confirmação do nome pode corrigi-lo
     const falt=[]; document.querySelectorAll('#'+card+' .obsline').forEach(l=>{ if(l.style.display==='none') return; /* pula perguntas condicionais escondidas (ex.: Tipo de vômito quando "Vomitou? Não") */ if(l.classList.contains('med-confirm-obs')) return; /* confirmação de remédio (Sim/Não) é opcional — não bloqueia salvar */ if(!l.querySelector('button.on')){ const q=l.querySelector('.q'); if(q) falt.push(q.textContent.trim()); } });
     if(falt.length){
       if(st){ st.style.color='var(--crm-critico)'; st.textContent='✋ Faltou responder: '+falt.slice(0,6).join(', ')+(falt.length>6?'…':''); }
@@ -6561,6 +6563,28 @@
     if(!passou){ relBloqueio(st,'Agora é só assinar: escreva o SEU NOME no campo "quem passou o plantão", logo acima do botão.',tipo,'FALTA A SUA ASSINATURA');
       try{ const el=document.getElementById('passou-'+tipo); if(el){ el.scrollIntoView({behavior:'smooth',block:'center'}); el.focus(); } }catch(e){}
       return; }
+    // ===== O NOME ESTÁ ESCRITO ERRADO? — Adriana, 17/ago/2026 =====================
+    // "Carpl não existe esse nome em português, nem Caroo, nem Caroll — talvez confirmar com
+    //  a própria plantonista se o nome for muito diferente."
+    // De madrugada, com o celular na mão, escapa letra. Confirmar aqui custa um toque e
+    // evita que o pagamento dela se parta em dois nomes no fim do mês.
+    if(!plantEhDuplo(passou) && !plantOficial(passou) && (PLANT_LIVRO.oficiais||[]).length){
+      var _prox=(PLANT_LIVRO.oficiais||[]).map(function(o){ return {o:o, d:_distNome(o,passou)}; })
+        .filter(function(x){ return x.d<=2 && jsNorm(x.o).charAt(0)===jsNorm(passou).charAt(0); })
+        .sort(function(a,b){ return a.d-b.d; })[0];
+      if(_prox){
+        var _r=confirm('Você escreveu "'+passou+'".\n\nVocê é a '+_prox.o+'?\n\n'
+          +'OK = sim, sou a '+_prox.o+' (eu arrumo o nome)\n'
+          +'Cancelar = não, o nome está certo do jeito que escrevi');
+        if(_r){
+          passou=_prox.o;
+          try{ var _el=document.getElementById('passou-'+tipo); if(_el) _el.value=passou; }catch(e){}
+        } else {
+          // Ela confirmou a grafia: o sistema aprende e não pergunta de novo.
+          try{ plantAprender(passou, passou); }catch(e){}
+        }
+      }
+    }
     // quem passa NAO preenche quem recebeu — o recebimento e assinado depois, por quem pega o plantao
     const dados=coletarCard(card); dados.passou=passou; const _rSalvo=(RELSTATE[tipo]||{}).recebeu||''; if(_rSalvo){ dados.recebeu=_rSalvo; dados._tsReceb=(RELSTATE[tipo]||{})._tsReceb||Date.now(); } dados._ts=Date.now();
     if(DB){ if(st){ st.style.color='var(--muted)'; st.textContent='Salvando...'; } DB.ref('auaulandia/relatorios/'+fichaKey()+'/'+tipo).set(dados).then(()=>{
@@ -7669,11 +7693,18 @@
   // Adriana, 17/ago/2026: "a dobra é o mesmo valor, pagamos por 12h. O valor é o mesmo: se
   // o valor a receber de 4 peludinhos é 100,00 + 13,00, recebe 200,00 + 13,00 — a ajuda de
   // custo continua sendo 1, a pessoa não saiu de lá."
-  function acertoValorPara(n, dobrou){
+  // quantas = quantas plantonistas ficaram na mesma noite. Adriana, 17/ago/2026:
+  // "dividimos por 2 o número de cães. De 4 a 5 é um valor; se tivemos 9 cães e duas
+  //  plantonistas, 4,5 cães para cada, entra dentro do valor de 4 a 5 cães."
+  // Cada uma recebe a SUA ajuda de custo — as duas passaram a noite aqui.
+  function acertoValorPara(n, dobrou, quantas){
     var T=acertoTab();
-    var f=T.faixas.find(function(x){ return n<=x.ate; })||T.faixas[T.faixas.length-1];
-    var base=dobrou?(f.v*2):f.v;                  // dois turnos de 12h
-    return {base:base, ajuda:T.ajuda, total:base+T.ajuda, dobrou:!!dobrou, base12:f.v};
+    var q=Math.max(1, parseInt(quantas,10)||1);
+    var porCabeca=n/q;                            // 9 FILHOts / 2 = 4,5
+    var f=T.faixas.find(function(x){ return porCabeca<=x.ate; })||T.faixas[T.faixas.length-1];
+    var base=dobrou?(f.v*2):f.v;                  // dobra = dois turnos de 12h
+    return {base:base, ajuda:T.ajuda, total:base+T.ajuda, dobrou:!!dobrou,
+            base12:f.v, quantas:q, porCabeca:porCabeca};
   }
   // Quantos FILHOts dormiram na noite que COMEÇA em `iso` (ele está aqui se a estadia já
   // começou e ainda não terminou naquele dia). Morador da casa fora da conta.
@@ -7712,6 +7743,49 @@
   //   relatorios/{pet}__{D}/dia.recebeu     → ela ASSUMIU o plantão (recebeu da monitora)
   //   relatorios/{pet}__{D}/inicio.passou   → ela deu o JANTAR
   //   relatorios/{pet}__{D+1}/noite.passou  → ela contou COMO FOI A NOITE, de manhã
+  // ===== O LIVRO DE NOMES DAS PLANTONISTAS — Adriana, 17/ago/2026 ================
+  // "Carina e Karina é uma só. Tem como perguntar à Gestão em caso de dúvidas? Aí a Gestão
+  //  responde e você já arruma. Carpl não existe esse nome em português, nem Caroo, nem
+  //  Caroll — talvez confirmar com a própria plantonista se o nome for muito diferente."
+  //
+  // Adivinhar por semelhança erra: eu tinha separado Carina de Karina achando serem duas
+  // pessoas, e são a mesma. Perguntar não erra. O sistema pergunta UMA vez e nunca mais — e
+  // o que a Gestão responde vale também para as noites passadas, porque o acerto recalcula.
+  //   config/plantonistas = { oficiais:['Carol',...], apelidos:{ 'carpl':'Carol', ... } }
+  var PLANT_LIVRO={oficiais:[], apelidos:{}};
+  function plantCarregarLivro(){
+    if(!DB) return Promise.resolve(PLANT_LIVRO);
+    return DB.ref('auaulandia/config/plantonistas').once('value').then(function(s){
+      var v=s.val()||{};
+      PLANT_LIVRO={oficiais:Array.isArray(v.oficiais)?v.oficiais:[], apelidos:v.apelidos||{}};
+      return PLANT_LIVRO;
+    }).catch(function(){ return PLANT_LIVRO; });
+  }
+  // Acento e maiúscula não contam: "Wandela" e "Wândela" são a mesma pessoa.
+  function plantChave(n){ return jsNorm(String(n||'').replace(/\s+/g,' ').trim()); }
+  // Nome oficial se já conhecido; null se ninguém disse ainda quem é.
+  function plantOficial(nome){
+    var k=plantChave(nome); if(!k) return null;
+    var ap=PLANT_LIVRO.apelidos||{};
+    if(ap[k]) return ap[k];
+    var of=(PLANT_LIVRO.oficiais||[]).find(function(o){ return plantChave(o)===k; });
+    return of||null;
+  }
+  function plantEhDuplo(n){ return /\s+e\s+|\/|\+|\s*&\s*/i.test(String(n||'')); }
+  // Ensina o sistema: este apelido é esta pessoa. Vale para trás e para a frente.
+  function plantAprender(apelido, oficial){
+    var k=plantChave(apelido), of=String(oficial||'').trim();
+    if(!k||!of) return Promise.resolve();
+    PLANT_LIVRO.apelidos=PLANT_LIVRO.apelidos||{};
+    PLANT_LIVRO.apelidos[k]=of;
+    if(!(PLANT_LIVRO.oficiais||[]).some(function(o){ return plantChave(o)===plantChave(of); })){
+      PLANT_LIVRO.oficiais=(PLANT_LIVRO.oficiais||[]).concat([of]);
+    }
+    if(!DB) return Promise.resolve();
+    return DB.ref('auaulandia/config/plantonistas').set(PLANT_LIVRO).then(function(){
+      if(typeof audit==='function') audit('plantonista-nome','"'+apelido+'" é '+of,{});
+    }).catch(function(){});
+  }
   // ===== JUNTAR OS NOMES DA MESMA PESSOA — Adriana, 17/ago/2026 ===================
   // O nome é digitado à mão, três vezes por plantão, muitas vezes de madrugada. A mesma
   // pessoa aparece como Carol · Carpl · Caroll · Caroo; Wândela · Wandela; Jessica · Jéssica.
@@ -7730,6 +7804,13 @@
     // 2) da mais usada para a menos usada, cada uma puxa as parecidas para si
     var oficiais=Object.keys(freq).sort(function(a,b){ return freq[b]-freq[a]; });
     var mapa={};
+    // O LIVRO MANDA. O que a Gestão (ou a própria plantonista) confirmou vence qualquer
+    // palpite por semelhança — inclusive Carina = Karina, que a semelhança separava.
+    oficiais=oficiais.filter(function(nome){
+      var of=plantOficial(nome);
+      if(of){ mapa[nome]=of; return false; }        // já se sabe quem é
+      return true;
+    });
     // Assinatura com DUAS pessoas fica sozinha: não absorve ninguém nem é absorvida por
     // ninguém. "Carol e Julia" não é a Carol nem a Julia — é uma noite em que duas cobriram.
     oficiais=oficiais.filter(function(nome){
@@ -7805,9 +7886,16 @@
         // Quais dos três momentos ela assinou — é isso que prova a noite inteira.
         var momentos=[]; if(p.recebeu) momentos.push('recebeu o plantão');
         if(p.jantar) momentos.push('jantar'); if(p.manha) momentos.push('manhã seguinte');
+        // Quantas ficaram nesta noite: ou porque a assinatura traz duas ("Carol e Julia"),
+        // ou porque duas pessoas diferentes assinaram momentos diferentes da mesma noite.
+        var equipe=nomes.slice();
+        if(p.duasPessoas){
+          equipe=String(nomes[0]).split(/\s+e\s+|\/|\+|\s*&\s*/i).map(function(x){ return x.trim(); }).filter(Boolean);
+        }
         out[noite]={ nome:nomes[0], acoes:(p.recebeu+p.jantar+p.manha), momentos:momentos,
                      completa:(p.recebeu>0&&p.jantar>0&&p.manha>0),
                      variantes:Object.keys(p.variantes||{}), duasPessoas:!!p.duasPessoas,
+                     equipe:equipe, quantas:Math.max(1,equipe.length),
                      outros:nomes.slice(1,3), fonte:'assinatura' };
       });
       return out;
@@ -7848,7 +7936,10 @@
   }
   function acertoCarregar(){
     if(!DB){ renderAcerto(); return; }
-    Promise.all([
+    // O LIVRO CARREGA PRIMEIRO, sozinho: o agrupamento consulta plantOficial() e daria
+    // resultado diferente se o livro ainda não tivesse chegado. Ordem aqui não é detalhe.
+    plantCarregarLivro().then(function(){
+    return Promise.all([
       DB.ref('auaulandia/config/acerto-plantao').once('value').then(function(s){ return s.val(); }).catch(function(){ return null; }),
       DB.ref('auaulandia/acerto-plantao').limitToLast(60).once('value').then(function(s){ return s.val()||{}; }).catch(function(){ return {}; }),
       acertoDeduzirQuem(),
@@ -7865,6 +7956,7 @@
       try{ acertoMarcarDobras(); }catch(e){}
       renderAcerto();
     });
+    }).catch(function(){ renderAcerto(); });
   }
   // ===== PLANTÃO DOBRADO ============================================================
   // "se dobrou plantão — entrou sábado às 19h e às 7h de domingo ficou até as 19h de domingo."
@@ -7894,14 +7986,62 @@
     }
     return out;
   }
+  // ===== NOMES A CONFIRMAR — a Gestão ensina o sistema uma vez ====================
+  // Cada apelido desconhecido vira uma pergunta com os nomes já conhecidos como resposta.
+  // Respondeu, o acerto INTEIRO se recalcula — inclusive as noites já passadas.
+  var PLANT_ACONFIRMAR={};   // {apelido: nº de noites}
+  function renderNomesAConfirmar(){
+    var el=document.getElementById('acertoNomes'); if(!el) return;
+    var ks=Object.keys(PLANT_ACONFIRMAR);
+    if(!ks.length){ el.innerHTML=''; el.style.display='none'; return; }
+    el.style.display='block';
+    var conhecidos=(PLANT_LIVRO.oficiais||[]).slice().sort();
+    el.innerHTML='<div class="card" style="border-left:4px solid var(--crm-critico)">'
+      +'<h2 style="font-size:18px">Nomes a confirmar ('+ks.length+')</h2>'
+      +'<div class="hint">Alguém assinou com um nome que eu não conheço. Diga de quem é — eu arrumo todas as noites, inclusive as que já passaram, e nunca mais pergunto.</div>'
+      +ks.sort(function(a,b){ return PLANT_ACONFIRMAR[b]-PLANT_ACONFIRMAR[a]; }).map(function(ap){
+        var n=PLANT_ACONFIRMAR[ap];
+        return '<div style="border-top:1px solid var(--line);padding:12px 0">'
+          +'<div style="font-weight:800;color:var(--z-blue);font-size:15px">Assinaram como &ldquo;'+escAttr(ap)+'&rdquo;'
+          +' <span style="font-weight:600;font-size:12.5px;color:var(--muted)">— '+n+' noite'+(n>1?'s':'')+'</span></div>'
+          +'<div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:7px">'
+          +conhecidos.map(function(o){
+              return '<button class="btn" style="background:var(--z-cream-warm);color:var(--z-blue);border:1.5px solid var(--line);padding:6px 13px" onclick="plantConfirmar(\''+escAttr(ap).replace(/'/g,"\\'")+'\',\''+escAttr(o).replace(/'/g,"\\'")+'\')">é a '+escAttr(o)+'</button>';
+            }).join('')
+          +'<button class="btn btn-gold" style="padding:6px 13px" onclick="plantConfirmarNova(\''+escAttr(ap).replace(/'/g,"\\'")+'\')">é alguém novo</button>'
+          +'</div></div>';
+      }).join('')+'</div>';
+  }
+  function plantConfirmar(apelido, oficial){
+    if(!confirm('&ldquo;'.replace(/&ldquo;/,'"')+apelido+'" é a '+oficial+'?\n\nVou juntar todas as noites assinadas assim com as da '+oficial+'.')) return;
+    plantAprender(apelido, oficial).then(function(){ acertoCarregar(); });
+  }
+  function plantConfirmarNova(apelido){
+    var nome=(prompt('Como se escreve o nome dela, certo?\n\nEla assinou como "'+apelido+'".', apelido)||'').trim();
+    if(!nome) return;
+    plantAprender(apelido, nome).then(function(){ acertoCarregar(); });
+  }
   function renderAcerto(){
     var el=document.getElementById('acertoLista'); if(!el) return;
+    // Quem ainda não está no livro vira pergunta para a Gestão.
+    PLANT_ACONFIRMAR={};
+    try{
+      Object.keys(ACERTO_QUEM||{}).forEach(function(noite){
+        var d=ACERTO_QUEM[noite]; if(!d||!d.nome||d.fonte!=='assinatura') return;
+        (d.duasPessoas?(d.equipe||[]):[d.nome]).forEach(function(n){
+          if(plantOficial(n)) return;                 // já se sabe quem é
+          PLANT_ACONFIRMAR[n]=(PLANT_ACONFIRMAR[n]||0)+1;
+        });
+      });
+    }catch(e){}
+    try{ renderNomesAConfirmar(); }catch(e){}
     var noites=acertoNoites();
     var lbSt={pago:['PAGO','resolvido'], acumulado:['ACUMULADO','processo']};
     el.innerHTML=noites.map(function(o){
-      var _dob=!!((ACERTO_QUEM[o.iso]||{}).dobrou);
-      var v=o.reg.valor_total_cent!=null?{total:o.reg.valor_total_cent, base:o.reg.valor_base_cent||0, ajuda:o.reg.ajuda_cent||0, dobrou:!!o.reg.dobrou}
-                                        :acertoValorPara(o.n, _dob);
+      var _q=ACERTO_QUEM[o.iso]||{};
+      var _dob=!!_q.dobrou, _qtas=Math.max(1,_q.quantas||1);
+      var v=o.reg.valor_total_cent!=null?{total:o.reg.valor_total_cent, base:o.reg.valor_base_cent||0, ajuda:o.reg.ajuda_cent||0, dobrou:!!o.reg.dobrou, quantas:o.reg.quantas||1, porCabeca:(o.reg.pets_por_pessoa!=null?o.reg.pets_por_pessoa:o.n)}
+                                        :acertoValorPara(o.n, _dob, _qtas);
       var st=o.reg.status||'apagar';
       var L=lbSt[st]||['A PAGAR','pendente'];
       var feriado=orcEhFeriado(o.iso), dom=(o.dw==='dom');
@@ -7914,7 +8054,10 @@
         +' <span style="font-weight:600;font-size:12px;color:var(--muted)">('
         +(v.dobrou?('2 &times; '+fmtCent(v.base12||Math.round(v.base/2))+' = '+fmtCent(v.base)):fmtCent(v.base))
         +' + '+fmtCent(v.ajuda)+' de ajuda)</span>'
-        +(v.dobrou?'<span style="display:inline-block;margin-left:6px;background:var(--crm-critico);color:#fff;border-radius:999px;padding:1px 9px;font-size:11px;font-weight:800">DOBRA · 24h</span>':'')+'</div>'
+        +(v.dobrou?'<span style="display:inline-block;margin-left:6px;background:var(--crm-critico);color:#fff;border-radius:999px;padding:1px 9px;font-size:11px;font-weight:800">DOBRA · 24h</span>':'')
+        +((v.quantas>1)?('<span style="display:inline-block;margin-left:6px;background:var(--z-blue);color:var(--z-cream);border-radius:999px;padding:1px 9px;font-size:11px;font-weight:800">'+v.quantas+' PLANTONISTAS</span>'):'')
+        +'</div>'
+        +((v.quantas>1)?('<div style="font-size:12.5px;color:var(--z-blue-soft);font-weight:600">'+o.n+' FILHOts &divide; '+v.quantas+' = <strong>'+String(v.porCabeca).replace('.',',')+' por pessoa</strong> — este valor é o de CADA UMA (a ajuda de custo também é de cada uma).</div>'):'')
         +((feriado||dom)?'<div style="font-size:12px;color:var(--z-blue-soft)">'+(feriado?'Feriado':'Domingo')+': há também o plantão de dia (06h50 às 19h). Se alguém cobriu, lance como uma noite à parte.</div>':'')
         +'</div><span class="avr-chip '+L[1]+'">'+L[0]+'</span></div>'
         // O nome já vem do sistema — a Gestão confere, não digita.
@@ -8032,7 +8175,7 @@
   // Agora existe um carimbo: esta constante é a versão que o aparelho está rodando, e o
   // Firebase guarda a versão publicada. Quando as duas diferem, aparece o aviso — mas
   // NUNCA recarrega sozinho: recarregar no meio de um check-in perderia o trabalho.
-  const APP_VERSAO='2026-08-17-03';
+  const APP_VERSAO='2026-08-17-04';
   function vigiarVersao(){
     if(!DB) return;
     try{
