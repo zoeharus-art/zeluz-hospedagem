@@ -7995,7 +7995,29 @@
     var ks=Object.keys(PLANT_ACONFIRMAR);
     if(!ks.length){ el.innerHTML=''; el.style.display='none'; return; }
     el.style.display='block';
-    var conhecidos=(PLANT_LIVRO.oficiais||[]).slice().sort();
+    // Adriana, 17/ago/2026: "como irei confirmar se a única opção é 'é alguém novo'?"
+    // Erro meu: no PRIMEIRO uso o livro está vazio, então não havia nome nenhum para oferecer
+    // como resposta — a única saída era digitar tudo à mão, um por um. Os nomes que já
+    // assinaram SÃO os candidatos: quem assinou 7 noites é gente de verdade. Ordenados por
+    // quantas noites, para os mais frequentes virem primeiro.
+    var vezes={};
+    Object.keys(ACERTO_QUEM||{}).forEach(function(noite){
+      var d=ACERTO_QUEM[noite]; if(!d||!d.nome) return;
+      (d.duasPessoas?(d.equipe||[]):[d.nome]).forEach(function(n){
+        var of=plantOficial(n)||n; vezes[of]=(vezes[of]||0)+1;
+      });
+    });
+    // TODOS os nomes vistos entram como candidatos — inclusive os que também estão em dúvida.
+    // Foi o erro que o teste pegou: no primeiro uso o livro está vazio e TODOS estão em
+    // dúvida, então filtrar "os em dúvida" não deixava nenhum. E é justamente a "Carol" (que
+    // também está na lista de dúvidas) a resposta certa para "Carpl". Quem é grafia errada
+    // aparece pouco; quem é a pessoa aparece muito — por isso a ordem é por nº de noites.
+    var conhecidos=(PLANT_LIVRO.oficiais||[]).slice();
+    Object.keys(vezes).forEach(function(n){
+      if(plantEhDuplo(n)) return;                       // "Carol e Julia" não é nome de pessoa
+      if(!conhecidos.some(function(c){ return plantChave(c)===plantChave(n); })) conhecidos.push(n);
+    });
+    conhecidos.sort(function(a,b){ return (vezes[b]||0)-(vezes[a]||0) || a.localeCompare(b,'pt'); });
     el.innerHTML='<div class="card" style="border-left:4px solid var(--crm-critico)">'
       +'<h2 style="font-size:18px">Nomes a confirmar ('+ks.length+')</h2>'
       +'<div class="hint">Alguém assinou com um nome que eu não conheço. Diga de quem é — eu arrumo todas as noites, inclusive as que já passaram, e nunca mais pergunto.</div>'
@@ -8005,15 +8027,25 @@
           +'<div style="font-weight:800;color:var(--z-blue);font-size:15px">Assinaram como &ldquo;'+escAttr(ap)+'&rdquo;'
           +' <span style="font-weight:600;font-size:12.5px;color:var(--muted)">— '+n+' noite'+(n>1?'s':'')+'</span></div>'
           +'<div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:7px">'
-          +conhecidos.map(function(o){
-              return '<button class="btn" style="background:var(--z-cream-warm);color:var(--z-blue);border:1.5px solid var(--line);padding:6px 13px" onclick="plantConfirmar(\''+escAttr(ap).replace(/'/g,"\\'")+'\',\''+escAttr(o).replace(/'/g,"\\'")+'\')">é a '+escAttr(o)+'</button>';
+          // Não se oferece o próprio apelido como resposta dele mesmo.
+          +conhecidos.filter(function(o){ return plantChave(o)!==plantChave(ap); }).map(function(o){
+              var _n=vezes[o]||0;
+              return '<button class="btn" style="background:var(--z-cream-warm);color:var(--z-blue);border:1.5px solid var(--line);padding:6px 13px" onclick="plantConfirmar(\''+escAttr(ap).replace(/'/g,"\\'")+'\',\''+escAttr(o).replace(/'/g,"\\'")+'\')">é a '+escAttr(o)
+                +(_n?('<span style="font-weight:600;font-size:11px;color:var(--muted)"> ('+_n+')</span>'):'')+'</button>';
             }).join('')
-          +'<button class="btn btn-gold" style="padding:6px 13px" onclick="plantConfirmarNova(\''+escAttr(ap).replace(/'/g,"\\'")+'\')">é alguém novo</button>'
+          // A maioria dos nomes está CERTA — só ainda não estava no livro. Sem este botão,
+          // confirmar a Claudilene (7 noites, escrita certa) exigiria digitar o nome de novo.
+          +'<button class="btn btn-primary" style="padding:6px 13px" onclick="plantConfirmar(\''+escAttr(ap).replace(/'/g,"\\'")+'\',\''+escAttr(ap).replace(/'/g,"\\'")+'\')">o nome está certo</button>'
+          +'<button class="btn btn-gold" style="padding:6px 13px" onclick="plantConfirmarNova(\''+escAttr(ap).replace(/'/g,"\\'")+'\')">escrever de outro jeito</button>'
           +'</div></div>';
       }).join('')+'</div>';
   }
   function plantConfirmar(apelido, oficial){
-    if(!confirm('&ldquo;'.replace(/&ldquo;/,'"')+apelido+'" é a '+oficial+'?\n\nVou juntar todas as noites assinadas assim com as da '+oficial+'.')) return;
+    var mesmo=(plantChave(apelido)===plantChave(oficial));
+    var msg=mesmo
+      ? ('Confirmar que "'+apelido+'" é o nome dela, escrito certo?\n\nNão pergunto mais sobre ele.')
+      : ('"'+apelido+'" é a '+oficial+'?\n\nVou juntar todas as noites assinadas assim com as da '+oficial+'.');
+    if(!confirm(msg)) return;
     plantAprender(apelido, oficial).then(function(){ acertoCarregar(); });
   }
   function plantConfirmarNova(apelido){
@@ -8044,6 +8076,21 @@
                                         :acertoValorPara(o.n, _dob, _qtas);
       var st=o.reg.status||'apagar';
       var L=lbSt[st]||['A PAGAR','pendente'];
+      // Quanto esta pessoa já tem guardado para pagar junto — inclusive esta noite.
+      // Adriana, 17/ago/2026: "cliquei em acumular e infelizmente não acumulou, e continuou o
+      // valor". Acumulava sim, mas a tela não mostrava NADA mudando: o card seguia com o
+      // valor da noite e o somatório vivia longe, no fim da página. Ela clicou quatro vezes
+      // testando. Ação sem retorno visível é ação que a pessoa acha que não funcionou.
+      var _acumDela=0, _acumN=0;
+      if(st==='acumulado'){
+        var _nomeDela=(o.reg.quem||'').trim()||((ACERTO_QUEM[o.iso]||{}).nome)||'';
+        Object.keys(ACERTO_REG||{}).forEach(function(k){
+          var rr=ACERTO_REG[k]||{};
+          if(rr.status!=='acumulado') return;
+          if(plantChave(rr.quem||'')!==plantChave(_nomeDela)) return;
+          _acumDela+=(rr.valor_total_cent||0); _acumN++;
+        });
+      }
       var feriado=orcEhFeriado(o.iso), dom=(o.dw==='dom');
       return '<div class="avr-card '+L[1]+'"><div class="avr-head"><div class="avr-info">'
         +'<strong>'+orcBR(o.iso)+'</strong> <span style="color:var(--muted);font-size:12px">'+(ORC_DIAW_LB[o.dw]||'')
@@ -8058,6 +8105,11 @@
         +((v.quantas>1)?('<span style="display:inline-block;margin-left:6px;background:var(--z-blue);color:var(--z-cream);border-radius:999px;padding:1px 9px;font-size:11px;font-weight:800">'+v.quantas+' PLANTONISTAS</span>'):'')
         +'</div>'
         +((v.quantas>1)?('<div style="font-size:12.5px;color:var(--z-blue-soft);font-weight:600">'+o.n+' FILHOts &divide; '+v.quantas+' = <strong>'+String(v.porCabeca).replace('.',',')+' por pessoa</strong> — este valor é o de CADA UMA (a ajuda de custo também é de cada uma).</div>'):'')
+        +((st==='acumulado'&&_acumDela)
+            ? ('<div style="margin-top:5px;background:rgba(222,180,40,.18);border-left:4px solid var(--z-gold);border-radius:8px;padding:7px 10px;font-size:13px;font-weight:700;color:var(--z-blue)">'
+               +'Guardado para pagar junto: <strong>'+fmtCent(_acumDela)+'</strong> em '+_acumN+' noite'+(_acumN>1?'s':'')
+               +' — quando pagar tudo, toque em <em>Paguei esta noite</em> em cada uma.</div>')
+            : '')
         +((feriado||dom)?'<div style="font-size:12px;color:var(--z-blue-soft)">'+(feriado?'Feriado':'Domingo')+': há também o plantão de dia (06h50 às 19h). Se alguém cobriu, lance como uma noite à parte.</div>':'')
         +'</div><span class="avr-chip '+L[1]+'">'+L[0]+'</span></div>'
         // O nome já vem do sistema — a Gestão confere, não digita.
@@ -8085,8 +8137,8 @@
           })()
         +'<input id="acq_'+o.iso+'" placeholder="Nome da plantonista" value="'+escAttr(o.reg.quem||((ACERTO_QUEM[o.iso]||{}).nome)||'')+'">'
         +'<div class="avr-form-btns">'
-        +'<button class="btn btn-primary" onclick="acertoMarcar(\''+o.iso+'\',\'pago\')">Pago</button>'
-        +'<button class="btn btn-gold" onclick="acertoMarcar(\''+o.iso+'\',\'acumulado\')">Acumular</button>'
+        +'<button class="btn btn-primary" onclick="acertoMarcar(\''+o.iso+'\',\'pago\')">Paguei esta noite</button>'
+        +'<button class="btn btn-gold" onclick="acertoMarcar(\''+o.iso+'\',\'acumulado\')">Guardar para pagar junto</button>'
         +(st!=='apagar'?'<button class="btn" style="background:var(--z-cream-warm);color:var(--z-blue);border:1.5px solid var(--line)" onclick="acertoMarcar(\''+o.iso+'\',\'apagar\')">Voltar para a pagar</button>':'')
         +'</div></div></div>';
     }).join('');
@@ -8135,6 +8187,20 @@
       ACERTO_REG[iso]=Object.assign({},ACERTO_REG[iso]||{},{status:status, quem:nomeProprio(q), valor_total_cent:v.total, valor_base_cent:v.base, ajuda_cent:v.ajuda, dobrou:!!_d.dobrou});
       renderAcerto();
       if(typeof audit==='function') audit('acerto-plantao',status+' — '+orcBR(iso)+' · '+nomeProprio(q)+' · '+fmtCent(v.total)+(_d.dobrou?' (DOBRA 24h)':''),{});
+      // Diz o que aconteceu, na hora. Sem isso a pessoa clica de novo achando que falhou.
+      if(status==='acumulado'){
+        var _tot=0,_qtd=0, _nm=plantChave(nomeProprio(q));
+        Object.keys(ACERTO_REG).forEach(function(k){
+          var rr=ACERTO_REG[k]||{};
+          if(rr.status==='acumulado'&&plantChave(rr.quem||'')===_nm){ _tot+=(rr.valor_total_cent||0); _qtd++; }
+        });
+        if(typeof zAlertao==='function') zAlertao('GUARDADO PARA PAGAR JUNTO',
+          [orcBR(iso)+' · '+nomeProprio(q)+' · '+fmtCent(v.total),
+           _qtd>1 ? ('Ela já tem '+fmtCent(_tot)+' guardado em '+_qtd+' noites.')
+                  : 'Esta é a primeira noite guardada dela.',
+           'Quando pagar tudo de uma vez, toque em "Paguei esta noite" em cada uma delas.'],
+          {ok:true, botao:'Certo'});
+      }
     }).catch(function(e){ alert('Não salvou: '+((e&&e.message)||e)); });
   }
   function renderAcertoTabela(){
@@ -8175,7 +8241,7 @@
   // Agora existe um carimbo: esta constante é a versão que o aparelho está rodando, e o
   // Firebase guarda a versão publicada. Quando as duas diferem, aparece o aviso — mas
   // NUNCA recarrega sozinho: recarregar no meio de um check-in perderia o trabalho.
-  const APP_VERSAO='2026-08-17-04';
+  const APP_VERSAO='2026-08-18-01';
   function vigiarVersao(){
     if(!DB) return;
     try{
