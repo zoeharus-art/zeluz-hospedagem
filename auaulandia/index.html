@@ -7720,6 +7720,43 @@
   // Agora lê TODAS as estadias. E conta cada FILHOt UMA vez por noite: a Dolly tem 6
   // estadias idênticas no banco (resto da fábrica de duplicados de 04/ago) e sem essa
   // trava ela valeria por seis.
+  // ===== PERNOITE CONTA IGUAL A HÓSPEDE — Adriana, 18/ago/2026 =====================
+  // "lembrando que pernoite e hóspedes conta para a plantonista da mesma forma."
+  // Faz sentido: ela dorme com ele do mesmo jeito e dá o jantar do mesmo jeito.
+  // Mas o pernoite NÃO é uma estadia — ele vive em auaulandia/manuais/{dia}, com quantas
+  // noites dura. O acerto nunca olhou para lá, então TODA noite com pernoite foi contada a
+  // menos. Quem a Gestão removeu do dia (auaulandia/removidos/{dia}) continua fora.
+  var ACERTO_MANUAIS={}, ACERTO_REMOVIDOS={};
+  function acertoCarregarPernoites(){
+    if(!DB) return Promise.resolve();
+    return Promise.all([
+      DB.ref('auaulandia/manuais').once('value').then(function(s){ return s.val()||{}; }).catch(function(){ return {}; }),
+      DB.ref('auaulandia/removidos').once('value').then(function(s){ return s.val()||{}; }).catch(function(){ return {}; })
+    ]).then(function(r){ ACERTO_MANUAIS=r[0]||{}; ACERTO_REMOVIDOS=r[1]||{}; });
+  }
+  // Um lançamento do dia D com `noites:3` cobre as noites D, D+1 e D+2.
+  function acertoPernoitesNaNoite(iso){
+    var out=[], removidos={};
+    var _n=function(s){ return (typeof jsNorm==='function')?jsNorm(String(s||'')):String(s||''); };
+    Object.keys((ACERTO_REMOVIDOS||{})[iso]||{}).forEach(function(k){
+      var v=(ACERTO_REMOVIDOS[iso]||{})[k];
+      removidos[_n((v&&(v.nome||v.n))||k)]=true;
+    });
+    Object.keys(ACERTO_MANUAIS||{}).forEach(function(dia){
+      if(dia>iso) return;                                   // lançado para depois desta noite
+      Object.keys(ACERTO_MANUAIS[dia]||{}).forEach(function(k){
+        var m=(ACERTO_MANUAIS[dia]||{})[k]||{};
+        if(!m.nome) return;
+        var n=Math.max(1, parseInt(m.noites,10)||1);
+        var fim=(typeof orcMaisDias==='function')?orcMaisDias(dia,n-1):dia;   // última noite coberta
+        if(iso>fim) return;
+        if(typeof ehMoradorDaCasa==='function' && ehMoradorDaCasa(m.nome,m.refKey)) return;
+        if(removidos[_n(m.nome)]) return;                    // a Gestão tirou do dia
+        out.push({nome:m.nome, chave:m.refKey||_n(m.nome)});
+      });
+    });
+    return out;
+  }
   function acertoHospedesNaNoite(iso){
     var out=[], vistos={}, lista=[];
     var todas=(typeof EST_TODAS!=='undefined'&&EST_TODAS&&Object.keys(EST_TODAS).length)?EST_TODAS:null;
@@ -7734,6 +7771,16 @@
       var k=e.refKey||((typeof jsNorm==='function')?jsNorm(e.nome||''):(e.nome||''));
       if(vistos[k]) return;                 // a mesma estadia gravada várias vezes conta UMA
       vistos[k]=true; out.push(e.nome||'?');
+    });
+    // O pernoite entra na MESMA lista. Se o FILHOt já está aqui como hóspede, não dobra.
+    acertoPernoitesNaNoite(iso).forEach(function(p){
+      var k=p.chave;
+      if(vistos[k]) return;
+      var jaPeloNome=out.some(function(nm){
+        return ((typeof jsNorm==='function')?jsNorm(nm):nm)===((typeof jsNorm==='function')?jsNorm(p.nome):p.nome);
+      });
+      if(jaPeloNome) return;
+      vistos[k]=true; out.push(p.nome);
     });
     return out;
   }
@@ -8012,7 +8059,7 @@
     if(!DB){ renderAcerto(); return; }
     // O LIVRO CARREGA PRIMEIRO, sozinho: o agrupamento consulta plantOficial() e daria
     // resultado diferente se o livro ainda não tivesse chegado. Ordem aqui não é detalhe.
-    plantCarregarLivro().then(function(){
+    plantCarregarLivro().then(function(){ return acertoCarregarPernoites(); }).then(function(){
     return Promise.all([
       DB.ref('auaulandia/config/acerto-plantao').once('value').then(function(s){ return s.val(); }).catch(function(){ return null; }),
       DB.ref('auaulandia/acerto-plantao').limitToLast(60).once('value').then(function(s){ return s.val()||{}; }).catch(function(){ return {}; }),
@@ -8218,6 +8265,13 @@
       var _dob=!!_q.dobrou, _qtas=Math.max(1,_q.quantas||1);
       var v=o.reg.valor_total_cent!=null?{total:o.reg.valor_total_cent, base:o.reg.valor_base_cent||0, ajuda:o.reg.ajuda_cent||0, dobrou:!!o.reg.dobrou, quantas:o.reg.quantas||1, porCabeca:(o.reg.pets_por_pessoa!=null?o.reg.pets_por_pessoa:o.n)}
                                         :acertoValorPara(o.n, _dob, _qtas);
+      // ===== VALOR CONGELADO QUE FICOU PARA TRÁS — 18/ago/2026 ====================
+      // O valor é congelado no lançamento, de propósito: mexer na tabela depois não pode
+      // reescrever o que já foi acertado. Mas se a LISTA da noite mudou (um pernoite que
+      // faltava, um FILHOt que voltou), o número congelado passa a estar errado — e nada
+      // na tela dizia isso. Agora diz, com o botão para acertar.
+      var _vAgora=acertoValorPara(o.n, _dob, _qtas);
+      var _desatualizado=(o.reg.valor_total_cent!=null && _vAgora.total!==o.reg.valor_total_cent);
       var st=o.reg.status||'apagar';
       var L=lbSt[st]||['A PAGAR','pendente'];
       // Quanto esta pessoa já tem guardado para pagar junto — inclusive esta noite.
@@ -8253,6 +8307,12 @@
             ? ('<div style="margin-top:5px;background:rgba(222,180,40,.18);border-left:4px solid var(--z-gold);border-radius:8px;padding:7px 10px;font-size:13px;font-weight:700;color:var(--z-blue)">'
                +'Guardado para pagar junto: <strong>'+fmtCent(_acumDela)+'</strong> em '+_acumN+' noite'+(_acumN>1?'s':'')
                +' — quando pagar tudo, toque em <em>Paguei esta noite</em> em cada uma.</div>')
+            : '')
+        +(_desatualizado
+            ? ('<div style="margin-top:5px;background:rgba(197,49,37,.10);border-left:4px solid var(--crm-critico);border-radius:8px;padding:7px 10px;font-size:13px;font-weight:700;color:var(--z-blue)">'
+               +'Este valor foi lançado quando a noite tinha outra lista. Hoje ela tem <strong>'+o.n+' FILHOt'+(o.n===1?'':'s')+'</strong>,'
+               +' e o valor certo é <strong>'+fmtCent(_vAgora.total)+'</strong> (está gravado '+fmtCent(o.reg.valor_total_cent||0)+').'
+               +' <button class="btn" style="background:var(--z-gold);color:var(--z-blue);border:none;padding:4px 12px;font-size:12px;margin-left:4px" onclick="acertoRecalcular(\''+o.iso+'\')">Atualizar para '+fmtCent(_vAgora.total)+'</button></div>')
             : '')
         +((feriado||dom)?'<div style="font-size:12px;color:var(--z-blue-soft)">'+(feriado?'Feriado':'Domingo')+': há também o plantão de dia (06h50 às 19h). Se alguém cobriu, lance como uma noite à parte.</div>':'')
         +'</div><span class="avr-chip '+L[1]+'">'+L[0]+'</span></div>'
@@ -8350,6 +8410,28 @@
         +'<span class="val" style="font-weight:800;color:var(--z-blue)">'+fmtCent(o.total)+'</span></div>';
     }).join('')+'<div class="orc-total" style="margin-top:8px"><span>Total em aberto</span><span>'+fmtCent(geral)+'</span></div>';
   }
+  // Regrava o valor de uma noite já lançada com a lista de HOJE. Só a Gestão usa, e só
+  // aparece quando há diferença de verdade. Guarda o valor anterior, para dar para conferir.
+  function acertoRecalcular(iso){
+    var noites=acertoNoites(), o=noites.find(function(x){ return x.iso===iso; });
+    if(!o||!DB) return;
+    var _q=ACERTO_QUEM[iso]||{}, _qtas=Math.max(1,_q.quantas||1);
+    var v=acertoValorPara(o.n, !!_q.dobrou, _qtas);
+    var antes=(ACERTO_REG[iso]||{}).valor_total_cent||0;
+    if(!confirm('Atualizar '+orcBR(iso)+' de '+fmtCent(antes)+' para '+fmtCent(v.total)+'?\n\n'
+      +'A noite tem '+o.n+' FILHOt'+(o.n===1?'':'s')+': '+o.pets.join(', ')+'.')) return;
+    DB.ref('auaulandia/acerto-plantao/'+iso).update({
+      valor_base_cent:v.base, ajuda_cent:v.ajuda, valor_total_cent:v.total,
+      quantas:_qtas, pets_por_pessoa:v.porCabeca, hospedes:o.n, pets:o.pets,
+      valor_anterior_cent:antes,
+      recalculado_por:(typeof quemSou==='function'?quemSou():'-'), recalculado_em:Date.now()
+    }).then(function(){
+      ACERTO_REG[iso]=Object.assign({},ACERTO_REG[iso]||{},{valor_total_cent:v.total,
+        valor_base_cent:v.base, ajuda_cent:v.ajuda, quantas:_qtas, pets_por_pessoa:v.porCabeca, hospedes:o.n});
+      if(typeof audit==='function') audit('acerto-plantao','recalculou '+orcBR(iso)+': '+fmtCent(antes)+' → '+fmtCent(v.total)+' ('+o.n+' FILHOts)',{});
+      renderAcerto();
+    }).catch(function(e){ alert('Não salvou: '+((e&&e.message)||e)); });
+  }
   function acertoMarcar(iso,status){
     var q=((document.getElementById('acq_'+iso)||{}).value||'').trim();
     if(status!=='apagar'&&!/[a-zA-ZÀ-ÿ]{2,}/.test(q)){ alert('Escreva o nome de quem passou a noite. Pagamento sem nome não fecha conta.'); return; }
@@ -8432,7 +8514,7 @@
   // Agora existe um carimbo: esta constante é a versão que o aparelho está rodando, e o
   // Firebase guarda a versão publicada. Quando as duas diferem, aparece o aviso — mas
   // NUNCA recarrega sozinho: recarregar no meio de um check-in perderia o trabalho.
-  const APP_VERSAO='2026-08-18-06';
+  const APP_VERSAO='2026-08-18-07';
   function vigiarVersao(){
     if(!DB) return;
     try{
