@@ -7757,7 +7757,7 @@
     if(!DB) return Promise.resolve(PLANT_LIVRO);
     return DB.ref('auaulandia/config/plantonistas').once('value').then(function(s){
       var v=s.val()||{};
-      PLANT_LIVRO={oficiais:Array.isArray(v.oficiais)?v.oficiais:[], apelidos:v.apelidos||{}};
+      PLANT_LIVRO={oficiais:Array.isArray(v.oficiais)?v.oficiais:[], apelidos:v.apelidos||{}, naoSao:v.naoSao||{}};
       return PLANT_LIVRO;
     }).catch(function(){ return PLANT_LIVRO; });
   }
@@ -7857,6 +7857,7 @@
         var n=String(nome||'').trim();
         if(!n||n.length<3) return;
         if(/^(plantonista|gest[ãa]o|supervisor|monitor\s*\d*|recep(c|ç)[ãa]o|veterin|equipe|-|\.)$/i.test(n)) return;
+        if(plantEhExcluida(n)) return;             // a Gestão já disse: esta não é plantonista
         // DUAS PESSOAS NUMA ASSINATURA SÓ ("Carol e Julia", "Júlia/Carol"). Aparece de verdade
         // nos dados. Juntar isso num nome só criaria uma plantonista que não existe — e, pior,
         // esconderia que duas pessoas cobriram a mesma noite. Fica marcado para a Gestão ver.
@@ -7868,8 +7869,15 @@
       Object.keys(rel).forEach(function(k){
         var m=/__(\d{4}-\d{2}-\d{2})$/.exec(k); if(!m) return;
         var dia=m[1], v=rel[k]||{};
-        if(v.dia&&v.dia.recebeu)      conta(dia, v.dia.recebeu, 'recebeu');      // assumiu naquela noite
-        if(v.inicio&&v.inicio.passou) conta(dia, v.inicio.passou, 'jantar');     // jantar da mesma noite
+        // Adriana, 18/ago/2026: "Giulia não é plantonista, é monitora e nunca ficou de
+        // plantão. Letícya idem. Márcia nunca ficou de plantão."
+        // Erro meu: eu contava o JANTAR como prova de plantão. Mas quem serve o jantar
+        // muitas vezes é a MONITORA, antes de ir embora às 19h15 — a Giulia tem 455
+        // passagens de plantão como monitora, 131 jantares e ZERO recebimentos de plantão.
+        // O que prova a noite é o par: RECEBEU o plantão + PASSOU de manhã. O jantar é
+        // reforço de quem já tem um dos dois, nunca prova sozinho.
+        if(v.dia&&v.dia.recebeu)      conta(dia, v.dia.recebeu, 'recebeu');      // assumiu a noite
+        if(v.inicio&&v.inicio.passou) conta(dia, v.inicio.passou, 'jantar');     // reforço, não prova
         // "Como foi a noite" é preenchido de MANHÃ: pertence à noite anterior.
         if(v.noite&&v.noite.passou)   conta(orcMaisDias(dia,-1), v.noite.passou, 'manha');
       });
@@ -7877,11 +7885,18 @@
       var out={};
       Object.keys(porNoite).forEach(function(noite){
         var m=porNoite[noite];
-        var nomes=Object.keys(m).sort(function(a,b){
+        // Só quem RECEBEU o plantão ou o PASSOU de manhã dormiu aqui. Quem só aparece no
+        // jantar serviu e foi embora — é a monitora do fim do dia, não a plantonista.
+        var comProva=Object.keys(m).filter(function(n){ return (m[n].recebeu>0||m[n].manha>0); });
+        var nomes=(comProva.length?comProva:Object.keys(m)).sort(function(a,b){
           var A=m[a], B=m[b];
-          return (B.recebeu+B.jantar+B.manha)-(A.recebeu+A.jantar+A.manha);
+          // desempate: quem recebeu/passou mais vezes vem primeiro; o jantar vale menos
+          return ((B.recebeu+B.manha)*10+B.jantar)-((A.recebeu+A.manha)*10+A.jantar);
         });
         if(!nomes.length) return;
+        // Ninguém recebeu nem passou o plantão nesta noite: não há prova de quem dormiu aqui.
+        // Melhor não afirmar do que apontar a monitora do jantar como plantonista.
+        if(!comProva.length) return;
         var p=m[nomes[0]];
         // Quais dos três momentos ela assinou — é isso que prova a noite inteira.
         var momentos=[]; if(p.recebeu) momentos.push('recebeu o plantão');
@@ -8026,6 +8041,22 @@
         return '<div style="border-top:1px solid var(--line);padding:12px 0">'
           +'<div style="font-weight:800;color:var(--z-blue);font-size:15px">Assinaram como &ldquo;'+escAttr(ap)+'&rdquo;'
           +' <span style="font-weight:600;font-size:12.5px;color:var(--muted)">— '+n+' noite'+(n>1?'s':'')+'</span></div>'
+          // Como ela assinou ajuda a Gestão a decidir: quem só passou de manhã, e poucas
+          // vezes, costuma ser monitora que preencheu o card errado — não plantonista.
+          +(function(){
+              var r=0,mn=0,jt=0;
+              Object.keys(ACERTO_QUEM||{}).forEach(function(noite){
+                var d=ACERTO_QUEM[noite]; if(!d) return;
+                if(plantChave(d.nome)!==plantChave(ap)) return;
+                (d.momentos||[]).forEach(function(m){
+                  if(/recebeu/.test(m)) r++; else if(/manhã/.test(m)) mn++; else jt++;
+                });
+              });
+              if(!r&&!mn&&!jt) return '';
+              return '<div style="font-size:12.5px;color:var(--muted);font-weight:600;margin-top:2px">'
+                +'recebeu o plantão '+r+'x · passou de manhã '+mn+'x · jantar '+jt+'x'
+                +(!r?' <span style="color:var(--crm-critico);font-weight:800">— nunca recebeu um plantão</span>':'')+'</div>';
+            })()
           +'<div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:7px">'
           // Não se oferece o próprio apelido como resposta dele mesmo.
           +conhecidos.filter(function(o){ return plantChave(o)!==plantChave(ap); }).map(function(o){
@@ -8037,6 +8068,10 @@
           // confirmar a Claudilene (7 noites, escrita certa) exigiria digitar o nome de novo.
           +'<button class="btn btn-primary" style="padding:6px 13px" onclick="plantConfirmar(\''+escAttr(ap).replace(/'/g,"\\'")+'\',\''+escAttr(ap).replace(/'/g,"\\'")+'\')">o nome está certo</button>'
           +'<button class="btn btn-gold" style="padding:6px 13px" onclick="plantConfirmarNova(\''+escAttr(ap).replace(/'/g,"\\'")+'\')">escrever de outro jeito</button>'
+          // Adriana, 18/ago/2026: a Giulia, a Letícya e a Márcia aparecem porque assinam
+          // outras coisas — mas nunca ficaram de plantão. Sem esta saída, a Gestão teria de
+          // responder algo errado só para a pergunta sumir da tela.
+          +'<button class="btn" style="padding:6px 13px;background:var(--crm-critico);color:#fff" onclick="plantNaoEhPlantonista(\''+escAttr(ap).replace(/'/g,"\\'")+'\')">não é plantonista</button>'
           +'</div></div>';
       }).join('')+'</div>';
   }
@@ -8053,6 +8088,22 @@
     if(!nome) return;
     plantAprender(apelido, nome).then(function(){ acertoCarregar(); });
   }
+  // Quem NÃO é plantonista sai da conta de vez: a Giulia, a Letícya e a Márcia assinam o
+  // plantão do dia e o jantar, mas nunca dormiram aqui. Fica gravado para nunca mais
+  // aparecer — e para o acerto não somar noite de quem não passou noite nenhuma.
+  function plantNaoEhPlantonista(apelido){
+    if(!confirm('"'+apelido+'" NÃO é plantonista?\n\n'
+      +'Ela some da lista de nomes e as noites dela deixam de contar no acerto.\n\n'
+      +'Use isto para monitoras e para a Gestão, que assinam o plantão do dia mas não dormem aqui.')) return;
+    PLANT_LIVRO.naoSao=PLANT_LIVRO.naoSao||{};
+    PLANT_LIVRO.naoSao[plantChave(apelido)]=apelido;
+    if(!DB){ acertoCarregar(); return; }
+    DB.ref('auaulandia/config/plantonistas').set(PLANT_LIVRO).then(function(){
+      if(typeof audit==='function') audit('plantonista-nome','"'+apelido+'" NÃO é plantonista',{});
+      acertoCarregar();
+    }).catch(function(){ acertoCarregar(); });
+  }
+  function plantEhExcluida(n){ try{ return !!(PLANT_LIVRO.naoSao||{})[plantChave(n)]; }catch(e){ return false; } }
   function renderAcerto(){
     var el=document.getElementById('acertoLista'); if(!el) return;
     // Quem ainda não está no livro vira pergunta para a Gestão.
@@ -8068,7 +8119,15 @@
     }catch(e){}
     try{ renderNomesAConfirmar(); }catch(e){}
     var noites=acertoNoites();
-    var lbSt={pago:['PAGO','resolvido'], acumulado:['ACUMULADO','processo']};
+    var lbSt={pago:['PAGO','resolvido'], acumulado:['GUARDADO','processo']};
+    // ===== O QUE JÁ FOI PAGO SAI DA LISTA — Adriana, 18/ago/2026 ==================
+    // "tudo que for pago tem que sair da lista e aparecer em alguma outra fonte, pequeno,
+    //  como pago... assim fica bagunçado sem saber como se faz."
+    // A lista é uma lista de TAREFAS: o que ainda precisa de decisão. Noite paga já não pede
+    // nada de ninguém — ficar ali só faz a Gestão reler trinta cartões para achar os cinco
+    // que importam. O pago vira uma linha pequena no fim, com quanto e quem.
+    var pagas=noites.filter(function(o){ return (o.reg.status||'')==='pago'; });
+    noites=noites.filter(function(o){ return (o.reg.status||'')!=='pago'; });
     el.innerHTML=noites.map(function(o){
       var _q=ACERTO_QUEM[o.iso]||{};
       var _dob=!!_q.dobrou, _qtas=Math.max(1,_q.quantas||1);
@@ -8142,6 +8201,24 @@
         +(st!=='apagar'?'<button class="btn" style="background:var(--z-cream-warm);color:var(--z-blue);border:1.5px solid var(--line)" onclick="acertoMarcar(\''+o.iso+'\',\'apagar\')">Voltar para a pagar</button>':'')
         +'</div></div></div>';
     }).join('');
+    if(!noites.length){
+      el.innerHTML='<div class="hint" style="color:var(--crm-ok);font-weight:700;padding:12px 2px">Todas as noites dos últimos 30 dias estão acertadas. Nada esperando decisão.</div>';
+    }
+    // As pagas, no fim, pequenas — cada uma numa linha, com quanto e quem.
+    if(pagas.length){
+      el.innerHTML+='<details style="margin-top:16px"><summary style="cursor:pointer;font-weight:800;color:var(--muted);font-size:13.5px;padding:8px 0">'
+        +'Já pagas ('+pagas.length+') — '+fmtCent(pagas.reduce(function(a,o){ return a+(o.reg.valor_total_cent||0); },0))+'</summary>'
+        +'<div style="margin-top:6px">'
+        +pagas.map(function(o){
+            return '<div class="pair" style="font-size:13px;padding:5px 0;border-bottom:1px solid var(--line)">'
+              +'<span class="k">'+orcBR(o.iso)+' · '+escAttr(o.reg.quem||'-')
+              +' <span style="color:var(--muted);font-size:11.5px">('+(o.reg.hospedes!=null?o.reg.hospedes:o.n)+' FILHOts'
+              +(o.reg.dobrou?' · dobra':'')+')</span></span>'
+              +'<span class="val" style="font-weight:700">'+fmtCent(o.reg.valor_total_cent||0)
+              +' <button class="btn" style="background:none;border:none;color:var(--z-blue);font-size:11.5px;text-decoration:underline;padding:0 0 0 6px" onclick="acertoMarcar(\''+o.iso+'\',\'apagar\')">desfazer</button></span></div>';
+          }).join('')
+        +'</div></details>';
+    }
     renderAcertoTotais(noites);
     renderAcertoTabela();
   }
@@ -8241,7 +8318,7 @@
   // Agora existe um carimbo: esta constante é a versão que o aparelho está rodando, e o
   // Firebase guarda a versão publicada. Quando as duas diferem, aparece o aviso — mas
   // NUNCA recarrega sozinho: recarregar no meio de um check-in perderia o trabalho.
-  const APP_VERSAO='2026-08-18-01';
+  const APP_VERSAO='2026-08-18-02';
   function vigiarVersao(){
     if(!DB) return;
     try{
