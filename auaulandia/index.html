@@ -1656,6 +1656,9 @@
     <a data-v="pessoas" class="so-master"><span data-icon="users"></span><span>Time</span></a>
     <div class="subnav so-master" id="pSubnav" style="display:none"></div>
     <a data-v="renovacao" class="so-gestao"><span data-icon="star"></span><span>Renovação de Planos</span></a>
+    <!-- A tela existia como "em breve" e nunca teve entrada no menu. Agora é o relatório de
+         quem está devendo vacina, vermífugo, antiparasitário, coleira, exame ou pesagem. -->
+    <a data-v="vacinas" class="so-gestao"><span data-icon="alert"></span><span>Prevenção</span></a>
     <a data-v="reposicao" class="so-recepcao"><span data-icon="star"></span><span>Reposições</span></a>
     <a data-v="orcamento" class="so-recepcao"><span data-icon="star"></span><span>Orçamento de Hospedagem</span></a>
 
@@ -2885,7 +2888,24 @@
     </div>
   </section>
   <section class="view" id="v-aulunos"><div class="soon-box"><img class="ic-st" src="assets/simbolo.png" alt=""><div class="t">Relatório de Aulunos</div><div class="d">Frequência e presença dos aulunos do Day Care — próxima etapa.</div></div></section>
-  <section class="view" id="v-vacinas"><div class="soon-box"><img class="ic-st" src="assets/simbolo.png" alt=""><div class="t">Relatório de Vacinas</div><div class="d">Carteira de vacinação e vencimentos — próxima etapa.</div></div></section>
+  <!-- ===== RELATÓRIO DE PREVENÇÃO — Adriana, 18/ago/2026 =========================
+       "preciso conseguir emitir um relatório de quem falta algum desses dados": peso,
+       vacinas, vermífugo, carrapaticida, coleira (Seresto e etc), exame de fezes.
+       "ou é vermífugo ou exame — tem tutor que opta por um, outro por outro." Essa regra
+       já existia no cadastro (dispensaSe) e o relatório a respeita. -->
+  <section class="view" id="v-vacinas">
+    <div class="role-note"><span data-icon="alert"></span><span><strong>Quem está faltando alguma coisa.</strong> Vacinas, antiparasitário, coleira, vermífugo (ou exame de fezes) e a pesagem do mês. Toque num item para ver só ele. Quem faz <strong>exame de fezes</strong> não precisa de vermífugo — e o contrário também vale.</span></div>
+    <div class="card"><div id="prevResumo"></div></div>
+    <div class="card">
+      <div style="display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-bottom:10px" id="prevFiltros"></div>
+      <input class="cad-in" id="prevBusca" placeholder="Buscar por nome do FILHOt ou do tutor" oninput="renderPrevencao()" autocomplete="off">
+      <div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:10px">
+        <button class="btn btn-gold" onclick="baixarPrevencao()">Baixar em Excel</button>
+        <button class="btn" style="background:var(--z-cream-warm);color:var(--z-blue);border:1.5px solid var(--line)" onclick="copiarPrevencao()">Copiar a lista</button>
+      </div>
+    </div>
+    <div id="prevLista"></div>
+  </section>
   <section class="view" id="v-abertura">
     <div class="role-note"><span data-icon="sun"></span><span><strong>Rotina de abertura do turno — Monitor 1.</strong> Marque cada item conforme executa. Fica registrado com horário e quem fez.</span></div>
     <div class="card"><div id="aberturaM1Prog" class="hint" style="margin-bottom:10px"></div><div id="aberturaM1List"></div></div>
@@ -3489,7 +3509,7 @@
     renovacao:['Renovação de Planos','Planos a vencer e renovações'],adaptacao:['Adaptação · 1º mês','Como está se adaptando'],
     reposicao:['Reposições','Faltas avisadas viram dias a repor'],
     daycare:['Day Care','Chamada e atividades'],hospedagem:['Plantão AuAulândia','Passagem de plantão'],
-    aulunos:['Aulunos','Relatório de frequência dos aulunos'],vacinas:['Vacinas','Relatório de vacinação'],
+    aulunos:['Aulunos','Relatório de frequência dos aulunos'],vacinas:['Prevenção','Vacinas, vermífugo, antiparasitário, coleira, exame de fezes e peso — quem está devendo'],
     cuidadovet:['Cuidado Vet','Consulta, receituário e reavaliação'],
     checkin:['Check-in','Entrada da estadia — ficha, pertences e assinatura'],
     conferencia:['Conferência Check-in','Pertences etiquetados, ração pesada e alarmes testados'],
@@ -3554,6 +3574,7 @@
     if(v==='relatorios'){ if(typeof renderRelatorios==='function') renderRelatorios(); if(typeof orcCarregarLista==='function') orcCarregarLista(); }
     if(v==='acerto'){ if(typeof acertoCarregar==='function') acertoCarregar(); }
     if(v==='ritmo'){ if(typeof ritmoCarregar==='function') ritmoCarregar(); }
+    if(v==='vacinas'){ if(typeof renderPrevencao==='function') renderPrevencao(); }
     const pn=document.getElementById('pSubnav'); if(pn) pn.style.display=(v==='pessoas')?'block':'none';
     if(v==='pessoas'){ if(typeof montarPSubnav==='function') montarPSubnav(); if(typeof abrirPessoas==='function') abrirPessoas('ativ'); return 'parar'; }
     if(v==='painel'){ if(typeof carregarPainel==='function') carregarPainel(); }
@@ -8514,7 +8535,7 @@
   // Agora existe um carimbo: esta constante é a versão que o aparelho está rodando, e o
   // Firebase guarda a versão publicada. Quando as duas diferem, aparece o aviso — mas
   // NUNCA recarrega sozinho: recarregar no meio de um check-in perderia o trabalho.
-  const APP_VERSAO='2026-08-18-08';
+  const APP_VERSAO='2026-08-18-09';
   function vigiarVersao(){
     if(!DB) return;
     try{
@@ -11700,6 +11721,183 @@
     if(r.sem.length) h+='<div class="dc-meia"><strong>Falta preencher:</strong> '+r.sem.join(' · ')+'</div>';
     if(!h) h='<div class="alm-fora">Prevenção em dia.</div>';
     return h;
+  }
+  // ===== RELATÓRIO DE PREVENÇÃO — quem falta o quê ================================
+  // Adriana, 18/ago/2026: "preciso conseguir emitir um relatório de quem falta algum
+  // desses dados" — peso, vacinas, vermífugo, carrapaticida, coleira, exame de fezes.
+  // A regra do vermífugo já existia no cadastro e vale aqui: quem fez exame de fezes não
+  // precisa de vermífugo, e quem toma vermífugo não precisa do exame. É escolha do tutor.
+  var PREV_FILTRO='tudo';
+  // A pesagem não está em PREV_ITENS (não é data de validade, é "pesou este mês?"), mas é
+  // pendência do mesmo jeito — entra como item próprio.
+  function prevItensDoFiltro(){
+    var l=PREV_ITENS.map(function(it){ return {k:it.k, nome:it.nome}; });
+    l.push({k:'peso', nome:'Peso do mês'});
+    return l;
+  }
+  function prevFaltasDe(ex){
+    ex=ex||{};
+    var out=[];
+    PREV_ITENS.forEach(function(it){
+      // "ou é vermífugo ou exame" — quem tem um não deve o outro.
+      if(it.dispensaSe && ex[it.dispensaSe]) return;
+      if(it.k==='fezes_p' && ex.verm_p) return;
+      var v=ex[it.k];
+      if(!v){ if(!it.opcional) out.push({k:it.k, nome:it.nome, tipo:'sem'}); return; }
+      if(venceuISO(v)) out.push({k:it.k, nome:it.nome, tipo:'venc', data:v, dias:-diasAteISO(v)});
+    });
+    if(!pesouEsteMes(ex)){
+      var u=ultimoPeso(ex);
+      out.push({k:'peso', nome:'Peso do mês', tipo:u?'venc':'sem', data:(u&&u.data)||'',
+                dias:(u&&u.data)?-diasAteISO(u.data):0});
+    }
+    return out;
+  }
+  function prevDados(){
+    var busca=String((document.getElementById('prevBusca')||{}).value||'').trim();
+    var bn=busca?jsNorm(busca):'';
+    var out=[];
+    (PELUDINHOS||[]).forEach(function(p){
+      if(typeof pelInativo==='function' && pelInativo(p)) return;
+      var ex=pelExtra(p)||{};
+      var faltas=prevFaltasDe(ex);
+      if(!faltas.length) return;
+      if(PREV_FILTRO!=='tudo' && !faltas.some(function(f){ return f.k===PREV_FILTRO; })) return;
+      var nome=(typeof pelNome==='function'?pelNome(p):'')||p.n||'';
+      var tutor=(typeof pelGet==='function'?pelGet(p,'tutor'):'')||p.tutor||'';
+      if(bn && jsNorm(nome).indexOf(bn)<0 && jsNorm(tutor).indexOf(bn)<0) return;
+      out.push({p:p, nome:nome, tutor:tutor,
+                raca:(typeof pelGet==='function'?pelGet(p,'raca'):'')||p.raca||'',
+                faltas:faltas,
+                venc:faltas.filter(function(f){ return f.tipo==='venc'; }).length});
+    });
+    // Quem tem coisa VENCIDA vem primeiro, e dentro disso quem tem mais pendência.
+    out.sort(function(a,b){
+      if(a.venc!==b.venc) return b.venc-a.venc;
+      if(a.faltas.length!==b.faltas.length) return b.faltas.length-a.faltas.length;
+      return jsNorm(a.nome).localeCompare(jsNorm(b.nome),'pt');
+    });
+    return out;
+  }
+  function renderPrevencao(){
+    var lista=prevDados();
+    // ---- contagem por item, ignorando o filtro (o resumo mostra o todo) ----
+    var salvo=PREV_FILTRO; PREV_FILTRO='tudo';
+    var buscaEl=document.getElementById('prevBusca'), buscaVal=buscaEl?buscaEl.value:'';
+    if(buscaEl) buscaEl.value='';
+    var todos=prevDados();
+    if(buscaEl) buscaEl.value=buscaVal;
+    PREV_FILTRO=salvo;
+    var cont={}, contVenc={};
+    todos.forEach(function(o){ o.faltas.forEach(function(f){
+      cont[f.k]=(cont[f.k]||0)+1; if(f.tipo==='venc') contVenc[f.k]=(contVenc[f.k]||0)+1; }); });
+
+    var res=document.getElementById('prevResumo');
+    if(res){
+      var totVenc=todos.reduce(function(a,o){ return a+o.venc; },0);
+      var totSem=todos.reduce(function(a,o){ return a+(o.faltas.length-o.venc); },0);
+      res.innerHTML='<div class="pair"><span class="k">FILHOts com alguma pendência</span>'
+        +'<span class="val" style="font-weight:800;color:var(--z-blue)">'+todos.length+'</span></div>'
+        +'<div class="pair"><span class="k">Itens <strong>vencidos</strong></span>'
+        +'<span class="val" style="font-weight:800;color:'+(totVenc?'var(--crm-critico)':'var(--crm-ok)')+'">'+totVenc+'</span></div>'
+        +'<div class="pair"><span class="k">Itens <strong>nunca preenchidos</strong></span>'
+        +'<span class="val" style="font-weight:800;color:'+(totSem?'var(--crm-atencao-text)':'var(--crm-ok)')+'">'+totSem+'</span></div>';
+    }
+
+    var fl=document.getElementById('prevFiltros');
+    if(fl){
+      var bt=function(k,rot,n,nv){
+        var on=(PREV_FILTRO===k);
+        return '<button class="btn" style="padding:6px 12px;font-size:12.5px;font-weight:800;border:1.5px solid '
+          +(on?'var(--z-blue)':'var(--line)')+';background:'+(on?'var(--z-blue)':'var(--z-cream-warm)')
+          +';color:'+(on?'var(--z-cream)':'var(--z-blue)')+'" onclick="prevFiltrar(\''+k+'\')">'
+          +escAttr(rot)+' <span style="font-weight:700;opacity:.85">'+(n||0)+'</span>'
+          +(nv?'<span style="color:'+(on?'#F6D8D4':'var(--crm-critico)')+';font-weight:800"> · '+nv+' venc.</span>':'')
+          +'</button>';
+      };
+      var h=bt('tudo','Tudo',todos.length,todos.reduce(function(a,o){ return a+o.venc; },0));
+      prevItensDoFiltro().forEach(function(it){
+        if(!cont[it.k]) return;                       // item sem ninguém devendo não vira botão
+        h+=bt(it.k,it.nome,cont[it.k],contVenc[it.k]||0);
+      });
+      fl.innerHTML=h;
+    }
+
+    var el=document.getElementById('prevLista'); if(!el) return;
+    if(!lista.length){
+      el.innerHTML='<div class="card"><div class="hint" style="color:var(--crm-ok);font-weight:700">'
+        +(PREV_FILTRO==='tudo'?'Ninguém com pendência. Prevenção em dia.':'Ninguém devendo este item.')+'</div></div>';
+      return;
+    }
+    el.innerHTML='<div class="card"><h2 style="font-size:17px">'+lista.length+' FILHOt'+(lista.length>1?'s':'')+'</h2>'
+      +lista.map(function(o){
+        return '<div style="border-top:1px solid var(--line);padding:11px 0">'
+          +'<div style="font-weight:800;color:var(--z-blue);font-size:15px">'+escAttr(o.nome)
+          +' <span style="font-weight:600;font-size:12.5px;color:var(--muted)">'+escAttr(o.raca||'')
+          +(o.tutor?(' · '+escAttr(o.tutor)):'')+'</span></div>'
+          +'<div style="display:flex;flex-wrap:wrap;gap:5px;margin-top:5px">'
+          +o.faltas.map(function(f){
+              var venc=(f.tipo==='venc');
+              return '<span style="border-radius:999px;padding:3px 11px;font-size:12px;font-weight:800;'
+                +(venc?'background:#F6D8D4;color:#8E1B10':'background:rgba(222,180,40,.22);color:var(--z-blue)')+'">'
+                +escAttr(f.nome)+(venc?(f.data?(' — venceu '+fmtBR(f.data)+(f.dias?(' (há '+f.dias+' dia'+(f.dias>1?'s':'')+')'):'')):' — vencido'):' — sem data')
+                +'</span>';
+            }).join('')
+          +'</div></div>';
+      }).join('')+'</div>';
+  }
+  function prevFiltrar(k){ PREV_FILTRO=k||'tudo'; renderPrevencao(); }
+  function prevLinhaTexto(o){
+    return o.nome+(o.raca?(' ('+o.raca+')'):'')+(o.tutor?(' — '+o.tutor):'')+': '
+      +o.faltas.map(function(f){
+          return f.nome+(f.tipo==='venc'?(f.data?(' venceu '+fmtBR(f.data)):' vencido'):' sem data');
+        }).join(' · ');
+  }
+  function copiarPrevencao(){
+    var l=prevDados();
+    if(!l.length){ alert('Nada a copiar — ninguém com pendência neste filtro.'); return; }
+    var txt='Zêluz · quem falta alguma coisa ('+fmtBR(hojeISO())+')\n\n'+l.map(prevLinhaTexto).join('\n');
+    var pronto=function(){ alert('Lista copiada — '+l.length+' FILHOt'+(l.length>1?'s':'')+'. É só colar onde quiser.'); };
+    if(navigator.clipboard&&navigator.clipboard.writeText) navigator.clipboard.writeText(txt).then(pronto).catch(function(){ prompt('Copie daqui:',txt); });
+    else prompt('Copie daqui:',txt);
+  }
+  function baixarPrevencao(){
+    var l=prevDados();
+    if(!l.length){ alert('Nada a baixar — ninguém com pendência neste filtro.'); return; }
+    var e=function(v){ return escAttr(v==null?'':String(v)); };
+    var itens=prevItensDoFiltro();
+    var hoje=new Date(), p2=function(x){ return String(x).padStart(2,'0'); };
+    var carimbo=p2(hoje.getDate())+'/'+p2(hoje.getMonth()+1)+'/'+hoje.getFullYear()+' às '+p2(hoje.getHours())+':'+p2(hoje.getMinutes());
+    var h='<html xmlns:x="urn:schemas-microsoft-com:office:excel"><head><meta charset="UTF-8">'
+      +'<style>body{font-family:Calibri,Arial,sans-serif}'
+      +'td,th{border:1px solid #b6c2cc;padding:4px 7px;font-size:11pt;vertical-align:top}'
+      +'th{background:#234D67;color:#FFFDF6;font-weight:bold;text-align:left}'
+      +'.venc{background:#F6D8D4;color:#8E1B10;font-weight:bold}.sem{background:#FBF3D2;font-weight:bold}'
+      +'.ok{color:#7C8B99}</style></head><body>'
+      +'<table><tr><td colspan="'+(3+itens.length)+'" style="border:none;font-size:16pt;font-weight:bold;color:#234D67">Zêluz &middot; Quem falta alguma coisa</td></tr>'
+      +'<tr><td colspan="'+(3+itens.length)+'" style="border:none;font-size:10pt;color:#555">Gerado em '+e(carimbo)
+      +' &middot; '+l.length+' FILHOts &middot; quem faz exame de fezes não precisa de vermífugo (e o contrário também)</td></tr></table><br>'
+      +'<table><tr><th>Peludinho</th><th>Raça</th><th>Tutor</th>'
+      +itens.map(function(it){ return '<th>'+e(it.nome)+'</th>'; }).join('')+'</tr>';
+    l.forEach(function(o){
+      var porK={}; o.faltas.forEach(function(f){ porK[f.k]=f; });
+      h+='<tr><td><b>'+e(o.nome)+'</b></td><td>'+e(o.raca)+'</td><td>'+e(o.tutor)+'</td>'
+        +itens.map(function(it){
+            var f=porK[it.k];
+            if(!f) return '<td class="ok">ok</td>';
+            if(f.tipo==='venc') return '<td class="venc">VENCEU '+(f.data?e(fmtBR(f.data)):'')+'</td>';
+            return '<td class="sem">sem data</td>';
+          }).join('')+'</tr>';
+    });
+    h+='</table></body></html>';
+    var nome='Zeluz-prevencao-'+hoje.getFullYear()+'-'+p2(hoje.getMonth()+1)+'-'+p2(hoje.getDate())+'.xls';
+    try{
+      var blob=new Blob(['﻿'+h],{type:'application/vnd.ms-excel;charset=utf-8'});
+      var url=URL.createObjectURL(blob), a=document.createElement('a');
+      a.href=url; a.download=nome; document.body.appendChild(a); a.click();
+      setTimeout(function(){ URL.revokeObjectURL(url); a.remove(); },1500);
+      if(typeof audit==='function') audit('relatorio-prevencao', l.length+' FILHOts com pendência', {arquivo:nome, filtro:PREV_FILTRO});
+    }catch(err){ alert('Não consegui gerar o arquivo: '+err.message); }
   }
   // --- Peso: registro MENSAL obrigatório (D8) ---
   // Sem pesagem no mês, vira alerta no dashboard. Guarda histórico para ver a evolução.
