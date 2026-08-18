@@ -3717,6 +3717,12 @@
         if(e.saida===hoje){ if(typeof coEtapaDe==='function'&&coEtapaDe(e)===2) r.naRecepcao++; else r.saemHoje++; }
       });
       (hospedes||[]).forEach(function(h){
+        // A MORADORA NÃO FAZ CHECK-IN (Adriana, 17/ago/2026: "está aparecendo para a Amanda o
+        // número 1, mas não tem nenhum lá"). Era a Repolho: ela mora aqui, nunca vai ter
+        // check-in de hospedagem — e o menu ficava vermelho cobrando um FILHOt que a tela do
+        // Check-in jamais mostraria. Aviso que não some por trabalho nenhum é aviso que a
+        // equipe aprende a ignorar, e aí o vermelho de verdade também passa batido.
+        if(h.mascote) return;
         var k=(typeof medAgendaKey==='function')?medAgendaKey(h):'';
         if(k && !(CF_ESTADIAS||{})[k]) r.semCheckin++;
       });
@@ -7659,10 +7665,15 @@
   };
   let acertoCfg=null;
   function acertoTab(){ return acertoCfg||ACERTO_PADRAO; }
-  function acertoValorPara(n){
+  // dobrou = ficou as 24h (19h→7h e 7h→19h, em dia sem monitora).
+  // Adriana, 17/ago/2026: "a dobra é o mesmo valor, pagamos por 12h. O valor é o mesmo: se
+  // o valor a receber de 4 peludinhos é 100,00 + 13,00, recebe 200,00 + 13,00 — a ajuda de
+  // custo continua sendo 1, a pessoa não saiu de lá."
+  function acertoValorPara(n, dobrou){
     var T=acertoTab();
     var f=T.faixas.find(function(x){ return n<=x.ate; })||T.faixas[T.faixas.length-1];
-    return {base:f.v, ajuda:T.ajuda, total:f.v+T.ajuda};
+    var base=dobrou?(f.v*2):f.v;                  // dois turnos de 12h
+    return {base:base, ajuda:T.ajuda, total:base+T.ajuda, dobrou:!!dobrou, base12:f.v};
   }
   // Quantos FILHOts dormiram na noite que COMEÇA em `iso` (ele está aqui se a estadia já
   // começou e ainda não terminou naquele dia). Morador da casa fora da conta.
@@ -7686,6 +7697,122 @@
   //
   // A noite de 12/08 vai das 18h50 de 12/08 às 07h de 13/08. Como a auditoria é guardada por
   // DIA, olhamos as ações do próprio dia depois das 18h e as da madrugada seguinte.
+  // ===== QUEM PASSOU A NOITE — pela ASSINATURA, não pelo login ====================
+  // Adriana, 17/ago/2026: "quero que a plantonista seja genérica, e você vai nomear a partir
+  // da assinatura delas. Elas são obrigadas a assinar o recebimento de plantão, com nome
+  // delas; depois vem o jantar, obrigadas a assinarem; depois como foi a noite e obrigadas a
+  // assinarem. Aí sabemos quem foi, o dia que pegou, quantos peludinhos tinha, se dobrou."
+  //
+  // O login delas é o genérico "Plantonista" — e a dedução antiga, que olhava a auditoria,
+  // jogava fora justamente os registros genéricos. Resultado: ninguém era reconhecido.
+  // A assinatura é melhor fonte que o login: ela é obrigatória, é escrita à mão pela pessoa,
+  // e existe TRÊS vezes por plantão. É por ela que se paga.
+  //
+  // Onde cada assinatura vive, para a noite do dia D:
+  //   relatorios/{pet}__{D}/dia.recebeu     → ela ASSUMIU o plantão (recebeu da monitora)
+  //   relatorios/{pet}__{D}/inicio.passou   → ela deu o JANTAR
+  //   relatorios/{pet}__{D+1}/noite.passou  → ela contou COMO FOI A NOITE, de manhã
+  // ===== JUNTAR OS NOMES DA MESMA PESSOA — Adriana, 17/ago/2026 ===================
+  // O nome é digitado à mão, três vezes por plantão, muitas vezes de madrugada. A mesma
+  // pessoa aparece como Carol · Carpl · Caroll · Caroo; Wândela · Wandela; Jessica · Jéssica.
+  // Enquanto o mais frequente ganha, a conta fecha por sorte — mas basta uma noite a mais
+  // escrita errado para o pagamento de alguém se partir em dois nomes. Isso é dinheiro.
+  // A grafia MAIS USADA vira a oficial; as variantes se somam a ela.
+  function acertoAgruparNomes(porNoite){
+    // 1) quantas vezes cada grafia apareceu no período inteiro
+    var freq={};
+    Object.keys(porNoite).forEach(function(n){
+      Object.keys(porNoite[n]).forEach(function(nome){
+        var p=porNoite[n][nome];
+        freq[nome]=(freq[nome]||0)+p.recebeu+p.jantar+p.manha;
+      });
+    });
+    // 2) da mais usada para a menos usada, cada uma puxa as parecidas para si
+    var oficiais=Object.keys(freq).sort(function(a,b){ return freq[b]-freq[a]; });
+    var mapa={};
+    // Assinatura com DUAS pessoas fica sozinha: não absorve ninguém nem é absorvida por
+    // ninguém. "Carol e Julia" não é a Carol nem a Julia — é uma noite em que duas cobriram.
+    oficiais=oficiais.filter(function(nome){
+      var duplo=false;
+      Object.keys(porNoite).forEach(function(n){ if(porNoite[n][nome]&&porNoite[n][nome].duasPessoas) duplo=true; });
+      if(duplo){ mapa[nome]=nome; return false; }
+      return true;
+    });
+    oficiais.forEach(function(nome){
+      if(mapa[nome]) return;                       // já foi absorvida por outra
+      mapa[nome]=nome;
+      oficiais.forEach(function(outro){
+        if(outro===nome||mapa[outro]) return;
+        // A PRIMEIRA LETRA NUNCA MUDA. Foi o teste que mostrou: o agrupamento juntou
+        // "Carina" com "Karina" — que podem ser DUAS PESSOAS. Erro de digitação acontece no
+        // meio e no fim da palavra (Carpl, Caroo, Jessicq); trocar a inicial é escrever outro
+        // nome. Na dúvida, é melhor deixar separado e a Gestão juntar do que pagar errado.
+        if(jsNorm(nome).charAt(0)!==jsNorm(outro).charAt(0)) return;
+        // 1 letra de diferença junta; 2 letras só se o nome for longo (Claudilene/Claudelene)
+        var d=_distNome(nome,outro);
+        var lim=(Math.min(jsNorm(nome).length,jsNorm(outro).length)>=7)?2:1;
+        if(d<=lim) mapa[outro]=nome;
+      });
+    });
+    // 3) reescreve as noites com a grafia oficial
+    var out={};
+    Object.keys(porNoite).forEach(function(n){
+      out[n]={};
+      Object.keys(porNoite[n]).forEach(function(nome){
+        var of=mapa[nome]||nome, p=porNoite[n][nome];
+        out[n][of]=out[n][of]||{recebeu:0,jantar:0,manha:0,variantes:{}};
+        out[n][of].recebeu+=p.recebeu; out[n][of].jantar+=p.jantar; out[n][of].manha+=p.manha;
+        if(of!==nome) out[n][of].variantes[nome]=true;
+      });
+    });
+    return out;
+  }
+  function acertoQuemPelaAssinatura(){
+    if(!DB) return Promise.resolve({});
+    return DB.ref('auaulandia/relatorios').once('value').then(function(s){
+      var rel=s.val()||{};
+      var porNoite={};                 // {noite: {nome: {recebeu,jantar,manha}}}
+      var conta=function(noite,nome,campo){
+        var n=String(nome||'').trim();
+        if(!n||n.length<3) return;
+        if(/^(plantonista|gest[ãa]o|supervisor|monitor\s*\d*|recep(c|ç)[ãa]o|veterin|equipe|-|\.)$/i.test(n)) return;
+        // DUAS PESSOAS NUMA ASSINATURA SÓ ("Carol e Julia", "Júlia/Carol"). Aparece de verdade
+        // nos dados. Juntar isso num nome só criaria uma plantonista que não existe — e, pior,
+        // esconderia que duas pessoas cobriram a mesma noite. Fica marcado para a Gestão ver.
+        var duplo=/\s+e\s+|\/|\+|\s*&\s*/i.test(n);
+        porNoite[noite]=porNoite[noite]||{};
+        porNoite[noite][n]=porNoite[noite][n]||{recebeu:0,jantar:0,manha:0,duasPessoas:duplo};
+        porNoite[noite][n][campo]++;
+      };
+      Object.keys(rel).forEach(function(k){
+        var m=/__(\d{4}-\d{2}-\d{2})$/.exec(k); if(!m) return;
+        var dia=m[1], v=rel[k]||{};
+        if(v.dia&&v.dia.recebeu)      conta(dia, v.dia.recebeu, 'recebeu');      // assumiu naquela noite
+        if(v.inicio&&v.inicio.passou) conta(dia, v.inicio.passou, 'jantar');     // jantar da mesma noite
+        // "Como foi a noite" é preenchido de MANHÃ: pertence à noite anterior.
+        if(v.noite&&v.noite.passou)   conta(orcMaisDias(dia,-1), v.noite.passou, 'manha');
+      });
+      porNoite=acertoAgruparNomes(porNoite);       // Carol = Carpl = Caroo
+      var out={};
+      Object.keys(porNoite).forEach(function(noite){
+        var m=porNoite[noite];
+        var nomes=Object.keys(m).sort(function(a,b){
+          var A=m[a], B=m[b];
+          return (B.recebeu+B.jantar+B.manha)-(A.recebeu+A.jantar+A.manha);
+        });
+        if(!nomes.length) return;
+        var p=m[nomes[0]];
+        // Quais dos três momentos ela assinou — é isso que prova a noite inteira.
+        var momentos=[]; if(p.recebeu) momentos.push('recebeu o plantão');
+        if(p.jantar) momentos.push('jantar'); if(p.manha) momentos.push('manhã seguinte');
+        out[noite]={ nome:nomes[0], acoes:(p.recebeu+p.jantar+p.manha), momentos:momentos,
+                     completa:(p.recebeu>0&&p.jantar>0&&p.manha>0),
+                     variantes:Object.keys(p.variantes||{}), duasPessoas:!!p.duasPessoas,
+                     outros:nomes.slice(1,3), fonte:'assinatura' };
+      });
+      return out;
+    }).catch(function(){ return {}; });
+  }
   function acertoDeduzirQuem(){
     if(!DB) return Promise.resolve({});
     var hoje=(typeof hojeISO==='function')?hojeISO():'';
@@ -7724,12 +7851,38 @@
     Promise.all([
       DB.ref('auaulandia/config/acerto-plantao').once('value').then(function(s){ return s.val(); }).catch(function(){ return null; }),
       DB.ref('auaulandia/acerto-plantao').limitToLast(60).once('value').then(function(s){ return s.val()||{}; }).catch(function(){ return {}; }),
-      acertoDeduzirQuem()
+      acertoDeduzirQuem(),
+      acertoQuemPelaAssinatura()
     ]).then(function(r){
       if(r[0]) acertoCfg=r[0];
       ACERTO_REG=r[1];
-      ACERTO_QUEM=r[2]||{};
+      // A ASSINATURA manda. A auditoria só entra onde ninguém assinou nada — ela depende do
+      // login, e a plantonista entra com login genérico. Quem assinou, assinou.
+      var porAudit=r[2]||{}, porAssin=r[3]||{};
+      ACERTO_QUEM={};
+      Object.keys(porAudit).forEach(function(k){ ACERTO_QUEM[k]=porAudit[k]; });
+      Object.keys(porAssin).forEach(function(k){ ACERTO_QUEM[k]=porAssin[k]; });
+      try{ acertoMarcarDobras(); }catch(e){}
       renderAcerto();
+    });
+  }
+  // ===== PLANTÃO DOBRADO ============================================================
+  // "se dobrou plantão — entrou sábado às 19h e às 7h de domingo ficou até as 19h de domingo."
+  // Em domingo e feriado a casa não abre: não há monitora, então quem cobre o DIA é a própria
+  // plantonista. Quando a mesma pessoa assina duas noites seguidas, ou assina a noite e o dia
+  // seguinte num dia sem monitora, ela ficou 24h — e isso tem que aparecer na conta.
+  function acertoMarcarDobras(){
+    var chaves=Object.keys(ACERTO_QUEM||{}).sort();
+    chaves.forEach(function(noite){
+      var a=ACERTO_QUEM[noite]; if(!a||!a.nome) return;
+      var seguinte=ACERTO_QUEM[orcMaisDias(noite,1)];
+      if(seguinte&&seguinte.nome===a.nome){
+        // Duas noites seguidas: o dia entre elas foi coberto por ela quando a casa não abre.
+        var diaDoMeio=orcMaisDias(noite,1);
+        var fechado=(orcDiaSemana(diaDoMeio)==='dom')||!!orcEhFeriado(diaDoMeio);
+        a.emenda=true;
+        if(fechado){ a.dobrou=true; a.dobraDe=diaDoMeio; }
+      }
     });
   }
   function acertoNoites(){
@@ -7746,7 +7899,9 @@
     var noites=acertoNoites();
     var lbSt={pago:['PAGO','resolvido'], acumulado:['ACUMULADO','processo']};
     el.innerHTML=noites.map(function(o){
-      var v=o.reg.valor_total_cent!=null?{total:o.reg.valor_total_cent, base:o.reg.valor_base_cent||0, ajuda:o.reg.ajuda_cent||0}:acertoValorPara(o.n);
+      var _dob=!!((ACERTO_QUEM[o.iso]||{}).dobrou);
+      var v=o.reg.valor_total_cent!=null?{total:o.reg.valor_total_cent, base:o.reg.valor_base_cent||0, ajuda:o.reg.ajuda_cent||0, dobrou:!!o.reg.dobrou}
+                                        :acertoValorPara(o.n, _dob);
       var st=o.reg.status||'apagar';
       var L=lbSt[st]||['A PAGAR','pendente'];
       var feriado=orcEhFeriado(o.iso), dom=(o.dw==='dom');
@@ -7756,7 +7911,10 @@
         +'<div style="font-size:13px;color:var(--z-blue)">'+o.n+' FILHOt'+(o.n===1?'':'s')+' dormindo'
         +(o.pets.length?(' — '+escAttr(o.pets.join(', '))):'')+'</div>'
         +'<div style="font-size:15px;font-weight:800;color:var(--z-blue);margin-top:3px">'+fmtCent(v.total)
-        +' <span style="font-weight:600;font-size:12px;color:var(--muted)">('+fmtCent(v.base)+' + '+fmtCent(v.ajuda)+' de ajuda)</span></div>'
+        +' <span style="font-weight:600;font-size:12px;color:var(--muted)">('
+        +(v.dobrou?('2 &times; '+fmtCent(v.base12||Math.round(v.base/2))+' = '+fmtCent(v.base)):fmtCent(v.base))
+        +' + '+fmtCent(v.ajuda)+' de ajuda)</span>'
+        +(v.dobrou?'<span style="display:inline-block;margin-left:6px;background:var(--crm-critico);color:#fff;border-radius:999px;padding:1px 9px;font-size:11px;font-weight:800">DOBRA · 24h</span>':'')+'</div>'
         +((feriado||dom)?'<div style="font-size:12px;color:var(--z-blue-soft)">'+(feriado?'Feriado':'Domingo')+': há também o plantão de dia (06h50 às 19h). Se alguém cobriu, lance como uma noite à parte.</div>':'')
         +'</div><span class="avr-chip '+L[1]+'">'+L[0]+'</span></div>'
         // O nome já vem do sistema — a Gestão confere, não digita.
@@ -7765,6 +7923,20 @@
             var d=ACERTO_QUEM[o.iso];
             if(o.reg.quem) return '';
             if(!d) return '<div class="hint" style="margin-bottom:5px">Ninguém assinou nada nesta noite — escreva o nome à mão.</div>';
+            // Pela ASSINATURA: dizer QUAIS momentos ela assinou é o que sustenta o pagamento.
+            if(d.fonte==='assinatura'){
+              return '<div class="hint" style="margin-bottom:5px">'
+                +'Assinou como <strong>'+escAttr(d.nome)+'</strong>'
+                +(d.momentos&&d.momentos.length?(': '+escAttr(d.momentos.join(' · '))):'')
+                +(d.completa?' <span style="color:var(--crm-ok);font-weight:700">— plantão inteiro</span>'
+                            :' <span style="color:var(--crm-atencao-text);font-weight:700">— faltou assinar '+(3-(d.momentos||[]).length)+' momento(s)</span>')
+                +(d.dobrou?'<div style="color:var(--crm-critico);font-weight:800;margin-top:3px">DOBROU: ficou também o dia de '+orcBR(d.dobraDe)+' ('+(orcEhFeriado(d.dobraDe)||'domingo')+'), quando a casa não abre. Confira se há um plantão de dia a pagar.</div>'
+                          :(d.emenda?'<div style="color:var(--z-blue-soft);font-weight:700;margin-top:3px">Emendou com a noite seguinte.</div>':''))
+                +(d.duasPessoas?'<div style="color:var(--crm-critico);font-weight:800;margin-top:3px">DUAS PESSOAS numa assinatura só. Confira quem passou de verdade esta noite antes de pagar.</div>':'')
+                +(d.variantes&&d.variantes.length?('<div style="margin-top:2px;color:var(--muted)">Também assinou como: '+escAttr(d.variantes.join(', '))+'</div>'):'')
+                +(d.outros&&d.outros.length?('<div style="margin-top:2px">Também assinaram: '+escAttr(d.outros.join(', '))+'</div>'):'')
+                +'</div>';
+            }
             return '<div class="hint" style="margin-bottom:5px">O sistema reconheceu <strong>'+escAttr(d.nome)+'</strong> ('+d.acoes+' registros na madrugada)'
               +(d.outros&&d.outros.length?(' · também apareceram: '+escAttr(d.outros.join(', '))):'')+'. Confira antes de marcar.</div>';
           })()
@@ -7804,17 +7976,22 @@
     var q=((document.getElementById('acq_'+iso)||{}).value||'').trim();
     if(status!=='apagar'&&!/[a-zA-ZÀ-ÿ]{2,}/.test(q)){ alert('Escreva o nome de quem passou a noite. Pagamento sem nome não fecha conta.'); return; }
     var noites=acertoNoites(), o=noites.find(function(x){ return x.iso===iso; });
-    var v=acertoValorPara(o?o.n:0);
+    var _d=ACERTO_QUEM[iso]||{};
+    var v=acertoValorPara(o?o.n:0, !!_d.dobrou);
     if(!DB) return;
     DB.ref('auaulandia/acerto-plantao/'+iso).update({
       status:status, quem:nomeProprio(q), hospedes:(o?o.n:0), pets:(o?o.pets:[]),
       // Congela o valor da época: mexer na tabela depois não pode reescrever o que já foi acertado.
       valor_base_cent:v.base, ajuda_cent:v.ajuda, valor_total_cent:v.total,
+      dobrou:!!_d.dobrou, dobra_de:_d.dobraDe||'',
+      // Como se soube quem foi — a assinatura é a prova do pagamento.
+      assinou:(_d.momentos||[]).join(' · '), assinatura_completa:!!_d.completa,
+      variantes_do_nome:(_d.variantes||[]).join(', '),
       marcado_por:(typeof quemSou==='function'?quemSou():'-'), marcado_em:Date.now()
     }).then(function(){
-      ACERTO_REG[iso]=Object.assign({},ACERTO_REG[iso]||{},{status:status, quem:nomeProprio(q), valor_total_cent:v.total, valor_base_cent:v.base, ajuda_cent:v.ajuda});
+      ACERTO_REG[iso]=Object.assign({},ACERTO_REG[iso]||{},{status:status, quem:nomeProprio(q), valor_total_cent:v.total, valor_base_cent:v.base, ajuda_cent:v.ajuda, dobrou:!!_d.dobrou});
       renderAcerto();
-      if(typeof audit==='function') audit('acerto-plantao',status+' — '+orcBR(iso)+' · '+nomeProprio(q)+' · '+fmtCent(v.total),{});
+      if(typeof audit==='function') audit('acerto-plantao',status+' — '+orcBR(iso)+' · '+nomeProprio(q)+' · '+fmtCent(v.total)+(_d.dobrou?' (DOBRA 24h)':''),{});
     }).catch(function(e){ alert('Não salvou: '+((e&&e.message)||e)); });
   }
   function renderAcertoTabela(){
@@ -7855,7 +8032,7 @@
   // Agora existe um carimbo: esta constante é a versão que o aparelho está rodando, e o
   // Firebase guarda a versão publicada. Quando as duas diferem, aparece o aviso — mas
   // NUNCA recarrega sozinho: recarregar no meio de um check-in perderia o trabalho.
-  const APP_VERSAO='2026-08-17-02';
+  const APP_VERSAO='2026-08-17-03';
   function vigiarVersao(){
     if(!DB) return;
     try{
