@@ -7772,6 +7772,34 @@
     return of||null;
   }
   function plantEhDuplo(n){ return /\s+e\s+|\/|\+|\s*&\s*/i.test(String(n||'')); }
+  function plantPartes(n){ return String(n||'').split(/\s+e\s+|\/|\+|\s*&\s*/i).map(function(x){ return x.trim(); }).filter(Boolean); }
+  // ===== DUPLA JÁ CONHECIDA NÃO SE PERGUNTA — Adriana, 18/ago/2026 ================
+  // "assinaram juntas, já confirmei o nome de cada uma separadamente, não faz sentido
+  //  confirmar as duas... nem sei se essa dupla irá se reunir novamente."
+  // Uma noite de dupla NÃO é uma pessoa nova. Se a Carol e a Júlia já estão no livro, não
+  // há o que perguntar: são elas duas, cada uma com o valor dela. E guardar "Carol e Júlia"
+  // no livro seria inventar uma plantonista que não existe — pior, uma que talvez nunca
+  // mais se repita. Só vira pergunta quando ALGUMA das partes é nome que ninguém ensinou.
+  function plantEquipe(d){
+    var partes=(d&&d.duasPessoas)?((d.equipe&&d.equipe.length)?d.equipe:plantPartes(d.nome)):[];
+    var oficiais=[], faltam=[];
+    partes.forEach(function(n){
+      var of=plantOficial(n);
+      if(of){ if(oficiais.indexOf(of)<0) oficiais.push(of); }
+      else faltam.push(n);
+    });
+    return {partes:partes, oficiais:oficiais, faltam:faltam, todas:(partes.length>1&&faltam.length===0)};
+  }
+  // O nome que já vem escrito no campo é sempre a grafia oficial. "Carol e julia" e
+  // "Júlia/Carol" são a mesma noite das mesmas duas — o acerto sai com um nome só.
+  function acertoNomeSugerido(d){
+    if(!d||!d.nome) return '';
+    // A ORDEM NÃO PODE MUDAR O NOME. "Júlia/Carol" e "Carol e Júlia" são a MESMA dupla —
+    // sem ordenar, viravam duas duplas diferentes e o acumulado de uma não achava o da
+    // outra. Em ordem alfabética, a mesma noite tem sempre o mesmo nome.
+    if(d.duasPessoas){ var eq=plantEquipe(d); return eq.todas?eq.oficiais.slice().sort(function(a,b){ return a.localeCompare(b,'pt'); }).join(' e '):d.nome; }
+    return plantOficial(d.nome)||d.nome;
+  }
   // Ensina o sistema: este apelido é esta pessoa. Vale para trás e para a frente.
   function plantAprender(apelido, oficial){
     var k=plantChave(apelido), of=String(oficial||'').trim();
@@ -8168,7 +8196,7 @@
       // testando. Ação sem retorno visível é ação que a pessoa acha que não funcionou.
       var _acumDela=0, _acumN=0;
       if(st==='acumulado'){
-        var _nomeDela=(o.reg.quem||'').trim()||((ACERTO_QUEM[o.iso]||{}).nome)||'';
+        var _nomeDela=(o.reg.quem||'').trim()||acertoNomeSugerido(ACERTO_QUEM[o.iso])||'';
         Object.keys(ACERTO_REG||{}).forEach(function(k){
           var rr=ACERTO_REG[k]||{};
           if(rr.status!=='acumulado') return;
@@ -8212,7 +8240,20 @@
                             :' <span style="color:var(--crm-atencao-text);font-weight:700">— faltou assinar '+(3-(d.momentos||[]).length)+' momento(s)</span>')
                 +(d.dobrou?'<div style="color:var(--crm-critico);font-weight:800;margin-top:3px">DOBROU: ficou também o dia de '+orcBR(d.dobraDe)+' ('+(orcEhFeriado(d.dobraDe)||'domingo')+'), quando a casa não abre. Confira se há um plantão de dia a pagar.</div>'
                           :(d.emenda?'<div style="color:var(--z-blue-soft);font-weight:700;margin-top:3px">Emendou com a noite seguinte.</div>':''))
-                +(d.duasPessoas?'<div style="color:var(--crm-critico);font-weight:800;margin-top:3px">DUAS PESSOAS numa assinatura só. Confira quem passou de verdade esta noite antes de pagar.</div>':'')
+                +(function(){
+                    if(!d.duasPessoas) return '';
+                    var eq=plantEquipe(d);
+                    // As duas já estão no livro: não é dúvida, é informação. Sem vermelho.
+                    if(eq.todas) return '<div style="color:var(--z-blue-soft);font-weight:700;margin-top:3px">'
+                      +'Duas plantonistas nesta noite: <strong>'+escAttr(eq.oficiais.join(' e '))+'</strong>'
+                      +' — o valor abaixo é o de <strong>cada uma</strong>.</div>';
+                    // Alguma parte é nome novo: aí sim a Gestão precisa olhar.
+                    return '<div style="color:var(--crm-critico);font-weight:800;margin-top:3px">DUAS PESSOAS numa assinatura só, e '
+                      +(eq.faltam.length===1
+                          ? ('&ldquo;'+escAttr(eq.faltam[0])+'&rdquo; é um nome que eu ainda não conheço')
+                          : ('estes eu ainda não conheço: '+escAttr(eq.faltam.join(', '))))
+                      +'. Confira quem passou de verdade antes de pagar.</div>';
+                  })()
                 +(d.variantes&&d.variantes.length?('<div style="margin-top:2px;color:var(--muted)">Também assinou como: '+escAttr(d.variantes.join(', '))+'</div>'):'')
                 +(d.outros&&d.outros.length?('<div style="margin-top:2px">Também assinaram: '+escAttr(d.outros.join(', '))+'</div>'):'')
                 +'</div>';
@@ -8220,7 +8261,7 @@
             return '<div class="hint" style="margin-bottom:5px">O sistema reconheceu <strong>'+escAttr(d.nome)+'</strong> ('+d.acoes+' registros na madrugada)'
               +(d.outros&&d.outros.length?(' · também apareceram: '+escAttr(d.outros.join(', '))):'')+'. Confira antes de marcar.</div>';
           })()
-        +'<input id="acq_'+o.iso+'" placeholder="Nome da plantonista" value="'+escAttr(o.reg.quem||((ACERTO_QUEM[o.iso]||{}).nome)||'')+'">'
+        +'<input id="acq_'+o.iso+'" placeholder="Nome da plantonista" value="'+escAttr(o.reg.quem||acertoNomeSugerido(ACERTO_QUEM[o.iso])||'')+'">'
         +'<div class="avr-form-btns">'
         +'<button class="btn btn-primary" onclick="acertoMarcar(\''+o.iso+'\',\'pago\')">Paguei esta noite</button>'
         +'<button class="btn btn-gold" onclick="acertoMarcar(\''+o.iso+'\',\'acumulado\')">Guardar para pagar junto</button>'
@@ -8254,11 +8295,19 @@
     noites.forEach(function(o){
       var st=o.reg.status||'apagar';
       if(st==='pago') return;
-      var nome=(o.reg.quem||'').trim()||((ACERTO_QUEM[o.iso]||{}).nome)||'(sem nome)';
-      var v=o.reg.valor_total_cent!=null?o.reg.valor_total_cent:acertoValorPara(o.n).total;
-      por[nome]=por[nome]||{total:0, noites:0, acum:0};
-      por[nome].total+=v; por[nome].noites++;
-      if(st==='acumulado') por[nome].acum+=v;
+      var _q=ACERTO_QUEM[o.iso]||{};
+      var nome=(o.reg.quem||'').trim()||acertoNomeSugerido(_q)||'(sem nome)';
+      var _qtas=Math.max(1, o.reg.quantas||_q.quantas||1);
+      var v=o.reg.valor_total_cent!=null?o.reg.valor_total_cent:acertoValorPara(o.n,!!_q.dobrou,_qtas).total;
+      // NOITE DE DUPLA CONTA POR PESSOA. O valor é o de CADA UMA, então uma linha só,
+      // somando uma vez, esconderia metade do que sai do caixa — e não diria à Gestão
+      // quanto ela deve à Carol e quanto deve à Júlia, que é a pergunta de verdade.
+      var quemNessaNoite=(_qtas>1&&plantEhDuplo(nome))?plantPartes(nome):[nome];
+      quemNessaNoite.forEach(function(p){
+        por[p]=por[p]||{total:0, noites:0, acum:0};
+        por[p].total+=v; por[p].noites++;
+        if(st==='acumulado') por[p].acum+=v;
+      });
     });
     var nomes=Object.keys(por).sort();
     if(!nomes.length){ el.innerHTML='<div class="hint" style="color:var(--crm-ok);font-weight:700">Não há nada em aberto.</div>'; return; }
@@ -8275,19 +8324,27 @@
     if(status!=='apagar'&&!/[a-zA-ZÀ-ÿ]{2,}/.test(q)){ alert('Escreva o nome de quem passou a noite. Pagamento sem nome não fecha conta.'); return; }
     var noites=acertoNoites(), o=noites.find(function(x){ return x.iso===iso; });
     var _d=ACERTO_QUEM[iso]||{};
-    var v=acertoValorPara(o?o.n:0, !!_d.dobrou);
+    // ERRO DE DINHEIRO CORRIGIDO EM 18/ago/2026: o cartão dividia os FILHOts pelas duas
+    // plantonistas ("9 ÷ 2 = 4,5 por pessoa") e mostrava o valor da faixa certa — mas na
+    // hora de PAGAR o valor era recalculado sem o "quantas", caindo na faixa dos 9. A tela
+    // dizia um número e o pagamento gravava outro. Agora é o mesmo cálculo dos dois lados.
+    var _qtas=Math.max(1,_d.quantas||1);
+    var v=acertoValorPara(o?o.n:0, !!_d.dobrou, _qtas);
     if(!DB) return;
     DB.ref('auaulandia/acerto-plantao/'+iso).update({
       status:status, quem:nomeProprio(q), hospedes:(o?o.n:0), pets:(o?o.pets:[]),
       // Congela o valor da época: mexer na tabela depois não pode reescrever o que já foi acertado.
       valor_base_cent:v.base, ajuda_cent:v.ajuda, valor_total_cent:v.total,
+      // Quantas ficaram e quantos FILHOts couberam a cada uma — sem isso o cartão relê a
+      // noite como se fosse de uma pessoa só e o valor "muda sozinho" depois de pago.
+      quantas:_qtas, pets_por_pessoa:v.porCabeca,
       dobrou:!!_d.dobrou, dobra_de:_d.dobraDe||'',
       // Como se soube quem foi — a assinatura é a prova do pagamento.
       assinou:(_d.momentos||[]).join(' · '), assinatura_completa:!!_d.completa,
       variantes_do_nome:(_d.variantes||[]).join(', '),
       marcado_por:(typeof quemSou==='function'?quemSou():'-'), marcado_em:Date.now()
     }).then(function(){
-      ACERTO_REG[iso]=Object.assign({},ACERTO_REG[iso]||{},{status:status, quem:nomeProprio(q), valor_total_cent:v.total, valor_base_cent:v.base, ajuda_cent:v.ajuda, dobrou:!!_d.dobrou});
+      ACERTO_REG[iso]=Object.assign({},ACERTO_REG[iso]||{},{status:status, quem:nomeProprio(q), valor_total_cent:v.total, valor_base_cent:v.base, ajuda_cent:v.ajuda, dobrou:!!_d.dobrou, quantas:_qtas, pets_por_pessoa:v.porCabeca});
       renderAcerto();
       if(typeof audit==='function') audit('acerto-plantao',status+' — '+orcBR(iso)+' · '+nomeProprio(q)+' · '+fmtCent(v.total)+(_d.dobrou?' (DOBRA 24h)':''),{});
       // Diz o que aconteceu, na hora. Sem isso a pessoa clica de novo achando que falhou.
@@ -8344,7 +8401,7 @@
   // Agora existe um carimbo: esta constante é a versão que o aparelho está rodando, e o
   // Firebase guarda a versão publicada. Quando as duas diferem, aparece o aviso — mas
   // NUNCA recarrega sozinho: recarregar no meio de um check-in perderia o trabalho.
-  const APP_VERSAO='2026-08-18-03';
+  const APP_VERSAO='2026-08-18-04';
   function vigiarVersao(){
     if(!DB) return;
     try{
