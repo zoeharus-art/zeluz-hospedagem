@@ -7780,8 +7780,16 @@
   // há o que perguntar: são elas duas, cada uma com o valor dela. E guardar "Carol e Júlia"
   // no livro seria inventar uma plantonista que não existe — pior, uma que talvez nunca
   // mais se repita. Só vira pergunta quando ALGUMA das partes é nome que ninguém ensinou.
+  // As pessoas de uma noite. TRAVA: se o texto assinado É uma dupla, ele vira duas pessoas
+  // mesmo que a marca `duasPessoas` tenha se perdido pelo caminho — foi o que aconteceu no
+  // agrupamento em 18/ago/2026 e fez o app pedir confirmação de "Carol e julia" de novo.
+  function acertoPessoasDa(d){
+    if(!d||!d.nome) return [];
+    if(d.duasPessoas||plantEhDuplo(d.nome)) return (d.equipe&&d.equipe.length>1)?d.equipe:plantPartes(d.nome);
+    return [d.nome];
+  }
   function plantEquipe(d){
-    var partes=(d&&d.duasPessoas)?((d.equipe&&d.equipe.length)?d.equipe:plantPartes(d.nome)):[];
+    var partes=(d&&(d.duasPessoas||plantEhDuplo(d.nome)))?acertoPessoasDa(d):[];
     var oficiais=[], faltam=[];
     partes.forEach(function(n){
       var of=plantOficial(n);
@@ -7797,7 +7805,7 @@
     // A ORDEM NÃO PODE MUDAR O NOME. "Júlia/Carol" e "Carol e Júlia" são a MESMA dupla —
     // sem ordenar, viravam duas duplas diferentes e o acumulado de uma não achava o da
     // outra. Em ordem alfabética, a mesma noite tem sempre o mesmo nome.
-    if(d.duasPessoas){ var eq=plantEquipe(d); return eq.todas?eq.oficiais.slice().sort(function(a,b){ return a.localeCompare(b,'pt'); }).join(' e '):d.nome; }
+    if(d.duasPessoas||plantEhDuplo(d.nome)){ var eq=plantEquipe(d); return eq.todas?eq.oficiais.slice().sort(function(a,b){ return a.localeCompare(b,'pt'); }).join(' e '):d.nome; }
     return plantOficial(d.nome)||d.nome;
   }
   // Ensina o sistema: este apelido é esta pessoa. Vale para trás e para a frente.
@@ -7869,8 +7877,13 @@
       out[n]={};
       Object.keys(porNoite[n]).forEach(function(nome){
         var of=mapa[nome]||nome, p=porNoite[n][nome];
-        out[n][of]=out[n][of]||{recebeu:0,jantar:0,manha:0,variantes:{}};
+        // A MARCA DE "DUAS PESSOAS" TEM QUE SOBREVIVER AO AGRUPAMENTO — 18/ago/2026.
+        // Ela se perdia aqui: o objeto novo nascia sem o campo, e daí para a frente
+        // "Carol e Júlia" voltava a ser tratada como nome de UMA pessoa desconhecida —
+        // pedindo confirmação de uma dupla que a Adriana já tinha confirmado, uma a uma.
+        out[n][of]=out[n][of]||{recebeu:0,jantar:0,manha:0,variantes:{},duasPessoas:false};
         out[n][of].recebeu+=p.recebeu; out[n][of].jantar+=p.jantar; out[n][of].manha+=p.manha;
+        if(p.duasPessoas||plantEhDuplo(of)) out[n][of].duasPessoas=true;
         if(of!==nome) out[n][of].variantes[nome]=true;
       });
     });
@@ -8059,7 +8072,7 @@
     var vezes={};
     Object.keys(ACERTO_QUEM||{}).forEach(function(noite){
       var d=ACERTO_QUEM[noite]; if(!d||!d.nome) return;
-      (d.duasPessoas?(d.equipe||[]):[d.nome]).forEach(function(n){
+      acertoPessoasDa(d).forEach(function(n){
         var of=plantOficial(n)||n; vezes[of]=(vezes[of]||0)+1;
       });
     });
@@ -8165,7 +8178,7 @@
     try{
       Object.keys(ACERTO_QUEM||{}).forEach(function(noite){
         var d=ACERTO_QUEM[noite]; if(!d||!d.nome||d.fonte!=='assinatura') return;
-        (d.duasPessoas?(d.equipe||[]):[d.nome]).forEach(function(n){
+        acertoPessoasDa(d).forEach(function(n){
           if(plantOficial(n)) return;                 // já se sabe quem é
           PLANT_ACONFIRMAR[n]=(PLANT_ACONFIRMAR[n]||0)+1;
         });
@@ -8401,7 +8414,7 @@
   // Agora existe um carimbo: esta constante é a versão que o aparelho está rodando, e o
   // Firebase guarda a versão publicada. Quando as duas diferem, aparece o aviso — mas
   // NUNCA recarrega sozinho: recarregar no meio de um check-in perderia o trabalho.
-  const APP_VERSAO='2026-08-18-04';
+  const APP_VERSAO='2026-08-18-05';
   function vigiarVersao(){
     if(!DB) return;
     try{
