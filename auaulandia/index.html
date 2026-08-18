@@ -8008,7 +8008,20 @@
   function renderNomesAConfirmar(){
     var el=document.getElementById('acertoNomes'); if(!el) return;
     var ks=Object.keys(PLANT_ACONFIRMAR);
-    if(!ks.length){ el.innerHTML=''; el.style.display='none'; return; }
+    // Quem foi marcada como "nunca fez plantão" fica visível, com o caminho de volta. A
+    // Letícia ainda não fez — mas o "ainda" da Adriana quer dizer que um dia pode fazer.
+    var fora=Object.keys(PLANT_LIVRO.naoSao||{}).map(function(k){ return PLANT_LIVRO.naoSao[k]; });
+    var htmlFora=fora.length
+      ? ('<div class="card" style="margin-top:10px"><h2 style="font-size:16px">Não fazem plantão ('+fora.length+')</h2>'
+         +'<div class="hint">As noites assinadas por elas não contam no acerto. Se alguma começar a fazer plantão, traga de volta aqui.</div>'
+         +'<div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:8px">'
+         +fora.map(function(n){
+             return '<button class="btn" style="background:var(--z-cream-warm);color:var(--z-blue);border:1.5px solid var(--line);padding:6px 13px" onclick="plantVoltarAContar(\''+escAttr(n).replace(/'/g,"\\'")+'\')">'
+               +escAttr(n)+' <span style="font-weight:600;font-size:11px;color:var(--muted)">— voltar a contar</span></button>';
+           }).join('')
+         +'</div></div>')
+      : '';
+    if(!ks.length){ el.innerHTML=htmlFora; el.style.display=htmlFora?'block':'none'; return; }
     el.style.display='block';
     // Adriana, 17/ago/2026: "como irei confirmar se a única opção é 'é alguém novo'?"
     // Erro meu: no PRIMEIRO uso o livro está vazio, então não havia nome nenhum para oferecer
@@ -8055,7 +8068,7 @@
               if(!r&&!mn&&!jt) return '';
               return '<div style="font-size:12.5px;color:var(--muted);font-weight:600;margin-top:2px">'
                 +'recebeu o plantão '+r+'x · passou de manhã '+mn+'x · jantar '+jt+'x'
-                +(!r?' <span style="color:var(--crm-critico);font-weight:800">— nunca recebeu um plantão</span>':'')+'</div>';
+                +(!r?' <span style="color:var(--crm-critico);font-weight:800">— nunca recebeu um plantão das mãos da monitora</span>':'')+'</div>';
             })()
           +'<div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:7px">'
           // Não se oferece o próprio apelido como resposta dele mesmo.
@@ -8071,9 +8084,9 @@
           // Adriana, 18/ago/2026: a Giulia, a Letícya e a Márcia aparecem porque assinam
           // outras coisas — mas nunca ficaram de plantão. Sem esta saída, a Gestão teria de
           // responder algo errado só para a pergunta sumir da tela.
-          +'<button class="btn" style="padding:6px 13px;background:var(--crm-critico);color:#fff" onclick="plantNaoEhPlantonista(\''+escAttr(ap).replace(/'/g,"\\'")+'\')">não é plantonista</button>'
+          +'<button class="btn" style="padding:6px 13px;background:var(--crm-critico);color:#fff" onclick="plantNaoEhPlantonista(\''+escAttr(ap).replace(/'/g,"\\'")+'\')">nunca fez plantão</button>'
           +'</div></div>';
-      }).join('')+'</div>';
+      }).join('')+'</div>'+htmlFora;
   }
   function plantConfirmar(apelido, oficial){
     var mesmo=(plantChave(apelido)===plantChave(oficial));
@@ -8088,18 +8101,31 @@
     if(!nome) return;
     plantAprender(apelido, nome).then(function(){ acertoCarregar(); });
   }
-  // Quem NÃO é plantonista sai da conta de vez: a Giulia, a Letícya e a Márcia assinam o
-  // plantão do dia e o jantar, mas nunca dormiram aqui. Fica gravado para nunca mais
-  // aparecer — e para o acerto não somar noite de quem não passou noite nenhuma.
+  // Adriana, 18/ago/2026: "o Otávio fez plantão; a Wandela é monitora E faz plantão, isso
+  // existe. Mas a Giulia nunca fez, nem a Letícia, AINDA."
+  // Duas coisas que isso ensina. Ser monitora NÃO exclui ninguém — a mesma pessoa faz os dois
+  // papéis, e supor o contrário tiraria a Wandela e o Otávio do pagamento. E o "ainda" é a
+  // palavra que importa: quem nunca fez pode começar amanhã. Então isto não é um veredito
+  // permanente — é "nunca fez até hoje", e se desfaz num toque na primeira noite dela.
   function plantNaoEhPlantonista(apelido){
-    if(!confirm('"'+apelido+'" NÃO é plantonista?\n\n'
-      +'Ela some da lista de nomes e as noites dela deixam de contar no acerto.\n\n'
-      +'Use isto para monitoras e para a Gestão, que assinam o plantão do dia mas não dormem aqui.')) return;
+    if(!confirm('"'+apelido+'" nunca fez plantão?\n\n'
+      +'Ela some da lista e as noites dela deixam de contar no acerto.\n\n'
+      +'Se um dia ela começar a fazer plantão, é só trazer de volta — o botão fica logo abaixo desta lista.')) return;
     PLANT_LIVRO.naoSao=PLANT_LIVRO.naoSao||{};
     PLANT_LIVRO.naoSao[plantChave(apelido)]=apelido;
     if(!DB){ acertoCarregar(); return; }
     DB.ref('auaulandia/config/plantonistas').set(PLANT_LIVRO).then(function(){
-      if(typeof audit==='function') audit('plantonista-nome','"'+apelido+'" NÃO é plantonista',{});
+      if(typeof audit==='function') audit('plantonista-nome','"'+apelido+'" marcada como quem nunca fez plantão',{});
+      acertoCarregar();
+    }).catch(function(){ acertoCarregar(); });
+  }
+  function plantVoltarAContar(apelido){
+    if(!confirm('"'+apelido+'" passou a fazer plantão?\n\n'
+      +'As noites assinadas por ela voltam a contar no acerto, inclusive as que já passaram.')) return;
+    try{ delete (PLANT_LIVRO.naoSao||{})[plantChave(apelido)]; }catch(e){}
+    if(!DB){ acertoCarregar(); return; }
+    DB.ref('auaulandia/config/plantonistas').set(PLANT_LIVRO).then(function(){
+      if(typeof audit==='function') audit('plantonista-nome','"'+apelido+'" voltou a contar como plantonista',{});
       acertoCarregar();
     }).catch(function(){ acertoCarregar(); });
   }
@@ -8318,7 +8344,7 @@
   // Agora existe um carimbo: esta constante é a versão que o aparelho está rodando, e o
   // Firebase guarda a versão publicada. Quando as duas diferem, aparece o aviso — mas
   // NUNCA recarrega sozinho: recarregar no meio de um check-in perderia o trabalho.
-  const APP_VERSAO='2026-08-18-02';
+  const APP_VERSAO='2026-08-18-03';
   function vigiarVersao(){
     if(!DB) return;
     try{
