@@ -8733,7 +8733,7 @@
   // Agora existe um carimbo: esta constante é a versão que o aparelho está rodando, e o
   // Firebase guarda a versão publicada. Quando as duas diferem, aparece o aviso — mas
   // NUNCA recarrega sozinho: recarregar no meio de um check-in perderia o trabalho.
-  const APP_VERSAO='2026-08-19-05';
+  const APP_VERSAO='2026-08-19-06';
   function vigiarVersao(){
     if(!DB) return;
     try{
@@ -11898,13 +11898,17 @@
   // O que a Zêluz exige para frequentar (folder 2026): múltipla, gripe, raiva, vermífugo
   // e antiparasitário em dia. Vencido é item urgente — não é lembrete.
   const PREV_ITENS=[
-    {k:'vac_mult_p', nome:'Vacina Múltipla'},
-    {k:'vac_gripe_p', nome:'Vacina de Gripe'},
-    {k:'vac_raiva_p', nome:'Vacina Antirrábica'},
-    {k:'ecto_p', nome:'Ectoparasitas'},
-    {k:'col_p', nome:'Coleira repelente', opcional:true},
-    {k:'verm_p', nome:'Vermífugo', dispensaSe:'fezes_t'},
-    {k:'fezes_p', nome:'Exame de fezes', opcional:true}
+    {k:'vac_mult_p',  base:'vac_mult_t',  nome:'Vacina Múltipla',           dias:365},
+    {k:'vac_gripe_p', base:'vac_gripe_t', nome:'Vacina de Gripe',           dias:365},
+    {k:'vac_raiva_p', base:'vac_raiva_t', nome:'Vacina Antirrábica',        dias:365},
+    {k:'ecto_p',      base:'ecto_t',      nome:'Ectoparasitas',             dias:30},
+    {k:'col_p',       base:'col_t',       nome:'Coleira repelente',         dias:180, opcional:true},
+    {k:'verm_p',      base:'verm_t',      nome:'Vermífugo',                 dias:VERMIF_PROX, dispensaSe:'fezes_t'},
+    {k:'fezes_p',     base:'fezes_t',     nome:'Exame de fezes',            dias:FEZES_PROX, opcional:true},
+    // Adriana, 19/ago/2026: "troca de escova de dentes, item a inserir; check-up — data do
+    // último". Escova troca a cada 3 meses; check-up é anual.
+    {k:'escova_p',    base:'escova_t',    nome:'Troca de escova de dentes', dias:90},
+    {k:'checkup_p',   base:'checkup_t',   nome:'Check-up',                  dias:365}
   ];
   function prevPendencias(ex){
     ex=ex||{};
@@ -12035,10 +12039,13 @@
     }
     el.innerHTML='<div class="card"><h2 style="font-size:17px">'+lista.length+' FILHOt'+(lista.length>1?'s':'')+'</h2>'
       +lista.map(function(o){
-        return '<div style="border-top:1px solid var(--line);padding:11px 0">'
+        var _ch=pelKey(o.p);
+        if(PREV_ABERTO===_ch) return prevEdicaoHTML(o);
+        return '<div style="border-top:1px solid var(--line);padding:11px 0;cursor:pointer" onclick="prevAbrir(\''+_ch+'\')">'
           +'<div style="font-weight:800;color:var(--z-blue);font-size:15px">'+escAttr(o.nome)
           +' <span style="font-weight:600;font-size:12.5px;color:var(--muted)">'+escAttr(o.raca||'')
-          +(o.tutor?(' · '+escAttr(o.tutor)):'')+'</span></div>'
+          +(o.tutor?(' · '+escAttr(o.tutor)):'')+'</span>'
+          +' <span style="font-weight:700;font-size:11.5px;color:var(--z-gold-deep)">toque para lançar</span></div>'
           +'<div style="display:flex;flex-wrap:wrap;gap:5px;margin-top:5px">'
           +o.faltas.map(function(f){
               var venc=(f.tipo==='venc');
@@ -12051,6 +12058,68 @@
       }).join('')+'</div>';
   }
   function prevFiltrar(k){ PREV_FILTRO=k||'tudo'; renderPrevencao(); }
+  // ===== LANÇAR ALI MESMO — Adriana, 19/ago/2026 =================================
+  // "Clica no nome, abre a tela e conseguimos colocar a data que foi feito e por quem foi
+  //  feito (às vezes o tutor que fez) — não ter que entrar na ficha do cliente inteiro.
+  //  Encurtar caminhos, ser rápido. E se venceu dia 10 e não foi colocado, continuar como
+  //  pendente."
+  // A próxima data se calcula sozinha a partir da data em que foi feito; quem quiser pode
+  // corrigir à mão. Vencido continua vencido até alguém lançar uma data nova — nada some
+  // sozinho da lista.
+  var PREV_ABERTO='';
+  function prevAbrir(chave){
+    PREV_ABERTO=(PREV_ABERTO===chave)?'':chave;
+    renderPrevencao();
+    if(PREV_ABERTO){ try{ var el=document.getElementById('prevEd_'+chave); if(el&&el.scrollIntoView) el.scrollIntoView({behavior:'smooth',block:'center'}); }catch(e){} }
+  }
+  function prevPetDe(chave){
+    return (PELUDINHOS||[]).find(function(p){ return pelKey(p)===chave; })||null;
+  }
+  // Lança "feito em" + quem fez, e recalcula a próxima. Um toque por item.
+  function prevLancar(chave, k){
+    var p=prevPetDe(chave); if(!p) return;
+    var it=PREV_ITENS.find(function(x){ return x.k===k; })||{};
+    var dt=String((document.getElementById('prevT_'+chave+'_'+k)||{}).value||'').trim();
+    var quem=String((document.getElementById('prevQ_'+chave+'_'+k)||{}).value||'').trim();
+    var prox=String((document.getElementById('prevP_'+chave+'_'+k)||{}).value||'').trim();
+    if(!dt){ alert('Escolha a data em que foi feito.'); return; }
+    if(dt>hojeISO()){ alert('Essa data ainda não chegou ('+fmtBR(dt)+'). Confira o mês e o ano.'); return; }
+    var patch={};
+    if(it.base) patch[it.base]=dt;
+    patch[k]=prox||(it.dias?addDiasISO(dt,it.dias):'');
+    if(quem) patch[k.replace(/_p$/,'')+'_por']=quem;
+    setPelExtra(p, patch);
+    if(typeof audit==='function') audit('prevencao', (pelNome(p)||'')+': '+(it.nome||k)+' feito em '+fmtBR(dt)+(quem?(' por '+quem):''), {pet:pelNome(p)||''});
+    setTimeout(function(){ renderPrevencao(); }, 120);
+  }
+  function prevEdicaoHTML(o){
+    var chave=pelKey(o.p), ex=pelExtra(o.p)||{};
+    var linha=function(it){
+      var feito=ex[it.base]||'', prox=ex[it.k]||'';
+      var por=ex[it.k.replace(/_p$/,'')+'_por']||'';
+      var atrasado=venceuISO(prox);
+      return '<div style="border-top:1px solid var(--line);padding:9px 0">'
+        +'<div style="font-weight:800;color:var(--z-blue);font-size:13.5px;margin-bottom:5px">'+escAttr(it.nome)+' '+seloValidade(prox)
+        +(por?(' <span style="font-weight:600;font-size:11.5px;color:var(--muted)">— último por '+escAttr(por)+'</span>'):'')+'</div>'
+        +'<div class="cad-grid2">'
+        +'<div><label class="cad-lb">Feito em</label><input type="date" class="cad-in" id="prevT_'+chave+'_'+it.k+'" value="'+escAttr(feito)+'" max="'+hojeISO()+'"></div>'
+        +'<div><label class="cad-lb">Vale até</label><input type="date" class="cad-in" id="prevP_'+chave+'_'+it.k+'" value="'+escAttr(prox)+'" placeholder="calculo sozinho"></div>'
+        +'<div style="grid-column:1/-1"><label class="cad-lb">Quem fez</label>'
+        +'<input class="cad-in" id="prevQ_'+chave+'_'+it.k+'" value="'+escAttr(por)+'" placeholder="Zêluz, o tutor, a clínica…" list="prevQuemLista"></div>'
+        +'</div>'
+        +'<button class="btn btn-gold" style="margin-top:7px;padding:6px 14px;font-size:12.5px" onclick="prevLancar(\''+chave+'\',\''+it.k+'\')">Salvar '+escAttr(it.nome)+'</button>'
+        +(atrasado?'<span style="margin-left:8px;font-size:12px;font-weight:800;color:var(--crm-critico)">continua vencido até você lançar uma data nova</span>':'')
+        +'</div>';
+    };
+    return '<div id="prevEd_'+chave+'" class="card" style="margin:8px 0;border-left:4px solid var(--z-gold)">'
+      +'<datalist id="prevQuemLista"><option value="Zêluz"><option value="Tutor"><option value="Clínica externa"></datalist>'
+      +'<div style="display:flex;justify-content:space-between;align-items:center">'
+      +'<h2 style="font-size:16px;margin:0">'+escAttr(o.nome)+'</h2>'
+      +'<button class="btn" style="background:none;border:none;color:var(--muted);font-weight:800" onclick="prevAbrir(\''+chave+'\')">fechar</button></div>'
+      +'<div class="hint">Lance aqui mesmo o que foi feito — não precisa abrir a ficha inteira. A data de validade eu calculo sozinho; se quiser outra, é só escrever.</div>'
+      +PREV_ITENS.map(linha).join('')
+      +'</div>';
+  }
   function prevLinhaTexto(o){
     return o.nome+(o.raca?(' ('+o.raca+')'):'')+(o.tutor?(' — '+o.tutor):'')+': '
       +o.faltas.map(function(f){
