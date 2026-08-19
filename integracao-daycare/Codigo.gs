@@ -232,8 +232,17 @@ function lerDia(d) {
 function _json(o) {
   return ContentService.createTextOutput(JSON.stringify(o)).setMimeType(ContentService.MimeType.JSON);
 }
+/**
+ * Normaliza para comparar títulos de coluna.
+ *
+ * O   (espaço NÃO-QUEBRÁVEL) é o detalhe que estraga tudo: o título
+ * "Peludinho que sairá cedo" na planilha está escrito com ele no lugar do espaço comum —
+ * dá para ver pelos códigos (160 em vez de 32). Aos olhos é idêntico; para o código, não.
+ * Sem trocar isso aqui, a coluna "não existe" e o lançamento se perde.
+ */
 function _norm(s) {
-  return String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '')
+  return String(s || '').replace(/[   ]/g, ' ')
+    .normalize('NFD').replace(/[̀-ͯ]/g, '')
     .toLowerCase().replace(/\s+/g, ' ').trim();
 }
 /** Todas as abas de Day Care ("2026 DayCare Agosto", "2025 DayCare Março"…). */
