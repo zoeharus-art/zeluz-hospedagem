@@ -2710,6 +2710,7 @@
       <div class="card">
         <h2 style="font-size:19px" id="coItensTitulo">Tudo que VOLTA com o tutor</h2>
         <div class="hint" id="coItensHint">Confira item a item. Junta o que entrou no check-in + o que foi adquirido ou o tutor mandou durante a estadia. Marque conforme entrega para não esquecer nada.</div>
+        <div id="coPlacar"></div>
         <div id="coItens" style="margin-top:8px"></div>
         <div id="coEtapa1Acao" style="margin-top:12px;display:none">
           <button class="btn btn-primary" style="width:100%" onclick="coFecharEtapa1()">✅ Juntei tudo — mandar para a recepção</button>
@@ -8800,7 +8801,7 @@
   // Agora existe um carimbo: esta constante é a versão que o aparelho está rodando, e o
   // Firebase guarda a versão publicada. Quando as duas diferem, aparece o aviso — mas
   // NUNCA recarrega sozinho: recarregar no meio de um check-in perderia o trabalho.
-  const APP_VERSAO='2026-08-19-08';
+  const APP_VERSAO='2026-08-19-09';
   function vigiarVersao(){
     if(!DB) return;
     try{
@@ -19653,7 +19654,7 @@
   function coEhRecepcao(){ if(coModo==='conferencia') return true; if(coModo==='monitor') return false;
     var r=document.body.dataset.role||''; return r==='consultora'||r==='gestao'||r==='supervisor'||r==='diretoria'; }
   function coEtapaDe(e){ return (e&&e.checkout_etapa1&&e.checkout_etapa1.ts)?2:1; }
-  function coAbrirFicha(rk){
+  function coAbrirFicha(rk){ CO_FALTOU={};
     var reg=CF_ESTADIAS[rk]; if(!reg) return; coEstadiaId=reg.id; coEstadia=reg.e||{}; coHosp={nome:coEstadia.nome,tutor:coEstadia.tutor,raca:coEstadia.raca}; coConf={};
     // Retoma o que o monitor já marcou na etapa 1 — a recepção não remarca tudo do zero.
     try{ if(coEstadia.checkout_etapa1&&coEstadia.checkout_etapa1.conferido) coConf=Object.assign({},coEstadia.checkout_etapa1.conferido); }catch(e){}
@@ -19739,9 +19740,52 @@
     // acompanha o FILHOt até o check-out em vez de virar uma nova rodada de conferência.
     var resolvido=(typeof cfResolvidosHTML==='function')?cfResolvidosHTML(coEstadia):'';
     if(!itens.length){ el.innerHTML=resolvido+'<div class="hint">Nada registrado para voltar.</div>'; return; }
+    var etapa2=(coEtapaDe(coEstadia)===2 && coEhRecepcao());
     el.innerHTML=resolvido+itens.map(function(it){ var on=!!coConf[it.k];
-      return '<div class="cf-item'+(on?' on':'')+(on?'':' critico')+'" data-k="'+escAttr(it.k)+'"><div class="cf-top" onclick="coToggleItem(this)"><span class="cf-box">'+(on?'&#10003;':'')+'</span>'+escAttr(it.label)+(on?'':'<span class="cf-tag-critico">ENTREGAR</span>')+'</div></div>';
+      var faltou=!!CO_FALTOU[it.k];
+      return '<div class="cf-item'+(on?' on':'')+(on?'':' critico')+'" data-k="'+escAttr(it.k)+'">'
+        +'<div class="cf-top" onclick="coToggleItem(this)"><span class="cf-box">'+(on?'&#10003;':'')+'</span>'+escAttr(it.label)
+        +(on?'':'<span class="cf-tag-critico">ENTREGAR</span>')+'</div>'
+        // Só a consultora, na 2ª conferência, marca o que NÃO desceu — é o que vira ponto.
+        +(etapa2?('<div style="padding:0 12px 9px"><button type="button" class="btn" style="padding:5px 11px;font-size:12px;font-weight:800;border:1.5px solid '
+            +(faltou?'var(--crm-critico);background:var(--crm-critico);color:#fff':'var(--line);background:var(--z-cream-warm);color:var(--z-blue)')
+            +'" onclick="coMarcarFaltou(\''+escAttr(it.k).replace(/'/g,"\\'")+'\')">'
+            +(faltou?'✓ não desceu — tive que buscar':'não desceu')+'</button></div>'):'')
+        +'</div>';
     }).join('');
+    try{ coRenderPlacar(); }catch(e){}
+  }
+  // ===== GAMIFICAÇÃO DO CHECK-OUT — Adriana, 19/ago/2026 =========================
+  // "Erros estão acontecendo: estão dando check em tudo (monitores), e ao chegar na mão das
+  //  consultoras — 2ª e última conferência antes de chegar até o tutor — falta coisa! Falta
+  //  a cama, falta isso e aquilo. Então as consultoras marcam o que falta descer, e isso ele
+  //  perde ponto. Deu tudo certo, ganha 10 pontos; faltou um item, perde 50%; 2, 80%; 3,
+  //  perde tudo. A ideia é que chegue na recepção redondo, e não fique indo e vindo."
+  //
+  // O ponto é de quem MONTOU A BOLSA (etapa 1), não de quem conferiu — é o trabalho dele que
+  // está sendo medido. Quem marca é a consultora, na etapa 2, e o nome dela fica junto: nota
+  // sem dono não é avaliação, é boato.
+  var CO_FALTOU={};
+  var CO_PONTOS=[10,5,2,0];   // 0 faltas = 10 · 1 falta = −50% · 2 = −80% · 3 ou mais = zero
+  function coPontosDe(n){ return CO_PONTOS[Math.min(n, CO_PONTOS.length-1)]; }
+  function coMarcarFaltou(k){
+    CO_FALTOU[k]=!CO_FALTOU[k];
+    if(CO_FALTOU[k]) coConf[k]=true;   // ela foi buscar e conferiu: o item está entregue
+    coRenderItens(); coRenderPend();
+  }
+  function coRenderPlacar(){
+    var el=document.getElementById('coPlacar'); if(!el) return;
+    if(!(coEtapaDe(coEstadia)===2 && coEhRecepcao())){ el.innerHTML=''; return; }
+    var quem=((coEstadia.checkout_etapa1||{}).quem||'').trim();
+    var n=Object.keys(CO_FALTOU).filter(function(k){ return CO_FALTOU[k]; }).length;
+    var pts=coPontosDe(n);
+    var cor=(pts===10)?'var(--crm-ok)':(pts===0?'var(--crm-critico)':'var(--crm-atencao-text)');
+    el.innerHTML='<div class="card" style="margin:10px 0;border-left:4px solid '+cor+'">'
+      +'<div style="font-weight:800;color:var(--z-blue);font-size:15px">Bolsa montada por '+escAttr(quem||'—')+'</div>'
+      +'<div style="font-size:13px;color:var(--muted);font-weight:600;margin-top:2px">Marque o que <strong>não desceu</strong> e você teve que ir buscar. É isso que conta o ponto dele.</div>'
+      +'<div style="margin-top:7px;font-size:22px;font-weight:800;color:'+cor+'">'+pts+' ponto'+(pts===1?'':'s')
+      +' <span style="font-size:13px;font-weight:700;color:var(--muted)">'
+      +(n===0?'— desceu redondo':('— '+n+' item'+(n>1?'s':'')+' faltando'))+'</span></div></div>';
   }
   function coToggleItem(top){ var it=top.closest('.cf-item'); if(!it) return; var k=it.dataset.k; coConf[k]=!coConf[k]; coRenderItens(); coRenderPend(); }
   function coRenderPend(){
@@ -19787,13 +19831,30 @@
       if(!sig){ if(st){ st.style.color='var(--crm-critico)'; st.textContent='✋ Peça para o tutor ASSINAR a retirada.'; } return; }
     }
     if(!DB){ if(st){ st.style.color='var(--crm-atencao-text)'; st.textContent='Banco conectando…'; } return; }
+    // Gamificação: o que a consultora marcou como "não desceu" vira a nota de quem montou.
+    var _itensFalt=itens.filter(function(it){ return CO_FALTOU[it.k]; }).map(function(it){ return it.label; });
+    var _pts=coPontosDe(_itensFalt.length);
+    var _montou=((coEstadia.checkout_etapa1||{}).quem||'').trim();
     var reg={ conferido:coConf, obs:(document.getElementById('coObs').value||'').trim(), assinado_por:assina, assinatura:sig, semTutor:semTutor, quem:(typeof quemSou==='function'?quemSou():'-'), ts:Date.now(),
-              bolsa_montada_por:((coEstadia.checkout_etapa1||{}).quem||''), bolsa_montada_em:((coEstadia.checkout_etapa1||{}).ts||null) };
+              bolsa_montada_por:_montou, bolsa_montada_em:((coEstadia.checkout_etapa1||{}).ts||null),
+              faltou_descer:_itensFalt, pontos:_pts, pontos_por:(typeof quemSou==='function'?quemSou():'-') };
     if(st){ st.style.color='var(--muted)'; st.textContent='Salvando check-out…'; }
     DB.ref('auaulandia/estadias/'+coEstadiaId).update({ status:'finalizada', checkout:reg }).then(function(){
       coEstadia.status='finalizada';
       if(st){ st.style.color='var(--crm-ok)'; st.textContent='✅ Check-out finalizado. '+(coHosp&&coHosp.nome||'')+' liberado.'; }
       if(typeof audit==='function') audit('checkout','estadia finalizada',{pet:(coHosp&&coHosp.nome)||''});
+      // O ponto fica num lugar só, por mês, para o placar não depender de varrer estadias.
+      if(_montou){
+        var _mes=(new Date()).toISOString().slice(0,7);
+        DB.ref('daycare/pontos-checkout/'+_mes).push({
+          quem:_montou, pontos:_pts, faltas:_itensFalt.length, itens:_itensFalt,
+          pet:(coEstadia.nome||''), estadia:coEstadiaId,
+          conferido_por:(typeof quemSou==='function'?quemSou():'-'), ts:Date.now()
+        }).catch(function(){});
+        if(typeof audit==='function') audit('checkout-pontos', _montou+': '+_pts+' pontos'
+          +(_itensFalt.length?(' — não desceu: '+_itensFalt.join(' · ')):' — desceu redondo'),{pet:(coEstadia.nome||'')});
+      }
+      CO_FALTOU={};
       if(typeof carregarAgendaMedTodos==='function') carregarAgendaMedTodos();
       setTimeout(coVoltar, 900);
     }).catch(function(e){ if(st){ st.style.color='var(--crm-critico)'; st.textContent='⚠️ Erro: '+(e&&e.message||e); } });
