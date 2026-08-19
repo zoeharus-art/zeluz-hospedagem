@@ -5784,15 +5784,52 @@
       : '<div class="avr-resolvido-banner">Resolvido — estoque encaminhado.</div><div style="text-align:right;margin-top:8px"><button class="btn" style="background:var(--z-cream-warm);color:var(--z-blue);border:1.5px solid var(--line)" onclick="avisoReabrir(\''+id+'\')">Reabrir</button></div>';
     return '<div class="avr-card '+cls+'"><div class="avr-head"><div class="avr-info"><div class="avr-nome">'+escAttr(a.medNome||'Medicamento')+'</div><div class="avr-sub">'+escAttr(a.hospNome||'')+(a.tutor?(' · Tutor: '+escAttr(a.tutor)):'')+' — '+escAttr(det.join(' · '))+'</div></div>'+chip+'</div><div class="avr-body">'+trilha+form+'</div></div>';
   }
+  // ===== PENDENTE NA CARA, RESOLVIDO NA GAVETA — Adriana, 19/ago/2026 ============
+  // Vale para as TRÊS listas da tela Atenção Recepção (estoque, ração e ocorrências): o que
+  // falta fica em cima com aviso pulsando; o que já foi resolvido continua guardado, mas
+  // atrás de uma gaveta fechada, com busca — senão a tela vira rolagem sem fim e o pendente
+  // se esconde atrás do que já acabou.
+  function _painelPendencias(abertosHTML, fechadosHTML, n, m, titulo, nomes, vazio, idBusca){
+    if(!n && !m) return '<div class="avr-empty">'+vazio+'</div>';
+    var h='';
+    if(n){
+      h+='<div class="alert-pill crit" style="display:block;margin-bottom:12px;padding:12px 15px;font-size:15px;font-weight:800;border-radius:12px">'
+        +n+' '+titulo
+        +(nomes&&nomes.length?('<div style="font-weight:700;font-size:13px;margin-top:3px">'+escAttr(nomes.slice(0,8).join(' · '))
+          +(nomes.length>8?(' e mais '+(nomes.length-8)):'')+'</div>'):'')
+        +'</div>'+abertosHTML;
+    } else {
+      h+='<div class="avr-empty" style="color:var(--crm-ok);font-weight:800">Nada pendente aqui.</div>';
+    }
+    if(m){
+      h+='<details style="margin-top:14px">'
+        +'<summary style="cursor:pointer;font-weight:800;color:var(--muted);font-size:13.5px;padding:9px 0">'
+        +'Já resolvidos ('+m+') — toque para ver o que foi feito</summary>'
+        +'<input class="cad-in" id="'+idBusca+'" placeholder="Buscar pelo nome do FILHOt…" autocomplete="off" oninput="ocorrFiltrarGaveta(\''+idBusca+'\')" style="margin:8px 0">'
+        +'<div id="'+idBusca+'_lista">'+fechadosHTML+'</div>'
+        +'</details>';
+    }
+    return h;
+  }
+  // Busca dentro da gaveta: esconde o cartão que não casa, sem recarregar nada.
+  function ocorrFiltrarGaveta(idBusca){
+    var q=jsNorm(String((document.getElementById(idBusca)||{}).value||'').trim());
+    var box=document.getElementById(idBusca+'_lista'); if(!box) return;
+    Array.prototype.forEach.call(box.children, function(c){
+      c.style.display=(!q || jsNorm(c.textContent||'').indexOf(q)>=0)?'':'none';
+    });
+  }
   function renderAvisosEstoque(){
     var el=document.getElementById('avisosEstoqueList'); if(!el) return;
     var ids=Object.keys(AVISOS_ESTOQUE_CACHE||{});
     ids.sort(function(a,b){ return (AVISOS_ESTOQUE_CACHE[b]._ts||0)-(AVISOS_ESTOQUE_CACHE[a]._ts||0); });
     var abertos=ids.filter(function(id){ return AVISOS_ESTOQUE_CACHE[id].status!=='resolvido'; });
     var fechados=ids.filter(function(id){ return AVISOS_ESTOQUE_CACHE[id].status==='resolvido'; });
-    var ordered=abertos.concat(fechados);
-    if(!ordered.length){ el.innerHTML='<div class="avr-empty">Nenhum aviso de estoque de medicação. Tudo em dia por aqui.</div>'; return; }
-    el.innerHTML=ordered.map(avisoCardHTML).join('');
+    el.innerHTML=_painelPendencias(
+      abertos.map(avisoCardHTML).join(''), fechados.map(avisoCardHTML).join(''),
+      abertos.length, fechados.length, 'REMÉDIO(S) ACABANDO — sem providência registrada',
+      abertos.map(function(id){ return (AVISOS_ESTOQUE_CACHE[id]||{}).pet||''; }).filter(Boolean),
+      'Nenhum aviso de estoque de medicação. Tudo em dia por aqui.', 'gvEstoque');
   }
   function avisoAddEntrada(id){
     var acao=((document.getElementById('avr_acao_'+id)||{}).value||'').trim();
@@ -5950,9 +5987,24 @@
     var el=document.getElementById('ocorrRecepcaoList'); if(!el) return;
     var lista=ocorrenciasLoja().concat(ocorrenciasDayCare()).sort(function(a,b){ return (b.ts||0)-(a.ts||0); });
     if(!lista.length){ el.innerHTML='<div class="avr-empty">Nenhuma ocorrência registrada nos últimos '+OCORR_JANELA_DIAS+' dias.</div>'; return; }
+    // ===== O QUE FALTA RESOLVER FICA NA CARA — Adriana, 19/ago/2026 ================
+    // "Erro 1: está lá para baixo — tudo sem desfecho precisa estar na cara, não para
+    //  procurar. Erro 2: se tem algo pendente precisa estar piscando. Erro 3: não pode
+    //  aparecer o que já foi resolvido... tenha uma parte só para os resolvidos, e não na
+    //  mesma tela, senão estaremos rolando rolando tela. Resolveu, sai da tela de atenção
+    //  (não podemos perder: se eu precisar encontrar agora, preciso saber o que ocorreu)."
+    //
+    // Antes as resolvidas vinham logo abaixo das abertas, na MESMA lista — a Lana, o Romeo e
+    // a Maria Flor ficavam no fim, atrás de tudo que já estava fechado. Agora a tela mostra
+    // só o que falta, com o aviso vermelho pulsando em cima e os nomes. O resolvido continua
+    // guardado, numa gaveta fechada no fim, com busca por nome.
     var abertas=lista.filter(function(o){ return !o.avisado; });
     var fechadas=lista.filter(function(o){ return !!o.avisado; });
-    el.innerHTML=abertas.concat(fechadas).map(ocorrCardHTML).join('');
+    var nomes=abertas.map(function(o){ return o.pet||o.nome||''; }).filter(Boolean);
+    el.innerHTML=_painelPendencias(
+      abertas.map(ocorrCardHTML).join(''), fechadas.map(ocorrCardHTML).join(''),
+      abertas.length, fechadas.length, 'SEM DESFECHO — resolva antes de sair', nomes,
+      'Nenhuma ocorrência registrada nos últimos '+OCORR_JANELA_DIAS+' dias.', 'gvOcorr');
   }
   function _ocorrSplit(id){ var i=(id||'').indexOf('__'); return i<0?null:{estadiaId:id.slice(0,i), ocId:id.slice(i+2)}; }
   // Desfecho da ocorrência — vale para as duas origens (hospedagem e Day Care).
@@ -5986,6 +6038,7 @@
     var reg={acao:acao, assinatura:assina, quando:agoraBR(), ts:Date.now()};
     DB.ref('auaulandia/estadias/'+r.estadiaId+'/ocorrencias/'+r.ocId+'/avisadoTutor').set(reg).then(function(){
       if(typeof audit==='function') audit('ocorrencia-tutor-avisado',r.estadiaId,{quem:assina});
+      try{ renderOcorrenciasRecepcao(); }catch(e){}
     }).catch(function(e){ alert('Erro ao registrar: '+(e&&e.message||e)); });
   }
   function ocorrReabrir(id){
@@ -6037,9 +6090,11 @@
     ids.sort(function(a,b){ return (AVISOS_RACAO_CACHE[b]._ts||0)-(AVISOS_RACAO_CACHE[a]._ts||0); });
     var abertos=ids.filter(function(id){ return AVISOS_RACAO_CACHE[id].status!=='resolvido'; });
     var fechados=ids.filter(function(id){ return AVISOS_RACAO_CACHE[id].status==='resolvido'; });
-    var ordered=abertos.concat(fechados);
-    if(!ordered.length){ el.innerHTML='<div class="avr-empty">Nenhum aviso de ração. Tudo em dia por aqui.</div>'; return; }
-    el.innerHTML=ordered.map(avisoRacaoCardHTML).join('');
+    el.innerHTML=_painelPendencias(
+      abertos.map(avisoRacaoCardHTML).join(''), fechados.map(avisoRacaoCardHTML).join(''),
+      abertos.length, fechados.length, 'SEM RAÇÃO SUFICIENTE — sem providência registrada',
+      abertos.map(function(id){ return (AVISOS_RACAO_CACHE[id]||{}).pet||''; }).filter(Boolean),
+      'Nenhum aviso de ração. Tudo em dia por aqui.', 'gvRacao');
   }
   function avisoRacaoAddEntrada(id){
     var acao=((document.getElementById('avrr_acao_'+id)||{}).value||'').trim();
@@ -8733,7 +8788,7 @@
   // Agora existe um carimbo: esta constante é a versão que o aparelho está rodando, e o
   // Firebase guarda a versão publicada. Quando as duas diferem, aparece o aviso — mas
   // NUNCA recarrega sozinho: recarregar no meio de um check-in perderia o trabalho.
-  const APP_VERSAO='2026-08-19-06';
+  const APP_VERSAO='2026-08-19-07';
   function vigiarVersao(){
     if(!DB) return;
     try{
