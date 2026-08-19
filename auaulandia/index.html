@@ -8705,7 +8705,7 @@
   // Agora existe um carimbo: esta constante é a versão que o aparelho está rodando, e o
   // Firebase guarda a versão publicada. Quando as duas diferem, aparece o aviso — mas
   // NUNCA recarrega sozinho: recarregar no meio de um check-in perderia o trabalho.
-  const APP_VERSAO='2026-08-19-03';
+  const APP_VERSAO='2026-08-19-04';
   function vigiarVersao(){
     if(!DB) return;
     try{
@@ -12684,6 +12684,10 @@
           <div class="field"><label>Adaptacao comecou em</label><input type="date" class="cad-in" value="${escAttr(ex.adaptacao_desde||'')}" onchange="setPelExtra(pelAtual,{adaptacao_desde:this.value});renderPelFicha()">
             <div class="hint" style="margin-top:4px">${adaptTextoFicha(ex)}</div></div>
           <div class="field"><label>Come em comedouro lento?</label><div class="seg gold" data-single>${segBtnsPel('ansioso',ex.ansioso||'',['Sim','Nao'])}</div></div>
+          <!-- MICROCHIP (Adriana, 19/ago/2026): "preciso de relatório de cães sem microchip".
+               O campo não existia — sem ele o relatório listaria todo mundo. Guarda o número;
+               quem fica em branco é exatamente quem falta. -->
+          <div class="field"><label>Microchip (número)</label><input class="cad-in" value="${escAttr(ex.microchip||'')}" placeholder="Só os números — em branco quer dizer que ainda não tem" onchange="setPelExtra(pelAtual,{microchip:this.value})"></div>
         </div>
         <!-- HISTORICO DO FILHOt (Adriana, 11/ago/2026: "nao tem historico do filhote").
              A folha de papel nunca deixou ver o passado dele. Aqui esta a linha do tempo dos
@@ -15306,6 +15310,52 @@
     h+='</table></body></html>';
     return h;
   }
+  // ===== QUEM AINDA NÃO TEM MICROCHIP — Adriana, 19/ago/2026 =====================
+  // "Preciso de relatório de cães sem microchip — em Relatórios."
+  // O campo não existia na ficha; foi criado junto. Em branco = não tem. Traz o telefone
+  // do tutor porque o próximo passo é falar com ele.
+  function semMicrochipDados(){
+    var out=[];
+    (PELUDINHOS||[]).forEach(function(p){
+      if(typeof pelInativo==='function' && pelInativo(p)) return;
+      var ex=(typeof pelExtra==='function'?pelExtra(p):{})||{};
+      var chip=String(ex.microchip||'').trim();
+      if(chip) return;                                  // já tem: fora do relatório
+      out.push({
+        nome:(typeof pelNome==='function'?pelNome(p):'')||p.n||'',
+        raca:(typeof pelGet==='function'?pelGet(p,'raca'):'')||p.raca||'',
+        tutor:(typeof pelGet==='function'?pelGet(p,'tutor'):'')||p.tutor||'',
+        tel:ex.tel||ex.telefone||ex.whatsapp||'',
+        categoria:(typeof pelCategoria==='function'?pelCategoria(p):'')||''
+      });
+    });
+    out.sort(function(a,b){ return jsNorm(a.nome).localeCompare(jsNorm(b.nome),'pt'); });
+    return out;
+  }
+  function baixarSemMicrochip(){
+    var l=semMicrochipDados();
+    if(!l.length){ alert('Todos os FILHOts ativos já têm microchip na ficha. Nada a listar.'); return; }
+    var e=function(v){ return escAttr(v==null?'':String(v)); };
+    var hoje=new Date(), p2=function(x){ return String(x).padStart(2,'0'); };
+    var carimbo=p2(hoje.getDate())+'/'+p2(hoje.getMonth()+1)+'/'+hoje.getFullYear()+' às '+p2(hoje.getHours())+':'+p2(hoje.getMinutes());
+    var h='<html xmlns:x="urn:schemas-microsoft-com:office:excel"><head><meta charset="UTF-8">'
+      +'<style>body{font-family:Calibri,Arial,sans-serif}'
+      +'td,th{border:1px solid #b6c2cc;padding:4px 7px;font-size:11pt;vertical-align:top}'
+      +'th{background:#234D67;color:#FFFDF6;font-weight:bold;text-align:left}</style></head><body>'
+      +'<table><tr><td colspan="5" style="border:none;font-size:16pt;font-weight:bold;color:#234D67">Zêluz &middot; FILHOts sem microchip</td></tr>'
+      +'<tr><td colspan="5" style="border:none;font-size:10pt;color:#555">Gerado em '+e(carimbo)+' &middot; '+l.length+' FILHOts sem número de microchip na ficha</td></tr></table><br>'
+      +'<table><tr><th>Peludinho</th><th>Raça</th><th>Tutor</th><th>Telefone</th><th>Categoria</th></tr>'
+      +l.map(function(o){ return '<tr><td><b>'+e(o.nome)+'</b></td><td>'+e(o.raca)+'</td><td>'+e(o.tutor)+'</td><td>'+e(o.tel)+'</td><td>'+e(o.categoria)+'</td></tr>'; }).join('')
+      +'</table></body></html>';
+    var nome='Zeluz-sem-microchip-'+hoje.getFullYear()+'-'+p2(hoje.getMonth()+1)+'-'+p2(hoje.getDate())+'.xls';
+    try{
+      var blob=new Blob(['﻿'+h],{type:'application/vnd.ms-excel;charset=utf-8'});
+      var url=URL.createObjectURL(blob), a=document.createElement('a');
+      a.href=url; a.download=nome; document.body.appendChild(a); a.click();
+      setTimeout(function(){ URL.revokeObjectURL(url); a.remove(); },1500);
+      if(typeof audit==='function') audit('relatorio-microchip', l.length+' FILHOts sem microchip', {arquivo:nome});
+    }catch(err){ alert('Não consegui gerar o arquivo: '+err.message); }
+  }
   function baixarGradeAlmoco(){
     const h=gradeAlmocoHTML();
     if(!h){ alert('A grade ainda não carregou. Espere alguns segundos e tente de novo.'); return; }
@@ -15447,7 +15497,8 @@
     {t:'Pertences do dia', d:'A tabela que hoje é preenchida à mão: item por item, o que cada FILHOt trouxe, como é e em que veio (pote, sacola ou mochila).', fn:'relPertencesHoje()'},
     {t:'Pertences EM BRANCO — para imprimir', d:'A mesma tabela, com os nomes do dia já escritos e as colunas vazias, para preencher à mão. É a contingência de quando falta internet.', fn:'relPertencesBrancoEscolher()'},
     {t:'Check-in do corpo de hoje', d:'Quem passou, a que horas, quem fez, o que foi encontrado de alteração, cocô e as coleiras que entraram.', fn:'relCheckinHoje()'},
-    {t:'Orçamentos de hospedagem', d:'Todo orçamento feito, com plano, desconto, diárias, pernoites, valor e se o tutor fechou. Uma linha por FILHOt.', fn:'relOrcamentos()'}
+    {t:'Orçamentos de hospedagem', d:'Todo orçamento feito, com plano, desconto, diárias, pernoites, valor e se o tutor fechou. Uma linha por FILHOt.', fn:'relOrcamentos()'},
+    {t:'FILHOts SEM microchip', d:'Quem ainda não tem número de microchip na ficha — para cobrar do tutor ou agendar a aplicação. Traz nome, raça, tutor e telefone.', fn:'baixarSemMicrochip()'}
   ];
   // As listas saíram do menu (que estava enorme) e viraram botões daqui.
   function relAbrirLista(v){
