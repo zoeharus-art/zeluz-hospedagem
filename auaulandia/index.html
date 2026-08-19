@@ -7286,8 +7286,80 @@
   // ===== O ORÇAMENTO FICA SALVO (é a semente do CRM) ================================
   // Cada orçamento guarda o PREÇO DA ÉPOCA e o desfecho: aguardando → fechado / não fechou.
   // Quando o CRM existir, ele lê daqui: quem pediu, quanto, quando e se fechou.
+  // ===== MUDAR AS DATAS DE UMA RESERVA — Adriana, 19/ago/2026 ====================
+  // "A tutora do Pufe agendou de 21 a 24/08. Hoje mandou que deixará ele amanhã, dia 20.
+  //  Não temos a opção de editar, apenas cancelar. Precisamos editar, e o sistema corrigir
+  //  planilha e etc."
+  // Cancelar e refazer perde o histórico e obriga a redigitar tudo — e o valor muda (20 a 24
+  // é uma noite a mais que 21 a 24). A edição REABRE a reserva na tela de orçamento com os
+  // mesmos FILHOts e deixa a CONTA DE VERDADE recalcular: é o mesmo orcCalcular() que fez o
+  // orçamento original. Nenhuma fórmula paralela — a lei de 18/ago (tela e pagamento pelo
+  // mesmo cálculo) vale aqui também.
+  var ORC_EDITANDO=null, ORC_EDIT_ANTES=null;
+  function orcMudarDatas(id){
+    var o=ORC_LISTA_CACHE[id]||{};
+    if(!o.pets||!o.pets.length){ alert('Esta reserva não tem FILHOt salvo — não dá para reabrir. Use "Cancelar reserva" e faça um orçamento novo.'); return; }
+    ORC_EDITANDO=id;
+    ORC_EDIT_ANTES={entrada:o.entrada||'', saida:o.saida||'', total_cent:o.total_cent||0,
+                    status:o.status||'aguardando',
+                    pets:(o.pets||[]).map(function(p){ return {nome:p.nome||'', raca:p.raca||'', tutor:p.tutor||o.tutor||''}; })};
+    ORC_AULUNO=!!o.auluno;
+    ORC_ALTA=!!o.alta_temporada;
+    // Remonta cada FILHOt A PARTIR DO CADASTRO ATUAL (plano, dias, desconto) — é o que um
+    // orçamento novo faria. Só cai para o que está salvo se ele não existir mais no cadastro.
+    ORC_SEL=(o.pets||[]).map(function(sp){
+      var p=(typeof PELUDINHOS!=='undefined'?PELUDINHOS:[]).find(function(x){ return pelKey(x)===sp.key; });
+      if(!p) return {key:sp.key, nome:sp.nome||'', tutor:sp.tutor||o.tutor||'', raca:sp.raca||'',
+                     dias:[], trocas:sp.trocas||{}, planoKey:'', rotulo:sp.plano||'sem plano',
+                     compromisso:sp.compromisso||'', hospOff:0, semCadastro:!!sp.sem_cadastro};
+      var pl=orcPlanoDoPet(p);
+      var _raca=(typeof pelGet==='function')?(pelGet(p,'raca')||''):(p.raca||'');
+      return (ORC_AULUNO&&pl.ativo)
+        ? {key:sp.key, nome:p.n||'', tutor:p.tutor||'', raca:_raca,
+           dias:((typeof pelDias==='function')?pelDias(p):[])||[], trocas:sp.trocas||{},
+           planoKey:pl.planoKey, rotulo:pl.rotulo, compromisso:pl.compromisso, hospOff:pl.hospOff}
+        : {key:sp.key, nome:p.n||'', tutor:p.tutor||'', raca:_raca, dias:[], trocas:sp.trocas||{},
+           planoKey:'', rotulo:(ORC_AULUNO?pl.rotulo:'não é auluno'), compromisso:'', hospOff:0,
+           semPlano:ORC_AULUNO&&!pl.ativo};
+    });
+    try{ if(typeof irParaView==='function') irParaView('orcamento'); }catch(e){}
+    var ent=document.getElementById('orcEntrada'), sai=document.getElementById('orcSaida');
+    if(ent) ent.value=o.entrada||'';
+    if(sai) sai.value=o.saida||'';
+    try{ orcRenderTipo(); }catch(e){}
+    try{ orcRenderTemporada(); }catch(e){}
+    try{ orcRenderSel(); }catch(e){}
+    try{ orcCalcular(); }catch(e){}
+    orcRenderAvisoEdicao();
+    try{ if(ent&&ent.scrollIntoView) ent.scrollIntoView({behavior:'smooth',block:'center'}); }catch(e){}
+  }
+  function orcRenderAvisoEdicao(){
+    var el=document.getElementById('orcAvisoEdicao');
+    if(!el){
+      var alvo=document.getElementById('orcEntrada');
+      var pai=(alvo&&alvo.closest)?alvo.closest('.card'):null;
+      if(!pai) return;
+      el=document.createElement('div'); el.id='orcAvisoEdicao';
+      pai.insertBefore(el, pai.firstChild);
+    }
+    if(!ORC_EDITANDO){ el.innerHTML=''; el.style.display='none'; return; }
+    var a=ORC_EDIT_ANTES||{};
+    el.style.display='block';
+    el.innerHTML='<div style="background:rgba(222,180,40,.20);border-left:4px solid var(--z-gold);border-radius:10px;padding:11px 13px;margin-bottom:12px;font-size:13.5px;color:var(--z-blue);font-weight:700">'
+      +'Você está <strong>mudando as datas</strong> da reserva de '+escAttr((a.pets||[]).map(function(p){ return p.nome; }).join(' e '))+'.'
+      +'<div style="font-weight:600;margin-top:3px">Era de <strong>'+orcBR(a.entrada||'')+'</strong> a <strong>'+orcBR(a.saida||'')+'</strong>'
+      +(a.total_cent?(' · '+fmtCent(a.total_cent)):'')+'. Troque as datas acima e toque em <strong>Salvar</strong> — eu acerto a planilha sozinho.</div>'
+      +'<button class="btn" style="background:var(--z-cream-warm);color:var(--z-blue);border:1.5px solid var(--line);padding:5px 12px;font-size:12.5px;margin-top:7px" onclick="orcCancelarEdicao()">Desistir da alteração</button>'
+      +'</div>';
+  }
+  function orcCancelarEdicao(){
+    ORC_EDITANDO=null; ORC_EDIT_ANTES=null;
+    ORC_SEL=[]; try{ orcRenderSel(); orcCalcular(); }catch(e){}
+    orcRenderAvisoEdicao();
+  }
   function orcSalvar(){
     if(!ORC_CALC){ return; }
+    if(ORC_EDITANDO) return orcSalvarEdicao();
     if(!DB){ var s0=document.getElementById('orcSalvoStatus'); if(s0){ s0.style.color='var(--crm-critico)'; s0.textContent='Sem conexão com o banco — o orçamento NÃO foi salvo. Copie a mensagem e tente de novo quando a internet voltar.'; } return; }
     var C=ORC_CALC;
     var reg={
@@ -7318,6 +7390,101 @@
     }).catch(function(e){
       if(st){ st.style.color='var(--crm-critico)'; st.textContent='⚠️ NÃO foi salvo: '+((e&&e.message)||e)+'. Copie a mensagem antes de sair da tela.'; }
     });
+  }
+  // Grava a alteração no MESMO registro (o histórico da reserva não se parte em dois) e
+  // acerta a planilha: primeiro libera as noites antigas, depois lança as novas.
+  function orcSalvarEdicao(){
+    var id=ORC_EDITANDO, antes=ORC_EDIT_ANTES||{}, C=ORC_CALC;
+    var st=document.getElementById('orcSalvoStatus');
+    if(!id||!C){ return; }
+    if(!DB){ if(st){ st.style.color='var(--crm-critico)'; st.textContent='Sem conexão — a alteração NÃO foi salva.'; } return; }
+    if(C.entrada===antes.entrada && C.saida===antes.saida){
+      alert('As datas continuam as mesmas ('+orcBR(antes.entrada)+' a '+orcBR(antes.saida)+').\n\nMude a entrada ou a saída antes de salvar.');
+      return;
+    }
+    var o=ORC_LISTA_CACHE[id]||{};
+    var nomes=(C.pets||[]).map(function(p){ return p.sel.nome; }).join(' e ');
+    var dif=(C.total-(antes.total_cent||0));
+    if(!confirm('Mudar a reserva de '+nomes+'?\n\n'
+      +'DE: '+orcBR(antes.entrada)+' a '+orcBR(antes.saida)+'  ·  '+fmtCent(antes.total_cent||0)+'\n'
+      +'PARA: '+orcBR(C.entrada)+' a '+orcBR(C.saida)+'  ·  '+fmtCent(C.total)+'\n\n'
+      +(dif===0?'O valor não muda.':(dif>0?('São '+fmtCent(dif)+' A MAIS.'):('São '+fmtCent(-dif)+' A MENOS.')))
+      +'\n\nEu libero as noites antigas na planilha e lanço as novas.')) return;
+    var motivo=(prompt('Por que as datas mudaram?\n(ex.: a tutora antecipou a viagem)','')||'').trim();
+    if(!motivo){ alert('Escreva o motivo — é ele que explica a mudança quando alguém for conferir depois.'); return; }
+    var senha=(prompt('Digite a SUA senha para confirmar.\n\nÉ o seu nome que vai ficar registrado.','')||'').trim();
+    var quem=senha?orcQuemPelaSenha(senha):null;
+    if(!quem){ alert('Essa senha não é de ninguém cadastrado. A reserva NÃO foi alterada.'); return; }
+    var agora=new Date(), pp=function(x){ return String(x).padStart(2,'0'); };
+    var brDataHora=pp(agora.getDate())+'/'+pp(agora.getMonth()+1)+'/'+agora.getFullYear()+' às '+pp(agora.getHours())+':'+pp(agora.getMinutes());
+    if(st){ st.style.color='var(--muted)'; st.textContent='Salvando a alteração…'; }
+    var patch={
+      entrada:C.entrada, saida:C.saida, saida_pedida:C.saidaPedida, noites:C.noites,
+      alta_temporada:!!C.alta, total_cent:C.total, parcela1_cent:C.p1, parcela2_cent:C.p2,
+      precos_da_epoca:orcPrecos(), auluno:!!ORC_AULUNO,
+      pets:C.pets.map(function(p){ return {
+        key:p.sel.key, nome:p.sel.nome, raca:p.sel.raca||'', tutor:p.sel.tutor||'',
+        plano:p.sel.rotulo, compromisso:p.sel.compromisso||'', trocas:p.sel.trocas||{},
+        ordem:p.ordem, desconto_pct:p.off, diarias:p.nDia, pernoites:p.nPer,
+        sem_cadastro:!!p.sel.semCadastro,
+        subtotal_diarias_cent:p.liqDia, subtotal_pernoites_cent:p.brutoPer,
+        subtotal_cent:p.total }; }),
+      mensagem:(document.getElementById('orcMsg')||{}).value||'',
+      alterado_por:quem.nome, alterado_role:quem.role||'', alterado_ts:Date.now(),
+      alterado_em_br:brDataHora, alterado_motivo:motivo,
+      planilha_ok:false, planilha_msg:'aguardando o acerto das datas'
+    };
+    // O que era antes fica guardado — reserva alterada não apaga o passado dela.
+    DB.ref('auaulandia/orcamentos/'+id+'/historico').push({
+      de_entrada:antes.entrada, de_saida:antes.saida, de_total_cent:antes.total_cent||0,
+      para_entrada:C.entrada, para_saida:C.saida, para_total_cent:C.total,
+      motivo:motivo, por:quem.nome, em_br:brDataHora, ts:Date.now()
+    }).catch(function(){});
+    DB.ref('auaulandia/orcamentos/'+id).update(patch).then(function(){
+      ORC_LISTA_CACHE[id]=Object.assign({}, o, patch);
+      if(typeof audit==='function') audit('orcamento-datas-alteradas',
+        'mudou a reserva de '+nomes+': '+orcBR(antes.entrada)+'–'+orcBR(antes.saida)+' → '+orcBR(C.entrada)+'–'+orcBR(C.saida)+' ('+motivo+')',
+        {pet:(C.pets[0]&&C.pets[0].sel.nome)||'', quem:quem.nome});
+      // 1) tira as noites ANTIGAS do calendário  2) lança as novas
+      orcLiberarNaPlanilha(antes, quem.nome, brDataHora).then(function(){
+        orcEnviarPlanilha(id);
+      });
+      var _id=id;
+      ORC_EDITANDO=null; ORC_EDIT_ANTES=null; ORC_SEL=[];
+      try{ orcRenderSel(); orcCalcular(); }catch(e){}
+      orcRenderAvisoEdicao();
+      orcCarregarLista();
+      if(typeof zAlertao==='function') zAlertao('RESERVA ALTERADA',
+        ['Agora é de '+orcBR(C.entrada)+' a '+orcBR(C.saida)+' — '+fmtCent(C.total)+'.',
+         'Liberei as noites antigas na planilha e lancei as novas.',
+         'Confira na lista abaixo se apareceu "Lançado na planilha". Se disser que NÃO entrou, toque em "reenviar".'],
+        {ok:true, botao:'Certo'});
+      else if(st){ st.style.color='var(--crm-ok)'; st.textContent='✅ Reserva alterada.'; }
+      return _id;
+    }).catch(function(e){
+      if(st){ st.style.color='var(--crm-critico)'; st.textContent='⚠️ NÃO salvou: '+((e&&e.message)||e)+'. Nada foi alterado.'; }
+    });
+  }
+  // Libera na planilha as noites de um período (usado quando a data muda). Não risca o
+  // financeiro — a linha continua viva, só muda de datas.
+  function orcLiberarNaPlanilha(antes, quem, quando){
+    var cfg=(orcSheetsCfg||{});
+    var pets=(antes&&antes.pets)||[];
+    if(!cfg.url||!pets.length) return Promise.resolve();
+    var nomes=pets.map(function(p){
+      var partes=[String(p.nome||'').trim()];
+      var r=String(p.raca||'').trim(); if(r) partes.push(r);
+      var t=String(p.tutor||'').trim(); if(t) partes.push(t);
+      return partes.join('/');
+    });
+    return Promise.all(nomes.map(function(n){
+      return fetch(cfg.url,{method:'POST', headers:{'Content-Type':'text/plain;charset=utf-8'},
+        body:JSON.stringify({ token:cfg.token||'', acao:'cancelar', peludoTutor:n, soCalendario:true,
+          entrada:antes.entrada||'', saida:antes.saida||'',
+          canceladoPor:quem||'', canceladoEm:quando||'' })})
+        .then(function(r){ return r.text().catch(function(){ return ''; }); })
+        .catch(function(){ return ''; });
+    })).catch(function(){});
   }
   var ORC_LISTA_CACHE={};
   function orcCarregarLista(){
@@ -7350,13 +7517,16 @@
       // registro). Cancelar guarda o histórico e desfaz o que a reserva ocupou.
       var cancelar=(stt==='fechado'||stt==='aguardando')
         ? '<button class="btn" style="background:var(--crm-critico);color:#fff" onclick="orcCancelar(\''+id+'\')">Cancelar reserva</button>' : '';
+      // A tutora antecipou/adiou: MUDAR AS DATAS, sem perder a reserva nem redigitar tudo.
+      var mudar=(stt==='fechado'||stt==='aguardando')
+        ? '<button class="btn btn-gold" onclick="orcMudarDatas(\''+id+'\')">Mudar as datas</button>' : '';
       var btns;
       if(stt==='cancelado'){
         btns='<div style="text-align:right;margin-top:6px">'+apagar+'</div>';
       } else if(stt==='aguardando'){
-        btns='<div class="avr-form-btns" style="margin-top:8px"><button class="btn btn-primary" onclick="orcStatus(\''+id+'\',\'fechado\')">Fechou</button><button class="btn" style="background:var(--z-cream-warm);color:var(--z-blue);border:1.5px solid var(--line)" onclick="orcStatus(\''+id+'\',\'nao_fechou\')">Não fechou</button>'+cancelar+apagar+'</div>';
+        btns='<div class="avr-form-btns" style="margin-top:8px"><button class="btn btn-primary" onclick="orcStatus(\''+id+'\',\'fechado\')">Fechou</button><button class="btn" style="background:var(--z-cream-warm);color:var(--z-blue);border:1.5px solid var(--line)" onclick="orcStatus(\''+id+'\',\'nao_fechou\')">Não fechou</button>'+mudar+cancelar+apagar+'</div>';
       } else {
-        btns='<div class="avr-form-btns" style="margin-top:8px;justify-content:flex-end">'+apagar+cancelar
+        btns='<div class="avr-form-btns" style="margin-top:8px;justify-content:flex-end">'+apagar+mudar+cancelar
           +'<button class="btn" style="background:var(--z-cream-warm);color:var(--z-blue);border:1.5px solid var(--line)" onclick="orcStatus(\''+id+'\',\'aguardando\')">Voltar para pendente</button></div>';
       }
       if(stt==='cancelado'&&o.cancelado_por){
@@ -8535,7 +8705,7 @@
   // Agora existe um carimbo: esta constante é a versão que o aparelho está rodando, e o
   // Firebase guarda a versão publicada. Quando as duas diferem, aparece o aviso — mas
   // NUNCA recarrega sozinho: recarregar no meio de um check-in perderia o trabalho.
-  const APP_VERSAO='2026-08-19-01';
+  const APP_VERSAO='2026-08-19-02';
   function vigiarVersao(){
     if(!DB) return;
     try{
