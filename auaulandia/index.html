@@ -1716,12 +1716,24 @@
 <!-- ============ NOVO AULUNO — 2 campos → ficha completa ============ -->
 <div id="novoAlunoModal" onclick="if(event.target===this)fecharNovoAluno()">
   <div class="na-card">
-    <div class="na-title">Novo AULUNO</div>
-    <div class="na-sub">Comece pelo nome e o tutor. Em seguida abre a <strong>ficha completa</strong> para o resto: raça, foto, alergias, medicação, vacinas, rotina…</div>
+    <div class="na-title">Novo AULUNO ou HÓSPEDE</div>
+    <!-- Adriana, 19/ago/2026: "no sistema do Day Care e Hospedagem não tem cadastro
+         simplificado, todas as informações são vitais... não pode salvar sem os itens
+         obrigatórios: raça, nome do peludo, nome do tutor, telefone do tutor, a parte de
+         vacina, carrapaticida e vermífugo."
+         A prevenção não trava a recepção: se ainda não foi feita, marca-se "a fazer na
+         Zêluz" e ela nasce como pendência na tela de Prevenção. O que não pode é ficar em
+         branco, ninguém saber, e o FILHOt entrar assim mesmo. -->
+    <div class="na-sub">É o mesmo cadastro do Day Care e da AuAulândia. Tudo aqui é obrigatório — se a prevenção ainda não foi feita, marque <strong>a fazer na Zêluz</strong> e ela já entra como pendência.</div>
     <label class="na-lb">Nome do FILHOt</label>
-    <input class="na-in" id="naNome" placeholder="Ex: Beau" autocomplete="off" onkeydown="if(event.key==='Enter')document.getElementById('naTutor').focus()">
+    <input class="na-in" id="naNome" placeholder="Ex: Beau" autocomplete="off" onkeydown="if(event.key==='Enter')document.getElementById('naRaca').focus()">
+    <label class="na-lb">Raça</label>
+    <input class="na-in" id="naRaca" placeholder="Ex: Poodle · SRD · Shih Tzu" autocomplete="off" onkeydown="if(event.key==='Enter')document.getElementById('naTutor').focus()">
     <label class="na-lb">Tutor — nome e sobrenome</label>
-    <input class="na-in" id="naTutor" placeholder="Ex: Rebeca Azevedo" autocomplete="off" onkeydown="if(event.key==='Enter')criarAluno()">
+    <input class="na-in" id="naTutor" placeholder="Ex: Rebeca Azevedo" autocomplete="off" onkeydown="if(event.key==='Enter')document.getElementById('naTel').focus()">
+    <label class="na-lb">Telefone do tutor</label>
+    <input class="na-in" id="naTel" placeholder="Ex: (31) 99999-0000" inputmode="tel" autocomplete="off">
+    <div id="naPrev"></div>
     <div class="na-warn" id="naWarn"></div>
     <div class="na-btns">
       <button class="na-cancel" onclick="fecharNovoAluno()">Cancelar</button>
@@ -8788,7 +8800,7 @@
   // Agora existe um carimbo: esta constante é a versão que o aparelho está rodando, e o
   // Firebase guarda a versão publicada. Quando as duas diferem, aparece o aviso — mas
   // NUNCA recarrega sozinho: recarregar no meio de um check-in perderia o trabalho.
-  const APP_VERSAO='2026-08-19-07';
+  const APP_VERSAO='2026-08-19-08';
   function vigiarVersao(){
     if(!DB) return;
     try{
@@ -12006,6 +12018,11 @@
       if(it.dispensaSe && ex[it.dispensaSe]) return;
       if(it.k==='fezes_p' && ex.verm_p) return;
       var v=ex[it.k];
+      // "A fazer na Zêluz", marcado no cadastro novo: é pendência assumida, não item
+      // esquecido. Aparece mesmo quando o item seria opcional — alguém prometeu fazer.
+      if(!v && it.base && ex[String(it.base).replace(/_t$/,'')+'_afazer']){
+        out.push({k:it.k, nome:it.nome, tipo:'sem', afazer:true}); return;
+      }
       if(!v){ if(!it.opcional) out.push({k:it.k, nome:it.nome, tipo:'sem'}); return; }
       if(venceuISO(v)) out.push({k:it.k, nome:it.nome, tipo:'venc', data:v, dias:-diasAteISO(v)});
     });
@@ -12106,7 +12123,8 @@
               var venc=(f.tipo==='venc');
               return '<span style="border-radius:999px;padding:3px 11px;font-size:12px;font-weight:800;'
                 +(venc?'background:#F6D8D4;color:#8E1B10':'background:rgba(222,180,40,.22);color:var(--z-blue)')+'">'
-                +escAttr(f.nome)+(venc?(f.data?(' — venceu '+fmtBR(f.data)+(f.dias?(' (há '+f.dias+' dia'+(f.dias>1?'s':'')+')'):'')):' — vencido'):' — sem data')
+                +escAttr(f.nome)+(venc?(f.data?(' — venceu '+fmtBR(f.data)+(f.dias?(' (há '+f.dias+' dia'+(f.dias>1?'s':'')+')'):'')):' — vencido')
+                                     :(f.afazer?' — A FAZER NA ZÊLUZ':' — sem data'))
                 +'</span>';
             }).join('')
           +'</div></div>';
@@ -12951,18 +12969,80 @@
     if(!canEditPel()){ alert('Apenas Gestão e Supervisão podem cadastrar um novo aluno.'); return; }
     const m=document.getElementById('novoAlunoModal'); if(!m) return;
     const n=document.getElementById('naNome'), t=document.getElementById('naTutor'), w=document.getElementById('naWarn');
-    if(n) n.value=''; if(t) t.value=''; if(w) w.textContent='';
+    if(n) n.value=''; if(t) t.value=''; if(w) w.innerHTML='';
+    ['naRaca','naTel'].forEach(function(id){ var e=document.getElementById(id); if(e) e.value=''; });
+    NA_AFAZER={};
+    try{ naRenderPrev(); }catch(e){}
     m.classList.add('show');
     setTimeout(()=>{ try{ n&&n.focus(); }catch(e){} },150);
   }
   function fecharNovoAluno(){ const m=document.getElementById('novoAlunoModal'); if(m) m.classList.remove('show'); }
+  // ===== CADASTRO NOVO NÃO NASCE PELA METADE — Adriana, 19/ago/2026 ==============
+  // Os itens de prevenção que a Zêluz exige para o FILHOt frequentar. Cada um pede a data
+  // OU o "a fazer na Zêluz" — as duas respostas servem, o branco não.
+  const NA_PREV=[
+    {k:'vac_mult',  t:'Vacina múltipla',  dias:365},
+    {k:'vac_raiva', t:'Antirrábica',      dias:365},
+    {k:'vac_gripe', t:'Vacina de gripe',  dias:365},
+    {k:'verm',      t:'Vermífugo',        dias:120},
+    {k:'ecto',      t:'Carrapaticida',    dias:30}
+  ];
+  function naRenderPrev(){
+    var el=document.getElementById('naPrev'); if(!el) return;
+    el.innerHTML='<div class="na-lb" style="margin-top:12px">Prevenção — obrigatória</div>'
+      +NA_PREV.map(function(it){
+        return '<div style="display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin:5px 0">'
+          +'<span style="min-width:128px;font-size:12.5px;font-weight:800;color:var(--z-blue)">'+it.t+'</span>'
+          +'<input type="date" class="na-in" id="naP_'+it.k+'" style="width:auto;margin:0;flex:1;min-width:140px" max="'+hojeISO()+'" onchange="naMarcarFeito(\''+it.k+'\')">'
+          +'<button type="button" class="btn" id="naF_'+it.k+'" style="background:var(--z-cream-warm);color:var(--z-blue);border:1.5px solid var(--line);padding:6px 11px;font-size:12px;font-weight:800" onclick="naAFazer(\''+it.k+'\')">a fazer na Zêluz</button>'
+          +'</div>';
+      }).join('');
+  }
+  var NA_AFAZER={};
+  function naAFazer(k){
+    NA_AFAZER[k]=!NA_AFAZER[k];
+    var b=document.getElementById('naF_'+k), d=document.getElementById('naP_'+k);
+    if(!b) return;
+    if(NA_AFAZER[k]){
+      b.style.background='var(--z-gold)'; b.style.color='var(--z-blue)'; b.textContent='✓ a fazer na Zêluz';
+      if(d) d.value='';
+    } else { b.style.background='var(--z-cream-warm)'; b.style.color='var(--z-blue)'; b.textContent='a fazer na Zêluz'; }
+  }
+  function naMarcarFeito(k){
+    if(NA_AFAZER[k]) naAFazer(k);   // escolheu a data: desmarca o "a fazer"
+  }
   function criarAluno(){
     if(!gateCadastro()) return;   // LEI do cadastro único — monitor não cadastra
     const nome=(document.getElementById('naNome').value||'').trim();
+    const raca=((document.getElementById('naRaca')||{}).value||'').trim();
     const tutor=(document.getElementById('naTutor').value||'').trim();
+    const tel=((document.getElementById('naTel')||{}).value||'').trim();
     const w=document.getElementById('naWarn');
-    if(!nome){ if(w) w.textContent='Escreva o nome do FILHOt.'; return; }
-    const novo={n:nome,raca:'',freq:'',tutor:tutor,nasc:'',dias:[]};
+    const faltando=[];
+    if(!nome)  faltando.push('o nome do FILHOt');
+    if(!raca)  faltando.push('a raça');
+    if(!tutor) faltando.push('o nome do tutor');
+    if(!tel)   faltando.push('o telefone do tutor');
+    else if(String(tel).replace(/\D/g,'').length<10) faltando.push('o telefone completo (com DDD)');
+    const prevPatch={};
+    NA_PREV.forEach(function(it){
+      const dt=((document.getElementById('naP_'+it.k)||{}).value||'').trim();
+      if(dt){
+        if(dt>hojeISO()){ faltando.push('uma data válida em '+it.t+' (essa ainda não chegou)'); return; }
+        prevPatch[it.k+'_t']=dt;
+        prevPatch[it.k+'_p']=addDiasISO(dt,it.dias);
+      } else if(NA_AFAZER[it.k]){
+        prevPatch[it.k+'_afazer']=true;   // nasce como pendência na tela de Prevenção
+      } else {
+        faltando.push(it.t+' (a data, ou marque "a fazer na Zêluz")');
+      }
+    });
+    if(faltando.length){
+      if(w) w.innerHTML='<strong>Falta '+(faltando.length>1?'preencher:':'')+'</strong> '+faltando.join(' · ')
+        +'<div style="font-weight:600;margin-top:3px">No Day Care e na AuAulândia não existe cadastro pela metade — tudo aqui é usado para cuidar dele.</div>';
+      return;
+    }
+    const novo={n:nome,raca:raca,freq:'',tutor:tutor,nasc:'',dias:[]};
     const key=pelKey(novo);
     // Nível 1 (nome+tutor+raça) — aqui a raça ainda não existe (só entra na ficha completa,
     // ver onRacaPel), então neste passo a chave equivale a nome+tutor: bloqueia sem opção
@@ -12980,9 +13060,11 @@
     PELUDINHOS.push(novo);
     PELUDINHOS.sort((a,b)=>jsNorm(a.n).localeCompare(jsNorm(b.n))||jsNorm(a.tutor).localeCompare(jsNorm(b.tutor)));
     // grava no banco para não sumir ao recarregar (e aparecer em todos os aparelhos)
-    const reg={_novo:true,n:nome,tutor:tutor,raca:'',nasc:'',dias:[],freq:''};
+    const reg=Object.assign({_novo:true,n:nome,tutor:tutor,raca:raca,tel:tel,nasc:'',dias:[],freq:''}, prevPatch);
     try{ localStorage.setItem('zeluz_pel_'+key,JSON.stringify(reg)); }catch(e){}
     if(DB) DB.ref('daycare/cadastro/'+key).update(reg).catch(()=>{});
+    NA_AFAZER={};
+    if(typeof audit==='function') audit('cadastro-novo', nome+' ('+raca+') — tutor '+tutor+' · '+tel, {pet:nome});
     fecharNovoAluno();
     renderPel();
     const idx=PELUDINHOS.findIndex(p=>pelKey(p)===key);
