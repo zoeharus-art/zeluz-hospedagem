@@ -8535,7 +8535,7 @@
   // Agora existe um carimbo: esta constante é a versão que o aparelho está rodando, e o
   // Firebase guarda a versão publicada. Quando as duas diferem, aparece o aviso — mas
   // NUNCA recarrega sozinho: recarregar no meio de um check-in perderia o trabalho.
-  const APP_VERSAO='2026-08-18-09';
+  const APP_VERSAO='2026-08-19-01';
   function vigiarVersao(){
     if(!DB) return;
     try{
@@ -13015,6 +13015,14 @@
   function removerAtividade(i){ if(!confirm('Remover a atividade \"'+ATIVIDADES[i].t+'\"?')) return; ATIVIDADES.splice(i,1); salvarAtiv(); renderAtiv(); }
   renderAtiv();
   try{ if(typeof tgCarregarCfg==='function') tgCarregarCfg(); }catch(e){}
+  // Avisos da vet que não saíram na hora: tenta de novo ao abrir o app e a cada 10 minutos.
+  // Quem fotografou o machucado já foi embora — insistir é trabalho do app, não dela.
+  try{
+    if(typeof vetFilaTentar==='function'){
+      setTimeout(function(){ vetFilaTentar(); }, 4000);
+      setInterval(function(){ vetFilaTentar(); }, 600000);
+    }
+  }catch(e){}
   try{ if(typeof ptEscutarChamados==='function') ptEscutarChamados(); }catch(e){}
   try{ if(typeof almEscutarExcecoes==='function') almEscutarExcecoes(); }catch(e){}
   try{ if(typeof ativCarregarTempo==='function') ativCarregarTempo(); }catch(e){}
@@ -13848,6 +13856,21 @@
       function(s){ TG_CFG=s.val()||null; },
       function(e){ try{ if(typeof audit==='function') audit('telegram-config','NÃO consegui ler a configuração do Telegram: '+((e&&e.message)||e),{}); }catch(x){} });
   }
+  // ===== A CONFIG TEM QUE ESTAR PRONTA NA HORA DE AVISAR — 19/ago/2026 ============
+  // Adriana: "o check-in não está mandando, para o grupo vet, os problemas encontrados."
+  // Prova: 19/08 08:20:53 a Wandela salvou o Romeo com a orelha vermelha e foto de 87 KB —
+  // e a auditoria não tem NEM "avisou" NEM "não avisou". O envio nem foi tentado: o código
+  // só entrava no bloco `if(... && TG_CFG && TG_CFG.url)`, e se a config ainda não tivesse
+  // chegado no aparelho, ele pulava tudo CALADO. Ela saiu achando que a vet foi avisada.
+  // Agora, na hora do aviso, se a config não estiver na memória ela é buscada na hora.
+  function tgCfgPronta(){
+    if(TG_CFG&&TG_CFG.url) return Promise.resolve(TG_CFG);
+    if(!DB) return Promise.resolve(null);
+    return DB.ref('auaulandia/config/telegram').once('value').then(function(s){
+      var v=s.val(); if(v&&v.url) TG_CFG=v;
+      return (TG_CFG&&TG_CFG.url)?TG_CFG:null;
+    }).catch(function(){ return null; });
+  }
   function tgAvisar(dados){
     var c=TG_CFG||{};
     if(!c.url) return Promise.resolve({ok:false, erro:'ponte não configurada'});
@@ -13873,6 +13896,81 @@
       return tgAvisar({ pet:p.n||'', ponto:(ponto.t||'')+' — foto de longe',
                         local:at.local||'', fotoBase64:at.foto2 }).then(function(){ return r; });
     });
+  }
+  // ===== O AVISO DA VETERINÁRIA NUNCA SE PERDE — 19/ago/2026 =====================
+  // Manda as alterações do check-in para o grupo da vet e diz NA HORA se conseguiu. O que
+  // não sair fica numa fila no Firebase e é tentado de novo sozinho — quem fotografou já
+  // foi embora, então o app é que tem que insistir.
+  function ckAvisarVet(p, alterados, R, hora){
+    return Promise.all(alterados.map(function(pt){
+      var at=R.pontos[pt.k]||{};
+      return tgAvisarAlteracao(p, pt, at, hora).then(function(r){
+        var ok=!!(r&&r.ok);
+        if(typeof audit==='function') audit('telegram-aviso',(ok?'avisou o grupo sobre ':'NÃO avisou o grupo sobre ')+(pt.t||'')+' de '+(p.n||''),{pet:p.n||''});
+        if(!ok) vetFilaGuardar(p, pt, at, hora, (r&&r.erro)||'a ponte não respondeu');
+        return {ponto:pt.t||'', ok:ok, erro:(r&&r.erro)||''};
+      }).catch(function(e){
+        vetFilaGuardar(p, pt, at, hora, String((e&&e.message)||e));
+        return {ponto:pt.t||'', ok:false, erro:String((e&&e.message)||e)};
+      });
+    })).then(function(res){
+      var ruins=res.filter(function(x){ return !x.ok; });
+      if(typeof zAlertao!=='function') return res;
+      if(!ruins.length){
+        zAlertao('A VETERINÁRIA JÁ FOI AVISADA',
+          ['Mandei para o grupo do Telegram, com as fotos: '+res.map(function(x){ return x.ponto; }).join(', ')+' de '+(p.n||'')+'.',
+           'Não precisa mandar de novo pelo seu celular.'],{botao:'Certo'});
+        return res;
+      }
+      zAlertao('⚠ O GRUPO NÃO FOI AVISADO',
+        ['O check-in de '+(p.n||'')+' está salvo — isso não se perdeu.',
+         'Mas NÃO consegui mandar para o grupo: '+ruins.map(function(x){ return x.ponto; }).join(', ')+'.',
+         'Motivo: '+(ruins[0].erro||'a ponte não respondeu')+'.',
+         'Guardei na fila e vou tentar sozinho, mas MANDE A FOTO PELO SEU CELULAR AGORA — a veterinária precisa ver hoje.'],
+        {botao:'Vou mandar agora'});
+      return res;
+    });
+  }
+  function vetFilaGuardar(p, pt, at, hora, motivo){
+    if(!DB) return;
+    try{
+      DB.ref('auaulandia/avisos-vet-fila').push({
+        pet:p.n||'', raca:p.raca||'', tutor:p.tutor||'',
+        ponto:pt.t||'', alertas:(at.alertas||[]).join(', '),
+        local:at.local||'', obs:at.obs||'', foto:at.foto||'', foto2:at.foto2||'',
+        quem:(typeof quemSou==='function'?quemSou():'-'), hora:hora||'',
+        dia:(typeof dcDataKey==='function'?dcDataKey():''), motivo:motivo||'', ts:Date.now(), tentativas:0
+      }).catch(function(){});
+    }catch(e){}
+  }
+  // Tenta esvaziar a fila. Roda na abertura do app e depois de cada check-in bem-sucedido.
+  var _vetFilaRodando=false;
+  function vetFilaTentar(){
+    if(!DB||_vetFilaRodando) return Promise.resolve(0);
+    _vetFilaRodando=true;
+    return tgCfgPronta().then(function(c){
+      if(!c||!c.url){ _vetFilaRodando=false; return 0; }
+      return DB.ref('auaulandia/avisos-vet-fila').limitToFirst(10).once('value').then(function(s){
+        var v=s.val()||{}, ks=Object.keys(v);
+        if(!ks.length){ _vetFilaRodando=false; return 0; }
+        return Promise.all(ks.map(function(id){
+          var a=v[id]||{};
+          return tgAvisar({pet:a.pet, raca:a.raca, tutor:a.tutor, ponto:(a.ponto||'')+' (aviso atrasado)',
+                           alertas:a.alertas, local:a.local, obs:a.obs, quem:a.quem, hora:a.hora,
+                           fotoBase64:a.foto||''})
+            .then(function(r){
+              if(r&&r.ok){
+                if(a.foto2) tgAvisar({pet:a.pet, ponto:(a.ponto||'')+' — foto de longe', local:a.local, fotoBase64:a.foto2});
+                return DB.ref('auaulandia/avisos-vet-fila/'+id).remove().then(function(){
+                  if(typeof audit==='function') audit('telegram-aviso','avisou o grupo (atrasado) sobre '+(a.ponto||'')+' de '+(a.pet||''),{pet:a.pet||''});
+                  return 1;
+                });
+              }
+              return DB.ref('auaulandia/avisos-vet-fila/'+id+'/tentativas').set((a.tentativas||0)+1).then(function(){ return 0; }).catch(function(){ return 0; });
+            }).catch(function(){ return 0; });
+        })).then(function(r){ _vetFilaRodando=false; return r.reduce(function(x,y){ return x+y; },0); });
+      }).catch(function(){ _vetFilaRodando=false; return 0; });
+    }).catch(function(){ _vetFilaRodando=false; return 0; });
   }
   var ckEntradaCache={};
   function ckSalvar(){
@@ -13915,35 +14013,34 @@
     // estiver ligada ou a internet falhar, o check-in é salvo do mesmo jeito — o aviso é
     // reforço, nunca condição.
     try{
-      if(alterados.length && TG_CFG && TG_CFG.url){
-        // Adriana, 13/ago/2026: "foi tirada foto, mas não chegou no grupo do Telegram."
-        // O resultado do envio só existia na auditoria — e ninguém na operação lê aquilo.
-        // Quem acabou de fotografar um machucado precisa saber NA HORA se a veterinária foi
-        // avisada: se não foi, ela manda pelo próprio celular e o FILHOt não fica esperando.
-        Promise.all(alterados.map(function(pt){
-          return tgAvisarAlteracao(p, pt, R.pontos[pt.k]||{}, reg.hora).then(function(r){
-            const ok=!!(r&&r.ok);
-            if(typeof audit==='function') audit('telegram-aviso',(ok?'avisou o grupo sobre ':'NÃO avisou o grupo sobre ')+(pt.t||'')+' de '+(p.n||''),{pet:p.n||''});
-            return {ponto:pt.t||'', ok:ok, erro:(r&&r.erro)||''};
-          }).catch(function(e){ return {ponto:pt.t||'', ok:false, erro:String((e&&e.message)||e)}; });
-        })).then(function(res){
-          const ruins=res.filter(function(x){ return !x.ok; });
-          if(typeof zAlertao!=='function') return;
-          if(!ruins.length){
-            zAlertao('A VETERINÁRIA JÁ FOI AVISADA',
-              ['Mandei para o grupo do Telegram, com as fotos: '+res.map(function(x){ return x.ponto; }).join(', ')+' de '+(p.n||'')+'.',
-               'Não precisa mandar de novo pelo seu celular.'],{botao:'Certo'});
-            return;
-          }
-          zAlertao('⚠ O GRUPO NÃO FOI AVISADO',
-            ['O check-in de '+(p.n||'')+' está salvo — isso não se perdeu.',
-             'Mas NÃO consegui mandar para o grupo do Telegram: '+ruins.map(function(x){ return x.ponto; }).join(', ')+'.',
-             'Motivo: '+(ruins[0].erro||'a ponte não respondeu')+'.',
-             'MANDE A FOTO NO GRUPO PELO SEU CELULAR AGORA — a veterinária precisa ver hoje.'],
-            {botao:'Vou mandar agora'});
-        });
+      if(alterados.length){
+        // Se a ponte não estiver pronta, isso NÃO é motivo para ficar calado: guarda o aviso
+        // na fila e diz à monitora para mandar pelo celular. Silêncio aqui é FILHOt machucado
+        // que a veterinária nunca vê.
+        if(!(TG_CFG&&TG_CFG.url)){
+          tgCfgPronta().then(function(c){
+            if(c&&c.url){ ckAvisarVet(p, alterados, R, reg.hora); return; }
+            alterados.forEach(function(pt){ vetFilaGuardar(p, pt, R.pontos[pt.k]||{}, reg.hora, 'a ponte do Telegram não estava carregada'); });
+            if(typeof audit==='function') audit('telegram-aviso','NÃO avisou o grupo sobre '+(p.n||'')+' — ponte não carregada (guardei na fila)',{pet:p.n||''});
+            if(typeof zAlertao==='function') zAlertao('⚠ O GRUPO NÃO FOI AVISADO',
+              ['O check-in de '+(p.n||'')+' está salvo — isso não se perdeu.',
+               'Mas o aviso do Telegram não saiu: o aparelho não conseguiu falar com a ponte.',
+               'Guardei na fila e vou tentar sozinho quando a conexão voltar.',
+               'MESMO ASSIM, MANDE A FOTO NO GRUPO PELO SEU CELULAR AGORA — a veterinária precisa ver hoje.'],
+              {botao:'Vou mandar agora'});
+          });
+        } else ckAvisarVet(p, alterados, R, reg.hora);
       }
-    }catch(e){}
+    }catch(e){
+      // O catch era VAZIO: qualquer erro aqui sumia e ninguém ficava sabendo.
+      try{
+        if(typeof audit==='function') audit('telegram-aviso','NÃO avisou o grupo sobre '+(p.n||'')+' — erro: '+((e&&e.message)||e),{pet:p.n||''});
+        if(typeof zAlertao==='function') zAlertao('⚠ O GRUPO NÃO FOI AVISADO',
+          ['O check-in de '+(p.n||'')+' está salvo.',
+           'Deu erro ao tentar avisar o grupo: '+((e&&e.message)||e),
+           'MANDE A FOTO NO GRUPO PELO SEU CELULAR AGORA.'],{botao:'Vou mandar agora'});
+      }catch(x){}
+    }
     if(DB){
       DB.ref(ckNo()+'/'+k).set(reg).catch(function(e){ alert('Erro ao salvar: '+e.message); });
       // presença: quem passou pelo check-in de entrada está aqui (acaba a chamada em separado)
