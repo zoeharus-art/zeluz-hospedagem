@@ -1789,6 +1789,7 @@
         </div>
         <div id="pendGrid"></div>
         <!-- Aniversariantes: aparece todo dia, inclusive fim de semana (Adriana, 20/ago/2026). -->
+        <div id="adaptPendCard"></div>
         <div id="anivCard"></div>
       </section>
 
@@ -8878,7 +8879,7 @@
   // Agora existe um carimbo: esta constante é a versão que o aparelho está rodando, e o
   // Firebase guarda a versão publicada. Quando as duas diferem, aparece o aviso — mas
   // NUNCA recarrega sozinho: recarregar no meio de um check-in perderia o trabalho.
-  const APP_VERSAO='2026-08-20-10';
+  const APP_VERSAO='2026-08-20-11';
   function vigiarVersao(){
     if(!DB) return;
     try{
@@ -13570,8 +13571,8 @@
       setTimeout(function(){ try{ resumoDiaAuto(); }catch(e){} }, 9000);
       setInterval(function(){ try{ resumoDiaAuto(); }catch(e){} }, 3600000);
       // Aniversariantes: desenha no Início e manda a tabela para a Gestão uma vez por dia.
-      setTimeout(function(){ try{ renderAniversariantes(); anivAuto(); }catch(e){} }, 6000);
-      setInterval(function(){ try{ renderAniversariantes(); anivAuto(); }catch(e){} }, 3600000);
+      setTimeout(function(){ try{ renderAdaptPendentes(); renderAniversariantes(); anivAuto(); }catch(e){} }, 6000);
+      setInterval(function(){ try{ renderAdaptPendentes(); renderAniversariantes(); anivAuto(); }catch(e){} }, 3600000);
       // Voltou para o app (trocou de aba, destravou o celular): relê o cronômetro. Sem isto,
       // a tela ficava com o estado de horas atrás e induzia a reiniciar a atividade.
       document.addEventListener('visibilitychange', function(){
@@ -13592,10 +13593,18 @@
   //  dias, ou o app não afirma nada. Informação velha na tela do time é pior que informação
   //  nenhuma — o time para de acreditar no que lê.
   const ADAPT_DIAS=30;
+  // ⚠ 20/ago/2026 — contava em milissegundos a partir do meio-dia, então o resultado mudava
+  // conforme a HORA da consulta: quem já tinha 31 dias aparecia com 30 se alguém abrisse o
+  // app de manhã, e o alerta de adaptação vencida chegava um dia atrasado. Agora conta dias
+  // de calendário — que é o que uma pessoa conta olhando o calendário.
   function adaptDiasDe(ex){
     var d=(ex&&ex.adaptacao_desde)||''; if(!d) return null;
-    try{ var ini=new Date(d+'T12:00:00'), hoje=new Date();
-      return Math.floor((hoje-ini)/86400000); }catch(e){ return null; }
+    try{
+      var p=String(d).slice(0,10).split('-'); if(p.length<3) return null;
+      var ini=new Date(+p[0],+p[1]-1,+p[2]); ini.setHours(0,0,0,0);
+      var hoje=new Date(); hoje.setHours(0,0,0,0);
+      return Math.round((hoje-ini)/86400000);
+    }catch(e){ return null; }
   }
   // Só é adaptação de verdade quando está marcada E dentro dos 30 dias contados da data.
   function pelEmAdaptacao(ex){
@@ -15432,6 +15441,40 @@
           +EA_SEM_RESP+' FILHOt'+(EA_SEM_RESP>1?'s':'')+' ainda sem a resposta do tutor sobre restrição. '
           +'A gestão está confirmando — não é tarefa do monitor.</div>'):'')
       +'</div>';
+  }
+  // ===== ADAPTAÇÃO SEM DATA OU VENCIDA — Adriana, 20/ago/2026 ====================
+  // "Adaptação sem data ou vencida (5): Antônio, Bruce, Lupin, Simba, Yumi — esse tipo de
+  //  informação precisa aparecer no meu dashboard e no dashboard da Amanda."
+  // A regra (adaptPendente) já existia e só vivia dentro da tela do Day Care. Alerta que mora
+  // numa tela só é alerta que a gestão não vê. Enquanto os três painéis por papel não
+  // existem, o lugar certo é o Início — que é o que ela e a Amanda abrem.
+  function adaptPendentesLista(){
+    var out=[];
+    try{
+      (PELUDINHOS||[]).forEach(function(p){
+        if(typeof pelInativo==='function'&&pelInativo(p)) return;
+        var ex=(typeof pelExtra==='function'?pelExtra(p):{})||{};
+        if(typeof adaptPendente!=='function'||!adaptPendente(ex)) return;
+        var n=(typeof adaptDiasDe==='function')?adaptDiasDe(ex):null;
+        out.push({nome:pelNome(p), semData:(n===null), dias:n});
+      });
+    }catch(e){}
+    return out.sort(function(a,b){ return (a.semData?0:1)-(b.semData?0:1) || jsNorm(a.nome).localeCompare(jsNorm(b.nome)); });
+  }
+  function renderAdaptPendentes(){
+    var el=document.getElementById('adaptPendCard'); if(!el) return;
+    if(typeof PELUDINHOS==='undefined'){ el.innerHTML=''; return; }
+    var L=adaptPendentesLista();
+    if(!L.length){ el.innerHTML=''; return; }     // nada pendente: não ocupa espaço à toa
+    el.innerHTML='<div class="card" style="border-left:4px solid var(--crm-atencao)">'
+      +'<h2 style="font-size:18px">Adaptação sem data ou vencida ('+L.length+')</h2>'
+      +'<div class="hint">Estão marcados como "em adaptação" mas sem data de início, ou já passaram do primeiro mês. Alguém precisa decidir: a adaptação terminou, ou faltou lançar a data?</div>'
+      +'<div style="margin-top:8px;font-weight:700;color:var(--z-blue);font-size:14.5px">'
+      +L.map(function(x){
+        return escAttr(x.nome)+' <span style="font-size:12px;font-weight:600;color:var(--muted)">('
+          +(x.semData?'sem data':(x.dias+' dias'))+')</span>';
+      }).join(' · ')
+      +'</div></div>';
   }
   // ===== ANIVERSARIANTES — Adriana, 20/ago/2026 ==================================
   // "Precisa mostrar: Kakinho fez 9 anos dia 01/09. Todo dia, mesmo sem creche (sábado,
