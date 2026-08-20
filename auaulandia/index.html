@@ -2694,6 +2694,7 @@
   <section class="view" id="v-checkout">
     <div id="co-lista">
       <div class="role-note"><span data-icon="paw"></span><span><strong>Check-out da estadia.</strong> O caminho inverso: o monitor confere tudo que vai voltar (pertences, ração/medicação que sobrou, o que o tutor mandou e o que foi comprado aqui) e desce com o FILHOt para a recepção. A recepção confere junto com o tutor, o tutor assina e recebe o PDF.</span></div>
+      <div id="coMeusPontos"></div>
       <div id="coGrid" class="vet-grid" style="margin-top:6px"></div>
     </div>
     <div id="co-ficha" style="display:none">
@@ -2991,6 +2992,14 @@
        tarde demais." Nao e para punir — e para PERGUNTAR a tempo. -->
   <section class="view" id="v-ritmo">
     <div class="role-note so-gestao"><span data-icon="star"></span><span><strong>Isto não mede pessoas — mede o dia.</strong> O tempo sozinho não diz nada: 40 minutos com 50 FILHOts é ótimo; com 12, é sinal de alguma coisa. Por isso a conta é <strong>minutos por FILHOt</strong>, comparada com a média da mesma atividade no mesmo dia da semana.</span></div>
+    <!-- Placar do check-out (Adriana, 19/ago/2026): "aparece no dashboard geral nosso —
+         pontos, e em que perdeu... clicamos e abre: dia 10/08/2026, esqueceu a mochila do
+         Ragnar." Aqui a Gestão vê tudo; o monitor vê só o dele, na tela de check-out. -->
+    <div class="card so-gestao">
+      <h2 style="font-size:19px">Bolsa do check-out — pontos do mês</h2>
+      <div class="hint">10 pontos quando a bolsa desce completa. Faltou 1 item: 5. Faltou 2: 2. Faltou 3 ou mais: zero. Toque no nome para ver onde os pontos foram perdidos.</div>
+      <div id="ritmoPontos" style="margin-top:8px"></div>
+    </div>
     <div class="card">
       <h2 style="font-size:19px">Hoje</h2>
       <div id="ritmoHoje"></div>
@@ -8801,7 +8810,7 @@
   // Agora existe um carimbo: esta constante é a versão que o aparelho está rodando, e o
   // Firebase guarda a versão publicada. Quando as duas diferem, aparece o aviso — mas
   // NUNCA recarrega sozinho: recarregar no meio de um check-in perderia o trabalho.
-  const APP_VERSAO='2026-08-19-09';
+  const APP_VERSAO='2026-08-19-10';
   function vigiarVersao(){
     if(!DB) return;
     try{
@@ -15322,7 +15331,48 @@
   const RITMO_TOLERANCIA=12;   // %
   const RITMO_GRAVE=30;        // %
   var RITMO_DADOS=null;
+  // Placar do check-out para a Gestão: quem, quantos pontos, e onde perdeu (clicável).
+  var RITMO_PT_ABERTO='';
+  function ritmoPontosCarregar(){
+    var el=document.getElementById('ritmoPontos'); if(!el||!DB) return;
+    var mes=(typeof coMesAtual==='function')?coMesAtual():(new Date()).toISOString().slice(0,7);
+    DB.ref('daycare/pontos-checkout/'+mes).once('value').then(function(s){
+      var v=s.val()||{}, ks=Object.keys(v);
+      if(!ks.length){ el.innerHTML='<div class="hint">Nenhuma bolsa conferida neste mês ainda.</div>'; return; }
+      var por={};
+      ks.forEach(function(k){
+        var r=v[k]||{}, nome=(r.quem||'—').trim();
+        por[nome]=por[nome]||{nome:nome, pontos:0, saidas:0, perdas:[]};
+        por[nome].pontos+=(r.pontos||0); por[nome].saidas++;
+        if((r.pontos||0)<10) por[nome].perdas.push(r);
+      });
+      var lista=Object.keys(por).map(function(n){ return por[n]; })
+        .sort(function(a,b){ return b.pontos-a.pontos || a.nome.localeCompare(b.nome,'pt'); });
+      el.innerHTML=lista.map(function(o){
+        var max=o.saidas*10, aberto=(RITMO_PT_ABERTO===o.nome);
+        var cor=(o.pontos===max)?'var(--crm-ok)':(o.pontos<=max*0.5?'var(--crm-critico)':'var(--crm-atencao-text)');
+        return '<div style="border-top:1px solid var(--line);padding:9px 0">'
+          +'<div style="display:flex;justify-content:space-between;align-items:baseline;cursor:pointer" onclick="ritmoPontosAbrir(\''+escAttr(o.nome).replace(/'/g,"\\'")+'\')">'
+          +'<span style="font-weight:800;color:var(--z-blue);font-size:15px">'+escAttr(o.nome)
+          +' <span style="font-weight:600;font-size:12px;color:var(--muted)">'+o.saidas+' bolsa'+(o.saidas>1?'s':'')
+          +(o.perdas.length?(' · '+o.perdas.length+' com falta'):' · nenhuma volta')+'</span></span>'
+          +'<span style="font-weight:800;font-size:18px;color:'+cor+'">'+o.pontos+'<span style="font-size:12px;color:var(--muted)"> de '+max+'</span></span></div>'
+          +(aberto&&o.perdas.length
+            ? o.perdas.sort(function(a,b){ return (b.ts||0)-(a.ts||0); }).map(function(r){
+                var d=r.ts?new Date(r.ts):null, p=function(x){ return String(x).padStart(2,'0'); };
+                return '<div style="padding:6px 0 0 12px;font-size:13px;color:var(--z-blue)">'
+                  +'<strong>'+(d?(p(d.getDate())+'/'+p(d.getMonth()+1)+'/'+d.getFullYear()):'')+'</strong> · '+escAttr(r.pet||'')
+                  +' — <span style="color:var(--crm-critico);font-weight:800">'+escAttr((r.itens||[]).join(' · ')||'item não anotado')+'</span>'
+                  +' <span style="color:var(--muted);font-weight:700">('+(r.pontos||0)+' de 10 · conferiu: '+escAttr(r.conferido_por||'—')+')</span></div>';
+              }).join('')
+            : (aberto?'<div class="hint" style="padding-left:12px">Nenhuma falta — todas desceram completas.</div>':''))
+          +'</div>';
+      }).join('');
+    }).catch(function(){});
+  }
+  function ritmoPontosAbrir(nome){ RITMO_PT_ABERTO=(RITMO_PT_ABERTO===nome)?'':nome; ritmoPontosCarregar(); }
   function ritmoCarregar(){
+    try{ ritmoPontosCarregar(); }catch(e){}
     if(!DB){ renderRitmo(); return; }
     var hoje=(typeof hojeISO==='function')?hojeISO():'';
     var dias=[]; for(var i=0;i<60;i++) dias.push(orcMaisDias(hoje,-i));
@@ -19582,7 +19632,45 @@
   // 'monitor' = tela "Check-out (monitores)": juntar as coisas.
   // 'conferencia' = tela "Conferência Check-out": conferir com o tutor e assinar.
   var coModo='monitor';
-  function abrirCheckout(){ document.getElementById('co-lista').style.display='block'; document.getElementById('co-ficha').style.display='none'; coRenderLista(); }
+  function abrirCheckout(){ document.getElementById('co-lista').style.display='block'; document.getElementById('co-ficha').style.display='none'; coRenderLista(); try{ coMeusPontos(); }catch(e){} }
+  // ===== O PLACAR DE QUEM MONTA A BOLSA — Adriana, 19/ago/2026 ===================
+  // "O placar aparece para ele: Otávio, você já tem xxx pontos no mês de agosto!"
+  // Aparece no topo da lista de check-out do MONITOR — a tela dele, não a da consultora.
+  var CO_PT_MES={};
+  function coMesAtual(){ var d=new Date(), p=function(x){ return String(x).padStart(2,'0'); }; return d.getFullYear()+'-'+p(d.getMonth()+1); }
+  function coMesNome(){ return (typeof MES_NOME!=='undefined'&&MES_NOME)?MES_NOME[(new Date()).getMonth()]:''; }
+  function coMeusPontos(){
+    var el=document.getElementById('coMeusPontos'); if(!el||!DB) return;
+    if(coModo!=='monitor'){ el.innerHTML=''; return; }
+    var eu=(typeof quemSou==='function'?quemSou():'').trim();
+    if(!eu){ el.innerHTML=''; return; }
+    DB.ref('daycare/pontos-checkout/'+coMesAtual()).once('value').then(function(s){
+      var v=s.val()||{}; CO_PT_MES=v;
+      var meus=Object.keys(v).map(function(k){ return v[k]; })
+        .filter(function(r){ return jsNorm(r.quem||'')===jsNorm(eu); });
+      if(!meus.length){ el.innerHTML=''; return; }
+      var tot=meus.reduce(function(a,r){ return a+(r.pontos||0); },0);
+      var perfeitas=meus.filter(function(r){ return (r.pontos||0)===10; }).length;
+      var perdidos=meus.filter(function(r){ return (r.pontos||0)<10; });
+      var maximo=meus.length*10;
+      el.innerHTML='<div class="card" style="border-left:4px solid '+(tot===maximo?'var(--crm-ok)':'var(--z-gold)')+'">'
+        +'<div style="font-size:16px;font-weight:800;color:var(--z-blue)">'+escAttr(eu)+', você tem <span style="color:var(--z-gold-deep)">'+tot+' pontos</span> em '+escAttr(coMesNome())+'.</div>'
+        +'<div style="font-size:13px;font-weight:700;color:var(--muted);margin-top:3px">'
+        +perfeitas+' de '+meus.length+' bolsa'+(meus.length>1?'s':'')+' desceu redondo'
+        +(tot===maximo?' — nenhuma volta até agora.':(' · '+(maximo-tot)+' ponto(s) perdido(s) em '+perdidos.length+' saída(s).'))+'</div>'
+        +(perdidos.length
+          ? ('<details style="margin-top:7px"><summary style="cursor:pointer;font-weight:800;color:var(--z-blue);font-size:13px">onde perdi</summary>'
+             +perdidos.sort(function(a,b){ return (b.ts||0)-(a.ts||0); }).map(function(r){
+                 var d=r.ts?new Date(r.ts):null, p=function(x){ return String(x).padStart(2,'0'); };
+                 return '<div style="border-top:1px solid var(--line);padding:6px 0;font-size:13px;color:var(--z-blue)">'
+                   +'<strong>'+(d?(p(d.getDate())+'/'+p(d.getMonth()+1)):'')+'</strong> · '+escAttr(r.pet||'')
+                   +' — <span style="color:var(--crm-critico);font-weight:800">'+escAttr((r.itens||[]).join(' · ')||'item não anotado')+'</span>'
+                   +' <span style="color:var(--muted);font-weight:700">('+(r.pontos||0)+' de 10)</span></div>';
+               }).join('')+'</details>')
+          : '')
+        +'</div>';
+    }).catch(function(){});
+  }
   function coRenderLista(){
     var el=document.getElementById('coGrid'); if(!el) return;
     // Fora do check-out: FILHOt da casa (Repolho, Stopa, Kako) e PERNOITE — pernoite é quem
@@ -19750,7 +19838,7 @@
         +(etapa2?('<div style="padding:0 12px 9px"><button type="button" class="btn" style="padding:5px 11px;font-size:12px;font-weight:800;border:1.5px solid '
             +(faltou?'var(--crm-critico);background:var(--crm-critico);color:#fff':'var(--line);background:var(--z-cream-warm);color:var(--z-blue)')
             +'" onclick="coMarcarFaltou(\''+escAttr(it.k).replace(/'/g,"\\'")+'\')">'
-            +(faltou?'✓ não desceu — tive que buscar':'não desceu')+'</button></div>'):'')
+            +(faltou?'✓ não desceu — fui buscar':'não desceu')+'</button></div>'):'')
         +'</div>';
     }).join('');
     try{ coRenderPlacar(); }catch(e){}
@@ -19768,24 +19856,37 @@
   var CO_FALTOU={};
   var CO_PONTOS=[10,5,2,0];   // 0 faltas = 10 · 1 falta = −50% · 2 = −80% · 3 ou mais = zero
   function coPontosDe(n){ return CO_PONTOS[Math.min(n, CO_PONTOS.length-1)]; }
+  // ===== A CONSULTORA NÃO VÊ QUE ESTÁ DANDO NOTA — Adriana, 19/ago/2026 ==========
+  // "Se eu escrever isso para a consultora, ela não vai querer prejudicar a colega.
+  //  Infelizmente eles preferem prejudicar a empresa, e não entendem o que realmente é
+  //  prejudicar."
+  // A tela dela NÃO fala de ponto nem de quem montou a bolsa. Ela marca o que teve que ir
+  // buscar porque isso é parte do trabalho dela — e é o que dispara a busca. A conta
+  // acontece por baixo. Quem vê o placar é o próprio monitor e a Gestão.
+  //
+  // E marcar "não desceu" NÃO libera a finalização (Adriana: "precisa travar, para não ter
+  // o erro do 'esqueci que o fulano não trouxe', o tutor não levar e termos que mandar
+  // entregar. Só finaliza quando tudo está completo! Por isso a dor — o retrabalho").
+  // O item volta a FALTAR e a saída fica travada até ele chegar de verdade na mão dela.
   function coMarcarFaltou(k){
     CO_FALTOU[k]=!CO_FALTOU[k];
-    if(CO_FALTOU[k]) coConf[k]=true;   // ela foi buscar e conferiu: o item está entregue
+    if(CO_FALTOU[k]) coConf[k]=false;   // não desceu → volta a faltar; a saída trava
     coRenderItens(); coRenderPend();
   }
   function coRenderPlacar(){
     var el=document.getElementById('coPlacar'); if(!el) return;
     if(!(coEtapaDe(coEstadia)===2 && coEhRecepcao())){ el.innerHTML=''; return; }
-    var quem=((coEstadia.checkout_etapa1||{}).quem||'').trim();
     var n=Object.keys(CO_FALTOU).filter(function(k){ return CO_FALTOU[k]; }).length;
-    var pts=coPontosDe(n);
-    var cor=(pts===10)?'var(--crm-ok)':(pts===0?'var(--crm-critico)':'var(--crm-atencao-text)');
-    el.innerHTML='<div class="card" style="margin:10px 0;border-left:4px solid '+cor+'">'
-      +'<div style="font-weight:800;color:var(--z-blue);font-size:15px">Bolsa montada por '+escAttr(quem||'—')+'</div>'
-      +'<div style="font-size:13px;color:var(--muted);font-weight:600;margin-top:2px">Marque o que <strong>não desceu</strong> e você teve que ir buscar. É isso que conta o ponto dele.</div>'
-      +'<div style="margin-top:7px;font-size:22px;font-weight:800;color:'+cor+'">'+pts+' ponto'+(pts===1?'':'s')
-      +' <span style="font-size:13px;font-weight:700;color:var(--muted)">'
-      +(n===0?'— desceu redondo':('— '+n+' item'+(n>1?'s':'')+' faltando'))+'</span></div></div>';
+    var itens=coItensLista();
+    var buscando=itens.filter(function(it){ return CO_FALTOU[it.k] && !coConf[it.k]; });
+    el.innerHTML='<div class="card" style="margin:10px 0;border-left:4px solid '+(n?'var(--crm-atencao)':'var(--line)')+'">'
+      +'<div style="font-size:13.5px;color:var(--z-blue);font-weight:700">Conferindo com o tutor. Se alguma coisa <strong>não desceu</strong>, marque no item — fica registrado que precisou subir buscar.</div>'
+      +(buscando.length
+        ? ('<div style="margin-top:7px;font-weight:800;color:var(--crm-critico);font-size:14px">Esperando chegar: '
+           +escAttr(buscando.map(function(x){ return x.label; }).join(' · '))
+           +'<div style="font-weight:700;font-size:12.5px;color:var(--muted);margin-top:2px">A saída só fecha com tudo em mãos — nada de entregar pela metade e mandar depois.</div></div>')
+        : (n?'<div style="margin-top:7px;font-weight:800;color:var(--crm-ok);font-size:14px">Tudo em mãos. Pode finalizar.</div>':''))
+      +'</div>';
   }
   function coToggleItem(top){ var it=top.closest('.cf-item'); if(!it) return; var k=it.dataset.k; coConf[k]=!coConf[k]; coRenderItens(); coRenderPend(); }
   function coRenderPend(){
