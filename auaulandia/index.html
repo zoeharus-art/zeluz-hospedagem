@@ -3074,6 +3074,13 @@
   <section class="view" id="v-relatorios">
     <div class="role-note so-gestao"><span data-icon="star"></span><span>Tudo que dá para <strong>baixar</strong> e todas as <strong>listas</strong>, num lugar só. Ficam aqui para o menu não virar uma lista sem fim.</span></div>
     <div id="relGrid"></div>
+    <!-- Resumo do dia para a Gestão (Adriana, 20/ago/2026). Sai sozinho a partir das 18h;
+         o botão serve para mandar antes, ou de novo. -->
+    <div class="card so-gestao">
+      <h2 style="font-size:19px">Resumo do dia para a Gestão</h2>
+      <div class="hint">Vai para o grupo <strong>Zêluz · Plantão AuAulândia</strong> no Telegram, com o Enriquecimento Ambiental do dia, quem comeu e quem não comeu, o que teve de diferente e a medicação. Sai <strong>sozinho a partir das 18h</strong> — o botão é para adiantar ou reenviar.</div>
+      <button type="button" class="btn btn-gold" style="margin-top:9px" onclick="resumoDiaBotao(this)">Enviar o resumo agora</button>
+    </div>
     <div class="card so-master">
       <h2 style="font-size:19px">Avisos no Telegram</h2>
       <div class="hint">Quando a monitora marca uma alteração no check-in e tira a foto, a foto vai <strong>sozinha</strong> para o grupo da veterinária — com o nome do FILHOt, o que foi encontrado e quem viu. Ninguém precisa lembrar de mandar.</div>
@@ -8840,7 +8847,7 @@
   // Agora existe um carimbo: esta constante é a versão que o aparelho está rodando, e o
   // Firebase guarda a versão publicada. Quando as duas diferem, aparece o aviso — mas
   // NUNCA recarrega sozinho: recarregar no meio de um check-in perderia o trabalho.
-  const APP_VERSAO='2026-08-20-05';
+  const APP_VERSAO='2026-08-20-06';
   function vigiarVersao(){
     if(!DB) return;
     try{
@@ -13525,6 +13532,10 @@
     if(typeof vetFilaTentar==='function'){
       setTimeout(function(){ vetFilaTentar(); }, 4000);
       setInterval(function(){ vetFilaTentar(); }, 600000);
+      // Resumo do dia para a Gestão: tenta na abertura e de hora em hora. Só sai das 18h em
+      // diante e uma vez por dia — quem abrir primeiro dispara, ninguém precisa lembrar.
+      setTimeout(function(){ try{ resumoDiaAuto(); }catch(e){} }, 9000);
+      setInterval(function(){ try{ resumoDiaAuto(); }catch(e){} }, 3600000);
     }
   }catch(e){}
   try{ if(typeof ptEscutarChamados==='function') ptEscutarChamados(); }catch(e){}
@@ -15479,6 +15490,148 @@
       +cel.join('')
       +'</div></div>'
       +(EAH_DIA?eaHistDetalheHTML(EAH_DIA):'');
+  }
+  // ===== RESUMO DO DIA PARA A GESTÃO — Adriana, 20/ago/2026 ======================
+  // "Mandar para a Márcia no Telegram um resumo do dia: o que foi o EA, se teve algo
+  //  complexo, se todos comeram ou não, e etc."
+  // Vai para o grupo `gestao` (Zêluz - Plantão AuAulândia, onde já estão ela e a Márcia).
+  // Uma vez por dia — e o registro do envio guarda se DEU CERTO, para ninguém supor que foi.
+  function resumoNomeDaChave(k){
+    var cad=(typeof pelCadCache!=='undefined'&&pelCadCache)?(pelCadCache[k]||{}):{};
+    if(cad.nome) return cad.nome;
+    return String(k).split('__')[0].replace(/-/g,' ').replace(/\b\w/g,function(c){ return c.toUpperCase(); });
+  }
+  function resumoDiaMontar(dia){
+    var pega=function(p){ return DB.ref(p).once('value').then(function(s){ return s.val()||{}; }).catch(function(){ return null; }); };
+    return Promise.all([
+      pega('daycare/ea/'+dia), pega('daycare/almoco/'+dia), pega('daycare/atividade/'+dia+'/almoco2'),
+      pega('daycare/chamada/'+dia), pega('daycare/checkin-corpo/'+dia), pega('daycare/med-dia/'+dia),
+      pega('daycare/ocorrencias/'+dia)
+    ]).then(function(r){
+      var ea=r[0]||{}, a1=r[1]||{}, a2=r[2]||{}, cham=r[3]||{}, ck=r[4]||{}, med=r[5]||{}, oco=r[6]||{};
+      var p=dia.split('-');
+      var L=['<b>Resumo do dia · '+p[2]+'/'+p[1]+'/'+p[0]+'</b>',''];
+
+      // --- presença ---
+      var presentes=Object.keys(cham).filter(function(k){ var v=cham[k]; return v==='pres'||v==='presente'||v===true||(v&&v.presente); });
+      if(Object.keys(cham).length) L.push('<b>Presença:</b> '+presentes.length+' de '+Object.keys(cham).length+' na chamada');
+
+      // --- EA ---
+      var reg=ea.registro||{};
+      var oque=String(reg.oque||ea.oque||'').trim();
+      var tipos=reg.tipos||ea.tipos||{};
+      var tps=(typeof EA_TIPOS!=='undefined'?EA_TIPOS:[]).filter(function(t){ return tipos[t.k]; }).map(function(t){ return t.t; });
+      L.push('');
+      L.push('<b>Enriquecimento Ambiental</b>');
+      if(oque){
+        L.push('O que foi montado: '+oque);
+        if(tps.length) L.push('Tipos: '+tps.join(' · '));
+        if(Array.isArray(reg.participaram)) L.push('Participaram: '+reg.participaram.length);
+        if(Array.isArray(reg.impedidos)&&reg.impedidos.length)
+          L.push('Não puderam: '+reg.impedidos.map(function(x){ return x.n+' ('+(x.motivo||'restrição')+')'; }).join(', '));
+        var ta=(ea.tempos||{}).atividade||{};
+        if(ta.ini&&ta.fim) L.push('Horário: '+(ta.ini.hora||'')+' → '+(ta.fim.hora||''));
+      } else {
+        L.push('Não foi registrado o EA de hoje.');
+      }
+
+      // --- almoço ---
+      var comeu=0, nao=[], metade=[], na=0, semSegundo=[];
+      var todas={}; Object.keys(a1).forEach(function(k){ todas[k]=1; }); Object.keys(a2).forEach(function(k){ todas[k]=1; });
+      Object.keys(todas).forEach(function(k){
+        var m1=a1[k]||'', m2=a2[k]||'';
+        if(m1==='na'||m2==='na'){ na++; return; }
+        if(m2==='comeu'||m1==='comeu'){ comeu++; return; }
+        if(m2==='nao'){ nao.push(resumoNomeDaChave(k)); return; }
+        if(m1==='metade'){ metade.push(resumoNomeDaChave(k)); return; }
+        if(m1==='nao'&&!m2) semSegundo.push(resumoNomeDaChave(k));
+      });
+      L.push('');
+      L.push('<b>Almoço</b>');
+      if(!Object.keys(todas).length) L.push('Nada registrado.');
+      else{
+        L.push('Comeram: '+comeu+(na?(' · não se aplica: '+na):''));
+        if(nao.length)     L.push('NÃO comeram (1º nem 2º): '+nao.join(', '));
+        if(metade.length)  L.push('Comeram só metade: '+metade.join(', '));
+        if(semSegundo.length) L.push('Sem registro do 2º horário: '+semSegundo.join(', '));
+        if(!nao.length&&!metade.length&&!semSegundo.length) L.push('Todos comeram.');
+      }
+
+      // --- o que teve de complexo ---
+      var compl=[];
+      Object.keys(ck).forEach(function(k){
+        var v=ck[k]||{}; var pontos=v.pontos||v.itens||v;
+        try{
+          Object.keys(pontos||{}).forEach(function(pk){
+            var a=pontos[pk]||{};
+            var al=a.alertas||a.alerta;
+            if(al&&(!Array.isArray(al)||al.length)) compl.push(resumoNomeDaChave(k)+': '+(Array.isArray(al)?al.join(', '):al));
+          });
+        }catch(e){}
+      });
+      Object.keys(oco).forEach(function(k){
+        var v=oco[k]||{}; if(v.texto||v.obs) compl.push(resumoNomeDaChave(v.pet||k)+': '+(v.texto||v.obs));
+      });
+      L.push('');
+      L.push('<b>O que teve de diferente</b>');
+      L.push(compl.length?compl.slice(0,12).map(function(x){ return '· '+x; }).join('\n'):'Nada fora do comum foi registrado.');
+      if(compl.length>12) L.push('· … e mais '+(compl.length-12)+'.');
+
+      // --- medicação ---
+      var doses=0, faltou=[];
+      Object.keys(med).forEach(function(k){
+        var v=med[k]||{};
+        Object.keys(v).forEach(function(h){
+          var d=v[h]||{};
+          if(d.dado||d.ok||d===true) doses++;
+          else if(d.pendente||d.falhou) faltou.push(resumoNomeDaChave(k)+' às '+h);
+        });
+      });
+      if(doses||faltou.length){
+        L.push('');
+        L.push('<b>Medicação</b>');
+        L.push('Doses dadas: '+doses+(faltou.length?(' · pendentes: '+faltou.join(', ')):''));
+      }
+      return L.join('\n');
+    });
+  }
+  function resumoDiaEnviar(manual){
+    if(!DB) return Promise.resolve({ok:false, erro:'sem conexão'});
+    var dia=(typeof dcDataKey==='function')?dcDataKey():'';
+    return DB.ref('daycare/resumo-gestao/'+dia).once('value').then(function(s){
+      var ja=s.val();
+      if(ja&&ja.ok&&!manual) return {ok:true, jaFoi:true};
+      return tgCfgPronta().then(function(c){
+        if(!c) return {ok:false, erro:'a ponte do Telegram não está configurada'};
+        return resumoDiaMontar(dia).then(function(txt){
+          return tgAvisar({grupo:'gestao', texto:txt}).then(function(r){
+            var ok=!!(r&&r.ok);
+            DB.ref('daycare/resumo-gestao/'+dia).set({ts:Date.now(), ok:ok,
+              quem:(typeof quemSou==='function'?quemSou():'-'), manual:!!manual,
+              erro: ok?'':String((r&&r.erro)||'a ponte não respondeu como esperado')}).catch(function(){});
+            if(typeof audit==='function') audit('resumo-gestao',(ok?'enviou':'NÃO enviou')+' o resumo do dia',{});
+            return ok?{ok:true}:{ok:false, erro:String((r&&r.erro)||'a ponte não respondeu')};
+          });
+        });
+      });
+    }).catch(function(e){ return {ok:false, erro:String((e&&e.message)||e)}; });
+  }
+  // Botão da gestão: manda agora e DIZ o que aconteceu. Nada de sumir em silêncio.
+  function resumoDiaBotao(btn){
+    if(!btn) return;
+    var t=btn.textContent; btn.disabled=true; btn.textContent='enviando…';
+    resumoDiaEnviar(true).then(function(r){
+      btn.disabled=false;
+      btn.textContent=r.ok?'✅ enviado para a Gestão':('❌ '+(r.erro||'não enviou'));
+      setTimeout(function(){ try{ btn.textContent=t; }catch(e){} }, 6000);
+    });
+  }
+  // Automático: a partir das 18h, quem abrir o app dispara o resumo — uma vez só por dia.
+  function resumoDiaAuto(){
+    try{
+      if(new Date().getHours()<18) return;
+      resumoDiaEnviar(false);
+    }catch(e){}
   }
   function renderGenerico(){
     // No EA a tela é só o painel: quem pode, participa — ninguém marca um a um (Adriana,
@@ -20022,16 +20175,103 @@
   // Ela liga, conta como foi e marca aqui — sem isso, ou ninguém avisa ou avisam duas vezes.
   var EMP_AVISOS={};
   function empDataKey(){ return (typeof dcDataKey==='function')?dcDataKey():''; }
+  // ⚠ 20/ago/2026 — Adriana: "no aviso de quem não almoçou não está aparecendo nada... está
+  // zerado e dia 19/08 tiveram 4 envios para o telegram."
+  // Auditado no banco: no dia 19 saíram 4 avisos ao grupo (Hana, Hoppy, Marta, Maya) e
+  // `avisos-comida/2026-08-19` ficou VAZIO — nenhum tutor foi avisado. A tela só olhava HOJE,
+  // então à meia-noite tudo que ficou pendente de ontem sumia: a consultora chega de manhã,
+  // vê zero, e o tutor nunca soube que o FILHOt não comeu. Agora a tela varre os últimos dias
+  // e traz o que ficou para trás — não some enquanto ninguém avisar.
+  var EMP_ATRASO=[];       // [{dia, itens:[...]}]
+  function empDiasAtras(n){
+    var p=function(x){ return String(x).padStart(2,'0'); };
+    var out=[], h=new Date();
+    for(var i=1;i<=n;i++){
+      var d=new Date(h.getFullYear(),h.getMonth(),h.getDate()-i);
+      out.push(d.getFullYear()+'-'+p(d.getMonth()+1)+'-'+p(d.getDate()));
+    }
+    return out;
+  }
+  // Monta a lista de um dia QUALQUER só com o que está gravado — sem depender da turma de
+  // hoje, que não vale para ontem.
+  function empPendentesDoDia(a1,a2,avisados){
+    var out=[], chaves={};
+    Object.keys(a1||{}).forEach(function(k){ chaves[k]=1; });
+    Object.keys(a2||{}).forEach(function(k){ chaves[k]=1; });
+    Object.keys(chaves).forEach(function(k){
+      var m1=(a1||{})[k]||'', m2=(a2||{})[k]||'';
+      if(m1==='na'||m2==='na') return;
+      if(m2==='comeu') return;
+      if((avisados||{})[k]) return;                 // tutor já avisado: nada a cobrar
+      var motivo='';
+      if(m2==='nao') motivo='não comeu nem no 2º horário';
+      else if(m1==='metade') motivo='comeu só metade';
+      else if(m1==='nao'&&!m2) motivo='não comeu no 1º horário e o 2º não foi registrado';
+      if(!motivo) return;
+      var partes=String(k).split('__');
+      var cad=(typeof pelCadCache!=='undefined'&&pelCadCache)?(pelCadCache[k]||{}):{};
+      var nome=cad.nome||partes[0].replace(/-/g,' ').replace(/\b\w/g,function(c){ return c.toUpperCase(); });
+      var tutor=cad.tutor||String(partes[1]||'').replace(/-/g,' ');
+      out.push({k:k, nome:nome, tutor:tutor, raca:cad.raca||'', sexo:cad.sexo||'',
+                motivo:motivo, pronto:true, grave:(m2==='nao'), aviso:null});
+    });
+    return out.sort(function(a,b){ return jsNorm(a.nome).localeCompare(jsNorm(b.nome)); });
+  }
   function abrirEmporio(){
     if(!DB){ renderEmporio(); return; }
+    var pega=function(p){ return DB.ref(p).once('value').then(function(s){ return s.val()||{}; }).catch(function(){ return {}; }); };
     Promise.all([
-      DB.ref('daycare/almoco/'+empDataKey()).once('value').then(s=>s.val()||{}).catch(()=>({})),
-      DB.ref('daycare/atividade/'+empDataKey()+'/almoco2').once('value').then(s=>s.val()||{}).catch(()=>({})),
-      DB.ref('daycare/avisos-comida/'+empDataKey()).once('value').then(s=>s.val()||{}).catch(()=>({}))
-    ]).then(function(r){
+      pega('daycare/almoco/'+empDataKey()),
+      pega('daycare/atividade/'+empDataKey()+'/almoco2'),
+      pega('daycare/avisos-comida/'+empDataKey())
+    ].concat(empDiasAtras(7).map(function(d){
+      return Promise.all([pega('daycare/almoco/'+d), pega('daycare/atividade/'+d+'/almoco2'), pega('daycare/avisos-comida/'+d)])
+        .then(function(x){ return {dia:d, itens:empPendentesDoDia(x[0],x[1],x[2])}; });
+    }))).then(function(r){
       window.__empAlm1=r[0]; window.__empAlm2=r[1]; EMP_AVISOS=r[2]||{};
+      EMP_ATRASO=r.slice(3).filter(function(x){ return x&&x.itens&&x.itens.length; });
       renderEmporio();
+      try{ empAvisarAtrasoNoTelegram(); }catch(e){}
     }).catch(function(){ renderEmporio(); });
+  }
+  // Manda para o grupo o que ficou de ontem — no formato que a Adriana pediu (20/ago/2026):
+  // primeiro a mensagem dizendo QUEM ficou; depois, em mensagem separada, o texto pronto para
+  // a consultora encaminhar ao tutor sem reescrever nada.
+  function empAvisarAtrasoNoTelegram(){
+    if(!DB||!EMP_ATRASO.length) return;
+    var hoje=empDataKey();
+    DB.ref('daycare/avisos-telegram-atraso/'+hoje).once('value').then(function(s){
+      if(s.val()) return;                                  // já mandado hoje
+      return tgCfgPronta().then(function(c){
+        if(!c) return;
+        var linhas=[];
+        EMP_ATRASO.forEach(function(g){
+          var p=g.dia.split('-');
+          linhas.push('<b>De '+p[2]+'/'+p[1]+' ficou:</b>');
+          g.itens.forEach(function(x){
+            linhas.push(x.nome+(x.raca?(' - '+x.raca):''));
+            linhas.push(x.motivo+'.');
+            linhas.push('');
+          });
+        });
+        linhas.push('Nenhum tutor foi avisado ainda. As mensagens prontas vêm a seguir.');
+        return tgAvisar({grupo:'comida', texto:linhas.join('\n')}).then(function(){
+          var seq=Promise.resolve();
+          EMP_ATRASO.forEach(function(g){
+            g.itens.forEach(function(x){
+              seq=seq.then(function(){
+                return tgAvisar({grupo:'comida', texto:'<b>Mensagem para o tutor d'
+                  +(/^f/i.test(x.sexo||'')?'a ':'o ')+x.nome+'</b>\n\n'+empMensagem(x)});
+              });
+            });
+          });
+          return seq;
+        }).then(function(){
+          return DB.ref('daycare/avisos-telegram-atraso/'+hoje)
+            .set({ts:Date.now(), dias:EMP_ATRASO.map(function(g){ return g.dia; })});
+        });
+      });
+    }).catch(function(){});
   }
   function empLista(){
     const a1=window.__empAlm1||{}, a2=window.__empAlm2||{};
@@ -20106,9 +20346,36 @@
     const cnt=document.getElementById('empCount');
     const faltam=lista.filter(function(x){ return !x.aviso && x.pronto; }).length;
     const esperando=lista.filter(function(x){ return !x.aviso && !x.pronto; }).length;
-    if(cnt) cnt.textContent=lista.length?(faltam+' para avisar'+(esperando?(' · '+esperando+' aguardando o 2º horário'):'')+' · '+lista.filter(function(x){return !!x.aviso;}).length+' já avisado(s)'):'ninguém para avisar';
-    if(!lista.length){ el.innerHTML='<div class="av-empty"><div class="big">Todos comeram hoje</div>Nenhum tutor para avisar por causa de comida.</div>'; return; }
-    el.innerHTML=lista.map(function(x){
+    var atrasados=EMP_ATRASO.reduce(function(a,g){ return a+g.itens.length; },0);
+    if(cnt) cnt.textContent=(atrasados?(atrasados+' de dias anteriores · '):'')
+      +(lista.length?(faltam+' para avisar'+(esperando?(' · '+esperando+' aguardando o 2º horário'):'')+' · '+lista.filter(function(x){return !!x.aviso;}).length+' já avisado(s)'):'ninguém de hoje');
+    // O que ficou para trás vem PRIMEIRO — é o mais urgente, porque o tutor já esperou um dia.
+    var cartao=function(x,dia){
+      var cor=(!x.pronto?'#7C8B99':(x.grave?'#B3261E':'#DEB428'));
+      var fundo=(!x.pronto?'rgba(124,139,153,.10)':(x.grave?'rgba(179,38,30,.07)':'rgba(222,180,40,.10)'));
+      return '<div style="border:2px solid '+cor+';background:'+fundo+';border-radius:13px;padding:13px;margin-bottom:10px">'
+        +'<div style="font-weight:800;font-size:17px;color:var(--z-blue)">'+escAttr(x.nome)+(x.raca?(' <span style="font-size:12.5px;color:var(--muted);font-weight:600">'+escAttr(x.raca)+'</span>'):'')+'</div>'
+        +'<div style="font-size:13.5px;color:var(--muted);font-weight:600">Tutor: '+escAttr(x.tutor||'a confirmar')+'</div>'
+        +'<div style="font-weight:800;font-size:14.5px;color:'+cor+';margin:6px 0 9px">'+escAttr(x.motivo)+'</div>'
+        +'<div style="font-size:11.5px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;margin-bottom:4px">Mensagem para o tutor</div>'
+        +'<textarea class="gest-txt emp-msg" readonly rows="4" style="width:100%">'+escAttr(empMensagem(x))+'</textarea>'
+        +'<button type="button" class="btn btn-gold" style="width:100%;margin:7px 0" onclick="empCopiar(this)">📋 Copiar mensagem</button>'
+        +'<input class="cad-in" id="empObsA_'+escAttr(dia)+'_'+escAttr(x.k)+'" placeholder="O que o tutor respondeu? (opcional)" autocomplete="off" style="margin-bottom:8px">'
+        +'<button type="button" class="btn btn-primary" style="width:100%" onclick="empAvisarDia(\''+escAttr(dia)+'\',\''+escAttr(x.k)+'\')">✅ Avisei o tutor</button>'
+        +'</div>';
+    };
+    var htmlAtraso=EMP_ATRASO.map(function(g){
+      var p=g.dia.split('-');
+      return '<div class="card" style="border-left:4px solid var(--crm-critico)">'
+        +'<h2 style="font-size:18px">De '+p[2]+'/'+p[1]+' ficou ('+g.itens.length+')</h2>'
+        +'<div class="hint">Estes tutores <strong>ainda não foram avisados</strong>. Ficam aqui até alguém avisar — não somem à meia-noite.</div>'
+        +'<div style="margin-top:10px">'+g.itens.map(function(x){ return cartao(x,g.dia); }).join('')+'</div></div>';
+    }).join('');
+    if(!lista.length){
+      el.innerHTML=htmlAtraso+'<div class="av-empty"><div class="big">Todos comeram hoje</div>Nenhum tutor de hoje para avisar por causa de comida.</div>';
+      return;
+    }
+    el.innerHTML=htmlAtraso+lista.map(function(x){
       const av=x.aviso;
       const cor=av?'#1E8449':(!x.pronto?'#7C8B99':(x.grave?'#B3261E':'#DEB428'));
       const fundo=av?'rgba(30,132,73,.08)':(!x.pronto?'rgba(124,139,153,.10)':(x.grave?'rgba(179,38,30,.07)':'rgba(222,180,40,.10)'));
@@ -20137,6 +20404,22 @@
     DB.ref('daycare/avisos-comida/'+empDataKey()+'/'+k).set(reg).then(function(){
       EMP_AVISOS[k]=reg;
       if(typeof audit==='function') audit('emporio-aviso-tutor', k, {quem:reg.quem, obs:reg.obs});
+      renderEmporio();
+    }).catch(function(e){ alert('Erro ao registrar: '+((e&&e.message)||e)); });
+  }
+  // Avisar um tutor de um dia ANTERIOR: grava no dia certo, não no de hoje — senão a pendência
+  // de ontem nunca fecharia e voltaria a aparecer amanhã.
+  function empAvisarDia(dia,k){
+    if(!DB) return;
+    var inp=document.getElementById('empObsA_'+dia+'_'+k);
+    var reg={quem:(typeof quemSou==='function'?quemSou():'-'), hora:(typeof horaAgora==='function'?horaAgora():''),
+             ts:Date.now(), obs:((inp&&inp.value)||'').trim(), atrasado:true};
+    DB.ref('daycare/avisos-comida/'+dia+'/'+k).set(reg).then(function(){
+      EMP_ATRASO=EMP_ATRASO.map(function(g){
+        if(g.dia!==dia) return g;
+        return {dia:g.dia, itens:g.itens.filter(function(x){ return x.k!==k; })};
+      }).filter(function(g){ return g.itens.length; });
+      if(typeof audit==='function') audit('emporio-aviso-tutor', k, {quem:reg.quem, obs:reg.obs, dia:dia});
       renderEmporio();
     }).catch(function(e){ alert('Erro ao registrar: '+((e&&e.message)||e)); });
   }
