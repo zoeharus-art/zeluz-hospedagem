@@ -8847,7 +8847,7 @@
   // Agora existe um carimbo: esta constante é a versão que o aparelho está rodando, e o
   // Firebase guarda a versão publicada. Quando as duas diferem, aparece o aviso — mas
   // NUNCA recarrega sozinho: recarregar no meio de um check-in perderia o trabalho.
-  const APP_VERSAO='2026-08-20-06';
+  const APP_VERSAO='2026-08-20-07';
   function vigiarVersao(){
     if(!DB) return;
     try{
@@ -13248,7 +13248,9 @@
   }
   function abrirDayCare(){ abrirAccDaycare(); marcarSubnavAtivo(); renderAtual(); }
   function setDcDia(d){ dcDia=d; if(typeof irParaView==='function') irParaView('daycare'); abrirAccDaycare(); marcarSubnavAtivo(); renderAtual(); if(typeof closeNav==='function') closeNav(); }
-  function abrirAtividade(slug){ const escopo=(typeof atividadesPermitidas==='function')?atividadesPermitidas():null; if(escopo&&escopo.indexOf(slug)<0) slug=escopo[0]; dcAtiv=slug; if(typeof irParaView==='function') irParaView('daycare'); abrirAccDaycare(); marcarSubnavAtivo(); renderAtual(); if(typeof closeNav==='function') closeNav(); }
+  function abrirAtividade(slug){ const escopo=(typeof atividadesPermitidas==='function')?atividadesPermitidas():null; if(escopo&&escopo.indexOf(slug)<0) slug=escopo[0]; dcAtiv=slug;
+    // Relê o cronômetro ao entrar na atividade: o app pode ter ficado horas fechado.
+    try{ if(typeof ativCarregarTempo==='function') ativCarregarTempo(); }catch(e){} if(typeof irParaView==='function') irParaView('daycare'); abrirAccDaycare(); marcarSubnavAtivo(); renderAtual(); if(typeof closeNav==='function') closeNav(); }
   function mostrarScr(){ const ehCk=(dcAtiv==='checkin-corpo'||dcAtiv==='checkout-corpo'); const ehPt=(dcAtiv==='checkin-pert'||dcAtiv==='checkout-pert'); const esp=(dcAtiv==='chamada'||dcAtiv==='almoco'||ehCk||ehPt); const a=document.getElementById('scr-chamada'),b=document.getElementById('scr-almoco'),c=document.getElementById('scr-generic'); if(a)a.style.display=dcAtiv==='chamada'?'block':'none'; if(b)b.style.display=dcAtiv==='almoco'?'block':'none'; if(c)c.style.display=esp?'none':'block'; const k=document.getElementById('scr-checkin'); if(k)k.style.display=ehCk?'block':'none'; const pt=document.getElementById('scr-pert'); if(pt)pt.style.display=ehPt?'block':'none'; const lbl=document.getElementById('dcAtivLabel'); if(lbl){ const f=ATIVS_DC.find(x=>x.s===dcAtiv); lbl.textContent=f?f.t:'Chamada'; } const dl=document.getElementById('dcDiaLabel'); if(dl) dl.textContent=DIA_FULL[dcDia]; }
   function renderAtual(){ mostrarScr(); if(dcAtiv==='chamada') carregarChamada(); else if(dcAtiv==='almoco') carregarAlmoco(); else if(dcAtiv==='checkin-corpo'||dcAtiv==='checkout-corpo'){ carregarCheckin(); if(dcAtiv==='checkout-corpo') ckCarregarEntradaDoDia(); } else if(dcAtiv==='checkin-pert'||dcAtiv==='checkout-pert'){ carregarPertences(); } else carregarGenerico(); if(typeof renderAdaptBanner==='function') renderAdaptBanner(); try{ if(typeof renderBarraAtiv==='function') renderBarraAtiv(); }catch(e){}
     try{ dcGarantirPlanilha(); }catch(e){} }
@@ -13536,6 +13538,12 @@
       // diante e uma vez por dia — quem abrir primeiro dispara, ninguém precisa lembrar.
       setTimeout(function(){ try{ resumoDiaAuto(); }catch(e){} }, 9000);
       setInterval(function(){ try{ resumoDiaAuto(); }catch(e){} }, 3600000);
+      // Voltou para o app (trocou de aba, destravou o celular): relê o cronômetro. Sem isto,
+      // a tela ficava com o estado de horas atrás e induzia a reiniciar a atividade.
+      document.addEventListener('visibilitychange', function(){
+        if(document.visibilityState!=='visible') return;
+        try{ if(typeof ativCarregarTempo==='function') ativCarregarTempo(); }catch(e){}
+      });
     }
   }catch(e){}
   try{ if(typeof ptEscutarChamados==='function') ptEscutarChamados(); }catch(e){}
@@ -15900,16 +15908,38 @@
   // pertences, no mesmo espaço. São dois cronômetros rodando juntos, de propósito — e a
   // análise sabe disso: não soma o tempo dela duas vezes.
   var ATIV_TEMPO={};   // {slug:{inicio,fim,quemInicio,quemFim,caes}}
+  // ⚠ 20/ago/2026 — Adriana: "ao fechar o aplicativo, ou o celular fechar, o tempo da
+  // atividade/cronômetro encerra e tem que iniciar novamente."
+  // O horário SEMPRE esteve gravado no banco. O que falhava era a leitura: acontecia UMA vez,
+  // no boot. Reabriu o app e a leitura não chegou a tempo? A barra mostrava "Início: —", a
+  // pessoa concluía que precisava começar de novo, clicava em Iniciar — e o horário
+  // verdadeiro era SOBRESCRITO. Agora a barra nunca diz "—" antes de saber, o tempo é relido
+  // ao abrir a atividade e ao voltar para o app, e o Iniciar relê o banco antes de gravar.
+  var ATIV_TEMPO_OK=false;
   const ATIV_SIMULTANEAS=[['almoco2','checkout-pert']];
   function ativTempoNo(slug){ return 'daycare/tempo-atividade/'+dcDataKey()+'/'+slug; }
   function ativCarregarTempo(){
-    if(!DB) return;
-    DB.ref('daycare/tempo-atividade/'+dcDataKey()).once('value').then(function(s){
-      ATIV_TEMPO=s.val()||{};
+    if(!DB){ ATIV_TEMPO_OK=true; return Promise.resolve(); }
+    return DB.ref('daycare/tempo-atividade/'+dcDataKey()).once('value').then(function(s){
+      ATIV_TEMPO=s.val()||{}; ATIV_TEMPO_OK=true;
       try{ if(typeof renderAtual==='function' && dcAtiv) renderBarraAtiv(); }catch(e){}
-    }).catch(function(){});
+    }).catch(function(){
+      // Falhou: NÃO marcar como carregado. A barra dizer que não sabe é melhor do que mentir.
+      try{ renderBarraAtiv(); }catch(e){}
+    });
   }
   function ativIniciar(slug){
+    // Relê antes de gravar: última barreira contra apagar o horário de quem já começou.
+    if(DB){
+      DB.ref(ativTempoNo(slug)).once('value').then(function(s){
+        ATIV_TEMPO[slug]=Object.assign({},ATIV_TEMPO[slug]||{},s.val()||{}); ATIV_TEMPO_OK=true;
+        ativIniciarAgora(slug);
+      }).catch(function(){ ativIniciarAgora(slug); });
+      return;
+    }
+    ativIniciarAgora(slug);
+  }
+  function ativIniciarAgora(slug){
     var t=ATIV_TEMPO[slug]||{};
     var r=turnoTrocar(ativTempoNo(slug),'inicio','quemInicio',t,'O início desta atividade');
     if(!r) return;
@@ -15937,24 +15967,54 @@
     var el=document.getElementById('ativBarraTempo'); if(!el) return;
     // Almoço e chamada já têm as suas barras próprias — não duplicar.
     if(!dcAtiv||dcAtiv==='almoco'||dcAtiv==='chamada'){ el.innerHTML=''; return; }
+    // Enquanto o tempo não chegou do banco, a barra DIZ que está carregando. Nunca "—":
+    // "não iniciado" e "ainda não sei" são coisas diferentes, e confundi-las fez a monitora
+    // reiniciar o cronômetro por cima do horário verdadeiro.
+    if(!ATIV_TEMPO_OK){
+      el.innerHTML='<div class="alm-turno"><div><div class="tb-lab">'+escAttr(ativNome(dcAtiv))+' — '+DIA_FULL[dcDia]+'</div>'
+        +'<div style="font-size:13px;margin-top:3px">Buscando o horário desta atividade…</div>'
+        +'<div style="font-size:12.5px;margin-top:4px;opacity:.9">Espere um instante antes de tocar em Iniciar — se alguém já começou, o horário está guardado.</div></div>'
+        +'<div><button class="btn" style="background:rgba(255,255,255,.14);color:var(--z-cream);border:1px solid rgba(255,255,255,.25)" onclick="ativCarregarTempo()">tentar de novo</button></div></div>';
+      return;
+    }
     var t=ATIV_TEMPO[dcAtiv]||{};
     var dur=diffMin(t.inicio,t.fim);
     var n=(typeof turmaDoDia==='function')?turmaDoDia().length:0;
     var porPet=(dur!=null&&n)?(dur/n):null;
     var par=ativPar(dcAtiv), tp=par?(ATIV_TEMPO[par]||{}):null;
+    // Começou e nunca encerrou, e já faz mais de 2h: ou está acontecendo, ou esqueceram
+    // desligado. O sistema não adivinha — pergunta (Adriana, 20/ago/2026).
+    var aberta=(t.inicio&&!t.fim)?ativMinutosDesde(t.inicio):null;
     el.innerHTML='<div class="alm-turno">'
       +'<div><div class="tb-lab">'+escAttr(ativNome(dcAtiv))+' — '+DIA_FULL[dcDia]+'</div>'
-      +'<div style="font-size:13px;margin-top:3px">Início: <strong>'+(t.inicio||'-')+'</strong>'+(t.quemInicio?(' ('+escAttr(t.quemInicio)+')'):'')
-      +' · Fim: <strong>'+(t.fim||'-')+'</strong>'+(t.quemFim?(' ('+escAttr(t.quemFim)+')'):'')
+      +'<div style="font-size:13px;margin-top:3px">Início: <strong>'+(t.inicio||'não iniciado')+'</strong>'+(t.quemInicio?(' ('+escAttr(t.quemInicio)+')'):'')
+      +' · Fim: <strong>'+(t.fim||(t.inicio?'em andamento':'—'))+'</strong>'+(t.quemFim?(' ('+escAttr(t.quemFim)+')'):'')
       +(dur!=null?(' · Duração: <strong>'+fmtDur(dur)+'</strong>'):'')
       +(porPet!=null?(' · <strong>'+porPet.toFixed(1)+' min por FILHOt</strong>'):'')+'</div>'
       +(!t.inicio?'<div style="font-size:12.5px;margin-top:4px;opacity:.9">Toque em Iniciar ao começar. Sem isso, esta atividade não entra no acompanhamento do time.</div>':'')
+      +(t.inicio&&!t.fim&&aberta!=null&&aberta<120
+        ?'<div style="font-size:12.5px;margin-top:4px;opacity:.9">Rodando há '+fmtDur(aberta)+'. Pode fechar o app à vontade — o horário já está guardado.</div>':'')
+      +(aberta!=null&&aberta>=120
+        ?'<div style="margin-top:6px;background:rgba(255,255,255,.16);border-radius:9px;padding:8px">'
+          +'<div style="font-size:13px;font-weight:800">Esta atividade está aberta há '+fmtDur(aberta)+'.</div>'
+          +'<div style="font-size:12.5px;margin-top:2px">Você ainda está nela, ou esqueceu de encerrar?</div>'
+          +'<button class="btn btn-gold" style="margin-top:6px;padding:5px 12px;font-size:12.5px" onclick="ativEncerrar(\''+dcAtiv+'\')">encerrar agora</button>'
+          +'</div>':'')
       +(par&&tp&&tp.inicio&&!tp.fim?'<div style="font-size:12.5px;margin-top:4px;opacity:.9">'+escAttr(ativNome(par))+' está rodando ao mesmo tempo — é assim mesmo: mesma pessoa, mesmo espaço.</div>':'')
       +'</div>'
       +'<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:flex-start">'
       +'<button class="btn btn-gold" onclick="ativIniciar(\''+dcAtiv+'\')">&#9654; Iniciar</button>'
       +'<button class="btn" style="background:rgba(255,255,255,.14);color:var(--z-cream);border:1px solid rgba(255,255,255,.25)" onclick="ativEncerrar(\''+dcAtiv+'\')">&#9632; Encerrar</button>'
       +'</div></div>';
+  }
+  // Minutos entre um "HH:MM" de hoje e agora. Negativo (virada de dia) devolve null.
+  function ativMinutosDesde(hhmm){
+    try{
+      var p=String(hhmm).split(':'); if(p.length<2) return null;
+      var d=new Date(); var ini=new Date(d.getFullYear(),d.getMonth(),d.getDate(),+p[0],+p[1],0);
+      var m=Math.round((d-ini)/60000);
+      return m>=0?m:null;
+    }catch(e){ return null; }
   }
   // ================= RITMO DO TIME — a leitura dos tempos =============================
   // A regra da Adriana: até 12% de diferença é variação normal do dia. Acima disso, vale
