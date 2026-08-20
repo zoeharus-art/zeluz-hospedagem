@@ -1788,6 +1788,8 @@
           <span class="dash-meta" id="pendAtualizado"></span>
         </div>
         <div id="pendGrid"></div>
+        <!-- Aniversariantes: aparece todo dia, inclusive fim de semana (Adriana, 20/ago/2026). -->
+        <div id="anivCard"></div>
       </section>
 
       <section class="dash-sec">
@@ -3089,6 +3091,11 @@
       <h2 style="font-size:19px">Resumo do dia para a Gestão</h2>
       <div class="hint">Vai para o grupo <strong>Zêluz · Plantão AuAulândia</strong> no Telegram, com o Enriquecimento Ambiental do dia, quem comeu e quem não comeu, o que teve de diferente e a medicação. Sai <strong>sozinho a partir das 18h</strong> — o botão é para adiantar ou reenviar.</div>
       <button type="button" class="btn btn-gold" style="margin-top:9px" onclick="resumoDiaBotao(this)">Enviar o resumo agora</button>
+    </div>
+    <div class="card so-gestao">
+      <h2 style="font-size:19px">Aniversariantes</h2>
+      <div class="hint">A tabela dos próximos 7 dias vai para o grupo da Gestão <strong>todo dia de manhã</strong> — inclusive sábado, domingo e feriado, porque o FILHOt faz aniversário no dia dele, não no dia em que a creche abre.</div>
+      <button type="button" class="btn btn-gold" style="margin-top:9px" onclick="anivBotao(this)">Enviar a lista agora</button>
     </div>
     <div class="card so-master">
       <h2 style="font-size:19px">Avisos no Telegram</h2>
@@ -8871,7 +8878,7 @@
   // Agora existe um carimbo: esta constante é a versão que o aparelho está rodando, e o
   // Firebase guarda a versão publicada. Quando as duas diferem, aparece o aviso — mas
   // NUNCA recarrega sozinho: recarregar no meio de um check-in perderia o trabalho.
-  const APP_VERSAO='2026-08-20-09';
+  const APP_VERSAO='2026-08-20-10';
   function vigiarVersao(){
     if(!DB) return;
     try{
@@ -13562,6 +13569,9 @@
       // diante e uma vez por dia — quem abrir primeiro dispara, ninguém precisa lembrar.
       setTimeout(function(){ try{ resumoDiaAuto(); }catch(e){} }, 9000);
       setInterval(function(){ try{ resumoDiaAuto(); }catch(e){} }, 3600000);
+      // Aniversariantes: desenha no Início e manda a tabela para a Gestão uma vez por dia.
+      setTimeout(function(){ try{ renderAniversariantes(); anivAuto(); }catch(e){} }, 6000);
+      setInterval(function(){ try{ renderAniversariantes(); anivAuto(); }catch(e){} }, 3600000);
       // Voltou para o app (trocou de aba, destravou o celular): relê o cronômetro. Sem isto,
       // a tela ficava com o estado de horas atrás e induzia a reiniciar a atividade.
       document.addEventListener('visibilitychange', function(){
@@ -15423,6 +15433,104 @@
           +'A gestão está confirmando — não é tarefa do monitor.</div>'):'')
       +'</div>';
   }
+  // ===== ANIVERSARIANTES — Adriana, 20/ago/2026 ==================================
+  // "Precisa mostrar: Kakinho fez 9 anos dia 01/09. Todo dia, mesmo sem creche (sábado,
+  //  domingo, feriado). Essa tabela precisa chegar no Telegram da Márcia."
+  // Fim de semana conta de propósito: o FILHOt faz aniversário no dia dele, não no dia em
+  // que a creche abre.
+  var ANIV_JANELA=7;      // hoje + 7 dias
+  function anivIdadeEm(nasc, quando){
+    try{
+      var n=String(nasc).slice(0,10).split('-'); if(n.length<3) return null;
+      var a=+n[0], m=+n[1], d=+n[2];
+      var y=quando.getFullYear()-a;
+      if((quando.getMonth()+1)<m || ((quando.getMonth()+1)===m && quando.getDate()<d)) y--;
+      return (y>=0&&y<40)?y:null;
+    }catch(e){ return null; }
+  }
+  function anivLista(){
+    var out=[], hoje=new Date(); hoje.setHours(0,0,0,0);
+    try{
+      (PELUDINHOS||[]).forEach(function(p){
+        if(typeof pelInativo==='function'&&pelInativo(p)) return;
+        var ex=(typeof pelExtra==='function'?pelExtra(p):{})||{};
+        var nasc=String(ex.nasc||p.nasc||'').slice(0,10);
+        if(!/^\d{4}-\d{2}-\d{2}$/.test(nasc)) return;
+        var mm=+nasc.slice(5,7), dd=+nasc.slice(8,10);
+        for(var i=0;i<=ANIV_JANELA;i++){
+          var d=new Date(hoje.getFullYear(),hoje.getMonth(),hoje.getDate()+i);
+          if((d.getMonth()+1)===mm && d.getDate()===dd){
+            out.push({p:p, nome:pelNome(p), quando:d, emDias:i, idade:anivIdadeEm(nasc,d),
+                      raca:(typeof pelGet==='function'?pelGet(p,'raca'):'')||'',
+                      tutor:(typeof pelGet==='function'?pelGet(p,'tutor'):'')||ex.tutor||''});
+            break;
+          }
+        }
+      });
+    }catch(e){}
+    return out.sort(function(a,b){ return a.emDias-b.emDias || jsNorm(a.nome).localeCompare(jsNorm(b.nome)); });
+  }
+  function anivFrase(x){
+    var p=String(x.quando.getDate()).padStart(2,'0')+'/'+String(x.quando.getMonth()+1).padStart(2,'0');
+    if(x.idade==null) return x.nome+(x.raca?(' — '+x.raca):'')+' faz aniversário dia '+p;
+    return x.nome+(x.raca?(' — '+x.raca):'')+' faz '+x.idade+' ano'+(x.idade===1?'':'s')+' dia '+p;
+  }
+  function renderAniversariantes(){
+    var el=document.getElementById('anivCard'); if(!el) return;
+    if(typeof PELUDINHOS==='undefined'){ el.innerHTML=''; return; }
+    var L=anivLista();
+    if(!L.length){ el.innerHTML='<div class="card"><h2 style="font-size:18px">Aniversariantes</h2><div class="hint">Ninguém faz aniversário nos próximos '+ANIV_JANELA+' dias.</div></div>'; return; }
+    var hoje=L.filter(function(x){ return x.emDias===0; });
+    el.innerHTML='<div class="card" style="border-left:4px solid var(--z-gold)">'
+      +'<h2 style="font-size:18px">Aniversariantes'+(hoje.length?(' · '+hoje.length+' hoje'):'')+'</h2>'
+      +L.map(function(x){
+        var eh=(x.emDias===0);
+        return '<div style="border-top:1px solid var(--line);padding:8px 0;font-weight:'+(eh?'800':'700')+';'
+          +'color:'+(eh?'var(--z-blue)':'var(--z-blue-soft)')+';font-size:'+(eh?'15.5px':'14px')+'">'
+          +(eh?'🎂 ':'')+escAttr(anivFrase(x))
+          +(eh?'':' <span style="font-size:12px;color:var(--muted);font-weight:600">(em '+x.emDias+' dia'+(x.emDias===1?'':'s')+')</span>')
+          +'</div>';
+      }).join('')
+      +'</div>';
+  }
+  function anivEnviarTelegram(manual){
+    if(!DB) return Promise.resolve({ok:false, erro:'sem conexão'});
+    var dia=(typeof dcDataKey==='function')?dcDataKey():'';
+    return DB.ref('daycare/aniversario-enviado/'+dia).once('value').then(function(s){
+      var ja=s.val();
+      if(ja&&ja.ok&&!manual) return {ok:true, jaFoi:true};
+      var L=anivLista();
+      if(!L.length&&!manual) return {ok:true, vazio:true};
+      return tgCfgPronta().then(function(c){
+        if(!c) return {ok:false, erro:'a ponte do Telegram não está configurada'};
+        var hoje=L.filter(function(x){ return x.emDias===0; });
+        var depois=L.filter(function(x){ return x.emDias>0; });
+        var T=['<b>Aniversariantes</b>',''];
+        T.push(hoje.length?'<b>Hoje:</b>':'Hoje não tem aniversariante.');
+        hoje.forEach(function(x){ T.push('🎂 '+anivFrase(x)+(x.tutor?(' · tutor: '+x.tutor):'')); });
+        if(depois.length){
+          T.push(''); T.push('<b>Nos próximos dias:</b>');
+          depois.forEach(function(x){ T.push(anivFrase(x)); });
+        }
+        return tgAvisar({grupo:'gestao', texto:T.join('\n')}).then(function(r){
+          var ok=!!(r&&r.ok);
+          DB.ref('daycare/aniversario-enviado/'+dia).set({ts:Date.now(), ok:ok, quantos:L.length,
+            erro: ok?'':String((r&&r.erro)||'a ponte não respondeu')}).catch(function(){});
+          if(typeof audit==='function') audit('aniversariantes',(ok?'enviou':'NÃO enviou')+' a lista do dia',{});
+          return ok?{ok:true}:{ok:false, erro:String((r&&r.erro)||'a ponte não respondeu')};
+        });
+      });
+    }).catch(function(e){ return {ok:false, erro:String((e&&e.message)||e)}; });
+  }
+  function anivBotao(btn){
+    if(!btn) return;
+    var t=btn.textContent; btn.disabled=true; btn.textContent='enviando…';
+    anivEnviarTelegram(true).then(function(r){
+      btn.disabled=false; btn.textContent=r.ok?'✅ enviado para a Gestão':('❌ '+(r.erro||'não enviou'));
+      setTimeout(function(){ try{ btn.textContent=t; }catch(e){} }, 6000);
+    });
+  }
+  function anivAuto(){ try{ if(new Date().getHours()>=7) anivEnviarTelegram(false); }catch(e){} }
   // ===== ALERGIA A CONFIRMAR — Adriana, 20/ago/2026 ==============================
   // "A consultora clica no nome, abre a mensagem pronta, copia, manda no WhatsApp. Quando o
   //  tutor responde, ela marca 'tutor respondeu' + a data. Duas listas: HÓSPEDES e AULUNOS.
