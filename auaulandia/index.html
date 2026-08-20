@@ -1226,6 +1226,21 @@
   .avr-form input{width:100%;padding:10px 12px;border:1.5px solid var(--line);border-radius:9px;background:var(--z-cream);font-family:var(--font-ui);font-size:14px;font-weight:700;color:var(--z-blue);margin-bottom:8px}
   .avr-form-btns{display:flex;gap:8px;flex-wrap:wrap}
   .avr-resolvido-banner{background:rgba(39,174,96,.1);border:1.5px solid var(--crm-ok);border-radius:11px;padding:12px 14px;font-weight:800;color:var(--crm-ok);text-align:center}
+  /* EA — o quadro de quem NÃO pode comer. Adriana, 20/ago/2026: "é algo MUITO MUITO
+     importante, coloque efeitos, chame atenção." O pulso é lento e a animação respeita
+     prefers-reduced-motion: chamar atenção não pode virar tela piscando na cara de quem
+     passa oito horas com ela. */
+  .ea-perigo{border:3px solid var(--crm-critico);border-radius:16px;overflow:hidden;
+    background:rgba(179,38,30,.055);margin:14px 0;
+    box-shadow:0 0 0 0 rgba(179,38,30,.45);animation:eaPulso 2.4s ease-out infinite}
+  .ea-perigo-faixa{background:var(--crm-critico);color:#fff;font-weight:800;font-size:14px;
+    letter-spacing:.6px;padding:9px 14px;text-align:center}
+  @keyframes eaPulso{
+    0%{box-shadow:0 0 0 0 rgba(179,38,30,.45)}
+    70%{box-shadow:0 0 0 12px rgba(179,38,30,0)}
+    100%{box-shadow:0 0 0 0 rgba(179,38,30,0)}
+  }
+  @media (prefers-reduced-motion: reduce){ .ea-perigo{animation:none} }
   .nav-badge{background:var(--crm-critico);color:#fff;font-size:11px;font-weight:800;border-radius:999px;padding:1px 8px;margin-left:auto}
   /* Recepção: nav só para consultora + gestão/supervisão/diretoria */
   .nav a.so-recepcao{display:none}
@@ -8879,7 +8894,7 @@
   // Agora existe um carimbo: esta constante é a versão que o aparelho está rodando, e o
   // Firebase guarda a versão publicada. Quando as duas diferem, aparece o aviso — mas
   // NUNCA recarrega sozinho: recarregar no meio de um check-in perderia o trabalho.
-  const APP_VERSAO='2026-08-20-11';
+  const APP_VERSAO='2026-08-20-12';
   function vigiarVersao(){
     if(!DB) return;
     try{
@@ -15120,15 +15135,22 @@
   // ===== ENRIQUECIMENTO AMBIENTAL (EA) ============================================
   // Quatro tempos, porque o trabalho tem quatro partes e cada uma leva o seu: montar,
   // brincar, desmontar/limpar e o vídeo da Márcia (um por matilha — pequeno e médio porte).
+  // Passo a passo — Adriana, 20/ago/2026: "precisa de um passo a passo, onde qualquer pessoa
+  // novata entenda o que ela precisa fazer." Cada etapa diz o QUE fazer, não só o nome dela.
   var EA_ETAPAS=[
-    {k:'montagem', t:'Montagem do EA',        d:'preparar a atividade'},
-    {k:'atividade',t:'Atividade',             d:'os peludinhos se divertindo'},
-    {k:'limpeza',  t:'Retirada e limpeza',    d:'guardar os itens e limpar a área'},
-    {k:'video',    t:'Vídeo do EA',           d:'2 vídeos: matilha pequena e matilha média'}
+    {k:'montagem', t:'Montagem',           d:'Separe e monte o que vai ser usado. Toque em começar ao pegar os itens e em terminar quando estiver tudo montado no espaço.'},
+    {k:'atividade',t:'Atividade',          d:'Solte a matilha e acompanhe. Toque em começar ao soltar e em terminar quando recolher os itens do chão.'},
+    {k:'limpeza',  t:'Retirada e limpeza', d:'Recolha tudo e limpe a área. Toque em começar ao iniciar a limpeza e em terminar quando o espaço estiver pronto para a próxima turma.'},
+    {k:'video',    t:'Vídeo',              d:'Grave DOIS vídeos: um da matilha de pequeno porte e um da de médio porte. Toque em terminar depois de enviar os dois.'}
   ];
   // Catálogo do que a Zêluz usa no EA. O campo livre continua, para o que não estiver aqui.
+  // Ampliado em 20/ago/2026 com o que aparece nas restrições reais: se um tutor disse "não
+  // pode bolo", o bolo precisa estar aqui — senão a monitora digita à mão, escreve diferente,
+  // e o cruzamento com a restrição não acontece.
   var EA_CATALOGO=['Feno','Abobrinha','Hortelã','Melancia','Coco verde','Manjericão','Chuchu',
-                   'Maçã','Iogurte natural sem açúcar','Madeira','Melão'];
+                   'Maçã','Pepino','Cenoura','Iogurte natural sem açúcar','Madeira','Melão',
+                   'Bolo','Petisco','Petisco de frango','Petisco de boi','Petisco de cordeiro',
+                   'Frango','Lavanda'];
   // Os CINCO tipos de enriquecimento ambiental — classificação de Bloomsmith, Brent &
   // Schapiro (1991), a mesma usada em zoológicos, na etologia clínica e nos cursos
   // brasileiros de enriquecimento pet. Descrição curta de propósito: é para o monitor
@@ -15276,6 +15298,21 @@
     EA_DIA.tempos[k]=t;
     if(DB) DB.ref(eaNo()+'/tempos/'+k).set(t).catch(function(){});
     if(typeof audit==='function') audit('ea',(t.fim?'terminou ':'começou ')+((EA_ETAPAS.find(function(x){return x.k===k;})||{}).t||k),{});
+    // A etapa "Atividade" É o cronômetro do EA para o Ritmo do Time. A monitora marca UMA
+    // vez, aqui; o app escreve nos dois lugares. Antes existiam dois botões pedindo a mesma
+    // coisa em telas diferentes, e o de cima ficava eternamente "não iniciado".
+    if(k==='atividade'&&DB){
+      try{
+        var patch={};
+        if(t.ini&&!t.fim){ patch.inicio=t.ini.hora; patch.quemInicio=t.ini.quem;
+          patch.caes=(typeof turmaDoDia==='function')?turmaDoDia().length:0; }
+        if(t.fim){ patch.fim=t.fim.hora; patch.quemFim=t.fim.quem; }
+        if(Object.keys(patch).length){
+          DB.ref('daycare/tempo-atividade/'+dcDataKey()+'/ea').update(patch).catch(function(){});
+          if(typeof ATIV_TEMPO!=='undefined'){ ATIV_TEMPO.ea=Object.assign({},ATIV_TEMPO.ea||{},patch); }
+        }
+      }catch(e){}
+    }
     // Ao FECHAR a atividade, o dia é congelado: é esse o momento em que a lista é verdade.
     if(k==='atividade'&&t.fim) eaCongelar();
     renderEA();
@@ -15325,8 +15362,13 @@
       if(nao) return;                                   // tutor liberou tudo
       if(!r){ EA_SEM_RESP++; return; }                  // sem resposta: conta, mas não polui a tela
       var rn=jsNorm(r);
+      // ⚠ 20/ago/2026 — Adriana: "se não foi marcado nada, por que essa lista está fixa? Não
+      // quero fixa, as pessoas não leem." Antes, quem tinha restrição a TUDO aparecia o dia
+      // inteiro, mesmo sem nada escolhido. Aviso que está sempre lá vira paisagem — e no dia
+      // em que ele muda, ninguém percebe. Agora o quadro só existe DEPOIS de escolher o que
+      // vai ser montado, e aí ele aparece com força.
+      if(!oque) return;
       if(/\btudo\b|\btodos\b|\bnada\b/.test(rn)){ out.push({o:o, motivo:r, tipo:'tudo'}); return; }
-      if(!oque) return;                                  // sem EA digitado, só os de "tudo"
       var bateu=palavras.filter(function(w){ return eaCasa(rn,w); });
       if(bateu.length) out.push({o:o, motivo:r, tipo:'item'});
     });
@@ -15347,11 +15389,19 @@
             var nome=((typeof pelNome==='function')?pelNome(x.o.p):'')||x.o.p.n||'';
             // "Restrição a TUDO" (Ragnar, Dino) fala do que é INGERIDO — não de cheiro nem de
             // brincadeira. Ele participa do EA; o que ele não pode é comer o que foi montado.
-            return '<div style="padding:7px 0;border-bottom:1px solid var(--line)">'
-              +'<span style="font-weight:800;color:var(--crm-critico);font-size:15px">'+escAttr(nome)+'</span>'
-              +'<div style="font-size:12.5px;font-weight:700;color:var(--z-blue)">'
+            // FOTO (Adriana, 20/ago/2026): "é algo MUITO importante, coloque a foto". Nome é
+            // texto que se lê rápido demais; rosto é reconhecimento — a monitora olha o FILHOt
+            // na sua frente e compara. Sem foto, cai no genérico.
+            var foto=''; try{ foto=(typeof fotoDoPel==='function')?(fotoDoPel(x.o.p)||''):''; }catch(e){}
+            return '<div style="display:flex;gap:10px;align-items:center;padding:9px 0;border-bottom:1px solid var(--line)">'
+              +(foto
+                ? '<img src="'+escAttr(foto)+'" alt="" style="width:54px;height:54px;border-radius:50%;object-fit:cover;border:3px solid var(--crm-critico);flex:0 0 54px">'
+                : '<span style="width:54px;height:54px;border-radius:50%;flex:0 0 54px;border:3px solid var(--crm-critico);background:var(--z-cream-warm);display:flex;align-items:center;justify-content:center;font-weight:800;font-size:20px;color:var(--crm-critico)">'+escAttr((nome||'?').slice(0,1).toUpperCase())+'</span>')
+              +'<div style="flex:1">'
+              +'<span style="font-weight:800;color:var(--crm-critico);font-size:17px">'+escAttr(nome)+'</span>'
+              +'<div style="font-size:13px;font-weight:800;color:var(--z-blue)">'
               +(x.tipo==='tudo'?'NÃO PODE COMER NADA do que foi montado':'não pode: '+escAttr(x.motivo))
-              +(x.o.daPlanilha?(' · '+escAttr(String(x.o.daPlanilha).toUpperCase())):'')+'</div></div>';
+              +(x.o.daPlanilha?(' · '+escAttr(String(x.o.daPlanilha).toUpperCase())):'')+'</div></div></div>';
           }).join('')
         : '<div class="hint" style="padding-top:7px">ninguém</div>')
       +'</div>';
@@ -15408,8 +15458,9 @@
       +'a mesma usada em zoológicos, na etologia clínica e no bem-estar animal no mundo inteiro. '
       +'Isto é ciência aplicada ao dia do FILHOt — não é passatempo.</div>'
       +'</div>'
-      // ---- os quatro tempos, um por linha, sem faixa nem enfeite ----
-      +'<div class="card">'
+      // ---- o passo a passo do EA (é também o cronômetro que vai para o Ritmo do Time) ----
+      +'<div class="card"><h2 style="font-size:17px">Passo a passo de hoje</h2>'
+      +'<div class="hint">Marque cada passo na hora em que ele acontece. É assim que a gestão sabe quanto tempo o EA levou — e você não precisa anotar nada em papel.</div>'
       +EA_ETAPAS.map(function(e){
           var t=tempos[e.k]||{};
           var dur=(t.ini&&t.fim)?Math.max(1,Math.round((t.fim.ts-t.ini.ts)/60000)):0;
@@ -15417,29 +15468,52 @@
           var cor=!t.ini?'var(--z-cream-warm)':(!t.fim?'var(--crm-atencao)':'var(--crm-ok)');
           var txtCor=(!t.ini)?'var(--z-blue)':'#fff';
           return '<div class="pair" style="padding:9px 0;border-bottom:1px solid var(--line)">'
-            +'<span class="k"><strong>'+escAttr(e.t)+'</strong>'
-            +(t.ini?('<div style="font-size:12.5px;font-weight:700;color:var(--z-blue-soft)">'+escAttr(t.ini.hora)
-                +(t.fim?(' → '+escAttr(t.fim.hora)+' · <strong>'+dur+' min</strong>'):' · agora')+'</div>'):'')
+            +'<span class="k"><strong>'+(EA_ETAPAS.indexOf(e)+1)+'. '+escAttr(e.t)+'</strong>'
+            +'<div style="font-size:12.5px;color:var(--muted);font-weight:600;line-height:1.4;margin-top:1px">'+escAttr(e.d)+'</div>'
+            +(t.ini?('<div style="font-size:12.5px;font-weight:800;color:var(--z-blue-soft);margin-top:2px">'+escAttr(t.ini.hora)
+                +(t.fim?(' → '+escAttr(t.fim.hora)+' · '+dur+' min'):' · em andamento')
+                +(t.ini.quem?(' · '+escAttr(String(t.ini.quem).split('·')[0].trim())):'')+'</div>'):'')
             +'</span>'
             +'<span class="val"><button class="btn" style="background:'+cor+';color:'+txtCor+';border:1.5px solid var(--line);padding:6px 14px;font-weight:800" onclick="eaMarcarTempo(\''+e.k+'\')">'+rot+'</button></span>'
             +'</div>';
         }).join('')
       +'</div>'
-      // ---- duas colunas: quem NÃO pode em cada matilha ----
-      +'<div class="card" style="border-left:4px solid '+(imp.length?'var(--crm-critico)':'var(--crm-ok)')+'">'
-      +'<h2 style="font-size:17px">'+(imp.length?('NÃO podem participar ('+imp.length+')'):'Ninguém impedido hoje')+'</h2>'
-      +(imp.length?'<div class="hint">Todo o resto da turma participa — não precisa marcar ninguém.</div>':'')
-      +'<div style="display:flex;flex-wrap:wrap;gap:18px;margin-top:8px">'
-      +eaColunaHTML('Pequeno porte', mat('p'))
-      +eaColunaHTML('Médio porte', mat('m'))
-      // OUTRO não é "erro de cadastro": é quem ainda não foi classificado, ou quem transita
-      // entre as duas — e isso se decide pelo comportamento, não pelo tamanho.
-      +eaColunaHTML('Outro / a definir', mat('o'))
-      +'</div>'
-      // A pendência não some da empresa — só sai da tela de quem não pode resolvê-la.
-      +(EA_SEM_RESP?('<div class="hint" style="margin-top:10px;border-top:1px solid var(--line);padding-top:7px">'
-          +EA_SEM_RESP+' FILHOt'+(EA_SEM_RESP>1?'s':'')+' ainda sem a resposta do tutor sobre restrição. '
-          +'A gestão está confirmando — não é tarefa do monitor.</div>'):'')
+      // ===== O QUADRO QUE PRECISA SER VISTO ====================================
+      // Adriana, 20/ago/2026: "como é algo MUITO MUITO importante, coloque a foto, coloque
+      // efeitos, chame atenção para esse quadro." E antes disso: "se não foi marcado nada,
+      // por que essa lista está fixa? Não quero fixa, as pessoas não leem."
+      // Então o quadro NÃO existe até alguém escolher o que vai ser montado. Quando aparece,
+      // é porque algo mudou — e aparece com faixa vermelha pulsando e a foto de cada FILHOt,
+      // porque nome é texto que se lê rápido demais; rosto é reconhecimento.
+      +(!oque
+        ? '<div class="card" style="border:2px dashed var(--z-gold);background:rgba(222,180,40,.07)">'
+          +'<div style="font-weight:800;color:var(--z-blue);font-size:16px">Escolha acima o que vai ser montado hoje.</div>'
+          +'<div class="hint" style="margin-top:3px">Assim que você escolher, aparece aqui quem <strong>não pode</strong> participar. Antes disso não dá para saber — e uma lista que fica sempre igual ninguém lê.</div>'
+          +'</div>'
+        : (!imp.length
+          ? '<div class="card" style="border-left:5px solid var(--crm-ok);background:rgba(30,132,73,.06)">'
+            +'<h2 style="font-size:18px;color:var(--crm-ok)">Ninguém impedido hoje</h2>'
+            +'<div class="hint">Com <strong>'+escAttr(oque)+'</strong>, a turma inteira pode participar.</div>'
+            +(EA_SEM_RESP?('<div class="hint" style="margin-top:8px;border-top:1px solid var(--line);padding-top:7px">'
+                +EA_SEM_RESP+' FILHOt'+(EA_SEM_RESP>1?'s':'')+' ainda sem a resposta do tutor. A gestão está confirmando — não é tarefa do monitor.</div>'):'')
+            +'</div>'
+          : '<div class="ea-perigo">'
+            +'<div class="ea-perigo-faixa">ATENÇÃO — '+imp.length+' NÃO '+(imp.length>1?'PODEM':'PODE')+' COMER</div>'
+            +'<div style="padding:14px">'
+            +'<div style="font-weight:800;color:var(--z-blue);font-size:15px">Hoje foi montado: '+escAttr(oque)+'</div>'
+            +'<div class="hint" style="margin-top:2px">Confira o rosto antes de oferecer. Todo o resto da turma participa — não precisa marcar ninguém.</div>'
+            +'<div style="display:flex;flex-wrap:wrap;gap:18px;margin-top:12px">'
+            +eaColunaHTML('Pequeno porte', mat('p'))
+            +eaColunaHTML('Médio porte', mat('m'))
+            // OUTRO não é "erro de cadastro": é quem ainda não foi classificado, ou quem
+            // transita entre as duas — e isso se decide pelo comportamento, não pelo tamanho.
+            +eaColunaHTML('Outro / a definir', mat('o'))
+            +'</div>'
+            // A pendência não some da empresa — só sai da tela de quem não pode resolvê-la.
+            +(EA_SEM_RESP?('<div class="hint" style="margin-top:12px;border-top:1px solid var(--line);padding-top:7px">'
+                +EA_SEM_RESP+' FILHOt'+(EA_SEM_RESP>1?'s':'')+' ainda sem a resposta do tutor sobre restrição. '
+                +'A gestão está confirmando — não é tarefa do monitor.</div>'):'')
+            +'</div></div>'))
       +'</div>';
   }
   // ===== ADAPTAÇÃO SEM DATA OU VENCIDA — Adriana, 20/ago/2026 ====================
@@ -16285,7 +16359,11 @@
   function renderBarraAtiv(){
     var el=document.getElementById('ativBarraTempo'); if(!el) return;
     // Almoço e chamada já têm as suas barras próprias — não duplicar.
-    if(!dcAtiv||dcAtiv==='almoco'||dcAtiv==='chamada'){ el.innerHTML=''; return; }
+    // No EA a barra genérica SOME: lá o cronômetro são as 4 etapas, e duas barras de tempo
+    // na mesma tela dizendo coisas diferentes é o que a Adriana chamou, com razão, de
+    // arquitetura ridícula (20/ago/2026). A etapa "Atividade" alimenta este mesmo
+    // cronômetro por dentro, então o Ritmo do Time continua recebendo o tempo do EA.
+    if(!dcAtiv||dcAtiv==='almoco'||dcAtiv==='chamada'||dcAtiv==='ea'){ el.innerHTML=''; return; }
     // Enquanto o tempo não chegou do banco, a barra DIZ que está carregando. Nunca "—":
     // "não iniciado" e "ainda não sei" são coisas diferentes, e confundi-las fez a monitora
     // reiniciar o cronômetro por cima do horário verdadeiro.
