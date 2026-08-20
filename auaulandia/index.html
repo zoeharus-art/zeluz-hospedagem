@@ -1498,6 +1498,15 @@
   #hospBuscaModal{display:none;position:fixed;inset:0;z-index:70;background:rgba(26,58,79,.55)}
   #hospBuscaModal.show{display:block}
   .hb-head{background:linear-gradient(135deg,var(--z-auaulandia),var(--z-blue));color:#fff;padding:16px 18px;display:flex;align-items:center;gap:14px;flex-shrink:0}
+  /* Jantar do hóspede no card — 20/ago/2026. Tratado como a medicação: quem serve tem de
+     ver a quantidade sem abrir nada. */
+  .hb-jantar{display:block;margin:6px 0 0;font-size:11px;font-weight:800;letter-spacing:.2px;
+    color:var(--z-blue);background:rgba(222,180,40,.20);padding:5px 8px;border-radius:7px;
+    border-left:3px solid var(--z-gold);text-align:left;line-height:1.35}
+  .hb-jantar-sub{font-size:10px;font-weight:600;color:var(--z-blue-soft);margin-top:2px}
+  .hb-jantar-rep{background:rgba(124,139,153,.16);border-left-color:#7C8B99}
+  .hb-jantar-falta{background:rgba(179,38,30,.12);border-left-color:var(--crm-critico);
+    color:var(--crm-critico)}
   .hb-alertbadge{display:block;margin:0 0 6px;font-size:9.5px;font-weight:800;letter-spacing:.3px;color:#fff;background:var(--crm-critico);padding:2px 7px;border-radius:7px}
   .hb-novo{grid-column:1/-1;border-top:2px dashed var(--line);margin-top:10px;padding-top:16px}
   .hb-novo-tit{font-size:13px;font-weight:700;color:var(--z-blue);margin-bottom:8px}
@@ -4874,6 +4883,7 @@
   }
   function renderHosp(){
     try{ cafeCarregar(); }catch(e){}
+    try{ if(!Object.keys(ALM_CAD_CACHE||{}).length) alimCarregarAlmocoCad(); }catch(e){}
     try{ renderRemovidosHoje(); }catch(e){}
     // ordem alfabética (a moradora Repolho por último)
     hospedes.sort((a,b)=>{ if(!!a.mascote!==!!b.mascote) return a.mascote?1:-1; return (a.nome||'').localeCompare((b.nome||''),'pt',{sensitivity:'base'}); });
@@ -4923,11 +4933,72 @@
           <div class="tarja ${tj[0]}">${tj[1]}</div>
           ${h.saidaHoje?'<div class="saida-hoje">Dormiu · sai hoje</div>':''}
           ${relMarcaDoCard(h)}
+          ${h.mascote?'':alimMarcaDoCard(h)}
         </div>`;
       }).join('');
     renderKPIs();
     try{ relCarregarDoDia(); }catch(e){}
     try{ const vv=document.getElementById('v-cuidadovet'); if(vv&&vv.classList.contains('active')&&typeof renderVetLista==='function') renderVetLista(); }catch(e){}
+  }
+  // ===== O JANTAR DO HÓSPEDE — Adriana, 20/ago/2026 ==============================
+  // "A plantonista, onde ela vê os dados de jantar dos hóspedes? Essa informação é igual
+  //  medicamento, precisa estar lá. Ração, quantidade, se é misturada."
+  // A informação SEMPRE existiu — só nunca chegou a quem serve. Ela mora em três lugares,
+  // nesta ordem de confiança:
+  //   1. ficha.alim da estadia (check-in de hospedagem: marca, gramas por refeição, extra)
+  //   2. daycare/almoco-cad (o almoço do Day Care) — para o pernoite que não tem check-in
+  //   3. nada  → a tela DIZ que não sabe e manda confirmar. Nunca inventa quantidade.
+  var ALM_CAD_CACHE={};
+  function alimCarregarAlmocoCad(){
+    if(!DB) return;
+    DB.ref('daycare/almoco-cad').once('value')
+      .then(function(sn){ ALM_CAD_CACHE=sn.val()||{}; try{ renderHosp(); }catch(e){} })
+      .catch(function(){});
+  }
+  // Devolve {racao, unidade, extra, marca, fonte, obs, incerto}
+  function alimDoHospede(h){
+    try{
+      if(!h||h.mascote) return null;
+      var k=(typeof medAgendaKey==='function')?medAgendaKey(h):'';
+      var est=((typeof CF_ESTADIAS!=='undefined'&&CF_ESTADIAS)?CF_ESTADIAS[k]:null)||null;
+      var a=(est&&est.e&&est.e.ficha&&est.e.ficha.alim)||null;
+      var j=(a&&a.refs&&a.refs.fixas&&a.refs.fixas.jantar)||null;
+      if(j&&(j.on||j.racao||j.natural||j.extra)){
+        return {racao:String(j.racao||''), natural:String(j.natural||''), extra:String(j.extra||''),
+                unidade:String(a.unidade||'gramas'), marca:String(a.marca||a.tipo||''),
+                trazida:String(a.trazida||''), obs:String(a.obs||''), fonte:'checkin', incerto:false};
+      }
+      // Pernoite sem check-in: repete o ALMOÇO do Day Care — e avisa que foi repetido.
+      var kc=(typeof dcKey==='function')?dcKey(h.nome,h.tutor):'';
+      var c=ALM_CAD_CACHE[kc]||ALM_CAD_CACHE[String(kc).replace(/-/g,' ')]||null;
+      if(c&&(c.alim||c.quant)){
+        return {racao:String(c.quant||''), natural:'', extra:'', unidade:'',
+                marca:String(c.alim||''), trazida:'', obs:String(c.restr||''),
+                fonte:'almoco', incerto:true};
+      }
+      // Sem quantidade em lugar nenhum. Mas se o Day Care tem RESTRIÇÃO gravada, ela vai
+      // junto do aviso: não saber quanto dar é ruim; não saber o que ele não pode é pior.
+      return {fonte:'nenhuma', incerto:true, obs:(c&&String(c.restr||''))||''};
+    }catch(e){ return {fonte:'nenhuma', incerto:true}; }
+  }
+  // A faixa que aparece no card. Curta: a plantonista lê de relance, com o pote na mão.
+  function alimMarcaDoCard(h){
+    var a=alimDoHospede(h); if(!a) return '';
+    if(a.fonte==='nenhuma'){
+      return '<div class="hb-jantar hb-jantar-falta">JANTAR A CONFIRMAR'
+        +(a.obs?('<div class="hb-jantar-sub"><strong>NÃO PODE: '+escAttr(a.obs)+'</strong></div>'):'')
+        +'<div class="hb-jantar-sub">Ninguém lançou a comida dele. Pergunte a quem passou o plantão e pegue a ração — não sirva no chute.</div></div>';
+    }
+    var linha=[];
+    if(a.racao) linha.push(a.racao+(a.unidade?(' '+a.unidade):'')+' de ração');
+    if(a.natural) linha.push(a.natural+' de natural');
+    if(a.extra) linha.push(a.extra);
+    return '<div class="hb-jantar'+(a.incerto?' hb-jantar-rep':'')+'">JANTAR: '
+      +escAttr(linha.length?linha.join(' + '):'sem quantidade lançada')
+      +(a.marca?('<div class="hb-jantar-sub">'+escAttr(a.marca)+'</div>'):'')
+      +(a.obs?('<div class="hb-jantar-sub">'+escAttr(a.obs)+'</div>'):'')
+      +(a.incerto?'<div class="hb-jantar-sub"><strong>Repetido do almoço do Day Care</strong> — confirme com quem passou o plantão.</div>':'')
+      +'</div>';
   }
   // ===== QUEM AINDA ESTÁ SEM RELATÓRIO — Adriana, 17/ago/2026 =====================
   // O Theo passou três noites sem relatório nenhum, enquanto os outros dez tiveram todos.
@@ -8907,7 +8978,7 @@
   // Agora existe um carimbo: esta constante é a versão que o aparelho está rodando, e o
   // Firebase guarda a versão publicada. Quando as duas diferem, aparece o aviso — mas
   // NUNCA recarrega sozinho: recarregar no meio de um check-in perderia o trabalho.
-  const APP_VERSAO='2026-08-20-14';
+  const APP_VERSAO='2026-08-20-15';
   function vigiarVersao(){
     if(!DB) return;
     try{
