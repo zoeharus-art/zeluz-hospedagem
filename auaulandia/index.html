@@ -3814,6 +3814,28 @@
       }
     }catch(e){}
   }
+  // ⚠ 20/ago/2026 — Adriana: "check-in está aparecendo 5, mas não tem nada quando clico."
+  // O menu contava certo; a TELA é que era uma busca — sem digitar nada ela fica em branco
+  // de propósito. A consultora via "5", clicava, e tinha de adivinhar QUAIS cinco para poder
+  // digitar o nome. Agora esta função devolve a LISTA, o menu usa o tamanho dela e a tela de
+  // Check-in mostra exatamente essas pessoas quando a busca está vazia: uma conta só, e os
+  // dois lugares contando a mesma história.
+  function hospedesSemCheckin(){
+    var out=[];
+    try{
+      (hospedes||[]).forEach(function(h){
+        // A MORADORA NÃO FAZ CHECK-IN (Adriana, 17/ago/2026: "está aparecendo para a Amanda o
+        // número 1, mas não tem nenhum lá"). Era a Repolho: ela mora aqui, nunca vai ter
+        // check-in de hospedagem — e o menu ficava vermelho cobrando um FILHOt que a tela do
+        // Check-in jamais mostraria. Aviso que não some por trabalho nenhum é aviso que a
+        // equipe aprende a ignorar, e aí o vermelho de verdade também passa batido.
+        if(h.mascote) return;
+        var k=(typeof medAgendaKey==='function')?medAgendaKey(h):'';
+        if(k && !(CF_ESTADIAS||{})[k]) out.push(h);
+      });
+    }catch(e){}
+    return out;
+  }
   // Uma conta só, para o menu e para o painel do Início não discordarem entre si.
   function contarPendencias(){
     var hoje=(function(){ var d=new Date(),p=function(x){return String(x).padStart(2,'0');};
@@ -3826,16 +3848,7 @@
         // Etapa 2 = o Day Care já conferiu e o tutor espera na recepção para assinar.
         if(e.saida===hoje){ if(typeof coEtapaDe==='function'&&coEtapaDe(e)===2) r.naRecepcao++; else r.saemHoje++; }
       });
-      (hospedes||[]).forEach(function(h){
-        // A MORADORA NÃO FAZ CHECK-IN (Adriana, 17/ago/2026: "está aparecendo para a Amanda o
-        // número 1, mas não tem nenhum lá"). Era a Repolho: ela mora aqui, nunca vai ter
-        // check-in de hospedagem — e o menu ficava vermelho cobrando um FILHOt que a tela do
-        // Check-in jamais mostraria. Aviso que não some por trabalho nenhum é aviso que a
-        // equipe aprende a ignorar, e aí o vermelho de verdade também passa batido.
-        if(h.mascote) return;
-        var k=(typeof medAgendaKey==='function')?medAgendaKey(h):'';
-        if(k && !(CF_ESTADIAS||{})[k]) r.semCheckin++;
-      });
+      r.semCheckin=hospedesSemCheckin().length;
     }catch(e){}
     try{ r.avisar=(typeof empLista==='function')?empLista().filter(function(x){ return !x.aviso; }).length:0; }catch(e){}
     try{
@@ -8847,7 +8860,7 @@
   // Agora existe um carimbo: esta constante é a versão que o aparelho está rodando, e o
   // Firebase guarda a versão publicada. Quando as duas diferem, aparece o aviso — mas
   // NUNCA recarrega sozinho: recarregar no meio de um check-in perderia o trabalho.
-  const APP_VERSAO='2026-08-20-07';
+  const APP_VERSAO='2026-08-20-08';
   function vigiarVersao(){
     if(!DB) return;
     try{
@@ -17477,8 +17490,23 @@
     const box=document.getElementById('ciResults'); if(!box) return;
     if(typeof PELUDINHOS==='undefined'){ box.innerHTML='<div class="hint">Carregando cadastro…</div>'; return; }
     const q=jsNorm(document.getElementById('ciBusca')?document.getElementById('ciBusca').value:'');
-    // Tela clean — a lista só aparece quando a Consultora começa a digitar (menos poluição visual).
-    if(!q){ box.innerHTML=''; return; }
+    // Busca vazia: em vez de tela em branco, mostra QUEM está hospedado sem check-in — os
+    // mesmos que o menu está contando. Era isto que fazia o "5" do menu abrir no nada.
+    if(!q){
+      var falta=(typeof hospedesSemCheckin==='function')?hospedesSemCheckin():[];
+      if(!falta.length){ box.innerHTML='<div class="hint">Nenhum hóspede sem check-in. Para lançar um novo, digite o nome acima.</div>'; return; }
+      box.innerHTML='<div class="hint" style="margin-bottom:8px"><strong>'+falta.length+' hospedado'+(falta.length>1?'s':'')+' sem check-in lançado.</strong> Toque no nome para fazer agora.</div>'
+        +falta.map(function(h){
+          var nome=h.nome||h.pet||h.n||'';
+          var idx=-1;
+          try{ idx=PELUDINHOS.findIndex(function(p){ return jsNorm(pelNome(p))===jsNorm(nome); }); }catch(e){}
+          var raca=h.raca||''; var tutor=h.tutor||'';
+          return '<div class="ci-item" style="cursor:pointer" onclick="'+(idx>=0?('ciEscolher('+idx+')'):('document.getElementById(\'ciBusca\').value='+JSON.stringify(nome)+';renderCiBusca()'))+'">'
+            +'<div><div style="font-weight:800;color:var(--z-blue);font-size:16px">'+escAttr(nome)+'</div>'
+            +'<div style="font-size:12.5px;color:var(--muted);font-weight:600">'+escAttr(raca||'raça a confirmar')+(tutor?(' · '+escAttr(tutor)):'')+'</div></div></div>';
+        }).join('');
+      return;
+    }
     const list=PELUDINHOS.map(function(p,i){ return {p:p,i:i}; })
       .filter(function(o){ return termosBuscaPel(o.p).indexOf(q)>=0; })
       .sort(function(x,y){ return jsNorm(pelNome(x.p)).localeCompare(jsNorm(pelNome(y.p))); });
