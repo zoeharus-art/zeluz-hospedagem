@@ -1233,6 +1233,19 @@
   .ea-perigo{border:3px solid var(--crm-critico);border-radius:16px;overflow:hidden;
     background:rgba(179,38,30,.055);margin:14px 0;
     box-shadow:0 0 0 0 rgba(179,38,30,.45);animation:eaPulso 2.4s ease-out infinite}
+  .ea-face{width:54px;height:54px;border-radius:50%;object-fit:cover;flex:0 0 54px;
+    border:3px solid var(--crm-critico);background:var(--z-cream-warm)}
+  .ea-face-vazia{display:flex;align-items:center;justify-content:center;font-weight:800;
+    font-size:20px;color:var(--crm-critico)}
+  @media (max-width:420px){
+    .ea-passo{display:block !important}
+    .ea-passo .ea-passo-btn{display:block;margin-top:8px}
+    .ea-passo .ea-passo-btn button{width:100%}
+    .ea-face{width:46px;height:46px;flex:0 0 46px;border-width:2px}
+    .ea-face-vazia{font-size:17px}
+    .ea-perigo-faixa{font-size:12.5px;letter-spacing:.3px;padding:8px 10px}
+    .ea-perigo > div{padding:11px !important}
+  }
   .ea-perigo-faixa{background:var(--crm-critico);color:#fff;font-weight:800;font-size:14px;
     letter-spacing:.6px;padding:9px 14px;text-align:center}
   @keyframes eaPulso{
@@ -8894,7 +8907,7 @@
   // Agora existe um carimbo: esta constante é a versão que o aparelho está rodando, e o
   // Firebase guarda a versão publicada. Quando as duas diferem, aparece o aviso — mas
   // NUNCA recarrega sozinho: recarregar no meio de um check-in perderia o trabalho.
-  const APP_VERSAO='2026-08-20-13';
+  const APP_VERSAO='2026-08-20-14';
   function vigiarVersao(){
     if(!DB) return;
     try{
@@ -15183,6 +15196,19 @@
     'A cara dele resolvendo sozinho é o melhor indicador de que deu certo. Se você precisou entregar, foi fácil demais.',
     'Enriquecimento ambiental é protocolo de bem-estar reconhecido pela ciência, usado em zoológicos do mundo inteiro. Aqui, cada cuidado é ÚNICO.'
   ];
+  // "NaN min" apareceu no teste em tela de celular: registro sem `ts` fazia a subtração dar
+  // NaN. Sem carimbo, conta pela hora — que é o que está escrito na tela de qualquer forma.
+  function eaDuracao(t){
+    if(!t||!t.ini||!t.fim) return 0;
+    var d=(typeof t.fim.ts==='number'&&typeof t.ini.ts==='number')?Math.round((t.fim.ts-t.ini.ts)/60000):NaN;
+    if(!isFinite(d)||d<0){
+      var h=function(x){ var p=String((x&&x.hora)||'').split(':'); return (p.length<2)?NaN:(+p[0]*60 + +p[1]); };
+      d=h(t.fim)-h(t.ini);
+      if(!isFinite(d)) return 0;
+      if(d<0) d+=1440;                     // virou a meia-noite
+    }
+    return Math.max(1,d);
+  }
   function eaFraseDoDia(){
     var d=new Date(), ini=new Date(d.getFullYear(),0,0);
     var dia=Math.floor((d-ini)/86400000);
@@ -15382,7 +15408,10 @@
   // Então: some a busca e o grid de marcar um a um (quem pode participa, ponto — ninguém
   // marca nada). Fica: o que foi montado · os 4 tempos · duas colunas com quem não pode.
   function eaColunaHTML(titulo, lista){
-    return '<div style="flex:1;min-width:230px">'
+    // Coluna vazia não aparece. No celular as colunas empilham, e três títulos com dois
+    // "ninguém" empurram para baixo justamente o FILHOt que a monitora precisa ver.
+    if(!lista.length) return '';
+    return '<div style="flex:1;min-width:210px">'
       +'<div style="font-weight:800;color:var(--z-blue);font-size:14px;border-bottom:2px solid var(--z-gold);padding-bottom:5px">'+escAttr(titulo)+'</div>'
       +(lista.length
         ? lista.map(function(x){
@@ -15395,15 +15424,15 @@
             var foto=''; try{ foto=(typeof fotoDoPel==='function')?(fotoDoPel(x.o.p)||''):''; }catch(e){}
             return '<div style="display:flex;gap:10px;align-items:center;padding:9px 0;border-bottom:1px solid var(--line)">'
               +(foto
-                ? '<img src="'+escAttr(foto)+'" alt="" style="width:54px;height:54px;border-radius:50%;object-fit:cover;border:3px solid var(--crm-critico);flex:0 0 54px">'
-                : '<span style="width:54px;height:54px;border-radius:50%;flex:0 0 54px;border:3px solid var(--crm-critico);background:var(--z-cream-warm);display:flex;align-items:center;justify-content:center;font-weight:800;font-size:20px;color:var(--crm-critico)">'+escAttr((nome||'?').slice(0,1).toUpperCase())+'</span>')
+                ? '<img class="ea-face" src="'+escAttr(foto)+'" alt="">'
+                : '<span class="ea-face ea-face-vazia">'+escAttr((nome||'?').slice(0,1).toUpperCase())+'</span>')
               +'<div style="flex:1">'
               +'<span style="font-weight:800;color:var(--crm-critico);font-size:17px">'+escAttr(nome)+'</span>'
               +'<div style="font-size:13px;font-weight:800;color:var(--z-blue)">'
               +(x.tipo==='tudo'?'NÃO PODE COMER NADA do que foi montado':'não pode: '+escAttr(x.motivo))
               +(x.o.daPlanilha?(' · '+escAttr(String(x.o.daPlanilha).toUpperCase())):'')+'</div></div></div>';
           }).join('')
-        : '<div class="hint" style="padding-top:7px">ninguém</div>')
+        : '')
       +'</div>';
   }
   function renderEA(){
@@ -15463,7 +15492,7 @@
       +'<div class="hint">Marque cada passo na hora em que ele acontece. É assim que a gestão sabe quanto tempo o EA levou — e você não precisa anotar nada em papel.</div>'
       +EA_ETAPAS.map(function(e){
           var t=tempos[e.k]||{};
-          var dur=(t.ini&&t.fim)?Math.max(1,Math.round((t.fim.ts-t.ini.ts)/60000)):0;
+          var dur=eaDuracao(t);
           // MESMO botão do almoço — Adriana, 20/ago/2026: "coloque um botão como Iniciar e
           // mantenha o design que estamos usando, porque eles já conhecem o almoço... vamos
           // manter um único app." A equipe já aprendeu ▶ Iniciar / ■ Encerrar; inventar
@@ -15472,14 +15501,14 @@
           var cls=!t.ini?'btn btn-gold':(!t.fim?'btn btn-primary':'btn');
 
 
-          return '<div class="pair" style="padding:9px 0;border-bottom:1px solid var(--line)">'
+          return '<div class="pair ea-passo" style="padding:10px 0;border-bottom:1px solid var(--line)">'
             +'<span class="k"><strong>'+(EA_ETAPAS.indexOf(e)+1)+'. '+escAttr(e.t)+'</strong>'
             +'<div style="font-size:12.5px;color:var(--muted);font-weight:600;line-height:1.4;margin-top:1px">'+escAttr(e.d)+'</div>'
             +(t.ini?('<div style="font-size:12.5px;font-weight:800;color:var(--z-blue-soft);margin-top:2px">'+escAttr(t.ini.hora)
                 +(t.fim?(' → '+escAttr(t.fim.hora)+' · '+dur+' min'):' · em andamento')
                 +(t.ini.quem?(' · '+escAttr(String(t.ini.quem).split('·')[0].trim())):'')+'</div>'):'')
             +'</span>'
-            +'<span class="val"><button class="'+cls+'" style="padding:7px 16px;font-weight:800;white-space:nowrap" onclick="eaMarcarTempo(\''+e.k+'\')">'+rot+'</button></span>'
+            +'<span class="val ea-passo-btn"><button class="'+cls+'" style="padding:7px 16px;font-weight:800;white-space:nowrap" onclick="eaMarcarTempo(\''+e.k+'\')">'+rot+'</button></span>'
             +'</div>';
         }).join('')
       +'</div>'
