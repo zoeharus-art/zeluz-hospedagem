@@ -1671,6 +1671,7 @@
     <a data-v="reposicao" class="so-recepcao"><span data-icon="star"></span><span>Reposições</span></a>
     <a data-v="orcamento" class="so-recepcao"><span data-icon="star"></span><span>Orçamento de Hospedagem</span></a>
 
+    <a data-v="alergia" class="so-gestao"><span data-icon="star"></span><span>Alergia a confirmar</span></a>
     <a data-v="eahist" class="so-gestao"><span data-icon="star"></span><span>Histórico do EA</span></a>
     <a data-v="relatorios" class="so-gestao"><span data-icon="star"></span><span>Relatórios</span></a>
     <a data-v="acerto" class="so-master"><span data-icon="star"></span><span>Acerto das Plantonistas</span></a>
@@ -3066,6 +3067,14 @@
        para clicar e descobrir o que foi o EA do dia. Alguns tutores precisam da informação...
        ele teve uma gastro, o tutor levou ao hospital de madrugada, o médico perguntará o que
        ele comeu hoje. Essa informação pode salvar vidas." -->
+  <!-- ALERGIA A CONFIRMAR — Adriana, 20/ago/2026. A consultora clica no nome, copia a
+       mensagem pronta e manda no WhatsApp. Quando o tutor responde, ela marca aqui.
+       Ciclo de 6 meses: a lista pode ter aumentado, então pergunta-se a todos de novo. -->
+  <section class="view" id="v-alergia">
+    <div class="role-note so-gestao"><span data-icon="star"></span><span>É uma <strong>rotina de cuidado</strong>, não uma cobrança. A mensagem já vem pronta e personalizada: pergunta de cio só para as fêmeas, e microchip só para quem ainda não tem cadastrado.</span></div>
+    <div id="algPainel"></div>
+  </section>
+
   <section class="view" id="v-eahist">
     <div class="role-note so-gestao"><span data-icon="star"></span><span>Clique num dia para ver <strong>o que foi montado</strong>, quem participou e quem não pôde. É a resposta pronta para quando um tutor — ou um veterinário de plantão — perguntar o que o FILHOt comeu naquele dia.</span></div>
     <div id="eaHistPainel"></div>
@@ -3598,6 +3607,7 @@
     checkin:['Check-in','Entrada da estadia — ficha, pertences e assinatura'],
     conferencia:['Conferência Check-in','Pertences etiquetados, ração pesada e alarmes testados'],
     orcamento:['Orçamento de Hospedagem','Diárias, pernoites e desconto do plano — com a mensagem pronta para o tutor'],
+    alergia:['Alergia a confirmar','Quem ainda não respondeu sobre restrições — com a mensagem pronta'],
     eahist:['Histórico do EA','O que foi montado em cada dia, quem participou e quem não pôde'],
     relatorios:['Relatórios','Tudo que dá para baixar em Excel, num lugar só'],
     acerto:['Acerto das Plantonistas','Quanto cada noite vale, quem dormiu aqui e o que está a pagar'],
@@ -3654,6 +3664,7 @@
     if(v==='inativos'){ if(typeof renderInativos==='function') renderInativos(); }
     if(v==='reposicao'){ if(typeof renderReposicao==='function') renderReposicao(); }
     if(v==='eahist'){ if(typeof eaHistInit==='function') eaHistInit(); }
+    if(v==='alergia'){ if(typeof algCarregar==='function') algCarregar(); }
     if(v==='renovacao'){ if(typeof renderRenovacao==='function') renderRenovacao(); }
     if(v==='daycare'){ if(typeof abrirDayCare==='function') abrirDayCare(); }
     if(v==='orcamento'){ if(typeof orcInit==='function') orcInit(); }
@@ -8860,7 +8871,7 @@
   // Agora existe um carimbo: esta constante é a versão que o aparelho está rodando, e o
   // Firebase guarda a versão publicada. Quando as duas diferem, aparece o aviso — mas
   // NUNCA recarrega sozinho: recarregar no meio de um check-in perderia o trabalho.
-  const APP_VERSAO='2026-08-20-08';
+  const APP_VERSAO='2026-08-20-09';
   function vigiarVersao(){
     if(!DB) return;
     try{
@@ -15411,6 +15422,150 @@
           +EA_SEM_RESP+' FILHOt'+(EA_SEM_RESP>1?'s':'')+' ainda sem a resposta do tutor sobre restrição. '
           +'A gestão está confirmando — não é tarefa do monitor.</div>'):'')
       +'</div>';
+  }
+  // ===== ALERGIA A CONFIRMAR — Adriana, 20/ago/2026 ==============================
+  // "A consultora clica no nome, abre a mensagem pronta, copia, manda no WhatsApp. Quando o
+  //  tutor responde, ela marca 'tutor respondeu' + a data. Duas listas: HÓSPEDES e AULUNOS.
+  //  De 6 em 6 meses pergunta de novo — a lista de restrições pode ter aumentado."
+  // Personalização que ela pediu: cio só para fêmeas (e some se já consta castrada);
+  // microchip só para quem ainda não tem; e "interação difícil", nunca "arrumar confusão".
+  var ALG_RESP={};             // {chave:{quando, quem, resposta}}
+  var ALG_MESES=6;
+  function algCarregar(){
+    if(!document.getElementById('algPainel')) return;
+    if(!DB){ ALG_RESP={}; algRender(); return; }
+    document.getElementById('algPainel').innerHTML='<div class="card"><div class="hint">Carregando…</div></div>';
+    DB.ref('daycare/alergia-confirmada').once('value').then(function(s){ ALG_RESP=s.val()||{}; algRender(); })
+      .catch(function(e){
+        var el=document.getElementById('algPainel'); if(!el) return;
+        el.innerHTML='<div class="card" style="border-left:4px solid var(--crm-critico)">'
+          +'<h2 style="font-size:17px">Não consegui ler as respostas</h2>'
+          +'<div class="hint">'+escAttr((e&&e.message)||'falha de conexão')+'. Não dá para saber quem já respondeu — melhor não perguntar de novo por engano. Tente outra vez.</div>'
+          +'<button class="btn btn-gold" style="margin-top:8px" onclick="algCarregar()">Tentar de novo</button></div>';
+      });
+  }
+  // Meses desde a última resposta. Sem resposta nenhuma devolve null.
+  function algMesesDesde(iso){
+    if(!iso) return null;
+    try{
+      var p=String(iso).slice(0,10).split('-');
+      var d=new Date(+p[0],+p[1]-1,+p[2]), h=new Date();
+      return (h.getFullYear()-d.getFullYear())*12+(h.getMonth()-d.getMonth());
+    }catch(e){ return null; }
+  }
+  function algLista(){
+    var out={hospede:[], auluno:[]};
+    try{
+      (PELUDINHOS||[]).forEach(function(p){
+        if(typeof pelInativo==='function'&&pelInativo(p)) return;
+        var cat=(typeof pelCategoria==='function')?pelCategoria(p):'auluno';
+        if(cat==='morador') return;                       // a moradora não tem tutor a consultar
+        var k=pelKey(p);
+        var r=ALG_RESP[k]||null;
+        var meses=r?algMesesDesde(r.quando):null;
+        var vencido=(meses!=null&&meses>=ALG_MESES);
+        if(r&&!vencido) return;                           // respondeu e ainda vale
+        out[(cat==='hospede'||cat==='avulso')?'hospede':'auluno']
+          .push({p:p, k:k, nome:pelNome(p), r:r, meses:meses, vencido:vencido});
+      });
+    }catch(e){}
+    ['hospede','auluno'].forEach(function(c){
+      out[c].sort(function(a,b){ return (b.vencido?1:0)-(a.vencido?1:0) || jsNorm(a.nome).localeCompare(jsNorm(b.nome)); });
+    });
+    return out;
+  }
+  // O texto é o da Adriana, palavra por palavra. O que muda por FILHOt: nome, tutor, gênero,
+  // e as perguntas que não fazem sentido para ele saem — perguntar o que já se sabe é o que
+  // faz o tutor achar que ninguém olha a ficha.
+  function algMensagem(p){
+    var ex=(typeof pelExtra==='function'?pelExtra(p):{})||{};
+    var tutor=String((typeof pelGet==='function'?pelGet(p,'tutor'):'')||ex.tutor||'').trim().split(/\s+/)[0]||'';
+    var nome=pelNome(p);
+    var femea=/^f/i.test(String(ex.sexo||''));
+    var castrada=/^s/i.test(String(ex.castrado||''));
+    var temChip=!!String(ex.microchip||ex.chip||'').trim();
+    var L=[];
+    L.push('Olá'+(tutor?(', '+tutor):'')+'! Como você está?');
+    L.push('');
+    L.push('Aqui na Zêluz, acreditamos que cada cuidado é ÚNICO. Por isso, estamos fazendo uma atualização preventiva das fichas dos nossos aulunos: queremos conhecer ainda melhor cada detalhe d'+(femea?'a ':'o ')+nome+' para oferecer uma rotina cada vez mais segura, confortável e personalizada.');
+    L.push('');
+    L.push('É uma rotina de cuidado, não uma cobrança. Você pode responder por tópicos e, se não souber alguma informação agora, basta nos avisar.');
+    L.push('');
+    L.push('Sobre '+(femea?'a ':'o ')+nome+', gostaríamos de confirmar:');
+    L.push('');
+    var n=0, pergunta=function(t){ L.push((++n)+'. '+t); };
+    pergunta('Existe alguma restrição, sensibilidade ou alergia? Pode ser a algum alimento, fruta, petisco, produto, fragrância ou cheiro específico.');
+    pergunta('Há alguma atividade física que precise ser evitada ou adaptada? Na nossa Aucademia temos esteira e o espaço do Day Care possui alguns degraus de acesso, que não são utilizados continuamente. Queremos adaptar tudo às necessidades d'+(femea?'a ':'o ')+nome+'.');
+    pergunta('Quando foi realizado o último check-up?');
+    if(!temChip) pergunta((femea?'A ':'O ')+nome+' possui microchip? Se sim, poderia nos enviar o número para conferirmos e mantermos a ficha atualizada?');
+    pergunta('Houve alguma mudança recente de comportamento? Por exemplo: ficou mais receoso, irritado, quieto, inseguro ou sensível ao toque?');
+    pergunta('Aconteceu alguma situação que possa ter sido estressante? Pode ter sido uma interação difícil com outro peludo durante um passeio, na praça ou em algum ambiente público — mesmo que tenha parecido algo pequeno.');
+    // Cio: só para fêmeas, e some se a ficha já diz que é castrada.
+    if(femea&&!castrada) pergunta('Quando foi o último cio? Se não souber a data exata, uma estimativa aproximada já ajuda.');
+    L.push('');
+    L.push('Muito obrigada por nos ajudar a cuidar ainda melhor d'+(femea?'a ':'o ')+nome+'. Essas informações fazem diferença porque permitem que nossa equipe perceba preferências, limites e mudanças individuais com mais atenção.');
+    L.push('');
+    L.push('Cuidar bem começa por conhecer bem.');
+    L.push('Aqui, cada cuidado é ÚNICO. 🐾');
+    return L.join('\n');
+  }
+  function algCopiar(btn){
+    var ta=btn.parentNode.querySelector('.alg-msg'); if(!ta) return;
+    ta.select(); try{ document.execCommand('copy'); }catch(e){}
+    var t=btn.textContent; btn.textContent='✅ Copiado!'; setTimeout(function(){ btn.textContent=t; },1600);
+  }
+  var ALG_ABERTO='';
+  function algAbrir(k){ ALG_ABERTO=(ALG_ABERTO===k)?'':k; algRender(); }
+  function algResponder(k){
+    if(!DB) return;
+    var inp=document.getElementById('algResp_'+k);
+    var dt=document.getElementById('algData_'+k);
+    var quando=(dt&&dt.value)||(new Date()).toISOString().slice(0,10);
+    var reg={quando:quando, quem:(typeof quemSou==='function'?quemSou():'-'),
+             resposta:((inp&&inp.value)||'').trim(), ts:Date.now()};
+    DB.ref('daycare/alergia-confirmada/'+k).set(reg).then(function(){
+      ALG_RESP[k]=reg; ALG_ABERTO='';
+      if(typeof audit==='function') audit('alergia-confirmada', k, {quando:quando, resposta:reg.resposta});
+      algRender();
+    }).catch(function(e){ alert('Não consegui gravar: '+((e&&e.message)||e)); });
+  }
+  function algBlocoHTML(titulo, arr){
+    if(!arr.length) return '<div class="card"><h2 style="font-size:18px">'+escAttr(titulo)+'</h2><div class="hint">Ninguém pendente aqui.</div></div>';
+    return '<div class="card"><h2 style="font-size:18px">'+escAttr(titulo)+' ('+arr.length+')</h2>'
+      +'<div class="hint">Toque no nome para abrir a mensagem pronta.</div>'
+      +arr.map(function(x){
+        var aberto=(ALG_ABERTO===x.k);
+        var hoje=(new Date()).toISOString().slice(0,10);
+        return '<div style="border-top:1px solid var(--line);padding:9px 0">'
+          +'<div style="cursor:pointer;display:flex;justify-content:space-between;align-items:baseline" onclick="algAbrir(\''+escAttr(x.k).replace(/'/g,"\\'")+'\')">'
+          +'<span style="font-weight:800;color:var(--z-blue);font-size:16px">'+escAttr(x.nome)+'</span>'
+          +'<span style="font-size:12px;font-weight:800;color:'+(x.vencido?'var(--crm-atencao-text)':'var(--crm-critico)')+'">'
+          +(x.vencido?('respondeu há '+x.meses+' meses — perguntar de novo'):'nunca respondeu')+'</span></div>'
+          +(aberto
+            ? '<div style="margin-top:8px">'
+              +'<textarea class="gest-txt alg-msg" readonly rows="12" style="width:100%">'+escAttr(algMensagem(x.p))+'</textarea>'
+              +'<button type="button" class="btn btn-gold" style="width:100%;margin:7px 0" onclick="algCopiar(this)">📋 Copiar mensagem</button>'
+              +'<div class="hint" style="margin-top:6px">Quando o tutor responder, escreva aqui o que ele disse e a data da resposta.</div>'
+              +'<input class="cad-in" id="algResp_'+escAttr(x.k)+'" placeholder="O que o tutor respondeu" autocomplete="off" style="margin:6px 0">'
+              +'<input class="cad-in" type="date" id="algData_'+escAttr(x.k)+'" value="'+hoje+'" style="margin-bottom:8px">'
+              +'<button type="button" class="btn btn-primary" style="width:100%" onclick="algResponder(\''+escAttr(x.k).replace(/'/g,"\\'")+'\')">✅ O tutor respondeu</button>'
+              +'</div>'
+            : '')
+          +'</div>';
+      }).join('')
+      +'</div>';
+  }
+  function algRender(){
+    var el=document.getElementById('algPainel'); if(!el) return;
+    if(typeof PELUDINHOS==='undefined'){ el.innerHTML='<div class="card"><div class="hint">Carregando o cadastro…</div></div>'; return; }
+    var L=algLista();
+    var total=L.hospede.length+L.auluno.length;
+    el.innerHTML='<div class="card" style="border-left:4px solid '+(total?'var(--crm-atencao)':'var(--crm-ok)')+'">'
+      +'<h2 style="font-size:19px">'+(total?(total+' a confirmar'):'Todos confirmados')+'</h2>'
+      +'<div class="hint">A pergunta é refeita a cada <strong>'+ALG_MESES+' meses</strong>: a lista de restrições de um FILHOt muda com o tempo, e o que ele não podia ano passado pode não ser o mesmo de hoje.</div>'
+      +'</div>'
+      +algBlocoHTML('Hóspedes', L.hospede)
+      +algBlocoHTML('Aulunos', L.auluno);
   }
   // ===== HISTÓRICO DO EA — o calendário da gestão ================================
   // Lê o nó inteiro de uma vez (um registro por dia, é pequeno) e desenha o mês. Dia com EA
