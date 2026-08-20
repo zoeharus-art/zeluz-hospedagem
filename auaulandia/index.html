@@ -8828,7 +8828,7 @@
   // Agora existe um carimbo: esta constante é a versão que o aparelho está rodando, e o
   // Firebase guarda a versão publicada. Quando as duas diferem, aparece o aviso — mas
   // NUNCA recarrega sozinho: recarregar no meio de um check-in perderia o trabalho.
-  const APP_VERSAO='2026-08-20-03';
+  const APP_VERSAO='2026-08-20-04';
   function vigiarVersao(){
     if(!DB) return;
     try{
@@ -12893,11 +12893,11 @@
                Vale para AULUNO e para HÓSPEDE. É o que monta a lista do EA. -->
           <div class="field" style="grid-column:1/-1">
             <label>Restrição no Enriquecimento Ambiental (EA)</label>
-            <input class="cad-in" value="${escAttr(ex.ea_restr||'')}" placeholder="O que ele NÃO pode. Ex: abobrinha · feno · TUDO" onchange="setPelExtra(pelAtual,{ea_restr:this.value, ea_restr_nao:false});renderPelFicha()">
+            <input class="cad-in" value="${escAttr(ex.ea_restr||ex.restricao||'')}" placeholder="O que ele NÃO pode. Ex: abobrinha · feno · TUDO" onchange="setPelExtra(pelAtual,{ea_restr:this.value, ea_restr_nao:false});renderPelFicha()">
             <div style="margin-top:5px">
               <button type="button" class="btn" style="padding:5px 12px;font-size:12px;font-weight:800;border:1.5px solid var(--line);background:${ex.ea_restr_nao?'var(--z-gold)':'var(--z-cream-warm)'};color:var(--z-blue)" onclick="setPelExtra(pelAtual,{ea_restr_nao:${ex.ea_restr_nao?'false':'true'}, ea_restr:''});renderPelFicha()">${ex.ea_restr_nao?'✓ não tem restrição — perguntei ao tutor':'não tem restrição (perguntei ao tutor)'}</button>
             </div>
-            <div class="hint" style="margin-top:4px">${(!ex.ea_restr&&!ex.ea_restr_nao)?'<span style="color:var(--crm-critico);font-weight:800">FALTA RESPONDER.</span> Enquanto ficar em branco, ele aparece no EA como <strong>a confirmar</strong> — ninguém pode adivinhar.':'Ele aparece na lista do EA sempre que a atividade do dia tiver algo que ele não pode.'}</div>
+            <div class="hint" style="margin-top:4px">${(!ex.ea_restr&&ex.restricao)?'Herdado da restrição alimentar já cadastrada: <strong>'+escAttr(ex.restricao)+'</strong>. Se no EA for diferente, escreva acima.':((!ex.ea_restr&&!ex.ea_restr_nao)?'<span style="color:var(--crm-critico);font-weight:800">FALTA RESPONDER.</span> Sem resposta, ele entra na contagem de pendências da gestão — e o monitor não vê palpite na tela dele.':'Ele aparece na lista do EA sempre que a atividade do dia tiver algo que ele não pode.')}</div>
           </div>
           <!-- O EA acontece em DUAS matilhas: pequeno e médio porte. É por elas que a tela
                do EA se divide em duas colunas. -->
@@ -15059,13 +15059,39 @@
   // Schapiro (1991), a mesma usada em zoológicos, na etologia clínica e nos cursos
   // brasileiros de enriquecimento pet. Descrição curta de propósito: é para o monitor
   // escolher em dois segundos, não para estudar.
+  // Textos reescritos por Adriana em 20/ago/2026: "não está didático". A descrição ENSINA o
+  // monitor — não é rótulo. O Social era o pior: dava a entender que o convívio de todo dia
+  // já contava ("todo dia ele teria, então").
   var EA_TIPOS=[
-    {k:'alimentar', t:'Alimentar', d:'a comida dá trabalho para conseguir — esconder, congelar, espalhar'},
-    {k:'sensorial', t:'Sensorial', d:'cheiro, som, textura, sabor: ervas, folhas, superfícies diferentes'},
-    {k:'cognitivo', t:'Cognitivo', d:'ele precisa pensar para resolver — encaixe, desafio, escolha'},
-    {k:'fisico',    t:'Físico',    d:'o espaço muda: obstáculos, alturas, esconderijos, água'},
-    {k:'social',    t:'Social',    d:'convívio: com outros FILHOts ou com a gente'}
+    {k:'alimentar', t:'Alimentar', d:'Na natureza, a comida dá trabalho para conseguir. Esconder, congelar, espalhar, fazer procurar: ele come devagar, gasta energia da cabeça e vive mais.'},
+    {k:'sensorial', t:'Sensorial', d:'Dar ao faro, à boca e à pele algo novo para sentir: ervas, folhas, gelo, texturas diferentes no chão. O olfato é o sentido mais forte do FILHOt.'},
+    {k:'cognitivo', t:'Cognitivo', d:'Todos precisam de desafio, e com os nossos FILHOts não é diferente. Aqui ele precisa PENSAR para conseguir: encaixe, quebra-cabeça, escolher entre dois caminhos.'},
+    {k:'fisico',    t:'Físico',    d:'Mudar o espaço, e não apenas usar o espaço: obstáculos, subidas, esconderijos, água, um caminho novo por onde ele nunca passou.'},
+    {k:'social',    t:'Social',    d:'Não é o convívio de todo dia — esse ele já tem. É o encontro PLANEJADO: apresentar uma dupla nova, conduzir uma brincadeira em grupo, trazer alguém de fora da rotina dele.'}
   ];
+  // Uma frase por dia, sempre a mesma para todo mundo no mesmo dia (por isso o cálculo pelo
+  // dia do ano, e não sorteio). Adriana, 20/ago/2026: "a frase que ensina, que fala da
+  // importância, e o porquê. Senão os monitores acham que não tem ciência, apenas bobagem.
+  // Além de facilitar os protocolos, queremos ENSINAR com o SaaS."
+  var EA_FRASES=[
+    'Um FILHOt que passa o dia sem nada para resolver não fica calmo: fica entediado. E o tédio vira latido, buraco no chão e ansiedade.',
+    'Cão que fareja por dez minutos cansa mais do que cão que corre por meia hora. O nariz gasta mais energia do que as patas.',
+    'Enriquecimento não é brinquedo novo. É dar ao FILHOt a chance de fazer o que ele nasceu para fazer: procurar, cheirar, escolher, resolver.',
+    'Comer no potinho leva dois minutos. Comer procurando leva vinte — e esses dezoito minutos a mais são saúde mental.',
+    'Repetir o mesmo enriquecimento todo dia deixa de ser enriquecimento. A novidade é metade do remédio.',
+    'O que para nós é uma folha de hortelã, para ele é uma notícia. O olfato do FILHOt é até cem mil vezes mais sensível que o nosso.',
+    'FILHOt que tem o que fazer dorme melhor, come melhor e briga menos. O EA é prevenção de comportamento, não passatempo.',
+    'Enriquecimento bom é aquele em que ele erra algumas vezes antes de acertar. Fácil demais não ensina nada.',
+    'Idoso também precisa de EA — só que mais fácil de alcançar. Parar de estimular o cérebro é o que o envelhece rápido.',
+    'Cinco tipos existem porque um só não basta: comida, cheiro, pensar, espaço e convívio. Um FILHOt completo recebe todos ao longo da semana.',
+    'A cara dele resolvendo sozinho é o melhor indicador de que deu certo. Se você precisou entregar, foi fácil demais.',
+    'Enriquecimento ambiental é protocolo de bem-estar reconhecido pela ciência, usado em zoológicos do mundo inteiro. Aqui, cada cuidado é ÚNICO.'
+  ];
+  function eaFraseDoDia(){
+    var d=new Date(), ini=new Date(d.getFullYear(),0,0);
+    var dia=Math.floor((d-ini)/86400000);
+    return EA_FRASES[dia%EA_FRASES.length];
+  }
   // ===== PORTE POR RAÇA — Adriana, 20/ago/2026 ==================================
   // "Westies são médio porte... todos os beagle, pastores de shetland, norfolk.
   //  Pequeno porte: Spitz, chihuahua, maltês, shih-tzu, york."
@@ -15098,21 +15124,25 @@
   }
   // Adriana, 20/ago/2026: "cliquei em salvar e nada apareceu — salvou ou não salvou?"
   // Ação sem retorno visível é ação que a pessoa acha que não funcionou. Agora fala.
+  // ⚠ 20/ago/2026 — o bug que fez ela dizer "cliquei em salvar e nada apareceu" DUAS vezes:
+  // a mensagem era escrita no <span> e, na linha seguinte, renderEA() recriava o innerHTML
+  // inteiro — o span nascia vazio de novo. Salvava de verdade; ela nunca via. Agora o aviso
+  // MORA NO ESTADO e é o próprio render que o desenha, então sobrevive ao redesenho.
+  var EA_AVISO=null;   // {ok:bool, txt:string, ts:number}
+  function eaDizer(ok,msg){
+    EA_AVISO={ok:ok, txt:msg, ts:Date.now()};
+    renderEA();
+    if(ok) setTimeout(function(){ try{ if(EA_AVISO&&Date.now()-EA_AVISO.ts>=3900){ EA_AVISO=null; renderEA(); } }catch(e){} }, 4000);
+  }
   function eaSalvarTexto(){
     var v=String((document.getElementById('eaTexto')||{}).value||'').trim();
     EA_DIA=EA_DIA||{}; EA_DIA.oque=v;
-    var dizer=function(ok,msg){
-      var st=document.getElementById('eaSalvoSt'); if(!st) return;
-      st.style.color=ok?'var(--crm-ok)':'var(--crm-critico)';
-      st.style.fontWeight='800'; st.textContent=msg;
-      if(ok) setTimeout(function(){ try{ st.textContent=''; }catch(e){} }, 4000);
-    };
-    if(!DB){ dizer(false,'sem conexão — NÃO salvou'); return; }
+    if(!DB){ eaDizer(false,'sem conexão — NÃO salvou. Tente de novo em instantes.'); return; }
+    eaDizer(true,'salvando…');
     DB.ref(eaNo()+'/oque').set(v).then(function(){
-      dizer(true, v?('✅ salvo: '+v):'✅ apagado');
+      eaDizer(true, v?('✅ salvo: '+v):'✅ apagado');
       if(typeof audit==='function'&&v) audit('ea','EA do dia: '+v,{});
-      renderEA();
-    }).catch(function(e){ dizer(false,'NÃO salvou: '+((e&&e.message)||e)); });
+    }).catch(function(e){ eaDizer(false,'NÃO salvou: '+((e&&e.message)||e)); });
   }
   // Toque no item do catálogo: entra ou sai do texto do dia. Sem digitar, sem errar o nome.
   function eaToggleItem(item){
@@ -15148,20 +15178,50 @@
   // Casa por palavra: "abobrinha + hortelã" bate com quem tem restrição a abobrinha.
   // Quem tem restrição a TUDO entra sempre. Quem nunca respondeu entra como "a confirmar" —
   // ninguém adivinha por FILHOt nenhum.
+  // ⚠ Adriana, 20/ago/2026: "não pode aparecer todo mundo (a confirmar), tira isso. Só aparece
+  // quem tem CERTEZA." Quem nunca respondeu deixou de virar linha na tela do monitor — a lista
+  // existe para ele agir, e ele não age sobre dúvida. A pendência não some: vira UMA linha de
+  // contagem no rodapé, e o trabalho de confirmar é da gestão, não do monitor.
+  var EA_SEM_RESP=0;
+  // ⚠ 20/ago/2026 — a ficha JÁ TINHA o campo `restricao` preenchido para 18 FILHOts (Ragnar
+  // "Tudo", Lanna "Tudo", Kira "cenoura"...). Criar um campo novo e vazio jogou todo mundo em
+  // "a confirmar" enquanto o dado estava ali do lado. Agora a base é o que já existe; ea_restr
+  // só refina quando alguém escreve algo específico do EA.
+  function eaRestricaoDe(ex){
+    return String(ex.ea_restr||ex.restricao||ex.restricoes||ex.alergia||'').trim();
+  }
+  // "Abrobrinha" está cadastrado assim na ficha do Palito. Comparar letra a letra deixaria ele
+  // comer abobrinha. Aceita UM erro de digitação em palavras de 6 letras ou mais.
+  function eaQuaseIgual(a,b){
+    if(a===b) return true;
+    if(a.length<6||b.length<6) return false;
+    if(Math.abs(a.length-b.length)>1) return false;
+    var i=0,j=0,erros=0;
+    while(i<a.length&&j<b.length){
+      if(a[i]===b[j]){ i++; j++; continue; }
+      if(++erros>1) return false;
+      if(a.length>b.length) i++; else if(b.length>a.length) j++; else { i++; j++; }
+    }
+    return (erros + (a.length-i) + (b.length-j))<=1;
+  }
+  function eaCasa(restrNorm, palavra){
+    if(restrNorm.indexOf(palavra)>=0) return true;
+    return restrNorm.split(/[^a-z0-9]+/).some(function(w){ return w.length>2 && eaQuaseIgual(w,palavra); });
+  }
   function eaImpedidos(){
     var oque=String((EA_DIA&&EA_DIA.oque)||'').trim();
     var palavras=jsNorm(oque).split(/[^a-z0-9]+/).filter(function(w){ return w.length>2; });
-    var out=[];
+    var out=[]; EA_SEM_RESP=0;
     (turmaDoDia()||[]).forEach(function(o){
       var ex=(typeof pelExtra==='function'?pelExtra(o.p):{})||{};
-      var r=String(ex.ea_restr||'').trim();
+      var r=eaRestricaoDe(ex);
       var nao=!!ex.ea_restr_nao;
       if(nao) return;                                   // tutor liberou tudo
-      if(!r){ out.push({o:o, motivo:'', tipo:'confirmar'}); return; }
+      if(!r){ EA_SEM_RESP++; return; }                  // sem resposta: conta, mas não polui a tela
       var rn=jsNorm(r);
       if(/\btudo\b|\btodos\b|\bnada\b/.test(rn)){ out.push({o:o, motivo:r, tipo:'tudo'}); return; }
-      if(!oque) return;                                  // sem EA digitado, só os de "tudo" e os a confirmar
-      var bateu=palavras.filter(function(w){ return rn.indexOf(w)>=0; });
+      if(!oque) return;                                  // sem EA digitado, só os de "tudo"
+      var bateu=palavras.filter(function(w){ return eaCasa(rn,w); });
       if(bateu.length) out.push({o:o, motivo:r, tipo:'item'});
     });
     return out;
@@ -15179,11 +15239,12 @@
       +(lista.length
         ? lista.map(function(x){
             var nome=((typeof pelNome==='function')?pelNome(x.o.p):'')||x.o.p.n||'';
-            var eh=(x.tipo==='confirmar');
+            // "Restrição a TUDO" (Ragnar, Dino) fala do que é INGERIDO — não de cheiro nem de
+            // brincadeira. Ele participa do EA; o que ele não pode é comer o que foi montado.
             return '<div style="padding:7px 0;border-bottom:1px solid var(--line)">'
-              +'<span style="font-weight:800;color:'+(eh?'var(--crm-atencao-text)':'var(--crm-critico)')+';font-size:15px">'+escAttr(nome)+'</span>'
+              +'<span style="font-weight:800;color:var(--crm-critico);font-size:15px">'+escAttr(nome)+'</span>'
               +'<div style="font-size:12.5px;font-weight:700;color:var(--z-blue)">'
-              +(eh?'a confirmar com o tutor':(x.tipo==='tudo'?'NÃO PODE NADA':'não pode: '+escAttr(x.motivo)))
+              +(x.tipo==='tudo'?'NÃO PODE COMER NADA do que foi montado':'não pode: '+escAttr(x.motivo))
               +(x.o.daPlanilha?(' · '+escAttr(String(x.o.daPlanilha).toUpperCase())):'')+'</div></div>';
           }).join('')
         : '<div class="hint" style="padding-top:7px">ninguém</div>')
@@ -15201,11 +15262,12 @@
     var tipos=(EA_DIA&&EA_DIA.tipos)||{};
     var escolhidos=jsNorm(oque).split(/\s*\+\s*|\s*,\s*/).map(function(s){ return s.trim(); }).filter(Boolean);
     el.innerHTML=
-      // frase que ensina, com o nome de quem está na tela
+      // A frase MUDA TODO DIA e vem com o nome de quem está na tela. É o que faz o monitor
+      // entender que EA é ciência, e não "bobagem" — ensinar pelo uso.
       '<div class="card" style="border-left:4px solid var(--z-gold)">'
       +'<div style="font-weight:800;color:var(--z-blue);font-size:15px">'
       +(eu?(escAttr(eu)+', o'):'O')+' EA é dos cuidados mais importantes do dia.</div>'
-      +'<div style="font-size:13px;color:var(--z-blue-soft);font-weight:600;margin-top:2px">Você sabia que existem <strong>cinco tipos</strong> de enriquecimento ambiental? Marque abaixo quais você trabalhou hoje.</div>'
+      +'<div style="font-size:14px;color:var(--z-blue);font-weight:600;margin-top:6px;line-height:1.45">'+escAttr(eaFraseDoDia())+'</div>'
       +'</div>'
       +'<div class="card">'
       +'<h2 style="font-size:17px">O que foi montado hoje</h2>'
@@ -15219,10 +15281,11 @@
       +'</div>'
       +'<input class="cad-in" id="eaTexto" value="'+escAttr(oque)+'" placeholder="ou escreva aqui o que não está na lista" autocomplete="off" onchange="eaSalvarTexto()">'
       +'<button class="btn btn-gold" style="margin-top:8px" onclick="eaSalvarTexto()">Salvar</button>'
-      +'<span id="eaSalvoSt" class="hint" style="margin-left:8px"></span>'
+      +(EA_AVISO?('<span style="margin-left:10px;font-weight:800;font-size:13px;color:'
+          +(EA_AVISO.ok?'var(--crm-ok)':'var(--crm-critico)')+'">'+escAttr(EA_AVISO.txt)+'</span>'):'')
       +'</div>'
       // ---- os 5 tipos ----
-      +'<div class="card"><h2 style="font-size:17px">Tipos trabalhados hoje</h2>'
+      +'<div class="card"><h2 style="font-size:17px">Tipos de Enriquecimento aplicados na atividade de hoje</h2>'
       +EA_TIPOS.map(function(tp){
           var on=!!tipos[tp.k];
           return '<div style="border-top:1px solid var(--line);padding:8px 0;display:flex;gap:10px;align-items:flex-start;cursor:pointer" onclick="eaToggleTipo(\''+tp.k+'\')">'
@@ -15231,6 +15294,11 @@
             +'<span><strong style="color:var(--z-blue)">'+escAttr(tp.t)+'</strong>'
             +'<div style="font-size:12.5px;color:var(--muted);font-weight:600">'+escAttr(tp.d)+'</div></span></div>';
         }).join('')
+      // A fonte na tela: é ciência, e o monitor precisa ver isso.
+      +'<div style="border-top:2px solid var(--z-gold);margin-top:10px;padding-top:8px;font-size:12px;color:var(--z-blue-soft);font-weight:700;line-height:1.45">'
+      +'Estes cinco tipos são a classificação de <strong>Bloomsmith, Brent &amp; Schapiro (1991)</strong>, '
+      +'a mesma usada em zoológicos, na etologia clínica e no bem-estar animal no mundo inteiro. '
+      +'Isto é ciência aplicada ao dia do FILHOt — não é passatempo.</div>'
       +'</div>'
       // ---- os quatro tempos, um por linha, sem faixa nem enfeite ----
       +'<div class="card">'
@@ -15260,6 +15328,10 @@
       // entre as duas — e isso se decide pelo comportamento, não pelo tamanho.
       +eaColunaHTML('Outro / a definir', mat('o'))
       +'</div>'
+      // A pendência não some da empresa — só sai da tela de quem não pode resolvê-la.
+      +(EA_SEM_RESP?('<div class="hint" style="margin-top:10px;border-top:1px solid var(--line);padding-top:7px">'
+          +EA_SEM_RESP+' FILHOt'+(EA_SEM_RESP>1?'s':'')+' ainda sem a resposta do tutor sobre restrição. '
+          +'A gestão está confirmando — não é tarefa do monitor.</div>'):'')
       +'</div>';
   }
   function renderGenerico(){
