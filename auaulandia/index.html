@@ -1941,6 +1941,13 @@
       <div id="ptFicha" style="display:none"></div>
     </div>
     <div id="scr-generic" class="dc-scr" style="display:none">
+      <!-- ENRIQUECIMENTO AMBIENTAL — Adriana, 19/ago/2026 ==========================
+           "Preciso de um campo EA do dia: a pessoa digita 'abobrinha + hortelã', ou coco,
+            ou feno... Ao digitar, aparecem na tela SOMENTE os que NÃO podem participar —
+            ou seja, os que têm restrição. E 4 marcadores de tempo."
+           A lista invertida é o ponto: com 50 FILHOts, procurar quem não pode numa lista de
+           todos é onde o erro mora. Aqui a tela mostra só os 3 ou 4 que importam. -->
+      <div id="eaPainel" style="display:none"></div>
       <div class="role-note" id="genNota"><span data-icon="star"></span><span id="genNotaTxt">Marque <strong>Feito</strong> em cada peludinho que passou por esta atividade. Cada atividade terá seu protocolo próprio em breve.</span></div>
       <div id="genResumo"></div>
       <div class="pel-toolbar"><span class="pel-count" id="genCount"></span></div>
@@ -8820,7 +8827,7 @@
   // Agora existe um carimbo: esta constante é a versão que o aparelho está rodando, e o
   // Firebase guarda a versão publicada. Quando as duas diferem, aparece o aviso — mas
   // NUNCA recarrega sozinho: recarregar no meio de um check-in perderia o trabalho.
-  const APP_VERSAO='2026-08-19-11';
+  const APP_VERSAO='2026-08-20-01';
   function vigiarVersao(){
     if(!DB) return;
     try{
@@ -12878,6 +12885,19 @@
                O campo não existia — sem ele o relatório listaria todo mundo. Guarda o número;
                quem fica em branco é exatamente quem falta. -->
           <div class="field"><label>Microchip (número)</label><input class="cad-in" value="${escAttr(ex.microchip||'')}" placeholder="Só os números — em branco quer dizer que ainda não tem" onchange="setPelExtra(pelAtual,{microchip:this.value})"></div>
+          <!-- RESTRIÇÃO DO ENRIQUECIMENTO AMBIENTAL — Adriana, 19/ago/2026:
+               "cada um tem restrição: alguns a abobrinha, outros a feno, outros a tudo...
+                precisa ser um campo na ficha do peludinho, campo obrigatório; se não tem,
+                tem que marcar 'não tem' — foi perguntado ao tutor e tudo foi liberado."
+               Vale para AULUNO e para HÓSPEDE. É o que monta a lista do EA. -->
+          <div class="field" style="grid-column:1/-1">
+            <label>Restrição no Enriquecimento Ambiental (EA)</label>
+            <input class="cad-in" value="${escAttr(ex.ea_restr||'')}" placeholder="O que ele NÃO pode. Ex: abobrinha · feno · TUDO" onchange="setPelExtra(pelAtual,{ea_restr:this.value, ea_restr_nao:false});renderPelFicha()">
+            <div style="margin-top:5px">
+              <button type="button" class="btn" style="padding:5px 12px;font-size:12px;font-weight:800;border:1.5px solid var(--line);background:${ex.ea_restr_nao?'var(--z-gold)':'var(--z-cream-warm)'};color:var(--z-blue)" onclick="setPelExtra(pelAtual,{ea_restr_nao:${ex.ea_restr_nao?'false':'true'}, ea_restr:''});renderPelFicha()">${ex.ea_restr_nao?'✓ não tem restrição — perguntei ao tutor':'não tem restrição (perguntei ao tutor)'}</button>
+            </div>
+            <div class="hint" style="margin-top:4px">${(!ex.ea_restr&&!ex.ea_restr_nao)?'<span style="color:var(--crm-critico);font-weight:800">FALTA RESPONDER.</span> Enquanto ficar em branco, ele aparece no EA como <strong>a confirmar</strong> — ninguém pode adivinhar.':'Ele aparece na lista do EA sempre que a atividade do dia tiver algo que ele não pode.'}</div>
+          </div>
         </div>
         <!-- HISTORICO DO FILHOt (Adriana, 11/ago/2026: "nao tem historico do filhote").
              A folha de papel nunca deixou ver o passado dele. Aqui esta a linha do tempo dos
@@ -14913,7 +14933,7 @@
         {ok:true, botao:'Fechar', rodape:'O alarme não some sozinho: só para quando alguém der a dose e confirmar com o nome.'});
     }).catch(function(e){ alert('Não salvou: '+((e&&e.message)||e)); });
   }
-  function carregarGenerico(){ genMarcas={};
+  function carregarGenerico(){ genMarcas={}; if(dcAtiv==='ea'){ try{ eaCarregar(); }catch(e){} }
     if(!DB){ renderGenerico(); return; }
     // o 2º horário se monta a partir de quem não comeu, então precisa das marcações do
     // almoço — que só eram carregadas na tela do Almoço (a lista viria vazia aqui).
@@ -15019,7 +15039,116 @@
     if(!list.length&&!met.length) h+=`<div class="alm-fora">Ninguem ficou para o 2º horário e ninguem comeu metade &mdash; nada para avisar aos tutores.</div>`;
     return h;
   }
+  // ===== ENRIQUECIMENTO AMBIENTAL (EA) ============================================
+  // Quatro tempos, porque o trabalho tem quatro partes e cada uma leva o seu: montar,
+  // brincar, desmontar/limpar e o vídeo da Márcia (um por matilha — pequeno e médio porte).
+  var EA_ETAPAS=[
+    {k:'montagem', t:'Montagem do EA',        d:'preparar a atividade'},
+    {k:'atividade',t:'Atividade',             d:'os peludinhos se divertindo'},
+    {k:'limpeza',  t:'Retirada e limpeza',    d:'guardar os itens e limpar a área'},
+    {k:'video',    t:'Vídeo do EA',           d:'2 vídeos: matilha pequena e matilha média'}
+  ];
+  var EA_DIA=null;
+  function eaNo(){ return 'daycare/ea/'+dcDataKey(); }
+  function eaCarregar(){
+    if(!DB){ EA_DIA={}; renderEA(); return; }
+    DB.ref(eaNo()).once('value').then(function(s){ EA_DIA=s.val()||{}; renderEA(); })
+      .catch(function(){ EA_DIA={}; renderEA(); });
+  }
+  function eaSalvarTexto(){
+    var v=String((document.getElementById('eaTexto')||{}).value||'').trim();
+    EA_DIA=EA_DIA||{}; EA_DIA.oque=v;
+    if(DB) DB.ref(eaNo()+'/oque').set(v).catch(function(){});
+    if(typeof audit==='function'&&v) audit('ea','EA do dia: '+v,{});
+    renderEA();
+  }
+  function eaMarcarTempo(k){
+    EA_DIA=EA_DIA||{}; EA_DIA.tempos=EA_DIA.tempos||{};
+    var t=EA_DIA.tempos[k]||{};
+    var agora={quem:(typeof pessoaDoTurno==='function'?pessoaDoTurno():'-'), hora:horaAgora(), ts:Date.now()};
+    if(!t.ini){ t.ini=agora; }
+    else if(!t.fim){ t.fim=agora; }
+    else { if(!confirm('Refazer o tempo de "'+((EA_ETAPAS.find(function(x){return x.k===k;})||{}).t||k)+'"?\n\nO horário anterior é perdido.')) return; t={ini:agora}; }
+    EA_DIA.tempos[k]=t;
+    if(DB) DB.ref(eaNo()+'/tempos/'+k).set(t).catch(function(){});
+    if(typeof audit==='function') audit('ea',(t.fim?'terminou ':'começou ')+((EA_ETAPAS.find(function(x){return x.k===k;})||{}).t||k),{});
+    renderEA();
+  }
+  // Quem NÃO pode participar do que foi montado hoje.
+  // Casa por palavra: "abobrinha + hortelã" bate com quem tem restrição a abobrinha.
+  // Quem tem restrição a TUDO entra sempre. Quem nunca respondeu entra como "a confirmar" —
+  // ninguém adivinha por FILHOt nenhum.
+  function eaImpedidos(){
+    var oque=String((EA_DIA&&EA_DIA.oque)||'').trim();
+    var palavras=jsNorm(oque).split(/[^a-z0-9]+/).filter(function(w){ return w.length>2; });
+    var out=[];
+    (turmaDoDia()||[]).forEach(function(o){
+      var ex=(typeof pelExtra==='function'?pelExtra(o.p):{})||{};
+      var r=String(ex.ea_restr||'').trim();
+      var nao=!!ex.ea_restr_nao;
+      if(nao) return;                                   // tutor liberou tudo
+      if(!r){ out.push({o:o, motivo:'', tipo:'confirmar'}); return; }
+      var rn=jsNorm(r);
+      if(/\btudo\b|\btodos\b|\bnada\b/.test(rn)){ out.push({o:o, motivo:r, tipo:'tudo'}); return; }
+      if(!oque) return;                                  // sem EA digitado, só os de "tudo" e os a confirmar
+      var bateu=palavras.filter(function(w){ return rn.indexOf(w)>=0; });
+      if(bateu.length) out.push({o:o, motivo:r, tipo:'item'});
+    });
+    return out;
+  }
+  function renderEA(){
+    var el=document.getElementById('eaPainel'); if(!el) return;
+    if(dcAtiv!=='ea'){ el.style.display='none'; return; }
+    el.style.display='block';
+    var oque=String((EA_DIA&&EA_DIA.oque)||'');
+    var imp=eaImpedidos();
+    var tempos=(EA_DIA&&EA_DIA.tempos)||{};
+    el.innerHTML='<div class="card">'
+      +'<h2 style="font-size:17px">EA de hoje</h2>'
+      +'<div class="hint">Escreva o que foi montado. A lista abaixo mostra <strong>só quem não pode participar</strong>.</div>'
+      +'<input class="cad-in" id="eaTexto" value="'+escAttr(oque)+'" placeholder="Ex: abobrinha + hortelã · coco · feno" autocomplete="off" onchange="eaSalvarTexto()">'
+      +'<button class="btn btn-gold" style="margin-top:8px" onclick="eaSalvarTexto()">Salvar o EA do dia</button>'
+      +'</div>'
+      // ---- os quatro tempos ----
+      +'<div class="card"><h2 style="font-size:17px">Tempo de cada parte</h2>'
+      +EA_ETAPAS.map(function(e){
+          var t=tempos[e.k]||{};
+          var dur=(t.ini&&t.fim)?Math.max(1,Math.round((t.fim.ts-t.ini.ts)/60000)):0;
+          var rot=!t.ini?'começar':(!t.fim?'terminar':'refazer');
+          var cor=!t.ini?'var(--z-cream-warm)':(!t.fim?'var(--crm-atencao)':'var(--crm-ok)');
+          var txtCor=(!t.ini)?'var(--z-blue)':'#fff';
+          return '<div class="pair" style="padding:8px 0;border-bottom:1px solid var(--line)">'
+            +'<span class="k"><strong>'+escAttr(e.t)+'</strong>'
+            +'<div style="font-size:12px;color:var(--muted);font-weight:600">'+escAttr(e.d)+'</div>'
+            +(t.ini?('<div style="font-size:12px;font-weight:700;color:var(--z-blue-soft)">'+escAttr(t.ini.hora)
+                +(t.fim?(' → '+escAttr(t.fim.hora)+' · <strong>'+dur+' min</strong>'):' · em andamento')
+                +' · '+escAttr((t.fim||t.ini).quem||'')+'</div>'):'')
+            +'</span>'
+            +'<span class="val"><button class="btn" style="background:'+cor+';color:'+txtCor+';border:1.5px solid var(--line);padding:6px 14px;font-weight:800" onclick="eaMarcarTempo(\''+e.k+'\')">'+rot+'</button></span>'
+            +'</div>';
+        }).join('')
+      +'</div>'
+      // ---- quem NÃO pode ----
+      +'<div class="card" style="border-left:4px solid '+(imp.length?'var(--crm-critico)':'var(--crm-ok)')+'">'
+      +'<h2 style="font-size:17px">'+(imp.length?('NÃO podem participar ('+imp.length+')'):'Ninguém impedido hoje')+'</h2>'
+      +(imp.length
+        ? ('<div class="hint">Só estes. Todo o resto da turma pode.</div>'
+           +imp.map(function(x){
+               var nome=((typeof pelNome==='function')?pelNome(x.o.p):'')||x.o.p.n||'';
+               var eh=(x.tipo==='confirmar');
+               return '<div style="border-top:1px solid var(--line);padding:9px 0">'
+                 +'<span style="font-weight:800;color:'+(eh?'var(--crm-atencao-text)':'var(--crm-critico)')+';font-size:15px">'+escAttr(nome)+'</span>'
+                 +' <span style="font-weight:700;font-size:13px;color:var(--z-blue)">'
+                 +(eh?'— a confirmar com o tutor (ninguém respondeu ainda)'
+                     :(x.tipo==='tudo'?'— NÃO PODE NADA':'— não pode: '+escAttr(x.motivo)))+'</span>'
+                 +(x.o.daPlanilha?(' <span style="font-size:11px;font-weight:800;color:var(--muted)">'+escAttr(String(x.o.daPlanilha).toUpperCase())+'</span>'):'')
+                 +'</div>';
+             }).join(''))
+        : '<div class="hint" style="color:var(--crm-ok);font-weight:700">Ninguém da turma de hoje tem restrição ao que foi montado.</div>')
+      +'</div>';
+  }
   function renderGenerico(){
+    try{ if(dcAtiv==='ea'){ if(!EA_DIA) eaCarregar(); else renderEA(); } else { var _e=document.getElementById('eaPainel'); if(_e) _e.style.display='none'; } }catch(e){}
     if(!document.getElementById('genGrid')) return;
     let list=ehAlmoco2()?listaSegundoHorario():turmaDoDia(); list=filtrarAtividadeSeletiva(list,dcAtiv); let feito=0;
     list.forEach(o=>{ const m=genMarcas[dcKey(o.p.n,o.p.tutor)]; if(m==='feito'||m==='comeu')feito++; });
