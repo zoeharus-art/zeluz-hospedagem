@@ -1671,6 +1671,7 @@
     <a data-v="reposicao" class="so-recepcao"><span data-icon="star"></span><span>Reposições</span></a>
     <a data-v="orcamento" class="so-recepcao"><span data-icon="star"></span><span>Orçamento de Hospedagem</span></a>
 
+    <a data-v="eahist" class="so-gestao"><span data-icon="star"></span><span>Histórico do EA</span></a>
     <a data-v="relatorios" class="so-gestao"><span data-icon="star"></span><span>Relatórios</span></a>
     <a data-v="acerto" class="so-master"><span data-icon="star"></span><span>Acerto das Plantonistas</span></a>
     <a data-v="ritmo" class="so-gestao"><span data-icon="star"></span><span>Ritmo do Time</span></a>
@@ -3061,6 +3062,15 @@
        "Baixar Excel do almoço — criar no sidebar, em relatórios, e colocar todos os
        relatórios disponíveis (vamos criar diversos)." Relatório escondido dentro de uma
        tela é relatório que ninguém acha. Aqui todos moram juntos. -->
+  <!-- HISTÓRICO DO EA — Adriana, 20/ago/2026: "a Gestão tem que ter acesso... um calendário
+       para clicar e descobrir o que foi o EA do dia. Alguns tutores precisam da informação...
+       ele teve uma gastro, o tutor levou ao hospital de madrugada, o médico perguntará o que
+       ele comeu hoje. Essa informação pode salvar vidas." -->
+  <section class="view" id="v-eahist">
+    <div class="role-note so-gestao"><span data-icon="star"></span><span>Clique num dia para ver <strong>o que foi montado</strong>, quem participou e quem não pôde. É a resposta pronta para quando um tutor — ou um veterinário de plantão — perguntar o que o FILHOt comeu naquele dia.</span></div>
+    <div id="eaHistPainel"></div>
+  </section>
+
   <section class="view" id="v-relatorios">
     <div class="role-note so-gestao"><span data-icon="star"></span><span>Tudo que dá para <strong>baixar</strong> e todas as <strong>listas</strong>, num lugar só. Ficam aqui para o menu não virar uma lista sem fim.</span></div>
     <div id="relGrid"></div>
@@ -3581,6 +3591,7 @@
     checkin:['Check-in','Entrada da estadia — ficha, pertences e assinatura'],
     conferencia:['Conferência Check-in','Pertences etiquetados, ração pesada e alarmes testados'],
     orcamento:['Orçamento de Hospedagem','Diárias, pernoites e desconto do plano — com a mensagem pronta para o tutor'],
+    eahist:['Histórico do EA','O que foi montado em cada dia, quem participou e quem não pôde'],
     relatorios:['Relatórios','Tudo que dá para baixar em Excel, num lugar só'],
     acerto:['Acerto das Plantonistas','Quanto cada noite vale, quem dormiu aqui e o que está a pagar'],
     ritmo:['Ritmo do Time','Quanto tempo cada atividade leva, por pessoa e por dia da semana'],
@@ -3635,6 +3646,7 @@
     if(v==='ficha'){ const l=document.getElementById('pel-lista'),fi=document.getElementById('pel-ficha'); if(l&&fi){ l.style.display='block'; fi.style.display='none'; } if(typeof renderPel==='function') renderPel(); }
     if(v==='inativos'){ if(typeof renderInativos==='function') renderInativos(); }
     if(v==='reposicao'){ if(typeof renderReposicao==='function') renderReposicao(); }
+    if(v==='eahist'){ if(typeof eaHistInit==='function') eaHistInit(); }
     if(v==='renovacao'){ if(typeof renderRenovacao==='function') renderRenovacao(); }
     if(v==='daycare'){ if(typeof abrirDayCare==='function') abrirDayCare(); }
     if(v==='orcamento'){ if(typeof orcInit==='function') orcInit(); }
@@ -8828,7 +8840,7 @@
   // Agora existe um carimbo: esta constante é a versão que o aparelho está rodando, e o
   // Firebase guarda a versão publicada. Quando as duas diferem, aparece o aviso — mas
   // NUNCA recarrega sozinho: recarregar no meio de um check-in perderia o trabalho.
-  const APP_VERSAO='2026-08-20-04';
+  const APP_VERSAO='2026-08-20-05';
   function vigiarVersao(){
     if(!DB) return;
     try{
@@ -15134,6 +15146,34 @@
     renderEA();
     if(ok) setTimeout(function(){ try{ if(EA_AVISO&&Date.now()-EA_AVISO.ts>=3900){ EA_AVISO=null; renderEA(); } }catch(e){} }, 4000);
   }
+  // ⚠ CONGELAR O DIA — Adriana, 20/ago/2026: "ele teve uma gastro, o tutor levou ao hospital
+  // de madrugada, o médico perguntará o que ele comeu hoje. Essa informação pode salvar vidas."
+  // Por isso a lista NÃO pode ser recalculada depois: daqui a seis meses a ficha do FILHOt
+  // pode ter mudado, e o recálculo contaria uma história que não aconteceu. O que valeu
+  // NAQUELE dia fica gravado NAQUELE dia — quem estava, quem comeu, quem foi impedido e por quê.
+  function eaCongelar(){
+    if(!DB) return;
+    try{
+      var imp=eaImpedidos();
+      var bloq={}; imp.forEach(function(x){ bloq[(x.o.p.n||'')+'__'+(x.o.p.tutor||'')]=x.motivo||'restrição'; });
+      var participaram=[], impedidos=[];
+      (turmaDoDia()||[]).forEach(function(o){
+        var nome=((typeof pelNome==='function')?pelNome(o.p):'')||o.p.n||'';
+        var k=(o.p.n||'')+'__'+(o.p.tutor||'');
+        if(bloq[k]) impedidos.push({n:nome, tutor:o.p.tutor||'', motivo:bloq[k]});
+        else participaram.push({n:nome, tutor:o.p.tutor||''});
+      });
+      DB.ref(eaNo()+'/registro').set({
+        oque: String((EA_DIA&&EA_DIA.oque)||''),
+        tipos: (EA_DIA&&EA_DIA.tipos)||null,
+        participaram: participaram,
+        impedidos: impedidos,
+        sem_resposta: EA_SEM_RESP,
+        quem: (typeof pessoaDoTurno==='function'?pessoaDoTurno():'-'),
+        ts: Date.now()
+      }).catch(function(){});
+    }catch(e){}
+  }
   function eaSalvarTexto(){
     var v=String((document.getElementById('eaTexto')||{}).value||'').trim();
     EA_DIA=EA_DIA||{}; EA_DIA.oque=v;
@@ -15142,6 +15182,7 @@
     DB.ref(eaNo()+'/oque').set(v).then(function(){
       eaDizer(true, v?('✅ salvo: '+v):'✅ apagado');
       if(typeof audit==='function'&&v) audit('ea','EA do dia: '+v,{});
+      eaCongelar();
     }).catch(function(e){ eaDizer(false,'NÃO salvou: '+((e&&e.message)||e)); });
   }
   // Toque no item do catálogo: entra ou sai do texto do dia. Sem digitar, sem errar o nome.
@@ -15160,6 +15201,7 @@
     EA_DIA=EA_DIA||{}; EA_DIA.tipos=EA_DIA.tipos||{};
     EA_DIA.tipos[k]=!EA_DIA.tipos[k];
     if(DB) DB.ref(eaNo()+'/tipos/'+k).set(EA_DIA.tipos[k]||null).catch(function(){});
+    eaCongelar();
     renderEA();
   }
   function eaMarcarTempo(k){
@@ -15172,6 +15214,8 @@
     EA_DIA.tempos[k]=t;
     if(DB) DB.ref(eaNo()+'/tempos/'+k).set(t).catch(function(){});
     if(typeof audit==='function') audit('ea',(t.fim?'terminou ':'começou ')+((EA_ETAPAS.find(function(x){return x.k===k;})||{}).t||k),{});
+    // Ao FECHAR a atividade, o dia é congelado: é esse o momento em que a lista é verdade.
+    if(k==='atividade'&&t.fim) eaCongelar();
     renderEA();
   }
   // Quem NÃO pode participar do que foi montado hoje.
@@ -15266,7 +15310,9 @@
       // entender que EA é ciência, e não "bobagem" — ensinar pelo uso.
       '<div class="card" style="border-left:4px solid var(--z-gold)">'
       +'<div style="font-weight:800;color:var(--z-blue);font-size:15px">'
-      +(eu?(escAttr(eu)+', o'):'O')+' EA é dos cuidados mais importantes do dia.</div>'
+      // pessoaDoTurno() devolve "Adriana · Gestão Total" — o papel não entra no meio da frase.
+      +(eu?(escAttr(String(eu).split('·')[0].trim().split(/\s+/)[0])+', o'):'O')
+      +' EA é um dos cuidados mais importantes do dia.</div>'
       +'<div style="font-size:14px;color:var(--z-blue);font-weight:600;margin-top:6px;line-height:1.45">'+escAttr(eaFraseDoDia())+'</div>'
       +'</div>'
       +'<div class="card">'
@@ -15333,6 +15379,106 @@
           +EA_SEM_RESP+' FILHOt'+(EA_SEM_RESP>1?'s':'')+' ainda sem a resposta do tutor sobre restrição. '
           +'A gestão está confirmando — não é tarefa do monitor.</div>'):'')
       +'</div>';
+  }
+  // ===== HISTÓRICO DO EA — o calendário da gestão ================================
+  // Lê o nó inteiro de uma vez (um registro por dia, é pequeno) e desenha o mês. Dia com EA
+  // fica dourado e clicável. O detalhe mostra o REGISTRO CONGELADO daquele dia — nunca um
+  // recálculo com a ficha de hoje, que contaria outra história.
+  var EAH_TUDO=null, EAH_MES=null, EAH_DIA=null;
+  var EAH_MESES=['janeiro','fevereiro','março','abril','maio','junho','julho','agosto','setembro','outubro','novembro','dezembro'];
+  function eaHistInit(){
+    if(!document.getElementById('eaHistPainel')) return;
+    if(!EAH_MES){ var h=new Date(); EAH_MES=new Date(h.getFullYear(), h.getMonth(), 1); }
+    if(EAH_TUDO){ eaHistRender(); return; }
+    document.getElementById('eaHistPainel').innerHTML='<div class="card"><div class="hint">Carregando o histórico…</div></div>';
+    if(!DB){ EAH_TUDO={}; eaHistRender(); return; }
+    DB.ref('daycare/ea').once('value').then(function(s){ EAH_TUDO=s.val()||{}; eaHistRender(); })
+      .catch(function(e){
+        // Sem silêncio: se não deu para ler, a tela DIZ. Ninguém conclui "não houve EA".
+        var el=document.getElementById('eaHistPainel'); if(!el) return;
+        el.innerHTML='<div class="card" style="border-left:4px solid var(--crm-critico)">'
+          +'<h2 style="font-size:17px">Não consegui ler o histórico</h2>'
+          +'<div class="hint">'+escAttr((e&&e.message)||'falha de conexão')+'. Isto <strong>não</strong> quer dizer que não houve EA — quer dizer que não deu para consultar. Tente de novo.</div>'
+          +'<button class="btn btn-gold" style="margin-top:8px" onclick="EAH_TUDO=null;eaHistInit()">Tentar de novo</button></div>';
+      });
+  }
+  function eaHistMes(delta){ EAH_MES=new Date(EAH_MES.getFullYear(), EAH_MES.getMonth()+delta, 1); EAH_DIA=null; eaHistRender(); }
+  function eaHistAbrir(iso){ EAH_DIA=(EAH_DIA===iso)?null:iso; eaHistRender(); }
+  function eaHistDetalheHTML(iso){
+    var d=(EAH_TUDO||{})[iso]||{};
+    var reg=d.registro||{};
+    var oque=String(reg.oque||d.oque||'').trim();
+    var tipos=reg.tipos||d.tipos||{};
+    var tps=(typeof EA_TIPOS!=='undefined'?EA_TIPOS:[]).filter(function(t){ return tipos[t.k]; }).map(function(t){ return t.t; });
+    var part=Array.isArray(reg.participaram)?reg.participaram:null;
+    var imp=Array.isArray(reg.impedidos)?reg.impedidos:null;
+    var tempos=d.tempos||{};
+    var p=iso.split('-');
+    var lista=function(tit,arr,cor,comMotivo){
+      if(!arr) return '';
+      return '<div style="flex:1;min-width:220px">'
+        +'<div style="font-weight:800;color:'+cor+';font-size:13.5px;border-bottom:2px solid var(--z-gold);padding-bottom:4px">'+escAttr(tit)+' ('+arr.length+')</div>'
+        +(arr.length?arr.map(function(x){
+            return '<div style="padding:5px 0;border-bottom:1px solid var(--line);font-size:13.5px;font-weight:700;color:var(--z-blue)">'
+              +escAttr(x.n||'')+(comMotivo&&x.motivo?('<span style="font-weight:600;color:var(--crm-critico)"> — não pôde: '+escAttr(x.motivo)+'</span>'):'')+'</div>';
+          }).join(''):'<div class="hint" style="padding-top:6px">ninguém</div>')
+        +'</div>';
+    };
+    return '<div class="card" style="border-left:4px solid var(--z-gold)">'
+      +'<h2 style="font-size:18px">'+p[2]+' de '+EAH_MESES[+p[1]-1]+' de '+p[0]+'</h2>'
+      +'<div style="font-size:16px;font-weight:800;color:var(--z-blue);margin-top:4px">'
+      +(oque?escAttr(oque):'<span style="color:var(--muted);font-weight:600">não foi anotado o que foi montado</span>')+'</div>'
+      +(tps.length?('<div style="font-size:13px;font-weight:700;color:var(--z-blue-soft);margin-top:3px">Tipos: '+escAttr(tps.join(' · '))+'</div>'):'')
+      +(reg.quem?('<div class="hint" style="margin-top:3px">registrado por '+escAttr(reg.quem)+'</div>'):'')
+      +(tempos.atividade&&tempos.atividade.ini
+        ?('<div class="hint">atividade: '+escAttr(tempos.atividade.ini.hora||'')
+          +(tempos.atividade.fim?(' → '+escAttr(tempos.atividade.fim.hora||'')):'')+'</div>'):'')
+      +((part||imp)
+        ? ('<div style="display:flex;flex-wrap:wrap;gap:16px;margin-top:10px">'
+            +lista('Participaram', part, 'var(--crm-ok)', false)
+            +lista('Não puderam', imp, 'var(--crm-critico)', true)
+            +'</div>'
+            +(reg.sem_resposta?('<div class="hint" style="margin-top:8px">'+reg.sem_resposta+' FILHOt(s) estavam sem a resposta do tutor nesse dia.</div>'):''))
+        : '<div class="hint" style="margin-top:10px">Neste dia a lista de quem participou ainda não era registrada — só o que foi montado ficou guardado.</div>')
+      +'</div>';
+  }
+  function eaHistRender(){
+    var el=document.getElementById('eaHistPainel'); if(!el) return;
+    var y=EAH_MES.getFullYear(), m=EAH_MES.getMonth();
+    var prim=new Date(y,m,1), qtd=new Date(y,m+1,0).getDate(), off=prim.getDay();
+    var doisD=function(n){ return (n<10?'0':'')+n; };
+    var cel=[];
+    for(var i=0;i<off;i++) cel.push('<div></div>');
+    var comEA=0;
+    for(var dia=1;dia<=qtd;dia++){
+      var iso=y+'-'+doisD(m+1)+'-'+doisD(dia);
+      var d=(EAH_TUDO||{})[iso];
+      var oque=d?String((d.registro&&d.registro.oque)||d.oque||'').trim():'';
+      var tem=!!oque; if(tem) comEA++;
+      var sel=(EAH_DIA===iso);
+      cel.push('<div style="text-align:center">'
+        +'<button type="button" class="btn" '+(tem?'':'disabled ')
+        +'style="width:100%;padding:7px 2px;font-weight:800;font-size:13px;border:1.5px solid '
+        +(sel?'var(--z-blue);background:var(--z-blue);color:var(--z-cream)'
+             :(tem?'var(--z-gold);background:var(--z-gold);color:var(--z-blue)'
+                  :'var(--line);background:transparent;color:var(--muted);opacity:.5;cursor:default'))
+        +'" '+(tem?('onclick="eaHistAbrir(\''+iso+'\')"'):'')+'>'+dia+'</button>'
+        +(tem?('<div style="font-size:9.5px;font-weight:700;color:var(--z-blue-soft);line-height:1.15;margin-top:2px;overflow:hidden;max-height:24px">'+escAttr(oque.slice(0,22))+'</div>'):'')
+        +'</div>');
+    }
+    el.innerHTML='<div class="card">'
+      +'<div class="pair" style="align-items:center">'
+      +'<span class="k"><button class="btn" style="padding:6px 14px;font-weight:800" onclick="eaHistMes(-1)">◀</button></span>'
+      +'<span style="flex:1;text-align:center;font-weight:800;color:var(--z-blue);font-size:17px">'+EAH_MESES[m]+' de '+y+'</span>'
+      +'<span class="val"><button class="btn" style="padding:6px 14px;font-weight:800" onclick="eaHistMes(1)">▶</button></span>'
+      +'</div>'
+      +'<div class="hint" style="margin-top:4px">'+(comEA?(comEA+' dia'+(comEA>1?'s':'')+' com EA registrado neste mês. Clique no dia dourado.'):'Nenhum EA registrado neste mês.')+'</div>'
+      +'<div style="display:grid;grid-template-columns:repeat(7,1fr);gap:5px;margin-top:10px">'
+      +['dom','seg','ter','qua','qui','sex','sáb'].map(function(x){
+          return '<div style="text-align:center;font-size:11px;font-weight:800;color:var(--muted)">'+x+'</div>'; }).join('')
+      +cel.join('')
+      +'</div></div>'
+      +(EAH_DIA?eaHistDetalheHTML(EAH_DIA):'');
   }
   function renderGenerico(){
     // No EA a tela é só o painel: quem pode, participa — ninguém marca um a um (Adriana,
