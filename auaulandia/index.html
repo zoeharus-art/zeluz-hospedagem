@@ -8828,7 +8828,7 @@
   // Agora existe um carimbo: esta constante é a versão que o aparelho está rodando, e o
   // Firebase guarda a versão publicada. Quando as duas diferem, aparece o aviso — mas
   // NUNCA recarrega sozinho: recarregar no meio de um check-in perderia o trabalho.
-  const APP_VERSAO='2026-08-20-02';
+  const APP_VERSAO='2026-08-20-03';
   function vigiarVersao(){
     if(!DB) return;
     try{
@@ -12901,7 +12901,7 @@
           </div>
           <!-- O EA acontece em DUAS matilhas: pequeno e médio porte. É por elas que a tela
                do EA se divide em duas colunas. -->
-          <div class="field"><label>Matilha (EA)</label><div class="seg gold" data-single>${segBtnsPel('matilha',ex.matilha||'',['Pequeno porte','Médio porte'])}</div></div>
+          <div class="field"><label>Matilha (EA)</label><div class="seg gold" data-single>${segBtnsPel('matilha',ex.matilha||'',['Pequeno porte','Médio porte','Outro'])}</div></div>
         </div>
         <!-- HISTORICO DO FILHOt (Adriana, 11/ago/2026: "nao tem historico do filhote").
              A folha de papel nunca deixou ver o passado dele. Aqui esta a linha do tempo dos
@@ -15052,6 +15052,43 @@
     {k:'limpeza',  t:'Retirada e limpeza',    d:'guardar os itens e limpar a área'},
     {k:'video',    t:'Vídeo do EA',           d:'2 vídeos: matilha pequena e matilha média'}
   ];
+  // Catálogo do que a Zêluz usa no EA. O campo livre continua, para o que não estiver aqui.
+  var EA_CATALOGO=['Feno','Abobrinha','Hortelã','Melancia','Coco verde','Manjericão','Chuchu',
+                   'Maçã','Iogurte natural sem açúcar','Madeira','Melão'];
+  // Os CINCO tipos de enriquecimento ambiental — classificação de Bloomsmith, Brent &
+  // Schapiro (1991), a mesma usada em zoológicos, na etologia clínica e nos cursos
+  // brasileiros de enriquecimento pet. Descrição curta de propósito: é para o monitor
+  // escolher em dois segundos, não para estudar.
+  var EA_TIPOS=[
+    {k:'alimentar', t:'Alimentar', d:'a comida dá trabalho para conseguir — esconder, congelar, espalhar'},
+    {k:'sensorial', t:'Sensorial', d:'cheiro, som, textura, sabor: ervas, folhas, superfícies diferentes'},
+    {k:'cognitivo', t:'Cognitivo', d:'ele precisa pensar para resolver — encaixe, desafio, escolha'},
+    {k:'fisico',    t:'Físico',    d:'o espaço muda: obstáculos, alturas, esconderijos, água'},
+    {k:'social',    t:'Social',    d:'convívio: com outros FILHOts ou com a gente'}
+  ];
+  // ===== PORTE POR RAÇA — Adriana, 20/ago/2026 ==================================
+  // "Westies são médio porte... todos os beagle, pastores de shetland, norfolk.
+  //  Pequeno porte: Spitz, chihuahua, maltês, shih-tzu, york."
+  // A raça já está na ficha, então o porte se deduz sozinho. Quem não cair nas listas (SRD,
+  // mestiço) vai para OUTRO — que não é erro: é coluna de verdade, porque às vezes a matilha
+  // se decide pelo COMPORTAMENTO, não pelo tamanho. A ficha manda sobre a dedução.
+  var EA_RACA_MEDIO=['westie','west highland','beagle','shetland','norfolk'];
+  var EA_RACA_PEQ=['spitz','lulu da pomerania','chihuahua','chiuaua','maltes','shih tzu','shihtzu','yorkshire','york'];
+  var EA_NOMES_MEDIO=['lilly','lanna','rita','elizabete','elizabeth'];   // ditos por ela, fora da raça
+  function eaPorte(p){
+    var ex=(typeof pelExtra==='function'?pelExtra(p):{})||{};
+    var m=jsNorm(ex.matilha||'');
+    if(/pequeno/.test(m)) return 'p';
+    if(/medio/.test(m))   return 'm';
+    if(/outro/.test(m))   return 'o';
+    var nome=jsNorm(((typeof pelNome==='function')?pelNome(p):'')||p.n||'');
+    if(EA_NOMES_MEDIO.indexOf(nome)>=0) return 'm';
+    var r=jsNorm(((typeof pelGet==='function')?pelGet(p,'raca'):'')||p.raca||'');
+    if(!r) return 'o';
+    if(EA_RACA_MEDIO.some(function(x){ return r.indexOf(x)>=0; })) return 'm';
+    if(EA_RACA_PEQ.some(function(x){ return r.indexOf(x)>=0; })) return 'p';
+    return 'o';
+  }
   var EA_DIA=null;
   function eaNo(){ return 'daycare/ea/'+dcDataKey(); }
   function eaCarregar(){
@@ -15059,11 +15096,40 @@
     DB.ref(eaNo()).once('value').then(function(s){ EA_DIA=s.val()||{}; renderEA(); })
       .catch(function(){ EA_DIA={}; renderEA(); });
   }
+  // Adriana, 20/ago/2026: "cliquei em salvar e nada apareceu — salvou ou não salvou?"
+  // Ação sem retorno visível é ação que a pessoa acha que não funcionou. Agora fala.
   function eaSalvarTexto(){
     var v=String((document.getElementById('eaTexto')||{}).value||'').trim();
     EA_DIA=EA_DIA||{}; EA_DIA.oque=v;
-    if(DB) DB.ref(eaNo()+'/oque').set(v).catch(function(){});
-    if(typeof audit==='function'&&v) audit('ea','EA do dia: '+v,{});
+    var dizer=function(ok,msg){
+      var st=document.getElementById('eaSalvoSt'); if(!st) return;
+      st.style.color=ok?'var(--crm-ok)':'var(--crm-critico)';
+      st.style.fontWeight='800'; st.textContent=msg;
+      if(ok) setTimeout(function(){ try{ st.textContent=''; }catch(e){} }, 4000);
+    };
+    if(!DB){ dizer(false,'sem conexão — NÃO salvou'); return; }
+    DB.ref(eaNo()+'/oque').set(v).then(function(){
+      dizer(true, v?('✅ salvo: '+v):'✅ apagado');
+      if(typeof audit==='function'&&v) audit('ea','EA do dia: '+v,{});
+      renderEA();
+    }).catch(function(e){ dizer(false,'NÃO salvou: '+((e&&e.message)||e)); });
+  }
+  // Toque no item do catálogo: entra ou sai do texto do dia. Sem digitar, sem errar o nome.
+  function eaToggleItem(item){
+    var atual=String((EA_DIA&&EA_DIA.oque)||'');
+    var partes=atual.split(/\s*\+\s*/).map(function(s){ return s.trim(); }).filter(Boolean);
+    var i=partes.findIndex(function(s){ return jsNorm(s)===jsNorm(item); });
+    if(i>=0) partes.splice(i,1); else partes.push(item);
+    var novo=partes.join(' + ');
+    EA_DIA=EA_DIA||{}; EA_DIA.oque=novo;
+    var inp=document.getElementById('eaTexto'); if(inp) inp.value=novo;
+    if(DB) DB.ref(eaNo()+'/oque').set(novo).catch(function(){});
+    renderEA();
+  }
+  function eaToggleTipo(k){
+    EA_DIA=EA_DIA||{}; EA_DIA.tipos=EA_DIA.tipos||{};
+    EA_DIA.tipos[k]=!EA_DIA.tipos[k];
+    if(DB) DB.ref(eaNo()+'/tipos/'+k).set(EA_DIA.tipos[k]||null).catch(function(){});
     renderEA();
   }
   function eaMarcarTempo(k){
@@ -15130,15 +15196,41 @@
     var oque=String((EA_DIA&&EA_DIA.oque)||'');
     var imp=eaImpedidos();
     var tempos=(EA_DIA&&EA_DIA.tempos)||{};
-    var mat=function(q){ return imp.filter(function(x){
-      var m=jsNorm(((typeof pelExtra==='function'?pelExtra(x.o.p):{})||{}).matilha||'');
-      return q==='p'?/pequeno/.test(m):(q==='m'?/medio/.test(m):(!/pequeno|medio/.test(m)));
-    }); };
-    var semMat=mat('');
-    el.innerHTML='<div class="card">'
+    var mat=function(q){ return imp.filter(function(x){ return eaPorte(x.o.p)===q; }); };
+    var eu=(typeof pessoaDoTurno==='function'?pessoaDoTurno():'')||'';
+    var tipos=(EA_DIA&&EA_DIA.tipos)||{};
+    var escolhidos=jsNorm(oque).split(/\s*\+\s*|\s*,\s*/).map(function(s){ return s.trim(); }).filter(Boolean);
+    el.innerHTML=
+      // frase que ensina, com o nome de quem está na tela
+      '<div class="card" style="border-left:4px solid var(--z-gold)">'
+      +'<div style="font-weight:800;color:var(--z-blue);font-size:15px">'
+      +(eu?(escAttr(eu)+', o'):'O')+' EA é dos cuidados mais importantes do dia.</div>'
+      +'<div style="font-size:13px;color:var(--z-blue-soft);font-weight:600;margin-top:2px">Você sabia que existem <strong>cinco tipos</strong> de enriquecimento ambiental? Marque abaixo quais você trabalhou hoje.</div>'
+      +'</div>'
+      +'<div class="card">'
       +'<h2 style="font-size:17px">O que foi montado hoje</h2>'
-      +'<input class="cad-in" id="eaTexto" value="'+escAttr(oque)+'" placeholder="Ex: abobrinha + hortelã · coco · feno" autocomplete="off" onchange="eaSalvarTexto()">'
+      +'<div style="display:flex;flex-wrap:wrap;gap:5px;margin-bottom:8px">'
+      +EA_CATALOGO.map(function(it){
+          var on=escolhidos.indexOf(jsNorm(it))>=0;
+          return '<button type="button" class="btn" style="padding:6px 12px;font-size:12.5px;font-weight:800;border:1.5px solid '
+            +(on?'var(--z-blue);background:var(--z-blue);color:var(--z-cream)':'var(--line);background:var(--z-cream-warm);color:var(--z-blue)')
+            +'" onclick="eaToggleItem(\''+escAttr(it).replace(/'/g,"\\'")+'\')">'+escAttr(it)+'</button>';
+        }).join('')
+      +'</div>'
+      +'<input class="cad-in" id="eaTexto" value="'+escAttr(oque)+'" placeholder="ou escreva aqui o que não está na lista" autocomplete="off" onchange="eaSalvarTexto()">'
       +'<button class="btn btn-gold" style="margin-top:8px" onclick="eaSalvarTexto()">Salvar</button>'
+      +'<span id="eaSalvoSt" class="hint" style="margin-left:8px"></span>'
+      +'</div>'
+      // ---- os 5 tipos ----
+      +'<div class="card"><h2 style="font-size:17px">Tipos trabalhados hoje</h2>'
+      +EA_TIPOS.map(function(tp){
+          var on=!!tipos[tp.k];
+          return '<div style="border-top:1px solid var(--line);padding:8px 0;display:flex;gap:10px;align-items:flex-start;cursor:pointer" onclick="eaToggleTipo(\''+tp.k+'\')">'
+            +'<span style="flex:0 0 26px;height:26px;border-radius:7px;border:2px solid '+(on?'var(--z-blue)':'var(--line)')
+            +';background:'+(on?'var(--z-blue)':'#fff')+';color:#fff;font-weight:800;text-align:center;line-height:24px">'+(on?'✓':'')+'</span>'
+            +'<span><strong style="color:var(--z-blue)">'+escAttr(tp.t)+'</strong>'
+            +'<div style="font-size:12.5px;color:var(--muted);font-weight:600">'+escAttr(tp.d)+'</div></span></div>';
+        }).join('')
       +'</div>'
       // ---- os quatro tempos, um por linha, sem faixa nem enfeite ----
       +'<div class="card">'
@@ -15162,12 +15254,12 @@
       +'<h2 style="font-size:17px">'+(imp.length?('NÃO podem participar ('+imp.length+')'):'Ninguém impedido hoje')+'</h2>'
       +(imp.length?'<div class="hint">Todo o resto da turma participa — não precisa marcar ninguém.</div>':'')
       +'<div style="display:flex;flex-wrap:wrap;gap:18px;margin-top:8px">'
-      +eaColunaHTML('Matilha de pequeno porte', mat('p'))
-      +eaColunaHTML('Matilha de médio porte', mat('m'))
+      +eaColunaHTML('Pequeno porte', mat('p'))
+      +eaColunaHTML('Médio porte', mat('m'))
+      // OUTRO não é "erro de cadastro": é quem ainda não foi classificado, ou quem transita
+      // entre as duas — e isso se decide pelo comportamento, não pelo tamanho.
+      +eaColunaHTML('Outro / a definir', mat('o'))
       +'</div>'
-      +(semMat.length?('<div style="margin-top:10px;background:rgba(222,180,40,.18);border-left:4px solid var(--z-gold);border-radius:8px;padding:9px 11px;font-size:13px;font-weight:700;color:var(--z-blue)">'
-        +'Sem matilha na ficha: '+escAttr(semMat.map(function(x){ return ((typeof pelNome==='function')?pelNome(x.o.p):'')||x.o.p.n; }).join(' · '))
-        +'<div style="font-weight:600;margin-top:2px">Marque a matilha na ficha para eles caírem na coluna certa.</div></div>'):'')
       +'</div>';
   }
   function renderGenerico(){
@@ -19926,7 +20018,7 @@
     }
     // Tela dos monitores: o que precisa ser juntado.
     if(saiHoje.length) h+=tit('🔴 Saem HOJE — juntar as coisas ('+saiHoje.length+')','#B3261E','Junte tudo que é do FILHOt e toque em "Juntei tudo" para mandar à recepção.')+grade(saiHoje);
-    if(saiAmanha.length) h+=tit('Saem AMANHÃ — já pode ir juntando ('+saiAmanha.length+')','#DEB428','Adiantar hoje evita correria na entrega.')+grade(saiAmanha);
+    if(saiAmanha.length) h+=tit('Saem AMANHÃ — já pode ir juntando ('+saiAmanha.length+')','#DEB428','')+grade(saiAmanha);
     if(resto.length) h+=tit('Outras estadias em curso ('+resto.length+')','var(--muted)','Ainda não é o dia da saída — só entre aqui se o tutor antecipou.')+grade(resto);
     if(prontos.length) h+=tit('✅ Já entregues à recepção ('+prontos.length+')','#1E8449','Você já juntou. Agora é a consultora que confere com o tutor.')+grade(prontos);
     h+=coAvisoVencidas(vencidas,tit,grade);
