@@ -657,6 +657,11 @@
   body[data-role="conferencia"] #magItens .magitem .ativ-del{display:none !important}
   /* .so-master = SÓ a Gestora (Márcia) e a Diretoria (Adriana). Supervisão (Amanda) e equipe não veem. */
   body:not([data-role="gestao"]):not([data-role="diretoria"]):not([data-role="supervisor"]) .so-master{display:none !important}
+  /* .so-config = configuração do sistema (senhas de ponte, chaves). SÓ Gestora e Diretoria —
+     nem a Supervisão vê. Adriana, 19/ago/2026: "a senha não pode aparecer... esse dashboard
+     será acionado por consultoras, não posso dar acesso a nada que possa prejudicar."
+     O .so-master deixava a Supervisão ver, apesar do que dizia o comentário dele. */
+  body:not([data-role="gestao"]):not([data-role="diretoria"]) .so-config{display:none !important}
   /* mensagem para quem entra em Pessoas mas não é a Gestora (ex: Amanda) */
   body[data-role="gestao"] .so-supervisor-only,
   body[data-role="diretoria"] .so-supervisor-only{display:none !important}
@@ -2933,12 +2938,17 @@
     <div class="role-note"><span data-icon="star"></span><span><strong>O que vai para a TV.</strong> Escolha o item, busque o FILHOt e lance. Vale para <strong>hoje</strong>. O que você lançar aqui aparece no dashboard do Day Care — ninguém precisa mais escrever na planilha.</span></div>
     <div id="dashPonteAviso"></div>
     <div id="dashBlocos"></div>
-    <div class="card so-master">
+    <div class="card so-config">
       <h2 style="font-size:16px">Ponte com a planilha</h2>
-      <div class="hint">Endereço do App da Web publicado na planilha do Day Care (termina em /exec) e a senha que você escolheu no código. Sem isso o app guarda tudo, mas a TV não recebe.</div>
+      <!-- Adriana, 19/ago/2026: "a senha não pode aparecer... esse dashboard será acionado
+           por consultoras, não posso dar acesso a nada que possa prejudicar."
+           O cartão inteiro é so-master (só Gestora e Diretoria veem) e a senha NUNCA é
+           escrita de volta na tela: depois de salva, aparece só "guardada". Para trocar,
+           digita-se a nova por cima — ninguém consegue LER a que está lá. -->
+      <div class="hint">Só a Gestão e a Diretoria veem este cartão. A senha fica guardada e <strong>nunca mais aparece escrita</strong> — nem para você.</div>
       <div class="cad-grid2" style="margin-top:8px">
         <div style="grid-column:1/-1"><label class="cad-lb">URL da ponte</label><input class="cad-in" id="dashPonteUrl" placeholder="https://script.google.com/macros/s/…/exec" autocomplete="off"></div>
-        <div><label class="cad-lb">Senha (token)</label><input class="cad-in" id="dashPonteToken" placeholder="a mesma do código" autocomplete="off"></div>
+        <div><label class="cad-lb">Senha (token)</label><input type="password" class="cad-in" id="dashPonteToken" placeholder="a mesma do código" autocomplete="new-password"><div id="dashPonteTokenSt" class="hint" style="margin-top:3px"></div></div>
       </div>
       <div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:10px">
         <button class="btn btn-gold" onclick="dashSalvarPonte()">Salvar a ponte</button>
@@ -8810,7 +8820,7 @@
   // Agora existe um carimbo: esta constante é a versão que o aparelho está rodando, e o
   // Firebase guarda a versão publicada. Quando as duas diferem, aparece o aviso — mas
   // NUNCA recarrega sozinho: recarregar no meio de um check-in perderia o trabalho.
-  const APP_VERSAO='2026-08-19-10';
+  const APP_VERSAO='2026-08-19-11';
   function vigiarVersao(){
     if(!DB) return;
     try{
@@ -15641,7 +15651,13 @@
     ]).then(function(){
       var u=document.getElementById('dashPonteUrl'), t=document.getElementById('dashPonteToken');
       if(u&&DASH_PONTE) u.value=DASH_PONTE.url||'';
-      if(t&&DASH_PONTE) t.value=DASH_PONTE.token||'';
+      // A SENHA NUNCA VOLTA PARA A TELA. O campo fica sempre vazio; ao lado, só o aviso de
+      // que existe uma guardada. Quem quiser trocar digita a nova por cima — ler, ninguém lê.
+      if(t) t.value='';
+      var ts=document.getElementById('dashPonteTokenSt');
+      if(ts) ts.innerHTML=(DASH_PONTE&&DASH_PONTE.token)
+        ? '<span style="color:var(--crm-ok);font-weight:800">✓ senha guardada</span> — deixe em branco para manter, ou digite outra para trocar.'
+        : '<span style="color:var(--crm-critico);font-weight:800">nenhuma senha guardada</span>';
       renderDash();
     });
   }
@@ -15654,8 +15670,16 @@
       return;
     }
     if(!DB) return;
-    DB.ref('daycare/config/ponte-planilha').set({url:url, token:token}).then(function(){
-      DASH_PONTE={url:url, token:token};
+    // Campo em branco = mantém a senha que já está guardada. Assim dá para corrigir a URL
+    // sem precisar redigitar a senha (e sem ela nunca ter aparecido na tela).
+    var tokenFinal=token||((DASH_PONTE&&DASH_PONTE.token)||'');
+    DB.ref('daycare/config/ponte-planilha').set({url:url, token:tokenFinal}).then(function(){
+      DASH_PONTE={url:url, token:tokenFinal};
+      var _t=document.getElementById('dashPonteToken'); if(_t) _t.value='';
+      var _ts=document.getElementById('dashPonteTokenSt');
+      if(_ts) _ts.innerHTML=tokenFinal
+        ? '<span style="color:var(--crm-ok);font-weight:800">✓ senha guardada</span> — deixe em branco para manter, ou digite outra para trocar.'
+        : '<span style="color:var(--crm-critico);font-weight:800">nenhuma senha guardada</span>';
       if(st){ st.style.color='var(--crm-ok)'; st.textContent=url?'✅ Ponte salva. O que for lançado daqui vai para a planilha e aparece na TV.':'Ponte desligada — o app guarda tudo, mas a TV não recebe.'; }
       if(typeof audit==='function') audit('dashboard-daycare', url?'ligou a ponte com a planilha do Day Care':'desligou a ponte',{});
       renderDash();
