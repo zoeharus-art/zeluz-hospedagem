@@ -2960,6 +2960,7 @@
       <div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:10px">
         <button class="btn btn-gold" onclick="dashSalvarPonte()">Salvar a ponte</button>
         <button class="btn" style="background:var(--z-cream-warm);color:var(--z-blue);border:1.5px solid var(--line)" onclick="dashCriarColunas()">Criar as colunas que faltam nos meses</button>
+        <button class="btn" id="dashApagarPonte" style="background:none;border:none;color:var(--crm-critico);font-weight:800;display:none" onclick="dashApagarPonte()">desligar a ponte</button>
       </div>
       <div id="dashPonteStatus" class="hint" style="margin-top:6px"></div>
     </div>
@@ -8827,7 +8828,7 @@
   // Agora existe um carimbo: esta constante é a versão que o aparelho está rodando, e o
   // Firebase guarda a versão publicada. Quando as duas diferem, aparece o aviso — mas
   // NUNCA recarrega sozinho: recarregar no meio de um check-in perderia o trabalho.
-  const APP_VERSAO='2026-08-20-01';
+  const APP_VERSAO='2026-08-20-02';
   function vigiarVersao(){
     if(!DB) return;
     try{
@@ -12898,6 +12899,9 @@
             </div>
             <div class="hint" style="margin-top:4px">${(!ex.ea_restr&&!ex.ea_restr_nao)?'<span style="color:var(--crm-critico);font-weight:800">FALTA RESPONDER.</span> Enquanto ficar em branco, ele aparece no EA como <strong>a confirmar</strong> — ninguém pode adivinhar.':'Ele aparece na lista do EA sempre que a atividade do dia tiver algo que ele não pode.'}</div>
           </div>
+          <!-- O EA acontece em DUAS matilhas: pequeno e médio porte. É por elas que a tela
+               do EA se divide em duas colunas. -->
+          <div class="field"><label>Matilha (EA)</label><div class="seg gold" data-single>${segBtnsPel('matilha',ex.matilha||'',['Pequeno porte','Médio porte'])}</div></div>
         </div>
         <!-- HISTORICO DO FILHOt (Adriana, 11/ago/2026: "nao tem historico do filhote").
              A folha de papel nunca deixou ver o passado dele. Aqui esta a linha do tempo dos
@@ -15096,6 +15100,29 @@
     });
     return out;
   }
+  // ===== A TELA DO EA — simples, Adriana 20/ago/2026 =============================
+  // "Não precisa buscar peludinho. O tempo tem uma faixa azul e depois tempo de cada parte,
+  //  me confundiu. Primeiro princípio do SaaS: ser autoexplicativo/intuitivo; segundo: não
+  //  confundir. E menos informação. Teremos tempo e duas colunas: matilha de pequeno porte
+  //  e matilha de médio porte."
+  // Então: some a busca e o grid de marcar um a um (quem pode participa, ponto — ninguém
+  // marca nada). Fica: o que foi montado · os 4 tempos · duas colunas com quem não pode.
+  function eaColunaHTML(titulo, lista){
+    return '<div style="flex:1;min-width:230px">'
+      +'<div style="font-weight:800;color:var(--z-blue);font-size:14px;border-bottom:2px solid var(--z-gold);padding-bottom:5px">'+escAttr(titulo)+'</div>'
+      +(lista.length
+        ? lista.map(function(x){
+            var nome=((typeof pelNome==='function')?pelNome(x.o.p):'')||x.o.p.n||'';
+            var eh=(x.tipo==='confirmar');
+            return '<div style="padding:7px 0;border-bottom:1px solid var(--line)">'
+              +'<span style="font-weight:800;color:'+(eh?'var(--crm-atencao-text)':'var(--crm-critico)')+';font-size:15px">'+escAttr(nome)+'</span>'
+              +'<div style="font-size:12.5px;font-weight:700;color:var(--z-blue)">'
+              +(eh?'a confirmar com o tutor':(x.tipo==='tudo'?'NÃO PODE NADA':'não pode: '+escAttr(x.motivo)))
+              +(x.o.daPlanilha?(' · '+escAttr(String(x.o.daPlanilha).toUpperCase())):'')+'</div></div>';
+          }).join('')
+        : '<div class="hint" style="padding-top:7px">ninguém</div>')
+      +'</div>';
+  }
   function renderEA(){
     var el=document.getElementById('eaPainel'); if(!el) return;
     if(dcAtiv!=='ea'){ el.style.display='none'; return; }
@@ -15103,52 +15130,58 @@
     var oque=String((EA_DIA&&EA_DIA.oque)||'');
     var imp=eaImpedidos();
     var tempos=(EA_DIA&&EA_DIA.tempos)||{};
+    var mat=function(q){ return imp.filter(function(x){
+      var m=jsNorm(((typeof pelExtra==='function'?pelExtra(x.o.p):{})||{}).matilha||'');
+      return q==='p'?/pequeno/.test(m):(q==='m'?/medio/.test(m):(!/pequeno|medio/.test(m)));
+    }); };
+    var semMat=mat('');
     el.innerHTML='<div class="card">'
-      +'<h2 style="font-size:17px">EA de hoje</h2>'
-      +'<div class="hint">Escreva o que foi montado. A lista abaixo mostra <strong>só quem não pode participar</strong>.</div>'
+      +'<h2 style="font-size:17px">O que foi montado hoje</h2>'
       +'<input class="cad-in" id="eaTexto" value="'+escAttr(oque)+'" placeholder="Ex: abobrinha + hortelã · coco · feno" autocomplete="off" onchange="eaSalvarTexto()">'
-      +'<button class="btn btn-gold" style="margin-top:8px" onclick="eaSalvarTexto()">Salvar o EA do dia</button>'
+      +'<button class="btn btn-gold" style="margin-top:8px" onclick="eaSalvarTexto()">Salvar</button>'
       +'</div>'
-      // ---- os quatro tempos ----
-      +'<div class="card"><h2 style="font-size:17px">Tempo de cada parte</h2>'
+      // ---- os quatro tempos, um por linha, sem faixa nem enfeite ----
+      +'<div class="card">'
       +EA_ETAPAS.map(function(e){
           var t=tempos[e.k]||{};
           var dur=(t.ini&&t.fim)?Math.max(1,Math.round((t.fim.ts-t.ini.ts)/60000)):0;
           var rot=!t.ini?'começar':(!t.fim?'terminar':'refazer');
           var cor=!t.ini?'var(--z-cream-warm)':(!t.fim?'var(--crm-atencao)':'var(--crm-ok)');
           var txtCor=(!t.ini)?'var(--z-blue)':'#fff';
-          return '<div class="pair" style="padding:8px 0;border-bottom:1px solid var(--line)">'
+          return '<div class="pair" style="padding:9px 0;border-bottom:1px solid var(--line)">'
             +'<span class="k"><strong>'+escAttr(e.t)+'</strong>'
-            +'<div style="font-size:12px;color:var(--muted);font-weight:600">'+escAttr(e.d)+'</div>'
-            +(t.ini?('<div style="font-size:12px;font-weight:700;color:var(--z-blue-soft)">'+escAttr(t.ini.hora)
-                +(t.fim?(' → '+escAttr(t.fim.hora)+' · <strong>'+dur+' min</strong>'):' · em andamento')
-                +' · '+escAttr((t.fim||t.ini).quem||'')+'</div>'):'')
+            +(t.ini?('<div style="font-size:12.5px;font-weight:700;color:var(--z-blue-soft)">'+escAttr(t.ini.hora)
+                +(t.fim?(' → '+escAttr(t.fim.hora)+' · <strong>'+dur+' min</strong>'):' · agora')+'</div>'):'')
             +'</span>'
             +'<span class="val"><button class="btn" style="background:'+cor+';color:'+txtCor+';border:1.5px solid var(--line);padding:6px 14px;font-weight:800" onclick="eaMarcarTempo(\''+e.k+'\')">'+rot+'</button></span>'
             +'</div>';
         }).join('')
       +'</div>'
-      // ---- quem NÃO pode ----
+      // ---- duas colunas: quem NÃO pode em cada matilha ----
       +'<div class="card" style="border-left:4px solid '+(imp.length?'var(--crm-critico)':'var(--crm-ok)')+'">'
       +'<h2 style="font-size:17px">'+(imp.length?('NÃO podem participar ('+imp.length+')'):'Ninguém impedido hoje')+'</h2>'
-      +(imp.length
-        ? ('<div class="hint">Só estes. Todo o resto da turma pode.</div>'
-           +imp.map(function(x){
-               var nome=((typeof pelNome==='function')?pelNome(x.o.p):'')||x.o.p.n||'';
-               var eh=(x.tipo==='confirmar');
-               return '<div style="border-top:1px solid var(--line);padding:9px 0">'
-                 +'<span style="font-weight:800;color:'+(eh?'var(--crm-atencao-text)':'var(--crm-critico)')+';font-size:15px">'+escAttr(nome)+'</span>'
-                 +' <span style="font-weight:700;font-size:13px;color:var(--z-blue)">'
-                 +(eh?'— a confirmar com o tutor (ninguém respondeu ainda)'
-                     :(x.tipo==='tudo'?'— NÃO PODE NADA':'— não pode: '+escAttr(x.motivo)))+'</span>'
-                 +(x.o.daPlanilha?(' <span style="font-size:11px;font-weight:800;color:var(--muted)">'+escAttr(String(x.o.daPlanilha).toUpperCase())+'</span>'):'')
-                 +'</div>';
-             }).join(''))
-        : '<div class="hint" style="color:var(--crm-ok);font-weight:700">Ninguém da turma de hoje tem restrição ao que foi montado.</div>')
+      +(imp.length?'<div class="hint">Todo o resto da turma participa — não precisa marcar ninguém.</div>':'')
+      +'<div style="display:flex;flex-wrap:wrap;gap:18px;margin-top:8px">'
+      +eaColunaHTML('Matilha de pequeno porte', mat('p'))
+      +eaColunaHTML('Matilha de médio porte', mat('m'))
+      +'</div>'
+      +(semMat.length?('<div style="margin-top:10px;background:rgba(222,180,40,.18);border-left:4px solid var(--z-gold);border-radius:8px;padding:9px 11px;font-size:13px;font-weight:700;color:var(--z-blue)">'
+        +'Sem matilha na ficha: '+escAttr(semMat.map(function(x){ return ((typeof pelNome==='function')?pelNome(x.o.p):'')||x.o.p.n; }).join(' · '))
+        +'<div style="font-weight:600;margin-top:2px">Marque a matilha na ficha para eles caírem na coluna certa.</div></div>'):'')
       +'</div>';
   }
   function renderGenerico(){
-    try{ if(dcAtiv==='ea'){ if(!EA_DIA) eaCarregar(); else renderEA(); } else { var _e=document.getElementById('eaPainel'); if(_e) _e.style.display='none'; } }catch(e){}
+    // No EA a tela é só o painel: quem pode, participa — ninguém marca um a um (Adriana,
+    // 20/ago/2026: "o quadrado dos aulunos, automaticamente todos que podem terão
+    // participado, não precisa marcar nenhum o monitor"). Some a busca e o grid.
+    try{
+      var _e=document.getElementById('eaPainel');
+      var _ea=(dcAtiv==='ea');
+      ['genNota','genResumo','genGrid'].forEach(function(id){ var x=document.getElementById(id); if(x) x.style.display=_ea?'none':''; });
+      var _tb=document.querySelector('#scr-generic .pel-toolbar'); if(_tb) _tb.style.display=_ea?'none':'';
+      if(_ea){ if(!EA_DIA) eaCarregar(); else renderEA(); return; }
+      if(_e) _e.style.display='none';
+    }catch(e){}
     if(!document.getElementById('genGrid')) return;
     let list=ehAlmoco2()?listaSegundoHorario():turmaDoDia(); list=filtrarAtividadeSeletiva(list,dcAtiv); let feito=0;
     list.forEach(o=>{ const m=genMarcas[dcKey(o.p.n,o.p.tutor)]; if(m==='feito'||m==='comeu')feito++; });
@@ -15784,9 +15817,15 @@
       // que existe uma guardada. Quem quiser trocar digita a nova por cima — ler, ninguém lê.
       if(t) t.value='';
       var ts=document.getElementById('dashPonteTokenSt');
+      // Adriana, 20/ago/2026: "deixa como asterisco para todos que têm acesso com exceção de
+      // mim... não deixe ninguém apagar com exceção de mim (vai que precisamos trocar algo)."
+      // Só a Diretoria revela a senha e só ela apaga a ponte. A Gestão pode ajustar a URL.
+      var _dir=(document.body.dataset.role==='diretoria');
       if(ts) ts.innerHTML=(DASH_PONTE&&DASH_PONTE.token)
-        ? '<span style="color:var(--crm-ok);font-weight:800">✓ senha guardada</span> — deixe em branco para manter, ou digite outra para trocar.'
+        ? ('<span style="color:var(--crm-ok);font-weight:800">✓ senha guardada</span> — deixe em branco para manter, ou digite outra para trocar.'
+           +(_dir?' <button class="btn" style="background:none;border:none;color:var(--z-blue);font-weight:800;text-decoration:underline;padding:0 4px;font-size:12px" onclick="dashRevelarSenha()">ver a senha</button>':''))
         : '<span style="color:var(--crm-critico);font-weight:800">nenhuma senha guardada</span>';
+      var _ap=document.getElementById('dashApagarPonte'); if(_ap) _ap.style.display=_dir?'':'none';
       renderDash();
     });
   }
@@ -15813,6 +15852,24 @@
       if(typeof audit==='function') audit('dashboard-daycare', url?'ligou a ponte com a planilha do Day Care':'desligou a ponte',{});
       renderDash();
     }).catch(function(e){ if(st){ st.style.color='var(--crm-critico)'; st.textContent='Não salvou: '+((e&&e.message)||e); } });
+  }
+  // Só a Diretoria vê a senha, e por 12 segundos — tempo de conferir, não de alguém copiar.
+  function dashRevelarSenha(){
+    if(document.body.dataset.role!=='diretoria') return;
+    var t=document.getElementById('dashPonteToken'); if(!t||!(DASH_PONTE&&DASH_PONTE.token)) return;
+    t.type='text'; t.value=DASH_PONTE.token;
+    if(typeof audit==='function') audit('dashboard-daycare','revelou a senha da ponte (Diretoria)',{});
+    setTimeout(function(){ try{ t.type='password'; t.value=''; }catch(e){} }, 12000);
+  }
+  // Apagar a ponte é só da Diretoria: desligá-la para todo mundo é decisão de uma pessoa só.
+  function dashApagarPonte(){
+    if(document.body.dataset.role!=='diretoria'){ alert('Só a Diretoria pode desligar a ponte.'); return; }
+    if(!confirm('Desligar a ponte com a planilha?\n\nO app continua guardando tudo, mas a TV para de receber o que for lançado — e alguém terá que escrever na planilha à mão.')) return;
+    if(!DB) return;
+    DB.ref('daycare/config/ponte-planilha').set({url:'', token:''}).then(function(){
+      DASH_PONTE=null; dashCarregar();
+      if(typeof audit==='function') audit('dashboard-daycare','DESLIGOU a ponte com a planilha',{});
+    }).catch(function(){});
   }
   function dashPonteChamar(corpo){
     var c=DASH_PONTE||{};
