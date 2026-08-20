@@ -8894,7 +8894,7 @@
   // Agora existe um carimbo: esta constante é a versão que o aparelho está rodando, e o
   // Firebase guarda a versão publicada. Quando as duas diferem, aparece o aviso — mas
   // NUNCA recarrega sozinho: recarregar no meio de um check-in perderia o trabalho.
-  const APP_VERSAO='2026-08-20-12';
+  const APP_VERSAO='2026-08-20-13';
   function vigiarVersao(){
     if(!DB) return;
     try{
@@ -15464,9 +15464,14 @@
       +EA_ETAPAS.map(function(e){
           var t=tempos[e.k]||{};
           var dur=(t.ini&&t.fim)?Math.max(1,Math.round((t.fim.ts-t.ini.ts)/60000)):0;
-          var rot=!t.ini?'começar':(!t.fim?'terminar':'refazer');
-          var cor=!t.ini?'var(--z-cream-warm)':(!t.fim?'var(--crm-atencao)':'var(--crm-ok)');
-          var txtCor=(!t.ini)?'var(--z-blue)':'#fff';
+          // MESMO botão do almoço — Adriana, 20/ago/2026: "coloque um botão como Iniciar e
+          // mantenha o design que estamos usando, porque eles já conhecem o almoço... vamos
+          // manter um único app." A equipe já aprendeu ▶ Iniciar / ■ Encerrar; inventar
+          // "começar/terminar" só aqui obrigaria a aprender duas linguagens no mesmo sistema.
+          var rot=!t.ini?'&#9654; Iniciar':(!t.fim?'&#9632; Encerrar':'&#8635; Refazer');
+          var cls=!t.ini?'btn btn-gold':(!t.fim?'btn btn-primary':'btn');
+
+
           return '<div class="pair" style="padding:9px 0;border-bottom:1px solid var(--line)">'
             +'<span class="k"><strong>'+(EA_ETAPAS.indexOf(e)+1)+'. '+escAttr(e.t)+'</strong>'
             +'<div style="font-size:12.5px;color:var(--muted);font-weight:600;line-height:1.4;margin-top:1px">'+escAttr(e.d)+'</div>'
@@ -15474,7 +15479,7 @@
                 +(t.fim?(' → '+escAttr(t.fim.hora)+' · '+dur+' min'):' · em andamento')
                 +(t.ini.quem?(' · '+escAttr(String(t.ini.quem).split('·')[0].trim())):'')+'</div>'):'')
             +'</span>'
-            +'<span class="val"><button class="btn" style="background:'+cor+';color:'+txtCor+';border:1.5px solid var(--line);padding:6px 14px;font-weight:800" onclick="eaMarcarTempo(\''+e.k+'\')">'+rot+'</button></span>'
+            +'<span class="val"><button class="'+cls+'" style="padding:7px 16px;font-weight:800;white-space:nowrap" onclick="eaMarcarTempo(\''+e.k+'\')">'+rot+'</button></span>'
             +'</div>';
         }).join('')
       +'</div>'
