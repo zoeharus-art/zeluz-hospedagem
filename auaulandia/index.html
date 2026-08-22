@@ -3197,6 +3197,10 @@
           <div><label class="cad-lb">Nome do peludinho</label><input class="cad-in" id="orcAvNome" placeholder="Ex: Thor"></div>
           <div><label class="cad-lb">Nome do tutor</label><input class="cad-in" id="orcAvTutor" placeholder="Ex: Renata"></div>
         </div>
+        <div style="margin-top:8px"><label class="cad-lb">Raça <span style="color:#b3261e">(obrigatória)</span></label>
+          <input class="cad-in" id="orcAvRaca" placeholder="Ex: Shih Tzu, Westie, SRD…">
+          <div class="hint">Sem a raça, dois FILHOts de mesmo nome viram um só na planilha e no dashboard.</div>
+        </div>
         <div style="margin-top:8px"><label class="cad-lb">É macho ou fêmea?</label>
           <div class="orc-temp" id="orcAvSexo" style="grid-template-columns:1fr 1fr">
             <button type="button" onclick="orcAvSexoSet('Macho')" id="orcAvSexoM"><span class="tt">Macho</span></button>
@@ -7358,12 +7362,17 @@
   function orcAddAvulso(){
     var n=nomeProprio(((document.getElementById('orcAvNome')||{}).value||''));
     var t=nomeProprio(((document.getElementById('orcAvTutor')||{}).value||''));
+    // A raça é obrigatória para cliente novo (Adriana, 22/ago/2026): é ela que separa a Maya
+    // da Carolina da Maya da Luciana na planilha, no dashboard e no cadastro que vem depois.
+    var r=nomeProprio(((document.getElementById('orcAvRaca')||{}).value||''));
     if(!n||!t){ alert('Escreva o nome do peludinho e o nome do tutor.'); return; }
+    if(!r){ alert('Falta a raça. Ela é obrigatória para cliente novo — sem ela, dois FILHOts de mesmo nome viram um só.'); try{ document.getElementById('orcAvRaca').focus(); }catch(e){} return; }
     var key='avulso__'+jsNorm(n)+'__'+jsNorm(t);
     if(ORC_SEL.some(function(s){ return s.key===key; })){ alert('Ele já está neste orçamento.'); return; }
-    ORC_SEL.push({key:key, nome:n, tutor:t, dias:[], planoKey:'', rotulo:'sem plano', compromisso:'',
+    ORC_SEL.push({key:key, nome:n, tutor:t, raca:r, dias:[], planoKey:'', rotulo:'sem plano', compromisso:'',
                   hospOff:0, semCadastro:true, sexo:ORC_AV_SEXO});
     document.getElementById('orcAvNome').value=''; document.getElementById('orcAvTutor').value='';
+    var _ar=document.getElementById('orcAvRaca'); if(_ar) _ar.value='';
     ORC_AV_SEXO=''; orcAvSexoSet('');
     orcRenderSel(); orcCalcular();
   }
@@ -7394,12 +7403,50 @@
     var achados=(typeof PELUDINHOS!=='undefined'?PELUDINHOS:[]).filter(function(p){
       return jsNorm(p.n||'').indexOf(n)>=0 || jsNorm(p.tutor||'').indexOf(n)>=0;
     }).slice(0,8);
-    if(!achados.length){ el.innerHTML='<div class="hint">Ninguém com esse nome no cadastro.</div>'; return; }
+    // ===== NUNCA ASSOCIAR SOZINHO (Adriana, 22/ago/2026) ==============================
+    // "Foi lançado um orçamento para Maya da Carolina, cliente sem cadastro, e o sistema puxou
+    //  a Maya SRD da Luciana. Isso NUNCA pode ocorrer. Pode perguntar: temos Maya cadastrada,
+    //  é essa ou é uma nova? A pessoa escolhe NOVA e damos entrada."
+    // O nome sozinho não identifica ninguém. A saída "é nova" fica SEMPRE visível, com o mesmo
+    // peso das sugestões — quem digita não precisa perceber que a lista está errada.
+    var novoBt='<div class="orc-sug" style="margin-top:6px"><div onclick="orcNovoComNome('+JSON.stringify(escAttr(t)).replace(/"/g,'&quot;')+')" '
+      +'style="border:2px dashed var(--z-gold);background:rgba(222,180,40,.10);font-weight:800;color:var(--z-blue)">'
+      +'Nenhum desses — é FILHOt novo, de outro tutor</div></div>';
+    if(!achados.length){ el.innerHTML='<div class="hint">Ninguém com esse nome no cadastro.</div>'+novoBt; return; }
     el.innerHTML='<div class="orc-sug">'+achados.map(function(p){
       var pl=orcPlanoDoPet(p);
-      return '<div onclick="orcAdd(\''+escAttr(pelKey(p))+'\')"><strong>'+escAttr(p.n||'')+'</strong> · '+escAttr(p.tutor||'sem tutor')
+      var rc=(typeof pelGet==='function')?(pelGet(p,'raca')||''):(p.raca||'');
+      return '<div onclick="orcConfirmarPet(\''+escAttr(pelKey(p))+'\')"><strong>'+escAttr(p.n||'')+'</strong>'
+        +(rc?(' · '+escAttr(rc)):'')+' · '+escAttr(p.tutor||'sem tutor')
         +' <span style="color:var(--muted);font-size:12px">('+escAttr(pl.rotulo)+')</span></div>';
-    }).join('')+'</div>';
+    }).join('')+'</div>'+novoBt;
+  }
+  // Passo de confirmação: o tutor aparece grande antes de entrar no orçamento. Um toque a mais
+  // custa 2 segundos; orçamento no cliente errado custa a confiança do tutor.
+  function orcConfirmarPet(key){
+    var el=document.getElementById('orcSug'); if(!el) return;
+    var p=(typeof PELUDINHOS!=='undefined'?PELUDINHOS:[]).find(function(x){ return pelKey(x)===key; });
+    if(!p){ el.innerHTML=''; return; }
+    var rc=(typeof pelGet==='function')?(pelGet(p,'raca')||''):(p.raca||'');
+    var nm=p.n||'';
+    el.innerHTML='<div style="margin-top:8px;border:2.5px solid var(--z-blue);border-radius:14px;padding:14px 16px;background:#fff">'
+      +'<div style="font-size:15px;color:var(--muted);font-weight:600">Confirme antes de somar ao orçamento:</div>'
+      +'<div style="font-size:20px;font-weight:800;color:var(--z-blue);margin:4px 0 2px">'+escAttr(nm)+(rc?(' · '+escAttr(rc)):'')+'</div>'
+      +'<div style="font-size:17px;font-weight:700">Tutor: '+escAttr(p.tutor||'sem tutor')+'</div>'
+      +(rc?'':'<div class="hint" style="color:#b3261e;font-weight:700">Este cadastro está sem raça — confira com o tutor.</div>')
+      +'<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px">'
+      +'<button class="btn btn-primary" onclick="orcAdd(\''+escAttr(key)+'\')">Sim, é este</button>'
+      +'<button class="btn btn-gold" onclick="orcNovoComNome('+JSON.stringify(escAttr(nm)).replace(/"/g,'&quot;')+')">Não — é outro '+escAttr(nm)+', de tutor novo</button>'
+      +'<button class="btn" onclick="document.getElementById(\'orcSug\').innerHTML=\'\'">Cancelar</button>'
+      +'</div></div>';
+  }
+  function orcNovoComNome(nome){
+    var box=document.getElementById('orcAvulsoBox'); if(box) box.style.display='block';
+    var s=document.getElementById('orcSug'); if(s) s.innerHTML='';
+    var b=document.getElementById('orcBusca'); if(b) b.value='';
+    var n=document.getElementById('orcAvNome'); if(n) n.value=nomeProprio(nome||'');
+    try{ box.scrollIntoView({behavior:'smooth', block:'center'}); }catch(e){}
+    setTimeout(function(){ try{ document.getElementById('orcAvTutor').focus(); }catch(e){} },250);
   }
   function orcAdd(key){
     var p=(typeof PELUDINHOS!=='undefined'?PELUDINHOS:[]).find(function(x){ return pelKey(x)===key; }); if(!p) return;
@@ -9080,7 +9127,7 @@
   // Agora existe um carimbo: esta constante é a versão que o aparelho está rodando, e o
   // Firebase guarda a versão publicada. Quando as duas diferem, aparece o aviso — mas
   // NUNCA recarrega sozinho: recarregar no meio de um check-in perderia o trabalho.
-  const APP_VERSAO='2026-08-22-05';
+  const APP_VERSAO='2026-08-22-06';
   function vigiarVersao(){
     if(!DB) return;
     try{
@@ -14936,6 +14983,84 @@
   ];
   // Em que embalagem o item chegou — a legenda da planilha, tal e qual.
   const PT_EMB=[{k:'P',t:'Pote'},{k:'S',t:'Sacola'},{k:'M',t:'Mochila'}];
+  // ===== IRMÃOS QUE DIVIDEM MOCHILA E VASILHA (Adriana, 20/ago/2026) ==================
+  // "Temos irmãos no Day Care, alguns trazem uma única mochila para os dois, uma única
+  //  vasilha para os dois... como fazemos?"
+  // Sem isto, a monitora marca "não trouxe mochila" para o segundo irmão — o que é falso e
+  // polui a conferência da saída. As duas últimas duplas NÃO dividem: estão aqui de propósito,
+  // para o app dizer "cada um tem a sua" em vez de ficar calado.
+  const PT_IRMAOS=[
+    {a:{n:'bartolomeu'},                 b:{n:'fiona'},                    mochila:true,  vasilha:true},
+    {a:{n:'yumi'},                       b:{n:'bruce', tutor:'filipe'},    mochila:true,  vasilha:true},
+    {a:{n:'buh'},                        b:{n:'nina', tutor:'mariana'},    mochila:true,  vasilha:true},
+    {a:{n:'lanna', tutor:'luiza'},       b:{n:'lilly', tutor:'luiza'},     mochila:true,  vasilha:true},
+    {a:{n:'chiara'},                     b:{n:'olivia', raca:'westie'},    mochila:true,  vasilha:true},
+    {a:{n:'joao'},                       b:{n:'juju'},                     mochila:true,  vasilha:true},
+    {a:{n:'maya', tutor:'raquel'},       b:{n:'chico', tutor:'raquel'},    mochila:true,  vasilha:false},
+    {a:{n:'cora'},                       b:{n:'corina'},                   mochila:true,  vasilha:false},
+    {a:{n:'theo', tutor:'renata'},       b:{n:'rafael', tutor:'renata'},   mochila:true,  vasilha:false},
+    {a:{n:'billy paul', tutor:'juliana'},b:{n:'chanel', tutor:'juliana'},  mochila:true,  vasilha:false},
+    {a:{n:'tablito'},                    b:{n:'biscoito'},                 mochila:true,  vasilha:false},
+    {a:{n:'bloo'},                       b:{n:'coco'},                     mochila:true,  vasilha:false},
+    {a:{n:'cookie', irmaoRaca:'maltes'}, b:{n:'cristal', raca:'maltes'},   mochila:true,  vasilha:false},
+    {a:{n:'olivia', raca:'srd'},         b:{n:'valentina', raca:'srd'},    mochila:true,  vasilha:false},
+    {a:{n:'ozzy', raca:'norfolk'},       b:{n:'charlotte', raca:'norfolk'},mochila:false, vasilha:false},
+    {a:{n:'cookie', irmaoRaca:'shih'},   b:{n:'jack', raca:'shih'},        mochila:false, vasilha:false}
+  ];
+  function ptCasa(p, alvo){
+    try{
+      if(jsNorm(p.n||'')!==jsNorm(alvo.n)) return false;
+      if(alvo.tutor && jsNorm(String(p.tutor||'')).indexOf(jsNorm(alvo.tutor))<0) return false;
+      if(alvo.raca){
+        var r=jsNorm((typeof pelGet==='function'?pelGet(p,'raca'):p.raca)||'');
+        if(r.indexOf(jsNorm(alvo.raca))<0) return false;
+      }
+      return true;
+    }catch(e){ return false; }
+  }
+  // Se o FILHOt casar com MAIS DE UMA linha, o app CALA. Duas Olivias e dois Cookies passam
+  // por aqui: afirmar "divide com a Chiara" para a Olivia errada é o erro da Maya de novo.
+  function ptIrmaosCandidatos(p){
+    var achou=[];
+    if(!p) return achou;
+    PT_IRMAOS.forEach(function(d){
+      if(ptCasa(p,d.a)) achou.push({eu:d.a, ele:d.b, mochila:d.mochila, vasilha:d.vasilha});
+      else if(ptCasa(p,d.b)) achou.push({eu:d.b, ele:d.a, mochila:d.mochila, vasilha:d.vasilha});
+    });
+    return achou;
+  }
+  function ptIrmaoDe(p){
+    var a=ptIrmaosCandidatos(p);
+    return a.length===1?a[0]:null;
+  }
+  function ptNomeIrmao(x){
+    var n=String(x.n||'').split(' ').map(function(w){ return w?(w.charAt(0).toLocaleUpperCase('pt-BR')+w.slice(1)):w; }).join(' ');
+    return n+(x.raca?(' · '+x.raca.toUpperCase()):'');
+  }
+  function ptFaixaIrmao(p){
+    var cand=ptIrmaosCandidatos(p);
+    // Calar por dúvida esconderia o irmão da monitora. Em vez de calar, DIZ que há dúvida —
+    // e diz o que resolve: a raça no cadastro.
+    if(cand.length>1){
+      return '<div class="ck-proto-corpo" style="border-left:4px solid #b3261e;background:rgba(179,38,30,.08);border-radius:12px;padding:10px 14px;margin:8px 0">'
+        +'<b>Existe mais de um FILHOt com esse nome que divide mochila</b> ('
+        +cand.map(function(c){ return escAttr(ptNomeIrmao(c.ele)); }).join(' ou ')+'). '
+        +'Este cadastro está <b>sem a raça</b>, então não sei qual é. Pergunte à Recepção antes de marcar falta de mochila — '
+        +'e peça para incluir a raça na ficha, que aí o app resolve sozinho.</div>';
+    }
+    var d=cand[0]; if(!d) return '';
+    var nome=ptNomeIrmao(d.ele);
+    if(!d.mochila && !d.vasilha){
+      return '<div class="ck-proto-corpo" style="border-left:4px solid var(--line);background:var(--z-cream-warm);border-radius:12px;padding:10px 14px;margin:8px 0">'
+        +'Irmão de <b>'+escAttr(nome)+'</b> — <b>cada um tem a sua</b> mochila e a sua vasilha. Confira as duas.</div>';
+    }
+    var oq=(d.mochila&&d.vasilha)?'a mochila E a vasilha':(d.mochila?'a mochila':'a vasilha');
+    return '<div class="ck-proto-corpo" style="border-left:4px solid var(--z-gold);background:rgba(222,180,40,.12);border-radius:12px;padding:10px 14px;margin:8px 0">'
+      +'<b>Divide '+oq+' com '+escAttr(nome)+'.</b> Se já conferiu na ficha '+(/a$/.test(nome.split(' ')[0].toLowerCase())?'dela':'dele')+', '
+      +'marque aqui como <b>trouxe</b> e escreva "dividida com '+escAttr(nome.split(' ')[0])+'". '
+      +'<b>Não é falta</b> — é uma só para os dois.'
+      +(d.vasilha?'':' A <b>vasilha</b>, essa sim, é individual: são duas.')+'</div>';
+  }
   var ptDados={}, ptAtual=null, ptRascunho=null;
   function ptEhEntrada(){ return dcAtiv==='checkin-pert'; }
   function ptNo(){ return 'daycare/'+(ptEhEntrada()?'checkin':'checkout')+'-pertences/'+dcDataKey(); }
@@ -15083,6 +15208,7 @@
       +'<div class="ck-topo">'+ph+'<div><div class="ck-nome">'+escAttr(pelNome(p))+'</div>'
       +'<div class="ck-sub">'+escAttr(p.raca||'')+(p.tutor?(' · '+escAttr(p.tutor)):'')+'</div></div>'
       +'<button class="btn" style="margin-left:auto;background:var(--z-cream-warm);color:var(--z-blue);border:1.5px solid var(--line)" onclick="ptVoltar()">Voltar</button></div>';
+    h+=ptFaixaIrmao(p);
     if(!entrada){
       // Saída: a lista vem do que entrou. Nada de recomeçar do zero.
       h+='<div class="ck-proto"><div class="ck-proto-cab" style="cursor:default"><span>O que volta para casa</span></div>'
