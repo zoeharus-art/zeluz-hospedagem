@@ -9127,7 +9127,7 @@
   // Agora existe um carimbo: esta constante é a versão que o aparelho está rodando, e o
   // Firebase guarda a versão publicada. Quando as duas diferem, aparece o aviso — mas
   // NUNCA recarrega sozinho: recarregar no meio de um check-in perderia o trabalho.
-  const APP_VERSAO='2026-08-22-07';
+  const APP_VERSAO='2026-08-22-08';
   function vigiarVersao(){
     if(!DB) return;
     try{
@@ -16264,11 +16264,23 @@
     L.push('Sobre '+(femea?'a ':'o ')+nome+', gostaríamos de confirmar:');
     L.push('');
     var n=0, pergunta=function(t){ L.push((++n)+'. '+t); };
+    // A ALIMENTAÇÃO VEM PRIMEIRO (Adriana, 20/ago/2026: "a alimentação é essencial"). Sai da
+    // cauda do questionário e vira a primeira seção — é o dado que a plantonista precisa às
+    // 19h e que hoje ela não tem. Títulos de seção em negrito do WhatsApp (*texto*).
+    L.push('*ALIMENTAÇÃO*');
+    pergunta('Quantas refeições '+(femea?'ela ':'ele ')+'faz por dia, e em que horários?');
+    pergunta('Qual a marca e o tipo do alimento? (ração seca, ração úmida, comida natural ou uma combinação)');
+    pergunta('Qual a quantidade em cada refeição? Pode ser em gramas, xícaras, copos-medida — ou a medida que você usa em casa, é só descrever.');
     pergunta('Existe alguma restrição, sensibilidade ou alergia? Pode ser a algum alimento, fruta, petisco, produto, fragrância ou cheiro específico.');
+    L.push('');
+    L.push('*SAÚDE, ROTINA E COMPORTAMENTO*');
     pergunta('Há alguma atividade física que precise ser evitada ou adaptada? Na nossa Aucademia temos esteira e o espaço do Day Care possui alguns degraus de acesso, que não são utilizados continuamente. Queremos adaptar tudo às necessidades d'+(femea?'a ':'o ')+nome+'.');
     pergunta('Quando foi realizado o último check-up?');
     if(!temChip) pergunta((femea?'A ':'O ')+nome+' possui microchip? Se sim, poderia nos enviar o número para conferirmos e mantermos a ficha atualizada?');
-    pergunta('Houve alguma mudança recente de comportamento? Por exemplo: ficou mais receoso, irritado, quieto, inseguro ou sensível ao toque?');
+    // Concordância: "ficou mais receosa, irritada" para fêmea. Norma culta é obrigatória —
+    // erro de português numa mensagem ao tutor desfaz o que o preço promete.
+    pergunta('Houve alguma mudança recente de comportamento? Por exemplo: ficou mais '
+      +(femea?'receosa, irritada, quieta, insegura':'receoso, irritado, quieto, inseguro')+' ou sensível ao toque?');
     pergunta('Aconteceu alguma situação que possa ter sido estressante? Pode ter sido uma interação difícil com outro peludo durante um passeio, na praça ou em algum ambiente público — mesmo que tenha parecido algo pequeno.');
     // Cio: só para fêmeas, e some se a ficha já diz que é castrada.
     if(femea&&!castrada) pergunta('Quando foi o último cio? Se não souber a data exata, uma estimativa aproximada já ajuda.');
