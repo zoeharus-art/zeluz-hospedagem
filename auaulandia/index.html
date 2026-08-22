@@ -578,6 +578,12 @@
   .seg button.on.t-bad{background:var(--crm-critico);color:#fff}
   .seg button.on.t-warn{background:var(--crm-atencao);color:var(--crm-atencao-text)}
   .grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+  /* Jantar dentro do relatório — 22/ago/2026 */
+  .janta-box{margin:10px 0;padding:10px 12px;border-radius:10px;font-size:13.5px;line-height:1.45;
+    font-weight:700;color:var(--z-blue);background:rgba(222,180,40,.18);border-left:4px solid var(--z-gold)}
+  .janta-box div{font-weight:600;font-size:12.5px;margin-top:3px;color:var(--z-blue-soft)}
+  .janta-box-rep{background:rgba(124,139,153,.14);border-left-color:#7C8B99}
+  .janta-box-falta{background:rgba(179,38,30,.10);border-left-color:var(--crm-critico);color:var(--crm-critico)}
   .obsline{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 0;border-bottom:1px solid #f1ebde}
   .obsline:last-child{border-bottom:none}
   .obsline .q{font-size:14px;font-weight:600;color:var(--z-blue)}
@@ -2203,6 +2209,16 @@
         <div class="obsline"><span class="q">Está ativo?</span><div class="seg" data-single><button data-tone="ok" onclick="pick(this)">Sim</button><button data-tone="warn" onclick="pick(this)">Não</button></div></div>
         <div class="obsline"><span class="q">Bebeu água?</span><div class="seg" data-single><button data-tone="ok" onclick="pick(this)">Sim</button><button data-tone="bad" onclick="pick(this)">Não</button></div></div>
         <div class="obsline"><span class="q">Jantou?</span><div class="seg" data-single><button data-tone="ok" onclick="pick(this)">Sim</button><button data-tone="bad" onclick="pick(this)">Não</button><button data-tone="warn" onclick="pick(this)">Metade</button><button data-tone="warn" onclick="pick(this)">Não se aplica</button></div></div>
+        <!-- O JANTAR — Adriana, 20-22/ago/2026: "não pode estar sem dado algum. Se entrou
+             pernoite, foi pega alguma comida, e a pessoa coloca no relatório... tem que ter uma
+             opção Jantar e abrir uma caixa: Dar 100g de comida natural. Caixa de onde está:
+             Geladeira ou Armário."
+             As plantonistas NÃO se encontram — todo o contato é pelo app. O que foi servido
+             precisa ficar ESCRITO aqui, não combinado de boca. -->
+        <div id="janta-slot-inicio"></div>
+        <div class="field"><label>Quanto e o que foi servido no jantar</label><textarea class="cad-in" style="min-height:52px" placeholder="jantar servido — ex.: 100g de comida natural"></textarea></div>
+        <div class="obsline"><span class="q">Onde está a comida dele?</span><div class="seg" data-single><button data-tone="ok" onclick="pick(this)">Geladeira</button><button data-tone="ok" onclick="pick(this)">Armário</button><button data-tone="warn" onclick="pick(this)">Na mochila</button><button data-tone="bad" onclick="pick(this)">Não trouxe — peguei da casa</button></div></div>
+        
         <div class="obsline"><span class="q">Fez xixi?</span><div class="seg" data-single><button data-tone="ok" onclick="pick(this);onXixiQ(this)">Sim</button><button data-tone="warn" onclick="pick(this);onXixiQ(this)">Não</button><button data-tone="warn" onclick="pick(this);onXixiQ(this)">Não vi</button></div></div>
         <div class="obsline"><span class="q">Fez cocô?</span><div class="seg" data-single><button data-tone="ok" onclick="pick(this);onCocoQ(this)">Sim</button><button data-tone="warn" onclick="pick(this);onCocoQ(this)">Não</button><button data-tone="warn" onclick="pick(this);onCocoQ(this)">Não vi</button></div></div>
         <div class="obsline"><span class="q">Consistência</span><div class="seg" data-single><button data-tone="ok" onclick="pick(this)">Normal</button><button data-tone="bad" onclick="pick(this)">Pastoso</button><button data-tone="bad" onclick="pick(this)">Diarreia</button><button data-tone="warn" onclick="pick(this)">Não vi</button></div></div>
@@ -6684,7 +6700,33 @@
       el.style.display='block'; el.innerHTML='⚠ <strong>'+((currentHosp&&currentHosp.nome)||'Este FILHOt')+'</strong> teve <strong>medicação registrada nesta estadia</strong> (dia '+medHistEstadia.quando+'). '+(hoje?'Continue registrando o horário e a quantidade.':'Se ainda toma, registre. Se acabou ou foi suspenso, confirme ao salvar.'); }
     else { el.style.display='none'; el.innerHTML=''; } }
   function coletarCard(cardId){ const byQ={}; document.querySelectorAll('#'+cardId+' .obsline').forEach(l=>{ const q=l.querySelector('.q'); const on=l.querySelector('button.on'); if(q) byQ[q.textContent.trim()]= on?on.textContent.trim():''; }); const areas=[]; const byArea={}; document.querySelectorAll('#'+cardId+' textarea').forEach(t=>{ areas.push(t.value||''); const ph=(t.placeholder||'').toLowerCase(); if(ph.indexOf('medicamento')>=0) byArea.medicamento=t.value||''; else if(ph.indexOf('suplemento')>=0) byArea.suplemento=t.value||''; }); const mg=coletarMedgrids(cardId); return {byQ:byQ,areas:areas,byArea:byArea,meds:mg.med,sups:mg.sup}; }
-  function aplicarCard(cardId,d){ d=d||{}; const byQ=d.byQ||{}; document.querySelectorAll('#'+cardId+' .obsline').forEach(l=>{ const q=l.querySelector('.q'); const val=q?byQ[q.textContent.trim()]:''; l.querySelectorAll('button').forEach(b=>{ b.classList.remove('on','t-ok','t-bad','t-warn'); if(val&&b.textContent.trim()===val){ b.classList.add('on'); if(b.dataset.tone) b.classList.add('t-'+b.dataset.tone);} }); }); const areas=d.areas||[]; document.querySelectorAll('#'+cardId+' textarea').forEach((t,i)=>t.value=areas[i]||''); const tipo=cardId.replace('card-',''); const sp=document.getElementById('passou-'+tipo); if(sp) sp.value=d.passou||''; const sr=document.getElementById('recebeu-'+tipo); if(sr) sr.value=d.recebeu||''; aplicarMedgrids(cardId,d); sincVomVis(cardId); sincCocoVis(cardId); sincXixiVis(cardId); RELSTATE[tipo]={passou:d.passou||'',recebeu:d.recebeu||''};
+  // Mostra DENTRO do relatório do jantar o que foi lançado no check-in. A plantonista não
+  // precisa sair da tela nem perguntar a ninguém: o número está na frente dela na hora de servir.
+  function jantaSlotRender(){
+    var el=document.getElementById('janta-slot-inicio'); if(!el) return;
+    var h=(typeof currentHosp!=='undefined')?currentHosp:null;
+    if(!h){ el.innerHTML=''; return; }
+    var a=(typeof alimDoHospede==='function')?alimDoHospede(h):null;
+    if(!a){ el.innerHTML=''; return; }
+    if(a.fonte==='nenhuma'){
+      el.innerHTML='<div class="janta-box janta-box-falta">'
+        +'<strong>Não há jantar lançado para '+escAttr(h.nome||'ele')+'.</strong>'
+        +(a.obs?('<div>NÃO PODE: '+escAttr(a.obs)+'</div>'):'')
+        +'<div>Pegue a comida, sirva e <strong>escreva abaixo o que deu</strong> — quem entra amanhã só vai saber por aqui.</div></div>';
+      return;
+    }
+    var L=[];
+    if(a.racao) L.push(a.racao+(a.unidade?(' '+a.unidade):'')+' de ração');
+    if(a.natural) L.push(a.natural+' de natural');
+    if(a.extra) L.push(a.extra);
+    el.innerHTML='<div class="janta-box'+(a.incerto?' janta-box-rep':'')+'">'
+      +'<strong>Jantar de '+escAttr(h.nome||'')+': '+escAttr(L.length?L.join(' + '):'sem quantidade lançada')+'</strong>'
+      +(a.marca?('<div>'+escAttr(a.marca)+'</div>'):'')
+      +(a.obs?('<div>'+escAttr(a.obs)+'</div>'):'')
+      +(a.incerto?'<div><strong>Isto veio do almoço do Day Care</strong> — confira a quantidade e escreva abaixo o que realmente deu.</div>':'')
+      +'</div>';
+  }
+  function aplicarCard(cardId,d){ d=d||{}; try{ jantaSlotRender(); }catch(e){} const byQ=d.byQ||{}; document.querySelectorAll('#'+cardId+' .obsline').forEach(l=>{ const q=l.querySelector('.q'); const val=q?byQ[q.textContent.trim()]:''; l.querySelectorAll('button').forEach(b=>{ b.classList.remove('on','t-ok','t-bad','t-warn'); if(val&&b.textContent.trim()===val){ b.classList.add('on'); if(b.dataset.tone) b.classList.add('t-'+b.dataset.tone);} }); }); const areas=d.areas||[]; document.querySelectorAll('#'+cardId+' textarea').forEach((t,i)=>t.value=areas[i]||''); const tipo=cardId.replace('card-',''); const sp=document.getElementById('passou-'+tipo); if(sp) sp.value=d.passou||''; const sr=document.getElementById('recebeu-'+tipo); if(sr) sr.value=d.recebeu||''; aplicarMedgrids(cardId,d); sincVomVis(cardId); sincCocoVis(cardId); sincXixiVis(cardId); RELSTATE[tipo]={passou:d.passou||'',recebeu:d.recebeu||''};
     // troca de FILHOt = leitura recomeça do zero (senão o "rolou até o fim" do anterior destravaria este,
     // e o cronômetro contaria o tempo do FILHOt errado)
     LEITURA_ROLOU[tipo]=false; LEITURA_T0[tipo]=0;
@@ -8991,7 +9033,7 @@
   // Agora existe um carimbo: esta constante é a versão que o aparelho está rodando, e o
   // Firebase guarda a versão publicada. Quando as duas diferem, aparece o aviso — mas
   // NUNCA recarrega sozinho: recarregar no meio de um check-in perderia o trabalho.
-  const APP_VERSAO='2026-08-22-02';
+  const APP_VERSAO='2026-08-22-03';
   function vigiarVersao(){
     if(!DB) return;
     try{
@@ -11887,6 +11929,18 @@
     if(DB) DB.ref('daycare/cadastro/'+k).update(patch).catch(()=>{});
     const s=document.getElementById('pel-saved'); if(s){ s.textContent='✓ Salvo'; setTimeout(()=>{ if(s) s.textContent=''; },1200); }
   }
+  // Marca/desmarca uma refeição na Alimentação. Guarda como texto legível ("Almoço · Jantar"),
+  // que é o que a plantonista lê na ficha.
+  function pelAlimRef(r){
+    var ex=pelExtra(pelAtual)||{};
+    var atual=String(ex.alim_refs||'').split(' · ').map(function(x){ return x.trim(); }).filter(Boolean);
+    var i=atual.indexOf(r);
+    if(i>=0) atual.splice(i,1); else atual.push(r);
+    var ordem=['Café da manhã','Almoço','Jantar'];
+    atual.sort(function(a,b){ return ordem.indexOf(a)-ordem.indexOf(b); });
+    setPelExtra(pelAtual,{alim_refs:atual.join(' · ')});
+    renderPelFicha();
+  }
   function segBtnsPel(field,val,opts){ return opts.map(o=>`<button class="${val===o?'on':''}" onclick="pick(this);setPelExtra(pelAtual,{${field}:this.textContent.trim()})">${o}</button>`).join(''); }
 
   // --- leitura unificada: o valor editado (extra/Firebase) vence o valor base hardcoded ---
@@ -13082,6 +13136,22 @@
         <div class="cad-grid">
           <div class="field"><label>Alergia</label><input class="cad-in" value="${escAttr(ex.alergia||'')}" placeholder="Ex: frango — ou deixe vazio" onchange="setPelExtra(pelAtual,{alergia:this.value});refreshPills()"></div>
           <div class="field"><label>Restrição alimentar</label><input class="cad-in" value="${escAttr(ex.restricao||'')}" placeholder="Ex: sem grãos" onchange="setPelExtra(pelAtual,{restricao:this.value});refreshPills()"></div>
+          <!-- ALIMENTAÇÃO — Adriana, 22/ago/2026: "essa informação é obrigatória e visível,
+               ração + comida = quantidade e as vezes no dia, café, almoço, jantar; num card
+               ACIMA de medicação". Quem serve não pode ter de adivinhar nem perguntar. -->
+          <div class="field" style="grid-column:1/-1;background:rgba(222,180,40,.10);border-left:4px solid var(--z-gold);border-radius:10px;padding:10px 12px">
+            <label style="font-size:13px;font-weight:800;color:var(--z-blue)">ALIMENTAÇÃO — o que e quanto ele come</label>
+            <div class="cad-grid" style="margin-top:6px">
+              <div class="field"><label>Ração (marca)</label><input class="cad-in" value="${escAttr(ex.alim_racao_marca||ex.alimentacao||'')}" placeholder="Ex: Hills Gastrointestinal" onchange="setPelExtra(pelAtual,{alim_racao_marca:this.value});refreshPills()"></div>
+              <div class="field"><label>Quanto de ração por refeição</label><input class="cad-in" value="${escAttr(ex.alim_racao_qtd||'')}" placeholder="Ex: 60 gramas" onchange="setPelExtra(pelAtual,{alim_racao_qtd:this.value})"></div>
+              <div class="field"><label>Comida natural (o quê)</label><input class="cad-in" value="${escAttr(ex.alim_nat||'')}" placeholder="Ex: patê gastrô — ou vazio" onchange="setPelExtra(pelAtual,{alim_nat:this.value})"></div>
+              <div class="field"><label>Quanto de natural por refeição</label><input class="cad-in" value="${escAttr(ex.alim_nat_qtd||'')}" placeholder="Ex: 1 colher" onchange="setPelExtra(pelAtual,{alim_nat_qtd:this.value})"></div>
+              <div class="field" style="grid-column:1/-1"><label>Em quais refeições</label><div class="seg gold">${['Café da manhã','Almoço','Jantar'].map(function(r){var on=(String(ex.alim_refs||'').indexOf(r)>=0);return '<button type="button" class="'+(on?'on':'')+'" onclick="pelAlimRef(\''+r+'\')">'+r+'</button>';}).join('')}</div>
+                <div class="hint" style="margin-top:3px">${escAttr(ex.alim_refs||'')||'<span style="color:var(--crm-critico);font-weight:800">Nenhuma refeição marcada.</span>'}</div></div>
+              <div class="field" style="grid-column:1/-1"><label>Mistura ração com natural?</label><div class="seg gold" data-single>${segBtnsPel('alim_mistura',ex.alim_mistura||'',['Sim','Nao'])}</div></div>
+              <div class="field" style="grid-column:1/-1"><label>Observação da comida</label><input class="cad-in" value="${escAttr(ex.alim_obs||'')}" placeholder="Ex: come devagar, comedouro lento" onchange="setPelExtra(pelAtual,{alim_obs:this.value})"></div>
+            </div>
+          </div>
           <div class="field"><label>Medicação</label><input class="cad-in" value="${escAttr(ex.medicacao||'')}" placeholder="Nome, dose, horário" onchange="setPelExtra(pelAtual,{medicacao:this.value});refreshPills()"></div>
           <div class="field"><label>Algum problema de saúde</label><input class="cad-in" value="${escAttr(ex.problema||'')}" placeholder="Ex: cardíaco — ou vazio" onchange="setPelExtra(pelAtual,{problema:this.value});refreshPills()"></div>
           <div class="field"><label>Manias</label><input class="cad-in" value="${escAttr(ex.manias||'')}" placeholder="Ex: protege a comida" onchange="setPelExtra(pelAtual,{manias:this.value});refreshPills()"></div>
