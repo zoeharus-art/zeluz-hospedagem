@@ -4883,7 +4883,7 @@
   }
   function renderHosp(){
     try{ cafeCarregar(); }catch(e){}
-    try{ if(!Object.keys(ALM_CAD_CACHE||{}).length) alimCarregarAlmocoCad(); }catch(e){}
+    try{ alimCarregarAlmocoCad(); }catch(e){}
     try{ renderRemovidosHoje(); }catch(e){}
     // ordem alfabética (a moradora Repolho por último)
     hospedes.sort((a,b)=>{ if(!!a.mascote!==!!b.mascote) return a.mascote?1:-1; return (a.nome||'').localeCompare((b.nome||''),'pt',{sensitivity:'base'}); });
@@ -4933,7 +4933,7 @@
           <div class="tarja ${tj[0]}">${tj[1]}</div>
           ${h.saidaHoje?'<div class="saida-hoje">Dormiu · sai hoje</div>':''}
           ${relMarcaDoCard(h)}
-          ${h.mascote?'':alimMarcaDoCard(h)}
+          ${(function(){ try{ return h.mascote?'':alimMarcaDoCard(h); }catch(e){ return ''; } })()}
         </div>`;
       }).join('');
     renderKPIs();
@@ -4948,12 +4948,25 @@
   //   1. ficha.alim da estadia (check-in de hospedagem: marca, gramas por refeição, extra)
   //   2. daycare/almoco-cad (o almoço do Day Care) — para o pernoite que não tem check-in
   //   3. nada  → a tela DIZ que não sabe e manda confirmar. Nunca inventa quantidade.
-  var ALM_CAD_CACHE={};
+  // ⚠ 22/ago/2026 — ESTE BLOCO TRAVOU O PLANTÃO INTEIRO na v15 e foi culpa minha.
+  // O gatilho era `if(!Object.keys(ALM_CAD_CACHE).length) carregar()` dentro do renderHosp, e o
+  // carregar() chamava renderHosp() de volta. Quando a leitura de `almoco-cad` voltava vazia —
+  // que é o caso do plantonista e do monitor, que não têm permissão nesse nó — o cache seguia
+  // vazio, o render disparava outra leitura, e o navegador entrava em laço infinito: nenhum
+  // toque na tela respondia. Agora a tentativa é marcada por uma FLAG, não pelo tamanho do
+  // cache, e o render só é refeito se algo realmente chegou.
+  var ALM_CAD_CACHE={}, ALM_CAD_TENTOU=false;
   function alimCarregarAlmocoCad(){
-    if(!DB) return;
+    if(!DB||ALM_CAD_TENTOU) return;
+    ALM_CAD_TENTOU=true;                      // marca ANTES: falha também conta como tentativa
     DB.ref('daycare/almoco-cad').once('value')
-      .then(function(sn){ ALM_CAD_CACHE=sn.val()||{}; try{ renderHosp(); }catch(e){} })
-      .catch(function(){});
+      .then(function(sn){
+        var v=sn.val()||{};
+        if(!Object.keys(v).length) return;    // veio vazio: nada mudou, não redesenha
+        ALM_CAD_CACHE=v;
+        try{ renderHosp(); }catch(e){}
+      })
+      .catch(function(){});                   // sem permissão: segue sem o almoço, sem travar
   }
   // Devolve {racao, unidade, extra, marca, fonte, obs, incerto}
   function alimDoHospede(h){
@@ -8978,7 +8991,7 @@
   // Agora existe um carimbo: esta constante é a versão que o aparelho está rodando, e o
   // Firebase guarda a versão publicada. Quando as duas diferem, aparece o aviso — mas
   // NUNCA recarrega sozinho: recarregar no meio de um check-in perderia o trabalho.
-  const APP_VERSAO='2026-08-20-15';
+  const APP_VERSAO='2026-08-22-01';
   function vigiarVersao(){
     if(!DB) return;
     try{
