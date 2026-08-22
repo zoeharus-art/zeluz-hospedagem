@@ -9033,7 +9033,7 @@
   // Agora existe um carimbo: esta constante é a versão que o aparelho está rodando, e o
   // Firebase guarda a versão publicada. Quando as duas diferem, aparece o aviso — mas
   // NUNCA recarrega sozinho: recarregar no meio de um check-in perderia o trabalho.
-  const APP_VERSAO='2026-08-22-03';
+  const APP_VERSAO='2026-08-22-04';
   function vigiarVersao(){
     if(!DB) return;
     try{
@@ -17067,7 +17067,7 @@
                  +'<span class="k"><strong>'+escAttr(o.valor||'')+'</strong>'
                  +(o.hora?(' <span style="color:var(--z-blue-soft);font-weight:800">'+escAttr(o.hora)+'</span>'):'')
                  +(o.planilha_ok===false?' <span style="color:var(--crm-critico);font-weight:800;font-size:11.5px">NÃO foi para a TV</span>'
-                    +' <button class="btn" style="background:none;border:none;color:var(--z-blue);font-size:11.5px;text-decoration:underline;padding:0 4px" onclick="dashReenviar(\''+it.k+'\',\''+id+'\')">reenviar</button>':'')
+                    +' <button class="btn" style="background:none;border:none;color:var(--z-blue);font-size:11.5px;text-decoration:underline;padding:0 4px" onclick="dashReenviar(\''+it.k+'\',\''+id+'\',this)">reenviar</button>':'')
                  +'</span>'
                  +'<span class="val"><button class="btn" style="background:none;border:none;color:var(--crm-critico);font-weight:800;padding:0 6px" onclick="dashRemover(\''+it.k+'\',\''+id+'\')">tirar</button></span></div>';
              }).join('')+'</div>')
@@ -17118,8 +17118,16 @@
   }
   // Espelha na planilha. O lançamento no app já está salvo — isto é o que faz a TV enxergar.
   function dashEspelhar(k, id, reg, acao){
-    var it=dashItem(k); if(!it) return Promise.resolve();
-    if(!(DASH_PONTE&&DASH_PONTE.url)) return Promise.resolve();
+    var it=dashItem(k); if(!it) return Promise.resolve({ok:false, erro:'item desconhecido'});
+    // ⚠ 22/ago/2026 — Adriana: "toca no botão e nada acontece". Aqui era um `return` mudo:
+    // sem a ponte configurada, a função saía em silêncio e o botão parecia quebrado. É a
+    // QUINTA vez do mesmo padrão (aviso da vet, almoço, EA, comida, agora este): caminho de
+    // saída sem `else` que não deixa nem rastro. Agora ele DIZ o que houve.
+    if(!(DASH_PONTE&&DASH_PONTE.url)){
+      var msg='A ponte da planilha não está configurada neste sistema. Peça à Gestão para colar a URL e a senha em Dashboard Day Care — sem isso nada chega à planilha nem à TV.';
+      if(typeof audit==='function') audit('dashboard-daycare','NÃO enviou ('+(reg&&reg.valor||'')+'): ponte não configurada',{});
+      return Promise.resolve({ok:false, erro:msg});
+    }
     return dashPonteChamar({acao:acao, dia:dashDia(), coluna:it.col, colunaHora:it.colHora||'',
                             valor:reg.valor||'', hora:reg.hora||''}).then(function(r){
       var ok=!!(r&&r.ok);
@@ -17133,9 +17141,22 @@
       return r;
     });
   }
-  function dashReenviar(k,id){
-    var reg=(DASH_DADOS[k]||{})[id]; if(!reg) return;
-    dashEspelhar(k,id,reg,'lancar');
+  // O botão SEMPRE responde: some, vira "enviando", e termina dizendo se foi ou não.
+  function dashReenviar(k,id,btn){
+    var reg=(DASH_DADOS[k]||{})[id];
+    if(!reg){ alert('Não achei este lançamento para reenviar. Atualize a tela e tente de novo.'); return; }
+    var txt=btn?btn.textContent:''; if(btn){ btn.disabled=true; btn.textContent='enviando…'; }
+    dashEspelhar(k,id,reg,'lancar').then(function(r){
+      if(btn){ btn.disabled=false; btn.textContent=txt||'reenviar'; }
+      if(r&&r.ok){ if(typeof zAlertao==='function') zAlertao('ENVIADO PARA A PLANILHA',[(reg.valor||'')+' entrou na planilha e vai aparecer na TV.'],{botao:'Fechar'});
+                   else alert('Enviado para a planilha.'); return; }
+      var e=(r&&r.erro)||'a ponte não respondeu';
+      if(typeof zAlertao==='function') zAlertao('NÃO FOI PARA A PLANILHA',[e,'O lançamento continua salvo aqui no app — só não chegou à planilha.'],{botao:'Entendi'});
+      else alert('Não foi para a planilha: '+e);
+    }).catch(function(e){
+      if(btn){ btn.disabled=false; btn.textContent=txt||'reenviar'; }
+      alert('Não foi para a planilha: '+((e&&e.message)||e));
+    });
   }
   function dashRemover(k,id){
     var it=dashItem(k), reg=(DASH_DADOS[k]||{})[id];
