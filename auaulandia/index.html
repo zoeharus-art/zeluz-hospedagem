@@ -8991,7 +8991,7 @@
   // Agora existe um carimbo: esta constante é a versão que o aparelho está rodando, e o
   // Firebase guarda a versão publicada. Quando as duas diferem, aparece o aviso — mas
   // NUNCA recarrega sozinho: recarregar no meio de um check-in perderia o trabalho.
-  const APP_VERSAO='2026-08-22-01';
+  const APP_VERSAO='2026-08-22-02';
   function vigiarVersao(){
     if(!DB) return;
     try{
@@ -12339,6 +12339,34 @@
   function prevPetDe(chave){
     return (PELUDINHOS||[]).find(function(p){ return pelKey(p)===chave; })||null;
   }
+  // Refaz o "Vale até" a partir da data que acabou de ser escolhida.
+  // ⚠ 22/ago/2026 — Adriana: "clica em comprimido e a tela sobe. Não pode ter esses erros."
+  // Todo redesenho da Prevenção reconstrói o HTML inteiro, e o navegador volta ao topo. Quem
+  // está lançando o vermífugo do vigésimo FILHOt perde o lugar e tem de rolar tudo de novo.
+  // Guarda a posição antes e devolve depois.
+  function prevRedesenhar(){
+    var y=(window.pageYOffset||document.documentElement.scrollTop||0);
+    try{ renderPrevencao(); }catch(e){}
+    try{ window.scrollTo(0,y); }catch(e){}
+  }
+  function prevRecalcular(chave,k){
+    try{
+      var it=PREV_ITENS.find(function(x){ return x.k===k; })||{};
+      var dt=String((document.getElementById('prevT_'+chave+'_'+k)||{}).value||'').trim();
+      var alvo=document.getElementById('prevP_'+chave+'_'+k);
+      if(!alvo||!dt||!it.dias) return;
+      alvo.value=addDiasISO(dt,it.dias);
+    }catch(e){}
+  }
+  // Onde foi dado: Day Care ou Tutor em casa. Fica na ficha, junto da data.
+  function prevOndeFoi(chave,k,op){
+    var p=prevPetDe(chave); if(!p) return;
+    var campo=k.replace(/_p$/,'')+'_ondefoi';
+    var ex=pelExtra(p)||{};
+    var patch={}; patch[campo]=(String(ex[campo]||'')===op)?'':op;
+    setPelExtra(p, patch);
+    setTimeout(function(){ prevRedesenhar(); }, 100);
+  }
   // Lança "feito em" + quem fez, e recalcula a próxima. Um toque por item.
   function prevLancar(chave, k){
     var p=prevPetDe(chave); if(!p) return;
@@ -12350,11 +12378,14 @@
     if(dt>hojeISO()){ alert('Essa data ainda não chegou ('+fmtBR(dt)+'). Confira o mês e o ano.'); return; }
     var patch={};
     if(it.base) patch[it.base]=dt;
-    patch[k]=prox||(it.dias?addDiasISO(dt,it.dias):'');
+    // Se o "Vale até" ficou com um valor ANTERIOR à data que acabou de ser lançada, ele é
+    // resto da ficha velha — recalcula. Data futura escrita à mão é respeitada.
+    var calc=(it.dias?addDiasISO(dt,it.dias):'');
+    patch[k]=(prox && prox>dt) ? prox : (calc||prox||'');
     if(quem) patch[k.replace(/_p$/,'')+'_por']=quem;
     setPelExtra(p, patch);
     if(typeof audit==='function') audit('prevencao', (pelNome(p)||'')+': '+(it.nome||k)+' feito em '+fmtBR(dt)+(quem?(' por '+quem):''), {pet:pelNome(p)||''});
-    setTimeout(function(){ renderPrevencao(); }, 120);
+    setTimeout(function(){ prevRedesenhar(); }, 120);
   }
   function prevEdicaoHTML(o){
     var chave=pelKey(o.p), ex=pelExtra(o.p)||{};
@@ -12366,8 +12397,21 @@
         +'<div style="font-weight:800;color:var(--z-blue);font-size:13.5px;margin-bottom:5px">'+escAttr(it.nome)+' '+seloValidade(prox)
         +(por?(' <span style="font-weight:600;font-size:11.5px;color:var(--muted)">— último por '+escAttr(por)+'</span>'):'')+'</div>'
         +'<div class="cad-grid2">'
-        +'<div><label class="cad-lb">Feito em</label><input type="date" class="cad-in" id="prevT_'+chave+'_'+it.k+'" value="'+escAttr(feito)+'" max="'+hojeISO()+'"></div>'
+        // ⚠ 22/ago/2026 — Adriana: "dei hoje e cai para dar daqui a 21 dias". O "Vale até"
+        // guardava o valor ANTIGO da ficha e o lançamento salvava esse valor, ignorando a data
+        // nova. Agora, ao trocar a data de "Feito em", o "Vale até" se refaz na hora — e quem
+        // quiser uma data diferente (o veterinário pediu antes) ainda pode escrever por cima.
+        +'<div><label class="cad-lb">Feito em</label><input type="date" class="cad-in" id="prevT_'+chave+'_'+it.k+'" value="'+escAttr(feito)+'" max="'+hojeISO()+'" onchange="prevRecalcular(\''+chave+'\',\''+it.k+'\')"></div>'
         +'<div><label class="cad-lb">Vale até</label><input type="date" class="cad-in" id="prevP_'+chave+'_'+it.k+'" value="'+escAttr(prox)+'" placeholder="calculo sozinho"></div>'
+        // Quem deu: em casa o tutor às vezes antecipa por ordem do veterinário — o registro
+        // precisa dizer QUEM deu, senão a conta da próxima dose fica sem dono (Adriana, 22/ago).
+        +'<div style="grid-column:1/-1"><label class="cad-lb">Quem deu</label>'
+        +['Day Care','Tutor em casa'].map(function(op){
+            var on=(String(ex[it.k.replace(/_p$/,'')+'_ondefoi']||'')===op);
+            return '<button type="button" class="btn" style="margin-right:6px;padding:5px 12px;font-size:12.5px;font-weight:800;border:1.5px solid var(--line);background:'
+              +(on?'var(--z-gold)':'var(--z-cream-warm)')+';color:var(--z-blue)" onclick="prevOndeFoi(\''+chave+'\',\''+it.k+'\',\''+op+'\')">'+op+'</button>';
+          }).join('')
+        +'</div>'
         +'<div style="grid-column:1/-1"><label class="cad-lb">Quem fez</label>'
         +'<input class="cad-in" id="prevQ_'+chave+'_'+it.k+'" value="'+escAttr(por)+'" placeholder="Zêluz, o tutor, a clínica…" list="prevQuemLista"></div>'
         +'</div>'
