@@ -3342,6 +3342,10 @@
           <button onclick="pick(this);repMotivoSel('outro')">Outro</button>
         </div>
 
+        <label class="rep-lb">O tutor já escolheu o dia de repor? <span style="font-weight:500;color:var(--muted)">(opcional — pode deixar em branco)</span></label>
+        <input type="date" class="rep-in" id="repVolta">
+        <div class="rep-res-sub" id="repVoltaAviso" style="padding:4px 2px">Se ele já disse "no dia 28 eu quero a reposição", marque aqui. A recepção vê o agendamento na tela de Reposições e no extrato do peludinho.</div>
+
         <label class="rep-lb">Detalhe (o que o tutor falou)</label>
         <textarea class="rep-in" id="repObs" rows="2" placeholder="Ex.: tutora ligou às 7h, viajou para Vitória e volta dia 20"></textarea>
 
@@ -4055,6 +4059,30 @@
     repLancamentos(p).forEach(function(l){ if(l.tipo==='credito') s++; else s--; });
     return s;
   }
+  // ---- Agendamento: "no dia 28 eu quero a reposição" ---------------------------------
+  // A data que o TUTOR escolheu fica dentro do próprio crédito (campo `volta`). Não é um
+  // tipo novo de lançamento: se fosse, o saldo teria de saber contá-lo, e saldo errado é
+  // pior que agendamento nenhum. O crédito só é consumido quando ele APARECE.
+  function repAgendaDe(p){
+    try{
+      const L=repLancamentos(p);
+      const estornados={}; L.forEach(function(l){ if(l.tipo==='estorno'&&l.estornaId) estornados[l.estornaId]=true; });
+      const hoje=repHojeISO();
+      return L.filter(function(l){ return l.tipo==='credito' && l.volta && l.volta>=hoje && !estornados[l._id]; })
+              .map(function(l){ return l.volta; })
+              .sort();
+    }catch(e){ return []; }
+  }
+  function repAgendadosPara(iso){
+    const out=[];
+    try{
+      PELUDINHOS.forEach(function(p,i){
+        if(pelInativo(p)) return;
+        if(repAgendaDe(p).indexOf(iso)>=0) out.push({p:p,i:i});
+      });
+    }catch(e){}
+    return out;
+  }
   function repPodeLancar(){ const r=document.body.dataset.role||'';
     return r==='consultora'||r==='gestao'||r==='supervisor'||r==='diretoria'; }
   function repGravar(p,reg){
@@ -4098,6 +4126,7 @@
     document.getElementById('repPelResults').innerHTML='';
     document.getElementById('repObs').value='';
     document.getElementById('repWarn').textContent='';
+    var _rv=document.getElementById('repVolta'); if(_rv) _rv.value='';
     document.getElementById('repData').value=repHojeISO();
     document.getElementById('repDe').value=repHojeISO();
     document.getElementById('repAte').value='';
@@ -4178,20 +4207,26 @@
     if(!p){ w.textContent='Escolha o peludinho primeiro.'; return; }
     if(!repMotivoAtual){ w.textContent='Diga por que ele não vem — é isso que a gestão lê depois.'; return; }
     const obs=(document.getElementById('repObs').value||'').trim();
+    // Data que o TUTOR escolheu para repor. Não mexe no saldo — o crédito continua valendo
+    // até ele aparecer de verdade. É só o aviso para a recepção saber quem vem em que dia.
+    const volta=((document.getElementById('repVolta')||{}).value||'').trim();
+    if(volta && volta<repHojeISO()){ w.textContent='O dia de repor não pode ser no passado. Se ele já repôs, marque o uso na lista em vez de agendar.'; return; }
     const btn=document.querySelector('#repModal .rep-ok'); if(btn){ btn.disabled=true; btn.textContent='Lançando…'; }
     const soltar=function(){ if(btn){ btn.disabled=false; btn.textContent='Lançar reposição'; } };
     let regs=[];
     if(repModoAtual==='dia'){
       const d=(document.getElementById('repData').value||'').trim();
       if(!d){ w.textContent='Informe o dia em que ele não vem.'; soltar(); return; }
-      regs=[{tipo:'credito', data:d, motivo:repMotivoAtual, obs:obs}];
+      regs=[{tipo:'credito', data:d, motivo:repMotivoAtual, obs:obs, volta:volta||''}];
     } else {
       const de=(document.getElementById('repDe').value||''), ate=(document.getElementById('repAte').value||'');
       if(!de||!ate){ w.textContent='Informe as duas datas do período.'; soltar(); return; }
       const dias=repDiasQueViria(p,de,ate);
       if(!dias.length){ w.textContent='Nesse período ele não teria nenhum dia de Day Care. Confira as datas e os dias dele na ficha.'; soltar(); return; }
       const lote='L'+Date.now();
-      regs=dias.map(function(d){ return {tipo:'credito', data:d, motivo:repMotivoAtual, obs:obs, lote:lote, periodo:{de:de,ate:ate}}; });
+      // O agendamento vai só no PRIMEIRO do lote: 12 créditos não são 12 dias de volta,
+      // é uma volta marcada. Gravar em todos encheria a tela da recepção com o mesmo aviso.
+      regs=dias.map(function(d,ix){ return {tipo:'credito', data:d, motivo:repMotivoAtual, obs:obs, lote:lote, periodo:{de:de,ate:ate}, volta:(ix===0?(volta||''):'')}; });
     }
     Promise.all(regs.map(function(r){ return repGravar(p,r); })).then(function(){
       if(typeof audit==='function') audit('reposicao-credito', pelNome(p)+' · '+regs.length+' dia(s) · '+(REP_MOTIVOS[repMotivoAtual]||repMotivoAtual), {obs:obs});
@@ -4199,7 +4234,8 @@
       zAlertao('✅ REPOSIÇÃO LANÇADA',
         [escAttr(pelNome(p))+' ganhou <b>'+regs.length+' dia'+(regs.length>1?'s':'')+'</b> de reposição.',
          'Motivo: '+(REP_MOTIVOS[repMotivoAtual]||repMotivoAtual)+(obs?(' — '+obs):'')+'.',
-         'Saldo agora: <b>'+(repSaldo(p)+regs.length)+'</b>. Quando ele vier repor, marque o uso na tela de Reposições.'],
+         'Saldo agora: <b>'+(repSaldo(p)+regs.length)+'</b>. Quando ele vier repor, marque o uso na tela de Reposições.']
+        .concat(volta?['<b>O tutor escolheu repor em '+repBRdata(volta)+'.</b> Fica agendado na tela de Reposições — o crédito só sai quando ele aparecer.']:[]),
         {ok:true, botao:'Fechar'});
       setTimeout(renderReposicao, 400);
     }).catch(function(e){
@@ -4401,9 +4437,15 @@
     const comSaldo=todos.filter(function(o){ return o.saldo>0; });
     const totalDias=comSaldo.reduce(function(a,o){ return a+o.saldo; },0);
     const rs=document.getElementById('repResumo');
+    const hojeISO=repHojeISO();
+    const vemHoje=repAgendadosPara(hojeISO);
     if(rs) rs.innerHTML='<div class="dc-resumo">'
       +'<div class="dc-stat pend"><b>'+comSaldo.length+'</b>com dias a repor</div>'
-      +'<div class="dc-stat"><b>'+totalDias+'</b>dias no total</div></div>';
+      +'<div class="dc-stat"><b>'+totalDias+'</b>dias no total</div></div>'
+      +(vemHoje.length?('<div class="alm-fora" style="margin-top:10px;border-left:4px solid var(--gold)">'
+        +'<b>Marcados para repor HOJE ('+vemHoje.length+'):</b> '
+        +vemHoje.map(function(o){ return escAttr(pelNome(o.p)); }).join(' · ')
+        +'<br><span style="color:var(--muted)">O tutor escolheu este dia. Se ele vier, marque "Veio repor hoje" — o crédito só sai quando ele aparece.</span></div>'):'');
     const lista=(q?todos.filter(function(o){ return jsNorm([o.p.n,pelGet(o.p,'tutor')].join(' ')).indexOf(q)>=0; })
                   :comSaldo).sort(function(a,b){ return b.saldo-a.saldo || jsNorm(pelNome(a.p)).localeCompare(jsNorm(pelNome(b.p))); });
     const c=document.getElementById('repCount');
@@ -4411,10 +4453,15 @@
     if(!lista.length){ el.innerHTML='<div class="alm-fora" style="margin-top:12px">'+(q?'Nenhum peludinho com esse nome.':'Ninguém tem dias a repor agora. Quando um tutor avisar que não vem, lance aqui.')+'</div>'; return; }
     el.innerHTML=lista.map(function(o){
       const ult=repLancamentos(o.p)[0];
+      const ag=repAgendaDe(o.p);
+      const agTxt=ag.length?('<div class="rp-sub" style="color:var(--gold);font-weight:700">Vem repor em '
+        +ag.slice(0,3).map(repBRdata).join(' · ')+(ag.length>3?(' e mais '+(ag.length-3)):'')
+        +(ag[0]===hojeISO?' — é HOJE':'')+'</div>'):'';
       return '<div class="rep-row"><div class="rp-n">'+o.saldo+'</div>'
         +'<div class="rp-txt"><div class="rp-nome">'+escAttr(pelNome(o.p))+'</div>'
         +'<div class="rp-sub">'+escAttr(pelGet(o.p,'tutor')||'sem tutor')
-        +(ult?(' · último: '+(ult.tipo==='credito'?'faltou':(ult.tipo==='uso'?'repôs':'estorno'))+' em '+repBRdata(ult.data)):'')+'</div></div>'
+        +(ult?(' · último: '+(ult.tipo==='credito'?'faltou':(ult.tipo==='uso'?'repôs':'estorno'))+' em '+repBRdata(ult.data)):'')+'</div>'
+        +agTxt+'</div>'
         +'<div class="rp-acoes">'
         +(o.saldo>0?'<button class="usar" onclick="repUsar('+o.i+')">Veio repor hoje</button>':'')
         +'<button onclick="repAbrirExtrato('+o.i+')">Extrato</button>'
@@ -9033,7 +9080,7 @@
   // Agora existe um carimbo: esta constante é a versão que o aparelho está rodando, e o
   // Firebase guarda a versão publicada. Quando as duas diferem, aparece o aviso — mas
   // NUNCA recarrega sozinho: recarregar no meio de um check-in perderia o trabalho.
-  const APP_VERSAO='2026-08-22-04';
+  const APP_VERSAO='2026-08-22-05';
   function vigiarVersao(){
     if(!DB) return;
     try{
