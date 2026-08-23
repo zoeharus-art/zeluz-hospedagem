@@ -4769,6 +4769,13 @@
       return acc;
     }catch(e){ return {}; }
   }
+  // Grava-e-registra: entra no lugar de um .catch vazio. Se a gravação no banco falhar (permissão,
+  // rede, quota), a falha vira RASTRO na auditoria em vez de sumir — a Gestão passa a ver o que não
+  // salvou. NÃO altera o caminho de sucesso e não mostra nada novo na tela: risco mínimo, ganho de
+  // deixar de perder gravações em silêncio. Ver auditoria: eventos 'gravacao-FALHOU'.
+  function _logFalhaGrav(oque,e){
+    try{ if(typeof audit==='function') audit('gravacao-FALHOU', String(oque||''), {erro:(e&&e.message)||String(e||'')}); }catch(_){}
+  }
   // Alergia/restrição é dado de segurança — Monitora também marca, não só Gestão/Supervisão/Diretoria.
   // Plantonista fica de fora (só cuida à noite, não é quem recebe o FILHOt na chegada).
   function canEditHospAlergia(){ const r=document.body.dataset.role; return r==='gestao'||r==='supervisor'||r==='diretoria'||r==='monitor'; }
@@ -4782,7 +4789,7 @@
       let local={}; try{ local=JSON.parse(localStorage.getItem('zeluz_pel_'+key)||'{}'); }catch(e){}
       local[campo]=val;
       try{ localStorage.setItem('zeluz_pel_'+key,JSON.stringify(local)); }catch(e){}
-      if(DB) DB.ref('daycare/cadastro/'+key).update({[campo]:val}).catch(()=>{});
+      if(DB) DB.ref('daycare/cadastro/'+key).update({[campo]:val}).catch(e=>_logFalhaGrav('alergia/'+campo,e));
       if(typeof pelCadCache!=='undefined') pelCadCache[key]=Object.assign({},pelCadCache[key]||{},{[campo]:val});
     } else {
       setInfo(currentHosp,{[campo]:val});
@@ -5302,7 +5309,7 @@
     setInfo(currentHosp,cad);
     // Chave FIXA da ficha aberta — nunca recalculada a partir do que está sendo digitado.
     var _ck=__cadKeyFixa||cadKey(currentHosp);
-    if(DB){ DB.ref('auaulandia/cadastro/'+_ck).update(cad).catch(()=>{}); DB.ref('daycare/cadastro/'+_ck).update(cad).catch(()=>{}); } // cadastro ÚNICO: espelha no mestre do Day Care
+    if(DB){ DB.ref('auaulandia/cadastro/'+_ck).update(cad).catch(e=>_logFalhaGrav('cadastro(auaulandia)',e)); DB.ref('daycare/cadastro/'+_ck).update(cad).catch(e=>_logFalhaGrav('cadastro(daycare)',e)); } // cadastro ÚNICO: espelha no mestre do Day Care
     if(typeof pelCadCache!=='undefined') pelCadCache[_ck]=Object.assign({},pelCadCache[_ck]||{},cad);
     // reflete a edição no card do Plantão na hora (antes só atualizava a ficha aberta)
     try{ if(currentHosp){ if(cad.raca) currentHosp.raca=cad.raca; if(cad.tutor) currentHosp.tutor=cad.tutor; } }catch(e){}
@@ -5315,7 +5322,7 @@
     if(!currentHosp) return;
     const v=((document.getElementById('hf-nome-edit')||{}).value||'').trim();
     setInfo(currentHosp,{nome:v});
-    if(DB){ DB.ref('auaulandia/cadastro/'+cadKey(currentHosp)).update({nome:v}).catch(()=>{}); DB.ref('daycare/cadastro/'+cadKey(currentHosp)).update({nome:v}).catch(()=>{}); }
+    if(DB){ DB.ref('auaulandia/cadastro/'+cadKey(currentHosp)).update({nome:v}).catch(e=>_logFalhaGrav('nome(auaulandia)',e)); DB.ref('daycare/cadastro/'+cadKey(currentHosp)).update({nome:v}).catch(e=>_logFalhaGrav('nome(daycare)',e)); }
     const disp=v||currentHosp.nome||'';
     const t=document.getElementById('hf-nome'); if(t) t.textContent=disp;
     renderHosp();
@@ -5337,7 +5344,7 @@
     { const _f=cad.foto||((currentHosp&&typeof fotoDe==='function')?fotoDe(currentHosp):''); const av=document.getElementById('hf-av'); if(av&&_f){ av.style.backgroundImage=`url('${_f}')`; av.style.backgroundSize='cover'; av.style.backgroundPosition='center'; av.textContent=''; } }
     atualizarHeader(cad);
   }
-  function onBrinq(){ if(!currentHosp) return; const v=document.getElementById('hf-brinq').value||''; setInfo(currentHosp,{brinquedos:v}); if(DB) DB.ref('auaulandia/cadastro/'+cadKey(currentHosp)).update({brinquedos:v}).catch(()=>{}); }
+  function onBrinq(){ if(!currentHosp) return; const v=document.getElementById('hf-brinq').value||''; setInfo(currentHosp,{brinquedos:v}); if(DB) DB.ref('auaulandia/cadastro/'+cadKey(currentHosp)).update({brinquedos:v}).catch(e=>_logFalhaGrav('brinquedos',e)); }
   function toggleDia(c){ c.classList.toggle('on'); onCad(); }
   function carregarCadastro(){
     if(!currentHosp) return;
@@ -9191,7 +9198,7 @@
   // Agora existe um carimbo: esta constante é a versão que o aparelho está rodando, e o
   // Firebase guarda a versão publicada. Quando as duas diferem, aparece o aviso — mas
   // NUNCA recarrega sozinho: recarregar no meio de um check-in perderia o trabalho.
-  const APP_VERSAO='2026-08-22-11';
+  const APP_VERSAO='2026-08-22-12';
   function vigiarVersao(){
     if(!DB) return;
     try{

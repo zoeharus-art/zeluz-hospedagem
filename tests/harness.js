@@ -296,6 +296,29 @@ async function main() {
   check('acertoMarcarDobras usa jsNorm (não igualdade crua de nome)', /jsNorm\(/.test(srcDob) && !/seguinte\.nome===a\.nome/.test(srcDob));
   console.log('');
 
+  // ---- nº 5: cadastro-mestre não grava em silêncio ----
+  console.log('Achado nº 5 — cadastro-mestre (nome/raça/alergia):');
+  check('_logFalhaGrav existe (helper de rastro na falha)', typeof ctx._logFalhaGrav === 'function');
+  const semCatchVazio = (fn) => {
+    const s = String(ctx[fn] || '');
+    return !/\.catch\(\s*\(\s*\)\s*=>\s*\{\s*\}\s*\)/.test(s) && !/\.catch\(\s*function\s*\(\s*\)\s*\{\s*\}\s*\)/.test(s);
+  };
+  check('onCad (campo) audita falha (sem .catch vazio)', semCatchVazio('onCad'));
+  check('onCadNome audita falha (sem .catch vazio)', semCatchVazio('onCadNome'));
+  check('onBrinq audita falha (sem .catch vazio)', semCatchVazio('onBrinq'));
+  check('setHospAlergia audita falha (sem .catch vazio)', semCatchVazio('setHospAlergia'));
+  // o helper realmente registra na auditoria quando chamado
+  let auditouFalha = false;
+  vm.runInContext(`
+    var __a = (typeof audit==='function') ? audit : null;
+    audit = function(t){ if(t==='gravacao-FALHOU') __res2 = true; };
+    _logFalhaGrav('teste', new Error('x'));
+    audit = __a;
+  `, Object.assign(ctx, { __res2: false }));
+  auditouFalha = ctx.__res2 === true;
+  check('_logFalhaGrav registra evento gravacao-FALHOU na auditoria', auditouFalha);
+  console.log('');
+
   // ---- resumo ----
   console.log('== Resultado: ' + pass + ' ok, ' + fail + ' falha(s) ==');
   if (fail) { console.log('\nFalhas:'); fails.forEach((f) => console.log('  - ' + f)); }
