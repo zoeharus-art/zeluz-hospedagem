@@ -6948,13 +6948,25 @@
     // antigo lia "Tem medicação?" — agora ESCONDIDO — e travava sem saída (era o bug do Felix).
     const _medConfAtivo=!!document.querySelector('#'+card+' .med-confirm-obs');
     const _esperaDia=(tipo!=='dia' && valDe('card-dia','Tem medicação?')==='Sim');
+    // ===== 22/ago/2026 — ISTO TRAVOU O PLANTÃO DE 3 HÓSPEDES ==========================
+    // Aqui havia DOIS confirm() nativos. Toshi, Maya e Arthur já tinham se hospedado antes,
+    // então os três caíam neste ponto. No celular, quando o navegador suprime diálogos, o
+    // confirm devolve `false` sozinho — e o código fazia `return`: relatório inteiro perdido,
+    // sem gravar e sem deixar rastro na auditoria. A monitora preencheu tudo três vezes e
+    // nada foi salvo. Diálogo nativo NUNCA pode ficar no caminho de um salvamento.
+    //
+    // E o caso do Arthur mostrou que a trava estava no lugar errado (Adriana, 22/ago):
+    // "apareceu que o Arthur tem Apoquel e não tem. Ele parou. O passado serve para dizer:
+    //  Rosana, o Arthur da última vez estava tomando Apoquel, não está mais? Se não, é
+    //  retirado da ficha dele."
+    // O histórico é pergunta PARA O TUTOR, não obstáculo para quem está de plantão. Agora o
+    // relatório SALVA sempre, e a divergência vira tarefa da Recepção.
+    var _divergMed=null;
     if(!_medConfAtivo && (_esperaDia||medHistEstadia.tinha) && _medResp!=='Sim'){
-      const _motivo=_esperaDia ? ('O Relatório do Dia indicou que '+(currentHosp.nome||'este FILHOt')+' TEM medicação.')
-        : ((currentHosp.nome||'Este FILHOt')+' teve medicação registrada nesta estadia (dia '+medHistEstadia.quando+').');
-      if(!confirm('⚠ '+_motivo+'\n\nVocê marcou que NÃO há medicação agora. O remédio ACABOU ou foi suspenso?\n\nOK = Sim, acabou / foi suspenso\nCancelar = não — vou registrar a medicação')){
-        if(st){ st.style.color='var(--crm-critico)'; st.textContent='Marque "Tem medicação? Sim" e preencha o nome, o horário e a quantidade.'; } return; }
-      if(!confirm('Tem CERTEZA de que o medicamento de '+(currentHosp.nome||'este FILHOt')+' acabou ou foi suspenso?\n\nNa dúvida, LIGUE 31 99764-4296.\n\nOK = tenho certeza\nCancelar = vou confirmar antes')){
-        if(st){ st.style.color='var(--crm-critico)'; st.textContent='Na dúvida sobre a medicação, ligue 31 99764-4296 antes de salvar.'; } return; }
+      _divergMed = _esperaDia
+        ? ('O Relatório do Dia indicou medicação, e à noite foi marcado que não tem.')
+        : ((currentHosp.nome||'Este FILHOt')+' tomava medicação na hospedagem anterior (dia '
+           +(medHistEstadia.quando||'—')+') e hoje foi marcado SEM medicação.');
     }
     if(passou && !nomeAssinaturaValido(passou)){
       relBloqueio(st,'A assinatura precisa ser o SEU NOME — um ponto ou uma letra solta não identifica quem passou o plantão.',tipo,'ASSINATURA INVÁLIDA');
@@ -6987,6 +6999,9 @@
     }
     // quem passa NAO preenche quem recebeu — o recebimento e assinado depois, por quem pega o plantao
     const dados=coletarCard(card); dados.passou=passou; const _rSalvo=(RELSTATE[tipo]||{}).recebeu||''; if(_rSalvo){ dados.recebeu=_rSalvo; dados._tsReceb=(RELSTATE[tipo]||{})._tsReceb||Date.now(); } dados._ts=Date.now();
+    // Rede de segurança: qualquer erro daqui para baixo TEM de aparecer na tela. Um clique que
+    // não faz nada é pior que um erro — a pessoa refaz o trabalho inteiro sem saber por quê.
+    try{
     if(DB){ if(st){ st.style.color='var(--muted)'; st.textContent='Salvando...'; } DB.ref('auaulandia/relatorios/'+fichaKey()+'/'+tipo).set(dados).then(()=>{
         RELSTATE[tipo]={passou:passou,recebeu:_rSalvo,_tsReceb:dados._tsReceb||0}; sincRecebVis(tipo);
         // Tira o "Sem relatório" do card na hora, sem esperar recarregar a lista.
@@ -6995,7 +7010,34 @@
         const _quemRecebe=(tipo==='dia')?'o Plantonista':'quem pega o plantão';
         if(st){ st.style.color='var(--crm-ok)'; st.textContent=(tipo==='inicio')?'✅ Jantar salvo! A Noite será preenchida amanhã de manhã, na passagem do plantão.'
           : (_rSalvo?'✅ Salvo!':'✅ Plantão passado! Agora fica piscando em vermelho até '+_quemRecebe+' ler e assinar o recebimento.'); }
-        if(typeof audit==='function') audit('relatorio', tipo, {pet:(currentHosp&&currentHosp.nome)||'', assinou:passou}); const c=document.getElementById(card); if(c) c.classList.add('collapsed'); if(typeof carregarRiscoNaoComer==='function') carregarRiscoNaoComer(); }).catch(e=>{ if(st){ st.style.color='var(--crm-critico)'; st.textContent='⚠️ Erro: '+e.message; } }); } else { if(st){ st.style.color='var(--crm-atencao-text)'; st.textContent='Banco conectando...'; } } }
+        if(typeof audit==='function') audit('relatorio', tipo, {pet:(currentHosp&&currentHosp.nome)||'', assinou:passou});
+        // Divergência de medicação: nunca impede o plantão — vira pergunta ao tutor.
+        try{
+          if(_divergMed && DB){
+            var _dk=(typeof dcDataKey==='function')?dcDataKey():'';
+            var _pk=((currentHosp&&currentHosp.nome)||'')+'__'+((currentHosp&&currentHosp.tutor)||'');
+            _pk=_pk.toLowerCase().replace(/[.#$\[\]\/]/g,'-');
+            DB.ref('daycare/conferir-medicacao/'+_dk+'/'+_pk).set({
+              pet:(currentHosp&&currentHosp.nome)||'', tutor:(currentHosp&&currentHosp.tutor)||'',
+              motivo:_divergMed, quem:passou, ts:Date.now(), resolvido:false,
+              pergunta:'Confirmar com o tutor se o medicamento foi suspenso. Se foi, retirar da ficha.'
+            }).catch(function(){});
+            if(st){ st.style.color='var(--crm-atencao-text)';
+              st.textContent='Salvo. A Recepção vai confirmar a medicação com o tutor — você não precisa fazer nada.'; }
+          }
+        }catch(e){}
+        const c=document.getElementById(card); if(c) c.classList.add('collapsed'); if(typeof carregarRiscoNaoComer==='function') carregarRiscoNaoComer(); }).catch(e=>{ if(st){ st.style.color='var(--crm-critico)'; st.textContent='⚠️ NÃO SALVOU: '+e.message+' — não saia da tela, tente de novo.'; }
+      try{ if(typeof audit==='function') audit('relatorio-falhou', tipo+': '+e.message, {pet:(currentHosp&&currentHosp.nome)||''}); }catch(_){} });
+    } else { if(st){ st.style.color='var(--crm-atencao-text)'; st.textContent='Banco conectando...'; } }
+    }catch(err){
+      if(st){ st.style.color='var(--crm-critico)'; st.textContent='⚠️ NÃO SALVOU: '+((err&&err.message)||err)+' — avise a Gestão e NÃO saia da tela.'; }
+      try{ if(typeof audit==='function') audit('relatorio-falhou', tipo+': '+((err&&err.message)||err), {pet:(currentHosp&&currentHosp.nome)||''}); }catch(_){}
+      try{ if(typeof zAlertao==='function') zAlertao('NÃO CONSEGUI SALVAR',
+        ['O relatório de '+((currentHosp&&currentHosp.nome)||'este FILHOt')+' NÃO foi gravado.',
+         'Motivo: '+((err&&err.message)||err),
+         'Não saia da tela. Tente de novo — e se repetir, avise a Gestão.'],{botao:'Entendi'}); }catch(_){}
+    }
+  }
   function valDe(cardId,perg){ for(const l of document.querySelectorAll('#'+cardId+' .obsline')){ const q=l.querySelector('.q'); if(q&&q.textContent.trim()===perg){ const on=l.querySelector('button.on'); return on?on.textContent.trim():''; } } return ''; }
   // ---- gerador de texto para o tutor: personalizado, em parágrafos, sempre diferente ----
   function rnd(arr){ return arr[Math.floor(Math.random()*arr.length)]; }
@@ -9127,7 +9169,7 @@
   // Agora existe um carimbo: esta constante é a versão que o aparelho está rodando, e o
   // Firebase guarda a versão publicada. Quando as duas diferem, aparece o aviso — mas
   // NUNCA recarrega sozinho: recarregar no meio de um check-in perderia o trabalho.
-  const APP_VERSAO='2026-08-22-08';
+  const APP_VERSAO='2026-08-22-09';
   function vigiarVersao(){
     if(!DB) return;
     try{
