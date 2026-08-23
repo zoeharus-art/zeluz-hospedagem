@@ -6536,17 +6536,38 @@
         +'</div>'
         +(r.feito
           ? '<div class="mag-dose-ok">✅ Dado por '+escAttr(r.quem||'?')+(r.ts?' às '+new Date(r.ts).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'}):'')+'</div>'
-          : (r.id?'<button type="button" class="btn btn-gold" onclick="registrarDoseAgendada(\''+r.id+'\',\''+r.h+'\')">Dei agora</button>':'<span class="mag-dose-ok" style="color:var(--muted)">registrada</span>'))
+          : (r.id?'<button type="button" class="btn btn-gold" onclick="registrarDoseAgendada(\''+r.id+'\',\''+r.h+'\',this)">Dei agora</button>':'<span class="mag-dose-ok" style="color:var(--muted)">registrada</span>'))
       +'</div>';
     }).join('');
   }
   // Registro pela FICHA aberta (currentHosp) — usado tanto pelo botão "Dei agora" da agenda
   // quanto internamente. Sem relatório, sem assinatura: salva direto, na hora.
-  function registrarDoseAgendada(itemId,horario){
+  function registrarDoseAgendada(itemId,horario,btn){
     if(!currentHosp) return;
     const it=MED_AGENDA_ITENS[itemId]; if(!it) return;
-    if(!confirm('Confirmar: deu '+it.nome+' ('+(fmtQtd(it.q,it.u)||'quantidade não informada')+') agora — horário agendado '+horario+'?')) return;
-    const key=medAgendaKey(); if(!key||!DB) return;
+    // Confirmação na PRÓPRIA tela — NUNCA confirm() nativo. No celular o navegador pode suprimir
+    // o confirm e devolver false sozinho: a dose de remédio sumiria sem ninguém saber (o mesmo
+    // que travou o plantão dos 3 hóspedes). Dois toques: o 1º arma o botão, o 2º registra — isso
+    // também protege contra o toque acidental que registraria uma dose que não foi dada.
+    if(btn && btn.dataset.armed!=='1'){
+      btn.dataset.armed='1';
+      if(!btn.dataset.label) btn.dataset.label=btn.textContent;
+      btn.textContent='Confirmar — dei '+(fmtQtd(it.q,it.u)||'a dose')+' agora';
+      btn.style.background='var(--crm-atencao-text)';
+      clearTimeout(btn._armT);
+      btn._armT=setTimeout(function(){ try{ if(btn.dataset.armed==='1'){ btn.dataset.armed=''; btn.textContent=btn.dataset.label||'Dei agora'; btn.style.background=''; } }catch(e){} }, 4000);
+      return;
+    }
+    if(btn){ clearTimeout(btn._armT); btn.dataset.armed=''; btn.style.background=''; }
+    const key=medAgendaKey();
+    // Banco reconectando: NUNCA sair mudo. A plantonista precisa saber que a dose NÃO foi
+    // registrada — senão pensa que deu e o alarme pode voltar (ou ninguém sabe se o remédio saiu).
+    // Mesmo tratamento da dose avulsa (registrarDoseAvulsa), que já fazia certo.
+    if(!key||!DB){
+      if(btn){ btn.textContent='Banco conectando… toque de novo'; btn.style.background='var(--crm-atencao-text)'; btn.dataset.armed=''; }
+      return;
+    }
+    if(btn){ btn.textContent='Registrando…'; btn.disabled=true; }
     registrarDoseAgendadaGlobal({key:key,itemId:itemId,nome:it.nome,q:it.q,u:it.u,local:it.local||'',horario:horario,hospNome:currentHosp.nome||''}, magDoseId(itemId,horario));
   }
   // Registro "de fora" da ficha — usado pelo despertador (confirmarDoseDespertador), que pode
@@ -9169,7 +9190,7 @@
   // Agora existe um carimbo: esta constante é a versão que o aparelho está rodando, e o
   // Firebase guarda a versão publicada. Quando as duas diferem, aparece o aviso — mas
   // NUNCA recarrega sozinho: recarregar no meio de um check-in perderia o trabalho.
-  const APP_VERSAO='2026-08-22-09';
+  const APP_VERSAO='2026-08-22-10';
   function vigiarVersao(){
     if(!DB) return;
     try{
