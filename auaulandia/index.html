@@ -2462,6 +2462,7 @@
         <div id="ciRestricaoDetalhe" style="display:none">
           <div class="field" style="margin-top:8px"><label>O que ele NÃO pode? (escreva TUDO se for tudo, ou liste os itens específicos)</label>
             <textarea class="cad-in" id="ciRestricaoTexto" style="min-height:64px" placeholder="Ex: TUDO fora da ração dele · ou: sem frango, sem grãos, não pode subir escada" onchange="ciSalvarRestricao()"></textarea></div>
+          <div id="ciRestricaoStatus" style="display:none;font-weight:700;font-size:13px;margin-top:4px"></div>
         </div>
       </div>
 
@@ -8765,7 +8766,7 @@
     chaves.forEach(function(noite){
       var a=ACERTO_QUEM[noite]; if(!a||!a.nome) return;
       var seguinte=ACERTO_QUEM[orcMaisDias(noite,1)];
-      if(seguinte&&seguinte.nome===a.nome){
+      if(seguinte&&seguinte.nome&&jsNorm(seguinte.nome)===jsNorm(a.nome)){ // normaliza: a dobra não pode se perder por acento/maiúscula no nome
         // Duas noites seguidas: o dia entre elas foi coberto por ela quando a casa não abre.
         var diaDoMeio=orcMaisDias(noite,1);
         var fechado=(orcDiaSemana(diaDoMeio)==='dom')||!!orcEhFeriado(diaDoMeio);
@@ -9190,7 +9191,7 @@
   // Agora existe um carimbo: esta constante é a versão que o aparelho está rodando, e o
   // Firebase guarda a versão publicada. Quando as duas diferem, aparece o aviso — mas
   // NUNCA recarrega sozinho: recarregar no meio de um check-in perderia o trabalho.
-  const APP_VERSAO='2026-08-22-10';
+  const APP_VERSAO='2026-08-22-11';
   function vigiarVersao(){
     if(!DB) return;
     try{
@@ -18703,17 +18704,35 @@
     const txt=document.getElementById('ciRestricaoTexto');
     const val=(txt?(txt.value||'').trim():'');
     const key=ciHosp.refKey;
+    const st=document.getElementById('ciRestricaoStatus');
+    const setSt=function(cor,t){ if(!st) return; st.style.display=t?'block':'none'; st.style.color=cor; st.textContent=t||''; };
+    const petNome=ciHosp.nome||'';
     if(key){
       let local={}; try{ local=JSON.parse(localStorage.getItem('zeluz_pel_'+key)||'{}'); }catch(e){}
       local.restricao=val;
       try{ localStorage.setItem('zeluz_pel_'+key,JSON.stringify(local)); }catch(e){}
-      if(DB) DB.ref('daycare/cadastro/'+key).update({restricao:val}).catch(function(){});
       if(typeof pelCadCache!=='undefined') pelCadCache[key]=Object.assign({},pelCadCache[key]||{},{restricao:val});
+      // Alergia/restrição é dado de SEGURANÇA — nunca gravar em silêncio. Sucesso confirma e audita;
+      // falha (ou banco reconectando) avisa na tela e vira rastro na auditoria, sem travar a operação
+      // (o valor já ficou salvo neste aparelho). Antes, o .catch era vazio e o audit afirmava
+      // "atualizada" mesmo quando a gravação falhava.
+      if(DB){
+        setSt('var(--muted)','Salvando…');
+        DB.ref('daycare/cadastro/'+key).update({restricao:val}).then(function(){
+          setSt('var(--crm-ok)', val?'✅ Restrição salva.':'✅ Restrição removida.');
+          if(typeof audit==='function') audit('checkin','restrição/alergia atualizada',{pet:petNome,restricao:val});
+        }).catch(function(e){
+          setSt('var(--crm-critico)','⚠ Anotado NESTE aparelho, mas NÃO salvou no sistema. Verifique a conexão e salve de novo.');
+          if(typeof audit==='function') audit('checkin-FALHA','restrição/alergia NÃO salvou',{pet:petNome,restricao:val,erro:(e&&e.message)||''});
+        });
+      } else {
+        setSt('var(--crm-atencao-text)','⚠ Anotado NESTE aparelho. O banco está reconectando — salve de novo em instantes.');
+        if(typeof audit==='function') audit('checkin-PENDENTE','restrição/alergia sem banco',{pet:petNome,restricao:val});
+      }
     }
     // atualiza a tarja na hora
     const p=(PELUDINHOS||[]).find(function(x){ return pelKey(x)===key; });
     if(p) document.getElementById('ciPills').innerHTML=(typeof alertPills==='function')?alertPills(pelExtra(p)):'';
-    if(typeof audit==='function') audit('checkin','restrição/alergia atualizada',{pet:ciHosp.nome||'',restricao:val});
   }
 
   // ---- Novo Hóspede — cadastrar do zero (mesma trava de duplicidade nome+tutor+raça) ----

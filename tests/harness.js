@@ -282,6 +282,20 @@ async function main() {
   check('2º toque com banco reconectando avisa (não sai mudo)', /conectando/i.test(R.txt2 || '') && R.gravou2 === false, R.txt2);
   console.log('');
 
+  // ---- nº 3: alergia/restrição nunca grava em silêncio ----
+  console.log('Achado nº 3 — gravação de alergia/restrição:');
+  const srcRestr = String(ctx.ciSalvarRestricao || '');
+  check('ciSalvarRestricao NÃO tem .catch vazio', !/\.catch\(\s*function\s*\(\s*\)\s*\{\s*\}\s*\)/.test(srcRestr) && !/\.catch\(\s*\(\s*\)\s*=>\s*\{\s*\}\s*\)/.test(srcRestr));
+  check('ciSalvarRestricao audita a FALHA da gravação', /checkin-FALHA/.test(srcRestr));
+  check('ciSalvarRestricao trata banco reconectando (else do if(DB))', /checkin-PENDENTE/.test(srcRestr));
+  console.log('');
+
+  // ---- nº 6: dobra de plantão compara nome normalizado ----
+  console.log('Achado nº 6 — dobra de plantão (nome normalizado):');
+  const srcDob = String(ctx.acertoMarcarDobras || '');
+  check('acertoMarcarDobras usa jsNorm (não igualdade crua de nome)', /jsNorm\(/.test(srcDob) && !/seguinte\.nome===a\.nome/.test(srcDob));
+  console.log('');
+
   // ---- resumo ----
   console.log('== Resultado: ' + pass + ' ok, ' + fail + ' falha(s) ==');
   if (fail) { console.log('\nFalhas:'); fails.forEach((f) => console.log('  - ' + f)); }
