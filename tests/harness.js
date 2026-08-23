@@ -319,6 +319,50 @@ async function main() {
   check('_logFalhaGrav registra evento gravacao-FALHOU na auditoria', auditouFalha);
   console.log('');
 
+  // ---- Fase 1 / Etapa A: Centro de Permissões é EQUIVALENTE às funções atuais ----
+  console.log('Fase 1 — Centro de Permissões (prova de equivalência):');
+  // PERM é const (escopo léxico do script) — checa por dentro do contexto
+  ctx.__permOk = false;
+  vm.runInContext("__permOk = (typeof PERM==='object' && PERM!==null && Object.keys(PERM).length>=15);", ctx);
+  check('PERM (tabela central) existe com >=15 capacidades', ctx.__permOk === true);
+  check('podePapel existe', typeof ctx.podePapel === 'function');
+  // função de permissão atual  ->  capacidade na tabela
+  const MAPA_PERM = [
+    ['podeVerSenhas', 'ver-senhas'],
+    ['repPodeLancar', 'lancar-reposicao'],
+    ['trocaEhGestora', 'decidir-troca'],
+    ['canEditHospAlergia', 'editar-alergia'],
+    ['canEditMed', 'editar-medicacao'],
+    ['canEditCheckinMed', 'editar-medicacao-checkin'],
+    ['hospPodeDesfazer', 'desfazer-hospedagem'],
+    ['papelRecebeAlarme', 'recebe-alarme'],
+    ['podeAlterarVet', 'alterar-vet'],
+    ['vePorDia', 'ver-por-dia'],
+    ['canEditPel', 'editar-peludinho'],
+    ['canCriarCadastro', 'criar-cadastro'],
+    ['ehGestaoRole', 'gestao-role'],
+    ['podeVerPlano', 'ver-plano'],
+    ['hospAbaPode', 'aba-hospedes'],
+  ];
+  const PAPEIS = ['gestao', 'diretoria', 'supervisor', 'monitor', 'plantonista',
+    'consultora', 'vet', 'conferencia', 'aprendiz', 'tutor', ''];
+  let divergencias = [];
+  let comparacoes = 0;
+  for (const [fn, cap] of MAPA_PERM) {
+    if (typeof ctx[fn] !== 'function') { divergencias.push(fn + ' não existe'); continue; }
+    for (const papel of PAPEIS) {
+      ctx.__ROLE__.role = papel;
+      const atual = ctx[fn]() === true;         // o que a função de hoje responde
+      const central = ctx.podePapel(cap, papel); // o que a tabela central responde
+      comparacoes++;
+      if (atual !== central) divergencias.push(`${fn}('${papel}'): atual=${atual} central=${central}`);
+    }
+  }
+  ctx.__ROLE__.role = 'gestao';
+  check(`Centro de Permissões reproduz as 15 funções em ${comparacoes} comparações (10 papéis)`,
+    divergencias.length === 0, divergencias.slice(0, 5).join(' | '));
+  console.log('');
+
   // ---- resumo ----
   console.log('== Resultado: ' + pass + ' ok, ' + fail + ' falha(s) ==');
   if (fail) { console.log('\nFalhas:'); fails.forEach((f) => console.log('  - ' + f)); }

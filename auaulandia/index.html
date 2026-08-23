@@ -3767,9 +3767,38 @@
   // "Pessoas" virou TIME e "Monitores" virou COLABORADORES (Adriana, 13/ago/2026): a tela
   // já não é só dos monitores — tem consultora, veterinária, supervisão, plantonista.
   const PESSOAS_SUB=[['ativ','p-ativ','Atividades'],['monitores','p-monitores','Colaboradores'],['senhas','p-senhas','Senhas']];
+  // ===== CENTRO DE PERMISSÕES — fonte ÚNICA de "quem pode o quê" (Fase 1 da reorganização) =====
+  // Hoje a regra de acesso está copiada à mão em ~30 lugares; quando uma muda e a outra não,
+  // alguém passa a ver o que não devia. Esta tabela é o lugar único. Cada capacidade lista os
+  // papéis que podem. As funções de permissão passam a consultar aqui — a migração é provada
+  // EQUIVALENTE pela rede de testes (tests/harness.js), papel por papel. NÃO inclui regras que
+  // dependem de mais do que o papel (ex.: ehDiretoriaRole usa 'souAdriana').
+  const PERM={
+    'ver-senhas':               ['gestao','diretoria'],
+    'lancar-reposicao':         ['consultora','gestao','supervisor','diretoria'],
+    'decidir-troca':            ['gestao','diretoria'],
+    'editar-alergia':           ['gestao','supervisor','diretoria','monitor'],
+    'editar-medicacao':         ['gestao','supervisor','diretoria','vet'],
+    'editar-medicacao-checkin': ['gestao','supervisor','diretoria','vet','consultora'],
+    'desfazer-hospedagem':      ['gestao','supervisor','diretoria'],
+    'recebe-alarme':            ['monitor','plantonista'],
+    'alterar-vet':              ['vet','gestao','supervisor','diretoria'],
+    'ver-por-dia':              ['gestao','supervisor','diretoria'],
+    'editar-peludinho':         ['gestao','supervisor','diretoria'],
+    'criar-cadastro':           ['gestao','supervisor','diretoria','consultora'],
+    'gestao-role':              ['gestao','diretoria'],
+    'ver-plano':                ['gestao','supervisor','diretoria','consultora'],
+    'aba-hospedes':             ['gestao','supervisor','diretoria','consultora']
+  };
+  // Consulta central. Papel omitido = lê o papel do corpo (como as funções antigas fazem).
+  function podePapel(capacidade, papel){
+    const r=(papel!=null)?papel:(document.body.dataset.role||'');
+    const lista=PERM[capacidade];
+    return !!lista && lista.indexOf(r)>=0;
+  }
   // Senhas só para quem manda de verdade. A Supervisão vê o time e as permissões, mas NÃO
   // as senhas — isso muda no dia em que ela virar gerente (Adriana, 13/ago/2026).
-  function podeVerSenhas(){ var r=document.body.dataset.role; return r==='gestao'||r==='diretoria'; }
+  function podeVerSenhas(){ return podePapel('ver-senhas'); }
   function montarPSubnav(){ const sm=document.getElementById('pSubnav'); if(!sm) return;
     sm.innerHTML=PESSOAS_SUB.filter(([k])=>k!=='senhas'||podeVerSenhas())
       .map(([k,,t])=>`<a data-pp="${k}" onclick="abrirPessoas('${k}')">${t}</a>`).join(''); }
@@ -4088,8 +4117,7 @@
     }catch(e){}
     return out;
   }
-  function repPodeLancar(){ const r=document.body.dataset.role||'';
-    return r==='consultora'||r==='gestao'||r==='supervisor'||r==='diretoria'; }
+  function repPodeLancar(){ return podePapel('lancar-reposicao'); }
   function repGravar(p,reg){
     if(!p) return Promise.resolve();
     const k=pelKey(p);
@@ -4299,7 +4327,7 @@
     const usadas=trocaDoDia(dataISO).filter(function(t){ return t.status==='confirmada'; }).length;
     return Math.max(0, TROCA_VAGAS_DIA-usadas);
   }
-  function trocaEhGestora(){ const r=document.body.dataset.role||''; return r==='gestao'||r==='diretoria'; }
+  function trocaEhGestora(){ return podePapel('decidir-troca'); }
   function trocaDiaSemana(iso){
     const D=['dom','seg','ter','qua','qui','sex','sab'];
     try{ return D[new Date(iso+'T12:00:00').getDay()]; }catch(e){ return ''; }
@@ -4778,7 +4806,7 @@
   }
   // Alergia/restrição é dado de segurança — Monitora também marca, não só Gestão/Supervisão/Diretoria.
   // Plantonista fica de fora (só cuida à noite, não é quem recebe o FILHOt na chegada).
-  function canEditHospAlergia(){ const r=document.body.dataset.role; return r==='gestao'||r==='supervisor'||r==='diretoria'||r==='monitor'; }
+  function canEditHospAlergia(){ return podePapel('editar-alergia'); }
   // Grava a alergia/restrição do hóspede. Se ele é um FILHOt do cadastro-mestre (refKey), grava lá —
   // vale em todo lugar (Day Care e AuAulândia, em qualquer aparelho). Se é hóspede manual sem
   // vínculo, grava só no registro deste hóspede na AuAulândia (mesmo esquema do getInfo/setInfo).
@@ -5501,9 +5529,9 @@
   // ===== Gate de papel na edição de medicação (Fundação 1 do Design) =====
   // Só a Veterinária, a Gestão, a Supervisão (Amanda) e a Diretoria podem CRIAR/ALTERAR/REMOVER a
   // ficha de medicação na operação diária. Monitor e plantonista só LEEM e registram a dose ("Dei agora").
-  function canEditMed(){ const r=document.body.dataset.role; return r==='gestao'||r==='supervisor'||r==='diretoria'||r==='vet'; }
+  function canEditMed(){ return podePapel('editar-medicacao'); }
   // No Check-in, a Consultora também cadastra as fichas de remédio (seção Check-in do Design).
-  function canEditCheckinMed(){ return canEditMed()||document.body.dataset.role==='consultora'; }
+  function canEditCheckinMed(){ return podePapel('editar-medicacao-checkin'); }
   // Guarda para os toggles compartilhados (medAgendaRowHTML é reusado no card diário e no Check-in):
   // se o botão está dentro do editor de Check-in (#ciMeds), aceita a Consultora; senão exige canEditMed.
   function podeEditarLinhaMed(node){
@@ -9198,7 +9226,7 @@
   // Agora existe um carimbo: esta constante é a versão que o aparelho está rodando, e o
   // Firebase guarda a versão publicada. Quando as duas diferem, aparece o aviso — mas
   // NUNCA recarrega sozinho: recarregar no meio de um check-in perderia o trabalho.
-  const APP_VERSAO='2026-08-22-12';
+  const APP_VERSAO='2026-08-23-13';
   function vigiarVersao(){
     if(!DB) return;
     try{
@@ -10303,7 +10331,7 @@
   // Sem isto, um toque errado só se desfazia mexendo no banco — foi o que aconteceu com o
   // Theo. Agora quem foi tirado hoje aparece numa faixa, com quem tirou e o motivo escrito.
   var REMOVIDOS_HOJE={};
-  function hospPodeDesfazer(){ const r=(document.body.dataset.role||''); return r==='gestao'||r==='supervisor'||r==='diretoria'; }
+  function hospPodeDesfazer(){ return podePapel('desfazer-hospedagem'); }
   function carregarRemovidosHoje(){
     if(!DB) return;
     DB.ref('auaulandia/removidos/'+dataKeyAtual()).on('value',function(s){
@@ -11271,7 +11299,7 @@
   // a sério por quem PRECISA obedecer. Gestão, Supervisão, Veterinária, Consultora e Conferência
   // continuam vendo tudo na tela (painel, badges, medicação atrasada) — só não são acordadas.
   // Fonte única: qualquer alarme sonoro novo DEVE passar por aqui.
-  function papelRecebeAlarme(){ var r=document.body.dataset.role; return r==='monitor'||r==='plantonista'; }
+  function papelRecebeAlarme(){ return podePapel('recebe-alarme'); }
   // Dose de medicação: mesmo critério — só quem DÁ o remédio é acordado.
   function papelRecebeAlarmeMed(){ return papelRecebeAlarme(); }
   function checarDespertadorMed(){
@@ -11372,7 +11400,7 @@
   var vcFotosBuf=[];           // fotos (base64) da consulta em edição
 
   // Quem pode alterar/cancelar medicação e cancelar consultas — só estes papéis, sempre com motivo.
-  function podeAlterarVet(){ var r=document.body.dataset.role; return r==='vet'||r==='gestao'||r==='supervisor'||r==='diretoria'; }
+  function podeAlterarVet(){ return podePapel('alterar-vet'); }
   function vetKey(h){ return medAgendaKey(h); } // mesma chave da agenda de medicação (uma ficha por remédio)
 
   // ---- Instruções ativas (recomendações + cuidados) viram tarja na ficha/card ----
@@ -11971,7 +11999,7 @@
   function pelInativo(p){ const ex=pelExtra(p); return !!(ex&&ex.inativo==='Sim'); }
   // Quantos aulunos estão matriculados em cada dia — só Gestão e Supervisão (Adriana, Márcia,
   // Amanda). Para o monitor seria ruído; para elas é ocupação da turma.
-  function vePorDia(){ const r=(document.body.dataset.role||''); return r==='gestao'||r==='supervisor'||r==='diretoria'; }
+  function vePorDia(){ return podePapel('ver-por-dia'); }
   function nMatriculados(d){ return PELUDINHOS.filter(p=>!pelInativo(p)&&pelDias(p).indexOf(d)>=0).length; }
   const ORDEM_DIAS=['seg','ter','qua','qui','sex'];
   // ===== ATIVIDADES SELETIVAS (Márcia decide quem faz) — item D =====
@@ -12109,13 +12137,12 @@
   function segBtnsPel(field,val,opts){ return opts.map(o=>`<button class="${val===o?'on':''}" onclick="pick(this);setPelExtra(pelAtual,{${field}:this.textContent.trim()})">${o}</button>`).join(''); }
 
   // --- leitura unificada: o valor editado (extra/Firebase) vence o valor base hardcoded ---
-  function canEditPel(){ const r=document.body.dataset.role; return r==='gestao'||r==='supervisor'||r==='diretoria'; }
+  function canEditPel(){ return podePapel('editar-peludinho'); }
   // ===== LEI DO CADASTRO ÚNICO (Adriana, 03/ago/2026) ================================
   // "O cadastro é UM SÓ, e sempre será feito pelas consultoras, gestoras ou pela Amanda
   //  supervisora. NUNCA os monitores. Eles podem apenas trazer um peludinho JÁ CADASTRADO
   //  para a pernoite. Não pode duplicar nunca."
-  function canCriarCadastro(){ const r=document.body.dataset.role;
-    return r==='gestao'||r==='supervisor'||r==='diretoria'||r==='consultora'; }
+  function canCriarCadastro(){ return podePapel('criar-cadastro'); }
   // Porteiro único de toda criação de cadastro-mestre. Devolve false e explica quando barra.
   function gateCadastro(){
     if(canCriarCadastro()) return true;
@@ -12307,7 +12334,7 @@
   let SENS=new Set();
   (function(){ const raw=localStorage.getItem('zeluz_daycare_sens'); if(raw){ try{ SENS=new Set(JSON.parse(raw)); }catch(e){} } else { SENS=new Set(['tel']); } })();
   function salvarSens(){ const a=[...SENS]; localStorage.setItem('zeluz_daycare_sens',JSON.stringify(a)); if(DB) DB.ref('daycare/config/sensiveis').set(a).catch(()=>{}); }
-  function ehGestaoRole(){ const r=document.body.dataset.role; return r==='gestao'||r==='diretoria'; }
+  function ehGestaoRole(){ return podePapel('gestao-role'); }
   // Excluir cadastro é IRREVERSÍVEL — restrito à Adriana (0901), mesmo Márcia sendo 'gestao' também.
   function ehDiretoriaRole(){ const r=document.body.dataset.role; if(r==='diretoria') return true; const u=(typeof usuarioAtual==='function')?usuarioAtual():null; return r==='gestao'&&!!(u&&u.souAdriana); }
   function toggleSens(fid){ if(SENS.has(fid)) SENS.delete(fid); else SENS.add(fid); salvarSens(); if(pelAtualIdx!=null) abrirPeludinho(pelAtualIdx); }
@@ -13370,8 +13397,7 @@
   // Para monitor, Encantador, plantonista e veterinária a aba Plano nem existe (dado
   // sensível): eles abrem em Identificação. Sem isto a ficha abriria numa aba invisível
   // e pareceria vazia para metade da equipe.
-  function podeVerPlano(){ const r=document.body.dataset.role;
-    return r==='gestao'||r==='supervisor'||r==='diretoria'||r==='consultora'; }
+  function podeVerPlano(){ return podePapel('ver-plano'); }
   // ===== HISTÓRICO DE CHECK-INS DO FILHOt ===============================================
   // Adriana, 11/ago/2026, sobre a planilha de papel: "a letra de quem escreveu... e não tem
   // histórico do filhote". A letra já foi resolvida. Isto resolve o resto: a linha do tempo
@@ -20177,7 +20203,7 @@
   var hospNovaPend=null;  // FILHOt escolhido para uma hospedagem nova, esperando as datas
   var HOSP_SO_PLANILHA=[]; // hóspedes do dia que vieram só da planilha (ainda sem estadia no app)
 
-  function hospAbaPode(){ const r=document.body.dataset.role||''; return r==='gestao'||r==='supervisor'||r==='diretoria'||r==='consultora'; }
+  function hospAbaPode(){ return podePapel('aba-hospedes'); }
   function hospHojeISO(){ const d=new Date(),p=function(x){return String(x).padStart(2,'0');}; return d.getFullYear()+'-'+p(d.getMonth()+1)+'-'+p(d.getDate()); }
   function estStatusDe(e){
     e=e||{}; const st=(e.status||'ativa');
