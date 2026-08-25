@@ -3543,6 +3543,10 @@
   // evita 'Cannot access X before initialization' (zona morta temporal) na carga.
   var __fbReady=false, __scriptReady=false, __fbWired=false;
   function wireFirebaseListeners(){ if(__fbWired||!__fbReady||!__scriptReady||!DB) return; __fbWired=true;
+      // O banco acabou de ficar pronto: esvazia o bolso da auditoria (rastros que não
+      // subiram porque o banco recusou ou ainda estava reconectando). Ver o bloco
+      // "AUDITORIA — BOLSO LOCAL E REENVIO".
+      try{ _audReenviarBolso(); }catch(e){}
       if(typeof preCadastro==='function') preCadastro();
       DB.ref('auaulandia/cadastro').on('value', s=>{ cadCache=s.val()||{}; if(typeof renderHosp==='function') renderHosp(); });
       DB.ref('daycare/config/sensiveis').on('value', s=>{ const v=s.val(); if(Array.isArray(v)){ try{ SENS=new Set(v); }catch(e){} } });
@@ -9802,12 +9806,16 @@
       // FICA REGISTRADO (03/ago/2026): a Letícya e o Octávio ficaram dias sem conseguir
       // trabalhar e ninguém sabia por quê — a tentativa barrada não deixava rastro nenhum.
       // Agora a Gestão vê no Painel quem tentou entrar, em qual aparelho e a que horas.
-      try{ if(DB) DB.ref('daycare/auditoria/'+_audKey()).push({
-        ts:Date.now(), hora:(typeof horaAgora==='function'?horaAgora():''),
-        quem:(u.nome||'?'), role:(u.role||'?'), acao:'login-barrado',
-        detalhe:'aparelho não autorizado — '+(u.nome||'?')+' digitou a senha certa e não conseguiu entrar',
-        aparelho:(typeof getDeviceId==='function'?getDeviceId():'')
-      }).catch(function(){}); }catch(e){}
+      // Vai pelo audit() em vez de gravar direto no nó: desde 25/ago/2026 o audit tem bolso
+      // local e reenvio, então a tentativa barrada sobrevive ao banco recusando ou ainda
+      // reconectando — que é justamente quando a pessoa fica trancada fora e ninguém sabe.
+      // `quem` e `role` vêm do FORMULÁRIO (a sessão não existe: o login foi barrado), por
+      // isso viajam em meta, que sobrescreve os campos padrão do rastro. O registro gravado
+      // continua com ts, hora, quem, role, acao, detalhe e aparelho — os mesmos de antes.
+      try{ audit('login-barrado',
+        'aparelho não autorizado — '+(u.nome||'?')+' digitou a senha certa e não conseguiu entrar',
+        { quem:(u.nome||'?'), role:(u.role||'?'),
+          aparelho:(typeof getDeviceId==='function'?getDeviceId():'') }); }catch(e){}
       err.style.color='var(--crm-critico)';
       err.innerHTML='Este aparelho não está autorizado.<br>Peça à <strong>Gestão</strong> para autorizar (botão abaixo).';
       // Cartaz na tela: o textinho vermelho passava despercebido e a pessoa achava que a
@@ -12350,7 +12358,7 @@
     // Foto é o único campo que não vai para o cadastro nem para a cópia local da ficha:
     // ela é pesada e tem nó próprio, que só desce quando muda.
     if(patch && patch.foto){
-      try{ salvarFotoCad(k, patch.foto); }catch(e){}
+      try{ salvarFotoCad(k, patch.foto).catch(function(e){ _logFalhaGrav('foto do cadastro '+k, e); }); }catch(e){}
       patch=Object.assign({},patch); delete patch.foto;
       if(!Object.keys(patch).length){
         const s0=document.getElementById('pel-saved'); if(s0){ s0.textContent='✓ Salvo'; setTimeout(()=>{ if(s0) s0.textContent=''; },1200); }
@@ -12358,7 +12366,7 @@
       }
     }
     const o=pelExtra(p); Object.assign(o,patch); delete o.foto; localStorage.setItem('zeluz_pel_'+k,JSON.stringify(o));
-    if(DB) DB.ref('daycare/cadastro/'+k).update(patch).catch(()=>{});
+    if(DB) DB.ref('daycare/cadastro/'+k).update(patch).catch(function(e){ _logFalhaGrav('ficha do cadastro '+k, e); });
     const s=document.getElementById('pel-saved'); if(s){ s.textContent='✓ Salvo'; setTimeout(()=>{ if(s) s.textContent=''; },1200); }
   }
   // Marca/desmarca uma refeição na Alimentação. Guarda como texto legível ("Almoço · Jantar"),
@@ -12516,7 +12524,7 @@
     // A foto tem nó próprio desde 04/ago/2026: ela é MOVIDA junto, mas nunca volta para
     // dentro do cadastro (senão o app recomeçaria a baixar foto a cada abertura).
     const _fotoMove=dados.foto; delete dados.foto;
-    if(_fotoMove){ try{ salvarFotoCad(kB,_fotoMove); delete FOTOS[kA]; if(DB) DB.ref('daycare/fotos/'+kA).remove().catch(function(){}); }catch(e){} }
+    if(_fotoMove){ try{ salvarFotoCad(kB,_fotoMove).catch(function(e){ _logFalhaGrav('mover foto ao renomear '+kB, e); }); delete FOTOS[kA]; if(DB) DB.ref('daycare/fotos/'+kA).remove().catch(function(e){ _logFalhaGrav('apagar foto antiga ao renomear '+kA, e); }); }catch(e){} }
     // O cadastro de ALMOÇO mora em outro nó (daycare/almoco-cad/{pelKey}) e a semente do
     // código também é indexada pela chave antiga. Renomear sem levar o almoço junto apagava
     // na prática a comida do FILHOt: a ficha passava a dizer "Almoço não cadastrado" e a
@@ -12528,7 +12536,7 @@
       delete _almMove.pet; delete _almMove.raca; delete _almMove.tutor;
       if(Object.keys(_almMove).length){
         almCadCache[kB]=Object.assign({}, _almMove, almCadCache[kB]||{});
-        if(DB) DB.ref('daycare/almoco-cad/'+kB).update(almCadCache[kB]).catch(function(){});
+        if(DB) DB.ref('daycare/almoco-cad/'+kB).update(almCadCache[kB]).catch(function(e){ _logFalhaGrav('cardápio de almoço ao renomear '+kB, e); });
       }
     }catch(e){}
     p.n=alvo.n; p.tutor=alvo.tutor;
@@ -12538,7 +12546,7 @@
     return DB.ref('daycare/cadastro/'+kB).update(dados)
       .then(function(){ return DB.ref('daycare/cadastro/'+kA).update({excluido:true, movido_para:kB, movido_em:Date.now()}); })
       .then(function(){ try{ renderPel(); if(typeof renderDaycare==='function') renderDaycare(); }catch(e){} })
-      .catch(function(e){ console.warn('renomear:',e); });
+      .catch(function(e){ console.warn('renomear:',e); _logFalhaGrav('renomear cadastro '+kA+' → '+kB, e); });
   }
   function onNomePel(v){ if(!pelAtual) return; renomearCadastroPel(pelAtual,{n:(v||'').trim()}).then(function(){ renderPel(); if(typeof renderDaycare==='function') renderDaycare(); }); }
   function onTutorPel(v){ if(!pelAtual) return; renomearCadastroPel(pelAtual,{tutor:(v||'').trim()}).then(function(){ renderPel(); if(typeof renderDaycare==='function') renderDaycare(); }); }
@@ -14152,7 +14160,7 @@
   function marcarPresenca(k,val){
     const cur=dcChamada[k]; const next=(cur===val)?'':val;
     if(next) dcChamada[k]=next; else delete dcChamada[k];
-    if(DB) DB.ref('daycare/chamada/'+dcDataKey()+'/'+k).set(next||null).catch(()=>{});
+    if(DB) DB.ref('daycare/chamada/'+dcDataKey()+'/'+k).set(next||null).catch(function(e){ _logFalhaGrav('presença na chamada '+k, e); });
     if(typeof audit==='function') audit('chamada', next?(next==='veio'?'marcou presença':'marcou falta'):'desmarcou', {alvo:k});
     renderDaycare();
   }
@@ -18328,12 +18336,37 @@
   // Base: quemSou()/horaAgora() já existem. Grava em daycare/auditoria/{data}.
   function _audKey(){ const p=x=>String(x).padStart(2,'0'); const d=new Date(); return d.getFullYear()+'-'+p(d.getMonth()+1)+'-'+p(d.getDate()); }
   function _sessao(){ try{ return JSON.parse(sessionStorage.getItem('zeluz_login')||'null')||{}; }catch(e){ return {}; } }
+  // ===== AUDITORIA — BOLSO LOCAL E REENVIO (Lote 2, 25/ago/2026) =====
+  // O caderno não pode anotar a própria falha: se o rastro é recusado pelo banco, chamar
+  // o rastro de novo cairia no mesmo nó que acabou de recusar — e o evento sumiria igual.
+  // Então o evento fica guardado no bolso do próprio aparelho (localStorage, até 200; os
+  // mais antigos caem), inclusive quando o banco ainda está reconectando na abertura.
+  // Quando o banco fica pronto, o bolso é esvaziado sozinho e tudo sobe marcado como
+  // reenviado, com o motivo da falha original junto.
+  function _audFilaLer(){ try{ return JSON.parse(localStorage.getItem('zeluz_audit_fila')||'[]')||[]; }catch(e){ return []; } }
+  function _audFilaGravar(arr){ try{ localStorage.setItem('zeluz_audit_fila', JSON.stringify(arr.slice(-200))); }catch(e){} }
+  function _audGuardarNoBolso(dia, rec, motivo){ var f=_audFilaLer(); f.push({dia:dia, rec:rec, motivo:String(motivo||'')}); _audFilaGravar(f); }
+  function _audReenviarBolso(){
+    if(!DB) return Promise.resolve(0);
+    var f=_audFilaLer(); if(!f.length) return Promise.resolve(0);
+    _audFilaGravar([]);                       // esvazia agora; o que falhar de novo volta pro bolso
+    var seq=Promise.resolve(), n=0;
+    f.forEach(function(it){
+      seq=seq.then(function(){
+        var r=Object.assign({}, it.rec, {reenviado:true, motivoFalha:it.motivo});
+        return DB.ref('daycare/auditoria/'+it.dia).push(r).then(function(){ n++; })
+          .catch(function(e){ _audGuardarNoBolso(it.dia, it.rec, (e&&e.message)||String(e)); });
+      });
+    });
+    return seq.then(function(){ return n; });
+  }
   function audit(acao, detalhe, meta){
     try{
-      if(!DB) return;
       const u=_sessao();
+      const dia=_audKey();
       const rec=Object.assign({ ts:Date.now(), hora:horaAgora(), quem:(u.nome||'-'), role:(u.role||'-'), acao:acao||'', detalhe:(detalhe==null?'':String(detalhe)) }, meta||{});
-      DB.ref('daycare/auditoria/'+_audKey()).push(rec).catch(()=>{});
+      if(!DB){ _audGuardarNoBolso(dia, rec, 'banco reconectando'); return; }
+      DB.ref('daycare/auditoria/'+dia).push(rec).catch(function(e){ _audGuardarNoBolso(dia, rec, (e&&e.message)||String(e)); });
     }catch(e){}
   }
 
@@ -21315,7 +21348,7 @@
     var novoOn=!atual.etiquetado;
     var reg=novoOn?{etiquetado:true,quem:(typeof quemSou==='function'?quemSou():'-'),ts:Date.now()}:null;
     cfConf[campo][k]=reg;
-    if(DB) DB.ref('auaulandia/estadias/'+cfEstadiaId+'/conferencia/'+campo+'/'+k).set(reg).catch(function(){});
+    if(DB) DB.ref('auaulandia/estadias/'+cfEstadiaId+'/conferencia/'+campo+'/'+k).set(reg).catch(function(e){ _logFalhaGrav('item conferido '+campo+' '+k, e); });
     if(typeof audit==='function'&&novoOn) audit('conferencia-etiqueta','etiquetou '+k,{pet:(cfHosp&&cfHosp.nome)||''});
     renderCfPert(); renderCfGate();
   }
@@ -21482,9 +21515,9 @@
         tipo:tipo, itemNome:itemNome,
         deficit:deficit, unidade:unidade||'g', status:'pendente', entries:[],
         criado_por:(typeof quemSou==='function'?quemSou():'-'), _ts:Date.now() };
-      DB.ref('auaulandia/avisos-racao').push(aviso).catch(function(){});
+      DB.ref('auaulandia/avisos-racao').push(aviso).catch(function(e){ _logFalhaGrav('aviso de ração', e); });
       if(typeof audit==='function') audit('racao-aviso',cfEstadiaId,{pet:cfHosp.nome||'',deficit:deficit,tipo:tipo});
-    }).catch(function(){});
+    }).catch(function(e){ _logFalhaGrav('aviso de ração (leitura dos avisos abertos)', e); });
   }
   // A Recepção corrige o item quando o aviso nasceu com o rótulo errado (o caso do Arthur:
   // o chamado dizia ração e o que faltava era comprimido).
@@ -21570,7 +21603,7 @@
     cfConf.medicacao=cfConf.medicacao||{};
     var reg=confirmado?{testado:true,confirmado:true,quem:(typeof quemSou==='function'?quemSou():'-'),ts:Date.now()}:null;
     cfConf.medicacao[k]=reg;
-    if(DB) DB.ref('auaulandia/estadias/'+cfEstadiaId+'/conferencia/medicacao/'+k).set(reg).catch(function(){});
+    if(DB) DB.ref('auaulandia/estadias/'+cfEstadiaId+'/conferencia/medicacao/'+k).set(reg).catch(function(e){ _logFalhaGrav('alarme de remédio confirmado '+k, e); });
     if(typeof audit==='function'&&confirmado) audit('conferencia-alarme','testou e confirmou o alarme',{pet:(cfHosp&&cfHosp.nome)||'',med:k});
     renderCfMed(); renderCfGate();
   }

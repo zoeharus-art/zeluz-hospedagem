@@ -776,6 +776,113 @@ async function main() {
   }
   console.log('');
 
+  // ---- Lote 2 da auditoria de gravações mudas (25/ago/2026) ----------------------
+  // Parte A: mais 8 gravações graves (ficha do cadastro, renomear, presença na chamada,
+  // conferência de pertences/alarme, aviso de ração) passam a deixar rastro.
+  // Parte B: o próprio audit() ganha bolso. Ele é o caderno — não conseguia anotar a
+  // própria falha, porque anotar significaria gravar no mesmo nó que acabou de recusar.
+  // Agora o evento fica no aparelho e sobe sozinho quando o banco volta.
+  console.log('Lote 2 — gravações graves + bolso da auditoria:');
+  {
+    const LOTE2 = ['setPelExtra', 'renomearCadastroPel', 'marcarPresenca',
+      'cfToggleItem', 'cfCriarAvisoRacao', 'cfConfirmarAlarme'];
+    LOTE2.forEach((fn) => {
+      check(fn + ' existe', typeof ctx[fn] === 'function');
+      check(fn + ' sem .catch vazio', semCatchVazio(fn));
+      check(fn + ' deixa rastro na falha (_logFalhaGrav)', /_logFalhaGrav\(/.test(String(ctx[fn] || '')));
+    });
+
+    // #39: a tentativa de login barrada não grava mais direto no nó da auditoria (que é
+    // o mesmo nó que pode estar recusando) — agora passa pelo audit() e herda o bolso.
+    const srcLogin = String(ctx.doLogin || '');
+    check('doLogin existe', typeof ctx.doLogin === 'function');
+    check('doLogin não grava mais direto em daycare/auditoria', !/daycare\/auditoria/.test(srcLogin));
+    check("doLogin registra pelo audit('login-barrado')", /audit\('login-barrado'/.test(srcLogin));
+
+    // #46: a foto movida no renomear era disparada e esquecida (nem .catch tinha).
+    check('renomearCadastroPel encadeia .catch no salvarFotoCad',
+      /salvarFotoCad\([^;]*\)\s*\.catch/.test(String(ctx.renomearCadastroPel || '')));
+
+    // ---- prova de comportamento: o bolso guarda, o reenvio esvazia -------------------
+    // O localStorage do sandbox é um stub que sempre devolve null. Para provar a fila,
+    // troca por um Map-like de verdade só durante o teste (restaurado no finally).
+    const lsOrig = ctx.localStorage;
+    const lojaFalsa = {
+      _m: {},
+      getItem(k) { return (k in this._m) ? this._m[k] : null; },
+      setItem(k, v) { this._m[k] = String(v); },
+      removeItem(k) { delete this._m[k]; },
+    };
+    let filaDepoisDeRecusa = null, filaDepoisDeSemBanco = null;
+    let devolvidos = null, enviados = [], filaFinal = null, filaCap = null;
+    try {
+      ctx.localStorage = lojaFalsa;
+      vm.runInContext('__bkp.DB2 = DB;', ctx);
+
+      // 1) banco recusando -> o rastro cai no bolso com o motivo real
+      vm.runInContext(`
+        (function(){
+          var nega = function(){ return Promise.reject(new Error('permissao negada (teste)')); };
+          DB = { ref: function(){ return { push: nega, set: nega, update: nega }; } };
+          audit('teste-fila', 'x', {});
+        })();
+      `, ctx);
+      await new Promise((r) => setImmediate(r));
+      await new Promise((r) => setImmediate(r));
+      filaDepoisDeRecusa = JSON.parse(lojaFalsa.getItem('zeluz_audit_fila') || '[]');
+
+      // 2) banco nulo (reconectando na abertura) -> também não perde o evento
+      vm.runInContext(`DB = null; audit('teste-sem-banco', 'y');`, ctx);
+      filaDepoisDeSemBanco = JSON.parse(lojaFalsa.getItem('zeluz_audit_fila') || '[]');
+
+      // 3) banco de volta -> o bolso esvazia e tudo sobe marcado como reenviado
+      ctx.__enviados = [];
+      vm.runInContext(`
+        DB = { ref: function(){ return { push: function(o){ __enviados.push(o); return Promise.resolve(); } }; } };
+      `, ctx);
+      devolvidos = await ctx._audReenviarBolso();
+      enviados = ctx.__enviados || [];
+      filaFinal = JSON.parse(lojaFalsa.getItem('zeluz_audit_fila') || '[]');
+
+      // 4) cap de 200: o bolso não cresce sem fim (os mais antigos caem)
+      lojaFalsa.setItem('zeluz_audit_fila', '[]');
+      for (let i = 0; i < 205; i++) ctx._audGuardarNoBolso('2026-08-25', { acao: 'enche', i: i }, 'teste');
+      filaCap = JSON.parse(lojaFalsa.getItem('zeluz_audit_fila') || '[]');
+    } finally {
+      vm.runInContext('DB = __bkp.DB2;', ctx);
+      ctx.localStorage = lsOrig;
+    }
+
+    check('banco recusa -> o rastro fica no bolso (1 item)',
+      Array.isArray(filaDepoisDeRecusa) && filaDepoisDeRecusa.length === 1 &&
+      filaDepoisDeRecusa[0].rec && filaDepoisDeRecusa[0].rec.acao === 'teste-fila',
+      JSON.stringify(filaDepoisDeRecusa || '').slice(0, 200));
+    check('o bolso guarda o motivo real da recusa',
+      !!(filaDepoisDeRecusa && filaDepoisDeRecusa[0] &&
+         String(filaDepoisDeRecusa[0].motivo || '').indexOf('permissao') >= 0),
+      JSON.stringify((filaDepoisDeRecusa || [])[0] || '').slice(0, 200));
+    check('banco reconectando -> o evento também não se perde (2 itens)',
+      Array.isArray(filaDepoisDeSemBanco) && filaDepoisDeSemBanco.length === 2 &&
+      filaDepoisDeSemBanco[1].rec.acao === 'teste-sem-banco' &&
+      filaDepoisDeSemBanco[1].motivo === 'banco reconectando',
+      JSON.stringify(filaDepoisDeSemBanco || '').slice(0, 240));
+    check('banco volta -> _audReenviarBolso devolve 2', devolvidos === 2, 'devolveu ' + devolvidos);
+    check('os 2 sobem marcados como reenviado',
+      enviados.length === 2 && enviados.every((r) => r.reenviado === true),
+      JSON.stringify(enviados).slice(0, 240));
+    check('o reenvio leva as ações certas',
+      enviados.map((r) => r.acao).join(',') === 'teste-fila,teste-sem-banco',
+      enviados.map((r) => r.acao).join(','));
+    check('depois do reenvio o bolso fica vazio',
+      Array.isArray(filaFinal) && filaFinal.length === 0,
+      JSON.stringify(filaFinal || '').slice(0, 120));
+    check('o bolso não passa de 200 (205 gravados -> 200)',
+      Array.isArray(filaCap) && filaCap.length === 200, 'ficou com ' + (filaCap || []).length);
+    check('wireFirebaseListeners esvazia o bolso quando o banco fica pronto',
+      /_audReenviarBolso/.test(String(ctx.wireFirebaseListeners || '')));
+  }
+  console.log('');
+
   // ---- resumo ----
   console.log('== Resultado: ' + pass + ' ok, ' + fail + ' falha(s) ==');
   if (fail) { console.log('\nFalhas:'); fails.forEach((f) => console.log('  - ' + f)); }
