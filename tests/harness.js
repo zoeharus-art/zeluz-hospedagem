@@ -21,6 +21,7 @@ const fs = require('fs');
 const path = require('path');
 const vm = require('vm');
 const https = require('https');
+const crypto = require('crypto');
 
 const APP = path.join(__dirname, '..', 'auaulandia', 'index.html');
 const DB_BASE = 'https://hospedagem-zeluz-default-rtdb.firebaseio.com';
@@ -126,6 +127,11 @@ function makeSandbox() {
     localStorage: { getItem() { return null; }, setItem() {}, removeItem() {} },
     navigator: { userAgent: 'harness', onLine: true },
     location: { href: 'https://harness.local/', reload() {}, hostname: 'harness.local' },
+    // Blob mínimo: o Node do sandbox não tem. Guarda os pedaços (Uint8Array) como
+    // vieram, para o teste poder conferir o PDF byte a byte.
+    Blob: class Blob {
+      constructor(parts, opts) { this.parts = parts || []; this.type = (opts && opts.type) || ''; }
+    },
     alert() {}, confirm() { return true; }, prompt() { return ''; },
     addEventListener() {}, // o quadro de assinatura registra o 'mouseup' no window
     __ROLE__: roleHolder, // ponte para o teste trocar o papel
@@ -147,6 +153,15 @@ function extractMainScript(html) {
   if (!last) throw new Error('Não achei o <script> inline principal');
   return last;
 }
+
+// -------------------------------------------------- bytes de um Blob (PDF)
+// Junta os pedaços do Blob de mentira num Buffer só e tira a impressão digital.
+// É o que permite provar que o PDF continua EXATAMENTE o mesmo depois de mexer no código.
+function blobBytes(b) {
+  const partes = ((b && b.parts) || []).map((p) => Buffer.from(p));
+  return Buffer.concat(partes);
+}
+function sha256(buf) { return crypto.createHash('sha256').update(buf).digest('hex'); }
 
 // -------------------------------------------------- runner de testes
 let pass = 0, fail = 0;
@@ -490,6 +505,33 @@ async function main() {
       'coSigCtx', 'coSigDrawing', 'coSigHasInk', 'coSigReady']) {
       check(nome + ' não existe mais no código', html.indexOf(nome) === -1);
     }
+  }
+  console.log('');
+
+  // ---- aviso do plantão para a Gestão (Adriana, 25/ago/2026) ----
+  console.log('Plantão → Gestão: só quem teve algo vira mensagem:');
+  {
+    const f = ['plantAlertas', 'plantLinhas', 'plantMensagem', 'plantFechamento', 'plantaoAvisoGestao'];
+    f.forEach((n) => check(n + ' existe', typeof ctx[n] === 'function'));
+    if (typeof ctx.plantAlertas === 'function') {
+      const bom = { byQ: { 'Como passou a noite?': 'Dormiu a noite inteira', 'Está ativo?': 'Sim', 'Bebeu água?': 'Sim', 'Fez xixi?': 'Sim' }, areas: [''] };
+      const ruim = { byQ: { 'Como passou a noite?': 'Agitado', 'Bebeu água?': 'Não' }, areas: [''] };
+      check('FILHOt que passou bem NÃO gera mensagem', ctx.plantAlertas('noite', bom).length === 0,
+        JSON.stringify(ctx.plantAlertas('noite', bom)));
+      const al = ctx.plantAlertas('noite', ruim);
+      check('noite agitada + sem água viram alerta', al.length >= 2, JSON.stringify(al));
+      // alergia sozinha não pode disparar mensagem todo dia
+      check('alergia sozinha não vira gatilho', ctx.plantAlertas('dia', { byQ: { 'Tem alergia?': 'Sim', 'Almoçou?': 'Sim' }, areas: [''] }).length === 0);
+      // observação escrita à mão sempre conta
+      check('observação escrita conta como algo', ctx.plantAlertas('dia', { byQ: {}, areas: ['mancando da pata traseira'] }).length === 1);
+    }
+    if (typeof ctx.plantLinhas === 'function') {
+      const l = ctx.plantLinhas('inicio', { byQ: { 'Jantou?': 'Não', 'Bebeu água?': 'Não' }, areas: ['55g ração'] });
+      check('linhas do jantar destacam o que é ruim', l.join(' ').indexOf('<b>NÃO</b>') >= 0, l.join(' | '));
+      check('o que foi servido entra na mensagem', l.join(' ').indexOf('55g ração') >= 0, l.join(' | '));
+    }
+    check('o aviso é disparado ao salvar o relatório', /plantaoAvisoGestao\(tipo, dados\)/.test(html));
+    check('vai para o grupo da Gestão (Plantão AuAulândia)', /tgAvisar\(\{grupo:'gestao', texto:plantMensagem/.test(html));
   }
   console.log('');
 

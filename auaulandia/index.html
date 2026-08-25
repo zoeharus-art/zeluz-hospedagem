@@ -7085,6 +7085,8 @@
         if(st){ st.style.color='var(--crm-ok)'; st.textContent=(tipo==='inicio')?'✅ Jantar salvo! A Noite será preenchida amanhã de manhã, na passagem do plantão.'
           : (_rSalvo?'✅ Salvo!':'✅ Plantão passado! Agora fica piscando em vermelho até '+_quemRecebe+' ler e assinar o recebimento.'); }
         if(typeof audit==='function') audit('relatorio', tipo, {pet:(currentHosp&&currentHosp.nome)||'', assinou:passou});
+        // A Gestão fica sabendo NA HORA (grupo Plantão AuAulândia) — ver plantaoAvisoGestao.
+        try{ plantaoAvisoGestao(tipo, dados); }catch(e){}
         // Divergência de medicação: nunca impede o plantão — vira pergunta ao tutor.
         try{
           if(_divergMed && DB){
@@ -7154,6 +7156,201 @@
       med:valDe('card-noite','Tem medicação?'), sup:valDe('card-noite','Tem suplementação?'), medTxt:medsToTxt(coletarMedgrids('card-noite').med), supTxt:medsToTxt(coletarMedgrids('card-noite').sup) }; }
   function gerarTexto(){ if(!currentHosp) return; document.getElementById('hf-txt').value=montarTextoTutor(ctxDoDOM()); }
   function copiarTexto(){ const t=document.getElementById('hf-txt'); if(!t.value){ gerarTexto(); } t.select(); try{ document.execCommand('copy'); }catch(e){} alert('Texto copiado! Cole no WhatsApp do tutor.'); }
+
+  // ===== O QUE FOI PARA O RELATÓRIO CHEGA À GESTÃO — Adriana, 25/ago/2026 ==========
+  // "Plantão AuAulândia: tudo que foi colocado nos relatórios chega, de cada um dos
+  //  peludinhos… e com atenção também. São 3 relatórios por dia: como dormiu, como
+  //  passou o dia, e o jantar."
+  // Formato escolhido por ela: uma mensagem POR FILHOt, só de quem teve alguma coisa —
+  // e, quando a rodada daquele relatório fecha (todo mundo entregou), uma linha dizendo
+  // quem passou bem. Dispara ASSIM QUE cada relatório é salvo, os três.
+  // Nunca manda o mesmo FILHOt duas vezes no mesmo relatório do mesmo dia: o envio fica
+  // registrado em daycare/avisos-plantao/{dia}/{tipo}/{chave} — com ok e com o motivo,
+  // se falhar. Corrigir o relatório depois NÃO reenvia (senão o grupo vira enxurrada).
+  var PLANT_ROTULO={noite:'🌙 COMO DORMIU', dia:'☀ COMO PASSOU O DIA', inicio:'🍽 JANTAR'};
+  function plantChaveAviso(h){ return (typeof medAgendaKey==='function')?medAgendaKey(h):((h&&h.nome)||''); }
+  function plantHospedesDoDia(){ return (hospedes||[]).filter(function(h){ return !h.mascote; }); }
+  // "Teve algo" = o que a Gestão precisa saber sem ninguém contar. Alergia sozinha não
+  // conta: o Ragnar é alérgico todo dia, e uma mensagem que sai todo dia vira ruído.
+  function plantAlertas(tipo, d){
+    var q=(d&&d.byQ)||{}, out=[];
+    try{ out=out.concat((typeof alertasDe==='function')?alertasDe(q):[]); }catch(e){}
+    if(q['Como passou a noite?']==='Agitado') out.push('noite agitada');
+    if(q['Está ativo?']==='Não') out.push('não estava ativo');
+    if(q['Tomou café da manhã?']==='Não') out.push('não tomou café');
+    if(q['Precisa ficar separado?']==='Sim') out.push('precisa ficar separado');
+    if(q['Aspecto do xixi']==='Amarelo escuro') out.push('xixi amarelo escuro');
+    ['Almoçou?','Jantou?','Tomou café da manhã?'].forEach(function(p){
+      if(q[p]==='Metade') out.push(p.replace('?','').toLowerCase()+': só metade');
+    });
+    // Texto escrito à mão pela monitora ou pela plantonista é sempre digno de nota:
+    // ninguém escreve à toa de madrugada.
+    var obs=plantObs(d, tipo);
+    if(obs) out.push('tem observação escrita');
+    return out.filter(function(v,i,a){ return a.indexOf(v)===i; });
+  }
+  function plantObs(d, tipo){
+    var a=(d&&d.areas)||[];
+    if(tipo==='inicio') a=a.slice(1);          // a [0] é o jantar servido, não observação
+    return a.map(function(x){ return String(x||'').trim(); }).filter(Boolean).join(' · ');
+  }
+  // As linhas de resumo — só o que foi respondido, na ordem em que a pessoa lê.
+  function plantLinhas(tipo, d){
+    var q=(d&&d.byQ)||{}, L=[];
+    var põe=function(rot,val,alerta){ if(val) L.push(rot+': '+(alerta?('<b>'+val.toUpperCase()+'</b>'):val)); };
+    if(tipo==='noite'){
+      if(q['Como passou a noite?']) L.push(q['Como passou a noite?']==='Agitado'?'<b>NOITE AGITADA</b>':'Dormiu a noite inteira');
+      põe('Ativo', q['Está ativo?'], q['Está ativo?']==='Não');
+      põe('Água', q['Bebeu água?'], q['Bebeu água?']==='Não');
+      põe('Xixi', q['Fez xixi?']); põe('Aspecto do xixi', q['Aspecto do xixi'], q['Aspecto do xixi']==='Com sangue');
+      põe('Cocô', q['Fez cocô?']); põe('Consistência', q['Consistência'], /Diarreia|Pastoso/.test(q['Consistência']||''));
+      põe('Vomitou', q['Vomitou?'], q['Vomitou?']==='Sim'); põe('Tipo de vômito', q['Tipo de vômito']);
+      põe('Jantou', q['Jantou?'], q['Jantou?']==='Não'); põe('Almoçou', q['Almoçou?'], q['Almoçou?']==='Não');
+    } else if(tipo==='dia'){
+      põe('Energia', q['Gastou energia?']);
+      põe('Café', q['Tomou café da manhã?'], q['Tomou café da manhã?']==='Não');
+      põe('Almoço', q['Almoçou?'], q['Almoçou?']==='Não');
+      põe('Desentendimento', q['Teve desentendimento?'], q['Teve desentendimento?']==='Sim');
+      põe('Precisa ficar separado', q['Precisa ficar separado?'], q['Precisa ficar separado?']==='Sim');
+      põe('Cocô', q['Fez cocô?']); põe('Consistência', q['Consistência'], /Diarreia|Pastoso/.test(q['Consistência']||''));
+      põe('Vomitou', q['Vomitou?'], q['Vomitou?']==='Sim'); põe('Tipo de vômito', q['Tipo de vômito']);
+      põe('Como está agora', q['Como está agora?']);
+    } else {
+      põe('Jantou', q['Jantou?'], q['Jantou?']==='Não');
+      var serv=String(((d&&d.areas)||[])[0]||'').trim();
+      if(serv) L.push('Serviu: '+serv);
+      põe('Onde está a comida', q['Onde está a comida dele?']);
+      põe('Água', q['Bebeu água?'], q['Bebeu água?']==='Não');
+      põe('Xixi', q['Fez xixi?']); põe('Cocô', q['Fez cocô?']);
+      põe('Consistência', q['Consistência'], /Diarreia|Pastoso/.test(q['Consistência']||''));
+      põe('Vomitou', q['Vomitou?'], q['Vomitou?']==='Sim');
+      põe('Como está agora', q['Como está agora?']);
+    }
+    return L;
+  }
+  function plantMedTxt(d){
+    var m=[].concat((d&&d.meds)||[], (d&&d.sups)||[]);
+    return m.map(function(o){
+      var qtd=(o.q&&o.u)?(o.q+' '+o.u):(o.d||'');
+      return [o.m,qtd,o.h].filter(Boolean).join(' · ');
+    }).filter(Boolean);
+  }
+  function plantCabecalho(tipo, dados, dia){
+    var p=String(dia||'').split('-'), hoje=(p.length===3?(p[2]+'/'+p[1]):'');
+    var per=hoje;
+    if(tipo==='noite' && typeof orcMaisDias==='function'){
+      var v=orcMaisDias(dia,-1).split('-');            // a noite é de ontem para hoje
+      per=v[2]+'/'+v[1]+' → '+hoje;
+    }
+    return ['<b>🏠 PLANTÃO AUAULÂNDIA · '+per+'</b>',
+            '<b>'+(PLANT_ROTULO[tipo]||tipo)+'</b> — '+((dados&&dados.passou)||'—')].join('\n');
+  }
+  function plantMensagem(tipo, h, dados, dia){
+    var ex=(typeof extraDoHosp==='function')?extraDoHosp(h):{};
+    var L=[plantCabecalho(tipo,dados,dia), ''];
+    L.push('<b>🐾 '+((h&&h.nome)||'')+'</b>'
+      +((typeof racaDe==='function'&&racaDe(h))?(' · '+racaDe(h)):'')
+      +((typeof tutorDe==='function'&&tutorDe(h))?(' · Tutor: '+tutorDe(h)):''));
+    plantLinhas(tipo,dados).forEach(function(x){ L.push(x); });
+    var obs=plantObs(dados, tipo);
+    if(obs) L.push('Observação: '+obs);
+    var med=plantMedTxt(dados);
+    if(med.length){ L.push(''); L.push('💊 '+med.join('\n💊 ')); }
+    // "e com atenção também": o que a Gestão precisa ter em mente sobre esse FILHOt.
+    var at=plantAlertas(tipo,dados).filter(function(x){ return x!=='tem observação escrita'; });
+    var cuid=[];
+    var _n=function(t){ return (typeof jsNorm==='function')?jsNorm(String(t||'')):String(t||'').toLowerCase(); };
+    if(ex.alergia) cuid.push('É alérgico: '+ex.alergia);
+    if(ex.restricao && _n(ex.restricao).replace(/restri(ç|c)(ã|a)o a?/g,'').trim()!==_n(ex.alergia).replace(/restri(ç|c)(ã|a)o a?/g,'').trim())
+      cuid.push('Restrição: '+ex.restricao);
+    if(at.length||cuid.length){
+      L.push(''); L.push('<b>⚠ ATENÇÃO</b>');
+      at.forEach(function(x){ L.push('• '+x); });
+      cuid.forEach(function(x){ L.push('• '+x); });
+    }
+    return L.join('\n');
+  }
+  // Fecha a rodada daquele relatório: quem passou bem, sem nada a relatar.
+  function plantFechamento(tipo, dia, bem){
+    var p=String(dia||'').split('-'), hoje=(p.length===3?(p[2]+'/'+p[1]):'');
+    var L=['<b>'+(PLANT_ROTULO[tipo]||tipo)+' · '+hoje+' — todos os relatórios entregues</b>'];
+    if(bem.length) L.push('Passaram bem, sem nada a relatar: '+bem.join(', ')+'.');
+    else L.push('Todos os FILHOts desta rodada tiveram alguma coisa — as mensagens estão acima.');
+    return L.join('\n');
+  }
+  function plantaoAvisoGestao(tipo, dados){
+    try{
+      if(!DB || !currentHosp || currentHosp.mascote) return;
+      if(!PLANT_ROTULO[tipo]) return;
+      var h=currentHosp, dia=(typeof dataKeyAtual==='function')?dataKeyAtual():'';
+      var base='daycare/avisos-plantao/'+dia+'/'+tipo;
+      var k=plantChaveAviso(h);
+      var alertas=plantAlertas(tipo,dados);
+      DB.ref(base+'/'+k).once('value').then(function(sn){
+        var ja=sn.val();
+        if(ja&&ja.ok) return plantChecarFechamento(tipo,dia,base);   // já avisado hoje
+        if(!alertas.length){
+          // Passou bem: não gera mensagem própria — entra na linha do fechamento.
+          return DB.ref(base+'/'+k).set({ts:Date.now(), ok:true, bem:true, nome:h.nome||'',
+            quem:(typeof quemSou==='function'?quemSou():'-')})
+            .catch(function(){}).then(function(){ return plantChecarFechamento(tipo,dia,base); });
+        }
+        return tgCfgPronta().then(function(c){
+          if(!c) return plantFalhou(base,k,h,'a ponte do Telegram não está configurada');
+          return tgAvisar({grupo:'gestao', texto:plantMensagem(tipo,h,dados,dia)}).then(function(r){
+            var ok=!!(r&&r.ok);
+            return DB.ref(base+'/'+k).set({ts:Date.now(), ok:ok, bem:false, nome:h.nome||'',
+              quem:(typeof quemSou==='function'?quemSou():'-'),
+              erro: ok?'':String((r&&r.erro)||'a ponte não respondeu como esperado')})
+              .catch(function(){}).then(function(){
+                if(typeof audit==='function') audit('plantao-aviso',(ok?'avisou':'NÃO avisou')+' a Gestão sobre '+(h.nome||'')+' ('+tipo+')',{pet:h.nome||''});
+                if(!ok) plantAvisoNaTela(h.nome||'', String((r&&r.erro)||'a ponte não respondeu'));
+                return plantChecarFechamento(tipo,dia,base);
+              });
+          });
+        });
+      }).catch(function(e){ plantFalhou(base,k,h,String((e&&e.message)||e)); });
+    }catch(e){
+      try{ if(typeof audit==='function') audit('plantao-aviso','NÃO avisou a Gestão — erro: '+((e&&e.message)||e),{}); }catch(x){}
+    }
+  }
+  function plantFalhou(base,k,h,motivo){
+    try{
+      DB.ref(base+'/'+k).set({ts:Date.now(), ok:false, nome:(h&&h.nome)||'', erro:motivo||'',
+        quem:(typeof quemSou==='function'?quemSou():'-')}).catch(function(){});
+      if(typeof audit==='function') audit('plantao-aviso','NÃO avisou a Gestão — '+(motivo||''),{pet:(h&&h.nome)||''});
+    }catch(e){}
+    plantAvisoNaTela((h&&h.nome)||'', motivo||'');
+  }
+  function plantAvisoNaTela(nome, motivo){
+    // O relatório dela ESTÁ salvo — isto não trava o trabalho. Mas o silêncio, sim, seria
+    // problema: a Gestão acharia que ficou sabendo.
+    try{
+      var st=document.getElementById('status-dia')||document.getElementById('status-inicio')||document.getElementById('status-noite');
+      if(st){ st.style.color='var(--crm-atencao-text)';
+        st.textContent='Relatório salvo. O aviso ao grupo da Gestão sobre '+(nome||'ele')+' NÃO saiu ('+(motivo||'')+') — está registrado.'; }
+    }catch(e){}
+  }
+  // Todos entregaram? Então fecha com a lista de quem passou bem — uma vez só.
+  function plantChecarFechamento(tipo, dia, base){
+    return DB.ref(base).once('value').then(function(sn){
+      var v=sn.val()||{};
+      if(v.__fechamento) return;
+      var lista=plantHospedesDoDia();
+      if(!lista.length) return;
+      var faltando=lista.filter(function(x){ return !v[plantChaveAviso(x)]; });
+      if(faltando.length) return;                       // ainda tem gente sem relatório
+      var bem=lista.filter(function(x){ var r=v[plantChaveAviso(x)]||{}; return r.bem; })
+                   .map(function(x){ return x.nome||''; }).filter(Boolean);
+      return tgCfgPronta().then(function(c){
+        if(!c) return;
+        return tgAvisar({grupo:'gestao', texto:plantFechamento(tipo,dia,bem)}).then(function(r){
+          DB.ref(base+'/__fechamento').set({ts:Date.now(), ok:!!(r&&r.ok), bem:bem.join(', ')}).catch(function(){});
+          if(typeof audit==='function') audit('plantao-aviso',((r&&r.ok)?'fechou':'NÃO fechou')+' a rodada '+tipo+' no grupo da Gestão',{});
+        });
+      });
+    }).catch(function(){});
+  }
   // ===== FECHAR O TURNO E AVISAR A GESTÃO — Adriana, 15/ago/2026 ===================
   // "precisamos criar um grupo para passar os dados do plantão para a Gestão e quem mais em
   //  algum momento convier — se tiver um dia um supervisor, gerente."
@@ -9243,7 +9440,7 @@
   // Agora existe um carimbo: esta constante é a versão que o aparelho está rodando, e o
   // Firebase guarda a versão publicada. Quando as duas diferem, aparece o aviso — mas
   // NUNCA recarrega sozinho: recarregar no meio de um check-in perderia o trabalho.
-  const APP_VERSAO='2026-08-25-17';
+  const APP_VERSAO='2026-08-25-19';
   function vigiarVersao(){
     if(!DB) return;
     try{
