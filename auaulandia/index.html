@@ -4147,7 +4147,11 @@
     return out;
   }
   function repBRdata(iso){ const a=String(iso||'').split('-'); return a.length===3?(a[2]+'/'+a[1]+'/'+a[0]):(iso||''); }
-  function repHojeISO(){ const d=new Date(),p=function(x){return String(x).padStart(2,'0');}; return d.getFullYear()+'-'+p(d.getMonth()+1)+'-'+p(d.getDate()); }
+  // ===== DATA DE HOJE — FONTE ÚNICA (Fase 1, 25/ago/2026) =====================================
+  // Antes existiam 5 cópias idênticas deste cálculo (repHojeISO, hojeISO ×2, ciHoje, hospHojeISO).
+  // Agora só esta calcula; as outras são apelidos e continuam existindo para não mexer em 61 chamadas.
+  function zHojeISO(){ var d=new Date(),p=function(x){return String(x).padStart(2,'0');}; return d.getFullYear()+'-'+p(d.getMonth()+1)+'-'+p(d.getDate()); }
+  function repHojeISO(){ return zHojeISO(); }
 
   // ---- Modal de lançamento ----
   var repPelSel=null, repModoAtual='dia', repMotivoAtual='';
@@ -9226,7 +9230,7 @@
   // Agora existe um carimbo: esta constante é a versão que o aparelho está rodando, e o
   // Firebase guarda a versão publicada. Quando as duas diferem, aparece o aviso — mas
   // NUNCA recarrega sozinho: recarregar no meio de um check-in perderia o trabalho.
-  const APP_VERSAO='2026-08-23-13';
+  const APP_VERSAO='2026-08-25-14';
   function vigiarVersao(){
     if(!DB) return;
     try{
@@ -12368,8 +12372,7 @@
   const VERMIF_PROX=120;     // e a próxima 4 meses depois da última dose
   const FEZES_PROX=120;      // exame de fezes renova em 4 meses
   const CIO_MESES=6;         // ciclo regular
-  function hojeISO(){ const d=new Date(),p=x=>String(x).padStart(2,'0');
-    return d.getFullYear()+'-'+p(d.getMonth()+1)+'-'+p(d.getDate()); }
+  function hojeISO(){ return zHojeISO(); }
   function addDiasISO(iso,n){ if(!/^\d{4}-\d{2}-\d{2}$/.test(iso||'')) return '';
     const a=iso.split('-').map(Number); const d=new Date(a[0],a[1]-1,a[2]);
     d.setDate(d.getDate()+n); const p=x=>String(x).padStart(2,'0');
@@ -18474,7 +18477,7 @@
   ];
   function ciSlug(s){ return jsNorm(s).replace(/[^a-z0-9]+/g,'-').replace(/^-+|-+$/g,'')||('item-'+Date.now()); }
   function ciKey(){ if(!ciHosp) return ''; return (typeof medAgendaKey==='function')?medAgendaKey(ciHosp):String(ciHosp.refKey||((ciHosp.nome||'')+'__'+(ciHosp.tutor||''))).toLowerCase().replace(/[.#$\[\]\/]/g,'-'); }
-  function ciHoje(){ const p=x=>String(x).padStart(2,'0'); const d=new Date(); return d.getFullYear()+'-'+p(d.getMonth()+1)+'-'+p(d.getDate()); }
+  function ciHoje(){ return zHojeISO(); }
 
   // ===== PERNOITE NO CHECK-IN (Adriana, 08/ago/2026) ==================================
   // "Quem coloca é a recepção porque tem que lançar valor." A pernoite já existia solta no
@@ -20204,7 +20207,7 @@
   var HOSP_SO_PLANILHA=[]; // hóspedes do dia que vieram só da planilha (ainda sem estadia no app)
 
   function hospAbaPode(){ return podePapel('aba-hospedes'); }
-  function hospHojeISO(){ const d=new Date(),p=function(x){return String(x).padStart(2,'0');}; return d.getFullYear()+'-'+p(d.getMonth()+1)+'-'+p(d.getDate()); }
+  function hospHojeISO(){ return zHojeISO(); }
   function estStatusDe(e){
     e=e||{}; const st=(e.status||'ativa');
     if(st==='cancelada') return 'cancelada';
@@ -20636,7 +20639,6 @@
   // Causa: NADA encerra a estadia quando a data de saída passa. A estadia fica `ativa` para
   // sempre e o FILHOt continua aparecendo na Conferência e no Check-out — a Stopa saiu em
   // 25/jul e ainda estava lá. Agora as telas olham a JANELA da estadia, não só o status.
-  function hojeISO(){ var d=new Date(),p=function(x){return String(x).padStart(2,'0');}; return d.getFullYear()+'-'+p(d.getMonth()+1)+'-'+p(d.getDate()); }
   function diasISO(n){ var d=new Date(); d.setDate(d.getDate()+n); var p=function(x){return String(x).padStart(2,'0');}; return d.getFullYear()+'-'+p(d.getMonth()+1)+'-'+p(d.getDate()); }
   // FILHOt da casa (Repolho, Stopa, Kako): nossos. Nunca passam por check-in, conferência ou
   // check-out — mesmo quando dormem aqui. Casa pela categoria da ficha e, se a chave da estadia

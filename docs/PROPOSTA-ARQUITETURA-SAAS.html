@@ -1,0 +1,187 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Arquitetura do App AuAulândia — Proposta para aprovação</title>
+<style>
+  :root{
+    --z-gold:#DEB428; --z-gold-deep:#B8961F; --z-blue:#234D67; --z-blue-deep:#1A3A4F;
+    --z-cream:#FFFDF6; --z-cream-warm:#F9F5EC; --line:#e7e0d2; --muted:#6b7780;
+    --ok:#27AE60; --warn:#8A6D00; --warn-bg:#FBF3D5; --crit:#C0392B; --crit-bg:#FBE9E7;
+    --radius:14px;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--z-cream);color:var(--z-blue);
+    font-family:'Inter',-apple-system,Segoe UI,Roboto,sans-serif;line-height:1.55;font-size:16px}
+  .wrap{max-width:940px;margin:0 auto;padding:28px 20px 80px}
+  header.top{border-bottom:3px solid var(--z-gold);padding-bottom:18px;margin-bottom:8px}
+  .kicker{font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:var(--z-gold-deep);font-weight:800}
+  h1{font-size:30px;line-height:1.15;margin:6px 0 8px;font-weight:800}
+  h2{font-size:22px;margin:38px 0 12px;padding-top:14px;border-top:1px solid var(--line);font-weight:800}
+  h3{font-size:17px;margin:22px 0 8px;font-weight:800;color:var(--z-blue-deep)}
+  p{margin:10px 0}
+  .lead{font-size:17px;color:var(--z-blue-deep)}
+  .muted{color:var(--muted)}
+  strong{color:var(--z-blue-deep)}
+  .card{background:#fff;border:1px solid var(--line);border-radius:var(--radius);padding:18px 20px;margin:14px 0;box-shadow:0 1px 0 rgba(0,0,0,.02)}
+  .grid{display:grid;gap:14px}
+  @media(min-width:720px){.grid.two{grid-template-columns:1fr 1fr}}
+  .tag{display:inline-block;font-size:12px;font-weight:800;padding:3px 10px;border-radius:999px;vertical-align:middle}
+  .tag.risk-lo{background:#E8F6EE;color:var(--ok)} .tag.risk-md{background:var(--warn-bg);color:var(--warn)}
+  .tag.risk-hi{background:var(--crit-bg);color:var(--crit)}
+  .num{font-size:34px;font-weight:800;color:var(--z-gold-deep);line-height:1}
+  .prob{border-left:4px solid var(--crit);background:var(--crit-bg);border-radius:0 10px 10px 0;padding:12px 16px;margin:10px 0}
+  .prob b{color:var(--crit)}
+  .fix{border-left:4px solid var(--ok);background:#EAF7EF;border-radius:0 10px 10px 0;padding:12px 16px;margin:10px 0}
+  ul{margin:8px 0;padding-left:20px} li{margin:5px 0}
+  .menu{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:13px;background:var(--z-blue);color:#fff;border-radius:10px;padding:14px 16px;line-height:1.7}
+  .menu .grp{color:var(--z-gold);font-weight:700;text-transform:uppercase;font-size:11px;letter-spacing:.08em;display:block;margin:8px 0 2px}
+  .menu .grp:first-child{margin-top:0}
+  .menu .it{display:block;padding-left:10px;color:#dfeaf1}
+  .beforeafter{display:grid;gap:14px}
+  @media(min-width:720px){.beforeafter{grid-template-columns:1fr 1fr}}
+  .lbl{font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:.1em;margin-bottom:6px}
+  .lbl.bad{color:var(--crit)} .lbl.good{color:var(--ok)}
+  table{width:100%;border-collapse:collapse;margin:10px 0;font-size:14.5px}
+  th,td{text-align:left;padding:9px 10px;border-bottom:1px solid var(--line);vertical-align:top}
+  th{font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted)}
+  .phase{display:flex;gap:14px;align-items:flex-start;margin:12px 0}
+  .phase .n{flex:0 0 40px;height:40px;border-radius:50%;background:var(--z-gold);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:18px}
+  .decide{background:var(--z-blue);color:#fff;border-radius:var(--radius);padding:22px 24px;margin:26px 0}
+  .decide h2{color:#fff;border:0;margin-top:0;padding:0}
+  .decide a,.decide strong{color:var(--z-gold)}
+  .check{background:var(--z-cream-warm);border:1px dashed var(--z-gold-deep);border-radius:10px;padding:10px 14px;margin:8px 0;font-weight:600}
+  .foot{margin-top:40px;padding-top:16px;border-top:1px solid var(--line);font-size:13px;color:var(--muted)}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header class="top">
+  <span class="kicker">App AuAulândia · Day Care e Auaulândia da Zêluz</span>
+  <h1>Como organizar o app — arquitetura, design e um plano seguro</h1>
+  <p class="lead">Você pediu para eu estudar por que o app está confuso e propor a organização. Estudei o app inteiro por três ângulos — onde cada dado mora, como o código se divide, e como a tela se comporta por papel. Aqui está o retrato honesto e um plano para arrumar <strong>sem quebrar o que já funciona</strong>.</p>
+  <p class="muted">Nada aqui foi aplicado no app. É uma proposta para você aprovar. Só depois do seu OK eu mexo — e mesmo assim, em passos pequenos e testados, um de cada vez.</p>
+</header>
+
+<h2>O diagnóstico: a bagunça tem causas com nome</h2>
+<p>O alívio primeiro: não é "tudo ruim". O app faz muita coisa e faz certo. O que incomoda tem <strong>seis causas concretas</strong>, e todas têm conserto.</p>
+
+<div class="grid two">
+  <div class="card"><div class="num">21.936</div><p><strong>linhas num único arquivo.</strong> Dessas, 18 mil são programação, empilhada na ordem em que cada pedaço foi criado ao longo dos meses. Nunca houve um "arrumar as gavetas".</p></div>
+  <div class="card"><div class="num">~40</div><p><strong>áreas de tamanho parecido</strong> (medicação, check-in, ficha, acerto…), todas no mesmo arquivo, sem divisão. Não é 1 app — são 40 miniprogramas convivendo no mesmo cômodo.</p></div>
+  <div class="card"><div class="num">+250</div><p><strong>"memórias" soltas.</strong> São variáveis que qualquer parte do código pode ler e mudar. É por isso que <em>mexer numa coisa quebra outra</em>: elas se cruzam sem aviso.</p></div>
+  <div class="card"><div class="num">27</div><p><strong>telas num menu plano.</strong> O grupo "Gestão" sozinho tem 14 itens misturados, ordenados por data de criação — não por assunto. Ninguém acha nada rápido.</p></div>
+</div>
+
+<h3>Os pontos que você sente no dia a dia</h3>
+
+<div class="prob"><b>1. O Painel de verdade da Gestão, a Amanda não vê.</b> Existe uma tela ("Painel") com o que a supervisão mais precisa — cumprimento de protocolo, tempo por Zeloso, confiabilidade das plantonistas. Só que ela está travada para Gestão e Diretoria. A Amanda, que toca a operação, fica de fora. E há uma segunda tela ("Início") com nome e função parecidos que todo mundo vê — dois "painéis" competindo.</div>
+
+<div class="prob"><b>2. "Relatórios" virou a gaveta da bagunça.</b> Na mesma tela moram: enviar resumo do dia, aniversariantes, botões "em breve" e — sem relação nenhuma — a <strong>configuração técnica do robô do Telegram, com senha</strong>. Coisas que não têm parentesco jogadas juntas porque "não tinham lugar melhor".</div>
+
+<div class="prob"><b>3. As regras de "quem pode o quê" estão escritas em 30 lugares diferentes.</b> Não existe uma lista central de permissões. Cada tela reescreve à mão quem entra. Quando uma muda e a outra não, uma pessoa passa a ver o que não devia — foi exatamente isso que já aconteceu com o Painel.</div>
+
+<div class="prob"><b>4. Cada tela inventou o próprio visual.</b> Faltam medidas padrão de espaço e de fonte. Resultado: <strong>271 cores digitadas à mão</strong> fora da paleta, botões sem cor definida que copiam o mesmo estilo coladinho em dezenas de lugares. Muda a marca num canto, os outros não acompanham.</div>
+
+<div class="prob"><b>5. Coisas iguais, feitas duas vezes.</b> O cálculo da "data de hoje" existe duplicado; a assinatura na tela e o PDF foram reescritos no check-in e no check-out em vez de reaproveitados. Mais código para manter, mais lugar para o mesmo bug aparecer.</div>
+
+<div class="prob"><b>6. Telas parentes moram longe.</b> "Prevenção", "Alergia a confirmar" e "Histórico do EA" são todas "coisas a confirmar sobre o FILHOt", mas estão espalhadas no menu como se não tivessem relação.</div>
+
+<h2>A visão: arrumar em dois andares</h2>
+<p>Separo a proposta em dois andares, porque eles têm responsável e risco diferentes:</p>
+<div class="grid two">
+  <div class="card">
+    <h3 style="margin-top:0">🪟 Andar de cima — o que a equipe VÊ</h3>
+    <p>Menu organizado por assunto, um Painel único para a Gestão e a Supervisão, e um visual consistente. <strong>É o que resolve a sua dor.</strong> Alto valor, e você aprova olhando.</p>
+  </div>
+  <div class="card">
+    <h3 style="margin-top:0">🔧 Andar de baixo — a fundação do código</h3>
+    <p>Uma lista central de permissões, as "memórias" organizadas num lugar só, as duplicações eliminadas, e o código dividido por área. <strong>Ninguém vê, mas é o que faz parar de quebrar.</strong> Feito aos poucos, por baixo.</p>
+  </div>
+</div>
+
+<h2>Andar de cima — proposta de organização das telas</h2>
+<p>Hoje o menu tem 3 grupos, mas o grupo "Gestão" é uma lista de 14 itens sem ordem. A proposta agrupa as 27 telas por <strong>o que a pessoa está tentando fazer</strong>:</p>
+
+<div class="beforeafter">
+  <div>
+    <div class="lbl bad">Hoje — "Gestão" com 14 itens soltos</div>
+    <div class="menu">
+      <span class="grp">Gestão</span>
+      <span class="it">Painel</span>
+      <span class="it">Aviso de quem não almoçou</span>
+      <span class="it">Peludinhos</span>
+      <span class="it">Time</span>
+      <span class="it">Renovação de Planos</span>
+      <span class="it">Prevenção</span>
+      <span class="it">Dashboard Day Care</span>
+      <span class="it">Reposições</span>
+      <span class="it">Orçamento de Hospedagem</span>
+      <span class="it">Alergia a confirmar</span>
+      <span class="it">Histórico do EA</span>
+      <span class="it">Relatórios</span>
+      <span class="it">Acerto das Plantonistas</span>
+      <span class="it">Ritmo do Time</span>
+    </div>
+  </div>
+  <div>
+    <div class="lbl good">Proposta — por assunto</div>
+    <div class="menu">
+      <span class="grp">Visão do dia</span>
+      <span class="it">Painel (Gestão + Supervisão)</span>
+      <span class="it">Pendências do FILHOt ▸ Prevenção · Alergia · EA</span>
+      <span class="grp">Time</span>
+      <span class="it">Colaboradores &amp; acessos</span>
+      <span class="it">Acerto das Plantonistas</span>
+      <span class="it">Ritmo do Time</span>
+      <span class="grp">Comercial</span>
+      <span class="it">Orçamento · Renovação · Reposições</span>
+      <span class="grp">Ferramentas</span>
+      <span class="it">Dashboard Day Care</span>
+      <span class="it">Relatórios &amp; exportações</span>
+      <span class="it">⚙ Configurações (Telegram, ponte)</span>
+    </div>
+  </div>
+</div>
+<p class="muted">Os nomes e os agrupamentos acima são uma <strong>sugestão para você ajustar</strong> — a decisão de como chamar e onde pôr cada coisa é sua. A configuração técnica (Telegram, senhas) sai de "Relatórios" e vai para um "⚙ Configurações" separado.</p>
+
+<div class="fix"><b>+ O Painel unificado.</b> Junto "Início" e "Painel" numa visão só, e <strong>libero para a Supervisão</strong> (Amanda), não só Gestão/Diretoria. Cada papel vê a fatia dele: Amanda vê o tático do turno; Márcia, o dia inteiro; você, tudo. É a base dos 3 dashboards que já estavam na fila.</p></div>
+
+<h2>Andar de baixo — a fundação (sem jargão)</h2>
+<table>
+  <tr><th>O que crio</th><th>O que resolve</th><th>Risco</th></tr>
+  <tr><td><strong>Lista central de permissões</strong><br><span class="muted">um lugar só que diz "papel X pode a ação Y"</span></td><td>Acaba com regras reescritas em 30 lugares. Muda a permissão num ponto, vale em todos. Mata o bug de "a pessoa vê o que não devia".</td><td><span class="tag risk-lo">baixo</span></td></tr>
+  <tr><td><strong>Utilitários num lugar só</strong><br><span class="muted">data, texto, assinatura, PDF</span></td><td>Elimina as duplicações (data de hoje 2×, PDF e assinatura repetidos). Menos código, menos lugar para o mesmo erro.</td><td><span class="tag risk-lo">baixo</span></td></tr>
+  <tr><td><strong>Medidas de design padrão</strong><br><span class="muted">espaço, fonte, botão secundário</span></td><td>Consistência visual. As 271 cores à mão passam a sair da paleta. Muda a marca num lugar, todos acompanham.</td><td><span class="tag risk-md">médio</span></td></tr>
+  <tr><td><strong>"Memórias" organizadas</strong><br><span class="muted">o estado num lugar, não 250 soltos</span></td><td>O "mexe aqui e quebra ali" diminui muito, porque as áreas param de cruzar sem aviso.</td><td><span class="tag risk-md">médio</span></td></tr>
+  <tr><td><strong>Código dividido por área</strong><br><span class="muted">medicação, check-in, ficha… cada um seu arquivo</span></td><td>Achar e mexer numa área sem esbarrar nas outras. É o "arrumar as gavetas".</td><td><span class="tag risk-hi">alto — por último</span></td></tr>
+</table>
+<p class="muted">Repare na ordem da coluna de risco: começamos pelo que é <strong>seguro e de alto valor</strong> (permissões, utilitários) e deixamos o que é <strong>arriscado</strong> (dividir o arquivo em pedaços) para o fim, quando a rede de testes já estiver bem maior.</p>
+
+<h2>O plano em fases — cada uma pequena, testada e reversível</h2>
+<p>Nada de "vira tudo de uma vez". Cada fase é publicável sozinha, passa pela rede de testes antes de ir ao ar, e pode ser desfeita. Você aprova fase a fase.</p>
+
+<div class="phase"><div class="n">1</div><div><strong>Fundação invisível</strong> <span class="tag risk-lo">baixo</span><br>Lista central de permissões + utilitários num lugar só. A equipe não vê diferença; o app para de quebrar por regra dessincronizada. <span class="muted">— resolve os pontos 3 e 5.</span></div></div>
+<div class="phase"><div class="n">2</div><div><strong>Painel unificado para a Gestão e a Supervisão</strong> <span class="tag risk-md">médio</span><br>Junta "Início" + "Painel", libera para a Amanda, cada papel com sua fatia. <span class="muted">— resolve o ponto 1 e entrega os 3 dashboards.</span></div></div>
+<div class="phase"><div class="n">3</div><div><strong>Menu reorganizado por assunto</strong> <span class="tag risk-md">médio</span><br>Os grupos novos, "Configurações" separado, telas-parentes juntas. <span class="muted">— resolve os pontos 2 e 6.</span></div></div>
+<div class="phase"><div class="n">4</div><div><strong>Design consistente</strong> <span class="tag risk-md">médio</span><br>Medidas padrão de espaço/fonte, botão secundário, cores à mão migradas para a paleta. <span class="muted">— resolve o ponto 4.</span></div></div>
+<div class="phase"><div class="n">5</div><div><strong>Dividir o código por área</strong> <span class="tag risk-hi">alto</span><br>Só quando a rede de testes cobrir bem cada área. Um arquivo por assunto, migrados um a um. <span class="muted">— o "arrumar as gavetas" final.</span></div></div>
+
+<div class="decide">
+  <h2>O que preciso de você agora</h2>
+  <p>Não vou mexer em nada até você decidir. Três perguntas:</p>
+  <div class="check">1 · A <strong>direção</strong> está certa? (dois andares, plano em fases, seguro primeiro)</div>
+  <div class="check">2 · Por qual <strong>fase</strong> começamos? Recomendo a <strong>Fase 1</strong> (invisível, baixo risco) para a rede de testes crescer antes das mudanças visíveis — mas se preferir ver resultado logo, começamos pela <strong>Fase 2</strong> (o Painel da Amanda).</div>
+  <div class="check">3 · O <strong>agrupamento do menu</strong> que sugeri faz sentido, ou quer ajustar nomes/grupos? A decisão é sua.</div>
+  <p style="margin-top:16px">Quando você responder, eu executo a fase escolhida — no meu espaço, testada na rede de segurança, e <strong>abro para você aprovar antes de qualquer publicação</strong>.</p>
+</div>
+
+<div class="foot">
+  Base do diagnóstico: mapa do dado (auditoria de 22/ago), mapa do código (~1.263 funções em ~40 domínios) e mapa de design/UX (27 telas, 10 papéis). App em produção intocado — versão no ar 2026-08-22-12. Documento de trabalho, não publicado. — Orion, arquitetura AIOS.
+</div>
+
+</div>
+</body>
+</html>

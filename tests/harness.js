@@ -94,6 +94,7 @@ function makeSandbox() {
   };
   const documentStub = {
     body: bodyEl,
+    head: { appendChild() {} }, // o app pendura o script da planilha aqui; sem isso, tropeça e faz barulho
     documentElement: universal('documentElement'),
     getElementById() { return universal('el'); },
     querySelector() { return null; },
@@ -361,6 +362,29 @@ async function main() {
   ctx.__ROLE__.role = 'gestao';
   check(`Centro de Permissões reproduz as 15 funções em ${comparacoes} comparações (10 papéis)`,
     divergencias.length === 0, divergencias.slice(0, 5).join(' | '));
+  console.log('');
+
+  // ---- Fase 1 · passo 1: "data de hoje" tem UMA fonte (zHojeISO) ----
+  console.log('Fase 1 · passo 1 — Data de hoje (fonte única):');
+  check('zHojeISO existe', typeof ctx.zHojeISO === 'function');
+  {
+    const d = new Date(), p2 = (x) => String(x).padStart(2, '0');
+    const esperado = d.getFullYear() + '-' + p2(d.getMonth() + 1) + '-' + p2(d.getDate());
+    check('zHojeISO devolve AAAA-MM-DD de hoje (' + esperado + ')', ctx.zHojeISO() === esperado, ctx.zHojeISO());
+    for (const nome of ['repHojeISO', 'hojeISO', 'ciHoje', 'hospHojeISO']) {
+      check(nome + ' responde igual à fonte única',
+        typeof ctx[nome] === 'function' && ctx[nome]() === ctx.zHojeISO(), String(ctx[nome] && ctx[nome]()));
+    }
+    // no código-fonte, cada nome é declarado UMA vez (a segunda hojeISO sumiu)
+    for (const nome of ['zHojeISO', 'repHojeISO', 'hojeISO', 'ciHoje', 'hospHojeISO']) {
+      const n = (html.match(new RegExp('function[ 	]+' + nome + '[ 	]*[(]', 'g')) || []).length;
+      check(nome + ' declarada exatamente 1 vez no código', n === 1, 'achei ' + n);
+    }
+    // e só a fonte única faz a conta (as outras são apelidos de uma linha)
+    const apelidos = ['repHojeISO', 'hojeISO', 'ciHoje', 'hospHojeISO'].every((nome) =>
+      new RegExp('function[ \t]+' + nome + '[ \t]*[(][)][ \t]*[{][ \t]*return zHojeISO[(][)];[ \t]*[}]').test(html));
+    check('as 4 antigas são apelidos que chamam zHojeISO (ninguém recalcula)', apelidos);
+  }
   console.log('');
 
   // ---- resumo ----
