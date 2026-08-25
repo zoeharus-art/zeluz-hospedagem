@@ -9243,7 +9243,7 @@
   // Agora existe um carimbo: esta constante é a versão que o aparelho está rodando, e o
   // Firebase guarda a versão publicada. Quando as duas diferem, aparece o aviso — mas
   // NUNCA recarrega sozinho: recarregar no meio de um check-in perderia o trabalho.
-  const APP_VERSAO='2026-08-25-15';
+  const APP_VERSAO='2026-08-25-16';
   function vigiarVersao(){
     if(!DB) return;
     try{
@@ -12420,36 +12420,43 @@
   const PREV_ITENS=[
     // nomeK = onde fica o NOME do produto/vacina usado (Adriana, 25/ago/2026: "ter o local
     // para colocar o nome — igual o vermífugo tem"). Mesmo campo na ficha e na Prevenção.
-    {k:'vac_mult_p',  base:'vac_mult_t',  nome:'Vacina Múltipla',           dias:365, nomeK:'vac_mult_nome'},
-    {k:'vac_gripe_p', base:'vac_gripe_t', nome:'Vacina de Gripe',           dias:365, nomeK:'vac_gripe_nome'},
-    {k:'vac_raiva_p', base:'vac_raiva_t', nome:'Vacina Antirrábica',        dias:365, nomeK:'vac_raiva_nome'},
-    {k:'ecto_p',      base:'ecto_t',      nome:'Ectoparasitas',             dias:30,  nomeK:'ecto_nome'},
-    {k:'col_p',       base:'col_t',       nome:'Coleira repelente',         dias:180, opcional:true},
-    {k:'verm_p',      base:'verm_t',      nome:'Vermífugo',                 dias:VERMIF_PROX, dispensaSe:'fezes_t', nomeK:'verm_nome'},
-    {k:'fezes_p',     base:'fezes_t',     nome:'Exame de fezes',            dias:FEZES_PROX, opcional:true},
+    // grupo = de que FAMÍLIA o item é. É o que separa "vacina atrasada" de "pipeta vencida"
+    // na ficha (Adriana, 25/ago/2026 — o caso do Billy Paul).
+    {k:'vac_mult_p',  base:'vac_mult_t',  nome:'Vacina Múltipla',           dias:365, nomeK:'vac_mult_nome', grupo:'vacina'},
+    {k:'vac_gripe_p', base:'vac_gripe_t', nome:'Vacina de Gripe',           dias:365, nomeK:'vac_gripe_nome', grupo:'vacina'},
+    {k:'vac_raiva_p', base:'vac_raiva_t', nome:'Vacina Antirrábica',        dias:365, nomeK:'vac_raiva_nome', grupo:'vacina'},
+    {k:'ecto_p',      base:'ecto_t',      nome:'Ectoparasitas',             dias:30,  nomeK:'ecto_nome', grupo:'antip'},
+    {k:'col_p',       base:'col_t',       nome:'Coleira repelente',         dias:180, opcional:true, grupo:'antip'},
+    {k:'verm_p',      base:'verm_t',      nome:'Vermífugo',                 dias:VERMIF_PROX, dispensaSe:'fezes_t', nomeK:'verm_nome', grupo:'antip'},
+    {k:'fezes_p',     base:'fezes_t',     nome:'Exame de fezes',            dias:FEZES_PROX, opcional:true, grupo:'antip'},
     // Adriana, 19/ago/2026: "troca de escova de dentes, item a inserir; check-up — data do
     // último". Escova troca a cada 3 meses; check-up é anual.
-    {k:'escova_p',    base:'escova_t',    nome:'Troca de escova de dentes', dias:90},
-    {k:'checkup_p',   base:'checkup_t',   nome:'Check-up',                  dias:365}
+    {k:'escova_p',    base:'escova_t',    nome:'Troca de escova de dentes', dias:90,  grupo:'saude'},
+    {k:'checkup_p',   base:'checkup_t',   nome:'Check-up',                  dias:365, grupo:'saude'}
   ];
-  function prevPendencias(ex){
+  // grupo (opcional): 'vacina' | 'antip' | 'saude'. Sem grupo = tudo, como sempre foi.
+  function prevPendencias(ex, grupo){
     ex=ex||{};
     const venc=[], sem=[];
     PREV_ITENS.forEach(function(it){
+      if(grupo && it.grupo!==grupo) return;
       if(it.dispensaSe && ex[it.dispensaSe]) return; // exame de fezes dispensa vermífugo
       const v=ex[it.k];
       if(!v){ if(!it.opcional) sem.push(it.nome); return; }
-      if(venceuISO(v)) venc.push({nome:it.nome, data:v, dias:-diasAteISO(v)});
+      if(venceuISO(v)) venc.push({nome:it.nome, data:v, dias:-diasAteISO(v),
+        familia:({vacina:'vacina', antip:'antiparasitário', saude:'saúde'})[it.grupo]||''});
     });
     return {venc:venc, sem:sem};
   }
-  function alertaPrevencao(ex){
-    const r=prevPendencias(ex);
+  // rotulo = como a família se chama na frase pronta ("Vacinas em dia.").
+  function alertaPrevencao(ex, grupo, rotulo){
+    const r=prevPendencias(ex, grupo);
+    const nome=rotulo||'Prevenção';
     let h='';
     if(r.venc.length) h+='<div class="dc-faltas"><strong>URGENTE &mdash; '+r.venc.length+' vencido'+(r.venc.length>1?'s':'')+':</strong> '
       +r.venc.map(function(v){ return v.nome+' (há '+v.dias+' dia'+(v.dias>1?'s':'')+')'; }).join(' · ')+'</div>';
     if(r.sem.length) h+='<div class="dc-meia"><strong>Falta preencher:</strong> '+r.sem.join(' · ')+'</div>';
-    if(!h) h='<div class="alm-fora">Prevenção em dia.</div>';
+    if(!h) h='<div class="alm-fora">'+nome+' em dia.</div>';
     return h;
   }
   // ===== RELATÓRIO DE PREVENÇÃO — quem falta o quê ================================
@@ -13301,7 +13308,7 @@
         <div class="subtab2 so-sensivel" onclick="pelSubtab(this,'ps-plano')">Plano</div>
         <div class="subtab2" onclick="pelSubtab(this,'ps-ident')">Identificação</div>
         <div class="subtab2" onclick="pelSubtab(this,'ps-comp')">Comportamento</div>
-        <div class="subtab2" onclick="pelSubtab(this,'ps-saude')">Prevenção &amp; Cuidados Vacinais</div>
+        <div class="subtab2" onclick="pelSubtab(this,'ps-saude')">Prevenção</div>
         <div class="subtab2" onclick="pelSubtab(this,'ps-rotina')">Rotina &amp; Almoço</div>
         <div class="subtab2" onclick="pelSubtab(this,'ps-atencao')">Atenção &amp; Cuidados</div>
       </div>
@@ -13329,19 +13336,27 @@
       </div></div>
 
       <div class="ppanel2" id="ps-saude"><div class="card">
-        <h2 style="font-size:20px">Prevenção &amp; Cuidados Vacinais</h2>
-        <div class="hint">Obrigatório para frequentar o Day Care. O que estiver vencido aparece como urgente para a Gestão, a Supervisora e a Consultora.</div>
-        ${alertaPrevencao(ex)}
-        <div class="field" style="max-width:260px"><label>Último check-up</label><input type="date" class="cad-in" value="${ex.checkup||''}" onchange="setPelExtra(pelAtual,{checkup:this.value})"></div>
-        <div class="hint">Preencha o bloco inteiro e toque em <strong>Salvar</strong> no fim dele. Nada grava sozinho — e a tela não sobe.</div>
+        <h2 style="font-size:20px">Prevenção</h2>
+        <div class="hint">Obrigatório para frequentar o Day Care. O que estiver vencido aparece como urgente para a Gestão, a Supervisora e a Consultora. Preencha o bloco inteiro e toque em <strong>Salvar</strong> no fim dele — nada grava sozinho, e a tela não sobe.</div>
+
         <h3 class="cad-sub">Vacinas</h3>
+        ${alertaPrevencao(ex,'vacina','Vacinas')}
         ${blocoVacinas(pbEx('vac'))}
+
         <h3 class="cad-sub">Antiparasitários</h3>
+        <div class="hint" style="margin-top:-2px">Pipeta, comprimido, coleira, vermífugo e exame de fezes. <strong>Nada aqui é vacina</strong> — o que vencer neste bloco não é dose de vacina atrasada.</div>
+        ${alertaPrevencao(ex,'antip','Antiparasitários')}
         ${blocoEcto(pbEx('ecto'))}
         ${blocoColeira(pbEx('col'))}
         ${blocoVerm(pbEx('verm'))}
         ${blocoFezes(pbEx('fezes'))}
         ${blocoCio(ex,p)}
+
+        <h3 class="cad-sub">Saúde e rotina</h3>
+        ${alertaPrevencao(ex,'saude','Escova e check-up')}
+        <div class="field" style="max-width:260px"><label>Último check-up</label><input type="date" class="cad-in" value="${ex.checkup_t||ex.checkup||''}" onchange="setPelExtra(pelAtual,{checkup_t:this.value, checkup_p:this.value?addDiasISO(this.value,365):''})"></div>
+        <div class="field" style="max-width:260px"><label>Última troca de escova de dentes</label><input type="date" class="cad-in" value="${ex.escova_t||''}" onchange="setPelExtra(pelAtual,{escova_t:this.value, escova_p:this.value?addDiasISO(this.value,90):''})"></div>
+
         <h3 class="cad-sub">Peso</h3>
         ${blocoPeso(ex)}
       </div></div>
@@ -18456,7 +18471,7 @@
     if(u.saiu.length) h+='<div class="dc-faltas"><strong>SAÍRAM &mdash; a Márcia precisa entrar em contato ('+u.saiu.length+'):</strong> '
       +u.saiu.map(function(s){ return s.nome+(s.motivo?' ('+s.motivo+')':''); }).join(' · ')+'</div>';
     if(u.venc.length) h+='<div class="dc-faltas"><strong>PREVENÇÃO VENCIDA &mdash; não podem frequentar ('+u.venc.length+'):</strong> '
-      +u.venc.map(function(v){ return v.nome+': '+v.itens.map(function(i){ return i.nome; }).join(', '); }).join(' · ')+'</div>';
+      +u.venc.map(function(v){ return v.nome+': '+v.itens.map(function(i){ return i.nome+(i.familia?(' ['+i.familia+']'):''); }).join(', '); }).join(' · ')+'</div>';
     if(u.semPeso.length) h+='<div class="dc-meia"><strong>Falta pesar este mês ('+u.semPeso.length+'):</strong> '
       +u.semPeso.slice(0,30).join(', ')+(u.semPeso.length>30?' e mais '+(u.semPeso.length-30):'')+'</div>';
     if(!u.saiu.length && !u.venc.length && !u.semPeso.length) h+='<div class="alm-fora">Nada urgente: prevenção em dia, todos pesados, nenhuma saída pendente.</div>';
