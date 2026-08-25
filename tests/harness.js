@@ -700,6 +700,82 @@ async function main() {
   }
   console.log('');
 
+  // ---- Lote 1 da auditoria de gravações mudas (25/ago/2026) ----------------------
+  // Gravação que engole o erro (`.catch(function(){})`) é gravação que ninguém sabe que
+  // não aconteceu: o remédio some da tela e continua no banco, a presença não grava e o
+  // FILHOt aparece como falta, a ocorrência de diarreia nunca chega à Coordenação.
+  // O padrão certo já existe no app: `_logFalhaGrav(oque, e)` deixa rastro na auditoria
+  // sem mudar o caminho de sucesso nem a tela.
+  console.log('Lote 1 — gravações mudas graves (medicação, estoque, presença):');
+  {
+    // O inventário atribuiu a divergência de medicação a `_vMed`; `_vMed` é um validador
+    // ANINHADO dentro de `salvarRelatorioCard` e a gravação mora na função de fora — por
+    // isso o alvo aqui é `salvarRelatorioCard`, cujo texto cobre os dois.
+    const LOTE1 = ['magRemoverItem', 'descontarEstoquePorDose', 'criarAvisoEstoque',
+      'tocarEstoqueAcabando', 'registrarDoseAgendadaGlobal', 'salvarRelatorioCard',
+      'vetSalvarMed', 'vetFilaGuardar', 'ckSalvar'];
+    LOTE1.forEach((fn) => {
+      check(fn + ' existe', typeof ctx[fn] === 'function');
+      check(fn + ' sem .catch vazio', semCatchVazio(fn));
+      check(fn + ' deixa rastro na falha (_logFalhaGrav)', /_logFalhaGrav\(/.test(String(ctx[fn] || '')));
+    });
+
+    // ---- prova de comportamento: o banco recusa e a auditoria fica sabendo ----------
+    // `DB`, `currentHosp` e `MED_AGENDA_ITENS` são `let` no script do app (escopo léxico
+    // global do realm) — só dá para trocá-los de dentro do próprio contexto, com vm.
+    // O restore vem DEPOIS do await: a rejeição da promessa é microtarefa, e restaurar o
+    // espião no mesmo bloco síncrono faria o rastro cair no `audit` de verdade.
+    ctx.__lote1 = [];
+    ctx.__bkp = {};
+    const qsOrig = ctx.document.querySelector;
+    const canEditMedOrig = ctx.canEditMed;
+    try {
+      const elFalso = { closest() { return {}; }, remove() {}, querySelector() { return null; } };
+      ctx.document.querySelector = () => elFalso;
+      ctx.canEditMed = () => true;
+      vm.runInContext(`
+        __bkp.DB = DB; __bkp.audit = audit; __bkp.hosp = currentHosp; __bkp.itens = MED_AGENDA_ITENS;
+        (function(){
+          var nega = function(){ return Promise.reject(new Error('permissao negada (teste)')); };
+          var refFalso = { remove: nega, push: nega, set: nega, update: nega, transaction: nega,
+                           once: function(){ return new Promise(function(){}); } };
+          DB = { ref: function(){ return refFalso; } };
+          audit = function(a, d){ __lote1.push({ acao: String(a || ''), detalhe: String(d == null ? '' : d) }); };
+          currentHosp = { nome: 'Teste Harness', tutor: 'Tutor Teste', refKey: 'teste__tutor' };
+          MED_AGENDA_ITENS = { item_teste: { nome: 'Betaína', q: '1', u: 'comprimido', horarios: ['07:30'] } };
+          try { magRemoverItem('item_teste'); } catch(e) { __lote1.push({ acao: 'ERRO-CHAMADA', detalhe: 'magRemoverItem: ' + e.message }); }
+          try { criarAvisoEstoque({ key: 'teste__tutor', itemId: 'item_teste', medNome: 'Betaína', motivo: 'projecao' }); }
+          catch(e) { __lote1.push({ acao: 'ERRO-CHAMADA', detalhe: 'criarAvisoEstoque: ' + e.message }); }
+        })();
+      `, ctx);
+      await new Promise((r) => setImmediate(r));
+      await new Promise((r) => setImmediate(r));
+    } finally {
+      vm.runInContext('DB = __bkp.DB; audit = __bkp.audit; currentHosp = __bkp.hosp; MED_AGENDA_ITENS = __bkp.itens;', ctx);
+      ctx.document.querySelector = qsOrig;
+      ctx.canEditMed = canEditMedOrig;
+    }
+    const rastro = ctx.__lote1 || [];
+    const falhou = rastro.filter((e) => e.acao === 'gravacao-FALHOU');
+    const visto = JSON.stringify(rastro).slice(0, 240);
+    check('magRemoverItem: banco recusa -> gravacao-FALHOU na auditoria',
+      falhou.some((e) => e.detalhe.indexOf('remover rem') === 0), visto);
+    check('criarAvisoEstoque: banco recusa -> gravacao-FALHOU na auditoria',
+      falhou.some((e) => e.detalhe.indexOf('aviso de estoque') === 0), visto);
+    check('o rastro nomeia o que não gravou (não é erro genérico)',
+      falhou.every((e) => e.detalhe.length > 3), visto);
+
+    // contagem: zero .catch vazio dentro do texto destas 9 funções
+    const reVazio = /\.catch\(\s*(?:function\s*\(\s*\)|\(\s*\)\s*=>)\s*\{\s*\}\s*\)/g;
+    let sobrou = 0, ondeSobrou = [];
+    LOTE1.forEach((fn) => {
+      const n = (String(ctx[fn] || '').match(reVazio) || []).length;
+      if (n) { sobrou += n; ondeSobrou.push(fn + '×' + n); }
+    });
+    check('zero .catch vazio nas 9 funções do Lote 1', sobrou === 0, ondeSobrou.join(', '));
+  }
+  console.log('');
+
   // ---- resumo ----
   console.log('== Resultado: ' + pass + ' ok, ' + fail + ' falha(s) ==');
   if (fail) { console.log('\nFalhas:'); fails.forEach((f) => console.log('  - ' + f)); }

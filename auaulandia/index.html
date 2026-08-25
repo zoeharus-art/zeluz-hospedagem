@@ -5707,7 +5707,7 @@
         if(typeof renderMedAgendaHoje==='function') renderMedAgendaHoje();
         if(typeof audit==='function') audit('medicacao-agenda-remover',key,{pet:currentHosp.nome||'',item:id});
         if(typeof carregarAgendaMedTodos==='function') carregarAgendaMedTodos();
-      }).catch(function(){});
+      }).catch(function(e){ _logFalhaGrav('remover remédio '+id, e); });
     }
   }
   function magAddNovoItem(){
@@ -5949,7 +5949,7 @@
         if(currentHosp && medAgendaKey(currentHosp)===key && typeof renderMedAgendaHoje==='function') renderMedAgendaHoje();
         avaliarEstoqueAlerta(key,itemId);
       }
-    }).catch(function(){});
+    }).catch(function(e){ _logFalhaGrav('estoque por dose '+itemId, e); });
   }
   // Depois de descontar, projeta: se está baixo e ainda não há aviso, abre um automaticamente.
   function avaliarEstoqueAlerta(key,itemId){
@@ -5979,7 +5979,7 @@
     if(typeof d.deficit==='number') aviso.deficit=d.deficit;
     if(typeof d.necessario==='number') aviso.necessario=d.necessario;
     if(d.ate) aviso.ate=d.ate;
-    DB.ref('auaulandia/avisos-estoque').push(aviso).catch(function(){});
+    DB.ref('auaulandia/avisos-estoque').push(aviso).catch(function(e){ _logFalhaGrav('aviso de estoque', e); });
     if(typeof audit==='function') audit('estoque-aviso',d.key,{med:d.medNome||'',motivo:aviso.motivo});
   }
   // Botão "Está acabando" (qualquer um pode tocar) — marca o item e abre o aviso à Recepção.
@@ -5988,7 +5988,7 @@
     if(!confirm('Avisar a Recepção que "'+(it.nome||'este medicamento')+'" está acabando?')) return;
     var key=medAgendaKey(); if(!key||!DB){ alert('Banco conectando… tente de novo em instantes.'); return; }
     it.estoque=Object.assign({}, it.estoque||{}, {acabando:true});
-    DB.ref('auaulandia/medicacao-agenda/'+key+'/itens/'+itemId+'/estoque').update({acabando:true}).catch(function(){});
+    DB.ref('auaulandia/medicacao-agenda/'+key+'/itens/'+itemId+'/estoque').update({acabando:true}).catch(function(e){ _logFalhaGrav('estoque acabando '+itemId, e); });
     var est=it.estoque||{};
     criarAvisoEstoque({key:key,itemId:itemId,medNome:it.nome||'',hospNome:(currentHosp&&currentHosp.nome)||'',tutor:(typeof tutorDe==='function'?tutorDe(currentHosp):(currentHosp&&currentHosp.tutor)||''),modo:est.modo||'',unidade:it.u||'',restante:(typeof est.restante==='number')?est.restante:undefined,motivo:'manual'});
     if(typeof renderMedAgendaHoje==='function') renderMedAgendaHoje();
@@ -6631,7 +6631,7 @@
         if(did!==doseId) extras[did]=Object.assign({},reg,{itemId:x.itemId, espelho_de:doseId});
       });
       if(Object.keys(extras).length) return DB.ref('auaulandia/medicacao-log/'+dataKeyAtual()+'/'+it.key).update(extras);
-    }).catch(function(){});
+    }).catch(function(e){ _logFalhaGrav('espelho de dose '+doseId, e); });
     DB.ref('auaulandia/medicacao-log/'+dataKeyAtual()+'/'+it.key+'/'+doseId).set(reg).then(function(){
       if(currentHosp && medAgendaKey(currentHosp)===it.key){ MED_AGENDA_LOG[doseId]=reg; renderMedAgendaHoje(); }
       if(typeof audit==='function') audit('medicacao-dose',it.key,{pet:it.hospNome||'',med:it.nome,horario:it.horario,quem:reg.quem,assinou:reg.quem});
@@ -7100,7 +7100,7 @@
               pet:(currentHosp&&currentHosp.nome)||'', tutor:(currentHosp&&currentHosp.tutor)||'',
               motivo:_divergMed, quem:passou, ts:Date.now(), resolvido:false,
               pergunta:'Confirmar com o tutor se o medicamento foi suspenso. Se foi, retirar da ficha.'
-            }).catch(function(){});
+            }).catch(function(e){ _logFalhaGrav('divergência de medicação '+_pk, e); });
             if(st){ st.style.color='var(--crm-atencao-text)';
               st.textContent='Salvo. A Recepção vai confirmar a medicação com o tutor — você não precisa fazer nada.'; }
           }
@@ -11881,7 +11881,7 @@
     // reativa se estava suspenso e a vet salvou uma alteração
     if(st){ st.style.color='var(--muted)'; st.textContent='Salvando na ficha do peludinho…'; }
     DB.ref('auaulandia/medicacao-agenda/'+key+'/itens/'+id).set(item).then(function(){
-      DB.ref('auaulandia/medicacao-agenda/'+key).update({nome:vetHosp.nome||'',tutor:(typeof tutorDe==='function'?tutorDe(vetHosp):(vetHosp.tutor||'')),_ts:Date.now(),_quem:quem}).catch(function(){});
+      DB.ref('auaulandia/medicacao-agenda/'+key).update({nome:vetHosp.nome||'',tutor:(typeof tutorDe==='function'?tutorDe(vetHosp):(vetHosp.tutor||'')),_ts:Date.now(),_quem:quem}).catch(function(e){ _logFalhaGrav('cabeçalho da medicação (vet) '+key, e); });
       if(typeof audit==='function') audit('vet-medicacao',key,{pet:vetHosp.nome||'',med:nome,acao:acao,quem:quem});
       if(st){ st.style.color='var(--crm-ok)'; st.textContent='✅ '+acao+' — já vale na ficha e nos alarmes.'; }
       vetFecharMedForm();
@@ -15272,7 +15272,7 @@
         local:at.local||'', obs:at.obs||'', foto:at.foto||'', foto2:at.foto2||'',
         quem:(typeof quemSou==='function'?quemSou():'-'), hora:hora||'',
         dia:(typeof dcDataKey==='function'?dcDataKey():''), motivo:motivo||'', ts:Date.now(), tentativas:0
-      }).catch(function(){});
+      }).catch(function(e){ _logFalhaGrav('fila de aviso vet', e); });
     }catch(e){}
   }
   // Tenta esvaziar a fila. Roda na abertura do app e depois de cada check-in bem-sucedido.
@@ -15376,11 +15376,11 @@
     if(DB){
       DB.ref(ckNo()+'/'+k).set(reg).catch(function(e){ alert('Erro ao salvar: '+e.message); });
       // presença: quem passou pelo check-in de entrada está aqui (acaba a chamada em separado)
-      if(entrada) DB.ref('daycare/chamada/'+dcDataKey()+'/'+k).set('veio').catch(function(){});
+      if(entrada) DB.ref('daycare/chamada/'+dcDataKey()+'/'+k).set('veio').catch(function(e){ _logFalhaGrav('presença pelo check-in '+k, e); });
       // histórico do FILHOt: a segunda dor da Adriana — a folha não deixa ver o passado dele
       DB.ref('daycare/checkin-hist/'+k).push({data:dcDataKey(), tipo:entrada?'entrada':'saida', hora:reg.hora,
         quem:quem, alteracoes:alterados.map(function(pt){ return {ponto:pt.t, alertas:(R.pontos[pt.k].alertas||[]), obs:(R.pontos[pt.k].obs||'')}; }),
-        coco:R.coco||'', ts:Date.now()}).catch(function(){});
+        coco:R.coco||'', ts:Date.now()}).catch(function(e){ _logFalhaGrav('histórico do check-in '+k, e); });
       // alerta para a Coordenação — fica PENDENTE até alguém dizer o que foi feito
       if(alterados.length||R.coco==='diarreia'){
         DB.ref('daycare/ocorrencias/'+dcDataKey()).push({
@@ -15388,7 +15388,7 @@
           origem:entrada?'check-in de entrada':'check-out',
           itens:alterados.map(function(pt){ return pt.t+((R.pontos[pt.k].alertas||[]).length?(': '+R.pontos[pt.k].alertas.join(', ')):''); }),
           coco:R.coco==='diarreia'?'DIARREIA':'', status:'aberta', ts:Date.now()
-        }).catch(function(){});
+        }).catch(function(e){ _logFalhaGrav('ocorrência do check-in '+k, e); });
       }
     }
     if(typeof audit==='function') audit(entrada?'checkin-corpo':'checkout-corpo',
