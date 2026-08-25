@@ -1,6 +1,7 @@
 /**
  * ZÊLUZ · AuAulândia — ponte para os grupos do Telegram
  *
+ * Versão 5 (25/ago/2026) — emoji parou de derrubar a mensagem inteira (par surrogado).
  * Versão 4 (25/ago/2026) — grupo "Diário do Daycare" (resumo do dia sai do Plantão AuAulândia)
  *                          e grupo desconhecido devolve erro em vez de cair na veterinária.
  * Versão 3 (13/ago/2026) — vários grupos, um bot só.
@@ -119,11 +120,28 @@ function _mandarFoto(destino, legenda, dataUri) {
   return { ok: r.getResponseCode() === 200, resposta: r.getContentText() };
 }
 
-/** Acento sobrevive à viagem: tudo que não é ASCII vira &#numero;. */
+/**
+ * Acento sobrevive à viagem: tudo que não é ASCII vira &#numero;.
+ *
+ * ⚠ 25/ago/2026 — EMOJI DERRUBAVA A MENSAGEM INTEIRA. Emoji (🐶 💛 🐾) ocupa DUAS
+ * posições em JavaScript (um "par surrogado"). Lendo caractere a caractere, cada metade
+ * virava uma entidade sem sentido e o Telegram recusava a mensagem toda com
+ * "unmatched surrogate code units". Foi assim que as mensagens prontas para o tutor
+ * pararam de chegar ao grupo "Quem não almoçou" — e ninguém ficou sabendo.
+ * Agora as duas metades são juntadas no número certo antes de virar entidade.
+ */
 function _paraHtml(s) {
   var t = String(s == null ? '' : s), out = '';
   for (var i = 0; i < t.length; i++) {
     var c = t.charCodeAt(i);
+    if (c >= 0xD800 && c <= 0xDBFF && i + 1 < t.length) {
+      var lo = t.charCodeAt(i + 1);
+      if (lo >= 0xDC00 && lo <= 0xDFFF) {
+        out += '&#' + ((c - 0xD800) * 0x400 + (lo - 0xDC00) + 0x10000) + ';';
+        i++;
+        continue;
+      }
+    }
     out += (c > 127) ? ('&#' + c + ';') : t.charAt(i);
   }
   return out;

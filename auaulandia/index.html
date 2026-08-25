@@ -3834,22 +3834,13 @@
   // lugar ao painel de pendências do dia (Adriana: "o Início tem que ter meu dashboard").
   const cores=['#E08856','#5AABB5','#5E9B6B','#2E7D8A','#B8A9C9','#234D67'];
 
-  // ===== HOSPEDAGEM — peludinhos hospedados hoje (04/06), dados reais da planilha =====
-  let hospedes=[
-    {nome:'Harry',    tutor:'Lilian',    raca:'', ini:'H', cor:'#5AABB5'},
-    {nome:'Rock',     tutor:'Thaisa',    raca:'', ini:'R', cor:'#E08856'},
-    {nome:'Bloom',    tutor:'Alexandre', raca:'', ini:'B', cor:'#5E9B6B'},
-    {nome:'Teka',     tutor:'Clara',     raca:'', ini:'T', cor:'#2E7D8A'},
-    {nome:'Bene',     tutor:'Clara',     raca:'', ini:'B', cor:'#B8A9C9'},
-    {nome:'Yume',     tutor:'Natercia',  raca:'', ini:'Y', cor:'#234D67'},
-    {nome:'Duda',     tutor:'Rhiane',    raca:'', ini:'D', cor:'#5AABB5'},
-    {nome:'Romeo',    tutor:'Jeanine',   raca:'', ini:'R', cor:'#E08856'},
-    {nome:'Becca',    tutor:'Jessica',   raca:'', ini:'B', cor:'#5E9B6B'},
-    {nome:'Ozzy',     tutor:'Zuleica',   raca:'', ini:'O', cor:'#2E7D8A'},
-    {nome:'Ozzy',     tutor:'Sabrina',   raca:'', ini:'O', cor:'#B8A9C9'},
-    {nome:'Charlotte',tutor:'Sabrina',   raca:'', ini:'C', cor:'#234D67'},
-    {nome:'Repolho',  tutor:'Zêluz · moradora', raca:'', ini:'R', cor:'#DEB428', mascote:true}
-  ];
+  // ===== HOSPEDAGEM — quem está hospedado hoje, lido da planilha da recepção =========
+  // Começa VAZIA de propósito: quem manda é a planilha do dia. Antes havia uma lista de
+  // exemplo aqui, e ela virava "hóspede de hoje" toda vez que a leitura falhava.
+  let hospedes=[];
+  // null = ainda não terminei de ler · true = li · false = NÃO consegui ler.
+  // Nada que dependa de saber quem está na casa pode afirmar coisa alguma com null/false.
+  var HOSP_PLANILHA=null;
   // Banco de raças (autocomplete) — lista dela + raças mais comuns no Brasil
   // Banco de raças Zêluz — pequeno porte / companhia (sem grande porte, sem cães de guarda)
   let racasMap={}; // 'nome__tutor' (lowercase) -> raça, vinda da planilha
@@ -3932,6 +3923,9 @@
   // dois lugares contando a mesma história.
   function hospedesSemCheckin(){
     var out=[];
+    // Sem a planilha lida, não dá para dizer quem está hospedado — e muito menos cobrar
+    // check-in de alguém. Foi assim que a lista de exemplo virou "6 sem check-in".
+    if(HOSP_PLANILHA!==true) return out;
     try{
       (hospedes||[]).forEach(function(h){
         // A MORADORA NÃO FAZ CHECK-IN (Adriana, 17/ago/2026: "está aparecendo para a Amanda o
@@ -4997,6 +4991,15 @@
     const _rHosp=(document.body.dataset.role||''); const _podeRemHosp=(_rHosp==='gestao'||_rHosp==='supervisor'||_rHosp==='diretoria'||_rHosp==='monitor');
     document.getElementById('kpiHosp').textContent   = hospedes.filter(h=>!h.mascote).length;
     document.getElementById('kpiMorada').textContent = hospedes.filter(h=>h.mascote).length;
+    try{
+      var _avP=document.getElementById('hospPlanilhaAviso');
+      if(!_avP){ var _g=document.getElementById('hospGrid');
+        if(_g&&_g.parentNode){ _avP=document.createElement('div'); _avP.id='hospPlanilhaAviso'; _g.parentNode.insertBefore(_avP,_g); } }
+      if(_avP) _avP.innerHTML=(typeof HOSP_PLANILHA!=='undefined'&&HOSP_PLANILHA===false)
+        ? '<div class="dc-faltas"><strong>Não consegui ler a planilha da hospedagem.</strong>'
+          +'<div style="font-weight:600;margin-top:4px">A lista abaixo pode estar incompleta — só aparece quem foi lançado aqui no Plantão ou no Check-in. Confira a internet e recarregue.</div></div>'
+        : '';
+    }catch(e){}
     document.getElementById('hospGrid').innerHTML =
       `<div class="pet add so-gestao" onclick="adicionarHospede()">
          <div class="plus">+</div><div class="t">Adicionar hóspede<br><span style="font-size:10px;font-weight:600;color:var(--muted)">Gestão / Supervisão</span></div></div>`+
@@ -9440,7 +9443,7 @@
   // Agora existe um carimbo: esta constante é a versão que o aparelho está rodando, e o
   // Firebase guarda a versão publicada. Quando as duas diferem, aparece o aviso — mas
   // NUNCA recarrega sozinho: recarregar no meio de um check-in perderia o trabalho.
-  const APP_VERSAO='2026-08-25-19';
+  const APP_VERSAO='2026-08-25-21';
   function vigiarVersao(){
     if(!DB) return;
     try{
@@ -10079,14 +10082,21 @@
         // Em datas passadas/futuras, ou após o corte, mostra SÓ a planilha do dia (senão a contagem infla).
         if(!(_ehHoje && !_depoisDoCorte)){ dormiramSaindo=[]; }
         const lista=hoje.concat(dormiramSaindo);
-        if(lista.length){
-          hospedes = lista.map((h,i)=>({nome:h.nome, tutor:h.tutor, raca:h.raca||'', ini:(h.nome[0]||'?').toUpperCase(), cor:CORES[i%CORES.length], mascote:/repolho/i.test(h.nome), saidaHoje:!!h.saidaHoje}));
-          addRacasAoBanco(hospedes.map(h=>h.raca).filter(Boolean));
-        }
-      }
+        // Substitui SEMPRE — inclusive por lista vazia. Manter a lista do carregamento
+        // anterior é o que fazia hóspede de ontem aparecer como hóspede de hoje.
+        hospedes = lista.map((h,i)=>({nome:h.nome, tutor:h.tutor, raca:h.raca||'', ini:(h.nome[0]||'?').toUpperCase(), cor:CORES[i%CORES.length], mascote:/repolho/i.test(h.nome), saidaHoje:!!h.saidaHoje}));
+        if(lista.length) addRacasAoBanco(hospedes.map(h=>h.raca).filter(Boolean));
+        HOSP_PLANILHA=true;
+      } else { HOSP_PLANILHA=true; hospedes=[]; }   // planilha lida, dia sem ninguém
       renderHosp(); carregarManuais(); if(typeof carregarPainelGestora==='function') carregarPainelGestora();
       if(typeof carregarRiscoNaoComer==='function') carregarRiscoNaoComer();
-    }catch(e){ console.warn('Planilha indisponível — usando lista de exemplo.', e); carregarManuais(); }
+    }catch(e){
+      // NÃO consegui ler a planilha. A tela passa a dizer isso — nunca mais inventa uma lista.
+      HOSP_PLANILHA=false;
+      try{ if(typeof audit==='function') audit('planilha-hospedagem','NÃO consegui ler a planilha da hospedagem: '+((e&&e.message)||e),{}); }catch(x){}
+      try{ renderHosp(); }catch(x){}
+      carregarManuais();
+    }
   }
   function dataKeyAtual(){ const p=x=>String(x).padStart(2,'0'); const d=selectedDate; return d.getFullYear()+'-'+p(d.getMonth()+1)+'-'+p(d.getDate()); }
   function carregarManuais(){
@@ -12000,32 +12010,47 @@
   // Cuidado Vet — Consulta em PDF (Receituário). Reaproveita a infraestrutura de PDF
   // do Check-in: as primitivas ciPdfEsc/ciPdfLatin1 e ciBaixarBlob (todas declarações
   // de função, portanto hoisted — seguras de chamar aqui, sem risco de ordem/TDZ).
-  // zPdfTextBlob é a GENERALIZAÇÃO só-texto do montador de ciBuildPdfBlob (o Check-in
-  // continua com o seu próprio montador com imagem/assinatura, intacto).
+  //
+  // ===== PDF — MONTADOR ÚNICO (Fase 1, passo 3, 25/ago/2026) =====
+  // Todo PDF do app sai daqui: o Receituário da Vet (só texto) e a Ficha de Check-in
+  // (texto + a assinatura do tutor em JPEG). Sem `opts`, o resultado é exatamente o de
+  // antes; com `opts`, a folha reserva o rodapé e recebe a assinatura por cima.
   // ================================================================================
-  function zPdfTextBlob(lines){
+  function zPdfTextBlob(lines, opts){
+    var o=opts||null;
+    var corte=(o&&o.reservaRodape)?70:60;
     var ops=[]; var y=800;
     (lines||[]).forEach(function(ln){
       var size=ln.size||11, gap=(ln.gap!=null?ln.gap:4);
-      y-=(size+gap); if(y<60) return;
+      y-=(size+gap); if(y<corte) return;
       if(!ln.t) return;
       var font=ln.bold?'F2':'F1';
       var col=ln.red?'0.753 0.224 0.169 rg':'0.137 0.302 0.404 rg';
       ops.push(col+'\nBT /'+font+' '+size+' Tf 1 0 0 1 56 '+y.toFixed(1)+' Tm ('+ciPdfEsc(ln.t)+') Tj ET');
     });
+    // ---- assinatura do tutor (só quando quem chamou pede) ----
+    var sig=o?(o.assinatura||null):null;
+    if(o){
+      var assina=o.assinaNome||'';
+      if(sig){ var W2=240, H2=Math.min(120, W2*(sig.h/sig.w)); var yb=Math.max(60, y-14-H2); ops.push('q '+W2.toFixed(2)+' 0 0 '+H2.toFixed(2)+' 56 '+yb.toFixed(2)+' cm /Im0 Do Q'); }
+      else { y-=16; if(y>70) ops.push('0.4 0.4 0.4 rg\nBT /F1 11 Tf 1 0 0 1 56 '+y.toFixed(1)+' Tm ((sem assinatura no quadro)) Tj ET'); }
+      if(assina){ y-=(sig?90:20); if(y>60) ops.push('0.137 0.302 0.404 rg\nBT /F2 11 Tf 1 0 0 1 56 '+y.toFixed(1)+' Tm ('+ciPdfEsc(assina)+') Tj ET'); }
+    }
     var content=ops.join('\n');
+    var hasImg=!!sig;
     var objs=[];
     objs.push('<< /Type /Catalog /Pages 2 0 R >>');
     objs.push('<< /Type /Pages /Kids [3 0 R] /Count 1 >>');
-    objs.push('<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 5 0 R /F2 6 0 R >> >> /Contents 4 0 R >>');
+    objs.push('<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 5 0 R /F2 6 0 R >>'+(hasImg?' /XObject << /Im0 7 0 R >>':'')+' >> /Contents 4 0 R >>');
     objs.push('<< /Length '+content.length+' >>\nstream\n'+content+'\nendstream');
     objs.push('<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>');
     objs.push('<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold /Encoding /WinAnsiEncoding >>');
+    if(hasImg){ objs.push({ pre:'<< /Type /XObject /Subtype /Image /Width '+sig.w+' /Height '+sig.h+' /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode /Length '+sig.bytes.length+' >>\nstream\n', bin:sig.bytes, post:'\nendstream' }); }
     var enc=function(s){ var u=new Uint8Array(s.length); for(var i=0;i<s.length;i++) u[i]=s.charCodeAt(i)&0xff; return u; };
     var chunks=[]; var len=0; var offsets=[];
     var push=function(x){ var u=(x instanceof Uint8Array)?x:enc(x); chunks.push(u); len+=u.length; };
     push('%PDF-1.4\n%âãÏÓ\n');
-    for(var i=0;i<objs.length;i++){ offsets[i]=len; push((i+1)+' 0 obj\n'); push(objs[i]); push('\nendobj\n'); }
+    for(var i=0;i<objs.length;i++){ offsets[i]=len; push((i+1)+' 0 obj\n'); var ob=objs[i]; if(typeof ob==='string') push(ob); else { push(ob.pre); push(ob.bin); push(ob.post); } push('\nendobj\n'); }
     var xrefOff=len;
     var xref='xref\n0 '+(objs.length+1)+'\n0000000000 65535 f \n';
     for(var j=0;j<objs.length;j++){ xref += (('0000000000'+offsets[j]).slice(-10))+' 00000 n \n'; }
@@ -15160,11 +15185,29 @@
         .catch(function(){ return false; });
     });
   }
+  // Emoji vira a entidade numérica correta ANTES de sair do app (ver o comentário acima).
+  function tgEmojiSeguro(v){
+    var t=String(v==null?'':v), out='';
+    for(var i=0;i<t.length;i++){
+      var c=t.charCodeAt(i);
+      if(c>=0xD800&&c<=0xDBFF&&i+1<t.length){
+        var lo=t.charCodeAt(i+1);
+        if(lo>=0xDC00&&lo<=0xDFFF){ out+='&#'+((c-0xD800)*0x400+(lo-0xDC00)+0x10000)+';'; i++; continue; }
+      }
+      out+=t.charAt(i);
+    }
+    return out;
+  }
   function tgAvisar(dados){
     var c=TG_CFG||{};
     if(!c.url) return Promise.resolve({ok:false, erro:'ponte não configurada'});
+    // Todo campo de texto que a ponte vai transformar em HTML passa pelo tratamento do emoji.
+    var _d=Object.assign({},dados||{});
+    ['texto','obs','alertas','pet','tutor','ponto','local','quem','raca'].forEach(function(k){
+      if(_d[k]) _d[k]=tgEmojiSeguro(_d[k]);
+    });
     return fetch(c.url,{method:'POST', headers:{'Content-Type':'text/plain;charset=utf-8'},
-      body:JSON.stringify(Object.assign({senha:c.senha||''},dados))})
+      body:JSON.stringify(Object.assign({senha:c.senha||''},_d))})
       .then(function(r){ return r.text().catch(function(){ return ''; }); })
       .then(function(t){ try{ return JSON.parse(t); }catch(e){ return {ok:false, erro:t.slice(0,120)}; } })
       .catch(function(e){ return {ok:false, erro:String((e&&e.message)||e)}; });
@@ -18885,6 +18928,13 @@
     // Busca vazia: em vez de tela em branco, mostra QUEM está hospedado sem check-in — os
     // mesmos que o menu está contando. Era isto que fazia o "5" do menu abrir no nada.
     if(!q){
+      if(typeof HOSP_PLANILHA!=='undefined' && HOSP_PLANILHA!==true){
+        box.innerHTML=(HOSP_PLANILHA===null)
+          ? '<div class="hint">Lendo a planilha da hospedagem…</div>'
+          : '<div class="dc-faltas"><strong>Não consegui ler a planilha da hospedagem.</strong>'
+            +'<div style="font-weight:600;margin-top:4px">Não sei quem está hospedado agora — por isso não mostro lista nenhuma. Confira a internet e recarregue a página. Para lançar um check-in mesmo assim, digite o nome do FILHOt acima.</div></div>';
+        return;
+      }
       var falta=(typeof hospedesSemCheckin==='function')?hospedesSemCheckin():[];
       if(!falta.length){ box.innerHTML='<div class="hint">Nenhum hóspede sem check-in. Para lançar um novo, digite o nome acima.</div>'; return; }
       box.innerHTML='<div class="hint" style="margin-bottom:8px"><strong>'+falta.length+' hospedado'+(falta.length>1?'s':'')+' sem check-in lançado.</strong> Toque no nome para fazer agora.</div>'
@@ -20329,40 +20379,9 @@
     if(meds.length){ add('MEDICACAO / SUPLEMENTOS - HORARIOS',{bold:true,size:12,red:true}); meds.forEach(function(it){ var per=medPeriodoTxt(it); add('- '+it.nome+' - '+medDoseTxt(it)+' - '+((it.horarios||[]).join(', '))+(per?(' - '+per):''),{red:true}); }); lines.push({t:'',size:6,gap:2}); }
     if(d.pertences.length){ add('Pertences',{bold:true,size:12}); d.pertences.forEach(function(p){ add('- '+p.nome+(p.spec?(' - '+p.spec):''),{}); }); lines.push({t:'',size:6,gap:2}); }
     add('Assinatura do tutor',{bold:true,size:12,gap:6});
-
-    // ---- content stream (texto) ----
-    let y=800; const ops=[];
-    lines.forEach(function(ln){ y-=(ln.size+ln.gap); if(y<70) return; const font=ln.bold?'F2':'F1'; const col=ln.red?'0.753 0.224 0.169 rg':'0.137 0.302 0.404 rg'; if(ln.t) ops.push(col+'\nBT /'+font+' '+ln.size+' Tf 1 0 0 1 56 '+y.toFixed(1)+' Tm ('+ciPdfEsc(ln.t)+') Tj ET'); });
-    // ---- assinatura (JPEG) ----
-    const sig=ciAssinaturaJpeg();
-    if(sig){ const W2=240, H2=Math.min(120, W2*(sig.h/sig.w)); const yb=Math.max(60, y-14-H2); ops.push('q '+W2.toFixed(2)+' 0 0 '+H2.toFixed(2)+' 56 '+yb.toFixed(2)+' cm /Im0 Do Q'); }
-    else { y-=16; if(y>70) ops.push('0.4 0.4 0.4 rg\nBT /F1 11 Tf 1 0 0 1 56 '+y.toFixed(1)+' Tm ((sem assinatura no quadro)) Tj ET'); }
-    if(assina){ y-=(sig?90:20); if(y>60) ops.push('0.137 0.302 0.404 rg\nBT /F2 11 Tf 1 0 0 1 56 '+y.toFixed(1)+' Tm ('+ciPdfEsc(assina)+') Tj ET'); }
-    const content=ops.join('\n');
-
-    // ---- montagem dos objetos ----
-    const hasImg=!!sig;
-    const objs=[];
-    objs.push('<< /Type /Catalog /Pages 2 0 R >>');
-    objs.push('<< /Type /Pages /Kids [3 0 R] /Count 1 >>');
-    objs.push('<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 5 0 R /F2 6 0 R >>'+(hasImg?' /XObject << /Im0 7 0 R >>':'')+' >> /Contents 4 0 R >>');
-    objs.push('<< /Length '+content.length+' >>\nstream\n'+content+'\nendstream');
-    objs.push('<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>');
-    objs.push('<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold /Encoding /WinAnsiEncoding >>');
-    if(hasImg){ objs.push({ pre:'<< /Type /XObject /Subtype /Image /Width '+sig.w+' /Height '+sig.h+' /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode /Length '+sig.bytes.length+' >>\nstream\n', bin:sig.bytes, post:'\nendstream' }); }
-
-    // ---- assembler (offsets em bytes) ----
-    const enc=function(s){ const u=new Uint8Array(s.length); for(let i=0;i<s.length;i++) u[i]=s.charCodeAt(i)&0xff; return u; };
-    const chunks=[]; let len=0; const offsets=[];
-    const push=function(x){ const u=(x instanceof Uint8Array)?x:enc(x); chunks.push(u); len+=u.length; };
-    push('%PDF-1.4\n%âãÏÓ\n');
-    for(let i=0;i<objs.length;i++){ offsets[i]=len; push((i+1)+' 0 obj\n'); const o=objs[i]; if(typeof o==='string') push(o); else { push(o.pre); push(o.bin); push(o.post); } push('\nendobj\n'); }
-    const xrefOff=len;
-    let xref='xref\n0 '+(objs.length+1)+'\n0000000000 65535 f \n';
-    for(let i=0;i<objs.length;i++){ xref += (('0000000000'+offsets[i]).slice(-10))+' 00000 n \n'; }
-    push(xref);
-    push('trailer\n<< /Size '+(objs.length+1)+' /Root 1 0 R >>\nstartxref\n'+xrefOff+'\n%%EOF');
-    return new Blob(chunks,{type:'application/pdf'});
+    // Daqui em diante é o montador único (zPdfTextBlob): a folha reserva o rodapé e
+    // recebe a assinatura do tutor em JPEG, com o nome de quem assinou logo abaixo.
+    return zPdfTextBlob(lines, { assinatura: ciAssinaturaJpeg(), assinaNome: assina, reservaRodape: true });
   }
   function ciBaixarBlob(blob,nome){ try{ const u=URL.createObjectURL(blob); const a=document.createElement('a'); a.href=u; a.download=nome; document.body.appendChild(a); a.click(); setTimeout(function(){ try{ document.body.removeChild(a); }catch(e){} URL.revokeObjectURL(u); },1500); }catch(e){} }
 
@@ -20399,6 +20418,13 @@
     window.open(url,'_blank');
     if(st){ st.style.color='var(--crm-atencao-text)'; st.textContent=(blob?('📎 PDF "'+nome+'" baixado e '):'')+'Gmail aberto — anexe o PDF ao e-mail. (Anexar automático pela URL não é possível.)'; }
   }
+
+  // ===== IMPRESSÃO — BLOCO DE ASSINATURA E ABERTURA (Fase 1, passo 3, 25/ago/2026) =====
+  // O quadro "Assinatura do tutor" da folha impressa e a abertura da janela de impressão
+  // são escritos uma vez só. Usam o mesmo #ci-print as três folhas: check-in, reemissão
+  // da ficha e check-out.
+  function zPrintAssinaturaHtml(sig, assina){ return '<div class="pf-sec"><h3>Assinatura do tutor</h3>'+(sig?('<img class="pf-sig-img" src="'+sig+'">'):'<div class="pf-row">(sem assinatura)</div>')+'<div class="pf-row" style="margin-top:6px">'+esc(assina||'—')+'</div></div>'; }
+  function zPrintAbrir(h){ var pr=document.getElementById('ci-print'); if(pr) pr.innerHTML=h; setTimeout(function(){ window.print(); },60); }
 
   // ---- PDF via window.print (offline, sem lib) ----
   function ciGerarPDF(){
@@ -20444,16 +20470,15 @@
     h+='<div class="pf-sec"><h3>Spa Dermoprotetor — Banho na saída</h3><div class="pf-row">'+bl+'</div><div class="pf-row" style="margin-top:4px;font-size:15px"><strong>DIA DA SAÍDA: '+(d.saida?ciBRdata(d.saida):'a confirmar')+'</strong></div></div>';
     if(mv.length){ h+='<div class="pf-med"><h3>⚠ MEDICAÇÃO / SUPLEMENTOS — HORÁRIOS</h3>'; mv.forEach(function(it){ var per=medPeriodoTxt(it); h+='<div class="pf-mrow">'+esc(it.nome)+' — '+esc(medDoseTxt(it))+' — '+esc((it.horarios||[]).join(', '))+(per?(' — '+esc(per)):'')+'</div>'; }); h+='</div>'; }
     if(d.pertences.length){ h+='<div class="pf-sec"><h3>Pertences</h3>'+d.pertences.map(function(p){ return '<div class="pf-row">• '+esc(p.nome)+(p.spec?(' — '+esc(p.spec)):'')+'</div>'; }).join('')+'</div>'; }
-    h+='<div class="pf-sec"><h3>Assinatura do tutor</h3>'+(sig?('<img class="pf-sig-img" src="'+sig+'">'):'<div class="pf-row">(sem assinatura)</div>')+'<div class="pf-row" style="margin-top:6px">'+esc(assina||'—')+'</div></div>';
+    h+=zPrintAssinaturaHtml(sig, assina);
     }catch(e){ __err=(e&&e.message)||String(e); }
     if(!h || h.indexOf('pf-h1')<0){
       h='<div class="pf-h1">Zêluz · AuAulândia — Ficha de Check-in</div>'
        +'<div class="pf-sub">'+esc((ciHosp&&ciHosp.nome)||'')+((ciHosp&&ciHosp.raca)?(' · '+esc(ciHosp.raca)):'')+((ciHosp&&ciHosp.tutor)?(' · Tutor: '+esc(ciHosp.tutor)):'')+'</div>';
     }
     if(__err) h+='<div class="pf-row" style="color:#C0392B;margin-top:8px">Aviso: alguns detalhes nao puderam ser montados ('+esc(__err)+'). Avise a Adriana.</div>';
-    const pr=document.getElementById('ci-print'); if(pr) pr.innerHTML=h;
     var __st=document.getElementById('ci-status'); if(__st&&__err){ __st.style.color='var(--crm-critico)'; __st.textContent='PDF gerado com aviso — me mande esta mensagem: '+__err; }
-    setTimeout(function(){ window.print(); },60);
+    zPrintAbrir(h);
   }
   // ===== Reemitir a ficha de check-in (PDF) a qualquer momento, a partir dos dados SALVOS na
   // estadia (auaulandia/estadias) — sem precisar refazer o check-in. Botão na ficha do hóspede.
@@ -20493,12 +20518,11 @@
       h+='<div class="pf-sec"><h3>Spa Dermoprotetor — Banho na saída</h3><div class="pf-row">'+bl+'</div></div>';
       if(mv.length){ h+='<div class="pf-med"><h3>⚠ MEDICAÇÃO / SUPLEMENTOS — HORÁRIOS</h3>'; mv.forEach(function(it){ var per=medPeriodoTxt(it); h+='<div class="pf-mrow">'+esc(it.nome)+' — '+esc(medDoseTxt(it))+' — '+esc((it.horarios||[]).join(', '))+(per?(' — '+esc(per)):'')+'</div>'; }); h+='</div>'; }
       if((est.pertences||[]).length){ h+='<div class="pf-sec"><h3>Pertences</h3>'+est.pertences.map(function(p){ return '<div class="pf-row">• '+esc(p.nome)+(p.spec?(' — '+esc(p.spec)):'')+'</div>'; }).join('')+'</div>'; }
-      h+='<div class="pf-sec"><h3>Assinatura do tutor</h3>'+(est.assinatura?('<img class="pf-sig-img" src="'+est.assinatura+'">'):'<div class="pf-row">(sem assinatura)</div>')+'<div class="pf-row" style="margin-top:6px">'+esc(est.assinado_por||'—')+'</div></div>';
+      h+=zPrintAssinaturaHtml(est.assinatura, est.assinado_por);
     }catch(e){ __err=(e&&e.message)||String(e); }
     if(!h || h.indexOf('pf-h1')<0){ h='<div class="pf-h1">Zêluz · AuAulândia — Ficha de Check-in</div><div class="pf-sub">'+esc((est&&est.nome)||'')+'</div>'; }
     if(__err) h+='<div class="pf-row" style="color:#C0392B;margin-top:8px">Aviso: '+esc(__err)+'</div>';
-    var pr=document.getElementById('ci-print'); if(pr) pr.innerHTML=h;
-    setTimeout(function(){ window.print(); },60);
+    zPrintAbrir(h);
   }
 
   // ==================================================================================
@@ -21817,7 +21841,9 @@
   // gênero também: quem recebe a mensagem lê "o Toddy… ele" ou "a Dolly… ela", nunca o
   // "o(a)"/"ele(a)" de formulário. Sem sexo na ficha, cai no neutro "o pequeno / ele".
   function empMensagem(x){
-    const tutor=String(x.tutor||'').trim().split(/\s+/)[0]||'';
+    // "Oi, Sophia/João" soava estranho para quem recebe: o cadastro guarda os dois tutores
+    // na mesma célula. primeiroNome() corta na barra e na vírgula (Adriana, 25/ago/2026).
+    const tutor=(typeof primeiroNome==='function')?primeiroNome(x.tutor):(String(x.tutor||'').trim().split(/\s+/)[0]||'');
     const nome=String(x.nome||'').trim();
     const f=/^f/i.test(String(x.sexo||''));           // Fêmea
     const o=f?'a':'o', ele=f?'ela':'ele', pequeno=f?'a pequena':'o pequeno';
@@ -22281,8 +22307,8 @@
     var itens=coItensLista(); if(itens.length){ h+='<div class="pf-sec"><h3>Itens que voltaram</h3>'+itens.map(function(it){ return '<div class="pf-row">• '+esc(it.label)+'</div>'; }).join('')+'</div>'; }
     var obs=(document.getElementById('coObs').value||'').trim(); if(obs) h+='<div class="pf-sec"><h3>Observações</h3><div class="pf-row">'+esc(obs)+'</div></div>';
     var assina=(document.getElementById('coAssinaNome').value||'').trim(); var sig=CO_SIG.dataURL();
-    h+='<div class="pf-sec"><h3>Assinatura do tutor</h3>'+(sig?('<img class="pf-sig-img" src="'+sig+'">'):'<div class="pf-row">(sem assinatura)</div>')+'<div class="pf-row" style="margin-top:6px">'+esc(assina||'—')+'</div></div>';
-    var pr=document.getElementById('ci-print'); if(pr) pr.innerHTML=h; setTimeout(function(){ window.print(); },60);
+    h+=zPrintAssinaturaHtml(sig, assina);
+    zPrintAbrir(h);
   }
   function coEnviarWhats(){ window.open('https://wa.me/?text='+encodeURIComponent(coResumoTexto()),'_blank'); }
 

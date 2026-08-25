@@ -535,6 +535,171 @@ async function main() {
   }
   console.log('');
 
+  // ---- Fase 1 · passo 3: o PDF tem UM montador só (zPdfTextBlob) ----
+  // Prova por bytes: o PDF do Check-in e o Receituário da Vet são montados a partir de
+  // dados fixos e comparados com a impressão digital colhida ANTES da unificação.
+  // Se um único byte mudar, o teste cai — é o que permite mexer no montador sem apostar.
+  console.log('Fase 1 · passo 3 — PDF (fonte única):');
+  {
+    // Gabaritos colhidos do código ANTES da unificação, em 25/ago/2026.
+    // Se mudarem, o PDF mudou — não é para "ajustar o gabarito", é para investigar.
+    const GABARITO_PDF_CHECKIN = '98858e0506fafb8ffa9e6cf69ebb4339038affadbd54df62caebf3b0a42aa791'; // 3628 bytes
+    const GABARITO_PDF_VET = '83338caf3f53ba3f20a6f7dd5de1bdc7fb3d7f0fcdbb9260cac499190cbc792d'; // 2086 bytes
+    const GABARITO_PDF_TEXTO = '82c7cd6e0345969d1db34d3c9fdb04e8038668720292fea9a7373f0e0f51207e'; // 848 bytes
+
+    const JPEG_FALSO = [255, 216, 255, 224, 0, 16, 74, 70, 73, 70, 0, 1, 1, 0, 0, 1, 0, 1, 0, 0, 255, 217];
+    const LINHAS_SIMPLES = [{ t: 'Linha 1', bold: true, size: 12, gap: 4 }, { t: 'Linha 2', size: 11, gap: 4 }];
+    // Sem `ts`: a data por extenso sairia pelo fuso da máquina e o gabarito deixaria de
+    // ser reproduzível fora daqui — a fixture tem de valer em qualquer computador.
+    const CONSULTA = {
+      data: '2026-08-25', temperatura: '38.5', peso: '7.2',
+      cuidados: ['Evitar banho por 3 dias'], recomendacoes: 'Retornar se coçar',
+      obs: 'Orelha vermelha', reavaliacao: '2026-09-01', reavaliacaoMotivo: 'reavaliar pele',
+      por: 'Dra. Tanara',
+    };
+
+    // ciHosp é declarado com `let` — mora no escopo léxico do script, não vira propriedade
+    // do global. Só dá para ler e trocar rodando código DENTRO do sandbox.
+    const lerCiHosp = () => vm.runInContext('ciHosp', ctx);
+    const porCiHosp = (v) => { ctx.__fixHosp = v; vm.runInContext('ciHosp = __fixHosp;', ctx); };
+
+    const geOrig = ctx.document.getElementById;
+    const ciHospOrig = lerCiHosp();
+    const orig = {};
+    ['ciColetarFicha', 'ciColetarMeds', 'ciAssinaturaJpeg', 'vetHosp', 'VET_MED_CACHE', 'tutorDe']
+      .forEach((k) => { orig[k] = ctx[k]; });
+    let bCheckin = null, bVet = null, bTexto = null, bSemSig = null, bComSig = null, erro = '';
+    try {
+      ctx.document.getElementById = function (id) {
+        if (id === 'ciAssinaNome') return { value: 'Maria Tutora' };
+        return geOrig.call(this, id);
+      };
+      porCiHosp({ nome: 'Toddy', raca: 'Spitz Alemão', tutor: 'Carolina' });
+      ctx.ciColetarFicha = () => ({
+        entrada: '2026-08-20', saida: '2026-08-27',
+        pertences: [{ nome: 'Mochila', spec: 'azul' }, { nome: 'Vasilha' }],
+        ficha: {
+          alim: {
+            tipo: 'Ração', marca: 'Guabi', qtd: 80, unidade: 'g', refeicoes: 2,
+            refs: { fixas: { cafe: { on: true, racao: '80' }, jantar: { on: true, racao: '80', natural: '50' } }, extras: [] },
+            dias: 7, minimo: 1120, trazida: 1200,
+            comida: { qtd: 50, refeicoes: { jantar: true }, minimo: 350, trazida: 400 },
+          },
+          spa: { banho: 'Sim', tipo: 'Dermoprotetor', horario: '10:00' },
+        },
+      });
+      ctx.ciColetarMeds = () => ({ a: { nome: 'Apoquel', q: '1', u: 'comprimido', horarios: ['08:00', '20:00'] } });
+      // O Uint8Array PRECISA nascer dentro do sandbox: o montador testa `instanceof
+      // Uint8Array` e um array vindo de fora seria tratado como texto — a assinatura
+      // sairia corrompida e o gabarito estaria protegendo a coisa errada.
+      vm.runInContext('ciAssinaturaJpeg = function(){ return { bytes: Uint8Array.from('
+        + JSON.stringify(JPEG_FALSO) + '), w:300, h:190 }; };', ctx);
+      ctx.vetHosp = { nome: 'Luna', raca: 'Westie', tutor: 'Beatriz' };
+      ctx.VET_MED_CACHE = { m1: { nome: 'Simparic', q: '1', u: 'comprimido', horarios: ['09:00'] } };
+      ctx.tutorDe = () => 'Beatriz'; // sem depender do cache de cadastros
+
+      bCheckin = blobBytes(ctx.ciBuildPdfBlob());
+      bVet = blobBytes(ctx.vetConsultaBlob(CONSULTA));
+      bTexto = blobBytes(ctx.zPdfTextBlob(LINHAS_SIMPLES));
+      try {
+        bSemSig = blobBytes(ctx.zPdfTextBlob(LINHAS_SIMPLES, { assinatura: null, assinaNome: 'Fulano', reservaRodape: true }));
+      } catch (e) { erro += ' [opts sem assinatura: ' + e.message + ']'; }
+      try {
+        bComSig = blobBytes(ctx.zPdfTextBlob(LINHAS_SIMPLES, { assinatura: ctx.ciAssinaturaJpeg(), assinaNome: 'Fulano', reservaRodape: true }));
+      } catch (e) { erro += ' [opts com assinatura: ' + e.message + ']'; }
+    } catch (e) {
+      erro = (e && e.message) || String(e);
+    } finally {
+      ctx.document.getElementById = geOrig;
+      Object.keys(orig).forEach((k) => { ctx[k] = orig[k]; });
+      porCiHosp(ciHospOrig);
+    }
+
+    const digital = (b) => (b ? sha256(b) + ' (' + b.length + ' bytes)' : 'não gerou: ' + erro);
+
+    check('PDF do check-in continua byte a byte igual ao gabarito',
+      !!bCheckin && sha256(bCheckin) === GABARITO_PDF_CHECKIN, digital(bCheckin));
+    check('Receituário da Vet continua byte a byte igual ao gabarito',
+      !!bVet && sha256(bVet) === GABARITO_PDF_VET, digital(bVet));
+    check('zPdfTextBlob sem opts continua byte a byte igual ao gabarito',
+      !!bTexto && sha256(bTexto) === GABARITO_PDF_TEXTO, digital(bTexto));
+    check('o PDF do check-in leva a assinatura como JPEG de verdade (não vira texto)',
+      !!bCheckin && bCheckin.indexOf(Buffer.from([0xFF, 0xD8, 0xFF])) > 0
+      && bCheckin.indexOf('/DCTDecode') > 0, digital(bCheckin));
+
+    check('sem assinatura: o PDF avisa na folha e não declara imagem nenhuma',
+      !!bSemSig && bSemSig.indexOf('(sem assinatura no quadro)') > 0
+      && bSemSig.indexOf('(Fulano)') > 0 && bSemSig.indexOf('/XObject') < 0,
+      bSemSig ? String(bSemSig.length) + ' bytes' : erro);
+    check('com assinatura: o PDF declara a imagem JPEG no lugar certo',
+      !!bComSig && bComSig.indexOf('/XObject << /Im0 7 0 R >>') > 0
+      && bComSig.indexOf('/DCTDecode') > 0,
+      bComSig ? String(bComSig.length) + ' bytes' : erro);
+
+    // no código-fonte: o montador de PDF e o bloco de impressão existem UMA vez só
+    const conta = (s) => html.split(s).length - 1;
+    check('startxref aparece 1 vez no código (antes eram 2 montadores)', conta('startxref') === 1, 'achei ' + conta('startxref'));
+    check('%%EOF aparece 1 vez no código (antes eram 2)', conta('%%EOF') === 1, 'achei ' + conta('%%EOF'));
+    check('<h3>Assinatura do tutor</h3> aparece 1 vez no código (antes eram 3)',
+      conta('<h3>Assinatura do tutor</h3>') === 1, 'achei ' + conta('<h3>Assinatura do tutor</h3>'));
+    check('window.print() aparece 1 vez no código (antes eram 3)', conta('window.print()') === 1, 'achei ' + conta('window.print()'));
+    check('zPrintAssinaturaHtml existe', typeof ctx.zPrintAssinaturaHtml === 'function');
+    check('zPrintAbrir existe', typeof ctx.zPrintAbrir === 'function');
+    if (typeof ctx.zPrintAssinaturaHtml === 'function') {
+      const comImg = '<div class="pf-sec"><h3>Assinatura do tutor</h3><img class="pf-sig-img" src="data:x"><div class="pf-row" style="margin-top:6px">Ana</div></div>';
+      const semImg = '<div class="pf-sec"><h3>Assinatura do tutor</h3><div class="pf-row">(sem assinatura)</div><div class="pf-row" style="margin-top:6px">—</div></div>';
+      check('bloco de assinatura COM imagem sai exatamente como antes',
+        ctx.zPrintAssinaturaHtml('data:x', 'Ana') === comImg, ctx.zPrintAssinaturaHtml('data:x', 'Ana'));
+      check('bloco de assinatura SEM imagem sai exatamente como antes',
+        ctx.zPrintAssinaturaHtml('', '') === semImg, ctx.zPrintAssinaturaHtml('', ''));
+    }
+  }
+  console.log('');
+
+  // ---- emoji no Telegram (Adriana, 25/ago/2026) ----
+  // As mensagens para o tutor não chegavam ao grupo: emoji vira par surrogado e a ponte
+  // quebrava cada metade numa entidade inválida — o Telegram recusava a mensagem inteira.
+  console.log('Telegram — emoji não pode derrubar a mensagem:');
+  {
+    check('tgEmojiSeguro existe', typeof ctx.tgEmojiSeguro === 'function');
+    if (typeof ctx.tgEmojiSeguro === 'function') {
+      const r = ctx.tgEmojiSeguro('Hoje o Camus não quis comer. \u{1F436} Reforce em casa. \u{1F49B}');
+      check('emoji sai como um número só (não em duas metades)',
+        r.indexOf('&#128054;') >= 0 && r.indexOf('&#128155;') >= 0 && r.indexOf('&#55357;') < 0, r.slice(0, 120));
+      check('acento é preservado como está (a ponte trata)', r.indexOf('não') >= 0);
+      check('texto sem emoji não muda', ctx.tgEmojiSeguro('Camus não comeu') === 'Camus não comeu');
+    }
+    check('tgAvisar trata o texto antes de enviar', /_d\[k\]=tgEmojiSeguro\(_d\[k\]\)/.test(html));
+    // a ponte também foi corrigida (vale quando a Adriana republicar)
+    const gs = fs.readFileSync(path.join(__dirname, '..', 'integracao-telegram', 'Codigo.gs'), 'utf8');
+    check('Codigo.gs junta o par surrogado antes de virar entidade', /0xD800\) \* 0x400/.test(gs));
+  }
+  console.log('');
+
+  // ---- lista de exemplo virando hóspede de verdade (Adriana, 25/ago/2026) ----
+  // O Check-in cobrava check-in de Bene, Bloom, Duda, Harry, Rock e Teka — a lista de
+  // exemplo de 04/06 que ficava na tela quando a leitura da planilha falhava.
+  console.log('Hospedagem — nada de hóspede inventado:');
+  {
+    ['Bene', 'Bloom', 'Teka', 'Harry'].forEach((n) => {
+      const re = new RegExp("\\{\\s*nome:\\s*'" + n + "'");
+      check('não existe ' + n + ' escrito à mão como hóspede', !re.test(html));
+    });
+    check('a lista de hóspedes começa vazia', /let hospedes=\[\];/.test(html));
+    check('o app registra se conseguiu ler a planilha (HOSP_PLANILHA)', /var HOSP_PLANILHA=null;/.test(html));
+    check('sem planilha lida, ninguém é cobrado de check-in',
+      /if\(HOSP_PLANILHA!==true\) return out;/.test(html));
+    check('a falha da planilha vai para a auditoria (não morre no console)',
+      /audit\('planilha-hospedagem'/.test(html));
+    if (typeof ctx.hospedesSemCheckin === 'function') {
+      ctx.HOSP_PLANILHA = false;
+      check('hospedesSemCheckin devolve vazio quando a planilha falhou', ctx.hospedesSemCheckin().length === 0);
+      ctx.HOSP_PLANILHA = null;
+      check('hospedesSemCheckin devolve vazio enquanto carrega', ctx.hospedesSemCheckin().length === 0);
+    }
+  }
+  console.log('');
+
   // ---- resumo ----
   console.log('== Resultado: ' + pass + ' ok, ' + fail + ' falha(s) ==');
   if (fail) { console.log('\nFalhas:'); fails.forEach((f) => console.log('  - ' + f)); }
