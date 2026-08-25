@@ -127,6 +127,7 @@ function makeSandbox() {
     navigator: { userAgent: 'harness', onLine: true },
     location: { href: 'https://harness.local/', reload() {}, hostname: 'harness.local' },
     alert() {}, confirm() { return true; }, prompt() { return ''; },
+    addEventListener() {}, // o quadro de assinatura registra o 'mouseup' no window
     __ROLE__: roleHolder, // ponte para o teste trocar o papel
   };
   sandbox.window = sandbox;
@@ -384,6 +385,111 @@ async function main() {
     const apelidos = ['repHojeISO', 'hojeISO', 'ciHoje', 'hospHojeISO'].every((nome) =>
       new RegExp('function[ \t]+' + nome + '[ \t]*[(][)][ \t]*[{][ \t]*return zHojeISO[(][)];[ \t]*[}]').test(html));
     check('as 4 antigas são apelidos que chamam zHojeISO (ninguém recalcula)', apelidos);
+  }
+  console.log('');
+
+  // ---- chave do relatório do plantão (Toshi, 23-24/ago/2026) ----
+  // 14 relatórios do Toshi morreram com "invalid key (Tuross 07:00 1/2 comprimido…)": a pergunta
+  // vira chave no Firebase, e o Firebase não aceita . # $ / [ ] em chave.
+  console.log('Relatório do plantão — chave segura no Firebase:');
+  {
+    check('relChave existe', typeof ctx.relChave === 'function');
+    const ruim = 'Tuross 07:00 1/2 comprimido · Dar 1/2 (40.minutos) [x] #1 $';
+    const k = typeof ctx.relChave === 'function' ? ctx.relChave(ruim) : '';
+    check('relChave tira . # $ / [ ] (o que derrubava o relatório do Toshi)', !!k && !/[.#$\/\[\]]/.test(k), k);
+    check('relChave não mexe em pergunta normal', typeof ctx.relChave === 'function' && ctx.relChave('Fez cocô?') === 'Fez cocô?');
+    check('coletarCard grava pela chave segura', /byQ\[relChave\(q\.dataset\.k\|\|q\.textContent\)\]/.test(html));
+    check('linha de remédio do relatório tem chave própria (data-k)', html.indexOf("<span class=\"q\"'+dk+'>") >= 0);
+  }
+  console.log('');
+
+  // ---- Fase 1 · passo 2: o quadro de assinatura tem UM construtor só (zSigCriar) ----
+  console.log('Fase 1 · passo 2 — Quadro de assinatura (fonte única):');
+  check('zSigCriar existe', typeof ctx.zSigCriar === 'function');
+  for (const nome of ['CI_SIG', 'CO_SIG']) {
+    const S = ctx[nome];
+    check(nome + ' é um quadro com init, limpar e dataURL',
+      !!S && typeof S.init === 'function' && typeof S.limpar === 'function' && typeof S.dataURL === 'function',
+      String(S && Object.keys(S)));
+  }
+  {
+    // canvas e pincel de mentira: gravam o que o app mandou desenhar
+    const chamadas = [];
+    const fakeCtx = {
+      beginPath() { chamadas.push(['beginPath']); },
+      moveTo(x, y) { chamadas.push(['moveTo', x, y]); },
+      lineTo(x, y) { chamadas.push(['lineTo', x, y]); },
+      stroke() { chamadas.push(['stroke']); },
+      clearRect(a, b, c, d) { chamadas.push(['clearRect', a, b, c, d]); },
+    };
+    const fakeCanvas = {
+      offsetWidth: 300, width: 0, height: 0, listeners: {}, addCount: 0,
+      getContext() { return fakeCtx; },
+      getBoundingClientRect() { return { left: 10, top: 20 }; },
+      addEventListener(ev, fn) { this.addCount++; this.listeners[ev] = fn; },
+      toDataURL() { return 'data:fake'; },
+    };
+    const fakeHint = { style: { display: 'block' } };
+    const achou = (nome, ...args) => chamadas.some((c) =>
+      c[0] === nome && args.every((v, i) => c[i + 1] === v));
+    const getOrig = ctx.document.getElementById;
+    try {
+      ctx.document.getElementById = function (id) {
+        if (id === 'ciSig') return fakeCanvas;
+        if (id === 'ciSigHint') return fakeHint;
+        return getOrig.call(this, id);
+      };
+      const S = ctx.CI_SIG;
+
+      S.init();
+      check('init ajusta o quadro ao tamanho na tela (300 × 190)',
+        fakeCanvas.width === 300 && fakeCanvas.height === 190, fakeCanvas.width + ' × ' + fakeCanvas.height);
+      check('caneta: espessura 2.5 e traço no azul Zêluz (#234D67)',
+        fakeCtx.lineWidth === 2.5 && fakeCtx.strokeStyle === '#234D67',
+        fakeCtx.lineWidth + ' / ' + fakeCtx.strokeStyle);
+      check('o quadro escuta os 5 gestos (mouse e dedo)',
+        ['mousedown', 'mousemove', 'touchstart', 'touchmove', 'touchend']
+          .every((e) => typeof fakeCanvas.listeners[e] === 'function') && fakeCanvas.addCount === 5,
+        'addCount=' + fakeCanvas.addCount);
+      check('antes de assinar: não há tinta e o dataURL é vazio',
+        S.hasInk === false && S.dataURL() === '', String(S.hasInk) + ' / ' + JSON.stringify(S.dataURL()));
+
+      // o dedo encosta e arrasta
+      fakeCanvas.listeners.touchstart({ preventDefault() {}, touches: [{ clientX: 50, clientY: 60 }] });
+      fakeCanvas.listeners.touchmove({ preventDefault() {}, touches: [{ clientX: 80, clientY: 90 }] });
+      check('o dedo deixou tinta e o aviso "assine aqui" sumiu',
+        S.hasInk === true && fakeHint.style.display === 'none',
+        String(S.hasInk) + ' / ' + fakeHint.style.display);
+      check('o traço saiu no lugar certo (moveTo 40,40 e lineTo 70,70)',
+        achou('moveTo', 40, 40) && achou('lineTo', 70, 70), JSON.stringify(chamadas));
+      check('com tinta, o dataURL devolve a imagem', S.dataURL() === 'data:fake', S.dataURL());
+
+      // "Limpar assinatura"
+      S.limpar();
+      check('limpar apaga o quadro inteiro (0,0,300,190)', achou('clearRect', 0, 0, 300, 190), JSON.stringify(chamadas));
+      check('depois de limpar: sem tinta, aviso de volta e dataURL vazio',
+        S.hasInk === false && fakeHint.style.display === 'block' && S.dataURL() === '',
+        String(S.hasInk) + ' / ' + fakeHint.style.display + ' / ' + JSON.stringify(S.dataURL()));
+
+      // reabrir a tela não pode empilhar escuta em cima de escuta
+      S.init();
+      check('abrir o quadro de novo NÃO duplica as escutas (continua 5)', fakeCanvas.addCount === 5, 'addCount=' + fakeCanvas.addCount);
+
+      check('ciAssinaturaDataURL só repassa o quadro do check-in',
+        typeof ctx.ciAssinaturaDataURL === 'function' && ctx.ciAssinaturaDataURL() === ctx.CI_SIG.dataURL());
+    } finally {
+      ctx.document.getElementById = getOrig;
+    }
+    for (const nome of ['ciInitSig', 'ciLimparAssinatura', 'coInitSig', 'coLimparAssinatura']) {
+      check(nome + ' continua existindo (os botões da tela chamam por esse nome)', typeof ctx[nome] === 'function');
+    }
+    // no código-fonte: o quadro é escrito uma vez só e os nomes duplicados sumiram
+    check("strokeStyle='#234D67' aparece 1 vez (antes eram 2 quadros)",
+      html.split("strokeStyle='#234D67'").length - 1 === 1, 'achei ' + (html.split("strokeStyle='#234D67'").length - 1));
+    for (const nome of ['ciSigCtx', 'ciSigDrawing', 'ciSigHasInk', 'ciSigReady',
+      'coSigCtx', 'coSigDrawing', 'coSigHasInk', 'coSigReady']) {
+      check(nome + ' não existe mais no código', html.indexOf(nome) === -1);
+    }
   }
   console.log('');
 

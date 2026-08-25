@@ -1,13 +1,16 @@
 /**
  * ZÊLUZ · AuAulândia — ponte para os grupos do Telegram
  *
+ * Versão 4 (25/ago/2026) — grupo "Diário do Daycare" (resumo do dia sai do Plantão AuAulândia)
+ *                          e grupo desconhecido devolve erro em vez de cair na veterinária.
  * Versão 3 (13/ago/2026) — vários grupos, um bot só.
  *
  * O mesmo bot atende quantos grupos forem precisos: cada aviso diz para QUAL
  * grupo vai. Grupo novo = uma linha na lista GRUPOS aqui embaixo.
  *
  * Se o aviso não disser o grupo, vai para o da veterinária (o primeiro que
- * existiu) — assim nada se perde por engano de configuração.
+ * existiu). Se disser um grupo que não está na lista, a ponte RECUSA e avisa —
+ * nunca manda para o grupo errado calada.
  */
 
 var TOKEN_BOT = 'COLE_AQUI_O_TOKEN';
@@ -20,7 +23,11 @@ var GRUPOS = {
   // grupo para passar os dados do plantão para a Gestão e quem mais em algum momento
   // convier — se tiver um dia um supervisor, gerente"). Começa só com a Adriana e a Márcia.
   // Quem entra e quem sai depois é decidido no próprio Telegram, sem mexer no sistema.
-  gestao: '-5388577278'    // Zêluz - Plantão AuAulândia
+  gestao: '-5388577278',   // Zêluz - Plantão AuAulândia — só o fechamento do turno do hotel
+  // Adriana, 25/ago/2026: "terá um grupo geral para o resumo do dia, para não colocar as
+  // informações do Plantão do Hotel junto e fazer uma bagunça." Recebe o resumo do dia do
+  // Day Care (EA, almoço, o que teve de diferente, medicação). Id lido com ?listar=1.
+  diario: '-5486234450'    // Diário do Daycare
 };
 var GRUPO_PADRAO = 'vet';
 
@@ -30,7 +37,11 @@ function doPost(e) {
     if (String(d.senha || '') !== SENHA) {
       return _resp({ ok: false, erro: 'senha invalida' });
     }
-    var destino = GRUPOS[String(d.grupo || GRUPO_PADRAO)] || GRUPOS[GRUPO_PADRAO];
+    var nomeGrupo = String(d.grupo || GRUPO_PADRAO);
+    // Grupo que a ponte não conhece NÃO cai no padrão: o app fica sabendo e diz na tela.
+    // (Antes caía na veterinária em silêncio — o resumo do dia iria para o grupo errado.)
+    if (!GRUPOS[nomeGrupo]) return _resp({ ok: false, erro: 'grupo nao configurado na ponte: ' + nomeGrupo });
+    var destino = GRUPOS[nomeGrupo];
     var texto = d.texto ? String(d.texto) : _montarLegenda(d);
     if (d.fotoBase64) return _resp(_mandarFoto(destino, texto, d.fotoBase64));
     return _resp(_mandarTexto(destino, texto));

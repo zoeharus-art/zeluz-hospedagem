@@ -3144,7 +3144,7 @@
          o botão serve para mandar antes, ou de novo. -->
     <div class="card so-gestao">
       <h2 style="font-size:19px">Resumo do dia para a Gestão</h2>
-      <div class="hint">Vai para o grupo <strong>Zêluz · Plantão AuAulândia</strong> no Telegram, com o Enriquecimento Ambiental do dia, quem comeu e quem não comeu, o que teve de diferente e a medicação. Sai <strong>sozinho a partir das 18h</strong> — o botão é para adiantar ou reenviar.</div>
+      <div class="hint">Vai para o grupo <strong>Diário do Daycare</strong> no Telegram, com o Enriquecimento Ambiental do dia, quem comeu e quem não comeu, o que teve de diferente (dizendo a parte do corpo) e a medicação. O grupo <strong>Zêluz · Plantão AuAulândia</strong> fica só com o plantão do hotel. Sai <strong>sozinho a partir das 18h</strong> — o botão é para adiantar ou reenviar.</div>
       <button type="button" class="btn btn-gold" style="margin-top:9px" onclick="resumoDiaBotao(this)">Enviar o resumo agora</button>
     </div>
     <div class="card so-gestao">
@@ -6471,17 +6471,19 @@
       linhas.sort(function(a,b){ return String(a.hr).localeCompare(String(b.hr)); });
       var h='<div style="margin:8px 0 4px;font-weight:800;color:var(--z-blue);font-size:14px">Medicações de hoje — horário por horário</div>';
       linhas.forEach(function(L){
+        // data-k: chave curta e sem caracteres proibidos para o relatório guardar (ver relChave).
+        var dk=' data-k="'+escAttr('med|'+(L.nome||'')+'|'+(L.hr||''))+'"';
         var cab='<strong>'+escAttr(L.nome)+'</strong>'+(L.hr?(' <span style="font-size:12px;font-weight:800;color:var(--z-blue)">'+escAttr(L.hr)+'</span>'):'')
               +(L.det?('<br><span style="font-size:11.5px;color:var(--z-gold-deep);font-weight:600">'+escAttr(L.det)+'</span>'):'');
         if(L.log){
           var hora=L.log.ts?new Date(L.log.ts).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'}):'';
-          h+='<div class="obsline med-confirm-obs" style="background:rgba(30,132,73,.10);border-radius:9px"><span class="q">'+cab+'</span>'
+          h+='<div class="obsline med-confirm-obs" style="background:rgba(30,132,73,.10);border-radius:9px"><span class="q"'+dk+'>'+cab+'</span>'
             +'<span style="font-weight:800;color:#1E8449;font-size:13px;white-space:nowrap">✅ já dado — '+escAttr(L.log.quem||'?')+(hora?(' às '+hora):'')+'</span></div>';
         } else if(L.futuro){
-          h+='<div class="obsline med-confirm-obs" style="background:rgba(35,77,103,.08);border-radius:9px"><span class="q">'+cab+'</span>'
+          h+='<div class="obsline med-confirm-obs" style="background:rgba(35,77,103,.08);border-radius:9px"><span class="q"'+dk+'>'+cab+'</span>'
             +'<span style="font-weight:800;color:var(--z-blue);font-size:13px;white-space:nowrap">🕒 ainda vai ser dado — avise quem entra no plantão</span></div>';
         } else {
-          h+='<div class="obsline med-confirm-obs" style="background:rgba(179,38,30,.08);border-radius:9px"><span class="q">'+cab
+          h+='<div class="obsline med-confirm-obs" style="background:rgba(179,38,30,.08);border-radius:9px"><span class="q"'+dk+'>'+cab
             +'<br><span style="font-size:11.5px;color:#B3261E;font-weight:800">Passou do horário e ninguém registrou. Foi dado?</span></span>'
             +'<div class="seg" data-single><button data-tone="ok" onclick="pick(this)">Sim</button><button data-tone="bad" onclick="pick(this)">Não</button></div></div>';
         }
@@ -6490,7 +6492,7 @@
         h+='<div style="margin:10px 0 4px;font-weight:800;color:var(--muted);font-size:13px">Não dar hoje (continuam na ficha só para você saber que existem)</div>';
         medsForaDeVigencia.forEach(function(it){
           var como=(typeof medDoseTxt==='function')?medDoseTxt(it):'';
-          h+='<div class="obsline med-confirm-obs" style="opacity:.75"><span class="q"><strong>'+escAttr(it.nome||'')+'</strong>'
+          h+='<div class="obsline med-confirm-obs" style="opacity:.75"><span class="q" data-k="'+escAttr('med|'+(it.nome||'')+'|fora')+'"><strong>'+escAttr(it.nome||'')+'</strong>'
             +(como?('<br><span style="font-size:11.5px;color:var(--muted);font-weight:600">'+escAttr(como)+'</span>'):'')
             +'</span><span style="font-weight:800;color:var(--muted);font-size:12.5px;white-space:nowrap">⛔ '+escAttr(it.__motivo||'')+'</span></div>';
         });
@@ -6811,7 +6813,18 @@
     if(medHistEstadia.tinha){ const hoje=(valDe('card-dia','Tem medicação?')==='Sim'||valDe('card-inicio','Tem medicação?')==='Sim'||valDe('card-noite','Tem medicação?')==='Sim');
       el.style.display='block'; el.innerHTML='⚠ <strong>'+((currentHosp&&currentHosp.nome)||'Este FILHOt')+'</strong> teve <strong>medicação registrada nesta estadia</strong> (dia '+medHistEstadia.quando+'). '+(hoje?'Continue registrando o horário e a quantidade.':'Se ainda toma, registre. Se acabou ou foi suspenso, confirme ao salvar.'); }
     else { el.style.display='none'; el.innerHTML=''; } }
-  function coletarCard(cardId){ const byQ={}; document.querySelectorAll('#'+cardId+' .obsline').forEach(l=>{ const q=l.querySelector('.q'); const on=l.querySelector('button.on'); if(q) byQ[q.textContent.trim()]= on?on.textContent.trim():''; }); const areas=[]; const byArea={}; document.querySelectorAll('#'+cardId+' textarea').forEach(t=>{ areas.push(t.value||''); const ph=(t.placeholder||'').toLowerCase(); if(ph.indexOf('medicamento')>=0) byArea.medicamento=t.value||''; else if(ph.indexOf('suplemento')>=0) byArea.suplemento=t.value||''; }); const mg=coletarMedgrids(cardId); return {byQ:byQ,areas:areas,byArea:byArea,meds:mg.med,sups:mg.sup}; }
+  // ===== O RELATÓRIO DO TOSHI QUE NUNCA SALVAVA — Adriana, 25/ago/2026 ==============
+  // "Toshi, não tem como a plantonista inserir dados dele." A auditoria de 23 e 24/ago mostra
+  // 14 tentativas, todas com o mesmo erro: "set failed: value argument contains an invalid key
+  // (Tuross 07:00 1/2 comprimido · Dar 1/2 junto com o Pimobendan…)". O relatório guarda cada
+  // pergunta como CHAVE do objeto — e a linha de confirmação de remédio usa o texto inteiro do
+  // remédio como pergunta. "1/2 comprimido" tem barra; "registrou. Foi dado?" tem ponto. O
+  // Firebase não aceita . # $ / [ ] em chave e recusava o relatório INTEIRO. Qualquer hóspede
+  // com dose atrasada ou remédio "1/2" caía no mesmo buraco.
+  // Agora a chave passa por relChave (troca os proibidos por _) e a linha de remédio tem uma
+  // chave própria (data-k), curta e estável. Ler continua aceitando a chave antiga.
+  function relChave(s){ return String(s==null?'':s).trim().replace(/[.#$\/\[\]]/g,'_'); }
+  function coletarCard(cardId){ const byQ={}; document.querySelectorAll('#'+cardId+' .obsline').forEach(l=>{ const q=l.querySelector('.q'); const on=l.querySelector('button.on'); if(q) byQ[relChave(q.dataset.k||q.textContent)]= on?on.textContent.trim():''; }); const areas=[]; const byArea={}; document.querySelectorAll('#'+cardId+' textarea').forEach(t=>{ areas.push(t.value||''); const ph=(t.placeholder||'').toLowerCase(); if(ph.indexOf('medicamento')>=0) byArea.medicamento=t.value||''; else if(ph.indexOf('suplemento')>=0) byArea.suplemento=t.value||''; }); const mg=coletarMedgrids(cardId); return {byQ:byQ,areas:areas,byArea:byArea,meds:mg.med,sups:mg.sup}; }
   // Mostra DENTRO do relatório do jantar o que foi lançado no check-in. A plantonista não
   // precisa sair da tela nem perguntar a ninguém: o número está na frente dela na hora de servir.
   function jantaSlotRender(){
@@ -6838,7 +6851,7 @@
       +(a.incerto?'<div><strong>Isto veio do almoço do Day Care</strong> — confira a quantidade e escreva abaixo o que realmente deu.</div>':'')
       +'</div>';
   }
-  function aplicarCard(cardId,d){ d=d||{}; try{ jantaSlotRender(); }catch(e){} const byQ=d.byQ||{}; document.querySelectorAll('#'+cardId+' .obsline').forEach(l=>{ const q=l.querySelector('.q'); const val=q?byQ[q.textContent.trim()]:''; l.querySelectorAll('button').forEach(b=>{ b.classList.remove('on','t-ok','t-bad','t-warn'); if(val&&b.textContent.trim()===val){ b.classList.add('on'); if(b.dataset.tone) b.classList.add('t-'+b.dataset.tone);} }); }); const areas=d.areas||[]; document.querySelectorAll('#'+cardId+' textarea').forEach((t,i)=>t.value=areas[i]||''); const tipo=cardId.replace('card-',''); const sp=document.getElementById('passou-'+tipo); if(sp) sp.value=d.passou||''; const sr=document.getElementById('recebeu-'+tipo); if(sr) sr.value=d.recebeu||''; aplicarMedgrids(cardId,d); sincVomVis(cardId); sincCocoVis(cardId); sincXixiVis(cardId); RELSTATE[tipo]={passou:d.passou||'',recebeu:d.recebeu||''};
+  function aplicarCard(cardId,d){ d=d||{}; try{ jantaSlotRender(); }catch(e){} const byQ=d.byQ||{}; document.querySelectorAll('#'+cardId+' .obsline').forEach(l=>{ const q=l.querySelector('.q'); const val=q?(byQ[relChave(q.dataset.k||q.textContent)]||byQ[q.textContent.trim()]||''):''; l.querySelectorAll('button').forEach(b=>{ b.classList.remove('on','t-ok','t-bad','t-warn'); if(val&&b.textContent.trim()===val){ b.classList.add('on'); if(b.dataset.tone) b.classList.add('t-'+b.dataset.tone);} }); }); const areas=d.areas||[]; document.querySelectorAll('#'+cardId+' textarea').forEach((t,i)=>t.value=areas[i]||''); const tipo=cardId.replace('card-',''); const sp=document.getElementById('passou-'+tipo); if(sp) sp.value=d.passou||''; const sr=document.getElementById('recebeu-'+tipo); if(sr) sr.value=d.recebeu||''; aplicarMedgrids(cardId,d); sincVomVis(cardId); sincCocoVis(cardId); sincXixiVis(cardId); RELSTATE[tipo]={passou:d.passou||'',recebeu:d.recebeu||''};
     // troca de FILHOt = leitura recomeça do zero (senão o "rolou até o fim" do anterior destravaria este,
     // e o cronômetro contaria o tempo do FILHOt errado)
     LEITURA_ROLOU[tipo]=false; LEITURA_T0[tipo]=0;
@@ -9230,7 +9243,7 @@
   // Agora existe um carimbo: esta constante é a versão que o aparelho está rodando, e o
   // Firebase guarda a versão publicada. Quando as duas diferem, aparece o aviso — mas
   // NUNCA recarrega sozinho: recarregar no meio de um check-in perderia o trabalho.
-  const APP_VERSAO='2026-08-25-14';
+  const APP_VERSAO='2026-08-25-15';
   function vigiarVersao(){
     if(!DB) return;
     try{
@@ -12405,12 +12418,14 @@
   // O que a Zêluz exige para frequentar (folder 2026): múltipla, gripe, raiva, vermífugo
   // e antiparasitário em dia. Vencido é item urgente — não é lembrete.
   const PREV_ITENS=[
-    {k:'vac_mult_p',  base:'vac_mult_t',  nome:'Vacina Múltipla',           dias:365},
-    {k:'vac_gripe_p', base:'vac_gripe_t', nome:'Vacina de Gripe',           dias:365},
-    {k:'vac_raiva_p', base:'vac_raiva_t', nome:'Vacina Antirrábica',        dias:365},
-    {k:'ecto_p',      base:'ecto_t',      nome:'Ectoparasitas',             dias:30},
+    // nomeK = onde fica o NOME do produto/vacina usado (Adriana, 25/ago/2026: "ter o local
+    // para colocar o nome — igual o vermífugo tem"). Mesmo campo na ficha e na Prevenção.
+    {k:'vac_mult_p',  base:'vac_mult_t',  nome:'Vacina Múltipla',           dias:365, nomeK:'vac_mult_nome'},
+    {k:'vac_gripe_p', base:'vac_gripe_t', nome:'Vacina de Gripe',           dias:365, nomeK:'vac_gripe_nome'},
+    {k:'vac_raiva_p', base:'vac_raiva_t', nome:'Vacina Antirrábica',        dias:365, nomeK:'vac_raiva_nome'},
+    {k:'ecto_p',      base:'ecto_t',      nome:'Ectoparasitas',             dias:30,  nomeK:'ecto_nome'},
     {k:'col_p',       base:'col_t',       nome:'Coleira repelente',         dias:180, opcional:true},
-    {k:'verm_p',      base:'verm_t',      nome:'Vermífugo',                 dias:VERMIF_PROX, dispensaSe:'fezes_t'},
+    {k:'verm_p',      base:'verm_t',      nome:'Vermífugo',                 dias:VERMIF_PROX, dispensaSe:'fezes_t', nomeK:'verm_nome'},
     {k:'fezes_p',     base:'fezes_t',     nome:'Exame de fezes',            dias:FEZES_PROX, opcional:true},
     // Adriana, 19/ago/2026: "troca de escova de dentes, item a inserir; check-up — data do
     // último". Escova troca a cada 3 meses; check-up é anual.
@@ -12632,6 +12647,7 @@
     var calc=(it.dias?addDiasISO(dt,it.dias):'');
     patch[k]=(prox && prox>dt) ? prox : (calc||prox||'');
     if(quem) patch[k.replace(/_p$/,'')+'_por']=quem;
+    if(it.nomeK){ var nmProd=String((document.getElementById('prevN_'+chave+'_'+k)||{}).value||'').trim(); if(nmProd) patch[it.nomeK]=nmProd; }
     setPelExtra(p, patch);
     if(typeof audit==='function') audit('prevencao', (pelNome(p)||'')+': '+(it.nome||k)+' feito em '+fmtBR(dt)+(quem?(' por '+quem):''), {pet:pelNome(p)||''});
     setTimeout(function(){ prevRedesenhar(); }, 120);
@@ -12663,6 +12679,8 @@
         +'</div>'
         +'<div style="grid-column:1/-1"><label class="cad-lb">Quem fez</label>'
         +'<input class="cad-in" id="prevQ_'+chave+'_'+it.k+'" value="'+escAttr(por)+'" placeholder="Zêluz, o tutor, a clínica…" list="prevQuemLista"></div>'
+        +(it.nomeK?('<div style="grid-column:1/-1"><label class="cad-lb">Nome do produto / vacina</label>'
+          +'<input class="cad-in" id="prevN_'+chave+'_'+it.k+'" value="'+escAttr(ex[it.nomeK]||'')+'" placeholder="Ex: V10 Nobivac · NexGard Spectra · Drontal"></div>'):'')
         +'</div>'
         +'<button class="btn btn-gold" style="margin-top:7px;padding:6px 14px;font-size:12.5px" onclick="prevLancar(\''+chave+'\',\''+it.k+'\')">Salvar '+escAttr(it.nome)+'</button>'
         +(atrasado?'<span style="margin-left:8px;font-size:12px;font-weight:800;color:var(--crm-critico)">continua vencido até você lançar uma data nova</span>':'')
@@ -12760,94 +12778,155 @@
       +(hist.length>1?'<div class="peso-hist">'+hist.slice(0,6).map(function(h){ return '<span>'+fmtBR(h.data)+': '+String(h.kg).replace('.',',')+' kg</span>'; }).join('')+'</div>':'')
       +'</div>';
   }
+  // ===== BLOCOS DE PREVENÇÃO COM "SALVAR" — Adriana, 25/ago/2026 ====================
+  // "Quando vamos atualizar uma data de antiparasitário, ao escolher sobe para o topo. Não
+  //  pode: tem que continuar até terminar os dados e a pessoa clicar em salvar. O tempo
+  //  inteiro sobe — coloca um dado, sobe; coloca outro, sobe."
+  // Antes cada campo gravava sozinho (setPelExtra) e chamava renderPelFicha(), que
+  // reconstrói a FICHA INTEIRA — e o navegador voltava ao topo a cada toque.
+  // Agora cada bloco (ectoparasitas, coleira, vermífugo, exame de fezes, vacinas):
+  //   1. guarda o que foi mexido em PB_PEND (nada vai para o banco ainda);
+  //   2. redesenha SÓ a si mesmo, no lugar, sem mexer na rolagem;
+  //   3. grava tudo de uma vez — e recalcula a próxima data — quando a pessoa toca em Salvar.
+  // Trocou de FILHOt sem salvar? O pendente é descartado (abrirPeludinho zera PB_PEND).
+  var PB_PEND={}, PB_SALVO={}, PB_ULT=null;
+  function pbEx(b){ return Object.assign({}, (pelAtual?pelExtra(pelAtual):{})||{}, PB_PEND[b]||{}); }
+  function pbSet(b,patch){
+    PB_PEND[b]=Object.assign({},PB_PEND[b]||{},patch||{}); PB_SALVO[b]=false;
+    // Vacina: trocou a data da dose e ninguém escreveu a próxima → mostra 1 ano depois já
+    // preenchido (a pessoa ainda pode escrever outra por cima antes de salvar).
+    if(b==='vac'){ Object.keys(patch||{}).forEach(function(k){ var m=k.match(/^(vac_\w+)_t$/); if(m&&patch[k]&&(patch[m[1]+'_p']===undefined)) PB_PEND[b][m[1]+'_p']=addDiasISO(patch[k],365); }); }
+    pbRender(b);
+  }
+  function pbRender(b){
+    var el=document.getElementById('pb-'+b); if(!el||!PB_HTML[b]) return;
+    var y=(window.pageYOffset||document.documentElement.scrollTop||0);
+    var tmp=document.createElement('div'); tmp.innerHTML=PB_HTML[b](pbEx(b));
+    var novo=tmp.firstElementChild; if(novo) el.replaceWith(novo);
+    try{ window.scrollTo(0,y); }catch(e){}
+  }
+  function pbRodape(b, rotulo){
+    var pend=!!(PB_PEND[b]&&Object.keys(PB_PEND[b]).length);
+    return '<div style="display:flex;align-items:center;gap:10px;margin-top:9px;flex-wrap:wrap">'
+      +'<button type="button" class="btn btn-gold" style="padding:7px 16px;font-size:13px" onclick="pbSalvar(\''+b+'\')">Salvar '+escAttr(rotulo)+'</button>'
+      +(pend?'<span style="font-size:12.5px;font-weight:800;color:var(--crm-atencao-text)">alterações ainda não salvas</span>'
+            :(PB_SALVO[b]?'<span style="font-size:12.5px;font-weight:800;color:var(--crm-ok)">✓ Salvo</span>':''))
+      +'</div>';
+  }
+  function pbSalvar(b){
+    if(!pelAtual) return;
+    var pend=PB_PEND[b]||{};
+    if(!Object.keys(pend).length){ PB_SALVO[b]=true; pbRender(b); return; }
+    var ex=pbEx(b), patch=Object.assign({},pend);
+    if(b==='ecto'){ var d=ectoDur(ex); patch.ecto_p=(ex.ecto_t&&d)?addDiasISO(ex.ecto_t,d):''; }
+    if(b==='col'){ var dc=coleiraDur(ex); patch.col_p=(ex.col_t&&dc)?addDiasISO(ex.col_t,dc):''; }
+    if(b==='verm'){
+      if(!ex.verm_t){ patch.verm_2a=''; patch.verm_p=''; }
+      else if(ex.verm_doses==='2 doses'){ var d2=addDiasISO(ex.verm_t,VERMIF_2A_DOSE); patch.verm_2a=d2; patch.verm_p=addDiasISO(d2,VERMIF_PROX); }
+      else { patch.verm_2a=''; patch.verm_p=addDiasISO(ex.verm_t,VERMIF_PROX); }
+    }
+    if(b==='fezes'){ patch.fezes_p=ex.fezes_t?addDiasISO(ex.fezes_t,FEZES_PROX):''; }
+    setPelExtra(pelAtual, patch);
+    delete PB_PEND[b]; PB_SALVO[b]=true;
+    try{ if(typeof audit==='function') audit('prevencao', (pelNome(pelAtual)||'')+': bloco '+b+' salvo na ficha', {pet:pelNome(pelAtual)||''}); }catch(e){}
+    pbRender(b);
+  }
   // --- Ectoparasitas (Pulgas e Carrapatos) ---
   function ectoDur(ex){ if(ex.ecto_prod==='Outro') return parseInt(ex.ecto_outro_dias,10)||0;
     return ECTO_DUR[ex.ecto_prod]||0; }
-  function recalcEcto(){ const ex=pelExtra(pelAtual); const dur=ectoDur(ex);
-    setPelExtra(pelAtual,{ecto_p:(ex.ecto_t&&dur)?addDiasISO(ex.ecto_t,dur):''}); renderPelFicha(); }
-  function setEcto(patch){ setPelExtra(pelAtual,patch); recalcEcto(); }
   function blocoEcto(ex){
     const comp=['Bravecto','Credelli','Simparic','Nexgard'];
     const prod=ex.ecto_prod||'', ehPipeta=ex.ecto_tipo==='Pipeta', dur=ectoDur(ex);
-    return '<div class="prev-bloco">'
+    const prox=(ex.ecto_t&&dur)?addDiasISO(ex.ecto_t,dur):'';
+    return '<div class="prev-bloco" id="pb-ecto">'
       +'<div class="prev-tit">Ectoparasitas (Pulgas e Carrapatos) '+(ex.ecto_p?seloValidade(ex.ecto_p):'')+'</div>'
       +'<div class="cad-grid">'
         +'<div class="field"><label>Tipo</label><div class="seg gold" data-single>'
-          +['Pipeta','Comprimido'].map(function(t){ return '<button class="'+(ex.ecto_tipo===t?'on':'')+'" onclick="pick(this);setEcto({ecto_tipo:\''+t+'\',ecto_prod:\''+(t==='Pipeta'?'Pipeta':'')+'\'})">'+t+'</button>'; }).join('')
+          +['Pipeta','Comprimido'].map(function(t){ return '<button type="button" class="'+(ex.ecto_tipo===t?'on':'')+'" onclick="pick(this);pbSet(\'ecto\',{ecto_tipo:\''+t+'\',ecto_prod:\''+(t==='Pipeta'?'Pipeta':'')+'\'})">'+t+'</button>'; }).join('')
         +'</div></div>'
         +(ehPipeta
           ? '<div class="field"><label>Duração</label><div class="prev-info">Pipeta dura 30 dias</div></div>'
           : '<div class="field" style="grid-column:1/-1"><label>Qual comprimido</label><div class="seg gold" data-single>'
-            +comp.concat(['Outro']).map(function(c){ return '<button class="'+(prod===c?'on':'')+'" onclick="pick(this);setEcto({ecto_prod:\''+c+'\'})">'+c+(ECTO_DUR[c]?' · '+ECTO_DUR[c]+'d':'')+'</button>'; }).join('')
+            +comp.concat(['Outro']).map(function(c){ return '<button type="button" class="'+(prod===c?'on':'')+'" onclick="pick(this);pbSet(\'ecto\',{ecto_prod:\''+c+'\'})">'+c+(ECTO_DUR[c]?' · '+ECTO_DUR[c]+'d':'')+'</button>'; }).join('')
           +'</div></div>')
         +(prod==='Outro'
-          ? '<div class="field"><label>Nome do produto</label><input class="cad-in" value="'+escAttr(ex.ecto_outro_nome||'')+'" placeholder="Ex: NexGard Spectra" onchange="setEcto({ecto_outro_nome:this.value})"></div>'
-            +'<div class="field"><label>Dura quantos dias?</label><input class="cad-in" inputmode="numeric" value="'+escAttr(ex.ecto_outro_dias||'')+'" placeholder="Ex: 90" onchange="setEcto({ecto_outro_dias:this.value})"></div>'
+          ? '<div class="field"><label>Dura quantos dias?</label><input class="cad-in" inputmode="numeric" value="'+escAttr(ex.ecto_outro_dias||'')+'" placeholder="Ex: 90" onchange="pbSet(\'ecto\',{ecto_outro_dias:this.value})"></div>'
           : '')
-        +'<div class="field"><label>Aplicado em</label><input type="date" class="cad-in" value="'+(ex.ecto_t||'')+'" onchange="setEcto({ecto_t:this.value})"></div>'
-        +'<div class="field"><label>Próxima aplicação</label><div class="prev-calc">'+(ex.ecto_p?fmtBR(ex.ecto_p)+(dur?' · '+dur+' dias':''):'preencha o produto e a data')+'</div></div>'
-      +'</div></div>';
+        // Adriana, 25/ago/2026: "ter o local para colocar o nome — igual o vermífugo tem".
+        +'<div class="field"><label>Nome do produto usado</label><input class="cad-in" value="'+escAttr(ex.ecto_nome||ex.ecto_outro_nome||'')+'" placeholder="Ex: NexGard Spectra 15 mg · Frontline" onchange="pbSet(\'ecto\',{ecto_nome:this.value})"></div>'
+        +'<div class="field"><label>Aplicado em</label><input type="date" class="cad-in" value="'+(ex.ecto_t||'')+'" onchange="pbSet(\'ecto\',{ecto_t:this.value})"></div>'
+        +'<div class="field"><label>Próxima aplicação</label><div class="prev-calc">'+(prox?fmtBR(prox)+(dur?' · '+dur+' dias':''):'preencha o produto e a data')+'</div></div>'
+      +'</div>'+pbRodape('ecto','antiparasitário')+'</div>';
   }
   // --- Coleira repelente ---
   function coleiraDur(ex){ if(ex.col_nome==='Outra') return parseInt(ex.col_outro_dias,10)||0;
     return COLEIRA_DUR[ex.col_nome]||0; }
-  function recalcColeira(){ const ex=pelExtra(pelAtual); const dur=coleiraDur(ex);
-    setPelExtra(pelAtual,{col_p:(ex.col_t&&dur)?addDiasISO(ex.col_t,dur):''}); renderPelFicha(); }
-  function setColeira(patch){ setPelExtra(pelAtual,patch); recalcColeira(); }
   function blocoColeira(ex){
     const nome=ex.col_nome||'', dur=coleiraDur(ex);
-    return '<div class="prev-bloco">'
+    const prox=(ex.col_t&&dur)?addDiasISO(ex.col_t,dur):'';
+    return '<div class="prev-bloco" id="pb-col">'
       +'<div class="prev-tit">Coleira repelente '+(ex.col_p?seloValidade(ex.col_p):'')+'</div>'
       +'<div class="cad-grid">'
         +'<div class="field" style="grid-column:1/-1"><label>Qual coleira</label><div class="seg gold" data-single>'
-          +['Seresto','Scalibur','Leevre','Outra'].map(function(c){ return '<button class="'+(nome===c?'on':'')+'" onclick="pick(this);setColeira({col_nome:\''+c+'\'})">'+c+(COLEIRA_DUR[c]?' · '+(COLEIRA_DUR[c]/30)+'m':'')+'</button>'; }).join('')
+          +['Seresto','Scalibur','Leevre','Outra'].map(function(c){ return '<button type="button" class="'+(nome===c?'on':'')+'" onclick="pick(this);pbSet(\'col\',{col_nome:\''+c+'\'})">'+c+(COLEIRA_DUR[c]?' · '+(COLEIRA_DUR[c]/30)+'m':'')+'</button>'; }).join('')
         +'</div></div>'
         +(nome==='Outra'
-          ? '<div class="field"><label>Nome da coleira</label><input class="cad-in" value="'+escAttr(ex.col_outro_nome||'')+'" onchange="setColeira({col_outro_nome:this.value})"></div>'
-            +'<div class="field"><label>Dura quantos dias?</label><input class="cad-in" inputmode="numeric" value="'+escAttr(ex.col_outro_dias||'')+'" placeholder="Ex: 180" onchange="setColeira({col_outro_dias:this.value})"></div>'
+          ? '<div class="field"><label>Nome da coleira</label><input class="cad-in" value="'+escAttr(ex.col_outro_nome||'')+'" onchange="pbSet(\'col\',{col_outro_nome:this.value})"></div>'
+            +'<div class="field"><label>Dura quantos dias?</label><input class="cad-in" inputmode="numeric" value="'+escAttr(ex.col_outro_dias||'')+'" placeholder="Ex: 180" onchange="pbSet(\'col\',{col_outro_dias:this.value})"></div>'
           : '')
-        +'<div class="field"><label>Colocada em</label><input type="date" class="cad-in" value="'+(ex.col_t||'')+'" onchange="setColeira({col_t:this.value})"></div>'
-        +'<div class="field"><label>Trocar em</label><div class="prev-calc">'+(ex.col_p?fmtBR(ex.col_p)+(dur?' · '+Math.round(dur/30)+' meses':''):'escolha a coleira e a data')+'</div></div>'
-      +'</div></div>';
+        +'<div class="field"><label>Colocada em</label><input type="date" class="cad-in" value="'+(ex.col_t||'')+'" onchange="pbSet(\'col\',{col_t:this.value})"></div>'
+        +'<div class="field"><label>Trocar em</label><div class="prev-calc">'+(prox?fmtBR(prox)+(dur?' · '+Math.round(dur/30)+' meses':''):'escolha a coleira e a data')+'</div></div>'
+      +'</div>'+pbRodape('col','coleira')+'</div>';
   }
   // --- Vermifugação ---
-  function recalcVerm(){ const ex=pelExtra(pelAtual);
-    if(!ex.verm_t){ setPelExtra(pelAtual,{verm_2a:'',verm_p:''}); renderPelFicha(); return; }
-    if(ex.verm_doses==='2 doses'){ const d2=addDiasISO(ex.verm_t,VERMIF_2A_DOSE);
-      setPelExtra(pelAtual,{verm_2a:d2, verm_p:addDiasISO(d2,VERMIF_PROX)}); }
-    else setPelExtra(pelAtual,{verm_2a:'', verm_p:addDiasISO(ex.verm_t,VERMIF_PROX)});
-    renderPelFicha(); }
-  function setVerm(patch){ setPelExtra(pelAtual,patch); recalcVerm(); }
   function blocoVerm(ex){
     const fez=!!ex.fezes_t;
-    return '<div class="prev-bloco">'
+    const d2=(ex.verm_t&&ex.verm_doses==='2 doses')?addDiasISO(ex.verm_t,VERMIF_2A_DOSE):'';
+    const prox=ex.verm_t?addDiasISO(d2||ex.verm_t,VERMIF_PROX):'';
+    return '<div class="prev-bloco" id="pb-verm">'
       +'<div class="prev-tit">Vermifugação '+(ex.verm_p?seloValidade(ex.verm_p):'')+'</div>'
       +(fez?'<div class="prev-nota">Fez exame de fezes em '+fmtBR(ex.fezes_t)+' — não precisa de vermífugo.</div>':'')
       +'<div class="cad-grid">'
-        +'<div class="field"><label>Nome do vermífugo</label><input class="cad-in" value="'+escAttr(ex.verm_nome||'')+'" placeholder="Ex: Drontal" onchange="setVerm({verm_nome:this.value})"></div>'
+        +'<div class="field"><label>Nome do vermífugo</label><input class="cad-in" value="'+escAttr(ex.verm_nome||'')+'" placeholder="Ex: Drontal" onchange="pbSet(\'verm\',{verm_nome:this.value})"></div>'
         +'<div class="field"><label>Quantas doses</label><div class="seg gold" data-single>'
-          +['Dose única','2 doses'].map(function(d){ return '<button class="'+(ex.verm_doses===d?'on':'')+'" onclick="pick(this);setVerm({verm_doses:\''+d+'\'})">'+d+'</button>'; }).join('')
+          +['Dose única','2 doses'].map(function(d){ return '<button type="button" class="'+(ex.verm_doses===d?'on':'')+'" onclick="pick(this);pbSet(\'verm\',{verm_doses:\''+d+'\'})">'+d+'</button>'; }).join('')
         +'</div></div>'
-        +'<div class="field"><label>'+(ex.verm_doses==='2 doses'?'1ª dose em':'Deu em')+'</label><input type="date" class="cad-in" value="'+(ex.verm_t||'')+'" onchange="setVerm({verm_t:this.value})"></div>'
+        +'<div class="field"><label>'+(ex.verm_doses==='2 doses'?'1ª dose em':'Deu em')+'</label><input type="date" class="cad-in" value="'+(ex.verm_t||'')+'" onchange="pbSet(\'verm\',{verm_t:this.value})"></div>'
         +(ex.verm_doses==='2 doses'
-          ? '<div class="field"><label>2ª dose (21 dias depois)</label><div class="prev-calc">'+(ex.verm_2a?fmtBR(ex.verm_2a):'informe a 1ª dose')+'</div></div>'
+          ? '<div class="field"><label>2ª dose (21 dias depois)</label><div class="prev-calc">'+(d2?fmtBR(d2):'informe a 1ª dose')+'</div></div>'
           : '')
-        +'<div class="field"><label>Próximo vermífugo</label><div class="prev-calc">'+(ex.verm_p?fmtBR(ex.verm_p)+' · 4 meses'+(ex.verm_doses==='2 doses'?' após a 2ª dose':''):'informe a data')+'</div></div>'
-      +'</div></div>';
+        +'<div class="field"><label>Próximo vermífugo</label><div class="prev-calc">'+(prox?fmtBR(prox)+' · 4 meses'+(ex.verm_doses==='2 doses'?' após a 2ª dose':''):'informe a data')+'</div></div>'
+      +'</div>'+pbRodape('verm','vermífugo')+'</div>';
   }
   // --- Exame de fezes ---
-  function setFezes(patch){ setPelExtra(pelAtual,patch); const ex=pelExtra(pelAtual);
-    setPelExtra(pelAtual,{fezes_p: ex.fezes_t?addDiasISO(ex.fezes_t,FEZES_PROX):''}); renderPelFicha(); }
   function blocoFezes(ex){
-    return '<div class="prev-bloco">'
+    const prox=ex.fezes_t?addDiasISO(ex.fezes_t,FEZES_PROX):'';
+    return '<div class="prev-bloco" id="pb-fezes">'
       +'<div class="prev-tit">Exame de fezes '+(ex.fezes_p?seloValidade(ex.fezes_p):'')+'</div>'
       +'<div class="prev-nota">Quem faz exame de fezes não precisa de vermífugo.</div>'
       +'<div class="cad-grid">'
-        +'<div class="field"><label>Data do exame</label><input type="date" class="cad-in" value="'+(ex.fezes_t||'')+'" onchange="setFezes({fezes_t:this.value})"></div>'
-        +'<div class="field"><label>Renovar em</label><div class="prev-calc">'+(ex.fezes_p?fmtBR(ex.fezes_p)+' · 4 meses':'informe a data')+'</div></div>'
-        +'<div class="field" style="grid-column:1/-1"><label>Resultado</label><input class="cad-in" value="'+escAttr(ex.fezes_res||'')+'" placeholder="Ex: negativo para giárdia e helmintos" onchange="setPelExtra(pelAtual,{fezes_res:this.value})"></div>'
-      +'</div></div>';
+        +'<div class="field"><label>Data do exame</label><input type="date" class="cad-in" value="'+(ex.fezes_t||'')+'" onchange="pbSet(\'fezes\',{fezes_t:this.value})"></div>'
+        +'<div class="field"><label>Renovar em</label><div class="prev-calc">'+(prox?fmtBR(prox)+' · 4 meses':'informe a data')+'</div></div>'
+        +'<div class="field" style="grid-column:1/-1"><label>Resultado</label><input class="cad-in" value="'+escAttr(ex.fezes_res||'')+'" placeholder="Ex: negativo para giárdia e helmintos" onchange="pbSet(\'fezes\',{fezes_res:this.value})"></div>'
+      +'</div>'+pbRodape('fezes','exame de fezes')+'</div>';
   }
+  // --- Vacinas (as três num bloco só, com nome da vacina e um Salvar) ---
+  function blocoVacinas(ex){
+    const row=function(key,label){
+      return '<div class="vac-row" style="grid-template-columns:1fr 1fr 1fr">'
+        +'<div class="vac-nome" style="grid-column:1/-1">'+label+' '+seloValidade(ex[key+'_p'])+'</div>'
+        +'<div class="field" style="margin:0"><label style="font-size:11px">Qual vacina / laboratório</label><input class="cad-in" value="'+escAttr(ex[key+'_nome']||'')+'" placeholder="Ex: V10 Nobivac" onchange="pbSet(\'vac\',{'+key+'_nome:this.value})"></div>'
+        +'<div class="field" style="margin:0"><label style="font-size:11px">Tomou em</label><input type="date" class="cad-in" value="'+(ex[key+'_t']||'')+'" onchange="pbSet(\'vac\',{'+key+'_t:this.value})"></div>'
+        +'<div class="field" style="margin:0"><label style="font-size:11px">Próxima</label><input type="date" class="cad-in" value="'+(ex[key+'_p']||'')+'" onchange="pbSet(\'vac\',{'+key+'_p:this.value})"></div>'
+        +'</div>';
+    };
+    return '<div id="pb-vac">'
+      +row('vac_mult','Vacina Múltipla (V7 / V8 / V10)')
+      +row('vac_gripe','Vacina de Gripe')
+      +row('vac_raiva','Vacina Antirrábica')
+      +pbRodape('vac','vacinas')+'</div>';
+  }
+  var PB_HTML={ecto:blocoEcto, col:blocoColeira, verm:blocoVerm, fezes:blocoFezes, vac:blocoVacinas};
   // --- Cio (castrada não tem cio; o campo nem aparece) ---
   function blocoCio(ex,p){
     const fem=(pelGet(p,'sexo')||ex.sexo)==='Fêmea';
@@ -12862,10 +12941,6 @@
       +'</div>'
       +'<div class="prev-nota">Aproximação: o ciclo regular é de '+CIO_MESES+' meses.</div></div>';
   }
-  function vacRow(ex,key,label){ return `<div class="vac-row"><div class="vac-nome">${label} ${seloValidade(ex[key+'_p'])}</div>
-    <div class="field" style="margin:0"><label style="font-size:11px">Tomou em</label><input type="date" class="cad-in" value="${ex[key+'_t']||''}" onchange="setPelExtra(pelAtual,{${key}_t:this.value})"></div>
-    <div class="field" style="margin:0"><label style="font-size:11px">Próxima</label><input type="date" class="cad-in" value="${ex[key+'_p']||''}" onchange="setPelExtra(pelAtual,{${key}_p:this.value})"></div>
-  </div>`; }
   let pelFotoPend=null;
   function onPhotoPel(e){ const fl=e.target.files&&e.target.files[0]; if(!fl) return; const r=new FileReader();
     /* 160px pelo mesmo motivo do onPhoto acima: daycare/cadastro também é baixado
@@ -13123,9 +13198,12 @@
     try{
       if(pelAtualIdx==null) return;
       const ativa=(document.querySelector('.ppanel2.active')||{}).id||'ps-ident';
+      // Redesenhar a ficha NÃO pode mandar a pessoa de volta ao topo (Adriana, 25/ago/2026).
+      const y=(window.pageYOffset||document.documentElement.scrollTop||0);
       abrirPeludinho(pelAtualIdx);
       const bt=Array.prototype.find.call(document.querySelectorAll('.subtab2'), b=>(b.getAttribute('onclick')||'').indexOf("'"+ativa+"'")>=0);
       if(bt) pelSubtab(bt, ativa);
+      try{ window.scrollTo(0,y); }catch(e){}
     }catch(e){}
   }
   // ===== CATEGORIA DO PELUDINHO (Adriana, 03/ago/2026) ===============================
@@ -13175,6 +13253,7 @@
   }
   function abrirPeludinho(i){
     const p=PELUDINHOS[i]; pelAtual=p; pelAtualIdx=i; pelFotoPend=null; const ex=pelExtra(p);
+    if(PB_ULT!==i){ PB_PEND={}; PB_SALVO={}; PB_ULT=i; }   // blocos de prevenção: pendente é por FILHOt
     const idade=calcIdade(pelNasc(p)); const can=canEditPel();
     document.getElementById('pel-lista').style.display='none';
     const f=document.getElementById('pel-ficha'); f.style.display='block';
@@ -13254,17 +13333,14 @@
         <div class="hint">Obrigatório para frequentar o Day Care. O que estiver vencido aparece como urgente para a Gestão, a Supervisora e a Consultora.</div>
         ${alertaPrevencao(ex)}
         <div class="field" style="max-width:260px"><label>Último check-up</label><input type="date" class="cad-in" value="${ex.checkup||''}" onchange="setPelExtra(pelAtual,{checkup:this.value})"></div>
+        <div class="hint">Preencha o bloco inteiro e toque em <strong>Salvar</strong> no fim dele. Nada grava sozinho — e a tela não sobe.</div>
         <h3 class="cad-sub">Vacinas</h3>
-        <div>
-          ${vacRow(ex,'vac_mult','Vacina Múltipla (V7 / V8 / V10)')}
-          ${vacRow(ex,'vac_gripe','Vacina de Gripe')}
-          ${vacRow(ex,'vac_raiva','Vacina Antirrábica')}
-        </div>
+        ${blocoVacinas(pbEx('vac'))}
         <h3 class="cad-sub">Antiparasitários</h3>
-        ${blocoEcto(ex)}
-        ${blocoColeira(ex)}
-        ${blocoVerm(ex)}
-        ${blocoFezes(ex)}
+        ${blocoEcto(pbEx('ecto'))}
+        ${blocoColeira(pbEx('col'))}
+        ${blocoVerm(pbEx('verm'))}
+        ${blocoFezes(pbEx('fezes'))}
         ${blocoCio(ex,p)}
         <h3 class="cad-sub">Peso</h3>
         ${blocoPeso(ex)}
@@ -14858,6 +14934,20 @@
       return (TG_CFG&&TG_CFG.url)?TG_CFG:null;
     }).catch(function(){ return null; });
   }
+  // Pergunta à ponte quais grupos ela conhece (?listar=1 NÃO envia mensagem nenhuma). Serve
+  // para não mandar aviso a um grupo que a ponte publicada ainda não tem — ela cairia no grupo
+  // padrão (veterinária) em silêncio. Resposta guardada na sessão.
+  var TG_GRUPOS_PONTE=null;
+  function tgGrupoNaPonte(nome){
+    return tgCfgPronta().then(function(c){
+      if(!c||!c.url) return false;
+      if(TG_GRUPOS_PONTE) return !!TG_GRUPOS_PONTE[nome];
+      return fetch(c.url+(c.url.indexOf('?')>=0?'&':'?')+'listar=1',{method:'GET'})
+        .then(function(r){ return r.json(); })
+        .then(function(j){ TG_GRUPOS_PONTE=(j&&j.grupos_configurados)||{}; return !!TG_GRUPOS_PONTE[nome]; })
+        .catch(function(){ return false; });
+    });
+  }
   function tgAvisar(dados){
     var c=TG_CFG||{};
     if(!c.url) return Promise.resolve({ok:false, erro:'ponte não configurada'});
@@ -15701,12 +15791,23 @@
       var o=(turmaDoDia()||[]).find(function(x){ return dcKey(x.p.n,x.p.tutor)===k; });
       var nome=o?pelNome(o.p):k;
       var raca=(o&&o.p.raca)||'';
-      var texto='<b>'+nome+'</b>'+(raca?(' · '+raca):'')
+      var tutor=(o&&o.p.tutor)||'';
+      var quem=(typeof pessoaDoTurno==='function'?pessoaDoTurno():'-'), hora=(typeof horaAgora==='function'?horaAgora():'');
+      // ===== FORMATO PEDIDO PELA ADRIANA (25/ago/2026) — duas mensagens no grupo ==========
+      //   1ª: "Camus · Maltês · Tutor: Sophia/João / Não comeu no 1º nem no 2º horário. /
+      //        Quem serviu o 2º horário: Octávio às 15:20"
+      //   2ª: "Mensagem para enviar ao tutor do Camus:" + o texto pronto (o mesmo de Avisar
+      //        tutores), para quem está no grupo só copiar e mandar.
+      var texto='<b>'+nome+'</b>'+(raca?(' · '+raca):'')+(tutor?(' · Tutor: '+tutor):'')
         +'\nNão comeu no 1º nem no 2º horário.'
-        +'\nQuem serviu: '+(typeof pessoaDoTurno==='function'?pessoaDoTurno():'-')
-        +' às '+(typeof horaAgora==='function'?horaAgora():'')
-        +'\n\nA mensagem para o tutor já está pronta no sistema, em Avisar tutores.';
-      tgAvisar({grupo:'comida', texto:texto}).then(function(r){
+        +'\nQuem serviu o 2º horário: '+quem+' às '+hora;
+      var _sx=''; try{ _sx=o?String((pelExtra(o.p)||{}).sexo||''):''; }catch(e){}
+      var msgTutor='Mensagem para enviar ao tutor d'+(/^f/i.test(_sx)?'a ':'o ')+nome+':\n\n'
+        +((typeof empMensagem==='function')?empMensagem({nome:nome,tutor:tutor,sexo:_sx,motivo:'não comeu nem no 2º horário'}):'');
+      tgAvisar({grupo:'comida', texto:texto}).then(function(r1){
+        if(!(r1&&r1.ok)) return r1;
+        return tgAvisar({grupo:'comida', texto:msgTutor});
+      }).then(function(r){
         var ok=!!(r&&r.ok);
         DB.ref('daycare/avisos-telegram-comida/'+dia+'/'+k).set({
           ts:Date.now(), ok:ok, nome:nome, quem:(typeof quemSou==='function'?quemSou():'-'),
@@ -16552,7 +16653,10 @@
   // ===== RESUMO DO DIA PARA A GESTÃO — Adriana, 20/ago/2026 ======================
   // "Mandar para a Márcia no Telegram um resumo do dia: o que foi o EA, se teve algo
   //  complexo, se todos comeram ou não, e etc."
-  // Vai para o grupo `gestao` (Zêluz - Plantão AuAulândia, onde já estão ela e a Márcia).
+  // Ia para o grupo `gestao` (Zêluz - Plantão AuAulândia). Adriana, 25/ago/2026: "no Plantão
+  // AuAulândia está indo informação de EA, de almoço… Terá um grupo geral para o resumo do
+  // dia, para não misturar com o Plantão do Hotel. Criado o grupo: Diário do Daycare."
+  // Agora vai para o grupo `diario`. O Plantão AuAulândia fica só com o fechamento do turno.
   // Uma vez por dia — e o registro do envio guarda se DEU CERTO, para ninguém supor que foi.
   function resumoNomeDaChave(k){
     var cad=(typeof pelCadCache!=='undefined'&&pelCadCache)?(pelCadCache[k]||{}):{};
@@ -16571,7 +16675,9 @@
       var L=['<b>Resumo do dia · '+p[2]+'/'+p[1]+'/'+p[0]+'</b>',''];
 
       // --- presença ---
-      var presentes=Object.keys(cham).filter(function(k){ var v=cham[k]; return v==='pres'||v==='presente'||v===true||(v&&v.presente); });
+      // A chamada grava 'veio' / 'faltou' (o check-in de entrada marca 'veio'). Sem o 'veio'
+      // aqui, o resumo dizia "0 de 46 na chamada" com 36 presentes (25/ago/2026).
+      var presentes=Object.keys(cham).filter(function(k){ var v=cham[k]; return v==='veio'||v==='pres'||v==='presente'||v===true||(v&&v.presente); });
       if(Object.keys(cham).length) L.push('<b>Presença:</b> '+presentes.length+' de '+Object.keys(cham).length+' na chamada');
 
       // --- EA ---
@@ -16599,7 +16705,7 @@
       Object.keys(todas).forEach(function(k){
         var m1=a1[k]||'', m2=a2[k]||'';
         if(m1==='na'||m2==='na'){ na++; return; }
-        if(m2==='comeu'||m1==='comeu'){ comeu++; return; }
+        if(m2==='comeu'||m1==='comeu'||m1==='tudo'){ comeu++; return; }   // o Almoço grava 'tudo'
         if(m2==='nao'){ nao.push(resumoNomeDaChave(k)); return; }
         if(m1==='metade'){ metade.push(resumoNomeDaChave(k)); return; }
         if(m1==='nao'&&!m2) semSegundo.push(resumoNomeDaChave(k));
@@ -16623,7 +16729,10 @@
           Object.keys(pontos||{}).forEach(function(pk){
             var a=pontos[pk]||{};
             var al=a.alertas||a.alerta;
-            if(al&&(!Array.isArray(al)||al.length)) compl.push(resumoNomeDaChave(k)+': '+(Array.isArray(al)?al.join(', '):al));
+            // Diz a PARTE DO CORPO: "Flor · Orelhas: vermelha por dentro, cheiro forte". Só o
+            // alerta solto ("Flor: vermelha por dentro") deixou a Adriana sem saber o que era.
+            var rot=''; try{ rot=((CK_PONTOS||[]).find(function(x){ return x.k===pk; })||{}).t||''; }catch(e){}
+            if(al&&(!Array.isArray(al)||al.length)) compl.push(resumoNomeDaChave(k)+(rot?(' · '+rot):'')+': '+(Array.isArray(al)?al.join(', '):al)+(a.obs?(' ('+a.obs+')'):''));
           });
         }catch(e){}
       });
@@ -16661,8 +16770,17 @@
       if(ja&&ja.ok&&!manual) return {ok:true, jaFoi:true};
       return tgCfgPronta().then(function(c){
         if(!c) return {ok:false, erro:'a ponte do Telegram não está configurada'};
+        // A ponte antiga não conhece o grupo novo e mandaria o resumo para o grupo ERRADO
+        // (o padrão dela é a veterinária). Antes de mandar, confere se ela já sabe do "diario".
+        return tgGrupoNaPonte('diario').then(function(tem){
+          if(!tem){
+            var erroG='a ponte do Telegram ainda não conhece o grupo "Diário do Daycare" — publique a versão nova de integracao-telegram/Codigo.gs (Implantar → Nova versão)';
+            DB.ref('daycare/resumo-gestao/'+dia).set({ts:Date.now(), ok:false, quem:(typeof quemSou==='function'?quemSou():'-'), manual:!!manual, erro:erroG}).catch(function(){});
+            if(typeof audit==='function') audit('resumo-gestao','NÃO enviou o resumo do dia — '+erroG,{});
+            return {ok:false, erro:erroG};
+          }
         return resumoDiaMontar(dia).then(function(txt){
-          return tgAvisar({grupo:'gestao', texto:txt}).then(function(r){
+          return tgAvisar({grupo:'diario', texto:txt}).then(function(r){
             var ok=!!(r&&r.ok);
             DB.ref('daycare/resumo-gestao/'+dia).set({ts:Date.now(), ok:ok,
               quem:(typeof quemSou==='function'?quemSou():'-'), manual:!!manual,
@@ -16670,6 +16788,7 @@
             if(typeof audit==='function') audit('resumo-gestao',(ok?'enviou':'NÃO enviou')+' o resumo do dia',{});
             return ok?{ok:true}:{ok:false, erro:String((r&&r.erro)||'a ponte não respondeu')};
           });
+        });
         });
       });
     }).catch(function(e){ return {ok:false, erro:String((e&&e.message)||e)}; });
@@ -16680,7 +16799,7 @@
     var t=btn.textContent; btn.disabled=true; btn.textContent='enviando…';
     resumoDiaEnviar(true).then(function(r){
       btn.disabled=false;
-      btn.textContent=r.ok?'✅ enviado para a Gestão':('❌ '+(r.erro||'não enviou'));
+      btn.textContent=r.ok?'✅ enviado ao Diário do Daycare':('❌ '+(r.erro||'não enviou'));
       setTimeout(function(){ try{ btn.textContent=t; }catch(e){} }, 6000);
     });
   }
@@ -18460,7 +18579,6 @@
   let ciHosp=null;               // {nome,tutor,raca,refKey,ini,cor}
   let ciPertBanco=[];            // banco de pertences (default + custom do Firebase)
   let ciPertSel=[];              // unidades adicionadas nesta estadia: [{uid,k,nome,spec}] — permite vários do mesmo tipo
-  let ciSigCtx=null, ciSigDrawing=false, ciSigHasInk=false, ciSigReady=false;
   const CI_PERT_DEFAULT=[
     {k:'coleira',nome:'Coleira',spec:'Cor e marca (ex: vermelha Zeedog)'},
     {k:'guia',nome:'Guia',spec:'Cor e marca'},
@@ -19353,21 +19471,33 @@
       '<label class="todo-item" style="cursor:pointer;margin-top:8px"><input type="checkbox" id="ciGateChk" style="width:20px;height:20px;flex:0 0 auto"><span>Conferi com o tutor os medicamentos, suplementos, dosagens, horários e as ALERGIAS / RESTRIÇÕES alimentares.</span></label>';
   }
 
-  // ---- Assinatura (canvas, dedo no tablet) ----
-  function ciInitSig(){
-    const c=document.getElementById('ciSig'); if(!c) return;
-    // ajusta resolução ao tamanho real na tela (nitidez)
-    const w=c.offsetWidth||600; c.width=w; c.height=190;
-    ciSigCtx=c.getContext('2d'); ciSigCtx.lineWidth=2.5; ciSigCtx.lineCap='round'; ciSigCtx.lineJoin='round'; ciSigCtx.strokeStyle='#234D67';
-    if(ciSigReady) return; ciSigReady=true;
-    function pos(ev){ const r=c.getBoundingClientRect(); const t=ev.touches&&ev.touches[0]; const x=(t?t.clientX:ev.clientX)-r.left; const y=(t?t.clientY:ev.clientY)-r.top; return {x:x,y:y}; }
-    function start(ev){ ev.preventDefault(); ciSigDrawing=true; const p=pos(ev); ciSigCtx.beginPath(); ciSigCtx.moveTo(p.x,p.y); }
-    function move(ev){ if(!ciSigDrawing) return; ev.preventDefault(); const p=pos(ev); ciSigCtx.lineTo(p.x,p.y); ciSigCtx.stroke(); ciSigHasInk=true; const h=document.getElementById('ciSigHint'); if(h) h.style.display='none'; }
-    function end(){ ciSigDrawing=false; }
-    c.addEventListener('mousedown',start); c.addEventListener('mousemove',move); window.addEventListener('mouseup',end);
-    c.addEventListener('touchstart',start,{passive:false}); c.addEventListener('touchmove',move,{passive:false}); c.addEventListener('touchend',end);
+  // ===== QUADRO DE ASSINATURA — FONTE ÚNICA (Fase 1, passo 2, 25/ago/2026) =====
+  // O mesmo quadro de assinatura era escrito duas vezes (check-in e check-out), com os nomes trocados.
+  // Agora existe um construtor só: zSigCriar cria o quadro, e o check-in e o check-out apenas o usam.
+  function zSigCriar(canvasId, hintId){
+    var S={ ctx:null, drawing:false, hasInk:false, ready:false };
+    S.init=function(){
+      var c=document.getElementById(canvasId); if(!c) return;
+      var w=c.offsetWidth||600; c.width=w; c.height=190;
+      S.ctx=c.getContext('2d'); S.ctx.lineWidth=2.5; S.ctx.lineCap='round'; S.ctx.lineJoin='round'; S.ctx.strokeStyle='#234D67';
+      if(S.ready) return; S.ready=true;
+      function pos(ev){ var r=c.getBoundingClientRect(); var t=ev.touches&&ev.touches[0]; return { x:(t?t.clientX:ev.clientX)-r.left, y:(t?t.clientY:ev.clientY)-r.top }; }
+      function start(ev){ ev.preventDefault(); S.drawing=true; var p=pos(ev); S.ctx.beginPath(); S.ctx.moveTo(p.x,p.y); }
+      function move(ev){ if(!S.drawing) return; ev.preventDefault(); var p=pos(ev); S.ctx.lineTo(p.x,p.y); S.ctx.stroke(); S.hasInk=true; var h=document.getElementById(hintId); if(h) h.style.display='none'; }
+      function end(){ S.drawing=false; }
+      c.addEventListener('mousedown',start); c.addEventListener('mousemove',move); window.addEventListener('mouseup',end);
+      c.addEventListener('touchstart',start,{passive:false}); c.addEventListener('touchmove',move,{passive:false}); c.addEventListener('touchend',end);
+    };
+    S.limpar=function(){ var c=document.getElementById(canvasId); if(c&&S.ctx) S.ctx.clearRect(0,0,c.width,c.height); S.hasInk=false; var h=document.getElementById(hintId); if(h) h.style.display='block'; };
+    S.dataURL=function(){ var c=document.getElementById(canvasId); return (c&&S.hasInk)?c.toDataURL('image/png'):''; };
+    return S;
   }
-  function ciLimparAssinatura(){ const c=document.getElementById('ciSig'); if(c&&ciSigCtx) ciSigCtx.clearRect(0,0,c.width,c.height); ciSigHasInk=false; const h=document.getElementById('ciSigHint'); if(h) h.style.display='block'; }
+  var CI_SIG=zSigCriar('ciSig','ciSigHint');
+  var CO_SIG=zSigCriar('coSig','coSigHint');
+
+  // ---- Assinatura (canvas, dedo no tablet) ----
+  function ciInitSig(){ CI_SIG.init(); }
+  function ciLimparAssinatura(){ CI_SIG.limpar(); }
   // "Outros deixaram" (taxi dog): esconde a assinatura e mostra o campo de quem deixou.
   function ciSemTutorChange(){
     const on=!!(document.getElementById('ciSemTutor')&&document.getElementById('ciSemTutor').checked);
@@ -19375,7 +19505,7 @@
     const box=document.getElementById('ciSemTutorBox'); if(box) box.style.display=on?'block':'none';
     if(on){ const q=document.getElementById('ciQuemDeixou'); if(q) setTimeout(function(){ try{ q.focus(); }catch(e){} },40); }
   }
-  function ciAssinaturaDataURL(){ const c=document.getElementById('ciSig'); return (c&&ciSigHasInk)?c.toDataURL('image/png'):''; }
+  function ciAssinaturaDataURL(){ return CI_SIG.dataURL(); }
 
   // ---- Coleta da ficha inteira ----
   function ciColetarFicha(){
@@ -19938,7 +20068,7 @@
   function ciPdfFileName(){ const nm=((ciHosp&&ciHosp.nome)?ciHosp.nome:'checkin').replace(/[^a-zA-Z0-9]+/g,'-').replace(/^-+|-+$/g,''); return 'checkin-'+(nm||'filhot')+'-'+ciHoje()+'.pdf'; }
   function ciAssinaturaJpeg(){
     try{
-      const c=document.getElementById('ciSig'); if(!c||!ciSigHasInk) return null;
+      const c=document.getElementById('ciSig'); if(!c||!CI_SIG.hasInk) return null;
       const off=document.createElement('canvas'); off.width=c.width; off.height=c.height;
       const x=off.getContext('2d'); x.fillStyle='#ffffff'; x.fillRect(0,0,off.width,off.height); x.drawImage(c,0,0);
       const durl=off.toDataURL('image/jpeg',0.9); const b64=durl.split(',')[1]; if(!b64) return null;
@@ -21598,7 +21728,7 @@
   }
 
   // ================= CHECK-OUT (saída) — fluxo inverso do check-in =================
-  var coEstadiaId=null, coEstadia=null, coHosp=null, coConf={}, coSigCtx=null, coSigDrawing=false, coSigHasInk=false, coSigReady=false;
+  var coEstadiaId=null, coEstadia=null, coHosp=null, coConf={};
   // 'monitor' = tela "Check-out (monitores)": juntar as coisas.
   // 'conferencia' = tela "Conferência Check-out": conferir com o tutor e assinar.
   var coModo='monitor';
@@ -21864,15 +21994,8 @@
     if(!falta.length) el.innerHTML='<span style="color:var(--crm-ok);font-weight:800">✅ Tudo conferido. Pode finalizar.</span>';
     else el.innerHTML='<span style="color:var(--crm-critico);font-weight:800">Falta entregar/conferir:</span> '+falta.map(function(f){ return escAttr(f.label); }).join(' · ');
   }
-  function coInitSig(){ var c=document.getElementById('coSig'); if(!c) return; var w=c.offsetWidth||600; c.width=w; c.height=190; coSigCtx=c.getContext('2d'); coSigCtx.lineWidth=2.5; coSigCtx.lineCap='round'; coSigCtx.lineJoin='round'; coSigCtx.strokeStyle='#234D67'; if(coSigReady) return; coSigReady=true;
-    function pos(ev){ var r=c.getBoundingClientRect(); var t=ev.touches&&ev.touches[0]; return {x:(t?t.clientX:ev.clientX)-r.left, y:(t?t.clientY:ev.clientY)-r.top}; }
-    function start(ev){ ev.preventDefault(); coSigDrawing=true; var p=pos(ev); coSigCtx.beginPath(); coSigCtx.moveTo(p.x,p.y); }
-    function move(ev){ if(!coSigDrawing) return; ev.preventDefault(); var p=pos(ev); coSigCtx.lineTo(p.x,p.y); coSigCtx.stroke(); coSigHasInk=true; var hh=document.getElementById('coSigHint'); if(hh) hh.style.display='none'; }
-    function end(){ coSigDrawing=false; }
-    c.addEventListener('mousedown',start); c.addEventListener('mousemove',move); window.addEventListener('mouseup',end);
-    c.addEventListener('touchstart',start,{passive:false}); c.addEventListener('touchmove',move,{passive:false}); c.addEventListener('touchend',end);
-  }
-  function coLimparAssinatura(){ var c=document.getElementById('coSig'); if(c&&coSigCtx) coSigCtx.clearRect(0,0,c.width,c.height); coSigHasInk=false; var hh=document.getElementById('coSigHint'); if(hh) hh.style.display='block'; }
+  function coInitSig(){ CO_SIG.init(); }
+  function coLimparAssinatura(){ CO_SIG.limpar(); }
   function coSemTutorChange(){ var on=!!(document.getElementById('coSemTutor')&&document.getElementById('coSemTutor').checked); var a=document.getElementById('coSigArea'); if(a) a.style.display=on?'none':'block'; var b=document.getElementById('coSemTutorBox'); if(b) b.style.display=on?'block':'none'; }
   function coVoltar(){ document.getElementById('co-ficha').style.display='none'; document.getElementById('co-lista').style.display='block'; coRenderLista(); }
   function coFinalizar(){
@@ -21898,7 +22021,7 @@
     else {
       assina=(document.getElementById('coAssinaNome').value||'').trim();
       if(!assina){ if(st){ st.style.color='var(--crm-critico)'; st.textContent='✋ Escreva o nome de quem assinou. Se ninguém veio, marque "O tutor não veio".'; } return; }
-      sig=(coSigHasInk?document.getElementById('coSig').toDataURL('image/png'):'');
+      sig=CO_SIG.dataURL();
       if(!sig){ if(st){ st.style.color='var(--crm-critico)'; st.textContent='✋ Peça para o tutor ASSINAR a retirada.'; } return; }
     }
     if(!DB){ if(st){ st.style.color='var(--crm-atencao-text)'; st.textContent='Banco conectando…'; } return; }
@@ -21945,7 +22068,7 @@
     h+='<div class="pf-sec"><h3>Saída</h3><div class="pf-row">'+(coEstadia.saida?esc(ciBRdata(coEstadia.saida)):'hoje')+'</div></div>';
     var itens=coItensLista(); if(itens.length){ h+='<div class="pf-sec"><h3>Itens que voltaram</h3>'+itens.map(function(it){ return '<div class="pf-row">• '+esc(it.label)+'</div>'; }).join('')+'</div>'; }
     var obs=(document.getElementById('coObs').value||'').trim(); if(obs) h+='<div class="pf-sec"><h3>Observações</h3><div class="pf-row">'+esc(obs)+'</div></div>';
-    var assina=(document.getElementById('coAssinaNome').value||'').trim(); var sig=(coSigHasInk?document.getElementById('coSig').toDataURL('image/png'):'');
+    var assina=(document.getElementById('coAssinaNome').value||'').trim(); var sig=CO_SIG.dataURL();
     h+='<div class="pf-sec"><h3>Assinatura do tutor</h3>'+(sig?('<img class="pf-sig-img" src="'+sig+'">'):'<div class="pf-row">(sem assinatura)</div>')+'<div class="pf-row" style="margin-top:6px">'+esc(assina||'—')+'</div></div>';
     var pr=document.getElementById('ci-print'); if(pr) pr.innerHTML=h; setTimeout(function(){ window.print(); },60);
   }
