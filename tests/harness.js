@@ -2048,6 +2048,38 @@ async function main() {
   }
   console.log('');
 
+  console.log('Lancamento fantasma: tirar antes da ponte responder nao pode ressuscitar (26/ago):');
+  {
+    check('a resposta da ponte usa transaction, nao set direto',
+      /\.transaction\(function\(atual\)\{[\s\S]{0,120}if\(atual===null\|\|atual===undefined\) return;/.test(html));
+    check('a gravacao direta de planilha_ok saiu do codigo',
+      !/planilha_ok'\)\.set\(ok\)/.test(html));
+    if (typeof ctx.dashLimparFantasmas === 'function') {
+      const bruto = {
+        vermifugo: {
+          fantasma: { planilha_ok: true, planilha_msg: '' },
+          real:     { valor: 'Hannah/West Terrier', ts: 1, quem: 'Adriana' }
+        },
+        banho: {
+          semNomeMasComTs: { ts: 2, valor: '' },     // gravado agora mesmo: nao e lixo
+          vazioDeVerdade:  { planilha_ok: false }
+        }
+      };
+      const limpo = ctx.dashLimparFantasmas(bruto);
+      check('o registro sem nome e sem ts some', !limpo.vermifugo.fantasma);
+      check('o lancamento de verdade fica', !!limpo.vermifugo.real);
+      check('registro com ts nao e apagado (pode estar sendo gravado)', !!limpo.banho.semNomeMasComTs);
+      check('o vazio de verdade some tambem', !limpo.banho.vazioDeVerdade);
+      check('a lista nao mente sobre o proprio tamanho',
+        Object.keys(limpo.vermifugo).length === 1 && Object.keys(limpo.banho).length === 1);
+    }
+    check('a limpeza acontece na leitura da tela',
+      /DASH_DADOS=dashLimparFantasmas\(s\.val\(\)\|\|\{\}\)/.test(html));
+    check('apagar deixa rastro na auditoria',
+      /apagou um lan\u00e7amento vazio em/.test(html) || /apagou um lançamento vazio em/.test(html));
+  }
+  console.log('');
+
   // ---- resumo ----
   console.log('== Resultado: ' + pass + ' ok, ' + fail + ' falha(s) ==');
   if (fail) { console.log('\nFalhas:'); fails.forEach((f) => console.log('  - ' + f)); }

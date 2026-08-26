@@ -9589,7 +9589,7 @@
   // Agora existe um carimbo: esta constante é a versão que o aparelho está rodando, e o
   // Firebase guarda a versão publicada. Quando as duas diferem, aparece o aviso — mas
   // NUNCA recarrega sozinho: recarregar no meio de um check-in perderia o trabalho.
-  const APP_VERSAO='2026-08-26-11';
+  const APP_VERSAO='2026-08-26-12';
   function vigiarVersao(){
     if(!DB) return;
     try{
@@ -18455,6 +18455,23 @@
     }catch(e){}
   }
   var DASH_AUTO_LIGADO=false;
+  // Registro sem nome e sem hora de criação nunca foi lançamento: é o resto de uma
+  // resposta da ponte que chegou depois de alguém tirar o lançamento. Some da tela e
+  // do banco — com rastro na auditoria, nunca em silêncio.
+  function dashLimparFantasmas(dados){
+    var limpo={};
+    Object.keys(dados||{}).forEach(function(k){
+      var lista=dados[k]||{}, fica={};
+      Object.keys(lista).forEach(function(id){
+        var o=lista[id]||{};
+        if(String(o.valor||'').trim() || o.ts){ fica[id]=o; return; }
+        try{ if(DB) DB.ref(dashNo()+'/'+k+'/'+id).remove().catch(function(){}); }catch(e){}
+        try{ if(typeof audit==='function') audit('dashboard-daycare','apagou um lançamento vazio em '+k+' (resto de um "tirar" antes da planilha responder)',{}); }catch(e){}
+      });
+      limpo[k]=fica;
+    });
+    return limpo;
+  }
   function dashCarregar(){
     try{ dashCalCarregarMarcas(); }catch(e){}
     if(!DB){ renderDash(); return; }
@@ -18462,7 +18479,7 @@
     Promise.all([
       DB.ref('daycare/config/ponte-planilha').once('value').then(function(s){ DASH_PONTE=s.val()||null; })
         .catch(function(e){ try{ if(typeof audit==='function') audit('dashboard-daycare','NÃO consegui ler a configuração da ponte: '+((e&&e.message)||e),{}); }catch(x){} }),
-      DB.ref(dashNo()).once('value').then(function(s){ DASH_DADOS=s.val()||{}; }).catch(function(){ DASH_DADOS={}; })
+      DB.ref(dashNo()).once('value').then(function(s){ DASH_DADOS=dashLimparFantasmas(s.val()||{}); }).catch(function(){ DASH_DADOS={}; })
     ]).then(function(){
       var u=document.getElementById('dashPonteUrl'), t=document.getElementById('dashPonteToken');
       if(u&&DASH_PONTE) u.value=DASH_PONTE.url||'';
@@ -18761,8 +18778,14 @@
                             valor:reg.valor||'', hora:reg.hora||''}).then(function(r){
       var ok=!!(r&&r.ok);
       if(acao==='lancar'&&DB){
-        DB.ref(dashNo()+'/'+k+'/'+id+'/planilha_ok').set(ok).catch(function(){});
-        DB.ref(dashNo()+'/'+k+'/'+id+'/planilha_msg').set(ok?'':((r&&r.erro)||'a ponte não respondeu')).catch(function(){});
+        // transaction porque o registro pode ter sido TIRADO enquanto a ponte respondia:
+        // gravar direto recriaria um lançamento sem nome (ver "lançamento fantasma").
+        DB.ref(dashNo()+'/'+k+'/'+id).transaction(function(atual){
+          if(atual===null||atual===undefined) return;      // já foi tirado: não ressuscita
+          atual.planilha_ok=ok;
+          atual.planilha_msg=ok?'':((r&&r.erro)||'a ponte não respondeu');
+          return atual;
+        }).catch(function(){});
         if(DASH_DADOS[k]&&DASH_DADOS[k][id]) DASH_DADOS[k][id].planilha_ok=ok;
         renderDash();
       }
