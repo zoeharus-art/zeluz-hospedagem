@@ -1239,6 +1239,278 @@ async function main() {
   }
   console.log('');
 
+  // ---- Passo 2 — janelinhas nativas: duplos + Lote 1 ---------------------------------
+  // O pior padrão do app era a janela nativa (confirm/prompt) no caminho de gravar: no
+  // tablet o navegador pode suprimi-la e responder "cancelar" sozinho — foi assim que o
+  // relatório inteiro de um plantão se perdeu (commit 260c544). Pior ainda eram os PARES
+  // de confirm seguidos. Aqui provamos que saíram e que o substituto funciona: o 1º toque
+  // só ARMA o botão (nada é gravado) e o 2º toque GRAVA.
+  console.log('Passo 2 — janelinhas nativas: duplos + Lote 1:');
+  {
+    // Contagem no arquivo inteiro. Medida em 25/ago/2026, antes de mexer: 56 chamadas de
+    // confirm e 35 de prompt. Este passo tirou 14 de confirm (13 chamadas reais + 1 citação
+    // dentro de comentário histórico) e 3 de prompt.
+    const CONFIRM_ANTES = 56, CONFIRM_SAIRAM = 14; // 25/ago/2026
+    const PROMPT_ANTES = 35, PROMPT_SAIRAM = 3;    // 25/ago/2026
+    const nConfirm = (html.match(/\bconfirm\s*\(/g) || []).length;
+    const nPrompt = (html.match(/\bprompt\s*\(/g) || []).length;
+    check('confirm() nativo no arquivo caiu para ' + (CONFIRM_ANTES - CONFIRM_SAIRAM),
+      nConfirm === CONFIRM_ANTES - CONFIRM_SAIRAM, 'achei ' + nConfirm);
+    check('prompt() nativo no arquivo caiu para ' + (PROMPT_ANTES - PROMPT_SAIRAM),
+      nPrompt === PROMPT_ANTES - PROMPT_SAIRAM, 'achei ' + nPrompt);
+
+    // ---- texto das funções: nenhuma pode mais chamar a janela nativa ----
+    const LIMPAS = ['salvarRelatorioCard', 'acertoRecalcular', 'cancelarHospedeManual',
+      'removerHospedeCard', 'cancelarPernoiteFicha', 'ciCriarNovoHospede', 'ciSalvar',
+      'ciCorrigirExistente', 'cfAvisarFaltaMed', 'cfRemoverOcorrencia', 'zCampo'];
+    LIMPAS.forEach((fn) => {
+      check(fn + ' existe', typeof ctx[fn] === 'function');
+      check(fn + ' NÃO usa confirm()/prompt() nativo',
+        !/\b(confirm|prompt)\s*\(/.test(String(ctx[fn] || '')));
+    });
+    check('salvarRelatorioCard grava por continuação (_gravarRel) e pergunta na tela (zEscolha)',
+      /_gravarRel/.test(String(ctx.salvarRelatorioCard || '')) &&
+      /zEscolha/.test(String(ctx.salvarRelatorioCard || '')));
+    check('ciSalvar lê motivo e nome dos campos da tela do modo CORRIGIR',
+      /ciCorrigirMotivo/.test(String(ctx.ciSalvar || '')) &&
+      /ciCorrigirQuem/.test(String(ctx.ciSalvar || '')));
+    check('o cartão do modo CORRIGIR já mostra os dois campos',
+      /ciCorrigirMotivo/.test(String(ctx.ciCorrigirExistente || '')) &&
+      /ciCorrigirQuem/.test(String(ctx.ciCorrigirExistente || '')));
+    check('os botões de 2 toques recebem o próprio botão (this) no onclick',
+      /removerHospedeCard\(\$\{i\},this\)/.test(html) &&
+      /cancelarPernoiteFicha\(this\)/.test(html) &&
+      /acertoRecalcular\(\\'.+?\\',this\)/.test(html) &&
+      /cfAvisarFaltaMed\('\+idx\+',this\)/.test(html) &&
+      /ciCriarNovoHospede\(this\)/.test(html));
+
+    // ---- prova de comportamento: 1º toque arma, 2º toque grava ----
+    // Botão de mentira: só o que o app toca (texto, estilo, dataset, classes).
+    const botao = (txt) => ({
+      textContent: txt || 'Botão', title: '', disabled: false, style: {}, dataset: {},
+      classList: { add() {}, remove() {}, toggle() {}, contains() { return false; } },
+    });
+    ctx.__p2 = { escritas: [], alertas: [], res: {} };
+    ctx.__p2b = {
+      acerto: botao('Atualizar para R$ 150,00'),
+      med: botao('Avisar a Recepção'),
+      ocor: botao('✕'),
+      remCard: botao('✕'),
+      remCurto: botao('✕'),
+      fichaEst: botao('🗑️ Deletar este peludinho do Hotel (hoje)'),
+      fichaMan: botao('🗑️ Deletar este peludinho do Hotel (hoje)'),
+      novoPel: botao('Cadastrar e iniciar check-in'),
+    };
+    ctx.__bkp2 = {};
+    const gebP2 = ctx.document.getElementById;
+    const elsP2 = {
+      ciNovoNome: { value: 'Maya' }, ciNovoTutor: { value: 'Carolina' }, ciNovoRaca: { value: 'Spitz' },
+      ciNovoWarn: { textContent: '', innerHTML: '' },
+      ciNovoNasc: { value: '' }, ciNovoPeso: { value: '' }, ciNovoChip: { value: '' },
+      ciNovoCorPelo: { value: '' }, ciNovoIdadeAprox: { value: '' }, ciNovoIdade: { value: '' },
+      ciNovoPainel: { style: {} }, ciToggleNovoTxt: { textContent: '' },
+    };
+    ctx.document.getElementById = function (id) {
+      const s = String(id || '');
+      if (Object.prototype.hasOwnProperty.call(elsP2, s)) return elsP2[s];
+      return gebP2.call(ctx.document, id);
+    };
+    const papelAntes = ctx.__ROLE__.role;
+    ctx.__ROLE__.role = 'gestao';
+
+    try {
+      vm.runInContext(`
+        __bkp2.DB=DB; __bkp2.audit=audit; __bkp2.zAlertao=zAlertao; __bkp2.zCampo=zCampo;
+        __bkp2.acertoNoites=acertoNoites; __bkp2.renderAcerto=renderAcerto;
+        __bkp2.ACERTO_REG=ACERTO_REG; __bkp2.ACERTO_QUEM=ACERTO_QUEM;
+        __bkp2.cfEstadia=cfEstadia; __bkp2.cfEstadiaId=cfEstadiaId;
+        __bkp2.medCoberturaEstadia=medCoberturaEstadia; __bkp2.cfMedRefs=cfMedRefs;
+        __bkp2.criarAvisoEstoque=criarAvisoEstoque; __bkp2.renderCfMed=renderCfMed;
+        __bkp2.renderCfOcorrencias=renderCfOcorrencias;
+        __bkp2.hospedes=hospedes; __bkp2.hospEstadiaAtivaDe=hospEstadiaAtivaDe;
+        __bkp2.carregarHospedes=carregarHospedes; __bkp2.carregarManuais=carregarManuais;
+        __bkp2.quemSou=quemSou; __bkp2.renderHosp=renderHosp; __bkp2.fecharPlantao=fecharPlantao;
+        __bkp2.currentHosp=currentHosp; __bkp2.CF_ESTADIAS=CF_ESTADIAS; __bkp2.medAgendaKey=medAgendaKey;
+        __bkp2.PELUDINHOS=PELUDINHOS; __bkp2.achaPorIdNR=achaPorIdNR; __bkp2.ciEscolher=ciEscolher;
+        (function(){
+          var mkRef=function(p){ return {
+            set:function(v){ __p2.escritas.push({op:'set',path:p}); return Promise.resolve(); },
+            update:function(v){ __p2.escritas.push({op:'update',path:p}); return Promise.resolve(); },
+            remove:function(){ __p2.escritas.push({op:'remove',path:p}); return Promise.resolve(); },
+            push:function(v){ __p2.escritas.push({op:'push',path:p}); return {key:'k1',
+              set:function(){ __p2.escritas.push({op:'push-set',path:p}); return Promise.resolve(); }}; },
+            once:function(){ return Promise.resolve({ val:function(){ return null; } }); }
+          }; };
+          DB={ ref:mkRef };
+          audit=function(){};
+          zAlertao=function(t){ __p2.alertas.push(String(t||'')); };
+          var _zc=zCampo;
+          zCampo=function(t,l,op){ __p2.res.zcampo={ titulo:String(t||''),
+            campoId:(op&&op.campoId)||'', botao:(op&&op.botao)||'', minimo:(op&&op.minimo)||0 };
+            return _zc(t,l,op); };
+
+          // --- 1) acertoRecalcular (dinheiro do acerto do plantão) ---
+          renderAcerto=function(){};
+          acertoNoites=function(){ return [{ iso:'2026-08-20', n:2, pets:['Toddy','Maya'] }]; };
+          ACERTO_REG={ '2026-08-20':{ valor_total_cent:12000 } };
+          ACERTO_QUEM={ '2026-08-20':{ quantas:1, dobrou:false } };
+          __p2.escritas.length=0;
+          acertoRecalcular('2026-08-20', __p2b.acerto);
+          __p2.res.acerto1={ n:__p2.escritas.length, txt:__p2b.acerto.textContent, armed:__p2b.acerto.dataset.armed };
+          acertoRecalcular('2026-08-20', __p2b.acerto);
+          __p2.res.acerto2={ n:__p2.escritas.length, path:(__p2.escritas[0]||{}).path||'' };
+
+          // --- 2) cfAvisarFaltaMed (remédio que não cobre a estadia) ---
+          renderCfMed=function(){}; renderCfOcorrencias=function(){};
+          cfEstadia={ medicacao:[{ nome:'Apoquel', q:1, u:'comprimido' }], entrada:'2026-08-20', saida:'2026-08-25', ocorrencias:{ o1:{ texto:'chegou com colar' } } };
+          medCoberturaEstadia=function(){ return { cobre:false, deficit:3, unidade:'comprimido', trazido:2, necessario:5, ate:'25/08' }; };
+          cfMedRefs=function(){ return { key:'k', itemId:'i' }; };
+          criarAvisoEstoque=function(d){ __p2.escritas.push({ op:'aviso-estoque', path:'estoque/'+(d&&d.medNome||'') }); };
+          __p2.escritas.length=0;
+          cfAvisarFaltaMed(0, __p2b.med);
+          __p2.res.med1={ n:__p2.escritas.length, txt:__p2b.med.textContent, armed:__p2b.med.dataset.armed };
+          cfAvisarFaltaMed(0, __p2b.med);
+          __p2.res.med2={ n:__p2.escritas.length, path:(__p2.escritas[0]||{}).path||'' };
+
+          // --- 3) cfRemoverOcorrencia (o que se apaga não volta) ---
+          cfEstadiaId='est1';
+          __p2.escritas.length=0;
+          cfRemoverOcorrencia('o1', __p2b.ocor);
+          __p2.res.ocor1={ n:__p2.escritas.length, txt:__p2b.ocor.textContent, armed:__p2b.ocor.dataset.armed };
+          cfRemoverOcorrencia('o1', __p2b.ocor);
+          __p2.res.ocor2={ n:__p2.escritas.length, path:(__p2.escritas[0]||{}).path||'' };
+
+          // --- 4) DUPLO: removerHospedeCard (era confirm + prompt + confirm final) ---
+          hospedes=[{ nome:'Toddy', tutor:'Ana', manualKey:'mk1', manualDia:'2026-08-25' }];
+          hospEstadiaAtivaDe=function(){ return { entrada:'2026-08-20', saida:'2026-08-30' }; };
+          carregarHospedes=function(){}; carregarManuais=function(){}; renderHosp=function(){};
+          quemSou=function(){ return 'Rosana'; };
+          __p2.escritas.length=0;
+          removerHospedeCard(0, __p2b.remCard);
+          __p2.res.rem1={ n:__p2.escritas.length, txt:__p2b.remCard.textContent,
+            armed:__p2b.remCard.dataset.armed, titulo:__p2b.remCard.title };
+          __p2b.remCard.dataset.motivo='lancei a Maya da tutora errada';
+          removerHospedeCard(0, __p2b.remCard);
+          __p2.res.rem2={ n:__p2.escritas.length, paths:__p2.escritas.map(function(e){ return e.path; }).join(' | ') };
+          // motivo curto: NÃO grava e avisa na tela
+          __p2.escritas.length=0; __p2.alertas.length=0;
+          removerHospedeCard(0, __p2b.remCurto);
+          __p2b.remCurto.dataset.motivo='erro';
+          removerHospedeCard(0, __p2b.remCurto);
+          __p2.res.remCurto={ n:__p2.escritas.length, alerta:__p2.alertas.join(' | ') };
+
+          // --- 5) DUPLO: cancelarPernoiteFicha, par "cancelar a estadia" ---
+          currentHosp={ nome:'Toddy', tutor:'Ana', refKey:'toddy__ana', manualKey:'mk1', manualDia:'2026-08-25' };
+          medAgendaKey=function(){ return 'toddy__ana'; };
+          fecharPlantao=function(){};
+          CF_ESTADIAS={ 'toddy__ana':{ id:'est9', e:{ status:'ativa' } } };
+          __p2.escritas.length=0;
+          cancelarPernoiteFicha(__p2b.fichaEst);
+          __p2.res.est1={ n:__p2.escritas.length, txt:__p2b.fichaEst.textContent, armed:__p2b.fichaEst.dataset.armed };
+          cancelarPernoiteFicha(__p2b.fichaEst);
+          __p2.res.est2={ n:__p2.escritas.length, path:(__p2.escritas[0]||{}).path||'' };
+
+          // --- 6) DUPLO: cancelarPernoiteFicha, par "deletar do Hotel de hoje" ---
+          CF_ESTADIAS={};
+          __p2.escritas.length=0;
+          cancelarPernoiteFicha(__p2b.fichaMan);
+          __p2.res.man1={ n:__p2.escritas.length, txt:__p2b.fichaMan.textContent, armed:__p2b.fichaMan.dataset.armed };
+          cancelarPernoiteFicha(__p2b.fichaMan);
+          __p2.res.man2={ n:__p2.escritas.length, path:(__p2.escritas[0]||{}).path||'' };
+
+          // --- 7) ciCriarNovoHospede (homônimo no check-in) ---
+          PELUDINHOS=[{ n:'Maya', tutor:'Luciana', raca:'Yorkshire', dias:[] }];
+          achaPorIdNR=function(){ return null; };
+          ciEscolher=function(){};
+          __p2.escritas.length=0;
+          ciCriarNovoHospede(__p2b.novoPel);
+          __p2.res.novo1={ n:__p2.escritas.length, txt:__p2b.novoPel.textContent,
+            armed:__p2b.novoPel.dataset.armed, pel:PELUDINHOS.length };
+          ciCriarNovoHospede(__p2b.novoPel);
+          __p2.res.novo2={ n:__p2.escritas.length, pel:PELUDINHOS.length,
+            path:(__p2.escritas[0]||{}).path||'' };
+        })();
+      `, ctx);
+
+      const R2 = ctx.__p2.res;
+      // acertoRecalcular
+      check('acertoRecalcular: 1º toque NÃO grava (só arma)',
+        R2.acerto1.n === 0 && R2.acerto1.armed === '1' && /^Confirmar/.test(R2.acerto1.txt),
+        JSON.stringify(R2.acerto1));
+      check('acertoRecalcular: o botão armado mostra o valor de antes e o de depois',
+        /R\$ 120,00/.test(R2.acerto1.txt) && /R\$/.test(R2.acerto1.txt), R2.acerto1.txt);
+      check('acertoRecalcular: 2º toque grava o acerto',
+        R2.acerto2.n > 0 && /acerto-plantao\/2026-08-20/.test(R2.acerto2.path),
+        JSON.stringify(R2.acerto2));
+      // cfAvisarFaltaMed
+      check('cfAvisarFaltaMed: 1º toque NÃO avisa a Recepção (só arma)',
+        R2.med1.n === 0 && R2.med1.armed === '1' && /^Confirmar/.test(R2.med1.txt),
+        JSON.stringify(R2.med1));
+      check('cfAvisarFaltaMed: 2º toque cria o aviso de estoque',
+        R2.med2.n > 0 && /estoque\/Apoquel/.test(R2.med2.path), JSON.stringify(R2.med2));
+      // cfRemoverOcorrencia
+      check('cfRemoverOcorrencia: 1º toque NÃO apaga (só arma)',
+        R2.ocor1.n === 0 && R2.ocor1.armed === '1' && /Confirmar/.test(R2.ocor1.txt),
+        JSON.stringify(R2.ocor1));
+      check('cfRemoverOcorrencia: 2º toque apaga a ocorrência',
+        R2.ocor2.n > 0 && /estadias\/est1\/ocorrencias\/o1/.test(R2.ocor2.path),
+        JSON.stringify(R2.ocor2));
+      // DUPLO 1 — removerHospedeCard
+      check('removerHospedeCard (duplo): 1º toque NÃO grava (só arma)',
+        R2.rem1.n === 0 && R2.rem1.armed === '1' && R2.rem1.txt !== '✕',
+        JSON.stringify(R2.rem1));
+      check('removerHospedeCard (duplo): o 1º toque abre o CAMPO do motivo na tela',
+        (ctx.__p2.res.zcampo || {}).campoId === 'hospRemMotivo' &&
+        (ctx.__p2.res.zcampo || {}).minimo === 8,
+        JSON.stringify(ctx.__p2.res.zcampo || {}));
+      check('removerHospedeCard (duplo): o botão do cartaz diz o que vai acontecer',
+        /^Confirmar — tirar Toddy do Plantão de hoje/.test((ctx.__p2.res.zcampo || {}).botao || ''),
+        (ctx.__p2.res.zcampo || {}).botao);
+      check('removerHospedeCard (duplo): 2º toque grava (removidos + apaga o lançamento)',
+        R2.rem2.n >= 2 && /removidos/.test(R2.rem2.paths) && /manuais\/2026-08-25\/mk1/.test(R2.rem2.paths),
+        JSON.stringify(R2.rem2));
+      check('removerHospedeCard: motivo curto NÃO grava e avisa na tela',
+        R2.remCurto.n === 0 && /NÃO TIREI/.test(R2.remCurto.alerta), JSON.stringify(R2.remCurto));
+      // DUPLO 2 — cancelarPernoiteFicha (estadia)
+      check('cancelarPernoiteFicha (duplo "cancelar estadia"): 1º toque NÃO grava (só arma)',
+        R2.est1.n === 0 && R2.est1.armed === '1' && /^Confirmar — cancelar a estadia de Toddy/.test(R2.est1.txt),
+        JSON.stringify(R2.est1));
+      check('cancelarPernoiteFicha (duplo "cancelar estadia"): 2º toque grava',
+        R2.est2.n > 0 && /estadias\/est9/.test(R2.est2.path), JSON.stringify(R2.est2));
+      // DUPLO 3 — cancelarPernoiteFicha (deletar do Hotel de hoje)
+      check('cancelarPernoiteFicha (duplo "deletar do Hotel"): 1º toque NÃO grava (só arma)',
+        R2.man1.n === 0 && R2.man1.armed === '1' && /^Confirmar — deletar Toddy/.test(R2.man1.txt),
+        JSON.stringify(R2.man1));
+      check('cancelarPernoiteFicha (duplo "deletar do Hotel"): 2º toque apaga o lançamento',
+        R2.man2.n > 0 && /manuais\/2026-08-25\/mk1/.test(R2.man2.path), JSON.stringify(R2.man2));
+      // ciCriarNovoHospede
+      check('ciCriarNovoHospede: 1º toque NÃO cadastra (só arma e avisa do homônimo)',
+        R2.novo1.n === 0 && R2.novo1.armed === '1' && R2.novo1.pel === 1 &&
+        /Luciana/.test(elsP2.ciNovoWarn.innerHTML || ''),
+        JSON.stringify(R2.novo1) + ' | ' + (elsP2.ciNovoWarn.innerHTML || '').slice(0, 120));
+      check('ciCriarNovoHospede: 2º toque cadastra o FILHOt',
+        R2.novo2.n > 0 && R2.novo2.pel === 2 && /daycare\/cadastro\//.test(R2.novo2.path),
+        JSON.stringify(R2.novo2));
+    } finally {
+      vm.runInContext(`
+        DB=__bkp2.DB; audit=__bkp2.audit; zAlertao=__bkp2.zAlertao; zCampo=__bkp2.zCampo;
+        acertoNoites=__bkp2.acertoNoites; renderAcerto=__bkp2.renderAcerto;
+        ACERTO_REG=__bkp2.ACERTO_REG; ACERTO_QUEM=__bkp2.ACERTO_QUEM;
+        cfEstadia=__bkp2.cfEstadia; cfEstadiaId=__bkp2.cfEstadiaId;
+        medCoberturaEstadia=__bkp2.medCoberturaEstadia; cfMedRefs=__bkp2.cfMedRefs;
+        criarAvisoEstoque=__bkp2.criarAvisoEstoque; renderCfMed=__bkp2.renderCfMed;
+        renderCfOcorrencias=__bkp2.renderCfOcorrencias;
+        hospedes=__bkp2.hospedes; hospEstadiaAtivaDe=__bkp2.hospEstadiaAtivaDe;
+        carregarHospedes=__bkp2.carregarHospedes; carregarManuais=__bkp2.carregarManuais;
+        quemSou=__bkp2.quemSou; renderHosp=__bkp2.renderHosp; fecharPlantao=__bkp2.fecharPlantao;
+        currentHosp=__bkp2.currentHosp; CF_ESTADIAS=__bkp2.CF_ESTADIAS; medAgendaKey=__bkp2.medAgendaKey;
+        PELUDINHOS=__bkp2.PELUDINHOS; achaPorIdNR=__bkp2.achaPorIdNR; ciEscolher=__bkp2.ciEscolher;
+      `, ctx);
+      ctx.document.getElementById = gebP2;
+      ctx.__ROLE__.role = papelAntes;
+    }
+  }
+  console.log('');
   // ---- resumo ----
   console.log('== Resultado: ' + pass + ' ok, ' + fail + ' falha(s) ==');
   if (fail) { console.log('\nFalhas:'); fails.forEach((f) => console.log('  - ' + f)); }

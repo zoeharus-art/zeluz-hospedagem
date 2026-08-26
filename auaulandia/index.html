@@ -2293,7 +2293,7 @@
       <div class="card so-equipe" id="hf-zonarisco" style="display:none;border:1.5px solid var(--crm-critico);background:rgba(197,49,37,.05);margin-top:14px">
         <h2 style="font-size:16px;color:var(--crm-critico);margin-bottom:6px">Zona de risco</h2>
         <div class="hint" style="margin-bottom:10px">Cancela apenas a pernoite/hospedagem de hoje. O cadastro do FILHOt continua salvo — se ele voltar outro dia, é só adicionar de novo.</div>
-        <button class="btn" style="background:var(--crm-critico);color:#fff;font-weight:800" onclick="cancelarPernoiteFicha()">🗑️ Deletar este peludinho do Hotel (hoje)</button>
+        <button class="btn" style="background:var(--crm-critico);color:#fff;font-weight:800" onclick="cancelarPernoiteFicha(this)">🗑️ Deletar este peludinho do Hotel (hoje)</button>
       </div>
 
     </div>
@@ -2427,7 +2427,7 @@
             <div class="field"><label>Nº Microchip · últimos do visor</label><input class="cad-in" id="ciNovoChip" maxlength="6" inputmode="numeric" placeholder="000000" autocomplete="off"></div>
           </div>
           <div class="cn-warn" id="ciNovoWarn"></div>
-          <button class="btn btn-primary" style="width:100%;margin-top:6px" onclick="ciCriarNovoHospede()">Cadastrar e iniciar check-in</button>
+          <button class="btn btn-primary" style="width:100%;margin-top:6px" onclick="ciCriarNovoHospede(this)">Cadastrar e iniciar check-in</button>
         </div>
       </div>
     </div>
@@ -5056,7 +5056,7 @@
         // O "×" de cancelar saiu do card (risco de apertar sem querer). A ação de deletar a pernoite
         // do dia agora vive DENTRO da ficha do hóspede, na "Zona de risco" (só equipe, com dupla
         // confirmação) — ver cancelarPernoiteFicha().
-        const delBtn=(_podeRemHosp && !h.mascote) ? `<button type="button" class="hosp-del" title="Remover do Plantão de hoje" onclick="event.stopPropagation();removerHospedeCard(${i})">&#10005;</button>` : '';
+        const delBtn=(_podeRemHosp && !h.mascote) ? `<button type="button" class="hosp-del" title="Remover do Plantão de hoje" onclick="event.stopPropagation();removerHospedeCard(${i},this)">&#10005;</button>` : '';
         return `<div class="pet" onclick="abrirPlantao(${i})">
           ${delBtn}${ph}${alertaFoto}${medFoto}${recFoto}${naoComeuFoto}
           <div class="nm">${cad.nome||h.nome}</div>
@@ -7049,9 +7049,10 @@
     const _medConfAtivo=!!document.querySelector('#'+card+' .med-confirm-obs');
     const _esperaDia=(tipo!=='dia' && valDe('card-dia','Tem medicação?')==='Sim');
     // ===== 22/ago/2026 — ISTO TRAVOU O PLANTÃO DE 3 HÓSPEDES ==========================
-    // Aqui havia DOIS confirm() nativos. Toshi, Maya e Arthur já tinham se hospedado antes,
-    // então os três caíam neste ponto. No celular, quando o navegador suprime diálogos, o
-    // confirm devolve `false` sozinho — e o código fazia `return`: relatório inteiro perdido,
+    // Aqui havia DUAS janelas nativas de confirmação, uma atrás da outra. Toshi, Maya e Arthur
+    // já tinham se hospedado antes, então os três caíam neste ponto. No celular, quando o
+    // navegador suprime diálogos, a janela nativa devolve `false` sozinha — e o código fazia
+    // `return`: relatório inteiro perdido,
     // sem gravar e sem deixar rastro na auditoria. A monitora preencheu tudo três vezes e
     // nada foi salvo. Diálogo nativo NUNCA pode ficar no caminho de um salvamento.
     //
@@ -7075,28 +7076,11 @@
     if(!passou){ relBloqueio(st,'Agora é só assinar: escreva o SEU NOME no campo "quem passou o plantão", logo acima do botão.',tipo,'FALTA A SUA ASSINATURA');
       try{ const el=document.getElementById('passou-'+tipo); if(el){ el.scrollIntoView({behavior:'smooth',block:'center'}); el.focus(); } }catch(e){}
       return; }
-    // ===== O NOME ESTÁ ESCRITO ERRADO? — Adriana, 17/ago/2026 =====================
-    // "Carpl não existe esse nome em português, nem Caroo, nem Caroll — talvez confirmar com
-    //  a própria plantonista se o nome for muito diferente."
-    // De madrugada, com o celular na mão, escapa letra. Confirmar aqui custa um toque e
-    // evita que o pagamento dela se parta em dois nomes no fim do mês.
-    if(!plantEhDuplo(passou) && !plantOficial(passou) && (PLANT_LIVRO.oficiais||[]).length){
-      var _prox=(PLANT_LIVRO.oficiais||[]).map(function(o){ return {o:o, d:_distNome(o,passou)}; })
-        .filter(function(x){ return x.d<=2 && jsNorm(x.o).charAt(0)===jsNorm(passou).charAt(0); })
-        .sort(function(a,b){ return a.d-b.d; })[0];
-      if(_prox){
-        var _r=confirm('Você escreveu "'+passou+'".\n\nVocê é a '+_prox.o+'?\n\n'
-          +'OK = sim, sou a '+_prox.o+' (eu arrumo o nome)\n'
-          +'Cancelar = não, o nome está certo do jeito que escrevi');
-        if(_r){
-          passou=_prox.o;
-          try{ var _el=document.getElementById('passou-'+tipo); if(_el) _el.value=passou; }catch(e){}
-        } else {
-          // Ela confirmou a grafia: o sistema aprende e não pergunta de novo.
-          try{ plantAprender(passou, passou); }catch(e){}
-        }
-      }
-    }
+    // TUDO o que grava o relatório mora dentro de _gravarRel. Assim a pergunta sobre o nome
+    // de quem assina pode ser respondida num cartaz da PRÓPRIA TELA (zEscolha) e a gravação
+    // acontece logo depois, na resposta — nunca dependendo de uma janela nativa, que o
+    // navegador do celular pode suprimir sozinha e cancelar o relatório inteiro.
+    var _gravarRel=function(passou){
     // quem passa NAO preenche quem recebeu — o recebimento e assinado depois, por quem pega o plantao
     const dados=coletarCard(card); dados.passou=passou; const _rSalvo=(RELSTATE[tipo]||{}).recebeu||''; if(_rSalvo){ dados.recebeu=_rSalvo; dados._tsReceb=(RELSTATE[tipo]||{})._tsReceb||Date.now(); } dados._ts=Date.now();
     // Rede de segurança: qualquer erro daqui para baixo TEM de aparecer na tela. Um clique que
@@ -7139,6 +7123,37 @@
          'Motivo: '+((err&&err.message)||err),
          'Não saia da tela. Tente de novo — e se repetir, avise a Gestão.'],{botao:'Entendi'}); }catch(_){}
     }
+    };
+    // ===== O NOME ESTÁ ESCRITO ERRADO? — Adriana, 17/ago/2026 =====================
+    // "Carpl não existe esse nome em português, nem Caroo, nem Caroll — talvez confirmar com
+    //  a própria plantonista se o nome for muito diferente."
+    // De madrugada, com o celular na mão, escapa letra. Perguntar aqui custa um toque e
+    // evita que o pagamento dela se parta em dois nomes no fim do mês. A pergunta é um
+    // cartaz da própria tela: escolha o botão e o relatório grava na sequência.
+    var _prox=null;
+    if(!plantEhDuplo(passou) && !plantOficial(passou) && (PLANT_LIVRO.oficiais||[]).length){
+      _prox=(PLANT_LIVRO.oficiais||[]).map(function(o){ return {o:o, d:_distNome(o,passou)}; })
+        .filter(function(x){ return x.d<=2 && jsNorm(x.o).charAt(0)===jsNorm(passou).charAt(0); })
+        .sort(function(a,b){ return a.d-b.d; })[0]||null;
+    }
+    if(_prox && typeof zEscolha==='function'){
+      if(st){ st.style.color='var(--crm-atencao-text)'; st.textContent='⏳ Confirme o seu nome na tela — o relatório grava logo em seguida.'; }
+      zEscolha('CONFIRME O SEU NOME',
+        ['Você escreveu "'+passou+'".',
+         'Você é a '+_prox.o+'?',
+         'Nada se perde: o relatório é gravado assim que você escolher.'],
+        [ {t:'Sim, sou a '+_prox.o+' — arrume o nome', cor:'#1E8449', fn:function(){
+             try{ var _el=document.getElementById('passou-'+tipo); if(_el) _el.value=_prox.o; }catch(e){}
+             _gravarRel(_prox.o);
+           }},
+          {t:'Não — o nome certo é "'+passou+'"', cor:'#234D67', fn:function(){
+             // Ela confirmou a grafia: o sistema aprende e não pergunta de novo.
+             try{ plantAprender(passou, passou); }catch(e){}
+             _gravarRel(passou);
+           }} ]);
+      return;
+    }
+    _gravarRel(passou);
   }
   function valDe(cardId,perg){ for(const l of document.querySelectorAll('#'+cardId+' .obsline')){ const q=l.querySelector('.q'); if(q&&q.textContent.trim()===perg){ const on=l.querySelector('button.on'); return on?on.textContent.trim():''; } } return ''; }
   // ---- gerador de texto para o tutor: personalizado, em parágrafos, sempre diferente ----
@@ -9264,7 +9279,7 @@
             ? ('<div style="margin-top:5px;background:rgba(197,49,37,.10);border-left:4px solid var(--crm-critico);border-radius:8px;padding:7px 10px;font-size:13px;font-weight:700;color:var(--z-blue)">'
                +'Este valor foi lançado quando a noite tinha outra lista. Hoje ela tem <strong>'+o.n+' FILHOt'+(o.n===1?'':'s')+'</strong>,'
                +' e o valor certo é <strong>'+fmtCent(_vAgora.total)+'</strong> (está gravado '+fmtCent(o.reg.valor_total_cent||0)+').'
-               +' <button class="btn" style="background:var(--z-gold);color:var(--z-blue);border:none;padding:4px 12px;font-size:12px;margin-left:4px" onclick="acertoRecalcular(\''+o.iso+'\')">Atualizar para '+fmtCent(_vAgora.total)+'</button></div>')
+               +' <button class="btn" style="background:var(--z-gold);color:var(--z-blue);border:none;padding:4px 12px;font-size:12px;margin-left:4px" onclick="acertoRecalcular(\''+o.iso+'\',this)">Atualizar para '+fmtCent(_vAgora.total)+'</button></div>')
             : '')
         +((feriado||dom)?'<div style="font-size:12px;color:var(--z-blue-soft)">'+(feriado?'Feriado':'Domingo')+': há também o plantão de dia (06h50 às 19h). Se alguém cobriu, lance como uma noite à parte.</div>':'')
         +'</div><span class="avr-chip '+L[1]+'">'+L[0]+'</span></div>'
@@ -9364,14 +9379,27 @@
   }
   // Regrava o valor de uma noite já lançada com a lista de HOJE. Só a Gestão usa, e só
   // aparece quando há diferença de verdade. Guarda o valor anterior, para dar para conferir.
-  function acertoRecalcular(iso){
+  // Dois toques, na PRÓPRIA TELA — nunca janela nativa. Isto mexe em dinheiro de plantonista:
+  // no tablet o navegador pode suprimir a janela e responder "cancelar" sozinho, e a Gestão
+  // acha que atualizou o valor quando nada foi gravado. O 1º toque só arma e mostra o novo
+  // valor no botão; o 2º grava. Sozinho, o botão desarma em alguns segundos.
+  function acertoRecalcular(iso, btn){
     var noites=acertoNoites(), o=noites.find(function(x){ return x.iso===iso; });
     if(!o||!DB) return;
     var _q=ACERTO_QUEM[iso]||{}, _qtas=Math.max(1,_q.quantas||1);
     var v=acertoValorPara(o.n, !!_q.dobrou, _qtas);
     var antes=(ACERTO_REG[iso]||{}).valor_total_cent||0;
-    if(!confirm('Atualizar '+orcBR(iso)+' de '+fmtCent(antes)+' para '+fmtCent(v.total)+'?\n\n'
-      +'A noite tem '+o.n+' FILHOt'+(o.n===1?'':'s')+': '+o.pets.join(', ')+'.')) return;
+    if(btn && btn.dataset.armed!=='1'){
+      btn.dataset.armed='1';
+      if(!btn.dataset.label) btn.dataset.label=btn.textContent;
+      btn.textContent='Confirmar — '+orcBR(iso)+': '+fmtCent(antes)+' → '+fmtCent(v.total)+' ('+o.n+' FILHOt'+(o.n===1?'':'s')+')';
+      btn.style.background='var(--crm-atencao-text)';
+      btn.style.color='#FFFDF6';
+      clearTimeout(btn._armT);
+      btn._armT=setTimeout(function(){ try{ if(btn.dataset.armed==='1'){ btn.dataset.armed=''; btn.textContent=btn.dataset.label||'Atualizar'; btn.style.background=''; btn.style.color=''; } }catch(e){} }, 6000);
+      return;
+    }
+    if(btn){ clearTimeout(btn._armT); btn.dataset.armed=''; btn.style.background=''; btn.style.color=''; btn.textContent='Atualizando…'; }
     DB.ref('auaulandia/acerto-plantao/'+iso).update({
       valor_base_cent:v.base, ajuda_cent:v.ajuda, valor_total_cent:v.total,
       quantas:_qtas, pets_por_pessoa:v.porCabeca, hospedes:o.n, pets:o.pets,
@@ -9382,7 +9410,14 @@
         valor_base_cent:v.base, ajuda_cent:v.ajuda, quantas:_qtas, pets_por_pessoa:v.porCabeca, hospedes:o.n});
       if(typeof audit==='function') audit('acerto-plantao','recalculou '+orcBR(iso)+': '+fmtCent(antes)+' → '+fmtCent(v.total)+' ('+o.n+' FILHOts)',{});
       renderAcerto();
-    }).catch(function(e){ alert('Não salvou: '+((e&&e.message)||e)); });
+    }).catch(function(e){
+      // O botão não pode ficar preso em "Atualizando…": devolve o rótulo e diz o que houve.
+      if(btn){ btn.textContent=btn.dataset.label||'Atualizar'; }
+      if(typeof zAlertao==='function') zAlertao('NÃO ATUALIZEI O VALOR',
+        ['O acerto de '+orcBR(iso)+' continua como estava: '+fmtCent(antes)+'.',
+         'Motivo: '+((e&&e.message)||e),
+         'Nada foi gravado. Confira a internet e toque de novo.'],{botao:'Entendi'});
+    });
   }
   function acertoMarcar(iso,status){
     var q=((document.getElementById('acq_'+iso)||{}).value||'').trim();
@@ -10474,15 +10509,30 @@
     if(!(r==='gestao'||r==='supervisor'||r==='diretoria'||r==='monitor')) return;
     const h=hospedes[i]; if(!h) return;
     if(!h.manualKey){ alert('Este registro não pode ser cancelado por aqui — ele veio da planilha, não foi lançado manualmente hoje.'); return; }
-    if(!confirm('Cancelar a pernoite/hospedagem de '+(h.nome||'?')+' de hoje?\n\nIsso remove só o lançamento de hoje — não mexe no cadastro do FILHOt. Se ele voltar outro dia, é só adicionar de novo.')) return;
-    const dia=h.manualDia||dataKeyAtual();
-    if(!DB){ hospedes.splice(i,1); renderHosp(); return; }
-    DB.ref('auaulandia/manuais/'+dia+'/'+h.manualKey).remove()
-      .then(function(){
-        if(typeof audit==='function') audit('hospede-cancelado','cancelou lançamento do dia',{pet:h.nome||'',tutor:h.tutor||'',dia:dia});
-        carregarManuais();
-      })
-      .catch(e=>alert('Erro ao cancelar: '+e.message));
+    // Cartaz na PRÓPRIA TELA, com botões — nunca janela nativa. No tablet o navegador pode
+    // suprimir a janela e responder "cancelar" sozinho: o botão parece morto e ninguém sabe
+    // se a pernoite saiu ou não.
+    var _apagar=function(){
+      const dia=h.manualDia||dataKeyAtual();
+      if(!DB){ hospedes.splice(i,1); renderHosp(); return; }
+      DB.ref('auaulandia/manuais/'+dia+'/'+h.manualKey).remove()
+        .then(function(){
+          if(typeof audit==='function') audit('hospede-cancelado','cancelou lançamento do dia',{pet:h.nome||'',tutor:h.tutor||'',dia:dia});
+          carregarManuais();
+        })
+        .catch(function(e){
+          if(typeof zAlertao==='function') zAlertao('NÃO CONSEGUI CANCELAR',
+            ['A pernoite de '+(h.nome||'este FILHOt')+' continua na lista de hoje.',
+             'Motivo: '+((e&&e.message)||e),
+             'Nada foi alterado. Confira a internet e tente de novo.'],{botao:'Entendi'});
+        });
+    };
+    if(typeof zEscolha!=='function'){ _apagar(); return; }
+    zEscolha('CANCELAR A PERNOITE DE '+((h.nome||'ESTE FILHOt').toUpperCase())+'?',
+      ['Isso remove só o lançamento de hoje — não mexe no cadastro do FILHOt.',
+       'Se ele voltar outro dia, é só adicionar de novo.'],
+      [ {t:'Confirmar — cancelar a pernoite de hoje', cor:'#B3261E', fn:_apagar},
+        {t:'Não mexer em nada', cor:'#6b5f4b', fn:function(){}} ]);
   }
   // Deletar a pernoite do dia a partir da FICHA (não do card) — evita o toque acidental do antigo "×".
   // Dificuldade proposital: dupla confirmação. Só equipe (gestão/supervisão/diretoria/monitor).
@@ -10491,7 +10541,7 @@
   function hospRemKey(h){ return ((h&&h.nome||'')+'__'+(h&&h.tutor||'')).toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/[.#$\[\]\/]/g,'-'); }
   // Remover DIRETO do card do Plantão (equipe): funciona para QUALQUER hóspede, de qualquer origem.
   // Manual (pernoite/hóspede lançado à mão) → deleta o lançamento. Planilha/estadia → override "removidos".
-  function removerHospedeCard(i){
+  function removerHospedeCard(i, btn){
     const r=(document.body.dataset.role||'');
     if(!(r==='gestao'||r==='supervisor'||r==='diretoria'||r==='monitor')){ alert('Só a Gestão, a Supervisão, a Diretoria ou o Monitor podem remover.'); return; }
     const h=hospedes[i]; if(!h) return;
@@ -10501,8 +10551,15 @@
     // no × enquanto encerrava o dia de quem ia embora. Ele ficava até domingo. O × gravava um
     // "removido de hoje" que vence TUDO — planilha, estadia ativa, conferência concluída — e
     // o FILHOt não voltava sozinho nunca. Botão perigoso com cara de botão comum.
-    // Agora: AVISA que ele está hospedado e até quando, EXIGE o motivo por escrito, pede
-    // confirmação final, e o que sai por engano volta com um toque (ver hospTrazerDeVolta).
+    // Agora: AVISA que ele está hospedado e até quando, EXIGE o motivo por escrito, e o que
+    // sai por engano volta com um toque (ver hospTrazerDeVolta).
+    //
+    // 25/ago/2026 — as TRÊS janelas nativas (aviso, motivo e "confirmação final") saíram.
+    // Eram o pior padrão possível: no tablet o navegador pode suprimir a janela e responder
+    // "cancelar" sozinho — o × parecia morto, ou pior, o motivo voltava vazio. Agora são dois
+    // toques: o 1º arma o × e abre o cartaz da própria tela com o aviso e o CAMPO do motivo;
+    // o 2º (o botão do cartaz) grava. A "confirmação final" virou o texto do próprio botão,
+    // que diz exatamente o que vai acontecer — uma pergunta só, em vez de duas iguais.
     const est=hospEstadiaAtivaDe(h);
     const nome=h.nome||'este FILHOt';
     const hojeI=(typeof hospHojeISO==='function')?hospHojeISO():'';
@@ -10516,20 +10573,38 @@
         +'Se você tirar, ele some da lista da plantonista: ninguém vê a comida, o remédio nem o alarme dele.\n\n'
         +'Isto NÃO é o check-out. Só use se o lançamento foi errado.';
     }
-    if(!confirm(cabeca+'\n\n'+corpo)) return;
-    // O MOTIVO é obrigatório — é ele que explica, depois, por que o FILHOt sumiu da lista.
-    var motivo=(prompt('Por que '+nome+' está saindo do Plantão?\n\n'
-      +'Escreva com suas palavras, por exemplo:\n'
-      +'· "lancei a Maya da tutora errada"\n'
-      +'· "esta pernoite foi lançada em duplicidade"\n'
-      +'· "o tutor desmarcou e ele não vem"','')||'').trim();
-    if(motivo.length<8){
-      alert('Preciso do motivo escrito para tirar '+nome+' da lista.\n\n'
-        +'É o que explica, depois, por que ele sumiu — e é o que permite trazê-lo de volta se for engano.');
+    // 1º toque: arma o × e abre o cartaz com o aviso e o CAMPO do motivo. Nada é gravado aqui.
+    if(btn && btn.dataset.armed!=='1'){
+      btn.dataset.armed='1';
+      if(!btn.dataset.label) btn.dataset.label=btn.textContent;
+      btn.textContent='…';
+      btn.title='Confirme no cartaz para tirar '+nome+' do Plantão';
+      btn.style.background='var(--crm-atencao-text)';
+      clearTimeout(btn._armT);
+      btn._armT=setTimeout(function(){ try{ if(btn.dataset.armed==='1'){ btn.dataset.armed=''; btn.dataset.motivo=''; btn.textContent=btn.dataset.label||'✕'; btn.title='Remover do Plantão de hoje'; btn.style.background=''; } }catch(e){} }, 60000);
+      if(typeof zCampo==='function'){
+        zCampo(cabeca, [corpo,
+            'O motivo é obrigatório: é ele que explica, depois, por que '+nome+' sumiu da lista — e é o que permite trazê-lo de volta se for engano.'],
+          { campoId:'hospRemMotivo', rotulo:'Por que '+nome+' está saindo do Plantão?',
+            dica:'Ex.: lancei a Maya da tutora errada', minimo:8,
+            erro:'Preciso do motivo escrito (pelo menos 8 letras) para tirar '+nome+' da lista.',
+            botao:'Confirmar — tirar '+nome+' do Plantão de hoje'+(est?(ate?(' (está hospedado até '+ate+')'):' (está hospedado)'):''),
+            botaoNao:'Não tirar — deixar '+nome+' na lista',
+            aoCancelar:function(){ try{ clearTimeout(btn._armT); btn.dataset.armed=''; btn.dataset.motivo=''; btn.textContent=btn.dataset.label||'✕'; btn.title='Remover do Plantão de hoje'; btn.style.background=''; }catch(e){} },
+            fn:function(v){ btn.dataset.motivo=v; removerHospedeCard(i, btn); } });
+      }
       return;
     }
-    if(est && !confirm('CONFIRMAÇÃO FINAL\n\n'+nome+' está hospedado'+(ate?(' até '+ate):'')+'.\n\n'
-      +'Motivo: '+motivo+'\n\nTirar mesmo assim?')) return;
+    // 2º toque: o motivo já foi escrito no campo da tela.
+    var motivo=(((btn&&btn.dataset.motivo)||(document.getElementById('hospRemMotivo')||{}).value||'')+'').trim();
+    if(btn){ clearTimeout(btn._armT); btn.dataset.armed=''; btn.dataset.motivo=''; btn.textContent=btn.dataset.label||'✕'; btn.style.background=''; }
+    if(motivo.length<8){
+      if(typeof zAlertao==='function') zAlertao('NÃO TIREI '+nome.toUpperCase()+' DA LISTA',
+        ['Falta o motivo escrito.',
+         'É o que explica, depois, por que ele sumiu — e é o que permite trazê-lo de volta se for engano.'],
+        {botao:'Vou escrever o motivo'});
+      return;
+    }
     const quem=(typeof quemSou==='function'?quemSou():'-');
     const dk=dataKeyAtual();
     if(h.manualKey){
@@ -10628,42 +10703,69 @@
       alert((v.nome||'Ele')+' voltou para o Plantão.\n\nPeça para a plantonista atualizar a tela.');
     }).catch(function(e){ alert('NÃO consegui trazer de volta: '+((e&&e.message)||e)+'\n\nNada foi alterado.'); });
   }
-  function cancelarPernoiteFicha(){
+  // 25/ago/2026 — aqui viviam CINCO janelas nativas, duas delas em PARES seguidos ("cancelar
+  // a estadia?" + "confirmação final: cancelar a estadia?" e "deletar do Hotel?" + "confirmação
+  // final: deletar?"). Era o pior padrão do app: no tablet o navegador pode suprimir a janela e
+  // responder "cancelar" sozinho — o botão parecia morto e ninguém sabia se algo tinha saído.
+  // As duas perguntas de cada par eram a MESMA pergunta feita duas vezes, então viraram UM
+  // botão de dois toques cujo texto já diz o que vai acontecer. Não cabia caixa de seleção:
+  // não havia uma segunda decisão a tomar, só uma repetição.
+  function cancelarPernoiteFicha(btn){
     const r=(document.body.dataset.role||'');
     if(!(r==='gestao'||r==='supervisor'||r==='diretoria'||r==='monitor')){ alert('Só a Gestão, a Supervisão, a Diretoria ou o Monitor podem deletar uma pernoite.'); return; }
     const h=currentHosp; if(!h) return;
+    const _nome=h.nome||'este FILHOt';
     // LANÇADO ERRADO? Se este FILHOt tem uma ESTADIA (check-in) em curso, CANCELA a estadia inteira
     // (não só hoje) — some do Plantão e do Day Care. O cadastro do FILHOt continua salvo.
+    var _cr=null;
     try{
       var _ck=(typeof medAgendaKey==='function')?medAgendaKey(h):'';
-      var _cr=(_ck&&typeof CF_ESTADIAS!=='undefined')?CF_ESTADIAS[_ck]:null;
-      if(_cr&&_cr.id&&_cr.e&&((_cr.e.status||'ativa')==='ativa')){
-        if(!confirm('CANCELAR a estadia de '+(h.nome||'este FILHOt')+'?\n\nUse quando o check-in foi lançado ERRADO. Cancela a estadia inteira (sai do Plantão e do Day Care). O cadastro do FILHOt continua salvo.')) return;
-        if(!confirm('Confirmação final: cancelar a estadia de '+(h.nome||'este FILHOt')+'?')) return;
-        if(!DB){ alert('Sem internet agora — tente de novo em instantes.'); return; }
-        DB.ref('auaulandia/estadias/'+_cr.id).update({status:'cancelada', canceladaPor:(typeof quemSou==='function'?quemSou():'-'), canceladaTs:Date.now()}).then(function(){
-          if(typeof audit==='function') audit('estadia-cancelada','cancelou estadia (lancamento errado) pela ficha',{pet:h.nome||'',id:_cr.id});
-          if(typeof fecharPlantao==='function') fecharPlantao();
-          carregarHospedes();
-        }).catch(function(e){ alert('Erro ao cancelar a estadia: '+(e&&e.message||e)); });
-        return;
-      }
+      var _c=(_ck&&typeof CF_ESTADIAS!=='undefined')?CF_ESTADIAS[_ck]:null;
+      if(_c&&_c.id&&_c.e&&((_c.e.status||'ativa')==='ativa')) _cr=_c;
     }catch(e){}
+    // O que este botão vai fazer AGORA — decidido antes de armar, para o texto do botão
+    // dizer exatamente o que acontece no 2º toque.
+    var _acao=_cr?'estadia':(h.manualKey?'manual':'override');
+    var _rotulo=(_acao==='estadia')
+      ? ('Confirmar — cancelar a estadia de '+_nome+' (sai do Plantão e do Day Care)')
+      : ((_acao==='manual')
+          ? ('Confirmar — deletar '+_nome+' da AuAulândia de hoje')
+          : ('Confirmar — tirar '+_nome+' do Hotel só de hoje'));
+    if(btn && btn.dataset.armed!=='1'){
+      btn.dataset.armed='1';
+      if(!btn.dataset.label) btn.dataset.label=btn.textContent;
+      btn.textContent=_rotulo;
+      btn.style.background='var(--crm-atencao-text)';
+      clearTimeout(btn._armT);
+      btn._armT=setTimeout(function(){ try{ if(btn.dataset.armed==='1'){ btn.dataset.armed=''; btn.textContent=btn.dataset.label||'Deletar'; btn.style.background=''; } }catch(e){} }, 6000);
+      return;
+    }
+    if(btn){ clearTimeout(btn._armT); btn.dataset.armed=''; btn.style.background=''; btn.textContent=btn.dataset.label||'Deletar'; }
+    if(_acao==='estadia'){
+      if(!DB){ if(typeof zAlertao==='function') zAlertao('SEM INTERNET AGORA',['A estadia de '+_nome+' NÃO foi cancelada. Nada mudou.','Tente de novo em instantes.'],{botao:'Entendi'}); return; }
+      DB.ref('auaulandia/estadias/'+_cr.id).update({status:'cancelada', canceladaPor:(typeof quemSou==='function'?quemSou():'-'), canceladaTs:Date.now()}).then(function(){
+        if(typeof audit==='function') audit('estadia-cancelada','cancelou estadia (lancamento errado) pela ficha',{pet:h.nome||'',id:_cr.id});
+        if(typeof fecharPlantao==='function') fecharPlantao();
+        carregarHospedes();
+      }).catch(function(e){
+        if(typeof zAlertao==='function') zAlertao('NÃO CANCELEI A ESTADIA',['A estadia de '+_nome+' continua ativa.','Motivo: '+((e&&e.message)||e),'Nada foi alterado.'],{botao:'Entendi'});
+      });
+      return;
+    }
     // Registro que NÃO é manual (veio da planilha ou de uma estadia): a Gestão tem autonomia de
     // tirá-lo do Plantão de hoje via override "removidos" (não mexe na planilha nem no cadastro).
-    if(!h.manualKey){
-      if(!confirm('Remover '+(h.nome||'este FILHOt')+' do Hotel de hoje?\n\nEle sai da lista de hoje. O cadastro continua salvo. (Registro da planilha/estadia — removido só para hoje.)')) return;
+    if(_acao==='override'){
       if(!DB){ const i=hospedes.indexOf(h); if(i>=0) hospedes.splice(i,1); if(typeof fecharPlantao==='function') fecharPlantao(); renderHosp(); return; }
       const dk=dataKeyAtual();
       DB.ref('auaulandia/removidos/'+dk+'/'+hospRemKey(h)).set({nome:h.nome||'', tutor:h.tutor||'', quem:(typeof quemSou==='function'?quemSou():'-'), ts:Date.now()}).then(function(){
         if(typeof audit==='function') audit('hospede-removido','removeu do Plantão (override)',{pet:h.nome||'',dia:dk});
         if(typeof fecharPlantao==='function') fecharPlantao();
         carregarHospedes();
-      }).catch(function(e){ alert('Erro ao remover: '+(e&&e.message||e)); });
+      }).catch(function(e){
+        if(typeof zAlertao==='function') zAlertao('NÃO CONSEGUI TIRAR DA LISTA',[_nome+' continua no Hotel de hoje.','Motivo: '+((e&&e.message)||e),'Nada foi alterado.'],{botao:'Entendi'});
+      });
       return;
     }
-    if(!confirm('Tem certeza que quer deletar esse peludinho do Hotel?\n\n'+(h.nome||'Este FILHOt')+' sai da lista de hoje. O cadastro dele continua salvo.')) return;
-    if(!confirm('Confirmação final: deletar '+(h.nome||'este FILHOt')+' da AuAulândia de hoje?')) return;
     const dia=h.manualDia||dataKeyAtual();
     if(!DB){ const i=hospedes.indexOf(h); if(i>=0) hospedes.splice(i,1); if(typeof fecharPlantao==='function') fecharPlantao(); renderHosp(); return; }
     DB.ref('auaulandia/manuais/'+dia+'/'+h.manualKey).remove()
@@ -10672,7 +10774,9 @@
         if(typeof fecharPlantao==='function') fecharPlantao();
         carregarManuais();
       })
-      .catch(function(e){ alert('Erro ao deletar: '+e.message); });
+      .catch(function(e){
+        if(typeof zAlertao==='function') zAlertao('NÃO CONSEGUI DELETAR',[_nome+' continua na AuAulândia de hoje.','Motivo: '+((e&&e.message)||e),'Nada foi alterado.'],{botao:'Entendi'});
+      });
   }
   // Lê a aba "Cadastro" (colunas Nome · Tutor · Raça) e cruza pelo nome+tutor
   async function carregarRacas(){
@@ -19339,7 +19443,7 @@
   // Idade ao vivo no cadastro Novo Hóspede (mesma regra do Day Care)
   function ciNovoCalcIdade(){ const el=document.getElementById('ciNovoNasc'); const out=document.getElementById('ciNovoIdade'); if(!el||!out) return; const nasc=(typeof parseNascToISO==='function'?parseNascToISO(el.value):'')||el.value.trim(); out.value=(typeof calcIdade==='function')?calcIdade(nasc):''; }
   function ciNovoNormNasc(){ const el=document.getElementById('ciNovoNasc'); if(!el) return; const iso=(typeof parseNascToISO==='function')?parseNascToISO(el.value):''; if(iso&&typeof isoParaBR==='function') el.value=isoParaBR(iso); }
-  function ciCriarNovoHospede(){
+  function ciCriarNovoHospede(btn){
     if(!gateCadastro()) return;   // LEI do cadastro único — monitor não cadastra
     const nEl=document.getElementById('ciNovoNome'), tEl=document.getElementById('ciNovoTutor'), rEl=document.getElementById('ciNovoRaca'), w=document.getElementById('ciNovoWarn');
     const nome=((nEl&&nEl.value)||'').trim(), tutor=((tEl&&tEl.value)||'').trim(), raca=((rEl&&rEl.value)||'').trim();
@@ -19363,11 +19467,21 @@
       return;
     }
     // Nível 2 — mesmo nome (homônimo), tutor/raça diferentes: pode ser outro FILHOt real. Só avisa.
+    // O aviso vive na PRÓPRIA TELA (o texto em #ciNovoWarn) e a confirmação são dois toques
+    // no botão — nunca janela nativa, que o navegador do tablet pode suprimir e responder
+    // "cancelar" sozinho, deixando a consultora sem entender por que o cadastro não sai.
     const parecido=PELUDINHOS.find(function(p){ return jsNorm(pelNome(p))===jsNorm(nome) && pelKey(p)!==pelKey({n:nome,tutor:tutor}); });
-    if(parecido && !confirm('Já existe "'+nome+'"'+(raca?(' · '+raca):'')+' com o tutor "'+(pelGet(parecido,'tutor')||'sem tutor informado')+'".\n\nÉ um FILHOt diferente, de outra família? OK para cadastrar mesmo assim, ou Cancelar para conferir antes.')){
-      if(w) w.textContent='Cadastro não concluído — confira se não é o mesmo FILHOt já cadastrado.';
+    if(parecido && btn && btn.dataset.armed!=='1'){
+      btn.dataset.armed='1';
+      if(!btn.dataset.label) btn.dataset.label=btn.textContent;
+      btn.textContent='Confirmar — é outro FILHOt, cadastrar mesmo assim';
+      btn.style.background='var(--crm-atencao-text)';
+      if(w) w.innerHTML='Já existe "'+esc(nome)+'"'+(raca?(' · '+esc(raca)):'')+' com o tutor "'+esc(pelGet(parecido,'tutor')||'sem tutor informado')+'". Se for um FILHOt diferente, de outra família, toque de novo no botão para cadastrar. Se for o mesmo, busque acima em vez de duplicar.';
+      clearTimeout(btn._armT);
+      btn._armT=setTimeout(function(){ try{ if(btn.dataset.armed==='1'){ btn.dataset.armed=''; btn.textContent=btn.dataset.label||'Cadastrar e iniciar check-in'; btn.style.background=''; if(w) w.textContent=''; } }catch(e){} }, 12000);
       return;
     }
+    if(btn){ clearTimeout(btn._armT); btn.dataset.armed=''; btn.style.background=''; btn.textContent=btn.dataset.label||btn.textContent; }
     const novo={n:nome,raca:raca,freq:'',tutor:tutor,nasc:nasc,idadeAprox:idadeAprox,corPelo:corPelo,sexo:sexo,castrado:castrado,peso:peso,chip:chip,dias:[]};
     const key=pelKey(novo);
     PELUDINHOS.push(novo);
@@ -19857,7 +19971,15 @@
         const el=document.getElementById('ciJaHospedado');
         if(el) el.innerHTML='<div style="background:#FDECEA;border:2px solid #B3261E;border-radius:14px;padding:14px 16px;margin-bottom:14px">'
           +'<div style="font-weight:800;font-size:17px;color:#B3261E;margin-bottom:4px">✎ Modo CORRIGIR ligado</div>'
-          +'<div style="font-size:14px;color:#234D67;font-weight:600">O que você mudar aqui <strong>substitui</strong> o que estava no check-in de '+esc(e.nome)+' — inclusive a medicação e a alimentação. Ao salvar eu peço <strong>o motivo</strong> e o seu nome, guardo o antes e o depois, e devolvo para a Conferência.</div></div>';
+          +'<div style="font-size:14px;color:#234D67;font-weight:600">O que você mudar aqui <strong>substitui</strong> o que estava no check-in de '+esc(e.nome)+' — inclusive a medicação e a alimentação. Preencha os dois campos abaixo: eu guardo o antes e o depois e devolvo para a Conferência.</div>'
+          // Os campos ficam AQUI, à vista, desde o começo. Antes eles eram pedidos por janela
+          // nativa na hora de salvar — e no tablet essa janela pode ser suprimida, voltando
+          // vazia: a correção era cancelada e ninguém entendia por quê.
+          +'<label for="ciCorrigirMotivo" style="display:block;margin-top:12px;font-size:13.5px;font-weight:800;color:#B3261E">Por que esta informação está sendo alterada? (obrigatório)</label>'
+          +'<input id="ciCorrigirMotivo" type="text" placeholder="Ex.: a tutora ligou às 10h — a alimentação estava errada" style="width:100%;box-sizing:border-box;margin-top:5px;padding:11px;border:2px solid #B3261E;border-radius:10px;font-family:inherit;font-size:15px;font-weight:600;color:#234D67;background:#FFFFFF">'
+          +'<label for="ciCorrigirQuem" style="display:block;margin-top:10px;font-size:13.5px;font-weight:800;color:#B3261E">Seu nome (quem está corrigindo)</label>'
+          +'<input id="ciCorrigirQuem" type="text" value="'+escAttr((typeof quemSou==='function'?quemSou():'')||'')+'" placeholder="Escreva o seu nome" style="width:100%;box-sizing:border-box;margin-top:5px;padding:11px;border:2px solid #B3261E;border-radius:10px;font-family:inherit;font-size:15px;font-weight:600;color:#234D67;background:#FFFFFF">'
+          +'</div>';
         window.scrollTo({top:0,behavior:'smooth'});
       });
     }).catch(function(err){ zAlertao('Não consegui abrir o check-in',[String((err&&err.message)||err)]); });
@@ -20066,6 +20188,43 @@
     });
     try{ if(navigator.vibrate) navigator.vibrate([180,90,180]); }catch(e){}
   }
+  // Mesmo cartaz, com um CAMPO DE TEXTO na tela — o substituto da janela nativa que pedia
+  // texto (motivo, nome). No tablet o navegador pode suprimir a janela nativa e devolver
+  // vazio sozinho: a gravação era cancelada sem ninguém saber. Este cartaz é elemento da
+  // própria página — sempre aparece, e o texto é lido de um input com id.
+  function zCampo(titulo, linhas, op){
+    op=op||{};
+    var cid=op.campoId||'zCampoTexto';
+    var old=document.getElementById('zAlertaoBox'); if(old) old.remove();
+    var d=document.createElement('div'); d.id='zAlertaoBox';
+    d.style.cssText='position:fixed;inset:0;z-index:99999;background:rgba(16,10,8,.78);display:flex;align-items:center;justify-content:center;padding:16px;font-family:Poppins,system-ui,-apple-system,sans-serif';
+    d.innerHTML='<div style="background:#FFFDF6;border-radius:20px;max-width:580px;width:100%;box-shadow:0 24px 70px rgba(0,0,0,.45);overflow:hidden;max-height:92vh;display:flex;flex-direction:column">'
+      +'<div style="background:#B3261E;color:#FFFDF6;padding:20px 22px;font-weight:800;font-size:24px;line-height:1.15">'+esc(titulo)+'</div>'
+      +'<div style="padding:20px 22px;overflow:auto;color:#234D67;font-size:17px;line-height:1.5;font-weight:600">'
+      + (Array.isArray(linhas)?linhas:[linhas]).filter(Boolean).map(function(t){ return '<div style="margin-bottom:10px">'+esc(t)+'</div>'; }).join('')
+      + '<label for="'+escAttr(cid)+'" style="display:block;margin-top:14px;font-size:15px;font-weight:800">'+esc(op.rotulo||'Escreva aqui')+'</label>'
+      + '<input id="'+escAttr(cid)+'" type="text" value="'+escAttr(op.valor||'')+'" placeholder="'+escAttr(op.dica||'')+'" style="width:100%;box-sizing:border-box;margin-top:6px;padding:14px;border:2px solid #234D67;border-radius:12px;font-family:inherit;font-size:17px;font-weight:600;color:#234D67;background:#FFFFFF">'
+      + '<div id="zCampoErro" style="display:none;margin-top:8px;font-size:15px;font-weight:800;color:#B3261E"></div>'
+      +'</div>'
+      +'<div style="padding:0 22px 22px;display:flex;flex-direction:column;gap:9px">'
+      +'<button type="button" id="zCampoOk" style="width:100%;border:0;border-radius:14px;background:'+(op.cor||'#B3261E')+';color:#FFFDF6;font-family:inherit;font-weight:800;font-size:17px;padding:15px;cursor:pointer">'+esc(op.botao||'Confirmar')+'</button>'
+      +'<button type="button" id="zCampoNao" style="width:100%;border:0;border-radius:14px;background:#6b5f4b;color:#FFFDF6;font-family:inherit;font-weight:800;font-size:17px;padding:15px;cursor:pointer">'+esc(op.botaoNao||'Cancelar — não mexer em nada')+'</button>'
+      +'</div></div>';
+    document.body.appendChild(d);
+    var inp=d.querySelector('#'+cid), err=d.querySelector('#zCampoErro');
+    var bNao=d.querySelector('#zCampoNao'); if(bNao) bNao.addEventListener('click',function(){ d.remove(); if(typeof op.aoCancelar==='function') op.aoCancelar(); });
+    var bOk=d.querySelector('#zCampoOk'); if(bOk) bOk.addEventListener('click',function(){
+      var v=(((inp&&inp.value)||'')+'').trim();
+      if(v.length<(op.minimo||0)){
+        if(err){ err.style.display='block'; err.textContent=op.erro||('Escreva pelo menos '+(op.minimo||0)+' letras — é isso que explica, depois, o que aconteceu.'); }
+        try{ if(inp&&inp.focus) inp.focus(); }catch(e){}
+        return;
+      }
+      d.remove(); if(typeof op.fn==='function') op.fn(v);
+    });
+    try{ if(inp&&inp.focus) inp.focus(); }catch(e){}
+    try{ if(navigator.vibrate) navigator.vibrate([180,90,180]); }catch(e){}
+  }
   var ciEditandoId=null; // quando setado, o Salvar ACRESCENTA nesta estadia em vez de criar outra
   function ciBloqueia(motivo, texto, focoId){
     const st=document.getElementById('ci-status');
@@ -20168,10 +20327,20 @@
         zAlertao('NADA MUDOU',['Você abriu o modo corrigir mas não alterou nenhum campo. Ajuste o que estava errado e salve de novo, ou volte.'],{botao:'Voltar e corrigir'});
         return;
       }
-      const _motivo=(prompt('CORREÇÃO — por que esta informação está sendo alterada?\n\nO motivo fica gravado no check-in e a Conferência é reaberta.\n\nEx.: a tutora ligou às 10h, o filho havia passado a alimentação errada.','')||'').trim();
-      if(!_motivo){ zAlertao('CORREÇÃO CANCELADA',['Sem o motivo eu não altero o check-in. Nada foi mudado — a ficha continua preenchida aqui na tela.'],{botao:'Entendi'}); return; }
-      const _quem=(prompt('Seu nome (quem está corrigindo):', (typeof quemSou==='function'?quemSou():'')||'')||'').trim();
-      if(!_quem){ zAlertao('CORREÇÃO CANCELADA',['Falta dizer quem está corrigindo. Nada foi alterado.'],{botao:'Entendi'}); return; }
+      // Motivo e nome vêm dos campos que já estão à vista no cartão vermelho "Modo CORRIGIR"
+      // (ver ciCorrigirExistente) — nunca de janela nativa no caminho de gravar.
+      const _motivo=(((document.getElementById('ciCorrigirMotivo')||{}).value)||'').trim();
+      if(!_motivo){
+        zAlertao('CORREÇÃO NÃO SALVA',['Falta dizer POR QUE esta informação está sendo alterada.','O campo está no cartão vermelho, no alto da tela. Nada foi mudado — a ficha continua preenchida aqui.'],
+          {botao:'Escrever o motivo', aoFechar:function(){ try{ const _el=document.getElementById('ciCorrigirMotivo'); if(_el){ _el.scrollIntoView({behavior:'smooth',block:'center'}); _el.focus(); } }catch(e){} }});
+        return;
+      }
+      const _quem=(((document.getElementById('ciCorrigirQuem')||{}).value)||'').trim();
+      if(!_quem){
+        zAlertao('CORREÇÃO NÃO SALVA',['Falta dizer QUEM está corrigindo.','O campo está no cartão vermelho, no alto da tela. Nada foi alterado.'],
+          {botao:'Escrever o meu nome', aoFechar:function(){ try{ const _el=document.getElementById('ciCorrigirQuem'); if(_el){ _el.scrollIntoView({behavior:'smooth',block:'center'}); _el.focus(); } }catch(e){} }});
+        return;
+      }
       pacote.correcao={motivo:_motivo, quem:_quem, diff:_diff};
       __ciTravar(true);
       __ciGravar('corrigir', ciCorrigindoId, pacote);
@@ -21721,7 +21890,7 @@
       +'<div class="cf-med-det">'+base+'</div>'
       +'<div class="cf-med-actions">'+(ja
         ? '<span class="p-pill warn">Recepção já avisada — acompanhe em Recepção</span>'
-        : '<button type="button" class="btn btn-primary" style="padding:7px 14px;font-size:12.5px" onclick="cfAvisarFaltaMed('+idx+')">Avisar a Recepção</button>')+'</div>';
+        : '<button type="button" class="btn btn-primary" style="padding:7px 14px;font-size:12.5px" onclick="cfAvisarFaltaMed('+idx+',this)">Avisar a Recepção</button>')+'</div>';
   }
   // Liga o remédio da estadia ao item vivo da agenda (para o aviso ser rastreado no MESMO item que
   // a Recepção resolve). Se não achar pelo nome, cai numa chave estável por nome — o aviso continua
@@ -21740,12 +21909,24 @@
     var r=cfMedRefs(m); if(!r.key) return null;
     return (typeof avisoAbertoDoItem==='function')?avisoAbertoDoItem(r.key,r.itemId):null;
   }
-  function cfAvisarFaltaMed(idx){
+  // Dois toques na PRÓPRIA TELA — nunca janela nativa. Isto é remédio: se o navegador do
+  // tablet suprime a janela e responde "cancelar" sozinho, a Recepção nunca fica sabendo que
+  // falta comprimido para cobrir a estadia, e ninguém percebe.
+  function cfAvisarFaltaMed(idx, btn){
     var meds=Array.isArray(cfEstadia.medicacao)?cfEstadia.medicacao:[];
     var m=meds[idx]; if(!m) return;
     var c=medCoberturaEstadia(m, cfEstadia.entrada, cfEstadia.saida); if(!c||c.cobre) return;
     if(!DB){ alert('Banco conectando… tente de novo em instantes.'); return; }
-    if(!confirm('Avisar a Recepção que faltam '+c.deficit+' '+medUnidLbl(c.deficit,c.unidade)+' de "'+(m.nome||'medicamento')+'" para cobrir a estadia?')) return;
+    if(btn && btn.dataset.armed!=='1'){
+      btn.dataset.armed='1';
+      if(!btn.dataset.label) btn.dataset.label=btn.textContent;
+      btn.textContent='Confirmar — avisar que faltam '+c.deficit+' '+medUnidLbl(c.deficit,c.unidade)+' de '+(m.nome||'medicamento');
+      btn.style.background='var(--crm-atencao-text)';
+      clearTimeout(btn._armT);
+      btn._armT=setTimeout(function(){ try{ if(btn.dataset.armed==='1'){ btn.dataset.armed=''; btn.textContent=btn.dataset.label||'Avisar a Recepção'; btn.style.background=''; } }catch(e){} }, 6000);
+      return;
+    }
+    if(btn){ clearTimeout(btn._armT); btn.dataset.armed=''; btn.style.background=''; btn.textContent=btn.dataset.label||'Avisar a Recepção'; }
     var r=cfMedRefs(m);
     criarAvisoEstoque({key:r.key, itemId:r.itemId, medNome:m.nome||'', hospNome:(cfHosp&&cfHosp.nome)||'',
       tutor:(cfHosp&&cfHosp.tutor)||'', modo:'contavel', unidade:c.unidade, restante:c.trazido,
@@ -21788,7 +21969,7 @@
     var el=document.getElementById('cfOcorrList'); if(!el) return;
     var lista=cfOcorrListaDe();
     if(!lista.length){ el.innerHTML='<div class="hint" style="margin-bottom:0">Nenhuma ocorrência registrada.</div>'; return; }
-    el.innerHTML=lista.map(function(o){ return '<div class="vet-hist-line" style="display:flex;align-items:center;gap:8px"><span style="flex:1">• '+escAttr(o.texto||'')+' <span style="color:var(--muted)">(— '+escAttr(o.quem||'-')+(o.ts?(' · '+new Date(o.ts).toLocaleString('pt-BR')):'')+')</span></span><button type="button" class="pert-row-del" title="Remover" onclick="cfRemoverOcorrencia(\''+o._id+'\')">&#10005;</button></div>'; }).join('');
+    el.innerHTML=lista.map(function(o){ return '<div class="vet-hist-line" style="display:flex;align-items:center;gap:8px"><span style="flex:1">• '+escAttr(o.texto||'')+' <span style="color:var(--muted)">(— '+escAttr(o.quem||'-')+(o.ts?(' · '+new Date(o.ts).toLocaleString('pt-BR')):'')+')</span></span><button type="button" class="pert-row-del" title="Remover" onclick="cfRemoverOcorrencia(\''+o._id+'\',this)">&#10005;</button></div>'; }).join('');
   }
   function cfAddOcorrencia(){
     if(!cfEstadiaId||!DB) return;
@@ -21802,13 +21983,27 @@
       if(typeof audit==='function') audit('conferencia-ocorrencia',cfEstadiaId,{pet:(cfHosp&&cfHosp.nome)||'',texto:txt});
     }).catch(function(e){ alert('Erro ao registrar: '+(e&&e.message||e)); });
   }
-  function cfRemoverOcorrencia(id){
+  // Dois toques na PRÓPRIA TELA — nunca janela nativa. Ocorrência apagada não volta.
+  function cfRemoverOcorrencia(id, btn){
     if(!cfEstadiaId||!DB||!id) return;
-    if(!confirm('Remover esta ocorrência?')) return;
+    if(btn && btn.dataset.armed!=='1'){
+      btn.dataset.armed='1';
+      if(!btn.dataset.label) btn.dataset.label=btn.textContent;
+      btn.textContent='Confirmar';
+      btn.title='Toque de novo para remover esta ocorrência';
+      btn.style.background='var(--crm-atencao-text)';
+      clearTimeout(btn._armT);
+      btn._armT=setTimeout(function(){ try{ if(btn.dataset.armed==='1'){ btn.dataset.armed=''; btn.textContent=btn.dataset.label||'✕'; btn.title='Remover'; btn.style.background=''; } }catch(e){} }, 6000);
+      return;
+    }
+    if(btn){ clearTimeout(btn._armT); btn.dataset.armed=''; btn.style.background=''; btn.textContent=btn.dataset.label||'✕'; }
     DB.ref('auaulandia/estadias/'+cfEstadiaId+'/ocorrencias/'+id).remove().then(function(){
       if(cfEstadia&&cfEstadia.ocorrencias) delete cfEstadia.ocorrencias[id];
       renderCfOcorrencias();
-    }).catch(function(){});
+    }).catch(function(e){
+      if(typeof zAlertao==='function') zAlertao('NÃO REMOVI A OCORRÊNCIA',
+        ['A ocorrência continua registrada.','Motivo: '+((e&&e.message)||e),'Nada foi alterado.'],{botao:'Entendi'});
+    });
   }
   // ---- Fotos da conferência (mesmo padrão das fotos da consulta do Cuidado Vet) ----
   function cfAddFoto(e){
