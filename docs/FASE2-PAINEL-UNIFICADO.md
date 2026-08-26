@@ -27,16 +27,35 @@ construído. Ordem dentro de cada fatia = ordem na tela (o mais urgente em cima)
 
 Quem: monitor, plantonista, aprendiz (cada um vê SÓ o seu).
 
+**Decisão da Adriana (26/ago):** o monitor NÃO vê "tempo por etapa" — isso é ferramenta da Gestão para
+saber se o protocolo está sendo burlado. O que o monitor vê é **o que ele tem que fazer**: o horário dele
+(entrada, almoço, saída) e as atividades do dia; e onde está falhando no que é dele (protocolo, pontos,
+avisos que ficaram com ele).
+
 | Card | O que mostra | Origem |
 |---|---|---|
+| Meu dia | entrada · almoço · saída de HOJE, e as atividades do dia na ordem, com horário | [novo E] escala por monitor + plano do dia (ver "Planos 1, 2, 3") |
+| Plano de hoje | "Plano 2 — a Wandela está de folga": qual plano vale hoje e o que muda para mim | [novo E] |
+| Meu protocolo hoje | check-ins do corpo que eu fiz / que faltam no meu turno, passos cumpridos | [novo A] recorte por pessoa de `porPessoa` (`renderPainelDia`) + `protoStatus()` |
 | Meus pontos do check-out | total no mês, bolsas perfeitas, onde perdi ponto | [reuso 13] `coMeusPontos()` — o único bloco pessoal que já existe; é o molde |
-| Meu protocolo hoje | check-ins do corpo que eu fiz / que faltam no meu turno, passos cumpridos | [novo A] recorte por pessoa do `porPessoa` de `renderPainelDia()` + `protoStatus()` |
-| Meu tempo por etapa | montagem / almoço / finalização — o meu tempo de hoje vs. minha média | [novo A] recorte por pessoa de `RITMO_DADOS` (`daycare/tempo-atividade`) |
-| Avisos que ficaram comigo | aviso ao grupo/vet/tutor que eu marquei e NÃO saiu (ok:false) com botão reenviar | [novo B] leitura de `daycare/avisos-*` filtrada por `quem` — depende de o registro gravar quem tentou |
-| Minha semana | os 4 números acima, semana a semana (últimas 4) | [novo C] `evolucaoPorColaborador(nome, semanas)` — mesma função que serve à Márcia |
+| Avisos que ficaram comigo | aviso ao grupo/vet/tutor que eu marquei e NÃO saiu (ok:false), com botão reenviar | [novo B] `daycare/avisos-*` filtrado por `quem` |
 
-Sem nomes de outras pessoas, sem dinheiro, sem ranking público. O feedback é para corrigir a rota, não
-para expor.
+Sem tempo por etapa, sem nomes de outras pessoas, sem dinheiro, sem ranking público.
+
+#### Planos 1, 2, 3 — o dia "normal" e os dias em que alguém faltou (requisito novo, 26/ago)
+
+Adriana: "cada monitor tem horário de entrada, almoço e saída e as atividades do dia. Temos que ter
+planos modificados: plano 1, 2 ou 3 (alguém faltou, alguém de férias)." Hoje isso não existe no app —
+é dado novo, não tela nova:
+
+- `daycare/config/escala/{monitor}` — entrada, almoço, saída (padrão).
+- `daycare/config/planos/{plano}` — nome ("Plano 1 — completo", "Plano 2 — um a menos", "Plano 3 —
+  férias"), e para cada monitor a lista de atividades com horário.
+- `daycare/plano-do-dia/{dia}` — qual plano vale hoje + motivo + quem definiu (Gestão/Supervisão).
+
+**Respostas da Adriana (26/ago):** o plano é **por monitor** ("estamos construindo isso"): Octávio = monitoria,
+guardar os pertences, 2º horário de almoço; Wandela = check-in de corpo e pertences, check-in de hóspedes.
+**Quem define o plano do dia é sempre a Márcia.** Cada monitor vê só a fatia dele.
 
 ### 2 · Supervisão (Amanda) — "a Recepção e a conversa com o tutor"
 
@@ -51,7 +70,7 @@ para expor.
 | Alergia a confirmar | [reuso 7] |
 | Cadastro incompleto (ficha do tutor e do FILHOt) | [reuso 4 — `cadastroFaltando`] |
 | Renovação de planos e carteira | [reuso 9] |
-| Acertos — **só a parte sem valor em R$** (quem dobrou, quantas noites) | [reuso 10, recortado] — o valor em R$ continua fora da Supervisão (decisão anterior da Adriana) |
+| Acerto do cliente, **na ficha de cada FILHOt**: "Fofucho — acertar plano R$ 5.000,00" — valor isolado, sem soma nem cálculo | [reuso 9 — ficha/carteira] — **decisão 26/ago: a Supervisão de loja cobra o cliente, então vê o valor, mas só isolado na ficha** |
 | Orçamento de hospedagem | [reuso 18] |
 
 ### 3 · Gestão (Márcia) — "o Day Care, a Auaulândia e o time"
@@ -64,14 +83,14 @@ Tudo da Supervisão **mais**:
 | Quem fez o quê / tempo por etapa por pessoa (visão do dia) | [reuso 14] `renderPainelDia()` |
 | Ritmo do Time (agregado) | [reuso 11] |
 | Bolsa do check-out — pontos do mês, todos os monitores | [reuso 12] |
-| Acerto das plantonistas **com valor** | [reuso 10] (`so-master` hoje; passa a `PERM` "ver-acerto-valor": gestao, diretoria) |
+| Acerto das plantonistas **com R$** — quem dobrou, quantas noites, valor por pessoa, soma do mês, quanto pagamos | [reuso 10] completo — **decisão 26/ago (corrigida): a Márcia paga as plantonistas; a Adriana só confere** |
 | Entrou e saiu no mês | [reuso 16] `movimentoDoMes()` — já existe, só muda de lugar |
 | **Evolução de cada colaborador** — série semana a semana: protocolo cumprido, tempo por etapa, pontos, avisos não enviados | [novo C] `evolucaoPorColaborador()` sobre `daycare/auditoria`, `daycare/pontos-checkout`, `daycare/tempo-atividade`, agrupados por semana ISO |
 | Dashboard Day Care | [reuso 17] |
 
 ### 4 · Diretoria (Adriana) — tudo
 
-Herda as três fatias. Único acréscimo: o caderno de auditoria com filtro "gravações que FALHARAM"
+Herda as três fatias (o acerto das plantonistas aparece como **conferência** — mesmos números da Gestão). Único acréscimo: o caderno de auditoria com filtro "gravações que FALHARAM"
 (os eventos `gravacao-FALHOU` criados em 25/ago) — para a Adriana ver se o sistema está perdendo alguma
 coisa em silêncio. [novo D, baixo esforço: filtro sobre `daycare/auditoria`]
 
@@ -86,7 +105,7 @@ Não é tela nova: é a fatia Gestão/Diretoria aberta no computador. Sem "modo 
 2. **Um relógio só.** O Painel usa UMA data (`painelDate`) para todos os cards. As funções que hoje leem
    `selectedDate` (medicação atrasada, alertas do plantão) passam a receber a data como parâmetro.
 3. **Permissão em um lugar só.** Cada card entra na tabela `PERM` (Centro de Permissões da Fase 1):
-   `painel-monitor`, `painel-supervisao`, `painel-gestao`, `painel-diretoria`, `ver-acerto-valor`.
+   `painel-monitor`, `painel-supervisao`, `painel-gestao`, `painel-diretoria`, `ver-acerto-plantonistas` (gestao, diretoria — como hoje), `ver-valor-plano-na-ficha` (supervisor, gestao, diretoria).
    Nada de classe `so-*` nova. O harness prova, papel a papel, o que aparece e o que não aparece.
 4. **Custo de leitura sob controle (Firebase Spark).** Cards usam os caches que já existem por ouvinte
    (`PELUDINHOS`, `CF_ESTADIAS`, `MED_AGENDA_TODOS`, `AVISOS_ESTOQUE_CACHE`…). Os blocos pesados
@@ -110,7 +129,12 @@ Não é tela nova: é a fatia Gestão/Diretoria aberta no computador. Sem "modo 
 Recomendação: começar pelo 2.1 — é a tese da Adriana em forma de tela, é o menor risco, e é o que o
 time sente primeiro.
 
-## O que preciso da Adriana
+## Aprovado pela Adriana em 26/ago ("pode ir na sequência")
+
+Ordem 2.1 → 2.4 mantida. Próximo artefato: **esboço visual** das 4 fatias na cara do app, antes de código.
+O card "Meu dia"/"Plano de hoje" espera as duas perguntas dos Planos 1, 2, 3.
+
+## O que foi perguntado (histórico)
 
 1. As quatro fatias estão certas? Algum card sobrando ou faltando?
 2. Confirma que o **valor em R$ do acerto** continua fora da Supervisão?
