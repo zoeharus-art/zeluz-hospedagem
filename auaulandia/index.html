@@ -716,6 +716,19 @@
   table.pel tbody td{padding:11px 14px;border-bottom:1px solid #f1ebde;color:var(--z-blue-deep);white-space:nowrap}
   /* Tutor pode ter nome longo: deixa quebrar em 2 linhas e reserva largura, para nunca ser cortado pela margem. */
   table.pel .pel-tutor{white-space:normal;min-width:150px;word-break:break-word;padding-right:16px}
+  /* 26/ago/2026 — no celular a tabela não pode esconder coluna: sem largura mínima, texto quebra, e a rolagem (se sobrar) fica visível */
+  @media (max-width:600px){
+    table.pel{min-width:0}
+    table.pel thead th,table.pel tbody td{white-space:normal;padding:9px 8px;font-size:12.5px;overflow-wrap:anywhere}
+    /* o Tutor reserva 150px no desktop; no celular é essa reserva que empurra a última coluna para fora da tela */
+    table.pel .pel-tutor{min-width:0;padding-right:8px}
+    /* os dias da semana viram duas linhas de chips em vez de uma faixa que não cabe */
+    table.pel tbody td.dias-cell{white-space:normal}
+    /* dinheiro e data não podem quebrar no meio: "R$ 1.404,00" partido em duas linhas vira outro número aos olhos */
+    table.pel td.num,table.pel td.data{white-space:nowrap;overflow-wrap:normal}
+    /* se ainda sobrar tabela para rolar, a sombra na borda direita avisa que existe mais coluna ali */
+    .pel-wrap{background:var(--z-white) linear-gradient(to left,rgba(35,77,103,.12),transparent 18px) right/18px 100% no-repeat}
+  }
   table.pel tbody tr:last-child td{border-bottom:none}
   table.pel tbody tr:hover{background:rgba(222,180,40,.07)}
   table.pel .pel-nome{font-weight:700;color:var(--z-blue)}
@@ -9548,7 +9561,7 @@
   // Agora existe um carimbo: esta constante é a versão que o aparelho está rodando, e o
   // Firebase guarda a versão publicada. Quando as duas diferem, aparece o aviso — mas
   // NUNCA recarrega sozinho: recarregar no meio de um check-in perderia o trabalho.
-  const APP_VERSAO='2026-08-26-04';
+  const APP_VERSAO='2026-08-26-05';
   function vigiarVersao(){
     if(!DB) return;
     try{
@@ -22824,6 +22837,16 @@
   var CO_PT_MES={};
   function coMesAtual(){ var d=new Date(), p=function(x){ return String(x).padStart(2,'0'); }; return d.getFullYear()+'-'+p(d.getMonth()+1); }
   function coMesNome(){ return (typeof MES_NOME!=='undefined'&&MES_NOME)?MES_NOME[(new Date()).getMonth()]:''; }
+  // 26/ago/2026 — a frase do placar estava dizendo "7 de 9 bolsas desceu redondo": verbo no
+  // singular com sujeito no plural. Quem concorda com o verbo é o número de bolsas certas
+  // (perfeitas), e a preposição vira "das" quando se recorta um grupo maior. Função pura de
+  // propósito: é texto que o monitor lê todo dia e que os testes conferem sem abrir tela.
+  function bolsasRedondasTexto(perfeitas, total){
+    var p=Number(perfeitas)||0, t=Number(total)||0;
+    if(p===0) return t===1 ? 'a bolsa não desceu redondo' : 'nenhuma das '+t+' bolsas desceu redondo';
+    if(t===1) return '1 de 1 bolsa desceu redondo';
+    return p+' das '+t+' bolsas desce'+(p>1?'ram':'u')+' redondo';
+  }
   function coMeusPontos(){
     var el=document.getElementById('coMeusPontos'); if(!el||!DB) return;
     if(coModo!=='monitor'){ el.innerHTML=''; return; }
@@ -22841,7 +22864,7 @@
       el.innerHTML='<div class="card" style="border-left:4px solid '+(tot===maximo?'var(--crm-ok)':'var(--z-gold)')+'">'
         +'<div style="font-size:16px;font-weight:800;color:var(--z-blue)">'+escAttr(eu)+', você tem <span style="color:var(--z-gold-deep)">'+tot+' pontos</span> em '+escAttr(coMesNome())+'.</div>'
         +'<div style="font-size:13px;font-weight:700;color:var(--muted);margin-top:3px">'
-        +perfeitas+' de '+meus.length+' bolsa'+(meus.length>1?'s':'')+' desceu redondo'
+        +bolsasRedondasTexto(perfeitas, meus.length)
         +(tot===maximo?' — nenhuma volta até agora.':(' · '+(maximo-tot)+' ponto(s) perdido(s) em '+perdidos.length+' saída(s).'))+'</div>'
         +(perdidos.length
           ? ('<details style="margin-top:7px"><summary style="cursor:pointer;font-weight:800;color:var(--z-blue);font-size:13px">onde perdi</summary>'

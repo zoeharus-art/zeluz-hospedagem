@@ -1858,6 +1858,25 @@ async function main() {
   }
   console.log('');
 
+  // ---------------------------------------------------------------------------------
+  // Norma culta — a frase do placar de quem monta a bolsa.
+  // Dizia "7 de 9 bolsas desceu redondo": verbo no singular com sujeito no plural. Quem
+  // manda no verbo é o número de bolsas certas, e "de" vira "das" ao recortar um grupo.
+  // O monitor lê essa frase todo dia; texto errado na tela é a Zêluz parecendo amadora.
+  console.log('Norma culta — frase das bolsas:');
+  {
+    const f = ctx.bolsasRedondasTexto;
+    const igual = (p, t, esperado) =>
+      check('bolsasRedondasTexto(' + p + ', ' + t + ') = "' + esperado + '"', f(p, t) === esperado, f(p, t));
+    igual(1, 1, '1 de 1 bolsa desceu redondo');
+    igual(1, 9, '1 das 9 bolsas desceu redondo');
+    igual(7, 9, '7 das 9 bolsas desceram redondo');
+    igual(9, 9, '9 das 9 bolsas desceram redondo');
+    igual(0, 9, 'nenhuma das 9 bolsas desceu redondo');
+    igual(0, 1, 'a bolsa não desceu redondo');
+  }
+  console.log('');
+
   // ---- resumo ----
   console.log('== Resultado: ' + pass + ' ok, ' + fail + ' falha(s) ==');
   if (fail) { console.log('\nFalhas:'); fails.forEach((f) => console.log('  - ' + f)); }

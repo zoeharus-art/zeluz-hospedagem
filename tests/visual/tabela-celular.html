@@ -1,0 +1,1645 @@
+<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Medição — tabelas no celular</title><style>
+  :root{
+    /* MARCA */
+    --z-gold:#DEB428; --z-gold-light:#E5C353; --z-gold-deep:#B8961F;
+    --z-blue:#234D67; --z-blue-deep:#1A3A4F; --z-blue-soft:#3A6A85;
+    --z-cream:#FFFDF6; --z-cream-warm:#F9F5EC; --z-white:#FFFFFF;
+    /* ECOSSISTEMA */
+    --z-daycare:#E08856; --z-auaulandia:#5AABB5; --z-emporio:#5E9B6B;
+    --z-spa:#B8A9C9; --z-vetcare:#2E7D8A;
+    /* STATUS */
+    --crm-critico:#C0392B; --crm-atencao:#F1C40F; --crm-atencao-text:#8A6D00;
+    --crm-ok:#27AE60; --crm-info:#2980B9;
+    /* base */
+    --line:#e7e0d2; --muted:#7c8a93;
+    --font-ui:'Inter',sans-serif; --font-marca:'Inter',sans-serif; --font-accent:'Inter',sans-serif;
+    --radius:14px; --shadow:0 4px 18px rgba(35,77,103,.08); --shadow-lg:0 12px 34px rgba(35,77,103,.16);
+    --sidebar:268px;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:var(--font-ui);background:var(--z-cream);color:var(--z-blue-deep);-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale}
+  /* Refino tipográfico estilo Apple: tracking apertado nos títulos e números grandes */
+  h1,h2,h3,.kpi .v,.p-score-num,.dc-stat b,.hosp-count .n,.mobtop .nm{letter-spacing:-.022em}
+
+  /* ===== LOGIN ===== */
+  .login-screen{position:fixed;inset:0;z-index:200;display:flex;align-items:center;justify-content:center;
+    background:radial-gradient(120% 80% at 50% 0%,rgba(222,180,40,.12),transparent 55%),linear-gradient(165deg,#2A597A,#1A3A4F);padding:24px}
+  .login-box{background:var(--z-cream);border-radius:22px;padding:34px 30px;width:100%;max-width:360px;text-align:center;
+    box-shadow:0 24px 70px rgba(0,0,0,.35)}
+  .login-logo{width:160px;max-width:70%;height:auto;margin:0 auto 4px;display:block}
+  .login-sub{font-size:11px;letter-spacing:1.4px;text-transform:uppercase;color:var(--muted);font-weight:600;margin-bottom:22px}
+  .login-title{font-size:16px;font-weight:700;color:var(--z-blue);margin-bottom:16px}
+  #loginPwd{width:100%;text-align:center;font-size:26px;letter-spacing:8px;font-family:var(--font-ui);font-weight:700;
+    color:var(--z-blue);background:var(--z-white);border:2px solid var(--line);border-radius:14px;padding:14px;outline:none}
+  #loginPwd:focus{border-color:var(--z-gold)}
+  .login-btn{width:100%;margin-top:14px;background:var(--z-blue);color:var(--z-cream);border:none;border-radius:14px;
+    padding:14px;font-family:var(--font-ui);font-weight:700;font-size:15px;cursor:pointer}
+  .login-btn:hover{background:#1b3d52}
+  .login-err{min-height:20px;margin-top:10px;font-size:13px;font-weight:600;color:var(--crm-critico)}
+  .who-user{display:flex;align-items:center;justify-content:space-between;gap:8px}
+  .who-user #whoName{font-size:13px;font-weight:700}
+  .who-sair{background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.2);color:var(--z-cream);
+    font-family:var(--font-ui);font-weight:600;font-size:12px;padding:6px 12px;border-radius:8px;cursor:pointer}
+  .who-sair:hover{background:rgba(255,255,255,.2)}
+
+  /* ===================== SIDEBAR ===================== */
+  .sidebar{
+    position:fixed;top:0;left:0;bottom:0;width:var(--sidebar);
+    background:
+      radial-gradient(120% 60% at 20% 0%, rgba(222,180,40,.10), transparent 60%),
+      radial-gradient(90% 50% at 100% 100%, rgba(58,106,133,.45), transparent 55%),
+      linear-gradient(165deg,#2A597A 0%,#234D67 45%,#1A3A4F 100%);
+    color:var(--z-cream);display:flex;flex-direction:column;z-index:50;
+    transition:transform .25s ease;overflow:hidden;
+  }
+  /* watermark do símbolo — tira o "chapado" sem mudar a cor do DS */
+  .sidebar::after{
+    content:'';position:absolute;right:-34px;bottom:-26px;width:200px;height:200px;
+    background:url('assets/simbolo.png') no-repeat center/contain;
+    opacity:.07;pointer-events:none;filter:brightness(0) invert(1);
+  }
+  .brand{display:flex;align-items:center;justify-content:center;padding:26px 16px 10px;position:relative;z-index:1}
+  .brand-logo{width:210px;max-width:92%;height:auto;display:block;filter:drop-shadow(0 2px 8px rgba(0,0,0,.25))}
+  .brand-sub{text-align:center;font-size:10.5px;letter-spacing:1.5px;text-transform:uppercase;
+    opacity:.7;font-weight:600;margin:0 0 8px}
+
+  .brand-sub{position:relative;z-index:1}
+  .nav{flex:1;min-height:0;overflow-y:auto;padding:8px 12px;scrollbar-width:thin;position:relative;z-index:1}
+  .who{position:relative;z-index:1}
+  .nav .grp{font-size:10px;text-transform:uppercase;letter-spacing:1.2px;opacity:.5;font-weight:700;margin:16px 12px 7px}
+  .nav a{
+    display:flex;align-items:center;gap:12px;padding:11px 13px;border-radius:11px;
+    color:var(--z-cream);text-decoration:none;font-size:14px;font-weight:500;
+    opacity:.82;transition:.16s;cursor:pointer;margin-bottom:2px;
+  }
+  .nav a:hover{background:rgba(255,255,255,.07);opacity:1}
+  .nav a.active{background:var(--z-gold);color:var(--z-blue);opacity:1;font-weight:700;box-shadow:var(--shadow)}
+  .nav a svg{width:19px;height:19px;flex:0 0 auto}
+  .nav a .soon{margin-left:auto;font-size:9px;background:rgba(255,255,255,.14);padding:2px 7px;border-radius:999px;font-weight:600;letter-spacing:.3px}
+
+  /* ===== Accordion (menu sanfona) ===== */
+  .nav .acc{margin-bottom:2px}
+  .nav a.nav-parent{position:relative}
+  .acc-caret{margin-left:auto;width:0;height:0;border-left:5px solid currentColor;
+    border-top:4px solid transparent;border-bottom:4px solid transparent;opacity:.7;
+    transition:transform .18s ease;flex:0 0 auto}
+  .acc.acc-open > .nav-parent .acc-caret{transform:rotate(90deg)}
+  .acc:not(.acc-open) > .acc-panel{display:none}
+  .dcsub-head{cursor:pointer;display:flex;align-items:center;justify-content:space-between;user-select:none}
+  .dcsub-caret{display:inline-flex;transition:transform .2s;opacity:.65}
+  .dcsub-caret svg{width:13px;height:13px}
+  .dcsub.dcsub-open > .dcsub-head .dcsub-caret{transform:rotate(90deg)}
+  .dcsub-panel{overflow:hidden;max-height:0;transition:max-height .25s ease}
+  .dcsub.dcsub-open > .dcsub-panel{max-height:1500px}
+  .acc-panel{margin:1px 0 5px}
+  .acc-panel > a{margin-left:10px}
+  .acc.acc-open > .nav-parent{background:rgba(255,255,255,.06);opacity:1}
+  /* botão de recolher a barra inteira */
+  .nav-collapse-btn{display:flex;align-items:center;justify-content:flex-end;gap:8px;width:100%;
+    background:none;border:none;color:var(--z-cream);opacity:.5;cursor:pointer;padding:0 8px 8px;font:inherit}
+  .nav-collapse-btn:hover{opacity:1}
+  .nav-collapse-btn svg{width:18px;height:18px;transition:transform .2s ease}
+  body.nav-collapsed .nav-collapse-btn svg{transform:rotate(180deg)}
+  /* barra recolhida — só desktop (mobile já usa off-canvas) */
+  @media(min-width:861px){
+    body.nav-collapsed{--sidebar:76px}
+    body.nav-collapsed .brand{padding:18px 6px 6px}
+    body.nav-collapsed .brand-logo{display:none}
+    body.nav-collapsed .brand-sub,
+    body.nav-collapsed .who,
+    body.nav-collapsed .nav .grp,
+    body.nav-collapsed .subnav,
+    body.nav-collapsed .nav a > span:not([data-icon]),
+    body.nav-collapsed .nav a .soon,
+    body.nav-collapsed .acc-caret{display:none}
+    body.nav-collapsed .nav a,
+    body.nav-collapsed .nav a.nav-parent{justify-content:center;padding:11px 0;gap:0}
+    body.nav-collapsed .acc-panel > a{margin-left:0}
+    body.nav-collapsed .nav-collapse-btn{justify-content:center}
+  }
+
+  .who{padding:13px 16px;border-top:1px solid rgba(255,255,255,.1)}
+  .who .lab{font-size:10px;opacity:.6;font-weight:600;text-transform:uppercase;letter-spacing:.6px;margin-bottom:6px}
+  .who select{
+    width:100%;font-family:var(--font-ui);font-size:13px;font-weight:600;
+    background:rgba(255,255,255,.1);color:var(--z-cream);border:1px solid rgba(255,255,255,.18);
+    border-radius:9px;padding:8px 10px;cursor:pointer;
+  }
+  .who select option{color:var(--z-blue)}
+
+  /* ===================== TOPO MOBILE ===================== */
+  .mobtop{display:none;position:sticky;top:0;z-index:40;background:var(--z-blue);color:var(--z-cream);
+    padding:12px 16px;align-items:center;gap:12px}
+  .mobtop button{background:transparent;border:none;color:var(--z-cream);font-size:22px;cursor:pointer}
+  .mobtop .nm{font-family:var(--font-marca);font-weight:800;font-size:17px}
+
+  /* ===================== MAIN ===================== */
+  .main{margin-left:var(--sidebar);min-height:100vh}
+  .head{
+    background:var(--z-cream-warm);border-bottom:1px solid var(--line);
+    padding:18px 26px;display:flex;align-items:center;gap:16px;position:sticky;top:0;z-index:20;
+  }
+  .head h1{font-size:21px;font-weight:700;color:var(--z-blue);flex:1}
+  .head h1 small{display:block;font-size:12px;font-weight:500;color:var(--muted);margin-top:2px}
+  .search{
+    background:var(--z-white);border:1.5px solid var(--line);border-radius:999px;
+    padding:9px 16px;font-family:var(--font-ui);font-size:13.5px;color:var(--z-blue);width:230px;outline:none;
+  }
+  .search:focus{border-color:var(--z-gold)}
+  .av{width:40px;height:40px;border-radius:50%;background:var(--z-blue);color:var(--z-cream);
+    display:grid;place-items:center;font-weight:700;font-size:15px;flex:0 0 auto}
+
+  .view{padding:26px;display:none;max-width:1100px}
+  .view.active{display:block;animation:fade .25s ease}
+  @keyframes fade{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+
+  /* ===== cards peludinhos (Início) ===== */
+  .pets-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(165px,1fr));gap:16px}
+  .pet{
+    position:relative;
+    background:var(--z-white);border:1px solid var(--line);border-radius:var(--radius);
+    padding:18px 14px;text-align:center;cursor:pointer;transition:.18s;box-shadow:var(--shadow);
+  }
+  .pet:hover{transform:translateY(-3px);box-shadow:var(--shadow-lg)}
+  .pet .ph{width:74px;height:74px;border-radius:50%;margin:0 auto 11px;display:grid;place-items:center;
+    font-weight:800;font-size:26px;color:var(--z-white);font-family:var(--font-marca)}
+  .pet .nm{font-weight:700;font-size:15px;color:var(--z-blue)}
+  .pet .br{font-size:11.5px;color:var(--muted);margin-top:2px}
+  .pet .tag{display:inline-block;margin-top:9px;font-size:10px;font-weight:700;padding:3px 10px;border-radius:999px;
+    background:rgba(224,136,86,.14);color:#a85a2e;letter-spacing:.3px}
+  .pet.add{display:grid;place-items:center;border:2px dashed var(--z-gold);background:var(--z-gold-light)}
+  .pet.add:hover{background:var(--z-gold)}
+  .pet.add .plus{font-size:30px;color:var(--z-gold-deep);font-weight:300}
+  .pet.add .t{font-size:13px;font-weight:700;color:var(--z-blue-soft);margin-top:6px}
+
+  /* ===== DASHBOARD DO INÍCIO (Adriana, 04/ago/2026: "sem estrutura... horrível") =====
+     Regra do redesenho: hierarquia antes de enfeite. Uma seção por pergunta, com
+     sobrancelha + título; a cor entra só onde ela informa (urgência, ecossistema).
+     Nada de borda grossa colorida em tudo — isso é o que fazia tudo gritar igual. */
+  .dash{display:flex;flex-direction:column;gap:32px;max-width:1120px}
+  .dash-h{display:flex;align-items:flex-end;justify-content:space-between;gap:14px;flex-wrap:wrap;margin-bottom:14px}
+  .dash-eyebrow{font-size:10.5px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--z-gold-deep)}
+  .dash-t{font-size:24px;font-weight:700;letter-spacing:-.025em;color:var(--z-blue);margin-top:3px;line-height:1.1}
+  .dash-meta{font-size:12.5px;font-weight:500;color:var(--muted)}
+
+  /* A casa hoje — uma faixa só, com divisórias. Quatro caixas soltas viravam ruído. */
+  .dash-strip{display:grid;grid-template-columns:repeat(4,1fr);background:var(--z-white);
+    border:1px solid var(--line);border-radius:18px;box-shadow:var(--shadow);overflow:hidden}
+  .ds-item{padding:18px 14px 16px;text-align:center;border-left:1px solid var(--line)}
+  .ds-item:first-child{border-left:none}
+  .ds-st{width:34px;height:34px;object-fit:contain;margin:0 auto 7px;display:block;opacity:.92}
+  .ds-n{font-size:30px;font-weight:800;letter-spacing:-.035em;line-height:1;color:var(--z-blue);font-variant-numeric:tabular-nums}
+  .ds-n.coral{color:var(--z-daycare)} .ds-n.aqua{color:var(--z-auaulandia)} .ds-n.gold{color:var(--z-gold-deep)}
+  .ds-l{font-size:12px;font-weight:600;color:var(--muted);margin-top:5px;letter-spacing:-.005em}
+  @media(max-width:640px){
+    .dash-strip{grid-template-columns:repeat(2,1fr)}
+    .ds-item:nth-child(3){border-left:none}
+    .ds-item:nth-child(n+3){border-top:1px solid var(--line)}
+  }
+
+  /* Pendências — número, rótulo e para onde vai. Urgência é um filete, não uma moldura. */
+  .dash-tiles{display:grid;grid-template-columns:repeat(auto-fill,minmax(228px,1fr));gap:12px}
+  .dt{position:relative;display:flex;align-items:center;gap:13px;background:var(--z-white);
+    border:1px solid var(--line);border-radius:16px;padding:15px 16px;cursor:pointer;text-align:left;
+    box-shadow:var(--shadow);width:100%;font-family:inherit;overflow:hidden;
+    transition:transform .14s,box-shadow .18s,border-color .18s}
+  .dt:hover{transform:translateY(-2px);box-shadow:var(--shadow-lg);border-color:var(--z-blue-soft)}
+  .dt:active{transform:scale(.985)}
+  .dt::before{content:'';position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--dt-cor,var(--line))}
+  .dt-n{display:block;font-size:29px;font-weight:800;letter-spacing:-.035em;line-height:1;min-width:42px;
+    color:var(--dt-cor,var(--z-blue));font-variant-numeric:tabular-nums}
+  .dt-txt{display:block;flex:1;min-width:0}
+  .dt-l{display:block;font-size:14px;font-weight:700;color:var(--z-blue);letter-spacing:-.012em;line-height:1.2}
+  .dt-s{display:block;font-size:12px;font-weight:500;color:var(--muted);margin-top:3px;line-height:1.35}
+  .dt-go{font-size:17px;font-weight:700;color:var(--line);flex:0 0 auto}
+  .dt:hover .dt-go{color:var(--z-gold)}
+  .dash-zen{display:flex;align-items:center;gap:13px;background:rgba(39,174,96,.07);
+    border:1px solid rgba(39,174,96,.28);border-radius:16px;padding:18px 20px}
+  .dash-zen .zt{font-size:15px;font-weight:700;color:#1E8449;letter-spacing:-.015em}
+  .dash-zen .zs{font-size:13px;font-weight:500;color:var(--z-blue-soft);margin-top:2px}
+
+  /* Carteira — 3 situações + a proporção numa barra, e os tipos como lista, não como grade */
+  .cart-top{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+  @media(max-width:620px){ .cart-top{grid-template-columns:1fr} }
+  .cart-q{background:var(--z-white);border:1px solid var(--line);border-radius:16px;padding:16px 18px;
+    cursor:pointer;text-align:left;box-shadow:var(--shadow);font-family:inherit;width:100%;
+    transition:transform .14s,box-shadow .18s,border-color .18s}
+  .cart-q:hover{transform:translateY(-2px);box-shadow:var(--shadow-lg);border-color:var(--z-blue-soft)}
+  .cq-l{display:flex;align-items:center;gap:7px;font-size:11px;font-weight:700;letter-spacing:.1em;
+    text-transform:uppercase;color:var(--muted)}
+  .cq-dot{width:8px;height:8px;border-radius:50%;flex:0 0 auto}
+  .cq-n{display:block;font-size:34px;font-weight:800;letter-spacing:-.04em;line-height:1;margin-top:9px;font-variant-numeric:tabular-nums}
+  .cq-s{display:block;font-size:12.5px;font-weight:500;color:var(--muted);margin-top:5px;line-height:1.35;min-height:17px}
+  .cart-bar{display:flex;height:7px;border-radius:999px;overflow:hidden;margin-top:14px;background:var(--z-cream-warm)}
+  .cart-bar i{display:block;height:100%}
+  .cart-tipos{background:var(--z-white);border:1px solid var(--line);border-radius:16px;
+    box-shadow:var(--shadow);margin-top:14px;overflow:hidden}
+  .ct-h{font-size:10.5px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);
+    padding:15px 18px 11px}
+  .ct-row{display:flex;align-items:center;gap:12px;padding:11px 18px;border-top:1px solid var(--line)}
+  .ct-dot{width:9px;height:9px;border-radius:3px;flex:0 0 auto}
+  .ct-l{flex:1;min-width:0;font-size:14px;font-weight:700;color:var(--z-blue);letter-spacing:-.012em}
+  .ct-l small{display:block;font-size:11.5px;font-weight:500;color:var(--muted);letter-spacing:0;margin-top:1px}
+  .ct-n{font-size:19px;font-weight:800;color:var(--z-blue);letter-spacing:-.025em;font-variant-numeric:tabular-nums}
+  .ct-nota{padding:11px 18px 14px;border-top:1px solid var(--line);font-size:12px;color:var(--muted);font-weight:500}
+  .ct-row:hover{background:var(--z-cream-warm)}
+
+  /* Entrou / saiu no mes — a cor so aparece no marcador do dia e no numero: o resto e neutro,
+     senao a lista inteira grita e nada tem destaque (Adriana, 04/ago/2026). */
+  .mov-topo{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:12px}
+  .mov-kpi{flex:1;min-width:120px;background:var(--z-white);border:1px solid var(--line);border-radius:14px;
+    box-shadow:var(--shadow);padding:12px 15px;font-size:12px;font-weight:700;color:var(--muted)}
+  .mov-kpi b{display:block;font-size:25px;font-weight:800;color:var(--z-blue);letter-spacing:-.03em;
+    font-variant-numeric:tabular-nums;line-height:1.1}
+  .mov-kpi small{display:block;font-size:11px;font-weight:600;color:var(--muted);margin-top:2px}
+  .mov-kpi.ok b{color:#1E8449} .mov-kpi.bad b{color:#B3261E}
+  .mov-cols{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:14px}
+  .mov-h{font-size:10.5px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);padding:2px 2px 8px}
+  .mov-row{display:flex;align-items:center;gap:10px;width:100%;text-align:left;background:var(--z-white);
+    border:1px solid var(--line);border-radius:12px;padding:9px 12px;margin-bottom:7px;cursor:pointer;font:inherit}
+  .mov-row:hover{background:var(--z-cream-warm)}
+  .mov-dia{flex:0 0 auto;min-width:26px;text-align:center;color:#fff;border-radius:7px;padding:3px 5px;
+    font-size:12px;font-weight:800;font-variant-numeric:tabular-nums}
+  .mov-nome{flex:1;min-width:0;font-size:13.5px;font-weight:700;color:var(--z-blue);letter-spacing:-.012em}
+  .mov-nome small{display:block;font-size:11.5px;font-weight:500;color:var(--muted);letter-spacing:0;margin-top:1px;
+    overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .mov-tag{flex:0 0 auto;font-size:10.5px;font-weight:800;color:var(--muted);border:1px solid var(--line);
+    border-radius:6px;padding:2px 6px;text-transform:uppercase;letter-spacing:.04em}
+  .mov-tag.pausa{color:#B3261E;border-color:#B3261E}
+  .mov-motivo{flex:0 0 100%;font-size:11.5px;font-weight:500;color:var(--muted);margin-top:3px}
+
+  /* Quem fez o que — desempenho por monitor. A cor identifica a ATIVIDADE (e so isso):
+     o nome, os numeros e o fundo ficam neutros, senao a tela vira arco-iris e nada se destaca. */
+  .mon-legenda{display:flex;gap:12px;flex-wrap:wrap;margin:12px 0 10px;font-size:11.5px;font-weight:600;color:var(--muted)}
+  .mon-legenda span{display:inline-flex;align-items:center;gap:5px}
+  .mon-legenda i{width:9px;height:9px;border-radius:3px;flex:0 0 auto}
+  .mon-lista{display:flex;flex-direction:column;gap:10px}
+  .mon-card{border:1px solid var(--line);border-radius:14px;padding:12px 14px;background:var(--z-white)}
+  .mon-top{display:flex;justify-content:space-between;align-items:baseline;gap:10px}
+  .mon-nome{font-size:15.5px;font-weight:800;color:var(--z-blue);letter-spacing:-.015em}
+  .mon-tot{font-size:19px;font-weight:800;color:var(--z-blue);font-variant-numeric:tabular-nums}
+  .mon-tot small{font-size:11px;font-weight:600;color:var(--muted)}
+  .mon-barra{display:flex;height:11px;border-radius:6px;overflow:hidden;margin:9px 0 8px;min-width:44px;
+    background:var(--z-cream-warm)}
+  .mon-barra i{display:block;height:100%}
+  .mon-nums{display:flex;gap:14px;flex-wrap:wrap;font-size:12px;font-weight:600;color:var(--muted)}
+  .mon-nums b{color:var(--z-blue);font-weight:800;font-variant-numeric:tabular-nums}
+  .mon-det{display:flex;gap:12px;flex-wrap:wrap;margin-top:7px;padding-top:7px;border-top:1px dashed var(--line);
+    font-size:11.5px;font-weight:600;color:var(--muted)}
+  .mon-det span{display:inline-flex;align-items:center;gap:5px}
+  .mon-det i{width:8px;height:8px;border-radius:2px;flex:0 0 auto}
+  .mon-det b{color:var(--z-blue);font-weight:800;font-variant-numeric:tabular-nums}
+  /* Check-in / check-out do corpo. Cor so onde ela informa: verde = olhado e normal,
+     vermelho = alteracao. O resto e neutro. */
+  /* Historico de check-ins do FILHOt. Vermelho SO no que teve alteracao. */
+  /* Lista de troca: verde/vermelho so na VAGA, que e a informacao que decide. */
+  .troca-dias{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px}
+  .troca-dia{border:1px solid var(--line);border-radius:14px;padding:11px 13px;background:var(--z-white)}
+  .troca-dia.cheio{border-color:#B3261E}
+  .troca-dh{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap;margin-bottom:7px}
+  .troca-data{font-size:14.5px;font-weight:800;color:var(--z-blue);font-variant-numeric:tabular-nums}
+  .troca-sem{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--muted)}
+  .troca-vagas{margin-left:auto;font-size:11.5px;font-weight:800;color:#1E8449}
+  .troca-vagas.zero{color:#B3261E}
+  .troca-nomes{display:flex;gap:6px;flex-wrap:wrap}
+  .troca-nome{display:inline-flex;align-items:center;gap:5px;background:var(--z-cream-warm);border-radius:8px;
+    padding:4px 8px;font-size:12.5px;font-weight:700;color:var(--z-blue)}
+  .troca-nome.ped{border:1px dashed #B3261E;color:#B3261E;background:#fff}
+  .troca-nome button{background:none;border:0;color:var(--muted);font-size:15px;line-height:1;cursor:pointer;padding:0 1px}
+  .troca-vazio{font-size:12px;font-weight:500;color:var(--muted)}
+  .troca-pedidos{display:flex;flex-direction:column;gap:8px;margin-bottom:12px}
+  .troca-ped{display:flex;align-items:center;gap:10px;flex-wrap:wrap;border:1px solid #B3261E;border-radius:12px;
+    padding:10px 13px;background:var(--z-white)}
+  .troca-ped strong{font-size:14.5px;font-weight:800;color:var(--z-blue);display:block}
+  .troca-ped small{font-size:12px;font-weight:600;color:var(--muted)}
+  .troca-acoes{margin-left:auto;display:flex;gap:7px;flex-wrap:wrap}
+  .troca-chip{margin-left:auto;font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.04em;
+    color:#B3261E;border:1px solid #B3261E;border-radius:6px;padding:3px 8px}
+  .hist-resumo{display:flex;gap:14px;flex-wrap:wrap;margin-bottom:9px;font-size:12.5px;font-weight:600;color:var(--muted)}
+  .hist-resumo b{font-size:17px;font-weight:800;color:var(--z-blue);margin-right:4px;font-variant-numeric:tabular-nums}
+  .hist-resumo .bad b{color:#B3261E}
+  .hist-lista{display:flex;flex-direction:column;gap:7px;max-height:420px;overflow-y:auto}
+  .hist-item{border:1px solid var(--line);border-left:4px solid var(--line);border-radius:11px;padding:9px 12px;background:var(--z-white)}
+  .hist-item.alt{border-left-color:#B3261E}
+  .hist-topo{display:flex;gap:9px;align-items:baseline;flex-wrap:wrap}
+  .hist-data{font-size:13.5px;font-weight:800;color:var(--z-blue);font-variant-numeric:tabular-nums}
+  .hist-tipo{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--muted)}
+  .hist-quem{margin-left:auto;font-size:11.5px;font-weight:600;color:var(--muted)}
+  .hist-ok{font-size:12.5px;font-weight:600;color:#1E8449;margin-top:3px}
+  .hist-alts{display:flex;flex-direction:column;gap:3px;margin-top:5px}
+  .hist-alt{font-size:12.5px;font-weight:600;color:var(--z-blue)}
+  .hist-alt b{font-weight:800}
+  .hist-coco{margin-top:4px;font-size:11.5px;font-weight:700;color:var(--muted)}
+  .hist-coco.bad{color:#B3261E}
+  .ck-frase{background:var(--z-cream-warm);border-left:4px solid var(--z-gold);border-radius:10px;
+    padding:10px 13px;margin:10px 0;font-size:13.5px;font-weight:600;color:var(--z-blue);font-style:italic}
+  .ck-card{position:relative}
+  .ck-card.ok{border-color:#1E8449}
+  .ck-card.alerta{border-color:#B3261E;border-width:2px}
+  .ck-tag{margin-top:6px;font-size:10.5px;font-weight:800;text-transform:uppercase;letter-spacing:.04em;color:var(--muted)}
+  .ck-tag.ok{color:#1E8449} .ck-tag.bad{color:#B3261E}
+  .ck-quem{font-size:11px;font-weight:600;color:var(--muted);margin-top:2px}
+  .ck-ficha{max-width:720px;margin:0 auto}
+  .ck-topo{display:flex;align-items:center;gap:12px;margin-bottom:10px}
+  .ck-av{width:64px;height:64px;border-radius:16px;background-size:cover;background-position:center;flex:0 0 auto}
+  .ck-nome{font-size:21px;font-weight:800;color:var(--z-blue);letter-spacing:-.02em}
+  .ck-sub{font-size:12.5px;font-weight:600;color:var(--muted)}
+  .ck-vem{background:rgba(222,180,40,.16);border-radius:10px;padding:10px 13px;margin-bottom:10px;
+    font-size:13.5px;font-weight:600;color:var(--z-blue)}
+  .ck-entrada{background:var(--z-cream-warm);border-left:4px solid var(--z-blue);border-radius:10px;
+    padding:10px 13px;margin-bottom:10px;font-size:13px;font-weight:600;color:var(--z-blue)}
+  .ck-entrada.ok{border-left-color:#1E8449}
+  .ck-entrada.sem{border-left-color:#B3261E;color:#B3261E}
+  .ck-ponto{border:1px solid var(--line);border-radius:14px;padding:12px 14px;margin-bottom:9px;background:var(--z-white)}
+  .ck-ponto.ok{border-color:rgba(30,132,73,.45)}
+  .ck-ponto.alt{border-color:#B3261E;border-width:2px}
+  .ck-ph{display:flex;gap:10px;align-items:flex-start;margin-bottom:9px}
+  .ck-num{flex:0 0 auto;width:24px;height:24px;border-radius:8px;background:var(--z-cream-warm);color:var(--z-blue);
+    font-size:12.5px;font-weight:800;display:flex;align-items:center;justify-content:center}
+  .ck-pt{font-size:15.5px;font-weight:800;color:var(--z-blue);letter-spacing:-.015em}
+  .ck-ver{font-size:13.5px;font-weight:700;color:var(--z-blue);margin-top:1px}
+  .ck-como{font-size:13px;line-height:1.55;color:var(--z-blue-soft);background:var(--z-cream-warm);border-left:3px solid var(--z-gold);border-radius:9px;padding:9px 11px;margin:8px 0 2px}
+  /* O cartão que fala com quem está ali — não é enfeite, é o lembrete do porquê */
+  .ck-cartao{background:linear-gradient(135deg,var(--z-blue) 0%,#1b3c52 100%);border-radius:16px;padding:16px 18px;margin:12px 0;box-shadow:0 4px 14px rgba(35,77,103,.22)}
+  .ck-cartao-oi{font-family:var(--font-marca),Poppins,sans-serif;font-size:15px;font-weight:700;color:var(--z-gold);letter-spacing:.01em;margin-bottom:6px}
+  .ck-cartao-frase{font-size:17px;line-height:1.45;font-weight:700;color:#FFFDF6}
+  @media(max-width:520px){ .ck-cartao-frase{font-size:15.5px} }
+  .ck-btns{display:flex;gap:8px}
+  .ck-btns.quatro{flex-wrap:wrap}
+  .ck-btns.quatro .ck-b{flex:1 1 calc(50% - 4px);min-width:0;font-size:13.5px;padding-left:6px;padding-right:6px}
+  .ck-b.neu{background:var(--z-cream-warm);color:var(--z-blue);border:1.5px solid var(--line)}
+  .ck-b.neu.on{background:var(--z-blue);color:#FFFDF6;border-color:var(--z-blue)}
+  /* A pergunta da ligação, em toda alteração */
+  .ck-ligar{margin-top:9px;background:rgba(192,57,43,.08);border:1.5px solid var(--crm-critico);border-radius:11px;padding:10px 12px}
+  .ck-ligar .lg-q{font-size:13.5px;font-weight:800;color:var(--crm-critico);margin-bottom:7px}
+  .ck-ligar .lg-b{display:flex;gap:8px;flex-wrap:wrap}
+  .ck-ligar .lg-ok{background:rgba(39,174,96,.12);border-color:var(--crm-ok);color:var(--crm-ok)}
+  /* Fotos extras */
+  .ck-extras{display:flex;flex-wrap:wrap;gap:7px;margin-top:9px;align-items:center}
+  .ck-extras .ex-item{position:relative}
+  .ck-extras .ex-item img{width:66px;height:66px;object-fit:cover;border-radius:9px;border:1.5px solid var(--line);display:block}
+  .ck-extras .ex-item button{position:absolute;top:-6px;right:-6px;width:22px;height:22px;border-radius:50%;border:none;background:var(--crm-critico);color:#fff;font-weight:800;cursor:pointer;line-height:1}
+  .ck-extras .ex-add{display:inline-flex;align-items:center;justify-content:center;width:66px;height:66px;border:1.5px dashed var(--z-gold);border-radius:9px;font-size:11.5px;font-weight:700;color:var(--z-blue);text-align:center;cursor:pointer;padding:4px}
+  .ck-b{flex:1;padding:13px 10px;border-radius:11px;border:1.5px solid var(--line);background:#fff;
+    font-family:inherit;font-size:14.5px;font-weight:800;color:var(--muted);cursor:pointer}
+  .ck-b.ok.on{background:#1E8449;border-color:#1E8449;color:#fff}
+  .ck-b.bad.on{background:#B3261E;border-color:#B3261E;color:#fff}
+  .ck-alertas{display:flex;gap:7px;flex-wrap:wrap;margin-top:10px}
+  .ck-chip{padding:8px 12px;border-radius:9px;border:1.5px solid var(--line);background:#fff;font-family:inherit;
+    font-size:13px;font-weight:700;color:var(--z-blue);cursor:pointer}
+  .ck-chip.on{background:#B3261E;border-color:#B3261E;color:#fff}
+  .ck-ponto .cad-in{margin-top:9px}
+  .ck-foto{display:flex;align-items:center;gap:10px;margin-top:9px;flex-wrap:wrap}
+  .ck-foto img{width:84px;height:84px;object-fit:cover;border-radius:11px;border:1px solid var(--line)}
+  .ck-foto-falta{font-size:12.5px;font-weight:800;color:#B3261E}
+  .ck-bloco{border:1px solid var(--line);border-radius:14px;padding:12px 14px;margin-bottom:9px;background:var(--z-white)}
+  .ck-bt{font-size:15px;font-weight:800;color:var(--z-blue);margin-bottom:3px}
+  .ck-hint{font-size:12px;font-weight:500;color:var(--muted);margin-bottom:8px}
+  .ck-opts{display:flex;gap:8px;flex-wrap:wrap}
+  .ck-opt{padding:11px 14px;border-radius:11px;border:1.5px solid var(--line);background:#fff;font-family:inherit;
+    font-size:14px;font-weight:800;color:var(--z-blue);cursor:pointer;text-align:center;line-height:1.2}
+  .ck-opt small{display:block;font-size:11px;font-weight:600;color:var(--muted);margin-top:1px}
+  .ck-opt.on{background:var(--z-blue);border-color:var(--z-blue);color:#fff}
+  .ck-opt.on small{color:rgba(255,255,255,.75)}
+  .ck-opt.grave.on{background:#B3261E;border-color:#B3261E}
+  .ck-criticos{background:rgba(179,38,30,.08);border-left:4px solid #B3261E;border-radius:10px;padding:10px 13px;
+    margin:12px 0;font-size:12.5px;font-weight:600;color:#B3261E}
+  .ck-salvar{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-top:6px}
+  .ck-progress{font-size:12.5px;font-weight:700;color:var(--muted)}
+  .ck-salvar .btn{margin-left:auto}
+  .mon-sec{font-size:10.5px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);margin-bottom:6px}
+  .mon-tabwrap{overflow-x:auto;border:1px solid var(--line);border-radius:14px;background:var(--z-white)}
+  .mon-tab{width:100%;border-collapse:collapse;font-size:13px;min-width:640px}
+  .mon-tab th{text-align:left;font-size:10.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;
+    color:var(--muted);padding:10px 12px;border-bottom:1px solid var(--line);white-space:nowrap}
+  .mon-tab th i{display:inline-block;width:8px;height:8px;border-radius:2px;margin-right:5px;vertical-align:middle}
+  .mon-tab td{padding:9px 12px;border-bottom:1px solid var(--line);color:var(--z-blue);font-weight:600;
+    font-variant-numeric:tabular-nums;white-space:nowrap}
+  .mon-tab tbody tr:last-child td{border-bottom:0}
+  .mon-tab tbody tr:hover{background:var(--z-cream-warm)}
+  .mon-tab td b{font-weight:800}
+  .mon-dia{font-weight:800}
+  .mon-vezes{color:var(--muted);font-weight:600}
+  .mon-quem{white-space:normal;font-weight:600;color:var(--muted);font-size:12px}
+  .mon-aberta{color:#B3261E;font-weight:800}
+  .mon-card.fora{border-style:dashed}
+  .mon-flag{display:inline-block;margin-left:7px;font-size:10px;font-weight:800;color:#B3261E;border:1px solid #B3261E;
+    border-radius:5px;padding:1px 5px;text-transform:uppercase;letter-spacing:.03em;vertical-align:middle}
+  .mon-alias{display:block;font-size:11px;font-weight:500;color:var(--muted);margin-top:2px}
+
+  .kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:14px;margin-bottom:24px}
+  .kpi{background:var(--z-white);border:1px solid var(--line);border-radius:var(--radius);padding:14px 16px;box-shadow:var(--shadow);display:flex;align-items:center;gap:12px}
+  .kpi-st{width:46px;height:46px;object-fit:contain;flex:0 0 auto}
+  .kpi .v{font-size:27px;font-weight:800;color:var(--z-blue);font-family:var(--font-marca);line-height:1}
+  .kpi .l{font-size:12px;color:var(--muted);font-weight:600;margin-top:3px}
+  .kpi .v.coral{color:var(--z-daycare)}
+  .soon-box .ic-st{width:84px;height:84px;object-fit:contain;opacity:.9}
+
+  /* ===== hospedagem ===== */
+  .back-btn{background:none;border:none;color:var(--z-blue-soft);font-family:var(--font-ui);font-weight:600;
+    font-size:14px;cursor:pointer;margin-bottom:14px;padding:4px 0}
+  .back-btn:hover{color:var(--z-gold-deep)}
+  .hosp-head{display:flex;align-items:center;gap:16px}
+  .hosp-head .ph{width:168px;height:168px;border-radius:18px;display:grid;place-items:center;
+    background:var(--z-auaulandia);color:#fff;font-weight:800;font-size:64px;font-family:var(--font-marca);flex:0 0 auto;box-shadow:0 8px 22px rgba(35,77,103,.22)}
+  /* Tag AuAulândia ABAIXO da foto (não sobre ela) */
+  .hf-photo-wrap{display:flex;flex-direction:column;align-items:center;gap:8px;flex:0 0 auto;align-self:flex-start}
+  .chip-serv.chip-on-photo{background:#2b7e88;color:#fff;font-weight:700;white-space:nowrap}
+  .hosp-tutor{font-size:11px;color:var(--muted);font-weight:600;margin-top:6px}
+  .hosp-count{display:flex;align-items:center;gap:14px;background:var(--z-blue);color:var(--z-cream);
+    border-radius:var(--radius);padding:16px 22px;margin-bottom:16px;box-shadow:var(--shadow)}
+  .hosp-count img{width:46px;height:46px;object-fit:contain}
+  .hosp-count .n{font-family:var(--font-marca);font-weight:800;font-size:38px;line-height:1;color:var(--z-gold)}
+  .hosp-count .lab{font-size:14px;font-weight:600;opacity:.92}
+  .hf-nome{font-family:var(--font-accent);font-size:28px;font-weight:700;color:var(--z-blue);line-height:1}
+  .hf-meta{font-size:13px;color:var(--muted);font-weight:600;margin-top:3px}
+  .hf-estadia{font-size:12.5px;color:var(--z-blue-soft);margin-top:5px}
+  .chip-serv{background:rgba(90,171,181,.16);color:#2b7e88;font-size:11px;font-weight:700;
+    padding:5px 12px;border-radius:999px;letter-spacing:.3px;flex:0 0 auto}
+  .hosp-st{font-size:10px;font-weight:700;padding:3px 10px;border-radius:999px;display:inline-block;margin-top:9px;letter-spacing:.3px}
+  .hosp-st.pend{background:rgba(241,196,15,.18);color:var(--crm-atencao-text)}
+  .hosp-st.ok{background:rgba(39,174,96,.14);color:var(--crm-ok)}
+
+  /* navegador de data */
+  .datenav{display:flex;align-items:center;gap:4px;background:var(--z-white);border:1.5px solid var(--line);border-radius:999px;padding:4px 6px;flex:0 0 auto}
+  .datenav button{border:none;background:transparent;color:var(--z-blue);font-family:var(--font-ui);font-weight:600;font-size:15px;cursor:pointer;padding:5px 10px;border-radius:999px;line-height:1}
+  .datenav button:hover{background:var(--z-cream-warm)}
+  .datenav #dateLabel{font-size:13px;font-weight:600;color:var(--z-blue);padding:0 8px;white-space:nowrap}
+  .datenav .hoje{background:var(--z-gold);color:var(--z-blue);font-weight:700;font-size:12px;padding:6px 12px}
+  /* porção de ração na ficha */
+  .racao-info{background:rgba(222,180,40,.12);border:1.5px solid var(--z-gold-light);border-radius:12px;
+    padding:13px 16px;margin-bottom:16px;font-size:14px;color:var(--z-blue-deep);display:flex;align-items:center;gap:11px}
+  .racao-info img{width:32px;height:32px;object-fit:contain;flex:0 0 auto}
+  .racao-info strong{color:var(--z-blue);font-size:16px}
+  .racao-info .sub{color:var(--muted);font-size:11.5px;font-weight:600}
+  .chip-box{background:var(--z-blue);color:var(--z-cream);border-radius:var(--radius);padding:14px 20px;
+    margin-bottom:16px;display:flex;align-items:center;justify-content:space-between;gap:14px;box-shadow:var(--shadow)}
+  .chip-lab{font-size:11px;text-transform:uppercase;letter-spacing:.8px;opacity:.85;font-weight:700}
+  .chip-input{width:150px;font-family:var(--font-marca);font-weight:800;font-size:26px;letter-spacing:5px;
+    text-align:center;border:none;border-radius:11px;padding:8px;background:var(--z-cream);color:var(--z-blue)}
+  .cad-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+  /* subtítulo de bloco dentro da ficha (ex.: Almoço) */
+  .cad-sub{font-size:13px;font-weight:800;letter-spacing:.3px;color:var(--z-blue);text-transform:uppercase;margin:18px 0 10px;padding-top:14px;border-top:1.5px dashed var(--line)}
+  @media(max-width:560px){.cad-grid{grid-template-columns:1fr}}
+  .cad-in{width:100%;font-family:var(--font-ui);font-size:14px;padding:11px 13px;border:1.5px solid var(--line);border-radius:11px;background:var(--z-cream);color:var(--z-blue)}
+  .cad-in:focus{border-color:var(--z-gold);outline:none}
+  .checklist-note{background:rgba(222,180,40,.22);border:2px solid var(--z-gold);border-radius:14px;
+    padding:16px 18px;margin-bottom:16px;font-size:15.5px;font-weight:700;color:var(--z-blue);
+    text-align:center;animation:piscaCheck 1.5s ease-in-out infinite}
+  @keyframes piscaCheck{0%,100%{box-shadow:0 0 0 0 rgba(222,180,40,.6)}50%{box-shadow:0 0 0 8px rgba(222,180,40,0)}}
+  .lock-note{display:none !important}
+  .hf-chipline{font-size:13.5px;font-weight:800;color:var(--z-gold-deep);margin-top:3px}
+  .btn-foto-mini{margin-top:10px;background:var(--z-gold);color:var(--z-blue);border:none;border-radius:9px;padding:7px 14px;font-family:var(--font-ui);font-weight:700;font-size:12.5px;cursor:pointer}
+  body[data-role="monitor"] #card-cadastro, body[data-role="plantonista"] #card-cadastro, body[data-role="tutor"] #card-cadastro{display:none}
+  body[data-role="monitor"] #card-texto, body[data-role="plantonista"] #card-texto, body[data-role="tutor"] #card-texto{display:none}
+  /* Protocolo do Plantão = SÓ o plantonista (monitor, gestão, supervisão e tutor não veem) */
+  body:not([data-role="plantonista"]) #card-checkout-plantao{display:none !important}
+  /* Onda 5 — Plantonista só RELATA: lê a Agenda de Medicação e registra a dose ("Dei agora" / avulsa),
+     mas não acrescenta, edita nem remove item (isso é da Consultora/Gestão/Supervisão/Vet). Guarda dupla:
+     CSS aqui (visual + trava de clique) + JS nas funções (salvarMedAgenda/magAddNovoItem/magRemoverItem). */
+  body:not([data-role="plantonista"]) #magSoLeituraAviso{display:none !important}
+  body[data-role="plantonista"] #magItens{pointer-events:none;opacity:.72}
+  /* Foto (trocar/salvar): Gestão, Supervisão e Monitor podem. Plantonista e tutor NÃO (só recebem).
+     !important vence o style inline display:flex. */
+  body[data-role="plantonista"] .so-foto, body[data-role="tutor"] .so-foto{display:none !important}
+  /* Adicionar pernoite/hóspede: equipe (gestão/supervisão/monitor). Plantonista e tutor NÃO. */
+  body[data-role="plantonista"] .pet.add, body[data-role="tutor"] .pet.add{display:none !important}
+  /* Relatório do Dia: editável por quem está de plantão (monitora, plantonista, gestão). Só o tutor é read-only. */
+  body[data-role="tutor"] #card-dia .seg button, body[data-role="tutor"] #card-dia textarea,
+  body[data-role="monitor"] #card-noite .seg button, body[data-role="monitor"] #card-noite textarea,
+  body[data-role="tutor"] #card-noite .seg button, body[data-role="tutor"] #card-noite textarea{pointer-events:none}
+  .datenav .dl-rel{color:var(--z-gold-deep);font-weight:800}
+  @media(max-width:600px){.datenav #dateLabel{font-size:11.5px;padding:0 4px}.datenav .dl-wd{display:none}.datenav button{padding:5px 8px;font-size:14px}.datenav .hoje{padding:6px 10px}}
+  /* Navegador de dia DENTRO da ficha do peludinho (todos os perfis podem navegar) */
+  .ficha-datenav{display:flex;align-items:center;gap:4px;background:var(--z-white);border:1.5px solid var(--line);border-radius:999px;padding:4px 6px;margin-bottom:14px;flex-wrap:wrap}
+  .ficha-datenav button{border:none;background:transparent;color:var(--z-blue);font-family:var(--font-ui);font-weight:600;font-size:15px;cursor:pointer;padding:5px 10px;border-radius:999px;line-height:1}
+  .ficha-datenav button:hover{background:var(--z-cream-warm)}
+  .ficha-datenav #hf-datelabel{font-size:13px;font-weight:600;color:var(--z-blue);padding:0 8px;white-space:nowrap}
+  .ficha-datenav .hoje{background:var(--z-gold);color:var(--z-blue);font-weight:700;font-size:12px;padding:6px 12px}
+  .ficha-datenav .dl-rel{color:var(--z-gold-deep);font-weight:800}
+  .ficha-datenav-hint{font-size:11px;color:var(--muted);font-weight:600;margin-left:auto;padding-right:6px}
+  @media(max-width:600px){.ficha-datenav #hf-datelabel{font-size:11.5px}.ficha-datenav .dl-wd{display:none}.ficha-datenav-hint{display:none}}
+  /* Banner Parte 2 — histórico de medicação na estadia */
+  .medhist-banner{background:rgba(222,180,40,.16);border:2px solid var(--z-gold);border-radius:14px;padding:13px 16px;margin-bottom:14px;font-size:14.5px;font-weight:600;color:var(--z-blue);line-height:1.45}
+  .medhist-banner strong{color:var(--z-blue)}
+  /* Dados do peludinho no celular: empilha foto + dados (corrige aperto p/ plantonista/monitor/gestão) */
+  @media(max-width:560px){
+    .hosp-head{flex-direction:column;align-items:flex-start;gap:12px}
+    .hosp-head .ph{width:96px;height:96px;font-size:40px;border-radius:14px}
+    .hosp-head>div[style*="flex:1"]{width:100%}
+    .hf-nome{font-size:24px}
+    .hosp-head .chip-serv{align-self:flex-start}
+    .so-foto{width:100%}
+  }
+
+  /* ===== ficha ===== */
+  .subtabs{display:flex;gap:7px;flex-wrap:wrap;margin-bottom:18px}
+  .subtab{padding:8px 15px;border-radius:999px;font-size:13px;font-weight:600;cursor:pointer;
+    background:var(--z-white);border:1.5px solid var(--line);color:var(--muted)}
+  .subtab.active{background:var(--z-blue);color:var(--z-cream);border-color:var(--z-blue)}
+  .card{background:var(--z-white);border:1px solid var(--line);border-radius:var(--radius);padding:20px;margin-bottom:16px;box-shadow:var(--shadow)}
+  .card h2{font-family:var(--font-accent);font-size:25px;font-weight:700;color:var(--z-blue);margin-bottom:3px}
+  .card .hint{font-size:12px;color:var(--muted);font-weight:500;margin-bottom:16px}
+  .subpanel{display:none}.subpanel.active{display:block}
+
+  .pair{display:flex;justify-content:space-between;gap:14px;padding:11px 0;border-bottom:1px solid var(--cream-warm,#f1ebde)}
+  .pair:last-child{border-bottom:none}
+  .pair .k{font-size:13px;color:var(--muted);font-weight:600}
+  .pair .val{font-size:14px;color:var(--z-blue);font-weight:600;text-align:right}
+  .sensivel-badge{font-size:9px;background:var(--z-blue-soft);color:#fff;padding:2px 7px;border-radius:999px;margin-left:6px;font-weight:700;vertical-align:middle}
+
+  /* toggles e chips */
+  .field{margin-bottom:15px}
+  .field>label{display:block;font-size:12.5px;font-weight:600;color:var(--z-blue);margin-bottom:7px}
+  .seg{display:inline-flex;background:#eef3f6;border-radius:11px;padding:4px;gap:4px;flex-wrap:wrap}
+  .seg button{border:none;background:transparent;font-family:var(--font-ui);font-size:13.5px;font-weight:600;
+    color:var(--z-blue);padding:9px 16px;border-radius:8px;cursor:pointer;transition:.15s}
+  .seg button.on{background:var(--z-blue);color:var(--z-cream);box-shadow:var(--shadow)}
+  .seg.gold button.on{background:var(--z-gold);color:var(--z-blue)}
+  /* semáforo por botão: verde=bom · vermelho=atenção · amarelo=neutro */
+  .seg button.on.t-ok{background:var(--crm-ok);color:#fff}
+  .seg button.on.t-bad{background:var(--crm-critico);color:#fff}
+  .seg button.on.t-warn{background:var(--crm-atencao);color:var(--crm-atencao-text)}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+  /* Jantar dentro do relatório — 22/ago/2026 */
+  .janta-box{margin:10px 0;padding:10px 12px;border-radius:10px;font-size:13.5px;line-height:1.45;
+    font-weight:700;color:var(--z-blue);background:rgba(222,180,40,.18);border-left:4px solid var(--z-gold)}
+  .janta-box div{font-weight:600;font-size:12.5px;margin-top:3px;color:var(--z-blue-soft)}
+  .janta-box-rep{background:rgba(124,139,153,.14);border-left-color:#7C8B99}
+  .janta-box-falta{background:rgba(179,38,30,.10);border-left-color:var(--crm-critico);color:var(--crm-critico)}
+
+  /* Calendário de "para que dia estou lançando" (tela Lançamentos da TV) */
+  .dcal{background:var(--z-cream-warm);border:1.5px solid var(--line);border-radius:14px;padding:10px 12px}
+  .dcal-top{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:8px}
+  .dcal-mes{font-weight:800;color:var(--z-blue);font-size:15px;text-transform:capitalize}
+  .dcal-nav{background:none;border:1.5px solid var(--line);border-radius:9px;width:34px;height:34px;
+            font-size:17px;font-weight:800;color:var(--z-blue);cursor:pointer;line-height:1}
+  .dcal-grade{display:grid;grid-template-columns:repeat(7,1fr);gap:4px}
+  .dcal-sem{font-size:10.5px;font-weight:800;color:var(--muted);text-align:center;padding:2px 0;text-transform:uppercase}
+  .dcal-dia{aspect-ratio:1/1;min-height:38px;border:1.5px solid transparent;border-radius:10px;background:var(--z-cream);
+            font-size:14px;font-weight:700;color:var(--z-blue);cursor:pointer;display:flex;align-items:center;justify-content:center}
+  .dcal-dia:disabled{background:none;color:transparent;cursor:default;border-color:transparent}
+  .dcal-dia.passado{color:var(--muted);background:none}
+  .dcal-dia.hoje{border-color:var(--z-gold);font-weight:800}
+  .dcal-dia.sel{background:var(--z-blue);color:var(--z-cream);border-color:var(--z-blue);font-weight:800}
+  .dcal-dia.temcoisa::after{content:'';width:5px;height:5px;border-radius:50%;background:var(--z-gold);
+            position:absolute;transform:translateY(13px)}
+  .dcal-dia{position:relative}
+  @media(max-width:420px){ .dcal-dia{min-height:34px;font-size:13px} }
+  .obsline{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 0;border-bottom:1px solid #f1ebde}
+  .obsline:last-child{border-bottom:none}
+  .obsline .q{font-size:14px;font-weight:600;color:var(--z-blue)}
+
+  /* timeline */
+  .tl{position:relative;padding-left:30px}
+  .tl::before{content:'';position:absolute;left:9px;top:6px;bottom:6px;width:2px;background:var(--line)}
+  .tl-item{position:relative;padding:0 0 20px}
+  .tl-item .dot{position:absolute;left:-30px;top:1px;width:20px;height:20px;border-radius:50%;
+    background:var(--z-daycare);border:3px solid var(--z-cream);box-shadow:0 0 0 1px var(--line)}
+  .tl-item .hora{font-size:12px;color:var(--muted);font-weight:700}
+  .tl-item .ac{font-size:15px;font-weight:600;color:var(--z-blue);margin-top:1px}
+  .tl-item .ac em{font-style:normal;color:var(--crm-ok);font-weight:700}
+
+  /* placeholder seções futuras */
+  .soon-box{text-align:center;padding:70px 20px;color:var(--muted)}
+  .soon-box .ic{font-size:46px;opacity:.4}
+  .soon-box .t{font-size:17px;font-weight:700;color:var(--z-blue-soft);margin-top:12px}
+  .soon-box .d{font-size:13px;margin-top:6px}
+
+  .btn{border:none;font-family:var(--font-ui);font-weight:700;font-size:14px;padding:12px 22px;border-radius:11px;cursor:pointer}
+  .btn-primary{background:var(--z-blue);color:var(--z-cream)}
+  .btn-gold{background:var(--z-gold);color:var(--z-blue)}
+  .actions{display:flex;gap:10px;margin-top:8px}
+
+  /* permissões por papel */
+  body[data-role="monitor"] .sensivel,
+  body[data-role="plantonista"] .sensivel,
+  body[data-role="aprendiz"] .sensivel,
+  body[data-role="tutor"]   .sensivel{display:none !important}
+  body[data-role="monitor"] .so-gestao,
+  body[data-role="plantonista"] .so-gestao,
+  body[data-role="aprendiz"] .so-gestao,
+  body[data-role="tutor"]   .so-gestao{display:none !important}
+  /* .so-sensivel = DADO SENSÍVEL (plano, valores, cobrança). Só Gestão, Supervisão,
+     Diretoria e Consultora — ninguém mais (Adriana, 04/ago/2026). */
+  .so-sensivel{display:none !important}
+  body[data-role="gestao"] .so-sensivel,
+  body[data-role="supervisor"] .so-sensivel,
+  body[data-role="diretoria"] .so-sensivel,
+  body[data-role="consultora"] .so-sensivel{display:block !important}
+  .subtabs .subtab2.so-sensivel{display:none !important}
+  body[data-role="gestao"] .subtabs .subtab2.so-sensivel,
+  body[data-role="supervisor"] .subtabs .subtab2.so-sensivel,
+  body[data-role="diretoria"] .subtabs .subtab2.so-sensivel,
+  body[data-role="consultora"] .subtabs .subtab2.so-sensivel{display:inline-flex !important}
+  /* PAINEL DE ABA sensível: quem manda é a ABA ATIVA, nunca o "pode ver" (Adriana, 11/ago/2026).
+     A regra acima liberava display:block para quem tem permissão — e o painel do Plano passou a
+     aparecer embaixo de Rotina & Almoço e de Atenção & Cuidados, em toda aba. Agora ele só
+     aparece quando é a aba escolhida. */
+  body[data-role="gestao"] .ppanel2.so-sensivel,
+  body[data-role="supervisor"] .ppanel2.so-sensivel,
+  body[data-role="diretoria"] .ppanel2.so-sensivel,
+  body[data-role="consultora"] .ppanel2.so-sensivel{display:none !important}
+  body[data-role="gestao"] .ppanel2.so-sensivel.active,
+  body[data-role="supervisor"] .ppanel2.so-sensivel.active,
+  body[data-role="diretoria"] .ppanel2.so-sensivel.active,
+  body[data-role="consultora"] .ppanel2.so-sensivel.active{display:block !important}
+  /* .so-equipe = Gestão + Supervisão + Diretoria + Monitor (quem recebe/cuida do FILHOt no dia a dia).
+     Plantonista, aprendiz e tutor ficam de fora — ex.: cancelar um lançamento do dia. */
+  body[data-role="plantonista"] .so-equipe,
+  body[data-role="aprendiz"] .so-equipe,
+  body[data-role="tutor"]   .so-equipe{display:none !important}
+  /* .so-medadmin = quem pode CRIAR/ALTERAR/REMOVER a ficha de medicação na operação diária:
+     Veterinária + Gestão + Supervisão (Amanda) + Diretoria (Fundação 1 do Design). Monitor e plantonista
+     só LEEM e registram a dose ("Dei agora"). A Consultora cadastra no Check-in, não no card diário. */
+  body[data-role="monitor"] .so-medadmin,
+  body[data-role="plantonista"] .so-medadmin,
+  body[data-role="aprendiz"] .so-medadmin,
+  body[data-role="tutor"] .so-medadmin,
+  body[data-role="consultora"] .so-medadmin,
+  body[data-role="conferencia"] .so-medadmin{display:none !important}
+  /* Card diário: só quem pode alterar medicação vê o botão "Remover item" de cada remédio.
+     (No Check-in, dentro de #ciMeds, a Consultora continua vendo — regra abaixo não alcança #ciMeds.) */
+  body[data-role="monitor"] #magItens .magitem .ativ-del,
+  body[data-role="consultora"] #magItens .magitem .ativ-del,
+  body[data-role="conferencia"] #magItens .magitem .ativ-del{display:none !important}
+  /* .so-master = SÓ a Gestora (Márcia) e a Diretoria (Adriana). Supervisão (Amanda) e equipe não veem. */
+  body:not([data-role="gestao"]):not([data-role="diretoria"]):not([data-role="supervisor"]) .so-master{display:none !important}
+  /* .so-config = configuração do sistema (senhas de ponte, chaves). SÓ Gestora e Diretoria —
+     nem a Supervisão vê. Adriana, 19/ago/2026: "a senha não pode aparecer... esse dashboard
+     será acionado por consultoras, não posso dar acesso a nada que possa prejudicar."
+     O .so-master deixava a Supervisão ver, apesar do que dizia o comentário dele. */
+  body:not([data-role="gestao"]):not([data-role="diretoria"]) .so-config{display:none !important}
+  /* mensagem para quem entra em Pessoas mas não é a Gestora (ex: Amanda) */
+  body[data-role="gestao"] .so-supervisor-only,
+  body[data-role="diretoria"] .so-supervisor-only{display:none !important}
+  /* abas internas de Pessoas (handler próprio, não colide com a Ficha) */
+  .ppanel{display:none}.ppanel.active{display:block}
+  /* Passagem de plantão — aguardando recebimento (pisca em vermelho até quem recebe ler e assinar) */
+  @keyframes piscaReceb{0%,100%{box-shadow:0 0 0 2px var(--crm-critico);background:rgba(200,40,40,.04)}50%{box-shadow:0 0 0 6px rgba(200,40,40,.5);background:rgba(200,40,40,.13)}}
+  .rel-card.aguarda-receb{animation:piscaReceb 1s ease-in-out infinite;border-color:var(--crm-critico) !important}
+  .rel-card.aguarda-receb .rel-head h2::after{content:' — AGUARDANDO ' attr(data-aguarda);color:var(--crm-critico);font-size:12px;font-weight:800;letter-spacing:.5px}
+  .receb-box{display:none;margin-top:14px;padding:14px;border:2px dashed var(--crm-critico);border-radius:12px;background:rgba(200,40,40,.05)}
+  .rel-card.aguarda-receb .receb-box,.rel-card.receb-done .receb-box{display:block}
+  .receb-aviso{font-weight:800;color:var(--crm-critico);margin-bottom:10px}
+  .rel-card.receb-done .receb-box{border:2px solid var(--crm-ok);background:rgba(20,140,90,.06)}
+  .rel-card.receb-done .receb-aviso{display:none}
+  .rel-card.receb-done .rel-head h2::after{content:' — RECEBIDO';color:var(--crm-ok);font-size:12px;font-weight:800;letter-spacing:.5px}
+  /* trava de leitura — só em FILHOt crítico: assinar só depois de rolar o relatório até o fim */
+  .fim-leitura{height:1px}
+  .trava-aviso{display:none;margin:10px 0;padding:11px 13px;border-radius:10px;background:rgba(222,180,40,.16);border:1.5px solid var(--z-gold);color:var(--z-blue);font-size:13.5px;font-weight:600;line-height:1.45}
+  .btn.btn-travado{opacity:.45;cursor:not-allowed;filter:grayscale(.6)}
+
+  /* ===== tabela de Peludinhos (turma) ===== */
+  .pel-toolbar{display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin-bottom:14px}
+  .pel-count{font-size:13px;color:var(--muted);font-weight:600}
+  .pel-wrap{overflow-x:auto;border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);background:var(--z-white)}
+  table.pel{width:100%;border-collapse:collapse;font-size:13.5px;min-width:680px}
+  table.pel thead th{background:var(--z-blue);color:var(--z-cream);font-weight:700;font-size:11.5px;text-transform:uppercase;letter-spacing:.5px;padding:11px 12px;text-align:left;white-space:nowrap}
+  table.pel tbody td{padding:11px 14px;border-bottom:1px solid #f1ebde;color:var(--z-blue-deep);white-space:nowrap}
+  /* Tutor pode ter nome longo: deixa quebrar em 2 linhas e reserva largura, para nunca ser cortado pela margem. */
+  table.pel .pel-tutor{white-space:normal;min-width:150px;word-break:break-word;padding-right:16px}
+  /* 26/ago/2026 — no celular a tabela não pode esconder coluna: sem largura mínima, texto quebra, e a rolagem (se sobrar) fica visível */
+  @media (max-width:600px){
+    table.pel{min-width:0}
+    table.pel thead th,table.pel tbody td{white-space:normal;padding:9px 8px;font-size:12.5px;overflow-wrap:anywhere}
+    /* o Tutor reserva 150px no desktop; no celular é essa reserva que empurra a última coluna para fora da tela */
+    table.pel .pel-tutor{min-width:0;padding-right:8px}
+    /* os dias da semana viram duas linhas de chips em vez de uma faixa que não cabe */
+    table.pel tbody td.dias-cell{white-space:normal}
+    /* dinheiro e data não podem quebrar no meio: "R$ 1.404,00" partido em duas linhas vira outro número aos olhos */
+    table.pel td.num,table.pel td.data{white-space:nowrap;overflow-wrap:normal}
+    /* se ainda sobrar tabela para rolar, a sombra na borda direita avisa que existe mais coluna ali */
+    .pel-wrap{background:var(--z-white) linear-gradient(to left,rgba(35,77,103,.12),transparent 18px) right/18px 100% no-repeat}
+  }
+  table.pel tbody tr:last-child td{border-bottom:none}
+  table.pel tbody tr:hover{background:rgba(222,180,40,.07)}
+  table.pel .pel-nome{font-weight:700;color:var(--z-blue)}
+  table.pel .pel-num{color:var(--muted);font-weight:700}
+  .pel-freq{display:inline-block;background:rgba(90,171,181,.16);color:#2b7e88;font-weight:700;font-size:12px;padding:3px 11px;border-radius:999px}
+  .pel-obs{display:inline-block;font-size:10px;font-weight:700;color:#a85a2e;background:rgba(224,136,86,.14);padding:2px 7px;border-radius:999px;margin-left:7px}
+  .dias-cell{white-space:nowrap}
+  .dia{display:inline-block;font-size:10px;font-weight:700;color:#b6ad9c;background:#f4f1e8;padding:2px 6px;border-radius:6px;margin-right:2px}
+  .dia.on{color:var(--z-cream);background:var(--z-auaulandia)}
+  .dia.clic{cursor:pointer;font-size:12px;padding:5px 10px;border:1.5px solid var(--line)}
+  .dia.clic:hover{border-color:var(--z-daycare)}
+  .dia.clic.on{border-color:var(--z-auaulandia)}
+  .pel-nome-input{width:100%;max-width:300px;font-family:var(--font-marca,inherit);font-size:20px;font-weight:800;color:var(--z-blue);border:1.5px dashed var(--line);border-radius:9px;padding:4px 10px;background:var(--z-cream)}
+  .pel-nome-input:focus{border-style:solid;border-color:var(--z-gold);outline:none}
+  .dctab{padding:9px 17px;border-radius:999px;font-size:13.5px;font-weight:600;cursor:pointer;background:var(--z-white);border:1.5px solid var(--line);color:var(--muted)}
+  .dctab.active{background:var(--z-daycare);color:#fff;border-color:var(--z-daycare)}
+  /* cadeado de sensibilidade */
+  .lock-toggle{cursor:pointer;font-size:13px;margin-left:5px;user-select:none}
+  /* abas internas da ficha do peludinho */
+  .subtab2{padding:8px 15px;border-radius:999px;font-size:13px;font-weight:600;cursor:pointer;background:var(--z-white);border:1.5px solid var(--line);color:var(--muted)}
+  .subtab2.active{background:var(--z-blue);color:var(--z-cream);border-color:var(--z-blue)}
+  .ppanel2{display:none}.ppanel2.active{display:block}
+  /* card de alertas de saude (destaque) */
+  .alert-card{background:#fff;border:1px solid var(--line);border-left:5px solid var(--crm-atencao);border-radius:var(--radius);padding:18px 20px;margin-bottom:16px;box-shadow:var(--shadow)}
+  .alert-pills{display:flex;flex-wrap:wrap;gap:8px;margin:6px 0 14px}
+  .alert-pill{display:inline-flex;align-items:center;gap:6px;font-size:12.5px;font-weight:800;padding:7px 13px;border-radius:10px;letter-spacing:.2px}
+  .alert-pill.crit{background:rgba(192,57,43,.12);color:var(--crm-critico);border:1.5px solid rgba(192,57,43,.4);animation:piscaAlerta 1.5s ease-in-out infinite}
+  .alert-pill.warn{background:rgba(222,180,40,.16);color:var(--crm-atencao-text);border:1.5px solid rgba(222,180,40,.45)}
+  @keyframes piscaAlerta{0%,100%{box-shadow:0 0 0 0 rgba(192,57,43,.5)}50%{box-shadow:0 0 0 6px rgba(192,57,43,0)}}
+  /* vacinas */
+  .vac-row{display:grid;grid-template-columns:1.3fr 1fr 1fr;gap:12px;align-items:end;padding:11px 0;border-bottom:1px solid #f1ebde}
+  .vac-row:last-child{border-bottom:none}
+  .vac-row .vac-nome{font-weight:700;color:var(--z-blue);font-size:14px;align-self:center}
+  @media(max-width:560px){.vac-row{grid-template-columns:1fr 1fr}.vac-row .vac-nome{grid-column:1/-1}}
+  /* Day Care chamada */
+  .dc-layout{display:flex;gap:18px;align-items:flex-start}
+  .dc-days{display:flex;flex-direction:column;gap:8px;flex:0 0 auto;width:152px}
+  .dc-day{padding:12px 14px;border-radius:12px;font-weight:700;font-size:14px;cursor:pointer;background:var(--z-white);border:1.5px solid var(--line);color:var(--muted)}
+  .dc-day .qt{float:right;font-size:11px;opacity:.7;font-weight:600}
+  .dc-day.active{background:var(--z-daycare);color:#fff;border-color:var(--z-daycare)}
+  .dc-day.hoje::after{content:' · hoje';font-size:10px;opacity:.7}
+  .dc-main{flex:1;min-width:0}
+  .pet{position:relative}
+  .dc-present{position:absolute;top:9px;right:9px;width:30px;height:30px;border-radius:50%;border:2px solid var(--line);background:#fff;display:grid;place-items:center;cursor:pointer;font-size:15px;font-weight:800;color:#c9c2b2;z-index:2}
+  .dc-present.veio{background:var(--crm-ok);border-color:var(--crm-ok);color:#fff}
+  .dc-present.faltou{background:var(--crm-critico);border-color:var(--crm-critico);color:#fff}
+  /* SEGURANÇA — tarja de restrição/alergia. Fica ABAIXO da foto (nunca sobre o rosto do FILHOt),
+     em banda vermelha piscante, óbvia. Vale para .pet, .pet.dc-card e .vet-pet. */
+  .pet .mini-alert,.vet-pet .mini-alert{display:block;margin:1px auto 7px;max-width:calc(100% - 6px);font-size:10.5px;font-weight:800;letter-spacing:.3px;color:#fff;background:var(--crm-critico);padding:5px 9px;border-radius:8px;text-align:center;line-height:1.2;animation:piscaAlerta 1.5s ease-in-out infinite}
+  /* selos de status (medicação, vet, não comeu) — chips no fluxo, abaixo da foto, sem cobrir o rosto */
+  .pet .mini-med,.pet .mini-recom,.pet .mini-naocomeu,.vet-pet .mini-med{display:inline-block;vertical-align:middle;margin:0 3px 7px;font-size:9.5px;font-weight:800;letter-spacing:.2px;padding:3px 8px;border-radius:7px;line-height:1.2}
+  .pet .mini-med{color:var(--crm-atencao-text);background:var(--z-gold)}
+  .pet .mini-recom{color:#fff;background:var(--crm-info)}
+  .pet .mini-naocomeu{color:#fff;background:var(--crm-critico);animation:piscaAlerta 1.5s ease-in-out infinite}
+  .vet-pet .mini-med{color:var(--z-blue);background:var(--z-gold)}
+  body[data-role="plantonista"] .so-day,body[data-role="tutor"] .so-day{display:none !important}
+  /* Plantonista na medicação: vê SÓ o plano do dia (o que dar, quando, como) — NUNCA o cadastro,
+     nem separação medicamento/suplemento. Ela só executa: "Dei agora". À prova de falha. */
+  body[data-role="plantonista"] #magItens,
+  body[data-role="plantonista"] #card-medagenda>h2+.hint,
+  body[data-role="plantonista"] #magSoLeituraAviso{display:none !important}
+  /* Plantonista: só AuAulândia e Sair */
+  body[data-role="plantonista"] .nav a,body[data-role="plantonista"] .nav .grp,body[data-role="plantonista"] .nav .subnav{display:none !important}
+  body[data-role="plantonista"] .nav a[data-v="hospedagem"],body[data-role="plantonista"] .nav a[data-v="sair"]{display:flex !important}
+  /* "Atividades Monitor 1" (rotina de abertura) — só aparece para quem tem abertura=true */
+  .nav a.so-abertura{display:none}
+  body[data-abertura="1"] .nav a.so-abertura{display:flex}
+  /* Escopo restrito por pessoa (ex.: Amanda Barbosa — só o almoço): esconde tudo menos Day Care e Sair */
+  body[data-scope="atividade"] .nav a[data-v="hospedagem"],
+  body[data-scope="atividade"] .nav a[data-v="agenda"],
+  body[data-scope="atividade"] .nav a[data-v="inicio"]{display:none !important}
+  /* Monitor: sem Operação */
+  body[data-role="monitor"] .op-only,body[data-role="monitor"] .grp-operacao,
+  body[data-role="aprendiz"] .op-only,body[data-role="aprendiz"] .grp-operacao{display:none !important}
+  /* selos de adaptação (foco do time) */
+  .mini-adapt{position:absolute;top:8px;right:8px;font-size:10px;font-weight:800;color:var(--z-blue);background:var(--z-gold);padding:3px 8px;border-radius:8px;z-index:3;animation:piscaAdapt 1s ease-in-out infinite}
+  .dc-card .mini-adapt,.alm-card .mini-adapt{top:32px}
+  @keyframes piscaAdapt{0%,100%{opacity:1}50%{opacity:.4}}
+  .adapt-banner{background:linear-gradient(90deg,rgba(222,180,40,.28),rgba(222,180,40,.1));border:2px solid var(--z-gold);border-radius:12px;padding:12px 16px;margin-bottom:12px;font-weight:800;color:var(--z-blue-deep);text-align:center;animation:piscaAlerta 1.1s ease-in-out infinite}
+  .subnav-grp{font-size:11px;text-transform:uppercase;letter-spacing:1.3px;font-weight:800;margin:14px 12px 5px;color:var(--z-gold);border-bottom:1px solid rgba(222,180,40,.35);padding-bottom:4px}
+  .dc-titulo{font-family:var(--font-accent);font-size:23px;font-weight:700;color:var(--z-blue);margin-bottom:12px}
+  @media(max-width:640px){.dc-layout{flex-direction:column}.dc-days{flex-direction:row;width:100%;overflow-x:auto}.dc-day{flex:0 0 auto}}
+  /* submenu de dias no menu lateral */
+  .subnav{display:flex;flex-direction:column;margin:2px 0 6px 22px;border-left:2px solid rgba(255,255,255,.14);padding-left:6px;position:relative;z-index:1}
+  .subnav a{color:var(--z-cream);text-decoration:none;font-size:13px;font-weight:500;opacity:.82;padding:8px 12px;border-radius:9px;cursor:pointer}
+  .subnav a:hover{background:rgba(255,255,255,.07);opacity:1}
+  .subnav a.active{background:var(--z-gold);color:var(--z-blue);opacity:1;font-weight:700}
+  /* chamada a prova de burros */
+  .dc-resumo{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:10px}
+  .dc-stat{flex:1;min-width:108px;background:#fff;border:1px solid var(--line);border-radius:12px;padding:12px 15px;font-size:13px;font-weight:600;color:var(--muted);box-shadow:var(--shadow)}
+  .dc-stat b{font-size:25px;font-family:var(--font-marca);display:block;line-height:1;margin-bottom:2px}
+  .dc-stat.ok b{color:var(--crm-ok)} .dc-stat.bad b{color:var(--crm-critico)} .dc-stat.pend b{color:var(--crm-atencao-text)}
+  .dc-faltas{background:rgba(192,57,43,.1);border:1.5px solid rgba(192,57,43,.35);color:var(--crm-critico);border-radius:11px;padding:11px 15px;font-size:14px;font-weight:600;margin-bottom:10px}
+  /* comeu metade / almoço em andamento — atenção, não é falta */
+  .dc-meia{background:rgba(222,180,40,.14);border:1.5px solid rgba(222,180,40,.5);color:var(--z-blue);border-radius:11px;padding:11px 15px;font-size:14px;font-weight:600;margin-bottom:10px}
+  /* não almoçam — informativo: saíram da fila de propósito */
+  .alm-fora{background:rgba(35,77,103,.08);border:1.5px dashed rgba(35,77,103,.35);color:var(--z-blue);border-radius:11px;padding:11px 15px;font-size:13.5px;font-weight:600;margin-bottom:10px}
+  /* prevenção & cuidados vacinais — cada bloco calcula a próxima data sozinho */
+  .prev-bloco{border:1.5px solid var(--line);border-radius:12px;padding:12px 14px;margin-bottom:12px;background:var(--z-cream)}
+  .prev-tit{font-size:14px;font-weight:800;color:var(--z-blue);margin-bottom:10px;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+  .prev-calc{background:var(--z-cream-warm);border:1.5px dashed var(--line);border-radius:9px;padding:9px 11px;font-size:13.5px;font-weight:700;color:var(--z-blue)}
+  .prev-info{padding:9px 0;font-size:13px;color:var(--muted);font-weight:600}
+  .prev-nota{font-size:11.5px;color:var(--muted);font-weight:600;margin:-4px 0 9px}
+  .vd{font-size:10px;font-weight:800;padding:3px 8px;border-radius:7px;letter-spacing:.3px}
+  .vd-ok{background:rgba(94,155,107,.16);color:#3d6b47}
+  .vd-perto{background:rgba(222,180,40,.22);color:var(--z-blue)}
+  .vd-venc{background:rgba(192,57,43,.14);color:var(--crm-critico)}
+  .vd-sem{background:rgba(35,77,103,.09);color:var(--muted)}
+  /* renovação de planos */
+  .renov-list{display:flex;flex-direction:column;gap:8px;margin-top:12px}
+  .renov-item{display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding:11px 14px;border:1.5px solid var(--line);border-radius:11px;background:var(--z-cream);cursor:pointer}
+  .renov-item:hover{border-color:var(--z-gold)}
+  .renov-nome{font-weight:800;color:var(--z-blue);flex:1;min-width:120px}
+  .renov-meta{font-size:12.5px;color:var(--muted);font-weight:600}
+  .renov-msgs{display:flex;flex-direction:column;gap:14px}
+  .renov-msg-tit{font-size:12.5px;font-weight:800;color:var(--z-blue);margin-bottom:5px}
+    .peso-hist{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+  .peso-hist span{font-size:11.5px;font-weight:600;color:var(--z-blue);background:var(--z-cream-warm);border:1px solid var(--line);border-radius:7px;padding:2px 8px}
+  /* despertador do banho — 5 min antes, para ninguem esquecer de descer com o FILHOt */
+  /* Os alarmes ficam ACIMA da tela trancada (z-index 180): tela bloqueada não pode esconder um
+     remédio na hora. Continuam ABAIXO da tela de login (200) — deslogado não existe alarme. */
+  .desp-banho{position:fixed;left:0;right:0;top:0;z-index:185;background:var(--z-gold);color:var(--z-blue);box-shadow:0 4px 18px rgba(0,0,0,.22);animation:despPisca 1.1s ease-in-out infinite}
+  .desp-in{display:flex;align-items:center;justify-content:center;gap:14px;flex-wrap:wrap;padding:12px 16px;max-width:900px;margin:0 auto}
+  .desp-tx{font-size:15px;font-weight:700;line-height:1.4}
+  .desp-tx span{display:block;font-size:12.5px;font-weight:600;opacity:.85}
+  @keyframes despPisca{0%,100%{background:var(--z-gold)}50%{background:#f0cc55}}
+  /* despertador da medicação — mesmo padrão do banho, mas vermelho (crítico) e por cima dele */
+  .desp-med{z-index:190;background:var(--crm-critico);color:#fff;animation:despPiscaMed 1.1s ease-in-out infinite}
+  /* Tela trancada — a sessão continua VIVA por baixo (o alarme de dose depende disso). */
+  .lock-screen{position:fixed;inset:0;z-index:180;display:none;align-items:center;justify-content:center;
+    background:linear-gradient(160deg,var(--z-blue),var(--z-blue-deep));padding:24px}
+  .lock-box{background:var(--z-cream);border-radius:20px;padding:30px 26px;width:100%;max-width:390px;
+    text-align:center;box-shadow:0 18px 50px rgba(0,0,0,.35)}
+  .lock-tit{font-size:13px;font-weight:700;letter-spacing:.6px;text-transform:uppercase;color:var(--z-blue-soft)}
+  .lock-nome{font-size:23px;font-weight:800;color:var(--z-blue);margin:6px 0 2px;line-height:1.25}
+  .lock-sub{font-size:14px;color:var(--z-blue-soft);font-weight:600;margin-bottom:20px}
+  .lock-box input{width:100%;padding:15px;font-size:24px;text-align:center;letter-spacing:9px;
+    border:2px solid var(--line);border-radius:13px;background:#fff;color:var(--z-blue);font-family:inherit}
+  .lock-box .login-btn,.lock-btn{width:100%;margin-top:13px;padding:15px;border:none;border-radius:13px;
+    background:var(--z-gold);color:var(--z-blue);font-weight:800;font-size:16px;cursor:pointer;font-family:inherit}
+  .lock-sair{margin-top:15px;font-size:13.5px;color:var(--z-blue-soft);text-decoration:underline;cursor:pointer;font-weight:600}
+  .lock-err{margin-top:11px;font-size:13.5px;font-weight:700;color:var(--crm-critico);min-height:19px}
+  @keyframes despPiscaMed{0%,100%{background:var(--crm-critico)}50%{background:#d9584a}}
+  /* legenda da ordem de servir — a lista não é alfabética, é por ordem de servir */
+  .alm-legenda{background:var(--z-cream-warm);border:1.5px solid var(--line);border-radius:11px;padding:10px 14px;font-size:12.5px;color:var(--z-blue);margin-bottom:10px;line-height:1.7}
+  .alm-legenda .lg-g{display:inline-block;background:var(--z-cream);border:1px solid var(--line);border-radius:999px;padding:2px 10px;margin:0 4px;font-weight:600}
+  .alm-legenda .lg-g b{color:var(--z-gold);font-weight:800}
+  .alm-legenda .lg-nota{display:block;margin-top:5px;font-size:11.5px;color:var(--muted)}
+  /* achado pela busca mas não é da turma do dia (reposição, avulso, urgência) */
+  /* contagem de matriculados por dia na subnav (só Gestão/Supervisão) */
+  /* peludinho que saiu do Day Care — fica no banco, mas nao se confunde com quem esta na ativa */
+  .pel-inativo{opacity:.55}
+  .pel-saiu{display:inline-block;font-size:9.5px;font-weight:800;color:var(--z-cream);background:var(--z-blue);padding:2px 7px;border-radius:7px;margin-left:6px;letter-spacing:.3px}
+  .dia-n{float:right;background:var(--z-gold);color:var(--z-blue);font-size:10.5px;font-weight:800;border-radius:999px;padding:1px 7px;margin-left:6px}
+  .mini-fora{position:absolute;top:8px;right:8px;font-size:9.5px;font-weight:800;color:var(--z-cream);background:var(--z-daycare,#E08856);padding:3px 8px;border-radius:8px;z-index:3;letter-spacing:.3px}
+  .alm-card .mini-fora,.dc-card .mini-fora{top:32px}
+  .pet.fora-dia{outline:2px dashed rgba(224,136,86,.55);outline-offset:2px}
+  .dc-pend-note{background:rgba(222,180,40,.14);border:1.5px solid rgba(222,180,40,.4);color:var(--crm-atencao-text);border-radius:11px;padding:9px 14px;font-size:13px;font-weight:600;margin-bottom:14px}
+  .dc-card{padding-top:32px;overflow:hidden}
+  .dc-ribbon{position:absolute;top:0;left:0;right:0;text-align:center;font-size:11px;font-weight:800;letter-spacing:.6px;padding:5px}
+  .dc-ribbon.pend{background:rgba(222,180,40,.22);color:var(--crm-atencao-text)}
+  .dc-ribbon.veio{background:var(--crm-ok);color:#fff}
+  .dc-ribbon.faltou{background:var(--crm-critico);color:#fff}
+  .dc-card.veio{border-color:var(--crm-ok);box-shadow:0 0 0 2px rgba(39,174,96,.32)}
+  .dc-card.faltou{border-color:var(--crm-critico);box-shadow:0 0 0 2px rgba(192,57,43,.32);opacity:.88}
+  /* .dc-card: tarja de restrição agora é banda no fluxo (abaixo da foto) — sem override de posição */
+  .dc-actions{display:flex;gap:6px;margin-top:11px}
+  .dc-btn{flex:1;border:1.5px solid var(--line);background:#fff;border-radius:9px;padding:10px 6px;font-family:var(--font-ui);font-weight:700;font-size:13.5px;cursor:pointer;color:var(--z-blue)}
+  .dc-btn.veio.on{background:var(--crm-ok);color:#fff;border-color:var(--crm-ok)}
+  .dc-btn.faltou.on{background:var(--crm-critico);color:#fff;border-color:var(--crm-critico)}
+  /* Relatórios (accordion) */
+  .rel-head{display:flex;align-items:center;gap:10px;cursor:pointer;user-select:none}
+  .rel-head h2{flex:1;margin:0}
+  .rel-tag{font-size:11px;font-weight:700;color:var(--z-blue-soft);background:var(--z-cream-warm);padding:3px 10px;border-radius:999px}
+  .rel-caret{font-size:14px;color:var(--muted);transition:transform .2s}
+  .rel-card.collapsed .rel-caret{transform:rotate(-90deg)}
+  .rel-card.collapsed .rel-body{display:none}
+  .rel-body{margin-top:12px}
+  .rel-assina{margin-top:14px;border-top:1px dashed var(--line);padding-top:12px}
+  /* ordem cronologica do ciclo de plantao: Noite (fecha) -> Dia -> Jantar (abre o proximo) */
+  .rel-stack{display:flex;flex-direction:column}
+  #card-noite{order:1}#card-dia{order:2}#card-inicio{order:3}
+  .rel-status{text-align:center;font-size:13px;font-weight:700;margin-top:8px;min-height:18px}
+  /* Resumo da Gestora */
+  .gest-card{border-left:5px solid var(--z-gold)}
+  .gest-item{border:1px solid var(--line);border-radius:11px;padding:11px 13px;margin-top:9px;background:var(--z-cream)}
+  .gest-item.alerta{border-color:rgba(192,57,43,.45);background:rgba(192,57,43,.05)}
+  .gest-head{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+  .gest-badge{font-size:10.5px;font-weight:800;color:#fff;background:var(--crm-critico);padding:3px 9px;border-radius:8px}
+  .gest-ok{font-size:10.5px;font-weight:800;color:var(--crm-ok);background:rgba(39,174,96,.12);padding:3px 9px;border-radius:8px}
+  .gest-pend{font-size:10.5px;font-weight:700;color:var(--crm-atencao-text);background:rgba(222,180,40,.15);padding:3px 9px;border-radius:8px}
+  .gest-txt{width:100%;font-family:var(--font-ui);font-size:13.5px;line-height:1.5;padding:10px;border:1.5px solid var(--line);border-radius:10px;background:#fff;min-height:96px}
+  /* To-Do (checklist) */
+  .todo-item{display:flex;align-items:center;gap:11px;padding:11px 14px;border:1.5px solid var(--line);border-radius:11px;margin-bottom:8px;cursor:pointer;font-weight:600;color:var(--z-blue);background:#fff}
+  .todo-item.on{background:rgba(39,174,96,.1);border-color:var(--crm-ok)}
+  .todo-box{width:24px;height:24px;border-radius:7px;border:2px solid var(--line);display:grid;place-items:center;font-weight:800;color:#fff;background:#fff;flex:0 0 auto;font-size:14px}
+  .todo-item.on .todo-box{background:var(--crm-ok);border-color:var(--crm-ok)}
+  /* Banco de atividades */
+  .ativ-card{background:#fff;border:1px solid var(--line);border-left:4px solid var(--z-gold);border-radius:12px;padding:13px 16px;margin-bottom:10px;box-shadow:var(--shadow)}
+  .ativ-head{display:flex;align-items:center;gap:10px}
+  .ativ-num{font-family:var(--font-marca);font-weight:800;color:var(--z-gold-deep);font-size:14px}
+  .ativ-tit{font-weight:700;color:var(--z-blue);font-size:14.5px;flex:1}
+  .ativ-del{background:none;border:none;color:var(--crm-critico);font-size:20px;font-weight:700;cursor:pointer;line-height:1;padding:0 4px}
+  .ativ-itens{margin:9px 0 0 26px;padding:0}
+  .ativ-itens li{font-size:13px;color:var(--z-blue-deep);margin-bottom:4px}
+  /* Protocolo almoco */
+  .dctab2.locked{opacity:.42;cursor:not-allowed}
+  .alm-regras{display:flex;flex-direction:column;gap:8px;margin-top:6px}
+  .alm-regra{background:var(--z-cream-warm);border-left:4px solid var(--z-blue-soft);border-radius:9px;padding:10px 14px;font-size:13.5px;color:var(--z-blue-deep);font-weight:600}
+  .alm-regra.obg{border-left-color:var(--crm-critico);background:rgba(192,57,43,.07)}
+  .alm-regra.warn{border-left-color:var(--z-gold);background:rgba(222,180,40,.1)}
+  .alm-next{margin-top:14px;text-align:center}
+  .mini-banho{position:absolute;top:8px;left:8px;font-size:10px;font-weight:800;color:#fff;background:var(--z-auaulandia);padding:3px 8px;border-radius:8px;z-index:3}
+  .alm-card .mini-banho{top:32px}
+  /* ANSIOSO — come em caixa própria. 2º da ordem de servir (depois de quem tem banho). */
+  .mini-ansioso{position:absolute;top:8px;left:8px;font-size:10px;font-weight:800;color:var(--z-cream);background:var(--z-blue);padding:3px 8px;border-radius:8px;z-index:3}
+  .alm-card .mini-ansioso{top:32px}
+  .mini-ansioso.lower{top:32px}
+  .alm-card .mini-ansioso.lower,.dc-card .mini-ansioso.lower{top:56px}
+  .banho-toggle{margin-top:7px;width:100%;border:1.5px solid var(--line);background:#fff;border-radius:9px;padding:7px;font-family:var(--font-ui);font-weight:700;font-size:12px;cursor:pointer;color:var(--z-blue-soft)}
+  .banho-toggle.on{background:var(--z-auaulandia);color:#fff;border-color:var(--z-auaulandia)}
+  /* Almoco */
+  .dctab2{padding:9px 18px;border-radius:999px;font-size:14px;font-weight:700;cursor:pointer;background:var(--z-white);border:1.5px solid var(--line);color:var(--muted)}
+  .dctab2.active{background:var(--z-blue);color:var(--z-cream);border-color:var(--z-blue)}
+  .alm-turno{display:flex;justify-content:space-between;gap:14px;flex-wrap:wrap;background:var(--z-blue);color:var(--z-cream);border-radius:var(--radius);padding:14px 18px;margin-bottom:12px}
+  .alm-turno .tb-lab{font-size:10.5px;text-transform:uppercase;letter-spacing:.8px;opacity:.7;font-weight:700}
+  .alm-card{display:flex;flex-direction:column;text-align:center}
+  .alm-info{margin-top:8px;text-align:left}
+  .alm-line{display:flex;justify-content:space-between;gap:8px;padding:3px 0;border-bottom:1px solid #f3efe5;font-size:12.5px}
+  .alm-line span{color:var(--muted);font-weight:600}.alm-line b{color:var(--z-blue)}
+  .alm-badge{display:inline-block;margin-top:6px;margin-right:4px;font-size:10.5px;font-weight:800;color:var(--z-blue);background:rgba(222,180,40,.22);padding:3px 9px;border-radius:7px;letter-spacing:.3px}
+  .alm-extra{margin-top:6px;font-size:11.5px;color:var(--z-blue-deep);background:var(--z-cream-warm);border-radius:8px;padding:6px 9px;line-height:1.4}
+  .alm-restr{margin-top:8px;font-size:12px;font-weight:800;color:#fff;background:var(--crm-critico);padding:7px 10px;border-radius:9px;text-align:center;animation:piscaAlerta 1.2s ease-in-out infinite}
+  /* ===== A COMIDA — controle segmentado (Adriana, 04/ago/2026) =======================
+     Eram 4 botões de borda grossa espremidos numa linha só: "Comeu tudo · Metade ·
+     Nao comeu · Não se aplica". Quebrava feio e ocupava meio card.
+     Agora: UMA trilha cinza com as 3 respostas do dia (Comeu · Metade · Não comeu) e,
+     embaixo, "Não se aplica" discreto — que é exceção, não resposta de rotina.
+     Só a opção escolhida ganha cor; as outras ficam quietas. */
+  .alm-actions{display:block;margin-top:9px}
+  .alm-seg{display:grid;grid-template-columns:repeat(3,1fr);gap:3px;background:rgba(35,77,103,.07);
+    border-radius:11px;padding:3px}
+  .alm-seg.duo{grid-template-columns:repeat(2,1fr)}
+  /* flex + min-height: "Não comeu" quebra em duas linhas em card estreito; sem isto os três
+     rótulos ficam em alturas diferentes e a trilha parece torta. */
+  .alm-btn{display:flex;align-items:center;justify-content:center;text-align:center;min-height:36px;
+    border:none;background:transparent;border-radius:8px;padding:6px 1px;
+    font-family:var(--font-ui);font-weight:600;font-size:11.5px;letter-spacing:-.015em;line-height:1.15;
+    color:var(--z-blue-soft);cursor:pointer;-webkit-tap-highlight-color:transparent;
+    transition:background .14s,color .14s,box-shadow .14s}
+  .alm-btn:active{transform:scale(.97)}
+  .alm-btn.on{font-weight:800;box-shadow:0 1px 2px rgba(26,58,79,.18)}
+  .alm-btn.tudo.on{background:var(--crm-ok);color:#fff}
+  .alm-btn.metade.on{background:var(--crm-atencao);color:var(--crm-atencao-text)}
+  .alm-btn.nao.on{background:var(--crm-critico);color:#fff}
+  /* Item 12 — "Não se aplica": tem FILHOt que não almoça (come só fruta, está de jejum,
+     comeu com o tutor). Não é falha, então não vai para o 2º horário nem avisa o tutor. */
+  .alm-na{display:block;width:100%;margin-top:5px;border:1px solid var(--line);background:transparent;
+    border-radius:9px;padding:6px 4px;font-family:var(--font-ui);font-weight:600;font-size:11.5px;
+    color:var(--muted);cursor:pointer;-webkit-tap-highlight-color:transparent;transition:.14s}
+  .alm-na.on{background:#7C8B99;border-color:#7C8B99;color:#fff;font-weight:800}
+  .alm-card.tudo{border-color:var(--crm-ok)} .alm-card.metade{border-color:var(--crm-atencao)} .alm-card.nao{border-color:var(--crm-critico);box-shadow:0 0 0 2px rgba(192,57,43,.3)}
+  .role-note{font-size:12px;background:var(--z-cream-warm);border:1px solid var(--line);border-radius:10px;
+    padding:10px 14px;color:var(--z-blue-soft);margin-bottom:18px;display:flex;gap:8px;align-items:center}
+
+  /* ===== Painel do Dia (auditoria & pontuação) ===== */
+  .p-datenav{display:flex;align-items:center;gap:6px;background:var(--z-white);border:1.5px solid var(--line);border-radius:14px;padding:6px 8px;margin-bottom:16px;flex-wrap:wrap}
+  .p-datenav button{border:none;background:transparent;color:var(--z-blue);font-family:var(--font-ui);font-weight:600;font-size:15px;cursor:pointer;padding:6px 12px;border-radius:10px;line-height:1}
+  .p-datenav button:hover{background:var(--z-cream-warm)}
+  .p-datenav #painelDateLabel{font-size:14px;font-weight:700;color:var(--z-blue);padding:0 8px;flex:1;min-width:120px}
+  .p-datenav .hoje{background:var(--z-gold);color:var(--z-blue);font-weight:700;font-size:13px}
+  .p-datenav .p-cfg-btn{background:var(--z-cream-warm);border:1.5px solid var(--line);color:var(--z-blue-soft);font-size:12.5px;font-weight:700}
+  .p-cfg-row{display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding:9px 0;border-bottom:1px solid #f1ebde}
+  .p-cfg-row:last-child{border-bottom:none}
+  .p-cfg-lab{font-weight:700;color:var(--z-blue);min-width:170px;font-size:14px}
+  .p-cfg-row label{font-size:12.5px;color:var(--muted);font-weight:600;display:inline-flex;align-items:center;gap:6px}
+  .p-cfg-row input[type=time]{font-family:var(--font-ui);font-size:14px;padding:7px 10px;border:1.5px solid var(--line);border-radius:9px;background:var(--z-cream);color:var(--z-blue)}
+  .p-score{display:flex;align-items:center;gap:18px;background:var(--z-blue);color:var(--z-cream);border-radius:var(--radius);padding:20px 24px;margin-bottom:16px;box-shadow:var(--shadow)}
+  .p-score-num{font-family:var(--font-marca);font-weight:800;font-size:52px;line-height:1}
+  .p-score-lab{font-size:14px;line-height:1.5;opacity:.95}
+  .p-proto{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:13px 0;border-bottom:1px solid #f1ebde;flex-wrap:wrap}
+  .p-proto:last-child{border-bottom:none}
+  .p-proto-nm{font-weight:700;color:var(--z-blue);font-size:14.5px}
+  .p-proto-meta{font-size:12px;color:var(--muted);font-weight:600;margin-top:2px}
+  .p-proto-r{display:flex;gap:6px;flex-wrap:wrap;flex:0 0 auto}
+  .p-proto.falta{opacity:.95}
+  .p-pill{font-size:11px;font-weight:800;padding:4px 10px;border-radius:8px;letter-spacing:.2px;white-space:nowrap}
+  .p-pill.ok{background:rgba(39,174,96,.13);color:var(--crm-ok)}
+  .p-pill.warn{background:rgba(222,180,40,.18);color:var(--crm-atencao-text)}
+  .p-pill.bad{background:rgba(192,57,43,.12);color:var(--crm-critico)}
+  .p-pill.neutro{background:var(--z-cream-warm);color:var(--muted)}
+  .p-pessoa{border:1px solid var(--line);border-left:4px solid var(--z-gold);border-radius:11px;padding:12px 15px;margin-top:10px;background:var(--z-cream)}
+  .p-pessoa-h{display:flex;align-items:center;gap:9px;flex-wrap:wrap}
+  .p-pessoa-h b{color:var(--z-blue);font-size:15px}
+  .p-pessoa-role{font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:var(--z-blue-soft);background:rgba(58,106,133,.12);padding:2px 8px;border-radius:6px}
+  .p-pessoa-n{margin-left:auto;font-size:12px;font-weight:800;color:var(--z-gold-deep)}
+  .p-pessoa-time{font-size:12px;color:var(--muted);font-weight:600;margin-top:4px}
+  .p-pessoa-ac{font-size:13px;color:var(--z-blue-deep);margin-top:6px;line-height:1.5}
+  .p-tl{position:relative;padding-left:8px}
+  .p-tl-item{display:flex;gap:12px;align-items:baseline;padding:8px 0;border-bottom:1px solid #f5f1e8;flex-wrap:wrap}
+  .p-tl-item:last-child{border-bottom:none}
+  .p-tl-h{font-family:var(--font-marca);font-weight:700;color:var(--z-gold-deep);font-size:13px;min-width:48px}
+  .p-tl-q{font-weight:700;color:var(--z-blue);font-size:13px;min-width:110px}
+  .p-tl-a{font-size:13px;color:var(--z-blue-deep)}
+  .p-empty{text-align:center;padding:40px 20px;color:var(--muted);font-size:14px;font-weight:600}
+  .saida-hoje{display:inline-block;margin-top:8px;font-size:10px;font-weight:800;letter-spacing:.3px;color:var(--crm-atencao-text);background:rgba(222,180,40,.2);border:1px solid rgba(222,180,40,.5);padding:3px 9px;border-radius:7px}
+  .hosp-del{position:absolute;top:6px;right:6px;z-index:3;width:30px;height:30px;border-radius:50%;border:2px solid #fff;background:var(--crm-critico);color:#fff;font-weight:800;font-size:15px;line-height:1;cursor:pointer;box-shadow:0 1px 4px rgba(0,0,0,.25)}
+  .hosp-del:hover{transform:scale(1.08)}
+  /* Tarjas de tipo do hóspede (HÓSPEDE / PERNOITE / MORADORA) */
+  .tarja{display:inline-block;margin-top:8px;font-size:10px;font-weight:800;letter-spacing:.4px;padding:3px 9px;border-radius:7px}
+  .tarja.t-hospede{background:#234D67;color:#FFFDF6}
+  .tarja.t-pernoite{background:#DEB428;color:#234D67}
+  .tarja.t-moradora{background:rgba(35,77,103,.08);color:#234D67;border:1px solid #DEB428}
+  /* Protocolo do Plantão — 4 regras imprescindíveis */
+  .protocolo-regras{list-style:none;margin:16px 0 0;padding:0;counter-reset:pr;display:flex;flex-direction:column;gap:12px}
+  .protocolo-regras li{counter-increment:pr;position:relative;padding:16px 17px 16px 60px;border-radius:14px;font-weight:600;line-height:1.42;font-size:15.5px;color:#1f3344;background:var(--rc-bg);border:1.5px solid var(--rc-bd);border-left:6px solid var(--rc);box-shadow:0 2px 10px rgba(35,77,103,.05)}
+  .protocolo-regras li::before{content:counter(pr);position:absolute;left:12px;top:50%;transform:translateY(-50%);width:36px;height:36px;display:flex;align-items:center;justify-content:center;background:var(--rc);color:#fff;font-weight:800;border-radius:11px;font-size:17px}
+  .protocolo-regras li strong{color:var(--rc);font-weight:800}
+  .protocolo-regras li:nth-child(1){--rc:#234D67;--rc-bg:rgba(35,77,103,.07);--rc-bd:rgba(35,77,103,.22)}
+  .protocolo-regras li:nth-child(2){--rc:#1E7A5A;--rc-bg:rgba(30,122,90,.07);--rc-bd:rgba(30,122,90,.26)}
+  .protocolo-regras li:nth-child(3){--rc:#C0392B;--rc-bg:rgba(192,57,43,.07);--rc-bd:rgba(192,57,43,.28)}
+  .protocolo-regras li:nth-child(4){--rc:#B26A00;--rc-bg:rgba(178,106,0,.08);--rc-bd:rgba(178,106,0,.30)}
+  .protocolo-regras li:nth-child(5){--rc:#5B4B8A;--rc-bg:rgba(91,75,138,.08);--rc-bd:rgba(91,75,138,.28)}
+  /* Selo crítico: frase que não pode ser ignorada (ex.: nenhuma alimentação pode ser trocada) */
+  .proto-critico{display:block;margin-top:11px;background:#C0392B;color:#fff;font-weight:800;font-size:15px;letter-spacing:.6px;line-height:1.3;padding:12px 15px;border-radius:11px;box-shadow:0 3px 12px rgba(192,57,43,.34);animation:piscaCritico 1.5s ease-in-out infinite}
+  .proto-critico::selection{background:#fff;color:#C0392B}
+  @keyframes piscaCritico{0%,100%{box-shadow:0 3px 12px rgba(192,57,43,.30)}50%{box-shadow:0 0 0 5px rgba(192,57,43,0),0 3px 12px rgba(192,57,43,.55)}}
+  .todo-det{display:block;font-size:12px;color:var(--muted);font-weight:500;margin-top:3px;line-height:1.35}
+  #card-checkout-plantao>h2{font-size:23px;letter-spacing:-.022em}
+  .med-add{margin-top:8px;background:rgba(35,77,103,.06);border:1.5px dashed rgba(35,77,103,.3);color:#234D67;border-radius:10px;padding:9px 14px;font-family:var(--font-ui);font-weight:700;font-size:13px;cursor:pointer;width:100%}
+  .med-add:hover{background:rgba(222,180,40,.12);border-color:#DEB428}
+  .medhint{font-size:12.5px;color:var(--muted);margin:2px 0 6px;font-weight:500}
+  /* Painel da Gestora — separadores por gravidade */
+  .gest-nivel{font-weight:800;font-size:12px;letter-spacing:.4px;padding:8px 12px;border-radius:9px;margin:14px 0 8px}
+  .gest-nivel.gn-urgente{background:rgba(192,57,43,.12);color:#C0392B;border:1px solid rgba(192,57,43,.4)}
+  .gest-nivel.gn-atencao{background:rgba(222,180,40,.16);color:#9a7b00;border:1px solid rgba(222,180,40,.5)}
+  .gest-nivel.gn-ok{background:rgba(39,174,96,.1);color:#1E7A5A;border:1px solid rgba(39,174,96,.35)}
+  .proto-subt{margin:20px 0 4px;padding-top:16px;border-top:1px solid rgba(35,77,103,.12);font-weight:700;color:#234D67;font-size:15px;display:flex;align-items:center;gap:9px}
+  .proto-subt::before{content:'';width:6px;height:18px;background:#DEB428;border-radius:3px;display:inline-block}
+  /* Medicação/Suplementação à prova de erro — 5 linhas estruturadas */
+  .medgrid{margin:4px 0 14px;border:1px solid var(--line);border-radius:11px;overflow:hidden}
+  .medgrid-head,.medrow{display:grid;grid-template-columns:1.3fr .82fr 1fr}
+  .medgrid-head{background:var(--z-blue);color:var(--z-cream);font-size:10.5px;font-weight:700;letter-spacing:.4px}
+  .medgrid-head span{padding:7px 9px}
+  .meditem{border-top:1px solid var(--line)}
+  .mfield{display:block;min-width:0;border-right:1px solid var(--line)}
+  .mfield:last-child{border-right:none}
+  .mf-lab{display:none}
+  .medrow input{border:none;padding:10px 9px;font-family:var(--font-ui);font-size:13.5px;background:var(--z-cream);width:100%;color:#234D67}
+  .medrow input:focus{outline:none;background:#fff;box-shadow:inset 0 0 0 2px rgba(222,180,40,.5)}
+  /* Quantidade = número + unidade escolhida no botão (não aceita texto livre) */
+  .medunits{display:flex;flex-wrap:wrap;gap:6px;padding:8px 9px;background:var(--z-cream-warm);border-top:1px dashed var(--line)}
+  .medunits button{border:1.5px solid var(--line);background:var(--z-cream);color:var(--z-blue);border-radius:999px;padding:6px 11px;font-size:12.5px;font-weight:700;font-family:var(--font-ui);cursor:pointer}
+  .medunits button.on{background:var(--z-gold);border-color:var(--z-gold);color:var(--z-blue)}
+  .medunits .mu-lab{align-self:center;font-size:10.5px;font-weight:800;letter-spacing:.4px;color:var(--muted);text-transform:uppercase;margin-right:2px}
+  .mag-tipo{display:flex;gap:6px;padding:8px 9px 0}
+  .mag-tipo button{flex:1;border:1.5px solid var(--line);background:var(--z-cream);color:var(--z-blue);border-radius:999px;padding:7px 11px;font-size:12.5px;font-weight:700;font-family:var(--font-ui);cursor:pointer}
+  .mag-tipo button.on{background:var(--z-gold);border-color:var(--z-gold);color:var(--z-blue)}
+  .mag-datas{display:flex;flex-wrap:wrap;align-items:flex-end;gap:8px;padding:8px 9px;background:var(--z-cream-warm);border-top:1px dashed var(--line)}
+  .mag-datas .mu-lab{align-self:center;font-size:10.5px;font-weight:800;letter-spacing:.4px;color:var(--muted);text-transform:uppercase}
+  .mag-data-f{display:flex;flex-direction:column;gap:3px}
+  .mag-data-f span{font-size:10.5px;font-weight:700;color:var(--muted)}
+  .mag-data-f input{border:1.5px solid var(--line);border-radius:9px;padding:7px 9px;font-family:var(--font-ui);font-size:13.5px;color:var(--z-blue);background:#fff}
+  .mag-data-fim.off{display:none}
+  .mag-continuo{border:1.5px solid var(--line);background:var(--z-cream);color:var(--z-blue);border-radius:999px;padding:7px 13px;font-size:12.5px;font-weight:700;font-family:var(--font-ui);cursor:pointer;align-self:center}
+  .mag-continuo.on{background:var(--z-gold);border-color:var(--z-gold);color:var(--z-blue)}
+  .mag-freq{display:flex;flex-wrap:wrap;align-items:center;gap:8px;padding:8px 9px;background:var(--z-cream-warm);border-top:1px dashed var(--line)}
+  .mag-freq .mu-lab{align-self:center;font-size:10.5px;font-weight:800;letter-spacing:.4px;color:var(--muted);text-transform:uppercase}
+  .mag-freq-opts{display:flex;gap:6px;flex-wrap:wrap}
+  .mag-freq-opts button{border:1.5px solid var(--line);background:var(--z-cream);color:var(--z-blue);border-radius:999px;padding:6px 11px;font-size:12.5px;font-weight:700;font-family:var(--font-ui);cursor:pointer}
+  .mag-freq-opts button.on{background:var(--z-gold);border-color:var(--z-gold);color:var(--z-blue)}
+  .mag-freq-dias{display:none;flex-wrap:wrap;gap:5px;width:100%}
+  .mag-freq-dias.on{display:flex}
+  .mag-diaw{width:42px;height:38px;border:1.5px solid var(--line);background:#fff;border-radius:9px;font-size:12px;font-weight:800;color:var(--z-blue);cursor:pointer}
+  .mag-diaw.on{background:var(--z-blue);border-color:var(--z-blue);color:#fff}
+  .medgrid.dim{opacity:.45;pointer-events:none}
+  /* Celular: a tabela de 3 colunas não cabe — o nome do remédio ficava cortado.
+     Cada linha vira um bloco empilhado, com rótulo em cada campo e botão no tamanho do dedo. */
+  @media (max-width:560px){
+    .medgrid-head{display:none}
+    .medrow{grid-template-columns:1fr}
+    .mfield{border-right:none;border-bottom:1px solid var(--line);padding:7px 9px 8px}
+    .mfield:last-child{border-bottom:none}
+    .mf-lab{display:block;font-size:10.5px;font-weight:800;letter-spacing:.4px;color:var(--muted);text-transform:uppercase;margin-bottom:2px}
+    .medrow input{padding:7px 0;font-size:15px;background:transparent}
+    .medrow input:focus{background:transparent;box-shadow:none;border-bottom:2px solid var(--z-gold)}
+    .medunits{padding:9px}
+    .medunits button{min-height:40px;padding:8px 13px;font-size:13.5px}
+  }
+
+  /* ===== Agenda de Medicação — horários fixos + registro na hora (independente do relatório) ===== */
+  .magitem{border:1px solid var(--line);border-radius:11px;padding:12px;margin-bottom:12px;background:var(--z-white)}
+  .mag-horarios{margin-top:8px}
+  .mag-horarios-list{display:inline-flex;flex-wrap:wrap;gap:6px;margin:0 8px 6px}
+  .magHorario{display:inline-flex;align-items:center;gap:2px;background:var(--z-cream);border:1.5px solid var(--line);border-radius:999px;padding:4px 4px 4px 10px}
+  .magHorario input{border:none;background:transparent;width:58px;font-family:var(--font-ui);font-size:13.5px;color:#234D67;text-align:center}
+  .magHorario input:focus{outline:none}
+  .mag-rm-h{border:none;background:none;color:var(--crm-critico);font-weight:800;font-size:16px;cursor:pointer;padding:2px 6px;line-height:1}
+  .mag-dose{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;padding:10px 12px;border:1.5px solid var(--crm-critico);background:rgba(192,57,43,.06);border-radius:11px;margin-bottom:8px}
+  .mag-dose.feito{border-color:var(--crm-ok);background:rgba(46,157,109,.07)}
+  .mag-dose-info{font-size:13.5px;font-weight:600;color:#234D67}
+  .mag-dose-ok{font-size:12.5px;font-weight:700;color:var(--crm-ok)}
+  /* Camada 4 — placar do dia (histórico por medicamento, dentro da ficha) */
+  .mag-placar{margin-bottom:10px}
+  .mag-placar-linha{font-size:13px;font-weight:600;color:#234D67;padding:7px 0;border-bottom:1px dashed var(--line)}
+  .mag-placar-linha:last-child{border-bottom:none}
+  .mag-placar-linha.atraso{color:var(--crm-critico);font-weight:800}
+  /* Onda 2 — Origem da medicação (tutor/vet/família) e Estoque (2 modos) na ficha viva do remédio */
+  .mag-origem{display:flex;gap:6px;flex-wrap:wrap;align-items:center;padding:10px 9px 0}
+  .mag-origem .mo-lab{font-size:10.5px;font-weight:800;letter-spacing:.4px;color:var(--muted);text-transform:uppercase;margin-right:2px}
+  .mag-origem button{border:1.5px solid var(--line);background:var(--z-cream);color:var(--z-blue);border-radius:999px;padding:6px 12px;font-size:12.5px;font-weight:700;font-family:var(--font-ui);cursor:pointer}
+  .mag-origem button.on{background:var(--z-blue);border-color:var(--z-blue);color:var(--z-cream)}
+  .mag-estoque{margin:10px 9px 2px;padding:11px 12px;border:1.5px dashed var(--line);border-radius:11px;background:var(--z-cream-warm)}
+  .mag-est-lab{font-size:10.5px;font-weight:800;letter-spacing:.4px;color:var(--muted);text-transform:uppercase;margin-bottom:7px}
+  .mag-est-modo{display:flex;gap:6px;margin-bottom:9px}
+  .mag-est-modo button{flex:1;border:1.5px solid var(--line);background:var(--z-cream);color:var(--z-blue);border-radius:999px;padding:7px 11px;font-size:12.5px;font-weight:700;font-family:var(--font-ui);cursor:pointer}
+  .mag-est-modo button.on{background:var(--z-gold);border-color:var(--z-gold);color:var(--z-blue)}
+  .mag-est-campo{display:none}
+  .mag-est-campo.on{display:block}
+  .mag-est-campo label{display:block;font-size:12px;font-weight:700;color:var(--z-blue);margin-bottom:5px}
+  .mag-est-campo input{width:120px;max-width:100%;padding:9px 11px;border:1.5px solid var(--line);border-radius:9px;background:var(--z-cream);font-family:var(--font-ui);font-size:14px;font-weight:700;color:var(--z-blue)}
+  .mag-est-nivel{display:flex;gap:6px}
+  .mag-est-nivel button{flex:1;border:1.5px solid var(--line);background:var(--z-cream);color:var(--z-blue);border-radius:999px;padding:8px 11px;font-size:12.5px;font-weight:700;font-family:var(--font-ui);cursor:pointer}
+  .mag-est-nivel button.on{background:var(--z-gold);border-color:var(--z-gold);color:var(--z-blue)}
+  /* Resumo de estoque (dentro dos "Horários de hoje") */
+  .mag-est-resumo{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;padding:10px 12px;border:1.5px solid var(--line);border-radius:11px;margin-bottom:8px;background:var(--z-white)}
+  .mag-est-resumo.baixo{border-color:var(--crm-critico);background:rgba(192,57,43,.06)}
+  .mag-est-resumo-info{font-size:13px;font-weight:700;color:#234D67}
+  .mag-est-resumo-info .sub{display:block;font-size:11.5px;font-weight:600;color:var(--muted);margin-top:2px}
+  .mag-est-resumo-info .sub.alerta{color:var(--crm-critico);font-weight:800}
+  .btn-acabando{border:1.5px solid var(--crm-critico);background:var(--z-cream);color:var(--crm-critico);border-radius:999px;padding:8px 13px;font-size:12.5px;font-weight:800;font-family:var(--font-ui);cursor:pointer}
+  .btn-acabando:hover{background:rgba(192,57,43,.09)}
+  .est-flag{display:inline-block;font-size:10.5px;font-weight:800;color:#fff;background:var(--crm-critico);padding:3px 9px;border-radius:8px}
+  /* ===== Avisos de Estoque rastreados (Recepção) — mesmo padrão da ração ===== */
+  .avr-empty{text-align:center;padding:46px 20px;color:var(--muted);font-size:14px;font-weight:600;font-style:italic}
+  .avr-card{border:1.5px solid var(--line);border-radius:14px;margin-bottom:16px;background:var(--z-white);overflow:hidden;box-shadow:var(--shadow)}
+  .avr-card.pendente{border-color:var(--crm-critico)}
+  .avr-card.processo{border-color:var(--z-gold-deep)}
+  /* Orçamento de hospedagem */
+  /* Protocolo dentro do check-in */
+  .ck-proto{border:1.5px solid var(--z-gold);border-radius:13px;margin:10px 0;overflow:hidden;background:rgba(222,180,40,.09)}
+  .ck-proto-cab{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:11px 14px;cursor:pointer;font-weight:800;color:var(--z-blue);font-size:14px}
+  .ck-proto-seta{font-size:12px;font-weight:700;color:var(--z-gold-deep);text-transform:uppercase;letter-spacing:.04em}
+  .ck-proto-corpo{padding:0 14px 12px}
+  .ck-proto-corpo ol{margin:0;padding-left:20px}
+  .ck-proto-corpo li{font-size:13.5px;color:var(--z-blue);margin-bottom:7px;line-height:1.5}
+  .ck-proto-rod{margin-top:8px;font-size:13px;color:var(--z-blue-soft);border-top:1px dashed var(--z-gold);padding-top:8px}
+  .ck-proto-porque{background:#fff;border-radius:11px;padding:11px 13px;margin-bottom:11px;font-size:13.5px;line-height:1.55;color:var(--z-blue);border-left:4px solid var(--z-blue)}
+  /* Protocolo do cocô — aparece na hora em que marca, com cara de urgência */
+  .ck-coco-proto{margin-top:10px;border:2.5px solid var(--crm-critico);background:rgba(192,57,43,.07);border-radius:13px;padding:13px 15px}
+  .ck-coco-proto .cp-tit{font-weight:800;color:var(--crm-critico);font-size:15px;margin-bottom:8px;letter-spacing:.02em}
+  .ck-coco-proto ol{margin:0;padding-left:20px}
+  .ck-coco-proto li{font-size:13.5px;line-height:1.5;color:var(--z-blue);margin-bottom:6px}
+  .ck-coco-proto .cp-rod{margin-top:8px;padding-top:7px;border-top:1px dashed var(--crm-critico);font-size:12.5px;color:var(--z-blue-soft)}
+  .ck-coco-proto .cp-sub{font-size:12.5px;color:var(--z-blue-soft);margin-bottom:9px;font-weight:600}
+  .cp-passo{display:flex;gap:9px;align-items:flex-start;background:#fff;border:1.5px solid var(--line);border-radius:10px;padding:9px 11px;margin-bottom:6px;cursor:pointer;font-size:13.5px;line-height:1.45;color:var(--z-blue)}
+  .cp-passo.on{border-color:var(--crm-ok);background:rgba(39,174,96,.09)}
+  .cp-passo.on span{text-decoration:line-through;opacity:.72}
+  .cp-passo input{width:19px;height:19px;flex:0 0 auto;margin-top:1px}
+  .cp-timer{background:var(--z-gold);color:var(--z-blue);border-radius:10px;padding:10px 12px;margin:8px 0;font-size:13.5px;font-weight:700}
+  .ck-proto-destaque{margin-top:10px;background:var(--z-blue);color:#FFFDF6;border-radius:11px;padding:12px 14px;font-size:14.5px;font-weight:700;line-height:1.45;text-align:center}
+  /* Machucado: as duas fotos, lado a lado */
+  .ck-foto2{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px}
+  .ck-foto2 .cx{border:1.5px dashed var(--line);border-radius:11px;padding:9px;text-align:center}
+  .ck-foto2 .cx.ok{border-style:solid;border-color:var(--crm-ok)}
+  .ck-foto2 .cx img{width:100%;max-width:110px;height:88px;object-fit:cover;border-radius:9px;display:block;margin:0 auto 6px}
+  .ck-foto2 .cx .lb{font-size:12px;font-weight:800;color:var(--z-blue);margin-bottom:5px}
+  .ck-foto2 .cx .dc{font-size:11.5px;color:var(--muted);margin-bottom:6px;line-height:1.35}
+  /* Pertences: listas de medicação/suplemento, etiqueta e chamado da Recepção */
+  .pt-lista{margin-top:8px}
+  .pt-linha{border:1.5px solid var(--line);border-radius:11px;padding:10px 11px;margin-bottom:8px;background:#fff}
+  .pt-linha-top{display:flex;gap:8px;align-items:center}
+  .pt-linha-top .x{background:none;border:none;color:var(--crm-critico);font-weight:800;font-size:20px;cursor:pointer;padding:0 4px;flex:0 0 auto}
+  .pt-horas{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-top:7px}
+  .pt-hora{background:var(--z-blue);color:#FFFDF6;border-radius:8px;padding:4px 6px 4px 9px;font-weight:800;font-size:13px;display:inline-flex;align-items:center;gap:3px}
+  .pt-hora button{background:none;border:none;color:#FFFDF6;font-size:16px;cursor:pointer;padding:0 3px;line-height:1}
+  .pt-hin{width:120px;padding:7px 9px}
+  .pt-hadd{padding:7px 12px;font-size:12.5px}
+  .pt-alarme{margin-top:7px;background:rgba(222,180,40,.2);border-radius:9px;padding:8px 10px;font-size:12.5px;font-weight:700;color:var(--z-blue)}
+  .pt-etiq{display:flex;align-items:center;gap:9px;margin-top:9px;background:var(--z-cream-warm);border:1.5px solid var(--line);border-radius:10px;padding:9px 11px;cursor:pointer;font-size:13px;font-weight:700;color:var(--z-blue)}
+  .pt-etiq.on{border-color:var(--crm-ok);background:rgba(39,174,96,.1)}
+  .pt-etiq input{width:19px;height:19px;flex:0 0 auto}
+  .pt-chamado{margin-top:12px;border:2.5px solid var(--z-gold);background:rgba(222,180,40,.14);border-radius:13px;padding:13px 15px;font-size:13.5px;color:var(--z-blue)}
+  .pt-chamado.ok{border-color:var(--crm-ok);background:rgba(39,174,96,.1)}
+  /* A exceção do dia, na hora de servir */
+  .alm-excecao{background:var(--z-gold);border-radius:10px;padding:9px 11px;margin-top:7px;text-align:left}
+  .alm-excecao .ax-tit{font-size:10.5px;font-weight:800;letter-spacing:.06em;color:var(--z-blue);opacity:.8}
+  .alm-excecao .ax-o{font-size:14px;font-weight:800;color:var(--z-blue);margin-top:2px;line-height:1.35}
+  .alm-excecao .ax-q{font-size:11px;color:var(--z-blue);opacity:.85;margin-top:3px;line-height:1.35}
+  .alm-semcomida{background:var(--crm-critico);border-radius:10px;padding:9px 11px;margin-top:7px;text-align:left;animation:ptPisca 1.4s ease-in-out infinite}
+  .alm-semcomida .ax-tit{font-size:11px;font-weight:800;letter-spacing:.06em;color:#fff}
+  .alm-semcomida .ax-o{font-size:12.5px;font-weight:700;color:#fff;margin-top:3px;line-height:1.4}
+  @keyframes ptPisca{0%,100%{opacity:1}50%{opacity:.35}}
+  .pt-pisca{animation:ptPisca 1.1s ease-in-out infinite}
+  .orc-temp{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  @media(max-width:520px){ .orc-temp{grid-template-columns:1fr} }
+  .orc-temp button{text-align:left;background:var(--z-cream-warm);border:2px solid var(--line);border-radius:13px;padding:13px 15px;cursor:pointer;font-family:inherit;color:var(--z-blue)}
+  .orc-temp button.on{border-color:var(--z-gold);background:rgba(222,180,40,.14)}
+  .orc-temp .tt{display:block;font-weight:800;font-size:15px}
+  .orc-temp .vv{display:block;font-size:13px;color:var(--z-blue-soft);margin-top:4px;line-height:1.5}
+  .orc-pet{display:flex;align-items:center;gap:10px;background:var(--z-cream-warm);border:1.5px solid var(--line);border-radius:12px;padding:10px 12px;margin-bottom:8px}
+  .orc-pet .x{margin-left:auto;background:none;border:none;color:var(--crm-critico);font-weight:800;font-size:18px;cursor:pointer;padding:0 6px}
+  .orc-sug{border:1.5px solid var(--line);border-radius:12px;margin-top:6px;overflow:hidden}
+  .orc-sug div{padding:10px 12px;cursor:pointer;border-bottom:1px solid var(--line);font-size:14px;color:var(--z-blue)}
+  .orc-sug div:last-child{border-bottom:none}
+  .orc-sug div:hover{background:var(--z-cream-warm)}
+  .orc-linha{display:flex;justify-content:space-between;gap:12px;padding:7px 0;border-bottom:1px dashed var(--line);font-size:14px;color:var(--z-blue)}
+  .orc-total{display:flex;justify-content:space-between;gap:12px;padding:12px 0 2px;font-size:19px;font-weight:800;color:var(--z-blue)}
+  .orc-noites{display:flex;flex-wrap:wrap;gap:5px;margin-top:8px}
+  .orc-n{font-size:11.5px;padding:3px 7px;border-radius:7px;font-weight:700}
+  .orc-n.d{background:rgba(35,77,103,.12);color:var(--z-blue)}
+  .orc-n.p{background:rgba(222,180,40,.24);color:#8A6D0B}
+  .avr-card.resolvido{border-color:var(--crm-ok)}
+  .avr-head{display:flex;align-items:center;gap:11px;padding:14px 16px;border-bottom:1px solid var(--line)}
+  .avr-info{flex:1;min-width:0}
+  .avr-nome{font-size:16px;font-weight:800;color:var(--z-blue)}
+  .avr-sub{font-size:12px;font-weight:600;color:var(--muted);margin-top:2px}
+  .avr-chip{font-size:10.5px;font-weight:800;padding:4px 10px;border-radius:9px;white-space:nowrap}
+  .avr-chip.pendente{background:rgba(192,57,43,.12);color:var(--crm-critico);animation:piscaAlerta 1s infinite}
+  .avr-chip.processo{background:rgba(184,150,31,.16);color:var(--z-gold-deep)}
+  .avr-chip.resolvido{background:rgba(39,174,96,.14);color:var(--crm-ok)}
+  .avr-body{padding:14px 16px;display:flex;flex-direction:column;gap:13px}
+  .avr-trilha{border-left:2.5px solid var(--line);padding-left:13px;display:flex;flex-direction:column;gap:11px}
+  .avr-tl{position:relative}
+  .avr-tl::before{content:'';position:absolute;left:-19px;top:3px;width:11px;height:11px;border-radius:50%;background:var(--z-gold);border:2px solid var(--z-white)}
+  .avr-tl.resol::before{background:var(--crm-ok)}
+  .avr-tl-meta{font-size:11px;font-weight:700;color:var(--muted)}
+  .avr-tl-acao{font-size:13.5px;font-weight:600;color:#234D67;margin:2px 0}
+  .avr-tl-assina{font-size:12px;font-weight:700;color:var(--z-blue)}
+  .avr-form{background:var(--z-cream-warm);border-radius:11px;padding:12px 13px}
+  .avr-form .ff-tit{font-size:13px;font-weight:800;color:var(--z-blue);margin-bottom:8px}
+  .avr-form textarea{width:100%;min-height:60px;padding:10px 12px;border:1.5px solid var(--line);border-radius:9px;background:var(--z-cream);font-family:var(--font-ui);font-size:14px;color:var(--z-blue);margin-bottom:8px}
+  .avr-form input{width:100%;padding:10px 12px;border:1.5px solid var(--line);border-radius:9px;background:var(--z-cream);font-family:var(--font-ui);font-size:14px;font-weight:700;color:var(--z-blue);margin-bottom:8px}
+  .avr-form-btns{display:flex;gap:8px;flex-wrap:wrap}
+  .avr-resolvido-banner{background:rgba(39,174,96,.1);border:1.5px solid var(--crm-ok);border-radius:11px;padding:12px 14px;font-weight:800;color:var(--crm-ok);text-align:center}
+  /* EA — o quadro de quem NÃO pode comer. Adriana, 20/ago/2026: "é algo MUITO MUITO
+     importante, coloque efeitos, chame atenção." O pulso é lento e a animação respeita
+     prefers-reduced-motion: chamar atenção não pode virar tela piscando na cara de quem
+     passa oito horas com ela. */
+  .ea-perigo{border:3px solid var(--crm-critico);border-radius:16px;overflow:hidden;
+    background:rgba(179,38,30,.055);margin:14px 0;
+    box-shadow:0 0 0 0 rgba(179,38,30,.45);animation:eaPulso 2.4s ease-out infinite}
+  .ea-face{width:54px;height:54px;border-radius:50%;object-fit:cover;flex:0 0 54px;
+    border:3px solid var(--crm-critico);background:var(--z-cream-warm)}
+  .ea-face-vazia{display:flex;align-items:center;justify-content:center;font-weight:800;
+    font-size:20px;color:var(--crm-critico)}
+  @media (max-width:420px){
+    .ea-passo{display:block !important}
+    .ea-passo .ea-passo-btn{display:block;margin-top:8px}
+    .ea-passo .ea-passo-btn button{width:100%}
+    .ea-face{width:46px;height:46px;flex:0 0 46px;border-width:2px}
+    .ea-face-vazia{font-size:17px}
+    .ea-perigo-faixa{font-size:12.5px;letter-spacing:.3px;padding:8px 10px}
+    .ea-perigo > div{padding:11px !important}
+  }
+  .ea-perigo-faixa{background:var(--crm-critico);color:#fff;font-weight:800;font-size:14px;
+    letter-spacing:.6px;padding:9px 14px;text-align:center}
+  @keyframes eaPulso{
+    0%{box-shadow:0 0 0 0 rgba(179,38,30,.45)}
+    70%{box-shadow:0 0 0 12px rgba(179,38,30,0)}
+    100%{box-shadow:0 0 0 0 rgba(179,38,30,0)}
+  }
+  @media (prefers-reduced-motion: reduce){ .ea-perigo{animation:none} }
+  .nav-badge{background:var(--crm-critico);color:#fff;font-size:11px;font-weight:800;border-radius:999px;padding:1px 8px;margin-left:auto}
+  /* Recepção: nav só para consultora + gestão/supervisão/diretoria */
+  .nav a.so-recepcao{display:none}
+  body[data-role="consultora"] .nav a.so-recepcao,
+  body[data-role="gestao"] .nav a.so-recepcao,
+  body[data-role="supervisor"] .nav a.so-recepcao,
+  body[data-role="diretoria"] .nav a.so-recepcao{display:flex}
+  /* Cuidado Vet: no menu só para a Veterinária + Gestão/Supervisão/Diretoria */
+  .nav a.so-vet{display:none}
+  body[data-role="vet"] .nav a.so-vet,
+  body[data-role="gestao"] .nav a.so-vet,
+  body[data-role="supervisor"] .nav a.so-vet,
+  body[data-role="diretoria"] .nav a.so-vet{display:flex}
+  /* A Veterinária só enxerga o Cuidado Vet e o Sair — mesma trava do plantonista */
+  body[data-role="vet"] .nav a,body[data-role="vet"] .nav .grp,body[data-role="vet"] .nav .subnav{display:none !important}
+  body[data-role="vet"] .nav a[data-v="cuidadovet"],body[data-role="vet"] .nav a[data-v="sair"]{display:flex !important}
+  /* Onda 4 — Conferência Check-in: no menu só para a Wandela (papel "conferencia") + Gestão/Supervisão/Diretoria */
+  /* Peludinhos Hóspedes — quem mexe em data de estadia: Gestão, Supervisão, Consultora e Diretoria */
+  .nav a.so-hosp{display:none}
+  body[data-role="consultora"] .nav a.so-hosp,
+  body[data-role="gestao"] .nav a.so-hosp,
+  body[data-role="supervisor"] .nav a.so-hosp,
+  body[data-role="diretoria"] .nav a.so-hosp{display:flex}
+  /* Renovação de Planos — filtros e linha da lista */
+  .renov-filtros{display:flex;gap:8px;flex-wrap:wrap;margin:10px 0 14px}
+  .renov-f{padding:9px 14px;border-radius:999px;border:1.5px solid var(--line);background:var(--z-white);
+    font-size:12.5px;font-weight:700;color:var(--muted);cursor:pointer}
+  .renov-f b{font-size:15px;margin-right:4px}
+  .renov-f.on{border-color:var(--z-gold);background:var(--z-cream);color:var(--z-blue)}
+  .renov-tutor{font-size:11.5px;font-weight:600;color:var(--muted);margin-top:2px}
+  .renov-per{font-size:11.5px;font-weight:600;color:var(--muted);margin-top:2px}
+  /* Check-in — uma caixa por refeição, cada uma com a sua quantidade */
+  .ci-refb{border:1.5px solid var(--line);border-radius:12px;padding:11px 13px;margin-bottom:8px;background:var(--z-white)}
+  .ci-refb.on{border-color:var(--z-gold);background:var(--z-cream)}
+  .ci-refb-head{display:flex;align-items:center;gap:10px;cursor:pointer;font-weight:800;color:var(--z-blue);font-size:14.5px}
+  .ci-refb-box{width:22px;height:22px;border-radius:6px;border:2px solid var(--line);display:flex;align-items:center;justify-content:center;font-size:13px;color:#fff;flex:none;background:transparent}
+  .ci-refb.on .ci-refb-box{background:var(--z-gold);border-color:var(--z-gold)}
+  .ci-refb-campos{margin-top:10px}
+  .ci-refb-campos label{display:block;font-size:12px;font-weight:700;color:var(--muted);margin-bottom:3px}
+  .ci-refb-del{margin-left:auto;background:none;border:none;color:var(--crm-critico);font-weight:800;cursor:pointer;font-size:12.5px;padding:2px 6px}
+  .ci-refb-tot{font-size:12.5px;font-weight:700;color:var(--z-gold-deep);margin-left:auto}
+  /* linhas da aba de hospedagens */
+  .hosp-est{display:flex;align-items:center;gap:12px;padding:13px 14px;border:1.5px solid var(--line);border-radius:12px;background:var(--z-white);margin-bottom:9px;flex-wrap:wrap}
+  .hosp-est .he-av{width:42px;height:42px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:800;color:#fff;background-size:cover;background-position:center;flex:none}
+  .hosp-est .he-main{flex:1;min-width:180px}
+  .hosp-est .he-nome{font-weight:800;color:var(--z-blue);font-size:15px}
+  .hosp-est .he-sub{font-size:12.5px;color:var(--muted);font-weight:600;margin-top:2px}
+  .hosp-est .he-datas{font-size:13.5px;font-weight:800;color:var(--z-blue);white-space:nowrap}
+  .hosp-est .he-acoes{display:flex;gap:7px;flex-wrap:wrap}
+  .hosp-est .he-acoes button{padding:7px 13px;font-size:12.5px}
+  .he-tag{display:inline-block;font-size:10.5px;font-weight:800;letter-spacing:.04em;padding:3px 8px;border-radius:999px;margin-left:6px}
+  .he-tag.agora{background:rgba(46,125,138,.15);color:#2E7D8A}
+  .he-tag.achegar{background:rgba(222,180,40,.2);color:var(--z-gold-deep)}
+  .he-tag.saiu{background:var(--z-cream-warm);color:var(--muted)}
+  .he-grp{font-size:13px;font-weight:800;color:var(--z-blue);margin:18px 0 9px;letter-spacing:.02em}
+  .he-edit{border-color:var(--z-gold);background:var(--z-cream)}
+  .nav a.so-conferencia{display:none}
+  body[data-role="conferencia"] .nav a.so-conferencia,
+  body[data-role="gestao"] .nav a.so-conferencia,
+  body[data-role="supervisor"] .nav a.so-conferencia,
+  body[data-role="diretoria"] .nav a.so-conferencia{display:flex}
+  /* Conferência da SAÍDA — é das consultoras (recepção), mais a conferente e a gestão.
+     Sempre existem 2 conferências: uma na entrada e uma na saída (Adriana, 03/ago/2026). */
+  .nav a.so-conf-saida{display:none}
+  body[data-role="consultora"] .nav a.so-conf-saida,
+  body[data-role="conferencia"] .nav a.so-conf-saida,
+  body[data-role="gestao"] .nav a.so-conf-saida,
+  body[data-role="supervisor"] .nav a.so-conf-saida,
+  body[data-role="diretoria"] .nav a.so-conf-saida{display:flex}
+  /* ===== REPOSIÇÕES ===== */
+  #repModal,#repExtratoModal{display:none;position:fixed;inset:0;background:rgba(26,58,79,.55);z-index:120;
+    align-items:center;justify-content:center;padding:18px;overflow-y:auto}
+  #repModal.on,#repExtratoModal.on{display:flex}
+  .rep-card{background:var(--z-cream);border-radius:20px;padding:24px;width:100%;max-width:560px;
+    box-shadow:0 24px 70px rgba(0,0,0,.35);max-height:92vh;overflow-y:auto}
+  .rep-tit{font-size:21px;font-weight:800;color:var(--z-blue);letter-spacing:-.02em}
+  .rep-sub{font-size:13.5px;color:var(--muted);font-weight:500;margin:5px 0 16px;line-height:1.45}
+  .rep-lb{display:block;font-size:12px;font-weight:700;color:var(--z-blue);margin:14px 0 5px;
+    text-transform:uppercase;letter-spacing:.06em}
+  .rep-in{width:100%;border:1.5px solid var(--line);border-radius:11px;padding:11px 13px;
+    font-family:var(--font-ui);font-size:14.5px;color:var(--z-blue);background:var(--z-white);outline:none}
+  .rep-in:focus{border-color:var(--z-gold)}
+  .rep-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  .rep-results{max-height:190px;overflow-y:auto;margin-top:6px}
+  .rep-res-item{display:flex;align-items:center;gap:10px;padding:9px 11px;border:1px solid var(--line);
+    border-radius:11px;margin-bottom:6px;cursor:pointer;background:var(--z-white)}
+  .rep-res-item:hover{border-color:var(--z-gold);background:var(--z-cream-warm)}
+  .rep-res-nome{font-weight:700;color:var(--z-blue);font-size:14.5px}
+  .rep-res-sub{font-size:12px;color:var(--muted);font-weight:500}
+  .rep-escolhido{background:rgba(39,174,96,.10);border:1.5px solid var(--crm-ok);border-radius:12px;
+    padding:11px 14px;margin-top:8px;font-weight:700;color:var(--z-blue);font-size:14.5px}
+  .rep-atalhos{display:flex;gap:7px;flex-wrap:wrap;margin-top:9px}
+  .rep-previa{margin-top:11px;background:var(--z-cream-warm);border:1.5px solid var(--line);
+    border-radius:12px;padding:12px 14px;font-size:13.5px;color:var(--z-blue);font-weight:600;line-height:1.5}
+  .rep-previa b{color:var(--z-gold-deep)}
+  .rep-warn{min-height:20px;font-size:13px;font-weight:700;color:var(--crm-critico);margin-top:10px}
+  .rep-btns{display:flex;gap:10px;margin-top:14px}
+  .rep-cancel,.rep-ok{flex:1;border-radius:12px;padding:13px;font-family:var(--font-ui);font-weight:700;
+    font-size:14.5px;cursor:pointer;border:none}
+  .rep-cancel{background:var(--z-cream-warm);color:var(--z-blue);border:1.5px solid var(--line)}
+  .rep-ok{background:var(--z-blue);color:var(--z-cream)}
+  .rep-row{display:flex;align-items:center;gap:13px;background:var(--z-white);border:1px solid var(--line);
+    border-radius:14px;padding:13px 15px;margin-bottom:9px;box-shadow:var(--shadow)}
+  .rep-row .rp-n{font-size:26px;font-weight:800;letter-spacing:-.03em;color:var(--z-gold-deep);min-width:38px;
+    font-variant-numeric:tabular-nums;text-align:center}
+  .rep-row .rp-txt{flex:1;min-width:0}
+  .rep-row .rp-nome{font-size:15px;font-weight:700;color:var(--z-blue);letter-spacing:-.01em}
+  .rep-row .rp-sub{font-size:12px;color:var(--muted);font-weight:500;margin-top:2px}
+  .rep-row .rp-acoes{display:flex;gap:7px;flex-wrap:wrap}
+  .rep-row .rp-acoes button{border-radius:9px;padding:8px 13px;font-family:var(--font-ui);font-weight:700;
+    font-size:12.5px;cursor:pointer;border:1.5px solid var(--line);background:#fff;color:var(--z-blue)}
+  .rep-row .rp-acoes button.usar{background:var(--crm-ok);color:#fff;border-color:var(--crm-ok)}
+  .rep-lanc{display:flex;gap:11px;align-items:flex-start;padding:10px 0;border-bottom:1px solid var(--line);font-size:13.5px}
+  .rep-lanc:last-child{border-bottom:none}
+  .rep-lanc .lc-tipo{font-size:11px;font-weight:800;border-radius:999px;padding:3px 9px;flex:0 0 auto;letter-spacing:.03em}
+  .rep-lanc .lc-tipo.credito{background:rgba(39,174,96,.16);color:#1E8449}
+  .rep-lanc .lc-tipo.uso{background:rgba(41,128,185,.14);color:var(--crm-info)}
+  .rep-lanc .lc-tipo.estorno{background:rgba(192,57,43,.13);color:var(--crm-critico)}
+  .rep-lanc .lc-corpo{flex:1;min-width:0;color:var(--z-blue);font-weight:600}
+  .rep-lanc .lc-meta{font-size:11.5px;color:var(--muted);font-weight:500;margin-top:2px}
+  /* Reposições — quem lança é a RECEPÇÃO: o tutor avisa no telefone da loja e a consultora
+     registra na hora (Adriana, 06/ago/2026). Gestão e Supervisão acompanham. */
+  .nav a.so-recepcao{display:none}
+  body[data-role="consultora"] .nav a.so-recepcao,
+  body[data-role="gestao"] .nav a.so-recepcao,
+  body[data-role="supervisor"] .nav a.so-recepcao,
+  body[data-role="diretoria"] .nav a.so-recepcao{display:flex}
+  /* Carteira de planos no Início — informação comercial: recepção e gestão */
+  .so-carteira{display:none}
+  body[data-role="consultora"] .so-carteira,
+  body[data-role="gestao"] .so-carteira,
+  body[data-role="supervisor"] .so-carteira,
+  body[data-role="diretoria"] .so-carteira{display:block}
+  /* Empório — quem avisa o tutor é a consultora (a gestão também acompanha) */
+  .nav a.so-emporio{display:none}
+  body[data-role="consultora"] .nav a.so-emporio,
+  body[data-role="gestao"] .nav a.so-emporio,
+  body[data-role="supervisor"] .nav a.so-emporio,
+  body[data-role="diretoria"] .nav a.so-emporio{display:flex}
+  /* A Wandela (conferência) enxerga as DUAS conferências (entrada e saída) e o Sair */
+  body[data-role="conferencia"] .nav a,body[data-role="conferencia"] .nav .grp,body[data-role="conferencia"] .nav .subnav{display:none !important}
+  body[data-role="conferencia"] .nav a[data-v="conferencia"],body[data-role="conferencia"] .nav a[data-v="checkoutconf"],body[data-role="conferencia"] .nav a[data-v="sair"]{display:flex !important}
+  /* ===== Onda 3 — Cuidado Vet ===== */
+  .vet-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:14px;margin-top:6px}
+  .vet-pet{position:relative;background:var(--z-white);border:2px solid var(--line);border-radius:18px;padding:16px 12px 18px;text-align:center;cursor:pointer;transition:transform .12s,border-color .15s,box-shadow .2s}
+  .vet-pet:active{transform:scale(.97)}
+  .vet-pet:hover{border-color:var(--z-blue-soft);box-shadow:var(--shadow-lg)}
+  .vet-pet .ph{width:74px;height:74px;border-radius:50%;margin:0 auto 10px;background-size:cover;background-position:center;display:grid;place-items:center;font-size:30px;font-weight:800;color:#fff}
+  .vet-pet .nm{font-size:16px;font-weight:800;color:var(--z-blue);line-height:1.15}
+  .vet-pet .br{font-size:12.5px;color:var(--muted);font-weight:600;margin-top:3px}
+  .vet-pet .tt{font-size:12.5px;color:var(--z-blue-soft);font-weight:700;margin-top:4px;line-height:1.2}
+  /* .vet-pet .mini-alert / .mini-med: agora no fluxo abaixo da foto (regras unificadas acima) */
+  .vet-sec{margin-top:16px}
+  .vet-sec h3{font-size:14px;font-weight:800;letter-spacing:.3px;color:var(--z-blue);text-transform:uppercase;margin:0 0 10px;padding-top:12px;border-top:1.5px dashed var(--line)}
+  .vet-row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  @media(max-width:520px){ .vet-row{grid-template-columns:1fr} }
+  .vet-med-item{border:1.5px solid var(--line);border-radius:12px;padding:13px 14px;margin-bottom:10px;background:var(--z-cream)}
+  .vet-med-item.suspenso{opacity:.66;border-style:dashed}
+  .vet-med-top{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+  .vet-med-nome{font-weight:800;color:var(--z-blue);font-size:15px}
+  .vet-med-orig{font-size:11px;font-weight:800;padding:2px 8px;border-radius:999px;background:rgba(41,128,185,.14);color:var(--crm-info)}
+  .vet-med-orig.vet{background:rgba(192,57,43,.13);color:var(--crm-critico)}
+  .vet-med-det{font-size:13px;color:var(--z-blue-soft);font-weight:600;margin-top:4px}
+  .vet-med-susp{font-size:12px;font-weight:800;color:var(--crm-critico);margin-top:5px}
+  .vet-med-btns{display:flex;gap:8px;flex-wrap:wrap;margin-top:9px}
+  .vet-hist-line{border-left:3px solid var(--z-gold);padding:2px 0 2px 12px;margin:6px 0;font-size:12.5px;color:var(--z-blue-soft)}
+  .vet-hist-line strong{color:var(--z-blue)}
+  .vet-recom-pill{display:inline-block;background:rgba(41,128,185,.13);color:var(--crm-info);border:1.5px solid var(--crm-info);font-size:12px;font-weight:800;border-radius:999px;padding:4px 11px;margin:3px 5px 3px 0}
+  .vet-recom-pill.cuidado{background:rgba(222,180,40,.16);color:var(--z-gold-deep);border-color:var(--z-gold)}
+  .vet-instr-box{background:rgba(41,128,185,.08);border:1.5px solid var(--crm-info);border-radius:12px;padding:12px 14px;margin-top:10px}
+  .vet-instr-box .vt{font-size:12px;font-weight:800;color:var(--crm-info);text-transform:uppercase;letter-spacing:.4px;margin-bottom:7px}
+  .vet-reaval-banner{background:rgba(222,180,40,.2);border:2px solid var(--z-gold);border-radius:14px;padding:14px 16px;margin-bottom:16px;font-weight:700;color:var(--z-blue);display:flex;gap:11px;align-items:flex-start}
+  .vet-reaval-banner .rr-tit{font-weight:800;color:var(--z-gold-deep)}
+  /* Item 4 — remédio prescrito pela vet que chegou na data de término (última dose dada). */
+  .vet-fimmed-banner{background:rgba(41,128,185,.12);border:2px solid var(--crm-info);border-radius:14px;padding:14px 16px;margin-bottom:16px;font-weight:700;color:var(--z-blue);display:flex;gap:11px;align-items:flex-start}
+  .vet-fimmed-banner .rr-tit{font-weight:800;color:var(--crm-info)}
+  /* Aviso de sessão prestes a expirar por inatividade */
+  .inat-aviso{position:fixed;left:0;right:0;bottom:0;z-index:9999;background:var(--z-blue);color:var(--z-cream);
+    padding:14px 18px;display:flex;gap:14px;align-items:center;justify-content:center;flex-wrap:wrap;
+    font-weight:700;font-size:14.5px;box-shadow:0 -4px 18px rgba(0,0,0,.25)}
+  .inat-aviso b{color:var(--z-gold)}
+  .inat-aviso button{background:var(--z-gold);color:var(--z-blue);border:none;border-radius:10px;
+    padding:9px 18px;font-weight:800;font-size:14px;cursor:pointer;font-family:inherit}
+  .vet-fimmed-line{margin-top:8px;display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+  .vet-fimmed-line .btn{padding:6px 13px;font-size:12.5px}
+  .vet-consulta-card{border:1.5px solid var(--line);border-radius:12px;padding:13px 14px;margin-bottom:10px;background:var(--z-cream-warm)}
+  .vet-consulta-card .cc-data{font-weight:800;color:var(--z-blue);font-size:14px}
+  .vet-consulta-card .cc-meta{font-size:12px;color:var(--muted);font-weight:700;margin-top:2px}
+  .vet-consulta-card .cc-body{font-size:13.5px;color:var(--z-blue-soft);margin-top:6px;line-height:1.5}
+  .vet-fotos{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
+  .vet-fotos img{width:74px;height:74px;object-fit:cover;border-radius:10px;border:1.5px solid var(--line)}
+  /* .pet .mini-recom: agora chip no fluxo abaixo da foto (regra unificada acima) */
+  /* botão de cancelar hóspede/pernoite do dia — canto do card, só Gestão/Supervisão/Diretoria */
+  .pet-x{position:absolute;top:-8px;right:-8px;width:27px;height:27px;border-radius:50%;border:2px solid #fff;background:var(--crm-critico);color:#fff;font-size:16px;font-weight:800;line-height:1;cursor:pointer;z-index:4;display:grid;place-items:center;box-shadow:0 2px 6px rgba(0,0,0,.25)}
+  .pet-x:hover{background:#a53125}
+
+  /* ===== Onda 4 — Conferência Check-in (Wandela) ===== */
+  .cf-item{border:1.5px solid var(--line);border-radius:12px;margin-bottom:9px;background:var(--z-white);overflow:hidden}
+  .cf-item.critico{border-color:var(--crm-critico);box-shadow:0 0 0 2px rgba(192,57,43,.18)}
+  .cf-item.on{border-color:var(--crm-ok);box-shadow:none}
+  .cf-top{display:flex;align-items:center;gap:11px;padding:11px 14px;cursor:pointer;font-weight:700;color:var(--z-blue)}
+  .cf-box{width:24px;height:24px;border-radius:7px;border:2px solid var(--line);display:grid;place-items:center;font-weight:800;color:#fff;background:#fff;flex:0 0 auto;font-size:14px}
+  .cf-item.on .cf-box{background:var(--crm-ok);border-color:var(--crm-ok)}
+  .cf-tag-critico{margin-left:auto;font-size:9.5px;font-weight:800;letter-spacing:.3px;background:var(--crm-critico);color:#fff;padding:2px 8px;border-radius:7px}
+  .cf-med-item{border:1.5px solid var(--line);border-radius:12px;padding:13px 14px;margin-bottom:10px;background:var(--z-cream)}
+  .cf-med-item.ok{border-color:var(--crm-ok)}
+  .cf-med-top{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}
+  .cf-med-nome{font-weight:800;color:var(--z-blue);font-size:15px}
+  .cf-med-det{font-size:12.5px;color:var(--z-blue-soft);font-weight:600;margin-top:3px}
+  .cf-med-actions{display:flex;gap:10px;align-items:center;margin-top:9px;flex-wrap:wrap}
+  .cf-ouviu{display:flex;align-items:center;gap:8px;font-size:12.5px;font-weight:700;color:var(--z-blue);cursor:pointer}
+  .cf-ouviu input{width:19px;height:19px}
+  .cf-ok-badge{font-size:10.5px;font-weight:800;color:#fff;background:var(--crm-ok);padding:3px 9px;border-radius:8px}
+  .cf-resultado{display:flex;justify-content:space-between;gap:10px;padding:11px 14px;border-radius:11px;font-weight:800;margin-top:10px}
+  .cf-resultado.alerta{background:rgba(192,57,43,.08);border:1.5px solid var(--crm-critico);color:var(--crm-critico)}
+  .cf-resultado.ok{background:rgba(39,174,96,.08);border:1.5px solid var(--crm-ok);color:var(--crm-ok)}
+
+  /* ===== Diária Avulsa — tela grande de busca (à prova de baixa leitura) ===== */
+  #avulsaModal{display:none;position:fixed;inset:0;z-index:70;background:rgba(26,58,79,.55)}
+  #avulsaModal.show{display:block}
+  .av-sheet{position:absolute;inset:0;background:var(--z-cream);display:flex;flex-direction:column}
+  .av-head{background:linear-gradient(135deg,var(--z-daycare),#c96f3f);color:#fff;padding:16px 18px;display:flex;align-items:center;gap:14px;flex-shrink:0}
+  .av-head .av-t{font-size:22px;font-weight:800;flex:1;line-height:1.15}
+  .av-close{background:rgba(255,255,255,.22);border:none;color:#fff;width:46px;height:46px;border-radius:50%;font-size:22px;font-weight:800;cursor:pointer;flex-shrink:0}
+  .av-searchwrap{padding:16px 18px;background:var(--z-white);border-bottom:2px solid var(--line);flex-shrink:0}
+  .av-search{width:100%;padding:18px 20px;font-size:21px;font-weight:700;border:3px solid var(--z-daycare);border-radius:16px;font-family:var(--font-ui);color:var(--z-blue)}
+  .av-search:focus{outline:none;border-color:#c96f3f}
+  .av-hint{font-size:13.5px;color:var(--muted);font-weight:600;margin-top:9px;text-align:center}
+  .av-results{flex:1;overflow-y:auto;padding:16px 18px 50px;display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:14px;align-content:start}
+  .av-card{background:var(--z-white);border:2px solid var(--line);border-radius:18px;padding:16px 12px 18px;text-align:center;cursor:pointer;transition:transform .12s,border-color .15s,box-shadow .2s}
+  .av-card:active{transform:scale(.96)}
+  .av-card:hover{border-color:var(--z-daycare);box-shadow:var(--shadow-lg)}
+  .av-ph{width:78px;height:78px;border-radius:50%;margin:0 auto 11px;background-size:cover;background-position:center;display:grid;place-items:center;font-size:32px;font-weight:800;color:#fff}
+  .av-nm{font-size:18px;font-weight:800;color:var(--z-blue);line-height:1.15}
+  .av-br{font-size:13px;color:var(--muted);font-weight:600;margin-top:3px}
+  .av-tt{font-size:13px;color:var(--z-daycare);font-weight:700;margin-top:5px;line-height:1.2}
+  .av-empty{grid-column:1/-1;text-align:center;padding:46px 18px;color:var(--muted);font-size:14px;font-weight:600;line-height:1.5}
+  .av-empty .big{font-size:19px;font-weight:800;color:var(--z-blue);margin-bottom:8px}
+  @media(max-width:480px){ .av-results{grid-template-columns:1fr 1fr} .av-head .av-t{font-size:19px} }
+
+  /* ===== Hospedagem — busca no cadastro-mestre ao adicionar hóspede/pernoite (reusa o "esqueleto" .av-* da Diária Avulsa, só troca a cor do topo para o tom da AuAulândia) ===== */
+  #hospBuscaModal{display:none;position:fixed;inset:0;z-index:70;background:rgba(26,58,79,.55)}
+  #hospBuscaModal.show{display:block}
+  .hb-head{background:linear-gradient(135deg,var(--z-auaulandia),var(--z-blue));color:#fff;padding:16px 18px;display:flex;align-items:center;gap:14px;flex-shrink:0}
+  /* Jantar do hóspede no card — 20/ago/2026. Tratado como a medicação: quem serve tem de
+     ver a quantidade sem abrir nada. */
+  .hb-jantar{display:block;margin:6px 0 0;font-size:11px;font-weight:800;letter-spacing:.2px;
+    color:var(--z-blue);background:rgba(222,180,40,.20);padding:5px 8px;border-radius:7px;
+    border-left:3px solid var(--z-gold);text-align:left;line-height:1.35}
+  .hb-jantar-sub{font-size:10px;font-weight:600;color:var(--z-blue-soft);margin-top:2px}
+  .hb-jantar-rep{background:rgba(124,139,153,.16);border-left-color:#7C8B99}
+  .hb-jantar-falta{background:rgba(179,38,30,.12);border-left-color:var(--crm-critico);
+    color:var(--crm-critico)}
+  .hb-alertbadge{display:block;margin:0 0 6px;font-size:9.5px;font-weight:800;letter-spacing:.3px;color:#fff;background:var(--crm-critico);padding:2px 7px;border-radius:7px}
+  .hb-novo{grid-column:1/-1;border-top:2px dashed var(--line);margin-top:10px;padding-top:16px}
+  .hb-novo-tit{font-size:13px;font-weight:700;color:var(--z-blue);margin-bottom:8px}
+  .hb-novo-in{width:100%;padding:12px 14px;font-size:14px;border:1.5px solid var(--line);border-radius:10px;font-family:var(--font-ui);color:var(--z-blue);margin-bottom:8px}
+  .hb-novo-warn{font-size:12px;font-weight:700;color:var(--crm-critico);min-height:16px}
+  /* selos de medicação / não comeu: agora chips no fluxo abaixo da foto (regras unificadas acima),
+     nunca sobre o rosto do FILHOt. Ondas 3/5 preservadas — só mudou a posição, não a lógica. */
+
+  /* ===== Novo AULUNO — telinha de 2 campos antes da ficha completa ===== */
+  #novoAlunoModal{display:none;position:fixed;inset:0;z-index:75;background:rgba(26,58,79,.55);padding:20px;overflow-y:auto}
+  #novoAlunoModal.show{display:flex;align-items:center;justify-content:center}
+  .na-card{background:var(--z-white);border-radius:20px;padding:26px 24px;max-width:460px;width:100%;box-shadow:var(--shadow-lg);border-top:5px solid var(--z-daycare)}
+  .na-title{font-size:24px;font-weight:800;color:var(--z-blue)}
+  .na-sub{font-size:13.5px;color:var(--muted);font-weight:600;margin:6px 0 16px;line-height:1.45}
+  .na-lb{display:block;font-size:13px;font-weight:700;color:var(--z-blue);margin:12px 0 6px}
+  .na-in{width:100%;padding:15px 16px;font-size:18px;font-weight:700;border:2.5px solid var(--line);border-radius:14px;font-family:var(--font-ui);color:var(--z-blue)}
+  .na-in:focus{outline:none;border-color:var(--z-daycare)}
+  .na-warn{color:var(--crm-critico-text);font-size:13.5px;font-weight:700;margin-top:10px;min-height:6px}
+  .na-btns{display:flex;gap:12px;margin-top:20px}
+  .na-cancel{flex:0 0 auto;background:none;border:2px solid var(--line);color:var(--muted);padding:14px 20px;border-radius:100px;font-family:var(--font-ui);font-size:15px;font-weight:700;cursor:pointer}
+  .na-ok{flex:1;background:var(--z-daycare);color:#fff;border:none;padding:14px;border-radius:100px;font-family:var(--font-ui);font-size:16px;font-weight:800;cursor:pointer}
+  .na-ok:hover{filter:brightness(1.06)}
+
+  /* responsivo */
+  .overlay{display:none;position:fixed;inset:0;background:rgba(26,58,79,.5);z-index:45}
+  @media(max-width:860px){
+    .sidebar{transform:translateX(-100%)}
+    .sidebar.open{transform:translateX(0)}
+    .overlay.show{display:block}
+    .main{margin-left:0}
+    .mobtop{display:flex}
+    .head .search{display:none}
+    .grid2{grid-template-columns:1fr}
+  }
+  /* Rodapé Kairós — idêntico ao Ágora (comercial) */
+  .kairos-footer-horizontal{display:flex;align-items:center;justify-content:center;gap:14px;padding:28px 20px;flex-wrap:wrap;border-top:1px solid rgba(222,180,40,0.10);margin-top:24px}
+  .kairos-footer-horizontal a{display:flex;align-items:center;gap:10px;text-decoration:none}
+  .kairos-footer-horizontal .kf-mono{height:48px;width:auto}
+  .kairos-footer-horizontal .kf-name{font-family:'Manrope','Poppins',sans-serif;font-size:30px;font-weight:600;letter-spacing:-0.5px;background:linear-gradient(135deg,#5E6CFF,#6AF2A3);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+  .kairos-footer-horizontal .kf-sep{width:1px;height:36px;background:rgba(35,77,103,0.18)}
+  .kairos-footer-horizontal .kf-text{font-family:'Manrope','Poppins',sans-serif;font-size:15px;color:rgba(35,77,103,0.50)}
+  .kairos-footer-horizontal .kf-text strong{font-weight:600;color:rgba(35,77,103,0.70)}
+  .kairos-footer-horizontal .kf-tripontos{color:#DEB428;font-weight:700;margin-left:1px}
+
+  /* ===== O QUE FALTA — Adriana, 14/ago/2026 =====================================
+     "nao deixa facil intuitivo... mostra em vermelho o que esta faltando... eu tive
+      que ficar procurando, foi uma merda."
+     O app dizia "Falta a foto de: Pele" num alerta que a pessoa fecha, e depois ela
+     tinha que caçar o campo numa tela de rolagem longa, com o tutor esperando na
+     frente. Agora o campo se ACUSA: fica vermelho, pulsa, diz o que fazer logo
+     abaixo, e a tela rola sozinha até ele. Quem opera nunca mais procura. */
+  @keyframes zFaltaPulso{
+    0%,100%{ box-shadow:0 0 0 0 rgba(192,57,43,.55); border-color:#C0392B }
+    50%    { box-shadow:0 0 0 7px rgba(192,57,43,0);  border-color:#E74C3C }
+  }
+  .z-falta{
+    border:2.5px solid #C0392B !important;
+    border-radius:10px !important;
+    background:#FDECEA !important;
+    animation:zFaltaPulso 1.25s ease-in-out 6;
+    scroll-margin-top:96px;   /* não fica escondido atrás da barra de cima */
+  }
+  .z-falta-msg{
+    display:block; margin:5px 0 12px;
+    color:#B3261E; font-weight:800; font-size:13.5px; line-height:1.35;
+  }
+  .z-falta-msg::before{ content:'▲  '; }
+  /* Contador no botão: "Faltam 2 · Salvar no sistema" */
+  .z-btn-falta{
+    background:#C0392B !important; color:#fff !important; border-color:#C0392B !important;
+  }
+  @media (prefers-reduced-motion: reduce){ .z-falta{ animation:none } }
+
+  /* ===== PENDÊNCIA NO MENU — Adriana, 15/ago/2026 ==============================
+     "ao invés de colocar apenas a numeração na frente, quero que tudo que esteja
+      pendente apareça em vermelho pulsando, na sidebar, dentro de um retângulo.
+      Então tudo que a Amanda tem à disposição com algo devendo, ela entra e vê."
+     Antes só a Recepção e a Conferência de check-in tinham contador, e um número
+     pequeno ao lado do nome não chama a atenção de quem passa correndo. Agora o
+     ITEM INTEIRO do menu vira um retângulo vermelho pulsando. */
+  @keyframes zNavPulso{
+    0%,100%{ box-shadow:0 0 0 0 rgba(192,57,43,.50) }
+    50%    { box-shadow:0 0 0 6px rgba(192,57,43,0) }
+  }
+  .nav a.nav-pend{
+    background:rgba(192,57,43,.14) !important;
+    border:2px solid #C0392B !important;
+    border-radius:10px !important;
+    color:#fff !important;
+    font-weight:800 !important;
+    animation:zNavPulso 1.6s ease-in-out infinite;
+  }
+  .nav a.nav-pend .nav-badge{ background:#fff; color:#B3261E; }
+  /* O PAI da sanfona acende junto. Sem isto, pendência dentro de um submenu FECHADO não é
+     vista por ninguém — foi o que a captura de tela mostrou em 15/ago/2026: o Check-in tinha
+     11 pendências e morava dentro do grupo "AuAulândia", recolhido. O vermelho existia e
+     ninguém nunca ia ver. */
+  .nav .acc > a.nav-parent.nav-pend{
+    background:rgba(192,57,43,.14) !important;
+    border:2px solid #C0392B !important;
+    border-radius:10px !important;
+    color:#fff !important;
+    font-weight:800 !important;
+    animation:zNavPulso 1.6s ease-in-out infinite;
+  }
+  .nav .acc > a.nav-parent.nav-pend .nav-badge{ background:#fff; color:#B3261E; margin-left:auto; margin-right:6px; }
+  @media (prefers-reduced-motion: reduce){ .nav a.nav-pend, .nav .acc > a.nav-parent.nav-pend{ animation:none } }
+</style></head><body><h3 data-tabela="Acerto das Plantonistas">Acerto das Plantonistas</h3><div class="pel-wrap"><table class="pel"><thead><tr><th>Noite</th><th>Quem dormiu</th><th>FILHOts</th><th>Assinatura</th><th>Valor</th></tr></thead><tbody><tr><td>24/08</td><td>Wandela Cristina</td><td>9 FILHOts</td><td>1 relatório sem assinatura, noite de 24/08</td><td>R$ 1.404,00</td></tr>
+<tr><td>23/08</td><td>Amanda de Souza</td><td>4 FILHOts</td><td>assinado por Amanda de Souza</td><td>R$ 118,00</td></tr>
+<tr><td>22/08</td><td>Giulia e Octávio</td><td>11 FILHOts</td><td>dupla — assinado pelas duas</td><td>R$ 246,00</td></tr></tbody></table></div>
+<h3 data-tabela="Peludinhos (Day Care)">Peludinhos (Day Care)</h3><div class="pel-wrap"><table class="pel"><thead><tr><th>Nº</th><th>Peludinho</th><th>Raça</th><th>Vem</th><th>Dias</th><th>Tutor</th><th>Idade</th></tr></thead><tbody><tr><td>1</td><td>Toddy</td><td>Lhasa Apso</td><td>3x</td><td>Seg Ter Qua Qui Sex</td><td>Maria Aparecida de Nascimento</td><td>4 anos e 2 meses</td></tr>
+<tr><td>2</td><td>Repolho</td><td>Spitz Alemão</td><td>mora aqui</td><td>Seg Ter Qua Qui Sex</td><td>Zêluz</td><td>7 anos</td></tr>
+<tr><td>3</td><td>Dolly</td><td>West Highland White Terrier</td><td>2x</td><td>Ter Qui</td><td>Ana Carolina Rodrigues</td><td>1 ano e 9 meses</td></tr></tbody></table></div>
+<h3 data-tabela="Inativos">Inativos</h3><div class="pel-wrap"><table class="pel"><thead><tr><th>Nº</th><th>Peludinho</th><th>Tutor</th><th>Data da saída</th><th>Motivo da saída</th><th>Voltou?</th></tr></thead><tbody><tr><td>1</td><td>Ozzy</td><td>Luciana Fernandes de Oliveira</td><td>14/08/2026</td><td>mudou de cidade com a família</td><td>Voltou</td></tr>
+<tr><td>2</td><td>Maya</td><td>Carolina Menezes</td><td>02/07/2026</td><td>trocou o Day Care pelo passeio da manhã</td><td>Voltou</td></tr></tbody></table></div></body></html>
