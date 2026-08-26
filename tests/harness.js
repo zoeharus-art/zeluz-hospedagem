@@ -187,6 +187,17 @@ async function main() {
   }
   console.log('Script do app carregou no sandbox.\n');
 
+  // A lógica do Painel (Fase 2.1) mora fora do index.html, num arquivo só de conta.
+  // Carrega no MESMO contexto: as funções pl* ficam globais, como ficarão no app
+  // quando ele incluir <script src="painel-logica.js">. Se o arquivo ainda não
+  // existir, o harness segue como antes — a rede de segurança não pode cair por
+  // causa de um arquivo que ainda está por vir.
+  const PL = path.join(__dirname, '..', 'auaulandia', 'painel-logica.js');
+  if (fs.existsSync(PL)) {
+    vm.runInContext(fs.readFileSync(PL, 'utf8'), ctx, { filename: 'painel-logica.js' });
+    console.log('painel-logica.js carregou no mesmo sandbox.\n');
+  }
+
   // ---- funções que precisam existir (contrato mínimo) ----
   const precisa = ['repSaldo', 'repLancamentos', 'repAgendaDe', 'repAgendadosPara',
     'repDiasQueViria', 'pelKey', 'repHojeISO', 'repPodeLancar'];
@@ -1554,6 +1565,296 @@ async function main() {
     check('dia futuro NÃO leva restrição nem cliente novo', !fut.aulunosRestr && !fut.clienteNovo);
     check('o automático nunca mexe em banho/vet/avaliação (têm hora)',
       !cols.banho && !cols.vet && !cols.avaliacao);
+  }
+  console.log('');
+
+  // ---- Painel 2.1 — a conta do Painel unificado, provada contra dado real ----
+  // A fatia do Monitor ("minha rota hoje") é feita de conta, não de tela. Aqui a
+  // conta roda contra o caderno de auditoria de verdade, o tempo por atividade de
+  // verdade e os pontos do check-out de verdade — antes de existir uma linha de
+  // tela. Nada é gravado: só leitura.
+  console.log('Painel 2.1 — lógica pura (painel-logica.js):');
+  {
+    const fnsPL = ['plNorm', 'plCheckinsPorPessoa', 'plProtocoloDe', 'plAvisosDe',
+      'plSemanaISO', 'plDiasISO', 'plEvolucao', 'plPlanoValido', 'plRotaDoDia'];
+    fnsPL.forEach((f) => check(f + ' existe', typeof ctx[f] === 'function'));
+
+    if (fnsPL.some((f) => typeof ctx[f] !== 'function')) {
+      check('painel-logica.js carregado (sem ele o resto não roda)', false, 'faltam funções pl*');
+    } else {
+      // ---------------- semana ISO conferida por uma conta INDEPENDENTE ----------------
+      // O painel-logica.js ancora na QUINTA-FEIRA da semana. Aqui a conta é outra:
+      // ancora na SEGUNDA-FEIRA, comparando com a segunda da 1ª semana do ano (a
+      // segunda em/antes de 4 de janeiro). Dois caminhos diferentes têm de chegar
+      // ao mesmo lugar — é isso que prova a regra, e não o meu próprio código.
+      const segDa = (ms) => { let w = new Date(ms).getUTCDay(); if (w === 0) w = 7; return ms - (w - 1) * 86400000; };
+      const primSeg = (y) => segDa(Date.UTC(y, 0, 4));
+      const semanaIndep = (iso) => {
+        const p = iso.split('-');
+        const s = segDa(Date.UTC(+p[0], +p[1] - 1, +p[2]));
+        let y = new Date(s).getUTCFullYear() + 1;
+        while (primSeg(y) > s) y--;
+        return y + '-W' + String(Math.round((s - primSeg(y)) / (7 * 86400000)) + 1).padStart(2, '0');
+      };
+      check('plSemanaISO: 2026-08-24 (segunda) = 2026-W35', ctx.plSemanaISO('2026-08-24') === '2026-W35', ctx.plSemanaISO('2026-08-24'));
+      check('plSemanaISO: 2026-01-01 (quinta) = 2026-W01', ctx.plSemanaISO('2026-01-01') === '2026-W01', ctx.plSemanaISO('2026-01-01'));
+      check('plSemanaISO: 2026-12-31 (quinta) = 2026-W53', ctx.plSemanaISO('2026-12-31') === '2026-W53', ctx.plSemanaISO('2026-12-31'));
+      check('plSemanaISO: 2027-01-01 (sexta) ainda é 2026-W53', ctx.plSemanaISO('2027-01-01') === '2026-W53', ctx.plSemanaISO('2027-01-01'));
+      const datas30 = ['2024-02-29', '2024-12-30', '2025-01-01', '2025-06-15', '2025-12-28',
+        '2025-12-29', '2025-12-31', '2026-01-01', '2026-01-04', '2026-01-05',
+        '2026-02-28', '2026-03-01', '2026-04-13', '2026-05-31', '2026-06-01',
+        '2026-07-04', '2026-08-19', '2026-08-24', '2026-08-25', '2026-08-30',
+        '2026-08-31', '2026-09-06', '2026-10-12', '2026-11-15', '2026-12-25',
+        '2026-12-31', '2027-01-01', '2027-01-03', '2027-01-04', '2028-02-29'];
+      let batemAs30 = true, ondeFalhou = '';
+      datas30.forEach((d) => {
+        if (ctx.plSemanaISO(d) !== semanaIndep(d)) { batemAs30 = false; ondeFalhou = d + ': ' + ctx.plSemanaISO(d) + ' vs ' + semanaIndep(d); }
+      });
+      check('plSemanaISO bate com a conta independente em 30 datas', batemAs30, ondeFalhou);
+      check('plSemanaISO com lixo devolve vazio (não inventa semana)',
+        ctx.plSemanaISO('') === '' && ctx.plSemanaISO('24/08/2026') === '' && ctx.plSemanaISO(null) === '');
+      check('plDiasISO: janela normal traz os dias na ordem',
+        ctx.plDiasISO('2026-08-24', '2026-08-26').join(',') === '2026-08-24,2026-08-25,2026-08-26');
+      check('plDiasISO: janela invertida devolve vazio', ctx.plDiasISO('2026-08-26', '2026-08-24').length === 0);
+
+      // ---------------- dado real do banco (só leitura) ----------------
+      const pd2 = (x) => String(x).padStart(2, '0');
+      const isoDe = (d) => d.getFullYear() + '-' + pd2(d.getMonth() + 1) + '-' + pd2(d.getDate());
+      const hojeD = new Date();
+      const hojePL = isoDe(hojeD);
+      const dias7 = [];
+      for (let i = 0; i < 7; i++) { const d = new Date(hojeD); d.setDate(d.getDate() - i); dias7.push(isoDe(d)); }
+      const auditoriaPorDia = {}, tempoPorDia = {};
+      for (const d of dias7) {
+        auditoriaPorDia[d] = await dbRead('daycare/auditoria/' + d, token);
+        tempoPorDia[d] = await dbRead('daycare/tempo-atividade/' + d, token);
+      }
+      const mesAtual = hojePL.slice(0, 7);
+      const mesAnterior = (() => { const d = new Date(hojeD.getFullYear(), hojeD.getMonth() - 1, 1); return d.getFullYear() + '-' + pd2(d.getMonth() + 1); })();
+      const pontosPorMes = {};
+      pontosPorMes[mesAtual] = await dbRead('daycare/pontos-checkout/' + mesAtual, token);
+      pontosPorMes[mesAnterior] = await dbRead('daycare/pontos-checkout/' + mesAnterior, token);
+      const avisosComidaHoje = await dbRead('daycare/avisos-telegram-comida/' + hojePL, token);
+      const nEventos = dias7.reduce((a, d) => a + (auditoriaPorDia[d] ? Object.keys(auditoriaPorDia[d]).length : 0), 0);
+      console.log('  dado real: ' + dias7.length + ' dias de auditoria (' + nEventos + ' eventos), pontos de '
+        + mesAtual + ' e ' + mesAnterior + ', avisos de comida de hoje.');
+
+      // ---------------- quem fez o quê: a soma tem de fechar com a contagem crua ----------------
+      let diaCheio = dias7[0], nCheio = -1;
+      dias7.forEach((d) => { const n = auditoriaPorDia[d] ? Object.keys(auditoriaPorDia[d]).length : 0; if (n > nCheio) { nCheio = n; diaCheio = d; } });
+      const audCheio = auditoriaPorDia[diaCheio] || {};
+      const evsCheio = Object.keys(audCheio).map((k) => audCheio[k]).filter((e) => e && typeof e === 'object');
+      const porPessoa = ctx.plCheckinsPorPessoa(audCheio);
+      const somaCorpo = Object.keys(porPessoa).reduce((a, k) => a + porPessoa[k].checkinCorpo, 0);
+      const somaPert = Object.keys(porPessoa).reduce((a, k) => a + porPessoa[k].pertences, 0);
+      const cruCorpo = evsCheio.filter((e) => e.acao === 'checkin-corpo').length;
+      const cruPert = evsCheio.filter((e) => e.acao === 'checkin-pertences').length;
+      check('houve movimento real para provar a conta (dia ' + diaCheio + ': ' + nCheio + ' eventos)', nCheio > 0);
+      check('plCheckinsPorPessoa: soma dos check-ins de corpo = contagem crua do dia (' + cruCorpo + ')',
+        somaCorpo === cruCorpo, somaCorpo + ' vs ' + cruCorpo);
+      check('plCheckinsPorPessoa: soma dos pertences = contagem crua do dia (' + cruPert + ')',
+        somaPert === cruPert, somaPert + ' vs ' + cruPert);
+      check('plCheckinsPorPessoa com dia vazio não estoura', Object.keys(ctx.plCheckinsPorPessoa(null)).length === 0);
+
+      // ---------------- protocolo do dia: o que eu fiz e o que ficou faltando ----------------
+      const contaPorQuem = {};
+      evsCheio.filter((e) => e.acao === 'checkin-corpo').forEach((e) => { const q = String(e.quem || ''); contaPorQuem[q] = (contaPorQuem[q] || 0) + 1; });
+      let pessoa = '', nPessoa = -1;
+      Object.keys(contaPorQuem).forEach((q) => { if (contaPorQuem[q] > nPessoa) { nPessoa = contaPorQuem[q]; pessoa = q; } });
+      check('há uma pessoa real com check-in de corpo no dia (' + pessoa + ': ' + nPessoa + ')', nPessoa > 0, diaCheio);
+      if (nPessoa > 0) {
+        const alvosDela = [], vistosDela = {};
+        evsCheio.filter((e) => e.acao === 'checkin-corpo' && ctx.plNorm(e.quem) === ctx.plNorm(pessoa))
+          .forEach((e) => { const a = e.alvo || e.pet || ''; if (a && !vistosDela[a]) { vistosDela[a] = 1; alvosDela.push(a); } });
+        const alvosDoDia = [], vistosDia = {};
+        evsCheio.filter((e) => e.acao === 'checkin-corpo')
+          .forEach((e) => { const a = e.alvo || e.pet || ''; if (a && !vistosDia[a]) { vistosDia[a] = 1; alvosDoDia.push(a); } });
+
+        const proprio = ctx.plProtocoloDe(pessoa, audCheio, alvosDela);
+        check('plProtocoloDe: com a turma que ela mesma atendeu, não falta ninguém e o placar é 100%',
+          proprio.faltam.length === 0 && proprio.pct === 100 && proprio.feitos.length === alvosDela.length,
+          JSON.stringify({ feitos: proprio.feitos.length, faltam: proprio.faltam.length, pct: proprio.pct }));
+
+        const doDia = ctx.plProtocoloDe(pessoa, audCheio, alvosDoDia);
+        const esperadoFaltam = alvosDoDia.length - alvosDela.length;
+        check('plProtocoloDe: com a turma inteira do dia, faltam exatamente os que não foram dela (' + esperadoFaltam + ')',
+          doDia.faltam.length === esperadoFaltam && doDia.feitos.length === alvosDela.length,
+          JSON.stringify({ faltam: doDia.faltam.length, esperado: esperadoFaltam }));
+
+        const comInventado = ctx.plProtocoloDe(pessoa, audCheio, alvosDoDia.concat(['filhot-que-nao-existe__tutor-nenhum']));
+        check('plProtocoloDe: uma chave a mais na turma vira exatamente um FILHOt faltando',
+          comInventado.faltam.length === doDia.faltam.length + 1 &&
+          comInventado.faltam.indexOf('filhot-que-nao-existe__tutor-nenhum') >= 0,
+          JSON.stringify({ antes: doDia.faltam.length, depois: comInventado.faltam.length }));
+
+        const semTurma = ctx.plProtocoloDe(pessoa, audCheio, []);
+        check('plProtocoloDe: sem a turma do dia não inventa cobrança (pct=null, faltam vazio)',
+          semTurma.pct === null && semTurma.faltam.length === 0);
+      }
+
+      // ---------------- avisos que ficaram com a pessoa ----------------
+      const agoraFix = 1787700000000;
+      const avisosFix = {
+        'telegram-comida': {
+          a1: { ok: true, nome: 'Cookie', quem: 'Octávio', ts: agoraFix - 600000, erro: '' },
+          a2: { ok: false, nome: 'Dolly', quem: 'octavio', ts: agoraFix - 300000, erro: 'a ponte não respondeu' },
+          a3: { tentando: true, nome: 'Romeo', quem: 'OCTÁVIO ', ts: agoraFix - 900000, erro: '' },
+          a4: { ok: false, nome: 'Flor', quem: 'Wandela', ts: agoraFix - 100000, erro: 'sem internet' }
+        }
+      };
+      const av = ctx.plAvisosDe('Octávio', avisosFix, agoraFix);
+      check('plAvisosDe: dos 3 avisos do Octávio devolve 2 (o que saiu não entra)', av.length === 2, JSON.stringify(av));
+      check('plAvisosDe: vem do mais novo para o mais velho (Dolly antes de Romeo)',
+        av.length === 2 && av[0].nome === 'Dolly' && av[1].nome === 'Romeo', JSON.stringify(av.map((x) => x.nome)));
+      check('plAvisosDe: diz o motivo de cada um (não saiu / travou tentando)',
+        av.length === 2 && av[0].motivo === 'não saiu' && av[1].motivo === 'travou tentando',
+        JSON.stringify(av.map((x) => x.motivo)));
+      check('plAvisosDe: nome de outra pessoa não vaza para a minha lista',
+        av.every((x) => x.nome !== 'Flor'));
+      const avNovo = ctx.plAvisosDe('Octávio', { 'telegram-comida': { z: { tentando: true, nome: 'Kako', quem: 'Octávio', ts: agoraFix - 5000 } } }, agoraFix);
+      check('plAvisosDe: "tentando" de 5 segundos atrás ainda não é aviso travado', avNovo.length === 0, JSON.stringify(avNovo));
+      const avFila = ctx.plAvisosDe('Octávio', { 'vet-fila': { f1: { pet: 'Romeo', quem: 'Octávio', ts: agoraFix - 60000 } } }, agoraFix);
+      check('plAvisosDe: item parado na fila da vet conta como aviso que não saiu',
+        avFila.length === 1 && avFila[0].nome === 'Romeo', JSON.stringify(avFila));
+      let avReal = null, avErro = '';
+      try { avReal = ctx.plAvisosDe(pessoa, { 'telegram-comida': avisosComidaHoje, 'vet-fila': null }, Date.now()); }
+      catch (e) { avErro = e.message; }
+      check('plAvisosDe: com o dado real de hoje não estoura', Array.isArray(avReal), avErro);
+
+      // ---------------- evolução semana a semana ----------------
+      const dadosEv = { auditoriaPorDia: auditoriaPorDia, pontosPorMes: pontosPorMes, tempoPorDia: tempoPorDia };
+      const ev = ctx.plEvolucao(pessoa, dadosEv, 2, hojePL);
+      check('plEvolucao: devolve 2 semanas', Array.isArray(ev) && ev.length === 2, JSON.stringify((ev || []).map((s) => s.semana)));
+      if (Array.isArray(ev) && ev.length === 2) {
+        check('plEvolucao: vem da semana mais antiga para a mais recente',
+          ev[0].semana < ev[1].semana || ev[0].dias[0] < ev[1].dias[0], ev[0].semana + ' -> ' + ev[1].semana);
+        check('plEvolucao: a semana corrente não lista dia que ainda não aconteceu',
+          ev[1].dias[ev[1].dias.length - 1] <= hojePL, ev[1].dias.join(','));
+
+        const diasEv = [];
+        ev.forEach((s) => s.dias.forEach((d) => { if (diasEv.indexOf(d) < 0) diasEv.push(d); }));
+        // contagem independente, direto do caderno de auditoria
+        let cruCheckin = 0, cruPert2 = 0;
+        diasEv.forEach((d) => {
+          const o = auditoriaPorDia[d] || {};
+          Object.keys(o).forEach((k) => {
+            const e = o[k];
+            if (!e || ctx.plNorm(e.quem) !== ctx.plNorm(pessoa)) return;
+            if (e.acao === 'checkin-corpo') cruCheckin++;
+            if (e.acao === 'checkin-pertences') cruPert2++;
+          });
+        });
+        const somaEvCheckin = ev.reduce((a, s) => a + s.checkinCorpo, 0);
+        const somaEvPert = ev.reduce((a, s) => a + s.checkinPertences, 0);
+        check('plEvolucao: check-ins de corpo das 2 semanas = contagem crua nos dias cobertos (' + cruCheckin + ')',
+          somaEvCheckin === cruCheckin, somaEvCheckin + ' vs ' + cruCheckin);
+        check('plEvolucao: pertences das 2 semanas = contagem crua nos dias cobertos (' + cruPert2 + ')',
+          somaEvPert === cruPert2, somaEvPert + ' vs ' + cruPert2);
+
+        // minutos de check-in de corpo, somados de novo à mão a partir de tempo-atividade
+        let cruMin = 0, cruVezes = 0;
+        diasEv.forEach((d) => {
+          const t = (tempoPorDia[d] || {})['checkin-corpo'];
+          if (!t || ctx.plNorm(t.quemInicio) !== ctx.plNorm(pessoa)) return;
+          cruVezes++;
+          const hm = (h) => (/^([01]\d|2[0-3]):[0-5]\d$/.test(h || '') ? (+h.slice(0, 2)) * 60 + (+h.slice(3, 5)) : null);
+          const a = hm(t.inicio), b = hm(t.fim);
+          if (a !== null && b !== null && b > a) cruMin += (b - a);
+        });
+        const evMin = ev.reduce((a, s) => a + ((s.etapas['checkin-corpo'] || { minutos: 0 }).minutos), 0);
+        const evVezes = ev.reduce((a, s) => a + ((s.etapas['checkin-corpo'] || { vezes: 0 }).vezes), 0);
+        check('plEvolucao: minutos de check-in de corpo = soma feita à mão (' + cruMin + ' min)',
+          evMin === cruMin, evMin + ' vs ' + cruMin);
+        check('plEvolucao: nº de vezes do check-in de corpo bate (' + cruVezes + ')', evVezes === cruVezes, evVezes + ' vs ' + cruVezes);
+
+        // pontos: recontados à mão dentro da janela da semana
+        let cruPontos = 0, cruBolsas = 0;
+        const deMS = new Date(+diasEv[0].slice(0, 4), +diasEv[0].slice(5, 7) - 1, +diasEv[0].slice(8, 10), 0, 0, 0, 0).getTime();
+        const ultimo = diasEv[diasEv.length - 1];
+        const ateMS = new Date(+ultimo.slice(0, 4), +ultimo.slice(5, 7) - 1, +ultimo.slice(8, 10), 23, 59, 59, 999).getTime();
+        Object.keys(pontosPorMes).forEach((m) => {
+          const o = pontosPorMes[m] || {};
+          Object.keys(o).forEach((k) => {
+            const r = o[k];
+            if (!r || ctx.plNorm(r.quem) !== ctx.plNorm(pessoa)) return;
+            if (!(r.ts >= deMS && r.ts <= ateMS)) return;
+            cruBolsas++; cruPontos += (r.pontos || 0);
+          });
+        });
+        const evPontos = ev.reduce((a, s) => a + s.pontos, 0), evBolsas = ev.reduce((a, s) => a + s.bolsas, 0);
+        check('plEvolucao: pontos do check-out das 2 semanas = soma feita à mão (' + cruPontos + ')',
+          evPontos === cruPontos, evPontos + ' vs ' + cruPontos);
+        check('plEvolucao: nº de bolsas conferidas bate (' + cruBolsas + ')', evBolsas === cruBolsas, evBolsas + ' vs ' + cruBolsas);
+        check('plEvolucao: bolsa perfeita nunca passa do nº de bolsas',
+          ev.every((s) => s.bolsasPerfeitas <= s.bolsas));
+
+        // nenhum campo NaN — número que vira NaN na tela é número que mente
+        const achouNaN = (o) => {
+          if (typeof o === 'number') return isNaN(o);
+          if (!o || typeof o !== 'object') return false;
+          return Object.keys(o).some((k) => achouNaN(o[k]));
+        };
+        check('plEvolucao: nenhum campo NaN em nenhuma semana', !achouNaN(ev), JSON.stringify(ev).slice(0, 200));
+        console.log('  evolução de ' + pessoa + ': ' + ev.map((s) => s.semana + ' → ' + s.checkinCorpo + ' check-ins, '
+          + s.pontos + ' ponto(s), ' + ((s.etapas['checkin-corpo'] || { minutos: 0 }).minutos) + ' min de corpo').join(' · '));
+      }
+      check('plEvolucao: data de hoje inválida devolve lista vazia (não chuta)',
+        ctx.plEvolucao(pessoa, dadosEv, 2, 'ontem').length === 0);
+      check('plEvolucao: sem dado nenhum devolve semanas zeradas, não erro',
+        ctx.plEvolucao('Ninguém', {}, 3, hojePL).length === 3);
+
+      // ---------------- escala e plano do dia (dado novo) ----------------
+      const planoFix = {
+        id: 'plano-2',
+        nome: 'Plano 2 — um a menos',
+        motivo: 'Wandela de folga',
+        definidoPor: 'Márcia',
+        ts: agoraFix,
+        porMonitor: {
+          'Octávio': [
+            { hora: '15:00', atividade: '2º horário de almoço' },
+            { hora: '07:30', atividade: 'check-in de corpo e pertences' },
+            { hora: '11:00', atividade: 'guardar os pertences' }
+          ],
+          'Giulia': [{ hora: '11:00', atividade: 'Enriquecimento Ambiental' }]
+        }
+      };
+      const vOk = ctx.plPlanoValido(planoFix);
+      check('plPlanoValido: plano completo passa', vOk.ok === true && vOk.erros.length === 0, JSON.stringify(vOk.erros));
+      const semDono = JSON.parse(JSON.stringify(planoFix)); delete semDono.definidoPor;
+      const vSemDono = ctx.plPlanoValido(semDono);
+      check('plPlanoValido: plano sem quem definiu é recusado', vSemDono.ok === false && vSemDono.erros.join(' ').indexOf('definiu') >= 0, JSON.stringify(vSemDono.erros));
+      const horaTorta = JSON.parse(JSON.stringify(planoFix)); horaTorta.porMonitor['Octávio'][0].hora = '7:00';
+      const vHora = ctx.plPlanoValido(horaTorta);
+      check("plPlanoValido: hora '7:00' (sem o zero) é recusada", vHora.ok === false && vHora.erros.join(' ').indexOf('hora inválida') >= 0, JSON.stringify(vHora.erros));
+      const semAtiv = JSON.parse(JSON.stringify(planoFix)); semAtiv.porMonitor['Giulia'][0].atividade = '  ';
+      check('plPlanoValido: atividade sem nome é recusada', ctx.plPlanoValido(semAtiv).ok === false);
+      check('plPlanoValido: plano vazio é recusado com a lista do que falta',
+        ctx.plPlanoValido(null).ok === false && ctx.plPlanoValido(null).erros.length >= 3);
+
+      const escalaFix = {
+        'Octávio': { entrada: '07:00', almoco: '13:00-14:00', saida: '16:00' },
+        'Wandela': { entrada: '07:00', almoco: '12:00-13:00', saida: '16:00' }
+      };
+      const rota = ctx.plRotaDoDia('Octávio', escalaFix, planoFix);
+      check('plRotaDoDia: traz o horário da pessoa da escala',
+        rota.entrada === '07:00' && rota.almoco === '13:00-14:00' && rota.saida === '16:00', JSON.stringify(rota));
+      check('plRotaDoDia: as atividades vêm na ordem da hora',
+        rota.atividades.map((a) => a.hora).join(',') === '07:30,11:00,15:00', JSON.stringify(rota.atividades));
+      check('plRotaDoDia: nenhuma atividade de outro monitor aparece',
+        rota.atividades.every((a) => a.atividade.indexOf('Enriquecimento') < 0));
+      check('plRotaDoDia: sem aviso quando a pessoa está na escala e no plano', rota.avisos.length === 0, JSON.stringify(rota.avisos));
+      check('plRotaDoDia: diz de quem é o plano de hoje e por quê',
+        rota.plano.definidoPor === 'Márcia' && rota.plano.motivo === 'Wandela de folga');
+      const fora = ctx.plRotaDoDia('Fulano', escalaFix, planoFix);
+      check('plRotaDoDia: quem não está no plano recebe o aviso de falar com a Márcia',
+        fora.avisos.join(' ').indexOf('não está no plano') >= 0, JSON.stringify(fora.avisos));
+      check('plRotaDoDia: quem não está na escala fica com o horário em branco e é avisado',
+        fora.entrada === '' && fora.avisos.join(' ').indexOf('escala') >= 0, JSON.stringify(fora));
+      const semAcento = ctx.plRotaDoDia('octavio', escalaFix, planoFix);
+      check('plRotaDoDia: "octavio" e "Octávio" são a mesma pessoa (acento não separa ninguém)',
+        semAcento.entrada === '07:00' && semAcento.avisos.length === 0, JSON.stringify(semAcento.avisos));
+    }
   }
   console.log('');
 
