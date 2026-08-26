@@ -2240,6 +2240,38 @@ async function main() {
       });
       check('nenhuma resposta real volta repetindo a pergunta', comEco.length === 0,
         JSON.stringify(comEco.slice(0, 5)));
+
+      // dois residuos vistos ao abrir a curadoria da Amora, 26/ago:
+      //  - o titulo da secao grudava no fim da resposta anterior ("Nao   SAUDE, ROTINA...")
+      //  - o eco parava na 1a palavra diferente ("receoso" no lugar de "receosa"), e a
+      //    pergunta inteira voltava como se fosse resposta da tutora
+      let comSecao = [], quaseSoPergunta = [];
+      comTexto.forEach((k) => {
+        const p = (ctx.PELUDINHOS || []).find((x) => ctx.pelKey(x) === k);
+        if (!p) return;
+        const Q = ctx.algPerguntas(p);
+        const sep = ctx.algSeparar(respostas[k].resposta, Q);
+        Q.forEach((q) => {
+          const v = String(sep.por[q.k] || '').trim();
+          if (!v) return;
+          if (/SAÚDE, ROTINA E COMPORTAMENTO|ALIMENTAÇÃO/i.test(v)) comSecao.push(k + '/' + q.k);
+          const pv = v.split(/\s+/).map(ctx.jsNorm).filter(Boolean);
+          const pq = new Set(q.t.split(/\s+/).map(ctx.jsNorm).filter(Boolean));
+          if (pv.length >= 5) {
+            const iguais = pv.filter((w) => pq.has(w)).length;
+            if (iguais / pv.length > 0.7) quaseSoPergunta.push(k + '/' + q.k + ' → "' + v.slice(0, 45) + '"');
+          }
+        });
+      });
+      check('o titulo da secao nao gruda na resposta', comSecao.length === 0, JSON.stringify(comSecao));
+      check('nenhum pedaco real e quase so a propria pergunta de volta',
+        quaseSoPergunta.length === 0, JSON.stringify(quaseSoPergunta.slice(0, 4)));
+      check('uma palavra trocada (genero) nao desmonta o reconhecimento',
+        eco('Houve alguma mudanca recente de comportamento? Por exemplo: ficou mais receoso, irritado, quieto, inseguro ou sensivel ao toque? Nada novo',
+            'Houve alguma mudanca recente de comportamento? Por exemplo: ficou mais receosa, irritada, quieta, insegura ou sensivel ao toque?')
+          === 'Nada novo',
+        JSON.stringify(eco('Houve alguma mudanca recente de comportamento? Por exemplo: ficou mais receoso, irritado, quieto, inseguro ou sensivel ao toque? Nada novo',
+            'Houve alguma mudanca recente de comportamento? Por exemplo: ficou mais receosa, irritada, quieta, insegura ou sensivel ao toque?')));
     }
   }
   console.log('');

@@ -9589,7 +9589,7 @@
   // Agora existe um carimbo: esta constante é a versão que o aparelho está rodando, e o
   // Firebase guarda a versão publicada. Quando as duas diferem, aparece o aviso — mas
   // NUNCA recarrega sozinho: recarregar no meio de um check-in perderia o trabalho.
-  const APP_VERSAO='2026-08-26-16';
+  const APP_VERSAO='2026-08-26-17';
   function vigiarVersao(){
     if(!DB) return;
     try{
@@ -17301,7 +17301,16 @@
   // tutor responde correndo sem numerar, volta como `solto`: aparece na tela para a
   // pessoa recortar à mão. Nada é descartado em silêncio.
   function algSeparar(texto, perguntas){
-    var t=String(texto||'').replace(/\r/g,'');
+    var t=algLimpo(texto);
+    // Os títulos de seção são texto NOSSO, colado de volta pelo tutor. Saem antes da
+    // separação, senão grudam no fim da resposta anterior.
+    (perguntas||[]).forEach(function(q){
+      if(!q.secao) return;
+      var puro=String(q.secao).replace(/\*/g,'').trim();
+      if(!puro) return;
+      var re=new RegExp('\\*?'+puro.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')+'\\*?','gi');
+      t=t.replace(re,' ');
+    });
     var re=/(?:^|[\n\s])(\d{1,2})\s*[\.\)\-–—]\s*/g, m, cand=[];
     while((m=re.exec(t))){
       var n=+m[1];
@@ -17317,12 +17326,34 @@
       var pedaco=t.slice(x.ini, fim).trim();
       var q=perguntas[i];
       if(!q){ out.solto+=(out.solto?'\n':'')+x.n+'. '+pedaco; return; }
-      out.por[q.k]=algTirarEco(pedaco, q.t);
+      // duas tentativas: pelo começo (o tutor colou a pergunta igual) e pelo fim (ele
+      // reescreveu o começo, mas o final da pergunta continua ali). Fica a mais curta —
+      // é a que tirou mais eco — desde que não tenha esvaziado a resposta.
+      var a=algTirarEco(pedaco, q.t), b=algCortarPelaCauda(a, q.t);
+      out.por[q.k]=(b&&b.length<a.length)?b:a;
     });
     // sobrou pergunta sem resposta? não é erro: o tutor pode ter pulado.
     if(antes && !/^(alimenta|sa[uú]de|ol[aá]|oi|bom dia|boa tarde|boa noite)/i.test(jsNorm(antes)))
       out.solto=antes;
     return out;
+  }
+  // O que o WhatsApp cola junto e o olho não vê: word joiner, espaço fino, espaço duro.
+  // Para o computador não são espaço, então grudam na palavra seguinte e quebram qualquer
+  // comparação. Saem antes de tudo.
+  function algLimpo(v){
+    return String(v==null?'':v)
+      .replace(/\r/g,'')
+      .replace(/[\u200B-\u200F\u2060-\u2064\uFEFF]/g,'')
+      .replace(/[\u00A0\u2007\u202F\u2009\u2002-\u2006]/g,' ');
+  }
+  // Palavra pronta para comparar: sem acento, sem pontuação, sem invisível.
+  function algPal(w){ return jsNorm(algLimpo(w)).replace(/[^a-z0-9]/g,''); }
+  // "receoso" e "receosa" são a mesma palavra para quem procura eco: a tutora colou a
+  // pergunta na forma masculina porque a mensagem foi gerada antes de o sexo entrar na
+  // ficha. Diferença só na última letra (gênero, plural) não conta como desencontro.
+  function algMesmaPalavra(a, b){
+    if(a===b) return true;
+    return (a.length>=5 && b.length>=5 && a.slice(0,-1)===b.slice(0,-1));
   }
   // O tutor costuma colar a pergunta junto com a resposta. O que interessa é o que ELE
   // disse — o resto é eco.
@@ -17333,16 +17364,41 @@
   // no primeiro desencontro, para e corta ali. Se casaram menos de 4 palavras, não era
   // eco nenhum e nada é cortado — na dúvida, sobra texto, nunca falta.
   function algTirarEco(pedaco, pergunta){
-    var texto=String(pedaco||''), perg=String(pergunta||'');
-    var pal=perg.split(/\s+/).filter(Boolean).map(jsNorm).filter(Boolean);
+    var texto=algLimpo(pedaco), perg=algLimpo(pergunta);
+    var pal=perg.split(/\s+/).map(algPal).filter(Boolean);
     if(pal.length<4) return texto;
-    var re=/\S+/g, m, i=0, fim=0, casou=0;
+    // Tolera trocas pontuais (gênero, acento, um "e" a mais): conta os desencontros e só
+    // desiste quando eles deixam de ser exceção. Sem isso, "receoso" no lugar de
+    // "receosa" fazia a pergunta inteira voltar como resposta.
+    var limite=Math.max(2, Math.round(pal.length*0.3));
+    var re=/\S+/g, m, i=0, fim=0, casou=0, err=0, seguidos=0;
     while((m=re.exec(texto)) && i<pal.length){
-      if(jsNorm(m[0])!==pal[i]) break;
-      fim=m.index+m[0].length; i++; casou++;
+      if(algMesmaPalavra(algPal(m[0]), pal[i])){ fim=m.index+m[0].length; casou++; seguidos=0; }
+      else {
+        err++; seguidos++;
+        if(err>limite || seguidos>2) break;
+      }
+      i++;
     }
-    if(casou<4) return texto;
+    if(casou<4 || casou<err) return texto;
     return texto.slice(fim).replace(/^[\s\-–—:.,)]+/,'').trim();
+  }
+
+  // Procura o FIM da pergunta dentro do pedaço. Só corta se o que sobrar tiver conteúdo —
+  // cortar até o fim e devolver vazio seria perder a resposta, que é o pecado maior.
+  function algCortarPelaCauda(texto, pergunta){
+    var t=algLimpo(texto);
+    var pal=algLimpo(pergunta).split(/\s+/).filter(Boolean);
+    if(pal.length<5) return t;
+    var cauda=pal.slice(-4).map(algPal).filter(Boolean);
+    if(cauda.length<3) return t;
+    // as mesmas palavras, aceitando pontuação e espaço entre elas
+    var re=new RegExp(cauda.map(function(w){ return w+'[^a-z0-9]*'; }).join('\\s*'), 'i');
+    var alvo=jsNorm(t), m=re.exec(alvo);
+    if(!m) return t;
+    // a posição no texto normalizado bate com a do original: jsNorm troca letra por letra
+    var resto=t.slice(m.index+m[0].length).replace(/^[\s\-–—:.,)?]+/,'').trim();
+    return resto?resto:t;
   }
 
   var ALG_CUR={};   // {k: {campos:{qk:{txt, campo, grava}}, solto:''}}
