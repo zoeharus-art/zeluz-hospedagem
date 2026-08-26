@@ -3004,8 +3004,20 @@
        Por ITEM, não por FILHOt: toca em Reposição, busca o nome, lança. O nome sai sempre
        como Nome/Raça, que é o formato que o dashboard da TV entende. -->
   <section class="view" id="v-dashdc">
-    <div class="role-note"><span data-icon="star"></span><span><strong>O que vai para a TV.</strong> Escolha o item, busque o FILHOt e lance. Vale para <strong>hoje</strong>. O que você lançar aqui aparece no dashboard do Day Care — ninguém precisa mais escrever na planilha.</span></div>
+    <div class="role-note"><span data-icon="star"></span><span><strong>O que vai para a TV.</strong> Escolha o item, busque o FILHOt e lance. Vale para o <strong>dia escolhido acima</strong> — dá para deixar marcado com antecedência. O que você lançar aqui aparece no dashboard do Day Care — ninguém precisa mais escrever na planilha.</span></div>
     <div id="dashPonteAviso"></div>
+    <!-- Para que DIA se está lançando. "Tem gente que já deixa previamente marcado"
+         (Adriana, 25/ago/2026) — o banho de sexta é combinado na segunda. -->
+    <div class="card" style="border-left:4px solid var(--z-blue)">
+      <div style="display:flex;flex-wrap:wrap;gap:10px;align-items:end">
+        <div class="field" style="margin:0;max-width:210px">
+          <label>Lançando para o dia</label>
+          <input type="date" class="cad-in" id="dashDataSel" onchange="dashTrocarDia(this.value)">
+        </div>
+        <button type="button" class="btn" style="background:var(--z-cream-warm);color:var(--z-blue);border:1.5px solid var(--line)" onclick="dashVoltarHoje()">Voltar para hoje</button>
+        <div class="hint" style="flex:1;min-width:200px;margin:0" id="dashDiaAviso"></div>
+      </div>
+    </div>
     <!-- Adriana, 25/ago/2026: "precisamos que a tabela seja preenchida automaticamente".
          Este cartão existe para a equipe SABER o que já vem sozinho — senão alguém lança de
          novo à mão e a TV mostra o mesmo FILHOt duas vezes. -->
@@ -3693,7 +3705,7 @@
     renovacao:['Renovação de Planos','Planos a vencer e renovações'],adaptacao:['Adaptação · 1º mês','Como está se adaptando'],
     reposicao:['Reposições','Faltas avisadas viram dias a repor'],
     daycare:['Day Care','Chamada e atividades'],hospedagem:['Plantão AuAulândia','Passagem de plantão'],
-    aulunos:['Aulunos','Relatório de frequência dos aulunos'],dashdc:['Dashboard Day Care','O que vai para a TV do Day Care — lance aqui, a planilha vira só o espelho'],vacinas:['Prevenção','Vacinas, vermífugo, antiparasitário, coleira, exame de fezes e peso — quem está devendo'],
+    aulunos:['Aulunos','Relatório de frequência dos aulunos'],dashdc:['Lançamentos da TV','O que a recepção lança e aparece na TV do Day Care'],vacinas:['Prevenção','Vacinas, vermífugo, antiparasitário, coleira, exame de fezes e peso — quem está devendo'],
     cuidadovet:['Cuidado Vet','Consulta, receituário e reavaliação'],
     checkin:['Check-in','Entrada da estadia — ficha, pertences e assinatura'],
     conferencia:['Conferência Check-in','Pertences etiquetados, ração pesada e alarmes testados'],
@@ -9515,7 +9527,7 @@
   // Agora existe um carimbo: esta constante é a versão que o aparelho está rodando, e o
   // Firebase guarda a versão publicada. Quando as duas diferem, aparece o aviso — mas
   // NUNCA recarrega sozinho: recarregar no meio de um check-in perderia o trabalho.
-  const APP_VERSAO='2026-08-25-27';
+  const APP_VERSAO='2026-08-26-02';
   function vigiarVersao(){
     if(!DB) return;
     try{
@@ -17981,7 +17993,28 @@
   ];
   var DASH_DADOS={}, DASH_PONTE=null, dashBusca={};
   function dashItem(k){ return DASH_ITENS.find(function(i){ return i.k===k; }); }
-  function dashDia(){ return (typeof dcDataKey==='function')?dcDataKey():((typeof hojeISO==='function')?hojeISO():''); }
+  // O dia que está sendo lançado. Começa em hoje e a recepção troca no seletor da tela.
+  var DASH_DIA_SEL='';
+  function dashDia(){
+    if(DASH_DIA_SEL) return DASH_DIA_SEL;
+    return (typeof dcDataKey==='function')?dcDataKey():((typeof hojeISO==='function')?hojeISO():'');
+  }
+  function dashTrocarDia(v){
+    var iso=String(v||'').slice(0,10);
+    if(!/^\d{4}-\d{2}-\d{2}$/.test(iso)) return;
+    DASH_DIA_SEL=iso;
+    try{ dashCarregar(); }catch(e){}
+  }
+  function dashVoltarHoje(){ DASH_DIA_SEL=''; try{ dashCarregar(); }catch(e){} }
+  // Frase que diz, em português, para que dia a pessoa está lançando.
+  function dashDiaTexto(){
+    var d=dashDia(), hoje=(typeof zHojeISO==='function')?zHojeISO():'';
+    if(d===hoje) return 'hoje';
+    var p=d.split('-'); var br=p.length===3?(p[2]+'/'+p[1]):d;
+    var amanha=(typeof orcMaisDias==='function')?orcMaisDias(hoje,1):'';
+    if(d===amanha) return 'amanhã ('+br+')';
+    return (d<hoje?'':'')+br;
+  }
   function dashNo(){ return 'daycare/dashboard/'+dashDia(); }
   // Nome/Raça — o formato que o dashboard entende. Sem raça, vai só o nome (nunca "Nome/").
   function dashNomeRaca(p){
@@ -17989,12 +18022,25 @@
     var r=((typeof pelGet==='function')?pelGet(p,'raca'):'')||p.raca||'';
     return r?(n+'/'+r):n;
   }
+  function dashSincronizarSeletor(){
+    try{
+      var el=document.getElementById('dashDataSel'); if(el) el.value=dashDia();
+      var av=document.getElementById('dashDiaAviso');
+      if(av){
+        var hoje=(typeof zHojeISO==='function')?zHojeISO():'';
+        av.innerHTML=(dashDia()===hoje)
+          ? 'Você está lançando para <strong>hoje</strong>. Para deixar marcado num outro dia, escolha a data ao lado.'
+          : '<strong style="color:var(--z-gold-deep)">Atenção: você está lançando para '+escAttr(dashDiaTexto())+'</strong>, não para hoje.';
+      }
+    }catch(e){}
+  }
   var DASH_AUTO_LIGADO=false;
   function dashCarregar(){
     if(!DB){ renderDash(); return; }
     if(!DASH_AUTO_LIGADO){ DASH_AUTO_LIGADO=true; try{ dashAutoLigar(); }catch(e){} }
     Promise.all([
-      DB.ref('daycare/config/ponte-planilha').once('value').then(function(s){ DASH_PONTE=s.val()||null; }).catch(function(){}),
+      DB.ref('daycare/config/ponte-planilha').once('value').then(function(s){ DASH_PONTE=s.val()||null; })
+        .catch(function(e){ try{ if(typeof audit==='function') audit('dashboard-daycare','NÃO consegui ler a configuração da ponte: '+((e&&e.message)||e),{}); }catch(x){} }),
       DB.ref(dashNo()).once('value').then(function(s){ DASH_DADOS=s.val()||{}; }).catch(function(){ DASH_DADOS={}; })
     ]).then(function(){
       var u=document.getElementById('dashPonteUrl'), t=document.getElementById('dashPonteToken');
@@ -18069,9 +18115,27 @@
       if(typeof audit==='function') audit('dashboard-daycare','DESLIGOU a ponte com a planilha',{});
     }).catch(function(){});
   }
+  function dashPontePronta(){
+    if(DASH_PONTE&&DASH_PONTE.url) return Promise.resolve(DASH_PONTE);
+    if(!DB) return Promise.resolve(null);
+    return DB.ref('daycare/config/ponte-planilha').once('value').then(function(s){
+      var v=s.val(); if(v&&v.url) DASH_PONTE=v;
+      return (DASH_PONTE&&DASH_PONTE.url)?DASH_PONTE:null;
+    }).catch(function(e){
+      try{ if(typeof audit==='function') audit('dashboard-daycare','NÃO consegui ler a configuração da ponte: '+((e&&e.message)||e),{}); }catch(x){}
+      return null;
+    });
+  }
   function dashPonteChamar(corpo){
+    if(!(DASH_PONTE&&DASH_PONTE.url)){
+      // Ainda não chegou do banco: busca agora e refaz a chamada. Nunca mais responder
+      // "não está configurada" para uma ponte que está.
+      return dashPontePronta().then(function(c){
+        if(!c) return {ok:false, erro:'a ponte com a planilha não está configurada'};
+        return dashPonteChamar(corpo);
+      });
+    }
     var c=DASH_PONTE||{};
-    if(!c.url) return Promise.resolve({ok:false, erro:'a ponte com a planilha não está configurada'});
     // Config antiga pode ter sido gravada com aspas (foi o que desligou a ponte em 21/08).
     if(c.token) c={url:c.url, token:dashLimparToken(c.token)};
     return fetch(c.url,{method:'POST', headers:{'Content-Type':'text/plain;charset=utf-8'},
@@ -18095,6 +18159,7 @@
     });
   }
   function renderDash(){
+    try{ dashSincronizarSeletor(); }catch(e){}
     var av=document.getElementById('dashPonteAviso');
     if(av){
       av.innerHTML=(DASH_PONTE&&DASH_PONTE.url)?''
@@ -18328,7 +18393,7 @@
   // Põe na planilha o que falta e tira o que este mecanismo pôs e não vale mais.
   // NUNCA remove o que uma pessoa escreveu — só o que está no registro do automático.
   function dashAutoSincronizar(iso){
-    if(!DB || !(DASH_PONTE&&DASH_PONTE.url)) return Promise.resolve({ok:false, erro:'ponte não configurada'});
+    if(!DB) return Promise.resolve({ok:false, erro:'sem conexão com o banco'});
     var noAuto='daycare/dashboard-auto/'+iso;
     return Promise.all([
       dashPonteChamar({acao:'lerDia', dia:iso}),
@@ -18380,9 +18445,16 @@
   // Trava para vários aparelhos não escreverem a mesma coisa ao mesmo tempo: quem rodou há
   // menos de DASH_AUTO_MIN minutos já resolveu o dia.
   function dashAutoRodar(forcar){
-    if(!DB || !(DASH_PONTE&&DASH_PONTE.url)) return Promise.resolve({ok:false, erro:'ponte não configurada'});
+    if(!DB) return Promise.resolve({ok:false, erro:'sem conexão com o banco'});
     var hoje=(typeof zHojeISO==='function')?zHojeISO():'';
     if(!hoje) return Promise.resolve({ok:false, erro:'sem data'});
+    // Espera a ponte chegar do banco antes de decidir que ela não existe.
+    return dashPontePronta().then(function(c){
+      if(!c) return {ok:false, erro:'a ponte com a planilha não está configurada'};
+      return dashAutoRodarAgora(forcar, hoje);
+    });
+  }
+  function dashAutoRodarAgora(forcar, hoje){
     return DB.ref('daycare/dashboard-auto/'+hoje+'/_ts').once('value').then(function(s){
       var ts=s.val()||0;
       if(!forcar && ts && (Date.now()-ts) < DASH_AUTO_MIN*60000) return {ok:true, pulou:true};

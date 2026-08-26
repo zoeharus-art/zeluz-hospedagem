@@ -1,6 +1,8 @@
 /**
  * ZÊLUZ · Day Care — ponte entre o APP e a planilha que alimenta o dashboard da TV
  * ============================================================================
+ * Versão 2 (25/ago/2026) — garantirColunas relê os títulos entre uma criação e outra
+ *                           (as duas colunas novas caíam na mesma célula).
  * Versão 1 (19/ago/2026)
  *
  * PARA QUE SERVE
@@ -114,6 +116,10 @@ function garantirColunas() {
       if (_acharCol(tit, nome) > 0) { jaTinha.push(sh.getName() + ' · ' + nome); return; }
       var col = _primeiraColunaLivre(sh, tit);
       sh.getRange(1, col).setValue(nome);
+      // ⚠ 25/ago/2026 — sem esta linha as DUAS colunas novas iam para o MESMO lugar: a
+      // lista de títulos era lida uma vez só, então a segunda achava a mesma "primeira
+      // coluna livre" e escrevia por cima da primeira. Só a última sobrevivia.
+      tit = _titulos(sh);
       criadas.push(sh.getName() + ' · ' + nome + ' (coluna ' + col + ')');
     });
   });
