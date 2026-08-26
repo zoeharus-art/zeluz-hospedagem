@@ -9589,7 +9589,7 @@
   // Agora existe um carimbo: esta constante é a versão que o aparelho está rodando, e o
   // Firebase guarda a versão publicada. Quando as duas diferem, aparece o aviso — mas
   // NUNCA recarrega sozinho: recarregar no meio de um check-in perderia o trabalho.
-  const APP_VERSAO='2026-08-26-14';
+  const APP_VERSAO='2026-08-26-15';
   function vigiarVersao(){
     if(!DB) return;
     try{
@@ -14064,6 +14064,7 @@
               <div class="field"><label>Quanto de ração por refeição</label><input class="cad-in" value="${escAttr(ex.alim_racao_qtd||'')}" placeholder="Ex: 60 gramas" onchange="setPelExtra(pelAtual,{alim_racao_qtd:this.value})"></div>
               <div class="field"><label>Comida natural (o quê)</label><input class="cad-in" value="${escAttr(ex.alim_nat||'')}" placeholder="Ex: patê gastrô — ou vazio" onchange="setPelExtra(pelAtual,{alim_nat:this.value})"></div>
               <div class="field"><label>Quanto de natural por refeição</label><input class="cad-in" value="${escAttr(ex.alim_nat_qtd||'')}" placeholder="Ex: 1 colher" onchange="setPelExtra(pelAtual,{alim_nat_qtd:this.value})"></div>
+              <div class="field" style="grid-column:1/-1"><label>Horários das refeições</label><input class="cad-in" value="${escAttr(ex.alim_horarios||'')}" placeholder="Ex: 07:00, 12:00 e 18:00" onchange="setPelExtra(pelAtual,{alim_horarios:this.value})"></div>
               <div class="field" style="grid-column:1/-1"><label>Em quais refeições</label><div class="seg gold">${['Café da manhã','Almoço','Jantar'].map(function(r){var on=(String(ex.alim_refs||'').indexOf(r)>=0);return '<button type="button" class="'+(on?'on':'')+'" onclick="pelAlimRef(\''+r+'\')">'+r+'</button>';}).join('')}</div>
                 <div class="hint" style="margin-top:3px">${escAttr(ex.alim_refs||'')||'<span style="color:var(--crm-critico);font-weight:800">Nenhuma refeição marcada.</span>'}</div></div>
               <div class="field" style="grid-column:1/-1"><label>Mistura ração com natural?</label><div class="seg gold" data-single>${segBtnsPel('alim_mistura',ex.alim_mistura||'',['Sim','Nao'])}</div></div>
@@ -14072,6 +14073,7 @@
           </div>
           <div class="field"><label>Medicação</label><input class="cad-in" value="${escAttr(ex.medicacao||'')}" placeholder="Nome, dose, horário" onchange="setPelExtra(pelAtual,{medicacao:this.value});refreshPills()"></div>
           <div class="field"><label>Algum problema de saúde</label><input class="cad-in" value="${escAttr(ex.problema||'')}" placeholder="Ex: cardíaco — ou vazio" onchange="setPelExtra(pelAtual,{problema:this.value});refreshPills()"></div>
+          <div class="field" style="grid-column:1/-1"><label>O que o tutor contou</label><input class="cad-in" value="${escAttr(ex.obs_tutor||'')}" placeholder="Check-up, cio, mudanças em casa — o que veio na resposta do tutor" onchange="setPelExtra(pelAtual,{obs_tutor:this.value})"></div>
           <div class="field"><label>Manias</label><input class="cad-in" value="${escAttr(ex.manias||'')}" placeholder="Ex: protege a comida" onchange="setPelExtra(pelAtual,{manias:this.value});refreshPills()"></div>
           <div class="field"><label>Em adaptacao (1&ordm; mes)?</label><div class="seg gold" data-single>${segBtnsPel('adaptacao',ex.adaptacao||'',['Sim','Nao'])}</div></div>
           <div class="field"><label>Adaptacao comecou em</label><input type="date" class="cad-in" value="${escAttr(ex.adaptacao_desde||'')}" onchange="setPelExtra(pelAtual,{adaptacao_desde:this.value});renderPelFicha()" min="2015-01-01" max="2035-12-31" onkeydown="return dataSoNoCalendario(event)">
@@ -17182,8 +17184,6 @@
     var tutor=String((typeof pelGet==='function'?pelGet(p,'tutor'):'')||ex.tutor||'').trim().split(/\s+/)[0]||'';
     var nome=pelNome(p);
     var femea=/^f/i.test(String(ex.sexo||''));
-    var castrada=/^s/i.test(String(ex.castrado||''));
-    var temChip=!!String(ex.microchip||ex.chip||'').trim();
     var L=[];
     L.push('Olá'+(tutor?(', '+tutor):'')+'! Como você está?');
     L.push('');
@@ -17193,27 +17193,13 @@
     L.push('');
     L.push('Sobre '+(femea?'a ':'o ')+nome+', gostaríamos de confirmar:');
     L.push('');
-    var n=0, pergunta=function(t){ L.push((++n)+'. '+t); };
-    // A ALIMENTAÇÃO VEM PRIMEIRO (Adriana, 20/ago/2026: "a alimentação é essencial"). Sai da
-    // cauda do questionário e vira a primeira seção — é o dado que a plantonista precisa às
-    // 19h e que hoje ela não tem. Títulos de seção em negrito do WhatsApp (*texto*).
-    L.push('*ALIMENTAÇÃO*');
-    pergunta('Quantas refeições '+(femea?'ela ':'ele ')+'faz por dia, e em que horários?');
-    pergunta('Qual a marca e o tipo do alimento? (ração seca, ração úmida, comida natural ou uma combinação)');
-    pergunta('Qual a quantidade em cada refeição? Pode ser em gramas, xícaras, copos-medida — ou a medida que você usa em casa, é só descrever.');
-    pergunta('Existe alguma restrição, sensibilidade ou alergia? Pode ser a algum alimento, fruta, petisco, produto, fragrância ou cheiro específico.');
-    L.push('');
-    L.push('*SAÚDE, ROTINA E COMPORTAMENTO*');
-    pergunta('Há alguma atividade física que precise ser evitada ou adaptada? Na nossa Aucademia temos esteira e o espaço do Day Care possui alguns degraus de acesso, que não são utilizados continuamente. Queremos adaptar tudo às necessidades d'+(femea?'a ':'o ')+nome+'.');
-    pergunta('Quando foi realizado o último check-up?');
-    if(!temChip) pergunta((femea?'A ':'O ')+nome+' possui microchip? Se sim, poderia nos enviar o número para conferirmos e mantermos a ficha atualizada?');
-    // Concordância: "ficou mais receosa, irritada" para fêmea. Norma culta é obrigatória —
-    // erro de português numa mensagem ao tutor desfaz o que o preço promete.
-    pergunta('Houve alguma mudança recente de comportamento? Por exemplo: ficou mais '
-      +(femea?'receosa, irritada, quieta, insegura':'receoso, irritado, quieto, inseguro')+' ou sensível ao toque?');
-    pergunta('Aconteceu alguma situação que possa ter sido estressante? Pode ter sido uma interação difícil com outro peludo durante um passeio, na praça ou em algum ambiente público — mesmo que tenha parecido algo pequeno.');
-    // Cio: só para fêmeas, e some se a ficha já diz que é castrada.
-    if(femea&&!castrada) pergunta('Quando foi o último cio? Se não souber a data exata, uma estimativa aproximada já ajuda.');
+    // As perguntas saem de algPerguntas(): a MESMA lista que separa a resposta depois.
+    // Se uma pergunta mudar de lugar, a separação acompanha sozinha.
+    var n=0;
+    algPerguntas(p).forEach(function(q){
+      if(q.secao){ if(n) L.push(''); L.push(q.secao); }
+      L.push((++n)+'. '+q.t);
+    });
     L.push('');
     L.push('Muito obrigada por nos ajudar a cuidar ainda melhor d'+(femea?'a ':'o ')+nome+'. Essas informações fazem diferença porque permitem que nossa equipe perceba preferências, limites e mudanças individuais com mais atenção.');
     L.push('');
@@ -17229,91 +17215,338 @@
   var ALG_ABERTO='';
   function algAbrir(k){ ALG_ABERTO=(ALG_ABERTO===k)?'':k; algRender(); }
 
-  // Onde a resposta do tutor entra na ficha. `campo` é o que a ficha já usa hoje.
-  var ALG_DESTINOS=[
-    {k:'alergia',   t:'Alergia',                 campo:'alergia',
-     dica:'Aparece em vermelho no card, no check-in e vai para a coluna de restrições da planilha.'},
-    {k:'restricao', t:'Restrição alimentar',     campo:'restricao',
-     dica:'O que ele não pode comer. Mesma tarja vermelha.'},
-    {k:'ea',        t:'Restrição no Enriquecimento', campo:'ea_restr',
-     dica:'O que ele não pode receber na atividade do dia (bolo, petisco, fruta…).'},
-    {k:'almoco',    t:'Almoço (o que ele come)', campo:'__almoco',
-     dica:'Marca, quantidade e observação vão para o cadastro de almoço, que a monitora lê na hora de servir.'}
+  // ===== DA RESPOSTA DO TUTOR PARA A FICHA — Adriana, 26/ago/2026 ==================
+  // "E como iremos colocar as respostas? Elas são essenciais para o cadastro do
+  //  peludinho, como fazemos?"
+  //
+  // Chegaram 15 respostas num dia e NENHUMA virou ficha. O motivo é de tamanho: o que o
+  // tutor manda não é um recado, é o questionário inteiro respondido — a da Amora tem
+  // 1.855 caracteres e responde nove coisas diferentes. Mandar esse textão para um campo
+  // só (era o que a tela fazia) é pior do que não gravar: enterra a alergia no meio de
+  // um parágrafo sobre esteira.
+  //
+  // Agora a tela separa a resposta pergunta a pergunta, mostra cada pedaço já ao lado do
+  // campo da ficha a que ele pertence, e diz o que HOJE está gravado ali. Quem preenche é
+  // a recepção — Amanda e as Consultoras de Bem-Estar — enquanto está com a conversa do
+  // tutor aberta e pode perguntar na hora o que ficou vago.
+  //
+  // Decisão da Adriana, 26/ago: quando o tutor contradiz a ficha, NADA é sobrescrito
+  // sozinho. Os dois valores aparecem lado a lado e a pessoa decide. Campo vazio já vem
+  // marcado (não há o que perder); campo com conteúdo diferente vem DESMARCADO.
+
+  // As perguntas do questionário, em forma de lista — é daqui que sai tanto a mensagem
+  // enviada ao tutor quanto a separação da resposta. Uma fonte só: se a pergunta mudar,
+  // a separação acompanha, sem ninguém lembrar de mexer nos dois lugares.
+  function algPerguntas(p){
+    var ex=(typeof pelExtra==='function'?pelExtra(p):{})||{};
+    var nome=pelNome(p);
+    var femea=/^f/i.test(String(ex.sexo||''));
+    var castrada=/^s/i.test(String(ex.castrado||''));
+    var temChip=!!String(ex.microchip||ex.chip||'').trim();
+    var Q=[];
+    Q.push({k:'refeicoes', secao:'*ALIMENTAÇÃO*', curta:'Refeições e horários', campo:'alim_horarios',
+      t:'Quantas refeições '+(femea?'ela ':'ele ')+'faz por dia, e em que horários?'});
+    Q.push({k:'marca', curta:'Marca e tipo do alimento', campo:'alim_racao_marca',
+      t:'Qual a marca e o tipo do alimento? (ração seca, ração úmida, comida natural ou uma combinação)'});
+    Q.push({k:'quanto', curta:'Quantidade por refeição', campo:'alim_racao_qtd',
+      t:'Qual a quantidade em cada refeição? Pode ser em gramas, xícaras, copos-medida — ou a medida que você usa em casa, é só descrever.'});
+    Q.push({k:'restricao', curta:'Restrição, sensibilidade ou alergia', campo:'alergia',
+      t:'Existe alguma restrição, sensibilidade ou alergia? Pode ser a algum alimento, fruta, petisco, produto, fragrância ou cheiro específico.'});
+    Q.push({k:'atividade', secao:'*SAÚDE, ROTINA E COMPORTAMENTO*', curta:'Atividade física a evitar', campo:'ea_restr',
+      t:'Há alguma atividade física que precise ser evitada ou adaptada? Na nossa Aucademia temos esteira e o espaço do Day Care possui alguns degraus de acesso, que não são utilizados continuamente. Queremos adaptar tudo às necessidades d'+(femea?'a ':'o ')+nome+'.'});
+    Q.push({k:'checkup', curta:'Último check-up', campo:'obs_tutor',
+      t:'Quando foi realizado o último check-up?'});
+    if(!temChip) Q.push({k:'chip', curta:'Microchip', campo:'microchip',
+      t:(femea?'A ':'O ')+nome+' possui microchip? Se sim, poderia nos enviar o número para conferirmos e mantermos a ficha atualizada?'});
+    // Concordância: "ficou mais receosa, irritada" para fêmea. Norma culta é obrigatória —
+    // erro de português numa mensagem ao tutor desfaz o que o preço promete.
+    Q.push({k:'comportamento', curta:'Mudança de comportamento', campo:'manias',
+      t:'Houve alguma mudança recente de comportamento? Por exemplo: ficou mais '
+        +(femea?'receosa, irritada, quieta, insegura':'receoso, irritado, quieto, inseguro')+' ou sensível ao toque?'});
+    Q.push({k:'estresse', curta:'Situação estressante', campo:'obs_tutor',
+      t:'Aconteceu alguma situação que possa ter sido estressante? Pode ter sido uma interação difícil com outro peludo durante um passeio, na praça ou em algum ambiente público — mesmo que tenha parecido algo pequeno.'});
+    // Cio: só para fêmeas, e some se a ficha já diz que é castrada.
+    if(femea&&!castrada) Q.push({k:'cio', curta:'Último cio', campo:'obs_tutor',
+      t:'Quando foi o último cio? Se não souber a data exata, uma estimativa aproximada já ajuda.'});
+    return Q;
+  }
+
+  // Os campos da ficha que podem receber uma resposta. São os que EXISTEM na tela do
+  // cadastro — gravar num campo que ninguém vê é o mesmo que não gravar.
+  var ALG_CAMPOS=[
+    {c:'',                 t:'— não gravar (fica só na resposta)'},
+    {c:'alergia',          t:'Alergia'},
+    {c:'restricao',        t:'Restrição alimentar'},
+    {c:'ea_restr',         t:'Restrição no Enriquecimento'},
+    {c:'alim_racao_marca', t:'Ração (marca)'},
+    {c:'alim_racao_qtd',   t:'Quanto de ração por refeição'},
+    {c:'alim_nat',         t:'Comida natural (o quê)'},
+    {c:'alim_nat_qtd',     t:'Quanto de natural por refeição'},
+    {c:'alim_horarios',    t:'Horários das refeições'},
+    {c:'alim_obs',         t:'Observação da comida'},
+    {c:'medicacao',        t:'Medicação'},
+    {c:'problema',         t:'Problema de saúde'},
+    {c:'manias',           t:'Manias'},
+    {c:'microchip',        t:'Microchip'},
+    {c:'obs_tutor',        t:'O que o tutor contou (observação)'}
   ];
-  var ALG_DESTINO_SEL={};
-  function algEscolherDestino(k, destino){
-    ALG_DESTINO_SEL[k]=destino;
-    algRender();
-    setTimeout(function(){ try{ var e=document.getElementById('algResp_'+k); if(e) e.focus(); }catch(x){} }, 60);
+  function algCampoNome(c){
+    var x=ALG_CAMPOS.filter(function(y){ return y.c===c; })[0];
+    return x?x.t:c;
   }
-  function algDestinoHTML(k){
-    var sel=ALG_DESTINO_SEL[k]||'';
-    var h='<div class="hint" style="margin:8px 0 4px"><strong>Onde isso entra na ficha?</strong> É o que faz a resposta virar cuidado de verdade — sem isso ela fica só anotada aqui.</div>'
-      +'<div style="display:flex;flex-wrap:wrap;gap:6px">';
-    ALG_DESTINOS.forEach(function(d){
-      var on=(sel===d.k);
-      h+='<button type="button" class="btn" style="padding:6px 12px;font-size:12.5px;font-weight:800;border:1.5px solid '
-        +(on?'var(--z-blue)':'var(--line)')+';background:'+(on?'var(--z-blue)':'var(--z-cream-warm)')+';color:'+(on?'var(--z-cream)':'var(--z-blue)')+'"'
-        +' onclick="algEscolherDestino(\''+escAttr(k).replace(/'/g,"\\'")+'\',\''+d.k+'\')">'+escAttr(d.t)+'</button>';
+
+  // Separa a resposta do tutor pelos números que ele usou. Aceita "1.", "2)", "3 -".
+  // Só considera a sequência CRESCENTE a partir do 1 — assim um horário ("07:00 - 12:00")
+  // não vira número de pergunta. O que vier antes do "1", ou o texto inteiro quando o
+  // tutor responde correndo sem numerar, volta como `solto`: aparece na tela para a
+  // pessoa recortar à mão. Nada é descartado em silêncio.
+  function algSeparar(texto, perguntas){
+    var t=String(texto||'').replace(/\r/g,'');
+    var re=/(?:^|[\n\s])(\d{1,2})\s*[\.\)\-–—]\s*/g, m, cand=[];
+    while((m=re.exec(t))){
+      var n=+m[1];
+      if(n>=1&&n<=20) cand.push({n:n, marca:m.index, ini:m.index+m[0].length});
+    }
+    var seq=[], esperado=1;
+    cand.forEach(function(x){ if(x.n===esperado){ seq.push(x); esperado++; } });
+    var out={por:{}, solto:''};
+    if(!seq.length){ out.solto=t.trim(); return out; }
+    var antes=t.slice(0, seq[0].marca).trim();
+    seq.forEach(function(x, i){
+      var fim=(i+1<seq.length)?seq[i+1].marca:t.length;
+      var pedaco=t.slice(x.ini, fim).trim();
+      var q=perguntas[i];
+      if(!q){ out.solto+=(out.solto?'\n':'')+x.n+'. '+pedaco; return; }
+      out.por[q.k]=algTirarEco(pedaco, q.t);
     });
-    h+='<button type="button" class="btn" style="padding:6px 12px;font-size:12.5px;font-weight:800;border:1.5px solid '
-      +(sel==='nada'?'var(--crm-ok)':'var(--line)')+';background:'+(sel==='nada'?'var(--crm-ok)':'var(--z-cream-warm)')+';color:'+(sel==='nada'?'#fff':'var(--z-blue)')+'"'
-      +' onclick="algEscolherDestino(\''+escAttr(k).replace(/'/g,"\\'")+'\',\'nada\')">Não tem restrição</button>';
-    h+='</div>';
-    var d=ALG_DESTINOS.filter(function(x){ return x.k===sel; })[0];
-    if(d) h+='<div class="hint" style="margin-top:5px">'+escAttr(d.dica)+'</div>';
-    if(sel==='nada') h+='<div class="hint" style="margin-top:5px">Fica registrado que o tutor disse que não há restrição. <strong>Nada é apagado da ficha por aqui</strong> — se havia uma restrição escrita, ela continua até alguém tirar na ficha, de propósito.</div>';
-    if(sel==='almoco') h+='<div class="cad-grid2" style="margin-top:6px">'
-      +'<div><label class="cad-lb">O que come (marca / tipo)</label><input class="cad-in" id="algAlim_'+escAttr(k)+'" placeholder="Ex: Ração Golden · Comida natural"></div>'
-      +'<div><label class="cad-lb">Quantidade</label><input class="cad-in" id="algQuant_'+escAttr(k)+'" placeholder="Ex: 75g"></div></div>';
-    return h;
+    // sobrou pergunta sem resposta? não é erro: o tutor pode ter pulado.
+    if(antes && !/^(alimenta|sa[uú]de|ol[aá]|oi|bom dia|boa tarde|boa noite)/i.test(jsNorm(antes)))
+      out.solto=antes;
+    return out;
   }
+  // O tutor costuma colar a pergunta junto com a resposta. Se o pedaço começa igual à
+  // pergunta, corta até o "?" — o que interessa é o que ELE disse.
+  function algTirarEco(pedaco, pergunta){
+    var a=jsNorm(pedaco).slice(0,40), b=jsNorm(pergunta).slice(0,40);
+    if(a && b && a===b){
+      var i=pedaco.indexOf('?');
+      if(i>=0) return pedaco.slice(i+1).trim();
+    }
+    return pedaco;
+  }
+
+  var ALG_CUR={};   // {k: {campos:{qk:{txt, campo, grava}}, solto:''}}
+  function algCurMontar(k){
+    var p=algPelDe(k); if(!p) return null;
+    var r=(ALG_RESP||{})[k]||{};
+    var Q=algPerguntas(p);
+    var sep=algSeparar(r.resposta||'', Q);
+    var ex=(typeof pelExtra==='function'?pelExtra(p):{})||{};
+    var campos={};
+    Q.forEach(function(q){
+      var txt=String(sep.por[q.k]||'').trim();
+      if(!txt) return;
+      var atual=String(ex[q.campo]||'').trim();
+      campos[q.k]={txt:txt, campo:q.campo, curta:q.curta, atual:atual,
+                   // campo vazio já vem marcado; campo com outro conteúdo vem DESMARCADO,
+                   // porque trocar o que está na ficha é decisão de gente (Adriana, 26/ago)
+                   grava:!atual};
+    });
+    ALG_CUR[k]={campos:campos, solto:sep.solto||'', total:Q.length};
+    return ALG_CUR[k];
+  }
+  function algCur(k){ return ALG_CUR[k]||algCurMontar(k); }
+  function algPelDe(k){
+    return (typeof PELUDINHOS!=='undefined')
+      ? PELUDINHOS.filter(function(x){ return pelKey(x)===k; })[0] : null;
+  }
+  function algCurToggle(k, qk){
+    var c=algCur(k); if(!c||!c.campos[qk]) return;
+    c.campos[qk].grava=!c.campos[qk].grava;
+    algRender();
+  }
+  function algCurCampo(k, qk, campo){
+    var c=algCur(k); if(!c||!c.campos[qk]) return;
+    var p=algPelDe(k), ex=(p&&typeof pelExtra==='function')?(pelExtra(p)||{}):{};
+    c.campos[qk].campo=campo;
+    c.campos[qk].atual=String(ex[campo]||'').trim();
+    if(!campo) c.campos[qk].grava=false;
+    algRender();
+  }
+  function algCurTexto(k, qk, v){
+    var c=algCur(k); if(!c||!c.campos[qk]) return;
+    c.campos[qk].txt=v;                      // sem re-render: não tirar o cursor de quem digita
+  }
+  function algCurHTML(k){
+    var c=algCur(k);
+    if(!c) return '<div class="hint">Não achei a ficha deste FILHOt.</div>';
+    var qks=Object.keys(c.campos);
+    var h='<div style="margin-top:10px;padding-top:9px;border-top:2px solid var(--z-gold)">'
+      +'<div style="font-weight:800;color:var(--z-blue);font-size:15px">Levar para a ficha</div>'
+      +'<div class="hint" style="margin-top:2px">Separei a resposta pergunta a pergunta. Confira cada pedaço e marque o que deve entrar na ficha. <strong>Nada muda sozinho.</strong></div>';
+    if(!qks.length){
+      h+='<div class="hint" style="margin-top:7px;color:var(--crm-atencao-text)"><strong>Não consegui separar por número.</strong> O texto inteiro está abaixo — recorte para os campos.</div>';
+    }
+    qks.forEach(function(qk){
+      var f=c.campos[qk];
+      var conflito=(f.atual && jsNorm(f.atual)!==jsNorm(f.txt));
+      h+='<div style="margin-top:9px;padding:9px 10px;border-radius:10px;border:1.5px solid '
+        +(conflito?'var(--crm-atencao)':'var(--line)')+';background:var(--z-cream-warm)">'
+        +'<div style="font-weight:800;color:var(--z-blue);font-size:13.5px">'+escAttr(f.curta)+'</div>'
+        +'<textarea class="cad-in" rows="2" style="width:100%;margin-top:4px"'
+        +' oninput="algCurTexto(\''+algEsc(k)+'\',\''+qk+'\',this.value)">'+escAttr(f.txt)+'</textarea>'
+        +'<div style="margin-top:5px;display:flex;flex-wrap:wrap;gap:6px;align-items:center">'
+        +'<span class="hint">vai para:</span>'
+        +'<select class="cad-in" style="max-width:230px;padding:5px 8px"'
+        +' onchange="algCurCampo(\''+algEsc(k)+'\',\''+qk+'\',this.value)">'
+        +ALG_CAMPOS.map(function(x){
+            return '<option value="'+escAttr(x.c)+'"'+(x.c===f.campo?' selected':'')+'>'+escAttr(x.t)+'</option>';
+          }).join('')
+        +'</select></div>';
+      if(conflito){
+        h+='<div style="margin-top:6px;font-size:12.5px;color:var(--crm-atencao-text)">'
+          +'<strong>Já existe algo neste campo.</strong><br>Hoje na ficha: <strong>'+escAttr(f.atual)+'</strong>'
+          +'<br>O tutor disse: <strong>'+escAttr(f.txt)+'</strong>'
+          +'<br>Marque abaixo só se for para trocar.</div>';
+      } else if(!f.atual && f.campo){
+        h+='<div class="hint" style="margin-top:5px">Hoje este campo está vazio.</div>';
+      }
+      h+='<label style="margin-top:6px;display:flex;gap:7px;align-items:center;cursor:pointer;font-weight:800;color:var(--z-blue);font-size:13px">'
+        +'<input type="checkbox" '+(f.grava?'checked':'')+(f.campo?'':' disabled')
+        +' onchange="algCurToggle(\''+algEsc(k)+'\',\''+qk+'\')" style="width:18px;height:18px">'
+        +(f.campo?(conflito?'Trocar o que está na ficha':'Gravar em "'+escAttr(algCampoNome(f.campo))+'"'):'Sem campo escolhido')
+        +'</label></div>';
+    });
+    if(c.solto){
+      h+='<div style="margin-top:9px;padding:9px 10px;border-radius:10px;border:1.5px dashed var(--crm-atencao);background:rgba(241,196,15,.08)">'
+        +'<div style="font-weight:800;color:var(--crm-atencao-text);font-size:13.5px">Não consegui encaixar este pedaço</div>'
+        +'<div class="hint" style="margin-top:2px">Fica aqui para você recortar para o campo certo — não some.</div>'
+        +'<textarea class="cad-in" rows="4" readonly style="width:100%;margin-top:5px">'+escAttr(c.solto)+'</textarea></div>';
+    }
+    var n=Object.keys(c.campos).filter(function(q){ return c.campos[q].grava && c.campos[q].campo; }).length;
+    h+='<button type="button" class="btn '+(n?'btn-primary':'btn-gold')+'" style="width:100%;margin-top:10px"'
+      +' onclick="algCurGravar(\''+algEsc(k)+'\')">'
+      +(n?('Gravar '+n+(n===1?' campo na ficha':' campos na ficha')):'Nada marcado ainda')+'</button>';
+    return h+'</div>';
+  }
+  function algCurGravar(k){
+    var c=algCur(k), p=algPelDe(k);
+    if(!c||!p){ alert('Não achei a ficha deste FILHOt.'); return; }
+    var marcados=Object.keys(c.campos).filter(function(q){ return c.campos[q].grava && c.campos[q].campo; });
+    if(!marcados.length){ alert('Marque pelo menos um pedaço para gravar.\n\nSe nada do que o tutor disse muda a ficha, toque em "Já conferi" para tirar da lista.'); return; }
+    var patch={}, quais=[];
+    marcados.forEach(function(q){
+      var f=c.campos[q], v=String(f.txt||'').trim();
+      if(!v) return;
+      // dois pedaços para o mesmo campo entram juntos, não um por cima do outro
+      patch[f.campo]=patch[f.campo]?(patch[f.campo]+' · '+v):v;
+      quais.push(f.campo);
+    });
+    if(!Object.keys(patch).length){ alert('Os pedaços marcados estão vazios.'); return; }
+    try{
+      if(typeof setPelExtra!=='function') throw new Error('não consigo escrever na ficha daqui');
+      setPelExtra(p, patch);
+    }catch(e){
+      alert('NÃO consegui gravar na ficha: '+((e&&e.message)||e)+'\n\nAbra a ficha dele e escreva à mão — a resposta do tutor continua guardada aqui.');
+      try{ if(typeof audit==='function') audit('alergia-ficha','NÃO gravou na ficha de '+k+': '+((e&&e.message)||e),{}); }catch(x){}
+      return;
+    }
+    var reg={quando:(typeof zHojeISO==='function')?zHojeISO():'', quem:(typeof quemSou==='function'?quemSou():'-'),
+             campos:quais, ts:Date.now()};
+    if(DB) DB.ref('daycare/alergia-confirmada/'+k+'/ficha').set(reg).catch(function(e){
+      alert('Gravei na ficha, mas não consegui marcar como conferido: '+((e&&e.message)||e));
+    });
+    if(ALG_RESP[k]) ALG_RESP[k].ficha=reg;
+    try{ if(typeof audit==='function') audit('alergia-ficha','levou para a ficha de '+pelNome(p)+': '+quais.join(', '),{pet:pelNome(p)}); }catch(e){}
+    delete ALG_CUR[k]; ALG_ABERTO='';
+    if(typeof refreshPills==='function') try{ refreshPills(); }catch(e){}
+    algRender();
+  }
+  // "Já conferi" — para a resposta que não muda nada na ficha ("não tem restrição").
+  // Sai da lista de trabalho sem inventar conteúdo em campo nenhum.
+  // Confirmação em dois toques NA TELA: janelinha nativa do navegador é proibida aqui —
+  // no celular ela some atrás do teclado e a pessoa acha que o botão não funcionou.
+  var ALG_NADA_ARMADO='';
+  function algCurNada(k){
+    if(ALG_NADA_ARMADO!==k){ ALG_NADA_ARMADO=k; algRender(); return; }
+    ALG_NADA_ARMADO='';
+    var reg={quando:(typeof zHojeISO==='function')?zHojeISO():'', quem:(typeof quemSou==='function'?quemSou():'-'),
+             campos:[], ts:Date.now()};
+    if(DB) DB.ref('daycare/alergia-confirmada/'+k+'/ficha').set(reg).catch(function(e){
+      alert('Não consegui marcar: '+((e&&e.message)||e));
+    });
+    if(ALG_RESP[k]) ALG_RESP[k].ficha=reg;
+    try{ if(typeof audit==='function') audit('alergia-ficha','conferiu sem mudar nada: '+k,{}); }catch(e){}
+    delete ALG_CUR[k]; ALG_ABERTO='';
+    algRender();
+  }
+  // Quem respondeu mas cuja resposta ainda não virou ficha. É o trabalho parado — por
+  // isso aparece PRIMEIRO na tela, antes de quem ainda nem foi perguntado.
+  function algPendentesFicha(){
+    var out=[];
+    Object.keys(ALG_RESP||{}).forEach(function(k){
+      var r=ALG_RESP[k]||{};
+      if(!String(r.resposta||'').trim()) return;     // sem resposta não há o que levar
+      if(r.ficha) return;                            // já conferida
+      var p=algPelDe(k); if(!p) return;
+      if(typeof pelInativo==='function'&&pelInativo(p)) return;
+      out.push({p:p, k:k, nome:pelNome(p), r:r});
+    });
+    out.sort(function(a,b){ return (a.r.ts||0)-(b.r.ts||0); });   // a mais antiga primeiro
+    return out;
+  }
+  function algEsc(k){ return escAttr(k).replace(/'/g,"\\'"); }
+
   function algResponder(k){
     if(!DB) return;
     var inp=document.getElementById('algResp_'+k);
     var dt=document.getElementById('algData_'+k);
-    var quando=(dt&&dt.value)||(new Date()).toISOString().slice(0,10);
+    var quando=(dt&&dt.value)||((typeof zHojeISO==='function')?zHojeISO():'');
     var texto=((inp&&inp.value)||'').trim();
-    var destino=ALG_DESTINO_SEL[k]||'';
-    if(!texto){ alert('Escreva o que o tutor respondeu — é isso que vai para a ficha.'); return; }
-    if(!destino){ alert('Diga ONDE isso entra na ficha (alergia, restrição alimentar, enriquecimento, almoço — ou "não tem restrição").\n\nSem isso a resposta fica só anotada aqui e ninguém enxerga na hora de cuidar dele.'); return; }
+    // Sem texto não é resposta: gravar em branco tirava o FILHOt da fila e a pergunta
+    // se perdia (foi o que sumiu com o Billie Joe, a Amora e o Zeus em 26/ago).
+    if(!texto){ alert('Cole aqui o que o tutor respondeu.\n\nSe ele ainda não respondeu, é só fechar: ele continua na lista de quem estamos esperando.'); return; }
     var reg={quando:quando, quem:(typeof quemSou==='function'?quemSou():'-'),
-             resposta:texto, destino:destino, ts:Date.now()};
-    // 1) o histórico da pergunta
+             resposta:texto, ts:Date.now()};
     DB.ref('daycare/alergia-confirmada/'+k).set(reg).then(function(){
-      ALG_RESP[k]=reg; ALG_ABERTO=''; delete ALG_DESTINO_SEL[k];
-      if(typeof audit==='function') audit('alergia-confirmada', k, {quando:quando, resposta:texto, destino:destino});
-      // 2) e a FICHA, que é quem o resto do sistema lê
-      try{ algGravarNaFicha(k, destino, texto); }catch(e){
-        try{ if(typeof audit==='function') audit('alergia-confirmada','NÃO consegui levar para a ficha de '+k+': '+((e&&e.message)||e),{}); }catch(x){}
-        alert('A resposta ficou registrada, mas NÃO consegui gravar na ficha: '+((e&&e.message)||e)+'\n\nAbra a ficha dele e escreva à mão.');
-      }
+      ALG_RESP[k]=reg;
+      delete ALG_CUR[k];                       // remonta a separação com o texto novo
+      if(typeof audit==='function') audit('alergia-confirmada', k, {quando:quando, resposta:texto.slice(0,200)});
       algRender();
+      // continua aberto de propósito: o passo seguinte é levar para a ficha, e ele
+      // aparece logo abaixo. Fechar aqui era o que fazia a resposta parar no meio.
     }).catch(function(e){ alert('Não consegui gravar: '+((e&&e.message)||e)); });
   }
-  // Leva a resposta para o campo certo da ficha — é o que faz a tarja vermelha aparecer
-  // no card, a coluna "Hóspedes com Restrições" da planilha se preencher e a monitora
-  // ver na hora de servir.
-  function algGravarNaFicha(k, destino, texto){
-    if(destino==='nada') return;                 // não apaga nada: ver a dica na tela
-    var p=(typeof PELUDINHOS!=='undefined')?PELUDINHOS.filter(function(x){ return pelKey(x)===k; })[0]:null;
-    if(!p) throw new Error('não achei a ficha deste FILHOt');
-    if(destino==='almoco'){
-      var alim=String((document.getElementById('algAlim_'+k)||{}).value||'').trim();
-      var quant=String((document.getElementById('algQuant_'+k)||{}).value||'').trim();
-      var patch={};
-      if(alim) patch.alim=alim;
-      if(quant) patch.quant=quant;
-      patch.extra=texto;                          // a resposta inteira fica como observação
-      if(typeof setAlmCad==='function') setAlmCad(p, patch);
-      else throw new Error('o cadastro de almoço não está disponível nesta tela');
-      return;
-    }
-    var d=ALG_DESTINOS.filter(function(x){ return x.k===destino; })[0];
-    if(!d) throw new Error('destino desconhecido');
-    var patch={}; patch[d.campo]=texto;
-    if(typeof setPelExtra==='function') setPelExtra(p, patch);
-    else throw new Error('não consigo escrever na ficha daqui');
+  // O trabalho parado vem PRIMEIRO: resposta que chegou e ainda não virou ficha vale
+  // mais que um FILHOt a quem nem perguntamos — o tutor já fez a parte dele.
+  function algFichaBlocoHTML(){
+    var arr=[];
+    try{ arr=algPendentesFicha(); }catch(e){ arr=[]; }
+    if(!arr.length) return '';
+    return '<div class="card" style="border-left:4px solid var(--z-gold)">'
+      +'<h2 style="font-size:18px">'+arr.length+(arr.length===1?' resposta a levar para a ficha':' respostas a levar para a ficha')+'</h2>'
+      +'<div class="hint">O tutor já respondeu. Falta passar para o cadastro — é ele que a equipe lê na hora de servir, de dar banho e de montar a atividade.</div>'
+      +arr.map(function(x){
+        var aberto=(ALG_ABERTO===x.k);
+        return '<div style="border-top:1px solid var(--line);padding:9px 0">'
+          +'<div style="cursor:pointer;display:flex;justify-content:space-between;align-items:baseline" onclick="algAbrir(\''+algEsc(x.k)+'\')">'
+          +'<span style="font-weight:800;color:var(--z-blue);font-size:16px">'+escAttr(x.nome)+'</span>'
+          +'<span style="font-size:12px;font-weight:800;color:var(--crm-atencao-text)">respondeu em '+escAttr(repBRdata(x.r.quando))+'</span></div>'
+          +(aberto
+            ? ('<div style="margin-top:6px">'
+               +'<div class="hint">O que o tutor mandou:</div>'
+               +'<textarea class="cad-in" rows="4" readonly style="width:100%;margin-top:4px">'+escAttr(x.r.resposta||'')+'</textarea>'
+               +algCurHTML(x.k)
+               +(ALG_NADA_ARMADO===x.k
+                 ? ('<button type="button" class="btn btn-gold" style="width:100%;margin-top:7px"'
+                    +' onclick="algCurNada(\''+algEsc(x.k)+'\')">Toque de novo para confirmar</button>'
+                    +'<div class="hint" style="margin-top:3px">Sai da lista sem mudar nada na ficha. A resposta continua guardada.</div>')
+                 : ('<button type="button" class="btn" style="width:100%;margin-top:7px;background:none;border:1.5px solid var(--line);color:var(--z-blue);font-weight:800"'
+                    +' onclick="algCurNada(\''+algEsc(x.k)+'\')">Já conferi — não muda nada na ficha</button>'))
+               +'</div>')
+            : '<div class="hint" style="margin-top:3px">Toque para separar a resposta e levar para a ficha.</div>')
+          +'</div>';
+      }).join('')+'</div>';
   }
   function algBlocoHTML(titulo, arr){
     if(!arr.length) return '<div class="card"><h2 style="font-size:18px">'+escAttr(titulo)+'</h2><div class="hint">Ninguém pendente aqui.</div></div>';
@@ -17330,21 +17563,19 @@
             :(x.esperando?('perguntamos em '+repBRdata(x.r.quando)+' — o tutor ainda não respondeu')
               :'nunca perguntamos'))+'</span></div>'
           +(function(){ var r=ALG_RESP[x.k];
-              if(!r||!r.resposta) return '';
-              var dest=(ALG_DESTINOS.filter(function(d){ return d.k===r.destino; })[0]||{}).t
-                     || (r.destino==='nada'?'sem restrição':'');
+              if(!r||!String(r.resposta||'').trim()) return '';
               return '<div class="hint" style="margin:3px 0 0">Última resposta: "'+escAttr(String(r.resposta).slice(0,90))+'"'
-                +(dest?(' → foi para <strong>'+escAttr(dest)+'</strong> na ficha'):' <strong style="color:var(--crm-atencao-text)">(ficou só anotada — não foi para a ficha)</strong>')+'</div>';
+                +(r.ficha?(' → já foi para a ficha em '+escAttr(repBRdata(r.ficha.quando))):' <strong style="color:var(--crm-atencao-text)">(ainda não foi para a ficha)</strong>')+'</div>';
             })()
           +(aberto
             ? '<div style="margin-top:8px">'
               +'<textarea class="gest-txt alg-msg" readonly rows="12" style="width:100%">'+escAttr(algMensagem(x.p))+'</textarea>'
               +'<button type="button" class="btn btn-gold" style="width:100%;margin:7px 0" onclick="algCopiar(this)">📋 Copiar mensagem</button>'
-              +'<div class="hint" style="margin-top:6px">Quando o tutor responder, escreva aqui o que ele disse e a data da resposta. <strong>O que você escrever vai para a ficha dele</strong> — escolha abaixo em qual campo.</div>'
-              +'<input class="cad-in" id="algResp_'+escAttr(x.k)+'" placeholder="O que o tutor respondeu" autocomplete="off" style="margin:6px 0">'
-              +algDestinoHTML(x.k)
-              +'<input class="cad-in" type="date" id="algData_'+escAttr(x.k)+'" value="'+hoje+'" style="margin-bottom:8px" min="2015-01-01" max="2035-12-31" onkeydown="return dataSoNoCalendario(event)">'
+              +'<div class="hint" style="margin-top:6px">Quando o tutor responder, <strong>cole aqui a resposta inteira</strong>, do jeito que ele mandou. Eu separo pergunta a pergunta no passo seguinte.</div>'
+              +'<textarea class="cad-in" id="algResp_'+escAttr(x.k)+'" rows="5" placeholder="Cole aqui o que o tutor respondeu" style="margin:6px 0;width:100%">'+escAttr((ALG_RESP[x.k]||{}).resposta||'')+'</textarea>'
+              +'<input class="cad-in" type="date" id="algData_'+escAttr(x.k)+'" value="'+escAttr((ALG_RESP[x.k]||{}).quando||hoje)+'" style="margin-bottom:8px" min="2015-01-01" max="2035-12-31" onkeydown="return dataSoNoCalendario(event)">'
               +'<button type="button" class="btn btn-primary" style="width:100%" onclick="algResponder(\''+escAttr(x.k).replace(/'/g,"\\'")+'\')">✅ O tutor respondeu</button>'
+              +(String((ALG_RESP[x.k]||{}).resposta||'').trim()?algCurHTML(x.k):'')
               +'</div>'
             : '')
           +'</div>';
@@ -17360,6 +17591,7 @@
       +'<h2 style="font-size:19px">'+(total?(total+' a confirmar'):'Todos confirmados')+'</h2>'
       +'<div class="hint">A pergunta é refeita a cada <strong>'+ALG_MESES+' meses</strong>: a lista de restrições de um FILHOt muda com o tempo, e o que ele não podia ano passado pode não ser o mesmo de hoje.</div>'
       +'</div>'
+      +algFichaBlocoHTML()
       +algBlocoHTML('Hóspedes', L.hospede)
       +algBlocoHTML('Aulunos', L.auluno);
   }

@@ -1915,7 +1915,7 @@ async function main() {
 
   console.log('Prevencao do hospede -- convite, nao cobranca:');
   {
-    ['prevEhHospede', 'prevMensagemTutor', 'prevBlocoHospedes', 'prevMarcarAvisado', 'algGravarNaFicha'].forEach((n) =>
+    ['prevEhHospede', 'prevMensagemTutor', 'prevBlocoHospedes', 'prevMarcarAvisado', 'algCurGravar'].forEach((n) =>
       check(n + ' existe', typeof ctx[n] === 'function'));
     if (typeof ctx.prevMensagemTutor === 'function') {
       const msg = ctx.prevMensagemTutor({ nome: 'Simba', tutor: 'Marina Souza', sexo: 'Macho',
@@ -1924,10 +1924,14 @@ async function main() {
       check('a mensagem diz o que venceu e quando', /Vacina Múltipla/.test(msg) && /17\/03\/2026/.test(msg));
       check('a mensagem convida a fazer na Zeluz', /veterinária|conosco/i.test(msg));
     }
-    // a resposta do tutor sobre alergia TEM de chegar na ficha
-    check('a resposta do tutor escolhe um destino na ficha', /ALG_DESTINOS/.test(html));
-    check('sem destino escolhido, o app nao deixa salvar', /Diga ONDE isso entra na ficha/.test(html));
-    check('"nao tem restricao" NAO apaga a ficha sozinho', /if\(destino==='nada'\) return;/.test(html));
+    // a resposta do tutor TEM de chegar na ficha — agora pergunta a pergunta
+    check('a resposta e separada pergunta a pergunta', /function algSeparar\(texto, perguntas\)/.test(html));
+    check('cada pergunta ja sabe o campo da ficha a que pertence', /campo:'alergia'/.test(html));
+    check('a resposta que ainda nao virou ficha aparece primeiro na tela',
+      /function algPendentesFicha\(\)/.test(html) && /algFichaBlocoHTML\(\)\n?\s*\+algBlocoHTML\('H\u00f3spedes'/.test(html));
+    check('"ja conferi" nao inventa conteudo em campo nenhum', /campos:\[\], ts:Date\.now\(\)/.test(html));
+    check('e confirma em dois toques na tela, sem janelinha do navegador',
+      /if\(ALG_NADA_ARMADO!==k\)\{ ALG_NADA_ARMADO=k;/.test(html) && /Toque de novo para confirmar/.test(html));
   }
   console.log('');
 
@@ -2094,7 +2098,7 @@ async function main() {
     check('quem ja foi perguntado nao aparece em vermelho de nunca-perguntado',
       /\(x\.vencido\|\|x\.esperando\)\?'var\(--crm-atencao-text\)'/.test(html));
     check('gravar em branco continua barrado na entrada',
-      /Escreva o que o tutor respondeu/.test(html));
+      /Cole aqui o que o tutor respondeu/.test(html));
 
     // a fila montada com o dado real do banco: os 3 que sumiram tem de voltar
     if (typeof ctx.algLista === 'function') {
@@ -2137,6 +2141,71 @@ async function main() {
         ![...L.hospede, ...L.auluno].find((x) => x.k === k && x.vencido));
       check('quem respondeu de verdade continua fora da fila',
         voltouSemPrecisar.length === 0, JSON.stringify(voltouSemPrecisar));
+    }
+  }
+  console.log('');
+
+  console.log('Da resposta do tutor para a ficha — contra as respostas REAIS (26/ago):');
+  {
+    // Adriana: "como iremos colocar as respostas? Elas sao essenciais para o cadastro".
+    // Nao adianta testar com texto inventado: os tutores escrevem cada um de um jeito.
+    // Este bloco roda a separacao contra o que EL@S mandaram de verdade.
+    check('a mensagem e a separacao saem da mesma lista de perguntas',
+      /algPerguntas\(p\)\.forEach/.test(html) && /function algPerguntas\(p\)/.test(html));
+    check('o esquema antigo de 4 destinos saiu', !/ALG_DESTINOS/.test(html));
+    check('a resposta e colada num textarea, nao num campo de uma linha',
+      /<textarea class="cad-in" id="algResp_/.test(html));
+    check('os dois campos novos existem na ficha',
+      /alim_horarios:this\.value/.test(html) && /obs_tutor:this\.value/.test(html));
+    check('nada e sobrescrito sozinho: campo com conteudo vem desmarcado',
+      /grava:!atual/.test(html));
+
+    if (typeof ctx.algSeparar === 'function' && typeof ctx.algPerguntas === 'function') {
+      const respostas = ctx.ALG_RESP || {};
+      const comTexto = Object.keys(respostas).filter((k) => String(respostas[k].resposta || '').trim());
+      let separadas = 0, semNada = [], detalhe = [];
+      comTexto.forEach((k) => {
+        const p = (ctx.PELUDINHOS || []).find((x) => ctx.pelKey(x) === k);
+        if (!p) return;
+        const Q = ctx.algPerguntas(p);
+        const sep = ctx.algSeparar(respostas[k].resposta, Q);
+        const n = Object.keys(sep.por || {}).length;
+        detalhe.push(k + ':' + n + '/' + Q.length);
+        if (n >= 4) separadas++; else semNada.push(k + ' (' + n + ' de ' + Q.length + ')');
+      });
+      check('separei ao menos 4 perguntas na maioria das respostas reais (' +
+        separadas + ' de ' + detalhe.length + ')',
+        detalhe.length === 0 || separadas >= Math.ceil(detalhe.length * 0.6), detalhe.join(' · '));
+      if (semNada.length) console.log('    (pouco separado, cai em "nao consegui encaixar": ' + semNada.join(', ') + ')');
+
+      // O que a separacao NAO conseguir encaixar tem de voltar em `solto` — nunca sumir.
+      let perdeu = [];
+      comTexto.forEach((k) => {
+        const p = (ctx.PELUDINHOS || []).find((x) => ctx.pelKey(x) === k);
+        if (!p) return;
+        const Q = ctx.algPerguntas(p);
+        const sep = ctx.algSeparar(respostas[k].resposta, Q);
+        const n = Object.keys(sep.por || {}).length;
+        if (n === 0 && !String(sep.solto || '').trim()) perdeu.push(k);
+      });
+      check('resposta que nao deu para separar volta inteira em "nao consegui encaixar"',
+        perdeu.length === 0, JSON.stringify(perdeu));
+
+      // um caso controlado: o eco da pergunta tem de sair, e a alergia tem de cair no
+      // campo de alergia — nao no meio de um paragrafo sobre esteira
+      const pFake = { n: 'Teste', tutor: 'Fulano', dias: [] };
+      const Qf = ctx.algPerguntas(pFake);
+      const bruto = '1. Quantas refeicoes ele faz por dia, e em que horarios? 3 vezes: 7h, 12h e 18h\n' +
+                    '2. Racao Golden\n3. 50 gramas\n4. Alergia a frango\n5. Evitar esteira';
+      const sepF = ctx.algSeparar(bruto, Qf);
+      check('o pedaco 4 (restricao) tem o destino "alergia"',
+        (Qf.find((q) => q.k === 'restricao') || {}).campo === 'alergia');
+      check('separou os 5 pedacos do caso controlado',
+        Object.keys(sepF.por).length === 5, JSON.stringify(Object.keys(sepF.por)));
+      check('a alergia veio limpa', (sepF.por.restricao || '').trim() === 'Alergia a frango',
+        JSON.stringify(sepF.por.restricao));
+      check('o horario nao virou numero de pergunta',
+        (sepF.por.refeicoes || '').indexOf('7h, 12h e 18h') >= 0, JSON.stringify(sepF.por.refeicoes));
     }
   }
   console.log('');
