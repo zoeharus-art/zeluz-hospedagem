@@ -1954,37 +1954,97 @@ async function main() {
   }
   console.log('');
 
-  console.log('Vermifugo e carrapaticida levam o detalhe para a planilha:');
+  console.log('O nome sozinho nao lanca: a tela pergunta antes (26/ago):');
   {
+    // Adriana: "ao selecionar o peludinho ja entra direto, nao me deixa escolher a
+    // quantidade e a observacao — ambos precisam ser obrigatorios".
     const item = (k) => {
-      const m = html.match(new RegExp("\{k:'" + k + "',[^}]*\}"));
-      return m ? m[0] : '';
+      const i = html.indexOf("{k:'" + k + "',");
+      if (i < 0) return '';
+      return html.slice(i, html.indexOf("\n    {k:'", i + 5) > 0 ? html.indexOf("\n    {k:'", i + 5) : i + 900);
     };
-    check('vermifugo pede o detalhe', /detalhe:true/.test(item('vermifugo')));
-    check('carrapaticida pede o detalhe e oferece pipeta',
-      /detalhe:true/.test(item('carrapaticida')) && /pipeta:true/.test(item('carrapaticida')));
-    check('so esses dois pedem detalhe (banho e vet nao)',
-      !/detalhe:true/.test(item('banho')) && !/detalhe:true/.test(item('vet')));
+    check('vermifugo pergunta quanto e a observacao',
+      /campos:\[/.test(item('vermifugo')) && /c:'qtd'/.test(item('vermifugo')) && /c:'onde'/.test(item('vermifugo')));
+    check('carrapaticida oferece a pipeta', /ops:DASH_QTD_PIP/.test(item('carrapaticida')));
+    check('coleira pergunta se veio e onde troca',
+      /c:'veio'/.test(item('coleira')) && /c:'onde'/.test(item('coleira')));
+    check('festa exige o tema', /c:'tema'/.test(item('festa')) && /ops:DASH_TEMAS/.test(item('festa')));
+    check('banho e vet continuam num clique so',
+      !/campos:/.test(item('banho')) && !/campos:/.test(item('vet')));
+    check('todo campo desses e obrigatorio',
+      (item('vermifugo').match(/obrig:true/g) || []).length === 2 &&
+      (item('carrapaticida').match(/obrig:true/g) || []).length === 2 &&
+      (item('coleira').match(/obrig:true/g) || []).length === 2 &&
+      (item('festa').match(/obrig:true/g) || []).length === 1);
+
+    const temas = ['ATL\u00c9TICO', 'CRUZEIRO', '101 D\u00c1LMATAS', 'PATRULHA CANINA', 'PETS',
+                   'A DAMA E O VAGABUNDO', 'BOLT'];
+    check('os 7 temas de festa estao la',
+      Array.isArray(ctx.DASH_TEMAS) && ctx.DASH_TEMAS.length === 7 &&
+      temas.every((t) => ctx.DASH_TEMAS.some((o) => o.v === t)),
+      JSON.stringify((ctx.DASH_TEMAS || []).map((o) => o.v)));
+
+    // clicar no nome ESCOLHE quando ha pergunta; lanca direto quando nao ha
+    check('o clique no nome escolhe (nao lanca) quando ha pergunta',
+      /\(dashItem\(k\)\|\|\{\}\)\.campos\?'dashEscolher':'dashLancar'/.test(html));
+    check('lancar sem responder e barrado tambem no caminho de baixo',
+      /if\(it\.campos\)\{[\s\S]{0,200}dashDetFalta\(k\)/.test(html));
+    check('depois de lancar, a escolha e o detalhe zeram',
+      /if\(it\.campos\)\{ DASH_DET\[k\]=\{\}; delete DASH_SEL\[k\]; \}/.test(html));
+    check('o re-render nao apaga a busca que a colega esta digitando',
+      /__manter\[i\.k\]=\{b:/.test(html) && /if\(b&&m\.b\)\{ b\.value=m\.b;/.test(html));
+
     if (typeof ctx.dashSetDet === 'function' && typeof ctx.dashDetTexto === 'function') {
-      ctx.DASH_DET = {};
+      ctx.DASH_DET = {}; ctx.DASH_SEL = {};
+      check('sem responder nada, o botao diz o que falta',
+        ctx.dashDetFalta('vermifugo') === 'Quanto foi dado \u00b7 Alguma observa\u00e7\u00e3o',
+        JSON.stringify(ctx.dashDetFalta('vermifugo')));
       ctx.dashSetDet('vermifugo', 'qtd', '2 COMPRIMIDOS');
+      check('ainda falta a observacao', ctx.dashDetFalta('vermifugo') === 'Alguma observa\u00e7\u00e3o',
+        JSON.stringify(ctx.dashDetFalta('vermifugo')));
       check('a quantidade sai entre parenteses e em maiuscula',
         ctx.dashDetTexto('vermifugo') === ' (2 COMPRIMIDOS)', JSON.stringify(ctx.dashDetTexto('vermifugo')));
-      ctx.dashSetDet('vermifugo', 'sit', 'NA BOLSA');
-      check('quantidade e situacao saem juntas',
-        ctx.dashDetTexto('vermifugo') === ' (2 COMPRIMIDOS · NA BOLSA)', JSON.stringify(ctx.dashDetTexto('vermifugo')));
-      ctx.dashSetDet('vermifugo', 'qtd', '2 COMPRIMIDOS');   // tocar de novo desmarca
-      check('tocar de novo desmarca a quantidade',
-        ctx.dashDetTexto('vermifugo') === ' (NA BOLSA)', JSON.stringify(ctx.dashDetTexto('vermifugo')));
+      ctx.dashSetDet('vermifugo', 'onde', 'NA BOLSA');
+      check('respondido tudo, nada falta', ctx.dashDetFalta('vermifugo') === '');
+      check('quantidade e observacao saem juntas, nessa ordem',
+        ctx.dashDetTexto('vermifugo') === ' (2 COMPRIMIDOS \u00b7 NA BOLSA)', JSON.stringify(ctx.dashDetTexto('vermifugo')));
+      // "Nada a observar" e uma RESPOSTA: libera o botao e nao escreve nada
+      ctx.dashSetDet('vermifugo', 'onde', '');
+      check('"nada a observar" conta como respondido', ctx.dashDetFalta('vermifugo') === '');
+      check('"nada a observar" nao escreve nada na planilha',
+        ctx.dashDetTexto('vermifugo') === ' (2 COMPRIMIDOS)', JSON.stringify(ctx.dashDetTexto('vermifugo')));
+      // tocar de novo desmarca — e volta a faltar
+      ctx.dashSetDet('vermifugo', 'qtd', '2 COMPRIMIDOS');
+      check('tocar de novo desmarca e o campo volta a faltar',
+        ctx.dashDetFalta('vermifugo') === 'Quanto foi dado' && ctx.dashDetTexto('vermifugo') === '',
+        JSON.stringify([ctx.dashDetFalta('vermifugo'), ctx.dashDetTexto('vermifugo')]));
+
       ctx.DASH_DET = {};
-      check('sem detalhe nenhum, nao sai parentese vazio', ctx.dashDetTexto('vermifugo') === '');
-      ctx.dashSetDet('carrapaticida', 'sit', 'BANHO');
-      check('"depois do banho" tambem vale sozinho',
-        ctx.dashDetTexto('carrapaticida') === ' (BANHO)', JSON.stringify(ctx.dashDetTexto('carrapaticida')));
+      ctx.dashSetDet('carrapaticida', 'qtd', 'PIPETA');
+      ctx.dashSetDet('carrapaticida', 'onde', 'BANHO');
+      check('carrapaticida em pipeta, depois do banho',
+        ctx.dashDetTexto('carrapaticida') === ' (PIPETA \u00b7 BANHO)', JSON.stringify(ctx.dashDetTexto('carrapaticida')));
+
       ctx.DASH_DET = {};
+      ctx.dashSetDet('coleira', 'veio', 'NA BOLSA');
+      check('coleira: so metade respondida ainda trava',
+        ctx.dashDetFalta('coleira') === 'Onde vai ser trocada?', JSON.stringify(ctx.dashDetFalta('coleira')));
+      ctx.dashSetDet('coleira', 'onde', 'DAYCARE');
+      check('coleira sai com as duas respostas',
+        ctx.dashDetTexto('coleira') === ' (NA BOLSA \u00b7 DAYCARE)', JSON.stringify(ctx.dashDetTexto('coleira')));
+
+      ctx.DASH_DET = {};
+      check('festa sem tema nao lanca', ctx.dashDetFalta('festa') === 'Tema da festa');
+      ctx.dashSetDet('festa', 'tema', 'PATRULHA CANINA');
+      check('festa sai com o tema',
+        ctx.dashDetTexto('festa') === ' (PATRULHA CANINA)', JSON.stringify(ctx.dashDetTexto('festa')));
+
+      // item sem pergunta nao inventa parenteses
+      ctx.DASH_DET = {};
+      check('banho nao ganha parenteses nenhum', ctx.dashDetTexto('banho') === '');
+      check('banho nunca "falta responder"', ctx.dashDetFalta('banho') === '');
+      ctx.DASH_DET = {}; ctx.DASH_SEL = {};
     }
-    check('o detalhe entra no valor que vai para a planilha', /if\(it\.detalhe\) valor = valor \+ dashDetTexto\(k\);/.test(html));
-    check('o detalhe zera depois de lancar (nao gruda no proximo)', /if\(it\.detalhe\) DASH_DET\[k\]=\{qtd:'', sit:''\};/.test(html));
   }
   console.log('');
 

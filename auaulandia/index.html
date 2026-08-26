@@ -9589,7 +9589,7 @@
   // Agora existe um carimbo: esta constante é a versão que o aparelho está rodando, e o
   // Firebase guarda a versão publicada. Quando as duas diferem, aparece o aviso — mas
   // NUNCA recarrega sozinho: recarregar no meio de um check-in perderia o trabalho.
-  const APP_VERSAO='2026-08-26-10';
+  const APP_VERSAO='2026-08-26-11';
   function vigiarVersao(){
     if(!DB) return;
     try{
@@ -18283,6 +18283,48 @@
   //
   // Os rótulos das colunas são os que a planilha tem HOJE, com a grafia que ela tem — é por
   // eles que o dashboard procura. Mudar um acento aqui apaga um bloco da TV.
+  // ===== O QUE VAI JUNTO COM O NOME NA PLANILHA ===================================
+  // A recepção escrevia isto à mão, entre parênteses. Aqui vira botão: ninguém digita
+  // "2 comprimdos" nem esquece de dizer que o remédio está na bolsa. Os valores saem
+  // em MAIÚSCULA porque é assim que a coluna sempre foi escrita e é assim que a TV lê.
+  var DASH_QTD=[
+    {v:'MEIO COMPRIMIDO',     t:'\u00bd comprimido'},
+    {v:'1 COMPRIMIDO',        t:'1 comprimido'},
+    {v:'1 COMPRIMIDO E MEIO', t:'1 e \u00bd'},
+    {v:'2 COMPRIMIDOS',       t:'2 comprimidos'},
+    {v:'3 COMPRIMIDOS',       t:'3 comprimidos'},
+    {v:'4 COMPRIMIDOS',       t:'4 comprimidos'}
+  ];
+  // Pipeta é o tubo inteiro: não existe meia pipeta, por isso ela é uma quantidade e
+  // não uma observação. Só o carrapaticida oferece.
+  var DASH_QTD_PIP=[{v:'PIPETA', t:'Pipeta (o tubo inteiro)'}].concat(DASH_QTD);
+  // "Nada a observar" existe de propósito: obrigatório é ESCOLHER, não é ter observação.
+  // Sem essa opção a pessoa inventaria um texto só para o botão liberar.
+  var DASH_ONDE=[
+    {v:'NA BOLSA', t:'Está na bolsa dele'},
+    {v:'BANHO',    t:'Vai passar depois do banho'},
+    {v:'',         t:'Nada a observar'}
+  ];
+  var DASH_COL_VEIO=[
+    {v:'NA BOLSA',  t:'Sim, veio na bolsa'},
+    {v:'N\u00c3O VEIO', t:'N\u00e3o veio'}
+  ];
+  var DASH_COL_ONDE=[
+    {v:'DAYCARE', t:'Troca no Day Care'},
+    {v:'BANHO',   t:'Troca no banho'}
+  ];
+  // Os temas que a casa faz. Escolher é obrigatório: sem tema ninguém consegue preparar
+  // a festa, e a TV anuncia um aniversário sem dizer do quê.
+  var DASH_TEMAS=[
+    {v:'ATL\u00c9TICO', t:'Atl\u00e9tico'},
+    {v:'CRUZEIRO', t:'Cruzeiro'},
+    {v:'101 D\u00c1LMATAS', t:'101 D\u00e1lmatas'},
+    {v:'PATRULHA CANINA', t:'Patrulha Canina'},
+    {v:'PETS', t:'Pets'},
+    {v:'A DAMA E O VAGABUNDO', t:'A Dama e o Vagabundo'},
+    {v:'BOLT', t:'Bolt'}
+  ];
+
   var DASH_ITENS=[
     {k:'reposicao',     t:'Reposição',                  col:'Reposição',                      icone:'🔄'},
     {k:'banho',         t:'Banho',                      col:'Banho',                          colHora:'Hora Banho',      hora:true, icone:'🛁'},
@@ -18290,14 +18332,21 @@
     {k:'saicedo',       t:'Sai mais cedo',              col:'Peludinho que sairá cedo',       colHora:'Hora Saída Cedo', hora:true, icone:'🚶'},
     {k:'avaliacao',     t:'Avaliação (Márcia)',         col:'Avaliação',                      colHora:'Horário',         hora:true, icone:'📋'},
     {k:'avulso',        t:'Avulso',                     col:'Avulso',                         icone:'📌'},
-    // detalhe:true → a tela pede QUANTO e ONDE antes de deixar lançar (ver dashDetalheHTML)
-    {k:'vermifugo',     t:'Vermífugo',                  col:'Vermifugo',                      icone:'💊', detalhe:true},
-    {k:'carrapaticida', t:'Carrapaticida',              col:'Carrapaticida',                  icone:'🔬', detalhe:true, pipeta:true},
-    {k:'coleira',       t:'Troca de coleira',           col:'Troca de Coleira',               icone:'🏷️'},
+    // campos → a tela PERGUNTA antes de deixar lançar; obrig:true não deixa passar em branco
+    {k:'vermifugo',     t:'Vermífugo',                  col:'Vermifugo',                      icone:'💊', campos:[
+      {c:'qtd',  rot:'Quanto foi dado',   ops:DASH_QTD, obrig:true},
+      {c:'onde', rot:'Alguma observação', ops:DASH_ONDE, obrig:true}]},
+    {k:'carrapaticida', t:'Carrapaticida',              col:'Carrapaticida',                  icone:'🔬', campos:[
+      {c:'qtd',  rot:'Quanto foi dado',   ops:DASH_QTD_PIP, obrig:true},
+      {c:'onde', rot:'Alguma observação', ops:DASH_ONDE, obrig:true}]},
+    {k:'coleira',       t:'Troca de coleira',           col:'Troca de Coleira',               icone:'🏷️', campos:[
+      {c:'veio', rot:'A coleira veio?',       ops:DASH_COL_VEIO, obrig:true},
+      {c:'onde', rot:'Onde vai ser trocada?', ops:DASH_COL_ONDE, obrig:true}]},
     {k:'hidratacao',    t:'Hidratação patinha e focinho',col:'Hidratação patinha e Focinho',  icone:'💧'},
     {k:'adaptacao',     t:'Adaptação',                  col:'Adaptação',                      icone:'🌟'},
     {k:'faltas',        t:'Falta avisada',              col:'Faltas Avisadas',                icone:'⚠️'},
-    {k:'festa',         t:'Fará festa na Zêluz',        col:'Festa na Zêluz - Auniversário)',  icone:'🎉'}
+    {k:'festa',         t:'Fará festa na Zêluz',        col:'Festa na Zêluz - Auniversário)',  icone:'🎉', campos:[
+      {c:'tema', rot:'Tema da festa', ops:DASH_TEMAS, obrig:true}]}
   ];
   var DASH_DADOS={}, DASH_PONTE=null, dashBusca={};
   function dashItem(k){ return DASH_ITENS.find(function(i){ return i.k===k; }); }
@@ -18539,6 +18588,13 @@
           +'<div class="hint" style="margin-top:3px">Pode lançar do mesmo jeito: fica tudo guardado aqui. Só que a TV do Day Care ainda lê a planilha, então enquanto a ponte não estiver ligada alguém precisa escrever lá à mão. O passo a passo está no arquivo <em>integracao-daycare/Codigo.gs</em>.</div></div>';
     }
     var el=document.getElementById('dashBlocos'); if(!el) return;
+    // Guardar o que está digitado: escolher uma quantidade redesenha a tela inteira, e sem
+    // isto a busca que a colega estava fazendo em outro bloco sumia no meio da digitação.
+    var __manter={};
+    DASH_ITENS.forEach(function(i){
+      var b=document.getElementById('dashB_'+i.k), h=document.getElementById('dashH_'+i.k);
+      __manter[i.k]={b:(b&&b.value)||'', h:(h&&h.value)||''};
+    });
     el.innerHTML=DASH_ITENS.map(function(it){
       var lista=DASH_DADOS[it.k]||{};
       var ks=Object.keys(lista).sort(function(a,b){ return (lista[a].ts||0)-(lista[b].ts||0); });
@@ -18558,73 +18614,90 @@
              }).join('')+'</div>')
           : '<div class="hint">Ninguém lançado hoje.</div>')
         +'<div style="margin-top:8px">'
-        +'<input class="cad-in" id="dashB_'+it.k+'" placeholder="Buscar o FILHOt pelo nome…" autocomplete="off" oninput="dashSugerir(\''+it.k+'\')">'
-        +(it.hora?('<div style="margin-top:6px"><label class="cad-lb">Horário</label><input type="time" class="cad-in" id="dashH_'+it.k+'" style="max-width:140px"></div>'):'')
-        +(it.detalhe?dashDetalheHTML(it):'')
-        +'<div id="dashS_'+it.k+'" style="display:flex;flex-wrap:wrap;gap:5px;margin-top:6px"></div>'
+        +((it.campos&&DASH_SEL[it.k])
+          ? dashPainelHTML(it)
+          : ('<input class="cad-in" id="dashB_'+it.k+'" placeholder="Buscar o FILHOt pelo nome…" autocomplete="off" oninput="dashSugerir(\''+it.k+'\')">'
+             +(it.hora?('<div style="margin-top:6px"><label class="cad-lb">Horário</label><input type="time" class="cad-in" id="dashH_'+it.k+'" style="max-width:140px"></div>'):'')
+             +'<div id="dashS_'+it.k+'" style="display:flex;flex-wrap:wrap;gap:5px;margin-top:6px"></div>'))
         +'</div></div>';
     }).join('');
+    DASH_ITENS.forEach(function(i){
+      var m=__manter[i.k]||{};
+      var b=document.getElementById('dashB_'+i.k); if(b&&m.b){ b.value=m.b; try{ dashSugerir(i.k); }catch(e){} }
+      var h=document.getElementById('dashH_'+i.k); if(h&&m.h) h.value=m.h;
+    });
   }
 
-  // ===== O DETALHE DO VERMÍFUGO E DO CARRAPATICIDA ================================
-  // Quantidade e situação, em botão. A recepção escrevia isso à mão na planilha, entre
-  // parênteses; aqui vira escolha, e o texto sai igualzinho do outro lado.
-  var DASH_QTD=[
-    {v:'',                     t:'sem dizer'},
-    {v:'MEIO COMPRIMIDO',      t:'½ comprimido'},
-    {v:'1 COMPRIMIDO',         t:'1 comprimido'},
-    {v:'1 COMPRIMIDO E MEIO',  t:'1 e ½'},
-    {v:'2 COMPRIMIDOS',        t:'2 comprimidos'},
-    {v:'3 COMPRIMIDOS',        t:'3 comprimidos'},
-    {v:'4 COMPRIMIDOS',        t:'4 comprimidos'}
-  ];
-  // Pipeta é o tubo inteiro: não existe meia pipeta, então a quantidade some da tela.
-  var DASH_PIPETA={v:'PIPETA', t:'Pipeta (tubo inteiro)'};
-  var DASH_SIT=[
-    {v:'',          t:'nada a dizer'},
-    {v:'NA BOLSA',  t:'Na bolsa dele'},
-    {v:'BANHO',     t:'Depois do banho'}
-  ];
-  var DASH_DET={};   // {item: {qtd:'', sit:''}}
-  function dashDet(k){ DASH_DET[k]=DASH_DET[k]||{qtd:'', sit:''}; return DASH_DET[k]; }
+  // ===== O DETALHE QUE VAI JUNTO — Adriana, 26/ago/2026 ===========================
+  // Antes, clicar no nome lançava na hora e o detalhe se perdia. Agora o clique só
+  // ESCOLHE o FILHOt: fica na tela quem foi escolhido, o que ainda falta responder e um
+  // botão que mostra, em português, exatamente o que vai ser escrito na planilha.
+  var DASH_SEL={};    // {item: 'Nome/Raça'} — quem está escolhido, ainda não lançado
+  var DASH_DET={};    // {item: {campo: valor}} — a chave existir = a pessoa escolheu
+  function dashDet(k){ DASH_DET[k]=DASH_DET[k]||{}; return DASH_DET[k]; }
   function dashSetDet(k, campo, valor){
     var d=dashDet(k);
-    d[campo]=(d[campo]===valor)?'':valor;    // tocar de novo desmarca
-    // Pipeta e comprimido não convivem: escolher um limpa o outro.
-    if(campo==='qtd' && valor===DASH_PIPETA.v) d.pipeta=true;
-    if(campo==='qtd' && valor!==DASH_PIPETA.v) d.pipeta=false;
-    renderDash();
+    if(d.hasOwnProperty(campo) && d[campo]===valor) delete d[campo];   // tocar de novo desmarca
+    else d[campo]=valor;
+    try{ renderDash(); }catch(e){}
   }
-  // O texto que vai para a planilha, entre parênteses: "(1 COMPRIMIDO · NA BOLSA)".
+  function dashEscolher(k, rot){
+    DASH_SEL[k]=rot; DASH_DET[k]={};
+    var b=document.getElementById('dashB_'+k); if(b) b.value='';
+    try{ renderDash(); }catch(e){}
+  }
+  function dashTrocarFilhot(k){
+    delete DASH_SEL[k]; DASH_DET[k]={};
+    try{ renderDash(); }catch(e){}
+  }
+  // O texto entre parênteses: "(1 COMPRIMIDO · NA BOLSA)". Campo escolhido como vazio
+  // ("Nada a observar") não aparece — e sem nenhum, não sai parêntese algum.
   function dashDetTexto(k){
-    var d=dashDet(k);
-    var partes=[];
-    if(d.qtd) partes.push(d.qtd);
-    if(d.sit) partes.push(d.sit);
+    var it=dashItem(k); if(!it||!it.campos) return '';
+    var d=dashDet(k), partes=[];
+    it.campos.forEach(function(c){ if(d[c.c]) partes.push(d[c.c]); });
     return partes.length ? (' (' + partes.join(' · ') + ')') : '';
   }
-  function dashDetalheHTML(it){
-    var d=dashDet(it.k);
-    var botao=function(campo, valor, rotulo){
-      var on=(d[campo]===valor);
-      return '<button type="button" class="btn" style="padding:5px 11px;font-size:12.5px;font-weight:800;border:1.5px solid '
-        +(on?'var(--z-blue)':'var(--line)')+';background:'+(on?'var(--z-blue)':'var(--z-cream-warm)')
-        +';color:'+(on?'var(--z-cream)':'var(--z-blue)')+'"'
-        +' onclick="dashSetDet(\'' + it.k + '\',\'' + campo + '\',\'' + valor + '\')">' + escAttr(rotulo) + '</button>';
-    };
-    var h='<div style="margin-top:8px;padding-top:8px;border-top:1px dashed var(--line)">'
-      +'<label class="cad-lb">Quanto</label><div style="display:flex;flex-wrap:wrap;gap:5px;margin-top:3px">';
-    if(it.pipeta) h+=botao('qtd', DASH_PIPETA.v, DASH_PIPETA.t);
-    DASH_QTD.forEach(function(q){ if(q.v==='') return; h+=botao('qtd', q.v, q.t); });
-    h+='</div>'
-      +'<label class="cad-lb" style="margin-top:7px;display:block">Alguma observação</label>'
-      +'<div style="display:flex;flex-wrap:wrap;gap:5px;margin-top:3px">';
-    DASH_SIT.forEach(function(x){ if(x.v==='') return; h+=botao('sit', x.v, x.t); });
-    h+='</div>';
-    var prev=dashDetTexto(it.k);
-    h+='<div class="hint" style="margin-top:6px">Vai para a planilha assim: <strong>Nome/Raça'+escAttr(prev)+'</strong>'
-      +(prev?'':' — sem nada entre parênteses, que também vale.')+'</div>';
-    return h+'</div>';
+  // O que ainda não foi respondido. Vira frase na tela — nunca um botão que não responde.
+  function dashDetFalta(k){
+    var it=dashItem(k); if(!it||!it.campos) return '';
+    var d=dashDet(k), falta=[];
+    it.campos.forEach(function(c){ if(c.obrig && !d.hasOwnProperty(c.c)) falta.push(c.rot); });
+    return falta.join(' · ');
+  }
+  function dashPainelHTML(it){
+    var sel=DASH_SEL[it.k]||'', d=dashDet(it.k);
+    var h='<div class="pair" style="padding:7px 0;border-bottom:1px solid var(--line)">'
+      +'<span class="k">Escolhido: <strong>'+escAttr(sel)+'</strong></span>'
+      +'<span class="val"><button class="btn" style="background:none;border:none;color:var(--z-blue);text-decoration:underline;font-size:12.5px;font-weight:700;padding:0 6px"'
+      +' onclick="dashTrocarFilhot(\''+it.k+'\')">trocar</button></span></div>';
+    it.campos.forEach(function(c){
+      var respondido=d.hasOwnProperty(c.c);
+      h+='<label class="cad-lb" style="margin-top:9px;display:block">'+escAttr(c.rot)
+        +(c.obrig&&!respondido?' <span style="color:var(--crm-critico);font-weight:900">— falta responder</span>':'')+'</label>'
+        +'<div style="display:flex;flex-wrap:wrap;gap:5px;margin-top:4px">';
+      c.ops.forEach(function(o){
+        var on=(respondido && d[c.c]===o.v);
+        h+='<button type="button" class="btn" style="padding:6px 12px;font-size:12.5px;font-weight:800;border:1.5px solid '
+          +(on?'var(--z-blue)':'var(--line)')+';background:'+(on?'var(--z-blue)':'var(--z-cream-warm)')
+          +';color:'+(on?'var(--z-cream)':'var(--z-blue)')+'"'
+          +' onclick="dashSetDet(\''+it.k+'\',\''+c.c+'\',\''+String(o.v).replace(/'/g,"\\'")+'\')">'
+          +escAttr(o.t)+'</button>';
+      });
+      h+='</div>';
+    });
+    var falta=dashDetFalta(it.k);
+    h+='<div class="hint" style="margin-top:9px">Vai para a planilha assim: <strong>'+escAttr(sel+dashDetTexto(it.k))+'</strong></div>'
+      +'<button class="btn" style="margin-top:8px;width:100%'+(falta?';opacity:.55':'')+'"'
+      +' onclick="dashLancarSel(\''+it.k+'\')">Lançar na planilha</button>'
+      +(falta?('<div class="hint" style="margin-top:5px;color:var(--crm-atencao-text)"><strong>Antes precisa responder:</strong> '+escAttr(falta)+'</div>'):'');
+    return h;
+  }
+  function dashLancarSel(k){
+    var sel=DASH_SEL[k]; if(!sel) return;
+    var falta=dashDetFalta(k);
+    if(falta){ alert('Antes de lançar, responda: '+falta+'.\n\nÉ isso que a equipe lê na planilha e na TV — sem essa resposta ninguém sabe o que fazer com o FILHOt.'); return; }
+    dashLancar(k, sel);
   }
   function dashSugerir(k){
     var inp=document.getElementById('dashB_'+k), box=document.getElementById('dashS_'+k);
@@ -18640,7 +18713,7 @@
     box.innerHTML=achados.map(function(p){
       var rot=dashNomeRaca(p), tut=((typeof pelGet==='function')?pelGet(p,'tutor'):'')||p.tutor||'';
       return '<button class="btn" style="background:var(--z-cream-warm);color:var(--z-blue);border:1.5px solid var(--line);padding:6px 12px;font-size:12.5px" '
-        +'onclick="dashLancar(\''+k+'\',\''+escAttr(rot).replace(/'/g,"\\'")+'\')">'+escAttr(rot)
+        +'onclick="'+((dashItem(k)||{}).campos?'dashEscolher':'dashLancar')+'(\''+k+'\',\''+escAttr(rot).replace(/'/g,"\\'")+'\')">'+escAttr(rot)
         +(tut?('<span style="color:var(--muted);font-weight:600"> · '+escAttr(tut)+'</span>'):'')+'</button>';
     }).join('');
   }
@@ -18648,9 +18721,13 @@
     var it=dashItem(k); if(!it||!DB) return;
     var hora=it.hora?String((document.getElementById('dashH_'+k)||{}).value||''):'';
     if(it.hora&&!hora){ alert('Escolha o horário antes — é ele que faz o alarme tocar na TV.'); return; }
-    // Vermífugo e carrapaticida levam o detalhe junto, na mesma célula da planilha:
-    // "Olivia/SRD (2 COMPRIMIDOS · NA BOLSA)". É o que a recepção já escrevia à mão.
-    if(it.detalhe) valor = valor + dashDetTexto(k);
+    // O detalhe vai na MESMA célula: "Olivia/SRD (2 COMPRIMIDOS · NA BOLSA)". É o que a
+    // recepção já escrevia à mão, e é assim que a TV lê.
+    if(it.campos){
+      var __falta=dashDetFalta(k);
+      if(__falta){ alert('Antes de lançar, responda: '+__falta+'.'); return; }
+      valor = valor + dashDetTexto(k);
+    }
     var lista=DASH_DADOS[k]||{};
     if(Object.keys(lista).some(function(id){ return jsNorm(lista[id].valor||'')===jsNorm(valor); })){
       alert(valor+' já está lançado em '+it.t+' hoje.'); return;
@@ -18661,8 +18738,8 @@
       DASH_DADOS[k]=DASH_DADOS[k]||{}; DASH_DADOS[k][ref.key]=reg;
       var b=document.getElementById('dashB_'+k); if(b) b.value='';
       var s=document.getElementById('dashS_'+k); if(s) s.innerHTML='';
-      // zera o detalhe: a dose do Olivia não pode grudar no próximo FILHOt
-      if(it.detalhe) DASH_DET[k]={qtd:'', sit:''};
+      // zera tudo: a dose da Olivia não pode grudar no próximo FILHOt
+      if(it.campos){ DASH_DET[k]={}; delete DASH_SEL[k]; }
       renderDash();
       if(typeof audit==='function') audit('dashboard-daycare','lançou '+valor+' em '+it.t,{pet:valor});
       dashEspelhar(k, ref.key, reg, 'lancar');
