@@ -2206,6 +2206,40 @@ async function main() {
         JSON.stringify(sepF.por.restricao));
       check('o horario nao virou numero de pergunta',
         (sepF.por.refeicoes || '').indexOf('7h, 12h e 18h') >= 0, JSON.stringify(sepF.por.refeicoes));
+
+      // O ECO DA PERGUNTA: metade das perguntas continua DEPOIS do "?", entao cortar no
+      // "?" devolvia o parenteses da pergunta como se fosse resposta da tutora.
+      const eco = ctx.algTirarEco;
+      check('tira a pergunta inteira, inclusive o que vem depois do "?"',
+        eco('Qual a marca e o tipo do alimento? (racao seca, racao umida, comida natural ou uma combinacao) Racao seca Formula Natural',
+            'Qual a marca e o tipo do alimento? (racao seca, racao umida, comida natural ou uma combinacao)')
+          === 'Racao seca Formula Natural',
+        JSON.stringify(eco('Qual a marca e o tipo do alimento? (racao seca, racao umida, comida natural ou uma combinacao) Racao seca Formula Natural',
+            'Qual a marca e o tipo do alimento? (racao seca, racao umida, comida natural ou uma combinacao)')));
+      check('quem respondeu sem repetir a pergunta nao perde nada',
+        eco('3 refeicoes: 07:00, 12:00 e 18:00', 'Quantas refeicoes ela faz por dia, e em que horarios?')
+          === '3 refeicoes: 07:00, 12:00 e 18:00');
+      check('na duvida sobra texto, nunca falta',
+        eco('Qual a marca? Nao sei', 'Qual a coisa completamente outra que eu perguntei aqui')
+          === 'Qual a marca? Nao sei');
+
+      // e agora contra as respostas REAIS: nenhum pedaco pode comecar repetindo a pergunta
+      let comEco = [];
+      comTexto.forEach((k) => {
+        const p = (ctx.PELUDINHOS || []).find((x) => ctx.pelKey(x) === k);
+        if (!p) return;
+        const Q = ctx.algPerguntas(p);
+        const sep = ctx.algSeparar(respostas[k].resposta, Q);
+        Q.forEach((q) => {
+          const v = String(sep.por[q.k] || '');
+          if (!v) return;
+          const primeiras = v.split(/\s+/).slice(0, 4).map(ctx.jsNorm).join(' ');
+          const daPergunta = q.t.split(/\s+/).slice(0, 4).map(ctx.jsNorm).join(' ');
+          if (primeiras && primeiras === daPergunta) comEco.push(k + '/' + q.k);
+        });
+      });
+      check('nenhuma resposta real volta repetindo a pergunta', comEco.length === 0,
+        JSON.stringify(comEco.slice(0, 5)));
     }
   }
   console.log('');

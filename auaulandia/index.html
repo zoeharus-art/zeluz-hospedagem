@@ -9589,7 +9589,7 @@
   // Agora existe um carimbo: esta constante é a versão que o aparelho está rodando, e o
   // Firebase guarda a versão publicada. Quando as duas diferem, aparece o aviso — mas
   // NUNCA recarrega sozinho: recarregar no meio de um check-in perderia o trabalho.
-  const APP_VERSAO='2026-08-26-15';
+  const APP_VERSAO='2026-08-26-16';
   function vigiarVersao(){
     if(!DB) return;
     try{
@@ -17324,15 +17324,25 @@
       out.solto=antes;
     return out;
   }
-  // O tutor costuma colar a pergunta junto com a resposta. Se o pedaço começa igual à
-  // pergunta, corta até o "?" — o que interessa é o que ELE disse.
+  // O tutor costuma colar a pergunta junto com a resposta. O que interessa é o que ELE
+  // disse — o resto é eco.
+  // Cortar no primeiro "?" não serve: metade das perguntas continua depois dele
+  // ("Qual a marca e o tipo do alimento? (ração seca, ração úmida...)"), e a tela
+  // devolvia o parêntese da pergunta como se fosse a resposta da tutora.
+  // Então a comparação é PALAVRA A PALAVRA: enquanto o pedaço repetir a pergunta, avança;
+  // no primeiro desencontro, para e corta ali. Se casaram menos de 4 palavras, não era
+  // eco nenhum e nada é cortado — na dúvida, sobra texto, nunca falta.
   function algTirarEco(pedaco, pergunta){
-    var a=jsNorm(pedaco).slice(0,40), b=jsNorm(pergunta).slice(0,40);
-    if(a && b && a===b){
-      var i=pedaco.indexOf('?');
-      if(i>=0) return pedaco.slice(i+1).trim();
+    var texto=String(pedaco||''), perg=String(pergunta||'');
+    var pal=perg.split(/\s+/).filter(Boolean).map(jsNorm).filter(Boolean);
+    if(pal.length<4) return texto;
+    var re=/\S+/g, m, i=0, fim=0, casou=0;
+    while((m=re.exec(texto)) && i<pal.length){
+      if(jsNorm(m[0])!==pal[i]) break;
+      fim=m.index+m[0].length; i++; casou++;
     }
-    return pedaco;
+    if(casou<4) return texto;
+    return texto.slice(fim).replace(/^[\s\-–—:.,)]+/,'').trim();
   }
 
   var ALG_CUR={};   // {k: {campos:{qk:{txt, campo, grava}}, solto:''}}
