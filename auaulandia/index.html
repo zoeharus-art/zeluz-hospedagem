@@ -2076,6 +2076,9 @@
           <div id="hf-obsgeral"></div>
           <div id="hf-vet-instr"></div>
           <div id="hf-alergia-block"></div>
+          <!-- Status da gravação da alergia/restrição. Fica FORA do hf-alergia-block de propósito:
+               renderHospAlergiaBlock() reescreve aquele bloco e apagaria o aviso na hora. -->
+          <div id="hf-alergia-st" style="font-size:12.5px;font-weight:700;margin-top:6px"></div>
           <div class="so-gestao" style="margin-top:10px">
             <button class="btn-foto-mini" style="background:var(--z-gold);color:var(--z-blue)" onclick="toggleCadastro()">✏️ Editar cadastro</button>
           </div>
@@ -4812,6 +4815,11 @@
   // Grava a alergia/restrição do hóspede. Se ele é um FILHOt do cadastro-mestre (refKey), grava lá —
   // vale em todo lugar (Day Care e AuAulândia, em qualquer aparelho). Se é hóspede manual sem
   // vínculo, grava só no registro deste hóspede na AuAulândia (mesmo esquema do getInfo/setInfo).
+  // Escreve o destino da gravação da alergia/restrição na própria ficha do hóspede.
+  function _hfAlergiaSt(cor,txt){
+    var el=document.getElementById('hf-alergia-st'); if(!el) return;
+    el.style.color=cor; el.textContent=txt||'';
+  }
   function setHospAlergia(campo,val){
     if(!currentHosp) return;
     const key=currentHosp.refKey;
@@ -4819,7 +4827,18 @@
       let local={}; try{ local=JSON.parse(localStorage.getItem('zeluz_pel_'+key)||'{}'); }catch(e){}
       local[campo]=val;
       try{ localStorage.setItem('zeluz_pel_'+key,JSON.stringify(local)); }catch(e){}
-      if(DB) DB.ref('daycare/cadastro/'+key).update({[campo]:val}).catch(e=>_logFalhaGrav('alergia/'+campo,e));
+      // Alergia/restrição é dado de SEGURANÇA — a tela nunca pode ficar calada sobre o
+      // destino da gravação. Falha real já deixava rastro; faltava o ramo do banco
+      // reconectando, em que a gravação NEM É TENTADA e antes ninguém ficava sabendo.
+      if(DB){
+        DB.ref('daycare/cadastro/'+key).update({[campo]:val})
+          .then(function(){ _hfAlergiaSt('var(--crm-ok)','✅ Salvo — vale em todos os aparelhos.'); })
+          .catch(function(e){ _logFalhaGrav('alergia/'+campo,e);
+            _hfAlergiaSt('var(--crm-critico)','⚠ Anotado NESTE aparelho, mas NÃO salvou no sistema. Verifique a conexão e salve de novo.'); });
+      } else {
+        _logFalhaGrav('alergia/'+campo+' (banco reconectando)', new Error('banco reconectando'));
+        _hfAlergiaSt('var(--crm-critico)','⚠ Anotado NESTE aparelho, mas NÃO salvou no sistema — banco reconectando. Salve de novo em instantes.');
+      }
       if(typeof pelCadCache!=='undefined') pelCadCache[key]=Object.assign({},pelCadCache[key]||{},{[campo]:val});
     } else {
       setInfo(currentHosp,{[campo]:val});
@@ -9447,7 +9466,7 @@
   // Agora existe um carimbo: esta constante é a versão que o aparelho está rodando, e o
   // Firebase guarda a versão publicada. Quando as duas diferem, aparece o aviso — mas
   // NUNCA recarrega sozinho: recarregar no meio de um check-in perderia o trabalho.
-  const APP_VERSAO='2026-08-25-21';
+  const APP_VERSAO='2026-08-25-22';
   function vigiarVersao(){
     if(!DB) return;
     try{
@@ -10836,7 +10855,20 @@
   }
   function setAlmCad(p,patch){ const k=pelKey(p);
     almCadCache[k]=Object.assign({}, almCadCache[k]||{}, patch);
-    if(DB) DB.ref('daycare/almoco-cad/'+k).update(patch).catch(()=>{});
+    // Restrição/alergia do almoço é SEGURANÇA ALIMENTAR: se não sobe, a monitora do outro
+    // aparelho serve o que não pode. O .catch era vazio (falha real sumia) e não havia ramo
+    // para o banco reconectando (a gravação nem era tentada, e a tela não dizia nada).
+    if(DB){
+      DB.ref('daycare/almoco-cad/'+k).update(patch).catch(function(e){ _logFalhaGrav('cadastro de almoço '+k, e); });
+    } else {
+      _logFalhaGrav('cadastro de almoço '+k+' (banco reconectando)', new Error('banco reconectando'));
+      const sa=document.getElementById('pel-saved2')||document.getElementById('pel-saved');
+      if(sa){ sa.style.color='var(--crm-critico)'; sa.textContent='⚠ Anotado NESTE aparelho, mas NÃO salvou no sistema — banco reconectando. Salve de novo em instantes.'; }
+      else if(typeof zAlertao==='function') zAlertao('⚠ BANCO RECONECTANDO',
+        ['O cadastro de almoço de '+(pelNome(p)||'este FILHOt')+' NÃO foi salvo no sistema.',
+         'Ele ficou só neste aparelho. Salve de novo em instantes.'],{botao:'Vou salvar de novo'});
+      return;
+    }
     if(typeof audit==='function') audit('almoco_cad','alterou o cadastro de almoço: '+Object.keys(patch).join(', '),{alvo:k});
   }
   function naoAlmoca(p){ const a=almCad(p); return !!(a&&a.nao); }
@@ -12361,13 +12393,28 @@
       try{ salvarFotoCad(k, patch.foto).catch(function(e){ _logFalhaGrav('foto do cadastro '+k, e); }); }catch(e){}
       patch=Object.assign({},patch); delete patch.foto;
       if(!Object.keys(patch).length){
-        const s0=document.getElementById('pel-saved'); if(s0){ s0.textContent='✓ Salvo'; setTimeout(()=>{ if(s0) s0.textContent=''; },1200); }
-        return;
+        const s0=document.getElementById('pel-saved'); if(s0){ s0.style.color='var(--crm-ok)'; s0.textContent='✓ Salvo'; setTimeout(()=>{ if(s0) s0.textContent=''; },1200); }
+        return Promise.resolve({ok:true});
       }
     }
     const o=pelExtra(p); Object.assign(o,patch); delete o.foto; localStorage.setItem('zeluz_pel_'+k,JSON.stringify(o));
-    if(DB) DB.ref('daycare/cadastro/'+k).update(patch).catch(function(e){ _logFalhaGrav('ficha do cadastro '+k, e); });
-    const s=document.getElementById('pel-saved'); if(s){ s.textContent='✓ Salvo'; setTimeout(()=>{ if(s) s.textContent=''; },1200); }
+    // Esta função devolve SEMPRE uma promessa que RESOLVE — nunca recusa — com {ok:true} ou
+    // {ok:false, erro}. Quem precisa esperar a gravação para só então dizer "✅ salvo"
+    // (ciSalvarCadastroFalta) lê o ok; e os ~48 chamadores que ignoram o retorno não geram
+    // "Uncaught (in promise)" no aparelho da monitora. O rastro da falha continua na auditoria.
+    let _pFicha;
+    if(DB){
+      _pFicha=DB.ref('daycare/cadastro/'+k).update(patch)
+        .then(function(){ return {ok:true}; })
+        .catch(function(e){ _logFalhaGrav('ficha do cadastro '+k, e); return {ok:false, erro:e}; });
+    } else {
+      _logFalhaGrav('ficha do cadastro '+k+' (banco reconectando)', new Error('banco reconectando'));
+      const sx=document.getElementById('pel-saved');
+      if(sx){ sx.style.color='var(--crm-critico)'; sx.textContent='⚠ Anotado NESTE aparelho, mas NÃO salvou no sistema — banco reconectando. Salve de novo em instantes.'; }
+      return Promise.resolve({ok:false, erro:new Error('banco reconectando')});
+    }
+    const s=document.getElementById('pel-saved'); if(s){ s.style.color='var(--crm-ok)'; s.textContent='✓ Salvo'; setTimeout(()=>{ if(s) s.textContent=''; },1200); }
+    return _pFicha;
   }
   // Marca/desmarca uma refeição na Alimentação. Guarda como texto legível ("Almoço · Jantar"),
   // que é o que a plantonista lê na ficha.
@@ -14160,7 +14207,20 @@
   function marcarPresenca(k,val){
     const cur=dcChamada[k]; const next=(cur===val)?'':val;
     if(next) dcChamada[k]=next; else delete dcChamada[k];
-    if(DB) DB.ref('daycare/chamada/'+dcDataKey()+'/'+k).set(next||null).catch(function(e){ _logFalhaGrav('presença na chamada '+k, e); });
+    if(DB){
+      DB.ref('daycare/chamada/'+dcDataKey()+'/'+k).set(next||null).catch(function(e){ _logFalhaGrav('presença na chamada '+k, e); });
+    } else {
+      // A chamada é a resposta de "quem está no prédio" — recepção, Gestão e o almoço leem
+      // dela. Marcada só neste aparelho, ela some para todo mundo e o FILHOt presente
+      // aparece como falta na tela de quem está do outro lado.
+      _logFalhaGrav('presença na chamada '+k+' (banco reconectando)', new Error('banco reconectando'));
+      if(typeof zAlertao==='function') zAlertao('⚠ SÓ NESTE APARELHO',
+        ['Presença marcada só NESTE aparelho — banco reconectando.',
+         'A recepção e a Gestão ainda não estão vendo. Marque de novo em instantes.'],
+        {botao:'Entendi'});
+      renderDaycare();
+      return;
+    }
     if(typeof audit==='function') audit('chamada', next?(next==='veio'?'marcou presença':'marcou falta'):'desmarcou', {alvo:k});
     renderDaycare();
   }
@@ -15398,6 +15458,20 @@
           coco:R.coco==='diarreia'?'DIARREIA':'', status:'aberta', ts:Date.now()
         }).catch(function(e){ _logFalhaGrav('ocorrência do check-in '+k, e); });
       }
+    } else {
+      // BANCO RECONECTANDO: nenhuma das 4 gravações acima foi sequer tentada. Antes o bloco
+      // inteiro era pulado em silêncio e a função seguia adiante — auditava "checkin-corpo",
+      // zerava ckAtual/ckRascunho e fechava a tela. Ou seja: exame do corpo, fotos, presença,
+      // histórico e ocorrência sumiam, e a monitora saía da tela achando que estava tudo salvo.
+      // Agora o cartaz PARA a pessoa e o rascunho fica exatamente onde está, para ela tocar
+      // em Salvar de novo assim que o banco voltar.
+      _logFalhaGrav('check-in do corpo '+k+' (banco reconectando)', new Error('banco reconectando'));
+      if(typeof zAlertao==='function') zAlertao('⚠ SEM CONEXÃO — NADA FOI SALVO',
+        ['O banco está reconectando. O check-in de '+pelNome(p)+' NÃO foi gravado.',
+         'Espere alguns segundos e toque em Salvar de novo. Não feche esta tela.'],
+        {botao:'Vou tentar de novo'});
+      else alert('Sem conexão — o check-in de '+pelNome(p)+' NÃO foi salvo. Toque em Salvar de novo em instantes.');
+      return;   // NUNCA limpar ckAtual/ckRascunho nem fechar a tela sem banco
     }
     if(typeof audit==='function') audit(entrada?'checkin-corpo':'checkout-corpo',
       pelNome(p)+(alterados.length?(' — '+alterados.length+' alteração(ões)'):' — tudo normal'), {alvo:k, assinou:quem});
@@ -17788,9 +17862,19 @@
       renderDash();
     });
   }
+  // Tira aspas das pontas ('senha' ou "senha") sem tocar no miolo. Copiar do Apps Script
+  // com as aspas é o caminho natural — quem tem de se adaptar é o sistema, não a pessoa.
+  function dashLimparToken(v){
+    var t=String(v==null?'':v).trim();
+    if(t.length>=2){
+      var a=t.charAt(0), b=t.charAt(t.length-1);
+      if((a==="'"&&b==="'")||(a==='"'&&b==='"')) t=t.slice(1,-1);
+    }
+    return t;
+  }
   function dashSalvarPonte(){
     var url=String((document.getElementById('dashPonteUrl')||{}).value||'').trim();
-    var token=String((document.getElementById('dashPonteToken')||{}).value||'').trim();
+    var token=dashLimparToken((document.getElementById('dashPonteToken')||{}).value);
     var st=document.getElementById('dashPonteStatus');
     if(url && !/^https:\/\/script\.google\.com\/.*\/exec$/.test(url)){
       if(st){ st.style.color='var(--crm-critico)'; st.textContent='Esse endereço não parece o da ponte. Ele começa com https://script.google.com/ e termina em /exec.'; }
@@ -17833,6 +17917,8 @@
   function dashPonteChamar(corpo){
     var c=DASH_PONTE||{};
     if(!c.url) return Promise.resolve({ok:false, erro:'a ponte com a planilha não está configurada'});
+    // Config antiga pode ter sido gravada com aspas (foi o que desligou a ponte em 21/08).
+    if(c.token) c={url:c.url, token:dashLimparToken(c.token)};
     return fetch(c.url,{method:'POST', headers:{'Content-Type':'text/plain;charset=utf-8'},
       body:JSON.stringify(Object.assign({token:c.token||''},corpo))})
       .then(function(r){ return r.text().catch(function(){ return ''; }); })
@@ -19048,15 +19134,29 @@
       if(v){ patch[f.c]=v; n++; }
     });
     if(!n){ if(st){ st.style.color='var(--crm-atencao-text)'; st.textContent='Preencha ao menos um campo antes de salvar.'; } return; }
-    try{ setPelExtra(p,patch); }catch(e){}
+    // As DUAS gravações viram promessa e ficam guardadas: o "✅ salvo" lá embaixo só sai
+    // depois que ambas confirmarem. Antes a tela dizia "✅ N campo(s) salvo(s)" na mesma
+    // hora — mesmo com o banco reconectando ou com a gravação recusada. O cadastro seguia
+    // faltando e ninguém ficava sabendo, que é exatamente o que este bloco existe para evitar.
+    // Convenção das duas: a promessa RESOLVE sempre, com {ok:true} ou {ok:false, erro} —
+    // nunca recusa. Assim nenhum chamador distraído estoura "Uncaught (in promise)".
+    var _pFicha;
+    try{ _pFicha=setPelExtra(p,patch); }catch(e){ _pFicha=Promise.resolve({ok:false, erro:e}); }
+    if(!_pFicha||typeof _pFicha.then!=='function') _pFicha=Promise.resolve({ok:true});
     // Espelha no cadastro da AuAulândia — o cadastro é ÚNICO, mesmo padrão do resto do arquivo.
+    var _pEspelho;
     try{
       if(DB){
         var kAua=(typeof cadKey==='function')?cadKey({nome:pelNome(p),tutor:pelGet(p,'tutor')||''}):'';
-        if(kAua) DB.ref('auaulandia/cadastro/'+kAua).update(patch).catch(function(){});
+        _pEspelho=kAua?DB.ref('auaulandia/cadastro/'+kAua).update(patch)
+          .then(function(){ return {ok:true}; })
+          .catch(function(e){ _logFalhaGrav('espelho do cadastro na AuAulândia '+kAua, e); return {ok:false, erro:e}; })
+          :Promise.resolve({ok:true});
+      } else {
+        _logFalhaGrav('espelho do cadastro na AuAulândia (banco reconectando)', new Error('banco reconectando'));
+        _pEspelho=Promise.resolve({ok:false, erro:new Error('banco reconectando')});
       }
-    }catch(e){}
-    if(typeof audit==='function') audit('cadastro-completado-checkin',pelNome(p),{campos:Object.keys(patch).join(', ')});
+    }catch(e){ _pEspelho=Promise.resolve({ok:false, erro:e}); }
     // Atualiza o cabeçalho na hora se raça/tutor entraram agora
     try{
       if(patch.raca||patch.tutor){
@@ -19067,8 +19167,19 @@
       }
     }catch(e){}
     ciRenderCadastroFalta(p);
-    var st2=document.getElementById('ciCadFaltaStatus');
-    if(st2){ st2.style.color='var(--crm-ok)'; st2.textContent='✅ '+n+' campo(s) salvo(s) no cadastro.'+(cadastroFaltando(p).length?' Ainda falta o resto — dá para completar na próxima.':' Cadastro completo.'); }
+    var _st=function(cor,txt){ var el=document.getElementById('ciCadFaltaStatus'); if(el){ el.style.color=cor; el.textContent=txt; } };
+    _st('var(--muted)','Salvando…');
+    Promise.all([_pFicha,_pEspelho]).then(function(rs){
+      if(!rs.every(function(r){ return r && r.ok!==false; })){
+        _st('var(--crm-critico)','⚠ Anotado NESTE aparelho, mas NÃO salvou no sistema. Verifique a conexão e salve de novo.');
+        return;
+      }
+      // Só aqui o cadastro está mesmo completo — e só aqui a auditoria pode afirmar isso.
+      if(typeof audit==='function') audit('cadastro-completado-checkin',pelNome(p),{campos:Object.keys(patch).join(', ')});
+      _st('var(--crm-ok)','✅ '+n+' campo(s) salvo(s) no cadastro.'+(cadastroFaltando(p).length?' Ainda falta o resto — dá para completar na próxima.':' Cadastro completo.'));
+    }).catch(function(){   // rede de segurança: nenhuma das duas recusa, mas se algo mudar não mente
+      _st('var(--crm-critico)','⚠ Anotado NESTE aparelho, mas NÃO salvou no sistema. Verifique a conexão e salve de novo.');
+    });
   }
 
   var ciPelAtual=null; // FILHOt aberto na ficha de check-in (para completar o cadastro na hora)
@@ -21344,11 +21455,26 @@
     var tipo=it.dataset.t, k=it.dataset.k;
     var campo=(tipo==='med')?'medicacaoEtiqueta':'pertences';
     cfConf[campo]=cfConf[campo]||{};
-    var atual=cfConf[campo][k]||{};
+    var antes=cfConf[campo][k];      // para desfazer se a gravação não puder acontecer
+    var atual=antes||{};
     var novoOn=!atual.etiquetado;
     var reg=novoOn?{etiquetado:true,quem:(typeof quemSou==='function'?quemSou():'-'),ts:Date.now()}:null;
     cfConf[campo][k]=reg;
-    if(DB) DB.ref('auaulandia/estadias/'+cfEstadiaId+'/conferencia/'+campo+'/'+k).set(reg).catch(function(e){ _logFalhaGrav('item conferido '+campo+' '+k, e); });
+    if(DB){
+      DB.ref('auaulandia/estadias/'+cfEstadiaId+'/conferencia/'+campo+'/'+k).set(reg).catch(function(e){ _logFalhaGrav('item conferido '+campo+' '+k, e); });
+    } else {
+      // Conferência é passagem de plantão: o item marcado aqui é o que a próxima pessoa vai
+      // ler como "já conferido". Sem banco isso não sai do aparelho — desfaz a marca em vez
+      // de deixar a tela afirmar uma conferência que o outro plantão nunca vai ver.
+      cfConf[campo][k]=antes;
+      _logFalhaGrav('item conferido '+campo+' '+k+' (banco reconectando)', new Error('banco reconectando'));
+      if(typeof zAlertao==='function') zAlertao('⚠ NÃO CONFERIDO — BANCO RECONECTANDO',
+        ['A conferência deste item NÃO foi salva.',
+         'Desmarquei de volta para o outro plantão não ver como conferido. Espere alguns segundos e marque de novo.'],
+        {botao:'Vou marcar de novo'});
+      renderCfPert(); renderCfGate();
+      return;
+    }
     if(typeof audit==='function'&&novoOn) audit('conferencia-etiqueta','etiquetou '+k,{pet:(cfHosp&&cfHosp.nome)||''});
     renderCfPert(); renderCfGate();
   }
@@ -21601,9 +21727,24 @@
     if(!cfEstadiaId) return;
     var chk=document.getElementById('cf-ouviu-'+k); var confirmado=!!(chk&&chk.checked);
     cfConf.medicacao=cfConf.medicacao||{};
+    var antes=cfConf.medicacao[k];   // para desfazer se a gravação não puder acontecer
     var reg=confirmado?{testado:true,confirmado:true,quem:(typeof quemSou==='function'?quemSou():'-'),ts:Date.now()}:null;
     cfConf.medicacao[k]=reg;
-    if(DB) DB.ref('auaulandia/estadias/'+cfEstadiaId+'/conferencia/medicacao/'+k).set(reg).catch(function(e){ _logFalhaGrav('alarme de remédio confirmado '+k, e); });
+    if(DB){
+      DB.ref('auaulandia/estadias/'+cfEstadiaId+'/conferencia/medicacao/'+k).set(reg).catch(function(e){ _logFalhaGrav('alarme de remédio confirmado '+k, e); });
+    } else {
+      // O clique já tinha marcado o checkbox. Sem banco, a confirmação de que o alarme do
+      // remédio TOCOU não sai deste aparelho — e a próxima plantonista abriria a Conferência
+      // vendo "TESTADO" que nunca existiu. Desfaz a marca e diz por quê.
+      cfConf.medicacao[k]=antes;
+      _logFalhaGrav('alarme de remédio confirmado '+k+' (banco reconectando)', new Error('banco reconectando'));
+      if(typeof zAlertao==='function') zAlertao('⚠ NÃO CONFIRMADO — BANCO RECONECTANDO',
+        ['A confirmação do alarme do remédio NÃO foi salva.',
+         'Desmarquei de volta para a tela não mentir. Espere alguns segundos e confirme de novo.'],
+        {botao:'Vou confirmar de novo'});
+      renderCfMed(); renderCfGate();
+      return;
+    }
     if(typeof audit==='function'&&confirmado) audit('conferencia-alarme','testou e confirmou o alarme',{pet:(cfHosp&&cfHosp.nome)||'',med:k});
     renderCfMed(); renderCfGate();
   }

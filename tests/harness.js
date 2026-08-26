@@ -883,6 +883,207 @@ async function main() {
   }
   console.log('');
 
+  // ---- Lote 3 da auditoria de gravações mudas (25/ago/2026) ----------------------
+  // `if(DB){ grava }` SEM `else`: quando o banco está reconectando, o bloco inteiro é pulado
+  // e a tela segue como se tivesse salvo. É pior que erro de gravação — no erro pelo menos
+  // existe um `.catch`; aqui não existe caminho nenhum, a gravação nem chega a ser tentada.
+  // O padrão certo já mora no app (`ciSalvarRestricao`): trata os DOIS jeitos de falhar —
+  // banco ausente no clique E gravação que rejeita depois.
+  console.log('Lote 3 — banco reconectando: a tela não mente que salvou:');
+  {
+    const LOTE3 = ['ckSalvar', 'setPelExtra', 'ciSalvarCadastroFalta', 'cfConfirmarAlarme',
+      'cfToggleItem', 'setAlmCad', 'setHospAlergia', 'marcarPresenca'];
+    LOTE3.forEach((fn) => {
+      check(fn + ' existe', typeof ctx[fn] === 'function');
+      check(fn + ' trata banco reconectando (else do if(DB))',
+        /banco reconectando/.test(String(ctx[fn] || '')));
+    });
+
+    // ---- prova de comportamento: com DB=null, o que a tela faz ----------------------
+    // `DB` e os estados de tela são `let`/`var` do escopo do app — só dá para trocá-los de
+    // dentro do próprio contexto, com vm. O restore vem no finally.
+    ctx.__l3 = [];        // eventos que passaram pelo audit()
+    ctx.__l3alerta = [];  // cartazes zAlertao que apareceram
+    ctx.__l3fechou = [];  // telas fechadas / re-renderizadas
+    ctx.__l3res = {};     // estado depois da chamada
+    ctx.__l3st = {};      // texto que cada status de tela recebeu
+    ctx.__bkp3 = {};
+
+    const gebOrig = ctx.document.getElementById;
+    const elDoTeste = {};
+    // getElementById de mentira: devolve objeto REAL (legível) para os ids que o teste
+    // observa, e o proxy universal para todo o resto — o app carrega igual.
+    ctx.document.getElementById = function (id) {
+      const s = String(id || '');
+      if (s === 'hf-alergia-st' || s === 'ciCadFaltaStatus' || s === 'pel-saved' || s === 'pel-saved2') {
+        if (!elDoTeste[s]) {
+          elDoTeste[s] = {
+            style: {},
+            get textContent() { return ctx.__l3st[s] || ''; },
+            set textContent(v) { ctx.__l3st[s] = String(v); },
+          };
+        }
+        return elDoTeste[s];
+      }
+      if (s.indexOf('cf-ouviu-') === 0) return { checked: true, focus() {} };
+      if (s.indexOf('ciCadF_') === 0) return { value: 'preenchido pelo teste' };
+      return gebOrig.call(ctx.document, id);
+    };
+
+    try {
+      vm.runInContext(`
+        __bkp3.DB=DB; __bkp3.audit=audit; __bkp3.zAlertao=zAlertao;
+        __bkp3.ckPontosDe=ckPontosDe; __bkp3.zFalta=zFalta; __bkp3.renderCheckin=renderCheckin;
+        __bkp3.ckAtual=ckAtual; __bkp3.ckRascunho=ckRascunho;
+        __bkp3.renderCfMed=renderCfMed; __bkp3.renderCfGate=renderCfGate;
+        __bkp3.cfConf=cfConf; __bkp3.cfEstadiaId=cfEstadiaId;
+        __bkp3.renderDaycare=renderDaycare; __bkp3.dcChamada=dcChamada;
+        __bkp3.currentHosp=currentHosp; __bkp3.renderHosp=renderHosp;
+        __bkp3.ciPelAtual=ciPelAtual; __bkp3.ciRenderCadastroFalta=ciRenderCadastroFalta;
+        (function(){
+          DB = null;   // banco reconectando
+          audit = function(a,d){ __l3.push({ acao:String(a||''), detalhe:String(d==null?'':d) }); };
+          zAlertao = function(t,l){ __l3alerta.push({ titulo:String(t||''), linhas:[].concat(l||[]).join(' | ') }); };
+          renderCheckin = function(){ __l3fechou.push('renderCheckin'); };
+          renderCfMed = function(){}; renderCfGate = function(){};
+          renderDaycare = function(){}; renderHosp = function(){};
+          ciRenderCadastroFalta = function(){};
+
+          // 1) ckSalvar — o pior caso: fechava a tela e zerava o rascunho sem ter gravado.
+          //    Os pontos do exame e o validador saem do caminho: quem está sob teste é o
+          //    que acontece DEPOIS da validação, quando o banco não está lá.
+          ckPontosDe = function(){ return []; };
+          zFalta = function(){ return false; };
+          ckAtual = { p:{ n:'Teste Harness', tutor:'Tutor Teste' } };
+          ckRascunho = { pontos:{}, coleiraRep:'Seresto', coleiraId:'Sim', coco:'normal' };
+          try { ckSalvar(); } catch(e) { __l3.push({ acao:'ERRO-CHAMADA', detalhe:'ckSalvar: '+e.message }); }
+          __l3res.ckAtualDepois    = (ckAtual !== null && ckAtual !== undefined);
+          __l3res.ckRascunhoDepois = (ckRascunho !== null && ckRascunho !== undefined);
+          __l3res.ckFechou         = __l3fechou.length;
+
+          // 2) cfConfirmarAlarme — o checkbox JÁ estava marcado pelo clique; sem banco a
+          //    marca tem de voltar atrás, senão o outro plantão lê "TESTADO" que não existe.
+          cfEstadiaId = 'estadia_teste';
+          cfConf = { medicacao:{}, pertences:{} };
+          try { cfConfirmarAlarme('med_0_betaina'); }
+          catch(e) { __l3.push({ acao:'ERRO-CHAMADA', detalhe:'cfConfirmarAlarme: '+e.message }); }
+          __l3res.medDepois = ((cfConf.medicacao||{})['med_0_betaina'] == null);
+
+          // 3) marcarPresenca — a chamada é "quem está no prédio".
+          dcChamada = {};
+          try { marcarPresenca('teste-harness__tutor-teste','veio'); }
+          catch(e) { __l3.push({ acao:'ERRO-CHAMADA', detalhe:'marcarPresenca: '+e.message }); }
+
+          // 4) setHospAlergia — dado de segurança; o status da ficha tem de dizer o que houve.
+          currentHosp = { nome:'Teste Harness', tutor:'Tutor Teste', refKey:'teste-harness__tutor-teste' };
+          try { setHospAlergia('alergia','frango'); }
+          catch(e) { __l3.push({ acao:'ERRO-CHAMADA', detalhe:'setHospAlergia: '+e.message }); }
+        })();
+      `, ctx);
+
+      // 5) ciSalvarCadastroFalta — antes dizia "✅ N campo(s) salvo(s)" na hora, sem esperar
+      //    nada. Primeiro com o banco RECUSANDO a gravação, depois com o banco aceitando.
+      ctx.__l3st['ciCadFaltaStatus'] = '';
+      vm.runInContext(`
+        (function(){
+          var nega = function(){ return Promise.reject(new Error('permissao negada (teste)')); };
+          DB = { ref: function(){ return { set:nega, update:nega, push:nega }; } };
+          ciPelAtual = { n:'Teste Harness', tutor:'Tutor Teste' };
+          try { ciSalvarCadastroFalta(); }
+          catch(e) { __l3.push({ acao:'ERRO-CHAMADA', detalhe:'ciSalvarCadastroFalta(nega): '+e.message }); }
+        })();
+      `, ctx);
+      await new Promise((r) => setImmediate(r));
+      await new Promise((r) => setImmediate(r));
+      ctx.__l3res.statusRecusa = ctx.__l3st['ciCadFaltaStatus'] || '';
+
+      ctx.__l3st['ciCadFaltaStatus'] = '';
+      vm.runInContext(`
+        (function(){
+          var ok = function(){ return Promise.resolve(); };
+          DB = { ref: function(){ return { set:ok, update:ok, push:ok }; } };
+          try { ciSalvarCadastroFalta(); }
+          catch(e) { __l3.push({ acao:'ERRO-CHAMADA', detalhe:'ciSalvarCadastroFalta(ok): '+e.message }); }
+        })();
+      `, ctx);
+      await new Promise((r) => setImmediate(r));
+      await new Promise((r) => setImmediate(r));
+      ctx.__l3res.statusOk = ctx.__l3st['ciCadFaltaStatus'] || '';
+
+      // 6) contrato de retorno do setPelExtra: RESOLVE sempre, com {ok:true}/{ok:false} —
+      //    nunca recusa. Recusar faria os ~48 chamadores que ignoram o retorno estourarem
+      //    "Uncaught (in promise)" no aparelho de quem está trabalhando. O rastro da falha
+      //    continua na auditoria; quem precisa saber (B3) lê o `ok`.
+      vm.runInContext(`
+        (function(){
+          var pet = { n:'Teste Harness', tutor:'Tutor Teste' };
+          DB = null;
+          __l3res.pSemBanco = setPelExtra(pet, { raca:'SRD' });
+          var nega = function(){ return Promise.reject(new Error('permissao negada (teste)')); };
+          DB = { ref: function(){ return { set:nega, update:nega, push:nega }; } };
+          __l3res.pRecusa = setPelExtra(pet, { raca:'SRD' });
+        })();
+      `, ctx);
+      await ctx.__l3res.pSemBanco.then(
+        (v) => { ctx.__l3res.semBanco = v; },
+        () => { ctx.__l3res.semBancoRejeitou = true; });
+      await ctx.__l3res.pRecusa.then(
+        (v) => { ctx.__l3res.recusa = v; },
+        () => { ctx.__l3res.recusaRejeitou = true; });
+    } finally {
+      vm.runInContext(`
+        DB=__bkp3.DB; audit=__bkp3.audit; zAlertao=__bkp3.zAlertao;
+        ckPontosDe=__bkp3.ckPontosDe; zFalta=__bkp3.zFalta; renderCheckin=__bkp3.renderCheckin;
+        ckAtual=__bkp3.ckAtual; ckRascunho=__bkp3.ckRascunho;
+        renderCfMed=__bkp3.renderCfMed; renderCfGate=__bkp3.renderCfGate;
+        cfConf=__bkp3.cfConf; cfEstadiaId=__bkp3.cfEstadiaId;
+        renderDaycare=__bkp3.renderDaycare; dcChamada=__bkp3.dcChamada;
+        currentHosp=__bkp3.currentHosp; renderHosp=__bkp3.renderHosp;
+        ciPelAtual=__bkp3.ciPelAtual; ciRenderCadastroFalta=__bkp3.ciRenderCadastroFalta;
+      `, ctx);
+      ctx.document.getElementById = gebOrig;
+    }
+
+    const r3 = ctx.__l3res || {};
+    const rastro3 = ctx.__l3 || [];
+    const falhou3 = rastro3.filter((e) => e.acao === 'gravacao-FALHOU');
+    const alertas3 = ctx.__l3alerta || [];
+    const visto3 = JSON.stringify(rastro3).slice(0, 260);
+
+    check('ckSalvar sem banco NÃO fecha a tela nem limpa o rascunho',
+      r3.ckAtualDepois === true && r3.ckRascunhoDepois === true && r3.ckFechou === 0,
+      'ckAtual=' + r3.ckAtualDepois + ' ckRascunho=' + r3.ckRascunhoDepois + ' renderCheckin×' + r3.ckFechou);
+    check('ckSalvar sem banco avisa (zAlertao) e deixa rastro',
+      alertas3.some((a) => a.titulo.indexOf('NADA FOI SALVO') >= 0) &&
+      falhou3.some((e) => e.detalhe.indexOf('check-in do corpo') === 0),
+      JSON.stringify(alertas3).slice(0, 200));
+    check('ckSalvar sem banco NÃO audita o check-in como concluído',
+      !rastro3.some((e) => e.acao === 'checkin-corpo' || e.acao === 'checkout-corpo'), visto3);
+    check('cfConfirmarAlarme sem banco NÃO marca confirmado',
+      r3.medDepois === true, 'cfConf.medicacao ficou ' + JSON.stringify(r3.medDepois));
+    check('marcarPresenca sem banco deixa rastro de banco reconectando',
+      falhou3.some((e) => e.detalhe.indexOf('presença na chamada') === 0 &&
+        e.detalhe.indexOf('reconectando') > 0), visto3);
+    check('setHospAlergia sem banco deixa rastro e avisa na tela',
+      falhou3.some((e) => e.detalhe.indexOf('alergia/') === 0 &&
+        e.detalhe.indexOf('reconectando') > 0) &&
+      String(ctx.__l3st['hf-alergia-st'] || '').indexOf('NÃO salvou') >= 0,
+      JSON.stringify(ctx.__l3st['hf-alergia-st'] || '').slice(0, 160));
+    check('ciSalvarCadastroFalta: banco recusa -> nada de "✅ salvo"',
+      String(r3.statusRecusa).indexOf('✅') < 0 &&
+      String(r3.statusRecusa).indexOf('NÃO salvou') >= 0, JSON.stringify(r3.statusRecusa));
+    check('ciSalvarCadastroFalta: banco aceita -> aí sim "✅ salvo"',
+      String(r3.statusOk).indexOf('✅') >= 0, JSON.stringify(r3.statusOk));
+    check('setPelExtra nunca rejeita: sem banco resolve {ok:false}',
+      r3.semBancoRejeitou !== true && !!r3.semBanco && r3.semBanco.ok === false,
+      'rejeitou=' + (r3.semBancoRejeitou === true) + ' valor=' + JSON.stringify(r3.semBanco));
+    check('setPelExtra com banco recusando resolve {ok:false} e deixa rastro',
+      r3.recusaRejeitou !== true && !!r3.recusa && r3.recusa.ok === false &&
+      falhou3.some((e) => e.detalhe.indexOf('ficha do cadastro') === 0),
+      'rejeitou=' + (r3.recusaRejeitou === true) + ' valor=' + JSON.stringify(r3.recusa));
+  }
+  console.log('');
+
   // ---- resumo ----
   console.log('== Resultado: ' + pass + ' ok, ' + fail + ' falha(s) ==');
   if (fail) { console.log('\nFalhas:'); fails.forEach((f) => console.log('  - ' + f)); }
