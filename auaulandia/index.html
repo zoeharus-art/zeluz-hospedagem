@@ -9589,7 +9589,7 @@
   // Agora existe um carimbo: esta constante é a versão que o aparelho está rodando, e o
   // Firebase guarda a versão publicada. Quando as duas diferem, aparece o aviso — mas
   // NUNCA recarrega sozinho: recarregar no meio de um check-in perderia o trabalho.
-  const APP_VERSAO='2026-08-26-12';
+  const APP_VERSAO='2026-08-26-13';
   function vigiarVersao(){
     if(!DB) return;
     try{
@@ -18705,8 +18705,8 @@
     });
     var falta=dashDetFalta(it.k);
     h+='<div class="hint" style="margin-top:9px">Vai para a planilha assim: <strong>'+escAttr(sel+dashDetTexto(it.k))+'</strong></div>'
-      +'<button class="btn" style="margin-top:8px;width:100%'+(falta?';opacity:.55':'')+'"'
-      +' onclick="dashLancarSel(\''+it.k+'\')">Lançar na planilha</button>'
+      +'<button class="btn '+(falta?'btn-gold':'btn-primary')+'" style="margin-top:8px;width:100%"'
+      +' onclick="dashLancarSel(\''+it.k+'\')">'+(falta?'Falta responder acima':'Lançar na planilha')+'</button>'
       +(falta?('<div class="hint" style="margin-top:5px;color:var(--crm-atencao-text)"><strong>Antes precisa responder:</strong> '+escAttr(falta)+'</div>'):'');
     return h;
   }
