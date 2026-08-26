@@ -9589,7 +9589,7 @@
   // Agora existe um carimbo: esta constante é a versão que o aparelho está rodando, e o
   // Firebase guarda a versão publicada. Quando as duas diferem, aparece o aviso — mas
   // NUNCA recarrega sozinho: recarregar no meio de um check-in perderia o trabalho.
-  const APP_VERSAO='2026-08-26-13';
+  const APP_VERSAO='2026-08-26-14';
   function vigiarVersao(){
     if(!DB) return;
     try{
@@ -17158,11 +17158,15 @@
         if(cat==='morador') return;                       // a moradora não tem tutor a consultar
         var k=pelKey(p);
         var r=ALG_RESP[k]||null;
-        var meses=r?algMesesDesde(r.quando):null;
+        // Registro sem texto = pergunta feita, tutor ainda calado. NÃO é resposta e não
+        // pode tirar ninguém da fila (foi assim que 3 FILHOts sumiram em 26/ago).
+        var respondeu=!!(r&&String(r.resposta||'').trim());
+        var meses=respondeu?algMesesDesde(r.quando):null;
         var vencido=(meses!=null&&meses>=ALG_MESES);
-        if(r&&!vencido) return;                           // respondeu e ainda vale
+        if(respondeu&&!vencido) return;                   // respondeu de verdade e ainda vale
         out[(cat==='hospede'||cat==='avulso')?'hospede':'auluno']
-          .push({p:p, k:k, nome:pelNome(p), r:r, meses:meses, vencido:vencido});
+          .push({p:p, k:k, nome:pelNome(p), r:r, meses:meses, vencido:vencido,
+                 esperando:!!(r&&!respondeu)});
       });
     }catch(e){}
     ['hospede','auluno'].forEach(function(c){
@@ -17321,8 +17325,10 @@
         return '<div style="border-top:1px solid var(--line);padding:9px 0">'
           +'<div style="cursor:pointer;display:flex;justify-content:space-between;align-items:baseline" onclick="algAbrir(\''+escAttr(x.k).replace(/'/g,"\\'")+'\')">'
           +'<span style="font-weight:800;color:var(--z-blue);font-size:16px">'+escAttr(x.nome)+'</span>'
-          +'<span style="font-size:12px;font-weight:800;color:'+(x.vencido?'var(--crm-atencao-text)':'var(--crm-critico)')+'">'
-          +(x.vencido?('respondeu há '+x.meses+' meses — perguntar de novo'):'nunca respondeu')+'</span></div>'
+          +'<span style="font-size:12px;font-weight:800;color:'+((x.vencido||x.esperando)?'var(--crm-atencao-text)':'var(--crm-critico)')+'">'
+          +(x.vencido?('respondeu há '+x.meses+' meses — perguntar de novo')
+            :(x.esperando?('perguntamos em '+repBRdata(x.r.quando)+' — o tutor ainda não respondeu')
+              :'nunca perguntamos'))+'</span></div>'
           +(function(){ var r=ALG_RESP[x.k];
               if(!r||!r.resposta) return '';
               var dest=(ALG_DESTINOS.filter(function(d){ return d.k===r.destino; })[0]||{}).t

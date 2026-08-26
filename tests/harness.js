@@ -2080,6 +2080,67 @@ async function main() {
   }
   console.log('');
 
+  console.log('Perguntado nao e respondido: quem esta calado continua na fila (26/ago):');
+  {
+    // Adriana: "sem querer a Amanda cancelou o Billie do Cristiano e uma outra, ninguem
+    // ainda respondeu". Salvar em branco gravava registro vazio e a lista tratava
+    // qualquer registro como respondido — o FILHOt sumia da fila.
+    check('respondido passa a exigir texto, nao so existir registro',
+      /var respondeu=!!\(r&&String\(r\.resposta\|\|''\)\.trim\(\)\)/.test(html));
+    check('so sai da fila quem respondeu de verdade',
+      /if\(respondeu&&!vencido\) return;/.test(html));
+    check('a tela separa "ainda nao respondeu" de "nunca perguntamos"',
+      /o tutor ainda n\u00e3o respondeu/.test(html) && /nunca perguntamos/.test(html));
+    check('quem ja foi perguntado nao aparece em vermelho de nunca-perguntado',
+      /\(x\.vencido\|\|x\.esperando\)\?'var\(--crm-atencao-text\)'/.test(html));
+    check('gravar em branco continua barrado na entrada',
+      /Escreva o que o tutor respondeu/.test(html));
+
+    // a fila montada com o dado real do banco: os 3 que sumiram tem de voltar
+    if (typeof ctx.algLista === 'function') {
+      ctx.ALG_RESP = (await dbRead('daycare/alergia-confirmada', token)) || {};
+      const total = Object.keys(ctx.ALG_RESP).length;
+      check('li as respostas do tutor no banco (' + total + ')', total > 0);
+      const vazios = Object.keys(ctx.ALG_RESP).filter((k) => !String(ctx.ALG_RESP[k].resposta || '').trim());
+      const L = ctx.algLista();
+      const naFila = [...L.hospede, ...L.auluno].map((x) => x.k);
+      // A bancada carrega menos FILHOts que o app: os hospedes entram em PELUDINHOS por um
+      // carregamento que o sandbox nao roda (118 aqui, 142 no navegador). Cobrar deles seria
+      // acusar um bug que nao existe — mas ficar calado seria pior. Entao separa-se: o que
+      // este ambiente PODE julgar, e o que ele nao alcanca (dito em voz alta).
+      const noCadastro = (k) => (ctx.PELUDINHOS || []).some((x) => ctx.pelKey(x) === k);
+      const porque = (k) => {
+        const p = (ctx.PELUDINHOS || []).find((x) => ctx.pelKey(x) === k);
+        if (typeof ctx.pelInativo === 'function' && ctx.pelInativo(p)) return 'marcado como inativo';
+        const cat = (typeof ctx.pelCategoria === 'function') ? ctx.pelCategoria(p) : '?';
+        if (cat === 'morador') return 'categoria morador (nao tem tutor a consultar)';
+        return 'categoria ' + cat + ' — deveria estar na fila';
+      };
+      const foraDoAlcance = vazios.filter((k) => !noCadastro(k));
+      if (foraDoAlcance.length) {
+        console.log('    (nao verificavel aqui — o sandbox nao carrega hospedes: ' +
+          foraDoAlcance.join(', ') + '. Conferir no app.)');
+      }
+      const faltando = vazios.filter((k) => noCadastro(k) && !naFila.includes(k))
+        .map((k) => k + ' [' + porque(k) + ']');
+      check('todo registro sem resposta voltou para a fila (' + vazios.length + ' no banco)',
+        faltando.length === 0, 'fora da fila: ' + JSON.stringify(faltando));
+      if (!vazios.length) console.log('    (nenhum registro sem resposta no banco agora — nada a recuperar)');
+      const marcados = [...L.hospede, ...L.auluno].filter((x) => x.esperando).map((x) => x.k);
+      const julgaveis = vazios.filter(noCadastro);
+      check('e aparecem marcados como "esperando resposta"' +
+        (julgaveis.length < vazios.length ? ' (dos ' + julgaveis.length + ' ao alcance)' : ''),
+        julgaveis.every((k) => marcados.includes(k)),
+        JSON.stringify({ julgaveis, marcados }));
+      const comTexto = Object.keys(ctx.ALG_RESP).filter((k) => String(ctx.ALG_RESP[k].resposta || '').trim());
+      const voltouSemPrecisar = comTexto.filter((k) => naFila.includes(k) &&
+        ![...L.hospede, ...L.auluno].find((x) => x.k === k && x.vencido));
+      check('quem respondeu de verdade continua fora da fila',
+        voltouSemPrecisar.length === 0, JSON.stringify(voltouSemPrecisar));
+    }
+  }
+  console.log('');
+
   // ---- resumo ----
   console.log('== Resultado: ' + pass + ' ok, ' + fail + ' falha(s) ==');
   if (fail) { console.log('\nFalhas:'); fails.forEach((f) => console.log('  - ' + f)); }
