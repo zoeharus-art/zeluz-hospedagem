@@ -2520,8 +2520,8 @@
         <h2>Datas da estadia</h2>
         <div class="hint">Cada estadia é uma pasta separada — ração, remédio e pertences nunca se misturam entre uma vez e outra.</div>
         <div class="cad-grid">
-          <div class="field"><label>Entrada *</label><input type="date" class="cad-in" id="ciEntrada" onchange="ciCalcDias()"></div>
-          <div class="field"><label>Saída prevista</label><input type="date" class="cad-in" id="ciSaida" onchange="ciCalcDias()"></div>
+          <div class="field"><label>Entrada *</label><input type="date" class="cad-in" id="ciEntrada" onchange="ciCalcDias()" min="2015-01-01" max="2035-12-31" onkeydown="return dataSoNoCalendario(event)"></div>
+          <div class="field"><label>Saída prevista</label><input type="date" class="cad-in" id="ciSaida" onchange="ciCalcDias()" min="2015-01-01" max="2035-12-31" onkeydown="return dataSoNoCalendario(event)"></div>
         </div>
       </div>
 
@@ -2916,8 +2916,8 @@
           </div>
           <div class="mag-datas" style="margin-top:10px">
             <span class="mu-lab">Período</span>
-            <label class="mag-data-f"><span>Início</span><input type="date" id="vmIni" data-c="ini"></label>
-            <label class="mag-data-f mag-data-fim"><span>Tomar até (término)</span><input type="date" id="vmFim" data-c="fim"></label>
+            <label class="mag-data-f"><span>Início</span><input type="date" id="vmIni" data-c="ini" min="2015-01-01" max="2035-12-31" onkeydown="return dataSoNoCalendario(event)"></label>
+            <label class="mag-data-f mag-data-fim"><span>Tomar até (término)</span><input type="date" id="vmFim" data-c="fim" min="2015-01-01" max="2035-12-31" onkeydown="return dataSoNoCalendario(event)"></label>
             <button type="button" class="mag-continuo" onclick="medToggleContinuo(this)">Uso contínuo</button>
           </div>
           <div class="mag-freq" data-freqtipo="diario" style="margin-top:8px;border-radius:10px;border-top:none;border:1.5px solid var(--line)">
@@ -2951,7 +2951,7 @@
         <h2 style="font-size:19px">Registrar consulta</h2>
         <div class="hint">O receituário no sistema. Fica datado e assinado na pasta da estadia. As recomendações e os cuidados viram instruções visíveis na ficha do peludinho para a plantonista e a monitora.</div>
         <div class="vet-row">
-          <div class="field"><label>Data da consulta</label><input id="vcData" class="cad-in" type="date"></div>
+          <div class="field"><label>Data da consulta</label><input id="vcData" class="cad-in" type="date" min="2015-01-01" max="2035-12-31" onkeydown="return dataSoNoCalendario(event)"></div>
           <div class="field"><label>Assinatura</label><input id="vcAssina" class="cad-in" readonly></div>
         </div>
         <div class="vet-row" style="margin-top:10px">
@@ -2976,7 +2976,7 @@
           <h3>Reavaliação</h3>
           <div class="hint" style="margin-top:0">No dia marcado, o sistema avisa a Veterinária e a Gestão que este peludinho tem reavaliação. Fim da dependência da memória.</div>
           <div class="vet-row" style="margin-top:8px">
-            <div class="field"><label>Reavaliar em</label><input id="vcReaval" class="cad-in" type="date"></div>
+            <div class="field"><label>Reavaliar em</label><input id="vcReaval" class="cad-in" type="date" min="2015-01-01" max="2035-12-31" onkeydown="return dataSoNoCalendario(event)"></div>
             <div class="field"><label>Motivo da reavaliação</label><input id="vcReavalMotivo" class="cad-in" placeholder="Ex: reavaliar a córnea" autocomplete="off"></div>
           </div>
           <div class="hint" style="margin-top:6px">Deixar em branco NÃO apaga a reavaliação já marcada — para remover, use o botão abaixo.</div>
@@ -3281,8 +3281,8 @@
       <!-- Data SÓ pelo calendário (Adriana, 13/ago/2026): digitar é onde nasce o erro de ano
            e de mês. O campo abre o calendário ao toque e não aceita digitação. -->
       <div class="cad-grid2">
-        <div><label class="cad-lb">Entrada</label><input class="cad-in" type="date" id="orcEntrada" onkeydown="return orcBloquearDigitacao(event)" onpaste="return false" onfocus="orcAbrirCalendario(this)" onclick="orcAbrirCalendario(this)" onchange="orcCalcular()"></div>
-        <div><label class="cad-lb">Saída</label><input class="cad-in" type="date" id="orcSaida" onkeydown="return orcBloquearDigitacao(event)" onpaste="return false" onfocus="orcAbrirCalendario(this)" onclick="orcAbrirCalendario(this)" onchange="orcCalcular()"></div>
+        <div><label class="cad-lb">Entrada</label><input class="cad-in" type="date" id="orcEntrada" onkeydown="return orcBloquearDigitacao(event)" onpaste="return false" onfocus="orcAbrirCalendario(this)" onclick="orcAbrirCalendario(this)" onchange="orcCalcular()" min="2015-01-01" max="2035-12-31"></div>
+        <div><label class="cad-lb">Saída</label><input class="cad-in" type="date" id="orcSaida" onkeydown="return orcBloquearDigitacao(event)" onpaste="return false" onfocus="orcAbrirCalendario(this)" onclick="orcAbrirCalendario(this)" onchange="orcCalcular()" min="2015-01-01" max="2035-12-31"></div>
       </div>
       <div class="hint" style="margin-top:6px">Toque no campo e escolha no calendário — não dá para digitar, é assim que o ano errado não passa.</div>
       <div id="orcAvisoData"></div>
@@ -3385,13 +3385,13 @@
 
         <div id="repBlocoDia">
           <label class="rep-lb">Que dia ele não vem?</label>
-          <input type="date" class="rep-in" id="repData">
+          <input type="date" class="rep-in" id="repData" min="2015-01-01" max="2035-12-31" onkeydown="return dataSoNoCalendario(event)">
         </div>
 
         <div id="repBlocoPeriodo" style="display:none">
           <div class="rep-grid">
-            <div><label class="rep-lb">A partir de</label><input type="date" class="rep-in" id="repDe" onchange="repPreverDias()"></div>
-            <div><label class="rep-lb">Até</label><input type="date" class="rep-in" id="repAte" onchange="repPreverDias()"></div>
+            <div><label class="rep-lb">A partir de</label><input type="date" class="rep-in" id="repDe" onchange="repPreverDias()" min="2015-01-01" max="2035-12-31" onkeydown="return dataSoNoCalendario(event)"></div>
+            <div><label class="rep-lb">Até</label><input type="date" class="rep-in" id="repAte" onchange="repPreverDias()" min="2015-01-01" max="2035-12-31" onkeydown="return dataSoNoCalendario(event)"></div>
           </div>
           <div class="rep-atalhos">
             <span class="dia clic" onclick="repAtalho(30)">Cio — 30 dias</span>
@@ -3411,7 +3411,7 @@
         </div>
 
         <label class="rep-lb">O tutor já escolheu o dia de repor? <span style="font-weight:500;color:var(--muted)">(opcional — pode deixar em branco)</span></label>
-        <input type="date" class="rep-in" id="repVolta">
+        <input type="date" class="rep-in" id="repVolta" min="2015-01-01" max="2035-12-31" onkeydown="return dataSoNoCalendario(event)">
         <div class="rep-res-sub" id="repVoltaAviso" style="padding:4px 2px">Se ele já disse "no dia 28 eu quero a reposição", marque aqui. A recepção vê o agendamento na tela de Reposições e no extrato do peludinho.</div>
 
         <label class="rep-lb">Detalhe (o que o tutor falou)</label>
@@ -4214,6 +4214,31 @@
   // ===== DATA DE HOJE — FONTE ÚNICA (Fase 1, 25/ago/2026) =====================================
   // Antes existiam 5 cópias idênticas deste cálculo (repHojeISO, hojeISO ×2, ciHoje, hospHojeISO).
   // Agora só esta calcula; as outras são apelidos e continuam existindo para não mexer em 61 chamadas.
+
+  // ===== DATA SÓ PELO CALENDÁRIO — Adriana, 26/ago/2026 ===========================
+  // "Tem que corrigir para que nunca consigam digitar a data errada."
+  // 13 fichas ficaram com ano 0026 / 0207 / 0001: a pessoa digita "26" no ano e o
+  // navegador grava o ano 26. Agora o campo recusa o teclado — só o calendarinho
+  // escolhe — e o próprio calendário não oferece nada fora de 2015 a 2035.
+  // Apagar continua valendo (Backspace/Delete): corrigir um lançamento errado não pode
+  // depender de mexer no banco. Tab e setas também passam, senão o campo prende quem
+  // navega pelo teclado.
+  var DATA_MIN='2015-01-01', DATA_MAX='2035-12-31';
+  function dataSoNoCalendario(ev){
+    try{
+      var t=(ev&&(ev.key||ev.code))||'';
+      var livres=['Backspace','Delete','Tab','Escape','Enter','ArrowUp','ArrowDown','ArrowLeft','ArrowRight','Home','End',' '];
+      if(livres.indexOf(t)>=0) return true;
+      if(ev&&(ev.ctrlKey||ev.metaKey)) return true;     // colar/copiar continuam
+      if(ev&&ev.preventDefault) ev.preventDefault();
+      return false;
+    }catch(e){ return true; }
+  }
+  // Última barreira: mesmo colado ou vindo de ficha antiga, ano impossível não passa.
+  function dataPlausivel(v){
+    if(!/^\d{4}-\d{2}-\d{2}$/.test(v||'')) return false;
+    return v>=DATA_MIN && v<=DATA_MAX;
+  }
   function zHojeISO(){ var d=new Date(),p=function(x){return String(x).padStart(2,'0');}; return d.getFullYear()+'-'+p(d.getMonth()+1)+'-'+p(d.getDate()); }
   function repHojeISO(){ return zHojeISO(); }
 
@@ -5652,8 +5677,8 @@
     // Bloco de período (início / fim / uso contínuo) — igual no Check-in e no Cuidado Vet.
     const datasBlock='<div class="mag-datas">'
       +'<span class="mu-lab">Período</span>'
-      +'<label class="mag-data-f"><span>Início</span><input type="date" data-c="ini" value="'+escAttr(item.dataInicio||'')+'"></label>'
-      +'<label class="mag-data-f mag-data-fim'+(cont?' off':'')+'"><span>Tomar até</span><input type="date" data-c="fim" value="'+escAttr(item.dataFim||'')+'"></label>'
+      +'<label class="mag-data-f"><span>Início</span><input type="date" data-c="ini" value="'+escAttr(item.dataInicio||'')+'" min="2015-01-01" max="2035-12-31" onkeydown="return dataSoNoCalendario(event)"></label>'
+      +'<label class="mag-data-f mag-data-fim'+(cont?' off':'')+'"><span>Tomar até</span><input type="date" data-c="fim" value="'+escAttr(item.dataFim||'')+'" min="2015-01-01" max="2035-12-31" onkeydown="return dataSoNoCalendario(event)"></label>'
       +'<button type="button" class="mag-continuo'+(cont?' on':'')+'" onclick="medToggleContinuo(this)">Uso contínuo</button>'
       +'</div>';
     // Frequência: todos os dias, dias específicos da semana (2x/semana, 1x/semana…) ou dia sim/dia não.
@@ -8605,7 +8630,7 @@
       +'<div id="orcCfgStatus" class="hint" style="margin-top:6px"></div>'
       +'<div style="margin-top:16px"><div class="ff-tit">Feriados (não entregamos)</div>'
       +'<div class="hint">Nacionais, de Minas e os dois municipais de BH — 15/08 e 08/12 — já vêm prontos. Acrescente recesso e datas próprias da Zêluz.</div>'
-      +'<div class="cad-grid2" style="margin-top:8px"><div><label class="cad-lb">Data</label><input class="cad-in" type="date" id="orcFerData"></div>'
+      +'<div class="cad-grid2" style="margin-top:8px"><div><label class="cad-lb">Data</label><input class="cad-in" type="date" id="orcFerData" min="2015-01-01" max="2035-12-31" onkeydown="return dataSoNoCalendario(event)"></div>'
       +'<div><label class="cad-lb">Nome</label><input class="cad-in" id="orcFerNome" placeholder="Ex: recesso da Zêluz"></div></div>'
       +'<button class="btn btn-primary" style="margin-top:8px" onclick="orcAddFeriado()">Acrescentar feriado</button>'
       +'<div style="margin-top:10px">'+(futuros.length?futuros.map(function(d){
@@ -9564,7 +9589,7 @@
   // Agora existe um carimbo: esta constante é a versão que o aparelho está rodando, e o
   // Firebase guarda a versão publicada. Quando as duas diferem, aparece o aviso — mas
   // NUNCA recarrega sozinho: recarregar no meio de um check-in perderia o trabalho.
-  const APP_VERSAO='2026-08-26-08';
+  const APP_VERSAO='2026-08-26-10';
   function vigiarVersao(){
     if(!DB) return;
     try{
@@ -10514,7 +10539,7 @@
       +'<div style="font-weight:800;font-size:17px;color:var(--z-blue);margin-bottom:2px">Pernoite de '+escAttr(reg.nome||'')+'</div>'
       +'<div style="font-size:13.5px;color:var(--muted);font-weight:600;margin-bottom:12px">Pode ser hoje ou um dia combinado com o tutor. Quem estiver de plantão nessa noite já vai ver na lista dele.</div>'
       +'<div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:10px">'
-      +'<label style="flex:1;min-width:150px;font-size:12px;font-weight:700;color:var(--muted)">Entra no dia<br><input type="date" class="cad-in" id="pfData" value="'+escAttr(hoje)+'" min="'+escAttr(hoje)+'"></label>'
+      +'<label style="flex:1;min-width:150px;font-size:12px;font-weight:700;color:var(--muted)">Entra no dia<br><input type="date" class="cad-in" id="pfData" value="'+escAttr(hoje)+'" min="'+escAttr(hoje)+'" max="2035-12-31" onkeydown="return dataSoNoCalendario(event)"></label>'
       +'<label style="flex:1;min-width:110px;font-size:12px;font-weight:700;color:var(--muted)">Quantas noites<br><input type="number" class="cad-in" id="pfNoites" value="1" min="1" max="7"></label>'
       +'</div>'
       +'<div style="font-size:13.5px;font-weight:700;color:var(--z-blue);margin:14px 0 6px">Todo pernoite janta</div>'
@@ -11293,7 +11318,7 @@
             // consultor tem na mão. O vencimento sai daqui sozinho — ele não digita, não calcula
             // e não erra. O mês do pagamento conta como o 1º mês do plano.
             +'<div class="field"><label>Data do pagamento'+(!r.plano?' <span style="color:var(--crm-critico);font-weight:800">— escolha o plano primeiro</span>':'')+'</label>'
-              +'<input type="date" class="cad-in" value="'+(r.inicio||'')+'"'+(!r.plano?' disabled style="opacity:.55;cursor:not-allowed" onclick="avisoEscolhaPlano()"':'')+' onchange="setRenovInicio(this.value)">'
+              +'<input type="date" class="cad-in" value="'+(r.inicio||'')+'"'+(!r.plano?' disabled style="opacity:.55;cursor:not-allowed" onclick="avisoEscolhaPlano()"':'')+' onchange="setRenovInicio(this.value)" min="2015-01-01" max="2035-12-31" onkeydown="return dataSoNoCalendario(event)">'
               +(r.plano?'<div class="hint" style="font-size:11px;margin-top:3px">O mês deste pagamento já conta como o 1º mês do plano. O vencimento é calculado sozinho.</div>':'')+'</div>'
             +'<div class="field"><label>Mensalidade'+((r.ordemPet||1)>1?' (com desconto)':'')+'</label><div class="prev-calc">'+(mens?fmtCent(mens):'escolha o plano')+'</div></div>'
             // O vencimento em destaque: é o número que a consultora confere antes de confirmar.
@@ -13280,8 +13305,8 @@
         // guardava o valor ANTIGO da ficha e o lançamento salvava esse valor, ignorando a data
         // nova. Agora, ao trocar a data de "Feito em", o "Vale até" se refaz na hora — e quem
         // quiser uma data diferente (o veterinário pediu antes) ainda pode escrever por cima.
-        +'<div><label class="cad-lb">Feito em</label><input type="date" class="cad-in" id="prevT_'+chave+'_'+it.k+'" value="'+escAttr(feito)+'" max="'+hojeISO()+'" onchange="prevRecalcular(\''+chave+'\',\''+it.k+'\')"></div>'
-        +'<div><label class="cad-lb">Vale até</label><input type="date" class="cad-in" id="prevP_'+chave+'_'+it.k+'" value="'+escAttr(prox)+'" placeholder="calculo sozinho"></div>'
+        +'<div><label class="cad-lb">Feito em</label><input type="date" class="cad-in" id="prevT_'+chave+'_'+it.k+'" value="'+escAttr(feito)+'" max="'+hojeISO()+'" onchange="prevRecalcular(\''+chave+'\',\''+it.k+'\')" min="2015-01-01" onkeydown="return dataSoNoCalendario(event)"></div>'
+        +'<div><label class="cad-lb">Vale até</label><input type="date" class="cad-in" id="prevP_'+chave+'_'+it.k+'" value="'+escAttr(prox)+'" placeholder="calculo sozinho" min="2015-01-01" max="2035-12-31" onkeydown="return dataSoNoCalendario(event)"></div>'
         // Quem deu: em casa o tutor às vezes antecipa por ordem do veterinário — o registro
         // precisa dizer QUEM deu, senão a conta da próxima dose fica sem dono (Adriana, 22/ago).
         +'<div style="grid-column:1/-1"><label class="cad-lb">Quem deu</label>'
@@ -13468,7 +13493,7 @@
           : '')
         // Adriana, 25/ago/2026: "ter o local para colocar o nome — igual o vermífugo tem".
         +'<div class="field"><label>Nome do produto usado</label><input class="cad-in" value="'+escAttr(ex.ecto_nome||ex.ecto_outro_nome||'')+'" placeholder="Ex: NexGard Spectra 15 mg · Frontline" onchange="pbSet(\'ecto\',{ecto_nome:this.value})"></div>'
-        +'<div class="field"><label>Aplicado em</label><input type="date" class="cad-in" value="'+(ex.ecto_t||'')+'" onchange="pbSet(\'ecto\',{ecto_t:this.value})"></div>'
+        +'<div class="field"><label>Aplicado em</label><input type="date" class="cad-in" value="'+(ex.ecto_t||'')+'" onchange="pbSet(\'ecto\',{ecto_t:this.value})" min="2015-01-01" max="2035-12-31" onkeydown="return dataSoNoCalendario(event)"></div>'
         +'<div class="field"><label>Próxima aplicação</label><div class="prev-calc">'+(prox?fmtBR(prox)+(dur?' · '+dur+' dias':''):'preencha o produto e a data')+'</div></div>'
       +'</div>'+pbRodape('ecto','antiparasitário')+'</div>';
   }
@@ -13488,7 +13513,7 @@
           ? '<div class="field"><label>Nome da coleira</label><input class="cad-in" value="'+escAttr(ex.col_outro_nome||'')+'" onchange="pbSet(\'col\',{col_outro_nome:this.value})"></div>'
             +'<div class="field"><label>Dura quantos dias?</label><input class="cad-in" inputmode="numeric" value="'+escAttr(ex.col_outro_dias||'')+'" placeholder="Ex: 180" onchange="pbSet(\'col\',{col_outro_dias:this.value})"></div>'
           : '')
-        +'<div class="field"><label>Colocada em</label><input type="date" class="cad-in" value="'+(ex.col_t||'')+'" onchange="pbSet(\'col\',{col_t:this.value})"></div>'
+        +'<div class="field"><label>Colocada em</label><input type="date" class="cad-in" value="'+(ex.col_t||'')+'" onchange="pbSet(\'col\',{col_t:this.value})" min="2015-01-01" max="2035-12-31" onkeydown="return dataSoNoCalendario(event)"></div>'
         +'<div class="field"><label>Trocar em</label><div class="prev-calc">'+(prox?fmtBR(prox)+(dur?' · '+Math.round(dur/30)+' meses':''):'escolha a coleira e a data')+'</div></div>'
       +'</div>'+pbRodape('col','coleira')+'</div>';
   }
@@ -13505,7 +13530,7 @@
         +'<div class="field"><label>Quantas doses</label><div class="seg gold" data-single>'
           +['Dose única','2 doses'].map(function(d){ return '<button type="button" class="'+(ex.verm_doses===d?'on':'')+'" onclick="pick(this);pbSet(\'verm\',{verm_doses:\''+d+'\'})">'+d+'</button>'; }).join('')
         +'</div></div>'
-        +'<div class="field"><label>'+(ex.verm_doses==='2 doses'?'1ª dose em':'Deu em')+'</label><input type="date" class="cad-in" value="'+(ex.verm_t||'')+'" onchange="pbSet(\'verm\',{verm_t:this.value})"></div>'
+        +'<div class="field"><label>'+(ex.verm_doses==='2 doses'?'1ª dose em':'Deu em')+'</label><input type="date" class="cad-in" value="'+(ex.verm_t||'')+'" onchange="pbSet(\'verm\',{verm_t:this.value})" min="2015-01-01" max="2035-12-31" onkeydown="return dataSoNoCalendario(event)"></div>'
         +(ex.verm_doses==='2 doses'
           ? '<div class="field"><label>2ª dose (21 dias depois)</label><div class="prev-calc">'+(d2?fmtBR(d2):'informe a 1ª dose')+'</div></div>'
           : '')
@@ -13519,7 +13544,7 @@
       +'<div class="prev-tit">Exame de fezes '+(ex.fezes_p?seloValidade(ex.fezes_p):'')+'</div>'
       +'<div class="prev-nota">Quem faz exame de fezes não precisa de vermífugo.</div>'
       +'<div class="cad-grid">'
-        +'<div class="field"><label>Data do exame</label><input type="date" class="cad-in" value="'+(ex.fezes_t||'')+'" onchange="pbSet(\'fezes\',{fezes_t:this.value})"></div>'
+        +'<div class="field"><label>Data do exame</label><input type="date" class="cad-in" value="'+(ex.fezes_t||'')+'" onchange="pbSet(\'fezes\',{fezes_t:this.value})" min="2015-01-01" max="2035-12-31" onkeydown="return dataSoNoCalendario(event)"></div>'
         +'<div class="field"><label>Renovar em</label><div class="prev-calc">'+(prox?fmtBR(prox)+' · 4 meses':'informe a data')+'</div></div>'
         +'<div class="field" style="grid-column:1/-1"><label>Resultado</label><input class="cad-in" value="'+escAttr(ex.fezes_res||'')+'" placeholder="Ex: negativo para giárdia e helmintos" onchange="pbSet(\'fezes\',{fezes_res:this.value})"></div>'
       +'</div>'+pbRodape('fezes','exame de fezes')+'</div>';
@@ -13530,8 +13555,8 @@
       return '<div class="vac-row" style="grid-template-columns:1fr 1fr 1fr">'
         +'<div class="vac-nome" style="grid-column:1/-1">'+label+' '+seloValidade(ex[key+'_p'])+'</div>'
         +'<div class="field" style="margin:0"><label style="font-size:11px">Qual vacina / laboratório</label><input class="cad-in" value="'+escAttr(ex[key+'_nome']||'')+'" placeholder="Ex: V10 Nobivac" onchange="pbSet(\'vac\',{'+key+'_nome:this.value})"></div>'
-        +'<div class="field" style="margin:0"><label style="font-size:11px">Tomou em</label><input type="date" class="cad-in" value="'+(ex[key+'_t']||'')+'" onchange="pbSet(\'vac\',{'+key+'_t:this.value})"></div>'
-        +'<div class="field" style="margin:0"><label style="font-size:11px">Próxima</label><input type="date" class="cad-in" value="'+(ex[key+'_p']||'')+'" onchange="pbSet(\'vac\',{'+key+'_p:this.value})"></div>'
+        +'<div class="field" style="margin:0"><label style="font-size:11px">Tomou em</label><input type="date" class="cad-in" value="'+(ex[key+'_t']||'')+'" onchange="pbSet(\'vac\',{'+key+'_t:this.value})" min="2015-01-01" max="2035-12-31" onkeydown="return dataSoNoCalendario(event)"></div>'
+        +'<div class="field" style="margin:0"><label style="font-size:11px">Próxima</label><input type="date" class="cad-in" value="'+(ex[key+'_p']||'')+'" onchange="pbSet(\'vac\',{'+key+'_p:this.value})" min="2015-01-01" max="2035-12-31" onkeydown="return dataSoNoCalendario(event)"></div>'
         +'</div>';
     };
     return '<div id="pb-vac">'
@@ -13550,7 +13575,7 @@
     return '<div class="prev-bloco">'
       +'<div class="prev-tit">Cio</div>'
       +'<div class="cad-grid">'
-        +'<div class="field"><label>Último cio</label><input type="date" class="cad-in" value="'+(ex.cio_ult||'')+'" onchange="setPelExtra(pelAtual,{cio_ult:this.value});renderPelFicha()"></div>'
+        +'<div class="field"><label>Último cio</label><input type="date" class="cad-in" value="'+(ex.cio_ult||'')+'" onchange="setPelExtra(pelAtual,{cio_ult:this.value});renderPelFicha()" min="2015-01-01" max="2035-12-31" onkeydown="return dataSoNoCalendario(event)"></div>'
         +'<div class="field"><label>Próximo (aproximado)</label><div class="prev-calc">'+(prox?'por volta de '+mesAnoDe(prox):'informe o último cio')+'</div></div>'
       +'</div>'
       +'<div class="prev-nota">Aproximação: o ciclo regular é de '+CIO_MESES+' meses.</div></div>';
@@ -13923,7 +13948,7 @@
       <div class="ppanel2" id="ps-ident"><div class="card">
         <div class="cad-grid">
           <div class="field"><label>Raça</label><input id="pelFichaRaca" class="cad-in" list="racasList" value="${escAttr(pelGet(p,'raca'))}" onchange="onRacaPel(this.value)"></div>
-          <div class="field"><label>Data de nascimento</label><input type="date" class="cad-in" value="${pelNasc(p)||''}" onchange="setPelExtra(pelAtual,{nasc:this.value})"></div>
+          <div class="field"><label>Data de nascimento</label><input type="date" class="cad-in" value="${pelNasc(p)||''}" onchange="setPelExtra(pelAtual,{nasc:this.value})" min="2015-01-01" max="2035-12-31" onkeydown="return dataSoNoCalendario(event)"></div>
           <div class="field"><label>Sexo</label><div class="seg" data-single>${segBtnsPel('sexo',sexo,['Macho','Fêmea'])}</div></div>
           <div class="field"><label>Castrado?</label><div class="seg gold" data-single>${segBtnsPel('castrado',castr,['Sim','Não'])}</div></div>
           <div class="field"><label>Microchip</label><input class="cad-in" value="${escAttr(ex.microchip||'')}" placeholder="Número do microchip" onchange="setPelExtra(pelAtual,{microchip:this.value})"></div>
@@ -13934,9 +13959,9 @@
           <div class="field" style="grid-column:1/-1"><label>Tutor principal (quem responde pelos cuidados)</label><div class="seg gold" data-single>${segBtnsPel('tutorPrinc',ex.tutorPrinc||'Tutor 1',['Tutor 1','Tutor 2'])}</div></div>
           ${fieldSens('bairro','Bairro',`<input class="cad-in" value="${escAttr(ex.bairro||'')}" placeholder="Bairro" onchange="setPelExtra(pelAtual,{bairro:this.value})">`)}
           ${fieldSens('indicou','Quem indicou',`<input class="cad-in" value="${escAttr(ex.indicou||'')}" placeholder="Indicação" onchange="setPelExtra(pelAtual,{indicou:this.value})">`)}
-          <div class="field"><label>Data de matrícula</label><input type="date" class="cad-in" value="${ex.matricula||''}" onchange="setPelExtra(pelAtual,{matricula:this.value})"></div>
-          <div class="field"><label>Plano Day Care — início</label><input type="date" class="cad-in" value="${(ex.renov&&ex.renov.inicio)||''}" onchange="setPelRenov('inicio',this.value)"></div>
-          <div class="field"><label>Plano Day Care — fim (vencimento)</label><input type="date" class="cad-in" value="${(ex.renov&&ex.renov.fim)||''}" onchange="setPelRenov('fim',this.value)"></div>
+          <div class="field"><label>Data de matrícula</label><input type="date" class="cad-in" value="${ex.matricula||''}" onchange="setPelExtra(pelAtual,{matricula:this.value})" min="2015-01-01" max="2035-12-31" onkeydown="return dataSoNoCalendario(event)"></div>
+          <div class="field"><label>Plano Day Care — início</label><input type="date" class="cad-in" value="${(ex.renov&&ex.renov.inicio)||''}" onchange="setPelRenov('inicio',this.value)" min="2015-01-01" max="2035-12-31" onkeydown="return dataSoNoCalendario(event)"></div>
+          <div class="field"><label>Plano Day Care — fim (vencimento)</label><input type="date" class="cad-in" value="${(ex.renov&&ex.renov.fim)||''}" onchange="setPelRenov('fim',this.value)" min="2015-01-01" max="2035-12-31" onkeydown="return dataSoNoCalendario(event)"></div>
           <div class="field"><label>Frequência (automática pelos dias)</label><input id="pelFreqInput" class="cad-in" value="${escAttr(pelFreq(p))} por semana" readonly></div>
         </div>
         <div id="pel-saved" style="font-size:12px;color:var(--crm-ok);font-weight:700;margin-top:8px"></div>
@@ -13961,8 +13986,8 @@
 
         <h3 class="cad-sub">Saúde e rotina</h3>
         ${alertaPrevencao(ex,'saude','Escova e check-up')}
-        <div class="field" style="max-width:260px"><label>Último check-up</label><input type="date" class="cad-in" value="${ex.checkup_t||ex.checkup||''}" onchange="setPelExtra(pelAtual,{checkup_t:this.value, checkup_p:this.value?addDiasISO(this.value,365):''})"></div>
-        <div class="field" style="max-width:260px"><label>Última troca de escova de dentes</label><input type="date" class="cad-in" value="${ex.escova_t||''}" onchange="setPelExtra(pelAtual,{escova_t:this.value, escova_p:this.value?addDiasISO(this.value,90):''})"></div>
+        <div class="field" style="max-width:260px"><label>Último check-up</label><input type="date" class="cad-in" value="${ex.checkup_t||ex.checkup||''}" onchange="setPelExtra(pelAtual,{checkup_t:this.value, checkup_p:this.value?addDiasISO(this.value,365):''})" min="2015-01-01" max="2035-12-31" onkeydown="return dataSoNoCalendario(event)"></div>
+        <div class="field" style="max-width:260px"><label>Última troca de escova de dentes</label><input type="date" class="cad-in" value="${ex.escova_t||''}" onchange="setPelExtra(pelAtual,{escova_t:this.value, escova_p:this.value?addDiasISO(this.value,90):''})" min="2015-01-01" max="2035-12-31" onkeydown="return dataSoNoCalendario(event)"></div>
 
         <h3 class="cad-sub">Peso</h3>
         ${blocoPeso(ex)}
@@ -14049,7 +14074,7 @@
           <div class="field"><label>Algum problema de saúde</label><input class="cad-in" value="${escAttr(ex.problema||'')}" placeholder="Ex: cardíaco — ou vazio" onchange="setPelExtra(pelAtual,{problema:this.value});refreshPills()"></div>
           <div class="field"><label>Manias</label><input class="cad-in" value="${escAttr(ex.manias||'')}" placeholder="Ex: protege a comida" onchange="setPelExtra(pelAtual,{manias:this.value});refreshPills()"></div>
           <div class="field"><label>Em adaptacao (1&ordm; mes)?</label><div class="seg gold" data-single>${segBtnsPel('adaptacao',ex.adaptacao||'',['Sim','Nao'])}</div></div>
-          <div class="field"><label>Adaptacao comecou em</label><input type="date" class="cad-in" value="${escAttr(ex.adaptacao_desde||'')}" onchange="setPelExtra(pelAtual,{adaptacao_desde:this.value});renderPelFicha()">
+          <div class="field"><label>Adaptacao comecou em</label><input type="date" class="cad-in" value="${escAttr(ex.adaptacao_desde||'')}" onchange="setPelExtra(pelAtual,{adaptacao_desde:this.value});renderPelFicha()" min="2015-01-01" max="2035-12-31" onkeydown="return dataSoNoCalendario(event)">
             <div class="hint" style="margin-top:4px">${adaptTextoFicha(ex)}</div></div>
           <div class="field"><label>Come em comedouro lento?</label><div class="seg gold" data-single>${segBtnsPel('ansioso',ex.ansioso||'',['Sim','Nao'])}</div></div>
           <!-- MICROCHIP (Adriana, 19/ago/2026): "preciso de relatório de cães sem microchip".
@@ -14206,7 +14231,7 @@
       +NA_PREV.map(function(it){
         return '<div style="display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin:5px 0">'
           +'<span style="min-width:128px;font-size:12.5px;font-weight:800;color:var(--z-blue)">'+it.t+'</span>'
-          +'<input type="date" class="na-in" id="naP_'+it.k+'" style="width:auto;margin:0;flex:1;min-width:140px" max="'+hojeISO()+'" onchange="naMarcarFeito(\''+it.k+'\')">'
+          +'<input type="date" class="na-in" id="naP_'+it.k+'" style="width:auto;margin:0;flex:1;min-width:140px" max="'+hojeISO()+'" onchange="naMarcarFeito(\''+it.k+'\')" min="2015-01-01" onkeydown="return dataSoNoCalendario(event)">'
           +'<button type="button" class="btn" id="naF_'+it.k+'" style="background:var(--z-cream-warm);color:var(--z-blue);border:1.5px solid var(--line);padding:6px 11px;font-size:12px;font-weight:800" onclick="naAFazer(\''+it.k+'\')">a fazer na Zêluz</button>'
           +'</div>';
       }).join('');
@@ -17312,7 +17337,7 @@
               +'<div class="hint" style="margin-top:6px">Quando o tutor responder, escreva aqui o que ele disse e a data da resposta. <strong>O que você escrever vai para a ficha dele</strong> — escolha abaixo em qual campo.</div>'
               +'<input class="cad-in" id="algResp_'+escAttr(x.k)+'" placeholder="O que o tutor respondeu" autocomplete="off" style="margin:6px 0">'
               +algDestinoHTML(x.k)
-              +'<input class="cad-in" type="date" id="algData_'+escAttr(x.k)+'" value="'+hoje+'" style="margin-bottom:8px">'
+              +'<input class="cad-in" type="date" id="algData_'+escAttr(x.k)+'" value="'+hoje+'" style="margin-bottom:8px" min="2015-01-01" max="2035-12-31" onkeydown="return dataSoNoCalendario(event)">'
               +'<button type="button" class="btn btn-primary" style="width:100%" onclick="algResponder(\''+escAttr(x.k).replace(/'/g,"\\'")+'\')">✅ O tutor respondeu</button>'
               +'</div>'
             : '')
@@ -18265,8 +18290,9 @@
     {k:'saicedo',       t:'Sai mais cedo',              col:'Peludinho que sairá cedo',       colHora:'Hora Saída Cedo', hora:true, icone:'🚶'},
     {k:'avaliacao',     t:'Avaliação (Márcia)',         col:'Avaliação',                      colHora:'Horário',         hora:true, icone:'📋'},
     {k:'avulso',        t:'Avulso',                     col:'Avulso',                         icone:'📌'},
-    {k:'vermifugo',     t:'Vermífugo',                  col:'Vermifugo',                      icone:'💊'},
-    {k:'carrapaticida', t:'Carrapaticida',              col:'Carrapaticida',                  icone:'🔬'},
+    // detalhe:true → a tela pede QUANTO e ONDE antes de deixar lançar (ver dashDetalheHTML)
+    {k:'vermifugo',     t:'Vermífugo',                  col:'Vermifugo',                      icone:'💊', detalhe:true},
+    {k:'carrapaticida', t:'Carrapaticida',              col:'Carrapaticida',                  icone:'🔬', detalhe:true, pipeta:true},
     {k:'coleira',       t:'Troca de coleira',           col:'Troca de Coleira',               icone:'🏷️'},
     {k:'hidratacao',    t:'Hidratação patinha e focinho',col:'Hidratação patinha e Focinho',  icone:'💧'},
     {k:'adaptacao',     t:'Adaptação',                  col:'Adaptação',                      icone:'🌟'},
@@ -18534,9 +18560,71 @@
         +'<div style="margin-top:8px">'
         +'<input class="cad-in" id="dashB_'+it.k+'" placeholder="Buscar o FILHOt pelo nome…" autocomplete="off" oninput="dashSugerir(\''+it.k+'\')">'
         +(it.hora?('<div style="margin-top:6px"><label class="cad-lb">Horário</label><input type="time" class="cad-in" id="dashH_'+it.k+'" style="max-width:140px"></div>'):'')
+        +(it.detalhe?dashDetalheHTML(it):'')
         +'<div id="dashS_'+it.k+'" style="display:flex;flex-wrap:wrap;gap:5px;margin-top:6px"></div>'
         +'</div></div>';
     }).join('');
+  }
+
+  // ===== O DETALHE DO VERMÍFUGO E DO CARRAPATICIDA ================================
+  // Quantidade e situação, em botão. A recepção escrevia isso à mão na planilha, entre
+  // parênteses; aqui vira escolha, e o texto sai igualzinho do outro lado.
+  var DASH_QTD=[
+    {v:'',                     t:'sem dizer'},
+    {v:'MEIO COMPRIMIDO',      t:'½ comprimido'},
+    {v:'1 COMPRIMIDO',         t:'1 comprimido'},
+    {v:'1 COMPRIMIDO E MEIO',  t:'1 e ½'},
+    {v:'2 COMPRIMIDOS',        t:'2 comprimidos'},
+    {v:'3 COMPRIMIDOS',        t:'3 comprimidos'},
+    {v:'4 COMPRIMIDOS',        t:'4 comprimidos'}
+  ];
+  // Pipeta é o tubo inteiro: não existe meia pipeta, então a quantidade some da tela.
+  var DASH_PIPETA={v:'PIPETA', t:'Pipeta (tubo inteiro)'};
+  var DASH_SIT=[
+    {v:'',          t:'nada a dizer'},
+    {v:'NA BOLSA',  t:'Na bolsa dele'},
+    {v:'BANHO',     t:'Depois do banho'}
+  ];
+  var DASH_DET={};   // {item: {qtd:'', sit:''}}
+  function dashDet(k){ DASH_DET[k]=DASH_DET[k]||{qtd:'', sit:''}; return DASH_DET[k]; }
+  function dashSetDet(k, campo, valor){
+    var d=dashDet(k);
+    d[campo]=(d[campo]===valor)?'':valor;    // tocar de novo desmarca
+    // Pipeta e comprimido não convivem: escolher um limpa o outro.
+    if(campo==='qtd' && valor===DASH_PIPETA.v) d.pipeta=true;
+    if(campo==='qtd' && valor!==DASH_PIPETA.v) d.pipeta=false;
+    renderDash();
+  }
+  // O texto que vai para a planilha, entre parênteses: "(1 COMPRIMIDO · NA BOLSA)".
+  function dashDetTexto(k){
+    var d=dashDet(k);
+    var partes=[];
+    if(d.qtd) partes.push(d.qtd);
+    if(d.sit) partes.push(d.sit);
+    return partes.length ? (' (' + partes.join(' · ') + ')') : '';
+  }
+  function dashDetalheHTML(it){
+    var d=dashDet(it.k);
+    var botao=function(campo, valor, rotulo){
+      var on=(d[campo]===valor);
+      return '<button type="button" class="btn" style="padding:5px 11px;font-size:12.5px;font-weight:800;border:1.5px solid '
+        +(on?'var(--z-blue)':'var(--line)')+';background:'+(on?'var(--z-blue)':'var(--z-cream-warm)')
+        +';color:'+(on?'var(--z-cream)':'var(--z-blue)')+'"'
+        +' onclick="dashSetDet(\'' + it.k + '\',\'' + campo + '\',\'' + valor + '\')">' + escAttr(rotulo) + '</button>';
+    };
+    var h='<div style="margin-top:8px;padding-top:8px;border-top:1px dashed var(--line)">'
+      +'<label class="cad-lb">Quanto</label><div style="display:flex;flex-wrap:wrap;gap:5px;margin-top:3px">';
+    if(it.pipeta) h+=botao('qtd', DASH_PIPETA.v, DASH_PIPETA.t);
+    DASH_QTD.forEach(function(q){ if(q.v==='') return; h+=botao('qtd', q.v, q.t); });
+    h+='</div>'
+      +'<label class="cad-lb" style="margin-top:7px;display:block">Alguma observação</label>'
+      +'<div style="display:flex;flex-wrap:wrap;gap:5px;margin-top:3px">';
+    DASH_SIT.forEach(function(x){ if(x.v==='') return; h+=botao('sit', x.v, x.t); });
+    h+='</div>';
+    var prev=dashDetTexto(it.k);
+    h+='<div class="hint" style="margin-top:6px">Vai para a planilha assim: <strong>Nome/Raça'+escAttr(prev)+'</strong>'
+      +(prev?'':' — sem nada entre parênteses, que também vale.')+'</div>';
+    return h+'</div>';
   }
   function dashSugerir(k){
     var inp=document.getElementById('dashB_'+k), box=document.getElementById('dashS_'+k);
@@ -18560,6 +18648,9 @@
     var it=dashItem(k); if(!it||!DB) return;
     var hora=it.hora?String((document.getElementById('dashH_'+k)||{}).value||''):'';
     if(it.hora&&!hora){ alert('Escolha o horário antes — é ele que faz o alarme tocar na TV.'); return; }
+    // Vermífugo e carrapaticida levam o detalhe junto, na mesma célula da planilha:
+    // "Olivia/SRD (2 COMPRIMIDOS · NA BOLSA)". É o que a recepção já escrevia à mão.
+    if(it.detalhe) valor = valor + dashDetTexto(k);
     var lista=DASH_DADOS[k]||{};
     if(Object.keys(lista).some(function(id){ return jsNorm(lista[id].valor||'')===jsNorm(valor); })){
       alert(valor+' já está lançado em '+it.t+' hoje.'); return;
@@ -18570,6 +18661,8 @@
       DASH_DADOS[k]=DASH_DADOS[k]||{}; DASH_DADOS[k][ref.key]=reg;
       var b=document.getElementById('dashB_'+k); if(b) b.value='';
       var s=document.getElementById('dashS_'+k); if(s) s.innerHTML='';
+      // zera o detalhe: a dose do Olivia não pode grudar no próximo FILHOt
+      if(it.detalhe) DASH_DET[k]={qtd:'', sit:''};
       renderDash();
       if(typeof audit==='function') audit('dashboard-daycare','lançou '+valor+' em '+it.t,{pet:valor});
       dashEspelhar(k, ref.key, reg, 'lancar');
@@ -21609,8 +21702,8 @@
         + av
         + '<div class="he-main"><div class="he-nome">'+escAttr(e.nome||'')+'</div>'
         + '<div class="he-sub">Mudando as datas da hospedagem. A planilha não desfaz o que for salvo aqui.</div></div>'
-        + '<label style="font-size:12px;font-weight:700;color:var(--muted)">Entrada<br><input type="date" class="cad-in" id="hospEdIni" value="'+escAttr(e.entrada||'')+'"></label>'
-        + '<label style="font-size:12px;font-weight:700;color:var(--muted)">Saída<br><input type="date" class="cad-in" id="hospEdFim" value="'+escAttr(e.saida||'')+'"></label>'
+        + '<label style="font-size:12px;font-weight:700;color:var(--muted)">Entrada<br><input type="date" class="cad-in" id="hospEdIni" value="'+escAttr(e.entrada||'')+'" min="2015-01-01" max="2035-12-31" onkeydown="return dataSoNoCalendario(event)"></label>'
+        + '<label style="font-size:12px;font-weight:700;color:var(--muted)">Saída<br><input type="date" class="cad-in" id="hospEdFim" value="'+escAttr(e.saida||'')+'" min="2015-01-01" max="2035-12-31" onkeydown="return dataSoNoCalendario(event)"></label>'
         + '<div class="he-acoes"><button class="btn btn-primary" onclick="hospSalvarDatas(\''+id+'\')">Salvar</button>'
         + '<button class="btn" onclick="hospCancelarEdicao()">Cancelar</button></div></div>';
     }
@@ -21626,7 +21719,7 @@
         + av
         + '<div class="he-main"><div class="he-nome">Dar baixa — '+escAttr(e.nome||'')+'</div>'
         + '<div class="he-sub">Em que dia ele foi embora? Pode ser uma data passada. Depois da baixa ele sai do Plantão e deixa de bloquear um check-in novo.</div></div>'
-        + '<label style="font-size:12px;font-weight:700;color:var(--muted)">Foi embora em<br><input type="date" class="cad-in" id="hospBxData" value="'+escAttr(e.saida||hospHojeISO())+'" max="'+escAttr(hospHojeISO())+'"></label>'
+        + '<label style="font-size:12px;font-weight:700;color:var(--muted)">Foi embora em<br><input type="date" class="cad-in" id="hospBxData" value="'+escAttr(e.saida||hospHojeISO())+'" max="'+escAttr(hospHojeISO())+'" min="2015-01-01" onkeydown="return dataSoNoCalendario(event)"></label>'
         + '<div class="he-acoes"><button class="btn btn-primary" onclick="hospConfirmarBaixa(\''+id+'\')">Confirmar baixa</button>'
         + '<button class="btn" onclick="hospCancelarBaixa()">Cancelar</button></div></div>';
     }
@@ -21729,8 +21822,8 @@
       h+='<div class="hosp-est he-edit">'
         + '<div class="he-main"><div class="he-nome">'+(hospNovaPernoite?'🌙 Pernoite de hoje — ':'Nova hospedagem — ')+escAttr(hospNovaPend.nome||'')+'</div>'
         + '<div class="he-sub">Tutor: '+escAttr(hospNovaPend.tutor||'a confirmar')+'. '+(hospNovaPernoite?'Entra hoje e sai amanhã — confira as datas e salve. A monitora recebe na Conferência.':'Informe de quando a quando o FILHOt fica.')+'</div></div>'
-        + '<label style="font-size:12px;font-weight:700;color:var(--muted)">Entrada<br><input type="date" class="cad-in" id="hospNovaIni" value="'+escAttr(hospHojeISO())+'"></label>'
-        + '<label style="font-size:12px;font-weight:700;color:var(--muted)">Saída<br><input type="date" class="cad-in" id="hospNovaFim" value="'+(hospNovaPernoite?escAttr(_amanha):'')+'"></label>'
+        + '<label style="font-size:12px;font-weight:700;color:var(--muted)">Entrada<br><input type="date" class="cad-in" id="hospNovaIni" value="'+escAttr(hospHojeISO())+'" min="2015-01-01" max="2035-12-31" onkeydown="return dataSoNoCalendario(event)"></label>'
+        + '<label style="font-size:12px;font-weight:700;color:var(--muted)">Saída<br><input type="date" class="cad-in" id="hospNovaFim" value="'+(hospNovaPernoite?escAttr(_amanha):'')+'" min="2015-01-01" max="2035-12-31" onkeydown="return dataSoNoCalendario(event)"></label>'
         + '<div class="he-acoes"><button class="btn btn-primary" onclick="hospSalvarNova()">Salvar hospedagem</button>'
         + '<button class="btn" onclick="hospNovaPend=null;renderHospedesAba()">Cancelar</button></div></div>';
     }

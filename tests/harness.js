@@ -1931,6 +1931,63 @@ async function main() {
   }
   console.log('');
 
+  console.log('Data nao se digita mais -- so o calendario escolhe (26/ago):');
+  {
+    // 13 fichas ficaram com ano 0026 / 0207 / 0001 porque o campo aceitava digitacao.
+    const inputs = html.match(/<input[^>]*type="date"[^>]*>/g) || [];
+    check('existem campos de data no app', inputs.length > 30, String(inputs.length));
+    check('NENHUM campo de data aceita teclado',
+      inputs.filter((t) => !/onkeydown/.test(t)).length === 0,
+      String(inputs.filter((t) => !/onkeydown/.test(t)).length) + ' sem trava');
+    check('todo campo de data tem ano minimo', inputs.filter((t) => !/ min=/.test(t)).length === 0);
+    check('todo campo de data tem ano maximo', inputs.filter((t) => !/ max=/.test(t)).length === 0);
+    if (typeof ctx.dataSoNoCalendario === 'function') {
+      check('digitar numero e recusado', ctx.dataSoNoCalendario({ key: '2', preventDefault() {} }) === false);
+      check('apagar continua valendo', ctx.dataSoNoCalendario({ key: 'Backspace' }) === true);
+      check('Tab continua valendo (quem navega pelo teclado)', ctx.dataSoNoCalendario({ key: 'Tab' }) === true);
+      check('colar continua valendo', ctx.dataSoNoCalendario({ key: 'v', ctrlKey: true }) === true);
+    }
+    if (typeof ctx.dataPlausivel === 'function') {
+      check('ano 0026 nao passa nem colado', ctx.dataPlausivel('0026-02-13') === false);
+      check('data normal passa', ctx.dataPlausivel('2026-08-26') === true);
+    }
+  }
+  console.log('');
+
+  console.log('Vermifugo e carrapaticida levam o detalhe para a planilha:');
+  {
+    const item = (k) => {
+      const m = html.match(new RegExp("\{k:'" + k + "',[^}]*\}"));
+      return m ? m[0] : '';
+    };
+    check('vermifugo pede o detalhe', /detalhe:true/.test(item('vermifugo')));
+    check('carrapaticida pede o detalhe e oferece pipeta',
+      /detalhe:true/.test(item('carrapaticida')) && /pipeta:true/.test(item('carrapaticida')));
+    check('so esses dois pedem detalhe (banho e vet nao)',
+      !/detalhe:true/.test(item('banho')) && !/detalhe:true/.test(item('vet')));
+    if (typeof ctx.dashSetDet === 'function' && typeof ctx.dashDetTexto === 'function') {
+      ctx.DASH_DET = {};
+      ctx.dashSetDet('vermifugo', 'qtd', '2 COMPRIMIDOS');
+      check('a quantidade sai entre parenteses e em maiuscula',
+        ctx.dashDetTexto('vermifugo') === ' (2 COMPRIMIDOS)', JSON.stringify(ctx.dashDetTexto('vermifugo')));
+      ctx.dashSetDet('vermifugo', 'sit', 'NA BOLSA');
+      check('quantidade e situacao saem juntas',
+        ctx.dashDetTexto('vermifugo') === ' (2 COMPRIMIDOS · NA BOLSA)', JSON.stringify(ctx.dashDetTexto('vermifugo')));
+      ctx.dashSetDet('vermifugo', 'qtd', '2 COMPRIMIDOS');   // tocar de novo desmarca
+      check('tocar de novo desmarca a quantidade',
+        ctx.dashDetTexto('vermifugo') === ' (NA BOLSA)', JSON.stringify(ctx.dashDetTexto('vermifugo')));
+      ctx.DASH_DET = {};
+      check('sem detalhe nenhum, nao sai parentese vazio', ctx.dashDetTexto('vermifugo') === '');
+      ctx.dashSetDet('carrapaticida', 'sit', 'BANHO');
+      check('"depois do banho" tambem vale sozinho',
+        ctx.dashDetTexto('carrapaticida') === ' (BANHO)', JSON.stringify(ctx.dashDetTexto('carrapaticida')));
+      ctx.DASH_DET = {};
+    }
+    check('o detalhe entra no valor que vai para a planilha', /if\(it\.detalhe\) valor = valor \+ dashDetTexto\(k\);/.test(html));
+    check('o detalhe zera depois de lancar (nao gruda no proximo)', /if\(it\.detalhe\) DASH_DET\[k\]=\{qtd:'', sit:''\};/.test(html));
+  }
+  console.log('');
+
   // ---- resumo ----
   console.log('== Resultado: ' + pass + ' ok, ' + fail + ' falha(s) ==');
   if (fail) { console.log('\nFalhas:'); fails.forEach((f) => console.log('  - ' + f)); }
