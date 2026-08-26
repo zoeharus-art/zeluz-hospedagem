@@ -1877,6 +1877,60 @@ async function main() {
   }
   console.log('');
 
+  // ---- Prevenção: a tela cobrava o que ja estava feito (Adriana, 26/ago/2026) ----
+  console.log('Prevencao -- so cobra o que e real:');
+  {
+    const hoje = ctx.zHojeISO ? ctx.zHojeISO() : '2026-08-26';
+    const linhaItem = (k) => {
+      const m = html.match(new RegExp("\{k:'" + k + "'[^}]*\}"));
+      return m ? m[0] : '';
+    };
+    check('vermifugo aceita o nome antigo do campo', /alt:'vermifugo_p'/.test(linhaItem('verm_p')), linhaItem('verm_p').slice(0, 90));
+    check('ectoparasitas aceita o nome antigo do campo', /alt:'carrapaticida_p'/.test(linhaItem('ecto_p')), linhaItem('ecto_p').slice(0, 90));
+    check('escova e check-up sao ROTINA (nao entram na conta de prevencao)',
+      /rotina:true/.test(linhaItem('escova_p')) && /rotina:true/.test(linhaItem('checkup_p')));
+    check('escova e check-up sao opcionais (a casa ainda nao registra)',
+      /opcional:true/.test(linhaItem('escova_p')) && /opcional:true/.test(linhaItem('checkup_p')));
+
+    if (typeof ctx.prevFaltasDe === 'function') {
+      // ficha antiga: vermifugo e carrapaticida lancados com o nome velho, em dia
+      const emDia = ctx.orcMaisDias ? ctx.orcMaisDias(hoje, 30) : '2026-09-25';
+      const antiga = { vermifugo_p: emDia, carrapaticida_p: emDia,
+        vac_mult_p: emDia, vac_gripe_p: emDia, vac_raiva_p: emDia };
+      const f = ctx.prevFaltasDe(antiga).filter((x) => !x.rotina);
+      check('ficha antiga em dia NAO gera pendencia de prevencao', f.length === 0,
+        JSON.stringify(f.map((x) => x.nome)));
+
+      // data impossivel (ano 0026) nao e "vencido ha 664 mil dias"
+      const quebrada = ctx.prevFaltasDe({ vac_raiva_p: '0026-02-13', vac_mult_p: emDia, vac_gripe_p: emDia,
+        verm_p: emDia, ecto_p: emDia });
+      const inv = quebrada.filter((x) => x.tipo === 'invalida');
+      check('data com ano impossivel vira "invalida", nao "vencida"', inv.length === 1, JSON.stringify(quebrada.map((x) => x.tipo + ':' + x.nome)));
+      check('prevDataQuebrada reconhece 0026 e 0207',
+        ctx.prevDataQuebrada('0026-02-13') === true && ctx.prevDataQuebrada('0207-05-22') === true);
+      check('prevDataQuebrada aceita data normal', ctx.prevDataQuebrada('2026-08-26') === false);
+    }
+  }
+  console.log('');
+
+  console.log('Prevencao do hospede -- convite, nao cobranca:');
+  {
+    ['prevEhHospede', 'prevMensagemTutor', 'prevBlocoHospedes', 'prevMarcarAvisado', 'algGravarNaFicha'].forEach((n) =>
+      check(n + ' existe', typeof ctx[n] === 'function'));
+    if (typeof ctx.prevMensagemTutor === 'function') {
+      const msg = ctx.prevMensagemTutor({ nome: 'Simba', tutor: 'Marina Souza', sexo: 'Macho',
+        faltas: [{ nome: 'Vacina Múltipla', tipo: 'venc', data: '2026-03-17' }] });
+      check('a mensagem chama o tutor pelo primeiro nome', /Oi, Marina/.test(msg), msg.slice(0, 40));
+      check('a mensagem diz o que venceu e quando', /Vacina Múltipla/.test(msg) && /17\/03\/2026/.test(msg));
+      check('a mensagem convida a fazer na Zeluz', /veterinária|conosco/i.test(msg));
+    }
+    // a resposta do tutor sobre alergia TEM de chegar na ficha
+    check('a resposta do tutor escolhe um destino na ficha', /ALG_DESTINOS/.test(html));
+    check('sem destino escolhido, o app nao deixa salvar', /Diga ONDE isso entra na ficha/.test(html));
+    check('"nao tem restricao" NAO apaga a ficha sozinho', /if\(destino==='nada'\) return;/.test(html));
+  }
+  console.log('');
+
   // ---- resumo ----
   console.log('== Resultado: ' + pass + ' ok, ' + fail + ' falha(s) ==');
   if (fail) { console.log('\nFalhas:'); fails.forEach((f) => console.log('  - ' + f)); }

@@ -3808,7 +3808,10 @@
     if(v==='relatorios'){ if(typeof renderRelatorios==='function') renderRelatorios(); if(typeof orcCarregarLista==='function') orcCarregarLista(); }
     if(v==='acerto'){ if(typeof acertoCarregar==='function') acertoCarregar(); }
     if(v==='ritmo'){ if(typeof ritmoCarregar==='function') ritmoCarregar(); }
-    if(v==='vacinas'){ if(typeof renderPrevencao==='function') renderPrevencao(); }
+    if(v==='vacinas'){
+      if(typeof prevCarregarAvisos==='function') prevCarregarAvisos().then(function(){ if(typeof renderPrevencao==='function') renderPrevencao(); });
+      if(typeof renderPrevencao==='function') renderPrevencao();
+    }
     if(v==='dashdc'){ if(typeof dashCarregar==='function') dashCarregar(); }
     const pn=document.getElementById('pSubnav'); if(pn) pn.style.display=(v==='pessoas')?'block':'none';
     if(v==='pessoas'){ if(typeof montarPSubnav==='function') montarPSubnav(); if(typeof abrirPessoas==='function') abrirPessoas('ativ'); return 'parar'; }
@@ -9561,7 +9564,7 @@
   // Agora existe um carimbo: esta constante é a versão que o aparelho está rodando, e o
   // Firebase guarda a versão publicada. Quando as duas diferem, aparece o aviso — mas
   // NUNCA recarrega sozinho: recarregar no meio de um check-in perderia o trabalho.
-  const APP_VERSAO='2026-08-26-05';
+  const APP_VERSAO='2026-08-26-08';
   function vigiarVersao(){
     if(!DB) return;
     try{
@@ -12866,15 +12869,42 @@
     {k:'vac_mult_p',  base:'vac_mult_t',  nome:'Vacina Múltipla',           dias:365, nomeK:'vac_mult_nome', grupo:'vacina'},
     {k:'vac_gripe_p', base:'vac_gripe_t', nome:'Vacina de Gripe',           dias:365, nomeK:'vac_gripe_nome', grupo:'vacina'},
     {k:'vac_raiva_p', base:'vac_raiva_t', nome:'Vacina Antirrábica',        dias:365, nomeK:'vac_raiva_nome', grupo:'vacina'},
-    {k:'ecto_p',      base:'ecto_t',      nome:'Ectoparasitas',             dias:30,  nomeK:'ecto_nome', grupo:'antip'},
+    // alt = como a ficha ANTIGA guardava a mesma coisa. Sem isto a tela cobrava de novo
+    // o que a equipe já tinha lançado (116 vermífugos e 103 carrapaticidas invisíveis).
+    {k:'ecto_p',      base:'ecto_t',      nome:'Ectoparasitas',             dias:30,  nomeK:'ecto_nome', grupo:'antip',
+     alt:'carrapaticida_p', altBase:'carrapaticida_t'},
     {k:'col_p',       base:'col_t',       nome:'Coleira repelente',         dias:180, opcional:true, grupo:'antip'},
-    {k:'verm_p',      base:'verm_t',      nome:'Vermífugo',                 dias:VERMIF_PROX, dispensaSe:'fezes_t', nomeK:'verm_nome', grupo:'antip'},
+    {k:'verm_p',      base:'verm_t',      nome:'Vermífugo',                 dias:VERMIF_PROX, dispensaSe:'fezes_t', nomeK:'verm_nome', grupo:'antip',
+     alt:'vermifugo_p', altBase:'vermifugo_t'},
     {k:'fezes_p',     base:'fezes_t',     nome:'Exame de fezes',            dias:FEZES_PROX, opcional:true, grupo:'antip'},
     // Adriana, 19/ago/2026: "troca de escova de dentes, item a inserir; check-up — data do
     // último". Escova troca a cada 3 meses; check-up é anual.
-    {k:'escova_p',    base:'escova_t',    nome:'Troca de escova de dentes', dias:90,  grupo:'saude'},
-    {k:'checkup_p',   base:'checkup_t',   nome:'Check-up',                  dias:365, grupo:'saude'}
+    // rotina:true → não entra no número de "prevenção pendente". A casa ainda não
+    // registra escova nem check-up; quando começar a registrar, o vencimento aparece.
+    {k:'escova_p',    base:'escova_t',    nome:'Troca de escova de dentes', dias:90,  grupo:'saude', opcional:true, rotina:true},
+    {k:'checkup_p',   base:'checkup_t',   nome:'Check-up',                  dias:365, grupo:'saude', opcional:true, rotina:true}
   ];
+  // O valor do item, aceitando o nome novo e o antigo da ficha (ver `alt` em PREV_ITENS).
+  function prevValor(ex, it){
+    ex=ex||{};
+    var v=ex[it.k];
+    if(!v && it.alt) v=ex[it.alt];
+    return v||'';
+  }
+  function prevFeitoEm(ex, it){
+    ex=ex||{};
+    var v=ex[it.base];
+    if(!v && it.altBase) v=ex[it.altBase];
+    return v||'';
+  }
+  // Data que não existe no calendário da vida real: ano 0026, 0207 — erro de digitação
+  // (alguém escreveu "26" e o campo entendeu ano 26). Vencido há 664 mil dias não é
+  // vencimento, é dado quebrado, e precisa aparecer como tal.
+  function prevDataQuebrada(v){
+    if(!/^\d{4}-\d{2}-\d{2}$/.test(v||'')) return false;
+    var ano=+String(v).slice(0,4);
+    return ano<2015 || ano>2100;
+  }
   // grupo (opcional): 'vacina' | 'antip' | 'saude'. Sem grupo = tudo, como sempre foi.
   function prevPendencias(ex, grupo){
     ex=ex||{};
@@ -12882,8 +12912,9 @@
     PREV_ITENS.forEach(function(it){
       if(grupo && it.grupo!==grupo) return;
       if(it.dispensaSe && ex[it.dispensaSe]) return; // exame de fezes dispensa vermífugo
-      const v=ex[it.k];
+      const v=prevValor(ex, it);
       if(!v){ if(!it.opcional) sem.push(it.nome); return; }
+      if(prevDataQuebrada(v)) return;                // dado quebrado não é vencimento
       if(venceuISO(v)) venc.push({nome:it.nome, data:v, dias:-diasAteISO(v),
         familia:({vacina:'vacina', antip:'antiparasitário', saude:'saúde'})[it.grupo]||''});
     });
@@ -12919,20 +12950,23 @@
     PREV_ITENS.forEach(function(it){
       // "ou é vermífugo ou exame" — quem tem um não deve o outro.
       if(it.dispensaSe && ex[it.dispensaSe]) return;
-      if(it.k==='fezes_p' && ex.verm_p) return;
-      var v=ex[it.k];
+      if(it.k==='fezes_p' && prevValor(ex,{k:'verm_p',alt:'vermifugo_p'})) return;
+      var v=prevValor(ex, it);
+      // Data impossível: sai da conta de vencido e vira um aviso próprio, para alguém
+      // abrir a ficha e corrigir o ano.
+      if(prevDataQuebrada(v)){ out.push({k:it.k, nome:it.nome, tipo:'invalida', data:v, dias:0, rotina:!!it.rotina}); return; }
       // "A fazer na Zêluz", marcado no cadastro novo: é pendência assumida, não item
       // esquecido. Aparece mesmo quando o item seria opcional — alguém prometeu fazer.
       if(!v && it.base && ex[String(it.base).replace(/_t$/,'')+'_afazer']){
-        out.push({k:it.k, nome:it.nome, tipo:'sem', afazer:true}); return;
+        out.push({k:it.k, nome:it.nome, tipo:'sem', afazer:true, rotina:!!it.rotina}); return;
       }
-      if(!v){ if(!it.opcional) out.push({k:it.k, nome:it.nome, tipo:'sem'}); return; }
-      if(venceuISO(v)) out.push({k:it.k, nome:it.nome, tipo:'venc', data:v, dias:-diasAteISO(v)});
+      if(!v){ if(!it.opcional) out.push({k:it.k, nome:it.nome, tipo:'sem', rotina:!!it.rotina}); return; }
+      if(venceuISO(v)) out.push({k:it.k, nome:it.nome, tipo:'venc', data:v, dias:-diasAteISO(v), rotina:!!it.rotina});
     });
     if(!pesouEsteMes(ex)){
       var u=ultimoPeso(ex);
       out.push({k:'peso', nome:'Peso do mês', tipo:u?'venc':'sem', data:(u&&u.data)||'',
-                dias:(u&&u.data)?-diasAteISO(u.data):0});
+                dias:(u&&u.data)?-diasAteISO(u.data):0, rotina:true});
     }
     return out;
   }
@@ -12977,14 +13011,25 @@
 
     var res=document.getElementById('prevResumo');
     if(res){
-      var totVenc=todos.reduce(function(a,o){ return a+o.venc; },0);
-      var totSem=todos.reduce(function(a,o){ return a+(o.faltas.length-o.venc); },0);
-      res.innerHTML='<div class="pair"><span class="k">FILHOts com alguma pendência</span>'
-        +'<span class="val" style="font-weight:800;color:var(--z-blue)">'+todos.length+'</span></div>'
-        +'<div class="pair"><span class="k">Itens <strong>vencidos</strong></span>'
-        +'<span class="val" style="font-weight:800;color:'+(totVenc?'var(--crm-critico)':'var(--crm-ok)')+'">'+totVenc+'</span></div>'
-        +'<div class="pair"><span class="k">Itens <strong>nunca preenchidos</strong></span>'
-        +'<span class="val" style="font-weight:800;color:'+(totSem?'var(--crm-atencao-text)':'var(--crm-ok)')+'">'+totSem+'</span></div>';
+      // Prevenção (vacina e antiparasitário) é uma conta; rotina (peso, escova,
+      // check-up) é outra. Misturar as duas foi o que fez a tela dizer centenas de
+      // pendências e ninguém acreditar em nenhuma (Adriana, 26/ago/2026).
+      var contaPor=function(fn){ return todos.reduce(function(a,o){ return a+o.faltas.filter(fn).length; },0); };
+      var vencPrev=contaPor(function(f){ return f.tipo==='venc' && !f.rotina; });
+      var semPrev =contaPor(function(f){ return f.tipo==='sem'  && !f.rotina; });
+      var rotina  =contaPor(function(f){ return !!f.rotina; });
+      var quebrada=contaPor(function(f){ return f.tipo==='invalida'; });
+      var comPrev=todos.filter(function(o){ return o.faltas.some(function(f){ return !f.rotina && f.tipo!=='invalida'; }); }).length;
+      res.innerHTML='<div class="pair"><span class="k">FILHOts com prevenção pendente</span>'
+        +'<span class="val" style="font-weight:800;color:var(--z-blue)">'+comPrev+'</span></div>'
+        +'<div class="pair"><span class="k">Vacina ou antiparasitário <strong>vencido</strong></span>'
+        +'<span class="val" style="font-weight:800;color:'+(vencPrev?'var(--crm-critico)':'var(--crm-ok)')+'">'+vencPrev+'</span></div>'
+        +'<div class="pair"><span class="k">Sem data no cadastro</span>'
+        +'<span class="val" style="font-weight:800;color:'+(semPrev?'var(--crm-atencao-text)':'var(--crm-ok)')+'">'+semPrev+'</span></div>'
+        +'<div class="pair"><span class="k">Rotina (peso, escova, check-up)</span>'
+        +'<span class="val" style="font-weight:800;color:var(--muted)">'+rotina+'</span></div>'
+        +(quebrada?('<div class="pair"><span class="k"><strong>Datas impossíveis</strong> — alguém digitou o ano errado</span>'
+        +'<span class="val" style="font-weight:800;color:var(--crm-critico)">'+quebrada+'</span></div>'):'');
     }
 
     var fl=document.getElementById('prevFiltros');
@@ -13012,7 +13057,14 @@
         +(PREV_FILTRO==='tudo'?'Ninguém com pendência. Prevenção em dia.':'Ninguém devendo este item.')+'</div></div>';
       return;
     }
-    el.innerHTML='<div class="card"><h2 style="font-size:17px">'+lista.length+' FILHOt'+(lista.length>1?'s':'')+'</h2>'
+    // Hóspede sai da lista da equipe e vai para o bloco próprio: com ele não se lança,
+    // se avisa o tutor (ver prevBlocoHospedes).
+    var hosp=lista.filter(function(o){ return prevEhHospede(o.p); });
+    PREV_CACHE_HOSP=hosp;
+    lista=lista.filter(function(o){ return !prevEhHospede(o.p); });
+    var htmlHosp='<div id="prevMsgCaixa" class="card" style="display:none"></div>'+prevBlocoHospedes(hosp);
+    if(!lista.length){ el.innerHTML=htmlHosp||'<div class="card"><div class="hint">Só hóspedes nesta lista.</div></div>'; return; }
+    el.innerHTML=htmlHosp+'<div class="card"><h2 style="font-size:17px">Aulunos — '+lista.length+' FILHOt'+(lista.length>1?'s':'')+'</h2>'
       +lista.map(function(o){
         var _ch=pelKey(o.p);
         if(PREV_ABERTO===_ch) return prevEdicaoHTML(o);
@@ -13023,15 +13075,129 @@
           +' <span style="font-weight:700;font-size:11.5px;color:var(--z-gold-deep)">toque para lançar</span></div>'
           +'<div style="display:flex;flex-wrap:wrap;gap:5px;margin-top:5px">'
           +o.faltas.map(function(f){
-              var venc=(f.tipo==='venc');
-              return '<span style="border-radius:999px;padding:3px 11px;font-size:12px;font-weight:800;'
-                +(venc?'background:#F6D8D4;color:#8E1B10':'background:rgba(222,180,40,.22);color:var(--z-blue)')+'">'
-                +escAttr(f.nome)+(venc?(f.data?(' — venceu '+fmtBR(f.data)+(f.dias?(' (há '+f.dias+' dia'+(f.dias>1?'s':'')+')'):'')):' — vencido')
-                                     :(f.afazer?' — A FAZER NA ZÊLUZ':' — sem data'))
-                +'</span>';
+              var venc=(f.tipo==='venc'), ruim=(f.tipo==='invalida');
+              var fundo = ruim ? 'background:#3B1F1F;color:#FFD9D9'
+                        : venc ? 'background:#F6D8D4;color:#8E1B10'
+                        : f.rotina ? 'background:rgba(124,139,153,.18);color:var(--muted)'
+                        : 'background:rgba(222,180,40,.22);color:var(--z-blue)';
+              var txt = ruim ? (' — DATA IMPOSSÍVEL ('+escAttr(f.data||'')+') · corrija o ano na ficha')
+                      : venc ? (f.data?(' — venceu '+fmtBR(f.data)+(f.dias?(' (há '+f.dias+' dia'+(f.dias>1?'s':'')+')'):'')):' — vencido')
+                      : (f.afazer?' — A FAZER NA ZÊLUZ':' — sem data');
+              return '<span style="border-radius:999px;padding:3px 11px;font-size:12px;font-weight:800;'+fundo+'">'
+                +escAttr(f.nome)+txt+'</span>';
             }).join('')
           +'</div></div>';
       }).join('')+'</div>';
+  }
+
+  // ===== PREVENÇÃO DO HÓSPEDE — convite, não cobrança ============================
+  var PREV_AVISOS={};      // {chaveDoFILHOt: {quando, quem, itens}}
+  function prevEhHospede(p){
+    try{
+      if(typeof pelCategoria!=='function') return false;
+      var c=pelCategoria(p);
+      return c==='hospede';
+    }catch(e){ return false; }
+  }
+  function prevCarregarAvisos(){
+    if(!DB) return Promise.resolve();
+    return DB.ref('daycare/prevencao-aviso').once('value').then(function(s){
+      PREV_AVISOS=s.val()||{};
+    }).catch(function(e){
+      try{ if(typeof audit==='function') audit('prevencao','NÃO consegui ler quem já foi avisado: '+((e&&e.message)||e),{}); }catch(x){}
+    });
+  }
+  // A mensagem que a recepção manda no WhatsApp do tutor. Duas coisas ao mesmo tempo:
+  // lembra que a prevenção venceu E convida para fazer aqui — que é o melhor dos dois
+  // mundos, nas palavras dela.
+  function prevMensagemTutor(o){
+    var tutor=(typeof primeiroNome==='function')?primeiroNome(o.tutor):String(o.tutor||'').split(' ')[0];
+    var venc=o.faltas.filter(function(f){ return f.tipo==='venc' && !f.rotina; });
+    var lista=venc.map(function(f){ return '· ' + f.nome + (f.data?(' — venceu em '+fmtBR(f.data)):''); });
+    var sem=o.faltas.filter(function(f){ return f.tipo==='sem' && !f.rotina; })
+                    .map(function(f){ return '· ' + f.nome + ' — ainda não temos a data'; });
+    var L=[];
+    L.push('Oi'+(tutor?(', '+tutor):'')+', tudo bem?');
+    L.push('');
+    L.push('Passando para avisar sobre a prevenção d' + (/^f/i.test(String(o.sexo||''))?'a ':'o ') + o.nome + ':');
+    L.push('');
+    venc.length && L.push(lista.join('\n'));
+    sem.length && L.push(sem.join('\n'));
+    L.push('');
+    L.push('A prevenção em dia é o que protege ' + (/^f/i.test(String(o.sexo||''))?'ela':'ele') + ' e todos os aumiguinhos que se hospedam com a gente.');
+    L.push('');
+    L.push('Se já estiver feito, é só nos mandar a data que atualizamos aqui. E se preferir fazer conosco, agendamos com a nossa veterinária — assim fica tudo num lugar só.');
+    return L.join('\n');
+  }
+  function prevCopiarTutor(chave, btn){
+    var o=(PREV_CACHE_HOSP||[]).filter(function(x){ return pelKey(x.p)===chave; })[0];
+    if(!o){ alert('Não achei este FILHOt para montar a mensagem. Atualize a tela.'); return; }
+    var txt=prevMensagemTutor(o);
+    var pronto=function(){
+      if(btn){ var t=btn.textContent; btn.textContent='✅ Copiado — cole no WhatsApp'; setTimeout(function(){ btn.textContent=t; },3000); }
+    };
+    var naTela=function(){
+      var cx=document.getElementById('prevMsgCaixa');
+      if(!cx) return;
+      cx.style.display='block';
+      cx.innerHTML='<div class="hint" style="margin-bottom:5px">Não consegui copiar sozinho. Selecione o texto abaixo e copie (Ctrl+C):</div>'
+        +'<textarea class="gest-txt" rows="12" style="width:100%" id="prevMsgTxt"></textarea>';
+      var t=document.getElementById('prevMsgTxt'); if(t){ t.value=txt; t.focus(); t.select(); }
+    };
+    if(navigator.clipboard&&navigator.clipboard.writeText) navigator.clipboard.writeText(txt).then(pronto).catch(naTela);
+    else naTela();
+  }
+  // Marca que o tutor foi avisado hoje. Some da fila de "a avisar" e fica registrado
+  // com quem avisou — se o tutor não responder, dá para cobrar de novo sabendo quando foi.
+  function prevMarcarAvisado(chave, btn){
+    if(!DB) return;
+    var o=(PREV_CACHE_HOSP||[]).filter(function(x){ return pelKey(x.p)===chave; })[0];
+    var reg={quando:(typeof zHojeISO==='function')?zHojeISO():'', ts:Date.now(),
+             quem:(typeof quemSou==='function'?quemSou():'-'),
+             itens:o?o.faltas.filter(function(f){ return !f.rotina; }).map(function(f){ return f.nome; }).join(' · '):''};
+    if(btn){ btn.disabled=true; btn.textContent='marcando…'; }
+    DB.ref('daycare/prevencao-aviso/'+chave).set(reg).then(function(){
+      PREV_AVISOS[chave]=reg;
+      if(typeof audit==='function') audit('prevencao','avisou o tutor de '+((o&&o.nome)||chave)+' sobre a prevenção',{pet:(o&&o.nome)||''});
+      renderPrevencao();
+    }).catch(function(e){
+      if(btn){ btn.disabled=false; btn.textContent='❌ não salvou: '+((e&&e.message)||e); }
+    });
+  }
+  var PREV_CACHE_HOSP=[];
+  function prevBlocoHospedes(hosp){
+    if(!hosp.length) return '';
+    var hoje=(typeof zHojeISO==='function')?zHojeISO():'';
+    var aAvisar=hosp.filter(function(o){ var a=PREV_AVISOS[pelKey(o.p)]; return !a || (a.quando||'') < prevDiasAtras(30); });
+    var h='<div class="card" style="border-left:4px solid var(--z-gold)">'
+      +'<h2 style="font-size:17px">Hóspedes — '+hosp.length+' com prevenção a vencer ou vencida</h2>'
+      +'<div class="hint">O hóspede não vem toda semana: não dá para pôr a prevenção dele em dia por aqui. O que a gente faz é <strong>avisar o tutor assim que vence</strong> — ele resolve onde quiser, e se quiser fazer conosco, melhor ainda. '
+      +(aAvisar.length?('<strong style="color:var(--crm-critico)">'+aAvisar.length+' esperando aviso.</strong>'):'Todos avisados nos últimos 30 dias.')+'</div>';
+    hosp.forEach(function(o){
+      var ch=pelKey(o.p), av=PREV_AVISOS[ch];
+      var venc=o.faltas.filter(function(f){ return f.tipo==='venc' && !f.rotina; });
+      h+='<div style="border-top:1px solid var(--line);padding:11px 0">'
+        +'<div style="font-weight:800;color:var(--z-blue);font-size:15px">'+escAttr(o.nome)
+        +' <span style="font-weight:600;font-size:12.5px;color:var(--muted)">'+escAttr(o.raca||'')+(o.tutor?(' · '+escAttr(o.tutor)):'')+'</span></div>'
+        +'<div style="display:flex;flex-wrap:wrap;gap:5px;margin:5px 0">'
+        +o.faltas.filter(function(f){ return !f.rotina; }).map(function(f){
+            var v=(f.tipo==='venc');
+            return '<span style="border-radius:999px;padding:3px 11px;font-size:12px;font-weight:800;'
+              +(v?'background:#F6D8D4;color:#8E1B10':'background:rgba(222,180,40,.22);color:var(--z-blue)')+'">'
+              +escAttr(f.nome)+(v&&f.data?(' — venceu '+fmtBR(f.data)):'')+'</span>';
+          }).join('')
+        +'</div>'
+        +(av?('<div class="hint" style="margin:4px 0;color:var(--crm-ok);font-weight:700">Tutor avisado em '+fmtBR(av.quando||'')+(av.quem?(' por '+escAttr(av.quem)):'')+'.</div>'):'')
+        +'<div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:5px">'
+        +'<button type="button" class="btn btn-gold" style="padding:6px 14px;font-size:12.5px" onclick="prevCopiarTutor(\''+ch+'\',this)">Copiar mensagem para o tutor</button>'
+        +'<button type="button" class="btn" style="padding:6px 14px;font-size:12.5px;background:var(--z-cream-warm);color:var(--z-blue);border:1.5px solid var(--line)" onclick="prevMarcarAvisado(\''+ch+'\',this)">'+(av?'Avisei de novo':'Já avisei')+'</button>'
+        +'<button type="button" class="btn" style="padding:6px 14px;font-size:12.5px;background:none;border:none;color:var(--z-blue);font-weight:800;text-decoration:underline" onclick="prevAbrir(\''+ch+'\')">lançar a data que ele mandou</button>'
+        +'</div></div>';
+    });
+    return h+'</div>';
+  }
+  function prevDiasAtras(n){
+    try{ return orcMaisDias((typeof zHojeISO==='function')?zHojeISO():'', -n); }catch(e){ return ''; }
   }
   function prevFiltrar(k){ PREV_FILTRO=k||'tudo'; renderPrevencao(); }
   // ===== LANÇAR ALI MESMO — Adriana, 19/ago/2026 =================================
@@ -17033,18 +17199,92 @@
   }
   var ALG_ABERTO='';
   function algAbrir(k){ ALG_ABERTO=(ALG_ABERTO===k)?'':k; algRender(); }
+
+  // Onde a resposta do tutor entra na ficha. `campo` é o que a ficha já usa hoje.
+  var ALG_DESTINOS=[
+    {k:'alergia',   t:'Alergia',                 campo:'alergia',
+     dica:'Aparece em vermelho no card, no check-in e vai para a coluna de restrições da planilha.'},
+    {k:'restricao', t:'Restrição alimentar',     campo:'restricao',
+     dica:'O que ele não pode comer. Mesma tarja vermelha.'},
+    {k:'ea',        t:'Restrição no Enriquecimento', campo:'ea_restr',
+     dica:'O que ele não pode receber na atividade do dia (bolo, petisco, fruta…).'},
+    {k:'almoco',    t:'Almoço (o que ele come)', campo:'__almoco',
+     dica:'Marca, quantidade e observação vão para o cadastro de almoço, que a monitora lê na hora de servir.'}
+  ];
+  var ALG_DESTINO_SEL={};
+  function algEscolherDestino(k, destino){
+    ALG_DESTINO_SEL[k]=destino;
+    algRender();
+    setTimeout(function(){ try{ var e=document.getElementById('algResp_'+k); if(e) e.focus(); }catch(x){} }, 60);
+  }
+  function algDestinoHTML(k){
+    var sel=ALG_DESTINO_SEL[k]||'';
+    var h='<div class="hint" style="margin:8px 0 4px"><strong>Onde isso entra na ficha?</strong> É o que faz a resposta virar cuidado de verdade — sem isso ela fica só anotada aqui.</div>'
+      +'<div style="display:flex;flex-wrap:wrap;gap:6px">';
+    ALG_DESTINOS.forEach(function(d){
+      var on=(sel===d.k);
+      h+='<button type="button" class="btn" style="padding:6px 12px;font-size:12.5px;font-weight:800;border:1.5px solid '
+        +(on?'var(--z-blue)':'var(--line)')+';background:'+(on?'var(--z-blue)':'var(--z-cream-warm)')+';color:'+(on?'var(--z-cream)':'var(--z-blue)')+'"'
+        +' onclick="algEscolherDestino(\''+escAttr(k).replace(/'/g,"\\'")+'\',\''+d.k+'\')">'+escAttr(d.t)+'</button>';
+    });
+    h+='<button type="button" class="btn" style="padding:6px 12px;font-size:12.5px;font-weight:800;border:1.5px solid '
+      +(sel==='nada'?'var(--crm-ok)':'var(--line)')+';background:'+(sel==='nada'?'var(--crm-ok)':'var(--z-cream-warm)')+';color:'+(sel==='nada'?'#fff':'var(--z-blue)')+'"'
+      +' onclick="algEscolherDestino(\''+escAttr(k).replace(/'/g,"\\'")+'\',\'nada\')">Não tem restrição</button>';
+    h+='</div>';
+    var d=ALG_DESTINOS.filter(function(x){ return x.k===sel; })[0];
+    if(d) h+='<div class="hint" style="margin-top:5px">'+escAttr(d.dica)+'</div>';
+    if(sel==='nada') h+='<div class="hint" style="margin-top:5px">Fica registrado que o tutor disse que não há restrição. <strong>Nada é apagado da ficha por aqui</strong> — se havia uma restrição escrita, ela continua até alguém tirar na ficha, de propósito.</div>';
+    if(sel==='almoco') h+='<div class="cad-grid2" style="margin-top:6px">'
+      +'<div><label class="cad-lb">O que come (marca / tipo)</label><input class="cad-in" id="algAlim_'+escAttr(k)+'" placeholder="Ex: Ração Golden · Comida natural"></div>'
+      +'<div><label class="cad-lb">Quantidade</label><input class="cad-in" id="algQuant_'+escAttr(k)+'" placeholder="Ex: 75g"></div></div>';
+    return h;
+  }
   function algResponder(k){
     if(!DB) return;
     var inp=document.getElementById('algResp_'+k);
     var dt=document.getElementById('algData_'+k);
     var quando=(dt&&dt.value)||(new Date()).toISOString().slice(0,10);
+    var texto=((inp&&inp.value)||'').trim();
+    var destino=ALG_DESTINO_SEL[k]||'';
+    if(!texto){ alert('Escreva o que o tutor respondeu — é isso que vai para a ficha.'); return; }
+    if(!destino){ alert('Diga ONDE isso entra na ficha (alergia, restrição alimentar, enriquecimento, almoço — ou "não tem restrição").\n\nSem isso a resposta fica só anotada aqui e ninguém enxerga na hora de cuidar dele.'); return; }
     var reg={quando:quando, quem:(typeof quemSou==='function'?quemSou():'-'),
-             resposta:((inp&&inp.value)||'').trim(), ts:Date.now()};
+             resposta:texto, destino:destino, ts:Date.now()};
+    // 1) o histórico da pergunta
     DB.ref('daycare/alergia-confirmada/'+k).set(reg).then(function(){
-      ALG_RESP[k]=reg; ALG_ABERTO='';
-      if(typeof audit==='function') audit('alergia-confirmada', k, {quando:quando, resposta:reg.resposta});
+      ALG_RESP[k]=reg; ALG_ABERTO=''; delete ALG_DESTINO_SEL[k];
+      if(typeof audit==='function') audit('alergia-confirmada', k, {quando:quando, resposta:texto, destino:destino});
+      // 2) e a FICHA, que é quem o resto do sistema lê
+      try{ algGravarNaFicha(k, destino, texto); }catch(e){
+        try{ if(typeof audit==='function') audit('alergia-confirmada','NÃO consegui levar para a ficha de '+k+': '+((e&&e.message)||e),{}); }catch(x){}
+        alert('A resposta ficou registrada, mas NÃO consegui gravar na ficha: '+((e&&e.message)||e)+'\n\nAbra a ficha dele e escreva à mão.');
+      }
       algRender();
     }).catch(function(e){ alert('Não consegui gravar: '+((e&&e.message)||e)); });
+  }
+  // Leva a resposta para o campo certo da ficha — é o que faz a tarja vermelha aparecer
+  // no card, a coluna "Hóspedes com Restrições" da planilha se preencher e a monitora
+  // ver na hora de servir.
+  function algGravarNaFicha(k, destino, texto){
+    if(destino==='nada') return;                 // não apaga nada: ver a dica na tela
+    var p=(typeof PELUDINHOS!=='undefined')?PELUDINHOS.filter(function(x){ return pelKey(x)===k; })[0]:null;
+    if(!p) throw new Error('não achei a ficha deste FILHOt');
+    if(destino==='almoco'){
+      var alim=String((document.getElementById('algAlim_'+k)||{}).value||'').trim();
+      var quant=String((document.getElementById('algQuant_'+k)||{}).value||'').trim();
+      var patch={};
+      if(alim) patch.alim=alim;
+      if(quant) patch.quant=quant;
+      patch.extra=texto;                          // a resposta inteira fica como observação
+      if(typeof setAlmCad==='function') setAlmCad(p, patch);
+      else throw new Error('o cadastro de almoço não está disponível nesta tela');
+      return;
+    }
+    var d=ALG_DESTINOS.filter(function(x){ return x.k===destino; })[0];
+    if(!d) throw new Error('destino desconhecido');
+    var patch={}; patch[d.campo]=texto;
+    if(typeof setPelExtra==='function') setPelExtra(p, patch);
+    else throw new Error('não consigo escrever na ficha daqui');
   }
   function algBlocoHTML(titulo, arr){
     if(!arr.length) return '<div class="card"><h2 style="font-size:18px">'+escAttr(titulo)+'</h2><div class="hint">Ninguém pendente aqui.</div></div>';
@@ -17058,12 +17298,20 @@
           +'<span style="font-weight:800;color:var(--z-blue);font-size:16px">'+escAttr(x.nome)+'</span>'
           +'<span style="font-size:12px;font-weight:800;color:'+(x.vencido?'var(--crm-atencao-text)':'var(--crm-critico)')+'">'
           +(x.vencido?('respondeu há '+x.meses+' meses — perguntar de novo'):'nunca respondeu')+'</span></div>'
+          +(function(){ var r=ALG_RESP[x.k];
+              if(!r||!r.resposta) return '';
+              var dest=(ALG_DESTINOS.filter(function(d){ return d.k===r.destino; })[0]||{}).t
+                     || (r.destino==='nada'?'sem restrição':'');
+              return '<div class="hint" style="margin:3px 0 0">Última resposta: "'+escAttr(String(r.resposta).slice(0,90))+'"'
+                +(dest?(' → foi para <strong>'+escAttr(dest)+'</strong> na ficha'):' <strong style="color:var(--crm-atencao-text)">(ficou só anotada — não foi para a ficha)</strong>')+'</div>';
+            })()
           +(aberto
             ? '<div style="margin-top:8px">'
               +'<textarea class="gest-txt alg-msg" readonly rows="12" style="width:100%">'+escAttr(algMensagem(x.p))+'</textarea>'
               +'<button type="button" class="btn btn-gold" style="width:100%;margin:7px 0" onclick="algCopiar(this)">📋 Copiar mensagem</button>'
-              +'<div class="hint" style="margin-top:6px">Quando o tutor responder, escreva aqui o que ele disse e a data da resposta.</div>'
+              +'<div class="hint" style="margin-top:6px">Quando o tutor responder, escreva aqui o que ele disse e a data da resposta. <strong>O que você escrever vai para a ficha dele</strong> — escolha abaixo em qual campo.</div>'
               +'<input class="cad-in" id="algResp_'+escAttr(x.k)+'" placeholder="O que o tutor respondeu" autocomplete="off" style="margin:6px 0">'
+              +algDestinoHTML(x.k)
               +'<input class="cad-in" type="date" id="algData_'+escAttr(x.k)+'" value="'+hoje+'" style="margin-bottom:8px">'
               +'<button type="button" class="btn btn-primary" style="width:100%" onclick="algResponder(\''+escAttr(x.k).replace(/'/g,"\\'")+'\')">✅ O tutor respondeu</button>'
               +'</div>'
