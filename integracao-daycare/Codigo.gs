@@ -1,6 +1,9 @@
 /**
  * ZÊLUZ · Day Care — ponte entre o APP e a planilha que alimenta o dashboard da TV
  * ============================================================================
+ * Versão 3 (26/ago/2026) — três ações novas: diagnostico, removerColunas e criarMeses.
+ *                           A planilha parava em março/2029 e a Adriana pediu até
+ *                           dezembro/2035, na mesma estrutura (cada dia repetido 50x).
  * Versão 2 (25/ago/2026) — garantirColunas relê os títulos entre uma criação e outra
  *                           (as duas colunas novas caíam na mesma célula).
  * Versão 1 (19/ago/2026)
@@ -83,6 +86,9 @@ function doPost(e) {
     if (String(d.token || '') !== TOKEN) return _json({ ok: false, erro: 'token invalido' });
     var acao = String(d.acao || 'lancar');
     if (acao === 'garantirColunas') return _json(garantirColunas());
+    if (acao === 'diagnostico')     return _json(diagnostico());
+    if (acao === 'removerColunas')  return _json(removerColunas(d));
+    if (acao === 'criarMeses')      return _json(criarMeses(d));
     if (acao === 'lancar')          return _json(lancar(d));
     if (acao === 'remover')         return _json(remover(d));
     if (acao === 'lerDia')          return _json(lerDia(d));
@@ -232,6 +238,179 @@ function lerDia(d) {
   return { ok: true, aba: sh.getName(), linhas: linhas.length, conteudo: out };
 }
 
+
+// ===========================================================================
+// 4) DIAGNÓSTICO, LIMPEZA DE COLUNA E CRIAÇÃO DE MESES  (26/ago/2026)
+// ===========================================================================
+
+/** Quantas abas, quantas células e até quando vai o Day Care. Não muda nada.
+ *  Serve para saber se ainda cabe: uma planilha do Google aguenta 10 milhões de
+ *  células no total — criar sete anos de uma vez sem olhar isso é temerário. */
+function diagnostico() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var todas = ss.getSheets(), celulas = 0, dc = [];
+  todas.forEach(function (sh) {
+    celulas += sh.getMaxRows() * sh.getMaxColumns();
+    if (_norm(sh.getName()).indexOf('daycare') >= 0) dc.push(sh.getName());
+  });
+  return {
+    ok: true,
+    abas: todas.length,
+    abas_daycare: dc.length,
+    celulas_usadas: celulas,
+    celulas_limite: 10000000,
+    celulas_livres: 10000000 - celulas,
+    ultimas_daycare: dc.slice(-8)
+  };
+}
+
+/**
+ * removerColunas({colunas:['Outros','Outros 2'], confirmar:true})
+ *
+ * Apaga a coluna INTEIRA em todas as abas do Day Care. Sem `confirmar:true` ele só
+ * CONTA o que seria apagado — coluna com conteúdo dentro não some sem alguém ver o
+ * número antes. Remove da direita para a esquerda: apagar da esquerda moveria as
+ * outras de lugar no meio do caminho.
+ */
+function removerColunas(d) {
+  var alvos = (d && d.colunas) || [];
+  if (!alvos.length) return { ok: false, erro: 'diga quais colunas em `colunas`' };
+  var confirmar = !!(d && d.confirmar);
+  var achadas = 0, comConteudo = 0, exemplos = [], removidas = 0;
+
+  _abasDayCare().forEach(function (sh) {
+    var tit = _titulos(sh);
+    var idx = [];
+    alvos.forEach(function (nome) {
+      var i = _acharCol(tit, nome);
+      if (i > 0) idx.push({ i: i, nome: tit[i - 1] });
+    });
+    if (!idx.length) return;
+    achadas += idx.length;
+
+    // olha o que existe dentro antes de qualquer coisa
+    var ultima = sh.getLastRow();
+    idx.forEach(function (c) {
+      if (ultima > 1) {
+        var vals = sh.getRange(2, c.i, ultima - 1, 1).getValues();
+        for (var k = 0; k < vals.length; k++) {
+          var v = String(vals[k][0] == null ? '' : vals[k][0]).trim();
+          if (v) {
+            comConteudo++;
+            if (exemplos.length < 12) exemplos.push(sh.getName() + ' · ' + c.nome + ' · linha ' + (k + 2) + ': ' + v.slice(0, 40));
+          }
+        }
+      }
+    });
+
+    if (confirmar) {
+      idx.sort(function (a, b) { return b.i - a.i; });   // direita → esquerda
+      idx.forEach(function (c) { sh.deleteColumn(c.i); removidas++; });
+    }
+  });
+
+  return {
+    ok: true,
+    confirmado: confirmar,
+    colunas_achadas: achadas,
+    celulas_com_conteudo: comConteudo,
+    exemplos: exemplos,
+    colunas_removidas: removidas,
+    aviso: confirmar ? '' : 'Nada foi apagado. Mande de novo com confirmar:true para apagar.'
+  };
+}
+
+/** A aba que serve de forma para as novas: a última do Day Care que tem a coluna Data. */
+function _modeloDayCare() {
+  var abas = _abasDayCare();
+  for (var i = abas.length - 1; i >= 0; i--) {
+    if (_acharCol(_titulos(abas[i]), COL.data) > 0) return abas[i];
+  }
+  return null;
+}
+function _acharAba(nome) {
+  var alvo = _norm(nome);
+  return _abasDayCare().filter(function (s) { return _norm(s.getName()) === alvo; })[0] || null;
+}
+
+/**
+ * criarMeses({de:'2029-04', ate:'2035-12', limite:6})
+ *
+ * Cria as abas que faltam, uma por mês, no mesmo formato das que existem: copia a
+ * última aba boa (para herdar largura de coluna, cor e o formato de data e de hora),
+ * limpa os dados, deixa o tamanho exato do mês e escreve a coluna Data com
+ * CADA DIA REPETIDO 50 VEZES — as 50 vagas de auluno, como a Adriana explicou.
+ *
+ * `limite` existe porque o Apps Script para sozinho depois de alguns minutos: cada
+ * chamada cria só um punhado de abas e diz quantas ainda faltam. É para chamar de
+ * novo até `faltam` chegar a zero.
+ */
+function criarMeses(d) {
+  var LINHAS_POR_DIA = 50;
+  var de  = String((d && d.de)  || '');
+  var ate = String((d && d.ate) || '');
+  if (!/^\d{4}-\d{2}$/.test(de) || !/^\d{4}-\d{2}$/.test(ate)) {
+    return { ok: false, erro: 'use de:"AAAA-MM" e ate:"AAAA-MM"' };
+  }
+  var limite = Math.max(1, Math.min(12, parseInt((d && d.limite), 10) || 6));
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var modelo = _modeloDayCare();
+  if (!modelo) return { ok: false, erro: 'nao achei nenhuma aba do Day Care para servir de forma' };
+  var tit = _titulos(modelo);
+  var cData = _acharCol(tit, COL.data);
+  if (cData < 1) return { ok: false, erro: 'a aba modelo nao tem coluna Data' };
+
+  var criadas = [], jaTinha = 0, faltam = 0, proximo = '';
+  var y = +de.slice(0, 4), m = +de.slice(5, 7) - 1;
+  var yF = +ate.slice(0, 4), mF = +ate.slice(5, 7) - 1;
+
+  while (y < yF || (y === yF && m <= mF)) {
+    var nome = y + ' DayCare ' + MESES[m];
+    if (_acharAba(nome)) {
+      jaTinha++;
+    } else if (criadas.length >= limite) {
+      faltam++;
+      if (!proximo) proximo = y + '-' + ('0' + (m + 1)).slice(-2);
+    } else {
+      _criarUmMes(ss, modelo, tit, cData, nome, y, m, LINHAS_POR_DIA);
+      criadas.push(nome);
+    }
+    m++; if (m > 11) { m = 0; y++; }
+  }
+  return {
+    ok: true, criadas: criadas, ja_tinha: jaTinha, faltam: faltam,
+    proximo_de: proximo,
+    aviso: faltam ? ('Ainda faltam ' + faltam + ' meses. Chame de novo com de:"' + proximo + '".') : 'Acabou.'
+  };
+}
+
+function _criarUmMes(ss, modelo, tit, cData, nome, ano, mes, porDia) {
+  var dias = new Date(ano, mes + 1, 0).getDate();
+  var linhas = dias * porDia + 1;          // +1 do cabeçalho
+  var colunas = tit.length;
+
+  var sh = modelo.copyTo(ss);
+  sh.setName(nome);
+  ss.setActiveSheet(sh);
+  ss.moveActiveSheet(ss.getNumSheets());   // vai para o fim, na ordem do tempo
+
+  // tamanho exato: nem célula sobrando (a planilha tem teto) nem faltando
+  if (sh.getMaxRows() > linhas) sh.deleteRows(linhas + 1, sh.getMaxRows() - linhas);
+  else if (sh.getMaxRows() < linhas) sh.insertRowsAfter(sh.getMaxRows(), linhas - sh.getMaxRows());
+  if (sh.getMaxColumns() > colunas) sh.deleteColumns(colunas + 1, sh.getMaxColumns() - colunas);
+
+  // fora os dados do mês que serviu de forma — fica só o cabeçalho
+  sh.getRange(2, 1, linhas - 1, colunas).clearContent();
+
+  // a coluna Data: cada dia repetido 50 vezes
+  var vals = [];
+  for (var dia = 1; dia <= dias; dia++) {
+    var dt = new Date(ano, mes, dia);
+    for (var i = 0; i < porDia; i++) vals.push([dt]);
+  }
+  sh.getRange(2, cData, vals.length, 1).setValues(vals);
+  return sh;
+}
 // ===========================================================================
 // APOIO
 // ===========================================================================
