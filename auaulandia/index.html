@@ -9589,7 +9589,7 @@
   // Agora existe um carimbo: esta constante é a versão que o aparelho está rodando, e o
   // Firebase guarda a versão publicada. Quando as duas diferem, aparece o aviso — mas
   // NUNCA recarrega sozinho: recarregar no meio de um check-in perderia o trabalho.
-  const APP_VERSAO='2026-08-26-18';
+  const APP_VERSAO='2026-08-26-19';
   function vigiarVersao(){
     if(!DB) return;
     try{
@@ -17345,6 +17345,9 @@
     // sobrou pergunta sem resposta? não é erro: o tutor pode ter pulado.
     if(antes && !/^(alimenta|sa[uú]de|ol[aá]|oi|bom dia|boa tarde|boa noite)/i.test(jsNorm(antes)))
       out.solto=antes+(out.solto?('\n\n'+out.solto):'');
+    // sobra de pontuação na frente ("-----  Saúde" vira ":") é resto da mensagem, não da
+    // resposta: sai, senão a caixa de recorte abre com um dois-pontos solto no alto.
+    out.solto=String(out.solto||'').replace(/^[\s\-–—:.,;)]+/,'').trim();
     // resto de pontuação sozinho não é conteúdo: ":" na tela só assusta.
     if(!/[a-zA-Z0-9\u00C0-\u024F]/.test(out.solto)) out.solto='';
     return out;
