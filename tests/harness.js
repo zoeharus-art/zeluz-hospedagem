@@ -1511,6 +1511,52 @@ async function main() {
     }
   }
   console.log('');
+
+  // ---- ponte da planilha do Day Care (Adriana, 25/ago/2026) ----
+  // A ponte ficou 5 dias desligada porque a senha foi gravada COM as aspas
+  // (' zeluz...') — copiada da linha do Apps Script, que é o que qualquer um faria.
+  // E a senha de verdade começa com um espaço DENTRO das aspas: aparar quebra de novo.
+  console.log('Ponte da planilha — a senha tem de sobreviver ao copiar e colar:');
+  {
+    check('dashLimparToken existe', typeof ctx.dashLimparToken === 'function');
+    if (typeof ctx.dashLimparToken === 'function') {
+      const f = ctx.dashLimparToken;
+      check('tira as aspas simples', f("'abc'") === 'abc', JSON.stringify(f("'abc'")));
+      check('tira as aspas duplas', f('"abc"') === 'abc', JSON.stringify(f('"abc"')));
+      check('preserva o espaço DENTRO das aspas (o token real)',
+        f("' zeluz2026daycare&hospedagem'") === ' zeluz2026daycare&hospedagem',
+        JSON.stringify(f("' zeluz2026daycare&hospedagem'")));
+      check('sem aspas, devolve fiel (não apara a senha)',
+        f(' zeluz2026daycare&hospedagem') === ' zeluz2026daycare&hospedagem');
+      check('aspas com espaço em volta ainda funcionam', f("  'abc'  ") === 'abc');
+    }
+    check('a ponte usa o token limpo ao chamar', /if\(c\.token\) c=\{url:c\.url, token:dashLimparToken\(c\.token\)\};/.test(html));
+  }
+  console.log('');
+
+  // ---- planilha do Day Care se preenchendo sozinha ----
+  console.log('Planilha do Day Care — o que o app preenche sozinho:');
+  {
+    ['dashAutoCalcular', 'dashAutoSincronizar', 'dashAutoRodar', 'dashAutoNomeChave'].forEach((n) =>
+      check(n + ' existe', typeof ctx[n] === 'function'));
+    if (typeof ctx.dashAutoNomeChave === 'function') {
+      const a = ctx.dashAutoNomeChave('Ozzy - Lhasa'), b = ctx.dashAutoNomeChave('Ozzy/Lhasa');
+      check('"Ozzy - Lhasa" e "Ozzy/Lhasa" são o MESMO FILHOt (não duplica na TV)', a === b, a + ' vs ' + b);
+    }
+    // as colunas têm de ser exatamente as da planilha, inclusive onde há erro de digitação
+    const cols = ctx.DASH_AUTO_COLS || {};
+    check('coluna de restrição usa a grafia da planilha ("restriçóes")',
+      cols.aulunosRestr === 'Aulunos com restriçóes', String(cols.aulunosRestr));
+    check('aniversariante usa "AUniversariante"', cols.aniversario === 'AUniversariante', String(cols.aniversario));
+    // só o que se sabe com antecedência vai para dias futuros
+    const fut = ctx.DASH_AUTO_FUTURO || {};
+    check('dia futuro leva reposição, falta e aniversário', !!(fut.reposicao && fut.faltas && fut.aniversario));
+    check('dia futuro NÃO leva restrição nem cliente novo', !fut.aulunosRestr && !fut.clienteNovo);
+    check('o automático nunca mexe em banho/vet/avaliação (têm hora)',
+      !cols.banho && !cols.vet && !cols.avaliacao);
+  }
+  console.log('');
+
   // ---- resumo ----
   console.log('== Resultado: ' + pass + ' ok, ' + fail + ' falha(s) ==');
   if (fail) { console.log('\nFalhas:'); fails.forEach((f) => console.log('  - ' + f)); }

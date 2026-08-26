@@ -3006,6 +3006,20 @@
   <section class="view" id="v-dashdc">
     <div class="role-note"><span data-icon="star"></span><span><strong>O que vai para a TV.</strong> Escolha o item, busque o FILHOt e lance. Vale para <strong>hoje</strong>. O que você lançar aqui aparece no dashboard do Day Care — ninguém precisa mais escrever na planilha.</span></div>
     <div id="dashPonteAviso"></div>
+    <!-- Adriana, 25/ago/2026: "precisamos que a tabela seja preenchida automaticamente".
+         Este cartão existe para a equipe SABER o que já vem sozinho — senão alguém lança de
+         novo à mão e a TV mostra o mesmo FILHOt duas vezes. -->
+    <div class="card" style="border-left:4px solid var(--z-gold)">
+      <h2 style="font-size:16px">O que se preenche sozinho</h2>
+      <div class="hint">Estes o app põe na planilha sem ninguém digitar — <strong>não precisa lançar aqui embaixo</strong>:
+        <strong>Reposição</strong> · <strong>Falta avisada</strong> · <strong>Aniversariante</strong> ·
+        <strong>Cliente novo</strong> (45 dias) · <strong>Aulunos com restrições</strong> ·
+        <strong>Hóspedes com restrições</strong> · <strong>Adaptação</strong>.
+        Reposição, falta e aniversário vão até <strong>14 dias à frente</strong>.
+        Ele confere sozinho a cada 5 minutos e nunca apaga o que uma pessoa escreveu.</div>
+      <div class="hint" style="margin-top:6px">O que tem <strong>horário</strong> continua sendo lançado aqui embaixo — é a hora que faz o alarme tocar na TV: <strong>Banho</strong> · <strong>Veterinário</strong> · <strong>Avaliação</strong> · <strong>Sai cedo</strong>. E também Troca de coleira, Hidratação, Vermífugo, Carrapaticida e Festa.</div>
+      <button type="button" class="btn btn-gold" style="margin-top:9px" onclick="dashAutoBotao(this)">Conferir a planilha agora</button>
+    </div>
     <div id="dashBlocos"></div>
     <div class="card so-config">
       <h2 style="font-size:16px">Ponte com a planilha</h2>
@@ -9501,7 +9515,7 @@
   // Agora existe um carimbo: esta constante é a versão que o aparelho está rodando, e o
   // Firebase guarda a versão publicada. Quando as duas diferem, aparece o aviso — mas
   // NUNCA recarrega sozinho: recarregar no meio de um check-in perderia o trabalho.
-  const APP_VERSAO='2026-08-25-23';
+  const APP_VERSAO='2026-08-25-26';
   function vigiarVersao(){
     if(!DB) return;
     try{
@@ -17975,8 +17989,10 @@
     var r=((typeof pelGet==='function')?pelGet(p,'raca'):'')||p.raca||'';
     return r?(n+'/'+r):n;
   }
+  var DASH_AUTO_LIGADO=false;
   function dashCarregar(){
     if(!DB){ renderDash(); return; }
+    if(!DASH_AUTO_LIGADO){ DASH_AUTO_LIGADO=true; try{ dashAutoLigar(); }catch(e){} }
     Promise.all([
       DB.ref('daycare/config/ponte-planilha').once('value').then(function(s){ DASH_PONTE=s.val()||null; }).catch(function(){}),
       DB.ref(dashNo()).once('value').then(function(s){ DASH_DADOS=s.val()||{}; }).catch(function(){ DASH_DADOS={}; })
@@ -18002,12 +18018,14 @@
   // Tira aspas das pontas ('senha' ou "senha") sem tocar no miolo. Copiar do Apps Script
   // com as aspas é o caminho natural — quem tem de se adaptar é o sistema, não a pessoa.
   function dashLimparToken(v){
-    var t=String(v==null?'':v).trim();
-    if(t.length>=2){
-      var a=t.charAt(0), b=t.charAt(t.length-1);
-      if((a==="'"&&b==="'")||(a==='"'&&b==='"')) t=t.slice(1,-1);
+    var t=String(v==null?'':v), ap=t.trim();
+    if(ap.length>=2){
+      var a=ap.charAt(0), b=ap.charAt(ap.length-1);
+      // Tem aspas → a senha é o MIOLO, inteiro. Este token de verdade começa com um espaço
+      // DENTRO das aspas: aparar aqui foi o que o quebrou de novo em 25/ago. Senha não se apara.
+      if((a==="'"&&b==="'")||(a==='"'&&b==='"')) return ap.slice(1,-1);
     }
-    return t;
+    return t;   // sem aspas: fiel ao que veio — o espaço pode fazer parte da senha
   }
   function dashSalvarPonte(){
     var url=String((document.getElementById('dashPonteUrl')||{}).value||'').trim();
@@ -18172,6 +18190,235 @@
     });
   }
   // O botão SEMPRE responde: some, vira "enviando", e termina dizendo se foi ou não.
+
+  // ===== A PLANILHA SE PREENCHE SOZINHA — Adriana, 25/ago/2026 =====================
+  // "Precisamos que a tabela das reposições, banhos e etc seja preenchida automaticamente."
+  // O que ela decidiu: o app preenche o que JÁ SABE e não depende de horário. O que tem
+  // hora (banho, veterinário, avaliação, sai cedo) continua sendo lançado à mão — é a hora
+  // que faz o alarme tocar na TV, e ela vem do agendamento, não do app.
+  //
+  // "A planilha é dinâmica. Já existe reposição lançada lá para frente de tutores super
+  //  organizados. Mas às 15h pode surgir um banho às 15h15." Por isso isto NÃO é um
+  //  disparo único: confere o dia de hoje de tempos em tempos e vai até 14 dias à frente,
+  //  onde moram a reposição agendada e os aniversários.
+  //
+  // Regra de ouro: só mexe no que FOI LANÇADO POR ELE (fica registrado em
+  // daycare/dashboard-auto/{dia}). O que uma pessoa escreveu na planilha nunca é apagado.
+  var DASH_AUTO_DIAS=14;      // hoje + 14 dias
+  var DASH_AUTO_MIN=5;        // conferir o dia de hoje a cada 5 minutos
+  var DASH_AUTO_45=45;        // "Cliente Novo": os 45 primeiros dias de matrícula
+  var DASH_AUTO_ADAPT=30;     // adaptação dura 30 dias (mesma regra da ficha)
+  // Coluna de cada item — a grafia é a que a planilha TEM hoje, inclusive onde há erro de
+  // digitação ("restriçóes"). O dashboard procura por estes nomes.
+  var DASH_AUTO_COLS={
+    reposicao:    'Reposição',
+    faltas:       'Faltas Avisadas',
+    aniversario:  'AUniversariante',
+    clienteNovo:  'Cliente Novo',
+    aulunosRestr: 'Aulunos com restriçóes',
+    hospRestr:    'Hóspedes com Restrições',
+    adaptacao:    'Adaptação'
+  };
+  // Itens que fazem sentido escrever com antecedência (a Adriana: "já existe reposição
+  // lançada lá para frente de tutores super organizados… aniversários já sabemos de todos").
+  var DASH_AUTO_FUTURO={reposicao:true, faltas:true, aniversario:true};
+  var DASH_AUTO_ROTULO={
+    reposicao:'Reposição', faltas:'Falta avisada', aniversario:'Aniversariante',
+    clienteNovo:'Cliente novo', aulunosRestr:'Auluno com restrição',
+    hospRestr:'Hóspede com restrição', adaptacao:'Em adaptação'
+  };
+  function dashAutoDias(n){ return (typeof orcMaisDias==='function')?orcMaisDias((typeof zHojeISO==='function'?zHojeISO():''),n):''; }
+  // Compara pelo NOME, não pela linha inteira: a recepção escreve "Ozzy - Lhasa" e o app
+  // escreve "Ozzy/Lhasa". São o mesmo FILHOt — lançar de novo criaria uma dupla na TV.
+  function dashAutoNomeChave(v){
+    var t=String(v||'').split(/[\/\-–—]/)[0];
+    return (typeof jsNorm==='function')?jsNorm(t):String(t).trim().toLowerCase();
+  }
+  var DASH_SEM=['dom','seg','ter','qua','qui','sex','sab'];
+  function dashAutoVemNoDia(p, iso){
+    try{
+      var d=new Date(iso+'T12:00:00'); if(isNaN(d.getTime())) return false;
+      var dia=DASH_SEM[d.getDay()];
+      var dias=(p&&p.dias)||[];
+      return Array.isArray(dias) && dias.indexOf(dia)>=0;
+    }catch(e){ return false; }
+  }
+  function dashAutoTemRestricao(ex){
+    ex=ex||{};
+    var r=String(ex.restricao||'').trim(), a=String(ex.alergia||'').trim();
+    var ea=String(ex.ea_restr||'').trim();
+    return !!(r||a||(ea&&!/^n(a|ã)o$/i.test(ea)));
+  }
+  function dashAutoTextoRestricao(p, ex){
+    var base=dashNomeRaca(p);
+    var det=String((ex&&(ex.restricao||ex.alergia||ex.ea_restr))||'').trim();
+    return det?(base+' - '+det):base;
+  }
+  // O que DEVE estar na planilha naquele dia, item por item. Só lê o que o app já tem.
+  function dashAutoCalcular(iso){
+    var out={}; Object.keys(DASH_AUTO_COLS).forEach(function(k){ out[k]=[]; });
+    if(typeof PELUDINHOS==='undefined') return out;
+    var hoje=(typeof zHojeISO==='function')?zHojeISO():'';
+    var ehHoje=(iso===hoje);
+    // quem vem nesse dia: hoje o app sabe de verdade (turma do dia); no futuro, pelos dias
+    // marcados na ficha — é o melhor que dá para saber com antecedência.
+    var vem={};
+    try{
+      if(ehHoje && typeof turmaDoDia==='function'){
+        turmaDoDia().forEach(function(o){ if(o&&o.p) vem[pelKey(o.p)]=o.p; });
+      } else {
+        PELUDINHOS.forEach(function(p){ if(!pelInativo(p) && dashAutoVemNoDia(p,iso)) vem[pelKey(p)]=p; });
+      }
+    }catch(e){}
+    PELUDINHOS.forEach(function(p){
+      try{
+        if(typeof pelInativo==='function' && pelInativo(p)) return;
+        var ex=(typeof pelExtra==='function')?pelExtra(p):{};
+        var k=pelKey(p), veio=!!vem[k];
+        // --- Reposição: quem agendou VOLTAR neste dia
+        if(typeof repAgendaDe==='function' && repAgendaDe(p).indexOf(iso)>=0)
+          out.reposicao.push(dashNomeRaca(p));
+        // --- Falta avisada: o dia que gerou o crédito da reposição é o dia da falta
+        try{
+          (repLancamentos(p)||[]).forEach(function(l){
+            if(l && l.tipo==='credito' && l.data===iso) out.faltas.push(dashNomeRaca(p));
+          });
+        }catch(e){}
+        // --- Aniversariante (o app sabe de todos, inclusive dos próximos dias)
+        var nasc=String(ex.nasc||p.nasc||'').slice(0,10);
+        if(/^\d{4}-\d{2}-\d{2}$/.test(nasc) && nasc.slice(5)===iso.slice(5))
+          out.aniversario.push(dashNomeRaca(p));
+        // --- Cliente novo: 45 primeiros dias de matrícula (o período de avaliação)
+        var mat=String(ex.matricula||'').slice(0,10);
+        if(veio && /^\d{4}-\d{2}-\d{2}$/.test(mat)){
+          var dm=(typeof diasEntreISO==='function')?diasEntreISO(mat,iso):null;
+          if(dm===null){ try{ dm=Math.round((new Date(iso+'T12:00:00')-new Date(mat+'T12:00:00'))/86400000); }catch(e){ dm=null; } }
+          if(dm!==null && dm>=0 && dm<=DASH_AUTO_45) out.clienteNovo.push(dashNomeRaca(p));
+        }
+        // --- Auluno com restrição (só quem vem nesse dia — a TV é do dia)
+        if(veio && dashAutoTemRestricao(ex)) out.aulunosRestr.push(dashAutoTextoRestricao(p,ex));
+        // --- Adaptação: dentro dos 30 dias, e vindo nesse dia
+        var ad=String(ex.adaptacao_desde||'').slice(0,10);
+        if(veio && /^\d{4}-\d{2}-\d{2}$/.test(ad)){
+          var da=null; try{ da=Math.round((new Date(iso+'T12:00:00')-new Date(ad+'T12:00:00'))/86400000); }catch(e){}
+          if(da!==null && da>=0 && da<=DASH_AUTO_ADAPT) out.adaptacao.push(dashNomeRaca(p));
+        }
+      }catch(e){}
+    });
+    // --- Hóspedes com restrição: quem está na AuAulândia hoje com alergia ou restrição
+    if(ehHoje){
+      try{
+        (hospedes||[]).forEach(function(h){
+          if(!h || h.mascote) return;
+          var ex=(typeof extraDoHosp==='function')?extraDoHosp(h):{};
+          if(!dashAutoTemRestricao(ex)) return;
+          var det=String(ex.restricao||ex.alergia||ex.ea_restr||'').trim();
+          var nome=(h.nome||'')+((typeof racaDe==='function'&&racaDe(h))?('/'+racaDe(h)):'');
+          out.hospRestr.push(det?(nome+' - '+det):nome);
+        });
+      }catch(e){}
+    }
+    // sem repetidos
+    Object.keys(out).forEach(function(k){
+      var visto={}; out[k]=out[k].filter(function(v){ var c=dashAutoNomeChave(v); if(visto[c]) return false; visto[c]=1; return true; });
+    });
+    return out;
+  }
+  // Põe na planilha o que falta e tira o que este mecanismo pôs e não vale mais.
+  // NUNCA remove o que uma pessoa escreveu — só o que está no registro do automático.
+  function dashAutoSincronizar(iso){
+    if(!DB || !(DASH_PONTE&&DASH_PONTE.url)) return Promise.resolve({ok:false, erro:'ponte não configurada'});
+    var noAuto='daycare/dashboard-auto/'+iso;
+    return Promise.all([
+      dashPonteChamar({acao:'lerDia', dia:iso}),
+      DB.ref(noAuto).once('value').then(function(s){ return s.val()||{}; }).catch(function(){ return {}; })
+    ]).then(function(r){
+      var naPlanilha=(r[0]&&r[0].conteudo)||{}, jaAuto=r[1]||{};
+      if(!(r[0]&&r[0].ok)) return {ok:false, erro:(r[0]&&r[0].erro)||'não consegui ler o dia na planilha'};
+      var hojeISOs=(typeof zHojeISO==='function')?zHojeISO():'';
+      var desejado=dashAutoCalcular(iso);
+      // Dia futuro: só reposição, falta avisada e aniversário.
+      if(iso>hojeISOs) Object.keys(desejado).forEach(function(k){ if(!DASH_AUTO_FUTURO[k]) desejado[k]=[]; });
+      var tarefas=[], novoRegistro={}, resumo={posto:0, tirado:0};
+      Object.keys(DASH_AUTO_COLS).forEach(function(k){
+        var col=DASH_AUTO_COLS[k];
+        var atual=(naPlanilha[col]||[]).filter(Boolean);
+        var atualCh={}; atual.forEach(function(v){ atualCh[dashAutoNomeChave(v)]=v; });
+        var antes=(jaAuto[k]||[]);
+        var quer=desejado[k]||[];
+        var querCh={}; quer.forEach(function(v){ querCh[dashAutoNomeChave(v)]=v; });
+        // 1) falta na planilha → lançar
+        quer.forEach(function(v){
+          if(atualCh[dashAutoNomeChave(v)]!==undefined) return;      // já está lá (de qualquer jeito)
+          tarefas.push(dashPonteChamar({acao:'lancar', dia:iso, coluna:col, valor:v})
+            .then(function(x){ if(x&&x.ok) resumo.posto++; return x; }));
+        });
+        // 2) foi este mecanismo que pôs e não vale mais → tirar
+        antes.forEach(function(v){
+          if(querCh[dashAutoNomeChave(v)]!==undefined) return;
+          if(atualCh[dashAutoNomeChave(v)]===undefined) return;      // já não está na planilha
+          tarefas.push(dashPonteChamar({acao:'remover', dia:iso, coluna:col, valor:atualCh[dashAutoNomeChave(v)]})
+            .then(function(x){ if(x&&x.ok) resumo.tirado++; return x; }));
+        });
+        novoRegistro[k]=quer;
+      });
+      return Promise.all(tarefas).then(function(){
+        novoRegistro._ts=Date.now();
+        novoRegistro._quem=(typeof quemSou==='function'?quemSou():'-');
+        return DB.ref(noAuto).set(novoRegistro).catch(function(){}).then(function(){
+          if((resumo.posto||resumo.tirado) && typeof audit==='function')
+            audit('dashboard-auto','preencheu a planilha de '+iso+': '+resumo.posto+' posto(s), '+resumo.tirado+' tirado(s)',{});
+          return {ok:true, dia:iso, posto:resumo.posto, tirado:resumo.tirado};
+        });
+      });
+    }).catch(function(e){
+      try{ if(typeof audit==='function') audit('dashboard-auto','NÃO consegui preencher a planilha de '+iso+': '+((e&&e.message)||e),{}); }catch(x){}
+      return {ok:false, erro:String((e&&e.message)||e)};
+    });
+  }
+  // Trava para vários aparelhos não escreverem a mesma coisa ao mesmo tempo: quem rodou há
+  // menos de DASH_AUTO_MIN minutos já resolveu o dia.
+  function dashAutoRodar(forcar){
+    if(!DB || !(DASH_PONTE&&DASH_PONTE.url)) return Promise.resolve({ok:false, erro:'ponte não configurada'});
+    var hoje=(typeof zHojeISO==='function')?zHojeISO():'';
+    if(!hoje) return Promise.resolve({ok:false, erro:'sem data'});
+    return DB.ref('daycare/dashboard-auto/'+hoje+'/_ts').once('value').then(function(s){
+      var ts=s.val()||0;
+      if(!forcar && ts && (Date.now()-ts) < DASH_AUTO_MIN*60000) return {ok:true, pulou:true};
+      // Hoje sempre. Os próximos dias, para pegar a reposição agendada e o aniversário.
+      var dias=[hoje];
+      for(var i=1;i<=DASH_AUTO_DIAS;i++){ var d=dashAutoDias(i); if(d) dias.push(d); }
+      var res=[];
+      return dias.reduce(function(fila, d){
+        return fila.then(function(){ return dashAutoSincronizar(d).then(function(x){ res.push(x); }); });
+      }, Promise.resolve()).then(function(){
+        var posto=res.reduce(function(a,x){ return a+((x&&x.posto)||0); },0);
+        var tirado=res.reduce(function(a,x){ return a+((x&&x.tirado)||0); },0);
+        return {ok:true, posto:posto, tirado:tirado, dias:dias.length};
+      });
+    }).catch(function(e){ return {ok:false, erro:String((e&&e.message)||e)}; });
+  }
+  // Botão da tela: DIZ o que fez. Nada de "clicou e não aconteceu nada".
+  function dashAutoBotao(btn){
+    if(!btn) return;
+    var t=btn.textContent; btn.disabled=true; btn.textContent='conferindo a planilha…';
+    dashAutoRodar(true).then(function(r){
+      btn.disabled=false;
+      btn.textContent=r.ok
+        ? ('✅ '+(r.posto||0)+' posto(s) · '+(r.tirado||0)+' tirado(s) em '+(r.dias||1)+' dia(s)')
+        : ('❌ '+(r.erro||'não consegui'));
+      try{ dashCarregar(); }catch(e){}
+      setTimeout(function(){ try{ btn.textContent=t; }catch(e){} }, 8000);
+    });
+  }
+  // Sozinho: ao abrir o app e de DASH_AUTO_MIN em DASH_AUTO_MIN minutos, enquanto alguém
+  // estiver com ele aberto. A TV relê a planilha a cada 2 minutos.
+  function dashAutoLigar(){
+    try{
+      setTimeout(function(){ dashAutoRodar(false); }, 12000);          // deixa o cadastro carregar
+      setInterval(function(){ dashAutoRodar(false); }, DASH_AUTO_MIN*60000);
+    }catch(e){}
+  }
   function dashReenviar(k,id,btn){
     var reg=(DASH_DADOS[k]||{})[id];
     if(!reg){ alert('Não achei este lançamento para reenviar. Atualize a tela e tente de novo.'); return; }
