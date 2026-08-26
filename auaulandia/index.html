@@ -9589,7 +9589,7 @@
   // Agora existe um carimbo: esta constante é a versão que o aparelho está rodando, e o
   // Firebase guarda a versão publicada. Quando as duas diferem, aparece o aviso — mas
   // NUNCA recarrega sozinho: recarregar no meio de um check-in perderia o trabalho.
-  const APP_VERSAO='2026-08-26-17';
+  const APP_VERSAO='2026-08-26-18';
   function vigiarVersao(){
     if(!DB) return;
     try{
@@ -17316,13 +17316,23 @@
       var n=+m[1];
       if(n>=1&&n<=20) cand.push({n:n, marca:m.index, ini:m.index+m[0].length});
     }
-    var seq=[], esperado=1;
-    cand.forEach(function(x){ if(x.n===esperado){ seq.push(x); esperado++; } });
+    var seq=[], esperado=1, recomeca=-1;
+    cand.forEach(function(x){
+      if(recomeca>=0) return;
+      if(x.n===esperado){ seq.push(x); esperado++; return; }
+      // voltou para o 1 (ou para um número já usado) depois de a lista ter começado:
+      // é uma segunda numeração, não a continuação desta.
+      if(seq.length>=2 && x.n<esperado && x.n<=2) recomeca=x.marca;
+    });
     var out={por:{}, solto:''};
     if(!seq.length){ out.solto=t.trim(); return out; }
+    var fimUtil=(recomeca>=0)?recomeca:t.length;
     var antes=t.slice(0, seq[0].marca).trim();
+    // o que veio depois do recomeço não se perde: vai inteiro para a caixa de recorte
+    if(recomeca>=0) out.solto=t.slice(recomeca).trim();
     seq.forEach(function(x, i){
-      var fim=(i+1<seq.length)?seq[i+1].marca:t.length;
+      var fim=(i+1<seq.length)?Math.min(seq[i+1].marca, fimUtil):fimUtil;
+      if(fim<x.ini) fim=x.ini;
       var pedaco=t.slice(x.ini, fim).trim();
       var q=perguntas[i];
       if(!q){ out.solto+=(out.solto?'\n':'')+x.n+'. '+pedaco; return; }
@@ -17334,7 +17344,9 @@
     });
     // sobrou pergunta sem resposta? não é erro: o tutor pode ter pulado.
     if(antes && !/^(alimenta|sa[uú]de|ol[aá]|oi|bom dia|boa tarde|boa noite)/i.test(jsNorm(antes)))
-      out.solto=antes;
+      out.solto=antes+(out.solto?('\n\n'+out.solto):'');
+    // resto de pontuação sozinho não é conteúdo: ":" na tela só assusta.
+    if(!/[a-zA-Z0-9\u00C0-\u024F]/.test(out.solto)) out.solto='';
     return out;
   }
   // O que o WhatsApp cola junto e o olho não vê: word joiner, espaço fino, espaço duro.

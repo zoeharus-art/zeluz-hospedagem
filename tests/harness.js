@@ -2264,6 +2264,59 @@ async function main() {
         });
       });
       check('o titulo da secao nao gruda na resposta', comSecao.length === 0, JSON.stringify(comSecao));
+
+      // A NUMERACAO QUE RECOMECA: a tutora do Boris respondeu 1..4, escreveu "Saude" e
+      // recomecou do 1. "Evitar escadas ao maximo pois sua coluna trava" nao pode sumir
+      // nem cair no campo de alergia de um FILHOt que tem um rim so.
+      // O que NAO pode sumir sao as palavras da TUTORA: as que ela escreveu e que nao
+      // estao em pergunta nenhuma (Formula, Natural, escadas, hemograma, hipoalergenica).
+      // Comparar trechos literais nao serve — o eco da pergunta some de proposito.
+      let sumiu = [];
+      comTexto.forEach((k) => {
+        const p = (ctx.PELUDINHOS || []).find((x) => ctx.pelKey(x) === k);
+        if (!p) return;
+        const Q = ctx.algPerguntas(p);
+        const bruto = String(respostas[k].resposta || '');
+        const sep = ctx.algSeparar(bruto, Q);
+        const junto = Object.keys(sep.por).map((q) => sep.por[q]).join(' ') + ' ' + (sep.solto || '');
+        const pal = (txt) => new Set(String(txt).split(/\s+/)
+          .map((w) => ctx.jsNorm(w).replace(/[^a-z0-9]/g, '')).filter((w) => w.length >= 4));
+        // as NOSSAS palavras entram todas, inclusive as curtas ("ele", "faz") — e delas
+        // que saem as flexoes que o tutor escreve ("eles fazem")
+        const nossas = new Set();
+        Q.forEach((q) => String(q.t + ' ' + (q.secao || '')).split(/\s+/)
+          .map((w) => ctx.jsNorm(w).replace(/[^a-z0-9]/g, '')).filter(Boolean)
+          .forEach((w) => nossas.add(w)));
+        const doResultado = pal(junto);
+        // "eles fazem" onde a pergunta diz "ele faz", "receosa" onde diz "receoso":
+        // e a NOSSA palavra reescrita pelo tutor, nao conteudo dele. Mesmo radical = nossa.
+        const nossaFlexao = (w) => [...nossas].some((n) =>
+          n.slice(0, 3) === w.slice(0, 3) && Math.abs(n.length - w.length) <= 2);
+        const saudacao = new Set(['tarde', 'noite', 'obrigada', 'obrigado', 'respondendo', 'perguntas']);
+        const perdidas = [...pal(bruto)].filter((w) =>
+          !nossas.has(w) && !doResultado.has(w) && !nossaFlexao(w) && !saudacao.has(w));
+        if (perdidas.length) sumiu.push(k + ': ' + perdidas.slice(0, 6).join(', '));
+      });
+      check('nenhuma palavra da tutora se perde no caminho',
+        sumiu.length === 0, JSON.stringify(sumiu.slice(0, 4)));
+
+      const boris = respostas['boris__laura'];
+      if (boris) {
+        const pB = (ctx.PELUDINHOS || []).find((x) => ctx.pelKey(x) === 'boris__laura');
+        if (pB) {
+          const sepB = ctx.algSeparar(boris.resposta, ctx.algPerguntas(pB));
+          check('a segunda numeracao vai para a caixa de recorte, nao para dentro da alergia',
+            /escadas/i.test(sepB.solto || '') && !/escadas/i.test(sepB.por.restricao || ''),
+            JSON.stringify({ solto: String(sepB.solto || '').slice(0, 60), restricao: String(sepB.por.restricao || '').slice(0, 60) }));
+        }
+      }
+      check('pontuacao sozinha nao vira "nao consegui encaixar"',
+        !Object.keys(respostas).some((k) => {
+          const p = (ctx.PELUDINHOS || []).find((x) => ctx.pelKey(x) === k);
+          if (!p) return false;
+          const sp = ctx.algSeparar(respostas[k].resposta || '', ctx.algPerguntas(p));
+          return sp.solto && !/[a-zA-Z0-9]/.test(sp.solto);
+        }));
       check('nenhum pedaco real e quase so a propria pergunta de volta',
         quaseSoPergunta.length === 0, JSON.stringify(quaseSoPergunta.slice(0, 4)));
       check('uma palavra trocada (genero) nao desmonta o reconhecimento',
