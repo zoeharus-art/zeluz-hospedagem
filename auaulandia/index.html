@@ -9515,7 +9515,7 @@
   // Agora existe um carimbo: esta constante é a versão que o aparelho está rodando, e o
   // Firebase guarda a versão publicada. Quando as duas diferem, aparece o aviso — mas
   // NUNCA recarrega sozinho: recarregar no meio de um check-in perderia o trabalho.
-  const APP_VERSAO='2026-08-25-26';
+  const APP_VERSAO='2026-08-25-27';
   function vigiarVersao(){
     if(!DB) return;
     try{
@@ -18275,12 +18275,13 @@
         if(typeof pelInativo==='function' && pelInativo(p)) return;
         var ex=(typeof pelExtra==='function')?pelExtra(p):{};
         var k=pelKey(p), veio=!!vem[k];
+        var ehMorador=(typeof pelCategoria==='function') && pelCategoria(p)==='morador';
         // --- Reposição: quem agendou VOLTAR neste dia
-        if(typeof repAgendaDe==='function' && repAgendaDe(p).indexOf(iso)>=0)
+        if(!ehMorador && typeof repAgendaDe==='function' && repAgendaDe(p).indexOf(iso)>=0)
           out.reposicao.push(dashNomeRaca(p));
         // --- Falta avisada: o dia que gerou o crédito da reposição é o dia da falta
         try{
-          (repLancamentos(p)||[]).forEach(function(l){
+          if(!ehMorador) (repLancamentos(p)||[]).forEach(function(l){
             if(l && l.tipo==='credito' && l.data===iso) out.faltas.push(dashNomeRaca(p));
           });
         }catch(e){}
@@ -18290,7 +18291,7 @@
           out.aniversario.push(dashNomeRaca(p));
         // --- Cliente novo: 45 primeiros dias de matrícula (o período de avaliação)
         var mat=String(ex.matricula||'').slice(0,10);
-        if(veio && /^\d{4}-\d{2}-\d{2}$/.test(mat)){
+        if(veio && !ehMorador && /^\d{4}-\d{2}-\d{2}$/.test(mat)){
           var dm=(typeof diasEntreISO==='function')?diasEntreISO(mat,iso):null;
           if(dm===null){ try{ dm=Math.round((new Date(iso+'T12:00:00')-new Date(mat+'T12:00:00'))/86400000); }catch(e){ dm=null; } }
           if(dm!==null && dm>=0 && dm<=DASH_AUTO_45) out.clienteNovo.push(dashNomeRaca(p));
