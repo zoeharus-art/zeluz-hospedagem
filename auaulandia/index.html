@@ -9466,7 +9466,7 @@
   // Agora existe um carimbo: esta constante é a versão que o aparelho está rodando, e o
   // Firebase guarda a versão publicada. Quando as duas diferem, aparece o aviso — mas
   // NUNCA recarrega sozinho: recarregar no meio de um check-in perderia o trabalho.
-  const APP_VERSAO='2026-08-25-22';
+  const APP_VERSAO='2026-08-25-23';
   function vigiarVersao(){
     if(!DB) return;
     try{
@@ -16110,26 +16110,57 @@
   // sempre esteve no ar: testada em 15/ago, a mensagem chegou ao grupo na hora.
   // Agora: se a config não está carregada, ela é buscada NA HORA; e o que não deu certo fica
   // gravado com o motivo, para aparecer na tela e ser reenviado.
-  function avisarGrupoComida(k){
+  //
+  // ⚠ 25/ago/2026 — o mesmo aviso falhou CALADO outra vez, por outro motivo.
+  // Dia 24/ago, às 15:33, o Octávio marcou Camus e Luna como quem não comeu nem no 2º
+  // horário. A marcação está gravada e a auditoria tem o `almoco2` dos dois. O grupo do
+  // Telegram NUNCA soube — e não sobrou rastro nenhum: `avisos-telegram-comida/2026-08-24`
+  // ficou VAZIO e não existe evento `telegram-comida` na auditoria daquele dia.
+  // A causa: a pergunta "já mandei este aviso hoje?" era um `once('value')` puro. Se o tablet
+  // fica sem rede naquele segundo, o Firebase deixa essa LEITURA pendente para sempre — a
+  // ESCRITA do `almoco2` entra na fila e sobe quando a rede volta, mas a leitura não volta
+  // nunca. O envio morria esperando a resposta: sem mensagem, sem registro, sem aviso na tela.
+  // Era a última saída silenciosa desta função.
+  // Agora, nesta ordem: (1) o rastro é gravado ANTES de tentar (`tentando:true`), então mesmo
+  // que tudo trave depois existe prova de que a tentativa começou e a tela pode oferecer o
+  // reenvio; (2) a pergunta "já mandei?" tem tempo máximo de 6 segundos — se estourar, vier
+  // vazia ou der erro, MANDA MESMO ASSIM (mandar duas vezes é chato; não mandar é o FILHOt
+  // passando o dia sem comer e o tutor sem saber); (3) um Set em memória evita a duplicata
+  // neste mesmo aparelho quando a leitura estoura o tempo.
+  var COMIDA_AVISO_OK=new Set();   // 'dia/chave' que ESTE aparelho já mandou com sucesso
+  function avisarGrupoComida(k, opts){
+    opts=opts||{};
     if(!DB) return;
     if(!TG_CFG||!TG_CFG.url){
       // Sem config em memória: busca agora e tenta de novo. Nunca mais desiste em silêncio.
       DB.ref('auaulandia/config/telegram').once('value').then(function(s){
         TG_CFG=s.val()||null;
-        if(TG_CFG&&TG_CFG.url) avisarGrupoComida(k);
+        if(TG_CFG&&TG_CFG.url) avisarGrupoComida(k, opts);
         else _comidaFalhou(k,'a ponte do Telegram não está configurada neste sistema');
       }).catch(function(e){ _comidaFalhou(k,'não consegui ler a configuração do Telegram: '+((e&&e.message)||e)); });
       return;
     }
     var dia=dcDataKey();
-    DB.ref('daycare/avisos-telegram-comida/'+dia+'/'+k).once('value').then(function(s){
-      var ja=s.val();
-      if(ja&&ja.ok) return;                     // já avisado com sucesso hoje
-      var o=(turmaDoDia()||[]).find(function(x){ return dcKey(x.p.n,x.p.tutor)===k; });
-      var nome=o?pelNome(o.p):k;
-      var raca=(o&&o.p.raca)||'';
-      var tutor=(o&&o.p.tutor)||'';
-      var quem=(typeof pessoaDoTurno==='function'?pessoaDoTurno():'-'), hora=(typeof horaAgora==='function'?horaAgora():'');
+    var o=(turmaDoDia()||[]).find(function(x){ return dcKey(x.p.n,x.p.tutor)===k; });
+    var nome=o?pelNome(o.p):k;
+    var raca=(o&&o.p.raca)||'';
+    var tutor=(o&&o.p.tutor)||'';
+    var quem=(typeof pessoaDoTurno==='function'?pessoaDoTurno():'-'), hora=(typeof horaAgora==='function'?horaAgora():'');
+    var reg=DB.ref('daycare/avisos-telegram-comida/'+dia+'/'+k);
+    // RASTRO ANTES DE TENTAR — e sem esperar esta gravação para seguir.
+    reg.update({ts:Date.now(), tentando:true, nome:nome, quem:(typeof quemSou==='function'?quemSou():'-')})
+      .catch(function(e){ _logFalhaGrav('aviso comida (tentando) '+k, e); });
+    // "Já mandei?" com tempo máximo. Timeout, leitura vazia, `tentando` de uma tentativa que
+    // morreu, ou erro de permissão: em todos os casos SEGUE e manda.
+    Promise.race([
+      reg.once('value').then(function(s){ return s.val(); })
+        .catch(function(e){ _logFalhaGrav('aviso comida (leitura) '+k, e); return {__timeout:true}; }),
+      new Promise(function(r){ setTimeout(function(){ r({__timeout:true}); }, 6000); })
+    ]).then(function(ja){
+      if(!opts.forcar){
+        if(ja&&ja.ok) return;                            // já avisado com sucesso hoje
+        if(COMIDA_AVISO_OK.has(dia+'/'+k)) return;       // este aparelho já mandou agora há pouco
+      }
       // ===== FORMATO PEDIDO PELA ADRIANA (25/ago/2026) — duas mensagens no grupo ==========
       //   1ª: "Camus · Maltês · Tutor: Sophia/João / Não comeu no 1º nem no 2º horário. /
       //        Quem serviu o 2º horário: Octávio às 15:20"
@@ -16146,10 +16177,12 @@
         return tgAvisar({grupo:'comida', texto:msgTutor});
       }).then(function(r){
         var ok=!!(r&&r.ok);
-        DB.ref('daycare/avisos-telegram-comida/'+dia+'/'+k).set({
-          ts:Date.now(), ok:ok, nome:nome, quem:(typeof quemSou==='function'?quemSou():'-'),
+        if(ok) COMIDA_AVISO_OK.add(dia+'/'+k);
+        // O registro final SUBSTITUI o `tentando:true` — quem lê a tela sabe se acabou.
+        reg.set({
+          ts:Date.now(), ok:ok, tentando:false, nome:nome, quem:(typeof quemSou==='function'?quemSou():'-'),
           erro: ok?'':String((r&&r.erro)||'a ponte não respondeu como esperado')
-        }).catch(function(){});
+        }).catch(function(e){ _logFalhaGrav('aviso comida (registro) '+k, e); });
         if(typeof audit==='function') audit('telegram-comida',(ok?'avisou o grupo que ':'NÃO avisou o grupo que ')+nome+' não almoçou',{pet:nome});
         if(!ok) _comidaAvisoNaTela(nome, String((r&&r.erro)||'a ponte não respondeu'));
       }).catch(function(e){ _comidaFalhou(k,String((e&&e.message)||e), nome); });
@@ -16160,9 +16193,9 @@
   function _comidaFalhou(k, motivo, nome){
     try{
       if(DB) DB.ref('daycare/avisos-telegram-comida/'+dcDataKey()+'/'+k).set({
-        ts:Date.now(), ok:false, nome:nome||'', erro:motivo||'',
+        ts:Date.now(), ok:false, tentando:false, nome:nome||'', erro:motivo||'',
         quem:(typeof quemSou==='function'?quemSou():'-')
-      }).catch(function(){});
+      }).catch(function(e){ _logFalhaGrav('aviso comida (falha) '+k, e); });
       if(typeof audit==='function') audit('telegram-comida','NÃO avisou o grupo — '+(motivo||''),{alvo:k});
     }catch(e){}
     _comidaAvisoNaTela(nome||'', motivo||'');
@@ -21881,6 +21914,10 @@
   // Adriana, 03/ago/2026: quem não comeu (1º e 2º horário) tem que chegar na consultora.
   // Ela liga, conta como foi e marca aqui — sem isso, ou ninguém avisa ou avisam duas vezes.
   var EMP_AVISOS={};
+  // O que o GRUPO do Telegram soube hoje — `daycare/avisos-telegram-comida/{dia}`.
+  // Sem isto, a consultora não tinha como saber se o grupo foi avisado nem como reenviar
+  // (Adriana, 25/ago/2026, depois do caso Camus/Luna de 24/ago).
+  var EMP_TG={};
   function empDataKey(){ return (typeof dcDataKey==='function')?dcDataKey():''; }
   // ⚠ 20/ago/2026 — Adriana: "no aviso de quem não almoçou não está aparecendo nada... está
   // zerado e dia 19/08 tiveram 4 envios para o telegram."
@@ -21930,13 +21967,14 @@
     Promise.all([
       pega('daycare/almoco/'+empDataKey()),
       pega('daycare/atividade/'+empDataKey()+'/almoco2'),
-      pega('daycare/avisos-comida/'+empDataKey())
+      pega('daycare/avisos-comida/'+empDataKey()),
+      pega('daycare/avisos-telegram-comida/'+empDataKey())
     ].concat(empDiasAtras(7).map(function(d){
       return Promise.all([pega('daycare/almoco/'+d), pega('daycare/atividade/'+d+'/almoco2'), pega('daycare/avisos-comida/'+d)])
         .then(function(x){ return {dia:d, itens:empPendentesDoDia(x[0],x[1],x[2])}; });
     }))).then(function(r){
-      window.__empAlm1=r[0]; window.__empAlm2=r[1]; EMP_AVISOS=r[2]||{};
-      EMP_ATRASO=r.slice(3).filter(function(x){ return x&&x.itens&&x.itens.length; });
+      window.__empAlm1=r[0]; window.__empAlm2=r[1]; EMP_AVISOS=r[2]||{}; EMP_TG=r[3]||{};
+      EMP_ATRASO=r.slice(4).filter(function(x){ return x&&x.itens&&x.itens.length; });
       renderEmporio();
       try{ empAvisarAtrasoNoTelegram(); }catch(e){}
     }).catch(function(){ renderEmporio(); });
@@ -21962,23 +22000,38 @@
           });
         });
         linhas.push('Nenhum tutor foi avisado ainda. As mensagens prontas vêm a seguir.');
-        return tgAvisar({grupo:'comida', texto:linhas.join('\n')}).then(function(){
+        // A ponte podia devolver {ok:false} e nada disso era olhado: o registro do dia era
+        // gravado igual e a tela dizia que estava tudo enviado. Agora cada mensagem é
+        // conferida, as que falharam ficam nomeadas no registro e a primeira falha vira
+        // cartaz na tela — sem interromper as outras (Adriana, 25/ago/2026).
+        var falhas=[], erro1='';
+        var conferir=function(quemFalhou, r){
+          if(r&&r.ok) return r;
+          if(!falhas.length) erro1=String((r&&r.erro)||'a ponte não respondeu');
+          falhas.push(quemFalhou);
+          return r;
+        };
+        return tgAvisar({grupo:'comida', texto:linhas.join('\n')}).then(function(r0){
+          conferir('o resumo do que ficou de ontem', r0);
           var seq=Promise.resolve();
           EMP_ATRASO.forEach(function(g){
             g.itens.forEach(function(x){
               seq=seq.then(function(){
                 return tgAvisar({grupo:'comida', texto:'<b>Mensagem para o tutor d'
-                  +(/^f/i.test(x.sexo||'')?'a ':'o ')+x.nome+'</b>\n\n'+empMensagem(x)});
+                  +(/^f/i.test(x.sexo||'')?'a ':'o ')+x.nome+'</b>\n\n'+empMensagem(x)})
+                  .then(function(r){ return conferir(x.nome, r); });
               });
             });
           });
           return seq;
         }).then(function(){
+          if(falhas.length) _comidaAvisoNaTela(falhas[0], erro1);
           return DB.ref('daycare/avisos-telegram-atraso/'+hoje)
-            .set({ts:Date.now(), dias:EMP_ATRASO.map(function(g){ return g.dia; })});
+            .set({ts:Date.now(), dias:EMP_ATRASO.map(function(g){ return g.dia; }), falhas:falhas})
+            .catch(function(e){ _logFalhaGrav('aviso atraso (registro)', e); });
         });
       });
-    }).catch(function(){});
+    }).catch(function(e){ _logFalhaGrav('aviso atraso ao grupo', e); });
   }
   function empLista(){
     const a1=window.__empAlm1||{}, a2=window.__empAlm2||{};
@@ -22049,6 +22102,25 @@
     if(typeof abrirEmporio==="function") abrirEmporio();
     window.scrollTo({top:0,behavior:"smooth"});
   }
+  // Status do aviso ao GRUPO "Quem não almoçou" — só para quem NÃO comeu nem no 2º horário
+  // (é nesse caso que o grupo deveria ter sido avisado na hora da marcação). Sem esta linha,
+  // o dia 24/ago passou inteiro sem ninguém perceber que o grupo não soube de Camus e Luna.
+  function empStatusGrupo(x){
+    if(!x||!x.grave) return '';
+    var t=(EMP_TG||{})[x.k]||null;
+    if(t&&t.ok) return '<div style="font-size:12.5px;font-weight:700;color:var(--crm-ok);margin:0 0 9px">✅ Grupo do Telegram avisado</div>';
+    if(t&&t.tentando&&(Date.now()-(Number(t.ts)||0))<120000)
+      return '<div style="font-size:12.5px;font-weight:700;color:var(--muted);margin:0 0 9px">⏳ Avisando o grupo…</div>';
+    var motivo=(t&&t.erro)?String(t.erro):'';
+    return '<div style="font-size:12.5px;font-weight:700;color:var(--crm-critico);margin:0 0 6px">⚠ O grupo do Telegram NÃO foi avisado'+(motivo?(' — '+escAttr(motivo)):'')+'</div>'
+      +'<button type="button" class="btn" style="width:100%;margin:0 0 9px;font-size:13px;font-weight:700;color:var(--crm-critico);background:transparent;border:1px solid var(--crm-critico)" onclick="empReenviarGrupo(\''+escAttr(x.k)+'\')">reenviar ao grupo</button>';
+  }
+  // Reenvio manual: força o envio mesmo que exista registro de tentativa, e recarrega a tela
+  // logo depois para a consultora ver o resultado sem ter de adivinhar.
+  function empReenviarGrupo(k){
+    try{ avisarGrupoComida(k,{forcar:true}); }catch(e){ _comidaAvisoNaTela('', String((e&&e.message)||e)); }
+    setTimeout(function(){ try{ abrirEmporio(); }catch(e){} },1500);
+  }
   function renderEmporio(){
     const el=document.getElementById('empList'); if(!el) return;
     const lista=empLista();
@@ -22092,6 +22164,7 @@
         +'<div style="font-weight:800;font-size:17px;color:var(--z-blue)">'+escAttr(x.nome)+(x.raca?(' <span style="font-size:12.5px;color:var(--muted);font-weight:600">'+escAttr(x.raca)+'</span>'):'')+'</div>'
         +'<div style="font-size:13.5px;color:var(--muted);font-weight:600">Tutor: '+escAttr(x.tutor||'a confirmar')+'</div>'
         +'<div style="font-weight:800;font-size:14.5px;color:'+cor+';margin:6px 0 9px">'+escAttr(x.motivo)+'</div>'
+        +empStatusGrupo(x)
         +(av
           ? '<div style="font-size:13.5px;font-weight:700;color:#1E8449">✅ Tutor avisado por '+escAttr(av.quem||'?')+(av.hora?(' às '+escAttr(av.hora)):'')+(av.obs?('<br><span style="color:var(--z-blue);font-weight:600">"'+escAttr(av.obs)+'"</span>'):'')+'</div>'
             +'<div style="text-align:right;margin-top:6px"><button type="button" class="ativ-del" style="font-size:12px" onclick="empDesfazer(\''+escAttr(x.k)+'\')">desfazer</button></div>'

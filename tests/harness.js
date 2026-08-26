@@ -1084,6 +1084,161 @@ async function main() {
   }
   console.log('');
 
+  // ---- Telegram: o aviso de quem não comeu (25/ago/2026) -------------------------
+  // 24/ago, 15:33: o Octávio marcou Camus e Luna como quem não comeu nem no 2º horário.
+  // O grupo nunca soube e não sobrou rastro — `avisos-telegram-comida/2026-08-24` vazio,
+  // nenhum evento `telegram-comida` na auditoria. A leitura "já mandei isso hoje?" era um
+  // `once('value')` puro: sem rede naquele segundo, o Firebase deixa a LEITURA pendente para
+  // sempre e o envio morre esperando. Estes testes provam que agora não morre mais calado.
+  console.log('Telegram — aviso de quem não comeu nunca trava mudo:');
+  {
+    const K = ctx.dcKey('Camus', 'Sophia');
+    const DIA = ctx.dcDataKey();
+    const P = 'daycare/avisos-telegram-comida/' + DIA + '/' + K;
+
+    const bkp = {
+      TG_CFG: ctx.TG_CFG, tgAvisar: ctx.tgAvisar, turmaDoDia: ctx.turmaDoDia,
+      pessoaDoTurno: ctx.pessoaDoTurno, horaAgora: ctx.horaAgora, quemSou: ctx.quemSou,
+      pelExtra: ctx.pelExtra, audit: ctx.audit, zAlertao: ctx.zAlertao,
+      setTimeout: ctx.setTimeout, EMP_TG: ctx.EMP_TG, EMP_AVISOS: ctx.EMP_AVISOS,
+      EMP_ATRASO: ctx.EMP_ATRASO, a1: ctx.__empAlm1, a2: ctx.__empAlm2,
+      geb: ctx.document.getElementById,
+    };
+    ctx.__bkpTg = {};
+    vm.runInContext('__bkpTg.DB = DB;', ctx);
+
+    // Ordem REAL dos acontecimentos: gravações e envios no mesmo registro, para provar que o
+    // rastro `tentando` é gravado ANTES da primeira mensagem sair.
+    const log = [];
+    const escritas = {};
+    const fazDB = (leitura) => ({
+      ref(p) {
+        return {
+          update(v) { log.push({ o: 'update', p, v }); escritas[p] = Object.assign({}, escritas[p] || {}, v); return Promise.resolve(); },
+          set(v) { log.push({ o: 'set', p, v }); escritas[p] = v; return Promise.resolve(); },
+          once() { log.push({ o: 'once', p }); return leitura(p); },
+        };
+      },
+    });
+    const porDB = (leitura) => { ctx.__tgDB = fazDB(leitura); vm.runInContext('DB = __tgDB;', ctx); };
+    const esperar = (ms) => new Promise((r) => setTimeout(r, ms));
+    const zerar = () => { log.length = 0; Object.keys(escritas).forEach((k) => delete escritas[k]); auditados.length = 0; alertas.length = 0; try { ctx.COMIDA_AVISO_OK.clear(); } catch (e) {} };
+
+    const auditados = [], alertas = [];
+    let tgResp = { ok: true };
+
+    try {
+      // O sandbox tem `setTimeout(){}` VAZIO — sem isto, a corrida de 6 s nunca resolveria.
+      ctx.setTimeout = (fn, ms) => setTimeout(fn, Math.min(Number(ms) || 0, 30));
+      ctx.TG_CFG = { url: 'https://ponte.teste', senha: 'x' };
+      ctx.tgAvisar = function (d) { log.push({ o: 'tg', t: String((d && d.texto) || '') }); return Promise.resolve(tgResp); };
+      ctx.turmaDoDia = () => [{ p: { n: 'Camus', tutor: 'Sophia', raca: 'Maltês' } }];
+      ctx.pessoaDoTurno = () => 'Octávio';
+      ctx.horaAgora = () => '15:33';
+      ctx.quemSou = () => 'Octávio';
+      ctx.pelExtra = () => ({ sexo: 'M' });
+      ctx.audit = function (a, d) { auditados.push({ acao: String(a || ''), detalhe: String(d == null ? '' : d) }); };
+      ctx.zAlertao = function (t) { alertas.push(String(t || '')); };
+
+      // 1) A LEITURA NUNCA RESPONDE — o caso real de 24/ago.
+      zerar();
+      porDB(() => new Promise(() => {}));
+      ctx.avisarGrupoComida(K);
+      await esperar(180);
+      const envios1 = log.filter((e) => e.o === 'tg');
+      const iTentando = log.findIndex((e) => e.o === 'update' && e.p === P && e.v && e.v.tentando === true);
+      const iPrimeiroEnvio = log.findIndex((e) => e.o === 'tg');
+      check('leitura travada: mesmo assim o grupo recebe as 2 mensagens',
+        envios1.length === 2, envios1.length + ' mensagem(ns) — ' + JSON.stringify(envios1.map((e) => e.t.slice(0, 40))));
+      check('leitura travada: fica registro tentando ANTES do envio',
+        iTentando >= 0 && iPrimeiroEnvio >= 0 && iTentando < iPrimeiroEnvio,
+        'tentando@' + iTentando + ' envio@' + iPrimeiroEnvio);
+      check('leitura travada: o registro final tem ok:true',
+        !!escritas[P] && escritas[P].ok === true && escritas[P].tentando === false,
+        JSON.stringify(escritas[P]));
+      check('leitura travada: audit telegram-comida gravado',
+        auditados.some((e) => e.acao === 'telegram-comida' && /avisou o grupo/.test(e.detalhe)),
+        JSON.stringify(auditados).slice(0, 200));
+
+      // 2) JÁ AVISADO HOJE — não repete; só repete se for reenvio forçado pela consultora.
+      zerar();
+      porDB(() => Promise.resolve({ val: () => ({ ok: true }) }));
+      ctx.avisarGrupoComida(K);
+      await esperar(120);
+      check('já avisado: não manda de novo sozinho', log.filter((e) => e.o === 'tg').length === 0);
+      zerar();
+      ctx.avisarGrupoComida(K, { forcar: true });
+      await esperar(120);
+      check('já avisado: com {forcar:true} manda as 2 mensagens de novo',
+        log.filter((e) => e.o === 'tg').length === 2);
+
+      // 3) A PONTE FALHA — registro com o motivo e cartaz na tela de quem serviu.
+      zerar();
+      tgResp = { ok: false, erro: 'ponte fora' };
+      porDB(() => Promise.resolve({ val: () => null }));
+      ctx.avisarGrupoComida(K);
+      await esperar(120);
+      check('ponte falha: registro final ok:false com o motivo',
+        !!escritas[P] && escritas[P].ok === false && escritas[P].erro === 'ponte fora',
+        JSON.stringify(escritas[P]));
+      check('ponte falha: quem serviu vê o cartaz na tela',
+        alertas.some((t) => /NÃO FOI AVISADO/.test(t)), JSON.stringify(alertas));
+      tgResp = { ok: true };
+
+      // 4) A TELA — a consultora precisa ver se o grupo soube, e reenviar quando não soube.
+      const elFalso = { innerHTML: '' }, cntFalso = { textContent: '' };
+      ctx.document.getElementById = function (id) {
+        const s = String(id || '');
+        if (s === 'empList') return elFalso;
+        if (s === 'empCount') return cntFalso;
+        return bkp.geb.call(ctx.document, id);
+      };
+      ctx.__empAlm1 = { [K]: 'nao' };
+      ctx.__empAlm2 = { [K]: 'nao' };
+      ctx.EMP_AVISOS = {};
+      ctx.EMP_ATRASO = [];
+
+      ctx.EMP_TG = { [K]: { ok: false, erro: 'ponte fora' } };
+      elFalso.innerHTML = ''; ctx.renderEmporio();
+      const htmlFalhou = String(elFalso.innerHTML || '');
+      check('tela: sem aviso ao grupo, o cartão diz que NÃO foi avisado',
+        /NÃO foi avisado/.test(htmlFalhou), htmlFalhou.slice(0, 160));
+      check('tela: e oferece o botão de reenviar ao grupo',
+        htmlFalhou.indexOf('empReenviarGrupo(') >= 0, htmlFalhou.slice(0, 160));
+
+      ctx.EMP_TG = { [K]: { ok: true } };
+      elFalso.innerHTML = ''; ctx.renderEmporio();
+      check('tela: com o grupo avisado, o cartão confirma',
+        /Grupo do Telegram avisado/.test(String(elFalso.innerHTML || '')),
+        String(elFalso.innerHTML || '').slice(0, 160));
+
+      ctx.EMP_TG = { [K]: { tentando: true, ts: Date.now() } };
+      elFalso.innerHTML = ''; ctx.renderEmporio();
+      check('tela: tentativa em curso aparece como "Avisando o grupo"',
+        /Avisando o grupo/.test(String(elFalso.innerHTML || '')) &&
+        String(elFalso.innerHTML || '').indexOf('empReenviarGrupo(') < 0,
+        String(elFalso.innerHTML || '').slice(0, 160));
+
+      // 5) O texto do código — as duas defesas continuam lá.
+      check('avisarGrupoComida usa Promise.race (leitura com tempo máximo)',
+        /Promise\.race/.test(String(ctx.avisarGrupoComida || '')));
+      check('avisarGrupoComida grava o rastro tentando',
+        /tentando/.test(String(ctx.avisarGrupoComida || '')));
+      check('empAvisarAtrasoNoTelegram registra as falhas do envio',
+        /falhas/.test(String(ctx.empAvisarAtrasoNoTelegram || '')));
+    } finally {
+      vm.runInContext('DB = __bkpTg.DB;', ctx);
+      ctx.TG_CFG = bkp.TG_CFG; ctx.tgAvisar = bkp.tgAvisar; ctx.turmaDoDia = bkp.turmaDoDia;
+      ctx.pessoaDoTurno = bkp.pessoaDoTurno; ctx.horaAgora = bkp.horaAgora; ctx.quemSou = bkp.quemSou;
+      ctx.pelExtra = bkp.pelExtra; ctx.audit = bkp.audit; ctx.zAlertao = bkp.zAlertao;
+      ctx.setTimeout = bkp.setTimeout; ctx.EMP_TG = bkp.EMP_TG; ctx.EMP_AVISOS = bkp.EMP_AVISOS;
+      ctx.EMP_ATRASO = bkp.EMP_ATRASO; ctx.__empAlm1 = bkp.a1; ctx.__empAlm2 = bkp.a2;
+      ctx.document.getElementById = bkp.geb;
+      try { ctx.COMIDA_AVISO_OK.clear(); } catch (e) {}
+    }
+  }
+  console.log('');
+
   // ---- resumo ----
   console.log('== Resultado: ' + pass + ' ok, ' + fail + ' falha(s) ==');
   if (fail) { console.log('\nFalhas:'); fails.forEach((f) => console.log('  - ' + f)); }
