@@ -60,3 +60,24 @@ Sidebar de vidro (símbolo Zêluz #39 real, 44px; itens Painel/AuAulândia/Day C
 
 ## Gate
 `bash tools/html-preflight.sh` APROVADO · zero cor/fonte fora dos tokens (importar `tokens.css` + usar variáveis; se precisar de teal/wash, definir `--p-*` locais derivadas dos tokens com comentário) · paleta categórica validada com `dataviz/scripts/validate_palette.js` · 375/390/1280px sem elemento com `right > innerWidth` · logo é SVG real · R$ completo · vocabulário Zêluz.
+
+## Saudação vibrante (pedido da Adriana, 26/ago ~00h50)
+"Tem que ter um bom dia, Octávio… vibrante. É um app para engajar: uma frase para motivar e mostrar que o que ele faz é muito importante."
+
+| Item | Medida |
+|---|---|
+| Linha 1 | "Bom dia, Octávio." (Boa tarde / Boa noite pelo relógio) — 28px/600 azul, entra com fade+translateY 12px em 400ms |
+| Linha 2 — o número que importa | "Hoje, **18 FILHOts** passam pelas suas mãos." — 16px/500, número em dourado 20px/600 com count-up 600ms (o número vem da turma do dia) |
+| Linha 3 — a frase do dia | 15px/400 azul, itálico Poppins 400, fade-in 500ms com 200ms de atraso; muda por dia da semana (rotação fixa, não aleatória — a pessoa reconhece a semana) |
+| Ornamento | traço dourado 3px × 40px abaixo da saudação, que "desenha" em 400ms (é o selo da fatia Monitor; o card Plano de hoje deixa de ter tarja para manter 1 selo por peça) |
+| Voz | autoridade que cuida; simples sem ser raso; sem infantilizar; zero emoji; tudo em português correto |
+
+Banco de frases (do Cérebro Zêluz, `07-linguagem-frases-mestras.md`, adaptadas ao Zeloso — NÃO inventar fora deste banco):
+1. Segunda — "Hoje, cada FILHOt vai ser visto de verdade. Pelos seus olhos."
+2. Terça — "O que ninguém vê também é cuidado. E é você quem vê."
+3. Quarta — "Energia bem gasta vira bem-estar. Isso começa na sua monitoria."
+4. Quinta — "Cuidar é escutar antes de agir. Cada check-in seu é uma escuta."
+5. Sexta — "Somos Zelosos. A gente se importa de verdade — e hoje isso tem o seu nome."
+6. Sábado — "A voz dos FILHOts hoje é a sua. Eles não sabem dizer onde dói; você sabe olhar."
+7. Domingo — "Aqui, cada cuidado é ÚNICO. E passa pelas suas mãos."
+Plantonista (noite): "Enquanto os tutores dormem, é o seu olhar que cuida." · Supervisão/Gestão/Diretoria: saudação com nome + data, sem frase motivacional (a frase é para quem está com o FILHOt).
