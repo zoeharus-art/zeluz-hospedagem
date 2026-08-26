@@ -584,6 +584,25 @@
   .janta-box div{font-weight:600;font-size:12.5px;margin-top:3px;color:var(--z-blue-soft)}
   .janta-box-rep{background:rgba(124,139,153,.14);border-left-color:#7C8B99}
   .janta-box-falta{background:rgba(179,38,30,.10);border-left-color:var(--crm-critico);color:var(--crm-critico)}
+
+  /* Calendário de "para que dia estou lançando" (tela Lançamentos da TV) */
+  .dcal{background:var(--z-cream-warm);border:1.5px solid var(--line);border-radius:14px;padding:10px 12px}
+  .dcal-top{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:8px}
+  .dcal-mes{font-weight:800;color:var(--z-blue);font-size:15px;text-transform:capitalize}
+  .dcal-nav{background:none;border:1.5px solid var(--line);border-radius:9px;width:34px;height:34px;
+            font-size:17px;font-weight:800;color:var(--z-blue);cursor:pointer;line-height:1}
+  .dcal-grade{display:grid;grid-template-columns:repeat(7,1fr);gap:4px}
+  .dcal-sem{font-size:10.5px;font-weight:800;color:var(--muted);text-align:center;padding:2px 0;text-transform:uppercase}
+  .dcal-dia{aspect-ratio:1/1;min-height:38px;border:1.5px solid transparent;border-radius:10px;background:var(--z-cream);
+            font-size:14px;font-weight:700;color:var(--z-blue);cursor:pointer;display:flex;align-items:center;justify-content:center}
+  .dcal-dia:disabled{background:none;color:transparent;cursor:default;border-color:transparent}
+  .dcal-dia.passado{color:var(--muted);background:none}
+  .dcal-dia.hoje{border-color:var(--z-gold);font-weight:800}
+  .dcal-dia.sel{background:var(--z-blue);color:var(--z-cream);border-color:var(--z-blue);font-weight:800}
+  .dcal-dia.temcoisa::after{content:'';width:5px;height:5px;border-radius:50%;background:var(--z-gold);
+            position:absolute;transform:translateY(13px)}
+  .dcal-dia{position:relative}
+  @media(max-width:420px){ .dcal-dia{min-height:34px;font-size:13px} }
   .obsline{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 0;border-bottom:1px solid #f1ebde}
   .obsline:last-child{border-bottom:none}
   .obsline .q{font-size:14px;font-weight:600;color:var(--z-blue)}
@@ -1710,7 +1729,7 @@
     <!-- Adriana, 19/ago/2026: "vamos criar no sidebar o item (Dashboard Day Care)". É aqui que
          a recepção lança o que hoje digita na planilha — e a planilha vira só o espelho que
          alimenta a TV. -->
-    <a data-v="dashdc" class="so-recepcao"><span data-icon="star"></span><span>Dashboard Day Care</span></a>
+    <a data-v="dashdc" class="so-recepcao"><span data-icon="star"></span><span>Lançamentos Diários Daycare</span></a>
     <a data-v="reposicao" class="so-recepcao"><span data-icon="star"></span><span>Reposições</span></a>
     <a data-v="orcamento" class="so-recepcao"><span data-icon="star"></span><span>Orçamento de Hospedagem</span></a>
 
@@ -3009,13 +3028,15 @@
     <!-- Para que DIA se está lançando. "Tem gente que já deixa previamente marcado"
          (Adriana, 25/ago/2026) — o banho de sexta é combinado na segunda. -->
     <div class="card" style="border-left:4px solid var(--z-blue)">
-      <div style="display:flex;flex-wrap:wrap;gap:10px;align-items:end">
-        <div class="field" style="margin:0;max-width:210px">
-          <label>Lançando para o dia</label>
-          <input type="date" class="cad-in" id="dashDataSel" onchange="dashTrocarDia(this.value)">
+      <div style="display:flex;flex-wrap:wrap;gap:14px;align-items:flex-start">
+        <div style="flex:0 0 auto;min-width:250px;max-width:330px;width:100%">
+          <label class="cad-lb" style="display:block;margin-bottom:5px">Toque no dia para o qual você está lançando</label>
+          <div id="dashCal"></div>
         </div>
-        <button type="button" class="btn" style="background:var(--z-cream-warm);color:var(--z-blue);border:1.5px solid var(--line)" onclick="dashVoltarHoje()">Voltar para hoje</button>
-        <div class="hint" style="flex:1;min-width:200px;margin:0" id="dashDiaAviso"></div>
+        <div style="flex:1;min-width:210px">
+          <div class="hint" id="dashDiaAviso" style="margin:0 0 8px"></div>
+          <button type="button" class="btn" style="background:var(--z-cream-warm);color:var(--z-blue);border:1.5px solid var(--line)" onclick="dashVoltarHoje()">Voltar para hoje</button>
+        </div>
       </div>
     </div>
     <!-- Adriana, 25/ago/2026: "precisamos que a tabela seja preenchida automaticamente".
@@ -3705,7 +3726,7 @@
     renovacao:['Renovação de Planos','Planos a vencer e renovações'],adaptacao:['Adaptação · 1º mês','Como está se adaptando'],
     reposicao:['Reposições','Faltas avisadas viram dias a repor'],
     daycare:['Day Care','Chamada e atividades'],hospedagem:['Plantão AuAulândia','Passagem de plantão'],
-    aulunos:['Aulunos','Relatório de frequência dos aulunos'],dashdc:['Lançamentos da TV','O que a recepção lança e aparece na TV do Day Care'],vacinas:['Prevenção','Vacinas, vermífugo, antiparasitário, coleira, exame de fezes e peso — quem está devendo'],
+    aulunos:['Aulunos','Relatório de frequência dos aulunos'],dashdc:['Lançamentos Diários Daycare','O que a recepção lança e aparece na TV do Day Care'],vacinas:['Prevenção','Vacinas, vermífugo, antiparasitário, coleira, exame de fezes e peso — quem está devendo'],
     cuidadovet:['Cuidado Vet','Consulta, receituário e reavaliação'],
     checkin:['Check-in','Entrada da estadia — ficha, pertences e assinatura'],
     conferencia:['Conferência Check-in','Pertences etiquetados, ração pesada e alarmes testados'],
@@ -9527,7 +9548,7 @@
   // Agora existe um carimbo: esta constante é a versão que o aparelho está rodando, e o
   // Firebase guarda a versão publicada. Quando as duas diferem, aparece o aviso — mas
   // NUNCA recarrega sozinho: recarregar no meio de um check-in perderia o trabalho.
-  const APP_VERSAO='2026-08-26-02';
+  const APP_VERSAO='2026-08-26-04';
   function vigiarVersao(){
     if(!DB) return;
     try{
@@ -18003,6 +18024,7 @@
     var iso=String(v||'').slice(0,10);
     if(!/^\d{4}-\d{2}-\d{2}$/.test(iso)) return;
     DASH_DIA_SEL=iso;
+    DASH_CAL_MES=iso.slice(0,7);
     try{ dashCarregar(); }catch(e){}
   }
   function dashVoltarHoje(){ DASH_DIA_SEL=''; try{ dashCarregar(); }catch(e){} }
@@ -18022,9 +18044,71 @@
     var r=((typeof pelGet==='function')?pelGet(p,'raca'):'')||p.raca||'';
     return r?(n+'/'+r):n;
   }
+
+  // ===== O CALENDÁRIO (Adriana, 26/ago/2026) ======================================
+  // "Um calendário, clica no dia — fica mais visual e didático." O mês inteiro na tela;
+  // um toque escolhe. Dourado = hoje. Azul cheio = o dia que está sendo lançado.
+  // Bolinha dourada embaixo = esse dia já tem coisa lançada (o app já sabe, não custa
+  // nada mostrar — evita lançar duas vezes achando que esqueceu).
+  var DASH_CAL_MES='';                 // 'AAAA-MM' que está aparecendo
+  var DASH_CAL_TEM={};                 // {'AAAA-MM-DD': true} — dias com lançamento
+  var DCAL_MESES=['janeiro','fevereiro','março','abril','maio','junho','julho',
+                  'agosto','setembro','outubro','novembro','dezembro'];
+  function dashCalMesDoDia(){ return (DASH_CAL_MES||dashDia().slice(0,7)); }
+  function dashCalTrocarMes(delta){
+    var m=dashCalMesDoDia().split('-'); var y=+m[0], mo=+m[1]-1+delta;
+    while(mo<0){ mo+=12; y--; } while(mo>11){ mo-=12; y++; }
+    DASH_CAL_MES=y+'-'+String(mo+1).padStart(2,'0');
+    dashCalRender(); dashCalCarregarMarcas();
+  }
+  function dashCalHTML(){
+    var ym=dashCalMesDoDia(), y=+ym.split('-')[0], mo=+ym.split('-')[1]-1;
+    var hoje=(typeof zHojeISO==='function')?zHojeISO():'', sel=dashDia();
+    var primeiro=new Date(y,mo,1), inicio=primeiro.getDay();
+    var qtd=new Date(y,mo+1,0).getDate();
+    var h='<div class="dcal"><div class="dcal-top">'
+      +'<button type="button" class="dcal-nav" onclick="dashCalTrocarMes(-1)" aria-label="mês anterior">‹</button>'
+      +'<span class="dcal-mes">'+DCAL_MESES[mo]+' de '+y+'</span>'
+      +'<button type="button" class="dcal-nav" onclick="dashCalTrocarMes(1)" aria-label="próximo mês">›</button>'
+      +'</div><div class="dcal-grade">';
+    ['dom','seg','ter','qua','qui','sex','sáb'].forEach(function(d){ h+='<div class="dcal-sem">'+d+'</div>'; });
+    for(var i=0;i<inicio;i++) h+='<button type="button" class="dcal-dia" disabled></button>';
+    for(var d=1;d<=qtd;d++){
+      var iso=y+'-'+String(mo+1).padStart(2,'0')+'-'+String(d).padStart(2,'0');
+      var cls='dcal-dia';
+      if(iso===sel) cls+=' sel'; else if(iso<hoje) cls+=' passado';
+      if(iso===hoje) cls+=' hoje';
+      if(DASH_CAL_TEM[iso]) cls+=' temcoisa';
+      h+='<button type="button" class="'+cls+'" onclick="dashTrocarDia(\''+iso+'\')" title="'+iso+'">'+d+'</button>';
+    }
+    return h+'</div></div>';
+  }
+  function dashCalRender(){
+    var el=document.getElementById('dashCal'); if(!el) return;
+    el.innerHTML=dashCalHTML();
+  }
+  // Quais dias do mês já têm alguma coisa lançada — uma leitura só, do mês inteiro.
+  function dashCalCarregarMarcas(){
+    if(!DB) return;
+    var ym=dashCalMesDoDia();
+    DB.ref('daycare/dashboard').once('value').then(function(s){
+      var v=s.val()||{}; DASH_CAL_TEM={};
+      Object.keys(v).forEach(function(dia){
+        if(String(dia).slice(0,7)!==ym) return;
+        var itens=v[dia]||{};
+        var tem=Object.keys(itens).some(function(k){ return itens[k] && Object.keys(itens[k]).length; });
+        if(tem) DASH_CAL_TEM[dia]=true;
+      });
+      dashCalRender();
+    }).catch(function(e){
+      try{ if(typeof audit==='function') audit('dashboard-daycare','NÃO consegui ler os dias com lançamento: '+((e&&e.message)||e),{}); }catch(x){}
+    });
+  }
   function dashSincronizarSeletor(){
     try{
-      var el=document.getElementById('dashDataSel'); if(el) el.value=dashDia();
+      // O calendário acompanha o dia escolhido — inclusive o mês, se ela pulou para outro.
+      if(!DASH_CAL_MES || DASH_CAL_MES!==dashDia().slice(0,7)) DASH_CAL_MES=dashDia().slice(0,7);
+      dashCalRender();
       var av=document.getElementById('dashDiaAviso');
       if(av){
         var hoje=(typeof zHojeISO==='function')?zHojeISO():'';
@@ -18036,6 +18120,7 @@
   }
   var DASH_AUTO_LIGADO=false;
   function dashCarregar(){
+    try{ dashCalCarregarMarcas(); }catch(e){}
     if(!DB){ renderDash(); return; }
     if(!DASH_AUTO_LIGADO){ DASH_AUTO_LIGADO=true; try{ dashAutoLigar(); }catch(e){} }
     Promise.all([
@@ -18237,7 +18322,7 @@
     // QUINTA vez do mesmo padrão (aviso da vet, almoço, EA, comida, agora este): caminho de
     // saída sem `else` que não deixa nem rastro. Agora ele DIZ o que houve.
     if(!(DASH_PONTE&&DASH_PONTE.url)){
-      var msg='A ponte da planilha não está configurada neste sistema. Peça à Gestão para colar a URL e a senha em Dashboard Day Care — sem isso nada chega à planilha nem à TV.';
+      var msg='A ponte da planilha não está configurada neste sistema. Peça à Gestão para colar a URL e a senha em Lançamentos Diários Daycare — sem isso nada chega à planilha nem à TV.';
       if(typeof audit==='function') audit('dashboard-daycare','NÃO enviou ('+(reg&&reg.valor||'')+'): ponte não configurada',{});
       return Promise.resolve({ok:false, erro:msg});
     }
