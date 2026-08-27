@@ -2902,6 +2902,8 @@ async function main() {
       /var repUsa=Math\.min\(repPedidas, nDiaBruto\);/.test(html));
     check('o saldo NAO cai no orcamento — so no check-in',
       /O saldo s\u00f3 cai no check-in|O saldo só cai no check-in/.test(html));
+    check('linha zerada nao aparece na conta (0 diarias x R$ 130,00)',
+      /if\(p\.nDia>0\) h\+=/.test(html) && /if\(p\.nPer>0\) h\+=/.test(html));
     check('a mensagem ao tutor conta a reposicao usada',
       /Já usando |J\u00e1 usando /.test(html));
 

@@ -8287,9 +8287,10 @@
     C.pets.forEach(function(p){
       h+='<div style="border:1.5px solid var(--line);border-radius:12px;padding:12px 14px;margin-bottom:10px">';
       h+='<div style="font-weight:800;color:var(--z-blue);font-size:15px;margin-bottom:6px">'+escAttr(p.sel.nome)+' <span style="font-weight:600;font-size:12.5px;color:var(--z-blue-soft)">'+escAttr(p.sel.rotulo)+(p.ordem>1?(' · '+p.ordem+'º FILHOt'):'')+'</span></div>';
-      h+='<div class="orc-linha"><span>'+p.nDia+' diária'+(p.nDia===1?'':'s')+' de hotel × '+fmtCent(p.vDia)+'</span><strong>'+fmtCent(p.brutoDia)+'</strong></div>';
+      // linha zerada é ruído: quando a reposição cobriu todas as diárias, ela some
+      if(p.nDia>0) h+='<div class="orc-linha"><span>'+p.nDia+' diária'+(p.nDia===1?'':'s')+' de hotel × '+fmtCent(p.vDia)+'</span><strong>'+fmtCent(p.brutoDia)+'</strong></div>';
       if(p.off>0) h+='<div class="orc-linha"><span>Desconto de '+p.off+'% na diária'+(p.sel.compromisso?(' (plano '+escAttr(p.sel.compromisso)+')'):'')+(p.ordem>1&&p.off===descFamiliaHosp(p.ordem)?(' — '+p.ordem+'º FILHOt'):'')+'</span><strong style="color:var(--crm-ok)">− '+fmtCent(p.descValor)+'</strong></div>';
-      h+='<div class="orc-linha"><span>'+p.nPer+' pernoite'+(p.nPer===1?'':'s')+' × '+fmtCent(p.vPer)+' <span style="color:var(--muted);font-size:12px">(pernoite não tem desconto)</span></span><strong>'+fmtCent(p.brutoPer)+'</strong></div>';
+      if(p.nPer>0) h+='<div class="orc-linha"><span>'+p.nPer+' pernoite'+(p.nPer===1?'':'s')+' × '+fmtCent(p.vPer)+' <span style="color:var(--muted);font-size:12px">(pernoite não tem desconto)</span></span><strong>'+fmtCent(p.brutoPer)+'</strong></div>';
       h+='<div class="orc-linha" style="border-bottom:none"><span><strong>Subtotal '+escAttr(p.sel.nome)+'</strong></span><strong>'+fmtCent(p.total)+'</strong></div>';
       h+=orcRepCaixaHTML(p);
       h+='<div class="orc-noites">'+p.noites.map(function(n){
@@ -9848,7 +9849,7 @@
   // Agora existe um carimbo: esta constante é a versão que o aparelho está rodando, e o
   // Firebase guarda a versão publicada. Quando as duas diferem, aparece o aviso — mas
   // NUNCA recarrega sozinho: recarregar no meio de um check-in perderia o trabalho.
-  const APP_VERSAO='2026-08-27-09';
+  const APP_VERSAO='2026-08-27-10';
   function vigiarVersao(){
     if(!DB) return;
     try{
