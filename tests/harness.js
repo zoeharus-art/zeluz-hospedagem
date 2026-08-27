@@ -2530,6 +2530,72 @@ async function main() {
     check('menu: v-relatorios continua existindo', vRel.length > 0);
     check('menu: v-inicio e v-painel continuam existindo',
       html.indexOf('id="v-inicio"') > 0 && html.indexOf('id="v-painel"') > 0);
+
+    // ---- 5. cabeçalho sem item embaixo não aparece ----
+    // Sem isto o monitor lia "Day Care", "Peludinhos" e "Planos e cobranças" na barra
+    // sem um item embaixo — rótulo prometendo o que não existe.
+    check('menu: existe a função que esconde cabeçalho vazio',
+      /function ajustarSubcabecalhosMenu\(\)/.test(html));
+    check('menu: o cabeçalho é reavaliado quando as permissões são aplicadas',
+      /function aplicarPaginasPessoa\(u\)\{[\s\S]*?ajustarSubcabecalhosMenu\(\);[\s\S]*?\n  \}/.test(html));
+    check('menu: o cabeçalho é reavaliado depois das pendências (navPend)',
+      /navPendSubirParaOPai\(\);[\s\S]{0,220}?ajustarSubcabecalhosMenu\(\)/.test(html));
+    const corpoFn = (/function ajustarSubcabecalhosMenu\(\)\{[\s\S]*?\n  \}/.exec(html) || [''])[0];
+    check('menu: ela não encosta em classe de visibilidade (só mede e esconde o rótulo)',
+      corpoFn.length > 0 && corpoFn.indexOf('so-') < 0 && corpoFn.indexOf('op-only') < 0);
+
+    // Prova de verdade: um DOM de mentira, pequeno, com a mesma forma do menu real.
+    // O teste de texto diz que a função existe; este diz que ela ACERTA qual rótulo some.
+    const noMenu = (tag, cls, filhos) => {
+      const n = { tagName: tag.toUpperCase(), _cls: cls ? cls.split(' ') : [],
+        filhos: filhos || [], offsetParent: {}, nextElementSibling: null };
+      n.style = { display: '', removeProperty(p) { if (p === 'display') n.style.display = ''; } };
+      n.classList = { contains: (c) => n._cls.indexOf(c) >= 0 };
+      n.desc = () => n.filhos.reduce((a, f) => a.concat([f], f.desc()), []);
+      n.querySelectorAll = (sel) => n.desc().filter((f) => (sel[0] === '.'
+        ? f.classList.contains(sel.slice(1)) : f.tagName === sel.toUpperCase()));
+      n.querySelector = (sel) => n.querySelectorAll(sel)[0] || null;
+      n.filhos.forEach((f, i) => { f.nextElementSibling = n.filhos[i + 1] || null; });
+      return n;
+    };
+    const escondido = (el) => el.style.display === 'none';
+
+    // Cenário do monitor: nada da AuAulândia visível, mas o Day Care (dentro do
+    // #blocoDaycare, com cabeçalho próprio) tem a Abertura do dia à vista.
+    const aConf = noMenu('a', ''); aConf.offsetParent = null;
+    const aHosp = noMenu('a', ''); aHosp.offsetParent = null;
+    const hDay = noMenu('div', 'grp grp-sub');
+    const aAber = noMenu('a', '');                       // este está visível
+    const blocoDC = noMenu('div', 'so-day', [hDay, aAber]);
+    const hAua = noMenu('div', 'grp grp-sub');
+    const gServ = noMenu('div', 'grp');
+    const hPel = noMenu('div', 'grp grp-sub');
+    const aVac = noMenu('a', ''); aVac.offsetParent = null;
+    const gCentral = noMenu('div', 'grp');
+    const navFake = noMenu('nav', '', [gServ, hAua, aConf, aHosp, blocoDC, gCentral, hPel, aVac]);
+
+    const rodar = () => {
+      const real = ctx.document.getElementById;
+      ctx.document.getElementById = (id) => (id === 'nav' ? navFake : real.call(ctx.document, id));
+      try { ctx.ajustarSubcabecalhosMenu(); } finally { ctx.document.getElementById = real; }
+    };
+    if (typeof ctx.ajustarSubcabecalhosMenu !== 'function') {
+      check('menu: a função de esconder cabeçalho é alcançável para simular', false, 'não exportada');
+    } else {
+      rodar();
+      check('menu: some o sub-cabeçalho que ficou sem nenhum item', escondido(hAua));
+      check('menu: some o grupo inteiro quando nada sobrou (Central Zêluz)', escondido(gCentral));
+      check('menu: some o sub-cabeçalho Peludinhos junto com o grupo', escondido(hPel));
+      check('menu: fica o sub-cabeçalho que ainda tem item (Day Care)', !escondido(hDay));
+      check('menu: fica o grupo que tem item aninhado num bloco (Serviços)', !escondido(gServ));
+      // O rótulo de dentro do bloco não empresta itens para o rótulo de fora: se emprestasse,
+      // "AuAulândia — o hotel da Zêluz" ficaria de pé sem nada seu embaixo.
+      check('menu: um rótulo não conta os itens do bloco vizinho', escondido(hAua) && !escondido(hDay));
+      // Trocar de papel tem que poder REVELAR de novo — senão some para sempre.
+      aVac.offsetParent = {};
+      rodar();
+      check('menu: quando o item volta, o cabeçalho volta com ele', !escondido(hPel) && !escondido(gCentral));
+    }
   }
   console.log('');
 

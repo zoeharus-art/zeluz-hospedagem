@@ -1718,7 +1718,7 @@
     <a data-v="checkout" title="O monitor monta a bolsa e devolve tudo (1º passo; a Central fecha com o tutor)."><span data-icon="check"></span><span>Check-out</span></a>
     <!-- Bloco do Day Care: era o accordion data-acc="daycare". Continua sendo UM bloco
          para a trava de permissão granular continuar valendo — quem tem escopo restrito
-         e nenhuma atividade não vê o Day Care (aplicarPaginasPermitidas). -->
+         e nenhuma atividade não vê o Day Care (aplicarPaginasPessoa). -->
     <div class="so-day" id="blocoDaycare">
       <div class="grp grp-sub">Day Care</div>
       <a data-v="abertura" class="so-abertura" title="Monitor 1: como a casa abre."><span data-icon="sun"></span><span>Abertura do dia</span></a>
@@ -4082,6 +4082,8 @@
     navPend('emporio',      r.avisar,      '{n} tutor a avisar — não comeram hoje');
     navPend('reposicao',    r.repComSaldo, '{n} peludinho com dia a repor');
     navPendSubirParaOPai();
+    // A pendência pode acender um item que estava apagado — o rótulo dele tem que voltar junto.
+    try{ if(typeof ajustarSubcabecalhosMenu==='function') ajustarSubcabecalhosMenu(); }catch(e){}
   }
   // A pendência SOBE até o grupo do menu. Descoberto em 15/ago/2026 abrindo o app de verdade:
   // o Check-in estava com 11 pendências e vive dentro do grupo "AuAulândia", que fica
@@ -9627,7 +9629,7 @@
   // Agora existe um carimbo: esta constante é a versão que o aparelho está rodando, e o
   // Firebase guarda a versão publicada. Quando as duas diferem, aparece o aviso — mas
   // NUNCA recarrega sozinho: recarregar no meio de um check-in perderia o trabalho.
-  const APP_VERSAO='2026-08-26-20';
+  const APP_VERSAO='2026-08-26-21';
   function vigiarVersao(){
     if(!DB) return;
     try{
@@ -10032,6 +10034,8 @@
     try{ var acc=document.getElementById('blocoDaycare');
       if(acc){ if(restrito && !(Array.isArray(u.atividades)&&u.atividades.length)) acc.style.setProperty('display','none','important'); else acc.style.removeProperty('display'); }
     }catch(e){}
+    // Decidido quem vê o quê, some com o rótulo que ficou sem nenhum item embaixo.
+    try{ if(typeof ajustarSubcabecalhosMenu==='function') ajustarSubcabecalhosMenu(); }catch(e){}
   }
   function aplicarLogin(u){
     try{ sessionStorage.setItem('zeluz_login', JSON.stringify(u)); }catch(e){} // fonte única do escopo (montarSubnav/abrirAtividade leem daqui)
@@ -10056,6 +10060,9 @@
     // (Não restaura a preferência salva: evita ter que fechar a AuAulândia pra abrir o Day Care.)
     // O ajustarAcordeoes só reabre o accordion de quem enxerga um único serviço (ex.: vet).
     try{ document.querySelectorAll('#nav .acc').forEach(function(a){ a.classList.remove('acc-open'); }); ajustarAcordeoes(); if(typeof requestAnimationFrame==='function') requestAnimationFrame(function(){ try{ ajustarAcordeoes(); }catch(e){} }); }catch(e){}
+    // Papel aplicado: esconde o cabeçalho que ficou sem item. De novo no quadro seguinte,
+    // porque a medição depende do layout já ter assentado (mesma razão do ajustarAcordeoes).
+    try{ ajustarSubcabecalhosMenu(); if(typeof requestAnimationFrame==='function') requestAnimationFrame(function(){ try{ ajustarSubcabecalhosMenu(); }catch(e){} }); }catch(e){}
     // Item 1 — quem recebeu atividade do Day Care (ex.: Almoço) precisa VER a atividade ao
     // entrar. Antes o Day Care ficava fechado na sanfona e a pessoa jurava que "não apareceu".
     try{ if(Array.isArray(u.atividades)&&u.atividades.length){
@@ -14459,6 +14466,46 @@
     // sozinho — não faz sentido a pessoa ter que abrir para achar o único item que ela usa.
     var _accsVis=[...document.querySelectorAll('#nav .acc')].filter(a=>getComputedStyle(a).display!=='none');
     if(_accsVis.length===1) _accsVis[0].classList.add('acc-open');
+  }
+  // ===== Cabeçalho vazio não aparece (índice de 26/ago/2026) =========================
+  // As sanfonas viraram sub-cabeçalhos e com isso voltou um problema que o antigo
+  // ajustarAcordeoes já resolvia: o monitor via "Day Care", "Peludinhos" e "Planos e
+  // cobranças" escritos na barra sem UM item embaixo. Cabeçalho que não encabeça nada é
+  // ruído — e ruído numa barra de trabalho faz a pessoa procurar o que não existe.
+  // NÃO mexe em classe nenhuma: só esconde o RÓTULO quando não sobrou item visível.
+  function ajustarSubcabecalhosMenu(){
+    try{
+      var nav=document.getElementById('nav'); if(!nav) return;
+      var eGrupo=function(el){ return !!(el&&el.classList&&el.classList.contains('grp')); };
+      var eSub=function(el){ return !!(el&&el.classList&&el.classList.contains('grp-sub')); };
+      // Mede com as sub-sanfonas do Day Care ABERTAS. Recolhidas, Turminhas e Atividades
+      // pareceriam vazias e o "Day Care" sumiria por engano — a mesma armadilha em que o
+      // ajustarAcordeoes já tinha caído. O estado do usuário é restaurado logo abaixo.
+      var dcs=[].slice.call(nav.querySelectorAll('.dcsub'));
+      var abertas=dcs.map(function(x){ return x.classList.contains('dcsub-open'); });
+      dcs.forEach(function(x){ x.classList.add('dcsub-open'); });
+
+      var cabecalhos=[].slice.call(nav.querySelectorAll('.grp'));
+      // Limpa a medição anterior ANTES de aferir: trocar de papel tem que poder revelar de novo.
+      cabecalhos.forEach(function(c){ c.style.removeProperty('display'); });
+
+      var contarAbaixo=function(c){
+        var sub=eSub(c), n=0;
+        for(var el=c.nextElementSibling; el; el=el.nextElementSibling){
+          if(eGrupo(el)){ if(sub||!eSub(el)) break; continue; } // grupo novo encerra a conta
+          // Um sub-cabeçalho para no primeiro bloco que tem cabeçalho próprio (ex.: #blocoDaycare):
+          // aqueles itens são do OUTRO rótulo, não deste.
+          if(sub && el.querySelector && el.querySelector('.grp')) break;
+          if(el.tagName==='A'){ if(el.offsetParent!==null) n++; continue; }
+          var dentro=el.querySelectorAll?el.querySelectorAll('a'):[];
+          for(var i=0;i<dentro.length;i++){ if(dentro[i].offsetParent!==null) n++; }
+        }
+        return n;
+      };
+
+      cabecalhos.forEach(function(c){ if(contarAbaixo(c)===0) c.style.display='none'; });
+      dcs.forEach(function(x,i){ x.classList.toggle('dcsub-open', abertas[i]); }); // restaura
+    }catch(e){}
   }
   // ===== Recolher/expandir a barra inteira =====
   function toggleSidebarColapso(){
