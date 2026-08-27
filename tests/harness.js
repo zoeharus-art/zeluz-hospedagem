@@ -2458,11 +2458,21 @@ async function main() {
         'AuAulândia — o hotel da Zêluz', 'Day Care', 'AuAulândia', 'Day Care', 'Peludinhos', 'Planos e cobranças']),
       JSON.stringify(subs.map((s) => s.titulo)));
     const grpDe = (t) => (grupos.find((g) => g.titulo === t) || { pos: -1 }).pos;
-    check('menu: Relatórios fica solto, entre Operação e Em breve',
-      porV.relatorios && porV.relatorios.pos > grpDe('Operação') && porV.relatorios.pos < grpDe('Em breve'),
+    // Adriana, 27/ago/2026: "Relatórios é um item à parte, no fim" — saiu de entre Operação
+    // e Em breve e foi para DEPOIS de tudo, sozinho, logo antes do Sair.
+    check('menu: Relatórios fica depois do grupo Em breve e antes de Sair',
+      porV.relatorios && porV.sair
+      && porV.relatorios.pos > grpDe('Em breve') && porV.relatorios.pos < porV.sair.pos,
       porV.relatorios ? String(porV.relatorios.pos) : 'sumiu');
-    check('menu: nada da Operação fica depois de Relatórios',
-      ['acerto', 'ritmo', 'eahist', 'pessoas', 'config', 'painel'].every((k) => porV[k] && porV[k].pos < porV.relatorios.pos));
+    check('menu: nada do menu fica entre Relatórios e Sair',
+      itens.every((it) => it.v === 'relatorios' || it.v === 'sair'
+        || it.pos < porV.relatorios.pos || it.pos > porV.sair.pos),
+      JSON.stringify(itens.filter((it) => it.pos > porV.relatorios.pos && it.pos < porV.sair.pos).map((i) => i.v)));
+    check('menu: Relatórios vem separado por um fio (nav-solto)',
+      /<a[^>]*data-v="relatorios"[^>]*class="[^"]*nav-solto/.test(nav)
+      && /\.nav a\.nav-solto\{[^}]*border-top:/.test(html));
+    check('menu: Relatórios não perdeu quem o vê ao virar item solto',
+      porV.relatorios && porV.relatorios.vis === 'so-gestao', porV.relatorios ? porV.relatorios.vis : 'sumiu');
     [['conferencia', 'Serviços'], ['checkout', 'Serviços'], ['cuidadovet', 'Serviços'], ['abertura', 'Serviços'],
      ['checkin', 'Central Zêluz'], ['checkoutconf', 'Central Zêluz'], ['ficha', 'Central Zêluz'],
      ['emporio', 'Central Zêluz'], ['renovacao', 'Central Zêluz'],
@@ -2530,6 +2540,28 @@ async function main() {
     check('menu: v-relatorios continua existindo', vRel.length > 0);
     check('menu: v-inicio e v-painel continuam existindo',
       html.indexOf('id="v-inicio"') > 0 && html.indexOf('id="v-painel"') > 0);
+
+    // Adriana, 27/ago/2026: "o nome está pequeno, não dá para enxergar; o que está dentro
+    // está maior que o título". O sub-cabeçalho tem de ser MAIOR e mais pesado que o item.
+    const cssSub = (/\.nav \.grp\.grp-sub\{([^}]*)\}/.exec(html) || [, ''])[1];
+    const cssItem = (/\.nav a\{([^}]*)\}/.exec(html) || [, ''])[1];
+    // Le "font-size:15px" sem regex: menos escape, menos chance de o teste mentir.
+    const px = (css, prop) => {
+      const i2 = css.indexOf(prop + ':');
+      return i2 < 0 ? NaN : parseFloat(css.slice(i2 + prop.length + 1));
+    };
+    const peso = (css) => { const m = /font-weight:\s*(\d+)/.exec(css); return m ? parseInt(m[1], 10) : NaN; };
+    check('menu: o sub-cabeçalho é MAIOR que o item que vem embaixo dele',
+      px(cssSub, 'font-size') > px(cssItem, 'font-size'),
+      'sub ' + px(cssSub, 'font-size') + 'px vs item ' + px(cssItem, 'font-size') + 'px');
+    check('menu: o sub-cabeçalho é mais pesado que o item',
+      peso(cssSub) > peso(cssItem), 'sub ' + peso(cssSub) + ' vs item ' + peso(cssItem));
+    check('menu: o sub-cabeçalho não fica apagado por opacidade',
+      /opacity:\s*1\s*;/.test(cssSub), cssSub);
+    check('menu: o sub-cabeçalho é dourado (cor de título, não de rótulo)',
+      /color:var\(--z-gold\)/.test(cssSub), cssSub);
+    check('menu: o sub-cabeçalho não usa caixa-alta (o grupo é que usa)',
+      /text-transform:\s*none/.test(cssSub) && /text-transform:uppercase/.test((/\.nav \.grp\{([^}]*)\}/.exec(html) || [, ''])[1]));
 
     // ---- 5. cabeçalho sem item embaixo não aparece ----
     // Sem isto o monitor lia "Day Care", "Peludinhos" e "Planos e cobranças" na barra
@@ -2702,6 +2734,47 @@ async function main() {
       // o nome antigo do campo tambem conta como preenchido (fichas de antes)
       check('o nome antigo do campo tambem conta como cadastro feito',
         ctx.prevFichaVazia({ vermifugo_p: iso(60) }) === false);
+    }
+  }
+  console.log('');
+
+  console.log('Campo abandonado nao proibe ninguem de frequentar (27/ago):');
+  {
+    // "Painel do dia esta todo vermelho... resolva, porque acho que nao e real."
+    // Eram 99 em "PREVENCAO VENCIDA - nao podem frequentar". No cadastro real:
+    // campo novo ecto_p = 42 fichas, 9 vencidas; campo antigo carrapaticida_p = 122
+    // fichas, 117 vencidas; e nas 28 que tem os dois, o novo e mais recente em 28/28.
+    check('a pendencia sabe de onde veio', /function prevOrigem\(ex, it\)/.test(html));
+    check('o bloqueio de frequentar usa so o campo em uso',
+      /venc:venc\.filter\(function\(x\)\{ return !x\.antigo; \}\)/.test(html));
+    check('o que veio do campo antigo sai separado, nunca calado',
+      /desatualizado:venc\.filter/.test(html) && /Ficha por migrar/.test(html));
+
+    if (typeof ctx.prevPendencias === 'function') {
+      const hoje = new Date();
+      const iso = (d) => new Date(hoje.getTime() + d * 86400000).toISOString().slice(0, 10);
+      // so o campo ANTIGO, vencido: nao pode bloquear
+      const soAntigo = ctx.prevPendencias({ carrapaticida_p: iso(-60) });
+      check('vencido so no campo antigo nao entra no bloqueio',
+        !soAntigo.venc.some((x) => /Ectoparasitas/.test(x.nome)),
+        JSON.stringify(soAntigo.venc.map((x) => x.nome)));
+      check('e aparece na lista de ficha por migrar',
+        (soAntigo.desatualizado || []).some((x) => /Ectoparasitas/.test(x.nome)),
+        JSON.stringify((soAntigo.desatualizado || []).map((x) => x.nome)));
+      // campo NOVO vencido: bloqueia mesmo
+      const novoVenc = ctx.prevPendencias({ ecto_p: iso(-10) });
+      check('vencido no campo em uso continua bloqueando',
+        novoVenc.venc.some((x) => /Ectoparasitas/.test(x.nome)),
+        JSON.stringify(novoVenc.venc.map((x) => x.nome)));
+      // os DOIS: vale o campo em uso (que e sempre o mais recente no cadastro real)
+      const ambos = ctx.prevPendencias({ carrapaticida_p: iso(-60), ecto_p: iso(20) });
+      check('tendo os dois, vale o campo em uso',
+        !ambos.venc.some((x) => /Ectoparasitas/.test(x.nome)) &&
+        !(ambos.desatualizado || []).some((x) => /Ectoparasitas/.test(x.nome)),
+        JSON.stringify({ venc: ambos.venc.map((x) => x.nome),
+                         velha: (ambos.desatualizado || []).map((x) => x.nome) }));
+      check('"quem saiu" sai ordenado por data, do mais recente',
+        /saiu\.sort\(function\(a,b\)\{ return String\(b\.quando/.test(html));
     }
   }
   console.log('');

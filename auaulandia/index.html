@@ -84,9 +84,15 @@
   .nav{flex:1;min-height:0;overflow-y:auto;padding:8px 12px;scrollbar-width:thin;position:relative;z-index:1}
   .who{position:relative;z-index:1}
   .nav .grp{font-size:10px;text-transform:uppercase;letter-spacing:1.2px;opacity:.5;font-weight:700;margin:16px 12px 7px}
-  /* Sub-cabeçalho dentro de um grupo (ex.: "Day Care" dentro de Serviços). Menor e mais
-     apagado que o grupo, sem linha — só separa, não compete com o título do grupo. */
-  .nav .grp.grp-sub{font-size:9.5px;letter-spacing:.9px;opacity:.34;font-weight:600;margin:11px 12px 4px;text-transform:none}
+  /* Sub-cabeçalho dentro de um grupo (ex.: "Day Care" dentro de Serviços).
+     Adriana, 27/ago/2026: "o nome está pequeno, não dá para enxergar; o que está dentro
+     está maior que o título". Então é TÍTULO de verdade: maior e mais pesado que os itens
+     (que são 14px/500), dourado, sem opacidade que o apague. O grupo continua acima dele
+     na hierarquia pela caixa-alta e pelo espaçamento entre letras. */
+  .nav .grp.grp-sub{font-size:15px;letter-spacing:.3px;opacity:1;font-weight:700;
+    color:var(--z-gold);margin:14px 12px 4px;text-transform:none}
+  /* Item solto no fim da barra (Relatórios): fica separado do que vem antes por um fio. */
+  .nav a.nav-solto{margin-top:14px;border-top:1px solid rgba(255,255,255,.12);padding-top:8px;border-radius:0 0 11px 11px}
   .nav a{
     display:flex;align-items:center;gap:12px;padding:11px 13px;border-radius:11px;
     color:var(--z-cream);text-decoration:none;font-size:14px;font-weight:500;
@@ -1763,10 +1769,12 @@
          viram uma coisa só (a fatia de cada um). -->
     <a data-v="painel" class="so-master" title="Auditoria e cumprimento de protocolos"><span data-icon="star"></span><span>Painel do Dia</span></a>
 
-    <a data-v="relatorios" class="so-gestao" title="Resumo do dia, aniversariantes, exportações."><span data-icon="star"></span><span>Relatórios</span></a>
-
     <div class="grp">Em breve</div>
     <a data-v="agenda" title="Frequência e reservas"><span data-icon="cal"></span><span>Agenda</span><span class="soon">em breve</span></a>
+
+    <!-- Adriana, 27/ago/2026: "Relatórios é um item à parte, no fim". Fica sozinho depois de
+         tudo, separado por um fio, logo antes do Sair — não pertence a grupo nenhum. -->
+    <a data-v="relatorios" class="so-gestao nav-solto" title="Resumo do dia, aniversariantes, exportações."><span data-icon="star"></span><span>Relatórios</span></a>
 
     <a data-v="sair" title="Encerra a sessão neste aparelho."><span data-icon="exit"></span><span>Sair</span></a>
   </nav>
@@ -9629,7 +9637,7 @@
   // Agora existe um carimbo: esta constante é a versão que o aparelho está rodando, e o
   // Firebase guarda a versão publicada. Quando as duas diferem, aparece o aviso — mas
   // NUNCA recarrega sozinho: recarregar no meio de um check-in perderia o trabalho.
-  const APP_VERSAO='2026-08-27-03';
+  const APP_VERSAO='2026-08-27-04';
   function vigiarVersao(){
     if(!DB) return;
     try{
@@ -12965,6 +12973,15 @@
     if(!v && it.alt) v=ex[it.alt];
     return v||'';
   }
+  // De onde veio a data: do campo que a equipe usa hoje, ou do nome antigo que ficou
+  // congelado quando o cadastro mudou. Vencimento vindo do campo abandonado não é o
+  // FILHOt devendo — é a ficha esperando migração.
+  function prevOrigem(ex, it){
+    ex=ex||{};
+    if(ex[it.k]) return 'atual';
+    if(it.alt && ex[it.alt]) return 'antigo';
+    return '';
+  }
   function prevFeitoEm(ex, it){
     ex=ex||{};
     var v=ex[it.base];
@@ -12990,9 +13007,14 @@
       if(!v){ if(!it.opcional) sem.push(it.nome); return; }
       if(prevDataQuebrada(v)) return;                // dado quebrado não é vencimento
       if(venceuISO(v)) venc.push({nome:it.nome, data:v, dias:-diasAteISO(v),
+        antigo:(prevOrigem(ex,it)==='antigo'),
         familia:({vacina:'vacina', antip:'antiparasitário', saude:'saúde'})[it.grupo]||''});
     });
-    return {venc:venc, sem:sem};
+    // Só bloqueia frequentar o que está vencido pelo campo em uso. O resto é ficha por
+    // migrar, e sai separado — nunca calado.
+    return {venc:venc.filter(function(x){ return !x.antigo; }),
+            desatualizado:venc.filter(function(x){ return x.antigo; }),
+            sem:sem};
   }
   // rotulo = como a família se chama na frase pronta ("Vacinas em dia.").
   function alertaPrevencao(ex, grupo, rotulo){
@@ -13035,7 +13057,8 @@
         out.push({k:it.k, nome:it.nome, tipo:'sem', afazer:true, rotina:!!it.rotina}); return;
       }
       if(!v){ if(!it.opcional) out.push({k:it.k, nome:it.nome, tipo:'sem', rotina:!!it.rotina}); return; }
-      if(venceuISO(v)) out.push({k:it.k, nome:it.nome, tipo:'venc', data:v, dias:-diasAteISO(v), rotina:!!it.rotina});
+      if(venceuISO(v)) out.push({k:it.k, nome:it.nome, tipo:'venc', data:v, dias:-diasAteISO(v),
+                                 rotina:!!it.rotina, antigo:(prevOrigem(ex,it)==='antigo')});
     });
     if(!pesouEsteMes(ex)){
       var u=ultimoPeso(ex);
@@ -13056,7 +13079,9 @@
   // de vencimento, vencimento antes de cadastro faltando, e rotina por último.
   function prevClasse(faltas, ex){
     if(faltas.some(function(f){ return f.tipo==='invalida'; })) return 'erro';
-    if(faltas.some(function(f){ return f.tipo==='venc' && !f.rotina; })) return 'deve';
+    if(faltas.some(function(f){ return f.tipo==='venc' && !f.rotina && !f.antigo; })) return 'deve';
+    // vencido SÓ pelo campo abandonado: a ficha é que está velha, não o FILHOt
+    if(faltas.some(function(f){ return f.tipo==='venc' && !f.rotina && f.antigo; })) return 'antigo';
     if(prevFichaVazia(ex)) return 'semcad';
     if(faltas.some(function(f){ return f.tipo==='sem' && !f.rotina; })) return 'deve';
     return 'rotina';
@@ -13066,6 +13091,7 @@
   var PREV_TIPOS=[
     {k:'deve',   t:'Devendo',       dica:'Vacina ou antiparasitário vencido, ou faltando numa ficha que já tem os outros.'},
     {k:'semcad', t:'Sem cadastro',  dica:'Ficha de prevenção inteiramente em branco — nunca preenchemos nenhuma data. Não quer dizer que esteja devendo.'},
+    {k:'antigo', t:'Ficha por migrar', dica:'A data está só no campo antigo do cadastro (carrapaticida/vermífugo), que a equipe deixou de usar. Pode ser que já tenha sido dado e ninguém lançou no campo novo — confira com o tutor antes de cobrar.'},
     {k:'rotina', t:'Rotina',        dica:'Só peso do mês, escova ou check-up. Rotina da casa, não prevenção.'},
     {k:'erro',   t:'Data errada',   dica:'Alguém digitou o ano errado na ficha (0026, 0207). Precisa de correção manual.'},
     {k:'tudo',   t:'Tudo',          dica:'Todo mundo com qualquer pendência, das quatro situações acima.'}
@@ -20441,25 +20467,35 @@
   // Varre TODAS as fichas e junta o que exige ação da Gestão: prevenção vencida (bloqueia
   // frequentar), peso sem registro no mês, e saídas a contatar (D9). É o "urgente a resolver".
   function urgenciasGestao(){
-    const venc=[], semPeso=[], saiu=[];
+    const venc=[], semPeso=[], saiu=[], velha=[];
     PELUDINHOS.forEach(p=>{
       const ex=pelExtra(p);
       if(pelInativo(p)){ saiu.push({nome:p.n, motivo:ex.motivoSaida||'', quando:ex.dataSaida||''}); return; }
       const r=prevPendencias(ex);
       if(r.venc.length) venc.push({nome:p.n, itens:r.venc});
+      if((r.desatualizado||[]).length) velha.push({nome:p.n, itens:r.desatualizado});
       if(!pesouEsteMes(ex)) semPeso.push(p.n);
     });
-    return {venc:venc, semPeso:semPeso, saiu:saiu};
+    // quem saiu por último primeiro: é com esse que a Márcia fala hoje
+    saiu.sort(function(a,b){ return String(b.quando||'').localeCompare(String(a.quando||'')); });
+    return {venc:venc, semPeso:semPeso, saiu:saiu, velha:velha};
   }
   function cardUrgenciasHTML(){
     const u=urgenciasGestao();
     const total=u.venc.length+u.saiu.length;
     let h='<div class="card"><h2>Urgente a resolver</h2>'
       +'<div class="hint">Prevenção vencida, saídas a contatar e peso do mês. Para Gestão, Supervisora e Consultora.</div>';
-    if(u.saiu.length) h+='<div class="dc-faltas"><strong>SAÍRAM &mdash; a Márcia precisa entrar em contato ('+u.saiu.length+'):</strong> '
-      +u.saiu.map(function(s){ return s.nome+(s.motivo?' ('+s.motivo+')':''); }).join(' · ')+'</div>';
+    if(u.saiu.length) h+='<div class="dc-faltas"><strong>SAÍRAM &mdash; a Márcia precisa entrar em contato ('+u.saiu.length+'):</strong>'
+      +'<div style="margin-top:5px">'+u.saiu.map(function(s){
+          return '<div style="display:flex;gap:8px;align-items:baseline;padding:3px 0;border-top:1px solid rgba(0,0,0,.08)">'
+            +'<span style="font-weight:800;min-width:110px">'+escAttr(s.nome||'')+'</span>'
+            +'<span style="font-size:12.5px;flex:1">'+escAttr(s.motivo||'sem motivo anotado')+'</span>'
+            +'<span style="font-size:12px;font-weight:700;opacity:.8">'+escAttr(s.quando?fmtBR(s.quando):'sem data')+'</span></div>';
+        }).join('')+'</div></div>';
     if(u.venc.length) h+='<div class="dc-faltas"><strong>PREVENÇÃO VENCIDA &mdash; não podem frequentar ('+u.venc.length+'):</strong> '
       +u.venc.map(function(v){ return v.nome+': '+v.itens.map(function(i){ return i.nome+(i.familia?(' ['+i.familia+']'):''); }).join(', '); }).join(' · ')+'</div>';
+    if(u.velha.length) h+='<div class="dc-meia"><strong>Ficha por migrar ('+u.velha.length+'):</strong> '
+      +'a data do antiparasitário está só no campo antigo do cadastro. Pode já ter sido dado sem ninguém lançar no campo novo — <strong>não bloqueia frequentar</strong>. Confira em Prevenção &rsaquo; Ficha por migrar.</div>';
     if(u.semPeso.length) h+='<div class="dc-meia"><strong>Falta pesar este mês ('+u.semPeso.length+'):</strong> '
       +u.semPeso.slice(0,30).join(', ')+(u.semPeso.length>30?' e mais '+(u.semPeso.length-30):'')+'</div>';
     if(!u.saiu.length && !u.venc.length && !u.semPeso.length) h+='<div class="alm-fora">Nada urgente: prevenção em dia, todos pesados, nenhuma saída pendente.</div>';
