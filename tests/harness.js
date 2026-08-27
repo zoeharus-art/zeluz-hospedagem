@@ -2305,10 +2305,44 @@ async function main() {
         const pB = (ctx.PELUDINHOS || []).find((x) => ctx.pelKey(x) === 'boris__laura');
         if (pB) {
           const sepB = ctx.algSeparar(boris.resposta, ctx.algPerguntas(pB));
-          check('a segunda numeracao vai para a caixa de recorte, nao para dentro da alergia',
-            /escadas/i.test(sepB.solto || '') && !/escadas/i.test(sepB.por.restricao || ''),
-            JSON.stringify({ solto: String(sepB.solto || '').slice(0, 60), restricao: String(sepB.por.restricao || '').slice(0, 60) }));
+          // A tutora recomecou a numeracao na segunda parte. "Evitar escadas ao maximo pois
+          // sua coluna trava" nao pode cair no campo de ALERGIA de um FILHOt com um rim so
+          // — e agora nem precisa esperar recorte: e reconhecido pelo assunto.
+          check('"evitar escadas" vai para atividade fisica, nunca para a alergia',
+            /escadas/i.test(sepB.por.atividade || '') && !/escadas/i.test(sepB.por.restricao || ''),
+            JSON.stringify({ atividade: String(sepB.por.atividade || '').slice(0, 60),
+                             restricao: String(sepB.por.restricao || '').slice(0, 60) }));
+          check('e vem marcado como "reconheci pelo assunto"', !!(sepB.assunto || {}).atividade);
+          check('os exames de hemograma viram check-up',
+            /hemograma/i.test(sepB.por.checkup || ''), JSON.stringify(sepB.por.checkup));
         }
+      }
+      // QUANTO SOBRA PARA A MAO: o numero que a Adriana perguntou ("preciso de humanos?")
+      {
+        let semRecorte = 0, linhas = [];
+        comTexto.forEach((k) => {
+          const p = (ctx.PELUDINHOS || []).find((x) => ctx.pelKey(x) === k);
+          if (!p) return;
+          const Q = ctx.algPerguntas(p);
+          const sep = ctx.algSeparar(respostas[k].resposta, Q);
+          const n = Object.keys(sep.por).length;
+          const sobra = String(sep.solto || '').trim();
+          if (!sobra) semRecorte++;
+          linhas.push(k.split('__')[0] + ': ' + n + '/' + Q.length + (sobra ? ' +recorte' : ''));
+        });
+        console.log('    [quanto o app resolve sozinho] ' + semRecorte + ' de ' + linhas.length +
+          ' sem nada para recortar');
+        console.log('    ' + linhas.join(' · '));
+        comTexto.forEach((k) => {
+          const p = (ctx.PELUDINHOS || []).find((x) => ctx.pelKey(x) === k);
+          if (!p) return;
+          const sep = ctx.algSeparar(respostas[k].resposta, ctx.algPerguntas(p));
+          const sobra = String(sep.solto || '').trim();
+          if (sobra) console.log('    [sobra ' + k + '] ' + sobra.split(String.fromCharCode(10)).join(' | ').slice(0, 300));
+        });
+        check('a maioria das respostas reais nao sobra nada para recortar',
+          linhas.length === 0 || semRecorte >= Math.ceil(linhas.length * 0.7),
+          semRecorte + '/' + linhas.length);
       }
       check('pontuacao sozinha nao vira "nao consegui encaixar"',
         !Object.keys(respostas).some((k) => {
@@ -2326,6 +2360,176 @@ async function main() {
         JSON.stringify(eco('Houve alguma mudanca recente de comportamento? Por exemplo: ficou mais receoso, irritado, quieto, inseguro ou sensivel ao toque? Nada novo',
             'Houve alguma mudanca recente de comportamento? Por exemplo: ficou mais receosa, irritada, quieta, insegura ou sensivel ao toque?')));
     }
+  }
+  console.log('');
+
+  // ============================================================================
+  // Menu — índice aprovado (26/ago):
+  // O menu foi reagrupado conforme docs/INDICE-MENU-APP.md. A promessa que a dona
+  // fez e que estes testes cobram: NINGUÉM ganhou nem perdeu acesso. Só mudaram
+  // grupo, ordem, título e a dica. Se alguém, ao mexer no menu, trocar uma classe
+  // so-*/op-only de um item, o gabarito abaixo acende antes de virar produção.
+  // ============================================================================
+  console.log('Menu — índice aprovado (26/ago):');
+  {
+    // Gabarito colhido do sidebar ANTES da reorganização (25/ago/2026). É a foto de
+    // QUEM VÊ O QUÊ. Só as classes de visibilidade — 'active' é estado, não permissão.
+    const MENU_VISIBILIDADE_ANTES = {
+      inicio: 'op-only',
+      checkin: '',
+      conferencia: 'so-conferencia',
+      recepcao: 'so-recepcao',
+      cuidadovet: 'so-vet',
+      hospedagem: '',
+      hospedes: 'so-hosp',
+      checkout: '',
+      checkoutconf: 'so-conf-saida',
+      abertura: 'so-abertura',
+      agenda: '',
+      painel: 'so-master',
+      emporio: 'so-emporio',
+      ficha: 'so-gestao',
+      pessoas: 'so-master',
+      renovacao: 'so-gestao',
+      vacinas: 'so-gestao',
+      dashdc: 'so-recepcao',
+      reposicao: 'so-recepcao',
+      orcamento: 'so-recepcao',
+      alergia: 'so-gestao',
+      eahist: 'so-gestao',
+      relatorios: 'so-gestao',
+      acerto: 'so-master',
+      ritmo: 'so-gestao',
+      sair: '',
+    };
+
+    // ---- lê o sidebar de verdade (o trecho entre <nav id="nav"> e </nav>) ----
+    const iNav = html.indexOf('<nav class="nav" id="nav">');
+    const fNav = html.indexOf('</nav>', iNav);
+    check('menu: o sidebar existe no HTML', iNav > 0 && fNav > iNav);
+    const nav = html.slice(iNav, fNav);
+
+    // Percorre o sidebar NA ORDEM: cada <a data-v> vira um item; cada <div class="grp">
+    // (sem grp-sub) abre um grupo; com grp-sub é só um sub-cabeçalho.
+    const itens = [];   // {v, vis, pos, grupo}
+    const grupos = [];  // {titulo, pos}
+    const subs = [];    // {titulo, pos}
+    const re = /<(a|div)\s([^>]*)>/g;
+    let m, grupoAtual = '';
+    while ((m = re.exec(nav)) !== null) {
+      const attrs = m[2];
+      const cls = (/class="([^"]*)"/.exec(attrs) || [, ''])[1];
+      const dv = /data-v="([a-z]+)"/.exec(attrs);
+      const rotulo = (/^([^<]*)/.exec(nav.slice(m.index + m[0].length)) || [, ''])[1].trim();
+      if (dv) {
+        // só as classes que decidem QUEM VÊ
+        const vis = cls.split(/\s+/).filter((c) => c === 'op-only' || c.startsWith('so-')).sort().join(' ');
+        itens.push({ v: dv[1], vis, pos: m.index, grupo: grupoAtual });
+      } else if (m[1] === 'div' && /(^|\s)grp(\s|$)/.test(cls)) {
+        if (/grp-sub/.test(cls)) subs.push({ titulo: rotulo, pos: m.index });
+        else { grupoAtual = rotulo; grupos.push({ titulo: rotulo, pos: m.index }); }
+      }
+    }
+    const porV = {};
+    itens.forEach((it) => { porV[it.v] = it; });
+
+    // ---- 1. ninguém ganhou nem perdeu acesso ----
+    Object.keys(MENU_VISIBILIDADE_ANTES).forEach((k) => {
+      const it = porV[k];
+      check('menu: ' + k + ' mantém quem vê',
+        !!it && it.vis === MENU_VISIBILIDADE_ANTES[k],
+        it ? ('agora "' + it.vis + '", antes "' + MENU_VISIBILIDADE_ANTES[k] + '"') : 'sumiu do menu');
+    });
+    check('menu: nenhum item do menu antigo desapareceu',
+      Object.keys(MENU_VISIBILIDADE_ANTES).every((k) => !!porV[k]),
+      JSON.stringify(Object.keys(MENU_VISIBILIDADE_ANTES).filter((k) => !porV[k])));
+    const duplicados = itens.map((i) => i.v).filter((v, i, a) => a.indexOf(v) !== i);
+    check('menu: nenhum data-v aparece duas vezes', duplicados.length === 0, JSON.stringify(duplicados));
+    check('menu: Configurações é a única tela nova, e é so-master',
+      !!porV.config && porV.config.vis === 'so-master',
+      porV.config ? porV.config.vis : 'não existe');
+
+    // ---- 2. os grupos e a ordem do índice ----
+    check('menu: os grupos estão na ordem do índice',
+      JSON.stringify(grupos.map((g) => g.titulo)) === JSON.stringify(['Serviços', 'Central Zêluz', 'Operação', 'Em breve']),
+      JSON.stringify(grupos.map((g) => g.titulo)));
+    check('menu: os sub-cabeçalhos do índice estão lá',
+      JSON.stringify(subs.map((s) => s.titulo)) === JSON.stringify([
+        'AuAulândia — o hotel da Zêluz', 'Day Care', 'AuAulândia', 'Day Care', 'Peludinhos', 'Planos e cobranças']),
+      JSON.stringify(subs.map((s) => s.titulo)));
+    const grpDe = (t) => (grupos.find((g) => g.titulo === t) || { pos: -1 }).pos;
+    check('menu: Relatórios fica solto, entre Operação e Em breve',
+      porV.relatorios && porV.relatorios.pos > grpDe('Operação') && porV.relatorios.pos < grpDe('Em breve'),
+      porV.relatorios ? String(porV.relatorios.pos) : 'sumiu');
+    check('menu: nada da Operação fica depois de Relatórios',
+      ['acerto', 'ritmo', 'eahist', 'pessoas', 'config', 'painel'].every((k) => porV[k] && porV[k].pos < porV.relatorios.pos));
+    [['conferencia', 'Serviços'], ['checkout', 'Serviços'], ['cuidadovet', 'Serviços'], ['abertura', 'Serviços'],
+     ['checkin', 'Central Zêluz'], ['checkoutconf', 'Central Zêluz'], ['ficha', 'Central Zêluz'],
+     ['emporio', 'Central Zêluz'], ['renovacao', 'Central Zêluz'],
+     ['config', 'Operação'], ['acerto', 'Operação'], ['painel', 'Operação'],
+     ['agenda', 'Em breve']].forEach(([k, g]) => {
+      check('menu: ' + k + ' está no grupo ' + g, porV[k] && porV[k].grupo === g,
+        porV[k] ? porV[k].grupo : 'sumiu');
+    });
+    check('menu: "Em débito" é etiqueta, não link (não tem data-v)',
+      /<a[^>]*>(?:(?!<\/a>)[\s\S])*Em débito[\s\S]*?<\/a>/.test(nav)
+      && !/<a[^>]*data-v="[a-z]*"[^>]*>(?:(?!<\/a>)[\s\S])*Em débito/.test(nav));
+    check('menu: o Day Care continua num bloco só (a trava de permissão granular)',
+      /id="blocoDaycare"/.test(nav) && /id="dcSubnav"/.test(nav)
+      && html.indexOf("getElementById('blocoDaycare')") > 0);
+
+    // ---- 3. título e dica de cada item (o app tem de ser autoexplicativo) ----
+    const bloco = html.slice(html.indexOf('const titles={'));
+    const titulos = {};
+    const reT = /([a-z]+):\['([^']*)','([^']*)'\]/g;
+    let t;
+    while ((t = reT.exec(bloco.slice(0, bloco.indexOf('};') + 2))) !== null) titulos[t[1]] = [t[2], t[3]];
+    const ESPERADO = {
+      emporio: 'Quem não comeu hoje', recepcao: 'Pendências com o tutor',
+      conferencia: 'Conferência do check-in', checkoutconf: 'Check-out com o tutor',
+      hospedes: 'Hóspedes de hoje', hospedagem: 'Plantão da noite',
+      abertura: 'Abertura do dia', eahist: 'Enriquecimento Ambiental',
+      acerto: 'Financeiro do plantão', renovacao: 'Renovação de planos',
+      dashdc: 'Lançamentos do dia', alergia: 'Alergias a confirmar',
+      ficha: 'Cadastro de Peludinhos', config: 'Configurações',
+    };
+    Object.keys(ESPERADO).forEach((k) => {
+      check('menu: ' + k + ' se chama "' + ESPERADO[k] + '"',
+        titulos[k] && titulos[k][0] === ESPERADO[k],
+        titulos[k] ? titulos[k][0] : 'sem título');
+    });
+    const semDica = itens.map((i) => i.v).filter((v) => !titulos[v] || !titulos[v][1]);
+    check('menu: todo item do menu tem dica (subtítulo) não vazia',
+      semDica.length === 0, JSON.stringify(semDica));
+    // A dica também é o title= do link — é ela que o Zeloso lê passando o mouse.
+    const semTitle = itens.map((i) => i.v).filter((v) => {
+      const r = new RegExp('<a[^>]*data-v="' + v + '"[^>]*>');
+      const mm = r.exec(nav);
+      return !mm || !/title="[^"]+"/.test(mm[0]);
+    });
+    check('menu: todo link do menu carrega a dica no title=', semTitle.length === 0, JSON.stringify(semTitle));
+    // navPend apagava o title ao zerar a pendência — o item ficava mudo para sempre.
+    check('menu: ao zerar a pendência o navPend devolve a dica (não apaga o title)',
+      /titles\[view\]\)\?titles\[view\]\[1\]/.test(html));
+
+    // ---- 4. Configurações levou os campos, Relatórios não os tem mais ----
+    const secao = (id) => {
+      const i = html.indexOf('id="' + id + '"');
+      if (i < 0) return '';
+      const f = html.indexOf('</section>', i);
+      return html.slice(i, f < 0 ? html.length : f);
+    };
+    const vConfig = secao('v-config'), vRel = secao('v-relatorios');
+    check('menu: a tela v-config existe', vConfig.length > 0);
+    ['tgUrl', 'tgSenha', 'tgStatus'].forEach((id) => {
+      check('menu: v-config tem o campo ' + id, vConfig.indexOf('id="' + id + '"') > 0);
+      check('menu: v-relatorios não tem mais o campo ' + id, vRel.indexOf('id="' + id + '"') < 0);
+    });
+    check('menu: abrir Configurações carrega o que está salvo (gancho em aoAbrirView)',
+      /v==='config'\)\{\s*if\(typeof configCarregar==='function'\) configCarregar\(\);/.test(html));
+    check('menu: v-relatorios continua existindo', vRel.length > 0);
+    check('menu: v-inicio e v-painel continuam existindo',
+      html.indexOf('id="v-inicio"') > 0 && html.indexOf('id="v-painel"') > 0);
   }
   console.log('');
 
