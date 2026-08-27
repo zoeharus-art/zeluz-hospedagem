@@ -9629,7 +9629,7 @@
   // Agora existe um carimbo: esta constante é a versão que o aparelho está rodando, e o
   // Firebase guarda a versão publicada. Quando as duas diferem, aparece o aviso — mas
   // NUNCA recarrega sozinho: recarregar no meio de um check-in perderia o trabalho.
-  const APP_VERSAO='2026-08-26-21';
+  const APP_VERSAO='2026-08-27-01';
   function vigiarVersao(){
     if(!DB) return;
     try{
@@ -17624,7 +17624,7 @@
                    porAssunto:!!(sep.assunto&&sep.assunto[q.k]),
                    // campo vazio já vem marcado; campo com outro conteúdo vem DESMARCADO,
                    // porque trocar o que está na ficha é decisão de gente (Adriana, 26/ago)
-                   grava:!atual};
+                   grava:!atual, decidido:!atual};
     });
     ALG_CUR[k]={campos:campos, solto:sep.solto||'', total:Q.length};
     return ALG_CUR[k];
@@ -17651,57 +17651,118 @@
     var c=algCur(k); if(!c||!c.campos[qk]) return;
     c.campos[qk].txt=v;                      // sem re-render: não tirar o cursor de quem digita
   }
+  // ===== A FICHA COMO VAI FICAR — Adriana, 26/ago/2026 ============================
+  // "Achei confuso a forma de guardar os itens em alergia a confirmar... teria uma forma
+  //  mais didática? E isso está indo para a ficha do peludinho — é o mais importante
+  //  estar na ficha do peludinho."
+  //
+  // A tela mostrava o PROCESSO: pedaço da resposta, um seletor de campo, uma frase sobre
+  // o estado atual e uma caixa de marcar. Três controles por pedaço, vinte e sete numa
+  // resposta de nove perguntas. Quem olhava tinha de montar o resultado de cabeça.
+  //
+  // Agora mostra o RESULTADO: a ficha do FILHOt já preenchida, do jeito que vai ficar.
+  // Cada linha diz o nome do campo como ele aparece na ficha, o valor novo e o que está
+  // lá hoje. O que não presta sai com um toque. Só o que conflita pede decisão — e
+  // decisão de trocar o que já está gravado é sempre de gente (Adriana, 26/ago).
+  var ALG_TROCA={};    // quem está com o seletor de campo aberto
+  function algTrocaChave(k, qk){ return k+'\\u0001'+qk; }
+  function algAbrirTroca(k, qk){
+    var c=algTrocaChave(k,qk);
+    ALG_TROCA[c]=!ALG_TROCA[c];
+    algRender();
+  }
+  // Conflito é o campo já ter conteúdo DIFERENTE do que o tutor disse.
+  function algCurConflito(f){
+    return !!(f.campo && f.atual && jsNorm(f.atual)!==jsNorm(f.txt));
+  }
+  function algCurDecidir(k, qk, usar){
+    var c=algCur(k); if(!c||!c.campos[qk]) return;
+    c.campos[qk].grava=!!usar;
+    c.campos[qk].decidido=true;
+    algRender();
+  }
   function algCurHTML(k){
-    var c=algCur(k);
+    var c=algCur(k), p=algPelDe(k);
     if(!c) return '<div class="hint">Não achei a ficha deste FILHOt.</div>';
-    var qks=Object.keys(c.campos);
+    var nome=p?pelNome(p):'', qks=Object.keys(c.campos);
+    var pendentes=qks.filter(function(q){ return algCurConflito(c.campos[q]) && !c.campos[q].decidido; }).length;
+
     var h='<div style="margin-top:10px;padding-top:9px;border-top:2px solid var(--z-gold)">'
-      +'<div style="font-weight:800;color:var(--z-blue);font-size:15px">Levar para a ficha</div>'
-      +'<div class="hint" style="margin-top:2px">Separei a resposta pergunta a pergunta. Confira cada pedaço e marque o que deve entrar na ficha. <strong>Nada muda sozinho.</strong></div>';
+      +'<div style="font-weight:800;color:var(--z-blue);font-size:15px">Como a ficha d'
+      +(nome?('e '+escAttr(nome)):'ele')+' vai ficar</div>'
+      +'<div class="hint" style="margin-top:2px">É isto que a equipe vai ler na hora de servir, de dar banho e de montar a atividade. Tire o que não presta; nada muda sozinho.</div>';
     if(!qks.length){
-      h+='<div class="hint" style="margin-top:7px;color:var(--crm-atencao-text)"><strong>Não consegui separar por número.</strong> O texto inteiro está abaixo — recorte para os campos.</div>';
+      h+='<div class="hint" style="margin-top:7px;color:var(--crm-atencao-text)"><strong>Não consegui encaixar nada em campo nenhum.</strong> A resposta inteira está abaixo — recorte para os campos.</div>';
     }
     qks.forEach(function(qk){
       var f=c.campos[qk];
-      var conflito=(f.atual && jsNorm(f.atual)!==jsNorm(f.txt));
-      h+='<div style="margin-top:9px;padding:9px 10px;border-radius:10px;border:1.5px solid '
-        +(conflito?'var(--crm-atencao)':'var(--line)')+';background:var(--z-cream-warm)">'
-        +'<div style="font-weight:800;color:var(--z-blue);font-size:13.5px">'+escAttr(f.curta)
-        +(f.porAssunto?' <span style="font-weight:800;font-size:11.5px;color:var(--crm-atencao-text)">— reconheci pelo assunto, confira</span>':'')+'</div>'
-        +'<textarea class="cad-in" rows="2" style="width:100%;margin-top:4px"'
-        +' oninput="algCurTexto(\''+algEsc(k)+'\',\''+qk+'\',this.value)">'+escAttr(f.txt)+'</textarea>'
-        +'<div style="margin-top:5px;display:flex;flex-wrap:wrap;gap:6px;align-items:center">'
-        +'<span class="hint">vai para:</span>'
-        +'<select class="cad-in" style="max-width:230px;padding:5px 8px"'
-        +' onchange="algCurCampo(\''+algEsc(k)+'\',\''+qk+'\',this.value)">'
-        +ALG_CAMPOS.map(function(x){
-            return '<option value="'+escAttr(x.c)+'"'+(x.c===f.campo?' selected':'')+'>'+escAttr(x.t)+'</option>';
-          }).join('')
-        +'</select></div>';
-      if(conflito){
-        h+='<div style="margin-top:6px;font-size:12.5px;color:var(--crm-atencao-text)">'
-          +'<strong>Já existe algo neste campo.</strong><br>Hoje na ficha: <strong>'+escAttr(f.atual)+'</strong>'
-          +'<br>O tutor disse: <strong>'+escAttr(f.txt)+'</strong>'
-          +'<br>Marque abaixo só se for para trocar.</div>';
-      } else if(!f.atual && f.campo){
-        h+='<div class="hint" style="margin-top:5px">Hoje este campo está vazio.</div>';
+      var conflito=algCurConflito(f);
+      var decidir=(conflito && !f.decidido);
+      var cor = decidir ? 'var(--crm-atencao)' : (f.grava?'var(--crm-ok)':'var(--line)');
+      var selo = decidir ? '\\u26a0' : (f.grava?'\\u2713':'\\u2717');
+      h+='<div style="margin-top:8px;padding:9px 11px;border-radius:11px;border-left:4px solid '+cor
+        +';border-top:1px solid var(--line);border-right:1px solid var(--line);border-bottom:1px solid var(--line)'
+        +';background:'+(f.grava||decidir?'var(--z-cream-warm)':'transparent')+(f.grava||decidir?'':';opacity:.62')+'">'
+        // linha 1: o nome do campo NA FICHA (não o nome da pergunta) — é o que ela procura depois
+        +'<div style="display:flex;gap:8px;align-items:baseline">'
+        +'<span style="font-weight:900;font-size:15px;color:'+cor+'">'+selo+'</span>'
+        +'<span style="font-weight:800;color:var(--z-blue);font-size:14px">'+escAttr(f.campo?algCampoNome(f.campo):f.curta)+'</span>'
+        +(decidir?'<span style="font-weight:800;font-size:11px;color:var(--crm-atencao-text);margin-left:auto">PRECISA DECIDIR</span>':'')
+        +(f.porAssunto&&!decidir?'<span style="font-weight:800;font-size:11px;color:var(--crm-atencao-text);margin-left:auto">reconheci pelo assunto</span>':'')
+        +'</div>'
+        // linha 2: o valor. Editável, mas sem cara de formulário — só ganha moldura ao tocar.
+        +'<textarea rows="2" style="width:100%;margin-top:3px;border:1px solid transparent;background:transparent;'
+        +'font:inherit;font-size:14px;color:var(--z-blue);resize:vertical;padding:3px 4px;border-radius:7px"'
+        +' onfocus="this.style.borderColor=\'var(--line)\';this.style.background=\'#fff\'"'
+        +' onblur="this.style.borderColor=\'transparent\';this.style.background=\'transparent\'"'
+        +' oninput="algCurTexto(\'' + algEsc(k) + '\',\'' + qk + '\',this.value)">'+escAttr(f.txt)+'</textarea>';
+      if(decidir){
+        h+='<div style="margin-top:2px;font-size:12.5px;color:var(--crm-atencao-text)">'
+          +'Hoje na ficha está: <strong>'+escAttr(f.atual)+'</strong></div>'
+          +'<div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:6px">'
+          +'<button type="button" class="btn" style="padding:6px 12px;font-size:12.5px;font-weight:800;border:1.5px solid var(--line);background:var(--z-cream-warm);color:var(--z-blue)"'
+          +' onclick="algCurDecidir(\'' + algEsc(k) + '\',\'' + qk + '\',false)">Manter o que está</button>'
+          +'<button type="button" class="btn btn-primary" style="padding:6px 12px;font-size:12.5px;font-weight:800"'
+          +' onclick="algCurDecidir(\'' + algEsc(k) + '\',\'' + qk + '\',true)">Trocar pelo do tutor</button>'
+          +'</div>';
+      } else {
+        h+='<div style="display:flex;flex-wrap:wrap;gap:10px;align-items:baseline;margin-top:1px">'
+          +'<span class="hint">'+(f.atual?('hoje: '+escAttr(f.atual.slice(0,40))):'hoje: vazio')+'</span>'
+          +'<button type="button" class="btn" style="margin-left:auto;background:none;border:none;padding:0 4px;'
+          +'color:var(--z-blue);font-size:12.5px;font-weight:800;text-decoration:underline"'
+          +' onclick="algCurToggle(\'' + algEsc(k) + '\',\'' + qk + '\')">'+(f.grava?'tirar':'usar')+'</button>'
+          +'<button type="button" class="btn" style="background:none;border:none;padding:0 4px;'
+          +'color:var(--muted);font-size:12px;font-weight:700;text-decoration:underline"'
+          +' onclick="algAbrirTroca(\'' + algEsc(k) + '\',\'' + qk + '\')">trocar de lugar</button>'
+          +'</div>';
       }
-      h+='<label style="margin-top:6px;display:flex;gap:7px;align-items:center;cursor:pointer;font-weight:800;color:var(--z-blue);font-size:13px">'
-        +'<input type="checkbox" '+(f.grava?'checked':'')+(f.campo?'':' disabled')
-        +' onchange="algCurToggle(\''+algEsc(k)+'\',\''+qk+'\')" style="width:18px;height:18px">'
-        +(f.campo?(conflito?'Trocar o que está na ficha':'Gravar em "'+escAttr(algCampoNome(f.campo))+'"'):'Sem campo escolhido')
-        +'</label></div>';
+      if(ALG_TROCA[algTrocaChave(k,qk)]){
+        h+='<div style="margin-top:6px"><span class="hint">gravar em vez disso em:</span> '
+          +'<select class="cad-in" style="max-width:240px;padding:5px 8px;margin-top:3px"'
+          +' onchange="algCurCampo(\'' + algEsc(k) + '\',\'' + qk + '\',this.value)">'
+          +ALG_CAMPOS.map(function(x){
+              return '<option value="'+escAttr(x.c)+'"'+(x.c===f.campo?' selected':'')+'>'+escAttr(x.t)+'</option>';
+            }).join('')
+          +'</select></div>';
+      }
+      h+='</div>';
     });
     if(c.solto){
-      h+='<div style="margin-top:9px;padding:9px 10px;border-radius:10px;border:1.5px dashed var(--crm-atencao);background:rgba(241,196,15,.08)">'
-        +'<div style="font-weight:800;color:var(--crm-atencao-text);font-size:13.5px">Não consegui encaixar este pedaço</div>'
+      h+='<div style="margin-top:9px;padding:9px 11px;border-radius:11px;border:1.5px dashed var(--crm-atencao);background:rgba(241,196,15,.08)">'
+        +'<div style="font-weight:800;color:var(--crm-atencao-text);font-size:13.5px">Isto eu não soube onde pôr</div>'
         +'<div class="hint" style="margin-top:2px">Fica aqui para você recortar para o campo certo — não some.</div>'
-        +'<textarea class="cad-in" rows="4" readonly style="width:100%;margin-top:5px">'+escAttr(c.solto)+'</textarea></div>';
+        +'<textarea class="cad-in" rows="3" readonly style="width:100%;margin-top:5px">'+escAttr(c.solto)+'</textarea></div>';
     }
-    var n=Object.keys(c.campos).filter(function(q){ return c.campos[q].grava && c.campos[q].campo; }).length;
-    h+='<button type="button" class="btn '+(n?'btn-primary':'btn-gold')+'" style="width:100%;margin-top:10px"'
-      +' onclick="algCurGravar(\''+algEsc(k)+'\')">'
-      +(n?('Gravar '+n+(n===1?' campo na ficha':' campos na ficha')):'Nada marcado ainda')+'</button>';
+    var n=qks.filter(function(q){ return c.campos[q].grava && c.campos[q].campo; }).length;
+    if(pendentes){
+      h+='<div class="hint" style="margin-top:9px;color:var(--crm-atencao-text)"><strong>'
+        +pendentes+(pendentes===1?' campo espera sua decisão':' campos esperam sua decisão')
+        +'</strong> — trocar o que já está na ficha nunca acontece sozinho.</div>';
+    }
+    h+='<button type="button" class="btn '+(n?'btn-primary':'btn-gold')+'" style="width:100%;margin-top:8px"'
+      +' onclick="algCurGravar(\'' + algEsc(k) + '\')">'
+      +(n?('Salvar '+n+(n===1?' campo':' campos')+' na ficha'+(nome?(' d'+(/[aA]$/.test(nome)?'a ':'o ')+escAttr(nome)):'')):'Nada marcado ainda')
+      +'</button>';
     return h+'</div>';
   }
   function algCurGravar(k){
