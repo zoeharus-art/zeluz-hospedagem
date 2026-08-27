@@ -90,7 +90,23 @@
      (que são 14px/500), dourado, sem opacidade que o apague. O grupo continua acima dele
      na hierarquia pela caixa-alta e pelo espaçamento entre letras. */
   .nav .grp.grp-sub{font-size:15px;letter-spacing:.3px;opacity:1;font-weight:700;
-    color:var(--z-gold);margin:14px 12px 4px;text-transform:none}
+    color:var(--z-gold);margin:14px 0 4px;padding-left:14px;text-transform:none}
+  /* CATEGORIA (Serviços, Central Zêluz, Operação, Em breve) — Adriana, 27/ago/2026:
+     "preciso de categoria de título, subtítulo e um outro título. Precisamos que as pessoas
+     enxerguem." Referência: Azure Portal / Google Cloud / Zendesk Admin. É uma linha própria,
+     clicável, que abre e fecha. Cada nível um degrau abaixo: categoria 17/700 creme,
+     sub-cabeçalho 15/700 dourado, item 14/500. */
+  .nav a.grp{font-size:17px;font-weight:700;color:var(--z-cream);opacity:1;
+    text-transform:none;letter-spacing:0;gap:10px;
+    margin:12px 0 0;padding:12px 14px 8px;border-radius:0;
+    border-top:1px solid rgba(255,255,255,.12)}
+  .nav a.grp:hover{background:rgba(255,255,255,.05)}
+  .nav a.grp svg{width:18px;height:18px}
+  .acc.acc-open > a.grp{background:none}
+  /* Item dentro de categoria: recuado, com uma trilha fina à esquerda ligando os irmãos. */
+  .nav .acc-panel a[data-v],
+  .nav .acc-panel a:not([data-v]):not(.nav-parent){margin-left:22px;padding-left:12px;
+    border-left:2px solid rgba(255,255,255,.10);border-radius:0 11px 11px 0}
   /* Item solto no fim da barra (Relatórios): fica separado do que vem antes por um fio. */
   .nav a.nav-solto{margin-top:14px;border-top:1px solid rgba(255,255,255,.12);padding-top:8px;border-radius:0 0 11px 11px}
   .nav a{
@@ -118,7 +134,7 @@
   .dcsub-panel{overflow:hidden;max-height:0;transition:max-height .25s ease}
   .dcsub.dcsub-open > .dcsub-panel{max-height:1500px}
   .acc-panel{margin:1px 0 5px}
-  .acc-panel > a{margin-left:10px}
+  /* (o recuo dos filhos agora vem da trilha em .nav .acc-panel a[data-v]) */
   .acc.acc-open > .nav-parent{background:rgba(255,255,255,.06);opacity:1}
   /* botão de recolher a barra inteira */
   .nav-collapse-btn{display:flex;align-items:center;justify-content:flex-end;gap:8px;width:100%;
@@ -1706,71 +1722,87 @@
 
     <!-- ÍNDICE APROVADO PELA ADRIANA (26/ago/2026) — docs/INDICE-MENU-APP.md.
          O menu tem de ser autoexplicativo: cada item tem TÍTULO curto e uma DICA
-         (o title=, que é a mesma frase do subtítulo em titles{}). As sanfonas viraram
-         sub-cabeçalhos (.grp-sub): o menu inteiro fica à vista, sem gaveta fechada.
+         (o title=, que é a mesma frase do subtítulo em titles{}). São TRÊS níveis, cada um
+         um degrau abaixo do outro (Adriana, 27/ago/2026): CATEGORIA recolhível (17/700 creme,
+         com ícone e seta) > sub-cabeçalho (15/700 dourado) > item (14/500).
          REGRA: ninguém ganhou nem perdeu acesso — cada <a> manteve exatamente as
          classes so-*/op-only que já tinha. Só mudou grupo, ordem, título e dica. -->
     <a class="active op-only" data-v="inicio" title="Visão geral do dia"><span data-icon="home"></span><span>Início</span></a>
 
-    <div class="grp">Serviços</div>
-    <div class="grp grp-sub">AuAulândia — o hotel da Zêluz</div>
-    <a data-v="conferencia" class="so-conferencia" title="O monitor confere corpo e pertences de quem chegou (2º passo; o 1º é da Central Zêluz)."><span data-icon="check"></span><span>Conferência do check-in</span></a>
-    <a data-v="cuidadovet" class="so-vet" title="Alterações no corpo que a veterinária precisa ver."><span data-icon="heart"></span><span>Cuidado Vet</span></a>
-    <a data-v="hospedagem" title="O relatório de cada hóspede, turno a turno."><span data-icon="moon"></span><span>Plantão da noite</span></a>
-    <a data-v="hospedes" class="so-hosp" title="Quem está na casa, medicação e alimentação."><span data-icon="paw"></span><span>Hóspedes de hoje</span></a>
-    <!-- SEMPRE 2 conferências: uma na ENTRADA e uma na SAÍDA (Adriana, 03/ago/2026).
-         Check-out = os monitores juntam. Check-out com o tutor = as consultoras
-         conferem com o tutor e colhem a assinatura (mora na Central Zêluz). -->
-    <a data-v="checkout" title="O monitor monta a bolsa e devolve tudo (1º passo; a Central fecha com o tutor)."><span data-icon="check"></span><span>Check-out</span></a>
-    <!-- Bloco do Day Care: era o accordion data-acc="daycare". Continua sendo UM bloco
-         para a trava de permissão granular continuar valendo — quem tem escopo restrito
-         e nenhuma atividade não vê o Day Care (aplicarPaginasPessoa). -->
-    <div class="so-day" id="blocoDaycare">
-      <div class="grp grp-sub">Day Care</div>
-      <a data-v="abertura" class="so-abertura" title="Monitor 1: como a casa abre."><span data-icon="sun"></span><span>Abertura do dia</span></a>
-      <!-- Turminhas (dias) + Atividades vivem no #dcSubnav (montarSubnav). -->
-      <div class="subnav so-day" id="dcSubnav"></div>
+    <div class="acc" data-acc="servicos">
+      <a class="grp nav-parent" data-acc-toggle="servicos"><span data-icon="paw"></span><span>Serviços</span><span class="acc-caret" aria-hidden="true"></span></a>
+      <div class="acc-panel">
+        <div class="grp grp-sub">AuAulândia — o hotel da Zêluz</div>
+        <a data-v="conferencia" class="so-conferencia" title="O monitor confere corpo e pertences de quem chegou (2º passo; o 1º é da Central Zêluz)."><span data-icon="check"></span><span>Conferência do check-in</span></a>
+        <a data-v="cuidadovet" class="so-vet" title="Alterações no corpo que a veterinária precisa ver."><span data-icon="heart"></span><span>Cuidado Vet</span></a>
+        <a data-v="hospedagem" title="O relatório de cada hóspede, turno a turno."><span data-icon="moon"></span><span>Plantão da noite</span></a>
+        <a data-v="hospedes" class="so-hosp" title="Quem está na casa, medicação e alimentação."><span data-icon="paw"></span><span>Hóspedes de hoje</span></a>
+        <!-- SEMPRE 2 conferências: uma na ENTRADA e uma na SAÍDA (Adriana, 03/ago/2026).
+             Check-out = os monitores juntam. Check-out com o tutor = as consultoras
+             conferem com o tutor e colhem a assinatura (mora na Central Zêluz). -->
+        <a data-v="checkout" title="O monitor monta a bolsa e devolve tudo (1º passo; a Central fecha com o tutor)."><span data-icon="check"></span><span>Check-out</span></a>
+        <!-- Bloco do Day Care: continua sendo UM bloco para a trava de permissão granular
+             continuar valendo — quem tem escopo restrito e nenhuma atividade não vê o
+             Day Care (aplicarPaginasPessoa). -->
+        <div class="so-day" id="blocoDaycare">
+          <div class="grp grp-sub">Day Care</div>
+          <a data-v="abertura" class="so-abertura" title="Monitor 1: como a casa abre."><span data-icon="sun"></span><span>Abertura do dia</span></a>
+          <!-- Turminhas (dias) + Atividades vivem no #dcSubnav (montarSubnav). -->
+          <div class="subnav so-day" id="dcSubnav"></div>
+        </div>
+      </div>
     </div>
 
-    <div class="grp">Central Zêluz</div>
-    <a data-v="ficha" class="so-gestao" title="Um cadastro só, para Day Care e AuAulândia — tudo começa aqui."><span data-icon="paw"></span><span>Cadastro de Peludinhos</span></a>
-    <div class="grp grp-sub">AuAulândia</div>
-    <a data-v="checkin" title="O tutor chega: entrada, alimentação, medicação, assinatura (1º passo)."><span data-icon="paw"></span><span>Check-in</span></a>
-    <a data-v="checkoutconf" class="so-conf-saida" title="Conferir a bolsa junto com o tutor e assinar (2º passo)."><span data-icon="check"></span><span>Check-out com o tutor</span></a>
-    <a data-v="orcamento" class="so-recepcao" title="Monte e envie o orçamento ao tutor."><span data-icon="star"></span><span>Orçamento de hospedagem</span></a>
-    <a data-v="recepcao" class="so-recepcao" title="Ração acabando, remédio faltando, algo que ficou."><span data-icon="paw"></span><span>Pendências com o tutor</span></a>
-    <div class="grp grp-sub">Day Care</div>
-    <!-- Saiu do menu "Empório", que foi deletado: ninguém procuraria a mensagem do tutor
-         ali dentro (Adriana, 13/ago/2026). -->
-    <a data-v="emporio" class="so-emporio" title="A mensagem pronta para avisar o tutor."><span data-icon="paw"></span><span>Quem não comeu hoje</span></a>
-    <a data-v="reposicao" class="so-recepcao" title="Créditos de dias por falta avisada."><span data-icon="star"></span><span>Reposições</span></a>
-    <!-- Adriana, 19/ago/2026: "vamos criar no sidebar o item (Dashboard Day Care)". É aqui que
-         a recepção lança o que hoje digita na planilha — e a planilha vira só o espelho que
-         alimenta a TV. -->
-    <a data-v="dashdc" class="so-recepcao" title="A planilha do Day Care, item por item."><span data-icon="star"></span><span>Lançamentos do dia</span></a>
-    <div class="grp grp-sub">Peludinhos</div>
-    <!-- A tela existia como "em breve" e nunca teve entrada no menu. Agora é o relatório de
-         quem está devendo vacina, vermífugo, antiparasitário, coleira, exame ou pesagem. -->
-    <a data-v="vacinas" class="so-gestao" title="Vacina, vermífugo, coleira, exame e peso: quem está atrasado."><span data-icon="alert"></span><span>Prevenção</span></a>
-    <a data-v="alergia" class="so-gestao" title="O que a ficha diz e ninguém confirmou com o tutor."><span data-icon="star"></span><span>Alergias a confirmar</span></a>
-    <div class="grp grp-sub">Planos e cobranças</div>
-    <a data-v="renovacao" class="so-gestao" title="Quem está no fim do plano."><span data-icon="star"></span><span>Renovação de planos</span></a>
-    <!-- Sem data-v de propósito: a tela ainda não existe. O clique não navega. -->
-    <a class="so-gestao" style="opacity:.55;cursor:default" title="Quem deve no Day Care."><span data-icon="star"></span><span>Em débito</span><span class="soon">em breve</span></a>
+    <div class="acc" data-acc="central">
+      <a class="grp nav-parent" data-acc-toggle="central"><span data-icon="star"></span><span>Central Zêluz</span><span class="acc-caret" aria-hidden="true"></span></a>
+      <div class="acc-panel">
+        <a data-v="ficha" class="so-gestao" title="Um cadastro só, para Day Care e AuAulândia — tudo começa aqui."><span data-icon="paw"></span><span>Cadastro de Peludinhos</span></a>
+        <div class="grp grp-sub">AuAulândia</div>
+        <a data-v="checkin" title="O tutor chega: entrada, alimentação, medicação, assinatura (1º passo)."><span data-icon="paw"></span><span>Check-in</span></a>
+        <a data-v="checkoutconf" class="so-conf-saida" title="Conferir a bolsa junto com o tutor e assinar (2º passo)."><span data-icon="check"></span><span>Check-out com o tutor</span></a>
+        <a data-v="orcamento" class="so-recepcao" title="Monte e envie o orçamento ao tutor."><span data-icon="star"></span><span>Orçamento de hospedagem</span></a>
+        <a data-v="recepcao" class="so-recepcao" title="Ração acabando, remédio faltando, algo que ficou."><span data-icon="paw"></span><span>Pendências com o tutor</span></a>
+        <div class="grp grp-sub">Day Care</div>
+        <!-- Saiu do menu "Empório", que foi deletado: ninguém procuraria a mensagem do
+             tutor ali dentro (Adriana, 13/ago/2026). -->
+        <a data-v="emporio" class="so-emporio" title="A mensagem pronta para avisar o tutor."><span data-icon="paw"></span><span>Quem não comeu hoje</span></a>
+        <a data-v="reposicao" class="so-recepcao" title="Créditos de dias por falta avisada."><span data-icon="star"></span><span>Reposições</span></a>
+        <!-- Adriana, 19/ago/2026: é aqui que a recepção lança o que hoje digita na
+             planilha — e a planilha vira só o espelho que alimenta a TV. -->
+        <a data-v="dashdc" class="so-recepcao" title="A planilha do Day Care, item por item."><span data-icon="star"></span><span>Lançamentos do dia</span></a>
+        <div class="grp grp-sub">Peludinhos</div>
+        <!-- A tela existia como "em breve" e nunca teve entrada no menu. Agora é o
+             relatório de quem está devendo vacina, vermífugo, coleira, exame ou peso. -->
+        <a data-v="vacinas" class="so-gestao" title="Vacina, vermífugo, coleira, exame e peso: quem está atrasado."><span data-icon="alert"></span><span>Prevenção</span></a>
+        <a data-v="alergia" class="so-gestao" title="O que a ficha diz e ninguém confirmou com o tutor."><span data-icon="star"></span><span>Alergias a confirmar</span></a>
+        <div class="grp grp-sub">Planos e cobranças</div>
+        <a data-v="renovacao" class="so-gestao" title="Quem está no fim do plano."><span data-icon="star"></span><span>Renovação de planos</span></a>
+        <!-- Sem data-v de propósito: a tela ainda não existe. O clique não navega. -->
+        <a class="so-gestao" style="opacity:.55;cursor:default" title="Quem deve no Day Care."><span data-icon="star"></span><span>Em débito</span><span class="soon">em breve</span></a>
+      </div>
+    </div>
 
-    <div class="grp so-gestao">Operação</div>
-    <a data-v="acerto" class="so-master" title="Acerto das plantonistas: noites, dobras, quanto pagamos."><span data-icon="star"></span><span>Financeiro do plantão</span></a>
-    <a data-v="ritmo" class="so-gestao" title="Tempo por etapa, dia a dia."><span data-icon="star"></span><span>Ritmo do Time</span></a>
-    <a data-v="eahist" class="so-gestao" title="O que foi feito e quem não participou."><span data-icon="star"></span><span>Enriquecimento Ambiental</span></a>
-    <a data-v="pessoas" class="so-master" title="Pessoas, senhas e quem acessa o quê."><span data-icon="users"></span><span>Time</span></a>
-    <div class="subnav so-master" id="pSubnav" style="display:none"></div>
-    <a data-v="config" class="so-master" title="Telegram e ponte da planilha."><span data-icon="lock"></span><span>Configurações</span></a>
-    <!-- Fica por último na Operação até a Fase 2, quando o Início e o Painel do Dia
-         viram uma coisa só (a fatia de cada um). -->
-    <a data-v="painel" class="so-master" title="Auditoria e cumprimento de protocolos"><span data-icon="star"></span><span>Painel do Dia</span></a>
+    <div class="acc so-gestao" data-acc="operacao">
+      <a class="grp nav-parent" data-acc-toggle="operacao"><span data-icon="users"></span><span>Operação</span><span class="acc-caret" aria-hidden="true"></span></a>
+      <div class="acc-panel">
+        <a data-v="acerto" class="so-master" title="Acerto das plantonistas: noites, dobras, quanto pagamos."><span data-icon="star"></span><span>Financeiro do plantão</span></a>
+        <a data-v="ritmo" class="so-gestao" title="Tempo por etapa, dia a dia."><span data-icon="star"></span><span>Ritmo do Time</span></a>
+        <a data-v="eahist" class="so-gestao" title="O que foi feito e quem não participou."><span data-icon="star"></span><span>Enriquecimento Ambiental</span></a>
+        <a data-v="pessoas" class="so-master" title="Pessoas, senhas e quem acessa o quê."><span data-icon="users"></span><span>Time</span></a>
+        <div class="subnav so-master" id="pSubnav" style="display:none"></div>
+        <a data-v="config" class="so-master" title="Telegram e ponte da planilha."><span data-icon="lock"></span><span>Configurações</span></a>
+        <!-- Fica por último na Operação até a Fase 2, quando o Início e o Painel do Dia
+             viram uma coisa só (a fatia de cada um). -->
+        <a data-v="painel" class="so-master" title="Auditoria e cumprimento de protocolos"><span data-icon="star"></span><span>Painel do Dia</span></a>
+      </div>
+    </div>
 
-    <div class="grp">Em breve</div>
-    <a data-v="agenda" title="Frequência e reservas"><span data-icon="cal"></span><span>Agenda</span><span class="soon">em breve</span></a>
+    <div class="acc" data-acc="embreve">
+      <a class="grp nav-parent" data-acc-toggle="embreve"><span data-icon="cal"></span><span>Em breve</span><span class="acc-caret" aria-hidden="true"></span></a>
+      <div class="acc-panel">
+        <a data-v="agenda" title="Frequência e reservas"><span data-icon="cal"></span><span>Agenda</span><span class="soon">em breve</span></a>
+      </div>
+    </div>
 
     <!-- Adriana, 27/ago/2026: "Relatórios é um item à parte, no fim". Fica sozinho depois de
          tudo, separado por um fio, logo antes do Sair — não pertence a grupo nenhum. -->
@@ -9637,7 +9669,7 @@
   // Agora existe um carimbo: esta constante é a versão que o aparelho está rodando, e o
   // Firebase guarda a versão publicada. Quando as duas diferem, aparece o aviso — mas
   // NUNCA recarrega sozinho: recarregar no meio de um check-in perderia o trabalho.
-  const APP_VERSAO='2026-08-27-05';
+  const APP_VERSAO='2026-08-27-06';
   function vigiarVersao(){
     if(!DB) return;
     try{
@@ -10074,12 +10106,18 @@
     // Item 1 — quem recebeu atividade do Day Care (ex.: Almoço) precisa VER a atividade ao
     // entrar. Antes o Day Care ficava fechado na sanfona e a pessoa jurava que "não apareceu".
     try{ if(Array.isArray(u.atividades)&&u.atividades.length){
-      var _accDC=document.querySelector('#nav .acc[data-acc="daycare"]'); if(_accDC) _accDC.classList.add('acc-open');
+      var _bd=document.getElementById('blocoDaycare'); var _accDC=_bd&&_bd.closest?_bd.closest('.acc'):null;
+      if(_accDC) _accDC.classList.add('acc-open');
     } }catch(e){}
     try{ if(localStorage.getItem('zeluz_sidebar_collapsed')==='1') document.body.classList.add('nav-collapsed'); }catch(e){} // barra recolhida (desktop)
     // Quem tem escopo restrito (ex.: Amanda Barbosa, só almoço) cai direto na atividade dela.
     // Pessoa só com atividade (sem páginas) cai direto na atividade dela (Amanda Barbosa etc.).
-    if(escopo && !_temPag && typeof abrirAtividade==='function'){ abrirAtividade(escopo[0]); return; }
+    if(escopo && !_temPag && typeof abrirAtividade==='function'){
+      // Sai por aqui, então a categoria do Day Care precisa estar aberta ANTES — senão a
+      // pessoa entra e vê a atividade dela dentro de uma gaveta fechada.
+      try{ var _b=document.getElementById('blocoDaycare'); var _a=_b&&_b.closest?_b.closest('.acc'):null;
+        if(_a) _a.classList.add('acc-open'); }catch(e){}
+      abrirAtividade(escopo[0]); return; }
     // Cada perfil cai na tela onde trabalha.
     var v=telaInicialDe(u);
     if(Array.isArray(u.paginas)){
@@ -14559,6 +14597,11 @@
       var dcs=[].slice.call(nav.querySelectorAll('.dcsub'));
       var abertas=dcs.map(function(x){ return x.classList.contains('dcsub-open'); });
       dcs.forEach(function(x){ x.classList.add('dcsub-open'); });
+      // Idem para as CATEGORIAS: fechada, o painel inteiro é display:none e TODO
+      // sub-cabeçalho pareceria vazio. Abre para medir, devolve o estado logo abaixo.
+      var cats=[].slice.call(nav.querySelectorAll('.acc'));
+      var catsAbertas=cats.map(function(x){ return x.classList.contains('acc-open'); });
+      cats.forEach(function(x){ x.classList.add('acc-open'); });
 
       var cabecalhos=[].slice.call(nav.querySelectorAll('.grp'));
       // Limpa a medição anterior ANTES de aferir: trocar de papel tem que poder revelar de novo.
@@ -14580,6 +14623,7 @@
 
       cabecalhos.forEach(function(c){ if(contarAbaixo(c)===0) c.style.display='none'; });
       dcs.forEach(function(x,i){ x.classList.toggle('dcsub-open', abertas[i]); }); // restaura
+      cats.forEach(function(x,i){ x.classList.toggle('acc-open', catsAbertas[i]); });
     }catch(e){}
   }
   // ===== Recolher/expandir a barra inteira =====

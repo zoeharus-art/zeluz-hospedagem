@@ -2420,14 +2420,19 @@ async function main() {
       const attrs = m[2];
       const cls = (/class="([^"]*)"/.exec(attrs) || [, ''])[1];
       const dv = /data-v="([a-z]+)"/.exec(attrs);
-      const rotulo = (/^([^<]*)/.exec(nav.slice(m.index + m[0].length)) || [, ''])[1].trim();
+      // A CATEGORIA agora é um <a class="grp nav-parent"> (linha clicável que abre/fecha),
+      // então o rótulo não é mais o texto solto logo após a tag: vem de dentro dos <span>.
+      const fecha = nav.indexOf(m[1] === 'a' ? '</a>' : '</div>', m.index + m[0].length);
+      const rotulo = nav.slice(m.index + m[0].length, fecha < 0 ? m.index : fecha)
+        .replace(/<[^>]*>/g, '').replace(/\s+/g, ' ').trim();
+      const ehGrp = /(^|\s)grp(\s|$)/.test(cls);
       if (dv) {
         // só as classes que decidem QUEM VÊ
         const vis = cls.split(/\s+/).filter((c) => c === 'op-only' || c.startsWith('so-')).sort().join(' ');
         itens.push({ v: dv[1], vis, pos: m.index, grupo: grupoAtual });
-      } else if (m[1] === 'div' && /(^|\s)grp(\s|$)/.test(cls)) {
+      } else if (ehGrp) {
         if (/grp-sub/.test(cls)) subs.push({ titulo: rotulo, pos: m.index });
-        else { grupoAtual = rotulo; grupos.push({ titulo: rotulo, pos: m.index }); }
+        else { grupoAtual = rotulo; grupos.push({ titulo: rotulo, pos: m.index, cls, tag: m[1] }); }
       }
     }
     const porV = {};
@@ -2562,6 +2567,64 @@ async function main() {
       /color:var\(--z-gold\)/.test(cssSub), cssSub);
     check('menu: o sub-cabeçalho não usa caixa-alta (o grupo é que usa)',
       /text-transform:\s*none/.test(cssSub) && /text-transform:uppercase/.test((/\.nav \.grp\{([^}]*)\}/.exec(html) || [, ''])[1]));
+
+    // ---- 4b. TRÊS níveis, cada um um degrau abaixo (Adriana, 27/ago/2026) ----
+    // "Central Zêluz mínimo... preciso de categoria de título, subtítulo e um outro título.
+    //  Precisamos que as pessoas enxerguem." Referência: Azure Portal / Google Cloud / Zendesk.
+    const cssCat = (/\.nav a\.grp\{([^}]*)\}/.exec(html) || [, ''])[1];
+    const peso2 = (css) => { const m = /font-weight:(\d+)/.exec(css); return m ? parseInt(m[1], 10) : NaN; };
+    check('menu: categoria > sub-cabeçalho > item, em tamanho',
+      px(cssCat, 'font-size') > px(cssSub, 'font-size') && px(cssSub, 'font-size') > px(cssItem, 'font-size'),
+      px(cssCat, 'font-size') + ' > ' + px(cssSub, 'font-size') + ' > ' + px(cssItem, 'font-size'));
+    check('menu: categoria 17 / sub 15 / item 14',
+      px(cssCat, 'font-size') === 17 && px(cssSub, 'font-size') === 15 && px(cssItem, 'font-size') === 14,
+      [px(cssCat, 'font-size'), px(cssSub, 'font-size'), px(cssItem, 'font-size')].join('/'));
+    check('menu: peso 700 / 700 / 500',
+      peso2(cssCat) === 700 && peso2(cssSub) === 700 && peso2(cssItem) === 500,
+      [peso2(cssCat), peso2(cssSub), peso2(cssItem)].join('/'));
+    check('menu: a categoria não usa caixa-alta e é creme',
+      /text-transform:none/.test(cssCat) && /color:var\(--z-cream\)/.test(cssCat), cssCat);
+    check('menu: a categoria tem filete acima', /border-top:1px solid/.test(cssCat), cssCat);
+    check('menu: categoria fechada esconde o que está dentro (por CSS, não mexendo em classe)',
+      /\.acc:not\(\.acc-open\) > \.acc-panel\{display:none\}/.test(html));
+    check('menu: item dentro de categoria tem trilha à esquerda',
+      /\.nav \.acc-panel a\[data-v\][\s\S]{0,140}?border-left:2px solid/.test(html));
+    // Fora de categoria = na raiz do <nav> (indentação de 4 espaços). Dentro de categoria
+    // os itens vivem no .acc-panel, com 8 ou mais.
+    const indent = (k) => {
+      const mm = new RegExp('^( *)<a[^>]*data-v="' + k + '"', 'm').exec(nav);
+      return mm ? mm[1].length : -1;
+    };
+    check('menu: Início, Relatórios e Sair ficam fora de categoria (na raiz do menu)',
+      [4, 4, 4].join() === ['inicio', 'relatorios', 'sair'].map(indent).join(),
+      JSON.stringify(['inicio', 'relatorios', 'sair'].map(indent)));
+    check('menu: os itens de categoria ficam dentro do painel dela',
+      ['conferencia', 'ficha', 'acerto', 'agenda'].every((k) => indent(k) >= 8),
+      JSON.stringify(['conferencia', 'ficha', 'acerto', 'agenda'].map(indent)));
+
+    // As 4 categorias: ícone, seta, clicável, e cada uma com sua chave de estado.
+    const cats = [...nav.matchAll(/<a class="grp nav-parent" data-acc-toggle="([a-z]+)"([^>]*)>([\s\S]*?)<\/a>/g)]
+      .map((mm) => ({ chave: mm[1], attrs: mm[2], dentro: mm[3] }));
+    check('menu: as 4 categorias são linhas clicáveis (nav-parent)', cats.length === 4,
+      JSON.stringify(cats.map((c) => c.chave)));
+    cats.forEach((c) => {
+      check('menu: categoria ' + c.chave + ' tem ícone', /data-icon="[a-z]+"/.test(c.dentro), c.dentro.slice(0, 60));
+      check('menu: categoria ' + c.chave + ' tem seta', /acc-caret/.test(c.dentro));
+    });
+    check('menu: clicar na categoria abre/fecha (o listener do nav trata nav-parent)',
+      /classList\.contains\('nav-parent'\)\)\{ toggleAcc\(a\); return; \}/.test(html));
+    check('menu: o estado de aberto/fechado fica guardado',
+      /localStorage\.setItem\('zeluz_acc_'\+k/.test(html) && /localStorage\.getItem\('zeluz_acc_'\+acc\.dataset\.acc\)/.test(html));
+    check('menu: ao entrar, abre a categoria da tela em que a pessoa cai',
+      /a\.click\(\); const _accIni=a\.closest\('\.acc'\); if\(_accIni\) _accIni\.classList\.add\('acc-open'\)/.test(html));
+    check('menu: quem cai direto numa atividade entra com a categoria do Day Care aberta',
+      /escopo && !_temPag[\s\S]{0,420}?blocoDaycare[\s\S]{0,220}?acc-open/.test(html));
+    check('menu: a pendência de item escondido sobe para a linha da categoria',
+      /function navPendSubirParaOPai\(\)[\s\S]{0,900}?\.acc-panel a\.nav-pend/.test(html)
+      && /navPendSubirParaOPai\(\);/.test(html));
+    check('menu: ao medir cabeçalho vazio, a categoria é aberta e depois restaurada',
+      /cats\.forEach\(function\(x\)\{ x\.classList\.add\('acc-open'\); \}\);/.test(html)
+      && /cats\.forEach\(function\(x,i\)\{ x\.classList\.toggle\('acc-open', catsAbertas\[i\]\); \}\);/.test(html));
 
     // ---- 5. cabeçalho sem item embaixo não aparece ----
     // Sem isto o monitor lia "Day Care", "Peludinhos" e "Planos e cobranças" na barra
