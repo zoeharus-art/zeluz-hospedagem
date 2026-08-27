@@ -5017,6 +5017,23 @@
   // Bloco "Alergia / Restrição" na ficha do hóspede — achável e editável por quem recebe o
   // FILHOt (Monitora, Gestão, Supervisão, Diretoria). Quem não pode editar não vê o bloco vazio
   // (a tarja vermelha em hf-pills já mostra o dado a todos, inclusive plantonista, em modo leitura).
+  // A pergunta que a tela faz quando duas linhas parecem o mesmo FILHOt. Aparece no
+  // card, com os dois nomes escritos por extenso — ninguém responde no escuro.
+  function hospSuspeitaHTML(h){
+    if(!h||!h.suspeita) return '';
+    var o=h.suspeita, ch=hospParChave(h,o);
+    return '<div style="margin-top:5px;padding:6px 7px;border-radius:9px;background:rgba(241,196,15,.16);'
+      +'border:1.5px solid var(--crm-atencao);text-align:left" onclick="event.stopPropagation()">'
+      +'<div style="font-size:11px;font-weight:800;color:var(--crm-atencao-text);line-height:1.35">'
+      +'É o mesmo FILHOt que <strong>'+escAttr(o.nome)+(o.tutor?(' · '+escAttr(o.tutor)):'')+'</strong>?</div>'
+      +'<div style="display:flex;gap:5px;margin-top:5px">'
+      +'<button type="button" class="btn btn-primary" style="padding:4px 9px;font-size:11px;font-weight:800;flex:1"'
+      +' onclick="event.stopPropagation();hospResponderMesmo(\''+ch+'\',true)">É o mesmo</button>'
+      +'<button type="button" class="btn" style="padding:4px 9px;font-size:11px;font-weight:800;flex:1;'
+      +'background:var(--z-cream-warm);border:1.5px solid var(--line);color:var(--z-blue)"'
+      +' onclick="event.stopPropagation();hospResponderMesmo(\''+ch+'\',false)">São dois</button>'
+      +'</div></div>';
+  }
   function renderHospAlergiaBlock(h){
     const el=document.getElementById('hf-alergia-block'); if(!el) return;
     if(!canEditHospAlergia()){ el.innerHTML=''; return; }
@@ -5038,6 +5055,71 @@
   // [tutora] e tutor="Westie" [raça]). A verdade é o cadastro-mestre (PELUDINHOS): resolvemos por
   // refKey ou por NOME e ignoramos os campos trocados. Sem mestre, decidimos pelo que PARECE raça.
   var _RACAS_EXTRA=['corgi','welsh corgi','westie','west terrier','west highland','spitz','lulu','pomerania','pomsky','cocker','lhasa','shih tzu','shihtzu','maltes','poodle','yorkshire','yorky','pug','buldogue','bulldog','pinscher','dachshund','daschund','salsicha','teckel','schnauzer','shiba','beagle','labrador','golden','border collie','pastor','chihuahua','pequines','papillon','fox paulistinha','spaniel','srd','vira lata','vira-lata','viralata','bichon','husky','akita','boston'];
+  // Duas linhas podem ser o mesmo FILHOt? Exige o primeiro nome igual E o tutor
+  // compativel (um contido no outro, ou o primeiro nome do tutor igual). Nome sozinho
+  // nunca basta — foi assim que a Maya da Carolina puxou a Maya da Luciana.
+  function hospPrimeiro(v){ return jsNorm(String(v||'')).split(/\s+/)[0]||''; }
+  function hospPodeSerMesmo(a, b){
+    if(!a||!b) return false;
+    var na=jsNorm(a.nome||''), nb=jsNorm(b.nome||'');
+    if(!na||!nb||na===nb) return false;                 // igual não é "suspeita", é o mesmo
+    var umDentroDoOutro=(na.indexOf(nb)===0||nb.indexOf(na)===0);
+    if(!umDentroDoOutro) return false;
+    var ta=jsNorm(a.tutor||''), tb=jsNorm(b.tutor||'');
+    if(!ta||!tb) return true;                           // um dos lados sem tutor: ainda suspeito
+    if(ta===tb) return true;
+    if(ta.indexOf(tb)===0||tb.indexOf(ta)===0) return true;
+    return hospPrimeiro(ta)===hospPrimeiro(tb);
+  }
+  // A resposta de quem olhou. Fica no banco, vale para trás e para frente.
+  var HOSP_MESMO={}, HOSP_MESMO_LIDO=false;   // {"chaveA||chaveB": {mesmo, quem, quando}}
+  function hospParChave(a, b){
+    var x=[jsNorm(a.nome||'')+'~'+jsNorm(a.tutor||''), jsNorm(b.nome||'')+'~'+jsNorm(b.tutor||'')].sort();
+    return (x[0]+'||'+x[1]).replace(/[.#$\/\[\]]/g,'_');
+  }
+  function hospCarregarMesmo(){
+    if(!DB) return Promise.resolve();
+    return DB.ref('daycare/hospede-mesmo').once('value').then(function(s){ HOSP_MESMO=s.val()||{}; })
+      .catch(function(e){
+        try{ if(typeof audit==='function') audit('hospedes','NÃO consegui ler as duplicidades já resolvidas: '+((e&&e.message)||e),{}); }catch(x){}
+      });
+  }
+  function hospResponderMesmo(chave, ehMesmo){
+    if(!DB) return;
+    var reg={mesmo:!!ehMesmo, quem:(typeof quemSou==='function'?quemSou():'-'),
+             quando:(typeof zHojeISO==='function')?zHojeISO():'', ts:Date.now()};
+    HOSP_MESMO[chave]=reg;
+    DB.ref('daycare/hospede-mesmo/'+chave).set(reg).catch(function(e){
+      alert('Não consegui gravar a resposta: '+((e&&e.message)||e));
+    });
+    try{ if(typeof audit==='function') audit('hospedes',(ehMesmo?'confirmou que são o MESMO FILHOt: ':'disse que são DOIS FILHOts: ')+chave,{}); }catch(e){}
+    try{ carregarHospedes(); }catch(e){ try{ renderHosp(); }catch(x){} }
+  }
+  // Junta o que a planilha e o app dizem do mesmo FILHOt, quando alguém já confirmou.
+  // O registro do APP vence: é ele que tem o vínculo com a ficha.
+  function hospJuntarDuplicados(lista){
+    var fora={};
+    for(var i=0;i<lista.length;i++){
+      for(var j=i+1;j<lista.length;j++){
+        var a=lista[i], b=lista[j];
+        if(!hospPodeSerMesmo(a,b)) continue;
+        var r=HOSP_MESMO[hospParChave(a,b)];
+        if(!r || !r.mesmo){
+          // ninguém respondeu ainda, ou disse que são dois: os dois ficam, com a pergunta
+          if(!r){ a.suspeita=b; b.suspeita=a; }
+          continue;
+        }
+        // é o mesmo: fica o que tem ficha (refKey); o outro sai e empresta o que sabe
+        var ficaA=!!a.refKey && !b.refKey;
+        var fica=ficaA?a:(b.refKey&&!a.refKey?b:a), sai=(fica===a)?b:a;
+        if(!fica.tutor && sai.tutor) fica.tutor=sai.tutor;
+        if(!fica.raca && sai.raca) fica.raca=sai.raca;
+        fica.tambemNaPlanilhaComo=sai.nome+(sai.tutor?(' · '+sai.tutor):'');
+        fora[lista.indexOf(sai)]=true;
+      }
+    }
+    return lista.filter(function(_,i){ return !fora[i]; });
+  }
   function ehRacaLike(x){ x=(typeof jsNorm==='function')?jsNorm(x||''):String(x||'').toLowerCase().trim(); if(!x) return false;
     if(_RACAS_EXTRA.indexOf(x)>=0) return true;
     if(_RACAS_EXTRA.some(function(r){ return r.length>=4 && (x.indexOf(r)>=0||r.indexOf(x)>=0); })) return true;
@@ -5175,6 +5257,10 @@
   }
   function renderHosp(){
     try{ cafeCarregar(); }catch(e){}
+    // Junta o que a planilha e o app dizem do mesmo FILHOt (quando alguém já confirmou)
+    // e marca as suspeitas que ainda esperam resposta. Sem isto, o Nelson do check-in e
+    // o Nelson da planilha viravam dois hóspedes e a contagem do dia mentia.
+    try{ hospedes=hospJuntarDuplicados(hospedes); }catch(e){}
     try{ alimCarregarAlmocoCad(); }catch(e){}
     try{ renderRemovidosHoje(); }catch(e){}
     // ordem alfabética (a moradora Repolho por último)
@@ -5233,6 +5319,8 @@
           ${(function(){var mc=chipDe(h); return (!h.mascote&&mc)?`<div class="hosp-chip" style="font-size:11px;font-weight:800;color:var(--z-gold-deep);margin-top:2px">Microchip: ${mc}</div>`:'';})()}
           <div class="tarja ${tj[0]}">${tj[1]}</div>
           ${h.saidaHoje?'<div class="saida-hoje">Dormiu · sai hoje</div>':''}
+          ${hospSuspeitaHTML(h)}
+          ${h.tambemNaPlanilhaComo?`<div class="hint" style="font-size:10.5px;margin-top:2px">também na planilha como <strong>${escAttr(h.tambemNaPlanilhaComo)}</strong></div>`:''}
           ${relMarcaDoCard(h)}
           ${(function(){ try{ return h.mascote?'':alimMarcaDoCard(h); }catch(e){ return ''; } })()}
         </div>`;
@@ -9669,7 +9757,7 @@
   // Agora existe um carimbo: esta constante é a versão que o aparelho está rodando, e o
   // Firebase guarda a versão publicada. Quando as duas diferem, aparece o aviso — mas
   // NUNCA recarrega sozinho: recarregar no meio de um check-in perderia o trabalho.
-  const APP_VERSAO='2026-08-27-06';
+  const APP_VERSAO='2026-08-27-07';
   function vigiarVersao(){
     if(!DB) return;
     try{
@@ -10302,6 +10390,9 @@
             // Se o campo do tutor é uma raça conhecida e o da raça não é, eles trocam de lugar.
             try{
               if(_tutor && ehRacaLike(_tutor) && _raca && !ehRacaLike(_raca)){ const t=_tutor; _tutor=_raca; _raca=t; }
+              // "Repolho / SRD": só dois campos, e o segundo é raça. Sem esta linha o SRD
+              // ficava como tutor da Repolho na tela de Hospedados (Adriana, 27/ago/2026).
+              else if(_tutor && !_raca && ehRacaLike(_tutor)){ _raca=_tutor; _tutor=''; }
             }catch(e){}
             out.push({nome:_nome, tutor:_tutor, raca:_raca});
           } }); return out; } }
@@ -10329,7 +10420,8 @@
         const lista=hoje.concat(dormiramSaindo);
         // Substitui SEMPRE — inclusive por lista vazia. Manter a lista do carregamento
         // anterior é o que fazia hóspede de ontem aparecer como hóspede de hoje.
-        hospedes = lista.map((h,i)=>({nome:h.nome, tutor:h.tutor, raca:h.raca||'', ini:(h.nome[0]||'?').toUpperCase(), cor:CORES[i%CORES.length], mascote:/repolho/i.test(h.nome), saidaHoje:!!h.saidaHoje}));
+        try{ if(!HOSP_MESMO_LIDO){ HOSP_MESMO_LIDO=true; hospCarregarMesmo().then(function(){ try{ renderHosp(); }catch(e){} }); } }catch(e){}
+      hospedes = lista.map((h,i)=>({nome:h.nome, tutor:h.tutor, raca:h.raca||'', ini:(h.nome[0]||'?').toUpperCase(), cor:CORES[i%CORES.length], mascote:/repolho/i.test(h.nome), saidaHoje:!!h.saidaHoje}));
         if(lista.length) addRacasAoBanco(hospedes.map(h=>h.raca).filter(Boolean));
         HOSP_PLANILHA=true;
       } else { HOSP_PLANILHA=true; hospedes=[]; }   // planilha lida, dia sem ninguém
@@ -17560,6 +17652,7 @@
     if(!/[a-zA-Z0-9\u00C0-\u024F]/.test(out.solto)) out.solto='';
     // o que a numeração não resolveu ainda tem uma chance: ser lido pelo assunto
     algPorAssunto(out, perguntas);
+    algLimpezaFinal(out, perguntas);
     if(!/[a-zA-Z0-9\u00C0-\u024F]/.test(out.solto)) out.solto='';
     return out;
   }
@@ -17580,6 +17673,17 @@
   function algMesmaPalavra(a, b){
     if(a===b) return true;
     return (a.length>=5 && b.length>=5 && a.slice(0,-1)===b.slice(0,-1));
+  }
+  // Última passada: nenhum pedaço pode carregar uma pergunta nossa dentro, nem ser só o
+  // resto de uma pergunta sem resposta. O que sobrar vazio simplesmente não vira campo.
+  function algLimpezaFinal(out, perguntas){
+    (perguntas||[]).forEach(function(q){
+      var v=out.por[q.k]; if(!v) return;
+      (perguntas||[]).forEach(function(outra){ v=algTirarPerguntaEmbutida(v, outra.t); });
+      if(!v || algSoSobraDaPergunta(v, q.t)){ delete out.por[q.k]; if(out.assunto) delete out.assunto[q.k]; return; }
+      out.por[q.k]=v;
+    });
+    return out;
   }
   // O tutor costuma colar a pergunta junto com a resposta. O que interessa é o que ELE
   // disse — o resto é eco.
@@ -17716,10 +17820,16 @@
       if(algAssuntoDe(f, jaTem)) pedacos.push(f);
       else algQuebrarPorAssunto(f).forEach(function(x){ pedacos.push(x); });
     });
+    var textoDa={}; (perguntas||[]).forEach(function(q){ textoDa[q.k]=q.t; });
     pedacos.forEach(function(f){
       var qk=algAssuntoDe(f, jaTem);
       if(!qk || !validos[qk] || jaTem[qk]){ sobra.push(f); return; }
-      out.por[qk]=f; jaTem[qk]=true;
+      // O eco da pergunta tem de sair AQUI tambem. Sem isto, a frase reconhecida pelo
+      // assunto entrava inteira — com pergunta e tudo — no campo da ficha. Foi o que
+      // aconteceu com as respostas da Mika e da Duda, 27/ago/2026.
+      var lim=algTirarEco(f, textoDa[qk]||'');
+      var lim2=algCortarPelaCauda(lim, textoDa[qk]||'');
+      out.por[qk]=(lim2&&lim2.length<lim.length)?lim2:lim; jaTem[qk]=true;
       out.assunto=out.assunto||{};
       out.assunto[qk]=true;            // a tela avisa: "reconheci pelo assunto, confira"
     });
@@ -17727,6 +17837,43 @@
     return out;
   }
 
+  // Tira do pedaço QUALQUER trecho longo que seja texto nosso. A tutora da Duda
+  // respondeu "Não" no meio da pergunta e colou o resto dela em seguida; a da Mika
+  // deixou só a cauda ("mesmo que tenha parecido algo pequeno"). Procurar o começo ou o
+  // fim da pergunta não resolve os dois — então procura-se a maior sequência de palavras
+  // que o pedaço tem em comum com a pergunta, na mesma ordem. Cinco palavras seguidas
+  // iguais não são coincidência: é a nossa mensagem de volta.
+  function algTirarPerguntaEmbutida(texto, pergunta){
+    var t=algLimpo(texto);
+    var pq=algLimpo(pergunta).split(/\s+/).map(algPal).filter(Boolean);
+    if(pq.length<8) return t;
+    for(var volta=0; volta<4; volta++){
+      var toks=[], re=/\S+/g, m;
+      while((m=re.exec(t))) toks.push({w:algPal(m[0]), i:m.index, f:m.index+m[0].length});
+      var melhor={n:0};
+      for(var a=0;a<toks.length;a++){
+        for(var b=0;b<pq.length;b++){
+          var n=0;
+          while(a+n<toks.length && b+n<pq.length && toks[a+n].w && algMesmaPalavra(toks[a+n].w, pq[b+n])) n++;
+          if(n>melhor.n) melhor={n:n, ini:toks[a].i, fim:toks[a+n-1].f};
+        }
+      }
+      if(melhor.n<5) break;
+      t=(t.slice(0,melhor.ini)+' '+t.slice(melhor.fim)).replace(/\s+/g,' ').trim();
+    }
+    return t.replace(/^[\s\-–—:.,;)?]+/,'').replace(/[\s:,;-]+$/,'').trim();
+  }
+  // Depois de tudo, o pedaço ainda pode ser só o resto de uma pergunta que o tutor não
+  // respondeu ("mesmo que tenha parecido algo pequeno"). Isso não é resposta: é sobra da
+  // nossa mensagem, e não pode virar conteúdo na ficha de ninguém.
+  function algSoSobraDaPergunta(texto, pergunta){
+    var pv=jsNorm(algLimpo(texto)).split(/\s+/).map(algPal).filter(Boolean);
+    if(!pv.length || pv.length>14) return false;
+    var pq={}; jsNorm(algLimpo(pergunta)).split(/\s+/).map(algPal).filter(Boolean)
+      .forEach(function(w){ pq[w]=true; });
+    var iguais=pv.filter(function(w){ return pq[w]; }).length;
+    return (iguais/pv.length) > 0.7;
+  }
   var ALG_CUR={};   // {k: {campos:{qk:{txt, campo, grava}}, solto:''}}
   function algCurMontar(k){
     var p=algPelDe(k); if(!p) return null;
