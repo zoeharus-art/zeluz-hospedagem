@@ -9629,7 +9629,7 @@
   // Agora existe um carimbo: esta constante é a versão que o aparelho está rodando, e o
   // Firebase guarda a versão publicada. Quando as duas diferem, aparece o aviso — mas
   // NUNCA recarrega sozinho: recarregar no meio de um check-in perderia o trabalho.
-  const APP_VERSAO='2026-08-27-02';
+  const APP_VERSAO='2026-08-27-03';
   function vigiarVersao(){
     if(!DB) return;
     try{
@@ -13044,6 +13044,32 @@
     }
     return out;
   }
+  // Ficha de prevenção em branco: nenhum item de vacina/antiparasitário preenchido.
+  // Não é dívida do FILHOt — é cadastro que nunca foi feito.
+  function prevFichaVazia(ex){
+    return !PREV_ITENS.some(function(it){
+      if(it.rotina) return false;
+      return !!prevValor(ex||{}, it);
+    });
+  }
+  // Em que situação este FILHOt está. A ordem é a da urgência: erro de digitação antes
+  // de vencimento, vencimento antes de cadastro faltando, e rotina por último.
+  function prevClasse(faltas, ex){
+    if(faltas.some(function(f){ return f.tipo==='invalida'; })) return 'erro';
+    if(faltas.some(function(f){ return f.tipo==='venc' && !f.rotina; })) return 'deve';
+    if(prevFichaVazia(ex)) return 'semcad';
+    if(faltas.some(function(f){ return f.tipo==='sem' && !f.rotina; })) return 'deve';
+    return 'rotina';
+  }
+  var PREV_TIPO='deve';        // a tela abre em quem realmente deve
+  function prevTipoFiltrar(t){ PREV_TIPO=t; PREV_ABERTO=''; renderPrevencao(); }
+  var PREV_TIPOS=[
+    {k:'deve',   t:'Devendo',       dica:'Vacina ou antiparasitário vencido, ou faltando numa ficha que já tem os outros.'},
+    {k:'semcad', t:'Sem cadastro',  dica:'Ficha de prevenção inteiramente em branco — nunca preenchemos nenhuma data. Não quer dizer que esteja devendo.'},
+    {k:'rotina', t:'Rotina',        dica:'Só peso do mês, escova ou check-up. Rotina da casa, não prevenção.'},
+    {k:'erro',   t:'Data errada',   dica:'Alguém digitou o ano errado na ficha (0026, 0207). Precisa de correção manual.'},
+    {k:'tudo',   t:'Tudo',          dica:'Todo mundo com qualquer pendência, das quatro situações acima.'}
+  ];
   function prevDados(){
     var busca=String((document.getElementById('prevBusca')||{}).value||'').trim();
     var bn=busca?jsNorm(busca):'';
@@ -13053,11 +13079,13 @@
       var ex=pelExtra(p)||{};
       var faltas=prevFaltasDe(ex);
       if(!faltas.length) return;
+      var classe=prevClasse(faltas, ex);
+      if(PREV_TIPO!=='tudo' && classe!==PREV_TIPO) return;
       if(PREV_FILTRO!=='tudo' && !faltas.some(function(f){ return f.k===PREV_FILTRO; })) return;
       var nome=(typeof pelNome==='function'?pelNome(p):'')||p.n||'';
       var tutor=(typeof pelGet==='function'?pelGet(p,'tutor'):'')||p.tutor||'';
       if(bn && jsNorm(nome).indexOf(bn)<0 && jsNorm(tutor).indexOf(bn)<0) return;
-      out.push({p:p, nome:nome, tutor:tutor,
+      out.push({p:p, nome:nome, tutor:tutor, classe:classe,
                 raca:(typeof pelGet==='function'?pelGet(p,'raca'):'')||p.raca||'',
                 faltas:faltas,
                 venc:faltas.filter(function(f){ return f.tipo==='venc'; }).length});
@@ -13073,12 +13101,13 @@
   function renderPrevencao(){
     var lista=prevDados();
     // ---- contagem por item, ignorando o filtro (o resumo mostra o todo) ----
-    var salvo=PREV_FILTRO; PREV_FILTRO='tudo';
+    var salvo=PREV_FILTRO, salvoT=PREV_TIPO; PREV_FILTRO='tudo'; PREV_TIPO='tudo';
     var buscaEl=document.getElementById('prevBusca'), buscaVal=buscaEl?buscaEl.value:'';
     if(buscaEl) buscaEl.value='';
     var todos=prevDados();
     if(buscaEl) buscaEl.value=buscaVal;
-    PREV_FILTRO=salvo;
+    PREV_FILTRO=salvo; PREV_TIPO=salvoT;
+    var porClasse={}; todos.forEach(function(o){ porClasse[o.classe]=(porClasse[o.classe]||0)+1; });
     var cont={}, contVenc={};
     todos.forEach(function(o){ o.faltas.forEach(function(f){
       cont[f.k]=(cont[f.k]||0)+1; if(f.tipo==='venc') contVenc[f.k]=(contVenc[f.k]||0)+1; }); });
@@ -13108,6 +13137,21 @@
 
     var fl=document.getElementById('prevFiltros');
     if(fl){
+      // ABAS DE SITUAÇÃO — a tela abre em "Devendo". As outras situações existem, mas
+      // com nome próprio: quem nunca foi cadastrado não é quem está devendo.
+      var abas='<div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px">'
+        +PREV_TIPOS.map(function(x){
+          var n=(x.k==='tudo')?todos.length:(porClasse[x.k]||0);
+          if(!n && x.k!=='deve' && x.k!=='tudo') return '';
+          var on=(PREV_TIPO===x.k);
+          return '<button class="btn" style="padding:7px 13px;font-size:13px;font-weight:800;border:1.5px solid '
+            +(on?'var(--z-blue)':'var(--line)')+';background:'+(on?'var(--z-blue)':'var(--z-cream-warm)')
+            +';color:'+(on?'var(--z-cream)':'var(--z-blue)')+'" onclick="prevTipoFiltrar(\''+x.k+'\')">'
+            +escAttr(x.t)+' <span style="font-weight:700;opacity:.85">'+n+'</span></button>';
+        }).join('')
+        +'</div>';
+      var dica=(PREV_TIPOS.filter(function(x){ return x.k===PREV_TIPO; })[0]||{}).dica||'';
+      if(dica) abas+='<div class="hint" style="margin:-4px 0 8px">'+escAttr(dica)+'</div>';
       var bt=function(k,rot,n,nv){
         var on=(PREV_FILTRO===k);
         return '<button class="btn" style="padding:6px 12px;font-size:12.5px;font-weight:800;border:1.5px solid '
@@ -13117,7 +13161,7 @@
           +(nv?'<span style="color:'+(on?'#F6D8D4':'var(--crm-critico)')+';font-weight:800"> · '+nv+' venc.</span>':'')
           +'</button>';
       };
-      var h=bt('tudo','Tudo',todos.length,todos.reduce(function(a,o){ return a+o.venc; },0));
+      var h=abas+bt('tudo','Todos os itens',todos.length,todos.reduce(function(a,o){ return a+o.venc; },0));
       prevItensDoFiltro().forEach(function(it){
         if(!cont[it.k]) return;                       // item sem ninguém devendo não vira botão
         h+=bt(it.k,it.nome,cont[it.k],contVenc[it.k]||0);
@@ -13127,8 +13171,13 @@
 
     var el=document.getElementById('prevLista'); if(!el) return;
     if(!lista.length){
+      var vazio = (PREV_TIPO==='deve')   ? 'Ninguém devendo vacina ou antiparasitário. Prevenção em dia.'
+                : (PREV_TIPO==='semcad') ? 'Todas as fichas de prevenção têm pelo menos uma data.'
+                : (PREV_TIPO==='rotina') ? 'Nada de rotina pendente.'
+                : (PREV_TIPO==='erro')   ? 'Nenhuma data impossível na ficha.'
+                : 'Ninguém com pendência. Prevenção em dia.';
       el.innerHTML='<div class="card"><div class="hint" style="color:var(--crm-ok);font-weight:700">'
-        +(PREV_FILTRO==='tudo'?'Ninguém com pendência. Prevenção em dia.':'Ninguém devendo este item.')+'</div></div>';
+        +(PREV_FILTRO==='tudo'?escAttr(vazio):'Ninguém devendo este item nesta situação.')+'</div></div>';
       return;
     }
     // Hóspede sai da lista da equipe e vai para o bloco próprio: com ele não se lança,

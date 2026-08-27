@@ -2613,6 +2613,99 @@ async function main() {
   }
   console.log('');
 
+  console.log('Prevencao: so aparece quem precisa (27/ago):');
+  {
+    // Adriana: "Chico, Pastor de Shetland, nao esta devendo nada? Entao nao tem que
+    // aparecer. Assim como Estrella, Felix e etc. So pode aparecer quando precisa."
+    check('a tela abre em quem realmente deve', /var PREV_TIPO='deve';/.test(html));
+    check('ficha de prevencao em branco tem nome proprio',
+      /function prevFichaVazia\(ex\)/.test(html) && /Sem cadastro/.test(html));
+    check('a classificacao poe erro de digitacao antes de vencimento',
+      /function prevClasse\(faltas, ex\)/.test(html) &&
+      html.indexOf("return 'erro';") < html.indexOf("return 'deve';"));
+
+    if (typeof ctx.prevDados === 'function' && typeof ctx.prevClasse === 'function') {
+      const antes = ctx.PREV_TIPO;
+      ctx.PREV_TIPO = 'tudo';
+      const todos = ctx.prevDados();
+      const porClasse = {};
+      todos.forEach((o) => { porClasse[o.classe] = (porClasse[o.classe] || 0) + 1; });
+      ctx.PREV_TIPO = 'deve';
+      const devendo = ctx.prevDados();
+      ctx.PREV_TIPO = 'semcad';
+      const semCad = ctx.prevDados();
+      ctx.PREV_TIPO = antes;
+
+      console.log('    [prevencao] ' + todos.length + ' com alguma pendencia · ' +
+        JSON.stringify(porClasse));
+      // A BANCADA NAO CARREGA A PREVENCAO: aqui todos caem em "sem cadastro" porque
+      // pelExtra() vem sem as datas. Se eu deixar assim, as assercoes abaixo passam
+      // sozinhas — teste que so pode dar verde nao testa nada. Entao ele DIZ isso, e a
+      // logica e provada logo abaixo com fichas que eu mesmo monto.
+      const semDadosReais = (todos.length > 0 && !porClasse.deve && !porClasse.rotina);
+      if (semDadosReais) {
+        console.log('    (o sandbox nao carrega as datas de prevencao — a prova real e ' +
+          'no app; a logica vai ser testada com fichas montadas aqui)');
+      }
+      check('a lista de "devendo" e menor que a lista de tudo',
+        devendo.length < todos.length, devendo.length + ' de ' + todos.length);
+      check('ninguem com a ficha em branco entra em "devendo"',
+        devendo.every((o) => !ctx.prevFichaVazia(ctx.pelExtra(o.p) || {})),
+        JSON.stringify(devendo.filter((o) => ctx.prevFichaVazia(ctx.pelExtra(o.p) || {}))
+          .map((o) => o.nome).slice(0, 5)));
+      check('ninguem devendo so rotina entra em "devendo"',
+        devendo.every((o) => o.faltas.some((f) => !f.rotina)),
+        JSON.stringify(devendo.filter((o) => o.faltas.every((f) => f.rotina))
+          .map((o) => o.nome).slice(0, 5)));
+      check('quem tem ficha em branco aparece em "Sem cadastro", nao some do sistema',
+        !porClasse.semcad || semCad.length === porClasse.semcad,
+        semCad.length + ' vs ' + porClasse.semcad);
+
+      // os tres nomes que a Adriana apontou
+      const apontados = ['chico', 'estrella', 'felix'];
+      const aindaDevendo = devendo.filter((o) =>
+        apontados.includes(ctx.jsNorm(o.nome)) && ctx.prevFichaVazia(ctx.pelExtra(o.p) || {}));
+      check('Chico, Estrella e Felix (ficha em branco) sairam de "devendo"',
+        aindaDevendo.length === 0, JSON.stringify(aindaDevendo.map((o) => o.nome)));
+    }
+
+    // ---- a logica, com fichas montadas aqui: nao depende do que a bancada carrega ----
+    if (typeof ctx.prevClasse === 'function' && typeof ctx.prevFaltasDe === 'function') {
+      const hoje = new Date();
+      const iso = (d) => new Date(hoje.getTime() + d * 86400000).toISOString().slice(0, 10);
+      const classeDe = (ex) => ctx.prevClasse(ctx.prevFaltasDe(ex), ex);
+
+      // vacina vencida ha 100 dias = DEVENDO
+      check('vacina vencida cai em "devendo"',
+        classeDe({ vac_mult_p: iso(-100), vac_mult_t: iso(-465) }) === 'deve',
+        classeDe({ vac_mult_p: iso(-100), vac_mult_t: iso(-465) }));
+      // nada preenchido = SEM CADASTRO (nao e divida: e o Chico da Adriana)
+      check('ficha inteiramente em branco cai em "sem cadastro"',
+        classeDe({}) === 'semcad', classeDe({}));
+      // tudo em dia, so o peso do mes faltando = ROTINA
+      const emDia = {};
+      check('so o peso do mes nao poe ninguem em "devendo"',
+        ['deve'].indexOf(classeDe({ vac_mult_p: iso(200), vac_raiva_p: iso(200),
+          vac_gripe_p: iso(200), vac_giardia_p: iso(200), ecto_p: iso(20),
+          verm_p: iso(60), coleira_p: iso(200), fezes_p: iso(200) })) < 0,
+        classeDe({ vac_mult_p: iso(200), vac_raiva_p: iso(200), vac_gripe_p: iso(200),
+          vac_giardia_p: iso(200), ecto_p: iso(20), verm_p: iso(60),
+          coleira_p: iso(200), fezes_p: iso(200) }));
+      // ano impossivel = ERRO, e vem antes de qualquer vencimento
+      check('ano impossivel cai em "data errada", nao em "devendo"',
+        classeDe({ vac_mult_p: '0026-02-13', ecto_p: iso(-90) }) === 'erro',
+        classeDe({ vac_mult_p: '0026-02-13', ecto_p: iso(-90) }));
+      // ficha com UM item preenchido e outro faltando = divida real, nao "sem cadastro"
+      check('faltar um item numa ficha que ja tem os outros e divida de verdade',
+        classeDe({ vac_mult_p: iso(200) }) === 'deve',
+        classeDe({ vac_mult_p: iso(200) }));
+      // o nome antigo do campo tambem conta como preenchido (fichas de antes)
+      check('o nome antigo do campo tambem conta como cadastro feito',
+        ctx.prevFichaVazia({ vermifugo_p: iso(60) }) === false);
+    }
+  }
+  console.log('');
+
   // ---- resumo ----
   console.log('== Resultado: ' + pass + ' ok, ' + fail + ' falha(s) ==');
   if (fail) { console.log('\nFalhas:'); fails.forEach((f) => console.log('  - ' + f)); }
