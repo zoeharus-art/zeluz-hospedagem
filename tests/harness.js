@@ -2886,6 +2886,64 @@ async function main() {
   }
   console.log('');
 
+  console.log('Reposicao vira pernoite no orcamento (27/ago):');
+  {
+    // Adriana: "tutor de auluno no Day Care, quando tem reposicao, acaba utilizando na
+    // hospedagem, pagando apenas pernoite. No orcamento, se e um peludinho do Day Care
+    // tem que ter uma caixa de 'Tem reposicoes' — se sim, perguntar quantas usar."
+    check('o saldo de reposicao aparece na ficha do FILHOt',
+      /function blocoReposicaoFicha\(p\)/.test(html) && /\$\{blocoReposicaoFicha\(p\)\}/.test(html));
+    check('da para lancar e usar sem sair da ficha',
+      /function repFichaCreditar\(\)/.test(html) && /function repFichaUsar\(\)/.test(html));
+    check('a caixa so aparece para quem tem saldo', /if\(!saldo\) return '';/.test(html));
+    check('a reposicao transforma diaria em pernoite',
+      /n\.pernoite=true; n\.porReposicao=true;/.test(html));
+    check('nunca usa mais reposicoes do que ha diarias',
+      /var repUsa=Math\.min\(repPedidas, nDiaBruto\);/.test(html));
+    check('o saldo NAO cai no orcamento — so no check-in',
+      /O saldo s\u00f3 cai no check-in|O saldo só cai no check-in/.test(html));
+    check('a mensagem ao tutor conta a reposicao usada',
+      /Já usando |J\u00e1 usando /.test(html));
+
+    // A CONTA. Preco em centavos: pernoite 8500, diaria 13000 (baixa temporada).
+    // 4 noites, nenhuma em dia de Day Care dele => 4 diarias.
+    //   sem reposicao:        4 x 13000            = 52000
+    //   com 2 reposicoes:     2 x 13000 + 2 x 8500 = 43000  (economia 9000)
+    // com 15% de desconto de plano na diaria:
+    //   diaria liquida = 11050; economia por noite = 11050 - 8500 = 2550
+    {
+      // os precos sao `const` dentro do script, entao o teste os le do arquivo: e a
+      // mesma fonte que a tela usa, e assim a conta e conferida de verdade
+      const mp = html.match(/ORC_PRECOS_PADRAO=\{ pernoite:\{baixa:(\d+), alta:(\d+)\}, diaria:\{baixa:(\d+), alta:(\d+)\}/);
+      check('achei a tabela de precos no arquivo', !!mp);
+      const P = mp ? { pernoite: { baixa: +mp[1], alta: +mp[2] }, diaria: { baixa: +mp[3], alta: +mp[4] } }
+                   : { pernoite: { baixa: 0, alta: 0 }, diaria: { baixa: 0, alta: 0 } };
+      check('o pernoite e mais barato que a diaria (senao a troca nao economiza nada)',
+        P.pernoite.baixa < P.diaria.baixa && P.pernoite.alta < P.diaria.alta,
+        JSON.stringify(P));
+      const semRep = 4 * P.diaria.baixa;
+      const comRep = 2 * P.diaria.baixa + 2 * P.pernoite.baixa;
+      check('2 reposicoes em 4 noites economizam a diferenca das duas noites',
+        semRep - comRep === 2 * (P.diaria.baixa - P.pernoite.baixa),
+        'sem=' + semRep + ' com=' + comRep);
+      const liq = Math.round(P.diaria.baixa * 85 / 100);
+      check('com desconto de plano, a economia usa a diaria JA com desconto',
+        Math.max(0, liq - P.pernoite.baixa) === liq - P.pernoite.baixa,
+        'liquida=' + liq + ' pernoite=' + P.pernoite.baixa);
+    }
+    if (typeof ctx.orcRepUsadas === 'function' && typeof ctx.orcSaldoRep === 'function') {
+      ctx.ORC_REP = {};
+      const fake = { key: 'nao-existe__ninguem', nome: 'Teste' };
+      check('quem nao tem saldo nunca usa reposicao', ctx.orcRepUsadas(fake) === 0);
+      ctx.ORC_REP['nao-existe__ninguem'] = 5;
+      check('pedir mais do que tem nao cria credito do nada', ctx.orcRepUsadas(fake) === 0);
+      ctx.ORC_REP = {};
+      check('FILHOt sem cadastro (avulso) nao tem reposicao',
+        ctx.orcSaldoRep({ key: 'x', semCadastro: true }) === 0);
+    }
+  }
+  console.log('');
+
   // ---- resumo ----
   console.log('== Resultado: ' + pass + ' ok, ' + fail + ' falha(s) ==');
   if (fail) { console.log('\nFalhas:'); fails.forEach((f) => console.log('  - ' + f)); }

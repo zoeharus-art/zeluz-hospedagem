@@ -8171,6 +8171,24 @@
   function descFamiliaHosp(ordem){ return (ordem>=2)?DESC_PET_HOSP:0; }
   // Temporada é ESCOLHA explícita — nunca um checkbox que fica desmarcado por esquecimento.
   // Os dois preços ficam à vista o tempo todo: quem faz o orçamento confere antes de mandar.
+  // Quantas reposições cada FILHOt vai usar neste orçamento: {chave: n}
+  var ORC_REP={};
+  function orcSaldoRep(sel){
+    try{
+      if(!sel || sel.semCadastro) return 0;
+      var p=(PELUDINHOS||[]).filter(function(x){ return pelKey(x)===sel.key; })[0];
+      return p?repSaldo(p):0;
+    }catch(e){ return 0; }
+  }
+  function orcRepUsadas(sel){
+    var n=+(ORC_REP[sel.key]||0);
+    var max=orcSaldoRep(sel);
+    return Math.max(0, Math.min(n, max));
+  }
+  function orcSetRep(key, n){
+    ORC_REP[key]=Math.max(0, +n||0);
+    orcCalcular();
+  }
   var ORC_ALTA=false;
   function orcSetTemporada(alta){ ORC_ALTA=!!alta; orcRenderTemporada(); orcCalcular(); }
   function orcRenderTemporada(){
@@ -8233,14 +8251,27 @@
       // vira pernoite e a quinta que passa a ser diária de hotel.
       var dias=orcDiasEfetivos(s);
       var lista=noites.map(function(n){ return {iso:n.iso, dw:n.dw, pernoite:dias.indexOf(n.dw)>=0}; });
+      // REPOSIÇÃO: cada dia a repor vale um dia de Day Care, então uma noite que seria
+      // DIÁRIA de hotel passa a valer só o PERNOITE. Consome as primeiras noites de
+      // diária — nunca mais reposições do que noites de diária existem.
+      var repSaldoDele=orcSaldoRep(s), repPedidas=orcRepUsadas(s);
+      var nDiaBruto=lista.filter(function(x){ return !x.pernoite; }).length;
+      var repUsa=Math.min(repPedidas, nDiaBruto);
+      if(repUsa>0){
+        var falta=repUsa;
+        lista.forEach(function(n){ if(falta>0 && !n.pernoite){ n.pernoite=true; n.porReposicao=true; falta--; } });
+      }
       var nPer=lista.filter(function(x){ return x.pernoite; }).length;
       var nDia=lista.length-nPer;
       var vDia=alta?P.diaria.alta:P.diaria.baixa, vPer=alta?P.pernoite.alta:P.pernoite.baixa;
       var brutoDia=nDia*vDia, brutoPer=nPer*vPer;
       var descValor=Math.round(brutoDia*off/100);
       var liqDia=brutoDia-descValor;
+      // o que a reposição economizou: a diferença entre a diária (já com desconto) e o pernoite
+      var economia=repUsa*Math.max(0, Math.round(vDia*(100-off)/100)-vPer);
       return {sel:s, ordem:ordem, off:off, noites:lista, nPer:nPer, nDia:nDia,
               vDia:vDia, vPer:vPer, brutoDia:brutoDia, brutoPer:brutoPer, descValor:descValor,
+              repSaldo:repSaldoDele, repUsa:repUsa, repEconomia:economia,
               liqDia:liqDia, total:liqDia+brutoPer};
     });
     var total=pets.reduce(function(a,p){ return a+p.total; },0);
@@ -8260,10 +8291,14 @@
       if(p.off>0) h+='<div class="orc-linha"><span>Desconto de '+p.off+'% na diária'+(p.sel.compromisso?(' (plano '+escAttr(p.sel.compromisso)+')'):'')+(p.ordem>1&&p.off===descFamiliaHosp(p.ordem)?(' — '+p.ordem+'º FILHOt'):'')+'</span><strong style="color:var(--crm-ok)">− '+fmtCent(p.descValor)+'</strong></div>';
       h+='<div class="orc-linha"><span>'+p.nPer+' pernoite'+(p.nPer===1?'':'s')+' × '+fmtCent(p.vPer)+' <span style="color:var(--muted);font-size:12px">(pernoite não tem desconto)</span></span><strong>'+fmtCent(p.brutoPer)+'</strong></div>';
       h+='<div class="orc-linha" style="border-bottom:none"><span><strong>Subtotal '+escAttr(p.sel.nome)+'</strong></span><strong>'+fmtCent(p.total)+'</strong></div>';
+      h+=orcRepCaixaHTML(p);
       h+='<div class="orc-noites">'+p.noites.map(function(n){
-            return '<span class="orc-n '+(n.pernoite?'p':'d')+'" title="'+(n.pernoite?'pernoite — dia dele no Day Care':'diária de hotel')+'">'+orcBR(n.iso).slice(0,5)+' '+n.dw+'</span>';
+            return '<span class="orc-n '+(n.pernoite?'p':'d')+'" title="'+(n.porReposicao?'pernoite pago com reposição':(n.pernoite?'pernoite — dia dele no Day Care':'diária de hotel'))+'"'
+              +(n.porReposicao?' style="outline:2px solid var(--z-gold-deep);outline-offset:-2px"':'')
+              +'>'+orcBR(n.iso).slice(0,5)+' '+n.dw+(n.porReposicao?' ↺':'')+'</span>';
           }).join('')+'</div>';
-      h+='<div class="hint" style="margin-top:6px">Dourado = pernoite (dia dele no Day Care) · azul = diária de hotel.</div>';
+      h+='<div class="hint" style="margin-top:6px">Dourado = pernoite (dia dele no Day Care) · azul = diária de hotel'
+        +(p.repUsa?' · <strong>↺ = pago com reposição</strong>':'')+'.</div>';
       h+='</div>';
     });
     h+='<div class="orc-total"><span>Total</span><span>'+fmtCent(C.total)+'</span></div>';
@@ -8312,6 +8347,8 @@
       if(p.nDia) partes.push(p.nDia+' diária'+(p.nDia===1?'':'s'));
       if(p.nPer) partes.push(p.nPer+' pernoite'+(p.nPer===1?'':'s'));
       L.push(pre+'Total de '+partes.join(' e '));
+      if(p.repUsa) L.push(pre+'Já usando '+p.repUsa+' '+(p.repUsa===1?'dia de reposição':'dias de reposição')
+        +' que '+(orcEhFemea(p.sel)?'ela':'ele')+' tinha — economia de '+fmtCent(p.repEconomia)+'.');
     });
     L.push('');
     L.push('Total: '+fmtCent(C.total));
@@ -8330,6 +8367,36 @@
     // Adriana. Trocamos o verbo por um que dispensa o pronome: fica natural E correto.
     L.push('Temos certeza de que '+ele+' e os aumiguinhos vão aproveitar muito!');
     el.value=L.join('\n');
+  }
+  // A caixa de reposições. Só aparece para quem TEM saldo — perguntar a quem não tem é
+  // ruído, e ruído ensina a equipe a ignorar a tela inteira.
+  function orcRepCaixaHTML(p){
+    var saldo=p.repSaldo||0;
+    if(!saldo) return '';
+    var nDiaBruto=p.nDia+p.repUsa;                 // as diárias antes do abatimento
+    var max=Math.min(saldo, nDiaBruto);
+    var usa=p.repUsa||0;
+    var h='<div style="margin-top:9px;padding:9px 11px;border-radius:10px;background:rgba(222,180,40,.14);'
+      +'border-left:4px solid var(--z-gold)">'
+      +'<div style="font-weight:800;color:var(--z-blue);font-size:13.5px">'
+      +escAttr(p.sel.nome)+' tem <strong>'+saldo+'</strong> '+(saldo===1?'dia de reposição':'dias de reposição')+'. Vai usar '+(saldo===1?'ele':'algum')+' aqui?</div>'
+      +'<div class="hint" style="margin-top:2px">Cada um transforma uma diária de hotel em pernoite — ele já teria vindo naquele dia.</div>'
+      +'<div style="display:flex;flex-wrap:wrap;gap:5px;margin-top:6px">';
+    for(var n=0;n<=max;n++){
+      var on=(usa===n);
+      h+='<button type="button" class="btn" style="padding:6px 12px;font-size:12.5px;font-weight:800;border:1.5px solid '
+        +(on?'var(--z-blue)':'var(--line)')+';background:'+(on?'var(--z-blue)':'var(--z-cream-warm)')
+        +';color:'+(on?'var(--z-cream)':'var(--z-blue)')+'"'
+        +' onclick="orcSetRep(\''+escAttr(p.sel.key).replace(/'/g,"\\'")+'\','+n+')">'
+        +(n===0?'nenhuma':n)+'</button>';
+    }
+    h+='</div>';
+    if(max<saldo) h+='<div class="hint" style="margin-top:5px">Nesta estadia só dá para usar '+max+': as outras noites já são pernoite (dia dele no Day Care).</div>';
+    if(usa>0) h+='<div style="margin-top:6px;font-size:13px;font-weight:800;color:var(--crm-ok)">'
+      +usa+' '+(usa===1?'reposição usada':'reposições usadas')+' — economia de '+fmtCent(p.repEconomia)
+      +'. Sobram '+(saldo-usa)+'.</div>'
+      +'<div class="hint" style="margin-top:2px">O saldo só cai no check-in, quando ele entrar de verdade. Orçamento não é reserva.</div>';
+    return h+'</div>';
   }
   function orcArtigoDe(sel){ return orcEhFemea(sel)?'da':'do'; }
   function orcCopiar(){
@@ -9781,7 +9848,7 @@
   // Agora existe um carimbo: esta constante é a versão que o aparelho está rodando, e o
   // Firebase guarda a versão publicada. Quando as duas diferem, aparece o aviso — mas
   // NUNCA recarrega sozinho: recarregar no meio de um check-in perderia o trabalho.
-  const APP_VERSAO='2026-08-27-08';
+  const APP_VERSAO='2026-08-27-09';
   function vigiarVersao(){
     if(!DB) return;
     try{
@@ -14111,6 +14178,70 @@
   }
   // Redesenha a ficha aberta mantendo a aba atual. Os blocos de prevenção calculam a
   // próxima data ao salvar, e o resultado precisa aparecer na hora.
+  // O bloco de reposições dentro da ficha. Saldo grande, porque é ele que decide se a
+  // recepção oferece o dia extra ou o abatimento na hospedagem; e os últimos lançamentos
+  // logo abaixo, para ninguém precisar sair da ficha para entender o número.
+  function blocoReposicaoFicha(p){
+    var saldo=0, L=[];
+    try{ saldo=repSaldo(p); L=repLancamentos(p)||[]; }catch(e){}
+    var pode=false; try{ pode=repPodeLancar(); }catch(e){}
+    var ult=L.slice().sort(function(a,b){ return (b.ts||0)-(a.ts||0); }).slice(0,4);
+    var cor = saldo>0 ? 'var(--z-gold)' : 'var(--line)';
+    var h='<div class="field" style="grid-column:1/-1;margin-top:10px;background:rgba(222,180,40,.10);'
+      +'border-left:4px solid '+cor+';border-radius:10px;padding:11px 13px">'
+      +'<div style="display:flex;align-items:baseline;gap:10px;flex-wrap:wrap">'
+      +'<label style="font-size:13px;font-weight:800;color:var(--z-blue);margin:0">REPOSIÇÕES</label>'
+      +'<span style="font-size:22px;font-weight:900;color:'+(saldo>0?'var(--z-gold-deep)':'var(--muted)')+'">'+saldo+'</span>'
+      +'<span class="hint" style="margin:0">'+(saldo===1?'dia a repor':'dias a repor')+'</span>'
+      +'</div>';
+    h+='<div class="hint" style="margin-top:3px">Um dia de reposição vale um dia de Day Care: ele pode vir num dia extra, '
+      +'ou usar na hospedagem — a noite deixa de ser diária de hotel e vira só pernoite.</div>';
+    if(ult.length){
+      h+='<div style="margin-top:7px">'+ult.map(function(l){
+        var cred=(l.tipo==='credito');
+        return '<div class="pair" style="padding:4px 0;border-top:1px solid var(--line)">'
+          +'<span class="k" style="font-size:12.5px">'
+          +'<strong style="color:'+(cred?'var(--crm-ok)':'var(--z-blue)')+'">'+(cred?'+1':'−1')+'</strong> '
+          +escAttr(l.motivo||(cred?'falta avisada':'usou'))
+          +(l.dia?(' · '+escAttr(repBRdata(l.dia))):'')+'</span>'
+          +'<span class="val" style="font-size:11.5px;color:var(--muted)">'+escAttr(l.quem||'')+'</span></div>';
+      }).join('')+'</div>';
+      if(L.length>ult.length) h+='<div class="hint" style="margin-top:3px">e mais '+(L.length-ult.length)+' no extrato.</div>';
+    } else {
+      h+='<div class="hint" style="margin-top:6px;color:var(--crm-atencao-text)">Nenhum lançamento ainda. '
+        +'Se ele tem reposição em aberto de antes do sistema, <strong>lance aqui</strong> — enquanto não estiver aqui, ninguém consegue usar.</div>';
+    }
+    if(pode){
+      h+='<div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:9px">'
+        +'<button type="button" class="btn btn-gold" style="padding:7px 13px;font-size:12.5px;font-weight:800"'
+        +' onclick="repFichaCreditar()">+ Faltou — dar 1 reposição</button>'
+        +(saldo>0?('<button type="button" class="btn btn-primary" style="padding:7px 13px;font-size:12.5px;font-weight:800"'
+          +' onclick="repFichaUsar()">Usou 1 hoje</button>'):'')
+        +'<button type="button" class="btn" style="padding:7px 13px;font-size:12.5px;font-weight:800;'
+        +'background:none;border:1.5px solid var(--line);color:var(--z-blue)"'
+        +' onclick="repFichaExtrato()">Ver o extrato</button>'
+        +'</div>';
+    }
+    return h+'</div>';
+  }
+  // Lançar dali mesmo, sem sair da ficha. O motivo é obrigatório: reposição sem motivo
+  // vira discussão com o tutor daqui a três meses.
+  function repFichaCreditar(){
+    if(!pelAtual) return;
+    repAbrirLancar(pelAtual);
+  }
+  function repFichaUsar(){
+    if(!pelAtual) return;
+    var i=-1; try{ i=PELUDINHOS.indexOf(pelAtual); }catch(e){}
+    if(i<0){ alert('Não achei este FILHOt na lista.'); return; }
+    repUsar(i);
+  }
+  function repFichaExtrato(){
+    if(!pelAtual) return;
+    var i=-1; try{ i=PELUDINHOS.indexOf(pelAtual); }catch(e){}
+    if(i<0){ alert('Não achei este FILHOt na lista.'); return; }
+    try{ repAbrirExtrato(i); }catch(e){ alert('Não consegui abrir o extrato: '+((e&&e.message)||e)); }
+  }
   function renderPelFicha(){
     try{
       if(pelAtualIdx==null) return;
@@ -14243,6 +14374,7 @@
           <div class="field"><label>Frequência (automática pelos dias)</label><input id="pelFreqInput" class="cad-in" value="${escAttr(pelFreq(p))} por semana" readonly></div>
         </div>
         <div id="pel-saved" style="font-size:12px;color:var(--crm-ok);font-weight:700;margin-top:8px"></div>
+        ${blocoReposicaoFicha(p)}
       </div></div>
 
       <div class="ppanel2" id="ps-saude"><div class="card">
