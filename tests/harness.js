@@ -2850,6 +2850,42 @@ async function main() {
   }
   console.log('');
 
+  console.log('Hospedados: o mesmo FILHOt nao pode virar dois (27/ago):');
+  {
+    // "Nelson chegou para hospedagem... em Hospedados agora consta 4 - sendo Nelson
+    // mandela, Lara e Nelson so na planilha. Esses Nelson sao o mesmo peludinho."
+    check('a raca sozinha nao vira tutor', /else if\(_tutor && !_raca && ehRacaLike\(_tutor\)\)/.test(html));
+    check('a tela pergunta em vez de juntar sozinha',
+      /function hospPodeSerMesmo\(a, b\)/.test(html) && /E o mesmo FILHOt que|É o mesmo FILHOt que/.test(html));
+    check('a resposta fica gravada e vale para os dois lados',
+      /daycare\/hospede-mesmo/.test(html) && /function hospParChave\(a, b\)/.test(html));
+
+    if (typeof ctx.hospPodeSerMesmo === 'function') {
+      const P = (nome, tutor, chip) => ({ nome, tutor, microchip: chip || '' });
+      check('"Nelson" e "Nelson mandela" da mesma tutora sao suspeitos',
+        ctx.hospPodeSerMesmo(P('Nelson', 'Lara de Castro'), P('Nelson mandela', 'Lara')) === true);
+      check('nomes parecidos de tutoras diferentes NAO sao suspeitos',
+        ctx.hospPodeSerMesmo(P('Maya', 'Carolina'), P('Maya do Sul', 'Luciana')) === false);
+      check('nomes sem relacao nunca sao suspeitos',
+        ctx.hospPodeSerMesmo(P('Nelson', 'Lara'), P('Toshi', 'Victor')) === false);
+      check('nome identico nao e "suspeita", e o mesmo registro',
+        ctx.hospPodeSerMesmo(P('Nelson', 'Lara'), P('Nelson', 'Lara')) === false);
+    }
+    if (typeof ctx.hospMesmoPeloChip === 'function') {
+      const C = (chip) => ({ nome: 'x', microchip: chip });
+      check('chip igual decide: e o mesmo', ctx.hospMesmoPeloChip(C('963003'), C('963.003')) === 1);
+      check('chip diferente decide: sao dois', ctx.hospMesmoPeloChip(C('963003'), C('111222')) === 0);
+      check('sem chip dos dois lados, o app nao decide sozinho',
+        ctx.hospMesmoPeloChip(C('963003'), C('')) === -1 && ctx.hospMesmoPeloChip(C(''), C('')) === -1);
+      check('chip diferente nem chega a virar pergunta',
+        ctx.hospPodeSerMesmo({nome:'Nelson',tutor:'Lara',microchip:'963003'},
+                             {nome:'Nelson mandela',tutor:'Lara',microchip:'999999'}) === false);
+      check('chip igual dispensa a pergunta e junta',
+        /porChip===1\){ a\.juntouPeloChip=true/.test(html) && /juntei pelo microchip/.test(html));
+    }
+  }
+  console.log('');
+
   // ---- resumo ----
   console.log('== Resultado: ' + pass + ' ok, ' + fail + ' falha(s) ==');
   if (fail) { console.log('\nFalhas:'); fails.forEach((f) => console.log('  - ' + f)); }

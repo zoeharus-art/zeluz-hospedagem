@@ -5059,12 +5059,31 @@
   // compativel (um contido no outro, ou o primeiro nome do tutor igual). Nome sozinho
   // nunca basta — foi assim que a Maya da Carolina puxou a Maya da Luciana.
   function hospPrimeiro(v){ return jsNorm(String(v||'')).split(/\s+/)[0]||''; }
+  // O número do chip, limpo: só dígitos, para "963003" e "963.003" serem o mesmo.
+  function hospChipNum(h){
+    try{
+      var v='';
+      if(typeof chipDe==='function'){ try{ v=chipDe(h)||''; }catch(e){} }
+      if(!v) v=(h&&(h.microchip||h.chip))||'';    // registro cru, ainda sem ficha
+      return String(v).replace(/\D/g,'');
+    }catch(e){ return ''; }
+  }
+  // -1 = não sei (falta chip em algum lado) · 1 = é o mesmo · 0 = são dois
+  function hospMesmoPeloChip(a, b){
+    var ca=hospChipNum(a), cb=hospChipNum(b);
+    if(ca.length<4 || cb.length<4) return -1;
+    return (ca===cb)?1:0;
+  }
   function hospPodeSerMesmo(a, b){
     if(!a||!b) return false;
     var na=jsNorm(a.nome||''), nb=jsNorm(b.nome||'');
     if(!na||!nb||na===nb) return false;                 // igual não é "suspeita", é o mesmo
     var umDentroDoOutro=(na.indexOf(nb)===0||nb.indexOf(na)===0);
     if(!umDentroDoOutro) return false;
+    // o chip é identificador: quando os dois têm, ele decide e ninguém precisa opinar
+    var c=hospMesmoPeloChip(a,b);
+    if(c===0) return false;                             // chips diferentes: são dois, e pronto
+    if(c===1) return true;
     var ta=jsNorm(a.tutor||''), tb=jsNorm(b.tutor||'');
     if(!ta||!tb) return true;                           // um dos lados sem tutor: ainda suspeito
     if(ta===tb) return true;
@@ -5103,18 +5122,23 @@
       for(var j=i+1;j<lista.length;j++){
         var a=lista[i], b=lista[j];
         if(!hospPodeSerMesmo(a,b)) continue;
+        var porChip=hospMesmoPeloChip(a,b);
         var r=HOSP_MESMO[hospParChave(a,b)];
-        if(!r || !r.mesmo){
+        // chip igual dos dois lados junta sozinho: é identificador, não palpite
+        var ehMesmo=(porChip===1) || !!(r&&r.mesmo);
+        if(!ehMesmo){
           // ninguém respondeu ainda, ou disse que são dois: os dois ficam, com a pergunta
           if(!r){ a.suspeita=b; b.suspeita=a; }
           continue;
         }
+        if(porChip===1){ a.juntouPeloChip=true; b.juntouPeloChip=true; }
         // é o mesmo: fica o que tem ficha (refKey); o outro sai e empresta o que sabe
         var ficaA=!!a.refKey && !b.refKey;
         var fica=ficaA?a:(b.refKey&&!a.refKey?b:a), sai=(fica===a)?b:a;
         if(!fica.tutor && sai.tutor) fica.tutor=sai.tutor;
         if(!fica.raca && sai.raca) fica.raca=sai.raca;
         fica.tambemNaPlanilhaComo=sai.nome+(sai.tutor?(' · '+sai.tutor):'');
+        if(sai.juntouPeloChip||fica.juntouPeloChip) fica.juntouPeloChip=true;
         fora[lista.indexOf(sai)]=true;
       }
     }
@@ -5320,7 +5344,7 @@
           <div class="tarja ${tj[0]}">${tj[1]}</div>
           ${h.saidaHoje?'<div class="saida-hoje">Dormiu · sai hoje</div>':''}
           ${hospSuspeitaHTML(h)}
-          ${h.tambemNaPlanilhaComo?`<div class="hint" style="font-size:10.5px;margin-top:2px">também na planilha como <strong>${escAttr(h.tambemNaPlanilhaComo)}</strong></div>`:''}
+          ${h.tambemNaPlanilhaComo?`<div class="hint" style="font-size:10.5px;margin-top:2px">também na planilha como <strong>${escAttr(h.tambemNaPlanilhaComo)}</strong>${h.juntouPeloChip?' — juntei pelo microchip':''}</div>`:''}
           ${relMarcaDoCard(h)}
           ${(function(){ try{ return h.mascote?'':alimMarcaDoCard(h); }catch(e){ return ''; } })()}
         </div>`;
@@ -9757,7 +9781,7 @@
   // Agora existe um carimbo: esta constante é a versão que o aparelho está rodando, e o
   // Firebase guarda a versão publicada. Quando as duas diferem, aparece o aviso — mas
   // NUNCA recarrega sozinho: recarregar no meio de um check-in perderia o trabalho.
-  const APP_VERSAO='2026-08-27-07';
+  const APP_VERSAO='2026-08-27-08';
   function vigiarVersao(){
     if(!DB) return;
     try{
