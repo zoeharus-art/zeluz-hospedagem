@@ -2599,6 +2599,20 @@ async function main() {
   }
   console.log('');
 
+  console.log('Escape literal nao pode chegar na tela (27/ago):');
+  {
+    // A tela mostrou "\\u2713 Horarios das refeicoes" para a Adriana: uma string com a
+    // barra dobrada vira o TEXTO "\\u2713" em vez do sinal de visto. Nenhum teste pegava
+    // porque o app funcionava — so estava feio e sem sentido para quem le.
+    const literais = html.match(/'[^']*\\\\u[0-9a-fA-F]{4}[^']*'/g) || [];
+    check('nenhuma string do app carrega um escape com barra dobrada',
+      literais.length === 0, JSON.stringify(literais.slice(0, 5)));
+    check('os sinais da curadoria sao caracteres de verdade',
+      /var selo = decidir \? '\u26a0'/.test(html) || /selo\s*=\s*decidir\s*\?\s*'\u26a0'/.test(html),
+      'nao achei o sinal de atencao como caractere');
+  }
+  console.log('');
+
   // ---- resumo ----
   console.log('== Resultado: ' + pass + ' ok, ' + fail + ' falha(s) ==');
   if (fail) { console.log('\nFalhas:'); fails.forEach((f) => console.log('  - ' + f)); }

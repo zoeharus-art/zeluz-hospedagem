@@ -9629,7 +9629,7 @@
   // Agora existe um carimbo: esta constante é a versão que o aparelho está rodando, e o
   // Firebase guarda a versão publicada. Quando as duas diferem, aparece o aviso — mas
   // NUNCA recarrega sozinho: recarregar no meio de um check-in perderia o trabalho.
-  const APP_VERSAO='2026-08-27-01';
+  const APP_VERSAO='2026-08-27-02';
   function vigiarVersao(){
     if(!DB) return;
     try{
@@ -17665,7 +17665,7 @@
   // lá hoje. O que não presta sai com um toque. Só o que conflita pede decisão — e
   // decisão de trocar o que já está gravado é sempre de gente (Adriana, 26/ago).
   var ALG_TROCA={};    // quem está com o seletor de campo aberto
-  function algTrocaChave(k, qk){ return k+'\\u0001'+qk; }
+  function algTrocaChave(k, qk){ return k+'::'+qk; }
   function algAbrirTroca(k, qk){
     var c=algTrocaChave(k,qk);
     ALG_TROCA[c]=!ALG_TROCA[c];
@@ -17699,7 +17699,7 @@
       var conflito=algCurConflito(f);
       var decidir=(conflito && !f.decidido);
       var cor = decidir ? 'var(--crm-atencao)' : (f.grava?'var(--crm-ok)':'var(--line)');
-      var selo = decidir ? '\\u26a0' : (f.grava?'\\u2713':'\\u2717');
+      var selo = decidir ? '⚠' : (f.grava?'✓':'✗');
       h+='<div style="margin-top:8px;padding:9px 11px;border-radius:11px;border-left:4px solid '+cor
         +';border-top:1px solid var(--line);border-right:1px solid var(--line);border-bottom:1px solid var(--line)'
         +';background:'+(f.grava||decidir?'var(--z-cream-warm)':'transparent')+(f.grava||decidir?'':';opacity:.62')+'">'
