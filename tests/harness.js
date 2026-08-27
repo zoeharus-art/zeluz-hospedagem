@@ -2775,6 +2775,14 @@ async function main() {
                          velha: (ambos.desatualizado || []).map((x) => x.nome) }));
       check('"quem saiu" sai ordenado por data, do mais recente',
         /saiu\.sort\(function\(a,b\)\{ return String\(b\.quando/.test(html));
+      check('quem faleceu sai da lista de contato',
+        /function saidaPorObito\(motivo\)/.test(html) && /Partiram \('/.test(html));
+      if (typeof ctx.saidaPorObito === 'function') {
+        ['Faleceu em 15/08', 'obito', 'Morreu ontem', 'FALECIDA'].forEach((m) =>
+          check('reconhece obito escrito como "' + m + '"', ctx.saidaPorObito(m) === true));
+        ['Mudou de cidade', 'Tutora precisa economizar', 'Cio', 'Está em tratamento pós cirurgia']
+          .forEach((m) => check('nao confunde "' + m + '" com obito', ctx.saidaPorObito(m) === false));
+      }
     }
   }
   console.log('');
