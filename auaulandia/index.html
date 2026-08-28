@@ -1345,6 +1345,14 @@
   body[data-role="gestao"] .nav a.so-recepcao,
   body[data-role="supervisor"] .nav a.so-recepcao,
   body[data-role="diretoria"] .nav a.so-recepcao{display:flex}
+  /* Peso: pesa a casa inteira — a recepção antes do banho, a veterinária na consulta,
+     a Gestão e a Supervisão. O monitor pesa na atividade do Day Care. */
+  .nav a.so-pesa{display:none}
+  body[data-role="consultora"] .nav a.so-pesa,
+  body[data-role="gestao"] .nav a.so-pesa,
+  body[data-role="supervisor"] .nav a.so-pesa,
+  body[data-role="vet"] .nav a.so-pesa,
+  body[data-role="diretoria"] .nav a.so-pesa{display:flex}
   /* Cuidado Vet: no menu só para a Veterinária + Gestão/Supervisão/Diretoria */
   .nav a.so-vet{display:none}
   body[data-role="vet"] .nav a.so-vet,
@@ -1354,6 +1362,11 @@
   /* A Veterinária só enxerga o Cuidado Vet e o Sair — mesma trava do plantonista */
   body[data-role="vet"] .nav a,body[data-role="vet"] .nav .grp,body[data-role="vet"] .nav .subnav{display:none !important}
   body[data-role="vet"] .nav a[data-v="cuidadovet"],body[data-role="vet"] .nav a[data-v="sair"]{display:flex !important}
+  /* ...e o caminho até o Peso, incluindo os dois grupos que o contêm — senão o item
+     existiria dentro de uma gaveta invisível (Adriana, 28/ago/2026). */
+  body[data-role="vet"] .nav a[data-v="peso"],
+  body[data-role="vet"] .nav .acc[data-acc="central"]>a.grp,
+  body[data-role="vet"] .nav .acc[data-acc="c-peludinhos"]>a.grp{display:flex !important}
   /* Onda 4 — Conferência Check-in: no menu só para a Wandela (papel "conferencia") + Gestão/Supervisão/Diretoria */
   /* Peludinhos Hóspedes — quem mexe em data de estadia: Gestão, Supervisão, Consultora e Diretoria */
   .nav a.so-hosp{display:none}
@@ -1813,6 +1826,7 @@
                relatório de quem deve vacina, vermífugo, coleira, exame ou peso. -->
           <a data-v="vacinas" class="so-gestao" title="Vacina, vermífugo, coleira, exame e peso: quem está atrasado."><span data-icon="alert"></span><span>Prevenção</span></a>
           <a data-v="alergia" class="so-gestao" title="O que a ficha diz e ninguém confirmou com o tutor."><span data-icon="star"></span><span>Alergias a confirmar</span></a>
+          <a data-v="peso" class="so-pesa" title="Pesar qualquer FILHOt: recepção, veterinária e gestão."><span data-icon="star"></span><span>Peso</span></a>
           </div>
         </div>
         <div class="acc" data-acc="c-planos">
@@ -3295,6 +3309,11 @@
     <div id="algPainel"></div>
   </section>
 
+  <section class="view" id="v-peso">
+    <div class="role-note"><span data-icon="star"></span><span>Procure o FILHOt, pese e salve. Vai para a <strong>mesma ficha</strong> que a Gestão e a veterinária veem — e <strong>mudança fora do comum avisa o grupo da veterinária</strong>.</span></div>
+    <div id="pesoTelaPainel"></div>
+  </section>
+
   <section class="view" id="v-eahist">
     <div class="role-note so-gestao"><span data-icon="star"></span><span>Clique num dia para ver <strong>o que foi montado</strong>, quem participou e quem não pôde. É a resposta pronta para quando um tutor — ou um veterinário de plantão — perguntar o que o FILHOt comeu naquele dia.</span></div>
     <div id="eaHistPainel"></div>
@@ -3861,6 +3880,7 @@
     conferencia:['Conferência do check-in','O monitor confere corpo e pertences de quem chegou (2º passo; o 1º é da Central Zêluz).'],
     orcamento:['Orçamento de hospedagem','Monte e envie o orçamento ao tutor.'],
     alergia:['Alergias a confirmar','O que a ficha diz e ninguém confirmou com o tutor.'],
+    peso:['Peso','Pesar qualquer FILHOt: recepção, veterinária e gestão.'],
     eahist:['Enriquecimento Ambiental','O que foi feito e quem não participou.'],
     relatorios:['Relatórios','Resumo do dia, aniversariantes, exportações.'],
     config:['Configurações','Telegram e ponte da planilha.'],
@@ -3919,6 +3939,7 @@
     if(v==='reposicao'){ if(typeof renderReposicao==='function') renderReposicao(); }
     if(v==='eahist'){ if(typeof eaHistInit==='function') eaHistInit(); }
     if(v==='alergia'){ if(typeof algCarregar==='function') algCarregar(); }
+    if(v==='peso'){ if(typeof renderPesoTela==='function') renderPesoTela(); }
     if(v==='renovacao'){ if(typeof renderRenovacao==='function') renderRenovacao(); }
     if(v==='daycare'){ if(typeof abrirDayCare==='function') abrirDayCare(); }
     if(v==='orcamento'){ if(typeof orcInit==='function') orcInit(); }
@@ -9923,7 +9944,7 @@
   // Agora existe um carimbo: esta constante é a versão que o aparelho está rodando, e o
   // Firebase guarda a versão publicada. Quando as duas diferem, aparece o aviso — mas
   // NUNCA recarrega sozinho: recarregar no meio de um check-in perderia o trabalho.
-  const APP_VERSAO='2026-08-28-07';
+  const APP_VERSAO='2026-08-28-08';
   function vigiarVersao(){
     if(!DB) return;
     try{
@@ -13807,13 +13828,154 @@
   function ultimoPeso(ex){ const a=pesosDe(ex).slice().sort((x,y)=>(x.data<y.data?1:-1)); return a[0]||null; }
   function pesouEsteMes(ex){ const u=ultimoPeso(ex); if(!u||!/^\d{4}-\d{2}/.test(u.data||'')) return false;
     return u.data.slice(0,7)===hojeISO().slice(0,7); }
-  function addPeso(){ const inp=document.getElementById('pesoNovo'); if(!inp) return;
-    const kg=parseFloat(String(inp.value||'').replace(',','.'));
-    if(!(kg>0)){ inp.focus(); return; }
-    const lista=pesosDe(pelExtra(pelAtual)); lista.push({data:hojeISO(), kg:kg});
-    setPelExtra(pelAtual,{pesos:lista});
-    if(typeof audit==='function') audit('peso','pesou '+kg+' kg',{alvo:dcKey(pelAtual.n,pelAtual.tutor)});
-    renderPelFicha();
+  // ===== O PESO NÃO PODE ACEITAR QUALQUER NÚMERO — Adriana, 28/ago/2026 ==========
+  // "Na Repolho fui digitar 130 kg e o sistema deixou. É importante colocar . ou , —
+  //  peso 9 kg é diferente de 9.700. 700 g para um cão é muito; mesmo 400 para mais ou
+  //  para menos é demais, principalmente para pequeno porte."
+  //
+  // Três coisas diferentes, que aqui viram uma função só:
+  //   1. LER o que a pessoa quis dizer — 9.700, 9,700, 9700 e 9,7 são o mesmo peso;
+  //   2. RECUSAR o impossível — 130 kg não é FILHOt, é dedo errado;
+  //   3. DESCONFIAR do possível mas estranho — e aí a veterinária é avisada.
+  //
+  // Peso errado não fica errado sozinho: ele vira dose de remédio errada.
+  function pesoFmt(kg){
+    var n=Number(kg)||0;
+    return n.toFixed(3).replace(/0+$/,'').replace(/\.$/,'').replace('.',',');
+  }
+  function pesoFmtDif(kg){
+    var g=Math.round(Math.abs(Number(kg)||0)*1000);
+    var sinal=(kg<0?'-':'+');
+    return g<1000 ? (sinal+g+' g') : (sinal+pesoFmt(Math.abs(kg))+' kg');
+  }
+  // Devolve {kg, como, erro}. `como` conta em português como o número foi entendido —
+  // a tela mostra isso ANTES de gravar, para ninguém descobrir depois.
+  function pesoLer(txt){
+    var t=String(txt==null?'':txt).toLowerCase().trim();
+    if(!t) return {erro:'Digite o peso.'};
+    var gramaExplicita=/[0-9]\s*g\s*$/.test(t) && !/kg\s*$/.test(t);
+    t=t.replace(/quilos?|kilos?|kgs?|gramas?|g/g,'').replace(/\s/g,'');
+    if(!/^[0-9]+([.,][0-9]+)*$/.test(t)) return {erro:'Só números. Ex.: 9,7'};
+    var como='';
+    var temV=t.indexOf(',')>=0, pontos=(t.match(/\./g)||[]).length;
+    if(temV && pontos){ t=t.replace(/\./g,'').replace(',','.'); como='ponto de milhar'; }
+    else if(temV){ t=t.replace(',','.'); }
+    else if(pontos>1){ t=t.replace(/\./g,''); como='ponto de milhar'; }
+    // "9.700": ninguém pesa 9700 kg, então aqui o ponto é vírgula. Foi o caso que ela
+    // citou — e sai de graça, porque parseFloat já lê 9.700 como 9,7.
+    var n=parseFloat(t);
+    if(!isFinite(n)) return {erro:'Não entendi esse número.'};
+    if(gramaExplicita && n>=100){ n=n/1000; como='gramas'; }
+    // Acima de 100 só pode ser grama: 9700 são 9,7 kg. 130 não é nem uma coisa nem outra.
+    if(n>100){
+      var emKg=n/1000;
+      if(emKg>=0.3 && emKg<=100){ n=emKg; como='gramas'; }
+      else return {erro:pesoFmt(n)+' kg não é peso de FILHOt. Confira o número.'};
+    }
+    if(n<0.3) return {erro:pesoFmt(n)+' kg é leve demais até para filhote. Confira.'};
+    return {kg:Math.round(n*1000)/1000, como:como};
+  }
+  // O que conta como mudança que merece um olhar. Piso de 100 g (foi o que ela pediu) e,
+  // para os grandes, 2% — senão um Labrador dispararia alarme toda semana e ninguém mais
+  // olharia. Entre pesagens distantes a régua afrouxa: engordar devagar é o esperado.
+  function pesoVariacao(kgNovo, ultimo){
+    if(!ultimo || !(ultimo.kg>0)) return null;
+    var d=Math.round((kgNovo-ultimo.kg)*1000)/1000;
+    var dias=pesoDiasDesde(ultimo.data);
+    if(dias===null || dias<0) dias=0;
+    var limite = (dias>45) ? Math.max(0.3, ultimo.kg*0.05) : Math.max(0.1, ultimo.kg*0.02);
+    var pct = ultimo.kg>0 ? (d/ultimo.kg*100) : 0;
+    return {delta:d, dias:dias, limite:Math.round(limite*1000)/1000, pct:pct,
+            suspeito: Math.abs(d) > limite + 0.0001};
+  }
+  function pesoGravar(p, kg){
+    var ex=pelExtra(p)||{}, lista=pesosDe(ex), hj=hojeISO();
+    lista=lista.filter(function(x){ return x.data!==hj; });   // duas vezes no mesmo dia: vale a última
+    lista.push({data:hj, kg:kg, quem:(typeof quemSou==='function'?quemSou():'-')});
+    setPelExtra(p,{pesos:lista});
+    return lista;
+  }
+  // O texto que a veterinária recebe. É a frase que ela mesma escreveu, com as duas datas,
+  // os dois pesos e a diferença — sem emoji, que a ponte não engole.
+  function pesoTextoVet(p, kg, ant, v){
+    var quem=(typeof quemSou==='function'?quemSou():'-');
+    var ident=(p.raca?(' · '+p.raca):'')+((p.tutor)?(' (tutor: '+p.tutor+')'):'');
+    var l=['PESO — vale investigar', (p.n||'')+ident, ''];
+    l.push(fmtBR(ant.data)+': '+pesoFmt(ant.kg)+' kg');
+    l.push(fmtBR(hojeISO())+': '+pesoFmt(kg)+' kg');
+    l.push('Diferença: '+pesoFmtDif(v.delta)+' em '+(v.dias===0?'menos de um dia':(v.dias===1?'1 dia':v.dias+' dias'))
+      +' ('+(v.pct>0?'+':'')+v.pct.toFixed(1).replace('.',',')+'%)');
+    l.push('');
+    l.push('Quem pesou: '+quem);
+    return l.join('\n');
+  }
+  function pesoAvisarVet(p, kg, ant, v){
+    var texto=pesoTextoVet(p, kg, ant, v);
+    if(typeof tgAvisar!=='function') return Promise.resolve({ok:false, erro:'ponte não carregada'});
+    return tgAvisar({grupo:'vet', texto:texto}).then(function(r){
+      var ok=!!(r&&r.ok);
+      try{ if(typeof audit==='function') audit('peso', (ok?'avisou a veterinária sobre ':'NÃO avisou a veterinária sobre ')
+        +(p.n||'')+' ('+pesoFmtDif(v.delta)+')', {alvo:(p.n||'')}); }catch(e){}
+      return r||{ok:false};
+    }).catch(function(e){ return {ok:false, erro:String((e&&e.message)||e)}; });
+  }
+  // Confirmação em dois toques: o primeiro toque explica o que entendeu, o segundo grava.
+  // Nunca é uma janelinha do navegador — no celular ela some atrás do teclado.
+  var PESO_CONF={};
+  // O caminho único que as telas de peso usam (ficha, atividade do monitor e a tela da
+  // recepção e da veterinária). Uma regra só, escrita num lugar só: o número que a tela
+  // mostra é o número que fica na ficha.
+  function pesoTentar(p, chave, txt, diz, aoGravar){
+    var r=pesoLer(txt);
+    if(r.erro){ delete PESO_CONF[chave]; diz(r.erro,'var(--crm-critico)'); return false; }
+    var ex=pelExtra(p)||{}, ant=ultimoPeso(ex);
+    var v=pesoVariacao(r.kg, ant);
+    var precisa = !!(r.como) || !!(v&&v.suspeito);
+    var jaConfirmou = (PESO_CONF[chave]===r.kg);
+    if(precisa && !jaConfirmou){
+      PESO_CONF[chave]=r.kg;
+      var m='Entendi '+pesoFmt(r.kg)+' kg';
+      if(r.como==='gramas') m+=' (o número estava em gramas)';
+      if(v&&v.suspeito) m+=' — ele pesava '+pesoFmt(ant.kg)+' kg em '+fmtBR(ant.data)
+        +' ('+pesoFmtDif(v.delta)+')';
+      m+='. Toque de novo para confirmar.';
+      diz(m,'var(--crm-atencao-text)');
+      return false;
+    }
+    delete PESO_CONF[chave];
+    try{ pesoGravar(p, r.kg); }
+    catch(e){ diz('NÃO gravou: '+((e&&e.message)||e),'var(--crm-critico)'); return false; }
+    try{ if(typeof audit==='function') audit('peso','pesou '+pesoFmt(r.kg)+' kg',{alvo:(typeof dcKey==='function'?dcKey(p.n,p.tutor):(p.n||''))}); }catch(e){}
+    if(v&&v.suspeito&&ant){
+      diz('\u2713 '+pesoFmt(r.kg)+' kg na ficha · avisando a veterinária…','var(--crm-ok)');
+      pesoAvisarVet(p, r.kg, ant, v).then(function(res){
+        if(res&&res.ok){
+          diz('\u2713 '+pesoFmt(r.kg)+' kg · a veterinária foi avisada','var(--crm-ok)');
+        }else{
+          // silêncio aqui seria pior que o erro: quem pesou precisa saber que ninguém soube
+          diz('\u2713 '+pesoFmt(r.kg)+' kg na ficha, mas o grupo da veterinária NÃO foi avisado ('
+            +((res&&res.erro)||'a ponte não respondeu')+'). Avise você mesma.','var(--crm-critico)');
+        }
+        if(typeof aoGravar==='function') aoGravar(r.kg, v, res);
+      });
+      return true;
+    }
+    diz('\u2713 '+pesoFmt(r.kg)+' kg na ficha','var(--crm-ok)');
+    if(typeof aoGravar==='function') aoGravar(r.kg, v, null);
+    return true;
+  }
+
+  function addPeso(){
+    var inp=document.getElementById('pesoNovo'); if(!inp) return;
+    var st=document.getElementById('pesoSt');
+    var diz=function(t,c){ if(st){ st.style.color=c||'var(--muted)'; st.textContent=t; } };
+    var chave='ficha:'+dcKey(pelAtual.n,pelAtual.tutor);
+    var gravou=pesoTentar(pelAtual, chave, inp.value, diz, function(){
+      // só redesenha a ficha DEPOIS de gravar, e devagar: redesenhar na hora apagaria o
+      // recado da tela antes de a pessoa conseguir ler
+      setTimeout(function(){ try{ renderPelFicha(); }catch(e){} }, 2600);
+    });
+    if(gravou && inp) inp.value='';
   }
   function blocoPeso(ex){
     const hist=pesosDe(ex).slice().sort((a,b)=>(a.data<b.data?1:-1));
@@ -13828,6 +13990,8 @@
         +'<div class="field"><label>Peso de hoje (kg)</label><input id="pesoNovo" class="cad-in" inputmode="decimal" placeholder="Ex: 8,5"></div>'
         +'<div class="field"><label>&nbsp;</label><button class="btn btn-gold" style="width:100%" onclick="addPeso()">Registrar peso</button></div>'
       +'</div>'
+      +'<div class="hint" id="pesoSt" style="margin-top:6px;min-height:16px;font-weight:800"></div>'
+      +'<div class="hint" style="margin-top:2px">Pode escrever 9,7 · 9.700 · 9700 (em gramas). Mudança acima de 100 g avisa a veterinária.</div>'
       +(u?'<div class="prev-calc" style="margin-top:8px">Último: <strong>'+String(u.kg).replace('.',',')+' kg</strong> em '+fmtBR(u.data)+evol+'</div>':'<div class="prev-nota">Ainda sem pesagem registrada.</div>')
       +(hist.length>1?'<div class="peso-hist">'+hist.slice(0,6).map(function(h){ return '<span>'+fmtBR(h.data)+': '+String(h.kg).replace('.',',')+' kg</span>'; }).join('')+'</div>':'')
       +'</div>';
@@ -18788,6 +18952,102 @@
     try{ return Math.round((new Date(hojeISO()+'T12:00:00')-new Date(iso+'T12:00:00'))/86400000); }
     catch(e){ return null; }
   }
+
+  // ===== A TELA DE PESO DA RECEPÇÃO E DA VETERINÁRIA — Adriana, 28/ago/2026 =======
+  // A atividade do Day Care só alcança a turma do dia. Aqui se procura qualquer FILHOt
+  // do cadastro — hóspede inclusive — e se pesa um atrás do outro. Mesma régua da ficha:
+  // o pesoTentar é quem lê, recusa o impossível e avisa a veterinária.
+  var PESOT_I=null, PESOT_BUSCA='';
+  function pesoTelaBuscar(){
+    var inp=document.getElementById('pesoTelaB');
+    PESOT_BUSCA=String((inp&&inp.value)||'');
+    var box=document.getElementById('pesoTelaSug'); if(!box) return;
+    var q=jsNorm(PESOT_BUSCA.trim());
+    if(q.length<2){ box.innerHTML='<div class="hint">Digite pelo menos duas letras do nome ou do tutor.</div>'; return; }
+    var achados=[];
+    (PELUDINHOS||[]).forEach(function(p,i){
+      if(typeof pelInativo==='function' && pelInativo(p)) return;
+      var nome=jsNorm(((typeof pelNome==='function')?pelNome(p):p.n)||'');
+      var tut=jsNorm(((typeof pelGet==='function')?pelGet(p,'tutor'):p.tutor)||'');
+      if(nome.indexOf(q)>=0 || tut.indexOf(q)>=0) achados.push({p:p,i:i});
+    });
+    if(!achados.length){ box.innerHTML='<div class="hint">Ninguém com esse nome no cadastro.</div>'; return; }
+    // Nome sozinho não identifica ninguém: a raça e o tutor vêm junto de cada sugestão.
+    box.innerHTML=achados.slice(0,10).map(function(o){
+      return '<button class="btn" style="background:var(--z-cream-warm);color:var(--z-blue);border:1.5px solid var(--line);padding:7px 12px;font-size:12.5px;text-align:left"'
+        +' onclick="pesoTelaEscolher('+o.i+')"><strong>'+escAttr((typeof pelNome==='function')?pelNome(o.p):(o.p.n||''))+'</strong>'
+        +'<span style="color:var(--muted);font-weight:600"> · '+ativIdent(o.p)+'</span></button>';
+    }).join('')+(achados.length>10?'<div class="hint">Mostrando 10 de '+achados.length+'. Escreva mais um pedaço do nome.</div>':'');
+  }
+  function pesoTelaEscolher(i){ PESOT_I=i; renderPesoTela(); }
+  function pesoTelaTrocar(){ PESOT_I=null; PESOT_BUSCA=''; renderPesoTela(); }
+  function pesoTelaSalvar(){
+    var p=(PELUDINHOS||[])[PESOT_I]; if(!p) return;
+    var inp=document.getElementById('pesoTelaIn');
+    var st=document.getElementById('pesoTelaSt');
+    var diz=function(t,c){ if(st){ st.style.color=c||'var(--muted)'; st.textContent=t; } };
+    var gravou=pesoTentar(p, 'tela:'+PESOT_I, (inp&&inp.value)||'', diz, function(){
+      // depois de gravar, a tela volta para a busca: pesar o próximo é o passo natural
+      setTimeout(function(){ PESOT_I=null; PESOT_BUSCA=''; try{ renderPesoTela(); }catch(e){} }, 2600);
+    });
+    if(gravou && inp) inp.value='';
+    else if(inp) inp.focus();
+  }
+  function renderPesoTela(){
+    var el=document.getElementById('pesoTelaPainel'); if(!el) return;
+    var p=(PESOT_I===null)?null:(PELUDINHOS||[])[PESOT_I];
+    if(!p){
+      el.innerHTML='<div class="card"><h2 style="font-size:17px">Quem vamos pesar?</h2>'
+        +'<input class="cad-in" id="pesoTelaB" placeholder="Nome do FILHOt ou do tutor…" autocomplete="off" oninput="pesoTelaBuscar()" value="'+escAttr(PESOT_BUSCA)+'">'
+        +'<div id="pesoTelaSug" style="display:flex;flex-direction:column;gap:5px;margin-top:8px"></div>'
+        +'</div>'+pesoTelaHojeHTML();
+      try{ if(PESOT_BUSCA) pesoTelaBuscar(); }catch(e){}
+      var b=document.getElementById('pesoTelaB'); if(b) b.focus();
+      return;
+    }
+    var ex=pelExtra(p)||{}, hist=pesosDe(ex).slice().sort(function(a,b){ return (a.data<b.data?1:-1); });
+    var u=hist[0];
+    var fot=(typeof fotoCad==='function')?fotoCad(pelKey(p)):'';
+    el.innerHTML='<div class="card">'
+      +'<div style="display:flex;gap:12px;align-items:center">'
+      +(fot?('<div style="width:64px;height:64px;border-radius:14px;flex:0 0 64px;background-image:url(\''+fot+'\');background-size:cover;background-position:center"></div>')
+           :('<div style="width:64px;height:64px;border-radius:14px;flex:0 0 64px;background:var(--z-blue-soft)"></div>'))
+      +'<div style="flex:1;min-width:0">'
+      +'<div style="font-weight:900;color:var(--z-blue);font-size:18px">'+escAttr((typeof pelNome==='function')?pelNome(p):(p.n||''))+'</div>'
+      +'<div class="hint" style="margin:1px 0 0">'+ativIdent(p)+'</div></div>'
+      +'<button class="btn" style="background:none;border:none;color:var(--z-blue);text-decoration:underline;font-weight:800;font-size:12.5px" onclick="pesoTelaTrocar()">trocar</button>'
+      +'</div>'
+      +'<div style="display:flex;gap:8px;margin-top:12px;align-items:flex-end">'
+      +'<div style="flex:1"><label class="cad-lb">Peso de agora</label>'
+      +'<input class="cad-in" id="pesoTelaIn" inputmode="decimal" placeholder="Ex.: 9,7"></div>'
+      +'<button class="btn btn-primary" style="padding:11px 18px;font-weight:800" onclick="pesoTelaSalvar()">Salvar</button>'
+      +'</div>'
+      +'<div class="hint" id="pesoTelaSt" style="margin-top:6px;min-height:16px;font-weight:800"></div>'
+      +'<div class="hint" style="margin-top:2px">Pode escrever 9,7 · 9.700 · 9700 (em gramas).</div>'
+      +(u?('<div class="prev-calc" style="margin-top:10px">Último: <strong>'+pesoFmt(u.kg)+' kg</strong> em '+fmtBR(u.data)
+          +(pesoDiasDesde(u.data)===0?' (hoje)':(pesoDiasDesde(u.data)===1?' (ontem)':' (há '+pesoDiasDesde(u.data)+' dias)'))+'</div>')
+        :'<div class="prev-nota" style="margin-top:10px">Nunca foi pesado. Este vai ser o primeiro peso da ficha dele.</div>')
+      +(hist.length>1?('<div class="peso-hist">'+hist.slice(0,6).map(function(h){ return '<span>'+fmtBR(h.data)+': '+pesoFmt(h.kg)+' kg</span>'; }).join('')+'</div>'):'')
+      +'</div>'+pesoTelaHojeHTML();
+    var i=document.getElementById('pesoTelaIn'); if(i) i.focus();
+  }
+  // Quem já foi pesado hoje: evita pesar duas vezes o mesmo e mostra que o trabalho rendeu.
+  function pesoTelaHojeHTML(){
+    var hj=hojeISO(), lista=[];
+    (PELUDINHOS||[]).forEach(function(p){
+      if(typeof pelInativo==='function' && pelInativo(p)) return;
+      var u=ultimoPeso(pelExtra(p)||{});
+      if(u && u.data===hj) lista.push({p:p, kg:u.kg, quem:u.quem||''});
+    });
+    if(!lista.length) return '<div class="card"><h2 style="font-size:16px">Pesados hoje</h2><div class="hint">Ninguém ainda.</div></div>';
+    lista.sort(function(a,b){ return jsNorm(a.p.n||'').localeCompare(jsNorm(b.p.n||''),'pt'); });
+    return '<div class="card"><h2 style="font-size:16px">Pesados hoje <span style="font-weight:700;font-size:13px;color:var(--muted)">— '+lista.length+'</span></h2>'
+      +lista.map(function(o){
+        return '<div class="pair" style="padding:6px 0;border-bottom:1px solid var(--line)">'
+          +'<span class="k"><strong>'+escAttr(o.p.n||'')+'</strong> <span style="color:var(--muted);font-weight:600">'+ativIdent(o.p)+'</span></span>'
+          +'<span class="val"><strong>'+pesoFmt(o.kg)+' kg</strong>'+(o.quem?('<span style="color:var(--muted);font-weight:600;font-size:11.5px"> · '+escAttr(o.quem)+'</span>'):'')+'</span></div>';
+      }).join('')+'</div>';
+  }
   function renderPesoAtiv(){
     var el=document.getElementById('genGrid'); if(!el) return;
     el.classList.remove('foto-grande');
@@ -18825,7 +19085,7 @@
             +(dias===0?'hoje':(dias===1?'ontem':('há '+dias+' dias'))))
           :'<span style="color:var(--crm-atencao-text);font-weight:800">nunca foi pesado</span>')+'</div>'
         +'<div style="display:flex;gap:5px;margin-top:7px;align-items:center">'
-        +'<input type="number" step="0.1" min="0.3" max="120" inputmode="decimal" class="cad-in" id="pesoAtiv_'+k+'"'
+        +'<input type="text" inputmode="decimal" class="cad-in" id="pesoAtiv_'+k+'"'
         +' placeholder="kg" style="width:78px;padding:7px 8px;text-align:center;font-weight:800">'
         +'<button type="button" class="btn btn-primary" style="flex:1;padding:7px 10px;font-size:12.5px;font-weight:800"'
         +' onclick="pesoAtivSalvar(\''+escAttr(k).replace(/'/g,"\\\'")+'\')">Salvar</button>'
@@ -18840,25 +19100,12 @@
     var diz=function(txt,cor){ if(st){ st.style.color=cor||'var(--muted)'; st.textContent=txt; } };
     if(!o){ diz('Não achei este FILHOt. Recarregue a tela.','var(--crm-critico)'); return; }
     var inp=document.getElementById('pesoAtiv_'+k);
-    var kg=parseFloat(String((inp&&inp.value)||'').replace(',','.'));
-    // 0,3 kg é menor que qualquer filhote; 120 kg é maior que qualquer FILHOt da casa.
-    // Fora disso é dedo errado, e peso errado vira dose de remédio errada.
-    if(!(kg>=0.3&&kg<=120)){ diz('Peso fora do razoável. Confira o número.','var(--crm-critico)'); if(inp) inp.focus(); return; }
-    var ex=pelExtra(o.p)||{};
-    var lista=pesosDe(ex);
-    var hj=hojeISO();
-    // pesou duas vezes no mesmo dia? vale o último, sem criar duas linhas na ficha
-    lista=lista.filter(function(x){ return x.data!==hj; });
-    lista.push({data:hj, kg:kg, quem:(typeof quemSou==='function'?quemSou():'-')});
-    try{
-      setPelExtra(o.p,{pesos:lista});
-      if(typeof audit==='function') audit('peso','pesou '+kg+' kg na atividade',{alvo:k});
-      diz('✓ '+String(kg).replace('.',',')+' kg na ficha','var(--crm-ok)');
-      if(inp) inp.value='';
-      setTimeout(function(){ try{ renderPesoAtiv(); }catch(e){} }, 900);
-    }catch(e){
-      diz('NÃO gravou: '+((e&&e.message)||e),'var(--crm-critico)');
-    }
+    // Mesma régua da ficha e da tela da recepção: uma regra só, escrita num lugar só.
+    var gravou=pesoTentar(o.p, 'ativ:'+k, (inp&&inp.value)||'', diz, function(){
+      setTimeout(function(){ try{ renderPesoAtiv(); }catch(e){} }, 2600);
+    });
+    if(gravou && inp) inp.value='';
+    else if(inp) inp.focus();
   }
 
   // ---- FOTO -------------------------------------------------------------------------

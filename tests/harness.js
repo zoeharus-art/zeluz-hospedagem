@@ -3032,8 +3032,9 @@ async function main() {
       /if\(dcAtiv==='peso'\)\{ try\{ renderPesoAtiv\(\)/.test(html) &&
       /if\(dcAtiv==='foto'\)\{ try\{ renderFotoAtiv\(\)/.test(html));
     check('o peso cai na MESMA ficha (pesos), nao num lugar paralelo',
-      /setPelExtra\(o\.p,\{pesos:lista\}\)/.test(html));
-    check('peso fora do razoavel nao entra', /kg>=0\.3&&kg<=120/.test(html));
+      /setPelExtra\(p,\{pesos:lista\}\)/.test(html));
+    check('as tres telas de peso passam pela mesma regua',
+      (html.match(/pesoTentar\(/g) || []).length >= 4);
     check('pesar duas vezes no mesmo dia nao cria duas linhas',
       /lista=lista\.filter\(function\(x\)\{ return x\.data!==hj; \}\)/.test(html));
     check('a foto nova apaga a antiga, e a tela avisa',
@@ -3282,6 +3283,88 @@ async function main() {
       /if\(dcAtiv!=='foto'\) document\.getElementById\('genGrid'\)\.classList\.remove\('foto-grande'\)/.test(html));
     check('e desligado no peso (que divide o mesmo grid)',
       /el\.classList\.remove\('foto-grande'\);/.test(html));
+  }
+  console.log('');
+
+  console.log('Travas de peso: 130 kg nao entra, 9.700 e 9,7 kg, e a vet e avisada (28/ago):');
+  {
+    const L = (t) => ctx.pesoLer(t);
+    // 1) o caso da Repolho
+    check('130 kg e recusado', !!L('130').erro, JSON.stringify(L('130')));
+    check('e a recusa diz o numero de volta', /130 kg n\u00e3o \u00e9 peso de FILHOt/.test(L('130').erro || ''));
+    // 2) o ponto e a virgula
+    check('9,7 continua 9,7', L('9,7').kg === 9.7);
+    check('9.700 e 9,7 kg (ninguem pesa 9700 kg)', L('9.700').kg === 9.7, JSON.stringify(L('9.700')));
+    check('9700 e lido como gramas', L('9700').kg === 9.7 && L('9700').como === 'gramas', JSON.stringify(L('9700')));
+    check('700g e 0,7 kg', L('700g').kg === 0.7, JSON.stringify(L('700g')));
+    check('14.4 e 14,4 kg', L('14.4').kg === 14.4);
+    check('45 kg passa direto', L('45').kg === 45 && !L('45').como);
+    check('o "kg" digitado junto nao atrapalha', L('8,5 kg').kg === 8.5, JSON.stringify(L('8,5 kg')));
+    // 3) o que nao e peso
+    check('vazio nao grava', !!L('').erro);
+    check('letra nao grava', !!L('abc').erro);
+    check('0,2 kg e leve demais ate para filhote', !!L('0,2').erro, JSON.stringify(L('0,2')));
+    check('101 (nem kg nem grama) e recusado', !!L('101').erro, JSON.stringify(L('101')));
+    check('9,7 nao pede confirmacao; 9700 pede',
+      !L('9,7').como && !!L('9700').como);
+
+    // 4) a variacao — o exemplo que ela mesma escreveu (Toshi)
+    const dias = (n) => { const d = new Date(ctx.hojeISO() + 'T12:00:00'); d.setDate(d.getDate() - n);
+      return d.toISOString().slice(0, 10); };
+    const v1 = ctx.pesoVariacao(13.9, {data: dias(10), kg: 14.4});
+    check('Toshi: 14,4 para 13,9 em 10 dias e suspeito', v1.suspeito, JSON.stringify(v1));
+    check('e a conta bate: -500 g', Math.abs(v1.delta + 0.5) < 1e-9, JSON.stringify(v1.delta));
+    const v2 = ctx.pesoVariacao(14.45, {data: dias(7), kg: 14.4});
+    check('50 g nao incomoda ninguem', !v2.suspeito, JSON.stringify(v2));
+    const v3 = ctx.pesoVariacao(3.15, {data: dias(7), kg: 3.0});
+    check('150 g num FILHOt de 3 kg JA e suspeito', v3.suspeito, JSON.stringify(v3));
+    const v4 = ctx.pesoVariacao(40.5, {data: dias(7), kg: 40.0});
+    check('500 g num FILHOt de 40 kg ainda nao e', !v4.suspeito, JSON.stringify(v4));
+    const v5 = ctx.pesoVariacao(15.0, {data: dias(120), kg: 14.4});
+    check('600 g em 4 meses e crescer, nao adoecer', !v5.suspeito, JSON.stringify(v5));
+    check('sem peso anterior nao existe variacao', ctx.pesoVariacao(9.7, null) === null);
+
+    // 5) o recado que chega na veterinaria
+    const txt = ctx.pesoTextoVet({n: 'Toshi', raca: 'Shih Tzu', tutor: 'Carolina'}, 13.9,
+      {data: dias(10), kg: 14.4}, v1);
+    check('o recado nomeia o FILHOt, a raca e o tutor',
+      /Toshi/.test(txt) && /Shih Tzu/.test(txt) && /Carolina/.test(txt));
+    check('traz os dois pesos e as duas datas',
+      /14,4 kg/.test(txt) && /13,9 kg/.test(txt) && (txt.match(/\d{2}\/\d{2}\/\d{4}/g) || []).length === 2, txt);
+    check('diz a diferenca em gramas e em %', /-500 g/.test(txt) && /%/.test(txt), txt);
+    check('diz quem pesou', /Quem pesou:/.test(txt));
+    check('sem emoji (a ponte engasga com eles)',
+      !/[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}]/u.test(txt), txt);
+    check('vai para o grupo da veterinaria', /tgAvisar\(\{grupo:'vet', texto:texto\}\)/.test(html));
+    check('se o grupo NAO for avisado, quem pesou fica sabendo',
+      /grupo da veterin\u00e1ria N\u00c3O foi avisado/.test(html));
+
+    // 6) confirmacao em dois toques, nunca janelinha do navegador
+    check('o primeiro toque explica, o segundo grava',
+      /var jaConfirmou = \(PESO_CONF\[chave\]===r\.kg\);/.test(html) &&
+      /Toque de novo para confirmar/.test(html));
+    check('o campo aceita virgula (nao e mais type=number)',
+      !/type="number"[^>]*id="pesoAtiv_/.test(html) &&
+      /<input type="text" inputmode="decimal" class="cad-in" id="pesoAtiv_/.test(html));
+    check('a ficha tambem tem onde mostrar o recado', /id="pesoSt"/.test(html));
+
+    // 7) a tela de peso da recepcao e da veterinaria
+    check('existe a tela e ela abre sozinha',
+      /<section class="view" id="v-peso">/.test(html) &&
+      /if\(v==='peso'\)\{ if\(typeof renderPesoTela==='function'\) renderPesoTela\(\); \}/.test(html));
+    check('tem entrada no menu', /data-v="peso" class="so-pesa"/.test(html));
+    check('recepcao, veterinaria, gestao e supervisao enxergam',
+      /body\[data-role="consultora"\] \.nav a\.so-pesa/.test(html) &&
+      /body\[data-role="vet"\] \.nav a\.so-pesa/.test(html) &&
+      /body\[data-role="supervisor"\] \.nav a\.so-pesa/.test(html));
+    check('e a veterinaria enxerga o CAMINHO ate ela (nao so o item)',
+      /body\[data-role="vet"\] \.nav a\[data-v="peso"\],[\s\S]{0,220}acc="c-peludinhos"\]>a\.grp\{display:flex !important\}/.test(html));
+    check('a tela tem titulo proprio', /peso:\['Peso'/.test(html));
+    check('a busca mostra raca e tutor (nome sozinho nao identifica)',
+      /pesoTelaBuscar[\s\S]{0,1400}ativIdent\(o\.p\)/.test(html));
+    check('procura qualquer FILHOt do cadastro, nao so a turma do dia',
+      /function pesoTelaBuscar\(\)[\s\S]{0,700}\(PELUDINHOS\|\|\[\]\)\.forEach/.test(html));
+    check('a tela mostra quem ja foi pesado hoje', /function pesoTelaHojeHTML\(\)/.test(html));
   }
   console.log('');
 
