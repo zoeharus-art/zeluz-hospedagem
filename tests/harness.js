@@ -1973,8 +1973,11 @@ async function main() {
     check('coleira pergunta se veio e onde troca',
       /c:'veio'/.test(item('coleira')) && /c:'onde'/.test(item('coleira')));
     check('festa exige o tema', /c:'tema'/.test(item('festa')) && /ops:DASH_TEMAS/.test(item('festa')));
-    check('banho e vet continuam num clique so',
-      !/campos:/.test(item('banho')) && !/campos:/.test(item('vet')));
+    check('banho pergunta o shampoo e onde ele esta',
+      /c:'sham'/.test(item('banho')) && /ops:DASH_SHAM_ONDE/.test(item('banho')));
+    check('e "onde esta" so vale se ele trouxe',
+      /dep:\{c:'sham', v:'SHAMPOO'\}/.test(item('banho')));
+    check('vet continua num clique so', !/campos:/.test(item('vet')));
     check('todo campo desses e obrigatorio',
       (item('vermifugo').match(/obrig:true/g) || []).length === 2 &&
       (item('carrapaticida').match(/obrig:true/g) || []).length === 2 &&
@@ -2045,8 +2048,42 @@ async function main() {
 
       // item sem pergunta nao inventa parenteses
       ctx.DASH_DET = {};
-      check('banho nao ganha parenteses nenhum', ctx.dashDetTexto('banho') === '');
-      check('banho nunca "falta responder"', ctx.dashDetFalta('banho') === '');
+      check('hidratacao nao ganha parenteses nenhum', ctx.dashDetTexto('hidratacao') === '');
+      check('hidratacao nunca "falta responder"', ctx.dashDetFalta('hidratacao') === '');
+
+      // ----- o shampoo dele (Adriana, 28/ago/2026) -----
+      ctx.DASH_DET = {}; ctx.DASH_SEL = {};
+      check('banho comeca cobrando o shampoo',
+        ctx.dashDetFalta('banho') === 'Trouxe shampoo?', JSON.stringify(ctx.dashDetFalta('banho')));
+      ctx.dashSetDet('banho', 'sham', 'SEM SHAMPOO');
+      check('nao trouxe: nao pergunta onde esta',
+        ctx.dashDetFalta('banho') === '', JSON.stringify(ctx.dashDetFalta('banho')));
+      check('nao trouxe sai escrito assim',
+        ctx.dashDetTexto('banho') === ' (SEM SHAMPOO)', JSON.stringify(ctx.dashDetTexto('banho')));
+      ctx.dashSetDet('banho', 'sham', 'SHAMPOO');
+      check('trouxe: agora precisa dizer onde esta',
+        ctx.dashDetFalta('banho') === 'Onde está o shampoo?', JSON.stringify(ctx.dashDetFalta('banho')));
+      ctx.dashSetDet('banho', 'onde', 'NA RECEPÇÃO');
+      check('shampoo na recepcao vai junto com o nome',
+        ctx.dashDetTexto('banho') === ' (SHAMPOO · NA RECEPÇÃO)', JSON.stringify(ctx.dashDetTexto('banho')));
+      ctx.dashSetDet('banho', 'onde', 'NA BOLSA');
+      check('trocar para a bolsa troca so o lugar',
+        ctx.dashDetTexto('banho') === ' (SHAMPOO · NA BOLSA)', JSON.stringify(ctx.dashDetTexto('banho')));
+      // a armadilha: responder "onde" e depois dizer que nao trouxe
+      ctx.dashSetDet('banho', 'sham', 'SEM SHAMPOO');
+      check('mudar de ideia esquece o lugar do shampoo',
+        ctx.dashDetTexto('banho') === ' (SEM SHAMPOO)' && ctx.dashDetFalta('banho') === '',
+        JSON.stringify([ctx.dashDetTexto('banho'), ctx.dashDetFalta('banho')]));
+
+      // o relogio do banho passou a morar dentro do painel
+      check('o painel de quem tem horario desenha o relogio',
+        /if\(it\.hora\)\{[\s\S]{0,200}type="time" class="cad-in" id="dashH_/.test(html));
+      ctx.DASH_SEL = {banho: 'Toshi/Shih Tzu'};
+      check('escolhido sem horario, o botao cobra o horario',
+        ctx.dashDetFalta('banho') === 'Horário', JSON.stringify(ctx.dashDetFalta('banho')));
+      ctx.DASH_DET = {}; ctx.DASH_SEL = {};
+      check('sem ninguem escolhido nao se cobra horario de ninguem',
+        ctx.dashDetFalta('banho') === 'Trouxe shampoo?', JSON.stringify(ctx.dashDetFalta('banho')));
       ctx.DASH_DET = {}; ctx.DASH_SEL = {};
     }
   }

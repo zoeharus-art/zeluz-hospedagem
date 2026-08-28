@@ -9923,7 +9923,7 @@
   // Agora existe um carimbo: esta constante é a versão que o aparelho está rodando, e o
   // Firebase guarda a versão publicada. Quando as duas diferem, aparece o aviso — mas
   // NUNCA recarrega sozinho: recarregar no meio de um check-in perderia o trabalho.
-  const APP_VERSAO='2026-08-28-06';
+  const APP_VERSAO='2026-08-28-07';
   function vigiarVersao(){
     if(!DB) return;
     try{
@@ -19680,6 +19680,16 @@
     {v:'BANHO',    t:'Vai passar depois do banho'},
     {v:'',         t:'Nada a observar'}
   ];
+  // Shampoo proprio: quem banha precisa saber ANTES se existe e onde foi parar.
+  // "Sem shampoo" e uma resposta legitima — a maioria usa o da casa.
+  var DASH_SHAM=[
+    {v:'SHAMPOO',      t:'Sim, trouxe o dele'},
+    {v:'SEM SHAMPOO',  t:'Não trouxe'}
+  ];
+  var DASH_SHAM_ONDE=[
+    {v:'NA RECEPÇÃO', t:'Está na recepção'},
+    {v:'NA BOLSA',    t:'Está na bolsa dele'}
+  ];
   var DASH_COL_VEIO=[
     {v:'NA BOLSA',  t:'Sim, veio na bolsa'},
     {v:'N\u00c3O VEIO', t:'N\u00e3o veio'}
@@ -19702,7 +19712,11 @@
 
   var DASH_ITENS=[
     {k:'reposicao',     t:'Reposição',                  col:'Reposição',                      icone:'🔄'},
-    {k:'banho',         t:'Banho',                      col:'Banho',                          colHora:'Hora Banho',      hora:true, icone:'🛁'},
+    {k:'banho',         t:'Banho',                      col:'Banho',                          colHora:'Hora Banho',      hora:true, icone:'🛁', campos:[
+      {c:'sham', rot:'Trouxe shampoo?',        ops:DASH_SHAM, obrig:true},
+      // só faz sentido perguntar onde está se ele trouxe — senão a planilha diria
+      // "SEM SHAMPOO · NA BOLSA", que é uma frase que não quer dizer nada
+      {c:'onde', rot:'Onde está o shampoo?',   ops:DASH_SHAM_ONDE, obrig:true, dep:{c:'sham', v:'SHAMPOO'}}]},
     {k:'vet',           t:'Veterinário',                col:'Veterinário',                    colHora:'Hora Veterinário',hora:true, icone:'🩺'},
     {k:'saicedo',       t:'Sai mais cedo',              col:'Peludinho que sairá cedo',       colHora:'Hora Saída Cedo', hora:true, icone:'🚶'},
     {k:'avaliacao',     t:'Avaliação (Márcia)',         col:'Avaliação',                      colHora:'Horário',         hora:true, icone:'📋'},
@@ -20027,10 +20041,20 @@
   var DASH_SEL={};    // {item: 'Nome/Raça'} — quem está escolhido, ainda não lançado
   var DASH_DET={};    // {item: {campo: valor}} — a chave existir = a pessoa escolheu
   function dashDet(k){ DASH_DET[k]=DASH_DET[k]||{}; return DASH_DET[k]; }
+  // Campo que depende da resposta de outro. Sem trouxe shampoo, "onde está" não existe:
+  // não é perguntado, não é cobrado e não vai para a planilha (Adriana, 28/ago/2026).
+  function dashCampoAtivo(k, c){
+    if(!c || !c.dep) return true;
+    var d=dashDet(k);
+    return d[c.dep.c]===c.dep.v;
+  }
   function dashSetDet(k, campo, valor){
     var d=dashDet(k);
     if(d.hasOwnProperty(campo) && d[campo]===valor) delete d[campo];   // tocar de novo desmarca
     else d[campo]=valor;
+    // se a resposta de cima mudou, a de baixo deixa de valer — some da tela e do texto
+    var it=dashItem(k);
+    (it&&it.campos||[]).forEach(function(c){ if(c.dep && !dashCampoAtivo(k,c)) delete d[c.c]; });
     try{ renderDash(); }catch(e){}
   }
   function dashEscolher(k, rot){
@@ -20047,14 +20071,23 @@
   function dashDetTexto(k){
     var it=dashItem(k); if(!it||!it.campos) return '';
     var d=dashDet(k), partes=[];
-    it.campos.forEach(function(c){ if(d[c.c]) partes.push(d[c.c]); });
+    it.campos.forEach(function(c){ if(dashCampoAtivo(k,c) && d[c.c]) partes.push(d[c.c]); });
     return partes.length ? (' (' + partes.join(' · ') + ')') : '';
   }
   // O que ainda não foi respondido. Vira frase na tela — nunca um botão que não responde.
   function dashDetFalta(k){
     var it=dashItem(k); if(!it||!it.campos) return '';
     var d=dashDet(k), falta=[];
-    it.campos.forEach(function(c){ if(c.obrig && !d.hasOwnProperty(c.c)) falta.push(c.rot); });
+    // O horário faz o alarme tocar na TV. No painel ele mora aqui dentro, então é aqui
+    // que ele é cobrado — o botão não pode dizer "Lançar" e depois recusar.
+    if(it.hora && it.campos && DASH_SEL[k]){
+      var _h=''; try{ _h=String((document.getElementById('dashH_'+k)||{}).value||''); }catch(e){}
+      if(!_h) falta.push('Horário');
+    }
+    it.campos.forEach(function(c){
+      if(!dashCampoAtivo(k,c)) return;
+      if(c.obrig && !d.hasOwnProperty(c.c)) falta.push(c.rot);
+    });
     return falta.join(' · ');
   }
   function dashPainelHTML(it){
@@ -20063,7 +20096,15 @@
       +'<span class="k">Escolhido: <strong>'+escAttr(sel)+'</strong></span>'
       +'<span class="val"><button class="btn" style="background:none;border:none;color:var(--z-blue);text-decoration:underline;font-size:12.5px;font-weight:700;padding:0 6px"'
       +' onclick="dashTrocarFilhot(\''+it.k+'\')">trocar</button></span></div>';
+    // O relógio entra no painel: sem ele aqui, o banho ficaria com um botão que pede
+    // horário e nenhum lugar para escolher (Adriana, 28/ago/2026).
+    if(it.hora){
+      h+='<label class="cad-lb" style="margin-top:9px;display:block">Horário</label>'
+        +'<input type="time" class="cad-in" id="dashH_'+it.k+'" style="max-width:140px"'
+        +' onchange="try{renderDash()}catch(e){}">';
+    }
     it.campos.forEach(function(c){
+      if(!dashCampoAtivo(it.k,c)) return;
       var respondido=d.hasOwnProperty(c.c);
       h+='<label class="cad-lb" style="margin-top:9px;display:block">'+escAttr(c.rot)
         +(c.obrig&&!respondido?' <span style="color:var(--crm-critico);font-weight:900">— falta responder</span>':'')+'</label>'
