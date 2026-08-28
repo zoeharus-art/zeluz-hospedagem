@@ -3695,8 +3695,41 @@
     });
   }
   // Ponto ÚNICO de gravação de foto. Sobe o carimbo para os outros aparelhos atualizarem.
+  // O "tutor" da chave é, na verdade, uma raça? Então esta chave não é ficha de ninguém.
+  function fotoChaveFantasma(k){
+    var t=String(k||'').split('__')[1]||'';
+    if(!t) return true;                                  // sem tutor não identifica ninguém
+    try{ return (typeof ehRacaLike==='function') ? !!ehRacaLike(t) : false; }catch(e){ return false; }
+  }
+  // Procura a ficha de verdade pelo nome. Só devolve quando há UMA — com duas, quem decide
+  // é gente, não o programa (a lei da Maya, 22/ago: nome sozinho não identifica ninguém).
+  function fotoFichaUnicaPorNome(nome){
+    try{
+      var alvo=jsNorm(nome||''); if(!alvo) return null;
+      var achados=(PELUDINHOS||[]).filter(function(p){
+        if(typeof pelInativo==='function' && pelInativo(p)) return false;
+        return jsNorm(pelNome(p))===alvo;
+      });
+      return achados.length===1 ? achados[0] : null;
+    }catch(e){ return null; }
+  }
   function salvarFotoCad(k,dataUrl){
     if(!k||!dataUrl) return Promise.resolve();
+    if(fotoChaveFantasma(k)){
+      var nome=String(k).split('__')[0]||'';
+      var p=fotoFichaUnicaPorNome(nome);
+      if(p){
+        var certa=pelKey(p);
+        try{ if(typeof audit==='function') audit('foto','corrigiu a chave da foto: '+k+' -> '+certa,{alvo:certa}); }catch(e){}
+        k=certa;
+      }else{
+        var msg='A foto NÃO foi guardada.\n\nA ficha de '+(nome||'este FILHOt')+' está sem o nome do tutor '
+          +'— o que está no lugar dele é a raça. Sem tutor, a foto ficaria fora de qualquer ficha '
+          +'e poderia aparecer na de outro FILHOt de mesmo nome.\n\nPeça à recepção para completar o cadastro.';
+        try{ if(typeof audit==='function') audit('foto','RECUSOU gravar foto em chave sem tutor: '+k,{alvo:k}); }catch(e){}
+        return Promise.reject(new Error(msg));
+      }
+    }
     FOTOS[k]=dataUrl; __fotosV=String(Date.now()); _fotosGuardar();
     if(!DB) return Promise.resolve();
     return DB.ref('daycare/fotos/'+k).set(dataUrl)
@@ -9995,7 +10028,7 @@
   // Agora existe um carimbo: esta constante é a versão que o aparelho está rodando, e o
   // Firebase guarda a versão publicada. Quando as duas diferem, aparece o aviso — mas
   // NUNCA recarrega sozinho: recarregar no meio de um check-in perderia o trabalho.
-  const APP_VERSAO='2026-08-28-14';
+  const APP_VERSAO='2026-08-28-15';
   function vigiarVersao(){
     if(!DB) return;
     try{
@@ -13014,7 +13047,12 @@
     // Foto é o único campo que não vai para o cadastro nem para a cópia local da ficha:
     // ela é pesada e tem nó próprio, que só desce quando muda.
     if(patch && patch.foto){
-      try{ salvarFotoCad(k, patch.foto).catch(function(e){ _logFalhaGrav('foto do cadastro '+k, e); }); }catch(e){}
+      try{ salvarFotoCad(k, patch.foto).catch(function(e){
+        _logFalhaGrav('foto do cadastro '+k, e);
+        // Foto recusada por falta de tutor na ficha: quem tirou PRECISA saber na hora, senão
+        // fica achando que guardou (a falha muda que já mordeu esta casa cinco vezes).
+        try{ alert((e&&e.message)||'A foto não foi guardada.'); }catch(e2){}
+      }); }catch(e){}
       patch=Object.assign({},patch); delete patch.foto;
       if(!Object.keys(patch).length){
         const s0=document.getElementById('pel-saved'); if(s0){ s0.style.color='var(--crm-ok)'; s0.textContent='✓ Salvo'; setTimeout(()=>{ if(s0) s0.textContent=''; },1200); }

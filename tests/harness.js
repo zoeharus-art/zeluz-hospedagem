@@ -3500,6 +3500,46 @@ async function main() {
   }
   console.log('');
 
+  console.log('Quem faltou nao se examina, e foto nao nasce fora de ficha (28/ago):');
+  {
+    check('a tela do corpo agora sabe quem faltou', /function ckFaltou\(o\)/.test(html) &&
+      /dcChamada\[dcKey\(o\.p\.n,o\.p\.tutor\)\]==='faltou'/.test(html));
+    check('e le a chamada ao abrir (quem entra direto na atividade nao passou por ela)',
+      /daycare\/chamada\/'\+dcDataKey\(\)\)\.once\('value'\)[\s\S]{0,300}CK_FALTA_TARDIA=/.test(html));
+    check('quem faltou sai da conta de "faltam conferir"',
+      /const lista=turma\.filter\(function\(o\)\{ return !ckFaltou\(o\); \}\);/.test(html));
+    check('mas nao some: vai para o rodape', /NÃO VIERAM HOJE/.test(html));
+    check('tem botao "Nao veio hoje" em cada card, em dois toques',
+      /Confirmar: não veio/.test(html) && /Não veio hoje/.test(html) &&
+      /if\(CK_FALTA_ARMADA!==k\)\{ CK_FALTA_ARMADA=k;/.test(html));
+    check('falta marcada no check-out fica registrada como TARDIA',
+      /daycare\/falta-tardia\/'\+dia\+'\/'\+k/.test(html) &&
+      /origem:\(tardia\?'checkout-corpo':'checkin-corpo'\)/.test(html));
+    check('e o rodape diz que era para ter sido no check-in da manha',
+      /era para ter sido lançada no check-in da manhã/.test(html));
+    check('se a gravacao falhar, a marcacao volta atras e avisa',
+      /delete dcChamada\[k\]; delete CK_FALTA_TARDIA\[k\]; renderCheckin\(\);/.test(html));
+
+    // foto em chave-fantasma (luna__shihtzu, jujuba__srd)
+    check('chave de foto cujo "tutor" e raca e reconhecida como fantasma',
+      /function fotoChaveFantasma\(k\)/.test(html) && /ehRacaLike\(t\)/.test(html));
+    check('havendo UMA ficha com esse nome, a foto vai para ela',
+      /function fotoFichaUnicaPorNome\(nome\)/.test(html) &&
+      /return achados\.length===1 \? achados\[0\] : null;/.test(html));
+    check('havendo duas, recusa (nome sozinho nao identifica ninguem)',
+      /return Promise\.reject\(new Error\(msg\)\);/.test(html));
+    check('e a recusa aparece na tela, nao so no log',
+      /try\{ alert\(\(e&&e\.message\)\|\|'A foto não foi guardada\.'\); \}catch\(e2\)\{\}/.test(html));
+    if (typeof ctx.fotoChaveFantasma === 'function') {
+      check('luna__shihtzu e fantasma', ctx.fotoChaveFantasma('luna__shihtzu'));
+      check('jujuba__srd e fantasma', ctx.fotoChaveFantasma('jujuba__srd'));
+      check('luna__riva NAO e fantasma', !ctx.fotoChaveFantasma('luna__riva'));
+      check('chave sem tutor e fantasma', ctx.fotoChaveFantasma('luna__'));
+      check('cookie__yara continua valendo', !ctx.fotoChaveFantasma('cookie__yara'));
+    }
+  }
+  console.log('');
+
   console.log('Tela que abre vazia: uma lista de ganchos so, com as excecoes escritas (28/ago):');
   {
     check('irParaView passa pela mesma lista do clique no menu',
