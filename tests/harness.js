@@ -3540,6 +3540,32 @@ async function main() {
   }
   console.log('');
 
+  console.log('Galeria: ver TODAS as fotos e dizer de quem e cada uma (28/ago):');
+  {
+    check('a galeria existe e entra na tela de Relatorios',
+      /function galeriaFotosHTML\(\)/.test(html) && /fotosConferirHTML\(\)\+galeriaFotosHTML\(\)/.test(html));
+    check('agrupa por NOME: fichas e fotos soltas juntas',
+      /function galDados\(\)/.test(html) && /g\.fichas\.push/.test(html) && /g\.fotos\.push/.test(html));
+    check('mostra tambem quem JA tem foto (era a suposicao que escondia a Luna)',
+      /Aqui aparece também quem <strong>já tem foto<\/strong>/.test(html));
+    check('quem tem xara aparece marcado', /FILHOts com este nome/.test(html));
+    check('da para dizer de quem e a foto solta', /function galAtribuir\(chaveFoto, chaveFicha\)/.test(html));
+    check('e da para apagar em dois toques, dos dois lados',
+      /function galApagar\(chave\)/.test(html) && /if\(GAL_ARMADO!==chave\)\{ GAL_ARMADO=chave;/.test(html));
+    check('atribuir NAO apaga a original (erro nao perde nada)',
+      /A original continua onde estava/.test(html));
+    check('abre mostrando so o que precisa de decisao', /var GAL_SO_DECIDIR=true;/.test(html));
+    check('mas da para ver todos os nomes', /Ver todos os '\+grupos\.length\+' nomes/.test(html));
+    if (typeof ctx.galFotoNome === 'function') {
+      check('o nome sai da chave', ctx.galFotoNome('luna__shihtzu') === 'luna');
+      check('e tutor com __ nao confunde', ctx.galFotoNome('nelson mandela__lara') === 'nelson mandela');
+    }
+    // a suposicao que causou o problema nao pode voltar
+    check('o semFotoDados ainda pula quem tem foto — POR ISSO a galeria existe',
+      /if\(chaves\[k\]\) return;/.test(html));
+  }
+  console.log('');
+
   console.log('Tela que abre vazia: uma lista de ganchos so, com as excecoes escritas (28/ago):');
   {
     check('irParaView passa pela mesma lista do clique no menu',

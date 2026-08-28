@@ -10028,7 +10028,7 @@
   // Agora existe um carimbo: esta constante é a versão que o aparelho está rodando, e o
   // Firebase guarda a versão publicada. Quando as duas diferem, aparece o aviso — mas
   // NUNCA recarrega sozinho: recarregar no meio de um check-in perderia o trabalho.
-  const APP_VERSAO='2026-08-28-15';
+  const APP_VERSAO='2026-08-28-16';
   function vigiarVersao(){
     if(!DB) return;
     try{
@@ -20906,6 +20906,144 @@
     try{ Object.keys(FOTOS||{}).forEach(function(k){ if(FOTOS[k]) out[k]=true; }); }catch(e){}
     return out;
   }
+
+  // ===== VER TODAS AS FOTOS E DIZER DE QUEM É CADA UMA — Adriana, 28/ago/2026 =====
+  // "Deixa eu verificar as fotos e escolher qual é de quem, como me deu a opção mais cedo.
+  //  E por que não consertou todas mais cedo, quando eu relatei?"
+  //
+  // A resposta é uma linha do código de hoje de manhã, no semFotoDados():
+  //      if(chaves[k]) return;   // tem foto, tudo certo
+  // A ferramenta só olhava quem estava SEM foto. "Tem foto" era tratado como "está certo" —
+  // e foto ERRADA tem foto. A Luna e a Jujuba nunca entraram na lista porque as duas já
+  // tinham retrato na ficha; o problema era justamente qual retrato era.
+  //
+  // Esta tela desfaz essa suposição: agrupa TUDO por nome — as fichas e as fotos soltas —
+  // e deixa a pessoa dizer de quem é cada imagem. Ninguém decide por semelhança de nome.
+  var GAL_ARMADO='';       // chave de foto aguardando o 2º toque para apagar
+  function galFotoNome(k){ return String(k||'').split('__')[0]; }
+  // Monta os grupos: para cada NOME, as fichas com aquele nome e todas as fotos daquele nome.
+  function galDados(){
+    var chaves=fotoChavesConhecidas();
+    var porNome={};
+    var add=function(nome){ var n=jsNorm(nome||''); if(!n) return null;
+      if(!porNome[n]) porNome[n]={nome:nome, fichas:[], fotos:[]}; return porNome[n]; };
+    (PELUDINHOS||[]).forEach(function(p){
+      if(typeof pelInativo==='function' && pelInativo(p)) return;
+      var nome=(typeof pelNome==='function')?pelNome(p):(p.n||'');
+      var g=add(nome); if(!g) return;
+      var k=pelKey(p);
+      g.fichas.push({p:p, chave:k, nome:nome,
+        raca:((typeof pelGet==='function')?pelGet(p,'raca'):'')||p.raca||'',
+        tutor:((typeof pelGet==='function')?pelGet(p,'tutor'):'')||p.tutor||'',
+        foto:chaves[k]?((FOTOS||{})[k]||''):''});
+    });
+    Object.keys(chaves).forEach(function(fk){
+      var g=add(galFotoNome(fk).replace(/-/g,' '));
+      if(!g) return;
+      g.fotos.push({chave:fk, url:(FOTOS||{})[fk]||'', daFicha:g.fichas.some(function(f){ return f.chave===fk; })});
+    });
+    var grupos=Object.keys(porNome).map(function(n){ return porNome[n]; });
+    // Ordem: primeiro o que exige decisão (mais de uma foto, ou foto sem ficha), depois o resto.
+    var pendente=function(g){
+      var soltas=g.fotos.filter(function(f){ return !f.daFicha; });
+      return soltas.length>0 || g.fotos.length>1 || (g.fichas.length>1 && g.fotos.length>0);
+    };
+    grupos.forEach(function(g){ g.decidir=pendente(g); });
+    grupos.sort(function(a,b){ return (b.decidir?1:0)-(a.decidir?1:0)
+      || jsNorm(a.nome).localeCompare(jsNorm(b.nome),'pt'); });
+    return grupos;
+  }
+  function galRetrato(url, tam){
+    tam=tam||96;
+    return url
+      ? '<div style="width:'+tam+'px;height:'+tam+'px;border-radius:13px;flex:0 0 '+tam+'px;background-image:url(\'' + url + '\');background-size:cover;background-position:center"></div>'
+      : '<div style="width:'+tam+'px;height:'+tam+'px;border-radius:13px;flex:0 0 '+tam+'px;background:var(--z-blue-soft);display:flex;align-items:center;justify-content:center;color:var(--muted);font-size:11px;font-weight:800;text-align:center">sem foto</div>';
+  }
+  function galGrupoHTML(g){
+    var soltas=g.fotos.filter(function(f){ return !f.daFicha; });
+    var h='<div style="border:1.5px solid '+(g.decidir?'var(--crm-atencao)':'var(--line)')+';border-radius:14px;padding:12px;margin-bottom:10px">'
+      +'<div style="font-weight:900;color:var(--z-blue);font-size:16px">'+escAttr(g.nome)
+      +(g.fichas.length>1?(' <span style="font-size:12px;color:var(--crm-critico);font-weight:800">'+g.fichas.length+' FILHOts com este nome</span>'):'')
+      +'</div>';
+    // as fichas e o retrato que cada uma mostra hoje
+    g.fichas.forEach(function(f){
+      h+='<div style="display:flex;gap:11px;align-items:center;margin-top:10px;padding-top:10px;border-top:1px solid var(--line)">'
+        +galRetrato(f.foto)
+        +'<div style="flex:1;min-width:0">'
+        +'<div style="font-weight:800;color:var(--z-blue);font-size:14px">'+escAttr(f.raca||'raça não cadastrada')+'</div>'
+        +'<div class="hint" style="margin:1px 0">tutor: '+escAttr(f.tutor||'não cadastrado')+'</div>'
+        +(f.foto
+          ? ('<button type="button" class="btn" style="margin-top:5px;padding:6px 11px;font-size:12px;font-weight:800;background:none;border:1.5px solid var(--crm-critico);color:var(--crm-critico)"'
+             +' onclick="galApagar(\'' + escAttr(f.chave).replace(/'/g, "\\'") + '\')">'
+             +(GAL_ARMADO===f.chave?'Confirmar: apagar':'Não é ele — apagar')+'</button>')
+          : '<div class="hint" style="margin-top:4px">Sem retrato na ficha.</div>')
+        +'</div></div>';
+    });
+    // as fotos soltas daquele nome: de quem são?
+    soltas.forEach(function(f){
+      h+='<div style="display:flex;gap:11px;align-items:center;margin-top:10px;padding-top:10px;border-top:1px dashed var(--line)">'
+        +galRetrato(f.url)
+        +'<div style="flex:1;min-width:0">'
+        +'<div style="font-weight:800;color:var(--crm-atencao-text);font-size:13.5px">Foto sem ficha</div>'
+        +'<div class="hint" style="margin:1px 0">guardada como <strong>'+escAttr(f.chave)+'</strong></div>'
+        +'<div style="display:flex;flex-wrap:wrap;gap:5px;margin-top:6px">'
+        +g.fichas.map(function(fc){
+          return '<button type="button" class="btn btn-primary" style="padding:6px 11px;font-size:12px;font-weight:800"'
+            +' onclick="galAtribuir(\'' + escAttr(f.chave).replace(/'/g, "\\'") + '\',\'' + escAttr(fc.chave).replace(/'/g, "\\'") + '\')">'
+            +'É d' + (/^f/i.test(String(pelGet(fc.p,'sexo')||'')) ? 'a ' : 'o ') + escAttr(g.nome)
+            +(fc.raca?(' '+escAttr(fc.raca)):'')+(fc.tutor?(' · '+escAttr(primeiroNome(fc.tutor))):'')+'</button>';
+        }).join('')
+        +'<button type="button" class="btn" style="padding:6px 11px;font-size:12px;font-weight:800;background:none;border:1.5px solid var(--crm-critico);color:var(--crm-critico)"'
+        +' onclick="galApagar(\'' + escAttr(f.chave).replace(/'/g, "\\'") + '\')">'
+        +(GAL_ARMADO===f.chave?'Confirmar: apagar':'Não é de ninguém — apagar')+'</button>'
+        +'</div></div></div>';
+    });
+    return h+'</div>';
+  }
+  var GAL_SO_DECIDIR=true;
+  function galAlternar(){ GAL_SO_DECIDIR=!GAL_SO_DECIDIR; renderRelatorios(); }
+  function galeriaFotosHTML(){
+    var grupos;
+    try{ grupos=galDados(); }catch(e){ return ''; }
+    if(!grupos.length) return '';
+    var decidir=grupos.filter(function(g){ return g.decidir; });
+    var mostrar=GAL_SO_DECIDIR?decidir:grupos;
+    var nFotos=0; grupos.forEach(function(g){ nFotos+=g.fotos.length; });
+    return '<div class="card" style="margin-bottom:12px;border-left:4px solid var(--z-gold)">'
+      +'<h2 style="font-size:17px">Todas as fotos — de quem é cada uma</h2>'
+      +'<div class="hint">'+nFotos+' fotos guardadas · <strong>'+decidir.length+' nomes precisam de decisão</strong>. '
+      +'Aqui aparece também quem <strong>já tem foto</strong> — se o retrato estiver errado, é aqui que se descobre.</div>'
+      +'<button type="button" class="btn" style="margin:8px 0;padding:7px 12px;font-size:12.5px;font-weight:800;background:var(--z-cream-warm);color:var(--z-blue);border:1.5px solid var(--line)"'
+      +' onclick="galAlternar()">'+(GAL_SO_DECIDIR?('Ver todos os '+grupos.length+' nomes'):('Ver só os '+decidir.length+' que precisam de decisão'))+'</button>'
+      +(mostrar.length?mostrar.map(galGrupoHTML).join(''):'<div class="hint">Nada a decidir: cada foto está na ficha de alguém.</div>')
+      +'</div>';
+  }
+  // Atribuir: a foto solta passa a ser a da ficha. A original continua onde estava — se a
+  // pessoa errar, nada foi perdido.
+  function galAtribuir(chaveFoto, chaveFicha){
+    var url=(FOTOS||{})[chaveFoto];
+    if(!url){ alert('A foto sumiu do banco. Recarregue a tela.'); return; }
+    GAL_ARMADO='';
+    salvarFotoCad(chaveFicha, url).then(function(){
+      try{ if(typeof audit==='function') audit('foto','disse que a foto '+chaveFoto+' é de '+chaveFicha,{alvo:chaveFicha}); }catch(e){}
+      try{ renderRelatorios(); }catch(e){}
+      try{ if(typeof renderDaycare==='function') renderDaycare(); }catch(e){}
+    }).catch(function(e){ alert('NÃO consegui guardar: '+((e&&e.message)||e)); });
+  }
+  // Apagar em dois toques. Foto errada é pior que foto nenhuma: ninguém desconfia dela.
+  function galApagar(chave){
+    if(GAL_ARMADO!==chave){ GAL_ARMADO=chave; try{ renderRelatorios(); }catch(e){} return; }
+    GAL_ARMADO='';
+    if(!DB){ alert('Sem conexão com o banco. Tente de novo.'); return; }
+    DB.ref('daycare/fotos/'+chave).remove().then(function(){
+      try{ delete FOTOS[chave]; }catch(e){}
+      return DB.ref('daycare/fotos-v').set(String(Date.now()));
+    }).then(function(){
+      try{ if(typeof audit==='function') audit('foto','APAGOU a foto '+chave+' (não era de ninguém)',{alvo:chave}); }catch(e){}
+      try{ renderRelatorios(); }catch(e){}
+      try{ if(typeof renderDaycare==='function') renderDaycare(); }catch(e){}
+    }).catch(function(e){ alert('NÃO apaguei: '+((e&&e.message)||e)); });
+  }
   function semFotoDados(){
     var chaves=fotoChavesConhecidas();
     var sem=[], soltas=[];
@@ -21373,7 +21511,7 @@
     var el=document.getElementById('relGrid'); if(!el) return;
     if(!FOTO_CONF.__lido){ FOTO_CONF.__lido=true; try{ fotoConfCarregar().then(function(){ try{ renderRelatorios(); }catch(e){} }); }catch(e){} }
     el.innerHTML='<div id="relStatus" class="card" style="display:none;margin-bottom:12px;border-left:4px solid var(--z-gold)"></div>'
-      +fotosConferirHTML()+RELATORIOS.map(function(r){
+      +fotosConferirHTML()+galeriaFotosHTML()+RELATORIOS.map(function(r){
       return '<div class="card" style="margin-bottom:12px"><h2 style="font-size:17px">'+relEsc(r.t)+'</h2>'
         +'<div class="hint" style="margin-bottom:10px">'+relEsc(r.d)+'</div>'
         +'<button class="btn btn-gold" onclick="'+r.fn+'">Baixar Excel</button>'
