@@ -9944,7 +9944,7 @@
   // Agora existe um carimbo: esta constante é a versão que o aparelho está rodando, e o
   // Firebase guarda a versão publicada. Quando as duas diferem, aparece o aviso — mas
   // NUNCA recarrega sozinho: recarregar no meio de um check-in perderia o trabalho.
-  const APP_VERSAO='2026-08-28-11';
+  const APP_VERSAO='2026-08-28-12';
   function vigiarVersao(){
     if(!DB) return;
     try{
@@ -10387,7 +10387,10 @@
     // O aviso de quem não comeu deixa de depender de alguém abrir a tela do Empório: sai
     // uma vez por dia, quando a recepção ou a gestão entra — em qualquer tela. Esperar o
     // banco acordar antes, senão a leitura sai vazia e o dia é marcado como enviado.
-    try{ setTimeout(function(){ try{ empChecarAtrasoDiario(); }catch(e){} }, 6000); }catch(e){}
+    try{ setTimeout(function(){
+      try{ empChecarAtrasoDiario(); }catch(e){}
+      try{ empVigiaAlmoco2(); }catch(e){}
+    }, 6000); }catch(e){}
     // Quem tem escopo restrito (ex.: Amanda Barbosa, só almoço) cai direto na atividade dela.
     // Pessoa só com atividade (sem páginas) cai direto na atividade dela (Amanda Barbosa etc.).
     if(escopo && !_temPag && typeof abrirAtividade==='function'){
@@ -25009,8 +25012,10 @@
   // continuam gerando UMA mensagem só.
   function empChecarAtrasoDiario(){
     if(!DB) return;
+    // Todo mundo que entra dispara: a mensagem vai para o grupo de sempre, e o que
+    // importa é que ela saia TODO DIA. Só o tutor fica de fora (não é gente da casa).
     var r=document.body.dataset.role||'';
-    if(['consultora','gestao','supervisor','diretoria'].indexOf(r)<0) return;
+    if(r==='tutor') return;
     empCarregarDias(empDiasAtras(EMP_DIAS_GRUPO)).then(function(gs){
       if(!gs.length) return;
       EMP_ATRASO=gs;
@@ -25026,6 +25031,57 @@
   // Manda para o grupo o que ficou de ontem — no formato que a Adriana pediu (20/ago/2026):
   // primeiro a mensagem dizendo QUEM ficou; depois, em mensagem separada, o texto pronto para
   // a consultora encaminhar ao tutor sem reescrever nada.
+  // ===== NINGUÉM ABRIU O PROGRAMA HOJE — a cobrança das 16h20 ===================
+  // Texto da Adriana, 28/ago/2026. A ponte do Apps Script manda a mesma coisa no mesmo
+  // horário, e as duas dividem a trava do dia: o grupo recebe uma vez, venha de onde vier.
+  var VIGIA_ALM2_INICIO='16:20';
+  function empVigiaAlmoco2(){
+    if(!DB) return Promise.resolve();
+    var r=document.body.dataset.role||''; if(r==='tutor') return Promise.resolve();
+    var agora=(typeof horaAgora==='function')?horaAgora():'';
+    if(!agora || agora<VIGIA_ALM2_INICIO) return Promise.resolve();      // ainda não é hora
+    var d=new Date(); if(d.getDay()===0) return Promise.resolve();       // domingo não há Day Care
+    var dia=empDataKey();
+    return empPega('daycare/atividade/'+dia+'/almoco2').then(function(a2){
+      var registrado=!!(a2 && Object.keys(a2).length);
+      // Foi registrado E ninguém ficou sem comer: o dia fecha com uma linha, para o silêncio
+      // não ter dois significados. Se alguém ficou, o grupo já recebeu caso a caso na hora.
+      if(registrado){
+        var ninguem=!Object.keys(a2).some(function(k){ return a2[k]==='nao'; });
+        if(ninguem) return empFecharDiaAlmoco(dia);
+        return;
+      }
+      return DB.ref('daycare/cobranca-almoco2/'+dia).transaction(function(atual){
+        if(atual) return;                                                // a ponte (ou outro celular) já mandou
+        return {ts:Date.now(), por:(typeof quemSou==='function'?quemSou():'-'), hora:agora};
+      }).then(function(res){
+        if(!res || !res.committed) return;
+        var texto=['<b>ALMOÇO — 2º horário sem registro hoje</b>','',
+          'Não foi aberto o programa hoje no 2º horário do almoço. Confirmar.','',
+          'Amanda: ligar para o Day Care confirmando se não houve nenhum FILHOt que não comeu hoje.'].join('\n');
+        return tgAvisar({grupo:'comida', texto:texto}).then(function(rr){
+          if(typeof audit==='function') audit('almoco2-cobranca',
+            (rr&&rr.ok)?'avisou o grupo que ninguém registrou o 2º horário':'NÃO conseguiu avisar o grupo',{});
+          // Falhou? Solta a trava, para a ponte ou o próximo a entrar tentarem de novo.
+          if(!(rr&&rr.ok)) return DB.ref('daycare/cobranca-almoco2/'+dia).remove().catch(function(){});
+        });
+      });
+    }).catch(function(){});
+  }
+  // "Todos comeram hoje" também é notícia: é a diferença entre o dia ter sido conferido e
+  // o programa não ter sido aberto (Adriana, 28/ago/2026).
+  function empFecharDiaAlmoco(dia){
+    return DB.ref('daycare/cobranca-almoco2/'+dia).transaction(function(atual){
+      if(atual) return;
+      return {ts:Date.now(), por:(typeof quemSou==='function'?quemSou():'-'), fechamento:true};
+    }).then(function(res){
+      if(!res || !res.committed) return;
+      return tgAvisar({grupo:'comida', texto:'<b>ALMOÇO — dia conferido</b>\n\nTodos comeram hoje. Nenhum tutor a avisar.'})
+        .then(function(rr){
+          if(!(rr&&rr.ok)) return DB.ref('daycare/cobranca-almoco2/'+dia).remove().catch(function(){});
+        });
+    }).catch(function(){});
+  }
   function empAvisarAtrasoNoTelegram(){
     if(!DB||!EMP_ATRASO.length) return Promise.resolve();
     var hoje=empDataKey();

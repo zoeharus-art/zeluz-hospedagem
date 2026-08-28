@@ -3383,9 +3383,35 @@ async function main() {
   {
     check('o envio nao depende mais de abrir a tela do Emporio',
       /function empChecarAtrasoDiario\(\)/.test(html) &&
-      /setTimeout\(function\(\)\{ try\{ empChecarAtrasoDiario\(\); \}catch\(e\)\{\} \}, 6000\)/.test(html));
-    check('so quem avisa tutor dispara o envio',
-      /\['consultora','gestao','supervisor','diretoria'\]\.indexOf\(r\)<0\) return;/.test(html));
+      /try\{ empChecarAtrasoDiario\(\); \}catch\(e\)\{\}/.test(html) && /\}, 6000\); \}catch\(e\)\{\}/.test(html));
+    check('quem entra dispara, seja qual for o papel (so o tutor fica de fora)',
+      (html.match(/if\(r==='tutor'\) return/g) || []).length >= 1 &&
+      !/\['consultora','gestao','supervisor','diretoria'\]\.indexOf\(r\)<0\) return;/.test(html));
+
+    // a cobranca das 16h20 (Adriana, 28/ago): "nao foi aberto o programa hoje"
+    check('existe o vigia do 2o horario', /function empVigiaAlmoco2\(\)/.test(html));
+    check('so age depois das 16h20', /var VIGIA_ALM2_INICIO='16:20';/.test(html) &&
+      /if\(!agora \|\| agora<VIGIA_ALM2_INICIO\) return/.test(html));
+    check('domingo nao cobra (nao ha Day Care)', /if\(d\.getDay\(\)===0\) return/.test(html));
+    check('nao cobra se o 2o horario FOI registrado',
+      /var registrado=!!\(a2 && Object\.keys\(a2\)\.length\);/.test(html) &&
+      /if\(registrado\)\{/.test(html));
+    check('a trava do dia e a mesma da ponte, com transaction',
+      /cobranca-almoco2\/'\+dia\)\.transaction/.test(html));
+    check('se o Telegram falhar, a trava e solta para tentar de novo',
+      /cobranca-almoco2\/'\+dia\)\.remove\(\)/.test(html));
+    check('o texto e o que ela escreveu',
+      /Não foi aberto o programa hoje no 2º horário do almoço\. Confirmar\./.test(html) &&
+      /Amanda: ligar para o Day Care confirmando/.test(html));
+    check('o vigia roda junto com o resumo, na entrada',
+      /try\{ empVigiaAlmoco2\(\); \}catch\(e\)\{\}/.test(html));
+    check('dia conferido e ninguem sem comer: fecha o dia com uma linha',
+      /function empFecharDiaAlmoco\(dia\)/.test(html) &&
+      /Todos comeram hoje\. Nenhum tutor a avisar\./.test(html));
+    check('se alguem ficou sem comer, nao repete (o grupo ja soube na hora)',
+      /var ninguem=!Object\.keys\(a2\)\.some\(function\(k\)\{ return a2\[k\]==='nao'; \}\);/.test(html));
+    check('o fechamento tambem solta a trava se o Telegram falhar',
+      (html.match(/cobranca-almoco2\/'\+dia\)\.remove\(\)/g) || []).length >= 2);
     check('duas pessoas entrando juntas nao mandam a mensagem em dobro',
       /avisos-telegram-atraso\/'\+hoje\)\.transaction\(function\(atual\)\{/.test(html) &&
       /if\(!res \|\| !res\.committed\) return;/.test(html));
@@ -3423,6 +3449,27 @@ async function main() {
       check('"deixa para la" tambem tira da lista',
         !ctx.empPendentesDoDia(a1, a2, {'kako__marcia': {dispensado: true, quem: 'Amanda'}}).some(x => x.k === 'kako__marcia'));
     }
+  }
+  console.log('');
+
+  console.log('Ponte do Telegram: o vigia roda sem o app aberto (28/ago):');
+  {
+    const fs2 = require('fs'), path2 = require('path');
+    const gs = fs2.readFileSync(path2.join(__dirname, '..', 'integracao-telegram', 'Codigo.gs'), 'utf8');
+    check('a ponte tem a funcao do acionador', /function vigiaAlmoco2\(\)/.test(gs));
+    check('so age entre 16h20 e 17h20',
+      /VIGIA_HORA_INICIO = '16:20'/.test(gs) && /hhmm < VIGIA_HORA_INICIO \|\| hhmm > VIGIA_HORA_FIM/.test(gs));
+    check('usa o fuso de Sao Paulo (nao o do servidor do Google)',
+      /'America\/Sao_Paulo'/.test(gs));
+    check('domingo nao cobra', /if \(diaSemana === 7\) return;/.test(gs));
+    check('divide a trava do dia com o app', /daycare\/cobranca-almoco2\/' \+ dia/.test(gs));
+    check('so grava a trava se o Telegram aceitou', /if \(r && r\.ok\) \{[\s\S]{0,180}cobranca-almoco2/.test(gs));
+    check('manda o texto dela quando ninguem registrou',
+      /Não foi aberto o programa hoje no 2º horário do almoço\. Confirmar\./.test(gs));
+    check('e fecha o dia quando todos comeram', /Todos comeram hoje\. Nenhum tutor a avisar\./.test(gs));
+    check('tem funcao de teste de bancada', /function vigiaAlmoco2_TESTE\(\)/.test(gs));
+    check('o passo a passo de ligar o acionador esta no arquivo',
+      /A cada 15 minutos/.test(gs) && /Acionadores/.test(gs));
   }
   console.log('');
 

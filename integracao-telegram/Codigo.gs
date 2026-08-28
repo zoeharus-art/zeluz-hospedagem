@@ -1,6 +1,8 @@
 /**
  * ZÊLUZ · AuAulândia — ponte para os grupos do Telegram
  *
+ * Versão 6 (28/ago/2026) — vigia do 2º horário do almoço: às 16h20, se ninguém registrou,
+ *                          a ponte avisa o grupo sozinha (roda sem o app aberto).
  * Versão 5 (25/ago/2026) — emoji parou de derrubar a mensagem inteira (par surrogado).
  * Versão 4 (25/ago/2026) — grupo "Diário do Daycare" (resumo do dia sai do Plantão AuAulândia)
  *                          e grupo desconhecido devolve erro em vez de cair na veterinária.
@@ -166,4 +168,122 @@ function _esc(s) {
 function _resp(obj) {
   return ContentService.createTextOutput(JSON.stringify(obj))
     .setMimeType(ContentService.MimeType.JSON);
+}
+
+/* ================================================================================
+ * VIGIA DO 2º HORÁRIO DO ALMOÇO — Adriana, 28/ago/2026
+ *
+ * "Precisa mandar todo dia; e se não mandar, mandar uma mensagem às 16h20:
+ *  Não foi aberto o programa hoje do 2º horário do almoço. Confirmar.
+ *  Amanda, ligar para o Day Care confirmando se não teve ninguém que não comeu hoje."
+ *
+ * Por que isto mora AQUI e não no app: o app só existe enquanto alguém está com ele
+ * aberto. Justamente no dia em que ninguém abriu — que é o dia que precisa ser
+ * cobrado — não há ninguém para mandar a mensagem. O Apps Script roda sozinho, no
+ * servidor do Google, mesmo com a casa inteira de celular no bolso.
+ *
+ * COMO LIGAR (uma vez só):
+ *   1. Cole este arquivo no editor do Apps Script e salve.
+ *   2. Implantar → Gerenciar implantações → editar (lápis) → Versão: NOVA → Implantar.
+ *   3. No menu da esquerda, Acionadores (o relógio) → Adicionar acionador:
+ *        Função: vigiaAlmoco2
+ *        Origem do evento: Baseado no tempo
+ *        Tipo: Timer por minuto → A cada 15 minutos
+ *      Salvar. (O acionador "diário" do Google só aceita uma FAIXA de uma hora, por
+ *      isso o de 15 em 15 minutos: a função é que decide a hora certa.)
+ *   4. Ela vai pedir autorização na primeira vez. Autorize com a conta da Zêluz.
+ *
+ * A função só age entre 16h20 e 17h20, uma vez por dia, e nunca aos domingos.
+ * ============================================================================== */
+
+var FB_URL = 'https://hospedagem-zeluz-default-rtdb.firebaseio.com';
+var FB_KEY = 'AIzaSyD3udp47XruRAEeIYWNGn0ICGCX3a1qr28';   // a mesma chave pública do app
+var VIGIA_HORA_INICIO = '16:20';
+var VIGIA_HORA_FIM    = '17:20';
+
+function vigiaAlmoco2() {
+  var agora = new Date();
+  var hhmm = Utilities.formatDate(agora, 'America/Sao_Paulo', 'HH:mm');
+  if (hhmm < VIGIA_HORA_INICIO || hhmm > VIGIA_HORA_FIM) return;      // fora da janela
+  var diaSemana = Number(Utilities.formatDate(agora, 'America/Sao_Paulo', 'u'));  // 7 = domingo
+  if (diaSemana === 7) return;                                        // domingo não há Day Care
+  var dia = Utilities.formatDate(agora, 'America/Sao_Paulo', 'yyyy-MM-dd');
+
+  var token = _fbToken();
+  if (!token) return;                                                 // sem token, não inventa
+
+  // Já cobrado hoje? A mesma trava que o app usa — quem chegar primeiro grava.
+  var jaFoi = _fbLer('daycare/cobranca-almoco2/' + dia, token);
+  if (jaFoi) return;
+
+  // O 2º horário do almoço foi registrado por alguém hoje?
+  var almoco2 = _fbLer('daycare/atividade/' + dia + '/almoco2', token);
+  var quantos = 0, algumNao = false;
+  if (almoco2) {
+    for (var k in almoco2) {
+      if (!almoco2.hasOwnProperty(k)) continue;
+      quantos++;
+      if (almoco2[k] === 'nao') algumNao = true;
+    }
+  }
+  // Foi registrado e alguém ficou sem comer: o grupo já recebeu caso a caso, na hora.
+  if (quantos > 0 && algumNao) return;
+
+  var texto = (quantos > 0)
+    // Dia conferido e ninguém sem comer. Uma linha, para o silêncio não ter dois
+    // significados — "todos comeram" e "ninguém abriu o programa" (Adriana, 28/ago/2026).
+    ? ['<b>ALMOÇO — dia conferido</b>', '', 'Todos comeram hoje. Nenhum tutor a avisar.'].join('\n')
+    : [
+        '<b>ALMOÇO — 2º horário sem registro hoje</b>',
+        '',
+        'Não foi aberto o programa hoje no 2º horário do almoço. Confirmar.',
+        '',
+        'Amanda: ligar para o Day Care confirmando se não houve nenhum FILHOt que não comeu hoje.'
+      ].join('\n');
+
+  var r = _mandarTexto(GRUPOS['comida'], texto);
+  // Grava a trava DEPOIS de mandar: se o Telegram falhar, tenta de novo daqui a 15 minutos,
+  // ainda dentro da janela — silêncio aqui seria o mesmo defeito que esta função conserta.
+  if (r && r.ok) {
+    _fbGravar('daycare/cobranca-almoco2/' + dia, { ts: agora.getTime(), por: 'ponte', hora: hhmm }, token);
+  }
+}
+
+/** Login anônimo no Firebase — a mesma porta que o app usa. */
+function _fbToken() {
+  try {
+    var r = UrlFetchApp.fetch(
+      'https://identitytoolkit.googleapis.com/v1/accounts:signUp?key=' + FB_KEY,
+      { method: 'post', contentType: 'application/json',
+        payload: JSON.stringify({ returnSecureToken: true }), muteHttpExceptions: true });
+    return JSON.parse(r.getContentText()).idToken || '';
+  } catch (e) { return ''; }
+}
+
+function _fbLer(caminho, token) {
+  try {
+    var r = UrlFetchApp.fetch(FB_URL + '/' + caminho + '.json?auth=' + token, { muteHttpExceptions: true });
+    var v = JSON.parse(r.getContentText());
+    return (v === null) ? null : v;
+  } catch (e) { return null; }
+}
+
+function _fbGravar(caminho, obj, token) {
+  try {
+    UrlFetchApp.fetch(FB_URL + '/' + caminho + '.json?auth=' + token,
+      { method: 'put', contentType: 'application/json',
+        payload: JSON.stringify(obj), muteHttpExceptions: true });
+  } catch (e) {}
+}
+
+/** Teste de bancada: roda a verificação ignorando a hora, para ver se está tudo ligado. */
+function vigiaAlmoco2_TESTE() {
+  var token = _fbToken();
+  var dia = Utilities.formatDate(new Date(), 'America/Sao_Paulo', 'yyyy-MM-dd');
+  var a2 = _fbLer('daycare/atividade/' + dia + '/almoco2', token);
+  var n = 0; if (a2) { for (var k in a2) { if (a2.hasOwnProperty(k)) n++; } }
+  Logger.log('token: ' + (token ? 'ok' : 'FALHOU'));
+  Logger.log('dia: ' + dia + ' · registros no 2º horário: ' + n);
+  Logger.log('já cobrado hoje: ' + JSON.stringify(_fbLer('daycare/cobranca-almoco2/' + dia, token)));
+  Logger.log(n > 0 ? 'Não cobraria: o 2º horário foi registrado.' : 'Cobraria: ninguém registrou o 2º horário.');
 }
