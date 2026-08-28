@@ -9944,7 +9944,7 @@
   // Agora existe um carimbo: esta constante é a versão que o aparelho está rodando, e o
   // Firebase guarda a versão publicada. Quando as duas diferem, aparece o aviso — mas
   // NUNCA recarrega sozinho: recarregar no meio de um check-in perderia o trabalho.
-  const APP_VERSAO='2026-08-28-09';
+  const APP_VERSAO='2026-08-28-10';
   function vigiarVersao(){
     if(!DB) return;
     try{
@@ -13839,6 +13839,9 @@
   //   3. DESCONFIAR do possível mas estranho — e aí a veterinária é avisada.
   //
   // Peso errado não fica errado sozinho: ele vira dose de remédio errada.
+  // O maior FILHOt da casa tem 21 kg (Adriana, 28/ago/2026). Acima disso o app desconfia;
+  // bem acima, recusa. A margem existe para o caso raro e para o erro de digitação leve.
+  var PESO_MAIOR_DA_CASA=21, PESO_IMPOSSIVEL=25, PESO_MINIMO=0.3;
   function pesoFmt(kg){
     var n=Number(kg)||0;
     return n.toFixed(3).replace(/0+$/,'').replace(/\.$/,'').replace('.',',');
@@ -13866,24 +13869,29 @@
     var n=parseFloat(t);
     if(!isFinite(n)) return {erro:'Não entendi esse número.'};
     if(gramaExplicita && n>=100){ n=n/1000; como='gramas'; }
-    // Acima de 100 só pode ser grama: 9700 são 9,7 kg. 130 não é nem uma coisa nem outra.
-    if(n>100){
+    // Acima do teto da casa só pode ser grama: 9700 são 9,7 kg. 130 não é nem uma coisa
+    // nem outra — e é exatamente o número que passou na Repolho.
+    if(n>PESO_IMPOSSIVEL){
       var emKg=n/1000;
-      if(emKg>=0.3 && emKg<=100){ n=emKg; como='gramas'; }
-      else return {erro:pesoFmt(n)+' kg não é peso de FILHOt. Confira o número.'};
+      if(emKg>=PESO_MINIMO && emKg<=PESO_IMPOSSIVEL){ n=emKg; como='gramas'; }
+      else return {erro:pesoFmt(n)+' kg não é peso de FILHOt. A casa não recebe acima de '
+        +PESO_MAIOR_DA_CASA+' kg. Confira o número.'};
     }
-    if(n<0.3) return {erro:pesoFmt(n)+' kg é leve demais até para filhote. Confira.'};
+    if(n<PESO_MINIMO) return {erro:pesoFmt(n)+' kg é leve demais até para filhote. Confira.'};
+    // Entre o maior da casa e o impossível: pode ser, mas quase nunca é. Pede confirmação.
+    if(n>PESO_MAIOR_DA_CASA) como='acima do porte que a casa recebe';
     return {kg:Math.round(n*1000)/1000, como:como};
   }
-  // O que conta como mudança que merece um olhar. Piso de 100 g (foi o que ela pediu) e,
-  // para os grandes, 2% — senão um Labrador dispararia alarme toda semana e ninguém mais
-  // olharia. Entre pesagens distantes a régua afrouxa: engordar devagar é o esperado.
+  // O que conta como mudança que merece um olhar: 100 g, como ela pediu. Cabe porque a
+  // casa é de pequeno e médio porte — em FILHOt de até 21 kg, 100 g já é sinal, não é a
+  // água que ele bebeu. Entre pesagens distantes a régua afrouxa para 300 g: crescer
+  // devagar é o esperado, e um filhote engorda de propósito.
   function pesoVariacao(kgNovo, ultimo){
     if(!ultimo || !(ultimo.kg>0)) return null;
     var d=Math.round((kgNovo-ultimo.kg)*1000)/1000;
     var dias=pesoDiasDesde(ultimo.data);
     if(dias===null || dias<0) dias=0;
-    var limite = (dias>45) ? Math.max(0.3, ultimo.kg*0.05) : Math.max(0.1, ultimo.kg*0.02);
+    var limite = (dias>45) ? 0.3 : 0.1;
     var pct = ultimo.kg>0 ? (d/ultimo.kg*100) : 0;
     return {delta:d, dias:dias, limite:Math.round(limite*1000)/1000, pct:pct,
             suspeito: Math.abs(d) > limite + 0.0001};
@@ -13936,6 +13944,8 @@
       PESO_CONF[chave]=r.kg;
       var m='Entendi '+pesoFmt(r.kg)+' kg';
       if(r.como==='gramas') m+=' (o número estava em gramas)';
+      if(r.como==='acima do porte que a casa recebe')
+        m+=' — é acima dos '+PESO_MAIOR_DA_CASA+' kg do maior FILHOt da casa';
       if(v&&v.suspeito) m+=' — ele pesava '+pesoFmt(ant.kg)+' kg em '+fmtBR(ant.data)
         +' ('+pesoFmtDif(v.delta)+')';
       m+='. Toque de novo para confirmar.';
@@ -13992,6 +14002,7 @@
       +'</div>'
       +'<div class="hint" id="pesoSt" style="margin-top:6px;min-height:16px;font-weight:800"></div>'
       +'<div class="hint" style="margin-top:2px">Pode escrever 9,7 · 9.700 · 9700 (em gramas). Mudança acima de 100 g avisa a veterinária.</div>'
+      +'<div class="hint" style="margin-top:1px">A casa recebe até 21 kg — acima disso o app pergunta antes de gravar.</div>'
       +(u?'<div class="prev-calc" style="margin-top:8px">Último: <strong>'+String(u.kg).replace('.',',')+' kg</strong> em '+fmtBR(u.data)+evol+'</div>':'<div class="prev-nota">Ainda sem pesagem registrada.</div>')
       +(hist.length>1?'<div class="peso-hist">'+hist.slice(0,6).map(function(h){ return '<span>'+fmtBR(h.data)+': '+String(h.kg).replace('.',',')+' kg</span>'; }).join('')+'</div>':'')
       +'</div>';
@@ -19023,7 +19034,7 @@
       +'<button class="btn btn-primary" style="padding:11px 18px;font-weight:800" onclick="pesoTelaSalvar()">Salvar</button>'
       +'</div>'
       +'<div class="hint" id="pesoTelaSt" style="margin-top:6px;min-height:16px;font-weight:800"></div>'
-      +'<div class="hint" style="margin-top:2px">Pode escrever 9,7 · 9.700 · 9700 (em gramas).</div>'
+      +'<div class="hint" style="margin-top:2px">Pode escrever 9,7 · 9.700 · 9700 (em gramas). A casa recebe até 21 kg.</div>'
       +(u?('<div class="prev-calc" style="margin-top:10px">Último: <strong>'+pesoFmt(u.kg)+' kg</strong> em '+fmtBR(u.data)
           +(pesoDiasDesde(u.data)===0?' (hoje)':(pesoDiasDesde(u.data)===1?' (ontem)':' (há '+pesoDiasDesde(u.data)+' dias)'))+'</div>')
         :'<div class="prev-nota" style="margin-top:10px">Nunca foi pesado. Este vai ser o primeiro peso da ficha dele.</div>')

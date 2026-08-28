@@ -3298,7 +3298,12 @@ async function main() {
     check('9700 e lido como gramas', L('9700').kg === 9.7 && L('9700').como === 'gramas', JSON.stringify(L('9700')));
     check('700g e 0,7 kg', L('700g').kg === 0.7, JSON.stringify(L('700g')));
     check('14.4 e 14,4 kg', L('14.4').kg === 14.4);
-    check('45 kg passa direto', L('45').kg === 45 && !L('45').como);
+    // A casa nao recebe cao grande: o maior FILHOt tem 21 kg (Adriana, 28/ago)
+    check('21 kg (o maior da casa) passa direto', L('21').kg === 21 && !L('21').como);
+    check('22 kg existe, mas pede confirmacao',
+      L('22').kg === 22 && /acima do porte/.test(L('22').como || ''), JSON.stringify(L('22')));
+    check('45 kg NAO e mais aceito', !!L('45').erro, JSON.stringify(L('45')));
+    check('e a recusa ensina o limite da casa', /não recebe acima de 21 kg/.test(L('45').erro || ''));
     check('o "kg" digitado junto nao atrapalha', L('8,5 kg').kg === 8.5, JSON.stringify(L('8,5 kg')));
     // 3) o que nao e peso
     check('vazio nao grava', !!L('').erro);
@@ -3318,10 +3323,16 @@ async function main() {
     check('50 g nao incomoda ninguem', !v2.suspeito, JSON.stringify(v2));
     const v3 = ctx.pesoVariacao(3.15, {data: dias(7), kg: 3.0});
     check('150 g num FILHOt de 3 kg JA e suspeito', v3.suspeito, JSON.stringify(v3));
-    const v4 = ctx.pesoVariacao(40.5, {data: dias(7), kg: 40.0});
-    check('500 g num FILHOt de 40 kg ainda nao e', !v4.suspeito, JSON.stringify(v4));
-    const v5 = ctx.pesoVariacao(15.0, {data: dias(120), kg: 14.4});
-    check('600 g em 4 meses e crescer, nao adoecer', !v5.suspeito, JSON.stringify(v5));
+    const v4 = ctx.pesoVariacao(21.08, {data: dias(7), kg: 21.0});
+    check('80 g no maior FILHOt da casa ainda e a agua que ele bebeu', !v4.suspeito, JSON.stringify(v4));
+    const v4b = ctx.pesoVariacao(21.15, {data: dias(7), kg: 21.0});
+    check('150 g ja e sinal, mesmo nos 21 kg', v4b.suspeito, JSON.stringify(v4b));
+    const v5 = ctx.pesoVariacao(4.6, {data: dias(120), kg: 4.4});
+    check('200 g em 4 meses e crescer, nao adoecer', !v5.suspeito, JSON.stringify(v5));
+    const v5b = ctx.pesoVariacao(4.8, {data: dias(120), kg: 4.4});
+    check('400 g em 4 meses ja merece um olhar', v5b.suspeito, JSON.stringify(v5b));
+    check('a regua e 100 g, e 300 g depois de 45 dias',
+      /var limite = \(dias>45\) \? 0\.3 : 0\.1;/.test(html));
     check('sem peso anterior nao existe variacao', ctx.pesoVariacao(9.7, null) === null);
 
     // 5) o recado que chega na veterinaria
