@@ -3150,6 +3150,78 @@ async function main() {
   }
   console.log('');
 
+  console.log('Xara nao empresta foto (28/ago):');
+  {
+    // "A Giulia, ao tirar da Cookie Shih Tzu, apareceu na SRD; depois tirou da SRD e
+    // mudou tambem da Shih Tzu. Sao duas peludinhas diferentes, racas e tutoras."
+    // A gravacao estava certa (conferi no banco: fotos diferentes). O erro era a LEITURA:
+    // fotoDe() procurava por NOME em qualquer chave, ignorando o tutor.
+    check('existe a checagem de xara', /function nomeTemXara\(nome\)/.test(html));
+    check('a chave propria vem antes de qualquer busca',
+      /if\(h&&h\.refKey\)\{ var fx=fotoCad\(h\.refKey\); if\(fx\) return fx; \}/.test(html));
+    check('com xara, nao se procura por nome',
+      /if\(h&&h\.nome&&nomeTemXara\(h\.nome\)\) return '';/.test(html));
+    check('na duvida trata como xara (lado seguro)',
+      /catch\(e\)\{ return true; \}\s*\/\/ na dúvida|catch\(e\)\{ return true; \}   \/\/ na dúvida/.test(html));
+    check('pelMestreDe nao escolhe mais "o primeiro da lista" sem desempate',
+      /return d\|\|null; \}/.test(html) && !/return d\|\|ex\[0\]; \}/.test(html));
+
+    if (typeof ctx.nomeTemXara === 'function') {
+      const nomes = {};
+      (ctx.PELUDINHOS || []).forEach((p) => {
+        if (ctx.pelInativo(p)) return;
+        const n = ctx.jsNorm(ctx.pelNome(p));
+        nomes[n] = (nomes[n] || 0) + 1;
+      });
+      const xaras = Object.keys(nomes).filter((n) => nomes[n] > 1);
+      const solos = Object.keys(nomes).filter((n) => nomes[n] === 1);
+      console.log('    [xaras] ' + xaras.length + ' nomes repetidos entre os ativos: ' +
+        xaras.slice(0, 12).join(', '));
+      check('encontrei os nomes repetidos no cadastro real (Cookie entre eles)',
+        xaras.length > 0 && xaras.some((n) => /cookie/.test(n)), JSON.stringify(xaras));
+      check('todo nome repetido e tratado como xara',
+        xaras.every((n) => ctx.nomeTemXara(n) === true),
+        JSON.stringify(xaras.filter((n) => !ctx.nomeTemXara(n))));
+      check('nome unico continua podendo ser procurado',
+        solos.length === 0 || solos.slice(0, 20).every((n) => ctx.nomeTemXara(n) === false),
+        JSON.stringify(solos.slice(0, 20).filter((n) => ctx.nomeTemXara(n))));
+      check('nome vazio conta como xara (nao procura nada)', ctx.nomeTemXara('') === true);
+    }
+    check('identidade (foto, microchip) nao se herda por nome',
+      /_NAO_HERDA_POR_NOME=\{foto:1, microchip:1, chip:1\}/.test(html) &&
+      /if\(_NAO_HERDA_POR_NOME\[k\]\) return;/.test(html));
+    if (typeof ctx.extraDoHosp === 'function') {
+      // seguranca CONTINUA sendo herdada por nome: errar para mais protege
+      const alvo = (ctx.PELUDINHOS || []).find((p) => {
+        const e = ctx.pelExtra(p) || {};
+        return !ctx.pelInativo(p) && String(e.alergia || e.restricao || '').trim();
+      });
+      if (alvo) {
+        const e = ctx.pelExtra(alvo) || {};
+        const herdado = ctx.extraDoHosp({ nome: ctx.pelNome(alvo), tutor: 'tutor escrito de outro jeito' });
+        check('alergia/restricao continuam acompanhando o FILHOt pelo nome',
+          String(herdado.alergia || herdado.restricao || '').trim() !== '' ||
+          !String(e.alergia || '').trim(),
+          JSON.stringify({ ficha: e.alergia || e.restricao, herdado: herdado.alergia || herdado.restricao }));
+      }
+    }
+    if (typeof ctx.fotoDe === 'function') {
+      const bkp = ctx.FOTOS;
+      try {
+        ctx.FOTOS = { 'cookie__raquel': 'FOTO-DA-RAQUEL' };
+        check('a Cookie da Yara NAO pega a foto da Cookie da Raquel',
+          ctx.fotoDe({ nome: 'Cookie', tutor: 'Yara Athayde' }) !== 'FOTO-DA-RAQUEL',
+          String(ctx.fotoDe({ nome: 'Cookie', tutor: 'Yara Athayde' })).slice(0, 30));
+        check('e a da Raquel tambem nao pega pela busca por nome (so pela chave)',
+          ctx.fotoDe({ nome: 'Cookie', tutor: 'Raquel Duarte Ziller' }) !== 'FOTO-DA-RAQUEL' ||
+          ctx.fotoDe({ nome: 'Cookie', tutor: 'Raquel Duarte Ziller', refKey: 'cookie__raquel' }) === 'FOTO-DA-RAQUEL');
+        check('com a chave na mao, acha a foto certa',
+          ctx.fotoDe({ nome: 'Cookie', tutor: 'Raquel', refKey: 'cookie__raquel' }) === 'FOTO-DA-RAQUEL');
+      } finally { ctx.FOTOS = bkp; }
+    }
+  }
+  console.log('');
+
   // ---- resumo ----
   console.log('== Resultado: ' + pass + ' ok, ' + fail + ' falha(s) ==');
   if (fail) { console.log('\nFalhas:'); fails.forEach((f) => console.log('  - ' + f)); }

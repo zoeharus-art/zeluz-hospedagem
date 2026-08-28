@@ -4984,7 +4984,14 @@
             if(!nomeOk) return false;
             var pr=(typeof pelGet==='function')?jsNorm(pelGet(p,'raca')||''):'';
             return (!_r||!pr||pr===_r); });
-          if(_pm){ var _pe=(typeof pelExtra==='function')?pelExtra(_pm):{}; Object.keys(_pe||{}).forEach(function(k){ if(acc[k]==null||acc[k]==='') acc[k]=_pe[k]; }); }
+          // O QUE NUNCA SE HERDA POR NOME (Adriana, 28/ago/2026): identidade.
+          // Este bloco casa por NOME para que alergia e restrição acompanhem o FILHOt
+          // mesmo com a chave escrita de outro jeito — e isso é certo, porque errar para
+          // MAIS em segurança protege. Mas foto e microchip são o contrário: herdados por
+          // nome, põem a cara e o chip de um FILHOt na ficha do outro. Foi assim que a
+          // foto da Cookie Shih Tzu apareceu na Cookie SRD, que são de tutoras diferentes.
+          var _NAO_HERDA_POR_NOME={foto:1, microchip:1, chip:1};
+          if(_pm){ var _pe=(typeof pelExtra==='function')?pelExtra(_pm):{}; Object.keys(_pe||{}).forEach(function(k){ if(_NAO_HERDA_POR_NOME[k]) return; if(acc[k]==null||acc[k]==='') acc[k]=_pe[k]; }); }
         }
       }catch(e){}
       // 2) registro manual do próprio hóspede — só preenche o que estiver vazio (não apaga o mestre)
@@ -5191,7 +5198,10 @@
       if(ex.length===1) return ex[0];
       if(ex.length>1){ var ht=jsNorm(h.tutor||''), hr=jsNorm(h.raca||'');
         var d=ex.find(function(p){ var pt=jsNorm(pelGet(p,'tutor')), pr=jsNorm(pelGet(p,'raca')); return (pt&&(pt===ht||pt===hr))||(pr&&(pr===ht||pr===hr)); });
-        return d||ex[0]; }
+        // Sem desempate, NÃO se escolhe o primeiro da lista: dois FILHOts com o mesmo
+        // nome e nada que os separe é justamente o caso em que chutar troca as fichas
+        // (as duas Cookie, 28/ago/2026).
+        return d||null; }
       var pref=PELUDINHOS.filter(function(p){ var pn=jsNorm(p.n); return pn&&n.indexOf(pn)===0; });
       if(pref.length===1) return pref[0];
     }catch(e){}
@@ -5215,9 +5225,26 @@
     if(ht && ehRacaLike(ht)){ return (hr && !ehRacaLike(hr))?hr:''; }
     return ht; }
   // Resolvedores robustos (usam extraDoHosp, que casa refKey + nome__tutor + mestre + local).
+  // Quantos FILHOts ativos se chamam assim. Mais de um = o nome não identifica ninguém,
+  // e nenhuma busca por nome pode decidir de quem é a foto.
+  function nomeTemXara(nome){
+    try{
+      var alvo=jsNorm(nome||''); if(!alvo) return true;
+      var n=0;
+      (PELUDINHOS||[]).forEach(function(p){
+        if(typeof pelInativo==='function' && pelInativo(p)) return;
+        if(jsNorm(pelNome(p))===alvo) n++;
+      });
+      return n>1;
+    }catch(e){ return true; }   // na dúvida, trata como xará: é o lado seguro
+  }
   function fotoDe(h){ try{
     const ex=extraDoHosp(h); if(ex&&ex.foto) return ex.foto;
     const c=getCad(h); if(c&&c.foto) return c.foto;
+    // A chave própria vem antes de qualquer busca: é a única que identifica de verdade.
+    if(h&&h.refKey){ var fx=fotoCad(h.refKey); if(fx) return fx; }
+    // Com xará na casa, procurar por nome é sorteio. Melhor sem foto que a foto do outro.
+    if(h&&h.nome&&nomeTemXara(h.nome)) return '';
     // último recurso: a foto é salva por nome__tutor, mas o tutor pode estar trocado/inconsistente
     // (chave muda e a foto "some"). Acha por NOME em qualquer chave dos caches de cadastro.
     if(h&&h.nome&&typeof jsNorm==='function'){
@@ -9884,7 +9911,7 @@
   // Agora existe um carimbo: esta constante é a versão que o aparelho está rodando, e o
   // Firebase guarda a versão publicada. Quando as duas diferem, aparece o aviso — mas
   // NUNCA recarrega sozinho: recarregar no meio de um check-in perderia o trabalho.
-  const APP_VERSAO='2026-08-28-04';
+  const APP_VERSAO='2026-08-28-05';
   function vigiarVersao(){
     if(!DB) return;
     try{
