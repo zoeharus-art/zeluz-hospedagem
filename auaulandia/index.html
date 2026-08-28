@@ -206,6 +206,18 @@
 
   /* ===== cards peludinhos (Início) ===== */
   .pets-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(165px,1fr));gap:16px}
+  /* AuAulândia: a plantonista identifica o FILHOt pela FOTO — ela não convive com eles.
+     Card e retrato maiores só aqui e na atividade de foto (Adriana, 28/ago/2026). */
+  #hospGrid.pets-grid, #cafeGrid.pets-grid{grid-template-columns:repeat(auto-fill,minmax(210px,1fr))}
+  #hospGrid .pet .ph, #cafeGrid .pet .ph{width:132px;height:132px;font-size:46px;margin-bottom:12px}
+  #genGrid.foto-grande{grid-template-columns:repeat(auto-fill,minmax(200px,1fr))}
+  #genGrid.foto-grande .pet .ph{width:140px;height:140px;font-size:48px;margin-bottom:10px}
+  @media(max-width:520px){
+    #hospGrid.pets-grid, #cafeGrid.pets-grid{grid-template-columns:repeat(auto-fill,minmax(150px,1fr))}
+    #hospGrid .pet .ph, #cafeGrid .pet .ph{width:112px;height:112px;font-size:40px}
+    #genGrid.foto-grande{grid-template-columns:repeat(auto-fill,minmax(150px,1fr))}
+    #genGrid.foto-grande .pet .ph{width:118px;height:118px;font-size:42px}
+  }
   .pet{
     position:relative;
     background:var(--z-white);border:1px solid var(--line);border-radius:var(--radius);
@@ -9911,7 +9923,7 @@
   // Agora existe um carimbo: esta constante é a versão que o aparelho está rodando, e o
   // Firebase guarda a versão publicada. Quando as duas diferem, aparece o aviso — mas
   // NUNCA recarrega sozinho: recarregar no meio de um check-in perderia o trabalho.
-  const APP_VERSAO='2026-08-28-05';
+  const APP_VERSAO='2026-08-28-06';
   function vigiarVersao(){
     if(!DB) return;
     try{
@@ -18778,6 +18790,7 @@
   }
   function renderPesoAtiv(){
     var el=document.getElementById('genGrid'); if(!el) return;
+    el.classList.remove('foto-grande');
     var _t=ativTurmaPresente(), lista=_t.lista;
     var comMes=0;
     lista.forEach(function(o){ if(pesouEsteMes(pelExtra(o.p))) comMes++; });
@@ -18854,6 +18867,7 @@
   var FOTO_ATIV_PEND={};
   function renderFotoAtiv(){
     var el=document.getElementById('genGrid'); if(!el) return;
+    el.classList.add('foto-grande');
     var _t=ativTurmaPresente(), lista=_t.lista;
     var temFoto=function(o){ return !!fotoDe({nome:o.p.n, tutor:o.p.tutor, refKey:pelKey(o.p)}); };
     var com=lista.filter(temFoto).length;
@@ -18889,7 +18903,7 @@
         +'<div style="display:flex;gap:5px;margin-top:7px">'
         +'<button type="button" class="btn btn-gold" style="flex:1;padding:7px 10px;font-size:12px;font-weight:800"'
         +' onclick="document.getElementById(\'fotoAtivIn_'+k+'\').click()">'+(tinha?'Trocar':'Tirar foto')+'</button>'
-        +(tinha&&!pend?('<button type="button" class="btn" style="padding:7px 10px;font-size:12px;font-weight:800;'
+        +(tinha&&!pend&&fotoPodeApagar()?('<button type="button" class="btn" style="padding:7px 10px;font-size:12px;font-weight:800;'
           +'background:none;border:1.5px solid var(--crm-critico);color:var(--crm-critico)"'
           +' onclick="fotoAtivApagar(\''+escAttr(k).replace(/'/g,"\\'")+'\')">'
           +(FOTO_APAGAR_ARMADO===k?'Confirmar':'Apagar')+'</button>'):'')
@@ -18906,7 +18920,13 @@
   // Apagar em dois toques, sem janelinha do navegador (no celular ela some atrás do
   // teclado e a pessoa acha que o botão não funcionou).
   var FOTO_APAGAR_ARMADO='';
+  // Só quem edita ficha apaga foto. O monitor troca — e trocar exige ter a foto nova na
+  // mão, então um toque errado dele não destrói nada (Adriana, 28/ago/2026).
+  function fotoPodeApagar(){
+    try{ return (typeof canEditPel==='function') ? !!canEditPel() : false; }catch(e){ return false; }
+  }
   function fotoAtivApagar(k){
+    if(!fotoPodeApagar()){ alert('Apagar foto é da Gestão e da Supervisão.\n\nSe a foto está errada, tire a certa em "Trocar" — a nova apaga a antiga.'); return; }
     if(FOTO_APAGAR_ARMADO!==k){ FOTO_APAGAR_ARMADO=k; try{ renderFotoAtiv(); }catch(e){} return; }
     FOTO_APAGAR_ARMADO='';
     var o=ativTurmaPresente().lista.filter(function(x){ return dcKey(x.p.n,x.p.tutor)===k; })[0];
@@ -18981,6 +19001,7 @@
       if(_e) _e.style.display='none';
     }catch(e){}
     if(!document.getElementById('genGrid')) return;
+    try{ if(dcAtiv!=='foto') document.getElementById('genGrid').classList.remove('foto-grande'); }catch(e){}
     // Peso e Foto tem tela propria: nao se "marca feito", se digita um valor.
     if(dcAtiv==='peso'){ try{ renderPesoAtiv(); }catch(e){} return; }
     if(dcAtiv==='foto'){ try{ renderFotoAtiv(); }catch(e){} return; }

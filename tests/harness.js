@@ -3222,6 +3222,32 @@ async function main() {
   }
   console.log('');
 
+  console.log('Foto maior para a plantonista, apagar so para a Gestao (28/ago):');
+  {
+    // "Tire a opcao apagar do monitor. Deixe so trocar." · "Essas fotos precisam aparecer
+    // maiores para as plantonistas (elas nao ficam direto com os peludinhos)... a foto e
+    // uma das formas, e a mais utilizada, de identificar o peludinho."
+    check('apagar foto passa a exigir quem edita ficha',
+      /function fotoPodeApagar\(\)/.test(html) && /canEditPel==='function'\) \? !!canEditPel\(\)/.test(html));
+    check('o botao Apagar so aparece para quem pode',
+      /tinha&&!pend&&fotoPodeApagar\(\)/.test(html));
+    check('e a funcao tambem barra por dentro, com o caminho certo na mensagem',
+      /Apagar foto é da Gestão e da Supervisão|Apagar foto é da Gestão e da Supervisão/.test(html) &&
+      /tire a certa em "Trocar"/.test(html));
+    check('a foto do hospede cresce para a plantonista',
+      /#hospGrid \.pet \.ph, #cafeGrid \.pet \.ph\{width:132px;height:132px/.test(html));
+    check('e a da atividade de foto tambem',
+      /#genGrid\.foto-grande \.pet \.ph\{width:140px;height:140px/.test(html));
+    check('no celular o retrato continua grande, sem estourar a tela',
+      /@media\(max-width:520px\)\{[\s\S]{0,400}#hospGrid \.pet \.ph, #cafeGrid \.pet \.ph\{width:112px/.test(html));
+    check('o modo grande e ligado so na atividade de foto',
+      /el\.classList\.add\('foto-grande'\);/.test(html) &&
+      /if\(dcAtiv!=='foto'\) document\.getElementById\('genGrid'\)\.classList\.remove\('foto-grande'\)/.test(html));
+    check('e desligado no peso (que divide o mesmo grid)',
+      /el\.classList\.remove\('foto-grande'\);/.test(html));
+  }
+  console.log('');
+
   // ---- resumo ----
   console.log('== Resultado: ' + pass + ' ok, ' + fail + ' falha(s) ==');
   if (fail) { console.log('\nFalhas:'); fails.forEach((f) => console.log('  - ' + f)); }
