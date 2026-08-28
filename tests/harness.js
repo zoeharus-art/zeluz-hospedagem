@@ -2572,6 +2572,7 @@ async function main() {
     // "Central Zêluz mínimo... preciso de categoria de título, subtítulo e um outro título.
     //  Precisamos que as pessoas enxerguem." Referência: Azure Portal / Google Cloud / Zendesk.
     const cssCat = (/\.nav a\.grp\{([^}]*)\}/.exec(html) || [, ''])[1];
+    const cssSubAcc = (/\.nav a\.grp\.grp-sub\{([^}]*)\}/.exec(html) || [, ''])[1];
     const peso2 = (css) => { const m = /font-weight:(\d+)/.exec(css); return m ? parseInt(m[1], 10) : NaN; };
     check('menu: categoria > sub-cabeçalho > item, em tamanho',
       px(cssCat, 'font-size') > px(cssSub, 'font-size') && px(cssSub, 'font-size') > px(cssItem, 'font-size'),
@@ -2615,10 +2616,46 @@ async function main() {
       /classList\.contains\('nav-parent'\)\)\{ toggleAcc\(a\); return; \}/.test(html));
     check('menu: o estado de aberto/fechado fica guardado',
       /localStorage\.setItem\('zeluz_acc_'\+k/.test(html) && /localStorage\.getItem\('zeluz_acc_'\+acc\.dataset\.acc\)/.test(html));
-    check('menu: ao entrar, abre a categoria da tela em que a pessoa cai',
-      /a\.click\(\); const _accIni=a\.closest\('\.acc'\); if\(_accIni\) _accIni\.classList\.add\('acc-open'\)/.test(html));
-    check('menu: quem cai direto numa atividade entra com a categoria do Day Care aberta',
-      /escopo && !_temPag[\s\S]{0,420}?blocoDaycare[\s\S]{0,220}?acc-open/.test(html));
+    check('menu: ao entrar, abre a corrente inteira (categoria E sub-cabeçalho) da tela ativa',
+      /a\.click\(\); abrirSanfonasDe\(a\);/.test(html)
+      && /function abrirSanfonasDe\(el\)[\s\S]{0,400}?parentElement\.closest\('\.acc'\)/.test(html));
+    check('menu: quem cai direto numa atividade entra com o Day Care aberto',
+      /escopo && !_temPag[\s\S]{0,420}?abrirSanfonasDe\(document\.getElementById\('blocoDaycare'\)\)/.test(html));
+
+    // ---- 4c. SEGUNDO nível: o sub-cabeçalho também abre e fecha ----
+    // Adriana, 27/ago/2026: "Toda vez que abro a Central Zêluz, tudo abre... isso vira poluição.
+    // Quero que abra os títulos, e ao clicar nele abre o restante; clico de novo, fecha."
+    const subsAcc = [...nav.matchAll(/<a class="grp grp-sub nav-parent" data-acc-toggle="([a-z-]+)"([^>]*)>([\s\S]*?)<\/a>/g)]
+      .map((mm) => ({ chave: mm[1], dentro: mm[3] }));
+    check('menu: os 6 sub-cabeçalhos são linhas clicáveis que abrem e fecham',
+      subsAcc.length === 6, JSON.stringify(subsAcc.map((x) => x.chave)));
+    subsAcc.forEach((x) => {
+      check('menu: sub-cabeçalho ' + x.chave + ' tem seta', /acc-caret/.test(x.dentro));
+    });
+    check('menu: cada sub-cabeçalho guarda o próprio estado (chave própria)',
+      new Set(subsAcc.map((x) => x.chave)).size === 6 && subsAcc.every((x) => /^[sc]-/.test(x.chave)));
+    check('menu: sub-cabeçalho fechado esconde os itens dele (mesma mecânica da categoria)',
+      subsAcc.every((x) => {
+        const i = nav.indexOf('data-acc-toggle="' + x.chave + '"');
+        return nav.indexOf('<div class="acc-panel">', i) > i;
+      }));
+    check('menu: o sub-cabeçalho é 15px dourado, não herda os 17px creme da categoria',
+      px(cssSubAcc, 'font-size') === 15 && /color:var\(--z-gold\)/.test(cssSubAcc), cssSubAcc);
+    check('menu: o sub-cabeçalho tem alvo de toque de 44px',
+      px(cssSubAcc, 'min-height') >= 44, cssSubAcc);
+    check('menu: Cadastro de Peludinhos fica na RAIZ da Central Zêluz (fora de sub-cabeçalho)',
+      (() => {
+        const iFicha = nav.indexOf('data-v="ficha"');
+        const iCentral = nav.indexOf('data-acc-toggle="central"');
+        const iPrimeiroSub = nav.indexOf('data-acc-toggle="c-auaulandia"');
+        return iCentral < iFicha && iFicha < iPrimeiroSub;
+      })());
+    check('menu: a pendência sobe em dois degraus (item, sub-cabeçalho, categoria)',
+      /\.acc-panel a\.nav-pend:not\(\.nav-parent\)/.test(html));
+    check('menu: ao medir cabeçalho vazio, cabeçalho não conta como item',
+      /!a\.classList\.contains\('nav-parent'\)/.test(html));
+    check('menu: Enriquecimento Ambiental (eahist) continua na Operação',
+      porV.eahist && porV.eahist.grupo === 'Operação', porV.eahist ? porV.eahist.grupo : 'sumiu');
     check('menu: a pendência de item escondido sobe para a linha da categoria',
       /function navPendSubirParaOPai\(\)[\s\S]{0,900}?\.acc-panel a\.nav-pend/.test(html)
       && /navPendSubirParaOPai\(\);/.test(html));
@@ -2942,6 +2979,89 @@ async function main() {
       ctx.ORC_REP = {};
       check('FILHOt sem cadastro (avulso) nao tem reposicao',
         ctx.orcSaldoRep({ key: 'x', semCadastro: true }) === 0);
+    }
+  }
+  console.log('');
+
+  console.log('Peso e Foto: as duas coisas que o monitor pode mexer (27/ago):');
+  {
+    // Adriana: "crie uma atividade nova: Peso do Peludinho... e uma atividade Foto do
+    // peludinho, para que os proprios monitores possam colocar a foto (eles nao tem
+    // direito de alterar nenhum dado da ficha, a nao ser a foto). Ao colocar uma foto,
+    // tem que tirar a outra."
+    check('as duas atividades existem na lista do Day Care',
+      /\{s:'peso',t:'Peso do peludinho'/.test(html) && /\{s:'foto',t:'Foto do peludinho'/.test(html));
+    check('cada uma tem tela propria (nao e "marcar feito")',
+      /if\(dcAtiv==='peso'\)\{ try\{ renderPesoAtiv\(\)/.test(html) &&
+      /if\(dcAtiv==='foto'\)\{ try\{ renderFotoAtiv\(\)/.test(html));
+    check('o peso cai na MESMA ficha (pesos), nao num lugar paralelo',
+      /setPelExtra\(o\.p,\{pesos:lista\}\)/.test(html));
+    check('peso fora do razoavel nao entra', /kg>=0\.3&&kg<=120/.test(html));
+    check('pesar duas vezes no mesmo dia nao cria duas linhas',
+      /lista=lista\.filter\(function\(x\)\{ return x\.data!==hj; \}\)/.test(html));
+    check('a foto nova apaga a antiga, e a tela avisa',
+      /A foto nova apaga a antiga/.test(html) && /A antiga ser\u00e1 apagada|A antiga será apagada/.test(html));
+    check('a foto e comprimida antes de gravar (o cadastro inteiro e baixado toda vez)',
+      /var max=160, w=img\.width, h=img\.height;/.test(html));
+    check('a tela de foto abre por quem NAO tem', /sem foto primeiro: e para isso|sem foto primeiro: é para isso/.test(html));
+    check('falha ao gravar a foto nao some em silencio',
+      /N\u00c3O gravou: '\+\(\(e&&e\.message\)\|\|e\)\+' — a foto continua aqui|NÃO gravou: '\+\(\(e&&e\.message\)\|\|e\)\+' — a foto continua aqui/.test(html));
+
+    // ---- o relatorio de quem nao tem foto ----
+    check('o relatorio de sem-foto existe e esta na lista',
+      /function semFotoDados\(\)/.test(html) && /FILHOts SEM foto na ficha/.test(html));
+    check('separa "sem foto nenhuma" de "foto a conferir"',
+      /sem:sem, soltas:soltas/.test(html) && /CONFERIR antes de usar/.test(html));
+    check('o relatorio avisa do xara (Boris da Laura x Boris da Valeria)',
+      /Boris da Laura tem foto guardada como Boris da Val/.test(html));
+
+    if (typeof ctx.semFotoDados === 'function') {
+      const d = ctx.semFotoDados();
+      console.log('    [fotos] ' + d.comFoto + ' com foto · ' + d.sem.length +
+        ' sem foto nenhuma · ' + d.soltas.length + ' com foto a conferir');
+      // A bancada nao carrega as fotos (elas vivem em daycare/fotos, que o sandbox nao
+      // baixa), entao aqui todos caem em "sem foto". Se eu deixar assim, as assercoes
+      // passam sozinhas. Entao ela DIZ, e a logica e provada logo abaixo com um FOTOS
+      // montado a mao — inclusive o caso do xara, que e o perigoso.
+      if (!d.comFoto && d.sem.length) {
+        console.log('    (o sandbox nao carrega as fotos — a contagem real e no app: ' +
+          '126 ativos, 79 com foto, 38 sem, 9 a conferir em 27/ago)');
+      }
+      check('o relatorio roda contra o cadastro real',
+        (d.comFoto + d.sem.length + d.soltas.length) > 0);
+      check('ninguem aparece nas duas listas ao mesmo tempo',
+        !d.sem.some((x) => d.soltas.some((y) => y.chave === x.chave)));
+      check('toda "foto a conferir" traz onde a foto esta',
+        d.soltas.every((x) => (x.candidatas || []).length > 0),
+        JSON.stringify(d.soltas.filter((x) => !(x.candidatas || []).length).map((x) => x.nome)));
+      const boris = d.soltas.find((x) => /boris/i.test(x.nome));
+      if (boris) {
+        check('o Boris aparece como A CONFERIR, nunca religado sozinho',
+          (boris.candidatas || []).length > 0 && boris.chave !== boris.candidatas[0],
+          JSON.stringify({ ficha: boris.chave, foto: boris.candidatas }));
+      }
+
+      // ---- a logica, com fotos montadas aqui: nao depende do que a bancada carrega ----
+      const bkpFotos = ctx.FOTOS;
+      try {
+        const alvo = (ctx.PELUDINHOS || []).filter((p) => !ctx.pelInativo(p)).slice(0, 3);
+        if (alvo.length === 3) {
+          const k0 = ctx.pelKey(alvo[0]);
+          const nome1 = ctx.jsNorm(ctx.pelNome(alvo[1]));
+          ctx.FOTOS = {};
+          ctx.FOTOS[k0] = 'data:image/jpeg;base64,xxx';            // esse TEM foto
+          ctx.FOTOS[nome1 + '__outro tutor'] = 'data:image/jpeg;base64,yyy'; // xara do segundo
+          const r = ctx.semFotoDados();
+          check('quem tem foto na chave certa sai da lista',
+            !r.sem.some((x) => x.chave === k0) && !r.soltas.some((x) => x.chave === k0));
+          check('foto de xara NAO conta como foto — vai para "a conferir"',
+            r.soltas.some((x) => ctx.jsNorm(x.nome) === nome1),
+            JSON.stringify(r.soltas.map((x) => x.nome)));
+          check('e quem nao tem nada em lugar nenhum fica em "sem foto"',
+            r.sem.some((x) => x.chave === ctx.pelKey(alvo[2])));
+          check('a contagem de "com foto" bate com o que foi montado', r.comFoto === 1, String(r.comFoto));
+        }
+      } finally { ctx.FOTOS = bkpFotos; }
     }
   }
   console.log('');

@@ -103,6 +103,15 @@
   .nav a.grp:hover{background:rgba(255,255,255,.05)}
   .nav a.grp svg{width:18px;height:18px}
   .acc.acc-open > a.grp{background:none}
+  /* SEGUNDO nível de sanfona (Adriana, 27/ago/2026): "quero que abra os títulos, e ao clicar
+     nele abre o restante; clico de novo, fecha". O sub-cabeçalho também é <a class="grp">,
+     então precisa desfazer o tamanho/cor da CATEGORIA e voltar ao degrau dele. */
+  .nav a.grp.grp-sub{font-size:15px;font-weight:700;color:var(--z-gold);
+    letter-spacing:.3px;text-transform:none;
+    margin:8px 0 2px;padding:8px 12px 8px 14px;min-height:44px;  /* alvo de toque no celular */
+    border-top:none;border-radius:9px;gap:8px}
+  .nav a.grp.grp-sub:hover{background:rgba(255,255,255,.05)}
+  .nav a.grp.grp-sub .acc-caret{border-left-width:4px;border-top-width:3px;border-bottom-width:3px;opacity:.85}
   /* Item dentro de categoria: recuado, com uma trilha fina à esquerda ligando os irmãos. */
   .nav .acc-panel a[data-v],
   .nav .acc-panel a:not([data-v]):not(.nav-parent){margin-left:22px;padding-left:12px;
@@ -1732,23 +1741,28 @@
     <div class="acc" data-acc="servicos">
       <a class="grp nav-parent" data-acc-toggle="servicos"><span data-icon="paw"></span><span>Serviços</span><span class="acc-caret" aria-hidden="true"></span></a>
       <div class="acc-panel">
-        <div class="grp grp-sub">AuAulândia — o hotel da Zêluz</div>
-        <a data-v="conferencia" class="so-conferencia" title="O monitor confere corpo e pertences de quem chegou (2º passo; o 1º é da Central Zêluz)."><span data-icon="check"></span><span>Conferência do check-in</span></a>
-        <a data-v="cuidadovet" class="so-vet" title="Alterações no corpo que a veterinária precisa ver."><span data-icon="heart"></span><span>Cuidado Vet</span></a>
-        <a data-v="hospedagem" title="O relatório de cada hóspede, turno a turno."><span data-icon="moon"></span><span>Plantão da noite</span></a>
-        <a data-v="hospedes" class="so-hosp" title="Quem está na casa, medicação e alimentação."><span data-icon="paw"></span><span>Hóspedes de hoje</span></a>
-        <!-- SEMPRE 2 conferências: uma na ENTRADA e uma na SAÍDA (Adriana, 03/ago/2026).
-             Check-out = os monitores juntam. Check-out com o tutor = as consultoras
-             conferem com o tutor e colhem a assinatura (mora na Central Zêluz). -->
-        <a data-v="checkout" title="O monitor monta a bolsa e devolve tudo (1º passo; a Central fecha com o tutor)."><span data-icon="check"></span><span>Check-out</span></a>
-        <!-- Bloco do Day Care: continua sendo UM bloco para a trava de permissão granular
-             continuar valendo — quem tem escopo restrito e nenhuma atividade não vê o
-             Day Care (aplicarPaginasPessoa). -->
-        <div class="so-day" id="blocoDaycare">
-          <div class="grp grp-sub">Day Care</div>
-          <a data-v="abertura" class="so-abertura" title="Monitor 1: como a casa abre."><span data-icon="sun"></span><span>Abertura do dia</span></a>
-          <!-- Turminhas (dias) + Atividades vivem no #dcSubnav (montarSubnav). -->
-          <div class="subnav so-day" id="dcSubnav"></div>
+        <div class="acc" data-acc="s-auaulandia">
+          <a class="grp grp-sub nav-parent" data-acc-toggle="s-auaulandia"><span>AuAulândia — o hotel da Zêluz</span><span class="acc-caret" aria-hidden="true"></span></a>
+          <div class="acc-panel">
+          <a data-v="conferencia" class="so-conferencia" title="O monitor confere corpo e pertences de quem chegou (2º passo; o 1º é da Central Zêluz)."><span data-icon="check"></span><span>Conferência do check-in</span></a>
+          <a data-v="cuidadovet" class="so-vet" title="Alterações no corpo que a veterinária precisa ver."><span data-icon="heart"></span><span>Cuidado Vet</span></a>
+          <a data-v="hospedagem" title="O relatório de cada hóspede, turno a turno."><span data-icon="moon"></span><span>Plantão da noite</span></a>
+          <a data-v="hospedes" class="so-hosp" title="Quem está na casa, medicação e alimentação."><span data-icon="paw"></span><span>Hóspedes de hoje</span></a>
+          <!-- SEMPRE 2 conferências: uma na ENTRADA e uma na SAÍDA (Adriana, 03/ago/2026).
+               Check-out = os monitores juntam; o Check-out com o tutor mora na Central. -->
+          <a data-v="checkout" title="O monitor monta a bolsa e devolve tudo (1º passo; a Central fecha com o tutor)."><span data-icon="check"></span><span>Check-out</span></a>
+          </div>
+        </div>
+        <!-- O bloco do Day Care é ao mesmo tempo a sanfona do sub-cabeçalho E o elemento
+             que a trava de permissão granular esconde (aplicarPaginasPessoa): quem tem
+             escopo restrito e nenhuma atividade não vê o Day Care. -->
+        <div class="acc so-day" id="blocoDaycare" data-acc="s-daycare">
+          <a class="grp grp-sub nav-parent" data-acc-toggle="s-daycare"><span>Day Care</span><span class="acc-caret" aria-hidden="true"></span></a>
+          <div class="acc-panel">
+            <a data-v="abertura" class="so-abertura" title="Monitor 1: como a casa abre."><span data-icon="sun"></span><span>Abertura do dia</span></a>
+            <!-- Turminhas (dias) + Atividades vivem no #dcSubnav (montarSubnav). -->
+            <div class="subnav so-day" id="dcSubnav"></div>
+          </div>
         </div>
       </div>
     </div>
@@ -1756,29 +1770,47 @@
     <div class="acc" data-acc="central">
       <a class="grp nav-parent" data-acc-toggle="central"><span data-icon="star"></span><span>Central Zêluz</span><span class="acc-caret" aria-hidden="true"></span></a>
       <div class="acc-panel">
+        <!-- Fica na raiz da categoria de propósito: não é de AuAulândia nem de Day Care,
+             é o cadastro único dos dois (Adriana, 26/ago/2026). -->
         <a data-v="ficha" class="so-gestao" title="Um cadastro só, para Day Care e AuAulândia — tudo começa aqui."><span data-icon="paw"></span><span>Cadastro de Peludinhos</span></a>
-        <div class="grp grp-sub">AuAulândia</div>
-        <a data-v="checkin" title="O tutor chega: entrada, alimentação, medicação, assinatura (1º passo)."><span data-icon="paw"></span><span>Check-in</span></a>
-        <a data-v="checkoutconf" class="so-conf-saida" title="Conferir a bolsa junto com o tutor e assinar (2º passo)."><span data-icon="check"></span><span>Check-out com o tutor</span></a>
-        <a data-v="orcamento" class="so-recepcao" title="Monte e envie o orçamento ao tutor."><span data-icon="star"></span><span>Orçamento de hospedagem</span></a>
-        <a data-v="recepcao" class="so-recepcao" title="Ração acabando, remédio faltando, algo que ficou."><span data-icon="paw"></span><span>Pendências com o tutor</span></a>
-        <div class="grp grp-sub">Day Care</div>
-        <!-- Saiu do menu "Empório", que foi deletado: ninguém procuraria a mensagem do
-             tutor ali dentro (Adriana, 13/ago/2026). -->
-        <a data-v="emporio" class="so-emporio" title="A mensagem pronta para avisar o tutor."><span data-icon="paw"></span><span>Quem não comeu hoje</span></a>
-        <a data-v="reposicao" class="so-recepcao" title="Créditos de dias por falta avisada."><span data-icon="star"></span><span>Reposições</span></a>
-        <!-- Adriana, 19/ago/2026: é aqui que a recepção lança o que hoje digita na
-             planilha — e a planilha vira só o espelho que alimenta a TV. -->
-        <a data-v="dashdc" class="so-recepcao" title="A planilha do Day Care, item por item."><span data-icon="star"></span><span>Lançamentos do dia</span></a>
-        <div class="grp grp-sub">Peludinhos</div>
-        <!-- A tela existia como "em breve" e nunca teve entrada no menu. Agora é o
-             relatório de quem está devendo vacina, vermífugo, coleira, exame ou peso. -->
-        <a data-v="vacinas" class="so-gestao" title="Vacina, vermífugo, coleira, exame e peso: quem está atrasado."><span data-icon="alert"></span><span>Prevenção</span></a>
-        <a data-v="alergia" class="so-gestao" title="O que a ficha diz e ninguém confirmou com o tutor."><span data-icon="star"></span><span>Alergias a confirmar</span></a>
-        <div class="grp grp-sub">Planos e cobranças</div>
-        <a data-v="renovacao" class="so-gestao" title="Quem está no fim do plano."><span data-icon="star"></span><span>Renovação de planos</span></a>
-        <!-- Sem data-v de propósito: a tela ainda não existe. O clique não navega. -->
-        <a class="so-gestao" style="opacity:.55;cursor:default" title="Quem deve no Day Care."><span data-icon="star"></span><span>Em débito</span><span class="soon">em breve</span></a>
+        <div class="acc" data-acc="c-auaulandia">
+          <a class="grp grp-sub nav-parent" data-acc-toggle="c-auaulandia"><span>AuAulândia</span><span class="acc-caret" aria-hidden="true"></span></a>
+          <div class="acc-panel">
+          <a data-v="checkin" title="O tutor chega: entrada, alimentação, medicação, assinatura (1º passo)."><span data-icon="paw"></span><span>Check-in</span></a>
+          <a data-v="checkoutconf" class="so-conf-saida" title="Conferir a bolsa junto com o tutor e assinar (2º passo)."><span data-icon="check"></span><span>Check-out com o tutor</span></a>
+          <a data-v="orcamento" class="so-recepcao" title="Monte e envie o orçamento ao tutor."><span data-icon="star"></span><span>Orçamento de hospedagem</span></a>
+          <a data-v="recepcao" class="so-recepcao" title="Ração acabando, remédio faltando, algo que ficou."><span data-icon="paw"></span><span>Pendências com o tutor</span></a>
+          </div>
+        </div>
+        <div class="acc" data-acc="c-daycare">
+          <a class="grp grp-sub nav-parent" data-acc-toggle="c-daycare"><span>Day Care</span><span class="acc-caret" aria-hidden="true"></span></a>
+          <div class="acc-panel">
+          <!-- Saiu do menu "Empório", que foi deletado: ninguém procuraria a mensagem
+               do tutor ali dentro (Adriana, 13/ago/2026). -->
+          <a data-v="emporio" class="so-emporio" title="A mensagem pronta para avisar o tutor."><span data-icon="paw"></span><span>Quem não comeu hoje</span></a>
+          <a data-v="reposicao" class="so-recepcao" title="Créditos de dias por falta avisada."><span data-icon="star"></span><span>Reposições</span></a>
+          <!-- Adriana, 19/ago/2026: é aqui que a recepção lança o que hoje digita na
+               planilha — e a planilha vira só o espelho que alimenta a TV. -->
+          <a data-v="dashdc" class="so-recepcao" title="A planilha do Day Care, item por item."><span data-icon="star"></span><span>Lançamentos do dia</span></a>
+          </div>
+        </div>
+        <div class="acc" data-acc="c-peludinhos">
+          <a class="grp grp-sub nav-parent" data-acc-toggle="c-peludinhos"><span>Peludinhos</span><span class="acc-caret" aria-hidden="true"></span></a>
+          <div class="acc-panel">
+          <!-- A tela existia como "em breve" e nunca teve entrada no menu. Agora é o
+               relatório de quem deve vacina, vermífugo, coleira, exame ou peso. -->
+          <a data-v="vacinas" class="so-gestao" title="Vacina, vermífugo, coleira, exame e peso: quem está atrasado."><span data-icon="alert"></span><span>Prevenção</span></a>
+          <a data-v="alergia" class="so-gestao" title="O que a ficha diz e ninguém confirmou com o tutor."><span data-icon="star"></span><span>Alergias a confirmar</span></a>
+          </div>
+        </div>
+        <div class="acc" data-acc="c-planos">
+          <a class="grp grp-sub nav-parent" data-acc-toggle="c-planos"><span>Planos e cobranças</span><span class="acc-caret" aria-hidden="true"></span></a>
+          <div class="acc-panel">
+          <a data-v="renovacao" class="so-gestao" title="Quem está no fim do plano."><span data-icon="star"></span><span>Renovação de planos</span></a>
+          <!-- Sem data-v de propósito: a tela ainda não existe. O clique não navega. -->
+          <a class="so-gestao" style="opacity:.55;cursor:default" title="Quem deve no Day Care."><span data-icon="star"></span><span>Em débito</span><span class="soon">em breve</span></a>
+          </div>
+        </div>
       </div>
     </div>
 
@@ -1787,12 +1819,12 @@
       <div class="acc-panel">
         <a data-v="acerto" class="so-master" title="Acerto das plantonistas: noites, dobras, quanto pagamos."><span data-icon="star"></span><span>Financeiro do plantão</span></a>
         <a data-v="ritmo" class="so-gestao" title="Tempo por etapa, dia a dia."><span data-icon="star"></span><span>Ritmo do Time</span></a>
+        <!-- Enriquecimento Ambiental é da Operação (o grupo da Márcia), não dos Serviços. -->
         <a data-v="eahist" class="so-gestao" title="O que foi feito e quem não participou."><span data-icon="star"></span><span>Enriquecimento Ambiental</span></a>
         <a data-v="pessoas" class="so-master" title="Pessoas, senhas e quem acessa o quê."><span data-icon="users"></span><span>Time</span></a>
         <div class="subnav so-master" id="pSubnav" style="display:none"></div>
         <a data-v="config" class="so-master" title="Telegram e ponte da planilha."><span data-icon="lock"></span><span>Configurações</span></a>
-        <!-- Fica por último na Operação até a Fase 2, quando o Início e o Painel do Dia
-             viram uma coisa só (a fatia de cada um). -->
+        <!-- Último da Operação até a Fase 2, quando Início e Painel do Dia viram um só. -->
         <a data-v="painel" class="so-master" title="Auditoria e cumprimento de protocolos"><span data-icon="star"></span><span>Painel do Dia</span></a>
       </div>
     </div>
@@ -4136,7 +4168,10 @@
         var pai=acc.querySelector(':scope > a.nav-parent'); if(!pai) return;
         var aberto=acc.classList.contains('acc-open');
         var soma=0;
-        acc.querySelectorAll('.acc-panel a.nav-pend').forEach(function(f){
+        // :not(.nav-parent) — com DOIS níveis de sanfona, o sub-cabeçalho também é um
+        // <a> que acende. Sem isto ele seria contado como item e a categoria mostraria o
+        // dobro. Assim a conta sobe em dois degraus: item -> sub-cabeçalho -> categoria.
+        acc.querySelectorAll('.acc-panel a.nav-pend:not(.nav-parent)').forEach(function(f){
           var b=f.querySelector('.nav-badge');
           soma+=Math.max(1, parseInt((b&&b.textContent)||'1',10)||1);
         });
@@ -9849,7 +9884,7 @@
   // Agora existe um carimbo: esta constante é a versão que o aparelho está rodando, e o
   // Firebase guarda a versão publicada. Quando as duas diferem, aparece o aviso — mas
   // NUNCA recarrega sozinho: recarregar no meio de um check-in perderia o trabalho.
-  const APP_VERSAO='2026-08-27-10';
+  const APP_VERSAO='2026-08-28-01';
   function vigiarVersao(){
     if(!DB) return;
     try{
@@ -10286,8 +10321,7 @@
     // Item 1 — quem recebeu atividade do Day Care (ex.: Almoço) precisa VER a atividade ao
     // entrar. Antes o Day Care ficava fechado na sanfona e a pessoa jurava que "não apareceu".
     try{ if(Array.isArray(u.atividades)&&u.atividades.length){
-      var _bd=document.getElementById('blocoDaycare'); var _accDC=_bd&&_bd.closest?_bd.closest('.acc'):null;
-      if(_accDC) _accDC.classList.add('acc-open');
+      abrirSanfonasDe(document.getElementById('blocoDaycare'));
     } }catch(e){}
     try{ if(localStorage.getItem('zeluz_sidebar_collapsed')==='1') document.body.classList.add('nav-collapsed'); }catch(e){} // barra recolhida (desktop)
     // Quem tem escopo restrito (ex.: Amanda Barbosa, só almoço) cai direto na atividade dela.
@@ -10295,8 +10329,7 @@
     if(escopo && !_temPag && typeof abrirAtividade==='function'){
       // Sai por aqui, então a categoria do Day Care precisa estar aberta ANTES — senão a
       // pessoa entra e vê a atividade dela dentro de uma gaveta fechada.
-      try{ var _b=document.getElementById('blocoDaycare'); var _a=_b&&_b.closest?_b.closest('.acc'):null;
-        if(_a) _a.classList.add('acc-open'); }catch(e){}
+      try{ abrirSanfonasDe(document.getElementById('blocoDaycare')); }catch(e){}
       abrirAtividade(escopo[0]); return; }
     // Cada perfil cai na tela onde trabalha.
     var v=telaInicialDe(u);
@@ -10304,7 +10337,9 @@
       if(u.paginas.length){ if(u.paginas.indexOf(v)<0) v=u.paginas[0]; } // pousa numa página permitida
       else { v=null; } // nada concedido (e sem atividade) → não navega; a Gestão precisa conceder acesso
     }
-    if(v){ const a=document.querySelector('[data-v="'+v+'"]'); if(a){ a.click(); const _accIni=a.closest('.acc'); if(_accIni) _accIni.classList.add('acc-open'); } }
+    // Abre a corrente inteira: a categoria E o sub-cabeçalho da tela em que a pessoa cai.
+    // Com dois níveis, abrir só o mais próximo deixaria a tela ativa dentro de uma gaveta fechada.
+    if(v){ const a=document.querySelector('[data-v="'+v+'"]'); if(a){ a.click(); abrirSanfonasDe(a); } }
     // O dashboard do Início tem que estar FRESCO a cada entrada (Adriana, 04/ago/2026:
     // "precisa ser atualizado toda vez que a pessoa entra com a senha, porque não está
     // atualizando"). Roda agora e de novo quando os dados do banco terminarem de chegar.
@@ -14760,7 +14795,10 @@
   // ===== DAY CARE — chamada visual a prova de burros (Aulunos do dia) =====
   const HOJE_DIA=(()=>{ const d=new Date().getDay(); return (d>=1&&d<=5)?ORDEM_DIAS[d-1]:'seg'; })();
   let dcDia=HOJE_DIA, dcChamada={}, dcAvulsos=[], dcAtiv='chamada';
-  const ATIVS_DC=[{s:'checkin-corpo',t:'Check-in do corpo'},{s:'checkin-pert',t:'Check-in dos pertences'},{s:'chamada',t:'Chamada',esp:1},{s:'livre',t:'Atividade livre'},{s:'ea',t:'Enriquecimento Ambiental (EA)'},{s:'aucademia',t:'Aucademia'},{s:'almoco',t:'Almoço',esp:1},{s:'almoco2',t:'2º Horário de Almoço'},{s:'massagem',t:'Massagem Dessensibilizadora'},{s:'escova',t:'Escova de Dentes'},{s:'jogos',t:'Jogos Cognitivos'},{s:'aulinha',t:'Aulinha de Disciplina'},{s:'agility',t:'Agility Funcional'},{s:'musicoterapia',t:'Musicoterapia'},{s:'checkout-pert',t:'Check-out dos pertences'},{s:'checkout-corpo',t:'Check-out do corpinho'}];
+  const ATIVS_DC=[{s:'checkin-corpo',t:'Check-in do corpo'},{s:'checkin-pert',t:'Check-in dos pertences'},{s:'chamada',t:'Chamada',esp:1},{s:'livre',t:'Atividade livre'},{s:'ea',t:'Enriquecimento Ambiental (EA)'},{s:'aucademia',t:'Aucademia'},{s:'almoco',t:'Almoço',esp:1},{s:'almoco2',t:'2º Horário de Almoço'},{s:'massagem',t:'Massagem Dessensibilizadora'},{s:'escova',t:'Escova de Dentes'},{s:'jogos',t:'Jogos Cognitivos'},{s:'aulinha',t:'Aulinha de Disciplina'},{s:'agility',t:'Agility Funcional'},{s:'musicoterapia',t:'Musicoterapia'},{s:'checkout-pert',t:'Check-out dos pertences'},{s:'checkout-corpo',t:'Check-out do corpinho'},
+    // Adriana, 27/ago/2026: duas atividades de UM campo so, para o monitor. Sao os unicos
+    // dados da ficha que ele altera — peso e foto — e caem na MESMA ficha que a Gestao le.
+    {s:'peso',t:'Peso do peludinho',esp:1},{s:'foto',t:'Foto do peludinho',esp:1}];
   function dcDataKey(){ const p=x=>String(x).padStart(2,'0'); const d=new Date(); return d.getFullYear()+'-'+p(d.getMonth()+1)+'-'+p(d.getDate()); }
   function dcKey(name,tutor){ return jsNorm((name||'')+'__'+(tutor||'')).replace(/[.#$\[\]\/ ]/g,'-'); }
   function montarSubnav(){ const sm=document.getElementById('dcSubnav'); if(!sm) return;
@@ -14794,6 +14832,14 @@
     // Abriu: o aviso passa do grupo para o item de dentro. Fechou: volta para o grupo.
     try{ if(typeof navPendSubirParaOPai==='function') navPendSubirParaOPai(); }catch(e){}
   }
+  // Abre TODAS as sanfonas acima de um elemento (sub-cabeçalho e categoria).
+  function abrirSanfonasDe(el){
+    try{
+      for(var p=el&&el.closest?el.closest('.acc'):null; p; p=(p.parentElement&&p.parentElement.closest)?p.parentElement.closest('.acc'):null){
+        p.classList.add('acc-open');
+      }
+    }catch(e){}
+  }
   function abrirAccDaycare(){ const acc=document.querySelector('#nav .acc[data-acc="daycare"]'); if(acc) acc.classList.add('acc-open'); }
   // Restaura a preferência de aberto/fechado por accordion (localStorage).
   function carregarEstadoAcordeoes(){
@@ -14806,28 +14852,33 @@
   // Depois de aplicar o papel: esconde accordion sem filho visível e garante que
   // papéis de tela única (vet/conferência/plantonista) sempre tenham o pai aberto.
   function ajustarAcordeoes(){
-    document.querySelectorAll('#nav .acc').forEach(acc=>{
-      const wasOpen=acc.classList.contains('acc-open');
-      acc.style.display=''; // limpa medição anterior (re-run/troca de papel) antes de aferir
-      acc.classList.add('acc-open'); // neutraliza o colapso para ler só a visibilidade por papel
-      // abre tambem as sub-sanfonas (Turminhas/Atividades) so para MEDIR — senao Day Care
-      // "sem filhos visiveis" e seria escondido por engano. Restaura o estado logo abaixo.
-      var _subs=[].slice.call(acc.querySelectorAll('.dcsub')); var _ss=_subs.map(function(x){return x.classList.contains('dcsub-open');});
-      _subs.forEach(function(x){ x.classList.add('dcsub-open'); });
-      let vis=0;
-      acc.querySelectorAll('.acc-panel a').forEach(l=>{ if(l.offsetParent!==null) vis++; });
-      _subs.forEach(function(x,i){ x.classList.toggle('dcsub-open', _ss[i]); }); // restaura sub-sanfonas
-      acc.classList.toggle('acc-open', wasOpen); // restaura estado do usuário
-      acc.style.display = vis>0 ? '' : 'none';
-      // Se o cabeçalho do pai está oculto pela regra de papel mas há filho visível,
-      // força aberto para o filho continuar acessível.
-      const parent=acc.querySelector('.nav-parent');
-      if(vis>0 && parent && getComputedStyle(parent).display==='none') acc.classList.add('acc-open');
+    // Com DOIS níveis de sanfona (categoria > sub-cabeçalho), medir uma sanfona de cada vez
+    // MENTE: a sanfona de dentro fica invisível só porque a de fora está fechada, mede zero e
+    // some para sempre. Foi o que aconteceu em 27/ago/2026 — abrir a Central Zêluz não mostrava
+    // sub-cabeçalho nenhum. Agora abre TUDO, mede TUDO, e só então devolve o estado.
+    var todas=[].slice.call(document.querySelectorAll('#nav .acc'));
+    var estava=todas.map(function(a){ return a.classList.contains('acc-open'); });
+    var subs=[].slice.call(document.querySelectorAll('#nav .dcsub'));
+    var subsEstava=subs.map(function(x){ return x.classList.contains('dcsub-open'); });
+    todas.forEach(function(a){ a.style.display=''; a.classList.add('acc-open'); });
+    subs.forEach(function(x){ x.classList.add('dcsub-open'); });
+    // Conta só ITEM de verdade: cabeçalho de sanfona é rótulo, não destino.
+    var vistos=todas.map(function(acc){
+      var n=0;
+      acc.querySelectorAll('.acc-panel a').forEach(function(l){
+        if(l.offsetParent!==null && !l.classList.contains('nav-parent')) n++;
+      });
+      return n;
     });
-    // Se o papel enxerga só UM serviço (vet, conferência, plantonista…), abre o accordion dele
-    // sozinho — não faz sentido a pessoa ter que abrir para achar o único item que ela usa.
-    var _accsVis=[...document.querySelectorAll('#nav .acc')].filter(a=>getComputedStyle(a).display!=='none');
-    if(_accsVis.length===1) _accsVis[0].classList.add('acc-open');
+    subs.forEach(function(x,i){ x.classList.toggle('dcsub-open', subsEstava[i]); });
+    todas.forEach(function(acc,i){
+      acc.classList.toggle('acc-open', estava[i]);
+      acc.style.display = vistos[i]>0 ? '' : 'none';
+      // Cabeçalho oculto pela regra de papel (vet, conferência, plantonista) mas com filho
+      // visível: abre à força, senão o único item que a pessoa usa fica inalcançável.
+      var parent=acc.querySelector(':scope > .nav-parent');
+      if(vistos[i]>0 && parent && getComputedStyle(parent).display==='none') acc.classList.add('acc-open');
+    });
   }
   // ===== Cabeçalho vazio não aparece (índice de 26/ago/2026) =========================
   // As sanfonas viraram sub-cabeçalhos e com isso voltou um problema que o antigo
@@ -14863,9 +14914,10 @@
           // Um sub-cabeçalho para no primeiro bloco que tem cabeçalho próprio (ex.: #blocoDaycare):
           // aqueles itens são do OUTRO rótulo, não deste.
           if(sub && el.querySelector && el.querySelector('.grp')) break;
-          if(el.tagName==='A'){ if(el.offsetParent!==null) n++; continue; }
+          var conta=function(a){ return a.offsetParent!==null && !a.classList.contains('nav-parent'); };
+          if(el.tagName==='A'){ if(conta(el)) n++; continue; }
           var dentro=el.querySelectorAll?el.querySelectorAll('a'):[];
-          for(var i=0;i<dentro.length;i++){ if(dentro[i].offsetParent!==null) n++; }
+          for(var i=0;i<dentro.length;i++){ if(conta(dentro[i])) n++; }
         }
         return n;
       };
@@ -18614,6 +18666,184 @@
       resumoDiaEnviar(false);
     }catch(e){}
   }
+
+  // ===== PESO E FOTO PELO MONITOR — Adriana, 27/ago/2026 ==========================
+  // "Crie uma atividade nova: Peso do Peludinho. O Day Care irá pesar de tempos em
+  //  tempos, e esse dado será colocado na ficha dele — um campo para o monitor apenas de
+  //  peso. Crie também uma atividade Foto do peludinho, para que os próprios monitores
+  //  possam colocar a foto (eles não têm direito de alterar nenhum dado da ficha, a não
+  //  ser a foto). Ao colocar uma foto, tem que tirar a outra."
+  //
+  // São duas atividades de UM campo só. O monitor não abre a ficha e não vê o resto: ele
+  // vê a turma do dia, o valor de hoje e nada mais. O dado cai na MESMA ficha que a
+  // Gestão lê — um cadastro só, como ela pediu.
+  //
+  // Contei no cadastro antes de fazer: dos 126 aulunos ativos, 38 não têm foto nenhuma.
+  // É por isso que a tela de foto abre por quem não tem.
+
+  // ---- PESO -----------------------------------------------------------------------
+  function pesoDiasDesde(iso){
+    try{ return Math.round((new Date(hojeISO()+'T12:00:00')-new Date(iso+'T12:00:00'))/86400000); }
+    catch(e){ return null; }
+  }
+  function renderPesoAtiv(){
+    var el=document.getElementById('genGrid'); if(!el) return;
+    var lista=turmaDoDia();
+    var comMes=0;
+    lista.forEach(function(o){ if(pesouEsteMes(pelExtra(o.p))) comMes++; });
+    var res=document.getElementById('genResumo');
+    if(res) res.innerHTML='<div class="dc-resumo">'
+      +'<div class="dc-stat ok"><b>'+comMes+'</b>pesados no mês</div>'
+      +'<div class="dc-stat pend"><b>'+(lista.length-comMes)+'</b>faltam</div></div>';
+    var cnt=document.getElementById('genCount');
+    if(cnt) cnt.textContent=lista.length+' aulunos · Peso do peludinho';
+    var nota=document.getElementById('genNotaTxt');
+    if(nota) nota.innerHTML='Pese e digite o valor. <strong>Vai direto para a ficha dele</strong> — é o mesmo peso que a Gestão e a veterinária veem. Nada mais da ficha é alterado aqui.';
+    // quem não é pesado há mais tempo aparece primeiro: é dele que a casa precisa saber
+    lista=lista.slice().sort(function(a,b){
+      var ua=ultimoPeso(pelExtra(a.p)), ub=ultimoPeso(pelExtra(b.p));
+      var da=ua?ua.data:'', db=ub?ub.data:'';
+      if(!da&&db) return -1; if(da&&!db) return 1;
+      return String(da).localeCompare(String(db));
+    });
+    el.innerHTML=lista.map(function(o){
+      var ex=pelExtra(o.p), u=ultimoPeso(ex);
+      var k=dcKey(o.p.n,o.p.tutor);
+      var dias=u?pesoDiasDesde(u.data):null;
+      var atrasado=(!u || (dias!=null && dias>45));
+      var fot=fotoDe({nome:o.p.n, tutor:o.p.tutor, refKey:pelKey(o.p)});
+      return '<div class="pet" style="cursor:default;'+(atrasado?'border:2px solid var(--z-gold)':'')+'">'
+        +(fot?('<div class="ph" style="background-image:url(\''+fot+'\');background-size:cover;background-position:center"></div>')
+             :('<div class="ph" style="background:var(--z-blue-soft)">'+escAttr((o.p.n||'?')[0].toUpperCase())+'</div>'))
+        +'<div class="nm">'+escAttr(o.p.n||'')+'</div>'
+        +'<div class="br" style="font-size:12px">'+(u?('<strong>'+String(u.kg).replace('.',',')+' kg</strong> · '
+            +(dias===0?'hoje':(dias===1?'ontem':('há '+dias+' dias'))))
+          :'<span style="color:var(--crm-atencao-text);font-weight:800">nunca foi pesado</span>')+'</div>'
+        +'<div style="display:flex;gap:5px;margin-top:7px;align-items:center">'
+        +'<input type="number" step="0.1" min="0.3" max="120" inputmode="decimal" class="cad-in" id="pesoAtiv_'+k+'"'
+        +' placeholder="kg" style="width:78px;padding:7px 8px;text-align:center;font-weight:800">'
+        +'<button type="button" class="btn btn-primary" style="flex:1;padding:7px 10px;font-size:12.5px;font-weight:800"'
+        +' onclick="pesoAtivSalvar(\''+escAttr(k).replace(/'/g,"\\\'")+'\')">Salvar</button>'
+        +'</div>'
+        +'<div class="hint" id="pesoAtivSt_'+k+'" style="margin-top:3px;min-height:14px"></div>'
+        +'</div>';
+    }).join('');
+  }
+  function pesoAtivSalvar(k){
+    var o=turmaDoDia().filter(function(x){ return dcKey(x.p.n,x.p.tutor)===k; })[0];
+    var st=document.getElementById('pesoAtivSt_'+k);
+    var diz=function(txt,cor){ if(st){ st.style.color=cor||'var(--muted)'; st.textContent=txt; } };
+    if(!o){ diz('Não achei este FILHOt. Recarregue a tela.','var(--crm-critico)'); return; }
+    var inp=document.getElementById('pesoAtiv_'+k);
+    var kg=parseFloat(String((inp&&inp.value)||'').replace(',','.'));
+    // 0,3 kg é menor que qualquer filhote; 120 kg é maior que qualquer FILHOt da casa.
+    // Fora disso é dedo errado, e peso errado vira dose de remédio errada.
+    if(!(kg>=0.3&&kg<=120)){ diz('Peso fora do razoável. Confira o número.','var(--crm-critico)'); if(inp) inp.focus(); return; }
+    var ex=pelExtra(o.p)||{};
+    var lista=pesosDe(ex);
+    var hj=hojeISO();
+    // pesou duas vezes no mesmo dia? vale o último, sem criar duas linhas na ficha
+    lista=lista.filter(function(x){ return x.data!==hj; });
+    lista.push({data:hj, kg:kg, quem:(typeof quemSou==='function'?quemSou():'-')});
+    try{
+      setPelExtra(o.p,{pesos:lista});
+      if(typeof audit==='function') audit('peso','pesou '+kg+' kg na atividade',{alvo:k});
+      diz('✓ '+String(kg).replace('.',',')+' kg na ficha','var(--crm-ok)');
+      if(inp) inp.value='';
+      setTimeout(function(){ try{ renderPesoAtiv(); }catch(e){} }, 900);
+    }catch(e){
+      diz('NÃO gravou: '+((e&&e.message)||e),'var(--crm-critico)');
+    }
+  }
+
+  // ---- FOTO -------------------------------------------------------------------------
+  // "Ao colocar uma foto, tem que tirar a outra." O `set` do Firebase já substitui —
+  // o que faltava era a tela deixar isso claro para quem aperta o botão.
+  var FOTO_ATIV_PEND={};
+  function renderFotoAtiv(){
+    var el=document.getElementById('genGrid'); if(!el) return;
+    var lista=turmaDoDia();
+    var temFoto=function(o){ return !!fotoDe({nome:o.p.n, tutor:o.p.tutor, refKey:pelKey(o.p)}); };
+    var com=lista.filter(temFoto).length;
+    var res=document.getElementById('genResumo');
+    if(res) res.innerHTML='<div class="dc-resumo">'
+      +'<div class="dc-stat ok"><b>'+com+'</b>com foto</div>'
+      +'<div class="dc-stat '+((lista.length-com)?'bad':'pend')+'"><b>'+(lista.length-com)+'</b>sem foto</div></div>';
+    var cnt=document.getElementById('genCount');
+    if(cnt) cnt.textContent=lista.length+' aulunos · Foto do peludinho';
+    var nota=document.getElementById('genNotaTxt');
+    if(nota) nota.innerHTML='Tire a foto do rostinho dele. <strong>A foto nova apaga a antiga</strong> — só existe uma por FILHOt. É a mesma que aparece na chamada, no almoço e na ficha.';
+    // sem foto primeiro: é para isso que a tela existe
+    lista=lista.slice().sort(function(a,b){
+      var fa=temFoto(a)?1:0, fb=temFoto(b)?1:0;
+      if(fa!==fb) return fa-fb;
+      return String(a.p.n||'').localeCompare(String(b.p.n||''),'pt',{sensitivity:'base'});
+    });
+    el.innerHTML=lista.map(function(o){
+      var k=dcKey(o.p.n,o.p.tutor);
+      var fot=FOTO_ATIV_PEND[k]||fotoDe({nome:o.p.n, tutor:o.p.tutor, refKey:pelKey(o.p)});
+      var pend=!!FOTO_ATIV_PEND[k];
+      var tinha=!!fotoDe({nome:o.p.n, tutor:o.p.tutor, refKey:pelKey(o.p)});
+      return '<div class="pet" style="cursor:default;'+(tinha?'':'border:2px solid var(--crm-atencao)')+'">'
+        +(fot?('<div class="ph" style="background-image:url(\''+fot+'\');background-size:cover;background-position:center"></div>')
+             :('<div class="ph" style="background:var(--z-blue-soft)">'+escAttr((o.p.n||'?')[0].toUpperCase())+'</div>'))
+        +'<div class="nm">'+escAttr(o.p.n||'')+'</div>'
+        +(tinha?'<div class="br" style="font-size:11.5px">já tem foto</div>'
+               :'<div class="br" style="font-size:11.5px;color:var(--crm-atencao-text);font-weight:800">SEM FOTO</div>')
+        +'<input type="file" accept="image/*" capture="environment" id="fotoAtivIn_'+k+'" style="display:none"'
+        +' onchange="fotoAtivEscolher(event,\''+escAttr(k).replace(/'/g,"\\\'")+'\')">'
+        +'<div style="display:flex;gap:5px;margin-top:7px">'
+        +'<button type="button" class="btn btn-gold" style="flex:1;padding:7px 10px;font-size:12px;font-weight:800"'
+        +' onclick="document.getElementById(\'fotoAtivIn_'+k+'\').click()">'+(tinha?'Trocar':'Tirar foto')+'</button>'
+        +(pend?('<button type="button" class="btn btn-primary" style="flex:1;padding:7px 10px;font-size:12px;font-weight:800"'
+          +' onclick="fotoAtivSalvar(\''+escAttr(k).replace(/'/g,"\\\'")+'\')">Salvar</button>'):'')
+        +'</div>'
+        +(pend?'<div class="hint" style="margin-top:3px;color:var(--crm-atencao-text);font-weight:800">Foto pronta — toque em Salvar.'
+            +(tinha?' A antiga será apagada.':'')+'</div>':'')
+        +'<div class="hint" id="fotoAtivSt_'+k+'" style="margin-top:3px;min-height:14px"></div>'
+        +'</div>';
+    }).join('');
+  }
+  function fotoAtivEscolher(e,k){
+    var fl=e&&e.target&&e.target.files&&e.target.files[0]; if(!fl) return;
+    var st=document.getElementById('fotoAtivSt_'+k);
+    var r=new FileReader();
+    r.onerror=function(){ if(st){ st.style.color='var(--crm-critico)'; st.textContent='Não consegui ler a imagem. Tente de novo.'; } };
+    r.onload=function(){
+      var img=new Image();
+      img.onerror=function(){ if(st){ st.style.color='var(--crm-critico)'; st.textContent='Arquivo não é uma imagem válida.'; } };
+      img.onload=function(){
+        // 160px, igual ao resto do app: o cadastro inteiro é baixado a cada abertura e a
+        // foto já foi 97% do peso dele uma vez.
+        var max=160, w=img.width, h=img.height;
+        if(w>h){ if(w>max){ h=Math.round(h*max/w); w=max; } } else { if(h>max){ w=Math.round(w*max/h); h=max; } }
+        var c=document.createElement('canvas'); c.width=w; c.height=h;
+        c.getContext('2d').drawImage(img,0,0,w,h);
+        FOTO_ATIV_PEND[k]=c.toDataURL('image/jpeg',0.72);
+        renderFotoAtiv();
+      };
+      img.src=r.result;
+    };
+    r.readAsDataURL(fl);
+  }
+  function fotoAtivSalvar(k){
+    var dataUrl=FOTO_ATIV_PEND[k];
+    var st=document.getElementById('fotoAtivSt_'+k);
+    var diz=function(txt,cor){ if(st){ st.style.color=cor||'var(--muted)'; st.textContent=txt; } };
+    if(!dataUrl){ diz('Escolha a foto primeiro.','var(--crm-critico)'); return; }
+    var o=turmaDoDia().filter(function(x){ return dcKey(x.p.n,x.p.tutor)===k; })[0];
+    if(!o){ diz('Não achei este FILHOt. Recarregue a tela.','var(--crm-critico)'); return; }
+    var chave=pelKey(o.p);
+    diz('gravando…');
+    salvarFotoCad(chave, dataUrl).then(function(){
+      delete FOTO_ATIV_PEND[k];
+      if(typeof audit==='function') audit('foto','trocou a foto de '+(o.p.n||'')+' na atividade',{alvo:k});
+      try{ renderFotoAtiv(); }catch(e){}
+      try{ if(typeof renderDaycare==='function') renderDaycare(); }catch(e){}
+    }).catch(function(e){
+      diz('NÃO gravou: '+((e&&e.message)||e)+' — a foto continua aqui, tente de novo.','var(--crm-critico)');
+    });
+  }
   function renderGenerico(){
     // No EA a tela é só o painel: quem pode, participa — ninguém marca um a um (Adriana,
     // 20/ago/2026: "o quadrado dos aulunos, automaticamente todos que podem terão
@@ -18627,6 +18857,9 @@
       if(_e) _e.style.display='none';
     }catch(e){}
     if(!document.getElementById('genGrid')) return;
+    // Peso e Foto tem tela propria: nao se "marca feito", se digita um valor.
+    if(dcAtiv==='peso'){ try{ renderPesoAtiv(); }catch(e){} return; }
+    if(dcAtiv==='foto'){ try{ renderFotoAtiv(); }catch(e){} return; }
     let list=ehAlmoco2()?listaSegundoHorario():turmaDoDia(); list=filtrarAtividadeSeletiva(list,dcAtiv); let feito=0;
     list.forEach(o=>{ const m=genMarcas[dcKey(o.p.n,o.p.tutor)]; if(m==='feito'||m==='comeu')feito++; });
     const f=ATIVS_DC.find(a=>a.s===dcAtiv);
@@ -20059,6 +20292,69 @@
   // "Preciso de relatório de cães sem microchip — em Relatórios."
   // O campo não existia na ficha; foi criado junto. Em branco = não tem. Traz o telefone
   // do tutor porque o próximo passo é falar com ele.
+  // Todas as chaves onde existe alguma foto guardada (o nó de fotos e o de versão).
+  function fotoChavesConhecidas(){
+    var out={};
+    try{ Object.keys(FOTOS||{}).forEach(function(k){ if(FOTOS[k]) out[k]=true; }); }catch(e){}
+    return out;
+  }
+  function semFotoDados(){
+    var chaves=fotoChavesConhecidas();
+    var sem=[], soltas=[];
+    (PELUDINHOS||[]).forEach(function(p){
+      if(typeof pelInativo==='function' && pelInativo(p)) return;
+      var k=pelKey(p);
+      if(chaves[k]) return;                                  // tem foto, tudo certo
+      var nome=(typeof pelNome==='function')?pelNome(p):(p.n||'');
+      var tutor=((typeof pelGet==='function')?pelGet(p,'tutor'):'')||p.tutor||'';
+      var base={p:p, chave:k, nome:nome, tutor:tutor,
+                raca:((typeof pelGet==='function')?pelGet(p,'raca'):'')||p.raca||'',
+                tel:((typeof pelGet==='function')?pelGet(p,'tel'):'')||''};
+      // existe foto guardada com o MESMO NOME e outro sufixo? pode ser dele — ou de um xará
+      var nk=jsNorm(nome);
+      var cand=Object.keys(chaves).filter(function(fk){ return String(fk).split('__')[0]===nk; });
+      if(cand.length){ base.candidatas=cand; soltas.push(base); }
+      else sem.push(base);
+    });
+    var porNome=function(a,b){ return jsNorm(a.nome).localeCompare(jsNorm(b.nome),'pt'); };
+    sem.sort(porNome); soltas.sort(porNome);
+    return {sem:sem, soltas:soltas, comFoto:(PELUDINHOS||[]).filter(function(p){
+      return !(typeof pelInativo==='function'&&pelInativo(p)) && chaves[pelKey(p)]; }).length};
+  }
+  function baixarSemFoto(){
+    var d=semFotoDados();
+    if(!d.sem.length && !d.soltas.length){ alert('Todos os FILHOts ativos já têm foto na ficha. Nada a listar.'); return; }
+    var e=function(v){ return escAttr(v==null?'':String(v)); };
+    var hoje=new Date(), p2=function(x){ return String(x).padStart(2,'0'); };
+    var carimbo=p2(hoje.getDate())+'/'+p2(hoje.getMonth()+1)+'/'+hoje.getFullYear()+' às '+p2(hoje.getHours())+':'+p2(hoje.getMinutes());
+    var h='<html xmlns:x="urn:schemas-microsoft-com:office:excel"><head><meta charset="UTF-8">'
+      +'<style>body{font-family:Calibri,Arial,sans-serif}'
+      +'td,th{border:1px solid #b6c2cc;padding:4px 7px;font-size:11pt;vertical-align:top}'
+      +'th{background:#234D67;color:#FFFDF6;font-weight:bold;text-align:left}</style></head><body>'
+      +'<table><tr><td colspan="4" style="border:none;font-size:16pt;font-weight:bold;color:#234D67">Zêluz &middot; FILHOts sem foto na ficha</td></tr>'
+      +'<tr><td colspan="4" style="border:none;font-size:10pt;color:#555">Gerado em '+e(carimbo)
+      +' &middot; '+d.comFoto+' com foto &middot; '+d.sem.length+' sem foto nenhuma &middot; '+d.soltas.length+' com foto a conferir</td></tr></table><br>'
+      +'<table><tr><td colspan="4" style="border:none;font-size:13pt;font-weight:bold;color:#234D67">Sem foto nenhuma ('+d.sem.length+') — precisa fotografar</td></tr></table>'
+      +'<table><tr><th>Peludinho</th><th>Raça</th><th>Tutor</th><th>Telefone</th></tr>'
+      +d.sem.map(function(o){ return '<tr><td><b>'+e(o.nome)+'</b></td><td>'+e(o.raca)+'</td><td>'+e(o.tutor)+'</td><td>'+e(o.tel)+'</td></tr>'; }).join('')
+      +'</table>';
+    if(d.soltas.length){
+      h+='<br><table><tr><td colspan="4" style="border:none;font-size:13pt;font-weight:bold;color:#8A6D00">Existe uma foto com o mesmo nome ('+d.soltas.length+') — CONFERIR antes de usar</td></tr>'
+        +'<tr><td colspan="4" style="border:none;font-size:10pt;color:#555">Pode ser dele com o nome do tutor escrito de outro jeito — ou pode ser um xará. O Boris da Laura tem foto guardada como Boris da Valéria, e são dois FILHOts diferentes. Ninguém deve colar sem olhar.</td></tr></table>'
+        +'<table><tr><th>Peludinho</th><th>Tutor</th><th>Chave da ficha</th><th>Onde existe foto</th></tr>'
+        +d.soltas.map(function(o){ return '<tr><td><b>'+e(o.nome)+'</b></td><td>'+e(o.tutor)+'</td><td>'+e(o.chave)+'</td><td>'+e((o.candidatas||[]).join(' · '))+'</td></tr>'; }).join('')
+        +'</table>';
+    }
+    h+='</body></html>';
+    var nome='Zeluz-sem-foto-'+hoje.getFullYear()+'-'+p2(hoje.getMonth()+1)+'-'+p2(hoje.getDate())+'.xls';
+    try{
+      var blob=new Blob(['\ufeff'+h],{type:'application/vnd.ms-excel;charset=utf-8'});
+      var url=URL.createObjectURL(blob), a=document.createElement('a');
+      a.href=url; a.download=nome; document.body.appendChild(a); a.click();
+      setTimeout(function(){ URL.revokeObjectURL(url); a.remove(); },1500);
+      if(typeof audit==='function') audit('relatorio-foto', d.sem.length+' sem foto e '+d.soltas.length+' a conferir', {arquivo:nome});
+    }catch(err){ alert('Não consegui gerar o arquivo: '+err.message); }
+  }
   function semMicrochipDados(){
     var out=[];
     (PELUDINHOS||[]).forEach(function(p){
@@ -20243,7 +20539,8 @@
     {t:'Pertences EM BRANCO — para imprimir', d:'A mesma tabela, com os nomes do dia já escritos e as colunas vazias, para preencher à mão. É a contingência de quando falta internet.', fn:'relPertencesBrancoEscolher()'},
     {t:'Check-in do corpo de hoje', d:'Quem passou, a que horas, quem fez, o que foi encontrado de alteração, cocô e as coleiras que entraram.', fn:'relCheckinHoje()'},
     {t:'Orçamentos de hospedagem', d:'Todo orçamento feito, com plano, desconto, diárias, pernoites, valor e se o tutor fechou. Uma linha por FILHOt.', fn:'relOrcamentos()'},
-    {t:'FILHOts SEM microchip', d:'Quem ainda não tem número de microchip na ficha — para cobrar do tutor ou agendar a aplicação. Traz nome, raça, tutor e telefone.', fn:'baixarSemMicrochip()'}
+    {t:'FILHOts SEM microchip', d:'Quem ainda não tem número de microchip na ficha — para cobrar do tutor ou agendar a aplicação. Traz nome, raça, tutor e telefone.', fn:'baixarSemMicrochip()'},
+    {t:'FILHOts SEM foto na ficha', d:'Quem ainda não tem foto — para a equipe fotografar na atividade "Foto do peludinho". Vem em duas listas: quem não tem foto nenhuma, e quem tem uma foto guardada com o mesmo nome mas outra chave (pode ser um xará — precisa conferir antes de usar).', fn:'baixarSemFoto()'}
   ];
   // As listas saíram do menu (que estava enorme) e viraram botões daqui.
   function relAbrirLista(v){
