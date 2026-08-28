@@ -3066,6 +3066,59 @@ async function main() {
   }
   console.log('');
 
+  console.log('Download, obitos e "Cookie e Cookie" (28/ago):');
+  {
+    // "Download nao baixa" (duas vezes) · "Inativos esta constando a Stopa, que morreu"
+    // · "precisa da raca e do primeiro nome do tutor... esta aqui hoje Cookie e Cookie"
+    check('o download tem um segundo caminho quando o aparelho nao baixa',
+      /function relEntregar\(nomeArquivo, html, quantos\)/.test(html) &&
+      /function relAbrirNaTela\(\)/.test(html));
+    check('nenhum relatorio usa mais o caminho unico que falhava calado',
+      !/a\.href=url; a\.download=\w+; document\.body\.appendChild\(a\); a\.click\(\);/.test(html));
+    check('a tela diz o que houve, mesmo quando o clique "funcionou"',
+      /Se nada apareceu no seu aparelho/.test(html));
+    check('pop-up bloqueado tambem e dito, nao fica mudo',
+      /O navegador bloqueou a janela/.test(html));
+
+    check('quem partiu sai da lista de quem pode voltar',
+      /const luto=todos\.filter\(ehObito\)/.test(html) && /Partiram \(\$\{luto\.length\}\)/.test(html));
+    check('a linha de quem partiu nao tem botao "Voltou"',
+      /A linha de quem partiu NÃO tem botão de voltar|A linha de quem partiu NÃO tem botão de voltar/.test(html));
+    check('e a reativacao e barrada por dentro, nao so pelo botao escondido',
+      /if\(saidaPorObito\(_ex\.motivoSaida\|\|''\)\)\{/.test(html));
+
+    check('os cards do monitor trazem raca e primeiro nome do tutor',
+      /function ativIdent\(p\)/.test(html) && /'tutor: '\+escAttr\(pri\)/.test(html));
+    if (typeof ctx.ativIdent === 'function') {
+      const r = ctx.ativIdent({ n: 'Cookie', tutor: 'Raquel Duarte Ziller', raca: 'Poodle' });
+      check('mostra raca e SO o primeiro nome do tutor',
+        /Poodle/.test(r) && /Raquel/.test(r) && !/Ziller/.test(r), r);
+      check('sem tutor e sem raca nao inventa texto', ctx.ativIdent({ n: 'X' }) === '');
+    }
+  }
+  console.log('');
+
+  console.log('Quem nao veio nao entra, e foto errada da para apagar (28/ago):');
+  {
+    // "Hulk nao esta vindo e consta na lista; quem nao esta na turma tem que sair."
+    // "Coco e Coco Chanel sao diferentes e esta errada a foto. Coco Chanel: deletar."
+    check('a lista de Peso e Foto passa a ser de quem ESTA presente',
+      /function ativTurmaPresente\(\)/.test(html) && /presentes=prev\.filter/.test(html));
+    check('antes do primeiro check-in, cai para a turma prevista COM aviso',
+      /Ainda ninguém passou pelo check-in hoje|Ainda ninguém passou pelo check-in hoje/.test(html));
+    check('gravar tambem procura na turma presente (nao na prevista)',
+      (html.match(/ativTurmaPresente\(\)\.lista\.filter/g) || []).length >= 2);
+    check('da para apagar foto errada', /function fotoAtivApagar\(k\)/.test(html));
+    check('apagar pede dois toques, sem janelinha do navegador',
+      /if\(FOTO_APAGAR_ARMADO!==k\)\{ FOTO_APAGAR_ARMADO=k;/.test(html) &&
+      /Toque em Confirmar para apagar/.test(html));
+    check('falha ao apagar nao some em silencio',
+      /NÃO apaguei: |NÃO apaguei: /.test(html));
+    check('apagar limpa o cache local tambem, nao so o banco',
+      /delete FOTOS\[chave\]/.test(html));
+  }
+  console.log('');
+
   // ---- resumo ----
   console.log('== Resultado: ' + pass + ' ok, ' + fail + ' falha(s) ==');
   if (fail) { console.log('\nFalhas:'); fails.forEach((f) => console.log('  - ' + f)); }

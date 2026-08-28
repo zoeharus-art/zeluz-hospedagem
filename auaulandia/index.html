@@ -9884,7 +9884,7 @@
   // Agora existe um carimbo: esta constante é a versão que o aparelho está rodando, e o
   // Firebase guarda a versão publicada. Quando as duas diferem, aparece o aviso — mas
   // NUNCA recarrega sozinho: recarregar no meio de um check-in perderia o trabalho.
-  const APP_VERSAO='2026-08-28-01';
+  const APP_VERSAO='2026-08-28-03';
   function vigiarVersao(){
     if(!DB) return;
     try{
@@ -13759,13 +13759,8 @@
     });
     h+='</table></body></html>';
     var nome='Zeluz-prevencao-'+hoje.getFullYear()+'-'+p2(hoje.getMonth()+1)+'-'+p2(hoje.getDate())+'.xls';
-    try{
-      var blob=new Blob(['﻿'+h],{type:'application/vnd.ms-excel;charset=utf-8'});
-      var url=URL.createObjectURL(blob), a=document.createElement('a');
-      a.href=url; a.download=nome; document.body.appendChild(a); a.click();
-      setTimeout(function(){ URL.revokeObjectURL(url); a.remove(); },1500);
-      if(typeof audit==='function') audit('relatorio-prevencao', l.length+' FILHOts com pendência', {arquivo:nome, filtro:PREV_FILTRO});
-    }catch(err){ alert('Não consegui gerar o arquivo: '+err.message); }
+    relEntregar(nome, h);
+      try{ if(typeof audit==='function') audit('relatorio-prevencao', l.length+' FILHOts com pendência', {arquivo:nome, filtro:PREV_FILTRO}); }catch(e){}
   }
   // --- Peso: registro MENSAL obrigatório (D8) ---
   // Sem pesagem no mês, vira alerta no dashboard. Guarda histórico para ver a evolução.
@@ -14154,25 +14149,64 @@
   // Relatório de Inativos — peludinhos que saíram do Day Care (histórico preservado).
   function renderInativos(){
     const body=document.getElementById('inativosBody'); if(!body) return;
-    const list=PELUDINHOS.map((p,i)=>({p,i})).filter(o=>pelInativo(o.p))
+    const todos=PELUDINHOS.map((p,i)=>({p,i})).filter(o=>pelInativo(o.p))
       .sort((a,b)=>jsNorm(pelNome(a.p)).localeCompare(jsNorm(pelNome(b.p)),'pt'));
-    const cnt=document.getElementById('inativosCount'); if(cnt) cnt.textContent=list.length?`${list.length} peludinho${list.length>1?'s':''} inativo${list.length>1?'s':''}`:'Nenhum peludinho inativo';
-    if(!list.length){ body.innerHTML=`<tr><td colspan="6" style="text-align:center;color:var(--muted);padding:22px">Nenhum peludinho inativo no momento.</td></tr>`; return; }
+    // Quem partiu sai da lista de quem "pode voltar" — e vai para a sua própria, no fim.
+    const ehObito=(o)=>{ try{ return saidaPorObito((pelExtra(o.p)||{}).motivoSaida||''); }catch(e){ return false; } };
+    const luto=todos.filter(ehObito);
+    const list=todos.filter(o=>!ehObito(o));
+    const cnt=document.getElementById('inativosCount');
+    if(cnt) cnt.textContent=(list.length?`${list.length} peludinho${list.length>1?'s':''} inativo${list.length>1?'s':''}`:'Nenhum peludinho inativo')
+      +(luto.length?` · ${luto.length} que ${luto.length>1?'partiram':'partiu'}`:'');
     const _podeReat=canEditPel();
-    body.innerHTML=list.map((o,row)=>{ const p=o.p; const ex=pelExtra(p); return `<tr onclick="abrirPeludinhoInativo(${o.i})" style="cursor:pointer" class="pel-inativo">
+    const linha=(o,row)=>{ const p=o.p; const ex=pelExtra(p); return `<tr onclick="abrirPeludinhoInativo(${o.i})" style="cursor:pointer" class="pel-inativo">
       <td class="pel-num">${row+1}</td>
       <td><span class="pel-nome">${pelNome(p)}</span>${p.apelido?` <span class="pel-obs">${p.apelido}</span>`:''}</td>
       <td class="pel-tutor">${pelGet(p,'tutor')||'—'}</td>
       <td>${ex.dataSaida?escAttr(ex.dataSaida):'—'}</td>
       <td class="pel-tutor">${ex.motivoSaida?escAttr(ex.motivoSaida):'—'}</td>
       <td>${_podeReat?`<button type="button" class="btn btn-primary" style="padding:7px 14px;font-size:13px" onclick="event.stopPropagation();reativarPeludinho(${o.i})">Voltou</button>`:'—'}</td>
-    </tr>`; }).join('');
+    </tr>`; };
+    // A linha de quem partiu NÃO tem botão de voltar. Não é esquecimento: é o ponto.
+    const linhaLuto=(o,row)=>{ const p=o.p; const ex=pelExtra(p); return `<tr onclick="abrirPeludinhoInativo(${o.i})" style="cursor:pointer;opacity:.85">
+      <td class="pel-num">${row+1}</td>
+      <td><span class="pel-nome">${pelNome(p)}</span></td>
+      <td class="pel-tutor">${pelGet(p,'tutor')||'—'}</td>
+      <td>${ex.dataSaida?escAttr(ex.dataSaida):'—'}</td>
+      <td class="pel-tutor">${ex.motivoSaida?escAttr(ex.motivoSaida):'—'}</td>
+      <td style="color:var(--muted);font-size:12.5px">—</td>
+    </tr>`; };
+    let h='';
+    if(!list.length && !luto.length){
+      body.innerHTML=`<tr><td colspan="6" style="text-align:center;color:var(--muted);padding:22px">Nenhum peludinho inativo no momento.</td></tr>`;
+      return;
+    }
+    h+=list.length?list.map(linha).join('')
+      :`<tr><td colspan="6" style="text-align:center;color:var(--muted);padding:16px">Nenhum peludinho inativo que possa voltar.</td></tr>`;
+    if(luto.length){
+      h+=`<tr><td colspan="6" style="padding:16px 10px 6px;background:rgba(35,77,103,.06)">
+        <div style="font-weight:800;color:var(--z-blue);font-size:15px">Partiram (${luto.length})</div>
+        <div class="hint" style="margin-top:2px">Aqui não existe "Voltou". Ficam registrados para que ninguém os coloque de volta na chamada por engano, e para que nenhuma campanha ou cobrança chegue a estas famílias.</div>
+      </td></tr>`;
+      h+=luto.map(linhaLuto).join('');
+    }
+    body.innerHTML=h;
   }
   // O FILHOt voltou para o Day Care. Reativa em 1 toque, direto da lista — sem precisar
   // abrir a ficha e caçar o campo "Saiu do Day Care?". A saída anterior NÃO se perde:
   // vira uma linha do histórico (ex.saidas), porque "quero todo o banco de dados sempre".
   function reativarPeludinho(i){
     if(!canEditPel()){ alert('Apenas Gestão e Supervisão podem reativar um peludinho.'); return; }
+    // Trava de verdade, não só o botão escondido: se a saída foi por óbito, não reativa
+    // por caminho nenhum. Um clique errado aqui traz de volta à chamada um FILHOt que
+    // partiu — e a família dele pode receber uma mensagem do sistema (Adriana, 28/ago).
+    try{
+      var _p=PELUDINHOS[i], _ex=_p?(pelExtra(_p)||{}):{};
+      if(saidaPorObito(_ex.motivoSaida||'')){
+        alert(pelNome(_p)+' consta como tendo partido ('+(_ex.motivoSaida||'')+').\n\nNão dá para reativar por aqui. Se houve engano no registro, corrija o motivo da saída na ficha primeiro.');
+        return;
+      }
+    }catch(e){}
     const p=PELUDINHOS[i]; if(!p) return;
     const nome=pelNome(p)||'este FILHOt';
     if(!confirm(nome+' voltou para o Day Care?\n\nEle volta para a lista de Peludinhos frequentes e para as chamadas do dia. A saída anterior fica guardada no histórico da ficha.')) return;
@@ -18682,13 +18716,42 @@
   // É por isso que a tela de foto abre por quem não tem.
 
   // ---- PESO -----------------------------------------------------------------------
+  // Como o FILHOt aparece nos cards do monitor: nome, raça e o primeiro nome do tutor.
+  // O tutor entra só com o primeiro nome — é o bastante para distinguir e não expõe o
+  // nome inteiro de ninguém na tela que fica aberta no salão.
+  // A turma para Peso e Foto: quem está de fato aqui. Cai para a turma prevista só
+  // enquanto o dia não começou (ninguém passou pelo check-in ainda).
+  function ativTurmaPresente(){
+    var prev=turmaDoDia();
+    try{
+      if(typeof ehHoje==='function' && !ehHoje()) return {lista:prev, porPresenca:false};
+      var presentes=prev.filter(function(o){ try{ return ckFeito(o); }catch(e){ return false; } });
+      if(presentes.length) return {lista:presentes, porPresenca:true};
+    }catch(e){}
+    return {lista:prev, porPresenca:false};
+  }
+  function ativAvisoTurma(t, quantos){
+    if(t.porPresenca) return '';
+    return '<div class="hint" style="margin-top:4px;color:var(--crm-atencao-text)">'
+      +'Ainda ninguém passou pelo check-in hoje, então esta é a turma <strong>prevista</strong> pela ficha. '
+      +'Assim que o primeiro FILHOt entrar, a lista passa a ser só de quem está aqui de verdade.</div>';
+  }
+  function ativIdent(p){
+    var raca=''; try{ raca=(typeof pelGet==='function'?pelGet(p,'raca'):'')||p.raca||''; }catch(e){}
+    var tutor=''; try{ tutor=(typeof pelGet==='function'?pelGet(p,'tutor'):'')||p.tutor||''; }catch(e){}
+    var pri=String(tutor||'').trim().split(/\s+/)[0]||'';
+    var partes=[];
+    if(raca) partes.push(escAttr(raca));
+    if(pri) partes.push('tutor: '+escAttr(pri));
+    return partes.join(' · ');
+  }
   function pesoDiasDesde(iso){
     try{ return Math.round((new Date(hojeISO()+'T12:00:00')-new Date(iso+'T12:00:00'))/86400000); }
     catch(e){ return null; }
   }
   function renderPesoAtiv(){
     var el=document.getElementById('genGrid'); if(!el) return;
-    var lista=turmaDoDia();
+    var _t=ativTurmaPresente(), lista=_t.lista;
     var comMes=0;
     lista.forEach(function(o){ if(pesouEsteMes(pelExtra(o.p))) comMes++; });
     var res=document.getElementById('genResumo');
@@ -18698,7 +18761,8 @@
     var cnt=document.getElementById('genCount');
     if(cnt) cnt.textContent=lista.length+' aulunos · Peso do peludinho';
     var nota=document.getElementById('genNotaTxt');
-    if(nota) nota.innerHTML='Pese e digite o valor. <strong>Vai direto para a ficha dele</strong> — é o mesmo peso que a Gestão e a veterinária veem. Nada mais da ficha é alterado aqui.';
+    if(nota) nota.innerHTML='Pese e digite o valor. <strong>Vai direto para a ficha dele</strong> — é o mesmo peso que a Gestão e a veterinária veem. Nada mais da ficha é alterado aqui.'
+      +ativAvisoTurma(_t);
     // quem não é pesado há mais tempo aparece primeiro: é dele que a casa precisa saber
     lista=lista.slice().sort(function(a,b){
       var ua=ultimoPeso(pelExtra(a.p)), ub=ultimoPeso(pelExtra(b.p));
@@ -18716,6 +18780,7 @@
         +(fot?('<div class="ph" style="background-image:url(\''+fot+'\');background-size:cover;background-position:center"></div>')
              :('<div class="ph" style="background:var(--z-blue-soft)">'+escAttr((o.p.n||'?')[0].toUpperCase())+'</div>'))
         +'<div class="nm">'+escAttr(o.p.n||'')+'</div>'
+        +'<div class="br" style="font-size:11.5px;line-height:1.3">'+ativIdent(o.p)+'</div>'
         +'<div class="br" style="font-size:12px">'+(u?('<strong>'+String(u.kg).replace('.',',')+' kg</strong> · '
             +(dias===0?'hoje':(dias===1?'ontem':('há '+dias+' dias'))))
           :'<span style="color:var(--crm-atencao-text);font-weight:800">nunca foi pesado</span>')+'</div>'
@@ -18730,7 +18795,7 @@
     }).join('');
   }
   function pesoAtivSalvar(k){
-    var o=turmaDoDia().filter(function(x){ return dcKey(x.p.n,x.p.tutor)===k; })[0];
+    var o=ativTurmaPresente().lista.filter(function(x){ return dcKey(x.p.n,x.p.tutor)===k; })[0];
     var st=document.getElementById('pesoAtivSt_'+k);
     var diz=function(txt,cor){ if(st){ st.style.color=cor||'var(--muted)'; st.textContent=txt; } };
     if(!o){ diz('Não achei este FILHOt. Recarregue a tela.','var(--crm-critico)'); return; }
@@ -18762,7 +18827,7 @@
   var FOTO_ATIV_PEND={};
   function renderFotoAtiv(){
     var el=document.getElementById('genGrid'); if(!el) return;
-    var lista=turmaDoDia();
+    var _t=ativTurmaPresente(), lista=_t.lista;
     var temFoto=function(o){ return !!fotoDe({nome:o.p.n, tutor:o.p.tutor, refKey:pelKey(o.p)}); };
     var com=lista.filter(temFoto).length;
     var res=document.getElementById('genResumo');
@@ -18772,7 +18837,8 @@
     var cnt=document.getElementById('genCount');
     if(cnt) cnt.textContent=lista.length+' aulunos · Foto do peludinho';
     var nota=document.getElementById('genNotaTxt');
-    if(nota) nota.innerHTML='Tire a foto do rostinho dele. <strong>A foto nova apaga a antiga</strong> — só existe uma por FILHOt. É a mesma que aparece na chamada, no almoço e na ficha.';
+    if(nota) nota.innerHTML='Tire a foto do rostinho dele. <strong>A foto nova apaga a antiga</strong> — só existe uma por FILHOt. É a mesma que aparece na chamada, no almoço e na ficha.'
+      +ativAvisoTurma(_t);
     // sem foto primeiro: é para isso que a tela existe
     lista=lista.slice().sort(function(a,b){
       var fa=temFoto(a)?1:0, fb=temFoto(b)?1:0;
@@ -18788,6 +18854,7 @@
         +(fot?('<div class="ph" style="background-image:url(\''+fot+'\');background-size:cover;background-position:center"></div>')
              :('<div class="ph" style="background:var(--z-blue-soft)">'+escAttr((o.p.n||'?')[0].toUpperCase())+'</div>'))
         +'<div class="nm">'+escAttr(o.p.n||'')+'</div>'
+        +'<div class="br" style="font-size:11.5px;line-height:1.3">'+ativIdent(o.p)+'</div>'
         +(tinha?'<div class="br" style="font-size:11.5px">já tem foto</div>'
                :'<div class="br" style="font-size:11.5px;color:var(--crm-atencao-text);font-weight:800">SEM FOTO</div>')
         +'<input type="file" accept="image/*" capture="environment" id="fotoAtivIn_'+k+'" style="display:none"'
@@ -18795,14 +18862,44 @@
         +'<div style="display:flex;gap:5px;margin-top:7px">'
         +'<button type="button" class="btn btn-gold" style="flex:1;padding:7px 10px;font-size:12px;font-weight:800"'
         +' onclick="document.getElementById(\'fotoAtivIn_'+k+'\').click()">'+(tinha?'Trocar':'Tirar foto')+'</button>'
+        +(tinha&&!pend?('<button type="button" class="btn" style="padding:7px 10px;font-size:12px;font-weight:800;'
+          +'background:none;border:1.5px solid var(--crm-critico);color:var(--crm-critico)"'
+          +' onclick="fotoAtivApagar(\''+escAttr(k).replace(/'/g,"\\'")+'\')">'
+          +(FOTO_APAGAR_ARMADO===k?'Confirmar':'Apagar')+'</button>'):'')
         +(pend?('<button type="button" class="btn btn-primary" style="flex:1;padding:7px 10px;font-size:12px;font-weight:800"'
           +' onclick="fotoAtivSalvar(\''+escAttr(k).replace(/'/g,"\\\'")+'\')">Salvar</button>'):'')
         +'</div>'
         +(pend?'<div class="hint" style="margin-top:3px;color:var(--crm-atencao-text);font-weight:800">Foto pronta — toque em Salvar.'
             +(tinha?' A antiga será apagada.':'')+'</div>':'')
+        +(FOTO_APAGAR_ARMADO===k?'<div class="hint" style="margin-top:3px;color:var(--crm-critico);font-weight:800">Toque em Confirmar para apagar. Ele fica sem foto até alguém tirar outra.</div>':'')
         +'<div class="hint" id="fotoAtivSt_'+k+'" style="margin-top:3px;min-height:14px"></div>'
         +'</div>';
     }).join('');
+  }
+  // Apagar em dois toques, sem janelinha do navegador (no celular ela some atrás do
+  // teclado e a pessoa acha que o botão não funcionou).
+  var FOTO_APAGAR_ARMADO='';
+  function fotoAtivApagar(k){
+    if(FOTO_APAGAR_ARMADO!==k){ FOTO_APAGAR_ARMADO=k; try{ renderFotoAtiv(); }catch(e){} return; }
+    FOTO_APAGAR_ARMADO='';
+    var o=ativTurmaPresente().lista.filter(function(x){ return dcKey(x.p.n,x.p.tutor)===k; })[0];
+    var st=document.getElementById('fotoAtivSt_'+k);
+    var diz=function(t,c){ if(st){ st.style.color=c||'var(--muted)'; st.textContent=t; } };
+    if(!o){ diz('Não achei este FILHOt.','var(--crm-critico)'); return; }
+    var chave=pelKey(o.p);
+    if(!DB){ diz('Sem conexão com o banco. Tente de novo.','var(--crm-critico)'); return; }
+    diz('apagando…');
+    DB.ref('daycare/fotos/'+chave).remove().then(function(){
+      try{ delete FOTOS[chave]; }catch(e){}
+      try{ __fotosV=String(Date.now()); _fotosGuardar(); }catch(e){}
+      return DB.ref('daycare/fotos-v').set(String(Date.now()));
+    }).then(function(){
+      try{ if(typeof audit==='function') audit('foto','APAGOU a foto de '+(o.p.n||'')+' (não era dele)',{alvo:k}); }catch(e){}
+      try{ renderFotoAtiv(); }catch(e){}
+      try{ if(typeof renderDaycare==='function') renderDaycare(); }catch(e){}
+    }).catch(function(e){
+      diz('NÃO apaguei: '+((e&&e.message)||e),'var(--crm-critico)');
+    });
   }
   function fotoAtivEscolher(e,k){
     var fl=e&&e.target&&e.target.files&&e.target.files[0]; if(!fl) return;
@@ -18831,7 +18928,7 @@
     var st=document.getElementById('fotoAtivSt_'+k);
     var diz=function(txt,cor){ if(st){ st.style.color=cor||'var(--muted)'; st.textContent=txt; } };
     if(!dataUrl){ diz('Escolha a foto primeiro.','var(--crm-critico)'); return; }
-    var o=turmaDoDia().filter(function(x){ return dcKey(x.p.n,x.p.tutor)===k; })[0];
+    var o=ativTurmaPresente().lista.filter(function(x){ return dcKey(x.p.n,x.p.tutor)===k; })[0];
     if(!o){ diz('Não achei este FILHOt. Recarregue a tela.','var(--crm-critico)'); return; }
     var chave=pelKey(o.p);
     diz('gravando…');
@@ -20347,13 +20444,8 @@
     }
     h+='</body></html>';
     var nome='Zeluz-sem-foto-'+hoje.getFullYear()+'-'+p2(hoje.getMonth()+1)+'-'+p2(hoje.getDate())+'.xls';
-    try{
-      var blob=new Blob(['\ufeff'+h],{type:'application/vnd.ms-excel;charset=utf-8'});
-      var url=URL.createObjectURL(blob), a=document.createElement('a');
-      a.href=url; a.download=nome; document.body.appendChild(a); a.click();
-      setTimeout(function(){ URL.revokeObjectURL(url); a.remove(); },1500);
-      if(typeof audit==='function') audit('relatorio-foto', d.sem.length+' sem foto e '+d.soltas.length+' a conferir', {arquivo:nome});
-    }catch(err){ alert('Não consegui gerar o arquivo: '+err.message); }
+    relEntregar(nome, h);
+      try{ if(typeof audit==='function') audit('relatorio-foto', d.sem.length+' sem foto e '+d.soltas.length+' a conferir', {arquivo:nome}); }catch(e){}
   }
   function semMicrochipDados(){
     var out=[];
@@ -20389,13 +20481,8 @@
       +l.map(function(o){ return '<tr><td><b>'+e(o.nome)+'</b></td><td>'+e(o.raca)+'</td><td>'+e(o.tutor)+'</td><td>'+e(o.tel)+'</td><td>'+e(o.categoria)+'</td></tr>'; }).join('')
       +'</table></body></html>';
     var nome='Zeluz-sem-microchip-'+hoje.getFullYear()+'-'+p2(hoje.getMonth()+1)+'-'+p2(hoje.getDate())+'.xls';
-    try{
-      var blob=new Blob(['﻿'+h],{type:'application/vnd.ms-excel;charset=utf-8'});
-      var url=URL.createObjectURL(blob), a=document.createElement('a');
-      a.href=url; a.download=nome; document.body.appendChild(a); a.click();
-      setTimeout(function(){ URL.revokeObjectURL(url); a.remove(); },1500);
-      if(typeof audit==='function') audit('relatorio-microchip', l.length+' FILHOts sem microchip', {arquivo:nome});
-    }catch(err){ alert('Não consegui gerar o arquivo: '+err.message); }
+    relEntregar(nome, h);
+      try{ if(typeof audit==='function') audit('relatorio-microchip', l.length+' FILHOts sem microchip', {arquivo:nome}); }catch(e){}
   }
   function baixarGradeAlmoco(){
     const h=gradeAlmocoHTML();
@@ -20403,13 +20490,8 @@
     const hoje=new Date(), p2=function(x){ return String(x).padStart(2,'0'); };
     const dados=gradeAlmocoDados();
     const nome='Zeluz-grade-almoco-'+hoje.getFullYear()+'-'+p2(hoje.getMonth()+1)+'-'+p2(hoje.getDate())+'.xls';
-    try{
-      const blob=new Blob(['﻿'+h],{type:'application/vnd.ms-excel;charset=utf-8'});
-      const url=URL.createObjectURL(blob), a=document.createElement('a');
-      a.href=url; a.download=nome; document.body.appendChild(a); a.click();
-      setTimeout(function(){ URL.revokeObjectURL(url); a.remove(); },1500);
-      if(typeof audit==='function') audit('grade-almoco-excel', dados.length+' linhas', {arquivo:nome});
-    }catch(err){ alert('Não consegui gerar o arquivo: '+err.message); }
+    relEntregar(nome, h);
+      try{ if(typeof audit==='function') audit('grade-almoco-excel', dados.length+' linhas', {arquivo:nome}); }catch(e){}
   }
   // ===== CENTRAL DE RELATÓRIOS ======================================================
   // Um lugar só para tudo que se baixa. Cada relatório se declara aqui: título, para que
@@ -20418,13 +20500,60 @@
     if(!html){ alert('Os dados ainda não carregaram. Espere alguns segundos e tente de novo.'); return; }
     var hoje=new Date(), p2=function(x){ return String(x).padStart(2,'0'); };
     var nome='Zeluz-'+nomeBase+'-'+hoje.getFullYear()+'-'+p2(hoje.getMonth()+1)+'-'+p2(hoje.getDate())+'.xls';
+    relEntregar(nome, html);
+      try{ if(typeof audit==='function') audit('relatorio-baixado', nomeBase+(quantas!=null?(' — '+quantas+' linhas'):''), {arquivo:nome}); }catch(e){}
+  }
+  // Entrega o relatório por qualquer caminho que o aparelho aceitar, e conta o que houve.
+  // "Download nao baixa" (Adriana, 28/ago, duas vezes). O caminho era um só: criar um
+  // Blob, forjar um <a download> e clicar. No celular — e em qualquer aparelho que bloqueie
+  // download automático — esse clique não faz NADA, e não há erro: a pessoa toca e a tela
+  // fica igual. É o mesmo padrão de sempre: saída que falha sem deixar rastro.
+  var REL_ULTIMO=null;
+  function relEntregar(nomeArquivo, html, quantos){
+    REL_ULTIMO={nome:nomeArquivo, html:html};
+    var st=document.getElementById('relStatus');
+    var baixou=false;
     try{
       var blob=new Blob(['﻿'+html],{type:'application/vnd.ms-excel;charset=utf-8'});
       var url=URL.createObjectURL(blob), a=document.createElement('a');
-      a.href=url; a.download=nome; document.body.appendChild(a); a.click();
-      setTimeout(function(){ URL.revokeObjectURL(url); a.remove(); },1500);
-      if(typeof audit==='function') audit('relatorio-baixado', nomeBase+(quantas!=null?(' — '+quantas+' linhas'):''), {arquivo:nome});
-    }catch(err){ alert('Não consegui gerar o arquivo: '+err.message); }
+      a.href=url; a.download=nomeArquivo; a.style.display='none';
+      document.body.appendChild(a); a.click();
+      baixou=true;
+      setTimeout(function(){ try{ URL.revokeObjectURL(url); a.remove(); }catch(e){} },1500);
+    }catch(err){ baixou=false; }
+    if(st){
+      st.style.display='block';
+      st.style.color=baixou?'var(--z-blue)':'var(--crm-atencao-text)';
+      st.innerHTML='<strong>'+(baixou?'Mandei baixar':'Não consegui baixar')+'</strong> — '
+        +(quantos!=null?(quantos+' linhas. '):'')
+        +'Se nada apareceu no seu aparelho, <button type="button" class="btn btn-gold" '
+        +'style="padding:5px 12px;font-size:12.5px;font-weight:800;margin-left:4px" '
+        +'onclick="relAbrirNaTela()">abra na tela</button> — dá para ler, imprimir ou salvar em PDF por lá.';
+    }
+    return baixou;
+  }
+  // O relatório numa aba, para quem não consegue baixar. É a mesma tabela.
+  function relAbrirNaTela(){
+    if(!REL_ULTIMO){ alert('Gere um relatório primeiro: toque em "Baixar Excel".'); return; }
+    var w=null;
+    try{ w=window.open('','_blank'); }catch(e){ w=null; }
+    if(!w){
+      var st=document.getElementById('relStatus');
+      if(st){ st.style.display='block';
+        st.innerHTML='<strong style="color:var(--crm-critico)">O navegador bloqueou a janela.</strong> '
+          +'Libere os pop-ups para este site e toque de novo.'; }
+      return;
+    }
+    try{
+      w.document.open();
+      w.document.write(String(REL_ULTIMO.html).replace('</body>',
+        '<div style="margin-top:18px;font-family:Calibri,Arial,sans-serif;font-size:11pt;color:#555">'
+        +'Para guardar: use Imprimir e escolha "Salvar como PDF".</div></body>'));
+      w.document.close();
+    }catch(e){
+      try{ w.close(); }catch(x){}
+      alert('Não consegui abrir: '+((e&&e.message)||e));
+    }
   }
   function relEsc(v){ return String(v==null?'':v).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
   function relTabelaHTML(titulo, subtitulo, colunas, linhas){
@@ -20595,12 +20724,92 @@
     if(a){ a.click(); return; }
     if(typeof irParaView==='function') irParaView(v);
   }
+  // A decisao de quem olhou: {chaveDaFicha: {chaveDaFoto: 'sim'|'nao'}}
+  var FOTO_CONF={};
+  function fotoConfCarregar(){
+    if(!DB) return Promise.resolve();
+    return DB.ref('daycare/foto-confirmada').once('value').then(function(s){ FOTO_CONF=s.val()||{}; })
+      .catch(function(e){
+        try{ if(typeof audit==='function') audit('foto','NÃO consegui ler as fotos já conferidas: '+((e&&e.message)||e),{}); }catch(x){}
+      });
+  }
+  function fotoConfChave(v){ return String(v||'').replace(/[.#$\/\[\]]/g,'_'); }
+  function fotoConfResponder(chaveFicha, chaveFoto, ehEle){
+    var ck=fotoConfChave(chaveFicha), cf=fotoConfChave(chaveFoto);
+    FOTO_CONF[ck]=FOTO_CONF[ck]||{};
+    FOTO_CONF[ck][cf]=ehEle?'sim':'nao';
+    if(DB) DB.ref('daycare/foto-confirmada/'+ck+'/'+cf).set({
+      resposta:ehEle?'sim':'nao', quem:(typeof quemSou==='function'?quemSou():'-'),
+      quando:(typeof zHojeISO==='function')?zHojeISO():'', ts:Date.now()
+    }).catch(function(e){ alert('Não consegui gravar a resposta: '+((e&&e.message)||e)); });
+    if(ehEle){
+      var url=(FOTOS||{})[chaveFoto];
+      if(!url){ alert('A foto sumiu do banco. Recarregue a tela.'); return; }
+      // copia para a chave da ficha; a original continua onde está (nada é apagado)
+      salvarFotoCad(chaveFicha, url).then(function(){
+        try{ if(typeof audit==='function') audit('foto','confirmou que a foto '+chaveFoto+' é de '+chaveFicha,{}); }catch(e){}
+        try{ renderRelatorios(); }catch(e){}
+        try{ if(typeof renderDaycare==='function') renderDaycare(); }catch(e){}
+      }).catch(function(e){ alert('NÃO consegui copiar a foto: '+((e&&e.message)||e)); });
+      return;
+    }
+    try{ if(typeof audit==='function') audit('foto','disse que a foto '+chaveFoto+' NÃO é de '+chaveFicha,{}); }catch(e){}
+    try{ renderRelatorios(); }catch(e){}
+  }
+  function fotoConfJaRespondeu(chaveFicha, chaveFoto){
+    var c=FOTO_CONF[fotoConfChave(chaveFicha)]||{};
+    return c[fotoConfChave(chaveFoto)]||'';
+  }
+  // O card que a Adriana pediu: as fotos na tela, para ela dizer quem é quem.
+  function fotosConferirHTML(){
+    var d;
+    try{ d=semFotoDados(); }catch(e){ return ''; }
+    var pend=[];
+    (d.soltas||[]).forEach(function(o){
+      (o.candidatas||[]).forEach(function(cf){
+        if(fotoConfJaRespondeu(o.chave, cf)) return;
+        pend.push({ficha:o, foto:cf, url:(FOTOS||{})[cf]||''});
+      });
+    });
+    if(!pend.length){
+      if(!(d.soltas||[]).length) return '';
+      return '<div class="card" style="margin-bottom:12px;border-left:4px solid var(--crm-ok)">'
+        +'<h2 style="font-size:17px">Fotos a conferir</h2>'
+        +'<div class="hint">Todas já foram respondidas. Obrigado — agora cada foto está na ficha certa.</div></div>';
+    }
+    var h='<div class="card" style="margin-bottom:12px;border-left:4px solid var(--z-gold)">'
+      +'<h2 style="font-size:17px">'+pend.length+(pend.length===1?' foto a conferir':' fotos a conferir')+'</h2>'
+      +'<div class="hint">Existe uma foto guardada com o mesmo nome, mas com o tutor escrito de outro jeito. '
+      +'<strong>Pode ser ele — ou pode ser um xará.</strong> O Boris da Laura tem uma foto guardada como Boris da Valéria, '
+      +'e são dois FILHOts diferentes. Olhe a cara e responda: só quem conhece sabe.</div>';
+    pend.forEach(function(x){
+      h+='<div style="display:flex;gap:12px;align-items:center;padding:11px 0;border-top:1px solid var(--line)">'
+        +(x.url?('<div style="width:74px;height:74px;border-radius:12px;flex:0 0 74px;background-image:url(\''+x.url+'\');background-size:cover;background-position:center;border:2px solid var(--line)"></div>')
+               :('<div style="width:74px;height:74px;border-radius:12px;flex:0 0 74px;background:var(--z-blue-soft)"></div>'))
+        +'<div style="flex:1;min-width:0">'
+        +'<div style="font-weight:800;color:var(--z-blue);font-size:15px">'+escAttr(x.ficha.nome)+'</div>'
+        +'<div class="hint" style="margin:1px 0 0">tutor da ficha: <strong>'+escAttr(x.ficha.tutor||'(sem tutor)')+'</strong></div>'
+        +'<div class="hint" style="margin:1px 0 0">a foto está guardada como: <strong>'+escAttr(x.foto)+'</strong></div>'
+        +'<div style="display:flex;gap:6px;margin-top:7px">'
+        +'<button type="button" class="btn btn-primary" style="padding:6px 14px;font-size:12.5px;font-weight:800"'
+        +' onclick="fotoConfResponder(\''+escAttr(x.ficha.chave).replace(/'/g,"\\'")+'\',\''+escAttr(x.foto).replace(/'/g,"\\'")+'\',true)">É ele</button>'
+        +'<button type="button" class="btn" style="padding:6px 14px;font-size:12.5px;font-weight:800;'
+        +'background:var(--z-cream-warm);border:1.5px solid var(--line);color:var(--z-blue)"'
+        +' onclick="fotoConfResponder(\''+escAttr(x.ficha.chave).replace(/'/g,"\\'")+'\',\''+escAttr(x.foto).replace(/'/g,"\\'")+'\',false)">Não é</button>'
+        +'</div></div></div>';
+    });
+    return h+'</div>';
+  }
   function renderRelatorios(){
     var el=document.getElementById('relGrid'); if(!el) return;
-    el.innerHTML=RELATORIOS.map(function(r){
+    if(!FOTO_CONF.__lido){ FOTO_CONF.__lido=true; try{ fotoConfCarregar().then(function(){ try{ renderRelatorios(); }catch(e){} }); }catch(e){} }
+    el.innerHTML='<div id="relStatus" class="card" style="display:none;margin-bottom:12px;border-left:4px solid var(--z-gold)"></div>'
+      +fotosConferirHTML()+RELATORIOS.map(function(r){
       return '<div class="card" style="margin-bottom:12px"><h2 style="font-size:17px">'+relEsc(r.t)+'</h2>'
         +'<div class="hint" style="margin-bottom:10px">'+relEsc(r.d)+'</div>'
-        +'<button class="btn btn-gold" onclick="'+r.fn+'">Baixar Excel</button></div>';
+        +'<button class="btn btn-gold" onclick="'+r.fn+'">Baixar Excel</button>'
+        +'<button class="btn" style="margin-left:6px;background:none;border:1.5px solid var(--line);color:var(--z-blue);font-weight:800" '
+        +'onclick="'+r.fn+';setTimeout(relAbrirNaTela,400)">Ver na tela</button></div>';
     }).join('');
   }
   // ===== A EXCEÇÃO DE HOJE, SEM MEXER NA FICHA (Adriana, 13/ago/2026) ===============
