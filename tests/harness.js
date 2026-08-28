@@ -3473,6 +3473,32 @@ async function main() {
   }
   console.log('');
 
+  console.log('Nascimento nao e data de operacao: 25 anos para tras (28/ago):');
+  {
+    check('o campo de nascimento tem regua propria', /var NASC_ANOS_MAX=25;/.test(html) &&
+      /function nascMinISO\(\)/.test(html));
+    check('e nao usa mais o min de 2015 das datas de operacao',
+      !/nasc:this\.value\}\)" min="2015-01-01"/.test(html) &&
+      /min="\$\{nascMinISO\(\)\}" max="\$\{zHojeISO\(\)\}"/.test(html));
+    check('grava passando pela validacao, nao direto', /onchange="setPelNasc\(this\.value,this\)"/.test(html));
+    check('os dois campos digitados avisam tambem',
+      (html.match(/Essa data de nascimento não é possível/g) || []).length >= 3);
+    if (typeof ctx.nascPlausivel === 'function') {
+      const anoAtual = new Date(ctx.hojeISO() + 'T12:00:00').getFullYear();
+      check('o Kako, de 01/09/2014, entra', ctx.nascPlausivel('2014-09-01'));
+      check('o auluno de 2009 entra', ctx.nascPlausivel('2009-06-15'));
+      check('20 anos atras entra', ctx.nascPlausivel((anoAtual - 20) + '-03-10'));
+      check('25 anos atras ainda entra', ctx.nascPlausivel((anoAtual - 25) + '-01-01'));
+      check('30 anos atras nao entra', !ctx.nascPlausivel((anoAtual - 30) + '-01-01'));
+      check('ninguem nasce amanha', !ctx.nascPlausivel((anoAtual + 1) + '-01-01'));
+      check('o ano 0026 (o erro que originou a trava) continua barrado', !ctx.nascPlausivel('0026-08-13'));
+      check('data pela metade nao passa', !ctx.nascPlausivel('2014-09'));
+    }
+    check('as datas de OPERACAO continuam travadas em 2015',
+      /var DATA_MIN='2015-01-01', DATA_MAX='2035-12-31';/.test(html));
+  }
+  console.log('');
+
   console.log('Tela que abre vazia: uma lista de ganchos so, com as excecoes escritas (28/ago):');
   {
     check('irParaView passa pela mesma lista do clique no menu',
