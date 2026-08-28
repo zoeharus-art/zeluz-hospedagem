@@ -9944,7 +9944,7 @@
   // Agora existe um carimbo: esta constante é a versão que o aparelho está rodando, e o
   // Firebase guarda a versão publicada. Quando as duas diferem, aparece o aviso — mas
   // NUNCA recarrega sozinho: recarregar no meio de um check-in perderia o trabalho.
-  const APP_VERSAO='2026-08-28-08';
+  const APP_VERSAO='2026-08-28-09';
   function vigiarVersao(){
     if(!DB) return;
     try{
@@ -14442,12 +14442,12 @@
     const sec=document.getElementById('v-'+v); if(sec) sec.classList.add('active');
     if(typeof titles!=='undefined'&&titles[v]){ document.getElementById('head-title').childNodes[0].nodeValue=titles[v][0]+' '; document.getElementById('head-sub').textContent=titles[v][1]; }
     window.scrollTo({top:0,behavior:'smooth'});
-    // A lista COMPLETA de ganchos vive em aoAbrirView (usada pelo clique no menu). Aqui
-    // disparamos só as telas que o próprio código abre por dentro — chamar a lista inteira
-    // reabriria telas que quem chamou já preparou (ex.: abre a ficha e some com o FILHOt).
-    if(v==='renovacao' && typeof renderRenovacao==='function') renderRenovacao();
-    if(v==='orcamento' && typeof orcInit==='function') orcInit();
-    if(v==='relatorios' && typeof renderRelatorios==='function') renderRelatorios();
+    // Uma lista de ganchos só (aoAbrirView), para os dois caminhos. As exceções abaixo são
+    // telas cujo conteúdo quem chamou JÁ preparou — nelas o gancho desfaria o trabalho:
+    //   ficha   → quem chamou acabou de escolher um FILHOt; o gancho voltaria para a lista
+    //   daycare → quem chamou acabou de escolher o dia e a atividade
+    if(v==='ficha' || v==='daycare') return;
+    if(typeof aoAbrirView==='function') aoAbrirView(v);
   }
   // Redesenha a ficha aberta mantendo a aba atual. Os blocos de prevenção calculam a
   // próxima data ao salvar, e o resultado precisa aparecer na hora.

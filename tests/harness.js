@@ -3368,6 +3368,24 @@ async function main() {
   }
   console.log('');
 
+  console.log('Tela que abre vazia: uma lista de ganchos so, com as excecoes escritas (28/ago):');
+  {
+    check('irParaView passa pela mesma lista do clique no menu',
+      /if\(typeof aoAbrirView==='function'\) aoAbrirView\(v\);/.test(html));
+    check('as excecoes sao duas, e explicadas', /if\(v==='ficha' \|\| v==='daycare'\) return;/.test(html));
+    check('a listinha paralela de tres telas sumiu',
+      !/A lista COMPLETA de ganchos vive em aoAbrirView/.test(html));
+    // toda tela do menu tem que ter titulo: sem ele irParaView quebra antes do gancho
+    const doMenu = Array.from(html.matchAll(/<a data-v="([a-z]+)"/g)).map(m => m[1]);
+    const NL = String.fromCharCode(10);
+    const semTitulo = doMenu.filter(v => v !== 'sair'
+      && html.indexOf(NL + '    ' + v + ":['") < 0
+      && html.indexOf(',' + v + ":['") < 0
+      && html.indexOf('{' + v + ":['") < 0);
+    check('toda tela do menu tem titulo e dica', semTitulo.length === 0, JSON.stringify(semTitulo));
+  }
+  console.log('');
+
   // ---- resumo ----
   console.log('== Resultado: ' + pass + ' ok, ' + fail + ' falha(s) ==');
   if (fail) { console.log('\nFalhas:'); fails.forEach((f) => console.log('  - ' + f)); }
