@@ -3119,6 +3119,37 @@ async function main() {
   }
   console.log('');
 
+  console.log('A linha respondida nao some sob o dedo (28/ago):');
+  {
+    // "Cristal, eu apertei 'nao e ela' varias vezes e nao foi." Fui ao banco: ela apertou
+    // UMA vez, as 11h46, e gravou certo. As 10 decisoes dela estao corretas. O que falhou
+    // foi a tela: a linha sumia na hora, a lista subia, e o toque seguinte caia em cima de
+    // OUTRO FILHOt. Pior que parecer quebrado: e a chance de responder pelo errado.
+    check('a resposta marca a linha em vez de faze-la sumir',
+      /FOTO_CONF_AGORA\[chaveFicha\+'\|\|'\+chaveFoto\]=ehEle\?'sim':'nao';/.test(html));
+    check('a tela mostra o que foi respondido agora',
+      /Você respondeu agora \('|Você respondeu agora \('/.test(html));
+    check('e da para desfazer', /function fotoConfDesfazer\(chaveFicha, chaveFoto\)/.test(html));
+    check('desfazer "e ele" tira a copia da ficha, sem tocar na original',
+      /a foto original continua onde sempre esteve/.test(html));
+    check('quem respondeu "e ele" volta a aparecer pela memoria da sessao',
+      /a linha volta pela memória|a linha volta pela memória/.test(html));
+    check('falha ao tirar a foto no desfazer nao some em silencio',
+      /NÃO consegui tirar a foto da ficha|NÃO consegui tirar a foto da ficha/.test(html));
+
+    if (typeof ctx.fotoConfResponder === 'function' && typeof ctx.fotosConferirHTML === 'function') {
+      const bkp = ctx.FOTO_CONF_AGORA;
+      try {
+        ctx.FOTO_CONF_AGORA = { 'x__y||x__z': 'nao' };
+        const h2 = ctx.fotosConferirHTML();
+        check('o bloco "respondeu agora" aparece com a resposta dada',
+          /respondeu agora/.test(h2) && /não é|não é/.test(h2));
+        check('e traz o botao de desfazer', /desfazer/.test(h2));
+      } finally { ctx.FOTO_CONF_AGORA = bkp; }
+    }
+  }
+  console.log('');
+
   // ---- resumo ----
   console.log('== Resultado: ' + pass + ' ok, ' + fail + ' falha(s) ==');
   if (fail) { console.log('\nFalhas:'); fails.forEach((f) => console.log('  - ' + f)); }

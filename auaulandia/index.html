@@ -9884,7 +9884,7 @@
   // Agora existe um carimbo: esta constante é a versão que o aparelho está rodando, e o
   // Firebase guarda a versão publicada. Quando as duas diferem, aparece o aviso — mas
   // NUNCA recarrega sozinho: recarregar no meio de um check-in perderia o trabalho.
-  const APP_VERSAO='2026-08-28-03';
+  const APP_VERSAO='2026-08-28-04';
   function vigiarVersao(){
     if(!DB) return;
     try{
@@ -20738,6 +20738,8 @@
     var ck=fotoConfChave(chaveFicha), cf=fotoConfChave(chaveFoto);
     FOTO_CONF[ck]=FOTO_CONF[ck]||{};
     FOTO_CONF[ck][cf]=ehEle?'sim':'nao';
+    // a linha não some: fica marcada, para quem tocou ver que pegou (Adriana, 28/ago)
+    FOTO_CONF_AGORA[chaveFicha+'||'+chaveFoto]=ehEle?'sim':'nao';
     if(DB) DB.ref('daycare/foto-confirmada/'+ck+'/'+cf).set({
       resposta:ehEle?'sim':'nao', quem:(typeof quemSou==='function'?quemSou():'-'),
       quando:(typeof zHojeISO==='function')?zHojeISO():'', ts:Date.now()
@@ -20761,21 +20763,57 @@
     return c[fotoConfChave(chaveFoto)]||'';
   }
   // O card que a Adriana pediu: as fotos na tela, para ela dizer quem é quem.
+  // O que foi respondido NESTA sessão fica na tela até alguém abrir a tela de novo.
+  var FOTO_CONF_AGORA={};        // {"ficha||foto": 'sim'|'nao'}
   function fotosConferirHTML(){
     var d;
     try{ d=semFotoDados(); }catch(e){ return ''; }
-    var pend=[];
+    var pend=[], feitas=[];
     (d.soltas||[]).forEach(function(o){
       (o.candidatas||[]).forEach(function(cf){
-        if(fotoConfJaRespondeu(o.chave, cf)) return;
-        pend.push({ficha:o, foto:cf, url:(FOTOS||{})[cf]||''});
+        var linha={ficha:o, foto:cf, url:(FOTOS||{})[cf]||''};
+        var agora=FOTO_CONF_AGORA[o.chave+'||'+cf];
+        if(agora){ linha.resposta=agora; feitas.push(linha); return; }
+        if(fotoConfJaRespondeu(o.chave, cf)) return;   // de outro dia: já resolvida
+        pend.push(linha);
       });
     });
+    // quem respondeu "é ele" ganhou foto e saiu de `soltas` — a linha volta pela memória
+    Object.keys(FOTO_CONF_AGORA).forEach(function(par){
+      if(feitas.some(function(x){ return (x.ficha.chave+'||'+x.foto)===par; })) return;
+      var p=par.split('||');
+      var nome=String(p[0]||'').split('__')[0];
+      feitas.push({ficha:{chave:p[0], nome:nome, tutor:''}, foto:p[1],
+                   url:(FOTOS||{})[p[1]]||(FOTOS||{})[p[0]]||'', resposta:FOTO_CONF_AGORA[par]});
+    });
+    var feitasHTML=function(){
+      if(!feitas.length) return '';
+      return '<div style="margin-top:10px;padding-top:9px;border-top:2px solid var(--line)">'
+        +'<div style="font-weight:800;color:var(--z-blue);font-size:14px">Você respondeu agora ('+feitas.length+')</div>'
+        +'<div class="hint" style="margin-top:2px">Ficam aqui para você conferir. Somem quando abrir esta tela de novo.</div>'
+        +feitas.map(function(x){
+          var sim=(x.resposta==='sim');
+          return '<div style="display:flex;gap:10px;align-items:center;padding:8px 0;border-top:1px solid var(--line);opacity:.85">'
+            +(x.url?('<div style="width:44px;height:44px;border-radius:9px;flex:0 0 44px;background-image:url(\''+x.url+'\');background-size:cover;background-position:center"></div>')
+                   :('<div style="width:44px;height:44px;border-radius:9px;flex:0 0 44px;background:var(--z-blue-soft)"></div>'))
+            +'<div style="flex:1;min-width:0">'
+            +'<div style="font-weight:800;color:var(--z-blue);font-size:14px">'+escAttr(x.ficha.nome)+'</div>'
+            +'<div class="hint" style="margin:0">'+escAttr(x.foto)+'</div></div>'
+            +'<div style="text-align:right">'
+            +'<div style="font-weight:800;font-size:12.5px;color:'+(sim?'var(--crm-ok)':'var(--muted)')+'">'
+            +(sim?'✓ é ele':'✗ não é')+'</div>'
+            +'<button type="button" class="btn" style="background:none;border:none;padding:2px 4px;'
+            +'color:var(--z-blue);font-size:12px;font-weight:800;text-decoration:underline"'
+            +' onclick="fotoConfDesfazer(\''+escAttr(x.ficha.chave).replace(/'/g,"\\'")+'\',\''+escAttr(x.foto).replace(/'/g,"\\'")+'\')">desfazer</button>'
+            +'</div></div>';
+        }).join('')+'</div>';
+    };
     if(!pend.length){
-      if(!(d.soltas||[]).length) return '';
+      if(!(d.soltas||[]).length && !feitas.length) return '';
       return '<div class="card" style="margin-bottom:12px;border-left:4px solid var(--crm-ok)">'
         +'<h2 style="font-size:17px">Fotos a conferir</h2>'
-        +'<div class="hint">Todas já foram respondidas. Obrigado — agora cada foto está na ficha certa.</div></div>';
+        +'<div class="hint">Todas já foram respondidas. Obrigado — agora cada foto está na ficha certa.</div>'
+        +feitasHTML()+'</div>';
     }
     var h='<div class="card" style="margin-bottom:12px;border-left:4px solid var(--z-gold)">'
       +'<h2 style="font-size:17px">'+pend.length+(pend.length===1?' foto a conferir':' fotos a conferir')+'</h2>'
@@ -20798,7 +20836,27 @@
         +' onclick="fotoConfResponder(\''+escAttr(x.ficha.chave).replace(/'/g,"\\'")+'\',\''+escAttr(x.foto).replace(/'/g,"\\'")+'\',false)">Não é</button>'
         +'</div></div></div>';
     });
-    return h+'</div>';
+    return h+feitasHTML()+'</div>';
+  }
+  // Desfaz uma resposta dada agora: tira a marca e devolve a linha para a lista.
+  // Se tinha copiado a foto ("é ele"), a copia sai também — a original nunca foi tocada.
+  function fotoConfDesfazer(chaveFicha, chaveFoto){
+    var par=chaveFicha+'||'+chaveFoto;
+    var era=FOTO_CONF_AGORA[par];
+    delete FOTO_CONF_AGORA[par];
+    var ck=fotoConfChave(chaveFicha), cf=fotoConfChave(chaveFoto);
+    try{ if(FOTO_CONF[ck]) delete FOTO_CONF[ck][cf]; }catch(e){}
+    if(DB) DB.ref('daycare/foto-confirmada/'+ck+'/'+cf).remove().catch(function(){});
+    if(era==='sim' && DB){
+      // tira a cópia que foi colada na ficha; a foto original continua onde sempre esteve
+      DB.ref('daycare/fotos/'+chaveFicha).remove().then(function(){
+        try{ delete FOTOS[chaveFicha]; }catch(e){}
+        return DB.ref('daycare/fotos-v').set(String(Date.now()));
+      }).catch(function(e){ alert('Desfiz a resposta, mas NÃO consegui tirar a foto da ficha: '+((e&&e.message)||e)); })
+        .then(function(){ try{ renderRelatorios(); }catch(e){} });
+    }
+    try{ if(typeof audit==='function') audit('foto','desfez a resposta de '+chaveFicha+' sobre '+chaveFoto,{}); }catch(e){}
+    try{ renderRelatorios(); }catch(e){}
   }
   function renderRelatorios(){
     var el=document.getElementById('relGrid'); if(!el) return;
