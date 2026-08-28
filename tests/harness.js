@@ -3563,6 +3563,11 @@ async function main() {
     // a suposicao que causou o problema nao pode voltar
     check('o semFotoDados ainda pula quem tem foto — POR ISSO a galeria existe',
       /if\(chaves\[k\]\) return;/.test(html));
+    check('da para mandar um link que abre direto na tela',
+      /var _h=String\(location\.hash\|\|''\)\.replace\('#',''\)\.trim\(\);/.test(html) &&
+      /if\(_h && document\.getElementById\('v-'\+_h\)\) v=_h;/.test(html));
+    check('e o link nao fura permissao (o filtro de paginas vem depois)',
+      /v=_h;[\s\S]{0,120}if\(Array\.isArray\(u\.paginas\)\)\{/.test(html));
   }
   console.log('');
 

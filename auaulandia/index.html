@@ -10028,7 +10028,7 @@
   // Agora existe um carimbo: esta constante é a versão que o aparelho está rodando, e o
   // Firebase guarda a versão publicada. Quando as duas diferem, aparece o aviso — mas
   // NUNCA recarrega sozinho: recarregar no meio de um check-in perderia o trabalho.
-  const APP_VERSAO='2026-08-28-16';
+  const APP_VERSAO='2026-08-28-17';
   function vigiarVersao(){
     if(!DB) return;
     try{
@@ -10484,6 +10484,14 @@
       abrirAtividade(escopo[0]); return; }
     // Cada perfil cai na tela onde trabalha.
     var v=telaInicialDe(u);
+    // ===== LINK DIRETO PARA UMA TELA — Adriana, 28/ago/2026 ("abre no local para mim") ==
+    // .../auaulandia/#relatorios entra e cai na tela de Relatorios. Vale para qualquer tela
+    // que a pessoa possa ver — o filtro de permissao logo abaixo continua mandando, entao um
+    // link nao abre porta nenhuma que ela ja nao tivesse.
+    try{
+      var _h=String(location.hash||'').replace('#','').trim();
+      if(_h && document.getElementById('v-'+_h)) v=_h;
+    }catch(e){}
     if(Array.isArray(u.paginas)){
       if(u.paginas.length){ if(u.paginas.indexOf(v)<0) v=u.paginas[0]; } // pousa numa página permitida
       else { v=null; } // nada concedido (e sem atividade) → não navega; a Gestão precisa conceder acesso
