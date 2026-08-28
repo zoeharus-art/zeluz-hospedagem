@@ -22,6 +22,7 @@ const path = require('path');
 const vm = require('vm');
 const https = require('https');
 const crypto = require('crypto');
+require('./lib/appcheck').instalarNoHttps(https); // App Check: só age com FIREBASE_APPCHECK_DEBUG_TOKEN no ambiente
 
 const APP = path.join(__dirname, '..', 'auaulandia', 'index.html');
 const DB_BASE = 'https://hospedagem-zeluz-default-rtdb.firebaseio.com';
@@ -3514,6 +3515,41 @@ async function main() {
       && html.indexOf(',' + v + ":['") < 0
       && html.indexOf('{' + v + ":['") < 0);
     check('toda tela do menu tem titulo e dica', semTitulo.length === 0, JSON.stringify(semTitulo));
+  }
+  console.log('');
+
+  console.log('Ícones do menu: nada fala mais que estrela (28/ago):');
+  {
+    // (a) todo data-icon="x" do arquivo tem uma chave x na função ic() — e (c) essa
+    // chave gera SVG não vazio (chave desconhecida vira <svg> sem nenhum <path>).
+    const chaves = Array.from(new Set(Array.from(html.matchAll(/data-icon="([a-z-]+)"/g)).map(m => m[1])));
+    check('achei chaves de ícone no arquivo', chaves.length > 0, 'chaves=' + chaves.length);
+    let semMapa = [], semPath = [];
+    chaves.forEach(k => {
+      const svg = ctx.ic(k);
+      if (typeof svg !== 'string' || !svg.includes('<svg')) { semMapa.push(k); return; }
+      if (!/<path/.test(svg)) semPath.push(k);
+    });
+    check('toda chave data-icon do arquivo existe em ic()', semMapa.length === 0, JSON.stringify(semMapa));
+    check('toda chave data-icon gera pelo menos um <path> (SVG não vazio)', semPath.length === 0, JSON.stringify(semPath));
+
+    // (b) nenhum item do menu (dentro de <nav id="nav">…</nav>) usa mais "star" —
+    // o ícone mora num <span> FILHO do <a>, não em atributo do próprio <a>, então
+    // o teste procura "star" em QUALQUER lugar do bloco do menu, não só na tag <a>.
+    const navHtml = (html.match(/<nav class="nav" id="nav">[\s\S]*?<\/nav>/) || [''])[0];
+    check('achei o bloco do menu (<nav id="nav">) no arquivo', navHtml.length > 0);
+    const linksComStar = Array.from(navHtml.matchAll(/data-icon="star"/g));
+    check('nenhum <a do menu usa data-icon="star"', linksComStar.length === 0, linksComStar.length + ' ocorrência(s)');
+    // e "star" nem aparece mais em NENHUM lugar do arquivo (nav ou role-note)
+    const starNoArquivo = Array.from(html.matchAll(/data-icon="star"/g));
+    check('data-icon="star" sumiu do arquivo inteiro', starNoArquivo.length === 0, starNoArquivo.length + ' ocorrência(s)');
+
+    // ícones novos deste redesenho — cada um precisa existir e desenhar algo
+    const NOVOS = ['clipboard', 'stethoscope', 'bed', 'bag', 'bell', 'id-card', 'login', 'door-out',
+      'dollar', 'dollar-alert', 'message', 'bowl', 'refresh', 'list-check', 'shield', 'drop', 'scale',
+      'card', 'ball', 'settings', 'chart', 'file-text', 'info', 'alert'];
+    const faltando = NOVOS.filter(k => !/<path/.test(ctx.ic(k) || ''));
+    check('os ' + NOVOS.length + ' ícones novos desenham SVG', faltando.length === 0, JSON.stringify(faltando));
   }
   console.log('');
 

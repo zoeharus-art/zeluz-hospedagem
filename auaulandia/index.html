@@ -3305,7 +3305,7 @@
        mensagem pronta e manda no WhatsApp. Quando o tutor responde, ela marca aqui.
        Ciclo de 6 meses: a lista pode ter aumentado, então pergunta-se a todos de novo. -->
   <section class="view" id="v-alergia">
-    <div class="role-note so-gestao"><span data-icon="shield"></span><span>É uma <strong>rotina de cuidado</strong>, não uma cobrança. A mensagem já vem pronta e personalizada: pergunta de cio só para as fêmeas, e microchip só para quem ainda não tem cadastrado.</span></div>
+    <div class="role-note so-gestao"><span data-icon="drop"></span><span>É uma <strong>rotina de cuidado</strong>, não uma cobrança. A mensagem já vem pronta e personalizada: pergunta de cio só para as fêmeas, e microchip só para quem ainda não tem cadastrado.</span></div>
     <div id="algPainel"></div>
   </section>
 
@@ -3839,7 +3839,7 @@
       scale:'M12 3v18M8 21h8M4 7h16M7 7l-3 6M7 7l3 6M4 13a3 3 0 006 0M17 7l-3 6M17 7l3 6M14 13a3 3 0 006 0',
       card:'M2 6h20v12H2zM2 10h20M5 15h4',
       ball:'M12 3a9 9 0 100 18a9 9 0 000-18zM4 9c4 3 12 3 16 0M4 15c4-3 12-3 16 0',
-      settings:'M12 9a3 3 0 100 6a3 3 0 000-6zM12 3v2M12 19v2M3 12h2M19 12h2M5.6 5.6l1.4 1.4M17 17l1.4 1.4M18.4 5.6L17 7M7 17l-1.4 1.4',
+      settings:'M19 8L12 4L5 8L5 16L12 20L19 16zM12 9a3 3 0 100 6a3 3 0 000-6z',
       chart:'M4 20h16M7 20v-5M12 20v-9M17 20v-13',
       'file-text':'M6 3h9l5 5v13H6zM15 3v5h5M9 12h8M9 16h8M9 20h5',
       info:'M12 3a9 9 0 100 18a9 9 0 000-18zM12 8v.01M12 11v5',
@@ -9995,7 +9995,7 @@
   // Agora existe um carimbo: esta constante é a versão que o aparelho está rodando, e o
   // Firebase guarda a versão publicada. Quando as duas diferem, aparece o aviso — mas
   // NUNCA recarrega sozinho: recarregar no meio de um check-in perderia o trabalho.
-  const APP_VERSAO='2026-08-28-13';
+  const APP_VERSAO='2026-08-28-14';
   function vigiarVersao(){
     if(!DB) return;
     try{
@@ -15990,8 +15990,23 @@
     try{ aplicarFaltaAutomatica(); }catch(e){}
     ckFrase=CK_FRASES[Math.floor(Date.now()/3600000)%CK_FRASES.length];
     if(!DB){ ckDados={}; renderCheckin(); return; }
-    DB.ref(ckNo()).once('value').then(function(s){ ckDados=s.val()||{}; renderCheckin(); })
-      .catch(function(){ ckDados={}; renderCheckin(); });
+    // A chamada vem junto: sem ela a tela não sabe quem faltou e cobra exame de quem não
+    // veio. Quem entra direto na atividade nunca passou pela tela que carregava a chamada.
+    Promise.all([
+      DB.ref(ckNo()).once('value').then(function(s){ return s.val()||{}; }).catch(function(){ return {}; }),
+      DB.ref('daycare/chamada/'+dcDataKey()).once('value').then(function(s){ return s.val()||{}; }).catch(function(){ return null; }),
+      DB.ref('daycare/falta-tardia/'+dcDataKey()).once('value').then(function(s){ return s.val()||{}; }).catch(function(){ return {}; })
+    ]).then(function(r){
+      ckDados=r[0];
+      if(r[1]) dcChamada=r[1];
+      CK_FALTA_TARDIA=r[2]||{};
+      renderCheckin();
+    }).catch(function(){ ckDados={}; renderCheckin(); });
+  }
+  // A chamada é a resposta de quem está no prédio. Quem faltou não se examina — nem na
+  // entrada nem na saída (Adriana, 28/ago/2026).
+  function ckFaltou(o){
+    try{ return dcChamada[dcKey(o.p.n,o.p.tutor)]==='faltou'; }catch(e){ return false; }
   }
   function ckDe(o){ return ckDados[dcKey(o.p.n,o.p.tutor)]||null; }
   function ckFeito(o){ const r=ckDe(o); return !!(r&&r.fim); }
@@ -16008,7 +16023,9 @@
     if(nota) nota.innerHTML=entrada
       ? '<strong>Check-in de entrada — 7h às 10h30.</strong> Chame cada um pelo nome com o comando <strong>VEM</strong> e olhe ponto a ponto. Quem passa por aqui fica <strong>presente</strong> no dia. Quem não passar até as 12h entra como falta.'
       : '<strong>Check-out — antes do banho ou no fim do dia.</strong> A pergunta agora é outra: <strong>aconteceu algo enquanto ele estava conosco?</strong> Compare com o que foi visto na entrada.';
-    const lista=turmaDoDia();
+    const turma=turmaDoDia();
+    const faltaram=turma.filter(ckFaltou);
+    const lista=turma.filter(function(o){ return !ckFaltou(o); });
     const feitos=lista.filter(ckFeito).length, comAlerta=lista.filter(ckTemAlerta).length;
     document.getElementById('ckResumo').innerHTML=
       '<div class="dc-resumo">'
@@ -16029,6 +16046,7 @@
             : '<div class="dc-meia"><strong>AINDA NAO CHEGARAM ('+f.lista.length+'):</strong> '+nomes
               +'<div style="font-weight:600;margin-top:4px">Fica em aberto ate as '+CK_HORA_FALTA+'h. Depois disso, quem nao passar pelo check-in entra como falta.</div></div>';
         })()
+      +ckFaltaramHTML(faltaram, lista)
       +avisoPlanilha();
     document.getElementById('ckCount').textContent=feitos+' de '+lista.length+' — toque no peludinho para examinar';
     grid.innerHTML=filtraLista(lista).map(function(o){
@@ -16040,8 +16058,58 @@
         +ph+'<div class="nm">'+nomeDesamb(o,lista)+'</div><div class="br">'+(p.raca||'-')+'</div>'
         +(alerta?'<div class="ck-tag bad">COM ALTERAÇÃO</div>':(feito?'<div class="ck-tag ok">✓ '+(r.hora||'feito')+'</div>':'<div class="ck-tag">a examinar</div>'))
         +(feito&&r.quem?'<div class="ck-quem">'+escAttr(r.quem)+'</div>':'')
+        // Ele não veio? Quem está com a lista na mão marca aqui mesmo, sem sair da tela.
+        +(feito?'':('<button type="button" class="btn" style="width:100%;margin-top:6px;padding:6px 8px;font-size:11.5px;font-weight:800;'
+            +'background:none;border:1.5px solid '+(CK_FALTA_ARMADA===k?'var(--crm-critico)':'var(--line)')+';'
+            +'color:'+(CK_FALTA_ARMADA===k?'var(--crm-critico)':'var(--muted)')+'"'
+            +' onclick="ckMarcarFalta(event,\''+escAttr(k).replace(/'/g,"\\'")+'\')">'
+            +(CK_FALTA_ARMADA===k?'Confirmar: não veio':'Não veio hoje')+'</button>'))
         +'</div>';
     }).join('');
+  }
+  // Quem faltou fica no rodapé: sai da conta, mas não some — a monitora precisa ver que o
+  // app sabe, senão ela procura o FILHOt pela casa.
+  var CK_FALTA_ARMADA='', CK_FALTA_TARDIA={};
+  function ckFaltaramHTML(faltaram, lista){
+    if(!faltaram.length) return '';
+    var nomes=faltaram.map(function(o){
+      var k=dcKey(o.p.n,o.p.tutor), t=CK_FALTA_TARDIA[k];
+      return nomeDesamb(o, lista.concat(faltaram))
+        +(t?(' <span style="font-weight:600;color:var(--muted)">(marcado no fim do dia por '+escAttr(t.quem||'?')+(t.hora?(' às '+escAttr(t.hora)):'')+')</span>'):'');
+    }).join(', ');
+    var tardias=faltaram.filter(function(o){ return !!CK_FALTA_TARDIA[dcKey(o.p.n,o.p.tutor)]; }).length;
+    return '<div class="dc-faltas" style="margin-top:10px"><strong>NÃO VIERAM HOJE ('+faltaram.length+'):</strong> '+nomes
+      +'<div style="font-weight:600;margin-top:4px">Estes saíram da conta: não há corpo para examinar. '
+      +(tardias?('<strong>'+tardias+' só '+(tardias>1?'foram marcados':'foi marcado')+' agora, no fim do dia</strong> — a falta era para ter sido lançada no check-in da manhã.')
+              :'A falta veio da chamada ou do check-in.')
+      +'</div></div>';
+  }
+  // Marca a falta sem sair da tela, em dois toques (janelinha do navegador some atrás do
+  // teclado no celular). Marcada no check-out, fica registrada como TARDIA: a manhã devia
+  // ter feito isso, e o registro é o que permite cobrar depois (Adriana, 28/ago/2026).
+  function ckMarcarFalta(ev, k){
+    if(ev&&ev.stopPropagation) ev.stopPropagation();
+    if(CK_FALTA_ARMADA!==k){ CK_FALTA_ARMADA=k; renderCheckin(); return; }
+    CK_FALTA_ARMADA='';
+    if(!DB){ alert('Sem conexão com o banco — a falta não seria vista pelas outras telas. Tente de novo.'); return; }
+    var dia=dcDataKey(), tardia=!ckEhEntrada();
+    var reg={quem:(typeof quemSou==='function'?quemSou():'-'), hora:(typeof horaAgora==='function'?horaAgora():''),
+             ts:Date.now(), origem:(tardia?'checkout-corpo':'checkin-corpo')};
+    dcChamada[k]='faltou';
+    if(tardia) CK_FALTA_TARDIA[k]=reg;
+    renderCheckin();
+    DB.ref('daycare/chamada/'+dia+'/'+k).set('faltou').then(function(){
+      if(!tardia) return;
+      // O registro da falta tardia é separado da chamada: a chamada diz O QUE aconteceu,
+      // isto diz QUANDO se soube e por quem — que é o que a Gestão precisa para cobrar.
+      return DB.ref('daycare/falta-tardia/'+dia+'/'+k).set(reg);
+    }).then(function(){
+      if(typeof audit==='function') audit(tardia?'falta-tardia':'falta',
+        (tardia?'marcou falta no FIM DO DIA (devia ter sido no check-in) de ':'marcou falta de ')+k, {alvo:k});
+    }).catch(function(e){
+      delete dcChamada[k]; delete CK_FALTA_TARDIA[k]; renderCheckin();
+      alert('NÃO consegui gravar a falta: '+((e&&e.message)||e)+'\n\nTente de novo — sem isso as outras telas continuam achando que ele está aqui.');
+    });
   }
   function ckAbrir(k){
     const o=turmaDoDia().filter(function(x){ return dcKey(x.p.n,x.p.tutor)===k; })[0];
