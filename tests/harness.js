@@ -3379,6 +3379,53 @@ async function main() {
   }
   console.log('');
 
+  console.log('Aviso de almoco: sai sozinho, separa o urgente e nada some no 8o dia (28/ago):');
+  {
+    check('o envio nao depende mais de abrir a tela do Emporio',
+      /function empChecarAtrasoDiario\(\)/.test(html) &&
+      /setTimeout\(function\(\)\{ try\{ empChecarAtrasoDiario\(\); \}catch\(e\)\{\} \}, 6000\)/.test(html));
+    check('so quem avisa tutor dispara o envio',
+      /\['consultora','gestao','supervisor','diretoria'\]\.indexOf\(r\)<0\) return;/.test(html));
+    check('duas pessoas entrando juntas nao mandam a mensagem em dobro',
+      /avisos-telegram-atraso\/'\+hoje\)\.transaction\(function\(atual\)\{/.test(html) &&
+      /if\(!res \|\| !res\.committed\) return;/.test(html));
+    check('a leitura antiga (once + set) saiu do caminho do envio',
+      !/avisos-telegram-atraso\/'\+hoje\)\.once\('value'\)/.test(html));
+    check('o grupo recebe 2 dias; a tela enxerga 21',
+      /var EMP_DIAS_GRUPO=2, EMP_DIAS_TELA=21;/.test(html));
+    check('o que passou de anteontem nao vai para o grupo',
+      /EMP_ANTIGO=todos\.filter\(function\(g\)\{ return recentes\.indexOf\(g\.dia\)<0; \}\)/.test(html));
+    check('mas conta no rodape da mensagem, para ninguem achar que acabou',
+      /Há ainda '\+nAntigo\+' de dias anteriores esperando decisão/.test(html));
+    check('o que ficou para tras aparece na tela com decisao de gente',
+      /Ficou para trás \('\+nAnt\+'\)/.test(html) && /function empDispensarDia\(dia,k\)/.test(html));
+    check('"deixa para la" grava QUEM decidiu (nada some por decurso de prazo)',
+      /dispensado:true[\s\S]{0,80}avisos-comida\/'\+dia\+'\/'\+k/.test(html) ||
+      /quem:\(typeof quemSou[\s\S]{0,140}dispensado:true/.test(html));
+    check('a data vira "Ontem"/"Anteontem" para quem le no celular',
+      /function empComoFoi\(dia\)/.test(html) && /if\(d===1\) return 'Ontem';/.test(html));
+    if (typeof ctx.empComoFoi === 'function') {
+      const p = (n) => { const d = new Date(ctx.hojeISO() + 'T12:00:00'); d.setDate(d.getDate() - n);
+        return d.toISOString().slice(0, 10); };
+      check('ontem e ontem', ctx.empComoFoi(p(1)) === 'Ontem', ctx.empComoFoi(p(1)));
+      check('anteontem e anteontem', ctx.empComoFoi(p(2)) === 'Anteontem', ctx.empComoFoi(p(2)));
+      check('mais velho conta os dias', ctx.empComoFoi(p(9)) === 'Há 9 dias', ctx.empComoFoi(p(9)));
+    }
+    if (typeof ctx.empPendentesDoDia === 'function') {
+      const a1 = {'kako__marcia': 'nao', 'bob__ana': 'comeu', 'zeca__lia': 'na', 'tina__rui': 'metade'};
+      const a2 = {'kako__marcia': 'nao', 'tina__rui': ''};
+      check('quem nao comeu nem no 2o entra na lista',
+        ctx.empPendentesDoDia(a1, a2, {}).some(x => x.k === 'kako__marcia'));
+      check('quem nao almoca ("na") NUNCA vira aviso ao tutor',
+        !ctx.empPendentesDoDia(a1, a2, {}).some(x => x.k === 'zeca__lia'));
+      check('tutor ja avisado sai da lista',
+        !ctx.empPendentesDoDia(a1, a2, {'kako__marcia': {quem: 'Amanda'}}).some(x => x.k === 'kako__marcia'));
+      check('"deixa para la" tambem tira da lista',
+        !ctx.empPendentesDoDia(a1, a2, {'kako__marcia': {dispensado: true, quem: 'Amanda'}}).some(x => x.k === 'kako__marcia'));
+    }
+  }
+  console.log('');
+
   console.log('Tela que abre vazia: uma lista de ganchos so, com as excecoes escritas (28/ago):');
   {
     check('irParaView passa pela mesma lista do clique no menu',

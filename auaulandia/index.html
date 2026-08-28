@@ -9944,7 +9944,7 @@
   // Agora existe um carimbo: esta constante é a versão que o aparelho está rodando, e o
   // Firebase guarda a versão publicada. Quando as duas diferem, aparece o aviso — mas
   // NUNCA recarrega sozinho: recarregar no meio de um check-in perderia o trabalho.
-  const APP_VERSAO='2026-08-28-10';
+  const APP_VERSAO='2026-08-28-11';
   function vigiarVersao(){
     if(!DB) return;
     try{
@@ -10384,6 +10384,10 @@
       abrirSanfonasDe(document.getElementById('blocoDaycare'));
     } }catch(e){}
     try{ if(localStorage.getItem('zeluz_sidebar_collapsed')==='1') document.body.classList.add('nav-collapsed'); }catch(e){} // barra recolhida (desktop)
+    // O aviso de quem não comeu deixa de depender de alguém abrir a tela do Empório: sai
+    // uma vez por dia, quando a recepção ou a gestão entra — em qualquer tela. Esperar o
+    // banco acordar antes, senão a leitura sai vazia e o dia é marcado como enviado.
+    try{ setTimeout(function(){ try{ empChecarAtrasoDiario(); }catch(e){} }, 6000); }catch(e){}
     // Quem tem escopo restrito (ex.: Amanda Barbosa, só almoço) cai direto na atividade dela.
     // Pessoa só com atividade (sem páginas) cai direto na atividade dela (Amanda Barbosa etc.).
     if(escopo && !_temPag && typeof abrirAtividade==='function'){
@@ -24922,7 +24926,12 @@
   // então à meia-noite tudo que ficou pendente de ontem sumia: a consultora chega de manhã,
   // vê zero, e o tutor nunca soube que o FILHOt não comeu. Agora a tela varre os últimos dias
   // e traz o que ficou para trás — não some enquanto ninguém avisar.
-  var EMP_ATRASO=[];       // [{dia, itens:[...]}]
+  var EMP_ATRASO=[];       // [{dia, itens:[...]}] — ontem e anteontem: ainda vale ligar
+  var EMP_ANTIGO=[];       // [{dia, itens:[...]}] — mais velho que isso: só decisão, sem mensagem
+  // Quantos dias o grupo recebe, e até onde a tela enxerga. O grupo é curto de propósito:
+  // avisar um tutor uma semana depois não é cuidado, é constrangimento — mas o registro
+  // não pode sumir, então a tela vai muito mais longe (Adriana, 28/ago/2026).
+  var EMP_DIAS_GRUPO=2, EMP_DIAS_TELA=21;
   function empDiasAtras(n){
     var p=function(x){ return String(x).padStart(2,'0'); };
     var out=[], h=new Date();
@@ -24934,6 +24943,13 @@
   }
   // Monta a lista de um dia QUALQUER só com o que está gravado — sem depender da turma de
   // hoje, que não vale para ontem.
+  // "Ontem" diz mais que "27/08" para quem lê no celular às pressas.
+  function empComoFoi(dia){
+    var d=pesoDiasDesde(dia);
+    if(d===1) return 'Ontem';
+    if(d===2) return 'Anteontem';
+    return 'Há '+d+' dias';
+  }
   function empPendentesDoDia(a1,a2,avisados){
     var out=[], chaves={};
     Object.keys(a1||{}).forEach(function(k){ chaves[k]=1; });
@@ -24957,45 +24973,87 @@
     });
     return out.sort(function(a,b){ return jsNorm(a.nome).localeCompare(jsNorm(b.nome)); });
   }
+  function empPega(p){ return DB.ref(p).once('value').then(function(s){ return s.val()||{}; }).catch(function(){ return {}; }); }
+  // Lê os dias pedidos e devolve o que ficou pendente em cada um. Usada pela tela (21 dias)
+  // e pelo aviso automático (2 dias) — a mesma conta, num lugar só.
+  function empCarregarDias(dias){
+    return Promise.all(dias.map(function(d){
+      return Promise.all([empPega('daycare/almoco/'+d), empPega('daycare/atividade/'+d+'/almoco2'), empPega('daycare/avisos-comida/'+d)])
+        .then(function(x){ return {dia:d, itens:empPendentesDoDia(x[0],x[1],x[2])}; });
+    })).then(function(gs){ return gs.filter(function(g){ return g.itens.length; }); });
+  }
   function abrirEmporio(){
     if(!DB){ renderEmporio(); return; }
-    var pega=function(p){ return DB.ref(p).once('value').then(function(s){ return s.val()||{}; }).catch(function(){ return {}; }); };
+    var dias=empDiasAtras(EMP_DIAS_TELA);
     Promise.all([
-      pega('daycare/almoco/'+empDataKey()),
-      pega('daycare/atividade/'+empDataKey()+'/almoco2'),
-      pega('daycare/avisos-comida/'+empDataKey()),
-      pega('daycare/avisos-telegram-comida/'+empDataKey())
-    ].concat(empDiasAtras(7).map(function(d){
-      return Promise.all([pega('daycare/almoco/'+d), pega('daycare/atividade/'+d+'/almoco2'), pega('daycare/avisos-comida/'+d)])
-        .then(function(x){ return {dia:d, itens:empPendentesDoDia(x[0],x[1],x[2])}; });
-    }))).then(function(r){
+      empPega('daycare/almoco/'+empDataKey()),
+      empPega('daycare/atividade/'+empDataKey()+'/almoco2'),
+      empPega('daycare/avisos-comida/'+empDataKey()),
+      empPega('daycare/avisos-telegram-comida/'+empDataKey()),
+      empCarregarDias(dias)
+    ]).then(function(r){
       window.__empAlm1=r[0]; window.__empAlm2=r[1]; EMP_AVISOS=r[2]||{}; EMP_TG=r[3]||{};
-      EMP_ATRASO=r.slice(4).filter(function(x){ return x&&x.itens&&x.itens.length; });
+      var todos=r[4]||[];
+      var recentes=empDiasAtras(EMP_DIAS_GRUPO);
+      EMP_ATRASO=todos.filter(function(g){ return recentes.indexOf(g.dia)>=0; });
+      EMP_ANTIGO=todos.filter(function(g){ return recentes.indexOf(g.dia)<0; });
       renderEmporio();
       try{ empAvisarAtrasoNoTelegram(); }catch(e){}
     }).catch(function(){ renderEmporio(); });
+  }
+  // ===== O AVISO SAI SOZINHO, UMA VEZ POR DIA =====================================
+  // Antes ele dependia de alguém abrir a tela do Empório. Quem abre a tela é justamente
+  // quem já ia olhar — então o aviso chegava para quem não precisava dele e faltava nos
+  // dias em que ninguém abriu. Agora sai quando a recepção ou a gestão ENTRA no app, em
+  // qualquer tela. A trava do dia é uma transaction: dez pessoas entrando ao mesmo tempo
+  // continuam gerando UMA mensagem só.
+  function empChecarAtrasoDiario(){
+    if(!DB) return;
+    var r=document.body.dataset.role||'';
+    if(['consultora','gestao','supervisor','diretoria'].indexOf(r)<0) return;
+    empCarregarDias(empDiasAtras(EMP_DIAS_GRUPO)).then(function(gs){
+      if(!gs.length) return;
+      EMP_ATRASO=gs;
+      // a contagem do que é antigo entra no rodapé da mensagem; se falhar, o rodapé some
+      return empCarregarDias(empDiasAtras(EMP_DIAS_TELA).filter(function(d){
+        return empDiasAtras(EMP_DIAS_GRUPO).indexOf(d)<0;
+      })).catch(function(){ return []; }).then(function(antigos){
+        EMP_ANTIGO=antigos||[];
+        return empAvisarAtrasoNoTelegram();
+      });
+    }).catch(function(){});
   }
   // Manda para o grupo o que ficou de ontem — no formato que a Adriana pediu (20/ago/2026):
   // primeiro a mensagem dizendo QUEM ficou; depois, em mensagem separada, o texto pronto para
   // a consultora encaminhar ao tutor sem reescrever nada.
   function empAvisarAtrasoNoTelegram(){
-    if(!DB||!EMP_ATRASO.length) return;
+    if(!DB||!EMP_ATRASO.length) return Promise.resolve();
     var hoje=empDataKey();
-    DB.ref('daycare/avisos-telegram-atraso/'+hoje).once('value').then(function(s){
-      if(s.val()) return;                                  // já mandado hoje
+    // Transaction, não leitura seguida de escrita: duas pessoas entrando no mesmo minuto
+    // liam "ainda não mandou" as duas e o grupo recebia a mensagem em dobro.
+    return DB.ref('daycare/avisos-telegram-atraso/'+hoje).transaction(function(atual){
+      if(atual) return;                                    // já mandado hoje: aborta
+      return {ts:Date.now(), enviando:true};
+    }).then(function(res){
+      if(!res || !res.committed) return;                   // outro já pegou o dia
       return tgCfgPronta().then(function(c){
         if(!c) return;
-        var linhas=[];
+        var linhas=['<b>ALMOÇO — tutores que ainda não foram avisados</b>',''];
         EMP_ATRASO.forEach(function(g){
           var p=g.dia.split('-');
-          linhas.push('<b>De '+p[2]+'/'+p[1]+' ficou:</b>');
+          linhas.push('<b>'+empComoFoi(g.dia)+' ('+p[2]+'/'+p[1]+'):</b>');
           g.itens.forEach(function(x){
             linhas.push(x.nome+(x.raca?(' - '+x.raca):''));
             linhas.push(x.motivo+'.');
             linhas.push('');
           });
         });
-        linhas.push('Nenhum tutor foi avisado ainda. As mensagens prontas vêm a seguir.');
+        linhas.push('As mensagens prontas vêm a seguir.');
+        // O que é mais velho não vem no grupo, mas também não pode sumir sem ninguém saber.
+        var nAntigo=EMP_ANTIGO.reduce(function(a,g){ return a+g.itens.length; },0);
+        if(nAntigo) linhas.push('',
+          'Há ainda '+nAntigo+' de dias anteriores esperando decisão na tela "Quem não comeu hoje" '
+          +'— avisar tão tarde não costuma valer, mas alguém precisa dizer que deixa para lá.');
         // A ponte podia devolver {ok:false} e nada disso era olhado: o registro do dia era
         // gravado igual e a tela dizia que estava tudo enviado. Agora cada mensagem é
         // conferida, as que falharam ficam nomeadas no registro e a primeira falha vira
@@ -25123,7 +25181,8 @@
     const cnt=document.getElementById('empCount');
     const faltam=lista.filter(function(x){ return !x.aviso && x.pronto; }).length;
     const esperando=lista.filter(function(x){ return !x.aviso && !x.pronto; }).length;
-    var atrasados=EMP_ATRASO.reduce(function(a,g){ return a+g.itens.length; },0);
+    var atrasados=EMP_ATRASO.reduce(function(a,g){ return a+g.itens.length; },0)
+      +EMP_ANTIGO.reduce(function(a,g){ return a+g.itens.length; },0);
     if(cnt) cnt.textContent=(atrasados?(atrasados+' de dias anteriores · '):'')
       +(lista.length?(faltam+' para avisar'+(esperando?(' · '+esperando+' aguardando o 2º horário'):'')+' · '+lista.filter(function(x){return !!x.aviso;}).length+' já avisado(s)'):'ninguém de hoje');
     // O que ficou para trás vem PRIMEIRO — é o mais urgente, porque o tutor já esperou um dia.
@@ -25144,10 +25203,34 @@
     var htmlAtraso=EMP_ATRASO.map(function(g){
       var p=g.dia.split('-');
       return '<div class="card" style="border-left:4px solid var(--crm-critico)">'
-        +'<h2 style="font-size:18px">De '+p[2]+'/'+p[1]+' ficou ('+g.itens.length+')</h2>'
+        +'<h2 style="font-size:18px">'+empComoFoi(g.dia)+', '+p[2]+'/'+p[1]+' ('+g.itens.length+')</h2>'
         +'<div class="hint">Estes tutores <strong>ainda não foram avisados</strong>. Ficam aqui até alguém avisar — não somem à meia-noite.</div>'
         +'<div style="margin-top:10px">'+g.itens.map(function(x){ return cartao(x,g.dia); }).join('')+'</div></div>';
     }).join('');
+    // Mais velho que anteontem: ligar agora quase nunca vale, mas sumir sozinho é pior.
+    // Aqui não há mensagem pronta — há uma decisão a tomar, e ela fica com nome.
+    var nAnt=EMP_ANTIGO.reduce(function(a,g){ return a+g.itens.length; },0);
+    var htmlAntigo=!nAnt?'':('<div class="card" style="border-left:4px solid var(--muted)">'
+      +'<h2 style="font-size:17px">Ficou para trás ('+nAnt+')</h2>'
+      +'<div class="hint">Passou de anteontem: avisar agora costuma constranger mais do que ajudar. '
+      +'Mas ninguém some da lista sozinho — diga <strong>Avisei</strong> ou <strong>Deixa para lá</strong>, e fica registrado quem decidiu.</div>'
+      +EMP_ANTIGO.map(function(g){
+        var p=g.dia.split('-');
+        return '<div style="margin-top:11px"><div style="font-weight:800;color:var(--z-blue);font-size:14px">'
+          +empComoFoi(g.dia)+' · '+p[2]+'/'+p[1]+'</div>'
+          +g.itens.map(function(x){
+            return '<div style="display:flex;gap:8px;align-items:center;padding:8px 0;border-bottom:1px solid var(--line);flex-wrap:wrap">'
+              +'<div style="flex:1;min-width:150px">'
+              +'<div style="font-weight:800;color:var(--z-blue)">'+escAttr(x.nome)+(x.raca?(' <span style="font-size:12px;color:var(--muted);font-weight:600">'+escAttr(x.raca)+'</span>'):'')+'</div>'
+              +'<div class="hint" style="margin:0">'+escAttr(x.motivo)+(x.tutor?(' · tutor: '+escAttr(x.tutor)):'')+'</div></div>'
+              +'<button type="button" class="btn btn-primary" style="padding:7px 12px;font-size:12.5px;font-weight:800"'
+              +' onclick="empAvisarDia(\''+escAttr(g.dia)+'\',\''+escAttr(x.k).replace(/'/g,"\\'")+'\')">Avisei</button>'
+              +'<button type="button" class="btn" style="padding:7px 12px;font-size:12.5px;font-weight:800;background:none;border:1.5px solid var(--line);color:var(--muted)"'
+              +' onclick="empDispensarDia(\''+escAttr(g.dia)+'\',\''+escAttr(x.k).replace(/'/g,"\\'")+'\')">Deixa para lá</button>'
+              +'</div>';
+          }).join('')+'</div>';
+      }).join('')+'</div>');
+    htmlAtraso=htmlAtraso+htmlAntigo;
     if(!lista.length){
       el.innerHTML=htmlAtraso+'<div class="av-empty"><div class="big">Todos comeram hoje</div>Nenhum tutor de hoje para avisar por causa de comida.</div>';
       return;
@@ -25198,6 +25281,22 @@
         return {dia:g.dia, itens:g.itens.filter(function(x){ return x.k!==k; })};
       }).filter(function(g){ return g.itens.length; });
       if(typeof audit==='function') audit('emporio-aviso-tutor', k, {quem:reg.quem, obs:reg.obs, dia:dia});
+      renderEmporio();
+    }).catch(function(e){ alert('Erro ao registrar: '+((e&&e.message)||e)); });
+  }
+  // Velho demais para ligar para o tutor. Some da lista, mas fica no banco com o nome de
+  // quem decidiu — nada desaparece por decurso de prazo (Adriana, 28/ago/2026).
+  function empDispensarDia(dia,k){
+    if(!DB) return;
+    var reg={quem:(typeof quemSou==='function'?quemSou():'-'), hora:(typeof horaAgora==='function'?horaAgora():''),
+             ts:Date.now(), dispensado:true, atrasado:true};
+    DB.ref('daycare/avisos-comida/'+dia+'/'+k).set(reg).then(function(){
+      var tira=function(L){ return L.map(function(g){
+        if(g.dia!==dia) return g;
+        return {dia:g.dia, itens:g.itens.filter(function(x){ return x.k!==k; })};
+      }).filter(function(g){ return g.itens.length; }); };
+      EMP_ANTIGO=tira(EMP_ANTIGO); EMP_ATRASO=tira(EMP_ATRASO);
+      if(typeof audit==='function') audit('emporio-dispensou', k, {quem:reg.quem, dia:dia});
       renderEmporio();
     }).catch(function(e){ alert('Erro ao registrar: '+((e&&e.message)||e)); });
   }
