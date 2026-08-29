@@ -1914,6 +1914,60 @@ async function main() {
   }
   console.log('');
 
+  // ---- Prevenção: trava de logica da data (Adriana, 29/ago/2026) ----
+  // "a pessoa foi colocar a data da vacina, nao mudou o ano do calendario -- tomou em
+  //  29/08/2025 e continua devendo. Precisa aparecer um aviso... nao permitir o erro
+  //  humano." Funcao pura prevChecarLogica(nome, feitoISO, proximoISO, hoje).
+  console.log('Prevencao -- trava de logica da data:');
+  if (typeof ctx.prevChecarLogica === 'function') {
+    // (a) o erro real: 29/08/2025 lancado em 29/08/2026, calendario nao avancou o ano
+    const a = ctx.prevChecarLogica('Vacina Antirrábica', '2025-08-29', '2025-08-29', '2026-08-29');
+    check('(a) ano do calendario esquecido: ok=false', a.ok === false, JSON.stringify(a));
+    check('(a) sugestao e a mesma data com o ano corrente (2026-08-29)', a.sugestao === '2026-08-29', JSON.stringify(a));
+    check('(a) pede confirmacao, nao bloqueia sozinho', a.confirmar === true, JSON.stringify(a));
+
+    // (b) feito no futuro -- bloqueia
+    const b = ctx.prevChecarLogica('Vermífugo', '2026-09-01', '', '2026-08-29');
+    check('(b) feito no futuro bloqueia (ok=false, sem confirmar)', b.ok === false && !b.confirmar, JSON.stringify(b));
+    check('(b) motivo fala da data no futuro', /futuro/.test(b.motivo || ''), JSON.stringify(b));
+
+    // (c) validade termina antes da aplicacao -- bloqueia
+    const c = ctx.prevChecarLogica('Coleira repelente', '2026-08-29', '2026-08-01', '2026-08-29');
+    check('(c) validade antes da aplicacao bloqueia (ok=false, sem confirmar)', c.ok === false && !c.confirmar, JSON.stringify(c));
+    check('(c) motivo fala da validade antes da aplicacao', /validade/.test(c.motivo || ''), JSON.stringify(c));
+
+    // (d) data correta -- ok
+    const d = ctx.prevChecarLogica('Exame de fezes', '2026-08-01', '2026-09-15', '2026-08-29');
+    check('(d) data correta devolve ok=true', d.ok === true, JSON.stringify(d));
+
+    // mordida: se a regra do futuro for invertida (feito no futuro passa como ok),
+    // este teste tem que cair -- prova que o teste de fato exercita a regra.
+    const mordidaFuturo = ctx.prevChecarLogica('Vermífugo', '2026-09-01', '', '2026-08-29');
+    check('mordida -- feito no futuro nunca pode voltar ok=true', mordidaFuturo.ok !== true, JSON.stringify(mordidaFuturo));
+  } else {
+    check('prevChecarLogica existe', false, 'função não encontrada no app');
+  }
+
+  // (e) prevLancar e o salvar da ficha (pbSalvar) de fato CHAMAM a trava -- não é só
+  // uma função pura solta que ninguém usa.
+  const corpoFuncao = (nomeFn) => {
+    const re = new RegExp('function\\s+' + nomeFn + '\\s*\\([^)]*\\)\\s*\\{');
+    const m = re.exec(html);
+    if (!m) return '';
+    let i = m.index + m[0].length, depth = 1;
+    while (i < html.length && depth > 0) {
+      if (html[i] === '{') depth++;
+      else if (html[i] === '}') depth--;
+      i++;
+    }
+    return html.slice(m.index + m[0].length, i);
+  };
+  const corpoPrevLancar = corpoFuncao('prevLancar');
+  const corpoPbSalvar = corpoFuncao('pbSalvar');
+  check('prevLancar (aba Prevenção) chama prevChecarLogica', /prevChecarLogica\(/.test(corpoPrevLancar), 'corpo com ' + corpoPrevLancar.length + ' caracteres');
+  check('pbSalvar (Salvar da ficha) chama prevChecarLogica', /prevChecarLogica\(/.test(corpoPbSalvar), 'corpo com ' + corpoPbSalvar.length + ' caracteres');
+  console.log('');
+
   console.log('Prevencao do hospede -- convite, nao cobranca:');
   {
     ['prevEhHospede', 'prevMensagemTutor', 'prevBlocoHospedes', 'prevMarcarAvisado', 'algCurGravar'].forEach((n) =>

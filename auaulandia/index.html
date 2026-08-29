@@ -10023,7 +10023,7 @@
   // Agora existe um carimbo: esta constante é a versão que o aparelho está rodando, e o
   // Firebase guarda a versão publicada. Quando as duas diferem, aparece o aviso — mas
   // NUNCA recarrega sozinho: recarregar no meio de um check-in perderia o trabalho.
-  const APP_VERSAO='2026-08-29-01';
+  const APP_VERSAO='2026-08-29-02';
   function vigiarVersao(){
     if(!DB) return;
     try{
@@ -13810,6 +13810,42 @@
     setPelExtra(p, patch);
     setTimeout(function(){ prevRedesenhar(); }, 100);
   }
+  // ===== TRAVA DE LÓGICA DA DATA — Adriana, 29/ago/2026 ===========================
+  // "uma pessoa foi colocar a data da vacina, não mudou o ano do calendário — tomou em
+  //  29/08/2025, lança em 29/08/2026 — e continua devendo. Precisa aparecer um aviso...
+  //  Precisamos não permitir o erro humano: o SaaS precisa questionar o que não tem
+  //  lógica — a pessoa atualiza e continua atrasado?"
+  // Função PURA — não toca em tela, não grava nada. Usada nos DOIS lugares onde uma
+  // data de prevenção entra no sistema: prevLancar (aba Prevenção) e pbSalvar (ficha).
+  // Devolve {ok:true} quando a dupla de datas faz sentido, ou {ok:false, motivo,
+  // sugestao?, confirmar?}. `confirmar:true` = não bloqueia sozinho, pede confirmação
+  // (o item pode legitimamente continuar em atraso). Sem `confirmar` = bloqueia
+  // (a data em si é impossível, não é o FILHOt que está devendo).
+  function prevChecarLogica(nome, feitoISO, proximoISO, hoje){
+    hoje=hoje||hojeISO();
+    nome=nome||'este item';
+    var dataOk=/^\d{4}-\d{2}-\d{2}$/;
+    var feitoValido=dataOk.test(feitoISO||'');
+    var proxValido=dataOk.test(proximoISO||'');
+    if(feitoValido && feitoISO>hoje) return {ok:false, motivo:'A data de aplicação está no futuro.'};
+    if(feitoValido && proxValido && proximoISO<feitoISO) return {ok:false, motivo:'A validade termina antes da aplicação.'};
+    if(proxValido && proximoISO<hoje){
+      // Sugestão: se "Feito em" tem o mesmo dia/mês de hoje (ou até 7 dias atrás) só que
+      // com o ano anterior, é o erro clássico do calendário que não avançou — sugere a
+      // MESMA data com o ano corrente. Senão, sugere hoje.
+      var sugestao=hoje;
+      if(feitoValido && feitoISO.slice(0,4)<hoje.slice(0,4)){
+        var md=feitoISO.split('-').map(Number), anoHoje=+hoje.slice(0,4);
+        var d=new Date(anoHoje, md[1]-1, md[2]);
+        var p2=function(x){ return String(x).padStart(2,'0'); };
+        var esteAno=d.getFullYear()+'-'+p2(d.getMonth()+1)+'-'+p2(d.getDate());
+        var diff=diasAteISO(esteAno);
+        if(diff!==null && diff<=0 && diff>=-7) sugestao=esteAno;
+      }
+      return {ok:false, motivo:nome+' continua em atraso — confira a data.', sugestao:sugestao, confirmar:true};
+    }
+    return {ok:true};
+  }
   // Lança "feito em" + quem fez, e recalcula a próxima. Um toque por item.
   function prevLancar(chave, k){
     var p=prevPetDe(chave); if(!p) return;
@@ -13818,18 +13854,38 @@
     var quem=String((document.getElementById('prevQ_'+chave+'_'+k)||{}).value||'').trim();
     var prox=String((document.getElementById('prevP_'+chave+'_'+k)||{}).value||'').trim();
     if(!dt){ alert('Escolha a data em que foi feito.'); return; }
-    if(dt>hojeISO()){ alert('Essa data ainda não chegou ('+fmtBR(dt)+'). Confira o mês e o ano.'); return; }
-    var patch={};
-    if(it.base) patch[it.base]=dt;
     // Se o "Vale até" ficou com um valor ANTERIOR à data que acabou de ser lançada, ele é
     // resto da ficha velha — recalcula. Data futura escrita à mão é respeitada.
     var calc=(it.dias?addDiasISO(dt,it.dias):'');
-    patch[k]=(prox && prox>dt) ? prox : (calc||prox||'');
-    if(quem) patch[k.replace(/_p$/,'')+'_por']=quem;
-    if(it.nomeK){ var nmProd=String((document.getElementById('prevN_'+chave+'_'+k)||{}).value||'').trim(); if(nmProd) patch[it.nomeK]=nmProd; }
-    setPelExtra(p, patch);
-    if(typeof audit==='function') audit('prevencao', (pelNome(p)||'')+': '+(it.nome||k)+' feito em '+fmtBR(dt)+(quem?(' por '+quem):''), {pet:pelNome(p)||''});
-    setTimeout(function(){ prevRedesenhar(); }, 120);
+    var proxFinal=(prox && prox>dt) ? prox : (calc||prox||'');
+    var nomeItem=it.nome||'este item';
+    var gravar=function(dtFinal, proxDef, atrasoConfirmado){
+      var patch={};
+      if(it.base) patch[it.base]=dtFinal;
+      patch[k]=proxDef;
+      if(quem) patch[k.replace(/_p$/,'')+'_por']=quem;
+      if(it.nomeK){ var nmProd=String((document.getElementById('prevN_'+chave+'_'+k)||{}).value||'').trim(); if(nmProd) patch[it.nomeK]=nmProd; }
+      setPelExtra(p, patch);
+      if(typeof audit==='function') audit('prevencao', (pelNome(p)||'')+': '+nomeItem+' feito em '+fmtBR(dtFinal)+(quem?(' por '+quem):''), {pet:pelNome(p)||''});
+      if(atrasoConfirmado && typeof audit==='function') audit('prevencao-atraso-confirmado', (pelNome(p)||'')+': '+nomeItem+' continua em atraso, confirmado'+(quem?(' por '+quem):''), {pet:pelNome(p)||''});
+      setTimeout(function(){ prevRedesenhar(); }, 120);
+    };
+    var checagem=prevChecarLogica(nomeItem, dt, proxFinal, hojeISO());
+    if(!checagem.ok && !checagem.confirmar){
+      zAlertao('Essa data não faz sentido', [checagem.motivo], {botao:'Vou corrigir'});
+      return;
+    }
+    if(!checagem.ok && checagem.confirmar){
+      zEscolha(checagem.motivo, ['Feito em '+fmtBR(dt)+' · Vale até '+(proxFinal?fmtBR(proxFinal):'—')], [
+        {t:'Corrigir para '+fmtBR(checagem.sugestao), cor:'#1E8449', fn:function(){
+          var novoProx=(it.dias?addDiasISO(checagem.sugestao,it.dias):checagem.sugestao);
+          gravar(checagem.sugestao, novoProx, false);
+        }},
+        {t:'Está certo, deixar em atraso', cor:'#6b5f4b', fn:function(){ gravar(dt, proxFinal, true); }}
+      ]);
+      return;
+    }
+    gravar(dt, proxFinal, false);
   }
   function prevEdicaoHTML(o){
     var chave=pelKey(o.p), ex=pelExtra(o.p)||{};
@@ -14141,6 +14197,34 @@
             :(PB_SALVO[b]?'<span style="font-size:12.5px;font-weight:800;color:var(--crm-ok)">✓ Salvo</span>':''))
       +'</div>';
   }
+  // Itens de um bloco da ficha, prontos para a trava de lógica da data (prevChecarLogica).
+  // `recalc(dtNovo)` refaz o "Vale até" do jeito que o próprio bloco calcula — mesma conta
+  // de pbSalvar, para a correção de "Corrigir para {sugestão}" não inventar outra regra.
+  function pbItensParaChecagem(b, ex){
+    if(b==='ecto') return [{nome:'Ectoparasitas', campoFeito:'ecto_t', campoProx:'ecto_p',
+      feito:ex.ecto_t, prox:ex.ecto_p,
+      recalc:function(dt){ var d=ectoDur(Object.assign({},ex,{ecto_t:dt})); return (dt&&d)?addDiasISO(dt,d):''; }}];
+    if(b==='col') return [{nome:'Coleira repelente', campoFeito:'col_t', campoProx:'col_p',
+      feito:ex.col_t, prox:ex.col_p,
+      recalc:function(dt){ var d=coleiraDur(Object.assign({},ex,{col_t:dt})); return (dt&&d)?addDiasISO(dt,d):''; }}];
+    if(b==='verm') return [{nome:'Vermífugo', campoFeito:'verm_t', campoProx:'verm_p',
+      feito:ex.verm_t, prox:ex.verm_p,
+      recalc:function(dt){
+        if(!dt) return '';
+        if(ex.verm_doses==='2 doses'){ var d2=addDiasISO(dt,VERMIF_2A_DOSE); return addDiasISO(d2,VERMIF_PROX); }
+        return addDiasISO(dt,VERMIF_PROX);
+      }}];
+    if(b==='fezes') return [{nome:'Exame de fezes', campoFeito:'fezes_t', campoProx:'fezes_p',
+      feito:ex.fezes_t, prox:ex.fezes_p,
+      recalc:function(dt){ return dt?addDiasISO(dt,FEZES_PROX):''; }}];
+    if(b==='vac'){
+      var mk=function(key,nome){ return {nome:nome, campoFeito:key+'_t', campoProx:key+'_p',
+        feito:ex[key+'_t'], prox:ex[key+'_p'],
+        recalc:function(dt){ return dt?addDiasISO(dt,365):''; }}; };
+      return [mk('vac_mult','Vacina Múltipla'), mk('vac_gripe','Vacina de Gripe'), mk('vac_raiva','Vacina Antirrábica')];
+    }
+    return [];
+  }
   function pbSalvar(b){
     if(!pelAtual) return;
     var pend=PB_PEND[b]||{};
@@ -14154,10 +14238,43 @@
       else { patch.verm_2a=''; patch.verm_p=addDiasISO(ex.verm_t,VERMIF_PROX); }
     }
     if(b==='fezes'){ patch.fezes_p=ex.fezes_t?addDiasISO(ex.fezes_t,FEZES_PROX):''; }
-    setPelExtra(pelAtual, patch);
-    delete PB_PEND[b]; PB_SALVO[b]=true;
-    try{ if(typeof audit==='function') audit('prevencao', (pelNome(pelAtual)||'')+': bloco '+b+' salvo na ficha', {pet:pelNome(pelAtual)||''}); }catch(e){}
-    pbRender(b);
+    // ===== TRAVA DE LÓGICA DA DATA — Adriana, 29/ago/2026 (mesma regra do prevLancar) =====
+    var exDepois=Object.assign({},ex,patch);
+    var itens=pbItensParaChecagem(b, exDepois);
+    var checagens=itens.map(function(it){
+      return {item:it, r:prevChecarLogica(it.nome, it.feito, it.prox, hojeISO())};
+    });
+    var bloqueios=checagens.filter(function(c){ return !c.r.ok && !c.r.confirmar; });
+    if(bloqueios.length){
+      zAlertao('Essa data não faz sentido', bloqueios.map(function(c){ return c.r.motivo; }), {botao:'Vou corrigir'});
+      return;
+    }
+    var gravar=function(confirmados){
+      setPelExtra(pelAtual, patch);
+      delete PB_PEND[b]; PB_SALVO[b]=true;
+      try{ if(typeof audit==='function') audit('prevencao', (pelNome(pelAtual)||'')+': bloco '+b+' salvo na ficha', {pet:pelNome(pelAtual)||''}); }catch(e){}
+      (confirmados||[]).forEach(function(c){
+        try{ if(typeof audit==='function') audit('prevencao-atraso-confirmado', (pelNome(pelAtual)||'')+': '+c.item.nome+' continua em atraso, confirmado na ficha', {pet:pelNome(pelAtual)||''}); }catch(e){}
+      });
+      pbRender(b);
+    };
+    var pendentesConfirmar=checagens.filter(function(c){ return !c.r.ok && c.r.confirmar; });
+    if(!pendentesConfirmar.length){ gravar([]); return; }
+    // Vários itens do mesmo bloco (as 3 vacinas) podem estar em atraso ao mesmo tempo —
+    // confirma um por vez; só grava quando todos forem respondidos.
+    var passo=function(i, confirmados){
+      if(i>=pendentesConfirmar.length){ gravar(confirmados); return; }
+      var c=pendentesConfirmar[i], it=c.item, r=c.r;
+      zEscolha(r.motivo, ['Feito em '+(it.feito?fmtBR(it.feito):'—')+' · Vale até '+(it.prox?fmtBR(it.prox):'—')], [
+        {t:'Corrigir para '+fmtBR(r.sugestao), cor:'#1E8449', fn:function(){
+          patch[it.campoFeito]=r.sugestao;
+          patch[it.campoProx]=it.recalc(r.sugestao);
+          passo(i+1, confirmados);
+        }},
+        {t:'Está certo, deixar em atraso', cor:'#6b5f4b', fn:function(){ confirmados.push(c); passo(i+1, confirmados); }}
+      ]);
+    };
+    passo(0, []);
   }
   // --- Ectoparasitas (Pulgas e Carrapatos) ---
   function ectoDur(ex){ if(ex.ecto_prod==='Outro') return parseInt(ex.ecto_outro_dias,10)||0;
