@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="pt-BR">
+<meta charset="utf-8">
+<title>Sidebar Zêluz — três opções</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<link rel="icon" href="assets/simbolo-zeluz-39.svg">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap">
+<style>
+/* -- Tokens DS v8 : copia literal de zeluz-ds-v8/shared/tokens.css -- */
+:root{
+  --z-gold:#DEB428; --z-gold-deep:#B8961F; --z-blue:#234D67; --z-blue-soft:#3A6A85;
+  --z-cream:#FFFDF6; --z-cream-warm:#F9F5EC; --z-white:#FFFFFF;
+  --font-marketing:'Poppins',-apple-system,BlinkMacSystemFont,system-ui,sans-serif;
+  --p-ink-soft:rgba(35,77,103,.68);   /* derivado de --z-blue */
+  --p-rule:rgba(35,77,103,.10);       /* derivado de --z-blue */
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{font-family:var(--font-marketing);background:linear-gradient(165deg,var(--z-cream) 0%,var(--z-cream-warm) 100%);color:var(--z-blue);-webkit-font-smoothing:antialiased;min-height:100vh;padding:32px 24px 48px}
+img,svg{display:block;max-width:100%}
+a{color:inherit;text-decoration:none}
+.top{max-width:1040px;margin:0 auto 26px;display:flex;align-items:center;gap:16px}
+.top img{width:56px;height:auto;flex:0 0 56px}
+h1{font-size:24px;font-weight:700;letter-spacing:-.01em;line-height:1.2}
+.sub{font-size:13px;font-weight:400;color:var(--p-ink-soft);margin-top:3px}
+.linha{max-width:1040px;margin:0 auto;display:flex;flex-wrap:wrap;gap:24px;justify-content:center}
+.op{width:300px;max-width:100%;display:flex;flex-direction:column;gap:12px}
+.op-cab{display:flex;align-items:baseline;gap:8px}
+.op-n{font-size:12px;font-weight:700;letter-spacing:.1em;color:var(--z-gold-deep);flex:0 0 auto}
+.op-t{font-size:17px;font-weight:700;letter-spacing:-.01em;line-height:1.25}
+.op-d{font-size:12.5px;font-weight:400;line-height:1.5;color:var(--p-ink-soft);min-height:76px}
+.moldura{width:100%;height:760px;border-radius:18px;overflow:hidden;border:1px solid var(--p-rule);box-shadow:0 6px 18px rgba(35,77,103,.08);background:var(--z-white)}
+iframe{width:100%;height:760px;border:0;display:block}
+.abrir{align-self:flex-start;font-size:12.5px;font-weight:600;padding:7px 14px;border-radius:999px;background:rgba(222,180,40,.14);transition:background 150ms cubic-bezier(.16,1,.3,1);cursor:pointer}
+.abrir:hover{background:rgba(222,180,40,.26)}
+@media (max-width:820px){
+  body{padding:24px 16px 40px}
+  .moldura,iframe{height:620px}
+}
+</style>
+
+<header class="top">
+  <img src="assets/simbolo-zeluz-39.svg" alt="Zêluz">
+  <div>
+    <h1>Sidebar Zêluz — três opções</h1>
+    <div class="sub">O mesmo menu e a mesma hierarquia de três níveis nas três. O que muda é a superfície.</div>
+  </div>
+</header>
+
+<div class="linha">
+  <section class="op">
+    <div class="op-cab"><span class="op-n">A</span><span class="op-t">Azul mais claro</span></div>
+    <div class="op-d">Gradiente tonal do azul-soft com dois washes creme muito grandes e difusos. Símbolo na versão clara, subtítulos dourados, item ativo em pílula creme com traço dourado.</div>
+    <div class="moldura"><iframe src="opcao-a.html?frame=1" title="Opção A — Azul mais claro"></iframe></div>
+    <a class="abrir" href="opcao-a.html">Abrir em tela cheia</a>
+  </section>
+  <section class="op">
+    <div class="op-cab"><span class="op-n">B</span><span class="op-t">Vidro creme</span></div>
+    <div class="op-d">Vidro fosco a 92% com desfoque de 16px sobre o chão creme. Símbolo na versão original, texto azul, item ativo em pílula de wash dourado.</div>
+    <div class="moldura"><iframe src="opcao-b.html?frame=1" title="Opção B — Vidro creme"></iframe></div>
+    <a class="abrir" href="opcao-b.html">Abrir em tela cheia</a>
+  </section>
+  <section class="op">
+    <div class="op-cab"><span class="op-n">C</span><span class="op-t">Azul claro com cabeçalho creme</span></div>
+    <div class="op-d">Cabeçalho creme de 168px com recorte curvo e o símbolo original grande; corpo azul-soft, item ativo em pílula dourada.</div>
+    <div class="moldura"><iframe src="opcao-c.html?frame=1" title="Opção C — Azul claro com cabeçalho creme"></iframe></div>
+    <a class="abrir" href="opcao-c.html">Abrir em tela cheia</a>
+  </section>
+</div>
+</html>

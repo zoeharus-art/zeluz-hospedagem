@@ -3774,7 +3774,7 @@
       // subiram porque o banco recusou ou ainda estava reconectando). Ver o bloco
       // "AUDITORIA — BOLSO LOCAL E REENVIO".
       try{ _audReenviarBolso(); }catch(e){}
-      if(typeof preCadastro==='function') preCadastro();
+      // preCadastro() removido em 29/ago/2026: gravava o chip de 2 FILHOts a cada abertura, antes do login (auditoria 03-smoke).
       DB.ref('auaulandia/cadastro').on('value', s=>{ cadCache=s.val()||{}; if(typeof renderHosp==='function') renderHosp(); });
       DB.ref('daycare/config/sensiveis').on('value', s=>{ const v=s.val(); if(Array.isArray(v)){ try{ SENS=new Set(v); }catch(e){} } });
       DB.ref('daycare/config/atividades').on('value', s=>{ const v=s.val(); if(Array.isArray(v)&&v.length){ ATIVIDADES=v; if(typeof renderAtiv==='function') renderAtiv(); } });
@@ -5868,11 +5868,6 @@
     fotoPendente=null;
     aplicarCadastro(getCad(currentHosp));
     if(DB) DB.ref('auaulandia/cadastro/'+cadKey(currentHosp)).once('value').then(s=>{ if(s.val()) aplicarCadastro(s.val()); }).catch(()=>{});
-  }
-  function preCadastro(){
-    if(!DB) return;
-    DB.ref('auaulandia/cadastro/charlotte__sabrina').update({chip:'225732'}).catch(()=>{});
-    DB.ref('auaulandia/cadastro/lana__').update({chip:'375365'}).catch(()=>{});
   }
 
   // ---- Relatórios da ficha: coletar, aplicar, salvar no banco, limpar ----
@@ -10028,7 +10023,7 @@
   // Agora existe um carimbo: esta constante é a versão que o aparelho está rodando, e o
   // Firebase guarda a versão publicada. Quando as duas diferem, aparece o aviso — mas
   // NUNCA recarrega sozinho: recarregar no meio de um check-in perderia o trabalho.
-  const APP_VERSAO='2026-08-28-17';
+  const APP_VERSAO='2026-08-29-01';
   function vigiarVersao(){
     if(!DB) return;
     try{

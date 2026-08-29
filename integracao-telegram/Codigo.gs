@@ -1,6 +1,10 @@
 /**
  * ZÊLUZ · AuAulândia — ponte para os grupos do Telegram
  *
+ * Versão 7 (28/ago/2026) — App Check: a ponte passa a mandar a prova de que é da casa, lendo o
+ *                          token de depuração das Propriedades do script (APPCHECK_DEBUG_TOKEN).
+ *                          Sem a propriedade, nada muda. E a gravação no banco deixou de engolir
+ *                          o erro calada.
  * Versão 6 (28/ago/2026) — vigia do 2º horário do almoço: às 16h20, se ninguém registrou,
  *                          a ponte avisa o grupo sozinha (roda sem o app aberto).
  * Versão 5 (25/ago/2026) — emoji parou de derrubar a mensagem inteira (par surrogado).
@@ -201,6 +205,70 @@ var FB_KEY = 'AIzaSyD3udp47XruRAEeIYWNGn0ICGCX3a1qr28';   // a mesma chave públ
 var VIGIA_HORA_INICIO = '16:20';
 var VIGIA_HORA_FIM    = '17:20';
 
+/* ---------------------------------------------------------------------------
+ * App Check — a prova de que quem fala com o banco é gente da casa.
+ *
+ * O app roda no navegador e produz essa prova com o reCAPTCHA. Esta ponte roda
+ * no servidor do Google (Apps Script), não tem navegador e não consegue fazer o
+ * reCAPTCHA. O caminho oficial do Firebase para servidor e teste é o TOKEN DE
+ * DEPURAÇÃO: cria-se um no Console (App Check → app web → Gerenciar tokens de
+ * depuração) e troca-se esse segredo por um token de App Check de verdade.
+ *
+ * O segredo NUNCA fica no código — este repositório é público. Ele mora nas
+ * Propriedades do script (Configurações do projeto → Propriedades do script),
+ * na propriedade APPCHECK_DEBUG_TOKEN.
+ *
+ * Sem a propriedade, a ponte segue exatamente como hoje, sem o cabeçalho — e
+ * diz isso no log, para o silêncio não ter dois significados.
+ * ------------------------------------------------------------------------- */
+var APPCHECK_PROJECT_ID = 'hospedagem-zeluz';
+var APPCHECK_APP_ID     = '1:199129329105:web:22d0995972c197e24644f0';
+var __appCheckToken = null;    // cache de uma execução (a troca vale ~1 hora)
+var __appCheckLido  = false;
+
+/** Troca o token de depuração por um token de App Check. Devolve '' se não houver. */
+function _appCheckToken() {
+  if (__appCheckLido) return __appCheckToken;
+  __appCheckLido = true;
+  __appCheckToken = '';
+  var segredo = '';
+  try {
+    segredo = PropertiesService.getScriptProperties().getProperty('APPCHECK_DEBUG_TOKEN') || '';
+  } catch (e) {
+    Logger.log('App Check: não consegui ler as Propriedades do script — ' + e + ' — seguindo sem');
+    return '';
+  }
+  if (!segredo) {
+    Logger.log('App Check: sem token de depuração — seguindo sem');
+    return '';
+  }
+  try {
+    var url = 'https://firebaseappcheck.googleapis.com/v1/projects/' + APPCHECK_PROJECT_ID +
+              '/apps/' + APPCHECK_APP_ID + ':exchangeDebugToken?key=' + FB_KEY;
+    var r = UrlFetchApp.fetch(url, {
+      method: 'post', contentType: 'application/json',
+      payload: JSON.stringify({ debug_token: segredo }), muteHttpExceptions: true });
+    var v = JSON.parse(r.getContentText() || '{}');
+    if (r.getResponseCode() !== 200 || !v.token) {
+      // Só o código e a mensagem de erro do Google — nunca o segredo nem o token.
+      Logger.log('App Check: a troca do token de depuração falhou (HTTP ' + r.getResponseCode() +
+                 ') — ' + ((v.error && v.error.status) || 'sem detalhe') + ' — seguindo sem');
+      return '';
+    }
+    __appCheckToken = v.token;
+    return __appCheckToken;
+  } catch (e) {
+    Logger.log('App Check: erro ao trocar o token de depuração — ' + e + ' — seguindo sem');
+    return '';
+  }
+}
+
+/** Cabeçalhos das chamadas ao banco: com a prova do App Check quando houver. */
+function _fbCabecalhos() {
+  var t = _appCheckToken();
+  return t ? { 'X-Firebase-AppCheck': t } : {};
+}
+
 function vigiaAlmoco2() {
   var agora = new Date();
   var hhmm = Utilities.formatDate(agora, 'America/Sao_Paulo', 'HH:mm');
@@ -262,18 +330,36 @@ function _fbToken() {
 
 function _fbLer(caminho, token) {
   try {
-    var r = UrlFetchApp.fetch(FB_URL + '/' + caminho + '.json?auth=' + token, { muteHttpExceptions: true });
+    var r = UrlFetchApp.fetch(FB_URL + '/' + caminho + '.json?auth=' + token,
+      { headers: _fbCabecalhos(), muteHttpExceptions: true });
+    if (r.getResponseCode() >= 300) {
+      Logger.log('Firebase: leitura de ' + caminho + ' recusada (HTTP ' + r.getResponseCode() + ')');
+      return null;
+    }
     var v = JSON.parse(r.getContentText());
     return (v === null) ? null : v;
-  } catch (e) { return null; }
+  } catch (e) {
+    Logger.log('Firebase: erro ao ler ' + caminho + ' — ' + e);
+    return null;
+  }
 }
 
 function _fbGravar(caminho, obj, token) {
+  // O comportamento de envio não muda: a ponte já mandou a mensagem antes de chegar aqui.
+  // O que muda é que a falha DEIXA RASTRO. Antes, o catch vazio engolia o erro e a trava
+  // diária simplesmente não existia — a ponte repetia o aviso a cada 15 minutos e ninguém
+  // sabia por quê.
   try {
-    UrlFetchApp.fetch(FB_URL + '/' + caminho + '.json?auth=' + token,
-      { method: 'put', contentType: 'application/json',
+    var r = UrlFetchApp.fetch(FB_URL + '/' + caminho + '.json?auth=' + token,
+      { method: 'put', contentType: 'application/json', headers: _fbCabecalhos(),
         payload: JSON.stringify(obj), muteHttpExceptions: true });
-  } catch (e) {}
+    if (r.getResponseCode() >= 300) {
+      Logger.log('Firebase: gravação em ' + caminho + ' recusada (HTTP ' + r.getResponseCode() +
+                 ') — a trava do dia NÃO foi gravada');
+    }
+  } catch (e) {
+    Logger.log('Firebase: erro ao gravar em ' + caminho + ' — ' + e + ' — a trava do dia NÃO foi gravada');
+  }
 }
 
 /** Teste de bancada: roda a verificação ignorando a hora, para ver se está tudo ligado. */
@@ -283,6 +369,7 @@ function vigiaAlmoco2_TESTE() {
   var a2 = _fbLer('daycare/atividade/' + dia + '/almoco2', token);
   var n = 0; if (a2) { for (var k in a2) { if (a2.hasOwnProperty(k)) n++; } }
   Logger.log('token: ' + (token ? 'ok' : 'FALHOU'));
+  Logger.log('App Check: ' + (_appCheckToken() ? 'ok (com prova)' : 'sem token de depuração — seguindo sem'));
   Logger.log('dia: ' + dia + ' · registros no 2º horário: ' + n);
   Logger.log('já cobrado hoje: ' + JSON.stringify(_fbLer('daycare/cobranca-almoco2/' + dia, token)));
   Logger.log(n > 0 ? 'Não cobraria: o 2º horário foi registrado.' : 'Cobraria: ninguém registrou o 2º horário.');

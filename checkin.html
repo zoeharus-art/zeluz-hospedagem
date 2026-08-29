@@ -434,6 +434,7 @@
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-database-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-check-compat.js"></script>
 <script>
 // ════════════════════════════════════════════════════════════
 //  CONFIG — mesmo banco do painel de Hospedagem
@@ -447,6 +448,11 @@ const FIREBASE_CONFIG = {
   messagingSenderId: "199129329105",
   appId:             "1:199129329105:web:22d0995972c197e24644f0"
 };
+// Chave pública do reCAPTCHA v3 do App Check — a MESMA do app da equipe
+// (auaulandia/index.html). VAZIA = App Check desligado, e nada muda nesta página.
+// Enquanto o "Impor" estiver desligado no Console do Firebase, isto é inerte:
+// a página apenas passa a mandar a prova junto, e o banco ainda não a exige.
+const APPCHECK_SITE_KEY = '6Lc9zmotAAAAADTA2O4DGzmZakZxqWPLWMIL0RB1';
 
 // Planilha viva de hóspedes (mesma do painel) — para sugerir FILHOts já conhecidos
 const SHEET_ID  = '1SJ3OZ6E2wMa1JHrQUcgtNffgQLQhCpa01IUQKCv605w';
@@ -474,6 +480,17 @@ function setVal(id,v){ const el=document.getElementById(id); if(el) el.value = v
 function initFirebase(){
   try {
     const app  = firebase.initializeApp(FIREBASE_CONFIG);
+    // ---- App Check: só as páginas da Zêluz falam com o banco ----
+    // A chave do Firebase acima é PÚBLICA por natureza (está no HTML, que qualquer um lê).
+    // Sem App Check, qualquer pessoa com o endereço faz o mesmo login anônimo e enxerga o
+    // banco de fora — por curl, por um HTML copiado, de qualquer lugar. O App Check exige a
+    // prova de que a requisição veio DESTE site; quem não tem a prova é barrado pelo
+    // Firebase, antes das regras. É a mesma ativação do app da equipe.
+    if (APPCHECK_SITE_KEY && typeof firebase.appCheck === 'function') {
+      try {
+        firebase.appCheck(app).activate(new firebase.appCheck.ReCaptchaV3Provider(APPCHECK_SITE_KEY), true);
+      } catch(e) { console.warn('App Check:', e); }
+    }
     const auth = firebase.auth(app);
     auth.signInAnonymously()
       .then(()=>{

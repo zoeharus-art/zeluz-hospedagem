@@ -1,0 +1,266 @@
+<!doctype html>
+<html lang="pt-BR">
+<meta charset="utf-8">
+<title>Opção C — Azul claro com cabeçalho creme · Sidebar Zêluz</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<link rel="icon" href="assets/simbolo-zeluz-39.svg">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap">
+<style>
+/* -- Tokens DS v8 : copia literal de docs/zeluz/branding/zeluz-ds-v8/shared/tokens.css -- */
+:root{
+  --z-gold:#DEB428; --z-gold-light:#E5C353; --z-gold-deep:#B8961F;
+  --z-blue:#234D67; --z-blue-deep:#1A3A4F; --z-blue-soft:#3A6A85;
+  --z-cream:#FFFDF6; --z-cream-warm:#F9F5EC; --z-white:#FFFFFF;
+  --font-marketing:'Poppins',-apple-system,BlinkMacSystemFont,system-ui,sans-serif;
+  --radius-lg:16px; --radius-md:12px; --radius-full:999px;
+  --duration-fast:150ms; --ease-out:cubic-bezier(.16,1,.3,1);
+  --sidebar-w:272px;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%}
+body{font-family:var(--font-marketing);background:var(--z-cream);color:var(--z-blue);-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale}
+a{color:inherit;text-decoration:none}
+button{background:none;border:none;font-family:inherit;color:inherit;cursor:pointer}
+img,svg{display:block;max-width:100%}
+
+.app{display:flex;min-height:100vh;position:relative}
+
+/* -- SIDEBAR -- */
+.sb{width:var(--sidebar-w);flex:0 0 var(--sidebar-w);min-width:0;position:sticky;top:0;height:100vh;display:flex;flex-direction:column;z-index:2}
+
+/* Marca: o simbolo respira sobre o fundo da sidebar, nunca dentro de caixa */
+.sb-brand{padding:28px 16px 20px;display:flex;flex-direction:column;align-items:center;gap:10px;position:relative;flex:0 0 auto}
+.sb-logo{width:88px;height:auto}
+.sb-brand-sub{font-size:11px;font-weight:500;letter-spacing:.08em;white-space:nowrap}
+.sb-burger{display:none;width:40px;height:40px;border-radius:var(--radius-full);align-items:center;justify-content:center;transition:background var(--duration-fast) var(--ease-out)}
+.sb-burger svg{width:20px;height:20px}
+
+/* -- NAVEGACAO : 3 niveis, categoria 17/700 > subtitulo 15/700 > item 14/500 -- */
+.sb-nav{flex:1 1 auto;min-height:0;overflow-y:auto;overflow-x:hidden;padding:2px 8px 10px;scrollbar-width:thin}
+.sb-nav::-webkit-scrollbar{width:6px}
+.sb-nav::-webkit-scrollbar-track{background:transparent}
+
+.nav-cat{display:flex;align-items:center;gap:10px;width:100%;padding:8px 10px;border-radius:var(--radius-md);font-size:17px;font-weight:700;letter-spacing:-.01em;line-height:1.2;text-align:left;transition:background var(--duration-fast) var(--ease-out),color var(--duration-fast) var(--ease-out)}
+.nav-cat--solo{margin-bottom:2px}
+.grp{margin-top:4px}
+.ico{width:18px;height:18px;flex:0 0 18px}
+.caret{width:13px;height:13px;flex:0 0 13px;margin-left:auto;opacity:.7;transition:transform var(--duration-fast) var(--ease-out)}
+.grp.is-open>.nav-cat .caret,.sub.is-open>.nav-sub .caret{transform:rotate(90deg)}
+.grp-body{display:none;padding:2px 0 5px 10px}
+.grp.is-open>.grp-body{display:block}
+
+.nav-sub{display:flex;align-items:flex-start;gap:8px;width:100%;padding:6px 10px 6px 32px;border-radius:var(--radius-md);font-size:15px;font-weight:700;line-height:1.25;text-align:left;transition:background var(--duration-fast) var(--ease-out),color var(--duration-fast) var(--ease-out)}
+.nav-sub .caret{margin-top:2px}
+.sub-body{display:none;position:relative;padding:2px 0 4px 10px}
+.sub.is-open>.sub-body{display:block}
+.sub-body::before{content:'';position:absolute;left:5px;top:4px;bottom:6px;width:1px}
+
+.nav-item{display:flex;align-items:center;gap:10px;padding:6px 10px 6px 8px;border-radius:var(--radius-full);font-size:14px;font-weight:500;line-height:1.3;position:relative;transition:background var(--duration-fast) var(--ease-out),color var(--duration-fast) var(--ease-out)}
+.nav-item .txt{min-width:0;overflow-wrap:anywhere}
+.tag{margin-left:auto;font-size:9.5px;font-weight:600;letter-spacing:.06em;padding:2px 7px;border-radius:var(--radius-full);white-space:nowrap}
+
+/* -- RODAPE -- */
+.sb-foot{display:flex;align-items:center;gap:10px;padding:12px 14px 16px;flex:0 0 auto}
+.sb-user{min-width:0;flex:1}
+.sb-user-name{font-size:14px;font-weight:600;line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sb-user-role{font-size:11px;font-weight:500;letter-spacing:.08em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sb-exit{display:flex;align-items:center;gap:6px;font-size:13px;font-weight:600;padding:7px 13px;border-radius:var(--radius-full);transition:background var(--duration-fast) var(--ease-out),color var(--duration-fast) var(--ease-out)}
+.sb-exit svg{width:16px;height:16px;flex:0 0 16px}
+
+/* -- CONTEUDO : so contexto, o foco e a sidebar -- */
+.content{flex:1 1 auto;min-width:0;background:var(--z-cream);padding:28px;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:20px;align-content:start}
+.card{background:var(--z-white);border-radius:var(--radius-lg);box-shadow:0 6px 18px rgba(35,77,103,.08);min-height:230px}
+
+/* -- MOBILE 390px : barra superior de 64px, menu aberto cobre a tela como folha -- */
+@media (max-width:640px){
+  html:not(.frame) .app{display:block}
+  html:not(.frame) .sb{position:fixed;top:0;left:0;right:0;width:100%;height:64px;flex:none;overflow:hidden;z-index:60}
+  html:not(.frame) .sb-brand{flex-direction:row;align-items:center;justify-content:flex-start;gap:12px;padding:0 14px;height:64px}
+  html:not(.frame) .sb-logo{width:40px}
+  html:not(.frame) .sb-brand-sub{font-size:10.5px}
+  html:not(.frame) .sb-burger{display:flex;margin-left:auto}
+  html:not(.frame) .sb-nav,html:not(.frame) .sb-foot{display:none}
+  html:not(.frame) .sb.is-open{height:100vh;overflow:hidden}
+  html:not(.frame) .sb.is-open .sb-nav{display:block}
+  html:not(.frame) .sb.is-open .sb-foot{display:flex}
+  html:not(.frame) .content{padding:80px 16px 24px;grid-template-columns:minmax(0,1fr)}
+  html:not(.frame) .card{min-height:150px}
+}
+/* == OPCAO C : AZUL CLARO COM CABECALHO CREME ===========================
+   Cabecalho creme de 168px com recorte curvo na base; corpo azul-soft.
+   As categorias ganham um wash mais escuro (8%) no lugar do filete. */
+:root{
+  --p-ink:var(--z-cream);
+  --p-ink-soft:rgba(255,253,246,.80);      /* creme 80% : derivado de --z-cream */
+  --p-item:rgba(255,253,246,.76);
+  --p-rule:rgba(255,253,246,.16);
+  --p-hover:rgba(255,253,246,.09);
+  --p-cat-wash:rgba(26,58,79,.08);         /* wash 8% : derivado de --z-blue-deep */
+  --p-cat-wash-hover:rgba(26,58,79,.16);
+}
+.sb{background:var(--z-blue-soft);color:var(--p-ink)}
+.sb-brand{background:var(--z-cream);border-radius:0 0 28px 28px;height:168px;justify-content:center;padding:0 16px;gap:8px}
+.sb-brand-sub{color:var(--z-blue)}
+.sb-burger{color:var(--z-blue)}
+.sb-burger:hover{background:rgba(35,77,103,.06)}
+.sb-nav{padding-top:12px}
+.nav-cat{color:var(--p-ink);background:var(--p-cat-wash)}
+.nav-cat:hover{background:var(--p-cat-wash-hover)}
+.nav-cat .ico{color:var(--z-gold)}
+.nav-sub{color:var(--p-ink-soft)}
+.nav-sub:hover{background:var(--p-hover)}
+.sub-body::before{background:var(--p-rule)}
+.nav-item{color:var(--p-item)}
+.nav-item:hover{background:var(--p-hover);color:var(--p-ink)}
+.nav-item.is-active{background:var(--z-gold);color:var(--z-blue);font-weight:600}
+.nav-item.is-active .ico{color:var(--z-blue)}
+.tag{background:rgba(255,253,246,.14);color:var(--p-ink-soft)}
+.sb-foot{border-top:1px solid var(--p-rule)}
+.sb-user-name{color:var(--p-ink)}
+.sb-user-role{color:var(--p-ink-soft)}
+.sb-exit{color:var(--p-ink);background:rgba(255,253,246,.12)}
+.sb-exit:hover{background:rgba(255,253,246,.20)}
+@media (max-width:640px){
+  /* barra fechada: o creme preenche os 64px inteiros (sem cantos azuis aparecendo) */
+  html:not(.frame) .sb-brand{height:64px;border-radius:0;justify-content:flex-start}
+  /* menu aberto: a curva volta, porque agora ha corpo azul embaixo dela */
+  html:not(.frame) .sb.is-open .sb-brand{border-radius:0 0 22px 22px}
+}
+</style>
+
+<div class="app">
+  <aside class="sb" id="sb">
+    <div class="sb-brand">
+      <img class="sb-logo" src="assets/simbolo-zeluz-39.svg" alt="Zêluz">
+      <div class="sb-brand-sub">AuAulândia &middot; Day Care</div>
+      <button class="sb-burger" type="button" id="burger" aria-label="Abrir o menu" aria-expanded="false">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
+      </button>
+    </div>
+
+    <nav class="sb-nav">
+<a class="nav-cat nav-cat--solo" href="#"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3.5 10.5 12 3.5l8.5 7"/><path d="M6 9.6V20h12V9.6"/><path d="M10 20v-5h4v5"/></svg><span class="txt">Início</span></a>
+
+<section class="grp">
+  <button class="nav-cat" type="button" aria-expanded="false"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3.2 3.6 7.4 12 11.6l8.4-4.2z"/><path d="M3.6 12.2 12 16.4l8.4-4.2"/><path d="M3.6 16.6 12 20.8l8.4-4.2"/></svg><span class="txt">Serviços</span><svg class="caret" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9.5 5.5 16 12l-6.5 6.5"/></svg></button>
+  <div class="grp-body">
+    <div class="sub">
+      <button class="nav-sub" type="button" aria-expanded="false"><span class="txt">AuAulândia — o hotel da Zêluz</span><svg class="caret" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9.5 5.5 16 12l-6.5 6.5"/></svg></button>
+      <div class="sub-body">
+        <a class="nav-item" href="#"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 4.2h6v2.6H9z"/><path d="M15.6 5.6h1.9A1.5 1.5 0 0 1 19 7.1v12.4a1.5 1.5 0 0 1-1.5 1.5h-11A1.5 1.5 0 0 1 5 19.5V7.1a1.5 1.5 0 0 1 1.5-1.5h1.9"/><path d="M8.8 13.4 11 15.6l4.2-4.2"/></svg><span class="txt">Conferência</span></a>
+        <a class="nav-item" href="#"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="8.4"/><path d="M12 8.4v7.2M8.4 12h7.2"/></svg><span class="txt">Cuidado Vet</span></a>
+        <a class="nav-item" href="#"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 14.6A8.6 8.6 0 0 1 9.4 4 8.6 8.6 0 1 0 20 14.6z"/></svg><span class="txt">Plantão da noite</span></a>
+        <a class="nav-item" href="#"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="9" cy="8.4" r="3.1"/><path d="M3.4 19.6c0-3.2 2.5-5.3 5.6-5.3s5.6 2.1 5.6 5.3"/><path d="M16.4 5.6a3.1 3.1 0 0 1 0 5.9"/><path d="M17.6 14.7c2.2.5 3.8 2.4 3.8 4.9"/></svg><span class="txt">Hóspedes de hoje</span></a>
+        <a class="nav-item" href="#"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 14V4"/><path d="M8.6 7.4 12 4l3.4 3.4"/><path d="M4.5 15.5v3A2 2 0 0 0 6.5 20.5h11a2 2 0 0 0 2-2v-3"/></svg><span class="txt">Check-out</span></a>
+      </div>
+    </div>
+    <div class="sub">
+      <button class="nav-sub" type="button" aria-expanded="false"><span class="txt">Day Care</span><svg class="caret" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9.5 5.5 16 12l-6.5 6.5"/></svg></button>
+      <div class="sub-body">
+        <a class="nav-item" href="#"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3.4v3.4M5.6 9.4 7.2 11M2.8 16.4h18.4M18.4 9.4 16.8 11"/><path d="M7.6 16.4a4.4 4.4 0 0 1 8.8 0"/><path d="M3.6 20.2h16.8"/></svg><span class="txt">Abertura do dia</span></a>
+        <a class="nav-item" href="#"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="8.6" cy="9" r="2.8"/><circle cx="16" cy="9.6" r="2.2"/><path d="M3.4 19.4c0-2.9 2.3-4.8 5.2-4.8s5.2 1.9 5.2 4.8"/><path d="M15.4 15c2.6 0 5.2 1.5 5.2 4.4"/></svg><span class="txt">Turminhas</span></a>
+        <a class="nav-item" href="#"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4.2 13.7 9l4.8 1.7-4.8 1.7L12 17.2l-1.7-4.8L5.5 10.7 10.3 9z"/></svg><span class="txt">Atividades</span></a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="grp is-open">
+  <button class="nav-cat" type="button" aria-expanded="true"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3.4"/><path d="M12 3.2v3M12 17.8v3M3.2 12h3M17.8 12h3M5.9 5.9l2.1 2.1M16 16l2.1 2.1M18.1 5.9 16 8M8 16l-2.1 2.1"/></svg><span class="txt">Central Zêluz</span><svg class="caret" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9.5 5.5 16 12l-6.5 6.5"/></svg></button>
+  <div class="grp-body">
+    <a class="nav-sub nav-sub--link" href="#"><span class="txt">Cadastro de Peludinhos</span></a>
+    <div class="sub is-open">
+      <button class="nav-sub" type="button" aria-expanded="true"><span class="txt">AuAulândia</span><svg class="caret" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9.5 5.5 16 12l-6.5 6.5"/></svg></button>
+      <div class="sub-body">
+        <a class="nav-item is-active" href="#"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v10"/><path d="M8.6 10.6 12 14l3.4-3.4"/><path d="M4.5 15.5v3A2 2 0 0 0 6.5 20.5h11a2 2 0 0 0 2-2v-3"/></svg><span class="txt">Check-in</span></a>
+        <a class="nav-item" href="#"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 14V4"/><path d="M8.6 7.4 12 4l3.4 3.4"/><path d="M4.5 15.5v3A2 2 0 0 0 6.5 20.5h11a2 2 0 0 0 2-2v-3"/></svg><span class="txt">Check-out com o tutor</span></a>
+        <a class="nav-item" href="#"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M13.6 3.6H7.4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2h9.2a2 2 0 0 0 2-2V8.6z"/><path d="M13.6 3.6v5h5"/><path d="M8.8 13.4h6.4M8.8 16.6h4.4"/></svg><span class="txt">Orçamento de hospedagem</span></a>
+        <a class="nav-item" href="#"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="8.4"/><path d="M12 7.8v4.6"/><path d="M12 16.1h.01"/></svg><span class="txt">Pendências com o tutor</span></a>
+      </div>
+    </div>
+    <div class="sub">
+      <button class="nav-sub" type="button" aria-expanded="false"><span class="txt">Day Care</span><svg class="caret" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9.5 5.5 16 12l-6.5 6.5"/></svg></button>
+      <div class="sub-body">
+        <a class="nav-item" href="#"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 11.2h16a8 8 0 0 1-16 0z"/><path d="M9.2 8.2c0-1.6 1.4-1.6 1.4-3.2"/><path d="M13.4 8.2c0-1.6 1.4-1.6 1.4-3.2"/><path d="M3.2 20.4h17.6"/></svg><span class="txt">Quem não comeu hoje</span></a>
+        <a class="nav-item" href="#"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4.2 11.4a7.8 7.8 0 0 1 13.2-4.2l2.4 2.2"/><path d="M19.8 12.6a7.8 7.8 0 0 1-13.2 4.2l-2.4-2.2"/><path d="M20 5.2v4.4h-4.4M4 18.8v-4.4h4.4"/></svg><span class="txt">Reposições</span></a>
+        <a class="nav-item" href="#"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4.4 19.6h3.4L19 8.4a1.9 1.9 0 0 0-2.7-2.7L5.1 16.9v2.7z"/><path d="M15 7.4l2.7 2.7"/></svg><span class="txt">Lançamentos do dia</span></a>
+      </div>
+    </div>
+    <div class="sub">
+      <button class="nav-sub" type="button" aria-expanded="false"><span class="txt">Peludinhos</span><svg class="caret" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9.5 5.5 16 12l-6.5 6.5"/></svg></button>
+      <div class="sub-body">
+        <a class="nav-item" href="#"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3.6 5.4 6.3v5.5c0 4.3 2.8 7.2 6.6 8.6 3.8-1.4 6.6-4.3 6.6-8.6V6.3z"/><path d="M9.4 12.2l1.9 1.9 3.5-3.6"/></svg><span class="txt">Prevenção</span></a>
+        <a class="nav-item" href="#"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4.4 3.4 19.6h17.2z"/><path d="M12 10.2v4"/><path d="M12 16.8h.01"/></svg><span class="txt">Alergias a confirmar</span></a>
+        <a class="nav-item" href="#"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4.2v15.6M7.4 19.8h9.2M5.6 8.4h12.8"/><path d="M5.6 8.4 3 14.2h5.2z"/><path d="M18.4 8.4 15.8 14.2H21z"/></svg><span class="txt">Peso</span></a>
+      </div>
+    </div>
+    <div class="sub">
+      <button class="nav-sub" type="button" aria-expanded="false"><span class="txt">Planos e cobranças</span><svg class="caret" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9.5 5.5 16 12l-6.5 6.5"/></svg></button>
+      <div class="sub-body">
+        <a class="nav-item" href="#"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19.8 6.2v4.4h-4.4M4.2 17.8v-4.4h4.4"/><path d="M5.4 10.2a7.2 7.2 0 0 1 12-2.7l2.4 2.3"/><path d="M18.6 13.8a7.2 7.2 0 0 1-12 2.7l-2.4-2.3"/></svg><span class="txt">Renovação de planos</span></a>
+        <a class="nav-item" href="#"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3.2" y="5.8" width="17.6" height="12.4" rx="2"/><path d="M3.2 10h17.6"/><path d="M6.6 14.6h3.2"/></svg><span class="txt">Em débito</span><span class="tag">em breve</span></a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="grp">
+  <button class="nav-cat" type="button" aria-expanded="false"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3.2 12h3.6l2.4 6.2 4-13.2 2.4 7h5.2"/></svg><span class="txt">Operação</span><svg class="caret" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9.5 5.5 16 12l-6.5 6.5"/></svg></button>
+  <div class="grp-body">
+    <a class="nav-item" href="#"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4.6 7.4h12.8a2 2 0 0 1 2 2v.6"/><path d="M4.6 7.4A2 2 0 0 0 2.6 9.4v8.2a2 2 0 0 0 2 2h14.8a2 2 0 0 0 2-2v-2.2"/><path d="M4.6 7.4V6.2a2 2 0 0 1 2-2h9.2"/><path d="M21.4 11.6h-3.2a1.9 1.9 0 0 0 0 3.8h3.2z"/></svg><span class="txt">Financeiro do plantão</span></a>
+    <a class="nav-item" href="#"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3.2 12.6h3.4l2.2 5 3.6-11.4 2.2 6.4h6.2"/></svg><span class="txt">Ritmo do Time</span></a>
+    <a class="nav-item" href="#"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19.8 4.2c0 8.8-5.4 12.8-10.8 12.8a4.9 4.9 0 0 1 0-9.8c3.4 0 5.4-1.4 10.8-3z"/><path d="M9 19.4c1-4 3.4-6.9 7.8-8.9"/></svg><span class="txt">Enriquecimento Ambiental</span></a>
+    <a class="nav-item" href="#"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="8.8" cy="8.6" r="3"/><path d="M3.2 19.6c0-3.1 2.5-5.1 5.6-5.1s5.6 2 5.6 5.1"/><path d="M16.2 5.8a3 3 0 0 1 0 5.6"/><path d="M17.4 14.8c2.2.5 3.8 2.3 3.8 4.8"/></svg><span class="txt">Time</span></a>
+    <a class="nav-item" href="#"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3.4 7.2h8.2M15.4 7.2h5.2M3.4 12h3.2M10.4 12h10.2M3.4 16.8h10.2M17.4 16.8h3.2"/><circle cx="13.6" cy="7.2" r="1.9"/><circle cx="8.4" cy="12" r="1.9"/><circle cx="15.4" cy="16.8" r="1.9"/></svg><span class="txt">Configurações</span></a>
+    <a class="nav-item" href="#"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3.4" y="3.8" width="7.4" height="6.4" rx="1.4"/><rect x="13.2" y="3.8" width="7.4" height="4" rx="1.4"/><rect x="13.2" y="10.2" width="7.4" height="10" rx="1.4"/><rect x="3.4" y="12.6" width="7.4" height="7.6" rx="1.4"/></svg><span class="txt">Painel do Dia</span></a>
+  </div>
+</section>
+
+<section class="grp">
+  <button class="nav-cat" type="button" aria-expanded="false"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="8.6"/><path d="M12 7.4V12l3 1.9"/></svg><span class="txt">Em breve</span><svg class="caret" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9.5 5.5 16 12l-6.5 6.5"/></svg></button>
+  <div class="grp-body">
+    <a class="nav-item" href="#"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3.6" y="5.4" width="16.8" height="15" rx="2"/><path d="M3.6 10h16.8"/><path d="M8.4 3.4v4M15.6 3.4v4"/></svg><span class="txt">Agenda</span></a>
+  </div>
+</section>
+
+<a class="nav-cat nav-cat--solo" href="#"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5.5 20V11.5M12 20V4.5M18.5 20v-6"/><path d="M3 20h18"/></svg><span class="txt">Relatórios</span></a>
+    </nav>
+
+    <div class="sb-foot">
+      <div class="sb-user">
+        <div class="sb-user-name">Amanda</div>
+        <div class="sb-user-role">Central Zêluz</div>
+      </div>
+      <button class="sb-exit" type="button">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H6.5A2.5 2.5 0 0 0 4 6.5v11A2.5 2.5 0 0 0 6.5 20H11"/><path d="M15.5 8 19.5 12l-4 4"/><path d="M19.5 12H9"/></svg>
+        Sair
+      </button>
+    </div>
+  </aside>
+
+  <main class="content">
+    <div class="card"></div>
+    <div class="card"></div>
+    <div class="card"></div>
+  </main>
+</div>
+
+<script>
+  if (location.search.indexOf('frame=1') > -1) document.documentElement.classList.add('frame');
+  document.querySelectorAll('.nav-cat[aria-expanded], .nav-sub[aria-expanded]').forEach(function (b) {
+    b.addEventListener('click', function () {
+      var alvo = b.closest('.grp') || b.closest('.sub');
+      var aberto = alvo.classList.toggle('is-open');
+      b.setAttribute('aria-expanded', String(aberto));
+    });
+  });
+  var burger = document.getElementById('burger'), sb = document.getElementById('sb');
+  burger.addEventListener('click', function () {
+    var aberto = sb.classList.toggle('is-open');
+    burger.setAttribute('aria-expanded', String(aberto));
+    burger.setAttribute('aria-label', aberto ? 'Fechar o menu' : 'Abrir o menu');
+  });
+</script>
+</html>
