@@ -188,6 +188,20 @@ async function main() {
   }
   console.log('Script do app carregou no sandbox.\n');
 
+  // As janelinhas da casa, no sandbox. zPergunta/zTexto desenham um cartaz na tela e só
+  // resolvem quando alguém TOCA num botão — e aqui não há dedo nenhum. Por padrão o
+  // sandbox responde "sim" e escreve um texto, que é o caminho que os testes de negócio
+  // já exercitavam com confirm()/prompt(). Quem quiser provar o "não" usa respondendo().
+  const RESP = { pergunta: true, texto: 'motivo escrito no teste' };
+  ctx.zPergunta = () => Promise.resolve(RESP.pergunta);
+  ctx.zTexto = () => Promise.resolve(RESP.texto);
+  const respondendo = async (op, fn) => {
+    const antes = { pergunta: RESP.pergunta, texto: RESP.texto };
+    Object.assign(RESP, op);
+    try { return await fn(); } finally { Object.assign(RESP, antes); }
+  };
+  const passarAsVoltas = (n) => new Promise((r) => setTimeout(r, n || 30));
+
   // A lógica do Painel (Fase 2.1) mora fora do index.html, num arquivo só de conta.
   // Carrega no MESMO contexto: as funções pl* ficam globais, como ficarão no app
   // quando ele incluir <script src="painel-logica.js">. Se o arquivo ainda não
@@ -197,6 +211,14 @@ async function main() {
   if (fs.existsSync(PL)) {
     vm.runInContext(fs.readFileSync(PL, 'utf8'), ctx, { filename: 'painel-logica.js' });
     console.log('painel-logica.js carregou no mesmo sandbox.\n');
+  }
+
+  // O leitor da resposta do tutor (rt*) — mesma ideia do painel-logica.js: função
+  // pura, fora do index.html, provada aqui ANTES de existir um botão na tela.
+  const RT = path.join(__dirname, '..', 'auaulandia', 'resposta-tutor.js');
+  if (fs.existsSync(RT)) {
+    vm.runInContext(fs.readFileSync(RT, 'utf8'), ctx, { filename: 'resposta-tutor.js' });
+    console.log('resposta-tutor.js carregou no mesmo sandbox.\n');
   }
 
   // ---- funções que precisam existir (contrato mínimo) ----
@@ -1262,14 +1284,12 @@ async function main() {
     // Contagem no arquivo inteiro. Medida em 25/ago/2026, antes de mexer: 56 chamadas de
     // confirm e 35 de prompt. Este passo tirou 14 de confirm (13 chamadas reais + 1 citação
     // dentro de comentário histórico) e 3 de prompt.
-    const CONFIRM_ANTES = 56, CONFIRM_SAIRAM = 14; // 25/ago/2026
-    const PROMPT_ANTES = 35, PROMPT_SAIRAM = 3;    // 25/ago/2026
+    // 29/ago/2026 — de 56/35 (25/ago) para UMA janelinha nativa no arquivo inteiro. O bloco
+    // "Janelinhas do navegador" no fim deste arquivo conta e nomeia a única que ficou.
     const nConfirm = (html.match(/\bconfirm\s*\(/g) || []).length;
     const nPrompt = (html.match(/\bprompt\s*\(/g) || []).length;
-    check('confirm() nativo no arquivo caiu para ' + (CONFIRM_ANTES - CONFIRM_SAIRAM),
-      nConfirm === CONFIRM_ANTES - CONFIRM_SAIRAM, 'achei ' + nConfirm);
-    check('prompt() nativo no arquivo caiu para ' + (PROMPT_ANTES - PROMPT_SAIRAM),
-      nPrompt === PROMPT_ANTES - PROMPT_SAIRAM, 'achei ' + nPrompt);
+    check('confirm() nativo só aparece em comentário (memória histórica)', nConfirm <= 2, 'achei ' + nConfirm);
+    check('prompt() nativo: só a de quem está no turno, mais os comentários', nPrompt <= 8, 'achei ' + nPrompt);
 
     // ---- texto das funções: nenhuma pode mais chamar a janela nativa ----
     const LIMPAS = ['salvarRelatorioCard', 'acertoRecalcular', 'cancelarHospedeManual',
@@ -3093,7 +3113,16 @@ async function main() {
     check('pesar duas vezes no mesmo dia nao cria duas linhas',
       /lista=lista\.filter\(function\(x\)\{ return x\.data!==hj; \}\)/.test(html));
     check('a foto nova apaga a antiga, e a tela avisa',
-      /A foto nova apaga a antiga/.test(html) && /A antiga ser\u00e1 apagada|A antiga será apagada/.test(html));
+      /A antiga será apagada/.test(html) && /a antiga sai/.test(html));
+    // Adriana, 29/ago: so tira foto de quem nao tem; se ficar ruim, ai troca
+    check('quem NAO tem foto recebe o botao grande', />Tirar foto</.test(html));
+    check('quem JA tem recebe so um link discreto, nao um botao dourado',
+      /está ruim\? trocar/.test(html) && !/\(tinha\?'Trocar':'Tirar foto'\)/.test(html));
+    check('a nota da tela manda fotografar so quem esta sem',
+      /<strong>Só fotografe quem está sem foto<\/strong>/.test(html));
+    check('e o cartao de quem tem mostra o selo verde', /já tem foto/.test(html));
+    check('editar o NOME nao cria ficha nova (resto da fabrica de 04-ago)',
+      /var _ckn=__cadKeyFixa\|\|cadKey\(currentHosp\);/.test(html));
     check('a foto e comprimida antes de gravar (o cadastro inteiro e baixado toda vez)',
       /var max=160, w=img\.width, h=img\.height;/.test(html));
     check('a tela de foto abre por quem NAO tem', /sem foto primeiro: e para isso|sem foto primeiro: é para isso/.test(html));
@@ -3600,8 +3629,8 @@ async function main() {
       /function galeriaFotosHTML\(\)/.test(html) && /fotosConferirHTML\(\)\+galeriaFotosHTML\(\)/.test(html));
     check('agrupa por NOME: fichas e fotos soltas juntas',
       /function galDados\(\)/.test(html) && /g\.fichas\.push/.test(html) && /g\.fotos\.push/.test(html));
-    check('mostra tambem quem JA tem foto (era a suposicao que escondia a Luna)',
-      /Aqui aparece também quem <strong>já tem foto<\/strong>/.test(html));
+    check('a galeria diz em uma frase o que fazer ali',
+      /<strong>O que fazer aqui:<\/strong>/.test(html));
     check('quem tem xara aparece marcado', /FILHOts com este nome/.test(html));
     check('da para dizer de quem e a foto solta', /function galAtribuir\(chaveFoto, chaveFicha\)/.test(html));
     check('e da para apagar em dois toques, dos dois lados',
@@ -3675,6 +3704,681 @@ async function main() {
       'card', 'ball', 'settings', 'chart', 'file-text', 'info', 'alert'];
     const faltando = NOVOS.filter(k => !/<path/.test(ctx.ic(k) || ''));
     check('os ' + NOVOS.length + ' ícones novos desenham SVG', faltando.length === 0, JSON.stringify(faltando));
+  }
+  console.log('');
+
+  // ============================================================================
+  // FALTA AUTOMÁTICA DAS 12h — o dia fecha sem ninguém abrir tela (29/ago/2026)
+  // ----------------------------------------------------------------------------
+  // Até 28/ago quem gravava a falta era o "Check-in do corpo": se ninguém abrisse
+  // AQUELA tela depois do meio-dia, o dia ficava sem falta nenhuma. Regra da casa:
+  // aviso que depende de abrir a tela não é aviso. Aqui a função real é chamada
+  // contra um banco de mentira, com o relógio na mão.
+  console.log('Falta automática das 12h: fecha o dia sem depender da tela (29/ago):');
+  {
+    // -- o texto, para o padrão do almoço não se perder num refactor --
+    check('a trava do dia mora no banco, com transaction',
+      /function faltaAutoTrava\(dia\)\{ return 'daycare\/falta-automatica\/'\+dia; \}/.test(html) &&
+      /DB\.ref\(faltaAutoTrava\(hoje\)\)\.transaction\(function\(atual\)\{/.test(html));
+    check('a trava fica FORA da chamada (senão o resumo do dia conta errado)',
+      !/daycare\/chamada\/'\+hoje\+'\/_fechado/.test(html) &&
+      /daycare\/falta-automatica\//.test(html));
+    check('o gancho de entrada é o mesmo do almoço (qualquer tela)',
+      /try\{ aplicarFaltaAutomatica\(\); \}catch\(e\)\{\}\n    \}, 6000\); \}catch\(e\)\{\}/.test(html));
+    check('e existe o temporizador de 30 s para quem já estava logado',
+      /setInterval\(function\(\)\{ try\{ aplicarFaltaAutomatica\(\); \}catch\(e\)\{\} \}, 30000\);/.test(html));
+    check('a turma é sempre a de HOJE, não a da aba aberta',
+      /function turmaDeHoje\(\)\{/.test(html) &&
+      /try\{ dcDia=HOJE_DIA; return turmaDoDia\(\); \}/.test(html) &&
+      !/dcDia!==HOJE_DIA/.test(html));
+    check('sábado e domingo não fecham dia (não há Day Care)',
+      /if\(ds===0\|\|ds===6\) return Promise\.resolve\(\);/.test(html));
+    check('a gravação que falha deixa rastro e solta a trava',
+      /_logFalhaGrav\('falta automática das '\+CK_HORA_FALTA\+'h', e\)/.test(html) &&
+      /_logFalhaGrav\('soltar a trava da falta automática', e2\)/.test(html));
+
+    // -------- prova de comportamento: a função real, com relógio de mentira --------
+    const DIA = '2026-08-27';                       // uma quinta-feira
+    const bkpF = {
+      Date: ctx.Date, turmaDoDia: ctx.turmaDoDia, PELUDINHOS: ctx.PELUDINHOS,
+      pelNome: ctx.pelNome, ehMoradorZeluz: ctx.ehMoradorZeluz,
+      faltouHoje: ctx.faltouHoje, audit: ctx.audit, quemSou: ctx.quemSou,
+      horaAgora: ctx.horaAgora,
+    };
+    const RealDate = ctx.Date;
+    // Relógio na mão: a hora do dia é o gatilho, e dcDataKey() lê o mesmo Date.
+    const porRelogio = (iso) => {
+      function FakeDate(...a) { return a.length ? new RealDate(...a) : new RealDate(iso); }
+      FakeDate.prototype = RealDate.prototype;
+      FakeDate.now = () => new RealDate(iso).getTime();
+      FakeDate.parse = RealDate.parse; FakeDate.UTC = RealDate.UTC;
+      ctx.Date = FakeDate;
+    };
+    // Banco de mentira: guarda o que foi escrito e responde o que mandarmos.
+    const feito = { escritas: [], travaNoBanco: null, transacoes: 0, leituraDaTravaMente: false };
+    const auditF = [];
+    const fazBanco = (dados) => ({
+      ref(p) {
+        return {
+          once() {
+            feito.escritas.push({ o: 'once', p });
+            if (p.indexOf('daycare/falta-automatica/') === 0) {
+              // leituraDaTravaMente = a corrida real: dois celulares leem "sem trava" no
+              // mesmo segundo e um deles grava primeiro. Quem chega depois só descobre
+              // no transaction — que é justamente o que este banco de mentira testa.
+              const v = feito.leituraDaTravaMente ? null : feito.travaNoBanco;
+              return Promise.resolve({ val: () => v });
+            }
+            return Promise.resolve({ val: () => (dados[p] || null) });
+          },
+          transaction(fn) {
+            feito.transacoes++;
+            const novo = fn(feito.travaNoBanco);
+            if (novo === undefined) return Promise.resolve({ committed: false });
+            feito.travaNoBanco = novo;
+            feito.escritas.push({ o: 'trava', p, v: novo });
+            return Promise.resolve({ committed: true });
+          },
+          update(v) { feito.escritas.push({ o: 'update', p, v }); return Promise.resolve(); },
+          remove() { feito.travaNoBanco = null; feito.escritas.push({ o: 'remove', p }); return Promise.resolve(); },
+        };
+      },
+    });
+    const zerarF = () => { feito.escritas.length = 0; feito.transacoes = 0; auditF.length = 0; };
+    const esperarF = (ms) => new Promise((r) => setTimeout(r, ms));
+    const TURMA = [
+      { p: { n: 'Camus', tutor: 'Sophia' } },
+      { p: { n: 'Luna', tutor: 'Carolina' } },
+      { p: { n: 'Toddy', tutor: 'Ana' } },
+    ];
+    const chaveDe = (i) => ctx.dcKey(TURMA[i].p.n, TURMA[i].p.tutor);
+
+    vm.runInContext('__bkpF = { DB: DB };', ctx);
+    const papelAntesF = ctx.__ROLE__ ? ctx.__ROLE__.role : null;
+    try {
+      ctx.document.body.dataset.role = 'gestao';
+      if (ctx.__ROLE__) ctx.__ROLE__.role = 'gestao';
+      ctx.turmaDoDia = () => TURMA;
+      ctx.PELUDINHOS = TURMA.map((o) => o.p);      // sem cadastro carregado a função nem começa
+      ctx.ehMoradorZeluz = () => false;
+      ctx.faltouHoje = () => false;
+      ctx.quemSou = () => 'Márcia';
+      ctx.horaAgora = () => '12:05';
+      ctx.audit = (a, d, m) => auditF.push({ acao: String(a || ''), detalhe: String(d == null ? '' : d), meta: m || {} });
+
+      // 2 dos 3 passaram pelo check-in de entrada; o 3º (Toddy) não.
+      const dados = {};
+      dados['daycare/checkin-corpo/' + DIA] = {};
+      dados['daycare/checkin-corpo/' + DIA][chaveDe(0)] = { ok: 1 };
+      dados['daycare/checkin-corpo/' + DIA][chaveDe(1)] = { ok: 1 };
+      dados['daycare/chamada/' + DIA] = {};
+      ctx.__bancoF = fazBanco(dados);
+
+      // ---- (a) ANTES do corte: 11h50, ninguém vira falta ----
+      porRelogio('2026-08-27T11:50:00');
+      vm.runInContext('DB = __bancoF; _faltaAutoFeita = "";', ctx);
+      zerarF();
+      await ctx.aplicarFaltaAutomatica();
+      await esperarF(30);
+      check('antes das 12h não grava nada (ainda dá tempo de chegar)',
+        feito.escritas.length === 0 && feito.travaNoBanco === null,
+        JSON.stringify(feito.escritas));
+
+      // ---- (b) DEPOIS do corte: 12h05, o 3º vira falta, com rastro ----
+      porRelogio('2026-08-27T12:05:00');
+      vm.runInContext('_faltaAutoFeita = "";', ctx);
+      zerarF();
+      await ctx.aplicarFaltaAutomatica();
+      await esperarF(30);
+      const updates = feito.escritas.filter((e) => e.o === 'update');
+      const gravou = updates.length === 1 && Object.keys(updates[0].v).length === 1 &&
+        updates[0].v[chaveDe(2)] === 'faltou' && updates[0].p === 'daycare/chamada/' + DIA;
+      check('passou das 12h: grava 1 falta (só quem não fez check-in)',
+        gravou, JSON.stringify(updates));
+      check('e deixa rastro na auditoria, assinado pelo sistema',
+        auditF.some((a) => a.acao === 'falta-automatica' && /Toddy/.test(a.detalhe) && a.meta.assinou === 'sistema'),
+        JSON.stringify(auditF));
+      check('a trava do dia ficou gravada no banco',
+        !!feito.travaNoBanco && feito.travaNoBanco.quantos === 1,
+        JSON.stringify(feito.travaNoBanco));
+
+      // ---- (c) RODAR DE NOVO não duplica — nem no mesmo aparelho, nem em outro ----
+      zerarF();
+      await ctx.aplicarFaltaAutomatica();           // mesmo aparelho (trava na memória)
+      await esperarF(30);
+      check('rodar de novo no mesmo aparelho não grava nada',
+        feito.escritas.filter((e) => e.o === 'update').length === 0,
+        JSON.stringify(feito.escritas));
+
+      vm.runInContext('_faltaAutoFeita = "";', ctx);  // outro celular: memória zerada, trava é a do banco
+      zerarF();
+      await ctx.aplicarFaltaAutomatica();
+      await esperarF(30);
+      check('outro aparelho vê a trava do banco e também não grava',
+        feito.escritas.filter((e) => e.o === 'update').length === 0 && feito.transacoes === 0,
+        JSON.stringify(feito.escritas));
+
+      // ---- (c2) a tela pode estar mostrando OUTRO dia da semana: fecha assim mesmo ----
+      // Era exatamente isto que travava antes: quem abrisse a aba de outro dia impedia o
+      // fechamento de hoje, porque a função devolvia cedo em `dcDia !== HOJE_DIA`.
+      const outroDia = vm.runInContext('ORDEM_DIAS.filter(function(d){ return d!==HOJE_DIA; })[0]', ctx);
+      feito.travaNoBanco = null;
+      vm.runInContext('_faltaAutoFeita = ""; __diaAntes = dcDia; dcDia = "' + outroDia + '";', ctx);
+      zerarF();
+      await ctx.aplicarFaltaAutomatica();
+      await esperarF(30);
+      check('com a tela em outro dia da semana, o dia de hoje fecha do mesmo jeito',
+        feito.escritas.filter((e) => e.o === 'update').length === 1,
+        JSON.stringify(feito.escritas.map((e) => e.o)));
+      check('e a aba do usuário volta para o dia que ele estava vendo',
+        vm.runInContext('dcDia', ctx) === outroDia, vm.runInContext('dcDia', ctx));
+      vm.runInContext('dcDia = __diaAntes;', ctx);
+
+      // ---- (c3) dois celulares no mesmo segundo: só um fecha o dia ----
+      // A leitura da trava mente (diz "sem trava") — é o transaction que segura.
+      feito.travaNoBanco = { ts: 1, por: 'outro celular', hora: '12:01', quantos: 1 };
+      feito.leituraDaTravaMente = true;
+      vm.runInContext('_faltaAutoFeita = "";', ctx);
+      zerarF();
+      await ctx.aplicarFaltaAutomatica();
+      await esperarF(30);
+      check('o transaction segura a corrida: quem chega depois não grava a falta em dobro',
+        feito.transacoes === 1 && feito.escritas.filter((e) => e.o === 'update').length === 0,
+        JSON.stringify(feito.escritas.map((e) => e.o)));
+      check('e a trava do outro celular fica intacta',
+        feito.travaNoBanco && feito.travaNoBanco.por === 'outro celular',
+        JSON.stringify(feito.travaNoBanco));
+      feito.leituraDaTravaMente = false;
+
+      // ---- (d) o tutor nunca fecha o dia da casa ----
+      ctx.document.body.dataset.role = 'tutor';
+      feito.travaNoBanco = null;
+      vm.runInContext('_faltaAutoFeita = "";', ctx);
+      zerarF();
+      await ctx.aplicarFaltaAutomatica();
+      await esperarF(30);
+      check('tutor não fecha o dia (nem lê o banco)', feito.escritas.length === 0);
+      ctx.document.body.dataset.role = 'gestao';
+
+      // ---- (e) sábado não fecha dia: o Day Care é de segunda a sexta ----
+      porRelogio('2026-08-29T12:05:00');            // 29/ago/2026 é sábado
+      vm.runInContext('_faltaAutoFeita = "";', ctx);
+      zerarF();
+      await ctx.aplicarFaltaAutomatica();
+      await esperarF(30);
+      check('sábado ao meio-dia não marca a turma de segunda como falta',
+        feito.escritas.length === 0, JSON.stringify(feito.escritas));
+
+      // ---- (f) se a gravação falhar, a trava é solta e sobra rastro ----
+      porRelogio('2026-08-27T12:05:00');
+      feito.travaNoBanco = null;
+      vm.runInContext('_faltaAutoFeita = "";', ctx);
+      zerarF();
+      const bancoRuim = fazBanco(dados);
+      ctx.__bancoF = { ref(p) {
+        const r = bancoRuim.ref(p);
+        if (p.indexOf('daycare/chamada/') === 0) r.update = () => Promise.reject(new Error('permissão negada'));
+        return r;
+      } };
+      vm.runInContext('DB = __bancoF;', ctx);
+      await ctx.aplicarFaltaAutomatica();
+      await esperarF(30);
+      check('gravação que falha vira rastro (não some calada)',
+        auditF.some((a) => a.acao === 'gravacao-FALHOU' && /falta autom/.test(a.detalhe)),
+        JSON.stringify(auditF));
+      check('e a trava é solta, para o próximo a entrar tentar de novo',
+        feito.travaNoBanco === null && feito.escritas.some((e) => e.o === 'remove'),
+        JSON.stringify(feito.escritas.map((e) => e.o)));
+    } finally {
+      ctx.Date = bkpF.Date; ctx.turmaDoDia = bkpF.turmaDoDia; ctx.PELUDINHOS = bkpF.PELUDINHOS;
+      ctx.pelNome = bkpF.pelNome; ctx.ehMoradorZeluz = bkpF.ehMoradorZeluz;
+      ctx.faltouHoje = bkpF.faltouHoje; ctx.audit = bkpF.audit; ctx.quemSou = bkpF.quemSou;
+      ctx.horaAgora = bkpF.horaAgora;
+      if (ctx.__ROLE__ && papelAntesF !== null) ctx.__ROLE__.role = papelAntesF;
+      vm.runInContext('DB = __bkpF.DB; _faltaAutoFeita = "";', ctx);
+    }
+  }
+  console.log('');
+
+  // ============================================================================
+  // AS GRAVAÇÕES MUDAS — nenhuma escrita no Firebase morre em silêncio (29/ago/2026)
+  // ----------------------------------------------------------------------------
+  // A auditoria de 28/ago (02-gordura-codigo.md, seção 6) achou 10 blocos try/catch
+  // VAZIOS em volta de uma gravação no Firebase: o app tentava salvar, falhava, e
+  // ninguém — nem a tela, nem a auditoria — ficava sabendo. O teste refaz a MESMA
+  // medição do relatório, agora exigindo zero.
+  console.log('Gravações mudas: escrita no Firebase que falha deixa rastro (29/ago):');
+  {
+    // -- refaz a medição do relatório: try{...}catch(){} vazio com .ref( + escrita --
+    const catchesVazios = (texto) => {
+      const achados = [];
+      const re = /catch\s*(\([^)]*\))?\s*\{\s*\}/g;
+      let m;
+      while ((m = re.exec(texto)) !== null) {
+        const j = texto.lastIndexOf('}', m.index);
+        if (j < 0) continue;
+        let prof = 1, k = j - 1;
+        while (k >= 0 && prof > 0) {
+          const c = texto[k];
+          if (c === '}') prof++; else if (c === '{') prof--;
+          k--;
+        }
+        if (prof !== 0) continue;
+        const ini = k + 1;
+        if (texto.slice(Math.max(0, ini - 12), ini + 1).indexOf('try') < 0) continue;
+        const corpo = texto.slice(ini, j);
+        if (corpo.indexOf('.ref(') < 0) continue;
+        if (!/\.(set|update|push|remove)\(/.test(corpo)) continue;
+        achados.push(texto.slice(0, ini).split('\n').length);
+      }
+      return achados;
+    };
+    const mudas = catchesVazios(html);
+    check('nenhuma gravação no Firebase fica dentro de try/catch vazio (eram 10)',
+      mudas.length === 0, 'ainda mudas nas linhas: ' + JSON.stringify(mudas));
+
+    // -- e o rótulo de cada uma existe: sem rótulo o rastro não diz o que se perdeu --
+    const ROTULOS = [
+      'divergência de medicação no relatório do plantão',
+      'registro da falha do aviso à Gestão — ',
+      'mover a foto ao renomear ',
+      'mover o cardápio de almoço ao renomear ',
+      'guardar o aviso da veterinária na fila',
+      'registro da falha do aviso de comida — ',
+      'congelar o registro do Enriquecimento Ambiental do dia',
+      'cronômetro da atividade do Enriquecimento Ambiental',
+      'apagar lançamento vazio do painel do Day Care em ',
+    ];
+    const semRotulo = ROTULOS.filter((r) => html.indexOf("_logFalhaGrav('" + r) < 0);
+    check('cada uma das 9 tem rótulo próprio no rastro (a 10ª é o próprio audit)',
+      semRotulo.length === 0, JSON.stringify(semRotulo));
+    check('o audit não chama _logFalhaGrav (seria roda-viva) — guarda no bolso',
+      /acao:'audit-FALHOU'/.test(html) &&
+      /_audGuardarNoBolso\(_audKey\(\)/.test(html));
+    check('as 3 gravações que tinham .catch VAZIO agora têm rastro',
+      /\.catch\(function\(e\)\{ _logFalhaGrav\('registro da falha do aviso à Gestão — '\+k, e\); \}\);/.test(html) &&
+      /\.catch\(function\(e\)\{ _eaCongelarFalhou\(e\); \}\);/.test(html) &&
+      /\.catch\(function\(e\)\{ _logFalhaGrav\('cronômetro da atividade do Enriquecimento Ambiental', e\); \}\);/.test(html));
+
+    // -------- prova de comportamento: o banco recusa, e sobra rastro --------
+    const bkpM = {
+      audit: ctx.audit, zAlertao: ctx.zAlertao, quemSou: ctx.quemSou,
+      plantAvisoNaTela: ctx.plantAvisoNaTela, eaImpedidos: ctx.eaImpedidos,
+      turmaDoDia: ctx.turmaDoDia, eaNo: ctx.eaNo, pessoaDoTurno: ctx.pessoaDoTurno,
+    };
+    const rastros = [], cartazes = [];
+    vm.runInContext('__bkpM = { DB: DB };', ctx);
+    try {
+      ctx.audit = (a, d) => rastros.push({ acao: String(a || ''), detalhe: String(d == null ? '' : d) });
+      ctx.zAlertao = (t) => cartazes.push(String(t || ''));
+      ctx.quemSou = () => 'Rosana';
+      ctx.plantAvisoNaTela = () => {};
+      // Banco que recusa TUDO — é o que acontece com regra de permissão ou quota estourada.
+      ctx.__dbRecusa = { ref() { return {
+        set: () => Promise.reject(new Error('permissão negada')),
+        update: () => Promise.reject(new Error('permissão negada')),
+        push: () => Promise.reject(new Error('permissão negada')),
+        remove: () => Promise.reject(new Error('permissão negada')),
+        once: () => Promise.resolve({ val: () => null }),
+      }; } };
+      vm.runInContext('DB = __dbRecusa;', ctx);
+      const esperarM = (ms) => new Promise((r) => setTimeout(r, ms));
+
+      // (1) o registro de que a Gestão NÃO foi avisada também pode não gravar
+      rastros.length = 0;
+      ctx.plantFalhou('daycare/plantao-aviso/2026-08-27', 'toddy__ana', { nome: 'Toddy' }, 'a ponte não respondeu');
+      await esperarM(30);
+      check('aviso à Gestão que não grava vira rastro, com o nome do que se perdeu',
+        rastros.some((r) => r.acao === 'gravacao-FALHOU' && /aviso à Gestão/.test(r.detalhe)),
+        JSON.stringify(rastros));
+
+      // (2) congelar o dia do Enriquecimento Ambiental: rastro E cartaz na tela
+      rastros.length = 0; cartazes.length = 0;
+      ctx.eaImpedidos = () => [];
+      ctx.turmaDoDia = () => [{ p: { n: 'Camus', tutor: 'Sophia' } }];
+      ctx.eaNo = () => 'daycare/ea/2026-08-27';
+      ctx.pessoaDoTurno = () => 'Octávio';
+      ctx.eaCongelar();
+      await esperarM(30);
+      check('congelar o dia do EA que falha deixa rastro',
+        rastros.some((r) => r.acao === 'gravacao-FALHOU' && /Enriquecimento Ambiental/.test(r.detalhe)),
+        JSON.stringify(rastros));
+      check('e avisa na tela quem fechou a atividade (amanhã já não dá para reconstruir)',
+        cartazes.some((t) => /NÃO CONSEGUI GRAVAR O REGISTRO DE HOJE/.test(t)),
+        JSON.stringify(cartazes));
+    } finally {
+      ctx.audit = bkpM.audit; ctx.zAlertao = bkpM.zAlertao; ctx.quemSou = bkpM.quemSou;
+      ctx.plantAvisoNaTela = bkpM.plantAvisoNaTela; ctx.eaImpedidos = bkpM.eaImpedidos;
+      ctx.turmaDoDia = bkpM.turmaDoDia; ctx.eaNo = bkpM.eaNo; ctx.pessoaDoTurno = bkpM.pessoaDoTurno;
+      vm.runInContext('DB = __bkpM.DB;', ctx);
+    }
+  }
+  console.log('');
+
+  // ---- Resposta do tutor → ficha (resposta-tutor.js) ----
+  console.log('Resposta do tutor → ficha (resposta-tutor.js):');
+  if (typeof ctx.rtLerResposta !== 'function') {
+    check('rtLerResposta existe', false, 'resposta-tutor.js não carregou');
+  } else {
+    // Espelha a FORMA real de algPerguntas(p) (auaulandia/index.html, ~linha
+    // 18328) para um FILHOt fictício sem microchip cadastrado e sem sexo
+    // conhecido (por isso sem a pergunta 'cio') — só para alimentar o teste
+    // do casamento por cabeçalho/ordem/palavra-chave. O TEXTO de cada
+    // pergunta não importa para o casamento (ele usa `k`, `secao` e
+    // `campo`) — por isso não é copiado da tela aqui; quem manda nisso
+    // continua sendo só a função real do app.
+    const perguntasYume = [
+      { k: 'refeicoes', secao: '*ALIMENTAÇÃO*', curta: 'Refeições e horários', campo: 'alim_horarios' },
+      { k: 'marca', curta: 'Marca e tipo do alimento', campo: 'alim_racao_marca' },
+      { k: 'quanto', curta: 'Quantidade por refeição', campo: 'alim_racao_qtd' },
+      { k: 'restricao', curta: 'Restrição, sensibilidade ou alergia', campo: 'alergia' },
+      { k: 'atividade', secao: '*SAÚDE, ROTINA E COMPORTAMENTO*', curta: 'Atividade física a evitar', campo: 'ea_restr' },
+      { k: 'checkup', curta: 'Último check-up', campo: 'obs_tutor' },
+      { k: 'chip', curta: 'Microchip', campo: 'microchip' },
+      { k: 'comportamento', curta: 'Mudança de comportamento', campo: 'manias' },
+      { k: 'estresse', curta: 'Situação estressante', campo: 'obs_tutor' },
+    ];
+
+    // O texto real da tutora da Yume, colado do WhatsApp — inclui o WORD
+    // JOINER (U+2060) que o WhatsApp intercala depois de alguns bullets.
+    const textoYume = [
+      'Alimentação',
+      '* 2 por dia, de manhã e à noite',
+      '* ⁠Ração seca, ND Prime Frango e Romã',
+      '* ⁠70g por refeição',
+      '* ⁠Nenhuma restrição',
+      '',
+      'Saúde, rotina e comportamento',
+      '* Atividades físicas liberadas',
+      '* ⁠Último checkup em janeiro',
+      '* ⁠Possui microchip: 900215002669358',
+      '* ⁠Nenhuma mudança recente',
+      '* ⁠Ela já foi atacada por um Golden (mais de 1 ano atrás) durante um passeio, e desde então tem receio com a raça e cachorros de porte parecido',
+    ].join('\n');
+
+    const HOJE = '2026-08-29'; // determinístico: agosto/2026, para a inferência de ano do check-up
+
+    // ---- 1) texto da Yume, SEM perguntas: só os campos estruturados ----
+    const semPerguntas = ctx.rtLerResposta(textoYume, { hoje: HOJE });
+    const c = semPerguntas.campos;
+    check('alim_horarios: 2 vezes, manhã e noite',
+      c.alim_horarios && c.alim_horarios.vezes === 2 && c.alim_horarios.horarios.join(',') === 'manha,noite',
+      JSON.stringify(c.alim_horarios));
+    check('alim_racao_marca: tipo "Ração seca" + marca "ND Prime Frango e Romã"',
+      c.alim_racao_marca && c.alim_racao_marca.tipo === 'Ração seca' && c.alim_racao_marca.marca === 'ND Prime Frango e Romã',
+      JSON.stringify(c.alim_racao_marca));
+    check('alim_racao_qtd: 70 g',
+      c.alim_racao_qtd && c.alim_racao_qtd.numero === 70 && c.alim_racao_qtd.unidade === 'g',
+      JSON.stringify(c.alim_racao_qtd));
+    check('restricao: nenhuma',
+      c.restricao && c.restricao.nenhuma === true,
+      JSON.stringify(c.restricao));
+    check('ea_restr: liberada',
+      c.ea_restr && c.ea_restr.liberada === true,
+      JSON.stringify(c.ea_restr));
+    check('checkup_t: 2026-01-01, inferido (janeiro já passou em 2026 até agosto)',
+      c.checkup_t && c.checkup_t.valor === '2026-01-01' && c.checkup_t.mes === 1 && c.checkup_t.inferido === true,
+      JSON.stringify(c.checkup_t));
+    check('checkup_p: 2027-01-01 (checkup_t + 365 dias)',
+      c.checkup_p && c.checkup_p.valor === '2027-01-01',
+      JSON.stringify(c.checkup_p));
+    check('microchip: 900215002669358, 15 dígitos válido',
+      c.microchip && c.microchip.numero === '900215002669358' && c.microchip.valido === true,
+      JSON.stringify(c.microchip));
+    check('manias.mudancaRecente: nenhuma',
+      c.manias && c.manias.mudancaRecente && c.manias.mudancaRecente.nenhuma === true,
+      JSON.stringify(c.manias && c.manias.mudancaRecente));
+    check('manias.comportamentoMedos: ALERTA (texto integral preservado)',
+      c.manias && c.manias.comportamentoMedos && c.manias.comportamentoMedos.alerta === true
+        && c.manias.comportamentoMedos.texto === 'Ela já foi atacada por um Golden (mais de 1 ano atrás) durante um passeio, e desde então tem receio com a raça e cachorros de porte parecido',
+      JSON.stringify(c.manias && c.manias.comportamentoMedos));
+    check('manias.alerta sobe para o nível de cima (EA e plantonista enxergam sem abrir nada)',
+      c.manias && c.manias.alerta === true,
+      JSON.stringify(c.manias));
+    check('nenhuma linha da Yume virou naoEntendi (bullets + cabeçalhos todos reconhecidos)',
+      Array.isArray(semPerguntas.naoEntendi) && semPerguntas.naoEntendi.length === 0,
+      JSON.stringify(semPerguntas.naoEntendi));
+
+    // ---- 2) mesmo texto, COM perguntas: casamento por cabeçalho ----
+    const comPerguntas = ctx.rtLerResposta(textoYume, { hoje: HOJE, perguntas: perguntasYume });
+    const respostasEsperadas = {
+      refeicoes: '2 por dia, de manhã e à noite',
+      marca: 'Ração seca, ND Prime Frango e Romã',
+      quanto: '70g por refeição',
+      restricao: 'Nenhuma restrição',
+      atividade: 'Atividades físicas liberadas',
+      checkup: 'Último checkup em janeiro',
+      chip: 'Possui microchip: 900215002669358',
+      comportamento: 'Nenhuma mudança recente',
+      estresse: 'Ela já foi atacada por um Golden (mais de 1 ano atrás) durante um passeio, e desde então tem receio com a raça e cachorros de porte parecido',
+    };
+    let cabecalhoOk = true, cabecalhoDet = '';
+    Object.keys(respostasEsperadas).forEach((k) => {
+      const r = comPerguntas.respostas[k];
+      if (!r || r.texto !== respostasEsperadas[k] || r.via !== 'cabecalho') {
+        cabecalhoOk = false; cabecalhoDet += k + '=' + JSON.stringify(r) + ' ';
+      }
+    });
+    check('casamento por CABEÇALHO: as 9 perguntas casam com o bullet certo da seção certa', cabecalhoOk, cabecalhoDet);
+    check('campo devolvido é o da pergunta REAL (não o palpite deste arquivo) — restricao→alergia, checkup/estresse→obs_tutor',
+      comPerguntas.respostas.restricao && comPerguntas.respostas.restricao.campo === 'alergia'
+        && comPerguntas.respostas.checkup && comPerguntas.respostas.checkup.campo === 'obs_tutor'
+        && comPerguntas.respostas.estresse && comPerguntas.respostas.estresse.campo === 'obs_tutor',
+      JSON.stringify([comPerguntas.respostas.restricao, comPerguntas.respostas.checkup, comPerguntas.respostas.estresse]));
+    check('estresse (o ataque do Golden) sai com alerta:true também em `respostas`',
+      comPerguntas.respostas.estresse && comPerguntas.respostas.estresse.alerta === true,
+      JSON.stringify(comPerguntas.respostas.estresse));
+    check('nenhuma pergunta ficou sem resposta', comPerguntas.perguntasSemResposta.length === 0, JSON.stringify(comPerguntas.perguntasSemResposta));
+
+    // ---- 3) prova pedida: respostas FORA DE ORDEM e SEM NENHUM título ----
+    const textoBaguncado = [
+      'Ela já foi atacada por um Golden (mais de 1 ano atrás) durante um passeio, e desde então tem receio com a raça e cachorros de porte parecido',
+      'Possui microchip: 900215002669358',
+      'Nenhuma restrição',
+      'Ração seca, ND Prime Frango e Romã',
+      'Nenhuma mudança recente',
+      'Atividades físicas liberadas',
+      '70g por refeição',
+      '2 por dia, de manhã e à noite',
+      'Último checkup em janeiro',
+    ].join('\n'); // mesma quantidade de linhas que perguntas (9), ordem embaralhada, zero cabeçalho
+    const forDeOrdem = ctx.rtLerResposta(textoBaguncado, { hoje: HOJE, perguntas: perguntasYume });
+    let forDeOrdemOk = true, forDeOrdemDet = '';
+    Object.keys(respostasEsperadas).forEach((k) => {
+      const r = forDeOrdem.respostas[k];
+      if (!r || r.texto !== respostasEsperadas[k]) { forDeOrdemOk = false; forDeOrdemDet += k + '=' + JSON.stringify(r) + ' '; }
+    });
+    check('SEM cabeçalho e FORA DE ORDEM: as 9 respostas ainda casam certo (conferidas por palavra-chave)',
+      forDeOrdemOk, forDeOrdemDet);
+    check('sem cabeçalho: nenhum casamento fica marcado como "cabecalho" (a posição por seção nunca foi vista)',
+      Object.keys(forDeOrdem.respostas).every((k) => forDeOrdem.respostas[k].via !== 'cabecalho'),
+      JSON.stringify(forDeOrdem.respostas));
+
+    // ---- 4) mordidas: texto vazio, cabeçalhos sem conteúdo, texto solto que não casa com nada ----
+    const vazio = ctx.rtLerResposta('', { hoje: HOJE });
+    check('texto vazio: nenhum campo, aviso claro, sem estourar',
+      Object.keys(vazio.campos).length === 0 && vazio.avisos.length === 1,
+      JSON.stringify(vazio));
+    const soCabecalho = ctx.rtLerResposta('Alimentação\nSaúde, rotina e comportamento', { hoje: HOJE, perguntas: perguntasYume });
+    check('só cabeçalho, sem nenhum bullet: nenhuma pergunta é respondida por adivinhação',
+      Object.keys(soCabecalho.respostas).length === 0,
+      JSON.stringify(soCabecalho.respostas));
+    const solto = ctx.rtLerResposta('Adora dormir de barriga para cima\nGosta muito de bolinha', { hoje: HOJE });
+    check('texto sem palavra-chave nenhuma: as duas linhas viram naoEntendi, nada é descartado',
+      solto.naoEntendi.length === 2 && solto.naoEntendi[0] === 'Adora dormir de barriga para cima',
+      JSON.stringify(solto.naoEntendi));
+    const microInvalido = ctx.rtLerResposta('Possui microchip: 12345');
+    check('microchip com menos de 15 dígitos: gera aviso, não trava e não inventa validade',
+      microInvalido.campos.microchip.valido === false && /5 dígito/.test(microInvalido.avisos[0] || ''),
+      JSON.stringify(microInvalido));
+    const checkupSemMes = ctx.rtLerResposta('Fez check-up recentemente, tudo certo', { hoje: HOJE });
+    check('check-up sem mês reconhecível: fica como observação (texto preservado), nunca inventa data',
+      checkupSemMes.campos.checkup_t && checkupSemMes.campos.checkup_t.inferido === false && checkupSemMes.campos.checkup_t.valor === '',
+      JSON.stringify(checkupSemMes.campos.checkup_t));
+    const unidades = ctx.rtLerResposta('70 g por refeição\n70gr por refeição\n1 xícara por refeição', { hoje: HOJE });
+    check('unidade "70 g" (com espaço) reconhecida', unidades.campos.alim_racao_qtd.numero === 70, JSON.stringify(unidades.campos.alim_racao_qtd));
+    const checkupDezembro = ctx.rtLerResposta('Último check up foi em dezembro', { hoje: HOJE });
+    check('check-up em mês que AINDA NÃO CHEGOU neste ano (dezembro, hoje=agosto): infere o ANO PASSADO',
+      checkupDezembro.campos.checkup_t.valor === '2025-12-01' && checkupDezembro.campos.checkup_t.ano === 2025,
+      JSON.stringify(checkupDezembro.campos.checkup_t));
+  }
+  console.log('');
+
+  // ============================================================================
+  // AS JANELINHAS DO NAVEGADOR SAÍRAM (29/ago/2026)
+  // ----------------------------------------------------------------------------
+  // A auditoria de 28/ago (seção 7) contou 41 confirm() e 27 prompt() — 68 janelas
+  // nativas. Elas travam a tela, não têm a cara da Zêluz e, no celular, o navegador
+  // pode SUPRIMI-LAS e responder sozinho: foi assim que um relatório inteiro de
+  // plantão se perdeu. No lugar entraram zPergunta/zTexto, que desenham um cartaz na
+  // própria página em cima do zEscolha/zCampo que já existiam.
+  console.log('Janelinhas do navegador: confirm() e prompt() saíram (29/ago):');
+  {
+    // Só conta chamada de verdade: as citações dentro de comentário (// ...) são
+    // memória histórica do arquivo e devem continuar lá.
+    const chamadasNativas = (texto) => {
+      const achadas = [];
+      // Apaga o que é comentário de HTML (<!-- ... -->), mantendo as quebras de linha
+      // para o número continuar batendo com o arquivo. Comentário de bloco /* */ NÃO se
+      // apaga aqui: o CSS e as expressões regulares do arquivo têm barras e asteriscos
+      // que enganariam a varredura e engoliriam código de verdade.
+      const semBloco = texto.replace(/<!--[\s\S]*?-->/g, (m) => m.replace(/[^\n]/g, ' '));
+      semBloco.split('\n').forEach((linha, i) => {
+        const semComentario = linha.replace(/\/\/.*$/, '');
+        const m = semComentario.match(/\b(confirm|prompt)\s*\(/g);
+        if (m) m.forEach((x) => achadas.push({ linha: i + 1, qual: x.trim(), texto: linha.trim().slice(0, 70) }));
+      });
+      return achadas;
+    };
+    // A ÚNICA que fica, e por quê: pessoaDoTurno() devolve o nome de quem está no turno
+    // dentro de expressões síncronas (assinou:pessoaDoTurno()) em 16 lugares — medicação,
+    // almoço, atividades. Torná-la assíncrona espalharia await por metade do app, e é
+    // justamente ela que garante que nenhuma dose seja gravada sem responsável.
+    const DEIXADA_DE_FORA = ['pessoaDoTurno'];
+    const sobraram = chamadasNativas(html);
+    check('sobrou exatamente 1 janelinha nativa no arquivo (eram 68)',
+      sobraram.length === 1, JSON.stringify(sobraram.map((x) => x.linha + ':' + x.texto)));
+    check('e a que sobrou é a do nome de quem está no turno, a única nomeada',
+      sobraram.length === 1 && /QUEM ESTA NO TURNO AGORA/.test(sobraram[0].texto),
+      JSON.stringify(sobraram));
+    check('a exceção está escrita no teste, com nome',
+      DEIXADA_DE_FORA.length === 1 && DEIXADA_DE_FORA[0] === 'pessoaDoTurno');
+
+    // Os dois envelopes que substituíram tudo — e o campo de senha que a janela nativa
+    // mostrava em texto puro.
+    check('zPergunta devolve promessa em cima do zEscolha',
+      /function zPergunta\(titulo, linhas, op\)\{/.test(html) &&
+      /zEscolha\(titulo, linhas, \[/.test(html));
+    check('zTexto devolve o texto, ou null quando a pessoa desiste',
+      /function zTexto\(titulo, linhas, op\)\{/.test(html) &&
+      /cfg\.aoCancelar=function\(\)\{ res\(null\); \};/.test(html));
+    check('zCampo aceita campo de senha (a janela nativa mostrava em texto puro)',
+      /type="'\+escAttr\(op\.tipo\|\|'text'\)\+'"/.test(html) &&
+      (html.match(/tipo:'password'/g) || []).length >= 2);
+
+    // Todo botão de zPergunta tem VERBO — "OK/Cancelar" não diz o que vai acontecer.
+    const semVerbo = [];
+    (html.match(/\{sim:'[^']*', ?nao:'[^']*'/g) || []).forEach((par) => {
+      const sim = (par.match(/sim:'([^']*)'/) || [])[1] || '';
+      if (/^(OK|Ok|Sim|Confirmar)$/.test(sim.trim())) semVerbo.push(sim);
+    });
+    check('nenhum botão ficou só com "OK"/"Sim"', semVerbo.length === 0, JSON.stringify(semVerbo));
+
+    // ---- prova de comportamento: a decisão de negócio de cada uma continua a mesma ----
+    // Com o cartaz respondendo "não", nada é gravado. Com "sim", grava.
+    const bkpJ = { audit: ctx.audit, alert: ctx.alert,
+                   salvarAtiv: ctx.salvarAtiv, renderAtiv: ctx.renderAtiv,
+                   quemSou: ctx.quemSou, horaAgora: ctx.horaAgora };
+    const escritas = [];
+    vm.runInContext('__bkpJ = { DB: DB };', ctx);
+    try {
+      ctx.audit = () => {};
+      ctx.salvarAtiv = () => { escritas.push('salvarAtiv'); };
+      ctx.renderAtiv = () => {};
+      ctx.quemSou = () => 'Márcia';
+      ctx.horaAgora = () => '11:47';
+      ctx.__dbJ = { ref(p) { return {
+        set(v) { escritas.push({ o: 'set', p, v }); return Promise.resolve(); },
+        update(v) { escritas.push({ o: 'update', p, v }); return Promise.resolve(); },
+        push(v) { escritas.push({ o: 'push', p, v }); return Promise.resolve(); },
+        remove() { escritas.push({ o: 'remove', p }); return Promise.resolve(); },
+        once() { return Promise.resolve({ val: () => null }); },
+      }; } };
+      vm.runInContext('DB = __dbJ;', ctx);
+
+      // (a) removerAtividade — "Manter" não tira nada da lista.
+      // ATIVIDADES é `let` no script do app: só existe DENTRO do contexto.
+      const ativs = () => vm.runInContext('JSON.stringify(ATIVIDADES)', ctx);
+      vm.runInContext("ATIVIDADES = [{t:'Banho de sol'},{t:'Piscina'}];", ctx);
+      escritas.length = 0;
+      await respondendo({ pergunta: false }, async () => { await ctx.removerAtividade(0); });
+      check('quem responde "Manter" não perde a atividade',
+        JSON.parse(ativs()).length === 2 && escritas.length === 0, ativs());
+      escritas.length = 0;
+      await respondendo({ pergunta: true }, async () => { await ctx.removerAtividade(0); });
+      check('quem responde "Remover" perde a atividade — e ela é a certa',
+        JSON.parse(ativs()).length === 1 && JSON.parse(ativs())[0].t === 'Piscina', ativs());
+
+      // (b) acrescentarAtividade — o texto escrito no cartaz é o que entra na lista
+      await respondendo({ texto: 'Cama elástica' }, async () => { await ctx.acrescentarAtividade(); });
+      check('o texto escrito no cartaz vira a atividade nova',
+        JSON.parse(ativs()).some((x) => x.t === 'Cama elástica'), ativs());
+      const antesN = JSON.parse(ativs()).length;
+      await respondendo({ texto: null }, async () => { await ctx.acrescentarAtividade(); });
+      check('quem desiste do cartaz não cria atividade em branco',
+        JSON.parse(ativs()).length === antesN, ativs());
+
+      // (c) turnoTrocar — o horário de outra pessoa não se apaga sem resposta
+      escritas.length = 0;
+      const r1 = await respondendo({ pergunta: false }, () =>
+        ctx.turnoTrocar('daycare/almoco-turno/2026-08-27', 'inicio', 'quemInicio',
+          { inicio: '11:20', quemInicio: 'Wandela' }, 'O início do almoço'));
+      check('"Manter como está" devolve null e NÃO grava por cima do horário da outra',
+        r1 === null && escritas.length === 0, JSON.stringify(escritas));
+      escritas.length = 0;
+      const r2 = await respondendo({ pergunta: true }, () =>
+        ctx.turnoTrocar('daycare/almoco-turno/2026-08-27', 'inicio', 'quemInicio',
+          { inicio: '11:20', quemInicio: 'Wandela' }, 'O início do almoço'));
+      check('"Trocar o horário" grava o novo E guarda o antigo no histórico',
+        r2 && r2.h === '11:47' &&
+        escritas.some((e) => e.o === 'push' && /historico/.test(e.p) && e.v.era === '11:20') &&
+        escritas.some((e) => e.o === 'update' && e.v.inicio === '11:47'),
+        JSON.stringify(escritas));
+
+      // (d) sair do Check-in com rascunho: a navegação espera a resposta
+      const bkpRasc = ctx.ciTemRascunhoNaoSalvo;
+      try {
+        ctx.ciTemRascunhoNaoSalvo = () => true;
+        let seguiu = 0;
+        check('com rascunho, o menu NÃO navega na hora',
+          ctx.ciPodeSairDoCheckin(() => { seguiu++; }) === false && seguiu === 0);
+        await passarAsVoltas(20);
+        check('e só navega depois de a pessoa tocar em "Sair e perder o que preenchi"', seguiu === 1);
+        seguiu = 0;
+        await respondendo({ pergunta: false }, async () => {
+          ctx.ciPodeSairDoCheckin(() => { seguiu++; });
+          await passarAsVoltas(20);
+        });
+        check('quem toca em "Ficar e salvar" continua no Check-in', seguiu === 0);
+        ctx.ciTemRascunhoNaoSalvo = () => false;
+        seguiu = 0;
+        check('sem rascunho, o menu navega direto, como sempre',
+          ctx.ciPodeSairDoCheckin(() => { seguiu++; }) === true && seguiu === 1);
+      } finally { ctx.ciTemRascunhoNaoSalvo = bkpRasc; }
+
+      // (e) ciQuemRecebeu — nome de gente, ou nada é lançado
+      const rec = await respondendo({ texto: 'Giullian' }, () => ctx.ciQuemRecebeu(['Roupa bege']));
+      check('o nome de quem recebeu o material vem do cartaz', rec === 'Giullian', String(rec));
+      const rec2 = await respondendo({ texto: '.', pergunta: true }, () => ctx.ciQuemRecebeu(['Roupa bege']));
+      check('um ponto não é nome de gente — não passa', rec2 === null, String(rec2));
+      const rec3 = await respondendo({ texto: '', pergunta: true }, () => ctx.ciQuemRecebeu(['Roupa bege']));
+      check('em branco + "Cancelar o lançamento" devolve null (nada é salvo)', rec3 === null, String(rec3));
+    } finally {
+      ctx.audit = bkpJ.audit;
+      ctx.salvarAtiv = bkpJ.salvarAtiv; ctx.renderAtiv = bkpJ.renderAtiv;
+      ctx.quemSou = bkpJ.quemSou; ctx.horaAgora = bkpJ.horaAgora;
+      vm.runInContext('DB = __bkpJ.DB;', ctx);
+    }
   }
   console.log('');
 

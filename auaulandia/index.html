@@ -3960,10 +3960,17 @@
     const v=a.dataset.v;
     if(!v) return; // sub-links (dias do Day Care) tratam o próprio clique
     // Não deixa sair do Check-in com a ficha preenchida e não salva (caso Mulan/Lisa, 30/jul).
+    // O cartaz é assíncrono: se houver rascunho, a navegação PARA aqui e só acontece depois,
+    // pelo `segue` — quem toca em "Ficar e salvar" continua exatamente onde estava.
     try{
       const vc=document.getElementById('v-checkin');
-      if(v!=='checkin' && vc && vc.classList.contains('active') && typeof ciPodeSairDoCheckin==='function' && !ciPodeSairDoCheckin()) return;
+      if(v!=='checkin' && vc && vc.classList.contains('active') && typeof ciPodeSairDoCheckin==='function'
+         && !ciPodeSairDoCheckin(function(){ _navegarMenu(a, v); })) return;
     }catch(e){}
+    _navegarMenu(a, v);
+  });
+  // A navegação do menu, em um lugar só — para poder acontecer agora ou depois de uma pergunta.
+  function _navegarMenu(a, v){
     document.querySelectorAll('#nav a').forEach(x=>x.classList.remove('active'));
     a.classList.add('active');
     document.querySelectorAll('.view').forEach(x=>x.classList.remove('active'));
@@ -3974,7 +3981,7 @@
     document.getElementById('head-sub').textContent=titles[v][1];
     if(aoAbrirView(v)==='parar') return;
     closeNav(); window.scrollTo({top:0,behavior:'smooth'});
-  });
+  }
   // ===== UM LUGAR SÓ PARA "AO ABRIR A TELA X, FAÇA Y" (Adriana, 13/ago/2026) ========
   // Existiam DUAS listas de ganchos: uma aqui, no clique do menu, e outra dentro de
   // irParaView (usada quando o próprio código troca de tela). Toda tela nova precisava ser
@@ -4584,22 +4591,28 @@
     });
   }
   // ---- Consumo ----
-  function repUsar(i){
+  async function repUsar(i){
     const p=PELUDINHOS[i]; if(!p) return;
     if(!repPodeLancar()){ alert('Só a recepção, a Gestão ou a Supervisão marcam o uso da reposição.'); return; }
     const s=repSaldo(p);
     if(s<=0){ alert(pelNome(p)+' não tem saldo de reposição.'); return; }
-    if(!confirm('Marcar que '+pelNome(p)+' veio REPOR hoje?\n\nSaldo agora: '+s+'\nDepois de marcar: '+(s-1))) return;
-    const obs=(prompt('Alguma observação? (opcional)','')||'').trim();
+    if(!await zPergunta('Marcar reposição de '+pelNome(p)+'?',
+      ['Ele veio REPOR hoje.', 'Saldo agora: '+s+'. Depois de marcar: '+(s-1)+'.'],
+      {sim:'Marcar', nao:'Não marcar'})) return;
+    const obs=((await zTexto('Alguma observação?',
+      ['É opcional — se não houver nada a dizer, deixe em branco e confirme.'],
+      {rotulo:'Observação', botao:'Confirmar', cor:'#234D67'}))||'').trim();
     repGravar(p,{tipo:'uso', data:repHojeISO(), motivo:'reposicao', obs:obs}).then(function(){
       if(typeof audit==='function') audit('reposicao-uso', pelNome(p), {obs:obs});
       setTimeout(renderReposicao, 300);
     }).catch(function(e){ alert('Não consegui marcar: '+((e&&e.message)||e)); });
   }
-  function repEstornar(i,id){
+  async function repEstornar(i,id){
     const p=PELUDINHOS[i]; if(!p||!id) return;
     if(!repPodeLancar()){ alert('Só a recepção, a Gestão ou a Supervisão estornam.'); return; }
-    const motivo=(prompt('Estornar este lançamento — por quê?\n\nO lançamento original NÃO é apagado: fica no extrato, e o estorno entra como uma linha nova explicando o erro.','')||'').trim();
+    const motivo=((await zTexto('Estornar este lançamento — por quê?',
+      ['O lançamento original NÃO é apagado: fica no extrato, e o estorno entra como uma linha nova explicando o erro.'],
+      {rotulo:'Motivo do estorno', botao:'Estornar', minimo:3}))||'').trim();
     if(!motivo) return;
     repGravar(p,{tipo:'estorno', data:repHojeISO(), motivo:'estorno', obs:motivo, estornaId:id}).then(function(){
       if(typeof audit==='function') audit('reposicao-estorno', pelNome(p), {motivo:motivo});
@@ -4667,12 +4680,14 @@
     });
   }
   // A Gestora decide o que passa das 5. Ela avalia matilha e comportamento — o app só pergunta.
-  function trocaDecidir(dataISO,k,ok){
+  async function trocaDecidir(dataISO,k,ok){
     if(!DB) return;
     if(!trocaEhGestora()){ alert('Só a Gestão ou a Diretoria decide uma troca acima das '+TROCA_VAGAS_DIA+' vagas.'); return; }
     const t=(TROCA_CACHE[dataISO]||{})[k]||{};
     if(!ok){
-      const motivo=(prompt('Recusar a troca de '+(t.nome||'')+' para '+fmtBR(dataISO)+'.\n\nPor quê? A recepção precisa saber o que dizer ao tutor.','')||'').trim();
+      const motivo=((await zTexto('Recusar a troca de '+(t.nome||'')+' para '+fmtBR(dataISO),
+        ['Por quê? A recepção precisa saber o que dizer ao tutor.'],
+        {rotulo:'Motivo da recusa', botao:'Recusar a troca', minimo:3}))||'').trim();
       if(!motivo) return;
       DB.ref('daycare/trocas/'+dataISO+'/'+k).update({status:'recusada', motivoDecisao:motivo,
         decidiuQuem:(typeof pessoaDoTurno==='function')?pessoaDoTurno():quemSou(), decidiuTs:Date.now()}).catch(function(){});
@@ -4683,9 +4698,11 @@
       decidiuQuem:(typeof pessoaDoTurno==='function')?pessoaDoTurno():quemSou(), decidiuTs:Date.now()}).catch(function(){});
     if(typeof audit==='function') audit('troca-confirmada',(t.nome||'')+' em '+fmtBR(dataISO)+' (acima das '+TROCA_VAGAS_DIA+' vagas)',{});
   }
-  function trocaCancelar(dataISO,k){
+  async function trocaCancelar(dataISO,k){
     if(!DB) return;
-    if(!confirm('Cancelar esta troca? A vaga volta a ficar livre e o crédito continua com ele.')) return;
+    if(!await zPergunta('Cancelar esta troca?',
+      ['A vaga volta a ficar livre e o crédito continua com ele.'],
+      {sim:'Cancelar a troca', nao:'Manter a troca'})) return;
     DB.ref('daycare/trocas/'+dataISO+'/'+k).update({status:'cancelada',
       canceladaQuem:(typeof pessoaDoTurno==='function')?pessoaDoTurno():quemSou(), canceladaTs:Date.now()}).catch(function(){});
   }
@@ -4741,9 +4758,11 @@
   function trocaPodeMexer(){ const r=document.body.dataset.role||'';
     return r==='consultora'||r==='gestao'||r==='supervisor'||r==='diretoria'; }
   // Marcar a troca com o tutor no telefone: quem, para quando e por quê.
-  function trocaAbrirLancar(){
+  async function trocaAbrirLancar(){
     if(!trocaPodeMexer()){ alert('Só a Recepção, a Supervisão ou a Gestão marcam troca.'); return; }
-    const nome=(prompt('Marcar troca — qual FILHOt?\n\nEscreva o nome (ou nome e tutor, se houver xará).','')||'').trim();
+    const nome=((await zTexto('Marcar troca — qual FILHOt?',
+      ['Escreva o nome (ou nome e tutor, se houver xará).'],
+      {rotulo:'Nome do FILHOt', botao:'Continuar', cor:'#234D67', minimo:2}))||'').trim();
     if(!nome) return;
     const achados=PELUDINHOS.filter(function(x){ return !pelInativo(x) && termosBuscaPel(x).indexOf(jsNorm(nome))>=0; });
     if(!achados.length){ alert('Não achei "'+nome+'" no cadastro.'); return; }
@@ -4754,7 +4773,9 @@
     }
     const p=achados[0];
     const jaVem=(pelDias(p)||[]).map(function(d){ return DIA_FULL[d]||d; }).join(', ')||'nenhum dia fixo';
-    const para=(prompt('Troca de '+pelNome(p)+'\n\nPara qual dia ele vem? Escreva no formato aaaa-mm-dd.\n\nDias em que ele já vem: '+jaVem,'')||'').trim();
+    const para=((await zTexto('Troca de '+pelNome(p),
+      ['Para qual dia ele vem? Escreva no formato aaaa-mm-dd.', 'Dias em que ele já vem: '+jaVem],
+      {rotulo:'Dia da troca', dica:'aaaa-mm-dd', botao:'Continuar', cor:'#234D67', minimo:8}))||'').trim();
     if(!para) return;
     const erro=trocaValidar(p,para);
     if(erro){ alert(erro); return; }
@@ -4762,7 +4783,9 @@
     const aviso=livres>0
       ? 'Há '+livres+' vaga(s) livre(s) em '+fmtBR(para)+' — dá para marcar na hora.'
       : 'SEM VAGA em '+fmtBR(para)+'. Vai virar um PEDIDO para a Gestora avaliar.';
-    const motivo=(prompt('Por que a troca? (ex.: viagem do tutor, consulta, cio)\n\n'+aviso,'')||'').trim();
+    const motivo=((await zTexto('Por que a troca?',
+      ['Por exemplo: viagem do tutor, consulta, cio.', aviso],
+      {rotulo:'Motivo da troca', botao:'Marcar a troca', cor:'#234D67'}))||'').trim();
     trocaLancar(p,'',para,motivo).then(function(reg){
       alert(reg.status==='confirmada'
         ? 'Troca marcada: '+pelNome(p)+' vem em '+fmtBR(para)+'.\n\nSobraram '+trocaVagasLivres(para)+' vaga(s) nesse dia.'
@@ -5378,14 +5401,14 @@
     if(typeof audit==='function'&&nx) audit('cafe', nx==='tudo'?'tomou o café todo':(nx==='metade'?'tomou metade':(nx==='naochegou'?'ainda não tinha chegado':'não tomou')), {alvo:k});
     renderCafe();
   }
-  function iniciarCafe(){
-    var r=turnoTrocar('auaulandia/cafe-turno/'+cafeDataKey(),'inicio','quemInicio',cafeTempo,'O início do café da manhã'); if(!r) return;
+  async function iniciarCafe(){
+    var r=await turnoTrocar('auaulandia/cafe-turno/'+cafeDataKey(),'inicio','quemInicio',cafeTempo,'O início do café da manhã'); if(!r) return;
     cafeTempo=Object.assign({},cafeTempo,r.patch,{caes:hospedes.length});
     if(DB) DB.ref('auaulandia/cafe-turno/'+cafeDataKey()).update({caes:hospedes.length}).catch(function(){});
     if(typeof audit==='function') audit('cafe_ini','iniciou o café da manhã às '+r.h); renderCafe();
   }
-  function encerrarCafe(){
-    var r=turnoTrocar('auaulandia/cafe-turno/'+cafeDataKey(),'fim','quemFim',cafeTempo,'O fim do café da manhã'); if(!r) return;
+  async function encerrarCafe(){
+    var r=await turnoTrocar('auaulandia/cafe-turno/'+cafeDataKey(),'fim','quemFim',cafeTempo,'O fim do café da manhã'); if(!r) return;
     cafeTempo=Object.assign({},cafeTempo,r.patch);
     if(typeof audit==='function') audit('cafe_fim','encerrou o café da manhã às '+r.h); renderCafe();
   }
@@ -5839,7 +5862,10 @@
     if(!currentHosp) return;
     const v=((document.getElementById('hf-nome-edit')||{}).value||'').trim();
     setInfo(currentHosp,{nome:v});
-    if(DB){ DB.ref('auaulandia/cadastro/'+cadKey(currentHosp)).update({nome:v}).catch(e=>_logFalhaGrav('nome(auaulandia)',e)); DB.ref('daycare/cadastro/'+cadKey(currentHosp)).update({nome:v}).catch(e=>_logFalhaGrav('nome(daycare)',e)); }
+    // Chave FIXA, como no onCadGravar: recalcular aqui recriaria a fábrica de duplicados
+    // pelo campo do nome (Adriana, 29/ago/2026).
+    var _ckn=__cadKeyFixa||cadKey(currentHosp);
+    if(DB){ DB.ref('auaulandia/cadastro/'+_ckn).update({nome:v}).catch(e=>_logFalhaGrav('nome(auaulandia)',e)); DB.ref('daycare/cadastro/'+_ckn).update({nome:v}).catch(e=>_logFalhaGrav('nome(daycare)',e)); }
     const disp=v||currentHosp.nome||'';
     const t=document.getElementById('hf-nome'); if(t) t.textContent=disp;
     renderHosp();
@@ -6169,12 +6195,14 @@
   // Remoção EXPLÍCITA, item a item (Fundação 1 — anti-Hulk). Como o "Salvar agenda" nunca mais
   // sobrescreve o nó inteiro, apagar um remédio precisa deletar SÓ aquele item no banco. Um rascunho
   // ainda não salvo é só removido da tela (não existe no banco). Guarda de papel: só quem edita medicação.
-  function magRemoverItem(id){
+  async function magRemoverItem(id){
     const el=document.querySelector('.magitem[data-id="'+id+'"]'); if(!el) return;
     const noCard=!!(el.closest&&el.closest('#magItens'));
     if(noCard){ if(!canEditMed()){ alert('Apenas a Veterinária, a Gestão ou a Supervisão podem remover medicação.'); return; } }
     else if(!podeEditarLinhaMed(el)){ alert('Você não tem permissão para remover medicação.'); return; }
-    if(!confirm('Remover este medicamento da agenda?')) return;
+    if(!await zPergunta('Remover este medicamento da agenda?',
+      ['Ele sai da agenda deste FILHOt. O histórico do que já foi dado continua guardado.'],
+      {sim:'Remover', nao:'Manter'})) return;
     el.remove();
     // Card diário: se o item já estava persistido, remove DELE no banco (nunca via sobrescrita do nó).
     if(noCard && DB && currentHosp && MED_AGENDA_ITENS && MED_AGENDA_ITENS[id]){
@@ -6460,9 +6488,12 @@
     if(typeof audit==='function') audit('estoque-aviso',d.key,{med:d.medNome||'',motivo:aviso.motivo});
   }
   // Botão "Está acabando" (qualquer um pode tocar) — marca o item e abre o aviso à Recepção.
-  function tocarEstoqueAcabando(itemId){
+  async function tocarEstoqueAcabando(itemId){
     var it=MED_AGENDA_ITENS[itemId]; if(!it) return;
-    if(!confirm('Avisar a Recepção que "'+(it.nome||'este medicamento')+'" está acabando?')) return;
+    if(!await zPergunta('Avisar a Recepção?',
+      ['"'+(it.nome||'este medicamento')+'" está acabando.',
+       'A Recepção recebe o aviso e fala com o tutor.'],
+      {sim:'Avisar a Recepção', nao:'Agora não', cor:'#234D67'})) return;
     var key=medAgendaKey(); if(!key||!DB){ alert('Banco conectando… tente de novo em instantes.'); return; }
     it.estoque=Object.assign({}, it.estoque||{}, {acabando:true});
     DB.ref('auaulandia/medicacao-agenda/'+key+'/itens/'+itemId+'/estoque').update({acabando:true}).catch(function(e){ _logFalhaGrav('estoque acabando '+itemId, e); });
@@ -6711,46 +6742,95 @@
     {k:'acomp', t:'Estou acompanhando'},
     {k:'nada',  t:'Sem intervenção necessária'}
   ];
-
   // ===== FALTA AUTOMÁTICA ÀS 12h ========================================================
   // Adriana: "deixe em aberto e coloque falta automaticamente se não apareceu até as 12h."
   // Antes das 12h quem não chegou fica EM ABERTO — muita gente chega atrasada e entra.
   // Passou das 12h, quem não passou pelo check-in de entrada vira falta. Grava uma vez só,
   // e nunca por cima de quem já tem marcação (o humano sempre vence o automático).
+  //
+  // 29/ago/2026 — o fechamento deixou de depender de alguém abrir o "Check-in do corpo".
+  // Regra da casa: aviso que depende de abrir a tela não é aviso. Mesmo padrão do almoço
+  // (commit 3213010): quem entra no app dispara em QUALQUER tela, e um temporizador de 30 s
+  // cobre quem já estava logado quando o relógio passou do meio-dia. A trava de "o dia já
+  // fechou" mora no BANCO (daycare/falta-automatica/<dia>, com transaction) e não numa
+  // variável do aparelho — assim dois celulares abertos ao mesmo tempo fecham o dia UMA vez
+  // só. Fica fora da chamada de propósito: o resumo do dia conta Object.keys(chamada) para
+  // dizer "X de Y", e uma chave de controle ali dentro faria o Y mentir.
   const CK_HORA_FALTA=12;
   var _faltaAutoFeita='';
+  function faltaAutoTrava(dia){ return 'daycare/falta-automatica/'+dia; }
+  // A turma é sempre a de HOJE, mesmo que a tela esteja mostrando outro dia da semana:
+  // turmaDoDia() lê o dia selecionado na aba, e antes disso quem estivesse olhando a
+  // quinta-feira impedia o fechamento da terça (a falta só saía se a tela estivesse no dia).
+  function turmaDeHoje(){
+    if(typeof turmaDoDia!=='function') return [];
+    var antes=dcDia;
+    try{ dcDia=HOJE_DIA; return turmaDoDia(); }
+    finally{ dcDia=antes; }
+  }
   function aplicarFaltaAutomatica(){
-    if(!DB) return;
-    const hoje=dcDataKey();
-    if(_faltaAutoFeita===hoje) return;
+    if(!DB) return Promise.resolve();
+    var r=(document.body&&document.body.dataset&&document.body.dataset.role)||'';
+    if(!r || r==='tutor') return Promise.resolve();      // ninguém logado, ou tutor: não fecha o dia da casa
     const agora=new Date();
-    if(agora.getHours()<CK_HORA_FALTA) return;          // ainda dá tempo de chegar
-    if(dcDia!==HOJE_DIA) return;                        // só o dia de hoje
-    _faltaAutoFeita=hoje;
-    Promise.all([
-      DB.ref('daycare/checkin-corpo/'+hoje).once('value').then(function(s){ return s.val()||{}; }).catch(function(){ return {}; }),
-      DB.ref('daycare/chamada/'+hoje).once('value').then(function(s){ return s.val()||{}; }).catch(function(){ return {}; })
-    ]).then(function(r){
-      const fezCheckin=r[0], chamada=r[1];
-      const marcados=[];
-      turmaDoDia().forEach(function(o){
-        const k=dcKey(o.p.n,o.p.tutor);
-        if(fezCheckin[k]) return;                       // passou pelo check-in: está aqui
-        if(chamada[k]) return;                          // alguém já marcou algo: não sobrescreve
-        if(typeof ehMoradorZeluz==='function' && ehMoradorZeluz(o.p)) return;  // mora aqui
-        if(typeof faltouHoje==='function' && faltouHoje(o)) return;            // a planilha já avisou
-        marcados.push({k:k, nome:pelNome(o.p)});
+    if(agora.getHours()<CK_HORA_FALTA) return Promise.resolve();   // ainda dá tempo de chegar
+    var ds=agora.getDay();
+    if(ds===0||ds===6) return Promise.resolve();         // sábado e domingo não há Day Care
+    // Cadastro ainda carregando: a turma sairia vazia e o dia fecharia sem marcar ninguém.
+    if(typeof PELUDINHOS==='undefined' || !Array.isArray(PELUDINHOS) || !PELUDINHOS.length) return Promise.resolve();
+    const hoje=dcDataKey();
+    if(_faltaAutoFeita===hoje) return Promise.resolve(); // este aparelho já confirmou hoje
+    return DB.ref(faltaAutoTrava(hoje)).once('value').then(function(s){
+      if(s.val()){ _faltaAutoFeita=hoje; return; }       // outro aparelho (ou esta sessão) já fechou
+      return Promise.all([
+        DB.ref('daycare/checkin-corpo/'+hoje).once('value').then(function(s2){ return s2.val()||{}; }).catch(function(){ return {}; }),
+        DB.ref('daycare/chamada/'+hoje).once('value').then(function(s2){ return s2.val()||{}; }).catch(function(){ return {}; })
+      ]).then(function(rr){
+        const fezCheckin=rr[0], chamada=rr[1];
+        const marcados=[];
+        turmaDeHoje().forEach(function(o){
+          const k=dcKey(o.p.n,o.p.tutor);
+          if(fezCheckin[k]) return;                       // passou pelo check-in: está aqui
+          if(chamada[k]) return;                          // alguém já marcou algo: não sobrescreve
+          if(typeof ehMoradorZeluz==='function' && ehMoradorZeluz(o.p)) return;  // mora aqui
+          if(typeof faltouHoje==='function' && faltouHoje(o)) return;            // a planilha já avisou
+          marcados.push({k:k, nome:pelNome(o.p)});
+        });
+        // A trava é tomada mesmo quando ninguém faltou: "o dia fechou e todos vieram" é uma
+        // resposta, e sem ela os aparelhos releriam o dia inteiro de 30 em 30 segundos.
+        return DB.ref(faltaAutoTrava(hoje)).transaction(function(atual){
+          if(atual) return;                               // outro aparelho fechou primeiro
+          return { ts:Date.now(), por:(typeof quemSou==='function'?quemSou():'-'),
+                   hora:(typeof horaAgora==='function'?horaAgora():''), quantos:marcados.length };
+        }).then(function(res){
+          if(!res || !res.committed) return;
+          _faltaAutoFeita=hoje;
+          if(!marcados.length){
+            if(typeof audit==='function') audit('falta-automatica',
+              'dia fechado às '+CK_HORA_FALTA+'h — ninguém ficou sem check-in', {assinou:'sistema'});
+            return;
+          }
+          const patch={}; marcados.forEach(function(m){ patch[m.k]='faltou'; });
+          return DB.ref('daycare/chamada/'+hoje).update(patch).then(function(){
+            if(typeof audit==='function') audit('falta-automatica',
+              marcados.length+' sem check-in até as '+CK_HORA_FALTA+'h: '+marcados.map(function(m){ return m.nome; }).join(', '),
+              {assinou:'sistema'});
+            try{ if(dcAtiv==='checkin-corpo' && typeof renderCheckin==='function') renderCheckin(); }catch(e){}
+          }).catch(function(e){
+            _logFalhaGrav('falta automática das '+CK_HORA_FALTA+'h', e);
+            // Falhou? Solta a trava, para o próximo a entrar (ou o temporizador) tentar de novo.
+            _faltaAutoFeita='';
+            return DB.ref(faltaAutoTrava(hoje)).remove().catch(function(e2){ _logFalhaGrav('soltar a trava da falta automática', e2); });
+          });
+        });
       });
-      if(!marcados.length) return;
-      const patch={}; marcados.forEach(function(m){ patch[m.k]='faltou'; });
-      DB.ref('daycare/chamada/'+hoje).update(patch).then(function(){
-        if(typeof audit==='function') audit('falta-automatica',
-          marcados.length+' sem check-in até as '+CK_HORA_FALTA+'h: '+marcados.map(function(m){ return m.nome; }).join(', '),
-          {assinou:'sistema'});
-        try{ if(dcAtiv==='checkin-corpo') renderCheckin(); }catch(e){}
-      }).catch(function(){});
     }).catch(function(){});
   }
+  // O relógio passa sozinho: quem já estava com o app aberto às 11h50 não abriria tela
+  // nenhuma ao dar meio-dia. Mesma cadência de 30 s dos despertadores do banho e da
+  // medicação. Sai barato: depois que o dia fecha, a trava (no banco e na memória) corta a
+  // volta antes de qualquer leitura.
+  setInterval(function(){ try{ aplicarFaltaAutomatica(); }catch(e){} }, 30000);
   // Quem ainda não chegou, na visão de quem está na porta.
   function ckAindaNaoChegou(){
     const agora=new Date(), limite=(agora.getHours()>=CK_HORA_FALTA);
@@ -6831,9 +6911,11 @@
       try{ renderOcorrenciasRecepcao(); }catch(e){}
     }).catch(function(e){ alert('Erro ao registrar: '+(e&&e.message||e)); });
   }
-  function ocorrReabrir(id){
+  async function ocorrReabrir(id){
     var r=_ocorrSplit(id); if(!r||!DB) return;
-    if(!confirm('Reabrir esta ocorrência? Ela volta a aparecer como "falta avisar".')) return;
+    if(!await zPergunta('Reabrir esta ocorrência?',
+      ['Ela volta a aparecer como "falta avisar".'],
+      {sim:'Reabrir', nao:'Deixar como está', cor:'#234D67'})) return;
     DB.ref('auaulandia/estadias/'+r.estadiaId+'/ocorrencias/'+r.ocId+'/avisadoTutor').set(null).catch(function(){});
   }
 
@@ -7380,7 +7462,7 @@
     const sr=document.getElementById('status-receb-'+tipo);
     if(sr){ if(st.recebeu){ sr.style.color='var(--crm-ok)'; sr.textContent='✅ Recebimento assinado por '+st.recebeu+'.'; } else sr.textContent=''; }
     sincTravaLeitura(tipo); }
-  function confirmarRecebimento(tipo){ if(!currentHosp) return; const st=document.getElementById('status-receb-'+tipo);
+  async function confirmarRecebimento(tipo){ if(!currentHosp) return; const st=document.getElementById('status-receb-'+tipo);
     const el=document.getElementById('recebeu-'+tipo); const nome=((el&&el.value)||'').trim();
     const quemPassou=(RELSTATE[tipo]||{}).passou||'';
     // Cada motivo de bloqueio agora aparece em cartaz, dizendo O QUE fazer (03/ago/2026:
@@ -7415,7 +7497,9 @@
         {botao:'Vou ler'});
       return;
     }
-    if(!confirm('Você leu TODO o relatório de '+((currentHosp&&currentHosp.nome)||'este FILHOt')+'?\n\nAo assinar, você assume o cuidado dele a partir de agora.\n\nOK = li tudo e assino\nCancelar = vou ler antes')) return;
+    if(!await zPergunta('Você leu TODO o relatório de '+((currentHosp&&currentHosp.nome)||'este FILHOt')+'?',
+      ['Ao assinar, você assume o cuidado dele a partir de agora.'],
+      {sim:'Li tudo e assino', nao:'Vou ler antes'})) return;
     if(!DB){ if(st){ st.style.color='var(--crm-atencao-text)'; st.textContent='Banco conectando...'; } return; }
     if(st){ st.style.color='var(--muted)'; st.textContent='Salvando...'; }
     const _seg=LEITURA_T0[tipo]?Math.round((Date.now()-LEITURA_T0[tipo])/1000):0;
@@ -7565,7 +7649,12 @@
             if(st){ st.style.color='var(--crm-atencao-text)';
               st.textContent='Salvo. A Recepção vai confirmar a medicação com o tutor — você não precisa fazer nada.'; }
           }
-        }catch(e){}
+        }catch(e){
+          // O relatório em si já está salvo; o que pode ter se perdido é a pergunta ao tutor.
+          _logFalhaGrav('divergência de medicação no relatório do plantão', e);
+          if(st){ st.style.color='var(--crm-critico)';
+            st.textContent='Não consegui gravar a divergência de medicação — tente de novo.'; }
+        }
         const c=document.getElementById(card); if(c) c.classList.add('collapsed'); if(typeof carregarRiscoNaoComer==='function') carregarRiscoNaoComer(); }).catch(e=>{ if(st){ st.style.color='var(--crm-critico)'; st.textContent='⚠️ NÃO SALVOU: '+e.message+' — não saia da tela, tente de novo.'; }
       try{ if(typeof audit==='function') audit('relatorio-falhou', tipo+': '+e.message, {pet:(currentHosp&&currentHosp.nome)||''}); }catch(_){} });
     } else { if(st){ st.style.color='var(--crm-atencao-text)'; st.textContent='Banco conectando...'; } }
@@ -7812,9 +7901,10 @@
   function plantFalhou(base,k,h,motivo){
     try{
       DB.ref(base+'/'+k).set({ts:Date.now(), ok:false, nome:(h&&h.nome)||'', erro:motivo||'',
-        quem:(typeof quemSou==='function'?quemSou():'-')}).catch(function(){});
+        quem:(typeof quemSou==='function'?quemSou():'-')})
+        .catch(function(e){ _logFalhaGrav('registro da falha do aviso à Gestão — '+k, e); });
       if(typeof audit==='function') audit('plantao-aviso','NÃO avisou a Gestão — '+(motivo||''),{pet:(h&&h.nome)||''});
-    }catch(e){}
+    }catch(e){ _logFalhaGrav('registro da falha do aviso à Gestão — '+k, e); }
     plantAvisoNaTela((h&&h.nome)||'', motivo||'');
   }
   function plantAvisoNaTela(nome, motivo){
@@ -7925,11 +8015,13 @@
     var btn=document.getElementById('btnFecharTurno');
     var voltar=function(){ if(btn){ btn.disabled=false; btn.textContent='Fechar o turno e avisar a Gestão'; } };
     if(btn){ btn.disabled=true; btn.textContent='Montando o resumo…'; }
-    resumoDoTurno().then(function(R){
+    resumoDoTurno().then(async function(R){
       if(!R){ voltar(); alert('Não consegui montar o resumo agora — confira a internet e tente de novo.'); return; }
       var texto=textoResumoTurno(R);
       // Quem passa o plantão LÊ antes o que vai ser enviado. Nada sai do turno dela sem ela ver.
-      if(!confirm('Vai para o grupo da Gestão:\n\n'+texto.replace(/<\/?b>/g,'')+'\n\nMandar?')){ voltar(); return; }
+      if(!await zPergunta('Vai para o grupo da Gestão',
+        String(texto.replace(/<\/?b>/g,'')).split('\n').concat(['Mandar?']),
+        {sim:'Mandar para a Gestão', nao:'Não mandar'})){ voltar(); return; }
       var manda=function(){
         return tgAvisar({grupo:'gestao', texto:texto}).then(function(r){
           var ok=!!(r&&r.ok);
@@ -8691,7 +8783,7 @@
   }
   // Grava a alteração no MESMO registro (o histórico da reserva não se parte em dois) e
   // acerta a planilha: primeiro libera as noites antigas, depois lança as novas.
-  function orcSalvarEdicao(){
+  async function orcSalvarEdicao(){
     var id=ORC_EDITANDO, antes=ORC_EDIT_ANTES||{}, C=ORC_CALC;
     var st=document.getElementById('orcSalvoStatus');
     if(!id||!C){ return; }
@@ -8703,14 +8795,19 @@
     var o=ORC_LISTA_CACHE[id]||{};
     var nomes=(C.pets||[]).map(function(p){ return p.sel.nome; }).join(' e ');
     var dif=(C.total-(antes.total_cent||0));
-    if(!confirm('Mudar a reserva de '+nomes+'?\n\n'
-      +'DE: '+orcBR(antes.entrada)+' a '+orcBR(antes.saida)+'  ·  '+fmtCent(antes.total_cent||0)+'\n'
-      +'PARA: '+orcBR(C.entrada)+' a '+orcBR(C.saida)+'  ·  '+fmtCent(C.total)+'\n\n'
-      +(dif===0?'O valor não muda.':(dif>0?('São '+fmtCent(dif)+' A MAIS.'):('São '+fmtCent(-dif)+' A MENOS.')))
-      +'\n\nEu libero as noites antigas na planilha e lanço as novas.')) return;
-    var motivo=(prompt('Por que as datas mudaram?\n(ex.: a tutora antecipou a viagem)','')||'').trim();
+    if(!await zPergunta('Mudar a reserva de '+nomes+'?',
+      ['DE: '+orcBR(antes.entrada)+' a '+orcBR(antes.saida)+' · '+fmtCent(antes.total_cent||0),
+       'PARA: '+orcBR(C.entrada)+' a '+orcBR(C.saida)+' · '+fmtCent(C.total),
+       (dif===0?'O valor não muda.':(dif>0?('São '+fmtCent(dif)+' A MAIS.'):('São '+fmtCent(-dif)+' A MENOS.'))),
+       'Eu libero as noites antigas na planilha e lanço as novas.'],
+      {sim:'Mudar a reserva', nao:'Manter como está'})) return;
+    var motivo=((await zTexto('Por que as datas mudaram?',
+      ['Por exemplo: a tutora antecipou a viagem.'],
+      {rotulo:'Motivo da mudança', botao:'Continuar', cor:'#234D67'}))||'').trim();
     if(!motivo){ alert('Escreva o motivo — é ele que explica a mudança quando alguém for conferir depois.'); return; }
-    var senha=(prompt('Digite a SUA senha para confirmar.\n\nÉ o seu nome que vai ficar registrado.','')||'').trim();
+    var senha=((await zTexto('Digite a SUA senha para confirmar',
+      ['É o seu nome que vai ficar registrado.'],
+      {rotulo:'Sua senha', tipo:'password', botao:'Confirmar a mudança'}))||'').trim();
     var quem=senha?orcQuemPelaSenha(senha):null;
     if(!quem){ alert('Essa senha não é de ninguém cadastrado. A reserva NÃO foi alterada.'); return; }
     var agora=new Date(), pp=function(x){ return String(x).padStart(2,'0'); };
@@ -8842,10 +8939,12 @@
   }
   // Apagar orçamento (teste, duplicado, erro). A trava de verdade são as regras do Firebase —
   // esconder o botão por papel é só para não tentar quem não deve.
-  function orcApagar(id){
+  async function orcApagar(id){
     var o=ORC_LISTA_CACHE[id]||{};
     var nomes=(o.pets||[]).map(function(p){ return p.nome; }).join(' e ');
-    if(!confirm('Apagar de vez o orçamento de '+(nomes||'—')+' ('+fmtCent(o.total_cent||0)+')?\n\nNão dá para desfazer.')) return;
+    if(!await zPergunta('Apagar de vez o orçamento de '+(nomes||'—')+'?',
+      ['Valor: '+fmtCent(o.total_cent||0)+'.', 'Não dá para desfazer.'],
+      {sim:'Apagar', nao:'Manter'})) return;
     if(!DB) return;
     DB.ref('auaulandia/orcamentos/'+id).remove().then(function(){
       delete ORC_LISTA_CACHE[id]; orcRenderLista();
@@ -8869,15 +8968,21 @@
       if(f) return {nome:f.nome||'', role:f.role||'monitor'}; }catch(e){}
     return null;
   }
-  function orcCancelar(id){
+  async function orcCancelar(id){
     var o=ORC_LISTA_CACHE[id]||{};
     var nomes=(o.pets||[]).map(function(p){ return p.nome; }).join(' e ')||'esta reserva';
-    if(!confirm('CANCELAR a reserva de '+nomes+'?\n\n'+orcBR(o.entrada||'')+' a '+orcBR(o.saida||'')+'\n\n'
-      +'As noites dele saem do calendário e a linha do financeiro é riscada como CANCELADA.\n'
-      +'A vaga volta a ficar livre para outro FILHOt.')) return;
-    var motivo=(prompt('Por que a reserva foi cancelada?\n(ex.: a viagem foi desmarcada, o tutor adiou)','')||'').trim();
+    if(!await zPergunta('CANCELAR a reserva de '+nomes+'?',
+      [orcBR(o.entrada||'')+' a '+orcBR(o.saida||''),
+       'As noites dele saem do calendário e a linha do financeiro é riscada como CANCELADA.',
+       'A vaga volta a ficar livre para outro FILHOt.'],
+      {sim:'Cancelar a reserva', nao:'Manter a reserva'})) return;
+    var motivo=((await zTexto('Por que a reserva foi cancelada?',
+      ['Por exemplo: a viagem foi desmarcada, o tutor adiou.'],
+      {rotulo:'Motivo do cancelamento', botao:'Continuar', cor:'#234D67'}))||'').trim();
     if(!motivo){ alert('Escreva o motivo — é ele que explica o cancelamento quando alguém for conferir depois.'); return; }
-    var senha=(prompt('Digite a SUA senha para confirmar o cancelamento.\n\nÉ o seu nome que vai ficar registrado.','')||'').trim();
+    var senha=((await zTexto('Digite a SUA senha para confirmar o cancelamento',
+      ['É o seu nome que vai ficar registrado.'],
+      {rotulo:'Sua senha', tipo:'password', botao:'Confirmar o cancelamento'}))||'').trim();
     if(!senha){ alert('Cancelamento não confirmado — a senha é obrigatória.'); return; }
     var quem=orcQuemPelaSenha(senha);
     if(!quem){ alert('Essa senha não é de ninguém cadastrado. A reserva NÃO foi cancelada.\n\nConfira a senha e tente de novo.'); return; }
@@ -9683,16 +9788,19 @@
           +'</div></div>';
       }).join('')+'</div>'+htmlFora;
   }
-  function plantConfirmar(apelido, oficial){
+  async function plantConfirmar(apelido, oficial){
     var mesmo=(plantChave(apelido)===plantChave(oficial));
-    var msg=mesmo
-      ? ('Confirmar que "'+apelido+'" é o nome dela, escrito certo?\n\nNão pergunto mais sobre ele.')
-      : ('"'+apelido+'" é a '+oficial+'?\n\nVou juntar todas as noites assinadas assim com as da '+oficial+'.');
-    if(!confirm(msg)) return;
+    var titulo=mesmo ? ('Confirmar que "'+apelido+'" é o nome dela, escrito certo?')
+                     : ('"'+apelido+'" é a '+oficial+'?');
+    var linha=mesmo ? 'Não pergunto mais sobre ele.'
+                    : ('Vou juntar todas as noites assinadas assim com as da '+oficial+'.');
+    if(!await zPergunta(titulo, [linha], {sim:'Confirmar o nome', nao:'Agora não', cor:'#234D67'})) return;
     plantAprender(apelido, oficial).then(function(){ acertoCarregar(); });
   }
-  function plantConfirmarNova(apelido){
-    var nome=(prompt('Como se escreve o nome dela, certo?\n\nEla assinou como "'+apelido+'".', apelido)||'').trim();
+  async function plantConfirmarNova(apelido){
+    var nome=((await zTexto('Como se escreve o nome dela, certo?',
+      ['Ela assinou como "'+apelido+'".'],
+      {rotulo:'Nome certo', valor:apelido, botao:'Confirmar o nome', cor:'#234D67', minimo:2}))||'').trim();
     if(!nome) return;
     plantAprender(apelido, nome).then(function(){ acertoCarregar(); });
   }
@@ -9702,10 +9810,11 @@
   // papéis, e supor o contrário tiraria a Wandela e o Otávio do pagamento. E o "ainda" é a
   // palavra que importa: quem nunca fez pode começar amanhã. Então isto não é um veredito
   // permanente — é "nunca fez até hoje", e se desfaz num toque na primeira noite dela.
-  function plantNaoEhPlantonista(apelido){
-    if(!confirm('"'+apelido+'" nunca fez plantão?\n\n'
-      +'Ela some da lista e as noites dela deixam de contar no acerto.\n\n'
-      +'Se um dia ela começar a fazer plantão, é só trazer de volta — o botão fica logo abaixo desta lista.')) return;
+  async function plantNaoEhPlantonista(apelido){
+    if(!await zPergunta('"'+apelido+'" nunca fez plantão?',
+      ['Ela some da lista e as noites dela deixam de contar no acerto.',
+       'Se um dia ela começar a fazer plantão, é só trazer de volta — o botão fica logo abaixo desta lista.'],
+      {sim:'Nunca fez plantão', nao:'Deixar na lista'})) return;
     PLANT_LIVRO.naoSao=PLANT_LIVRO.naoSao||{};
     PLANT_LIVRO.naoSao[plantChave(apelido)]=apelido;
     if(!DB){ acertoCarregar(); return; }
@@ -9714,9 +9823,10 @@
       acertoCarregar();
     }).catch(function(){ acertoCarregar(); });
   }
-  function plantVoltarAContar(apelido){
-    if(!confirm('"'+apelido+'" passou a fazer plantão?\n\n'
-      +'As noites assinadas por ela voltam a contar no acerto, inclusive as que já passaram.')) return;
+  async function plantVoltarAContar(apelido){
+    if(!await zPergunta('"'+apelido+'" passou a fazer plantão?',
+      ['As noites assinadas por ela voltam a contar no acerto, inclusive as que já passaram.'],
+      {sim:'Passou a fazer', nao:'Agora não', cor:'#234D67'})) return;
     try{ delete (PLANT_LIVRO.naoSao||{})[plantChave(apelido)]; }catch(e){}
     if(!DB){ acertoCarregar(); return; }
     DB.ref('auaulandia/config/plantonistas').set(PLANT_LIVRO).then(function(){
@@ -10023,7 +10133,7 @@
   // Agora existe um carimbo: esta constante é a versão que o aparelho está rodando, e o
   // Firebase guarda a versão publicada. Quando as duas diferem, aparece o aviso — mas
   // NUNCA recarrega sozinho: recarregar no meio de um check-in perderia o trabalho.
-  const APP_VERSAO='2026-08-29-02';
+  const APP_VERSAO='2026-08-29-01';
   function vigiarVersao(){
     if(!DB) return;
     try{
@@ -10105,9 +10215,11 @@
   // liberado — e nada disso aparecia para a Gestão. Agora aparece, com o botão de liberar.
   // Tirar o aviso SEM liberar o aparelho: o caso já foi resolvido de outro jeito. Fica
   // guardado quem dispensou e quando — dispensar não apaga a história, só limpa a tela.
-  function dispensarAvisoBarrado(aparelho,quem){
+  async function dispensarAvisoBarrado(aparelho,quem){
     if(!DB) return;
-    if(!confirm('Tirar o aviso de "'+quem+'"?\n\nO celular NÃO será liberado — só o aviso sai da lista.')) return;
+    if(!await zPergunta('Tirar o aviso de "'+quem+'"?',
+      ['O celular NÃO será liberado — só o aviso sai da lista.'],
+      {sim:'Tirar o aviso', nao:'Manter na lista'})) return;
     DB.ref('auaulandia/avisos-barrados-dispensados/'+aparelho).set({
       quem:quem, dispensado_em:Date.now(), dispensado_por:(typeof quemSou==='function'?quemSou():'-')
     }).then(function(){
@@ -10152,9 +10264,11 @@
       }).catch(function(){});
     }).catch(function(){});
   }
-  function liberarAparelhoDaLista(id,quem){
+  async function liberarAparelhoDaLista(id,quem){
     if(!DB) return;
-    const nome=(prompt('Dê um nome para este celular (ex.: "Celular do Octávio"):', 'Celular de '+(quem||''))||'').trim();
+    const nome=((await zTexto('Dê um nome para este celular',
+      ['Por exemplo: "Celular do Octávio". É esse nome que a Gestão vê na lista de aparelhos.'],
+      {rotulo:'Nome do celular', valor:'Celular de '+(quem||''), botao:'Liberar o celular', cor:'#234D67', minimo:3}))||'').trim();
     if(!nome) return;
     const u=(typeof usuarioAtual==='function')?usuarioAtual():null;
     DB.ref('auaulandia/aparelhos/'+id).set({nome:nome, por:((u&&u.nome)||'Gestão'), ts:Date.now(), liberadoPara:quem||''}).then(function(){
@@ -10325,7 +10439,11 @@
   }
   function setMon(i,campo,val){ if(!MONITORES[i]) return; MONITORES[i][campo]=(campo==='senha')?String(val).replace(/\D/g,''):val; if(campo==='senha'||campo==='nome') { try{ renderSenhas(); }catch(e){} } if(campo==='role') { try{ renderMonitores(); }catch(e){} try{ renderSenhas(); }catch(e){} } }
   function addPessoa(){ if(!Array.isArray(MONITORES)) MONITORES=[]; MONITORES.push({id:'p'+((typeof Date!=='undefined'?Date.now():MONITORES.length)), nome:'', role:'monitor', senha:'', entrada:'', saida:''}); try{ renderMonitores(); }catch(e){} }
-  function removerPessoa(i){ if(!MONITORES[i]) return; if(!confirm('Remover '+(MONITORES[i].nome||'esta pessoa')+' do cadastro? (Não apaga histórico — só tira o acesso.)')) return; MONITORES.splice(i,1); try{ renderMonitores(); }catch(e){} try{ renderSenhas(); }catch(e){} }
+  async function removerPessoa(i){ if(!MONITORES[i]) return;
+    if(!await zPergunta('Remover '+(MONITORES[i].nome||'esta pessoa')+' do cadastro?',
+      ['Não apaga o histórico — só tira o acesso.'],
+      {sim:'Remover do cadastro', nao:'Manter'})) return;
+    MONITORES.splice(i,1); try{ renderMonitores(); }catch(e){} try{ renderSenhas(); }catch(e){} }
   function salvarMonitores(){
     const st=document.getElementById('monitoresStatus'); if(st) st.style.color='';
     const senhas=(MONITORES||[]).map(m=>String(m.senha||'').trim());
@@ -10356,10 +10474,12 @@
     if(DB){ DB.ref('auaulandia/aparelhos/'+id).once('value').then(s=>{ const ok=!!s.val(); try{ if(ok) localStorage.setItem('zeluz_device_ok','1'); else localStorage.removeItem('zeluz_device_ok'); }catch(e){} cb(ok,false); }).catch(()=>cb(deviceLocalOk(),true)); }
     else { cb(deviceLocalOk(),true); } }
   function mostrarStatusDevice(){ const el=document.getElementById('deviceStatus'); if(!el) return; deviceAutorizado(function(ok){ el.innerHTML= ok?'Este aparelho está autorizado &#10003;':'Este aparelho ainda <strong>não está autorizado</strong>. A Gestão precisa autorizar.'; el.style.color= ok?'var(--crm-ok)':'var(--crm-atencao-text)'; }); }
-  function autorizarAparelho(){ const err=document.getElementById('loginErr'); err.style.color='';
+  async function autorizarAparelho(){ const err=document.getElementById('loginErr'); err.style.color='';
     const v=(document.getElementById('loginPwd').value||'').trim(); const u=senhasRuntime()[v];
     if(!u||(u.role!=='gestao'&&u.role!=='diretoria')){ err.style.color='var(--crm-critico)'; err.textContent='Digite a senha da GESTÃO no campo acima e toque em Autorizar.'; return; }
-    const nome=(prompt('Dê um nome para ESTE aparelho (ex: iPhone Daycare 1):')||'').trim(); if(!nome) return;
+    const nome=((await zTexto('Dê um nome para ESTE aparelho',
+      ['Por exemplo: "iPhone Daycare 1". É esse nome que aparece na lista de aparelhos autorizados.'],
+      {rotulo:'Nome do aparelho', botao:'Autorizar este aparelho', cor:'#234D67', minimo:3}))||'').trim(); if(!nome) return;
     const id=getDeviceId(); const reg={nome:nome, por:u.nome, ts:Date.now()};
     if(DB){ DB.ref('auaulandia/aparelhos/'+id).set(reg).then(()=>{ try{ localStorage.setItem('zeluz_device_ok','1'); }catch(e){} err.style.color='var(--crm-ok)'; err.textContent='✅ Aparelho "'+nome+'" autorizado! Agora a equipe entra normalmente neste celular.'; mostrarStatusDevice(); }).catch(e=>{ err.style.color='var(--crm-critico)'; err.textContent='Erro ao autorizar: '+e.message; }); }
     else { try{ localStorage.setItem('zeluz_device_ok','1'); }catch(e){} err.style.color='var(--crm-atencao-text)'; err.textContent='Aparelho autorizado localmente (sem internet no momento).'; } }
@@ -10469,6 +10589,8 @@
     try{ setTimeout(function(){
       try{ empChecarAtrasoDiario(); }catch(e){}
       try{ empVigiaAlmoco2(); }catch(e){}
+      // Mesma ideia para a falta das 12h: quem entra fecha o dia, esteja em que tela estiver.
+      try{ aplicarFaltaAutomatica(); }catch(e){}
     }, 6000); }catch(e){}
     // Quem tem escopo restrito (ex.: Amanda Barbosa, só almoço) cai direto na atividade dela.
     // Pessoa só com atividade (sem páginas) cai direto na atividade dela (Amanda Barbosa etc.).
@@ -10931,7 +11053,7 @@
   }
   // Toque num FILHOt da busca → cria o registro de hospedagem JÁ LIGADO ao cadastro-mestre
   // (refKey=pelKey). Raça, alergia e medicação passam a vir sempre de lá — nunca mais digitadas.
-  function escolherHospede(i){
+  async function escolherHospede(i){
     const p=PELUDINHOS[i]; if(!p) return;
     const nome=pelNome(p), tutor=pelGet(p,'tutor')||'', raca=pelGet(p,'raca')||'';
     const refKey=pelKey(p);
@@ -10941,8 +11063,10 @@
     if(hospBuscaTipo==='estadia'){
       const exE=pelExtra(p);
       if(exE.alergia||exE.restricao){
-        const det=(exE.alergia?('Alergia: '+exE.alergia+'\n'):'')+(exE.restricao?('Restrição: '+exE.restricao+'\n'):'');
-        if(!confirm('⚠ ATENÇÃO — '+nome+' é ALÉRGICO(A) / tem RESTRIÇÃO:\n'+det+'\nConfirme para lançar a hospedagem.')) return;
+        const det=[exE.alergia?('Alergia: '+exE.alergia):'', exE.restricao?('Restrição: '+exE.restricao):''].filter(Boolean);
+        if(!await zPergunta('ATENÇÃO — '+nome+' é ALÉRGICO(A) ou tem RESTRIÇÃO',
+          det.concat(['Confirme para lançar a hospedagem.']),
+          {sim:'Li e confirmo', nao:'Cancelar'})) return;
       }
       hospNovaPend={nome:nome, tutor:tutor, raca:raca, refKey:refKey};
       fecharHospBuscaModal();
@@ -10967,8 +11091,10 @@
     // Alergia/restrição em destaque ANTES de confirmar a entrada — é questão de segurança do FILHOt
     const ex=pelExtra(p);
     if(ex.alergia||ex.restricao){
-      const detalhe=(ex.alergia?('Alergia: '+ex.alergia+'\n'):'')+(ex.restricao?('Restrição: '+ex.restricao+'\n'):'');
-      if(!confirm('⚠ ATENÇÃO — '+nome+' é ALÉRGICO(A) / tem RESTRIÇÃO:\n'+detalhe+'\nConfirme para prosseguir com o registro da hospedagem.')) return;
+      const detalhe=[ex.alergia?('Alergia: '+ex.alergia):'', ex.restricao?('Restrição: '+ex.restricao):''].filter(Boolean);
+      if(!await zPergunta('ATENÇÃO — '+nome+' é ALÉRGICO(A) ou tem RESTRIÇÃO',
+        detalhe.concat(['Confirme para prosseguir com o registro da hospedagem.']),
+        {sim:'Li e confirmo', nao:'Cancelar'})) return;
     }
     const tipo=hospBuscaTipo;
     const reg={nome:nome,tutor:tutor,raca:raca,refKey:refKey};
@@ -11241,11 +11367,12 @@
           +'<button class="btn btn-gold" style="white-space:nowrap" onclick="hospTrazerDeVolta(\''+escAttr(k)+'\')">Trazer de volta</button></div>';
       }).join('');
   }
-  function hospTrazerDeVolta(k){
+  async function hospTrazerDeVolta(k){
     if(!hospPodeDesfazer()){ alert('Só a Supervisão, a Gestão ou a Diretoria podem trazer um FILHOt de volta ao Plantão.'); return; }
     var v=REMOVIDOS_HOJE[k]||{};
-    if(!confirm('Trazer '+(v.nome||'este FILHOt')+' de volta ao Plantão de hoje?\n\n'
-      +'Ele volta para a lista da plantonista, com comida, remédio e alarme.')) return;
+    if(!await zPergunta('Trazer '+(v.nome||'este FILHOt')+' de volta ao Plantão de hoje?',
+      ['Ele volta para a lista da plantonista, com comida, remédio e alarme.'],
+      {sim:'Trazer de volta', nao:'Deixar fora', cor:'#234D67'})) return;
     if(!DB){ alert('Sem conexão com o banco agora — tente de novo em instantes.'); return; }
     var dk=dataKeyAtual();
     var passos=[DB.ref('auaulandia/removidos/'+dk+'/'+k).remove()];
@@ -11814,7 +11941,7 @@
        'É o plano que define até quando a vigência vale. Sem ele, a data de início não gera vencimento nenhum — o plano fica lançado pela metade e ninguém percebe na hora de cobrar.'],
       {rodape:'Se este FILHOt não tem plano mensal, use "Avulso · diária", "Só AuAulândia · hospedagem" ou "Morador(a) Zêluz".', botao:'Escolher o plano'});
   }
-  function setRenovInicio(iso){ const r=renovDe(pelExtra(pelAtual));
+  async function setRenovInicio(iso){ const r=renovDe(pelExtra(pelAtual));
     if(!r.plano){ avisoEscolhaPlano(); renderPelFicha(); return; }   // data sem plano não vira vencimento
     let calc=aplicarRenovacao(r.plano, r.aulas||nAulasDe(pelAtual), iso);
     // TRAVA CONTRA VIGÊNCIA NASCIDA VENCIDA (Adriana, 11/ago/2026).
@@ -11829,17 +11956,17 @@
       const p2=x=>String(x).padStart(2,'0');
       const isoProx=(a[1]===12? (a[0]+1)+'-01-01' : a[0]+'-'+p2(a[1]+1)+'-01');
       const fimProx=fimVigenciaISO(isoProx, meses);
-      const usarProx=confirm('ATENÇÃO — esta vigência já nasce VENCIDA.\n\n'
-        +'Data do pagamento: '+fmtBR(iso)+'\n'
-        +'Plano: '+(pl.rotulo||r.plano)+' ('+(pl.compromisso||'')+')\n'
-        +'Vale até: '+fmtBR(calc.fim)+' — que já passou.\n\n'
-        +'Assim ele CONTINUA na lista de cobrança, como se não tivesse renovado.\n\n'
-        +'OK = começar em '+fmtBR(isoProx)+', valendo até '+fmtBR(fimProx)+'\n'
-        +'Cancelar = manter '+fmtBR(iso)+' mesmo assim (ex.: lançamento atrasado de um mês antigo)');
+      const usarProx=await zPergunta('ATENÇÃO — esta vigência já nasce VENCIDA',
+        ['Data do pagamento: '+fmtBR(iso),
+         'Plano: '+(pl.rotulo||r.plano)+' ('+(pl.compromisso||'')+')',
+         'Vale até: '+fmtBR(calc.fim)+' — que já passou.',
+         'Assim ele CONTINUA na lista de cobrança, como se não tivesse renovado.'],
+        {sim:'Começar em '+fmtBR(isoProx)+', valendo até '+fmtBR(fimProx),
+         nao:'Manter '+fmtBR(iso)+' mesmo assim'});
       if(usarProx) calc=aplicarRenovacao(r.plano, r.aulas||nAulasDe(pelAtual), isoProx);
     }
     setRenov(Object.assign({inicio:(calc&&calc.inicio)||iso}, calc||{})); }
-  function confirmarRenovacao(){ const ex=pelExtra(pelAtual), r=renovDe(ex);
+  async function confirmarRenovacao(){ const ex=pelExtra(pelAtual), r=renovDe(ex);
     if(!r.plano){ avisoEscolhaPlano(); return; }
     if(!r.inicio){
       if(typeof zAlertao==='function') zAlertao('FALTA A DATA DO PAGAMENTO',
@@ -11853,11 +11980,10 @@
     // Última barreira: confirmar uma renovação que já nasce vencida é registrar um trabalho
     // que não vale (Adriana, 11/ago/2026 — caso Beau). Avisa antes de gravar.
     if(calc && calc.fim && calc.fim < hojeISO()){
-      if(!confirm('ATENÇÃO — você está confirmando uma renovação JÁ VENCIDA.\n\n'
-        +'Pagamento em '+fmtBR(r.inicio)+' · vale até '+fmtBR(calc.fim)+', que já passou.\n\n'
-        +'Ele vai continuar aparecendo na lista de cobrança, como se não tivesse renovado.\n\n'
-        +'OK = gravar assim mesmo (lançamento atrasado)\n'
-        +'Cancelar = voltar e corrigir a data do pagamento')) return;
+      if(!await zPergunta('ATENÇÃO — você está confirmando uma renovação JÁ VENCIDA',
+        ['Pagamento em '+fmtBR(r.inicio)+' · vale até '+fmtBR(calc.fim)+', que já passou.',
+         'Ele vai continuar aparecendo na lista de cobrança, como se não tivesse renovado.'],
+        {sim:'Gravar assim mesmo (lançamento atrasado)', nao:'Voltar e corrigir a data'})) return;
     }
     setPelExtra(pelAtual,{renov:Object.assign({}, r, calc, {ordemPet:r.ordemPet||1})});
     if(typeof audit==='function') audit('renovacao','renovou o plano '+r.plano+' ('+(r.aulas||nAulasDe(pelAtual))+'x) até '+(calc?fmtBR(calc.fim):''),{alvo:dcKey(pelAtual.n,pelAtual.tutor)});
@@ -12385,10 +12511,12 @@
     el.innerHTML='<div class="vet-instr-box" style="border-color:var(--z-gold)"><div style="font-size:12.5px;font-weight:800;color:var(--z-gold-deep)">Reavaliação marcada: '+escAttr(fmtBR(reav.data))+(reav.motivo?(' — '+escAttr(reav.motivo)):'')+'</div>'
       +'<div class="actions" style="margin-top:8px"><button type="button" class="btn" style="background:var(--z-cream-warm);color:var(--crm-critico);border:1.5px solid var(--crm-critico)" onclick="vetRemoverReavaliacao()">Remover reavaliação</button></div></div>';
   }
-  function vetRemoverReavaliacao(){
+  async function vetRemoverReavaliacao(){
     if(!vetHosp||!podeAlterarVet()){ alert('Apenas a Veterinária, a Gestão ou a Supervisão podem remover a reavaliação.'); return; }
     var reav=VET_REAVAL_CACHE[vetKey(vetHosp)]; if(!reav||!reav.data){ return; }
-    if(!confirm('Remover a reavaliação marcada de '+(vetHosp.nome||'este peludinho')+'?')) return;
+    if(!await zPergunta('Remover a reavaliação marcada de '+(vetHosp.nome||'este peludinho')+'?',
+      ['A data marcada sai da ficha e some dos avisos do dia.'],
+      {sim:'Remover', nao:'Manter'})) return;
     if(!DB) return; var key=vetKey(vetHosp);
     DB.ref('auaulandia/vet-reavaliacao/'+key).remove().then(function(){
       if(typeof audit==='function') audit('vet-reavaliacao-removida',key,{pet:vetHosp.nome||'',quem:(typeof quemSou==='function'?quemSou():'Veterinária')});
@@ -12589,10 +12717,12 @@
       if(typeof carregarAgendaMedTodos==='function') carregarAgendaMedTodos(); // desce viva: rearma os alarmes
     }).catch(function(e){ if(st){ st.style.color='var(--crm-critico)'; st.textContent='⚠️ Erro: '+e.message; } });
   }
-  function vetSuspenderMed(id){
+  async function vetSuspenderMed(id){
     if(!vetHosp||!podeAlterarVet()) return;
     var it=VET_MED_CACHE[id]; if(!it) return;
-    var motivo=(prompt('Suspender "'+(it.nome||'este medicamento')+'". Motivo (fica registrado e assinado):')||'').trim();
+    var motivo=((await zTexto('Suspender "'+(it.nome||'este medicamento')+'"',
+      ['O motivo fica registrado e assinado com o seu nome.'],
+      {rotulo:'Motivo da suspensão', botao:'Suspender', minimo:3}))||'').trim();
     if(!motivo){ alert('É preciso informar o motivo para suspender.'); return; }
     if(!DB) return; var key=vetKey(vetHosp); var quem=(typeof quemSou==='function')?quemSou():'Veterinária';
     var hist=(Array.isArray(it.historico)?it.historico.slice():[]); hist.push({quem:quem,quando:agoraBR(),acao:'Suspendeu',motivo:motivo});
@@ -12602,10 +12732,12 @@
       if(typeof carregarAgendaMedTodos==='function') carregarAgendaMedTodos(); // some dos alarmes na hora
     }).catch(function(e){ alert('Erro ao suspender: '+e.message); });
   }
-  function vetReativarMed(id){
+  async function vetReativarMed(id){
     if(!vetHosp||!podeAlterarVet()) return;
     var it=VET_MED_CACHE[id]; if(!it) return;
-    var motivo=(prompt('Reativar "'+(it.nome||'este medicamento')+'". Motivo (fica registrado):')||'').trim();
+    var motivo=((await zTexto('Reativar "'+(it.nome||'este medicamento')+'"',
+      ['O motivo fica registrado.'],
+      {rotulo:'Motivo da reativação', botao:'Reativar', cor:'#234D67', minimo:3}))||'').trim();
     if(!motivo){ alert('É preciso informar o motivo para reativar.'); return; }
     if(!DB) return; var key=vetKey(vetHosp); var quem=(typeof quemSou==='function')?quemSou():'Veterinária';
     var hist=(Array.isArray(it.historico)?it.historico.slice():[]); hist.push({quem:quem,quando:agoraBR(),acao:'Reativou',motivo:motivo});
@@ -13165,7 +13297,7 @@
   }
   // O cadastro rápido (Novo AULUNO) só pede nome+tutor — a raça é preenchida aqui, na ficha
   // completa. É aqui que os níveis 1 e 2 da trava ficam ativos de verdade.
-  function onRacaPel(v){
+  async function onRacaPel(v){
     if(!pelAtual) return;
     const raca=(v||'').trim(), nome=pelNome(pelAtual), tutor=pelGet(pelAtual,'tutor'), minhaKey=pelKey(pelAtual);
     if(raca){
@@ -13181,7 +13313,10 @@
       // duas "Maya SRD" reais, uma da Luciana e outra da Marcela) — avisa mostrando o
       // cadastro parecido, mas NUNCA bloqueia. Só o humano confirma.
       const parecido=achaPorNomeRaca(nome,raca,minhaKey);
-      if(parecido && !confirm('Já existe outro(a) "'+nome+'" · '+raca+' cadastrado(a) com o(a) tutor(a) "'+(pelGet(parecido,'tutor')||'sem tutor informado')+'".\n\nÉ um FILHOt diferente, de outra família? Clique OK para confirmar, ou Cancelar para conferir antes.')){
+      if(parecido && !await zPergunta('Já existe outro(a) "'+nome+'" · '+raca,
+      ['O cadastro que já existe é do(a) tutor(a) "'+(pelGet(parecido,'tutor')||'sem tutor informado')+'".',
+       'É um FILHOt diferente, de outra família?'],
+      {sim:'É outro FILHOt — confirmar', nao:'Conferir antes'})){
         const el=document.getElementById('pelFichaRaca'); if(el) el.value=pelGet(pelAtual,'raca')||'';
         return;
       }
@@ -13236,7 +13371,7 @@
     // A foto tem nó próprio desde 04/ago/2026: ela é MOVIDA junto, mas nunca volta para
     // dentro do cadastro (senão o app recomeçaria a baixar foto a cada abertura).
     const _fotoMove=dados.foto; delete dados.foto;
-    if(_fotoMove){ try{ salvarFotoCad(kB,_fotoMove).catch(function(e){ _logFalhaGrav('mover foto ao renomear '+kB, e); }); delete FOTOS[kA]; if(DB) DB.ref('daycare/fotos/'+kA).remove().catch(function(e){ _logFalhaGrav('apagar foto antiga ao renomear '+kA, e); }); }catch(e){} }
+    if(_fotoMove){ try{ salvarFotoCad(kB,_fotoMove).catch(function(e){ _logFalhaGrav('mover foto ao renomear '+kB, e); }); delete FOTOS[kA]; if(DB) DB.ref('daycare/fotos/'+kA).remove().catch(function(e){ _logFalhaGrav('apagar foto antiga ao renomear '+kA, e); }); }catch(e){ _logFalhaGrav('mover a foto ao renomear '+kA+' → '+kB, e); } }
     // O cadastro de ALMOÇO mora em outro nó (daycare/almoco-cad/{pelKey}) e a semente do
     // código também é indexada pela chave antiga. Renomear sem levar o almoço junto apagava
     // na prática a comida do FILHOt: a ficha passava a dizer "Almoço não cadastrado" e a
@@ -13250,7 +13385,7 @@
         almCadCache[kB]=Object.assign({}, _almMove, almCadCache[kB]||{});
         if(DB) DB.ref('daycare/almoco-cad/'+kB).update(almCadCache[kB]).catch(function(e){ _logFalhaGrav('cardápio de almoço ao renomear '+kB, e); });
       }
-    }catch(e){}
+    }catch(e){ _logFalhaGrav('mover o cardápio de almoço ao renomear '+kA+' → '+kB, e); }
     p.n=alvo.n; p.tutor=alvo.tutor;
     try{ localStorage.setItem('zeluz_pel_'+kB, JSON.stringify(dados)); localStorage.removeItem('zeluz_pel_'+kA); }catch(e){}
     if(typeof audit==='function') audit('cadastro-renomeado', kA+' → '+kB, {pet:alvo.n});
@@ -13941,8 +14076,12 @@
     if(!l.length){ alert('Nada a copiar — ninguém com pendência neste filtro.'); return; }
     var txt='Zêluz · quem falta alguma coisa ('+fmtBR(hojeISO())+')\n\n'+l.map(prevLinhaTexto).join('\n');
     var pronto=function(){ alert('Lista copiada — '+l.length+' FILHOt'+(l.length>1?'s':'')+'. É só colar onde quiser.'); };
-    if(navigator.clipboard&&navigator.clipboard.writeText) navigator.clipboard.writeText(txt).then(pronto).catch(function(){ prompt('Copie daqui:',txt); });
-    else prompt('Copie daqui:',txt);
+    // Sem área de transferência, a lista aparece num campo já selecionável: dá para copiar
+    // à mão, que era exatamente o que o prompt() do navegador oferecia.
+    var naMao=function(){ zCampo('Copie daqui', ['Selecione o texto abaixo e copie.'],
+      {rotulo:'Lista', valor:txt, botao:'Já copiei', botaoNao:'Fechar', cor:'#234D67'}); };
+    if(navigator.clipboard&&navigator.clipboard.writeText) navigator.clipboard.writeText(txt).then(pronto).catch(naMao);
+    else naMao();
   }
   function baixarPrevencao(){
     var l=prevDados();
@@ -14449,7 +14588,7 @@
   //  criar a data do óbito também."
   // A data é digitável porque quase nunca se registra no mesmo dia — a notícia chega depois,
   // e a data que importa é a que a família viveu, não a que alguém teve tempo de abrir o app.
-  function registrarObito(){
+  async function registrarObito(){
     if(!pelAtual) return;
     if(!canEditPel()){ alert('Só a Gestão, a Supervisão ou a Diretoria podem registrar um falecimento.'); return; }
     const ex=pelExtra(pelAtual)||{}; const nome=pelNome(pelAtual)||pelAtual.n||'este FILHOt';
@@ -14458,17 +14597,19 @@
         +'Se a data estiver errada, corrija em Saída, no campo "Data do falecimento".');
       return;
     }
-    if(!confirm('Registrar o falecimento de '+nome+'?\n\n'
-      +'Ele sai das listas do dia e da chamada, e NUNCA entra na lista de quem a recepção liga para trazer de volta.\n\n'
-      +'Todo o histórico dele continua guardado.')) return;
+    if(!await zPergunta('Registrar o falecimento de '+nome+'?',
+      ['Ele sai das listas do dia e da chamada, e NUNCA entra na lista de quem a recepção liga para trazer de volta.',
+       'Todo o histórico dele continua guardado.'],
+      {sim:'Registrar o falecimento', nao:'Cancelar'})) return;
     const hoje=new Date(), p2=function(x){ return String(x).padStart(2,'0'); };
     const hojeBR=p2(hoje.getDate())+'/'+p2(hoje.getMonth()+1)+'/'+hoje.getFullYear();
     // Data digitável: a notícia quase sempre chega depois do dia.
     var data='';
     for(var tent=0; tent<3; tent++){
-      const r=prompt('Em que dia '+nome+' faleceu?\n\n'
-        +'Escreva no formato dia/mês/ano — por exemplo '+hojeBR+'.\n'
-        +'Se foi há alguns dias, escreva a data certa: é ela que fica no histórico dele.', data||hojeBR);
+      const r=await zTexto('Em que dia '+nome+' faleceu?',
+        ['Escreva no formato dia/mês/ano — por exemplo '+hojeBR+'.',
+         'Se foi há alguns dias, escreva a data certa: é ela que fica no histórico dele.'],
+        {rotulo:'Data do falecimento', dica:'dd/mm/aaaa', valor:(data||hojeBR), botao:'Confirmar a data'});
       if(r===null) return;                                  // desistiu — nada é gravado
       const v=String(r).trim();
       const m=/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/.exec(v);
@@ -14481,9 +14622,10 @@
     }
     if(!data) return;
     // Observação é opcional: ninguém deve ser obrigado a escrever num momento desses.
-    const obs=(prompt('Quer deixar alguma observação? (opcional)\n\n'
-      +'Ex.: a tutora avisou por telefone · estava em tratamento havia meses\n\n'
-      +'Pode deixar em branco e tocar em OK.','')||'').trim();
+    const obs=((await zTexto('Quer deixar alguma observação?',
+      ['É opcional. Por exemplo: a tutora avisou por telefone · estava em tratamento havia meses.',
+       'Pode deixar em branco e confirmar.'],
+      {rotulo:'Observação', botao:'Confirmar', cor:'#234D67'}))||'').trim();
     setPelExtra(pelAtual,{ inativo:'Sim', tipoSaida:'obito', dataObito:data, dataSaida:data,
       motivoSaida:'Faleceu em '+data+(obs?(' — '+obs):''), obsObito:obs,
       obitoPor:(typeof quemSou==='function'?quemSou():'-'), obitoTs:Date.now() });
@@ -14495,7 +14637,7 @@
     if(typeof renderKPIs==='function') renderKPIs();
     voltarPel();
   }
-  function inativarPeludinhoRapido(){
+  async function inativarPeludinhoRapido(){
     if(!pelAtual) return;
     if(!canEditPel()){ alert('Só a Gestão, a Supervisão ou a Diretoria podem inativar um FILHOt.'); return; }
     const ex=pelExtra(pelAtual)||{}; const nome=pelNome(pelAtual)||pelAtual.n||'este FILHOt';
@@ -14506,7 +14648,9 @@
       return;
     }
     if(ex.inativo==='Sim'){
-      if(!confirm(nome+' está inativo.\n\nReativar? Ele volta para as listas do dia e para a chamada.')) return;
+      if(!await zPergunta(nome+' está inativo. Reativar?',
+        ['Ele volta para as listas do dia e para a chamada.'],
+        {sim:'Reativar', nao:'Deixar inativo', cor:'#234D67'})) return;
       const hist=Array.isArray(ex.saidas)?ex.saidas.slice():[];
       setPelExtra(pelAtual,{inativo:'Nao'});
       if(typeof audit==='function') audit('peludinho-reativado', nome);
@@ -14517,14 +14661,16 @@
     // Conta como saida nas duas, mas o dashboard precisa saber qual e qual — quem pausou
     // volta, e e quem a consultora liga para trazer de volta. Perguntar e melhor do que
     // adivinhar pelo texto do motivo.
-    const ehPausaResp=confirm(nome+' — este é um caso de PAUSA (o tutor suspendeu por um tempo e ele volta)?\n\n'
-      +'OK = PAUSA / SUSPENSÃO (viagem, dinheiro, tratamento, cio — ele volta)\n'
-      +'Cancelar = SAÍDA DEFINITIVA (mudou de cidade, brigas, falecido, parou de vir)\n\n'
-      +'Nos dois casos ele sai das listas do dia e conta como saída do mês.');
-    const motivo=(prompt('Inativar '+nome+' — '+(ehPausaResp?'por que ele vai PAUSAR?':'por que ele saiu do Day Care?')
-      +'\n\nO motivo é obrigatório: é ele que a Márcia lê no painel da Gestão para saber quem contatar.\n\n'
-      +(ehPausaResp?'Ex.: viagem da família — volta em setembro · tratamento · cio'
-                   :'Ex.: mudou de cidade · brigas · falecido · parou de vir'),'')||'').trim();
+    const ehPausaResp=await zPergunta(nome+' — este é um caso de PAUSA?',
+      ['PAUSA / SUSPENSÃO: viagem, dinheiro, tratamento, cio — ele volta.',
+       'SAÍDA DEFINITIVA: mudou de cidade, brigas, faleceu, parou de vir.',
+       'Nos dois casos ele sai das listas do dia e conta como saída do mês.'],
+      {sim:'PAUSA / SUSPENSÃO', nao:'SAÍDA DEFINITIVA', cor:'#234D67'});
+    const motivo=((await zTexto('Inativar '+nome+' — '+(ehPausaResp?'por que ele vai PAUSAR?':'por que ele saiu do Day Care?'),
+      ['O motivo é obrigatório: é ele que a Márcia lê no painel da Gestão para saber quem contatar.',
+       (ehPausaResp?'Por exemplo: viagem da família — volta em setembro · tratamento · cio'
+                   :'Por exemplo: mudou de cidade · brigas · faleceu · parou de vir')],
+      {rotulo:'Motivo', botao:'Inativar', minimo:3}))||'').trim();
     if(!motivo){ alert('Sem o motivo eu não inativo. Se não souber ainda, pergunte antes — o cadastro continua ativo.'); return; }
     const hoje=new Date(), p2=x=>String(x).padStart(2,'0');
     const data=p2(hoje.getDate())+'/'+p2(hoje.getMonth()+1)+'/'+hoje.getFullYear();
@@ -14625,7 +14771,7 @@
   // O FILHOt voltou para o Day Care. Reativa em 1 toque, direto da lista — sem precisar
   // abrir a ficha e caçar o campo "Saiu do Day Care?". A saída anterior NÃO se perde:
   // vira uma linha do histórico (ex.saidas), porque "quero todo o banco de dados sempre".
-  function reativarPeludinho(i){
+  async function reativarPeludinho(i){
     if(!canEditPel()){ alert('Apenas Gestão e Supervisão podem reativar um peludinho.'); return; }
     // Trava de verdade, não só o botão escondido: se a saída foi por óbito, não reativa
     // por caminho nenhum. Um clique errado aqui traz de volta à chamada um FILHOt que
@@ -14639,7 +14785,10 @@
     }catch(e){}
     const p=PELUDINHOS[i]; if(!p) return;
     const nome=pelNome(p)||'este FILHOt';
-    if(!confirm(nome+' voltou para o Day Care?\n\nEle volta para a lista de Peludinhos frequentes e para as chamadas do dia. A saída anterior fica guardada no histórico da ficha.')) return;
+    if(!await zPergunta(nome+' voltou para o Day Care?',
+      ['Ele volta para a lista de Peludinhos frequentes e para as chamadas do dia.',
+       'A saída anterior fica guardada no histórico da ficha.'],
+      {sim:'Voltou — reativar', nao:'Agora não', cor:'#234D67'})) return;
     const ex=pelExtra(p)||{};
     const hist=Array.isArray(ex.saidas)?ex.saidas.slice():[];
     if(ex.dataSaida||ex.motivoSaida) hist.push({quando:ex.dataSaida||'', motivo:ex.motivoSaida||'', retornoEm:agoraBR(), retornoPor:(typeof quemSou==='function'?quemSou():'-')});
@@ -15161,7 +15310,7 @@
   function naMarcarFeito(k){
     if(NA_AFAZER[k]) naAFazer(k);   // escolheu a data: desmarca o "a fazer"
   }
-  function criarAluno(){
+  async function criarAluno(){
     if(!gateCadastro()) return;   // LEI do cadastro único — monitor não cadastra
     const nome=(document.getElementById('naNome').value||'').trim();
     const raca=((document.getElementById('naRaca')||{}).value||'').trim();
@@ -15203,7 +15352,10 @@
     // nem funde sozinho. (O nível 2, nome+raça, roda em onRacaPel — na hora de completar a
     // ficha — porque aqui ainda não há raça para comparar.)
     const homonimo=PELUDINHOS.find(p=>jsNorm(p.n)===jsNorm(nome));
-    if(homonimo && !confirm('Já existe um(a) '+nome+' cadastrado(a) com o(a) tutor(a) "'+(pelGet(homonimo,'tutor')||'sem tutor informado')+'".\n\nEste é outro FILHOt, de outra família? Clique OK para cadastrar mesmo assim, ou Cancelar para conferir antes.')){
+    if(homonimo && !await zPergunta('Já existe um(a) '+nome+' cadastrado(a)',
+      ['O cadastro que já existe é do(a) tutor(a) "'+(pelGet(homonimo,'tutor')||'sem tutor informado')+'".',
+       'Este é outro FILHOt, de outra família?'],
+      {sim:'É outro FILHOt — cadastrar', nao:'Conferir antes'})){
       if(w) w.textContent='Cadastro não concluído — confira se não é o mesmo FILHOt já cadastrado.';
       return;
     }
@@ -15224,14 +15376,20 @@
   // Diferente de inativar: aqui o registro some do sistema. Por segurança: 2 confirmações
   // (a 2ª pede o nome exato) + cópia integral gravada em daycare/excluidos ANTES de sumir —
   // "quero todo o banco de dados sempre" continua valendo, só que agora fora da lista ativa.
-  function excluirCadastroPel(){
+  async function excluirCadastroPel(){
     if(!ehDiretoriaRole()){ alert('Somente a Diretoria pode excluir um cadastro definitivamente.'); return; }
     if(!pelAtual){ return; }
     if(!DB){ alert('Sem conexão com o banco agora. A exclusão precisa gravar no Firebase antes de sumir da tela — tente de novo com internet.'); return; }
     const nome=pelNome(pelAtual);
-    const motivo=(prompt('Motivo da exclusão de '+nome+' (obrigatório — fica registrado no histórico):')||'').trim();
+    const motivo=((await zTexto('Motivo da exclusão de '+nome,
+      ['É obrigatório — fica registrado no histórico.'],
+      {rotulo:'Motivo da exclusão', botao:'Continuar', minimo:3}))||'').trim();
     if(!motivo){ alert('Sem motivo escrito, o cadastro não é excluído.'); return; }
-    const confNome=(prompt('CONFIRMAÇÃO FINAL — isso é IRREVERSÍVEL e diferente de inativar.\n\nSe o FILHOt pode voltar ou a família continua tutora, CANCELE aqui e use "Saiu do Day Care? Sim" em vez de excluir.\n\nPara excluir '+nome+' de verdade, digite o nome exato do FILHOt:')||'').trim();
+    const confNome=((await zTexto('CONFIRMAÇÃO FINAL — isso é IRREVERSÍVEL',
+      ['Excluir é diferente de inativar.',
+       'Se o FILHOt pode voltar ou a família continua tutora, cancele aqui e use "Saiu do Day Care? Sim".',
+       'Para excluir '+nome+' de verdade, digite o nome exato do FILHOt.'],
+      {rotulo:'Nome exato do FILHOt', botao:'Excluir definitivamente'}))||'').trim();
     if(confNome!==nome){ alert('O nome digitado não confere com "'+nome+'". Cadastro NÃO excluído.'); return; }
     const key=pelKey(pelAtual);
     const backup={
@@ -15687,8 +15845,16 @@
       ${(a.itens&&a.itens.length)?`<ul class="ativ-itens">${a.itens.map(x=>`<li>${x}</li>`).join('')}</ul>`:''}
     </div>`).join('');
   }
-  function acrescentarAtividade(){ const t=(prompt('Nome da nova atividade:')||'').trim(); if(!t) return; ATIVIDADES.push({t:t}); salvarAtiv(); renderAtiv(); }
-  function removerAtividade(i){ if(!confirm('Remover a atividade \"'+ATIVIDADES[i].t+'\"?')) return; ATIVIDADES.splice(i,1); salvarAtiv(); renderAtiv(); }
+  async function acrescentarAtividade(){
+    const t=((await zTexto('Nome da nova atividade',
+      ['Ela entra no banco de atividades e passa a aparecer para o monitor escolher.'],
+      {rotulo:'Nome da atividade', botao:'Acrescentar', cor:'#234D67', minimo:2}))||'').trim();
+    if(!t) return; ATIVIDADES.push({t:t}); salvarAtiv(); renderAtiv(); }
+  async function removerAtividade(i){
+    if(!await zPergunta('Remover a atividade "'+ATIVIDADES[i].t+'"?',
+      ['Ela sai do banco de atividades para todos.'],
+      {sim:'Remover', nao:'Manter'})) return;
+    ATIVIDADES.splice(i,1); salvarAtiv(); renderAtiv(); }
   renderAtiv();
   try{ if(typeof tgCarregarCfg==='function') tgCarregarCfg(); }catch(e){}
   // Avisos da vet que não saíram na hora: tenta de novo ao abrir o app e a cada 10 minutos.
@@ -16739,7 +16905,7 @@
         quem:(typeof quemSou==='function'?quemSou():'-'), hora:hora||'',
         dia:(typeof dcDataKey==='function'?dcDataKey():''), motivo:motivo||'', ts:Date.now(), tentativas:0
       }).catch(function(e){ _logFalhaGrav('fila de aviso vet', e); });
-    }catch(e){}
+    }catch(e){ _logFalhaGrav('guardar o aviso da veterinária na fila', e); }
   }
   // Tenta esvaziar a fila. Roda na abertura do app e depois de cada check-in bem-sucedido.
   var _vetFilaRodando=false;
@@ -17088,9 +17254,11 @@
       })
       .catch(function(e){ alert('Não consegui salvar: '+((e&&e.message)||e)+'. Nada foi gravado.'); });
   }
-  function irmDesfazer(id){
+  async function irmDesfazer(id){
     if(!DB||!id) return;
-    if(!confirm('Desfazer este vínculo? Os dois voltam a ser conferidos separadamente.')) return;
+    if(!await zPergunta('Desfazer este vínculo?',
+      ['Os dois voltam a ser conferidos separadamente.'],
+      {sim:'Desfazer', nao:'Manter o vínculo'})) return;
     DB.ref('daycare/irmaos/'+id).remove().then(function(){
       if(typeof audit==='function') audit('irmaos-desfazer', id, {});
       irmRender(); try{ renderPertences(); }catch(e){}
@@ -17413,15 +17581,17 @@
       if(typeof audit==='function') audit('chamado-recepcao','avisou a Recepção: falta comida de '+(p.n||''),{pet:p.n||''});
     }).catch(function(e){ alert('Não consegui avisar: '+((e&&e.message)||e)+'. Ligue para a Recepção.'); });
   }
-  function ptSalvarSaida(){
+  async function ptSalvarSaida(){
     if(!ptAtual||!ptRascunho) return;
     var o=ptAtual, k=dcKey(o.p.n,o.p.tutor);
     var itens=ptItensDaEntrada(o)||[];
     var S=ptRascunho.saida||{};
     var naoGuardados=itens.filter(function(it){ return !((S[it.k]||{}).guardei); });
     if(naoGuardados.length){
-      if(!confirm('Ainda não foram guardados:\n\n'+naoGuardados.map(function(x){ return '· '+x.t; }).join('\n')
-        +'\n\nSalvar assim mesmo? Fica registrado no seu nome que estes itens não voltaram para a bolsa.')) return;
+      if(!await zPergunta('Ainda não foram guardados',
+        naoGuardados.map(function(x){ return '· '+x.t; })
+          .concat(['Salvar assim mesmo? Fica registrado no seu nome que estes itens não voltaram para a bolsa.']),
+        {sim:'Salvar assim mesmo', nao:'Voltar e guardar'})) return;
     }
     var d=new Date(), p2=function(x){ return String(x).padStart(2,'0'); };
     var reg={ nome:o.p.n||'', tutor:o.p.tutor||'', raca:o.p.raca||'', saida:S,
@@ -17595,7 +17765,7 @@
         quem:(typeof quemSou==='function'?quemSou():'-')
       }).catch(function(e){ _logFalhaGrav('aviso comida (falha) '+k, e); });
       if(typeof audit==='function') audit('telegram-comida','NÃO avisou o grupo — '+(motivo||''),{alvo:k});
-    }catch(e){}
+    }catch(e){ _logFalhaGrav('registro da falha do aviso de comida — '+k, e); }
     _comidaAvisoNaTela(nome||'', motivo||'');
   }
   function _comidaAvisoNaTela(nome, motivo){
@@ -17761,8 +17931,17 @@
         sem_resposta: EA_SEM_RESP,
         quem: (typeof pessoaDoTurno==='function'?pessoaDoTurno():'-'),
         ts: Date.now()
-      }).catch(function(){});
-    }catch(e){}
+      }).catch(function(e){ _eaCongelarFalhou(e); });
+    }catch(e){ _eaCongelarFalhou(e); }
+  }
+  // Congelar é o que faz o dia virar história. Se falhar, quem fechou a atividade PRECISA
+  // saber na hora — amanhã a lista já não é a mesma e ninguém reconstrói o que aconteceu.
+  function _eaCongelarFalhou(e){
+    _logFalhaGrav('congelar o registro do Enriquecimento Ambiental do dia', e);
+    try{ if(typeof zAlertao==='function') zAlertao('NÃO CONSEGUI GRAVAR O REGISTRO DE HOJE',
+      ['O Enriquecimento Ambiental de hoje não foi congelado: quem participou e quem ficou de fora não ficaram guardados.',
+       'Feche a atividade de novo. Se continuar assim, avise a Gestão antes de sair.'],
+      {botao:'Vou tentar de novo'}); }catch(_){}
   }
   function eaSalvarTexto(){
     var v=String((document.getElementById('eaTexto')||{}).value||'').trim();
@@ -17794,13 +17973,15 @@
     eaCongelar();
     renderEA();
   }
-  function eaMarcarTempo(k){
+  async function eaMarcarTempo(k){
     EA_DIA=EA_DIA||{}; EA_DIA.tempos=EA_DIA.tempos||{};
     var t=EA_DIA.tempos[k]||{};
     var agora={quem:(typeof pessoaDoTurno==='function'?pessoaDoTurno():'-'), hora:horaAgora(), ts:Date.now()};
     if(!t.ini){ t.ini=agora; }
     else if(!t.fim){ t.fim=agora; }
-    else { if(!confirm('Refazer o tempo de "'+((EA_ETAPAS.find(function(x){return x.k===k;})||{}).t||k)+'"?\n\nO horário anterior é perdido.')) return; t={ini:agora}; }
+    else { if(!await zPergunta('Refazer o tempo de "'+((EA_ETAPAS.find(function(x){return x.k===k;})||{}).t||k)+'"?',
+      ['O horário anterior é perdido.'],
+      {sim:'Refazer', nao:'Manter o horário'})) return; t={ini:agora}; }
     EA_DIA.tempos[k]=t;
     if(DB) DB.ref(eaNo()+'/tempos/'+k).set(t).catch(function(){});
     if(typeof audit==='function') audit('ea',(t.fim?'terminou ':'começou ')+((EA_ETAPAS.find(function(x){return x.k===k;})||{}).t||k),{});
@@ -17814,10 +17995,11 @@
           patch.caes=(typeof turmaDoDia==='function')?turmaDoDia().length:0; }
         if(t.fim){ patch.fim=t.fim.hora; patch.quemFim=t.fim.quem; }
         if(Object.keys(patch).length){
-          DB.ref('daycare/tempo-atividade/'+dcDataKey()+'/ea').update(patch).catch(function(){});
+          DB.ref('daycare/tempo-atividade/'+dcDataKey()+'/ea').update(patch)
+            .catch(function(e){ _logFalhaGrav('cronômetro da atividade do Enriquecimento Ambiental', e); });
           if(typeof ATIV_TEMPO!=='undefined'){ ATIV_TEMPO.ea=Object.assign({},ATIV_TEMPO.ea||{},patch); }
         }
-      }catch(e){}
+      }catch(e){ _logFalhaGrav('cronômetro da atividade do Enriquecimento Ambiental', e); }
     }
     // Ao FECHAR a atividade, o dia é congelado: é esse o momento em que a lista é verdade.
     if(k==='atividade'&&t.fim) eaCongelar();
@@ -19420,7 +19602,8 @@
     var cnt=document.getElementById('genCount');
     if(cnt) cnt.textContent=lista.length+' aulunos · Foto do peludinho';
     var nota=document.getElementById('genNotaTxt');
-    if(nota) nota.innerHTML='Tire a foto do rostinho dele. <strong>A foto nova apaga a antiga</strong> — só existe uma por FILHOt. É a mesma que aparece na chamada, no almoço e na ficha.'
+    if(nota) nota.innerHTML='<strong>Só fotografe quem está sem foto</strong> — são os cartões de borda amarela. '
+      +'Quem já tem, deixe como está; se a foto estiver ruim, use o <em>trocar</em> embaixo do retrato (a antiga sai).'
       +ativAvisoTurma(_t);
     // sem foto primeiro: é para isso que a tela existe
     lista=lista.slice().sort(function(a,b){
@@ -19438,13 +19621,19 @@
              :('<div class="ph" style="background:var(--z-blue-soft)">'+escAttr((o.p.n||'?')[0].toUpperCase())+'</div>'))
         +'<div class="nm">'+escAttr(o.p.n||'')+'</div>'
         +'<div class="br" style="font-size:11.5px;line-height:1.3">'+ativIdent(o.p)+'</div>'
-        +(tinha?'<div class="br" style="font-size:11.5px">já tem foto</div>'
+        +(tinha?'<div class="br" style="font-size:11.5px;color:var(--crm-ok);font-weight:800">\u2713 já tem foto</div>'
                :'<div class="br" style="font-size:11.5px;color:var(--crm-atencao-text);font-weight:800">SEM FOTO</div>')
         +'<input type="file" accept="image/*" capture="environment" id="fotoAtivIn_'+k+'" style="display:none"'
         +' onchange="fotoAtivEscolher(event,\''+escAttr(k).replace(/'/g,"\\\'")+'\')">'
         +'<div style="display:flex;gap:5px;margin-top:7px">'
-        +'<button type="button" class="btn btn-gold" style="flex:1;padding:7px 10px;font-size:12px;font-weight:800"'
-        +' onclick="document.getElementById(\'fotoAtivIn_'+k+'\').click()">'+(tinha?'Trocar':'Tirar foto')+'</button>'
+        // Quem NÃO tem foto recebe o botão grande; quem tem recebe um link, que ninguém
+        // toca por reflexo. Trocar é decisão de quem olhou o retrato e viu que está ruim.
+        +(tinha
+          ? ('<button type="button" class="btn" style="flex:1;padding:6px 8px;font-size:11.5px;font-weight:700;'
+             +'background:none;border:none;color:var(--z-blue);text-decoration:underline"'
+             +' onclick="document.getElementById(\'fotoAtivIn_'+k+'\').click()">está ruim? trocar</button>')
+          : ('<button type="button" class="btn btn-gold" style="flex:1;padding:7px 10px;font-size:12px;font-weight:800"'
+             +' onclick="document.getElementById(\'fotoAtivIn_'+k+'\').click()">Tirar foto</button>'))
         +(tinha&&!pend&&fotoPodeApagar()?('<button type="button" class="btn" style="padding:7px 10px;font-size:12px;font-weight:800;'
           +'background:none;border:1.5px solid var(--crm-critico);color:var(--crm-critico)"'
           +' onclick="fotoAtivApagar(\''+escAttr(k).replace(/'/g,"\\'")+'\')">'
@@ -19774,12 +19963,13 @@
   // realmente começou sumiu do relatório. Um toque, sem pergunta nenhuma, apagava o dia.
   // Agora o botão mostra o que já está gravado; se a pessoa confirmar mesmo assim, o horário
   // antigo vai para um histórico em vez de virar pó.
-  function turnoTrocar(caminho, campo, campoQuem, turno, rotulo){
+  async function turnoTrocar(caminho, campo, campoQuem, turno, rotulo){
     const h=horaAgora(), q=quemSou(), atual=(turno||{})[campo], quemAtual=(turno||{})[campoQuem];
     if(atual){
-      if(!confirm(rotulo+' de hoje JÁ foi registrado às '+atual+(quemAtual?' por '+quemAtual:'')+'.\n\n'
-        +'Se continuar, o horário passa a ser o seu ('+h+') e o de '+(quemAtual||'quem registrou')+' sai do relatório.\n\n'
-        +'Quer mesmo trocar?')) return null;
+      if(!await zPergunta(rotulo+' de hoje JÁ foi registrado às '+atual+(quemAtual?' por '+quemAtual:''),
+        ['Se continuar, o horário passa a ser o seu ('+h+') e o de '+(quemAtual||'quem registrou')+' sai do relatório.',
+         'Quer mesmo trocar?'],
+        {sim:'Trocar o horário', nao:'Manter como está'})) return null;
       if(DB) DB.ref(caminho+'/historico').push({campo:campo, era:atual, eraQuem:(quemAtual||'-'), virou:h, virouQuem:q, ts:Date.now()}).catch(()=>{});
       try{ if(typeof audit==='function') audit('turno-sobrescrito', rotulo+': '+atual+' ('+(quemAtual||'-')+') passou para '+h+' ('+q+')'); }catch(e){}
     }
@@ -19832,19 +20022,19 @@
     }
     ativIniciarAgora(slug);
   }
-  function ativIniciarAgora(slug){
+  async function ativIniciarAgora(slug){
     var t=ATIV_TEMPO[slug]||{};
-    var r=turnoTrocar(ativTempoNo(slug),'inicio','quemInicio',t,'O início desta atividade');
+    var r=await turnoTrocar(ativTempoNo(slug),'inicio','quemInicio',t,'O início desta atividade');
     if(!r) return;
     ATIV_TEMPO[slug]=Object.assign({},t,r.patch,{caes:(typeof turmaDoDia==='function')?turmaDoDia().length:0});
     if(DB) DB.ref(ativTempoNo(slug)).update({caes:ATIV_TEMPO[slug].caes}).catch(function(){});
     if(typeof audit==='function') audit('ativ_ini','iniciou '+ativNome(slug)+' às '+r.h,{});
     renderBarraAtiv();
   }
-  function ativEncerrar(slug){
+  async function ativEncerrar(slug){
     var t=ATIV_TEMPO[slug]||{};
     if(!t.inicio){ alert('Esta atividade ainda não foi iniciada. Toque em "Iniciar" primeiro — sem o começo não dá para medir o tempo.'); return; }
-    var r=turnoTrocar(ativTempoNo(slug),'fim','quemFim',t,'O fim desta atividade');
+    var r=await turnoTrocar(ativTempoNo(slug),'fim','quemFim',t,'O fim desta atividade');
     if(!r) return;
     ATIV_TEMPO[slug]=Object.assign({},t,r.patch);
     if(typeof audit==='function') audit('ativ_fim','encerrou '+ativNome(slug)+' às '+r.h,{});
@@ -20054,9 +20244,9 @@
       elM.innerHTML=linhas.length?linhas.join(''):'<div class="hint">Ainda não há atividades cronometradas. Comece a marcar Iniciar e Encerrar — em uma semana já dá para comparar.</div>';
     }
   }
-  function iniciarAlmoco(){ const r=turnoTrocar('daycare/almoco-turno/'+dcDataKey(),'inicio','quemInicio',almTurno,'O início do almoço'); if(!r) return;
+  async function iniciarAlmoco(){ const r=await turnoTrocar('daycare/almoco-turno/'+dcDataKey(),'inicio','quemInicio',almTurno,'O início do almoço'); if(!r) return;
     almTurno=Object.assign({},almTurno,r.patch); if(typeof audit==='function') audit('almoco_ini','iniciou o almoço às '+r.h); renderAlmoco(); }
-  function encerrarAlmoco(){ const r=turnoTrocar('daycare/almoco-turno/'+dcDataKey(),'fim','quemFim',almTurno,'O fim do almoço'); if(!r) return;
+  async function encerrarAlmoco(){ const r=await turnoTrocar('daycare/almoco-turno/'+dcDataKey(),'fim','quemFim',almTurno,'O fim do almoço'); if(!r) return;
     almTurno=Object.assign({},almTurno,r.patch); if(typeof audit==='function') audit('almoco_fim','encerrou o almoço às '+r.h); renderAlmoco(); }
   // A marcação é do DIA de hoje (daycare/almoco/{data}), não do dia da semana. Navegar para
   // "Segunda" troca só a turma exibida — marcar ali gravaria na data de hoje e faria o
@@ -20079,13 +20269,13 @@
         <button class="btn" style="background:rgba(255,255,255,.14);color:var(--z-cream);border:1px solid rgba(255,255,255,.25)" onclick="${fnFim}()">&#9632; Encerrar</button>
       </div></div>`;
   }
-  function iniciarPrep(){ const r=turnoTrocar('daycare/almoco-prep-turno/'+dcDataKey(),'inicio','quemInicio',almPrepTurno,'O início da preparação'); if(!r) return;
+  async function iniciarPrep(){ const r=await turnoTrocar('daycare/almoco-prep-turno/'+dcDataKey(),'inicio','quemInicio',almPrepTurno,'O início da preparação'); if(!r) return;
     almPrepTurno=Object.assign({},almPrepTurno,r.patch); if(typeof audit==='function') audit('prep_ini','iniciou a preparação às '+r.h); renderAlmPrep(); }
-  function encerrarPrep(){ const r=turnoTrocar('daycare/almoco-prep-turno/'+dcDataKey(),'fim','quemFim',almPrepTurno,'O fim da preparação'); if(!r) return;
+  async function encerrarPrep(){ const r=await turnoTrocar('daycare/almoco-prep-turno/'+dcDataKey(),'fim','quemFim',almPrepTurno,'O fim da preparação'); if(!r) return;
     almPrepTurno=Object.assign({},almPrepTurno,r.patch); if(typeof audit==='function') audit('prep_fim','encerrou a preparação às '+r.h); renderAlmPrep(); }
-  function iniciarFinal(){ const r=turnoTrocar('daycare/almoco-final-turno/'+dcDataKey(),'inicio','quemInicio',almFinalTurno,'O início da finalização'); if(!r) return;
+  async function iniciarFinal(){ const r=await turnoTrocar('daycare/almoco-final-turno/'+dcDataKey(),'inicio','quemInicio',almFinalTurno,'O início da finalização'); if(!r) return;
     almFinalTurno=Object.assign({},almFinalTurno,r.patch); if(typeof audit==='function') audit('final_ini','iniciou a finalização às '+r.h); renderAlmFinal(); }
-  function encerrarFinal(){ const r=turnoTrocar('daycare/almoco-final-turno/'+dcDataKey(),'fim','quemFim',almFinalTurno,'O fim da finalização'); if(!r) return;
+  async function encerrarFinal(){ const r=await turnoTrocar('daycare/almoco-final-turno/'+dcDataKey(),'fim','quemFim',almFinalTurno,'O fim da finalização'); if(!r) return;
     almFinalTurno=Object.assign({},almFinalTurno,r.patch); if(typeof audit==='function') audit('final_fim','encerrou a finalização às '+r.h); renderAlmFinal(); }
   function bancoTempoHTML(){
     const p=diffMin(almPrepTurno.inicio,almPrepTurno.fim);
@@ -20396,7 +20586,7 @@
       Object.keys(lista).forEach(function(id){
         var o=lista[id]||{};
         if(String(o.valor||'').trim() || o.ts){ fica[id]=o; return; }
-        try{ if(DB) DB.ref(dashNo()+'/'+k+'/'+id).remove().catch(function(){}); }catch(e){}
+        try{ if(DB) DB.ref(dashNo()+'/'+k+'/'+id).remove().catch(function(e){ _logFalhaGrav('apagar lançamento vazio do painel do Day Care em '+k, e); }); }catch(e){ _logFalhaGrav('apagar lançamento vazio do painel do Day Care em '+k, e); }
         try{ if(typeof audit==='function') audit('dashboard-daycare','apagou um lançamento vazio em '+k+' (resto de um "tirar" antes da planilha responder)',{}); }catch(e){}
       });
       limpo[k]=fica;
@@ -20475,9 +20665,11 @@
     setTimeout(function(){ try{ t.type='password'; t.value=''; }catch(e){} }, 12000);
   }
   // Apagar a ponte é só da Diretoria: desligá-la para todo mundo é decisão de uma pessoa só.
-  function dashApagarPonte(){
+  async function dashApagarPonte(){
     if(document.body.dataset.role!=='diretoria'){ alert('Só a Diretoria pode desligar a ponte.'); return; }
-    if(!confirm('Desligar a ponte com a planilha?\n\nO app continua guardando tudo, mas a TV para de receber o que for lançado — e alguém terá que escrever na planilha à mão.')) return;
+    if(!await zPergunta('Desligar a ponte com a planilha?',
+      ['O app continua guardando tudo, mas a TV para de receber o que for lançado — e alguém terá que escrever na planilha à mão.'],
+      {sim:'Desligar a ponte', nao:'Manter ligada'})) return;
     if(!DB) return;
     DB.ref('daycare/config/ponte-planilha').set({url:'', token:''}).then(function(){
       DASH_PONTE=null; dashCarregar();
@@ -21005,10 +21197,12 @@
       alert('Não foi para a planilha: '+((e&&e.message)||e));
     });
   }
-  function dashRemover(k,id){
+  async function dashRemover(k,id){
     var it=dashItem(k), reg=(DASH_DADOS[k]||{})[id];
     if(!it||!reg||!DB) return;
-    if(!confirm('Tirar '+reg.valor+' de '+it.t+'?\n\nSai daqui e sai da planilha — some da TV.')) return;
+    if(!await zPergunta('Tirar '+reg.valor+' de '+it.t+'?',
+      ['Sai daqui e sai da planilha — some da TV.'],
+      {sim:'Tirar', nao:'Manter'})) return;
     DB.ref(dashNo()+'/'+k+'/'+id).remove().then(function(){
       if(DASH_DADOS[k]) delete DASH_DADOS[k][id];
       renderDash();
@@ -21131,8 +21325,9 @@
     var nFotos=0; grupos.forEach(function(g){ nFotos+=g.fotos.length; });
     return '<div class="card" style="margin-bottom:12px;border-left:4px solid var(--z-gold)">'
       +'<h2 style="font-size:17px">Todas as fotos — de quem é cada uma</h2>'
-      +'<div class="hint">'+nFotos+' fotos guardadas · <strong>'+decidir.length+' nomes precisam de decisão</strong>. '
-      +'Aqui aparece também quem <strong>já tem foto</strong> — se o retrato estiver errado, é aqui que se descobre.</div>'
+      +'<div class="hint"><strong>O que fazer aqui:</strong> em cada nome abaixo há uma foto que não está na ficha de ninguém. '
+      +'Olhe o retrato e diga de quem é — ou que não é de ninguém. Nada é apagado sem dois toques.</div>'
+      +'<div class="hint" style="margin-top:3px">'+nFotos+' fotos guardadas · '+decidir.length+' nome(s) a decidir.</div>'
       +'<button type="button" class="btn" style="margin:8px 0;padding:7px 12px;font-size:12.5px;font-weight:800;background:var(--z-cream-warm);color:var(--z-blue);border:1.5px solid var(--line)"'
       +' onclick="galAlternar()">'+(GAL_SO_DECIDIR?('Ver todos os '+grupos.length+' nomes'):('Ver só os '+decidir.length+' que precisam de decisão'))+'</button>'
       +(mostrar.length?mostrar.map(galGrupoHTML).join(''):'<div class="hint">Nada a decidir: cada foto está na ficha de alguém.</div>')
@@ -21422,9 +21617,10 @@
       ['Nome','Raça'].concat(PT_ITENS.map(function(x){ return x.t; })),
       linhas), 'pertences-em-branco-'+d, linhas.length);
   }
-  function relPertencesBrancoEscolher(){
+  async function relPertencesBrancoEscolher(){
     var opc=ORDEM_DIAS.map(function(d){ return DIA_FULL[d]; }).join(', ');
-    var r=(prompt('Qual dia da semana?\n\n'+opc+'\n\n(escreva o dia, ex: quarta)','')||'').trim();
+    var r=((await zTexto('Qual dia da semana?', [opc],
+      {rotulo:'Dia da semana', dica:'por exemplo: quarta', botao:'Gerar a tabela', cor:'#234D67', minimo:3}))||'').trim();
     if(!r) return;
     var n=jsNorm(r);
     var achou=ORDEM_DIAS.find(function(d){ return jsNorm(DIA_FULL[d]).indexOf(n)===0 || d===n.slice(0,3); });
@@ -21789,7 +21985,12 @@
       const rec=Object.assign({ ts:Date.now(), hora:horaAgora(), quem:(u.nome||'-'), role:(u.role||'-'), acao:acao||'', detalhe:(detalhe==null?'':String(detalhe)) }, meta||{});
       if(!DB){ _audGuardarNoBolso(dia, rec, 'banco reconectando'); return; }
       DB.ref('daycare/auditoria/'+dia).push(rec).catch(function(e){ _audGuardarNoBolso(dia, rec, (e&&e.message)||String(e)); });
-    }catch(e){}
+    }catch(e){
+      // Aqui NÃO se chama _logFalhaGrav: ele grava pelo próprio audit, e a falha entraria em
+      // roda-viva. O rastro vai direto para o bolso local, que o _audReenviarBolso reenvia.
+      try{ _audGuardarNoBolso(_audKey(), { ts:Date.now(), acao:'audit-FALHOU',
+        detalhe:'não consegui montar o rastro de "'+String(acao||'')+'"' }, (e&&e.message)||String(e)); }catch(_){}
+    }
   }
 
   // Janelas de horário esperadas por protocolo (Gestão pode ajustar).
@@ -23077,10 +23278,12 @@
   function ciEditPertSpec(uid,val){ const p=ciPertSel.find(function(x){ return x.uid===uid; }); if(p) p.spec=val; }
   function ciRemovePertUnit(uid){ ciPertSel=ciPertSel.filter(function(x){ return x.uid!==uid; }); ciDrawPert(); }
   // Gestão: renomear um item do banco de pertences (mantém a mesma chave).
-  function ciRenomearPertBanco(k){
+  async function ciRenomearPertBanco(k){
     if(!canEditCheckinMed()){ alert('Sem permissão para editar o banco.'); return; }
     const def=ciPertDef(k); if(!def) return;
-    const novo=(prompt('Editar o nome do item "'+def.nome+'":', def.nome)||'').trim();
+    const novo=((await zTexto('Editar o nome do item "'+def.nome+'"',
+      ['O nome muda para todo mundo, na lista de pertences.'],
+      {rotulo:'Nome do item', valor:def.nome, botao:'Salvar o nome', cor:'#234D67', minimo:2}))||'').trim();
     if(!novo||novo===def.nome) return;
     def.nome=novo;
     if(DB) DB.ref('auaulandia/pertences-banco/'+k).update({nome:novo,_ts:Date.now(),_quem:quemSou()}).catch(function(){});
@@ -23090,10 +23293,12 @@
     ciDrawPert();
   }
   // Gestão: excluir um item do banco de pertences (some para todos). Remove também as unidades soltas.
-  function ciExcluirPertBanco(k){
+  async function ciExcluirPertBanco(k){
     if(!canEditCheckinMed()){ alert('Sem permissão para excluir do banco.'); return; }
     const def=ciPertDef(k); if(!def) return;
-    if(!confirm('Excluir "'+def.nome+'" do banco de pertences? Some da lista para todos.'+(ciPertEhDefault(k)?'\n\n(É um item padrão — ele pode voltar em atualizações futuras.)':''))) return;
+    if(!await zPergunta('Excluir "'+def.nome+'" do banco de pertences?',
+      ['Some da lista para todos.'].concat(ciPertEhDefault(k)?['É um item padrão — ele pode voltar em atualizações futuras.']:[]),
+      {sim:'Excluir', nao:'Manter'})) return;
     ciPertBanco=ciPertBanco.filter(function(o){ return o.k!==k; });
     ciPertSel=ciPertSel.filter(function(p){ return p.k!==k; });
     if(DB) DB.ref('auaulandia/pertences-banco/'+k).remove().catch(function(){});
@@ -23365,9 +23570,17 @@
       return !!(ent||temRef||assina);
     }catch(e){ return false; }
   }
-  function ciPodeSairDoCheckin(){
-    if(!ciTemRascunhoNaoSalvo()) return true;
-    return confirm('⚠️ O check-in de '+((ciHosp&&ciHosp.nome)||'este FILHOt')+' ainda NÃO FOI SALVO.\n\nSe sair agora, ele não existe no sistema — não vai aparecer na Conferência nem no Plantão, e tudo o que você preencheu se perde.\n\nSair mesmo assim?');
+  // A pergunta vira um cartaz da própria página: no celular o navegador pode suprimir a
+  // janela nativa e responder sozinho — e responder "sim" aqui é perder o check-in inteiro.
+  // Como zPergunta é assíncrono e o clique do menu não espera, quem chama passa o que fazer
+  // DEPOIS ("segue") em vez de esperar um sim/não na hora.
+  function ciPodeSairDoCheckin(segue){
+    if(!ciTemRascunhoNaoSalvo()){ if(typeof segue==='function') segue(); return true; }
+    zPergunta('O check-in de '+((ciHosp&&ciHosp.nome)||'este FILHOt')+' ainda NÃO FOI SALVO',
+      ['Se sair agora, ele não existe no sistema — não vai aparecer na Conferência nem no Plantão, e tudo o que você preencheu se perde.'],
+      {sim:'Sair e perder o que preenchi', nao:'Ficar e salvar'})
+      .then(function(ok){ if(ok && typeof segue==='function') segue(); });
+    return false;
   }
   // ===== CARTAZ NA TELA (item 5, Adriana 02/ago/2026) ================================
   // O alert() do celular é uma caixinha cinza que some com um toque — duas estadias
@@ -23434,7 +23647,7 @@
       +'<div style="padding:20px 22px;overflow:auto;color:#234D67;font-size:17px;line-height:1.5;font-weight:600">'
       + (Array.isArray(linhas)?linhas:[linhas]).filter(Boolean).map(function(t){ return '<div style="margin-bottom:10px">'+esc(t)+'</div>'; }).join('')
       + '<label for="'+escAttr(cid)+'" style="display:block;margin-top:14px;font-size:15px;font-weight:800">'+esc(op.rotulo||'Escreva aqui')+'</label>'
-      + '<input id="'+escAttr(cid)+'" type="text" value="'+escAttr(op.valor||'')+'" placeholder="'+escAttr(op.dica||'')+'" style="width:100%;box-sizing:border-box;margin-top:6px;padding:14px;border:2px solid #234D67;border-radius:12px;font-family:inherit;font-size:17px;font-weight:600;color:#234D67;background:#FFFFFF">'
+      + '<input id="'+escAttr(cid)+'" type="'+escAttr(op.tipo||'text')+'" value="'+escAttr(op.valor||'')+'" placeholder="'+escAttr(op.dica||'')+'" style="width:100%;box-sizing:border-box;margin-top:6px;padding:14px;border:2px solid #234D67;border-radius:12px;font-family:inherit;font-size:17px;font-weight:600;color:#234D67;background:#FFFFFF">'
       + '<div id="zCampoErro" style="display:none;margin-top:8px;font-size:15px;font-weight:800;color:#B3261E"></div>'
       +'</div>'
       +'<div style="padding:0 22px 22px;display:flex;flex-direction:column;gap:9px">'
@@ -23455,6 +23668,33 @@
     });
     try{ if(inp&&inp.focus) inp.focus(); }catch(e){}
     try{ if(navigator.vibrate) navigator.vibrate([180,90,180]); }catch(e){}
+  }
+  // ===== AS DUAS PERGUNTAS DA CASA, NA PRÓPRIA TELA (29/ago/2026) ====================
+  // confirm() e prompt() são janelas do navegador: travam tudo, não têm a cara da Zêluz e,
+  // no celular, o navegador pode simplesmente SUPRIMI-LAS e devolver "não" ou vazio sem
+  // ninguém tocar em nada — a gravação era cancelada e a pessoa nem sabia. Estes dois
+  // envelopes devolvem uma promessa em cima do zEscolha e do zCampo, que já são elementos
+  // da própria página. O efeito de cada pergunta continua igual: quem chama usa `await`.
+  //   await zPergunta(...)  -> true (confirmou) | false (desistiu)
+  //   await zTexto(...)     -> o texto escrito | null (desistiu)
+  function zPergunta(titulo, linhas, op){
+    op=op||{};
+    return new Promise(function(res){
+      zEscolha(titulo, linhas, [
+        {t:(op.sim||'Confirmar'), cor:(op.cor||'#B3261E'), fn:function(){ res(true); }},
+        {t:(op.nao||'Cancelar'), cor:'#6b5f4b', fn:function(){ res(false); }}
+      ]);
+    });
+  }
+  function zTexto(titulo, linhas, op){
+    op=op||{};
+    var cfg={}; Object.keys(op).forEach(function(k){ cfg[k]=op[k]; });
+    cfg.botaoNao=op.botaoNao||'Cancelar';
+    return new Promise(function(res){
+      cfg.fn=function(v){ res(v); };
+      cfg.aoCancelar=function(){ res(null); };
+      zCampo(titulo, linhas, cfg);
+    });
   }
   var ciEditandoId=null; // quando setado, o Salvar ACRESCENTA nesta estadia em vez de criar outra
   function ciBloqueia(motivo, texto, focoId){
@@ -23660,14 +23900,23 @@
   // Regra dela: material novo SEMPRE chega na recepção. A exceção é urgência em fim de semana
   // ou feriado, sem recepção na casa — aí monitor ou plantonista recebe e lança. Por isso o
   // campo não pergunta o papel: pergunta o NOME de quem pegou na mão. Login é papel, não pessoa.
-  function ciQuemRecebeu(itens){
-    var msg='CHEGOU MATERIAL NOVO\n\n'+itens.join('\n')
-      +'\n\nQuem RECEBEU isto na porta? Escreva o nome da pessoa.\n(Se foi você mesma, escreva o seu nome.)';
+  async function ciQuemRecebeu(itens){
+    var titulo='CHEGOU MATERIAL NOVO';
+    var linhas=itens.concat(['Quem RECEBEU isto na porta? Escreva o nome da pessoa.',
+                             'Se foi você mesma, escreva o seu nome.']);
     for(var t=0;t<3;t++){
-      var q=(prompt(msg)||'').trim();
-      if(q===''&&t>=0) { if(!confirm('Sem o nome de quem recebeu, ninguém sabe quem pegou o material na mão.\n\nCancelar o lançamento?')) { continue; } return null; }
+      var q=((await zTexto(titulo, linhas,
+        {rotulo:'Nome de quem recebeu', botao:'Confirmar quem recebeu'}))||'').trim();
+      if(q===''){
+        if(!await zPergunta('Sem o nome de quem recebeu, ninguém sabe quem pegou o material na mão',
+          ['Cancelar o lançamento?'],
+          {sim:'Cancelar o lançamento', nao:'Voltar e escrever o nome'})) { continue; }
+        return null;
+      }
       if(/[a-zA-ZÀ-ÿ]{2,}/.test(q)&&q.length>=3) return q;
-      msg='Precisa ser um NOME DE GENTE — não vale ponto, traço ou uma letra só.\n\n'+itens.join('\n')+'\n\nQuem recebeu isto na porta?';
+      titulo='Precisa ser um NOME DE GENTE';
+      linhas=['Não vale ponto, traço ou uma letra só.'].concat(itens)
+             .concat(['Quem recebeu isto na porta?']);
     }
     return null;
   }
@@ -23683,7 +23932,7 @@
     ((modo==='acrescentar'||modo==='corrigir')
       ? DB.ref('auaulandia/estadias/'+estadiaId).once('value').then(function(s){ return s.val()||{}; })
       : Promise.resolve({})
-    ).then(function(antes){
+    ).then(async function(antes){
     const ops=[]; let ref=null, novosItens=[];
     if(modo==='corrigir'){
       // SUBSTITUI. É a diferença que faz a correção existir: aqui a medicação e a
@@ -23728,7 +23977,7 @@
       P.chegouNovo=chegouNovo;
       if(chegouNovo.length){
         // Material novo de verdade → volta para a fila, com o nome do que chegou e de quem recebeu.
-        var _rec=ciQuemRecebeu(chegouNovo);
+        var _rec=await ciQuemRecebeu(chegouNovo);
         if(_rec===null){ __ciTravar(false); if(st){ st.style.color='var(--crm-atencao-text)'; st.textContent='Nada foi salvo — falta dizer quem recebeu o material.'; } return; }
         P.recebidoPor=_rec;
         ops.push(DB.ref('auaulandia/estadias/'+estadiaId+'/conferencia').update({
@@ -23781,7 +24030,7 @@
       // Voltou a ter coisa para conferir → a conferência REABRE e a Wandela vê de novo,
       // sabendo O QUE chegou e QUEM pegou na mão.
       if(novosItens.length){
-        var _rec2=ciQuemRecebeu(novosItens);
+        var _rec2=await ciQuemRecebeu(novosItens);
         if(_rec2===null){ __ciTravar(false); if(st){ st.style.color='var(--crm-atencao-text)'; st.textContent='Nada foi salvo — falta dizer quem recebeu o material.'; } return; }
         P.recebidoPor=_rec2;
         ops.push(DB.ref('auaulandia/estadias/'+estadiaId+'/conferencia').update({
@@ -24237,7 +24486,7 @@
     setTimeout(function(){ try{ const el=document.getElementById('hospBxData'); if(el){ el.scrollIntoView({behavior:'smooth',block:'center'}); el.focus(); } }catch(e){} },50);
   }
   function hospCancelarBaixa(){ hospAbaBaixa=null; renderHospedesAba(); }
-  function hospConfirmarBaixa(id){
+  async function hospConfirmarBaixa(id){
     if(!hospAbaPode()){ alert('Sem permissão para dar baixa.'); return; }
     const e=EST_TODAS[id]||{};
     const dt=(document.getElementById('hospBxData')||{}).value||'';
@@ -24250,8 +24499,11 @@
                 : '')))) return;
     if(!DB){ alert('Sem conexão com o banco agora — a baixa não foi dada. Tente de novo em instantes.'); return; }
     const quem=(typeof quemSou==='function'?quemSou():'-');
-    if(!confirm('Dar baixa em '+(e.nome||'esta hospedagem')+'?\n\nFoi embora em: '+((typeof ciBRdata==='function')?ciBRdata(dt):dt)
-      +'\nQuem deu a baixa: '+quem+'\n\nEle sai do Plantão. Se voltar, é um check-in novo.')) return;
+    if(!await zPergunta('Dar baixa em '+(e.nome||'esta hospedagem')+'?',
+      ['Foi embora em: '+((typeof ciBRdata==='function')?ciBRdata(dt):dt),
+       'Quem deu a baixa: '+quem,
+       'Ele sai do Plantão. Se voltar, é um check-in novo.'],
+      {sim:'Dar baixa', nao:'Cancelar'})) return;
     DB.ref('auaulandia/estadias/'+id).update({
       status:'encerrada', saida:dt, encerradaEm:dt, encerradaPor:quem, encerradaTs:Date.now()
     }).then(function(){
@@ -24416,21 +24668,25 @@
       if(typeof audit==='function') audit('falta-cobertura', id, {pet:nome, itens:achados.map(function(f){return f.nome;}).join(', '), motivo:motivoTexto||''});
     }).catch(function(){});
   }
-  function hospSalvarDatas(id){
+  async function hospSalvarDatas(id){
     if(!hospAbaPode()){ alert('Sem permissão para mudar as datas.'); return; }
     const e=EST_TODAS[id]||{};
     const ent=(document.getElementById('hospEdIni')||{}).value||'';
     const sai=(document.getElementById('hospEdFim')||{}).value||'';
     if(!ent){ alert('Informe a data de ENTRADA da hospedagem.'); return; }
     if(sai && sai<ent){ alert('A saída não pode ser antes da entrada. Confira as datas.'); return; }
-    if(!sai && !confirm('Sem data de saída, '+(e.nome||'o FILHOt')+' fica no Plantão todos os dias até alguém encerrar a hospedagem.\n\nSalvar assim mesmo?')) return;
+    if(!sai && !await zPergunta('Sem data de saída',
+      [(e.nome||'O FILHOt')+' fica no Plantão todos os dias até alguém encerrar a hospedagem.'],
+      {sim:'Salvar assim mesmo', nao:'Voltar e preencher'})) return;
     const patch={ entrada:ent, saida:sai,
       alterado_por:(typeof quemSou==='function'?quemSou():'-'), alterado_ts:Date.now(),
       alteracao_anterior:{entrada:e.entrada||'', saida:e.saida||''} };
     // Estadia já encerrada e datas esticadas para a frente = o FILHOt continua aqui. Reabre.
     const st=(e.status||'ativa');
     if(st!=='ativa'){
-      if(!confirm('Esta hospedagem está marcada como '+(st==='cancelada'?'CANCELADA':'encerrada')+'.\n\nReabrir '+(e.nome||'a hospedagem')+' com as novas datas? Ele volta a aparecer no Plantão.')) return;
+      if(!await zPergunta('Esta hospedagem está marcada como '+(st==='cancelada'?'CANCELADA':'encerrada'),
+        ['Reabrir '+(e.nome||'a hospedagem')+' com as novas datas? Ele volta a aparecer no Plantão.'],
+        {sim:'Reabrir', nao:'Deixar como está', cor:'#234D67'})) return;
       patch.status='ativa'; patch.reabertaPor=(typeof quemSou==='function'?quemSou():'-'); patch.reabertaTs=Date.now();
     }
     if(!DB){ alert('Sem conexão com o banco agora — tente de novo em instantes.'); return; }
@@ -24544,12 +24800,15 @@
   }
   // Abre a FICHA COMPLETA do peludinho (a mesma do Day Care: vacinas, carrapaticida, tudo).
   // Hóspede que nunca foi auluno pode não ter cadastro-mestre ainda — aí oferece criar na hora.
-  function hospAbrirFicha(id){
+  async function hospAbrirFicha(id){
     const e=EST_TODAS[id]||{}; if(!e.nome) return;
     let p=(typeof pelMestreDe==='function')?pelMestreDe({nome:e.nome,tutor:e.tutor,raca:e.raca,refKey:e.refKey}):null;
     if(!p){
       if(!gateCadastro()) return;   // LEI do cadastro único — monitor não cadastra
-      if(!confirm(e.nome+' ainda não tem ficha no cadastro de peludinhos.\n\nCriar a ficha agora com os dados da hospedagem (nome, tutor e raça)? Depois é só completar vacinas, carrapaticida e o resto.')) return;
+      if(!await zPergunta(e.nome+' ainda não tem ficha no cadastro de peludinhos',
+        ['Criar a ficha agora com os dados da hospedagem (nome, tutor e raça)?',
+         'Depois é só completar vacinas, carrapaticida e o resto.'],
+        {sim:'Criar a ficha', nao:'Agora não', cor:'#234D67'})) return;
       const novo={n:e.nome, raca:e.raca||'', freq:'', tutor:e.tutor||'', nasc:'', dias:[]};
       const key=pelKey(novo);
       if(!PELUDINHOS.some(function(x){ return pelKey(x)===key; })){
