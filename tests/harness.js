@@ -3774,9 +3774,9 @@ async function main() {
       !/daycare\/chamada\/'\+hoje\+'\/_fechado/.test(html) &&
       /daycare\/falta-automatica\//.test(html));
     check('o gancho de entrada é o mesmo do almoço (qualquer tela)',
-      /try\{ aplicarFaltaAutomatica\(\); \}catch\(e\)\{\}\n    \}, 6000\); \}catch\(e\)\{\}/.test(html));
+      /try\{ aplicarFaltaAutomatica\(\); \}catch\(e\)\{\}(?: \/\* silencioso de prop[^*]*\*\/)?\n    \}, 6000\); \}catch\(e\)\{\}/.test(html));
     check('e existe o temporizador de 30 s para quem já estava logado',
-      /setInterval\(function\(\)\{ try\{ aplicarFaltaAutomatica\(\); \}catch\(e\)\{\} \}, 30000\);/.test(html));
+      /setInterval\(function\(\)\{ try\{ aplicarFaltaAutomatica\(\); \}catch\(e\)\{\}(?: \/\* silencioso de prop[^*]*\*\/)? \}, 30000\);/.test(html));
     check('a turma é sempre a de HOJE, não a da aba aberta',
       /function turmaDeHoje\(\)\{/.test(html) &&
       /try\{ dcDia=HOJE_DIA; return turmaDoDia\(\); \}/.test(html) &&
@@ -3987,6 +3987,267 @@ async function main() {
       if (ctx.__ROLE__ && papelAntesF !== null) ctx.__ROLE__.role = papelAntesF;
       vm.runInContext('DB = __bkpF.DB; _faltaAutoFeita = "";', ctx);
     }
+  }
+  console.log('');
+  // ============================================================================
+  // A FOTOGRAFIA DA TURMA — quem ERA esperado hoje fica registrado (30/ago/2026)
+  // ----------------------------------------------------------------------------
+  // Retaguarda da falta das 12h. A turma é calculada dentro do aparelho: sem ninguém
+  // abrir o app, não sobra registro nenhum de quem deveria ter vindo — nem para
+  // conferir depois, nem para a retaguarda que roda fora do app cobrar o fechamento.
+  // De manhã o primeiro aparelho grava daycare/turma/<dia>, uma vez só, com transaction.
+  console.log('A fotografia da turma do dia (retaguarda da falta):');
+  {
+    check('o caminho da fotografia é daycare/turma/<dia>',
+      /function turmaFotoTrava\(dia\)\{ return 'daycare\/turma\/'\+dia; \}/.test(html));
+    check('grava com transaction (dois celulares não escrevem em dobro)',
+      /DB\.ref\(turmaFotoTrava\(hoje\)\)\.transaction\(function\(atual\)\{/.test(html));
+    check('tem temporizador próprio, como a falta',
+      /setInterval\(function\(\)\{ try\{ gravarTurmaDoDia\(\); \}catch\(e\)\{\}(?: \/\* silencioso de prop[^*]*\*\/)? \}, 30000\);/.test(html));
+    check('e roda no mesmo gancho de entrada da falta (qualquer tela)',
+      /try\{ gravarTurmaDoDia\(\); \}catch\(e\)\{\}[\s\S]{0,400}try\{ aplicarFaltaAutomatica\(\); \}catch\(e\)\{\}(?: \/\* silencioso de prop[^*]*\*\/)?\n    \}, 6000\); \}catch\(e\)\{\}/.test(html));
+    check('sábado e domingo não fotografam turma',
+      /function gravarTurmaDoDia\(\)\{[\s\S]{0,700}if\(ds===0\|\|ds===6\) return Promise\.resolve\(\);/.test(html));
+    check('a falha deixa rastro (não some calada)',
+      /_logFalhaGrav\('a fotografia da turma do dia', e\)/.test(html) &&
+      /_logFalhaGrav\('ler a fotografia da turma do dia', e\)/.test(html));
+
+    // -------- prova de comportamento: a função real, com relógio de mentira --------
+    const DIA_T = '2026-08-27';                   // uma quinta-feira
+    const bkpT = {
+      Date: ctx.Date, turmaDoDia: ctx.turmaDoDia, PELUDINHOS: ctx.PELUDINHOS,
+      audit: ctx.audit, quemSou: ctx.quemSou, horaAgora: ctx.horaAgora,
+    };
+    const RealDateT = ctx.Date;
+    const porRelogioT = (iso) => {
+      function FakeDate(...a) { return a.length ? new RealDateT(...a) : new RealDateT(iso); }
+      FakeDate.prototype = RealDateT.prototype;
+      FakeDate.now = () => new RealDateT(iso).getTime();
+      FakeDate.parse = RealDateT.parse; FakeDate.UTC = RealDateT.UTC;
+      ctx.Date = FakeDate;
+    };
+    // Banco de mentira: só o nó da fotografia responde alguma coisa.
+    const st = { escritas: [], foto: null, transacoes: 0 };
+    const auditT = [];
+    const bancoT = { ref(p) { return {
+      once() {
+        st.escritas.push({ o: 'once', p });
+        return Promise.resolve({ val: () => (p.indexOf('daycare/turma/') === 0 ? st.foto : null) });
+      },
+      transaction(fn) {
+        st.transacoes++;
+        const novo = fn(st.foto);
+        if (novo === undefined) return Promise.resolve({ committed: false });
+        st.foto = novo; st.escritas.push({ o: 'foto', p, v: novo });
+        return Promise.resolve({ committed: true });
+      },
+      update(v) { st.escritas.push({ o: 'update', p, v }); return Promise.resolve(); },
+      remove() { st.escritas.push({ o: 'remove', p }); return Promise.resolve(); },
+    }; } };
+    const TURMA_T = [
+      { p: { n: 'Camus', tutor: 'Sophia' } },
+      { p: { n: 'Luna', tutor: 'Carolina' } },
+      { p: { n: 'Toddy', tutor: 'Ana' } },
+    ];
+    const zerarT = () => { st.escritas.length = 0; st.transacoes = 0; auditT.length = 0; };
+    const esperarT = (ms) => new Promise((r) => setTimeout(r, ms));
+
+    vm.runInContext('__bkpT = { DB: DB };', ctx);
+    const papelAntesT = ctx.__ROLE__ ? ctx.__ROLE__.role : null;
+    try {
+      ctx.document.body.dataset.role = 'gestao';
+      if (ctx.__ROLE__) ctx.__ROLE__.role = 'gestao';
+      ctx.turmaDoDia = () => TURMA_T;
+      ctx.PELUDINHOS = TURMA_T.map((o) => o.p);
+      ctx.quemSou = () => 'Márcia';
+      ctx.horaAgora = () => '07:10';
+      ctx.audit = (a, d, m) => auditT.push({ acao: String(a || ''), detalhe: String(d == null ? '' : d), meta: m || {} });
+      ctx.__bancoT = bancoT;
+
+      // ---- (a) antes das 7h: a turma ainda não é notícia ----
+      porRelogioT('2026-08-27T06:30:00');
+      vm.runInContext('DB = __bancoT; _turmaGravada = "";', ctx);
+      zerarT();
+      await ctx.gravarTurmaDoDia();
+      await esperarT(30);
+      check('antes das 7h não grava nada', st.escritas.length === 0 && st.foto === null,
+        JSON.stringify(st.escritas));
+
+      // ---- (b) 07h10: grava a turma inteira, uma vez ----
+      porRelogioT('2026-08-27T07:10:00');
+      vm.runInContext('_turmaGravada = "";', ctx);
+      zerarT();
+      await ctx.gravarTurmaDoDia();
+      await esperarT(30);
+      const chavesT = TURMA_T.map((o) => ctx.dcKey(o.p.n, o.p.tutor));
+      check('às 7h grava a turma do dia, com as 3 chaves',
+        !!st.foto && st.foto.quantos === 3 && JSON.stringify(st.foto.chaves) === JSON.stringify(chavesT),
+        JSON.stringify(st.foto));
+      check('grava no caminho daycare/turma/<dia>',
+        st.escritas.some((e) => e.o === 'foto' && e.p === 'daycare/turma/' + DIA_T),
+        JSON.stringify(st.escritas.map((e) => e.p)));
+      check('e deixa rastro na auditoria, assinado pelo sistema',
+        auditT.some((a) => a.acao === 'turma-do-dia' && a.meta.assinou === 'sistema'),
+        JSON.stringify(auditT));
+      check('a fotografia não toca na chamada (não marca falta nenhuma)',
+        !st.escritas.some((e) => String(e.p).indexOf('daycare/chamada/') === 0),
+        JSON.stringify(st.escritas.map((e) => e.p)));
+
+      // ---- (c) não regrava: nem o mesmo aparelho, nem outro ----
+      zerarT();
+      await ctx.gravarTurmaDoDia();
+      await esperarT(30);
+      check('rodar de novo no mesmo aparelho não grava nada', st.escritas.length === 0,
+        JSON.stringify(st.escritas));
+
+      vm.runInContext('_turmaGravada = "";', ctx);   // outro celular: memória zerada
+      zerarT();
+      await ctx.gravarTurmaDoDia();
+      await esperarT(30);
+      check('outro aparelho vê a fotografia no banco e não regrava',
+        st.transacoes === 0 && !st.escritas.some((e) => e.o === 'foto'),
+        JSON.stringify(st.escritas.map((e) => e.o)));
+
+      // ---- (c2) dois celulares no mesmo segundo: o transaction segura ----
+      const fotoAntes = st.foto;
+      const bancoMente = { ref(p) {
+        const r = bancoT.ref(p);
+        if (p.indexOf('daycare/turma/') === 0) r.once = () => Promise.resolve({ val: () => null });
+        return r;
+      } };
+      ctx.__bancoT2 = bancoMente;
+      vm.runInContext('DB = __bancoT2; _turmaGravada = "";', ctx);
+      zerarT();
+      await ctx.gravarTurmaDoDia();
+      await esperarT(30);
+      check('a leitura mentindo "sem fotografia" não gera fotografia em dobro',
+        st.transacoes === 1 && !st.escritas.some((e) => e.o === 'foto') && st.foto === fotoAntes,
+        JSON.stringify(st.escritas.map((e) => e.o)));
+      vm.runInContext('DB = __bancoT;', ctx);
+
+      // ---- (d) fim de semana não fotografa ----
+      st.foto = null;
+      porRelogioT('2026-08-29T08:00:00');            // 29/ago/2026 é sábado
+      vm.runInContext('_turmaGravada = "";', ctx);
+      zerarT();
+      await ctx.gravarTurmaDoDia();
+      await esperarT(30);
+      check('sábado não grava turma (não há Day Care)',
+        st.escritas.length === 0 && st.foto === null, JSON.stringify(st.escritas));
+
+      porRelogioT('2026-08-30T08:00:00');            // domingo
+      vm.runInContext('_turmaGravada = "";', ctx);
+      zerarT();
+      await ctx.gravarTurmaDoDia();
+      await esperarT(30);
+      check('domingo também não', st.escritas.length === 0 && st.foto === null,
+        JSON.stringify(st.escritas));
+
+      // ---- (e) o tutor não fotografa a turma da casa ----
+      porRelogioT('2026-08-27T07:10:00');
+      ctx.document.body.dataset.role = 'tutor';
+      vm.runInContext('_turmaGravada = "";', ctx);
+      zerarT();
+      await ctx.gravarTurmaDoDia();
+      await esperarT(30);
+      check('tutor não grava a turma (nem lê o banco)', st.escritas.length === 0,
+        JSON.stringify(st.escritas));
+      ctx.document.body.dataset.role = 'gestao';
+
+      // ---- (f) cadastro ainda carregando não vira fotografia em branco ----
+      ctx.PELUDINHOS = [];
+      vm.runInContext('_turmaGravada = "";', ctx);
+      zerarT();
+      await ctx.gravarTurmaDoDia();
+      await esperarT(30);
+      check('cadastro ainda carregando não vira fotografia vazia',
+        st.escritas.length === 0 && st.foto === null, JSON.stringify(st.escritas));
+      ctx.PELUDINHOS = TURMA_T.map((o) => o.p);
+
+      // ---- (g) turma vazia com cadastro carregado: não grava, tenta de novo depois ----
+      ctx.turmaDoDia = () => [];
+      vm.runInContext('_turmaGravada = "";', ctx);
+      zerarT();
+      await ctx.gravarTurmaDoDia();
+      await esperarT(30);
+      check('turma vazia não vira fotografia (o próximo aparelho tenta de novo)',
+        st.foto === null && !st.escritas.some((e) => e.o === 'foto'),
+        JSON.stringify(st.escritas.map((e) => e.o)));
+      ctx.turmaDoDia = () => TURMA_T;
+    } finally {
+      ctx.Date = bkpT.Date; ctx.turmaDoDia = bkpT.turmaDoDia; ctx.PELUDINHOS = bkpT.PELUDINHOS;
+      ctx.audit = bkpT.audit; ctx.quemSou = bkpT.quemSou; ctx.horaAgora = bkpT.horaAgora;
+      if (ctx.__ROLE__ && papelAntesT !== null) ctx.__ROLE__.role = papelAntesT;
+      vm.runInContext('DB = __bkpT.DB; _turmaGravada = "";', ctx);
+    }
+  }
+  console.log('');
+  // ============================================================================
+  // CATCH VAZIO: OU FALA, OU DIZ POR QUE CALA (LOTE B — 30/ago/2026)
+  // ----------------------------------------------------------------------------
+  // O inventário da auditoria de 28/ago contou centenas de `catch` vazios. Nem todos são
+  // defeito: perder o foco de um campo ou não conseguir redesenhar uma lista realmente não
+  // pode derrubar quem chamou. O que não pode existir é silêncio SEM MOTIVO ESCRITO —
+  // porque aí ninguém sabe, ao ler, se aquilo foi decisão ou esquecimento.
+  //
+  // A regra que passa a valer:
+  //   - banco: LER que falha vai para o console com rótulo (_logLeituraFalhou);
+  //            GRAVAR que falha vai para a auditoria (_logFalhaGrav). Nenhum dos dois
+  //            continua sendo `catch` vazio.
+  //   - o resto: pode continuar calado, mas com o motivo escrito ao lado, na forma
+  //            /* silencioso de propósito: ... */
+  console.log('Catch vazio: ou fala, ou diz por que cala (LOTE B):');
+  {
+    check('existe o registrador de leitura que falha', /function _logLeituraFalhou\(oque,e\)\{/.test(html));
+    check('e ele NÃO enche a auditoria (leitura se resolve relendo)',
+      /_logLeituraFalhou[\s\S]{0,220}console\.warn/.test(html) &&
+      !/function _logLeituraFalhou\(oque,e\)\{[\s\S]{0,220}audit\(/.test(html));
+    check('gravação que falha continua indo para a auditoria', /function _logFalhaGrav\(oque,e\)\{/.test(html));
+
+    // ---- o detector: nenhum catch vazio pode ficar sem motivo escrito ----------------
+    // Aceita o comentário na MESMA LINHA (antes ou depois do catch) ou na LINHA ANTERIOR.
+    const MARCA = /silencioso de prop[óo]sito/;
+    const RE = /catch\s*(?:\([^)]*\))?\s*\{\s*\}/g;
+    const mudos = [];
+    const linhasComCatchVazio = [];   // toda linha que tem catch vazio, com motivo ou sem
+    let achado, total = 0;
+    while ((achado = RE.exec(html)) !== null) {
+      total++;
+      const fim = achado.index + achado[0].length;
+      const iniLinha = html.lastIndexOf('\n', achado.index) + 1;
+      const fimLinha = html.indexOf('\n', fim);
+      const restoDaLinha = html.slice(fim, fimLinha < 0 ? html.length : fimLinha);
+      const antesNaLinha = html.slice(iniLinha, achado.index);
+      const fimAnterior = iniLinha - 1;
+      const iniAnterior = html.lastIndexOf('\n', fimAnterior - 1) + 1;
+      const linhaAnterior = fimAnterior > 0 ? html.slice(iniAnterior, fimAnterior) : '';
+      // Só a forma `.catch(...)` é promessa: é assim que a recusa do Firebase chega.
+      // Um `try{...}catch(e){}` na mesma linha é outra coisa (costuma ser localStorage).
+      if (html[achado.index - 1] === String.fromCharCode(46)) {
+        linhasComCatchVazio.push(html.slice(iniLinha, fimLinha < 0 ? html.length : fimLinha));
+      }
+      if (MARCA.test(restoDaLinha) || MARCA.test(antesNaLinha) || MARCA.test(linhaAnterior)) continue;
+      mudos.push(html.slice(iniLinha, fim).trim().slice(-110));
+    }
+    check('há catch vazio no arquivo (o detector está mesmo olhando)', total > 100, String(total));
+    check('ZERO catch vazio sem comentário de propósito', mudos.length === 0,
+      mudos.length + ' sem motivo — o primeiro: ' + (mudos[0] || ''));
+
+    // ---- e o banco não voltou a calar ------------------------------------------------
+    // Um `.set(...)/.update(...)` do Firebase com `catch` vazio é o defeito que mais mordeu
+    // esta casa: a tela diz "salvo" e o dado não foi. A conferência é por LINHA — regex que
+    // atravessa o arquivo procurando o `.catch` lá adiante volta com falso alarme (já voltou:
+    // um `MED_AGENDA_TODOS.push` de lista casava com um `.catch` de outra instrução).
+    const gravMudas = [];
+    for (const l of linhasComCatchVazio) {
+      if (/DB\.ref\s*\(/.test(l) && /\.(set|update|remove|push|transaction)\s*\(/.test(l)) gravMudas.push(l);
+    }
+    check('nenhuma gravação no banco com catch vazio', gravMudas.length === 0,
+      gravMudas.length + ' — a primeira: ' + (gravMudas[0] || '').slice(0, 140));
+
+    check('as leituras do banco ganharam rótulo no console',
+      (html.match(/_logLeituraFalhou\(/g) || []).length >= 20,
+      String((html.match(/_logLeituraFalhou\(/g) || []).length));
   }
   console.log('');
 

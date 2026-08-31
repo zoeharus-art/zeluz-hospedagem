@@ -409,3 +409,85 @@ function vigiaAlmoco2_TESTE() {
   Logger.log('já cobrado hoje: ' + JSON.stringify(_fbLer('daycare/cobranca-almoco2/' + dia, token)));
   Logger.log(n > 0 ? 'Não cobraria: o 2º horário foi registrado.' : 'Cobraria: ninguém registrou o 2º horário.');
 }
+
+/* ================================================================================
+ * VIGIA DA FALTA DAS 12h — a retaguarda de quem fecha o dia (30/ago/2026)
+ *
+ * O app fecha o dia sozinho ao meio-dia: quem não passou pelo check-in de entrada
+ * vira falta, e a trava desse fechamento fica em daycare/falta-automatica/<dia>.
+ * Só que esse fechamento ainda depende de UM aparelho estar aberto em algum lugar
+ * da casa. No dia em que ninguém abrir o app — que é justamente o dia em que a
+ * falta não seria marcada — não há ninguém para perceber.
+ *
+ * Esta função é a retaguarda. Ela NÃO marca falta em ninguém: marcar exige saber
+ * quem passou pelo check-in, e essa decisão é da casa, não da ponte. O que ela faz
+ * é olhar se a trava do dia existe:
+ *
+ *   - Trava existe  -> alguém (ou o temporizador do app) fechou o dia. Silêncio.
+ *   - Trava não existe -> ninguém fechou. Cobra UMA vez no grupo da Gestão.
+ *
+ * Por que só cobrar: a regra da casa é que o humano sempre vence o automático. Uma
+ * ponte que marcasse falta sem enxergar o check-in poderia marcar como ausente um
+ * FILHOt que está deitado na sala. Cobrar quem tem o app na mão custa uma mensagem
+ * e não estraga dado nenhum.
+ *
+ * COMO LIGAR (uma vez só) — igual ao vigiaAlmoco2:
+ *   Acionadores (o relógio) -> Adicionar acionador:
+ *     Função: vigiaFalta12h
+ *     Origem do evento: Baseado no tempo
+ *     Tipo: Timer por minuto -> A cada 15 minutos
+ *
+ * A função só age entre 12h15 e 13h15, de segunda a sexta, e cobra uma vez por dia.
+ * ============================================================================== */
+
+var FALTA_HORA_INICIO = '12:15';
+var FALTA_HORA_FIM    = '13:15';
+
+function vigiaFalta12h() {
+  var agora = new Date();
+  var hhmm = Utilities.formatDate(agora, 'America/Sao_Paulo', 'HH:mm');
+  if (hhmm < FALTA_HORA_INICIO || hhmm > FALTA_HORA_FIM) return;      // fora da janela
+  var diaSemana = Number(Utilities.formatDate(agora, 'America/Sao_Paulo', 'u'));  // 6 = sábado, 7 = domingo
+  if (diaSemana === 6 || diaSemana === 7) return;                     // fim de semana não há Day Care
+  var dia = Utilities.formatDate(agora, 'America/Sao_Paulo', 'yyyy-MM-dd');
+
+  var token = _fbToken();
+  if (!token) return;                                                 // sem token, não inventa
+
+  // Já cobrado hoje? A cobrança tem trava própria — a do fechamento é outra coisa e
+  // não pode ser tocada por aqui, senão a ponte "fecharia" um dia que ninguém fechou.
+  var jaCobrado = _fbLer('daycare/cobranca-falta/' + dia, token);
+  if (jaCobrado) return;
+
+  // O dia foi fechado por alguém? Esta é a única leitura que decide.
+  var fechado = _fbLer('daycare/falta-automatica/' + dia, token);
+  if (fechado) return;                                                // fechou: nada a cobrar
+
+  var texto = [
+    '<b>FALTA DAS 12h — ninguém fechou o dia</b>',
+    '',
+    'Passou do meio-dia e a falta de hoje não foi fechada: nenhum aparelho abriu o app.',
+    '',
+    'Abram o app para o dia fechar. Quem não passou pelo check-in de entrada continua em aberto até lá.'
+  ].join('\n');
+
+  var r = _mandarTexto(GRUPOS['gestao'], texto);
+  // Grava a trava DEPOIS de mandar: se o Telegram falhar, tenta de novo daqui a 15 minutos,
+  // ainda dentro da janela — silêncio aqui seria o mesmo defeito que esta função conserta.
+  if (r && r.ok) {
+    _fbGravar('daycare/cobranca-falta/' + dia, { ts: agora.getTime(), por: 'ponte', hora: hhmm }, token);
+  }
+}
+
+/** Teste de bancada: roda a verificação ignorando a hora, para ver se está tudo ligado. */
+function vigiaFalta12h_TESTE() {
+  var token = _fbToken();
+  var dia = Utilities.formatDate(new Date(), 'America/Sao_Paulo', 'yyyy-MM-dd');
+  var fechado = _fbLer('daycare/falta-automatica/' + dia, token);
+  Logger.log('token: ' + (token ? 'ok' : 'FALHOU'));
+  Logger.log('App Check: ' + (_appCheckToken() ? 'ok (com prova)' : 'sem token de depuração — seguindo sem'));
+  Logger.log('dia: ' + dia + ' · fechamento do dia: ' + JSON.stringify(fechado));
+  Logger.log('turma fotografada de manhã: ' + JSON.stringify(_fbLer('daycare/turma/' + dia, token)));
+  Logger.log('já cobrado hoje: ' + JSON.stringify(_fbLer('daycare/cobranca-falta/' + dia, token)));
+  Logger.log(fechado ? 'Não cobraria: o dia já foi fechado.' : 'Cobraria: ninguém fechou o dia.');
+}
