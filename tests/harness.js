@@ -350,8 +350,21 @@ async function main() {
   // ---- nº 5: cadastro-mestre não grava em silêncio ----
   console.log('Achado nº 5 — cadastro-mestre (nome/raça/alergia):');
   check('_logFalhaGrav existe (helper de rastro na falha)', typeof ctx._logFalhaGrav === 'function');
+  // Uma função de gravação pode ser um porteiro fino que confere a permissão e entrega o
+  // trabalho ao gêmeo de underline (`setPelExtra` → `_setPelExtra`). O caminho REAL da
+  // gravação é a soma dos dois — então a fonte examinada é a do porteiro MAIS a do gêmeo,
+  // e só quando o porteiro de fato o chama. Sem isso, partir a função em duas faria a prova
+  // passar a olhar para o lado errado e o rastro poderia sumir sem ninguém perceber.
+  const srcGrav = (fn) => {
+    let s = String(ctx[fn] || '');
+    const gemeo = '_' + fn;
+    if (typeof ctx[gemeo] === 'function' && s.indexOf(gemeo + '(') >= 0) {
+      s += '\n' + String(ctx[gemeo]);
+    }
+    return s;
+  };
   const semCatchVazio = (fn) => {
-    const s = String(ctx[fn] || '');
+    const s = srcGrav(fn);
     return !/\.catch\(\s*\(\s*\)\s*=>\s*\{\s*\}\s*\)/.test(s) && !/\.catch\(\s*function\s*\(\s*\)\s*\{\s*\}\s*\)/.test(s);
   };
   check('onCad (campo) audita falha (sem .catch vazio)', semCatchVazio('onCad'));
@@ -751,7 +764,7 @@ async function main() {
     LOTE1.forEach((fn) => {
       check(fn + ' existe', typeof ctx[fn] === 'function');
       check(fn + ' sem .catch vazio', semCatchVazio(fn));
-      check(fn + ' deixa rastro na falha (_logFalhaGrav)', /_logFalhaGrav\(/.test(String(ctx[fn] || '')));
+      check(fn + ' deixa rastro na falha (_logFalhaGrav)', /_logFalhaGrav\(/.test(srcGrav(fn)));
     });
 
     // ---- prova de comportamento: o banco recusa e a auditoria fica sabendo ----------
@@ -823,7 +836,7 @@ async function main() {
     LOTE2.forEach((fn) => {
       check(fn + ' existe', typeof ctx[fn] === 'function');
       check(fn + ' sem .catch vazio', semCatchVazio(fn));
-      check(fn + ' deixa rastro na falha (_logFalhaGrav)', /_logFalhaGrav\(/.test(String(ctx[fn] || '')));
+      check(fn + ' deixa rastro na falha (_logFalhaGrav)', /_logFalhaGrav\(/.test(srcGrav(fn)));
     });
 
     // #39: a tentativa de login barrada não grava mais direto no nó da auditoria (que é
@@ -930,7 +943,7 @@ async function main() {
     LOTE3.forEach((fn) => {
       check(fn + ' existe', typeof ctx[fn] === 'function');
       check(fn + ' trata banco reconectando (else do if(DB))',
-        /banco reconectando/.test(String(ctx[fn] || '')));
+        /banco reconectando/.test(srcGrav(fn)));
     });
 
     // ---- prova de comportamento: com DB=null, o que a tela faz ----------------------
@@ -3651,6 +3664,43 @@ async function main() {
       /if\(_h && document\.getElementById\('v-'\+_h\)\) v=_h;/.test(html));
     check('e o link nao fura permissao (o filtro de paginas vem depois)',
       /v=_h;[\s\S]{0,120}if\(Array\.isArray\(u\.paginas\)\)\{/.test(html));
+  }
+  console.log('');
+
+  console.log('A ficha do cliente nao e de quem passa (30/ago):');
+  {
+    check('a consultora entrou em quem edita ficha (e ela quem cadastra na recepcao)',
+      /'editar-peludinho':\s*\['gestao','supervisor','diretoria','consultora'\]/.test(html));
+    check('o monitor continua fora', !/'editar-peludinho':[^\]]*'monitor'/.test(html));
+    check('existe porteiro na GRAVACAO, nao so na tela',
+      /function pelCamposBarrados\(patch\)/.test(html) &&
+      /var _barrados=pelCamposBarrados\(patch\);/.test(html));
+    check('peso e foto continuam livres para todos',
+      /var PEL_LIVRES=\{pesos:1, foto:1\};/.test(html));
+    check('alergia continua com quem tem a capacidade',
+      /podeAlergia && PEL_ALERGIA\[c\]/.test(html));
+    check('a barrada deixa rastro na auditoria', /BARROU alteração de/.test(html));
+    check('o campo Tutor 1 deixou de ser editavel por qualquer um',
+      /Só a recepção, a Supervisão ou a Gestão mudam o nome do tutor/.test(html));
+    check('e o onTutorPel barra por dentro (o campo readonly nao basta)',
+      /function onTutorPel\(v\)\{[\s\S]{0,260}canEditPel\(\)\)\{/.test(html));
+    if (typeof ctx.pelCamposBarrados === 'function' && typeof ctx.podePapel === 'function') {
+      const papelAntes = ctx.document.body.dataset.role;
+      ctx.document.body.dataset.role = 'monitor';   // o sandbox nasce como gestao
+      // sem papel definido no sandbox, canEditPel() e falso: e o caso do monitor
+      check('monitor: peso passa', ctx.pelCamposBarrados({pesos: [{data: '2026-08-30', kg: 9}]}).length === 0);
+      check('monitor: foto passa', ctx.pelCamposBarrados({foto: 'data:...'}).length === 0);
+      check('monitor: tutor NAO passa', ctx.pelCamposBarrados({tutor: 'Outro'}).length === 1);
+      check('monitor: raca NAO passa', ctx.pelCamposBarrados({raca: 'Westie'}).length === 1);
+      check('monitor: telefone NAO passa', ctx.pelCamposBarrados({tel: '31999'}).length === 1);
+      check('monitor: mistura barra o que deve',
+        JSON.stringify(ctx.pelCamposBarrados({pesos: [], tutor: 'x', foto: 'y'})) === '["tutor"]',
+        JSON.stringify(ctx.pelCamposBarrados({pesos: [], tutor: 'x', foto: 'y'})));
+      ctx.document.body.dataset.role = 'consultora';
+      check('consultora: tutor PASSA (e ela quem corrige o cadastro)',
+        ctx.pelCamposBarrados({tutor: 'Roberta Senna'}).length === 0);
+      ctx.document.body.dataset.role = papelAntes;
+    }
   }
   console.log('');
 

@@ -4102,7 +4102,9 @@
     'recebe-alarme':            ['monitor','plantonista'],
     'alterar-vet':              ['vet','gestao','supervisor','diretoria'],
     'ver-por-dia':              ['gestao','supervisor','diretoria'],
-    'editar-peludinho':         ['gestao','supervisor','diretoria'],
+    // A consultora ENTRA: é ela quem faz e corrige cadastro na recepção (Adriana, 03/ago
+    // e 30/ago/2026). O monitor continua fora — ele mexe em peso e foto, mais nada.
+    'editar-peludinho':         ['gestao','supervisor','diretoria','consultora'],
     'criar-cadastro':           ['gestao','supervisor','diretoria','consultora'],
     'gestao-role':              ['gestao','diretoria'],
     'ver-plano':                ['gestao','supervisor','diretoria','consultora'],
@@ -13271,7 +13273,31 @@
     // ainda tem `foto` gravada continua valendo — a mudança é invisível para quem usa.
     if(!o.foto){ try{ const f=fotoCad(k); if(f) o.foto=f; }catch(e){} }
     return o; }
+  // O que quem NÃO edita ficha ainda pode gravar nela. Lista curta e explicada:
+  //   pesos  — a balança é de todo mundo (Adriana, 28/ago)
+  //   foto   — o monitor troca o retrato quando está ruim
+  //   alergia/restricao — quem tem a capacidade 'editar-alergia' (inclui monitor)
+  // Qualquer outro campo é identidade ou contrato do cliente: só consultora e gestão.
+  var PEL_LIVRES={pesos:1, foto:1};
+  var PEL_ALERGIA={alergia:1, restricao:1};
+  function pelCamposBarrados(patch){
+    if(typeof canEditPel==='function' && canEditPel()) return [];
+    var podeAlergia=false;
+    try{ podeAlergia=(typeof podePapel==='function') && podePapel('editar-alergia'); }catch(e){}
+    return Object.keys(patch||{}).filter(function(c){
+      if(PEL_LIVRES[c]) return false;
+      if(podeAlergia && PEL_ALERGIA[c]) return false;
+      return true;
+    });
+  }
   function setPelExtra(p,patch){
+    // Porteiro: a tela já esconde os campos, mas esconder não é impedir.
+    var _barrados=pelCamposBarrados(patch);
+    if(_barrados.length){
+      try{ if(typeof audit==='function') audit('ficha','BARROU alteração de '+_barrados.join(', ')+' (papel sem permissão)',{alvo:(typeof pelKey==='function'?pelKey(p):'')}); }catch(e){}
+      try{ alert('A ficha do FILHOt só é alterada pela recepção (consultoras), pela Supervisão ou pela Gestão.\n\nVocê pode registrar o peso e trocar a foto. O resto — nome, raça, tutor, telefone — é cadastro do cliente.'); }catch(e){}
+      return Promise.resolve({ok:false, erro:'sem permissão para alterar a ficha'});
+    }
     const k=pelKey(p);
     // Foto é o único campo que não vai para o cadastro nem para a cópia local da ficha:
     // ela é pesada e tem nó próprio, que só desce quando muda.
@@ -13490,7 +13516,17 @@
       .catch(function(e){ console.warn('renomear:',e); _logFalhaGrav('renomear cadastro '+kA+' → '+kB, e); });
   }
   function onNomePel(v){ if(!pelAtual) return; renomearCadastroPel(pelAtual,{n:(v||'').trim()}).then(function(){ renderPel(); if(typeof renderDaycare==='function') renderDaycare(); }); }
-  function onTutorPel(v){ if(!pelAtual) return; renomearCadastroPel(pelAtual,{tutor:(v||'').trim()}).then(function(){ renderPel(); if(typeof renderDaycare==='function') renderDaycare(); }); }
+  // Trocar o tutor MOVE a ficha inteira de chave. É a operação mais séria da ficha — foi
+  // ela que criou o "Toddy da Roberta Secca" ao lado do "Toddy da Roberta Senna".
+  function onTutorPel(v){
+    if(!pelAtual) return;
+    if(typeof canEditPel==='function' && !canEditPel()){
+      alert('Só a recepção (consultoras), a Supervisão ou a Gestão mudam o nome do tutor.');
+      try{ renderPelFicha(); }catch(e){}
+      return;
+    }
+    renomearCadastroPel(pelAtual,{tutor:(v||'').trim()}).then(function(){ renderPel(); if(typeof renderDaycare==='function') renderDaycare(); });
+  }
   // alunos novos cadastrados pela equipe vivem no Firebase (daycare/cadastro com _novo) e entram na lista base
   // Trava nível 1 embutida de graça: criarAluno grava em daycare/cadastro/{pelKey(nome+tutor)} —
   // chave determinística (mesmo padrão de escolherAvulso). Dois Zelosos cadastrando o mesmo
@@ -15104,7 +15140,9 @@
           <div class="field"><label>Sexo</label><div class="seg" data-single>${segBtnsPel('sexo',sexo,['Macho','Fêmea'])}</div></div>
           <div class="field"><label>Castrado?</label><div class="seg gold" data-single>${segBtnsPel('castrado',castr,['Sim','Não'])}</div></div>
           <div class="field"><label>Microchip</label><input class="cad-in" value="${escAttr(ex.microchip||'')}" placeholder="Número do microchip" onchange="setPelExtra(pelAtual,{microchip:this.value})"></div>
-          <div class="field"><label>Tutor 1 (nome)</label><input class="cad-in" value="${escAttr(pelGet(p,'tutor'))}" onchange="onTutorPel(this.value)"></div>
+          <div class="field"><label>Tutor 1 (nome)</label>${can
+            ? `<input class="cad-in" value="${escAttr(pelGet(p,'tutor'))}" onchange="onTutorPel(this.value)">`
+            : `<input class="cad-in" value="${escAttr(pelGet(p,'tutor'))}" readonly style="background:var(--z-cream-warm);color:var(--muted)" title="Só a recepção, a Supervisão ou a Gestão mudam o nome do tutor">`}</div>
           ${fieldSens('tel','Tutor 1 — Telefone / WhatsApp',`<input class="cad-in" value="${escAttr(ex.tel||'')}" placeholder="(31) 9____-____" onchange="setPelExtra(pelAtual,{tel:this.value})">`)}
           <div class="field"><label>Tutor 2 (nome) &mdash; guarda compartilhada</label><input class="cad-in" value="${escAttr(ex.tutor2||'')}" placeholder="Opcional — outro responsável" onchange="setPelExtra(pelAtual,{tutor2:this.value})"></div>
           ${fieldSens('tel2','Tutor 2 — Telefone / WhatsApp',`<input class="cad-in" value="${escAttr(ex.tel2||'')}" placeholder="(31) 9____-____" onchange="setPelExtra(pelAtual,{tel2:this.value})">`)}
