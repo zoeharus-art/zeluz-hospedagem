@@ -47,6 +47,7 @@
     }
     .pin-dot.filled { background:#F0C840; border-color:#F0C840; }
     .pin-error { font-size:14px; color:#FF7043; font-weight:700; min-height:20px; }
+    .pin-modo  { font-size:12px; color:rgba(255,255,255,.55); font-weight:600; text-align:center; max-width:320px; min-height:16px; }
     .keypad {
       display:grid; grid-template-columns:repeat(3,72px); gap:12px;
     }
@@ -236,6 +237,7 @@
     <div class="pin-dot" id="pd3"></div>
   </div>
   <div class="pin-error" id="pin-error"></div>
+  <div class="pin-modo" id="pin-modo"></div>
   <div class="keypad">
     <button class="key" onclick="pinKey('1')">1</button>
     <button class="key" onclick="pinKey('2')">2</button>
@@ -330,6 +332,13 @@
   <div class="footer-txt">🔐 Acesso restrito</div>
 </footer>
 
+<!-- Firebase SDK — só para LER o PIN da Gestão (daycare/config/pin-gestao). Esta página nunca
+     grava nada no banco. Ver a nota "PIN — Diretoria" logo no início do script abaixo. -->
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-database-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-check-compat.js"></script>
+
 <script>
 // ════════════════════════════════════════════════════════════
 //  CONFIG
@@ -337,8 +346,82 @@
 const SHEET_ID   = '1SJ3OZ6E2wMa1JHrQUcgtNffgQLQhCpa01IUQKCv605w';
 const TAB_GERAL  = 'Dash Geral';
 const CACHE_KEY  = 'zeluz_gestao_v1';
-const PIN_CORRETO= '1007';
 const TZ         = 'America/Sao_Paulo';
+
+// ════════════════════════════════════════════════════════════
+//  PIN — Diretoria (auditoria 28/ago/2026, achado 23)
+// ════════════════════════════════════════════════════════════
+// ⚠ Até 28/ago/2026 o PIN desta tela era '1007' em texto puro — E era o MESMO valor do PIN
+// padrão do Monitor 3 do app da equipe (auaulandia/index.html). Um número não deve abrir
+// duas portas diferentes: quem lesse o código-fonte desta página ganhava, de brinde, uma
+// senha do app.
+//
+// O conserto tem duas partes independentes:
+//   1) Quem já entrou no app da equipe (auaulandia/index.html) como Gestão ou Diretoria,
+//      NESTA MESMA ABA do navegador, nem vê a tela de PIN — não faz sentido autenticar duas
+//      vezes quem já provou quem é. Isto NÃO é a barreira de segurança (sessionStorage se
+//      forja pelo console do navegador, como o próprio app já documenta) — é só não repetir
+//      pergunta para quem já respondeu. Ver sessaoDoAppJaAutenticada() abaixo.
+//   2) O PIN de verdade passa a morar no banco, em daycare/config/pin-gestao, como
+//      { hash, sal } — NUNCA em texto puro (hash = SHA-256(pin + sal), calculado aqui no
+//      navegador com a Web Crypto API). Enquanto a Diretoria não configurar esse nó — o
+//      roteiro está em docs/auditoria-28ago2026/06-pontes-e-pin.md — esta página usa o
+//      PIN_PROVISORIO abaixo, que já NÃO é mais '1007' e não colide com nenhum PIN do app
+//      (SENHAS fixas 1101/0902/1001, monitores 1005/1007-1011).
+const PIN_NO_BANCO   = 'daycare/config/pin-gestao';
+const PIN_PROVISORIO = '5829';   // só vale enquanto PIN_NO_BANCO não existir no banco
+const FIREBASE_CONFIG = {
+  apiKey:            "AIzaSyD3udp47XruRAEeIYWNGn0ICGCX3a1qr28",
+  authDomain:        "hospedagem-zeluz.firebaseapp.com",
+  databaseURL:       "https://hospedagem-zeluz-default-rtdb.firebaseio.com",
+  projectId:         "hospedagem-zeluz",
+  storageBucket:     "hospedagem-zeluz.firebasestorage.app",
+  messagingSenderId: "199129329105",
+  appId:             "1:199129329105:web:22d0995972c197e24644f0"
+};
+// Chave pública do reCAPTCHA v3 do App Check — a MESMA do app da equipe e da calculadora de
+// ração (index.html), porque é a mesma página/domínio. Enquanto o "Impor" estiver desligado
+// no Console do Firebase, isto é inerte.
+const APPCHECK_SITE_KEY = '6Lc9zmotAAAAADTA2O4DGzmZakZxqWPLWMIL0RB1';
+
+let pinRemoto      = null;   // {hash, sal} lido de daycare/config/pin-gestao — null = não configurado (ou ainda não chegou)
+let pinFirebaseApp = null;
+
+/** true só quando esta ABA já tem a sessão do app como Gestão/Diretoria. Ver a nota acima — não é segurança. */
+function sessaoDoAppJaAutenticada() {
+  try {
+    const u = JSON.parse(sessionStorage.getItem('zeluz_login') || 'null');
+    return !!(u && (u.role === 'gestao' || u.role === 'diretoria'));
+  } catch (e) { return false; }
+}
+
+/** Liga o Firebase só para ler o PIN. Falha calada (nunca trava a tela de PIN) — se der
+ *  errado, pinRemoto continua null e o PIN_PROVISORIO é quem decide. */
+function iniciarLeituraPin() {
+  try {
+    pinFirebaseApp = firebase.initializeApp(FIREBASE_CONFIG);
+    if (APPCHECK_SITE_KEY && typeof firebase.appCheck === 'function') {
+      try { firebase.appCheck(pinFirebaseApp).activate(new firebase.appCheck.ReCaptchaV3Provider(APPCHECK_SITE_KEY), true); }
+      catch (e) { console.warn('App Check:', e); }
+    }
+    firebase.auth(pinFirebaseApp).signInAnonymously().then(() => {
+      firebase.database(pinFirebaseApp).ref(PIN_NO_BANCO).once('value').then(s => {
+        pinRemoto = s.val() || null;
+        atualizarAvisoPinModo();
+      }).catch(e => { console.warn('PIN: não consegui ler ' + PIN_NO_BANCO + ' —', e); atualizarAvisoPinModo(); });
+    }).catch(e => { console.warn('PIN: login anônimo falhou —', e); atualizarAvisoPinModo(); });
+  } catch (e) { console.warn('PIN: Firebase indisponível —', e); atualizarAvisoPinModo(); }
+}
+function atualizarAvisoPinModo() {
+  const el = document.getElementById('pin-modo'); if (!el) return;
+  el.textContent = (pinRemoto && pinRemoto.hash)
+    ? ''
+    : 'PIN provisório em uso — peça à Diretoria para configurar o PIN definitivo (ver roteiro em docs/auditoria-28ago2026/06-pontes-e-pin.md).';
+}
+async function sha256Hex(texto) {
+  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(texto));
+  return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, '0')).join('');
+}
 
 const MESES = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho',
                'Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
@@ -397,8 +480,23 @@ function atualizarPinDots() {
     document.getElementById(`pd${i}`).classList.toggle('filled', i<pinBuffer.length);
   }
 }
-function validarPin() {
-  if(pinBuffer===PIN_CORRETO) {
+// Assíncrona: quando o PIN já foi migrado para o banco, conferir o hash pede a Web Crypto
+// API (crypto.subtle), que é assíncrona por natureza. Erro aqui NUNCA libera a tela — cai
+// no PIN_PROVISORIO, que é síncrono e sempre decide algo.
+async function validarPin() {
+  let ok = false;
+  try {
+    if (pinRemoto && pinRemoto.hash) {
+      const calc = await sha256Hex(pinBuffer + (pinRemoto.sal || ''));
+      ok = (calc === pinRemoto.hash);
+    } else {
+      ok = (pinBuffer === PIN_PROVISORIO);
+    }
+  } catch (e) {
+    console.warn('PIN: erro ao validar —', e);
+    ok = (pinBuffer === PIN_PROVISORIO);
+  }
+  if(ok) {
     pinDesbloq = true;
     document.getElementById('pin-screen').classList.add('hidden');
     initDashboard();
@@ -425,6 +523,15 @@ document.addEventListener('keydown', e => {
 //  INIT
 // ════════════════════════════════════════════════════════════
 function init() {
+  iniciarLeituraPin();
+  // Já autenticado nesta aba pelo app da equipe (Gestão/Diretoria)? Não pede PIN de novo —
+  // ver a nota "PIN — Diretoria" no topo do script. Qualquer outra pessoa (aba nova, outro
+  // navegador, celular sem o app aberto) cai na tela de PIN normalmente.
+  if (sessaoDoAppJaAutenticada()) {
+    pinDesbloq = true;
+    document.getElementById('pin-screen').classList.add('hidden');
+    initDashboard();
+  }
   syncInternetTime();
   setInterval(syncInternetTime, 30*60*1000);
   updateClock();

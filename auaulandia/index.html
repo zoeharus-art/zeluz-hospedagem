@@ -7,7 +7,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<title>Zêluz · Sistema DayCare</title>
+<title>Zêluz · AuAulândia · Day Care</title>
 <!-- RASCUNHO VISUAL (shell do app) para aprovação de Adriana. DS v8.1. Sem backend ainda. -->
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -53,19 +53,33 @@
     padding:14px;font-family:var(--font-ui);font-weight:700;font-size:15px;cursor:pointer}
   .login-btn:hover{background:#1b3d52}
   .login-err{min-height:20px;margin-top:10px;font-size:13px;font-weight:600;color:var(--crm-critico)}
-  .who-user{display:flex;align-items:center;justify-content:space-between;gap:8px}
-  .who-user #whoName{font-size:13px;font-weight:700}
-  .who-sair{background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.2);color:var(--z-cream);
-    font-family:var(--font-ui);font-weight:600;font-size:12px;padding:6px 12px;border-radius:8px;cursor:pointer}
-  .who-sair:hover{background:rgba(255,255,255,.2)}
+  /* Rodapé da barra — Opção F: quem está usando, e em que papel. O nome vem primeiro,
+     grande; o papel embaixo, miúdo e espaçado. O "Sair" vira pílula, sem borda dura. */
+  .who-user{display:flex;align-items:center;justify-content:space-between;gap:10px}
+  .who-quem{min-width:0;flex:1}
+  .who-user #whoName{font-size:14px;font-weight:600;line-height:1.2;display:block;
+    white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .who-papel{font-size:11px;font-weight:500;letter-spacing:.08em;opacity:.66;line-height:1.3;
+    white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .who-sair{background:rgba(255,253,246,.10);border:none;color:var(--z-cream);
+    font-family:var(--font-ui);font-weight:600;font-size:13px;padding:7px 13px;border-radius:999px;cursor:pointer;flex:0 0 auto}
+  .who-sair:hover{background:rgba(255,253,246,.18)}
 
   /* ===================== SIDEBAR ===================== */
+  /* ===== O VISUAL DA OPÇÃO F — "A trilha do cuidado" (Adriana escolheu, 29/ago/2026) =====
+     Base: docs/sidebar-opcoes/opcao-f.html. O corpo da barra desce para o azul profundo — a
+     barra vira noite e o dourado passa a ser a única luz. O item ativo abandona a bola
+     amarela cheia: fica uma pílula de dourado baixo com um fio dourado à esquerda, mais
+     discreto e mais caro. A marca é o SÍMBOLO OFICIAL #39 em SVG, grande, respirando sobre
+     o fundo — nunca dentro de caixa (zeluz-logo-lei.md).
+     O que NÃO mudou, de propósito: a estrutura do menu, a hierarquia 17/15/14, os ícones e
+     a mecânica de sanfona/pendência. Isto aqui é pintura, não obra. */
   .sidebar{
     position:fixed;top:0;left:0;bottom:0;width:var(--sidebar);
     background:
-      radial-gradient(120% 60% at 20% 0%, rgba(222,180,40,.10), transparent 60%),
-      radial-gradient(90% 50% at 100% 100%, rgba(58,106,133,.45), transparent 55%),
-      linear-gradient(165deg,#2A597A 0%,#234D67 45%,#1A3A4F 100%);
+      radial-gradient(125% 55% at 22% 0%, rgba(222,180,40,.11), transparent 62%),
+      radial-gradient(90% 50% at 100% 100%, rgba(58,106,133,.30), transparent 58%),
+      linear-gradient(168deg,#20475F 0%,#1A3A4F 46%,#15303F 100%);
     color:var(--z-cream);display:flex;flex-direction:column;z-index:50;
     transition:transform .25s ease;overflow:hidden;
   }
@@ -75,10 +89,12 @@
     background:url('assets/simbolo.png') no-repeat center/contain;
     opacity:.07;pointer-events:none;filter:brightness(0) invert(1);
   }
-  .brand{display:flex;align-items:center;justify-content:center;padding:26px 16px 10px;position:relative;z-index:1}
-  .brand-logo{width:210px;max-width:92%;height:auto;display:block;filter:drop-shadow(0 2px 8px rgba(0,0,0,.25))}
-  .brand-sub{text-align:center;font-size:10.5px;letter-spacing:1.5px;text-transform:uppercase;
-    opacity:.7;font-weight:600;margin:0 0 8px}
+  .brand{display:flex;align-items:center;justify-content:center;padding:30px 16px 12px;position:relative;z-index:1}
+  /* Símbolo oficial #39, versão clara (o preto vira creme, o dourado fica). Grande e sem
+     caixa nenhuma: ele respira direto sobre o fundo da barra. */
+  .brand-logo{width:96px;max-width:58%;height:auto;display:block;filter:drop-shadow(0 3px 10px rgba(0,0,0,.30))}
+  .brand-sub{text-align:center;font-size:11px;letter-spacing:.9px;text-transform:none;
+    opacity:.62;font-weight:500;margin:0 0 10px}
 
   .brand-sub{position:relative;z-index:1}
   .nav{flex:1;min-height:0;overflow-y:auto;padding:8px 12px;scrollbar-width:thin;position:relative;z-index:1}
@@ -96,12 +112,16 @@
      enxerguem." Referência: Azure Portal / Google Cloud / Zendesk Admin. É uma linha própria,
      clicável, que abre e fecha. Cada nível um degrau abaixo: categoria 17/700 creme,
      sub-cabeçalho 15/700 dourado, item 14/500. */
+  /* Opção F: a categoria ganha uma superfície própria, baixinha, com canto arredondado — é
+     ela que separa os blocos. O filete de cima continua (é o que dá o degrau da hierarquia),
+     e o ícone da categoria acende em dourado: a única luz da barra. */
   .nav a.grp{font-size:17px;font-weight:700;color:var(--z-cream);opacity:1;
-    text-transform:none;letter-spacing:0;gap:10px;
-    margin:12px 0 0;padding:12px 14px 8px;border-radius:0;
+    text-transform:none;letter-spacing:-.01em;gap:10px;
+    margin:14px 0 0;padding:11px 12px;border-radius:12px;
+    background:rgba(255,253,246,.045);
     border-top:1px solid rgba(255,255,255,.12)}
-  .nav a.grp:hover{background:rgba(255,255,255,.05)}
-  .nav a.grp svg{width:18px;height:18px}
+  .nav a.grp:hover{background:rgba(255,253,246,.09)}
+  .nav a.grp svg{width:18px;height:18px;color:var(--z-gold)}
   .acc.acc-open > a.grp{background:none}
   /* SEGUNDO nível de sanfona (Adriana, 27/ago/2026): "quero que abra os títulos, e ao clicar
      nele abre o restante; clico de novo, fecha". O sub-cabeçalho também é <a class="grp">,
@@ -109,13 +129,14 @@
   .nav a.grp.grp-sub{font-size:15px;font-weight:700;color:var(--z-gold);
     letter-spacing:.3px;text-transform:none;
     margin:8px 0 2px;padding:8px 12px 8px 14px;min-height:44px;  /* alvo de toque no celular */
-    border-top:none;border-radius:9px;gap:8px}
-  .nav a.grp.grp-sub:hover{background:rgba(255,255,255,.05)}
+    border-top:none;border-radius:9px;gap:8px;
+    background:none}   /* a superfície é da CATEGORIA; o sub-cabeçalho é só título (Opção F) */
+  .nav a.grp.grp-sub:hover{background:rgba(255,253,246,.07)}
   .nav a.grp.grp-sub .acc-caret{border-left-width:4px;border-top-width:3px;border-bottom-width:3px;opacity:.85}
   /* Item dentro de categoria: recuado, com uma trilha fina à esquerda ligando os irmãos. */
   .nav .acc-panel a[data-v],
   .nav .acc-panel a:not([data-v]):not(.nav-parent){margin-left:22px;padding-left:12px;
-    border-left:2px solid rgba(255,255,255,.10);border-radius:0 11px 11px 0}
+    border-left:2px solid rgba(222,180,40,.30);border-radius:0 11px 11px 0}  /* Opção F: a trilha é dourada baixa */
   /* Item solto no fim da barra (Relatórios): fica separado do que vem antes por um fio. */
   .nav a.nav-solto{margin-top:14px;border-top:1px solid rgba(255,255,255,.12);padding-top:8px;border-radius:0 0 11px 11px}
   .nav a{
@@ -123,10 +144,21 @@
     color:var(--z-cream);text-decoration:none;font-size:14px;font-weight:500;
     opacity:.82;transition:.16s;cursor:pointer;margin-bottom:2px;
   }
-  .nav a:hover{background:rgba(255,255,255,.07);opacity:1}
-  .nav a.active{background:var(--z-gold);color:var(--z-blue);opacity:1;font-weight:700;box-shadow:var(--shadow)}
+  .nav a:hover{background:rgba(255,253,246,.07);opacity:1}
+  /* ITEM ATIVO — Opção F. Era uma bola amarela cheia (fundo dourado sólido, texto azul):
+     gritava mais que o próprio conteúdo da tela. Agora é uma PÍLULA de dourado baixo, com o
+     texto aceso e um fio dourado à esquerda marcando onde a pessoa está. Mais discreto e
+     mais caro — e o dourado continua sendo a única luz da barra. */
+  .nav a.active{background:rgba(222,180,40,.13);color:var(--z-gold-light);opacity:1;
+    font-weight:600;box-shadow:none;position:relative}
+  .nav a.active::before{content:'';position:absolute;left:0;top:5px;bottom:5px;width:3px;
+    border-radius:999px;background:var(--z-gold)}
+  .nav a.active svg{color:var(--z-gold)}
+  /* dentro de uma categoria o item tem a trilha à esquerda; o ativo troca a trilha pelo fio */
+  .nav .acc-panel a[data-v].active{border-left-color:transparent;border-radius:999px}
+  .nav .acc-panel a[data-v].active::before{left:-2px}
   .nav a svg{width:19px;height:19px;flex:0 0 auto}
-  .nav a .soon{margin-left:auto;font-size:9px;background:rgba(255,255,255,.14);padding:2px 7px;border-radius:999px;font-weight:600;letter-spacing:.3px}
+  .nav a .soon{margin-left:auto;font-size:9px;background:rgba(255,253,246,.10);padding:2px 7px;border-radius:999px;font-weight:600;letter-spacing:.3px}
 
   /* ===== Accordion (menu sanfona) ===== */
   .nav .acc{margin-bottom:2px}
@@ -169,7 +201,7 @@
     body.nav-collapsed .nav-collapse-btn{justify-content:center}
   }
 
-  .who{padding:13px 16px;border-top:1px solid rgba(255,255,255,.1)}
+  .who{padding:13px 16px 16px;border-top:1px solid rgba(255,253,246,.12)}
   .who .lab{font-size:10px;opacity:.6;font-weight:600;text-transform:uppercase;letter-spacing:.6px;margin-bottom:6px}
   .who select{
     width:100%;font-family:var(--font-ui);font-size:13px;font-weight:600;
@@ -1734,7 +1766,7 @@
 <div class="login-screen" id="loginScreen">
   <div class="login-box">
     <img src="assets/logo-wordmark.png" alt="Zêluz" class="login-logo">
-    <div class="login-sub">Sistema DayCare · AuAulândia</div>
+    <div class="login-sub">AuAulândia · Day Care · AuAulândia</div>
     <div class="login-title">Entrar com sua senha</div>
     <input id="loginPwd" type="password" inputmode="numeric" maxlength="6" placeholder="• • • •"
       onkeydown="if(event.key==='Enter')doLogin()">
@@ -1748,9 +1780,11 @@
 <!-- ============ SIDEBAR ============ -->
 <aside class="sidebar" id="sidebar">
   <div class="brand">
-    <img src="assets/logo-wordmark.png" alt="Zêluz" class="brand-logo">
+    <!-- Símbolo oficial #39 (zeluz-logo-lei.md): SVG de verdade, versão clara para fundo
+         escuro, grande e sem caixa. Nunca a palavra "Zêluz" digitada fazendo de logo. -->
+    <img src="assets/simbolo-zeluz-39-claro.svg" alt="Zêluz" class="brand-logo">
   </div>
-  <div class="brand-sub">Sistema DayCare</div>
+  <div class="brand-sub">AuAulândia · Day Care</div>
   <nav class="nav" id="nav">
     <button class="nav-collapse-btn" onclick="toggleSidebarColapso()" title="Recolher menu" aria-label="Recolher menu"><span data-icon="chevron"></span></button>
 
@@ -1870,7 +1904,12 @@
   </nav>
   <div class="who">
     <div class="lab">Conectado como</div>
-    <div class="who-user"><span id="whoName">—</span><button class="who-sair" onclick="logout()">Sair</button></div>
+    <!-- Nome e PAPEL (Opção F): quem está usando e em que função. Papel é o posto, não o
+         grau de acesso — a mesma ideia de ROLE_OPCOES. O id whoName não muda de nome. -->
+    <div class="who-user">
+      <div class="who-quem"><span id="whoName">—</span><div class="who-papel" id="whoPapel"></div></div>
+      <button class="who-sair" onclick="logout()">Sair</button>
+    </div>
   </div>
 </aside>
 <div class="overlay" id="overlay" onclick="closeNav()"></div>
@@ -3356,7 +3395,7 @@
       <div class="hint">Quando a monitora marca uma alteração no check-in e tira a foto, a foto vai <strong>sozinha</strong> para o grupo da veterinária — com o nome do FILHOt, o que foi encontrado e quem viu. Ninguém precisa lembrar de mandar.</div>
       <div class="hint" style="margin-top:6px">Para ligar: crie o bot no <strong>@BotFather</strong>, coloque-o no grupo e publique a ponte <code>integracao-telegram/Codigo.gs</code> como App da Web. O passo a passo está dentro do arquivo. O token do bot fica na ponte, <strong>nunca aqui</strong> — esta página é pública.</div>
       <div style="margin-top:10px"><label class="cad-lb">URL do App da Web</label><input class="cad-in" id="tgUrl" placeholder="https://script.google.com/macros/s/.../exec"></div>
-      <div style="margin-top:8px"><label class="cad-lb">Palavra-chave (a mesma do SENHA no script)</label><input class="cad-in" id="tgSenha" placeholder="zeluz-auaulandia"></div>
+      <div style="margin-top:8px"><label class="cad-lb">Palavra-chave (a mesma do PONTE_SENHA no Apps Script)</label><input class="cad-in" id="tgSenha" placeholder="a mesma PONTE_SENHA do Apps Script"></div>
       <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px">
         <button class="btn btn-gold" onclick="tgSalvarCfg()">Salvar</button>
         <button class="btn" style="background:var(--z-cream-warm);color:var(--z-blue);border:1.5px solid var(--line)" onclick="tgTestar()">Mandar mensagem de teste</button>
@@ -3652,6 +3691,11 @@
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-database-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-check-compat.js"></script>
+<!-- O leitor da resposta do tutor. Mora fora deste arquivo, como o painel-logica.js, para
+     rodar sozinho no harness contra o texto REAL que os tutores mandam — sem tela, sem
+     banco. Entra antes do script grande porque é dele que sai a proposta da tela
+     "Alergias a confirmar" quando alguém toca em "Colar resposta do tutor". -->
+<script src="resposta-tutor.js"></script>
 <script>
   // ---- Firebase (banco gratuito que já temos) ----
   // Declarados AQUI (antes dos ouvintes do Firebase abaixo) para não caírem na zona morta temporal:
@@ -9181,7 +9225,7 @@
       +'<div class="hint">Quando alguém marca <strong>Fechou</strong> num orçamento, o sistema escreve sozinho nas duas abas da planilha de Hospedagem — <strong>Hospedagem</strong> e <strong>Calendario Hospedagem para Dash</strong>. O dashboard da Gestão continua igual: ele lê a mesma planilha. Acaba o esquecimento de lançar à mão.</div>'
       +'<div class="hint" style="margin-top:6px">Para ligar: abra a planilha → <strong>Extensões → Apps Script</strong>, cole o arquivo <code>integracao-planilha/Codigo.gs</code>, publique como <strong>App da Web</strong> (executar como você, acesso "qualquer pessoa") e cole aqui a URL que termina em <code>/exec</code>.</div>'
       +'<div style="margin-top:8px"><label class="cad-lb">URL do App da Web</label><input class="cad-in" id="orcShUrl" placeholder="https://script.google.com/macros/s/.../exec" value="'+escAttr((orcSheetsCfg&&orcSheetsCfg.url)||'')+'"></div>'
-      +'<div style="margin-top:8px"><label class="cad-lb">Palavra-chave (a mesma do TOKEN no script)</label><input class="cad-in" id="orcShToken" placeholder="zeluz-auaulandia" value="'+escAttr((orcSheetsCfg&&orcSheetsCfg.token)||'')+'"></div>'
+      +'<div style="margin-top:8px"><label class="cad-lb">Palavra-chave (a mesma do PONTE_SENHA no Apps Script)</label><input class="cad-in" id="orcShToken" placeholder="a mesma PONTE_SENHA do Apps Script" value="'+escAttr((orcSheetsCfg&&orcSheetsCfg.token)||'')+'"></div>'
       +'<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px">'
       +'<button class="btn btn-gold" onclick="orcSalvarSheets()">Salvar ponte</button>'
       +'<button class="btn" style="background:var(--z-cream-warm);color:var(--z-blue);border:1.5px solid var(--line)" onclick="orcTestarSheets()">Testar agora</button></div>'
@@ -10133,7 +10177,7 @@
   // Agora existe um carimbo: esta constante é a versão que o aparelho está rodando, e o
   // Firebase guarda a versão publicada. Quando as duas diferem, aparece o aviso — mas
   // NUNCA recarrega sozinho: recarregar no meio de um check-in perderia o trabalho.
-  const APP_VERSAO='2026-08-29-04';
+  const APP_VERSAO='2026-08-30-01';
   function vigiarVersao(){
     if(!DB) return;
     try{
@@ -10375,6 +10419,17 @@
     {k:'conferencia', t:'Conferência de Check-in'}, {k:'supervisor', t:'Supervisão'},
     {k:'plantonista', t:'Plantonista'}, {k:'aprendiz', t:'Aprendiz'}
   ];
+  // O papel escrito por extenso, para o rodapé da barra dizer QUEM está usando e EM QUE
+  // FUNÇÃO (Opção F, 29/ago/2026). Sai de ROLE_OPCOES sempre que possível — uma lista só —
+  // e completa os papéis que não se cadastram no Time (gestão, diretoria, recepção).
+  var PAPEL_EXTRA={gestao:'Gestão', diretoria:'Diretoria', supervisao:'Supervisão',
+    recepcao:'Consultora (Recepção)', central:'Central Zêluz'};
+  function papelRotulo(role){
+    var r=String(role||'').trim().toLowerCase();
+    if(!r) return 'Zêluz';
+    var achou=ROLE_OPCOES.filter(function(x){ return x.k===r; })[0];
+    return achou?achou.t:(PAPEL_EXTRA[r]||'Zêluz');
+  }
   // ===== OS DIAS DE CADA PESSOA (Adriana, 13/ago/2026) ==============================
   // "Adicionar os dias da semana que estão liberados para essas pessoas, como no peludinho
   //  do Day Care que marca que dia vai." A Amanda tem horário E dias na empresa; a freelance
@@ -10483,6 +10538,39 @@
     const id=getDeviceId(); const reg={nome:nome, por:u.nome, ts:Date.now()};
     if(DB){ DB.ref('auaulandia/aparelhos/'+id).set(reg).then(()=>{ try{ localStorage.setItem('zeluz_device_ok','1'); }catch(e){} err.style.color='var(--crm-ok)'; err.textContent='✅ Aparelho "'+nome+'" autorizado! Agora a equipe entra normalmente neste celular.'; mostrarStatusDevice(); }).catch(e=>{ err.style.color='var(--crm-critico)'; err.textContent='Erro ao autorizar: '+e.message; }); }
     else { try{ localStorage.setItem('zeluz_device_ok','1'); }catch(e){} err.style.color='var(--crm-atencao-text)'; err.textContent='Aparelho autorizado localmente (sem internet no momento).'; } }
+  // ===== LOGIN DE POSTO PEDE O NOME DE QUEM ESTÁ USANDO (Adriana, 29/ago/2026) ========
+  // "Plantonista", "Monitor 3", "Recepção" são POSTOS, não pessoas — e posto não responde
+  // por nada. Antes o nome era pedido lá adiante, no meio da ação, por uma janelinha do
+  // navegador que o celular podia engolir. Agora é na porta: sem nome, não entra.
+  function entrarComoPessoa(u, erroAnterior){
+    const nomeLogin=String((u&&u.nome)||'').trim();
+    if(!LOGIN_GENERICO.test(nomeLogin)){
+      try{ sessionStorage.setItem('zeluz_login', JSON.stringify(u)); }catch(e){}
+      aplicarLogin(u);
+      return;
+    }
+    zCampo('Quem está usando este aparelho agora?',
+      ['A senha é do posto ("'+nomeLogin+'"), não de uma pessoa. Escreva o SEU nome: ele fica registrado em tudo o que você fizer aqui — remédio, almoço, atividade — até você sair.',
+       'Um ponto, uma letra solta ou o nome de um FILHOt não identificam ninguém.'],
+      {campoId:'loginPessoa', rotulo:'Seu nome', dica:'Ex.: Wandela Cristina', minimo:3, valor:'',
+       cor:'#234D67', botao:'Entrar como esta pessoa', botaoNao:'Cancelar — não entrar',
+       erro:(erroAnterior||'Escreva o seu nome — pelo menos 3 letras. Sem nome, o remédio ficaria sem responsável.'),
+       fn:function(v){
+         const nome=String(v||'').trim();
+         if(!nomeAssinaturaValido(nome)){ entrarComoPessoa(u, avisoAssinaturaInvalida(nome)); return; }
+         const u2={}; Object.keys(u).forEach(function(k){ u2[k]=u[k]; });
+         u2.pessoa=nome;
+         try{ sessionStorage.setItem('zeluz_pessoa_turno', nome); }catch(e){}
+         try{ if(typeof audit==='function') audit('login-pessoa',
+           'entrou no posto '+nomeLogin+' como '+nome, {quem:nome, role:(u.role||'')}); }catch(e){}
+         aplicarLogin(u2);   // ele mesmo grava a sessão, agora COM a pessoa dentro
+       },
+       aoCancelar:function(){
+         const err=document.getElementById('loginErr');
+         if(err){ err.style.color='var(--crm-atencao-text)';
+           err.textContent='Sem o nome de quem está usando, este acesso não entra — o remédio ficaria registrado sem responsável.'; }
+       }});
+  }
   function doLogin(){
     const v=(document.getElementById('loginPwd').value||'').trim();
     const u=senhasRuntime()[v]; const err=document.getElementById('loginErr'); err.style.color='';
@@ -10498,7 +10586,7 @@
     deviceAutorizado(function(ok, semResposta){
       // Sem internet para consultar a lista de aparelhos: a Gestão ainda entra, senão um
       // problema de rede tranca a dona do negócio fora do próprio sistema.
-      if(ok || (semResposta && ehGestaoPura)){ sessionStorage.setItem('zeluz_login', JSON.stringify(u)); aplicarLogin(u); return; }
+      if(ok || (semResposta && ehGestaoPura)){ entrarComoPessoa(u); return; }
       // Aparelho não autorizado e não é gestão → bloqueia
       // FICA REGISTRADO (03/ago/2026): a Letícya e o Octávio ficaram dias sem conseguir
       // trabalhar e ninguém sabia por quê — a tentativa barrada não deixava rastro nenhum.
@@ -10555,7 +10643,13 @@
     try{ sessionStorage.setItem('zeluz_login', JSON.stringify(u)); }catch(e){} // fonte única do escopo (montarSubnav/abrirAtividade leem daqui)
     document.body.dataset.role=u.role;
     if(u.abertura) document.body.dataset.abertura='1'; else document.body.removeAttribute('data-abertura');
-    document.getElementById('whoName').textContent=u.nome;
+    // Quando a senha é de posto, quem aparece é a PESSOA que escreveu o nome na entrada.
+    document.getElementById('whoName').textContent=(u.pessoa||u.nome);
+    // O PAPEL embaixo do nome (rodapé da Opção F). É informação, não permissão: quem manda
+    // no acesso continua sendo data-role + aplicarPaginasPessoa. Com login de posto, o papel
+    // mostra o posto — "Wandela Cristina · Plantonista" diz as duas coisas de uma vez.
+    try{ var _wp=document.getElementById('whoPapel');
+      if(_wp) _wp.textContent=(u.pessoa? (u.nome||papelRotulo(u.role)) : papelRotulo(u.role)); }catch(e){}
     document.getElementById('loginScreen').style.display='none';
     document.getElementById('loginErr').textContent='';
     try{ inatIniciar(); }catch(e){} // relógio de inatividade começa (e zera) a cada entrada
@@ -17500,6 +17594,22 @@
     a.linhas.push({nome:'', dose:'', horarios:[]}); ptRascunho.itens[k]=a; renderPertences();
   }
   function ptDelLinha(k,i){ if(!ptRascunho) return; var a=ptRascunho.itens[k]||{}; (a.linhas||[]).splice(i,1); ptRascunho.itens[k]=a; renderPertences(); }
+  // "Mudou a dose" no Day Care: devolve o remédio para a lista, já preenchido do jeito que
+  // estava da última vez, e PARA o salvamento — quem ajusta é gente (Adriana, 29/ago/2026).
+  function ptMudouDose(f){
+    if(!ptRascunho) return;
+    var a=ptRascunho.itens.medicacao||{};
+    a.linhas=Array.isArray(a.linhas)?a.linhas:[];
+    a.trouxe=true;                     // ele veio: só a dose é que mudou
+    a.linhas.push({nome:f.nome, dose:(f.item&&f.item.dose)||'', horarios:((f.item&&f.item.horarios)||[]).slice(0)});
+    ptRascunho.itens.medicacao=a;
+    renderPertences();
+    zAlertao('AJUSTE A DOSE DE '+String(f.nome||'').toUpperCase(),
+      ['Coloquei '+f.nome+' de volta na medicação, do jeito que estava da última vez.',
+       'Corrija a dose e os horários com quem trouxe — e toque em Salvar de novo.',
+       'O check-in dos pertences NÃO foi salvo ainda: nada se perdeu.'],
+      {botao:'Ajustar agora'});
+  }
   function ptSetLinha(k,i,campo,v){ if(!ptRascunho) return; var a=ptRascunho.itens[k]||{}; if(!a.linhas||!a.linhas[i]) return; a.linhas[i][campo]=v; ptRascunho.itens[k]=a; }
   function ptAddHora(k,i){
     if(!ptRascunho) return;
@@ -17611,6 +17721,17 @@
     var faltam=PT_ITENS.filter(function(it){ return typeof (ptRascunho.itens[it.k]||{}).trouxe!=='boolean'; });
     if(faltam.length){ alert('Falta responder: '+faltam.map(function(x){ return x.t; }).join(', ')+'.\n\nMarcar "não trouxe" também conta — é assim que a saída sabe o que não pode cobrar.'); return; }
     var o=ptAtual, k=dcKey(o.p.n,o.p.tutor);
+    // O remédio da última vinda (29/ago/2026). Mesma regra da AuAulândia: se ele tomava algo
+    // que não está sendo registrado hoje, alguém tem de dizer o que houve — ANTES de salvar.
+    if(ptEhEntrada() && !MED_GATE_ULTIMO['daycare|'+k]){
+      var _agora=[];
+      ['medicacao','suplemento'].forEach(function(campo){
+        ((ptRascunho.itens[campo]||{}).linhas||[]).forEach(function(L){ if(L&&L.nome) _agora.push({nome:L.nome}); });
+      });
+      medGate('daycare', k, (o.p.n||''), (o.p.tutor||''), medFemea(o.p), _agora,
+        ptMudouDose, function(){ ptSalvar(); });
+      return;
+    }
     var d=new Date(), p2=function(x){ return String(x).padStart(2,'0'); };
     var reg=Object.assign({},ptRascunho,{
       nome:o.p.n||'', tutor:o.p.tutor||'', raca:o.p.raca||'',
@@ -17633,6 +17754,19 @@
     if(ptEhEntrada()){
       ops.push(DB.ref('daycare/med-dia/'+dcDataKey()+'/'+k).set(
         Object.keys(doses).length?{nome:o.p.n||'', tutor:o.p.tutor||'', itens:doses, _ts:Date.now(), _quem:reg.quem}:null));
+      // A MEMÓRIA do remédio (29/ago/2026): uma linha por FILHOt, para o próximo check-in
+      // saber o que ele tomava sem varrer mês nenhum de histórico. Entra TODO remédio com
+      // nome — inclusive o sem horário, que não vira alarme mas continua sendo remédio.
+      // Dia sem remédio nenhum apaga a memória: é a resposta "não toma mais" virando fato.
+      var memoria={};
+      ['medicacao','suplemento'].forEach(function(campo){
+        ((reg.itens[campo]||{}).linhas||[]).forEach(function(L,i){
+          if(!L||!String(L.nome||'').trim()) return;
+          memoria[campo+'_'+i]={nome:String(L.nome).trim(), dose:L.dose||'', horarios:(L.horarios||[]).slice(0)};
+        });
+      });
+      ops.push(DB.ref('daycare/med-ultimo/'+k).set(
+        Object.keys(memoria).length?{nome:o.p.n||'', tutor:o.p.tutor||'', dia:dcDataKey(), itens:memoria, _ts:Date.now(), _quem:reg.quem}:null));
     }
     Promise.all(ops).then(function(){
       ptDados[k]=reg; ptAtual=null; ptRascunho=null;
@@ -18840,6 +18974,116 @@
     var c=algCur(k); if(!c||!c.campos[qk]) return;
     c.campos[qk].txt=v;                      // sem re-render: não tirar o cursor de quem digita
   }
+
+  // ===== COLAR A RESPOSTA DO TUTOR — o leitor faz a proposta (29/ago/2026) =========
+  // O leitor mora em auaulandia/resposta-tutor.js (função rtLerResposta) e é provado no
+  // harness contra o texto REAL da tutora da Yume. Ele casa cada pergunta com o pedaço de
+  // resposta certo por CABEÇALHO ("*ALIMENTAÇÃO*"), por ORDEM (texto sem título nenhum) ou
+  // por PALAVRA-CHAVE — e diz por qual dos três chegou a cada casamento, para quem confere
+  // saber o quanto pode confiar naquela linha. O que ele não souber encaixar NÃO SOME:
+  // volta na lista "não consegui encaixar", para a recepção mandar à mão para o campo certo.
+  //
+  // Nada é gravado aqui. Esta função só MONTA a proposta na mesma forma que a tela já
+  // desenha (ALG_CUR) — quem grava continua sendo algCurGravar, o mesmo caminho de sempre.
+  function algColarLer(k, texto){
+    var p=algPelDe(k); if(!p) return null;
+    if(typeof rtLerResposta!=='function') return null;
+    var Q=algPerguntas(p);
+    var lido=rtLerResposta(texto, {perguntas:Q});
+    var ex=(typeof pelExtra==='function'?pelExtra(p):{})||{};
+    var campos={};
+    Q.forEach(function(q){
+      var r=(lido.respostas||{})[q.k]; if(!r) return;
+      var txt=String(r.texto||'').trim(); if(!txt) return;
+      // o campo vem da PERGUNTA REAL (algPerguntas), nunca de um palpite do leitor
+      var campo=r.campo||q.campo||'';
+      var atual=String(ex[campo]||'').trim();
+      campos[q.k]={txt:txt, campo:campo, curta:q.curta, atual:atual,
+                   via:String(r.via||''), alerta:!!r.alerta, porAssunto:false,
+                   // campo vazio já vem marcado; campo com outro conteúdo vem DESMARCADO,
+                   // porque trocar o que está na ficha é decisão de gente (Adriana, 26/ago)
+                   grava:!atual, decidido:!atual};
+    });
+    var sobras=(lido.naoEntendi||[]).map(function(t){ return {txt:String(t||''), campo:''}; });
+    ALG_CUR[k]={campos:campos, solto:'', sobras:sobras,
+                avisos:(lido.avisos||[]).slice(0),
+                semResposta:(lido.perguntasSemResposta||[]).slice(0),
+                total:Q.length, doLeitor:true};
+    return ALG_CUR[k];
+  }
+  // Como cada resposta chegou até a pergunta — é isto que a tela mostra ao lado do campo.
+  function algViaTexto(f){
+    if(!f) return '';
+    if(f.porAssunto) return 'reconheci pelo assunto';
+    if(f.via==='cabecalho') return 'via cabeçalho';
+    if(f.via==='ordem') return 'via ordem';
+    if(f.via==='palavra-chave') return 'via palavra-chave';
+    return '';
+  }
+  // A lista "não consegui encaixar": texto e destino ficam nas mãos de quem confere.
+  function algSobraCampo(k, i, campo){
+    var c=algCur(k); if(!c||!c.sobras||!c.sobras[i]) return;
+    c.sobras[i].campo=campo||'';
+    algRender();
+  }
+  function algSobraTexto(k, i, v){
+    var c=algCur(k); if(!c||!c.sobras||!c.sobras[i]) return;
+    c.sobras[i].txt=v;                       // sem re-render: não tirar o cursor de quem digita
+  }
+  // O botão da tela. Abre o cartaz com a caixa grande, lê o que foi colado e mostra a
+  // proposta. A resposta crua também fica guardada no banco — se o leitor errar, o texto
+  // original continua ali para a pessoa recortar à mão.
+  function algColarBotao(k){
+    var p=algPelDe(k);
+    if(!p){ zAlertao('Não achei a ficha deste FILHOt', ['Sem a ficha não dá para saber quais perguntas foram feitas a ele.']); return; }
+    if(typeof rtLerResposta!=='function'){
+      zAlertao('O leitor da resposta não carregou',
+        ['O arquivo resposta-tutor.js não veio junto com a página.',
+         'Cole a resposta no campo de sempre ("Cole aqui o que o tutor respondeu") e toque em "O tutor respondeu" — a separação antiga continua funcionando.']);
+      return;
+    }
+    var atual=String((((typeof ALG_RESP!=='undefined'&&ALG_RESP)||{})[k]||{}).resposta||'');
+    zCampo('Colar resposta do tutor',
+      ['Cole a resposta INTEIRA, do jeito que '+(pelNome(p)||'o FILHOt')+' recebeu no WhatsApp — com os títulos das seções, os tópicos e tudo.',
+       'Eu separo pergunta a pergunta e mostro a proposta. Você confere, corrige o que precisar, e só depois leva para a ficha.'],
+      {campoId:'algColarTexto', grande:9, rotulo:'A resposta do tutor', valor:atual, minimo:3,
+       cor:'#234D67', botao:'Ler a resposta', botaoNao:'Cancelar — não mexer em nada',
+       dica:'Ex.: Alimentação · 2 por dia, de manhã e à noite · Ração seca…',
+       erro:'Cole a resposta do tutor — sem o texto não há o que ler.',
+       fn:function(v){ algColarConfirmar(k, v); }});
+  }
+  function algColarConfirmar(k, texto){
+    var p=algPelDe(k); if(!p) return;
+    var c=algColarLer(k, texto);
+    if(!c){ zAlertao('Não consegui ler a resposta', ['Cole a resposta no campo de sempre e toque em "O tutor respondeu".']); return; }
+    // guarda a resposta crua no mesmo nó de sempre (update, para não apagar o que já foi
+    // conferido antes). Falha de gravação nunca fica muda.
+    var reg={quando:(typeof zHojeISO==='function')?zHojeISO():'',
+             quem:(typeof quemSou==='function'?quemSou():'-'),
+             resposta:String(texto||''), ts:Date.now()};
+    if(DB){
+      DB.ref('daycare/alergia-confirmada/'+k).update(reg).catch(function(e){
+        _logFalhaGrav('alergia colar resposta '+k, e);
+        zAlertao('A proposta está na tela, mas a resposta NÃO ficou guardada',
+          ['O texto do tutor não chegou ao sistema: '+((e&&e.message)||e),
+           'Confira a conexão e cole de novo. O que está na tela agora só existe neste aparelho.']);
+      });
+    } else {
+      _logFalhaGrav('alergia colar resposta '+k+' (banco desligado)', new Error('sem banco'));
+    }
+    if(typeof ALG_RESP!=='undefined'&&ALG_RESP){
+      ALG_RESP[k]=ALG_RESP[k]||{};
+      ALG_RESP[k].quando=reg.quando; ALG_RESP[k].quem=reg.quem;
+      ALG_RESP[k].resposta=reg.resposta; ALG_RESP[k].ts=reg.ts;
+    }
+    var lidas=Object.keys(c.campos).length;
+    try{ if(typeof audit==='function') audit('alergia-colou-resposta',
+      'leu a resposta de '+pelNome(p)+': '+lidas+' de '+c.total+' pergunta(s), '+((c.sobras||[]).length)+' sem encaixe',
+      {pet:pelNome(p)}); }catch(e){}
+    ALG_ABERTO=k;
+    algRender();
+  }
+
   // ===== A FICHA COMO VAI FICAR — Adriana, 26/ago/2026 ============================
   // "Achei confuso a forma de guardar os itens em alergia a confirmar... teria uma forma
   //  mais didática? E isso está indo para a ficha do peludinho — é o mais importante
@@ -18897,8 +19141,12 @@
         +'<span style="font-weight:900;font-size:15px;color:'+cor+'">'+selo+'</span>'
         +'<span style="font-weight:800;color:var(--z-blue);font-size:14px">'+escAttr(f.campo?algCampoNome(f.campo):f.curta)+'</span>'
         +(decidir?'<span style="font-weight:800;font-size:11px;color:var(--crm-atencao-text);margin-left:auto">PRECISA DECIDIR</span>':'')
-        +(f.porAssunto&&!decidir?'<span style="font-weight:800;font-size:11px;color:var(--crm-atencao-text);margin-left:auto">reconheci pelo assunto</span>':'')
+        // como esta resposta chegou até esta pergunta: cabeçalho, ordem ou palavra-chave.
+        // Quem confere precisa saber o quanto pode confiar na linha antes de aprovar.
+        +((!decidir&&algViaTexto(f))?'<span style="font-weight:800;font-size:11px;color:var(--crm-atencao-text);margin-left:auto">'+escAttr(algViaTexto(f))+'</span>':'')
         +'</div>'
+        // o alerta de comportamento (medo de raça, ataque, trauma) não pode passar batido
+        +(f.alerta?'<div style="margin-top:3px;font-size:12.5px;font-weight:800;color:var(--crm-critico)">⚠ ALERTA — a equipe precisa ler isto antes de montar a atividade e antes de juntar com outro FILHOt.</div>':'')
         // linha 2: o valor. Editável, mas sem cara de formulário — só ganha moldura ao tocar.
         +'<textarea rows="2" style="width:100%;margin-top:3px;border:1px solid transparent;background:transparent;'
         +'font:inherit;font-size:14px;color:var(--z-blue);resize:vertical;padding:3px 4px;border-radius:7px"'
@@ -18942,7 +19190,31 @@
         +'<div class="hint" style="margin-top:2px">Fica aqui para você recortar para o campo certo — não some.</div>'
         +'<textarea class="cad-in" rows="3" readonly style="width:100%;margin-top:5px">'+escAttr(c.solto)+'</textarea></div>';
     }
-    var n=qks.filter(function(q){ return c.campos[q].grava && c.campos[q].campo; }).length;
+    // O que o leitor não soube encaixar. Cada pedaço fica com o texto editável e um destino
+    // à escolha: é assim que ela aloca à mão o que a máquina não entendeu. Enquanto não
+    // escolher o campo, o pedaço não vai para lugar nenhum — mas também não some da tela.
+    var sobras=c.sobras||[];
+    if(sobras.length){
+      h+='<div style="margin-top:9px;padding:9px 11px;border-radius:11px;border:1.5px dashed var(--crm-atencao);background:rgba(241,196,15,.08)">'
+        +'<div style="font-weight:800;color:var(--crm-atencao-text);font-size:13.5px">Não consegui encaixar ('+sobras.length+')</div>'
+        +'<div class="hint" style="margin-top:2px">Escolha o campo de cada pedaço — ou deixe como está, que ele fica guardado na resposta e não vai para a ficha.</div>';
+      sobras.forEach(function(s, i){
+        h+='<div style="margin-top:7px;padding-top:7px;border-top:1px solid var(--line)">'
+          +'<textarea rows="2" style="width:100%;border:1px solid var(--line);background:#fff;font:inherit;font-size:13.5px;'
+          +'color:var(--z-blue);resize:vertical;padding:5px 6px;border-radius:8px"'
+          +' oninput="algSobraTexto(\'' + algEsc(k) + '\',' + i + ',this.value)">'+escAttr(s.txt)+'</textarea>'
+          +'<div style="margin-top:4px"><span class="hint">gravar em:</span> '
+          +'<select class="cad-in" style="max-width:240px;padding:5px 8px;margin-top:3px"'
+          +' onchange="algSobraCampo(\'' + algEsc(k) + '\',' + i + ',this.value)">'
+          +ALG_CAMPOS.map(function(x){
+              return '<option value="'+escAttr(x.c)+'"'+(x.c===(s.campo||'')?' selected':'')+'>'+escAttr(x.t)+'</option>';
+            }).join('')
+          +'</select></div></div>';
+      });
+      h+='</div>';
+    }
+    var nSobras=sobras.filter(function(s){ return s.campo && String(s.txt||'').trim(); }).length;
+    var n=qks.filter(function(q){ return c.campos[q].grava && c.campos[q].campo; }).length + nSobras;
     if(pendentes){
       h+='<div class="hint" style="margin-top:9px;color:var(--crm-atencao-text)"><strong>'
         +pendentes+(pendentes===1?' campo espera sua decisão':' campos esperam sua decisão')
@@ -18956,9 +19228,16 @@
   }
   function algCurGravar(k){
     var c=algCur(k), p=algPelDe(k);
-    if(!c||!p){ alert('Não achei a ficha deste FILHOt.'); return; }
+    if(!c||!p){ zAlertao('Não achei a ficha deste FILHOt', ['Sem a ficha não há onde gravar. Feche e abra a tela de novo.']); return; }
     var marcados=Object.keys(c.campos).filter(function(q){ return c.campos[q].grava && c.campos[q].campo; });
-    if(!marcados.length){ alert('Marque pelo menos um pedaço para gravar.\n\nSe nada do que o tutor disse muda a ficha, toque em "Já conferi" para tirar da lista.'); return; }
+    // os pedaços que ELA alocou à mão na lista "não consegui encaixar" entram junto
+    var sobrasAloc=(c.sobras||[]).filter(function(s){ return s.campo && String(s.txt||'').trim(); });
+    if(!marcados.length && !sobrasAloc.length){
+      zAlertao('Nada marcado para gravar',
+        ['Marque pelo menos um pedaço — ou escolha o campo de algum item da lista "não consegui encaixar".',
+         'Se nada do que o tutor disse muda a ficha, toque em "Já conferi" para tirar da lista.']);
+      return;
+    }
     var patch={}, quais=[];
     marcados.forEach(function(q){
       var f=c.campos[q], v=String(f.txt||'').trim();
@@ -18967,19 +19246,28 @@
       patch[f.campo]=patch[f.campo]?(patch[f.campo]+' · '+v):v;
       quais.push(f.campo);
     });
-    if(!Object.keys(patch).length){ alert('Os pedaços marcados estão vazios.'); return; }
+    sobrasAloc.forEach(function(s){
+      var v=String(s.txt||'').trim();
+      patch[s.campo]=patch[s.campo]?(patch[s.campo]+' · '+v):v;
+      quais.push(s.campo);
+    });
+    if(!Object.keys(patch).length){ zAlertao('Os pedaços marcados estão vazios', ['Escreva o que vai para a ficha, ou tire a marcação do que não presta.']); return; }
     try{
       if(typeof setPelExtra!=='function') throw new Error('não consigo escrever na ficha daqui');
       setPelExtra(p, patch);
     }catch(e){
-      alert('NÃO consegui gravar na ficha: '+((e&&e.message)||e)+'\n\nAbra a ficha dele e escreva à mão — a resposta do tutor continua guardada aqui.');
+      zAlertao('NÃO consegui gravar na ficha',
+        [((e&&e.message)||String(e)),
+         'Abra a ficha dele e escreva à mão — a resposta do tutor continua guardada aqui.']);
       try{ if(typeof audit==='function') audit('alergia-ficha','NÃO gravou na ficha de '+k+': '+((e&&e.message)||e),{}); }catch(x){}
       return;
     }
     var reg={quando:(typeof zHojeISO==='function')?zHojeISO():'', quem:(typeof quemSou==='function'?quemSou():'-'),
              campos:quais, ts:Date.now()};
     if(DB) DB.ref('daycare/alergia-confirmada/'+k+'/ficha').set(reg).catch(function(e){
-      alert('Gravei na ficha, mas não consegui marcar como conferido: '+((e&&e.message)||e));
+      _logFalhaGrav('alergia ficha conferida '+k, e);
+      zAlertao('Gravei na ficha, mas não consegui marcar como conferido',
+        [((e&&e.message)||String(e)), 'Ele vai continuar aparecendo na lista de trabalho até isto ser marcado.']);
     });
     if(ALG_RESP[k]) ALG_RESP[k].ficha=reg;
     try{ if(typeof audit==='function') audit('alergia-ficha','levou para a ficha de '+pelNome(p)+': '+quais.join(', '),{pet:pelNome(p)}); }catch(e){}
@@ -19061,6 +19349,9 @@
             ? ('<div style="margin-top:6px">'
                +'<div class="hint">O que o tutor mandou:</div>'
                +'<textarea class="cad-in" rows="4" readonly style="width:100%;margin-top:4px">'+escAttr(x.r.resposta||'')+'</textarea>'
+               +'<button type="button" class="btn btn-gold" style="width:100%;margin-top:7px"'
+               +' onclick="algColarBotao(\''+algEsc(x.k)+'\')">Colar resposta do tutor</button>'
+               +'<div class="hint" style="margin-top:3px">Chegou outra resposta, ou a separação abaixo não ficou boa? Cole o texto de novo — eu leio pergunta a pergunta e digo por onde reconheci cada uma.</div>'
                +algCurHTML(x.k)
                +(ALG_NADA_ARMADO===x.k
                  ? ('<button type="button" class="btn btn-gold" style="width:100%;margin-top:7px"'
@@ -19100,6 +19391,11 @@
               +'<textarea class="cad-in" id="algResp_'+escAttr(x.k)+'" rows="5" placeholder="Cole aqui o que o tutor respondeu" style="margin:6px 0;width:100%">'+escAttr((ALG_RESP[x.k]||{}).resposta||'')+'</textarea>'
               +'<input class="cad-in" type="date" id="algData_'+escAttr(x.k)+'" value="'+escAttr((ALG_RESP[x.k]||{}).quando||hoje)+'" style="margin-bottom:8px" min="2015-01-01" max="2035-12-31" onkeydown="return dataSoNoCalendario(event)">'
               +'<button type="button" class="btn btn-primary" style="width:100%" onclick="algResponder(\''+escAttr(x.k).replace(/'/g,"\\'")+'\')">✅ O tutor respondeu</button>'
+              // O caminho novo: o leitor (resposta-tutor.js) casa cada pergunta com o
+              // pedaço certo e diz por onde reconheceu — cabeçalho, ordem ou palavra-chave.
+              +'<button type="button" class="btn btn-gold" style="width:100%;margin-top:7px"'
+              +' onclick="algColarBotao(\''+algEsc(x.k)+'\')">Colar resposta do tutor</button>'
+              +'<div class="hint" style="margin-top:3px">Abre uma caixa grande para colar o textão inteiro. Eu separo pergunta a pergunta, mostro a proposta e você confere antes de levar para a ficha.</div>'
               +(String((ALG_RESP[x.k]||{}).resposta||'').trim()?algCurHTML(x.k):'')
               +'</div>'
             : '')
@@ -19876,27 +20172,80 @@
   // 257 doses num mes sem o nome de ninguem. Agora o app pergunta UMA VEZ por sessao quem
   // esta no turno e usa esse nome em tudo que exige responsavel.
   const LOGIN_GENERICO=/^(plantonista|monitor(\s*\d+)?|encantador(a)?|recep(c|ç)(a|ã)o|vet(erin(a|á)ria)?|equipe|-)$/i;
+  // ===== O NOME DE QUEM ESTÁ NO TURNO — sem janelinha do navegador (29/ago/2026) =====
+  // Esta era a ÚLTIMA janelinha nativa do arquivo: um prompt() que perguntava o nome no meio
+  // da ação (na hora de dar o remédio, de marcar o almoço). No celular o navegador pode
+  // suprimir a janela e devolver vazio sozinho — e aí a dose ficava gravada sem responsável,
+  // que é exatamente o que a assinatura existe para impedir.
+  // A pergunta subiu para a PORTA DE ENTRADA: login de posto ("Plantonista", "Monitor 3")
+  // não entra sem dizer QUEM está usando. O nome fica na sessão (zeluz_login.pessoa) e
+  // pessoaDoTurno() passa a ser uma leitura SÍNCRONA — nunca mais abre nada no meio do
+  // caminho, e continua podendo ser usada dentro de `assinou:pessoaDoTurno()`.
+  function pessoaDaSessao(){
+    try{ const u=JSON.parse(sessionStorage.getItem('zeluz_login')||'null'); return String((u&&u.pessoa)||'').trim(); }catch(e){ return ''; }
+  }
+  let __pedindoNomeTurno=false;   // pede no máximo uma vez por sessão (aparelho antigo)
+  function pedirNomeDoTurno(op){
+    op=op||{};
+    if(__pedindoNomeTurno && !op.forcar) return Promise.resolve('');
+    __pedindoNomeTurno=true;
+    let atual=''; try{ atual=sessionStorage.getItem('zeluz_pessoa_turno')||''; }catch(e){}
+    return zTexto('Quem está no turno agora?',
+      ['Escreva o seu nome. Ele fica registrado em tudo o que você fizer neste aparelho — medicação, almoço e atividades — até você sair.',
+       'Sem isto, o remédio fica gravado sem responsável.'],
+      {campoId:'turnoNome', rotulo:'Seu nome', dica:'Ex.: Wandela Cristina', valor:atual, minimo:3,
+       cor:'#234D67', botao:'É esta pessoa que está no turno', botaoNao:'Agora não',
+       erro:'Escreva o seu nome — pelo menos 3 letras. Um ponto não identifica ninguém.'})
+      .then(function(v){
+        const nome=String(v||'').trim();
+        if(!nome) return '';
+        if(!nomeAssinaturaValido(nome)){
+          zAlertao('ESSE NOME NÃO IDENTIFICA NINGUÉM',
+            [avisoAssinaturaInvalida(nome)], {botao:'Escrever de novo',
+              aoFechar:function(){ __pedindoNomeTurno=false; pedirNomeDoTurno({forcar:true}); }});
+          return '';
+        }
+        try{ sessionStorage.setItem('zeluz_pessoa_turno',nome); }catch(e){}
+        try{ const u=JSON.parse(sessionStorage.getItem('zeluz_login')||'null')||{};
+          u.pessoa=nome; sessionStorage.setItem('zeluz_login', JSON.stringify(u)); }catch(e){}
+        try{ if(typeof audit==='function') audit('turno-pessoa','o turno passou a ser de '+nome,{quem:nome}); }catch(e){}
+        return nome;
+      });
+  }
   function pessoaDoTurno(forcar){
     let atual='';
     try{ atual=sessionStorage.getItem('zeluz_pessoa_turno')||''; }catch(e){}
     if(atual && !forcar) return atual;
+    // 1) o nome escrito na porta de entrada (login de posto)
+    const pessoa=pessoaDaSessao();
+    if(!forcar && pessoa && nomeAssinaturaValido(pessoa)){
+      try{ sessionStorage.setItem('zeluz_pessoa_turno',pessoa); }catch(e){}
+      return pessoa;
+    }
+    // 2) login com nome de gente: é ela mesma
     const login=quemSou();
     if(!forcar && login && !LOGIN_GENERICO.test(String(login).trim()) && nomeAssinaturaValido(login)){
       try{ sessionStorage.setItem('zeluz_pessoa_turno',login); }catch(e){}
       return login;
     }
-    for(let i=0;i<3;i++){
-      const r=prompt('QUEM ESTA NO TURNO AGORA?\n\nEscreva o seu nome. Ele fica registrado em tudo o que voce fizer neste aparelho — '
-        +'medicacao, almoco e atividades — ate voce sair.\n\nSem isto, o remedio fica registrado sem responsavel.', atual||'');
-      if(r===null) break;
-      const v=String(r).trim();
-      if(nomeAssinaturaValido(v)){ try{ sessionStorage.setItem('zeluz_pessoa_turno',v); }catch(e){} return v; }
-      alert(avisoAssinaturaInvalida(v));
-    }
-    return atual||login||'-';
+    // 3) aparelho antigo, com sessão aberta antes desta mudança: pede UMA vez, na tela, sem
+    // travar a ação de agora. Esta função continua devolvendo na hora o que já se sabe.
+    try{ pedirNomeDoTurno({forcar:!!forcar}); }catch(e){}
+    // Aqui só se chega quando o login é de POSTO (ou não serve como assinatura). "Plantonista"
+    // não assina nada: devolver o nome do posto seria fabricar um responsável que não existe.
+    return atual||'-';
   }
-  function trocarPessoaDoTurno(){ const n=pessoaDoTurno(true); if(n) alert('Turno agora com: '+n); return n; }
-  function quemSou(){ try{ const u=JSON.parse(sessionStorage.getItem('zeluz_login')||'null'); return (u&&u.nome)||'-'; }catch(e){ return '-'; } }
+  function trocarPessoaDoTurno(){
+    return pedirNomeDoTurno({forcar:true}).then(function(n){
+      if(n) zAlertao('TURNO AGORA COM '+String(n).toUpperCase(),
+        ['Tudo o que for feito neste aparelho a partir de agora fica registrado no nome de '+n+'.'],
+        {ok:true, botao:'Entendi'});
+      return n;
+    });
+  }
+  // Quem está usando: a PESSOA, quando a senha é de posto. O nome do posto sozinho não
+  // responde por nada (Adriana, 13/ago/2026: "login de papel não responde por nada").
+  function quemSou(){ try{ const u=JSON.parse(sessionStorage.getItem('zeluz_login')||'null'); return (u&&(u.pessoa||u.nome))||'-'; }catch(e){ return '-'; } }
   // A GRADE NUNCA MAIS APARECE VAZIA POR FALHA DE REDE (Adriana, 08/ago/2026: "as marcações
   // sumiam"). Antes esta função ZERAVA tudo na primeira linha e só depois ia buscar no banco —
   // e cada leitura terminava em .catch(()=>{}), que engole o erro sem dizer nada. Com o Wi-Fi da
@@ -23647,7 +23996,12 @@
       +'<div style="padding:20px 22px;overflow:auto;color:#234D67;font-size:17px;line-height:1.5;font-weight:600">'
       + (Array.isArray(linhas)?linhas:[linhas]).filter(Boolean).map(function(t){ return '<div style="margin-bottom:10px">'+esc(t)+'</div>'; }).join('')
       + '<label for="'+escAttr(cid)+'" style="display:block;margin-top:14px;font-size:15px;font-weight:800">'+esc(op.rotulo||'Escreva aqui')+'</label>'
-      + '<input id="'+escAttr(cid)+'" type="'+escAttr(op.tipo||'text')+'" value="'+escAttr(op.valor||'')+'" placeholder="'+escAttr(op.dica||'')+'" style="width:100%;box-sizing:border-box;margin-top:6px;padding:14px;border:2px solid #234D67;border-radius:12px;font-family:inherit;font-size:17px;font-weight:600;color:#234D67;background:#FFFFFF">'
+      // Texto de uma linha (o normal) ou CAIXA GRANDE (op.grande = quantas linhas). A caixa
+      // grande existe porque a resposta do tutor é um textão de quase 2 mil caracteres: num
+      // campo de uma linha ninguém enxerga o que colou nem percebe se colou pela metade.
+      + (op.grande
+          ? '<textarea id="'+escAttr(cid)+'" rows="'+(parseInt(op.grande,10)||6)+'" placeholder="'+escAttr(op.dica||'')+'" style="width:100%;box-sizing:border-box;margin-top:6px;padding:14px;border:2px solid #234D67;border-radius:12px;font-family:inherit;font-size:16px;font-weight:600;color:#234D67;background:#FFFFFF;resize:vertical;line-height:1.45">'+escAttr(op.valor||'')+'</textarea>'
+          : '<input id="'+escAttr(cid)+'" type="'+escAttr(op.tipo||'text')+'" value="'+escAttr(op.valor||'')+'" placeholder="'+escAttr(op.dica||'')+'" style="width:100%;box-sizing:border-box;margin-top:6px;padding:14px;border:2px solid #234D67;border-radius:12px;font-family:inherit;font-size:17px;font-weight:600;color:#234D67;background:#FFFFFF">')
       + '<div id="zCampoErro" style="display:none;margin-top:8px;font-size:15px;font-weight:800;color:#B3261E"></div>'
       +'</div>'
       +'<div style="padding:0 22px 22px;display:flex;flex-direction:column;gap:9px">'
@@ -23740,6 +24094,177 @@
     }
     return F;
   }
+  // ===== O REMÉDIO DA ESTADIA ANTERIOR (Adriana, 29/ago/2026) ======================
+  // "Na última hospedagem o Arthur tomava Apoquel — não toma mais?"
+  //
+  // O remédio some do check-in por três motivos, e os três acabam iguais na prática: a dose
+  // deixa de acontecer e ninguém fica sabendo. Ou o tratamento acabou (e está tudo certo), ou
+  // a dose mudou (e ninguém corrigiu), ou o tutor esqueceu de trazer (e é ELE quem precisa
+  // saber, hoje). Antes o app simplesmente aceitava o silêncio.
+  //
+  // Agora, ANTES de concluir o check-in — na AuAulândia e no Day Care — o app compara o que
+  // ele tomava da última vez com o que está sendo registrado agora, e pergunta um por um.
+  // Cada resposta grava audit com quem respondeu. Nada é decidido pelo sistema.
+  //
+  // De onde vem "a última vez":
+  //   AuAulândia — `auaulandia/medicacao-agenda/<key>/itens`. Este nó é REESCRITO a cada
+  //     check-in novo, então enquanto o de agora não foi salvo ele ainda guarda o da estadia
+  //     passada. Só vale se a estadia dona dele já TERMINOU (senão é a estadia de agora, e
+  //     perguntar seria perguntar sobre o próprio formulário).
+  //   Day Care — `daycare/med-ultimo/<k>`, escrito pelo próprio check-in dos pertences.
+  //     É uma linha por FILHOt (não uma varredura de dias), para não pesar no plano Spark.
+  var MED_GATE_ULTIMO={};   // origem|key -> já perguntei neste FILHOt nesta sessão
+  function medNomeChave(v){ return jsNorm(String(v||'')).replace(/[^a-z0-9]/g,''); }
+  // Quais remédios da última vez NÃO estão no check-in de agora. Função pura: é ela que o
+  // harness exercita, sem tela e sem banco.
+  function medSumiram(anteriores, agora){
+    var tem={}, out=[], visto={};
+    (agora||[]).forEach(function(m){
+      var n=medNomeChave(m&&(m.nome!==undefined?m.nome:m)); if(n) tem[n]=true;
+    });
+    (anteriores||[]).forEach(function(m){
+      var nome=String((m&&(m.nome!==undefined?m.nome:m))||'').trim(); if(!nome) return;
+      var n=medNomeChave(nome); if(!n||tem[n]||visto[n]) return;
+      visto[n]=true;
+      // `item` é SEMPRE o remédio de verdade — é dele que sai a dose já preenchida quando a
+      // resposta é "Mudou a dose". Quem já vem embrulhado ({nome, item, id}) entrega o de
+      // dentro; sem isto o embrulho virava o item e a dose voltava vazia.
+      out.push({nome:nome, item:(m&&typeof m==='object')?(m.item||m):{nome:nome}});
+    });
+    return out;
+  }
+  function medFemea(p){
+    try{
+      var s=(typeof pelGet==='function'?pelGet(p,'sexo'):'')||(p&&p.sexo)||'';
+      return /^f/i.test(String(s));
+    }catch(e){ return false; }
+  }
+  // A estadia dona da agenda já terminou? Só o passado conta como passado.
+  function medEstadiaEncerrada(estadiaId){
+    if(!estadiaId) return Promise.resolve(true);   // agenda sem dono: veio de antes, é passado
+    var julga=function(e){
+      e=e||{};
+      if((e.status||'ativa')!=='ativa') return true;
+      var hj=(typeof hospHojeISO==='function')?hospHojeISO():((typeof zHojeISO==='function')?zHojeISO():'');
+      return !!(hj && e.saida && e.saida<hj);
+    };
+    try{ if(typeof EST_TODAS!=='undefined' && EST_TODAS && EST_TODAS[estadiaId]) return Promise.resolve(julga(EST_TODAS[estadiaId])); }catch(e){}
+    if(!DB) return Promise.resolve(false);
+    return DB.ref('auaulandia/estadias/'+estadiaId).once('value')
+      .then(function(s){ return julga(s.val()); })
+      .catch(function(e){ _logFalhaGrav('conferir se a estadia '+estadiaId+' já acabou', e); return false; });
+  }
+  function medAnterioresDe(origem, key){
+    if(!DB||!key) return Promise.resolve([]);
+    if(origem==='auaulandia'){
+      return DB.ref('auaulandia/medicacao-agenda/'+key).once('value').then(function(s){
+        var no=s.val()||{}, itens=no.itens||{};
+        var lista=Object.keys(itens).map(function(id){
+          var it=itens[id]||{};
+          return {nome:String(it.nome||'').trim(), item:it, id:id};
+        }).filter(function(x){
+          // remédio já suspenso pela veterinária não é surpresa: alguém já decidiu por ele
+          return x.nome && !x.item.suspenso;
+        });
+        if(!lista.length) return [];
+        return medEstadiaEncerrada(no.estadiaId).then(function(acabou){ return acabou?lista:[]; });
+      }).catch(function(e){ _logFalhaGrav('ler o remédio da estadia anterior de '+key, e); return []; });
+    }
+    return DB.ref('daycare/med-ultimo/'+key).once('value').then(function(s){
+      var v=s.val()||{}, itens=v.itens||{};
+      return Object.keys(itens).map(function(id){
+        var it=itens[id]||{};
+        return {nome:String(it.nome||'').trim(), item:it, id:id, dia:v.dia||''};
+      }).filter(function(x){ return x.nome; });
+    }).catch(function(e){ _logFalhaGrav('ler o remédio do último Day Care de '+key, e); return []; });
+  }
+  // "O tutor esqueceu de trazer" vira pendência no MESMO nó que a tela "Pendências com o
+  // tutor" já lê (auaulandia/avisos-racao) — não se inventa lugar novo para um trabalho
+  // que já tem tela.
+  function medPendenciaEsqueceu(origem, nomePet, tutor, f, aoFim){
+    var quem=(typeof quemSou==='function'?quemSou():'sistema');
+    var reg={ hospNome:nomePet||'', tutor:tutor||'', estadiaId:'', tipo:'medicacao-nao-veio',
+              itemNome:f.nome, deficit:'?', unidade:'', necessario:'?', trazido:'não veio', ate:'',
+              motivo:'O tutor esqueceu de trazer — visto no check-in d'+(origem==='auaulandia'?'a AuAulândia':'o Day Care'),
+              status:'pendente', entries:[], criado_por:quem, automatico:true, _ts:Date.now() };
+    if(!DB){
+      _logFalhaGrav('pendência do remédio '+f.nome+' (banco desligado)', new Error('sem banco'));
+      zAlertao('A PENDÊNCIA NÃO FOI REGISTRADA',
+        ['O banco está reconectando: '+f.nome+' NÃO entrou em "Pendências com o tutor".',
+         'Fale com o tutor mesmo assim — e registre a pendência à mão quando a conexão voltar.'],
+        {botao:'Entendi', aoFechar:aoFim});
+      return;
+    }
+    DB.ref('auaulandia/avisos-racao').push(reg).then(function(){
+      zAlertao('ANOTADO PARA FALAR COM O TUTOR',
+        [f.nome+' entrou em "Pendências com o tutor", no seu nome.',
+         'Enquanto o remédio não chegar, a dose não acontece — quem falar com o tutor fecha a pendência lá.'],
+        {ok:true, botao:'Continuar o check-in', aoFechar:aoFim});
+    }).catch(function(e){
+      _logFalhaGrav('pendência do remédio '+f.nome, e);
+      zAlertao('A PENDÊNCIA NÃO FOI REGISTRADA',
+        ['Motivo: '+((e&&e.message)||e), 'Fale com o tutor mesmo assim e registre à mão em "Pendências com o tutor".'],
+        {botao:'Entendi', aoFechar:aoFim});
+    });
+  }
+  function medPerguntarUm(origem, nomePet, tutor, femea, f, aoMudarDose, proximo){
+    var quem=(typeof quemSou==='function'?quemSou():'')||'';
+    var artigo=femea?'a ':'o ';
+    var onde=(origem==='auaulandia')?'na última hospedagem':'na última vinda ao Day Care';
+    var titulo=(quem?(quem+', '):'')+onde+' '+artigo+(nomePet||'este FILHOt')+' tomava '+f.nome+' — não toma mais?';
+    var reg=function(oque){
+      try{ if(typeof audit==='function') audit('remedio-anterior', oque,
+        {pet:nomePet||'', alvo:f.nome, assinou:quem||'-'}); }catch(e){}
+    };
+    zEscolha(titulo,
+      [f.nome+' não está no check-in de agora. Antes de fechar, diga o que houve — se ninguém disser, a dose simplesmente deixa de acontecer e o tutor não fica sabendo.'],
+      [ {t:'Não toma mais', cor:'#1E8449', fn:function(){
+          reg('não toma mais '+f.nome+' ('+(origem==='auaulandia'?'AuAulândia':'Day Care')+')');
+          if(typeof proximo==='function') proximo();
+        }},
+        {t:'Mudou a dose', cor:'#234D67', fn:function(){
+          reg('mudou a dose de '+f.nome+' — abriu o cadastro para ajustar');
+          if(typeof aoMudarDose==='function') aoMudarDose(f);
+        }},
+        {t:'O tutor esqueceu de trazer', cor:'#B3261E', fn:function(){
+          reg('o tutor esqueceu de trazer '+f.nome+' — virou pendência com o tutor');
+          medPendenciaEsqueceu(origem, nomePet, tutor, f, proximo);
+        }} ]);
+  }
+  // O portão. Pergunta no máximo uma vez por FILHOt por sessão de check-in e, quando não há
+  // o que perguntar, sai do caminho na hora. `seguir` é o que continua o salvamento.
+  function medGate(origem, key, nomePet, tutor, femea, medsAgora, aoMudarDose, seguir){
+    var segue=function(){ if(typeof seguir==='function') seguir(); };
+    MED_GATE_ULTIMO[origem+'|'+key]=true;   // marcado ANTES de tudo: nenhum erro aqui vira laço
+    if(!key||!DB){ segue(); return; }
+    medAnterioresDe(origem, key).then(function(ant){
+      var faltando=medSumiram(ant, medsAgora);
+      if(!faltando.length){ segue(); return; }
+      var i=0;
+      var proximo=function(){
+        if(i>=faltando.length){ segue(); return; }
+        medPerguntarUm(origem, nomePet, tutor, femea, faltando[i++], aoMudarDose, proximo);
+      };
+      proximo();
+    }).catch(function(e){
+      _logFalhaGrav('perguntar sobre o remédio anterior de '+key, e);
+      segue();   // a pergunta é cuidado a mais; falhar nela nunca pode impedir um check-in
+    });
+  }
+  // "Mudou a dose" na AuAulândia: devolve o remédio para a lista, já preenchido, e PARA o
+  // salvamento — quem ajusta é gente, e só depois salva.
+  function ciMudouDose(f){
+    try{ if(typeof ciAddMed==='function') ciAddMed(f.item||{nome:f.nome}); }catch(e){}
+    var ms=document.getElementById('ci-med-status');
+    if(ms){ ms.style.color='var(--crm-atencao-text)'; ms.textContent='Ajuste a dose de '+f.nome+' e toque em Salvar de novo — nada foi gravado ainda.'; }
+    zAlertao('AJUSTE A DOSE DE '+String(f.nome||'').toUpperCase(),
+      ['Coloquei '+f.nome+' de volta na medicação, do jeito que estava na última vez.',
+       'Corrija a quantidade, a medida e os horários com o tutor — e toque em Salvar de novo.',
+       'O check-in NÃO foi salvo ainda: nada se perdeu.'],
+      {botao:'Ajustar agora', aoFechar:function(){
+        try{ var el=document.getElementById('ciMeds'); if(el&&el.scrollIntoView) el.scrollIntoView({behavior:'smooth',block:'center'}); }catch(e){}
+      }});
+  }
   var __ciSalvando=false;
   function ciSalvar(){
     const st=document.getElementById('ci-status');
@@ -23787,6 +24312,14 @@
     const quemDeixou=semTutor?((document.getElementById('ciQuemDeixou')&&document.getElementById('ciQuemDeixou').value||'').trim()):'';
     if(!DB){ ciBloqueia('banco desconectado','O sistema está sem conexão com o banco agora. Confira a internet e toque em Salvar de novo em alguns segundos.','ci-status'); return; }
     const key=ciKey();
+    // O remédio da estadia anterior (29/ago/2026). Vem ANTES de qualquer gravação: se ele
+    // tomava algo que não está aqui, alguém tem de dizer o que houve. Pergunta uma vez só —
+    // quando termina (ou quando não há o que perguntar), o próprio Salvar recomeça daqui.
+    if(!MED_GATE_ULTIMO['auaulandia|'+key]){
+      medGate('auaulandia', key, (ciHosp.nome||''), (ciHosp.tutor||''), medFemea(ciHosp),
+        ciMedsToLista(meds), ciMudouDose, function(){ ciSalvar(); });
+      return;
+    }
     const pacote={ dados:dados, meds:meds, temMed:temMed, semTutor:semTutor, assina:assina, sig:sig, quemDeixou:quemDeixou, key:key };
     // TRAVA DURA anti-duplicidade (item 15, caso Ozzy 01/ago/2026: 3 check-ins do mesmo dia).
     // O cache local pode estar atrasado, então a checagem vai ao BANCO antes de criar qualquer coisa.

@@ -4221,6 +4221,419 @@ async function main() {
     check('check-up em mês que AINDA NÃO CHEGOU neste ano (dezembro, hoje=agosto): infere o ANO PASSADO',
       checkupDezembro.campos.checkup_t.valor === '2025-12-01' && checkupDezembro.campos.checkup_t.ano === 2025,
       JSON.stringify(checkupDezembro.campos.checkup_t));
+
+    // ---- 5) O BOTÃO NA TELA: "Colar resposta do tutor" (29/ago/2026) ----
+    // O leitor já era provado aqui, mas vivia fora do app: ninguém na recepção conseguia
+    // usá-lo. Agora ele entra pela página e por um botão da tela de Alergias a confirmar.
+    check('o app carrega o leitor junto com a página (<script src="resposta-tutor.js">)',
+      /<script src="resposta-tutor\.js"><\/script>/.test(html));
+    check('a tela de Alergias a confirmar tem o botão "Colar resposta do tutor"',
+      (html.match(/>Colar resposta do tutor</g) || []).length >= 2 &&
+      (html.match(/onclick="algColarBotao\(/g) || []).length >= 2,
+      'botões: ' + (html.match(/>Colar resposta do tutor</g) || []).length);
+    check('o botão abre uma CAIXA GRANDE (zCampo com textarea) — a resposta tem quase 2 mil letras',
+      /grande:9/.test(html) && /op\.grande[\s\S]{0,40}<textarea id="/.test(html));
+    check('o campo de uma linha do zCampo continua existindo (senha e nome não viraram caixa)',
+      /type="'\+escAttr\(op\.tipo\|\|'text'\)\+'"/.test(html));
+
+    if (typeof ctx.algColarLer === 'function' && Array.isArray(ctx.PELUDINHOS) && typeof ctx.pelKey === 'function') {
+      // Um FILHOt de mentira, com ficha VAZIA: sem sexo (por isso sem a pergunta de cio) e
+      // sem microchip (por isso COM a pergunta de chip) — as mesmas 9 perguntas do texto real.
+      const fake = { n: 'Yume Do Harness', tutor: 'Tutora Do Harness', raca: 'Spitz', dias: [] };
+      ctx.PELUDINHOS.push(fake);
+      const kFake = ctx.pelKey(fake);
+      check('o FILHOt de teste faz as mesmas 9 perguntas do texto real',
+        ctx.algPerguntas(fake).length === 9, String(ctx.algPerguntas(fake).length));
+
+      const prop = ctx.algColarLer(kFake, textoYume);
+      check('texto da Yume colado na tela → 9 propostas, uma por pergunta',
+        !!prop && Object.keys(prop.campos).length === 9,
+        prop ? Object.keys(prop.campos).join(',') : 'null');
+      check('cada proposta diz POR ONDE reconheceu (aqui: via cabeçalho)',
+        !!prop && Object.keys(prop.campos).every((q) => prop.campos[q].via === 'cabecalho'),
+        prop ? JSON.stringify(Object.keys(prop.campos).map((q) => q + ':' + prop.campos[q].via)) : '');
+      check('a tela sabe escrever esse "por onde" em português',
+        typeof ctx.algViaTexto === 'function' &&
+        ctx.algViaTexto({ via: 'cabecalho' }) === 'via cabeçalho' &&
+        ctx.algViaTexto({ via: 'ordem' }) === 'via ordem' &&
+        ctx.algViaTexto({ via: 'palavra-chave' }) === 'via palavra-chave');
+      check('o ataque do Golden vem MARCADO como alerta',
+        !!prop && prop.campos.estresse && prop.campos.estresse.alerta === true,
+        JSON.stringify(prop && prop.campos.estresse));
+      check('o campo é o da pergunta REAL — restrição→alergia, check-up→observação do tutor',
+        !!prop && prop.campos.restricao.campo === 'alergia' && prop.campos.checkup.campo === 'obs_tutor',
+        JSON.stringify(prop && [prop.campos.restricao.campo, prop.campos.checkup.campo]));
+      check('ficha vazia: a proposta já vem marcada (não há o que perder)',
+        !!prop && Object.keys(prop.campos).every((q) => prop.campos[q].grava === true));
+      check('no texto da Yume nada sobra sem encaixe',
+        !!prop && (prop.sobras || []).length === 0, JSON.stringify(prop && prop.sobras));
+
+      // O que o leitor não entende NÃO SOME: vira lista para ela alocar à mão.
+      const prop2 = ctx.algColarLer(kFake, 'Adora dormir de barriga para cima\nGosta muito de bolinha');
+      check('o que não encaixa vira a lista "não consegui encaixar", com destino em branco',
+        !!prop2 && prop2.sobras.length === 2 && prop2.sobras[0].campo === '' &&
+        prop2.sobras[0].txt === 'Adora dormir de barriga para cima',
+        JSON.stringify(prop2 && prop2.sobras));
+      check('enquanto ela não escolher o campo, o pedaço não entra em proposta nenhuma',
+        !!prop2 && Object.keys(prop2.campos).length === 0, JSON.stringify(prop2 && prop2.campos));
+
+      // ---- APLICAR À FICHA usa o MESMO gravador que a tela já usava ----
+      // (algCurGravar → setPelExtra). Se um dia alguém escrever um caminho paralelo de
+      // gravação para o texto colado, este teste cai.
+      const corpoGravar = corpoFuncao('algCurGravar');
+      check('o gravador da tela continua sendo setPelExtra (um caminho só)',
+        /setPelExtra\(p, patch\)/.test(corpoGravar) && (html.match(/function algCurGravar\(/g) || []).length === 1);
+
+      ctx.algColarLer(kFake, textoYume);
+      const espiao = [];
+      const setReal = ctx.setPelExtra;
+      const auditReal = ctx.audit;
+      const auditado = [];
+      ctx.setPelExtra = (p, patch) => { espiao.push({ k: ctx.pelKey(p), patch }); return Promise.resolve({ ok: true }); };
+      ctx.audit = (tipo, oque) => { auditado.push(tipo + '|' + oque); };
+      try { ctx.algCurGravar(kFake); } finally { ctx.setPelExtra = setReal; ctx.audit = auditReal; }
+      check('Aplicar à ficha chama o MESMO gravador, uma vez só, na ficha certa',
+        espiao.length === 1 && espiao[0].k === kFake, JSON.stringify(espiao.map((x) => x.k)));
+      check('e leva os 8 campos da ficha (check-up e estresse dividem "observação do tutor")',
+        espiao.length === 1 && Object.keys(espiao[0].patch).length === 8 &&
+        espiao[0].patch.alergia === 'Nenhuma restrição' &&
+        /Último checkup em janeiro/.test(espiao[0].patch.obs_tutor) &&
+        /atacada por um Golden/.test(espiao[0].patch.obs_tutor),
+        JSON.stringify(espiao[0] && espiao[0].patch));
+      check('a gravação deixa rastro no audit (quem levou, e o quê)',
+        auditado.some((x) => /^alergia-ficha\|levou para a ficha/.test(x)), JSON.stringify(auditado));
+
+      // Mordida: pedaço alocado à mão na lista "não consegui encaixar" TEM de ir junto.
+      const prop3 = ctx.algColarLer(kFake, 'Adora dormir de barriga para cima');
+      ctx.algSobraCampo(kFake, 0, 'manias');
+      const espiao2 = [];
+      const setReal2 = ctx.setPelExtra;
+      ctx.setPelExtra = (p, patch) => { espiao2.push(patch); return Promise.resolve({ ok: true }); };
+      try { ctx.algCurGravar(kFake); } finally { ctx.setPelExtra = setReal2; }
+      check('mordida — o que ela alocou à mão vai para a ficha pelo mesmo caminho',
+        !!prop3 && espiao2.length === 1 && espiao2[0].manias === 'Adora dormir de barriga para cima',
+        JSON.stringify(espiao2));
+
+      // Mordida: sem nada marcado e sem nada alocado, NADA é gravado.
+      ctx.algColarLer(kFake, 'Adora dormir de barriga para cima');
+      const espiao3 = [];
+      const setReal3 = ctx.setPelExtra;
+      const alertaoReal = ctx.zAlertao;
+      let avisou = 0;
+      ctx.setPelExtra = (p, patch) => { espiao3.push(patch); return Promise.resolve({ ok: true }); };
+      ctx.zAlertao = () => { avisou++; };
+      try { ctx.algCurGravar(kFake); } finally { ctx.setPelExtra = setReal3; ctx.zAlertao = alertaoReal; }
+      check('mordida — nada marcado, nada alocado: não grava e AVISA na tela (sem janelinha)',
+        espiao3.length === 0 && avisou === 1, 'gravou ' + espiao3.length + ', avisou ' + avisou);
+
+      ctx.PELUDINHOS.pop();
+      delete (ctx.ALG_CUR || {})[kFake];
+    } else {
+      check('algColarLer existe (o botão da tela sem função é botão morto)', false);
+    }
+  }
+  console.log('');
+
+  // ============================================================================
+  // O REMÉDIO DA ESTADIA ANTERIOR (Adriana, 29/ago/2026)
+  // ----------------------------------------------------------------------------
+  // "Na última hospedagem o Arthur tomava Apoquel — não toma mais?" O remédio some do
+  // check-in e a dose simplesmente deixa de acontecer. Agora o app pergunta antes de
+  // concluir — na AuAulândia e no Day Care — e cada resposta deixa rastro.
+  console.log('O remédio da estadia anterior — a pergunta antes de concluir (29/ago):');
+  {
+    if (typeof ctx.medSumiram !== 'function' || typeof ctx.medGate !== 'function') {
+      check('medSumiram e medGate existem', false, 'funções não encontradas no app');
+    } else {
+      // ---- a conta pura: o que sumiu ----
+      check('acha o remédio que sumiu, ignorando maiúscula, acento e espaço sobrando',
+        JSON.stringify(ctx.medSumiram([{ nome: 'Apoquel' }, { nome: 'Ômega 3' }], [{ nome: ' apoquel ' }]).map((x) => x.nome)) === '["Ômega 3"]',
+        JSON.stringify(ctx.medSumiram([{ nome: 'Apoquel' }, { nome: 'Ômega 3' }], [{ nome: ' apoquel ' }])));
+      check('mesmo remédio dos dois lados: nada a perguntar',
+        ctx.medSumiram([{ nome: 'Apoquel' }], [{ nome: 'APOQUEL' }]).length === 0);
+      check('sem histórico nenhum: nada a perguntar',
+        ctx.medSumiram([], [{ nome: 'Apoquel' }]).length === 0);
+      check('o mesmo nome duas vezes no histórico não vira duas perguntas',
+        ctx.medSumiram([{ nome: 'Apoquel' }, { nome: 'apoquel ' }], []).length === 1);
+      check('o item INTEIRO volta junto — é dele que sai a dose já preenchida',
+        (ctx.medSumiram([{ nome: 'Apoquel', q: '1', u: 'comprimido', horarios: ['08:00'] }], [])[0] || {}).item.horarios[0] === '08:00');
+
+      // ---- o portão, com banco de mentira ----
+      const dados = {};
+      const escritas = [];
+      const fazSnap = (v) => ({ val: () => (v === undefined ? null : v) });
+      const bancoM = {
+        ref(p) {
+          return {
+            once() { return Promise.resolve(fazSnap(dados[p])); },
+            push(v) { escritas.push({ o: 'push', p, v }); return Promise.resolve({ key: 'novo' }); },
+            set(v) { escritas.push({ o: 'set', p, v }); return Promise.resolve(); },
+            update(v) { escritas.push({ o: 'update', p, v }); return Promise.resolve(); },
+          };
+        },
+      };
+      ctx.__bkpMed = {};
+      vm.runInContext('__bkpMed = { DB: DB, audit: audit, zEscolha: zEscolha, zAlertao: zAlertao, quemSou: quemSou, hospHojeISO: hospHojeISO, pelGet: pelGet };', ctx);
+      ctx.__bancoMed = bancoM;
+
+      const perguntas = [], auditados = [], alertas = [];
+      const toque = { botao: 0 };                 // qual dos 3 botões a pessoa toca
+      ctx.zEscolha = (titulo, linhas, botoes) => {
+        perguntas.push({ titulo: String(titulo || ''), botoes: (botoes || []).map((b) => b.t) });
+        const b = (botoes || [])[toque.botao];
+        if (b && typeof b.fn === 'function') b.fn();
+      };
+      ctx.zAlertao = (t, l, op) => { alertas.push(String(t || '')); if (op && typeof op.aoFechar === 'function') op.aoFechar(); };
+      ctx.audit = (a, d, m) => auditados.push({ acao: String(a || ''), detalhe: String(d == null ? '' : d), meta: m || {} });
+      ctx.quemSou = () => 'Giullian';
+      ctx.hospHojeISO = () => '2026-08-29';
+      ctx.pelGet = () => 'Macho';
+      vm.runInContext('DB = __bancoMed;', ctx);
+
+      const zerarMed = () => {
+        perguntas.length = 0; auditados.length = 0; alertas.length = 0; escritas.length = 0;
+        Object.keys(dados).forEach((k) => delete dados[k]);
+        try { Object.keys(ctx.MED_GATE_ULTIMO).forEach((k) => delete ctx.MED_GATE_ULTIMO[k]); } catch (e) {}
+      };
+      const esperarMed = () => new Promise((r) => setTimeout(r, 30));
+      const KEY = 'arthur__renata';
+      const agendaComApoquel = (estadiaId) => {
+        dados['auaulandia/medicacao-agenda/' + KEY] = {
+          estadiaId: estadiaId, itens: { m1: { nome: 'Apoquel', q: '1', u: 'comprimido', horarios: ['08:00'] } },
+        };
+      };
+
+      try {
+        // (a) tinha Apoquel na estadia PASSADA e o check-in de agora vem sem ele → PERGUNTA
+        zerarMed();
+        agendaComApoquel('est-antiga');
+        dados['auaulandia/estadias/est-antiga'] = { status: 'ativa', entrada: '2026-07-01', saida: '2026-07-10' };
+        let seguiu = 0, mudou = null;
+        toque.botao = 0;
+        ctx.medGate('auaulandia', KEY, 'Arthur', 'Renata', false, [], (f) => { mudou = f; }, () => { seguiu++; });
+        await esperarMed();
+        check('(a) tinha Apoquel e o check-in vem sem ele → o app PERGUNTA antes de concluir',
+          perguntas.length === 1 &&
+          perguntas[0].titulo === 'Giullian, na última hospedagem o Arthur tomava Apoquel — não toma mais?',
+          JSON.stringify(perguntas));
+        check('(a) a pergunta oferece as TRÊS respostas, nessa ordem',
+          perguntas.length === 1 &&
+          JSON.stringify(perguntas[0].botoes) === '["Não toma mais","Mudou a dose","O tutor esqueceu de trazer"]',
+          JSON.stringify(perguntas[0] && perguntas[0].botoes));
+        check('(a) "Não toma mais" grava audit com quem respondeu e segue o check-in',
+          seguiu === 1 &&
+          auditados.some((x) => x.acao === 'remedio-anterior' && /não toma mais Apoquel/.test(x.detalhe) && x.meta.assinou === 'Giullian' && x.meta.alvo === 'Apoquel'),
+          JSON.stringify(auditados));
+
+        // (b) o mesmo remédio está no check-in de agora → NÃO pergunta
+        zerarMed();
+        agendaComApoquel('est-antiga');
+        dados['auaulandia/estadias/est-antiga'] = { status: 'ativa', entrada: '2026-07-01', saida: '2026-07-10' };
+        let seguiu2 = 0;
+        ctx.medGate('auaulandia', KEY, 'Arthur', 'Renata', false, [{ nome: 'apoquel' }], () => {}, () => { seguiu2++; });
+        await esperarMed();
+        check('(b) o mesmo remédio no check-in de agora: nenhuma pergunta, o check-in segue direto',
+          perguntas.length === 0 && seguiu2 === 1, JSON.stringify(perguntas));
+
+        // (c) "Mudou a dose": abre o cadastro preenchido e NÃO deixa salvar
+        zerarMed();
+        agendaComApoquel('est-antiga');
+        dados['auaulandia/estadias/est-antiga'] = { status: 'ativa', entrada: '2026-07-01', saida: '2026-07-10' };
+        let seguiu3 = 0, mudou3 = null;
+        toque.botao = 1;
+        ctx.medGate('auaulandia', KEY, 'Arthur', 'Renata', false, [], (f) => { mudou3 = f; }, () => { seguiu3++; });
+        await esperarMed();
+        check('(c) "Mudou a dose" devolve o remédio JÁ PREENCHIDO (dose e horário da última vez)',
+          !!mudou3 && mudou3.nome === 'Apoquel' && mudou3.item.q === '1' && mudou3.item.horarios[0] === '08:00',
+          JSON.stringify(mudou3));
+        check('(c) e o check-in NÃO conclui: quem ajusta a dose é gente',
+          seguiu3 === 0 && auditados.some((x) => /mudou a dose de Apoquel/.test(x.detalhe)),
+          'seguiu ' + seguiu3 + ' — ' + JSON.stringify(auditados));
+
+        // (d) "O tutor esqueceu de trazer": vira pendência no nó que a tela já lê
+        zerarMed();
+        agendaComApoquel('est-antiga');
+        dados['auaulandia/estadias/est-antiga'] = { status: 'ativa', entrada: '2026-07-01', saida: '2026-07-10' };
+        let seguiu4 = 0;
+        toque.botao = 2;
+        ctx.medGate('auaulandia', KEY, 'Arthur', 'Renata', false, [], () => {}, () => { seguiu4++; });
+        await esperarMed();
+        const pend = escritas.filter((x) => x.o === 'push' && x.p === 'auaulandia/avisos-racao');
+        check('(d) "esqueceu de trazer" vira pendência em auaulandia/avisos-racao (a tela Pendências lê daqui)',
+          pend.length === 1 && pend[0].v.tipo === 'medicacao-nao-veio' && pend[0].v.itemNome === 'Apoquel' &&
+          pend[0].v.status === 'pendente' && pend[0].v.hospNome === 'Arthur' && pend[0].v.criado_por === 'Giullian',
+          JSON.stringify(pend));
+        check('(d) e o check-in segue, com rastro de quem respondeu',
+          seguiu4 === 1 && auditados.some((x) => x.acao === 'remedio-anterior' && /esqueceu de trazer Apoquel/.test(x.detalhe) && x.meta.assinou === 'Giullian'),
+          'seguiu ' + seguiu4);
+
+        // (e) MORDIDA: a estadia dona da agenda AINDA ESTÁ EM CURSO — é o formulário de
+        // agora, não é passado. Perguntar aqui seria perguntar sobre o próprio check-in.
+        zerarMed();
+        agendaComApoquel('est-de-agora');
+        dados['auaulandia/estadias/est-de-agora'] = { status: 'ativa', entrada: '2026-08-28', saida: '2026-09-05' };
+        let seguiu5 = 0;
+        toque.botao = 0;
+        ctx.medGate('auaulandia', KEY, 'Arthur', 'Renata', false, [], () => {}, () => { seguiu5++; });
+        await esperarMed();
+        check('(e) mordida — estadia ainda em curso: não pergunta sobre o próprio check-in',
+          perguntas.length === 0 && seguiu5 === 1, JSON.stringify(perguntas));
+
+        // (f) MORDIDA: remédio já SUSPENSO pela veterinária não vira surpresa
+        zerarMed();
+        dados['auaulandia/medicacao-agenda/' + KEY] = { estadiaId: 'est-antiga', itens: { m1: { nome: 'Apoquel', suspenso: true } } };
+        dados['auaulandia/estadias/est-antiga'] = { status: 'ativa', saida: '2026-07-10' };
+        let seguiu6 = 0;
+        ctx.medGate('auaulandia', KEY, 'Arthur', 'Renata', false, [], () => {}, () => { seguiu6++; });
+        await esperarMed();
+        check('(f) mordida — remédio já suspenso pela veterinária não é perguntado de novo',
+          perguntas.length === 0 && seguiu6 === 1, JSON.stringify(perguntas));
+
+        // (g) DAY CARE: a memória por FILHOt, e o texto que fala da vinda ao Day Care
+        zerarMed();
+        dados['daycare/med-ultimo/toddy__marina'] = {
+          nome: 'Toddy', dia: '2026-08-28',
+          itens: { medicacao_0: { nome: 'Apoquel', dose: 'meio comprimido', horarios: ['12:00'] } },
+        };
+        let seguiu7 = 0, mudou7 = null;
+        toque.botao = 1;
+        ctx.medGate('daycare', 'toddy__marina', 'Toddy', 'Marina', false, [], (f) => { mudou7 = f; }, () => { seguiu7++; });
+        await esperarMed();
+        check('(g) Day Care: pergunta pela última VINDA, com a dose de lá',
+          perguntas.length === 1 &&
+          perguntas[0].titulo === 'Giullian, na última vinda ao Day Care o Toddy tomava Apoquel — não toma mais?' &&
+          !!mudou7 && mudou7.item.dose === 'meio comprimido' && seguiu7 === 0,
+          JSON.stringify(perguntas) + ' ' + JSON.stringify(mudou7));
+
+        // (h) fêmea: a frase concorda ("a Yume", não "o Yume")
+        zerarMed();
+        dados['daycare/med-ultimo/yume__ana'] = { nome: 'Yume', itens: { m0: { nome: 'Ômega 3' } } };
+        toque.botao = 0;
+        ctx.medGate('daycare', 'yume__ana', 'Yume', 'Ana', true, [], () => {}, () => {});
+        await esperarMed();
+        check('(h) a frase concorda com o gênero do FILHOt',
+          perguntas.length === 1 && /a Yume tomava Ômega 3/.test(perguntas[0].titulo),
+          JSON.stringify(perguntas));
+
+        // (i) sem memória nenhuma: nada é inventado
+        zerarMed();
+        let seguiu9 = 0;
+        ctx.medGate('daycare', 'nunca__tomou', 'Ninguém', '', false, [], () => {}, () => { seguiu9++; });
+        await esperarMed();
+        check('(i) FILHOt sem passado de remédio: nenhuma pergunta, nenhum palpite',
+          perguntas.length === 0 && seguiu9 === 1);
+      } finally {
+        vm.runInContext('DB = __bkpMed.DB; audit = __bkpMed.audit; zEscolha = __bkpMed.zEscolha; zAlertao = __bkpMed.zAlertao; quemSou = __bkpMed.quemSou; hospHojeISO = __bkpMed.hospHojeISO; pelGet = __bkpMed.pelGet;', ctx);
+        try { Object.keys(ctx.MED_GATE_ULTIMO).forEach((k) => delete ctx.MED_GATE_ULTIMO[k]); } catch (e) {}
+      }
+
+      // ---- o portão está LIGADO nos dois salvamentos, e vem ANTES de gravar ----
+      const corpoCi = corpoFuncao('ciSalvar');
+      const corpoPt = corpoFuncao('ptSalvar');
+      check('o check-in da AuAulândia chama o portão', /medGate\('auaulandia'/.test(corpoCi));
+      check('o check-in do Day Care chama o portão', /medGate\('daycare'/.test(corpoPt));
+      check('na AuAulândia a pergunta vem ANTES de qualquer gravação',
+        corpoCi.indexOf("medGate('auaulandia'") > 0 &&
+        corpoCi.indexOf("medGate('auaulandia'") < corpoCi.indexOf('__ciGravar('),
+        'medGate em ' + corpoCi.indexOf("medGate('auaulandia'") + ', __ciGravar em ' + corpoCi.indexOf('__ciGravar('));
+      check('no Day Care a pergunta vem ANTES de qualquer gravação',
+        corpoPt.indexOf("medGate('daycare'") > 0 &&
+        corpoPt.indexOf("medGate('daycare'") < corpoPt.indexOf('DB.ref(ptNo()'),
+        'medGate em ' + corpoPt.indexOf("medGate('daycare'") + ', gravação em ' + corpoPt.indexOf('DB.ref(ptNo()'));
+      check('o check-in do Day Care guarda a memória do remédio para a próxima vez',
+        /daycare\/med-ultimo\/'\+k/.test(corpoPt) && /dia:dcDataKey\(\)/.test(corpoPt));
+      check('dia sem remédio nenhum APAGA a memória (a resposta "não toma mais" vira fato)',
+        /Object\.keys\(memoria\)\.length\?\{[^}]*\}:null/.test(corpoPt));
+      check('as três respostas são as três da Adriana, escritas na tela',
+        /'Não toma mais'/.test(html) && /'Mudou a dose'/.test(html) && /'O tutor esqueceu de trazer'/.test(html));
+    }
+  }
+  console.log('');
+
+  // ============================================================================
+  // A BARRA COM O VISUAL DA OPÇÃO F (Adriana escolheu, 29/ago/2026)
+  // ----------------------------------------------------------------------------
+  // Só pintura: superfície, marca, tipografia, pílula do ativo e rodapé. A estrutura do
+  // menu, a hierarquia e a sanfona continuam provadas no bloco "menu" acima — se alguma
+  // delas cair, é porque a pintura mexeu no que não devia.
+  console.log('Barra lateral — o visual da Opção F (29/ago):');
+  {
+    const cssSb = (/\.sidebar\{([^}]*)\}/.exec(html) || [, ''])[1];
+    const cssBrandLogo = (/\.brand-logo\{([^}]*)\}/.exec(html) || [, ''])[1];
+    const cssBrand = (/\.brand\{([^}]*)\}/.exec(html) || [, ''])[1];
+    const cssAtivo = (/\.nav a\.active\{([^}]*)\}/.exec(html) || [, ''])[1];
+
+    // ---- a marca: SVG de verdade, grande, sem caixa (zeluz-logo-lei.md) ----
+    check('a marca da barra é o SÍMBOLO OFICIAL #39, em SVG — não a palavra "Zêluz" digitada',
+      /<img src="assets\/simbolo-zeluz-39-claro\.svg"[^>]*class="brand-logo"/.test(html),
+      (html.match(/class="brand-logo"[^>]*>/) || [])[0] || 'não achei a marca');
+    check('o arquivo do símbolo veio junto com o app (senão a barra abre sem marca)',
+      fs.existsSync(path.join(__dirname, '..', 'auaulandia', 'assets', 'simbolo-zeluz-39-claro.svg')) &&
+      fs.existsSync(path.join(__dirname, '..', 'auaulandia', 'assets', 'simbolo-zeluz-39.svg')));
+    check('em fundo escuro entra a versão CLARA (a preta sumiria na barra)',
+      /simbolo-zeluz-39-claro\.svg/.test(html) &&
+      /fill: #FFFDF6/.test(fs.readFileSync(path.join(__dirname, '..', 'auaulandia', 'assets', 'simbolo-zeluz-39-claro.svg'), 'utf8')));
+    const larguraLogo = parseFloat((/width:(\d+)px/.exec(cssBrandLogo) || [, '0'])[1]);
+    check('o símbolo é GRANDE: pelo menos 72px', larguraLogo >= 72, larguraLogo + 'px');
+    check('e não mora dentro de caixa nenhuma (o .brand não tem fundo nem borda próprios)',
+      !/background/.test(cssBrand) && !/border/.test(cssBrand), cssBrand);
+
+    // ---- a superfície: a barra desce para o azul profundo ----
+    check('a barra é o azul profundo da Opção F',
+      /#1A3A4F/.test(cssSb) && /#15303F/.test(cssSb), cssSb.slice(0, 160));
+    check('e continua com profundidade — nada de fundo chapado',
+      /radial-gradient/.test(cssSb) && /\.sidebar::after/.test(html));
+
+    // ---- o item ativo: pílula de dourado baixo + fio, nunca a bola amarela cheia ----
+    check('o item ativo NÃO é mais a bola amarela cheia (fundo dourado sólido)',
+      !/background:var\(--z-gold\)/.test(cssAtivo), cssAtivo);
+    check('o item ativo é uma pílula de dourado baixo com o texto aceso',
+      /background:rgba\(222,180,40,\.13\)/.test(cssAtivo) && /color:var\(--z-gold-light\)/.test(cssAtivo), cssAtivo);
+    check('e tem o fio dourado à esquerda marcando onde a pessoa está',
+      /\.nav a\.active::before\{[^}]*background:var\(--z-gold\)/.test(html.replace(/\s*\n\s*/g, '')));
+    check('o ícone do item ativo acende em dourado', /\.nav a\.active svg\{color:var\(--z-gold\)\}/.test(html));
+
+    // ---- o rodapé: quem está usando E em que papel ----
+    check('o rodapé mostra o PAPEL embaixo do nome',
+      /id="whoPapel"/.test(html) && /\.who-papel\{/.test(html));
+    check('o nome continua no mesmo id de sempre (nada quebrou fora daqui)', /id="whoName"/.test(html));
+    if (typeof ctx.papelRotulo === 'function') {
+      check('o papel sai por extenso, da MESMA lista do Time (ROLE_OPCOES)',
+        ctx.papelRotulo('monitor') === 'Monitor(a)' &&
+        ctx.papelRotulo('vet') === 'Veterinária' &&
+        ctx.papelRotulo('plantonista') === 'Plantonista',
+        [ctx.papelRotulo('monitor'), ctx.papelRotulo('vet'), ctx.papelRotulo('plantonista')].join(' / '));
+      check('e os papéis que não se cadastram no Time também têm nome',
+        ctx.papelRotulo('gestao') === 'Gestão' && ctx.papelRotulo('diretoria') === 'Diretoria' &&
+        ctx.papelRotulo('recepcao') === 'Consultora (Recepção)',
+        [ctx.papelRotulo('gestao'), ctx.papelRotulo('diretoria'), ctx.papelRotulo('recepcao')].join(' / '));
+      check('mordida — papel desconhecido não vira "undefined" na tela',
+        ctx.papelRotulo('coisa-que-nao-existe') === 'Zêluz' && ctx.papelRotulo('') === 'Zêluz' && ctx.papelRotulo() === 'Zêluz');
+      check('o rodapé é preenchido no login (papel escrito, não só guardado)',
+        /_wp\.textContent=\(u\.pessoa\?/.test(html) && /papelRotulo\(u\.role\)/.test(html));
+      check('com login de posto, quem aparece no rodapé é a PESSOA (o posto vira o papel)',
+        /whoName'\)\.textContent=\(u\.pessoa\|\|u\.nome\)/.test(html));
+    } else {
+      check('papelRotulo existe', false, 'função não encontrada no app');
+    }
+
+    // ---- o que a pintura NÃO podia mexer ----
+    // A senha antiga das pontes não pode ficar escrita como dica de campo: quem abre a tela
+    // acha que é o valor certo e cola ela. As pontes leem a senha de PONTE_SENHA (propriedade
+    // do Apps Script), não mais do código.
+    check('a palavra-chave antiga das pontes saiu das dicas de campo',
+      html.indexOf('zeluz-auaulandia') === -1,
+      'ainda aparece ' + ((html.match(/zeluz-auaulandia/g) || []).length + 'x'));
+    check('e os dois campos citam PONTE_SENHA, que é onde a senha mora agora',
+      (html.match(/PONTE_SENHA no Apps Script/g) || []).length === 2 &&
+      (html.match(/PONTE_SENHA do Apps Script/g) || []).length === 2,
+      'rótulo ' + (html.match(/PONTE_SENHA no Apps Script/g) || []).length +
+      ' · dica ' + (html.match(/PONTE_SENHA do Apps Script/g) || []).length);
+
+    check('a sanfona continua sendo a mesma (nenhuma classe nova de abrir/fechar)',
+      /\.acc:not\(\.acc-open\) > \.acc-panel\{display:none\}/.test(html));
+    check('a pendência continua acendendo em vermelho por cima de tudo (!important)',
+      /\.nav a\.nav-pend\{[\s\S]{0,220}?!important/.test(html));
   }
   console.log('');
 
@@ -4250,19 +4663,53 @@ async function main() {
       });
       return achadas;
     };
-    // A ÚNICA que fica, e por quê: pessoaDoTurno() devolve o nome de quem está no turno
-    // dentro de expressões síncronas (assinou:pessoaDoTurno()) em 16 lugares — medicação,
-    // almoço, atividades. Torná-la assíncrona espalharia await por metade do app, e é
-    // justamente ela que garante que nenhuma dose seja gravada sem responsável.
-    const DEIXADA_DE_FORA = ['pessoaDoTurno'];
+    // NENHUMA sobrou (29/ago/2026). A última era o prompt() do nome de quem está no turno,
+    // que abria NO MEIO da ação — na hora de dar o remédio, de marcar o almoço. A pergunta
+    // subiu para a porta de entrada: login de POSTO ("Plantonista", "Monitor 3") não entra
+    // sem dizer quem está usando, o nome fica na sessão, e pessoaDoTurno() virou leitura
+    // síncrona — continua cabendo dentro de `assinou:pessoaDoTurno()` nos 16 lugares.
     const sobraram = chamadasNativas(html);
-    check('sobrou exatamente 1 janelinha nativa no arquivo (eram 68)',
-      sobraram.length === 1, JSON.stringify(sobraram.map((x) => x.linha + ':' + x.texto)));
-    check('e a que sobrou é a do nome de quem está no turno, a única nomeada',
-      sobraram.length === 1 && /QUEM ESTA NO TURNO AGORA/.test(sobraram[0].texto),
-      JSON.stringify(sobraram));
-    check('a exceção está escrita no teste, com nome',
-      DEIXADA_DE_FORA.length === 1 && DEIXADA_DE_FORA[0] === 'pessoaDoTurno');
+    check('não sobrou NENHUMA janelinha nativa no arquivo (eram 68)',
+      sobraram.length === 0, JSON.stringify(sobraram.map((x) => x.linha + ':' + x.texto)));
+    check('pessoaDoTurno não abre mais nada: lê a sessão e devolve na hora',
+      /function pessoaDoTurno\(forcar\)\{/.test(html) &&
+      !/prompt\(/.test(corpoFuncao('pessoaDoTurno')) &&
+      /return atual\|\|'-';/.test(corpoFuncao('pessoaDoTurno')),
+      corpoFuncao('pessoaDoTurno').slice(0, 120));
+    check('login de POSTO não entra sem o nome de quem está usando',
+      /function entrarComoPessoa\(u, erroAnterior\)\{/.test(html) &&
+      /LOGIN_GENERICO\.test\(nomeLogin\)/.test(corpoFuncao('entrarComoPessoa')) &&
+      /Quem está usando este aparelho agora\?/.test(html));
+    check('e quem desiste NÃO entra (o cancelar não deixa passar)',
+      /aoCancelar:function\(\)\{[\s\S]{0,320}?este acesso não entra/.test(html));
+    check('doLogin passa por essa porta — não grava a sessão por fora',
+      /entrarComoPessoa\(u\); return;/.test(String(ctx.doLogin || '')));
+    if (typeof ctx.pessoaDoTurno === 'function' && typeof ctx.quemSou === 'function') {
+      // Sessão de mentira: é assim que o app guarda o login (zeluz_login) e o nome escrito
+      // na entrada (campo `pessoa`).
+      const sessao = {};
+      const bkpSS = ctx.sessionStorage;
+      ctx.sessionStorage = {
+        getItem(k) { return Object.prototype.hasOwnProperty.call(sessao, k) ? sessao[k] : null; },
+        setItem(k, v) { sessao[k] = String(v); },
+        removeItem(k) { delete sessao[k]; },
+      };
+      try {
+        sessao.zeluz_login = JSON.stringify({ role: 'plantonista', nome: 'Plantonista', pessoa: 'Wandela Cristina' });
+        check('com o nome na sessão, pessoaDoTurno devolve a PESSOA — sem abrir nada',
+          ctx.pessoaDoTurno() === 'Wandela Cristina', String(ctx.pessoaDoTurno()));
+        check('e quemSou também: o posto sozinho não responde por nada',
+          ctx.quemSou() === 'Wandela Cristina', String(ctx.quemSou()));
+        delete sessao.zeluz_pessoa_turno;
+        sessao.zeluz_login = JSON.stringify({ role: 'monitor', nome: 'Giulia Andrade' });
+        check('login com nome de gente continua valendo por si',
+          ctx.pessoaDoTurno() === 'Giulia Andrade', String(ctx.pessoaDoTurno()));
+        delete sessao.zeluz_pessoa_turno;
+        sessao.zeluz_login = JSON.stringify({ role: 'plantonista', nome: 'Plantonista' });
+        check('mordida — posto SEM nome não vira responsável: não devolve "Plantonista"',
+          ctx.pessoaDoTurno() !== 'Plantonista', String(ctx.pessoaDoTurno()));
+      } finally { ctx.sessionStorage = bkpSS; }
+    }
 
     // Os dois envelopes que substituíram tudo — e o campo de senha que a janela nativa
     // mostrava em texto puro.

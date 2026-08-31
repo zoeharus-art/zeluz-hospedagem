@@ -235,6 +235,10 @@ const SENHAS_FIXAS = {
   plantonista: { senha: '1001', quem: 'Plantonista', origem: 'senha fixa no HTML' }
 };
 
+// Quem "está no turno" quando a senha é de POSTO. O app pede este nome na porta de entrada
+// desde 29/ago/2026 — posto não assina nada, pessoa assina.
+const NOME_DE_QUEM_TESTA = 'Teste do Sistema';
+
 // O papel no banco → o nome que a Adriana usa
 const NOME_DO_PAPEL = {
   monitor: 'monitor', plantonista: 'plantonista', consultora: 'recepcao',
@@ -355,6 +359,17 @@ async function varrerPapel(navegador, base, papel, senha, quem, origem, aparelho
   await page.fill('#loginPwd', senha);
   await page.click('.login-btn');
   await page.waitForTimeout(1500);
+
+  // Login de POSTO (ex.: "Plantonista") pergunta QUEM está usando antes de deixar entrar
+  // (29/ago/2026). Aqui o teste responde como uma pessoa responderia: escreve o nome e
+  // confirma. Sem isso, o papel plantonista não entraria e a varredura pararia nele.
+  const pedeNome = await page.$('#loginPessoa');
+  if (pedeNome) {
+    await page.fill('#loginPessoa', NOME_DE_QUEM_TESTA);
+    await page.click('#zCampoOk');
+    await page.waitForTimeout(1200);
+  }
+
   await estabilizar(page);
   await dispensarCartazes(page);
 

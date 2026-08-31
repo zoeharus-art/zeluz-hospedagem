@@ -1,0 +1,258 @@
+{
+  // Realtime Database — hospedagem-zeluz. v2 — Etapa 4 da auditoria de 28/ago/2026.
+  // Este arquivo NÃO está publicado. É proposta. O que vale hoje continua sendo
+  // database.rules.json (v1). Ver docs/auditoria-28ago2026/05-regras-v2.md para o
+  // raciocínio completo, a tabela de verificação caminho-a-caminho e como publicar.
+  //
+  // 29/ago/2026 — CORREÇÃO DE FORMATO (achada ao rodar de verdade no emulador pela
+  // primeira vez): a v2 original documentava cada trecho com chaves JSON fictícias
+  // ("//", "//01"...) cujo VALOR era uma string de comentário. Isso é JSON válido, mas
+  // NÃO é a gramática de regra do Realtime Database — toda chave que não começa com "."
+  // é lida como um CAMINHO FILHO, e um caminho filho só pode valer um OBJETO (outro nó
+  // de regra), nunca uma string solta. O emulador rejeitava o arquivo inteiro com
+  // "Expected '{'" bem em cima do texto do comentário. A correção troca as notas por
+  // comentários DE VERDADE (// e /* */, fora de qualquer chave/valor) — que o parser de
+  // regras do Firebase aceita nativamente. Nada da LÓGICA das regras mudou nesta
+  // correção (conferido nó a nó antes de publicar: mesmo conjunto de
+  // .read/.write/.validate, nos mesmos caminhos).
+  //
+  // O QUE MUDA EM RELAÇÃO À v1 (só isto — o resto é idêntico):
+  // 1) daycare/auditoria — o diário de quem-fez-o-quê agora é SÓ CRIA: cada entrada
+  //    (a chave aleatória do push()) não pode mais ser editada nem apagada depois de
+  //    escrita, e o dia inteiro (o nível acima) não aceita mais escrita nenhuma direto.
+  //    Fecha o achado D (apagar o diário de um dia inteiro num comando).
+  // 2) auaulandia/medicacao-log — o registro de cada dose JÁ DADA não pode mais ser
+  //    apagado (nem o dia inteiro, nem uma dose isolada) e passa a validar o formato
+  //    mínimo (nome, medida, hora, quem, quando — como texto/número de verdade).
+  //    Fecha o achado P.
+  // 3) daycare/med-dia e daycare/conferir-medicacao — o dia inteiro não pode mais ser
+  //    apagado com um comando só. O item de cada FILHOt dentro do dia continua podendo
+  //    ser limpo (o app faz isso de propósito quando não há mais dose a registrar —
+  //    NÃO restringi esse nível, ver a nota grande mais abaixo).
+  // 4) auaulandia/config/acerto-plantao, auaulandia/config/telegram e
+  //    daycare/config/monitores — as três continuam GRAVÁVEIS por qualquer login
+  //    anônimo (o app precisa disso; ver docs/auditoria-28ago2026/05-regras-v2.md),
+  //    mas não podem mais ser APAGADAS (newData.exists()) e passam a exigir o FORMATO
+  //    mínimo esperado (validate) — um número onde devia ser texto, ou um monitor sem
+  //    nome/senha/papel, já não passa mais.
+  // 5) auaulandia/medicacao-agenda/$key/itens — GANHOU escrita própria (29/ago/2026,
+  //    achado ao rodar o teste de verdade no emulador — fecha a ressalva da seção 1.3
+  //    do 05-regras-v2.md). Antes, um set(null) no nó "itens" inteiro (é exatamente o
+  //    que a Conferência do check-in faz quando o tutor confirma "sem medicação")
+  //    dependia da regra do $key ($key.write exige newData.exists()) — e SE a ficha
+  //    daquele FILHOt não tivesse nome/tutor gravados (só "itens"), o $key ficava
+  //    vazio depois do set(null) e a escrita era negada por engano. Provado no
+  //    emulador com um caso de teste explícito (tests/regras.test.js): sem esta
+  //    correção, a prova falhava. A correção dá ao nó "itens" a MESMA regra que ele já
+  //    tinha na v1 (auth != null, sem newData.exists()) — independente do que sobrar
+  //    no $key — e o $key continua protegido contra ser apagado/sobrescrito DIRETO
+  //    (.remove() ou um PUT de lixo nele mesmo): provado também, com um segundo caso
+  //    de teste, que essa correção não reabre o buraco original.
+  //
+  // O QUE NÃO MUDA (fora do escopo desta etapa — não depende de servidor):
+  // - Continua tudo logado como 'auth != null' — não separa papel (Etapa 5, precisa de
+  //   servidor ou de conta por pessoa). Ver achado 10.
+  // - auaulandia/medicacao-agenda/$key/itens/$id (a AGENDA — o que precisa ser dado,
+  //   diferente do LOG — o que já foi dado) continua podendo ser apagada item a item.
+  //   É recurso DELIBERADO do app (função magRemoverItem, "Fundação 1 — anti-Hulk"):
+  //   travar isso quebraria "remover remédio da agenda" para a Vet/Gestão/Supervisão.
+  //   A proteção aqui é só no nível acima ($key): não dá mais para apagar a FICHA
+  //   inteira de um FILHOt com um comando bobo — só remédio por remédio, como já era.
+  // - daycare/config/ponte-planilha (a ponte da planilha do Day Care) e as demais
+  //   configurações (orçamento, plantonistas, sensíveis, atividades, versão do app,
+  //   janela da auditoria) NÃO foram endurecidas nesta etapa — o pedido nomeou só as
+  //   três acima. Seguem exatamente como na v1.
+  // - O curinga $colecao continua aceitando nome de coleção novo (achado 12 — enchimento
+  //   do banco). Enumerar as coleções foi cogitado e DESCARTADO nesta etapa: o próprio
+  //   relatório avisa que a falha ao esquecer de cadastrar uma coleção nova é silenciosa
+  //   (a maioria das escritas termina em .catch vazio). Fica para quando houver tempo
+  //   de rodar a lista completa contra o emulador.
+
+  "rules": {
+    ".read": false,
+    ".write": false,
+
+    "auaulandia": {
+      ".read": "auth != null",
+      ".write": false,
+
+      // A AGENDA (o que precisa ser dado). O nível do FILHOt ($key) ganha proteção
+      // contra apagar/virar lixo; o item do remédio (itens/$id) fica como na v1 de
+      // propósito — ver a nota "O QUE NÃO MUDA" acima. O nó "itens" (o pai direto dos
+      // itens, sem o $id) ganha a SUA PRÓPRIA regra de escrita (nota "5)" acima) para
+      // que um set(null) no "itens" inteiro nunca dependa de sobrar outro campo no $key.
+      "medicacao-agenda": {
+        ".read": "auth != null",
+        ".write": false,
+        "$key": {
+          ".write": "auth != null && newData.exists()",
+          ".validate": "newData.hasChildren()",
+          "itens": {
+            ".write": "auth != null",
+            "$id": { ".write": "auth != null" }
+          }
+        }
+      },
+
+      // O LOG (o que já foi dado). Ninguém apaga — nem o dia, nem o FILHOt no dia, nem
+      // uma dose isolada. E o que for escrito precisa ter a cara de uma dose de verdade.
+      "medicacao-log": {
+        ".read": "auth != null",
+        ".write": false,
+        // 29/ago/2026 — CORREÇÃO (achada rodando o teste de verdade no emulador):
+        // $dia e $key NÃO têm ".write" própria de propósito — nem "newData.exists()".
+        // Explicação do porquê isso IMPORTA: no Realtime Database, um ".write" cascateia
+        // — se QUALQUER nível ancestral no caminho autoriza a escrita, ela é permitida,
+        // não importa o que o nível mais fundo diga. Com ".write: newData.exists()" no
+        // $dia e no $key (como a v2 tinha antes desta correção), remover UMA dose
+        // isolada (o alvo exato é o $doseId) também é avaliado contra a regra do $key
+        // e do $dia — e, se sobrar QUALQUER outra dose irmã depois da remoção, o $key
+        // (ou o $dia) "ainda existe", a condição newData.exists() do ANCESTRAL dá
+        // verdadeiro, e a remoção da dose passa mesmo com o ".write" do $doseId
+        // dizendo que não. Provado no emulador: com a regra antiga, a prova "anônimo
+        // NÃO apaga uma dose já registrada" falhava sempre que havia outra dose no
+        // mesmo FILHOt/dia (o caso normal, com prova 2 tendo gravado uma dose antes).
+        // A correção: só o $doseId concede escrita (e exige newData.exists() — não
+        // apaga). Sem ".write" nenhuma em $dia/$key, apagar o DIA inteiro ou o FILHOt
+        // inteiro num comando direto continua negado — não por causa de "ainda ter
+        // sobrado algo", mas porque NENHUM nível do caminho concede a escrita (o
+        // padrão de toda regra é negar). Mais forte que antes, não mais fraco: o
+        // histórico fica intocável em QUALQUER combinação de dados vizinhos.
+        "$dia": {
+          ".validate": "newData.hasChildren()",
+          "$key": {
+            ".validate": "newData.hasChildren()",
+            "$doseId": {
+              ".write": "auth != null && newData.exists()",
+              ".validate": "newData.hasChildren(['nome','u','ts','quem','horario']) && newData.child('nome').isString() && newData.child('u').isString() && newData.child('ts').isNumber() && newData.child('quem').isString() && newData.child('horario').isString()"
+            }
+          }
+        }
+      },
+
+      "config": {
+        ".read": "auth != null",
+        ".write": false,
+
+        // A tabela de preço da hospedagem. Não apaga; precisa ter faixas + ajuda de custo,
+        // e o ajuda de custo precisa ser número (não string).
+        "acerto-plantao": {
+          ".read": "auth != null",
+          ".write": "auth != null && newData.exists()",
+          ".validate": "newData.hasChildren(['faixas','ajuda']) && newData.child('ajuda').isNumber()"
+        },
+
+        // URL + senha da ponte do Telegram. Não apaga; os dois campos precisam ser texto
+        // (string vazia continua permitida — é assim que o app "desliga" os avisos hoje).
+        "telegram": {
+          ".read": "auth != null",
+          ".write": "auth != null && newData.exists()",
+          ".validate": "newData.hasChildren(['url','senha']) && newData.child('url').isString() && newData.child('senha').isString()"
+        },
+
+        // Tudo que não é uma das duas de cima (orçamento/precos, orçamento/feriados,
+        // orçamento/sheets, plantonistas...) — sem mudança nenhuma em relação à v1.
+        "$outraConfig": {
+          ".write": "auth != null && newData.exists()",
+          "$item": { ".write": "auth != null" }
+        }
+      },
+
+      "$colecao": {
+        ".write": "auth != null && newData.exists()",
+        "$item": { ".write": "auth != null" }
+      }
+    },
+
+    "daycare": {
+      ".read": "auth != null",
+      ".write": false,
+
+      // O DIÁRIO DE AUDITORIA. Cada evento é uma entrada nova (push) — o app nunca edita
+      // nem apaga uma entrada já gravada, e nunca escreve no dia inteiro de uma vez.
+      // Por isso a regra passa a refletir exatamente isso: cria, nunca edita, nunca apaga.
+      "auditoria": {
+        ".read": "auth != null",
+        ".write": false,
+        "$dia": {
+          ".write": false,
+          "$entryId": {
+            ".write": "auth != null && !data.exists() && newData.exists()",
+            ".validate": "newData.hasChildren(['ts','quem','role','acao']) && newData.child('ts').isNumber() && newData.child('quem').isString() && newData.child('role').isString() && newData.child('acao').isString()"
+          }
+        }
+      },
+
+      // Check-in de pertences com dose a registrar no dia. O item de cada FILHOt
+      // ($item) segue como na v1 DE PROPÓSITO: o app grava null ali quando não há
+      // dose nenhuma para aquele check-in (linha 17464-17465) — travar quebraria isso.
+      // A proteção fica no dia inteiro ($dia): ninguém mais apaga/vira lixo o dia todo.
+      "med-dia": {
+        ".read": "auth != null",
+        ".write": false,
+        "$dia": {
+          ".write": "auth != null && newData.exists()",
+          ".validate": "newData.hasChildren()",
+          "$item": { ".write": "auth != null" }
+        }
+      },
+
+      // Fila de divergência de medicação (checkout avisa a recepção). O app nunca
+      // apaga aqui — mesma proteção no nível do dia.
+      "conferir-medicacao": {
+        ".read": "auth != null",
+        ".write": false,
+        "$dia": {
+          ".write": "auth != null && newData.exists()",
+          ".validate": "newData.hasChildren()",
+          "$item": { ".write": "auth != null" }
+        }
+      },
+
+      "config": {
+        ".read": "auth != null",
+        ".write": false,
+
+        // Nome, papel e SENHA de cada colaborador. Não apaga; e cada pessoa do array
+        // precisa ter nome, senha e papel — os três como texto.
+        "monitores": {
+          ".read": "auth != null",
+          ".write": "auth != null && newData.exists()",
+          "$index": {
+            ".validate": "newData.hasChildren(['nome','senha','role']) && newData.child('nome').isString() && newData.child('senha').isString() && newData.child('role').isString()"
+          }
+        },
+
+        // Tudo que não é 'monitores' (ponte-planilha, sensiveis, atividades, versao-app,
+        // a janela de horário da própria auditoria) — sem mudança em relação à v1.
+        "$outraConfig": {
+          ".write": "auth != null && newData.exists()",
+          "$item": { ".write": "auth != null" }
+        }
+      },
+
+      "$colecao": {
+        ".write": "auth != null && newData.exists()",
+        "$item": { ".write": "auth != null" }
+      }
+    },
+
+    "filhots": {
+      ".read": "auth != null",
+      ".write": false,
+      "$colecao": {
+        ".write": "auth != null && newData.exists()",
+        "$item": { ".write": "auth != null" }
+      }
+    },
+
+    "racao": {
+      ".read": "auth != null",
+      ".write": false,
+      "$colecao": {
+        ".write": "auth != null && newData.exists()",
+        "$item": { ".write": "auth != null" }
+      }
+    }
+  }
+}

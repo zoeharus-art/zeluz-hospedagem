@@ -1,6 +1,15 @@
 /**
  * ZÊLUZ · AuAulândia — ponte para os grupos do Telegram
  *
+ * Versão 8 (29/ago/2026) — a palavra-chave da ponte (SENHA) saiu do código e passou a
+ *                          morar só nas Propriedades do script, na propriedade PONTE_SENHA.
+ *                          Antes ela era um texto fixo e curto, escrito neste
+ *                          arquivo — que é um repositório PÚBLICO no GitHub — e quem o lesse
+ *                          ganhava poder de postar nos 4 grupos da Zêluz, inclusive no da
+ *                          Gestão (auditoria 28/ago/2026, achados 8 e 9). Sem a propriedade
+ *                          configurada, a ponte RECUSA TUDO — nunca abre a porta por padrão —
+ *                          e diz isso no log. Ver _ponteSenha() logo abaixo e
+ *                          docs/auditoria-28ago2026/06-pontes-e-pin.md.
  * Versão 7 (28/ago/2026) — App Check: a ponte passa a mandar a prova de que é da casa, lendo o
  *                          token de depuração das Propriedades do script (APPCHECK_DEBUG_TOKEN).
  *                          Sem a propriedade, nada muda. E a gravação no banco deixou de engolir
@@ -21,7 +30,28 @@
  */
 
 var TOKEN_BOT = 'COLE_AQUI_O_TOKEN';
-var SENHA     = 'zeluz-auaulandia';
+
+/* ---------------------------------------------------------------------------
+ * PONTE_SENHA — a palavra-chave que autoriza o app a falar com esta ponte.
+ *
+ * NUNCA fica escrita neste arquivo (o repositório é público). Mora só nas
+ * Propriedades do script: Configurações do projeto (a engrenagem, à esquerda) →
+ * Propriedades do script → Adicionar propriedade do script → nome PONTE_SENHA,
+ * valor a nova palavra-chave (uma string longa e aleatória, a mesma que vai ser
+ * colada em Configurações → Avisos no Telegram, no app).
+ *
+ * Sem a propriedade, esta função devolve '' — e doPost() recusa TODO pedido,
+ * mesmo sem 'senha' nenhuma vindo no corpo. O silêncio nunca pode ter dois
+ * significados: o log diz exatamente por que recusou.
+ * ------------------------------------------------------------------------- */
+function _ponteSenha() {
+  try {
+    return PropertiesService.getScriptProperties().getProperty('PONTE_SENHA') || '';
+  } catch (e) {
+    Logger.log('PONTE_SENHA: não consegui ler as Propriedades do script — ' + e);
+    return '';
+  }
+}
 
 var GRUPOS = {
   vet:    '-5484669898',   // Zêluz Daycare Vet — alterações do check-in do corpo
@@ -41,7 +71,12 @@ var GRUPO_PADRAO = 'vet';
 function doPost(e) {
   try {
     var d = JSON.parse(e.postData.contents);
-    if (String(d.senha || '') !== SENHA) {
+    var senhaEsperada = _ponteSenha();
+    if (!senhaEsperada) {
+      Logger.log('PONTE_SENHA não configurada nas Propriedades do script — recusando o pedido.');
+      return _resp({ ok: false, erro: 'PONTE_SENHA não configurada nas Propriedades do script' });
+    }
+    if (String(d.senha || '') !== senhaEsperada) {
       return _resp({ ok: false, erro: 'senha invalida' });
     }
     var nomeGrupo = String(d.grupo || GRUPO_PADRAO);
