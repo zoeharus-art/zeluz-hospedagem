@@ -4177,6 +4177,9 @@
     // Sem a planilha lida, não dá para dizer quem está hospedado — e muito menos cobrar
     // check-in de alguém. Foi assim que a lista de exemplo virou "6 sem check-in".
     if(HOSP_PLANILHA!==true) return out;
+    // Estadias ainda descendo: índice vazio faria TODO hóspede parecer sem check-in
+    // (foi o "3 sem check-in" com Serena e Hana já lançadas — 01/set).
+    if(typeof CF_ESTADIAS_LIDO!=='undefined' && !CF_ESTADIAS_LIDO) return out;
     try{
       (hospedes||[]).forEach(function(h){
         // A MORADORA NÃO FAZ CHECK-IN (Adriana, 17/ago/2026: "está aparecendo para a Amanda o
@@ -10658,7 +10661,7 @@
   // Agora existe um carimbo: esta constante é a versão que o aparelho está rodando, e o
   // Firebase guarda a versão publicada. Quando as duas diferem, aparece o aviso — mas
   // NUNCA recarrega sozinho: recarregar no meio de um check-in perderia o trabalho.
-  const APP_VERSAO='2026-09-01-07';
+  const APP_VERSAO='2026-09-01-08';
   function vigiarVersao(){
     if(!DB) return;
     try{
@@ -19811,7 +19814,11 @@
     var h='<div style="margin-top:10px;padding-top:9px;border-top:2px solid var(--z-gold)">'
       +'<div style="font-weight:800;color:var(--z-blue);font-size:15px">Como a ficha d'
       +(nome?('e '+escAttr(nome)):'ele')+' vai ficar</div>'
-      +'<div class="hint" style="margin-top:2px">É isto que a equipe vai ler na hora de servir, de dar banho e de montar a atividade. Tire o que não presta; nada muda sozinho.</div>';
+      +'<div class="hint" style="margin-top:2px">É isto que a equipe vai ler na hora de servir, de dar banho e de montar a atividade. Nada muda sozinho.</div>'
+      +'<div class="hint" style="margin-top:4px;padding:7px 9px;background:var(--z-cream-warm);border-radius:8px">'
+      +'Cada cartão abaixo é <strong>um trecho da resposta que o tutor mandou no WhatsApp</strong>. '
+      +'Para cada um: <strong>gravar</strong> põe o trecho na ficha · <strong>não gravar</strong> deixa de fora · '
+      +'<strong>mudar o campo</strong> é para quando o trecho caiu no lugar errado (ex.: uma mania que apareceu em Alergia).</div>';
     if(!qks.length){
       h+='<div class="hint" style="margin-top:7px;color:var(--crm-atencao-text)"><strong>Não consegui encaixar nada em campo nenhum.</strong> A resposta inteira está abaixo — recorte para os campos.</div>';
     }
@@ -19855,14 +19862,14 @@
           +'<span class="hint">'+(f.atual?('hoje: '+escAttr(f.atual.slice(0,40))):'hoje: vazio')+'</span>'
           +'<button type="button" class="btn" style="margin-left:auto;background:none;border:none;padding:0 4px;'
           +'color:var(--z-blue);font-size:12.5px;font-weight:800;text-decoration:underline"'
-          +' onclick="algCurToggle(\'' + algEsc(k) + '\',\'' + qk + '\')">'+(f.grava?'tirar':'usar')+'</button>'
+          +' onclick="algCurToggle(\'' + algEsc(k) + '\',\'' + qk + '\')">'+(f.grava?'não gravar':'gravar')+'</button>'
           +'<button type="button" class="btn" style="background:none;border:none;padding:0 4px;'
           +'color:var(--muted);font-size:12px;font-weight:700;text-decoration:underline"'
-          +' onclick="algAbrirTroca(\'' + algEsc(k) + '\',\'' + qk + '\')">trocar de lugar</button>'
+          +' onclick="algAbrirTroca(\'' + algEsc(k) + '\',\'' + qk + '\')">mudar o campo</button>'
           +'</div>';
       }
       if(ALG_TROCA[algTrocaChave(k,qk)]){
-        h+='<div style="margin-top:6px"><span class="hint">gravar em vez disso em:</span> '
+        h+='<div style="margin-top:6px"><span class="hint">este trecho pertence ao campo:</span> '
           +'<select class="cad-in" style="max-width:240px;padding:5px 8px;margin-top:3px"'
           +' onchange="algCurCampo(\'' + algEsc(k) + '\',\'' + qk + '\',this.value)">'
           +ALG_CAMPOS.map(function(x){
@@ -23673,6 +23680,11 @@
             +'<div style="font-weight:600;margin-top:4px">Não sei quem está hospedado agora — por isso não mostro lista nenhuma. Confira a internet e recarregue a página. Para lançar um check-in mesmo assim, digite o nome do FILHOt acima.</div></div>';
         return;
       }
+      if(typeof CF_ESTADIAS_LIDO!=='undefined' && !CF_ESTADIAS_LIDO){
+        box.innerHTML='<div class="hint">Conferindo as estadias já lançadas…</div>';
+        setTimeout(function(){ try{ if(document.getElementById('ciResults')) renderCiBusca(); }catch(e){} /* silencioso de propósito: redesenho de tela — falhar não pode derrubar quem chamou */ }, 1200);
+        return;
+      }
       var falta=(typeof hospedesSemCheckin==='function')?hospedesSemCheckin():[];
       if(!falta.length){ box.innerHTML='<div class="hint">Nenhum hóspede sem check-in. Para lançar um novo, digite o nome acima.</div>'; return; }
       box.innerHTML='<div class="hint" style="margin-bottom:8px"><strong>'+falta.length+' hospedado'+(falta.length>1?'s':'')+' sem check-in lançado.</strong> Toque no nome para fazer agora.</div>'
@@ -25922,7 +25934,9 @@
   var cfEstadia=null;   // objeto da estadia carregado do Firebase
   var cfConf=null;      // objeto "conferencia" em edição (espelho local do que já foi salvo)
 
+  var CF_ESTADIAS_LIDO=false;   // o aviso de "sem check-in" espera por esta bandeira
   function _cfIndexarEstadias(v){
+    CF_ESTADIAS_LIDO=true;
     CF_ESTADIAS={};
     EST_TODAS=v||{};   // guarda TODAS (a aba Peludinhos Hóspedes precisa do histórico, não só da última)
     try{ var vh=document.getElementById('v-hospedes'); if(vh&&vh.classList.contains('active')&&typeof renderHospedesAba==='function') renderHospedesAba(); }catch(e){} /* silencioso de propósito: redesenho de tela — falhar não pode derrubar quem chamou */

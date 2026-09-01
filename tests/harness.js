@@ -2451,7 +2451,10 @@ async function main() {
         // e a NOSSA palavra reescrita pelo tutor, nao conteudo dele. Mesmo radical = nossa.
         const nossaFlexao = (w) => [...nossas].some((n) =>
           n.slice(0, 3) === w.slice(0, 3) && Math.abs(n.length - w.length) <= 2);
-        const saudacao = new Set(['tarde', 'noite', 'obrigada', 'obrigado', 'respondendo', 'perguntas']);
+        // Resposta conjunta de irmãs (Jasmin e Luna, 01/set): a tutora reescreve o eco
+        // no plural ("elas fazem") — pronome não é conteúdo, é a nossa pergunta flexionada.
+        const saudacao = new Set(['tarde', 'noite', 'obrigada', 'obrigado', 'respondendo', 'perguntas',
+          'elas', 'eles', 'delas', 'deles', 'fazem']);
         const perdidas = [...pal(bruto)].filter((w) =>
           !nossas.has(w) && !doResultado.has(w) && !nossaFlexao(w) && !saudacao.has(w));
         if (perdidas.length) sumiu.push(k + ': ' + perdidas.slice(0, 6).join(', '));
@@ -3627,6 +3630,20 @@ async function main() {
     }
     check('as datas de OPERACAO continuam travadas em 2015',
       /var DATA_MIN='2015-01-01', DATA_MAX='2035-12-31';/.test(html));
+  }
+  console.log('');
+
+  console.log('O aviso sem-check-in espera as estadias + alergia autoexplicativa (01/set):');
+  {
+    check('sem as estadias carregadas, ninguem e cobrado de check-in (bandeira CF_ESTADIAS_LIDO)',
+      /var CF_ESTADIAS_LIDO=false;/.test(html) && /CF_ESTADIAS_LIDO=true;/.test(html) &&
+      /!CF_ESTADIAS_LIDO\) return out;/.test(html));
+    check('a tela do check-in diz "Conferindo as estadias" em vez de afirmar ausencia',
+      /Conferindo as estadias já lançadas/.test(html));
+    check('alergia a confirmar: botoes com nome de gente e origem explicada',
+      /não gravar':'gravar'/.test(html) && /mudar o campo<\/button>/.test(html) &&
+      /um trecho da resposta que o tutor mandou no WhatsApp/.test(html) &&
+      html.indexOf('>trocar de lugar</button>') < 0);
   }
   console.log('');
 
