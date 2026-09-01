@@ -600,7 +600,10 @@ async function main() {
     // Se mudarem, o PDF mudou — não é para "ajustar o gabarito", é para investigar.
     // Gabarito atualizado em 31/ago/2026 (paginação do PDF): o nome de quem assinou
     // passou a ficar ABAIXO da imagem da assinatura, não atravessando-a. Mesmo tamanho.
-    const GABARITO_PDF_CHECKIN = 'd87be8577fd6c31b3c0fdf7b1e7dc74c97ec7b83c44cac53feb541c1c9ecf058'; // 3628 bytes
+    // Gabarito atualizado em 31/ago/2026 (2ª vez, intencional): a ficha passou para o
+    // motor com a cara da marca (zPdfDocBlob) — faixas por seção, cabeçalho e rodapé.
+    // No sandbox não há atob, então o logo fica de fora e o hash é determinístico.
+    const GABARITO_PDF_CHECKIN = '57ea45557dcf3e5aef93a3b22f881589f77fcbe9aff7b000ec8afd5fa290d013'; // 4113 bytes — travessão traduzido + folga do rótulo (31/ago)
     const GABARITO_PDF_VET = '83338caf3f53ba3f20a6f7dd5de1bdc7fb3d7f0fcdbb9260cac499190cbc792d'; // 2086 bytes
     const GABARITO_PDF_TEXTO = '82c7cd6e0345969d1db34d3c9fdb04e8038668720292fea9a7373f0e0f51207e'; // 848 bytes
 
@@ -695,8 +698,8 @@ async function main() {
 
     // no código-fonte: o montador de PDF e o bloco de impressão existem UMA vez só
     const conta = (s) => html.split(s).length - 1;
-    check('startxref aparece 1 vez no código (antes eram 2 montadores)', conta('startxref') === 1, 'achei ' + conta('startxref'));
-    check('%%EOF aparece 1 vez no código (antes eram 2)', conta('%%EOF') === 1, 'achei ' + conta('%%EOF'));
+    check('startxref aparece 2 vezes (os DOIS montadores: texto e marca)', conta('startxref') === 2, 'achei ' + conta('startxref'));
+    check('%%EOF aparece 2 vezes (os DOIS montadores: texto e marca)', conta('%%EOF') === 2, 'achei ' + conta('%%EOF'));
     check('<h3>Assinatura do tutor</h3> aparece 1 vez no código (antes eram 3)',
       conta('<h3>Assinatura do tutor</h3>') === 1, 'achei ' + conta('<h3>Assinatura do tutor</h3>'));
     check('window.print() aparece 1 vez no código (antes eram 3)', conta('window.print()') === 1, 'achei ' + conta('window.print()'));
