@@ -5254,6 +5254,30 @@
       +' onclick="event.stopPropagation();hospResponderMesmo(\''+ch+'\',false)">São dois</button>'
       +'</div></div>';
   }
+  // Os pares ainda sem resposta, para as telas da Gestão gritarem (caso Nelson, 01/set).
+  function hospParesPendentes(){
+    var out=[];
+    (hospedes||[]).forEach(function(h){
+      if(h&&h.suspeita) out.push({a:h, b:h.suspeita, ch:hospParChave(h,h.suspeita)});
+    });
+    return out;
+  }
+  function hospParesPendentesHtml(){
+    var pares=hospParesPendentes();
+    if(!pares.length) return '';
+    return pares.map(function(p){
+      var la=escAttr((p.a.nome||'')+(p.a.tutor?(' · '+p.a.tutor):''));
+      var lb=escAttr((p.b.nome||'')+(p.b.tutor?(' · '+p.b.tutor):''));
+      return '<div class="dc-faltas" style="margin:8px 0;border-color:var(--crm-critico)">'
+        +'<div style="font-weight:800;font-size:14px;color:var(--crm-critico)">POSSÍVEL DUPLICADO — responda para juntar</div>'
+        +'<div style="font-size:13px;margin-top:4px"><strong>'+la+'</strong> e <strong>'+lb+'</strong> parecem o MESMO FILHOt. '
+        +'Enquanto ninguém responde, ele conta DUAS vezes em relatórios, medicação e cobrança.</div>'
+        +'<div style="display:flex;gap:6px;margin-top:7px">'
+        +'<button type="button" class="btn btn-primary" style="padding:6px 12px;font-size:12.5px;font-weight:800" onclick="hospResponderMesmo(\''+p.ch+'\',true)">É o mesmo</button>'
+        +'<button type="button" class="btn" style="padding:6px 12px;font-size:12.5px;font-weight:800;background:var(--z-cream-warm);border:1.5px solid var(--line);color:var(--z-blue)" onclick="hospResponderMesmo(\''+p.ch+'\',false)">São dois</button>'
+        +'</div></div>';
+    }).join('');
+  }
   function renderHospAlergiaBlock(h){
     const el=document.getElementById('hf-alergia-block'); if(!el) return;
     if(!canEditHospAlergia()){ el.innerHTML=''; return; }
@@ -5333,6 +5357,7 @@
     });
     try{ if(typeof audit==='function') audit('hospedes',(ehMesmo?'confirmou que são o MESMO FILHOt: ':'disse que são DOIS FILHOts: ')+chave,{}); }catch(e){} /* silencioso de propósito: o audit() tem bolso próprio e reenvia sozinho — falhar aqui não pode travar a ação */
     try{ carregarHospedes(); }catch(e){ try{ renderHosp(); }catch(x){} /* silencioso de propósito: redesenho de tela — falhar não pode derrubar quem chamou */ }
+    try{ if(typeof gdCarregar==='function') setTimeout(gdCarregar,900); }catch(e){} /* silencioso de propósito: redesenho de tela — falhar não pode derrubar quem chamou */
   }
   // Junta o que a planilha e o app dizem do mesmo FILHOt, quando alguém já confirmou.
   // O registro do APP vence: é ele que tem o vínculo com a ficha.
@@ -8443,7 +8468,9 @@
         hp+='<div style="margin-top:9px;font-weight:800;font-size:13px;color:var(--z-blue)">'+t.r+'</div>'+linhas.join('');
       }
     });
-    elP.innerHTML = nProb? hp : '<div class="dc-pend-note" style="background:rgba(39,174,96,.1);border-color:rgba(39,174,96,.35);color:var(--crm-ok)">Nenhum problema registrado até agora.</div>';
+    var _dupl=''; try{ _dupl=hospParesPendentesHtml(); }catch(e){} /* silencioso de propósito: guarda defensiva — falhar aqui não pode interromper quem chamou */
+    elP.innerHTML = _dupl + (nProb? hp : '<div class="dc-pend-note" style="background:rgba(39,174,96,.1);border-color:rgba(39,174,96,.35);color:var(--crm-ok)">Nenhum problema registrado até agora.</div>');
+    if(_dupl) nProb+=hospParesPendentes().length;
     GD_CHIP.prob=nProb+' problema'+(nProb===1?'':'s');
     // --- os três tempos, FILHOt a FILHOt ---
     var totRel=0, totEsper=0, ht='';
@@ -8539,6 +8566,7 @@
     const _nHosp=arr.filter(o=>!o.h.mascote).length, _temMor=arr.some(o=>o.h.mascote);
     const _cap=s=>s.charAt(0).toUpperCase()+s.slice(1);
     let html='<div class="card gest-card"><h2 style="font-size:20px;margin-bottom:2px">Resumo de hoje · AuAulândia</h2><div class="hint">'+_nHosp+' hóspedes'+(_temMor?' + Repolho (moradora)':'')+' · '+prontos+' com relatório · '+pendentes+' sem relatório</div>';
+    try{ html+=hospParesPendentesHtml(); }catch(e){} /* silencioso de propósito: guarda defensiva — falhar aqui não pode interromper quem chamou */
     if(petsAlerta.length){
       const linhas=petsAlerta.map((p,i)=>'<div style="margin-top:7px;font-weight:700;color:var(--crm-critico);font-size:14px">'+(i+1)+' — '+p.nome+' — '+p.als.map(_cap).join(', ')+'</div>').join('');
       html+='<div class="dc-faltas" style="margin-top:10px"><div style="font-weight:800;font-size:15px;color:var(--crm-critico);letter-spacing:.3px">⚠ ATENÇÃO: '+petsAlerta.length+' peludinho'+(petsAlerta.length>1?'s':'')+'</div>'+linhas+'</div>';
@@ -10548,7 +10576,7 @@
   // Agora existe um carimbo: esta constante é a versão que o aparelho está rodando, e o
   // Firebase guarda a versão publicada. Quando as duas diferem, aparece o aviso — mas
   // NUNCA recarrega sozinho: recarregar no meio de um check-in perderia o trabalho.
-  const APP_VERSAO='2026-09-01-01';
+  const APP_VERSAO='2026-09-01-02';
   function vigiarVersao(){
     if(!DB) return;
     try{
