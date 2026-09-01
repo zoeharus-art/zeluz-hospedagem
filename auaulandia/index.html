@@ -5243,6 +5243,7 @@
   function hospSuspeitaHTML(h){
     if(!h||!h.suspeita) return '';
     var o=h.suspeita, ch=hospParChave(h,o);
+    HOSP_PAR_VIVO[ch]={a:h, b:o};
     return '<div style="margin-top:5px;padding:6px 7px;border-radius:9px;background:rgba(241,196,15,.16);'
       +'border:1.5px solid var(--crm-atencao);text-align:left" onclick="event.stopPropagation()">'
       +'<div style="font-size:11px;font-weight:800;color:var(--crm-atencao-text);line-height:1.35">'
@@ -5259,7 +5260,7 @@
   function hospParesPendentes(){
     var out=[];
     (hospedes||[]).forEach(function(h){
-      if(h&&h.suspeita) out.push({a:h, b:h.suspeita, ch:hospParChave(h,h.suspeita)});
+      if(h&&h.suspeita){ var ch=hospParChave(h,h.suspeita); HOSP_PAR_VIVO[ch]={a:h, b:h.suspeita}; out.push({a:h, b:h.suspeita, ch:ch}); }
     });
     return out;
   }
@@ -5348,10 +5349,27 @@
         try{ if(typeof audit==='function') audit('hospedes','NÃO consegui ler as duplicidades já resolvidas: '+((e&&e.message)||e),{}); }catch(x){} /* silencioso de propósito: o audit() tem bolso próprio e reenvia sozinho — falhar aqui não pode travar a ação */
       });
   }
+  // O par que está na tela agora, por chave — é dele que a resposta tira quem vence.
+  var HOSP_PAR_VIVO={};
   function hospResponderMesmo(chave, ehMesmo){
     if(!DB) return;
     var reg={mesmo:!!ehMesmo, quem:(typeof quemSou==='function'?quemSou():'-'),
              quando:(typeof zHojeISO==='function')?zHojeISO():'', ts:Date.now()};
+    // Quem vence é quem tem o vínculo com a ficha (refKey) ou um cadastro-mestre; a
+    // outra grafia vira apelido e passa a ser TRADUZIDA na entrada da lista — mesmo
+    // quando só ela aparecer (a planilha muda de grafia de um dia para o outro).
+    try{
+      var par=HOSP_PAR_VIVO[chave];
+      if(ehMesmo && par && par.a && par.b){
+        var fica=par.a, sai=par.b;
+        if(!fica.refKey && sai.refKey){ fica=par.b; sai=par.a; }
+        else if(!fica.refKey && !sai.refKey && typeof pelMestreDe==='function'){
+          if(!pelMestreDe(fica) && pelMestreDe(sai)){ fica=par.b; sai=par.a; }
+        }
+        reg.fica={nome:fica.nome||'', tutor:fica.tutor||''};
+        reg.sai={nome:sai.nome||'', tutor:sai.tutor||''};
+      }
+    }catch(e){} /* silencioso de propósito: guarda defensiva — sem o par vivo, a resposta simples ainda vale */
     HOSP_MESMO[chave]=reg;
     DB.ref('daycare/hospede-mesmo/'+chave).set(reg).catch(function(e){
       alert('Não consegui gravar a resposta: '+((e&&e.message)||e));
@@ -5359,6 +5377,39 @@
     try{ if(typeof audit==='function') audit('hospedes',(ehMesmo?'confirmou que são o MESMO FILHOt: ':'disse que são DOIS FILHOts: ')+chave,{}); }catch(e){} /* silencioso de propósito: o audit() tem bolso próprio e reenvia sozinho — falhar aqui não pode travar a ação */
     try{ carregarHospedes(); }catch(e){ try{ renderHosp(); }catch(x){} /* silencioso de propósito: redesenho de tela — falhar não pode derrubar quem chamou */ }
     try{ if(typeof gdCarregar==='function') setTimeout(gdCarregar,900); }catch(e){} /* silencioso de propósito: redesenho de tela — falhar não pode derrubar quem chamou */
+  }
+  // A grafia da planilha vira a grafia OFICIAL na entrada da lista, usando as respostas
+  // já dadas ("é o mesmo" com fica/sai). Funciona mesmo quando só a versão da planilha
+  // aparece no dia — foi o caso Nelson: "Nelson · Lara de Castro" num dia, "Nelson
+  // mandela · Lara" no outro, e o check-in não era encontrado.
+  function hospTraduzirMesmo(lista){
+    var mapa={};
+    Object.keys(HOSP_MESMO||{}).forEach(function(ch){
+      var r=HOSP_MESMO[ch];
+      if(r&&r.mesmo&&r.fica&&r.sai&&r.sai.nome){
+        mapa[jsNorm(r.sai.nome)+'~'+jsNorm(r.sai.tutor||'')]=r.fica;
+      }
+    });
+    if(!Object.keys(mapa).length) return lista;
+    lista.forEach(function(h){
+      if(!h||!h.nome) return;
+      var f=mapa[jsNorm(h.nome)+'~'+jsNorm(h.tutor||'')];
+      if(f&&f.nome){
+        h.tambemNaPlanilhaComo=h.nome+(h.tutor?(' · '+h.tutor):'');
+        h.nome=f.nome; if(f.tutor) h.tutor=f.tutor;
+      }
+    });
+    // a tradução pode ter criado dois iguais (planilha + app no mesmo dia): fica um
+    var visto={}, fora={};
+    lista.forEach(function(h,i){
+      var id=jsNorm(h.nome||'')+'~'+jsNorm(h.tutor||'');
+      if(visto[id]!==undefined){
+        var outro=lista[visto[id]];
+        if(!outro.raca&&h.raca) outro.raca=h.raca;
+        fora[i]=true;
+      } else visto[id]=i;
+    });
+    return lista.filter(function(_,i){ return !fora[i]; });
   }
   // Junta o que a planilha e o app dizem do mesmo FILHOt, quando alguém já confirmou.
   // O registro do APP vence: é ele que tem o vínculo com a ficha.
@@ -10577,7 +10628,7 @@
   // Agora existe um carimbo: esta constante é a versão que o aparelho está rodando, e o
   // Firebase guarda a versão publicada. Quando as duas diferem, aparece o aviso — mas
   // NUNCA recarrega sozinho: recarregar no meio de um check-in perderia o trabalho.
-  const APP_VERSAO='2026-09-01-05';
+  const APP_VERSAO='2026-09-01-06';
   function vigiarVersao(){
     if(!DB) return;
     try{
@@ -11320,8 +11371,8 @@
         const lista=hoje.concat(dormiramSaindo);
         // Substitui SEMPRE — inclusive por lista vazia. Manter a lista do carregamento
         // anterior é o que fazia hóspede de ontem aparecer como hóspede de hoje.
-        try{ if(!HOSP_MESMO_LIDO){ HOSP_MESMO_LIDO=true; hospCarregarMesmo().then(function(){ try{ renderHosp(); }catch(e){} /* silencioso de propósito: redesenho de tela — falhar não pode derrubar quem chamou */ }); } }catch(e){} /* silencioso de propósito: redesenho de tela — falhar não pode derrubar quem chamou */
-      hospedes = lista.map((h,i)=>({nome:h.nome, tutor:h.tutor, raca:h.raca||'', ini:(h.nome[0]||'?').toUpperCase(), cor:CORES[i%CORES.length], mascote:/repolho/i.test(h.nome), saidaHoje:!!h.saidaHoje}));
+        try{ if(!HOSP_MESMO_LIDO){ HOSP_MESMO_LIDO=true; hospCarregarMesmo().then(function(){ try{ carregarHospedes(); }catch(e){} /* silencioso de propósito: redesenho de tela — falhar não pode derrubar quem chamou */ }); } }catch(e){} /* silencioso de propósito: redesenho de tela — falhar não pode derrubar quem chamou */
+      hospedes = hospTraduzirMesmo(lista.map((h,i)=>({nome:h.nome, tutor:h.tutor, raca:h.raca||'', ini:(h.nome[0]||'?').toUpperCase(), cor:CORES[i%CORES.length], mascote:/repolho/i.test(h.nome), saidaHoje:!!h.saidaHoje})));
         if(lista.length) addRacasAoBanco(hospedes.map(h=>h.raca).filter(Boolean));
         HOSP_PLANILHA=true;
       } else { HOSP_PLANILHA=true; hospedes=[]; }   // planilha lida, dia sem ninguém

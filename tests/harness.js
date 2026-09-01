@@ -3630,6 +3630,21 @@ async function main() {
   }
   console.log('');
 
+  console.log('Traducao pela resposta e-o-mesmo (caso Nelson parte 2, 01/set):');
+  {
+    check('a resposta guarda quem VENCE (fica/sai) a partir do par vivo na tela',
+      /var HOSP_PAR_VIVO=\{\};/.test(html) && /reg\.fica=\{nome:fica\.nome/.test(html) &&
+      /reg\.sai=\{nome:sai\.nome/.test(html));
+    check('a lista TRADUZ a grafia da planilha para a oficial mesmo sem o par presente',
+      /function hospTraduzirMesmo/.test(html) &&
+      /hospedes = hospTraduzirMesmo\(lista\.map/.test(html));
+    check('depois que as respostas descem, a lista e REMONTADA (nao so redesenhada)',
+      /HOSP_MESMO_LIDO=true; hospCarregarMesmo\(\)\.then\(function\(\)\{ try\{ carregarHospedes\(\); \}/.test(html));
+    check('a traducao deduplica quando as duas grafias vem no mesmo dia',
+      /a tradução pode ter criado dois iguais/.test(html));
+  }
+  console.log('');
+
   console.log('Foto do corpo: enviada ao grupo da vet vira carimbo e sai do banco (01/set):');
   {
     check('o carimbo fotoTg existe e e gravado no envio direto E no reenvio da fila',
