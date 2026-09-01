@@ -2206,7 +2206,7 @@
           <div class="field"><label>Sexo</label><div class="seg" id="hf-sexo" data-single><button onclick="pick(this);onCad()">Macho</button><button onclick="pick(this);onCad()">Fêmea</button></div></div>
           <div class="field"><label>Castrado?</label><div class="seg gold" id="hf-cast" data-single><button onclick="pick(this);onCad()">Sim</button><button onclick="pick(this);onCad()">Não</button></div></div>
           <div class="field"><label>Nome do tutor</label><input type="text" id="hf-tutor" class="cad-in" oninput="onCad()" placeholder="Nome do tutor"></div>
-          <div class="field"><label>Nº Microchip · últimos do visor</label><input type="text" id="hf-chip" class="cad-in" maxlength="6" inputmode="numeric" placeholder="000000" oninput="onChip(this.value)"></div>
+          <div class="field"><label>Microchip · número completo do visor</label><input type="text" id="hf-chip" class="cad-in" maxlength="15" inputmode="numeric" placeholder="todos os números — 11 a 15 dígitos" oninput="onChip(this.value)"></div>
         </div>
         <div class="actions" style="margin-top:8px"><button class="btn btn-primary" onclick="onCad();this.textContent='✅ Cadastro salvo';setTimeout(()=>this.textContent='Salvar cadastro',1500)">Salvar cadastro</button><button class="btn" style="background:var(--z-cream-warm);color:var(--z-blue);border:1.5px solid var(--line)" onclick="toggleCadastro()">Fechar</button></div>
       </div>
@@ -2530,7 +2530,7 @@
           </div>
           <div class="cad-grid">
             <div class="field"><label>Peso (kg)</label><input class="cad-in" id="ciNovoPeso" inputmode="decimal" placeholder="Ex: 7,2" autocomplete="off"></div>
-            <div class="field"><label>Nº Microchip · últimos do visor</label><input class="cad-in" id="ciNovoChip" maxlength="6" inputmode="numeric" placeholder="000000" autocomplete="off"></div>
+            <div class="field"><label>Microchip · número completo do visor</label><input class="cad-in" id="ciNovoChip" maxlength="15" inputmode="numeric" placeholder="todos os números — 11 a 15 dígitos" autocomplete="off"></div>
           </div>
           <div class="cn-warn" id="ciNovoWarn"></div>
           <button class="btn btn-primary" style="width:100%;margin-top:6px" onclick="ciCriarNovoHospede(this)">Cadastrar e iniciar check-in</button>
@@ -5318,7 +5318,10 @@
   function hospMesmoPeloChip(a, b){
     var ca=hospChipNum(a), cb=hospChipNum(b);
     if(ca.length<4 || cb.length<4) return -1;
-    return (ca===cb)?1:0;
+    // Registros antigos guardaram só o FINAL do número; os novos, o número inteiro.
+    // O mesmo chip tem que casar nas duas formas: um termina com o outro.
+    if(ca===cb || (ca.length!==cb.length && (ca.slice(-cb.length)===cb || cb.slice(-ca.length)===ca))) return 1;
+    return 0;
   }
   function hospPodeSerMesmo(a, b){
     if(!a||!b) return false;
@@ -5343,10 +5346,30 @@
     return (x[0]+'||'+x[1]).replace(/[.#$\/\[\]]/g,'_');
   }
   function hospCarregarMesmo(){
-    if(!DB) return Promise.resolve();
+    // O vilão do "dois Nelson que voltam" (01/set): na primeira passada o banco ainda
+    // estava inicializando (DB null) e esta função devolvia o vazio SEM ERRO — a trava
+    // ficava marcada como lida e as respostas nunca desciam. Sem banco: tenta de novo.
+    if(!DB){
+      HOSP_MESMO_LIDO=false;
+      setTimeout(function(){
+        if(HOSP_MESMO_LIDO) return;
+        HOSP_MESMO_LIDO=true;
+        hospCarregarMesmo().then(function(){ try{ if(typeof carregarHospedes==='function') carregarHospedes(); }catch(x){} /* silencioso de propósito: redesenho de tela — falhar não pode derrubar quem chamou */ });
+      }, 1500);
+      return Promise.resolve();
+    }
     return DB.ref('daycare/hospede-mesmo').once('value').then(function(s){ HOSP_MESMO=s.val()||{}; })
       .catch(function(e){
         try{ if(typeof audit==='function') audit('hospedes','NÃO consegui ler as duplicidades já resolvidas: '+((e&&e.message)||e),{}); }catch(x){} /* silencioso de propósito: o audit() tem bolso próprio e reenvia sozinho — falhar aqui não pode travar a ação */
+        // A corrida com o login anônimo fazia esta leitura falhar UMA vez e ficar vazia a
+        // sessão inteira — e o Nelson aparecia em dobro de novo (01/set). Tenta sozinha
+        // até conseguir; quando conseguir, REMONTA a lista do dia.
+        HOSP_MESMO_LIDO=false;
+        setTimeout(function(){
+          if(HOSP_MESMO_LIDO) return;
+          HOSP_MESMO_LIDO=true;
+          hospCarregarMesmo().then(function(){ try{ if(typeof carregarHospedes==='function') carregarHospedes(); }catch(x){} /* silencioso de propósito: redesenho de tela — falhar não pode derrubar quem chamou */ });
+        }, 4000);
       });
   }
   // O par que está na tela agora, por chave — é dele que a resposta tira quem vence.
@@ -5511,6 +5534,13 @@
       var pm=(typeof pelMestreDe==='function')?pelMestreDe(h):null; if(pm){ var pe=(typeof pelExtra==='function')?pelExtra(pm):null; if(pe&&pe.foto) return pe.foto; }
     }
   }catch(e){} /* silencioso de propósito: guarda defensiva — falhar aqui não pode interromper quem chamou */ return ''; }
+  // "...3851, ...3852: o que muda é o final" — os últimos 4 dígitos saem maiores e
+  // em dourado em toda tela que mostra o microchip (Adriana, 01/set).
+  function chipHtml(mc){
+    mc=String(mc||'').trim(); if(!mc) return '';
+    if(mc.length<=4) return '<strong style="font-size:1.12em;color:var(--z-gold-deep);letter-spacing:.5px">'+escAttr(mc)+'</strong>';
+    return escAttr(mc.slice(0,-4))+'<strong style="font-size:1.12em;color:var(--z-gold-deep);letter-spacing:.5px">'+escAttr(mc.slice(-4))+'</strong>';
+  }
   function chipDe(h){ try{ const ex=extraDoHosp(h); return String((ex&&(ex.chip||ex.microchip))||'').trim(); }catch(e){ return ''; } }
   // ================= CAFÉ DA MANHÃ DOS HÓSPEDES =====================================
   // Mora na AuAulândia porque é só de quem dormiu aqui (Adriana, 13/ago/2026: "só pega
@@ -5657,7 +5687,7 @@
           <div class="nm">${cad.nome||h.nome}</div>
           <div class="br">${raca}</div>
           <div class="hosp-tutor">${h.mascote?'Nossa Zelozinha':(tutorShow?'Tutor: '+tutorShow:'Tutor a confirmar')}</div>
-          ${(function(){var mc=chipDe(h); return (!h.mascote&&mc)?`<div class="hosp-chip" style="font-size:11px;font-weight:800;color:var(--z-gold-deep);margin-top:2px">Microchip: ${mc}</div>`:'';})()}
+          ${(function(){var mc=chipDe(h); return (!h.mascote&&mc)?`<div class="hosp-chip" style="font-size:11px;font-weight:800;color:var(--z-gold-deep);margin-top:2px">Microchip: ${chipHtml(mc)}</div>`:'';})()}
           <div class="tarja ${tj[0]}">${tj[1]}</div>
           ${h.saidaHoje?'<div class="saida-hoje">Dormiu · sai hoje</div>':''}
           ${hospSuspeitaHTML(h)}
@@ -5957,7 +5987,7 @@
     const tp=h.mascote?'Moradora':(h.hospede?'Hóspede':(h.pernoite?'Pernoite':'Hóspede'));
     const tut=tutorDe(h)||cad.tutor;
     document.getElementById('hf-meta').innerHTML = (p.length?p.join(' · ')+' · ':'') + '<strong>'+tp+'</strong>' + (h.mascote?' · Nossa Zelozinha':(tut?' · Tutor: '+tut:' · Tutor a confirmar'));
-    const cl=document.getElementById('hf-chipline'); if(cl) cl.textContent='Microchip: '+(cad.chip||cad.microchip||(typeof chipDe==='function'?chipDe(h):'')||'--');
+    const cl=document.getElementById('hf-chipline'); if(cl){ var _mc=(cad.chip||cad.microchip||(typeof chipDe==='function'?chipDe(h):'')||''); cl.innerHTML='Microchip: '+(_mc?chipHtml(_mc):'--'); }
   }
   // ===== A FÁBRICA DE DUPLICADOS (achada em 04/ago/2026) =============================
   // Esta função roda a CADA TECLA (oninput) e gravava em daycare/cadastro/{cadKey}. Como o
@@ -10628,7 +10658,7 @@
   // Agora existe um carimbo: esta constante é a versão que o aparelho está rodando, e o
   // Firebase guarda a versão publicada. Quando as duas diferem, aparece o aviso — mas
   // NUNCA recarrega sozinho: recarregar no meio de um check-in perderia o trabalho.
-  const APP_VERSAO='2026-09-01-06';
+  const APP_VERSAO='2026-09-01-07';
   function vigiarVersao(){
     if(!DB) return;
     try{
@@ -13112,7 +13142,7 @@
     if(cad.foto){ av.style.backgroundImage="url('"+cad.foto+"')"; av.style.backgroundSize='cover'; av.style.backgroundPosition='center'; av.textContent=''; }
     else { av.style.backgroundImage='none'; av.textContent=(h.ini||(h.nome||'?')[0]||'?'); av.style.background=(h.cor||'#234D67'); }
     document.getElementById('vf-nome').textContent=cad.nome||h.nome||'—';
-    document.getElementById('vf-chipline').textContent='Microchip: '+((cad.chip||cad.microchip)?(cad.chip||cad.microchip):'--');
+    (function(){ var _mc=(cad.chip||cad.microchip)||''; document.getElementById('vf-chipline').innerHTML='Microchip: '+(_mc?chipHtml(_mc):'--'); })();
     var tutor=(typeof tutorDe==='function')?tutorDe(h):(h.tutor||'');
     var _vidade=(typeof calcIdade==='function')?calcIdade(cad.nasc||h.nasc||''):'';
     document.getElementById('vf-meta').innerHTML=[ (racaDe(h)?escAttr(racaDe(h)):''), (_vidade?escAttr(_vidade):''), (h.mascote?'Nossa Zelozinha':(tutor?'Tutor: '+escAttr(tutor):'Tutor a confirmar')) ].filter(Boolean).join(' · ');
@@ -25652,7 +25682,8 @@
       if(ex.tutor2) LE.push({k:'Tutor 2', v:ex.tutor2});
       LE.push({k:'Veterinário(a)', v: ex.vetNome?((ex.vetNome)+(ex.vetTel?('  ·  '+ex.vetTel):'')):'não informado — completar na ficha'});
       if(ex.vetClinica||ex.vetEnd) LE.push({k:'Clínica', v:(ex.vetClinica||'—')+(ex.vetEnd?('  ·  '+ex.vetEnd):'')});
-      LE.push({k:'Microchip', v: ex.microchip||'sem registro'});
+      var _mcp=String(ex.microchip||'').trim();
+      LE.push({k:'Microchip', v: _mcp?(_mcp.length>4?(_mcp.slice(0,-4)+'  '+_mcp.slice(-4)):_mcp):'sem registro'});
       S.push({titulo:'EMERGÊNCIA — CONTATOS E IDENTIFICAÇÃO', linhas:LE});
     })();
     // --- alimentação, refeição a refeição, com horário ---

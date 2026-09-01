@@ -603,7 +603,7 @@ async function main() {
     // Gabarito atualizado em 31/ago/2026 (2ª vez, intencional): a ficha passou para o
     // motor com a cara da marca (zPdfDocBlob) — faixas por seção, cabeçalho e rodapé.
     // No sandbox não há atob, então o logo fica de fora e o hash é determinístico.
-    const GABARITO_PDF_CHECKIN = 'db0edaebc71c0ceb47bc58534476959d56cef3babac31b7ecaa67b239313ace3'; // 6353 bytes — PDF v4 com o caminho de ALERGIA exercitado (aviso no cabecalho + secao vermelha) — quadro de medicação por horário + seção EMERGÊNCIA + período da busca (PDF v3, 31/ago)
+    const GABARITO_PDF_CHECKIN = '53149fbe092c876bd08e140186770b502c7a214ab603ee395f389c50de56bf2b'; // 6355 bytes — microchip com o final separado por espaco (destaque dos ultimos 4, 01/set) — quadro de medicação por horário + seção EMERGÊNCIA + período da busca (PDF v3, 31/ago)
     const GABARITO_PDF_VET = '83338caf3f53ba3f20a6f7dd5de1bdc7fb3d7f0fcdbb9260cac499190cbc792d'; // 2086 bytes
     const GABARITO_PDF_TEXTO = '82c7cd6e0345969d1db34d3c9fdb04e8038668720292fea9a7373f0e0f51207e'; // 848 bytes
 
@@ -3627,6 +3627,22 @@ async function main() {
     }
     check('as datas de OPERACAO continuam travadas em 2015',
       /var DATA_MIN='2015-01-01', DATA_MAX='2035-12-31';/.test(html));
+  }
+  console.log('');
+
+  console.log('Nelson parte 3 + microchip completo (01/set):');
+  {
+    check('a leitura das respostas e-o-mesmo TENTA DE NOVO quando falha (corrida com o login)',
+      /HOSP_MESMO_LIDO=false;/.test(html) && /corrida com o login an/.test(html));
+    check('microchip aceita o numero completo (15) nos dois campos rapidos',
+      html.indexOf('id="hf-chip" class="cad-in" maxlength="15"') > 0 &&
+      html.indexOf('id="ciNovoChip" maxlength="15"') > 0 &&
+      html.indexOf('maxlength="6" inputmode="numeric" placeholder="000000"') < 0);
+    check('os ultimos 4 digitos saem em destaque (chipHtml) nas telas',
+      (html.match(/function chipHtml/g)||[]).length === 1 &&
+      /Microchip: \$\{chipHtml\(mc\)\}/.test(html));
+    check('chips antigos (so o final) casam com o numero completo na comparacao',
+      /ca\.slice\(-cb\.length\)===cb \|\| cb\.slice\(-ca\.length\)===ca/.test(html));
   }
   console.log('');
 
