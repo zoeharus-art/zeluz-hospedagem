@@ -4925,10 +4925,17 @@ async function main() {
       ctx.setPelExtra = (p, patch) => { espiao.push({ k: ctx.pelKey(p), patch }); return Promise.resolve({ ok: true }); };
       ctx.audit = (tipo, oque) => { auditado.push(tipo + '|' + oque); };
       try { ctx.algCurGravar(kFake); } finally { ctx.setPelExtra = setReal; ctx.audit = auditReal; }
+      check('a ENTREVISTA inteira vai junto: pergunta + resposta + data (01/set)',
+        espiao.length === 1 && espiao[0].patch.entrevista &&
+        (espiao[0].patch.entrevista.itens || []).length >= 8 &&
+        espiao[0].patch.entrevista.itens.every((it) => it.p && it.r) &&
+        espiao[0].patch.entrevista.quando === espiao[0].patch.entrevista.tratadaEm ? true :
+        !!(espiao[0].patch.entrevista && espiao[0].patch.entrevista.quando),
+        JSON.stringify((espiao[0] && espiao[0].patch.entrevista || {}).quando));
       check('Aplicar à ficha chama o MESMO gravador, uma vez só, na ficha certa',
         espiao.length === 1 && espiao[0].k === kFake, JSON.stringify(espiao.map((x) => x.k)));
       check('e leva os 8 campos da ficha (check-up e estresse dividem "observação do tutor")',
-        espiao.length === 1 && Object.keys(espiao[0].patch).length === 8 &&
+        espiao.length === 1 && Object.keys(espiao[0].patch).length === 9 &&
         espiao[0].patch.alergia === 'Nenhuma restrição' &&
         /Último checkup em janeiro/.test(espiao[0].patch.obs_tutor) &&
         /atacada por um Golden/.test(espiao[0].patch.obs_tutor),

@@ -3987,6 +3987,7 @@
     if(v==='vacinas'){
       if(typeof prevCarregarAvisos==='function') prevCarregarAvisos().then(function(){ if(typeof renderPrevencao==='function') renderPrevencao(); });
       if(typeof renderPrevencao==='function') renderPrevencao();
+      if(typeof renderPrevCheckup==='function') renderPrevCheckup();
     }
     if(v==='dashdc'){ if(typeof dashCarregar==='function') dashCarregar(); }
     const pn=document.getElementById('pSubnav'); if(pn) pn.style.display=(v==='pessoas')?'block':'none';
@@ -10661,7 +10662,7 @@
   // Agora existe um carimbo: esta constante é a versão que o aparelho está rodando, e o
   // Firebase guarda a versão publicada. Quando as duas diferem, aparece o aviso — mas
   // NUNCA recarrega sozinho: recarregar no meio de um check-in perderia o trabalho.
-  const APP_VERSAO='2026-09-01-08';
+  const APP_VERSAO='2026-09-01-09';
   function vigiarVersao(){
     if(!DB) return;
     try{
@@ -14294,6 +14295,69 @@
     });
     return out;
   }
+  // ===== CHECK-UP — a parte exclusiva (Adriana, 01/set) ===========================
+  // "Ter um campo Check-up... com data e vencimento... e um texto pronto convidando —
+  //  é uma oportunidade: além de importante, os peludinhos do Day Care têm desconto."
+  function prevConviteCheckup(p, situacao){
+    var nome=pelNome(p);
+    var tutor=String(pelGet(p,'tutor')||'').split(/\s+/)[0]||'';
+    var motivo=(situacao==='nunca')
+      ? 'que '+nome+' ainda não fez um check-up completo'
+      : 'que o último check-up de '+nome+' já completou um ano';
+    return 'Oi, '+(tutor||'tutor(a)')+', tudo bem? Aqui é da Zêluz. Na entrevista você nos contou '
+      +motivo+'. A nossa Veterinária Preventiva existe exatamente para isso: cuidar antes de qualquer sinal, '
+      +'como nas melhores clínicas de longevidade. E, por fazer parte do Day Care, '+nome
+      +' tem desconto especial no check-up completo. Quer que eu deixe uma avaliação reservada para esta semana? '
+      +'Aqui, cada cuidado é ÚNICO.';
+  }
+  function prevCheckupCopiar(btn, i, situacao){
+    try{
+      var p=PELUDINHOS[i]; if(!p) return;
+      var txt=prevConviteCheckup(p, situacao);
+      var ta=document.createElement('textarea'); ta.value=txt; document.body.appendChild(ta);
+      ta.select(); var ok=false; try{ ok=document.execCommand('copy'); }catch(e){} /* silencioso de propósito: sem permissão de copiar, o texto continua na janelinha */
+      document.body.removeChild(ta);
+      if(ok){ btn.textContent='Copiado'; setTimeout(function(){ btn.textContent='Copiar convite'; },1600); }
+      else if(typeof zAlertao==='function') zAlertao('Copie o convite', [txt], {botao:'Fechei'});
+    }catch(e){} /* silencioso de propósito: enfeite de tela — falhar não muda dado nenhum */
+  }
+  function renderPrevCheckup(){
+    var sec=document.getElementById('v-vacinas'); if(!sec) return;
+    var el=document.getElementById('prevCheckup');
+    if(!el){ el=document.createElement('div'); el.id='prevCheckup'; sec.appendChild(el); }
+    if(typeof PELUDINHOS==='undefined'||!Array.isArray(PELUDINHOS)){ el.innerHTML=''; return; }
+    var hoje=(typeof zHojeISO==='function')?zHojeISO():'';
+    var umAno=function(iso){ try{ var d=new Date(iso+'T12:00:00'); d.setFullYear(d.getFullYear()+1);
+      var pd=function(x){ return String(x).padStart(2,'0'); }; return d.getFullYear()+'-'+pd(d.getMonth()+1)+'-'+pd(d.getDate()); }catch(e){ return ''; } };
+    var nunca=[], vencidos=[], semInfo=[];
+    PELUDINHOS.forEach(function(p,i){
+      var ex=pelExtra(p)||{};
+      if(ex.inativo==='Sim') return;
+      if(ex.checkup_fez==='Nunca fez'){ nunca.push({i:i,p:p}); return; }
+      if(ex.checkup_data){ var vence=umAno(ex.checkup_data); if(vence&&vence<hoje) vencidos.push({i:i,p:p,vence:vence}); return; }
+      if(!ex.checkup_fez) semInfo.push({i:i,p:p});
+    });
+    var linha=function(o, extra, situacao){
+      return '<div style="display:flex;gap:8px;align-items:center;padding:6px 0;border-bottom:1px solid var(--line);flex-wrap:wrap">'
+        +'<span style="font-weight:800;color:var(--z-blue)">'+escAttr(pelNome(o.p))+'</span>'
+        +'<span style="font-size:12.5px;color:var(--muted)">'+escAttr(pelGet(o.p,'tutor')||'')+'</span>'
+        +(extra||'')
+        +(situacao?('<button type="button" class="btn btn-gold" style="margin-left:auto;padding:5px 12px;font-size:12px;font-weight:800" onclick="prevCheckupCopiar(this,'+o.i+',\''+situacao+'\')">Copiar convite</button>'):'')
+        +'</div>';
+    };
+    var h='<div class="card" style="margin-top:14px"><h2 style="font-size:19px;margin-bottom:3px">Check-up veterinário</h2>'
+      +'<div class="hint">A entrevista com o tutor alimenta esta lista. O convite já sai pronto — Veterinária Preventiva, com o desconto de quem é do Day Care.</div>';
+    if(nunca.length){ h+='<div style="font-weight:800;font-size:13px;color:var(--crm-critico);margin-top:9px">NUNCA FIZERAM ('+nunca.length+')</div>'
+      +nunca.map(function(o){ return linha(o,'','nunca'); }).join(''); }
+    if(vencidos.length){ h+='<div style="font-weight:800;font-size:13px;color:var(--z-gold-deep);margin-top:9px">VENCIDOS — mais de 12 meses ('+vencidos.length+')</div>'
+      +vencidos.map(function(o){ return linha(o,'<span style="font-size:12px;color:var(--crm-critico);font-weight:700">venceu em '+escAttr(repBRdata?repBRdata(o.vence):o.vence)+'</span>','vencido'); }).join(''); }
+    if(semInfo.length){ h+='<div style="font-weight:800;font-size:13px;color:var(--muted);margin-top:9px">SEM INFORMAÇÃO ('+semInfo.length+') — perguntar na entrevista</div>'
+      +semInfo.slice(0,30).map(function(o){ return linha(o,'',''); }).join('')
+      +(semInfo.length>30?('<div class="hint">e mais '+(semInfo.length-30)+'.</div>'):''); }
+    if(!nunca.length&&!vencidos.length&&!semInfo.length) h+='<div class="hint" style="margin-top:8px">Todo mundo com check-up em dia.</div>';
+    h+='</div>';
+    el.innerHTML=h;
+  }
   function renderPrevencao(){
     var lista=prevDados();
     // ---- contagem por item, ignorando o filtro (o resumo mostra o todo) ----
@@ -15651,6 +15715,13 @@
         <h2 style="font-size:20px">Prevenção</h2>
         <div class="hint">Obrigatório para frequentar o Day Care. O que estiver vencido aparece como urgente para a Gestão, a Supervisora e a Consultora. Preencha o bloco inteiro e toque em <strong>Salvar</strong> no fim dele — nada grava sozinho, e a tela não sobe.</div>
 
+        <h3 class="cad-sub">Check-up veterinário</h3>
+        <div class="cad-grid">
+          <div class="field"><label>Já fez check-up?</label><div class="seg gold" data-single>${segBtnsPel('checkup_fez',ex.checkup_fez||'',['Sim','Nunca fez'])}</div></div>
+          <div class="field"><label>Último check-up (data)</label><input type="date" class="cad-in" value="${escAttr(ex.checkup_data||'')}" onchange="setPelExtra(pelAtual,{checkup_data:this.value})" min="2015-01-01" max="2035-12-31" onkeydown="return dataSoNoCalendario(event)">
+            <div class="hint" style="margin-top:3px">O check-up vale por 12 meses. Quem nunca fez, ou está vencido, aparece na tela Prevenção com o convite pronto.</div></div>
+        </div>
+
         <h3 class="cad-sub">Vacinas</h3>
         ${alertaPrevencao(ex,'vacina','Vacinas')}
         ${blocoVacinas(pbEx('vac'))}
@@ -15766,6 +15837,12 @@
             </div>
           </div>
           <div class="field" style="grid-column:1/-1"><label>O que o tutor contou</label><input class="cad-in" value="${escAttr(ex.obs_tutor||'')}" placeholder="Check-up, cio, mudanças em casa — o que veio na resposta do tutor" onchange="setPelExtra(pelAtual,{obs_tutor:this.value})"></div>
+          ${(function(){ var ev=ex.entrevista; if(!(ev&&ev.itens&&ev.itens.length)) return '';
+            return '<div class="field" style="grid-column:1/-1;background:rgba(35,77,103,.06);border-left:4px solid var(--z-blue);border-radius:10px;padding:10px 12px">'
+              +'<label style="font-size:13px;font-weight:800;color:var(--z-blue)">ENTREVISTA COM O TUTOR'+(ev.quando?(' — respondida em '+escAttr(repBRdata?repBRdata(ev.quando):ev.quando)):'')+'</label>'
+              +ev.itens.map(function(it){ return '<div style="margin-top:7px"><div style="font-size:12px;color:var(--muted);font-weight:600">'+escAttr(it.p||'')+'</div>'
+                +'<div style="font-size:13.5px;font-weight:700;color:var(--ink,#333)">'+escAttr(it.r||'—')+'</div></div>'; }).join('')
+              +'</div>'; })()}
           <div class="field"><label>Manias</label><input class="cad-in" value="${escAttr(ex.manias||'')}" placeholder="Ex: protege a comida" onchange="setPelExtra(pelAtual,{manias:this.value});refreshPills()"></div>
           <div class="field"><label>Em adaptacao (1&ordm; mes)?</label><div class="seg gold" data-single>${segBtnsPel('adaptacao',ex.adaptacao||'',['Sim','Nao'])}</div></div>
           <div class="field"><label>Adaptacao comecou em</label><input type="date" class="cad-in" value="${escAttr(ex.adaptacao_desde||'')}" onchange="setPelExtra(pelAtual,{adaptacao_desde:this.value});renderPelFicha()" min="2015-01-01" max="2035-12-31" onkeydown="return dataSoNoCalendario(event)">
@@ -19809,6 +19886,8 @@
     var c=algCur(k), p=algPelDe(k);
     if(!c) return '<div class="hint">Não achei a ficha deste FILHOt.</div>';
     var nome=p?pelNome(p):'', qks=Object.keys(c.campos);
+    // Resposta sem pergunta não diz nada (Adriana, 01/set): o cartão mostra a pergunta.
+    var QMAP={}; try{ (p?algPerguntas(p):[]).forEach(function(q){ QMAP[q.k]=q.t; }); }catch(e){} /* silencioso de propósito: guarda defensiva — sem o mapa, o cartão sai sem a pergunta */
     var pendentes=qks.filter(function(q){ return algCurConflito(c.campos[q]) && !c.campos[q].decidido; }).length;
 
     var h='<div style="margin-top:10px;padding-top:9px;border-top:2px solid var(--z-gold)">'
@@ -19840,6 +19919,7 @@
         // Quem confere precisa saber o quanto pode confiar na linha antes de aprovar.
         +((!decidir&&algViaTexto(f))?'<span style="font-weight:800;font-size:11px;color:var(--crm-atencao-text);margin-left:auto">'+escAttr(algViaTexto(f))+'</span>':'')
         +'</div>'
+        +(QMAP[qk]?('<div style="margin-top:3px;font-size:12px;color:var(--muted);font-weight:600">Pergunta: '+escAttr(QMAP[qk])+'</div>'):'')
         // o alerta de comportamento (medo de raça, ataque, trauma) não pode passar batido
         +(f.alerta?'<div style="margin-top:3px;font-size:12.5px;font-weight:800;color:var(--crm-critico)">⚠ ALERTA — a equipe precisa ler isto antes de montar a atividade e antes de juntar com outro FILHOt.</div>':'')
         // linha 2: o valor. Editável, mas sem cara de formulário — só ganha moldura ao tocar.
@@ -19921,6 +20001,58 @@
       +'</button>';
     return h+'</div>';
   }
+  // A entrevista inteira — pergunta, resposta e data — vira um registro na ficha.
+  function algEntrevistaReg(k, c, p){
+    try{
+      var Q=(p&&typeof algPerguntas==='function')?algPerguntas(p):[];
+      var itens=[];
+      Q.forEach(function(q){
+        var f=c&&c.campos&&c.campos[q.k];
+        var r=f?String(f.txt||'').trim():'';
+        if(r) itens.push({p:q.t, r:r});
+      });
+      var solto=(c&&c.sobras||[]).map(function(x){ return String(x.txt||'').trim(); }).filter(Boolean).join(' · ');
+      if(solto) itens.push({p:'Fora das perguntas', r:solto});
+      if(!itens.length) return null;
+      return {quando:(ALG_RESP[k]&&ALG_RESP[k].quando)||((typeof zHojeISO==='function')?zHojeISO():''),
+              tratadaEm:(typeof zHojeISO==='function')?zHojeISO():'',
+              quem:(typeof quemSou==='function'?quemSou():'-'), itens:itens};
+    }catch(e){ return null; } /* silencioso de propósito: guarda defensiva — sem o registro, a gravação principal segue */
+  }
+  // "Não, nada disso" não precisa acordar ninguém; qualquer coisa além disso, precisa.
+  function algRespostaPreocupa(txt){
+    var n=(typeof jsNorm==='function')?jsNorm(String(txt||'')):String(txt||'').toLowerCase();
+    if(!n) return false;
+    if(/^(nao|nada|nenhum|nenhuma|nunca)\b/.test(n) && n.length<=100 && !/\b(mas|porem|so que|exceto|as vezes|apenas quando)\b/.test(n)) return false;
+    return true;
+  }
+  var ALG_ATENCAO_QKS={restricao:1, atividade:1, comportamento:1, estresse:1};
+  function algAvisarGestao(k, c, p){
+    try{
+      var Q=(p&&typeof algPerguntas==='function')?algPerguntas(p):[];
+      var linhas=[];
+      Q.forEach(function(q){
+        if(!ALG_ATENCAO_QKS[q.k]) return;
+        var f=c&&c.campos&&c.campos[q.k];
+        var r=f?String(f.txt||'').trim():'';
+        if(r && algRespostaPreocupa(r)) linhas.push('• <b>'+medTgEsc(q.curta||q.k)+':</b> '+medTgEsc(r));
+      });
+      if(!linhas.length) return;
+      var nome=p?pelNome(p):k, tutor=(p&&typeof pelGet==='function')?(pelGet(p,'tutor')||''):'';
+      var texto='\u26A0 <b>ENTREVISTA \u2014 ATEN\u00C7\u00C3O</b>\n<b>'+medTgEsc(nome)+'</b>'+(tutor?(' \u00B7 tutor: '+medTgEsc(tutor)):'')
+        +'\n\n'+linhas.join('\n')
+        +'\n\nJ\u00E1 levada \u00E0 ficha por '+medTgEsc((typeof quemSou==='function'?quemSou():'-'))+'.';
+      // fica guardado para o painel da Gestão (o dashboard vem depois; o dado já não se perde)
+      if(DB) DB.ref('daycare/entrevista-atencao/'+k).set({nome:nome, tutor:tutor, itens:linhas.map(function(x){ return x.replace(/<[^>]+>/g,''); }), ts:Date.now()})
+        .catch(function(e){ _logFalhaGrav('entrevista-atencao '+k, e); });
+      tgCfgPronta().then(function(cfg){
+        if(!cfg){ medTgGuardar(texto,'a ponte do Telegram não está configurada'); return; }
+        tgAvisar({grupo:'gestao', texto:texto}).then(function(r){
+          if(!(r&&r.ok)) medTgGuardar(texto,(r&&r.erro)||'a ponte não respondeu');
+        }).catch(function(e){ medTgGuardar(texto,String((e&&e.message)||e)); });
+      });
+    }catch(e){ try{ if(typeof audit==='function') audit('entrevista-atencao','NÃO avisou a Gestão sobre '+k+': '+((e&&e.message)||e),{}); }catch(x){} /* silencioso de propósito: o audit() tem bolso próprio — falhar aqui não trava a gravação */ }
+  }
   function algCurGravar(k){
     var c=algCur(k), p=algPelDe(k);
     if(!c||!p){ zAlertao('Não achei a ficha deste FILHOt', ['Sem a ficha não há onde gravar. Feche e abra a tela de novo.']); return; }
@@ -19947,6 +20079,7 @@
       quais.push(s.campo);
     });
     if(!Object.keys(patch).length){ zAlertao('Os pedaços marcados estão vazios', ['Escreva o que vai para a ficha, ou tire a marcação do que não presta.']); return; }
+    var _ev=algEntrevistaReg(k, c, p); if(_ev) patch.entrevista=_ev;
     try{
       if(typeof setPelExtra!=='function') throw new Error('não consigo escrever na ficha daqui');
       setPelExtra(p, patch);
@@ -19965,6 +20098,7 @@
         [((e&&e.message)||String(e)), 'Ele vai continuar aparecendo na lista de trabalho até isto ser marcado.']);
     });
     if(ALG_RESP[k]) ALG_RESP[k].ficha=reg;
+    algAvisarGestao(k, c, p);
     try{ if(typeof audit==='function') audit('alergia-ficha','levou para a ficha de '+pelNome(p)+': '+quais.join(', '),{pet:pelNome(p)}); }catch(e){} /* silencioso de propósito: o audit() tem bolso próprio e reenvia sozinho — falhar aqui não pode travar a ação */
     delete ALG_CUR[k]; ALG_ABERTO='';
     if(typeof refreshPills==='function') try{ refreshPills(); }catch(e){} /* silencioso de propósito: guarda defensiva — falhar aqui não pode interromper quem chamou */
@@ -19978,6 +20112,12 @@
   function algCurNada(k){
     if(ALG_NADA_ARMADO!==k){ ALG_NADA_ARMADO=k; algRender(); return; }
     ALG_NADA_ARMADO='';
+    try{
+      var _c=algCur(k), _p=algPelDe(k);
+      var _ev=algEntrevistaReg(k, _c, _p);
+      if(_ev && _p && typeof setPelExtra==='function') setPelExtra(_p,{entrevista:_ev});
+      algAvisarGestao(k, _c, _p);
+    }catch(e){} /* silencioso de propósito: guarda defensiva — o "já conferi" continua valendo mesmo sem o registro */
     var reg={quando:(typeof zHojeISO==='function')?zHojeISO():'', quem:(typeof quemSou==='function'?quemSou():'-'),
              campos:[], ts:Date.now()};
     if(DB) DB.ref('daycare/alergia-confirmada/'+k+'/ficha').set(reg).catch(function(e){
