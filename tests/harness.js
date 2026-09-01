@@ -3619,12 +3619,31 @@ async function main() {
   }
   console.log('');
 
+  console.log('Ouvinte economico - 341 MB num domingo com teto de 360 MB/dia (31/ago):');
+  {
+    check('zMapaVivo existe uma unica vez e mantem o retrato por child_*',
+      (html.match(/function zMapaVivo\(/g) || []).length === 1 &&
+      /child_added/.test(html) && /child_changed/.test(html) && /child_removed/.test(html));
+    check('o cadastro NAO tem mais ouvinte de no inteiro (116 KB por edicao)',
+      html.indexOf("DB.ref('daycare/cadastro').on('value'") < 0 &&
+      /zMapaVivo\('daycare\/cadastro','_pelcad'/.test(html));
+    check('as estadias NAO tem mais ouvinte de no inteiro (513 KB por mudanca)',
+      html.indexOf("DB.ref('auaulandia/estadias').on('value'") < 0 &&
+      /zMapaVivo\('auaulandia\/estadias','_est'/.test(html));
+    check('o corpo do dia (com as fotos) desce pelo retrato compartilhado',
+      /zMapaUma\(ckNo\(\)\)/.test(html) && /zMapaUma\(ptNo\(\)\)/.test(html) &&
+      html.indexOf("DB.ref(ckNo()).once('value')") < 0);
+    check('sem .on no ref (bancada/stub), o helper cai no once de sempre',
+      /typeof r\.on==='function'/.test(html));
+  }
+  console.log('');
+
   console.log('Quem faltou nao se examina, e foto nao nasce fora de ficha (28/ago):');
   {
     check('a tela do corpo agora sabe quem faltou', /function ckFaltou\(o\)/.test(html) &&
       /dcChamada\[dcKey\(o\.p\.n,o\.p\.tutor\)\]==='faltou'/.test(html));
     check('e le a chamada ao abrir (quem entra direto na atividade nao passou por ela)',
-      /daycare\/chamada\/'\+dcDataKey\(\)\)\.once\('value'\)[\s\S]{0,300}CK_FALTA_TARDIA=/.test(html));
+      /daycare\/chamada\/'\+dcDataKey\(\)\)\.once\('value'\)[\s\S]{0,420}CK_FALTA_TARDIA=/.test(html)); // janela alargada em 31/ago: o ouvinte econômico acrescentou o Object.assign no meio
     check('quem faltou sai da conta de "faltam conferir"',
       /const lista=turma\.filter\(function\(o\)\{ return !ckFaltou\(o\); \}\);/.test(html));
     check('mas nao some: vai para o rodape', /NÃO VIERAM HOJE/.test(html));

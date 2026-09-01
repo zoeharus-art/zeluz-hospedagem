@@ -3727,7 +3727,7 @@
       DB.ref('auaulandia/cadastro').on('value', s=>{ cadCache=s.val()||{}; if(typeof renderHosp==='function') renderHosp(); });
       DB.ref('daycare/config/sensiveis').on('value', s=>{ const v=s.val(); if(Array.isArray(v)){ try{ SENS=new Set(v); }catch(e){} /* silencioso de propósito: guarda defensiva — se o valor não vier, o anterior continua valendo */ } });
       DB.ref('daycare/config/atividades').on('value', s=>{ const v=s.val(); if(Array.isArray(v)&&v.length){ ATIVIDADES=v; if(typeof renderAtiv==='function') renderAtiv(); } });
-      DB.ref('daycare/cadastro').on('value', s=>{ pelCadCache=s.val()||{}; CARTEIRA_CARREGADA=true; try{ if(typeof renderRenovacao==='function') renderRenovacao(); }catch(e){} /* silencioso de propósito: redesenho de tela — falhar não pode derrubar quem chamou */ if(typeof mergeNovosAlunos==='function') mergeNovosAlunos(); if(typeof aplicarExclusoes==='function') aplicarExclusoes(); if(typeof renderPel==='function') renderPel(); if(typeof renderDaycare==='function') renderDaycare(); if(typeof renderKPIs==='function') renderKPIs(); });
+      zMapaVivo('daycare/cadastro','_pelcad', v=>{ pelCadCache=Object.assign({},v); CARTEIRA_CARREGADA=true; try{ if(typeof renderRenovacao==='function') renderRenovacao(); }catch(e){} /* silencioso de propósito: redesenho de tela — falhar não pode derrubar quem chamou */ if(typeof mergeNovosAlunos==='function') mergeNovosAlunos(); if(typeof aplicarExclusoes==='function') aplicarExclusoes(); if(typeof renderPel==='function') renderPel(); if(typeof renderDaycare==='function') renderDaycare(); if(typeof renderKPIs==='function') renderKPIs(); });
       // As fotos vêm de um nó separado, sem ouvinte — ver o comentário lá em cima.
       try{ carregarFotos(); }catch(e){ console.warn('fotos:',e); }
       // Banco de reposição: leve (só lançamentos), então pode ter ouvinte — a recepção
@@ -3777,7 +3777,7 @@
       });
       // Onda 4 — Conferência Check-in (Wandela). Índice vivo das estadias por refKey (a mais
       // recente de cada hóspede), pra badge no menu e pra lista de quem ainda falta conferir.
-      DB.ref('auaulandia/estadias').on('value', s=>{ if(typeof _cfIndexarEstadias==='function') _cfIndexarEstadias(s.val()||{}); });
+      zMapaVivo('auaulandia/estadias','_est', v=>{ if(typeof _cfIndexarEstadias==='function') _cfIndexarEstadias(Object.assign({},v)); });
       // Onda 4 — avisos de ração (Recepção), em tempo real em todos os aparelhos.
       DB.ref('auaulandia/avisos-racao').on('value', s=>{ AVISOS_RACAO_CACHE=s.val()||{};
         try{ if(typeof atualizarBadgeRecepcao==='function') atualizarBadgeRecepcao(); }catch(e){} /* silencioso de propósito: redesenho de tela — falhar não pode derrubar quem chamou */
@@ -6864,7 +6864,7 @@
     return DB.ref(faltaAutoTrava(hoje)).once('value').then(function(s){
       if(s.val()){ _faltaAutoFeita=hoje; return; }       // outro aparelho (ou esta sessão) já fechou
       return Promise.all([
-        DB.ref('daycare/checkin-corpo/'+hoje).once('value').then(function(s2){ return s2.val()||{}; }).catch(function(){ return {}; }),
+        zMapaUma('daycare/checkin-corpo/'+hoje).catch(function(){ return {}; }),
         DB.ref('daycare/chamada/'+hoje).once('value').then(function(s2){ return s2.val()||{}; }).catch(function(){ return {}; })
       ]).then(function(rr){
         const fezCheckin=rr[0], chamada=rr[1];
@@ -7948,6 +7948,56 @@
   // Nunca manda o mesmo FILHOt duas vezes no mesmo relatório do mesmo dia: o envio fica
   // registrado em daycare/avisos-plantao/{dia}/{tipo}/{chave} — com ok e com o motivo,
   // se falhar. Corrigir o relatório depois NÃO reenvia (senão o grupo vira enxurrada).
+  // ===== OUVINTE ECONÔMICO (Adriana, 31/ago/2026) ==================================
+  // 341 MB de download num DOMINGO, com teto gratuito de 360 MB/dia: o ouvinte de nó
+  // inteiro ('value') re-baixa TUDO a cada mudança, e o once() repetido re-baixa o nó
+  // do dia (com fotos dentro) a cada abertura de tela. Aqui a coleção desce UMA vez
+  // por sessão e depois só a MUDANÇA viaja (child_added/changed/removed). O retrato
+  // local vive em Z_MAPAS e é compartilhado por todo mundo que lê o mesmo caminho.
+  var Z_MAPAS={};
+  function zMapaVivo(path, slot, aoMudar){
+    if(!DB) return null;
+    var m=Z_MAPAS[path];
+    if(!m){
+      m=Z_MAPAS[path]={mapa:{}, pronto:false, slots:{}, t:null, prontoCbs:[]};
+      var solta=function(){
+        if(m.t) return;
+        m.t=setTimeout(function(){ m.t=null; Object.keys(m.slots).forEach(function(k){
+          try{ m.slots[k](m.mapa); }catch(e){} /* silencioso de propósito: redesenho de tela — falhar não pode derrubar a sincronia */ }); },90);
+      };
+      var r=DB.ref(path);
+      var pronto=function(v){
+        if(m.pronto) return;
+        if(v&&typeof v==='object') m.mapa=v;
+        m.pronto=true;
+        m.prontoCbs.splice(0).forEach(function(f){ try{ f(m.mapa); }catch(e){} /* silencioso de propósito: redesenho de tela — falhar não pode derrubar a sincronia */ });
+        solta();
+      };
+      if(typeof r.on==='function'){
+        r.on('child_added',  function(sn){ m.mapa[sn.key]=sn.val(); if(m.pronto) solta(); });
+        r.on('child_changed',function(sn){ m.mapa[sn.key]=sn.val(); solta(); });
+        r.on('child_removed',function(sn){ delete m.mapa[sn.key]; solta(); });
+      }
+      // O primeiro retrato: este once é servido do cache que os child_* acabaram de
+      // baixar — o nó NÃO desce duas vezes. Ele só marca o "pronto". (Sem .on — a
+      // bancada de testes, por exemplo — ele vira o once() que sempre existiu.)
+      r.once('value').then(function(sn){ pronto(sn&&sn.val?sn.val():null); })
+        .catch(function(){ pronto(null); });   // sem permissão/sem rede: entrega vazio, como o catch fazia
+    }
+    if(slot && aoMudar){
+      m.slots[slot]=aoMudar;
+      if(m.pronto){ try{ aoMudar(m.mapa); }catch(e){} /* silencioso de propósito: redesenho de tela — falhar não pode derrubar a sincronia */ }
+    }
+    return m;
+  }
+  // A mesma coleção em forma de promessa — para os fluxos que antes usavam once().
+  function zMapaUma(path){
+    var m=zMapaVivo(path);
+    if(!m) return Promise.resolve({});
+    if(m.pronto) return Promise.resolve(m.mapa);
+    return new Promise(function(res){ m.prontoCbs.push(res); });
+  }
+
   var PLANT_ROTULO={noite:'🌙 COMO DORMIU', dia:'☀ COMO PASSOU O DIA', inicio:'🍽 JANTAR'};
   function plantChaveAviso(h){ return (typeof medAgendaKey==='function')?medAgendaKey(h):((h&&h.nome)||''); }
   function plantHospedesDoDia(){ return (hospedes||[]).filter(function(h){ return !h.mascote; }); }
@@ -10325,7 +10375,7 @@
   // Agora existe um carimbo: esta constante é a versão que o aparelho está rodando, e o
   // Firebase guarda a versão publicada. Quando as duas diferem, aparece o aviso — mas
   // NUNCA recarrega sozinho: recarregar no meio de um check-in perderia o trabalho.
-  const APP_VERSAO='2026-08-31-09';
+  const APP_VERSAO='2026-08-31-10';
   function vigiarVersao(){
     if(!DB) return;
     try{
@@ -16656,12 +16706,19 @@
     if(!DB){ ckDados={}; renderCheckin(); return; }
     // A chamada vem junto: sem ela a tela não sabe quem faltou e cobra exame de quem não
     // veio. Quem entra direto na atividade nunca passou pela tela que carregava a chamada.
+    // O nó do dia carrega as FOTOS do corpo: re-baixar a cada abertura era um dos
+    // vilões do limite diário. Agora desce uma vez e as mudanças chegam sozinhas.
+    (function(){ var p=ckNo(); zMapaVivo(p,'_ck',function(v){
+      if(ckNo()!==p) return;                       // trocou de entrada para saída: cada uma tem o seu
+      ckDados=Object.assign({},v);
+      try{ if(dcAtiv==='checkin-corpo'||dcAtiv==='checkout-corpo') renderCheckin(); }catch(e){} /* silencioso de propósito: redesenho de tela — falhar não pode derrubar quem chamou */
+    }); })();
     Promise.all([
-      DB.ref(ckNo()).once('value').then(function(s){ return s.val()||{}; }).catch(function(){ return {}; }),
+      zMapaUma(ckNo()).catch(function(){ return {}; }),
       DB.ref('daycare/chamada/'+dcDataKey()).once('value').then(function(s){ return s.val()||{}; }).catch(function(){ return null; }),
       DB.ref('daycare/falta-tardia/'+dcDataKey()).once('value').then(function(s){ return s.val()||{}; }).catch(function(){ return {}; })
     ]).then(function(r){
-      ckDados=r[0];
+      ckDados=Object.assign({},r[0]);
       if(r[1]) dcChamada=r[1];
       CK_FALTA_TARDIA=r[2]||{};
       renderCheckin();
@@ -17384,7 +17441,7 @@
   // O check-out precisa do que a entrada viu para poder comparar.
   function ckCarregarEntradaDoDia(){
     if(!DB) return;
-    DB.ref('daycare/checkin-corpo/'+dcDataKey()).once('value')
+    zMapaUma('daycare/checkin-corpo/'+dcDataKey()).then(function(v){ return {val:function(){ return v; }}; })
       .then(function(s){ ckEntradaCache=s.val()||{}; if(dcAtiv==='checkout-corpo') renderCheckin(); })
       .catch(function(e){ _logLeituraFalhou('daycare/checkin-corpo/ (ckCarregarEntradaDoDia)', e); });
   }
@@ -17636,7 +17693,12 @@
   function carregarPertences(){
     if(!document.getElementById('ptGrid')) return;
     if(!DB){ ptDados={}; renderPertences(); return; }
-    DB.ref(ptNo()).once('value').then(function(s){ ptDados=s.val()||{};
+    (function(){ var p=ptNo(); zMapaVivo(p,'_pt',function(v){
+      if(ptNo()!==p) return;
+      ptDados=Object.assign({},v);
+      try{ if(dcAtiv==='checkin-pert'||dcAtiv==='checkout-pert') renderPertences(); }catch(e){} /* silencioso de propósito: redesenho de tela — falhar não pode derrubar quem chamou */
+    }); })();
+    zMapaUma(ptNo()).then(function(v){ ptDados=Object.assign({},v);
       // Na saída, a lista nasce do que entrou de manhã — carrega os dois.
       if(!ptEhEntrada()) return ptCarregarEntradaDoDia();
     }).then(function(){ renderPertences(); })
