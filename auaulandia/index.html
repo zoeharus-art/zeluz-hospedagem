@@ -4524,17 +4524,84 @@
     Promise.all(regs.map(function(r){ return repGravar(p,r); })).then(function(){
       if(typeof audit==='function') audit('reposicao-credito', pelNome(p)+' · '+regs.length+' dia(s) · '+(REP_MOTIVOS[repMotivoAtual]||repMotivoAtual), {obs:obs});
       repFechar(); soltar();
-      zAlertao('✅ REPOSIÇÃO LANÇADA',
-        [escAttr(pelNome(p))+' ganhou <b>'+regs.length+' dia'+(regs.length>1?'s':'')+'</b> de reposição.',
-         'Motivo: '+(REP_MOTIVOS[repMotivoAtual]||repMotivoAtual)+(obs?(' — '+obs):'')+'.',
-         'Saldo agora: <b>'+(repSaldo(p)+regs.length)+'</b>. Quando ele vier repor, marque o uso na tela de Reposições.']
-        .concat(volta?['<b>O tutor escolheu repor em '+repBRdata(volta)+'.</b> Fica agendado na tela de Reposições — o crédito só sai quando ele aparecer.']:[]),
-        {ok:true, botao:'Fechar'});
+      // A confirmação vem com a mensagem pronta para o tutor: é a consultora quem manda,
+      // e é agora que ela está com o telefone na mão (Adriana, 31/ago/2026).
+      var _info={qtd:regs.length, data:(regs[0]||{}).data, volta:volta||'', saldo:repSaldo(p)+regs.length};
+      if(regs.length>1 && regs[0].periodo){ _info.de=regs[0].periodo.de; _info.ate=regs[0].periodo.ate; }
+      repMsgModal('✅ Reposição lançada',
+        [pelNome(p)+' ganhou '+regs.length+' dia'+(regs.length>1?'s':'')+' de reposição — motivo: '+(REP_MOTIVOS[repMotivoAtual]||repMotivoAtual)+'.',
+         'Saldo agora: '+_info.saldo+'. Quando ele vier repor, marque o uso na tela de Reposições.']
+        .concat(volta?['O tutor escolheu repor em '+repBRdata(volta)+' — fica agendado.']:[]),
+        repMensagem(p,'credito',_info));
       setTimeout(renderReposicao, 400);
     }).catch(function(e){
       soltar();
       w.textContent='Não consegui lançar: '+((e&&e.message)||e)+'. Nada foi salvo — tente de novo.';
     });
+  }
+  // ===== MENSAGEM PRONTA DE REPOSIÇÃO — Adriana, 31/ago/2026 ======================
+  // "Criar texto para quando for inserida reposição e quando for usada, assim como os
+  //  textos sobre pagamento, sobre alergia ou sobre quem não comeu no almoço. Tem um
+  //  padrão nosso de escrita — verifique e crie essas mensagens."
+  // O texto-base é dela: "Passando para dizer que o xxx tem tantas reposições com a de
+  // hoje, referente ao dia x. Essa mensagem é para que possamos, juntas, controlar."
+  // O padrão da casa vem do empMensagem: "Oi, {tutor}, como está?", flexão pelo sexo da
+  // ficha, fecho com o coração amarelo. A consultora copia e manda — o app nunca envia
+  // sozinho para o tutor.
+  function repMensagem(p, modo, info){
+    info=info||{};
+    var ex={}; try{ ex=(typeof pelExtra==='function'?pelExtra(p):{})||{}; }catch(e){ /* sem extra, a mensagem sai no neutro — melhor que não sair */ }
+    var tutor=(typeof primeiroNome==='function')?primeiroNome(pelGet(p,'tutor')||p.tutor||''):'';
+    var nome=pelNome(p);
+    var f=/^f/i.test(String(ex.sexo||''));
+    var o=f?'a':'o', ele=f?'ela':'ele';
+    // O cache local só atualiza quando o Firebase responde — quem chama passa o saldo já
+    // com o lançamento de agora, senão a mensagem sairia com o número velho.
+    var saldo=(info.saldo!=null)?info.saldo:0;
+    if(info.saldo==null){ try{ saldo=repSaldo(p); }catch(e){ /* cache ainda não desceu: melhor 0 que quebrar a mensagem */ } }
+    var ola='Oi'+(tutor?(', '+tutor):'')+', como está?';
+    var corpo='';
+    if(modo==='credito'){
+      var qtd=info.qtd||1;
+      var ref=(qtd>1 && info.de && info.ate)
+        ? ('referentes ao período de '+repBRdata(info.de)+' a '+repBRdata(info.ate))
+        : ('referente ao dia '+repBRdata(info.data||repHojeISO()));
+      corpo='Passando para dizer que '+o+' '+nome+' está com '
+        +saldo+(saldo===1?' reposição':' reposições')
+        +(qtd>1?', com as de hoje, ':', com a de hoje, ') + ref + '.';
+      if(info.volta) corpo+='\n\nO dia de repor já ficou combinado: '+repBRdata(info.volta)+'.';
+    }else{
+      corpo='Passando para dizer que '+o+' '+nome+' usou hoje uma reposição.';
+      if(saldo>1) corpo+=' Agora restam '+saldo+' reposições.';
+      else if(saldo===1) corpo+=' Agora resta 1 reposição.';
+      else corpo+=' Com essa, as reposições terminaram — qualquer falta avisada gera uma nova.';
+    }
+    return ola+'\n\n'+corpo+'\n\nEssa mensagem é para que possamos controlar juntas. 💛';
+  }
+  // Modal com a confirmação em cima e a mensagem pronta embaixo — a consultora copia e
+  // manda no WhatsApp. Mesmo desenho do zAlertao, mas com textarea (o zAlertao escapa HTML).
+  function repMsgModal(titulo, linhas, texto){
+    var old=document.getElementById('repMsgBox'); if(old) old.remove();
+    var esc2=function(t){ return String(t==null?'':t).replace(/&/g,'&amp;').replace(/</g,'&lt;'); };
+    var d=document.createElement('div'); d.id='repMsgBox';
+    d.style.cssText='position:fixed;inset:0;z-index:99999;background:rgba(16,10,8,.78);display:flex;align-items:center;justify-content:center;padding:16px;font-family:Poppins,system-ui,sans-serif';
+    d.innerHTML='<div style="background:#FFFDF6;border-radius:20px;max-width:560px;width:100%;box-shadow:0 24px 70px rgba(0,0,0,.45);max-height:92vh;display:flex;flex-direction:column;overflow:hidden">'
+      +'<div style="background:#1E8449;color:#FFFDF6;padding:16px 20px;font-weight:800;font-size:21px">'+esc2(titulo)+'</div>'
+      +'<div style="padding:16px 20px;overflow:auto;color:#234D67;font-size:15.5px;line-height:1.5;font-weight:600">'
+      +linhas.map(function(t){ return '<div style="margin-bottom:6px">'+esc2(t)+'</div>'; }).join('')
+      +'<div style="font-size:11.5px;font-weight:800;color:#7C8B99;text-transform:uppercase;letter-spacing:.4px;margin:12px 0 4px">Mensagem para o tutor — copie e mande no WhatsApp</div>'
+      +'<textarea id="repMsgTxt" readonly rows="8" style="width:100%;border:1.5px solid #e6dfd0;border-radius:12px;padding:10px;font-family:inherit;font-size:14px;color:#234D67;background:#fff">'+esc2(texto)+'</textarea>'
+      +'<button type="button" style="width:100%;margin-top:8px;border:0;border-radius:12px;background:#DEB428;color:#234D67;font-family:inherit;font-weight:800;font-size:16px;padding:13px;cursor:pointer"'
+      +' onclick="repCopiarMsg(this)">📋 Copiar mensagem</button>'
+      +'</div>'
+      +'<div style="padding:0 20px 18px"><button type="button" style="width:100%;border:0;border-radius:12px;background:#234D67;color:#FFFDF6;font-family:inherit;font-weight:800;font-size:16px;padding:13px;cursor:pointer"'
+      +' onclick="document.getElementById(\'repMsgBox\').remove()">Fechar</button></div></div>';
+    document.body.appendChild(d);
+  }
+  function repCopiarMsg(btn){
+    var ta=document.getElementById('repMsgTxt'); if(!ta) return;
+    ta.select(); try{ document.execCommand('copy'); }catch(e){ /* navegador sem permissão: o texto fica selecionado para copiar à mão */ }
+    var t=btn.textContent; btn.textContent='✅ Copiado!'; setTimeout(function(){ btn.textContent=t; },1600);
   }
   // ---- Consumo ----
   async function repUsar(i){
@@ -4550,6 +4617,10 @@
       {rotulo:'Observação', botao:'Confirmar', cor:'#234D67'}))||'').trim();
     repGravar(p,{tipo:'uso', data:repHojeISO(), motivo:'reposicao', obs:obs}).then(function(){
       if(typeof audit==='function') audit('reposicao-uso', pelNome(p), {obs:obs});
+      var _sd=Math.max(0, s-1);   // s foi lido antes de gravar; o cache ainda não desceu
+      repMsgModal('✅ Reposição usada',
+        [pelNome(p)+' repôs hoje. Saldo agora: '+_sd+'.'],
+        repMensagem(p,'uso',{saldo:_sd}));
       setTimeout(renderReposicao, 300);
     }).catch(function(e){ alert('Não consegui marcar: '+((e&&e.message)||e)); });
   }
@@ -6394,7 +6465,11 @@
     var qNum=qtdNum(q)||0;
     var ck=dataKeyAtual()+'__'+doseId;
     DB.ref('auaulandia/medicacao-agenda/'+key+'/itens/'+itemId+'/estoque').transaction(function(est){
-      if(!est || est.modo!=='contavel') return; // aborta
+      // Os remédios do Toshi tinham 'inicial: 20' mas o modo em branco — e por isso o
+      // estoque ficou parado em 20 a estadia inteira, escondendo o comprimido que sobrou.
+      // Quantidade inicial numérica JÁ É estoque contável, com ou sem a etiqueta.
+      var _contavel = est && (est.modo==='contavel' || (est.modo==null && (typeof est.inicial==='number' || typeof est.restante==='number')));
+      if(!_contavel) return; // aborta: sem quantidade não há o que descontar
       est.contados=est.contados||{};
       if(est.contados[ck]) return; // já contado hoje — aborta
       var base=(typeof est.restante==='number')?est.restante:(typeof est.inicial==='number'?est.inicial:null);
@@ -7169,7 +7244,16 @@
   // disparar mesmo com outro FILHOt (ou nenhum) aberto na tela.
   function registrarDoseAgendadaGlobal(it,doseId){
     if(!DB||!it) return;
-    const reg={itemId:it.itemId,nome:it.nome,q:it.q,u:it.u,local:it.local||null,horario:it.horario,quem:pessoaDoTurno(),ts:Date.now(),avulso:false};
+    // A dose de Tyross de 29/08 entrou assinada como "Plantonista" — o papel, não a
+    // pessoa. Dose de remédio sem dono não é registro, é boato: bloqueia e pede o nome.
+    const _quem=pessoaDoTurno();
+    if(!_quem || LOGIN_GENERICO.test(String(_quem).trim()) || (typeof nomeAssinaturaValido==='function' && !nomeAssinaturaValido(_quem))){
+      try{ pedirNomeDoTurno({forcar:true}); }catch(e){ /* sem o modal, o alert abaixo ainda explica o caminho */ }
+      alert('Antes de registrar a dose, diga QUEM você é.\n\nRemédio é ação crítica: precisa do nome de uma pessoa, não do papel "Plantonista". Escreva seu nome e toque de novo em "Dei agora".');
+      try{ renderMedAgendaHoje(); }catch(e){ /* redesenha para soltar o botão "Registrando…" */ }
+      return;
+    }
+    const reg={itemId:it.itemId,nome:it.nome,q:it.q,u:it.u,local:it.local||null,horario:it.horario,quem:_quem,ts:Date.now(),avulso:false};
     // Item 8 — marca a dose em TODAS as fichas iguais deste FILHOt (mesmo remédio, mesma dose,
     // mesmo local, mesmo horário). Sem isso, a cópia da Betaína da Dolly voltava a alarmar
     // depois de a plantonista já ter dado o comprimido.
@@ -7185,6 +7269,7 @@
     DB.ref('auaulandia/medicacao-log/'+dataKeyAtual()+'/'+it.key+'/'+doseId).set(reg).then(function(){
       if(currentHosp && medAgendaKey(currentHosp)===it.key){ MED_AGENDA_LOG[doseId]=reg; renderMedAgendaHoje(); }
       if(typeof audit==='function') audit('medicacao-dose',it.key,{pet:it.hospNome||'',med:it.nome,horario:it.horario,quem:reg.quem,assinou:reg.quem});
+      try{ medTgAvisarDose(reg, it.hospNome||''); }catch(e){ _logFalhaGrav('telegram da dose '+doseId, e); }
       if(typeof descontarEstoquePorDose==='function') descontarEstoquePorDose(it.key,it.itemId,doseId,it.q); // Onda 2: desconta do estoque contável e projeta o fim
       if(typeof fecharDespertadorMed==='function') fecharDespertadorMed();
       if(typeof carregarMedAtrasadaGestora==='function') carregarMedAtrasadaGestora(); // dose registrada: some do alerta da Gestora sozinho
@@ -7219,7 +7304,13 @@
     else if(qtdNum(q)==null){ if(st){ st.style.color='var(--crm-critico)'; st.textContent='✋ Escreva a quantidade em número (ex: 1, 0,5, 10).'; } return; }
     const key=medAgendaKey(); if(!key||!DB){ if(st){ st.style.color='var(--crm-atencao-text)'; st.textContent='Banco conectando...'; } return; }
     const doseId='avulso_'+Date.now();
-    const reg={itemId:null,nome:nome,q:(ehLocal?'':q),u:u,local:local||null,motivo:motivo||null,horario:h,quem:pessoaDoTurno(),ts:Date.now(),avulso:true};
+    const _qa=pessoaDoTurno();
+    if(!_qa || LOGIN_GENERICO.test(String(_qa).trim()) || (typeof nomeAssinaturaValido==='function' && !nomeAssinaturaValido(_qa))){
+      try{ pedirNomeDoTurno({forcar:true}); }catch(e){ /* o status abaixo ainda explica */ }
+      if(st){ st.style.color='var(--crm-critico)'; st.textContent='✋ Diga QUEM você é antes de registrar remédio — nome de pessoa, não o papel.'; }
+      return;
+    }
+    const reg={itemId:null,nome:nome,q:(ehLocal?'':q),u:u,local:local||null,motivo:motivo||null,horario:h,quem:_qa,ts:Date.now(),avulso:true};
     if(st){ st.style.color='var(--muted)'; st.textContent='Salvando...'; }
     DB.ref('auaulandia/medicacao-log/'+dataKeyAtual()+'/'+key+'/'+doseId).set(reg).then(function(){
       MED_AGENDA_LOG[doseId]=reg;
@@ -7230,6 +7321,7 @@
       document.querySelectorAll('#magAvUnidades button').forEach(b=>b.classList.remove('on'));
       if(st){ st.style.color='var(--crm-ok)'; st.textContent='✅ Dose avulsa registrada.'; }
       if(typeof audit==='function') audit('medicacao-dose-avulsa',key,{pet:currentHosp.nome||'',med:nome+(local?(' — '+local):''),horario:h,quem:reg.quem,assinou:reg.quem,motivo:motivo||''});
+      try{ medTgAvisarDose(reg, currentHosp.nome||''); }catch(e){ _logFalhaGrav('telegram da dose avulsa', e); }
       renderMedAgendaHoje();
       if(typeof carregarMedAtrasadaGestora==='function') carregarMedAtrasadaGestora();
     }).catch(function(e){ if(st){ st.style.color='var(--crm-critico)'; st.textContent='⚠️ Erro: '+e.message; } });
@@ -7270,6 +7362,56 @@
   }
   // Cruza a agenda de TODOS os hóspedes de hoje (MED_AGENDA_TODOS, mesma lista do despertador)
   // com o log de hoje e devolve cada dose já classificada — fonte única para o painel da Gestora.
+  // ===== CADA DOSE DADA CHEGA NO GRUPO — Adriana, 31/ago/2026 =====================
+  // "No grupo do Telegram não chega detalhado cada medicamento dado. Precisa disso."
+  // A mensagem sai na hora do registro, para o grupo do plantão (gestao). Se a ponte
+  // falhar, a mensagem NÃO se perde: entra numa fila no banco e é tentada de novo — o
+  // mesmo padrão da fila da veterinária.
+  function medTgTexto(reg, hospNome){
+    var qtd=(typeof fmtQtd==='function')?fmtQtd(reg.q,reg.u):((reg.q||'')+' '+(reg.u||''));
+    var agora=(typeof horaAgora==='function')?horaAgora():'';
+    var L=['💊 <b>'+(hospNome||'?')+'</b> — '+(reg.nome||'')];
+    L.push('Dose: '+(qtd||'—')+(reg.local?(' · onde: '+reg.local):''));
+    if(reg.avulso){
+      L.push('AVULSA às '+(reg.horario||agora)+(reg.motivo?(' — motivo: '+reg.motivo):''));
+    }else{
+      var atraso='';
+      try{
+        var m=minutosAte(reg.horario);
+        if(m!==null && -m>10) atraso=' (atraso de '+fmtAtrasoMin(-m)+')';
+      }catch(e){ /* sem a conta do atraso a mensagem ainda vale */ }
+      L.push('Agendada: '+(reg.horario||'—')+' · Dada: '+agora+atraso);
+    }
+    L.push('Quem deu: '+(reg.quem||'—'));
+    return L.join('\n');
+  }
+  function medTgAvisarDose(reg, hospNome){
+    var texto=medTgTexto(reg, hospNome);
+    if(typeof tgAvisar!=='function') return;
+    tgAvisar({grupo:'gestao', texto:texto}).then(function(r){
+      if(r&&r.ok) return;
+      medTgGuardar(texto, (r&&r.erro)||'a ponte não respondeu');
+    }).catch(function(e){ medTgGuardar(texto, String((e&&e.message)||e)); });
+  }
+  function medTgGuardar(texto, erro){
+    if(!DB) return;
+    DB.ref('auaulandia/med-tg-fila').push({texto:texto, erro:erro, ts:Date.now(), tentativas:0})
+      .catch(function(e){ _logFalhaGrav('fila do telegram de medicação', e); });
+    try{ if(typeof audit==='function') audit('telegram-medicacao','NÃO saiu (guardado na fila): '+erro,{}); }catch(e){ /* auditoria é rastro, não trava */ }
+  }
+  function medTgFilaTentar(){
+    if(!DB || typeof tgAvisar!=='function') return;
+    DB.ref('auaulandia/med-tg-fila').limitToFirst(10).once('value').then(function(snap){
+      var fila=snap.val()||{};
+      Object.keys(fila).forEach(function(id){
+        var item=fila[id]||{};
+        tgAvisar({grupo:'gestao', texto:item.texto||''}).then(function(r){
+          if(r&&r.ok) return DB.ref('auaulandia/med-tg-fila/'+id).remove();
+          return DB.ref('auaulandia/med-tg-fila/'+id+'/tentativas').set((item.tentativas||0)+1);
+        }).catch(function(e){ _logFalhaGrav('reenvio da fila de medicação '+id, e); });
+      });
+    }).catch(function(e){ _logFalhaGrav('leitura da fila de medicação', e); });
+  }
   function dosesMedDoDia(){
     if(!DB||!MED_AGENDA_TODOS||!MED_AGENDA_TODOS.length) return Promise.resolve([]);
     return DB.ref('auaulandia/medicacao-log/'+dataKeyAtual()).once('value').then(function(snap){
@@ -7292,20 +7434,53 @@
     if(role!=='gestao'&&role!=='supervisor'&&role!=='diretoria'){ el.innerHTML=''; return; }
     if(typeof ehHojeAua==='function' && !ehHojeAua()){ el.innerHTML=''; return; }
     dosesMedDoDia().then(function(doses){
-      renderMedAtrasadaGestora(doses.filter(function(d){ return d.status==='atrasada'; }));
+      renderMedAtrasadaGestora(doses);
     });
   }
-  function renderMedAtrasadaGestora(atrasadas){
+  // ===== MEDICAÇÕES DO DIA, DOSE A DOSE — Adriana, 31/ago/2026 ====================
+  // "A tela para a Gestão verificar está péssima, confusa." O placar dose a dose que já
+  // existia ("Optivet — 3 de 4 doses dadas") vivia escondido DENTRO da ficha de cada
+  // hóspede: a Gestão tinha que abrir um por um. Agora o dia inteiro está aqui:
+  // vermelho = atrasada (agir agora) · amarelo = a dar · verde = dada, com quem e hora.
+  function renderMedAtrasadaGestora(doses){
     const el=document.getElementById('painelMedAtrasada'); if(!el) return;
-    if(!atrasadas||!atrasadas.length){ el.innerHTML='<div class="card gest-card"><div class="hint" style="margin:0">Medicação: todas as doses em dia.</div></div>'; return; }
-    atrasadas=atrasadas.slice().sort(function(a,b){ return b.atrasoMin-a.atrasoMin; });
-    const linhas=atrasadas.map(function(it){
+    doses=doses||[];
+    if(!doses.length){ el.innerHTML='<div class="card gest-card"><div class="hint" style="margin:0">Nenhuma medicação agendada para hoje.</div></div>'; return; }
+    const atr=doses.filter(function(d){ return d.status==='atrasada'; }).sort(function(a,b){ return b.atrasoMin-a.atrasoMin; });
+    const pend=doses.filter(function(d){ return d.status==='pendente'; }).sort(function(a,b){ return String(a.horario).localeCompare(String(b.horario)); });
+    const ok=doses.filter(function(d){ return d.status==='cumprida'; }).sort(function(a,b){ return String(a.horario).localeCompare(String(b.horario)); });
+    const linha=function(it, cor, extra){
       const qtd=fmtQtd(it.q,it.u);
-      return '<div class="gest-item alerta"><div class="gest-head"><strong>'+escAttr(it.hospNome||'')+'</strong>'
-        +' <span style="color:var(--muted);font-size:12px">'+escAttr(it.nome||'')+(qtd?' · '+escAttr(qtd):'')+' — agendado às '+escAttr(it.horario||'')+'</span>'
-        +' <span class="gest-badge">atrasada '+fmtAtrasoMin(it.atrasoMin)+'</span></div></div>';
-    }).join('');
-    el.innerHTML='<div class="card gest-card"><div class="gest-nivel gn-urgente">⚠ Medicação atrasada: '+atrasadas.length+' dose'+(atrasadas.length>1?'s':'')+' sem registro</div>'+linhas+'</div>';
+      return '<div style="display:flex;gap:8px;align-items:baseline;padding:5px 0;border-bottom:1px solid var(--line)">'
+        +'<span style="flex:0 0 8px;height:8px;border-radius:50%;background:'+cor+';align-self:center"></span>'
+        +'<span style="font-weight:800;color:var(--z-blue)">'+escAttr(it.hospNome||'')+'</span>'
+        +'<span style="flex:1;color:var(--muted);font-size:12.5px">'+escAttr(it.nome||'')+(qtd?(' · '+escAttr(qtd)):'')+'</span>'
+        +'<span style="font-size:12.5px;font-weight:700">'+escAttr(it.horario||'')+'</span>'
+        +(extra||'')+'</div>';
+    };
+    let h='<div class="card gest-card">';
+    h+='<div style="font-weight:800;color:var(--z-blue);font-size:15px;margin-bottom:6px">💊 Medicações de hoje '
+      +'<span style="font-weight:700;font-size:12.5px;color:var(--muted)">— '+ok.length+' dada'+(ok.length===1?'':'s')
+      +' · '+pend.length+' a dar'+(atr.length?(' · <span style="color:var(--crm-critico);font-weight:800">'+atr.length+' atrasada'+(atr.length===1?'':'s')+'</span>'):'')+'</span></div>';
+    if(atr.length){
+      h+='<div class="gest-nivel gn-urgente" style="margin-bottom:4px">⚠ SEM REGISTRO — agir agora</div>';
+      h+=atr.map(function(it){ return linha(it,'var(--crm-critico)',
+        '<span class="gest-badge">atrasada '+fmtAtrasoMin(it.atrasoMin)+'</span>'); }).join('');
+    }
+    if(pend.length){
+      h+='<div style="font-weight:800;font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;margin:8px 0 2px">Ainda vão ser dadas</div>';
+      h+=pend.map(function(it){ return linha(it,'var(--z-gold)',''); }).join('');
+    }
+    if(ok.length){
+      h+='<div style="font-weight:800;font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;margin:8px 0 2px">Dadas</div>';
+      h+=ok.map(function(it){
+        var hr=it.ts?new Date(it.ts):null, p2=function(x){ return String(x).padStart(2,'0'); };
+        return linha(it,'var(--crm-ok)',
+          '<span style="font-size:12px;color:var(--crm-ok);font-weight:700">✓ '+(hr?(p2(hr.getHours())+':'+p2(hr.getMinutes())):'')+(it.quem?(' · '+escAttr(it.quem)):'')+'</span>');
+      }).join('');
+    }
+    h+='</div>';
+    el.innerHTML=h;
   }
 
   // Parte 2: histórico de medicação na estadia atual do FILHOt aberto (preenchido ao abrir a ficha)
@@ -10117,7 +10292,7 @@
   // Agora existe um carimbo: esta constante é a versão que o aparelho está rodando, e o
   // Firebase guarda a versão publicada. Quando as duas diferem, aparece o aviso — mas
   // NUNCA recarrega sozinho: recarregar no meio de um check-in perderia o trabalho.
-  const APP_VERSAO='2026-08-31-01';
+  const APP_VERSAO='2026-08-31-05';
   function vigiarVersao(){
     if(!DB) return;
     try{
@@ -12329,9 +12504,27 @@
               });
             });
           });
-        }).catch(function(e){ _logFalhaGrav('daycare/med-dia/ (carregarAgendaMedTodos)', e); }).then(function(){ if(typeof carregarMedAtrasadaGestora==='function') carregarMedAtrasadaGestora(); });
-      } else if(typeof carregarMedAtrasadaGestora==='function') carregarMedAtrasadaGestora();
+        }).catch(function(e){ _logFalhaGrav('daycare/med-dia/ (carregarAgendaMedTodos)', e); }).then(function(){ if(typeof carregarMedAtrasadaGestora==='function') carregarMedAtrasadaGestora(); medVigiaGravar(); });
+      } else { if(typeof carregarMedAtrasadaGestora==='function') carregarMedAtrasadaGestora(); medVigiaGravar(); }
     });
+  }
+  // O retrato do dia para o vigia do servidor: dose esperada por dose esperada. A ponte
+  // (vigiaMedicacao no Apps Script) lê isto e cobra o que passou de 30 min sem registro —
+  // mesmo com todos os celulares no bolso.
+  function medVigiaGravar(){
+    if(!DB) return;
+    try{
+      if(typeof ehHojeAua==='function' && !ehHojeAua()) return;   // retrato é do dia real
+      var esperadas={};
+      (MED_AGENDA_TODOS||[]).forEach(function(it){
+        var id=String(it.key+'__'+magDoseId(it.itemId,it.horario)).replace(/[.#$\[\]\/]/g,'-');
+        esperadas[id]={key:it.key, doseId:magDoseId(it.itemId,it.horario), hospNome:it.hospNome||'',
+                       nome:it.nome||'', q:it.q||'', u:it.u||'', horario:it.horario||''};
+      });
+      DB.ref('auaulandia/med-vigia/'+dataKeyAtual())
+        .set({ts:Date.now(), esperadas:esperadas})
+        .catch(function(e){ _logFalhaGrav('retrato do vigia de medicação', e); });
+    }catch(e){ _logFalhaGrav('retrato do vigia de medicação (montagem)', e); }
   }
   // ===== QUEM O ALARME ACORDA (Adriana, 12/ago/2026) =================================
   // "Preciso que o alarme não toque para os gestores (Adriana e Márcia), não toque para a
@@ -12845,38 +13038,59 @@
   function zPdfTextBlob(lines, opts){
     var o=opts||null;
     var corte=(o&&o.reservaRodape)?70:60;
-    var ops=[]; var y=800;
+    // Uma lista de páginas, cada uma com suas operações. Linha que não cabe NÃO é mais
+    // descartada: vira a primeira da página seguinte (era o corte silencioso que fazia a
+    // ficha "perder" medicação e pertences — Adriana, 31/ago/2026).
+    var paginas=[]; var ops=[]; var y=800;
+    var novaPagina=function(){ if(ops.length) paginas.push(ops); ops=[]; y=800; };
     (lines||[]).forEach(function(ln){
       var size=ln.size||11, gap=(ln.gap!=null?ln.gap:4);
-      y-=(size+gap); if(y<corte) return;
+      if(y-(size+gap)<corte) novaPagina();
+      y-=(size+gap);
       if(!ln.t) return;
       var font=ln.bold?'F2':'F1';
       var col=ln.red?'0.753 0.224 0.169 rg':'0.137 0.302 0.404 rg';
       ops.push(col+'\nBT /'+font+' '+size+' Tf 1 0 0 1 56 '+y.toFixed(1)+' Tm ('+ciPdfEsc(ln.t)+') Tj ET');
     });
-    // ---- assinatura do tutor (só quando quem chamou pede) ----
+    // ---- assinatura do tutor (só quando quem chamou pede) — sempre na última página ----
     var sig=o?(o.assinatura||null):null;
     if(o){
       var assina=o.assinaNome||'';
-      if(sig){ var W2=240, H2=Math.min(120, W2*(sig.h/sig.w)); var yb=Math.max(60, y-14-H2); ops.push('q '+W2.toFixed(2)+' 0 0 '+H2.toFixed(2)+' 56 '+yb.toFixed(2)+' cm /Im0 Do Q'); }
-      else { y-=16; if(y>70) ops.push('0.4 0.4 0.4 rg\nBT /F1 11 Tf 1 0 0 1 56 '+y.toFixed(1)+' Tm ((sem assinatura no quadro)) Tj ET'); }
-      if(assina){ y-=(sig?90:20); if(y>60) ops.push('0.137 0.302 0.404 rg\nBT /F2 11 Tf 1 0 0 1 56 '+y.toFixed(1)+' Tm ('+ciPdfEsc(assina)+') Tj ET'); }
+      var altura=(sig?150:40)+(assina?24:0);
+      if(y-altura<corte-10) novaPagina();
+      if(sig){ var W2=240, H2=Math.min(120, W2*(sig.h/sig.w)); var yb=Math.max(60, y-14-H2); ops.push('q '+W2.toFixed(2)+' 0 0 '+H2.toFixed(2)+' 56 '+yb.toFixed(2)+' cm /Im0 Do Q'); y=yb; }
+      else { y-=16; ops.push('0.4 0.4 0.4 rg\nBT /F1 11 Tf 1 0 0 1 56 '+y.toFixed(1)+' Tm ((sem assinatura no quadro)) Tj ET'); }
+      if(assina){ y-=20; ops.push('0.137 0.302 0.404 rg\nBT /F2 11 Tf 1 0 0 1 56 '+y.toFixed(1)+' Tm ('+ciPdfEsc(assina)+') Tj ET'); }
     }
-    var content=ops.join('\n');
+    novaPagina();
+    if(!paginas.length) paginas.push([]);
+    var n=paginas.length;
     var hasImg=!!sig;
+    // Numeração dos objetos: 1=Catálogo · 2=Árvore de páginas · 3..(2+n)=páginas ·
+    // (3+n)..(2+2n)=conteúdos · depois as fontes e, por último, a imagem da assinatura.
+    var objPag=function(i){ return 3+i; }, objCont=function(i){ return 3+n+i; };
+    var objF1=3+2*n, objF2=4+2*n, objIm=5+2*n;
+    var kids=[]; for(var i0=0;i0<n;i0++) kids.push(objPag(i0)+' 0 R');
     var objs=[];
     objs.push('<< /Type /Catalog /Pages 2 0 R >>');
-    objs.push('<< /Type /Pages /Kids [3 0 R] /Count 1 >>');
-    objs.push('<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 5 0 R /F2 6 0 R >>'+(hasImg?' /XObject << /Im0 7 0 R >>':'')+' >> /Contents 4 0 R >>');
-    objs.push('<< /Length '+content.length+' >>\nstream\n'+content+'\nendstream');
+    objs.push('<< /Type /Pages /Kids ['+kids.join(' ')+'] /Count '+n+' >>');
+    for(var i1=0;i1<n;i1++){
+      // a assinatura (Im0) fica na última página; as outras não precisam do XObject
+      var xo=(hasImg && i1===n-1)?(' /XObject << /Im0 '+objIm+' 0 R >>'):'';
+      objs.push('<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 '+objF1+' 0 R /F2 '+objF2+' 0 R >>'+xo+' >> /Contents '+objCont(i1)+' 0 R >>');
+    }
+    for(var i2=0;i2<n;i2++){
+      var content=paginas[i2].join('\n');
+      objs.push('<< /Length '+content.length+' >>\nstream\n'+content+'\nendstream');
+    }
     objs.push('<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>');
     objs.push('<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold /Encoding /WinAnsiEncoding >>');
     if(hasImg){ objs.push({ pre:'<< /Type /XObject /Subtype /Image /Width '+sig.w+' /Height '+sig.h+' /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode /Length '+sig.bytes.length+' >>\nstream\n', bin:sig.bytes, post:'\nendstream' }); }
-    var enc=function(s){ var u=new Uint8Array(s.length); for(var i=0;i<s.length;i++) u[i]=s.charCodeAt(i)&0xff; return u; };
+    var enc=function(x){ var u=new Uint8Array(x.length); for(var i=0;i<x.length;i++) u[i]=x.charCodeAt(i)&0xff; return u; };
     var chunks=[]; var len=0; var offsets=[];
     var push=function(x){ var u=(x instanceof Uint8Array)?x:enc(x); chunks.push(u); len+=u.length; };
-    push('%PDF-1.4\n%âãÏÓ\n');
-    for(var i=0;i<objs.length;i++){ offsets[i]=len; push((i+1)+' 0 obj\n'); var ob=objs[i]; if(typeof ob==='string') push(ob); else { push(ob.pre); push(ob.bin); push(ob.post); } push('\nendobj\n'); }
+    push('%PDF-1.4\n%\u00e2\u00e3\u00cf\u00d3\n');
+    for(var i3=0;i3<objs.length;i3++){ offsets[i3]=len; push((i3+1)+' 0 obj\n'); var ob=objs[i3]; if(typeof ob==='string') push(ob); else { push(ob.pre); push(ob.bin); push(ob.post); } push('\nendobj\n'); }
     var xrefOff=len;
     var xref='xref\n0 '+(objs.length+1)+'\n0000000000 65535 f \n';
     for(var j=0;j<objs.length;j++){ xref += (('0000000000'+offsets[j]).slice(-10))+' 00000 n \n'; }
@@ -15605,6 +15819,16 @@
     }catch(e){} /* silencioso de propósito: redesenho de tela — falhar não pode derrubar quem chamou */
   }
   function dcGarantirPlanilha(forcar){
+    // O lançamento direto e a diária avulsa vêm SEMPRE, mesmo que a planilha falhe —
+    // é o que garante o avulso no check-out sem depender de a Chamada ter sido aberta.
+    try{ dcCarregarLancamentos(); }catch(e){ _logLeituraFalhou('lançamentos do dia (garantir)', e); }
+    try{
+      if(DB && typeof ehHoje==='function' && ehHoje()){
+        DB.ref('daycare/avulsos/'+dcDataKey()).once('value')
+          .then(function(s){ dcAvulsos=Object.values(s.val()||{}); })
+          .catch(function(e){ _logLeituraFalhou('daycare/avulsos (garantir)', e); });
+      }
+    }catch(e){ _logLeituraFalhou('daycare/avulsos (garantir, fora do banco)', e); }
     if(typeof carregarPlanilhaDia!=='function') return;
     if(typeof ehHoje==='function' && !ehHoje()) return;      // a planilha do dia é a de hoje
     if(_planCarregando) return;
@@ -15624,6 +15848,36 @@
   // morador entra na turma de TODOS os dias sozinho. Ele é da casa: aparece em tudo (busca,
   // ficha, comida, vacinas) e só fica fora do financeiro, que é o que a categoria já resolve.
   function ehMoradorZeluz(p){ try{ return (typeof pelCategoria==='function') && pelCategoria(p)==='morador'; }catch(e){ return false; } }
+  // Avulso e Reposição lançados nos "Lançamentos do dia" — lidos DIRETO do banco.
+  // Antes a turma só os via depois de app→ponte→planilha→releitura; a ponte caiu em
+  // 27/08 e três FILHOts passaram o dia invisíveis (Adriana, 31/ago/2026).
+  var DC_DASH_TURMA={reposicao:[], avulso:[], quando:0};
+  function dcCarregarLancamentos(){
+    if(!DB || (typeof ehHoje==='function' && !ehHoje())) return Promise.resolve();
+    if(Date.now()-DC_DASH_TURMA.quando<60000) return Promise.resolve();   // fresco: não relê
+    DC_DASH_TURMA.quando=Date.now();
+    var dia=(typeof dcDataKey==='function')?dcDataKey():'';
+    return DB.ref('daycare/dashboard/'+dia).once('value').then(function(snap){
+      var d=snap.val()||{};
+      ['reposicao','avulso'].forEach(function(campo){
+        var out=[];
+        Object.keys(d[campo]||{}).forEach(function(id){
+          var valor=String((d[campo][id]||{}).valor||'');
+          // o detalhe entre parênteses não é nome: "Billy Paul/Westie (SHAMPOO)" → "Billy Paul/Westie"
+          var limpo=valor.replace(/\s*\(.*\)\s*$/,'').trim();
+          if(!limpo) return;
+          var casado=null;
+          try{ casado=(typeof planCasar==='function')?planCasar(limpo):null; }catch(e){ /* nome que não casa vira entrada crua abaixo */ }
+          if(casado && casado.p){ out.push({p:casado.p}); return; }
+          // Sem ficha casada o FILHOt ainda TEM que aparecer: entrada crua com o nome lançado
+          var nome=limpo.split('/')[0].trim(), raca=(limpo.split('/')[1]||'').trim();
+          if(nome) out.push({p:{n:nome, raca:raca, tutor:'', freq:campo, dias:[], nasc:''}, cru:true});
+        });
+        DC_DASH_TURMA[campo]=out;
+      });
+      try{ dcRedesenharAtividade(); }catch(e){ /* a tela seguinte redesenha sozinha */ }
+    }).catch(function(e){ _logLeituraFalhou('daycare/dashboard (turma do dia)', e); });
+  }
   function turmaDoDia(){
     const base=PELUDINHOS.map((p,i)=>({p,i})).filter(o=>(pelDias(o.p).indexOf(dcDia)>=0 || ehMoradorZeluz(o.p)) && !pelInativo(o.p));
     // controla quem já está na lista — evita que o mesmo FILHOt entre 2x (fixo do dia + avulso)
@@ -15634,14 +15888,15 @@
       jaTem.add(key);
       base.push({p:{n:a.nome,raca:a.raca||'',tutor:a.tutor||'',freq:'avulso',dias:[dcDia],nasc:''},i:'av'+k,avulso:true});
     });
-    // A planilha manda: Reposição (não é do dia mas veio hoje) e Avulso (pagou diária)
-    // entram na lista do dia — na chamada e no almoço. Só vale para hoje.
+    // Reposição (não é do dia mas veio hoje) e Avulso (pagou diária) entram na lista —
+    // primeiro pelo LANÇAMENTO DIRETO no app (fonte primária desde 31/ago), depois pela
+    // planilha (cobre o que a recepção ainda escreve lá à mão). Só vale para hoje.
     if(ehHoje()){
       ['reposicao','avulso'].forEach(campo=>{
-        (planDia[campo]||[]).forEach(it=>{
+        ((DC_DASH_TURMA[campo]||[]).concat(planDia[campo]||[])).forEach(it=>{
           if(!it.p) return;
           const k=dcKey(it.p.n,it.p.tutor);
-          if(jaTem.has(k)||pelInativo(it.p)) return;
+          if(jaTem.has(k)||(!it.cru&&pelInativo(it.p))) return;
           jaTem.add(k);
           const i=PELUDINHOS.indexOf(it.p);
           base.push({ p:it.p, i:(i>=0?i:'pl'+k), daPlanilha:campo });
@@ -15886,6 +16141,8 @@
     if(typeof vetFilaTentar==='function'){
       setTimeout(function(){ vetFilaTentar(); }, 4000);
       setInterval(function(){ vetFilaTentar(); }, 600000);
+      setTimeout(function(){ try{ medTgFilaTentar(); }catch(e){ _logFalhaGrav('fila med (arranque)', e); } }, 5000);
+      setInterval(function(){ try{ medTgFilaTentar(); }catch(e){ _logFalhaGrav('fila med (relógio)', e); } }, 600000);
       // Resumo do dia para a Gestão: tenta na abertura e de hora em hora. Só sai das 18h em
       // diante e uma vez por dia — quem abrir primeiro dispara, ninguém precisa lembrar.
       setTimeout(function(){ try{ resumoDiaAuto(); }catch(e){} /* silencioso de propósito: guarda defensiva — falhar aqui não pode interromper quem chamou */ }, 9000);
@@ -20963,11 +21220,15 @@
     var c=DASH_PONTE||{};
     // Config antiga pode ter sido gravada com aspas (foi o que desligou a ponte em 21/08).
     if(c.token) c={url:c.url, token:dashLimparToken(c.token)};
+    // Tempo máximo de 12s: um fetch pendurado deixava o lançamento sem planilha_ok para
+    // sempre — nem erro, nem botão de reenviar, nem rastro (foi assim de 27 a 31/08).
+    var _ac=null; try{ _ac=new AbortController(); setTimeout(function(){ try{ _ac.abort(); }catch(e2){ /* já resolveu */ } }, 12000); }catch(e){ /* navegador sem AbortController segue sem tempo máximo */ }
     return fetch(c.url,{method:'POST', headers:{'Content-Type':'text/plain;charset=utf-8'},
+      signal:(_ac?_ac.signal:undefined),
       body:JSON.stringify(Object.assign({token:c.token||''},corpo))})
       .then(function(r){ return r.text().catch(function(){ return ''; }); })
       .then(function(t){ try{ return JSON.parse(t); }catch(e){ return {ok:false, erro:String(t).slice(0,140)}; } })
-      .catch(function(e){ return {ok:false, erro:String((e&&e.message)||e)}; });
+      .catch(function(e){ return {ok:false, erro:(e&&e.name==='AbortError')?'a ponte não respondeu em 12s':String((e&&e.message)||e)}; });
   }
   function dashCriarColunas(){
     var st=document.getElementById('dashPonteStatus');
@@ -23232,17 +23493,19 @@
   // jantar — e tem quem faça 4 ou mais refeições. Cada refeição guarda a SUA quantidade.
   // ==================================================================================
   var CI_REF_FIXAS=[{k:'cafe',n:'Café da manhã',i:'☕'},{k:'almoco',n:'Almoço',i:'🍽️'},{k:'jantar',n:'Jantar',i:'🌙'}];
-  var ciRefs={cafe:{on:false,racao:'',natural:'',extra:''},almoco:{on:false,racao:'',natural:'',extra:''},jantar:{on:false,racao:'',natural:'',extra:''}};
+  // O horário entrou nas três fixas em 31/ago/2026: "ter detalhado o horário de almoço,
+  // café, jantar" — a plantonista precisa saber A QUE HORAS este FILHOt come.
+  var ciRefs={cafe:{on:false,hora:'',racao:'',natural:'',extra:''},almoco:{on:false,hora:'',racao:'',natural:'',extra:''},jantar:{on:false,hora:'',racao:'',natural:'',extra:''}};
   var ciRefsExtras=[]; // {nome,hora,racao,natural,extra} — a 4ª refeição em diante
   function ciRefsZerar(){
-    ciRefs={cafe:{on:false,racao:'',natural:'',extra:''},almoco:{on:false,racao:'',natural:'',extra:''},jantar:{on:false,racao:'',natural:'',extra:''}};
+    ciRefs={cafe:{on:false,hora:'',racao:'',natural:'',extra:''},almoco:{on:false,hora:'',racao:'',natural:'',extra:''},jantar:{on:false,hora:'',racao:'',natural:'',extra:''}};
     ciRefsExtras=[]; ciRenderRefs();
   }
   function ciNum(v){ return parseFloat(String(v==null?'':v).replace(',','.'))||0; }
   // Refeições que realmente acontecem, na ordem do dia. Extras entram como refeição própria.
   function ciRefsAtivas(){
     const out=[];
-    CI_REF_FIXAS.forEach(function(f){ const r=ciRefs[f.k]||{}; if(r.on) out.push({k:f.k,nome:f.n,hora:'',racao:r.racao||'',natural:r.natural||'',extra:r.extra||'',fixa:true}); });
+    CI_REF_FIXAS.forEach(function(f){ const r=ciRefs[f.k]||{}; if(r.on) out.push({k:f.k,nome:f.n,hora:r.hora||'',racao:r.racao||'',natural:r.natural||'',extra:r.extra||'',fixa:true}); });
     (ciRefsExtras||[]).forEach(function(e,i){ out.push({k:'extra'+i,nome:(e.nome||'Refeição extra'),hora:e.hora||'',racao:e.racao||'',natural:e.natural||'',extra:e.extra||'',fixa:false}); });
     return out;
   }
@@ -23267,10 +23530,10 @@
   // o novo (`refs`) e o antigo (uma quantidade só + em quais refeições era dada).
   function ciCarregarRefs(a){
     a=a||{};
-    ciRefs={cafe:{on:false,racao:'',natural:'',extra:''},almoco:{on:false,racao:'',natural:'',extra:''},jantar:{on:false,racao:'',natural:'',extra:''}};
+    ciRefs={cafe:{on:false,hora:'',racao:'',natural:'',extra:''},almoco:{on:false,hora:'',racao:'',natural:'',extra:''},jantar:{on:false,hora:'',racao:'',natural:'',extra:''}};
     ciRefsExtras=[];
     if(a.refs&&a.refs.fixas){
-      CI_REF_FIXAS.forEach(function(f){ const r=a.refs.fixas[f.k]; if(r) ciRefs[f.k]={on:!!r.on, racao:r.racao||'', natural:r.natural||'', extra:r.extra||''}; });
+      CI_REF_FIXAS.forEach(function(f){ const r=a.refs.fixas[f.k]; if(r) ciRefs[f.k]={on:!!r.on, hora:r.hora||'', racao:r.racao||'', natural:r.natural||'', extra:r.extra||''}; });
       ciRefsExtras=Array.isArray(a.refs.extras)?a.refs.extras.map(function(e){ return {nome:e.nome||'',hora:e.hora||'',racao:e.racao||'',natural:e.natural||'',extra:e.extra||''}; }):[];
     } else {
       const rr=a.racaoRefeicoes||{}, nn=(a.comida&&a.comida.refeicoes)||{};
@@ -23321,6 +23584,8 @@
       const resumo=r.on?'':'<span class="ci-refb-tot">não faz</span>';
       h+='<div class="ci-refb'+(r.on?' on':'')+'">'
         + '<div class="ci-refb-head" onclick="ciRefToggle(\''+f.k+'\')"><span class="ci-refb-box">'+(r.on?'&#10003;':'')+'</span><span>'+f.i+' '+f.n+'</span>'+resumo+'</div>'
+        + (r.on?('<div class="ci-refb-campos cad-grid"><div class="field"><label>Horário</label>'
+          + '<input type="time" class="cad-in" value="'+escAttr(r.hora||'')+'" oninput="ciRefSet(\''+f.k+'\',\'hora\',this.value)"></div></div>'):'')
         + (r.on?campos('ciRefSet.bind(null,\''+f.k+'\')',r):'')
         + '</div>';
     });
@@ -23408,7 +23673,7 @@
       linhas.push(nome+(hora?(' ('+hora+')'):'')+': '+p.join(' + '));
     };
     [{k:'cafe',n:'Café da manhã'},{k:'almoco',n:'Almoço'},{k:'jantar',n:'Jantar'}].forEach(function(f){
-      const r=(refs.fixas||{})[f.k]; if(r&&r.on) monta(f.n,'',r);
+      const r=(refs.fixas||{})[f.k]; if(r&&r.on) monta(f.n,r.hora||'',r);
     });
     (refs.extras||[]).forEach(function(e){ monta(e.nome||'Refeição extra', e.hora||'', e); });
     return linhas.join(' · ');
@@ -24557,8 +24822,10 @@
       } else {
         zAlertao('✅ CHECK-IN SALVO',
           [(ciHosp.nome||'O FILHOt')+' — estadia de '+ciBRdata(dados.entrada)+' até '+(dados.saida?ciBRdata(dados.saida):'data a confirmar')+'.',
-           'Já aparece na Conferência e no Plantão.'],
+           'Já aparece na Conferência e no Plantão.',
+           'O resumo e a ficha em PDF foram mandados para o grupo do plantão no Telegram.'],
           {ok:true, botao:'Fechar'});
+        try{ ciMandarTelegram(); }catch(e){ _logFalhaGrav('telegram do check-in', e); }
       }
     }).catch(function(e){
       __ciTravar(false);
@@ -24573,6 +24840,45 @@
     });
   }
 
+  // "Quantidade que veio": o estoque declarado no check-in — é o número que fecha a conta
+  // do comprimido que sobra (caso Toshi, 31/ago/2026).
+  function ciMedVeioTxt(it){
+    var e=(it&&it.estoque)||{};
+    if(typeof e.inicial==='number') return ' — veio: '+e.inicial+' '+(it.u||'unidade(s)');
+    if(e.nivel) return ' — veio: '+e.nivel;
+    return '';
+  }
+  // ===== O GRUPO DO PLANTÃO RECEBE A FICHA — Adriana, 31/ago/2026 =================
+  // "Enviar esse arquivo imediatamente para o grupo no Telegram de hospedagem."
+  // Sai sozinho ao salvar o check-in: primeiro o resumo detalhado em texto (leitura
+  // imediata no grupo), depois o PDF da ficha como arquivo. Falha nunca é silêncio:
+  // o texto cai na fila de reenvio da medicação, que já tenta de novo sozinha.
+  function ciMandarTelegram(){
+    try{
+      var texto='';
+      try{ texto=ciResumoTexto(); }catch(e){ texto=''; }
+      if(!texto || typeof tgAvisar!=='function') return;
+      var nomeArq='checkin-'+String((ciHosp&&ciHosp.nome)||'filhot').replace(/[^a-zA-Z0-9]+/g,'-')+'-'+((typeof hojeISO==='function')?hojeISO():'')+'.pdf';
+      tgAvisar({grupo:'gestao', texto:'📋 <b>CHECK-IN — '+((ciHosp&&ciHosp.nome)||'')+'</b>\n\n'+texto}).then(function(r){
+        if(!(r&&r.ok)) medTgGuardar('📋 CHECK-IN — '+((ciHosp&&ciHosp.nome)||'')+'\n\n'+texto, (r&&r.erro)||'a ponte não respondeu');
+      }).catch(function(e){ medTgGuardar('📋 CHECK-IN — '+((ciHosp&&ciHosp.nome)||'')+'\n\n'+texto, String((e&&e.message)||e)); });
+      // o PDF vai em seguida — e se a ponte ainda for a versão sem sendDocument, o grupo
+      // já recebeu o conteúdo em texto acima: nada se perde
+      var blob=null; try{ blob=ciBuildPdfBlob(); }catch(e){ blob=null; }
+      if(blob && typeof FileReader!=='undefined'){
+        var fr=new FileReader();
+        fr.onload=function(){
+          var b64=String(fr.result||'').replace(/^data:[^;]+;base64,/,'');
+          if(!b64) return;
+          tgAvisar({grupo:'gestao', documentoBase64:b64, nomeArquivo:nomeArq,
+                    texto:'📎 Ficha de check-in — '+((ciHosp&&ciHosp.nome)||'')})
+            .catch(function(e){ _logFalhaGrav('PDF do check-in para o grupo', e); });
+        };
+        fr.readAsDataURL(blob);
+      }
+      try{ if(typeof audit==='function') audit('checkin-telegram','mandou resumo e ficha ao grupo do plantão',{pet:(ciHosp&&ciHosp.nome)||''}); }catch(e){ /* rastro, não trava */ }
+    }catch(e){ _logFalhaGrav('envio do check-in ao Telegram', e); }
+  }
   // ---- Resumo em texto (WhatsApp / e-mail) ----
   function ciBRdata(iso){ if(!iso) return '—'; const p=iso.split('-'); return p.length===3?(p[2]+'/'+p[1]+'/'+p[0]):iso; }
   function ciResumoTexto(){
@@ -24589,7 +24895,7 @@
     const spa=(d.ficha.spa)||{};
     if(spa.banho){ let bl='Banho na saída (Spa Dermoprotetor): '+spa.banho; if(spa.banho==='Sim'){ if(spa.tipo) bl+=' — '+spa.tipo; bl += spa.aConfirmar?' — horário a confirmar':(spa.horario?(' — '+spa.horario):''); } L.push(bl); }
     const mv=Object.values(meds);
-    if(mv.length){ L.push(''); L.push('*MEDICAÇÃO / SUPLEMENTOS — HORÁRIOS*'); mv.forEach(function(it){ var per=medPeriodoTxt(it); L.push('- '+it.nome+' — '+medDoseTxt(it)+' — '+ (it.horarios||[]).join(', ')+(per?(' — '+per):'')); }); }
+    if(mv.length){ L.push(''); L.push('*MEDICAÇÃO / SUPLEMENTOS — HORÁRIOS*'); mv.forEach(function(it){ var per=medPeriodoTxt(it); L.push('- '+it.nome+' — '+medDoseTxt(it)+' — '+ (it.horarios||[]).join(', ')+(per?(' — '+per):'')+ciMedVeioTxt(it)); }); }
     if(d.pertences.length){ L.push(''); L.push('Pertences: '+d.pertences.map(function(p){ return p.nome+(p.spec?(' ('+p.spec+')'):''); }).join('; ')); }
     const assina=(document.getElementById('ciAssinaNome').value||'').trim();
     if(assina){ L.push(''); L.push('Conferido e assinado por: '+assina); }
@@ -24650,7 +24956,7 @@
     add('Banho na saida (Spa Dermoprotetor)',{bold:true,size:12,gap:3});
     add('Banho na saida: '+(spa.banho||'nao informado')+(spa.banho==='Sim'?((spa.tipo?(' - '+spa.tipo):'')+(spa.aConfirmar?' - horario a confirmar':(spa.horario?(' - as '+spa.horario):''))):''),{gap:3});
     add('DIA DA SAIDA: '+(d.saida?ciBRdata(d.saida):'a confirmar'),{bold:true,gap:8});
-    if(meds.length){ add('MEDICACAO / SUPLEMENTOS - HORARIOS',{bold:true,size:12,red:true}); meds.forEach(function(it){ var per=medPeriodoTxt(it); add('- '+it.nome+' - '+medDoseTxt(it)+' - '+((it.horarios||[]).join(', '))+(per?(' - '+per):''),{red:true}); }); lines.push({t:'',size:6,gap:2}); }
+    if(meds.length){ add('MEDICACAO / SUPLEMENTOS - HORARIOS',{bold:true,size:12,red:true}); meds.forEach(function(it){ var per=medPeriodoTxt(it); add('- '+it.nome+' - '+medDoseTxt(it)+' - '+((it.horarios||[]).join(', '))+(per?(' - '+per):'')+ciMedVeioTxt(it),{red:true}); }); lines.push({t:'',size:6,gap:2}); }
     if(d.pertences.length){ add('Pertences',{bold:true,size:12}); d.pertences.forEach(function(p){ add('- '+p.nome+(p.spec?(' - '+p.spec):''),{}); }); lines.push({t:'',size:6,gap:2}); }
     add('Assinatura do tutor',{bold:true,size:12,gap:6});
     // Daqui em diante é o montador único (zPdfTextBlob): a folha reserva o rodapé e

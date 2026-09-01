@@ -213,6 +213,14 @@ async function main() {
     console.log('painel-logica.js carregou no mesmo sandbox.\n');
   }
 
+  // A conta do Financeiro (fin*) — mesma ideia do painel-logica.js: função pura,
+  // fora do index.html, provada aqui ANTES de existir uma tela de dinheiro.
+  const FIN = path.join(__dirname, '..', 'auaulandia', 'financeiro-logica.js');
+  if (fs.existsSync(FIN)) {
+    vm.runInContext(fs.readFileSync(FIN, 'utf8'), ctx, { filename: 'financeiro-logica.js' });
+    console.log('financeiro-logica.js carregou no mesmo sandbox.\n');
+  }
+
   // O leitor da resposta do tutor (rt*) — mesma ideia do painel-logica.js: função
   // pura, fora do index.html, provada aqui ANTES de existir um botão na tela.
   const RT = path.join(__dirname, '..', 'auaulandia', 'resposta-tutor.js');
@@ -590,7 +598,9 @@ async function main() {
   {
     // Gabaritos colhidos do código ANTES da unificação, em 25/ago/2026.
     // Se mudarem, o PDF mudou — não é para "ajustar o gabarito", é para investigar.
-    const GABARITO_PDF_CHECKIN = '98858e0506fafb8ffa9e6cf69ebb4339038affadbd54df62caebf3b0a42aa791'; // 3628 bytes
+    // Gabarito atualizado em 31/ago/2026 (paginação do PDF): o nome de quem assinou
+    // passou a ficar ABAIXO da imagem da assinatura, não atravessando-a. Mesmo tamanho.
+    const GABARITO_PDF_CHECKIN = 'd87be8577fd6c31b3c0fdf7b1e7dc74c97ec7b83c44cac53feb541c1c9ecf058'; // 3628 bytes
     const GABARITO_PDF_VET = '83338caf3f53ba3f20a6f7dd5de1bdc7fb3d7f0fcdbb9260cac499190cbc792d'; // 2086 bytes
     const GABARITO_PDF_TEXTO = '82c7cd6e0345969d1db34d3c9fdb04e8038668720292fea9a7373f0e0f51207e'; // 848 bytes
 
@@ -3704,6 +3714,121 @@ async function main() {
   }
   console.log('');
 
+  console.log('Missao 31/ago: medicacao com dono, telegram, PDF que pagina, avulso, reposicao:');
+  {
+    // ---- 1. dose so grava com nome de gente ----
+    check('dose agendada bloqueia assinatura generica',
+      /function registrarDoseAgendadaGlobal[\s\S]{0,700}LOGIN_GENERICO\.test\(String\(_quem\)\.trim\(\)\)/.test(html));
+    check('dose avulsa tambem', /const _qa=pessoaDoTurno\(\);[\s\S]{0,400}LOGIN_GENERICO\.test\(String\(_qa\)\.trim\(\)\)/.test(html));
+    check('o bloqueio explica e pede o nome', /precisa do nome de uma pessoa, não do papel "Plantonista"/.test(html));
+
+    // ---- 2. cada dose vira mensagem no grupo, com fila ----
+    check('a dose dada chama o telegram', /medTgAvisarDose\(reg, it\.hospNome\|\|''\)/.test(html));
+    check('a avulsa tambem', /medTgAvisarDose\(reg, currentHosp\.nome\|\|''\)/.test(html));
+    check('falha NAO se perde: fila no banco', /auaulandia\/med-tg-fila/.test(html) &&
+      /function medTgFilaTentar\(\)/.test(html));
+    if (typeof ctx.medTgTexto === 'function') {
+      const t = ctx.medTgTexto({nome: 'Pimobendan', q: '1', u: 'comprimido', horario: '18:00', quem: 'Jeisi'}, 'Toshi');
+      check('a mensagem nomeia FILHOt, remedio, dose, horario e quem deu',
+        /Toshi/.test(t) && /Pimobendan/.test(t) && /18:00/.test(t) && /Jeisi/.test(t), t);
+      const av = ctx.medTgTexto({nome: 'Dipirona', q: '10', u: 'gotas', horario: '21:15', quem: 'Carol', avulso: true, motivo: 'febre'}, 'Harry');
+      check('a avulsa diz que e avulsa e o motivo', /AVULSA/.test(av) && /febre/.test(av), av);
+    }
+
+    // ---- 3. estoque desce mesmo sem o modo marcado (caso Toshi) ----
+    check('inicial numerico conta como estoque contavel',
+      /est\.modo==='contavel' \|\| \(est\.modo==null && \(typeof est\.inicial==='number' \|\| typeof est\.restante==='number'\)\)/.test(html));
+
+    // ---- 4. painel da gestao com o dia inteiro ----
+    check('o painel recebe TODAS as doses, nao so as atrasadas',
+      /renderMedAtrasadaGestora\(doses\);/.test(html) &&
+      !/renderMedAtrasadaGestora\(doses\.filter/.test(html));
+    check('mostra dadas, a dar e atrasadas', /Medicações de hoje/.test(html) &&
+      /SEM REGISTRO — agir agora/.test(html) && /Ainda vão ser dadas/.test(html));
+
+    // ---- 5. avulso na turma sem depender da planilha ----
+    check('a turma le o lancamento direto do banco',
+      /var DC_DASH_TURMA=\{reposicao:\[\], avulso:\[\], quando:0\};/.test(html) &&
+      /\(\(DC_DASH_TURMA\[campo\]\|\|\[\]\)\.concat\(planDia\[campo\]\|\|\[\]\)\)/.test(html));
+    check('a leitura roda em toda atividade (dcGarantirPlanilha)',
+      /try\{ dcCarregarLancamentos\(\); \}catch/.test(html));
+    check('a diaria avulsa tambem e relida fora da Chamada',
+      /daycare\/avulsos\/'\+dcDataKey\(\)\)\.once\('value'\)[\s\S]{0,140}dcAvulsos=Object\.values/.test(html));
+    check('o fetch da ponte tem tempo maximo (nunca mais pendurado)',
+      /AbortController/.test(html) && /a ponte não respondeu em 12s/.test(html));
+    check('nome lancado sem ficha ainda APARECE (entrada crua)',
+      /cru:true/.test(html));
+
+    // ---- 6. PDF pagina em vez de cortar ----
+    if (typeof ctx.zPdfTextBlob === 'function') {
+      const muitas = []; for (let i = 0; i < 120; i++) muitas.push({t: 'Linha ' + (i + 1), size: 11, gap: 4});
+      const b = ctx.zPdfTextBlob(muitas);
+      const bytes = blobBytes(b); const txt = String.fromCharCode.apply(null, Array.prototype.slice.call(bytes, 0, 4000));
+      const count = (txt.match(/\/Count (\d+)/) || [])[1];
+      check('120 linhas viram 3 paginas (nada e descartado)', count === '3', '/Count ' + count);
+      let tj = 0; for (let i = 0; i < bytes.length - 2; i++) { if (bytes[i] === 84 && bytes[i + 1] === 106) tj++; }
+      check('TODAS as 120 linhas estao no PDF', tj >= 120, tj + ' linhas desenhadas');
+      const uma = ctx.zPdfTextBlob([{t: 'So uma', size: 11}]);
+      check('uma linha continua dando UMA pagina', /\/Count 1/.test(String.fromCharCode.apply(null, Array.prototype.slice.call(blobBytes(uma), 0, 1200))));
+    }
+
+    // ---- 7. refeicoes fixas com horario ----
+    check('cafe/almoco/jantar tem campo de horario', /ciRefs=\{cafe:\{on:false,hora:''/.test(html));
+    check('o horario sai no texto por refeicao', /if\(r&&r\.on\) monta\(f\.n,r\.hora\|\|'',r\);/.test(html));
+    check('a quantidade que veio sai na ficha e no PDF',
+      /function ciMedVeioTxt\(it\)/.test(html) && (html.match(/ciMedVeioTxt\(it\)/g) || []).length >= 3);
+
+    // ---- 8. o grupo recebe o check-in ----
+    check('salvar o check-in manda resumo e PDF ao grupo',
+      /function ciMandarTelegram\(\)/.test(html) &&
+      /try\{ ciMandarTelegram\(\); \}catch/.test(html) &&
+      /documentoBase64:b64/.test(html));
+    check('falha do texto cai na fila (nunca silencio)', /medTgGuardar\('📋 CHECK-IN/.test(html));
+
+    // ---- 9. o retrato do vigia ----
+    check('o app grava o retrato das doses esperadas',
+      /function medVigiaGravar\(\)/.test(html) && /auaulandia\/med-vigia\//.test(html));
+
+    // ---- 10. reposicao: mensagens prontas ----
+    if (typeof ctx.repMensagem === 'function') {
+      const p = {n: 'Maya', tutor: 'Luciana Couto'};
+      const pelExtraOrig = ctx.pelExtra;
+      ctx.pelExtra = () => ({sexo: 'Fêmea'});
+      const mc = ctx.repMensagem(p, 'credito', {qtd: 1, data: '2026-08-31', saldo: 3});
+      check('credito: saudacao da casa + saldo + dia', /Oi, Luciana, como está\?/.test(mc) && /3 reposições/.test(mc) && /31\/08\/2026/.test(mc), mc);
+      check('credito: flexiona pelo sexo da ficha', /a Maya/.test(mc), mc);
+      const mu = ctx.repMensagem(p, 'uso', {saldo: 0});
+      check('uso com saldo zero avisa que terminaram', /terminaram/.test(mu), mu);
+      const m1 = ctx.repMensagem(p, 'uso', {saldo: 1});
+      check('resta 1 no singular', /resta 1 reposição/.test(m1), m1);
+      check('fecho dela: "controlar juntas"', /controlar juntas/.test(mc) && /controlar juntas/.test(mu));
+      ctx.pelExtra = pelExtraOrig;
+    }
+    check('lançar e usar mostram o modal com a mensagem',
+      /repMsgModal\('✅ Reposição lançada'/.test(html) && /repMsgModal\('✅ Reposição usada'/.test(html));
+  }
+  console.log('');
+
+  console.log('Ponte v7: documento e vigia de medicacao (31/ago):');
+  {
+    const fs3 = require('fs'), path3 = require('path');
+    const gs = fs3.readFileSync(path3.join(__dirname, '..', 'integracao-telegram', 'Codigo.gs'), 'utf8');
+    check('a ponte sabe mandar ARQUIVO (sendDocument)',
+      /function _mandarDocumento\(/.test(gs) && /sendDocument/.test(gs) &&
+      /if \(d\.documentoBase64\) return _resp\(_mandarDocumento/.test(gs));
+    check('vigia de medicacao existe e roda das 7h as 22h30',
+      /function vigiaMedicacao\(\)/.test(gs) && /hhmm < '07:00' \|\| hhmm > '22:30'/.test(gs));
+    check('le o retrato do app e o log do dia',
+      /auaulandia\/med-vigia\//.test(gs) && /auaulandia\/medicacao-log\//.test(gs));
+    check('cobra so depois de 30 min', /agoraMin - alvoMin < 30/.test(gs));
+    check('uma trava por dose, gravada SO se o telegram aceitou',
+      /daycare\/cobranca-medvigia\//.test(gs) && /if \(r && r\.ok\) _fbGravar\('daycare\/cobranca-medvigia/.test(gs));
+    check('ninguem abriu o app = aviso proprio (silencio nao e "tudo bem")',
+      /sem vigilância hoje/.test(gs) && /sem-app/.test(gs));
+    check('tem teste de bancada', /function vigiaMedicacao_TESTE\(\)/.test(gs));
+  }
+  console.log('');
+
   console.log('Tela que abre vazia: uma lista de ganchos so, com as excecoes escritas (28/ago):');
   {
     check('irParaView passa pela mesma lista do clique no menu',
@@ -5136,6 +5261,342 @@ async function main() {
       ctx.salvarAtiv = bkpJ.salvarAtiv; ctx.renderAtiv = bkpJ.renderAtiv;
       ctx.quemSou = bkpJ.quemSou; ctx.horaAgora = bkpJ.horaAgora;
       vm.runInContext('DB = __bkpJ.DB;', ctx);
+    }
+  }
+  console.log('');
+
+  // ============================================================================
+  // FINANCEIRO — a conta do dinheiro (financeiro-logica.js)
+  //
+  // Dinheiro é a única parte do app onde ser rápido é ser errado. Aqui a rede
+  // é apertada de propósito: formato provado caractere a caractere, soma
+  // conferida ao CENTAVO, mês vazio obrigado a devolver zero (nunca NaN) e
+  // mordidas para cada jeito conhecido de a conta mentir calada.
+  // ============================================================================
+  console.log('Financeiro — a conta do dinheiro (financeiro-logica.js):');
+  if (typeof ctx.finResumoMes !== 'function' || typeof ctx.finBRL !== 'function') {
+    check('financeiro-logica.js carregado (sem ele o resto não roda)', false, 'faltam funções fin*');
+  } else {
+    // ---- 1) finBRL: a lei do formato (R$ 1.234,56, SEMPRE duas casas) ----
+    check('finBRL(0) = "R$ 0,00" — zero é R$ 0,00, nunca "0" nem "R$ 0"',
+      ctx.finBRL(0) === 'R$ 0,00', ctx.finBRL(0));
+    check('finBRL(123456) = "R$ 1.234,56" — milhar com ponto, decimal com vírgula',
+      ctx.finBRL(123456) === 'R$ 1.234,56', ctx.finBRL(123456));
+    check('finBRL(100) = "R$ 1,00" — valor redondo mantém os centavos ",00"',
+      ctx.finBRL(100) === 'R$ 1,00', ctx.finBRL(100));
+    check('finBRL(5) = "R$ 0,05" — centavo sozinho não vira "R$ 0,5"',
+      ctx.finBRL(5) === 'R$ 0,05', ctx.finBRL(5));
+    check('finBRL(50) = "R$ 0,50"', ctx.finBRL(50) === 'R$ 0,50', ctx.finBRL(50));
+    check('finBRL(999) = "R$ 9,99"', ctx.finBRL(999) === 'R$ 9,99', ctx.finBRL(999));
+    check('finBRL(38700) = "R$ 387,00" — mensalidade Silver 1x',
+      ctx.finBRL(38700) === 'R$ 387,00', ctx.finBRL(38700));
+    check('finBRL(100000000) = "R$ 1.000.000,00" — dois pontos de milhar',
+      ctx.finBRL(100000000) === 'R$ 1.000.000,00', ctx.finBRL(100000000));
+    check('finBRL(-24000) = "-R$ 240,00" — o sinal vem ANTES do R$',
+      ctx.finBRL(-24000) === '-R$ 240,00', ctx.finBRL(-24000));
+    // mordida: lixo na entrada NUNCA pode virar "R$ NaN" na tela da Adriana
+    check('mordida — finBRL(undefined/null/"abc"/NaN) nunca escreve NaN',
+      ctx.finBRL(undefined) === 'R$ 0,00' && ctx.finBRL(null) === 'R$ 0,00' &&
+      ctx.finBRL('abc') === 'R$ 0,00' && ctx.finBRL(NaN) === 'R$ 0,00',
+      [ctx.finBRL(undefined), ctx.finBRL(null), ctx.finBRL('abc'), ctx.finBRL(NaN)].join(' / '));
+
+    // ---- 2) finChave é a MESMA chave do app (pelKey) ----
+    check('finChave é a mesma chave do app (pelKey) — senão o pagamento não acha o dono',
+      ctx.finChave('Billy Paul', 'Juliana') === ctx.pelKey({ n: 'Billy Paul', tutor: 'Juliana' }) &&
+      ctx.finChave('Hannah Clara', 'Adriana Duarte') === ctx.pelKey({ n: 'Hannah Clara', tutor: 'Adriana Duarte' }),
+      ctx.finChave('Billy Paul', 'Juliana') + ' vs ' + ctx.pelKey({ n: 'Billy Paul', tutor: 'Juliana' }));
+
+    // ---- 3) calendário da vigência (a regra da Adriana, 30/jul/2026) ----
+    check('finFimVigencia("2026-08-05",6) = 2027-01-31 — semestral vale até o ÚLTIMO DIA do 6º mês',
+      ctx.finFimVigencia('2026-08-05', 6) === '2027-01-31', ctx.finFimVigencia('2026-08-05', 6));
+    check('finFimVigencia("2026-08-01",1) = 2026-08-31 — mensal termina no fim do próprio mês',
+      ctx.finFimVigencia('2026-08-01', 1) === '2026-08-31', ctx.finFimVigencia('2026-08-01', 1));
+    check('finUltimoDia("2026-02") = 2026-02-28 e ("2028-02") = 2028-02-29 (bissexto)',
+      ctx.finUltimoDia('2026-02') === '2026-02-28' && ctx.finUltimoDia('2028-02') === '2028-02-29',
+      ctx.finUltimoDia('2026-02') + ' / ' + ctx.finUltimoDia('2028-02'));
+    check('finMesesDaVigencia("2026-08-01","2027-01-31") = 6 meses, virando o ano',
+      ctx.finMesesDaVigencia('2026-08-01', '2027-01-31').join(',') ===
+      '2026-08,2026-09,2026-10,2026-11,2026-12,2027-01',
+      ctx.finMesesDaVigencia('2026-08-01', '2027-01-31').join(','));
+
+    // ---- 4) finMensalidade: a MESMA fórmula do app, ao centavo ----
+    check('Silver 5x, 1º peludinho = R$ 1.067,00 (tabela 2026)',
+      ctx.finMensalidade(null, 'Silver', 5, 1) === 106700, String(ctx.finMensalidade(null, 'Silver', 5, 1)));
+    check('Gold 2x, 1º = R$ 589,00', ctx.finMensalidade(null, 'Gold', 2, 1) === 58900,
+      String(ctx.finMensalidade(null, 'Gold', 2, 1)));
+    check('Black 1x, 1º = R$ 338,00', ctx.finMensalidade(null, 'Black', 1, 1) === 33800,
+      String(ctx.finMensalidade(null, 'Black', 1, 1)));
+    // 73700 * 93 / 100 = 68541 — conferido à mão
+    check('Silver 3x, 2º peludinho (-7%) = R$ 685,41',
+      ctx.finMensalidade(null, 'Silver', 3, 2) === 68541, String(ctx.finMensalidade(null, 'Silver', 3, 2)));
+    // 35900 * 88 / 100 = 31592 — conferido à mão
+    check('Gold 1x, 3º peludinho (-12%) = R$ 315,92',
+      ctx.finMensalidade(null, 'Gold', 1, 3) === 31592, String(ctx.finMensalidade(null, 'Gold', 1, 3)));
+    check('4º peludinho paga o mesmo desconto do 3º (12%), como no app',
+      ctx.finMensalidade(null, 'Gold', 1, 4) === ctx.finMensalidade(null, 'Gold', 1, 3),
+      String(ctx.finMensalidade(null, 'Gold', 1, 4)));
+    // 38799 * 93 / 100 = 36083,07 -> 36083. Prova que arredonda AO CENTAVO e não deixa fração.
+    check('arredonda ao centavo (38799 com -7% = 36083, não 36083,07)',
+      ctx.finMensalidade({ X: { compromisso: 'mensal', valores: { 1: 38799 } } }, 'X', 1, 2) === 36083,
+      String(ctx.finMensalidade({ X: { compromisso: 'mensal', valores: { 1: 38799 } } }, 'X', 1, 2)));
+    // mordida: o que não dá para saber devolve null — NUNCA zero
+    check('mordida — sem aulas válidas devolve null, nunca 0 (zero entraria calado na soma)',
+      ctx.finMensalidade(null, 'Silver', 0, 1) === null &&
+      ctx.finMensalidade(null, 'Silver', 6, 1) === null &&
+      ctx.finMensalidade(null, 'Silver', null, 1) === null,
+      [ctx.finMensalidade(null, 'Silver', 0, 1), ctx.finMensalidade(null, 'Silver', 6, 1)].join('/'));
+    check('mordida — "auaulandia"/"avulso"/"morador" não têm mensalidade: null',
+      ctx.finMensalidade(null, 'auaulandia', 3, 1) === null &&
+      ctx.finMensalidade(null, 'avulso', 3, 1) === null &&
+      ctx.finMensalidade(null, 'morador', 3, 1) === null);
+
+    // ---- 5) mês sem dado nenhum = zeros, jamais NaN ----
+    const vazio = ctx.finResumoMes({}, '2026-08');
+    const numeros = [vazio.recebidoTotal, vazio.aReceberTotal, vazio.emAtrasoTotal,
+      vazio.inadimplenciaTotal, vazio.declaradoTotal,
+      vazio.porServico.daycare.aReceber, vazio.porServico.auaulandia.aReceber];
+    check('mês sem dado: todo total é 0 e nenhum é NaN',
+      numeros.every((n) => n === 0) && numeros.every((n) => typeof n === 'number' && !isNaN(n)),
+      JSON.stringify(numeros));
+    check('mês sem dado: listas vêm vazias (nunca undefined)',
+      Array.isArray(vazio.porFILHOt) && vazio.porFILHOt.length === 0 &&
+      Array.isArray(vazio.inadimplentes) && vazio.inadimplentes.length === 0);
+    const semNada = ctx.finResumoMes(null, null);
+    check('mordida — dados nulos e mês inválido não explodem: zeros + aviso',
+      semNada.recebidoTotal === 0 && semNada.aReceberTotal === 0 && semNada.avisos.length > 0,
+      JSON.stringify(semNada.avisos));
+    check('mês sem lançamento nenhum avisa que "Recebido" é R$ 0,00 por falta de registro',
+      vazio.avisos.join(' ').indexOf('R$ 0,00') >= 0, JSON.stringify(vazio.avisos));
+
+    // ---- 6) caso montado: a soma bate AO CENTAVO ----
+    // 3 aulunos, contas feitas à mão antes de escrever o teste:
+    //   Silver 3x, 1º ................ 73.700
+    //   Gold   2x, 1º = 58.900 x 3 ... 176.700
+    //   Black  1x, 2º = 33.800 x0,93 = 31.434 x 6 ... 188.604
+    //   TOTAL ........................ 439.004 centavos = R$ 4.390,04
+    const CAD = {
+      'a__x': { n: 'Ayla', tutor: 'Xuxa', dias: ['seg', 'qua', 'sex'],
+        renov: { plano: 'Silver', inicio: '2026-08-01', fim: '2026-08-31', aulas: 3, ordemPet: 1 } },
+      'b__y': { n: 'Bento', tutor: 'Yara', dias: ['ter', 'qui'],
+        renov: { plano: 'Gold', inicio: '2026-08-10', fim: '2026-10-31', aulas: 2, ordemPet: 1 } },
+      'c__z': { n: 'Caju', tutor: 'Zeca', dias: ['seg'],
+        renov: { plano: 'Black', inicio: '2026-08-01', fim: '2027-01-31', aulas: 1, ordemPet: 2 } },
+      // não cobram, cada um pelo seu motivo — e nenhum é "buraco de dado"
+      'repolho__zeluz': { n: 'Repolho', tutor: 'Zêluz', renov: { plano: 'morador' } },
+      'h__w': { n: 'Harry', tutor: 'Wanda', renov: { plano: 'auaulandia' } },
+      'v__u': { n: 'Vito', tutor: 'Ubi', renov: { plano: 'avulso' } },
+      'inativo__i': { n: 'Bud', tutor: 'Iara', inativo: 'Sim', dias: ['seg'],
+        renov: { plano: 'Silver', inicio: '2026-08-01', fim: '2026-08-31', aulas: 1 } },
+      // auluno com plano e data, mas SEM como saber as aulas: fica fora da soma
+      'sem__aulas': { n: 'Nina', tutor: 'Sem Aulas',
+        renov: { plano: 'Silver', inicio: '2026-08-01', fim: '2026-08-31' } }
+    };
+    const r1 = ctx.finResumoMes({ cadastro: CAD }, '2026-08');
+    check('caixa: a receber de agosto = R$ 4.390,04 (soma conferida à mão)',
+      r1.aReceberTotal === 439004 && ctx.finBRL(r1.aReceberTotal) === 'R$ 4.390,04',
+      r1.aReceberTotal + ' / ' + ctx.finBRL(r1.aReceberTotal));
+    check('sem nó de pagamento, "recebido" é exatamente R$ 0,00 (não se inventa caixa)',
+      r1.recebidoTotal === 0);
+    const somaLinhas = r1.porFILHOt.reduce((a, o) => a + o.falta, 0);
+    check('a soma das linhas bate com o total, ao centavo',
+      somaLinhas === r1.aReceberTotal, somaLinhas + ' vs ' + r1.aReceberTotal);
+    check('todo valor da conta é inteiro em centavos (nenhuma fração escapou)',
+      r1.porFILHOt.every((o) => Number.isInteger(o.valor) && Number.isInteger(o.pago) && Number.isInteger(o.falta)));
+    check('morador, hóspede e avulso NÃO viram cobrança nem viram "falta de dado"',
+      !r1.porFILHOt.some((o) => /repolho|h__w|v__u/.test(o.chave)) &&
+      !r1.semComoCalcular.some((o) => /repolho|h__w|v__u/.test(o.chave)),
+      JSON.stringify(r1.semComoCalcular.map((o) => o.chave)));
+    check('quem saiu (inativo) não é cobrado', !r1.porFILHOt.some((o) => o.chave === 'inativo__i'));
+    check('mordida — sem como saber as aulas, o FILHOt sai da soma E aparece listado (não vira R$ 0,00 calado)',
+      !r1.porFILHOt.some((o) => o.chave === 'sem__aulas') &&
+      r1.semComoCalcular.some((o) => o.chave === 'sem__aulas'),
+      JSON.stringify(r1.semComoCalcular));
+    check('o 2º peludinho da família pagou 7% a menos — R$ 314,34/mês, não R$ 338,00',
+      (r1.porFILHOt.filter((o) => o.chave === 'c__z')[0] || {}).mensalidade === 31434,
+      String((r1.porFILHOt.filter((o) => o.chave === 'c__z')[0] || {}).mensalidade));
+
+    // ---- 7) pagamento lançado abate — e o parcial aparece como parcial ----
+    const PAG = { '2026-08': {
+      p1: { chave: 'a__x', valor_cent: 73700, data: '2026-08-03', forma: 'pix', quem: 'Amanda' },
+      p2: { chave: 'b__y', valor_cent: 50000, data: '2026-08-10', forma: 'cartão', quem: 'Amanda' }
+    } };
+    const r2 = ctx.finResumoMes({ cadastro: CAD, pagamentos: PAG }, '2026-08');
+    check('recebido = R$ 1.237,00 (73.700 + 50.000)',
+      r2.recebidoTotal === 123700 && ctx.finBRL(r2.recebidoTotal) === 'R$ 1.237,00',
+      ctx.finBRL(r2.recebidoTotal));
+    check('a receber cai para R$ 3.153,04 (4.390,04 - 1.237,00)',
+      r2.aReceberTotal === 315304 && ctx.finBRL(r2.aReceberTotal) === 'R$ 3.153,04',
+      ctx.finBRL(r2.aReceberTotal));
+    check('recebido + a receber = o devido do mês, ao centavo',
+      r2.recebidoTotal + r2.aReceberTotal === r1.aReceberTotal);
+    check('quem pagou tudo fica "pago"; quem pagou parte fica "parcial"',
+      (r2.porFILHOt.filter((o) => o.chave === 'a__x')[0] || {}).situacao === 'pago' &&
+      (r2.porFILHOt.filter((o) => o.chave === 'b__y')[0] || {}).situacao === 'parcial',
+      JSON.stringify(r2.porFILHOt.map((o) => o.chave + ':' + o.situacao)));
+    // mordida: pagar a mais não pode virar "a receber negativo"
+    const r2b = ctx.finResumoMes({ cadastro: CAD,
+      pagamentos: { '2026-08': { p: { chave: 'a__x', valor_cent: 99999900, data: '2026-08-03' } } } }, '2026-08');
+    check('mordida — pagamento maior que a conta não gera "a receber" negativo',
+      r2b.aReceberTotal >= 0 &&
+      (r2b.porFILHOt.filter((o) => o.chave === 'a__x')[0] || {}).falta === 0,
+      String(r2b.aReceberTotal));
+
+    // ---- 8) caixa x competência: os dois existem, nenhum é escolhido calado ----
+    const rComp = ctx.finResumoMes({ cadastro: CAD }, '2026-09', { regime: 'competencia' });
+    check('competência: em setembro o Gold cobra UMA mensalidade (R$ 589,00), não o trimestre',
+      (rComp.porFILHOt.filter((o) => o.chave === 'b__y')[0] || {}).valor === 58900,
+      String((rComp.porFILHOt.filter((o) => o.chave === 'b__y')[0] || {}).valor));
+    const rCaixaSet = ctx.finResumoMes({ cadastro: CAD }, '2026-09');
+    check('caixa: em setembro não entra nada dos planos pagos em agosto',
+      rCaixaSet.porFILHOt.filter((o) => o.servico === 'daycare').length === 0,
+      JSON.stringify(rCaixaSet.porFILHOt.map((o) => o.chave)));
+    check('mordida — os dois regimes NÃO dão o mesmo número (o app não pode escolher por conta própria)',
+      rComp.aReceberTotal !== rCaixaSet.aReceberTotal,
+      rComp.aReceberTotal + ' vs ' + rCaixaSet.aReceberTotal);
+
+    // ---- 9) inadimplente = plano que venceu e ninguém renovou ----
+    const rSet = ctx.finResumoMes({ cadastro: CAD }, '2026-09', { hoje: '2026-09-15' });
+    check('em setembro, o Silver que venceu em 31/08 vira "em débito"',
+      rSet.inadimplentes.some((o) => o.chave === 'a__x'), JSON.stringify(rSet.inadimplentes.map((o) => o.chave)));
+    check('quem tem vigência até 31/10 ou 31/01 NÃO é inadimplente em setembro',
+      !rSet.inadimplentes.some((o) => o.chave === 'b__y' || o.chave === 'c__z'));
+    check('o débito cobrado é o de UM mês (R$ 737,00) — afirmar mais seria inventar',
+      (rSet.inadimplentes.filter((o) => o.chave === 'a__x')[0] || {}).valorDeUmMes === 73700,
+      String((rSet.inadimplentes.filter((o) => o.chave === 'a__x')[0] || {}).valorDeUmMes));
+    check('plano vencido é população SEPARADA: entra em inadimplência, não em "a receber"',
+      rSet.inadimplenciaTotal === 73700 && rSet.aReceberTotal === 0 &&
+      rSet.inadimplentes[0].tipo === 'plano-vencido' &&
+      rSet.inadimplentes[0].contaEmAReceber === false,
+      ctx.finBRL(rSet.inadimplenciaTotal) + ' / ' + ctx.finBRL(rSet.aReceberTotal));
+
+    // ---- 9b) MORDIDA CENTRAL: "em atraso" é RECORTE de "a receber", não parcela nova ----
+    // Se um dia alguém somar os dois cards da tela, o número tem que continuar
+    // verdadeiro. Aqui: em 15/08 as três cobranças de agosto (venc. 01/08, 10/08
+    // e 01/08) já venceram, então "em atraso" tem que ser EXATAMENTE o "a receber".
+    const rAtraso = ctx.finResumoMes({ cadastro: CAD }, '2026-08', { hoje: '2026-08-15' });
+    check('"em atraso" é recorte de "a receber" — nunca maior que ele',
+      rAtraso.emAtrasoTotal === rAtraso.aReceberTotal && rAtraso.emAtrasoTotal === 439004,
+      ctx.finBRL(rAtraso.emAtrasoTotal) + ' vs ' + ctx.finBRL(rAtraso.aReceberTotal));
+    // Em 05/08 o Gold (vence 10/08) ainda não venceu: sai do atraso, fica no a receber.
+    const rAtraso2 = ctx.finResumoMes({ cadastro: CAD }, '2026-08', { hoje: '2026-08-05' });
+    check('o que ainda não venceu fica fora do atraso (R$ 4.390,04 a receber, R$ 2.623,04 vencido)',
+      rAtraso2.aReceberTotal === 439004 && rAtraso2.emAtrasoTotal === 262304,
+      ctx.finBRL(rAtraso2.aReceberTotal) + ' / ' + ctx.finBRL(rAtraso2.emAtrasoTotal));
+    check('mordida — pagou, some do atraso na mesma hora',
+      ctx.finResumoMes({ cadastro: CAD, pagamentos: PAG }, '2026-08', { hoje: '2026-08-15' })
+        .emAtrasoTotal === 315304);
+
+    // ---- 10) plano DEDUZIDO nunca vira "declarado" ----
+    const CAD2 = {
+      'd__1': { n: 'Dado', tutor: 'Um', dias: ['seg'],
+        renov: { plano: 'Silver', inicio: '2026-08-01', fim: '2026-08-31', aulas: 1, ordemPet: 1 } },
+      'd__2': { n: 'Deduz', tutor: 'Dois', dias: ['seg'],
+        renov: { plano: 'Silver', inicio: '2026-08-01', fim: '2026-08-31', aulas: 1, ordemPet: 1,
+          plano_deduzido: true, plano_deduzido_meses: 1 } }
+    };
+    const r3 = ctx.finResumoMes({ cadastro: CAD2 }, '2026-08');
+    check('a data lançada à mão conta como DECLARADO (R$ 387,00); a deduzida da planilha, não',
+      r3.declaradoTotal === 38700, ctx.finBRL(r3.declaradoTotal));
+    check('mordida — "declarado" nunca é somado em "recebido"',
+      r3.recebidoTotal === 0 && r3.declaradoTotal > 0);
+
+    // ---- 11) ordemPet ausente: assume 1º, mas AVISA (nada some calado) ----
+    const CAD3 = { 'e__1': { n: 'Eco', tutor: 'Um', dias: ['seg', 'qua'],
+      renov: { plano: 'Silver', inicio: '2026-08-01', fim: '2026-08-31', aulas: 2 } } };
+    const r4 = ctx.finResumoMes({ cadastro: CAD3 }, '2026-08');
+    check('sem o "Nº do peludinho na família", a conta assume 1º E avisa que pode estar alta',
+      r4.ordemPetSuposta === 1 &&
+      r4.porFILHOt[0].ordemPetSuposta === true &&
+      r4.avisos.join(' ').indexOf('7%') >= 0, JSON.stringify(r4.avisos));
+
+    // ---- 12) AuAulândia: as duas parcelas caem em meses diferentes ----
+    const ORC = {
+      o1: { status: 'fechado', status_em: new Date(2026, 7, 20, 10, 0, 0).getTime(),
+        criado_em: new Date(2026, 7, 20, 9, 0, 0).getTime(),
+        entrada: '2026-09-04', saida: '2026-09-08', noites: 4,
+        total_cent: 43600, parcela1_cent: 21800, parcela2_cent: 21800,
+        tutor: 'Caroline', pets: [{ nome: 'Juma', key: 'juma__caroline' }] },
+      o2: { status: 'aguardando', criado_em: new Date(2026, 7, 25, 9, 0, 0).getTime(),
+        entrada: '2026-10-01', saida: '2026-10-03', total_cent: 26000,
+        parcela1_cent: 13000, parcela2_cent: 13000, tutor: 'Jeanine', pets: [{ nome: 'Romeo' }] },
+      o3: { status: 'cancelado', status_em: new Date(2026, 7, 22, 9, 0, 0).getTime(),
+        criado_em: new Date(2026, 7, 21, 9, 0, 0).getTime(),
+        entrada: '2026-08-30', saida: '2026-08-31', total_cent: 13000,
+        parcela1_cent: 6500, parcela2_cent: 6500, tutor: 'Ana', pets: [{ nome: 'Lua' }] }
+    };
+    const rA = ctx.finResumoMes({ orcamentos: ORC }, '2026-08');
+    check('AuAulândia em agosto: só a parcela da reserva (R$ 218,00), não a reserva inteira',
+      rA.porServico.auaulandia.aReceber === 21800 && rA.aReceberTotal === 21800,
+      ctx.finBRL(rA.porServico.auaulandia.aReceber));
+    const rB = ctx.finResumoMes({ orcamentos: ORC }, '2026-09');
+    check('a 2ª parcela (R$ 218,00) cai em setembro, no mês da ENTRADA',
+      rB.porServico.auaulandia.aReceber === 21800, ctx.finBRL(rB.porServico.auaulandia.aReceber));
+    check('as duas parcelas somadas dão o total da reserva, ao centavo (R$ 436,00)',
+      rA.porServico.auaulandia.aReceber + rB.porServico.auaulandia.aReceber === 43600);
+    check('mordida — orçamento "aguardando" é proposta, NÃO entra em "a receber"',
+      rA.propostasAbertas.quantas === 1 && rA.propostasAbertas.total === 26000 &&
+      !rA.porFILHOt.some((o) => o.tutor === 'Jeanine'),
+      JSON.stringify(rA.propostasAbertas));
+    check('mordida — reserva CANCELADA não é dinheiro nenhum',
+      !rA.porFILHOt.some((o) => o.tutor === 'Ana') && !rB.porFILHOt.some((o) => o.tutor === 'Ana'));
+    check('a linha do dinheiro da hospedagem é por RESERVA, não por FILHOt',
+      rA.porFILHOt.filter((o) => o.servico === 'auaulandia').length === 1);
+
+    // ---- 13) finPagamentosDoMes: "ref" manda mais que "data" ----
+    const pgRef = ctx.finPagamentosDoMes({ x: { chave: 'a__x', valor_cent: 100, data: '2026-09-02', ref: '2026-08' } }, '2026-08');
+    check('pagamento atrasado com "ref" conta no mês a que se refere, não no dia em que caiu',
+      pgRef.length === 1 && pgRef[0].valor_cent === 100, JSON.stringify(pgRef));
+    const pgSemRef = ctx.finPagamentosDoMes({ x: { chave: 'a__x', valor_cent: 100, data: '2026-09-02' } }, '2026-08');
+    check('sem "ref", vale o mês da data — e setembro não entra em agosto', pgSemRef.length === 0);
+
+    // ---- 14) DADO REAL do banco: a conta não pode quebrar com a vida como ela é ----
+    const [cadReal, orcReal] = await Promise.all([
+      dbRead('daycare/cadastro', token),
+      dbRead('auaulandia/orcamentos', token),
+    ]);
+    console.log('  cadastro real: ' + (cadReal ? Object.keys(cadReal).length : 0) + ' FILHOt(s)' +
+      ' · orçamentos: ' + (orcReal ? Object.keys(orcReal).length : 0));
+    if (cadReal) {
+      const dadosReais = { cadastro: cadReal, orcamentos: orcReal || {},
+        peludinhos: (typeof ctx.PELUDINHOS !== 'undefined' ? ctx.PELUDINHOS : []) };
+      const meses = ['2026-06', '2026-07', '2026-08', '2026-09'];
+      let tudoNumero = true, tudoInteiro = true, somaBate = true, recorteOk = true, det = '';
+      meses.forEach((m) => {
+        const r = ctx.finResumoMes(dadosReais, m, { hoje: '2026-08-31' });
+        const tot = [r.recebidoTotal, r.aReceberTotal, r.emAtrasoTotal, r.inadimplenciaTotal, r.declaradoTotal];
+        if (r.emAtrasoTotal > r.aReceberTotal) { recorteOk = false; det = m + ' atraso=' + r.emAtrasoTotal + ' > aReceber=' + r.aReceberTotal; }
+        if (!tot.every((n) => typeof n === 'number' && !isNaN(n))) { tudoNumero = false; det = m + ' ' + JSON.stringify(tot); }
+        if (!tot.every((n) => Number.isInteger(n))) { tudoInteiro = false; det = m + ' fração ' + JSON.stringify(tot); }
+        const s = r.porFILHOt.reduce((a, o) => a + o.falta, 0);
+        if (s !== r.aReceberTotal) { somaBate = false; det = m + ' linhas=' + s + ' total=' + r.aReceberTotal; }
+        const porServ = r.porServico.daycare.aReceber + r.porServico.auaulandia.aReceber;
+        if (porServ !== r.aReceberTotal) { somaBate = false; det = m + ' porServico=' + porServ + ' total=' + r.aReceberTotal; }
+      });
+      check('dado real: nenhum total vira NaN em nenhum mês', tudoNumero, det);
+      check('dado real: todo total é inteiro em centavos (zero fração)', tudoInteiro, det);
+      check('dado real: linhas e por-serviço batem com o total, ao centavo', somaBate, det);
+      check('dado real: "em atraso" nunca passa de "a receber" (é recorte dele)', recorteOk, det);
+
+      const rAgo = ctx.finResumoMes(dadosReais, '2026-08', { hoje: '2026-08-31' });
+      check('dado real: "recebido" de agosto é R$ 0,00 — o banco não tem registro de pagamento',
+        rAgo.recebidoTotal === 0, ctx.finBRL(rAgo.recebidoTotal));
+      check('dado real: o dashboard avisa que não existe registro de pagamento',
+        rAgo.avisos.join(' ').indexOf('Não existe registro de pagamento') >= 0,
+        JSON.stringify(rAgo.avisos));
+      check('dado real: nenhum morador, hóspede ou avulso entrou na cobrança do Day Care',
+        !rAgo.porFILHOt.some((o) => o.servico === 'daycare' &&
+          ['auaulandia', 'avulso', 'morador'].indexOf(o.plano) >= 0),
+        JSON.stringify(rAgo.porFILHOt.filter((o) => o.servico === 'daycare').map((o) => o.plano).slice(0, 5)));
+      console.log('  agosto/2026 (regime caixa) — a receber ' + ctx.finBRL(rAgo.aReceberTotal) +
+        ' (Day Care ' + ctx.finBRL(rAgo.porServico.daycare.aReceber) +
+        ' · AuAulândia ' + ctx.finBRL(rAgo.porServico.auaulandia.aReceber) + ')' +
+        ' · em atraso ' + ctx.finBRL(rAgo.emAtrasoTotal) +
+        ' · planos vencidos ' + ctx.finBRL(rAgo.inadimplenciaTotal) +
+        ' · declarado ' + ctx.finBRL(rAgo.declaradoTotal) +
+        ' · sem como calcular: ' + rAgo.semComoCalcular.length +
+        ' · ordemPet suposta: ' + rAgo.ordemPetSuposta);
+    } else {
+      check('dado real do cadastro chegou', false, 'leitura devolveu null');
     }
   }
   console.log('');

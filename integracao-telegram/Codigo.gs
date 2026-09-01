@@ -14,6 +14,8 @@
  *                          token de depuração das Propriedades do script (APPCHECK_DEBUG_TOKEN).
  *                          Sem a propriedade, nada muda. E a gravação no banco deixou de engolir
  *                          o erro calada.
+ * Versão 7 (31/ago/2026) — a ponte aprende a mandar ARQUIVO (sendDocument): o relatório
+ *                          da hospedagem em PDF chega no grupo, não só texto e foto.
  * Versão 6 (28/ago/2026) — vigia do 2º horário do almoço: às 16h20, se ninguém registrou,
  *                          a ponte avisa o grupo sozinha (roda sem o app aberto).
  * Versão 5 (25/ago/2026) — emoji parou de derrubar a mensagem inteira (par surrogado).
@@ -85,6 +87,8 @@ function doPost(e) {
     if (!GRUPOS[nomeGrupo]) return _resp({ ok: false, erro: 'grupo nao configurado na ponte: ' + nomeGrupo });
     var destino = GRUPOS[nomeGrupo];
     var texto = d.texto ? String(d.texto) : _montarLegenda(d);
+    // Documento (PDF do relatório da hospedagem): base64 + nome do arquivo.
+    if (d.documentoBase64) return _resp(_mandarDocumento(destino, texto, d.documentoBase64, d.nomeArquivo || 'relatorio.pdf'));
     if (d.fotoBase64) return _resp(_mandarFoto(destino, texto, d.fotoBase64));
     return _resp(_mandarTexto(destino, texto));
   } catch (err) {
@@ -186,6 +190,26 @@ function _paraHtml(s) {
     out += (c > 127) ? ('&#' + c + ';') : t.charAt(i);
   }
   return out;
+}
+
+/** Manda um ARQUIVO (PDF etc.) para o grupo, com legenda. Base64 vem do app. */
+function _mandarDocumento(chatId, legenda, base64, nomeArquivo) {
+  try {
+    var dados = String(base64 || '').replace(/^data:[^;]+;base64,/, '');
+    var bytes = Utilities.base64Decode(dados);
+    var blob = Utilities.newBlob(bytes, 'application/pdf', String(nomeArquivo || 'relatorio.pdf'));
+    // UrlFetchApp monta o multipart sozinho quando o payload tem um blob.
+    var r = UrlFetchApp.fetch('https://api.telegram.org/bot' + TOKEN_BOT + '/sendDocument', {
+      method: 'post',
+      payload: { chat_id: String(chatId), caption: String(legenda || '').slice(0, 1024), parse_mode: 'HTML', document: blob },
+      muteHttpExceptions: true
+    });
+    var j = {}; try { j = JSON.parse(r.getContentText()); } catch (e) { j = {}; }
+    if (j.ok) return { ok: true };
+    return { ok: false, erro: 'telegram recusou o documento: ' + String(r.getContentText()).slice(0, 160) };
+  } catch (err) {
+    return { ok: false, erro: 'falha ao montar o documento: ' + String(err) };
+  }
 }
 
 function _montarLegenda(d) {
@@ -490,4 +514,89 @@ function vigiaFalta12h_TESTE() {
   Logger.log('turma fotografada de manhã: ' + JSON.stringify(_fbLer('daycare/turma/' + dia, token)));
   Logger.log('já cobrado hoje: ' + JSON.stringify(_fbLer('daycare/cobranca-falta/' + dia, token)));
   Logger.log(fechado ? 'Não cobraria: o dia já foi fechado.' : 'Cobraria: ninguém fechou o dia.');
+}
+
+
+/* ================================================================================
+ * VIGIA DE MEDICAÇÃO — Adriana, 31/ago/2026 (caso Toshi: dose das 18h sem alerta)
+ *
+ * O app grava em `auaulandia/med-vigia/{dia}` o retrato das doses esperadas do dia.
+ * Esta função roda no servidor do Google (acionador de 15 em 15 minutos, o MESMO que
+ * já dispara vigiaAlmoco2) e compara o retrato com o que foi registrado em
+ * `auaulandia/medicacao-log/{dia}`. Dose 30+ minutos atrasada e sem registro → cobra
+ * no grupo do plantão, uma vez só por dose (trava em daycare/cobranca-medvigia).
+ * E se NINGUÉM abriu o app até 09h30, isso também vira aviso — app fechado não pode
+ * significar "está tudo bem".
+ *
+ * LIGAR: no Apps Script, Acionadores → Adicionar → função vigiaMedicacao →
+ *        Baseado no tempo → A cada 15 minutos. (Igual ao do vigiaAlmoco2.)
+ * ============================================================================== */
+function vigiaMedicacao() {
+  var agora = new Date();
+  var hhmm = Utilities.formatDate(agora, 'America/Sao_Paulo', 'HH:mm');
+  if (hhmm < '07:00' || hhmm > '22:30') return;                 // fora do horário da casa
+  var dia = Utilities.formatDate(agora, 'America/Sao_Paulo', 'yyyy-MM-dd');
+  var token = _fbToken();
+  if (!token) return;
+
+  var retrato = _fbLer('auaulandia/med-vigia/' + dia, token);
+  var travas = _fbLer('daycare/cobranca-medvigia/' + dia, token) || {};
+
+  // Ninguém abriu o app hoje: sem retrato não há vigilância nenhuma — isso é um aviso
+  // por si só, uma vez por dia.
+  if (!retrato || !retrato.esperadas) {
+    if (hhmm >= '09:30' && !travas['sem-app']) {
+      var r0 = _mandarTexto(GRUPOS['gestao'], [
+        '<b>MEDICAÇÃO — sem vigilância hoje</b>', '',
+        'Ninguém abriu o app da AuAulândia hoje, então não sei quais doses estão programadas.',
+        'Se há hóspede com medicação, abrir o app AGORA — é ele que arma o vigia do dia.'
+      ].join('\n'));
+      if (r0 && r0.ok) _fbGravar('daycare/cobranca-medvigia/' + dia + '/sem-app', { ts: agora.getTime() }, token);
+    }
+    return;
+  }
+
+  var log = _fbLer('auaulandia/medicacao-log/' + dia, token) || {};
+  var esperadas = retrato.esperadas || {};
+  var agoraMin = Number(hhmm.slice(0, 2)) * 60 + Number(hhmm.slice(3, 5));
+
+  for (var id in esperadas) {
+    if (!esperadas.hasOwnProperty(id)) continue;
+    if (travas[id]) continue;                                   // já cobrada
+    var d = esperadas[id] || {};
+    var h = String(d.horario || '');
+    if (!/^\d\d:\d\d$/.test(h)) continue;
+    var alvoMin = Number(h.slice(0, 2)) * 60 + Number(h.slice(3, 5));
+    if (agoraMin - alvoMin < 30) continue;                      // ainda dentro da meia hora
+    var deu = log[d.key] && log[d.key][d.doseId];
+    if (deu) continue;                                          // registrada: tudo certo
+    var txt = [
+      '<b>💊 MEDICAÇÃO SEM REGISTRO — agir AGORA</b>', '',
+      '<b>' + (d.hospNome || '?') + '</b> — ' + (d.nome || ''),
+      'Dose: ' + ((d.q || '') + ' ' + (d.u || '')).trim(),
+      'Estava agendada para as ' + h + ' e até as ' + hhmm + ' ninguém registrou.',
+      '',
+      'Confirmar com o plantão se foi dada. Se foi, registrar no app AGORA — sem o registro, o remédio conta como não dado.'
+    ].join('\n');
+    var r = _mandarTexto(GRUPOS['gestao'], txt);
+    // A trava só grava se o Telegram aceitou — falha tenta de novo em 15 minutos.
+    if (r && r.ok) _fbGravar('daycare/cobranca-medvigia/' + dia + '/' + id, { ts: agora.getTime(), horario: h }, token);
+  }
+}
+
+/** Teste de bancada do vigia de medicação: mostra o que ele cobraria, sem mandar nada. */
+function vigiaMedicacao_TESTE() {
+  var token = _fbToken();
+  var dia = Utilities.formatDate(new Date(), 'America/Sao_Paulo', 'yyyy-MM-dd');
+  var retrato = _fbLer('auaulandia/med-vigia/' + dia, token);
+  var log = _fbLer('auaulandia/medicacao-log/' + dia, token) || {};
+  Logger.log('token: ' + (token ? 'ok' : 'FALHOU'));
+  Logger.log('retrato de hoje: ' + (retrato && retrato.esperadas ? Object.keys(retrato.esperadas).length + ' doses esperadas' : 'NÃO EXISTE (ninguém abriu o app)'));
+  if (retrato && retrato.esperadas) {
+    for (var id in retrato.esperadas) {
+      var d = retrato.esperadas[id];
+      var deu = log[d.key] && log[d.key][d.doseId];
+      Logger.log((deu ? 'OK   ' : 'FALTA') + ' ' + d.hospNome + ' - ' + d.nome + ' as ' + d.horario);
+    }
+  }
 }
