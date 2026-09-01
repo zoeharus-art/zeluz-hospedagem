@@ -4521,12 +4521,15 @@
       // é uma volta marcada. Gravar em todos encheria a tela da recepção com o mesmo aviso.
       regs=dias.map(function(d,ix){ return {tipo:'credito', data:d, motivo:repMotivoAtual, obs:obs, lote:lote, periodo:{de:de,ate:ate}, volta:(ix===0?(volta||''):'')}; });
     }
-    Promise.all(regs.map(function(r){ return repGravar(p,r); })).then(function(){
+    // Saldo lido ANTES de gravar: o listener local do Firebase já terá somado os créditos
+  // novos quando o .then rodar — somar de novo dobraria o número (auditoria, 31/ago).
+  const _saldoAntes=repSaldo(p);
+  Promise.all(regs.map(function(r){ return repGravar(p,r); })).then(function(){
       if(typeof audit==='function') audit('reposicao-credito', pelNome(p)+' · '+regs.length+' dia(s) · '+(REP_MOTIVOS[repMotivoAtual]||repMotivoAtual), {obs:obs});
       repFechar(); soltar();
       // A confirmação vem com a mensagem pronta para o tutor: é a consultora quem manda,
       // e é agora que ela está com o telefone na mão (Adriana, 31/ago/2026).
-      var _info={qtd:regs.length, data:(regs[0]||{}).data, volta:volta||'', saldo:repSaldo(p)+regs.length};
+      var _info={qtd:regs.length, data:(regs[0]||{}).data, volta:volta||'', saldo:_saldoAntes+regs.length};
       if(regs.length>1 && regs[0].periodo){ _info.de=regs[0].periodo.de; _info.ate=regs[0].periodo.ate; }
       repMsgModal('✅ Reposição lançada',
         [pelNome(p)+' ganhou '+regs.length+' dia'+(regs.length>1?'s':'')+' de reposição — motivo: '+(REP_MOTIVOS[repMotivoAtual]||repMotivoAtual)+'.',
@@ -7248,8 +7251,13 @@
     // pessoa. Dose de remédio sem dono não é registro, é boato: bloqueia e pede o nome.
     const _quem=pessoaDoTurno();
     if(!_quem || LOGIN_GENERICO.test(String(_quem).trim()) || (typeof nomeAssinaturaValido==='function' && !nomeAssinaturaValido(_quem))){
-      try{ pedirNomeDoTurno({forcar:true}); }catch(e){ /* sem o modal, o alert abaixo ainda explica o caminho */ }
-      alert('Antes de registrar a dose, diga QUEM você é.\n\nRemédio é ação crítica: precisa do nome de uma pessoa, não do papel "Plantonista". Escreva seu nome e toque de novo em "Dei agora".');
+      try{ pedirNomeDoTurno({forcar:true}); }catch(e){ /* sem o modal, o zAlertao abaixo ainda explica o caminho */ }
+      try{
+        zAlertao('DIGA QUEM VOCÊ É',
+          ['Remédio é ação crítica: precisa do nome de uma pessoa, não do papel "Plantonista".',
+           'Escreva seu nome e toque de novo em "Dei agora". A dose NÃO foi registrada.'],
+          {botao:'Escrever meu nome'});
+      }catch(e){ alert('Diga QUEM você é antes de registrar a dose — nome de pessoa, não o papel.'); }
       try{ renderMedAgendaHoje(); }catch(e){ /* redesenha para soltar o botão "Registrando…" */ }
       return;
     }
@@ -7367,13 +7375,16 @@
   // A mensagem sai na hora do registro, para o grupo do plantão (gestao). Se a ponte
   // falhar, a mensagem NÃO se perde: entra numa fila no banco e é tentada de novo — o
   // mesmo padrão da fila da veterinária.
+  // Campo livre não pode carregar HTML: "febre > 39" no motivo derrubava a mensagem
+  // inteira (Telegram recusa HTML malformado). Só o <b> que NÓS escrevemos passa.
+  function medTgEsc(v){ return String(v==null?'':v).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
   function medTgTexto(reg, hospNome){
     var qtd=(typeof fmtQtd==='function')?fmtQtd(reg.q,reg.u):((reg.q||'')+' '+(reg.u||''));
     var agora=(typeof horaAgora==='function')?horaAgora():'';
-    var L=['💊 <b>'+(hospNome||'?')+'</b> — '+(reg.nome||'')];
-    L.push('Dose: '+(qtd||'—')+(reg.local?(' · onde: '+reg.local):''));
+    var L=['💊 <b>'+medTgEsc(hospNome||'?')+'</b> — '+medTgEsc(reg.nome||'')];
+    L.push('Dose: '+medTgEsc(qtd||'—')+(reg.local?(' · onde: '+medTgEsc(reg.local)):''));
     if(reg.avulso){
-      L.push('AVULSA às '+(reg.horario||agora)+(reg.motivo?(' — motivo: '+reg.motivo):''));
+      L.push('AVULSA às '+medTgEsc(reg.horario||agora)+(reg.motivo?(' — motivo: '+medTgEsc(reg.motivo)):''));
     }else{
       var atraso='';
       try{
@@ -7382,7 +7393,7 @@
       }catch(e){ /* sem a conta do atraso a mensagem ainda vale */ }
       L.push('Agendada: '+(reg.horario||'—')+' · Dada: '+agora+atraso);
     }
-    L.push('Quem deu: '+(reg.quem||'—'));
+    L.push('Quem deu: '+medTgEsc(reg.quem||'—'));
     return L.join('\n');
   }
   function medTgAvisarDose(reg, hospNome){
@@ -7405,9 +7416,26 @@
       var fila=snap.val()||{};
       Object.keys(fila).forEach(function(id){
         var item=fila[id]||{};
-        tgAvisar({grupo:'gestao', texto:item.texto||''}).then(function(r){
-          if(r&&r.ok) return DB.ref('auaulandia/med-tg-fila/'+id).remove();
-          return DB.ref('auaulandia/med-tg-fila/'+id+'/tentativas').set((item.tentativas||0)+1);
+        // Carta morta: 5 tentativas e fora — senão dez mensagens envenenadas na cabeça
+        // da fila travam TODAS as seguintes para sempre (auditoria, 31/ago).
+        if((item.tentativas||0)>=5){
+          DB.ref('auaulandia/med-tg-fila/'+id).remove().catch(function(e){ _logFalhaGrav('carta morta da fila '+id, e); });
+          try{ if(typeof audit==='function') audit('telegram-medicacao','DESISTIU após 5 tentativas: '+String(item.erro||'').slice(0,80),{}); }catch(e){ /* rastro */ }
+          return;
+        }
+        // Dono: o item é CLAMADO por transaction antes do envio. Aparelho que chega
+        // depois vê o lockTs recente e não manda a mesma mensagem de novo.
+        DB.ref('auaulandia/med-tg-fila/'+id).transaction(function(atual){
+          if(!atual) return;                                        // alguém já entregou
+          if(atual.lockTs && Date.now()-atual.lockTs<120000) return; // outro aparelho está tentando
+          atual.lockTs=Date.now();
+          return atual;
+        }).then(function(res){
+          if(!res || !res.committed || !res.snapshot || !res.snapshot.val()) return;
+          return tgAvisar({grupo:'gestao', texto:item.texto||''}).then(function(r){
+            if(r&&r.ok) return DB.ref('auaulandia/med-tg-fila/'+id).remove();
+            return DB.ref('auaulandia/med-tg-fila/'+id).update({tentativas:(item.tentativas||0)+1, lockTs:null});
+          });
         }).catch(function(e){ _logFalhaGrav('reenvio da fila de medicação '+id, e); });
       });
     }).catch(function(e){ _logFalhaGrav('leitura da fila de medicação', e); });
@@ -10292,7 +10320,7 @@
   // Agora existe um carimbo: esta constante é a versão que o aparelho está rodando, e o
   // Firebase guarda a versão publicada. Quando as duas diferem, aparece o aviso — mas
   // NUNCA recarrega sozinho: recarregar no meio de um check-in perderia o trabalho.
-  const APP_VERSAO='2026-08-31-05';
+  const APP_VERSAO='2026-08-31-06';
   function vigiarVersao(){
     if(!DB) return;
     try{
@@ -12473,6 +12501,7 @@
   function carregarAgendaMedTodos(){
     MED_AGENDA_TODOS=[];
     if(!DB) return;
+    __medAgendaFalhas=0;
     const jobs=(hospedes||[]).map(function(h){
       const key=medAgendaKey(h); if(!key) return Promise.resolve();
       return DB.ref('auaulandia/medicacao-agenda/'+key+'/itens').once('value').then(function(s){
@@ -12483,7 +12512,7 @@
           if(!medVigenteEm(it)) return; // parou no dia do término (ou ainda não começou) — não gera alarme
           (it.horarios||[]).forEach(function(hr){ MED_AGENDA_TODOS.push({hospNome:h.nome||'', key:key, itemId:id, nome:it.nome||'', q:it.q||'', u:it.u||'', local:it.local||'', obs:it.obs||'', horario:hr}); });
         });
-      }).catch(function(e){ _logLeituraFalhou('auaulandia/medicacao-agenda/ (carregarAgendaMedTodos)', e); });
+      }).catch(function(e){ __medAgendaFalhas++; _logLeituraFalhou('auaulandia/medicacao-agenda/ (carregarAgendaMedTodos)', e); });
     });
     Promise.all(jobs).catch(function(){}) /* silencioso de propósito: guarda defensiva — falhar aqui não pode interromper quem chamou */.then(function(){
       // ===== A MEDICAÇÃO DO DAY CARE ENTRA NO MESMO ALARME (Adriana, 13/ago/2026) ====
@@ -12511,6 +12540,7 @@
   // O retrato do dia para o vigia do servidor: dose esperada por dose esperada. A ponte
   // (vigiaMedicacao no Apps Script) lê isto e cobra o que passou de 30 min sem registro —
   // mesmo com todos os celulares no bolso.
+  var __medAgendaFalhas=0;
   function medVigiaGravar(){
     if(!DB) return;
     try{
@@ -12521,9 +12551,22 @@
         esperadas[id]={key:it.key, doseId:magDoseId(it.itemId,it.horario), hospNome:it.hospNome||'',
                        nome:it.nome||'', q:it.q||'', u:it.u||'', horario:it.horario||''};
       });
-      DB.ref('auaulandia/med-vigia/'+dataKeyAtual())
-        .set({ts:Date.now(), esperadas:esperadas})
-        .catch(function(e){ _logFalhaGrav('retrato do vigia de medicação', e); });
+      var no=DB.ref('auaulandia/med-vigia/'+dataKeyAtual());
+      // Auditoria 31/ago: leitura que falhou não pode gerar retrato "saudável".
+      //  - alguma leitura falhou → NÃO apaga nada: acrescenta o que se sabe (update por
+      //    dose) e carimba parcial:true, para a ponte avisar que a lista pode estar curta
+      //  - tudo lido e zero dose → semDoses:true: a ponte distingue de "app fechado"
+      if(__medAgendaFalhas>0){
+        var patch={ts:Date.now(), parcial:true};
+        Object.keys(esperadas).forEach(function(id2){ patch['esperadas/'+id2]=esperadas[id2]; });
+        no.update(patch).catch(function(e){ _logFalhaGrav('retrato do vigia (parcial)', e); });
+      }else if(!Object.keys(esperadas).length){
+        no.set({ts:Date.now(), semDoses:true})
+          .catch(function(e){ _logFalhaGrav('retrato do vigia (sem doses)', e); });
+      }else{
+        no.set({ts:Date.now(), esperadas:esperadas})
+          .catch(function(e){ _logFalhaGrav('retrato do vigia de medicação', e); });
+      }
     }catch(e){ _logFalhaGrav('retrato do vigia de medicação (montagem)', e); }
   }
   // ===== QUEM O ALARME ACORDA (Adriana, 12/ago/2026) =================================
@@ -15855,9 +15898,9 @@
   function dcCarregarLancamentos(){
     if(!DB || (typeof ehHoje==='function' && !ehHoje())) return Promise.resolve();
     if(Date.now()-DC_DASH_TURMA.quando<60000) return Promise.resolve();   // fresco: não relê
-    DC_DASH_TURMA.quando=Date.now();
     var dia=(typeof dcDataKey==='function')?dcDataKey():'';
     return DB.ref('daycare/dashboard/'+dia).once('value').then(function(snap){
+      DC_DASH_TURMA.quando=Date.now();   // só carimba quando a leitura DEU certo
       var d=snap.val()||{};
       ['reposicao','avulso'].forEach(function(campo){
         var out=[];
@@ -15868,7 +15911,7 @@
           if(!limpo) return;
           var casado=null;
           try{ casado=(typeof planCasar==='function')?planCasar(limpo):null; }catch(e){ /* nome que não casa vira entrada crua abaixo */ }
-          if(casado && casado.p){ out.push({p:casado.p}); return; }
+          if(casado && casado.p && !casado.ambiguo){ out.push({p:casado.p}); return; }
           // Sem ficha casada o FILHOt ainda TEM que aparecer: entrada crua com o nome lançado
           var nome=limpo.split('/')[0].trim(), raca=(limpo.split('/')[1]||'').trim();
           if(nome) out.push({p:{n:nome, raca:raca, tutor:'', freq:campo, dias:[], nasc:''}, cru:true});
@@ -15876,7 +15919,7 @@
         DC_DASH_TURMA[campo]=out;
       });
       try{ dcRedesenharAtividade(); }catch(e){ /* a tela seguinte redesenha sozinha */ }
-    }).catch(function(e){ _logLeituraFalhou('daycare/dashboard (turma do dia)', e); });
+    }).catch(function(e){ DC_DASH_TURMA.quando=0; _logLeituraFalhou('daycare/dashboard (turma do dia)', e); });
   }
   function turmaDoDia(){
     const base=PELUDINHOS.map((p,i)=>({p,i})).filter(o=>(pelDias(o.p).indexOf(dcDia)>=0 || ehMoradorZeluz(o.p)) && !pelInativo(o.p));
@@ -21432,6 +21475,7 @@
       var s=document.getElementById('dashS_'+k); if(s) s.innerHTML='';
       // zera tudo: a dose da Olivia não pode grudar no próximo FILHOt
       if(it.campos){ DASH_DET[k]={}; delete DASH_SEL[k]; }
+      DC_DASH_TURMA.quando=0;   // o avulso lançado agora entra na turma na hora, não em 60s
       renderDash();
       if(typeof audit==='function') audit('dashboard-daycare','lançou '+valor+' em '+it.t,{pet:valor});
       dashEspelhar(k, ref.key, reg, 'lancar');
@@ -24859,9 +24903,10 @@
       try{ texto=ciResumoTexto(); }catch(e){ texto=''; }
       if(!texto || typeof tgAvisar!=='function') return;
       var nomeArq='checkin-'+String((ciHosp&&ciHosp.nome)||'filhot').replace(/[^a-zA-Z0-9]+/g,'-')+'-'+((typeof hojeISO==='function')?hojeISO():'')+'.pdf';
-      tgAvisar({grupo:'gestao', texto:'📋 <b>CHECK-IN — '+((ciHosp&&ciHosp.nome)||'')+'</b>\n\n'+texto}).then(function(r){
-        if(!(r&&r.ok)) medTgGuardar('📋 CHECK-IN — '+((ciHosp&&ciHosp.nome)||'')+'\n\n'+texto, (r&&r.erro)||'a ponte não respondeu');
-      }).catch(function(e){ medTgGuardar('📋 CHECK-IN — '+((ciHosp&&ciHosp.nome)||'')+'\n\n'+texto, String((e&&e.message)||e)); });
+      var _msgCk='📋 <b>CHECK-IN — '+medTgEsc((ciHosp&&ciHosp.nome)||'')+'</b>\n\n'+medTgEsc(texto);
+      tgAvisar({grupo:'gestao', texto:_msgCk}).then(function(r){
+        if(!(r&&r.ok)) medTgGuardar(_msgCk, (r&&r.erro)||'a ponte não respondeu');
+      }).catch(function(e){ medTgGuardar(_msgCk, String((e&&e.message)||e)); });
       // o PDF vai em seguida — e se a ponte ainda for a versão sem sendDocument, o grupo
       // já recebeu o conteúdo em texto acima: nada se perde
       var blob=null; try{ blob=ciBuildPdfBlob(); }catch(e){ blob=null; }

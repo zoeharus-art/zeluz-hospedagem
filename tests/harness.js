@@ -3783,7 +3783,7 @@ async function main() {
       /function ciMandarTelegram\(\)/.test(html) &&
       /try\{ ciMandarTelegram\(\); \}catch/.test(html) &&
       /documentoBase64:b64/.test(html));
-    check('falha do texto cai na fila (nunca silencio)', /medTgGuardar\('📋 CHECK-IN/.test(html));
+    check('falha do texto cai na fila (nunca silencio)', /medTgGuardar\(_msgCk/.test(html));
 
     // ---- 9. o retrato do vigia ----
     check('o app grava o retrato das doses esperadas',
@@ -3806,6 +3806,35 @@ async function main() {
     }
     check('lançar e usar mostram o modal com a mensagem',
       /repMsgModal\('✅ Reposição lançada'/.test(html) && /repMsgModal\('✅ Reposição usada'/.test(html));
+
+    // ---- correcoes da auditoria adversarial (31/ago) ----
+    check('AUDIT-4: xara ambiguo NAO e casado sozinho',
+      /if\(casado && casado\.p && !casado\.ambiguo\)/.test(html));
+    check('AUDIT-5: saldo lido ANTES de gravar (nunca dobra na mensagem)',
+      /const _saldoAntes=repSaldo\(p\);/.test(html) && /saldo:_saldoAntes\+regs\.length/.test(html));
+    if (typeof ctx.medTgEsc === 'function' && typeof ctx.medTgTexto === 'function') {
+      check('AUDIT-2: "febre > 39" nao derruba a mensagem',
+        ctx.medTgEsc('febre > 39') === 'febre &gt; 39');
+      const t2 = ctx.medTgTexto({nome: 'Dipirona', q: '1', u: 'ml', horario: '10:00', quem: 'Ana', avulso: true, motivo: 'febre > 39'}, 'Rex <3');
+      check('AUDIT-2: campos livres escapados, so o <b> nosso sobrevive',
+        t2.indexOf('febre &gt; 39') >= 0 && t2.indexOf('Rex &lt;3') >= 0 && /<b>/.test(t2), t2);
+    }
+    check('AUDIT-2b: carta morta — 5 tentativas e o item sai da fila',
+      /\(item\.tentativas\|\|0\)>=5/.test(html) && /DESISTIU após 5 tentativas/.test(html));
+    check('AUDIT-3: a fila tem DONO (transaction com lockTs)',
+      /atual\.lockTs && Date\.now\(\)-atual\.lockTs<120000/.test(html));
+    check('AUDIT-1: leitura que falha e CONTADA e o retrato sai parcial (update, nao set)',
+      /__medAgendaFalhas\+\+/.test(html) && /parcial:true/.test(html) &&
+      /patch\['esperadas\/'\+id2\]=esperadas\[id2\]/.test(html));
+    check('AUDIT-1: dia sem dose vira semDoses:true (nao silencio)',
+      /semDoses:true/.test(html));
+    check('AUDIT-7: o bloqueio da dose usa zAlertao, nao alert nativo',
+      /zAlertao\('DIGA QUEM VOCÊ É'/.test(html) &&
+      !/alert\('Antes de registrar a dose, diga QUEM/.test(html));
+    check('AUDIT-9: lancar avulso zera o cache da turma (aparece na hora)',
+      /DC_DASH_TURMA\.quando=0;   \/\/ o avulso lançado agora entra na turma na hora/.test(html));
+    check('AUDIT-9: cache so carimba quando a leitura DEU certo',
+      /DC_DASH_TURMA\.quando=Date\.now\(\);   \/\/ só carimba quando a leitura DEU certo/.test(html));
   }
   console.log('');
 
@@ -3816,8 +3845,16 @@ async function main() {
     check('a ponte sabe mandar ARQUIVO (sendDocument)',
       /function _mandarDocumento\(/.test(gs) && /sendDocument/.test(gs) &&
       /if \(d\.documentoBase64\) return _resp\(_mandarDocumento/.test(gs));
-    check('vigia de medicacao existe e roda das 7h as 22h30',
-      /function vigiaMedicacao\(\)/.test(gs) && /hhmm < '07:00' \|\| hhmm > '22:30'/.test(gs));
+    check('vigia de medicacao existe e roda das 6h30 as 23h45',
+      /function vigiaMedicacao\(\)/.test(gs) && /hhmm < '06:30' \|\| hhmm > '23:45'/.test(gs));
+    check('a noite de ontem e conferida na primeira rodada da manha',
+      /function _vigiaMedNoiteDeOntem\(/.test(gs) && /h < '21:00'/.test(gs) && /DOSE DE ONTEM SEM REGISTRO/.test(gs));
+    check('retrato parcial avisa e SEGUE cobrando (nao vira "ninguem abriu")',
+      /vigia com lista incompleta/.test(gs) && /retrato\.parcial && !travas\['parcial'\]/.test(gs));
+    check('dia declaradamente sem dose nao e "app fechado"',
+      /retrato && retrato\.semDoses && !retrato\.esperadas\) return;/.test(gs));
+    check('nomes escapados no texto do vigia (HTML nao derruba a mensagem)',
+      /_esc\(d\.hospNome \|\| '\?'\)/.test(gs));
     check('le o retrato do app e o log do dia',
       /auaulandia\/med-vigia\//.test(gs) && /auaulandia\/medicacao-log\//.test(gs));
     check('cobra so depois de 30 min', /agoraMin - alvoMin < 30/.test(gs));

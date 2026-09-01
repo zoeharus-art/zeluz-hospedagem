@@ -534,17 +534,40 @@ function vigiaFalta12h_TESTE() {
 function vigiaMedicacao() {
   var agora = new Date();
   var hhmm = Utilities.formatDate(agora, 'America/Sao_Paulo', 'HH:mm');
-  if (hhmm < '07:00' || hhmm > '22:30') return;                 // fora do horário da casa
+  if (hhmm < '06:30' || hhmm > '23:45') return;                 // fora do horário da casa
   var dia = Utilities.formatDate(agora, 'America/Sao_Paulo', 'yyyy-MM-dd');
   var token = _fbToken();
   if (!token) return;
+
+  // A dose das 23h de ONTEM morria na virada do dia (o retrato muda). Na primeira
+  // rodada da manhã, a noite de ontem é conferida também (auditoria, 31/ago).
+  if (hhmm <= '08:30') {
+    try { _vigiaMedNoiteDeOntem(agora, token); } catch (eN) { Logger.log('vigia noite de ontem: ' + eN); }
+  }
 
   var retrato = _fbLer('auaulandia/med-vigia/' + dia, token);
   var travas = _fbLer('daycare/cobranca-medvigia/' + dia, token) || {};
 
   // Ninguém abriu o app hoje: sem retrato não há vigilância nenhuma — isso é um aviso
   // por si só, uma vez por dia.
+  // Dia declaradamente SEM dose: nada a vigiar (e não é "app fechado").
+  if (retrato && retrato.semDoses && !retrato.esperadas) return;
+  // Retrato marcado como PARCIAL: alguma leitura falhou no app — a lista pode estar
+  // curta. Avisa uma vez e SEGUE cobrando o que tem (auditoria, 31/ago).
+  if (retrato && retrato.parcial && !travas['parcial']) {
+    var rp = _mandarTexto(GRUPOS['gestao'], [
+      '<b>MEDICAÇÃO — vigia com lista incompleta</b>', '',
+      'O app não conseguiu ler a agenda de todos os hóspedes: a lista de doses vigiadas pode estar mais curta que a real.',
+      'Abrir o app da AuAulândia e conferir a tela de medicações do plantão.'
+    ].join('\n'));
+    if (rp && rp.ok) _fbGravar('daycare/cobranca-medvigia/' + dia + '/parcial', { ts: agora.getTime() }, token);
+  }
   if (!retrato || !retrato.esperadas) {
+    if (retrato && retrato.esperadas === undefined && retrato.ts && !retrato.semDoses && !retrato.parcial) {
+      // Retrato gravado mas sem lista e sem explicação: trata como parcial, nunca como
+      // "ninguém abriu o app" — mensagem falsa cala o vigia o resto do dia.
+      return;
+    }
     if (hhmm >= '09:30' && !travas['sem-app']) {
       var r0 = _mandarTexto(GRUPOS['gestao'], [
         '<b>MEDICAÇÃO — sem vigilância hoje</b>', '',
@@ -572,8 +595,8 @@ function vigiaMedicacao() {
     if (deu) continue;                                          // registrada: tudo certo
     var txt = [
       '<b>💊 MEDICAÇÃO SEM REGISTRO — agir AGORA</b>', '',
-      '<b>' + (d.hospNome || '?') + '</b> — ' + (d.nome || ''),
-      'Dose: ' + ((d.q || '') + ' ' + (d.u || '')).trim(),
+      '<b>' + _esc(d.hospNome || '?') + '</b> — ' + _esc(d.nome || ''),
+      'Dose: ' + _esc(((d.q || '') + ' ' + (d.u || '')).trim()),
       'Estava agendada para as ' + h + ' e até as ' + hhmm + ' ninguém registrou.',
       '',
       'Confirmar com o plantão se foi dada. Se foi, registrar no app AGORA — sem o registro, o remédio conta como não dado.'
@@ -581,6 +604,34 @@ function vigiaMedicacao() {
     var r = _mandarTexto(GRUPOS['gestao'], txt);
     // A trava só grava se o Telegram aceitou — falha tenta de novo em 15 minutos.
     if (r && r.ok) _fbGravar('daycare/cobranca-medvigia/' + dia + '/' + id, { ts: agora.getTime(), horario: h }, token);
+  }
+}
+
+/** A noite de ontem: doses das 21h em diante que ficaram sem registro e sem cobrança. */
+function _vigiaMedNoiteDeOntem(agora, token) {
+  var ontemD = new Date(agora.getTime() - 24 * 3600 * 1000);
+  var ontem = Utilities.formatDate(ontemD, 'America/Sao_Paulo', 'yyyy-MM-dd');
+  var retrato = _fbLer('auaulandia/med-vigia/' + ontem, token);
+  if (!retrato || !retrato.esperadas) return;
+  var travas = _fbLer('daycare/cobranca-medvigia/' + ontem, token) || {};
+  var log = _fbLer('auaulandia/medicacao-log/' + ontem, token) || {};
+  for (var id in retrato.esperadas) {
+    if (!retrato.esperadas.hasOwnProperty(id)) continue;
+    if (travas[id]) continue;
+    var d = retrato.esperadas[id] || {};
+    var h = String(d.horario || '');
+    if (!/^\d\d:\d\d$/.test(h) || h < '21:00') continue;      // o dia normal já cobriu o resto
+    var deu = log[d.key] && log[d.key][d.doseId];
+    if (deu) continue;
+    var txt = [
+      '<b>💊 DOSE DE ONTEM SEM REGISTRO</b>', '',
+      '<b>' + _esc(d.hospNome || '?') + '</b> — ' + _esc(d.nome || ''),
+      'Estava agendada para ONTEM às ' + h + ' e não há registro de que foi dada.',
+      '',
+      'Confirmar com quem estava no plantão da noite — e registrar no app se foi dada.'
+    ].join('\n');
+    var r = _mandarTexto(GRUPOS['gestao'], txt);
+    if (r && r.ok) _fbGravar('daycare/cobranca-medvigia/' + ontem + '/' + id, { ts: agora.getTime(), horario: h, noite: true }, token);
   }
 }
 
