@@ -8044,6 +8044,8 @@
       L.push(''); L.push('<b>⚠ ATENÇÃO</b>');
       at.forEach(function(x){ L.push('• '+x); });
       cuid.forEach(function(x){ L.push('• '+x); });
+    } else {
+      L.push(''); L.push('\u2705 Passou bem — nada que exija atenção.');
     }
     return L.join('\n');
   }
@@ -8066,17 +8068,16 @@
       DB.ref(base+'/'+k).once('value').then(function(sn){
         var ja=sn.val();
         if(ja&&ja.ok) return plantChecarFechamento(tipo,dia,base);   // já avisado hoje
-        if(!alertas.length){
-          // Passou bem: não gera mensagem própria — entra na linha do fechamento.
-          return DB.ref(base+'/'+k).set({ts:Date.now(), ok:true, bem:true, nome:h.nome||'',
-            quem:(typeof quemSou==='function'?quemSou():'-')})
-            .catch(function(e){ _logFalhaGrav('plantaoAvisoGestao', e); }).then(function(){ return plantChecarFechamento(tipo,dia,base); });
-        }
+        // Adriana, 31/ago/2026: "o dado de cada peludinho do plantão precisa ir COMPLETO
+        // para o grupo — os gestores precisam disso." Revoga a regra de 25/ago (quem
+        // passou bem só entrava na linha do fechamento): TODO relatório vira a mensagem
+        // completa. O fechamento continua resumindo quem passou bem.
+        var _bem=!alertas.length;
         return tgCfgPronta().then(function(c){
           if(!c) return plantFalhou(base,k,h,'a ponte do Telegram não está configurada');
           return tgAvisar({grupo:'gestao', texto:plantMensagem(tipo,h,dados,dia)}).then(function(r){
             var ok=!!(r&&r.ok);
-            return DB.ref(base+'/'+k).set({ts:Date.now(), ok:ok, bem:false, nome:h.nome||'',
+            return DB.ref(base+'/'+k).set({ts:Date.now(), ok:ok, bem:_bem, nome:h.nome||'',
               quem:(typeof quemSou==='function'?quemSou():'-'),
               erro: ok?'':String((r&&r.erro)||'a ponte não respondeu como esperado')})
               .catch(function(e){ _logFalhaGrav('plantaoAvisoGestao', e); }).then(function(){
@@ -10320,7 +10321,7 @@
   // Agora existe um carimbo: esta constante é a versão que o aparelho está rodando, e o
   // Firebase guarda a versão publicada. Quando as duas diferem, aparece o aviso — mas
   // NUNCA recarrega sozinho: recarregar no meio de um check-in perderia o trabalho.
-  const APP_VERSAO='2026-08-31-06';
+  const APP_VERSAO='2026-08-31-07';
   function vigiarVersao(){
     if(!DB) return;
     try{

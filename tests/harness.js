@@ -3833,6 +3833,14 @@ async function main() {
       !/alert\('Antes de registrar a dose, diga QUEM/.test(html));
     check('AUDIT-9: lancar avulso zera o cache da turma (aparece na hora)',
       /DC_DASH_TURMA\.quando=0;   \/\/ o avulso lançado agora entra na turma na hora/.test(html));
+    // Adriana, 31/ago (noite): o relatorio COMPLETO de cada peludinho vai ao grupo
+    check('todo relatorio do plantao vira mensagem completa (nao so quem teve algo)',
+      !/Passou bem: não gera mensagem própria/.test(html) &&
+      /o dado de cada peludinho do plantão precisa ir COMPLETO/.test(html));
+    check('quem passou bem leva o selo na propria mensagem',
+      /Passou bem — nada que exija atenção\./.test(html));
+    check('o fechamento continua resumindo quem passou bem', /var _bem=!alertas\.length;/.test(html) &&
+      /bem:_bem/.test(html));
     check('AUDIT-9: cache so carimba quando a leitura DEU certo',
       /DC_DASH_TURMA\.quando=Date\.now\(\);   \/\/ só carimba quando a leitura DEU certo/.test(html));
   }
