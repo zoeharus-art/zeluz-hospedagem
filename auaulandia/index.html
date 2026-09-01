@@ -10548,7 +10548,7 @@
   // Agora existe um carimbo: esta constante é a versão que o aparelho está rodando, e o
   // Firebase guarda a versão publicada. Quando as duas diferem, aparece o aviso — mas
   // NUNCA recarrega sozinho: recarregar no meio de um check-in perderia o trabalho.
-  const APP_VERSAO='2026-08-31-11';
+  const APP_VERSAO='2026-09-01-01';
   function vigiarVersao(){
     if(!DB) return;
     try{
@@ -23502,12 +23502,18 @@
     {c:'raca',  t:'Raça',                critico:true },
     {c:'tutor', t:'Tutor',               critico:true },
     {c:'nasc',  t:'Nascimento',          tipo:'date'  },
-    {c:'chip',  t:'Microchip'                          }
+    {c:'chip',  t:'Microchip'                          },
+    // Emergência (Adriana, 01/set): o PDF do check-in imprime o veterinário de
+    // confiança — se a ficha não tem, a recepção pergunta ao tutor aqui mesmo.
+    {c:'vetNome',    t:'Veterinário(a) de emergência — nome'     },
+    {c:'vetTel',     t:'Veterinário(a) de emergência — telefone' },
+    {c:'vetClinica', t:'Clínica de emergência — nome'            }
   ];
   function ciCadValor(p,campo){
     var ex=(typeof pelExtra==='function')?pelExtra(p):{};
     if(campo==='nasc') return String((typeof pelNasc==='function'?pelNasc(p):'')||'').trim();
     if(campo==='chip') return String(ex.chip||ex.microchip||p.chip||p.microchip||'').trim();
+    if(campo==='vetNome'||campo==='vetTel'||campo==='vetClinica'||campo==='vetEnd') return String(ex[campo]||'').trim();
     return String((typeof pelGet==='function'?pelGet(p,campo):'')||'').trim();
   }
   function cadastroFaltando(p){
@@ -25169,7 +25175,12 @@
   // do comprimido que sobra (caso Toshi, 31/ago/2026).
   function ciMedVeioTxt(it){
     var e=(it&&it.estoque)||{};
-    if(typeof e.inicial==='number') return ' — veio: '+e.inicial+' '+(it.u||'unidade(s)');
+    if(typeof e.inicial==='number'){
+      // Concordância (Adriana, 01/set): "vieram 20 comprimidos", "veio 1 comprimido".
+      var u=String(it.u||'unidade');
+      var plural=(e.inicial>1)?(/s$/i.test(u)?u:(u+'s')):u;
+      return (e.inicial>1?' — vieram: ':' — veio: ')+e.inicial+' '+plural;
+    }
     if(e.nivel) return ' — veio: '+e.nivel;
     return '';
   }
@@ -25371,9 +25382,14 @@
         cab.push('q '+fW.toFixed(2)+' 0 0 '+fH+' '+(X1-fW).toFixed(2)+' 756 cm /Im2 Do Q');
       }
       var tx=X0+(logo?(lw+12):0);
+      // O aviso que não pode passar despercebido: alergia/restrição em vermelho, no cabeçalho.
+      // (depois do tx: usá-lo antes de existir derrubava o PDF de quem TEM alergia — pego pelo exemplo)
+      if(doc.alertaCab && pi===0){
+        cab.push(ZPDF_VERM+' rg\nBT /F2 8.6 Tf 1 0 0 1 '+tx.toFixed(1)+' 776.2 Tm ('+ciPdfEsc(doc.alertaCab)+') Tj ET');
+      }
       cab.push(ZPDF_AZUL+' rg\nBT /F2 15 Tf 1 0 0 1 '+tx.toFixed(1)+' 800 Tm ('+ciPdfEsc(doc.titulo||'Zêluz · AuAulândia')+') Tj ET');
       if(doc.sub) cab.push(ZPDF_CINZA+' rg\nBT /F1 9.5 Tf 1 0 0 1 '+tx.toFixed(1)+' 786 Tm ('+ciPdfEsc(doc.sub)+') Tj ET');
-      cab.push(ZPDF_OURO+' rg\n'+X0+' 772 '+LARG+' 2.4 re f');
+      cab.push(ZPDF_OURO+' rg\n'+X0+' 771 '+((foto&&pi===0)?(LARG-fW-12):LARG)+' 2.4 re f');
       var pe=['0.85 0.85 0.85 rg\n'+X0+' 52 '+LARG+' 0.8 re f',
         ZPDF_CINZA+' rg\nBT /F1 8 Tf 1 0 0 1 '+X0+' 40 Tm ('+ciPdfEsc('Zêluz · Aqui, cada cuidado é ÚNICO.')+') Tj ET',
         ZPDF_CINZA+' rg\nBT /F1 8 Tf 1 0 0 1 '+(X1-58)+' 40 Tm ('+ciPdfEsc('página '+(pi+1)+' de '+n)+') Tj ET'];
@@ -25429,17 +25445,29 @@
     const a=d.ficha.alim||{}; const spa=d.ficha.spa||{};
     const S=[];
     // --- estadia ---
+    var exH=(typeof extraDoHosp==='function'&&ciHosp)?(extraDoHosp(ciHosp)||{}):{};
+    // --- ALERGIA E RESTRIÇÃO primeiro de tudo (Adriana, 01/set): "isso tem que
+    //     aparecer no cabeçalho em vermelho e um tópico só para isso" ---
+    var LN=[];
+    if(exH.alergia) LN.push({k:'Alergia', v:exH.alergia});
+    if(exH.restricao) LN.push({k:'Restrição alimentar', v:exH.restricao});
+    var _eaR=String(exH.ea_restr||'').trim();
+    if(_eaR) LN.push({k:'Enriquecimento Ambiental', v:_eaR});
+    if(LN.length) S.push({titulo:'ALERGIA E RESTRIÇÃO — O QUE ELE NÃO PODE', vermelha:true, linhas:LN});
     var _per={'Manhã':'busca pela manhã','Tarde':'busca à tarde','Noite':'busca à noite'}[d.saidaPer]||'';
+    var _qd=((document.getElementById('ciQuemDeixou')||{}).value||'').trim();
     S.push({titulo:'ESTADIA', linhas:[
       {k:'Entrada', v:ciBRdata(d.entrada)+(a.dias?('  ('+a.dias+' dia(s))'):'')},
       {k:'Saída', v:(d.saida?ciBRdata(d.saida):'a confirmar')+(_per?('  ·  '+_per):'')}
-    ]});
+    ].concat(_qd?[{k:'Quem trouxe', v:_qd}]:[])});
     // --- emergência: contatos e identificação (Adriana, 31/ago) ---
     (function(){
-      var ex=(typeof extraDoHosp==='function'&&ciHosp)?(extraDoHosp(ciHosp)||{}):{};
+      var ex=exH;
       var LE=[];
-      LE.push({k:'Tutor', v:((ciHosp&&ciHosp.tutor)||'—')+(ex.tel?('  ·  '+ex.tel):'')});
-      if(ex.tutor2||ex.tel2) LE.push({k:'Tutor 2', v:(ex.tutor2||'—')+(ex.tel2?('  ·  '+ex.tel2):'')});
+      // Telefone do TUTOR é sigiloso (Adriana, 01/set) — não sai no PDF. O do
+      // veterinário e o da clínica são justamente para emergência: ficam.
+      LE.push({k:'Tutor', v:((ciHosp&&ciHosp.tutor)||'—')});
+      if(ex.tutor2) LE.push({k:'Tutor 2', v:ex.tutor2});
       LE.push({k:'Veterinário(a)', v: ex.vetNome?((ex.vetNome)+(ex.vetTel?('  ·  '+ex.vetTel):'')):'não informado — completar na ficha'});
       if(ex.vetClinica||ex.vetEnd) LE.push({k:'Clínica', v:(ex.vetClinica||'—')+(ex.vetEnd?('  ·  '+ex.vetEnd):'')});
       LE.push({k:'Microchip', v: ex.microchip||'sem registro'});
@@ -25471,6 +25499,10 @@
         var meals=ciComidaRefNomesCap(a.comida.refeicoes);
         LA.push({t:'Comida natural SOMENTE em: '+(meals.length?meals.join(', '):'(marcar quais)')+'. Nas demais refeições, só a ração. Não trocar.'});
       }
+      var _entR=ciComidaRefNomesCap(a.entrada||{}), _saiR=ciComidaRefNomesCap(a.saida||{});
+      if(_entR.length) LA.push({k:'Dia da chegada', v:'refeições aqui: '+_entR.join(', ')});
+      if(_saiR.length) LA.push({k:'Dia da saída', v:'refeições aqui: '+_saiR.join(', ')});
+      if(a.obs) LA.push({t:'Observação: '+a.obs});
       if(a.dias) LA.push({t:'Para a estadia: ração aprox. '+(a.minimo||0)+ciUnidLbl(a.unidade)+(a.trazida?(' (trazido '+a.trazida+'g)'):'')+(a.comida&&a.comida.minimo?('  ·  comida natural aprox. '+a.comida.minimo+'g'+(a.comida.trazida?(' (trazido '+a.comida.trazida+'g)'):'')):''), cinza:true});
       S.push({titulo:'ALIMENTAÇÃO — O QUE E QUANDO', linhas:LA});
     }
@@ -25481,32 +25513,40 @@
       var rowsMed=[];
       meds.forEach(function(it){
         var per=medPeriodoTxt(it);
-        var veio=String(ciMedVeioTxt(it)||'').replace(/^\s*[—-]\s*veio:\s*/,'');
-        var obs=[per, veio?('veio: '+veio):''].filter(Boolean).join('  ·  ');
+        var veio=String(ciMedVeioTxt(it)||'').replace(/^\s*[—-]\s*/,'');
+        var obs=[per, veio].filter(Boolean).join('  ·  ');
         ((it.horarios&&it.horarios.length)?it.horarios.slice().sort():['—']).forEach(function(hr){
           rowsMed.push([hr, it.nome||'—', medDoseTxt(it)||'—', obs||'—']);
         });
       });
       rowsMed.sort(function(a,b){ return String(a[0]).localeCompare(String(b[0])); });
-      S.push({titulo:'MEDICAÇÃO E SUPLEMENTOS — DOSE A DOSE, POR HORÁRIO', vermelha:true, linhas:[
+      var LMx=[
         {tab:{cab:['Horário','Medicamento','Dose','Como veio · período'], pesos:[0.62,1.35,1.05,1.75], rows:rowsMed}},
         {t:'Cada linha do quadro é UMA dose. O mesmo remédio aparece em todos os horários em que deve ser dado.', cinza:true}
-      ]});
+      ];
+      if(d.ficha.medObs) LMx.push({t:'Observação: '+d.ficha.medObs});
+      S.push({titulo:'MEDICAÇÃO E SUPLEMENTOS — DOSE A DOSE, POR HORÁRIO', vermelha:true, linhas:LMx});
     }
     // --- banho na saída ---
     S.push({titulo:'BANHO NA SAÍDA (SPA DERMOPROTETOR)', linhas:[
       {k:'Banho', v:(spa.banho||'não informado')+(spa.banho==='Sim'?((spa.tipo?('  ·  '+spa.tipo):'')+(spa.aConfirmar?'  ·  horário a confirmar':(spa.horario?('  ·  às '+spa.horario):''))):'')},
       {k:'Dia da saída', v:(d.saida?ciBRdata(d.saida):'a confirmar')}
     ]});
+    // --- observações gerais do check-in ---
+    if(d.ficha.obsGeral){
+      S.push({titulo:'OBSERVAÇÕES', linhas:[{t:d.ficha.obsGeral}]});
+    }
     // --- pertences, compactos ---
     if(d.pertences.length){
       S.push({titulo:'PERTENCES ('+d.pertences.length+')', linhas:[
         {t:d.pertences.map(function(p){ return p.nome+(p.spec?(' ('+p.spec+')'):''); }).join('  ·  ')}
       ]});
     }
+    var _alerta=[exH.alergia?('ALERGIA: '+exH.alergia):'', exH.restricao?('NÃO PODE: '+exH.restricao):''].filter(Boolean).join('  ·  ');
     return zPdfDocBlob({
       titulo:'Zêluz · AuAulândia — Ficha de Check-in',
       sub:(ciHosp.nome||'')+(ciHosp.raca?(' · '+ciHosp.raca):'')+(ciHosp.tutor?(' · Tutor: '+ciHosp.tutor):'')+'  —  emitida em '+ciBRdata((typeof hojeISO==='function')?hojeISO():''),
+      alertaCab:_alerta.slice(0,110),
       secoes:S
     },{ assinatura: ciAssinaturaJpeg(), assinaNome: assina, foto: CI_FOTO_JPEG });
   }

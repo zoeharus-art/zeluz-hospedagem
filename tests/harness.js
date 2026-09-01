@@ -603,7 +603,7 @@ async function main() {
     // Gabarito atualizado em 31/ago/2026 (2ª vez, intencional): a ficha passou para o
     // motor com a cara da marca (zPdfDocBlob) — faixas por seção, cabeçalho e rodapé.
     // No sandbox não há atob, então o logo fica de fora e o hash é determinístico.
-    const GABARITO_PDF_CHECKIN = '88063bdb552d59b06f4cdc8941ab0d7ca343fa869400174c9a4ee01858e38e4a'; // 5841 bytes — quadro de medicação por horário + seção EMERGÊNCIA + período da busca (PDF v3, 31/ago)
+    const GABARITO_PDF_CHECKIN = 'db0edaebc71c0ceb47bc58534476959d56cef3babac31b7ecaa67b239313ace3'; // 6353 bytes — PDF v4 com o caminho de ALERGIA exercitado (aviso no cabecalho + secao vermelha) — quadro de medicação por horário + seção EMERGÊNCIA + período da busca (PDF v3, 31/ago)
     const GABARITO_PDF_VET = '83338caf3f53ba3f20a6f7dd5de1bdc7fb3d7f0fcdbb9260cac499190cbc792d'; // 2086 bytes
     const GABARITO_PDF_TEXTO = '82c7cd6e0345969d1db34d3c9fdb04e8038668720292fea9a7373f0e0f51207e'; // 848 bytes
 
@@ -626,7 +626,7 @@ async function main() {
     const geOrig = ctx.document.getElementById;
     const ciHospOrig = lerCiHosp();
     const orig = {};
-    ['ciColetarFicha', 'ciColetarMeds', 'ciAssinaturaJpeg', 'vetHosp', 'VET_MED_CACHE', 'tutorDe', 'hojeISO']
+    ['ciColetarFicha', 'ciColetarMeds', 'ciAssinaturaJpeg', 'vetHosp', 'VET_MED_CACHE', 'tutorDe', 'hojeISO', 'extraDoHosp']
       .forEach((k) => { orig[k] = ctx[k]; });
     let bCheckin = null, bVet = null, bTexto = null, bSemSig = null, bComSig = null, erro = '';
     try {
@@ -637,6 +637,10 @@ async function main() {
       porCiHosp({ nome: 'Toddy', raca: 'Spitz Alemão', tutor: 'Carolina' });
       // Data fixa: o PDF imprime "emitida em {hoje}" e o gabarito virava a cada meia-noite.
       ctx.hojeISO = () => '2026-08-31';
+      // Com ALERGIA de propósito: o aviso vermelho do cabeçalho usava uma variável antes
+      // de ela existir e derrubava o PDF só de quem TEM alergia — a bancada sem alergia
+      // nunca veria. Agora o caminho vermelho roda em todo teste.
+      ctx.extraDoHosp = () => ({ alergia: 'frango', restricao: '', microchip: '985113001234' });
       ctx.ciColetarFicha = () => ({
         entrada: '2026-08-20', saida: '2026-08-27',
         saidaPer: 'Tarde',
@@ -691,6 +695,11 @@ async function main() {
     check('quadro de medicação: um remédio com 2 horários aparece em 2 linhas',
       !!bCheckin && bCheckin.toString('latin1').split('(Apoquel)').length - 1 === 2,
       bCheckin ? String(bCheckin.toString('latin1').split('(Apoquel)').length - 1) + ' ocorrências' : erro);
+    check('a ALERGIA sai em vermelho no cabeçalho e como primeira seção',
+      !!bCheckin && bCheckin.toString('latin1').indexOf('ALERGIA: frango') > 0
+      && bCheckin.toString('latin1').indexOf('O QUE ELE N') > 0, digital(bCheckin));
+    check('o telefone do tutor NÃO sai no PDF (sigiloso)',
+      !!bCheckin && bCheckin.toString('latin1').indexOf('99999-0000') < 0, digital(bCheckin));
     check('a seção EMERGÊNCIA — CONTATOS E IDENTIFICAÇÃO sai no PDF do check-in',
       !!bCheckin && bCheckin.toString('latin1').indexOf('CONTATOS E IDENTIFICA') > 0, digital(bCheckin));
     check('o período da busca sai na linha da Saída quando preenchido',
