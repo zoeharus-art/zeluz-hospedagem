@@ -2576,6 +2576,10 @@
         <div class="cad-grid">
           <div class="field"><label>Entrada *</label><input type="date" class="cad-in" id="ciEntrada" onchange="ciCalcDias()" min="2015-01-01" max="2035-12-31" onkeydown="return dataSoNoCalendario(event)"></div>
           <div class="field"><label>Saída prevista</label><input type="date" class="cad-in" id="ciSaida" onchange="ciCalcDias()" min="2015-01-01" max="2035-12-31" onkeydown="return dataSoNoCalendario(event)"></div>
+          <!-- Adriana, 31/ago/2026 (revisão do PDF): "sai de manhã, tarde ou noite?" — o período
+               da busca entra na ficha e sai impresso no PDF, junto da data. -->
+          <div class="field"><label>Busca no dia da saída — período</label>
+            <div class="seg gold" id="ciSaidaPer" data-single><button onclick="pick(this)">Manhã</button><button onclick="pick(this)">Tarde</button><button onclick="pick(this)">Noite</button></div></div>
         </div>
       </div>
 
@@ -10321,7 +10325,7 @@
   // Agora existe um carimbo: esta constante é a versão que o aparelho está rodando, e o
   // Firebase guarda a versão publicada. Quando as duas diferem, aparece o aviso — mas
   // NUNCA recarrega sozinho: recarregar no meio de um check-in perderia o trabalho.
-  const APP_VERSAO='2026-08-31-08';
+  const APP_VERSAO='2026-08-31-09';
   function vigiarVersao(){
     if(!DB) return;
     try{
@@ -15413,6 +15417,18 @@
           </div>
           <div class="field"><label>Medicação</label><input class="cad-in" value="${escAttr(ex.medicacao||'')}" placeholder="Nome, dose, horário" onchange="setPelExtra(pelAtual,{medicacao:this.value});refreshPills()"></div>
           <div class="field"><label>Algum problema de saúde</label><input class="cad-in" value="${escAttr(ex.problema||'')}" placeholder="Ex: cardíaco — ou vazio" onchange="setPelExtra(pelAtual,{problema:this.value});refreshPills()"></div>
+          <!-- EMERGÊNCIA (Adriana, 31/ago/2026): o PDF do check-in precisa dos dados de
+               emergência — veterinário(a) de confiança do tutor, clínica e endereço.
+               Sem programador: os campos vivem na ficha e o PDF lê daqui. -->
+          <div class="field" style="grid-column:1/-1;background:rgba(200,60,45,.06);border-left:4px solid var(--crm-critico);border-radius:10px;padding:10px 12px">
+            <label style="font-size:13px;font-weight:800;color:var(--crm-critico)">EMERGÊNCIA — veterinário(a) de confiança do tutor</label>
+            <div class="cad-grid" style="margin-top:6px">
+              <div class="field"><label>Veterinário(a) — nome</label><input class="cad-in" value="${escAttr(ex.vetNome||'')}" placeholder="Ex: Dra. Tanara" onchange="setPelExtra(pelAtual,{vetNome:this.value})"></div>
+              <div class="field"><label>Veterinário(a) — telefone</label><input class="cad-in" value="${escAttr(ex.vetTel||'')}" placeholder="(31) 9____-____" onchange="setPelExtra(pelAtual,{vetTel:this.value})"></div>
+              <div class="field"><label>Clínica — nome</label><input class="cad-in" value="${escAttr(ex.vetClinica||'')}" placeholder="Nome da clínica" onchange="setPelExtra(pelAtual,{vetClinica:this.value})"></div>
+              <div class="field"><label>Clínica — endereço</label><input class="cad-in" value="${escAttr(ex.vetEnd||'')}" placeholder="Rua, número, bairro" onchange="setPelExtra(pelAtual,{vetEnd:this.value})"></div>
+            </div>
+          </div>
           <div class="field" style="grid-column:1/-1"><label>O que o tutor contou</label><input class="cad-in" value="${escAttr(ex.obs_tutor||'')}" placeholder="Check-up, cio, mudanças em casa — o que veio na resposta do tutor" onchange="setPelExtra(pelAtual,{obs_tutor:this.value})"></div>
           <div class="field"><label>Manias</label><input class="cad-in" value="${escAttr(ex.manias||'')}" placeholder="Ex: protege a comida" onchange="setPelExtra(pelAtual,{manias:this.value});refreshPills()"></div>
           <div class="field"><label>Em adaptacao (1&ordm; mes)?</label><div class="seg gold" data-single>${segBtnsPel('adaptacao',ex.adaptacao||'',['Sim','Nao'])}</div></div>
@@ -23082,6 +23098,31 @@
   // medicação viva. A medicação também é gravada em auaulandia/medicacao-agenda/{key} — o mesmo nó
   // que dispara o despertador — para já ficar ligada à espinha (aprofundada na Onda 2).
   let ciHosp=null;               // {nome,tutor,raca,refKey,ini,cor}
+  // A foto que vai no PDF (JPEG pequeno). Preparada em segundo plano quando o check-in
+  // abre; se não der tempo ou não houver foto, o PDF sai sem ela — nunca trava.
+  let CI_FOTO_JPEG=null;
+  function ciFotoJpegPrep(){
+    CI_FOTO_JPEG=null;
+    try{
+      var du=(typeof fotoDe==='function'&&ciHosp)?fotoDe(ciHosp):'';
+      if(!du) return;
+      var img=new Image();
+      img.onload=function(){
+        try{
+          var MAX=260, e2=Math.min(1, MAX/Math.max(img.width||1,img.height||1));
+          var cw=Math.max(1,Math.round((img.width||1)*e2)), ch=Math.max(1,Math.round((img.height||1)*e2));
+          var cv=document.createElement('canvas'); cv.width=cw; cv.height=ch;
+          var cx=cv.getContext('2d'); cx.fillStyle='#fff'; cx.fillRect(0,0,cw,ch); cx.drawImage(img,0,0,cw,ch);
+          var b64=cv.toDataURL('image/jpeg',0.82).split(',')[1]||'';
+          if(!b64) return;
+          var bin=atob(b64), by=new Uint8Array(bin.length);
+          for(var i=0;i<bin.length;i++) by[i]=bin.charCodeAt(i)&0xff;
+          CI_FOTO_JPEG={bytes:by,w:cw,h:ch};
+        }catch(e){} /* silencioso de propósito: enfeite de tela (foco, rolagem, mídia) — falhar não muda dado nenhum */
+      };
+      img.src=du;
+    }catch(e){} /* silencioso de propósito: enfeite de tela (foco, rolagem, mídia) — falhar não muda dado nenhum */
+  }
   let ciPertBanco=[];            // banco de pertences (default + custom do Firebase)
   let ciPertSel=[];              // unidades adicionadas nesta estadia: [{uid,k,nome,spec}] — permite vários do mesmo tipo
   const CI_PERT_DEFAULT=[
@@ -23321,6 +23362,7 @@
     const _nasc=(typeof pelNasc==='function')?pelNasc(p):(pelGet(p,'nasc')||'');
     const _idade=(typeof calcIdade==='function'?calcIdade(_nasc):'')||(pelGet(p,'idadeAprox')||'');
     ciHosp={ nome:pelNome(p), tutor:pelGet(p,'tutor')||'', raca:pelGet(p,'raca')||'', refKey:pelKey(p), nasc:_nasc, idade:_idade, ini:(pelNome(p)[0]||'?').toUpperCase(), cor:corPel(i) };
+    ciFotoJpegPrep();
     document.getElementById('ci-escolha').style.display='none';
     document.getElementById('ci-ficha').style.display='block';
     // header
@@ -23338,6 +23380,7 @@
     // datas
     document.getElementById('ciEntrada').value=ciHoje();
     document.getElementById('ciSaida').value='';
+    setSeg('ciSaidaPer','');
     setSeg('ciTipoEstadia',''); ciTipoEstadia='hospedagem';
     var _pnb=document.getElementById('ciPernoiteBox'); if(_pnb){ _pnb.style.display='none'; _pnb.innerHTML=''; }
     // reset alimentação (inclui calc por dias) + Spa
@@ -23911,6 +23954,7 @@
       const spa=f.spa||{};
       if(e.entrada){ const _e=document.getElementById('ciEntrada'); if(_e) _e.value=e.entrada; }
       if(e.saida){ const _s=document.getElementById('ciSaida'); if(_s) _s.value=e.saida; }
+      if(e.saidaPer) setSeg('ciSaidaPer',e.saidaPer);
       // Reabrir uma pernoite tem que mostrar que ela É pernoite — senão a recepção corrige a
       // ficha e o botão volta calado para "Hospedagem", mudando o que ninguém pediu para mudar.
       if(typeof ehPernoite==='function' && ehPernoite(e)){ setSeg('ciTipoEstadia','Pernoite (uma noite)'); ciTipoEstadia='pernoite'; try{ ciTipoEstadiaChange('pernoite'); }catch(x){} /* silencioso de propósito: guarda defensiva — falhar aqui não pode interromper quem chamou */ }
@@ -24088,6 +24132,7 @@
     return {
       entrada:document.getElementById('ciEntrada').value||'',
       saida:document.getElementById('ciSaida').value||'',
+      saidaPer:segVal('ciSaidaPer')||'',
       ficha:{
         obsGeral:((document.getElementById('ciObsGeral')||{}).value||'').trim(),
         medObs:((document.getElementById('ciMedObs')||{}).value||'').trim(),
@@ -25033,10 +25078,36 @@
     var solta=function(t,cinza){
       zPdfQuebra(String(t||''), LARG-12, 9.5).forEach(function(l){ garante(15); y-=12; texto(X0+6,y,l,9.5,cinza?ZPDF_CINZA:ZPDF_TINTA,false); });
     };
+    // Quadro (Adriana, 31/ago): "quanto mais detalhado, mais visualmente tiver, melhor".
+    // Cada linha da tabela é uma dose/um fato; a 1ª coluna sai em negrito azul.
+    var tabela=function(t){
+      var cab=t.cab||[], rows=t.rows||[];
+      var pesos=t.pesos||cab.map(function(){ return 1; });
+      var soma=pesos.reduce(function(a,b){ return a+b; },0)||1;
+      var w=pesos.map(function(p){ return (LARG-8)*p/soma; });
+      var xs=[], ax=X0+4; w.forEach(function(cw){ xs.push(ax); ax+=cw; });
+      garante(20);
+      y-=15;
+      caixa(X0+2,y-4,LARG-4,14.5,'0.97 0.93 0.80');
+      cab.forEach(function(c,i){ texto(xs[i]+3,y,c,8.6,ZPDF_AZUL,true); });
+      y-=3;
+      rows.forEach(function(r){
+        var cel=r.map(function(v,i){ return zPdfQuebra(String(v==null?'':v), w[i]-7, 9); });
+        var nl=Math.max.apply(null, cel.map(function(a){ return a.length; }).concat([1]));
+        garante(nl*11.5+7);
+        y-=13;
+        var ytop=y;
+        cel.forEach(function(lc,i){ lc.forEach(function(tx,li){ texto(xs[i]+3, ytop-li*11.5, tx, 9, i===0?ZPDF_AZUL:ZPDF_TINTA, i===0); }); });
+        y=ytop-(nl-1)*11.5-3.5;
+        ops.push('0.88 0.88 0.88 rg\n'+(X0+2).toFixed(1)+' '+(y-1).toFixed(1)+' '+(LARG-4).toFixed(1)+' 0.7 re f');
+      });
+      y-=2;
+    };
     (doc.secoes||[]).forEach(function(sec){
       secao(sec.titulo||'', !!sec.vermelha);
       (sec.linhas||[]).forEach(function(l){
         if(l && l.k!=null) kv(l.k,l.v,!!l.vermelho||!!sec.vermelha);
+        else if(l && l.tab) tabela(l.tab);
         else if(l && l.t!=null) solta(l.t,!!l.cinza);
       });
     });
@@ -25055,9 +25126,15 @@
     var n=paginas.length;
     // cabeçalho e rodapé entram AGORA, quando o total de páginas é conhecido
     var lw=logo?(34*logo.w/logo.h):0;
+    var foto=opts.foto||null;   // {bytes,w,h} — a cara do FILHOt na 1ª página (Adriana, 31/ago)
+    var fH=52, fW=foto?Math.min(78, fH*foto.w/foto.h):0;
     for(var pi=0;pi<n;pi++){
       var cab=[];
       if(logo) cab.push('q '+lw.toFixed(2)+' 0 0 34 '+X0+' 782 cm /Im1 Do Q');
+      if(foto && pi===0){
+        cab.push(ZPDF_OURO+' rg\n'+(X1-fW-2).toFixed(1)+' 754 '+(fW+4).toFixed(1)+' '+(fH+4)+' re f');
+        cab.push('q '+fW.toFixed(2)+' 0 0 '+fH+' '+(X1-fW).toFixed(2)+' 756 cm /Im2 Do Q');
+      }
       var tx=X0+(logo?(lw+12):0);
       cab.push(ZPDF_AZUL+' rg\nBT /F2 15 Tf 1 0 0 1 '+tx.toFixed(1)+' 800 Tm ('+ciPdfEsc(doc.titulo||'Zêluz · AuAulândia')+') Tj ET');
       if(doc.sub) cab.push(ZPDF_CINZA+' rg\nBT /F1 9.5 Tf 1 0 0 1 '+tx.toFixed(1)+' 786 Tm ('+ciPdfEsc(doc.sub)+') Tj ET');
@@ -25068,9 +25145,15 @@
       paginas[pi]=cab.concat(paginas[pi]).concat(pe);
     }
     // ---- montagem dos objetos (mesma técnica do montador antigo) ----
-    var hasSig=!!sig, hasLogo=!!logo;
+    // As imagens agora são uma LISTA (assinatura, logo, foto) — cada uma diz em que
+    // página aparece. Numeração de objeto vem da posição na lista.
+    var imgs=[];
+    if(sig)  imgs.push({nome:'Im0', im:sig,  em:function(i){ return i===n-1; }});
+    if(logo) imgs.push({nome:'Im1', im:logo, em:function(i){ return true; }});
+    if(foto) imgs.push({nome:'Im2', im:foto, em:function(i){ return i===0; }});
     var objPag=function(i){ return 3+i; }, objCont=function(i){ return 3+n+i; };
-    var objF1=3+2*n, objF2=4+2*n, objIm0=5+2*n, objIm1=hasSig?(6+2*n):(5+2*n);
+    var objF1=3+2*n, objF2=4+2*n;
+    var objDe={}; imgs.forEach(function(g,gi){ objDe[g.nome]=5+2*n+gi; });
     var kids=[]; for(var i0=0;i0<n;i0++) kids.push(objPag(i0)+' 0 R');
     var objs=[];
     objs.push('<< /Type /Catalog /Pages 2 0 R >>');
@@ -25078,8 +25161,7 @@
     for(var i1=0;i1<n;i1++){
       var xo='';
       var partes=[];
-      if(hasLogo) partes.push('/Im1 '+objIm1+' 0 R');
-      if(hasSig && i1===n-1) partes.push('/Im0 '+objIm0+' 0 R');
+      imgs.forEach(function(g){ if(g.em(i1)) partes.push('/'+g.nome+' '+objDe[g.nome]+' 0 R'); });
       if(partes.length) xo=' /XObject << '+partes.join(' ')+' >>';
       objs.push('<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 '+objF1+' 0 R /F2 '+objF2+' 0 R >>'+xo+' >> /Contents '+objCont(i1)+' 0 R >>');
     }
@@ -25090,8 +25172,7 @@
     objs.push('<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>');
     objs.push('<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold /Encoding /WinAnsiEncoding >>');
     var img=function(im){ return { pre:'<< /Type /XObject /Subtype /Image /Width '+im.w+' /Height '+im.h+' /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode /Length '+im.bytes.length+' >>\nstream\n', bin:im.bytes, post:'\nendstream' }; };
-    if(hasSig) objs.push(img(sig));
-    if(hasLogo) objs.push(img(logo));
+    imgs.forEach(function(g){ objs.push(img(g.im)); });
     var enc=function(x){ var u=new Uint8Array(x.length); for(var i=0;i<x.length;i++) u[i]=x.charCodeAt(i)&0xff; return u; };
     var chunks=[]; var len=0; var offsets=[];
     var push=function(x){ var u=(x instanceof Uint8Array)?x:enc(x); chunks.push(u); len+=u.length; };
@@ -25113,10 +25194,22 @@
     const a=d.ficha.alim||{}; const spa=d.ficha.spa||{};
     const S=[];
     // --- estadia ---
+    var _per={'Manhã':'busca pela manhã','Tarde':'busca à tarde','Noite':'busca à noite'}[d.saidaPer]||'';
     S.push({titulo:'ESTADIA', linhas:[
       {k:'Entrada', v:ciBRdata(d.entrada)+(a.dias?('  ('+a.dias+' dia(s))'):'')},
-      {k:'Saída', v:(d.saida?ciBRdata(d.saida):'a confirmar')}
+      {k:'Saída', v:(d.saida?ciBRdata(d.saida):'a confirmar')+(_per?('  ·  '+_per):'')}
     ]});
+    // --- emergência: contatos e identificação (Adriana, 31/ago) ---
+    (function(){
+      var ex=(typeof extraDoHosp==='function'&&ciHosp)?(extraDoHosp(ciHosp)||{}):{};
+      var LE=[];
+      LE.push({k:'Tutor', v:((ciHosp&&ciHosp.tutor)||'—')+(ex.tel?('  ·  '+ex.tel):'')});
+      if(ex.tutor2||ex.tel2) LE.push({k:'Tutor 2', v:(ex.tutor2||'—')+(ex.tel2?('  ·  '+ex.tel2):'')});
+      LE.push({k:'Veterinário(a)', v: ex.vetNome?((ex.vetNome)+(ex.vetTel?('  ·  '+ex.vetTel):'')):'não informado — completar na ficha'});
+      if(ex.vetClinica||ex.vetEnd) LE.push({k:'Clínica', v:(ex.vetClinica||'—')+(ex.vetEnd?('  ·  '+ex.vetEnd):'')});
+      LE.push({k:'Microchip', v: ex.microchip||'sem registro'});
+      S.push({titulo:'EMERGÊNCIA — CONTATOS E IDENTIFICAÇÃO', linhas:LE});
+    })();
     // --- alimentação, refeição a refeição, com horário ---
     if(a.tipo||a.marca||a.qtd||a.refs){
       var LA=[];
@@ -25148,12 +25241,22 @@
     }
     // --- medicação: a seção vermelha, com horários e a quantidade que veio ---
     if(meds.length){
-      var LM=[];
+      // Quadro dose a dose (Adriana, 31/ago): "o comprimido para o coração tem às 7 e às
+      // 18h" — cada horário vira a SUA linha; o mesmo remédio aparece em cada horário.
+      var rowsMed=[];
       meds.forEach(function(it){
         var per=medPeriodoTxt(it);
-        LM.push({k:it.nome||'—', v:medDoseTxt(it)+'  ·  às '+((it.horarios||[]).join(', ')||'—')+(per?('  ·  '+per):'')+ciMedVeioTxt(it)});
+        var veio=String(ciMedVeioTxt(it)||'').replace(/^\s*[—-]\s*veio:\s*/,'');
+        var obs=[per, veio?('veio: '+veio):''].filter(Boolean).join('  ·  ');
+        ((it.horarios&&it.horarios.length)?it.horarios.slice().sort():['—']).forEach(function(hr){
+          rowsMed.push([hr, it.nome||'—', medDoseTxt(it)||'—', obs||'—']);
+        });
       });
-      S.push({titulo:'MEDICAÇÃO E SUPLEMENTOS — HORÁRIOS', vermelha:true, linhas:LM});
+      rowsMed.sort(function(a,b){ return String(a[0]).localeCompare(String(b[0])); });
+      S.push({titulo:'MEDICAÇÃO E SUPLEMENTOS — DOSE A DOSE, POR HORÁRIO', vermelha:true, linhas:[
+        {tab:{cab:['Horário','Medicamento','Dose','Como veio · período'], pesos:[0.62,1.35,1.05,1.75], rows:rowsMed}},
+        {t:'Cada linha do quadro é UMA dose. O mesmo remédio aparece em todos os horários em que deve ser dado.', cinza:true}
+      ]});
     }
     // --- banho na saída ---
     S.push({titulo:'BANHO NA SAÍDA (SPA DERMOPROTETOR)', linhas:[
@@ -25170,7 +25273,7 @@
       titulo:'Zêluz · AuAulândia — Ficha de Check-in',
       sub:(ciHosp.nome||'')+(ciHosp.raca?(' · '+ciHosp.raca):'')+(ciHosp.tutor?(' · Tutor: '+ciHosp.tutor):'')+'  —  emitida em '+ciBRdata((typeof hojeISO==='function')?hojeISO():''),
       secoes:S
-    },{ assinatura: ciAssinaturaJpeg(), assinaNome: assina });
+    },{ assinatura: ciAssinaturaJpeg(), assinaNome: assina, foto: CI_FOTO_JPEG });
   }
   // (o montador antigo da ficha foi substituído pelo zPdfDocBlob acima — 31/ago/2026;
   //  o histórico do git guarda a versão anterior)

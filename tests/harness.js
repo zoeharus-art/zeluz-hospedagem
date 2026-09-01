@@ -603,7 +603,7 @@ async function main() {
     // Gabarito atualizado em 31/ago/2026 (2ª vez, intencional): a ficha passou para o
     // motor com a cara da marca (zPdfDocBlob) — faixas por seção, cabeçalho e rodapé.
     // No sandbox não há atob, então o logo fica de fora e o hash é determinístico.
-    const GABARITO_PDF_CHECKIN = '57ea45557dcf3e5aef93a3b22f881589f77fcbe9aff7b000ec8afd5fa290d013'; // 4113 bytes — travessão traduzido + folga do rótulo (31/ago)
+    const GABARITO_PDF_CHECKIN = '88063bdb552d59b06f4cdc8941ab0d7ca343fa869400174c9a4ee01858e38e4a'; // 5841 bytes — quadro de medicação por horário + seção EMERGÊNCIA + período da busca (PDF v3, 31/ago)
     const GABARITO_PDF_VET = '83338caf3f53ba3f20a6f7dd5de1bdc7fb3d7f0fcdbb9260cac499190cbc792d'; // 2086 bytes
     const GABARITO_PDF_TEXTO = '82c7cd6e0345969d1db34d3c9fdb04e8038668720292fea9a7373f0e0f51207e'; // 848 bytes
 
@@ -637,6 +637,7 @@ async function main() {
       porCiHosp({ nome: 'Toddy', raca: 'Spitz Alemão', tutor: 'Carolina' });
       ctx.ciColetarFicha = () => ({
         entrada: '2026-08-20', saida: '2026-08-27',
+        saidaPer: 'Tarde',
         pertences: [{ nome: 'Mochila', spec: 'azul' }, { nome: 'Vasilha' }],
         ficha: {
           alim: {
@@ -683,6 +684,15 @@ async function main() {
       !!bVet && sha256(bVet) === GABARITO_PDF_VET, digital(bVet));
     check('zPdfTextBlob sem opts continua byte a byte igual ao gabarito',
       !!bTexto && sha256(bTexto) === GABARITO_PDF_TEXTO, digital(bTexto));
+    // PDF v3 (31/ago): o quadro é dose a dose — Apoquel às 08:00 E às 20:00 vira DUAS
+    // linhas, cada uma com o nome do remédio. E a seção de emergência sempre sai.
+    check('quadro de medicação: um remédio com 2 horários aparece em 2 linhas',
+      !!bCheckin && bCheckin.toString('latin1').split('(Apoquel)').length - 1 === 2,
+      bCheckin ? String(bCheckin.toString('latin1').split('(Apoquel)').length - 1) + ' ocorrências' : erro);
+    check('a seção EMERGÊNCIA — CONTATOS E IDENTIFICAÇÃO sai no PDF do check-in',
+      !!bCheckin && bCheckin.toString('latin1').indexOf('CONTATOS E IDENTIFICA') > 0, digital(bCheckin));
+    check('o período da busca sai na linha da Saída quando preenchido',
+      !!bCheckin && bCheckin.toString('latin1').indexOf('busca ') > 0, digital(bCheckin));
     check('o PDF do check-in leva a assinatura como JPEG de verdade (não vira texto)',
       !!bCheckin && bCheckin.indexOf(Buffer.from([0xFF, 0xD8, 0xFF])) > 0
       && bCheckin.indexOf('/DCTDecode') > 0, digital(bCheckin));
