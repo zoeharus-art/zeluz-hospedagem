@@ -3640,6 +3640,11 @@ async function main() {
       /refNo:\(typeof ckNo==='function'\?ckNo\(\):''\), refK:dcKey\(p\.n,p\.tutor\), refPt:pt\.k/.test(html));
     check('a faxina so olha DIAS PASSADOS (comeca em ontem) e nunca o dia de hoje',
       /for\(var i=1;i<=CK_FAXINA_DIAS;i\+\+\) dias\.push\(orcMaisDias\(hoje,-i\)\)/.test(html));
+    check('as fotos EXTRAS tambem vao ao grupo, e o carimbo exige TODAS enviadas',
+      /foto extra '\+\(i\+1\)/.test(html) && /var todas=rs\.every/.test(html) &&
+      /extras:\(at\.extras\|\|\[\]\)\.filter\(Boolean\)/.test(html));
+    check('a faxina apaga as extras carimbadas junto com foto e foto2',
+      /if\(at\.extras&&at\.extras\.length\) up\[k\+'\/pontos\/'\+ptk\+'\/extras'\]=null;/.test(html));
     check('a faxina so apaga foto COM carimbo de enviada, e deixa o rastro fotoApagada',
       /at\.fotoTg && at\.fotoTg\.ok/.test(html) && /fotoApagada/.test(html));
     check('a faxina tem trava diaria no banco (um aparelho por dia)',

@@ -10577,7 +10577,7 @@
   // Agora existe um carimbo: esta constante é a versão que o aparelho está rodando, e o
   // Firebase guarda a versão publicada. Quando as duas diferem, aparece o aviso — mas
   // NUNCA recarrega sozinho: recarregar no meio de um check-in perderia o trabalho.
-  const APP_VERSAO='2026-09-01-03';
+  const APP_VERSAO='2026-09-01-04';
   function vigiarVersao(){
     if(!DB) return;
     try{
@@ -17455,9 +17455,21 @@
     // A primeira foto vai com a legenda completa. Machucado tem uma segunda (de longe):
     // ela vai logo atrás, para a vet ver o lugar no corpo — sem repetir o texto todo.
     return tgAvisar(Object.assign({}, base, {fotoBase64:at.foto||''})).then(function(r){
-      if(!at.foto2) return r;
-      return tgAvisar({ pet:p.n||'', ponto:(ponto.t||'')+' — foto de longe',
-                        local:at.local||'', fotoBase64:at.foto2 }).then(function(){ return r; });
+      // A de longe e as EXTRAS vão atrás (Adriana, 01/set: TODAS as fotos vão ao grupo).
+      // O "ok" que autoriza o carimbo — e depois a faxina — exige que TODAS tenham saído.
+      var envios=[];
+      if(at.foto2) envios.push(tgAvisar({ pet:p.n||'', ponto:(ponto.t||'')+' — foto de longe',
+                        local:at.local||'', fotoBase64:at.foto2 }));
+      (at.extras||[]).forEach(function(ex,i){
+        if(ex) envios.push(tgAvisar({ pet:p.n||'', ponto:(ponto.t||'')+' — foto extra '+(i+1),
+                        local:at.local||'', fotoBase64:ex }));
+      });
+      if(!envios.length) return r;
+      return Promise.all(envios).then(function(rs){
+        var todas=rs.every(function(x){ return x&&x.ok; });
+        if(r&&r.ok&&todas) return r;
+        return {ok:false, erro:(r&&!r.ok?(r.erro||''):'')||'uma das fotos não chegou ao grupo'};
+      });
     });
   }
   // ===== O AVISO DA VETERINÁRIA NUNCA SE PERDE — 19/ago/2026 =====================
@@ -17528,9 +17540,10 @@
               var pontos=(v[k]&&v[k].pontos)||{};
               Object.keys(pontos).forEach(function(ptk){
                 var at=pontos[ptk]||{};
-                if((at.foto||at.foto2) && at.fotoTg && at.fotoTg.ok){
+                if((at.foto||at.foto2||(at.extras&&at.extras.length)) && at.fotoTg && at.fotoTg.ok){
                   if(at.foto)  up[k+'/pontos/'+ptk+'/foto']=null;
                   if(at.foto2) up[k+'/pontos/'+ptk+'/foto2']=null;
+                  if(at.extras&&at.extras.length) up[k+'/pontos/'+ptk+'/extras']=null;
                   up[k+'/pontos/'+ptk+'/fotoApagada']={ts:Date.now(), motivo:'já enviada ao grupo da veterinária'};
                   apagadas++;
                 }
@@ -17558,6 +17571,7 @@
         pet:p.n||'', raca:p.raca||'', tutor:p.tutor||'',
         ponto:pt.t||'', alertas:(at.alertas||[]).join(', '),
         local:at.local||'', obs:at.obs||'', foto:at.foto||'', foto2:at.foto2||'',
+        extras:(at.extras||[]).filter(Boolean),
         quem:(typeof quemSou==='function'?quemSou():'-'), hora:hora||'',
         dia:(typeof dcDataKey==='function'?dcDataKey():''), motivo:motivo||'', ts:Date.now(), tentativas:0,
         refNo:(typeof ckNo==='function'?ckNo():''), refK:dcKey(p.n,p.tutor), refPt:pt.k||''
@@ -17582,6 +17596,7 @@
             .then(function(r){
               if(r&&r.ok){
                 if(a.foto2) tgAvisar({pet:a.pet, ponto:(a.ponto||'')+' — foto de longe', local:a.local, fotoBase64:a.foto2});
+                (a.extras||[]).forEach(function(ex,i){ if(ex) tgAvisar({pet:a.pet, ponto:(a.ponto||'')+' — foto extra '+(i+1), local:a.local, fotoBase64:ex}); });
                 if(a.refNo&&a.refK&&a.refPt) ckFotoMarcarEnviada(a.refNo, a.refK, a.refPt);
                 return DB.ref('auaulandia/avisos-vet-fila/'+id).remove().then(function(){
                   if(typeof audit==='function') audit('telegram-aviso','avisou o grupo (atrasado) sobre '+(a.ponto||'')+' de '+(a.pet||''),{pet:a.pet||''});
