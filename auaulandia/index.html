@@ -3962,6 +3962,7 @@
   function aoAbrirView(v){
     if(v==='hospedagem'){ if(typeof fecharPlantao==='function') fecharPlantao(); }
     if(v==='gestdia'){ GD_TENT=0; GD_MED_TENT=0; if(typeof gdCarregar==='function') gdCarregar(); }
+    if(v==='inicio'||v==='hospedagem'){ try{ if(typeof ckLimparFotosEnviadas==='function') setTimeout(ckLimparFotosEnviadas, 4000); }catch(e){} /* silencioso de propósito: faxina é conveniência — falhar não pode derrubar a tela */ }
     if(v==='cuidadovet'){ if(typeof abrirCuidadoVet==='function') abrirCuidadoVet(); }
     if(v==='checkin'){ if(typeof abrirCheckin==='function') abrirCheckin(); }
     if(v==='conferencia'){ if(typeof abrirConferencia==='function') abrirConferencia(); }
@@ -10576,7 +10577,7 @@
   // Agora existe um carimbo: esta constante é a versão que o aparelho está rodando, e o
   // Firebase guarda a versão publicada. Quando as duas diferem, aparece o aviso — mas
   // NUNCA recarrega sozinho: recarregar no meio de um check-in perderia o trabalho.
-  const APP_VERSAO='2026-09-01-02';
+  const APP_VERSAO='2026-09-01-03';
   function vigiarVersao(){
     if(!DB) return;
     try{
@@ -17463,13 +17464,23 @@
   // Manda as alterações do check-in para o grupo da vet e diz NA HORA se conseguiu. O que
   // não sair fica numa fila no Firebase e é tentado de novo sozinho — quem fotografou já
   // foi embora, então o app é que tem que insistir.
+  // O grupo confirmou? O ponto ganha o carimbo fotoTg — é ele que autoriza a faxina
+  // a apagar a foto do banco depois (Adriana, 01/set: "não precisa ficar guardada
+  // se tiver sido enviada").
+  function ckFotoMarcarEnviada(no, k, ptk){
+    if(!DB||!no||!k||!ptk) return;
+    DB.ref(no+'/'+k+'/pontos/'+ptk+'/fotoTg').set({ok:true, ts:Date.now()})
+      .catch(function(e){ _logFalhaGrav('carimbo de foto enviada '+k+'/'+ptk, e); });
+  }
   function ckAvisarVet(p, alterados, R, hora){
+    var _no=ckNo(), _k=dcKey(p.n,p.tutor);
     return Promise.all(alterados.map(function(pt){
       var at=R.pontos[pt.k]||{};
       return tgAvisarAlteracao(p, pt, at, hora).then(function(r){
         var ok=!!(r&&r.ok);
         if(typeof audit==='function') audit('telegram-aviso',(ok?'avisou o grupo sobre ':'NÃO avisou o grupo sobre ')+(pt.t||'')+' de '+(p.n||''),{pet:p.n||''});
-        if(!ok) vetFilaGuardar(p, pt, at, hora, (r&&r.erro)||'a ponte não respondeu');
+        if(ok) ckFotoMarcarEnviada(_no, _k, pt.k);
+        else vetFilaGuardar(p, pt, at, hora, (r&&r.erro)||'a ponte não respondeu');
         return {ponto:pt.t||'', ok:ok, erro:(r&&r.erro)||''};
       }).catch(function(e){
         vetFilaGuardar(p, pt, at, hora, String((e&&e.message)||e));
@@ -17493,6 +17504,53 @@
       return res;
     });
   }
+  // ===== FAXINA DAS FOTOS JÁ ENVIADAS (Adriana, 01/set) ==========================
+  // "Não precisa ficar guardada se tiver sido enviada." A foto que o grupo da vet já
+  // recebeu (carimbo fotoTg.ok) é apagada do banco NO DIA SEGUINTE em diante — nunca
+  // no próprio dia, porque o check-out compara o corpo com a foto da entrada. Roda
+  // uma vez por dia, no primeiro aparelho da Gestão/Supervisão que abrir o app.
+  var CK_FAXINA_DIAS=21;
+  function ckLimparFotosEnviadas(){
+    if(!DB) return Promise.resolve(0);
+    var role=document.body.dataset.role;
+    if(role!=='gestao'&&role!=='supervisor'&&role!=='diretoria') return Promise.resolve(0);
+    var hoje=dcDataKey();
+    var trava='daycare/limpeza-fotos/'+hoje;
+    return DB.ref(trava).once('value').then(function(sn){
+      if(sn.val()) return 0;                            // outro aparelho já fez hoje
+      var dias=[]; for(var i=1;i<=CK_FAXINA_DIAS;i++) dias.push(orcMaisDias(hoje,-i));
+      var apagadas=0;
+      var porNo=function(no){
+        return Promise.all(dias.map(function(d){
+          return DB.ref(no+'/'+d).once('value').then(function(s2){
+            var v=s2.val()||{}; var up={};
+            Object.keys(v).forEach(function(k){
+              var pontos=(v[k]&&v[k].pontos)||{};
+              Object.keys(pontos).forEach(function(ptk){
+                var at=pontos[ptk]||{};
+                if((at.foto||at.foto2) && at.fotoTg && at.fotoTg.ok){
+                  if(at.foto)  up[k+'/pontos/'+ptk+'/foto']=null;
+                  if(at.foto2) up[k+'/pontos/'+ptk+'/foto2']=null;
+                  up[k+'/pontos/'+ptk+'/fotoApagada']={ts:Date.now(), motivo:'já enviada ao grupo da veterinária'};
+                  apagadas++;
+                }
+              });
+            });
+            if(!Object.keys(up).length) return;
+            return DB.ref(no+'/'+d).update(up)
+              .catch(function(e){ _logFalhaGrav('faxina de fotos '+no+'/'+d, e); });
+          }).catch(function(){ /* dia sem nó ou sem permissão: nada a fazer */ });
+        }));
+      };
+      return porNo('daycare/checkin-corpo').then(function(){ return porNo('daycare/checkout-corpo'); }).then(function(){
+        return DB.ref(trava).set({ts:Date.now(), apagadas:apagadas,
+          quem:(typeof quemSou==='function'?quemSou():'-')}).then(function(){
+          if(apagadas && typeof audit==='function') audit('limpeza-fotos','apagou '+apagadas+' foto(s) do corpo já enviadas ao grupo da veterinária (últimos '+CK_FAXINA_DIAS+' dias)',{});
+          return apagadas;
+        });
+      });
+    }).catch(function(e){ _logLeituraFalhou('daycare/limpeza-fotos/ (ckLimparFotosEnviadas)', e); return 0; });
+  }
   function vetFilaGuardar(p, pt, at, hora, motivo){
     if(!DB) return;
     try{
@@ -17501,7 +17559,8 @@
         ponto:pt.t||'', alertas:(at.alertas||[]).join(', '),
         local:at.local||'', obs:at.obs||'', foto:at.foto||'', foto2:at.foto2||'',
         quem:(typeof quemSou==='function'?quemSou():'-'), hora:hora||'',
-        dia:(typeof dcDataKey==='function'?dcDataKey():''), motivo:motivo||'', ts:Date.now(), tentativas:0
+        dia:(typeof dcDataKey==='function'?dcDataKey():''), motivo:motivo||'', ts:Date.now(), tentativas:0,
+        refNo:(typeof ckNo==='function'?ckNo():''), refK:dcKey(p.n,p.tutor), refPt:pt.k||''
       }).catch(function(e){ _logFalhaGrav('fila de aviso vet', e); });
     }catch(e){ _logFalhaGrav('guardar o aviso da veterinária na fila', e); }
   }
@@ -17523,6 +17582,7 @@
             .then(function(r){
               if(r&&r.ok){
                 if(a.foto2) tgAvisar({pet:a.pet, ponto:(a.ponto||'')+' — foto de longe', local:a.local, fotoBase64:a.foto2});
+                if(a.refNo&&a.refK&&a.refPt) ckFotoMarcarEnviada(a.refNo, a.refK, a.refPt);
                 return DB.ref('auaulandia/avisos-vet-fila/'+id).remove().then(function(){
                   if(typeof audit==='function') audit('telegram-aviso','avisou o grupo (atrasado) sobre '+(a.ponto||'')+' de '+(a.pet||''),{pet:a.pet||''});
                   return 1;

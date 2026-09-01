@@ -3630,6 +3630,23 @@ async function main() {
   }
   console.log('');
 
+  console.log('Foto do corpo: enviada ao grupo da vet vira carimbo e sai do banco (01/set):');
+  {
+    check('o carimbo fotoTg existe e e gravado no envio direto E no reenvio da fila',
+      (html.match(/function ckFotoMarcarEnviada/g)||[]).length === 1 &&
+      /if\(ok\) ckFotoMarcarEnviada\(_no, _k, pt\.k\);/.test(html) &&
+      /if\(a\.refNo&&a\.refK&&a\.refPt\) ckFotoMarcarEnviada/.test(html));
+    check('a fila guarda o endereco do ponto (refNo/refK/refPt) para carimbar depois',
+      /refNo:\(typeof ckNo==='function'\?ckNo\(\):''\), refK:dcKey\(p\.n,p\.tutor\), refPt:pt\.k/.test(html));
+    check('a faxina so olha DIAS PASSADOS (comeca em ontem) e nunca o dia de hoje',
+      /for\(var i=1;i<=CK_FAXINA_DIAS;i\+\+\) dias\.push\(orcMaisDias\(hoje,-i\)\)/.test(html));
+    check('a faxina so apaga foto COM carimbo de enviada, e deixa o rastro fotoApagada',
+      /at\.fotoTg && at\.fotoTg\.ok/.test(html) && /fotoApagada/.test(html));
+    check('a faxina tem trava diaria no banco (um aparelho por dia)',
+      /daycare\/limpeza-fotos\//.test(html));
+  }
+  console.log('');
+
   console.log('Conferencia do dia - a subtela da Gestao (31/ago):');
   {
     check('a tela existe no menu (so-gestao) e como view',
