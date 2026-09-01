@@ -10577,7 +10577,7 @@
   // Agora existe um carimbo: esta constante é a versão que o aparelho está rodando, e o
   // Firebase guarda a versão publicada. Quando as duas diferem, aparece o aviso — mas
   // NUNCA recarrega sozinho: recarregar no meio de um check-in perderia o trabalho.
-  const APP_VERSAO='2026-09-01-04';
+  const APP_VERSAO='2026-09-01-05';
   function vigiarVersao(){
     if(!DB) return;
     try{
@@ -16995,17 +16995,45 @@
   var CK_FALTA_ARMADA='', CK_FALTA_TARDIA={};
   function ckFaltaramHTML(faltaram, lista){
     if(!faltaram.length) return '';
+    // Cada nome carrega o caminho de VOLTA (caso dos 13 aulunos, 01/set): a falta
+    // automática das 12h pega a monitora atrasada, e sem este botão o FILHOt que
+    // ESTÁ na casa some do check-in e do almoço até alguém mexer no banco.
     var nomes=faltaram.map(function(o){
       var k=dcKey(o.p.n,o.p.tutor), t=CK_FALTA_TARDIA[k];
-      return nomeDesamb(o, lista.concat(faltaram))
-        +(t?(' <span style="font-weight:600;color:var(--muted)">(marcado no fim do dia por '+escAttr(t.quem||'?')+(t.hora?(' às '+escAttr(t.hora)):'')+')</span>'):'');
-    }).join(', ');
+      var arm=(CK_VEIO_ARMADO===k);
+      return '<span style="display:inline-flex;align-items:center;gap:5px;margin:2px 6px 2px 0">'
+        +nomeDesamb(o, lista.concat(faltaram))
+        +(t?(' <span style="font-weight:600;color:var(--muted)">(marcado no fim do dia por '+escAttr(t.quem||'?')+(t.hora?(' às '+escAttr(t.hora)):'')+')</span>'):'')
+        +'<button type="button" class="btn" style="padding:2px 8px;font-size:11px;font-weight:800;'
+        +(arm?'background:var(--crm-ok);color:#fff;border:1.5px solid var(--crm-ok)'
+             :'background:var(--z-cream-warm);border:1.5px solid var(--line);color:var(--z-blue)')
+        +'" onclick="ckDesfazerFalta(event,\''+escAttr(k)+'\')">'+(arm?'Confirmar: veio':'Veio, sim')+'</button></span>';
+    }).join(' ');
     var tardias=faltaram.filter(function(o){ return !!CK_FALTA_TARDIA[dcKey(o.p.n,o.p.tutor)]; }).length;
     return '<div class="dc-faltas" style="margin-top:10px"><strong>NÃO VIERAM HOJE ('+faltaram.length+'):</strong> '+nomes
       +'<div style="font-weight:600;margin-top:4px">Estes saíram da conta: não há corpo para examinar. '
       +(tardias?('<strong>'+tardias+' só '+(tardias>1?'foram marcados':'foi marcado')+' agora, no fim do dia</strong> — a falta era para ter sido lançada no check-in da manhã.')
               :'A falta veio da chamada ou do check-in.')
+      +' Marcou errado — ou a falta automática pegou o registro atrasado? Toque em <strong>Veio, sim</strong> que ele volta para todas as telas.'
       +'</div></div>';
+  }
+  // Desfaz a falta em dois toques, igual ao "Não veio hoje" — só que na direção certa.
+  var CK_VEIO_ARMADO='';
+  function ckDesfazerFalta(ev, k){
+    if(ev&&ev.stopPropagation) ev.stopPropagation();
+    if(CK_VEIO_ARMADO!==k){ CK_VEIO_ARMADO=k; renderCheckin(); return; }
+    CK_VEIO_ARMADO='';
+    if(!DB){ alert('Sem conexão com o banco — as outras telas não veriam a volta. Tente de novo.'); return; }
+    var dia=dcDataKey();
+    dcChamada[k]='veio'; delete CK_FALTA_TARDIA[k]; renderCheckin();
+    DB.ref('daycare/chamada/'+dia+'/'+k).set('veio').then(function(){
+      return DB.ref('daycare/falta-tardia/'+dia+'/'+k).remove();
+    }).then(function(){
+      if(typeof audit==='function') audit('falta-desfeita','desfez a falta de '+k+' — ele veio, sim',{alvo:k});
+    }).catch(function(e){
+      dcChamada[k]='faltou'; renderCheckin();
+      alert('NÃO consegui gravar a volta: '+((e&&e.message)||e)+'\n\nTente de novo — sem isso ele continua fora do almoço e do check-in.');
+    });
   }
   // Marca a falta sem sair da tela, em dois toques (janelinha do navegador some atrás do
   // teclado no celular). Marcada no check-out, fica registrada como TARDIA: a manhã devia

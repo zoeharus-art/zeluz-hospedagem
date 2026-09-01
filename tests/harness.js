@@ -3713,6 +3713,9 @@ async function main() {
       /dcChamada\[dcKey\(o\.p\.n,o\.p\.tutor\)\]==='faltou'/.test(html));
     check('e le a chamada ao abrir (quem entra direto na atividade nao passou por ela)',
       /daycare\/chamada\/'\+dcDataKey\(\)\)\.once\('value'\)[\s\S]{0,420}CK_FALTA_TARDIA=/.test(html)); // janela alargada em 31/ago: o ouvinte econômico acrescentou o Object.assign no meio
+    check('a falta tem caminho de VOLTA em dois toques (caso dos 13 aulunos, 01/set)',
+      /function ckDesfazerFalta/.test(html) && /Veio, sim/.test(html) &&
+      /Confirmar: veio/.test(html) && /falta-desfeita/.test(html));
     check('quem faltou sai da conta de "faltam conferir"',
       /const lista=turma\.filter\(function\(o\)\{ return !ckFaltou\(o\); \}\);/.test(html));
     check('mas nao some: vai para o rodape', /NÃO VIERAM HOJE/.test(html));
