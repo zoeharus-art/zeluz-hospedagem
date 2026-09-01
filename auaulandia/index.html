@@ -1721,6 +1721,7 @@
           <a data-v="cuidadovet" class="so-vet" title="Alterações no corpo que a veterinária precisa ver."><span data-icon="stethoscope"></span><span>Cuidado Vet</span></a>
           <a data-v="hospedagem" title="O relatório de cada hóspede, turno a turno."><span data-icon="moon"></span><span>Plantão da noite</span></a>
           <a data-v="hospedes" class="so-hosp" title="Quem está na casa, medicação e alimentação."><span data-icon="bed"></span><span>Hóspedes de hoje</span></a>
+          <a data-v="gestdia" class="so-gestao" title="A conferência da Gestão: medicações por horário, problemas e os três tempos do plantão."><span data-icon="clipboard"></span><span>Conferência do dia</span></a>
           <!-- SEMPRE 2 conferências: uma na ENTRADA e uma na SAÍDA (Adriana, 03/ago/2026).
                Check-out = os monitores juntam; o Check-out com o tutor mora na Central. -->
           <a data-v="checkout" title="O monitor monta a bolsa e devolve tudo (1º passo; a Central fecha com o tutor)."><span data-icon="bag"></span><span>Check-out</span></a>
@@ -2477,6 +2478,25 @@
       #ci-print .pf-row{font-size:13.5px;color:#222;margin-bottom:3px}
     }
   </style>
+  <section class="view" id="v-gestdia">
+    <!-- Adriana, 31/ago/2026: "a tela para a Gestão verificar está péssima, confusa...
+         acho que tinha que abrir uma subtela no sidebar... o que ela precisa ver =
+         medicamentos e os problemas, separados, por horário (são 3 partes o plantão)".
+         A Gestão usa o CELULAR: uma coluna, chips no topo, o que está bem vira uma linha. -->
+    <div id="gd-chips" style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px"></div>
+    <div class="card"><h2 style="font-size:18px;margin-bottom:6px">💊 Medicações — por horário</h2>
+      <div id="gd-med"><div class="hint">Carregando…</div></div></div>
+    <div class="card"><h2 style="font-size:18px;margin-bottom:6px">⚠ Problemas — por tempo do plantão</h2>
+      <div class="hint" style="margin-bottom:6px">Só quem teve alguma coisa. Quem passou bem não ocupa parede.</div>
+      <div id="gd-prob"><div class="hint">Carregando…</div></div></div>
+    <div class="card"><h2 style="font-size:18px;margin-bottom:6px">Os três tempos do plantão</h2>
+      <div class="hint" style="margin-bottom:6px">Toque num FILHOt para abrir o relatório completo.</div>
+      <div id="gd-tempos"><div class="hint">Carregando…</div></div></div>
+    <div id="gd-passagem"></div>
+    <div class="card" style="margin-top:10px"><div class="hint" style="margin:0">Os <strong>textos prontos para os tutores</strong> continuam na tela
+      <a href="#" onclick="irParaView('hospedagem');return false" style="color:var(--z-blue);font-weight:800">Plantão da noite</a>.</div></div>
+  </section>
+
   <section class="view" id="v-checkin">
     <!-- PASSO 1 — escolher o peludinho -->
     <div id="ci-escolha">
@@ -3881,6 +3901,7 @@
     renovacao:['Renovação de planos','Quem está no fim do plano.'],adaptacao:['Adaptação · 1º mês','Como está se adaptando'],
     reposicao:['Reposições','Créditos de dias por falta avisada.'],
     daycare:['Day Care','Chamada, almoço, atividades, EA.'],hospedagem:['Plantão da noite','O relatório de cada hóspede, turno a turno.'],
+    gestdia:['Conferência do dia','Medicações por horário, problemas e os três tempos do plantão.'],
     aulunos:['Aulunos','A turma do dia.'],dashdc:['Lançamentos do dia','A planilha do Day Care, item por item.'],vacinas:['Prevenção','Vacina, vermífugo, coleira, exame e peso: quem está atrasado.'],
     cuidadovet:['Cuidado Vet','Alterações no corpo que a veterinária precisa ver.'],
     checkin:['Check-in','O tutor chega: entrada, alimentação, medicação, assinatura (1º passo).'],
@@ -3940,6 +3961,7 @@
   // passam por aqui. Tela nova = uma linha, num lugar só.
   function aoAbrirView(v){
     if(v==='hospedagem'){ if(typeof fecharPlantao==='function') fecharPlantao(); }
+    if(v==='gestdia'){ GD_TENT=0; GD_MED_TENT=0; if(typeof gdCarregar==='function') gdCarregar(); }
     if(v==='cuidadovet'){ if(typeof abrirCuidadoVet==='function') abrirCuidadoVet(); }
     if(v==='checkin'){ if(typeof abrirCheckin==='function') abrirCheckin(); }
     if(v==='conferencia'){ if(typeof abrirConferencia==='function') abrirConferencia(); }
@@ -8307,12 +8329,163 @@
   function alertasDoItem(o){ let a=[]; ['dia','inicio','noite'].forEach(k=>{ if(o[k]&&o[k].byQ) a=a.concat(alertasDe(o[k].byQ)); }); return a.filter((v,i)=>a.indexOf(v)===i); }
   function ctxDeRelatorio(h,rel){ const cad=getCad(h)||{}; const byQ=(rel&&rel.byQ)||{}; const areas=(rel&&rel.byArea)||{};
     return { nome:h.nome, tutor:primeiroNome(h.tutor), fem:cad.sexo==='Fêmea', brinq:cad.brinquedos||'', energia:byQ['Gastou energia?']||'', noite:byQ['Como passou a noite?']||'', jant:byQ['Jantou?']||'', xixi:byQ['Fez xixi?']||'', coco:byQ['Fez cocô?']||'', med:byQ['Tem medicação?']||'', sup:byQ['Tem suplementação?']||'', medTxt:medsToTxt((rel&&rel.meds)||[])||areas.medicamento||'', supTxt:medsToTxt((rel&&rel.sups)||[])||areas.suplemento||'' }; }
+  // A leitura dos relatórios do dia é UMA só — o painel da tela de plantão e a
+  // Conferência do dia consomem o mesmo resultado (fonte única, sem versão paralela).
+  function plantRelatoriosDoDia(){
+    const reais=(hospedes||[]); // inclui a moradora (Repolho): a Gestora precisa ver alertas dela também
+    if(!DB||!reais.length) return Promise.resolve([]);
+    return Promise.all(reais.map(h=>{ const base='auaulandia/relatorios/'+fichaKeyDe(h,selectedDate); return Promise.all([ DB.ref(base+'/dia').once('value').then(s=>s.val()).catch(()=>null), DB.ref(base+'/inicio').once('value').then(s=>s.val()).catch(()=>null), DB.ref(base+'/noite').once('value').then(s=>s.val()).catch(()=>null), DB.ref(base).once('value').then(s=>s.val()).catch(()=>null) ]).then(function(r){ const ant=migrarAntigo(r[3]); return {h:h, dia:r[0]||(ant?ant.dia:null), inicio:r[1]||(ant?ant.inicio:null), noite:r[2]||r[1]||(ant?ant.inicio:null)}; }); }));
+  }
   function carregarPainelGestora(){
     const el=document.getElementById('painelGestora'); if(!el) return;
     const role=document.body.dataset.role; if(role!=='gestao'&&role!=='supervisor'&&role!=='diretoria'){ el.innerHTML=''; return; }
-    const reais=(hospedes||[]); // inclui a moradora (Repolho): a Gestora precisa ver alertas dela também
-    if(!DB||!reais.length){ el.innerHTML=''; return; }
-    Promise.all(reais.map(h=>{ const base='auaulandia/relatorios/'+fichaKeyDe(h,selectedDate); return Promise.all([ DB.ref(base+'/dia').once('value').then(s=>s.val()).catch(()=>null), DB.ref(base+'/inicio').once('value').then(s=>s.val()).catch(()=>null), DB.ref(base+'/noite').once('value').then(s=>s.val()).catch(()=>null), DB.ref(base).once('value').then(s=>s.val()).catch(()=>null) ]).then(function(r){ const ant=migrarAntigo(r[3]); return {h:h, dia:r[0]||(ant?ant.dia:null), inicio:r[1]||(ant?ant.inicio:null), noite:r[2]||r[1]||(ant?ant.inicio:null)}; }); })).then(renderPainelGestora).catch(function(e){ _logLeituraFalhou('carregarPainelGestora', e); });
+    if(!DB||!(hospedes||[]).length){ el.innerHTML=''; return; }
+    plantRelatoriosDoDia().then(renderPainelGestora).catch(function(e){ _logLeituraFalhou('carregarPainelGestora', e); });
+  }
+
+  // ===== CONFERÊNCIA DO DIA — a subtela da Gestão (Adriana, 31/ago/2026) ============
+  var GD_TENT=0, GD_MED_TENT=0;
+  // A agenda de medicação pode ainda não ter descido quando a Gestão abre direto esta
+  // tela — e "sem doses hoje" seria mentira (lição de 11/ago: nenhuma tela afirma
+  // ausência antes de saber que os dados chegaram). Carrega a agenda e espera por ela.
+  function gdMedCarregar(){
+    if(typeof dosesMedDoDia!=='function') return;
+    if(!(MED_AGENDA_TODOS||[]).length && (hospedes||[]).length && GD_MED_TENT<8){
+      GD_MED_TENT++;
+      if(GD_MED_TENT===1){ try{ if(typeof carregarAgendaMedTodos==='function') carregarAgendaMedTodos(); }catch(e){} /* silencioso de propósito: guarda defensiva — falhar aqui não pode interromper quem chamou */ }
+      var el=document.getElementById('gd-med'); if(el) el.innerHTML='<div class="hint">Carregando a agenda de medicação…</div>';
+      setTimeout(gdMedCarregar,1200); return;
+    }
+    GD_MED_TENT=0;
+    dosesMedDoDia().then(gdRenderMed).catch(function(){ gdRenderMed([]); });
+  }
+  function gdCarregar(){
+    if(!document.getElementById('gd-med')) return;
+    gdMedCarregar();
+    // A lista do dia pode ainda estar descendo: a tela NUNCA afirma ausência antes de
+    // saber que os dados chegaram (lição de 11/ago — a tela que mentia).
+    if(!(hospedes||[]).length && !(typeof HOSP_PLANILHA!=='undefined' && HOSP_PLANILHA)){
+      if(GD_TENT<10){ GD_TENT++;
+        try{ if(typeof carregarHospedes==='function' && GD_TENT===1) carregarHospedes(); }catch(e){} /* silencioso de propósito: guarda defensiva — falhar aqui não pode interromper quem chamou */
+        ['gd-prob','gd-tempos'].forEach(function(id){ var el=document.getElementById(id); if(el) el.innerHTML='<div class="hint">Carregando a lista do dia…</div>'; });
+        setTimeout(gdCarregar,1500); return;
+      }
+    }
+    GD_TENT=0;
+    plantRelatoriosDoDia().then(gdRenderPlantao).catch(function(e){ _logLeituraFalhou('gdCarregar', e); });
+  }
+  function gdIr(id){ var el=document.getElementById(id); if(el&&el.scrollIntoView) el.scrollIntoView({behavior:'smooth',block:'start'}); return false; }
+  function gdChips(medTxt, probTxt, relTxt){
+    var el=document.getElementById('gd-chips'); if(!el) return;
+    var chip=function(txt, cor, alvo){ return '<a href="#" onclick="return gdIr(\''+alvo+'\')" '
+      +'style="text-decoration:none;background:var(--card,#fff);border:1.5px solid '+cor+';border-radius:999px;padding:7px 13px;font-size:13px;font-weight:800;color:'+cor+'">'+txt+'</a>'; };
+    el.innerHTML=chip(medTxt,'var(--z-blue)','gd-med')+chip(probTxt, probTxt.indexOf('0 ')===0?'var(--crm-ok)':'var(--crm-critico)','gd-prob')+chip(relTxt,'var(--z-gold-deep)','gd-tempos');
+  }
+  var GD_CHIP={med:'💊 …', prob:'… problemas', rel:'…'};
+  function gdChipsSolta(){ gdChips(GD_CHIP.med, GD_CHIP.prob, GD_CHIP.rel); }
+  function gdRenderMed(doses){
+    var el=document.getElementById('gd-med'); if(!el) return;
+    doses=doses||[];
+    if(!doses.length){
+      el.innerHTML='<div class="hint">Nenhuma medicação agendada para hoje.</div>';
+      GD_CHIP.med='💊 sem doses hoje'; gdChipsSolta(); return;
+    }
+    var atr=doses.filter(function(d){ return d.status==='atrasada'; }).length;
+    var ok=doses.filter(function(d){ return d.status==='cumprida'; }).length;
+    GD_CHIP.med='💊 '+ok+'/'+doses.length+' dadas'+(atr?(' · '+atr+' ⚠'):''); gdChipsSolta();
+    var porHora={};
+    doses.forEach(function(d){ (porHora[d.horario||'—']=porHora[d.horario||'—']||[]).push(d); });
+    var p2=function(x){ return String(x).padStart(2,'0'); };
+    var h='';
+    Object.keys(porHora).sort().forEach(function(hr){
+      h+='<div style="display:flex;align-items:baseline;gap:8px;margin-top:10px">'
+        +'<span style="font-weight:900;font-size:16px;color:var(--z-blue)">'+escAttr(hr)+'</span>'
+        +'<span style="flex:1;border-top:1px solid var(--line)"></span></div>';
+      porHora[hr].forEach(function(d){
+        var cor = d.status==='atrasada'?'var(--crm-critico)':(d.status==='cumprida'?'var(--crm-ok)':'var(--z-gold)');
+        var lado = d.status==='cumprida'
+          ? '<span style="font-size:12px;color:var(--crm-ok);font-weight:700">✓ '+(d.ts?(function(){var x=new Date(d.ts);return p2(x.getHours())+':'+p2(x.getMinutes());})():'')+(d.quem?(' · '+escAttr(d.quem)):'')+'</span>'
+          : (d.status==='atrasada'
+            ? '<span class="gest-badge">SEM REGISTRO — '+fmtAtrasoMin(d.atrasoMin)+'</span>'
+            : '<span style="font-size:12px;color:var(--z-gold-deep);font-weight:700">a dar</span>');
+        h+='<div style="display:flex;gap:8px;align-items:center;padding:5px 0 5px 6px;border-bottom:1px solid var(--line)">'
+          +'<span style="flex:0 0 8px;height:8px;border-radius:50%;background:'+cor+'"></span>'
+          +'<span style="font-weight:800;color:var(--z-blue)">'+escAttr(d.hospNome||'')+'</span>'
+          +'<span style="flex:1;color:var(--muted);font-size:12.5px">'+escAttr(d.nome||'')+(fmtQtd(d.q,d.u)?(' · '+escAttr(fmtQtd(d.q,d.u))):'')+'</span>'
+          +lado+'</div>';
+      });
+    });
+    el.innerHTML=h;
+  }
+  var GD_TEMPOS=[{k:'noite',r:'🌙 Como dormiu'},{k:'dia',r:'☀ Como passou o dia'},{k:'inicio',r:'🍽 Jantar'}];
+  function gdRenderPlantao(arr){
+    arr=arr||[];
+    var elP=document.getElementById('gd-prob'), elT=document.getElementById('gd-tempos'), elPass=document.getElementById('gd-passagem');
+    if(!elP||!elT) return;
+    if(!arr.length){
+      var vazio='<div class="hint">'+((typeof HOSP_PLANILHA!=='undefined'&&HOSP_PLANILHA)?'Sem hóspedes hoje.':'A lista do dia ainda não desceu — abra de novo daqui a pouco.')+'</div>';
+      elP.innerHTML=vazio; elT.innerHTML=vazio; if(elPass) elPass.innerHTML='';
+      GD_CHIP.prob='—'; GD_CHIP.rel='—'; gdChipsSolta(); return;
+    }
+    // --- problemas, separados por tempo do plantão ---
+    var nProb=0, hp='';
+    GD_TEMPOS.forEach(function(t){
+      var linhas=[];
+      arr.forEach(function(o){
+        var rel=o[t.k];
+        var als=(rel&&rel.byQ)?alertasDe(rel.byQ):[];
+        if(t.k==='noite' && o.dia&&o.dia.byQ&&o.dia.byQ['Tem medicação?']==='Sim' && o.noite&&o.noite.byQ && !temMedEm(o.noite)) als=als.concat('medicação não confirmada à noite');
+        als=als.filter(function(v,i){ return als.indexOf(v)===i; });
+        if(als.length) linhas.push('<div style="margin-top:5px;font-size:13.5px"><strong style="color:var(--crm-critico)">'+escAttr(o.h.nome||'')+'</strong> — '+escAttr(als.join(', '))+'</div>');
+      });
+      if(linhas.length){
+        nProb+=linhas.length;
+        hp+='<div style="margin-top:9px;font-weight:800;font-size:13px;color:var(--z-blue)">'+t.r+'</div>'+linhas.join('');
+      }
+    });
+    elP.innerHTML = nProb? hp : '<div class="dc-pend-note" style="background:rgba(39,174,96,.1);border-color:rgba(39,174,96,.35);color:var(--crm-ok)">Nenhum problema registrado até agora.</div>';
+    GD_CHIP.prob=nProb+' problema'+(nProb===1?'':'s');
+    // --- os três tempos, FILHOt a FILHOt ---
+    var totRel=0, totEsper=0, ht='';
+    GD_TEMPOS.forEach(function(t){
+      var feitos=arr.filter(function(o){ return o[t.k]&&o[t.k].byQ; }).length;
+      totRel+=feitos; totEsper+=arr.length;
+      ht+='<div style="display:flex;align-items:baseline;gap:8px;margin-top:12px">'
+        +'<span style="font-weight:900;font-size:15px;color:var(--z-blue)">'+t.r+'</span>'
+        +'<span style="font-size:12px;color:var(--muted);font-weight:700">'+feitos+' de '+arr.length+'</span>'
+        +'<span style="flex:1;border-top:1px solid var(--line)"></span></div>';
+      arr.slice().sort(function(a,b){ return jsNorm(a.h.nome||'').localeCompare(jsNorm(b.h.nome||'')); }).forEach(function(o){
+        var rel=o[t.k];
+        if(!(rel&&rel.byQ)){
+          ht+='<div style="padding:4px 0 4px 6px;font-size:13px;color:var(--muted)">'+escAttr(o.h.nome||'')+' — <em>sem relatório ainda</em></div>';
+          return;
+        }
+        var als=alertasDe(rel.byQ);
+        var selo = als.length
+          ? '<span class="gest-badge">'+escAttr(als.join(', '))+'</span>'
+          : '<span style="color:var(--crm-ok);font-weight:800;font-size:12px">✅ passou bem</span>';
+        var corpo=[];
+        try{ corpo=plantLinhas(t.k,rel)||[]; }catch(e){} /* silencioso de propósito: guarda defensiva — se o valor não vier, o anterior continua valendo */
+        var obs=''; try{ obs=plantObs(rel,t.k)||''; }catch(e){} /* silencioso de propósito: guarda defensiva — se o valor não vier, o anterior continua valendo */
+        var med=[]; try{ med=plantMedTxt(rel)||[]; }catch(e){} /* silencioso de propósito: guarda defensiva — se o valor não vier, o anterior continua valendo */
+        ht+='<details style="padding:2px 0 2px 6px;border-bottom:1px solid var(--line)">'
+          +'<summary style="display:flex;gap:8px;align-items:center;list-style:none;cursor:pointer;padding:4px 0">'
+          +'<span style="font-weight:800;color:var(--z-blue)">'+escAttr(o.h.nome||'')+'</span>'+selo+'</summary>'
+          +'<div style="font-size:13px;color:var(--ink,#333);padding:4px 0 8px 16px">'
+          +corpo.map(function(l){ return '<div>'+l+'</div>'; }).join('')
+          +(obs?('<div style="margin-top:4px"><strong>Observação:</strong> '+escAttr(obs)+'</div>'):'')
+          +(med.length?('<div style="margin-top:4px">💊 '+med.map(escAttr).join('<br>💊 ')+'</div>'):'')
+          +'</div></details>';
+      });
+    });
+    elT.innerHTML=ht;
+    GD_CHIP.rel='📋 '+totRel+'/'+totEsper+' relatórios'; gdChipsSolta();
+    // --- passagem de plantão, a mesma do painel ---
+    if(elPass){ try{
+      var bp=blocoPassagemPlantao(arr)||'';
+      // caixa vazia engana o olho: sem conteúdo, sem card
+      elPass.innerHTML=bp.trim()?('<div class="card gest-card">'+bp+'</div>'):'';
+    }catch(e){ elPass.innerHTML=''; } }
   }
   // ---- Onda 5 — Risco "NÃO COMEU" precisa gritar no CARD do hóspede (hospGrid), não só no painel
   // da Gestora (que é so-gestao — o plantonista não vê). Lê o relatório de HOJE (dia + noite/início) e
@@ -10375,7 +10548,7 @@
   // Agora existe um carimbo: esta constante é a versão que o aparelho está rodando, e o
   // Firebase guarda a versão publicada. Quando as duas diferem, aparece o aviso — mas
   // NUNCA recarrega sozinho: recarregar no meio de um check-in perderia o trabalho.
-  const APP_VERSAO='2026-08-31-10';
+  const APP_VERSAO='2026-08-31-11';
   function vigiarVersao(){
     if(!DB) return;
     try{

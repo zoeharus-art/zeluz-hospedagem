@@ -626,7 +626,7 @@ async function main() {
     const geOrig = ctx.document.getElementById;
     const ciHospOrig = lerCiHosp();
     const orig = {};
-    ['ciColetarFicha', 'ciColetarMeds', 'ciAssinaturaJpeg', 'vetHosp', 'VET_MED_CACHE', 'tutorDe']
+    ['ciColetarFicha', 'ciColetarMeds', 'ciAssinaturaJpeg', 'vetHosp', 'VET_MED_CACHE', 'tutorDe', 'hojeISO']
       .forEach((k) => { orig[k] = ctx[k]; });
     let bCheckin = null, bVet = null, bTexto = null, bSemSig = null, bComSig = null, erro = '';
     try {
@@ -635,6 +635,8 @@ async function main() {
         return geOrig.call(this, id);
       };
       porCiHosp({ nome: 'Toddy', raca: 'Spitz Alemão', tutor: 'Carolina' });
+      // Data fixa: o PDF imprime "emitida em {hoje}" e o gabarito virava a cada meia-noite.
+      ctx.hojeISO = () => '2026-08-31';
       ctx.ciColetarFicha = () => ({
         entrada: '2026-08-20', saida: '2026-08-27',
         saidaPer: 'Tarde',
@@ -3616,6 +3618,42 @@ async function main() {
     }
     check('as datas de OPERACAO continuam travadas em 2015',
       /var DATA_MIN='2015-01-01', DATA_MAX='2035-12-31';/.test(html));
+  }
+  console.log('');
+
+  console.log('Conferencia do dia - a subtela da Gestao (31/ago):');
+  {
+    check('a tela existe no menu (so-gestao) e como view',
+      /data-v="gestdia" class="so-gestao"/.test(html) && /<section class="view" id="v-gestdia">/.test(html));
+    check('medicacoes agrupadas POR HORARIO e problemas POR TEMPO do plantao',
+      /function gdRenderMed/.test(html) && /porHora\[d\.horario/.test(html) &&
+      /Problemas — por tempo do plant/.test(html) && (html.match(/GD_TEMPOS/g)||[]).length >= 2);
+    check('os tres tempos sao noite (como dormiu), dia e jantar',
+      /\{k:'noite',r:'🌙 Como dormiu'\}/.test(html) && /\{k:'dia',r:'☀ Como passou o dia'\}/.test(html) && /\{k:'inicio',r:'🍽 Jantar'\}/.test(html));
+    check('a leitura dos relatorios e UMA so (fonte unica com o painel do plantao)',
+      (html.match(/function plantRelatoriosDoDia/g)||[]).length === 1 &&
+      (html.match(/plantRelatoriosDoDia\(\)\.then/g)||[]).length === 2);
+    check('a tela nao afirma ausencia antes de os dados chegarem (agenda e lista do dia)',
+      /Carregando a agenda de medicação/.test(html) && /Carregando a lista do dia/.test(html));
+    if (typeof ctx.gdRenderMed === 'function') {
+      // comportamento: o mesmo remedio em 2 horarios aparece sob 2 cabecalhos de hora
+      const geOrig2 = ctx.document.getElementById;
+      const fakeEls = {};
+      ctx.document.getElementById = (id) => {
+        if (['gd-med','gd-chips'].indexOf(id) >= 0){ fakeEls[id]=fakeEls[id]||{innerHTML:''}; return fakeEls[id]; }
+        return geOrig2.call(ctx.document, id);
+      };
+      try {
+        ctx.gdRenderMed([
+          { horario: '07:00', hospNome: 'Toshi', nome: 'Pimobendan', q: '1', u: 'comprimido', status: 'cumprida', ts: 1756700000000, quem: 'Leticia' },
+          { horario: '18:00', hospNome: 'Toshi', nome: 'Pimobendan', q: '1', u: 'comprimido', status: 'atrasada', atrasoMin: 45 },
+        ]);
+        const out = fakeEls['gd-med'].innerHTML;
+        check('gdRenderMed: cada horario vira um cabecalho proprio', out.indexOf('07:00') > -1 && out.indexOf('18:00') > -1);
+        check('gdRenderMed: dose atrasada grita SEM REGISTRO com o atraso', out.indexOf('SEM REGISTRO') > -1 && out.indexOf('45min') > -1);
+        check('gdRenderMed: dose dada mostra quem deu', out.indexOf('Leticia') > -1);
+      } finally { ctx.document.getElementById = geOrig2; }
+    }
   }
   console.log('');
 
