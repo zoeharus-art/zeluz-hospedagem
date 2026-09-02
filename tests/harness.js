@@ -2667,7 +2667,7 @@ async function main() {
       hospedes: 'Hóspedes de hoje', hospedagem: 'Plantão da noite',
       abertura: 'Abertura do dia', eahist: 'Enriquecimento Ambiental',
       acerto: 'Financeiro do plantão', renovacao: 'Renovação de planos',
-      dashdc: 'Lançamentos do dia', alergia: 'Alergias a confirmar',
+      dashdc: 'Lançamentos do dia', alergia: 'Conversa com o Tutor', // renomeada em 01/set (pesquisa com o tutor)
       ficha: 'Cadastro de Peludinhos', config: 'Configurações',
     };
     Object.keys(ESPERADO).forEach((k) => {
@@ -3633,12 +3633,31 @@ async function main() {
   }
   console.log('');
 
+  console.log('Ficha sem repeticao + aba Exames do corpo (01/set):');
+  {
+    check('Microchip aparece UMA vez na ficha (em Identificacao)',
+      (html.match(/onchange="setPelExtra\(pelAtual,\{microchip:this\.value\}\)"/g)||[]).length === 1);
+    check('o bloco ALIMENTACAO mora em Rotina & Alimentacao (nao em Atencao & Cuidados)',
+      html.indexOf('almoço em campo almoço') > 0 &&
+      /Xixi e cocô[\s\S]{0,900}ALIMENTAÇÃO — o que e quanto ele come/.test(html));
+    check('o veterinario de emergencia mora na Prevencao, junto do Check-up',
+      html.indexOf('O veterinário de emergência mudou para a aba Prevenção') > 0 &&
+      /check-up vale por 12 meses[\s\S]{0,600}EMERG/.test(html));
+    check('a aba Exames do corpo existe, explica o "tudo normal" e lista os pontos',
+      /ps-exames/.test(html) && /Exames do corpo/.test(html) &&
+      /todos<\/strong> os pontos abaixo foram olhados/.test(html) &&
+      /CK_PONTOS\.map\(function\(pt\)\{ return pt\.t; \}\)/.test(html));
+  }
+  console.log('');
+
   console.log('A resposta do tutor se trata sozinha - tela limpa (01/set):');
   {
     check('algTratarAuto existe: preenche so campo VAZIO e nunca sobrescreve a ficha',
       (html.match(/function algTratarAuto/g)||[]).length === 1 &&
-      /if\(!atual\)\{ patch\[f\.campo\]/.test(html) &&
+      html.indexOf('if(algNegativoPuro(v)) return;') > 0 &&
       /divergencias\.push/.test(html));
+    check('negativa pura ("Nao", "Nada novo") NAO vira texto de campo — fica so na entrevista',
+      (html.match(/function algNegativoPuro/g)||[]).length === 1);
     check('divergencia vira linha de ATENCAO para a Gestao (a ficha NAO foi mudada)',
       /DIVERGE DA FICHA/.test(html) && html.indexOf('a ficha N\\u00C3O foi mudada') > 0);
     check('o mutirao roda ao carregar as respostas, um por vez',

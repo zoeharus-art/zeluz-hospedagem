@@ -1774,7 +1774,7 @@
           <!-- A tela existia como "em breve" e nunca teve entrada no menu. Agora é o
                relatório de quem deve vacina, vermífugo, coleira, exame ou peso. -->
           <a data-v="vacinas" class="so-gestao" title="Vacina, vermífugo, coleira, exame e peso: quem está atrasado."><span data-icon="shield"></span><span>Prevenção</span></a>
-          <a data-v="alergia" class="so-gestao" title="O que a ficha diz e ninguém confirmou com o tutor."><span data-icon="drop"></span><span>Alergias a confirmar</span></a>
+          <a data-v="alergia" class="so-gestao" title="A pesquisa com o tutor: enviar, colar a resposta, e ela vira ficha sozinha."><span data-icon="drop"></span><span>Conversa com o Tutor</span></a>
           <a data-v="peso" class="so-pesa" title="Pesar qualquer FILHOt: recepção, veterinária e gestão."><span data-icon="scale"></span><span>Peso</span></a>
           </div>
         </div>
@@ -3907,7 +3907,7 @@
     checkin:['Check-in','O tutor chega: entrada, alimentação, medicação, assinatura (1º passo).'],
     conferencia:['Conferência do check-in','O monitor confere corpo e pertences de quem chegou (2º passo; o 1º é da Central Zêluz).'],
     orcamento:['Orçamento de hospedagem','Monte e envie o orçamento ao tutor.'],
-    alergia:['Alergias a confirmar','O que a ficha diz e ninguém confirmou com o tutor.'],
+    alergia:['Conversa com o Tutor','A pesquisa: enviar, colar a resposta — e ela vira ficha sozinha.'],
     peso:['Peso','Pesar qualquer FILHOt: recepção, veterinária e gestão.'],
     eahist:['Enriquecimento Ambiental','O que foi feito e quem não participou.'],
     relatorios:['Relatórios','Resumo do dia, aniversariantes, exportações.'],
@@ -10662,7 +10662,7 @@
   // Agora existe um carimbo: esta constante é a versão que o aparelho está rodando, e o
   // Firebase guarda a versão publicada. Quando as duas diferem, aparece o aviso — mas
   // NUNCA recarrega sozinho: recarregar no meio de um check-in perderia o trabalho.
-  const APP_VERSAO='2026-09-01-10';
+  const APP_VERSAO='2026-09-01-12';
   function vigiarVersao(){
     if(!DB) return;
     try{
@@ -15683,6 +15683,7 @@
         <div class="subtab2" onclick="pelSubtab(this,'ps-comp')">Comportamento</div>
         <div class="subtab2" onclick="pelSubtab(this,'ps-saude')">Prevenção</div>
         <div class="subtab2" onclick="pelSubtab(this,'ps-rotina')">Rotina &amp; Almoço</div>
+        <div class="subtab2" onclick="pelSubtab(this,'ps-exames')">Exames do corpo</div>
         <div class="subtab2" onclick="pelSubtab(this,'ps-atencao')">Atenção &amp; Cuidados</div>
       </div>
 
@@ -15720,6 +15721,18 @@
           <div class="field"><label>Já fez check-up?</label><div class="seg gold" data-single>${segBtnsPel('checkup_fez',ex.checkup_fez||'',['Sim','Nunca fez'])}</div></div>
           <div class="field"><label>Último check-up (data)</label><input type="date" class="cad-in" value="${escAttr(ex.checkup_data||'')}" onchange="setPelExtra(pelAtual,{checkup_data:this.value})" min="2015-01-01" max="2035-12-31" onkeydown="return dataSoNoCalendario(event)">
             <div class="hint" style="margin-top:3px">O check-up vale por 12 meses. Quem nunca fez, ou está vencido, aparece na tela Prevenção com o convite pronto.</div></div>
+          <!-- EMERGÊNCIA (Adriana, 31/ago/2026): o PDF do check-in precisa dos dados de
+               emergência — veterinário(a) de confiança do tutor, clínica e endereço.
+               Sem programador: os campos vivem na ficha e o PDF lê daqui. -->
+          <div class="field" style="grid-column:1/-1;background:rgba(200,60,45,.06);border-left:4px solid var(--crm-critico);border-radius:10px;padding:10px 12px">
+            <label style="font-size:13px;font-weight:800;color:var(--crm-critico)">EMERGÊNCIA — veterinário(a) de confiança do tutor</label>
+            <div class="cad-grid" style="margin-top:6px">
+              <div class="field"><label>Veterinário(a) — nome</label><input class="cad-in" value="${escAttr(ex.vetNome||'')}" placeholder="Ex: Dra. Tanara" onchange="setPelExtra(pelAtual,{vetNome:this.value})"></div>
+              <div class="field"><label>Veterinário(a) — telefone</label><input class="cad-in" value="${escAttr(ex.vetTel||'')}" placeholder="(31) 9____-____" onchange="setPelExtra(pelAtual,{vetTel:this.value})"></div>
+              <div class="field"><label>Clínica — nome</label><input class="cad-in" value="${escAttr(ex.vetClinica||'')}" placeholder="Nome da clínica" onchange="setPelExtra(pelAtual,{vetClinica:this.value})"></div>
+              <div class="field"><label>Clínica — endereço</label><input class="cad-in" value="${escAttr(ex.vetEnd||'')}" placeholder="Rua, número, bairro" onchange="setPelExtra(pelAtual,{vetEnd:this.value})"></div>
+            </div>
+          </div>
         </div>
 
         <h3 class="cad-sub">Vacinas</h3>
@@ -15750,6 +15763,23 @@
           <div class="field"><label>Alimentação em casa (ração / dose)</label><input class="cad-in" value="${escAttr(ex.alimentacao||'')}" placeholder="Ex: Ração X · 80g 2x/dia" onchange="setPelExtra(pelAtual,{alimentacao:this.value})"></div>
           <div class="field"><label>Passeia?</label><div class="seg gold" data-single>${segBtnsPel('passeia',ex.passeia||'',['Sim','Não'])}</div></div>
           <div class="field"><label>Xixi e cocô</label><input class="cad-in" value="${escAttr(ex.banheiro||'')}" placeholder="Ex: fora de casa" onchange="setPelExtra(pelAtual,{banheiro:this.value})"></div>
+          <!-- ALIMENTAÇÃO — Adriana, 22/ago/2026: "essa informação é obrigatória e visível,
+               ração + comida = quantidade e as vezes no dia, café, almoço, jantar; num card
+               ACIMA de medicação". Quem serve não pode ter de adivinhar nem perguntar. -->
+          <div class="field" style="grid-column:1/-1;background:rgba(222,180,40,.10);border-left:4px solid var(--z-gold);border-radius:10px;padding:10px 12px">
+            <label style="font-size:13px;font-weight:800;color:var(--z-blue)">ALIMENTAÇÃO — o que e quanto ele come</label>
+            <div class="cad-grid" style="margin-top:6px">
+              <div class="field"><label>Ração (marca)</label><input class="cad-in" value="${escAttr(ex.alim_racao_marca||ex.alimentacao||'')}" placeholder="Ex: Hills Gastrointestinal" onchange="setPelExtra(pelAtual,{alim_racao_marca:this.value});refreshPills()"></div>
+              <div class="field"><label>Quanto de ração por refeição</label><input class="cad-in" value="${escAttr(ex.alim_racao_qtd||'')}" placeholder="Ex: 60 gramas" onchange="setPelExtra(pelAtual,{alim_racao_qtd:this.value})"></div>
+              <div class="field"><label>Comida natural (o quê)</label><input class="cad-in" value="${escAttr(ex.alim_nat||'')}" placeholder="Ex: patê gastrô — ou vazio" onchange="setPelExtra(pelAtual,{alim_nat:this.value})"></div>
+              <div class="field"><label>Quanto de natural por refeição</label><input class="cad-in" value="${escAttr(ex.alim_nat_qtd||'')}" placeholder="Ex: 1 colher" onchange="setPelExtra(pelAtual,{alim_nat_qtd:this.value})"></div>
+              <div class="field" style="grid-column:1/-1"><label>Horários das refeições</label><input class="cad-in" value="${escAttr(ex.alim_horarios||'')}" placeholder="Ex: 07:00, 12:00 e 18:00" onchange="setPelExtra(pelAtual,{alim_horarios:this.value})"></div>
+              <div class="field" style="grid-column:1/-1"><label>Em quais refeições</label><div class="seg gold">${['Café da manhã','Almoço','Jantar'].map(function(r){var on=(String(ex.alim_refs||'').indexOf(r)>=0);return '<button type="button" class="'+(on?'on':'')+'" onclick="pelAlimRef(\''+r+'\')">'+r+'</button>';}).join('')}</div>
+                <div class="hint" style="margin-top:3px">${escAttr(ex.alim_refs||'')||'<span style="color:var(--crm-critico);font-weight:800">Nenhuma refeição marcada.</span>'}</div></div>
+              <div class="field" style="grid-column:1/-1"><label>Mistura ração com natural?</label><div class="seg gold" data-single>${segBtnsPel('alim_mistura',ex.alim_mistura||'',['Sim','Nao'])}</div></div>
+              <div class="field" style="grid-column:1/-1"><label>Observação da comida</label><input class="cad-in" value="${escAttr(ex.alim_obs||'')}" placeholder="Ex: come devagar, comedouro lento" onchange="setPelExtra(pelAtual,{alim_obs:this.value})"></div>
+            </div>
+          </div>
         </div>
         <!-- O almoço da creche mora AQUI, junto da rotina — é onde a consultora procura.
              É o MESMO dado que aparece na grade do Day Care, não uma cópia. -->
@@ -15798,6 +15828,14 @@
       </div></div>
 
       <!-- Atenção · Saúde e Cuidados — agora é aba, não mais um bloco fixo no topo -->
+      <div class="ppanel2" id="ps-exames"><div class="card">
+        <h2 style="font-size:20px">Exames do corpo</h2>
+        <div class="hint">Em todo check-in e check-out do Day Care, o monitor examina o corpo inteiro, ponto a ponto, com foto obrigatória do que estiver alterado. <strong>"Tudo normal"</strong> quer dizer que <strong>todos</strong> os pontos abaixo foram olhados e nada chamou a atenção.</div>
+        <div class="hint" style="margin-top:6px;padding:8px 10px;background:var(--z-cream-warm);border-radius:8px"><strong>O que é analisado em cada exame:</strong> ${(typeof CK_PONTOS!=='undefined'?CK_PONTOS.map(function(pt){ return pt.t; }).join(' · '):'')} — e ainda xixi, cocô (com protocolo próprio para alteração) e vômito.</div>
+        <h3 class="cad-sub">Histórico de check-ins</h3>
+        <div id="pelHistCk"><div class="hint">Carregando…</div></div>
+      </div></div>
+
       <div class="ppanel2" id="ps-atencao"><div class="alert-card" style="margin-bottom:0">
         <h2 style="font-size:19px;margin-bottom:3px">Atenção · Saúde e Cuidados</h2>
         <div class="hint">Tudo que o monitor precisa saber antes de cuidar e dar o almoço.</div>
@@ -15805,37 +15843,10 @@
         <div class="cad-grid">
           <div class="field"><label>Alergia</label><input class="cad-in" value="${escAttr(ex.alergia||'')}" placeholder="Ex: frango — ou deixe vazio" onchange="setPelExtra(pelAtual,{alergia:this.value});refreshPills()"></div>
           <div class="field"><label>Restrição alimentar</label><input class="cad-in" value="${escAttr(ex.restricao||'')}" placeholder="Ex: sem grãos" onchange="setPelExtra(pelAtual,{restricao:this.value});refreshPills()"></div>
-          <!-- ALIMENTAÇÃO — Adriana, 22/ago/2026: "essa informação é obrigatória e visível,
-               ração + comida = quantidade e as vezes no dia, café, almoço, jantar; num card
-               ACIMA de medicação". Quem serve não pode ter de adivinhar nem perguntar. -->
-          <div class="field" style="grid-column:1/-1;background:rgba(222,180,40,.10);border-left:4px solid var(--z-gold);border-radius:10px;padding:10px 12px">
-            <label style="font-size:13px;font-weight:800;color:var(--z-blue)">ALIMENTAÇÃO — o que e quanto ele come</label>
-            <div class="cad-grid" style="margin-top:6px">
-              <div class="field"><label>Ração (marca)</label><input class="cad-in" value="${escAttr(ex.alim_racao_marca||ex.alimentacao||'')}" placeholder="Ex: Hills Gastrointestinal" onchange="setPelExtra(pelAtual,{alim_racao_marca:this.value});refreshPills()"></div>
-              <div class="field"><label>Quanto de ração por refeição</label><input class="cad-in" value="${escAttr(ex.alim_racao_qtd||'')}" placeholder="Ex: 60 gramas" onchange="setPelExtra(pelAtual,{alim_racao_qtd:this.value})"></div>
-              <div class="field"><label>Comida natural (o quê)</label><input class="cad-in" value="${escAttr(ex.alim_nat||'')}" placeholder="Ex: patê gastrô — ou vazio" onchange="setPelExtra(pelAtual,{alim_nat:this.value})"></div>
-              <div class="field"><label>Quanto de natural por refeição</label><input class="cad-in" value="${escAttr(ex.alim_nat_qtd||'')}" placeholder="Ex: 1 colher" onchange="setPelExtra(pelAtual,{alim_nat_qtd:this.value})"></div>
-              <div class="field" style="grid-column:1/-1"><label>Horários das refeições</label><input class="cad-in" value="${escAttr(ex.alim_horarios||'')}" placeholder="Ex: 07:00, 12:00 e 18:00" onchange="setPelExtra(pelAtual,{alim_horarios:this.value})"></div>
-              <div class="field" style="grid-column:1/-1"><label>Em quais refeições</label><div class="seg gold">${['Café da manhã','Almoço','Jantar'].map(function(r){var on=(String(ex.alim_refs||'').indexOf(r)>=0);return '<button type="button" class="'+(on?'on':'')+'" onclick="pelAlimRef(\''+r+'\')">'+r+'</button>';}).join('')}</div>
-                <div class="hint" style="margin-top:3px">${escAttr(ex.alim_refs||'')||'<span style="color:var(--crm-critico);font-weight:800">Nenhuma refeição marcada.</span>'}</div></div>
-              <div class="field" style="grid-column:1/-1"><label>Mistura ração com natural?</label><div class="seg gold" data-single>${segBtnsPel('alim_mistura',ex.alim_mistura||'',['Sim','Nao'])}</div></div>
-              <div class="field" style="grid-column:1/-1"><label>Observação da comida</label><input class="cad-in" value="${escAttr(ex.alim_obs||'')}" placeholder="Ex: come devagar, comedouro lento" onchange="setPelExtra(pelAtual,{alim_obs:this.value})"></div>
-            </div>
-          </div>
+          <!-- O bloco ALIMENTAÇÃO mudou para a aba Rotina & Alimentação (Adriana, 01/set: "almoço em campo almoço"). -->
           <div class="field"><label>Medicação</label><input class="cad-in" value="${escAttr(ex.medicacao||'')}" placeholder="Nome, dose, horário" onchange="setPelExtra(pelAtual,{medicacao:this.value});refreshPills()"></div>
           <div class="field"><label>Algum problema de saúde</label><input class="cad-in" value="${escAttr(ex.problema||'')}" placeholder="Ex: cardíaco — ou vazio" onchange="setPelExtra(pelAtual,{problema:this.value});refreshPills()"></div>
-          <!-- EMERGÊNCIA (Adriana, 31/ago/2026): o PDF do check-in precisa dos dados de
-               emergência — veterinário(a) de confiança do tutor, clínica e endereço.
-               Sem programador: os campos vivem na ficha e o PDF lê daqui. -->
-          <div class="field" style="grid-column:1/-1;background:rgba(200,60,45,.06);border-left:4px solid var(--crm-critico);border-radius:10px;padding:10px 12px">
-            <label style="font-size:13px;font-weight:800;color:var(--crm-critico)">EMERGÊNCIA — veterinário(a) de confiança do tutor</label>
-            <div class="cad-grid" style="margin-top:6px">
-              <div class="field"><label>Veterinário(a) — nome</label><input class="cad-in" value="${escAttr(ex.vetNome||'')}" placeholder="Ex: Dra. Tanara" onchange="setPelExtra(pelAtual,{vetNome:this.value})"></div>
-              <div class="field"><label>Veterinário(a) — telefone</label><input class="cad-in" value="${escAttr(ex.vetTel||'')}" placeholder="(31) 9____-____" onchange="setPelExtra(pelAtual,{vetTel:this.value})"></div>
-              <div class="field"><label>Clínica — nome</label><input class="cad-in" value="${escAttr(ex.vetClinica||'')}" placeholder="Nome da clínica" onchange="setPelExtra(pelAtual,{vetClinica:this.value})"></div>
-              <div class="field"><label>Clínica — endereço</label><input class="cad-in" value="${escAttr(ex.vetEnd||'')}" placeholder="Rua, número, bairro" onchange="setPelExtra(pelAtual,{vetEnd:this.value})"></div>
-            </div>
-          </div>
+          <!-- O veterinário de emergência mudou para a aba Prevenção, junto do Check-up (Adriana, 01/set). -->
           <div class="field" style="grid-column:1/-1"><label>O que o tutor contou</label><input class="cad-in" value="${escAttr(ex.obs_tutor||'')}" placeholder="Check-up, cio, mudanças em casa — o que veio na resposta do tutor" onchange="setPelExtra(pelAtual,{obs_tutor:this.value})"></div>
           ${(function(){ var ev=ex.entrevista; if(!(ev&&ev.itens&&ev.itens.length)) return '';
             return '<div class="field" style="grid-column:1/-1;background:rgba(35,77,103,.06);border-left:4px solid var(--z-blue);border-radius:10px;padding:10px 12px">'
@@ -15851,7 +15862,7 @@
           <!-- MICROCHIP (Adriana, 19/ago/2026): "preciso de relatório de cães sem microchip".
                O campo não existia — sem ele o relatório listaria todo mundo. Guarda o número;
                quem fica em branco é exatamente quem falta. -->
-          <div class="field"><label>Microchip (número)</label><input class="cad-in" value="${escAttr(ex.microchip||'')}" placeholder="Só os números — em branco quer dizer que ainda não tem" onchange="setPelExtra(pelAtual,{microchip:this.value})"></div>
+          <!-- Microchip mora só em Identificação (Adriana, 01/set: "não pode ficar repetindo"). -->
           <!-- RESTRIÇÃO DO ENRIQUECIMENTO AMBIENTAL — Adriana, 19/ago/2026:
                "cada um tem restrição: alguns a abobrinha, outros a feno, outros a tudo...
                 precisa ser um campo na ficha do peludinho, campo obrigatório; se não tem,
@@ -15869,11 +15880,7 @@
                do EA se divide em duas colunas. -->
           <div class="field"><label>Matilha (EA)</label><div class="seg gold" data-single>${segBtnsPel('matilha',ex.matilha||'',['Pequeno porte','Médio porte','Outro'])}</div></div>
         </div>
-        <!-- HISTORICO DO FILHOt (Adriana, 11/ago/2026: "nao tem historico do filhote").
-             A folha de papel nunca deixou ver o passado dele. Aqui esta a linha do tempo dos
-             check-ins: quando, quem olhou, o que foi encontrado e como estava o coco. -->
-        <h3 class="cad-sub">Histórico de check-ins</h3>
-        <div id="pelHistCk"><div class="hint">Carregando…</div></div>
+        <!-- O histórico dos check-ins mudou para a aba Exames do corpo (Adriana, 01/set). -->
       </div></div>
 
       <div class="actions" style="margin-top:4px">
@@ -19258,6 +19265,7 @@
     if(!document.getElementById('algPainel')) return;
     if(!DB){ ALG_RESP={}; algRender(); return; }
     document.getElementById('algPainel').innerHTML='<div class="card"><div class="hint">Carregando…</div></div>';
+    algPesqCarregarCampanha();
     DB.ref('daycare/alergia-confirmada').once('value').then(function(s){ ALG_RESP=s.val()||{}; algRender();
       // cada resposta pendente se trata sozinha — a tela fica limpa (Adriana, 01/set)
       try{ if(typeof PELUDINHOS!=='undefined'&&PELUDINHOS.length) algTratarFila(); else setTimeout(function(){ try{ algTratarFila(); }catch(e){} /* silencioso de propósito: guarda defensiva — falhar aqui não pode interromper quem chamou */ }, 3000); }catch(e){} /* silencioso de propósito: idem */ })
@@ -20058,6 +20066,20 @@
       });
     }catch(e){ try{ if(typeof audit==='function') audit('entrevista-atencao','NÃO avisou a Gestão sobre '+k+': '+((e&&e.message)||e),{}); }catch(x){} /* silencioso de propósito: o audit() tem bolso próprio — falhar aqui não trava a gravação */ }
   }
+  // "Não", "Nada novo", "Nenhuma restrição" não são conteúdo de ficha — são a ausência
+  // dele. Negativa pura fica só na entrevista; campo de ficha não recebe (01/set, após
+  // o mutirão gravar "Não" em Alergia e Manias de meia turma).
+  function algNegativoPuro(v){
+    var CONT=/(misturar|dar |dou |pode|evitar|apenas|somente|exceto|menos |do |da |de |quando|se |mas |porem|sim)/;
+    var partes=String(v||'').split(' \u00B7 ');
+    for(var i=0;i<partes.length;i++){
+      var n=jsNorm(partes[i]).replace(/[!.,;:\u2026]+/g,'').replace(/^nao,? ?/,'nao ').replace(/^ñao/,'nao');
+      if(!n) continue;
+      if(CONT.test(n+' ')) return false;
+      if(!(/^(nao|nada|nenhuma?|nunca|nao me lembro|nao recordo)( |$)/.test(n) && n.length<=90)) return false;
+    }
+    return true;
+  }
   // A resposta se trata sozinha (Adriana, 01/set: "tela limpa"). Campo vazio recebe;
   // campo preenchido NUNCA é sobrescrito — divergência vira ATENÇÃO para a Gestão.
   function algTratarAuto(k){
@@ -20072,7 +20094,10 @@
         var v=String(f.txt||'').trim();
         if(!v || !f.campo) return;
         var atual=String(f.atual||'').trim();
-        if(!atual){ patch[f.campo]=patch[f.campo]?(patch[f.campo]+' \u00B7 '+v):v; quais.push(f.campo); }
+        if(!atual){
+          if(algNegativoPuro(v)) return;   // fica na entrevista; ficha limpa
+          patch[f.campo]=patch[f.campo]?(patch[f.campo]+' \u00B7 '+v):v; quais.push(f.campo);
+        }
         else if(typeof algCurConflito==='function' && algCurConflito(f)){
           divergencias.push({campo:(typeof algCampoNome==='function'?algCampoNome(f.campo):f.campo), tutor:v, ficha:atual});
         }
@@ -20111,6 +20136,83 @@
         .catch(function(){ setTimeout(um, 600); });
     };
     um();
+  }
+  // ===== O QUADRO DA PESQUISA (Adriana, 01/set) ====================================
+  // "Pesquisa de agosto/26 — tantos responderam, tantos a responder... os 102 que
+  //  nunca nem perguntamos em vermelho... o pessoal tem que dar conta."
+  var ALG_PESQ_VER='';
+  function algPesqCampanha(){ return (window.__ALG_CAMPANHA||{}); }
+  function algPesqCarregarCampanha(){
+    if(!DB) return;
+    DB.ref('daycare/pesquisa-campanha').once('value').then(function(s){ window.__ALG_CAMPANHA=s.val()||{}; algRender(); })
+      .catch(function(e){ _logLeituraFalhou('daycare/pesquisa-campanha', e); });
+  }
+  function algPesqSalvarCampanha(){
+    var g=function(id){ var el=document.getElementById(id); return el?(el.value||'').trim():''; };
+    var reg={nome:g('algCampNome'), inicio:g('algCampIni'), fim:g('algCampFim'), ts:Date.now(),
+             quem:(typeof quemSou==='function'?quemSou():'-')};
+    window.__ALG_CAMPANHA=reg;
+    if(DB) DB.ref('daycare/pesquisa-campanha').set(reg).catch(function(e){ alert('Não consegui gravar: '+((e&&e.message)||e)); });
+    algRender();
+  }
+  function algPesqEnviada(k){
+    var reg={ts:Date.now(), quem:(typeof quemSou==='function'?quemSou():'-'),
+             quando:(typeof zHojeISO==='function')?zHojeISO():''};
+    if(!ALG_RESP[k]) ALG_RESP[k]={};
+    ALG_RESP[k].enviada=reg;
+    if(DB) DB.ref('daycare/alergia-confirmada/'+k+'/enviada').set(reg).catch(function(e){ alert('Não consegui marcar: '+((e&&e.message)||e)); });
+    algRender();
+  }
+  function algPesqVer(qual){ ALG_PESQ_VER=(ALG_PESQ_VER===qual)?'':qual; algRender(); }
+  function algPesqBoxHtml(){
+    if(typeof PELUDINHOS==='undefined'||!Array.isArray(PELUDINHOS)) return '';
+    var responderam=[], aguardando=[], nunca=[];
+    PELUDINHOS.forEach(function(p,i){
+      var ex=pelExtra(p)||{}; if(ex.inativo==='Sim') return;
+      var k=pelKey(p); var r=ALG_RESP[k];
+      var item={i:i, k:k, nome:pelNome(p), tutor:pelGet(p,'tutor')||'',
+                hospede: !!(typeof EST_TODAS!=='undefined' && Object.keys(EST_TODAS||{}).some(function(id){ return (EST_TODAS[id]||{}).refKey===k; }))};
+      if(r && String(r.resposta||'').trim()) responderam.push(item);
+      else if(r && r.enviada) aguardando.push(item);
+      else nunca.push(item);
+    });
+    var camp=algPesqCampanha();
+    var h='<div class="card" style="margin-bottom:12px">';
+    h+='<div style="display:flex;gap:10px;align-items:baseline;flex-wrap:wrap">'
+      +'<h2 style="font-size:18px;margin:0">Pesquisa'+(camp.nome?(': '+escAttr(camp.nome)):'')+'</h2>'
+      +((camp.inicio||camp.fim)?('<span class="hint" style="margin:0">'+(camp.inicio?('de '+escAttr(repBRdata(camp.inicio))):'')+(camp.fim?(' até '+escAttr(repBRdata(camp.fim))):'')+'</span>'):'')+'</div>';
+    // campanha editável pela Gestão, ali mesmo
+    h+='<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:7px;align-items:end">'
+      +'<div class="field" style="margin:0"><label style="font-size:11px">Nome da pesquisa</label><input class="cad-in" id="algCampNome" style="max-width:180px;padding:6px 9px" value="'+escAttr(camp.nome||'')+'" placeholder="Ex: Pesquisa ago/26"></div>'
+      +'<div class="field" style="margin:0"><label style="font-size:11px">Início</label><input type="date" class="cad-in" id="algCampIni" style="padding:6px 9px" min="2015-01-01" max="2035-12-31" onkeydown="return dataSoNoCalendario(event)" value="'+escAttr(camp.inicio||'')+'"></div>'
+      +'<div class="field" style="margin:0"><label style="font-size:11px">Fim</label><input type="date" class="cad-in" id="algCampFim" style="padding:6px 9px" min="2015-01-01" max="2035-12-31" onkeydown="return dataSoNoCalendario(event)" value="'+escAttr(camp.fim||'')+'"></div>'
+      +'<button type="button" class="btn" style="padding:7px 13px;font-size:12.5px;font-weight:800;border:1.5px solid var(--line);background:var(--z-cream-warm);color:var(--z-blue)" onclick="algPesqSalvarCampanha()">Salvar</button></div>';
+    var chip=function(qual,txt,cor){ return '<a href="#" onclick="algPesqVer(\''+qual+'\');return false" style="text-decoration:none;'
+      +'background:'+(ALG_PESQ_VER===qual?cor:'transparent')+';border:1.5px solid '+cor+';border-radius:999px;padding:6px 12px;font-size:13px;font-weight:800;'
+      +'color:'+(ALG_PESQ_VER===qual?'#fff':cor)+'">'+txt+'</a>'; };
+    h+='<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px">'
+      +chip('resp','Responderam: '+responderam.length,'var(--crm-ok)')
+      +chip('aguar','Enviadas, aguardando: '+aguardando.length,'var(--z-gold-deep)')
+      +chip('nunca','NUNCA PERGUNTAMOS: '+nunca.length,'var(--crm-critico)')+'</div>';
+    var lista=function(arr, comBotao){
+      var hosp=arr.filter(function(x){ return x.hospede; }), aul=arr.filter(function(x){ return !x.hospede; });
+      var bloco=function(tit,xs){ if(!xs.length) return '';
+        return '<div style="font-weight:800;font-size:12.5px;color:var(--z-blue);margin-top:8px">'+tit+' ('+xs.length+')</div>'
+          +xs.map(function(x){ return '<div style="display:flex;gap:8px;align-items:center;padding:4px 0;border-bottom:1px solid var(--line)">'
+            +'<span style="font-weight:700">'+escAttr(x.nome)+'</span><span class="hint" style="margin:0">'+escAttr(x.tutor)+'</span>'
+            +(comBotao?('<button type="button" class="btn btn-gold" style="margin-left:auto;padding:4px 10px;font-size:11.5px;font-weight:800" onclick="algPesqEnviada(\''+algEsc(x.k)+'\')">Pesquisa enviada</button>'):'')
+            +'</div>'; }).join(''); };
+      return bloco('Hóspedes',hosp)+bloco('Aulunos (Day Care)',aul);
+    };
+    if(ALG_PESQ_VER==='resp') h+='<div style="margin-top:6px">'+lista(responderam,false)+'</div>';
+    if(ALG_PESQ_VER==='aguar') h+='<div style="margin-top:6px">'+lista(aguardando,false)+'</div>';
+    if(ALG_PESQ_VER==='nunca') h+='<div style="margin-top:6px">'+lista(nunca,true)+'</div>';
+    h+='<div class="hint" style="margin-top:10px;padding:8px 10px;background:var(--z-cream-warm);border-radius:8px">'
+      +'<strong>O protocolo, em três passos:</strong> 1. Envie a pesquisa ao tutor no WhatsApp e toque em <strong>Pesquisa enviada</strong>. '
+      +'2. Quando ele responder, toque no FILHOt e cole a resposta. '
+      +'3. O sistema separa as respostas, grava na ficha (entrevista completa, com data) e avisa a Gestão do que precisa de atenção — sozinho.</div>';
+    h+='</div>';
+    return h;
   }
   function algCurGravar(k){
     var c=algCur(k), p=algPelDe(k);
@@ -20302,7 +20404,8 @@
     if(typeof PELUDINHOS==='undefined'){ el.innerHTML='<div class="card"><div class="hint">Carregando o cadastro…</div></div>'; return; }
     var L=algLista();
     var total=L.hospede.length+L.auluno.length;
-    el.innerHTML='<div class="card" style="border-left:4px solid '+(total?'var(--crm-atencao)':'var(--crm-ok)')+'">'
+    var _pesq=''; try{ _pesq=algPesqBoxHtml(); }catch(e){} /* silencioso de propósito: guarda defensiva — sem o quadro, a lista continua */
+    el.innerHTML=_pesq+'<div class="card" style="border-left:4px solid '+(total?'var(--crm-atencao)':'var(--crm-ok)')+'">'
       +'<h2 style="font-size:19px">'+(total?(total+' a confirmar'):'Todos confirmados')+'</h2>'
       +'<div class="hint">A pergunta é refeita a cada <strong>'+ALG_MESES+' meses</strong>: a lista de restrições de um FILHOt muda com o tempo, e o que ele não podia ano passado pode não ser o mesmo de hoje.</div>'
       +'</div>'
