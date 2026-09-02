@@ -3737,6 +3737,29 @@ async function main() {
   }
   console.log('');
 
+  console.log('Telegram: fila protegida da ponte quebrada + assinatura no fechamento (02/set):');
+  {
+    check('falha de CONFIGURACAO da ponte nao queima tentativa da mensagem (dia mudo de 01/set)',
+      /_cfg\?\{lockTs:null, erro:_e\}:\{tentativas:/.test(html) &&
+      /PONTE_SENHA/.test(html));
+    check('o registro do aviso do plantao guarda QUEM ASSINOU (passou)',
+      /passou:\(dados&&dados\.passou\)\|\|'',/.test(html));
+    check('assinantes vem do registro da rodada, sem repetir, e o "-" de papel nao vale',
+      /q!=='-' && assinantes\.indexOf\(q\)<0/.test(html));
+    if (typeof ctx.plantFechamento === 'function') {
+      var um = ctx.plantFechamento('inicio', '2026-09-01', ['Fofuxo', 'Hana'], ['Leticya']);
+      var dois = ctx.plantFechamento('inicio', '2026-09-01', ['Fofuxo'], ['Leticya', 'Otavio']);
+      var zero = ctx.plantFechamento('inicio', '2026-09-01', ['Fofuxo'], []);
+      check('o fechamento do plantao diz quem assinou — um nome',
+        um.indexOf('assinados por: Leticya.') > 0, um.slice(-70));
+      check('dois nomes saem com "e" (norma culta)',
+        dois.indexOf('assinados por: Leticya e Otavio.') > 0, dois.slice(-70));
+      check('sem assinante conhecido, a linha nao aparece (nao inventa nome)',
+        zero.indexOf('assinados por') < 0);
+    }
+  }
+  console.log('');
+
   console.log('Nelson parte 3 + microchip completo (01/set):');
   {
     check('a leitura das respostas e-o-mesmo TENTA DE NOVO quando falha (corrida com o login)',
@@ -5723,10 +5746,12 @@ async function main() {
       ctx.finBRL(r2.aReceberTotal));
     check('recebido + a receber = o devido do mês, ao centavo',
       r2.recebidoTotal + r2.aReceberTotal === r1.aReceberTotal);
-    check('quem pagou tudo fica "pago"; quem pagou parte fica "parcial"',
+    check('quem pagou tudo fica "pago"; quem pagou parte fica "aberto" (parcial saiu da conta, 02/set/2026)',
       (r2.porFILHOt.filter((o) => o.chave === 'a__x')[0] || {}).situacao === 'pago' &&
-      (r2.porFILHOt.filter((o) => o.chave === 'b__y')[0] || {}).situacao === 'parcial',
+      (r2.porFILHOt.filter((o) => o.chave === 'b__y')[0] || {}).situacao === 'aberto',
       JSON.stringify(r2.porFILHOt.map((o) => o.chave + ':' + o.situacao)));
+    check('mordida — nenhuma linha usa mais o estado "parcial" (decisão 2, 02/set/2026)',
+      !r2.porFILHOt.some((o) => o.situacao === 'parcial'));
     // mordida: pagar a mais não pode virar "a receber negativo"
     const r2b = ctx.finResumoMes({ cadastro: CAD,
       pagamentos: { '2026-08': { p: { chave: 'a__x', valor_cent: 99999900, data: '2026-08-03' } } } }, '2026-08');
@@ -5735,18 +5760,29 @@ async function main() {
       (r2b.porFILHOt.filter((o) => o.chave === 'a__x')[0] || {}).falta === 0,
       String(r2b.aReceberTotal));
 
-    // ---- 8) caixa x competência: os dois existem, nenhum é escolhido calado ----
-    const rComp = ctx.finResumoMes({ cadastro: CAD }, '2026-09', { regime: 'competencia' });
-    check('competência: em setembro o Gold cobra UMA mensalidade (R$ 589,00), não o trimestre',
-      (rComp.porFILHOt.filter((o) => o.chave === 'b__y')[0] || {}).valor === 58900,
-      String((rComp.porFILHOt.filter((o) => o.chave === 'b__y')[0] || {}).valor));
+    // ---- 8) DECISÃO 1 (Adriana, 02/set/2026): só existe regime caixa — trimestral e
+    // semestral são pagos TODO à vista na renovação. Não existe mais "competência".
     const rCaixaSet = ctx.finResumoMes({ cadastro: CAD }, '2026-09');
-    check('caixa: em setembro não entra nada dos planos pagos em agosto',
+    check('caixa: em setembro não entra nada dos planos pagos em agosto (mês seguinte não cobra de novo)',
       rCaixaSet.porFILHOt.filter((o) => o.servico === 'daycare').length === 0,
       JSON.stringify(rCaixaSet.porFILHOt.map((o) => o.chave)));
-    check('mordida — os dois regimes NÃO dão o mesmo número (o app não pode escolher por conta própria)',
-      rComp.aReceberTotal !== rCaixaSet.aReceberTotal,
-      rComp.aReceberTotal + ' vs ' + rCaixaSet.aReceberTotal);
+    check('mordida — passar "regime" não muda mais nada: o retorno sempre diz regime "caixa"',
+      rCaixaSet.regime === 'caixa' &&
+      ctx.finResumoMes({ cadastro: CAD }, '2026-09', { regime: 'competencia' }).regime === 'caixa',
+      rCaixaSet.regime);
+    // Caso exato da decisão: Gold (trimestral) fechado em setembro cobra R$ 1.077,00
+    // (R$ 359,00 x 3) inteiro em setembro; outubro e novembro do mesmo período não
+    // geram cobrança nova.
+    const CAD_GOLD = { 'g__1': { n: 'Gaia', tutor: 'Um', dias: ['seg'],
+      renov: { plano: 'Gold', inicio: '2026-09-05', fim: '2026-11-30', aulas: 1, ordemPet: 1 } } };
+    const rGoldSet = ctx.finResumoMes({ cadastro: CAD_GOLD }, '2026-09');
+    const rGoldOut = ctx.finResumoMes({ cadastro: CAD_GOLD }, '2026-10');
+    const rGoldNov = ctx.finResumoMes({ cadastro: CAD_GOLD }, '2026-11');
+    check('Gold trimestral fechado em setembro: R$ 1.077,00 inteiro em setembro (359,00 x 3)',
+      rGoldSet.aReceberTotal === 107700, ctx.finBRL(rGoldSet.aReceberTotal));
+    check('Gold trimestral: outubro e novembro (mesmo período) não cobram de novo — R$ 0,00',
+      rGoldOut.aReceberTotal === 0 && rGoldNov.aReceberTotal === 0,
+      ctx.finBRL(rGoldOut.aReceberTotal) + ' / ' + ctx.finBRL(rGoldNov.aReceberTotal));
 
     // ---- 9) inadimplente = plano que venceu e ninguém renovou ----
     const rSet = ctx.finResumoMes({ cadastro: CAD }, '2026-09', { hoje: '2026-09-15' });
@@ -5843,6 +5879,78 @@ async function main() {
     const pgSemRef = ctx.finPagamentosDoMes({ x: { chave: 'a__x', valor_cent: 100, data: '2026-09-02' } }, '2026-08');
     check('sem "ref", vale o mês da data — e setembro não entra em agosto', pgSemRef.length === 0);
 
+    // ---- 13b) DECISÃO 2 (Adriana, 02/set/2026): pagamento parcial não existe ----
+    check('finLancamentoValido — valor cheio bate: {ok:true}',
+      ctx.finLancamentoValido(73700, 73700).ok === true);
+    check('finLancamentoValido — R$ 500,00 contra plano de R$ 737,00: barrado com "falta R$ 237,00"',
+      ctx.finLancamentoValido(50000, 73700).ok === false &&
+      ctx.finLancamentoValido(50000, 73700).motivo === 'falta R$ 237,00',
+      JSON.stringify(ctx.finLancamentoValido(50000, 73700)));
+    check('finLancamentoValido — pagar A MAIS também é barrado (sobra não vira crédito calado)',
+      ctx.finLancamentoValido(80000, 73700).ok === false &&
+      ctx.finLancamentoValido(80000, 73700).motivo === 'passa R$ 63,00 do valor esperado',
+      JSON.stringify(ctx.finLancamentoValido(80000, 73700)));
+    check('finLancamentoValido — aceita o formato gravado no banco {valor_cent:...}',
+      ctx.finLancamentoValido({ valor_cent: 73700 }, 73700).ok === true &&
+      ctx.finLancamentoValido({ valor_cent: 50000 }, 73700).ok === false);
+    check('mordida — sem valor esperado (0 ou negativo), finLancamentoValido não finge que validou',
+      ctx.finLancamentoValido(1000, 0).ok === false && ctx.finLancamentoValido(1000, -100).ok === false);
+    check('mordida — o estado "parcial" não existe mais em nenhum dado montado deste harness (Day Care e AuAulândia)',
+      !r2.porFILHOt.some((o) => o.situacao === 'parcial') && !rA.porFILHOt.some((o) => o.situacao === 'parcial'));
+
+    // ---- 13c) DECISÃO 3 (Adriana, 02/set/2026): irmãos — a família resolve a ordem sozinha ----
+    check('finGruposFamilia encadeia vínculos: A-B e B-C viram UMA família de três',
+      (function () {
+        const g = ctx.finGruposFamilia({ p1: { a: 'a', b: 'b' }, p2: { a: 'b', b: 'c' } });
+        const grupos = Object.keys(g).map((raiz) => g[raiz].slice().sort().join(','));
+        return grupos.length === 1 && grupos[0] === 'a,b,c';
+      })());
+    const IRM = { i1: { a: 'fam__um', b: 'fam__dois' } };
+    const CAD_FAM = {
+      'fam__um': { n: 'Um', tutor: 'Fam', dias: ['seg'],
+        renov: { plano: 'Silver', inicio: '2026-08-01', fim: '2026-08-31', aulas: 1 } },
+      'fam__dois': { n: 'Dois', tutor: 'Fam', dias: ['seg'],
+        renov: { plano: 'Silver', inicio: '2026-08-01', fim: '2026-08-31', aulas: 1 } }
+    };
+    const rFam = ctx.finResumoMes({ cadastro: CAD_FAM, irmaos: IRM }, '2026-08');
+    const famUm = rFam.porFILHOt.filter((o) => o.chave === 'fam__um')[0] || {};
+    const famDois = rFam.porFILHOt.filter((o) => o.chave === 'fam__dois')[0] || {};
+    check('família de 2 sem ordemPet: um paga cheio (R$ 387,00) e o outro com desconto de irmão (R$ 359,91)',
+      [famUm.mensalidade, famDois.mensalidade].sort((a, b) => b - a).join(',') === '38700,35991',
+      famUm.chave + ':' + famUm.mensalidade + ' / ' + famDois.chave + ':' + famDois.mensalidade);
+    check('exatamente 1 da família paga cheio — nunca os dois, nunca nenhum',
+      [famUm.mensalidade, famDois.mensalidade].filter((v) => v === 38700).length === 1);
+    check('os dois saem de "sem o Nº da família": resolvidos pela família, não pela suposição de 1º',
+      famUm.ordemPetSuposta === false && famDois.ordemPetSuposta === false &&
+      famUm.resolvidoPorFamilia === true && famDois.resolvidoPorFamilia === true,
+      JSON.stringify([famUm, famDois]));
+    check('finResumoMes conta quantos foram resolvidos automaticamente pela família (ordemFamiliaResolvida)',
+      rFam.ordemFamiliaResolvida === 2 && rFam.ordemPetSuposta === 0, String(rFam.ordemFamiliaResolvida));
+    check('o aviso conta quantos FILHOts tiveram a ordem resolvida pelo vínculo de irmãos',
+      rFam.avisos.join(' ').indexOf('vínculo de irmãos') >= 0, JSON.stringify(rFam.avisos));
+    check('mordida — ordemPet EXPLÍCITO inverte a família: quem está marcado 2º fica 2º, o outro vira 1º',
+      (function () {
+        const cad2 = { 'fam__um': { n: 'Um', tutor: 'Fam', dias: ['seg'],
+            renov: { plano: 'Silver', inicio: '2026-08-01', fim: '2026-08-31', aulas: 1, ordemPet: 2 } },
+          'fam__dois': CAD_FAM['fam__dois'] };
+        const r = ctx.finResumoMes({ cadastro: cad2, irmaos: IRM }, '2026-08');
+        const um = r.porFILHOt.filter((o) => o.chave === 'fam__um')[0] || {};
+        const dois = r.porFILHOt.filter((o) => o.chave === 'fam__dois')[0] || {};
+        return um.ordemPet === 2 && um.mensalidade === 35991 &&
+          dois.ordemPet === 1 && dois.mensalidade === 38700 && dois.resolvidoPorFamilia === true;
+      })());
+    check('mordida — sem vínculo de irmãos nenhum, continua assumindo 1º e avisando (comportamento antigo preservado)',
+      ctx.finResumoMes({ cadastro: CAD_FAM }, '2026-08').ordemPetSuposta === 2);
+    check('mordida — vínculo com FILHOt que não é auluno (ex.: morador) não vira "família" de cobrança',
+      (function () {
+        const cad3 = { 'fam__um': CAD_FAM['fam__um'],
+          'morador__x': { n: 'Repolho', tutor: 'x', renov: { plano: 'morador' } } };
+        const irm3 = { i1: { a: 'fam__um', b: 'morador__x' } };
+        const r = ctx.finResumoMes({ cadastro: cad3, irmaos: irm3 }, '2026-08');
+        const um = r.porFILHOt.filter((o) => o.chave === 'fam__um')[0] || {};
+        return um.mensalidade === 38700 && um.ordemPetSuposta === true && um.resolvidoPorFamilia === false;
+      })());
+
     // ---- 14) DADO REAL do banco: a conta não pode quebrar com a vida como ela é ----
     const [cadReal, orcReal] = await Promise.all([
       dbRead('daycare/cadastro', token),
@@ -5851,7 +5959,10 @@ async function main() {
     console.log('  cadastro real: ' + (cadReal ? Object.keys(cadReal).length : 0) + ' FILHOt(s)' +
       ' · orçamentos: ' + (orcReal ? Object.keys(orcReal).length : 0));
     if (cadReal) {
-      const dadosReais = { cadastro: cadReal, orcamentos: orcReal || {},
+      const dadosReais = { cadastro: cadReal, orcamentos: orcReal || {}, irmaos: irmaos || {},
+        peludinhos: (typeof ctx.PELUDINHOS !== 'undefined' ? ctx.PELUDINHOS : []) };
+      // Sem os vínculos de irmãos — só pra medir o quanto a DECISÃO 3 mudou o número.
+      const dadosSemFamilia = { cadastro: cadReal, orcamentos: orcReal || {},
         peludinhos: (typeof ctx.PELUDINHOS !== 'undefined' ? ctx.PELUDINHOS : []) };
       const meses = ['2026-06', '2026-07', '2026-08', '2026-09'];
       let tudoNumero = true, tudoInteiro = true, somaBate = true, recorteOk = true, det = '';
@@ -5872,6 +5983,7 @@ async function main() {
       check('dado real: "em atraso" nunca passa de "a receber" (é recorte dele)', recorteOk, det);
 
       const rAgo = ctx.finResumoMes(dadosReais, '2026-08', { hoje: '2026-08-31' });
+      const rAgoSemFamilia = ctx.finResumoMes(dadosSemFamilia, '2026-08', { hoje: '2026-08-31' });
       check('dado real: "recebido" de agosto é R$ 0,00 — o banco não tem registro de pagamento',
         rAgo.recebidoTotal === 0, ctx.finBRL(rAgo.recebidoTotal));
       check('dado real: o dashboard avisa que não existe registro de pagamento',
@@ -5881,14 +5993,20 @@ async function main() {
         !rAgo.porFILHOt.some((o) => o.servico === 'daycare' &&
           ['auaulandia', 'avulso', 'morador'].indexOf(o.plano) >= 0),
         JSON.stringify(rAgo.porFILHOt.filter((o) => o.servico === 'daycare').map((o) => o.plano).slice(0, 5)));
-      console.log('  agosto/2026 (regime caixa) — a receber ' + ctx.finBRL(rAgo.aReceberTotal) +
+      check('dado real: os vínculos de irmãos SÓ diminuem "a receber" (nunca aumentam) — desconto nunca vira acréscimo',
+        rAgo.aReceberTotal <= rAgoSemFamilia.aReceberTotal,
+        ctx.finBRL(rAgo.aReceberTotal) + ' vs sem família ' + ctx.finBRL(rAgoSemFamilia.aReceberTotal));
+      console.log('  agosto/2026 (regime caixa, com irmãos) — a receber ' + ctx.finBRL(rAgo.aReceberTotal) +
         ' (Day Care ' + ctx.finBRL(rAgo.porServico.daycare.aReceber) +
         ' · AuAulândia ' + ctx.finBRL(rAgo.porServico.auaulandia.aReceber) + ')' +
         ' · em atraso ' + ctx.finBRL(rAgo.emAtrasoTotal) +
         ' · planos vencidos ' + ctx.finBRL(rAgo.inadimplenciaTotal) +
         ' · declarado ' + ctx.finBRL(rAgo.declaradoTotal) +
         ' · sem como calcular: ' + rAgo.semComoCalcular.length +
-        ' · ordemPet suposta: ' + rAgo.ordemPetSuposta);
+        ' · ordemPet suposta: ' + rAgo.ordemPetSuposta +
+        ' · resolvido pela família: ' + rAgo.ordemFamiliaResolvida);
+      console.log('  agosto/2026 SEM os vínculos de irmãos (antes da decisão 3) — a receber ' +
+        ctx.finBRL(rAgoSemFamilia.aReceberTotal) + ' · ordemPet suposta: ' + rAgoSemFamilia.ordemPetSuposta);
     } else {
       check('dado real do cadastro chegou', false, 'leitura devolveu null');
     }

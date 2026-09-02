@@ -7776,7 +7776,14 @@
           if(!res || !res.committed || !res.snapshot || !res.snapshot.val()) return;
           return tgAvisar({grupo:'gestao', texto:item.texto||''}).then(function(r){
             if(r&&r.ok) return DB.ref('auaulandia/med-tg-fila/'+id).remove();
-            return DB.ref('auaulandia/med-tg-fila/'+id).update({tentativas:(item.tentativas||0)+1, lockTs:null});
+            // Ponte sem senha/sem configuração = culpa da PONTE, não da mensagem (dia mudo de
+            // 01/set: PONTE_SENHA sumiu na republicação). Essa falha não queima tentativa —
+            // a mensagem espera a ponte voltar. Carta morta fica só para mensagem que a
+            // ponte VIVA recusa 5 vezes.
+            var _e=String((r&&r.erro)||'');
+            var _cfg=/PONTE_SENHA|n\u00E3o configurada|nao configurada/i.test(_e);
+            return DB.ref('auaulandia/med-tg-fila/'+id).update(
+              _cfg?{lockTs:null, erro:_e}:{tentativas:(item.tentativas||0)+1, lockTs:null, erro:_e||item.erro||''});
           });
         }).catch(function(e){ _logFalhaGrav('reenvio da fila de medicação '+id, e); });
       });
@@ -8442,11 +8449,15 @@
     return L.join('\n');
   }
   // Fecha a rodada daquele relatório: quem passou bem, sem nada a relatar.
-  function plantFechamento(tipo, dia, bem){
+  function plantFechamento(tipo, dia, bem, assinantes){
     var p=String(dia||'').split('-'), hoje=(p.length===3?(p[2]+'/'+p[1]):'');
     var L=['<b>'+(PLANT_ROTULO[tipo]||tipo)+' · '+hoje+' — todos os relatórios entregues</b>'];
     if(bem.length) L.push('Passaram bem, sem nada a relatar: '+bem.join(', ')+'.');
     else L.push('Todos os FILHOts desta rodada tiveram alguma coisa — as mensagens estão acima.');
+    // "Quem é a monitora? Ela assinou, então aparece o nome dela." (Adriana, 02/set)
+    var A=(assinantes||[]).filter(Boolean);
+    if(A.length===1) L.push('Relatórios assinados por: '+A[0]+'.');
+    else if(A.length>1) L.push('Relatórios assinados por: '+A.slice(0,-1).join(', ')+' e '+A[A.length-1]+'.');
     return L.join('\n');
   }
   function plantaoAvisoGestao(tipo, dados){
@@ -8470,6 +8481,7 @@
           return tgAvisar({grupo:'gestao', texto:plantMensagem(tipo,h,dados,dia)}).then(function(r){
             var ok=!!(r&&r.ok);
             return DB.ref(base+'/'+k).set({ts:Date.now(), ok:ok, bem:_bem, nome:h.nome||'',
+              passou:(dados&&dados.passou)||'',
               quem:(typeof quemSou==='function'?quemSou():'-'),
               erro: ok?'':String((r&&r.erro)||'a ponte não respondeu como esperado')})
               .catch(function(e){ _logFalhaGrav('plantaoAvisoGestao', e); }).then(function(){
@@ -8513,9 +8525,15 @@
       if(faltando.length) return;                       // ainda tem gente sem relatório
       var bem=lista.filter(function(x){ var r=v[plantChaveAviso(x)]||{}; return r.bem; })
                    .map(function(x){ return x.nome||''; }).filter(Boolean);
+      // Assinantes da rodada, sem repetir: a assinatura do relatório (nome de gente) vence;
+      // registro antigo sem ela cai para quem estava logado ao enviar.
+      var assinantes=[];
+      lista.forEach(function(x){ var r=v[plantChaveAviso(x)]||{};
+        var q=String(r.passou||r.quem||'').trim();
+        if(q && q!=='-' && assinantes.indexOf(q)<0) assinantes.push(q); });
       return tgCfgPronta().then(function(c){
         if(!c) return;
-        return tgAvisar({grupo:'gestao', texto:plantFechamento(tipo,dia,bem)}).then(function(r){
+        return tgAvisar({grupo:'gestao', texto:plantFechamento(tipo,dia,bem,assinantes)}).then(function(r){
           DB.ref(base+'/__fechamento').set({ts:Date.now(), ok:!!(r&&r.ok), bem:bem.join(', ')}).catch(function(e){ _logFalhaGrav('plantChecarFechamento', e); });
           if(typeof audit==='function') audit('plantao-aviso',((r&&r.ok)?'fechou':'NÃO fechou')+' a rodada '+tipo+' no grupo da Gestão',{});
         });
@@ -10867,7 +10885,7 @@
   // Agora existe um carimbo: esta constante é a versão que o aparelho está rodando, e o
   // Firebase guarda a versão publicada. Quando as duas diferem, aparece o aviso — mas
   // NUNCA recarrega sozinho: recarregar no meio de um check-in perderia o trabalho.
-  const APP_VERSAO='2026-09-01-13';
+  const APP_VERSAO='2026-09-02-01';
   function vigiarVersao(){
     if(!DB) return;
     try{
