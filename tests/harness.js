@@ -3682,6 +3682,61 @@ async function main() {
   }
   console.log('');
 
+  console.log('O que fazer hoje — a mesa dos tres papeis (01/set):');
+  {
+    check('a tela existe: menu, section, titulo e gancho de abertura',
+      html.indexOf('data-v="mesa" class="so-mesa"') > 0 &&
+      html.indexOf('id="v-mesa"') > 0 &&
+      /mesa:\['O que fazer hoje'/.test(html) &&
+      /if\(v==='mesa'\)\{ if\(typeof mesaAbrir==='function'\) mesaAbrir\(\); \}/.test(html));
+    check('so Gestao, Supervisao, Recepcao e Diretoria veem o item no menu',
+      /\.nav a\.so-mesa\{display:none\}/.test(html) &&
+      /body\[data-role="consultora"\] \.nav a\.so-mesa,/.test(html) &&
+      /body\[data-role="supervisor"\] \.nav a\.so-mesa,/.test(html) &&
+      /body\[data-role="diretoria"\] \.nav a\.so-mesa\{display:flex\}/.test(html) &&
+      html.indexOf('body[data-role="monitor"] .nav a.so-mesa') < 0);
+    check('cada papel abre na sua fatia — e a Gestao enxerga as tres',
+      JSON.stringify((function(){ const antes=ctx.document.body.dataset.role, r={};
+        ['gestao','supervisor','consultora','monitor'].forEach(function(p){
+          ctx.document.body.dataset.role=p; r[p]=ctx.mesaFatiasDoPapel(); });
+        ctx.document.body.dataset.role=antes; return r; })()) ===
+      JSON.stringify({gestao:['gestao','supervisao','recepcao'],
+        supervisor:['supervisao','recepcao'], consultora:['recepcao'], monitor:[]}));
+    check('quadro com dado ainda descendo mostra "\u2026" — nunca afirma zero antes de ler',
+      ctx.mesaBox(null,'x','y','#000',"irParaView('checkin')").indexOf('\u2026') > 0);
+    check('quadro zerado some; quadro com numero leva ao destino (regra de ouro)',
+      ctx.mesaBox(0,'x','y','#000',"irParaView('checkin')") === '' &&
+      ctx.mesaBox(3,'x','y','#000',"irParaView('checkin')").indexOf("irParaView('checkin')") > 0);
+    check('a mesa nao inventa conta: pesquisa e check-up saem das MESMAS funcoes das telas de origem',
+      (html.match(/function algPesqContagemDe/g)||[]).length === 1 &&
+      (html.match(/function prevCheckupContagem/g)||[]).length === 1 &&
+      /var _ct=algPesqContagemDe\(ALG_RESP\);/.test(html) &&
+      /var _ck=prevCheckupContagem\(\);/.test(html));
+    if (typeof ctx.algPesqContagemDe === 'function' && Array.isArray(ctx.PELUDINHOS)) {
+      const ct = ctx.algPesqContagemDe({});
+      const ativos = ctx.PELUDINHOS.filter((p) => !ctx.pelInativo(p)).length;
+      check('dado real: as tres listas da pesquisa somam exatamente os FILHOts ativos',
+        (ct.responderam.length + ct.aguardando.length + ct.nunca.length) === ativos,
+        ct.responderam.length + '+' + ct.aguardando.length + '+' + ct.nunca.length + ' vs ' + ativos);
+      const ck = ctx.prevCheckupContagem();
+      check('dado real: check-up (nunca+vencidos+sem info) nunca passa dos ativos',
+        (ck.nunca.length + ck.vencidos.length + ck.semInfo.length) <= ativos,
+        ck.nunca.length + '/' + ck.vencidos.length + '/' + ck.semInfo.length);
+    }
+    check('entrevista com ATENCAO tratada sai da mesa — e o Tratei grava quem e quando',
+      /function mesaAtencaoLista/.test(html) && /return !\(o\[k\]\|\|\{\}\)\.tratado;/.test(html) &&
+      /entrevista-atencao\/'\+k\+'\/tratado'\)\.set\(reg\)/.test(html) &&
+      /quem:\(typeof quemSou==='function'\?quemSou\(\):'-'\), ts:Date\.now\(\)\};\n    DB\.ref\('daycare\/entrevista-atencao/.test(html));
+    check('duplicados na mesa usam os MESMOS botoes da conferencia (hospParesPendentesHtml)',
+      /MESA_EXPAND\.duplicados/.test(html) && /hospParesPendentesHtml\(\):''/.test(html));
+    check('a dose atrasada da mesa vem de dosesMedDoDia — a conta da Conferencia do dia',
+      /MESA_DOSES===null\?null:MESA_DOSES\.filter\(function\(d\)\{ return d\.status==='atrasada'; \}\)\.length/.test(html) &&
+      /function mesaCarregarDoses/.test(html));
+    check('agenda vazia com leitura no meio do caminho tenta de novo antes de afirmar zero',
+      /tent<3 && \(typeof MED_AGENDA_TODOS==='undefined'\|\|!MED_AGENDA_TODOS\.length\)/.test(html));
+  }
+  console.log('');
+
   console.log('Nelson parte 3 + microchip completo (01/set):');
   {
     check('a leitura das respostas e-o-mesmo TENTA DE NOVO quando falha (corrida com o login)',

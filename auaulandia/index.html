@@ -312,6 +312,12 @@
     border:1px solid rgba(39,174,96,.28);border-radius:16px;padding:18px 20px}
   .dash-zen .zt{font-size:15px;font-weight:700;color:#1E8449;letter-spacing:-.015em}
   .dash-zen .zs{font-size:13px;font-weight:500;color:var(--z-blue-soft);margin-top:2px}
+  /* O QUE FAZER HOJE — a mesa de cada papel (Adriana, 01/set/2026) */
+  .nav a.so-mesa{display:none}
+  body[data-role="consultora"] .nav a.so-mesa,
+  body[data-role="gestao"] .nav a.so-mesa,
+  body[data-role="supervisor"] .nav a.so-mesa,
+  body[data-role="diretoria"] .nav a.so-mesa{display:flex}
 
   /* Carteira — 3 situações + a proporção numa barra, e os tipos como lista, não como grade */
   .cart-top{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
@@ -1710,6 +1716,7 @@
          REGRA: ninguém ganhou nem perdeu acesso — cada <a> manteve exatamente as
          classes so-*/op-only que já tinha. Só mudou grupo, ordem, título e dica. -->
     <a class="active op-only" data-v="inicio" title="Visão geral do dia"><span data-icon="home"></span><span>Início</span></a>
+    <a data-v="mesa" class="so-mesa" title="Tudo o que espera por você hoje — toque num quadro para ir direto ao item."><span data-icon="list-check"></span><span>O que fazer hoje</span></a>
 
     <div class="acc" data-acc="servicos">
       <a class="grp nav-parent" data-acc-toggle="servicos"><span data-icon="paw"></span><span>Serviços</span><span class="acc-caret" aria-hidden="true"></span></a>
@@ -1988,6 +1995,10 @@
   </section>
 
   <!-- ===== PELUDINHOS (cadastro mestre) ===== -->
+  <section class="view" id="v-mesa">
+    <div id="mesaRoot"><div class="card"><div class="hint">Carregando…</div></div></div>
+  </section>
+
   <section class="view" id="v-ficha">
     <div id="pel-lista">
       <div class="role-note"><span data-icon="paw"></span><span>Peludinhos <strong>frequentes</strong> do Day Care. Clique no nome para ver e editar a ficha completa. Quem saiu fica em <strong>Relatórios › Inativos</strong>.</span></div>
@@ -3921,6 +3932,7 @@
     recepcao:['Pendências com o tutor','Ração acabando, remédio faltando, algo que ficou.'],
     agenda:['Agenda','Frequência e reservas'],pessoas:['Time','Pessoas, senhas e quem acessa o quê.'],
     painel:['Painel do Dia','Auditoria e cumprimento de protocolos'],
+    mesa:['O que fazer hoje','A sua mesa do dia.'],
     abertura:['Abertura do dia','Monitor 1: como a casa abre.'],sair:['Sair','Encerra a sessão neste aparelho.']};
 
   document.getElementById('nav').addEventListener('click',e=>{
@@ -3973,6 +3985,7 @@
     if(v==='recepcao'){ if(typeof carregarAvisosEstoque==='function') carregarAvisosEstoque(); }
     if(v==='ficha'){ const l=document.getElementById('pel-lista'),fi=document.getElementById('pel-ficha'); if(l&&fi){ l.style.display='block'; fi.style.display='none'; } if(typeof renderPel==='function') renderPel(); }
     if(v==='inativos'){ if(typeof renderInativos==='function') renderInativos(); }
+    if(v==='mesa'){ if(typeof mesaAbrir==='function') mesaAbrir(); }
     if(v==='reposicao'){ if(typeof renderReposicao==='function') renderReposicao(); }
     if(v==='eahist'){ if(typeof eaHistInit==='function') eaHistInit(); }
     if(v==='alergia'){ if(typeof algCarregar==='function') algCarregar(); }
@@ -4311,6 +4324,198 @@
         +'<span class="zs">Conferências feitas, ninguém esperando na recepção e nenhum tutor a avisar.</span></span></div>';
     const st=document.getElementById('pendAtualizado');
     if(st){ const d=new Date(); st.textContent='atualizado às '+String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0'); }
+  }
+  // ===== O QUE FAZER HOJE — a mesa de cada papel (Adriana, 01/set/2026) ==============
+  // "A gestão tem assuntos importantes que precisam ir para o dashboard da Márcia... o da
+  //  Amanda... e um dashboard das consultoras... precisa clicar no box e ver o que é —
+  //  o clique leva ao item em débito."
+  // Três fatias na MESMA tela: Gestão (Márcia), Supervisão (Amanda), Recepção (consultoras).
+  // Cada papel abre na sua; a Gestão enxerga as três, a Supervisão vê a dela e a da Recepção.
+  // Nenhum número nasce aqui: tudo vem das contas que as telas de origem já usam
+  // (contarPendencias, dosesMedDoDia, hospParesPendentes, algPesqContagemDe,
+  // prevCheckupContagem) — uma conta só, vários lugares que a mostram.
+  // Enquanto o banco desce, o quadro mostra "…" — nunca afirma zero antes de ler.
+  var MESA_FATIA='';        // fatia aberta: 'gestao' | 'supervisao' | 'recepcao'
+  var MESA_EXPAND={};       // quadros abertos na própria mesa (entrevistas, duplicados)
+  var MESA_ATENCAO=null;    // daycare/entrevista-atencao — null = ainda não lido
+  var MESA_PESQ=null;       // daycare/alergia-confirmada — null = ainda não lido
+  var MESA_CHAMADOS=null;   // daycare/chamados-recepcao/{hoje} — null = ainda não lido
+  var MESA_DOSES=null;      // dosesMedDoDia() — null = ainda não lido
+  function mesaFatiasDoPapel(){
+    var r=document.body.dataset.role||'';
+    if(r==='gestao'||r==='diretoria') return ['gestao','supervisao','recepcao'];
+    if(r==='supervisor') return ['supervisao','recepcao'];
+    if(r==='consultora') return ['recepcao'];
+    return [];
+  }
+  function mesaAbrir(){
+    var fs=mesaFatiasDoPapel();
+    if(!fs.length){ var el=document.getElementById('mesaRoot');
+      if(el) el.innerHTML='<div class="card"><div class="hint">Esta tela é da Gestão, da Supervisão e da Recepção.</div></div>'; return; }
+    if(fs.indexOf(MESA_FATIA)<0) MESA_FATIA=fs[0];
+    MESA_EXPAND={};
+    mesaRender();
+    mesaCarregar();
+    // As contas locais (estadias, avisos, hóspedes) ainda podem estar descendo quando a
+    // tela abre — redesenhos baratos até a foto ficar completa.
+    [2000,5000,9000].forEach(function(t){ setTimeout(function(){ try{ mesaRender(); }catch(e){} /* silencioso de propósito: redesenho de tela — falhar não pode derrubar quem chamou */ }, t); });
+  }
+  function mesaCarregar(){
+    if(!DB){ setTimeout(mesaCarregar, 1500); return; }
+    DB.ref('daycare/entrevista-atencao').once('value').then(function(s){ MESA_ATENCAO=s.val()||{}; mesaRender(); })
+      .catch(function(e){ _logLeituraFalhou('daycare/entrevista-atencao (mesa)', e); });
+    DB.ref('daycare/alergia-confirmada').once('value').then(function(s){ MESA_PESQ=s.val()||{}; mesaRender(); })
+      .catch(function(e){ _logLeituraFalhou('daycare/alergia-confirmada (mesa)', e); });
+    DB.ref('daycare/chamados-recepcao/'+dcDataKey()).once('value').then(function(s){ MESA_CHAMADOS=s.val()||{}; mesaRender(); })
+      .catch(function(e){ _logLeituraFalhou('daycare/chamados-recepcao (mesa)', e); });
+    try{ if(typeof carregarOcorrenciasDayCare==='function') carregarOcorrenciasDayCare(); }catch(e){} /* silencioso de propósito: guarda defensiva — falhar aqui não pode interromper quem chamou */
+    mesaCarregarDoses(0);
+  }
+  function mesaCarregarDoses(tent){
+    if(typeof dosesMedDoDia!=='function'){ MESA_DOSES=[]; mesaRender(); return; }
+    dosesMedDoDia().then(function(ds){
+      // Agenda ainda vazia com hóspedes na casa = provável leitura no meio do caminho.
+      // Vazio aqui viraria "0 sem registro" mentiroso — tenta de novo antes de afirmar.
+      if((!ds||!ds.length) && tent<3 && (typeof MED_AGENDA_TODOS==='undefined'||!MED_AGENDA_TODOS.length)){
+        if(tent===0){ try{ if(typeof carregarAgendaMedTodos==='function') carregarAgendaMedTodos(); }catch(e){} /* silencioso de propósito: guarda defensiva — falhar aqui não pode interromper quem chamou */ }
+        setTimeout(function(){ mesaCarregarDoses(tent+1); }, 1800); return;
+      }
+      MESA_DOSES=ds||[]; mesaRender();
+    });
+  }
+  function mesaExpandir(q){ MESA_EXPAND[q]=!MESA_EXPAND[q]; mesaRender(); }
+  // A lista das entrevistas que pedem decisão da Gestão (o que ainda não foi dado por tratado).
+  function mesaAtencaoLista(){
+    var o=MESA_ATENCAO||{};
+    return Object.keys(o).filter(function(k){ return !(o[k]||{}).tratado; })
+      .map(function(k){ return Object.assign({_k:k}, o[k]); })
+      .sort(function(a,b){ return (b.ts||0)-(a.ts||0); });
+  }
+  function mesaAtencaoTratei(k){
+    if(!DB) return;
+    var reg={quem:(typeof quemSou==='function'?quemSou():'-'), ts:Date.now()};
+    DB.ref('daycare/entrevista-atencao/'+k+'/tratado').set(reg).then(function(){
+      if(MESA_ATENCAO&&MESA_ATENCAO[k]) MESA_ATENCAO[k].tratado=reg;
+      try{ if(typeof audit==='function') audit('entrevista-atencao','deu por tratada a atenção de '+(((MESA_ATENCAO||{})[k]||{}).nome||k),{}); }catch(e){} /* silencioso de propósito: o audit() tem bolso próprio — falhar aqui não trava o tratamento */
+      mesaRender();
+    }).catch(function(e){ alert('Não consegui marcar como tratada: '+((e&&e.message)||e)); });
+  }
+  function mesaAbrirFichaPorChave(k){
+    var i=-1;
+    try{ (PELUDINHOS||[]).forEach(function(p,idx){ if(i<0 && pelKey(p)===k) i=idx; }); }catch(e){} /* silencioso de propósito: guarda defensiva — falhar aqui não pode interromper quem chamou */
+    if(i<0){
+      if(typeof zAlertao==='function') zAlertao('Não achei a ficha','Este FILHOt pode ter sido juntado a outro cadastro ou saído do Day Care.');
+      else alert('Não achei a ficha — o FILHOt pode ter sido juntado a outro cadastro.');
+      return;
+    }
+    irParaView('ficha'); abrirPeludinho(i);
+  }
+  function mesaAtencaoHtml(){
+    var L=mesaAtencaoLista();
+    if(!L.length) return '';
+    return '<div style="margin-top:12px">'+L.map(function(r){
+      var dt='';
+      try{ if(r.ts){ var d=new Date(r.ts); dt=String(d.getDate()).padStart(2,'0')+'/'+String(d.getMonth()+1).padStart(2,'0'); } }catch(e){} /* silencioso de propósito: enfeite de tela (foco, rolagem, mídia) — falhar não muda dado nenhum */
+      return '<div class="dc-faltas" style="margin:8px 0;border-color:var(--crm-critico)">'
+        +'<div style="display:flex;gap:8px;align-items:baseline;flex-wrap:wrap">'
+        +'<strong style="color:var(--crm-critico)">'+escAttr(r.nome||'')+'</strong>'
+        +'<span class="hint" style="margin:0">'+escAttr(r.tutor||'')+(dt?(' · resposta de '+dt):'')+'</span></div>'
+        +(Array.isArray(r.itens)?r.itens.map(function(x){ return '<div style="font-size:13px;margin-top:4px">'+escAttr(x)+'</div>'; }).join(''):'')
+        +'<div style="display:flex;gap:6px;margin-top:8px;flex-wrap:wrap">'
+        +'<button type="button" class="btn btn-primary" style="padding:6px 12px;font-size:12.5px;font-weight:800" onclick="mesaAbrirFichaPorChave(\''+escAttr(r._k)+'\')">Abrir a ficha</button>'
+        +'<button type="button" class="btn" style="padding:6px 12px;font-size:12.5px;font-weight:800;background:var(--z-cream-warm);border:1.5px solid var(--line);color:var(--z-blue)" onclick="mesaAtencaoTratei(\''+escAttr(r._k)+'\')">Tratei — pode tirar da mesa</button>'
+        +'</div></div>';
+    }).join('')+'</div>';
+  }
+  // O quadro. n===null = o dado ainda está descendo (mostra "…"); n===0 = nada pendente
+  // (quadro nem aparece); n>0 = número real, e o toque leva ao item.
+  function mesaBox(n, rot, sub, cor, acao){
+    if(n===0) return '';
+    var num=(n===null)?'\u2026':n;
+    return '<button class="dt" style="--dt-cor:'+cor+'" onclick="'+acao+'">'
+      +'<span class="dt-n">'+num+'</span>'
+      +'<span class="dt-txt"><span class="dt-l">'+rot+'</span><span class="dt-s">'+sub+'</span></span>'
+      +'<span class="dt-go">&rsaquo;</span></button>';
+  }
+  function mesaOcorrAbertas(){
+    var n=0;
+    try{ n+=ocorrenciasLoja().filter(function(o){ return !o.avisado; }).length; }catch(e){} /* silencioso de propósito: guarda defensiva — se o valor não vier, o anterior continua valendo */
+    try{ n+=ocorrenciasDayCare().filter(function(o){ return !o.avisado; }).length; }catch(e){} /* silencioso de propósito: guarda defensiva — se o valor não vier, o anterior continua valendo */
+    return n;
+  }
+  function mesaRepHoje(){
+    try{ return (typeof repAgendadosPara==='function')?repAgendadosPara((typeof zHojeISO==='function')?zHojeISO():'').length:0; }catch(e){ return 0; }
+  }
+  function mesaFatiaHtml(){
+    var P={}; try{ P=contarPendencias(); }catch(e){} /* silencioso de propósito: guarda defensiva — se o valor não vier, o anterior continua valendo */
+    var estOk=(typeof CF_ESTADIAS_LIDO==='undefined')||CF_ESTADIAS_LIDO;
+    var hospOk=(typeof HOSP_PLANILHA!=='undefined'&&HOSP_PLANILHA===true);
+    var pel=(typeof PELUDINHOS!=='undefined'&&Array.isArray(PELUDINHOS)&&PELUDINHOS.length>0);
+    var nvl=function(cond,n){ return cond?(n||0):null; };
+    var medAtr=(typeof ehHojeAua==='function'&&!ehHojeAua())?0
+      :(MESA_DOSES===null?null:MESA_DOSES.filter(function(d){ return d.status==='atrasada'; }).length);
+    var ir=function(v){ return "irParaView('"+v+"')"; };
+    var B=[], EXTRA='';
+    if(MESA_FATIA==='gestao'){
+      var at=(MESA_ATENCAO===null)?null:mesaAtencaoLista().length;
+      var pares=[]; try{ if(typeof hospParesPendentes==='function') pares=hospParesPendentes()||[]; }catch(e){} /* silencioso de propósito: guarda defensiva — se o valor não vier, o anterior continua valendo */
+      var ct=(MESA_PESQ===null||!pel)?null:algPesqContagemDe(MESA_PESQ);
+      var ck=pel?prevCheckupContagem():null;
+      B.push(mesaBox(at,'Entrevistas com ATENÇÃO','o tutor contou algo que pede a sua decisão — toque para ler','#B3261E',"mesaExpandir('atencao')"));
+      B.push(mesaBox(medAtr,'Medicação sem registro','horário passou e ninguém registrou — dose a dose na Conferência do dia','#B3261E',ir('gestdia')));
+      B.push(mesaBox(pares.length,'Possíveis duplicados','responda para juntar — em dobro ele conta duas vezes na cobrança','#B3261E',"mesaExpandir('duplicados')"));
+      B.push(mesaBox(ct===null?null:ct.nunca.length,'Pesquisa não enviada','FILHOts que nunca perguntamos — a campanha precisa andar','#B3261E',ir('alergia')));
+      B.push(mesaBox(ct===null?null:ct.aguardando.length,'Pesquisa aguardando resposta','enviada, o tutor ainda não respondeu','#DEB428',ir('alergia')));
+      B.push(mesaBox(ck===null?null:(ck.nunca.length+ck.vencidos.length),'Check-up a convidar','nunca fizeram ou venceu há mais de 12 meses — o convite já está pronto','#DEB428',ir('vacinas')));
+      if(MESA_EXPAND.atencao) EXTRA+=mesaAtencaoHtml();
+      if(MESA_EXPAND.duplicados){ try{ EXTRA+='<div style="margin-top:12px">'+(typeof hospParesPendentesHtml==='function'?hospParesPendentesHtml():'')+'</div>'; }catch(e){} /* silencioso de propósito: guarda defensiva — falhar aqui não pode interromper quem chamou */ }
+    } else if(MESA_FATIA==='supervisao'){
+      B.push(mesaBox(nvl(estOk,P.conferir),'Check-in a conferir','o monitor confere corpo e pertences de quem chegou','#B3261E',ir('conferencia')));
+      B.push(mesaBox(nvl(hospOk&&estOk,P.semCheckin),'Sem check-in lançado','hospedado sem ficha lançada','#B3261E',ir('checkin')));
+      B.push(mesaBox(medAtr,'Medicação sem registro','horário passou e ninguém registrou','#B3261E',ir('gestdia')));
+      B.push(mesaBox(mesaOcorrAbertas(),'Ocorrências sem desfecho','algo do corpo ou do dia que ninguém fechou','#B3261E',ir('recepcao')));
+      B.push(mesaBox(nvl(estOk,P.naRecepcao),'Tutor esperando na recepção','conferir a bolsa junto e assinar','#1E8449',ir('checkoutconf')));
+      B.push(mesaBox(nvl(estOk,P.saemHoje),'Saem hoje','a monitora precisa juntar as coisas','#DEB428',ir('checkout')));
+      B.push(mesaBox(P.faltas||0,'Faltas em aberto','ração ou remédio que não cobre a estadia','#DEB428',ir('recepcao')));
+      B.push(mesaBox(mesaRepHoje(),'Reposições marcadas para hoje','o tutor avisou que vem repor','#2E7D8A',ir('reposicao')));
+    } else {
+      var cham=(MESA_CHAMADOS===null)?null
+        :Object.keys(MESA_CHAMADOS).filter(function(k){ return (MESA_CHAMADOS[k]||{}).status==='aberto'; }).length;
+      B.push(mesaBox(P.faltas||0,'Faltou remédio ou ração','contactar o tutor — a falta não se resolve sozinha','#B3261E',ir('recepcao')));
+      B.push(mesaBox(cham,'Day Care chamando','o monitor precisa de uma resposta agora (ex.: faltou a comida)','#B3261E',ir('recepcao')));
+      B.push(mesaBox(nvl(hospOk&&estOk,P.semCheckin),'Sem check-in lançado','hospedado sem ficha lançada','#B3261E',ir('checkin')));
+      B.push(mesaBox(nvl(estOk,P.naRecepcao),'Tutor esperando para assinar','check-out conferido junto com o tutor','#1E8449',ir('checkoutconf')));
+      B.push(mesaBox(P.avisar||0,'Avisar tutores — não comeram','a mensagem já sai pronta','#E08856',ir('emporio')));
+      B.push(mesaBox(mesaRepHoje(),'Reposições marcadas para hoje','o tutor avisou que vem repor','#2E7D8A',ir('reposicao')));
+    }
+    return {tiles:B.filter(Boolean).join(''), extra:EXTRA};
+  }
+  function mesaChipsHtml(fs){
+    if(fs.length<2) return '';
+    var NOME={gestao:'Gestão', supervisao:'Supervisão', recepcao:'Recepção'};
+    return '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px">'+fs.map(function(f){
+      var on=(f===MESA_FATIA);
+      return '<a href="#" onclick="MESA_FATIA=\''+f+'\';MESA_EXPAND={};mesaRender();return false" style="text-decoration:none;'
+        +'background:'+(on?'var(--z-blue)':'transparent')+';border:1.5px solid var(--z-blue);border-radius:999px;'
+        +'padding:6px 14px;font-size:13px;font-weight:800;color:'+(on?'#fff':'var(--z-blue)')+'">'+NOME[f]+'</a>';
+    }).join('')+'</div>';
+  }
+  function mesaRender(){
+    var el=document.getElementById('mesaRoot'); if(!el) return;
+    var fs=mesaFatiasDoPapel(); if(!fs.length) return;
+    if(fs.indexOf(MESA_FATIA)<0) MESA_FATIA=fs[0];
+    var NOME={gestao:'a mesa da Gestão', supervisao:'a mesa da Supervisão', recepcao:'a mesa da Recepção'};
+    var r=mesaFatiaHtml();
+    var h='<div class="card">';
+    h+='<h2 style="font-size:20px;margin-bottom:2px">O que fazer hoje</h2>';
+    h+='<div class="hint" style="margin-bottom:10px">Esta é '+NOME[MESA_FATIA]+'. Cada quadro é uma coisa esperando por alguém — <strong>toque e ele leva direto ao item</strong>. Quadro que some é assunto resolvido.</div>';
+    h+=mesaChipsHtml(fs);
+    if(r.tiles) h+='<div class="dash-tiles">'+r.tiles+'</div>';
+    else h+='<div class="dash-zen"><span style="font-size:22px">\u2713</span><span><span class="zt">Nada esperando por você agora</span>'
+      +'<span class="zs">Quando algo precisar de solução, aparece aqui como um quadro — e o toque leva até ele.</span></span></div>';
+    h+=r.extra;
+    h+='</div>';
+    el.innerHTML=h;
   }
   // ===================================================================================
   // ===== BANCO DE REPOSIÇÃO (Adriana, 06/ago/2026) ===================================
@@ -10662,7 +10867,7 @@
   // Agora existe um carimbo: esta constante é a versão que o aparelho está rodando, e o
   // Firebase guarda a versão publicada. Quando as duas diferem, aparece o aviso — mas
   // NUNCA recarrega sozinho: recarregar no meio de um check-in perderia o trabalho.
-  const APP_VERSAO='2026-09-01-12';
+  const APP_VERSAO='2026-09-01-13';
   function vigiarVersao(){
     if(!DB) return;
     try{
@@ -14321,22 +14526,29 @@
       else if(typeof zAlertao==='function') zAlertao('Copie o convite', [txt], {botao:'Fechei'});
     }catch(e){} /* silencioso de propósito: enfeite de tela — falhar não muda dado nenhum */
   }
+  // Uma conta só, para a Prevenção e para a mesa da Gestão não discordarem.
+  function prevCheckupContagem(){
+    var out={nunca:[], vencidos:[], semInfo:[]};
+    if(typeof PELUDINHOS==='undefined'||!Array.isArray(PELUDINHOS)) return out;
+    var hoje=(typeof zHojeISO==='function')?zHojeISO():'';
+    var umAno=function(iso){ try{ var d=new Date(iso+'T12:00:00'); d.setFullYear(d.getFullYear()+1);
+      var pd=function(x){ return String(x).padStart(2,'0'); }; return d.getFullYear()+'-'+pd(d.getMonth()+1)+'-'+pd(d.getDate()); }catch(e){ return ''; } };
+    PELUDINHOS.forEach(function(p,i){
+      var ex=pelExtra(p)||{};
+      if(ex.inativo==='Sim') return;
+      if(ex.checkup_fez==='Nunca fez'){ out.nunca.push({i:i,p:p}); return; }
+      if(ex.checkup_data){ var vence=umAno(ex.checkup_data); if(vence&&vence<hoje) out.vencidos.push({i:i,p:p,vence:vence}); return; }
+      if(!ex.checkup_fez) out.semInfo.push({i:i,p:p});
+    });
+    return out;
+  }
   function renderPrevCheckup(){
     var sec=document.getElementById('v-vacinas'); if(!sec) return;
     var el=document.getElementById('prevCheckup');
     if(!el){ el=document.createElement('div'); el.id='prevCheckup'; sec.appendChild(el); }
     if(typeof PELUDINHOS==='undefined'||!Array.isArray(PELUDINHOS)){ el.innerHTML=''; return; }
-    var hoje=(typeof zHojeISO==='function')?zHojeISO():'';
-    var umAno=function(iso){ try{ var d=new Date(iso+'T12:00:00'); d.setFullYear(d.getFullYear()+1);
-      var pd=function(x){ return String(x).padStart(2,'0'); }; return d.getFullYear()+'-'+pd(d.getMonth()+1)+'-'+pd(d.getDate()); }catch(e){ return ''; } };
-    var nunca=[], vencidos=[], semInfo=[];
-    PELUDINHOS.forEach(function(p,i){
-      var ex=pelExtra(p)||{};
-      if(ex.inativo==='Sim') return;
-      if(ex.checkup_fez==='Nunca fez'){ nunca.push({i:i,p:p}); return; }
-      if(ex.checkup_data){ var vence=umAno(ex.checkup_data); if(vence&&vence<hoje) vencidos.push({i:i,p:p,vence:vence}); return; }
-      if(!ex.checkup_fez) semInfo.push({i:i,p:p});
-    });
+    var _ck=prevCheckupContagem();
+    var nunca=_ck.nunca, vencidos=_ck.vencidos, semInfo=_ck.semInfo;
     var linha=function(o, extra, situacao){
       return '<div style="display:flex;gap:8px;align-items:center;padding:6px 0;border-bottom:1px solid var(--line);flex-wrap:wrap">'
         +'<span style="font-weight:800;color:var(--z-blue)">'+escAttr(pelNome(o.p))+'</span>'
@@ -20164,18 +20376,27 @@
     algRender();
   }
   function algPesqVer(qual){ ALG_PESQ_VER=(ALG_PESQ_VER===qual)?'':qual; algRender(); }
-  function algPesqBoxHtml(){
-    if(typeof PELUDINHOS==='undefined'||!Array.isArray(PELUDINHOS)) return '';
-    var responderam=[], aguardando=[], nunca=[];
+  // Uma conta só, para a Conversa com o Tutor e para a mesa da Gestão não discordarem
+  // (mesma lei do contarPendencias: "quase igual" é como nascem duas telas brigando).
+  function algPesqContagemDe(RESP){
+    RESP=RESP||{};
+    var out={responderam:[], aguardando:[], nunca:[]};
+    if(typeof PELUDINHOS==='undefined'||!Array.isArray(PELUDINHOS)) return out;
     PELUDINHOS.forEach(function(p,i){
       var ex=pelExtra(p)||{}; if(ex.inativo==='Sim') return;
-      var k=pelKey(p); var r=ALG_RESP[k];
+      var k=pelKey(p); var r=RESP[k];
       var item={i:i, k:k, nome:pelNome(p), tutor:pelGet(p,'tutor')||'',
                 hospede: !!(typeof EST_TODAS!=='undefined' && Object.keys(EST_TODAS||{}).some(function(id){ return (EST_TODAS[id]||{}).refKey===k; }))};
-      if(r && String(r.resposta||'').trim()) responderam.push(item);
-      else if(r && r.enviada) aguardando.push(item);
-      else nunca.push(item);
+      if(r && String(r.resposta||'').trim()) out.responderam.push(item);
+      else if(r && r.enviada) out.aguardando.push(item);
+      else out.nunca.push(item);
     });
+    return out;
+  }
+  function algPesqBoxHtml(){
+    if(typeof PELUDINHOS==='undefined'||!Array.isArray(PELUDINHOS)) return '';
+    var _ct=algPesqContagemDe(ALG_RESP);
+    var responderam=_ct.responderam, aguardando=_ct.aguardando, nunca=_ct.nunca;
     var camp=algPesqCampanha();
     var h='<div class="card" style="margin-bottom:12px">';
     h+='<div style="display:flex;gap:10px;align-items:baseline;flex-wrap:wrap">'
