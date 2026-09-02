@@ -1,0 +1,1964 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Painel unificado Zêluz — esboço v4</title>
+
+<!-- Símbolo oficial #39 (SVG real) também como ícone da aba -->
+<link rel="icon" type="image/svg+xml" href="assets/simbolo-zeluz-39.svg">
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+
+<!-- Fonte única de tokens do Design System Zêluz v8.1 -->
+<link rel="stylesheet" href="../../code/docs/zeluz/branding/zeluz-ds-v8/shared/tokens.css">
+
+<style>
+/* ============================================================
+   cópia dos tokens do DS v8 para o esboço abrir sozinho
+   (se o <link> acima não resolver, estes valores mantêm a peça
+   correta; nenhum valor novo — todos vêm de shared/tokens.css)
+   ============================================================ */
+:root{
+  --z-gold:#DEB428;
+  --z-gold-light:#E5C353;
+  --z-gold-deep:#B8961F;
+  --z-blue:#234D67;
+  --z-blue-deep:#1A3A4F;
+  --z-blue-soft:#3A6A85;
+  --z-cream:#FFFDF6;
+  --z-cream-warm:#F9F5EC;
+  --z-white:#FFFFFF;
+
+  --z-gold-wash-08:rgba(222,180,40,.08);
+  --z-gold-wash-12:rgba(222,180,40,.12);
+  --z-gold-wash-20:rgba(222,180,40,.20);
+  --z-blue-wash-06:rgba(35,77,103,.06);
+  --z-blue-wash-10:rgba(35,77,103,.10);
+  --z-blue-wash-15:rgba(35,77,103,.15);
+
+  --z-gray-200:#EEEDE9;
+  --z-gray-300:#DDDCD8;
+  --z-gray-400:#B5B4B0;
+  --z-gray-500:#8A8985;
+  --z-gray-600:#6B6A66;
+
+  --crm-critico:#C0392B;
+  --crm-critico-soft:rgba(192,57,43,.12);
+  --crm-critico-text:#9B2C2C;
+  --crm-atencao-soft:rgba(241,196,15,.18);
+  --crm-atencao-text:#8A6D00;
+  --crm-ok:#27AE60;
+  --crm-ok-soft:rgba(39,174,96,.12);
+  --crm-ok-text:#1E8449;
+  --crm-info:#2980B9;
+  --crm-info-soft:rgba(41,128,185,.12);
+  --crm-info-text:#1F618D;
+
+  --z-emporio:#5E9B6B;
+  --z-spa:#B8A9C9;
+  --z-vetcare:#2E7D8A;
+  --z-daycare:#E08856;
+  --z-auaulandia:#5AABB5;
+
+  --radius-md:12px;
+  --radius-lg:16px;
+  --radius-full:999px;
+  --font-marketing:'Poppins',-apple-system,BlinkMacSystemFont,system-ui,sans-serif;
+  --ease-out:cubic-bezier(0.16,1,0.3,1);
+}
+
+/* ============================================================
+   Derivadas locais do esboço (--p-*), todas a partir dos tokens
+   ============================================================ */
+:root{
+  --p-line:var(--z-blue-wash-10);
+  --p-line-fina:var(--z-blue-wash-06);
+  --p-muted:var(--z-gray-600);
+
+  /* v4 — a CAIXA FORTE do NPS, que a Adriana já aprova em produção:
+     um "lábio" sólido (sombra de deslocamento sem desfoque) que dá corpo
+     de papel empilhado + a sombra difusa tingida de azul um degrau mais funda. */
+  --p-sombra:0 4px 0 var(--z-gray-200),0 10px 28px rgba(35,77,103,.12);
+  --p-sombra-alta:0 6px 0 var(--z-gray-300),0 18px 36px rgba(35,77,103,.16);
+  --p-glow-ouro:0 0 0 6px rgba(222,180,40,.18);
+
+  /* --- PALETA CATEGÓRICA DE DADOS · tema "situação do dia" ---
+     Validada com dataviz/scripts/validate_palette.js --mode light --surface #FFFFFF:
+     Lightness PASS · Chroma PASS · CVD PASS (pior par ΔE 14,0 deutan) ·
+     Normal-vision PASS (ΔE 21,5). O WARN de contraste do #B8961F é aliviado
+     por rótulo direto escrito em toda marca (nunca cor sozinha). */
+  --p-dado-ouro:var(--z-gold-deep);   /* #B8961F — série única dourada */
+  --p-dado-azul:var(--z-blue);        /* #234D67 — série única azul (estrutura) */
+  --p-dado-alerta:var(--crm-critico); /* #C0392B — só status */
+  --p-seg-falta:var(--crm-critico);   /* #C0392B — falta */
+  --p-seg-avisou:var(--crm-info);     /* #2980B9 — falta avisada */
+  --p-trilho:rgba(35,77,103,.08);     /* trilho de anel, pill e barra */
+  --p-media:var(--z-gray-400);        /* marca cinza de média (emphasis) */
+
+  /* --- TINTAS LEGÍVEIS das cores de serviço (derivadas dos tokens) ---
+     A cor de serviço cheia é para wash, tarja e ícone. Para TEXTO ela precisa
+     descer um degrau: estas duas passam 4,5:1 sobre branco. */
+  --p-daycare-tinta:#A85A2E;             /* --z-daycare #E08856 escurecido (o app já usa esta tinta) */
+  --p-auaulandia-tinta:var(--z-vetcare); /* #2E7D8A — o azul-petróleo do DS é a tinta do turquesa */
+
+  /* --- PARADAS TONAIS DA BARRA LATERAL (Opção F, escolhida pela Adriana em 29/ago) ---
+     Degradê entre --z-blue e --z-blue-deep com uma parada final um degrau abaixo.
+     É a ÚNICA superfície tratada da peça — nunca cor crua, nunca chapada. */
+  --p-barra-1:#20475F;
+  --p-barra-2:var(--z-blue-deep);
+  --p-barra-3:#15303F;
+}
+
+/* ============================================================
+   BASE
+   ============================================================ */
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{-webkit-text-size-adjust:100%}
+body{
+  font-family:var(--font-marketing);
+  background:var(--z-cream);
+  color:var(--z-blue);
+  font-size:14px;
+  line-height:1.5;
+  overflow-x:hidden;
+}
+img,svg{display:block;max-width:100%}
+button{font-family:inherit;background:none;border:none;cursor:pointer;color:inherit}
+a{color:inherit;text-decoration:none}
+
+/* ============================================================
+   HOLOGRAMA DE ENTRADA (IDEIA-11) — só CSS, 900ms, uma vez por sessão
+   O símbolo #39 surge com um brilho dourado varrendo por cima. Sem vídeo,
+   sem biblioteca. `prefers-reduced-motion` desliga (regra no fim do arquivo).
+   ============================================================ */
+.holo{
+  position:fixed;inset:0;z-index:200;display:grid;place-items:center;
+  background:var(--z-cream);overflow:hidden;pointer-events:none;
+  animation:holoSai 900ms var(--ease-out) forwards;
+}
+.holo img{width:118px;height:auto;animation:holoEntra 700ms var(--ease-out) both}
+.holo::after{
+  content:"";position:absolute;top:0;bottom:0;left:0;width:100%;
+  background:linear-gradient(105deg,rgba(222,180,40,0) 42%,rgba(222,180,40,.34) 50%,rgba(222,180,40,0) 58%);
+  animation:holoVarre 900ms var(--ease-out) both;
+}
+@keyframes holoEntra{
+  0%{opacity:0;transform:scale(.86);filter:blur(7px)}
+  55%{opacity:1;filter:blur(0)}
+  100%{opacity:1;transform:scale(1)}
+}
+@keyframes holoVarre{0%{transform:translateX(-72%)}100%{transform:translateX(72%)}}
+@keyframes holoSai{0%,72%{opacity:1}100%{opacity:0}}
+
+/* ============================================================
+   BARRA SUPERIOR (celular) — a mesma superfície tratada da lateral
+   ============================================================ */
+.topo{
+  position:sticky;top:0;z-index:60;padding:11px 14px;
+  color:var(--z-cream);
+  background:
+    radial-gradient(120% 60% at 20% 0%,rgba(222,180,40,.13),transparent 64%),
+    linear-gradient(168deg,var(--p-barra-1) 0%,var(--p-barra-2) 48%,var(--p-barra-3) 100%);
+}
+.topo-linha{display:flex;align-items:center;gap:11px}
+.topo-nome{font-size:15px;font-weight:600;letter-spacing:-.01em}
+.topo-nome small{display:block;font-size:11px;font-weight:500;opacity:.66}
+.menu-mob{display:flex;flex-wrap:wrap;gap:6px;margin:0 0 20px}
+.menu-mob .gp{
+  flex:0 0 100%;font-size:10px;font-weight:700;color:var(--z-gray-500);
+  letter-spacing:.1em;padding:9px 2px 0;
+}
+
+/* ---------- Barra lateral (só no computador) ---------- */
+.lateral{display:none}
+
+/* ---------- Item de navegação do celular (pílula) ---------- */
+.item{
+  display:inline-flex;align-items:center;gap:8px;
+  padding:7px 14px;border-radius:var(--radius-full);
+  font-size:13px;font-weight:500;color:var(--z-blue-soft);
+  border:1px solid transparent;
+  transition:background 200ms var(--ease-out),color 200ms var(--ease-out);
+}
+.item:hover{background:var(--z-blue-wash-06);color:var(--z-blue)}
+.item.on{background:var(--z-gold-wash-12);color:var(--z-blue);font-weight:600}
+.item .breve{font-size:10px;font-weight:500;color:var(--z-gray-500)}
+
+/* ============================================================
+   CONTEÚDO
+   ============================================================ */
+.conteudo{padding:16px 14px 48px;max-width:100%}
+.cabeca{margin-bottom:18px}
+
+/* ---------- saudação vibrante (o topo que engaja) ---------- */
+.saud1{font-size:32px;font-weight:700;color:var(--z-blue);letter-spacing:-.03em;line-height:1.12}
+.saud2{font-size:16px;font-weight:500;color:var(--z-blue);margin-top:8px;line-height:1.45}
+.saud2 b{font-size:21px;font-weight:700;color:var(--z-gold-deep);font-variant-numeric:tabular-nums}
+.saud3{font-size:15px;font-weight:400;font-style:italic;color:var(--z-blue-soft);margin-top:5px;line-height:1.5;max-width:54ch}
+/* o ORNAMENTO — traço dourado 3px × 40px: o único selo da peça */
+.traco{display:block;height:3px;width:0;border-radius:2px;margin-top:13px;
+  background:linear-gradient(90deg,var(--z-gold),var(--z-gold-deep));
+  transition:width 400ms var(--ease-out)}
+.traco.dentro{width:40px}
+.entra{opacity:0;transform:translateY(12px);transition:opacity 400ms var(--ease-out),transform 400ms var(--ease-out)}
+.entra.atraso{transition:opacity 500ms var(--ease-out) 200ms,transform 500ms var(--ease-out) 200ms}
+.entra.dentro{opacity:1;transform:none}
+/* a frase do dia é de quem está com o FILHOt; a chefia recebe o número da casa */
+.so-monitor,.so-outros{display:none}
+body.fatia-monitor .so-monitor{display:block}
+body:not(.fatia-monitor) .so-outros{display:block}
+
+.data{font-size:12px;font-weight:500;color:var(--p-muted);margin-top:14px}
+.fatias{display:flex;flex-wrap:wrap;gap:7px;margin-top:14px}
+.fatia-bt{
+  padding:8px 16px;border-radius:var(--radius-full);
+  font-size:13px;font-weight:600;color:var(--z-blue-soft);
+  border:1px solid var(--p-line);background:var(--z-white);
+  box-shadow:0 2px 0 var(--z-gray-200);
+  transition:transform 200ms var(--ease-out),background 200ms var(--ease-out),color 200ms var(--ease-out);
+}
+.fatia-bt:hover{transform:translateY(-2px)}
+.fatia-bt.on{background:var(--z-blue);border-color:var(--z-blue);color:var(--z-cream);box-shadow:0 2px 0 var(--p-barra-3)}
+
+.nota{
+  font-size:12.5px;font-weight:500;color:var(--p-muted);
+  border-left:3px solid var(--z-gold);padding:6px 0 6px 12px;margin:0 0 16px;
+}
+.nota strong{color:var(--z-blue);font-weight:600}
+
+/* ============================================================
+   ÁREA — o bloco temático que carrega a COR DE SERVIÇO
+   A cor entra em três lugares e só: a tarja de topo dos cards da área,
+   o wash do sticker e a tinta da sobrancelha. Nunca em fundo de bloco.
+   ============================================================ */
+.area{
+  --area-tinta:var(--z-gold-deep);
+  --area-wash:var(--z-gold-wash-12);
+  --area-tarja:var(--z-gold-wash-20);
+}
+/* Day Care — creche lúdica e feliz: coral */
+.area-daycare{
+  --area-tinta:var(--p-daycare-tinta);
+  --area-wash:rgba(224,136,86,.14);
+  --area-tarja:rgba(224,136,86,.58);
+}
+/* AuAulândia — colônia de férias encantada: turquesa */
+.area-auaulandia{
+  --area-tinta:var(--p-auaulandia-tinta);
+  --area-wash:rgba(90,171,181,.16);
+  --area-tarja:rgba(90,171,181,.62);
+}
+.area-h{display:flex;align-items:flex-start;gap:14px;margin:36px 0 14px}
+.area:first-child .area-h{margin-top:20px}
+.area-st{
+  width:46px;height:46px;flex:0 0 46px;border-radius:14px;
+  display:flex;align-items:center;justify-content:center;
+  background:var(--area-wash);color:var(--area-tinta);
+}
+.area-st svg{width:28px;height:28px}
+.area-txt{min-width:0;flex:1 1 auto}
+.area-eyebrow{font-size:10.5px;font-weight:700;letter-spacing:.14em;color:var(--area-tinta)}
+.area-t{font-size:26px;font-weight:700;color:var(--z-blue);letter-spacing:-.03em;line-height:1.15;margin-top:3px}
+.area-sub{font-size:13.5px;font-weight:500;color:var(--p-muted);margin-top:5px;max-width:76ch;line-height:1.5}
+
+/* ---------- título de SEÇÃO (a herança da Diretoria) ---------- */
+.secao{
+  font-size:34px;font-weight:700;color:var(--z-blue);
+  letter-spacing:-.035em;line-height:1.1;margin:40px 0 4px;
+}
+.secao-sub{font-size:13.5px;font-weight:500;color:var(--p-muted);margin-bottom:6px;max-width:72ch;line-height:1.5}
+
+/* ============================================================
+   GRID 12 COLUNAS
+   ============================================================ */
+.painel{display:none}
+.painel.on{display:block}
+.grid{display:grid;grid-template-columns:1fr;gap:12px;align-items:start}
+.c3,.c4,.c5,.c6,.c7,.c8,.c12{grid-column:auto}
+
+/* ============================================================
+   CARD — v4: a caixa forte
+   ============================================================ */
+.card{
+  position:relative;background:var(--z-white);
+  border:1px solid var(--p-line-fina);
+  border-top:3px solid var(--area-tarja,var(--z-gold-wash-20));
+  border-radius:var(--radius-lg);
+  padding:17px 16px 16px;box-shadow:var(--p-sombra);
+  transition:transform 200ms var(--ease-out),box-shadow 200ms var(--ease-out);
+  min-width:0;
+}
+.card:hover{transform:translateY(-3px);box-shadow:var(--p-sombra-alta)}
+/* par de quadros grandes lado a lado — mesma altura */
+.grid > .par{align-self:stretch}
+.tit{font-size:20px;font-weight:700;color:var(--z-blue);letter-spacing:-.025em;line-height:1.22}
+.sub{font-size:13.5px;font-weight:500;color:var(--p-muted);margin-top:5px;line-height:1.45}
+.rot{font-size:13px;font-weight:500;color:var(--p-muted)}
+.tag{
+  position:absolute;top:16px;right:14px;
+  font-size:9.5px;font-weight:700;color:var(--p-muted);
+  border:1px solid var(--p-line);border-radius:var(--radius-full);padding:2px 8px;
+  letter-spacing:.02em;
+}
+/* folga fixa para a etiqueta mais larga ("já existe") nunca encostar no título */
+.card .tit{padding-right:80px}
+
+/* ============================================================
+   NÚMEROS
+   ============================================================ */
+.kpi{font-size:40px;font-weight:700;color:var(--z-blue);line-height:1.02;letter-spacing:-.04em;font-variant-numeric:tabular-nums}
+.kpi.ouro{color:var(--z-gold-deep)}
+.kpi.coral{color:var(--p-daycare-tinta)}
+.kpi.turq{color:var(--p-auaulandia-tinta)}
+.kpi.hero{font-size:46px}
+.kpi-linha{display:grid;grid-template-columns:repeat(2,1fr);gap:14px}
+.kpi-bloco{min-width:0}
+.icone{
+  width:32px;height:32px;border-radius:10px;display:flex;align-items:center;justify-content:center;
+  margin-bottom:9px;
+}
+.icone svg{width:17px;height:17px}
+
+/* ---------- washes de serviço (10–16%) ---------- */
+.w-daycare{background:rgba(224,136,86,.14);color:var(--p-daycare-tinta)}
+.w-auaulandia{background:rgba(90,171,181,.16);color:var(--p-auaulandia-tinta)}
+.w-vetcare{background:rgba(46,125,138,.12);color:var(--z-vetcare)}
+.w-emporio{background:rgba(94,155,107,.12);color:var(--z-emporio)}
+.w-ouro{background:var(--z-gold-wash-12);color:var(--z-gold-deep)}
+.w-azul{background:var(--z-blue-wash-06);color:var(--z-blue)}
+
+/* ============================================================
+   FAIXA "A CASA AGORA" — a tira que a Adriana já lê no app
+   ============================================================ */
+.strip{
+  display:grid;grid-template-columns:repeat(2,1fr);gap:1px;
+  background:var(--p-line);border-radius:var(--radius-md);overflow:hidden;margin-top:16px;
+}
+@media(min-width:640px){.strip{grid-template-columns:repeat(4,1fr)}}
+.strip-i{background:var(--z-white);padding:16px 10px 14px;text-align:center;min-width:0}
+.strip-st{
+  width:38px;height:38px;margin:0 auto 8px;border-radius:11px;
+  display:flex;align-items:center;justify-content:center;
+}
+.strip-st svg{width:22px;height:22px}
+.strip-i .kpi{font-size:32px}
+.strip-l{font-size:12px;font-weight:600;color:var(--p-muted);margin-top:5px;line-height:1.3}
+
+/* ---------- badge alpha (semáforo) ---------- */
+.badge{
+  display:inline-flex;align-items:center;gap:6px;
+  padding:3px 10px;border-radius:var(--radius-full);
+  font-size:11.5px;font-weight:700;white-space:nowrap;
+}
+.b-critico{background:var(--crm-critico-soft);color:var(--crm-critico-text)}
+.b-atencao{background:var(--crm-atencao-soft);color:var(--crm-atencao-text)}
+.b-ok{background:var(--crm-ok-soft);color:var(--crm-ok-text)}
+.b-info{background:var(--crm-info-soft);color:var(--crm-info-text)}
+.b-ouro{background:var(--z-gold-wash-20);color:var(--z-blue)}
+.badge svg{width:11px;height:11px;flex:0 0 auto}
+.li .badge,.feed-i .badge,.ritmo-i .badge{flex:0 0 auto;align-self:flex-start}
+
+/* ---------- botões pílula ---------- */
+.bt{
+  display:inline-flex;align-items:center;gap:7px;
+  padding:9px 18px;border-radius:var(--radius-full);
+  font-size:13px;font-weight:700;
+  transition:transform 180ms var(--ease-out),box-shadow 180ms var(--ease-out);
+}
+.bt-azul{background:var(--z-blue);color:var(--z-cream);box-shadow:0 3px 0 var(--p-barra-3)}
+.bt-azul:hover{transform:translateY(-2px);box-shadow:0 5px 0 var(--p-barra-3),0 10px 18px rgba(35,77,103,.18)}
+.bt-ouro{background:var(--z-gold);color:var(--z-blue);box-shadow:0 3px 0 var(--z-gold-deep)}
+.bt-ouro:hover{transform:translateY(-2px);box-shadow:0 5px 0 var(--z-gold-deep),0 10px 18px rgba(35,77,103,.18)}
+.chip{
+  display:inline-flex;align-items:center;gap:6px;
+  padding:4px 12px;border-radius:var(--radius-full);
+  font-size:12px;font-weight:600;background:var(--z-gold-wash-12);color:var(--z-blue);
+}
+.chip-falta{background:var(--crm-critico-soft);color:var(--crm-critico-text)}
+.chip-avisou{background:var(--crm-info-soft);color:var(--crm-info-text)}
+.chip-neutro{background:var(--z-blue-wash-06);color:var(--z-blue-soft)}
+
+/* ---------- ponto ao vivo ---------- */
+.vivo{width:8px;height:8px;border-radius:50%;background:var(--crm-ok);flex:0 0 auto;animation:pulso 1.6s ease-in-out infinite}
+@keyframes pulso{0%,100%{opacity:1;box-shadow:0 0 0 0 rgba(39,174,96,.35)}50%{opacity:.55;box-shadow:0 0 0 5px rgba(39,174,96,0)}}
+
+/* ============================================================
+   FAIXA "AULUNOS DE HOJE" — barra 12px segmentada
+   ============================================================ */
+.faixa-corpo{display:grid;gap:18px;margin-top:16px}
+@media(min-width:700px){
+  .c12.faixa-aulunos .faixa-corpo{grid-template-columns:auto 1fr;gap:28px;align-items:center}
+}
+.faixa-num{min-width:0}
+.faixa-num .kpi{white-space:nowrap}
+.faixa-lado{min-width:0}
+.segbar{display:flex;gap:2px;height:12px;margin-bottom:12px;min-width:0}
+.segbar i{display:block;width:0;height:100%;border-radius:6px;min-width:0;
+  transition:width 500ms var(--ease-out)}
+.seg-ok{
+  background:linear-gradient(180deg,rgba(255,255,255,.30),rgba(255,255,255,0) 45%),var(--p-dado-ouro);
+  box-shadow:inset 0 -1px 0 rgba(35,77,103,.25);
+}
+.seg-falta{
+  background:linear-gradient(180deg,rgba(255,255,255,.30),rgba(255,255,255,0) 45%),var(--p-seg-falta);
+  box-shadow:inset 0 -1px 0 rgba(35,77,103,.30);
+}
+.seg-avisou{
+  background:linear-gradient(180deg,rgba(255,255,255,.30),rgba(255,255,255,0) 45%),var(--p-seg-avisou);
+  box-shadow:inset 0 -1px 0 rgba(35,77,103,.30);
+}
+.segleg{display:flex;flex-wrap:wrap;gap:7px 18px;font-size:12.5px;font-weight:500;color:var(--p-muted)}
+.segleg-i{display:inline-flex;align-items:center;gap:7px;white-space:nowrap;min-width:0}
+.segleg-i b{color:var(--z-blue);font-weight:700;font-variant-numeric:tabular-nums}
+.pt{width:9px;height:9px;border-radius:3px;flex:0 0 auto}
+.pt-ok{background:var(--p-dado-ouro)}
+.pt-falta{background:var(--p-seg-falta)}
+.pt-avisou{background:var(--p-seg-avisou)}
+.chips{display:flex;flex-wrap:wrap;gap:8px;margin-top:14px}
+
+/* ============================================================
+   TIMELINE VERTICAL
+   ============================================================ */
+.tl{position:relative;margin-top:14px;padding-left:22px}
+.tl::before{content:"";position:absolute;left:5px;top:6px;bottom:6px;width:2px;background:var(--z-blue-wash-15);border-radius:2px}
+.tl-i{position:relative;display:flex;gap:10px;align-items:baseline;padding:6px 0}
+.tl-no{position:absolute;left:-22px;top:9px;width:12px;height:12px;border-radius:50%;
+  border:2px solid var(--z-blue-wash-15);background:var(--z-white);
+  display:flex;align-items:center;justify-content:center}
+.tl-i.feito .tl-no{background:var(--z-gold);border-color:var(--z-gold)}
+.tl-i.feito .tl-no::after{content:"✓";font-size:8px;font-weight:700;color:var(--z-blue);line-height:1}
+.tl-i.agora .tl-no{border-color:var(--crm-ok)}
+.tl-i.agora .tl-no::after{content:"";width:6px;height:6px;border-radius:50%;background:var(--crm-ok);animation:pulso 1.6s ease-in-out infinite}
+.tl-h{font-size:12px;font-weight:700;color:var(--p-muted);flex:0 0 40px;font-variant-numeric:tabular-nums}
+.tl-t{font-size:13px;font-weight:500;color:var(--z-blue);min-width:0}
+.tl-i.feito .tl-t{color:var(--p-muted)}
+
+/* ============================================================
+   TIMELINE HORIZONTAL — os 4 tempos de Enriquecimento Ambiental
+   ============================================================ */
+.tlh{list-style:none;display:grid;grid-template-columns:repeat(2,1fr);gap:18px 14px;margin-top:18px}
+@media(min-width:760px){.tlh{grid-template-columns:repeat(4,1fr)}}
+.tlh-i{position:relative;min-width:0;padding-top:28px}
+.tlh-i::before{content:"";position:absolute;top:8px;left:24px;right:-14px;height:2px;background:var(--z-blue-wash-15);border-radius:2px}
+.tlh-i:last-child::before{display:none}
+@media(max-width:759px){.tlh-i:nth-child(2n)::before{display:none}}
+.tlh-no{position:absolute;top:0;left:0;width:18px;height:18px;border-radius:50%;
+  border:2px solid var(--z-blue-wash-15);background:var(--z-white);
+  display:flex;align-items:center;justify-content:center}
+.tlh-i.feito .tlh-no{background:var(--z-gold);border-color:var(--z-gold)}
+.tlh-i.feito .tlh-no::after{content:"✓";font-size:10px;font-weight:700;color:var(--z-blue);line-height:1}
+.tlh-i.agora .tlh-no{border-color:var(--crm-ok)}
+.tlh-i.agora .tlh-no::after{content:"";width:8px;height:8px;border-radius:50%;background:var(--crm-ok);animation:pulso 1.6s ease-in-out infinite}
+.tlh-h{display:block;font-size:12.5px;font-weight:700;color:var(--p-muted);font-variant-numeric:tabular-nums}
+.tlh-t{display:block;font-size:14px;font-weight:700;color:var(--z-blue);margin-top:1px;line-height:1.3}
+.tlh-i .chip{margin-top:8px;font-size:11.5px}
+
+/* ============================================================
+   PROGRESS PILL (8px)
+   ============================================================ */
+.pill{height:8px;border-radius:var(--radius-full);background:var(--p-trilho);overflow:hidden;margin-top:8px}
+.pill i{display:block;height:100%;width:0;border-radius:var(--radius-full);
+  background:linear-gradient(180deg,var(--z-gold-light),var(--z-gold-deep));
+  transition:width 500ms var(--ease-out)}
+.pill-rot{display:flex;justify-content:space-between;gap:10px;font-size:12.5px;font-weight:500;color:var(--p-muted);margin-top:8px}
+.pill-rot b{color:var(--z-blue);font-weight:700}
+
+/* ---------- pílula de variação do KPI (seta + número, nunca cor sozinha) ---------- */
+.varp{display:inline-flex;align-items:center;gap:5px;margin-top:8px;padding:2px 10px;
+  border-radius:var(--radius-full);font-size:11.5px;font-weight:700;font-variant-numeric:tabular-nums;white-space:nowrap}
+.v-sobe{background:var(--crm-ok-soft);color:var(--crm-ok-text)}
+.v-desce{background:var(--crm-critico-soft);color:var(--crm-critico-text)}
+.v-igual{background:var(--z-blue-wash-06);color:var(--z-blue-soft)}
+
+/* ============================================================
+   STAT TILES
+   ============================================================ */
+.tiles{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:14px}
+.tile{border:1px solid var(--p-line-fina);border-radius:var(--radius-md);padding:11px 10px;min-width:0;
+  box-shadow:0 2px 0 var(--z-gray-200)}
+.tile b{display:block;font-size:22px;font-weight:700;color:var(--z-blue);letter-spacing:-.03em;line-height:1.1;font-variant-numeric:tabular-nums}
+.tile span{display:block;font-size:11.5px;font-weight:500;color:var(--p-muted);margin-top:2px}
+
+/* ============================================================
+   DONUT — a métrica-âncora
+   ============================================================ */
+.anel-caixa{display:flex;gap:18px;align-items:center;flex-wrap:wrap;margin-top:16px}
+.anel{position:relative;width:132px;height:132px;flex:0 0 132px;border-radius:50%;box-shadow:var(--p-glow-ouro)}
+.anel svg{width:132px;height:132px}
+.anel-arco{transition:stroke-dashoffset 700ms var(--ease-out)}
+.anel-mid{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center}
+.anel-mid b{font-size:34px;font-weight:700;color:var(--z-blue);letter-spacing:-.035em;line-height:1;font-variant-numeric:tabular-nums}
+.anel-mid span{font-size:12px;font-weight:500;color:var(--p-muted);margin-top:2px}
+.anel-lado{min-width:0;flex:1 1 150px}
+/* anel de 72px — ocupação de leitos */
+.anel.mini{width:72px;height:72px;flex:0 0 72px}
+.anel.mini svg{width:72px;height:72px}
+.anel.mini .anel-mid b{font-size:19px}
+.anel.mini .anel-mid span{font-size:9.5px;margin-top:0}
+
+/* ============================================================
+   BARRAS HORIZONTAIS (sólidas, leve 3D)
+   ============================================================ */
+.barras{margin-top:14px;display:grid;gap:9px}
+.barra{display:grid;grid-template-columns:1fr auto;gap:8px;align-items:center;min-width:0}
+.barra-rot{display:flex;justify-content:space-between;gap:8px;font-size:12.5px;font-weight:600;color:var(--z-blue);margin-bottom:4px}
+.barra-rot em{font-style:normal;color:var(--p-muted);font-size:12px;font-weight:500}
+.barra-tr{grid-column:1/-1;position:relative;height:10px;border-radius:5px;background:var(--p-trilho);overflow:hidden}
+.barra-tr i{
+  display:block;height:100%;width:0;border-radius:5px;
+  background:linear-gradient(180deg,rgba(255,255,255,.30),rgba(255,255,255,0) 45%),var(--p-dado-azul);
+  box-shadow:inset 0 -1px 0 rgba(35,77,103,.35);
+  transition:width 500ms var(--ease-out);
+}
+.barra-tr.ouro i{background:linear-gradient(180deg,rgba(255,255,255,.35),rgba(255,255,255,0) 45%),var(--p-dado-ouro);box-shadow:inset 0 -1px 0 rgba(35,77,103,.25)}
+.barra-tr.alerta i{background:linear-gradient(180deg,rgba(255,255,255,.30),rgba(255,255,255,0) 45%),var(--p-dado-alerta);box-shadow:inset 0 -1px 0 rgba(35,77,103,.30)}
+/* marca cinza de média (emphasis) */
+.barra-media{position:absolute;top:-3px;bottom:-3px;width:2px;background:var(--p-media);border-radius:2px}
+
+/* ============================================================
+   BARRAS VERTICAIS (colunas douradas, leve 3D)
+   ============================================================ */
+.colunas{display:flex;align-items:flex-end;gap:14px;height:132px;margin-top:18px;padding:0 2px}
+.coluna{flex:1 1 0;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;height:100%;min-width:0}
+.coluna b{font-size:14px;font-weight:700;color:var(--z-blue);margin-bottom:5px;font-variant-numeric:tabular-nums}
+.coluna i{
+  display:block;width:100%;max-width:44px;height:0;border-radius:5px 5px 0 0;
+  background:linear-gradient(180deg,rgba(255,255,255,.38),rgba(255,255,255,0) 40%),var(--p-dado-ouro);
+  box-shadow:inset -1px 0 0 rgba(35,77,103,.18);
+  transition:height 500ms var(--ease-out);
+}
+.colunas-rot{display:flex;gap:14px;margin-top:8px;padding:0 2px}
+.colunas-rot span{flex:1 1 0;text-align:center;font-size:12px;font-weight:500;color:var(--p-muted);min-width:0}
+
+/* ============================================================
+   SPARKLINE / LINHA SUAVE
+   ============================================================ */
+.spark{width:120px;height:36px;flex:0 0 auto}
+.spark-traco,.linha-traco{stroke-dasharray:var(--comp,600);stroke-dashoffset:var(--comp,600);transition:stroke-dashoffset 500ms var(--ease-out)}
+.linha-traco{transition-duration:600ms}
+.spark-area,.linha-area{opacity:0;transition:opacity 500ms var(--ease-out) 200ms}
+.desenhado .spark-traco,.desenhado .linha-traco{stroke-dashoffset:0}
+.desenhado .spark-area,.desenhado .linha-area{opacity:1}
+.ritmo{display:grid;gap:12px;margin-top:14px}
+.ritmo-i{display:grid;grid-template-columns:auto 1fr;gap:12px;align-items:center;min-width:0}
+.ritmo-txt{min-width:0}
+.ritmo-txt b{display:block;font-size:13.5px;font-weight:700;color:var(--z-blue)}
+.ritmo-txt span{display:block;font-size:12px;font-weight:500;color:var(--p-muted)}
+.ritmo-txt .badge{display:inline-flex;margin-top:5px}
+.grafico-nota{font-size:12px;font-weight:500;color:var(--p-muted);margin-top:12px;line-height:1.5}
+/* duas colunas internas: gráfico à esquerda, leitura à direita */
+.duas{display:grid;gap:0}
+/* só divide em duas colunas quando há largura de verdade: num card de 6 colunas
+   a 1280px as barras e a lista ficariam apertadas demais */
+@media(min-width:1500px){.duas{grid-template-columns:1fr 1fr;gap:20px;align-items:start}
+  .duas > .lista{margin-top:0}}
+
+/* ============================================================
+   LISTAS COMPACTAS
+   ============================================================ */
+.lista{margin-top:12px}
+.li{display:flex;gap:9px;align-items:flex-start;padding:8px 0;border-top:1px solid var(--p-line-fina);min-width:0}
+.li:first-child{border-top:none;padding-top:4px}
+.li-txt{min-width:0;flex:1 1 auto}
+.li-txt b{display:block;font-size:13.5px;font-weight:700;color:var(--z-blue)}
+.li-txt span{display:block;font-size:12px;font-weight:500;color:var(--p-muted);margin-top:1px}
+.li-fim{flex:0 0 auto;align-self:center}
+/* lista larga em três colunas (card de 12 colunas) */
+@media(min-width:900px){
+  .lista.trio{display:grid;grid-template-columns:repeat(3,1fr);gap:0 26px;align-items:start}
+  .lista.trio .li:first-child{border-top:1px solid var(--p-line-fina);padding-top:8px}
+}
+
+/* ============================================================
+   TABELA LEVE (zebra 3% azul)
+   ============================================================ */
+.tab{width:100%;border-collapse:collapse;margin-top:14px;font-size:12.5px}
+.tab th{
+  text-align:left;font-size:11px;font-weight:700;color:var(--p-muted);
+  padding:7px 8px;border-bottom:1px solid var(--p-line);white-space:nowrap;
+}
+.tab td{padding:9px 8px;color:var(--z-blue);font-weight:500;vertical-align:top}
+.tab tbody tr:nth-child(odd){background:rgba(35,77,103,.03)}
+.tab td.num{font-variant-numeric:tabular-nums;white-space:nowrap}
+.tab td.nome{font-weight:700}
+.total{
+  display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;
+  margin-top:12px;padding-top:11px;border-top:1px solid var(--p-line);
+}
+.total span{font-size:12.5px;font-weight:500;color:var(--p-muted)}
+.total b{font-size:22px;font-weight:700;color:var(--z-gold-deep);font-variant-numeric:tabular-nums}
+
+/* ============================================================
+   FEED AO VIVO
+   ============================================================ */
+.feed{margin-top:14px}
+.feed-i{display:flex;align-items:flex-start;gap:10px;padding:9px 0;border-top:1px solid var(--p-line-fina);min-width:0}
+.feed-i:first-child{border-top:none}
+.feed-q{font-size:11.5px;font-weight:700;color:var(--p-muted);flex:0 0 74px;font-variant-numeric:tabular-nums}
+.feed-t{min-width:0;flex:1 1 auto}
+.feed-t b{display:block;font-size:13px;font-weight:700;color:var(--z-blue)}
+.feed-t span{display:block;font-size:11.5px;font-weight:500;color:var(--p-muted);word-break:break-word}
+
+/* ============================================================
+   RODAPÉ
+   ============================================================ */
+.rodape{margin-top:34px;font-size:11.5px;font-weight:500;color:var(--p-muted);text-align:center}
+
+/* ============================================================
+   MOTION — reveal em cascata
+   ============================================================ */
+.rv{opacity:0;transform:translateY(12px);transition:opacity 360ms var(--ease-out),transform 360ms var(--ease-out)}
+.rv.dentro{opacity:1;transform:none}
+
+/* ============================================================
+   RESPONSIVO
+   ============================================================ */
+@media(min-width:600px){
+  .kpi-linha{grid-template-columns:repeat(4,1fr)}
+  .conteudo{padding-left:20px;padding-right:20px}
+}
+
+@media(min-width:900px){
+  .topo,.menu-mob{display:none}
+
+  /* ---------- BARRA LATERAL — "a trilha do cuidado" (Opção F do app) ----------
+     Azul profundo tratado (degradê + brilho dourado no alto), símbolo #39 claro
+     grande e sem caixa, categoria › sub-cabeçalho › item nos três degraus. */
+  .lateral{
+    display:flex;flex-direction:column;
+    position:fixed;top:0;bottom:0;left:0;width:252px;z-index:60;
+    color:var(--z-cream);overflow:hidden;
+    background:
+      radial-gradient(125% 55% at 22% 0%,rgba(222,180,40,.12),transparent 62%),
+      linear-gradient(168deg,var(--p-barra-1) 0%,var(--p-barra-2) 46%,var(--p-barra-3) 100%);
+  }
+  .lat-marca{flex:0 0 auto;display:flex;justify-content:center;padding:26px 16px 8px}
+  /* o símbolo respira direto sobre o fundo da barra — nunca dentro de caixa */
+  .lat-marca img{width:96px;height:auto;filter:drop-shadow(0 3px 10px rgba(26,58,79,.45))}
+  .lat-sub{flex:0 0 auto;text-align:center;font-size:11px;letter-spacing:.9px;opacity:.62;font-weight:500;margin-bottom:12px}
+  /* o menu é quem rola; a marca no alto e o rodapé embaixo ficam sempre no lugar */
+  .lat-nav{flex:1 1 auto;min-height:0;overflow-y:auto;padding:6px 12px 12px}
+  .lat-nav a{
+    display:flex;align-items:center;gap:11px;padding:10px 13px;border-radius:11px;
+    color:var(--z-cream);font-size:14px;font-weight:500;opacity:.82;
+    margin-bottom:2px;line-height:1.3;transition:background 160ms var(--ease-out),opacity 160ms var(--ease-out);
+  }
+  .lat-nav a:hover{background:rgba(255,253,246,.07);opacity:1}
+  .lat-nav a svg{width:18px;height:18px;flex:0 0 auto}
+  /* nível 1 — CATEGORIA: superfície própria, baixinha, com o ícone aceso em dourado */
+  .lat-nav a.cat{
+    font-size:17px;font-weight:700;opacity:1;letter-spacing:-.01em;
+    margin:14px 0 0;padding:11px 12px;border-radius:12px;
+    background:rgba(255,253,246,.045);border-top:1px solid rgba(255,255,255,.12);
+  }
+  .lat-nav a.cat svg{color:var(--z-gold)}
+  .lat-nav a.cat:hover{background:rgba(255,253,246,.09)}
+  /* nível 2 — SUB-CABEÇALHO: título dourado, sem superfície */
+  .lat-nav a.sub2{
+    font-size:15px;font-weight:700;color:var(--z-gold);opacity:1;letter-spacing:.3px;
+    margin:8px 0 2px;padding:8px 12px 8px 14px;border-radius:9px;gap:8px;
+  }
+  /* nível 3 — ITEM: recuado, com a trilha dourada baixa ligando os irmãos */
+  .lat-nav a.filho{margin-left:22px;padding-left:12px;
+    border-left:2px solid rgba(222,180,40,.30);border-radius:0 11px 11px 0}
+  /* ITEM ATIVO — pílula de dourado baixo com um fio dourado à esquerda.
+     Nunca bola amarela cheia: ela gritava mais que o conteúdo da tela. */
+  .lat-nav a.on{position:relative;background:rgba(222,180,40,.13);color:var(--z-gold-light);opacity:1;font-weight:600}
+  .lat-nav a.on::before{content:"";position:absolute;left:0;top:5px;bottom:5px;width:3px;border-radius:999px;background:var(--z-gold)}
+  .lat-nav a.on svg{color:var(--z-gold)}
+  .lat-nav a.solto{margin-top:14px;border-top:1px solid rgba(255,255,255,.12);padding-top:10px;border-radius:0 0 11px 11px}
+  .lat-nav .breve{margin-left:auto;font-size:9px;background:rgba(255,253,246,.10);padding:2px 7px;border-radius:999px;font-weight:600;letter-spacing:.3px}
+  .lat-quem{flex:0 0 auto;padding:13px 16px 16px;border-top:1px solid rgba(255,253,246,.12)}
+  .lat-quem small{display:block;font-size:10px;font-weight:700;letter-spacing:.6px;opacity:.6}
+  .lat-quem b{display:block;font-size:14px;font-weight:600;margin-top:4px}
+
+  .conteudo{margin-left:252px;padding:28px 28px 56px;max-width:1280px}
+  .grid{grid-template-columns:repeat(12,1fr);gap:16px}
+  .c3{grid-column:span 3}
+  .c4{grid-column:span 4}
+  .c5{grid-column:span 5}
+  .c6{grid-column:span 6}
+  .c7{grid-column:span 7}
+  .c8{grid-column:span 8}
+  .c12{grid-column:span 12}
+  .card{padding:19px 18px 18px}
+  .area-t{font-size:28px}
+}
+
+/* tabela vira lista no celular */
+@media(max-width:699px){
+  .tab,.tab tbody,.tab tr,.tab td{display:block;width:100%}
+  .tab thead{display:none}
+  .tab tr{border:1px solid var(--p-line-fina);border-radius:var(--radius-md);padding:6px 10px;margin-bottom:8px;background:none}
+  .tab tbody tr:nth-child(odd){background:rgba(35,77,103,.03)}
+  .tab td{display:flex;justify-content:space-between;gap:12px;padding:5px 0;border:none}
+  .tab td::before{content:attr(data-col);color:var(--p-muted);font-weight:500;flex:0 0 auto}
+  .tab td.nome{justify-content:flex-start}
+  .tab td span{text-align:right;min-width:0}
+}
+
+@media(prefers-reduced-motion:reduce){
+  *,*::before,*::after{animation:none !important;transition:none !important}
+  .rv{opacity:1;transform:none}
+  .holo{display:none}
+}
+</style>
+</head>
+<body>
+
+<!-- ============ HOLOGRAMA DE ENTRADA (900ms, uma vez por sessão) ============ -->
+<div class="holo" id="holo" aria-hidden="true">
+  <img src="assets/simbolo-zeluz-39.svg" alt="" width="118" height="118">
+</div>
+
+<!-- ============ DESENHOS (stickers) — usados por <use> em toda a peça ============ -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
+  <defs>
+    <!-- sol — o dia que começa -->
+    <g id="st-sol">
+      <circle cx="16" cy="16" r="6" fill="none" stroke="currentColor" stroke-width="2.2"></circle>
+      <path d="M16 2.6v3.4M16 26v3.4M2.6 16h3.4M26 16h3.4M6.6 6.6l2.4 2.4M23 23l2.4 2.4M25.4 6.6L23 9M9 23l-2.4 2.4"
+            fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"></path>
+    </g>
+    <!-- lua — a noite da AuAulândia -->
+    <g id="st-lua">
+      <path d="M26 20.6A11.2 11.2 0 0111.4 6a11.4 11.4 0 1014.6 14.6z" fill="currentColor"></path>
+      <circle cx="24.2" cy="8.4" r="1.5" fill="currentColor"></circle>
+    </g>
+    <!-- patinha — o Day Care -->
+    <g id="st-pata">
+      <ellipse cx="8.4" cy="12.2" rx="3" ry="3.9" fill="currentColor"></ellipse>
+      <ellipse cx="14.2" cy="8.4" rx="3.1" ry="4.1" fill="currentColor"></ellipse>
+      <ellipse cx="20.6" cy="8.8" rx="3.1" ry="4.1" fill="currentColor"></ellipse>
+      <ellipse cx="26" cy="13" rx="2.9" ry="3.7" fill="currentColor"></ellipse>
+      <path d="M17 15.4c4.6 0 8.4 3.6 8.4 7.6 0 3.1-2.4 4.8-5.2 4.8-1.4 0-2.3-.6-3.2-.6s-1.8.6-3.2.6c-2.8 0-5.2-1.7-5.2-4.8 0-4 3.8-7.6 8.4-7.6z" fill="currentColor"></path>
+    </g>
+    <!-- ossinho — os Peludinhos -->
+    <g id="st-osso">
+      <rect x="8" y="13.4" width="16" height="5.2" rx="2.6" fill="currentColor"></rect>
+      <circle cx="8" cy="12" r="3.5" fill="currentColor"></circle>
+      <circle cx="8" cy="20" r="3.5" fill="currentColor"></circle>
+      <circle cx="24" cy="12" r="3.5" fill="currentColor"></circle>
+      <circle cx="24" cy="20" r="3.5" fill="currentColor"></circle>
+    </g>
+    <!-- coração — planos e cobranças (o vínculo que se renova) -->
+    <g id="st-coracao">
+      <path d="M16 27.4S4.6 20.2 4.6 12.7A6.2 6.2 0 0116 9.3a6.2 6.2 0 0111.4 3.4c0 7.5-11.4 14.7-11.4 14.7z" fill="currentColor"></path>
+    </g>
+    <!-- casinha — o time e a casa -->
+    <g id="st-casa">
+      <path d="M16 3.4L3.6 14.2v13.2c0 .9.7 1.6 1.6 1.6h6.6v-8.2h8.4V29h6.6c.9 0 1.6-.7 1.6-1.6V14.2z" fill="currentColor"></path>
+    </g>
+    <!-- escudo — a conferência da Diretoria -->
+    <g id="st-escudo">
+      <path d="M16 2.8l11.4 4.1v9.3c0 7.3-4.8 12.1-11.4 14-6.6-1.9-11.4-6.7-11.4-14V6.9z" fill="currentColor"></path>
+    </g>
+  </defs>
+</svg>
+
+<!-- ============ BARRA SUPERIOR (celular) ============ -->
+<header class="topo">
+  <div class="topo-linha">
+    <img src="assets/simbolo-zeluz-39-claro.svg" alt="Zêluz" width="36" height="36">
+    <div class="topo-nome">Zêluz<small>Painel</small></div>
+  </div>
+</header>
+
+<!-- ============ BARRA LATERAL (computador) — a trilha do cuidado ============ -->
+<aside class="lateral">
+  <div class="lat-marca">
+    <img src="assets/simbolo-zeluz-39-claro.svg" alt="Zêluz" width="96" height="96">
+  </div>
+  <p class="lat-sub">Sistema Zêluz</p>
+  <nav class="lat-nav">
+    <a class="on"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5h7v7H4zM13 5h7v4h-7zM13 11h7v8h-7zM4 14h7v5H4z"/></svg><span>Painel</span></a>
+
+    <a class="cat"><svg viewBox="0 0 32 32" aria-hidden="true"><use href="#st-casa"></use></svg><span>Serviços</span></a>
+    <a class="sub2"><svg viewBox="0 0 32 32" aria-hidden="true"><use href="#st-lua"></use></svg><span>AuAulândia</span></a>
+    <a class="filho">Conferência do check-in</a>
+    <a class="filho">Plantão da noite</a>
+    <a class="filho">Hóspedes de hoje</a>
+    <a class="filho">Check-out</a>
+    <a class="sub2"><svg viewBox="0 0 32 32" aria-hidden="true"><use href="#st-pata"></use></svg><span>Day Care</span></a>
+    <a class="filho">Abertura do dia</a>
+    <a class="filho">Aulunos</a>
+
+    <a class="cat"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="8"/><path d="M12 8v8M8 12h8"/></svg><span>Central Zêluz</span></a>
+    <a class="cat"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 6h16M4 12h16M4 18h10"/></svg><span>Operação</span></a>
+
+    <a class="solto"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 4h9l3 3v13H6z"/><path d="M9 11h6M9 15h4"/></svg><span>Relatórios</span></a>
+    <a><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="4" y="5" width="16" height="15" rx="2"/><path d="M4 10h16M9 3v4M15 3v4"/></svg><span>Agenda</span><span class="breve">em breve</span></a>
+  </nav>
+  <div class="lat-quem">
+    <small>FATIA EM EXIBIÇÃO</small>
+    <b id="quemNome">Monitor</b>
+  </div>
+</aside>
+
+<!-- ============ CONTEÚDO ============ -->
+<main class="conteudo">
+
+  <!-- No celular o menu é uma tira curta: os três níveis da barra lateral moram
+       na gaveta do app, e aqui o que precisa aparecer primeiro é a saudação. -->
+  <nav class="menu-mob">
+    <a class="item on">Painel</a>
+    <a class="item">AuAulândia</a>
+    <a class="item">Day Care</a>
+    <a class="item">Central Zêluz</a>
+    <a class="item">Operação</a>
+    <a class="item">Relatórios</a>
+  </nav>
+
+  <div class="cabeca">
+    <h1 class="saud1 entra" id="saud1">Bom dia, Octávio.</h1>
+    <p class="saud2 entra so-monitor" id="saud2">Hoje, <b data-alvo="18">0</b> FILHOts passam pelas suas mãos.</p>
+    <p class="saud3 entra atraso so-monitor" id="saud3">Energia bem gasta vira bem-estar. Isso começa na sua monitoria.</p>
+    <p class="saud2 entra so-outros">Na casa hoje: <b data-alvo="21">0</b> aulunos e <b data-alvo="3">0</b> hóspedes.</p>
+    <span class="traco" id="traco" aria-hidden="true"></span>
+    <div class="data" id="dataHoje">segunda-feira, 31 de agosto de 2026</div>
+    <div class="fatias" id="fatias">
+      <button type="button" class="fatia-bt on" data-fatia="monitor">Monitor</button>
+      <button type="button" class="fatia-bt" data-fatia="central">Central Zêluz</button>
+      <button type="button" class="fatia-bt" data-fatia="operacao">Operação</button>
+      <button type="button" class="fatia-bt" data-fatia="diretoria">Diretoria</button>
+    </div>
+  </div>
+
+  <!-- ================================================================= -->
+  <!-- FATIA 1 · MONITOR                                                  -->
+  <!-- ================================================================= -->
+  <section class="painel on" id="p-monitor">
+    <p class="nota"><strong>Esboço para aprovação — nenhuma tela foi construída ainda.</strong> Octávio, Encãotador: você vê só o que é seu. Sem tempo por etapa, sem o nome de outras pessoas, sem dinheiro e sem ranking.</p>
+
+    <section class="area">
+      <header class="area-h">
+        <span class="area-st"><svg viewBox="0 0 32 32" aria-hidden="true"><use href="#st-sol"></use></svg></span>
+        <div class="area-txt">
+          <p class="area-eyebrow">A SUA ROTA</p>
+          <h2 class="area-t">O seu dia</h2>
+          <p class="area-sub">O horário, o plano e o protocolo — na ordem em que a sua manhã acontece.</p>
+        </div>
+      </header>
+
+      <div class="grid">
+
+        <!-- Meu dia -->
+        <article class="card rv c5">
+          <span class="tag">novo</span>
+          <h3 class="tit">Meu dia</h3>
+          <p class="sub">O seu horário de hoje e as suas atividades, na ordem em que acontecem.</p>
+          <div class="tiles">
+            <div class="tile"><b>07:00</b><span>entrada</span></div>
+            <div class="tile"><b>12:00</b><span>almoço</span></div>
+            <div class="tile"><b>16:00</b><span>saída</span></div>
+          </div>
+          <div class="tl">
+            <div class="tl-i feito"><span class="tl-no"></span><span class="tl-h">07:00</span><span class="tl-t">Abertura e recebimento dos aulunos</span></div>
+            <div class="tl-i feito"><span class="tl-no"></span><span class="tl-h">08:30</span><span class="tl-t">Monitoria da turma da manhã</span></div>
+            <div class="tl-i feito"><span class="tl-no"></span><span class="tl-h">10:00</span><span class="tl-t">Check-in do corpo — 3 de 5 FILHOts</span></div>
+            <div class="tl-i agora"><span class="tl-no"></span><span class="tl-h">11:00</span><span class="tl-t">Guardar os pertences da chegada</span></div>
+            <div class="tl-i"><span class="tl-no"></span><span class="tl-h">13:30</span><span class="tl-t">2º horário do almoço dos aulunos</span></div>
+            <div class="tl-i"><span class="tl-no"></span><span class="tl-h">15:00</span><span class="tl-t">Bolsas do check-out</span></div>
+          </div>
+          <div class="pill"><i data-pct="50"></i></div>
+          <div class="pill-rot"><span><b>3 de 6</b> feitas</span><span>faltam 3</span></div>
+        </article>
+
+        <!-- Plano de hoje -->
+        <article class="card rv c3">
+          <span class="tag">novo</span>
+          <h3 class="tit">Plano de hoje</h3>
+          <p class="sub">O plano é por monitor. Quem define é sempre a Márcia — você vê só a sua parte.</p>
+          <p style="margin-top:14px"><span class="chip">Plano 2 · definido às 06:50</span></p>
+          <div class="lista">
+            <div class="li"><div class="li-txt"><b>Monitoria</b><span>turma da manhã e turma da tarde</span></div></div>
+            <div class="li"><div class="li-txt"><b>Guardar os pertences</b><span>na chegada de cada auluno</span></div></div>
+            <div class="li"><div class="li-txt"><b>2º horário de almoço</b><span>13:30 — o seu almoço continua às 12:00</span></div></div>
+          </div>
+        </article>
+
+        <!-- Meu protocolo hoje — a ÂNCORA -->
+        <article class="card rv c4">
+          <span class="tag">novo</span>
+          <h3 class="tit">Meu protocolo hoje</h3>
+          <p class="sub">Não é cobrança: é o retrato de onde a sua rota está aberta, enquanto ainda dá para fechar.</p>
+          <div class="anel-caixa">
+            <div class="anel">
+              <svg viewBox="0 0 132 132" role="img" aria-label="3 de 5 check-ins do corpo feitos">
+                <defs>
+                  <linearGradient id="ouroAnel" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0" stop-color="#DEB428"></stop>
+                    <stop offset="1" stop-color="#B8961F"></stop>
+                  </linearGradient>
+                </defs>
+                <g transform="rotate(-90 66 66)">
+                  <circle cx="66" cy="66" r="60" fill="none" stroke="rgba(35,77,103,.08)" stroke-width="12"></circle>
+                  <circle class="anel-arco" cx="66" cy="66" r="60" fill="none" stroke="url(#ouroAnel)" stroke-width="12"
+                          stroke-linecap="round" stroke-dasharray="377" stroke-dashoffset="377" data-anel="60"></circle>
+                </g>
+              </svg>
+              <div class="anel-mid"><b>3/5</b><span>feitos</span></div>
+            </div>
+            <div class="anel-lado">
+              <p class="rot">Faltam no seu turno</p>
+              <div class="lista">
+                <div class="li"><div class="li-txt"><b>Luna</b><span>chegou às 09:40</span></div></div>
+                <div class="li"><div class="li-txt"><b>Camus</b><span>chegou às 10:05</span></div></div>
+              </div>
+              <p style="margin-top:12px"><button type="button" class="bt bt-azul">Fazer o check-in da Luna</button></p>
+            </div>
+          </div>
+        </article>
+
+        <!-- Meus pontos — o HERO -->
+        <article class="card rv c6">
+          <span class="tag">já existe</span>
+          <h3 class="tit">Meus pontos do check-out</h3>
+          <p class="sub">10 pontos quando a bolsa desce completa. Agosto até hoje.</p>
+          <div style="display:flex;align-items:flex-end;gap:16px;flex-wrap:wrap;margin-top:14px">
+            <div>
+              <div class="kpi ouro hero" data-alvo="78">0</div>
+              <p class="rot">pontos em agosto</p><p class="varp v-sobe">▲ 8 vs. julho</p>
+            </div>
+            <svg class="spark" viewBox="0 0 120 36" role="img" aria-label="Pontos dos últimos 9 check-outs, de 10 possíveis por bolsa">
+              <defs><linearGradient id="gArea1" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#234D67" stop-opacity=".18"></stop><stop offset="1" stop-color="#234D67" stop-opacity="0"></stop></linearGradient></defs>
+              <path class="spark-area" d="M3,3 L17,9 L32,3 L46,3 L60,15 L74,3 L89,3 L103,6 L117,3 L117,36 L3,36 Z" fill="url(#gArea1)"></path>
+              <path class="spark-traco" d="M3,3 L17,9 L32,3 L46,3 L60,15 L74,3 L89,3 L103,6 L117,3" fill="none" stroke="#234D67" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" data-comp="140"></path>
+              <circle cx="117" cy="3" r="4" fill="#234D67" stroke="#FFFFFF" stroke-width="2"></circle>
+            </svg>
+          </div>
+          <div class="lista">
+            <div class="li"><div class="li-txt"><b>7 das 9 bolsas desceram redondo</b><span>12 pontos perdidos em 2 saídas</span></div><span class="li-fim badge b-ouro">últimos 9 check-outs</span></div>
+            <div class="li"><div class="li-txt"><b>19/08 · Toddy</b><span>faltaram mochila e vasilha — 2 de 10</span></div><span class="li-fim badge b-critico">−8</span></div>
+            <div class="li"><div class="li-txt"><b>11/08 · Ozzy</b><span>faltou a coleira — 5 de 10</span></div><span class="li-fim badge b-critico">−5</span></div>
+          </div>
+        </article>
+
+        <!-- Avisos que ficaram comigo -->
+        <article class="card rv c6">
+          <span class="tag">novo</span>
+          <h3 class="tit">Avisos que ficaram comigo</h3>
+          <p class="sub">Aviso que você marcou e que o sistema não conseguiu enviar. Enquanto estiver aqui, ninguém do outro lado recebeu.</p>
+          <div class="lista">
+            <div class="li">
+              <span class="badge b-critico">não saiu</span>
+              <div class="li-txt"><b>Dolly — aviso ao grupo</b><span>hoje às 09:12 — “não comeu o almoço”</span></div>
+            </div>
+          </div>
+          <p style="margin-top:14px"><button type="button" class="bt bt-azul">Reenviar ao grupo</button></p>
+        </article>
+
+      </div>
+    </section>
+  </section>
+
+  <!-- ================================================================= -->
+  <!-- FATIA 2 · CENTRAL ZÊLUZ                                            -->
+  <!-- ================================================================= -->
+  <section class="painel" id="p-central">
+    <p class="nota">Amanda, Central Zêluz: <strong>tudo passa por aqui</strong> — o cadastro, a conversa com o tutor e as cobranças. O valor do plano aparece isolado na ficha do FILHOt e em nenhum outro lugar.</p>
+
+    <section class="area">
+      <header class="area-h">
+        <span class="area-st"><svg viewBox="0 0 32 32" aria-hidden="true"><use href="#st-sol"></use></svg></span>
+        <div class="area-txt">
+          <p class="area-eyebrow">AGORA</p>
+          <h2 class="area-t">O que precisa de você</h2>
+          <p class="area-sub">A turma do dia e a fila que espera decisão sua antes do meio-dia.</p>
+        </div>
+      </header>
+
+      <div class="grid">
+
+        <!-- FAIXA · Aulunos de hoje -->
+        <article class="card rv c12 faixa-aulunos">
+          <span class="tag">novo</span>
+          <h3 class="tit">Aulunos de hoje</h3>
+          <p class="sub">A turma do dia: quem veio, quem faltou e quem avisou antes de faltar.</p>
+          <div class="faixa-corpo">
+            <div class="faixa-num">
+              <div class="kpi ouro hero"><span data-alvo="18">0</span> de 21</div>
+              <p class="rot">aulunos presentes hoje</p>
+              <p class="varp v-sobe">▲ 2 vs. ontem</p>
+            </div>
+            <div class="faixa-lado">
+              <div class="segbar" role="img" aria-label="De 21 aulunos previstos: 18 presentes, 2 faltas e 1 falta avisada">
+                <i class="seg-ok" data-seg="85.71"></i>
+                <i class="seg-falta" data-seg="9.52"></i>
+                <i class="seg-avisou" data-seg="4.77"></i>
+              </div>
+              <div class="segleg">
+                <span class="segleg-i"><em class="pt pt-ok"></em><b>18</b> presentes</span>
+                <span class="segleg-i"><em class="pt pt-falta"></em><b>2</b> faltas</span>
+                <span class="segleg-i"><em class="pt pt-avisou"></em><b>1</b> falta avisada</span>
+              </div>
+              <div class="chips">
+                <span class="chip chip-falta">Luna — faltou</span>
+                <span class="chip chip-falta">Toddy — faltou</span>
+                <span class="chip chip-avisou">Camus — avisou</span>
+              </div>
+            </div>
+          </div>
+        </article>
+
+        <!-- Fila do dia -->
+        <article class="card rv c12">
+          <span class="tag">já existe</span>
+          <h3 class="tit">Fila do dia</h3>
+          <p class="sub">O que precisa de decisão sua antes do meio-dia.</p>
+          <div class="kpi-linha" style="margin-top:16px">
+            <div class="kpi-bloco">
+              <span class="icone w-daycare"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M4 12h16M12 4v16"/></svg></span>
+              <div class="kpi coral" data-alvo="3">0</div>
+              <p class="rot">check-ins pendentes</p><p class="varp v-desce">▲ 1 vs. ontem</p>
+            </div>
+            <div class="kpi-bloco">
+              <span class="icone w-auaulandia"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M5 4h14v16H5z"/><path d="M9 9h6M9 13h4"/></svg></span>
+              <div class="kpi turq" data-alvo="1">0</div>
+              <p class="rot">hóspede sem ficha</p><p class="varp v-igual">= igual a ontem</p>
+            </div>
+            <div class="kpi-bloco">
+              <span class="icone w-auaulandia"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M4 12h13M13 7l5 5-5 5"/></svg></span>
+              <div class="kpi turq" data-alvo="2">0</div>
+              <p class="rot">check-outs hoje</p><p class="varp v-igual">▼ 1 vs. ontem</p>
+            </div>
+            <div class="kpi-bloco">
+              <span class="icone w-ouro"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M4 6h16v12H4z"/><path d="M4 7l8 6 8-6"/></svg></span>
+              <div class="kpi ouro" data-alvo="4">0</div>
+              <p class="rot">tutores a avisar</p><p class="varp v-desce">▲ 2 vs. ontem</p>
+            </div>
+          </div>
+        </article>
+
+      </div>
+    </section>
+
+    <!-- ÁREA · AuAulândia (turquesa) -->
+    <section class="area area-auaulandia">
+      <header class="area-h">
+        <span class="area-st"><svg viewBox="0 0 32 32" aria-hidden="true"><use href="#st-lua"></use></svg></span>
+        <div class="area-txt">
+          <p class="area-eyebrow">SERVIÇO</p>
+          <h2 class="area-t">AuAulândia — o hotel da Zêluz</h2>
+          <p class="area-sub">A colônia de férias: chegada, medicação, orçamento e a bolsa que volta para casa.</p>
+        </div>
+      </header>
+
+      <div class="grid">
+
+        <article class="card rv c4">
+          <span class="tag">já existe</span>
+          <h3 class="tit">Check-in do dia</h3>
+          <p class="sub">O tutor chega: entrada, alimentação, medicação e assinatura. Este é o 1º passo — o monitor confere o corpo depois.</p>
+          <div class="lista">
+            <div class="li"><span class="badge b-critico">esperando</span><div class="li-txt"><b>Toddy — 5 noites</b><span>tutora Sophia · chegou às 08:40</span></div></div>
+            <div class="li"><span class="badge b-atencao">sem assinatura</span><div class="li-txt"><b>Bidu — 2 noites</b><span>tutor Rafael · falta assinar a ficha</span></div></div>
+            <div class="li"><span class="badge b-info">às 15:00</span><div class="li-txt"><b>Mel — 3 noites</b><span>tutora Beatriz · chegada combinada</span></div></div>
+          </div>
+        </article>
+
+        <article class="card rv c4">
+          <span class="tag">já existe</span>
+          <h3 class="tit">Check-out com o tutor</h3>
+          <p class="sub">Conferir a bolsa junto com o tutor e assinar. É o 2º passo — o monitor já montou a bolsa.</p>
+          <div class="lista">
+            <div class="li"><span class="badge b-ok">bolsa pronta</span><div class="li-txt"><b>Camus</b><span>tutora Carolina · sai hoje às 17:00</span></div></div>
+            <div class="li"><span class="badge b-atencao">falta 1 item</span><div class="li-txt"><b>Nina</b><span>tutora Júlia · a vasilha não desceu</span></div></div>
+          </div>
+        </article>
+
+        <article class="card rv c4">
+          <span class="tag">já existe</span>
+          <h3 class="tit">Medicação do dia</h3>
+          <p class="sub">O que precisa ser dado hoje, o que já foi dado e o que passou da hora.</p>
+          <div class="pill" style="margin-top:16px"><i data-pct="71"></i></div>
+          <div class="pill-rot"><span><b>5 de 7</b> doses dadas</span><span>2 em aberto</span></div>
+          <div class="lista">
+            <div class="li"><span class="badge b-critico">atrasada</span><div class="li-txt"><b>Toddy — antibiótico das 10:00</b><span>ainda em aberto, 2 horas de atraso</span></div></div>
+            <div class="li"><span class="badge b-info">próxima</span><div class="li-txt"><b>Luna — 1 dose às 17:00</b><span>anti-inflamatório, com comida</span></div></div>
+          </div>
+        </article>
+
+        <article class="card rv c6">
+          <span class="tag">já existe</span>
+          <h3 class="tit">Orçamento de hospedagem</h3>
+          <p class="sub">Orçamento pedido pelo tutor e ainda sem resposta.</p>
+          <div class="lista">
+            <div class="li"><span class="badge b-critico">sem resposta</span><div class="li-txt"><b>Sophia — Toddy, 5 noites</b><span>pedido ontem · R$ 815,00</span></div></div>
+            <div class="li"><span class="badge b-info">aguardando</span><div class="li-txt"><b>Carolina — Luna e Camus, 3 noites</b><span>enviado hoje · R$ 978,00</span></div></div>
+          </div>
+        </article>
+
+        <article class="card rv c6">
+          <span class="tag">já existe</span>
+          <h3 class="tit">Pendências com o tutor</h3>
+          <p class="sub">Ração acabando, remédio faltando, alguma coisa que ficou para trás na chegada.</p>
+          <div class="lista trio">
+            <div class="li"><span class="icone w-emporio" style="margin:0"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M5 8h14l-1.5 11h-11z"/><path d="M9 8V6a3 3 0 016 0v2"/></svg></span><div class="li-txt"><b>Camus — ração para 1 dia</b><span>tutora Carolina · avisar hoje</span></div></div>
+            <div class="li"><span class="icone w-vetcare" style="margin:0"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M8 12h8M12 8v8"/><circle cx="12" cy="12" r="8"/></svg></span><div class="li-txt"><b>Toddy — remédio não veio na mochila</b><span>tutora Sophia · consta na ficha</span></div></div>
+            <div class="li"><span class="icone w-daycare" style="margin:0"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M5 10h14v8H5z"/><path d="M9 10V7h6v3"/></svg></span><div class="li-txt"><b>Ozzy — vasilha não conferida</b><span>na entrada de hoje</span></div></div>
+          </div>
+        </article>
+
+      </div>
+    </section>
+
+    <!-- ÁREA · Day Care (coral) -->
+    <section class="area area-daycare">
+      <header class="area-h">
+        <span class="area-st"><svg viewBox="0 0 32 32" aria-hidden="true"><use href="#st-pata"></use></svg></span>
+        <div class="area-txt">
+          <p class="area-eyebrow">SERVIÇO</p>
+          <h2 class="area-t">Day Care</h2>
+          <p class="area-sub">A creche: chamada, almoço, reposições e a planilha do dia que a equipe já conhece.</p>
+        </div>
+      </header>
+
+      <div class="grid">
+
+        <article class="card rv c6">
+          <span class="tag">já existe</span>
+          <h3 class="tit">Quem não comeu hoje</h3>
+          <p class="sub">1º e 2º horários somados — 20 FILHOts na casa. A mensagem para cada tutor já está pronta.</p>
+          <div class="duas">
+            <div class="barras">
+              <div class="barra">
+                <div class="barra-rot" style="grid-column:1/-1"><span>Comeu tudo</span><em>14 FILHOts</em></div>
+                <div class="barra-tr ouro"><i data-pct="70"></i></div>
+              </div>
+              <div class="barra">
+                <div class="barra-rot" style="grid-column:1/-1"><span>Comeu metade</span><em>2 FILHOts</em></div>
+                <div class="barra-tr ouro"><i data-pct="10"></i></div>
+              </div>
+              <div class="barra">
+                <div class="barra-rot" style="grid-column:1/-1"><span>Não comeu</span><em>1 FILHOt</em></div>
+                <div class="barra-tr alerta"><i data-pct="5"></i></div>
+              </div>
+              <div class="barra">
+                <div class="barra-rot" style="grid-column:1/-1"><span>Não se aplica</span><em>3 FILHOts</em></div>
+                <div class="barra-tr ouro"><i data-pct="15"></i></div>
+              </div>
+            </div>
+            <div class="lista">
+              <div class="li"><span class="badge b-critico">não comeu</span><div class="li-txt"><b>Dolly</b><span>tutora Sophia — mensagem pronta para copiar</span></div></div>
+              <div class="li"><span class="badge b-atencao">metade</span><div class="li-txt"><b>Camus</b><span>tutora Carolina — atenção, não é falta</span></div></div>
+              <div class="li"><span class="vivo" style="margin:5px 0 0"></span><div class="li-txt"><b>Grupo do Telegram conectado</b><span>último aviso entregue às 09:40</span></div></div>
+            </div>
+          </div>
+        </article>
+
+        <article class="card rv c3">
+          <span class="tag">já existe</span>
+          <h3 class="tit">Reposições</h3>
+          <p class="sub">Créditos de dias por falta avisada. O crédito não vence.</p>
+          <div class="lista">
+            <div class="li"><span class="badge b-ok">creditado</span><div class="li-txt"><b>Camus</b><span>avisou hoje às 06:50 · 1 dia</span></div></div>
+            <div class="li"><span class="badge b-info">3 dias</span><div class="li-txt"><b>Nina</b><span>saldo em aberto</span></div></div>
+            <div class="li"><span class="badge b-atencao">sem aviso</span><div class="li-txt"><b>Luna</b><span>faltou hoje · não gera crédito</span></div></div>
+          </div>
+        </article>
+
+        <article class="card rv c3">
+          <span class="tag">já existe</span>
+          <h3 class="tit">Lançamentos do dia</h3>
+          <p class="sub">A planilha do Day Care, item por item, que a equipe já conhece.</p>
+          <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:16px">
+            <div><div class="kpi" data-alvo="18">0</div><p class="rot">na chamada</p></div>
+            <div><div class="kpi" data-alvo="1">0</div><p class="rot">falta avisada</p></div>
+            <div><div class="kpi" data-alvo="1">0</div><p class="rot">reposição</p></div>
+          </div>
+        </article>
+
+      </div>
+    </section>
+
+    <!-- ÁREA · Peludinhos (dourado) -->
+    <section class="area">
+      <header class="area-h">
+        <span class="area-st"><svg viewBox="0 0 32 32" aria-hidden="true"><use href="#st-osso"></use></svg></span>
+        <div class="area-txt">
+          <p class="area-eyebrow">CADASTRO</p>
+          <h2 class="area-t">Peludinhos</h2>
+          <p class="area-sub">O que a ficha promete e ainda não foi cumprido: prevenção, alergia e campo em branco.</p>
+        </div>
+      </header>
+
+      <div class="grid">
+
+        <article class="card rv c6">
+          <span class="tag">já existe</span>
+          <h3 class="tit">Prevenção</h3>
+          <p class="sub">Quem deve vacina, vermífugo, coleira, exame ou peso — entre os 20 FILHOts da casa.</p>
+          <div class="barras">
+            <div class="barra"><div class="barra-rot" style="grid-column:1/-1"><span>Peso sem registro</span><em>4</em></div><div class="barra-tr"><i data-pct="80"></i></div></div>
+            <div class="barra"><div class="barra-rot" style="grid-column:1/-1"><span>Exame vencido</span><em>3</em></div><div class="barra-tr"><i data-pct="60"></i></div></div>
+            <div class="barra"><div class="barra-rot" style="grid-column:1/-1"><span>Vermífugo a vencer</span><em>2</em></div><div class="barra-tr"><i data-pct="40"></i></div></div>
+            <div class="barra"><div class="barra-rot" style="grid-column:1/-1"><span>Vacina vencida</span><em>1</em></div><div class="barra-tr"><i data-pct="20"></i></div></div>
+            <div class="barra"><div class="barra-rot" style="grid-column:1/-1"><span>Coleira a trocar</span><em>0</em></div><div class="barra-tr"><i data-pct="0"></i></div></div>
+          </div>
+          <p class="grafico-nota">Ozzy — vacina vencida há 12 dias. Luna — vermífugo vence em 5 dias. Toddy — sem peso há 4 meses.</p>
+        </article>
+
+        <article class="card rv c3">
+          <span class="tag">já existe</span>
+          <h3 class="tit">Alergias a confirmar</h3>
+          <p class="sub">A ficha diz que existe alergia, mas ninguém confirmou com o tutor.</p>
+          <div class="lista">
+            <div class="li"><span class="badge b-atencao">confirmar</span><div class="li-txt"><b>Dolly — “alergia a frango”</b><span>tutora Sophia · texto pronto</span></div></div>
+            <div class="li"><span class="badge b-atencao">confirmar</span><div class="li-txt"><b>Camus — “coceira depois do banho”</b><span>tutora Carolina</span></div></div>
+          </div>
+        </article>
+
+        <article class="card rv c3">
+          <span class="tag">já existe</span>
+          <h3 class="tit">Cadastro incompleto</h3>
+          <p class="sub">Ficha do tutor e ficha do FILHOt. Nada aqui é opcional.</p>
+          <div class="lista">
+            <div class="li"><span class="badge b-critico">2 campos</span><div class="li-txt"><b>Dolly</b><span>sem raça e sem telefone da tutora</span></div></div>
+            <div class="li"><span class="badge b-atencao">1 campo</span><div class="li-txt"><b>Ozzy</b><span>sem carrapaticida informado</span></div></div>
+          </div>
+        </article>
+
+      </div>
+    </section>
+
+    <!-- ÁREA · Planos e cobranças (dourado) -->
+    <section class="area">
+      <header class="area-h">
+        <span class="area-st"><svg viewBox="0 0 32 32" aria-hidden="true"><use href="#st-coracao"></use></svg></span>
+        <div class="area-txt">
+          <p class="area-eyebrow">COMERCIAL</p>
+          <h2 class="area-t">Planos e cobranças</h2>
+          <p class="area-sub">O vínculo que se renova. O valor do plano aparece isolado na ficha — nunca somado.</p>
+        </div>
+      </header>
+
+      <div class="grid">
+
+        <article class="card rv c4">
+          <span class="tag">já existe</span>
+          <h3 class="tit">Renovação de planos</h3>
+          <p class="sub">Quem está no fim do plano e quem já venceu.</p>
+          <div class="lista">
+            <div class="li"><span class="badge b-atencao">3 dias</span><div class="li-txt"><b>Toddy</b><span>tutora Sophia</span></div></div>
+            <div class="li"><span class="badge b-critico">vencido</span><div class="li-txt"><b>Luna</b><span>há 6 dias · tutora Carolina</span></div></div>
+            <div class="li"><span class="badge b-info">2 diárias</span><div class="li-txt"><b>Camus</b><span>restantes no plano</span></div></div>
+          </div>
+        </article>
+
+        <article class="card rv c4">
+          <span class="tag">em breve</span>
+          <h3 class="tit">Em débito</h3>
+          <p class="sub">Quem deve no Day Care. Esta tela ainda vai ser construída — o desenho já reserva o lugar dela.</p>
+          <div class="lista">
+            <div class="li"><span class="badge b-info">em breve</span><div class="li-txt"><b>Lista de tutores em atraso</b><span>com o valor e há quantos dias</span></div></div>
+            <div class="li"><span class="badge b-info">em breve</span><div class="li-txt"><b>Mensagem de cobrança pronta</b><span>no tom da Zêluz, para copiar</span></div></div>
+          </div>
+        </article>
+
+        <article class="card rv c4">
+          <span class="tag">já existe</span>
+          <h3 class="tit">Acerto do cliente</h3>
+          <p class="sub">Aparece isolado na ficha de cada FILHOt. Sem soma, sem total e sem cálculo na tela.</p>
+          <p style="margin-top:16px"><span class="chip">Fofucho — acertar plano <b style="margin-left:4px">R$ 5.000,00</b></span></p>
+          <p class="grafico-nota">A Central Zêluz cobra o cliente, então vê este valor. Ele não se soma a nenhum outro nem gera total em lugar nenhum.</p>
+        </article>
+
+      </div>
+    </section>
+  </section>
+
+  <!-- ================================================================= -->
+  <!-- FATIA 3 · OPERAÇÃO                                                 -->
+  <!-- ================================================================= -->
+  <section class="painel" id="p-operacao">
+    <p class="nota">Márcia, Operação: o Day Care, a AuAulândia e o time. Tudo o que a Central Zêluz vê, mais o que está abaixo.</p>
+
+    <!-- ÁREA · O dia da casa -->
+    <section class="area">
+      <header class="area-h">
+        <span class="area-st"><svg viewBox="0 0 32 32" aria-hidden="true"><use href="#st-sol"></use></svg></span>
+        <div class="area-txt">
+          <p class="area-eyebrow">HOJE</p>
+          <h2 class="area-t">A casa agora</h2>
+          <p class="area-sub">Quem está aqui neste momento — e como estão os dois quadros do dia.</p>
+        </div>
+      </header>
+
+      <div class="grid">
+
+        <!-- A casa agora — a tira -->
+        <article class="card rv c12">
+          <span class="tag">já existe</span>
+          <h3 class="tit">Quem está na casa</h3>
+          <p class="sub">A carteira inteira e onde cada parte dela está agora.</p>
+          <div class="strip">
+            <div class="strip-i">
+              <span class="strip-st w-azul"><svg viewBox="0 0 32 32" aria-hidden="true"><use href="#st-osso"></use></svg></span>
+              <div class="kpi" data-alvo="58">0</div>
+              <p class="strip-l">Peludinhos</p>
+            </div>
+            <div class="strip-i">
+              <span class="strip-st w-daycare"><svg viewBox="0 0 32 32" aria-hidden="true"><use href="#st-pata"></use></svg></span>
+              <div class="kpi coral" data-alvo="50">0</div>
+              <p class="strip-l">No Day Care</p>
+            </div>
+            <div class="strip-i">
+              <span class="strip-st w-auaulandia"><svg viewBox="0 0 32 32" aria-hidden="true"><use href="#st-lua"></use></svg></span>
+              <div class="kpi turq" data-alvo="8">0</div>
+              <p class="strip-l">Na AuAulândia</p>
+            </div>
+            <div class="strip-i">
+              <span class="strip-st w-ouro"><svg viewBox="0 0 32 32" aria-hidden="true"><use href="#st-coracao"></use></svg></span>
+              <div class="kpi ouro" data-alvo="3">0</div>
+              <p class="strip-l">Em adaptação</p>
+            </div>
+          </div>
+        </article>
+
+        <!-- QUADRO 1 · Hóspedes do dia -->
+        <article class="card rv c6 par">
+          <span class="tag">já existe</span>
+          <h3 class="tit">Hóspedes do dia</h3>
+          <p class="sub">Quem está na casa agora, quantos leitos estão ocupados e o que cada um tem de diferente hoje.</p>
+          <div class="anel-caixa">
+            <div>
+              <div class="kpi turq hero" data-alvo="3">0</div>
+              <p class="rot">hóspedes na casa</p>
+              <p class="varp v-igual">= igual a ontem</p>
+            </div>
+            <div class="anel mini">
+              <svg viewBox="0 0 72 72" role="img" aria-label="3 leitos ocupados de 8">
+                <defs>
+                  <linearGradient id="ouroAnelMini" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0" stop-color="#DEB428"></stop>
+                    <stop offset="1" stop-color="#B8961F"></stop>
+                  </linearGradient>
+                </defs>
+                <g transform="rotate(-90 36 36)">
+                  <circle cx="36" cy="36" r="30" fill="none" stroke="rgba(35,77,103,.08)" stroke-width="8"></circle>
+                  <circle class="anel-arco" cx="36" cy="36" r="30" fill="none" stroke="url(#ouroAnelMini)" stroke-width="8"
+                          stroke-linecap="round" stroke-dasharray="188.5" stroke-dashoffset="188.5" data-anel="37.5"></circle>
+                </g>
+              </svg>
+              <div class="anel-mid"><b>3/8</b><span>leitos</span></div>
+            </div>
+          </div>
+          <div class="lista">
+            <div class="li"><div class="li-txt"><b>Toddy</b><span>5 noites · tutora Sophia</span></div><span class="li-fim chip chip-neutro">entrou hoje</span></div>
+            <div class="li"><div class="li-txt"><b>Camus</b><span>última noite · tutora Carolina</span></div><span class="li-fim chip chip-neutro">sai hoje</span></div>
+            <div class="li"><div class="li-txt"><b>Luna</b><span>anti-inflamatório às 17:00</span></div><span class="li-fim chip">medicação</span></div>
+          </div>
+        </article>
+
+        <!-- QUADRO 2 · Aulunos do dia -->
+        <article class="card rv c6 par faixa-aulunos">
+          <span class="tag">novo</span>
+          <h3 class="tit">Aulunos do dia</h3>
+          <p class="sub">A turma do dia: quem veio, quem faltou e quem avisou antes de faltar.</p>
+          <div class="faixa-corpo">
+            <div class="faixa-num">
+              <div class="kpi coral hero"><span data-alvo="18">0</span> de 21</div>
+              <p class="rot">aulunos presentes hoje</p>
+              <p class="varp v-sobe">▲ 2 vs. ontem</p>
+            </div>
+            <div class="faixa-lado">
+              <div class="segbar" role="img" aria-label="De 21 aulunos previstos: 18 presentes, 2 faltas e 1 falta avisada">
+                <i class="seg-ok" data-seg="85.71"></i>
+                <i class="seg-falta" data-seg="9.52"></i>
+                <i class="seg-avisou" data-seg="4.77"></i>
+              </div>
+              <div class="segleg">
+                <span class="segleg-i"><em class="pt pt-ok"></em><b>18</b> presentes</span>
+                <span class="segleg-i"><em class="pt pt-falta"></em><b>2</b> faltas</span>
+                <span class="segleg-i"><em class="pt pt-avisou"></em><b>1</b> falta avisada</span>
+              </div>
+              <div class="chips">
+                <span class="chip chip-falta">Luna — faltou</span>
+                <span class="chip chip-falta">Toddy — faltou</span>
+                <span class="chip chip-avisou">Camus — avisou</span>
+              </div>
+            </div>
+          </div>
+        </article>
+
+      </div>
+    </section>
+
+    <!-- ÁREA · Day Care (coral) -->
+    <section class="area area-daycare">
+      <header class="area-h">
+        <span class="area-st"><svg viewBox="0 0 32 32" aria-hidden="true"><use href="#st-pata"></use></svg></span>
+        <div class="area-txt">
+          <p class="area-eyebrow">SERVIÇO</p>
+          <h2 class="area-t">Day Care</h2>
+          <p class="area-sub">Os quatro tempos do Enriquecimento Ambiental — e a lista curta de quem ficou de fora.</p>
+        </div>
+      </header>
+
+      <div class="grid">
+
+        <article class="card rv c8">
+          <span class="tag">novo</span>
+          <h3 class="tit">Enriquecimento Ambiental hoje</h3>
+          <p class="sub">Os quatro tempos do dia e o que foi oferecido em cada um. A marca dourada é o tempo já cumprido.</p>
+          <ol class="tlh">
+            <li class="tlh-i feito">
+              <span class="tlh-no"></span>
+              <span class="tlh-h">08:30</span><span class="tlh-t">1º tempo</span>
+              <span class="chip">Faro no gramado</span>
+            </li>
+            <li class="tlh-i feito">
+              <span class="tlh-no"></span>
+              <span class="tlh-h">10:30</span><span class="tlh-t">2º tempo</span>
+              <span class="chip">Petisco recheado</span>
+            </li>
+            <li class="tlh-i agora">
+              <span class="tlh-no"></span>
+              <span class="tlh-h">13:30</span><span class="tlh-t">3º tempo</span>
+              <span class="chip">Piscina de bolinhas</span>
+            </li>
+            <li class="tlh-i">
+              <span class="tlh-no"></span>
+              <span class="tlh-h">15:30</span><span class="tlh-t">4º tempo</span>
+              <span class="chip">Circuito de agilidade</span>
+            </li>
+          </ol>
+          <div class="pill" style="margin-top:18px"><i data-pct="50"></i></div>
+          <div class="pill-rot"><span><b>2 de 4</b> tempos cumpridos</span><span>o 3º está em curso</span></div>
+        </article>
+
+        <article class="card rv c4">
+          <span class="tag">novo</span>
+          <h3 class="tit">Quem não participou</h3>
+          <p class="sub">A lista curta: só quem ficou de fora e o motivo. Quem participou não precisa aparecer.</p>
+          <div class="lista">
+            <div class="li"><span class="badge b-atencao">alergia</span><div class="li-txt"><b>Dolly</b><span>alergia a frango (EA com petisco) · 2º tempo</span></div></div>
+            <div class="li"><span class="badge b-critico">restrição médica</span><div class="li-txt"><b>Ozzy</b><span>pós-operatório · liberado a partir de 28/08</span></div></div>
+          </div>
+          <p class="grafico-nota">Os outros 16 aulunos participaram dos dois tempos já cumpridos.</p>
+        </article>
+
+      </div>
+    </section>
+
+    <!-- ÁREA · O time (dourado) -->
+    <section class="area">
+      <header class="area-h">
+        <span class="area-st"><svg viewBox="0 0 32 32" aria-hidden="true"><use href="#st-casa"></use></svg></span>
+        <div class="area-txt">
+          <p class="area-eyebrow">O TIME</p>
+          <h2 class="area-t">Quem toca a casa</h2>
+          <p class="area-sub">Ritmo, pontos, evolução e o acerto das plantonistas. Ferramenta da Operação — o monitor não vê esta área.</p>
+        </div>
+      </header>
+
+      <div class="grid">
+
+        <!-- Quem fez o quê -->
+        <article class="card rv c7">
+          <span class="tag">já existe</span>
+          <h3 class="tit">Quem fez o quê <span class="vivo" style="display:inline-block;vertical-align:middle;margin-left:6px"></span></h3>
+          <p class="sub">Minutos trabalhados hoje, por pessoa. A marca cinza é a média da mesma pessoa nas últimas quatro segundas-feiras.</p>
+          <div class="barras">
+            <div class="barra">
+              <div class="barra-rot" style="grid-column:1/-1"><span>Octávio</span><em>63 min · média 58</em></div>
+              <div class="barra-tr"><i data-pct="88"></i><span class="barra-media" style="left:81%"></span></div>
+            </div>
+            <div class="barra">
+              <div class="barra-rot" style="grid-column:1/-1"><span>Wandela</span><em>31 min · média 34</em></div>
+              <div class="barra-tr"><i data-pct="43"></i><span class="barra-media" style="left:47%"></span></div>
+            </div>
+            <div class="barra">
+              <div class="barra-rot" style="grid-column:1/-1"><span>Amanda</span><em>22 min · média 20</em></div>
+              <div class="barra-tr"><i data-pct="31"></i><span class="barra-media" style="left:28%"></span></div>
+            </div>
+          </div>
+          <div class="lista">
+            <div class="li"><span class="badge b-ouro">Plano 2</span><div class="li-txt"><b>Octávio</b><span>monitoria · guardar os pertences · 2º horário de almoço</span></div></div>
+            <div class="li"><span class="badge b-ouro">Plano 2</span><div class="li-txt"><b>Wandela</b><span>check-in de corpo e pertences · check-in de hóspedes</span></div></div>
+          </div>
+        </article>
+
+        <!-- Ritmo do Time -->
+        <article class="card rv c5">
+          <span class="tag">já existe</span>
+          <h3 class="tit">Ritmo do Time</h3>
+          <p class="sub">Minutos por FILHOt, quatro semanas. Até 12% de diferença é variação normal.</p>
+          <div class="ritmo">
+            <div class="ritmo-i">
+              <svg class="spark" viewBox="0 0 110 32" role="img" aria-label="Almoço: 1,9 · 1,8 · 1,7 · 1,6 minutos por FILHOt">
+                <defs><linearGradient id="gArea2" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#234D67" stop-opacity=".18"></stop><stop offset="1" stop-color="#234D67" stop-opacity="0"></stop></linearGradient></defs>
+                <path class="spark-area" d="M4,18 L38,20 L72,23 L106,25 L106,32 L4,32 Z" fill="url(#gArea2)"></path>
+                <path class="spark-traco" d="M4,18 L38,20 L72,23 L106,25" fill="none" stroke="#234D67" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" data-comp="120"></path>
+                <circle cx="106" cy="25" r="4" fill="#234D67" stroke="#FFFFFF" stroke-width="2"></circle>
+              </svg>
+              <div class="ritmo-txt"><b>Almoço — 1,6 min por FILHOt</b><span>média das segundas: 1,7 min</span><span class="badge b-ok">dentro do normal</span></div>
+            </div>
+            <div class="ritmo-i">
+              <svg class="spark" viewBox="0 0 110 32" role="img" aria-label="Montagem: 2,0 · 2,1 · 2,3 · 2,4 minutos por FILHOt">
+                <defs><linearGradient id="gArea3" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#234D67" stop-opacity=".18"></stop><stop offset="1" stop-color="#234D67" stop-opacity="0"></stop></linearGradient></defs>
+                <path class="spark-area" d="M4,16 L38,14 L72,10 L106,7 L106,32 L4,32 Z" fill="url(#gArea3)"></path>
+                <path class="spark-traco" d="M4,16 L38,14 L72,10 L106,7" fill="none" stroke="#234D67" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" data-comp="120"></path>
+                <circle cx="106" cy="7" r="4" fill="#234D67" stroke="#FFFFFF" stroke-width="2"></circle>
+              </svg>
+              <div class="ritmo-txt"><b>Montagem — 2,4 min por FILHOt</b><span>média das segundas: 1,9 min · 26% acima</span><span class="badge b-atencao">vale uma pergunta</span></div>
+            </div>
+            <div class="ritmo-i">
+              <svg class="spark" viewBox="0 0 110 32" role="img" aria-label="Finalização: 1,3 · 1,2 · 1,2 · 1,1 minutos por FILHOt">
+                <defs><linearGradient id="gArea4" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#234D67" stop-opacity=".18"></stop><stop offset="1" stop-color="#234D67" stop-opacity="0"></stop></linearGradient></defs>
+                <path class="spark-area" d="M4,12 L38,16 L72,16 L106,20 L106,32 L4,32 Z" fill="url(#gArea4)"></path>
+                <path class="spark-traco" d="M4,12 L38,16 L72,16 L106,20" fill="none" stroke="#234D67" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" data-comp="120"></path>
+                <circle cx="106" cy="20" r="4" fill="#234D67" stroke="#FFFFFF" stroke-width="2"></circle>
+              </svg>
+              <div class="ritmo-txt"><b>Finalização — 1,1 min por FILHOt</b><span>média das segundas: 1,2 min</span><span class="badge b-ok">dentro do normal</span></div>
+            </div>
+          </div>
+        </article>
+
+        <!-- Bolsa do check-out -->
+        <article class="card rv c5">
+          <span class="tag">já existe</span>
+          <h3 class="tit">Bolsa do check-out</h3>
+          <p class="sub">Pontos do mês, todos os monitores. 10 pontos quando a bolsa desce completa.</p>
+          <div class="colunas">
+            <div class="coluna"><b>90</b><i data-h="100"></i></div>
+            <div class="coluna"><b>78</b><i data-h="87"></i></div>
+            <div class="coluna"><b>55</b><i data-h="61"></i></div>
+          </div>
+          <div class="colunas-rot"><span>Wandela</span><span>Octávio</span><span>Amanda</span></div>
+        </article>
+
+        <!-- Evolução de cada colaborador -->
+        <article class="card rv c7">
+          <span class="tag">novo</span>
+          <h3 class="tit">Evolução de cada colaborador</h3>
+          <p class="sub">Semana a semana, para a conversa deixar de ser impressão e virar série.</p>
+          <div class="fatias pessoas" style="margin-top:14px">
+            <button type="button" class="fatia-bt on">Octávio</button>
+            <button type="button" class="fatia-bt">Wandela</button>
+            <button type="button" class="fatia-bt">Amanda</button>
+          </div>
+          <svg viewBox="0 0 300 118" style="width:100%;height:auto;margin-top:16px" role="img" aria-label="Protocolo cumprido do Octávio: 82%, 88%, 91% e 96% nas quatro últimas semanas">
+            <line x1="20" y1="100" x2="288" y2="100" stroke="rgba(35,77,103,.10)" stroke-width="1"></line>
+            <line x1="20" y1="60" x2="288" y2="60" stroke="rgba(35,77,103,.10)" stroke-width="1"></line>
+            <line x1="20" y1="20" x2="288" y2="20" stroke="rgba(35,77,103,.10)" stroke-width="1"></line>
+            <defs><linearGradient id="gArea5" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#234D67" stop-opacity=".18"></stop><stop offset="1" stop-color="#234D67" stop-opacity="0"></stop></linearGradient></defs>
+            <path class="linha-area" d="M20,69 C49,69 78,51 107,51 C136,51 165,42 194,42 C223,42 251,27 280,27 L280,100 L20,100 Z" fill="url(#gArea5)"></path>
+            <path class="linha-traco" d="M20,69 C49,69 78,51 107,51 C136,51 165,42 194,42 C223,42 251,27 280,27" fill="none" stroke="#234D67" stroke-width="2" stroke-linecap="round" data-comp="300"></path>
+            <circle cx="20" cy="69" r="4" fill="#234D67" stroke="#FFFFFF" stroke-width="2"></circle>
+            <circle cx="107" cy="51" r="4" fill="#234D67" stroke="#FFFFFF" stroke-width="2"></circle>
+            <circle cx="194" cy="42" r="4" fill="#234D67" stroke="#FFFFFF" stroke-width="2"></circle>
+            <circle cx="280" cy="27" r="5" fill="#234D67" stroke="#FFFFFF" stroke-width="2"></circle>
+            <text x="272" y="16" text-anchor="end" font-family="Poppins, sans-serif" font-size="12" font-weight="700" fill="#234D67">96%</text>
+            <text x="20" y="113" font-family="Poppins, sans-serif" font-size="9" font-weight="500" fill="#6B6A66">03/08</text>
+            <text x="107" y="113" font-family="Poppins, sans-serif" font-size="9" font-weight="500" fill="#6B6A66">10/08</text>
+            <text x="194" y="113" font-family="Poppins, sans-serif" font-size="9" font-weight="500" fill="#6B6A66">17/08</text>
+            <text x="280" y="113" text-anchor="end" font-family="Poppins, sans-serif" font-size="9" font-weight="500" fill="#6B6A66">24/08</text>
+          </svg>
+          <p class="rot" style="margin-top:2px">Protocolo cumprido — quatro semanas</p>
+          <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:16px">
+            <div><div class="kpi" data-alvo="90">0</div><p class="rot">pontos da bolsa</p></div>
+            <div><div class="kpi" data-alvo="0">0</div><p class="rot">avisos que não saíram</p></div>
+            <div><div class="kpi">1,5</div><p class="rot">min por FILHOt</p></div>
+          </div>
+        </article>
+
+        <!-- Financeiro do plantão -->
+        <article class="card rv c6">
+          <span class="tag">já existe</span>
+          <h3 class="tit">Financeiro do plantão</h3>
+          <p class="sub">Acerto das plantonistas: quem dobrou, quantas noites e quanto pagamos. O acerto é por noite e depende de quantos FILHOts dormiram aqui. A Repolho nunca entra na conta — ela mora aqui.</p>
+          <table class="tab">
+            <thead><tr><th>Plantonista</th><th>Noites</th><th>Dobras</th><th>Assinatura</th><th>Valor</th></tr></thead>
+            <tbody>
+              <tr>
+                <td class="nome" data-col="Plantonista">Wandela</td>
+                <td class="num" data-col="Noites"><span>9</span></td>
+                <td class="num" data-col="Dobras"><span>2</span></td>
+                <td data-col="Assinatura"><span>em dia</span></td>
+                <td class="num" data-col="Valor"><span>R$ 1.404,00</span></td>
+              </tr>
+              <tr>
+                <td class="nome" data-col="Plantonista">Elizabeth</td>
+                <td class="num" data-col="Noites"><span>6</span></td>
+                <td class="num" data-col="Dobras"><span>0</span></td>
+                <td data-col="Assinatura"><span>1 relatório sem assinatura, noite de 24/08</span></td>
+                <td class="num" data-col="Valor"><span>R$ 936,00</span></td>
+              </tr>
+              <tr>
+                <td class="nome" data-col="Plantonista">Lana</td>
+                <td class="num" data-col="Noites"><span>6</span></td>
+                <td class="num" data-col="Dobras"><span>1</span></td>
+                <td data-col="Assinatura"><span>em dia</span></td>
+                <td class="num" data-col="Valor"><span>R$ 780,00</span></td>
+              </tr>
+            </tbody>
+          </table>
+          <div class="total"><span>Total do mês</span><b>R$ 3.120,00</b></div>
+        </article>
+
+        <!-- Entrou e saiu -->
+        <article class="card rv c6">
+          <span class="tag">já existe</span>
+          <h3 class="tit">Entrou e saiu</h3>
+          <p class="sub">Movimento da carteira em agosto.</p>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:16px">
+            <div>
+              <div class="kpi" data-alvo="4">0</div>
+              <p class="rot">entraram</p>
+              <p class="varp v-sobe">▲ 2 sobre julho</p>
+            </div>
+            <div>
+              <div class="kpi" data-alvo="2">0</div>
+              <p class="rot">saíram</p>
+              <p class="varp v-sobe">▼ 1 sobre julho</p>
+            </div>
+          </div>
+          <p class="grafico-nota">Saídas: 1 mudança de cidade e 1 pausa.</p>
+        </article>
+
+      </div>
+    </section>
+  </section>
+
+  <!-- ================================================================= -->
+  <!-- FATIA 4 · DIRETORIA                                                -->
+  <!-- ================================================================= -->
+  <section class="painel" id="p-diretoria">
+    <p class="nota">Adriana, Diretoria: <strong>a casa inteira</strong>. A senhora herda a Central Zêluz e a Operação exatamente como elas são — os mesmos cards, os mesmos números, sem recontagem — mais os dois cards que só existem aqui.</p>
+
+    <!-- a faixa de aulunos sobe para cá (movida pelo JavaScript) -->
+    <div class="grid" id="d-faixa"></div>
+
+    <h2 class="secao">Central Zêluz</h2>
+    <p class="secao-sub">O que a Amanda vê. Tudo passa por aqui: cadastro, conversa com o tutor e cobranças.</p>
+    <div id="d-central"></div>
+
+    <h2 class="secao">Operação</h2>
+    <p class="secao-sub">O que a Márcia vê. Day Care, AuAulândia e o time — inclusive o acerto das plantonistas.</p>
+    <div id="d-operacao"></div>
+
+    <h2 class="secao">Só da Diretoria</h2>
+    <p class="secao-sub">Os dois cards que ninguém mais enxerga.</p>
+
+    <section class="area">
+      <header class="area-h">
+        <span class="area-st"><svg viewBox="0 0 32 32" aria-hidden="true"><use href="#st-escudo"></use></svg></span>
+        <div class="area-txt">
+          <p class="area-eyebrow">CONFERÊNCIA</p>
+          <h3 class="area-t">O que só a senhora vê</h3>
+          <p class="area-sub">O acerto que a Márcia paga, para conferir — e o caderno do que o sistema não conseguiu gravar.</p>
+        </div>
+      </header>
+
+      <div class="grid">
+
+        <!-- Acerto — conferência -->
+        <article class="card rv c7">
+          <span class="tag">já existe</span>
+          <h3 class="tit">Acerto das plantonistas — conferência</h3>
+          <p class="sub">Os mesmos números que a Márcia usa para pagar. Aqui a senhora só confere.</p>
+          <table class="tab">
+            <thead><tr><th>Plantonista</th><th>Noites</th><th>Dobras</th><th>Assinatura</th><th>Valor</th></tr></thead>
+            <tbody>
+              <tr>
+                <td class="nome" data-col="Plantonista">Wandela</td>
+                <td class="num" data-col="Noites"><span>9</span></td>
+                <td class="num" data-col="Dobras"><span>2</span></td>
+                <td data-col="Assinatura"><span>em dia</span></td>
+                <td class="num" data-col="Valor"><span>R$ 1.404,00</span></td>
+              </tr>
+              <tr>
+                <td class="nome" data-col="Plantonista">Elizabeth</td>
+                <td class="num" data-col="Noites"><span>6</span></td>
+                <td class="num" data-col="Dobras"><span>0</span></td>
+                <td data-col="Assinatura"><span>1 relatório sem assinatura, noite de 24/08</span></td>
+                <td class="num" data-col="Valor"><span>R$ 936,00</span></td>
+              </tr>
+              <tr>
+                <td class="nome" data-col="Plantonista">Lana</td>
+                <td class="num" data-col="Noites"><span>6</span></td>
+                <td class="num" data-col="Dobras"><span>1</span></td>
+                <td data-col="Assinatura"><span>em dia</span></td>
+                <td class="num" data-col="Valor"><span>R$ 780,00</span></td>
+              </tr>
+            </tbody>
+          </table>
+          <div class="total"><span>Total do mês</span><b>R$ 3.120,00</b></div>
+        </article>
+
+        <!-- Auditoria — feed live -->
+        <article class="card rv c5">
+          <span class="tag">novo</span>
+          <h3 class="tit">Auditoria — gravações que falharam <span class="vivo" style="display:inline-block;vertical-align:middle;margin-left:6px"></span></h3>
+          <p class="sub">O que o sistema tentou gravar e não conseguiu. Existe para a senhora ver se alguma coisa está se perdendo em silêncio.</p>
+          <div class="feed">
+            <div class="feed-i">
+              <span class="feed-q">30/08 · 21:14</span>
+              <div class="feed-t"><b>Aviso ao grupo — Camus, orelha vermelha</b><span>daycare/avisos-grupo · Octávio</span></div>
+              <span class="badge b-critico">falhou</span>
+            </div>
+            <div class="feed-i">
+              <span class="feed-q">30/08 · 07:02</span>
+              <div class="feed-t"><b>Dolly comeu tudo</b><span>daycare/almoco/2026-08-30 · Wandela</span></div>
+              <span class="badge b-critico">falhou</span>
+            </div>
+            <div class="feed-i">
+              <span class="feed-q">29/08 · 19:40</span>
+              <div class="feed-t"><b>Pernoite do Camus</b><span>manuais/pernoite · Elizabeth</span></div>
+              <span class="badge b-critico">falhou</span>
+            </div>
+          </div>
+          <p style="margin-top:16px"><button type="button" class="bt bt-ouro">Tentar gravar de novo</button></p>
+        </article>
+
+      </div>
+    </section>
+  </section>
+
+  <p class="rodape">Esboço v4 para aprovação — 31 de agosto de 2026 — nada aqui está ligado ao banco.</p>
+
+</main>
+
+<script>
+/* ============================================================
+   Esboço estático. O JavaScript faz seis coisas e só:
+   tirar o holograma de entrada depois que ele passa, clonar a
+   Central Zêluz e a Operação dentro da Diretoria, trocar de fatia
+   pelo endereço (#hash), subir os contadores, preencher
+   anéis/barras/segmentos e revelar os cards em cascata.
+   ============================================================ */
+(function(){
+  'use strict';
+
+  var PARADO = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  var FATIAS = ['monitor','central','operacao','diretoria'];
+  /* nomes antigos continuam funcionando no endereço */
+  var ALIAS  = { supervisao:'central', gestao:'operacao', gestão:'operacao' };
+  var NOMES  = { monitor:'Monitor', central:'Central Zêluz', operacao:'Operação', diretoria:'Diretoria' };
+  var SAUD   = { monitor:'Octávio', central:'Amanda', operacao:'Márcia', diretoria:'Adriana' };
+
+  /* Banco de frases do Cérebro Zêluz (07-linguagem-frases-mestras), por dia da
+     semana — rotação fixa, nunca sorteada: a pessoa reconhece a semana. */
+  var FRASES = [
+    'Aqui, cada cuidado é ÚNICO. E passa pelas suas mãos.',                        /* domingo */
+    'Hoje, cada FILHOt vai ser visto de verdade. Pelos seus olhos.',               /* segunda */
+    'O que ninguém vê também é cuidado. E é você quem vê.',                        /* terça   */
+    'Energia bem gasta vira bem-estar. Isso começa na sua monitoria.',             /* quarta  */
+    'Cuidar é escutar antes de agir. Cada check-in seu é uma escuta.',             /* quinta  */
+    'Somos Zelosos. A gente se importa de verdade — e hoje isso tem o seu nome.',  /* sexta   */
+    'A voz dos FILHOts hoje é a sua. Eles não sabem dizer onde dói; você sabe olhar.' /* sábado */
+  ];
+  var FRASE_NOITE = 'Enquanto os tutores dormem, é o seu olhar que cuida.';
+
+  function comoVai(h){ return (h >= 5 && h < 12) ? 'Bom dia' : ((h >= 12 && h < 18) ? 'Boa tarde' : 'Boa noite'); }
+
+  /* ---------- holograma: 900ms e sai de cena; uma vez por sessão ----------
+     Se a pessoa já viu nesta sessão, nem chega a aparecer. */
+  function holograma(){
+    var h = document.getElementById('holo');
+    if (!h) { return; }
+    var jaViu = false;
+    try { jaViu = window.sessionStorage.getItem('zeluz_holo_v4') === '1'; } catch (e) { jaViu = false; }
+    if (jaViu || PARADO) { h.parentNode.removeChild(h); return; }
+    try { window.sessionStorage.setItem('zeluz_holo_v4', '1'); } catch (e) {} /* silencioso de propósito: sem armazenamento, o holograma só repete */
+    setTimeout(function(){ if (h.parentNode) { h.parentNode.removeChild(h); } }, 950);
+  }
+
+  /* ---------- a Diretoria herda por clonagem de nós ----------
+     Nada de HTML duplicado: as mesmas áreas da Central Zêluz e da
+     Operação são copiadas para dentro das seções da Diretoria. */
+  function herdar(){
+    var dFaixa = document.getElementById('d-faixa');
+    var dCentral = document.getElementById('d-central');
+    var dOper = document.getElementById('d-operacao');
+    if (!dFaixa || !dCentral || !dOper) { return; }
+
+    copiar(document.getElementById('p-central'), dCentral);
+    copiar(document.getElementById('p-operacao'), dOper);
+
+    /* a faixa de aulunos sobe para o topo da fatia, logo abaixo da saudação */
+    var f = dCentral.querySelector('.faixa-aulunos');
+    if (f) { dFaixa.appendChild(f); }
+  }
+  function copiar(origem, destino){
+    if (!origem) { return; }
+    var n = origem.children, i;
+    for (i = 0; i < n.length; i++) {
+      if (n[i].classList.contains('nota')) { continue; }
+      destino.appendChild(n[i].cloneNode(true));
+    }
+  }
+
+  /* ---------- saudação vibrante ---------- */
+  function saudar(id){
+    var agora = new Date();
+    var l1 = document.getElementById('saud1');
+    var l3 = document.getElementById('saud3');
+    var tr = document.getElementById('traco');
+    var linhas = document.querySelectorAll('.cabeca .entra');
+    var noite = agora.getHours() >= 18 || agora.getHours() < 5;
+    var i;
+
+    l1.textContent = comoVai(agora.getHours()) + ', ' + SAUD[id] + '.';
+    l3.textContent = (id === 'monitor' && noite) ? FRASE_NOITE : FRASES[agora.getDay()];
+    document.body.classList.toggle('fatia-monitor', id === 'monitor');
+
+    for (i = 0; i < linhas.length; i++) { linhas[i].classList.remove('dentro'); }
+    tr.classList.remove('dentro');
+    var n = document.querySelectorAll('.cabeca [data-alvo]');
+    for (i = 0; i < n.length; i++) { n[i].textContent = '0'; }
+
+    requestAnimationFrame(function(){
+      var k;
+      for (k = 0; k < linhas.length; k++) { linhas[k].classList.add('dentro'); }
+      tr.classList.add('dentro');
+      /* só conta o que está de fato visível nesta fatia */
+      for (k = 0; k < n.length; k++) {
+        if (n[k].offsetParent !== null) { contar(n[k]); }
+      }
+    });
+  }
+
+  /* ---------- data por extenso, em português ---------- */
+  function escreverData(){
+    var el = document.getElementById('dataHoje');
+    if (!el) { return; }
+    var d = new Date();
+    var dias = ['domingo','segunda-feira','terça-feira','quarta-feira','quinta-feira','sexta-feira','sábado'];
+    var meses = ['janeiro','fevereiro','março','abril','maio','junho','julho','agosto','setembro','outubro','novembro','dezembro'];
+    el.textContent = dias[d.getDay()] + ', ' + d.getDate() + ' de ' + meses[d.getMonth()] + ' de ' + d.getFullYear();
+  }
+
+  /* ---------- contadores: sobem em 600ms ---------- */
+  function contar(el){
+    var alvo = parseInt(el.getAttribute('data-alvo'), 10);
+    if (isNaN(alvo)) { return; }
+    if (PARADO || alvo === 0) { el.textContent = String(alvo); return; }
+    var t0 = null, dur = 600;
+    function passo(t){
+      if (t0 === null) { t0 = t; }
+      var k = Math.min(1, (t - t0) / dur);
+      var suave = 1 - Math.pow(1 - k, 3);
+      el.textContent = String(Math.round(alvo * suave));
+      if (k < 1) { requestAnimationFrame(passo); }
+    }
+    requestAnimationFrame(passo);
+  }
+
+  /* ---------- anel do donut: preenche em 700ms (qualquer diâmetro) ---------- */
+  function comprimento(el){ return parseFloat(el.getAttribute('stroke-dasharray')) || 377; }
+  function anel(el){
+    var pct = parseFloat(el.getAttribute('data-anel')) || 0;
+    var comp = comprimento(el);
+    el.setAttribute('stroke-dashoffset', String(comp - comp * pct / 100));
+  }
+
+  /* ---------- barras, pill e segmentos: crescem em 500ms ---------- */
+  function largura(el){ el.style.width = (parseFloat(el.getAttribute('data-pct')) || 0) + '%'; }
+  function altura(el){ el.style.height = (parseFloat(el.getAttribute('data-h')) || 0) + '%'; }
+  /* o −2px devolve ao segmento o respiro de 2px que o gap consome */
+  function segmento(el){ el.style.width = 'calc(' + (parseFloat(el.getAttribute('data-seg')) || 0) + '% - 2px)'; }
+
+  /* ---------- sparkline e linha suave: desenham ---------- */
+  function tracar(svg){
+    var t = svg.querySelectorAll('[data-comp]');
+    for (var i = 0; i < t.length; i++) {
+      t[i].style.setProperty('--comp', t[i].getAttribute('data-comp'));
+    }
+    svg.classList.add('desenhado');
+  }
+
+  /* ---------- zera para poder reanimar ao trocar de fatia ---------- */
+  function zerar(painel){
+    var i, n;
+    n = painel.querySelectorAll('.rv');        for (i=0;i<n.length;i++){ n[i].classList.remove('dentro'); }
+    n = painel.querySelectorAll('[data-alvo]');for (i=0;i<n.length;i++){ n[i].textContent = '0'; }
+    n = painel.querySelectorAll('[data-anel]');for (i=0;i<n.length;i++){ n[i].setAttribute('stroke-dashoffset', String(comprimento(n[i]))); }
+    n = painel.querySelectorAll('[data-pct]'); for (i=0;i<n.length;i++){ n[i].style.width = '0%'; }
+    n = painel.querySelectorAll('[data-seg]'); for (i=0;i<n.length;i++){ n[i].style.width = '0%'; }
+    n = painel.querySelectorAll('[data-h]');   for (i=0;i<n.length;i++){ n[i].style.height = '0%'; }
+    n = painel.querySelectorAll('svg');        for (i=0;i<n.length;i++){ n[i].classList.remove('desenhado'); }
+  }
+
+  /* ---------- reveal em cascata (stagger 60ms) + gráficos ---------- */
+  function animar(painel){
+    var cards = painel.querySelectorAll('.rv');
+    for (var i = 0; i < cards.length; i++) {
+      (function(card, idx){
+        setTimeout(function(){
+          card.classList.add('dentro');
+          var j, n;
+          n = card.querySelectorAll('[data-alvo]'); for (j=0;j<n.length;j++){ contar(n[j]); }
+          n = card.querySelectorAll('[data-anel]'); for (j=0;j<n.length;j++){ anel(n[j]); }
+          n = card.querySelectorAll('[data-pct]');  for (j=0;j<n.length;j++){ largura(n[j]); }
+          n = card.querySelectorAll('[data-seg]');  for (j=0;j<n.length;j++){ segmento(n[j]); }
+          n = card.querySelectorAll('[data-h]');    for (j=0;j<n.length;j++){ altura(n[j]); }
+          n = card.querySelectorAll('svg');         for (j=0;j<n.length;j++){ tracar(n[j]); }
+        }, PARADO ? 0 : Math.min(idx, 14) * 60);
+      })(cards[i], i);
+    }
+  }
+
+  /* ---------- troca de fatia ---------- */
+  function normalizar(id){
+    id = String(id || '').replace('#','').toLowerCase();
+    if (ALIAS[id]) { id = ALIAS[id]; }
+    return (FATIAS.indexOf(id) === -1) ? 'monitor' : id;
+  }
+
+  function abrir(id){
+    id = normalizar(id);
+    var i, paineis = document.querySelectorAll('.painel');
+    for (i = 0; i < paineis.length; i++) { paineis[i].classList.remove('on'); }
+    var alvo = document.getElementById('p-' + id);
+    var botoes = document.querySelectorAll('#fatias .fatia-bt');
+    for (i = 0; i < botoes.length; i++) {
+      var marcado = botoes[i].getAttribute('data-fatia') === id;
+      botoes[i].classList.toggle('on', marcado);
+      botoes[i].setAttribute('aria-pressed', marcado ? 'true' : 'false');
+    }
+    document.getElementById('quemNome').textContent = NOMES[id];
+    saudar(id);
+    if (alvo) {
+      zerar(alvo);
+      alvo.classList.add('on');
+      requestAnimationFrame(function(){ animar(alvo); });
+    }
+    try { if (window.location.hash !== '#' + id) { history.replaceState(null, '', '#' + id); } } catch (e) {}
+    window.scrollTo(0, 0);
+  }
+
+  holograma();
+  escreverData();
+  herdar();
+
+  var barra = document.getElementById('fatias');
+  barra.addEventListener('click', function(ev){
+    var bt = ev.target.closest ? ev.target.closest('.fatia-bt') : null;
+    if (bt) { abrir(bt.getAttribute('data-fatia')); }
+  });
+
+  /* seletor de pessoa do card Evolução — só troca o estado do botão.
+     Delegado no documento porque o card existe duas vezes (Operação e Diretoria). */
+  document.addEventListener('click', function(ev){
+    if (!ev.target.closest) { return; }
+    var bt = ev.target.closest('.pessoas .fatia-bt');
+    if (!bt) { return; }
+    var caixa = bt.parentNode;
+    var n = caixa.querySelectorAll('.fatia-bt');
+    for (var i = 0; i < n.length; i++) { n[i].classList.remove('on'); }
+    bt.classList.add('on');
+  });
+
+  window.addEventListener('hashchange', function(){ abrir(window.location.hash); });
+
+  abrir(window.location.hash);
+})();
+</script>
+</body>
+</html>

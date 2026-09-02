@@ -1926,6 +1926,381 @@ async function main() {
   }
   console.log('');
 
+  // ===================================================================================
+  // Fase 2.1 — MEU PAINEL, a fatia do Monitor DENTRO do app.
+  //
+  // O bloco acima prova a CONTA (painel-logica.js, sem tela). Este prova a TELA: quem
+  // enxerga o item de menu, de onde vem cada frase, e que o recorte por pessoa não deixa
+  // vazar o nome de ninguém. Cada prova nasce de uma regra escrita no FASE2 doc ou no
+  // GABARITO — nenhuma é decoração.
+  // ===================================================================================
+  console.log('Fase 2.1 — Meu Painel (a fatia do Monitor na tela):');
+  {
+    const AGORA = 1787600000000;
+    const ESCALA = {
+      'Octávio': { entrada: '07:00', almoco: '13:00-14:00', saida: '16:00' },
+      'Wandela': { entrada: '07:00', almoco: '12:00-13:00', saida: '16:00' },
+    };
+    const PLANO = {
+      id: 'plano-2', nome: 'Plano 2 — um a menos', motivo: 'Wandela de folga',
+      definidoPor: 'Márcia', ts: AGORA,
+      porMonitor: {
+        'Octávio': [
+          { hora: '15:00', atividade: '2º horário de almoço' },
+          { hora: '07:30', atividade: 'check-in de corpo e pertences' },
+          { hora: '11:00', atividade: 'guardar os pertences' },
+        ],
+        'Wandela': [{ hora: '11:00', atividade: 'Enriquecimento Ambiental' }],
+      },
+    };
+    const rotaOct = ctx.plRotaDoDia('Octávio', ESCALA, PLANO);
+
+    // ---- 1. o script da conta entra no app (sem ele a tela não desenha nada) ----
+    check('index.html inclui o painel-logica.js',
+      /<script src="painel-logica\.js"><\/script>/.test(html));
+
+    // ---- 2. as duas telas existem, com item de menu, título e gancho ----
+    check('a tela v-painelmeu existe no HTML', /id="v-painelmeu"/.test(html));
+    check('a tela v-planodia existe no HTML', /id="v-planodia"/.test(html));
+    check('o item "Meu Painel" está no menu', /data-v="painelmeu"/.test(html));
+    check('o item "Escala e plano do dia" está no menu', /data-v="planodia"/.test(html));
+    check('os dois itens nascem ESCONDIDOS (quem mostra é a tabela PERM)',
+      /<a data-v="painelmeu" style="display:none"/.test(html) &&
+      /<a data-v="planodia" style="display:none"/.test(html));
+    check('nenhuma classe so-* nova foi criada para o Painel (regra 3 da Fase 2)',
+      !/data-v="painelmeu"[^>]*class="so-/.test(html) && !/data-v="planodia"[^>]*class="so-/.test(html));
+    // Tela nova que não entra em titles{} abre com o cabeçalho quebrado — já aconteceu antes.
+    ctx.__tit = null;
+    vm.runInContext("__tit = [!!(titles && titles.painelmeu), !!(titles && titles.planodia)];", ctx);
+    check('as duas telas têm título e dica em titles{} (senão o cabeçalho quebra)',
+      ctx.__tit[0] === true && ctx.__tit[1] === true, JSON.stringify(ctx.__tit));
+    // Um gancho por tela, na lista ÚNICA (aoAbrirView) — a lição de 13/ago: duas listas de
+    // ganchos fazem a tela abrir vazia.
+    check('aoAbrirView chama pmAbrir e pdAbrir (lista única de ganchos)',
+      /if\(v==='painelmeu'\)\{ if\(typeof pmAbrir==='function'\) pmAbrir\(\); \}/.test(html) &&
+      /if\(v==='planodia'\)\{ if\(typeof pdAbrir==='function'\) pdAbrir\(\); \}/.test(html));
+
+    // ---- 3. PERMISSÃO, papel a papel — o coração desta entrega ----
+    // Quem trabalha COM o FILHOt vê o Meu Painel. A Central, a chefia e o tutor não.
+    const VE_PAINEL = ['monitor', 'plantonista', 'aprendiz'];
+    const NAO_VE_PAINEL = ['gestao', 'diretoria', 'supervisor', 'consultora', 'vet', 'conferencia', 'tutor', ''];
+    let permOk = true, permDet = '';
+    VE_PAINEL.forEach((p) => {
+      if (ctx.podePapel('painel-monitor', p) !== true) { permOk = false; permDet = p + ' NÃO vê e deveria ver'; }
+    });
+    NAO_VE_PAINEL.forEach((p) => {
+      if (ctx.podePapel('painel-monitor', p) !== false) { permOk = false; permDet = "'" + p + "' vê e NÃO deveria"; }
+    });
+    check('Meu Painel: monitor, plantonista e aprendiz veem; Central, chefia e tutor não ('
+      + (VE_PAINEL.length + NAO_VE_PAINEL.length) + ' papéis)', permOk, permDet);
+
+    // O plano do dia é da Márcia. "Quem define o plano do dia é sempre a Márcia" (Adriana).
+    const DEFINE = ['gestao', 'diretoria'];
+    const NAO_DEFINE = ['monitor', 'plantonista', 'aprendiz', 'supervisor', 'consultora', 'vet', 'conferencia', 'tutor', ''];
+    let planoOk = true, planoDet = '';
+    DEFINE.forEach((p) => {
+      if (ctx.podePapel('definir-plano-do-dia', p) !== true) { planoOk = false; planoDet = p + ' NÃO define e deveria'; }
+    });
+    NAO_DEFINE.forEach((p) => {
+      if (ctx.podePapel('definir-plano-do-dia', p) !== false) { planoOk = false; planoDet = "'" + p + "' define e NÃO deveria"; }
+    });
+    check('Plano do dia: só Gestão e Diretoria definem — nem o monitor, nem a Supervisão ('
+      + (DEFINE.length + NAO_DEFINE.length) + ' papéis)', planoOk, planoDet);
+    // As duas permissões são DISJUNTAS: ninguém monta a própria escala.
+    check('ninguém que vê o Meu Painel pode montar a própria escala (os dois grupos não se tocam)',
+      VE_PAINEL.every((p) => ctx.podePapel('definir-plano-do-dia', p) === false));
+    check('aplicarPermMenu existe e é chamado quando alguém entra',
+      typeof ctx.aplicarPermMenu === 'function' && /aplicarPermMenu\(\); \}catch/.test(html));
+
+    // A tela também se tranca por dentro: link direto não abre porta que o menu fecha.
+    check('pmAbrir se tranca pela mesma tabela (link direto não fura a permissão)',
+      /function pmAbrir\([\s\S]{0,500}?podePapel\('painel-monitor'\)/.test(html));
+    check('pdAbrir se tranca pela mesma tabela',
+      /function pdAbrir\([\s\S]{0,300}?podePapel\('definir-plano-do-dia'\)/.test(html));
+    // E a gravação da escala e do plano mora SÓ nas funções que a Gestão alcança.
+    check('gravar escala e plano do dia só existe nas funções da Gestão (pd*)',
+      /function pdSalvarEscala\(\)[\s\S]*?DB\.ref\('daycare\/config\/escala'\)\.set/.test(html) &&
+      /function pdEscolherPlano\(id\)[\s\S]*?DB\.ref\('daycare\/plano-do-dia\/'\+dia\)\.set/.test(html));
+    check('as funções do monitor (pm*) NÃO gravam escala, plano nem plano-do-dia',
+      !/DB\.ref\('daycare\/(config\/(escala|planos)|plano-do-dia)[^)]*\)\.(set|update|push)/.test(
+        html.slice(html.indexOf('function pmComoVai'), html.indexOf('function pdAbrir'))));
+
+    // ---- 4. a saudação vem do BANCO de frases, e de mais lugar nenhum ----
+    // GABARITO: "NÃO inventar frases fora deste banco". São 7, uma por dia da semana,
+    // em rotação FIXA (nunca sorteada: a pessoa reconhece a semana).
+    const BANCO = [
+      'Aqui, cada cuidado é ÚNICO. E passa pelas suas mãos.',                            // domingo
+      'Hoje, cada FILHOt vai ser visto de verdade. Pelos seus olhos.',                   // segunda
+      'O que ninguém vê também é cuidado. E é você quem vê.',                            // terça
+      'Energia bem gasta vira bem-estar. Isso começa na sua monitoria.',                 // quarta
+      'Cuidar é escutar antes de agir. Cada check-in seu é uma escuta.',                 // quinta
+      'Somos Zelosos. A gente se importa de verdade — e hoje isso tem o seu nome.',      // sexta
+      'A voz dos FILHOts hoje é a sua. Eles não sabem dizer onde dói; você sabe olhar.', // sábado
+    ];
+    ctx.__banco = null;
+    vm.runInContext('__banco = { frases: PM_FRASES.slice(), noite: PM_FRASE_NOITE };', ctx);
+    check('o banco tem exatamente 7 frases (uma por dia da semana)',
+      Array.isArray(ctx.__banco.frases) && ctx.__banco.frases.length === 7,
+      String(ctx.__banco.frases && ctx.__banco.frases.length));
+    let bancoOk = true, bancoDet = '';
+    BANCO.forEach((f, i) => {
+      if (ctx.__banco.frases[i] !== f) { bancoOk = false; bancoDet = 'dia ' + i + ': ' + ctx.__banco.frases[i]; }
+    });
+    check('as 7 frases são EXATAMENTE as do GABARITO, na ordem do dia da semana', bancoOk, bancoDet);
+    check('a frase do plantão da noite é a do GABARITO',
+      ctx.__banco.noite === 'Enquanto os tutores dormem, é o seu olhar que cuida.', ctx.__banco.noite);
+    // pmFraseDoDia escolhe do banco, nunca fora dele — e nunca sorteia.
+    const DOM = new Date(2026, 8, 6), SEG = new Date(2026, 8, 7); // 06/set/2026 é domingo
+    check('pmFraseDoDia devolve a frase do domingo no domingo',
+      ctx.pmFraseDoDia('monitor', DOM) === BANCO[0], ctx.pmFraseDoDia('monitor', DOM));
+    check('pmFraseDoDia devolve a frase da segunda na segunda',
+      ctx.pmFraseDoDia('monitor', SEG) === BANCO[1], ctx.pmFraseDoDia('monitor', SEG));
+    let rotacaoFixa = true;
+    for (let i = 0; i < 20; i++) { if (ctx.pmFraseDoDia('monitor', SEG) !== BANCO[1]) rotacaoFixa = false; }
+    check('a rotação é FIXA: 20 chamadas no mesmo dia devolvem sempre a mesma frase', rotacaoFixa);
+    let sempreDoBanco = true, foraDoBanco = '', combinacoes = 0;
+    ['monitor', 'plantonista', 'aprendiz'].forEach((papel) => {
+      for (let d = 0; d < 7; d++) {
+        for (const h of [7, 13, 20, 3]) {
+          combinacoes++;
+          const f = ctx.pmFraseDoDia(papel, new Date(2026, 8, 6 + d, h, 0, 0));
+          if (BANCO.indexOf(f) < 0 && f !== ctx.__banco.noite) {
+            sempreDoBanco = false; foraDoBanco = papel + ' dia' + d + ' h' + h + ': ' + f;
+          }
+        }
+      }
+    });
+    check('em ' + combinacoes + ' combinações de papel/dia/hora, nenhuma frase sai de fora do banco',
+      sempreDoBanco, foraDoBanco);
+    // À noite quem está de plantão recebe a frase do plantão; de dia, a do dia da semana.
+    check('plantonista às 21h recebe a frase do plantão',
+      ctx.pmFraseDoDia('plantonista', new Date(2026, 8, 7, 21, 0, 0)) === ctx.__banco.noite);
+    check('plantonista às 3h da manhã ainda é noite',
+      ctx.pmFraseDoDia('plantonista', new Date(2026, 8, 7, 3, 0, 0)) === ctx.__banco.noite);
+    check('plantonista às 10h da manhã recebe a frase do dia, não a da noite',
+      ctx.pmFraseDoDia('plantonista', new Date(2026, 8, 7, 10, 0, 0)) === BANCO[1]);
+    check('monitor às 21h NÃO recebe a frase do plantão (ela é de quem está de plantão)',
+      ctx.pmFraseDoDia('monitor', new Date(2026, 8, 7, 21, 0, 0)) === BANCO[1]);
+    check('pmComoVai troca com o relógio: bom dia, boa tarde, boa noite',
+      ctx.pmComoVai(8) === 'Bom dia' && ctx.pmComoVai(14) === 'Boa tarde' && ctx.pmComoVai(20) === 'Boa noite',
+      [ctx.pmComoVai(8), ctx.pmComoVai(14), ctx.pmComoVai(20)].join('/'));
+    check('a data por extenso sai em português correto',
+      ctx.pmDataExtenso(new Date(2026, 8, 7)) === 'segunda-feira, 7 de setembro de 2026',
+      ctx.pmDataExtenso(new Date(2026, 8, 7)));
+
+    // ---- 5. o recorte por pessoa NÃO vaza o nome de ninguém ----
+    // Regra da fatia: "sem tempo por etapa, sem nomes de outras pessoas, sem dinheiro".
+    // A prova é sobre o HTML montado: nada do que sai na tela do Octávio cita a Wandela.
+    const audVaza = {
+      a1: { acao: 'checkin-corpo', quem: 'Octávio', alvo: 'luna__ana', hora: '09:40' },
+      a2: { acao: 'checkin-corpo', quem: 'Wandela', alvo: 'camus__sophia', hora: '10:05' },
+      a3: { acao: 'checkin-corpo', quem: 'Wandela', alvo: 'toddy__carla', hora: '10:20' },
+    };
+    const turmaVaza = ['luna__ana', 'camus__sophia', 'toddy__carla'];
+    const meu = ctx.plProtocoloDe('Octávio', audVaza, turmaVaza);
+    check('o protocolo do Octávio conta só o que foi dele (1 de 3)',
+      meu.feitos.length === 1 && meu.total === 3 && meu.feitos[0] === 'luna__ana', JSON.stringify(meu));
+    const htmlProto = ctx.pmCardProtocolo(meu);
+    check('o card do protocolo não cita o nome de nenhuma pessoa do time',
+      htmlProto.indexOf('Wandela') < 0 && htmlProto.indexOf('Octávio') < 0, htmlProto.slice(0, 160));
+    check('o card do protocolo mostra os FILHOts que faltam, pelo nome',
+      htmlProto.indexOf('Camus') >= 0 && htmlProto.indexOf('Toddy') >= 0);
+    // A captura de 02/set com dado REAL mostrou 0/48 sob o rótulo 'Faltam no seu turno' —
+    // como se os 48 FILHOts da casa fossem responsabilidade de um monitor sozinho às seis da
+    // manhã. O banco não guarda quem atende quem (lacuna 6 do FASE2 doc), então o card diz o
+    // que de fato sabe: quem ainda não tem check-in, e que a conta é da turma inteira.
+    check('o card do protocolo não chama a turma inteira de "o seu turno"',
+      htmlProto.indexOf('Faltam no seu turno') < 0 &&
+      htmlProto.indexOf('Ainda sem check-in do corpo hoje') >= 0, htmlProto.slice(0, 200));
+    check('o card do protocolo avisa que a conta é da turma inteira, não só da pessoa',
+      htmlProto.indexOf('o app ainda não sabe quem atende quem') >= 0);
+    check('pmNomeDaChave lê o nome da chave nome__tutor, sem mostrar o tutor',
+      ctx.pmNomeDaChave('camus__sophia') === 'Camus' && ctx.pmNomeDaChave('luna__ana') === 'Luna',
+      ctx.pmNomeDaChave('camus__sophia'));
+    // Sem a turma do dia não se inventa cobrança — a tela diz isso em vez de mostrar 0/0.
+    const semTurma = ctx.plProtocoloDe('Octávio', audVaza, []);
+    const htmlSemTurma = ctx.pmCardProtocolo(semTurma);
+    check('sem a turma do dia o card avisa, em vez de acusar falta que não sabe existir',
+      htmlSemTurma.indexOf('não inventa cobrança') >= 0 && htmlSemTurma.indexOf('data-pm-anel') < 0);
+    // O aviso de outra pessoa nunca entra na minha lista (provado na conta; aqui, na tela).
+    const avisosVaza = {
+      'telegram-comida': {
+        k1: { ok: false, nome: 'Dolly', quem: 'Octávio', ts: AGORA, erro: 'a ponte não respondeu' },
+        k2: { ok: false, nome: 'Heidi', quem: 'Wandela', ts: AGORA, erro: 'a ponte não respondeu' },
+      },
+    };
+    const meusAvisos = ctx.plAvisosDe('Octávio', avisosVaza, Date.now());
+    const htmlAvisos = ctx.pmCardAvisos(meusAvisos);
+    check('o card de avisos traz só o meu (1 de 2)', meusAvisos.length === 1, JSON.stringify(meusAvisos));
+    check('o card de avisos não mostra o FILHOt do aviso de outra pessoa',
+      htmlAvisos.indexOf('Dolly') >= 0 && htmlAvisos.indexOf('Heidi') < 0);
+    check('o aviso preso oferece o reenvio (não fica só acusando)',
+      htmlAvisos.indexOf('pmReenviar(0,this)') >= 0);
+    check('sem aviso preso, o card diz que está tudo entregue (não fica em branco)',
+      ctx.pmCardAvisos([]).indexOf('Nenhum aviso seu ficou preso') >= 0);
+    // Dinheiro e tempo por etapa NUNCA aparecem na fatia do monitor.
+    const htmlDiaDoOctavio = ctx.pmCardMeuDia(rotaOct);
+    const htmlPontosDoOctavio = ctx.pmCardPontos({
+      eu: 'Octávio', mes: 'agosto', bolsas: 2, total: 12, perfeitas: 1, maximo: 20,
+      perdidos: [{ ts: AGORA, pet: 'Toddy', pontos: 2, itens: ['mochila'] }],
+      todos: [{ pontos: 10 }, { pontos: 2 }],
+    });
+    const fatiaInteira = [htmlProto, htmlAvisos, htmlDiaDoOctavio,
+      ctx.pmCardPlano(rotaOct, { ts: AGORA }), ctx.pmSaudacaoHTML('Octávio', 18, 'monitor')].join(' ');
+    check('a fatia do monitor não mostra dinheiro (nenhum "R$")', fatiaInteira.indexOf('R$') < 0);
+    check('a fatia do monitor não mostra tempo por etapa (é ferramenta da Gestão)',
+      !/min\/FILHOt|tempo por etapa|minutos por etapa/i.test(fatiaInteira));
+    // "Sem nomes de outras pessoas" é sobre o TRABALHO alheio: protocolo, tempo e pontos de
+    // outro colega não aparecem para ninguém. O motivo do plano é outra coisa — o FASE2 doc
+    // pede, com todas as letras, "Plano 2 — a Wandela está de folga": é a Gestão explicando
+    // ao monitor por que o dia dele mudou. Sem isso o plano vira ordem sem porquê.
+    const cardsDeTrabalho = [htmlProto, htmlAvisos, htmlDiaDoOctavio, htmlPontosDoOctavio].join(' ');
+    check('protocolo, avisos, meu dia e pontos não citam o nome de nenhum colega',
+      cardsDeTrabalho.indexOf('Wandela') < 0, cardsDeTrabalho.slice(0, 160));
+    check('o motivo do plano PODE nomear o colega — é a Gestão explicando o dia (FASE2 doc)',
+      ctx.pmCardPlano(rotaOct, { ts: AGORA }).indexOf('Wandela de folga') >= 0);
+
+    // ---- 6. o card "Meu dia" não mente sobre o que foi feito ----
+    // O app NÃO registra atividade concluída — só sabe o relógio. Dizer "3 de 6 feitas"
+    // seria a tela mentindo para quem confia nela (texto aprovado pela Adriana, 02/set).
+    const htmlDia = ctx.pmCardMeuDia(rotaOct);
+    check('o "Meu dia" diz "já passaram do horário", nunca "feitas"',
+      htmlDia.indexOf('já passaram do horário') >= 0 && !/\bfeitas\b/.test(htmlDia), htmlDia.slice(0, 200));
+    check('o "Meu dia" explica que a marcação é pelo relógio',
+      htmlDia.indexOf('Pelo relógio: o app ainda não registra o que você concluiu') >= 0);
+    check('o "Meu dia" traz os três horários da escala',
+      htmlDia.indexOf('07:00') >= 0 && htmlDia.indexOf('13:00-14:00') >= 0 && htmlDia.indexOf('16:00') >= 0);
+    check('o "Meu dia" traz as atividades na ordem da hora',
+      htmlDia.indexOf('07:30') < htmlDia.indexOf('11:00') && htmlDia.indexOf('11:00') < htmlDia.indexOf('15:00'));
+    check('o "Meu dia" não mostra a atividade de outro monitor', htmlDia.indexOf('Enriquecimento') < 0);
+    // Sem escala nenhuma, a tela diz o que fazer — nunca inventa horário.
+    const semEscala = ctx.plRotaDoDia('Fulano', ESCALA, PLANO);
+    const htmlSemEscala = ctx.pmCardMeuDia(semEscala);
+    check('sem escala, o card mostra travessão no lugar do horário e manda falar com a Márcia',
+      htmlSemEscala.indexOf('<b>—</b>') >= 0 && htmlSemEscala.indexOf('fale com a Márcia') >= 0);
+    check('sem plano de hoje, o card do plano avisa em vez de ficar vazio',
+      ctx.pmCardPlano({ plano: {}, atividades: [], avisos: [] }, {}).indexOf('ainda não montou o plano de hoje') >= 0);
+    check('o card do plano diz de quem é o plano e por quê',
+      ctx.pmCardPlano(rotaOct, { ts: AGORA }).indexOf('Definido por Márcia') >= 0 &&
+      ctx.pmCardPlano(rotaOct, { ts: AGORA }).indexOf('Wandela de folga') >= 0);
+    // A captura de 02/set mostrou a MESMA lista de atividades duas vezes na mesma tela — uma
+    // no "Meu dia" e outra no "Plano de hoje". Ler duas vezes procurando uma diferença que
+    // não existe é trabalho jogado fora. O plano passou a dizer QUANTAS são, não quais.
+    const htmlPlano = ctx.pmCardPlano(rotaOct, { ts: AGORA });
+    check('o card do plano NÃO repete a lista de atividades do "Meu dia"',
+      htmlPlano.indexOf('check-in de corpo e pertences') < 0 &&
+      htmlPlano.indexOf('2º horário de almoço') < 0, htmlPlano.slice(0, 200));
+    check('o card do plano diz quantas atividades são, e onde está a lista',
+      htmlPlano.indexOf('3 atividades para você hoje') >= 0 &&
+      htmlPlano.indexOf('está em "Meu dia"') >= 0, htmlPlano.slice(-260));
+    check('com uma atividade só, o card do plano fica no singular',
+      ctx.pmCardPlano({ plano: { nome: 'Plano 1', definidoPor: 'Márcia' },
+        atividades: [{ hora: '07:30', atividade: 'abrir a casa' }], avisos: [] }, {})
+        .indexOf('1 atividade para você hoje') >= 0);
+
+    // ---- 7. os pontos são a MESMA conta do Check-out (integrar, nunca recriar) ----
+    check('coPontosDoMesDe existe (a conta saiu de dentro do desenho)', typeof ctx.coPontosDoMesDe === 'function');
+    check('coMeusPontos passou a usar a conta compartilhada, em vez de recontar',
+      /function coMeusPontos\(\)[\s\S]{0,400}?coPontosDoMesDe\(eu\)/.test(html));
+    check('a leitura dos pontos do mês aparece uma vez só no código (nenhuma cópia da conta)',
+      (html.match(/daycare\/pontos-checkout\/'\+coMesAtual\(\)/g) || []).length === 1,
+      String((html.match(/daycare\/pontos-checkout\/'\+coMesAtual\(\)/g) || []).length));
+    const pontosFix = {
+      eu: 'Octávio', mes: 'agosto', bolsas: 3, total: 22, perfeitas: 1, maximo: 30,
+      perdidos: [{ ts: AGORA, pet: 'Toddy', pontos: 2, itens: ['mochila', 'vasilha'] }],
+      todos: [{ pontos: 10 }, { pontos: 2 }, { pontos: 10 }],
+    };
+    const htmlPontos = ctx.pmCardPontos(pontosFix);
+    check('o card de pontos mostra o total do mês', htmlPontos.indexOf('data-pm-alvo="22"') >= 0);
+    check('o card de pontos usa a frase de norma culta já provada (bolsasRedondasTexto)',
+      htmlPontos.indexOf(ctx.bolsasRedondasTexto(1, 3)) >= 0, ctx.bolsasRedondasTexto(1, 3));
+    check('o card de pontos não fica em branco para quem ainda não conferiu bolsa',
+      ctx.pmCardPontos(null).indexOf('ainda não conferiu bolsa neste mês') >= 0);
+    check('com menos de 2 check-outs não se desenha sparkline (linha de um ponto só não é linha)',
+      ctx.pmSparkHTML([{ pontos: 10 }]) === '' && ctx.pmSparkHTML([]) === '');
+    // Norma culta, achada na captura de 02/set: dizia "12 ponto(s) perdido(s) em 2 saída(s)"
+    // e "setembro até hoje" (mês em minúscula abrindo frase).
+    check('pmPlural concorda de verdade, sem "(s)"',
+      ctx.pmPlural(1, 'saída', 'saídas') === '1 saída' &&
+      ctx.pmPlural(2, 'saída', 'saídas') === '2 saídas' &&
+      ctx.pmPlural(0, 'ponto perdido', 'pontos perdidos') === '0 pontos perdidos',
+      ctx.pmPlural(1, 'saída', 'saídas'));
+    check('o card de pontos não escreve "(s)" em lugar nenhum', htmlPontos.indexOf('(s)') < 0);
+    check('o card de pontos escreve os perdidos com concordância',
+      htmlPontos.indexOf('8 pontos perdidos em 1 saída.') >= 0, htmlPontos.slice(0, 400));
+    check('o nome do mês abre a frase com maiúscula',
+      htmlPontos.indexOf('Agosto até hoje') >= 0 && ctx.pmMaiuscula('setembro') === 'Setembro',
+      ctx.pmMaiuscula('setembro'));
+    check('pmMaiuscula não estoura com vazio', ctx.pmMaiuscula('') === '' && ctx.pmMaiuscula(null) === '');
+
+    // ---- 8. MORDIDAS — cada jeito conhecido de esta tela quebrar calada ----
+    let mordeu = true, ondeMordeu = '';
+    const morde = (nome, fn) => { try { fn(); } catch (e) { mordeu = false; ondeMordeu = nome + ': ' + e.message; } };
+    morde('rota vazia', () => ctx.pmCardMeuDia({ entrada: '', almoco: '', saida: '', atividades: [], avisos: [], plano: {} }));
+    morde('plano nulo', () => ctx.pmCardPlano({ plano: {}, atividades: [], avisos: [] }, null));
+    morde('protocolo zerado', () => ctx.pmCardProtocolo({ feitos: [], faltam: [], total: 0, pct: null }));
+    morde('protocolo 100%', () => ctx.pmCardProtocolo({ feitos: ['a__b'], faltam: [], total: 1, pct: 100 }));
+    morde('pontos nulos', () => ctx.pmCardPontos(null));
+    morde('avisos vazios', () => ctx.pmCardAvisos([]));
+    morde('nome da chave vazio', () => ctx.pmNomeDaChave(''));
+    morde('turma sem dado', () => ctx.pmTurmaDeHoje());
+    morde('saudação sem turma', () => ctx.pmSaudacaoHTML('Octávio', 0, 'monitor'));
+    morde('hora torta na rota', () => ctx.pmCardMeuDia({
+      entrada: '07:00', almoco: '', saida: '', avisos: [], plano: {},
+      atividades: [{ hora: 'quinze', atividade: 'sem hora' }, { hora: '', atividade: 'nenhuma' }],
+    }));
+    check('nenhum card estoura com dado vazio, nulo, zerado ou torto', mordeu, ondeMordeu);
+    // Turma zerada: a linha do número não aparece — melhor calar do que dizer "0 FILHOts".
+    check('com turma vazia a saudação NÃO anuncia "0 FILHOts"',
+      ctx.pmSaudacaoHTML('Octávio', 0, 'monitor').indexOf('passam pelas suas mãos') < 0);
+    // O número começa em 0 na marcação e sobe até o alvo (count-up de 600ms): quem guarda o
+    // valor de verdade é o data-pm-alvo. A concordância é que está sob prova aqui.
+    check('com 1 FILHOt a frase fica no singular (concordância)',
+      /data-pm-alvo="1">0<\/b> FILHOt passa pelas suas mãos/.test(ctx.pmSaudacaoHTML('Octávio', 1, 'monitor')),
+      ctx.pmSaudacaoHTML('Octávio', 1, 'monitor').slice(0, 300));
+    check('com 18 FILHOts a frase fica no plural',
+      /data-pm-alvo="18">0<\/b> FILHOts passam pelas suas mãos/.test(ctx.pmSaudacaoHTML('Octávio', 18, 'monitor')));
+    // Nome com marcação dentro não pode virar HTML na tela.
+    check('nome com HTML dentro sai escapado, nunca vira marcação',
+      ctx.pmSaudacaoHTML('<script>x</script>', 3, 'monitor').indexOf('<script>x') < 0);
+    // Vocabulário Zêluz: é "FILHOt", nunca cachorro/cão/animal/bicho.
+    const tudoQueSaiNaTela = [ctx.pmSaudacaoHTML('Octávio', 18, 'monitor'), htmlDia, htmlProto,
+      htmlAvisos, htmlPontos, ctx.pmCardPlano(rotaOct, { ts: AGORA })].join(' ');
+    check('a fatia inteira usa o vocabulário Zêluz (nenhum cachorro, cão, animal ou bicho)',
+      !/\b(cachorr|c[ãa]es?\b|animal|animais|bicho)/i.test(tudoQueSaiNaTela),
+      (tudoQueSaiNaTela.match(/\b(cachorr\w*|c[ãa]es?|animal|animais|bicho)\b/i) || [''])[0]);
+    check('a fatia inteira escreve FILHOt com o t minúsculo', /FILHOt/.test(tudoQueSaiNaTela));
+
+    // ---- 9. o editor da Gestão devolve exatamente o que o monitor vai ler ----
+    check('pdLinhasParaAtividades lê "07:30 check-in de corpo" como hora + atividade',
+      JSON.stringify(ctx.pdLinhasParaAtividades('07:30 check-in de corpo\n11:00 guardar os pertences'))
+      === JSON.stringify([{ hora: '07:30', atividade: 'check-in de corpo' },
+        { hora: '11:00', atividade: 'guardar os pertences' }]),
+      JSON.stringify(ctx.pdLinhasParaAtividades('07:30 check-in de corpo')));
+    check('pdLinhasParaAtividades ignora linha em branco (não cria atividade fantasma)',
+      ctx.pdLinhasParaAtividades('\n\n07:30 abrir a casa\n   \n').length === 1);
+    // O que o editor monta tem de passar na MESMA validação que o harness já prova.
+    const doEditor = {
+      id: 'plano-9', nome: 'Plano 9', definidoPor: 'Márcia', ts: AGORA,
+      porMonitor: { 'Octávio': ctx.pdLinhasParaAtividades('07:30 check-in de corpo') },
+    };
+    check('o plano montado pelo editor passa na plPlanoValido', ctx.plPlanoValido(doEditor).ok === true,
+      JSON.stringify(ctx.plPlanoValido(doEditor).erros));
+    const doEditorTorto = JSON.parse(JSON.stringify(doEditor));
+    doEditorTorto.porMonitor['Octávio'] = ctx.pdLinhasParaAtividades('7:30 check-in de corpo');
+    check('hora sem o zero na frente é recusada ANTES de gravar',
+      ctx.plPlanoValido(doEditorTorto).ok === false);
+    check('pdSalvarPlano só grava depois de a plPlanoValido aprovar',
+      /function pdSalvarPlano\(id\)[\s\S]*?plPlanoValido\(plano\)[\s\S]{0,200}?if\(!v\.ok\)\{[\s\S]{0,200}?return; \}[\s\S]{0,200}?DB\.ref/.test(html));
+    check('gravação de escala e de plano avisa quando falha (nunca falha calada)',
+      /_logFalhaGrav\('daycare\/config\/escala \(pdSalvarEscala\)'/.test(html) &&
+      /_logFalhaGrav\('daycare\/plano-do-dia\/'\+dia\+' \(pdEscolherPlano\)'/.test(html) &&
+      /_logFalhaGrav\('daycare\/config\/planos\/'\+id\+' \(pdSalvarPlano\)'/.test(html));
+    check('o Painel não usa confirm/prompt/alert do navegador',
+      !/\b(confirm|prompt|alert)\(/.test(html.slice(html.indexOf('function pmComoVai'), html.indexOf('// INIT do Day Care'))));
+  }
+  console.log('');
+
   // ---------------------------------------------------------------------------------
   // Norma culta — a frase do placar de quem monta a bolsa.
   // Dizia "7 de 9 bolsas desceu redondo": verbo no singular com sujeito no plural. Quem

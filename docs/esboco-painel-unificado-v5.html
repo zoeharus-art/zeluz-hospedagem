@@ -1,0 +1,1822 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sistema Zêluz — Day Care &amp; AuAulândia</title>
+
+<!-- Símbolo oficial #39 (SVG real) também como ícone da aba -->
+<link rel="icon" type="image/svg+xml" href="assets/simbolo-zeluz-39.svg">
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+
+<!-- Fonte única de tokens do Design System Zêluz v8.1 -->
+<link rel="stylesheet" href="../../code/docs/zeluz/branding/zeluz-ds-v8/shared/tokens.css">
+
+<style>
+/* ============================================================
+   cópia dos tokens do DS v8 para o esboço abrir sozinho
+   (se o <link> acima não resolver, estes valores mantêm a peça
+   correta; nenhum valor novo — todos vêm de shared/tokens.css)
+   ============================================================ */
+:root{
+  --z-gold:#DEB428;
+  --z-gold-light:#E5C353;
+  --z-gold-deep:#B8961F;
+  --z-blue:#234D67;
+  --z-blue-deep:#1A3A4F;
+  --z-blue-soft:#3A6A85;
+  --z-cream:#FFFDF6;
+  --z-cream-warm:#F9F5EC;
+  --z-white:#FFFFFF;
+
+  --z-gold-wash-08:rgba(222,180,40,.08);
+  --z-gold-wash-12:rgba(222,180,40,.12);
+  --z-gold-wash-20:rgba(222,180,40,.20);
+  --z-blue-wash-06:rgba(35,77,103,.06);
+  --z-blue-wash-10:rgba(35,77,103,.10);
+  --z-blue-wash-15:rgba(35,77,103,.15);
+
+  --z-gray-200:#EEEDE9;
+  --z-gray-300:#DDDCD8;
+  --z-gray-400:#B5B4B0;
+  --z-gray-500:#8A8985;
+  --z-gray-600:#6B6A66;
+
+  --crm-critico:#C0392B;
+  --crm-critico-soft:rgba(192,57,43,.12);
+  --crm-critico-text:#9B2C2C;
+  --crm-atencao-soft:rgba(241,196,15,.18);
+  --crm-atencao-text:#8A6D00;
+  --crm-ok:#27AE60;
+  --crm-ok-soft:rgba(39,174,96,.12);
+  --crm-ok-text:#1E8449;
+  --crm-info:#2980B9;
+  --crm-info-soft:rgba(41,128,185,.12);
+  --crm-info-text:#1F618D;
+
+  --z-emporio:#5E9B6B;
+  --z-spa:#B8A9C9;
+  --z-vetcare:#2E7D8A;
+  --z-daycare:#E08856;
+  --z-auaulandia:#5AABB5;
+
+  --radius-md:12px;
+  --radius-lg:16px;
+  --radius-full:999px;
+  --font-marketing:'Poppins',-apple-system,BlinkMacSystemFont,system-ui,sans-serif;
+  --ease-out:cubic-bezier(0.16,1,0.3,1);
+}
+
+/* ============================================================
+   Derivadas locais do esboço (--p-*), todas a partir dos tokens
+   ============================================================ */
+:root{
+  --p-line:var(--z-blue-wash-10);
+  --p-line-fina:var(--z-blue-wash-06);
+  --p-muted:var(--z-gray-600);
+
+  /* a CAIXA FORTE aprovada na v4: um "lábio" sólido (sombra de deslocamento
+     sem desfoque) que dá corpo de papel empilhado + a sombra difusa tingida
+     de azul um degrau mais funda. */
+  --p-sombra:0 4px 0 var(--z-gray-200),0 10px 28px rgba(35,77,103,.12);
+  --p-sombra-alta:0 6px 0 var(--z-gray-300),0 18px 36px rgba(35,77,103,.16);
+  --p-glow-ouro:0 0 0 6px rgba(222,180,40,.18);
+
+  /* --- PALETA CATEGÓRICA DE DADOS · tema "situação do dia" ---
+     A mesma da v4, sem cor nova. Validada com
+     dataviz/scripts/validate_palette.js --mode light --surface #FFFFFF:
+     Lightness PASS · Chroma PASS · CVD PASS (pior par ΔE 14,0 deutan) ·
+     Normal-vision PASS (ΔE 21,5). O WARN de contraste do #B8961F é aliviado
+     por rótulo direto escrito em toda marca (nunca cor sozinha).
+     A v5 usa ouro e azul juntos numa mesma série dupla (resolvido × pendente):
+     é o par de maior separação do conjunto e leva legenda escrita. */
+  --p-dado-ouro:var(--z-gold-deep);   /* #B8961F — série "resolvido" e série única dourada */
+  --p-dado-azul:var(--z-blue);        /* #234D67 — série "pendente" e estrutura */
+  --p-dado-alerta:var(--crm-critico); /* #C0392B — só status */
+  --p-seg-falta:var(--crm-critico);   /* #C0392B — falta sem aviso */
+  --p-seg-avisou:var(--crm-info);     /* #2980B9 — falta avisada */
+  --p-trilho:rgba(35,77,103,.08);     /* trilho de anel, pill e barra */
+  --p-media:var(--z-gray-400);        /* marca cinza de média (emphasis) */
+
+  /* --- TINTAS LEGÍVEIS das cores de serviço (derivadas dos tokens) ---
+     A cor de serviço cheia é para wash, tarja e ícone. Para TEXTO e para a
+     barra de proporção do Financeiro ela desce um degrau: estas duas passam
+     4,5:1 sobre branco. */
+  --p-daycare-tinta:#A85A2E;             /* --z-daycare #E08856 escurecido (o app já usa esta tinta) */
+  --p-auaulandia-tinta:var(--z-vetcare); /* #2E7D8A — o azul-petróleo do DS é a tinta do turquesa */
+
+  /* --- PARADAS TONAIS DA BARRA LATERAL (Opção F, escolhida pela Adriana em 29/ago) ---
+     Degradê entre --z-blue e --z-blue-deep com uma parada final um degrau abaixo.
+     É a ÚNICA superfície tratada da peça — nunca cor crua, nunca chapada. */
+  --p-barra-1:#20475F;
+  --p-barra-2:var(--z-blue-deep);
+  --p-barra-3:#15303F;
+}
+
+/* ============================================================
+   BASE
+   ============================================================ */
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{-webkit-text-size-adjust:100%}
+body{
+  font-family:var(--font-marketing);
+  background:var(--z-cream);
+  color:var(--z-blue);
+  font-size:14px;
+  line-height:1.5;
+  overflow-x:hidden;
+}
+img,svg{display:block;max-width:100%}
+button{font-family:inherit;background:none;border:none;cursor:pointer;color:inherit}
+a{color:inherit;text-decoration:none}
+
+/* ============================================================
+   HOLOGRAMA DE ENTRADA — só CSS, 900ms, uma vez por sessão
+   ============================================================ */
+.holo{
+  position:fixed;inset:0;z-index:200;display:grid;place-items:center;
+  background:var(--z-cream);overflow:hidden;pointer-events:none;
+  animation:holoSai 900ms var(--ease-out) forwards;
+}
+.holo img{width:118px;height:auto;animation:holoEntra 700ms var(--ease-out) both}
+.holo::after{
+  content:"";position:absolute;top:0;bottom:0;left:0;width:100%;
+  background:linear-gradient(105deg,rgba(222,180,40,0) 42%,rgba(222,180,40,.34) 50%,rgba(222,180,40,0) 58%);
+  animation:holoVarre 900ms var(--ease-out) both;
+}
+@keyframes holoEntra{
+  0%{opacity:0;transform:scale(.86);filter:blur(7px)}
+  55%{opacity:1;filter:blur(0)}
+  100%{opacity:1;transform:scale(1)}
+}
+@keyframes holoVarre{0%{transform:translateX(-72%)}100%{transform:translateX(72%)}}
+@keyframes holoSai{0%,72%{opacity:1}100%{opacity:0}}
+
+/* ============================================================
+   BARRA SUPERIOR (celular) — a mesma superfície tratada da lateral
+   ============================================================ */
+.topo{
+  position:sticky;top:0;z-index:60;padding:11px 14px;
+  color:var(--z-cream);
+  background:
+    radial-gradient(120% 60% at 20% 0%,rgba(222,180,40,.13),transparent 64%),
+    linear-gradient(168deg,var(--p-barra-1) 0%,var(--p-barra-2) 48%,var(--p-barra-3) 100%);
+}
+.topo-linha{display:flex;align-items:center;gap:11px}
+.topo-nome{font-size:15px;font-weight:600;letter-spacing:-.01em;min-width:0}
+.topo-nome small{display:block;font-size:11px;font-weight:500;opacity:.66}
+.hamb{
+  margin-left:auto;flex:0 0 auto;width:42px;height:42px;border-radius:12px;
+  display:flex;align-items:center;justify-content:center;
+  background:rgba(255,253,246,.10);color:var(--z-cream);
+}
+.hamb svg{width:22px;height:22px}
+
+/* ============================================================
+   BARRA LATERAL — "a trilha do cuidado" (Opção F)
+   No celular ela é a gaveta do app; no computador, fixa à esquerda.
+   ============================================================ */
+.veu{
+  position:fixed;inset:0;z-index:70;background:rgba(26,58,79,.44);
+  opacity:0;pointer-events:none;transition:opacity 220ms var(--ease-out);
+}
+.veu.aberta{opacity:1;pointer-events:auto}
+.lateral{
+  display:flex;flex-direction:column;
+  position:fixed;top:0;bottom:0;left:0;width:272px;max-width:86vw;z-index:80;
+  color:var(--z-cream);overflow:hidden;
+  background:
+    radial-gradient(125% 55% at 22% 0%,rgba(222,180,40,.12),transparent 62%),
+    linear-gradient(168deg,var(--p-barra-1) 0%,var(--p-barra-2) 46%,var(--p-barra-3) 100%);
+  transform:translateX(-100%);
+  transition:transform 260ms var(--ease-out);
+}
+.lateral.aberta{transform:none}
+.lat-marca{flex:0 0 auto;display:flex;justify-content:center;padding:26px 16px 8px}
+/* o símbolo respira direto sobre o fundo da barra — nunca dentro de caixa */
+.lat-marca img{width:96px;height:auto;filter:drop-shadow(0 3px 10px rgba(26,58,79,.45))}
+.lat-sub{flex:0 0 auto;text-align:center;font-size:11px;letter-spacing:.9px;opacity:.62;font-weight:500;margin-bottom:12px}
+/* o menu é quem rola; a marca no alto e o rodapé embaixo ficam sempre no lugar */
+.lat-nav{flex:1 1 auto;min-height:0;overflow-y:auto;padding:6px 12px 12px}
+.lat-nav a,.lat-nav button{
+  display:flex;align-items:center;gap:11px;padding:10px 13px;border-radius:11px;
+  width:100%;text-align:left;
+  color:var(--z-cream);font-size:14px;font-weight:500;opacity:.82;
+  margin-bottom:2px;line-height:1.3;transition:background 160ms var(--ease-out),opacity 160ms var(--ease-out);
+}
+.lat-nav a:hover,.lat-nav button:hover{background:rgba(255,253,246,.07);opacity:1}
+.lat-nav a svg,.lat-nav button svg{width:18px;height:18px;flex:0 0 auto}
+/* nível 1 — CATEGORIA: superfície própria, baixinha, com o ícone aceso em dourado */
+.lat-nav .cat{
+  font-size:17px;font-weight:700;opacity:1;letter-spacing:-.01em;
+  margin:14px 0 0;padding:11px 12px;border-radius:12px;
+  background:rgba(255,253,246,.045);border-top:1px solid rgba(255,255,255,.12);
+}
+.lat-nav .cat > svg:first-child{color:var(--z-gold)}
+.lat-nav .cat:hover{background:rgba(255,253,246,.09)}
+/* nível 2 — SUB-CABEÇALHO: título dourado, sem superfície */
+.lat-nav .sub2{
+  font-size:15px;font-weight:700;color:var(--z-gold);opacity:1;letter-spacing:.3px;
+  margin:8px 0 2px;padding:8px 12px 8px 14px;border-radius:9px;gap:8px;
+}
+/* nível 3 — ITEM: recuado, com a trilha dourada baixa ligando os irmãos */
+.lat-nav a.filho{margin-left:22px;padding-left:12px;
+  border-left:2px solid rgba(222,180,40,.30);border-radius:0 11px 11px 0}
+/* ITEM ATIVO — pílula de dourado baixo com um fio dourado à esquerda.
+   Nunca bola amarela cheia: ela gritava mais que o conteúdo da tela. */
+.lat-nav a.on{position:relative;background:rgba(222,180,40,.13);color:var(--z-gold-light);opacity:1;font-weight:600}
+.lat-nav a.on::before{content:"";position:absolute;left:0;top:5px;bottom:5px;width:3px;border-radius:999px;background:var(--z-gold)}
+.lat-nav a.on svg{color:var(--z-gold)}
+.lat-nav a.solto{margin-top:14px;border-top:1px solid rgba(255,255,255,.12);padding-top:10px;border-radius:0 0 11px 11px}
+.lat-nav .breve{margin-left:auto;font-size:9px;background:rgba(255,253,246,.10);padding:2px 7px;border-radius:999px;font-weight:600;letter-spacing:.3px}
+.lat-quem{flex:0 0 auto;padding:13px 16px 16px;border-top:1px solid rgba(255,253,246,.12)}
+.lat-quem small{display:block;font-size:10px;font-weight:700;letter-spacing:.6px;opacity:.6}
+.lat-quem b{display:block;font-size:14px;font-weight:600;margin-top:4px}
+
+/* ---------- a SANFONA: abre e fecha de verdade ---------- */
+.seta{margin-left:auto;flex:0 0 auto;width:15px;height:15px;opacity:.72;
+  transition:transform 220ms var(--ease-out)}
+.lat-nav [aria-expanded="true"] > .seta{transform:rotate(180deg)}
+.gaveta{overflow:hidden;max-height:0;transition:max-height 280ms var(--ease-out)}
+.gaveta.aberta{max-height:460px}
+
+/* ============================================================
+   CONTEÚDO
+   ============================================================ */
+.conteudo{padding:16px 14px 48px;max-width:100%}
+.cabeca{margin-bottom:18px}
+
+/* ---------- saudação vibrante (o topo que engaja) ---------- */
+.saud1{font-size:32px;font-weight:700;color:var(--z-blue);letter-spacing:-.03em;line-height:1.12}
+.saud2{font-size:16px;font-weight:500;color:var(--z-blue);margin-top:8px;line-height:1.45}
+.saud2 b{font-size:21px;font-weight:700;color:var(--z-gold-deep);font-variant-numeric:tabular-nums}
+.saud3{font-size:15px;font-weight:400;font-style:italic;color:var(--z-blue-soft);margin-top:5px;line-height:1.5;max-width:54ch}
+/* o ORNAMENTO — traço dourado 3px × 40px: o único selo da peça */
+.traco{display:block;height:3px;width:0;border-radius:2px;margin-top:13px;
+  background:linear-gradient(90deg,var(--z-gold),var(--z-gold-deep));
+  transition:width 400ms var(--ease-out)}
+.traco.dentro{width:40px}
+.entra{opacity:0;transform:translateY(12px);transition:opacity 400ms var(--ease-out),transform 400ms var(--ease-out)}
+.entra.atraso{transition:opacity 500ms var(--ease-out) 200ms,transform 500ms var(--ease-out) 200ms}
+.entra.dentro{opacity:1;transform:none}
+/* a frase do dia é de quem está com o FILHOt; a chefia recebe o número da casa */
+.so-monitor,.so-outros{display:none}
+body.fatia-monitor .so-monitor{display:block}
+body:not(.fatia-monitor) .so-outros{display:block}
+
+.data{font-size:12px;font-weight:500;color:var(--p-muted);margin-top:14px}
+.fatias{display:flex;flex-wrap:wrap;gap:7px;margin-top:14px}
+.fatia-bt{
+  padding:8px 16px;border-radius:var(--radius-full);
+  font-size:13px;font-weight:600;color:var(--z-blue-soft);
+  border:1px solid var(--p-line);background:var(--z-white);
+  box-shadow:0 2px 0 var(--z-gray-200);
+  transition:transform 200ms var(--ease-out),background 200ms var(--ease-out),color 200ms var(--ease-out);
+}
+.fatia-bt:hover{transform:translateY(-2px)}
+.fatia-bt.on{background:var(--z-blue);border-color:var(--z-blue);color:var(--z-cream);box-shadow:0 2px 0 var(--p-barra-3)}
+
+.nota{
+  font-size:12.5px;font-weight:500;color:var(--p-muted);
+  border-left:3px solid var(--z-gold);padding:6px 0 6px 12px;margin:0 0 16px;
+}
+.nota strong{color:var(--z-blue);font-weight:600}
+
+/* ============================================================
+   ÁREA — o bloco temático que carrega a COR DE SERVIÇO
+   A cor entra em três lugares e só: a tarja de topo dos cards da área,
+   o wash do sticker e a tinta da sobrancelha. Nunca em fundo de bloco.
+   ============================================================ */
+.area{
+  --area-tinta:var(--z-gold-deep);
+  --area-wash:var(--z-gold-wash-12);
+  --area-tarja:var(--z-gold-wash-20);
+}
+/* Day Care — creche lúdica e feliz: coral */
+.area-daycare{
+  --area-tinta:var(--p-daycare-tinta);
+  --area-wash:rgba(224,136,86,.14);
+  --area-tarja:rgba(224,136,86,.58);
+}
+/* AuAulândia — colônia de férias encantada: turquesa */
+.area-auaulandia{
+  --area-tinta:var(--p-auaulandia-tinta);
+  --area-wash:rgba(90,171,181,.16);
+  --area-tarja:rgba(90,171,181,.62);
+}
+.area-h{display:flex;align-items:flex-start;gap:14px;margin:36px 0 14px}
+.area:first-child .area-h{margin-top:20px}
+.area-st{
+  width:46px;height:46px;flex:0 0 46px;border-radius:14px;
+  display:flex;align-items:center;justify-content:center;
+  background:var(--area-wash);color:var(--area-tinta);
+}
+.area-st svg{width:28px;height:28px}
+.area-txt{min-width:0;flex:1 1 auto}
+.area-eyebrow{font-size:10.5px;font-weight:700;letter-spacing:.14em;color:var(--area-tinta)}
+.area-t{font-size:26px;font-weight:700;color:var(--z-blue);letter-spacing:-.03em;line-height:1.15;margin-top:3px}
+.area-sub{font-size:13.5px;font-weight:500;color:var(--p-muted);margin-top:5px;max-width:76ch;line-height:1.5}
+
+/* ---------- título de SEÇÃO (a herança da Diretoria) ---------- */
+.secao{
+  font-size:34px;font-weight:700;color:var(--z-blue);
+  letter-spacing:-.035em;line-height:1.1;margin:40px 0 4px;
+}
+.secao-sub{font-size:13.5px;font-weight:500;color:var(--p-muted);margin-bottom:6px;max-width:72ch;line-height:1.5}
+
+/* ============================================================
+   GRID 12 COLUNAS
+   ============================================================ */
+.painel{display:none}
+.painel.on{display:block}
+.grid{display:grid;grid-template-columns:1fr;gap:12px;align-items:start}
+.c3,.c4,.c5,.c6,.c7,.c8,.c12{grid-column:auto}
+
+/* ============================================================
+   CARD — a caixa forte
+   ============================================================ */
+.card{
+  position:relative;background:var(--z-white);
+  border:1px solid var(--p-line-fina);
+  border-top:3px solid var(--area-tarja,var(--z-gold-wash-20));
+  border-radius:var(--radius-lg);
+  padding:17px 16px 16px;box-shadow:var(--p-sombra);
+  transition:transform 200ms var(--ease-out),box-shadow 200ms var(--ease-out);
+  min-width:0;
+}
+.card:hover{transform:translateY(-3px);box-shadow:var(--p-sombra-alta)}
+/* par de quadros grandes lado a lado — mesma altura */
+.grid > .par{align-self:stretch}
+.tit{font-size:20px;font-weight:700;color:var(--z-blue);letter-spacing:-.025em;line-height:1.22}
+.sub{font-size:13.5px;font-weight:500;color:var(--p-muted);margin-top:5px;line-height:1.45}
+.rot{font-size:13px;font-weight:500;color:var(--p-muted)}
+.tag{
+  position:absolute;top:16px;right:14px;
+  font-size:9.5px;font-weight:700;color:var(--p-muted);
+  border:1px solid var(--p-line);border-radius:var(--radius-full);padding:2px 8px;
+  letter-spacing:.02em;
+}
+/* folga fixa para a etiqueta mais larga ("já existe") nunca encostar no título */
+.card .tit{padding-right:80px}
+
+/* ============================================================
+   NÚMEROS
+   ============================================================ */
+.kpi{font-size:40px;font-weight:700;color:var(--z-blue);line-height:1.02;letter-spacing:-.04em;font-variant-numeric:tabular-nums}
+.kpi.ouro{color:var(--z-gold-deep)}
+.kpi.coral{color:var(--p-daycare-tinta)}
+.kpi.turq{color:var(--p-auaulandia-tinta)}
+.kpi.alerta{color:var(--crm-critico-text)}
+.kpi.hero{font-size:46px}
+/* dinheiro por extenso nunca abrevia — então o corpo desce para caber a 390px */
+.kpi.dinheiro{font-size:22px;letter-spacing:-.02em}
+.kpi-linha{display:grid;grid-template-columns:repeat(2,1fr);gap:14px}
+.kpi-bloco{min-width:0}
+.icone{
+  width:32px;height:32px;border-radius:10px;display:flex;align-items:center;justify-content:center;
+  margin-bottom:9px;
+}
+.icone svg{width:17px;height:17px}
+
+/* ---------- washes de serviço (10–16%) ---------- */
+.w-daycare{background:rgba(224,136,86,.14);color:var(--p-daycare-tinta)}
+.w-auaulandia{background:rgba(90,171,181,.16);color:var(--p-auaulandia-tinta)}
+.w-vetcare{background:rgba(46,125,138,.12);color:var(--z-vetcare)}
+.w-emporio{background:rgba(94,155,107,.12);color:var(--z-emporio)}
+.w-ouro{background:var(--z-gold-wash-12);color:var(--z-gold-deep)}
+.w-azul{background:var(--z-blue-wash-06);color:var(--z-blue)}
+
+/* ---------- cabeçalho do card de alerta (número grande + semáforo) ---------- */
+.alerta-h{display:flex;align-items:flex-end;gap:14px;flex-wrap:wrap;margin-top:15px}
+.alerta-h .kpi{line-height:1}
+
+/* ---------- badge alpha (semáforo) ---------- */
+.badge{
+  display:inline-flex;align-items:center;gap:6px;
+  padding:3px 10px;border-radius:var(--radius-full);
+  font-size:11.5px;font-weight:700;white-space:nowrap;
+}
+.b-critico{background:var(--crm-critico-soft);color:var(--crm-critico-text)}
+.b-atencao{background:var(--crm-atencao-soft);color:var(--crm-atencao-text)}
+.b-ok{background:var(--crm-ok-soft);color:var(--crm-ok-text)}
+.b-info{background:var(--crm-info-soft);color:var(--crm-info-text)}
+.b-ouro{background:var(--z-gold-wash-20);color:var(--z-blue)}
+.badge svg{width:11px;height:11px;flex:0 0 auto}
+.li .badge,.feed-i .badge,.ritmo-i .badge{flex:0 0 auto;align-self:flex-start}
+
+/* ---------- botões pílula ---------- */
+.bt{
+  display:inline-flex;align-items:center;gap:7px;
+  padding:9px 18px;border-radius:var(--radius-full);
+  font-size:13px;font-weight:700;
+  transition:transform 180ms var(--ease-out),box-shadow 180ms var(--ease-out);
+}
+.bt-azul{background:var(--z-blue);color:var(--z-cream);box-shadow:0 3px 0 var(--p-barra-3)}
+.bt-azul:hover{transform:translateY(-2px);box-shadow:0 5px 0 var(--p-barra-3),0 10px 18px rgba(35,77,103,.18)}
+.bt-ouro{background:var(--z-gold);color:var(--z-blue);box-shadow:0 3px 0 var(--z-gold-deep)}
+.bt-ouro:hover{transform:translateY(-2px);box-shadow:0 5px 0 var(--z-gold-deep),0 10px 18px rgba(35,77,103,.18)}
+.bt-mini{padding:7px 14px;font-size:12px}
+.chip{
+  display:inline-flex;align-items:center;gap:6px;
+  padding:4px 12px;border-radius:var(--radius-full);
+  font-size:12px;font-weight:600;background:var(--z-gold-wash-12);color:var(--z-blue);
+}
+.chip-falta{background:var(--crm-critico-soft);color:var(--crm-critico-text)}
+.chip-avisou{background:var(--crm-info-soft);color:var(--crm-info-text)}
+.chip-neutro{background:var(--z-blue-wash-06);color:var(--z-blue-soft)}
+.chip-hospede{background:rgba(90,171,181,.16);color:var(--p-auaulandia-tinta)}
+
+/* ---------- ponto ao vivo ---------- */
+.vivo{width:8px;height:8px;border-radius:50%;background:var(--crm-ok);flex:0 0 auto;animation:pulso 1.6s ease-in-out infinite}
+@keyframes pulso{0%,100%{opacity:1;box-shadow:0 0 0 0 rgba(39,174,96,.35)}50%{opacity:.55;box-shadow:0 0 0 5px rgba(39,174,96,0)}}
+
+/* ============================================================
+   BARRA SEGMENTADA (12px) — presença do dia e proporção
+   ============================================================ */
+.faixa-corpo{display:grid;gap:18px;margin-top:16px}
+.faixa-num{min-width:0}
+.faixa-num .kpi{white-space:nowrap}
+.faixa-lado{min-width:0}
+.segbar{display:flex;gap:2px;height:12px;margin-bottom:12px;min-width:0}
+.alerta-h + .segbar{margin-top:15px}
+.segbar i{display:block;width:0;height:100%;border-radius:6px;min-width:0;
+  transition:width 500ms var(--ease-out)}
+.seg-ok{
+  background:linear-gradient(180deg,rgba(255,255,255,.30),rgba(255,255,255,0) 45%),var(--p-dado-ouro);
+  box-shadow:inset 0 -1px 0 rgba(35,77,103,.25);
+}
+.seg-falta{
+  background:linear-gradient(180deg,rgba(255,255,255,.30),rgba(255,255,255,0) 45%),var(--p-seg-falta);
+  box-shadow:inset 0 -1px 0 rgba(35,77,103,.30);
+}
+.seg-avisou{
+  background:linear-gradient(180deg,rgba(255,255,255,.30),rgba(255,255,255,0) 45%),var(--p-seg-avisou);
+  box-shadow:inset 0 -1px 0 rgba(35,77,103,.30);
+}
+.seg-meio{
+  background:linear-gradient(180deg,rgba(255,255,255,.30),rgba(255,255,255,0) 45%),var(--p-dado-azul);
+  box-shadow:inset 0 -1px 0 rgba(35,77,103,.30);
+}
+.seg-na{background:var(--p-trilho)}
+.seg-dc{
+  background:linear-gradient(180deg,rgba(255,255,255,.28),rgba(255,255,255,0) 45%),var(--p-daycare-tinta);
+  box-shadow:inset 0 -1px 0 rgba(35,77,103,.28);
+}
+.seg-au{
+  background:linear-gradient(180deg,rgba(255,255,255,.28),rgba(255,255,255,0) 45%),var(--p-auaulandia-tinta);
+  box-shadow:inset 0 -1px 0 rgba(35,77,103,.28);
+}
+.segleg{display:flex;flex-wrap:wrap;gap:7px 18px;font-size:12.5px;font-weight:500;color:var(--p-muted)}
+.segleg-i{display:inline-flex;align-items:center;gap:7px;white-space:nowrap;min-width:0}
+.segleg-i b{color:var(--z-blue);font-weight:700;font-variant-numeric:tabular-nums}
+.pt{width:9px;height:9px;border-radius:3px;flex:0 0 auto}
+.pt-ok{background:var(--p-dado-ouro)}
+.pt-falta{background:var(--p-seg-falta)}
+.pt-avisou{background:var(--p-seg-avisou)}
+.pt-azul{background:var(--p-dado-azul)}
+.pt-na{background:var(--p-trilho)}
+.pt-dc{background:var(--p-daycare-tinta)}
+.pt-au{background:var(--p-auaulandia-tinta)}
+.chips{display:flex;flex-wrap:wrap;gap:8px;margin-top:14px}
+
+/* ============================================================
+   BARRA EMPILHADA — resolvido × pendente, por categoria
+   ============================================================ */
+.emp-lista{display:grid;gap:12px;margin-top:14px}
+.emp-rot{display:flex;justify-content:space-between;gap:10px;font-size:12.5px;font-weight:600;color:var(--z-blue);margin-bottom:5px}
+.emp-rot em{font-style:normal;color:var(--p-muted);font-size:12px;font-weight:500;white-space:nowrap}
+.emp{display:flex;height:12px;border-radius:6px;overflow:hidden;background:var(--p-trilho);min-width:0}
+.emp i{display:block;height:100%;width:0;transition:width 500ms var(--ease-out)}
+.emp .e-ok{background:linear-gradient(180deg,rgba(255,255,255,.30),rgba(255,255,255,0) 45%),var(--p-dado-ouro);box-shadow:inset 0 -1px 0 rgba(35,77,103,.25)}
+.emp .e-ab{background:linear-gradient(180deg,rgba(255,255,255,.30),rgba(255,255,255,0) 45%),var(--p-dado-azul);box-shadow:inset 0 -1px 0 rgba(35,77,103,.30)}
+
+/* ============================================================
+   TIMELINE VERTICAL
+   ============================================================ */
+.tl{position:relative;margin-top:14px;padding-left:22px}
+.tl::before{content:"";position:absolute;left:5px;top:6px;bottom:6px;width:2px;background:var(--z-blue-wash-15);border-radius:2px}
+.tl-i{position:relative;display:flex;gap:10px;align-items:baseline;padding:6px 0}
+.tl-no{position:absolute;left:-22px;top:9px;width:12px;height:12px;border-radius:50%;
+  border:2px solid var(--z-blue-wash-15);background:var(--z-white);
+  display:flex;align-items:center;justify-content:center}
+.tl-i.feito .tl-no{background:var(--z-gold);border-color:var(--z-gold)}
+.tl-i.feito .tl-no::after{content:"✓";font-size:8px;font-weight:700;color:var(--z-blue);line-height:1}
+.tl-i.agora .tl-no{border-color:var(--crm-ok)}
+.tl-i.agora .tl-no::after{content:"";width:6px;height:6px;border-radius:50%;background:var(--crm-ok);animation:pulso 1.6s ease-in-out infinite}
+.tl-h{font-size:12px;font-weight:700;color:var(--p-muted);flex:0 0 40px;font-variant-numeric:tabular-nums}
+.tl-t{font-size:13px;font-weight:500;color:var(--z-blue);min-width:0}
+.tl-i.feito .tl-t{color:var(--p-muted)}
+
+/* ============================================================
+   TIMELINE HORIZONTAL — os 4 tempos de Enriquecimento Ambiental
+   ============================================================ */
+.tlh{list-style:none;display:grid;grid-template-columns:repeat(2,1fr);gap:18px 14px;margin-top:18px}
+@media(min-width:760px){.tlh{grid-template-columns:repeat(4,1fr)}}
+.tlh-i{position:relative;min-width:0;padding-top:28px}
+.tlh-i::before{content:"";position:absolute;top:8px;left:24px;right:-14px;height:2px;background:var(--z-blue-wash-15);border-radius:2px}
+.tlh-i:last-child::before{display:none}
+@media(max-width:759px){.tlh-i:nth-child(2n)::before{display:none}}
+.tlh-no{position:absolute;top:0;left:0;width:18px;height:18px;border-radius:50%;
+  border:2px solid var(--z-blue-wash-15);background:var(--z-white);
+  display:flex;align-items:center;justify-content:center}
+.tlh-i.feito .tlh-no{background:var(--z-gold);border-color:var(--z-gold)}
+.tlh-i.feito .tlh-no::after{content:"✓";font-size:10px;font-weight:700;color:var(--z-blue);line-height:1}
+.tlh-i.agora .tlh-no{border-color:var(--crm-ok)}
+.tlh-i.agora .tlh-no::after{content:"";width:8px;height:8px;border-radius:50%;background:var(--crm-ok);animation:pulso 1.6s ease-in-out infinite}
+.tlh-h{display:block;font-size:12.5px;font-weight:700;color:var(--p-muted);font-variant-numeric:tabular-nums}
+.tlh-t{display:block;font-size:14px;font-weight:700;color:var(--z-blue);margin-top:1px;line-height:1.3}
+.tlh-i .chip{margin-top:8px;font-size:11.5px}
+
+/* ============================================================
+   PROGRESS PILL (8px)
+   ============================================================ */
+.pill{height:8px;border-radius:var(--radius-full);background:var(--p-trilho);overflow:hidden;margin-top:8px}
+.pill i{display:block;height:100%;width:0;border-radius:var(--radius-full);
+  background:linear-gradient(180deg,var(--z-gold-light),var(--z-gold-deep));
+  transition:width 500ms var(--ease-out)}
+.pill-rot{display:flex;justify-content:space-between;gap:10px;font-size:12.5px;font-weight:500;color:var(--p-muted);margin-top:8px}
+.pill-rot b{color:var(--z-blue);font-weight:700}
+
+/* ---------- pílula de variação do KPI (seta + número, nunca cor sozinha) ---------- */
+.varp{display:inline-flex;align-items:center;gap:5px;margin-top:8px;padding:2px 10px;
+  border-radius:var(--radius-full);font-size:11.5px;font-weight:700;font-variant-numeric:tabular-nums;white-space:nowrap}
+.v-sobe{background:var(--crm-ok-soft);color:var(--crm-ok-text)}
+.v-desce{background:var(--crm-critico-soft);color:var(--crm-critico-text)}
+.v-igual{background:var(--z-blue-wash-06);color:var(--z-blue-soft)}
+
+/* ============================================================
+   STAT TILES
+   ============================================================ */
+.tiles{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:14px}
+.tile{border:1px solid var(--p-line-fina);border-radius:var(--radius-md);padding:11px 10px;min-width:0;
+  box-shadow:0 2px 0 var(--z-gray-200)}
+.tile b{display:block;font-size:22px;font-weight:700;color:var(--z-blue);letter-spacing:-.03em;line-height:1.1;font-variant-numeric:tabular-nums}
+.tile span{display:block;font-size:11.5px;font-weight:500;color:var(--p-muted);margin-top:2px}
+
+/* ============================================================
+   DONUT — a métrica-âncora
+   ============================================================ */
+.anel-caixa{display:flex;gap:18px;align-items:center;flex-wrap:wrap;margin-top:16px}
+.anel{position:relative;width:132px;height:132px;flex:0 0 132px;border-radius:50%;box-shadow:var(--p-glow-ouro)}
+.anel svg{width:132px;height:132px}
+.anel-arco{transition:stroke-dashoffset 700ms var(--ease-out)}
+.anel-mid{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center}
+.anel-mid b{font-size:34px;font-weight:700;color:var(--z-blue);letter-spacing:-.035em;line-height:1;font-variant-numeric:tabular-nums}
+.anel-mid span{font-size:12px;font-weight:500;color:var(--p-muted);margin-top:2px}
+.anel-lado{min-width:0;flex:1 1 190px}
+
+/* ============================================================
+   BARRAS HORIZONTAIS (sólidas, leve 3D)
+   ============================================================ */
+.barras{margin-top:14px;display:grid;gap:9px}
+.barra{display:grid;grid-template-columns:1fr auto;gap:8px;align-items:center;min-width:0}
+.barra-rot{display:flex;justify-content:space-between;gap:8px;font-size:12.5px;font-weight:600;color:var(--z-blue);margin-bottom:4px}
+.barra-rot em{font-style:normal;color:var(--p-muted);font-size:12px;font-weight:500;white-space:nowrap}
+.barra-tr{grid-column:1/-1;position:relative;height:10px;border-radius:5px;background:var(--p-trilho);overflow:hidden}
+.barra-tr i{
+  display:block;height:100%;width:0;border-radius:5px;
+  background:linear-gradient(180deg,rgba(255,255,255,.30),rgba(255,255,255,0) 45%),var(--p-dado-azul);
+  box-shadow:inset 0 -1px 0 rgba(35,77,103,.35);
+  transition:width 500ms var(--ease-out);
+}
+.barra-tr.ouro i{background:linear-gradient(180deg,rgba(255,255,255,.35),rgba(255,255,255,0) 45%),var(--p-dado-ouro);box-shadow:inset 0 -1px 0 rgba(35,77,103,.25)}
+.barra-tr.alerta i{background:linear-gradient(180deg,rgba(255,255,255,.30),rgba(255,255,255,0) 45%),var(--p-dado-alerta);box-shadow:inset 0 -1px 0 rgba(35,77,103,.30)}
+
+/* ============================================================
+   BARRAS VERTICAIS (colunas douradas, leve 3D)
+   ============================================================ */
+.colunas{display:flex;align-items:flex-end;gap:14px;height:132px;margin-top:18px;padding:0 2px}
+.colunas.sete{gap:7px}
+.coluna{flex:1 1 0;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;height:100%;min-width:0}
+.coluna b{font-size:14px;font-weight:700;color:var(--z-blue);margin-bottom:5px;font-variant-numeric:tabular-nums}
+.coluna i{
+  display:block;width:100%;max-width:44px;height:0;border-radius:5px 5px 0 0;
+  background:linear-gradient(180deg,rgba(255,255,255,.38),rgba(255,255,255,0) 40%),var(--p-dado-ouro);
+  box-shadow:inset -1px 0 0 rgba(35,77,103,.18);
+  transition:height 500ms var(--ease-out);
+}
+/* dia lotado — muda a FORMA (contorno cheio), não só a cor */
+.coluna.cheia i{background:linear-gradient(180deg,rgba(255,255,255,.30),rgba(255,255,255,0) 40%),var(--p-dado-alerta)}
+.coluna.cheia b{color:var(--crm-critico-text)}
+.colunas-rot{display:flex;gap:14px;margin-top:8px;padding:0 2px}
+.colunas-rot.sete{gap:7px}
+.colunas-rot span{flex:1 1 0;text-align:center;font-size:12px;font-weight:500;color:var(--p-muted);min-width:0}
+
+/* ============================================================
+   SPARKLINE
+   ============================================================ */
+.spark{width:120px;height:36px;flex:0 0 auto}
+.spark-traco{stroke-dasharray:var(--comp,600);stroke-dashoffset:var(--comp,600);transition:stroke-dashoffset 500ms var(--ease-out)}
+.spark-area{opacity:0;transition:opacity 500ms var(--ease-out) 200ms}
+.desenhado .spark-traco{stroke-dashoffset:0}
+.desenhado .spark-area{opacity:1}
+.grafico-nota{font-size:12px;font-weight:500;color:var(--p-muted);margin-top:12px;line-height:1.5}
+
+/* duas colunas internas: gráfico à esquerda, leitura à direita */
+.duas{display:grid;gap:0}
+@media(min-width:1500px){.duas{grid-template-columns:1fr 1fr;gap:20px;align-items:start}
+  .duas > .lista{margin-top:0}}
+
+/* ============================================================
+   LISTAS COMPACTAS
+   ============================================================ */
+.lista{margin-top:12px}
+.li{display:flex;gap:9px;align-items:flex-start;padding:8px 0;border-top:1px solid var(--p-line-fina);min-width:0}
+.li:first-child{border-top:none;padding-top:4px}
+.li-txt{min-width:0;flex:1 1 auto}
+.li-txt b{display:block;font-size:13.5px;font-weight:700;color:var(--z-blue)}
+.li-txt span{display:block;font-size:12px;font-weight:500;color:var(--p-muted);margin-top:1px}
+.li-fim{flex:0 0 auto;align-self:center}
+.li-acao{margin-top:7px}
+.mais{display:block;margin-top:12px;font-size:12.5px;font-weight:600;color:var(--z-blue-soft)}
+
+/* ============================================================
+   TABELA LEVE (zebra 3% azul)
+   ============================================================ */
+.tab{width:100%;border-collapse:collapse;margin-top:14px;font-size:12.5px}
+.tab th{
+  text-align:left;font-size:11px;font-weight:700;color:var(--p-muted);
+  padding:7px 8px;border-bottom:1px solid var(--p-line);white-space:nowrap;
+}
+.tab td{padding:9px 8px;color:var(--z-blue);font-weight:500;vertical-align:top}
+.tab tbody tr:nth-child(odd){background:rgba(35,77,103,.03)}
+.tab td.num{font-variant-numeric:tabular-nums;white-space:nowrap}
+.tab td.nome{font-weight:700}
+.total{
+  display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;
+  margin-top:12px;padding-top:11px;border-top:1px solid var(--p-line);
+}
+.total span{font-size:12.5px;font-weight:500;color:var(--p-muted)}
+.total b{font-size:22px;font-weight:700;color:var(--z-gold-deep);font-variant-numeric:tabular-nums}
+
+/* ============================================================
+   FEED AO VIVO
+   ============================================================ */
+.feed{margin-top:14px}
+.feed-i{display:flex;align-items:flex-start;gap:10px;padding:9px 0;border-top:1px solid var(--p-line-fina);min-width:0}
+.feed-i:first-child{border-top:none}
+.feed-q{font-size:11.5px;font-weight:700;color:var(--p-muted);flex:0 0 74px;font-variant-numeric:tabular-nums}
+.feed-t{min-width:0;flex:1 1 auto}
+.feed-t b{display:block;font-size:13px;font-weight:700;color:var(--z-blue)}
+.feed-t span{display:block;font-size:11.5px;font-weight:500;color:var(--p-muted);word-break:break-word}
+
+/* ============================================================
+   RODAPÉ
+   ============================================================ */
+.rodape{margin-top:34px;font-size:11.5px;font-weight:500;color:var(--p-muted);text-align:center}
+
+/* ============================================================
+   MOTION — reveal em cascata
+   ============================================================ */
+.rv{opacity:0;transform:translateY(12px);transition:opacity 360ms var(--ease-out),transform 360ms var(--ease-out)}
+.rv.dentro{opacity:1;transform:none}
+
+/* ============================================================
+   RESPONSIVO
+   ============================================================ */
+@media(min-width:600px){
+  .kpi-linha{grid-template-columns:repeat(4,1fr)}
+  .kpi.dinheiro{font-size:24px}
+  .conteudo{padding-left:20px;padding-right:20px}
+}
+
+@media(min-width:700px){
+  .duas-col{display:grid;grid-template-columns:auto 1fr;gap:26px;align-items:center}
+}
+
+@media(min-width:900px){
+  .topo{display:none}
+  .veu{display:none}
+  .lateral{width:252px;max-width:none;z-index:60;transform:none;transition:none}
+
+  .conteudo{margin-left:252px;padding:28px 28px 56px;max-width:1280px}
+  .grid{grid-template-columns:repeat(12,1fr);gap:16px}
+  .c3{grid-column:span 3}
+  .c4{grid-column:span 4}
+  .c5{grid-column:span 5}
+  .c6{grid-column:span 6}
+  .c7{grid-column:span 7}
+  .c8{grid-column:span 8}
+  .c12{grid-column:span 12}
+  .card{padding:19px 18px 18px}
+  .area-t{font-size:28px}
+}
+
+/* tabela vira lista no celular */
+@media(max-width:699px){
+  .tab,.tab tbody,.tab tr,.tab td{display:block;width:100%}
+  .tab thead{display:none}
+  .tab tr{border:1px solid var(--p-line-fina);border-radius:var(--radius-md);padding:6px 10px;margin-bottom:8px;background:none}
+  .tab tbody tr:nth-child(odd){background:rgba(35,77,103,.03)}
+  .tab td{display:flex;justify-content:space-between;gap:12px;padding:5px 0;border:none}
+  .tab td::before{content:attr(data-col);color:var(--p-muted);font-weight:500;flex:0 0 auto}
+  .tab td.nome{justify-content:flex-start}
+  .tab td span{text-align:right;min-width:0}
+}
+
+@media(prefers-reduced-motion:reduce){
+  *,*::before,*::after{animation:none !important;transition:none !important}
+  .rv{opacity:1;transform:none}
+  .holo{display:none}
+}
+</style>
+</head>
+<body>
+
+<!-- ============ HOLOGRAMA DE ENTRADA (900ms, uma vez por sessão) ============ -->
+<div class="holo" id="holo" aria-hidden="true">
+  <img src="assets/simbolo-zeluz-39.svg" alt="" width="118" height="118">
+</div>
+
+<!-- ============ DESENHOS (stickers) — usados por <use> em toda a peça ============ -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
+  <defs>
+    <!-- sol — o dia que começa -->
+    <g id="st-sol">
+      <circle cx="16" cy="16" r="6" fill="none" stroke="currentColor" stroke-width="2.2"></circle>
+      <path d="M16 2.6v3.4M16 26v3.4M2.6 16h3.4M26 16h3.4M6.6 6.6l2.4 2.4M23 23l2.4 2.4M25.4 6.6L23 9M9 23l-2.4 2.4"
+            fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"></path>
+    </g>
+    <!-- lua — a noite da AuAulândia -->
+    <g id="st-lua">
+      <path d="M26 20.6A11.2 11.2 0 0111.4 6a11.4 11.4 0 1014.6 14.6z" fill="currentColor"></path>
+      <circle cx="24.2" cy="8.4" r="1.5" fill="currentColor"></circle>
+    </g>
+    <!-- patinha — o Day Care -->
+    <g id="st-pata">
+      <ellipse cx="8.4" cy="12.2" rx="3" ry="3.9" fill="currentColor"></ellipse>
+      <ellipse cx="14.2" cy="8.4" rx="3.1" ry="4.1" fill="currentColor"></ellipse>
+      <ellipse cx="20.6" cy="8.8" rx="3.1" ry="4.1" fill="currentColor"></ellipse>
+      <ellipse cx="26" cy="13" rx="2.9" ry="3.7" fill="currentColor"></ellipse>
+      <path d="M17 15.4c4.6 0 8.4 3.6 8.4 7.6 0 3.1-2.4 4.8-5.2 4.8-1.4 0-2.3-.6-3.2-.6s-1.8.6-3.2.6c-2.8 0-5.2-1.7-5.2-4.8 0-4 3.8-7.6 8.4-7.6z" fill="currentColor"></path>
+    </g>
+    <!-- ossinho — os Peludinhos -->
+    <g id="st-osso">
+      <rect x="8" y="13.4" width="16" height="5.2" rx="2.6" fill="currentColor"></rect>
+      <circle cx="8" cy="12" r="3.5" fill="currentColor"></circle>
+      <circle cx="8" cy="20" r="3.5" fill="currentColor"></circle>
+      <circle cx="24" cy="12" r="3.5" fill="currentColor"></circle>
+      <circle cx="24" cy="20" r="3.5" fill="currentColor"></circle>
+    </g>
+    <!-- coração — planos e cobranças (o vínculo que se renova) -->
+    <g id="st-coracao">
+      <path d="M16 27.4S4.6 20.2 4.6 12.7A6.2 6.2 0 0116 9.3a6.2 6.2 0 0111.4 3.4c0 7.5-11.4 14.7-11.4 14.7z" fill="currentColor"></path>
+    </g>
+    <!-- casinha — o time e a casa -->
+    <g id="st-casa">
+      <path d="M16 3.4L3.6 14.2v13.2c0 .9.7 1.6 1.6 1.6h6.6v-8.2h8.4V29h6.6c.9 0 1.6-.7 1.6-1.6V14.2z" fill="currentColor"></path>
+    </g>
+    <!-- escudo — a conferência da Diretoria -->
+    <g id="st-escudo">
+      <path d="M16 2.8l11.4 4.1v9.3c0 7.3-4.8 12.1-11.4 14-6.6-1.9-11.4-6.7-11.4-14V6.9z" fill="currentColor"></path>
+    </g>
+    <!-- sino — o alerta da recepção -->
+    <g id="st-sino">
+      <path d="M16 3.6a2.2 2.2 0 012.2 2.2v.9a7.6 7.6 0 015.4 7.3v5l2.2 3.4c.5.8-.1 1.8-1 1.8H7.2c-.9 0-1.5-1-1-1.8l2.2-3.4v-5a7.6 7.6 0 015.4-7.3v-.9A2.2 2.2 0 0116 3.6z" fill="currentColor"></path>
+      <path d="M13 26h6a3 3 0 01-6 0z" fill="currentColor"></path>
+    </g>
+  </defs>
+</svg>
+
+<!-- ============ BARRA SUPERIOR (celular) ============ -->
+<header class="topo">
+  <div class="topo-linha">
+    <img src="assets/simbolo-zeluz-39-claro.svg" alt="Zêluz" width="36" height="36">
+    <div class="topo-nome">Sistema Zêluz<small>Day Care e AuAulândia</small></div>
+    <button type="button" class="hamb" id="hamb" aria-label="Abrir o menu" aria-expanded="false" aria-controls="lateral">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
+    </button>
+  </div>
+</header>
+
+<div class="veu" id="veu" hidden></div>
+
+<!-- ============ BARRA LATERAL — a trilha do cuidado (sanfona de verdade) ============ -->
+<aside class="lateral" id="lateral">
+  <div class="lat-marca">
+    <img src="assets/simbolo-zeluz-39-claro.svg" alt="Zêluz" width="96" height="96">
+  </div>
+  <p class="lat-sub">Sistema Zêluz</p>
+  <nav class="lat-nav" id="latNav">
+    <a class="on"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5h7v7H4zM13 5h7v4h-7zM13 11h7v8h-7zM4 14h7v5H4z"/></svg><span>Painel</span></a>
+
+    <!-- CATEGORIA · Serviços -->
+    <button type="button" class="cat" data-abre="g-servicos" aria-expanded="true" aria-controls="g-servicos">
+      <svg viewBox="0 0 32 32" aria-hidden="true"><use href="#st-casa"></use></svg><span>Serviços</span>
+      <svg class="seta" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>
+    </button>
+    <div class="gaveta aberta" id="g-servicos">
+      <button type="button" class="sub2" data-abre="g-auaulandia" aria-expanded="true" aria-controls="g-auaulandia">
+        <svg viewBox="0 0 32 32" aria-hidden="true"><use href="#st-lua"></use></svg><span>AuAulândia</span>
+        <svg class="seta" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>
+      </button>
+      <div class="gaveta aberta" id="g-auaulandia">
+        <a class="filho">Conferência do check-in</a>
+        <a class="filho">Plantão da noite</a>
+        <a class="filho">Hóspedes de hoje</a>
+        <a class="filho">Check-out</a>
+      </div>
+      <button type="button" class="sub2" data-abre="g-daycare" aria-expanded="false" aria-controls="g-daycare">
+        <svg viewBox="0 0 32 32" aria-hidden="true"><use href="#st-pata"></use></svg><span>Day Care</span>
+        <svg class="seta" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>
+      </button>
+      <div class="gaveta" id="g-daycare">
+        <a class="filho">Abertura do dia</a>
+        <a class="filho">Day Care</a>
+        <a class="filho">Aulunos</a>
+      </div>
+    </div>
+
+    <!-- CATEGORIA · Central Zêluz -->
+    <button type="button" class="cat" data-abre="g-central" aria-expanded="false" aria-controls="g-central">
+      <svg viewBox="0 0 32 32" aria-hidden="true"><use href="#st-osso"></use></svg><span>Central Zêluz</span>
+      <svg class="seta" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>
+    </button>
+    <div class="gaveta" id="g-central">
+      <a class="filho">Cadastro de Peludinhos</a>
+      <a class="filho">Check-in</a>
+      <a class="filho">Orçamento de hospedagem</a>
+      <a class="filho">Pendências com o tutor</a>
+      <a class="filho">Quem não comeu hoje</a>
+      <a class="filho">Renovação de planos</a>
+    </div>
+
+    <!-- CATEGORIA · Operação -->
+    <button type="button" class="cat" data-abre="g-operacao" aria-expanded="false" aria-controls="g-operacao">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h10"/></svg><span>Operação</span>
+      <svg class="seta" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>
+    </button>
+    <div class="gaveta" id="g-operacao">
+      <a class="filho">Financeiro do plantão</a>
+      <a class="filho">Ritmo do Time</a>
+      <a class="filho">Enriquecimento Ambiental</a>
+      <a class="filho">Time</a>
+      <a class="filho">Configurações</a>
+    </div>
+
+    <a class="solto"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 4h9l3 3v13H6z"/><path d="M9 11h6M9 15h4"/></svg><span>Relatórios</span></a>
+    <a><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="4" y="5" width="16" height="15" rx="2"/><path d="M4 10h16M9 3v4M15 3v4"/></svg><span>Agenda</span><span class="breve">em breve</span></a>
+  </nav>
+  <div class="lat-quem">
+    <small>FATIA EM EXIBIÇÃO</small>
+    <b id="quemNome">Monitor</b>
+  </div>
+</aside>
+
+<!-- ============ CONTEÚDO ============ -->
+<main class="conteudo">
+
+  <div class="cabeca">
+    <h1 class="saud1 entra" id="saud1">Bom dia, Octávio.</h1>
+    <p class="saud2 entra so-monitor" id="saud2">Hoje, <b data-alvo="18">0</b> FILHOts passam pelas suas mãos.</p>
+    <p class="saud3 entra atraso so-monitor" id="saud3">Energia bem gasta vira bem-estar. Isso começa na sua monitoria.</p>
+    <p class="saud2 entra so-outros">Na casa hoje: <b data-alvo="18">0</b> aulunos e <b data-alvo="3">0</b> hóspedes.</p>
+    <span class="traco" id="traco" aria-hidden="true"></span>
+    <div class="data" id="dataHoje">quarta-feira, 2 de setembro de 2026</div>
+    <div class="fatias" id="fatias">
+      <button type="button" class="fatia-bt on" data-fatia="monitor">Monitor</button>
+      <button type="button" class="fatia-bt" data-fatia="consultoras">Consultoras</button>
+      <button type="button" class="fatia-bt" data-fatia="amanda">Supervisão</button>
+      <button type="button" class="fatia-bt" data-fatia="operacao">Operação</button>
+      <button type="button" class="fatia-bt" data-fatia="diretoria">Diretoria</button>
+    </div>
+  </div>
+
+  <!-- ================================================================= -->
+  <!-- FATIA 1 · MONITOR — mantida como na v4 (aprovada)                  -->
+  <!-- ================================================================= -->
+  <section class="painel on" id="p-monitor">
+    <p class="nota"><strong>Esboço para aprovação — nenhuma tela foi construída ainda.</strong> Octávio, Encãotador: você vê só o que é seu. Sem tempo por etapa, sem o nome de outras pessoas, sem dinheiro e sem ranking.</p>
+
+    <section class="area">
+      <header class="area-h">
+        <span class="area-st"><svg viewBox="0 0 32 32" aria-hidden="true"><use href="#st-sol"></use></svg></span>
+        <div class="area-txt">
+          <p class="area-eyebrow">A SUA ROTA</p>
+          <h2 class="area-t">O seu dia</h2>
+          <p class="area-sub">O horário, o plano e o protocolo — na ordem em que a sua manhã acontece.</p>
+        </div>
+      </header>
+
+      <div class="grid">
+
+        <!-- 1 · Meu dia -->
+        <article class="card rv c5">
+          <span class="tag">novo</span>
+          <h3 class="tit">Meu dia</h3>
+          <p class="sub">O seu horário de hoje e as suas atividades, na ordem em que acontecem.</p>
+          <div class="tiles">
+            <div class="tile"><b>07:00</b><span>entrada</span></div>
+            <div class="tile"><b>12:00</b><span>almoço</span></div>
+            <div class="tile"><b>16:00</b><span>saída</span></div>
+          </div>
+          <div class="tl">
+            <div class="tl-i feito"><span class="tl-no"></span><span class="tl-h">07:00</span><span class="tl-t">Abertura e recebimento dos aulunos</span></div>
+            <div class="tl-i feito"><span class="tl-no"></span><span class="tl-h">08:30</span><span class="tl-t">Monitoria da turma da manhã</span></div>
+            <div class="tl-i feito"><span class="tl-no"></span><span class="tl-h">10:00</span><span class="tl-t">Check-in do corpo — 3 de 5 FILHOts</span></div>
+            <div class="tl-i agora"><span class="tl-no"></span><span class="tl-h">11:00</span><span class="tl-t">Guardar os pertences da chegada</span></div>
+            <div class="tl-i"><span class="tl-no"></span><span class="tl-h">13:30</span><span class="tl-t">2º horário do almoço dos aulunos</span></div>
+            <div class="tl-i"><span class="tl-no"></span><span class="tl-h">15:00</span><span class="tl-t">Bolsas do check-out</span></div>
+          </div>
+          <div class="pill"><i data-pct="50"></i></div>
+          <div class="pill-rot"><span><b>3 de 6</b> feitas</span><span>faltam 3</span></div>
+        </article>
+
+        <!-- 2 · Plano de hoje -->
+        <article class="card rv c3">
+          <span class="tag">novo</span>
+          <h3 class="tit">Plano de hoje</h3>
+          <p class="sub">O plano é por monitor. Quem define é sempre a Márcia — você vê só a sua parte.</p>
+          <p style="margin-top:14px"><span class="chip">Plano 2 · definido às 06:50</span></p>
+          <div class="lista">
+            <div class="li"><div class="li-txt"><b>Monitoria</b><span>turma da manhã e turma da tarde</span></div></div>
+            <div class="li"><div class="li-txt"><b>Guardar os pertences</b><span>na chegada de cada auluno</span></div></div>
+            <div class="li"><div class="li-txt"><b>2º horário de almoço</b><span>13:30 — o seu almoço continua às 12:00</span></div></div>
+          </div>
+        </article>
+
+        <!-- 3 · Meu protocolo hoje — a ÂNCORA -->
+        <article class="card rv c4">
+          <span class="tag">novo</span>
+          <h3 class="tit">Meu protocolo hoje</h3>
+          <p class="sub">Não é cobrança: é o retrato de onde a sua rota está aberta, enquanto ainda dá para fechar.</p>
+          <div class="anel-caixa">
+            <div class="anel">
+              <svg viewBox="0 0 132 132" role="img" aria-label="3 de 5 check-ins do corpo feitos">
+                <defs>
+                  <linearGradient id="ouroAnel" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0" stop-color="#DEB428"></stop>
+                    <stop offset="1" stop-color="#B8961F"></stop>
+                  </linearGradient>
+                </defs>
+                <g transform="rotate(-90 66 66)">
+                  <circle cx="66" cy="66" r="60" fill="none" stroke="rgba(35,77,103,.08)" stroke-width="12"></circle>
+                  <circle class="anel-arco" cx="66" cy="66" r="60" fill="none" stroke="url(#ouroAnel)" stroke-width="12"
+                          stroke-linecap="round" stroke-dasharray="377" stroke-dashoffset="377" data-anel="60"></circle>
+                </g>
+              </svg>
+              <div class="anel-mid"><b>3/5</b><span>feitos</span></div>
+            </div>
+            <div class="anel-lado">
+              <p class="rot">Faltam no seu turno</p>
+              <div class="lista">
+                <div class="li"><div class="li-txt"><b>Luna</b><span>chegou às 09:40</span></div></div>
+                <div class="li"><div class="li-txt"><b>Camus</b><span>chegou às 10:05</span></div></div>
+              </div>
+              <p style="margin-top:12px"><button type="button" class="bt bt-azul">Fazer o check-in da Luna</button></p>
+            </div>
+          </div>
+        </article>
+
+        <!-- 4 · Meus pontos — o HERO -->
+        <article class="card rv c6">
+          <span class="tag">já existe</span>
+          <h3 class="tit">Meus pontos do check-out</h3>
+          <p class="sub">10 pontos quando a bolsa desce completa. Agosto até hoje.</p>
+          <div style="display:flex;align-items:flex-end;gap:16px;flex-wrap:wrap;margin-top:14px">
+            <div>
+              <div class="kpi ouro hero" data-alvo="78">0</div>
+              <p class="rot">pontos em agosto</p><p class="varp v-sobe">▲ 8 sobre julho</p>
+            </div>
+            <svg class="spark" viewBox="0 0 120 36" role="img" aria-label="Pontos dos últimos nove check-outs, de dez possíveis por bolsa">
+              <defs><linearGradient id="gArea1" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#234D67" stop-opacity=".18"></stop><stop offset="1" stop-color="#234D67" stop-opacity="0"></stop></linearGradient></defs>
+              <path class="spark-area" d="M3,3 L17,9 L32,3 L46,3 L60,15 L74,3 L89,3 L103,6 L117,3 L117,36 L3,36 Z" fill="url(#gArea1)"></path>
+              <path class="spark-traco" d="M3,3 L17,9 L32,3 L46,3 L60,15 L74,3 L89,3 L103,6 L117,3" fill="none" stroke="#234D67" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" data-comp="140"></path>
+              <circle cx="117" cy="3" r="4" fill="#234D67" stroke="#FFFFFF" stroke-width="2"></circle>
+            </svg>
+          </div>
+          <div class="lista">
+            <div class="li"><div class="li-txt"><b>7 das 9 bolsas desceram redondo</b><span>12 pontos perdidos em 2 saídas</span></div><span class="li-fim badge b-ouro">últimos 9 check-outs</span></div>
+            <div class="li"><div class="li-txt"><b>19/08 · Toddy</b><span>faltaram a mochila e a vasilha — 2 de 10</span></div><span class="li-fim badge b-critico">−8</span></div>
+            <div class="li"><div class="li-txt"><b>11/08 · Ozzy</b><span>faltou a coleira — 5 de 10</span></div><span class="li-fim badge b-critico">−5</span></div>
+          </div>
+        </article>
+
+        <!-- 5 · Avisos que ficaram comigo -->
+        <article class="card rv c6">
+          <span class="tag">novo</span>
+          <h3 class="tit">Avisos que ficaram comigo</h3>
+          <p class="sub">Aviso que você marcou e que o sistema não conseguiu enviar. Enquanto estiver aqui, ninguém do outro lado recebeu.</p>
+          <div class="lista">
+            <div class="li">
+              <span class="badge b-critico">não saiu</span>
+              <div class="li-txt"><b>Dolly — aviso ao grupo</b><span>hoje às 09:12 — “não comeu o almoço”</span></div>
+            </div>
+          </div>
+          <p style="margin-top:14px"><button type="button" class="bt bt-azul">Reenviar ao grupo</button></p>
+        </article>
+
+      </div>
+    </section>
+  </section>
+
+  <!-- ================================================================= -->
+  <!-- FATIA 2 · CONSULTORAS DE BEM-ESTAR (recepção)                      -->
+  <!-- ================================================================= -->
+  <section class="painel" id="p-consultoras">
+    <p class="nota">Consultoras de Bem-Estar, recepção: <strong>só os quatro alertas do balcão</strong>. Sem valores, sem total e sem o nome de quem trabalha — o que aparece aqui é o que precisa de uma ação sua agora.</p>
+
+    <section class="area">
+      <header class="area-h">
+        <span class="area-st"><svg viewBox="0 0 32 32" aria-hidden="true"><use href="#st-sino"></use></svg></span>
+        <div class="area-txt">
+          <p class="area-eyebrow">O BALCÃO AGORA</p>
+          <h2 class="area-t">O que precisa de você</h2>
+          <p class="area-sub">Quatro perguntas, quatro respostas. Cada quadro abre a tela que resolve.</p>
+        </div>
+      </header>
+
+      <div class="grid">
+
+        <!-- 1 · Remédio que acabou -->
+        <article class="card rv c6 par">
+          <span class="tag">já existe</span>
+          <h3 class="tit">Remédio que acabou</h3>
+          <p class="sub">O que precisa ser pedido ao tutor hoje, antes de a dose da noite chegar.</p>
+          <div class="alerta-h">
+            <div>
+              <div class="kpi alerta hero" data-alvo="2">0</div>
+              <p class="rot">FILHOts sem remédio para amanhã</p>
+            </div>
+            <span class="badge b-critico">avisar o tutor hoje</span>
+          </div>
+          <div class="pill"><i data-pct="40"></i></div>
+          <div class="pill-rot"><span><b>2 de 5</b> hóspedes com medicação</span><span>3 com estoque em dia</span></div>
+          <div class="lista">
+            <div class="li"><span class="badge b-critico">acabou</span><div class="li-txt"><b>Toddy — antibiótico</b><span>tutora Sophia · a dose das 22:00 não tem comprimido</span></div></div>
+            <div class="li"><span class="badge b-atencao">para 1 dia</span><div class="li-txt"><b>Luna — anti-inflamatório</b><span>tutora Carolina · pedir hoje para não faltar amanhã</span></div></div>
+          </div>
+        </article>
+
+        <!-- 2 · Check-in a fazer — a ÂNCORA da fatia -->
+        <article class="card rv c6 par">
+          <span class="tag">já existe</span>
+          <h3 class="tit">Check-in a fazer</h3>
+          <p class="sub">A chegada do tutor: entrada, alimentação, medicação e assinatura. Este é o 1º passo — o monitor confere o corpo depois.</p>
+          <div class="anel-caixa">
+            <div class="anel">
+              <svg viewBox="0 0 132 132" role="img" aria-label="3 de 6 check-ins do dia já feitos">
+                <defs>
+                  <linearGradient id="ouroAnel2" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0" stop-color="#DEB428"></stop>
+                    <stop offset="1" stop-color="#B8961F"></stop>
+                  </linearGradient>
+                </defs>
+                <g transform="rotate(-90 66 66)">
+                  <circle cx="66" cy="66" r="60" fill="none" stroke="rgba(35,77,103,.08)" stroke-width="12"></circle>
+                  <circle class="anel-arco" cx="66" cy="66" r="60" fill="none" stroke="url(#ouroAnel2)" stroke-width="12"
+                          stroke-linecap="round" stroke-dasharray="377" stroke-dashoffset="377" data-anel="50"></circle>
+                </g>
+              </svg>
+              <div class="anel-mid"><b>3/6</b><span>feitos</span></div>
+            </div>
+            <div class="anel-lado">
+              <div class="lista">
+                <div class="li"><span class="badge b-critico">esperando</span><div class="li-txt"><b>Toddy — 5 noites</b><span>tutora Sophia · chegou às 08:40</span></div></div>
+                <div class="li"><span class="badge b-atencao">sem assinatura</span><div class="li-txt"><b>Bidu — 2 noites</b><span>tutor Rafael · falta assinar a ficha</span></div></div>
+                <div class="li"><span class="badge b-info">às 15:00</span><div class="li-txt"><b>Mel — 3 noites</b><span>tutora Beatriz · chegada combinada</span></div></div>
+              </div>
+            </div>
+          </div>
+        </article>
+
+        <!-- 3 · Orçamentos em aberto -->
+        <article class="card rv c6 par">
+          <span class="tag">já existe</span>
+          <h3 class="tit">Orçamentos em aberto</h3>
+          <p class="sub">Orçamento enviado ao tutor e ainda sem resposta. O valor fica na tela do orçamento — aqui aparece só a espera.</p>
+          <div class="alerta-h">
+            <div>
+              <div class="kpi hero" data-alvo="3">0</div>
+              <p class="rot">esperando resposta do tutor</p>
+            </div>
+            <span class="badge b-atencao">1 já passou de 2 dias</span>
+          </div>
+          <div class="barras">
+            <div class="barra">
+              <div class="barra-rot" style="grid-column:1/-1"><span>Sem resposta há 2 dias</span><em>1 orçamento</em></div>
+              <div class="barra-tr alerta"><i data-pct="33"></i></div>
+            </div>
+            <div class="barra">
+              <div class="barra-rot" style="grid-column:1/-1"><span>Enviado hoje</span><em>2 orçamentos</em></div>
+              <div class="barra-tr"><i data-pct="67"></i></div>
+            </div>
+          </div>
+          <div class="lista">
+            <div class="li"><span class="badge b-critico">2 dias</span><div class="li-txt"><b>Sophia — Toddy, 5 noites</b><span>cobrar a resposta por mensagem</span></div></div>
+            <div class="li"><span class="badge b-info">hoje</span><div class="li-txt"><b>Carolina — Luna e Camus, 3 noites</b><span>enviado às 09:20</span></div></div>
+            <div class="li"><span class="badge b-info">hoje</span><div class="li-txt"><b>Beatriz — Mel, 3 noites</b><span>enviado às 10:05</span></div></div>
+          </div>
+        </article>
+
+        <!-- 4 · Mensagem de almoço a enviar -->
+        <article class="card rv c6 par">
+          <span class="tag">já existe</span>
+          <h3 class="tit">Mensagem de almoço a enviar</h3>
+          <p class="sub">Quem não comeu tudo hoje. A mensagem de cada tutor já está escrita — falta enviar.</p>
+          <div class="alerta-h">
+            <div>
+              <div class="kpi ouro hero" data-alvo="3">0</div>
+              <p class="rot">mensagens prontas para enviar</p>
+            </div>
+            <span class="badge b-ok"><span class="vivo"></span>grupo do Telegram conectado</span>
+          </div>
+          <div class="segbar" role="img" aria-label="De 20 FILHOts no almoço: 14 comeram tudo, 2 comeram metade, 1 não comeu e 3 não se aplicam">
+            <i class="seg-ok" data-seg="70"></i>
+            <i class="seg-meio" data-seg="10"></i>
+            <i class="seg-falta" data-seg="5"></i>
+            <i class="seg-na" data-seg="15"></i>
+          </div>
+          <div class="segleg">
+            <span class="segleg-i"><em class="pt pt-ok"></em><b>14</b> comeram tudo</span>
+            <span class="segleg-i"><em class="pt pt-azul"></em><b>2</b> comeram metade</span>
+            <span class="segleg-i"><em class="pt pt-falta"></em><b>1</b> não comeu</span>
+            <span class="segleg-i"><em class="pt pt-na"></em><b>3</b> não se aplica</span>
+          </div>
+          <div class="lista">
+            <div class="li"><span class="badge b-critico">não comeu</span><div class="li-txt"><b>Dolly</b><span>tutora Sophia · mensagem pronta</span></div></div>
+            <div class="li"><span class="badge b-atencao">metade</span><div class="li-txt"><b>Camus</b><span>tutora Carolina · é atenção, não é falta</span></div></div>
+            <div class="li"><span class="badge b-atencao">metade</span><div class="li-txt"><b>Nina</b><span>tutora Júlia · é atenção, não é falta</span></div></div>
+          </div>
+        </article>
+
+      </div>
+    </section>
+  </section>
+
+  <!-- ================================================================= -->
+  <!-- FATIA 3 · SUPERVISÃO (Amanda)                                      -->
+  <!-- ================================================================= -->
+  <section class="painel" id="p-amanda">
+    <p class="nota">Amanda, Supervisão: <strong>o dia em duas colunas</strong> — o que ainda está pendente e o que já foi resolvido, com o nome de quem resolveu e a hora. A senhora cobra, corrige e supervisiona a partir daqui.</p>
+
+    <section class="area">
+      <header class="area-h">
+        <span class="area-st"><svg viewBox="0 0 32 32" aria-hidden="true"><use href="#st-escudo"></use></svg></span>
+        <div class="area-txt">
+          <p class="area-eyebrow">O DIA</p>
+          <h2 class="area-t">Pendente e resolvido</h2>
+          <p class="area-sub">Um gráfico para saber como o dia está indo e duas listas curtas para agir.</p>
+        </div>
+      </header>
+
+      <div class="grid">
+
+        <!-- 1 · O gráfico de topo — a ÂNCORA -->
+        <article class="card rv c12">
+          <span class="tag">novo</span>
+          <h3 class="tit">Como o dia está indo</h3>
+          <p class="sub">Tudo o que entrou na fila hoje, por assunto. A parte dourada já foi resolvida; a azul continua aberta.</p>
+          <div class="anel-caixa duas-col">
+            <div class="anel">
+              <svg viewBox="0 0 132 132" role="img" aria-label="18 de 24 pendências do dia já resolvidas">
+                <defs>
+                  <linearGradient id="ouroAnel3" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0" stop-color="#DEB428"></stop>
+                    <stop offset="1" stop-color="#B8961F"></stop>
+                  </linearGradient>
+                </defs>
+                <g transform="rotate(-90 66 66)">
+                  <circle cx="66" cy="66" r="60" fill="none" stroke="rgba(35,77,103,.08)" stroke-width="12"></circle>
+                  <circle class="anel-arco" cx="66" cy="66" r="60" fill="none" stroke="url(#ouroAnel3)" stroke-width="12"
+                          stroke-linecap="round" stroke-dasharray="377" stroke-dashoffset="377" data-anel="75"></circle>
+                </g>
+              </svg>
+              <div class="anel-mid"><b>18/24</b><span>resolvidas</span></div>
+            </div>
+            <div class="anel-lado">
+              <div class="segleg" style="margin-bottom:4px">
+                <span class="segleg-i"><em class="pt pt-ok"></em>resolvida</span>
+                <span class="segleg-i"><em class="pt pt-azul"></em>ainda aberta</span>
+              </div>
+              <div class="emp-lista">
+                <div>
+                  <div class="emp-rot"><span>Check-in e check-out</span><em>6 de 8</em></div>
+                  <div class="emp"><i class="e-ok" data-pct="75"></i><i class="e-ab" data-pct="25"></i></div>
+                </div>
+                <div>
+                  <div class="emp-rot"><span>Remédio e ração</span><em>3 de 4</em></div>
+                  <div class="emp"><i class="e-ok" data-pct="75"></i><i class="e-ab" data-pct="25"></i></div>
+                </div>
+                <div>
+                  <div class="emp-rot"><span>Pendências com o tutor</span><em>4 de 5</em></div>
+                  <div class="emp"><i class="e-ok" data-pct="80"></i><i class="e-ab" data-pct="20"></i></div>
+                </div>
+                <div>
+                  <div class="emp-rot"><span>Alergias a confirmar</span><em>2 de 3</em></div>
+                  <div class="emp"><i class="e-ok" data-pct="67"></i><i class="e-ab" data-pct="33"></i></div>
+                </div>
+                <div>
+                  <div class="emp-rot"><span>Cadastro incompleto</span><em>3 de 4</em></div>
+                  <div class="emp"><i class="e-ok" data-pct="75"></i><i class="e-ab" data-pct="25"></i></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </article>
+
+        <!-- 2 · Pendente -->
+        <article class="card rv c6 par">
+          <span class="tag">novo</span>
+          <h3 class="tit">Pendente agora</h3>
+          <p class="sub">As três mais antigas primeiro. Quem está há mais tempo esperando é quem custa mais caro.</p>
+          <div class="alerta-h">
+            <div>
+              <div class="kpi alerta hero" data-alvo="6">0</div>
+              <p class="rot">em aberto neste momento</p>
+            </div>
+            <span class="badge b-critico">1 desde ontem</span>
+          </div>
+          <div class="lista">
+            <div class="li"><span class="badge b-critico">desde ontem</span><div class="li-txt"><b>Sophia — orçamento sem resposta</b><span>Toddy, 5 noites · enviado há 2 dias</span></div></div>
+            <div class="li"><span class="badge b-atencao">desde 09:10</span><div class="li-txt"><b>Toddy — antibiótico acabou</b><span>a Consultora ainda não falou com a tutora</span></div></div>
+            <div class="li"><span class="badge b-atencao">desde 08:30</span><div class="li-txt"><b>Dolly — alergia a frango a confirmar</b><span>a ficha diz; ninguém confirmou com a tutora</span></div></div>
+          </div>
+          <span class="mais">E mais 3 em aberto — ver a fila inteira.</span>
+        </article>
+
+        <!-- 3 · Resolvido -->
+        <article class="card rv c6 par">
+          <span class="tag">novo</span>
+          <h3 class="tit">Resolvido hoje</h3>
+          <p class="sub">Com o nome de quem resolveu e a hora. Toda ação crítica tem responsável.</p>
+          <div class="alerta-h">
+            <div>
+              <div class="kpi ouro hero" data-alvo="18">0</div>
+              <p class="rot">resolvidas até agora</p>
+            </div>
+            <span class="badge b-ok">▲ 4 sobre a média das quartas</span>
+          </div>
+          <div class="lista">
+            <div class="li"><span class="badge b-ok">09:12</span><div class="li-txt"><b>Camus — reposição creditada</b><span>resolvido por Amanda</span></div></div>
+            <div class="li"><span class="badge b-ok">08:55</span><div class="li-txt"><b>Bidu — ficha assinada na chegada</b><span>resolvido por Wandela</span></div></div>
+            <div class="li"><span class="badge b-ok">10:20</span><div class="li-txt"><b>Ozzy — peso registrado na ficha</b><span>resolvido por Octávio</span></div></div>
+          </div>
+          <span class="mais">E mais 15 resolvidas hoje — ver a lista inteira.</span>
+        </article>
+
+      </div>
+    </section>
+  </section>
+
+  <!-- ================================================================= -->
+  <!-- FATIA 4 · OPERAÇÃO (Márcia)                                        -->
+  <!-- ================================================================= -->
+  <section class="painel" id="p-operacao">
+    <p class="nota">Márcia, Operação: <strong>cinco quadros e nada mais</strong>. Quem não veio, quantos hóspedes vêm aí, quanto se paga às plantonistas, quem toma remédio hoje e o Enriquecimento Ambiental do dia.</p>
+
+    <!-- ÁREA · Day Care (coral) -->
+    <section class="area area-daycare">
+      <header class="area-h">
+        <span class="area-st"><svg viewBox="0 0 32 32" aria-hidden="true"><use href="#st-pata"></use></svg></span>
+        <div class="area-txt">
+          <p class="area-eyebrow">DAY CARE</p>
+          <h2 class="area-t">A turma de hoje</h2>
+          <p class="area-sub">Quem não veio — e o que a senhora faz com isso ainda hoje.</p>
+        </div>
+      </header>
+
+      <div class="grid">
+
+        <!-- 1 · Quem não veio — e por quê -->
+        <article class="card rv c7">
+          <span class="tag">novo</span>
+          <h3 class="tit">Quem não veio — e por quê</h3>
+          <p class="sub">Falta avisada tem motivo escrito. Falta sem aviso não tem notícia nenhuma: é a senhora quem precisa ligar para o tutor.</p>
+          <div class="faixa-corpo duas-col">
+            <div class="faixa-num">
+              <div class="kpi coral hero"><span data-alvo="18">0</span> de 21</div>
+              <p class="rot">aulunos presentes hoje</p>
+              <p class="varp v-sobe">▲ 2 sobre ontem</p>
+            </div>
+            <div class="faixa-lado">
+              <div class="segbar" role="img" aria-label="De 21 aulunos previstos: 18 presentes, 2 faltas sem aviso e 1 falta avisada">
+                <i class="seg-ok" data-seg="85.71"></i>
+                <i class="seg-falta" data-seg="9.52"></i>
+                <i class="seg-avisou" data-seg="4.77"></i>
+              </div>
+              <div class="segleg">
+                <span class="segleg-i"><em class="pt pt-ok"></em><b>18</b> presentes</span>
+                <span class="segleg-i"><em class="pt pt-falta"></em><b>2</b> sem aviso</span>
+                <span class="segleg-i"><em class="pt pt-avisou"></em><b>1</b> avisou</span>
+              </div>
+            </div>
+          </div>
+          <div class="lista">
+            <div class="li">
+              <span class="badge b-critico">sem aviso</span>
+              <div class="li-txt"><b>Luna</b><span>nenhuma notícia desde ontem — tutora Carolina</span>
+                <p class="li-acao"><button type="button" class="bt bt-ouro bt-mini">Ligar para a tutora Carolina</button></p>
+              </div>
+            </div>
+            <div class="li">
+              <span class="badge b-critico">sem aviso</span>
+              <div class="li-txt"><b>Toddy</b><span>nenhuma notícia hoje — tutora Sophia</span>
+                <p class="li-acao"><button type="button" class="bt bt-ouro bt-mini">Ligar para a tutora Sophia</button></p>
+              </div>
+            </div>
+            <div class="li"><span class="badge b-info">avisou</span><div class="li-txt"><b>Camus</b><span>hoje às 06:50 — a Camus está no cio · crédito de 1 dia lançado</span></div></div>
+          </div>
+        </article>
+
+        <!-- 5 · Enriquecimento Ambiental (fica ao lado, coral) -->
+        <article class="card rv c5">
+          <span class="tag">novo</span>
+          <h3 class="tit">Enriquecimento Ambiental de hoje</h3>
+          <p class="sub">Os quatro tempos do dia e o que foi oferecido em cada um. A marca dourada é o tempo já cumprido.</p>
+          <div class="pill" style="margin-top:16px"><i data-pct="50"></i></div>
+          <div class="pill-rot"><span><b>2 de 4</b> tempos cumpridos</span><span>o 3º está em curso</span></div>
+          <ol class="tlh">
+            <li class="tlh-i feito"><span class="tlh-no"></span><span class="tlh-h">08:30</span><span class="tlh-t">1º tempo</span><span class="chip">Faro no gramado</span></li>
+            <li class="tlh-i feito"><span class="tlh-no"></span><span class="tlh-h">10:30</span><span class="tlh-t">2º tempo</span><span class="chip">Petisco recheado</span></li>
+            <li class="tlh-i agora"><span class="tlh-no"></span><span class="tlh-h">13:30</span><span class="tlh-t">3º tempo</span><span class="chip">Piscina de bolinhas</span></li>
+            <li class="tlh-i"><span class="tlh-no"></span><span class="tlh-h">15:30</span><span class="tlh-t">4º tempo</span><span class="chip">Circuito de agilidade</span></li>
+          </ol>
+          <div class="lista">
+            <div class="li"><span class="badge b-atencao">alergia</span><div class="li-txt"><b>Dolly ficou de fora do 2º tempo</b><span>alergia a frango — o petisco tinha frango</span></div></div>
+            <div class="li"><span class="badge b-critico">restrição médica</span><div class="li-txt"><b>Ozzy está fora dos quatro tempos</b><span>pós-operatório · liberado a partir de 08/09</span></div></div>
+          </div>
+        </article>
+
+      </div>
+    </section>
+
+    <!-- ÁREA · AuAulândia (turquesa) -->
+    <section class="area area-auaulandia">
+      <header class="area-h">
+        <span class="area-st"><svg viewBox="0 0 32 32" aria-hidden="true"><use href="#st-lua"></use></svg></span>
+        <div class="area-txt">
+          <p class="area-eyebrow">AUAULÂNDIA</p>
+          <h2 class="area-t">As noites que vêm aí</h2>
+          <p class="area-sub">Quantos hóspedes por noite, quem toma remédio e quanto se paga às plantonistas no mês.</p>
+        </div>
+      </header>
+
+      <div class="grid">
+
+        <!-- 2 · Hóspedes: hoje e os próximos dias -->
+        <article class="card rv c5 par">
+          <span class="tag">novo</span>
+          <h3 class="tit">Hóspedes: hoje e os próximos dias</h3>
+          <p class="sub">Sete noites à frente, para escalar as plantonistas antes e não na véspera. A casa tem 8 leitos.</p>
+          <div class="colunas sete">
+            <div class="coluna"><b>3</b><i data-h="37.5"></i></div>
+            <div class="coluna"><b>5</b><i data-h="62.5"></i></div>
+            <div class="coluna cheia"><b>8</b><i data-h="100"></i></div>
+            <div class="coluna cheia"><b>8</b><i data-h="100"></i></div>
+            <div class="coluna"><b>6</b><i data-h="75"></i></div>
+            <div class="coluna"><b>4</b><i data-h="50"></i></div>
+            <div class="coluna"><b>3</b><i data-h="37.5"></i></div>
+          </div>
+          <div class="colunas-rot sete"><span>hoje</span><span>qui</span><span>sex</span><span>sáb</span><span>dom</span><span>seg</span><span>ter</span></div>
+          <div class="lista">
+            <div class="li"><span class="badge b-critico">casa cheia</span><div class="li-txt"><b>Sexta e sábado: 8 de 8 leitos</b><span>as duas noites pedem plantonista dobrada</span></div></div>
+            <div class="li"><span class="badge b-info">a escalar</span><div class="li-txt"><b>Sábado ainda sem plantonista confirmada</b><span>Wandela já tem 2 dobras neste mês</span></div></div>
+          </div>
+        </article>
+
+        <!-- 3 · Quem tem medicação hoje -->
+        <article class="card rv c5 par">
+          <span class="tag">já existe</span>
+          <h3 class="tit">Quem tem medicação hoje</h3>
+          <p class="sub">Hóspede leva selo: ele dorme aqui, então a dose depende inteiramente da casa. Atenção redobrada.</p>
+          <div class="alerta-h">
+            <div>
+              <div class="kpi turq hero" data-alvo="3">0</div>
+              <p class="rot">FILHOts com medicação — 2 deles são hóspedes</p>
+            </div>
+            <span class="badge b-critico">1 dose atrasada</span>
+          </div>
+          <div class="pill"><i data-pct="71"></i></div>
+          <div class="pill-rot"><span><b>5 de 7</b> doses dadas</span><span>2 em aberto</span></div>
+          <div class="lista">
+            <div class="li"><span class="badge b-critico">atrasada</span><div class="li-txt"><b>Toddy — antibiótico das 10:00</b><span>2 horas de atraso</span></div><span class="li-fim chip chip-hospede">hóspede</span></div>
+            <div class="li"><span class="badge b-info">às 17:00</span><div class="li-txt"><b>Luna — anti-inflamatório</b><span>com comida</span></div><span class="li-fim chip chip-hospede">hóspede</span></div>
+            <div class="li"><span class="badge b-ok">dada às 12:40</span><div class="li-txt"><b>Ozzy — pomada no pós-operatório</b><span>auluno do Day Care, vai para casa hoje</span></div></div>
+          </div>
+        </article>
+
+        <!-- 4 · Acerto das plantonistas -->
+        <article class="card rv c12">
+          <span class="tag">já existe</span>
+          <h3 class="tit">Acerto das plantonistas</h3>
+          <p class="sub">Quanto se paga a cada uma neste mês, para conferir antes de pagar. O acerto é por noite e depende de quantos FILHOts dormiram na casa. A Repolho nunca entra na conta — ela mora aqui.</p>
+          <div class="barras">
+            <div class="barra">
+              <div class="barra-rot" style="grid-column:1/-1"><span>Wandela — 9 noites, 2 dobras</span><em>R$ 1.404,00</em></div>
+              <div class="barra-tr ouro"><i data-pct="100"></i></div>
+            </div>
+            <div class="barra">
+              <div class="barra-rot" style="grid-column:1/-1"><span>Elizabeth — 6 noites, sem dobra</span><em>R$ 936,00</em></div>
+              <div class="barra-tr ouro"><i data-pct="67"></i></div>
+            </div>
+            <div class="barra">
+              <div class="barra-rot" style="grid-column:1/-1"><span>Lana — 6 noites, 1 dobra</span><em>R$ 780,00</em></div>
+              <div class="barra-tr ouro"><i data-pct="56"></i></div>
+            </div>
+          </div>
+          <div class="total"><span>Total a pagar no mês</span><b>R$ 3.120,00</b></div>
+          <p class="grafico-nota">A Elizabeth tem 1 relatório sem assinatura, na noite de 24/08. Enquanto não for assinado, a noite entra no acerto sem responsável registrado.</p>
+        </article>
+
+      </div>
+    </section>
+  </section>
+
+  <!-- ================================================================= -->
+  <!-- FATIA 5 · DIRETORIA                                                -->
+  <!-- ================================================================= -->
+  <section class="painel" id="p-diretoria">
+    <p class="nota">Adriana, Diretoria: <strong>a casa inteira</strong>. A senhora herda as Consultoras, a Supervisão e a Operação exatamente como elas são — os mesmos quadros, os mesmos números, sem recontagem — mais o Financeiro e a auditoria, que só existem aqui.</p>
+
+    <h2 class="secao">Consultoras de Bem-Estar</h2>
+    <p class="secao-sub">O balcão. Os quatro alertas que a recepção precisa resolver hoje.</p>
+    <div id="d-consultoras"></div>
+
+    <h2 class="secao">Supervisão</h2>
+    <p class="secao-sub">O que a Amanda vê: o dia em pendente e resolvido, com o nome de quem resolveu.</p>
+    <div id="d-amanda"></div>
+
+    <h2 class="secao">Operação</h2>
+    <p class="secao-sub">O que a Márcia vê: as faltas, as noites que vêm aí, a medicação e o acerto das plantonistas.</p>
+    <div id="d-operacao"></div>
+
+    <h2 class="secao">Só da Diretoria</h2>
+    <p class="secao-sub">Os dois quadros que ninguém mais enxerga.</p>
+
+    <section class="area">
+      <header class="area-h">
+        <span class="area-st"><svg viewBox="0 0 32 32" aria-hidden="true"><use href="#st-escudo"></use></svg></span>
+        <div class="area-txt">
+          <p class="area-eyebrow">CONFERÊNCIA</p>
+          <h3 class="area-t">O dinheiro e o que não gravou</h3>
+          <p class="area-sub">O que entrou e o que falta receber — e o caderno do que o sistema tentou gravar e não conseguiu.</p>
+        </div>
+      </header>
+
+      <div class="grid">
+
+        <!-- Financeiro -->
+        <article class="card rv c7">
+          <span class="tag">novo</span>
+          <h3 class="tit">Financeiro — agosto de 2026</h3>
+          <p class="sub">Mensalidades, planos e diárias. Regime de caixa: o mês em que o dinheiro entra.</p>
+          <div class="kpi-linha" style="margin-top:16px">
+            <div class="kpi-bloco">
+              <span class="icone w-ouro"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M4 7h16v11H4z"/><path d="M4 11h16"/></svg></span>
+              <div class="kpi ouro dinheiro">R$ 0,00</div>
+              <p class="rot">recebido no mês</p>
+            </div>
+            <div class="kpi-bloco">
+              <span class="icone w-azul"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="12" cy="12" r="8"/><path d="M12 8v4l3 2"/></svg></span>
+              <div class="kpi dinheiro">R$ 74.894,37</div>
+              <p class="rot">a receber</p>
+            </div>
+            <div class="kpi-bloco">
+              <span class="icone w-daycare"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 4l9 16H3z"/><path d="M12 10v4M12 17h.01"/></svg></span>
+              <div class="kpi alerta dinheiro">R$ 74.894,37</div>
+              <p class="rot">em atraso</p><p class="varp v-desce">recorte do “a receber”</p>
+            </div>
+            <div class="kpi-bloco">
+              <span class="icone w-vetcare"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M5 5h14v14H5z"/><path d="M9 12h6"/></svg></span>
+              <div class="kpi dinheiro">R$ 955,00</div>
+              <p class="rot">planos vencidos</p>
+            </div>
+          </div>
+          <div class="segbar" style="margin-top:20px" role="img" aria-label="Do que falta receber, Day Care responde por R$ 66.053,62 e AuAulândia por R$ 8.840,75">
+            <i class="seg-dc" data-seg="88.2"></i>
+            <i class="seg-au" data-seg="11.8"></i>
+          </div>
+          <div class="segleg">
+            <span class="segleg-i"><em class="pt pt-dc"></em>Day Care <b>R$ 66.053,62</b></span>
+            <span class="segleg-i"><em class="pt pt-au"></em>AuAulândia <b>R$ 8.840,75</b></span>
+          </div>
+          <div class="lista">
+            <div class="li"><span class="badge b-critico">sem registro</span><div class="li-txt"><b>“Recebido” abre em R$ 0,00 de propósito</b><span>não existe lançamento de pagamento no sistema — a tela que grava ainda vai ser feita</span></div></div>
+            <div class="li"><span class="badge b-atencao">a conferir</span><div class="li-txt"><b>R$ 36.816,99 declarados sem lançamento</b><span>data de pagamento escrita na ficha, sem valor e sem prova</span></div></div>
+            <div class="li"><span class="badge b-info">fora da soma</span><div class="li-txt"><b>1 FILHOt ficou de fora por falta de dado</b><span>Toddy, da tutora Roberta Secca — auluno sem plano lançado</span></div></div>
+          </div>
+          <p class="grafico-nota">“Em atraso” é um recorte do “a receber”, não uma parcela nova: somar os dois conta o mesmo dinheiro duas vezes.</p>
+        </article>
+
+        <!-- Auditoria — feed ao vivo -->
+        <article class="card rv c5">
+          <span class="tag">novo</span>
+          <h3 class="tit">Auditoria — gravações que falharam <span class="vivo" style="display:inline-block;vertical-align:middle;margin-left:6px"></span></h3>
+          <p class="sub">O que o sistema tentou gravar e não conseguiu. Existe para a senhora ver se alguma coisa está se perdendo em silêncio.</p>
+          <div class="feed">
+            <div class="feed-i">
+              <span class="feed-q">hoje 09:12</span>
+              <div class="feed-t"><b>Aviso ao grupo — Dolly</b><span>o Telegram recusou a mensagem · 3 tentativas</span></div>
+              <span class="badge b-critico">não saiu</span>
+            </div>
+            <div class="feed-i">
+              <span class="feed-q">hoje 08:44</span>
+              <div class="feed-t"><b>Foto do check-in — Bidu</b><span>a gravação da foto voltou com erro de permissão</span></div>
+              <span class="badge b-atencao">a repetir</span>
+            </div>
+            <div class="feed-i">
+              <span class="feed-q">ontem 21:30</span>
+              <div class="feed-t"><b>Relatório do plantão — Elizabeth</b><span>gravado sem assinatura, noite de 24/08</span></div>
+              <span class="badge b-atencao">sem responsável</span>
+            </div>
+          </div>
+          <p style="margin-top:14px"><button type="button" class="bt bt-azul">Tentar gravar de novo</button></p>
+        </article>
+
+      </div>
+    </section>
+  </section>
+
+  <p class="rodape">Esboço v5 · Sistema Zêluz — Day Care e AuAulândia · Aqui, cada cuidado é ÚNICO.</p>
+
+</main>
+
+<script>
+(function(){
+  'use strict';
+
+  var PARADO = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  var FATIAS = ['monitor','consultoras','amanda','operacao','diretoria'];
+  /* nomes antigos continuam funcionando no endereço */
+  var ALIAS  = { central:'amanda', supervisao:'amanda', 'supervisão':'amanda',
+                 gestao:'operacao', 'gestão':'operacao',
+                 consultora:'consultoras', recepcao:'consultoras', 'recepção':'consultoras' };
+  var NOMES  = { monitor:'Monitor', consultoras:'Consultoras', amanda:'Supervisão', operacao:'Operação', diretoria:'Diretoria' };
+  var SAUD   = { monitor:'Octávio', consultoras:'Consultoras', amanda:'Amanda', operacao:'Márcia', diretoria:'Adriana' };
+
+  /* Banco de frases do Cérebro Zêluz (07-linguagem-frases-mestras), por dia da
+     semana — rotação fixa, nunca sorteada: a pessoa reconhece a semana. */
+  var FRASES = [
+    'Aqui, cada cuidado é ÚNICO. E passa pelas suas mãos.',                        /* domingo */
+    'Hoje, cada FILHOt vai ser visto de verdade. Pelos seus olhos.',               /* segunda */
+    'O que ninguém vê também é cuidado. E é você quem vê.',                        /* terça   */
+    'Energia bem gasta vira bem-estar. Isso começa na sua monitoria.',             /* quarta  */
+    'Cuidar é escutar antes de agir. Cada check-in seu é uma escuta.',             /* quinta  */
+    'Somos Zelosos. A gente se importa de verdade — e hoje isso tem o seu nome.',  /* sexta   */
+    'A voz dos FILHOts hoje é a sua. Eles não sabem dizer onde dói; você sabe olhar.' /* sábado */
+  ];
+  var FRASE_NOITE = 'Enquanto os tutores dormem, é o seu olhar que cuida.';
+
+  function comoVai(h){ return (h >= 5 && h < 12) ? 'Bom dia' : ((h >= 12 && h < 18) ? 'Boa tarde' : 'Boa noite'); }
+
+  /* ---------- holograma: 900ms e sai de cena; uma vez por sessão ---------- */
+  function holograma(){
+    var h = document.getElementById('holo');
+    if (!h) { return; }
+    var jaViu = false;
+    try { jaViu = window.sessionStorage.getItem('zeluz_holo_v5') === '1'; } catch (e) { jaViu = false; }
+    if (jaViu || PARADO) { h.parentNode.removeChild(h); return; }
+    try { window.sessionStorage.setItem('zeluz_holo_v5', '1'); } catch (e) {} /* silencioso de propósito: sem armazenamento, o holograma só repete */
+    setTimeout(function(){ if (h.parentNode) { h.parentNode.removeChild(h); } }, 950);
+  }
+
+  /* ================================================================
+     BARRA LATERAL — a sanfona abre e fecha de verdade
+     Regra do app: abre só o caminho ativo. Ao abrir uma categoria,
+     as outras do mesmo nível fecham.
+     ================================================================ */
+  function fecharGaveta(bt){
+    var g = document.getElementById(bt.getAttribute('data-abre'));
+    if (!g) { return; }
+    g.classList.remove('aberta');
+    bt.setAttribute('aria-expanded','false');
+  }
+  function abrirGaveta(bt){
+    var g = document.getElementById(bt.getAttribute('data-abre'));
+    if (!g) { return; }
+    g.classList.add('aberta');
+    bt.setAttribute('aria-expanded','true');
+  }
+  function sanfona(){
+    var nav = document.getElementById('latNav');
+    if (!nav) { return; }
+    nav.addEventListener('click', function(ev){
+      var bt = ev.target.closest ? ev.target.closest('[data-abre]') : null;
+      if (!bt || !nav.contains(bt)) { return; }
+      ev.preventDefault();
+      var aberto = bt.getAttribute('aria-expanded') === 'true';
+      /* fecha os irmãos do mesmo nível — só um caminho por vez */
+      var nivel = bt.classList.contains('cat') ? 'cat' : 'sub2';
+      var irmaos = nav.querySelectorAll('.' + nivel + '[data-abre]');
+      for (var i = 0; i < irmaos.length; i++) {
+        if (irmaos[i] !== bt) { fecharGaveta(irmaos[i]); }
+      }
+      /* ao fechar uma categoria, os sub-cabeçalhos de dentro fecham junto */
+      if (aberto) {
+        var g = document.getElementById(bt.getAttribute('data-abre'));
+        if (g) {
+          var netos = g.querySelectorAll('[data-abre]');
+          for (var j = 0; j < netos.length; j++) { fecharGaveta(netos[j]); }
+        }
+        fecharGaveta(bt);
+      } else {
+        abrirGaveta(bt);
+      }
+    });
+  }
+
+  /* ---------- gaveta do celular ---------- */
+  function gavetaCelular(){
+    var bt = document.getElementById('hamb');
+    var lat = document.getElementById('lateral');
+    var veu = document.getElementById('veu');
+    if (!bt || !lat || !veu) { return; }
+    function abrir(){
+      lat.classList.add('aberta'); veu.hidden = false;
+      requestAnimationFrame(function(){ veu.classList.add('aberta'); });
+      bt.setAttribute('aria-expanded','true'); bt.setAttribute('aria-label','Fechar o menu');
+    }
+    function fechar(){
+      lat.classList.remove('aberta'); veu.classList.remove('aberta');
+      setTimeout(function(){ if (!veu.classList.contains('aberta')) { veu.hidden = true; } }, 240);
+      bt.setAttribute('aria-expanded','false'); bt.setAttribute('aria-label','Abrir o menu');
+    }
+    bt.addEventListener('click', function(){
+      if (lat.classList.contains('aberta')) { fechar(); } else { abrir(); }
+    });
+    veu.addEventListener('click', fechar);
+    document.addEventListener('keydown', function(ev){
+      if (ev.key === 'Escape' && lat.classList.contains('aberta')) { fechar(); }
+    });
+  }
+
+  /* ---------- a Diretoria herda por clonagem de nós ----------
+     Nada de HTML duplicado: as mesmas áreas das outras três fatias
+     são copiadas para dentro das seções da Diretoria. */
+  function herdar(){
+    copiar(document.getElementById('p-consultoras'), document.getElementById('d-consultoras'));
+    copiar(document.getElementById('p-amanda'),      document.getElementById('d-amanda'));
+    copiar(document.getElementById('p-operacao'),    document.getElementById('d-operacao'));
+  }
+  function copiar(origem, destino){
+    if (!origem || !destino) { return; }
+    var n = origem.children, i;
+    for (i = 0; i < n.length; i++) {
+      if (n[i].classList.contains('nota')) { continue; }
+      destino.appendChild(n[i].cloneNode(true));
+    }
+  }
+
+  /* ---------- saudação vibrante ---------- */
+  function saudar(id){
+    var agora = new Date();
+    var l1 = document.getElementById('saud1');
+    var l3 = document.getElementById('saud3');
+    var tr = document.getElementById('traco');
+    var linhas = document.querySelectorAll('.cabeca .entra');
+    var noite = agora.getHours() >= 18 || agora.getHours() < 5;
+    var i;
+
+    l1.textContent = comoVai(agora.getHours()) + ', ' + SAUD[id] + '.';
+    l3.textContent = (id === 'monitor' && noite) ? FRASE_NOITE : FRASES[agora.getDay()];
+    document.body.classList.toggle('fatia-monitor', id === 'monitor');
+
+    for (i = 0; i < linhas.length; i++) { linhas[i].classList.remove('dentro'); }
+    tr.classList.remove('dentro');
+    var n = document.querySelectorAll('.cabeca [data-alvo]');
+    for (i = 0; i < n.length; i++) { n[i].textContent = '0'; }
+
+    requestAnimationFrame(function(){
+      var k;
+      for (k = 0; k < linhas.length; k++) { linhas[k].classList.add('dentro'); }
+      tr.classList.add('dentro');
+      /* só conta o que está de fato visível nesta fatia */
+      for (k = 0; k < n.length; k++) {
+        if (n[k].offsetParent !== null) { contar(n[k]); }
+      }
+    });
+  }
+
+  /* ---------- data por extenso, em português ---------- */
+  function escreverData(){
+    var el = document.getElementById('dataHoje');
+    if (!el) { return; }
+    var d = new Date();
+    var dias = ['domingo','segunda-feira','terça-feira','quarta-feira','quinta-feira','sexta-feira','sábado'];
+    var meses = ['janeiro','fevereiro','março','abril','maio','junho','julho','agosto','setembro','outubro','novembro','dezembro'];
+    el.textContent = dias[d.getDay()] + ', ' + d.getDate() + ' de ' + meses[d.getMonth()] + ' de ' + d.getFullYear();
+  }
+
+  /* ---------- contadores: sobem em 600ms ---------- */
+  function contar(el){
+    var alvo = parseInt(el.getAttribute('data-alvo'), 10);
+    if (isNaN(alvo)) { return; }
+    if (PARADO || alvo === 0) { el.textContent = String(alvo); return; }
+    var t0 = null, dur = 600;
+    function passo(t){
+      if (t0 === null) { t0 = t; }
+      var k = Math.min(1, (t - t0) / dur);
+      var suave = 1 - Math.pow(1 - k, 3);
+      el.textContent = String(Math.round(alvo * suave));
+      if (k < 1) { requestAnimationFrame(passo); }
+    }
+    requestAnimationFrame(passo);
+  }
+
+  /* ---------- anel do donut: preenche em 700ms ---------- */
+  function comprimento(el){ return parseFloat(el.getAttribute('stroke-dasharray')) || 377; }
+  function anel(el){
+    var pct = parseFloat(el.getAttribute('data-anel')) || 0;
+    var comp = comprimento(el);
+    el.setAttribute('stroke-dashoffset', String(comp - comp * pct / 100));
+  }
+
+  /* ---------- barras, pill e segmentos: crescem em 500ms ---------- */
+  function largura(el){ el.style.width = (parseFloat(el.getAttribute('data-pct')) || 0) + '%'; }
+  function altura(el){ el.style.height = (parseFloat(el.getAttribute('data-h')) || 0) + '%'; }
+  /* o −2px devolve ao segmento o respiro de 2px que o gap consome */
+  function segmento(el){ el.style.width = 'calc(' + (parseFloat(el.getAttribute('data-seg')) || 0) + '% - 2px)'; }
+
+  /* ---------- sparkline: desenha ---------- */
+  function tracar(svg){
+    var t = svg.querySelectorAll('[data-comp]');
+    for (var i = 0; i < t.length; i++) {
+      t[i].style.setProperty('--comp', t[i].getAttribute('data-comp'));
+    }
+    svg.classList.add('desenhado');
+  }
+
+  /* ---------- zera para poder reanimar ao trocar de fatia ---------- */
+  function zerar(painel){
+    var i, n;
+    n = painel.querySelectorAll('.rv');         for (i=0;i<n.length;i++){ n[i].classList.remove('dentro'); }
+    n = painel.querySelectorAll('[data-alvo]'); for (i=0;i<n.length;i++){ n[i].textContent = '0'; }
+    n = painel.querySelectorAll('[data-anel]'); for (i=0;i<n.length;i++){ n[i].setAttribute('stroke-dashoffset', String(comprimento(n[i]))); }
+    n = painel.querySelectorAll('[data-pct]');  for (i=0;i<n.length;i++){ n[i].style.width = '0%'; }
+    n = painel.querySelectorAll('[data-seg]');  for (i=0;i<n.length;i++){ n[i].style.width = '0%'; }
+    n = painel.querySelectorAll('[data-h]');    for (i=0;i<n.length;i++){ n[i].style.height = '0%'; }
+    n = painel.querySelectorAll('svg');         for (i=0;i<n.length;i++){ n[i].classList.remove('desenhado'); }
+  }
+
+  /* ---------- reveal em cascata (stagger 60ms) + gráficos ---------- */
+  function animar(painel){
+    var cards = painel.querySelectorAll('.rv');
+    for (var i = 0; i < cards.length; i++) {
+      (function(card, idx){
+        setTimeout(function(){
+          card.classList.add('dentro');
+          var j, n;
+          n = card.querySelectorAll('[data-alvo]'); for (j=0;j<n.length;j++){ contar(n[j]); }
+          n = card.querySelectorAll('[data-anel]'); for (j=0;j<n.length;j++){ anel(n[j]); }
+          n = card.querySelectorAll('[data-pct]');  for (j=0;j<n.length;j++){ largura(n[j]); }
+          n = card.querySelectorAll('[data-seg]');  for (j=0;j<n.length;j++){ segmento(n[j]); }
+          n = card.querySelectorAll('[data-h]');    for (j=0;j<n.length;j++){ altura(n[j]); }
+          n = card.querySelectorAll('svg');         for (j=0;j<n.length;j++){ tracar(n[j]); }
+        }, PARADO ? 0 : Math.min(idx, 14) * 60);
+      })(cards[i], i);
+    }
+  }
+
+  /* ---------- troca de fatia ---------- */
+  function normalizar(id){
+    id = String(id || '').replace('#','').toLowerCase();
+    if (ALIAS[id]) { id = ALIAS[id]; }
+    return (FATIAS.indexOf(id) === -1) ? 'monitor' : id;
+  }
+
+  function abrir(id){
+    id = normalizar(id);
+    var i, paineis = document.querySelectorAll('.painel');
+    for (i = 0; i < paineis.length; i++) { paineis[i].classList.remove('on'); }
+    var alvo = document.getElementById('p-' + id);
+    var botoes = document.querySelectorAll('#fatias .fatia-bt');
+    for (i = 0; i < botoes.length; i++) {
+      var marcado = botoes[i].getAttribute('data-fatia') === id;
+      botoes[i].classList.toggle('on', marcado);
+      botoes[i].setAttribute('aria-pressed', marcado ? 'true' : 'false');
+    }
+    document.getElementById('quemNome').textContent = NOMES[id];
+    saudar(id);
+    if (alvo) {
+      zerar(alvo);
+      alvo.classList.add('on');
+      requestAnimationFrame(function(){ animar(alvo); });
+    }
+    try { if (window.location.hash !== '#' + id) { history.replaceState(null, '', '#' + id); } } catch (e) {}
+    window.scrollTo(0, 0);
+  }
+
+  holograma();
+  escreverData();
+  sanfona();
+  gavetaCelular();
+  herdar();
+
+  var barra = document.getElementById('fatias');
+  barra.addEventListener('click', function(ev){
+    var bt = ev.target.closest ? ev.target.closest('.fatia-bt') : null;
+    if (bt) { abrir(bt.getAttribute('data-fatia')); }
+  });
+
+  window.addEventListener('hashchange', function(){ abrir(window.location.hash); });
+
+  abrir(window.location.hash);
+})();
+</script>
+</body>
+</html>
