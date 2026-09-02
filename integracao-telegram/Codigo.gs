@@ -66,7 +66,11 @@ var GRUPOS = {
   // Adriana, 25/ago/2026: "terá um grupo geral para o resumo do dia, para não colocar as
   // informações do Plantão do Hotel junto e fazer uma bagunça." Recebe o resumo do dia do
   // Day Care (EA, almoço, o que teve de diferente, medicação). Id lido com ?listar=1.
-  diario: '-5486234450'    // Diário do Daycare
+  diario: '-5486234450',   // Diário do Daycare
+  // URGÊNCIAS — só Adriana e Márcia. O sensível e o que exige ação imediata: entrevista
+  // sensível, medicação não dada, cocô alterado, achado no corpo, recusa de comida (hóspede,
+  // 2ª vez) e vômito. Grupo criado 02/set/2026. Id lido com ?listar=1.
+  urgencia: '-5363438885'  // URGÊNCIAS Daycare&Hospedagem
 };
 var GRUPO_PADRAO = 'vet';
 

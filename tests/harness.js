@@ -2301,6 +2301,385 @@ async function main() {
   }
   console.log('');
 
+  // ===================================================================================
+  // Fase 2.2 — PAINEL DA OPERAÇÃO, a fatia da Márcia.
+  //
+  // É a outra ponta da 2.1: onde o monitor vê a rota dele, a Márcia vê a casa. E é a
+  // primeira tela do Painel que mostra DINHEIRO e TEMPO POR PESSOA — as duas coisas que
+  // a fatia do Monitor esconde de todo mundo. Por isso as provas aqui giram em torno de
+  // três perguntas: quem entra, se as contagens do topo batem, e se o dinheiro sai no
+  // formato da lei. Cada mordida abaixo é um jeito real de esta tela mentir calada.
+  // ===================================================================================
+  console.log('Fase 2.2 — Painel da Operação (a fatia da Márcia):');
+  {
+    // ---- 1. a tela existe, tem menu, título e gancho (a lição das duas listas) ----
+    check('a tela v-paineloperacao existe no HTML', /id="v-paineloperacao"/.test(html));
+    check('o item "Painel da Operação" está no menu', /data-v="paineloperacao"/.test(html));
+    check('o item nasce ESCONDIDO (quem mostra é a tabela PERM)',
+      /<a data-v="paineloperacao" style="display:none"/.test(html));
+    check('nenhuma classe so-* nova para o Painel da Operação (regra 3 da Fase 2)',
+      !/data-v="paineloperacao"[^>]*class="so-/.test(html));
+    ctx.__titOp = null;
+    vm.runInContext("__titOp = !!(titles && titles.paineloperacao);", ctx);
+    check('a tela tem título e dica em titles{} (senão o cabeçalho quebra)', ctx.__titOp === true);
+    check('aoAbrirView chama poAbrir (lista única de ganchos)',
+      /if\(v==='paineloperacao'\)\{ if\(typeof poAbrir==='function'\) poAbrir\(\); \}/.test(html));
+    check('o item entra na PERM_MENU, junto dos outros dois do Painel',
+      /PERM_MENU=\[\['painelmeu','painel-monitor'\],\['paineloperacao','painel-operacao'\],/.test(html));
+    // Ela é a PORTA da Operação: fica antes do Financeiro do plantão, primeiro do grupo.
+    check('o item é o PRIMEIRO do grupo Operação (antes do Financeiro do plantão)',
+      html.indexOf('data-v="paineloperacao"') < html.indexOf('data-v="acerto"') &&
+      html.indexOf('data-v="paineloperacao"') > html.indexOf('data-acc="operacao"'));
+
+    // ---- 2. PERMISSÃO, papel a papel — o coração desta entrega ----
+    // Aqui há dinheiro e tempo por etapa por pessoa. O grupo é o mais fechado do app.
+    const VE_OP = ['gestao', 'diretoria'];
+    const NAO_VE_OP = ['monitor', 'plantonista', 'aprendiz', 'supervisor', 'consultora',
+      'recepcao', 'vet', 'conferencia', 'tutor', ''];
+    let opOk = true, opDet = '';
+    VE_OP.forEach((p) => {
+      if (ctx.podePapel('painel-operacao', p) !== true) { opOk = false; opDet = p + ' NÃO vê e deveria ver'; }
+    });
+    NAO_VE_OP.forEach((p) => {
+      if (ctx.podePapel('painel-operacao', p) !== false) { opOk = false; opDet = "'" + p + "' vê e NÃO deveria"; }
+    });
+    check('Painel da Operação: só Gestão e Diretoria veem — monitor, recepção, vet e Supervisão não ('
+      + (VE_OP.length + NAO_VE_OP.length) + ' papéis)', opOk, opDet);
+    // As duas fatias do Painel não se cruzam em pessoa nenhuma: quem vê a casa não vê a
+    // rota individual de ninguém, e quem tem rota não vê o dinheiro da casa.
+    check('nenhum papel vê as DUAS fatias do Painel ao mesmo tempo',
+      ['monitor', 'plantonista', 'aprendiz', 'gestao', 'diretoria', 'supervisor', 'consultora', 'vet']
+        .every((p) => !(ctx.podePapel('painel-monitor', p) && ctx.podePapel('painel-operacao', p))));
+    check('poAbrir se tranca pela mesma tabela (link direto não fura a permissão)',
+      /function poAbrir\([\s\S]{0,400}?podePapel\('painel-operacao'\)/.test(html));
+
+    // ---- 3. O PAINEL SÓ OBSERVA — nenhuma gravação sai daqui ----
+    // "Dashboards só observam, nunca decidem." A prova é sobre o código da fatia inteira.
+    // A âncora é a PRIMEIRA função da fatia, não o comentário: o mesmo título aparece no
+    // comentário da <section> lá em cima, e cortar por ele arrastaria meia tela alheia.
+    const fatiaOp = html.slice(html.indexOf('function poComHoje'),
+      html.indexOf('// INIT do Day Care'));
+    check('a fatia da Operação existe no código (a fatia não pode estar vazia)', fatiaOp.length > 4000,
+      String(fatiaOp.length));
+    check('o Painel da Operação NÃO grava nada (nenhum set/update/push/remove/transaction)',
+      !/DB\.ref\([^)]*\)\.(set|update|push|remove|transaction)\b/.test(fatiaOp),
+      (fatiaOp.match(/DB\.ref\([^)]*\)\.(set|update|push|remove|transaction)\b/) || [''])[0]);
+    check('o Painel da Operação só lê com once (nenhum ouvinte novo pendurado)',
+      !/\.on\('value'/.test(fatiaOp));
+    check('toda leitura que falha é registrada (nunca falha calada)',
+      /_logLeituraFalhou\(caminho\+' \(Painel da Operação\)'/.test(fatiaOp));
+
+    // ---- 4. AS TRÊS CAIXAS DO TOPO — a contagem que a Márcia lê primeiro ----
+    // Turma montada à mão, com uma armadilha de cada tipo que a casa tem de verdade.
+    const guardaTurma = ctx.turmaDeHoje, guardaMorador = ctx.ehMoradorZeluz;
+    const TURMA = [
+      { p: { n: 'Toddy', tutor: 'Sophia' }, i: 0 },
+      { p: { n: 'Dolly', tutor: 'Marina' }, i: 1 },
+      { p: { n: 'Ozzy', tutor: 'Lisa' }, i: 2 },
+      { p: { n: 'Kiara', tutor: 'Bia' }, i: 'pl2', daPlanilha: 'reposicao' },   // reposição É auluno
+      { p: { n: 'Luna', tutor: 'Carolina', freq: 'avulso' }, i: 'av1', avulso: true },
+      { p: { n: 'Bidu', tutor: 'Ana' }, i: 'pl1', daPlanilha: 'avulso' },
+      { p: { n: 'Theo', tutor: 'Rui' }, i: 'hosp1', hospede: true },            // hóspede não é auluno
+      { p: { n: 'Repolho', tutor: 'Zêluz' }, i: 9 },                            // moradora da casa
+    ];
+    ctx.turmaDeHoje = () => TURMA;
+    ctx.ehMoradorZeluz = (p) => !!(p && p.n === 'Repolho');
+    const CHAMADA = {};
+    CHAMADA[ctx.dcKey('Toddy', 'Sophia')] = 'veio';
+    CHAMADA[ctx.dcKey('Kiara', 'Bia')] = 'veio';
+    CHAMADA[ctx.dcKey('Bidu', 'Ana')] = 'veio';
+    CHAMADA[ctx.dcKey('Dolly', 'Marina')] = 'faltou';
+    CHAMADA[ctx.dcKey('Luna', 'Carolina')] = 'faltou';
+    CHAMADA[ctx.dcKey('Theo', 'Rui')] = 'veio';       // hóspede: não conta na chamada do Day Care
+    CHAMADA[ctx.dcKey('Repolho', 'Zêluz')] = 'veio';  // moradora: idem
+    // (Ozzy fica sem marcar de propósito)
+    const T = ctx.poTurma(CHAMADA);
+    check('caixa 1 — AULUNOS conta 4 (os 3 do plano mais a reposição)', T.aulunos.length === 4,
+      T.aulunos.map((o) => o.p.n).join(','));
+    check('caixa 2 — AVULSOS conta 2 (o lançado à mão e o da planilha)', T.avulsos.length === 2,
+      T.avulsos.map((o) => o.p.n).join(','));
+    check('caixa 3 — FALTARAM conta 2 (Dolly e Luna)', T.faltas.length === 2,
+      T.faltas.map((o) => o.p.n).join(','));
+    check('a saudação conta a casa inteira: 8 peludinhos passam por aqui hoje', T.total === 8, String(T.total));
+    check('presentes e sem marcar batem com a chamada (3 presentes, 1 sem marcar)',
+      T.presentes === 3 && T.semMarcar === 1, T.presentes + '/' + T.semMarcar);
+    check('as três caixas mais o hóspede e a moradora fecham a turma inteira, sem sobra',
+      T.aulunos.length + T.avulsos.length + T.hospedes.length + T.moradores.length === T.total);
+    // ---- MORDIDAS das três caixas ----
+    check('mordida — a moradora não entra em NENHUMA das três caixas (a Repolho mora aqui)',
+      !T.aulunos.concat(T.avulsos, T.faltas).some((o) => o.p.n === 'Repolho') && T.moradores.length === 1);
+    check('mordida — o hóspede não vira auluno nem avulso (ele dorme aqui, não estuda aqui)',
+      !T.aulunos.concat(T.avulsos).some((o) => o.p.n === 'Theo') && T.hospedes.length === 1);
+    check('mordida — reposição é AULUNO, nunca avulso (é crédito de plano sendo usado)',
+      T.aulunos.some((o) => o.p.n === 'Kiara') && !T.avulsos.some((o) => o.p.n === 'Kiara'));
+    check('mordida — o avulso que falta CONTA como falta (ele estava marcado para vir)',
+      T.faltas.some((o) => o.p.n === 'Luna'));
+    // A mordida mais perigosa: "ainda não marcaram" virar "faltou" faria a Márcia ligar
+    // para o tutor de um FILHOt que está brincando no gramado.
+    check('mordida — quem ainda não foi marcado NÃO conta como falta (o Ozzy não é falta)',
+      !T.faltas.some((o) => o.p.n === 'Ozzy') && T.semMarcar === 1);
+    check('mordida — a chamada do hóspede e da moradora não mexe em presentes nem em faltas',
+      T.presentes === 3 && T.faltas.length === 2);
+    // Turma vazia não pode virar afirmação de zero em lugar nenhum.
+    ctx.turmaDeHoje = () => [];
+    const T0 = ctx.poTurma({});
+    check('mordida — turma vazia devolve tudo zerado sem estourar',
+      T0.total === 0 && T0.aulunos.length === 0 && T0.faltas.length === 0);
+    check('mordida — com turma vazia o quadro das faltas diz que não leu, nunca "ninguém faltou"',
+      ctx.poCardFaltas(T0, '2026-09-02').indexOf('Ainda não consegui ler') >= 0);
+    ctx.turmaDeHoje = guardaTurma; ctx.ehMoradorZeluz = guardaMorador;
+
+    // ---- 5. O DINHEIRO — a conta é UMA SÓ e o formato é o da lei ----
+    // "O número da tela é o número que se paga" (18/ago). A conta do acerto saiu de dentro
+    // do desenho e virou acertoTotaisPor(): as duas telas chamam a MESMA função.
+    check('acertoTotaisPor existe (a conta saiu de dentro do renderAcertoTotais)',
+      typeof ctx.acertoTotaisPor === 'function');
+    check('renderAcertoTotais passou a usar a conta compartilhada, em vez de recontar',
+      /function renderAcertoTotais\(noites\)\{[\s\S]{0,300}?acertoTotaisPor\(noites\)/.test(html));
+    check('a soma por plantonista aparece uma vez só no código (nenhuma cópia da conta)',
+      (html.match(/por\[p\]\.total\+=v; por\[p\]\.noites\+\+;/g) || []).length === 1,
+      String((html.match(/por\[p\]\.total\+=v; por\[p\]\.noites\+\+;/g) || []).length));
+    const guardaQuem = ctx.ACERTO_QUEM, guardaNoites = ctx.acertoNoites;
+    vm.runInContext("ACERTO_QUEM = {};", ctx);
+    const NOITES = [
+      { iso: '2026-09-01', n: 3, reg: { status: 'acumulado', quem: 'Wandela', quantas: 1, valor_total_cent: 14300 } },
+      { iso: '2026-08-31', n: 5, reg: { status: 'apagar', quem: 'Elizabeth', quantas: 1, valor_total_cent: 16300 } },
+      { iso: '2026-08-30', n: 2, reg: { status: 'pago', quem: 'Wandela', quantas: 1, valor_total_cent: 99999 } },
+    ];
+    const A = ctx.acertoTotaisPor(NOITES);
+    check('o acerto soma por pessoa e ignora a noite já paga',
+      A.por['Wandela'].total === 14300 && A.por['Elizabeth'].total === 16300 && A.geral === 30600,
+      JSON.stringify(A.por));
+    check('mordida — noite marcada como "pago" não entra no total em aberto',
+      A.por['Wandela'].noites === 1, String(A.por['Wandela'].noites));
+    check('mordida — acertoTotaisPor não estoura com lista vazia nem com registro faltando',
+      ctx.acertoTotaisPor([]).geral === 0 && ctx.acertoTotaisPor([{ iso: 'x', n: 1 }]).nomes.length === 1);
+    ctx.__NOITES_FAKE = NOITES;
+    vm.runInContext("acertoNoites = function(){ return __NOITES_FAKE; };", ctx);
+    const htmlAcerto = ctx.poCardAcerto();
+    check('o quadro do acerto mostra o valor de cada plantonista e o total',
+      htmlAcerto.indexOf('R$ 143,00') >= 0 && htmlAcerto.indexOf('R$ 163,00') >= 0 &&
+      htmlAcerto.indexOf('R$ 306,00') >= 0, htmlAcerto.slice(0, 200));
+    // A LEI DO FORMATO (.claude/rules/formato-monetario-zeluz.md): R$ 1.234,56, sempre com
+    // os centavos. Nenhum "R$ 306" e nenhum "R$ 306,0" podem escapar para a tela.
+    const RS_CERTO = /^R\$ \d{1,3}(\.\d{3})*,\d{2}$/;
+    const todosOsReais = (htmlAcerto.match(/R\$[^<]*/g) || []).map((s) => s.trim());
+    check('todo R$ do quadro sai no formato completo, com os centavos ('
+      + todosOsReais.length + ' valores)',
+      todosOsReais.length >= 3 && todosOsReais.every((s) => RS_CERTO.test(s)),
+      todosOsReais.filter((s) => !RS_CERTO.test(s)).join(' | '));
+    check('mordida — fmtCent nunca devolve valor sem centavos',
+      ctx.fmtCent(0) === 'R$ 0,00' && ctx.fmtCent(100) === 'R$ 1,00' &&
+      ctx.fmtCent(123456) === 'R$ 1.234,56', ctx.fmtCent(0) + ' / ' + ctx.fmtCent(100));
+    check('o quadro do acerto diz que a Repolho não entra na conta',
+      htmlAcerto.indexOf('A Repolho nunca entra') >= 0);
+    ctx.ACERTO_QUEM = guardaQuem; ctx.acertoNoites = guardaNoites;
+
+    // ---- 6. TEMPO POR PESSOA — a ferramenta que só a Gestão tem ----
+    const TEMPO = {
+      'checkin-corpo': { inicio: '07:30', fim: '08:10', quemInicio: 'Octávio', caes: 12 },
+      'almoco': { inicio: '12:00', fim: '12:45', quemInicio: 'Wandela', caes: 12 },
+      'ea': { inicio: '10:30', fim: '11:00', quemInicio: 'Octávio', caes: 12 },
+      'jogos': { inicio: '15:00', quemInicio: 'Wandela', caes: 12 },        // aberta: sem fim
+      'peso': { inicio: '09:00', fim: '09:10', caes: 3 },                    // sem quem: não entra
+    };
+    const TP = ctx.poTempoPorPessoa(TEMPO);
+    check('o tempo por pessoa soma só as etapas encerradas (Octávio 70 min, Wandela 45 min)',
+      TP.por['Octávio'].min === 70 && TP.por['Wandela'].min === 45,
+      JSON.stringify({ o: TP.por['Octávio'], w: TP.por['Wandela'] }));
+    check('mordida — etapa sem fim NÃO vira minuto (não se inventa tempo que ninguém trabalhou)',
+      TP.abertas === 1 && TP.por['Wandela'].etapas === 1, String(TP.abertas));
+    check('mordida — etapa sem dono não é atribuída a ninguém', TP.nomes.length === 2, TP.nomes.join(','));
+    check('a lista sai de quem levou mais tempo para quem levou menos', TP.nomes[0] === 'Octávio');
+    check('o quadro do tempo avisa que a etapa aberta ficou de fora da conta',
+      ctx.poCardTempo(TP).indexOf('não há duração') >= 0);
+    check('mordida — sem etapa nenhuma encerrada, o quadro não afirma zero minutos',
+      ctx.poCardTempo(ctx.poTempoPorPessoa({})).indexOf('Ainda não consegui ler') >= 0);
+
+    // ---- 7. quem não comeu: lista vazia NÃO é "todo mundo comeu" ----
+    // A lição de 13/ago (a Dolly sumiu de uma lista curta): lista vazia também é o que
+    // aparece quando ninguém marcou o almoço ainda.
+    check('sem NENHUMA marcação de almoço, o quadro diz que não foi marcado',
+      ctx.poCardComida([], 0).indexOf('ainda não foi marcado') >= 0);
+    check('com o almoço marcado e ninguém na lista, aí sim o quadro afirma que comeram',
+      ctx.poCardComida([], 18).indexOf('Todo mundo comeu') >= 0);
+    const COMIDA = [
+      { k: 'a', nome: 'Toddy', motivo: 'não comeu nem no 2º horário', grave: true, pronto: true, aviso: null },
+      { k: 'b', nome: 'Dolly', motivo: 'comeu só metade', grave: false, pronto: true, aviso: { quem: 'Ana', ts: 1 } },
+    ];
+    const htmlComida = ctx.poCardComida(COMIDA, 18);
+    check('o quadro da comida conta quem já teve o tutor avisado',
+      htmlComida.indexOf('1 com tutor avisado') >= 0, htmlComida.slice(0, 300));
+
+    // ---- 8. a veterinária e os problemas dos dois grupos ----
+    const D_VET = { dia: '2026-09-02', vetFila: { x1: { pet: 'Romeo', ponto: 'Orelhas' } } };
+    const guardaReaval = ctx.VET_REAVAL_CACHE, guardaMeds = ctx.medsEncerradasPend;
+    vm.runInContext("VET_REAVAL_CACHE = { 'toddy__sophia': { data:'2026-08-30', motivo:'ferida na pata' } };", ctx);
+    ctx.medsEncerradasPend = () => [{ key: 'k', id: 'i', pet: 'Dolly', med: 'antibiótico', dataFim: '2026-09-01' }];
+    const VET = ctx.poVet(D_VET);
+    check('a veterinária recebe as três portas: reavaliação, remédio no fim e aviso preso',
+      VET.length === 3, JSON.stringify(VET.map((x) => x.tipo)));
+    check('o aviso que NÃO saiu vem primeiro — é o único que a vet nunca chegou a ver',
+      VET[0].grave === true, JSON.stringify(VET[0]));
+    check('mordida — reavaliação marcada para depois de hoje não entra na lista',
+      (() => {
+        vm.runInContext("VET_REAVAL_CACHE = { 'x': { data:'2099-01-01' } };", ctx);
+        ctx.medsEncerradasPend = () => [];
+        return ctx.poVet({ dia: '2026-09-02', vetFila: {} }).length === 0;
+      })());
+    ctx.VET_REAVAL_CACHE = guardaReaval; ctx.medsEncerradasPend = guardaMeds;
+
+    const guardaLoja = ctx.ocorrenciasLoja;
+    ctx.ocorrenciasLoja = () => [{ pet: 'Theo', texto: 'mancando da pata direita', ts: Date.parse('2026-09-02T14:00:00'), avisado: null }];
+    const D_PROB = {
+      dia: '2026-09-02',
+      ocorrDC: { o1: { pet: 'Ozzy', origem: 'check-out', itens: ['Orelhas: vermelhidão'], ts: Date.parse('2026-09-02T16:00:00') } },
+      avisosPlantao: {
+        noite: { k1: { nome: 'Luna', bem: false, ok: true, ts: 1 }, k2: { nome: 'Bidu', bem: true, ok: true, ts: 1 } },
+        dia: { k3: { nome: 'Kiara', ok: false, erro: 'sem internet', ts: 1 } },
+        __fechamento: { ts: 1, ok: true },
+      },
+    };
+    const PROB = ctx.poProblemasDoDia(D_PROB);
+    check('os problemas juntam os DOIS grupos numa lista só (Day Care e AuAulândia)',
+      PROB.length === 4 && PROB.some((x) => x.lado === 'Day Care') && PROB.some((x) => x.lado === 'AuAulândia'),
+      JSON.stringify(PROB.map((x) => x.lado + ':' + x.nome)));
+    check('mordida — o relatório que passou BEM não vira problema (o Bidu não entra)',
+      !PROB.some((x) => x.nome === 'Bidu'));
+    check('o relatório que não chegou à Gestão entra como problema, com o motivo',
+      PROB.some((x) => x.nome === 'Kiara' && x.texto.indexOf('não chegou à Gestão') >= 0));
+    check('mordida — o registro de fechamento não vira um FILHOt na lista',
+      !PROB.some((x) => !x.nome));
+    check('mordida — ocorrência de OUTRO dia não entra na lista de hoje',
+      (() => {
+        ctx.ocorrenciasLoja = () => [{ pet: 'Antigo', texto: 'x', ts: Date.parse('2026-08-20T10:00:00'), avisado: null }];
+        return ctx.poProblemasDoDia({ dia: '2026-09-02', ocorrDC: {}, avisosPlantao: {} }).length === 0;
+      })());
+    ctx.ocorrenciasLoja = guardaLoja;
+
+    // ---- 9. as noites, a medicação e o EA ----
+    const guardaNoite = ctx.acertoHospedesNaNoite;
+    const PORNOITE = { '2026-09-02': ['a', 'b', 'c'], '2026-09-03': ['a', 'b', 'c', 'd', 'e'] };
+    ctx.acertoHospedesNaNoite = (iso) => PORNOITE[iso] || [];
+    const NO = ctx.poNoites('2026-09-02', 7);
+    check('as próximas noites vêm em sete colunas, a primeira sendo hoje',
+      NO.length === 7 && NO[0].rot === 'hoje' && NO[0].n === 3, JSON.stringify(NO.map((o) => o.n)));
+    check('a contagem por noite é a MESMA que decide o pagamento da plantonista',
+      /function poNoites[\s\S]{0,500}?acertoHospedesNaNoite\(iso\)/.test(html));
+    const htmlNoites = ctx.poCardNoites(NO);
+    check('o quadro das noites não inventa número de leitos (a casa não guarda esse dado)',
+      htmlNoites.indexOf('não guarda um número de leitos') >= 0 && !/de 8 leitos/.test(htmlNoites));
+    check('a noite mais cheia da semana fica em destaque', htmlNoites.indexOf('pm-pico') >= 0);
+    check('mordida — sem hóspede nenhum, o quadro sugere conferir a aba em vez de afirmar',
+      ctx.poCardNoites(ctx.poNoites('2099-01-01', 7)).indexOf('a estadia pode não ter sido lançada') >= 0);
+    ctx.acertoHospedesNaNoite = guardaNoite;
+
+    const guardaMed = ctx.MED_AGENDA_TODOS;
+    vm.runInContext("MED_AGENDA_TODOS = [" +
+      "{hospNome:'Toddy', key:'toddy__sophia', nome:'antibiótico', horario:'10:00'}," +
+      "{hospNome:'Toddy', key:'toddy__sophia', nome:'antibiótico', horario:'22:00'}," +
+      "{hospNome:'Ozzy', key:'dc__ozzy-lisa', nome:'pomada', horario:'12:00'}];", ctx);
+    const MED = ctx.poMedicacaoHoje();
+    check('a medicação agrupa por FILHOt e conta as doses (2 FILHOts, 3 doses)',
+      MED.nomes.length === 2 && MED.doses === 3, JSON.stringify(MED.nomes));
+    check('o hóspede leva selo e o auluno do Day Care não (a chave dc__ é quem separa)',
+      MED.por['Toddy'].hospede === true && MED.por['Ozzy'].hospede === false);
+    check('o hóspede vem primeiro na lista — a dose dele depende inteiramente da casa',
+      MED.nomes[0] === 'Toddy');
+    check('o quadro da medicação mostra o selo "hóspede"',
+      ctx.poCardMedicacao(MED).indexOf('pm-chip-hospede">hóspede') >= 0);
+    check('mordida — sem agenda lida, o quadro diz que não leu, nunca "ninguém toma remédio"',
+      ctx.poCardMedicacao({ por: {}, nomes: [], doses: 0, hospedes: 0 }).indexOf('Ainda não consegui ler') >= 0);
+    ctx.MED_AGENDA_TODOS = guardaMed;
+
+    const EA = ctx.poEA({
+      oque: 'Abobrinha + Hortelã',
+      tempos: {
+        montagem: { ini: { hora: '08:00' }, fim: { hora: '08:20' } },
+        atividade: { ini: { hora: '10:30' } },
+      },
+      registro: { oque: 'Abobrinha + Hortelã', impedidos: [{ n: 'Dolly', motivo: 'alergia a abobrinha' }], sem_resposta: 4 },
+    });
+    check('o EA lê os quatro tempos e conta os encerrados (1 de 4)',
+      EA.etapas.length === 4 && EA.feitos === 1, JSON.stringify({ n: EA.etapas.length, f: EA.feitos }));
+    check('o tempo em curso é marcado como "agora", não como feito',
+      EA.etapas[1].estado === 'agora', EA.etapas[1].estado);
+    check('quem ficou de fora do EA aparece com o motivo',
+      ctx.poCardEA(EA).indexOf('alergia a abobrinha') >= 0);
+    check('mordida — EA sem registro nenhum não afirma que ninguém participou',
+      ctx.poCardEA(ctx.poEA({})).indexOf('ainda não foi registrado') >= 0);
+
+    // ---- 10. MORDIDAS gerais — cada jeito conhecido de esta tela quebrar calada ----
+    let mordeuOp = true, ondeOp = '';
+    const mordeOp = (nome, fn) => { try { fn(); } catch (e) { mordeuOp = false; ondeOp = nome + ': ' + e.message; } };
+    mordeOp('turma nula', () => ctx.poTurma(null));
+    mordeOp('tempo nulo', () => ctx.poTempoPorPessoa(null));
+    mordeOp('comida vazia', () => ctx.poCardComida([], 0));
+    mordeOp('vet sem nada', () => ctx.poVet({ dia: '2026-09-02', vetFila: null }));
+    mordeOp('problemas sem nada', () => ctx.poProblemasDoDia({ dia: '2026-09-02', ocorrDC: null, avisosPlantao: null }));
+    mordeOp('medicação sem nada', () => ctx.poMedicacaoHoje());
+    mordeOp('EA nulo', () => ctx.poCardEA(ctx.poEA(null)));
+    mordeOp('acerto sem noites', () => ctx.acertoTotaisPor(null));
+    mordeOp('saudação sem nome', () => ctx.poSaudacaoHTML('', 0));
+    mordeOp('telefone torto', () => ctx.poTelDoTutor({ n: 'x' }));
+    check('nenhum quadro da Operação estoura com dado vazio, nulo ou torto', mordeuOp, ondeOp);
+    check('mordida — turma vazia não anuncia "0 peludinhos" na saudação',
+      ctx.poSaudacaoHTML('Márcia', 0).indexOf('passam pela casa') < 0);
+    check('mordida — telefone incompleto NÃO vira link de ligação (o discador abriria com lixo)',
+      ctx.poTelDoTutor({}) === '', ctx.poTelDoTutor({}));
+    // O "Ligar para o tutor" é o único botão do painel que age no mundo. Se o número sair
+    // torto, a Márcia liga para ninguém — e conclui que o app não serve.
+    const guardaPelGet = ctx.pelGet;
+    const tel = (v) => { ctx.pelGet = () => v; return ctx.poTelDoTutor({}); };
+    check('celular com DDD vira o número do discador com o código do país',
+      tel('(31) 98888-7777') === '+5531988887777', tel('(31) 98888-7777'));
+    check('fixo de dez dígitos também vale', tel('3134445555') === '+553134445555', tel('3134445555'));
+    check('mordida — número que JÁ tem o 55 não ganha outro (nunca "+5555319…")',
+      tel('5531988887777') === '+5531988887777', tel('5531988887777'));
+    check('mordida — número curto demais não vira link', tel('98887777') === '', tel('98887777'));
+    check('mordida — número comprido demais não vira link (não se adivinha discagem)',
+      tel('1234567890123456') === '', tel('1234567890123456'));
+    check('mordida — campo vazio ou só com pontuação não vira link',
+      tel('') === '' && tel('(  ) -') === '');
+    ctx.pelGet = guardaPelGet;
+    check('nome com HTML dentro sai escapado, nunca vira marcação',
+      ctx.poSaudacaoHTML('<script>x</script>', 3).indexOf('<script>x') < 0);
+
+    // ---- 11. vocabulário e norma culta em tudo que sai na tela ----
+    const telaOp = [ctx.poSaudacaoHTML('Márcia', 18), htmlComida, htmlAcerto, htmlNoites,
+      ctx.poCardMedicacao(MED), ctx.poCardEA(EA), ctx.poCardVet(VET), ctx.poCardProblemas(PROB),
+      ctx.poCardTempo(TP)].join(' ');
+    check('a fatia da Operação usa o vocabulário Zêluz (nenhum cachorro, cão, animal ou bicho)',
+      !/\b(cachorr|c[ãa]es?\b|animal|animais|bicho)\b/i.test(telaOp),
+      (telaOp.match(/\b(cachorr\w*|c[ãa]es?|animal|animais|bicho)\b/i) || [''])[0]);
+    check('a fatia da Operação não escreve "dono" nem "funcionário"',
+      !/\b(dono|donos|funcion[áa]ri)/i.test(telaOp),
+      (telaOp.match(/\b(dono|donos|funcion[áa]ri\w*)\b/i) || [''])[0]);
+    check('a fatia da Operação não escreve "(s)" — concordância de verdade', telaOp.indexOf('(s)') < 0);
+    check('a fatia da Operação escreve Zêluz com o circunflexo (nunca Zeluz nem Zéluz)',
+      !/Z[eé]luz/.test(telaOp), (telaOp.match(/Z[eé]luz/) || [''])[0]);
+    check('nenhum emoji na comunicação da marca',
+      !/[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}]/u.test(telaOp),
+      (telaOp.match(/[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}]/u) || [''])[0]);
+    // Cada quadro tem de apontar para a tela onde a coisa se resolve — o painel só observa,
+    // então um quadro sem saída seria um beco: a Márcia lê o problema e não tem como agir.
+    const SAIDAS = [
+      ['as faltas', ctx.poCardFaltas(T0, '2026-09-02'), 'daycare'],
+      ['o tempo do time', ctx.poCardTempo(TP), 'ritmo'],
+      ['quem não comeu', htmlComida, 'emporio'],
+      ['a veterinária', ctx.poCardVet(VET), 'cuidadovet'],
+      ['os problemas do dia', ctx.poCardProblemas(PROB), 'recepcao'],
+      ['as próximas noites', htmlNoites, 'hospedes'],
+      ['o acerto', htmlAcerto, 'acerto'],
+      ['a medicação', ctx.poCardMedicacao(MED), 'gestdia'],
+      ['o Enriquecimento', ctx.poCardEA(EA), 'eahist'],
+    ];
+    const semSaida = SAIDAS.filter(([, h, v]) => h.indexOf("irParaView('" + v + "')") < 0);
+    check('todo quadro leva para a tela onde se decide (' + SAIDAS.length + ' quadros, nenhum beco sem saída)',
+      semSaida.length === 0, semSaida.map((x) => x[0]).join(', '));
+  }
+  console.log('');
+
   // ---------------------------------------------------------------------------------
   // Norma culta — a frase do placar de quem monta a bolsa.
   // Dizia "7 de 9 bolsas desceu redondo": verbo no singular com sujeito no plural. Quem
@@ -4109,6 +4488,32 @@ async function main() {
       /function mesaCarregarDoses/.test(html));
     check('agenda vazia com leitura no meio do caminho tenta de novo antes de afirmar zero',
       /tent<3 && \(typeof MED_AGENDA_TODOS==='undefined'\|\|!MED_AGENDA_TODOS\.length\)/.test(html));
+  }
+  console.log('');
+
+  console.log('Grupo de URGENCIAS (so Adriana e Marcia) — 6 gatilhos (02/set):');
+  {
+    check('urgAvisar existe e faz dedup por dia via transaction (nao repete o mesmo alerta)',
+      (html.match(/function urgAvisar/g)||[]).length === 1 &&
+      /daycare\/urgencias-enviadas\/'\+dia\+'\/'\+ck\)\.transaction/.test(html) &&
+      /grupo:'urgencia'/.test(html));
+    check('entrevista sensivel MIGROU: vai so para urgencias, nao mais para o grupo gestao',
+      /urgAvisar\('entrevista-'\+k, texto\)/.test(html));
+    check('coco alterado (diarreia OU pastoso) e achado no corpo disparam urgencia',
+      /var _cocoRuim=\(R\.coco==='diarreia'\|\|R\.coco==='pastoso'\);/.test(html) &&
+      /urgAvisar\('corpo-'\+k\+'-'\+\(entrada\?'ent':'sai'\)/.test(html));
+    check('plantao do hospede manda o extrato urgente (vomito, nao comeu, diarreia, sangue)',
+      /urgAvisar\('plantao-'\+tipo\+'-'\+k/.test(html) &&
+      /_URG=\['vomitou'/.test(html));
+    check('medicacao nao dada (dose atrasada) dispara urgencia, uma vez por dose',
+      /function urgMedAtrasada/.test(html) &&
+      /urgAvisar\('med-'\+d\.key\+'-'\+d\.doseId/.test(html) &&
+      /d\.status==='atrasada'/.test(html));
+    check('a fila do Telegram leva o GRUPO — uma fila serve gestao e urgencia',
+      /grupo:\(grupo\|\|'gestao'\)/.test(html) &&
+      /tgAvisar\(\{grupo:\(item\.grupo\|\|'gestao'\)/.test(html));
+    check('grupo ainda nao configurado na ponte NAO queima tentativa (ate a republicacao)',
+      /var _cfg=\/PONTE_SENHA\|configurad\/i\.test\(_e\);/.test(html));
   }
   console.log('');
 
