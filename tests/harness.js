@@ -3633,6 +3633,22 @@ async function main() {
   }
   console.log('');
 
+  console.log('A resposta do tutor se trata sozinha - tela limpa (01/set):');
+  {
+    check('algTratarAuto existe: preenche so campo VAZIO e nunca sobrescreve a ficha',
+      (html.match(/function algTratarAuto/g)||[]).length === 1 &&
+      /if\(!atual\)\{ patch\[f\.campo\]/.test(html) &&
+      /divergencias\.push/.test(html));
+    check('divergencia vira linha de ATENCAO para a Gestao (a ficha NAO foi mudada)',
+      /DIVERGE DA FICHA/.test(html) && html.indexOf('a ficha N\\u00C3O foi mudada') > 0);
+    check('o mutirao roda ao carregar as respostas, um por vez',
+      /function algTratarFila/.test(html) && /algTratarFila\(\); else setTimeout/.test(html) &&
+      /setTimeout\(um, 600\)/.test(html));
+    check('o tratamento automatico deixa rastro com quem=automatico',
+      html.indexOf("quem:'autom\\u00E1tico (resposta do tutor)'") > 0 && /auto:true/.test(html));
+  }
+  console.log('');
+
   console.log('O aviso sem-check-in espera as estadias + alergia autoexplicativa (01/set):');
   {
     check('sem as estadias carregadas, ninguem e cobrado de check-in (bandeira CF_ESTADIAS_LIDO)',

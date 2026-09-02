@@ -10662,7 +10662,7 @@
   // Agora existe um carimbo: esta constante é a versão que o aparelho está rodando, e o
   // Firebase guarda a versão publicada. Quando as duas diferem, aparece o aviso — mas
   // NUNCA recarrega sozinho: recarregar no meio de um check-in perderia o trabalho.
-  const APP_VERSAO='2026-09-01-09';
+  const APP_VERSAO='2026-09-01-10';
   function vigiarVersao(){
     if(!DB) return;
     try{
@@ -19258,7 +19258,9 @@
     if(!document.getElementById('algPainel')) return;
     if(!DB){ ALG_RESP={}; algRender(); return; }
     document.getElementById('algPainel').innerHTML='<div class="card"><div class="hint">Carregando…</div></div>';
-    DB.ref('daycare/alergia-confirmada').once('value').then(function(s){ ALG_RESP=s.val()||{}; algRender(); })
+    DB.ref('daycare/alergia-confirmada').once('value').then(function(s){ ALG_RESP=s.val()||{}; algRender();
+      // cada resposta pendente se trata sozinha — a tela fica limpa (Adriana, 01/set)
+      try{ if(typeof PELUDINHOS!=='undefined'&&PELUDINHOS.length) algTratarFila(); else setTimeout(function(){ try{ algTratarFila(); }catch(e){} /* silencioso de propósito: guarda defensiva — falhar aqui não pode interromper quem chamou */ }, 3000); }catch(e){} /* silencioso de propósito: idem */ })
       .catch(function(e){
         var el=document.getElementById('algPainel'); if(!el) return;
         el.innerHTML='<div class="card" style="border-left:4px solid var(--crm-critico)">'
@@ -20027,7 +20029,7 @@
     return true;
   }
   var ALG_ATENCAO_QKS={restricao:1, atividade:1, comportamento:1, estresse:1};
-  function algAvisarGestao(k, c, p){
+  function algAvisarGestao(k, c, p, divergencias){
     try{
       var Q=(p&&typeof algPerguntas==='function')?algPerguntas(p):[];
       var linhas=[];
@@ -20036,6 +20038,9 @@
         var f=c&&c.campos&&c.campos[q.k];
         var r=f?String(f.txt||'').trim():'';
         if(r && algRespostaPreocupa(r)) linhas.push('• <b>'+medTgEsc(q.curta||q.k)+':</b> '+medTgEsc(r));
+      });
+      (divergencias||[]).forEach(function(d){
+        linhas.push('• <b>DIVERGE DA FICHA \u2014 '+medTgEsc(d.campo)+':</b> tutor disse \u201C'+medTgEsc(d.tutor)+'\u201D \u00B7 a ficha diz \u201C'+medTgEsc(d.ficha)+'\u201D (a ficha N\u00C3O foi mudada \u2014 decidir e ajustar na ficha)');
       });
       if(!linhas.length) return;
       var nome=p?pelNome(p):k, tutor=(p&&typeof pelGet==='function')?(pelGet(p,'tutor')||''):'';
@@ -20052,6 +20057,60 @@
         }).catch(function(e){ medTgGuardar(texto,String((e&&e.message)||e)); });
       });
     }catch(e){ try{ if(typeof audit==='function') audit('entrevista-atencao','NÃO avisou a Gestão sobre '+k+': '+((e&&e.message)||e),{}); }catch(x){} /* silencioso de propósito: o audit() tem bolso próprio — falhar aqui não trava a gravação */ }
+  }
+  // A resposta se trata sozinha (Adriana, 01/set: "tela limpa"). Campo vazio recebe;
+  // campo preenchido NUNCA é sobrescrito — divergência vira ATENÇÃO para a Gestão.
+  function algTratarAuto(k){
+    try{
+      var r=ALG_RESP[k];
+      if(!r || !String(r.resposta||'').trim() || r.ficha) return Promise.resolve(false);
+      var c=algCur(k), p=algPelDe(k);
+      if(!c || !p) return Promise.resolve(false);   // sem ficha não há onde gravar — fica na lista
+      var patch={}, quais=[], divergencias=[];
+      Object.keys(c.campos).forEach(function(q){
+        var f=c.campos[q];
+        var v=String(f.txt||'').trim();
+        if(!v || !f.campo) return;
+        var atual=String(f.atual||'').trim();
+        if(!atual){ patch[f.campo]=patch[f.campo]?(patch[f.campo]+' \u00B7 '+v):v; quais.push(f.campo); }
+        else if(typeof algCurConflito==='function' && algCurConflito(f)){
+          divergencias.push({campo:(typeof algCampoNome==='function'?algCampoNome(f.campo):f.campo), tutor:v, ficha:atual});
+        }
+      });
+      var ev=algEntrevistaReg(k, c, p);
+      if(ev) patch.entrevista=ev;
+      if(!Object.keys(patch).length && !divergencias.length) return Promise.resolve(false);
+      var grava=Object.keys(patch).length?setPelExtra(p, patch):Promise.resolve({ok:true});
+      if(!grava||typeof grava.then!=='function') grava=Promise.resolve({ok:true});
+      return grava.then(function(){
+        var reg={quando:(typeof zHojeISO==='function')?zHojeISO():'', quem:'autom\u00E1tico (resposta do tutor)',
+                 campos:quais, auto:true, ts:Date.now()};
+        if(DB) DB.ref('daycare/alergia-confirmada/'+k+'/ficha').set(reg).catch(function(e){ _logFalhaGrav('entrevista auto '+k, e); });
+        if(ALG_RESP[k]) ALG_RESP[k].ficha=reg;
+        algAvisarGestao(k, c, p, divergencias);
+        try{ if(typeof audit==='function') audit('alergia-ficha','tratou sozinho a resposta de '+pelNome(p)+(quais.length?(' \u2014 preencheu: '+quais.join(', ')):'')+(divergencias.length?(' \u2014 '+divergencias.length+' diverg\u00EAncia(s) avisada(s) \u00E0 Gest\u00E3o'):''),{pet:pelNome(p)}); }catch(e){} /* silencioso de propósito: o audit() tem bolso próprio — falhar aqui não trava o tratamento */
+        delete ALG_CUR[k];
+        return true;
+      });
+    }catch(e){ return Promise.resolve(false); } /* silencioso de propósito: guarda defensiva — item problemático fica na lista para a mão humana */
+  }
+  // O mutirão: trata um por vez (sem rajada) e redesenha no fim.
+  var ALG_AUTO_RODANDO=false;
+  function algTratarFila(){
+    if(ALG_AUTO_RODANDO) return;
+    var ks=Object.keys(ALG_RESP||{}).filter(function(k){
+      var r=ALG_RESP[k]; return r && String(r.resposta||'').trim() && !r.ficha;
+    });
+    if(!ks.length) return;
+    ALG_AUTO_RODANDO=true;
+    var i=0, feitos=0;
+    var um=function(){
+      if(i>=ks.length){ ALG_AUTO_RODANDO=false; if(feitos) try{ algRender(); }catch(e){} /* silencioso de propósito: redesenho de tela — falhar não pode derrubar quem chamou */ return; }
+      var k=ks[i++];
+      algTratarAuto(k).then(function(ok){ if(ok) feitos++; setTimeout(um, 600); })
+        .catch(function(){ setTimeout(um, 600); });
+    };
+    um();
   }
   function algCurGravar(k){
     var c=algCur(k), p=algPelDe(k);
