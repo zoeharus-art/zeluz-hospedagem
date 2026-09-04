@@ -11529,7 +11529,7 @@
   // Agora existe um carimbo: esta constante é a versão que o aparelho está rodando, e o
   // Firebase guarda a versão publicada. Quando as duas diferem, aparece o aviso — mas
   // NUNCA recarrega sozinho: recarregar no meio de um check-in perderia o trabalho.
-  const APP_VERSAO='2026-09-04-03';
+  const APP_VERSAO='2026-09-04-04';
   function vigiarVersao(){
     if(!DB) return;
     try{
@@ -16735,6 +16735,10 @@
           <div class="field"><label>Em adaptacao (45 dias)?</label><div class="seg gold" data-single>${segBtnsPel('adaptacao',ex.adaptacao||'',['Sim','Nao'])}</div></div>
           <div class="field"><label>Adaptacao comecou em</label><input type="date" class="cad-in" value="${escAttr(ex.adaptacao_desde||'')}" onchange="setPelExtra(pelAtual,{adaptacao_desde:this.value});renderPelFicha()" min="2015-01-01" max="2035-12-31" onkeydown="return dataSoNoCalendario(event)">
             <div class="hint" style="margin-top:4px">${adaptTextoFicha(ex)}</div></div>
+          <!-- Adriana, 04/set/2026: "hospedagem são poucas, daycare são 45 dias" — o tipo
+               decide se a contagem de 45 dias corridos roda. Ficha sem tipo é Day Care. -->
+          <div class="field"><label>Adaptacao de que?</label><div class="seg gold" data-single>${segBtnsPel('adaptacao_tipo',ex.adaptacao_tipo||'Day Care',['Day Care','Hospedagem'])}</div>
+            <div class="hint" style="margin-top:4px">Day Care conta ${ADAPT_DIAS} dias corridos. Hospedagem só registra a data — sem contagem automática.</div></div>
           <div class="field"><label>Come em comedouro lento?</label><div class="seg gold" data-single>${segBtnsPel('ansioso',ex.ansioso||'',['Sim','Nao'])}</div></div>
           <!-- MICROCHIP (Adriana, 19/ago/2026): "preciso de relatório de cães sem microchip".
                O campo não existia — sem ele o relatório listaria todo mundo. Guarda o número;
@@ -17227,11 +17231,11 @@
           var casado=null;
           try{ casado=(typeof planCasar==='function')?planCasar(limpo):null; }catch(e){ /* nome que não casa vira entrada crua abaixo */ }
           if(casado && casado.p && !casado.ambiguo){ out.push({p:casado.p}); return; }
-          // Sem ficha casada o FILHOt ainda TEM que aparecer — mas NUNCA com o texto
-          // digitado fazendo papel de nome válido (fantasmas "atnoio"/"Maya/Spitz" no
-          // celular, 04/set/2026). A entrada crua leva o texto lançado (txt) e quem decide
-          // como mostrar é turmaDoDia(): re-casa com o cadastro na hora de desenhar e, se
-          // ainda não casar, vira "Não identificado — conferir na recepção".
+          // Sem ficha casada, NUNCA com o texto digitado fazendo papel de nome válido
+          // (fantasmas "atnoio"/"Maya/Spitz" no celular, 04/set/2026). A entrada crua leva
+          // o texto lançado (txt) e quem decide é turmaDoDia(): re-casa com o cadastro na
+          // hora de desenhar e, se ainda não casar, fica FORA da turma e vira aviso à
+          // recepção (dcNaoCasadosFaixaHTML) — regra dura de 04/set: só quem tem cadastro.
           var nome=limpo.split('/')[0].trim(), raca=(limpo.split('/')[1]||'').trim();
           if(nome) out.push({p:{n:nome, raca:raca, tutor:'', freq:campo, dias:[], nasc:''}, cru:true, txt:limpo});
         });
@@ -17239,6 +17243,63 @@
       });
       try{ dcRedesenharAtividade(); }catch(e){ /* a tela seguinte redesenha sozinha */ }
     }).catch(function(e){ DC_DASH_TURMA.quando=0; _logLeituraFalhou('daycare/dashboard (turma do dia)', e); });
+  }
+  // ===== LANÇAMENTO SEM CADASTRO — Adriana, 04/set/2026 ===========================
+  // "Nome, raça e nome do tutor têm obrigatoriedade de bater. Impeça erros... precisa
+  //  aparecer para a recepção que o peludinho não existe, perguntando se é erro —
+  //  teremos que ter relatório de tudo."
+  // Quem não casa NÃO entra na turma. Em troca, o texto lançado vira AVISO nas telas
+  // que a recepção JÁ abre no fluxo do dia (Lançamentos do dia + atividades do Day
+  // Care). E só se acusa "não existe" com o cadastro JÁ carregado (CARTEIRA_CARREGADA)
+  // — acusar por dado que ainda não chegou seria mentir (a corrida do boot).
+  function dcLancamentosNaoCasados(){
+    var out=[], vistos={};
+    try{
+      if(typeof CARTEIRA_CARREGADA==='undefined'||!CARTEIRA_CARREGADA) return out;
+      var hoje=(typeof zHojeISO==='function')?zHojeISO():'';
+      if(!DC_DASH_TURMA || DC_DASH_TURMA.dia!==hoje) return out;   // retrato de outro dia não acusa ninguém
+      ['reposicao','avulso'].forEach(function(campo){
+        (DC_DASH_TURMA[campo]||[]).forEach(function(it){
+          if(!it||!it.cru) return;
+          var txt=String(it.txt||((it.p&&it.p.n)||'')).trim(); if(!txt) return;
+          var m=null;
+          try{ m=(typeof planCasar==='function')?planCasar(txt):null; }catch(e){ /* sem casar, o aviso assume */ }
+          if(m && m.p && !m.ambiguo) return;                        // casa agora: é gente da turma
+          var ch=(typeof jsNorm==='function')?jsNorm(txt):txt.toLowerCase();
+          if(vistos[ch]) return; vistos[ch]=1;
+          out.push({txt:txt, campo:campo});
+        });
+      });
+    }catch(e){ _logFalhaGrav('dcLancamentosNaoCasados', e); }
+    return out;
+  }
+  // "Relatório de tudo": cada texto acusado deixa UM rastro por dia na auditoria.
+  var _dcNaoCasAvisados={};
+  function dcNaoCasadosAuditar(lista){
+    try{
+      var hoje=(typeof zHojeISO==='function')?zHojeISO():'';
+      (lista||[]).forEach(function(x){
+        var ch=hoje+'|'+x.txt;
+        if(_dcNaoCasAvisados[ch]) return; _dcNaoCasAvisados[ch]=1;
+        if(typeof audit==='function') audit('dashboard-daycare','lançamento sem cadastro: "'+x.txt+'" ('+(x.campo==='avulso'?'Avulso':'Reposição')+') — fora da turma, recepção avisada',{pet:x.txt});
+      });
+    }catch(e){ /* silencioso de propósito: o rastro é desejável, mas nunca pode travar o desenho da tela */ }
+  }
+  // A faixa. `noLancamento`=true quando ela está NA tela de Lançamentos do dia — lá a
+  // correção é na própria tela ("tirar" e lançar de novo), então sobra o botão do Cadastro.
+  function dcNaoCasadosFaixaHTML(noLancamento){
+    var L=dcLancamentosNaoCasados(); if(!L.length) return '';
+    dcNaoCasadosAuditar(L);
+    return '<div class="dc-faltas"><strong>Lançamento sem cadastro ('+L.length+'):</strong> '
+      +L.map(function(x){ return '"'+escAttr(x.txt)+'"'; }).join(' · ')
+      +'<div style="font-weight:600;margin-top:4px">Não existe no cadastro do app — é erro de digitação ou FILHOt novo? '
+      +'Enquanto não casar com uma ficha, NÃO entra na turma, no check-in nem no almoço.</div>'
+      +'<div style="margin-top:7px;display:flex;gap:6px;flex-wrap:wrap;align-items:center">'
+      +(noLancamento
+        ? '<span style="font-weight:600">Toque em "tirar" no lançamento errado e lance de novo escolhendo a ficha certa — ou crie a ficha:</span>'
+        : '<button type="button" class="btn" style="padding:6px 12px;font-size:12.5px;font-weight:800" onclick="abrirItemDoMenu(\'dashdc\')">Corrigir o lançamento</button>')
+      +'<button type="button" class="btn btn-gold" style="padding:6px 12px;font-size:12.5px;font-weight:800" onclick="abrirItemDoMenu(\'ficha\')">Criar a ficha no Cadastro</button>'
+      +'</div></div>';
   }
   function turmaDoDia(){
     const base=PELUDINHOS.map((p,i)=>({p,i})).filter(o=>(pelDias(o.p).indexOf(dcDia)>=0 || ehMoradorZeluz(o.p)) && !pelInativo(o.p));
@@ -17267,21 +17328,24 @@
             // A linha crua ("atnoio", "Maya/Spitz") re-tenta casar AGORA com o cadastro —
             // na hora da leitura dos lançamentos o cadastro podia ainda não ter chegado.
             let rec=null;
-            try{ rec=(typeof planCasar==='function')?planCasar(it.txt||it.p.n):null; }catch(e){ /* segue como não identificado */ }
+            try{ rec=(typeof planCasar==='function')?planCasar(it.txt||it.p.n):null; }catch(e){ /* segue sem casar */ }
             if(rec && rec.p && !rec.ambiguo){ uso={p:rec.p}; }
             else{
-              // Texto digitado que não casa com ficha NUNCA vira nome válido na tela.
-              const txt=it.txt||((it.p.n||'')+(it.p.raca?('/'+it.p.raca):''));
-              uso={ p:{n:'Não identificado', raca:'conferir na recepção — lançado como "'+txt+'"',
-                       tutor:txt, freq:campo, dias:[], nasc:''}, cru:true, naoIdentificado:true };
+              // 04/set/2026 — Adriana: "os únicos que podem aparecer nessa tabela é quem
+              // tem cadastro no app; se não tiver, não pode estar lá". Texto que não casa
+              // com ficha NÃO entra na turma — nem no check-in, na chamada, no almoço,
+              // nos contadores, nem como card. Ele vira AVISO à recepção
+              // (dcNaoCasadosFaixaHTML), que só acusa com o cadastro já carregado.
+              // Bloqueio visível, nunca mudo — a faixa mora nas telas do fluxo do dia.
+              return;
             }
           }
           if(!uso.p) return;
           const k=dcKey(uso.p.n,uso.p.tutor);
-          if(jaTem.has(k)||(!uso.cru&&pelInativo(uso.p))) return;
+          if(jaTem.has(k)||pelInativo(uso.p)) return;
           jaTem.add(k);
           const i=PELUDINHOS.indexOf(uso.p);
-          base.push({ p:uso.p, i:(i>=0?i:'pl'+k), daPlanilha:campo, naoIdentificado:!!uso.naoIdentificado });
+          base.push({ p:uso.p, i:(i>=0?i:'pl'+k), daPlanilha:campo });
         });
       });
     }
@@ -17558,7 +17622,13 @@
   //  nenhuma — o time para de acreditar no que lê.
   // 04/set/2026 — Adriana: a adaptação passa de 30 para 45 dias. E adaptação VENCIDA sai
   // sozinha da conta e das pendências — ninguém precisa "decidir" nada: passou do prazo,
-  // acabou. Pendência mesmo, só quando está marcada Sim SEM data de início.
+  // acabou.
+  // 04/set/2026 (à noite) — regra DEFINITIVA dela: "são 45 dias CORRIDOS. Começou 04/09 →
+  // 04/10 fez um mês, 19/10 faz 45 dias." Sem conta de frequência semanal. E o "sem data"
+  // DEIXOU de ser pendência: sem o dia 1 o app não afirma nada, e o nome NÃO aparece em
+  // quadro nenhum de adaptação — a data agora nasce no próprio lançamento de Adaptação
+  // (Lançamentos do dia). Adaptação de HOSPEDAGEM só registra data e tipo: são poucas e a
+  // Adriana não deu duração — o app não inventa contagem.
   const ADAPT_DIAS=45;
   // ⚠ 20/ago/2026 — contava em milissegundos a partir do meio-dia, então o resultado mudava
   // conforme a HORA da consulta: quem já tinha 31 dias aparecia com 30 se alguém abrisse o
@@ -17573,20 +17643,29 @@
       return Math.round((hoje-ini)/86400000);
     }catch(e){ return null; }
   }
-  // Só é adaptação de verdade quando está marcada E dentro dos 30 dias contados da data.
+  // Só é adaptação de verdade quando está marcada E dentro dos 45 dias contados da data.
+  // Tipo Hospedagem NUNCA conta: fica registrada (data + tipo) e só.
   function pelEmAdaptacao(ex){
     if(!ex||ex.adaptacao!=='Sim') return false;
+    if(String((ex&&ex.adaptacao_tipo)||'')==='Hospedagem') return false;
     var n=adaptDiasDe(ex);
     if(n===null) return false;              // sem data = o app NÃO afirma
     return n>=0 && n<=ADAPT_DIAS;
   }
-  // Marcada como Sim mas SEM data de início: sem o dia 1 não há contagem — só isso é
-  // pendência. A vencida (passou dos 45 dias) sai SOZINHA de toda conta, sem pedir decisão.
-  function adaptPendente(ex){
-    if(!ex||ex.adaptacao!=='Sim') return false;
-    return adaptDiasDe(ex)===null;
+  // Os marcos de encantamento: 30 dias fecha um mês, 45 fecha a adaptação. É a régua das
+  // ligações de boas-vindas da Márcia no Painel da Operação (04/09 → 04/10 → 19/10).
+  function adaptMarcos(ex){
+    var d=String((ex&&ex.adaptacao_desde)||'').slice(0,10);
+    if(!/^\d{4}-\d{2}-\d{2}$/.test(d)) return null;
+    if(typeof orcMaisDias!=='function') return null;
+    return {m30:orcMaisDias(d,30), m45:orcMaisDias(d,45)};
   }
   function adaptTextoFicha(ex){
+    if(String((ex&&ex.adaptacao_tipo)||'')==='Hospedagem'){
+      var dh=String((ex&&ex.adaptacao_desde)||'').slice(0,10);
+      return dh?('Adaptação de Hospedagem, começada em '+((typeof fmtBR==='function'&&fmtBR(dh))||dh)+'. Fica registrada — sem contagem automática.')
+               :'Adaptação de Hospedagem: registre a data de início. Não há contagem automática.';
+    }
     if(!ex||ex.adaptacao!=='Sim') return 'Só vale quando "Em adaptação" está como Sim.';
     var n=adaptDiasDe(ex);
     if(n===null) return 'Sem esta data o time NÃO vê o aviso de adaptação — o app não afirma o que não sabe.';
@@ -17598,18 +17677,16 @@
   function renderAdaptBanner(){ const el=document.getElementById('dcAdaptBanner'); if(!el) return;
     const turma=turmaDoDia().filter(o=>typeof o.i==='number');
     const emAdapt=turma.filter(o=>pelEmAdaptacao(pelExtra(o.p)));
-    const pendentes=turma.filter(o=>adaptPendente(pelExtra(o.p)));
     let h='';
     if(emAdapt.length){
       h+=`<div class="adapt-banner">&#9733; EM ADAPTACAO HOJE: ${emAdapt.map(o=>{
             const n=adaptDiasDe(pelExtra(o.p)); return o.p.n+(n!=null?` (${n}º dia de ${ADAPT_DIAS})`:''); }).join(', ')} &mdash; foco de todo o time!</div>`;
     }
-    // Aviso só para quem resolve — o time não precisa ver pendência de cadastro.
-    const r=document.body.dataset.role;
-    if(pendentes.length&&(r==='gestao'||r==='diretoria'||r==='supervisor')){
-      h+=`<div class="dc-meia"><strong>Adaptação sem data de início (${pendentes.length}):</strong> ${pendentes.map(o=>o.p.n).join(', ')}.
-        <div style="font-weight:600;margin-top:4px">Estão marcados como "em adaptação" na ficha, mas sem a data de início — sem o dia 1 não há contagem, e o time NÃO vê o aviso deles. Abra a ficha e lance a data.</div></div>`;
-    }
+    // 04/set/2026 — o aviso de "adaptação sem data" saiu de TODOS os quadros, por decisão
+    // da Adriana: sem data não é pendência, é um campo que a régua simplesmente ignora.
+    // A faixa que vive aqui agora é outra: lançamento do dia que NÃO existe no cadastro
+    // (aparece nas telas que a recepção já abre — chamada, check-in, almoço, pertences).
+    try{ if(typeof dcNaoCasadosFaixaHTML==='function') h+=dcNaoCasadosFaixaHTML(false); }catch(e){} /* silencioso de propósito: redesenho de tela — falhar não pode derrubar quem chamou */
     el.innerHTML=h;
   }
   let genMarcas={}, dcBuscaVal='', dcBanho={};
@@ -20077,8 +20154,8 @@
   // ===== ADAPTAÇÃO NO INÍCIO — Adriana, 20/ago e 04/set/2026 =====================
   // 20/ago: "esse tipo de informação precisa aparecer no meu dashboard e no da Amanda."
   // 04/set: o quadro vira a lista de quem ESTÁ em adaptação (nome + "Xº dia de 45").
-  // A vencida saiu SOZINHA da conta (adaptPendente não a considera mais) — ninguém decide
-  // nada. "Sem data" continua como pendência pequena: sem o dia 1 não há contagem.
+  // A vencida sai SOZINHA da conta — ninguém decide nada. E o "sem data" saiu de vez
+  // (decisão dela, 04/set à noite): nem pendência é mais. A data nasce no lançamento.
   function adaptEmCursoLista(){
     var out=[];
     try{
@@ -20092,44 +20169,20 @@
     }catch(e){ _logFalhaGrav('adaptEmCursoLista', e); }
     return out.sort(function(a,b){ return (b.dias||0)-(a.dias||0) || jsNorm(a.nome).localeCompare(jsNorm(b.nome)); });
   }
-  function adaptPendentesLista(){
-    var out=[];
-    try{
-      (PELUDINHOS||[]).forEach(function(p){
-        if(typeof pelInativo==='function'&&pelInativo(p)) return;
-        var ex=(typeof pelExtra==='function'?pelExtra(p):{})||{};
-        if(typeof adaptPendente!=='function'||!adaptPendente(ex)) return;
-        out.push({nome:pelNome(p), semData:true, dias:null});
-      });
-    }catch(e){ _logFalhaGrav('adaptPendentesLista', e); }
-    return out.sort(function(a,b){ return jsNorm(a.nome).localeCompare(jsNorm(b.nome)); });
-  }
   function renderAdaptPendentes(){
     var el=document.getElementById('adaptPendCard'); if(!el) return;
     if(typeof PELUDINHOS==='undefined'){ el.innerHTML=''; return; }
-    var E=adaptEmCursoLista(), P=adaptPendentesLista();
-    if(!E.length && !P.length){ el.innerHTML=''; return; }   // nada a dizer: não ocupa espaço à toa
-    var h='';
-    if(E.length){
-      h+='<div class="card" style="border-left:4px solid var(--z-gold)">'
-        +'<h2 style="font-size:18px">Em adaptação ('+E.length+')</h2>'
-        +'<div class="hint">Os primeiros '+ADAPT_DIAS+' dias — foco de todo o time. Quando passa do prazo, sai desta lista sozinho.</div>'
-        +'<div style="margin-top:8px;font-weight:700;color:var(--z-blue);font-size:14.5px">'
-        +E.map(function(x){
-          return escAttr(x.nome)+' <span style="font-size:12px;font-weight:600;color:var(--muted)">('
-            +(x.dias!=null?(x.dias+'º dia de '+ADAPT_DIAS):'em adaptação')+')</span>';
-        }).join(' · ')
-        +'</div>';
-    } else {
-      h+='<div class="card" style="border-left:4px solid var(--z-gold)">';
-    }
-    if(P.length){
-      h+='<div class="hint" style="margin-top:'+(E.length?'10px':'0')+'">'
-        +'<strong>Sem data de início ('+P.length+'):</strong> '
-        +P.map(function(x){ return escAttr(x.nome); }).join(', ')
-        +' — marcados como "em adaptação" na ficha, mas sem o dia 1 não há contagem. Lance a data na ficha.</div>';
-    }
-    h+='</div>';
+    var E=adaptEmCursoLista();
+    if(!E.length){ el.innerHTML=''; return; }   // nada a dizer: não ocupa espaço à toa
+    var h='<div class="card" style="border-left:4px solid var(--z-gold)">'
+      +'<h2 style="font-size:18px">Em adaptação ('+E.length+')</h2>'
+      +'<div class="hint">Os primeiros '+ADAPT_DIAS+' dias corridos — foco de todo o time. Quando passa do prazo, sai desta lista sozinho.</div>'
+      +'<div style="margin-top:8px;font-weight:700;color:var(--z-blue);font-size:14.5px">'
+      +E.map(function(x){
+        return escAttr(x.nome)+' <span style="font-size:12px;font-weight:600;color:var(--muted)">('
+          +(x.dias!=null?(x.dias+'º dia de '+ADAPT_DIAS):'em adaptação')+')</span>';
+      }).join(' · ')
+      +'</div></div>';
     el.innerHTML=h;
   }
   // ===== ANIVERSARIANTES — Adriana, 20/ago/2026 ==================================
@@ -22762,6 +22815,12 @@
     {v:'BOLT', t:'Bolt'}
   ];
 
+  // O tipo da adaptação — em MAIÚSCULA porque é assim que a célula da planilha fala.
+  var DASH_ADAPT_TIPO=[
+    {v:'DAY CARE',   t:'Day Care (45 dias corridos)'},
+    {v:'HOSPEDAGEM', t:'Hospedagem (só registra)'}
+  ];
+
   var DASH_ITENS=[
     {k:'reposicao',     t:'Reposição',                  col:'Reposição',                      icone:'🔄'},
     {k:'banho',         t:'Banho',                      col:'Banho',                          colHora:'Hora Banho',      hora:true, icone:'🛁', campos:[
@@ -22784,7 +22843,11 @@
       {c:'veio', rot:'A coleira veio?',       ops:DASH_COL_VEIO, obrig:true},
       {c:'onde', rot:'Onde vai ser trocada?', ops:DASH_COL_ONDE, obrig:true}]},
     {k:'hidratacao',    t:'Hidratação patinha e focinho',col:'Hidratação patinha e Focinho',  icone:'💧'},
-    {k:'adaptacao',     t:'Adaptação',                  col:'Adaptação',                      icone:'🌟'},
+    // Adaptação (Adriana, 04/set/2026): o lançamento é quem dá o dia 1 — pede a DATA de
+    // início e o TIPO. Day Care dispara a contagem de 45 dias corridos na ficha;
+    // Hospedagem só registra data e tipo (ela não deu duração — o app não inventa).
+    {k:'adaptacao',     t:'Adaptação',                  col:'Adaptação',                      icone:'🌟', dataIni:true, campos:[
+      {c:'tipo', rot:'Adaptação de quê?', ops:DASH_ADAPT_TIPO, obrig:true}]},
     {k:'faltas',        t:'Falta avisada',              col:'Faltas Avisadas',                icone:'⚠️'},
     {k:'festa',         t:'Fará festa na Zêluz',        col:'Festa na Zêluz - Auniversário)',  icone:'🎉', campos:[
       {c:'tema', rot:'Tema da festa', ops:DASH_TEMAS, obrig:true}]}
@@ -23047,9 +23110,12 @@
     try{ dashSincronizarSeletor(); }catch(e){} /* silencioso de propósito: guarda defensiva — falhar aqui não pode interromper quem chamou */
     var av=document.getElementById('dashPonteAviso');
     if(av){
-      av.innerHTML=(DASH_PONTE&&DASH_PONTE.url)?''
+      av.innerHTML=((DASH_PONTE&&DASH_PONTE.url)?''
         : '<div class="card" style="border-left:4px solid var(--crm-atencao)"><strong>A ponte com a planilha ainda não foi ligada.</strong>'
-          +'<div class="hint" style="margin-top:3px">Pode lançar do mesmo jeito: fica tudo guardado aqui. Só que a TV do Day Care ainda lê a planilha, então enquanto a ponte não estiver ligada alguém precisa escrever lá à mão. O passo a passo está no arquivo <em>integracao-daycare/Codigo.gs</em>.</div></div>';
+          +'<div class="hint" style="margin-top:3px">Pode lançar do mesmo jeito: fica tudo guardado aqui. Só que a TV do Day Care ainda lê a planilha, então enquanto a ponte não estiver ligada alguém precisa escrever lá à mão. O passo a passo está no arquivo <em>integracao-daycare/Codigo.gs</em>.</div></div>')
+        // O lançamento que não existe no cadastro é avisado AQUI, onde ele nasceu —
+        // é a tela que a recepção já está olhando quando lança (Adriana, 04/set/2026).
+        +((typeof dcNaoCasadosFaixaHTML==='function')?dcNaoCasadosFaixaHTML(true):'');
     }
     var el=document.getElementById('dashBlocos'); if(!el) return;
     // Guardar o que está digitado: escolher uma quantidade redesenha a tela inteira, e sem
@@ -23057,7 +23123,8 @@
     var __manter={};
     DASH_ITENS.forEach(function(i){
       var b=document.getElementById('dashB_'+i.k), h=document.getElementById('dashH_'+i.k);
-      __manter[i.k]={b:(b&&b.value)||'', h:(h&&h.value)||''};
+      var dt=document.getElementById('dashD_'+i.k);
+      __manter[i.k]={b:(b&&b.value)||'', h:(h&&h.value)||'', d:(dt&&dt.value)||''};
     });
     el.innerHTML=DASH_ITENS.map(function(it){
       var lista=DASH_DADOS[it.k]||{};
@@ -23089,6 +23156,7 @@
       var m=__manter[i.k]||{};
       var b=document.getElementById('dashB_'+i.k); if(b&&m.b){ b.value=m.b; try{ dashSugerir(i.k); }catch(e){} /* silencioso de propósito: guarda defensiva — falhar aqui não pode interromper quem chamou */ }
       var h=document.getElementById('dashH_'+i.k); if(h&&m.h) h.value=m.h;
+      var dt=document.getElementById('dashD_'+i.k); if(dt&&m.d) dt.value=m.d;
     });
   }
 
@@ -23097,6 +23165,7 @@
   // ESCOLHE o FILHOt: fica na tela quem foi escolhido, o que ainda falta responder e um
   // botão que mostra, em português, exatamente o que vai ser escrito na planilha.
   var DASH_SEL={};    // {item: 'Nome/Raça'} — quem está escolhido, ainda não lançado
+  var DASH_SEL_I={};  // {item: índice em PELUDINHOS} — a FICHA escolhida (nome sozinho não identifica ninguém)
   var DASH_DET={};    // {item: {campo: valor}} — a chave existir = a pessoa escolheu
   function dashDet(k){ DASH_DET[k]=DASH_DET[k]||{}; return DASH_DET[k]; }
   // Campo que depende da resposta de outro. Sem trouxe shampoo, "onde está" não existe:
@@ -23115,13 +23184,14 @@
     (it&&it.campos||[]).forEach(function(c){ if(c.dep && !dashCampoAtivo(k,c)) delete d[c.c]; });
     try{ renderDash(); }catch(e){} /* silencioso de propósito: redesenho de tela — falhar não pode derrubar quem chamou */
   }
-  function dashEscolher(k, rot){
+  function dashEscolher(k, rot, idx){
     DASH_SEL[k]=rot; DASH_DET[k]={};
+    if(typeof idx==='number'&&idx>=0) DASH_SEL_I[k]=idx; else delete DASH_SEL_I[k];
     var b=document.getElementById('dashB_'+k); if(b) b.value='';
     try{ renderDash(); }catch(e){} /* silencioso de propósito: redesenho de tela — falhar não pode derrubar quem chamou */
   }
   function dashTrocarFilhot(k){
-    delete DASH_SEL[k]; DASH_DET[k]={};
+    delete DASH_SEL[k]; delete DASH_SEL_I[k]; DASH_DET[k]={};
     try{ renderDash(); }catch(e){} /* silencioso de propósito: redesenho de tela — falhar não pode derrubar quem chamou */
   }
   // O texto entre parênteses: "(1 COMPRIMIDO · NA BOLSA)". Campo escolhido como vazio
@@ -23142,6 +23212,12 @@
       var _h=''; try{ _h=String((document.getElementById('dashH_'+k)||{}).value||''); }catch(e){} /* silencioso de propósito: guarda defensiva — se o valor não vier, o anterior continua valendo */
       if(!_h) falta.push('Horário');
     }
+    // A data de início mora no painel, então é aqui que ela é cobrada — o botão não pode
+    // dizer "Lançar" e depois recusar (mesma regra do horário).
+    if(it.dataIni && DASH_SEL[k]){
+      var _d=''; try{ _d=String((document.getElementById('dashD_'+k)||{}).value||''); }catch(e){} /* silencioso de propósito: guarda defensiva — se o valor não vier, o anterior continua valendo */
+      if(!_d) falta.push('Data de início');
+    }
     it.campos.forEach(function(c){
       if(!dashCampoAtivo(k,c)) return;
       if(c.obrig && !d.hasOwnProperty(c.c)) falta.push(c.rot);
@@ -23160,6 +23236,16 @@
       h+='<label class="cad-lb" style="margin-top:9px;display:block">Horário</label>'
         +'<input type="time" class="cad-in" id="dashH_'+it.k+'" style="max-width:140px"'
         +' onchange="try{renderDash()}catch(e){}/* silencioso de propósito: redesenho de tela */">';
+    }
+    // A data de início da adaptação: é ela que dá o dia 1 da contagem de 45 dias corridos
+    // (Adriana, 04/set/2026: "começou 04/09 → 04/10 fez um mês, 19/10 faz 45 dias").
+    // Já vem com o dia que está sendo lançado — a recepção só mexe se começou antes.
+    if(it.dataIni){
+      h+='<label class="cad-lb" style="margin-top:9px;display:block">Começou em</label>'
+        +'<input type="date" class="cad-in" id="dashD_'+it.k+'" style="max-width:170px" value="'+escAttr(dashDia())+'"'
+        +' min="2015-01-01" max="2035-12-31" onkeydown="return dataSoNoCalendario(event)"'
+        +' onchange="try{renderDash()}catch(e){}/* silencioso de propósito: redesenho de tela */">'
+        +'<div class="hint" style="margin-top:3px">A data vai para a ficha do FILHOt e começa a contagem.</div>';
     }
     it.campos.forEach(function(c){
       if(!dashCampoAtivo(it.k,c)) return;
@@ -23203,15 +23289,57 @@
     if(!achados.length){ box.innerHTML='<div class="hint">Ninguém com esse nome no cadastro.</div>'; return; }
     box.innerHTML=achados.map(function(p){
       var rot=dashNomeRaca(p), tut=((typeof pelGet==='function')?pelGet(p,'tutor'):'')||p.tutor||'';
+      // O índice da ficha viaja junto: quando o lançamento precisa GRAVAR na ficha
+      // (adaptação), o vínculo é com a ficha escolhida — nome sozinho não identifica ninguém.
+      var idx=PELUDINHOS.indexOf(p);
       return '<button class="btn" style="background:var(--z-cream-warm);color:var(--z-blue);border:1.5px solid var(--line);padding:6px 12px;font-size:12.5px" '
-        +'onclick="'+((dashItem(k)||{}).campos?'dashEscolher':'dashLancar')+'(\''+k+'\',\''+escAttr(rot).replace(/'/g,"\\'")+'\')">'+escAttr(rot)
+        +'onclick="'+((dashItem(k)||{}).campos?'dashEscolher':'dashLancar')+'(\''+k+'\',\''+escAttr(rot).replace(/'/g,"\\'")+'\','+idx+')">'+escAttr(rot)
         +(tut?('<span style="color:var(--muted);font-weight:600"> · '+escAttr(tut)+'</span>'):'')+'</button>';
     }).join('');
+  }
+  // O que o lançamento de Adaptação grava na ficha (Adriana, 04/set/2026):
+  // DAY CARE liga a contagem dos 45 dias corridos (adaptacao:'Sim' + a data);
+  // HOSPEDAGEM só registra data e tipo — ela não deu duração, o app não inventa contagem.
+  function dashAdaptPatch(tipo, dataIni){
+    var t=(String(tipo||'').toUpperCase()==='HOSPEDAGEM')?'Hospedagem':'Day Care';
+    var patch={adaptacao_desde:String(dataIni||'').slice(0,10), adaptacao_tipo:t};
+    if(t==='Day Care') patch.adaptacao='Sim';
+    return patch;
+  }
+  // Grava o dia 1 na ficha do FILHOt — o MESMO campo que a ficha usa (adaptacao_desde).
+  // Sem ficha casada não grava em silêncio: cartaz na tela + rastro na auditoria.
+  function dashAdaptGravarFicha(p, tipo, dataIni, rotulo){
+    if(!p){
+      if(typeof audit==='function') audit('dashboard-daycare','adaptação lançada SEM ficha casada: '+(rotulo||'')+' — a data NÃO foi para a ficha',{pet:rotulo||''});
+      try{ zAlertao('A data não foi para a ficha',
+        ['Não achei a ficha de "'+(rotulo||'')+'" no cadastro. O lançamento ficou registrado, mas a data de início da adaptação não tem onde morar.',
+         'Abra o Cadastro de Peludinhos e lance a data na ficha certa.']); }catch(e){} /* silencioso de propósito: guarda defensiva — falhar aqui não pode interromper quem chamou */
+      return;
+    }
+    var patch=dashAdaptPatch(tipo, dataIni);
+    try{
+      setPelExtra(p, patch).then(function(r){
+        if(!(r&&r.ok)) _logFalhaGrav('adaptação na ficha de '+((typeof pelNome==='function'&&pelNome(p))||p.n||''), (r&&r.erro)||new Error('gravação recusada'));
+      });
+      if(typeof audit==='function') audit('dashboard-daycare','adaptação ('+patch.adaptacao_tipo+') começa em '+patch.adaptacao_desde+' — gravada na ficha',{alvo:(typeof pelKey==='function'?pelKey(p):''), pet:(p.n||'')});
+    }catch(e){ _logFalhaGrav('adaptação na ficha (chamada)', e); }
   }
   function dashLancar(k, valor){
     var it=dashItem(k); if(!it||!DB) return;
     var hora=it.hora?String((document.getElementById('dashH_'+k)||{}).value||''):'';
     if(it.hora&&!hora){ alert('Escolha o horário antes — é ele que faz o alarme tocar na TV.'); return; }
+    // Adaptação: a DATA de início é obrigatória — sem o dia 1 não existe contagem.
+    var dataIni=it.dataIni?String((document.getElementById('dashD_'+k)||{}).value||'').slice(0,10):'';
+    if(it.dataIni&&!/^\d{4}-\d{2}-\d{2}$/.test(dataIni)){ alert('Escolha a data de início da adaptação — é ela que começa a contagem dos '+ADAPT_DIAS+' dias.'); return; }
+    var valorBase=valor;
+    var tipoAdapt=it.dataIni?String((dashDet(k)||{}).tipo||''):'';
+    // A ficha que recebe a data é a ESCOLHIDA na busca; sem índice guardado, tenta casar
+    // o texto com o cadastro — e nunca aceita casamento ambíguo (nome não identifica ninguém).
+    var pAdapt=null;
+    if(it.dataIni){
+      if(typeof DASH_SEL_I[k]==='number') pAdapt=PELUDINHOS[DASH_SEL_I[k]]||null;
+      if(!pAdapt){ try{ var mAd=planCasar(valorBase); if(mAd&&mAd.p&&!mAd.ambiguo) pAdapt=mAd.p; }catch(e){} /* silencioso de propósito: sem casamento o aviso de ficha não casada assume */ }
+    }
     // O detalhe vai na MESMA célula: "Olivia/SRD (2 COMPRIMIDOS · NA BOLSA)". É o que a
     // recepção já escrevia à mão, e é assim que a TV lê.
     if(it.campos){
@@ -23230,10 +23358,12 @@
       var b=document.getElementById('dashB_'+k); if(b) b.value='';
       var s=document.getElementById('dashS_'+k); if(s) s.innerHTML='';
       // zera tudo: a dose da Olivia não pode grudar no próximo FILHOt
-      if(it.campos){ DASH_DET[k]={}; delete DASH_SEL[k]; }
+      if(it.campos){ DASH_DET[k]={}; delete DASH_SEL[k]; delete DASH_SEL_I[k]; }
       DC_DASH_TURMA.quando=0;   // o avulso lançado agora entra na turma na hora, não em 60s
       renderDash();
       if(typeof audit==='function') audit('dashboard-daycare','lançou '+valor+' em '+it.t,{pet:valor});
+      // Adaptação: o lançamento é quem dá o dia 1 — grava a data (e o tipo) na ficha.
+      if(it.dataIni) dashAdaptGravarFicha(pAdapt, tipoAdapt, dataIni, valorBase);
       dashEspelhar(k, ref.key, reg, 'lancar');
     }).catch(function(e){ alert('Não salvou: '+((e&&e.message)||e)); });
   }
@@ -23377,9 +23507,10 @@
         }
         // --- Auluno com restrição (só quem vem nesse dia — a TV é do dia)
         if(veio && dashAutoTemRestricao(ex)) out.aulunosRestr.push(dashAutoTextoRestricao(p,ex));
-        // --- Adaptação: dentro dos 30 dias, e vindo nesse dia
+        // --- Adaptação: dentro dos 45 dias corridos, e vindo nesse dia.
+        // Hospedagem fica de fora: registra-se data e tipo, mas não há contagem (04/set/2026).
         var ad=String(ex.adaptacao_desde||'').slice(0,10);
-        if(veio && /^\d{4}-\d{2}-\d{2}$/.test(ad)){
+        if(veio && String(ex.adaptacao_tipo||'')!=='Hospedagem' && /^\d{4}-\d{2}-\d{2}$/.test(ad)){
           var da=null; try{ da=Math.round((new Date(iso+'T12:00:00')-new Date(ad+'T12:00:00'))/86400000); }catch(e){} /* silencioso de propósito: guarda defensiva — se o valor não vier, o anterior continua valendo */
           if(da!==null && da>=0 && da<=DASH_AUTO_ADAPT) out.adaptacao.push(dashNomeRaca(p));
         }
@@ -30564,7 +30695,7 @@
   // ---- 4 · o que a veterinária precisa analisar ----
   function poCardVet(itens){
     var presos=itens.filter(function(x){ return x.tipo==='preso'; }).length;
-    var h='<article class="pm-card pm-rv pm-c6">'
+    var h='<article class="pm-card pm-rv pm-c4">'
       +'<h3 class="pm-tit">Questões para a Veterinária analisar</h3>'
       +'<p class="pm-sub">Reavaliação vencida, remédio que chegou ao fim sem ciência e o aviso de alteração no corpo que não saiu.</p>';
     if(!itens.length) return h+poVazioHTML('Nada aguardando a veterinária.','Nenhuma reavaliação vencida e nenhum aviso preso.')
@@ -30590,7 +30721,7 @@
     var abertos=lista.filter(function(x){ return !x.resolvido; });
     var nDC=lista.filter(function(x){ return x.lado==='Day Care'; }).length;
     var nAU=lista.length-nDC;
-    var h='<article class="pm-card pm-rv pm-c6">'
+    var h='<article class="pm-card pm-rv pm-c4">'
       +'<h3 class="pm-tit">Problemas do dia — os dois grupos</h3>'
       +'<p class="pm-sub">O que o Day Care e a AuAulândia registraram hoje, na mesma lista: ocorrência aberta no corpinho e relatório de plantão que apontou algo.</p>';
     if(!lista.length) return h+poVazioHTML('Nenhum problema registrado hoje.','Os dois grupos passaram o dia sem ocorrência aberta.')
@@ -30619,6 +30750,65 @@
   }
 
   // ---- 6a · hóspedes: hoje e as próximas noites ----
+  // ---- 5b · as ligações de boas-vindas da adaptação (Adriana, 04/set/2026) ----
+  // "Ela precisa LIGAR para o tutor e ter uma conversa de boas-vindas, dar um ok para o
+  //  tutor — é um setor de atenção de encantar o cliente." Os marcos: 30 dias fecha um
+  //  mês, 45 fecha a adaptação (04/09 → 04/10 → 19/10, dias CORRIDOS). Cada nome fica
+  //  na lista do dia do marco até 7 dias depois — para não sumir se ninguém abriu no dia.
+  //  Este painel só observa: a ligação é humana; o botão só abre a ficha.
+  var PO_LIG_JANELA=7;
+  function poLigacoes(){
+    var out=[];
+    try{
+      if(typeof PELUDINHOS==='undefined'||!Array.isArray(PELUDINHOS)) return out;
+      PELUDINHOS.forEach(function(p,i){
+        if(typeof pelInativo==='function'&&pelInativo(p)) return;
+        var ex=(typeof pelExtra==='function'?pelExtra(p):{})||{};
+        // Hospedagem não tem contagem — logo, não tem marco (a Adriana não deu duração).
+        if(String(ex.adaptacao_tipo||'')==='Hospedagem') return;
+        var n=(typeof adaptDiasDe==='function')?adaptDiasDe(ex):null;
+        if(n===null) return;                       // sem o dia 1 não há marco — e não há acusação
+        var marco=null;
+        if(n>=30 && n<=30+PO_LIG_JANELA) marco=30;
+        else if(n>=45 && n<=45+PO_LIG_JANELA) marco=45;
+        if(!marco) return;
+        var m=(typeof adaptMarcos==='function')?adaptMarcos(ex):null;
+        out.push({ i:i, nome:(typeof pelNome==='function'?pelNome(p):p.n)||'',
+                   tutor:String(((typeof pelGet==='function')?pelGet(p,'tutor'):'')||p.tutor||'').trim(),
+                   tel:(typeof poTelDoTutor==='function')?poTelDoTutor(p):'',
+                   marco:marco, quando:m?(marco===30?m.m30:m.m45):'', dias:n });
+      });
+    }catch(e){ _logFalhaGrav('poLigacoes', e); }
+    return out.sort(function(a,b){ return (b.dias-a.dias) || jsNorm(a.nome).localeCompare(jsNorm(b.nome)); });
+  }
+  function poAbrirFichaDe(i){
+    try{ if(typeof abrirItemDoMenu==='function') abrirItemDoMenu('ficha'); }catch(e){} /* silencioso de propósito: navegação de tela — falhar não pode derrubar quem chamou */
+    try{ if(typeof abrirPeludinho==='function') abrirPeludinho(i); }catch(e){} /* silencioso de propósito: idem */
+  }
+  function poCardLigacoes(L){
+    var h='<article class="pm-card pm-rv pm-c4">'
+      +'<h3 class="pm-tit">Ligações de boas-vindas</h3>'
+      +'<p class="pm-sub">Quando o FILHOt em adaptação fecha 30 dias (um mês) e 45 dias (fim da adaptação), a senhora liga para o tutor e dá o ok de boas-vindas. Cada nome fica aqui do dia do marco até '+PO_LIG_JANELA+' dias depois.</p>';
+    if(!L.length) return h+poVazioHTML('Ninguém fecha 30 ou 45 dias nesta janela.','Quando um FILHOt em adaptação chegar ao marco, o nome aparece aqui sozinho.')+'</article>';
+    h+='<div class="pm-lista">';
+    L.slice(0,4).forEach(function(x){
+      var quandoBR=(typeof fmtBR==='function'&&x.quando)?fmtBR(x.quando):(x.quando||'');
+      h+='<div class="pm-li"><span class="pm-badge '+(x.marco===45?'pm-b-ok':'pm-b-atencao')+'">'+x.marco+' dias</span>'
+        +'<div class="pm-li-txt"><b>'+esc(x.nome)+'</b>'
+        +'<span>'+(x.tutor?('tutor '+esc(x.tutor)):'tutor não anotado na ficha')
+        +(quandoBR?(' · '+(x.marco===30?'fez um mês':'fez 45 dias')+' em '+esc(quandoBR)):'')+'</span>'
+        +'<p style="margin-top:8px">'
+        +(x.tel?('<a class="pm-bt pm-bt-ouro pm-bt-mini" href="tel:'+escAttr(x.tel)+'">Ligar para o tutor</a> '):'')
+        +'<button type="button" class="pm-bt pm-bt-mini" onclick="poAbrirFichaDe('+x.i+')">Abrir a ficha</button></p>'
+        +(x.tel?'':'<span style="margin-top:4px">Sem telefone com DDD na ficha — abra o cadastro para completar.</span>')
+        +'</div></div>';
+    });
+    h+='</div>';
+    if(L.length>4) h+='<p class="pm-sub" style="margin-top:10px">Mais '
+      +pmPlural(L.length-4,'ligação nesta janela','ligações nesta janela')+'.</p>';
+    return h+'</article>';
+  }
+
   function poCardNoites(noites){
     var h='<article class="pm-card pm-rv pm-c6">'
       +'<h3 class="pm-tit">Hóspedes: hoje e as próximas noites</h3>'
@@ -30794,10 +30984,11 @@
         + poCardComida(comida, Object.keys(d.almoco||{}).length+Object.keys(d.almoco2||{}).length)
         +'</div>'
         + poAreaHTML('A CASA INTEIRA','O que pede a sua decisão',
-            'O que ficou esperando a veterinária e os problemas que os dois grupos registraram hoje.', PO_IC_ALERTA)
+            'O que ficou esperando a veterinária, os problemas do dia e as ligações de boas-vindas da adaptação.', PO_IC_ALERTA)
         +'<div class="pm-grid">'
         + poCardVet(vet)
         + poCardProblemas(probs)
+        + poCardLigacoes(poLigacoes())
         +'</div>'
         + poAreaHTML('AUAULÂNDIA','As noites que vêm aí',
             'Quantos hóspedes por noite, quanto se paga às plantonistas, quem toma remédio e o Enriquecimento do dia.', PO_IC_LUA)

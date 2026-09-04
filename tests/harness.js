@@ -2872,8 +2872,8 @@ async function main() {
       /\(dashItem\(k\)\|\|\{\}\)\.campos\?'dashEscolher':'dashLancar'/.test(html));
     check('lancar sem responder e barrado tambem no caminho de baixo',
       /if\(it\.campos\)\{[\s\S]{0,200}dashDetFalta\(k\)/.test(html));
-    check('depois de lancar, a escolha e o detalhe zeram',
-      /if\(it\.campos\)\{ DASH_DET\[k\]=\{\}; delete DASH_SEL\[k\]; \}/.test(html));
+    check('depois de lancar, a escolha e o detalhe zeram (inclusive a ficha guardada)',
+      /if\(it\.campos\)\{ DASH_DET\[k\]=\{\}; delete DASH_SEL\[k\]; delete DASH_SEL_I\[k\]; \}/.test(html));
     check('o re-render nao apaga a busca que a colega esta digitando',
       /__manter\[i\.k\]=\{b:/.test(html) && /if\(b&&m\.b\)\{ b\.value=m\.b;/.test(html));
 
@@ -7381,8 +7381,8 @@ async function main() {
   }
   console.log('');
 
-  // ---- Tarefa 3: adaptação agora é de 45 dias, e vencida sai SOZINHA ----------------
-  console.log('Adaptação — 45 dias, vencida sai sozinha, sem data continua pendência (04/set):');
+  // ---- Tarefa 3 (v-03→v-04): 45 dias CORRIDOS, e o "sem data" saiu de tudo ---------
+  console.log('Adaptação — 45 dias corridos, vencida sai sozinha, sem data fora de tudo (04/set):');
   {
     const diasAtras = function (n) { const d = new Date(); d.setDate(d.getDate() - n);
       const pz = (x) => String(x).padStart(2, '0');
@@ -7393,14 +7393,29 @@ async function main() {
       ctx.pelEmAdaptacao({ adaptacao: 'Sim', adaptacao_desde: diasAtras(40) }) === true);
     check('50º dia não é mais adaptação (venceu)',
       ctx.pelEmAdaptacao({ adaptacao: 'Sim', adaptacao_desde: diasAtras(50) }) === false);
-    check('mordida — adaptação VENCIDA não é mais pendência: sai sozinha, ninguém decide nada',
-      ctx.adaptPendente({ adaptacao: 'Sim', adaptacao_desde: diasAtras(50) }) === false);
-    check('marcada "Sim" SEM data continua pendência (sem o dia 1 não há contagem)',
-      ctx.adaptPendente({ adaptacao: 'Sim' }) === true);
-    check('quem não está marcado não é nada', ctx.adaptPendente({}) === false && ctx.pelEmAdaptacao({}) === false);
+    // v-04 — as datas DELA: "começou 04/09 → 04/10 fez um mês, 19/10 faz 45 dias" (corridos).
+    const marcos = ctx.adaptMarcos({ adaptacao_desde: '2026-09-04' });
+    check('mordida — começou 04/09: fecha um mês em 04/10 (30 dias corridos)',
+      !!marcos && marcos.m30 === '2026-10-04', JSON.stringify(marcos));
+    check('mordida — começou 04/09: fecha os 45 dias em 19/10 (corridos, sem conta de frequência semanal)',
+      !!marcos && marcos.m45 === '2026-10-19', JSON.stringify(marcos));
+    check('sem data (ou com data inválida) não há marco nenhum — o app não afirma o que não sabe',
+      ctx.adaptMarcos({}) === null && ctx.adaptMarcos({ adaptacao_desde: 'amanhã' }) === null);
+    // v-04 — HOSPEDAGEM: registra data e tipo, mas NUNCA conta ("ela não deu duração").
+    check('mordida — adaptação de Hospedagem não conta, mesmo marcada Sim e dentro dos 45 dias',
+      ctx.pelEmAdaptacao({ adaptacao: 'Sim', adaptacao_desde: diasAtras(10), adaptacao_tipo: 'Hospedagem' }) === false);
+    check('a mesma ficha, como Day Care, conta normalmente',
+      ctx.pelEmAdaptacao({ adaptacao: 'Sim', adaptacao_desde: diasAtras(10), adaptacao_tipo: 'Day Care' }) === true);
+    check('ficha antiga sem tipo continua contando (o padrão é Day Care)',
+      ctx.pelEmAdaptacao({ adaptacao: 'Sim', adaptacao_desde: diasAtras(10) }) === true);
+    // v-04 — o "sem data" DEIXOU de existir como pendência: a função morreu com os quadros.
+    check('mordida — adaptPendente não existe mais (sem data não é pendência de ninguém)',
+      typeof ctx.adaptPendente === 'undefined');
+    check('quem não está marcado não é nada', ctx.pelEmAdaptacao({}) === false);
     check('a régua do dashboard automático acompanhou (DASH_AUTO_ADAPT=45)', ctx.DASH_AUTO_ADAPT === 45);
-    // O quadro do Início: lista quem ESTÁ em adaptação, com "Xº dia de 45".
-    check('adaptEmCursoLista existe (o Início agora mostra quem ESTÁ em adaptação)',
+    check('o auto-lançamento da TV deixa a Hospedagem de fora (registra, não conta)',
+      /String\(ex\.adaptacao_tipo\|\|''\)!=='Hospedagem'/.test(html));
+    check('adaptEmCursoLista existe (o Início mostra quem ESTÁ em adaptação)',
       typeof ctx.adaptEmCursoLista === 'function');
     check('o texto do quadro é "º dia de 45" (via ADAPT_DIAS), não um número solto',
       /º dia de '\+ADAPT_DIAS/.test(html));
@@ -7414,33 +7429,159 @@ async function main() {
         vm.runInContext(`
           PELUDINHOS=[{n:'Em Curso',tutor:'t1',raca:'SRD',freq:'5x',dias:['seg'],nasc:''},
                       {n:'Sem Data',tutor:'t2',raca:'SRD',freq:'5x',dias:['seg'],nasc:''},
-                      {n:'Vencida',tutor:'t3',raca:'SRD',freq:'5x',dias:['seg'],nasc:''}];
+                      {n:'Vencida',tutor:'t3',raca:'SRD',freq:'5x',dias:['seg'],nasc:''},
+                      {n:'De Hospedagem',tutor:'t4',raca:'SRD',freq:'5x',dias:['seg'],nasc:''}];
         `, ctx);
         ctx.__cadAdapta = {};
         ctx.__cadAdapta[ctx.pelKey(ctx.PELUDINHOS[0])] = { adaptacao: 'Sim', adaptacao_desde: diasAtras(40) };
         ctx.__cadAdapta[ctx.pelKey(ctx.PELUDINHOS[1])] = { adaptacao: 'Sim' };
         ctx.__cadAdapta[ctx.pelKey(ctx.PELUDINHOS[2])] = { adaptacao: 'Sim', adaptacao_desde: diasAtras(60) };
+        ctx.__cadAdapta[ctx.pelKey(ctx.PELUDINHOS[3])] = { adaptacao: 'Sim', adaptacao_desde: diasAtras(5), adaptacao_tipo: 'Hospedagem' };
         vm.runInContext('pelCadCache = __cadAdapta;', ctx);
         ctx.renderAdaptPendentes();
-        check('mordida — o quadro do Início mostra quem ESTÁ em adaptação com o "40º dia de 45"',
+        check('o quadro do Início mostra quem ESTÁ em adaptação com o "40º dia de 45"',
           /Em Curso/.test(elA.innerHTML) && /40º dia de 45/.test(elA.innerHTML), elA.innerHTML.slice(0, 200));
-        check('o "sem data" aparece como pendência pequena, com o nome',
-          /Sem data de início \(1\)/.test(elA.innerHTML) && /Sem Data/.test(elA.innerHTML), elA.innerHTML.slice(0, 300));
+        check('mordida — o "sem data" NÃO aparece em lugar NENHUM do quadro (nem pendência é mais)',
+          elA.innerHTML.indexOf('Sem Data') < 0 && elA.innerHTML.indexOf('Sem data de início') < 0, elA.innerHTML.slice(0, 300));
         check('mordida — a VENCIDA não aparece em lugar nenhum do quadro (saiu sozinha)',
           elA.innerHTML.indexOf('Vencida') < 0, elA.innerHTML.slice(0, 300));
+        check('mordida — a de HOSPEDAGEM não entra no quadro (registrada, sem contagem)',
+          elA.innerHTML.indexOf('De Hospedagem') < 0, elA.innerHTML.slice(0, 300));
       } finally {
         ctx.document.getElementById = gebA;
         vm.runInContext('PELUDINHOS = __bkpPel2; pelCadCache = __bkpCad2L;',
           Object.assign(ctx, { __bkpPel2: bkpPel2 }));
       }
     }
+    // O banner do Day Care também perdeu o aviso de "sem data" (sai de QUALQUER quadro).
+    check('mordida — o banner do Day Care não fala mais em "Adaptação sem data de início"',
+      html.indexOf('Adaptação sem data de início') < 0);
   }
   console.log('');
 
-  // ---- Tarefa 4: fantasmas no Check-in do corpo -------------------------------------
-  console.log('Check-in do corpo — texto digitado nunca vira nome válido (04/set):');
+  // ---- v-04: ligações de boas-vindas da Márcia (marcos 30 e 45, janela de 7 dias) ----
+  console.log('Painel da Operação — ligações de boas-vindas (30/45 dias, janela de 7):');
+  if (typeof ctx.poLigacoes === 'function') {
+    const diasAtras = function (n) { const d = new Date(); d.setDate(d.getDate() - n);
+      const pz = (x) => String(x).padStart(2, '0');
+      return d.getFullYear() + '-' + pz(d.getMonth() + 1) + '-' + pz(d.getDate()); };
+    const bkpPelL = ctx.PELUDINHOS;
+    vm.runInContext("__bkpCadLig = (typeof pelCadCache==='undefined' || !pelCadCache) ? {} : pelCadCache;", ctx);
+    try {
+      vm.runInContext(`
+        PELUDINHOS=[{n:'Marco Trinta',tutor:'Ana',raca:'SRD',freq:'5x',dias:['seg'],nasc:''},
+                    {n:'Janela Fim',tutor:'Bia',raca:'SRD',freq:'5x',dias:['seg'],nasc:''},
+                    {n:'Fora Janela',tutor:'Caio',raca:'SRD',freq:'5x',dias:['seg'],nasc:''},
+                    {n:'Marco Quarenta',tutor:'Duda',raca:'SRD',freq:'5x',dias:['seg'],nasc:''},
+                    {n:'Pos Janela',tutor:'Edu',raca:'SRD',freq:'5x',dias:['seg'],nasc:''},
+                    {n:'Cedo Demais',tutor:'Fabi',raca:'SRD',freq:'5x',dias:['seg'],nasc:''},
+                    {n:'De Hotel',tutor:'Gil',raca:'SRD',freq:'5x',dias:['seg'],nasc:''}];
+      `, ctx);
+      const cad = {};
+      cad[ctx.pelKey(ctx.PELUDINHOS[0])] = { adaptacao: 'Sim', adaptacao_desde: diasAtras(30) }; // dia exato do marco de 30
+      cad[ctx.pelKey(ctx.PELUDINHOS[1])] = { adaptacao: 'Sim', adaptacao_desde: diasAtras(37) }; // último dia da janela do 30
+      cad[ctx.pelKey(ctx.PELUDINHOS[2])] = { adaptacao: 'Sim', adaptacao_desde: diasAtras(38) }; // 30+8: já saiu
+      cad[ctx.pelKey(ctx.PELUDINHOS[3])] = { adaptacao: 'Sim', adaptacao_desde: diasAtras(45) }; // dia exato do marco de 45
+      cad[ctx.pelKey(ctx.PELUDINHOS[4])] = { adaptacao: 'Sim', adaptacao_desde: diasAtras(53) }; // 45+8: já saiu
+      cad[ctx.pelKey(ctx.PELUDINHOS[5])] = { adaptacao: 'Sim', adaptacao_desde: diasAtras(29) }; // ainda não fez um mês
+      cad[ctx.pelKey(ctx.PELUDINHOS[6])] = { adaptacao: 'Sim', adaptacao_desde: diasAtras(31), adaptacao_tipo: 'Hospedagem' };
+      ctx.__cadLig = cad;
+      vm.runInContext('pelCadCache = __cadLig;', ctx);
+      const L = ctx.poLigacoes();
+      const porNome = {}; L.forEach(function (x) { porNome[x.nome] = x; });
+      check('mordida — quem fez 30 dias HOJE entra com o marco de um mês',
+        !!porNome['Marco Trinta'] && porNome['Marco Trinta'].marco === 30, JSON.stringify(L));
+      check('mordida — a janela segura o nome por 7 dias (37º dia ainda aparece)',
+        !!porNome['Janela Fim'] && porNome['Janela Fim'].marco === 30);
+      check('mordida — no 38º dia o marco de 30 já saiu da lista', !porNome['Fora Janela']);
+      check('mordida — quem fez 45 dias entra com o marco do fim da adaptação',
+        !!porNome['Marco Quarenta'] && porNome['Marco Quarenta'].marco === 45);
+      check('mordida — depois de 45+7 o nome sai sozinho', !porNome['Pos Janela']);
+      check('29º dia ainda não é marco nenhum', !porNome['Cedo Demais']);
+      check('mordida — Hospedagem não tem marco (não há contagem para fechar)', !porNome['De Hotel']);
+      check('cada linha leva a data em que o marco caiu (via adaptMarcos)',
+        !!porNome['Marco Trinta'] && porNome['Marco Trinta'].quando === diasAtras(0),
+        porNome['Marco Trinta'] && porNome['Marco Trinta'].quando);
+      check('a linha leva nome + tutor (e o telefone quando a ficha tem)',
+        !!porNome['Marco Trinta'] && porNome['Marco Trinta'].tutor === 'Ana' && porNome['Marco Trinta'].tel === '');
+      const cardHTML = ctx.poCardLigacoes(L);
+      check('o card mostra nome, tutor e o marco',
+        /Marco Trinta/.test(cardHTML) && /tutor Ana/.test(cardHTML) && /30 dias/.test(cardHTML), cardHTML.slice(0, 300));
+      check('o card diz que a janela é do marco até 7 dias depois',
+        /até 7 dias depois/.test(cardHTML));
+      check('painel só observa: o botão abre a ficha, nada grava',
+        /poAbrirFichaDe\(/.test(cardHTML));
+      check('mordida — o card entrou no Painel da Operação da Márcia (área A CASA INTEIRA)',
+        /poCardLigacoes\(poLigacoes\(\)\)/.test(html) && /Ligações de boas-vindas/.test(html));
+      check('card vazio explica a régua em vez de sumir mudo',
+        /Ninguém fecha 30 ou 45 dias nesta janela/.test(ctx.poCardLigacoes([])));
+    } finally {
+      vm.runInContext('PELUDINHOS = __bkpPelLig; pelCadCache = __bkpCadLig;',
+        Object.assign(ctx, { __bkpPelLig: bkpPelL }));
+    }
+  } else {
+    check('poLigacoes existe (o quadro da Márcia)', false);
+  }
+  console.log('');
+
+  // ---- v-04: o lançamento de Adaptação dá o dia 1 (data + tipo) ----------------------
+  console.log('Lançamentos do dia — Adaptação pede data de início e tipo (04/set):');
+  {
+    const itAd = (ctx.DASH_ITENS || []).find(function (i) { return i.k === 'adaptacao'; });
+    check('mordida — o item Adaptação agora pede a DATA de início (dataIni) e o TIPO obrigatório',
+      !!itAd && itAd.dataIni === true && Array.isArray(itAd.campos)
+      && itAd.campos.some(function (c) { return c.c === 'tipo' && c.obrig === true; }), JSON.stringify(itAd));
+    const ops = ((itAd && itAd.campos[0].ops) || []).map(function (o) { return o.v; });
+    check('mordida — os tipos são DAY CARE e HOSPEDAGEM ("hospedagem são poucas, daycare são 45 dias")',
+      ops.indexOf('DAY CARE') >= 0 && ops.indexOf('HOSPEDAGEM') >= 0, JSON.stringify(ops));
+    check('mordida — DAY CARE liga a contagem: adaptacao Sim + a data + o tipo na ficha',
+      (function () { const pt = ctx.dashAdaptPatch('DAY CARE', '2026-09-04');
+        return pt.adaptacao === 'Sim' && pt.adaptacao_desde === '2026-09-04' && pt.adaptacao_tipo === 'Day Care'; })());
+    check('mordida — HOSPEDAGEM só registra: data + tipo, SEM ligar contagem nenhuma',
+      (function () { const pt = ctx.dashAdaptPatch('HOSPEDAGEM', '2026-09-04');
+        return !('adaptacao' in pt) && pt.adaptacao_desde === '2026-09-04' && pt.adaptacao_tipo === 'Hospedagem'; })());
+    check('a data vai para o MESMO campo que a ficha usa hoje (adaptacao_desde)',
+      /adaptacao_desde:String\(dataIni\|\|''\)\.slice\(0,10\)/.test(html));
+    check('o campo de data aparece no painel do lançamento (dashD_) e sobrevive ao redesenho',
+      /id="dashD_'\+it\.k/.test(html) && /dashD_'\+i\.k/.test(html));
+    check('a tela cobra a "Data de início" antes de deixar lançar (botão nunca recusa mudo)',
+      /falta\.push\('Data de início'\)/.test(html));
+    check('a gravação na ficha deixa rastro na auditoria',
+      /audit\('dashboard-daycare','adaptação \('\+patch\.adaptacao_tipo/.test(html));
+    check('falha de gravação cai no _logFalhaGrav (nunca silêncio)',
+      /_logFalhaGrav\('adaptação na ficha de '/.test(html));
+    check('sem ficha casada não grava em silêncio: cartaz na tela + rastro',
+      /adaptação lançada SEM ficha casada/.test(html) && /zAlertao\('A data não foi para a ficha'/.test(html));
+    check('a busca do lançamento guarda a FICHA escolhida (índice), não só o texto',
+      /DASH_SEL_I\[k\]=idx/.test(html) && /PELUDINHOS\.indexOf\(p\)/.test(html));
+    // gravação de verdade, com o setPelExtra dublado
+    (function () {
+      const bkpSet = ctx.setPelExtra; let recebido = null;
+      ctx.setPelExtra = function (pp, patch) { recebido = { p: pp, patch: patch }; return Promise.resolve({ ok: true }); };
+      try {
+        ctx.dashAdaptGravarFicha({ n: 'Prova', tutor: 't' }, 'DAY CARE', '2026-09-04', 'Prova/SRD');
+        check('mordida — o lançamento grava na FICHA (setPelExtra): data, tipo e o Sim da contagem',
+          !!recebido && recebido.p.n === 'Prova' && recebido.patch.adaptacao_desde === '2026-09-04'
+          && recebido.patch.adaptacao === 'Sim' && recebido.patch.adaptacao_tipo === 'Day Care',
+          JSON.stringify(recebido && recebido.patch));
+        recebido = null;
+        ctx.dashAdaptGravarFicha({ n: 'Prova2', tutor: 't' }, 'HOSPEDAGEM', '2026-09-01', 'Prova2/SRD');
+        check('mordida — Hospedagem grava data e tipo sem ligar o Sim',
+          !!recebido && !('adaptacao' in recebido.patch) && recebido.patch.adaptacao_tipo === 'Hospedagem',
+          JSON.stringify(recebido && recebido.patch));
+      } finally { ctx.setPelExtra = bkpSet; }
+    })();
+    // a ficha ganhou o seletor do tipo, para corrigir sem programador
+    check('a ficha tem o seletor "Adaptacao de que?" (Day Care · Hospedagem)',
+      /segBtnsPel\('adaptacao_tipo'/.test(html));
+  }
+  console.log('');
+
+  // ---- Tarefa 4 (v-03→v-04): lançamento que não casa fica FORA da turma --------------
+  console.log('Check-in do corpo — só quem tem cadastro entra; o resto vira aviso (04/set):');
   if (typeof ctx.turmaDoDia === 'function' && Array.isArray(ctx.PELUDINHOS)) {
     const bkpDash = JSON.parse(JSON.stringify(ctx.DC_DASH_TURMA || {}));
+    const bkpCart = ctx.CARTEIRA_CARREGADA;
     vm.runInContext(`
       __bkpPlanL = planDia;
       if(typeof pelCadCache==='undefined' || !pelCadCache) pelCadCache={};
@@ -7451,41 +7592,61 @@ async function main() {
     ctx.PELUDINHOS.forEach(function (pp) { const k = ctx.jsNorm(pp.n); contagem[k] = (contagem[k] || 0) + 1; });
     const unico = ctx.PELUDINHOS.find(function (pp) { return contagem[ctx.jsNorm(pp.n)] === 1 && pp.n.indexOf("'") < 0; });
     try {
-      // 1) "atnoio" (erro de digitação que o fuzzy não alcança) — vira "Não identificado"
+      ctx.CARTEIRA_CARREGADA = true;   // o cadastro JÁ chegou: pode acusar
+      // 1) "atnoio" (erro de digitação que o fuzzy não alcança) — FORA da turma, sem card
       ctx.__dashProva = { reposicao: [{ p: { n: 'atnoio', raca: '', tutor: '', freq: 'reposicao', dias: [], nasc: '' }, cru: true, txt: 'atnoio' }],
         avulso: [], quando: Date.now(), dia: hoje4 };
       vm.runInContext('DC_DASH_TURMA = __dashProva;', ctx);
       let turma4 = ctx.turmaDoDia();
-      const fantasma = turma4.find(function (o) { return o.p.n === 'atnoio'; });
-      const naoIdent = turma4.find(function (o) { return o.naoIdentificado; });
-      check('mordida — "atnoio" NÃO aparece como nome válido na turma (era o fantasma do celular)',
-        !fantasma, fantasma ? JSON.stringify(fantasma.p) : '');
-      check('mordida — a linha vira "Não identificado", carregando o texto lançado para a recepção achar',
-        !!naoIdent && naoIdent.p.n === 'Não identificado' && /atnoio/.test(naoIdent.p.raca) && naoIdent.p.tutor === 'atnoio',
-        naoIdent ? JSON.stringify(naoIdent.p) : 'não achei a entrada');
-
-      // 2) o texto que CASA com o cadastro re-casa na hora de desenhar (a corrida do boot)
+      check('mordida — "atnoio" NÃO aparece na turma como nome válido',
+        !turma4.some(function (o) { return o.p.n === 'atnoio'; }));
+      check('mordida — e NÃO existe mais card "Não identificado" dentro da turma (regra dura: só quem tem cadastro)',
+        !turma4.some(function (o) { return o.naoIdentificado || o.p.n === 'Não identificado'; }));
+      // 2) em troca, ele vira AVISO à recepção — com o texto lançado e os dois caminhos
+      const N = ctx.dcLancamentosNaoCasados();
+      check('mordida — o texto lançado aparece na lista de "lançamento sem cadastro"',
+        N.length === 1 && N[0].txt === 'atnoio' && N[0].campo === 'reposicao', JSON.stringify(N));
+      const faixa = ctx.dcNaoCasadosFaixaHTML(false);
+      check('mordida — a faixa pergunta se é erro de digitação ou FILHOt novo, com os dois caminhos',
+        /atnoio/.test(faixa) && /erro de digitação ou FILHOt novo/.test(faixa)
+        && /Corrigir o lançamento/.test(faixa) && /Criar a ficha no Cadastro/.test(faixa), faixa.slice(0, 400));
+      const faixaLanc = ctx.dcNaoCasadosFaixaHTML(true);
+      check('na tela de Lançamentos do dia a correção é ali mesmo ("tirar" e lançar de novo)',
+        /tirar/.test(faixaLanc) && /Criar a ficha no Cadastro/.test(faixaLanc), faixaLanc.slice(0, 400));
+      check('a faixa mora nas telas do fluxo do dia: Lançamentos do dia E o banner do Day Care',
+        /dcNaoCasadosFaixaHTML\(true\)/.test(html) && /dcNaoCasadosFaixaHTML\(false\)/.test(html));
+      check('"relatório de tudo": cada acusação deixa rastro na auditoria (uma vez por dia)',
+        /lançamento sem cadastro: "/.test(html) && /_dcNaoCasAvisados/.test(html));
+      // 3) a corrida do boot: cadastro AINDA não chegou → não se acusa ninguém
+      ctx.CARTEIRA_CARREGADA = false;
+      check('mordida — sem o cadastro carregado o app NÃO acusa "não existe" (nunca por dado que não chegou)',
+        ctx.dcLancamentosNaoCasados().length === 0 && ctx.dcNaoCasadosFaixaHTML(false) === '');
+      ctx.CARTEIRA_CARREGADA = true;
+      // 4) o texto que CASA com o cadastro re-casa na hora de desenhar (a corrida do boot)
       if (unico) {
         ctx.__dashProva2 = { reposicao: [{ p: { n: unico.n, raca: '', tutor: '', freq: 'reposicao', dias: [], nasc: '' }, cru: true, txt: unico.n }],
           avulso: [], quando: Date.now(), dia: hoje4 };
         vm.runInContext('DC_DASH_TURMA = __dashProva2;', ctx);
         turma4 = ctx.turmaDoDia();
         const casado4 = turma4.find(function (o) { return o.p === unico || (o.p.n === unico.n && o.p.tutor === unico.tutor); });
-        const aindaCru = turma4.find(function (o) { return o.naoIdentificado; });
         check('mordida — linha crua que CASA com o cadastro re-casa ao desenhar (nome sempre traduzido pela ficha)',
-          !!casado4 && !aindaCru, 'unico=' + unico.n + ' casado=' + !!casado4 + ' cru=' + !!aindaCru);
+          !!casado4, 'unico=' + (unico && unico.n) + ' casado=' + !!casado4);
+        check('quem casa não entra no aviso (só o que de fato não existe)',
+          ctx.dcLancamentosNaoCasados().length === 0);
       } else {
         check('havia nome único na base para provar o re-casamento', false);
       }
-
-      // 3) lançamento de OUTRO dia não entra (a virada do dia limpa o retrato em memória)
+      // 5) lançamento de OUTRO dia não entra — nem na turma, nem no aviso
       ctx.__dashProva3 = { reposicao: [{ p: { n: 'atnoio', raca: '', tutor: '', freq: 'reposicao', dias: [], nasc: '' }, cru: true, txt: 'atnoio' }],
         avulso: [], quando: Date.now(), dia: '2020-01-01' };
       vm.runInContext('DC_DASH_TURMA = __dashProva3;', ctx);
       turma4 = ctx.turmaDoDia();
       check('mordida — lançamento com carimbo de OUTRO dia fica de fora da turma (rascunho de ontem não vira gente de hoje)',
-        !turma4.some(function (o) { return o.naoIdentificado || o.p.n === 'atnoio'; }));
+        !turma4.some(function (o) { return o.p.n === 'atnoio' || o.p.n === 'Não identificado'; }));
+      check('e também fica de fora do aviso (retrato de outro dia não acusa ninguém)',
+        ctx.dcLancamentosNaoCasados().length === 0);
     } finally {
+      ctx.CARTEIRA_CARREGADA = bkpCart;
       vm.runInContext('DC_DASH_TURMA = __bkpDash; planDia = __bkpPlanL;',
         Object.assign(ctx, { __bkpDash: bkpDash }));
     }
