@@ -4058,7 +4058,17 @@
       DB.ref('auaulandia/cadastro').on('value', s=>{ cadCache=s.val()||{}; if(typeof renderHosp==='function') renderHosp(); });
       DB.ref('daycare/config/sensiveis').on('value', s=>{ const v=s.val(); if(Array.isArray(v)){ try{ SENS=new Set(v); }catch(e){} /* silencioso de propósito: guarda defensiva — se o valor não vier, o anterior continua valendo */ } });
       DB.ref('daycare/config/atividades').on('value', s=>{ const v=s.val(); if(Array.isArray(v)&&v.length){ ATIVIDADES=v; if(typeof renderAtiv==='function') renderAtiv(); } });
-      zMapaVivo('daycare/cadastro','_pelcad', v=>{ pelCadCache=Object.assign({},v); CARTEIRA_CARREGADA=true; try{ if(typeof renderRenovacao==='function') renderRenovacao(); }catch(e){} /* silencioso de propósito: redesenho de tela — falhar não pode derrubar quem chamou */ if(typeof mergeNovosAlunos==='function') mergeNovosAlunos(); if(typeof aplicarExclusoes==='function') aplicarExclusoes(); if(typeof renderPel==='function') renderPel(); if(typeof renderDaycare==='function') renderDaycare(); if(typeof renderKPIs==='function') renderKPIs(); });
+      zMapaVivo('daycare/cadastro','_pelcad', v=>{ pelCadCache=Object.assign({},v); CARTEIRA_CARREGADA=true; try{ if(typeof renderRenovacao==='function') renderRenovacao(); }catch(e){} /* silencioso de propósito: redesenho de tela — falhar não pode derrubar quem chamou */ if(typeof mergeNovosAlunos==='function') mergeNovosAlunos(); if(typeof aplicarExclusoes==='function') aplicarExclusoes(); if(typeof renderPel==='function') renderPel(); if(typeof renderDaycare==='function') renderDaycare(); if(typeof renderKPIs==='function') renderKPIs();
+        // Prevenção (Adriana, 04/set/2026: "110 sem cadastro, não tem nada" — verificado:
+        // o dado EXISTE). Causa raiz: prevDados()/pelInativo() leem pelExtra(p), que só existe
+        // depois que pelCadCache chega deste MESMO ouvinte — mas nenhuma tela chamava
+        // renderPrevencao() de novo quando ele chegava. Quem abria "Prevenção" rápido (antes
+        // da 1ª sincronização) via a ficha de TODO MUNDO como vazia — e a tela nunca se
+        // corrigia sozinha depois, porque só quem reabria a aba via o dado certo. Mesmo
+        // padrão de guarda das outras telas aqui embaixo: só redesenha quem está com a
+        // tela aberta agora.
+        try{ const v=document.getElementById('v-vacinas'); if(v&&v.classList.contains('active')){ if(typeof renderPrevencao==='function') renderPrevencao(); if(typeof renderPrevCheckup==='function') renderPrevCheckup(); } }catch(e){} /* silencioso de propósito: redesenho de tela — falhar não pode derrubar quem chamou */
+      });
       // As fotos vêm de um nó separado, sem ouvinte — ver o comentário lá em cima.
       try{ carregarFotos(); }catch(e){ console.warn('fotos:',e); }
       // Banco de reposição: leve (só lançamentos), então pode ter ouvinte — a recepção
@@ -8154,13 +8164,31 @@
     }).then(function(res){
       if(!res || !res.committed || !res.snapshot || !res.snapshot.val()) return false; // já existia
       URG_ENVIADAS[ck]=true;
+      var chaveDedup='daycare/urgencias-enviadas/'+dia+'/'+ck;
+      // A ponte VELHA não conhece o grupo "urgencia" enquanto ninguém republicar
+      // integracao-telegram/Codigo.gs — e sem esta checagem ela manda em silêncio para o
+      // grupo padrão (a veterinária), que não é gente pra ver medicação/cocô sensível da
+      // Adriana e da Márcia (mesmo risco que resumoDiaEnviar já cobre para o grupo "diario",
+      // ~índice 21341). Se a ponte ainda não sabe: NÃO manda, e desfaz a trava de dedup —
+      // senão o alerta de hoje morre calado e nunca mais tenta, mesmo depois do deploy.
       return tgCfgPronta().then(function(cfg){
         if(!cfg){ medTgGuardar(texto, 'a ponte do Telegram não está configurada', 'urgencia'); return false; }
-        return tgAvisar({grupo:'urgencia', texto:texto}).then(function(r){
-          if(r&&r.ok){ if(typeof audit==='function') audit('urgencia','avisou o grupo de Urgências: '+String(texto).replace(/<[^>]+>/g,'').slice(0,60),{}); return true; }
-          medTgGuardar(texto, (r&&r.erro)||'a ponte não respondeu', 'urgencia');
-          return false;
-        }).catch(function(e){ medTgGuardar(texto, String((e&&e.message)||e), 'urgencia'); return false; });
+        return tgGrupoNaPonte('urgencia').then(function(tem){
+          if(!tem){
+            var erroG='a ponte do Telegram ainda não conhece o grupo de Urgências (grupo não configurado na ponte) — publique a versão nova de integracao-telegram/Codigo.gs (Implantar → Nova versão)';
+            medTgGuardar(texto, erroG, 'urgencia');
+            if(typeof audit==='function') audit('urgencia','NÃO avisou (ponte sem o grupo) — fila para reenvio: '+String(texto).replace(/<[^>]+>/g,'').slice(0,60),{});
+            // Desfaz o "já avisei hoje": o deploy pode acontecer daqui a pouco, e o PRÓXIMO
+            // evento do mesmo tipo precisa poder tentar de novo — não ficar mudo o dia inteiro.
+            return DB.ref(chaveDedup).remove().then(function(){ return false; })
+              .catch(function(e){ _logFalhaGrav('desfazer trava de urgência (ponte sem grupo) '+ck, e); return false; });
+          }
+          return tgAvisar({grupo:'urgencia', texto:texto}).then(function(r){
+            if(r&&r.ok){ if(typeof audit==='function') audit('urgencia','avisou o grupo de Urgências: '+String(texto).replace(/<[^>]+>/g,'').slice(0,60),{}); return true; }
+            medTgGuardar(texto, (r&&r.erro)||'a ponte não respondeu', 'urgencia');
+            return false;
+          }).catch(function(e){ medTgGuardar(texto, String((e&&e.message)||e), 'urgencia'); return false; });
+        });
       });
     }).catch(function(){ return false; });
   }
@@ -10043,9 +10071,42 @@
       ORC_LISTA_CACHE=s.val()||{}; orcRenderLista();
     }).catch(function(e){ _logLeituraFalhou('auaulandia/orcamentos (orcCarregarLista)', e); });
   }
+  // Ordem da lista (Adriana, 04/set/2026): "orçamentos PENDENTES, depois os FECHADOS,
+  // por ordem de ENTRADA do peludinho — se ele entrará dia 05/09, precisa estar na
+  // frente do que entrará dia 10/09." Primeiro agrupa por situação (pendente na
+  // frente, cancelado por último — é onde a tela já os tratava como "encerrados"),
+  // depois dentro de cada grupo ordena por data de ENTRADA crescente (quem chega
+  // primeiro aparece primeiro). Sem data de entrada vai para o fim do seu próprio
+  // grupo — nunca para o topo — e a tela mostra um aviso, porque a Consultora
+  // precisa completar a data, não adivinhar. Função pura: não lê nem escreve nada,
+  // só recebe a lista e devolve a ordem certa — é isso que o harness prova.
+  var ORC_GRUPO_ORDEM={aguardando:0, fechado:1, nao_fechou:2, cancelado:3};
+  function orcOrdenar(lista, hoje){
+    // `hoje` (AAAA-MM-DD) faz parte do contrato pedido por Adriana mas a regra de
+    // hoje não usa data-corrente nenhuma — reservado para uma futura prioridade
+    // por urgência (ex.: entrada já vencida). Não inventar uso agora.
+    void hoje;
+    var pares=(lista||[]).map(function(o,i){ return {o:(o||{}), i:i}; });
+    pares.sort(function(A,B){
+      var oa=A.o, ob=B.o;
+      var ga=ORC_GRUPO_ORDEM.hasOwnProperty(oa.status)?ORC_GRUPO_ORDEM[oa.status]:ORC_GRUPO_ORDEM.aguardando;
+      var gb=ORC_GRUPO_ORDEM.hasOwnProperty(ob.status)?ORC_GRUPO_ORDEM[ob.status]:ORC_GRUPO_ORDEM.aguardando;
+      if(ga!==gb) return ga-gb;
+      var ea=!!oa.entrada, eb=!!ob.entrada;
+      if(ea!==eb) return ea?-1:1;                 // com data de entrada vem antes de sem data
+      if(ea && eb && oa.entrada!==ob.entrada) return oa.entrada<ob.entrada?-1:1; // AAAA-MM-DD compara certo como texto
+      return A.i-B.i;                              // empate: mantém a ordem em que chegou (estável)
+    });
+    return pares.map(function(x){ return x.o; });
+  }
   function orcRenderLista(){
     var el=document.getElementById('orcLista'); if(!el) return;
-    var ids=Object.keys(ORC_LISTA_CACHE||{}).sort(function(a,b){ return (ORC_LISTA_CACHE[b].criado_em||0)-(ORC_LISTA_CACHE[a].criado_em||0); });
+    // Base antes de agrupar: mais recente primeiro — é o desempate de quem tem
+    // status e data de entrada iguais (o "empate mantém ordem estável" do orcOrdenar).
+    var todos=Object.keys(ORC_LISTA_CACHE||{}).map(function(id){
+      return Object.assign({id:id}, ORC_LISTA_CACHE[id]||{});
+    }).sort(function(a,b){ return (b.criado_em||0)-(a.criado_em||0); });
+    var ids=orcOrdenar(todos, (typeof zHojeISO==='function')?zHojeISO():'').map(function(o){ return o.id; });
     if(!ids.length){ el.innerHTML='<div class="hint">Nenhum orçamento salvo ainda.</div>'; return; }
     var lb={aguardando:['PENDENTE','pendente'], fechado:['FECHOU','resolvido'], nao_fechou:['NÃO FECHOU','processo'], cancelado:['CANCELADO','processo']};
     el.innerHTML=ids.map(function(id){
@@ -10084,9 +10145,14 @@
           +(o.cancelado_motivo?('<div style="font-weight:600;color:var(--muted)">Motivo: '+escAttr(o.cancelado_motivo)+'</div>'):'')
           +(o.cancelado_planilha_msg?('<div style="font-weight:600;color:var(--muted)">Planilha: '+escAttr(o.cancelado_planilha_msg)+'</div>'):'')+'</div>';
       }
+      // Sem data de entrada: a ordem por chegada não tem como valer para este — a
+      // Consultora precisa completar, não adivinhar (é por isso que ele vai para o
+      // fim do grupo dele em orcOrdenar, nunca para o topo).
+      var semData=o.entrada?'':'<div style="font-size:12px;color:var(--crm-critico);font-weight:700;margin-top:2px">⚠ sem data de entrada — complete para entrar na ordem por chegada</div>';
       return '<div class="avr-card '+L[1]+'"><div class="avr-head"><div class="avr-info">'
         +'<strong>'+escAttr(nomes||'—')+'</strong> <span style="color:var(--muted);font-size:12px">'+escAttr(o.tutor||'')+'</span>'
         +'<div style="font-size:12.5px;color:var(--z-blue-soft)">'+orcBR(o.entrada||'')+' a '+orcBR(o.saida||'')+' · '+(o.noites||0)+' noites'+(o.alta_temporada?' · ALTA':'')+' · feito em '+dt+' por '+escAttr(o.criado_por||'-')+'</div>'
+        +semData
         +'<div style="font-size:15px;font-weight:800;color:var(--z-blue);margin-top:3px">'+fmtCent(o.total_cent||0)+'</div>'
         +planilha
         +'</div><span class="avr-chip '+L[1]+'">'+L[0]+'</span></div>'+btns+'</div>';
@@ -11298,7 +11364,7 @@
   // Agora existe um carimbo: esta constante é a versão que o aparelho está rodando, e o
   // Firebase guarda a versão publicada. Quando as duas diferem, aparece o aviso — mas
   // NUNCA recarrega sozinho: recarregar no meio de um check-in perderia o trabalho.
-  const APP_VERSAO='2026-09-04-01';
+  const APP_VERSAO='2026-09-04-02';
   function vigiarVersao(){
     if(!DB) return;
     try{
@@ -17269,6 +17335,10 @@
       setInterval(function(){ vetFilaTentar(); }, 600000);
       setTimeout(function(){ try{ medTgFilaTentar(); }catch(e){ _logFalhaGrav('fila med (arranque)', e); } }, 5000);
       setInterval(function(){ try{ medTgFilaTentar(); }catch(e){ _logFalhaGrav('fila med (relógio)', e); } }, 600000);
+      // Aviso de comida (04/set/2026): relógio CURTO — 2 minutos, não 10 — porque o tutor
+      // ainda está lá para buscar o FILHOt e o Day Care precisa saber rápido se vai ligar.
+      setTimeout(function(){ try{ comidaTgFilaTentar(); }catch(e){ _logFalhaGrav('fila comida (arranque)', e); } }, 6000);
+      setInterval(function(){ try{ comidaTgFilaTentar(); }catch(e){ _logFalhaGrav('fila comida (relógio)', e); } }, 120000);
       // Resumo do dia para a Gestão: tenta na abertura e de hora em hora. Só sai das 18h em
       // diante e uma vez por dia — quem abrir primeiro dispara, ninguém precisa lembrar.
       setTimeout(function(){ try{ resumoDiaAuto(); }catch(e){} /* silencioso de propósito: guarda defensiva — falhar aqui não pode interromper quem chamou */ }, 9000);
@@ -19345,6 +19415,37 @@
          'AVISE NO GRUPO PELO SEU CELULAR. A recepção precisa falar com o tutor hoje.'],
         {botao:'Vou avisar'});
     }catch(e){} /* silencioso de propósito: função opcional, pode não existir nesta tela */
+  }
+  // ===== REENVIO AUTOMÁTICO DO AVISO DE COMIDA — Adriana, 04/set/2026 =====================
+  // avisarGrupoComida() manda NA HORA; se falhar (rede do tablet, ponte fora do ar), o único
+  // jeito de reenviar era um humano abrir "Meu Painel" e clicar em Reenviar (pmReenviar).
+  // Mesmo padrão de medTgFilaTentar (~índice 8112): um relógio curto (2 em 2 min) varre
+  // `daycare/avisos-telegram-comida/{hoje}` atrás de quem ficou com ok:false e manda de novo
+  // sozinho — sem esperar ninguém abrir tela nenhuma. A trava é um nó PRÓPRIO
+  // (comida-tg-retry-lock), separado do registro que avisarGrupoComida já escreve: assim o
+  // reenvio nunca briga com o `.set()` que aquela função faz sozinha ao terminar, e dois
+  // aparelhos disputando o mesmo tique só deixam UM mandar (transaction, mesmo padrão).
+  function comidaTgFilaTentar(){
+    if(!DB || typeof avisarGrupoComida!=='function') return;
+    var r=document.body.dataset.role||''; if(r==='tutor') return;
+    var dia=(typeof dcDataKey==='function')?dcDataKey():''; if(!dia) return;
+    DB.ref('daycare/avisos-telegram-comida/'+dia).once('value').then(function(snap){
+      var fila=snap.val()||{};
+      Object.keys(fila).forEach(function(k){
+        var item=fila[k]||{};
+        if(item.ok||item.tentando) return;   // já entregou, ou uma tentativa está rolando agora mesmo
+        DB.ref('daycare/comida-tg-retry-lock/'+dia+'/'+k).transaction(function(atual){
+          atual=atual||{};
+          var tent=atual.tentativas||0;
+          if(tent>=5) return;                                       // carta morta: para de insistir sozinho
+          if(atual.lockTs && Date.now()-atual.lockTs<120000) return; // outro aparelho já pegou este tique
+          return {lockTs:Date.now(), tentativas:tent+1};
+        }).then(function(res){
+          if(!res||!res.committed) return; // não ganhou a vez desta rodada (ou virou carta morta)
+          avisarGrupoComida(k,{forcar:true});
+        }).catch(function(e){ _logFalhaGrav('reenvio automático do aviso de comida '+k, e); });
+      });
+    }).catch(function(e){ _logFalhaGrav('leitura da fila de comida (retry)', e); });
   }
   function nomeAtiv(slug){ try{ const a=(typeof ATIVS_DC!=='undefined'?ATIVS_DC:[]).find(x=>x.s===slug); return a?a.t:slug; }catch(e){ return slug; } }
   // 2º Horário de Almoço (Monitor: Octávio) — recebe só quem NÃO comeu no 1º horário.
@@ -24430,8 +24531,11 @@
     const score=Math.round((cumpridos/protos.length)*100);
     const scoreCor = score>=85?'var(--crm-ok)':(score>=60?'var(--z-gold-deep)':'var(--crm-critico)');
     // ---- por pessoa ----
+    // Um rastro pode chegar sem hora — é o próprio audit() se socorrendo quando falha em se
+    // montar (acao:'audit-FALHOU', guardado no bolso local). Campo ausente nunca vira a
+    // palavra "undefined" na tela: cai no mesmo traço da Linha do Tempo, aqui embaixo.
     const porPessoa={};
-    aud.forEach(a=>{ const q=a.quem||'-'; if(!porPessoa[q]) porPessoa[q]={n:0,prim:a.hora,ult:a.hora,role:a.role,acoes:{}}; const P=porPessoa[q]; P.n++; P.ult=a.hora; P.acoes[a.acao]=(P.acoes[a.acao]||0)+1; });
+    aud.forEach(a=>{ const hr=a.hora||'--:--'; const q=a.quem||'-'; if(!porPessoa[q]) porPessoa[q]={n:0,prim:hr,ult:hr,role:a.role,acoes:{}}; const P=porPessoa[q]; P.n++; P.ult=hr; P.acoes[a.acao]=(P.acoes[a.acao]||0)+1; });
     // ---- monta HTML ----
     let html='';
     html+=`<div class="p-score"><div class="p-score-num" style="color:${scoreCor}">${score}%</div>
@@ -28172,7 +28276,10 @@
     if(d===2) return 'Anteontem';
     return 'Há '+d+' dias';
   }
-  function empPendentesDoDia(a1,a2,avisados){
+  // audMap (opcional): k -> ts da última marcação (almoco_grade/almoco2) daquele k NAQUELE
+  // dia, tirado da auditoria (04/set/2026 — ver EMP_HORAS_TELEGRAM abaixo). Sem ele, a idade
+  // do item é desconhecida.
+  function empPendentesDoDia(a1,a2,avisados,audMap){
     var out=[], chaves={};
     Object.keys(a1||{}).forEach(function(k){ chaves[k]=1; });
     Object.keys(a2||{}).forEach(function(k){ chaves[k]=1; });
@@ -28191,17 +28298,32 @@
       var nome=cad.nome||partes[0].replace(/-/g,' ').replace(/\b\w/g,function(c){ return c.toUpperCase(); });
       var tutor=cad.tutor||String(partes[1]||'').replace(/-/g,' ');
       out.push({k:k, nome:nome, tutor:tutor, raca:cad.raca||'', sexo:cad.sexo||'',
-                motivo:motivo, pronto:true, grave:(m2==='nao'), aviso:null});
+                motivo:motivo, pronto:true, grave:(m2==='nao'), aviso:null,
+                ts:(audMap&&audMap[k])||null});
     });
     return out.sort(function(a,b){ return jsNorm(a.nome).localeCompare(jsNorm(b.nome)); });
   }
   function empPega(p){ return DB.ref(p).once('value').then(function(s){ return s.val()||{}; }).catch(function(){ return {}; }); }
+  // A HORA de cada marcação — não vive em daycare/almoco nem em .../almoco2 (só guardam
+  // 'nao'/'metade'/'comeu', sem quando). Quem sabe a hora é a auditoria: marcarAlmoco() grava
+  // acao:'almoco_grade' e marcarAlmoco2() grava acao:'almoco2', os dois com {alvo:k}. Pega o
+  // MAIS RECENTE dos dois por k — é o que decide se o item ainda é "de agora" ou já é velho.
+  function empHorasDoDia(d){
+    return empPega('daycare/auditoria/'+d).then(function(aud){
+      var map={};
+      Object.values(aud||{}).forEach(function(a){
+        if(!a||(a.acao!=='almoco_grade'&&a.acao!=='almoco2')||!a.alvo) return;
+        if(!map[a.alvo]||(a.ts||0)>map[a.alvo]) map[a.alvo]=a.ts||0;
+      });
+      return map;
+    });
+  }
   // Lê os dias pedidos e devolve o que ficou pendente em cada um. Usada pela tela (21 dias)
   // e pelo aviso automático (2 dias) — a mesma conta, num lugar só.
   function empCarregarDias(dias){
     return Promise.all(dias.map(function(d){
-      return Promise.all([empPega('daycare/almoco/'+d), empPega('daycare/atividade/'+d+'/almoco2'), empPega('daycare/avisos-comida/'+d)])
-        .then(function(x){ return {dia:d, itens:empPendentesDoDia(x[0],x[1],x[2])}; });
+      return Promise.all([empPega('daycare/almoco/'+d), empPega('daycare/atividade/'+d+'/almoco2'), empPega('daycare/avisos-comida/'+d), empHorasDoDia(d)])
+        .then(function(x){ return {dia:d, itens:empPendentesDoDia(x[0],x[1],x[2],x[3])}; });
     })).then(function(gs){ return gs.filter(function(g){ return g.itens.length; }); });
   }
   function abrirEmporio(){
@@ -28301,9 +28423,25 @@
         });
     }).catch(function(e){ _logFalhaGrav('daycare/cobranca-almoco2/ (empFecharDiaAlmoco)', e); });
   }
+  // Item com mais de 12h de idade não sai pelo Telegram: "o aviso do almoço de ONTEM chegou
+  // às 6h da manhã" confunde o tutor — parece que acabou de acontecer (Adriana, 04/set/2026).
+  // A idade vem de empHorasDoDia (auditoria); sem essa hora não dá para provar que é recente,
+  // então fica de fora do Telegram por segurança — mesmo raciocínio do "fallback honesto":
+  // não afirmar frescor que não se sabe se existe. A tela mostra os dois grupos sempre.
+  var EMP_DOZE_HORAS_MS=12*60*60*1000;
+  function empEhFresco(x, agoraMs){ return !!(x&&x.ts) && (agoraMs-x.ts)<=EMP_DOZE_HORAS_MS; }
   function empAvisarAtrasoNoTelegram(){
     if(!DB||!EMP_ATRASO.length) return Promise.resolve();
     var hoje=empDataKey();
+    var agoraMs=Date.now();
+    // Separa por idade ANTES de decidir se há algo a mandar — dias inteiros com só itens
+    // velhos (>12h) não abrem o grupo, só ficam na tela como "aviso de ontem não saiu".
+    var grupos=EMP_ATRASO.map(function(g){
+      return {dia:g.dia, frescos:g.itens.filter(function(x){ return empEhFresco(x,agoraMs); }),
+              velhos:g.itens.filter(function(x){ return !empEhFresco(x,agoraMs); })};
+    });
+    var nFrescos=grupos.reduce(function(a,g){ return a+g.frescos.length; },0);
+    var nVelhos=grupos.reduce(function(a,g){ return a+g.velhos.length; },0);
     // Transaction, não leitura seguida de escrita: duas pessoas entrando no mesmo minuto
     // liam "ainda não mandou" as duas e o grupo recebia a mensagem em dobro.
     return DB.ref('daycare/avisos-telegram-atraso/'+hoje).transaction(function(atual){
@@ -28311,13 +28449,21 @@
       return {ts:Date.now(), enviando:true};
     }).then(function(res){
       if(!res || !res.committed) return;                   // outro já pegou o dia
+      // Nada fresco hoje: não abre o grupo à toa — só registra que a checagem rodou, com
+      // quantos ficaram só na tela (para provar que não sumiu, só não virou Telegram).
+      if(!nFrescos){
+        return DB.ref('daycare/avisos-telegram-atraso/'+hoje)
+          .set({ts:Date.now(), dias:EMP_ATRASO.map(function(g){ return g.dia; }), pulou:'tudo velho (mais de 12h)', velhos:nVelhos})
+          .catch(function(e){ _logFalhaGrav('aviso atraso (registro sem envio)', e); });
+      }
       return tgCfgPronta().then(function(c){
         if(!c) return;
         var linhas=['<b>ALMOÇO — tutores que ainda não foram avisados</b>',''];
-        EMP_ATRASO.forEach(function(g){
+        grupos.forEach(function(g){
+          if(!g.frescos.length) return;
           var p=g.dia.split('-');
           linhas.push('<b>'+empComoFoi(g.dia)+' ('+p[2]+'/'+p[1]+'):</b>');
-          g.itens.forEach(function(x){
+          g.frescos.forEach(function(x){
             linhas.push(x.nome+(x.raca?(' - '+x.raca):''));
             linhas.push(x.motivo+'.');
             linhas.push('');
@@ -28326,8 +28472,9 @@
         linhas.push('As mensagens prontas vêm a seguir.');
         // O que é mais velho não vem no grupo, mas também não pode sumir sem ninguém saber.
         var nAntigo=EMP_ANTIGO.reduce(function(a,g){ return a+g.itens.length; },0);
-        if(nAntigo) linhas.push('',
-          'Há ainda '+nAntigo+' de dias anteriores esperando decisão na tela "Quem não comeu hoje" '
+        var nVelhoTotal=nVelhos+nAntigo;
+        if(nVelhoTotal) linhas.push('',
+          'Há ainda '+nVelhoTotal+' esperando decisão na tela "Quem não comeu hoje" (mais de 12h) '
           +'— avisar tão tarde não costuma valer, mas alguém precisa dizer que deixa para lá.');
         // A ponte podia devolver {ok:false} e nada disso era olhado: o registro do dia era
         // gravado igual e a tela dizia que estava tudo enviado. Agora cada mensagem é
@@ -28343,8 +28490,8 @@
         return tgAvisar({grupo:'comida', texto:linhas.join('\n')}).then(function(r0){
           conferir('o resumo do que ficou de ontem', r0);
           var seq=Promise.resolve();
-          EMP_ATRASO.forEach(function(g){
-            g.itens.forEach(function(x){
+          grupos.forEach(function(g){
+            g.frescos.forEach(function(x){
               seq=seq.then(function(){
                 return tgAvisar({grupo:'comida', texto:'<b>Mensagem para o tutor d'
                   +(/^f/i.test(x.sexo||'')?'a ':'o ')+x.nome+'</b>\n\n'+empMensagem(x)})
@@ -28356,7 +28503,7 @@
         }).then(function(){
           if(falhas.length) _comidaAvisoNaTela(falhas[0], erro1);
           return DB.ref('daycare/avisos-telegram-atraso/'+hoje)
-            .set({ts:Date.now(), dias:EMP_ATRASO.map(function(g){ return g.dia; }), falhas:falhas})
+            .set({ts:Date.now(), dias:EMP_ATRASO.map(function(g){ return g.dia; }), falhas:falhas, velhos:nVelhos})
             .catch(function(e){ _logFalhaGrav('aviso atraso (registro)', e); });
         });
       });
@@ -28464,10 +28611,15 @@
     var cartao=function(x,dia){
       var cor=(!x.pronto?'#7C8B99':(x.grave?'#B3261E':'#DEB428'));
       var fundo=(!x.pronto?'rgba(124,139,153,.10)':(x.grave?'rgba(179,38,30,.07)':'rgba(222,180,40,.10)'));
+      // Mais de 12h (ou sem hora conhecida): o Telegram já não manda mais este — só a tela
+      // sabe. Precisa dizer isso na cara, senão a Consultora acha que já saiu (04/set/2026).
+      var velho=!empEhFresco(x, Date.now());
+      var avisoVelho=velho?'<div style="font-size:12.5px;font-weight:800;color:#B3261E;background:rgba(179,38,30,.08);border-radius:8px;padding:6px 9px;margin-bottom:8px">⚠ Aviso de '+(dia===empDataKey()?'hoje':'ontem')+' NÃO saiu pelo Telegram (mais de 12h) — avise por fora se ainda fizer sentido.</div>':'';
       return '<div style="border:2px solid '+cor+';background:'+fundo+';border-radius:13px;padding:13px;margin-bottom:10px">'
         +'<div style="font-weight:800;font-size:17px;color:var(--z-blue)">'+escAttr(x.nome)+(x.raca?(' <span style="font-size:12.5px;color:var(--muted);font-weight:600">'+escAttr(x.raca)+'</span>'):'')+'</div>'
         +'<div style="font-size:13.5px;color:var(--muted);font-weight:600">Tutor: '+escAttr(x.tutor||'a confirmar')+'</div>'
         +'<div style="font-weight:800;font-size:14.5px;color:'+cor+';margin:6px 0 9px">'+escAttr(x.motivo)+'</div>'
+        +avisoVelho
         +'<div style="font-size:11.5px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;margin-bottom:4px">Mensagem para o tutor</div>'
         +'<textarea class="gest-txt emp-msg" readonly rows="4" style="width:100%">'+escAttr(empMensagem(x))+'</textarea>'
         +'<button type="button" class="btn btn-gold" style="width:100%;margin:7px 0" onclick="empCopiar(this)">📋 Copiar mensagem</button>'

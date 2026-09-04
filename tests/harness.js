@@ -4310,7 +4310,9 @@ async function main() {
     check('o que passou de anteontem nao vai para o grupo',
       /EMP_ANTIGO=todos\.filter\(function\(g\)\{ return recentes\.indexOf\(g\.dia\)<0; \}\)/.test(html));
     check('mas conta no rodape da mensagem, para ninguem achar que acabou',
-      /Há ainda '\+nAntigo\+' de dias anteriores esperando decisão/.test(html));
+      // 04/set/2026: a conta do rodapé passou a somar também quem ficou de FORA do Telegram
+      // por idade (>12h, ver EMP_DOZE_HORAS_MS) — não só o que já era "mais velho que 2 dias".
+      /Há ainda '\+nVelhoTotal\+' esperando decisão na tela "Quem não comeu hoje" \(mais de 12h\)/.test(html));
     check('o que ficou para tras aparece na tela com decisao de gente',
       /Ficou para trás \('\+nAnt\+'\)/.test(html) && /function empDispensarDia\(dia,k\)/.test(html));
     check('"deixa para la" grava QUEM decidiu (nada some por decurso de prazo)',
@@ -6790,6 +6792,388 @@ async function main() {
     } else {
       check('dado real do cadastro chegou', false, 'leitura devolveu null');
     }
+  }
+  console.log('');
+
+  // ---- v-orcamento: orcOrdenar — pendente primeiro, fechado depois, por ENTRADA ----
+  // Pedido verbatim (Adriana, 04/set/2026): "A sequência é: orçamentos PENDENTES,
+  // depois os FECHADOS, por ordem de ENTRADA do peludinho — se ele entrará dia
+  // 05/09, precisa estar na frente do que entrará dia 10/09."
+  console.log('v-orcamento — orcOrdenar (fila da lista de orçamentos):');
+  if (typeof ctx.orcOrdenar === 'function') {
+    const pend10 = { id: 'pend10', status: 'aguardando', entrada: '2026-09-10' };
+    const fech05 = { id: 'fech05', status: 'fechado', entrada: '2026-09-05' };
+    const r1 = ctx.orcOrdenar([fech05, pend10], '2026-09-04').map((o) => o.id);
+    check('mordida — pendente com entrada 10/09 vem ANTES de fechado com entrada 05/09 (grupo manda mais que data)',
+      r1[0] === 'pend10' && r1[1] === 'fech05', JSON.stringify(r1));
+
+    const pend05 = { id: 'pend05', status: 'aguardando', entrada: '2026-09-05' };
+    const r2 = ctx.orcOrdenar([pend10, pend05], '2026-09-04').map((o) => o.id);
+    check('dentro dos pendentes, 05/09 vem antes de 10/09',
+      r2[0] === 'pend05' && r2[1] === 'pend10', JSON.stringify(r2));
+
+    const semData = { id: 'semData', status: 'aguardando', entrada: '' };
+    const r3 = ctx.orcOrdenar([semData, pend10, pend05], '2026-09-04').map((o) => o.id);
+    check('sem data de entrada vai ao FIM do seu grupo (nunca ao topo)',
+      r3[0] === 'pend05' && r3[1] === 'pend10' && r3[2] === 'semData', JSON.stringify(r3));
+
+    const semDataFechado = { id: 'semDataFechado', status: 'fechado', entrada: '' };
+    const r3b = ctx.orcOrdenar([semDataFechado, semData, fech05, pend05], '2026-09-04').map((o) => o.id);
+    check('sem data fica no FIM do PRÓPRIO grupo — não migra para outro grupo nem os embaralha',
+      JSON.stringify(r3b) === JSON.stringify(['pend05', 'semData', 'fech05', 'semDataFechado']), JSON.stringify(r3b));
+
+    const eA = { id: 'eA', status: 'aguardando', entrada: '2026-09-05' };
+    const eB = { id: 'eB', status: 'aguardando', entrada: '2026-09-05' };
+    const r4 = ctx.orcOrdenar([eA, eB], '2026-09-04').map((o) => o.id);
+    const r4inv = ctx.orcOrdenar([eB, eA], '2026-09-04').map((o) => o.id);
+    check('empate de data mantém ordem estável (não embaralha quem chegou igual)',
+      r4[0] === 'eA' && r4[1] === 'eB' && r4inv[0] === 'eB' && r4inv[1] === 'eA',
+      JSON.stringify(r4) + ' / ' + JSON.stringify(r4inv));
+
+    const naoFechou = { id: 'naoFechou', status: 'nao_fechou', entrada: '2026-09-01' };
+    const cancelado = { id: 'cancelado', status: 'cancelado', entrada: '2026-09-01' };
+    const semStatus = { id: 'semStatus', entrada: '2026-09-20' }; // sem status = trata como aguardando
+    const r5 = ctx.orcOrdenar([cancelado, naoFechou, fech05, pend10, semStatus], '2026-09-04').map((o) => o.id);
+    check('ordem completa dos 4 grupos: pendente > fechado > não fechou > cancelado (sem status entra como pendente)',
+      JSON.stringify(r5) === JSON.stringify(['pend10', 'semStatus', 'fech05', 'naoFechou', 'cancelado']),
+      JSON.stringify(r5));
+
+    check('mordida — lista vazia não estoura', JSON.stringify(ctx.orcOrdenar([], '2026-09-04')) === '[]');
+    check('mordida — orcOrdenar não muda a quantidade de itens nem inventa nenhum',
+      ctx.orcOrdenar([pend10, fech05, semData], '2026-09-04').length === 3);
+  } else {
+    check('orcOrdenar existe', false, 'função não encontrada no script — orçamento não pode ordenar a lista por ENTRADA');
+  }
+  console.log('');
+
+  // ---- v-painel: renderPainelDia — rastro sem "hora" nunca vira a palavra "undefined" na
+  // tela (smoke de navegador, 04/set/2026: Painel do Dia mostrava "das 07:53 às undefined"
+  // para Supervisão/Gestão/Diretoria). A causa: audit() se socorre no catch quando falha em
+  // se montar e guarda { acao:'audit-FALHOU' } SEM 'hora' nem 'quem' — e "O que cada pessoa
+  // fez hoje" escrevia a.hora direto no template, sem o fallback que o resto da função já usa.
+  console.log('v-painel — renderPainelDia (rastro sem hora nunca vira "undefined" na tela):');
+  if (typeof ctx.renderPainelDia === 'function') {
+    const gebPainel = ctx.document.getElementById;
+    const elPainel = { innerHTML: '', style: {} };
+    const elLabel = { style: {}, get textContent() { return this._t || ''; }, set textContent(v) { this._t = v; } };
+    ctx.document.getElementById = function (id) {
+      if (id === 'painelWrap') return elPainel;
+      if (id === 'painelDateLabel') return elLabel;
+      return gebPainel.call(ctx.document, id);
+    };
+    // painelData é `let` no script — vive na lexical scope do contexto, não como
+    // propriedade do sandbox. "ctx.painelData=" de fora não alcança essa ligação;
+    // tem de reatribuir por DENTRO do próprio contexto (mesmo truque do __bkp3 acima).
+    ctx.__bkpPainelData = ctx.painelData;
+    try {
+      // a1: rastro normal, com hora. a2: MESMA pessoa, ts maior (processado por último),
+      // igual ao audit-FALHOU real — sem 'hora' nenhuma no registro.
+      ctx.__novoPainelData = {
+        auditoria: {
+          a1: { ts: 1000, hora: '07:53', quem: 'Teste Harness', role: 'plantonista', acao: 'planilha-hospedagem' },
+          a2: { ts: 2000, quem: 'Teste Harness', role: 'plantonista', acao: 'audit-FALHOU', detalhe: 'não consegui montar o rastro de "x"' },
+        },
+      };
+      vm.runInContext('painelData = __novoPainelData;', ctx);
+      ctx.renderPainelDia();
+      const out = String(elPainel.innerHTML || '');
+      check('mordida — campo "hora" ausente no rastro NUNCA vira a palavra "undefined" na tela',
+        !/\bundefined\b/.test(out), out.slice(Math.max(0, out.indexOf('Teste Harness') - 20), out.indexOf('Teste Harness') + 120));
+      check('mordida — o fallback aparece no lugar dela: "das 07:53 às --:--"',
+        out.indexOf('das 07:53 às --:--') >= 0,
+        out.slice(Math.max(0, out.indexOf('Teste Harness') - 30), out.indexOf('Teste Harness') + 200));
+    } finally {
+      vm.runInContext('painelData = __bkpPainelData;', ctx);
+      ctx.document.getElementById = gebPainel;
+    }
+  } else {
+    check('renderPainelDia existe', false, 'função não encontrada — Painel do Dia não pode ser provado');
+  }
+  console.log('');
+
+  // ---- v-vacinas (Prevenção): "110 sem cadastro, não tem nada" (Adriana, 04/set/2026) ------
+  // Investigado com dado real do banco: NENHUMA chave de PELUDINHOS ficou órfã de
+  // daycare/cadastro (pelKey bate 100%) e a separação semcad/deve/antigo/rotina já existe e
+  // já funciona (tela real: Sem cadastro 5, Devendo 36, Ficha por migrar 6, Rotina 42 — bem
+  // longe de 110). A causa real é uma CORRIDA: prevDados()/pelExtra(p) leem `pelCadCache`,
+  // que só chega pelo listener `zMapaVivo('daycare/cadastro',...)` (index.html ~4061) — e
+  // esse listener NUNCA chamava renderPrevencao() de volta quando o dado chegava (diferente
+  // de renderPel/renderDaycare/renderKPIs, que ele já redesenha). Quem abre "Prevenção" antes
+  // da 1ª sincronização (ou antes de mergeNovosAlunos rodar) vê pelCadCache={} — TODA ficha
+  // fica vazia, pelInativo() nunca acha ninguém inativo, e quase toda a lista mestra (108 a
+  // 132 no boot real, medido nesta investigação) cai em "Sem cadastro". É o "110" da Adriana.
+  // A ficha abaixo é REAL, trazida do banco nesta investigação (chave
+  // "repolho - zelosinha__adriana duarte - zêluz", 04/set/2026): tem vacina, antiparasitário
+  // e coleira preenchidos — não deveria NUNCA aparecer como "Sem cadastro".
+  console.log('v-vacinas — Prevenção não pode perder o dado que chega DEPOIS do 1º desenho (04/set):');
+  if (typeof ctx.renderPrevencao === 'function' && Array.isArray(ctx.PELUDINHOS)) {
+    const FICHA_REAL_PREVENCAO = { // cópia fiel da ficha real (só sem PII de contato)
+      _novo: true, adaptacao: 'Nao', alimentacao: 'Ração - 50gr', almoca: 'Sim', ansioso: 'Sim',
+      bairro: 'Sion', banheiro: 'Somente no Daycare', castrado: 'Sim', categoria: 'morador',
+      col_nome: 'Seresto', col_p: '2026-08-05', col_t: '2026-02-06',
+      carrapaticida_p: '2026-07-05', carrapaticida_t: '2026-06-05',
+      dias: ['seg', 'ter', 'qua', 'qui', 'sex'], freq: '5x', matricula: '2024-01-09',
+      n: 'Repolho Harness', nasc: '2022-01-18', raca: 'SRD', sexo: 'Fêmea',
+      tutor: 'Tutor Harness', renov: { plano: 'morador' },
+      vac_gripe_p: '2027-04-15', vac_gripe_t: '2026-04-15',
+      vac_mult_t: '2026-03-31', // real: vac_mult_p NUNCA foi calculado/salvo (achado à parte)
+      vac_raiva_p: '2027-03-13', vac_raiva_t: '2026-03-13',
+      verm_2a: '2026-05-29', verm_doses: '2 doses', verm_p: '2026-09-26', verm_t: '2026-05-08',
+    };
+    const bkpPeludinhos = ctx.PELUDINHOS;
+    ctx.__novoPeludinhos = [{ n: FICHA_REAL_PREVENCAO.n, tutor: FICHA_REAL_PREVENCAO.tutor,
+      raca: FICHA_REAL_PREVENCAO.raca, freq: FICHA_REAL_PREVENCAO.freq, dias: FICHA_REAL_PREVENCAO.dias, nasc: FICHA_REAL_PREVENCAO.nasc }];
+    vm.runInContext('PELUDINHOS = __novoPeludinhos;', ctx);
+    const chaveFicha = ctx.pelKey(ctx.PELUDINHOS[0]);
+
+    const gebPrev = ctx.document.getElementById;
+    const els = { prevResumo: { innerHTML: '' }, prevFiltros: { innerHTML: '' }, prevLista: { innerHTML: '' } };
+    ctx.document.getElementById = function (id) {
+      if (els[id]) return els[id];
+      return gebPrev.call(ctx.document, id);
+    };
+    const bkpCad = ctx.pelCadCache;
+    try {
+      // 1) ANTES de pelCadCache chegar (a corrida real): render acontece com dado vazio.
+      vm.runInContext('pelCadCache = {};', ctx);
+      ctx.renderPrevencao();
+      const antesResumo = els.prevResumo.innerHTML, antesFiltros = els.prevFiltros.innerHTML;
+      check('mordida — SEM pelCadCache (corrida), a ficha REAL com vacina/antiparasitário em dia aparece como "Sem cadastro" — reproduz o "110" da Adriana',
+        /Sem cadastro <span[^>]*>1</.test(antesFiltros),
+        antesFiltros.slice(0, 200));
+
+      // 2) O FIX: quando pelCadCache chega, a tela tem que se redesenhar SOZINHA (é isso que
+      //    o novo hook dentro de zMapaVivo faz). Aqui simulamos exatamente o que o hook faz:
+      //    popula pelCadCache e chama renderPrevencao() de novo — sem ninguém trocar de tela.
+      ctx.__novoCad = { [chaveFicha]: FICHA_REAL_PREVENCAO };
+      vm.runInContext('pelCadCache = __novoCad;', ctx);
+      ctx.renderPrevencao();
+      const depoisResumo = els.prevResumo.innerHTML, depoisFiltros = els.prevFiltros.innerHTML;
+      check('mordida — DEPOIS que pelCadCache chega e a tela se redesenha, a MESMA ficha sai de "Sem cadastro" (ela tem vacina/antiparasitário/coleira preenchidos)',
+        !/Sem cadastro <span[^>]*>1</.test(depoisFiltros), depoisFiltros.slice(0, 200));
+      check('mordida — a ficha real vira "Devendo" (tem dado, mas Vacina Múltipla venceu/falta calcular) — rótulo separa "sem dado" de "com dado incompleto", como já deveria',
+        /Devendo <span[^>]*>1</.test(depoisFiltros), depoisFiltros.slice(0, 200));
+      check('a mudança de resumo prova que o redesenho de verdade aconteceu (não é o mesmo HTML de antes)',
+        antesResumo !== depoisResumo, 'antes==depois? ' + (antesResumo === depoisResumo));
+    } finally {
+      vm.runInContext('pelCadCache = __bkpCad;', Object.assign(ctx, { __bkpCad: bkpCad }));
+      vm.runInContext('PELUDINHOS = __bkpPeludinhos;', Object.assign(ctx, { __bkpPeludinhos: bkpPeludinhos }));
+      ctx.document.getElementById = gebPrev;
+    }
+  } else {
+    check('renderPrevencao existe', false, 'função não encontrada — Prevenção não pode ser provada');
+  }
+
+  // Estrutural: o listener de daycare/cadastro tem de chamar renderPrevencao() de volta —
+  // sem essa linha no código-fonte, o comportamento acima é só teoria.
+  check('mordida — o listener zMapaVivo(\'daycare/cadastro\',...) chama renderPrevencao() quando o dado chega (senão quem abriu a tela antes da sincronização fica com o número errado para sempre)',
+    /zMapaVivo\('daycare\/cadastro','_pelcad'[\s\S]{0,2000}?getElementById\('v-vacinas'\)[\s\S]{0,200}?renderPrevencao\(\)/.test(html),
+    'padrão não encontrado no listener de daycare/cadastro');
+  console.log('');
+
+  // ===== Banco de mentira, em memória, com transaction() de verdade (mesmo contrato do
+  // Firebase real: devolve undefined no updater = aborta; devolve valor = commita e vira o
+  // novo estado). Serve para os 3 pontos do patch do almoço, que dependem de transaction. =====
+  function criarDBFake(seed) {
+    var store = JSON.parse(JSON.stringify(seed || {}));
+    function partes(p) { return String(p).split('/').filter(Boolean); }
+    function ler(p) { var c = store; var ps = partes(p); for (var i = 0; i < ps.length; i++) { if (c == null) return undefined; c = c[ps[i]]; } return c; }
+    function escrever(p, v) {
+      var ps = partes(p); var c = store;
+      for (var i = 0; i < ps.length - 1; i++) { var k = ps[i]; if (c[k] == null || typeof c[k] !== 'object') c[k] = {}; c = c[k]; }
+      if (ps.length) { if (v === null || v === undefined) delete c[ps[ps.length - 1]]; else c[ps[ps.length - 1]] = v; }
+    }
+    return {
+      __store: store,
+      ref: function (p) {
+        return {
+          once: function () { return Promise.resolve({ val: function () { var v = ler(p); return v === undefined ? null : v; } }); },
+          set: function (v) { escrever(p, v); return Promise.resolve(); },
+          update: function (v) { var cur = ler(p) || {}; escrever(p, Object.assign({}, cur, v)); return Promise.resolve(); },
+          remove: function () { escrever(p, null); return Promise.resolve(); },
+          transaction: function (fn) {
+            var atual = ler(p); if (atual === undefined) atual = null;
+            var novo = fn(atual);
+            if (novo === undefined) return Promise.resolve({ committed: false, snapshot: null });
+            escrever(p, novo);
+            return Promise.resolve({ committed: true, snapshot: { val: function () { return novo; } } });
+          }
+        };
+      }
+    };
+  }
+  async function drenar(n) { for (var i = 0; i < (n || 4); i++) await new Promise(function (r) { setImmediate(r); }); }
+  // DB é `let` no script — vive na lexical scope do contexto (mesmo motivo de painelData e
+  // pelCadCache lá em cima): ctx.DB= de fora não alcança a ligação real. Troca sempre por
+  // DENTRO do contexto.
+  function setDB(v) { ctx.__setDBtmp = v; vm.runInContext('DB = __setDBtmp;', ctx); }
+  function getDB() { vm.runInContext('__getDBtmp = DB;', ctx); return ctx.__getDBtmp; }
+
+  // ---- Almoço: idade > 12h não vai mais pro Telegram (Adriana, 04/set/2026) ----------------
+  console.log('Almoço — idade do aviso (empEhFresco / empPendentesDoDia / empHorasDoDia):');
+  if (typeof ctx.empEhFresco === 'function') {
+    var AGORA = new Date('2026-09-04T06:00:00-03:00').getTime();
+    var ONTEM_15H20 = new Date('2026-09-03T15:20:00-03:00').getTime();
+    var HOJE_03H = new Date('2026-09-04T03:00:00-03:00').getTime();
+    check('mordida — item de ontem 15:20, visto hoje 06:00 (14h40 de idade): NÃO é fresco',
+      ctx.empEhFresco({ ts: ONTEM_15H20 }, AGORA) === false);
+    check('item de 3h atrás (dentro da janela de 12h): É fresco — o filtro não trava tudo',
+      ctx.empEhFresco({ ts: HOJE_03H }, AGORA) === true);
+    check('mordida — sem ts nenhum (idade desconhecida): trata como velho, nunca finge frescor',
+      ctx.empEhFresco({ ts: null }, AGORA) === false && ctx.empEhFresco({}, AGORA) === false);
+    check('EMP_DOZE_HORAS_MS é exatamente 12h em ms', ctx.EMP_DOZE_HORAS_MS === 12 * 60 * 60 * 1000);
+  } else {
+    check('empEhFresco existe', false, 'função não encontrada — filtro de 12h não pode ser provado');
+  }
+  if (typeof ctx.empPendentesDoDia === 'function') {
+    var a1 = {}, a2 = { 'camus__sophia-joao': 'nao' };
+    var audMap = { 'camus__sophia-joao': 123456 };
+    var itens = ctx.empPendentesDoDia(a1, a2, {}, audMap);
+    check('mordida — empPendentesDoDia carrega o ts do audMap no item (sem isso, empEhFresco não tem o que medir)',
+      itens.length === 1 && itens[0].ts === 123456, JSON.stringify(itens));
+    var semAud = ctx.empPendentesDoDia(a1, a2, {}, null);
+    check('sem audMap (chamada antiga, compatibilidade), o item vem com ts:null — não quebra, só fica "sem idade conhecida"',
+      semAud.length === 1 && semAud[0].ts === null);
+  } else {
+    check('empPendentesDoDia existe', false, 'função não encontrada');
+  }
+  if (typeof ctx.empHorasDoDia === 'function') {
+    var bkpDB0 = getDB();
+    setDB(criarDBFake({ daycare: { auditoria: { '2026-09-03': {
+      a1: { acao: 'almoco_grade', alvo: 'camus__sophia-joao', ts: 1000 },
+      a2: { acao: 'almoco2', alvo: 'camus__sophia-joao', ts: 2000 }, // mais recente — é este que vale
+      a3: { acao: 'chamada', alvo: 'outro-filhote__x', ts: 9999 },   // ação que NÃO é do almoço: ignora
+    } } } }));
+    try {
+      var mapa = await ctx.empHorasDoDia('2026-09-03');
+      check('mordida — empHorasDoDia pega o MAIS RECENTE entre almoco_grade e almoco2 do mesmo k (2000, não 1000)',
+        mapa['camus__sophia-joao'] === 2000, JSON.stringify(mapa));
+      check('ações de outra natureza (ex.: chamada) não entram no mapa de horas do almoço',
+        mapa['outro-filhote__x'] === undefined);
+    } finally { setDB(bkpDB0); }
+  } else {
+    check('empHorasDoDia existe', false, 'função não encontrada');
+  }
+  console.log('');
+
+  // ---- Almoço: reenvio automático de curto prazo (avisarGrupoComida) -----------------------
+  console.log('Almoço — comidaTgFilaTentar (retry de 2 em 2 min, trava por transaction):');
+  if (typeof ctx.comidaTgFilaTentar === 'function') {
+    var bkpDB1 = getDB(), bkpAviso = ctx.avisarGrupoComida, bkpRole = ctx.__ROLE__.role;
+    var chamadas = [];
+    ctx.__ROLE__.role = 'recepcao';
+    vm.runInContext('avisarGrupoComida = function(k, opts){ __chamadas.push({k:k, opts:opts}); };', Object.assign(ctx, { __chamadas: chamadas }));
+    var DIA = '2026-09-04';
+    var seedFila = { daycare: { 'avisos-telegram-comida': {} } };
+    seedFila.daycare['avisos-telegram-comida'][DIA] = {
+      'falhou__tutor': { ok: false, tentando: false, nome: 'Falhou' },
+      'ok__tutor': { ok: true, nome: 'Já Foi' },
+      'emcurso__tutor': { ok: false, tentando: true, nome: 'Em Curso' },
+    };
+    var dbFake = criarDBFake(seedFila);
+    setDB(dbFake);
+    try {
+      vm.runInContext('dcDataKey = function(){ return __dia; };', Object.assign(ctx, { __dia: DIA }));
+      await ctx.comidaTgFilaTentar();
+      await drenar();
+      check('mordida — só o item com ok:false E sem tentativa em curso é reenviado (o ok:true e o "tentando" ficam de fora)',
+        chamadas.length === 1 && chamadas[0].k === 'falhou__tutor' && chamadas[0].opts && chamadas[0].opts.forcar === true,
+        JSON.stringify(chamadas));
+      var lock1 = dbFake.__store.daycare['comida-tg-retry-lock'][DIA]['falhou__tutor'];
+      check('a trava fica gravada com tentativas:1 e um lockTs', lock1 && lock1.tentativas === 1 && !!lock1.lockTs, JSON.stringify(lock1));
+
+      // 2º tique, ainda dentro dos 2 minutos: NÃO reenvia de novo (a trava segura).
+      chamadas.length = 0;
+      await ctx.comidaTgFilaTentar();
+      await drenar();
+      check('mordida — dentro da janela de 2 min, um 2º tique NÃO manda de novo (trava por lockTs, dois "aparelhos"/tiques não duplicam)',
+        chamadas.length === 0, JSON.stringify(chamadas));
+
+      // Passa a janela: lockTs "envelhecido" à mão (sem mexer no relógio de verdade).
+      dbFake.__store.daycare['comida-tg-retry-lock'][DIA]['falhou__tutor'].lockTs = Date.now() - 200000;
+      chamadas.length = 0;
+      await ctx.comidaTgFilaTentar();
+      await drenar();
+      check('mordida — passados os 2 minutos, o relógio seguinte reenvia sozinho — sem ninguém abrir tela nenhuma',
+        chamadas.length === 1 && chamadas[0].k === 'falhou__tutor', JSON.stringify(chamadas));
+      check('tentativas sobe para 2 no 2º reenvio real', dbFake.__store.daycare['comida-tg-retry-lock'][DIA]['falhou__tutor'].tentativas === 2);
+
+      // Carta morta: 5 tentativas e para (mesmo limite do medTgFilaTentar).
+      dbFake.__store.daycare['comida-tg-retry-lock'][DIA]['falhou__tutor'] = { tentativas: 5, lockTs: Date.now() - 200000 };
+      chamadas.length = 0;
+      await ctx.comidaTgFilaTentar();
+      await drenar();
+      check('mordida — depois de 5 tentativas, o relógio para de insistir sozinho (carta morta, mesma regra do medTgFilaTentar)',
+        chamadas.length === 0, JSON.stringify(chamadas));
+
+      // Papel tutor nunca dispara reenvio (o próprio arranque já filtra isso).
+      chamadas.length = 0;
+      ctx.__ROLE__.role = 'tutor';
+      dbFake.__store.daycare['comida-tg-retry-lock'][DIA]['falhou__tutor'] = undefined;
+      await ctx.comidaTgFilaTentar();
+      await drenar();
+      check('o papel "tutor" nunca dispara o reenvio automático', chamadas.length === 0);
+    } finally {
+      setDB(bkpDB1); ctx.__ROLE__.role = bkpRole;
+      vm.runInContext('avisarGrupoComida = __bkpAviso;', Object.assign(ctx, { __bkpAviso: bkpAviso }));
+    }
+  } else {
+    check('comidaTgFilaTentar existe', false, 'função não encontrada — reenvio automático não pode ser provado');
+  }
+  check('mordida — o relógio do reenvio de comida é de 2 minutos (120000ms), não de 10 como o de medicação',
+    /setInterval\(function\(\)\{ try\{ comidaTgFilaTentar\(\); \}catch\(e\)\{[\s\S]{0,80}?\}, 120000\);/.test(html));
+  console.log('');
+
+  // ---- Urgências: nunca mais fila muda por deploy pendente da ponte ------------------------
+  console.log('Urgências — urgAvisar confere tgGrupoNaPonte(\'urgencia\') antes de mandar:');
+  if (typeof ctx.urgAvisar === 'function') {
+    var bkpDB2 = getDB(), bkpTgCfg = ctx.tgCfgPronta, bkpTgGrupo = ctx.tgGrupoNaPonte, bkpTgAvisar = ctx.tgAvisar, bkpMedGuardar = ctx.medTgGuardar, bkpAudit2 = ctx.audit, bkpDia2 = ctx.dcDataKey;
+    var enviosTg = [], guardados = [];
+    vm.runInContext(`
+      tgCfgPronta = function(){ return Promise.resolve({url:'https://ponte.fake'}); };
+      tgAvisar = function(o){ __enviosTg.push(o); return Promise.resolve({ok:true}); };
+      medTgGuardar = function(t,e,g){ __guardados.push({texto:t, erro:e, grupo:g}); };
+      audit = function(){};
+      dcDataKey = function(){ return '2026-09-04'; };
+    `, Object.assign(ctx, { __enviosTg: enviosTg, __guardados: guardados }));
+    try {
+      // 1) Ponte SEM o grupo "urgencia" (deploy pendente): NÃO manda, e desfaz a trava do dia.
+      var dbFakeUrg = criarDBFake({});
+      setDB(dbFakeUrg);
+      vm.runInContext('tgGrupoNaPonte = function(nome){ return Promise.resolve(nome!==\'urgencia\'); };', ctx);
+      var r1 = await ctx.urgAvisar('teste-chave-1', 'texto de urgência 1');
+      await drenar();
+      check('mordida — ponte sem o grupo "urgencia": urgAvisar NÃO manda pelo Telegram (não cai calado no grupo errado)',
+        r1 === false && enviosTg.length === 0, JSON.stringify(enviosTg));
+      check('a mensagem fica guardada para reenvio, com o motivo dizendo que é a PONTE (não configurada) — mesma palavra que medTgFilaTentar já reconhece para não queimar tentativa',
+        guardados.length === 1 && /configurad/i.test(guardados[0].erro), JSON.stringify(guardados));
+      check('mordida — a trava de "já avisei hoje" é DESFEITA quando a ponte não tem o grupo — senão o dia inteiro fica mudo mesmo depois do deploy',
+        (dbFakeUrg.__store.daycare||{})['urgencias-enviadas'] === undefined ||
+        (dbFakeUrg.__store.daycare['urgencias-enviadas']['2026-09-04']||{})['teste-chave-1'] === undefined);
+
+      // 2) Depois do deploy, o MESMO tipo de alerta consegue tentar de novo (a trava não ficou presa).
+      enviosTg.length = 0; guardados.length = 0;
+      vm.runInContext('tgGrupoNaPonte = function(nome){ return Promise.resolve(nome===\'urgencia\'); };', ctx);
+      var r2 = await ctx.urgAvisar('teste-chave-1', 'texto de urgência 1 (retry pós-deploy)');
+      await drenar();
+      check('mordida — depois do deploy (ponte já conhece o grupo), o MESMO alerta consegue sair — a trava de antes não travou o dia inteiro',
+        r2 === true && enviosTg.length === 1 && enviosTg[0].grupo === 'urgencia', JSON.stringify(enviosTg));
+
+      // 3) Dedup normal continua valendo: mandar 2x no MESMO dia para a MESMA chave não repete.
+      enviosTg.length = 0;
+      var r3 = await ctx.urgAvisar('teste-chave-1', 'de novo');
+      await drenar();
+      check('dedup do dia continua de pé: a mesma chave não avisa duas vezes (comportamento antigo preservado)',
+        r3 === false && enviosTg.length === 0);
+    } finally {
+      setDB(bkpDB2);
+      vm.runInContext(`
+        tgCfgPronta = __bkpTgCfg; tgGrupoNaPonte = __bkpTgGrupo; tgAvisar = __bkpTgAvisar;
+        medTgGuardar = __bkpMedGuardar; audit = __bkpAudit2; dcDataKey = __bkpDia2;
+      `, Object.assign(ctx, { __bkpTgCfg: bkpTgCfg, __bkpTgGrupo: bkpTgGrupo, __bkpTgAvisar: bkpTgAvisar, __bkpMedGuardar: bkpMedGuardar, __bkpAudit2: bkpAudit2, __bkpDia2: bkpDia2 }));
+    }
+  } else {
+    check('urgAvisar existe', false, 'função não encontrada — porta de Urgências não pode ser provada');
   }
   console.log('');
 

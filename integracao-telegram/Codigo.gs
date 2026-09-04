@@ -100,7 +100,23 @@ function doPost(e) {
   }
 }
 
-/** Abra a URL /exec no navegador: manda um teste para CADA grupo configurado. */
+/**
+ * Abra a URL /exec no navegador: SÓ diz se a ponte está viva. NUNCA manda nada.
+ *
+ * ⚠ 04/set/2026 — ATÉ AQUI, doGet() mandava a mensagem de teste para TODOS OS GRUPOS
+ * (inclusive Gestão e Urgências) TODA VEZ que alguém — ou alguma coisa — fizesse um GET
+ * nesta URL. A URL /exec não pede senha nenhuma para um GET: ela é pública por natureza
+ * (é assim que o Apps Script publica um "site"), e o nó `auaulandia/config/telegram` no
+ * Firebase — de onde ela é lida pelo app — já foi encontrado LEGÍVEL por qualquer anônimo
+ * (auditoria 28/ago/2026, docs/auditoria-28ago2026/01-seguranca.md, achado S5/S6). Basta um
+ * crawler, um monitor de uptime, uma prévia de link de WhatsApp/Telegram ao colar a URL numa
+ * conversa, ou alguém só abrindo o link salvo para "ver se está no ar" — cada GET virava um
+ * disparo real em produção. Isso é a causa do spam relatado pela Adriana em 04/set/2026:
+ * "chegando o tempo inteiro, em todos os grupos". A partir de agora, doGet() NUNCA manda
+ * mensagem — só relata o estado. O teste de verdade só roda manualmente pelo editor do Apps
+ * Script, com uma guarda extra (ver testarTodosOsGrupos() abaixo) — nunca alcançável por um
+ * GET de fora, por um acionador (trigger) ou por qualquer reenvio.
+ */
 function doGet(e) {
   // ?listar=1 → NÃO manda nada: só diz em que grupos o bot está e qual é o id de cada um.
   // É assim que se descobre o número de um grupo novo, sem precisar do token na mão: crie o
@@ -109,12 +125,41 @@ function doGet(e) {
   if (e && e.parameter && e.parameter.listar) return _resp(_listarGrupos());
   var out = { ok: true, msg: 'ponte do telegram no ar', grupos: {} };
   Object.keys(GRUPOS).forEach(function (nome) {
+    out.grupos[nome] = (String(GRUPOS[nome]).indexOf('COLE_AQUI') === 0) ? 'AINDA NAO CONFIGURADO' : 'configurado';
+  });
+  return _resp(out);
+}
+
+/**
+ * Manda a mensagem de teste para CADA grupo configurado — só isso, nada mais.
+ *
+ * PROTEGIDA DE PROPÓSITO: não é chamada por doGet, nem por doPost, nem por nenhum
+ * acionador (trigger) instalado. Só roda se alguém, no editor do Apps Script, selecionar
+ * esta função na barra "Executar" e clicar em Executar — e MESMO ASSIM só manda algo se a
+ * propriedade MODO_TESTE estiver ligada (ela não existe em produção por padrão).
+ *
+ * COMO USAR (uma vez, com cuidado):
+ *   1. Configurações do projeto (engrenagem) → Propriedades do script → Adicionar propriedade
+ *      → nome MODO_TESTE, valor sim.
+ *   2. No editor, escolher a função testarTodosOsGrupos na barra de cima e clicar Executar.
+ *   3. Depois do teste, APAGAR a propriedade MODO_TESTE (ou trocar o valor) — senão qualquer
+ *      execução futura desta função (inclusive por engano) volta a mandar para todo mundo.
+ */
+function testarTodosOsGrupos() {
+  if (PropertiesService.getScriptProperties().getProperty('MODO_TESTE') !== 'sim') {
+    Logger.log('testarTodosOsGrupos: MODO_TESTE não está ligado — nada foi enviado. ' +
+      'Ligue a propriedade MODO_TESTE=sim nas Propriedades do script para rodar o teste de verdade.');
+    return { ok: false, erro: 'MODO_TESTE não está ligado — nada foi enviado' };
+  }
+  var out = { ok: true, grupos: {} };
+  Object.keys(GRUPOS).forEach(function (nome) {
     // Grupo ainda não configurado não recebe teste — e não vira erro escondido.
     if (String(GRUPOS[nome]).indexOf('COLE_AQUI') === 0) { out.grupos[nome] = 'AINDA NAO CONFIGURADO'; return; }
     out.grupos[nome] = _mandarTexto(GRUPOS[nome],
       '<b>Zêluz · AuAulândia</b>\nPonte de testes: está tudo funcionando. Acentuação: ação, coração, Zêluz, José.');
   });
-  return _resp(out);
+  Logger.log(JSON.stringify(out));
+  return out;
 }
 
 /** Onde o bot está: nome do grupo + id, lidos das mensagens recentes. Não envia nada. */
