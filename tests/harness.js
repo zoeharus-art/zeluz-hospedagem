@@ -4795,8 +4795,10 @@ async function main() {
 
     // ---- 5. avulso na turma sem depender da planilha ----
     check('a turma le o lancamento direto do banco',
-      /var DC_DASH_TURMA=\{reposicao:\[\], avulso:\[\], quando:0\};/.test(html) &&
-      /\(\(DC_DASH_TURMA\[campo\]\|\|\[\]\)\.concat\(planDia\[campo\]\|\|\[\]\)\)/.test(html));
+      // 04/set/2026: DC_DASH_TURMA ganhou o carimbo do DIA e a mescla passou a filtrar
+      // lancamento de outro dia (lancDoDia/planDoDia) — a intencao do check e a mesma.
+      /var DC_DASH_TURMA=\{reposicao:\[\], avulso:\[\], quando:0, dia:''\};/.test(html) &&
+      /\(\(lancDoDia\[campo\]\|\|\[\]\)\.concat\(planDoDia\[campo\]\|\|\[\]\)\)/.test(html));
     check('a leitura roda em toda atividade (dcGarantirPlanilha)',
       /try\{ dcCarregarLancamentos\(\); \}catch/.test(html));
     check('a diaria avulsa tambem e relida fora da Chamada',
@@ -7174,6 +7176,356 @@ async function main() {
     }
   } else {
     check('urgAvisar existe', false, 'função não encontrada — porta de Urgências não pode ser provada');
+  }
+  console.log('');
+
+  // =========================================================================
+  // 04/set/2026 — as 5 entregas do dia (carimbo de versão, A casa sem dobro,
+  // adaptação 45 dias, fantasmas do Check-in, Cadastro em destaque no menu).
+  // =========================================================================
+
+  // ---- Tarefa 1: CARIMBO DE VERSÃO — sessão sem mudança baixa SÓ o carimbo ----------
+  console.log('Carimbo de versão — a coleção pesada só desce quando o carimbo muda (04/set):');
+  // Banco de mentira que CONTA os bytes que desceram, caminho a caminho — e avisa os
+  // ouvintes de 'value' quando alguém grava (é assim que o carimbo plantado chega).
+  function criarDBContado(seed) {
+    var store = JSON.parse(JSON.stringify(seed || {}));
+    var baixado = { bytes: 0, por: {} };
+    var valueOuvintes = {};   // path -> [cb]
+    var comOn = {};           // path com .on ligado: o once() é servido do cache (0 bytes)
+    function ler(pp) { var c = store; var ps = String(pp).split('/').filter(Boolean);
+      for (var i = 0; i < ps.length; i++) { if (c == null) return null; c = c[ps[i]]; }
+      return c === undefined ? null : c; }
+    function escrever(pp, v) { var ps = String(pp).split('/').filter(Boolean); var c = store;
+      for (var i = 0; i < ps.length - 1; i++) { if (c[ps[i]] == null || typeof c[ps[i]] !== 'object') c[ps[i]] = {}; c = c[ps[i]]; }
+      if (v === null || v === undefined) delete c[ps[ps.length - 1]]; else c[ps[ps.length - 1]] = v;
+      Object.keys(valueOuvintes).forEach(function (vp) {
+        if (String(pp) === vp || String(pp).indexOf(vp + '/') === 0) {
+          var nv = ler(vp); conta(vp, nv);
+          valueOuvintes[vp].forEach(function (cb) { try { cb({ val: function () { return nv; } }); } catch (e) {} });
+        }
+      }); }
+    function conta(pp, v) { var b = JSON.stringify(v === undefined ? null : v); b = b ? b.length : 4;
+      baixado.bytes += b; baixado.por[pp] = (baixado.por[pp] || 0) + b; }
+    function fazRef(pp) {
+      return {
+        on: function (tipo, cb) {
+          if (tipo === 'value') { comOn[pp] = true; (valueOuvintes[pp] = valueOuvintes[pp] || []).push(cb);
+            var v = ler(pp); conta(pp, v); cb({ val: function () { return v; } }); return; }
+          if (tipo === 'child_added') { comOn[pp] = true; var m = ler(pp) || {};
+            Object.keys(m).forEach(function (k) { conta(pp + '/' + k, m[k]); cb({ key: k, val: function () { return m[k]; } }); }); return; }
+          // child_changed / child_removed: nada muda ao vivo neste teste
+        },
+        once: function () { var v = ler(pp); if (!comOn[pp]) conta(pp, v);
+          return Promise.resolve({ val: function () { return v; } }); },
+        set: function (v) { escrever(pp, v); return Promise.resolve(); },
+        update: function (v) { var cur = ler(pp) || {}; escrever(pp, Object.assign({}, cur, v)); return Promise.resolve(); },
+        remove: function () { escrever(pp, null); return Promise.resolve(); },
+        push: function (v) { var id = 'push-' + Math.random().toString(36).slice(2, 8);
+          if (v !== undefined) escrever(pp + '/' + id, v);
+          // NUNCA resolver o thenable com o próprio ref: await de um thenable que se
+          // resolve consigo mesmo entra em recursão infinita (foi um OOM real do harness).
+          var novo = fazRef(pp + '/' + id); novo.key = id;
+          novo.then = function (res) { if (res) res(null); return Promise.resolve(null); };
+          return novo; },
+        transaction: function (fn, done) { var atual = ler(pp); var nv = fn(atual);
+          if (nv === undefined) { if (done) done(null, false, null); return Promise.resolve({ committed: false, snapshot: null }); }
+          escrever(pp, nv); if (done) done(null, true, { val: function () { return nv; } });
+          return Promise.resolve({ committed: true, snapshot: { val: function () { return nv; } } }); }
+      };
+    }
+    return { __store: store, __baixado: baixado, ref: fazRef };
+  }
+  {
+    // Relógio de mentira: o sandbox tem setTimeout(){} (nulo). Aqui os agendamentos caem
+    // numa fila que o teste esvazia quando quer — é o que deixa o solta()/a cópia rodarem.
+    const tOrig = ctx.setTimeout, cOrig = ctx.clearTimeout, lsOrig2 = ctx.localStorage;
+    const fila = [];
+    ctx.setTimeout = function (fn) { fila.push(fn); return fila.length; };
+    ctx.clearTimeout = function (id) { if (id) fila[id - 1] = null; };
+    const rodarFila = async () => { let volta = 0;
+      while (fila.some(Boolean) && volta++ < 50) { const f = fila.shift(); if (f) { try { f(); } catch (e) {} } await new Promise((r) => setImmediate(r)); } };
+    const loja2 = { _m: {}, getItem(k) { return (k in this._m) ? this._m[k] : null; },
+      setItem(k, v) { this._m[k] = String(v); }, removeItem(k) { delete this._m[k]; } };
+    ctx.localStorage = loja2;
+    const bkpDBc = getDB();
+    const CAD = { 'a__t': { n: 'A', tutor: 't' }, 'b__t': { n: 'B', tutor: 't' } };
+    const chaveLS = ctx.zCopiaChave('daycare/cadastro');
+    try {
+      // -------- Sessão A: sem cópia local → desce tudo, guarda a cópia e PLANTA o carimbo
+      vm.runInContext('Z_MAPAS={};', ctx);
+      const dbA = criarDBContado({ daycare: { cadastro: JSON.parse(JSON.stringify(CAD)) } });
+      setDB(dbA);
+      let mapaA = null;
+      ctx.zMapaVivo('daycare/cadastro', '_provaA', function (m) { mapaA = m; });
+      await passarAsVoltas(5); await rodarFila(); await passarAsVoltas(5); await rodarFila();
+      const bytesColecaoA = dbA.__baixado.por['daycare/cadastro/a__t'] || 0;
+      check('sessão A (sem cópia): a coleção desceu inteira, como hoje',
+        bytesColecaoA > 0 && mapaA && mapaA['a__t'] && mapaA['b__t'], JSON.stringify(dbA.__baixado.por));
+      const copiaA = JSON.parse(loja2.getItem(chaveLS) || 'null');
+      check('mordida — ao assentar, a cópia local foi guardada (localStorage) com o retrato completo',
+        !!copiaA && copiaA.mapa && !!copiaA.mapa['a__t'] && !!copiaA.mapa['b__t'], loja2.getItem(chaveLS) ? 'existe' : 'não existe');
+      check('mordida — o carimbo que não existia foi PLANTADO no banco (daycare/versoes/cadastro = 1) e a cópia ficou com ele',
+        dbA.__store.daycare.versoes && dbA.__store.daycare.versoes.cadastro === 1 && copiaA.v === 1,
+        'banco=' + JSON.stringify((dbA.__store.daycare || {}).versoes) + ' copia.v=' + (copiaA && copiaA.v));
+
+      // -------- Sessão B: cópia local válida + carimbo IGUAL → desce SÓ o carimbo
+      vm.runInContext('Z_MAPAS={};', ctx);
+      const dbB = criarDBContado({ daycare: { cadastro: JSON.parse(JSON.stringify(CAD)), versoes: { cadastro: 1 } } });
+      setDB(dbB);
+      let mapaB = null;
+      ctx.zMapaVivo('daycare/cadastro', '_provaB', function (m) { mapaB = m; });
+      await passarAsVoltas(5); await rodarFila();
+      const desceuColecaoB = Object.keys(dbB.__baixado.por).some(function (k) { return k.indexOf('daycare/cadastro') === 0; });
+      check('mordida — sessão B (carimbo igual): NADA da coleção desceu — só o carimbo (' + dbB.__baixado.bytes + ' byte(s))',
+        !desceuColecaoB && dbB.__baixado.bytes <= 8, JSON.stringify(dbB.__baixado.por));
+      check('mordida — e mesmo sem descer nada, a tela recebeu o retrato completo (da cópia local)',
+        !!mapaB && !!mapaB['a__t'] && !!mapaB['b__t'], JSON.stringify(mapaB || {}).slice(0, 120));
+
+      // -------- Sessão C: o carimbo MUDOU → desce tudo de novo e a cópia se atualiza
+      vm.runInContext('Z_MAPAS={};', ctx);
+      const CAD2 = Object.assign({}, CAD, { 'c__t': { n: 'C', tutor: 't' } });
+      const dbC = criarDBContado({ daycare: { cadastro: CAD2, versoes: { cadastro: 2 } } });
+      setDB(dbC);
+      let mapaC = null;
+      ctx.zMapaVivo('daycare/cadastro', '_provaC', function (m) { mapaC = m; });
+      await passarAsVoltas(5); await rodarFila(); await passarAsVoltas(5); await rodarFila();
+      check('mordida — sessão C (carimbo mudou): a coleção desceu de novo e o FILHOt novo apareceu',
+        !!mapaC && !!mapaC['c__t'], JSON.stringify(Object.keys(mapaC || {})));
+      const copiaC = JSON.parse(loja2.getItem(chaveLS) || 'null');
+      check('e a cópia local foi atualizada com o carimbo novo (v=2)',
+        !!copiaC && copiaC.v === 2 && !!copiaC.mapa['c__t'], 'copia.v=' + (copiaC && copiaC.v));
+
+      // -------- Gravações: QUALQUER escrita nas coleções carimbadas incrementa o carimbo
+      const dbW = criarDBContado({ daycare: { cadastro: {}, versoes: { cadastro: 5 } },
+        auaulandia: { estadias: {}, versoes: { estadias: 7 } } });
+      setDB(dbW);
+      vm.runInContext('DB.__carimboLigado=false; zLigarCarimboNasGravacoes();', ctx);
+      await vm.runInContext("DB.ref('daycare/cadastro/x__y').update({n:'X'})", ctx);
+      await passarAsVoltas(5);
+      check('mordida — update em daycare/cadastro/{chave} incrementa daycare/versoes/cadastro sozinho (5 → 6)',
+        dbW.__store.daycare.versoes.cadastro === 6, 'carimbo=' + dbW.__store.daycare.versoes.cadastro);
+      await vm.runInContext("DB.ref('auaulandia/estadias/id1/conferencia').update({ok:true})", ctx);
+      await passarAsVoltas(5);
+      check('mordida — gravação FUNDA (estadias/{id}/conferencia) também carimba auaulandia/versoes/estadias (7 → 8)',
+        dbW.__store.auaulandia.versoes.estadias === 8, 'carimbo=' + dbW.__store.auaulandia.versoes.estadias);
+      vm.runInContext("DB.ref('auaulandia/estadias').push({nome:'Novo'})", ctx);
+      await passarAsVoltas(5);
+      check('mordida — push() de estadia nova também carimba (8 → 9)',
+        dbW.__store.auaulandia.versoes.estadias === 9, 'carimbo=' + dbW.__store.auaulandia.versoes.estadias);
+      await vm.runInContext("DB.ref('daycare/reposicao/x').update({q:1})", ctx);
+      await passarAsVoltas(5);
+      check('gravação FORA das coleções carimbadas NÃO mexe em carimbo nenhum',
+        dbW.__store.daycare.versoes.cadastro === 6 && dbW.__store.auaulandia.versoes.estadias === 9);
+    } finally {
+      setDB(bkpDBc); ctx.setTimeout = tOrig; ctx.clearTimeout = cOrig; ctx.localStorage = lsOrig2;
+      vm.runInContext('Z_MAPAS={};', ctx);
+    }
+    // Estrutural: os três once() no nó INTEIRO de estadias saíram — sem isto, cada abertura
+    // do Plantão/da Gestão re-baixava ~583 KB mesmo com a cópia local valendo.
+    check('mordida — nenhum once(\'value\') no nó inteiro de auaulandia/estadias sobrou no app',
+      html.indexOf("DB.ref('auaulandia/estadias').once('value')") < 0);
+    check('o embrulho do carimbo liga junto com os ouvintes (wireFirebaseListeners)',
+      /__fbWired=true;[\s\S]{0,600}?zLigarCarimboNasGravacoes\(\)/.test(html));
+    check('a leitura econômica usa cópia local com try/catch (localStorage nunca derruba o app)',
+      /function zCopiaLer\(path\)\{\s*try\{/.test(html) && /function zCopiaGravar\(path, v, mapa\)\{\s*try\{/.test(html));
+  }
+  console.log('');
+
+  // ---- Tarefa 2: "A casa" no Início — hóspede não conta duas vezes ------------------
+  console.log('A casa (Início) — hóspede não conta em dobro, moradora não é hóspede (04/set):');
+  if (typeof ctx.renderKPIs === 'function' && typeof ctx.turmaDoDia === 'function') {
+    const gebK = ctx.document.getElementById;
+    const elsK = { kpiTotal: { textContent: '' }, kpiDay: { textContent: '' }, kpiAua: { textContent: '' }, kpiAdapt: { textContent: '' } };
+    ctx.document.getElementById = function (id) { if (elsK[id]) return elsK[id]; return gebK.call(ctx.document, id); };
+    // hospedes/pelCadCache/CF_ESTADIAS são `let` no script: backup e restauração por DENTRO
+    // do contexto (ctx.x não alcança a ligação lexical). E um teste anterior deixa
+    // pelCadCache=undefined — pelExtra quebraria; garante o objeto antes.
+    vm.runInContext(`
+      __bkpHospL = (typeof hospedes==='undefined') ? [] : hospedes;
+      __bkpCFL = (typeof CF_ESTADIAS==='undefined') ? undefined : CF_ESTADIAS;
+      __bkpCadL = (typeof pelCadCache==='undefined' || !pelCadCache) ? {} : pelCadCache;
+      pelCadCache = __bkpCadL;
+    `, ctx);
+    try {
+      vm.runInContext(`
+        hospedes=[{nome:'Hóspede Prova',tutor:'Tutor Prova',raca:'SRD',mascote:false},
+                  {nome:'Repolho',tutor:'',raca:'SRD',mascote:true}];
+        CF_ESTADIAS={ 'hóspede prova__tutor prova': { e: { status:'ativa', entrada:'2000-01-01', saida:'2999-12-31',
+          nome:'Hóspede Prova', tutor:'Tutor Prova', raca:'SRD' } } };
+      `, ctx);
+      const turma = ctx.turmaDoDia();
+      const nHospNaTurma = turma.filter(function (o) { return o.hospede; }).length;
+      const nDayPuro = turma.length - nHospNaTurma;
+      ctx.renderKPIs();
+      check('o hóspede ENTROU na turma do dia (participa do Day Care durante a estadia)',
+        nHospNaTurma === 1, 'hóspedes na turma: ' + nHospNaTurma);
+      check('mordida — kpiDay conta a turma SEM o hóspede (ele não é aluno do dia)',
+        String(elsK.kpiDay.textContent) === String(nDayPuro),
+        'kpiDay=' + elsK.kpiDay.textContent + ' esperado=' + nDayPuro);
+      check('mordida — kpiAua conta os hóspedes SEM a moradora (a Repolho mora aqui, não é hóspede)',
+        String(elsK.kpiAua.textContent) === '1', 'kpiAua=' + elsK.kpiAua.textContent);
+      check('mordida — kpiTotal = turma sem hóspede + hóspedes: o mesmo FILHOt NUNCA soma duas vezes',
+        String(elsK.kpiTotal.textContent) === String(nDayPuro + 1) &&
+        Number(elsK.kpiTotal.textContent) < turma.length + 2,
+        'kpiTotal=' + elsK.kpiTotal.textContent + ' esperado=' + (nDayPuro + 1));
+      check('o rótulo do quadro diz a verdade (turma do dia + hóspedes, ninguém em dobro) — não "quem está aqui neste momento"',
+        /a turma do dia e os hóspedes de hoje — ninguém contado duas vezes/.test(html) &&
+        html.indexOf('<span class="dash-meta">quem está aqui neste momento</span>') < 0);
+    } finally {
+      ctx.document.getElementById = gebK;
+      vm.runInContext('hospedes = __bkpHospL; CF_ESTADIAS = __bkpCFL; pelCadCache = __bkpCadL;', ctx);
+    }
+  } else {
+    check('renderKPIs e turmaDoDia existem', false, 'funções não encontradas');
+  }
+  console.log('');
+
+  // ---- Tarefa 3: adaptação agora é de 45 dias, e vencida sai SOZINHA ----------------
+  console.log('Adaptação — 45 dias, vencida sai sozinha, sem data continua pendência (04/set):');
+  {
+    const diasAtras = function (n) { const d = new Date(); d.setDate(d.getDate() - n);
+      const pz = (x) => String(x).padStart(2, '0');
+      return d.getFullYear() + '-' + pz(d.getMonth() + 1) + '-' + pz(d.getDate()); };
+    const adaptDias = vm.runInContext('ADAPT_DIAS', ctx);   // é const — ctx.ADAPT_DIAS não alcança
+    check('mordida — ADAPT_DIAS agora é 45 (era 30)', adaptDias === 45, 'ADAPT_DIAS=' + adaptDias);
+    check('mordida — 40º dia AINDA é adaptação (com 30 ele já tinha caído fora)',
+      ctx.pelEmAdaptacao({ adaptacao: 'Sim', adaptacao_desde: diasAtras(40) }) === true);
+    check('50º dia não é mais adaptação (venceu)',
+      ctx.pelEmAdaptacao({ adaptacao: 'Sim', adaptacao_desde: diasAtras(50) }) === false);
+    check('mordida — adaptação VENCIDA não é mais pendência: sai sozinha, ninguém decide nada',
+      ctx.adaptPendente({ adaptacao: 'Sim', adaptacao_desde: diasAtras(50) }) === false);
+    check('marcada "Sim" SEM data continua pendência (sem o dia 1 não há contagem)',
+      ctx.adaptPendente({ adaptacao: 'Sim' }) === true);
+    check('quem não está marcado não é nada', ctx.adaptPendente({}) === false && ctx.pelEmAdaptacao({}) === false);
+    check('a régua do dashboard automático acompanhou (DASH_AUTO_ADAPT=45)', ctx.DASH_AUTO_ADAPT === 45);
+    // O quadro do Início: lista quem ESTÁ em adaptação, com "Xº dia de 45".
+    check('adaptEmCursoLista existe (o Início agora mostra quem ESTÁ em adaptação)',
+      typeof ctx.adaptEmCursoLista === 'function');
+    check('o texto do quadro é "º dia de 45" (via ADAPT_DIAS), não um número solto',
+      /º dia de '\+ADAPT_DIAS/.test(html));
+    if (typeof ctx.renderAdaptPendentes === 'function') {
+      const gebA = ctx.document.getElementById;
+      const elA = { innerHTML: '' };
+      ctx.document.getElementById = function (id) { if (id === 'adaptPendCard') return elA; return gebA.call(ctx.document, id); };
+      const bkpPel2 = ctx.PELUDINHOS;
+      vm.runInContext("__bkpCad2L = (typeof pelCadCache==='undefined' || !pelCadCache) ? {} : pelCadCache;", ctx);
+      try {
+        vm.runInContext(`
+          PELUDINHOS=[{n:'Em Curso',tutor:'t1',raca:'SRD',freq:'5x',dias:['seg'],nasc:''},
+                      {n:'Sem Data',tutor:'t2',raca:'SRD',freq:'5x',dias:['seg'],nasc:''},
+                      {n:'Vencida',tutor:'t3',raca:'SRD',freq:'5x',dias:['seg'],nasc:''}];
+        `, ctx);
+        ctx.__cadAdapta = {};
+        ctx.__cadAdapta[ctx.pelKey(ctx.PELUDINHOS[0])] = { adaptacao: 'Sim', adaptacao_desde: diasAtras(40) };
+        ctx.__cadAdapta[ctx.pelKey(ctx.PELUDINHOS[1])] = { adaptacao: 'Sim' };
+        ctx.__cadAdapta[ctx.pelKey(ctx.PELUDINHOS[2])] = { adaptacao: 'Sim', adaptacao_desde: diasAtras(60) };
+        vm.runInContext('pelCadCache = __cadAdapta;', ctx);
+        ctx.renderAdaptPendentes();
+        check('mordida — o quadro do Início mostra quem ESTÁ em adaptação com o "40º dia de 45"',
+          /Em Curso/.test(elA.innerHTML) && /40º dia de 45/.test(elA.innerHTML), elA.innerHTML.slice(0, 200));
+        check('o "sem data" aparece como pendência pequena, com o nome',
+          /Sem data de início \(1\)/.test(elA.innerHTML) && /Sem Data/.test(elA.innerHTML), elA.innerHTML.slice(0, 300));
+        check('mordida — a VENCIDA não aparece em lugar nenhum do quadro (saiu sozinha)',
+          elA.innerHTML.indexOf('Vencida') < 0, elA.innerHTML.slice(0, 300));
+      } finally {
+        ctx.document.getElementById = gebA;
+        vm.runInContext('PELUDINHOS = __bkpPel2; pelCadCache = __bkpCad2L;',
+          Object.assign(ctx, { __bkpPel2: bkpPel2 }));
+      }
+    }
+  }
+  console.log('');
+
+  // ---- Tarefa 4: fantasmas no Check-in do corpo -------------------------------------
+  console.log('Check-in do corpo — texto digitado nunca vira nome válido (04/set):');
+  if (typeof ctx.turmaDoDia === 'function' && Array.isArray(ctx.PELUDINHOS)) {
+    const bkpDash = JSON.parse(JSON.stringify(ctx.DC_DASH_TURMA || {}));
+    vm.runInContext(`
+      __bkpPlanL = planDia;
+      if(typeof pelCadCache==='undefined' || !pelCadCache) pelCadCache={};
+    `, ctx);
+    const hoje4 = ctx.dcDataKey();
+    // um FILHOt com nome ÚNICO na base, para provar o re-casamento
+    const contagem = {};
+    ctx.PELUDINHOS.forEach(function (pp) { const k = ctx.jsNorm(pp.n); contagem[k] = (contagem[k] || 0) + 1; });
+    const unico = ctx.PELUDINHOS.find(function (pp) { return contagem[ctx.jsNorm(pp.n)] === 1 && pp.n.indexOf("'") < 0; });
+    try {
+      // 1) "atnoio" (erro de digitação que o fuzzy não alcança) — vira "Não identificado"
+      ctx.__dashProva = { reposicao: [{ p: { n: 'atnoio', raca: '', tutor: '', freq: 'reposicao', dias: [], nasc: '' }, cru: true, txt: 'atnoio' }],
+        avulso: [], quando: Date.now(), dia: hoje4 };
+      vm.runInContext('DC_DASH_TURMA = __dashProva;', ctx);
+      let turma4 = ctx.turmaDoDia();
+      const fantasma = turma4.find(function (o) { return o.p.n === 'atnoio'; });
+      const naoIdent = turma4.find(function (o) { return o.naoIdentificado; });
+      check('mordida — "atnoio" NÃO aparece como nome válido na turma (era o fantasma do celular)',
+        !fantasma, fantasma ? JSON.stringify(fantasma.p) : '');
+      check('mordida — a linha vira "Não identificado", carregando o texto lançado para a recepção achar',
+        !!naoIdent && naoIdent.p.n === 'Não identificado' && /atnoio/.test(naoIdent.p.raca) && naoIdent.p.tutor === 'atnoio',
+        naoIdent ? JSON.stringify(naoIdent.p) : 'não achei a entrada');
+
+      // 2) o texto que CASA com o cadastro re-casa na hora de desenhar (a corrida do boot)
+      if (unico) {
+        ctx.__dashProva2 = { reposicao: [{ p: { n: unico.n, raca: '', tutor: '', freq: 'reposicao', dias: [], nasc: '' }, cru: true, txt: unico.n }],
+          avulso: [], quando: Date.now(), dia: hoje4 };
+        vm.runInContext('DC_DASH_TURMA = __dashProva2;', ctx);
+        turma4 = ctx.turmaDoDia();
+        const casado4 = turma4.find(function (o) { return o.p === unico || (o.p.n === unico.n && o.p.tutor === unico.tutor); });
+        const aindaCru = turma4.find(function (o) { return o.naoIdentificado; });
+        check('mordida — linha crua que CASA com o cadastro re-casa ao desenhar (nome sempre traduzido pela ficha)',
+          !!casado4 && !aindaCru, 'unico=' + unico.n + ' casado=' + !!casado4 + ' cru=' + !!aindaCru);
+      } else {
+        check('havia nome único na base para provar o re-casamento', false);
+      }
+
+      // 3) lançamento de OUTRO dia não entra (a virada do dia limpa o retrato em memória)
+      ctx.__dashProva3 = { reposicao: [{ p: { n: 'atnoio', raca: '', tutor: '', freq: 'reposicao', dias: [], nasc: '' }, cru: true, txt: 'atnoio' }],
+        avulso: [], quando: Date.now(), dia: '2020-01-01' };
+      vm.runInContext('DC_DASH_TURMA = __dashProva3;', ctx);
+      turma4 = ctx.turmaDoDia();
+      check('mordida — lançamento com carimbo de OUTRO dia fica de fora da turma (rascunho de ontem não vira gente de hoje)',
+        !turma4.some(function (o) { return o.naoIdentificado || o.p.n === 'atnoio'; }));
+    } finally {
+      vm.runInContext('DC_DASH_TURMA = __bkpDash; planDia = __bkpPlanL;',
+        Object.assign(ctx, { __bkpDash: bkpDash }));
+    }
+    check('a leitura dos lançamentos agora carimba o DIA do retrato (DC_DASH_TURMA.dia)',
+      /DC_DASH_TURMA\.dia=dia;/.test(html));
+    check('a entrada crua leva o texto lançado (txt) para o re-casamento',
+      /cru:true, txt:limpo/.test(html));
+  } else {
+    check('turmaDoDia e PELUDINHOS existem', false);
+  }
+  console.log('');
+
+  // ---- Tarefa 5: Cadastro de Peludinhos em destaque no menu -------------------------
+  console.log('Menu — Cadastro de Peludinhos em destaque, sem quebrar a hierarquia (04/set):');
+  {
+    check('mordida — o item do Cadastro tem o destaque (nav-destaque) e continua so-gestao (monitor NUNCA cadastra)',
+      /<a data-v="ficha" class="so-gestao nav-destaque"/.test(html));
+    const regraDestaque = (html.match(/\.nav \.acc-panel a\.nav-destaque\{[^}]*\}/) || [''])[0];
+    check('o destaque é discreto: trilha dourada cheia + peso 600 — sem fundo, sem caixa-alta',
+      /border-left:2px solid var\(--z-gold\)/.test(regraDestaque) && /font-weight:600/.test(regraDestaque) &&
+      regraDestaque.indexOf('background') < 0 && regraDestaque.indexOf('text-transform') < 0,
+      regraDestaque);
+    check('mordida — o destaque NÃO mexe no tamanho: nenhuma font-size na regra (o item segue 14px)',
+      regraDestaque.length > 0 && regraDestaque.indexOf('font-size') < 0, regraDestaque);
+    check('a hierarquia de 3 níveis segue de pé: categoria 17/700 › subtítulo 15/700 › item 14/500',
+      /\.nav a\.grp\{font-size:17px;font-weight:700/.test(html) &&
+      /\.nav a\.grp\.grp-sub\{font-size:15px;font-weight:700/.test(html) &&
+      /font-size:14px;font-weight:500/.test(html));
+    const iniCentral = html.indexOf('<div class="acc" data-acc="central">');
+    const iniFicha = html.indexOf('data-v="ficha"');
+    const entre = (iniCentral >= 0 && iniFicha > iniCentral) ? html.slice(iniCentral, iniFicha) : '';
+    // o corte termina DENTRO do próprio link do ficha, então o "<a " dele também conta:
+    // 2 = o título clicável da categoria + o próprio Cadastro. Qualquer item no meio daria 3+.
+    check('mordida — o Cadastro é o PRIMEIRO item da categoria Central Zêluz (só o título da categoria vem antes)',
+      entre !== '' && (entre.match(/<a /g) || []).length === 2, 'links no corte: ' + ((entre.match(/<a /g) || []).length));
+    check('quem vê: recepção, supervisão, gestão e diretoria (o .so-gestao só é escondido de monitor/plantonista/aprendiz/tutor)',
+      /body\[data-role="monitor"\] \.so-gestao,\s*body\[data-role="plantonista"\] \.so-gestao,\s*body\[data-role="aprendiz"\] \.so-gestao,\s*body\[data-role="tutor"\]\s+\.so-gestao\{display:none !important\}/.test(html) &&
+      !/data-role="consultora"\][^,{]*\.so-gestao/.test(html) &&
+      !/data-role="supervisor"\][^,{]*\.so-gestao/.test(html) &&
+      !/data-role="diretoria"\][^,{]*\.so-gestao/.test(html));
   }
   console.log('');
 

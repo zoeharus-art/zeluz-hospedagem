@@ -157,6 +157,12 @@
   /* dentro de uma categoria o item tem a trilha à esquerda; o ativo troca a trilha pelo fio */
   .nav .acc-panel a[data-v].active{border-left-color:transparent;border-radius:999px}
   .nav .acc-panel a[data-v].active::before{left:-2px}
+  /* CADASTRO EM DESTAQUE (Adriana, 04/set/2026: "é a parte inicial de tudo").
+     Realce discreto no padrão do app: primeiro item da categoria, trilha dourada CHEIA
+     (as outras são dourado a 30%) e peso 600 — sem caixa, sem fundo, sem caixa-alta e
+     SEM crescer: o item continua 14px, abaixo do subtítulo (15px) e da categoria (17px). */
+  .nav .acc-panel a.nav-destaque{border-left:2px solid var(--z-gold);font-weight:600;opacity:.95}
+  .nav .acc-panel a.nav-destaque svg{color:var(--z-gold)}
   .nav a svg{width:19px;height:19px;flex:0 0 auto}
   .nav a .soon{margin-left:auto;font-size:9px;background:rgba(255,253,246,.10);padding:2px 7px;border-radius:999px;font-weight:600;letter-spacing:.3px}
 
@@ -2010,7 +2016,7 @@
       <div class="acc-panel">
         <!-- Fica na raiz da categoria de propósito: não é de AuAulândia nem de Day Care,
              é o cadastro único dos dois (Adriana, 26/ago/2026). -->
-        <a data-v="ficha" class="so-gestao" title="Um cadastro só, para Day Care e AuAulândia — tudo começa aqui."><span data-icon="id-card"></span><span>Cadastro de Peludinhos</span></a>
+        <a data-v="ficha" class="so-gestao nav-destaque" title="Um cadastro só, para Day Care e AuAulândia — tudo começa aqui."><span data-icon="id-card"></span><span>Cadastro de Peludinhos</span></a>
         <div class="acc" data-acc="c-auaulandia">
           <a class="grp grp-sub nav-parent" data-acc-toggle="c-auaulandia"><span>AuAulândia</span><span class="acc-caret" aria-hidden="true"></span></a>
           <div class="acc-panel">
@@ -2215,12 +2221,12 @@
             <div class="dash-eyebrow">Hoje</div>
             <h2 class="dash-t">A casa</h2>
           </div>
-          <span class="dash-meta">quem está aqui neste momento</span>
+          <span class="dash-meta">a turma do dia e os hóspedes de hoje — ninguém contado duas vezes</span>
         </div>
         <div class="dash-strip">
           <div class="ds-item"><img class="ds-st" src="assets/stickers/pata.png" alt=""><div class="ds-n" id="kpiTotal">—</div><div class="ds-l">Peludinhos</div></div>
-          <div class="ds-item"><img class="ds-st" src="assets/stickers/vasilha.png" alt=""><div class="ds-n coral" id="kpiDay">—</div><div class="ds-l">No Day Care</div></div>
-          <div class="ds-item"><img class="ds-st" src="assets/stickers/osso.png" alt=""><div class="ds-n aqua" id="kpiAua">—</div><div class="ds-l">Na AuAulândia</div></div>
+          <div class="ds-item"><img class="ds-st" src="assets/stickers/vasilha.png" alt=""><div class="ds-n coral" id="kpiDay">—</div><div class="ds-l">Turma do dia</div></div>
+          <div class="ds-item"><img class="ds-st" src="assets/stickers/osso.png" alt=""><div class="ds-n aqua" id="kpiAua">—</div><div class="ds-l">Hóspedes de hoje</div></div>
           <div class="ds-item"><img class="ds-st" src="assets/stickers/coracao.png" alt=""><div class="ds-n gold" id="kpiAdapt">—</div><div class="ds-l">Em adaptação</div></div>
         </div>
       </section>
@@ -2285,7 +2291,7 @@
 
   <!-- ===== ADAPTAÇÃO 1º MÊS ===== -->
   <section class="view" id="v-adaptacao">
-    <div class="role-note so-gestao"><span data-icon="info"></span><span>Registro do <strong>primeiro mês / adaptação</strong>. Marque como o peludinho passou o dia — rápido, só tocando.</span></div>
+    <div class="role-note so-gestao"><span data-icon="info"></span><span>Registro da <strong>adaptação (45 dias)</strong>. Marque como o peludinho passou o dia — rápido, só tocando.</span></div>
     <div class="card">
       <h2>Como foi a adaptação hoje?</h2>
       <div class="hint">Amora · 04/06/2026 · 2º dia de adaptação</div>
@@ -4050,6 +4056,10 @@
   // evita 'Cannot access X before initialization' (zona morta temporal) na carga.
   var __fbReady=false, __scriptReady=false, __fbWired=false;
   function wireFirebaseListeners(){ if(__fbWired||!__fbReady||!__scriptReady||!DB) return; __fbWired=true;
+      // Carimbo de versão (04/set/2026): ANTES de qualquer ouvinte/gravação, o DB.ref é
+      // embrulhado — toda gravação em daycare/cadastro e auaulandia/estadias passa a
+      // incrementar o carimbo da coleção sozinha. Ver o bloco CARIMBO DE VERSÃO.
+      try{ zLigarCarimboNasGravacoes(); }catch(e){} /* silencioso de propósito: sem o embrulho o app segue como antes — só perde a economia */
       // O banco acabou de ficar pronto: esvazia o bolso da auditoria (rastros que não
       // subiram porque o banco recusou ou ainda estava reconectando). Ver o bloco
       // "AUDITORIA — BOLSO LOCAL E REENVIO".
@@ -4219,7 +4229,7 @@
   // faz — a mesma frase que aparece como title= no menu e no cabeçalho da tela. Fonte única:
   // se mudar aqui, muda no menu, no cabeçalho e no aviso de pendência (navPend).
   const titles={inicio:['Início','Visão geral do dia'],ficha:['Cadastro de Peludinhos','Um cadastro só, para Day Care e AuAulândia — tudo começa aqui.'],inativos:['Inativos','Peludinhos que saíram do Day Care'],
-    renovacao:['Renovação de planos','Quem está no fim do plano.'],adaptacao:['Adaptação · 1º mês','Como está se adaptando'],
+    renovacao:['Renovação de planos','Quem está no fim do plano.'],adaptacao:['Adaptação · 45 dias','Como está se adaptando'],
     reposicao:['Reposições','Créditos de dias por falta avisada.'],
     daycare:['Day Care','Chamada, almoço, atividades, EA.'],hospedagem:['Plantão da noite','O relatório de cada hóspede, turno a turno.'],
     gestdia:['Conferência do dia','Medicações por horário, problemas e os três tempos do plantão.'],
@@ -4480,19 +4490,25 @@
 
   // Os KPIs do Início eram números fixos no HTML (14/9/5/3) — nunca calcularam nada.
   // Agora: Day Care = turma do dia (sem inativos), AuAulândia = hóspedes carregados da
-  // planilha, adaptação = quem está no 1º mês. Roda depois que as duas fontes chegam.
+  // planilha, adaptação = quem está nos 45 dias. Roda depois que as duas fontes chegam.
   function renderKPIs(){
     try{
       const el=id=>document.getElementById(id);
       if(!el('kpiTotal')) return;
       const turma=(typeof turmaDoDia==='function')?turmaDoDia():[];
-      const nDay=turma.length;
-      const nAua=Array.isArray(hospedes)?hospedes.length:0;
-      // Mesma regra do banner: adaptação vale 30 dias contados da data. Sem data, não conta.
+      // O HÓSPEDE NÃO CONTA DUAS VEZES (Adriana, 04/set/2026): turmaDoDia() já INCLUI os
+      // hóspedes da AuAulândia (eles participam do Day Care durante a estadia, entram
+      // marcados com o.hospede). Somar turma.length + hospedes.length contava cada
+      // hóspede em dobro no total da casa. Agora: Day Care = turma SEM os hóspedes;
+      // AuAulândia = hóspedes da planilha SEM a moradora (a Repolho mora aqui — não é
+      // hóspede, e moradora nunca entra em conta nenhuma); total = a soma das duas.
+      const nDayPuro=turma.filter(o=>!o.hospede).length;
+      const nAua=Array.isArray(hospedes)?hospedes.filter(h=>!h.mascote).length:0;
+      // Mesma regra do banner: adaptação vale ADAPT_DIAS contados da data. Sem data, não conta.
       const nAdapt=turma.filter(o=>{ const ex=pelExtra(o.p);
         return (typeof pelEmAdaptacao==='function')?pelEmAdaptacao(ex):(ex&&ex.adaptacao==='Sim'); }).length;
-      el('kpiTotal').textContent=nDay+nAua;
-      el('kpiDay').textContent=nDay;
+      el('kpiTotal').textContent=nDayPuro+nAua;
+      el('kpiDay').textContent=nDayPuro;
       el('kpiAua').textContent=nAua;
       el('kpiAdapt').textContent=nAdapt;
     }catch(e){ /* nunca derrubar a tela por causa de um contador */ } /* silencioso de propósito: função opcional, pode não existir nesta tela */
@@ -8718,34 +8734,183 @@
   // por sessão e depois só a MUDANÇA viaja (child_added/changed/removed). O retrato
   // local vive em Z_MAPAS e é compartilhado por todo mundo que lê o mesmo caminho.
   var Z_MAPAS={};
+  // ===== CARIMBO DE VERSÃO (Adriana, 04/set/2026 — prioridade nº 1) =================
+  // O ouvinte econômico acabou com o "re-baixa a cada mudança", mas as duas coleções
+  // pesadas ainda desciam INTEIRAS a cada sessão: daycare/cadastro ~198 KB e
+  // auaulandia/estadias ~583 KB (medidos por REST em 04/set/2026). Dezenas de aberturas
+  // por dia = dezenas de MB do teto gratuito, por um dado que quase nunca mudou.
+  // Agora cada coleção tem um CARIMBO (um número em daycare/versoes/cadastro e
+  // auaulandia/versoes/estadias) que TODA gravação incrementa. O aparelho guarda uma
+  // cópia local (localStorage) com o carimbo que ela tinha: no boot desce SÓ o carimbo
+  // (poucos bytes); se ele não mudou, a cópia local É o retrato e nada mais desce. Se
+  // mudou (ou não há cópia), liga o vivo de sempre — e a cópia nova é guardada quando
+  // o retrato assenta. As regras do banco (v1, publicadas) já permitem a escrita do
+  // carimbo: daycare/versoes/cadastro cai em daycare/$colecao/$item (auth != null).
+  var Z_CARIMBOS={ 'daycare/cadastro':'daycare/versoes/cadastro',
+                   'auaulandia/estadias':'auaulandia/versoes/estadias' };
+  function zCopiaChave(path){ return 'zeluz_copia_v1_'+String(path).replace(/\//g,'_'); }
+  function zCopiaLer(path){
+    try{
+      var raw=localStorage.getItem(zCopiaChave(path)); if(!raw) return null;
+      var o=JSON.parse(raw);
+      if(!o || typeof o.v==='undefined' || !o.mapa || typeof o.mapa!=='object') return null;
+      return o;
+    }catch(e){ return null; }
+  }
+  function zCopiaGravar(path, v, mapa){
+    try{ localStorage.setItem(zCopiaChave(path), JSON.stringify({v:v, mapa:mapa})); }
+    catch(e){} /* silencioso de propósito: guardar no aparelho é conveniência — o dado de verdade mora no banco */
+  }
+  function zColecaoCarimbada(p){
+    p=String(p||'');
+    for(var c in Z_CARIMBOS){ if(p===c || p.indexOf(c+'/')===0) return c; }
+    return null;
+  }
+  // TODA gravação numa coleção carimbada incrementa o carimbo dela. O incremento é do
+  // servidor (ServerValue.increment): dois aparelhos gravando juntos não se atropelam.
+  function zCarimbar(colecao){
+    try{
+      var no=Z_CARIMBOS[colecao]; if(!no || !DB) return;
+      var sv=(typeof firebase!=='undefined' && firebase.database && firebase.database.ServerValue &&
+              typeof firebase.database.ServerValue.increment==='function')
+             ? firebase.database.ServerValue.increment(1) : null;
+      var r=DB.ref(no);
+      if(sv){ r.set(sv).catch(function(e){ _logFalhaGrav('carimbo '+no, e); }); }
+      else if(typeof r.transaction==='function'){
+        r.transaction(function(v){ return (Number(v)||0)+1; },
+          function(e){ if(e) _logFalhaGrav('carimbo '+no, e); });
+      }
+    }catch(e){ try{ _logFalhaGrav('carimbo '+colecao, e); }catch(x){} /* silencioso de propósito: guarda defensiva — falhar aqui não pode interromper quem chamou */ }
+  }
+  // O incremento não depende de ninguém lembrar dele: o DB.ref é embrulhado UMA vez
+  // (zLigarCarimboNasGravacoes, chamada no wireFirebaseListeners) e qualquer
+  // set/update/remove/push/transaction dentro de uma coleção carimbada — em qualquer
+  // profundidade — carimba sozinho DEPOIS que a gravação dá certo. Um ponto só cobre
+  // os ~35 call sites de hoje e os que ainda vão nascer.
+  function zEmbrulharRefComCarimbo(r, colecao){
+    if(!r) return r;
+    try{ if(r.__comCarimbo) return r; r.__comCarimbo=true; }catch(e){ return r; }
+    var depois=function(pr){
+      if(pr && typeof pr.then==='function'){ pr.then(function(){ zCarimbar(colecao); }, function(){}); }
+      else zCarimbar(colecao);
+      return pr;
+    };
+    ['set','update','remove'].forEach(function(mm){
+      if(typeof r[mm]!=='function') return;
+      var orig=r[mm];
+      r[mm]=function(){ return depois(orig.apply(r, arguments)); };
+    });
+    if(typeof r.push==='function'){
+      var pushOrig=r.push;
+      r.push=function(){
+        var novo=pushOrig.apply(r, arguments);
+        if(arguments.length && arguments[0]!==undefined) depois(novo);
+        // push() sem valor devolve um ref filho: o set/update que vier nele também carimba
+        if(novo && typeof novo.set==='function') zEmbrulharRefComCarimbo(novo, colecao);
+        return novo;
+      };
+    }
+    if(typeof r.transaction==='function'){
+      var trOrig=r.transaction;
+      r.transaction=function(){
+        var pr=trOrig.apply(r, arguments);
+        if(pr && typeof pr.then==='function'){
+          pr.then(function(res){ if(!res || res.committed!==false) zCarimbar(colecao); }, function(){});
+        }
+        return pr;
+      };
+    }
+    return r;
+  }
+  function zLigarCarimboNasGravacoes(){
+    try{
+      if(!DB || DB.__carimboLigado || typeof DB.ref!=='function') return;
+      DB.__carimboLigado=true;
+      var refOrig=DB.ref;
+      DB.ref=function(p){
+        var r=refOrig.call(DB, p);
+        var col=zColecaoCarimbada(p);
+        if(col) zEmbrulharRefComCarimbo(r, col);
+        return r;
+      };
+    }catch(e){} /* silencioso de propósito: sem o embrulho o app segue como antes — só perde a economia */
+  }
   function zMapaVivo(path, slot, aoMudar){
     if(!DB) return null;
     var m=Z_MAPAS[path];
     if(!m){
-      m=Z_MAPAS[path]={mapa:{}, pronto:false, slots:{}, t:null, prontoCbs:[]};
+      m=Z_MAPAS[path]={mapa:{}, pronto:false, slots:{}, t:null, prontoCbs:[], vivo:false, carimbo:null};
       var solta=function(){
         if(m.t) return;
         m.t=setTimeout(function(){ m.t=null; Object.keys(m.slots).forEach(function(k){
-          try{ m.slots[k](m.mapa); }catch(e){} /* silencioso de propósito: redesenho de tela — falhar não pode derrubar a sincronia */ }); },90);
+          try{ m.slots[k](m.mapa); }catch(e){} /* silencioso de propósito: redesenho de tela — falhar não pode derrubar a sincronia */ });
+          // Coleção carimbada, no modo vivo: o retrato que acabou de assentar vira a
+          // cópia local — é ela que poupa o download da próxima sessão.
+          if(m.vivo && m.pronto && Z_CARIMBOS[path]){
+            zCopiaGravar(path, m.carimbo, m.mapa);
+            // O carimbo ainda não existe no banco (ninguém nunca gravou lá): planta o 1,
+            // uma vez só — sem ele nenhuma sessão consegue reaproveitar a cópia.
+            if(m.carimbo===null && !m.carimboPlantado){ m.carimboPlantado=true; zCarimbar(path); }
+          }
+        },90);
       };
-      var r=DB.ref(path);
       var pronto=function(v){
-        if(m.pronto) return;
-        if(v&&typeof v==='object') m.mapa=v;
-        m.pronto=true;
-        m.prontoCbs.splice(0).forEach(function(f){ try{ f(m.mapa); }catch(e){} /* silencioso de propósito: redesenho de tela — falhar não pode derrubar a sincronia */ });
+        if(v && typeof v==='object') m.mapa=v;
+        if(!m.pronto){
+          m.pronto=true;
+          m.prontoCbs.splice(0).forEach(function(f){ try{ f(m.mapa); }catch(e){} /* silencioso de propósito: redesenho de tela — falhar não pode derrubar a sincronia */ });
+        }
         solta();
       };
-      if(typeof r.on==='function'){
-        r.on('child_added',  function(sn){ m.mapa[sn.key]=sn.val(); if(m.pronto) solta(); });
-        r.on('child_changed',function(sn){ m.mapa[sn.key]=sn.val(); solta(); });
-        r.on('child_removed',function(sn){ delete m.mapa[sn.key]; solta(); });
+      var ligarVivo=function(){
+        if(m.vivo) return; m.vivo=true;
+        var r=DB.ref(path);
+        if(typeof r.on==='function'){
+          r.on('child_added',  function(sn){ m.mapa[sn.key]=sn.val(); if(m.pronto) solta(); });
+          r.on('child_changed',function(sn){ m.mapa[sn.key]=sn.val(); solta(); });
+          r.on('child_removed',function(sn){ delete m.mapa[sn.key]; solta(); });
+        }
+        // O primeiro retrato: este once é servido do cache que os child_* acabaram de
+        // baixar — o nó NÃO desce duas vezes. Ele só marca o "pronto". (Sem .on — a
+        // bancada de testes, por exemplo — ele vira o once() que sempre existiu.)
+        // Quando o vivo liga por cima da cópia local (carimbo mudou), este retrato
+        // cheio SUBSTITUI o mapa — é o que tira da cópia quem foi apagado no banco.
+        r.once('value').then(function(sn){ pronto(sn&&sn.val?sn.val():null); })
+          .catch(function(){ pronto(null); });   // sem permissão/sem rede: entrega vazio, como o catch fazia
+      };
+      var noCarimbo=Z_CARIMBOS[path];
+      var rc=noCarimbo ? DB.ref(noCarimbo) : null;
+      if(rc && typeof rc.on==='function'){
+        var copia=zCopiaLer(path);
+        var esperaCopia=null;
+        if(copia){
+          // Rede lenta/fora: depois de 8s sem resposta do carimbo, a cópia local segura
+          // a tela. Se o carimbo chegar depois dizendo outra coisa, o vivo liga e corrige.
+          esperaCopia=setTimeout(function(){
+            if(!m.pronto && !m.vivo){ m.carimbo=copia.v; pronto(copia.mapa); }
+          }, 8000);
+        } else {
+          ligarVivo();      // sem cópia: desce tudo (como hoje) e guarda a primeira cópia
+        }
+        rc.on('value', function(sn){
+          var v=(sn && sn.val) ? sn.val() : null;
+          if(esperaCopia){ clearTimeout(esperaCopia); esperaCopia=null; }
+          if(m.vivo){
+            m.carimbo=v;
+            // A cópia nova espera o dado assentar: o evento do dado viaja antes do carimbo.
+            if(m.pronto) setTimeout(function(){ zCopiaGravar(path, m.carimbo, m.mapa); }, 600);
+            return;
+          }
+          m.carimbo=v;
+          if(copia && v!==null && v===copia.v){
+            if(!m.pronto) pronto(copia.mapa);   // carimbo igual: a cópia local É o retrato
+          } else {
+            ligarVivo();                        // mudou (ou o carimbo nunca existiu): desce
+          }
+        });
+      } else {
+        ligarVivo();
       }
-      // O primeiro retrato: este once é servido do cache que os child_* acabaram de
-      // baixar — o nó NÃO desce duas vezes. Ele só marca o "pronto". (Sem .on — a
-      // bancada de testes, por exemplo — ele vira o once() que sempre existiu.)
-      r.once('value').then(function(sn){ pronto(sn&&sn.val?sn.val():null); })
-        .catch(function(){ pronto(null); });   // sem permissão/sem rede: entrega vazio, como o catch fazia
     }
     if(slot && aoMudar){
       m.slots[slot]=aoMudar;
@@ -8987,7 +9152,7 @@
       var reais=(hospedes||[]).filter(function(h){ return !h.mascote; });
       var jobs=[
         DB.ref('auaulandia/medicacao-log/'+dia).once('value').then(function(s){ return s.val()||{}; }).catch(function(){ return {}; }),
-        DB.ref('auaulandia/estadias').once('value').then(function(s){ return s.val()||{}; }).catch(function(){ return {}; })
+        zMapaUma('auaulandia/estadias').then(function(v){ return v||{}; }).catch(function(){ return {}; })
       ].concat(reais.map(function(h){
         return DB.ref('auaulandia/relatorios/'+fichaKeyDe(h,selectedDate)).once('value')
           .then(function(s){ return {h:h, v:s.val()||{}}; }).catch(function(){ return {h:h, v:{}}; });
@@ -11364,7 +11529,7 @@
   // Agora existe um carimbo: esta constante é a versão que o aparelho está rodando, e o
   // Firebase guarda a versão publicada. Quando as duas diferem, aparece o aviso — mas
   // NUNCA recarrega sozinho: recarregar no meio de um check-in perderia o trabalho.
-  const APP_VERSAO='2026-09-04-02';
+  const APP_VERSAO='2026-09-04-03';
   function vigiarVersao(){
     if(!DB) return;
     try{
@@ -12170,7 +12335,7 @@
       // Estadias do Check-in (auaulandia/estadias): o hóspede que fez check-in aparece no Plantão
       // com ficha + medicação + alimentação, mesmo sem estar na planilha. Ativa = status 'ativa' e
       // hoje dentro de entrada→saída. Dedupe por nome+tutor (o `add` já protege).
-      DB.ref('auaulandia/estadias').once('value').then(s=>s.val()||{}),
+      zMapaUma('auaulandia/estadias').then(v=>v||{}),   // retrato compartilhado — não re-baixa o nó inteiro
       // Removidos de hoje (override da Gestão): tira do Plantão quem foi removido manualmente.
       DB.ref('auaulandia/removidos/'+hojeK).once('value').then(s=>s.val()||{})
     ]).then(function(r){
@@ -13410,7 +13575,7 @@
       const t=await fetchSheet(abaDaycareDe(d), SHEET_DC);
       const ix=planIdx(t.cols);
       if(ix.data==null){ planDia=Object.assign(zerar,{erro:'A aba "'+abaDaycareDe(d)+'" não tem coluna Data.'}); return planDia; }
-      const out=Object.assign({}, zerar, {lida:true});
+      const out=Object.assign({}, zerar, {lida:true, dia:(typeof dcDataKey==='function')?dcDataKey():''});
       (t.rows||[]).forEach(r=>{
         if(!planMesmaData(planCel(r,ix.data), d)) return;
         [['banho','banho'],['avulso','avulso'],['reposicao','reposicao'],['adaptacao','adaptacao'],['faltas','faltas']]
@@ -16567,7 +16732,7 @@
                 +'<div style="font-size:13.5px;font-weight:700;color:var(--ink,#333)">'+escAttr(it.r||'—')+'</div></div>'; }).join('')
               +'</div>'; })()}
           <div class="field"><label>Manias</label><input class="cad-in" value="${escAttr(ex.manias||'')}" placeholder="Ex: protege a comida" onchange="setPelExtra(pelAtual,{manias:this.value});refreshPills()"></div>
-          <div class="field"><label>Em adaptacao (1&ordm; mes)?</label><div class="seg gold" data-single>${segBtnsPel('adaptacao',ex.adaptacao||'',['Sim','Nao'])}</div></div>
+          <div class="field"><label>Em adaptacao (45 dias)?</label><div class="seg gold" data-single>${segBtnsPel('adaptacao',ex.adaptacao||'',['Sim','Nao'])}</div></div>
           <div class="field"><label>Adaptacao comecou em</label><input type="date" class="cad-in" value="${escAttr(ex.adaptacao_desde||'')}" onchange="setPelExtra(pelAtual,{adaptacao_desde:this.value});renderPelFicha()" min="2015-01-01" max="2035-12-31" onkeydown="return dataSoNoCalendario(event)">
             <div class="hint" style="margin-top:4px">${adaptTextoFicha(ex)}</div></div>
           <div class="field"><label>Come em comedouro lento?</label><div class="seg gold" data-single>${segBtnsPel('ansioso',ex.ansioso||'',['Sim','Nao'])}</div></div>
@@ -17043,13 +17208,14 @@
   // Avulso e Reposição lançados nos "Lançamentos do dia" — lidos DIRETO do banco.
   // Antes a turma só os via depois de app→ponte→planilha→releitura; a ponte caiu em
   // 27/08 e três FILHOts passaram o dia invisíveis (Adriana, 31/ago/2026).
-  var DC_DASH_TURMA={reposicao:[], avulso:[], quando:0};
+  var DC_DASH_TURMA={reposicao:[], avulso:[], quando:0, dia:''};
   function dcCarregarLancamentos(){
     if(!DB || (typeof ehHoje==='function' && !ehHoje())) return Promise.resolve();
     if(Date.now()-DC_DASH_TURMA.quando<60000) return Promise.resolve();   // fresco: não relê
     var dia=(typeof dcDataKey==='function')?dcDataKey():'';
     return DB.ref('daycare/dashboard/'+dia).once('value').then(function(snap){
       DC_DASH_TURMA.quando=Date.now();   // só carimba quando a leitura DEU certo
+      DC_DASH_TURMA.dia=dia;             // ...e de QUAL dia é este retrato (virada do dia)
       var d=snap.val()||{};
       ['reposicao','avulso'].forEach(function(campo){
         var out=[];
@@ -17061,9 +17227,13 @@
           var casado=null;
           try{ casado=(typeof planCasar==='function')?planCasar(limpo):null; }catch(e){ /* nome que não casa vira entrada crua abaixo */ }
           if(casado && casado.p && !casado.ambiguo){ out.push({p:casado.p}); return; }
-          // Sem ficha casada o FILHOt ainda TEM que aparecer: entrada crua com o nome lançado
+          // Sem ficha casada o FILHOt ainda TEM que aparecer — mas NUNCA com o texto
+          // digitado fazendo papel de nome válido (fantasmas "atnoio"/"Maya/Spitz" no
+          // celular, 04/set/2026). A entrada crua leva o texto lançado (txt) e quem decide
+          // como mostrar é turmaDoDia(): re-casa com o cadastro na hora de desenhar e, se
+          // ainda não casar, vira "Não identificado — conferir na recepção".
           var nome=limpo.split('/')[0].trim(), raca=(limpo.split('/')[1]||'').trim();
-          if(nome) out.push({p:{n:nome, raca:raca, tutor:'', freq:campo, dias:[], nasc:''}, cru:true});
+          if(nome) out.push({p:{n:nome, raca:raca, tutor:'', freq:campo, dias:[], nasc:''}, cru:true, txt:limpo});
         });
         DC_DASH_TURMA[campo]=out;
       });
@@ -17084,14 +17254,34 @@
     // primeiro pelo LANÇAMENTO DIRETO no app (fonte primária desde 31/ago), depois pela
     // planilha (cobre o que a recepção ainda escreve lá à mão). Só vale para hoje.
     if(ehHoje()){
+      // Lançamento de OUTRO dia não entra: na virada do dia o retrato em memória
+      // (DC_DASH_TURMA / planDia) ainda é o de ontem até a releitura — e nome de ontem
+      // aparecendo hoje é fantasma no Check-in (celular da Adriana, 04/set/2026).
+      const lancDia=(typeof dcDataKey==='function')?dcDataKey():'';
+      const lancDoDia=(DC_DASH_TURMA.dia===lancDia)?DC_DASH_TURMA:{reposicao:[],avulso:[]};
+      const planDoDia=(!planDia.dia||planDia.dia===lancDia)?planDia:{reposicao:[],avulso:[]};
       ['reposicao','avulso'].forEach(campo=>{
-        ((DC_DASH_TURMA[campo]||[]).concat(planDia[campo]||[])).forEach(it=>{
-          if(!it.p) return;
-          const k=dcKey(it.p.n,it.p.tutor);
-          if(jaTem.has(k)||(!it.cru&&pelInativo(it.p))) return;
+        ((lancDoDia[campo]||[]).concat(planDoDia[campo]||[])).forEach(it=>{
+          let uso=it;
+          if(it.cru){
+            // A linha crua ("atnoio", "Maya/Spitz") re-tenta casar AGORA com o cadastro —
+            // na hora da leitura dos lançamentos o cadastro podia ainda não ter chegado.
+            let rec=null;
+            try{ rec=(typeof planCasar==='function')?planCasar(it.txt||it.p.n):null; }catch(e){ /* segue como não identificado */ }
+            if(rec && rec.p && !rec.ambiguo){ uso={p:rec.p}; }
+            else{
+              // Texto digitado que não casa com ficha NUNCA vira nome válido na tela.
+              const txt=it.txt||((it.p.n||'')+(it.p.raca?('/'+it.p.raca):''));
+              uso={ p:{n:'Não identificado', raca:'conferir na recepção — lançado como "'+txt+'"',
+                       tutor:txt, freq:campo, dias:[], nasc:''}, cru:true, naoIdentificado:true };
+            }
+          }
+          if(!uso.p) return;
+          const k=dcKey(uso.p.n,uso.p.tutor);
+          if(jaTem.has(k)||(!uso.cru&&pelInativo(uso.p))) return;
           jaTem.add(k);
-          const i=PELUDINHOS.indexOf(it.p);
-          base.push({ p:it.p, i:(i>=0?i:'pl'+k), daPlanilha:campo });
+          const i=PELUDINHOS.indexOf(uso.p);
+          base.push({ p:uso.p, i:(i>=0?i:'pl'+k), daPlanilha:campo, naoIdentificado:!!uso.naoIdentificado });
         });
       });
     }
@@ -17362,11 +17552,14 @@
 
   // ===== ADAPTACAO NAO PODE SER ETERNA (Adriana, 12/ago/2026) =======================
   // "EM ADAPTAÇÃO HOJE: Bruce, Hulk, Yumi — essa informação não é real, de onde está tirando
-  //  isso?" Vinha do campo "Em adaptação (1º mês)?" da ficha, marcado como Sim e NUNCA
-  //  desmarcado. Adaptação é o PRIMEIRO MÊS: ou tem data de início e vence sozinha em 30
-  //  dias, ou o app não afirma nada. Informação velha na tela do time é pior que informação
+  //  isso?" Vinha do campo "Em adaptação?" da ficha, marcado como Sim e NUNCA
+  //  desmarcado. Adaptação tem prazo: ou tem data de início e vence sozinha em ADAPT_DIAS,
+  //  ou o app não afirma nada. Informação velha na tela do time é pior que informação
   //  nenhuma — o time para de acreditar no que lê.
-  const ADAPT_DIAS=30;
+  // 04/set/2026 — Adriana: a adaptação passa de 30 para 45 dias. E adaptação VENCIDA sai
+  // sozinha da conta e das pendências — ninguém precisa "decidir" nada: passou do prazo,
+  // acabou. Pendência mesmo, só quando está marcada Sim SEM data de início.
+  const ADAPT_DIAS=45;
   // ⚠ 20/ago/2026 — contava em milissegundos a partir do meio-dia, então o resultado mudava
   // conforme a HORA da consulta: quem já tinha 31 dias aparecia com 30 se alguém abrisse o
   // app de manhã, e o alerta de adaptação vencida chegava um dia atrasado. Agora conta dias
@@ -17387,18 +17580,18 @@
     if(n===null) return false;              // sem data = o app NÃO afirma
     return n>=0 && n<=ADAPT_DIAS;
   }
-  // Marcada como Sim mas sem data, ou já passou do mês: a Gestão precisa resolver.
+  // Marcada como Sim mas SEM data de início: sem o dia 1 não há contagem — só isso é
+  // pendência. A vencida (passou dos 45 dias) sai SOZINHA de toda conta, sem pedir decisão.
   function adaptPendente(ex){
     if(!ex||ex.adaptacao!=='Sim') return false;
-    var n=adaptDiasDe(ex);
-    return (n===null)||(n>ADAPT_DIAS);
+    return adaptDiasDe(ex)===null;
   }
   function adaptTextoFicha(ex){
     if(!ex||ex.adaptacao!=='Sim') return 'Só vale quando "Em adaptação" está como Sim.';
     var n=adaptDiasDe(ex);
     if(n===null) return 'Sem esta data o time NÃO vê o aviso de adaptação — o app não afirma o que não sabe.';
     if(n<0) return 'A data está no futuro. A adaptação começa em '+(typeof fmtBR==='function'?fmtBR(ex.adaptacao_desde):ex.adaptacao_desde)+'.';
-    if(n>ADAPT_DIAS) return 'Já são '+n+' dias — o primeiro mês terminou. Mude "Em adaptação" para Não.';
+    if(n>ADAPT_DIAS) return 'Já são '+n+' dias — os '+ADAPT_DIAS+' dias de adaptação terminaram e ela saiu sozinha da conta. Se quiser, mude "Em adaptação" para Não.';
     return n+'º dia de adaptação. Termina sozinha depois de '+ADAPT_DIAS+' dias.';
   }
   function seloAdapt(ex){ return pelEmAdaptacao(ex)?'<span class="mini-adapt">ADAPTACAO</span>':''; }
@@ -17409,13 +17602,13 @@
     let h='';
     if(emAdapt.length){
       h+=`<div class="adapt-banner">&#9733; EM ADAPTACAO HOJE: ${emAdapt.map(o=>{
-            const n=adaptDiasDe(pelExtra(o.p)); return o.p.n+(n!=null?` (${n}º dia)`:''); }).join(', ')} &mdash; foco de todo o time!</div>`;
+            const n=adaptDiasDe(pelExtra(o.p)); return o.p.n+(n!=null?` (${n}º dia de ${ADAPT_DIAS})`:''); }).join(', ')} &mdash; foco de todo o time!</div>`;
     }
     // Aviso só para quem resolve — o time não precisa ver pendência de cadastro.
     const r=document.body.dataset.role;
     if(pendentes.length&&(r==='gestao'||r==='diretoria'||r==='supervisor')){
-      h+=`<div class="dc-meia"><strong>Adaptação sem data ou vencida (${pendentes.length}):</strong> ${pendentes.map(o=>o.p.n).join(', ')}.
-        <div style="font-weight:600;margin-top:4px">Estes estão marcados como "em adaptação" na ficha, mas sem data de início ou já passaram do primeiro mês. Enquanto isso o time NÃO vê o aviso deles — abra a ficha e resolva.</div></div>`;
+      h+=`<div class="dc-meia"><strong>Adaptação sem data de início (${pendentes.length}):</strong> ${pendentes.map(o=>o.p.n).join(', ')}.
+        <div style="font-weight:600;margin-top:4px">Estão marcados como "em adaptação" na ficha, mas sem a data de início — sem o dia 1 não há contagem, e o time NÃO vê o aviso deles. Abra a ficha e lance a data.</div></div>`;
     }
     el.innerHTML=h;
   }
@@ -19881,12 +20074,24 @@
             +'</div></div>'))
       +'</div>';
   }
-  // ===== ADAPTAÇÃO SEM DATA OU VENCIDA — Adriana, 20/ago/2026 ====================
-  // "Adaptação sem data ou vencida (5): Antônio, Bruce, Lupin, Simba, Yumi — esse tipo de
-  //  informação precisa aparecer no meu dashboard e no dashboard da Amanda."
-  // A regra (adaptPendente) já existia e só vivia dentro da tela do Day Care. Alerta que mora
-  // numa tela só é alerta que a gestão não vê. Enquanto os três painéis por papel não
-  // existem, o lugar certo é o Início — que é o que ela e a Amanda abrem.
+  // ===== ADAPTAÇÃO NO INÍCIO — Adriana, 20/ago e 04/set/2026 =====================
+  // 20/ago: "esse tipo de informação precisa aparecer no meu dashboard e no da Amanda."
+  // 04/set: o quadro vira a lista de quem ESTÁ em adaptação (nome + "Xº dia de 45").
+  // A vencida saiu SOZINHA da conta (adaptPendente não a considera mais) — ninguém decide
+  // nada. "Sem data" continua como pendência pequena: sem o dia 1 não há contagem.
+  function adaptEmCursoLista(){
+    var out=[];
+    try{
+      (PELUDINHOS||[]).forEach(function(p){
+        if(typeof pelInativo==='function'&&pelInativo(p)) return;
+        var ex=(typeof pelExtra==='function'?pelExtra(p):{})||{};
+        if(typeof pelEmAdaptacao!=='function'||!pelEmAdaptacao(ex)) return;
+        var n=(typeof adaptDiasDe==='function')?adaptDiasDe(ex):null;
+        out.push({nome:pelNome(p), dias:n});
+      });
+    }catch(e){ _logFalhaGrav('adaptEmCursoLista', e); }
+    return out.sort(function(a,b){ return (b.dias||0)-(a.dias||0) || jsNorm(a.nome).localeCompare(jsNorm(b.nome)); });
+  }
   function adaptPendentesLista(){
     var out=[];
     try{
@@ -19894,26 +20099,38 @@
         if(typeof pelInativo==='function'&&pelInativo(p)) return;
         var ex=(typeof pelExtra==='function'?pelExtra(p):{})||{};
         if(typeof adaptPendente!=='function'||!adaptPendente(ex)) return;
-        var n=(typeof adaptDiasDe==='function')?adaptDiasDe(ex):null;
-        out.push({nome:pelNome(p), semData:(n===null), dias:n});
+        out.push({nome:pelNome(p), semData:true, dias:null});
       });
     }catch(e){ _logFalhaGrav('adaptPendentesLista', e); }
-    return out.sort(function(a,b){ return (a.semData?0:1)-(b.semData?0:1) || jsNorm(a.nome).localeCompare(jsNorm(b.nome)); });
+    return out.sort(function(a,b){ return jsNorm(a.nome).localeCompare(jsNorm(b.nome)); });
   }
   function renderAdaptPendentes(){
     var el=document.getElementById('adaptPendCard'); if(!el) return;
     if(typeof PELUDINHOS==='undefined'){ el.innerHTML=''; return; }
-    var L=adaptPendentesLista();
-    if(!L.length){ el.innerHTML=''; return; }     // nada pendente: não ocupa espaço à toa
-    el.innerHTML='<div class="card" style="border-left:4px solid var(--crm-atencao)">'
-      +'<h2 style="font-size:18px">Adaptação sem data ou vencida ('+L.length+')</h2>'
-      +'<div class="hint">Estão marcados como "em adaptação" mas sem data de início, ou já passaram do primeiro mês. Alguém precisa decidir: a adaptação terminou, ou faltou lançar a data?</div>'
-      +'<div style="margin-top:8px;font-weight:700;color:var(--z-blue);font-size:14.5px">'
-      +L.map(function(x){
-        return escAttr(x.nome)+' <span style="font-size:12px;font-weight:600;color:var(--muted)">('
-          +(x.semData?'sem data':(x.dias+' dias'))+')</span>';
-      }).join(' · ')
-      +'</div></div>';
+    var E=adaptEmCursoLista(), P=adaptPendentesLista();
+    if(!E.length && !P.length){ el.innerHTML=''; return; }   // nada a dizer: não ocupa espaço à toa
+    var h='';
+    if(E.length){
+      h+='<div class="card" style="border-left:4px solid var(--z-gold)">'
+        +'<h2 style="font-size:18px">Em adaptação ('+E.length+')</h2>'
+        +'<div class="hint">Os primeiros '+ADAPT_DIAS+' dias — foco de todo o time. Quando passa do prazo, sai desta lista sozinho.</div>'
+        +'<div style="margin-top:8px;font-weight:700;color:var(--z-blue);font-size:14.5px">'
+        +E.map(function(x){
+          return escAttr(x.nome)+' <span style="font-size:12px;font-weight:600;color:var(--muted)">('
+            +(x.dias!=null?(x.dias+'º dia de '+ADAPT_DIAS):'em adaptação')+')</span>';
+        }).join(' · ')
+        +'</div>';
+    } else {
+      h+='<div class="card" style="border-left:4px solid var(--z-gold)">';
+    }
+    if(P.length){
+      h+='<div class="hint" style="margin-top:'+(E.length?'10px':'0')+'">'
+        +'<strong>Sem data de início ('+P.length+'):</strong> '
+        +P.map(function(x){ return escAttr(x.nome); }).join(', ')
+        +' — marcados como "em adaptação" na ficha, mas sem o dia 1 não há contagem. Lance a data na ficha.</div>';
+    }
+    h+='</div>';
+    el.innerHTML=h;
   }
   // ===== ANIVERSARIANTES — Adriana, 20/ago/2026 ==================================
   // "Precisa mostrar: Kakinho fez 9 anos dia 01/09. Todo dia, mesmo sem creche (sábado,
@@ -23069,7 +23286,7 @@
   var DASH_AUTO_DIAS=14;      // hoje + 14 dias
   var DASH_AUTO_MIN=5;        // conferir o dia de hoje a cada 5 minutos
   var DASH_AUTO_45=45;        // "Cliente Novo": os 45 primeiros dias de matrícula
-  var DASH_AUTO_ADAPT=30;     // adaptação dura 30 dias (mesma regra da ficha)
+  var DASH_AUTO_ADAPT=45;     // adaptação dura 45 dias (mesma regra da ficha, ADAPT_DIAS)
   // Coluna de cada item — a grafia é a que a planilha TEM hoje, inclusive onde há erro de
   // digitação ("restriçóes"). O dashboard procura por estes nomes.
   var DASH_AUTO_COLS={
@@ -26211,7 +26428,7 @@
     // para sempre — e aqui isso segurava o botão de salvar travado sem explicação nenhuma
     // (caso Toddy, 06/ago/2026). Este nó tem ~200 KB, então numa rede ruim é o passo mais
     // provável de pendurar. 12s e desiste: quem chama trata como "não deu para conferir".
-    var _consulta=DB.ref('auaulandia/estadias').once('value');
+    var _consulta=zMapaUma('auaulandia/estadias').then(function(v){ return {val:function(){ return v||{}; }}; });   // retrato compartilhado — não re-baixa o nó inteiro
     var _prazo=new Promise(function(_,rej){ setTimeout(function(){ rej(new Error('o banco não respondeu a tempo (12s)')); }, 12000); });
     return Promise.race([_consulta,_prazo]).then(function(s){
       const v=s.val()||{}; let achou=null;

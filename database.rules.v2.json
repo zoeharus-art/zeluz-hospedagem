@@ -76,6 +76,12 @@
       ".read": "auth != null",
       ".write": false,
 
+      // CARIMBO DE VERSÃO — mesma nota do bloco "versoes" em daycare (04/set/2026):
+      // auaulandia/versoes/estadias precisa continuar gravável por login autenticado.
+      "versoes": {
+        "$colecao": { ".write": "auth != null", ".validate": "newData.isNumber()" }
+      },
+
       // A AGENDA (o que precisa ser dado). O nível do FILHOt ($key) ganha proteção
       // contra apagar/virar lixo; o item do remédio (itens/$id) fica como na v1 de
       // propósito — ver a nota "O QUE NÃO MUDA" acima. O nó "itens" (o pai direto dos
@@ -167,6 +173,20 @@
     "daycare": {
       ".read": "auth != null",
       ".write": false,
+
+      // CARIMBO DE VERSÃO (04/set/2026, prioridade nº 1 da Adriana — economia Firebase):
+      // daycare/versoes/cadastro e auaulandia/versoes/estadias são um NÚMERO que TODA
+      // gravação em daycare/cadastro / auaulandia/estadias incrementa (o app embrulha o
+      // DB.ref — ver zLigarCarimboNasGravacoes no index.html). Os nós "versoes" PRECISAM
+      // ser graváveis pelos MESMOS papéis que gravam a coleção correspondente: na v1
+      // publicada eles já caem em $colecao/$item (auth != null) e funcionam. AO PUBLICAR
+      // ESTA v2, conferir que "versoes" continua gravável por qualquer login autenticado
+      // (só número: ".validate": "newData.isNumber()") — se "versoes" ficar só-leitura,
+      // toda gravação nas coleções pesadas passa a logar falha de carimbo e a economia
+      // de banda morre (as cópias locais nunca mais batem com o carimbo).
+      "versoes": {
+        "$colecao": { ".write": "auth != null", ".validate": "newData.isNumber()" }
+      },
 
       // O DIÁRIO DE AUDITORIA. Cada evento é uma entrada nova (push) — o app nunca edita
       // nem apaga uma entrada já gravada, e nunca escreve no dia inteiro de uma vez.
