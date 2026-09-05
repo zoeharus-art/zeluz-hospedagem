@@ -22,7 +22,30 @@ const path = require('path');
 const vm = require('vm');
 const https = require('https');
 const crypto = require('crypto');
+
+// ===== RETRATO EM VEZ DE BANCO VIVO (04/set/2026) ==================================
+// 694 MB de download do Firebase em 24 h — e a causa dominante eram os PRÓPRIOS testes,
+// que desciam o banco real a cada rodada. Por padrão o harness lê o retrato diário da
+// VPS (tests/lib/retrato.js); o banco vivo só entra de propósito: HARNESS_VIVO=1.
+// O vigia abaixo é a PROVA: anota toda conexão https a firebaseio/identitytoolkit —
+// na rodada padrão essa lista tem de terminar VAZIA.
+const HARNESS_VIVO = process.env.HARNESS_VIVO === '1';
+const CONEXOES_FIREBASE = [];
+{
+  const _origRequest = https.request;
+  https.request = function (opts) {
+    try {
+      const host = (typeof opts === 'string') ? opts : String((opts && (opts.hostname || opts.host)) || '');
+      const caminho = (typeof opts === 'object' && opts) ? String(opts.path || '') : '';
+      if (/firebaseio\.com|firebasedatabase\.app|identitytoolkit\.googleapis\.com/.test(host + ' ' + caminho))
+        CONEXOES_FIREBASE.push(host + caminho.slice(0, 60));
+    } catch (e) { /* o vigia nunca derruba a rodada */ }
+    return _origRequest.apply(https, arguments);
+  };
+}
 require('./lib/appcheck').instalarNoHttps(https); // App Check: só age com FIREBASE_APPCHECK_DEBUG_TOKEN no ambiente
+const retratoLib = require('./lib/retrato');
+let RETRATO = null;   // carregado no main() quando a rodada é padrão
 
 const APP = path.join(__dirname, '..', 'auaulandia', 'index.html');
 const DB_BASE = 'https://hospedagem-zeluz-default-rtdb.firebaseio.com';
@@ -52,6 +75,7 @@ function httpJSON(method, url, body) {
 }
 
 async function anonToken() {
+  if (!HARNESS_VIVO) return 'retrato-local';   // rodada padrão: nenhum login, nenhuma rede
   const r = await httpJSON('POST',
     `https://identitytoolkit.googleapis.com/v1/accounts:signUp?key=${API_KEY}`,
     { returnSecureToken: true });
@@ -60,6 +84,7 @@ async function anonToken() {
 }
 
 async function dbRead(pathStr, token) {
+  if (!HARNESS_VIVO) return retratoLib.ler(RETRATO, pathStr);   // rodada padrão: retrato do disco
   const r = await httpJSON('GET', `${DB_BASE}/${pathStr}.json?auth=${token}`);
   return r.json;
 }
@@ -174,6 +199,12 @@ function check(nome, cond, detalhe) {
 
 async function main() {
   console.log('== Harness AuAulândia — rede de segurança ==\n');
+  if (HARNESS_VIVO) {
+    console.log('⚠ HARNESS_VIVO=1 — lendo o BANCO REAL (gasta banda do Firebase).\n');
+  } else {
+    RETRATO = retratoLib.carregar();
+    console.log('Fonte dos dados: retrato de ' + RETRATO.dia + ' (tests/.retrato/ — o Firebase não é tocado).\n');
+  }
 
   const html = fs.readFileSync(APP, 'utf8');
   const script = extractMainScript(html);
@@ -2967,8 +2998,12 @@ async function main() {
 
   console.log('Lancamento fantasma: tirar antes da ponte responder nao pode ressuscitar (26/ago):');
   {
+    // 04/set/2026: o guarda anti-ressurreicao mudou de `return;` para `return null` —
+    // o `return;` abortava a transaction no cache frio e planilha_ok ficava null para
+    // sempre. `return null` nao ressuscita nada (null sobre null e no-op) e deixa o SDK
+    // trazer o valor do servidor quando o no ainda vive.
     check('a resposta da ponte usa transaction, nao set direto',
-      /\.transaction\(function\(atual\)\{[\s\S]{0,120}if\(atual===null\|\|atual===undefined\) return;/.test(html));
+      /\.transaction\(function\(atual\)\{[\s\S]{0,700}if\(atual===null\|\|atual===undefined\) return null;/.test(html));
     check('a gravacao direta de planilha_ok saiu do codigo',
       !/planilha_ok'\)\.set\(ok\)/.test(html));
     if (typeof ctx.dashLimparFantasmas === 'function') {
@@ -3371,12 +3406,15 @@ async function main() {
       porV.config ? porV.config.vis : 'não existe');
 
     // ---- 2. os grupos e a ordem do índice ----
-    check('menu: os grupos estão na ordem do índice',
-      JSON.stringify(grupos.map((g) => g.titulo)) === JSON.stringify(['Serviços', 'Central Zêluz', 'Operação', 'Em breve']),
+    // 04/set/2026 (achado 8): o menu tinha DUAS "AuAulândia" e DOIS "Day Care" (Serviços
+    // e Central Zêluz). Unificado: a categoria Serviços saiu e cada serviço tem UM
+    // sub-cabeçalho, dentro da Central Zêluz.
+    check('menu: os grupos estão na ordem do índice (Serviços saiu — unificação de 04/set)',
+      JSON.stringify(grupos.map((g) => g.titulo)) === JSON.stringify(['Central Zêluz', 'Operação', 'Em breve']),
       JSON.stringify(grupos.map((g) => g.titulo)));
-    check('menu: os sub-cabeçalhos do índice estão lá',
+    check('mordida — cada serviço aparece UMA vez só no menu (nunca mais duas gavetas iguais)',
       JSON.stringify(subs.map((s) => s.titulo)) === JSON.stringify([
-        'AuAulândia — o hotel da Zêluz', 'Day Care', 'AuAulândia', 'Day Care', 'Peludinhos', 'Planos e cobranças']),
+        'AuAulândia', 'Day Care', 'Peludinhos', 'Planos e cobranças']),
       JSON.stringify(subs.map((s) => s.titulo)));
     const grpDe = (t) => (grupos.find((g) => g.titulo === t) || { pos: -1 }).pos;
     // Adriana, 27/ago/2026: "Relatórios é um item à parte, no fim" — saiu de entre Operação
@@ -3394,7 +3432,7 @@ async function main() {
       && /\.nav a\.nav-solto\{[^}]*border-top:/.test(html));
     check('menu: Relatórios não perdeu quem o vê ao virar item solto',
       porV.relatorios && porV.relatorios.vis === 'so-gestao', porV.relatorios ? porV.relatorios.vis : 'sumiu');
-    [['conferencia', 'Serviços'], ['checkout', 'Serviços'], ['cuidadovet', 'Serviços'], ['abertura', 'Serviços'],
+    [['conferencia', 'Central Zêluz'], ['checkout', 'Central Zêluz'], ['cuidadovet', 'Central Zêluz'], ['abertura', 'Central Zêluz'],
      ['checkin', 'Central Zêluz'], ['checkoutconf', 'Central Zêluz'], ['ficha', 'Central Zêluz'],
      ['emporio', 'Central Zêluz'], ['renovacao', 'Central Zêluz'],
      ['config', 'Operação'], ['acerto', 'Operação'], ['painel', 'Operação'],
@@ -3522,8 +3560,8 @@ async function main() {
     // As 4 categorias: ícone, seta, clicável, e cada uma com sua chave de estado.
     const cats = [...nav.matchAll(/<a class="grp nav-parent" data-acc-toggle="([a-z]+)"([^>]*)>([\s\S]*?)<\/a>/g)]
       .map((mm) => ({ chave: mm[1], attrs: mm[2], dentro: mm[3] }));
-    check('menu: as 4 categorias são linhas clicáveis (nav-parent)', cats.length === 4,
-      JSON.stringify(cats.map((c) => c.chave)));
+    check('menu: as 3 categorias são linhas clicáveis (nav-parent) — Serviços saiu na unificação',
+      cats.length === 3, JSON.stringify(cats.map((c) => c.chave)));
     cats.forEach((c) => {
       check('menu: categoria ' + c.chave + ' tem ícone', /data-icon="[a-z]+"/.test(c.dentro), c.dentro.slice(0, 60));
       check('menu: categoria ' + c.chave + ' tem seta', /acc-caret/.test(c.dentro));
@@ -3543,13 +3581,13 @@ async function main() {
     // Quero que abra os títulos, e ao clicar nele abre o restante; clico de novo, fecha."
     const subsAcc = [...nav.matchAll(/<a class="grp grp-sub nav-parent" data-acc-toggle="([a-z-]+)"([^>]*)>([\s\S]*?)<\/a>/g)]
       .map((mm) => ({ chave: mm[1], dentro: mm[3] }));
-    check('menu: os 6 sub-cabeçalhos são linhas clicáveis que abrem e fecham',
-      subsAcc.length === 6, JSON.stringify(subsAcc.map((x) => x.chave)));
+    check('menu: os 4 sub-cabeçalhos são linhas clicáveis que abrem e fecham (unificação de 04/set)',
+      subsAcc.length === 4, JSON.stringify(subsAcc.map((x) => x.chave)));
     subsAcc.forEach((x) => {
       check('menu: sub-cabeçalho ' + x.chave + ' tem seta', /acc-caret/.test(x.dentro));
     });
     check('menu: cada sub-cabeçalho guarda o próprio estado (chave própria)',
-      new Set(subsAcc.map((x) => x.chave)).size === 6 && subsAcc.every((x) => /^[sc]-/.test(x.chave)));
+      new Set(subsAcc.map((x) => x.chave)).size === 4 && subsAcc.every((x) => /^c-/.test(x.chave)));
     check('menu: sub-cabeçalho fechado esconde os itens dele (mesma mecânica da categoria)',
       subsAcc.every((x) => {
         const i = nav.indexOf('data-acc-toggle="' + x.chave + '"');
@@ -4256,8 +4294,11 @@ async function main() {
       /body\[data-role="consultora"\] \.nav a\.so-pesa/.test(html) &&
       /body\[data-role="vet"\] \.nav a\.so-pesa/.test(html) &&
       /body\[data-role="supervisor"\] \.nav a\.so-pesa/.test(html));
+    // 04/set/2026: com a unificação do menu o Cuidado Vet mora em Central › AuAulândia —
+    // o caminho da veterinária ganhou o grp c-auaulandia no meio (janela maior no regex).
     check('e a veterinaria enxerga o CAMINHO ate ela (nao so o item)',
-      /body\[data-role="vet"\] \.nav a\[data-v="peso"\],[\s\S]{0,220}acc="c-peludinhos"\]>a\.grp\{display:flex !important\}/.test(html));
+      /body\[data-role="vet"\] \.nav a\[data-v="peso"\],[\s\S]{0,700}acc="c-peludinhos"\]>a\.grp\{display:flex !important\}/.test(html)
+      && /body\[data-role="vet"\] \.nav \.acc\[data-acc="c-auaulandia"\]>a\.grp/.test(html));
     check('a tela tem titulo proprio', /peso:\['Peso'/.test(html));
     check('a busca mostra raca e tutor (nome sozinho nao identifica)',
       /pesoTelaBuscar[\s\S]{0,1400}ativIdent\(o\.p\)/.test(html));
@@ -7061,7 +7102,10 @@ async function main() {
   // ---- Almoço: reenvio automático de curto prazo (avisarGrupoComida) -----------------------
   console.log('Almoço — comidaTgFilaTentar (retry de 2 em 2 min, trava por transaction):');
   if (typeof ctx.comidaTgFilaTentar === 'function') {
-    var bkpDB1 = getDB(), bkpAviso = ctx.avisarGrupoComida, bkpRole = ctx.__ROLE__.role;
+    // O backup do dcDataKey vem ANTES do stub — sem ele, o relógio preso em 2026-09-04
+    // vazava para o resto da rodada e os checks de "lançamento sem cadastro" quebravam em
+    // qualquer dia que não fosse 04/09 (mina achada em 05/set/2026).
+    var bkpDB1 = getDB(), bkpAviso = ctx.avisarGrupoComida, bkpRole = ctx.__ROLE__.role, bkpDia1 = ctx.dcDataKey;
     var chamadas = [];
     ctx.__ROLE__.role = 'recepcao';
     vm.runInContext('avisarGrupoComida = function(k, opts){ __chamadas.push({k:k, opts:opts}); };', Object.assign(ctx, { __chamadas: chamadas }));
@@ -7117,7 +7161,8 @@ async function main() {
       check('o papel "tutor" nunca dispara o reenvio automático', chamadas.length === 0);
     } finally {
       setDB(bkpDB1); ctx.__ROLE__.role = bkpRole;
-      vm.runInContext('avisarGrupoComida = __bkpAviso;', Object.assign(ctx, { __bkpAviso: bkpAviso }));
+      vm.runInContext('avisarGrupoComida = __bkpAviso; dcDataKey = __bkpDia1;',
+        Object.assign(ctx, { __bkpAviso: bkpAviso, __bkpDia1: bkpDia1 }));
     }
   } else {
     check('comidaTgFilaTentar existe', false, 'função não encontrada — reenvio automático não pode ser provado');
@@ -7687,6 +7732,400 @@ async function main() {
       !/data-role="consultora"\][^,{]*\.so-gestao/.test(html) &&
       !/data-role="supervisor"\][^,{]*\.so-gestao/.test(html) &&
       !/data-role="diretoria"\][^,{]*\.so-gestao/.test(html));
+  }
+  console.log('');
+
+  // ════════════════════════════════════════════════════════════════════════════════
+  // v-05 (04/set/2026) — os consertos da varredura ao vivo + Bug A + Bug B
+  // ════════════════════════════════════════════════════════════════════════════════
+
+  // Banco falso com a semântica REAL de transaction do SDK: a 1ª rodada roda com o
+  // retrato LOCAL (cache frio = null); se o palpite difere do servidor, roda de novo com
+  // o valor de verdade. Foi exatamente essa semântica que o app ignorava — o `return;`
+  // no null abortava a transaction de vez e planilha_ok ficou null para sempre.
+  const bancoFiel = (estado, rastro) => ({
+    ref: (caminho) => ({
+      transaction(cb) {
+        const serv = () => (estado[caminho] === undefined ? null : estado[caminho]);
+        let r = cb(null);                                    // 1ª rodada: cache frio
+        if (r === undefined) return Promise.resolve({ committed: false, snapshot: { val: serv } });
+        if (JSON.stringify(r) !== JSON.stringify(serv()) && serv() !== null) {
+          r = cb(serv());                                    // 2ª rodada: valor do servidor
+          if (r === undefined) return Promise.resolve({ committed: false, snapshot: { val: serv } });
+        }
+        if (r === null) delete estado[caminho]; else estado[caminho] = r;
+        return Promise.resolve({ committed: true, snapshot: { val: () => r } });
+      },
+      update(o) {
+        const a = Object.assign({}, estado[caminho] || {});
+        Object.keys(o).forEach((k) => { if (o[k] === null) delete a[k]; else a[k] = o[k]; });
+        estado[caminho] = a; return Promise.resolve();
+      },
+      once() { return Promise.resolve({ val: () => (estado[caminho] === undefined ? null : estado[caminho]) }); },
+      set(v) { estado[caminho] = v; return Promise.resolve(); },
+      remove() { delete estado[caminho]; if (rastro) rastro.removidos.push(caminho); return Promise.resolve(); },
+      limitToFirst() { return this; }, limitToLast() { return this; },
+    }),
+  });
+
+  // ---- Achado 1: o R$ 4.050,00 fantasma do card "Acerto das plantonistas" ----------
+  console.log('v-05 · Achado 1 — acertoCarregar devolve a Promise (o card espera a carga):');
+  {
+    check('mordida — acertoCarregar RETORNA a cadeia (era a falta deste return que desenhava '
+      + 'toda noite como "não paga · (sem nome)" e somava R$ 4.050,00 num aberto real de R$ 1.194,00)',
+      /function acertoCarregar\(\)\{[\s\S]{0,900}?return plantCarregarLivro\(\)/.test(html));
+    const leituraVazia = { ref: () => ({
+      once: () => Promise.resolve({ val: () => null }),
+      limitToFirst() { return this; }, limitToLast() { return this; },
+    }) };
+    ctx.__dbA1 = leituraVazia;
+    vm.runInContext('__bkpA1 = DB; DB = __dbA1;', ctx);
+    try {
+      const ret = ctx.acertoCarregar();
+      check('com banco, acertoCarregar() devolve algo esperável (thenable) — é o que o Painel da Operação espera',
+        !!ret && typeof ret.then === 'function');
+      if (ret && ret.then) await ret.catch(() => {});
+    } finally { vm.runInContext('DB = __bkpA1;', ctx); }
+    // 05/set/2026 — a régua mudou de lugar, não de dono: esperar a cadeia INTEIRA antes da
+    // primeira pintura deixou o painel no "Carregando a casa de hoje…" (26 caracteres — o
+    // smoke reprovou a tela para Gestão e Diretoria; a cadeia leva ~2,5 s). Agora quem
+    // espera a carga é SÓ o quadro do dinheiro: a tela abre pelas cargas rápidas e o quadro
+    // nasce "ainda lendo", trocado pelo id quando a conta chega.
+    check('mordida — a carga do acerto mora na fila LENTA (ACERTO_CARGA), fora da primeira pintura',
+      /ACERTO_CARGA=Promise\.resolve\(acertoCarregar\(\)\)/.test(html)
+      && !/rapidas\.push\(Promise\.resolve\(acertoCarregar\(\)\)\)/.test(html));
+    check('mordida — a primeira pintura espera SÓ as rápidas, e o quadro do acerto é trocado depois pelo id',
+      /cargas\.rapidas\.then\(function\(\)\{ return poLer\(/.test(html)
+      && /cargas\.lenta\.then\(function\(\)\{/.test(html)
+      && /getElementById\('poCardAcerto'\)/.test(html)
+      && /poCardAcerto\(!ACERTO_PRONTO\)/.test(html));
+    // O fantasma continua impossível: enquanto a carga não termina, o quadro DIZ que está
+    // lendo — nunca soma ACERTO_REG/ACERTO_QUEM vazios.
+    const cardLendo = ctx.poCardAcerto(true);
+    check('mordida — poCardAcerto(aindaLendo) diz "ainda lendo" e não mostra total nenhum',
+      cardLendo.indexOf('ainda lendo') >= 0 && cardLendo.indexOf('Ainda estou somando') >= 0
+      && cardLendo.indexOf('Total em aberto') < 0 && !/R\$ \d/.test(cardLendo),
+      cardLendo.slice(0, 200));
+    check('o quadro do acerto tem o id que o redesenho procura (poCardAcerto)',
+      /class="pm-card pm-rv pm-c6" id="poCardAcerto"/.test(html));
+  }
+  console.log('');
+
+  // ---- Bug A: os 3 carrapaticidas de 03/09 — leitura, confirmação e fila -----------
+  console.log('v-05 · Bug A — carrapaticida de 03/09 (dado real) e a confirmação da planilha:');
+  {
+    const no0309 = await dbRead('daycare/dashboard/2026-09-03/carrapaticida', token);
+    const ids = Object.keys(no0309 || {});
+    check('dado real: os 3 lançamentos de 03/09 seguem no banco (Yume, Elizabeth, Cindy)',
+      ids.length === 3 && ['Yume', 'Elizabeth', 'Cindy'].every((n) =>
+        ids.some((id) => String(no0309[id].valor || '').indexOf(n) === 0)),
+      JSON.stringify(ids.map((id) => no0309[id].valor)));
+    check('dado real: TODOS sem planilha_ok (null era o estado normal — nunca prova de falha)',
+      ids.every((id) => no0309[id].planilha_ok === undefined || no0309[id].planilha_ok === null));
+
+    // (a) a tela "Lançamentos do dia" em 03/09 MOSTRA os 3 — nada os filtra.
+    vm.runInContext('__bkpBA = { DB: DB, dados: DASH_DADOS, ponte: DASH_PONTE, diaSel: DASH_DIA_SEL };', ctx);
+    ctx.__no0309 = no0309;
+    try {
+      vm.runInContext('DB = null; DASH_DIA_SEL = "2026-09-03";', ctx);
+      const limpo = ctx.dashLimparFantasmas({ carrapaticida: no0309 });
+      check('mordida — dashLimparFantasmas MANTÉM os 3 (têm valor e ts; nenhum é fantasma)',
+        Object.keys((limpo || {}).carrapaticida || {}).length === 3);
+      const gravador = { innerHTML: '' };
+      const gidBA = ctx.document.getElementById;
+      ctx.document.getElementById = (id) => (id === 'dashBlocos' ? gravador : gidBA(id));
+      try {
+        vm.runInContext('DASH_DADOS = __dashProvaBA; DASH_PONTE = { url: "https://script.google.com/x/exec", token: "t" };',
+          Object.assign(ctx, { __dashProvaBA: limpo }));
+        ctx.renderDash();
+        check('mordida — a tela do dia 03/09 desenha "Carrapaticida — 3" com os três nomes',
+          /Carrapaticida/.test(gravador.innerHTML) && /—\s*3/.test(gravador.innerHTML.split('Carrapaticida')[1] || '')
+          && /Yume/.test(gravador.innerHTML) && /Elizabeth/.test(gravador.innerHTML) && /Cindy/.test(gravador.innerHTML),
+          gravador.innerHTML.slice(gravador.innerHTML.indexOf('Carrapaticida') - 40, gravador.innerHTML.indexOf('Carrapaticida') + 200));
+        check('o "não sei" antigo ganha saída manual discreta: "envio à planilha não confirmado" + reenviar',
+          /envio à planilha não confirmado/.test(gravador.innerHTML) && /dashReenviar\('carrapaticida'/.test(gravador.innerHTML));
+      } finally { ctx.document.getElementById = gidBA; }
+    } finally {
+      vm.runInContext('DB = __bkpBA.DB; DASH_DADOS = __bkpBA.dados; DASH_PONTE = __bkpBA.ponte; DASH_DIA_SEL = __bkpBA.diaSel;', ctx);
+    }
+
+    // (c) a CAUSA do planilha_ok eterno em null: a transaction abortava no cache frio.
+    // Com o banco fiel ao SDK, o conserto (`return null`) tem de escrever a confirmação.
+    {
+      const reg = { valor: 'Elizabeth/SRD (PIPETA · NA BOLSA)', hora: '', quem: 'Giullian Gomes', ts: 1788460240098 };
+      const estado = { 'daycare/dashboard/2026-09-03/carrapaticida/id1': Object.assign({}, reg) };
+      ctx.__dbBA = bancoFiel(estado);
+      ctx.__pontesBA = [];
+      vm.runInContext('__bkpBA2 = { DB: DB, chamar: dashPonteChamar, ponte: DASH_PONTE };'
+        + 'DB = __dbBA; DASH_PONTE = { url: "https://script.google.com/x/exec", token: "t" };'
+        + 'dashPonteChamar = function(corpo){ __pontesBA.push(corpo); return Promise.resolve({ ok: true }); };', ctx);
+      try {
+        await ctx.dashEspelhar('carrapaticida', 'id1', reg, 'lancar', '2026-09-03');
+        await passarAsVoltas();
+        const dep = estado['daycare/dashboard/2026-09-03/carrapaticida/id1'] || {};
+        check('mordida — a confirmação AGORA é escrita: planilha_ok=true mesmo com cache frio '
+          + '(o `return;` antigo abortava a transaction e deixava null para sempre)',
+          dep.planilha_ok === true, JSON.stringify(dep));
+        check('mordida — a ponte recebeu O DIA DO LANÇAMENTO (03/09), não o dia aberto na tela',
+          ctx.__pontesBA.length === 1 && ctx.__pontesBA[0].dia === '2026-09-03'
+          && ctx.__pontesBA[0].coluna === 'Carrapaticida',
+          JSON.stringify(ctx.__pontesBA[0]));
+        // falha declarada fica declarada
+        vm.runInContext('dashPonteChamar = function(){ return Promise.resolve({ ok: false, erro: "a aba nao tem a coluna" }); };', ctx);
+        await ctx.dashEspelhar('carrapaticida', 'id1', estado['daycare/dashboard/2026-09-03/carrapaticida/id1'], 'lancar', '2026-09-03');
+        await passarAsVoltas();
+        const dep2 = estado['daycare/dashboard/2026-09-03/carrapaticida/id1'] || {};
+        check('quando a ponte recusa, a falha fica DECLARADA (planilha_ok=false com o motivo)',
+          dep2.planilha_ok === false && /coluna/.test(dep2.planilha_msg || ''), JSON.stringify(dep2));
+        // nó tirado não ressuscita
+        delete estado['daycare/dashboard/2026-09-03/carrapaticida/id1'];
+        vm.runInContext('dashPonteChamar = function(){ return Promise.resolve({ ok: true }); };', ctx);
+        await ctx.dashEspelhar('carrapaticida', 'id1', reg, 'lancar', '2026-09-03');
+        await passarAsVoltas();
+        check('mordida — lançamento TIRADO continua tirado (confirmar não ressuscita nó apagado)',
+          estado['daycare/dashboard/2026-09-03/carrapaticida/id1'] === undefined);
+      } finally {
+        vm.runInContext('DB = __bkpBA2.DB; dashPonteChamar = __bkpBA2.chamar; DASH_PONTE = __bkpBA2.ponte;', ctx);
+      }
+    }
+
+    // A fila de reenvio NUNCA age sobre o "não sei": só falha declarada entra.
+    check('mordida — o dado real de 03/09 (planilha_ok null) NÃO entra na fila automática '
+      + '(reenviar o histórico inteiro em cima de "não sei" era o plano errado)',
+      ctx.dashPlanFilaPendentes({ carrapaticida: no0309 }).length === 0);
+    check('falha declarada entra na fila; confirmado sai',
+      ctx.dashPlanFilaPendentes({ carrapaticida: { x: { valor: 'A', ts: 1, planilha_ok: false } } }).length === 1
+      && ctx.dashPlanFilaPendentes({ carrapaticida: { x: { valor: 'A', ts: 1, planilha_ok: true } } }).length === 0);
+    check('erro de senha/configuração não queima tentativa (o lançamento espera a ponte voltar)',
+      ctx.dashPlanFilaErroDeConfig('senha invalida') && ctx.dashPlanFilaErroDeConfig('a ponte não está configurada')
+      && !ctx.dashPlanFilaErroDeConfig('a aba nao tem a coluna'));
+
+    // A fila de verdade, contra o banco fiel: clama, reenvia com o dia certo, confirma.
+    {
+      const estadoF = { 'daycare/dashboard/2026-09-03/carrapaticida/eliz':
+        { valor: 'Elizabeth/SRD (PIPETA · NA BOLSA)', hora: '', ts: 1788460240098, planilha_ok: false, planilha_msg: 'a ponte não respondeu' } };
+      ctx.__dbBF = bancoFiel(estadoF);
+      ctx.__pontesBF = [];
+      vm.runInContext('__bkpBF = { DB: DB, chamar: dashPonteChamar, ponte: DASH_PONTE };'
+        + 'DB = __dbBF; DASH_PONTE = { url: "https://script.google.com/x/exec", token: "t" };'
+        + 'dashPonteChamar = function(corpo){ __pontesBF.push(corpo); return Promise.resolve({ ok: true }); };', ctx);
+      try {
+        const ok = await ctx.dashPlanFilaReenviar('2026-09-03', 'carrapaticida', 'eliz');
+        await passarAsVoltas();
+        const dep = estadoF['daycare/dashboard/2026-09-03/carrapaticida/eliz'] || {};
+        check('mordida — a fila clama por transaction, reenvia para a planilha DO DIA 03/09 e confirma',
+          ok === true && dep.planilha_ok === true && !dep.lockTs
+          && ctx.__pontesBF.length === 1 && ctx.__pontesBF[0].dia === '2026-09-03',
+          JSON.stringify({ ok, dep, ponte: ctx.__pontesBF[0] }));
+      } finally {
+        vm.runInContext('DB = __bkpBF.DB; dashPonteChamar = __bkpBF.chamar; DASH_PONTE = __bkpBF.ponte;', ctx);
+      }
+    }
+  }
+  console.log('');
+
+  // ---- Achado 4: dose dupla — a trava por transaction ------------------------------
+  console.log('v-05 · Achado 4 — dose dupla (Palito, zenrelia 08:04) nunca mais:');
+  {
+    const estadoD = {};
+    ctx.__dbD = bancoFiel(estadoD);
+    ctx.__provaD = { tg: 0, estoque: 0, alertas: [] };
+    vm.runInContext('__bkpD = { DB: DB, quem: pessoaDoTurno, tg: medTgAvisarDose, est: descontarEstoquePorDose, al: zAlertao };'
+      + 'DB = __dbD;'
+      + 'pessoaDoTurno = function(){ return __provaD.nomeAtual; };'
+      + 'medTgAvisarDose = function(){ __provaD.tg++; };'
+      + 'descontarEstoquePorDose = function(){ __provaD.estoque++; };'
+      + 'zAlertao = function(t, l){ __provaD.alertas.push(String(t) + " · " + (l || []).join(" ")); };', ctx);
+    try {
+      const it = { key: 'palito__x', itemId: 'i1', nome: 'zenrelia', q: 1, u: 'comprimido', local: '', horario: '08:04', hospNome: 'Palito' };
+      ctx.__provaD.nomeAtual = 'Wandela Prova';
+      ctx.registrarDoseAgendadaGlobal(Object.assign({}, it), 'i1__0804');
+      await passarAsVoltas();
+      const chaveD = Object.keys(estadoD).find((k) => /medicacao-log/.test(k) && /i1__0804/.test(k));
+      check('a 1ª assinatura entra (transaction commit) e leva o nome de quem deu',
+        !!chaveD && estadoD[chaveD].quem === 'Wandela Prova', JSON.stringify(estadoD));
+      check('a 1ª assinatura dispara o aviso do Telegram e o desconto de estoque UMA vez',
+        ctx.__provaD.tg === 1 && ctx.__provaD.estoque === 1);
+      ctx.__provaD.nomeAtual = 'Giulia Prova';
+      ctx.registrarDoseAgendadaGlobal(Object.assign({}, it), 'i1__0804');
+      await passarAsVoltas();
+      check('mordida — a 2ª assinatura NÃO grava por cima: a dose continua da Wandela',
+        !!chaveD && estadoD[chaveD].quem === 'Wandela Prova', JSON.stringify(estadoD[chaveD]));
+      check('mordida — a 2ª pessoa vê QUEM assinou ("já foi registrada … Wandela"), em vez de um botão mudo',
+        ctx.__provaD.alertas.some((a) => /JÁ FOI REGISTRADA/.test(a) && /Wandela Prova/.test(a)),
+        JSON.stringify(ctx.__provaD.alertas));
+      check('mordida — nenhum efeito colateral em dobro: Telegram e estoque seguem em 1',
+        ctx.__provaD.tg === 1 && ctx.__provaD.estoque === 1);
+    } finally {
+      vm.runInContext('DB = __bkpD.DB; pessoaDoTurno = __bkpD.quem; medTgAvisarDose = __bkpD.tg; descontarEstoquePorDose = __bkpD.est; zAlertao = __bkpD.al;', ctx);
+    }
+    check('a linha do tempo do Painel do Dia mostra o REMÉDIO e o horário da dose (não a chave crua)',
+      /medicacao-dose'\|\|a\.acao==='medicacao-dose-avulsa'\)&&\(a\.med\|\|a\.horario\|\|a\.pet\)/.test(html)
+      && /'medicacao-dose':'Dose dada'/.test(html));
+  }
+  console.log('');
+
+  // ---- Fila do Telegram: aviso com mais de 12 h não é notícia ----------------------
+  console.log('v-05 · Fila do Telegram — a lei do almoço (>12 h) vale para a drenagem:');
+  {
+    const agora = Date.now();
+    const fila = {
+      velho: { texto: 'dose antiga de 3 dias', ts: agora - 3 * 86400000, tentativas: 0, grupo: 'gestao' },
+      novo: { texto: 'dose de 1 hora atrás', ts: agora - 3600000, tentativas: 0, grupo: 'gestao' },
+    };
+    const estadoT = { 'auaulandia/med-tg-fila/velho': fila.velho, 'auaulandia/med-tg-fila/novo': fila.novo };
+    const rastroT = { removidos: [] };
+    const bancoT = bancoFiel(estadoT, rastroT);
+    const refFila = bancoT.ref('auaulandia/med-tg-fila');
+    refFila.once = () => Promise.resolve({ val: () => ({ velho: fila.velho, novo: fila.novo }) });
+    ctx.__dbT = { ref: (c) => (c === 'auaulandia/med-tg-fila' ? refFila : bancoT.ref(c)) };
+    ctx.__provaT = { enviados: [], audits: [] };
+    vm.runInContext('__bkpT2 = { DB: DB, tg: tgAvisar, aud: audit };'
+      + 'DB = __dbT;'
+      + 'tgAvisar = function(o){ __provaT.enviados.push(o.texto); return Promise.resolve({ ok: true }); };'
+      + 'audit = function(acao, det){ __provaT.audits.push(acao + ": " + det); };', ctx);
+    try {
+      ctx.medTgFilaTentar();
+      await passarAsVoltas(80);
+      check('mordida — o item de 3 DIAS nunca é enviado (vencido não vira enxurrada no grupo)',
+        ctx.__provaT.enviados.indexOf('dose antiga de 3 dias') < 0, JSON.stringify(ctx.__provaT.enviados));
+      check('mordida — o vencido sai da fila COM RASTRO: "vencido — não enviado (aviso velho)"',
+        rastroT.removidos.indexOf('auaulandia/med-tg-fila/velho') >= 0
+        && ctx.__provaT.audits.some((a) => /vencido — não enviado \(aviso velho/.test(a)),
+        JSON.stringify(ctx.__provaT.audits));
+      check('o item de 1 HORA é enviado normalmente e sai da fila (contrato do retry preservado)',
+        ctx.__provaT.enviados.indexOf('dose de 1 hora atrás') >= 0
+        && rastroT.removidos.indexOf('auaulandia/med-tg-fila/novo') >= 0,
+        JSON.stringify({ env: ctx.__provaT.enviados, rem: rastroT.removidos }));
+      check('mordida — o clamor da fila sobrevive ao cache frio (`return null`, não `return;`)',
+        /med-tg-fila\/'\+id\)\.transaction\(function\(atual\)\{[\s\S]{0,600}?if\(atual===null\|\|atual===undefined\) return null;/.test(html));
+    } finally {
+      vm.runInContext('DB = __bkpT2.DB; tgAvisar = __bkpT2.tg; audit = __bkpT2.aud;', ctx);
+    }
+  }
+  console.log('');
+
+  // ---- Bug B: Aulunos com restrições — só quem TEM restrição real ------------------
+  console.log('v-05 · Bug B — restrição real, específica e curta (a Hana fica de fora):');
+  {
+    const cadRestr = await dbRead('daycare/cadastro', token) || {};
+    const hana = cadRestr['hana__alessandra'];
+    check('dado real: a ficha da Hana existe e a resposta dela é NEGATIVA '
+      + '("Hana não tem nenhuma atividade física com restrição")',
+      !!hana && /não tem nenhuma/i.test(String(hana.ea_restr || '')), JSON.stringify(hana && hana.ea_restr));
+    check('mordida — a Hana NÃO conta como restrita (resposta negativa não é restrição)',
+      hana ? ctx.dashAutoTemRestricao(hana) === false : false,
+      hana ? JSON.stringify({ ea: hana.ea_restr, alergia: hana.alergia, restricao: hana.restricao }) : 'sem ficha');
+    check('alergia de verdade conta — e vira o texto específico ("alergia a frango")',
+      ctx.dashAutoTemRestricao({ alergia: 'alergia a frango' }) === true
+      && ctx.dashAutoRestricaoCurta({ alergia: 'alergia a frango' }) === 'alergia a frango');
+    check('a ressalva no meio devolve o FILHOt à lista ("não tem alergia, MAS não pode frango")',
+      ctx.dashAutoTemRestricao({ alergia: 'não tem alergia, mas não pode frango' }) === true);
+    check('"sem restrição", "nenhuma", "não come nada além da ração" — tudo fora',
+      !ctx.dashAutoTemRestricao({ restricao: 'sem restrição' })
+      && !ctx.dashAutoTemRestricao({ alergia: 'Nenhuma' })
+      && !ctx.dashAutoTemRestricao({ ea_restr: 'Não tem problema com nenhuma atividade' }));
+    const comprida = 'alergia gravíssima a frango, milho, soja, corante amarelo, perfume de banho e a tudo que contém proteína hidrolisada de origem suspeita';
+    const curta = ctx.dashAutoRestricaoCurta({ alergia: comprida });
+    check('mordida — texto livre comprido NUNCA passa de ' + ctx.DASH_RESTR_MAX + ' caracteres: corta na palavra com reticências',
+      curta.length <= ctx.DASH_RESTR_MAX && /…$/.test(curta), JSON.stringify(curta));
+    check('campo negativo não rouba a vez do campo real (restricao negativa + alergia real → mostra a alergia)',
+      ctx.dashAutoRestricaoCurta({ restricao: 'não tem', alergia: 'alergia a frango' }) === 'alergia a frango');
+
+    // Turma do dia com o CADASTRO REAL: o quadro de uma sexta só leva quem VEM na sexta.
+    ctx.__cadB = cadRestr;
+    vm.runInContext('__bkpB = { cad: pelCadCache, nPel: PELUDINHOS.length };'
+      + 'pelCadCache = __cadB; if (typeof mergeNovosAlunos === "function") mergeNovosAlunos();', ctx);
+    try {
+      const ativos = ctx.PELUDINHOS.filter((p) => !ctx.pelInativo(p));
+      const comRestr = ativos.filter((p) => ctx.dashAutoTemRestricao(ctx.pelExtra(p)));
+      const sexta = '2026-09-11';                     // sexta-feira FUTURA: a conta usa os dias da ficha
+      const esperados = comRestr.filter((p) => ctx.dashAutoVemNoDia(p, sexta));
+      const out = ctx.dashAutoCalcular(sexta);
+      console.log('  cadastro real: ' + ativos.length + ' ativos · ' + comRestr.length + ' com restrição real · '
+        + esperados.length + ' vêm na sexta ' + sexta);
+      check('mordida — o quadro da sexta conta SÓ a turma do dia (' + esperados.length + '), nunca os '
+        + comRestr.length + ' do cadastro inteiro',
+        out.aulunosRestr.length === esperados.length && esperados.length <= comRestr.length,
+        'quadro=' + out.aulunosRestr.length + ' esperados=' + esperados.length);
+      check('mordida — a Hana não aparece em NENHUM dia (ela respondeu que não tem restrição)',
+        !out.aulunosRestr.some((t) => /^Hana\b/i.test(t)), JSON.stringify(out.aulunosRestr.filter((t) => /hana/i.test(t))));
+      check('cada linha do quadro cabe em 2 linhas: "Nome/Raça - restrição" com a restrição curta',
+        out.aulunosRestr.every((t) => {
+          const corte = t.indexOf(' - ');
+          return corte < 0 || (t.length - corte - 3) <= ctx.DASH_RESTR_MAX;
+        }), JSON.stringify(out.aulunosRestr.filter((t) => (t.length - t.indexOf(' - ') - 3) > ctx.DASH_RESTR_MAX)));
+    } finally {
+      vm.runInContext('pelCadCache = __bkpB.cad; PELUDINHOS.length = __bkpB.nPel;', ctx);
+    }
+  }
+  console.log('');
+
+  // ---- Achados 3, 5, 6, 7 e 8 — os freios e as consertos de tela -------------------
+  console.log('v-05 · Achados 3, 5, 6, 7 e 8 — freio da planilha, rótulos, homônimos, celular e cosméticos:');
+  {
+    // 3 · o freio do redisparo da planilha
+    check('mordida — o ouvinte de auaulandia/manuais passa pelo AGENDADOR (não chama carregarHospedes direto)',
+      /auaulandia\/manuais'\)\.on\('value'[\s\S]{0,400}?hospRecarregarAgendar/.test(html)
+      && !/auaulandia\/manuais'\)\.on\('value'[\s\S]{0,400}?carregarHospedes\(\)/.test(html));
+    check('o intervalo mínimo DOBRA a cada falha (5 s → 10 min) e volta ao normal no sucesso',
+      /HOSP_RECAR_MIN=Math\.min\(HOSP_RECAR_MIN\*2, 600000\)/.test(html)
+      && /HOSP_RECAR_MIN=5000; _planErrN=0;/.test(html));
+    check('mordida — a falha repetida grava UM audit por hora, com a contagem ("repetiu N×")',
+      /_planErrUltAudit>3600000/.test(html) && /repetiu '\+_planErrN\+'×/.test(html));
+    check('mordida — a lista usa o último retrato bom do MESMO dia (tela nunca mente ausência)',
+      /HOSP_ULT_BOM && HOSP_ULT_BOM\.dia===dataKeyAtual\(\)/.test(html)
+      && /hospedes=HOSP_ULT_BOM\.lista\.slice\(\)/.test(html));
+    check('e o aviso da tela diz que é retrato, com a hora ("lido às HH:MM")',
+      /último retrato bom/.test(html) && /lido às/.test(html));
+
+    // 5 · cada número declara a própria conta
+    check('mordida — o hero do Painel declara a conta (aulunos + avulsos + hóspedes + moradores)',
+      /passa'\+\(total>1\?'m':''\)\+' pela casa <span[^>]*>\(aulunos \+ avulsos \+ hóspedes \+ moradores\)/.test(html));
+    check('o tile diz "aulunos na turma (sem moradores e hóspedes)" e a falta diz "na chamada"',
+      /aulunos na turma \(sem moradores e hóspedes\)/.test(html) && /faltaram'\)\+' na chamada/.test(html));
+    check('o card de faltas declara "na turma da chamada (aulunos + avulsos)"',
+      /na turma da chamada \(aulunos \+ avulsos\)/.test(html));
+    check('a chamada declara a composição (fixos + reposições + avulsos + moradores)',
+      /na chamada \(fixos \+ reposições \+ avulsos \+ moradores\)/.test(html));
+
+    // 6 · nome sozinho não identifica ninguém
+    check('pelNomeIdent identifica por nome/raça — e sem raça, pelo tutor',
+      ctx.pelNomeIdent({ n: 'Luna', raca: 'Spitz Alemão' }) === 'Luna/Spitz Alemão'
+      && ctx.pelNomeIdent({ n: 'Luna', tutor: 'Ana' }) === 'Luna (Ana)'
+      && ctx.pelNomeIdent({ n: 'Luna' }) === 'Luna');
+    check('mordida — o card Urgente a resolver identifica todo mundo por pelNomeIdent (16 homônimos no cadastro)',
+      /venc\.push\(\{nome:pelNomeIdent\(p\)/.test(html) && /semPeso\.push\(pelNomeIdent\(p\)\)/.test(html)
+      && /nome:pelNomeIdent\(p\), motivo:ex\.motivoSaida/.test(html));
+    check('mordida — "Quem não comeu hoje" mostra nome/raça (ou o tutor) no Painel da Operação',
+      /_identC=x\.nome\+\(x\.raca\?\('\/'\+x\.raca\):\(x\.tutor\?\(' \('\+x\.tutor\+'\)'\):''\)\)/.test(html));
+
+    // 7 · celular de 390px sem rolagem lateral
+    check('mordida — o cabeçalho quebra linha no celular (flex-wrap) e o título encolhe (min-width:0)',
+      /\.head\{[\s\S]{0,300}?flex-wrap:wrap/.test(html) && /\.head h1\{[^}]*min-width:0/.test(html));
+    check('a linha do tempo não vaza mais (.p-tl-a com min-width:0 e quebra de palavra)',
+      /\.p-tl-a\{[^}]*min-width:0[^}]*overflow-wrap:anywhere/.test(html));
+
+    // 8 · cosméticos
+    check('mordida — "Setembro de 2026": o calendário perdeu o text-transform:capitalize',
+      /\.dcal-mes\{[^}]*\}/.test(html) && !/\.dcal-mes\{[^}]*text-transform:capitalize/.test(html));
+    check('o Ritmo fala pt-BR: vírgula decimal e % calculado dos valores exibidos',
+      ctx.ritmoBR(3.25) === '3,3' && ctx.ritmoArred(3.249) === 3.2
+      && /pShow=ritmoArred\(r\.porPet\), mShow=m\?ritmoArred\(m\.media\):null/.test(html)
+      && /var pS=ritmoArred\(r\.porPet\), mS=ritmoArred\(m\.media\)/.test(html));
+  }
+  console.log('');
+
+  // ---- a prova do retrato: rodada padrão não toca o Firebase --------------------
+  console.log('Retrato — a rodada padrão não abre conexão nenhuma com o banco:');
+  if (HARNESS_VIVO) {
+    check('rodada com HARNESS_VIVO=1: o vigia viu as conexões esperadas (banco vivo de propósito)',
+      CONEXOES_FIREBASE.length > 0, 'nenhuma conexão? algo mudou no caminho REST');
+  } else {
+    check('mordida — ZERO conexões https a firebaseio/identitytoolkit na rodada padrão (694 MB/dia eram os testes)',
+      CONEXOES_FIREBASE.length === 0, JSON.stringify(CONEXOES_FIREBASE.slice(0, 3)));
+    check('o retrato veio do disco e tem os dois lados (daycare e auaulandia)',
+      !!(RETRATO && RETRATO.daycare && RETRATO.auaulandia && RETRATO.dia));
   }
   console.log('');
 

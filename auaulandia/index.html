@@ -224,11 +224,18 @@
 
   /* ===================== MAIN ===================== */
   .main{margin-left:var(--sidebar);min-height:100vh}
+  /* Achado 7 da varredura (04/set/2026): em 390px a página rolava 32px para o lado.
+     O cabeçalho era um flex de linha única (sem wrap) com o navegador de data rígido
+     (flex:0 0 auto) e o rótulo em nowrap — juntos, empurravam a largura além da tela.
+     flex-wrap + min-width:0 no título deixam o navegador de data descer de linha no
+     celular; no desktop nada muda (sobra espaço, o wrap nunca dispara). */
   .head{
     background:var(--z-cream-warm);border-bottom:1px solid var(--line);
-    padding:18px 26px;display:flex;align-items:center;gap:16px;position:sticky;top:0;z-index:20;
+    padding:18px 26px;display:flex;align-items:center;gap:16px;row-gap:8px;flex-wrap:wrap;
+    position:sticky;top:0;z-index:20;
   }
-  .head h1{font-size:21px;font-weight:700;color:var(--z-blue);flex:1}
+  .head h1{font-size:21px;font-weight:700;color:var(--z-blue);flex:1;min-width:0}
+  @media(max-width:480px){ .head{padding:12px 14px} }
   .head h1 small{display:block;font-size:12px;font-weight:500;color:var(--muted);margin-top:2px}
   .search{
     background:var(--z-white);border:1.5px solid var(--line);border-radius:999px;
@@ -639,7 +646,9 @@
   /* Calendário de "para que dia estou lançando" (tela Lançamentos da TV) */
   .dcal{background:var(--z-cream-warm);border:1.5px solid var(--line);border-radius:14px;padding:10px 12px}
   .dcal-top{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:8px}
-  .dcal-mes{font-weight:800;color:var(--z-blue);font-size:15px;text-transform:capitalize}
+  /* sem text-transform:capitalize — ele punha maiúscula até no "de" ("Setembro De 2026").
+     O nome do mês já vem com a inicial certa de DCAL_MESES (achado 8, 04/set/2026). */
+  .dcal-mes{font-weight:800;color:var(--z-blue);font-size:15px}
   .dcal-nav{background:none;border:1.5px solid var(--line);border-radius:9px;width:34px;height:34px;
             font-size:17px;font-weight:800;color:var(--z-blue);cursor:pointer;line-height:1}
   .dcal-grade{display:grid;grid-template-columns:repeat(7,1fr);gap:4px}
@@ -1048,7 +1057,8 @@
   .p-tl-item:last-child{border-bottom:none}
   .p-tl-h{font-family:var(--font-marca);font-weight:700;color:var(--z-gold-deep);font-size:13px;min-width:48px}
   .p-tl-q{font-weight:700;color:var(--z-blue);font-size:13px;min-width:110px}
-  .p-tl-a{font-size:13px;color:var(--z-blue-deep)}
+  /* min-width:0 + quebra de palavra: o texto da ação vazava ~7px no celular (achado 7) */
+  .p-tl-a{font-size:13px;color:var(--z-blue-deep);flex:1;min-width:0;overflow-wrap:anywhere}
   .p-empty{text-align:center;padding:40px 20px;color:var(--muted);font-size:14px;font-weight:600}
   .saida-hoje{display:inline-block;margin-top:8px;font-size:10px;font-weight:800;letter-spacing:.3px;color:var(--crm-atencao-text);background:rgba(222,180,40,.2);border:1px solid rgba(222,180,40,.5);padding:3px 9px;border-radius:7px}
   .hosp-del{position:absolute;top:6px;right:6px;z-index:3;width:30px;height:30px;border-radius:50%;border:2px solid #fff;background:var(--crm-critico);color:#fff;font-weight:800;font-size:15px;line-height:1;cursor:pointer;box-shadow:0 1px 4px rgba(0,0,0,.25)}
@@ -1332,6 +1342,9 @@
      existiria dentro de uma gaveta invisível (Adriana, 28/ago/2026). */
   body[data-role="vet"] .nav a[data-v="peso"],
   body[data-role="vet"] .nav .acc[data-acc="central"]>a.grp,
+  /* Cuidado Vet mudou de gaveta com a unificação do menu (04/set/2026): agora mora em
+     Central Zêluz › AuAulândia — a veterinária precisa ver este sub-cabeçalho também. */
+  body[data-role="vet"] .nav .acc[data-acc="c-auaulandia"]>a.grp,
   body[data-role="vet"] .nav .acc[data-acc="c-peludinhos"]>a.grp{display:flex !important}
   /* Onda 4 — Conferência Check-in: no menu só para a Wandela (papel "conferencia") + Gestão/Supervisão/Diretoria */
   /* Peludinhos Hóspedes — quem mexe em data de estadia: Gestão, Supervisão, Consultora e Diretoria */
@@ -1981,36 +1994,12 @@
          classe so-* nova (regra 3 da Fase 2: permissão em um lugar só). -->
     <a data-v="painelmeu" style="display:none" title="A sua fatia do dia: o seu horário, o seu plano, o que ficou aberto e os seus pontos."><span data-icon="sun"></span><span>Meu Painel</span></a>
 
-    <div class="acc" data-acc="servicos">
-      <a class="grp nav-parent" data-acc-toggle="servicos"><span data-icon="paw"></span><span>Serviços</span><span class="acc-caret" aria-hidden="true"></span></a>
-      <div class="acc-panel">
-        <div class="acc" data-acc="s-auaulandia">
-          <a class="grp grp-sub nav-parent" data-acc-toggle="s-auaulandia"><span>AuAulândia — o hotel da Zêluz</span><span class="acc-caret" aria-hidden="true"></span></a>
-          <div class="acc-panel">
-          <a data-v="conferencia" class="so-conferencia" title="O monitor confere corpo e pertences de quem chegou (2º passo; o 1º é da Central Zêluz)."><span data-icon="clipboard"></span><span>Conferência do check-in</span></a>
-          <a data-v="cuidadovet" class="so-vet" title="Alterações no corpo que a veterinária precisa ver."><span data-icon="stethoscope"></span><span>Cuidado Vet</span></a>
-          <a data-v="hospedagem" title="O relatório de cada hóspede, turno a turno."><span data-icon="moon"></span><span>Plantão da noite</span></a>
-          <a data-v="hospedes" class="so-hosp" title="Quem está na casa, medicação e alimentação."><span data-icon="bed"></span><span>Hóspedes de hoje</span></a>
-          <a data-v="gestdia" class="so-gestao" title="A conferência da Gestão: medicações por horário, problemas e os três tempos do plantão."><span data-icon="clipboard"></span><span>Conferência do dia</span></a>
-          <!-- SEMPRE 2 conferências: uma na ENTRADA e uma na SAÍDA (Adriana, 03/ago/2026).
-               Check-out = os monitores juntam; o Check-out com o tutor mora na Central. -->
-          <a data-v="checkout" title="O monitor monta a bolsa e devolve tudo (1º passo; a Central fecha com o tutor)."><span data-icon="bag"></span><span>Check-out</span></a>
-          </div>
-        </div>
-        <!-- O bloco do Day Care é ao mesmo tempo a sanfona do sub-cabeçalho E o elemento
-             que a trava de permissão granular esconde (aplicarPaginasPessoa): quem tem
-             escopo restrito e nenhuma atividade não vê o Day Care. -->
-        <div class="acc so-day" id="blocoDaycare" data-acc="s-daycare">
-          <a class="grp grp-sub nav-parent" data-acc-toggle="s-daycare"><span>Day Care</span><span class="acc-caret" aria-hidden="true"></span></a>
-          <div class="acc-panel">
-            <a data-v="abertura" class="so-abertura" title="Monitor 1: como a casa abre."><span data-icon="sun"></span><span>Abertura do dia</span></a>
-            <!-- Turminhas (dias) + Atividades vivem no #dcSubnav (montarSubnav). -->
-            <div class="subnav so-day" id="dcSubnav"></div>
-          </div>
-        </div>
-      </div>
-    </div>
-
+    <!-- Achado 8 da varredura (04/set/2026): o menu tinha DUAS categorias "AuAulândia" e
+         DUAS "Day Care" — uma dentro de "Serviços", outra dentro de "Central Zêluz". A
+         mesma casa em duas gavetas: ninguém sabia em qual procurar. Unificado: cada
+         serviço tem UM sub-cabeçalho, na Central Zêluz, com os itens na ordem do dia
+         (chegada → cuidado → saída). As classes so-* de cada item seguem mandando quem
+         vê o quê — nenhuma permissão mudou de dono. -->
     <div class="acc" data-acc="central">
       <a class="grp nav-parent" data-acc-toggle="central"><span data-icon="bell"></span><span>Central Zêluz</span><span class="acc-caret" aria-hidden="true"></span></a>
       <div class="acc-panel">
@@ -2021,6 +2010,14 @@
           <a class="grp grp-sub nav-parent" data-acc-toggle="c-auaulandia"><span>AuAulândia</span><span class="acc-caret" aria-hidden="true"></span></a>
           <div class="acc-panel">
           <a data-v="checkin" title="O tutor chega: entrada, alimentação, medicação, assinatura (1º passo)."><span data-icon="login"></span><span>Check-in</span></a>
+          <a data-v="conferencia" class="so-conferencia" title="O monitor confere corpo e pertences de quem chegou (2º passo)."><span data-icon="clipboard"></span><span>Conferência do check-in</span></a>
+          <a data-v="hospedes" class="so-hosp" title="Quem está na casa, medicação e alimentação."><span data-icon="bed"></span><span>Hóspedes de hoje</span></a>
+          <a data-v="cuidadovet" class="so-vet" title="Alterações no corpo que a veterinária precisa ver."><span data-icon="stethoscope"></span><span>Cuidado Vet</span></a>
+          <a data-v="hospedagem" title="O relatório de cada hóspede, turno a turno."><span data-icon="moon"></span><span>Plantão da noite</span></a>
+          <a data-v="gestdia" class="so-gestao" title="A conferência da Gestão: medicações por horário, problemas e os três tempos do plantão."><span data-icon="clipboard"></span><span>Conferência do dia</span></a>
+          <!-- SEMPRE 2 conferências: uma na ENTRADA e uma na SAÍDA (Adriana, 03/ago/2026).
+               Check-out = os monitores juntam; o Check-out com o tutor fecha com o tutor. -->
+          <a data-v="checkout" title="O monitor monta a bolsa e devolve tudo (1º passo)."><span data-icon="bag"></span><span>Check-out</span></a>
           <a data-v="checkoutconf" class="so-conf-saida" title="Conferir a bolsa junto com o tutor e assinar (2º passo)."><span data-icon="door-out"></span><span>Check-out com o tutor</span></a>
           <a data-v="orcamento" class="so-recepcao" title="Monte e envie o orçamento ao tutor."><span data-icon="dollar"></span><span>Orçamento de hospedagem</span></a>
           <a data-v="recepcao" class="so-recepcao" title="Ração acabando, remédio faltando, algo que ficou."><span data-icon="message"></span><span>Pendências com o tutor</span></a>
@@ -2029,6 +2026,14 @@
         <div class="acc" data-acc="c-daycare">
           <a class="grp grp-sub nav-parent" data-acc-toggle="c-daycare"><span>Day Care</span><span class="acc-caret" aria-hidden="true"></span></a>
           <div class="acc-panel">
+          <!-- O #blocoDaycare continua sendo o elemento que a trava de permissão granular
+               esconde (aplicarPaginasPessoa): quem tem escopo restrito e nenhuma atividade
+               não vê o dia do Day Care — só os itens de recepção logo abaixo. -->
+          <div class="so-day" id="blocoDaycare">
+            <a data-v="abertura" class="so-abertura" title="Monitor 1: como a casa abre."><span data-icon="sun"></span><span>Abertura do dia</span></a>
+            <!-- Turminhas (dias) + Atividades vivem no #dcSubnav (montarSubnav). -->
+            <div class="subnav so-day" id="dcSubnav"></div>
+          </div>
           <!-- Saiu do menu "Empório", que foi deletado: ninguém procuraria a mensagem
                do tutor ali dentro (Adriana, 13/ago/2026). -->
           <a data-v="emporio" class="so-emporio" title="A mensagem pronta para avisar o tutor."><span data-icon="bowl"></span><span>Quem não comeu hoje</span></a>
@@ -4096,7 +4101,10 @@
       DB.ref('daycare/config/monitores').on('value', s=>{ const v=s.val(); if(Array.isArray(v)&&v.length){ MONITORES=v; } else { MONITORES=MONITORES_DEFAULT.map(m=>Object.assign({},m)); } try{ if(typeof renderSenhas==='function') renderSenhas(); }catch(e){} /* silencioso de propósito: redesenho de tela — falhar não pode derrubar quem chamou */ try{ if(typeof renderMonitores==='function') renderMonitores(); }catch(e){} /* silencioso de propósito: redesenho de tela — falhar não pode derrubar quem chamou */ try{ if(typeof renderPainelDia==='function') renderPainelDia(); }catch(e){} /* silencioso de propósito: redesenho de tela — falhar não pode derrubar quem chamou */ });
       // Sincronização em tempo real das pernoites/hóspedes manuais entre TODOS os aparelhos.
       // (antes usava .once() e quem já estava com o app aberto não via a inserção do outro celular)
-      DB.ref('auaulandia/manuais').on('value', ()=>{ try{ const ls=document.getElementById('loginScreen'); if(ls && ls.style.display==='none' && typeof carregarHospedes==='function') carregarHospedes(); }catch(e){} /* silencioso de propósito: função opcional, pode não existir nesta tela */ });
+      // Achado 3 (04/set/2026): este redisparo, sem freio, redesceu a planilha a cada
+      // mudança em TODOS os aparelhos — 576 falhas de "planilha-hospedagem timeout" num
+      // dia. Agora passa pelo agendador com debounce e backoff (hospRecarregarAgendar).
+      DB.ref('auaulandia/manuais').on('value', ()=>{ try{ const ls=document.getElementById('loginScreen'); if(ls && ls.style.display==='none' && typeof hospRecarregarAgendar==='function') hospRecarregarAgendar(); }catch(e){} /* silencioso de propósito: função opcional, pode não existir nesta tela */ });
       // Onda 2 — avisos de estoque de medicação (Recepção), em tempo real em todos os aparelhos.
       DB.ref('auaulandia/avisos-estoque').on('value', s=>{ AVISOS_ESTOQUE_CACHE=s.val()||{};
         try{ if(typeof atualizarBadgeRecepcao==='function') atualizarBadgeRecepcao(); }catch(e){} /* silencioso de propósito: redesenho de tela — falhar não pode derrubar quem chamou */
@@ -6159,7 +6167,7 @@
       +'<div><div class="tb-lab">Café da manhã</div>'
       +'<div style="font-size:13px;margin-top:3px">Início: <strong>'+(cafeTempo.inicio||'-')+'</strong>'+(cafeTempo.quemInicio?(' ('+escAttr(cafeTempo.quemInicio)+')'):'')
       +' · Fim: <strong>'+(cafeTempo.fim||'-')+'</strong>'+(dur!=null?(' · '+fmtDur(dur)):'')
-      +(dur!=null&&n?(' · <strong>'+(dur/n).toFixed(1)+' min por FILHOt</strong>'):'')+'</div></div>'
+      +(dur!=null&&n?(' · <strong>'+(dur/n).toFixed(1).replace('.',',')+' min por FILHOt</strong>'):'')+'</div></div>'
       +'<div style="display:flex;gap:8px;flex-wrap:wrap">'
       +'<button class="btn btn-gold" onclick="iniciarCafe()">&#9654; Iniciar</button>'
       +'<button class="btn" style="background:rgba(255,255,255,.14);color:var(--z-cream);border:1px solid rgba(255,255,255,.25)" onclick="encerrarCafe()">&#9632; Encerrar</button>'
@@ -6218,10 +6226,19 @@
       var _avP=document.getElementById('hospPlanilhaAviso');
       if(!_avP){ var _g=document.getElementById('hospGrid');
         if(_g&&_g.parentNode){ _avP=document.createElement('div'); _avP.id='hospPlanilhaAviso'; _g.parentNode.insertBefore(_avP,_g); } }
-      if(_avP) _avP.innerHTML=(typeof HOSP_PLANILHA!=='undefined'&&HOSP_PLANILHA===false)
-        ? '<div class="dc-faltas"><strong>Não consegui ler a planilha da hospedagem.</strong>'
-          +'<div style="font-weight:600;margin-top:4px">A lista abaixo pode estar incompleta — só aparece quem foi lançado aqui no Plantão ou no Check-in. Confira a internet e recarregue.</div></div>'
-        : '';
+      if(_avP){
+        var _retrato=(typeof HOSP_ULT_BOM!=='undefined'&&HOSP_ULT_BOM&&typeof dataKeyAtual==='function'&&HOSP_ULT_BOM.dia===dataKeyAtual());
+        var _hRet='';
+        if(_retrato){ try{ var _dR=new Date(HOSP_ULT_BOM.quando); _hRet=String(_dR.getHours()).padStart(2,'0')+':'+String(_dR.getMinutes()).padStart(2,'0'); }catch(e2){ _hRet=''; } }
+        _avP.innerHTML=(typeof HOSP_PLANILHA!=='undefined'&&HOSP_PLANILHA===false)
+          ? '<div class="dc-faltas"><strong>Não consegui ler a planilha da hospedagem.</strong>'
+            +'<div style="font-weight:600;margin-top:4px">'
+            +(_retrato
+               ? 'A lista abaixo é o último retrato bom'+(_hRet?(' (lido às '+_hRet+')'):'')+'. O app tenta de novo sozinho — não precisa recarregar.'
+               : 'A lista abaixo pode estar incompleta — só aparece quem foi lançado aqui no Plantão ou no Check-in. Confira a internet e recarregue.')
+            +'</div></div>'
+          : '';
+      }
     }catch(e){} /* silencioso de propósito: guarda defensiva — falhar aqui não pode interromper quem chamou */
     document.getElementById('hospGrid').innerHTML =
       `<div class="pet add so-gestao" onclick="adicionarHospede()">
@@ -7977,19 +7994,45 @@
       return;
     }
     const reg={itemId:it.itemId,nome:it.nome,q:it.q,u:it.u,local:it.local||null,horario:it.horario,quem:_quem,ts:Date.now(),avulso:false};
-    // Item 8 — marca a dose em TODAS as fichas iguais deste FILHOt (mesmo remédio, mesma dose,
-    // mesmo local, mesmo horário). Sem isso, a cópia da Betaína da Dolly voltava a alarmar
-    // depois de a plantonista já ter dado o comprimido.
-    DB.ref('auaulandia/medicacao-agenda/'+it.key+'/itens').once('value').then(function(s){
-      const irmas=medIrmasDaDose(s.val()||{}, {nome:it.nome,q:it.q,u:it.u,local:it.local,h:it.horario});
-      const extras={};
-      irmas.forEach(function(x){
-        const did=magDoseId(x.itemId,x.horario);
-        if(did!==doseId) extras[did]=Object.assign({},reg,{itemId:x.itemId, espelho_de:doseId});
-      });
-      if(Object.keys(extras).length) return DB.ref('auaulandia/medicacao-log/'+dataKeyAtual()+'/'+it.key).update(extras);
-    }).catch(function(e){ _logFalhaGrav('espelho de dose '+doseId, e); });
-    DB.ref('auaulandia/medicacao-log/'+dataKeyAtual()+'/'+it.key+'/'+doseId).set(reg).then(function(){
+    // TRAVA DE DOSE DUPLA — achado 4 da varredura (04/set/2026). A zenrelia do Palito das
+    // 08:04 foi registrada por Wandela E por Giulia: dois aparelhos, cada um sem saber do
+    // outro, e o set() cego gravava por cima. Agora a dose é CLAMADA por transaction
+    // (molde medTgFilaTentar): só a primeira assinatura entra; a segunda vê quem assinou
+    // e a que horas — e nenhum efeito colateral (Telegram, estoque) roda em dobro.
+    DB.ref('auaulandia/medicacao-log/'+dataKeyAtual()+'/'+it.key+'/'+doseId).transaction(function(atual){
+      if(atual) return;          // já assinada — aborta sem escrever
+      return reg;
+    }).then(function(res){
+      const jaTinha=res&&res.snapshot?res.snapshot.val():null;
+      if(!res || !res.committed){
+        // Alguém assinou primeiro: dizer QUEM e QUANDO — sem isso a segunda pessoa acha
+        // que o botão falhou e tenta de novo (foi assim que virou dose dupla).
+        var _hQ='';
+        try{ if(jaTinha&&jaTinha.ts){ var _dQ=new Date(jaTinha.ts); _hQ=String(_dQ.getHours()).padStart(2,'0')+':'+String(_dQ.getMinutes()).padStart(2,'0'); } }catch(e){ _hQ=''; }
+        try{
+          zAlertao('ESTA DOSE JÁ FOI REGISTRADA',
+            ['A dose de '+(it.nome||'medicamento')+' das '+(it.horario||'--:--')+' já foi assinada por '
+             +((jaTinha&&jaTinha.quem)||'outra pessoa')+(_hQ?(' às '+_hQ):'')+'.',
+             'Não registrei de novo — o FILHOt não pode receber a mesma dose duas vezes.'],
+            {botao:'Entendi'});
+        }catch(e){ alert('Esta dose já foi registrada por '+((jaTinha&&jaTinha.quem)||'outra pessoa')+'.'); }
+        if(currentHosp && medAgendaKey(currentHosp)===it.key && jaTinha){ MED_AGENDA_LOG[doseId]=jaTinha; }
+        try{ renderMedAgendaHoje(); }catch(e){} /* silencioso de propósito: redesenho de tela — falhar não pode derrubar quem chamou */
+        if(typeof fecharDespertadorMed==='function') fecharDespertadorMed();
+        return;
+      }
+      // Item 8 — marca a dose em TODAS as fichas iguais deste FILHOt (mesmo remédio, mesma
+      // dose, mesmo local, mesmo horário). Só roda quando ESTA assinatura venceu a trava —
+      // senão o espelho da segunda pessoa gravava por cima do da primeira.
+      DB.ref('auaulandia/medicacao-agenda/'+it.key+'/itens').once('value').then(function(s){
+        const irmas=medIrmasDaDose(s.val()||{}, {nome:it.nome,q:it.q,u:it.u,local:it.local,h:it.horario});
+        const extras={};
+        irmas.forEach(function(x){
+          const did=magDoseId(x.itemId,x.horario);
+          if(did!==doseId) extras[did]=Object.assign({},reg,{itemId:x.itemId, espelho_de:doseId});
+        });
+        if(Object.keys(extras).length) return DB.ref('auaulandia/medicacao-log/'+dataKeyAtual()+'/'+it.key).update(extras);
+      }).catch(function(e){ _logFalhaGrav('espelho de dose '+doseId, e); });
       if(currentHosp && medAgendaKey(currentHosp)===it.key){ MED_AGENDA_LOG[doseId]=reg; renderMedAgendaHoje(); }
       if(typeof audit==='function') audit('medicacao-dose',it.key,{pet:it.hospNome||'',med:it.nome,horario:it.horario,quem:reg.quem,assinou:reg.quem});
       try{ medTgAvisarDose(reg, it.hospNome||''); }catch(e){ _logFalhaGrav('telegram da dose '+doseId, e); }
@@ -8131,6 +8174,16 @@
       var fila=snap.val()||{};
       Object.keys(fila).forEach(function(id){
         var item=fila[id]||{};
+        // Lei do almoço aplicada à fila (04/set/2026): aviso com mais de 12 horas não é
+        // notícia, é enxurrada — 77 itens presos desde 01/09 drenariam de uma vez nos
+        // grupos quando a ponte voltasse. Vencido sai da fila COM RASTRO, nunca é enviado.
+        if(item.ts && (Date.now()-item.ts)>43200000){
+          DB.ref('auaulandia/med-tg-fila/'+id).remove().catch(function(e){ _logFalhaGrav('fila med (vencido) '+id, e); });
+          try{ if(typeof audit==='function') audit('telegram-medicacao','vencido — não enviado (aviso velho, '
+            +Math.round((Date.now()-item.ts)/3600000)+'h na fila): '
+            +String(item.texto||'').replace(/<[^>]+>/g,'').slice(0,60),{}); }catch(e){ /* rastro */ }
+          return;
+        }
         // Carta morta: 5 tentativas e fora — senão dez mensagens envenenadas na cabeça
         // da fila travam TODAS as seguintes para sempre (auditoria, 31/ago).
         if((item.tentativas||0)>=5){
@@ -8141,7 +8194,11 @@
         // Dono: o item é CLAMADO por transaction antes do envio. Aparelho que chega
         // depois vê o lockTs recente e não manda a mesma mensagem de novo.
         DB.ref('auaulandia/med-tg-fila/'+id).transaction(function(atual){
-          if(!atual) return;                                        // alguém já entregou
+          // Cache frio devolve null na 1ª rodada mesmo com o item vivo no servidor —
+          // `return;` (undefined) abortava o clamor de vez e a fila nunca drenava neste
+          // aparelho (a mesma praga do planilha_ok, 04/set/2026). `return null` deixa o
+          // SDK trazer o valor do servidor; item já entregue continua entregue.
+          if(atual===null||atual===undefined) return null;
           if(atual.lockTs && Date.now()-atual.lockTs<120000) return; // outro aparelho está tentando
           atual.lockTs=Date.now();
           return atual;
@@ -10765,6 +10822,12 @@
     return out;
   }
   var ACERTO_REG={}, ACERTO_QUEM={};
+  // O acerto tem TRÊS estados, e a tela precisa distinguir os três (05/set/2026):
+  // ainda não li (ACERTO_PRONTO=false) · li e está vazio · li e há noites em aberto.
+  // Sem esta bandeira, "ainda não li" era desenhado como se fosse dado — toda noite
+  // virava "não paga · (sem nome)" e o total saltava para um valor fantasma.
+  var ACERTO_PRONTO=false;   // só vira true quando o pipeline inteiro terminou de verdade
+  var ACERTO_CARGA=null;     // a carga em andamento: reabrir o painel não desce o banco de novo
   // ===== O NOME VEM SOZINHO (Adriana, 13/ago/2026) ==================================
   // "Ao assinarem o nome delas no recebimento, no jantar, no relatório da noite, já vem
   //  automaticamente — a pessoa tem que conferir apenas."
@@ -11039,7 +11102,13 @@
     if(!DB){ renderAcerto(); return; }
     // O LIVRO CARREGA PRIMEIRO, sozinho: o agrupamento consulta plantOficial() e daria
     // resultado diferente se o livro ainda não tivesse chegado. Ordem aqui não é detalhe.
-    plantCarregarLivro().then(function(){ return acertoCarregarPernoites(); }).then(function(){
+    // O RETURN também não é: é por ele que o Painel da Operação sabe QUANDO esta carga
+    // terminou e redesenha o quadro do acerto com os números reais (04/set/2026: sem
+    // esperar, toda noite virava "não paga · (sem nome)" e o total saltava para
+    // R$ 4.050,00 no lugar dos R$ 1.194,00 reais). A primeira pintura do painel NÃO
+    // espera por esta cadeia — ela leva ~2,5 s (lê auaulandia/relatorios inteiro) e
+    // segurar a tela toda nela deixava o painel no "Carregando…" (smoke, 04/set/2026).
+    return plantCarregarLivro().then(function(){ return acertoCarregarPernoites(); }).then(function(){
     return Promise.all([
       DB.ref('auaulandia/config/acerto-plantao').once('value').then(function(s){ return s.val(); }).catch(function(){ return null; }),
       DB.ref('auaulandia/acerto-plantao').limitToLast(60).once('value').then(function(s){ return s.val()||{}; }).catch(function(){ return {}; }),
@@ -11055,6 +11124,7 @@
       Object.keys(porAudit).forEach(function(k){ ACERTO_QUEM[k]=porAudit[k]; });
       Object.keys(porAssin).forEach(function(k){ ACERTO_QUEM[k]=porAssin[k]; });
       try{ acertoMarcarDobras(); }catch(e){} /* silencioso de propósito: guarda defensiva — falhar aqui não pode interromper quem chamou */
+      ACERTO_PRONTO=true;   // agora sim: o que está em ACERTO_REG/ACERTO_QUEM é leitura, não vazio de carga
       renderAcerto();
     });
     }).catch(function(){ renderAcerto(); });
@@ -11529,7 +11599,7 @@
   // Agora existe um carimbo: esta constante é a versão que o aparelho está rodando, e o
   // Firebase guarda a versão publicada. Quando as duas diferem, aparece o aviso — mas
   // NUNCA recarrega sozinho: recarregar no meio de um check-in perderia o trabalho.
-  const APP_VERSAO='2026-09-04-04';
+  const APP_VERSAO='2026-09-05-01';
   function vigiarVersao(){
     if(!DB) return;
     try{
@@ -12229,6 +12299,29 @@
     if(typeof c.v==='string'&&c.v.startsWith('Date(')){ const m=c.v.match(/Date\((-?\d+),(\d+),(\d+)/); if(m) return new Date(+m[1],+m[2],+m[3]); }
     return null;
   }
+  // ===== FREIO DO REDISPARO DA PLANILHA — achado 3 da varredura (04/set/2026) ======
+  // O ouvinte de auaulandia/manuais redisparava carregarHospedes() a cada mudança, em
+  // todos os aparelhos; com a planilha instável cada tentativa falhava, gravava um audit
+  // e o Painel do Dia afogou: 576 "planilha-hospedagem timeout" num dia (52% dos audits,
+  // pico de 502 numa hora). Três freios: (a) o redisparo é agrupado e respeita um
+  // intervalo mínimo que DOBRA a cada falha (5 s → 10 min) e volta ao normal no sucesso;
+  // (b) a falha repetida grava UM audit por hora, dizendo quantas vezes repetiu;
+  // (c) a lista usa o último retrato bom do MESMO dia em vez de afirmar tela vazia.
+  var HOSP_RECAR_TIMER=null;   // debounce do redisparo
+  var HOSP_RECAR_MIN=5000;     // intervalo mínimo atual (backoff: dobra a cada falha)
+  var HOSP_RECAR_ULT=0;        // quando a última carga começou
+  var HOSP_ULT_BOM=null;       // {dia, lista, quando}: último retrato lido com sucesso
+  var _planErrN=0, _planErrUltAudit=0;
+  function hospRecarregarAgendar(){
+    try{
+      if(HOSP_RECAR_TIMER) return;                          // já há uma recarga agendada
+      var espera=Math.max(2000, HOSP_RECAR_ULT+HOSP_RECAR_MIN-Date.now());
+      HOSP_RECAR_TIMER=setTimeout(function(){
+        HOSP_RECAR_TIMER=null; HOSP_RECAR_ULT=Date.now();
+        try{ if(typeof carregarHospedes==='function') carregarHospedes(); }catch(e){} /* silencioso de propósito: redesenho de tela — falhar não pode derrubar quem chamou */
+      }, espera);
+    }catch(e){} /* silencioso de propósito: guarda defensiva — falhar aqui não pode interromper quem chamou */
+  }
   async function carregarHospedes(){
     try{
       const table=await fetchSheet(TAB_HOSP);
@@ -12280,12 +12373,29 @@
         if(lista.length) addRacasAoBanco(hospedes.map(h=>h.raca).filter(Boolean));
         HOSP_PLANILHA=true;
       } else { HOSP_PLANILHA=true; hospedes=[]; }   // planilha lida, dia sem ninguém
+      // Planilha respondeu: o freio do redisparo volta ao normal e o retrato fica guardado
+      // (lista vazia também é retrato válido — dia sem ninguém é informação, não falha).
+      HOSP_RECAR_MIN=5000; _planErrN=0;
+      try{ HOSP_ULT_BOM={dia:dataKeyAtual(), lista:hospedes.slice(), quando:Date.now()}; }catch(e2){} /* silencioso de propósito: guarda defensiva — falhar aqui não pode interromper quem chamou */
       renderHosp(); carregarManuais(); if(typeof carregarPainelGestora==='function') carregarPainelGestora();
       if(typeof carregarRiscoNaoComer==='function') carregarRiscoNaoComer();
     }catch(e){
       // NÃO consegui ler a planilha. A tela passa a dizer isso — nunca mais inventa uma lista.
       HOSP_PLANILHA=false;
-      try{ if(typeof audit==='function') audit('planilha-hospedagem','NÃO consegui ler a planilha da hospedagem: '+((e&&e.message)||e),{}); }catch(x){} /* silencioso de propósito: o audit() tem bolso próprio e reenvia sozinho — falhar aqui não pode travar a ação */
+      // Backoff: planilha instável = insistir menos (o intervalo mínimo dobra até 10 min).
+      HOSP_RECAR_MIN=Math.min(HOSP_RECAR_MIN*2, 600000);
+      // Audit deduplicado: a MESMA falha repetida grava um rastro por hora, com a contagem —
+      // 576 registros iguais num dia afogavam o Painel do Dia e escondiam o resto.
+      _planErrN++;
+      if(Date.now()-_planErrUltAudit>3600000){
+        try{ if(typeof audit==='function') audit('planilha-hospedagem','NÃO consegui ler a planilha da hospedagem'+(_planErrN>1?' (repetiu '+_planErrN+'× desde o último rastro)':'')+': '+((e&&e.message)||e),{}); }catch(x){} /* silencioso de propósito: o audit() tem bolso próprio e reenvia sozinho — falhar aqui não pode travar a ação */
+        _planErrUltAudit=Date.now(); _planErrN=0;
+      }
+      // O último retrato bom do MESMO dia vale mais que uma tela mentindo ausência: quem
+      // está na casa não muda porque o gviz engasgou. O aviso de falha continua na tela.
+      if(HOSP_ULT_BOM && HOSP_ULT_BOM.dia===dataKeyAtual() && Array.isArray(HOSP_ULT_BOM.lista)){
+        hospedes=HOSP_ULT_BOM.lista.slice();
+      }
       try{ renderHosp(); }catch(x){} /* silencioso de propósito: redesenho de tela — falhar não pode derrubar quem chamou */
       carregarManuais();
     }
@@ -17383,7 +17493,9 @@
     let nVeio=0,nFaltou=0,nPend=0; const faltas=[],pendentes=[];
     list.forEach(o=>{ const st=dcChamada[dcKey(o.p.n,o.p.tutor)]; if(st==='veio')nVeio++; else if(st==='faltou'){nFaltou++;faltas.push(o.p.n);} else {nPend++;pendentes.push(o.p.n);} });
     const d=new Date(),p2=x=>String(x).padStart(2,'0');
-    document.getElementById('dcCount').textContent=`Turma de ${DIA_FULL[dcDia]} · ${list.length} aulunos · ${p2(d.getDate())}/${p2(d.getMonth()+1)}`;
+    // Achado 5 da varredura (04/set/2026): cada tela contava a turma por um critério e
+    // nenhuma dizia o seu — 57/56/47/50/58 sem explicação. Agora o número declara a conta.
+    document.getElementById('dcCount').textContent=`Turma de ${DIA_FULL[dcDia]} · ${list.length} na chamada (fixos + reposições + avulsos + moradores) · ${p2(d.getDate())}/${p2(d.getMonth()+1)}`;
     document.getElementById('dcResumo').innerHTML=`
       <div class="dc-resumo">
         <div class="dc-stat ok"><b>${nVeio}</b>presentes</div>
@@ -17589,6 +17701,10 @@
       setInterval(function(){ vetFilaTentar(); }, 600000);
       setTimeout(function(){ try{ medTgFilaTentar(); }catch(e){ _logFalhaGrav('fila med (arranque)', e); } }, 5000);
       setInterval(function(){ try{ medTgFilaTentar(); }catch(e){ _logFalhaGrav('fila med (relógio)', e); } }, 600000);
+      // Lançamento do Day Care que não chegou à planilha (04/set/2026): reenvia sozinho
+      // na abertura e a cada 10 minutos — os 3 carrapaticidas de 03/09 nunca mais.
+      setTimeout(function(){ try{ if(typeof dashPlanFilaTentar==='function') dashPlanFilaTentar(); }catch(e){ _logFalhaGrav('fila da planilha (arranque)', e); } }, 8000);
+      setInterval(function(){ try{ if(typeof dashPlanFilaTentar==='function') dashPlanFilaTentar(); }catch(e){ _logFalhaGrav('fila da planilha (relógio)', e); } }, 600000);
       // Aviso de comida (04/set/2026): relógio CURTO — 2 minutos, não 10 — porque o tutor
       // ainda está lá para buscar o FILHOt e o Day Care precisa saber rápido se vai ligar.
       setTimeout(function(){ try{ comidaTgFilaTentar(); }catch(e){ _logFalhaGrav('fila comida (arranque)', e); } }, 6000);
@@ -22450,7 +22566,7 @@
       +'<div style="font-size:13px;margin-top:3px">Início: <strong>'+(t.inicio||'não iniciado')+'</strong>'+(t.quemInicio?(' ('+escAttr(t.quemInicio)+')'):'')
       +' · Fim: <strong>'+(t.fim||(t.inicio?'em andamento':'—'))+'</strong>'+(t.quemFim?(' ('+escAttr(t.quemFim)+')'):'')
       +(dur!=null?(' · Duração: <strong>'+fmtDur(dur)+'</strong>'):'')
-      +(porPet!=null?(' · <strong>'+porPet.toFixed(1)+' min por FILHOt</strong>'):'')+'</div>'
+      +(porPet!=null?(' · <strong>'+porPet.toFixed(1).replace('.',',')+' min por FILHOt</strong>'):'')+'</div>'
       +(!t.inicio?'<div style="font-size:12.5px;margin-top:4px;opacity:.9">Toque em Iniciar ao começar. Sem isso, esta atividade não entra no acompanhamento do time.</div>':'')
       +(t.inicio&&!t.fim&&aberta!=null&&aberta<120
         ?'<div style="font-size:12.5px;margin-top:4px;opacity:.9">Rodando há '+fmtDur(aberta)+'. Pode fechar o app à vontade — o horário já está guardado.</div>':'')
@@ -22556,6 +22672,10 @@
     var soma=l.reduce(function(a,r){ return a+r.porPet; },0);
     return {media:soma/l.length, n:l.length};
   }
+  // Achado 8 (04/set/2026): todo minuto/FILHOt do Ritmo sai em pt-BR (vírgula decimal)
+  // e o % é calculado dos valores ARREDONDADOS que a tela mostra — nunca dos brutos.
+  function ritmoArred(v){ return Math.round(v*10)/10; }
+  function ritmoBR(v){ return Number(v).toFixed(1).replace('.',','); }
   function renderRitmo(){
     var elH=document.getElementById('ritmoHoje'); if(!elH) return;
     var regs=RITMO_DADOS||[];
@@ -22566,11 +22686,14 @@
     } else {
       elH.innerHTML=doDia.sort(function(a,b){ return a.slug.localeCompare(b.slug); }).map(function(r){
         var m=ritmoMedia(regs,r.slug,r.dw,hoje);
-        var dif=m?((r.porPet-m.media)/m.media*100):null;
+        // Achado 8 (04/set/2026): número em pt-BR (vírgula) e o % calculado dos MESMOS
+        // valores que a tela mostra — a conta sobre os brutos gerava "3,3 contra 3,3 (+4%)".
+        var pShow=ritmoArred(r.porPet), mShow=m?ritmoArred(m.media):null;
+        var dif=(mShow!=null&&mShow>0)?((pShow-mShow)/mShow*100):null;
         var cor=(dif==null)?'var(--muted)':(Math.abs(dif)<=RITMO_TOLERANCIA?'var(--crm-ok)':(Math.abs(dif)>=RITMO_GRAVE?'var(--crm-critico)':'var(--crm-atencao-text)'));
         return '<div class="pair"><span class="k"><strong>'+escAttr(ativNome(r.slug))+'</strong>'
           +' <span style="color:var(--muted);font-size:12px">'+escAttr(r.quem)+' · '+fmtDur(r.dur)+' · '+r.caes+' FILHOts</span></span>'
-          +'<span class="val" style="color:'+cor+';font-weight:800">'+r.porPet.toFixed(1)+' min/FILHOt'
+          +'<span class="val" style="color:'+cor+';font-weight:800">'+ritmoBR(pShow)+' min/FILHOt'
           +(dif!=null?('<span style="font-weight:600;font-size:12px"> ('+(dif>0?'+':'')+dif.toFixed(0)+'%)</span>'):'<span style="font-weight:600;font-size:12px"> (sem base ainda)</span>')+'</span></div>';
       }).join('');
     }
@@ -22578,7 +22701,11 @@
     var fora=[];
     regs.forEach(function(r){
       var m=ritmoMedia(regs,r.slug,r.dw,r.dia); if(!m) return;
-      var dif=(r.porPet-m.media)/m.media*100;
+      // O desvio nasce dos valores ARREDONDADOS que a tela mostra (achado 8): assim o
+      // chip de % nunca contradiz os dois números escritos ao lado dele.
+      var pS=ritmoArred(r.porPet), mS=ritmoArred(m.media);
+      if(!(mS>0)) return;
+      var dif=(pS-mS)/mS*100;
       if(Math.abs(dif)>RITMO_TOLERANCIA) fora.push({r:r, dif:dif, media:m.media, n:m.n});
     });
     fora.sort(function(a,b){ return (a.r.dia===b.r.dia)?(Math.abs(b.dif)-Math.abs(a.dif)):(a.r.dia<b.r.dia?1:-1); });
@@ -22597,7 +22724,7 @@
         return '<div class="avr-card '+(grave?'pendente':'processo')+'"><div class="avr-head"><div class="avr-info">'
           +'<strong>'+escAttr(f.r.quem)+'</strong> · '+escAttr(ativNome(f.r.slug))
           +'<div style="font-size:12.5px;color:var(--z-blue-soft)">'+orcBR(f.r.dia)+' ('+(ORC_DIAW_LB[f.r.dw]||'')+') · '
-          +f.r.porPet.toFixed(1)+' min/FILHOt contra média de '+f.media.toFixed(1)+' em '+f.n+' dias</div>'
+          +ritmoBR(ritmoArred(f.r.porPet))+' min/FILHOt contra média de '+ritmoBR(ritmoArred(f.media))+' em '+f.n+' dias</div>'
           +'</div><span class="avr-chip '+(grave?'pendente':'processo')+'">'+(lento?'+':'')+f.dif.toFixed(0)+'%</span></div>'
           +'<div class="avr-form" style="padding-top:8px"><div class="ff-tit">'+(lento?'Mais lenta que o normal — o que perguntar':'Mais rápida que o normal — o que perguntar')+'</div>'
           +'<ul style="margin:0;padding-left:18px;font-size:13px;color:var(--z-blue);line-height:1.6">'
@@ -22612,7 +22739,7 @@
         var p=k.split('|'), l=chaves[k];
         var med=l.reduce(function(a,x){ return a+x; },0)/l.length;
         return '<div class="pair"><span class="k">'+escAttr(ativNome(p[0]))+' <span style="color:var(--muted);font-size:12px">'+(ORC_DIAW_LB[p[1]]||p[1])+'</span></span>'
-          +'<span class="val">'+med.toFixed(1)+' min/FILHOt <span style="color:var(--muted);font-size:12px">('+l.length+(l.length<3?' — sem base':' dias')+')</span></span></div>';
+          +'<span class="val">'+ritmoBR(ritmoArred(med))+' min/FILHOt <span style="color:var(--muted);font-size:12px">('+l.length+(l.length<3?' — sem base':' dias')+')</span></span></div>';
       });
       elM.innerHTML=linhas.length?linhas.join(''):'<div class="hint">Ainda não há atividades cronometradas. Comece a marcar Iniciar e Encerrar — em uma semana já dá para comparar.</div>';
     }
@@ -23115,7 +23242,9 @@
           +'<div class="hint" style="margin-top:3px">Pode lançar do mesmo jeito: fica tudo guardado aqui. Só que a TV do Day Care ainda lê a planilha, então enquanto a ponte não estiver ligada alguém precisa escrever lá à mão. O passo a passo está no arquivo <em>integracao-daycare/Codigo.gs</em>.</div></div>')
         // O lançamento que não existe no cadastro é avisado AQUI, onde ele nasceu —
         // é a tela que a recepção já está olhando quando lança (Adriana, 04/set/2026).
-        +((typeof dcNaoCasadosFaixaHTML==='function')?dcNaoCasadosFaixaHTML(true):'');
+        +((typeof dcNaoCasadosFaixaHTML==='function')?dcNaoCasadosFaixaHTML(true):'')
+        // E o que não chegou à planilha também é avisado aqui — com a fila reenviando.
+        +dashFilaAvisoHTML();
     }
     var el=document.getElementById('dashBlocos'); if(!el) return;
     // Guardar o que está digitado: escolher uma quantidade redesenha a tela inteira, e sem
@@ -23138,8 +23267,17 @@
                return '<div class="pair" style="padding:6px 0;border-bottom:1px solid var(--line)">'
                  +'<span class="k"><strong>'+escAttr(o.valor||'')+'</strong>'
                  +(o.hora?(' <span style="color:var(--z-blue-soft);font-weight:800">'+escAttr(o.hora)+'</span>'):'')
-                 +(o.planilha_ok===false?' <span style="color:var(--crm-critico);font-weight:800;font-size:11.5px">NÃO foi para a TV</span>'
-                    +' <button class="btn" style="background:none;border:none;color:var(--z-blue);font-size:11.5px;text-decoration:underline;padding:0 4px" onclick="dashReenviar(\''+it.k+'\',\''+id+'\',this)">reenviar</button>':'')
+                 +(o.planilha_ok===false
+                    ?(' <span style="color:var(--crm-critico);font-weight:800;font-size:11.5px">'+(dashPlanFilaMorto(o)?'NÃO foi para a TV — reenvio automático esgotado':'NÃO foi para a TV')+'</span>'
+                      +' <button class="btn" style="background:none;border:none;color:var(--z-blue);font-size:11.5px;text-decoration:underline;padding:0 4px" onclick="dashReenviar(\''+it.k+'\',\''+id+'\',this)">reenviar</button>')
+                    // planilha_ok null = "não sei" (era do aborto silencioso da confirmação —
+                    // ver dashEspelhar). Sem alarme: só a saída manual, porque a ponte não
+                    // duplica (valor que já está lá responde "já estava"). Recém-lançado
+                    // ainda está a caminho; só depois de 2 minutos o botão aparece.
+                    :(o.planilha_ok!==true&&(Date.now()-(o.ts||0))>120000
+                      ?(' <span style="color:var(--muted);font-weight:700;font-size:11px">envio à planilha não confirmado</span>'
+                        +' <button class="btn" style="background:none;border:none;color:var(--z-blue);font-size:11.5px;text-decoration:underline;padding:0 4px" onclick="dashReenviar(\''+it.k+'\',\''+id+'\',this)">reenviar</button>')
+                      :''))
                  +'</span>'
                  +'<span class="val"><button class="btn" style="background:none;border:none;color:var(--crm-critico);font-weight:800;padding:0 6px" onclick="dashRemover(\''+it.k+'\',\''+id+'\')">tirar</button></span></div>';
              }).join('')+'</div>')
@@ -23368,7 +23506,10 @@
     }).catch(function(e){ alert('Não salvou: '+((e&&e.message)||e)); });
   }
   // Espelha na planilha. O lançamento no app já está salvo — isto é o que faz a TV enxergar.
-  function dashEspelhar(k, id, reg, acao){
+  // diaOpc: a fila de reenvio manda lançamento de dias passados — a ponte precisa receber
+  // O DIA DO LANÇAMENTO (03/09 vai para a planilha de 03/09), nunca o dia aberto na tela.
+  function dashEspelhar(k, id, reg, acao, diaOpc){
+    var dia=diaOpc||dashDia();
     var it=dashItem(k); if(!it) return Promise.resolve({ok:false, erro:'item desconhecido'});
     // ⚠ 22/ago/2026 — Adriana: "toca no botão e nada acontece". Aqui era um `return` mudo:
     // sem a ponte configurada, a função saía em silêncio e o botão parecia quebrado. É a
@@ -23379,19 +23520,27 @@
       if(typeof audit==='function') audit('dashboard-daycare','NÃO enviou ('+(reg&&reg.valor||'')+'): ponte não configurada',{});
       return Promise.resolve({ok:false, erro:msg});
     }
-    return dashPonteChamar({acao:acao, dia:dashDia(), coluna:it.col, colunaHora:it.colHora||'',
+    return dashPonteChamar({acao:acao, dia:dia, coluna:it.col, colunaHora:it.colHora||'',
                             valor:reg.valor||'', hora:reg.hora||''}).then(function(r){
       var ok=!!(r&&r.ok);
       if(acao==='lancar'&&DB){
         // transaction porque o registro pode ter sido TIRADO enquanto a ponte respondia:
         // gravar direto recriaria um lançamento sem nome (ver "lançamento fantasma").
-        DB.ref(dashNo()+'/'+k+'/'+id).transaction(function(atual){
-          if(atual===null||atual===undefined) return;      // já foi tirado: não ressuscita
+        // ⚠ CAUSA REAL do planilha_ok eternamente null (achado de 04/set/2026): o SDK
+        // chama esta função primeiro com o retrato LOCAL — e, sem cache, o retrato é
+        // null mesmo com o nó vivo no servidor. O `return;` (undefined) de antes
+        // ABORTAVA a transaction de vez, e a confirmação nunca era escrita — TODOS os
+        // 21 lançamentos de 03/09 ficaram null, inclusive os que chegaram à planilha.
+        // `return null` é diferente: se o servidor TEM o nó, o SDK refaz a rodada com o
+        // valor de verdade e a confirmação entra; se o nó foi mesmo tirado, gravar null
+        // onde já é null não ressuscita nada.
+        DB.ref('daycare/dashboard/'+dia+'/'+k+'/'+id).transaction(function(atual){
+          if(atual===null||atual===undefined) return null; // cache frio OU tirado — o SDK decide com o servidor
           atual.planilha_ok=ok;
           atual.planilha_msg=ok?'':((r&&r.erro)||'a ponte não respondeu');
           return atual;
         }).catch(function(e){ _logFalhaGrav('dashEspelhar', e); });
-        if(DASH_DADOS[k]&&DASH_DADOS[k][id]) DASH_DADOS[k][id].planilha_ok=ok;
+        if(dia===dashDia()&&DASH_DADOS[k]&&DASH_DADOS[k][id]) DASH_DADOS[k][id].planilha_ok=ok;
         renderDash();
       }
       if(!ok && typeof audit==='function') audit('dashboard-daycare','NÃO foi para a planilha: '+(reg.valor||'')+' em '+it.t+' — '+((r&&r.erro)||''),{pet:reg.valor||''});
@@ -23399,6 +23548,112 @@
     });
   }
   // O botão SEMPRE responde: some, vira "enviando", e termina dizendo se foi ou não.
+
+  // ===== FILA DE REENVIO À PLANILHA — Adriana, 04/set/2026 =========================
+  // A TV lê a planilha: lançamento que não chega lá NÃO EXISTE para a equipe (a
+  // Elizabeth/SRD do carrapaticida de 03/09 até hoje não está na planilha). Molde da
+  // fila de medicação (medTgFilaTentar): varre, CLAMA por transaction (dois aparelhos
+  // não reenviam a mesma linha), tenta, e desiste com rastro após 5 falhas. Erro de
+  // senha/configuração não queima tentativa — o lançamento espera a ponte voltar.
+  // ⚠ SÓ planilha_ok===false entra na fila. null é o estado "não sei" (era o normal da
+  // era em que a confirmação abortava — ver dashEspelhar): reenvio automático em cima de
+  // "não sei" mandaria o histórico inteiro de novo à ponte a cada 10 minutos. Para o
+  // null antigo existe o botão manual "reenviar" na linha (a ponte não duplica: valor já
+  // presente responde "já estava").
+  var DASH_FILA_DIAS=7;      // varre hoje e os 7 dias anteriores
+  var DASH_FILA_PEND=0;      // falhas declaradas aguardando reenvio (alimenta o aviso)
+  var DASH_FILA_MORTA=0;     // esgotaram as 5 tentativas — só o botão manual resolve
+  // Seleção pura (provada no harness): o que de UM dia precisa de reenvio automático.
+  // SÓ falha declarada (planilha_ok===false); null e true ficam de fora.
+  function dashPlanFilaPendentes(dados){
+    var out=[];
+    Object.keys(dados||{}).forEach(function(k){
+      if(!dashItem(k)) return;
+      var lista=dados[k]||{};
+      Object.keys(lista).forEach(function(id){
+        var o=lista[id]||{};
+        if(!o||typeof o!=='object') return;
+        if(o.planilha_ok!==false) return;              // fila só age sobre falha declarada
+        out.push({k:k, id:id, reg:o});
+      });
+    });
+    return out;
+  }
+  function dashPlanFilaMorto(reg){ return !!(reg&&(reg.planilha_desisti||(reg.planilha_tent||0)>=5)); }
+  // Senha trocada, ponte sem configuração: culpa da PONTE, não do lançamento.
+  function dashPlanFilaErroDeConfig(msg){ return /senha|token|configurad|PONTE/i.test(String(msg||'')); }
+  function dashPlanFilaReenviar(dia, k, id){
+    var it=dashItem(k); if(!it||!DB) return Promise.resolve(false);
+    var no='daycare/dashboard/'+dia+'/'+k+'/'+id;
+    // CLAMA o lançamento por transaction: aparelho que chega depois vê o lockTs recente
+    // e não manda a mesma linha duas vezes para a planilha. Cache frio devolve `null`
+    // na primeira rodada — `return null` deixa o SDK trazer o valor do servidor (a
+    // mesma lição do dashEspelhar; `return;` aqui abortaria a fila para sempre).
+    return DB.ref(no).transaction(function(atual){
+      if(atual===null||atual===undefined) return null;            // cache frio OU tirado
+      if(atual.planilha_ok!==false) return;                       // confirmou (ou virou "não sei"): fila não age
+      if(atual.lockTs && Date.now()-atual.lockTs<120000) return;  // outro está tentando
+      atual.lockTs=Date.now();
+      return atual;
+    }).then(function(res){
+      if(!res || !res.committed || !res.snapshot || !res.snapshot.val()) return false;
+      var reg=res.snapshot.val();
+      if(reg.planilha_ok!==false || !reg.lockTs) return false;    // o commit não foi o nosso clamor
+      return dashPonteChamar({acao:'lancar', dia:dia, coluna:it.col, colunaHora:it.colHora||'',
+                              valor:reg.valor||'', hora:reg.hora||''}).then(function(r){
+        var ok=!!(r&&r.ok), erro=String((r&&r.erro)||'a ponte não respondeu');
+        var up;
+        if(ok){ up={planilha_ok:true, planilha_msg:'', lockTs:null}; }
+        else if(dashPlanFilaErroDeConfig(erro)){ up={planilha_ok:false, planilha_msg:erro, lockTs:null}; }
+        else {
+          var t=(reg.planilha_tent||0)+1;
+          up={planilha_ok:false, planilha_msg:erro, planilha_tent:t, lockTs:null};
+          if(t>=5){
+            up.planilha_desisti=true;
+            try{ if(typeof audit==='function') audit('dashboard-daycare','fila da planilha DESISTIU após 5 tentativas: '+(reg.valor||'')+' em '+it.t+' de '+dia+' — '+erro.slice(0,80),{pet:reg.valor||''}); }catch(e){ /* rastro */ }
+          }
+        }
+        return DB.ref(no).update(up).then(function(){
+          if(ok){
+            try{ if(typeof audit==='function') audit('dashboard-daycare','fila da planilha reenviou '+(reg.valor||'')+' em '+it.t+' para o dia '+dia,{pet:reg.valor||''}); }catch(e){ /* rastro */ }
+            if(dia===dashDia()&&DASH_DADOS[k]&&DASH_DADOS[k][id]){ DASH_DADOS[k][id].planilha_ok=true; DASH_DADOS[k][id].planilha_msg=''; }
+          }
+          return ok;
+        });
+      });
+    }).catch(function(e){ _logFalhaGrav('fila da planilha ('+dia+'/'+k+'/'+id+')', e); return false; });
+  }
+  function dashPlanFilaTentar(){
+    if(!DB) return Promise.resolve();
+    return dashPontePronta().then(function(cfg){
+      if(!cfg) return;                             // sem ponte não há para onde reenviar
+      var hoje=(typeof zHojeISO==='function')?zHojeISO():'';
+      var dias=[]; for(var i=0;i<=DASH_FILA_DIAS;i++){ var d=(i===0)?hoje:((typeof orcMaisDias==='function')?orcMaisDias(hoje,-i):''); if(d) dias.push(d); }
+      var pend=0, morta=0;
+      return Promise.all(dias.map(function(dia){
+        return DB.ref('daycare/dashboard/'+dia).once('value').then(function(s){
+          var itens=dashPlanFilaPendentes(s.val()||{});
+          var vivos=[];
+          itens.forEach(function(x){ if(dashPlanFilaMorto(x.reg)) morta++; else { pend++; vivos.push(x); } });
+          return Promise.all(vivos.map(function(x){ return dashPlanFilaReenviar(dia, x.k, x.id); }))
+            .then(function(res){ res.forEach(function(ok){ if(ok===true) pend--; }); });
+        }).catch(function(e){ _logFalhaGrav('fila da planilha (leitura de '+dia+')', e); });
+      })).then(function(){
+        DASH_FILA_PEND=pend; DASH_FILA_MORTA=morta;
+        try{ renderDash(); }catch(e){} /* silencioso de propósito: redesenho de tela — falhar não pode derrubar quem chamou */
+      });
+    });
+  }
+  // O aviso VISÍVEL na tela de Lançamentos — nunca mais falha muda.
+  function dashFilaAvisoHTML(){
+    var n=DASH_FILA_PEND, m=DASH_FILA_MORTA;
+    if(!(n>0||m>0)) return '';
+    var partes=[];
+    if(n>0) partes.push('<strong>'+n+(n===1?' lançamento ainda não chegou':' lançamentos ainda não chegaram')+' à planilha — o app está reenviando sozinho.</strong>');
+    if(m>0) partes.push('<strong>'+m+(m===1?' lançamento esgotou':' lançamentos esgotaram')+' as 5 tentativas de reenvio</strong> — use o botão "reenviar" na linha dele.');
+    return '<div class="card" style="border-left:4px solid var(--crm-atencao)">'+partes.join('<br>')
+      +'<div class="hint" style="margin-top:3px">Cada lançamento vai para a planilha do dia em que foi feito. O rastro de cada tentativa fica na auditoria (Painel do Dia).</div></div>';
+  }
 
   // ===== A PLANILHA SE PREENCHE SOZINHA — Adriana, 25/ago/2026 =====================
   // "Precisamos que a tabela das reposições, banhos e etc seja preenchida automaticamente."
@@ -23452,15 +23707,47 @@
       return Array.isArray(dias) && dias.indexOf(dia)>=0;
     }catch(e){ return false; }
   }
+  // Resposta NEGATIVA não é restrição — Adriana, 04/set/2026: "a Hana não tem restrição,
+  // então não tem que aparecer." A ficha real da Hana tem ea_restr = "Hana não tem
+  // nenhuma atividade física com restrição" (a resposta do tutor virou ficha em 26/ago),
+  // e o quadro da TV a listava como restrita. Regra: campo vazio, "não/nada/nenhuma…",
+  // "X não tem/possui alergia/restrição" e "sem restrição" NÃO contam. Uma ressalva no
+  // meio ("mas", "exceto", "só que") volta a contar — na dúvida, o FILHOt aparece.
+  function dashRestrNegativa(txt){
+    var t=String(txt||'').replace(/\s+/g,' ').trim();
+    if(!t) return true;
+    var n=(typeof jsNorm==='function')?jsNorm(t):t.toLowerCase();
+    if(/\b(mas|porem|so que|exceto|as vezes|apenas quando|somente quando)\b/.test(n)) return false;
+    if(/^(nao|nada|nenhum|nenhuma|nunca|sem)\b/.test(n)) return true;
+    if(/\bnao (tem|possui|apresenta|ha|come)\b[\s\S]*\b(alergia|alergias|restricao|restricoes|intolerancia|problema|problemas)\b/.test(n)) return true;
+    if(/\bsem (alergia|alergias|restricao|restricoes|intolerancia)\b/.test(n)) return true;
+    return false;
+  }
   function dashAutoTemRestricao(ex){
     ex=ex||{};
-    var r=String(ex.restricao||'').trim(), a=String(ex.alergia||'').trim();
-    var ea=String(ex.ea_restr||'').trim();
-    return !!(r||a||(ea&&!/^n(a|ã)o$/i.test(ea)));
+    var campos=[ex.restricao, ex.alergia, (ex.ea_restr_nao?'':ex.ea_restr)];
+    return campos.some(function(v){ v=String(v||'').trim(); return !!v && !dashRestrNegativa(v); });
+  }
+  // Bug B (Adriana, 04/set/2026): "São no máximo DUAS linhas, ninguém vai ler. Nome/raça
+  // e a restrição = a quê? A frango? Ao quê?" A célula leva a restrição ESPECÍFICA e
+  // curta — o PRIMEIRO campo que preocupa de verdade (resposta negativa não vira texto);
+  // texto livre comprido é cortado na palavra, com reticências. A TV desenha
+  // linha 1 = nome/raça, linha 2 = isto aqui.
+  var DASH_RESTR_MAX=60;
+  function dashAutoRestricaoCurta(ex){
+    ex=ex||{};
+    var det='';
+    [ex.restricao, ex.alergia, (ex.ea_restr_nao?'':ex.ea_restr)].some(function(v){
+      v=String(v||'').replace(/\s+/g,' ').trim();
+      if(v && !dashRestrNegativa(v)){ det=v; return true; }
+      return false;
+    });
+    if(det.length>DASH_RESTR_MAX) det=det.slice(0,DASH_RESTR_MAX-1).replace(/\s+\S*$/,'')+'…';
+    return det;
   }
   function dashAutoTextoRestricao(p, ex){
     var base=dashNomeRaca(p);
-    var det=String((ex&&(ex.restricao||ex.alergia||ex.ea_restr))||'').trim();
+    var det=dashAutoRestricaoCurta(ex);
     return det?(base+' - '+det):base;
   }
   // O que DEVE estar na planilha naquele dia, item por item. Só lê o que o app já tem.
@@ -23523,7 +23810,7 @@
           if(!h || h.mascote) return;
           var ex=(typeof extraDoHosp==='function')?extraDoHosp(h):{};
           if(!dashAutoTemRestricao(ex)) return;
-          var det=String(ex.restricao||ex.alergia||ex.ea_restr||'').trim();
+          var det=dashAutoRestricaoCurta(ex);   // o primeiro campo que preocupa — nunca o texto negativo
           var nome=(h.nome||'')+((typeof racaDe==='function'&&racaDe(h))?('/'+racaDe(h)):'');
           out.hospRestr.push(det?(nome+' - '+det):nome);
         });
@@ -24810,19 +25097,27 @@
     var m=jsNorm(String(motivo||''));
     return /falec|obito|morreu|morte|partiu para|descansou/.test(m);
   }
+  // Achado 6 da varredura (04/set/2026): 16 nomes se repetem no cadastro — "Luna" sozinho
+  // não identifica ninguém (a lei de 22/ago). Toda lista de painel identifica por
+  // nome/raça; ficha sem raça identifica pelo tutor.
+  function pelNomeIdent(p){
+    if(!p) return '';
+    if(p.raca) return (typeof dashNomeRaca==='function')?dashNomeRaca(p):(String(p.n||'')+'/'+p.raca);
+    return p.tutor?(String(p.n||'')+' ('+p.tutor+')'):String(p.n||'');
+  }
   function urgenciasGestao(){
     const venc=[], semPeso=[], saiu=[], velha=[], luto=[];
     PELUDINHOS.forEach(p=>{
       const ex=pelExtra(p);
       if(pelInativo(p)){
-        var reg={nome:p.n, motivo:ex.motivoSaida||'', quando:ex.dataSaida||''};
+        var reg={nome:pelNomeIdent(p), motivo:ex.motivoSaida||'', quando:ex.dataSaida||''};
         (saidaPorObito(reg.motivo)?luto:saiu).push(reg);
         return;
       }
       const r=prevPendencias(ex);
-      if(r.venc.length) venc.push({nome:p.n, itens:r.venc});
-      if((r.desatualizado||[]).length) velha.push({nome:p.n, itens:r.desatualizado});
-      if(!pesouEsteMes(ex)) semPeso.push(p.n);
+      if(r.venc.length) venc.push({nome:pelNomeIdent(p), itens:r.venc});
+      if((r.desatualizado||[]).length) velha.push({nome:pelNomeIdent(p), itens:r.desatualizado});
+      if(!pesouEsteMes(ex)) semPeso.push(pelNomeIdent(p));
     });
     // quem saiu por último primeiro: é com esse que a Márcia fala hoje
     saiu.sort(function(a,b){ return String(b.quando||'').localeCompare(String(a.quando||'')); });
@@ -24939,7 +25234,14 @@
     // linha do tempo
     html+='<div class="card"><h2>Linha do tempo do dia</h2><div class="hint">Tudo o que aconteceu, em ordem. Rastreabilidade total.</div>';
     if(!aud.length) html+='<div class="p-empty">Sem registros para este dia.</div>';
-    else { html+='<div class="p-tl">'; aud.forEach(a=>{ html+=`<div class="p-tl-item"><span class="p-tl-h">${a.hora||'--:--'}</span><span class="p-tl-q">${a.quem||'-'}</span><span class="p-tl-a">${ACAO_LABEL[a.acao]||a.acao}${a.detalhe?' — '+a.detalhe:''}</span></div>`; }); html+='</div>'; }
+    else { html+='<div class="p-tl">'; aud.forEach(a=>{
+      // Achado 4 da varredura (04/set/2026): a dose aparecia como a chave crua
+      // ("palito__fulano"). O audit já leva remédio, horário e FILHOt — é isso que se lê.
+      let det=a.detalhe?(' — '+a.detalhe):'';
+      if((a.acao==='medicacao-dose'||a.acao==='medicacao-dose-avulsa')&&(a.med||a.horario||a.pet)){
+        det=' — '+escAttr(a.med||'medicamento')+(a.horario?(' às '+escAttr(a.horario)):'')+(a.pet?(' ('+escAttr(a.pet)+')'):'');
+      }
+      html+=`<div class="p-tl-item"><span class="p-tl-h">${a.hora||'--:--'}</span><span class="p-tl-q">${a.quem||'-'}</span><span class="p-tl-a">${ACAO_LABEL[a.acao]||a.acao}${det}</span></div>`; }); html+='</div>'; }
     html+='</div>';
     wrap.innerHTML=html;
   }
@@ -24947,7 +25249,8 @@
     almoco_grade:'Marcou no almoço', almoco_prep:'Checklist preparação', almoco_final:'Checklist finalização',
     almoco_exec:'Confirmou execução', atividade:'Atividade', banho:'Banho', relatorio:'Relatório assinado',
     checkout:'Protocolo do Plantão', prep_ini:'Iniciou preparação', prep_fim:'Encerrou preparação',
-    final_ini:'Iniciou finalização', final_fim:'Encerrou finalização', abertura_m1:'Abertura (Monitor 1)' };
+    final_ini:'Iniciou finalização', final_fim:'Encerrou finalização', abertura_m1:'Abertura (Monitor 1)',
+    'medicacao-dose':'Dose dada', 'medicacao-dose-avulsa':'Dose avulsa dada' };
   // editor de janelas de horário (só Gestão)
   function abrirAuditCfg(){ const el=document.getElementById('painelCfg'); if(!el) return;
     if(el.style.display==='block'){ el.style.display='none'; return; }
@@ -30263,31 +30566,49 @@
     }).catch(function(e){ _logLeituraFalhou('Painel da Operação (leitura geral)', e); return null; });
   }
 
-  // As três cargas que NÃO são leitura de nó solto: cada uma tem pipeline próprio e cache
+  // As cargas que NÃO são leitura de nó solto: cada uma tem pipeline próprio e cache
   // próprio, e só roda quando ainda não rodou nesta sessão. Nenhuma delas grava nada.
+  //
+  // REGRESSÃO DE 04/set/2026, pega pelo smoke: segurar a PRIMEIRA pintura na carga do
+  // acerto (que lê auaulandia/relatorios inteiro + 31 dias de auditoria, ~2,5 s) deixava
+  // o painel parado no "Carregando a casa de hoje…" — a tela abria vazia para a Gestão e
+  // para a Diretoria. Por isso a carga se divide em DUAS filas: `rapidas` (o que a
+  // primeira pintura espera — centenas de ms) e `lenta` (o acerto inteiro, que só o
+  // quadro do dinheiro espera: ele nasce dizendo "ainda não li" e se redesenha sozinho
+  // quando a conta chega). O fantasma de R$ 4.050,00 continua impossível: o quadro nunca
+  // desenha número antes de ACERTO_PRONTO.
   function poCargasPesadas(){
-    var espera=[];
+    var rapidas=[], lenta=Promise.resolve();
     // 1) os avulsos e as reposições lançados hoje — sem isto a turma vem incompleta e as
     //    três caixas do topo contam a menos (a lição de 31/ago: três FILHOts invisíveis).
-    try{ if(typeof dcCarregarLancamentos==='function') espera.push(poComHoje(dcCarregarLancamentos)); }catch(e){} /* silencioso de propósito: a turma ainda desenha com o que tem */
-    // 2) o acerto das plantonistas — pipeline inteiro (livro de nomes, pernoites, assinaturas).
+    try{ if(typeof dcCarregarLancamentos==='function') rapidas.push(poComHoje(dcCarregarLancamentos)); }catch(e){} /* silencioso de propósito: a turma ainda desenha com o que tem */
+    // 2) o acerto das plantonistas — pipeline inteiro (livro de nomes, pernoites,
+    //    assinaturas). É a fila LENTA. As pernoites, que o quadro das noites usa, são
+    //    leves e entram nas rápidas para a primeira pintura já sair certa.
     try{
-      if(typeof ACERTO_REG!=='undefined' && !Object.keys(ACERTO_REG||{}).length
-         && typeof acertoCarregar==='function') espera.push(Promise.resolve(acertoCarregar()));
-      else if(typeof ACERTO_MANUAIS==='undefined' || !ACERTO_MANUAIS)
-        { if(typeof acertoCarregarPernoites==='function') espera.push(acertoCarregarPernoites()); }
+      if(typeof ACERTO_PRONTO!=='undefined' && !ACERTO_PRONTO && typeof acertoCarregar==='function'){
+        if(typeof ACERTO_MANUAIS!=='undefined' && !Object.keys(ACERTO_MANUAIS||{}).length
+           && typeof acertoCarregarPernoites==='function') rapidas.push(acertoCarregarPernoites());
+        if(!ACERTO_CARGA){
+          ACERTO_CARGA=Promise.resolve(acertoCarregar()).then(function(){
+            if(!ACERTO_PRONTO) ACERTO_CARGA=null;   // não terminou de verdade: a próxima abertura tenta de novo
+          });
+        }
+        lenta=ACERTO_CARGA;
+      }
     }catch(e){} /* silencioso de propósito: sem o acerto o quadro do dinheiro diz que ainda não leu */
     // 3) a agenda de medicação de hoje.
     try{
       if((typeof MED_AGENDA_TODOS==='undefined' || !(MED_AGENDA_TODOS||[]).length)
-         && typeof carregarAgendaMedTodos==='function') espera.push(Promise.resolve(carregarAgendaMedTodos()));
+         && typeof carregarAgendaMedTodos==='function') rapidas.push(Promise.resolve(carregarAgendaMedTodos()));
     }catch(e){} /* silencioso de propósito: idem */
     // 4) as ocorrências da janela de 30 dias (o painel só usa as de hoje, mas o cache é este).
     try{
       if((typeof DC_OCORR==='undefined' || !Object.keys(DC_OCORR||{}).length)
          && typeof carregarOcorrenciasDayCare==='function') carregarOcorrenciasDayCare();
     }catch(e){} /* silencioso de propósito: as ocorrências de hoje já vêm na leitura direta */
-    return Promise.all(espera).catch(function(){ return null; });
+    return { rapidas: Promise.all(rapidas).catch(function(){ return null; }),
+             lenta: lenta.catch(function(){ return null; }) };
   }
 
   // ------------------------------------------------------------------------- as contas
@@ -30508,9 +30829,12 @@
   // ------------------------------------------------------------------------ os desenhos
   function poSaudacaoHTML(eu, total){
     var agora=new Date();
+    // Achado 5 (04/set/2026): o número declara a própria conta — "63" aqui é a casa
+    // INTEIRA (aulunos + avulsos + hóspedes + moradores), diferente dos "55 aulunos"
+    // logo abaixo. Sem o rótulo, os dois pareciam a mesma conta errada.
     var linha2 = total
       ? ('<p class="pm-saud2 pm-entra">Hoje, <b data-pm-alvo="'+total+'">0</b> peludinho'+(total>1?'s':'')
-         +' passa'+(total>1?'m':'')+' pela casa.</p>')
+         +' passa'+(total>1?'m':'')+' pela casa <span style="font-size:.62em;font-weight:500;color:var(--muted)">(aulunos + avulsos + hóspedes + moradores)</span>.</p>')
       : '';
     return '<div style="margin-bottom:18px">'
       +'<h1 class="pm-saud1 pm-entra">'+esc(pmComoVai(agora.getHours()))+', '+esc(eu)+'.</h1>'
@@ -30559,9 +30883,9 @@
     var faltaram=T.faltas.length;
     return '<div class="pm-rv">'
       +'<div class="pm-tiles pm-grandes">'
-      +'<div class="pm-tile pm-t-ouro"><b data-pm-alvo="'+T.aulunos.length+'">0</b><span>aulunos hoje</span></div>'
+      +'<div class="pm-tile pm-t-ouro"><b data-pm-alvo="'+T.aulunos.length+'">0</b><span>aulunos na turma (sem moradores e hóspedes)</span></div>'
       +'<div class="pm-tile"><b data-pm-alvo="'+T.avulsos.length+'">0</b><span>'+(T.avulsos.length===1?'avulso':'avulsos')+'</span></div>'
-      +'<div class="pm-tile'+(faltaram?' pm-t-alerta':'')+'"><b data-pm-alvo="'+faltaram+'">0</b><span>'+(faltaram===1?'faltou':'faltaram')+'</span></div>'
+      +'<div class="pm-tile'+(faltaram?' pm-t-alerta':'')+'"><b data-pm-alvo="'+faltaram+'">0</b><span>'+(faltaram===1?'faltou':'faltaram')+' na chamada</span></div>'
       +'</div></div>';
   }
 
@@ -30580,7 +30904,7 @@
     var pc=function(n){ return Math.round((n/naTurma)*1000)/10; };
     h+='<div style="display:flex;align-items:flex-end;gap:16px;flex-wrap:wrap;margin-top:14px">'
       +'<div><div class="pm-kpi hero'+(T.faltas.length?'':' ouro')+'" data-pm-alvo="'+T.faltas.length+'">0</div>'
-      +'<p class="pm-rot">'+(T.faltas.length===1?'falta':'faltas')+' de '+naTurma+' na turma</p></div></div>'
+      +'<p class="pm-rot">'+(T.faltas.length===1?'falta':'faltas')+' de '+naTurma+' na turma da chamada (aulunos + avulsos)</p></div></div>'
       +'<div class="pm-segbar" role="img" aria-label="'+escAttr('De '+naTurma+' na turma: '+T.presentes+' presentes, '
         +comAviso.length+' faltas avisadas, '+semAviso.length+' faltas sem aviso e '+T.semMarcar+' ainda sem marcar')+'">'
       +'<i class="pm-seg-ok" data-pm-pct="'+pc(T.presentes)+'"></i>'
@@ -30682,9 +31006,11 @@
       +'<span>'+(lista.length-avisados)+' por avisar</span></div>'
       +'<div class="pm-lista">';
     lista.slice(0,3).forEach(function(x){
+      // nome/raça (ou tutor): 16 nomes se repetem no cadastro — achado 6, 04/set/2026
+      var _identC=x.nome+(x.raca?('/'+x.raca):(x.tutor?(' ('+x.tutor+')'):''));
       h+='<div class="pm-li"><span class="pm-badge '+(x.aviso?'pm-b-ok':(x.grave?'pm-b-critico':'pm-b-atencao'))+'">'
         +(x.aviso?'avisado':(x.pronto?'por avisar':'aguarda o 2º'))+'</span>'
-        +'<div class="pm-li-txt"><b>'+esc(x.nome)+'</b><span>'+esc(x.motivo)+'</span></div></div>';
+        +'<div class="pm-li-txt"><b>'+esc(_identC)+'</b><span>'+esc(x.motivo)+'</span></div></div>';
     });
     h+='</div>';
     if(lista.length>3) h+='<p class="pm-sub" style="margin-top:10px">Mais '
@@ -30844,10 +31170,19 @@
   // ---- 6b · o acerto das plantonistas ----
   // O número aqui é o MESMO do Financeiro do plantão, pela mesma função. Este quadro só
   // confere; quem lança, marca como pago e recalcula é aquela tela.
-  function poCardAcerto(){
-    var h='<article class="pm-card pm-rv pm-c6">'
+  // aindaLendo=true → a carga lenta do acerto não terminou: o quadro diz "sem leitura" em
+  // vez de somar ACERTO_REG/ACERTO_QUEM vazios (era isso que fabricava o R$ 4.050,00
+  // fantasma). Quando a carga termina, o poAbrir redesenha SÓ este quadro, pelo id.
+  function poCardAcerto(aindaLendo){
+    var h='<article class="pm-card pm-rv pm-c6" id="poCardAcerto">'
       +'<h3 class="pm-tit">Acerto das plantonistas</h3>'
       +'<p class="pm-sub">Quanto está em aberto com cada uma, para conferir antes de pagar. É o mesmo número do Financeiro do plantão — a conta é uma só. A Repolho nunca entra: ela mora aqui.</p>';
+    if(aindaLendo) return h
+      +'<div class="pm-lista"><div class="pm-li"><span class="pm-badge pm-b-atencao">ainda lendo</span>'
+      +'<div class="pm-li-txt"><b>Ainda estou somando as noites e as assinaturas.</b>'
+      +'<span>O quadro se completa sozinho em instantes. Se não vier, abra esta tela de novo.</span>'
+      +'</div></div></div>'
+      +poIrHTML('acerto','Abrir o Financeiro do plantão')+'</article>';
     var noites=null;
     try{ noites=(typeof acertoNoites==='function')?acertoNoites():null; }catch(e){ noites=null; } /* silencioso de propósito: o quadro diz que ainda não leu */
     if(!noites || !noites.length) return h+poSemLeituraHTML('as noites do acerto')
@@ -30957,7 +31292,10 @@
       return;
     }
     var eu=(typeof quemSou==='function'?quemSou():'').trim();
-    poCargasPesadas().then(function(){ return poLer(forcar===true); }).then(function(d){
+    // A pintura NÃO espera a carga lenta do acerto (~2,5 s): a tela abre com o que já
+    // chegou e o quadro do dinheiro se redesenha sozinho quando a conta termina.
+    var cargas=poCargasPesadas();
+    cargas.rapidas.then(function(){ return poLer(forcar===true); }).then(function(d){
       if(!d){
         raiz.innerHTML='<div class="pm-card"><h3 class="pm-tit">Não consegui ler a casa de hoje</h3>'
           +'<p class="pm-sub">Nada foi perdido — este painel não grava nada. Abra esta tela de novo em instantes.</p></div>';
@@ -30994,11 +31332,26 @@
             'Quantos hóspedes por noite, quanto se paga às plantonistas, quem toma remédio e o Enriquecimento do dia.', PO_IC_LUA)
         +'<div class="pm-grid">'
         + poCardNoites(noites)
-        + poCardAcerto()
+        + poCardAcerto(!ACERTO_PRONTO)
         + poCardMedicacao(med)
         + poCardEA(ea)
         +'</div>';
       requestAnimationFrame(function(){ pmAnimar(raiz); });
+      // A conta do acerto chegou (ou já estava): troca SÓ o quadro do dinheiro, sem
+      // reiniciar a animação do painel inteiro. Se a carga falhou, ACERTO_PRONTO segue
+      // false e o quadro continua dizendo que ainda não leu — nunca um número inventado.
+      cargas.lenta.then(function(){
+        var velho=document.getElementById('poCardAcerto');
+        if(!velho||!velho.parentNode) return;                 // a pessoa já saiu da tela
+        var caixa=document.createElement('div');
+        caixa.innerHTML=poCardAcerto(!ACERTO_PRONTO);
+        var novo=caixa.firstElementChild; if(!novo) return;
+        // pmAnimar procura os cartões DENTRO da raiz que recebe — por isso ele roda com a
+        // caixa (enquanto o quadro ainda mora nela) e a troca vem em seguida: as classes e
+        // os contadores agendados alcançam o nó já na tela.
+        try{ pmAnimar(caixa); }catch(e){} /* silencioso de propósito: animação — falhar não pode derrubar o quadro */
+        velho.parentNode.replaceChild(novo, velho);
+      }).catch(function(e){ _logLeituraFalhou('Painel da Operação (quadro do acerto)', e); });
     }).catch(function(e){
       _logLeituraFalhou('Painel da Operação (montagem da tela)', e);
       raiz.innerHTML='<div class="pm-card"><h3 class="pm-tit">Não consegui montar o painel agora</h3>'

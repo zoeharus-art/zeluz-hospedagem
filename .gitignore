@@ -27,3 +27,6 @@ secret*
 secrets*
 service-account*.json
 serviceAccount*.json
+
+# Retrato do banco para os testes (baixado da VPS uma vez por dia — nunca versionar)
+tests/.retrato/

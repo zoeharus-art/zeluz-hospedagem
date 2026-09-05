@@ -1,7 +1,7 @@
 # Smoke de navegador — o app aberto de verdade, tela por tela
 
-> Gerado por `tests/smoke-navegador.js` em 04/09/2026, 17:33:03.
-> Servidor: servidor já no ar na porta 8765 · arquivo medido: `auaulandia/index.html` (do disco, nunca o GitHub Pages).
+> Gerado por `tests/smoke-navegador.js` em 05/09/2026, 00:49:18.
+> Servidor: python -m http.server 8765 · arquivo medido: `auaulandia/index.html` (do disco, nunca o GitHub Pages).
 
 ## Por que este teste existe
 
@@ -59,13 +59,13 @@ Cada tela espera a rede aquietar (teto de 8000 ms) e só então mais 1200 ms —
 
 | Papel | Entrou como | Telas visitadas | Falhas | Escritas tentadas |
 |---|---|---:|---:|---:|
-| `monitor` | Felipe (`monitor`) | 3 | 0 | 14 |
-| `plantonista` | Teste do Sistema (`plantonista`) | 2 | 0 | 13 |
-| `recepcao` | Giullian Gomes (`consultora`) | 16 | 0 | 20 |
-| `vet` | Suellen (`vet`) | 2 | 0 | 14 |
-| `supervisao` | Amanda Silva (`supervisor`) | 25 | 0 | 22 |
-| `gestao` | Márcia · Gestora (`gestao`) | 53 | 0 | 22 |
-| `diretoria` | Adriana · Gestão Total (`gestao`) | 53 | 0 | 23 |
+| `monitor` | Felipe (`monitor`) | 2 | 0 | 7 |
+| `plantonista` | Teste do Sistema (`plantonista`) | 2 | 0 | 27 |
+| `recepcao` | Giullian Gomes (`consultora`) | 16 | 0 | 31 |
+| `vet` | Suellen (`vet`) | 2 | 0 | 27 |
+| `supervisao` | Amanda Silva (`supervisor`) | 25 | 0 | 38 |
+| `gestao` | Márcia · Gestora (`gestao`) | 53 | 0 | 45 |
+| `diretoria` | Adriana · Gestão Total (`gestao`) | 53 | 0 | 42 |
 
 ### O nome do papel e o que o app grava
 
@@ -86,32 +86,40 @@ Todas foram barradas pelo guarda.
 
 | Papel | Tela | Tentativas | Caminhos |
 |---|---|---:|---|
-| `monitor` | _(carga + entrada)_ | 13 | set auaulandia/med-vigia/2026-09-04 · transaction auaulandia/med-tg-fila/-P0RDDYGW4hZeQWT9L-o · transaction auaulandia/med-tg-fila/-P0S8GuT569m9ZQAD8Zq · transaction auaulandia/med-tg-fila/-P0SSw0_T4pzZWjX-2jQ |
-| `monitor` | `agenda` | 1 | transaction daycare/avisos-telegram-atraso/2026-09-04 |
-| `plantonista` | _(carga + entrada)_ | 13 | set auaulandia/med-vigia/2026-09-04 · transaction auaulandia/med-tg-fila/-P0RDDYGW4hZeQWT9L-o · transaction auaulandia/med-tg-fila/-P0S8GuT569m9ZQAD8Zq · transaction auaulandia/med-tg-fila/-P0SSw0_T4pzZWjX-2jQ |
-| `recepcao` | _(carga + entrada)_ | 12 | set auaulandia/med-vigia/2026-09-04 · transaction auaulandia/med-tg-fila/-P0RDDYGW4hZeQWT9L-o · transaction auaulandia/med-tg-fila/-P0S8GuT569m9ZQAD8Zq · transaction auaulandia/med-tg-fila/-P0SSw0_T4pzZWjX-2jQ |
-| `recepcao` | `mesa` | 1 | transaction daycare/avisos-telegram-atraso/2026-09-04 |
-| `recepcao` | `emporio` | 1 | transaction daycare/avisos-telegram-atraso/2026-09-04 |
+| `monitor` | _(carga + entrada)_ | 7 | set auaulandia/med-vigia/2026-09-05 |
+| `plantonista` | _(carga + entrada)_ | 27 | remove auaulandia/med-tg-fila/-P0USqR6Uz4RyqxHZEqA · push daycare/auditoria/2026-09-05 · remove auaulandia/med-tg-fila/-P0USqciF0iQnZ6hK7xX · remove auaulandia/med-tg-fila/-P0USqvsz5hk51T-ReUm |
+| `recepcao` | _(carga + entrada)_ | 23 | set auaulandia/med-vigia/2026-09-05 · remove auaulandia/med-tg-fila/-P0USqR6Uz4RyqxHZEqA · push daycare/auditoria/2026-09-05 · remove auaulandia/med-tg-fila/-P0USqciF0iQnZ6hK7xX |
+| `recepcao` | `ficha` | 1 | transaction daycare/avisos-telegram-atraso/2026-09-05 |
+| `recepcao` | `emporio` | 1 | transaction daycare/avisos-telegram-atraso/2026-09-05 |
 | `recepcao` | `alergia` | 6 | update daycare/cadastro/ella__yerkes%20pereira%20e%20silva · set daycare/versoes/cadastro · set daycare/alergia-confirmada/ella__yerkes%20pereira%20e%20silva/ficha · set daycare/entrevista-atencao/ella__yerkes%20pereira%20e%20silva |
-| `vet` | _(carga + entrada)_ | 13 | set auaulandia/med-vigia/2026-09-04 · transaction auaulandia/med-tg-fila/-P0RDDYGW4hZeQWT9L-o · transaction auaulandia/med-tg-fila/-P0S8GuT569m9ZQAD8Zq · transaction auaulandia/med-tg-fila/-P0SSw0_T4pzZWjX-2jQ |
-| `vet` | `peso` | 1 | set auaulandia/med-vigia/2026-09-04 |
-| `supervisao` | _(carga + entrada)_ | 12 | set auaulandia/med-vigia/2026-09-04 · transaction auaulandia/med-tg-fila/-P0RDDYGW4hZeQWT9L-o · transaction auaulandia/med-tg-fila/-P0S8GuT569m9ZQAD8Zq · transaction auaulandia/med-tg-fila/-P0SSw0_T4pzZWjX-2jQ |
-| `supervisao` | `mesa` | 1 | transaction daycare/avisos-telegram-atraso/2026-09-04 |
-| `supervisao` | `conferencia` | 1 | set auaulandia/med-vigia/2026-09-04 |
-| `supervisao` | `cuidadovet` | 1 | set auaulandia/med-vigia/2026-09-04 |
-| `supervisao` | `emporio` | 1 | transaction daycare/avisos-telegram-atraso/2026-09-04 |
+| `vet` | _(carga + entrada)_ | 26 | remove auaulandia/med-tg-fila/-P0USqR6Uz4RyqxHZEqA · push daycare/auditoria/2026-09-05 · remove auaulandia/med-tg-fila/-P0USqciF0iQnZ6hK7xX · remove auaulandia/med-tg-fila/-P0USqvsz5hk51T-ReUm |
+| `vet` | `peso` | 1 | set auaulandia/med-vigia/2026-09-05 |
+| `supervisao` | _(carga + entrada)_ | 23 | set auaulandia/med-vigia/2026-09-05 · remove auaulandia/med-tg-fila/-P0USqR6Uz4RyqxHZEqA · push daycare/auditoria/2026-09-05 · remove auaulandia/med-tg-fila/-P0USqciF0iQnZ6hK7xX |
+| `supervisao` | `inicio` | 1 | transaction daycare/avisos-telegram-atraso/2026-09-05 |
+| `supervisao` | `checkin` | 4 | update daycare/checkin-corpo/2026-09-04 · update daycare/checkout-corpo/2026-09-04 · set daycare/limpeza-fotos/2026-09-05 · push daycare/auditoria/2026-09-05 |
+| `supervisao` | `conferencia` | 2 | set auaulandia/med-vigia/2026-09-05 |
+| `supervisao` | `gestdia` | 1 | set auaulandia/med-vigia/2026-09-05 |
+| `supervisao` | `emporio` | 1 | transaction daycare/avisos-telegram-atraso/2026-09-05 |
 | `supervisao` | `alergia` | 6 | update daycare/cadastro/ella__yerkes%20pereira%20e%20silva · set daycare/versoes/cadastro · set daycare/alergia-confirmada/ella__yerkes%20pereira%20e%20silva/ficha · set daycare/entrevista-atencao/ella__yerkes%20pereira%20e%20silva |
-| `gestao` | _(carga + entrada)_ | 12 | set auaulandia/med-vigia/2026-09-04 · transaction auaulandia/med-tg-fila/-P0RDDYGW4hZeQWT9L-o · transaction auaulandia/med-tg-fila/-P0S8GuT569m9ZQAD8Zq · transaction auaulandia/med-tg-fila/-P0SSw0_T4pzZWjX-2jQ |
-| `gestao` | `mesa` | 1 | transaction daycare/avisos-telegram-atraso/2026-09-04 |
-| `gestao` | `cuidadovet` | 1 | set auaulandia/med-vigia/2026-09-04 |
-| `gestao` | `hospedagem` | 1 | set auaulandia/med-vigia/2026-09-04 |
-| `gestao` | `emporio` | 1 | transaction daycare/avisos-telegram-atraso/2026-09-04 |
+| `gestao` | _(carga + entrada)_ | 26 | remove auaulandia/med-tg-fila/-P0USqR6Uz4RyqxHZEqA · push daycare/auditoria/2026-09-05 · remove auaulandia/med-tg-fila/-P0USqciF0iQnZ6hK7xX · remove auaulandia/med-tg-fila/-P0USqvsz5hk51T-ReUm |
+| `gestao` | `mesa` | 1 | transaction daycare/avisos-telegram-atraso/2026-09-05 |
+| `gestao` | `ficha` | 1 | update daycare/checkin-corpo/2026-09-04 |
+| `gestao` | `checkin` | 3 | update daycare/checkout-corpo/2026-09-04 · set daycare/limpeza-fotos/2026-09-05 · push daycare/auditoria/2026-09-05 |
+| `gestao` | `conferencia` | 2 | set auaulandia/med-vigia/2026-09-05 |
+| `gestao` | `hospedagem` | 1 | set auaulandia/med-vigia/2026-09-05 |
+| `gestao` | `checkout` | 1 | update daycare/checkin-corpo/2026-09-04 |
+| `gestao` | `checkoutconf` | 3 | update daycare/checkout-corpo/2026-09-04 · set daycare/limpeza-fotos/2026-09-05 · push daycare/auditoria/2026-09-05 |
+| `gestao` | `emporio` | 1 | transaction daycare/avisos-telegram-atraso/2026-09-05 |
 | `gestao` | `alergia` | 6 | update daycare/cadastro/ella__yerkes%20pereira%20e%20silva · set daycare/versoes/cadastro · set daycare/alergia-confirmada/ella__yerkes%20pereira%20e%20silva/ficha · set daycare/entrevista-atencao/ella__yerkes%20pereira%20e%20silva |
-| `diretoria` | _(carga + entrada)_ | 13 | set auaulandia/med-vigia/2026-09-04 · transaction auaulandia/med-tg-fila/-P0RDDYGW4hZeQWT9L-o · transaction auaulandia/med-tg-fila/-P0S8GuT569m9ZQAD8Zq · transaction auaulandia/med-tg-fila/-P0SSw0_T4pzZWjX-2jQ |
-| `diretoria` | `mesa` | 1 | transaction daycare/avisos-telegram-atraso/2026-09-04 |
-| `diretoria` | `conferencia` | 1 | set auaulandia/med-vigia/2026-09-04 |
-| `diretoria` | `hospedagem` | 1 | set auaulandia/med-vigia/2026-09-04 |
-| `diretoria` | `emporio` | 1 | transaction daycare/avisos-telegram-atraso/2026-09-04 |
+| `diretoria` | _(carga + entrada)_ | 23 | remove auaulandia/med-tg-fila/-P0USqR6Uz4RyqxHZEqA · push daycare/auditoria/2026-09-05 · remove auaulandia/med-tg-fila/-P0USqciF0iQnZ6hK7xX · remove auaulandia/med-tg-fila/-P0USqvsz5hk51T-ReUm |
+| `diretoria` | `mesa` | 1 | transaction daycare/avisos-telegram-atraso/2026-09-05 |
+| `diretoria` | `checkin` | 4 | update daycare/checkin-corpo/2026-09-04 · update daycare/checkout-corpo/2026-09-04 · set daycare/limpeza-fotos/2026-09-05 · push daycare/auditoria/2026-09-05 |
+| `diretoria` | `conferencia` | 1 | set auaulandia/med-vigia/2026-09-05 |
+| `diretoria` | `hospedes` | 1 | set auaulandia/med-vigia/2026-09-05 |
+| `diretoria` | `hospedagem` | 1 | set auaulandia/med-vigia/2026-09-05 |
+| `diretoria` | `checkout` | 2 | update daycare/checkin-corpo/2026-09-04 · update daycare/checkout-corpo/2026-09-04 |
+| `diretoria` | `checkoutconf` | 2 | set daycare/limpeza-fotos/2026-09-05 · push daycare/auditoria/2026-09-05 |
+| `diretoria` | `emporio` | 1 | transaction daycare/avisos-telegram-atraso/2026-09-05 |
 | `diretoria` | `alergia` | 6 | update daycare/cadastro/ella__yerkes%20pereira%20e%20silva · set daycare/versoes/cadastro · set daycare/alergia-confirmada/ella__yerkes%20pereira%20e%20silva/ficha · set daycare/entrevista-atencao/ella__yerkes%20pereira%20e%20silva |
 
 **Como ler esta tabela.** Gravar ao abrir não é errado por si só — às vezes é uma regra do
@@ -126,13 +134,12 @@ negócio (marcar falta depois da hora, por exemplo). Mas duas coisas merecem ate
 
 ### `monitor` — Felipe (senha 1005, cadastro do banco (daycare/config/monitores))
 
-Entrou como **Felipe**, papel `monitor`. 3 tela(s) no menu dele.
+Entrou como **Felipe**, papel `monitor`. 2 tela(s) no menu dele.
 
 | Tela (`data-v`) | Nome no menu | Estabilizou (ms) | Conteúdo (chars) | Altura (px) | Erros JS | Escritas | Situação |
 |---|---|---:|---:|---:|---:|---:|---|
-| `painelmeu` | Meu Painel | 1279 | 1539 | 1295 | 0 | 0 | ok |
-| `abertura` | Abertura do dia | 1249 | 730 | 869 | 0 | 0 | ok |
-| `agenda` | Agenda em breve | 1241 | 59 | 339 | 0 | 1 | ok |
+| `painelmeu` | Meu Painel | 1375 | 1531 | 1295 | 0 | 0 | ok |
+| `agenda` | Agenda em breve | 1333 | 59 | 339 | 0 | 0 | ok |
 
 ### `plantonista` — Plantonista (senha 1001, senha fixa no HTML)
 
@@ -140,8 +147,8 @@ Entrou como **Teste do Sistema**, papel `plantonista`. 2 tela(s) no menu dele.
 
 | Tela (`data-v`) | Nome no menu | Estabilizou (ms) | Conteúdo (chars) | Altura (px) | Erros JS | Escritas | Situação |
 |---|---|---:|---:|---:|---:|---:|---|
-| `painelmeu` | Meu Painel | 1284 | 1551 | 1234 | 0 | 0 | ok |
-| `hospedagem` | Plantão da noite | 1293 | 4128 | 4087 | 0 | 0 | ok |
+| `painelmeu` | Meu Painel | 1297 | 1516 | 1212 | 0 | 0 | ok |
+| `hospedagem` | Plantão da noite | 1323 | 5189 | 4836 | 0 | 0 | ok |
 
 ### `recepcao` — Giullian Gomes (senha 8000, cadastro do banco (daycare/config/monitores))
 
@@ -149,22 +156,22 @@ Entrou como **Giullian Gomes**, papel `consultora`. 16 tela(s) no menu dele.
 
 | Tela (`data-v`) | Nome no menu | Estabilizou (ms) | Conteúdo (chars) | Altura (px) | Erros JS | Escritas | Situação |
 |---|---|---:|---:|---:|---:|---:|---|
-| `inicio` | Início | 1295 | 1490 | 1733 | 0 | 0 | ok |
-| `mesa` | O que fazer hoje | 1295 | 395 | 287 | 0 | 1 | ok |
-| `hospedes` | Hóspedes de hoje | 1320 | 8145 | 6596 | 0 | 0 | ok |
-| `gestdia` | Conferência do dia | 1326 | 2613 | 2783 | 0 | 0 | ok |
-| `ficha` | Cadastro de Peludinhos | 1400 | 9318 | 8441 | 0 | 0 | ok |
-| `checkin` | Check-in | 1299 | 414 | 376 | 0 | 0 | ok |
-| `orcamento` | Orçamento de hospedagem | 1305 | 8217 | 7963 | 0 | 0 | ok |
-| `emporio` | Quem não comeu hoje | 1284 | 4122 | 8015 | 0 | 1 | ok |
-| `reposicao` | Reposições 4 | 1295 | 1476 | 1193 | 0 | 0 | ok |
-| `dashdc` | Lançamentos do dia | 1275 | 2436 | 3834 | 0 | 0 | ok |
-| `vacinas` | Prevenção | 1355 | 7712 | 5198 | 0 | 0 | ok |
-| `alergia` | Conversa com o Tutor | 1283 | 3442 | 5062 | 0 | 6 | ok |
-| `peso` | Peso | 1283 | 190 | 366 | 0 | 0 | ok |
-| `ritmo` | Ritmo do Time | 1280 | 3865 | 2743 | 0 | 0 | ok |
-| `eahist` | Enriquecimento Ambiental | 1253 | 355 | 480 | 0 | 0 | ok |
-| `agenda` | Agenda em breve | 1255 | 59 | 339 | 0 | 0 | ok |
+| `inicio` | Início | 1314 | 1492 | 1733 | 0 | 0 | ok |
+| `mesa` | O que fazer hoje | 1365 | 239 | 287 | 0 | 0 | ok |
+| `ficha` | Cadastro de Peludinhos | 1630 | 9318 | 8441 | 0 | 1 | ok |
+| `checkin` | Check-in | 1356 | 414 | 376 | 0 | 0 | ok |
+| `hospedes` | Hóspedes de hoje | 1526 | 8637 | 6829 | 0 | 0 | ok |
+| `gestdia` | Conferência do dia | 1358 | 3028 | 3179 | 0 | 0 | ok |
+| `orcamento` | Orçamento de hospedagem | 1316 | 8217 | 7963 | 0 | 0 | ok |
+| `emporio` | Quem não comeu hoje | 1295 | 3497 | 6458 | 0 | 1 | ok |
+| `reposicao` | Reposições 4 | 1328 | 1476 | 1193 | 0 | 0 | ok |
+| `dashdc` | Lançamentos do dia | 1352 | 1671 | 3134 | 0 | 0 | ok |
+| `vacinas` | Prevenção | 1465 | 8376 | 5604 | 0 | 0 | ok |
+| `alergia` | Conversa com o Tutor | 1363 | 3442 | 5062 | 0 | 6 | ok |
+| `peso` | Peso | 1292 | 190 | 366 | 0 | 0 | ok |
+| `ritmo` | Ritmo do Time | 1297 | 3732 | 2646 | 0 | 0 | ok |
+| `eahist` | Enriquecimento Ambiental | 1337 | 355 | 480 | 0 | 0 | ok |
+| `agenda` | Agenda em breve | 1285 | 59 | 339 | 0 | 0 | ok |
 
 ### `vet` — Suellen (senha 3000, cadastro do banco (daycare/config/monitores))
 
@@ -172,7 +179,7 @@ Entrou como **Suellen**, papel `vet`. 2 tela(s) no menu dele.
 
 | Tela (`data-v`) | Nome no menu | Estabilizou (ms) | Conteúdo (chars) | Altura (px) | Erros JS | Escritas | Situação |
 |---|---|---:|---:|---:|---:|---:|---|
-| `cuidadovet` | Cuidado Vet | 1259 | 805 | 759 | 0 | 0 | ok |
+| `cuidadovet` | Cuidado Vet | 1299 | 979 | 969 | 0 | 0 | ok |
 | `peso` | Peso | 1285 | 190 | 366 | 0 | 1 | ok |
 
 ### `supervisao` — Amanda Silva (senha 1209, cadastro do banco (daycare/config/monitores))
@@ -181,31 +188,31 @@ Entrou como **Amanda Silva**, papel `supervisor`. 25 tela(s) no menu dele.
 
 | Tela (`data-v`) | Nome no menu | Estabilizou (ms) | Conteúdo (chars) | Altura (px) | Erros JS | Escritas | Situação |
 |---|---|---:|---:|---:|---:|---:|---|
-| `inicio` | Início | 1325 | 1490 | 1733 | 0 | 0 | ok |
-| `mesa` | O que fazer hoje | 1378 | 457 | 333 | 0 | 1 | ok |
-| `conferencia` | Conferência do check-in 2 | 1368 | 293 | 252 | 0 | 1 | ok |
-| `cuidadovet` | Cuidado Vet | 1310 | 805 | 759 | 0 | 1 | ok |
-| `hospedes` | Hóspedes de hoje | 1378 | 8145 | 6596 | 0 | 0 | ok |
-| `gestdia` | Conferência do dia | 1292 | 2613 | 2783 | 0 | 0 | ok |
-| `ficha` | Cadastro de Peludinhos | 1380 | 9318 | 8441 | 0 | 0 | ok |
-| `checkin` | Check-in | 1297 | 414 | 376 | 0 | 0 | ok |
-| `checkoutconf` | Check-out com o tutor 1 | 1295 | 825 | 729 | 0 | 0 | ok |
-| `orcamento` | Orçamento de hospedagem | 1285 | 10329 | 10033 | 0 | 0 | ok |
-| `recepcao` | Pendências com o tutor 6 | 1391 | 11553 | 16526 | 0 | 0 | ok |
-| `emporio` | Quem não comeu hoje | 1328 | 4122 | 8015 | 0 | 1 | ok |
-| `reposicao` | Reposições 4 | 1307 | 1476 | 1193 | 0 | 0 | ok |
-| `dashdc` | Lançamentos do dia | 1283 | 2436 | 3834 | 0 | 0 | ok |
-| `vacinas` | Prevenção | 1344 | 7712 | 5198 | 0 | 0 | ok |
-| `alergia` | Conversa com o Tutor | 1288 | 3442 | 5062 | 0 | 6 | ok |
-| `peso` | Peso | 1270 | 190 | 366 | 0 | 0 | ok |
-| `renovacao` | Renovação de planos | 1316 | 1696 | 1394 | 0 | 0 | ok |
-| `acerto` | Financeiro do plantão | 1282 | 4230 | 3982 | 0 | 0 | ok |
-| `ritmo` | Ritmo do Time | 1295 | 3865 | 2743 | 0 | 0 | ok |
-| `eahist` | Enriquecimento Ambiental | 1278 | 355 | 480 | 0 | 0 | ok |
-| `config` | Configurações | 1290 | 983 | 721 | 0 | 0 | ok |
-| `painel` | Painel do Dia | 1300 | 103707 | 47683 | 0 | 0 | ok |
-| `agenda` | Agenda em breve | 1292 | 59 | 339 | 0 | 0 | ok |
-| `relatorios` | Relatórios | 1364 | 7047 | 11031 | 0 | 0 | ok |
+| `inicio` | Início | 1335 | 1492 | 1733 | 0 | 1 | ok |
+| `mesa` | O que fazer hoje | 1352 | 442 | 333 | 0 | 0 | ok |
+| `ficha` | Cadastro de Peludinhos | 1553 | 9318 | 8441 | 0 | 0 | ok |
+| `checkin` | Check-in | 1519 | 414 | 376 | 0 | 4 | ok |
+| `conferencia` | Conferência do check-in 2 | 1384 | 434 | 324 | 0 | 2 | ok |
+| `hospedes` | Hóspedes de hoje | 1450 | 8637 | 6829 | 0 | 0 | ok |
+| `cuidadovet` | Cuidado Vet | 1496 | 979 | 969 | 0 | 0 | ok |
+| `gestdia` | Conferência do dia | 1333 | 3028 | 3179 | 0 | 1 | ok |
+| `checkoutconf` | Check-out com o tutor | 1383 | 759 | 632 | 0 | 0 | ok |
+| `orcamento` | Orçamento de hospedagem | 1442 | 10329 | 10033 | 0 | 0 | ok |
+| `recepcao` | Pendências com o tutor 4 | 1412 | 11374 | 16288 | 0 | 0 | ok |
+| `emporio` | Quem não comeu hoje | 1516 | 3497 | 6458 | 0 | 1 | ok |
+| `reposicao` | Reposições 4 | 1402 | 1476 | 1193 | 0 | 0 | ok |
+| `dashdc` | Lançamentos do dia | 1484 | 1671 | 3134 | 0 | 0 | ok |
+| `vacinas` | Prevenção | 1513 | 8376 | 5604 | 0 | 0 | ok |
+| `alergia` | Conversa com o Tutor | 1892 | 3442 | 5062 | 0 | 6 | ok |
+| `peso` | Peso | 1306 | 190 | 366 | 0 | 0 | ok |
+| `renovacao` | Renovação de planos | 1522 | 1409 | 1174 | 0 | 0 | ok |
+| `acerto` | Financeiro do plantão | 1408 | 472 | 465 | 0 | 0 | ok |
+| `ritmo` | Ritmo do Time | 2319 | 3732 | 2646 | 0 | 0 | ok |
+| `eahist` | Enriquecimento Ambiental | 1497 | 355 | 480 | 0 | 0 | ok |
+| `config` | Configurações | 1307 | 983 | 721 | 0 | 0 | ok |
+| `painel` | Painel do Dia | 1891 | 6005 | 3913 | 0 | 0 | ok (tem "carregando" na tela) |
+| `agenda` | Agenda em breve | 1338 | 59 | 339 | 0 | 0 | ok |
+| `relatorios` | Relatórios | 1431 | 7047 | 11031 | 0 | 0 | ok |
 
 ### `gestao` — Márcia · Gestora (senha 0902, senha fixa no HTML)
 
@@ -213,59 +220,59 @@ Entrou como **Márcia · Gestora**, papel `gestao`. 53 tela(s) no menu dele.
 
 | Tela (`data-v`) | Nome no menu | Estabilizou (ms) | Conteúdo (chars) | Altura (px) | Erros JS | Escritas | Situação |
 |---|---|---:|---:|---:|---:|---:|---|
-| `inicio` | Início | 1272 | 1490 | 1733 | 0 | 0 | ok |
-| `mesa` | O que fazer hoje | 1305 | 453 | 349 | 0 | 1 | ok |
-| `conferencia` | Conferência do check-in 2 | 1344 | 293 | 252 | 0 | 0 | ok |
-| `cuidadovet` | Cuidado Vet | 1316 | 805 | 759 | 0 | 1 | ok |
-| `hospedagem` | Plantão da noite | 1437 | 5235 | 6276 | 0 | 1 | ok |
-| `hospedes` | Hóspedes de hoje | 1387 | 8145 | 6596 | 0 | 0 | ok |
-| `gestdia` | Conferência do dia | 1300 | 2613 | 2783 | 0 | 0 | ok |
-| `checkout` | Check-out | 1310 | 1094 | 1013 | 0 | 0 | ok |
-| `ficha` | Cadastro de Peludinhos | 1397 | 9318 | 8441 | 0 | 0 | ok |
-| `checkin` | Check-in | 1277 | 414 | 376 | 0 | 0 | ok |
-| `checkoutconf` | Check-out com o tutor 1 | 1281 | 825 | 729 | 0 | 0 | ok |
-| `orcamento` | Orçamento de hospedagem | 1295 | 10329 | 10033 | 0 | 0 | ok |
-| `recepcao` | Pendências com o tutor 6 | 1432 | 11553 | 16526 | 0 | 0 | ok |
-| `emporio` | Quem não comeu hoje | 1300 | 4122 | 8015 | 0 | 1 | ok |
-| `reposicao` | Reposições 4 | 1293 | 1476 | 1193 | 0 | 0 | ok |
-| `dashdc` | Lançamentos do dia | 1271 | 2726 | 4173 | 0 | 0 | ok |
-| `vacinas` | Prevenção | 1367 | 7712 | 5198 | 0 | 0 | ok |
-| `alergia` | Conversa com o Tutor | 1268 | 3442 | 5062 | 0 | 6 | ok |
-| `peso` | Peso | 1280 | 190 | 366 | 0 | 0 | ok |
-| `renovacao` | Renovação de planos | 1330 | 1696 | 1394 | 0 | 0 | ok |
-| `paineloperacao` | Painel da Operação | 1263 | 4220 | 2775 | 0 | 0 | ok |
-| `acerto` | Financeiro do plantão | 1728 | 4230 | 3982 | 0 | 0 | ok |
-| `ritmo` | Ritmo do Time | 1286 | 3865 | 2743 | 0 | 0 | ok |
-| `eahist` | Enriquecimento Ambiental | 1281 | 355 | 480 | 0 | 0 | ok |
-| `pessoas` | Time | 1303 | 1104 | 1676 | 0 | 0 | ok |
-| `planodia` | Escala e plano do dia | 1278 | 769 | 1006 | 0 | 0 | ok |
-| `config` | Configurações | 1288 | 983 | 721 | 0 | 0 | ok |
-| `painel` | Painel do Dia | 1328 | 103707 | 47683 | 0 | 0 | ok |
-| `agenda` | Agenda em breve | 1319 | 59 | 339 | 0 | 0 | ok |
-| `relatorios` | Relatórios | 1364 | 7047 | 11031 | 0 | 0 | ok |
-| `turminha:seg` | Segunda 44 | 1474 | 4601 | 3817 | 0 | 0 | ok |
-| `turminha:ter` | Terça 43 | 1329 | 4579 | 3393 | 0 | 0 | ok |
-| `turminha:qua` | Quarta 45 | 1337 | 4695 | 3830 | 0 | 0 | ok |
-| `turminha:qui` | Quinta 37 | 1344 | 4187 | 3120 | 0 | 0 | ok |
-| `turminha:sex` | Sexta · hoje 53 | 1355 | 6083 | 4813 | 0 | 0 | ok |
-| `atividade:agility` | Agility Funcional | 1306 | 356 | 425 | 0 | 0 | ok |
-| `atividade:almoco` | Almoço | 1513 | 8958 | 6337 | 0 | 0 | ok |
-| `atividade:almoco2` | 2º Horário de Almoço | 1389 | 1588 | 1591 | 0 | 0 | ok |
-| `atividade:livre` | Atividade livre | 1316 | 2937 | 3854 | 0 | 0 | ok |
-| `atividade:aucademia` | Aucademia | 1375 | 332 | 425 | 0 | 0 | ok |
-| `atividade:aulinha` | Aulinha de Disciplina | 1310 | 368 | 425 | 0 | 0 | ok |
-| `atividade:chamada` | Chamada | 1374 | 6083 | 4813 | 0 | 0 | ok |
-| `atividade:checkin-corpo` | Check-in do corpo | 1420 | 5120 | 3865 | 0 | 0 | ok |
-| `atividade:checkin-pert` | Check-in dos pertences | 1365 | 1887 | 1887 | 0 | 0 | ok |
-| `atividade:checkout-corpo` | Check-out do corpinho | 1439 | 4235 | 3690 | 0 | 0 | ok |
-| `atividade:checkout-pert` | Check-out dos pertences | 1315 | 1544 | 1888 | 0 | 0 | ok |
-| `atividade:ea` | Enriquecimento Ambiental (EA) | 1344 | 2439 | 1477 | 0 | 0 | ok |
-| `atividade:escova` | Escova de Dentes | 1326 | 353 | 425 | 0 | 0 | ok |
-| `atividade:foto` | Foto do peludinho | 1347 | 2704 | 3268 | 0 | 0 | ok |
-| `atividade:jogos` | Jogos Cognitivos | 1307 | 353 | 425 | 0 | 0 | ok |
-| `atividade:massagem` | Massagem Dessensibilizadora | 1346 | 386 | 425 | 0 | 0 | ok |
-| `atividade:musicoterapia` | Musicoterapia | 1371 | 2931 | 3854 | 0 | 0 | ok |
-| `atividade:peso` | Peso do peludinho | 1382 | 2377 | 2214 | 0 | 0 | ok |
+| `inicio` | Início | 1292 | 1437 | 1695 | 0 | 0 | ok |
+| `mesa` | O que fazer hoje | 1389 | 453 | 349 | 0 | 1 | ok |
+| `ficha` | Cadastro de Peludinhos | 1595 | 9318 | 8441 | 0 | 1 | ok |
+| `checkin` | Check-in | 1479 | 414 | 376 | 0 | 3 | ok |
+| `conferencia` | Conferência do check-in 2 | 1514 | 434 | 324 | 0 | 2 | ok |
+| `hospedes` | Hóspedes de hoje | 1463 | 8637 | 6829 | 0 | 0 | ok |
+| `cuidadovet` | Cuidado Vet | 1367 | 886 | 954 | 0 | 0 | ok |
+| `hospedagem` | Plantão da noite | 2119 | 6300 | 6236 | 0 | 1 | ok |
+| `gestdia` | Conferência do dia | 1365 | 3028 | 3179 | 0 | 0 | ok |
+| `checkout` | Check-out 5 | 1411 | 1328 | 1056 | 0 | 1 | ok |
+| `checkoutconf` | Check-out com o tutor | 1328 | 759 | 632 | 0 | 3 | ok |
+| `orcamento` | Orçamento de hospedagem | 1310 | 10329 | 10033 | 0 | 0 | ok |
+| `recepcao` | Pendências com o tutor 4 | 1483 | 11374 | 16288 | 0 | 0 | ok |
+| `emporio` | Quem não comeu hoje | 1402 | 3497 | 6458 | 0 | 1 | ok |
+| `reposicao` | Reposições 4 | 1385 | 1476 | 1193 | 0 | 0 | ok |
+| `dashdc` | Lançamentos do dia | 1323 | 1961 | 3473 | 0 | 0 | ok |
+| `vacinas` | Prevenção | 1427 | 8376 | 5604 | 0 | 0 | ok |
+| `alergia` | Conversa com o Tutor | 1314 | 3442 | 5062 | 0 | 6 | ok |
+| `peso` | Peso | 1360 | 190 | 366 | 0 | 0 | ok |
+| `renovacao` | Renovação de planos | 1453 | 1409 | 1174 | 0 | 0 | ok |
+| `paineloperacao` | Painel da Operação | 1317 | 4105 | 2395 | 0 | 0 | ok |
+| `acerto` | Financeiro do plantão | 1421 | 4563 | 4302 | 0 | 0 | ok |
+| `ritmo` | Ritmo do Time | 1509 | 3732 | 2646 | 0 | 0 | ok |
+| `eahist` | Enriquecimento Ambiental | 1332 | 355 | 480 | 0 | 0 | ok |
+| `pessoas` | Time | 1415 | 1104 | 1676 | 0 | 0 | ok |
+| `planodia` | Escala e plano do dia | 1344 | 769 | 1006 | 0 | 0 | ok |
+| `config` | Configurações | 1344 | 1036 | 721 | 0 | 0 | ok |
+| `painel` | Painel do Dia | 1347 | 10129 | 6576 | 0 | 0 | ok |
+| `agenda` | Agenda em breve | 1330 | 59 | 339 | 0 | 0 | ok |
+| `relatorios` | Relatórios | 1442 | 7047 | 11031 | 0 | 0 | ok |
+| `turminha:seg` | Segunda · hoje 44 | 1741 | 5593 | 4121 | 0 | 0 | ok |
+| `turminha:ter` | Terça 43 | 1459 | 4931 | 3357 | 0 | 0 | ok |
+| `turminha:qua` | Quarta 45 | 1330 | 5194 | 3795 | 0 | 0 | ok |
+| `turminha:qui` | Quinta 37 | 1418 | 4365 | 3140 | 0 | 0 | ok |
+| `turminha:sex` | Sexta 53 | 1495 | 5968 | 4164 | 0 | 0 | ok |
+| `atividade:agility` | Agility Funcional | 1379 | 356 | 425 | 0 | 0 | ok |
+| `atividade:almoco` | Almoço | 1459 | 7449 | 5296 | 0 | 0 | ok |
+| `atividade:almoco2` | 2º Horário de Almoço | 1418 | 460 | 480 | 0 | 0 | ok |
+| `atividade:livre` | Atividade livre | 1385 | 2526 | 3356 | 0 | 0 | ok |
+| `atividade:aucademia` | Aucademia | 1396 | 332 | 425 | 0 | 0 | ok |
+| `atividade:aulinha` | Aulinha de Disciplina | 1359 | 368 | 425 | 0 | 0 | ok |
+| `atividade:chamada` | Chamada | 1391 | 5968 | 4164 | 0 | 0 | ok |
+| `atividade:checkin-corpo` | Check-in do corpo | 1329 | 4370 | 3632 | 0 | 0 | ok |
+| `atividade:checkin-pert` | Check-in dos pertences | 1387 | 1438 | 1629 | 0 | 0 | ok |
+| `atividade:checkout-corpo` | Check-out do corpinho | 1499 | 3679 | 3500 | 0 | 0 | ok |
+| `atividade:checkout-pert` | Check-out dos pertences | 1378 | 1375 | 1612 | 0 | 0 | ok |
+| `atividade:ea` | Enriquecimento Ambiental (EA) | 1401 | 2450 | 1477 | 0 | 0 | ok |
+| `atividade:escova` | Escova de Dentes | 1397 | 353 | 425 | 0 | 0 | ok |
+| `atividade:foto` | Foto do peludinho | 1352 | 4187 | 4877 | 0 | 0 | ok |
+| `atividade:jogos` | Jogos Cognitivos | 1590 | 353 | 425 | 0 | 0 | ok |
+| `atividade:massagem` | Massagem Dessensibilizadora | 1678 | 386 | 425 | 0 | 0 | ok |
+| `atividade:musicoterapia` | Musicoterapia | 1465 | 2520 | 3356 | 0 | 0 | ok |
+| `atividade:peso` | Peso do peludinho | 1441 | 3659 | 3262 | 0 | 0 | ok |
 
 ### `diretoria` — Adriana · Gestão Total (senha 1101, senha fixa no HTML (role=gestao + souAdriana, que o app trata como Diretoria))
 
@@ -273,59 +280,59 @@ Entrou como **Adriana · Gestão Total**, papel `gestao`. 53 tela(s) no menu del
 
 | Tela (`data-v`) | Nome no menu | Estabilizou (ms) | Conteúdo (chars) | Altura (px) | Erros JS | Escritas | Situação |
 |---|---|---:|---:|---:|---:|---:|---|
-| `inicio` | Início | 1259 | 1490 | 1733 | 0 | 0 | ok |
-| `mesa` | O que fazer hoje | 1342 | 453 | 349 | 0 | 1 | ok |
-| `conferencia` | Conferência do check-in 2 | 1339 | 293 | 252 | 0 | 1 | ok |
-| `cuidadovet` | Cuidado Vet | 1302 | 805 | 759 | 0 | 0 | ok |
-| `hospedagem` | Plantão da noite | 1418 | 5235 | 6276 | 0 | 1 | ok |
-| `hospedes` | Hóspedes de hoje | 1390 | 8145 | 6596 | 0 | 0 | ok |
-| `gestdia` | Conferência do dia | 1290 | 2613 | 2783 | 0 | 0 | ok |
-| `checkout` | Check-out | 1281 | 1094 | 1013 | 0 | 0 | ok |
-| `ficha` | Cadastro de Peludinhos | 1366 | 9318 | 8441 | 0 | 0 | ok |
-| `checkin` | Check-in | 1288 | 414 | 376 | 0 | 0 | ok |
-| `checkoutconf` | Check-out com o tutor 1 | 1282 | 825 | 729 | 0 | 0 | ok |
-| `orcamento` | Orçamento de hospedagem | 1281 | 10329 | 10033 | 0 | 0 | ok |
-| `recepcao` | Pendências com o tutor 6 | 1386 | 11553 | 16526 | 0 | 0 | ok |
-| `emporio` | Quem não comeu hoje | 1294 | 4122 | 8015 | 0 | 1 | ok |
-| `reposicao` | Reposições 4 | 1300 | 1476 | 1193 | 0 | 0 | ok |
-| `dashdc` | Lançamentos do dia | 1284 | 2726 | 4173 | 0 | 0 | ok |
-| `vacinas` | Prevenção | 1345 | 7712 | 5198 | 0 | 0 | ok |
-| `alergia` | Conversa com o Tutor | 1276 | 3442 | 5062 | 0 | 6 | ok |
-| `peso` | Peso | 1283 | 190 | 366 | 0 | 0 | ok |
-| `renovacao` | Renovação de planos | 1329 | 1696 | 1394 | 0 | 0 | ok |
-| `paineloperacao` | Painel da Operação | 1270 | 4226 | 2775 | 0 | 0 | ok |
-| `acerto` | Financeiro do plantão | 1714 | 4230 | 3982 | 0 | 0 | ok |
-| `ritmo` | Ritmo do Time | 1294 | 3865 | 2743 | 0 | 0 | ok |
-| `eahist` | Enriquecimento Ambiental | 1292 | 355 | 480 | 0 | 0 | ok |
-| `pessoas` | Time | 1286 | 1104 | 1676 | 0 | 0 | ok |
-| `planodia` | Escala e plano do dia | 1269 | 769 | 1006 | 0 | 0 | ok |
-| `config` | Configurações | 1281 | 983 | 721 | 0 | 0 | ok |
-| `painel` | Painel do Dia | 1298 | 103760 | 47719 | 0 | 0 | ok |
-| `agenda` | Agenda em breve | 1317 | 59 | 339 | 0 | 0 | ok |
-| `relatorios` | Relatórios | 1383 | 7047 | 11031 | 0 | 0 | ok |
-| `turminha:seg` | Segunda 44 | 1467 | 4601 | 3817 | 0 | 0 | ok |
-| `turminha:ter` | Terça 43 | 1332 | 4579 | 3393 | 0 | 0 | ok |
-| `turminha:qua` | Quarta 45 | 1292 | 4695 | 3830 | 0 | 0 | ok |
-| `turminha:qui` | Quinta 37 | 1359 | 4187 | 3120 | 0 | 0 | ok |
-| `turminha:sex` | Sexta · hoje 53 | 1316 | 6083 | 4813 | 0 | 0 | ok |
-| `atividade:agility` | Agility Funcional | 1360 | 356 | 425 | 0 | 0 | ok |
-| `atividade:almoco` | Almoço | 1467 | 8958 | 6337 | 0 | 0 | ok |
-| `atividade:almoco2` | 2º Horário de Almoço | 1378 | 1588 | 1591 | 0 | 0 | ok |
-| `atividade:livre` | Atividade livre | 1396 | 2937 | 3854 | 0 | 0 | ok |
-| `atividade:aucademia` | Aucademia | 1386 | 332 | 425 | 0 | 0 | ok |
-| `atividade:aulinha` | Aulinha de Disciplina | 1376 | 368 | 425 | 0 | 0 | ok |
-| `atividade:chamada` | Chamada | 1380 | 6083 | 4813 | 0 | 0 | ok |
-| `atividade:checkin-corpo` | Check-in do corpo | 1346 | 5121 | 3865 | 0 | 0 | ok |
-| `atividade:checkin-pert` | Check-in dos pertences | 1319 | 1887 | 1887 | 0 | 0 | ok |
-| `atividade:checkout-corpo` | Check-out do corpinho | 1484 | 4227 | 3675 | 0 | 0 | ok |
-| `atividade:checkout-pert` | Check-out dos pertences | 1349 | 1544 | 1888 | 0 | 0 | ok |
-| `atividade:ea` | Enriquecimento Ambiental (EA) | 1292 | 2440 | 1477 | 0 | 0 | ok |
-| `atividade:escova` | Escova de Dentes | 1347 | 353 | 425 | 0 | 0 | ok |
-| `atividade:foto` | Foto do peludinho | 1306 | 2704 | 3268 | 0 | 0 | ok |
-| `atividade:jogos` | Jogos Cognitivos | 1308 | 353 | 425 | 0 | 0 | ok |
-| `atividade:massagem` | Massagem Dessensibilizadora | 1373 | 386 | 425 | 0 | 0 | ok |
-| `atividade:musicoterapia` | Musicoterapia | 1305 | 2931 | 3854 | 0 | 0 | ok |
-| `atividade:peso` | Peso do peludinho | 1365 | 2377 | 2214 | 0 | 0 | ok |
+| `inicio` | Início | 1289 | 1492 | 1733 | 0 | 0 | ok |
+| `mesa` | O que fazer hoje | 1575 | 453 | 349 | 0 | 1 | ok |
+| `ficha` | Cadastro de Peludinhos | 1485 | 9318 | 8441 | 0 | 0 | ok |
+| `checkin` | Check-in | 1628 | 414 | 376 | 0 | 4 | ok |
+| `conferencia` | Conferência do check-in 2 | 1551 | 434 | 324 | 0 | 1 | ok |
+| `hospedes` | Hóspedes de hoje | 2220 | 8637 | 6829 | 0 | 1 | ok |
+| `cuidadovet` | Cuidado Vet | 1683 | 979 | 969 | 0 | 0 | ok |
+| `hospedagem` | Plantão da noite | 2238 | 6208 | 6126 | 0 | 1 | ok |
+| `gestdia` | Conferência do dia | 1453 | 3028 | 3179 | 0 | 0 | ok |
+| `checkout` | Check-out 5 | 1372 | 1328 | 1056 | 0 | 2 | ok |
+| `checkoutconf` | Check-out com o tutor | 1712 | 759 | 632 | 0 | 2 | ok |
+| `orcamento` | Orçamento de hospedagem | 1354 | 10329 | 10033 | 0 | 0 | ok |
+| `recepcao` | Pendências com o tutor 4 | 1598 | 11374 | 16288 | 0 | 0 | ok |
+| `emporio` | Quem não comeu hoje | 1778 | 3497 | 6458 | 0 | 1 | ok |
+| `reposicao` | Reposições 4 | 1409 | 1476 | 1193 | 0 | 0 | ok |
+| `dashdc` | Lançamentos do dia | 1471 | 1961 | 3473 | 0 | 0 | ok |
+| `vacinas` | Prevenção | 1544 | 8376 | 5604 | 0 | 0 | ok |
+| `alergia` | Conversa com o Tutor | 1358 | 3442 | 5062 | 0 | 6 | ok |
+| `peso` | Peso | 1366 | 190 | 366 | 0 | 0 | ok |
+| `renovacao` | Renovação de planos | 1401 | 1409 | 1174 | 0 | 0 | ok |
+| `paineloperacao` | Painel da Operação | 1338 | 4111 | 2395 | 0 | 0 | ok |
+| `acerto` | Financeiro do plantão | 2408 | 4563 | 4302 | 0 | 0 | ok |
+| `ritmo` | Ritmo do Time | 1711 | 3732 | 2646 | 0 | 0 | ok |
+| `eahist` | Enriquecimento Ambiental | 1341 | 355 | 480 | 0 | 0 | ok |
+| `pessoas` | Time | 1450 | 1104 | 1676 | 0 | 0 | ok |
+| `planodia` | Escala e plano do dia | 1304 | 769 | 1006 | 0 | 0 | ok |
+| `config` | Configurações | 1312 | 983 | 721 | 0 | 0 | ok |
+| `painel` | Painel do Dia | 1380 | 10129 | 6576 | 0 | 0 | ok |
+| `agenda` | Agenda em breve | 1339 | 59 | 339 | 0 | 0 | ok |
+| `relatorios` | Relatórios | 1416 | 7047 | 11031 | 0 | 0 | ok |
+| `turminha:seg` | Segunda · hoje 44 | 1605 | 5593 | 4121 | 0 | 0 | ok |
+| `turminha:ter` | Terça 43 | 1384 | 4931 | 3357 | 0 | 0 | ok |
+| `turminha:qua` | Quarta 45 | 1410 | 5194 | 3795 | 0 | 0 | ok |
+| `turminha:qui` | Quinta 37 | 1425 | 4365 | 3140 | 0 | 0 | ok |
+| `turminha:sex` | Sexta 53 | 1347 | 5968 | 4164 | 0 | 0 | ok |
+| `atividade:agility` | Agility Funcional | 1394 | 356 | 425 | 0 | 0 | ok |
+| `atividade:almoco` | Almoço | 1459 | 7449 | 5296 | 0 | 0 | ok |
+| `atividade:almoco2` | 2º Horário de Almoço | 1508 | 460 | 480 | 0 | 0 | ok |
+| `atividade:livre` | Atividade livre | 1371 | 2526 | 3356 | 0 | 0 | ok |
+| `atividade:aucademia` | Aucademia | 1400 | 332 | 425 | 0 | 0 | ok |
+| `atividade:aulinha` | Aulinha de Disciplina | 1346 | 368 | 425 | 0 | 0 | ok |
+| `atividade:chamada` | Chamada | 1493 | 5968 | 4164 | 0 | 0 | ok |
+| `atividade:checkin-corpo` | Check-in do corpo | 1515 | 4371 | 3632 | 0 | 0 | ok |
+| `atividade:checkin-pert` | Check-in dos pertences | 1565 | 1438 | 1629 | 0 | 0 | ok |
+| `atividade:checkout-corpo` | Check-out do corpinho | 1561 | 3680 | 3500 | 0 | 0 | ok |
+| `atividade:checkout-pert` | Check-out dos pertences | 1428 | 1375 | 1612 | 0 | 0 | ok |
+| `atividade:ea` | Enriquecimento Ambiental (EA) | 1446 | 2451 | 1477 | 0 | 0 | ok |
+| `atividade:escova` | Escova de Dentes | 1478 | 353 | 425 | 0 | 0 | ok |
+| `atividade:foto` | Foto do peludinho | 1366 | 4187 | 4877 | 0 | 0 | ok |
+| `atividade:jogos` | Jogos Cognitivos | 1607 | 353 | 425 | 0 | 0 | ok |
+| `atividade:massagem` | Massagem Dessensibilizadora | 1439 | 386 | 425 | 0 | 0 | ok |
+| `atividade:musicoterapia` | Musicoterapia | 1463 | 2520 | 3356 | 0 | 0 | ok |
+| `atividade:peso` | Peso do peludinho | 1450 | 3659 | 3262 | 0 | 0 | ok |
 
 ## Ruído do ambiente (não reprova)
 
@@ -334,8 +341,10 @@ Estes erros são do laboratório, não do app:
 
 | Mensagem | Vezes |
 |---|---:|
-| `[2026-09-04T20:29:16.006Z]  @firebase/app-check: FirebaseError: AppCheck: ReCAPT` | 1 |
-| `[2026-09-04T20:30:00.854Z]  @firebase/app-check: FirebaseError: AppCheck: ReCAPT` | 1 |
-| `[2026-09-04T20:30:45.741Z]  @firebase/app-check: FirebaseError: AppCheck: ReCAPT` | 1 |
-| `[2026-09-04T20:32:10.272Z]  @firebase/app-check: FirebaseError: AppCheck: ReCAPT` | 1 |
+| `[2026-09-05T03:44:09.826Z]  @firebase/app-check: FirebaseError: AppCheck: ReCAPT` | 1 |
+| `[2026-09-05T03:45:14.767Z]  @firebase/app-check: FirebaseError: AppCheck: ReCAPT` | 1 |
+| `[2026-09-05T03:46:14.289Z]  @firebase/app-check: FirebaseError: AppCheck: ReCAPT` | 1 |
+| `[2026-09-05T03:47:14.525Z]  @firebase/app-check: FirebaseError: AppCheck: ReCAPT` | 1 |
+| `[2026-09-05T03:48:03.531Z]  @firebase/app-check: FirebaseError: AppCheck: ReCAPT` | 1 |
+| `[2026-09-05T03:49:03.544Z]  @firebase/app-check: FirebaseError: AppCheck: ReCAPT` | 1 |
 
