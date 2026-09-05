@@ -4539,7 +4539,14 @@ async function main() {
     check('urgAvisar existe e faz dedup por dia via transaction (nao repete o mesmo alerta)',
       (html.match(/function urgAvisar/g)||[]).length === 1 &&
       /daycare\/urgencias-enviadas\/'\+dia\+'\/'\+ck\)\.transaction/.test(html) &&
-      /grupo:'urgencia'/.test(html));
+      // 05/set: a porta ganhou o grupo como 3º argumento — 'urgencia' segue o padrão
+      // (nenhum chamador antigo muda) e o envio leva o grupo pedido.
+      /grupo=grupo\|\|'urgencia'/.test(html) &&
+      /tgAvisar\(\{grupo:grupo, texto:texto\}\)/.test(html));
+    check('mordida — grupo fora do padrao ganha trava PROPRIA no dedup (vet nao cala urgencia): ck leva o prefixo do grupo',
+      /var ck=\(\(grupo==='urgencia'\)\?'':\(grupo\+'--'\)\)\+String\(chave\)/.test(html));
+    check('mordida — a ocorrencia do check-in do Day Care vai TAMBEM ao grupo da veterinaria (Adriana, 04/set)',
+      /urgAvisar\('corpo-'\+k\+'-'\+\(entrada\?'ent':'sai'\), _txtU, 'vet'\)/.test(html));
     check('entrevista sensivel MIGROU: vai so para urgencias, nao mais para o grupo gestao',
       /urgAvisar\('entrevista-'\+k, texto\)/.test(html));
     check('coco alterado (diarreia OU pastoso) e achado no corpo disparam urgencia',
@@ -8113,6 +8120,309 @@ async function main() {
       ctx.ritmoBR(3.25) === '3,3' && ctx.ritmoArred(3.249) === 3.2
       && /pShow=ritmoArred\(r\.porPet\), mShow=m\?ritmoArred\(m\.media\):null/.test(html)
       && /var pS=ritmoArred\(r\.porPet\), mS=ritmoArred\(m\.media\)/.test(html));
+  }
+  console.log('');
+
+  // ════════════════════════════════════════════════════════════════════════════════
+  // v-06 (05/set/2026) — a fila de 04/set: ocorrências separadas, check-in → vet+urgente,
+  // Time espelhando o menu, Reposições ↔ Lançamentos, restrições em ordem, reenvio 03/09.
+  // ════════════════════════════════════════════════════════════════════════════════
+
+  // Banco de mentira COM push (repGravar e dashLancar usam push): tree store + chaves p1, p2…
+  function criarDBComPush(seed) {
+    var base = criarDBFake(seed);
+    var seq = 0;
+    var refOrig = base.ref.bind(base);
+    base.ref = function (p) {
+      var r = refOrig(p);
+      r.push = function (v) {
+        var key = 'p' + (++seq);
+        var filho = refOrig(p + '/' + key);
+        filho.key = key;
+        if (v !== undefined) return filho.set(v).then(function () { return filho; });
+        return filho;
+      };
+      return r;
+    };
+    return base;
+  }
+
+  // ---- Tarefa 1: ocorrência do Day Care FORA da lista dos hóspedes -----------------
+  console.log('v-06 · Tarefa 1 — "o que é da hospedagem fica na hospedagem":');
+  {
+    check('a tela da Recepção tem DUAS seções: "Ocorrências dos hóspedes" e "Ocorrências do Day Care"',
+      /<h2[^>]*>Ocorrências dos hóspedes<\/h2>/.test(html) &&
+      /<h2[^>]*>Ocorrências do Day Care<\/h2>/.test(html) &&
+      /id="ocorrRecepcaoList"/.test(html) && /id="ocorrDayCareRecepcaoList"/.test(html));
+    check('mordida — o render NÃO concatena mais loja+daycare numa lista só',
+      !/ocorrenciasLoja\(\)\.concat\(ocorrenciasDayCare\(\)\)/.test(html));
+    // Comportamento: cada ocorrência cai na SUA seção — o critério é o nó onde nasceu.
+    const bkpLoja = ctx.ocorrenciasLoja, bkpDc = ctx.ocorrenciasDayCare, gidT1 = ctx.document.getElementById;
+    const elHosp = { innerHTML: '' }, elDc = { innerHTML: '' };
+    try {
+      ctx.ocorrenciasLoja = () => [{ estadiaId: 'e1', ocId: 'o1', pet: 'Theo', tutor: 'Renata',
+        texto: 'mancando da pata direita', quem: 'Giulia', ts: 2, avisado: null }];
+      ctx.ocorrenciasDayCare = () => [{ estadiaId: 'dc:2026-09-05', ocId: 'd1', pet: 'Ozzy', tutor: 'Paula',
+        texto: 'check-in de entrada: Orelhas: vermelhidão', quem: 'Wandela', ts: 3, avisado: null, daycare: true }];
+      ctx.document.getElementById = (id) =>
+        (id === 'ocorrRecepcaoList' ? elHosp : (id === 'ocorrDayCareRecepcaoList' ? elDc : gidT1(id)));
+      ctx.renderOcorrenciasRecepcao();
+      check('mordida — a lista dos HÓSPEDES tem só a ocorrência nascida na AuAulândia (Theo, sem Ozzy)',
+        /Theo/.test(elHosp.innerHTML) && !/Ozzy/.test(elHosp.innerHTML), elHosp.innerHTML.slice(0, 160));
+      check('mordida — a ocorrência nascida no Day Care (mesmo de quem participa de dia) vai para a seção do Day Care',
+        /Ozzy/.test(elDc.innerHTML) && !/Theo/.test(elDc.innerHTML), elDc.innerHTML.slice(0, 160));
+      check('as duas seções continuam com o desfecho na mão (botão "Avisei o tutor" nos dois lados)',
+        /Avisei o tutor/.test(elHosp.innerHTML) && /Avisei o tutor/.test(elDc.innerHTML));
+    } finally {
+      ctx.ocorrenciasLoja = bkpLoja; ctx.ocorrenciasDayCare = bkpDc; ctx.document.getElementById = gidT1;
+    }
+  }
+  console.log('');
+
+  // ---- Tarefa 2: check-in do Day Care → grupo da veterinária + grupo URGENTE -------
+  console.log('v-06 · Tarefa 2 — a ocorrência do check-in avisa a vet E o urgente, pela mesma porta:');
+  if (typeof ctx.urgAvisar === 'function') {
+    const bkpDBv = getDB();
+    const enviosV = [], guardadosV = [];
+    vm.runInContext(`
+      __bkpV = { cfg: tgCfgPronta, grupo: tgGrupoNaPonte, avisar: tgAvisar, med: medTgGuardar, audit: audit, dia: dcDataKey };
+      tgCfgPronta = function(){ return Promise.resolve({url:'https://ponte.fake'}); };
+      tgAvisar = function(o){ __enviosV.push(o); return Promise.resolve({ok:true}); };
+      medTgGuardar = function(t,e,g){ __guardadosV.push({texto:t, erro:e, grupo:g}); };
+      audit = function(){};
+      dcDataKey = function(){ return '2026-09-05'; };
+      tgGrupoNaPonte = function(nome){ return Promise.resolve(true); };
+    `, Object.assign(ctx, { __enviosV: enviosV, __guardadosV: guardadosV }));
+    try {
+      const dbV = criarDBFake({});
+      setDB(dbV);
+      const rA = await ctx.urgAvisar('corpo-serena__ana-ent', 'CORPO — Serena');
+      const rB = await ctx.urgAvisar('corpo-serena__ana-ent', 'CORPO — Serena', 'vet');
+      await drenar();
+      check('mordida — a MESMA chave sai para os DOIS grupos (a trava de um não cala o outro)',
+        rA === true && rB === true && enviosV.length === 2 &&
+        enviosV[0].grupo === 'urgencia' && enviosV[1].grupo === 'vet', JSON.stringify(enviosV));
+      const travas = ((dbV.__store.daycare || {})['urgencias-enviadas'] || {})['2026-09-05'] || {};
+      check('mordida — no banco, cada grupo tem a sua trava do dia (chave crua + "vet--"+chave)',
+        !!travas['corpo-serena__ana-ent'] && !!travas['vet--corpo-serena__ana-ent'], JSON.stringify(Object.keys(travas)));
+      enviosV.length = 0;
+      const rC = await ctx.urgAvisar('corpo-serena__ana-ent', 'de novo', 'vet');
+      await drenar();
+      check('dedup por dia vale para a vet também: o mesmo aviso não repete',
+        rC === false && enviosV.length === 0);
+      // Ponte que ainda não conhece o grupo 'vet': fila com o grupo certo e trava desfeita.
+      enviosV.length = 0; guardadosV.length = 0;
+      vm.runInContext("tgGrupoNaPonte = function(nome){ return Promise.resolve(nome==='urgencia'); };", ctx);
+      const rD = await ctx.urgAvisar('corpo-ozzy__paula-ent', 'CORPO — Ozzy', 'vet');
+      await drenar();
+      const travas2 = ((dbV.__store.daycare || {})['urgencias-enviadas'] || {})['2026-09-05'] || {};
+      check('mordida — ponte sem o grupo da vet: NÃO manda, guarda na fila COM o grupo vet, e desfaz a trava',
+        rD === false && enviosV.length === 0 && guardadosV.length === 1 &&
+        guardadosV[0].grupo === 'vet' && /configurad/i.test(guardadosV[0].erro) &&
+        travas2['vet--corpo-ozzy__paula-ent'] === undefined, JSON.stringify(guardadosV));
+    } finally {
+      setDB(bkpDBv);
+      vm.runInContext('tgCfgPronta=__bkpV.cfg; tgGrupoNaPonte=__bkpV.grupo; tgAvisar=__bkpV.avisar; medTgGuardar=__bkpV.med; audit=__bkpV.audit; dcDataKey=__bkpV.dia;', ctx);
+    }
+  } else {
+    check('urgAvisar existe', false, 'função não encontrada');
+  }
+  console.log('');
+
+  // ---- Tarefa 3: a tela Time fala a língua do sidebar ------------------------------
+  console.log('v-06 · Tarefa 3 — Time espelha o menu (grupos e rótulos do sidebar):');
+  {
+    // NAV_PAGINAS_ALL é const na lexical scope do script — ctx.X não alcança; runInContext sim.
+    vm.runInContext('__navAll = NAV_PAGINAS_ALL; __navKeys = NAV_PAGINAS_KEYS;', ctx);
+    const navAll = ctx.__navAll || [], navKeys = ctx.__navKeys || [];
+    const grupos = navAll.map((g) => g.grp);
+    check('mordida — os grupos são os do menu de hoje (Central Zêluz e suas partes, Operação, Relatórios) — "Gestão" morreu',
+      JSON.stringify(grupos) === JSON.stringify(['Central Zêluz', 'Central Zêluz · AuAulândia',
+        'Central Zêluz · Day Care', 'Central Zêluz · Planos e cobranças', 'Operação', 'Relatórios']),
+      JSON.stringify(grupos));
+    const CHAVES_DE_SEMPRE = ['checkin', 'conferencia', 'recepcao', 'cuidadovet', 'hospedagem', 'checkout',
+      'checkoutconf', 'emporio', 'painel', 'ficha', 'hospedes', 'pessoas', 'renovacao', 'reposicao',
+      'orcamento', 'relatorios'];
+    const chaves = navKeys.slice().sort();
+    check('mordida — as CHAVES são exatamente as 16 de antes: nenhuma permissão nova nasceu, nenhuma sumiu',
+      JSON.stringify(chaves) === JSON.stringify(CHAVES_DE_SEMPRE.slice().sort()), JSON.stringify(chaves));
+    // Cada rótulo da tela Time é O MESMO que o sidebar mostra para aquele data-v.
+    const rotuloDoMenu = (k) => {
+      const m = html.match(new RegExp('<a[^>]*data-v="' + k + '"[^>]*>[\\s\\S]*?<\\/a>'));
+      if (!m) return null;
+      const spans = m[0].match(/<span>([^<]+)<\/span>/g) || [];
+      const ultimo = spans.length ? spans[spans.length - 1] : '';
+      return ultimo.replace(/<\/?span>/g, '');
+    };
+    const divergem = [];
+    navAll.forEach((g) => g.itens.forEach((it) => {
+      const doMenu = rotuloDoMenu(it.k);
+      if (doMenu !== it.t) divergem.push(it.k + ': Time="' + it.t + '" menu="' + doMenu + '"');
+    }));
+    check('mordida — rótulo por rótulo, a tela Time diz o que o sidebar diz (Orçamento e Reposições incluídos)',
+      divergem.length === 0, divergem.join(' | '));
+    check('Orçamento e Reposições estão concedíveis (a queixa "Não tem Orçamento... Reposições nada")',
+      navKeys.indexOf('orcamento') >= 0 && navKeys.indexOf('reposicao') >= 0);
+  }
+  console.log('');
+
+  // ---- Tarefa 4: lançar Reposição ABATE 1 do Banco + texto pronto ao tutor ---------
+  console.log('v-06 · Tarefa 4 — Reposições e Lançamentos do dia conversam:');
+  if (typeof ctx.dashLancar === 'function' && typeof ctx.dashRepAbater === 'function') {
+    const t4 = { espelhos: [], audits: [], escolhas: [], modais: [] };
+    const dbT4 = criarDBComPush({});
+    ctx.__t4 = t4; ctx.__t4db = dbT4;
+    vm.runInContext(`
+      __bkpT4 = { PEL: PELUDINHOS, REPO: REPO_CACHE, DB: DB, dados: DASH_DADOS, diaSel: DASH_DIA_SEL,
+        esp: dashEspelhar, rd: renderDash, au: audit, zes: zEscolha, modal: repMsgModal,
+        cad: pelCadCache, turma: DC_DASH_TURMA };
+      PELUDINHOS = [{ n: 'Serena', raca: 'SRD', tutor: 'Ana Flávia' }];
+      pelCadCache = { 'serena__ana flávia': { sexo: 'Fêmea' } };
+      REPO_CACHE = { 'serena__ana flávia': { lancamentos: {
+        a: { tipo: 'credito' }, b: { tipo: 'credito' }, c: { tipo: 'credito' }, d: { tipo: 'credito' } } } };
+      DASH_DADOS = {}; DASH_DIA_SEL = '2026-09-04'; DC_DASH_TURMA = { reposicao: [], avulso: [], quando: 0, dia: '' };
+      dashEspelhar = function(){ __t4.espelhos.push(Array.prototype.slice.call(arguments)); return Promise.resolve({ ok: true }); };
+      renderDash = function(){}; audit = function(a, m){ __t4.audits.push(a + ' :: ' + m); };
+      zEscolha = function(t, l, bts){ __t4.escolhas.push({ t: t, bts: bts }); };
+      repMsgModal = function(t, l, texto){ __t4.modais.push({ titulo: t, linhas: l, texto: texto }); };
+      DB = __t4db;
+    `, ctx);
+    try {
+      const noRep = 'daycare/reposicao/serena__ana flávia/lancamentos';
+      const lerRep = () => {
+        let c = dbT4.__store;
+        ['daycare', 'reposicao', 'serena__ana flávia', 'lancamentos'].forEach((k) => { c = (c || {})[k]; });
+        return c || {};
+      };
+      // (1) com saldo 4: lança, abate 1 (tipo:'uso') e entrega o texto no molde da Adriana
+      ctx.dashLancar('reposicao', 'Serena/SRD', 0);
+      await drenar(8);
+      const lanc = ((dbT4.__store.daycare || {}).dashboard || {})['2026-09-04'] || {};
+      const usos = Object.keys(lerRep()).map((k) => lerRep()[k]).filter((l) => l.tipo === 'uso');
+      check('mordida — o lançamento entrou nos Lançamentos do dia (2026-09-04)',
+        Object.keys((lanc.reposicao || {})).length === 1, JSON.stringify(lanc));
+      check('mordida — o Banco de Reposições ABATEU 1: um lançamento tipo "uso", com data e rastro de onde veio',
+        usos.length === 1 && usos[0].data === '2026-09-04' && usos[0].motivo === 'reposicao' &&
+        /Lançamentos do dia/.test(usos[0].obs || ''), JSON.stringify(usos));
+      check('mordida — o texto pronto sai NO MOLDE dela: "tinha 4… usou 1 em 04/09/2026… ficará com 3… pernoite para acerto"',
+        t4.modais.length === 1 && t4.modais[0].texto ===
+        'Ana, a Serena tinha 4 reposições; como usou 1 em 04/09/2026, ficará com 3. ' +
+        'As reposições também podem ser usadas em hospedagem, ficando somente o valor da pernoite para acerto.',
+        JSON.stringify(t4.modais.map((m) => m.texto)));
+      check('a auditoria registra o uso vindo do lançamento',
+        t4.audits.some((a) => /^reposicao-uso :: Serena — abatida pelo lançamento/.test(a)), JSON.stringify(t4.audits));
+      check('com saldo, nenhum cartaz de pergunta atrapalha o fluxo', t4.escolhas.length === 0);
+      // (2) lançar a MESMA de novo: barrado pela trava de duplicado — o saldo não desce duas vezes
+      ctx.dashLancar('reposicao', 'Serena/SRD', 0);
+      await drenar(8);
+      check('mordida — duplicado barrado: continua 1 lançamento e 1 uso (o saldo nunca desce em dobro)',
+        Object.keys((((dbT4.__store.daycare || {}).dashboard || {})['2026-09-04'].reposicao) || {}).length === 1 &&
+        Object.keys(lerRep()).map((k) => lerRep()[k]).filter((l) => l.tipo === 'uso').length === 1);
+      // (3) SEM saldo: pergunta antes; "não lançar" não escreve nada; "lançar mesmo assim" escreve sem abater
+      vm.runInContext("DASH_DADOS = {}; REPO_CACHE = { 'serena__ana flávia': { lancamentos: {} } };", ctx);
+      t4.escolhas.length = 0; t4.modais.length = 0; t4.audits.length = 0;
+      ctx.dashLancar('reposicao', 'Serena/SRD', 0);
+      await drenar(4);
+      const doDia = () => Object.keys((((dbT4.__store.daycare || {}).dashboard || {})['2026-09-04'].reposicao) || {}).length;
+      check('mordida — sem saldo a tela PERGUNTA (zEscolha), e enquanto ninguém responde NADA é gravado',
+        t4.escolhas.length === 1 && /não tem saldo/.test(t4.escolhas[0].t) && doDia() === 1,
+        JSON.stringify(t4.escolhas.map((e) => e.t)));
+      const botoes = (t4.escolhas[0] || {}).bts || [];
+      check('o cartaz dá as duas saídas: "Lançar mesmo assim (sem abater)" e "Não lançar"',
+        botoes.length === 2 && /sem abater/.test(botoes[0].t) && /Não lançar/.test(botoes[1].t));
+      if (botoes[0] && botoes[0].fn) botoes[0].fn();
+      await drenar(8);
+      check('mordida — "lançar mesmo assim" escreve o lançamento e NÃO mexe no Banco (nenhum uso novo além do 1º teste)',
+        doDia() === 2 &&
+        Object.keys(lerRep()).map((k) => lerRep()[k]).filter((l) => l.tipo === 'uso').length === 1 &&
+        t4.audits.some((a) => /SEM saldo/.test(a)), JSON.stringify(t4.audits));
+      // (4) SEM ficha casada: pergunta antes, com a saída "é novo/não achei" sempre à mão
+      t4.escolhas.length = 0;
+      vm.runInContext('DASH_DADOS = {};', ctx);
+      ctx.dashLancar('reposicao', 'Zeblon/SRD');
+      await drenar(4);
+      check('mordida — texto que não casa com o cadastro NÃO abate no escuro: cartaz "Não achei a ficha"',
+        t4.escolhas.length === 1 && /Não achei a ficha/.test(t4.escolhas[0].t), JSON.stringify(t4.escolhas.map((e) => e.t)));
+      // (5) o texto flexiona: 1 reposição → "ficará sem reposições", macho → artigo "o"
+      vm.runInContext("pelCadCache = { 'serena__ana flávia': { sexo: 'Macho' } };", ctx);
+      const txt1 = ctx.dashRepMensagemTutor(ctx.PELUDINHOS[0], 1, '2026-09-04');
+      check('molde flexiona certo no limite: "o Serena tinha 1 reposição; … ficará sem reposições"',
+        /^Ana, o Serena tinha 1 reposição; como usou 1 em 04\/09\/2026, ficará sem reposições\./.test(txt1), txt1);
+    } finally {
+      vm.runInContext('PELUDINHOS=__bkpT4.PEL; REPO_CACHE=__bkpT4.REPO; DB=__bkpT4.DB; DASH_DADOS=__bkpT4.dados;'
+        + 'DASH_DIA_SEL=__bkpT4.diaSel; dashEspelhar=__bkpT4.esp; renderDash=__bkpT4.rd; audit=__bkpT4.au;'
+        + 'zEscolha=__bkpT4.zes; repMsgModal=__bkpT4.modal; pelCadCache=__bkpT4.cad; DC_DASH_TURMA=__bkpT4.turma;', ctx);
+    }
+  } else {
+    check('dashLancar e dashRepAbater existem', false, 'funções não encontradas');
+  }
+  console.log('');
+
+  // ---- Tarefa 5: restrições em ORDEM ALFABÉTICA ------------------------------------
+  console.log('v-06 · Tarefa 5 — a lista de restrições sai em ordem alfabética:');
+  {
+    check('mordida — dashAutoCalcular ordena aulunosRestr e hospRestr com localeCompare pt-BR',
+      /\['aulunosRestr','hospRestr'\]\.forEach\(function\(k\)\{\s*\n?\s*out\[k\]\.sort\(function\(a,b\)\{ return String\(a\)\.localeCompare\(String\(b\),'pt-BR',\{sensitivity:'base'\}\); \}\);/.test(html));
+    const amanha = ctx.orcMaisDias(ctx.zHojeISO(), 1);
+    const diaSem = ['dom', 'seg', 'ter', 'qua', 'qui', 'sex', 'sab'][new Date(amanha + 'T12:00:00').getDay()];
+    vm.runInContext(`
+      __bkpT5 = { PEL: PELUDINHOS, cad: pelCadCache, REPO: REPO_CACHE };
+      PELUDINHOS = [
+        { n: 'Zara',  raca: 'SRD', tutor: 'T1', dias: ['${diaSem}'] },
+        { n: 'Mel',   raca: 'SRD', tutor: 'T2', dias: ['${diaSem}'] },
+        { n: 'Bella', raca: 'SRD', tutor: 'T3', dias: ['${diaSem}'] }
+      ];
+      pelCadCache = {
+        'zara__t1':  { restricao: 'alergia a frango' },
+        'mel__t2':   { alergia: 'carne bovina' },
+        'bella__t3': { ea_restr: 'não pode abobrinha, exceto cozida' }
+      };
+      REPO_CACHE = {};
+    `, ctx);
+    try {
+      const out = ctx.dashAutoCalcular(amanha);
+      const nomes = (out.aulunosRestr || []).map((v) => String(v).split(/[\/ ]/)[0]);
+      check('mordida — Bella, Mel, Zara: a ordem é do alfabeto, não do cadastro',
+        JSON.stringify(nomes) === JSON.stringify(['Bella', 'Mel', 'Zara']), JSON.stringify(out.aulunosRestr));
+      check('cada linha continua "Nome/Raça - restrição curta" (a lógica de conteúdo da v-05 não mudou)',
+        (out.aulunosRestr || []).every((v) => / - /.test(v)), JSON.stringify(out.aulunosRestr));
+    } finally {
+      vm.runInContext('PELUDINHOS=__bkpT5.PEL; pelCadCache=__bkpT5.cad; REPO_CACHE=__bkpT5.REPO;', ctx);
+    }
+  }
+  console.log('');
+
+  // ---- Tarefa 6: o reenvio manual manda O DIA ABERTO NA TELA (03/09) ---------------
+  console.log('v-06 · Tarefa 6 — reenviar na tela de 03/09 vai para a planilha de 03/09:');
+  if (typeof ctx.dashReenviar === 'function') {
+    const pontes6 = [];
+    const estado6 = { 'daycare/dashboard/2026-09-03/carrapaticida/eliz':
+      { valor: 'Elizabeth/SRD (PIPETA · NA BOLSA)', hora: '', ts: 1788460240098, planilha_ok: null } };
+    ctx.__db6 = bancoFiel(estado6); ctx.__pontes6 = pontes6;
+    vm.runInContext(`
+      __bkp6 = { DB: DB, chamar: dashPonteChamar, ponte: DASH_PONTE, dados: DASH_DADOS, diaSel: DASH_DIA_SEL, rd: renderDash, al: zAlertao };
+      DB = __db6; DASH_PONTE = { url: 'https://script.google.com/x/exec', token: 't' };
+      DASH_DIA_SEL = '2026-09-03';
+      DASH_DADOS = { carrapaticida: { eliz: { valor: 'Elizabeth/SRD (PIPETA · NA BOLSA)', hora: '', ts: 1788460240098, planilha_ok: null } } };
+      dashPonteChamar = function(corpo){ __pontes6.push(corpo); return Promise.resolve({ ok: true }); };
+      renderDash = function(){}; zAlertao = function(){};
+    `, ctx);
+    try {
+      check('mordida — dashReenviar passa o dia EXPLÍCITO (dashDia()) ao dashEspelhar',
+        /dashEspelhar\(k,id,reg,'lancar',dashDia\(\)\)/.test(html));
+      ctx.dashReenviar('carrapaticida', 'eliz', null);
+      await drenar(6);
+      check('mordida — o clique em "reenviar" com a tela em 03/09 manda dia=2026-09-03, coluna Carrapaticida, a Elizabeth',
+        pontes6.length === 1 && pontes6[0].dia === '2026-09-03' && pontes6[0].coluna === 'Carrapaticida' &&
+        /Elizabeth/.test(pontes6[0].valor || ''), JSON.stringify(pontes6[0]));
+      const dep6 = estado6['daycare/dashboard/2026-09-03/carrapaticida/eliz'] || {};
+      check('e a confirmação entra no nó do dia 03/09 (planilha_ok=true)', dep6.planilha_ok === true, JSON.stringify(dep6));
+    } finally {
+      vm.runInContext('DB=__bkp6.DB; dashPonteChamar=__bkp6.chamar; DASH_PONTE=__bkp6.ponte; DASH_DADOS=__bkp6.dados;'
+        + 'DASH_DIA_SEL=__bkp6.diaSel; renderDash=__bkp6.rd; zAlertao=__bkp6.al;', ctx);
+    }
+  } else {
+    check('dashReenviar existe', false, 'função não encontrada');
   }
   console.log('');
 

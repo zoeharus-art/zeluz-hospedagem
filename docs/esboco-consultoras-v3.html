@@ -1,0 +1,1210 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sistema Zêluz — Day Care &amp; AuAulândia</title>
+
+<!-- Símbolo oficial #39 (SVG real) também como ícone da aba -->
+<link rel="icon" type="image/svg+xml" href="assets/simbolo-zeluz-39.svg">
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+
+<!-- Fonte única de tokens do Design System Zêluz v8.1 -->
+<link rel="stylesheet" href="../../code/docs/zeluz/branding/zeluz-ds-v8/shared/tokens.css">
+
+<style>
+/* ============================================================
+   cópia dos tokens do DS v8 para o esboço abrir sozinho
+   (se o <link> acima não resolver, estes valores mantêm a peça
+   correta; nenhum valor novo — todos vêm de shared/tokens.css)
+   ============================================================ */
+:root{
+  --z-gold:#DEB428;
+  --z-gold-light:#E5C353;
+  --z-gold-deep:#B8961F;
+  --z-blue:#234D67;
+  --z-blue-deep:#1A3A4F;
+  --z-blue-soft:#3A6A85;
+  --z-cream:#FFFDF6;
+  --z-cream-warm:#F9F5EC;
+  --z-white:#FFFFFF;
+
+  --z-gold-wash-08:rgba(222,180,40,.08);
+  --z-gold-wash-12:rgba(222,180,40,.12);
+  --z-gold-wash-20:rgba(222,180,40,.20);
+  --z-blue-wash-06:rgba(35,77,103,.06);
+  --z-blue-wash-10:rgba(35,77,103,.10);
+  --z-blue-wash-15:rgba(35,77,103,.15);
+
+  --z-gray-200:#EEEDE9;
+  --z-gray-300:#DDDCD8;
+  --z-gray-400:#B5B4B0;
+  --z-gray-500:#8A8985;
+  --z-gray-600:#6B6A66;
+
+  --crm-critico:#C0392B;
+  --crm-critico-soft:rgba(192,57,43,.12);
+  --crm-critico-text:#9B2C2C;
+  --crm-atencao-soft:rgba(241,196,15,.18);
+  --crm-atencao-text:#8A6D00;
+  --crm-ok:#27AE60;
+  --crm-ok-soft:rgba(39,174,96,.12);
+  --crm-ok-text:#1E8449;
+  --crm-info:#2980B9;
+  --crm-info-soft:rgba(41,128,185,.12);
+  --crm-info-text:#1F618D;
+
+  --z-auaulandia:#5AABB5;
+  --z-vetcare:#2E7D8A;
+
+  --radius-md:12px;
+  --radius-lg:16px;
+  --radius-full:999px;
+  --font-marketing:'Poppins',-apple-system,BlinkMacSystemFont,system-ui,sans-serif;
+  --ease-out:cubic-bezier(0.16,1,0.3,1);
+}
+
+/* ============================================================
+   Derivadas locais do esboço (--p-*), todas a partir dos tokens
+   ============================================================ */
+:root{
+  --p-line:var(--z-blue-wash-10);
+  --p-line-fina:var(--z-blue-wash-06);
+  --p-muted:var(--z-gray-600);
+
+  /* a CAIXA FORTE aprovada na v4/v5: um "lábio" sólido (sombra de
+     deslocamento sem desfoque) que dá corpo de papel empilhado +
+     a sombra difusa tingida de azul um degrau mais funda. */
+  --p-sombra:0 4px 0 var(--z-gray-200),0 10px 28px rgba(35,77,103,.12);
+  --p-sombra-alta:0 6px 0 var(--z-gray-300),0 18px 36px rgba(35,77,103,.16);
+  --p-glow-ouro:0 0 0 6px rgba(222,180,40,.18);
+
+  /* série única de dado = ouro fundo (#B8961F, legível sobre branco);
+     série pendente/estrutura = azul; alerta só em status */
+  --p-dado-ouro:var(--z-gold-deep);
+  --p-dado-azul:var(--z-blue);
+  --p-dado-alerta:var(--crm-critico);
+  --p-trilho:rgba(35,77,103,.08);
+
+  /* paradas tonais da barra lateral (Opção F, escolhida pela Adriana
+     em 29/ago) — a ÚNICA superfície tratada da peça, nunca cor crua */
+  --p-barra-1:#20475F;
+  --p-barra-2:var(--z-blue-deep);
+  --p-barra-3:#15303F;
+}
+
+/* ============================================================
+   BASE
+   ============================================================ */
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{-webkit-text-size-adjust:100%}
+body{
+  font-family:var(--font-marketing);
+  background:var(--z-cream);
+  color:var(--z-blue);
+  font-size:14px;
+  line-height:1.5;
+  overflow-x:hidden;
+}
+img,svg{display:block;max-width:100%}
+button{font-family:inherit;background:none;border:none;cursor:pointer;color:inherit}
+a{color:inherit;text-decoration:none}
+
+/* ============================================================
+   HOLOGRAMA DE ENTRADA — só CSS, 900ms, uma vez
+   ============================================================ */
+.holo{
+  position:fixed;inset:0;z-index:200;display:grid;place-items:center;
+  background:var(--z-cream);overflow:hidden;pointer-events:none;
+  animation:holoSai 900ms var(--ease-out) forwards;
+}
+.holo img{width:118px;height:auto;animation:holoEntra 700ms var(--ease-out) both}
+.holo::after{
+  content:"";position:absolute;top:0;bottom:0;left:0;width:100%;
+  background:linear-gradient(105deg,rgba(222,180,40,0) 42%,rgba(222,180,40,.34) 50%,rgba(222,180,40,0) 58%);
+  animation:holoVarre 900ms var(--ease-out) both;
+}
+@keyframes holoEntra{
+  0%{opacity:0;transform:scale(.86);filter:blur(7px)}
+  55%{opacity:1;filter:blur(0)}
+  100%{opacity:1;transform:scale(1)}
+}
+@keyframes holoVarre{0%{transform:translateX(-72%)}100%{transform:translateX(72%)}}
+@keyframes holoSai{0%,72%{opacity:1}100%{opacity:0}}
+
+/* ============================================================
+   BARRA SUPERIOR (celular) — a mesma superfície tratada da lateral
+   ============================================================ */
+.topo{
+  position:sticky;top:0;z-index:60;padding:11px 14px;
+  color:var(--z-cream);
+  background:
+    radial-gradient(120% 60% at 20% 0%,rgba(222,180,40,.13),transparent 64%),
+    linear-gradient(168deg,var(--p-barra-1) 0%,var(--p-barra-2) 48%,var(--p-barra-3) 100%);
+}
+.topo-linha{display:flex;align-items:center;gap:11px}
+.topo-nome{font-size:15px;font-weight:600;letter-spacing:-.01em;min-width:0}
+.topo-nome small{display:block;font-size:11px;font-weight:500;opacity:.66}
+.hamb{
+  margin-left:auto;flex:0 0 auto;width:42px;height:42px;border-radius:12px;
+  display:flex;align-items:center;justify-content:center;
+  background:rgba(255,253,246,.10);color:var(--z-cream);
+}
+.hamb svg{width:22px;height:22px}
+
+/* ============================================================
+   BARRA LATERAL — "a trilha do cuidado" (herdada da v5, aprovada)
+   ============================================================ */
+.veu{
+  position:fixed;inset:0;z-index:70;background:rgba(26,58,79,.44);
+  opacity:0;pointer-events:none;transition:opacity 220ms var(--ease-out);
+}
+.veu.aberta{opacity:1;pointer-events:auto}
+.lateral{
+  display:flex;flex-direction:column;
+  position:fixed;top:0;bottom:0;left:0;width:272px;max-width:86vw;z-index:80;
+  color:var(--z-cream);overflow:hidden;
+  background:
+    radial-gradient(125% 55% at 22% 0%,rgba(222,180,40,.12),transparent 62%),
+    linear-gradient(168deg,var(--p-barra-1) 0%,var(--p-barra-2) 46%,var(--p-barra-3) 100%);
+  transform:translateX(-100%);
+  transition:transform 260ms var(--ease-out);
+}
+.lateral.aberta{transform:none}
+.lat-marca{flex:0 0 auto;display:flex;justify-content:center;padding:26px 16px 8px}
+/* o símbolo respira direto sobre o fundo da barra — nunca dentro de caixa */
+.lat-marca img{width:96px;height:auto;filter:drop-shadow(0 3px 10px rgba(26,58,79,.45))}
+.lat-sub{flex:0 0 auto;text-align:center;font-size:11px;letter-spacing:.9px;opacity:.62;font-weight:500;margin-bottom:12px}
+.lat-nav{flex:1 1 auto;min-height:0;overflow-y:auto;padding:6px 12px 12px}
+.lat-nav a,.lat-nav button{
+  display:flex;align-items:center;gap:11px;padding:10px 13px;border-radius:11px;
+  width:100%;text-align:left;
+  color:var(--z-cream);font-size:14px;font-weight:500;opacity:.82;
+  margin-bottom:2px;line-height:1.3;transition:background 160ms var(--ease-out),opacity 160ms var(--ease-out);
+}
+.lat-nav a:hover,.lat-nav button:hover{background:rgba(255,253,246,.07);opacity:1}
+.lat-nav a svg,.lat-nav button svg{width:18px;height:18px;flex:0 0 auto}
+/* nível 1 — CATEGORIA */
+.lat-nav .cat{
+  font-size:17px;font-weight:700;opacity:1;letter-spacing:-.01em;
+  margin:14px 0 0;padding:11px 12px;border-radius:12px;
+  background:rgba(255,253,246,.045);border-top:1px solid rgba(255,255,255,.12);
+}
+.lat-nav .cat > svg:first-child{color:var(--z-gold)}
+.lat-nav .cat:hover{background:rgba(255,253,246,.09)}
+/* nível 2 — SUB-CABEÇALHO */
+.lat-nav .sub2{
+  font-size:15px;font-weight:700;color:var(--z-gold);opacity:1;letter-spacing:.3px;
+  margin:8px 0 2px;padding:8px 12px 8px 14px;border-radius:9px;gap:8px;
+}
+/* nível 3 — ITEM */
+.lat-nav a.filho{margin-left:22px;padding-left:12px;
+  border-left:2px solid rgba(222,180,40,.30);border-radius:0 11px 11px 0}
+/* ITEM ATIVO — pílula de dourado baixo com fio dourado; nunca bola amarela */
+.lat-nav a.on{position:relative;background:rgba(222,180,40,.13);color:var(--z-gold-light);opacity:1;font-weight:600}
+.lat-nav a.on::before{content:"";position:absolute;left:0;top:5px;bottom:5px;width:3px;border-radius:999px;background:var(--z-gold)}
+.lat-nav a.on svg{color:var(--z-gold)}
+.lat-nav a.solto{margin-top:14px;border-top:1px solid rgba(255,255,255,.12);padding-top:10px;border-radius:0 0 11px 11px}
+.lat-nav .breve{margin-left:auto;font-size:9px;background:rgba(255,253,246,.10);padding:2px 7px;border-radius:999px;font-weight:600;letter-spacing:.3px}
+.lat-quem{flex:0 0 auto;padding:13px 16px 16px;border-top:1px solid rgba(255,253,246,.12)}
+.lat-quem small{display:block;font-size:10px;font-weight:700;letter-spacing:.6px;opacity:.6}
+.lat-quem b{display:block;font-size:14px;font-weight:600;margin-top:4px}
+
+/* ---------- a sanfona ---------- */
+.seta{margin-left:auto;flex:0 0 auto;width:15px;height:15px;opacity:.72;
+  transition:transform 220ms var(--ease-out)}
+.lat-nav [aria-expanded="true"] > .seta{transform:rotate(180deg)}
+.gaveta{overflow:hidden;max-height:0;transition:max-height 280ms var(--ease-out)}
+.gaveta.aberta{max-height:460px}
+
+/* ============================================================
+   CONTEÚDO
+   ============================================================ */
+.conteudo{padding:16px 14px 48px;max-width:100%}
+.cabeca{margin-bottom:18px}
+
+/* ---------- saudação ---------- */
+.saud1{font-size:32px;font-weight:700;color:var(--z-blue);letter-spacing:-.03em;line-height:1.12}
+.saud2{font-size:16px;font-weight:500;color:var(--z-blue);margin-top:8px;line-height:1.45}
+.saud2 b{font-size:21px;font-weight:700;color:var(--z-gold-deep);font-variant-numeric:tabular-nums}
+/* a frase do dia — vibrante, muda por dia da semana (rotação fixa) */
+.saud3{font-size:15px;font-weight:400;font-style:italic;color:var(--z-blue);margin-top:9px;line-height:1.55;max-width:60ch}
+.entra.tarde{transition-delay:200ms}
+/* o ORNAMENTO — traço dourado 3px × 40px: o único selo da peça */
+.traco{display:block;height:3px;width:0;border-radius:2px;margin-top:13px;
+  background:linear-gradient(90deg,var(--z-gold),var(--z-gold-deep));
+  transition:width 400ms var(--ease-out)}
+.traco.dentro{width:40px}
+.entra{opacity:0;transform:translateY(12px);transition:opacity 400ms var(--ease-out),transform 400ms var(--ease-out)}
+.entra.dentro{opacity:1;transform:none}
+.data{font-size:12px;font-weight:500;color:var(--p-muted);margin-top:14px}
+
+.nota{
+  font-size:12.5px;font-weight:500;color:var(--p-muted);
+  border-left:3px solid var(--z-gold);padding:6px 0 6px 12px;margin:0 0 16px;
+}
+.nota strong{color:var(--z-blue);font-weight:600}
+
+/* ---------- cabeçalho da área ---------- */
+.area-h{display:flex;align-items:flex-start;gap:14px;margin:20px 0 14px}
+.area-st{
+  width:46px;height:46px;flex:0 0 46px;border-radius:14px;
+  display:flex;align-items:center;justify-content:center;
+  background:var(--z-gold-wash-12);color:var(--z-gold-deep);
+}
+.area-st svg{width:28px;height:28px}
+.area-txt{min-width:0;flex:1 1 auto}
+.area-eyebrow{font-size:10.5px;font-weight:700;letter-spacing:.14em;color:var(--z-gold-deep)}
+.area-t{font-size:26px;font-weight:700;color:var(--z-blue);letter-spacing:-.03em;line-height:1.15;margin-top:3px}
+.area-sub{font-size:13.5px;font-weight:500;color:var(--p-muted);margin-top:5px;max-width:76ch;line-height:1.5}
+
+/* ============================================================
+   GRID 12 COLUNAS
+   ============================================================ */
+.grid{display:grid;grid-template-columns:1fr;gap:12px;align-items:start}
+.c5,.c6,.c7,.c12{grid-column:auto}
+
+/* ============================================================
+   CARD — a caixa forte
+   ============================================================ */
+.card{
+  position:relative;background:var(--z-white);
+  border:1px solid var(--p-line-fina);
+  border-top:3px solid var(--z-gold-wash-20);
+  border-radius:var(--radius-lg);
+  padding:17px 16px 16px;box-shadow:var(--p-sombra);
+  transition:transform 200ms var(--ease-out),box-shadow 200ms var(--ease-out);
+  min-width:0;
+}
+.card:hover{transform:translateY(-3px);box-shadow:var(--p-sombra-alta)}
+.grid > .par{align-self:stretch}
+.tit{font-size:20px;font-weight:700;color:var(--z-blue);letter-spacing:-.025em;line-height:1.22;padding-right:80px}
+.sub{font-size:13.5px;font-weight:500;color:var(--p-muted);margin-top:5px;line-height:1.45}
+.rot{font-size:13px;font-weight:500;color:var(--p-muted)}
+.tag{
+  position:absolute;top:16px;right:14px;
+  font-size:9.5px;font-weight:700;color:var(--p-muted);
+  border:1px solid var(--p-line);border-radius:var(--radius-full);padding:2px 8px;
+  letter-spacing:.02em;
+}
+
+/* ============================================================
+   NÚMEROS — KPI 36px; hero 44px (um só por peça)
+   ============================================================ */
+.kpi{font-size:36px;font-weight:700;color:var(--z-blue);line-height:1.02;letter-spacing:-.04em;font-variant-numeric:tabular-nums}
+.kpi.ouro{color:var(--z-gold-deep)}
+.kpi.alerta{color:var(--crm-critico-text)}
+.kpi.hero{font-size:44px}
+.kpi-linha{display:grid;grid-template-columns:repeat(2,1fr);gap:14px;margin-top:15px}
+.kpi-bloco{min-width:0}
+.kpi-bloco .rot{margin-top:3px}
+
+/* ---------- cabeçalho do card de alerta (número grande + semáforo) ---------- */
+.alerta-h{display:flex;align-items:flex-end;gap:14px;flex-wrap:wrap;margin-top:15px}
+.alerta-h .kpi{line-height:1}
+
+/* ---------- badge alpha (semáforo) ---------- */
+.badge{
+  display:inline-flex;align-items:center;gap:6px;
+  padding:3px 10px;border-radius:var(--radius-full);
+  font-size:11.5px;font-weight:700;white-space:nowrap;
+}
+.b-critico{background:var(--crm-critico-soft);color:var(--crm-critico-text)}
+.b-atencao{background:var(--crm-atencao-soft);color:var(--crm-atencao-text)}
+.b-ok{background:var(--crm-ok-soft);color:var(--crm-ok-text)}
+.b-info{background:var(--crm-info-soft);color:var(--crm-info-text)}
+.li .badge{flex:0 0 auto;align-self:flex-start}
+
+/* ---------- ponto ao vivo ---------- */
+.vivo{width:8px;height:8px;border-radius:50%;background:var(--crm-ok);flex:0 0 auto;animation:pulso 1.6s ease-in-out infinite}
+@keyframes pulso{0%,100%{opacity:1;box-shadow:0 0 0 0 rgba(39,174,96,.35)}50%{opacity:.55;box-shadow:0 0 0 5px rgba(39,174,96,0)}}
+
+/* ============================================================
+   PROGRESS PILL (8px)
+   ============================================================ */
+.pill{height:8px;border-radius:var(--radius-full);background:var(--p-trilho);overflow:hidden;margin-top:14px}
+.pill i{display:block;height:100%;width:0;border-radius:var(--radius-full);
+  background:linear-gradient(180deg,var(--z-gold-light),var(--z-gold-deep));
+  transition:width 500ms var(--ease-out)}
+.pill-rot{display:flex;justify-content:space-between;gap:10px;font-size:12.5px;font-weight:500;color:var(--p-muted);margin-top:8px}
+.pill-rot b{color:var(--z-blue);font-weight:700}
+
+/* ============================================================
+   DONUT — a métrica-âncora (o único glow da peça)
+   ============================================================ */
+.anel-caixa{display:flex;gap:18px;align-items:center;flex-wrap:wrap;margin-top:16px}
+.anel{position:relative;width:132px;height:132px;flex:0 0 132px;border-radius:50%;box-shadow:var(--p-glow-ouro)}
+.anel svg{width:132px;height:132px}
+.anel-arco{transition:stroke-dashoffset 700ms var(--ease-out)}
+.anel-mid{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center}
+.anel-mid b{font-size:34px;font-weight:700;color:var(--z-blue);letter-spacing:-.035em;line-height:1;font-variant-numeric:tabular-nums}
+.anel-mid span{font-size:12px;font-weight:500;color:var(--p-muted);margin-top:2px}
+.anel-lado{min-width:0;flex:1 1 190px}
+
+/* ============================================================
+   BARRAS HORIZONTAIS (sólidas, leve 3D)
+   ============================================================ */
+.barras{margin-top:14px;display:grid;gap:9px}
+.barra{display:grid;grid-template-columns:1fr;gap:0;min-width:0}
+.barra-rot{display:flex;justify-content:space-between;gap:8px;font-size:12.5px;font-weight:600;color:var(--z-blue);margin-bottom:4px}
+.barra-rot em{font-style:normal;color:var(--p-muted);font-size:12px;font-weight:500;white-space:nowrap}
+.barra-tr{position:relative;height:10px;border-radius:5px;background:var(--p-trilho);overflow:hidden}
+.barra-tr i{
+  display:block;height:100%;width:0;border-radius:5px;
+  background:linear-gradient(180deg,rgba(255,255,255,.30),rgba(255,255,255,0) 45%),var(--p-dado-azul);
+  box-shadow:inset 0 -1px 0 rgba(35,77,103,.35);
+  transition:width 500ms var(--ease-out);
+}
+.barra-tr.alerta i{background:linear-gradient(180deg,rgba(255,255,255,.30),rgba(255,255,255,0) 45%),var(--p-dado-alerta);box-shadow:inset 0 -1px 0 rgba(35,77,103,.30)}
+
+/* ============================================================
+   BARRA SEGMENTADA (12px) — enviadas × pendentes
+   ============================================================ */
+.segbar{display:flex;gap:2px;height:12px;margin-top:15px;margin-bottom:12px;min-width:0}
+.segbar i{display:block;width:0;height:100%;border-radius:6px;min-width:0;
+  transition:width 500ms var(--ease-out)}
+.seg-ok{
+  background:linear-gradient(180deg,rgba(255,255,255,.30),rgba(255,255,255,0) 45%),var(--p-dado-ouro);
+  box-shadow:inset 0 -1px 0 rgba(35,77,103,.25);
+}
+.seg-meio{
+  background:linear-gradient(180deg,rgba(255,255,255,.30),rgba(255,255,255,0) 45%),var(--p-dado-azul);
+  box-shadow:inset 0 -1px 0 rgba(35,77,103,.30);
+}
+.segleg{display:flex;flex-wrap:wrap;gap:7px 18px;font-size:12.5px;font-weight:500;color:var(--p-muted)}
+.segleg-i{display:inline-flex;align-items:center;gap:7px;white-space:nowrap;min-width:0}
+.segleg-i b{color:var(--z-blue);font-weight:700;font-variant-numeric:tabular-nums}
+.pt{width:9px;height:9px;border-radius:3px;flex:0 0 auto}
+.pt-ok{background:var(--p-dado-ouro)}
+.pt-azul{background:var(--p-dado-azul)}
+
+/* ============================================================
+   LISTAS COMPACTAS (2–3 linhas por card, nunca mais)
+   ============================================================ */
+.lista{margin-top:12px}
+.li{display:flex;gap:9px;align-items:flex-start;padding:8px 0;border-top:1px solid var(--p-line-fina);min-width:0}
+.li:first-child{border-top:none;padding-top:4px}
+.li-txt{min-width:0;flex:1 1 auto}
+.li-txt b{display:block;font-size:13.5px;font-weight:700;color:var(--z-blue)}
+.li-txt span{display:block;font-size:12px;font-weight:500;color:var(--p-muted);margin-top:1px}
+.li-txt .valor{color:var(--z-gold-deep);font-weight:700;font-style:normal;font-variant-numeric:tabular-nums}
+
+/* ============================================================
+   SEU DIA — bem-estar de quem atende (semente da NR-1).
+   v3: refeito como experiência, a pedido da fundadora — copinhos
+   que enchem, anel que fecha, carinhas desenhadas, série de dias
+   e celebração ao completar. A brincadeira mora na INTERAÇÃO;
+   a escrita segue adulta. Estado só em memória — é esboço.
+   ============================================================ */
+.qz{padding:13px 0 12px;border-top:1px solid var(--p-line-fina)}
+.qz-p{font-size:13.5px;font-weight:600;color:var(--z-blue)}
+.ganho{display:inline-block;margin-left:8px;font-size:11.5px;font-weight:700;color:var(--z-gold-deep);
+  opacity:0;transform:translateY(3px);
+  transition:opacity 300ms var(--ease-out),transform 300ms var(--ease-out)}
+.ganho.mostra{opacity:1;transform:none}
+
+/* ---------- a série (streak) ---------- */
+.serie{display:flex;align-items:center;gap:11px;margin-top:14px;padding:11px 12px 10px;
+  border:1px solid rgba(222,180,40,.35);border-radius:var(--radius-md);background:var(--z-gold-wash-08)}
+.serie-chama{width:32px;height:32px;flex:0 0 auto;color:var(--z-gold-deep)}
+.serie-chama svg{width:100%;height:100%}
+.serie-chama .chama-miolo{fill:var(--z-gold-light)}
+.serie-chama.acesa{animation:chamaPulsa 2.2s ease-in-out infinite;transform-origin:50% 85%}
+@keyframes chamaPulsa{0%,100%{transform:scale(1)}50%{transform:scale(1.08)}}
+.serie-txt{min-width:0;flex:1 1 auto}
+.serie-txt b{display:block;font-size:13.5px;font-weight:700;color:var(--z-blue);line-height:1.3}
+.serie-txt span{display:block;font-size:11.5px;font-weight:500;color:var(--p-muted);margin-top:1px}
+.serie-dias{display:flex;justify-content:space-between;gap:4px;margin-top:9px;max-width:300px}
+.dia{display:grid;justify-items:center;gap:3px}
+.dia small{font-size:9.5px;font-weight:700;color:var(--p-muted)}
+.dia-bola{width:20px;height:20px;border-radius:50%;background:var(--p-trilho);display:grid;place-items:center}
+.dia-bola svg{width:10px;height:10px;color:var(--z-white);opacity:0;transition:opacity 250ms var(--ease-out)}
+.dia-bola.feito{background:linear-gradient(180deg,var(--z-gold-light),var(--z-gold-deep))}
+.dia-bola.feito svg{opacity:1}
+.dia-bola.hoje{background:var(--z-white);border:2px solid var(--z-gold);animation:hojeChama 1.8s ease-in-out infinite}
+.dia-bola.hoje.feito{border:none;background:linear-gradient(180deg,var(--z-gold-light),var(--z-gold-deep));animation:none}
+@keyframes hojeChama{0%,100%{box-shadow:0 0 0 0 rgba(222,180,40,.35)}50%{box-shadow:0 0 0 4px rgba(222,180,40,0)}}
+
+/* ---------- água: copinhos que enchem ---------- */
+.copos{display:flex;gap:6px;margin-top:10px}
+.copo{width:34px;height:44px;padding:0;flex:0 0 auto;transition:transform 160ms var(--ease-out)}
+.copo:active{transform:scale(.92)}
+.copo svg{width:100%;height:100%;overflow:visible}
+.copo .agua{fill:var(--z-auaulandia);transform:scaleY(0);transform-origin:50% 100%;transform-box:fill-box;
+  transition:transform 300ms var(--ease-out)}
+.copo.cheio .agua{transform:scaleY(1)}
+.copo .vidro{fill:none;stroke:var(--z-gray-400);stroke-width:2.4;stroke-linejoin:round;
+  transition:stroke 200ms var(--ease-out)}
+.copo.cheio .vidro{stroke:var(--z-blue-soft)}
+.copo.pula{animation:copoPula 320ms var(--ease-out)}
+@keyframes copoPula{0%{transform:scale(1)}45%{transform:scale(1.12)}100%{transform:scale(1)}}
+.copos-rot{font-size:12px;font-weight:500;color:var(--p-muted);margin-top:7px}
+.copos-rot b{color:var(--z-gold-deep);font-weight:700;font-variant-numeric:tabular-nums}
+
+/* ---------- pausa: anel que fecha + check que se desenha ---------- */
+.pausa{display:flex;align-items:center;gap:13px;margin-top:10px}
+.pausa-anel{width:56px;height:56px;flex:0 0 auto;border-radius:50%;padding:0}
+.pausa-anel svg{width:56px;height:56px}
+.pausa-trilho{fill:none;stroke:var(--z-blue-wash-15);stroke-width:5}
+.pausa-arco{fill:none;stroke:url(#ouroAnel);stroke-width:5;stroke-linecap:round;
+  stroke-dasharray:151;stroke-dashoffset:151;transition:stroke-dashoffset 350ms var(--ease-out)}
+.pausa.feita .pausa-arco{stroke-dashoffset:0}
+.pausa-check{fill:none;stroke:var(--z-gold-deep);stroke-width:3.5;stroke-linecap:round;stroke-linejoin:round;
+  stroke-dasharray:30;stroke-dashoffset:30;transition:stroke-dashoffset 260ms var(--ease-out) 320ms}
+.pausa.feita .pausa-check{stroke-dashoffset:0}
+.pausa-txt{min-width:0}
+.pausa-txt b{display:block;font-size:12.5px;font-weight:700;color:var(--z-blue)}
+.pausa-txt span{display:block;font-size:11.5px;font-weight:500;color:var(--p-muted);margin-top:1px}
+
+/* ---------- como você está: carinhas desenhadas ---------- */
+.humores{display:flex;gap:12px;margin-top:10px}
+.humor{display:grid;justify-items:center;gap:5px;padding:0;flex:0 0 auto}
+.humor svg{width:46px;height:46px;color:var(--z-gray-500);transition:color 200ms var(--ease-out)}
+.humor .rosto-fundo{fill:var(--z-blue-wash-06);transition:fill 200ms var(--ease-out)}
+.humor small{font-size:11px;font-weight:600;color:var(--p-muted)}
+.humor.marcado svg{animation:humorPula 360ms var(--ease-out)}
+.humor.marcado small{color:var(--z-blue);font-weight:700}
+.humor.marcado.h-bem svg{color:var(--z-gold-deep)}
+.humor.marcado.h-bem .rosto-fundo{fill:var(--z-gold-wash-20)}
+.humor.marcado.h-cansada svg{color:var(--z-blue)}
+.humor.marcado.h-cansada .rosto-fundo{fill:var(--z-blue-wash-15)}
+.humor.marcado.h-sobre svg{color:var(--crm-critico)}
+.humor.marcado.h-sobre .rosto-fundo{fill:var(--crm-critico-soft)}
+@keyframes humorPula{0%{transform:scale(1)}40%{transform:scale(1.16)}70%{transform:scale(.95)}100%{transform:scale(1)}}
+
+/* ---------- rodapé do card: pontos vivos, medalha, dia completo ---------- */
+.qz-rodape{margin-top:12px;padding-top:10px;border-top:1px solid var(--p-line-fina)}
+.qz-pontos{font-size:12.5px;font-weight:500;color:var(--p-muted)}
+.qz-pontos b{font-size:22px;font-weight:700;color:var(--z-gold-deep);font-variant-numeric:tabular-nums}
+.medalha{display:none;align-items:center;gap:10px;margin-top:10px;padding:9px 12px;
+  border-radius:var(--radius-md);border:1px solid rgba(222,180,40,.5);background:var(--z-gold-wash-12)}
+.medalha.ganha{display:flex;animation:medalhaEntra 500ms var(--ease-out)}
+@keyframes medalhaEntra{0%{opacity:0;transform:translateY(8px) scale(.94)}100%{opacity:1;transform:none}}
+.medalha svg{width:26px;height:26px;flex:0 0 auto;color:var(--z-gold-deep)}
+.medalha b{display:block;font-size:12.5px;font-weight:700;color:var(--z-blue)}
+.medalha span{display:block;font-size:11.5px;font-weight:500;color:var(--p-muted)}
+.dia-completo{display:none;align-items:center;gap:10px;margin-top:10px}
+.dia-completo.mostra{display:flex}
+.dia-completo img{width:42px;height:auto;flex:0 0 auto}
+.dia-completo b{font-size:12.5px;font-weight:700;color:var(--z-gold-deep)}
+.qz-honesta{font-size:11.5px;font-weight:500;color:var(--p-muted);line-height:1.5;margin-top:10px}
+
+/* ---------- celebração ao completar as três (máx. 800ms) ---------- */
+.festa{position:absolute;inset:0;z-index:5;display:none;place-items:center;overflow:hidden;
+  pointer-events:none;border-radius:var(--radius-lg)}
+.festa.roda{display:grid}
+.festa-anel{position:absolute;width:130px;height:130px;border-radius:50%;
+  border:5px solid var(--z-gold);opacity:0;animation:festaAnel 700ms var(--ease-out) both}
+@keyframes festaAnel{0%{opacity:.9;transform:scale(.35)}100%{opacity:0;transform:scale(1.5)}}
+.festa-sticker{width:86px;height:auto;filter:drop-shadow(0 6px 14px rgba(35,77,103,.25));
+  animation:festaSticker 800ms var(--ease-out) both}
+@keyframes festaSticker{0%{opacity:0;transform:scale(.4) rotate(-8deg)}
+  35%{opacity:1;transform:scale(1.12) rotate(3deg)}60%{transform:scale(.98)}
+  85%{opacity:1;transform:scale(1)}100%{opacity:0;transform:scale(1)}}
+.festa-pontos{position:absolute;top:22%;font-size:21px;font-weight:800;color:var(--z-gold-deep);
+  animation:festaPontos 800ms var(--ease-out) both}
+@keyframes festaPontos{0%{opacity:0;transform:translateY(16px)}30%{opacity:1}
+  80%{opacity:1;transform:translateY(-30px)}100%{opacity:0;transform:translateY(-38px)}}
+
+/* ============================================================
+   RODAPÉ
+   ============================================================ */
+.rodape{margin-top:34px;font-size:11.5px;font-weight:500;color:var(--p-muted);text-align:center}
+
+/* ============================================================
+   MOTION — reveal em cascata
+   ============================================================ */
+.rv{opacity:0;transform:translateY(12px);transition:opacity 360ms var(--ease-out),transform 360ms var(--ease-out)}
+.rv.dentro{opacity:1;transform:none}
+
+/* ============================================================
+   RESPONSIVO
+   ============================================================ */
+@media(min-width:600px){
+  .conteudo{padding-left:20px;padding-right:20px}
+}
+@media(min-width:900px){
+  .topo{display:none}
+  .veu{display:none}
+  .lateral{width:252px;max-width:none;z-index:60;transform:none;transition:none}
+
+  .conteudo{margin-left:252px;padding:28px 28px 56px;max-width:1280px}
+  .grid{grid-template-columns:repeat(12,1fr);gap:16px}
+  .c5{grid-column:span 5}
+  .c6{grid-column:span 6}
+  .c7{grid-column:span 7}
+  .c12{grid-column:span 12}
+  .card{padding:19px 18px 18px}
+  .area-t{font-size:28px}
+}
+
+@media(prefers-reduced-motion:reduce){
+  *,*::before,*::after{animation:none !important;transition:none !important}
+  .rv,.entra{opacity:1;transform:none}
+  .traco{width:40px}
+  .holo{display:none}
+}
+</style>
+</head>
+<body>
+
+<!-- ============ HOLOGRAMA DE ENTRADA (900ms) ============ -->
+<div class="holo" id="holo" aria-hidden="true">
+  <img src="assets/simbolo-zeluz-39.svg" alt="" width="118" height="118">
+</div>
+
+<!-- ============ DESENHOS (stickers) — usados por <use> ============ -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
+  <defs>
+    <!-- lua — a noite da AuAulândia -->
+    <g id="st-lua">
+      <path d="M26 20.6A11.2 11.2 0 0111.4 6a11.4 11.4 0 1014.6 14.6z" fill="currentColor"></path>
+      <circle cx="24.2" cy="8.4" r="1.5" fill="currentColor"></circle>
+    </g>
+    <!-- patinha — o Day Care -->
+    <g id="st-pata">
+      <ellipse cx="8.4" cy="12.2" rx="3" ry="3.9" fill="currentColor"></ellipse>
+      <ellipse cx="14.2" cy="8.4" rx="3.1" ry="4.1" fill="currentColor"></ellipse>
+      <ellipse cx="20.6" cy="8.8" rx="3.1" ry="4.1" fill="currentColor"></ellipse>
+      <ellipse cx="26" cy="13" rx="2.9" ry="3.7" fill="currentColor"></ellipse>
+      <path d="M17 15.4c4.6 0 8.4 3.6 8.4 7.6 0 3.1-2.4 4.8-5.2 4.8-1.4 0-2.3-.6-3.2-.6s-1.8.6-3.2.6c-2.8 0-5.2-1.7-5.2-4.8 0-4 3.8-7.6 8.4-7.6z" fill="currentColor"></path>
+    </g>
+    <!-- ossinho — os Peludinhos -->
+    <g id="st-osso">
+      <rect x="8" y="13.4" width="16" height="5.2" rx="2.6" fill="currentColor"></rect>
+      <circle cx="8" cy="12" r="3.5" fill="currentColor"></circle>
+      <circle cx="8" cy="20" r="3.5" fill="currentColor"></circle>
+      <circle cx="24" cy="12" r="3.5" fill="currentColor"></circle>
+      <circle cx="24" cy="20" r="3.5" fill="currentColor"></circle>
+    </g>
+    <!-- casinha — o time e a casa -->
+    <g id="st-casa">
+      <path d="M16 3.4L3.6 14.2v13.2c0 .9.7 1.6 1.6 1.6h6.6v-8.2h8.4V29h6.6c.9 0 1.6-.7 1.6-1.6V14.2z" fill="currentColor"></path>
+    </g>
+    <!-- sino — o alerta da recepção -->
+    <g id="st-sino">
+      <path d="M16 3.6a2.2 2.2 0 012.2 2.2v.9a7.6 7.6 0 015.4 7.3v5l2.2 3.4c.5.8-.1 1.8-1 1.8H7.2c-.9 0-1.5-1-1-1.8l2.2-3.4v-5a7.6 7.6 0 015.4-7.3v-.9A2.2 2.2 0 0116 3.6z" fill="currentColor"></path>
+      <path d="M13 26h6a3 3 0 01-6 0z" fill="currentColor"></path>
+    </g>
+  </defs>
+</svg>
+
+<!-- ============ BARRA SUPERIOR (celular) ============ -->
+<header class="topo">
+  <div class="topo-linha">
+    <img src="assets/simbolo-zeluz-39-claro.svg" alt="Zêluz" width="36" height="36">
+    <div class="topo-nome">Sistema Zêluz<small>Day Care e AuAulândia</small></div>
+    <button type="button" class="hamb" id="hamb" aria-label="Abrir o menu" aria-expanded="false" aria-controls="lateral">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
+    </button>
+  </div>
+</header>
+
+<div class="veu" id="veu" hidden></div>
+
+<!-- ============ BARRA LATERAL — a trilha do cuidado (herdada da v5) ============ -->
+<aside class="lateral" id="lateral">
+  <div class="lat-marca">
+    <img src="assets/simbolo-zeluz-39-claro.svg" alt="Zêluz" width="96" height="96">
+  </div>
+  <p class="lat-sub">Sistema Zêluz</p>
+  <nav class="lat-nav" id="latNav">
+    <a class="on"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5h7v7H4zM13 5h7v4h-7zM13 11h7v8h-7zM4 14h7v5H4z"/></svg><span>Painel</span></a>
+
+    <!-- CATEGORIA · Serviços -->
+    <button type="button" class="cat" data-abre="g-servicos" aria-expanded="false" aria-controls="g-servicos">
+      <svg viewBox="0 0 32 32" aria-hidden="true"><use href="#st-casa"></use></svg><span>Serviços</span>
+      <svg class="seta" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>
+    </button>
+    <div class="gaveta" id="g-servicos">
+      <button type="button" class="sub2" data-abre="g-auaulandia" aria-expanded="true" aria-controls="g-auaulandia">
+        <svg viewBox="0 0 32 32" aria-hidden="true"><use href="#st-lua"></use></svg><span>AuAulândia</span>
+        <svg class="seta" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>
+      </button>
+      <div class="gaveta aberta" id="g-auaulandia">
+        <a class="filho">Conferência do check-in</a>
+        <a class="filho">Plantão da noite</a>
+        <a class="filho">Hóspedes de hoje</a>
+        <a class="filho">Check-out</a>
+      </div>
+      <button type="button" class="sub2" data-abre="g-daycare" aria-expanded="false" aria-controls="g-daycare">
+        <svg viewBox="0 0 32 32" aria-hidden="true"><use href="#st-pata"></use></svg><span>Day Care</span>
+        <svg class="seta" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>
+      </button>
+      <div class="gaveta" id="g-daycare">
+        <a class="filho">Abertura do dia</a>
+        <a class="filho">Day Care</a>
+        <a class="filho">Aulunos</a>
+      </div>
+    </div>
+
+    <!-- CATEGORIA · Central Zêluz — a casa das Consultoras -->
+    <button type="button" class="cat" data-abre="g-central" aria-expanded="true" aria-controls="g-central">
+      <svg viewBox="0 0 32 32" aria-hidden="true"><use href="#st-osso"></use></svg><span>Central Zêluz</span>
+      <svg class="seta" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>
+    </button>
+    <div class="gaveta aberta" id="g-central">
+      <a class="filho">Cadastro de Peludinhos</a>
+      <a class="filho">Check-in</a>
+      <a class="filho">Orçamento de hospedagem</a>
+      <a class="filho">Pendências com o tutor</a>
+      <a class="filho">Quem não comeu hoje</a>
+      <a class="filho">Renovação de planos</a>
+    </div>
+
+    <a class="solto"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 4h9l3 3v13H6z"/><path d="M9 11h6M9 15h4"/></svg><span>Relatórios</span></a>
+    <a><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="4" y="5" width="16" height="15" rx="2"/><path d="M4 10h16M9 3v4M15 3v4"/></svg><span>Agenda</span><span class="breve">em breve</span></a>
+  </nav>
+  <div class="lat-quem">
+    <small>PAINEL EM EXIBIÇÃO</small>
+    <b>Consultoras de Bem-Estar</b>
+  </div>
+</aside>
+
+<!-- ============ CONTEÚDO ============ -->
+<main class="conteudo">
+
+  <div class="cabeca">
+    <h1 class="saud1 entra" id="saud1">Bom dia, Larissa.</h1>
+    <p class="saud2 entra">Na casa hoje: <b data-alvo="18">0</b> aulunos e <b data-alvo="5">0</b> hóspedes.</p>
+    <p class="saud3 entra tarde" id="saud3">Aqui, cada cuidado é ÚNICO. E é você quem o apresenta a cada Família Multiespécie.</p>
+    <span class="traco" id="traco" aria-hidden="true"></span>
+    <div class="data" id="dataHoje">sexta-feira, 4 de setembro de 2026</div>
+  </div>
+
+  <p class="nota"><strong>Esboço v3 para aprovação — nenhuma tela foi construída ainda.</strong> Consultoras de Bem-Estar, recepção: só os alertas do balcão, iguais à v2. A v3 refaz o card Seu dia como experiência de verdade: copinhos que enchem, anel da pausa, carinhas que ganham cor, série de dias e celebração ao completar as três. Toque no card para sentir.</p>
+
+  <header class="area-h">
+    <span class="area-st"><svg viewBox="0 0 32 32" aria-hidden="true"><use href="#st-sino"></use></svg></span>
+    <div class="area-txt">
+      <p class="area-eyebrow">O BALCÃO AGORA</p>
+      <h2 class="area-t">O que precisa de você</h2>
+      <p class="area-sub">Cinco quadros, cinco respostas. Cada um abre a tela que resolve.</p>
+    </div>
+  </header>
+
+  <div class="grid">
+
+    <!-- 1 · Remédio acabando — o único hero (44px) da peça -->
+    <article class="card rv c6 par">
+      <span class="tag">alerta</span>
+      <h3 class="tit">Remédio acabando</h3>
+      <p class="sub">O que precisa ser pedido ao tutor antes de a próxima dose chegar.</p>
+      <div class="alerta-h">
+        <div>
+          <div class="kpi alerta hero" data-alvo="2">0</div>
+          <p class="rot">FILHOts com remédio no fim</p>
+        </div>
+        <span class="badge b-critico">pedir ao tutor hoje</span>
+      </div>
+      <div class="pill"><i data-pct="60"></i></div>
+      <div class="pill-rot"><span><b>3 de 5</b> hóspedes com estoque em dia</span></div>
+      <div class="lista">
+        <div class="li"><span class="badge b-critico">acabou</span><div class="li-txt"><b>Toshi — antibiótico · restam 0 doses</b><span>tutora Sophia · a dose das 22h não tem comprimido</span></div></div>
+        <div class="li"><span class="badge b-atencao">restam 2 doses</span><div class="li-txt"><b>Serena — anti-inflamatório</b><span>tutora Júlia · pedir hoje para não faltar no domingo</span></div></div>
+      </div>
+    </article>
+
+    <!-- 2 · Check-ins a fazer hoje — a métrica-âncora (donut) -->
+    <article class="card rv c6 par">
+      <span class="tag">hoje</span>
+      <h3 class="tit">Check-ins a fazer hoje</h3>
+      <p class="sub">Quem entra e ainda não passou pelo primeiro passo da chegada.</p>
+      <div class="anel-caixa">
+        <div class="anel">
+          <svg viewBox="0 0 132 132" role="img" aria-label="4 de 6 check-ins do dia já feitos">
+            <defs>
+              <linearGradient id="ouroAnel" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0" stop-color="#DEB428"></stop>
+                <stop offset="1" stop-color="#B8961F"></stop>
+              </linearGradient>
+            </defs>
+            <g transform="rotate(-90 66 66)">
+              <circle cx="66" cy="66" r="60" fill="none" stroke="rgba(35,77,103,.08)" stroke-width="12"></circle>
+              <circle class="anel-arco" cx="66" cy="66" r="60" fill="none" stroke="url(#ouroAnel)" stroke-width="12"
+                      stroke-linecap="round" stroke-dasharray="377" stroke-dashoffset="377" data-anel="67"></circle>
+            </g>
+          </svg>
+          <div class="anel-mid"><b>4/6</b><span>feitos</span></div>
+        </div>
+        <div class="anel-lado">
+          <div class="lista">
+            <div class="li"><span class="badge b-critico">esperando</span><div class="li-txt"><b>Antônio — 4 noites</b><span>tutora Beatriz · chegou às 8h40</span></div></div>
+            <div class="li"><span class="badge b-info">às 15h</span><div class="li-txt"><b>Maya — 3 noites</b><span>tutora Carolina · chegada combinada</span></div></div>
+          </div>
+        </div>
+      </div>
+    </article>
+
+    <!-- 3 · Orçamentos em aberto — pendentes primeiro, por data de entrada -->
+    <article class="card rv c6 par">
+      <span class="tag">em aberto</span>
+      <h3 class="tit">Orçamentos em aberto</h3>
+      <p class="sub">Enviados ao tutor e ainda sem resposta — os de entrada mais próxima primeiro.</p>
+      <div class="alerta-h">
+        <div>
+          <div class="kpi" data-alvo="3">0</div>
+          <p class="rot">esperando resposta do tutor</p>
+        </div>
+        <span class="badge b-atencao">1 sem resposta há 2 dias</span>
+      </div>
+      <div class="barras">
+        <div class="barra">
+          <div class="barra-rot"><span>Sem resposta há 2 dias</span><em>1 orçamento</em></div>
+          <div class="barra-tr alerta"><i data-pct="33"></i></div>
+        </div>
+        <div class="barra">
+          <div class="barra-rot"><span>Enviados hoje</span><em>2 orçamentos</em></div>
+          <div class="barra-tr"><i data-pct="67"></i></div>
+        </div>
+      </div>
+      <div class="lista">
+        <div class="li"><span class="badge b-critico">entra amanhã</span><div class="li-txt"><b>Ragnar — 5 noites · <em class="valor">R$ 890,00</em></b><span>tutor Rafael · sem resposta há 2 dias — cobrar por mensagem</span></div></div>
+        <div class="li"><span class="badge b-atencao">entra segunda-feira</span><div class="li-txt"><b>Luna — 3 noites · <em class="valor">R$ 534,00</em></b><span>tutora Carolina · enviado hoje às 9h20</span></div></div>
+        <div class="li"><span class="badge b-info">entra quarta-feira</span><div class="li-txt"><b>Mel — 2 noites · <em class="valor">R$ 356,00</em></b><span>tutora Beatriz · enviado hoje às 10h05</span></div></div>
+      </div>
+    </article>
+
+    <!-- 4 · Mensagem de almoço ao tutor -->
+    <article class="card rv c6 par">
+      <span class="tag">almoço</span>
+      <h3 class="tit">Mensagem de almoço ao tutor</h3>
+      <p class="sub">Quem não comeu tudo hoje. A mensagem de cada tutor já está escrita — falta enviar.</p>
+      <div class="alerta-h">
+        <div>
+          <div class="kpi ouro" data-alvo="2">0</div>
+          <p class="rot">mensagens prontas para enviar</p>
+        </div>
+        <span class="badge b-ok"><span class="vivo"></span>Telegram conectado</span>
+      </div>
+      <div class="segbar" role="img" aria-label="De 8 mensagens de almoço do dia, 6 já foram enviadas e 2 estão pendentes">
+        <i class="seg-ok" data-seg="75"></i>
+        <i class="seg-meio" data-seg="25"></i>
+      </div>
+      <div class="segleg">
+        <span class="segleg-i"><em class="pt pt-ok"></em><b>6</b> enviadas</span>
+        <span class="segleg-i"><em class="pt pt-azul"></em><b>2</b> pendentes</span>
+      </div>
+      <div class="lista">
+        <div class="li"><span class="badge b-critico">não comeu</span><div class="li-txt"><b>Repolho</b><span>mensagem pronta · enviar antes das 14h</span></div></div>
+        <div class="li"><span class="badge b-atencao">comeu metade</span><div class="li-txt"><b>Toshi</b><span>tutora Sophia · é atenção, não é falta</span></div></div>
+      </div>
+    </article>
+
+    <!-- 5 · Pendências da recepção — o card pequeno -->
+    <article class="card rv c6 par">
+      <span class="tag">recepção</span>
+      <h3 class="tit">Pendências da recepção</h3>
+      <p class="sub">Cadastro incompleto e adaptação sem data marcada.</p>
+      <div class="kpi-linha">
+        <div class="kpi-bloco">
+          <div class="kpi" data-alvo="3">0</div>
+          <p class="rot">cadastros incompletos</p>
+        </div>
+        <div class="kpi-bloco">
+          <div class="kpi" data-alvo="1">0</div>
+          <p class="rot">adaptação sem data</p>
+        </div>
+      </div>
+      <div class="pill"><i data-pct="83"></i></div>
+      <div class="pill-rot"><span><b>15 de 18</b> cadastros completos</span></div>
+      <div class="lista">
+        <div class="li"><span class="badge b-atencao">cadastro</span><div class="li-txt"><b>Repolho — falta o peso atualizado</b><span>pesar na próxima chegada e gravar na ficha</span></div></div>
+        <div class="li"><span class="badge b-info">adaptação</span><div class="li-txt"><b>Maya — aprovada, sem data marcada</b><span>tutora Carolina · combinar o primeiro dia</span></div></div>
+      </div>
+    </article>
+
+    <!-- 6 · Seu dia — bem-estar de quem atende (semente da NR-1).
+         v3, a pedido da fundadora: nada de chip seco — copinhos que
+         enchem, anel da pausa, carinhas desenhadas, série de dias e
+         celebração ao completar as três. Interativo de verdade neste
+         esboço; o estado vive só na memória da página. -->
+    <article class="card rv c6 par" id="cardSeuDia">
+      <span class="tag">seu bem-estar</span>
+      <h3 class="tit">Seu dia</h3>
+      <p class="sub">Três toques, uma vez por dia — cada resposta soma pontos e mantém a sua série acesa.</p>
+
+      <div class="serie">
+        <span class="serie-chama acesa" aria-hidden="true">
+          <svg viewBox="0 0 32 32" fill="currentColor"><path d="M16 2.4c.7 4.5-1.1 7-3.3 9.2-2.3 2.4-4.7 4.9-4.7 9.1a8 8 0 0016 0c0-2.5-.8-4.5-2-6.3-.5 1.2-1.3 2.2-2.5 2.9.5-4.7-1.1-11-3.5-14.9z"/><path class="chama-miolo" d="M16 25.2a3.6 3.6 0 01-3.6-3.6c0-1.7 1-2.9 2-4 .7-.8 1.4-1.6 1.8-2.7 1.5 1.9 3.4 4.6 3.4 7a3.6 3.6 0 01-3.6 3.6z"/></svg>
+        </span>
+        <div class="serie-txt">
+          <b id="serieTexto">5 dias seguidos cuidando de você</b>
+          <span id="serieSub">Responda às três de hoje e a série continua.</span>
+        </div>
+      </div>
+      <div class="serie-dias" role="img" aria-label="Série da semana — os dias respondidos ficam dourados; o de hoje ainda está em aberto">
+        <span class="dia"><small>S</small><span class="dia-bola"><svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2.4 6.4l2.4 2.4 4.8-5.2"/></svg></span></span>
+        <span class="dia"><small>T</small><span class="dia-bola"><svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2.4 6.4l2.4 2.4 4.8-5.2"/></svg></span></span>
+        <span class="dia"><small>Q</small><span class="dia-bola"><svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2.4 6.4l2.4 2.4 4.8-5.2"/></svg></span></span>
+        <span class="dia"><small>Q</small><span class="dia-bola"><svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2.4 6.4l2.4 2.4 4.8-5.2"/></svg></span></span>
+        <span class="dia"><small>S</small><span class="dia-bola"><svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2.4 6.4l2.4 2.4 4.8-5.2"/></svg></span></span>
+        <span class="dia"><small>S</small><span class="dia-bola"><svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2.4 6.4l2.4 2.4 4.8-5.2"/></svg></span></span>
+        <span class="dia"><small>D</small><span class="dia-bola"><svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2.4 6.4l2.4 2.4 4.8-5.2"/></svg></span></span>
+      </div>
+
+      <div class="qz" id="qzAgua">
+        <p class="qz-p">Água de hoje<span class="ganho" hidden>+5 pontos</span></p>
+        <div class="copos">
+          <button type="button" class="copo" data-copo="1" aria-pressed="false" aria-label="Marcar 1 copo de água"><svg viewBox="0 0 32 44" aria-hidden="true"><rect class="agua" x="10" y="13" width="12" height="22" rx="2.5"></rect><path class="vidro" d="M7 5h18l-1.7 29.2a3.6 3.6 0 01-3.6 3.4h-7.4a3.6 3.6 0 01-3.6-3.4z"></path></svg></button>
+          <button type="button" class="copo" data-copo="2" aria-pressed="false" aria-label="Marcar 2 copos de água"><svg viewBox="0 0 32 44" aria-hidden="true"><rect class="agua" x="10" y="13" width="12" height="22" rx="2.5"></rect><path class="vidro" d="M7 5h18l-1.7 29.2a3.6 3.6 0 01-3.6 3.4h-7.4a3.6 3.6 0 01-3.6-3.4z"></path></svg></button>
+          <button type="button" class="copo" data-copo="3" aria-pressed="false" aria-label="Marcar 3 copos de água"><svg viewBox="0 0 32 44" aria-hidden="true"><rect class="agua" x="10" y="13" width="12" height="22" rx="2.5"></rect><path class="vidro" d="M7 5h18l-1.7 29.2a3.6 3.6 0 01-3.6 3.4h-7.4a3.6 3.6 0 01-3.6-3.4z"></path></svg></button>
+          <button type="button" class="copo" data-copo="4" aria-pressed="false" aria-label="Marcar 4 copos de água"><svg viewBox="0 0 32 44" aria-hidden="true"><rect class="agua" x="10" y="13" width="12" height="22" rx="2.5"></rect><path class="vidro" d="M7 5h18l-1.7 29.2a3.6 3.6 0 01-3.6 3.4h-7.4a3.6 3.6 0 01-3.6-3.4z"></path></svg></button>
+          <button type="button" class="copo" data-copo="5" aria-pressed="false" aria-label="Marcar 5 copos de água"><svg viewBox="0 0 32 44" aria-hidden="true"><rect class="agua" x="10" y="13" width="12" height="22" rx="2.5"></rect><path class="vidro" d="M7 5h18l-1.7 29.2a3.6 3.6 0 01-3.6 3.4h-7.4a3.6 3.6 0 01-3.6-3.4z"></path></svg></button>
+          <button type="button" class="copo" data-copo="6" aria-pressed="false" aria-label="Marcar 6 copos de água"><svg viewBox="0 0 32 44" aria-hidden="true"><rect class="agua" x="10" y="13" width="12" height="22" rx="2.5"></rect><path class="vidro" d="M7 5h18l-1.7 29.2a3.6 3.6 0 01-3.6 3.4h-7.4a3.6 3.6 0 01-3.6-3.4z"></path></svg></button>
+        </div>
+        <p class="copos-rot" id="coposRot"><b>0 de 6</b> copos — toque para marcar cada copo</p>
+      </div>
+
+      <div class="qz" id="qzPausa">
+        <p class="qz-p">Uma pausa de verdade<span class="ganho" hidden>+5 pontos</span></p>
+        <div class="pausa" id="pausa">
+          <button type="button" class="pausa-anel" id="pausaBtn" aria-pressed="false" aria-label="Registrar a pausa de hoje">
+            <svg viewBox="0 0 56 56" aria-hidden="true">
+              <g transform="rotate(-90 28 28)">
+                <circle class="pausa-trilho" cx="28" cy="28" r="24"></circle>
+                <circle class="pausa-arco" cx="28" cy="28" r="24"></circle>
+              </g>
+              <path class="pausa-check" d="M18.5 28.5l6.5 6.5 12.5-13"></path>
+            </svg>
+          </button>
+          <div class="pausa-txt"><b id="pausaTit">Toque no anel quando fizer a pausa</b><span id="pausaSub">Dois minutos longe do balcão já contam.</span></div>
+        </div>
+      </div>
+
+      <div class="qz" id="qzHumor">
+        <p class="qz-p">Como você está agora?<span class="ganho" hidden>+5 pontos</span></p>
+        <div class="humores">
+          <button type="button" class="humor h-bem" aria-pressed="false">
+            <svg viewBox="0 0 48 48" aria-hidden="true">
+              <circle class="rosto-fundo" cx="24" cy="24" r="20"></circle>
+              <circle cx="24" cy="24" r="20" fill="none" stroke="currentColor" stroke-width="2.6"></circle>
+              <path d="M14.5 21q3.5-4 7 0" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"></path>
+              <path d="M26.5 21q3.5-4 7 0" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"></path>
+              <path d="M16 28q8 7 16 0" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"></path>
+            </svg>
+            <small>Bem</small>
+          </button>
+          <button type="button" class="humor h-cansada" aria-pressed="false">
+            <svg viewBox="0 0 48 48" aria-hidden="true">
+              <circle class="rosto-fundo" cx="24" cy="24" r="20"></circle>
+              <circle cx="24" cy="24" r="20" fill="none" stroke="currentColor" stroke-width="2.6"></circle>
+              <path d="M14.5 20q3.5 3.2 7 0" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"></path>
+              <path d="M26.5 20q3.5 3.2 7 0" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"></path>
+              <path d="M17 30h14" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"></path>
+            </svg>
+            <small>Cansada</small>
+          </button>
+          <button type="button" class="humor h-sobre" aria-pressed="false">
+            <svg viewBox="0 0 48 48" aria-hidden="true">
+              <circle class="rosto-fundo" cx="24" cy="24" r="20"></circle>
+              <circle cx="24" cy="24" r="20" fill="none" stroke="currentColor" stroke-width="2.6"></circle>
+              <path d="M13.5 16.5l7.5 2.6" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"></path>
+              <path d="M34.5 16.5l-7.5 2.6" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"></path>
+              <circle cx="18.5" cy="23.5" r="1.9" fill="currentColor"></circle>
+              <circle cx="29.5" cy="23.5" r="1.9" fill="currentColor"></circle>
+              <path d="M16.5 31q3.75-3.4 7.5 0t7.5 0" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"></path>
+            </svg>
+            <small>Sobrecarregada</small>
+          </button>
+        </div>
+      </div>
+
+      <div class="qz-rodape">
+        <p class="qz-pontos"><b id="ptsSemana" data-base="40">40</b> pontos na semana — a meta é 55</p>
+        <div class="medalha" id="medalha" role="status">
+          <svg viewBox="0 0 32 32" fill="currentColor" aria-hidden="true"><path d="M9 4h14v5.2A7 7 0 0117.9 16c-.3 1.3-.9 2.3-1.9 3v2.6h4.6v3.2H11.4v-3.2H16V19c-1-.7-1.6-1.7-1.9-3A7 7 0 019 9.2z"/><path d="M7.2 6H3.6v2.6a5.8 5.8 0 004.8 5.7A9.6 9.6 0 017.2 9.4zM24.8 6h3.6v2.6a5.8 5.8 0 01-4.8 5.7 9.6 9.6 0 001.2-4.9z"/><rect x="10" y="26.4" width="12" height="2.6" rx="1.3"/></svg>
+          <div><b>Meta da semana batida</b><span>55 pontos — semana cheia de cuidado com você.</span></div>
+        </div>
+        <div class="dia-completo" id="diaCompleto" role="status">
+          <img src="assets/stickers/auau.png" alt="" width="42" height="57">
+          <b id="diaCompletoTxt">Dia completo.</b>
+        </div>
+        <p class="qz-honesta">Responder é o que vale o ponto — nunca a resposta. Suas respostas somam pontos e ajudam a Zêluz a cuidar de quem cuida.</p>
+      </div>
+
+      <div class="festa" id="festa" aria-hidden="true">
+        <span class="festa-anel"></span>
+        <img class="festa-sticker" src="assets/stickers/coracao.png" alt="" width="86" height="102">
+        <b class="festa-pontos">+15 pontos</b>
+      </div>
+    </article>
+
+  </div>
+
+  <p class="rodape">Esboço v3 · Consultoras de Bem-Estar · dados de exemplo — nenhuma tela foi construída ainda.</p>
+
+</main>
+
+<script>
+(function(){
+  'use strict';
+  var PARADO = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  /* ---------- data por extenso, em português ---------- */
+  (function escreverData(){
+    var el = document.getElementById('dataHoje');
+    if (!el) { return; }
+    var d = new Date();
+    var dias = ['domingo','segunda-feira','terça-feira','quarta-feira','quinta-feira','sexta-feira','sábado'];
+    var meses = ['janeiro','fevereiro','março','abril','maio','junho','julho','agosto','setembro','outubro','novembro','dezembro'];
+    el.textContent = dias[d.getDay()] + ', ' + d.getDate() + ' de ' + meses[d.getMonth()] + ' de ' + d.getFullYear();
+  })();
+
+  /* ---------- saudação pelo relógio ---------- */
+  (function saudar(){
+    var h = new Date().getHours();
+    var s = (h < 12) ? 'Bom dia' : (h < 18) ? 'Boa tarde' : 'Boa noite';
+    document.getElementById('saud1').textContent = s + ', Larissa.';
+  })();
+
+  /* ---------- a frase do dia — rotação FIXA por dia da semana
+       (não aleatória: a pessoa reconhece a semana pela frase).
+       Voz Zêluz, escrita para quem atende o tutor no balcão. ---------- */
+  (function fraseDoDia(){
+    var el = document.getElementById('saud3');
+    if (!el) { return; }
+    var frases = [
+      /* domingo */ 'Aqui, cada cuidado é ÚNICO. E é você quem o apresenta a cada Família Multiespécie.',
+      /* segunda */ 'Quem chega ao balcão entrega mais que um FILHOt: entrega confiança. E ela começa em você.',
+      /* terça   */ 'Uma resposta sua tira o peso de uma dúvida. Isso também é cuidado.',
+      /* quarta  */ 'A calma que o tutor sente nasce da segurança da sua palavra.',
+      /* quinta  */ 'Cuidar é escutar antes de agir. Todo bom atendimento começa por uma escuta.',
+      /* sexta   */ 'Somos Zelosos. A gente se importa de verdade — e no balcão isso tem o seu nome.',
+      /* sábado  */ 'O tutor não vê o dia inteiro do FILHOt. É a sua palavra que traduz esse cuidado.'
+    ];
+    el.textContent = frases[new Date().getDay()];
+  })();
+
+  /* ---------- Seu dia — v3, experiência à la Duolingo.
+       Cada pergunta paga UMA vez (+5); trocar a resposta não soma
+       de novo. Ao completar as três: celebração curta, bolinha do
+       dia e série +1. Estado só em memória — é esboço. ---------- */
+  (function seuDia(){
+    var card = document.getElementById('cardSeuDia');
+    var pts = document.getElementById('ptsSemana');
+    if (!card || !pts) { return; }
+
+    var META = 55;
+    var total = parseInt(pts.getAttribute('data-base'), 10) || 0;
+    var pagas = { agua: false, pausa: false, humor: false };
+
+    /* a semana (seg → dom): os dias anteriores a hoje contam como
+       respondidos — dado de exemplo do esboço; o de hoje fica aberto */
+    var bolas = card.querySelectorAll('.dia-bola');
+    var pos = (new Date().getDay() + 6) % 7; /* seg=0 … dom=6 */
+    for (var b = 0; b < bolas.length; b++) {
+      if (b < pos) { bolas[b].classList.add('feito'); }
+      if (b === pos) { bolas[b].classList.add('hoje'); }
+    }
+    var serieTexto = document.getElementById('serieTexto');
+    function textoSerie(n){
+      if (n <= 0) { return 'Comece hoje uma nova série'; }
+      return n + (n === 1 ? ' dia seguido' : ' dias seguidos') + ' cuidando de você';
+    }
+    serieTexto.textContent = textoSerie(pos);
+
+    /* pontos vivos: o contador SOBE quando um ponto entra */
+    function contarPontos(novo){
+      var de = parseInt(pts.textContent, 10) || 0;
+      if (PARADO) { pts.textContent = String(novo); depoisDosPontos(); return; }
+      var t0 = null, dur = 450;
+      function passo(t){
+        if (t0 === null) { t0 = t; }
+        var k = Math.min(1, (t - t0) / dur);
+        var suave = 1 - Math.pow(1 - k, 3);
+        pts.textContent = String(Math.round(de + (novo - de) * suave));
+        if (k < 1) { requestAnimationFrame(passo); } else { depoisDosPontos(); }
+      }
+      requestAnimationFrame(passo);
+    }
+    function depoisDosPontos(){
+      if (total >= META) { document.getElementById('medalha').classList.add('ganha'); }
+    }
+    function pagar(chave, qz){
+      if (pagas[chave]) { return; }
+      pagas[chave] = true;
+      total += 5;
+      contarPontos(total);
+      var g = qz.querySelector('.ganho');
+      if (g) { g.hidden = false; requestAnimationFrame(function(){ g.classList.add('mostra'); }); }
+      if (pagas.agua && pagas.pausa && pagas.humor) { celebrar(); }
+    }
+
+    /* celebração curta (máx. 800ms); com prefers-reduced-motion,
+       vai direto ao estado final, sem animação nenhuma */
+    function celebrar(){
+      var hoje = card.querySelector('.dia-bola.hoje');
+      if (hoje) { hoje.classList.add('feito'); }
+      serieTexto.textContent = textoSerie(pos + 1);
+      document.getElementById('serieSub').textContent = 'Série mantida. Até amanhã.';
+      var txt = document.getElementById('diaCompletoTxt');
+      var n = pos + 1;
+      txt.textContent = 'Dia completo — a sua série chegou a ' + n + (n === 1 ? ' dia.' : ' dias.');
+      function mostrarCompleto(){ document.getElementById('diaCompleto').classList.add('mostra'); }
+      if (PARADO) { mostrarCompleto(); return; }
+      var festa = document.getElementById('festa');
+      festa.classList.add('roda');
+      setTimeout(function(){ festa.classList.remove('roda'); mostrarCompleto(); }, 820);
+    }
+
+    /* água: cada toque enche até aquele copo (líquido sobe em 300ms,
+       com escadinha quando vários enchem de uma vez) */
+    (function agua(){
+      var qz = document.getElementById('qzAgua');
+      var copos = qz.querySelectorAll('.copo');
+      var rot = document.getElementById('coposRot');
+      var nivel = 0;
+      function aplicar(novo){
+        for (var j = 0; j < copos.length; j++) {
+          var enche = j < novo;
+          var liquido = copos[j].querySelector('.agua');
+          if (enche && !copos[j].classList.contains('cheio')) {
+            liquido.style.transitionDelay = (PARADO ? 0 : Math.max(0, j - nivel) * 70) + 'ms';
+            copos[j].classList.add('cheio', 'pula');
+          } else if (!enche) {
+            liquido.style.transitionDelay = '0ms';
+            copos[j].classList.remove('cheio', 'pula');
+          }
+          copos[j].setAttribute('aria-pressed', enche ? 'true' : 'false');
+        }
+        nivel = novo;
+        rot.innerHTML = '<b>' + nivel + ' de 6</b>' +
+          (nivel === 6 ? ' copos — dia inteiro de água' : ' copos — toque para marcar cada copo');
+      }
+      for (var i = 0; i < copos.length; i++) {
+        (function(bt){
+          bt.addEventListener('click', function(){
+            var alvo = parseInt(bt.getAttribute('data-copo'), 10);
+            aplicar(alvo === nivel ? alvo - 1 : alvo);
+            if (nivel > 0) { pagar('agua', qz); }
+          });
+          bt.addEventListener('animationend', function(){ bt.classList.remove('pula'); });
+        })(copos[i]);
+      }
+    })();
+
+    /* pausa: o anel fecha e o check dourado se desenha */
+    (function pausa(){
+      var qz = document.getElementById('qzPausa');
+      var caixa = document.getElementById('pausa');
+      var bt = document.getElementById('pausaBtn');
+      bt.addEventListener('click', function(){
+        if (caixa.classList.contains('feita')) { return; }
+        caixa.classList.add('feita');
+        bt.setAttribute('aria-pressed', 'true');
+        document.getElementById('pausaTit').textContent = 'Pausa registrada';
+        document.getElementById('pausaSub').textContent = 'Corpo e atenção agradecem.';
+        pagar('pausa', qz);
+      });
+    })();
+
+    /* como você está: a carinha ganha cor e dá um pulinho */
+    (function humor(){
+      var qz = document.getElementById('qzHumor');
+      var caras = qz.querySelectorAll('.humor');
+      for (var i = 0; i < caras.length; i++) {
+        (function(bt){
+          bt.addEventListener('click', function(){
+            for (var j = 0; j < caras.length; j++) {
+              caras[j].classList.remove('marcado');
+              caras[j].setAttribute('aria-pressed', 'false');
+            }
+            void bt.offsetWidth; /* reinicia o pulinho ao trocar de carinha */
+            bt.classList.add('marcado');
+            bt.setAttribute('aria-pressed', 'true');
+            pagar('humor', qz);
+          });
+        })(caras[i]);
+      }
+    })();
+  })();
+
+  /* ---------- sanfona da barra lateral ---------- */
+  (function sanfona(){
+    var nav = document.getElementById('latNav');
+    nav.addEventListener('click', function(ev){
+      var bt = ev.target.closest ? ev.target.closest('[data-abre]') : null;
+      if (!bt) { return; }
+      var gaveta = document.getElementById(bt.getAttribute('data-abre'));
+      if (!gaveta) { return; }
+      var aberta = gaveta.classList.toggle('aberta');
+      bt.setAttribute('aria-expanded', aberta ? 'true' : 'false');
+    });
+  })();
+
+  /* ---------- gaveta no celular ---------- */
+  (function gavetaCelular(){
+    var hamb = document.getElementById('hamb');
+    var lateral = document.getElementById('lateral');
+    var veu = document.getElementById('veu');
+    function alternar(abrir){
+      lateral.classList.toggle('aberta', abrir);
+      veu.classList.toggle('aberta', abrir);
+      veu.hidden = !abrir;
+      hamb.setAttribute('aria-expanded', abrir ? 'true' : 'false');
+    }
+    hamb.addEventListener('click', function(){ alternar(!lateral.classList.contains('aberta')); });
+    veu.addEventListener('click', function(){ alternar(false); });
+  })();
+
+  /* ---------- contadores: sobem em 600ms ---------- */
+  function contar(el){
+    var alvo = parseInt(el.getAttribute('data-alvo'), 10);
+    if (isNaN(alvo)) { return; }
+    if (PARADO || alvo === 0) { el.textContent = String(alvo); return; }
+    var t0 = null, dur = 600;
+    function passo(t){
+      if (t0 === null) { t0 = t; }
+      var k = Math.min(1, (t - t0) / dur);
+      var suave = 1 - Math.pow(1 - k, 3);
+      el.textContent = String(Math.round(alvo * suave));
+      if (k < 1) { requestAnimationFrame(passo); }
+    }
+    requestAnimationFrame(passo);
+  }
+
+  /* ---------- anel do donut: preenche em 700ms ---------- */
+  function anel(el){
+    var pct = parseFloat(el.getAttribute('data-anel')) || 0;
+    var comp = parseFloat(el.getAttribute('stroke-dasharray')) || 377;
+    el.setAttribute('stroke-dashoffset', String(comp - comp * pct / 100));
+  }
+
+  /* ---------- barras, pill e segmentos: crescem em 500ms ---------- */
+  function largura(el){ el.style.width = (parseFloat(el.getAttribute('data-pct')) || 0) + '%'; }
+  /* o −2px devolve ao segmento o respiro de 2px que o gap consome */
+  function segmento(el){ el.style.width = 'calc(' + (parseFloat(el.getAttribute('data-seg')) || 0) + '% - 2px)'; }
+
+  /* ---------- entrada: saudação + reveal em cascata (stagger 60ms) ---------- */
+  function entrar(){
+    var i, n;
+    n = document.querySelectorAll('.entra');
+    for (i = 0; i < n.length; i++) { n[i].classList.add('dentro'); }
+    document.getElementById('traco').classList.add('dentro');
+    n = document.querySelectorAll('.cabeca [data-alvo]');
+    for (i = 0; i < n.length; i++) { contar(n[i]); }
+
+    var cards = document.querySelectorAll('.rv');
+    for (i = 0; i < cards.length; i++) {
+      (function(card, idx){
+        setTimeout(function(){
+          card.classList.add('dentro');
+          var j, m;
+          m = card.querySelectorAll('[data-alvo]'); for (j=0;j<m.length;j++){ contar(m[j]); }
+          m = card.querySelectorAll('[data-anel]'); for (j=0;j<m.length;j++){ anel(m[j]); }
+          m = card.querySelectorAll('[data-pct]');  for (j=0;j<m.length;j++){ largura(m[j]); }
+          m = card.querySelectorAll('[data-seg]');  for (j=0;j<m.length;j++){ segmento(m[j]); }
+        }, PARADO ? 0 : Math.min(idx, 14) * 60);
+      })(cards[i], i);
+    }
+  }
+
+  requestAnimationFrame(function(){ requestAnimationFrame(entrar); });
+})();
+</script>
+</body>
+</html>

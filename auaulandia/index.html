@@ -3228,8 +3228,16 @@
     <div class="role-note"><span data-icon="paw"></span><span><strong>Ração insuficiente para a estadia.</strong> Gerado pela Conferência do check-in quando a ração pesada não cobre os dias hospedados. Mesmo padrão pendente → resolvido — registre a providência até resolver.</span></div>
     <div id="avisosRacaoList"></div>
     <h2 style="font-size:19px;margin-top:22px">Ocorrências dos hóspedes</h2>
+    <!-- Adriana, 04/set/2026: "o que é da hospedagem fica na hospedagem." Aqui entram SÓ as
+         ocorrências nascidas na AuAulândia (Conferência do check-in e plantão). As do Day Care
+         ganharam a seção própria logo abaixo — continuam com as Consultoras, que são quem fala
+         com o tutor, mas sem se misturar com as da estadia. -->
     <div class="role-note"><span data-icon="paw"></span><span><strong>O que aconteceu com o FILHOt durante a estadia.</strong> Registrado por quem viu — na Conferência do check-in ou no plantão — e chega aqui para quem fala com o tutor (Consultoras e Supervisão). Depois de ligar, registre <strong>o que foi dito</strong> e marque "avisei o tutor". Nada verbal: fica escrito, com quem e quando.</span></div>
     <div id="ocorrRecepcaoList"></div>
+
+    <h2 style="font-size:19px;margin-top:22px">Ocorrências do Day Care</h2>
+    <div class="role-note"><span data-icon="paw"></span><span><strong>O que o check-in e o check-out do Day Care encontraram.</strong> Alteração no corpo ou cocô alterado vira ocorrência aqui — inclusive de hóspede que participou do Day Care durante o dia. Mesmo padrão: avise o tutor, registre o que foi dito e dê o desfecho.</span></div>
+    <div id="ocorrDayCareRecepcaoList"></div>
   </section>
 
   <!-- ===== Onda 3 — CUIDADO VET (veterinária) ===== -->
@@ -7665,28 +7673,42 @@
       +'<div class="avr-sub">Registrado por '+escAttr(o.quem)+(quando?(' · '+escAttr(quando)):'')+'</div>'
       +'</div>'+chip+'</div><div class="avr-body">'+corpo+'</div></div>';
   }
-  function renderOcorrenciasRecepcao(){
-    var el=document.getElementById('ocorrRecepcaoList'); if(!el) return;
-    var lista=ocorrenciasLoja().concat(ocorrenciasDayCare()).sort(function(a,b){ return (b.ts||0)-(a.ts||0); });
-    if(!lista.length){ el.innerHTML='<div class="avr-empty">Nenhuma ocorrência registrada nos últimos '+OCORR_JANELA_DIAS+' dias.</div>'; return; }
-    // ===== O QUE FALTA RESOLVER FICA NA CARA — Adriana, 19/ago/2026 ================
-    // "Erro 1: está lá para baixo — tudo sem desfecho precisa estar na cara, não para
-    //  procurar. Erro 2: se tem algo pendente precisa estar piscando. Erro 3: não pode
-    //  aparecer o que já foi resolvido... tenha uma parte só para os resolvidos, e não na
-    //  mesma tela, senão estaremos rolando rolando tela. Resolveu, sai da tela de atenção
-    //  (não podemos perder: se eu precisar encontrar agora, preciso saber o que ocorreu)."
-    //
-    // Antes as resolvidas vinham logo abaixo das abertas, na MESMA lista — a Lana, o Romeo e
-    // a Maria Flor ficavam no fim, atrás de tudo que já estava fechado. Agora a tela mostra
-    // só o que falta, com o aviso vermelho pulsando em cima e os nomes. O resolvido continua
-    // guardado, numa gaveta fechada no fim, com busca por nome.
+  // ===== O QUE FALTA RESOLVER FICA NA CARA — Adriana, 19/ago/2026 ================
+  // "Erro 1: está lá para baixo — tudo sem desfecho precisa estar na cara, não para
+  //  procurar. Erro 2: se tem algo pendente precisa estar piscando. Erro 3: não pode
+  //  aparecer o que já foi resolvido... tenha uma parte só para os resolvidos, e não na
+  //  mesma tela, senão estaremos rolando rolando tela. Resolveu, sai da tela de atenção
+  //  (não podemos perder: se eu precisar encontrar agora, preciso saber o que ocorreu)."
+  //
+  // Antes as resolvidas vinham logo abaixo das abertas, na MESMA lista — a Lana, o Romeo e
+  // a Maria Flor ficavam no fim, atrás de tudo que já estava fechado. Agora a tela mostra
+  // só o que falta, com o aviso vermelho pulsando em cima e os nomes. O resolvido continua
+  // guardado, numa gaveta fechada no fim, com busca por nome.
+  //
+  // 05/set/2026 (Adriana, 04/set): "o que é da hospedagem fica na hospedagem." A lista era
+  // UMA (loja + Day Care concatenados) sob o título "Ocorrências dos hóspedes" — ocorrência
+  // nascida no Day Care aparecia como se fosse da estadia. Agora são DUAS listas na mesma
+  // tela: a dos hóspedes só com o que nasceu na AuAulândia (auaulandia/estadias/.../ocorrencias),
+  // e a do Day Care só com o que nasceu lá (daycare/ocorrencias/<dia> — a flag daycare:true
+  // que ocorrDayCareItem já carrega). O critério é O NÓ ONDE A OCORRÊNCIA NASCEU, não quem o
+  // FILHOt é: hóspede que participou do Day Care de dia e teve ocorrência NA atividade do
+  // Day Care aparece na seção do Day Care — foi lá que aconteceu e foi o check-in de lá que viu.
+  function _ocorrPainelHTML(lista, idBusca){
     var abertas=lista.filter(function(o){ return !o.avisado; });
     var fechadas=lista.filter(function(o){ return !!o.avisado; });
     var nomes=abertas.map(function(o){ return o.pet||o.nome||''; }).filter(Boolean);
-    el.innerHTML=_painelPendencias(
+    return _painelPendencias(
       abertas.map(ocorrCardHTML).join(''), fechadas.map(ocorrCardHTML).join(''),
       abertas.length, fechadas.length, 'SEM DESFECHO — resolva antes de sair', nomes,
-      'Nenhuma ocorrência registrada nos últimos '+OCORR_JANELA_DIAS+' dias.', 'gvOcorr');
+      'Nenhuma ocorrência registrada nos últimos '+OCORR_JANELA_DIAS+' dias.', idBusca);
+  }
+  function renderOcorrenciasRecepcao(){
+    var el=document.getElementById('ocorrRecepcaoList');
+    if(el) el.innerHTML=_ocorrPainelHTML(
+      ocorrenciasLoja().sort(function(a,b){ return (b.ts||0)-(a.ts||0); }), 'gvOcorr');
+    var elDc=document.getElementById('ocorrDayCareRecepcaoList');
+    if(elDc) elDc.innerHTML=_ocorrPainelHTML(
+      ocorrenciasDayCare().sort(function(a,b){ return (b.ts||0)-(a.ts||0); }), 'gvOcorrDc');
   }
   function _ocorrSplit(id){ var i=(id||'').indexOf('__'); return i<0?null:{estadiaId:id.slice(0,i), ocId:id.slice(i+2)}; }
   // Desfecho da ocorrência — vale para as duas origens (hospedagem e Day Care).
@@ -8222,15 +8244,21 @@
   // ===== GRUPO DE URGÊNCIAS — só Adriana e Márcia (Adriana, 02/set/2026) =============
   // "questões como as respostas da Coco que têm sensibilidade, medicação não dada, cocô
   //  errado, tudo que seja urgente que a Márcia precisa ver." Grupo privado.
-  // Uma porta só: urgAvisar(chave, texto). A chave garante que o MESMO alerta não repete
-  // no mesmo dia — a trava mora no banco (transaction), então vale mesmo se a tela recarregar
-  // ou se dois aparelhos dispararem juntos. Falha entra na med-tg-fila (que agora leva o
+  // Uma porta só: urgAvisar(chave, texto[, grupo]). A chave garante que o MESMO alerta não
+  // repete no mesmo dia — a trava mora no banco (transaction), então vale mesmo se a tela
+  // recarregar ou se dois aparelhos dispararem juntos. Falha entra na med-tg-fila (que leva o
   // grupo) e é reenviada sozinha — igual aos avisos da Gestão.
+  // 05/set/2026 (Adriana, 04/set): a ocorrência do check-in do Day Care vai TAMBÉM para o
+  // grupo da veterinária. Em vez de nascer uma segunda porta (fórmula repetida diverge),
+  // a MESMA porta aceita o grupo: 'urgencia' é o padrão (nenhum chamador antigo muda), e
+  // 'vet' ganha trava própria no mesmo nó ('vet--'+chave) — o dedup de um grupo não cala o outro.
   var URG_ENVIADAS={};
-  function urgAvisar(chave, texto){
+  function urgAvisar(chave, texto, grupo){
     if(!DB || !chave || !texto) return Promise.resolve(false);
+    grupo=grupo||'urgencia';
+    var rotG=(grupo==='vet')?'o grupo da Veterinária':'o grupo de Urgências';
     var dia=(typeof dcDataKey==='function')?dcDataKey():'';
-    var ck=String(chave).replace(/[.#$\[\]\/]/g,'-');
+    var ck=((grupo==='urgencia')?'':(grupo+'--'))+String(chave).replace(/[.#$\[\]\/]/g,'-');
     return DB.ref('daycare/urgencias-enviadas/'+dia+'/'+ck).transaction(function(atual){
       if(atual) return;                 // já avisado hoje — aborta a escrita
       return {ts:Date.now()};
@@ -8245,22 +8273,22 @@
       // ~índice 21341). Se a ponte ainda não sabe: NÃO manda, e desfaz a trava de dedup —
       // senão o alerta de hoje morre calado e nunca mais tenta, mesmo depois do deploy.
       return tgCfgPronta().then(function(cfg){
-        if(!cfg){ medTgGuardar(texto, 'a ponte do Telegram não está configurada', 'urgencia'); return false; }
-        return tgGrupoNaPonte('urgencia').then(function(tem){
+        if(!cfg){ medTgGuardar(texto, 'a ponte do Telegram não está configurada', grupo); return false; }
+        return tgGrupoNaPonte(grupo).then(function(tem){
           if(!tem){
-            var erroG='a ponte do Telegram ainda não conhece o grupo de Urgências (grupo não configurado na ponte) — publique a versão nova de integracao-telegram/Codigo.gs (Implantar → Nova versão)';
-            medTgGuardar(texto, erroG, 'urgencia');
-            if(typeof audit==='function') audit('urgencia','NÃO avisou (ponte sem o grupo) — fila para reenvio: '+String(texto).replace(/<[^>]+>/g,'').slice(0,60),{});
+            var erroG='a ponte do Telegram ainda não conhece '+rotG+' (grupo não configurado na ponte) — publique a versão nova de integracao-telegram/Codigo.gs (Implantar → Nova versão)';
+            medTgGuardar(texto, erroG, grupo);
+            if(typeof audit==='function') audit('urgencia','NÃO avisou '+rotG+' (ponte sem o grupo) — fila para reenvio: '+String(texto).replace(/<[^>]+>/g,'').slice(0,60),{});
             // Desfaz o "já avisei hoje": o deploy pode acontecer daqui a pouco, e o PRÓXIMO
             // evento do mesmo tipo precisa poder tentar de novo — não ficar mudo o dia inteiro.
             return DB.ref(chaveDedup).remove().then(function(){ return false; })
               .catch(function(e){ _logFalhaGrav('desfazer trava de urgência (ponte sem grupo) '+ck, e); return false; });
           }
-          return tgAvisar({grupo:'urgencia', texto:texto}).then(function(r){
-            if(r&&r.ok){ if(typeof audit==='function') audit('urgencia','avisou o grupo de Urgências: '+String(texto).replace(/<[^>]+>/g,'').slice(0,60),{}); return true; }
-            medTgGuardar(texto, (r&&r.erro)||'a ponte não respondeu', 'urgencia');
+          return tgAvisar({grupo:grupo, texto:texto}).then(function(r){
+            if(r&&r.ok){ if(typeof audit==='function') audit('urgencia','avisou '+rotG+': '+String(texto).replace(/<[^>]+>/g,'').slice(0,60),{}); return true; }
+            medTgGuardar(texto, (r&&r.erro)||'a ponte não respondeu', grupo);
             return false;
-          }).catch(function(e){ medTgGuardar(texto, String((e&&e.message)||e), 'urgencia'); return false; });
+          }).catch(function(e){ medTgGuardar(texto, String((e&&e.message)||e), grupo); return false; });
         });
       });
     }).catch(function(){ return false; });
@@ -11599,7 +11627,7 @@
   // Agora existe um carimbo: esta constante é a versão que o aparelho está rodando, e o
   // Firebase guarda a versão publicada. Quando as duas diferem, aparece o aviso — mas
   // NUNCA recarrega sozinho: recarregar no meio de um check-in perderia o trabalho.
-  const APP_VERSAO='2026-09-05-01';
+  const APP_VERSAO='2026-09-05-02';
   function vigiarVersao(){
     if(!DB) return;
     try{
@@ -11748,24 +11776,35 @@
   // Padrão: sem 'paginas'/'atividades' configurado = pessoa vê tudo que o papel monitor já mostra
   // (comportamento de hoje, sem mudança). A Gestão DESLIGA o que não quer — nunca o contrário.
   // AuAulândia + Gestão ficam em 'paginas' (nav[data-v]); Day Care fica em 'atividades' (já existia).
+  // 05/set/2026 (Adriana, 04/set): "os nomes ainda continuam do passado. Central Zêluz não
+  // está lá, está Gestão… super desatualizado com o sidebar." Os grupos e rótulos daqui
+  // AGORA espelham o menu como ele é (Central Zêluz › AuAulândia / Day Care / Planos ·
+  // Operação · Relatórios) — ela dá acesso por partes, e a tela do Time precisa falar a
+  // mesma língua do sidebar. As CHAVES são as mesmas de antes (nenhuma permissão nova
+  // nasceu, nenhuma sumiu): só o agrupamento e os nomes mudaram de roupa.
   const NAV_PAGINAS_ALL=[
-    {grp:'AuAulândia', itens:[
-      {k:'checkin', t:'Check-in'}, {k:'conferencia', t:'Conferência do check-in'}, {k:'recepcao', t:'Pendências com o tutor'},
-      {k:'cuidadovet', t:'Cuidado Vet'}, {k:'hospedagem', t:'Plantão da noite'},
-      {k:'checkout', t:'Check-out'}, {k:'checkoutconf', t:'Check-out com o tutor'}
-    ]},
-    {grp:'Day Care', itens:[ {k:'emporio', t:'Quem não comeu hoje'} ]},
-    {grp:'Gestão', itens:[
-      {k:'painel', t:'Painel do Dia'}, {k:'ficha', t:'Cadastro de Peludinhos'}, {k:'hospedes', t:'Hóspedes de hoje'},
-      {k:'pessoas', t:'Time'}, {k:'renovacao', t:'Renovação de planos'}, {k:'reposicao', t:'Reposições'},
+    {grp:'Central Zêluz', itens:[ {k:'ficha', t:'Cadastro de Peludinhos'} ]},
+    {grp:'Central Zêluz · AuAulândia', itens:[
+      {k:'checkin', t:'Check-in'}, {k:'conferencia', t:'Conferência do check-in'},
+      {k:'hospedes', t:'Hóspedes de hoje'}, {k:'cuidadovet', t:'Cuidado Vet'},
+      {k:'hospedagem', t:'Plantão da noite'},
+      {k:'checkout', t:'Check-out'}, {k:'checkoutconf', t:'Check-out com o tutor'},
       // Faltavam aqui (Adriana, 13/ago/2026): "não consegui dar permissão para Orçamento
       // Hospedagem". A tela existia no menu, mas não nesta lista — e o que não está aqui
       // NÃO PODE ser concedido a ninguém. Tela nova precisa nascer nos dois lugares.
-      {k:'orcamento', t:'Orçamento de hospedagem'}, {k:'relatorios', t:'Relatórios'}
-      // "Senhas" não entra aqui de propósito: não é item de menu e não se concede a ninguém.
-      // "Configurações" (config) também não: é so-master, e ajuste de sistema não se concede.
-      // Quem vê senhas é só Gestão e Diretoria — a trava está em podeVerSenhas().
-    ]}
+      {k:'orcamento', t:'Orçamento de hospedagem'}, {k:'recepcao', t:'Pendências com o tutor'}
+    ]},
+    {grp:'Central Zêluz · Day Care', itens:[
+      {k:'emporio', t:'Quem não comeu hoje'}, {k:'reposicao', t:'Reposições'}
+    ]},
+    {grp:'Central Zêluz · Planos e cobranças', itens:[ {k:'renovacao', t:'Renovação de planos'} ]},
+    {grp:'Operação', itens:[ {k:'pessoas', t:'Time'}, {k:'painel', t:'Painel do Dia'} ]},
+    {grp:'Relatórios', itens:[ {k:'relatorios', t:'Relatórios'} ]}
+    // "Senhas" não entra aqui de propósito: não é item de menu e não se concede a ninguém.
+    // "Configurações" (config) também não: é so-master, e ajuste de sistema não se concede.
+    // Quem vê senhas é só Gestão e Diretoria — a trava está em podeVerSenhas().
+    // "Lançamentos do dia" (dashdc), Prevenção, Peso etc. seguem FORA porque nunca foram
+    // concedíveis daqui — entrar nesta lista é criar permissão nova, e isso é decisão dela.
   ];
   const NAV_PAGINAS_KEYS=NAV_PAGINAS_ALL.reduce((a,g)=>a.concat(g.itens.map(x=>x.k)),[]);
   function monPaginasSet(m){ return Array.isArray(m.paginas)?m.paginas:[]; } // padrão: NADA (a Gestão concede)
@@ -19004,6 +19043,12 @@
             +'\n('+(entrada?'check-in':'check-out')+' \u00B7 '+medTgEsc(reg.hora||'')+' \u00B7 por '+medTgEsc(quem||'-')+')'
             +'\n\n'+_linU.join('\n');
           urgAvisar('corpo-'+k+'-'+(entrada?'ent':'sai'), _txtU);
+          // Adriana, 04/set/2026: "check-in de entrada gera ocorrência que vai para o grupo
+          // de veterinários e o URGENTE." O resumo vai TAMBÉM ao grupo da Vet pela mesma
+          // porta (dedup por dia, falha na fila — nunca silêncio). Cobre o caso que hoje
+          // passava batido: cocô alterado SEM ponto do corpo alterado não chamava a vet
+          // (ckAvisarVet só dispara quando há ponto alterado, porque leva as fotos).
+          urgAvisar('corpo-'+k+'-'+(entrada?'ent':'sai'), _txtU, 'vet');
         }catch(_e){} /* silencioso de propósito: o aviso de urgência é extra — falhar não pode travar o salvamento do check-in */
       }
     } else {
@@ -23462,7 +23507,46 @@
       if(typeof audit==='function') audit('dashboard-daycare','adaptação ('+patch.adaptacao_tipo+') começa em '+patch.adaptacao_desde+' — gravada na ficha',{alvo:(typeof pelKey==='function'?pelKey(p):''), pet:(p.n||'')});
     }catch(e){ _logFalhaGrav('adaptação na ficha (chamada)', e); }
   }
-  function dashLancar(k, valor){
+  // ===== REPOSIÇÃO LANÇADA ↔ BANCO DE REPOSIÇÕES (Adriana, 04/set/2026) ===========
+  // "Essas duas têm que conversar: a Serena tem 4; se eu lançar uma reposição tem que
+  // abater." Antes, lançar 'Reposição' nos Lançamentos do dia só escrevia na planilha —
+  // o saldo do Banco de Reposições ficava intacto e a conta divergia da vida real.
+  // Agora o lançamento ABATE 1 do saldo (tipo:'uso', mesmo lançamento auditável da tela
+  // de Reposições) e entrega à consultora o texto pronto para o tutor, no molde que a
+  // Adriana ditou. Sem saldo (ou sem ficha casada), a tela PERGUNTA antes — nunca abate
+  // no escuro nem lança em silêncio.
+  function dashRepMensagemTutor(p, saldoAntes, diaISO){
+    var tutor=(typeof primeiroNome==='function')?primeiroNome(pelGet(p,'tutor')||p.tutor||''):'';
+    var ex={}; try{ ex=(typeof pelExtra==='function'?pelExtra(p):{})||{}; }catch(e){ /* sem extra, artigo neutro — melhor que não sair */ }
+    var o=/^f/i.test(String(ex.sexo||''))?'a':'o';
+    var dep=Math.max(0, saldoAntes-1);
+    var tinha=(saldoAntes===1)?'tinha 1 reposição':('tinha '+saldoAntes+' reposições');
+    var fica=(dep>0)?('ficará com '+dep):'ficará sem reposições';
+    return (tutor?(tutor+', '):'')+o+' '+pelNome(p)+' '+tinha+'; como usou 1 em '+repBRdata(diaISO)+', '+fica
+      +'. As reposições também podem ser usadas em hospedagem, ficando somente o valor da pernoite para acerto.';
+  }
+  function dashRepAbater(p, saldoAntes){
+    var dia=dashDia();
+    return repGravar(p,{tipo:'uso', data:dia, motivo:'reposicao', obs:'Reposição lançada nos Lançamentos do dia'}).then(function(){
+      if(typeof audit==='function') audit('reposicao-uso', pelNome(p)+' — abatida pelo lançamento de Reposição do dia '+dia, {});
+      var dep=Math.max(0, saldoAntes-1);
+      repMsgModal('✅ Reposição lançada e abatida',
+        [pelNome(p)+' usou 1 reposição em '+repBRdata(dia)+'. Saldo: era '+saldoAntes+', ficou '+dep+'.',
+         'O abatimento no Banco de Reposições já está feito — não marque o uso de novo na tela de Reposições.'],
+        dashRepMensagemTutor(p, saldoAntes, dia));
+      return true;
+    }).catch(function(e){
+      // O lançamento entrou; o abatimento é que falhou. Isso NUNCA fica mudo: o saldo
+      // errado vira cobrança errada (a lei do Banco: falta avisada é dinheiro).
+      _logFalhaGrav('abater reposição de '+pelNome(p)+' (Lançamentos do dia)', e);
+      if(typeof zAlertao==='function') zAlertao('⚠ O LANÇAMENTO ENTROU, MAS O SALDO NÃO DESCEU',
+        ['A reposição de '+pelNome(p)+' foi lançada, mas não consegui abater 1 do Banco de Reposições: '+((e&&e.message)||e)+'.',
+         'Abra a tela de Reposições e marque o uso à mão — senão o saldo fica maior do que a verdade.'],
+        {botao:'Vou marcar à mão'});
+      return false;
+    });
+  }
+  function dashLancar(k, valor, idx){
     var it=dashItem(k); if(!it||!DB) return;
     var hora=it.hora?String((document.getElementById('dashH_'+k)||{}).value||''):'';
     if(it.hora&&!hora){ alert('Escolha o horário antes — é ele que faz o alarme tocar na TV.'); return; }
@@ -23490,20 +23574,57 @@
       alert(valor+' já está lançado em '+it.t+' hoje.'); return;
     }
     var reg={valor:valor, hora:hora, quem:(typeof quemSou==='function'?quemSou():'-'), ts:Date.now(), planilha_ok:null};
-    var ref=DB.ref(dashNo()+'/'+k).push();
-    ref.set(reg).then(function(){
-      DASH_DADOS[k]=DASH_DADOS[k]||{}; DASH_DADOS[k][ref.key]=reg;
-      var b=document.getElementById('dashB_'+k); if(b) b.value='';
-      var s=document.getElementById('dashS_'+k); if(s) s.innerHTML='';
-      // zera tudo: a dose da Olivia não pode grudar no próximo FILHOt
-      if(it.campos){ DASH_DET[k]={}; delete DASH_SEL[k]; delete DASH_SEL_I[k]; }
-      DC_DASH_TURMA.quando=0;   // o avulso lançado agora entra na turma na hora, não em 60s
-      renderDash();
-      if(typeof audit==='function') audit('dashboard-daycare','lançou '+valor+' em '+it.t,{pet:valor});
-      // Adaptação: o lançamento é quem dá o dia 1 — grava a data (e o tipo) na ficha.
-      if(it.dataIni) dashAdaptGravarFicha(pAdapt, tipoAdapt, dataIni, valorBase);
-      dashEspelhar(k, ref.key, reg, 'lancar');
-    }).catch(function(e){ alert('Não salvou: '+((e&&e.message)||e)); });
+    var gravar=function(abaterRep, pRep, saldoRep){
+      var ref=DB.ref(dashNo()+'/'+k).push();
+      ref.set(reg).then(function(){
+        DASH_DADOS[k]=DASH_DADOS[k]||{}; DASH_DADOS[k][ref.key]=reg;
+        var b=document.getElementById('dashB_'+k); if(b) b.value='';
+        var s=document.getElementById('dashS_'+k); if(s) s.innerHTML='';
+        // zera tudo: a dose da Olivia não pode grudar no próximo FILHOt
+        if(it.campos){ DASH_DET[k]={}; delete DASH_SEL[k]; delete DASH_SEL_I[k]; }
+        DC_DASH_TURMA.quando=0;   // o avulso lançado agora entra na turma na hora, não em 60s
+        renderDash();
+        if(typeof audit==='function') audit('dashboard-daycare','lançou '+valor+' em '+it.t,{pet:valor});
+        // Adaptação: o lançamento é quem dá o dia 1 — grava a data (e o tipo) na ficha.
+        if(it.dataIni) dashAdaptGravarFicha(pAdapt, tipoAdapt, dataIni, valorBase);
+        // Reposição: o lançamento abate 1 do Banco — só DEPOIS de o lançamento existir,
+        // para nunca descontar saldo de um lançamento que não entrou.
+        if(abaterRep) dashRepAbater(pRep, saldoRep);
+        dashEspelhar(k, ref.key, reg, 'lancar');
+      }).catch(function(e){ alert('Não salvou: '+((e&&e.message)||e)); });
+    };
+    if(k!=='reposicao'){ gravar(false); return; }
+    // ---- Reposição: casar a ficha e conferir o saldo ANTES de gravar ----------------
+    // A ficha é a ESCOLHIDA na busca (idx viaja no clique); sem índice, tenta casar o
+    // texto — e nunca aceita casamento ambíguo (nome sozinho não identifica ninguém).
+    var pRep=null;
+    if(typeof idx==='number' && PELUDINHOS[idx]) pRep=PELUDINHOS[idx];
+    if(!pRep){ try{ var mRep=planCasar(valor); if(mRep&&mRep.p&&!mRep.ambiguo) pRep=mRep.p; }catch(e){ /* sem casamento, o cartaz abaixo pergunta */ } }
+    if(!pRep){
+      zEscolha('Não achei a ficha de "'+valor+'"',
+        ['Sem a ficha eu não sei o saldo do Banco de Reposições — e não abato nada no escuro.',
+         'Lançar mesmo assim escreve na planilha, mas o saldo dele NÃO desce: depois é preciso marcar o uso à mão na tela de Reposições.'],
+        [{t:'Lançar mesmo assim (sem abater)', cor:'#B3261E', fn:function(){
+            if(typeof audit==='function') audit('dashboard-daycare','Reposição lançada SEM ficha casada: '+valor+' — o saldo do Banco NÃO foi abatido',{pet:valor});
+            gravar(false);
+          }},
+         {t:'Não lançar', fn:function(){}}]);
+      return;
+    }
+    var saldoRep=0; try{ saldoRep=repSaldo(pRep); }catch(e){ saldoRep=0; }
+    if(saldoRep<=0){
+      zEscolha(pelNome(pRep)+' não tem saldo de reposição',
+        ['O Banco de Reposições dele está em '+saldoRep+' — não há crédito para abater.',
+         'Se ele veio mesmo assim, confira com a Gestão: pode ser falta avisada que ninguém lançou, ou um dia que será cobrado.',
+         'Lançar mesmo assim escreve na planilha sem mexer no saldo.'],
+        [{t:'Lançar mesmo assim (sem abater)', cor:'#B3261E', fn:function(){
+            if(typeof audit==='function') audit('dashboard-daycare','Reposição lançada SEM saldo no Banco: '+valor+' (saldo '+saldoRep+') — nada foi abatido',{pet:valor});
+            gravar(false);
+          }},
+         {t:'Não lançar', fn:function(){}}]);
+      return;
+    }
+    gravar(true, pRep, saldoRep);
   }
   // Espelha na planilha. O lançamento no app já está salvo — isto é o que faz a TV enxergar.
   // diaOpc: a fila de reenvio manda lançamento de dias passados — a ponte precisa receber
@@ -23820,6 +23941,12 @@
     Object.keys(out).forEach(function(k){
       var visto={}; out[k]=out[k].filter(function(v){ var c=dashAutoNomeChave(v); if(visto[c]) return false; visto[c]=1; return true; });
     });
+    // Restrições em ORDEM ALFABÉTICA (Adriana, 04/set/2026): a lista saía na ordem do
+    // cadastro, e quem procura um FILHOt no quadro procura pelo nome. Vale para aulunos e
+    // hóspedes — a planilha recebe já ordenada, e a TV mostra igual.
+    ['aulunosRestr','hospRestr'].forEach(function(k){
+      out[k].sort(function(a,b){ return String(a).localeCompare(String(b),'pt-BR',{sensitivity:'base'}); });
+    });
     return out;
   }
   // Põe na planilha o que falta e tira o que este mecanismo pôs e não vale mais.
@@ -23928,7 +24055,10 @@
     var reg=(DASH_DADOS[k]||{})[id];
     if(!reg){ alert('Não achei este lançamento para reenviar. Atualize a tela e tente de novo.'); return; }
     var txt=btn?btn.textContent:''; if(btn){ btn.disabled=true; btn.textContent='enviando…'; }
-    dashEspelhar(k,id,reg,'lancar').then(function(r){
+    // O dia vai EXPLÍCITO: é o dia aberto na tela (o botão mora na linha daquele dia).
+    // Reenviar o carrapaticida de 03/09 com a tela em 03/09 manda para a planilha de
+    // 03/09 — nunca para o dia em que alguém por acaso estiver olhando depois.
+    dashEspelhar(k,id,reg,'lancar',dashDia()).then(function(r){
       if(btn){ btn.disabled=false; btn.textContent=txt||'reenviar'; }
       if(r&&r.ok){ if(typeof zAlertao==='function') zAlertao('ENVIADO PARA A PLANILHA',[(reg.valor||'')+' entrou na planilha e vai aparecer na TV.'],{botao:'Fechar'});
                    else alert('Enviado para a planilha.'); return; }
