@@ -7827,8 +7827,13 @@ async function main() {
       ids.length === 3 && ['Yume', 'Elizabeth', 'Cindy'].every((n) =>
         ids.some((id) => String(no0309[id].valor || '').indexOf(n) === 0)),
       JSON.stringify(ids.map((id) => no0309[id].valor)));
-    check('dado real: TODOS sem planilha_ok (null era o estado normal — nunca prova de falha)',
-      ids.every((id) => no0309[id].planilha_ok === undefined || no0309[id].planilha_ok === null));
+    // 07/set/2026 — o dado real andou: os reenvios manuais (a saída que este mesmo
+    // conserto criou) confirmaram os 3 na planilha, e planilha_ok virou true no banco.
+    // A prova agora aceita os DOIS estados legítimos — null (o "não sei" histórico) e
+    // true (confirmado depois) — e segue reprovando qualquer outro valor.
+    check('dado real: planilha_ok dos 3 é null (o "não sei" histórico) ou true (confirmado pelo reenviar) — nunca outro estado',
+      ids.every((id) => no0309[id].planilha_ok === undefined || no0309[id].planilha_ok === null || no0309[id].planilha_ok === true));
+    const aindaSemOk0309 = ids.some((id) => no0309[id].planilha_ok == null);
 
     // (a) a tela "Lançamentos do dia" em 03/09 MOSTRA os 3 — nada os filtra.
     vm.runInContext('__bkpBA = { DB: DB, dados: DASH_DADOS, ponte: DASH_PONTE, diaSel: DASH_DIA_SEL };', ctx);
@@ -7849,8 +7854,15 @@ async function main() {
           /Carrapaticida/.test(gravador.innerHTML) && /—\s*3/.test(gravador.innerHTML.split('Carrapaticida')[1] || '')
           && /Yume/.test(gravador.innerHTML) && /Elizabeth/.test(gravador.innerHTML) && /Cindy/.test(gravador.innerHTML),
           gravador.innerHTML.slice(gravador.innerHTML.indexOf('Carrapaticida') - 40, gravador.innerHTML.indexOf('Carrapaticida') + 200));
-        check('o "não sei" antigo ganha saída manual discreta: "envio à planilha não confirmado" + reenviar',
-          /envio à planilha não confirmado/.test(gravador.innerHTML) && /dashReenviar\('carrapaticida'/.test(gravador.innerHTML));
+        // Com planilha_ok ainda em null, a tela dá a saída manual ("não confirmado" +
+        // reenviar); com os 3 já confirmados (o estado real desde 07/set), o aviso e o
+        // botão de reenviar somem — confirmação não pede providência de ninguém.
+        check(aindaSemOk0309
+            ? 'o "não sei" antigo ganha saída manual discreta: "envio à planilha não confirmado" + reenviar'
+            : 'os 3 já confirmados (planilha_ok=true): sem aviso e sem reenviar à toa',
+          aindaSemOk0309
+            ? (/envio à planilha não confirmado/.test(gravador.innerHTML) && /dashReenviar\('carrapaticida'/.test(gravador.innerHTML))
+            : (!/envio à planilha não confirmado/.test(gravador.innerHTML) && !/dashReenviar\('carrapaticida'/.test(gravador.innerHTML)));
       } finally { ctx.document.getElementById = gidBA; }
     } finally {
       vm.runInContext('DB = __bkpBA.DB; DASH_DADOS = __bkpBA.dados; DASH_PONTE = __bkpBA.ponte; DASH_DIA_SEL = __bkpBA.diaSel;', ctx);
@@ -8423,6 +8435,308 @@ async function main() {
     }
   } else {
     check('dashReenviar existe', false, 'função não encontrada');
+  }
+  console.log('');
+
+  // ════════════════════════════════════════════════════════════════════════════════
+  // v-07 (07/set/2026) — selo da Conferência = lista da Conferência (régua única)
+  //                      + Painel das Consultoras (Seu dia + 5 quadros com dado real)
+  // ════════════════════════════════════════════════════════════════════════════════
+
+  // ---- Tarefa 1: o caso Kako + Hannah — selo e lista com a MESMA régua -------------
+  console.log('v-07 · Tarefa 1 — selo da Conferência = lista da Conferência (cfEntraNaFila):');
+  if (typeof ctx.cfEntraNaFila === 'function') {
+    check('mordida — o selo (contarPendencias) conta pela régua única cfEntraNaFila',
+      /if\(cfEntraNaFila\(e,k\) && !\(e\.conferencia&&e\.conferencia\.concluida\)\) r\.conferir\+\+;/.test(html));
+    check('mordida — a lista (cfListaHospedes) filtra pela MESMA cfEntraNaFila',
+      /function cfListaHospedes\(\)\{[\s\S]{0,700}?if\(!cfEntraNaFila\(e,k\)\) return;/.test(html));
+    const hoje7 = ctx.hojeISO();
+    const ontem7 = ctx.orcMaisDias(hoje7, -1);
+    const amanha7 = ctx.orcMaisDias(hoje7, 1);
+    vm.runInContext(`
+      __bkp7 = { CF: CF_ESTADIAS, cad: pelCadCache, HP: HOSP_PLANILHA, HOSP: hospedes, LIDO: CF_ESTADIAS_LIDO };
+      HOSP_PLANILHA = false; hospedes = []; CF_ESTADIAS_LIDO = true;
+      pelCadCache = { 'kako__zeluz': { categoria: 'morador' } };
+      CF_ESTADIAS = {
+        'kako__zeluz':  { id: 'e1', e: { nome: 'Kako',   tutor: 'Zêluz', status: 'ativa', entrada: '${ontem7}',  saida: '${amanha7}', refKey: 'kako__zeluz' } },
+        'hannah__lia':  { id: 'e2', e: { nome: 'Hannah', tutor: 'Lia',   status: 'ativa', entrada: '${amanha7}', saida: '${ctx.orcMaisDias(hoje7, 3)}' } },
+        'arthur__bea':  { id: 'e3', e: { nome: 'Arthur', tutor: 'Bea',   status: 'ativa', entrada: '${ctx.orcMaisDias(hoje7, -5)}', saida: '${ontem7}' } }
+      };
+    `, ctx);
+    try {
+      // (1) O caso real de hoje: morador ativo sem conferência + estadia futura + vencida.
+      let selo = ctx.contarPendencias();
+      let lista = ctx.cfListaHospedes();
+      check('mordida — Kako (morador) + Hannah (futura) + Arthur (vencida): selo 0 E lista vazia JUNTOS',
+        selo.conferir === 0 && lista.length === 0, 'selo=' + selo.conferir + ' lista=' + lista.length);
+      // (2) Um hóspede REAL na casa, sem conferência: selo 1 e o MESMO nome na lista.
+      vm.runInContext(`CF_ESTADIAS['pufe__ana'] = { id: 'e4', e: { nome: 'Pufe', tutor: 'Ana', raca: 'SRD', status: 'ativa', entrada: '${ontem7}', saida: '${amanha7}' } };`, ctx);
+      selo = ctx.contarPendencias(); lista = ctx.cfListaHospedes();
+      check('mordida — hóspede real na casa sem conferência: selo 1 E ele aparece na lista',
+        selo.conferir === 1 && lista.length === 1 && lista[0].nome === 'Pufe',
+        'selo=' + selo.conferir + ' lista=' + JSON.stringify(lista.map((h) => h.nome)));
+      // (3) Conferido: sai do selo, mas NÃO some da lista (continua ali, recolhido).
+      vm.runInContext(`CF_ESTADIAS['serena__julia'] = { id: 'e5', e: { nome: 'Serena', tutor: 'Júlia', raca: 'SRD', status: 'ativa', entrada: '${ontem7}', saida: '${amanha7}', conferencia: { concluida: true } } };`, ctx);
+      selo = ctx.contarPendencias(); lista = ctx.cfListaHospedes();
+      check('mordida — conferida sai do selo e fica na lista: selo segue 1, lista tem os 2',
+        selo.conferir === 1 && lista.length === 2, 'selo=' + selo.conferir + ' lista=' + lista.length);
+      // (4) A régua em si, caso a caso.
+      check('cfEntraNaFila: morador nunca entra', ctx.cfEntraNaFila({ nome: 'Kako', status: 'ativa', entrada: ontem7, saida: amanha7 }, 'kako__zeluz') === false);
+      check('cfEntraNaFila: futura não entra; vencida não entra; encerrada não entra; a de hoje entra',
+        ctx.cfEntraNaFila({ nome: 'H', status: 'ativa', entrada: amanha7, saida: amanha7 }, 'h__x') === false &&
+        ctx.cfEntraNaFila({ nome: 'A', status: 'ativa', entrada: ontem7, saida: ontem7 }, 'a__x') === false &&
+        ctx.cfEntraNaFila({ nome: 'F', status: 'finalizada', entrada: ontem7, saida: amanha7 }, 'f__x') === false &&
+        ctx.cfEntraNaFila({ nome: 'P', status: 'ativa', entrada: ontem7, saida: amanha7 }, 'p__x') === true);
+    } finally {
+      vm.runInContext('CF_ESTADIAS=__bkp7.CF; pelCadCache=__bkp7.cad; HOSP_PLANILHA=__bkp7.HP; hospedes=__bkp7.HOSP; CF_ESTADIAS_LIDO=__bkp7.LIDO;', ctx);
+    }
+  } else {
+    check('cfEntraNaFila existe', false, 'função não encontrada');
+  }
+  console.log('');
+
+  // ---- Tarefa 2a: Painel das Consultoras — permissão, menu e voz -------------------
+  console.log('v-07 · Tarefa 2 — Painel das Consultoras (permissão, menu, frases):');
+  {
+    check('PERM: consultora, supervisão, gestão e diretoria veem o painel',
+      ['consultora', 'supervisor', 'gestao', 'diretoria'].every((p) => ctx.podePapel('painel-consultoras', p)));
+    check('PERM: monitor, plantonista, aprendiz, vet e conferência NÃO veem',
+      ['monitor', 'plantonista', 'aprendiz', 'vet', 'conferencia'].every((p) => !ctx.podePapel('painel-consultoras', p)));
+    check('mordida — o item do menu nasce escondido e é a tabela quem o mostra (PERM_MENU)',
+      /\['consultoras','painel-consultoras'\]/.test(html) &&
+      /<a data-v="consultoras" style="display:none"/.test(html));
+    check('mordida — o Cadastro segue sendo o 1º item da Central; o Painel vem logo depois dele',
+      html.indexOf('data-v="ficha"') < html.indexOf('data-v="consultoras"') &&
+      html.indexOf('data-v="consultoras"') < html.indexOf('<div class="acc" data-acc="c-auaulandia">'));
+    check('a tela v-consultoras existe e tem título no mapa (fonte única titles)',
+      /<section class="view" id="v-consultoras">/.test(html) &&
+      /consultoras:\['Painel das Consultoras'/.test(html));
+    check('pcAbrir se tranca pela mesma tabela (link direto não fura a permissão)',
+      /function pcAbrir\([\s\S]{0,400}?podePapel\('painel-consultoras'\)/.test(html));
+    // As sete frases do dia — os textos EXATOS do gabarito v4, rotação fixa por dia.
+    const F = ctx.PC_FRASES;
+    check('PC_FRASES tem as 7 frases do v4 (uma por dia da semana)', Array.isArray(F) && F.length === 7);
+    check('domingo abre com o slogan aplicado à mão de quem atende',
+      F[0] === 'Aqui, cada cuidado é ÚNICO — e é pelas suas mãos que ele chega a cada Família Multiespécie.');
+    check('segunda fala da voz dos FILHOts começando no acolhimento',
+      F[1] === 'A Zêluz é a voz dos FILHOts num mundo que ainda aprende a escutá-los. E toda escuta começa no seu acolhimento.');
+    check('sábado fecha com a individualização começando no atendimento',
+      F[6] === 'Onde o mercado generaliza, a Zêluz individualiza. Essa diferença começa no seu atendimento.');
+    check('a rotação é FIXA pelo dia da semana (07/set/2026 é segunda → frase 1)',
+      ctx.pcFraseDoDia(new Date('2026-09-07T12:00:00')) === F[1] &&
+      ctx.pcFraseDoDia(new Date('2026-09-13T12:00:00')) === F[0]);
+    // Vocabulário: o módulo novo (JS + tela) não usa a palavra proibida do gabarito.
+    const iniPC = html.indexOf('PAINEL DAS CONSULTORAS — a mesa da Central Zêluz (v-07, 07/set/2026)');
+    const fimPC = html.indexOf('PAINEL DA OPERAÇÃO — a fatia da Márcia (Fase 2.2)\n');
+    const fatiaPC = (iniPC >= 0 && fimPC > iniPC) ? html.slice(iniPC, fimPC) : '';
+    const secaoPC = (() => { const a = html.indexOf('id="v-consultoras"'); return a >= 0 ? html.slice(a - 600, a + 400) : ''; })();
+    check('a fatia do módulo novo existe no código', fatiaPC.length > 4000, String(fatiaPC.length));
+    check('mordida — nenhum "balcão" no módulo novo nem na tela nova (grep /balc/i = zero no que é novo)',
+      !/balc/i.test(fatiaPC) && !/balc/i.test(secaoPC));
+  }
+  console.log('');
+
+  // ---- Tarefa 2b: Seu dia — copos SEM ponto, +5 UMA vez por dia, com rastro --------
+  console.log('v-07 · Seu dia — água sem ponto e a carinha que paga +5 uma única vez:');
+  if (typeof ctx.pcCopoTocar === 'function' && typeof ctx.pcHumorTocar === 'function') {
+    check('pcCopoAlvo: tocar um copo enche até ele; tocar o mesmo do topo esvazia um',
+      ctx.pcCopoAlvo(0, 3) === 3 && ctx.pcCopoAlvo(3, 3) === 2 && ctx.pcCopoAlvo(5, 8) === 8);
+    check('pcSerieNova: ontem respondido continua a conta; ontem calado recomeça do 1',
+      ctx.pcSerieNova({ pontos5: true, serie: 4 }) === 5 && ctx.pcSerieNova(null) === 1 &&
+      ctx.pcSerieNova({ copos: 8 }) === 1);
+    check('pcPontosSemana: 5 por dia respondido — copos NUNCA somam',
+      ctx.pcPontosSemana([{ pontos5: true }, { copos: 8 }, null, { pontos5: true, copos: 3 }]) === 10);
+    const escr = { updates: [], pushes: [], estado: {} };
+    ctx.__escr7 = escr;
+    ctx.__db7 = { ref: (caminho) => ({
+      update(o) { const a = Object.assign({}, escr.estado[caminho] || {}); Object.keys(o).forEach((k) => { a[k] = o[k]; }); escr.estado[caminho] = a; escr.updates.push({ caminho, o }); return Promise.resolve(); },
+      push(v) { escr.pushes.push({ caminho, v }); return Promise.resolve(); },
+      transaction(cb) { const serv = escr.estado[caminho] === undefined ? null : JSON.parse(JSON.stringify(escr.estado[caminho])); const r = cb(serv); if (r === undefined) return Promise.resolve({ committed: false, snapshot: { val: () => serv } }); escr.estado[caminho] = r; return Promise.resolve({ committed: true, snapshot: { val: () => r } }); },
+      once() { return Promise.resolve({ val: () => (escr.estado[caminho] === undefined ? null : escr.estado[caminho]) }); },
+      limitToLast() { return this; },
+    }) };
+    vm.runInContext(`__bkpPC = { DB: DB, U: PC_ULTIMO, D: PC_DIA };
+      DB = __db7; PC_DIA = '2026-09-07';
+      PC_ULTIMO = { eu: 'Larissa Teste', key: 'larissa-teste', pos: 0, pago: false, copos: 0, humor: '', serie: 3, serieFeita: 2, pontosSemana: 10 };`, ctx);
+    try {
+      // (1) Água: grava só no nó do Seu dia, com quem e ts — e NENHUM ponto no placar.
+      ctx.pcCopoTocar(3);
+      await drenar(4);
+      const upAgua = escr.updates.filter((u) => u.caminho === 'daycare/seu-dia/2026-09-07/larissa-teste');
+      check('mordida — o copo grava copos=3 em daycare/seu-dia/{dia}/{pessoa}, com quem e ts',
+        upAgua.length === 1 && upAgua[0].o.copos === 3 && upAgua[0].o.quem === 'Larissa Teste' && typeof upAgua[0].o.ts === 'number',
+        JSON.stringify(upAgua));
+      check('mordida — copo NÃO soma ponto: zero push no placar dos Zelosos', escr.pushes.length === 0);
+      // (2) A carinha paga +5 UMA vez, no MESMO placar do check-out, com rastro.
+      ctx.pcHumorTocar('bem');
+      await drenar(6);
+      const reg7 = escr.estado['daycare/seu-dia/2026-09-07/larissa-teste'] || {};
+      const soPlacar = () => escr.pushes.filter((x) => x.caminho.indexOf('daycare/pontos-checkout/') === 0);
+      check('mordida — responder grava pontos5, humor, série e quem no nó do dia',
+        reg7.pontos5 === true && reg7.humor === 'bem' && reg7.serie === 3 && reg7.quem === 'Larissa Teste',
+        JSON.stringify(reg7));
+      check('mordida — o +5 entra em daycare/pontos-checkout/{mês} com rastro origem:"seu-dia" e o dia',
+        soPlacar().length === 1 && soPlacar()[0].caminho === 'daycare/pontos-checkout/2026-09' &&
+        soPlacar()[0].v.pontos === 5 && soPlacar()[0].v.origem === 'seu-dia' &&
+        soPlacar()[0].v.dia === '2026-09-07' && soPlacar()[0].v.quem === 'Larissa Teste',
+        JSON.stringify(escr.pushes));
+      check('e o gesto deixa rastro também na auditoria do dia (audit seu-dia-humor)',
+        escr.pushes.some((x) => x.caminho.indexOf('daycare/auditoria/') === 0 && x.v && x.v.acao === 'seu-dia-humor'),
+        JSON.stringify(escr.pushes.map((x) => x.caminho)));
+      // (3) Trocar a resposta NÃO paga de novo — e "sobrecarregada" vale o MESMO ponto.
+      ctx.pcHumorTocar('sobrecarregada');
+      await drenar(4);
+      const reg7b = escr.estado['daycare/seu-dia/2026-09-07/larissa-teste'] || {};
+      check('mordida — trocar para "sobrecarregada" muda a resposta e NÃO soma de novo (1 ponto só, ponto igual)',
+        soPlacar().length === 1 && reg7b.humor === 'sobrecarregada' && reg7b.pontos5 === true,
+        'placar=' + soPlacar().length + ' humor=' + reg7b.humor);
+      // (4) Outro aparelho pagou primeiro: a transação vê pontos5 e não empilha 2º ponto.
+      vm.runInContext("PC_ULTIMO.pago = false; PC_ULTIMO.humor = '';", ctx);
+      ctx.pcHumorTocar('cansada');
+      await drenar(4);
+      check('mordida — mesmo com o estado local atrasado, a transação barra o 2º pagamento do dia',
+        soPlacar().length === 1, 'placar=' + soPlacar().length);
+    } finally {
+      vm.runInContext('DB = __bkpPC.DB; PC_ULTIMO = __bkpPC.U; PC_DIA = __bkpPC.D;', ctx);
+    }
+    check('mordida — o rodapé honesto do v4 está na tela: responder é o que vale, nunca a resposta',
+      /Responder é o que vale o ponto — nunca a resposta escolhida\. Os pontos entram no placar dos Zelosos, o mesmo do aplicativo\. A água é um cuidado seu: os copos acompanham a meta de 2 litros e não somam pontos\./.test(html));
+    check('mordida — a tela diz com todas as letras que os copos não somam pontos',
+      /Acompanhamento pessoal: os copos não somam pontos\./.test(html));
+  } else {
+    check('pcCopoTocar e pcHumorTocar existem', false, 'funções não encontradas');
+  }
+  console.log('');
+
+  // ---- Tarefa 2c: o placar continua honesto para quem já o usava -------------------
+  console.log('v-07 · Placar dos Zelosos — o +5 do Seu dia não vira "bolsa com falta":');
+  {
+    const mes7 = new Date().toISOString().slice(0, 7);
+    const estadoP = {}; estadoP['daycare/pontos-checkout/' + mes7] = {
+      a: { quem: 'Ana Teste', pontos: 10, pet: 'Pufe', ts: 1 },
+      b: { quem: 'Ana Teste', pontos: 5, origem: 'seu-dia', dia: '2026-09-07', ts: 2 },
+    };
+    ctx.__dbP7 = { ref: (c) => ({ once: () => Promise.resolve({ val: () => (estadoP[c] === undefined ? null : estadoP[c]) }), limitToLast() { return this; } }) };
+    vm.runInContext('__bkpP7 = DB; DB = __dbP7;', ctx);
+    try {
+      const R = await ctx.coPontosDoMesDe('Ana Teste');
+      check('mordida — coPontosDoMesDe (Meus pontos do check-out) ignora o registro seu-dia: 1 bolsa, 10 pontos, perfeita',
+        !!R && R.bolsas === 1 && R.total === 10 && R.perfeitas === 1 && R.maximo === 10, JSON.stringify(R));
+    } finally { vm.runInContext('DB = __bkpP7;', ctx); }
+    check('mordida — o placar do check-out da Gestão (Ritmo do Time) pula os registros seu-dia',
+      /function ritmoPontosCarregar\(\)\{[\s\S]{0,1600}?if\(\(r\.origem\|\|''\)==='seu-dia'\) return;/.test(html));
+  }
+  console.log('');
+
+  // ---- Tarefa 2d: os cinco quadros com as fontes REAIS (dubladas) ------------------
+  console.log('v-07 · Os cinco quadros — cada um bebe da conta que já existe:');
+  {
+    // (1) Remédio acabando — projecaoEstoque, com a regra do Toshi (modo em branco).
+    const med7 = ctx.pcDadosMedicacao([
+      { nome: 'Toshi', ok: true, itens: { i1: { nome: 'Antibiótico', q: '1', u: 'comprimido', horarios: ['08:00', '20:00'], estoque: { inicial: 20, restante: 2 } } } },
+      { nome: 'Serena', ok: true, itens: { i2: { nome: 'Anti-inflamatório', q: '1', u: 'comprimido', horarios: ['08:00'], estoque: { modo: 'contavel', inicial: 20, restante: 20 } } } },
+      { nome: 'Luna', ok: true, itens: { i3: { nome: 'Pomada', q: '', u: '', horarios: ['08:00'], estoque: { modo: 'frasco', nivel: 'cheio' } } } },
+    ]);
+    check('mordida — a regra do Toshi vale: estoque com modo em branco e número É contável, e 2 comprimidos p/ 2 doses/dia = acabando',
+      med7.baixos.length === 1 && med7.baixos[0].nome === 'Toshi' && med7.baixos[0].doses === 2,
+      JSON.stringify(med7));
+    check('mordida — quem tem estoque folgado conta como "em dia"; pomada sem conta fica fora',
+      med7.acomp === 2 && med7.emDia === 1 && med7.filhots === 1, JSON.stringify(med7));
+    check('quadro honesto: sem a lista de hóspedes o remédio mostra travessão, nunca zero',
+      (() => { const q = ctx.pcQuadroMedicacao(null); return q.indexOf('&mdash;') >= 0 && q.indexOf('data-pm-alvo') < 0; })());
+    // (2) Check-ins de hoje — a MESMA hospedesSemCheckin do menu.
+    vm.runInContext(`__bkpQ2 = { HP: HOSP_PLANILHA, HOSP: hospedes, CF: CF_ESTADIAS, LIDO: CF_ESTADIAS_LIDO };
+      HOSP_PLANILHA = true; CF_ESTADIAS_LIDO = true;
+      hospedes = [ { nome: 'Pufe', tutor: 'Ana', refKey: 'pufe__ana' },
+                   { nome: 'Repolho', tutor: 'Zêluz', mascote: true, refKey: 'repolho__zeluz' },
+                   { nome: 'Mel', tutor: 'Bia', refKey: 'mel__bia' } ];
+      CF_ESTADIAS = { 'pufe__ana': { id: 'x1', e: { nome: 'Pufe', status: 'ativa' } } };`, ctx);
+    try {
+      const c7 = ctx.pcDadosCheckins();
+      check('mordida — check-ins de hoje: 2 hóspedes reais (mascote fora), 1 feito, falta a Mel',
+        !!c7 && c7.total === 2 && c7.feitos === 1 && c7.faltam.length === 1 && c7.faltam[0].nome === 'Mel',
+        JSON.stringify(c7));
+      vm.runInContext('HOSP_PLANILHA = null;', ctx);
+      check('quadro honesto: sem a planilha lida, pcDadosCheckins devolve null (o quadro mostra travessão)',
+        ctx.pcDadosCheckins() === null);
+    } finally {
+      vm.runInContext('HOSP_PLANILHA=__bkpQ2.HP; hospedes=__bkpQ2.HOSP; CF_ESTADIAS=__bkpQ2.CF; CF_ESTADIAS_LIDO=__bkpQ2.LIDO;', ctx);
+    }
+    // (3) Orçamentos — pendentes primeiro, por data de ENTRADA (orcOrdenar, a ordem da Adriana).
+    const o7 = ctx.pcDadosOrcamentos({
+      o1: { status: 'aguardando', entrada: '2026-09-10', criado_em: 1, pets: [{ nome: 'Ragnar' }] },
+      o2: { status: 'fechado', entrada: '2026-09-08', criado_em: 2 },
+      o3: { status: 'aguardando', entrada: '2026-09-08', criado_em: 3, pets: [{ nome: 'Luna' }] },
+      o4: { status: 'aguardando', criado_em: 4, pets: [{ nome: 'Mel' }] },
+    });
+    check('mordida — só os pendentes entram, na ordem de entrada; sem data vai para o fim, nunca para o topo',
+      o7.pendentes.length === 3 && o7.pendentes[0].id === 'o3' && o7.pendentes[1].id === 'o1' && o7.pendentes[2].id === 'o4',
+      JSON.stringify(o7.pendentes.map((x) => x.id)));
+    // (4) Almoço — a MESMA empLista da tela "Quem não comeu hoje".
+    vm.runInContext(`__bkpQ4 = { t: turmaDoDia, c: CARTEIRA_CARREGADA, a1: window.__empAlm1, a2: window.__empAlm2, av: EMP_AVISOS };
+      CARTEIRA_CARREGADA = true;
+      turmaDoDia = function(){ return [
+        { p: { n: 'Toddy', tutor: 'Sophia' }, i: 0 },
+        { p: { n: 'Dolly', tutor: 'Marina' }, i: 1 },
+        { p: { n: 'Ozzy',  tutor: 'Lisa' },   i: 2 } ]; };`, ctx);
+    try {
+      const kT = ctx.dcKey('Toddy', 'Sophia'), kD = ctx.dcKey('Dolly', 'Marina'), kO = ctx.dcKey('Ozzy', 'Lisa');
+      const emp7 = { ok: true, a1: {}, a2: {}, avisos: {} };
+      emp7.a1[kT] = 'nao'; emp7.a2[kT] = 'nao';       // Toddy: não comeu nem no 2º — pronto e grave
+      emp7.a1[kD] = 'metade';                          // Dolly: metade — pronta, mas já avisada
+      emp7.avisos[kD] = { ts: 1 };
+      emp7.a1[kO] = 'nao';                             // Ozzy: aguarda o 2º horário — NÃO está pronto
+      const a7 = ctx.pcDadosAlmoco(emp7);
+      check('mordida — almoço: 1 enviada (Dolly), 1 pronta (Toddy, grave), 1 aguardando o 2º horário (Ozzy)',
+        !!a7 && a7.enviadas === 1 && a7.prontos.length === 1 && a7.prontos[0].nome === 'Toddy' &&
+        a7.prontos[0].grave === true && a7.aguardam === 1, JSON.stringify(a7));
+      check('quadro honesto: leitura do almoço que falhou vira null (travessão), nunca "ninguém a avisar"',
+        ctx.pcDadosAlmoco({ ok: false }) === null && ctx.pcDadosAlmoco(null) === null);
+    } finally {
+      vm.runInContext('turmaDoDia=__bkpQ4.t; CARTEIRA_CARREGADA=__bkpQ4.c; window.__empAlm1=__bkpQ4.a1; window.__empAlm2=__bkpQ4.a2; EMP_AVISOS=__bkpQ4.av;', ctx);
+    }
+    // (5) Recepção — cadastroFaltando (a régua do check-in); adaptação sem data FORA.
+    vm.runInContext(`__bkpQ5 = { PEL: PELUDINHOS, cad: pelCadCache, c: CARTEIRA_CARREGADA };
+      CARTEIRA_CARREGADA = true;
+      PELUDINHOS = [ { n: 'Zara', raca: 'SRD', tutor: '' },
+                     { n: 'Mel',  raca: '',    tutor: 'Bia' },
+                     { n: 'Bella', raca: 'SRD', tutor: 'Tati' } ];
+      pelCadCache = {};`, ctx);
+    try {
+      const r7 = ctx.pcDadosRecepcao();
+      check('mordida — recepção: 2 cadastros sem o essencial (Zara sem tutor, Mel sem raça); Bella completa',
+        !!r7 && r7.total === 3 && r7.incompletos.length === 2 &&
+        r7.incompletos.some((x) => x.nome === 'Zara' && x.faltas.indexOf('Tutor') >= 0) &&
+        r7.incompletos.some((x) => x.nome === 'Mel' && x.faltas.indexOf('Raça') >= 0),
+        JSON.stringify(r7));
+      vm.runInContext('CARTEIRA_CARREGADA = false;', ctx);
+      check('quadro honesto: sem o cadastro do banco, pcDadosRecepcao devolve null (nunca acusa no escuro)',
+        ctx.pcDadosRecepcao() === null);
+      check('mordida — adaptação sem data NÃO volta como pendência (decisão de 04/set): o quadro mostra travessão fixo',
+        /adaptação sem data não é pendência \(decisão de 04\/set\)/.test(html) &&
+        !/adaptacao_desde[\s\S]{0,200}?pcDadosRecepcao/.test(html));
+    } finally {
+      vm.runInContext('PELUDINHOS=__bkpQ5.PEL; pelCadCache=__bkpQ5.cad; CARTEIRA_CARREGADA=__bkpQ5.c;', ctx);
+    }
+    // O painel só observa: as leituras são once, cada quadro clica para a tela que resolve.
+    const iniPC2 = html.indexOf('PAINEL DAS CONSULTORAS — a mesa da Central Zêluz (v-07, 07/set/2026)');
+    const fatiaPC2 = html.slice(iniPC2, html.indexOf('PAINEL DA OPERAÇÃO — a fatia da Márcia (Fase 2.2)\n'));
+    check('os quadros não penduram ouvinte novo (nenhum .on(\'value\') no módulo)', !/\.on\('value'/.test(fatiaPC2));
+    // No código-fonte o onclick nasce como pcIr(\'recepcao\') — a aspa vem escapada
+    // dentro da string que monta o HTML; a busca precisa incluir a barra.
+    check('cada quadro abre a tela que resolve (recepcao, checkin, orcamento, emporio, ficha)',
+      ['recepcao', 'checkin', 'orcamento', 'emporio', 'ficha']
+        .every((v) => fatiaPC2.indexOf("pcIr(\\'" + v + "\\')") >= 0));
+    check('toda leitura que falha é registrada (nunca falha calada)',
+      /_logLeituraFalhou\(caminho\+' \(Painel das Consultoras\)'/.test(fatiaPC2));
+    check('a única gravação do painel é o gesto do Seu dia: seu-dia (update+transaction) e o +5 no placar (push) — e mais nada',
+      fatiaPC2.indexOf("DB.ref('daycare/seu-dia/'+PC_DIA+'/'+PC_ULTIMO.key).update") >= 0 &&
+      fatiaPC2.indexOf("DB.ref('daycare/seu-dia/'+PC_DIA+'/'+PC_ULTIMO.key).transaction") >= 0 &&
+      fatiaPC2.indexOf("DB.ref('daycare/pontos-checkout/'+PC_DIA.slice(0,7)).push(") >= 0 &&
+      !/DB\.ref\([^)]*\)\.(set|remove)\b/.test(fatiaPC2) &&
+      (fatiaPC2.match(/\)\.push\(/g) || []).length === 1 &&
+      (fatiaPC2.match(/\)\.update\(/g) || []).length === 1 &&
+      (fatiaPC2.match(/\)\.transaction\(/g) || []).length === 1);
   }
   console.log('');
 

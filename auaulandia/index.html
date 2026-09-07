@@ -1707,7 +1707,7 @@
     --pm-wash:rgba(90,171,181,.16);
     --pm-tarja:rgba(90,171,181,.62);
   }
-  #v-painelmeu,#v-planodia,#v-paineloperacao{max-width:1120px}
+  #v-painelmeu,#v-planodia,#v-paineloperacao,#v-consultoras{max-width:1120px}
 
   /* ---------- saudação vibrante (o topo que engaja) ---------- */
   .pm-saud1{font-size:28px;font-weight:800;color:var(--z-blue);letter-spacing:-.03em;line-height:1.12}
@@ -1932,6 +1932,115 @@
     .pm-card,.pm-pill i,.pm-anel-arco,.pm-spark-traco,.pm-spark-area,.pm-bt{transition:none}
     .pm-tl-i.agora .pm-tl-no::after{animation:none}
   }
+
+  /* ==================================================================================
+     PAINEL DAS CONSULTORAS (v-07) — só o que o card "Seu dia" precisa além do .pm-*.
+     Tudo do gabarito docs/esboco-consultoras-v4.html: série com chama, copos de 250 ml
+     que enchem ao toque (SEM pontos), carinhas SVG e a celebração curta (≤800 ms).
+     Nenhuma cor nova: tokens e derivadas --pm-* de sempre.
+     ================================================================================== */
+  .pc-colunas{margin-top:6px}
+  .pc-qz{padding:13px 0 12px;border-top:1px solid var(--pm-linha-fina)}
+  .pc-qz-p{font-size:13.5px;font-weight:700;color:var(--z-blue)}
+  .pc-ganho{display:inline-block;margin-left:8px;font-size:11.5px;font-weight:800;color:var(--z-gold-deep);
+    opacity:0;transform:translateY(3px);transition:opacity 300ms var(--pm-ease),transform 300ms var(--pm-ease)}
+  .pc-ganho.mostra{opacity:1;transform:none}
+  /* a série (streak) */
+  .pc-serie{display:flex;align-items:center;gap:11px;margin-top:8px;padding:11px 12px 10px;
+    border:1px solid rgba(222,180,40,.35);border-radius:12px;background:rgba(222,180,40,.08)}
+  .pc-chama{width:32px;height:32px;flex:0 0 auto;color:var(--z-gold-deep)}
+  .pc-chama svg{width:100%;height:100%;display:block}
+  .pc-chama .pc-chama-miolo{fill:var(--z-gold-light,#E5C353)}
+  .pc-chama.acesa{animation:pcChamaPulsa 2.2s ease-in-out infinite;transform-origin:50% 85%}
+  @keyframes pcChamaPulsa{0%,100%{transform:scale(1)}50%{transform:scale(1.08)}}
+  .pc-serie-txt{min-width:0;flex:1 1 auto}
+  .pc-serie-txt b{display:block;font-size:13.5px;font-weight:800;color:var(--z-blue);line-height:1.3}
+  .pc-serie-txt span{display:block;font-size:11.5px;font-weight:500;color:var(--muted);margin-top:1px}
+  .pc-dias{display:flex;justify-content:space-between;gap:4px;margin-top:9px;max-width:300px}
+  .pc-dia{display:grid;justify-items:center;gap:3px}
+  .pc-dia small{font-size:9.5px;font-weight:800;color:var(--muted)}
+  .pc-bola{width:20px;height:20px;border-radius:50%;background:var(--pm-trilho);display:grid;place-items:center}
+  .pc-bola svg{width:10px;height:10px;color:var(--z-white);opacity:0;transition:opacity 250ms var(--pm-ease)}
+  .pc-bola.feito{background:linear-gradient(180deg,var(--z-gold-light,#E5C353),var(--z-gold-deep))}
+  .pc-bola.feito svg{opacity:1}
+  .pc-bola.hoje{background:var(--z-white);border:2px solid var(--z-gold);animation:pcHojeChama 1.8s ease-in-out infinite}
+  .pc-bola.hoje.feito{border:none;background:linear-gradient(180deg,var(--z-gold-light,#E5C353),var(--z-gold-deep));animation:none}
+  @keyframes pcHojeChama{0%,100%{box-shadow:0 0 0 0 rgba(222,180,40,.35)}50%{box-shadow:0 0 0 4px rgba(222,180,40,0)}}
+  /* água: copinhos que enchem */
+  .pc-copos{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
+  .pc-copo{width:34px;height:44px;padding:0;flex:0 0 auto;background:none;border:none;cursor:pointer;
+    transition:transform 160ms var(--pm-ease)}
+  .pc-copo:active{transform:scale(.92)}
+  .pc-copo svg{width:100%;height:100%;overflow:visible;display:block}
+  .pc-copo .pc-agua{fill:var(--z-auaulandia,#5AABB5);transform:scaleY(0);transform-origin:50% 100%;transform-box:fill-box;
+    transition:transform 300ms var(--pm-ease)}
+  .pc-copo.cheio .pc-agua{transform:scaleY(1)}
+  .pc-copo .pc-vidro{fill:none;stroke:#B5B4B0;stroke-width:2.4;stroke-linejoin:round;transition:stroke 200ms var(--pm-ease)}
+  .pc-copo.cheio .pc-vidro{stroke:var(--z-blue-soft,#3A6A85)}
+  .pc-copo.pula{animation:pcCopoPula 320ms var(--pm-ease)}
+  @keyframes pcCopoPula{0%{transform:scale(1)}45%{transform:scale(1.12)}100%{transform:scale(1)}}
+  .pc-copos-rot{font-size:12px;font-weight:500;color:var(--muted);margin-top:7px}
+  .pc-copos-rot b{color:var(--z-gold-deep);font-weight:800;font-variant-numeric:tabular-nums}
+  .pc-nota-agua{font-size:11px;font-weight:500;color:var(--muted);margin-top:6px}
+  /* como você está: carinhas desenhadas */
+  .pc-humores{display:flex;gap:12px;margin-top:10px}
+  .pc-humor{display:grid;justify-items:center;gap:5px;padding:0;flex:0 0 auto;background:none;border:none;cursor:pointer}
+  .pc-humor svg{width:46px;height:46px;color:#8A8985;transition:color 200ms var(--pm-ease);display:block}
+  .pc-humor .pc-rosto{fill:rgba(35,77,103,.06);transition:fill 200ms var(--pm-ease)}
+  .pc-humor small{font-size:11px;font-weight:600;color:var(--muted)}
+  .pc-humor.marcado svg{animation:pcHumorPula 360ms var(--pm-ease)}
+  .pc-humor.marcado small{color:var(--z-blue);font-weight:800}
+  .pc-humor.marcado.pc-h-bem svg{color:var(--z-gold-deep)}
+  .pc-humor.marcado.pc-h-bem .pc-rosto{fill:rgba(222,180,40,.20)}
+  .pc-humor.marcado.pc-h-cansada svg{color:var(--z-blue)}
+  .pc-humor.marcado.pc-h-cansada .pc-rosto{fill:rgba(35,77,103,.15)}
+  .pc-humor.marcado.pc-h-sobre svg{color:var(--crm-critico)}
+  .pc-humor.marcado.pc-h-sobre .pc-rosto{fill:rgba(192,57,43,.12)}
+  @keyframes pcHumorPula{0%{transform:scale(1)}40%{transform:scale(1.16)}70%{transform:scale(.95)}100%{transform:scale(1)}}
+  /* rodapé do card */
+  .pc-rodape{margin-top:12px;padding-top:10px;border-top:1px solid var(--pm-linha-fina)}
+  .pc-pontos{font-size:12.5px;font-weight:500;color:var(--muted)}
+  .pc-pontos b{font-size:22px;font-weight:800;color:var(--z-gold-deep);font-variant-numeric:tabular-nums}
+  .pc-medalha{display:none;align-items:center;gap:10px;margin-top:10px;padding:9px 12px;
+    border-radius:12px;border:1px solid rgba(222,180,40,.5);background:rgba(222,180,40,.12)}
+  .pc-medalha.ganha{display:flex;animation:pcMedalhaEntra 500ms var(--pm-ease)}
+  @keyframes pcMedalhaEntra{0%{opacity:0;transform:translateY(8px) scale(.94)}100%{opacity:1;transform:none}}
+  .pc-medalha svg{width:26px;height:26px;flex:0 0 auto;color:var(--z-gold-deep);display:block}
+  .pc-medalha b{display:block;font-size:12.5px;font-weight:800;color:var(--z-blue)}
+  .pc-medalha span{display:block;font-size:11.5px;font-weight:500;color:var(--muted)}
+  .pc-completo{display:none;align-items:center;gap:10px;margin-top:10px}
+  .pc-completo.mostra{display:flex}
+  .pc-completo img{width:42px;height:auto;flex:0 0 auto}
+  .pc-completo b{font-size:12.5px;font-weight:800;color:var(--z-gold-deep)}
+  .pc-honesta{font-size:11.5px;font-weight:500;color:var(--muted);line-height:1.5;margin-top:10px}
+  /* celebração ao responder (máx. 800 ms) */
+  .pc-festa{position:absolute;inset:0;z-index:5;display:none;place-items:center;overflow:hidden;
+    pointer-events:none;border-radius:16px}
+  .pc-festa.roda{display:grid}
+  .pc-festa-anel{position:absolute;width:130px;height:130px;border-radius:50%;
+    border:5px solid var(--z-gold);opacity:0;animation:pcFestaAnel 700ms var(--pm-ease) both}
+  @keyframes pcFestaAnel{0%{opacity:.9;transform:scale(.35)}100%{opacity:0;transform:scale(1.5)}}
+  .pc-festa-sticker{width:86px;height:auto;filter:drop-shadow(0 6px 14px rgba(35,77,103,.25));
+    animation:pcFestaSticker 800ms var(--pm-ease) both}
+  @keyframes pcFestaSticker{0%{opacity:0;transform:scale(.4) rotate(-8deg)}
+    35%{opacity:1;transform:scale(1.12) rotate(3deg)}60%{transform:scale(.98)}
+    85%{opacity:1;transform:scale(1)}100%{opacity:0;transform:scale(1)}}
+  .pc-festa-pontos{position:absolute;top:22%;font-size:21px;font-weight:800;color:var(--z-gold-deep);
+    animation:pcFestaPontos 800ms var(--pm-ease) both}
+  @keyframes pcFestaPontos{0%{opacity:0;transform:translateY(16px)}30%{opacity:1}
+    80%{opacity:1;transform:translateY(-30px)}100%{opacity:0;transform:translateY(-38px)}}
+  /* os quadros são a porta da tela que resolve — o dedo precisa saber disso */
+  .pc-quadro{cursor:pointer}
+  @media(min-width:900px){
+    .pc-colunas{display:grid;grid-template-columns:1.15fr 1fr 1fr;gap:0 26px;align-items:start}
+    .pc-colunas .pc-qz{border-top:none;border-left:1px solid var(--pm-linha-fina);padding-left:22px}
+    .pc-colunas .pc-qz:first-child{border-left:none;padding-left:0}
+  }
+  @media(prefers-reduced-motion:reduce){
+    .pc-chama.acesa,.pc-bola.hoje,.pc-copo.pula,.pc-humor.marcado svg{animation:none}
+    .pc-festa{display:none !important}
+    .pc-copo .pc-agua,.pc-bola svg,.pc-ganho,.pc-copo,.pc-humor svg{transition:none}
+  }
 </style>
 </head>
 <body data-role="gestao">
@@ -2006,6 +2115,12 @@
         <!-- Fica na raiz da categoria de propósito: não é de AuAulândia nem de Day Care,
              é o cadastro único dos dois (Adriana, 26/ago/2026). -->
         <a data-v="ficha" class="so-gestao nav-destaque" title="Um cadastro só, para Day Care e AuAulândia — tudo começa aqui."><span data-icon="id-card"></span><span>Cadastro de Peludinhos</span></a>
+        <!-- PAINEL DAS CONSULTORAS (v-07) — a mesa do dia de quem atende na Central.
+             Vem logo depois do Cadastro (que É o primeiro item da categoria, por decisão
+             de 26/ago — o harness morde isso). Nasce ESCONDIDO; quem mostra é
+             aplicarPermMenu(), lendo a tabela PERM ('painel-consultoras'). Nada de
+             classe so-* nova (regra 3 da Fase 2). -->
+        <a data-v="consultoras" style="display:none" title="A sua mesa do dia: o Seu dia e os cinco quadros que precisam de você."><span data-icon="sun"></span><span>Painel das Consultoras</span></a>
         <div class="acc" data-acc="c-auaulandia">
           <a class="grp grp-sub nav-parent" data-acc-toggle="c-auaulandia"><span>AuAulândia</span><span class="acc-caret" aria-hidden="true"></span></a>
           <div class="acc-panel">
@@ -3878,6 +3993,15 @@
     <div id="pmRoot"><div class="pm-card"><div class="pm-sub">Carregando a sua rota de hoje…</div></div></div>
   </section>
 
+  <!-- ===== PAINEL DAS CONSULTORAS — a mesa da Central Zêluz (v-07) ==================
+       Gabarito: docs/esboco-consultoras-v4.html, aprovado com as seis correções diretas
+       da Adriana. O card "Seu dia" abre a página (decisão da fundadora), e os cinco
+       quadros mostram DADO REAL das contas que o app já tem — este painel só observa;
+       cada quadro abre a tela que resolve. -->
+  <section class="view" id="v-consultoras">
+    <div id="pcRoot"><div class="pm-card"><div class="pm-sub">Carregando a sua mesa do dia…</div></div></div>
+  </section>
+
   <!-- ===== ESCALA E PLANO DO DIA — a mesa da Márcia (Fase 2.1) ======================
        É daqui que sai o card "Meu dia" de cada monitor. Sem isto preenchido, o Painel do
        monitor diz "a Gestão ainda não montou a sua escala" — nunca inventa horário. -->
@@ -4272,6 +4396,7 @@
     // Dica curta de propósito: no celular ela divide a barra com o seletor de data, e uma
     // frase longa vira uma coluna estreita e alta em cima da tela.
     painelmeu:['Meu Painel','A sua rota de hoje.'],
+    consultoras:['Painel das Consultoras','A sua mesa do dia na Central.'],
     paineloperacao:['Painel da Operação','A casa de hoje: quem veio, o time, as noites e o acerto.'],
     planodia:['Escala e plano do dia','A escala de cada um e qual plano vale hoje.'],
     abertura:['Abertura do dia','Monitor 1: como a casa abre.'],sair:['Sair','Encerra a sessão neste aparelho.']};
@@ -4328,6 +4453,7 @@
     if(v==='inativos'){ if(typeof renderInativos==='function') renderInativos(); }
     if(v==='mesa'){ if(typeof mesaAbrir==='function') mesaAbrir(); }
     if(v==='painelmeu'){ if(typeof pmAbrir==='function') pmAbrir(); }
+    if(v==='consultoras'){ if(typeof pcAbrir==='function') pcAbrir(); }
     if(v==='paineloperacao'){ if(typeof poAbrir==='function') poAbrir(); }
     if(v==='planodia'){ if(typeof pdAbrir==='function') pdAbrir(); }
     if(v==='reposicao'){ if(typeof renderReposicao==='function') renderReposicao(); }
@@ -4404,6 +4530,11 @@
     'painel-monitor':           ['monitor','plantonista','aprendiz'],
     // Quem monta a escala e diz qual plano vale hoje é SEMPRE a Márcia (Adriana, 26/ago).
     'definir-plano-do-dia':     ['gestao','diretoria'],
+    // ===== v-07 — o Painel das Consultoras (a mesa da Central Zêluz) ==================
+    // A tela da recepção: o "Seu dia" (bem-estar de quem cuida) e os cinco quadros que
+    // precisam dela. Quem atende na Central vê; o monitor NÃO — a fatia dele é o Meu
+    // Painel. Mesma regra 3 da Fase 2: permissão em um lugar só, provada no harness.
+    'painel-consultoras':       ['consultora','supervisor','gestao','diretoria'],
     // ===== FASE 2.2 — a fatia da Operação (a Márcia) ==================================
     // A outra ponta da mesma tese: o monitor vê a rota dele, a Márcia vê a casa. Aqui há
     // dinheiro (o acerto das plantonistas) e tempo por etapa POR PESSOA — as duas coisas
@@ -4426,7 +4557,7 @@
   // Nenhum dos dois entra em NAV_PAGINAS_ALL de propósito: "Meu Painel" é a fatia da
   // própria pessoa (não se concede a ninguém, é dela), e a escala é ajuste da Gestão —
   // mesma razão pela qual "Senhas" e "Configurações" também ficam fora daquela lista.
-  const PERM_MENU=[['painelmeu','painel-monitor'],['paineloperacao','painel-operacao'],['planodia','definir-plano-do-dia']];
+  const PERM_MENU=[['painelmeu','painel-monitor'],['paineloperacao','painel-operacao'],['planodia','definir-plano-do-dia'],['consultoras','painel-consultoras']];
   function aplicarPermMenu(){
     PERM_MENU.forEach(function(par){
       document.querySelectorAll('#nav a[data-v="'+par[0]+'"]').forEach(function(a){
@@ -4598,7 +4729,12 @@
     try{
       Object.keys(CF_ESTADIAS||{}).forEach(function(k){
         var e=(CF_ESTADIAS[k]||{}).e||{}; if((e.status||'ativa')!=='ativa') return;
-        if(!(e.conferencia&&e.conferencia.concluida)) r.conferir++;
+        // ⚠ 07/set/2026 — caso Kako + Hannah: o selo contava TODA estadia ativa sem
+        // conferência, mas a tela da Conferência exclui morador da casa, vencida e futura.
+        // Selo 2, tela vazia — a 6ª aparição de "duas telas, duas verdades". Agora o selo
+        // usa a MESMA régua da lista: cfEntraNaFila decide pelos dois. Morador da casa
+        // (Repolho, Stopa, Kako) nunca acende selo.
+        if(cfEntraNaFila(e,k) && !(e.conferencia&&e.conferencia.concluida)) r.conferir++;
         // Etapa 2 = o Day Care já conferiu e o tutor espera na recepção para assinar.
         if(e.saida===hoje){ if(typeof coEtapaDe==='function'&&coEtapaDe(e)===2) r.naRecepcao++; else r.saemHoje++; }
       });
@@ -11627,7 +11763,7 @@
   // Agora existe um carimbo: esta constante é a versão que o aparelho está rodando, e o
   // Firebase guarda a versão publicada. Quando as duas diferem, aparece o aviso — mas
   // NUNCA recarrega sozinho: recarregar no meio de um check-in perderia o trabalho.
-  const APP_VERSAO='2026-09-05-02';
+  const APP_VERSAO='2026-09-07-01';
   function vigiarVersao(){
     if(!DB) return;
     try{
@@ -22658,6 +22794,10 @@
       var por={};
       ks.forEach(function(k){
         var r=v[k]||{}, nome=(r.quem||'—').trim();
+        // O ponto do "Seu dia" (origem:'seu-dia') mora no mesmo placar, mas este quadro é
+        // o placar do CHECK-OUT (bolsas de 10). Um +5 de bem-estar aqui viraria "1 bolsa
+        // · 5 de 10" — uma falta que a pessoa nunca cometeu. Fica de fora.
+        if((r.origem||'')==='seu-dia') return;
         por[nome]=por[nome]||{nome:nome, pontos:0, saidas:0, perdas:[]};
         por[nome].pontos+=(r.pontos||0); por[nome].saidas++;
         if((r.pontos||0)<10) por[nome].perdas.push(r);
@@ -28284,6 +28424,18 @@
   // Passou da data de saída e ninguém encerrou. Não é "a conferir" — é saída em aberto.
   function estadiaVencida(e){ var s=(e&&e.saida)||''; return !!(s && s < hojeISO()); }
   function estadiaFutura(e){ var i=(e&&e.entrada)||''; return !!(i && i > hojeISO()); }
+  // ===== A RÉGUA ÚNICA DA FILA DA CONFERÊNCIA (07/set/2026 — caso Kako + Hannah) =====
+  // Quem entra na fila da Conferência hoje: estadia ATIVA, de quem NÃO é morador da casa,
+  // que já começou e ainda não venceu. O selo do menu (contarPendencias) e a lista da tela
+  // (cfListaHospedes) usam ESTA função — uma régua só, para o selo nunca mais prometer
+  // um número que a tela não mostra.
+  function cfEntraNaFila(e,k){
+    e=e||{};
+    if((e.status||'ativa')!=='ativa') return false;   // encerrada não volta para a fila
+    if(ehMoradorDaCasa(e.nome,k)) return false;       // Repolho, Stopa e Kako são da casa
+    if(estadiaVencida(e)||estadiaFutura(e)) return false; // só quem está aqui HOJE
+    return true;
+  }
   // Pernoite = o peludinho estava na creche e o tutor não conseguiu buscar. Não é hospedagem:
   // não entra no check-out (Adriana, 05/ago/2026).
   function ehPernoite(e){ return !!(e&&(e.pernoite||e.tipo==='pernoite')); }
@@ -28302,9 +28454,9 @@
     var out=[], seen={}, seenNome={};
     Object.keys(CF_ESTADIAS||{}).forEach(function(k){
       var reg=CF_ESTADIAS[k]||{}; var e=reg.e||{};
-      if((e.status||'ativa')!=='ativa') return;      // encerrada não volta para a fila
-      if(ehMoradorDaCasa(e.nome,k)) return;          // Repolho, Stopa e Kako são da casa
-      if(estadiaVencida(e)||estadiaFutura(e)) return;// só quem está aqui HOJE
+      // A régua é UMA: cfEntraNaFila (a mesma do selo do menu). Detalhar aqui de novo foi
+      // o que criou o selo 2 / tela vazia de 07/set (Kako + Hannah).
+      if(!cfEntraNaFila(e,k)) return;
       var h={nome:e.nome||'', tutor:e.tutor||'', raca:e.raca||'', refKey:e.refKey||k, ini:((e.nome||'?')[0]||'?').toUpperCase(), cor:'#234D67'};
       var mk=(typeof medAgendaKey==='function')?medAgendaKey(h):k;
       if(seen[mk]) return; seen[mk]=1; seenNome[jsNorm(h.nome||'')]=1; out.push(h);
@@ -29550,7 +29702,11 @@
     return DB.ref('daycare/pontos-checkout/'+coMesAtual()).once('value').then(function(s){
       var v=s.val()||{}; CO_PT_MES=v;
       var meus=Object.keys(v).map(function(k){ return v[k]; })
-        .filter(function(r){ return r && jsNorm(r.quem||'')===jsNorm(eu); })
+        // O placar dos Zelosos agora guarda também o ponto do "Seu dia" (origem:'seu-dia',
+        // Painel das Consultoras, v-07). Ele NÃO é bolsa: aqui a conta é de bolsas (10
+        // pontos cada, perfeitas===10) — sem este filtro, um +5 de bem-estar viraria
+        // "1 bolsa com falta" no card de quem respondeu.
+        .filter(function(r){ return r && (r.origem||'')!=='seu-dia' && jsNorm(r.quem||'')===jsNorm(eu); })
         .sort(function(a,b){ return (a.ts||0)-(b.ts||0); });   // do mais velho para o mais novo
       if(!meus.length) return null;
       return {
@@ -30577,6 +30733,608 @@
     }).catch(function(e){
       _logFalhaGrav('daycare/plano-do-dia/'+dia+' (pdEscolherPlano)', e);
       pdMsg('pdMsgDia','NÃO consegui marcar o plano de hoje: '+((e&&e.message)||e)+'. Tente de novo.', false);
+    });
+  }
+
+  /* ====================================================================================
+   * PAINEL DAS CONSULTORAS — a mesa da Central Zêluz (v-07, 07/set/2026)
+   *
+   * Gabarito: docs/esboco-consultoras-v4.html, aprovado na prática com as seis correções
+   * diretas da Adriana. Por decisão da fundadora, o card "Seu dia" (o cuidado com quem
+   * cuida — semente da NR-1) abre a página; embaixo, cinco quadros com DADO REAL.
+   *
+   * REGRA DE OURO (a mesma do Meu Painel e do Painel da Operação): integrar, nunca
+   * recriar. Nenhuma conta de negócio nasce aqui — os quadros REUSAM projecaoEstoque,
+   * hospedesSemCheckin, orcOrdenar, empLista e cadastroFaltando, e cada quadro abre a
+   * tela que resolve. Este painel só observa; o único gesto que grava é o do "Seu dia".
+   *
+   * O PONTO DO "SEU DIA": responder "Como você está agora?" soma +5 UMA vez por dia no
+   * placar dos Zelosos — o MESMO nó do check-out (daycare/pontos-checkout/{mês}), com
+   * rastro (origem:'seu-dia'). Responder é o que vale o ponto, NUNCA a resposta
+   * escolhida: quem marca "Sobrecarregada" ganha o mesmo ponto de quem marca "Bem".
+   * Os copos de água NÃO somam ponto nenhum — são acompanhamento pessoal.
+   * O estado mora em daycare/seu-dia/{dia}/{pessoa}, com quem e ts.
+   * ================================================================================== */
+
+  // O banco de frases do Cérebro Zêluz na voz da Central — os textos EXATOS do gabarito
+  // v4. Rotação FIXA por dia da semana, nunca sorteada: a pessoa reconhece a semana.
+  var PC_FRASES=[
+    'Aqui, cada cuidado é ÚNICO — e é pelas suas mãos que ele chega a cada Família Multiespécie.',       /* domingo */
+    'A Zêluz é a voz dos FILHOts num mundo que ainda aprende a escutá-los. E toda escuta começa no seu acolhimento.', /* segunda */
+    'Bem-estar, saúde e longevidade não são serviços. São decisões diárias — e muitas delas nascem do seu cuidado.',  /* terça */
+    'Cuidar é escutar antes de agir. É a sua atenção que transforma uma chegada em confiança.',           /* quarta */
+    'Cada FILHOt é a melhor parte da vida de alguém. Recebê-lo bem é proteger esse amor.',                /* quinta */
+    'Somos Zelosos: a gente se importa de verdade — e quem chega à recepção sente isso no primeiro olhar.',/* sexta */
+    'Onde o mercado generaliza, a Zêluz individualiza. Essa diferença começa no seu atendimento.'         /* sábado */
+  ];
+  var PC_DIAS_ROTULO=['S','T','Q','Q','S','S','D'];   // seg → dom, como no gabarito
+  var PC_META_SEMANA=35;                              // 7 dias × 5 pontos
+
+  var PC_DIA='';                                      // o relógio único desta abertura
+  var PC_CACHE={quando:0, dia:'', dados:null};
+  var PC_ULTIMO=null;                                 // estado do "Seu dia" desenhado agora
+
+  function pcFraseDoDia(agora){ return PC_FRASES[(agora||new Date()).getDay()]; }
+  // A chave da pessoa no nó do "Seu dia" — mesmo saneamento de caracteres do dcKey.
+  function pcPessoaKey(nome){ return jsNorm(nome||'').replace(/[.#$\[\]\/ ]/g,'-'); }
+  function pcTextoSerie(n){ n=Number(n)||0; if(n<=0) return 'Comece hoje uma nova série';
+    return n+(n===1?' dia seguido':' dias seguidos')+' cuidando de você'; }
+  // A série de hoje: ontem respondido continua a conta; ontem calado recomeça do 1.
+  function pcSerieNova(ontem){ return (ontem&&ontem.pontos5)?((Number(ontem.serie)||1)+1):1; }
+  // Os pontos da semana no placar dos Zelosos: 5 por dia respondido. Copos NUNCA entram.
+  function pcPontosSemana(semana){ var n=0; (semana||[]).forEach(function(r){ if(r&&r.pontos5) n+=5; }); return n; }
+  // Tocar o copo N enche até ele; tocar o copo já cheio no topo esvazia ele (volta 1).
+  function pcCopoAlvo(nivel,tocado){ tocado=Number(tocado)||0; return (tocado===Number(nivel||0))?tocado-1:tocado; }
+
+  // ------------------------------------------------------------- as contas dos quadros
+  // Regra do Toshi (a mesma de descontarEstoquePorDose): quantidade inicial numérica JÁ É
+  // estoque contável, mesmo com o campo modo em branco — sem isto o remédio dele ficaria
+  // fora da conta de "acabando" exatamente como ficou fora do desconto por dose.
+  function pcNormalizaEstoque(it){
+    var est=(it&&it.estoque)||{};
+    if(est.modo==='contavel') return it;
+    if(est.modo==null && (typeof est.inicial==='number'||typeof est.restante==='number')){
+      var c=Object.assign({},it); c.estoque=Object.assign({},est,{modo:'contavel'}); return c;
+    }
+    return it;
+  }
+  // Quadro 1 — remédio acabando. Consome projecaoEstoque (a mecânica de doses restantes
+  // que já existe): baixo = acaba em poucos dias no ritmo atual, ou restam 3 ou menos.
+  function pcDadosMedicacao(porHosp){
+    var acomp=0, emDia=0, baixos=[];
+    (porHosp||[]).forEach(function(h){
+      var itens=h.itens||{}, temAcomp=false, temBaixo=false;
+      Object.keys(itens).forEach(function(id){
+        var it=itens[id]||{}; if(it.suspenso) return;
+        var p=(typeof projecaoEstoque==='function')?projecaoEstoque(pcNormalizaEstoque(it)):null;
+        if(!p) return;
+        temAcomp=true;
+        if(p.baixo){
+          temBaixo=true;
+          var qd=(typeof qtdNum==='function')?(qtdNum(it.q)||0):0;
+          baixos.push({nome:h.nome||'', remedio:it.nome||'medicação', restante:p.restante,
+                       doses:(qd>0?Math.floor(p.restante/qd):null), dias:p.diasRestantes});
+        }
+      });
+      if(temAcomp){ acomp++; if(!temBaixo) emDia++; }
+    });
+    baixos.sort(function(a,b){ return ((a.dias==null)?99:a.dias)-((b.dias==null)?99:b.dias); });
+    var nomes={}; baixos.forEach(function(b){ nomes[b.nome]=1; });
+    return {acomp:acomp, emDia:emDia, baixos:baixos, filhots:Object.keys(nomes).length};
+  }
+  // Quadro 2 — check-ins a fazer hoje. A MESMA conta do menu: hospedesSemCheckin. Sem a
+  // planilha lida (ou com o índice de estadias ainda descendo) devolve null — o quadro
+  // mostra o travessão em vez de afirmar o que não sabe.
+  function pcDadosCheckins(){
+    if(typeof HOSP_PLANILHA==='undefined'||HOSP_PLANILHA!==true) return null;
+    if(typeof CF_ESTADIAS_LIDO!=='undefined' && !CF_ESTADIAS_LIDO) return null;
+    var total=0;
+    (hospedes||[]).forEach(function(h){
+      if(h.mascote) return;
+      var k=(typeof medAgendaKey==='function')?medAgendaKey(h):'';
+      if(k) total++;
+    });
+    var faltam=(typeof hospedesSemCheckin==='function')?hospedesSemCheckin():[];
+    return {total:total, feitos:Math.max(0,total-faltam.length), faltam:faltam};
+  }
+  // Quadro 3 — orçamentos em aberto, na ordem que a Adriana ditou (orcOrdenar: pendentes
+  // por data de ENTRADA; sem data vai para o fim, nunca para o topo).
+  function pcDadosOrcamentos(cache){
+    if(cache==null) return null;
+    var todos=Object.keys(cache).map(function(id){ return Object.assign({id:id}, cache[id]||{}); })
+      .sort(function(a,b){ return (b.criado_em||0)-(a.criado_em||0); });
+    var pend=todos.filter(function(o){ return (o.status||'aguardando')==='aguardando'; });
+    if(typeof orcOrdenar==='function') pend=orcOrdenar(pend,(typeof zHojeISO==='function')?zHojeISO():'');
+    return {pendentes:pend};
+  }
+  // Quadro 4 — mensagem de almoço ao tutor. A MESMA conta da tela "Quem não comeu hoje"
+  // (empLista): aqui só se emprestam a ela os dados do dia, como o Painel da Operação faz.
+  function pcDadosAlmoco(emp){
+    if(!emp||!emp.ok) return null;
+    if(typeof CARTEIRA_CARREGADA!=='undefined' && !CARTEIRA_CARREGADA) return null; // turma sem cadastro mentiria
+    window.__empAlm1=emp.a1||{}; window.__empAlm2=emp.a2||{};
+    if(typeof EMP_AVISOS!=='undefined') EMP_AVISOS=emp.avisos||{};
+    var L=(typeof empLista==='function')?empLista():[];
+    return {
+      turma:(typeof turmaDoDia==='function')?turmaDoDia().length:0,
+      enviadas:L.filter(function(x){ return !!x.aviso; }).length,
+      prontos:L.filter(function(x){ return x.pronto && !x.aviso; }),
+      aguardam:L.filter(function(x){ return !x.pronto && !x.aviso; }).length
+    };
+  }
+  // Quadro 5 — pendências da recepção: cadastros sem o essencial (raça/tutor), pela MESMA
+  // régua do check-in (cadastroFaltando). Adaptação sem data NÃO entra: por decisão da
+  // Adriana em 04/set/2026, sem data não é pendência — a régua simplesmente a ignora.
+  function pcDadosRecepcao(){
+    if(typeof CARTEIRA_CARREGADA!=='undefined' && !CARTEIRA_CARREGADA) return null;
+    var ativos=(PELUDINHOS||[]).filter(function(p){ return !(typeof pelInativo==='function'&&pelInativo(p)); });
+    var inc=[];
+    ativos.forEach(function(p){
+      var faltas=(typeof cadastroFaltando==='function')?cadastroFaltando(p):[];
+      var crit=faltas.filter(function(f){ return f.critico; });
+      if(crit.length) inc.push({nome:(typeof pelNome==='function')?(pelNome(p)||p.n||''):(p.n||''),
+                                faltas:crit.map(function(f){ return f.t; })});
+    });
+    return {total:ativos.length, incompletos:inc};
+  }
+
+  // ---------------------------------------------------------------- as leituras (uma vez)
+  function pcPega(caminho){
+    return DB.ref(caminho).once('value').then(function(s){ return {ok:true, v:s.val()}; })
+      .catch(function(e){ _logLeituraFalhou(caminho+' (Painel das Consultoras)', e); return {ok:false, v:null}; });
+  }
+  function pcLer(forcar){
+    var dia=PC_DIA;
+    if(!forcar && PC_CACHE.dados && PC_CACHE.dia===dia && (Date.now()-PC_CACHE.quando)<60000)
+      return Promise.resolve(PC_CACHE.dados);
+    if(!DB) return Promise.resolve(null);
+    var eu=(typeof quemSou==='function'?quemSou():'').trim();
+    var key=pcPessoaKey(eu);
+    var pos=(new Date().getDay()+6)%7;                 // seg=0 … dom=6
+    var diasSemana=[], i;
+    for(i=0;i<=pos;i++) diasSemana.push(orcMaisDias(dia, i-pos));
+    var pSemana=Promise.all(diasSemana.map(function(d){ return pcPega('daycare/seu-dia/'+d+'/'+key); }));
+    // Na segunda-feira o "ontem" é o domingo da semana passada — fora da janela acima.
+    var pOntem=(pos===0)?pcPega('daycare/seu-dia/'+orcMaisDias(dia,-1)+'/'+key):Promise.resolve(null);
+    var pOrc=DB.ref('auaulandia/orcamentos').limitToLast(60).once('value')
+      .then(function(s){ return {ok:true, v:s.val()||{}}; })
+      .catch(function(e){ _logLeituraFalhou('auaulandia/orcamentos (Painel das Consultoras)', e); return {ok:false, v:null}; });
+    var pMed;
+    if(typeof HOSP_PLANILHA!=='undefined'&&HOSP_PLANILHA===true){
+      pMed=Promise.all((hospedes||[]).filter(function(h){ return !h.mascote; }).map(function(h){
+        var k=(typeof medAgendaKey==='function')?medAgendaKey(h):'';
+        if(!k) return Promise.resolve(null);
+        return pcPega('auaulandia/medicacao-agenda/'+k+'/itens').then(function(r){
+          return {nome:h.nome||'', ok:r.ok, itens:r.v||{}};
+        });
+      })).then(function(arr){
+        arr=arr.filter(Boolean);
+        // Leitura que falhou não pode virar quadro "saudável": um hóspede não lido pode
+        // ser exatamente o do remédio no fim. Falhou uma → o quadro fica honesto (—).
+        return {ok:arr.every(function(x){ return x.ok; }), porHosp:arr};
+      });
+    } else pMed=Promise.resolve(null);
+    var ed=(typeof empDataKey==='function')?empDataKey():dia;
+    var pEmp=Promise.all([pcPega('daycare/almoco/'+ed), pcPega('daycare/atividade/'+ed+'/almoco2'), pcPega('daycare/avisos-comida/'+ed)])
+      .then(function(r){ return {ok:(r[0].ok&&r[1].ok&&r[2].ok), a1:r[0].v||{}, a2:r[1].v||{}, avisos:r[2].v||{}}; });
+    return Promise.all([pSemana, pOntem, pOrc, pMed, pEmp]).then(function(r){
+      var semana=[null,null,null,null,null,null,null], falhouSeuDia=false;
+      (r[0]||[]).forEach(function(x,ix){ if(!x.ok) falhouSeuDia=true; semana[ix]=x.v||null; });
+      var ontem=(pos===0)?((r[1]&&r[1].v)||null):semana[pos-1];
+      var d={dia:dia, eu:eu, key:key, pos:pos, semana:semana, ontem:ontem, falhouSeuDia:falhouSeuDia,
+             orc:r[2], med:r[3], emp:r[4]};
+      PC_CACHE={quando:Date.now(), dia:dia, dados:d};
+      return d;
+    }).catch(function(e){ _logLeituraFalhou('Painel das Consultoras (leitura geral)', e); return null; });
+  }
+
+  // ------------------------------------------------------------------------ os desenhos
+  function pcSaudacaoHTML(eu){
+    var agora=new Date();
+    var nome=String(eu||'').trim();
+    var pedaco=function(n,um,muitos){ n=Number(n)||0;
+      return '<b data-pm-alvo="'+n+'">0</b> '+(n===1?um:muitos); };
+    var partes=[];
+    try{ if(typeof CARTEIRA_CARREGADA!=='undefined'&&CARTEIRA_CARREGADA&&typeof turmaDoDia==='function')
+      partes.push(pedaco(turmaDoDia().length,'auluno','aulunos')); }catch(e){} /* silencioso de propósito: a linha do número é enfeite — falhar não pode derrubar a tela */
+    try{ if(typeof HOSP_PLANILHA!=='undefined'&&HOSP_PLANILHA===true)
+      partes.push(pedaco((hospedes||[]).filter(function(h){ return !h.mascote; }).length,'hóspede','hóspedes')); }catch(e){} /* silencioso de propósito: idem */
+    var linha2=partes.length?('<p class="pm-saud2 pm-entra">Na casa hoje: '+partes.join(' e ')+'.</p>'):'';
+    return '<div style="margin-bottom:18px">'
+      +'<h1 class="pm-saud1 pm-entra">'+esc(pmComoVai(agora.getHours()))+(nome&&nome!=='-'?(', '+esc(nome)):'')+'.</h1>'
+      + linha2
+      +'<p class="pm-saud3 pm-entra atraso">'+esc(pcFraseDoDia(agora))+'</p>'
+      +'<span class="pm-traco" aria-hidden="true"></span>'
+      +'<div class="pm-data">'+esc(pmDataExtenso(agora))+'</div>'
+      +'</div>';
+  }
+  function pcAreaHTML(){
+    return '<header class="pm-area-h">'
+      +'<span class="pm-st" aria-hidden="true"><svg viewBox="0 0 32 32" focusable="false">'
+      +'<path d="M16 3.6a2.2 2.2 0 012.2 2.2v.9a7.6 7.6 0 015.4 7.3v5l2.2 3.4c.5.8-.1 1.8-1 1.8H7.2c-.9 0-1.5-1-1-1.8l2.2-3.4v-5a7.6 7.6 0 015.4-7.3v-.9A2.2 2.2 0 0116 3.6z" fill="currentColor"></path>'
+      +'<path d="M13 26h6a3 3 0 01-6 0z" fill="currentColor"></path></svg></span>'
+      +'<div class="pm-area-txt"><p class="pm-eyebrow">A CENTRAL ZÊLUZ AGORA</p>'
+      +'<h2 class="pm-area-t">O que precisa de você</h2>'
+      +'<p class="pm-area-sub">Cinco quadros, cinco respostas. Cada um abre a tela que resolve.</p></div>'
+      +'</header>';
+  }
+
+  // O card "Seu dia" — a tradução fiel do gabarito v4: série com chama, 8 copos de 250 ml
+  // (SEM pontos), as três carinhas SVG e o rodapé honesto.
+  function pcCardSeuDiaHTML(d){
+    var U=PC_ULTIMO, i;
+    var copoSVG='<svg viewBox="0 0 32 44" aria-hidden="true"><rect class="pc-agua" x="10" y="13" width="12" height="22" rx="2.5"></rect><path class="pc-vidro" d="M7 5h18l-1.7 29.2a3.6 3.6 0 01-3.6 3.4h-7.4a3.6 3.6 0 01-3.6-3.4z"></path></svg>';
+    var checkSVG='<svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2.4 6.4l2.4 2.4 4.8-5.2"/></svg>';
+    var bolas='';
+    for(i=0;i<7;i++){
+      var cls='pc-bola';
+      if(i<U.pos && d.semana[i] && d.semana[i].pontos5) cls+=' feito';
+      if(i===U.pos){ cls+=' hoje'; if(U.pago) cls+=' feito'; }
+      bolas+='<span class="pc-dia"><small>'+PC_DIAS_ROTULO[i]+'</small><span class="'+cls+'">'+checkSVG+'</span></span>';
+    }
+    var copos='';
+    for(i=1;i<=8;i++){
+      var cheio=(i<=U.copos);
+      copos+='<button type="button" class="pc-copo'+(cheio?' cheio':'')+'" data-pc-copo="'+i+'" aria-pressed="'+(cheio?'true':'false')
+        +'" aria-label="Marcar '+i+(i===1?' copo':' copos')+' de água (250 ml cada)" onclick="pcCopoTocar('+i+')">'+copoSVG+'</button>';
+    }
+    var caras=[
+      ['bem','Bem','<path d="M14.5 21q3.5-4 7 0" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"></path><path d="M26.5 21q3.5-4 7 0" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"></path><path d="M16 28q8 7 16 0" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"></path>','pc-h-bem'],
+      ['cansada','Cansada','<path d="M14.5 20q3.5 3.2 7 0" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"></path><path d="M26.5 20q3.5 3.2 7 0" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"></path><path d="M17 30h14" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"></path>','pc-h-cansada'],
+      ['sobrecarregada','Sobrecarregada','<path d="M13.5 16.5l7.5 2.6" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"></path><path d="M34.5 16.5l-7.5 2.6" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"></path><circle cx="18.5" cy="23.5" r="1.9" fill="currentColor"></circle><circle cx="29.5" cy="23.5" r="1.9" fill="currentColor"></circle><path d="M16.5 31q3.75-3.4 7.5 0t7.5 0" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"></path>','pc-h-sobre']
+    ].map(function(c){
+      var marcado=(U.humor===c[0]);
+      return '<button type="button" class="pc-humor '+c[3]+(marcado?' marcado':'')+'" data-pc-humor="'+c[0]+'" aria-pressed="'+(marcado?'true':'false')+'" onclick="pcHumorTocar(\''+c[0]+'\')">'
+        +'<svg viewBox="0 0 48 48" aria-hidden="true"><circle class="pc-rosto" cx="24" cy="24" r="20"></circle>'
+        +'<circle cx="24" cy="24" r="20" fill="none" stroke="currentColor" stroke-width="2.6"></circle>'+c[2]+'</svg>'
+        +'<small>'+c[1]+'</small></button>';
+    }).join('');
+    var serieTxt=U.pago?pcTextoSerie(U.serie):pcTextoSerie(U.serieFeita);
+    var serieSub=U.pago?'Série mantida. Até amanhã.':'Responda como você está e a série continua.';
+    var avisoLeitura=d.falhouSeuDia
+      ?'<p class="pm-rot" style="margin-top:8px;color:var(--crm-critico)">Não consegui ler os dias anteriores — a série pode aparecer menor do que é.</p>':'';
+    return '<div class="pm-grid"><article class="pm-card pm-rv pm-c12" id="pcCardSeuDia">'
+      +'<h3 class="pm-tit">Seu dia</h3>'
+      +'<p class="pm-sub">Um minuto para você, uma vez por dia. Responder como você está soma pontos no placar dos Zelosos — o mesmo que já funciona no aplicativo.</p>'
+      +'<div class="pc-colunas">'
+      +'<div class="pc-qz">'
+        +'<div class="pc-serie"><span class="pc-chama'+((U.serieFeita>0||U.pago)?' acesa':'')+'" aria-hidden="true">'
+        +'<svg viewBox="0 0 32 32" fill="currentColor"><path d="M16 2.4c.7 4.5-1.1 7-3.3 9.2-2.3 2.4-4.7 4.9-4.7 9.1a8 8 0 0016 0c0-2.5-.8-4.5-2-6.3-.5 1.2-1.3 2.2-2.5 2.9.5-4.7-1.1-11-3.5-14.9z"/><path class="pc-chama-miolo" d="M16 25.2a3.6 3.6 0 01-3.6-3.6c0-1.7 1-2.9 2-4 .7-.8 1.4-1.6 1.8-2.7 1.5 1.9 3.4 4.6 3.4 7a3.6 3.6 0 01-3.6 3.6z"/></svg></span>'
+        +'<div class="pc-serie-txt"><b id="pcSerieTexto">'+esc(serieTxt)+'</b><span id="pcSerieSub">'+esc(serieSub)+'</span></div></div>'
+        +'<div class="pc-dias" role="img" aria-label="Série da semana — os dias respondidos ficam dourados; o de hoje '+(U.pago?'já foi respondido':'ainda está em aberto')+'">'+bolas+'</div>'
+        + avisoLeitura
+      +'</div>'
+      +'<div class="pc-qz">'
+        +'<p class="pc-qz-p">Água de hoje</p>'
+        +'<div class="pc-copos">'+copos+'</div>'
+        +'<p class="pc-copos-rot" id="pcCoposRot"><b>'+U.copos+' de 8</b> copos · 250 ml cada'+(U.copos===8?' — 2 litros: meta do dia completa':' — meta de 2 litros')+'</p>'
+        +'<p class="pc-nota-agua">Acompanhamento pessoal: os copos não somam pontos.</p>'
+      +'</div>'
+      +'<div class="pc-qz">'
+        +'<p class="pc-qz-p">Como você está agora?<span class="pc-ganho" id="pcGanho"'+(U.pago?'':' hidden')+(U.pago?' style="opacity:1;transform:none"':'')+'>+5 pontos</span></p>'
+        +'<div class="pc-humores">'+caras+'</div>'
+      +'</div>'
+      +'</div>'
+      +'<div class="pc-rodape">'
+        +'<p class="pc-pontos"><b id="pcPts">'+U.pontosSemana+'</b> pontos na semana no placar dos Zelosos — a meta é '+PC_META_SEMANA+'</p>'
+        +'<div class="pc-medalha'+(U.pontosSemana>=PC_META_SEMANA?' ganha':'')+'" id="pcMedalha" role="status">'
+        +'<svg viewBox="0 0 32 32" fill="currentColor" aria-hidden="true"><path d="M9 4h14v5.2A7 7 0 0117.9 16c-.3 1.3-.9 2.3-1.9 3v2.6h4.6v3.2H11.4v-3.2H16V19c-1-.7-1.6-1.7-1.9-3A7 7 0 019 9.2z"/><path d="M7.2 6H3.6v2.6a5.8 5.8 0 004.8 5.7A9.6 9.6 0 017.2 9.4zM24.8 6h3.6v2.6a5.8 5.8 0 01-4.8 5.7 9.6 9.6 0 001.2-4.9z"/><rect x="10" y="26.4" width="12" height="2.6" rx="1.3"/></svg>'
+        +'<div><b>Meta da semana batida</b><span>'+PC_META_SEMANA+' pontos — semana cheia de cuidado com você.</span></div></div>'
+        +'<div class="pc-completo'+(U.pago?' mostra':'')+'" id="pcCompleto" role="status">'
+        +'<img src="assets/stickers/auau.png" alt="" width="42" height="57">'
+        +'<b id="pcCompletoTxt">Dia completo'+(U.pago?(' — a sua série chegou a '+pmPlural(U.serie,'dia','dias')+'.'):'.')+'</b></div>'
+        +'<p class="pc-honesta">Responder é o que vale o ponto — nunca a resposta escolhida. Os pontos entram no placar dos Zelosos, o mesmo do aplicativo. A água é um cuidado seu: os copos acompanham a meta de 2 litros e não somam pontos.</p>'
+      +'</div>'
+      +'<div class="pc-festa" id="pcFesta" aria-hidden="true">'
+        +'<span class="pc-festa-anel"></span>'
+        +'<img class="pc-festa-sticker" src="assets/stickers/coracao.png" alt="" width="86" height="102">'
+        +'<b class="pc-festa-pontos">+5 pontos</b>'
+      +'</div>'
+      +'</article></div>';
+  }
+
+  // Um quadro que ainda não tem de onde contar mostra o travessão e diz o porquê —
+  // nunca um zero inventado (a lei de 11/ago: não afirmar ausência antes de o dado chegar).
+  function pcQuadroTravado(titulo, sub, motivo, destino){
+    return '<article class="pm-card pm-rv pm-c6 pc-quadro" onclick="pcIr(\''+destino+'\')">'
+      +'<h3 class="pm-tit">'+titulo+'</h3><p class="pm-sub">'+sub+'</p>'
+      +'<div class="pm-kpi" style="margin-top:14px">&mdash;</div>'
+      +'<p class="pm-rot" style="margin-top:4px">'+motivo+'</p></article>';
+  }
+  // 1 · Remédio acabando — o único hero (46px) da peça.
+  function pcQuadroMedicacao(m){
+    var titulo='Remédio acabando', sub='O que precisa ser pedido ao tutor antes de a próxima dose chegar.';
+    if(!m) return pcQuadroTravado(titulo, sub, 'A lista de hóspedes de hoje (ou o estoque de um deles) ainda não chegou — sem ela o quadro não conta dose.', 'recepcao');
+    var h='<article class="pm-card pm-rv pm-c6 pc-quadro" onclick="pcIr(\'recepcao\')">'
+      +'<h3 class="pm-tit">'+titulo+'</h3><p class="pm-sub">'+sub+'</p>'
+      +'<div style="display:flex;align-items:flex-end;gap:14px;flex-wrap:wrap;margin-top:14px">'
+      +'<div><div class="pm-kpi hero"'+(m.filhots?' style="color:#9B2C2C"':'')+' data-pm-alvo="'+m.filhots+'">0</div>'
+      +'<p class="pm-rot">'+(m.filhots===1?'FILHOt com remédio no fim':'FILHOts com remédio no fim')+'</p></div>'
+      +(m.filhots?'<span class="pm-badge pm-b-critico">pedir ao tutor hoje</span>'
+                 :'<span class="pm-badge pm-b-ok">estoque em dia</span>')
+      +'</div>';
+    if(m.acomp){
+      h+='<div class="pm-pill"><i data-pm-pct="'+Math.round((m.emDia/m.acomp)*100)+'"></i></div>'
+        +'<div class="pm-pill-rot"><span><b>'+m.emDia+' de '+m.acomp+'</b> '+(m.acomp===1?'hóspede':'hóspedes')+' com estoque em dia</span></div>';
+    } else {
+      h+='<p class="pm-rot" style="margin-top:10px">Nenhum hóspede de hoje tem remédio com estoque contado.</p>';
+    }
+    if(m.baixos.length){
+      h+='<div class="pm-lista">'+m.baixos.slice(0,2).map(function(b){
+        var selo=(b.restante<=0)?'<span class="pm-badge pm-b-critico">acabou</span>'
+          :((b.doses===0)?'<span class="pm-badge pm-b-critico">não cobre a próxima dose</span>'
+          :'<span class="pm-badge pm-b-critico">'+((b.doses!=null)?('restam '+pmPlural(b.doses,'dose','doses')):('restam '+b.restante))+'</span>');
+        var quando=(b.dias!=null&&b.dias>0)?('acaba em ~'+pmPlural(b.dias,'dia','dias')+' no ritmo atual')
+          :((b.restante<=0)?'não há mais dose contada':'acaba hoje no ritmo atual');
+        return '<div class="pm-li">'+selo+'<div class="pm-li-txt"><b>'+esc(b.nome)+' — '+esc(b.remedio)+'</b>'
+          +'<span>'+quando+'</span></div></div>';
+      }).join('')
+      +(m.baixos.length>2?('<div class="pm-li"><div class="pm-li-txt"><span>e mais '+(m.baixos.length-2)+'.</span></div></div>'):'')
+      +'</div>';
+    }
+    return h+'</article>';
+  }
+  // 2 · Check-ins a fazer hoje — a métrica-âncora (o donut).
+  function pcQuadroCheckins(c){
+    var titulo='Check-ins a fazer hoje', sub='Quem está na casa e ainda não passou pelo primeiro passo da chegada.';
+    if(!c) return pcQuadroTravado(titulo, sub, 'A planilha do dia ainda não chegou — sem ela não dá para dizer quem entra.', 'checkin');
+    var h='<article class="pm-card pm-rv pm-c6 pc-quadro" onclick="pcIr(\'checkin\')">'
+      +'<h3 class="pm-tit">'+titulo+'</h3><p class="pm-sub">'+sub+'</p>';
+    if(!c.total){
+      h+='<div class="pm-lista"><div class="pm-li"><span class="pm-badge pm-b-ok">sem entradas</span>'
+        +'<div class="pm-li-txt"><b>Sem hóspedes na planilha de hoje.</b>'
+        +'<span>Quando alguém chegar, o check-in aparece aqui.</span></div></div></div>';
+      return h+'</article>';
+    }
+    var pct=Math.round((c.feitos/c.total)*100);
+    h+='<div class="pm-anel-caixa">'
+      +'<div class="pm-anel"><svg viewBox="0 0 132 132" role="img" aria-label="'+escAttr(c.feitos+' de '+c.total+' check-ins do dia já feitos')+'">'
+      +'<defs><linearGradient id="pcOuroAnel" x1="0" y1="0" x2="0" y2="1">'
+      +'<stop offset="0" stop-color="#DEB428"></stop><stop offset="1" stop-color="#B8961F"></stop></linearGradient></defs>'
+      +'<g transform="rotate(-90 66 66)">'
+      +'<circle cx="66" cy="66" r="60" fill="none" stroke="rgba(35,77,103,.08)" stroke-width="12"></circle>'
+      +'<circle class="pm-anel-arco" cx="66" cy="66" r="60" fill="none" stroke="url(#pcOuroAnel)" stroke-width="12" '
+      +'stroke-linecap="round" stroke-dasharray="377" stroke-dashoffset="377" data-pm-anel="'+pct+'"></circle>'
+      +'</g></svg><div class="pm-anel-mid"><b>'+c.feitos+'/'+c.total+'</b><span>feitos</span></div></div>'
+      +'<div class="pm-anel-lado">';
+    if(c.faltam.length){
+      h+='<p class="pm-rot">Esperando o check-in</p><div class="pm-lista">'
+        + c.faltam.slice(0,3).map(function(f){
+            var tutor=(typeof tutorDe==='function')?tutorDe(f):(f.tutor||'');
+            return '<div class="pm-li"><span class="pm-badge pm-b-critico">esperando</span>'
+              +'<div class="pm-li-txt"><b>'+esc(f.nome||'—')+'</b>'
+              +(tutor?('<span>'+esc('tutor: '+tutor)+'</span>'):'')+'</div></div>';
+          }).join('')
+        +(c.faltam.length>3?('<div class="pm-li"><div class="pm-li-txt"><span>e mais '+(c.faltam.length-3)+'.</span></div></div>'):'')
+        +'</div>';
+    } else {
+      h+='<div class="pm-lista"><div class="pm-li"><span class="pm-badge pm-b-ok">tudo feito</span>'
+        +'<div class="pm-li-txt"><b>Todo hóspede de hoje já tem check-in.</b></div></div></div>';
+    }
+    return h+'</div></div></article>';
+  }
+  // 3 · Orçamentos em aberto — pendentes por data de entrada (a ordem da Adriana).
+  function pcQuadroOrcamentos(o){
+    var titulo='Orçamentos em aberto', sub='Enviados ao tutor e ainda sem resposta — os de entrada mais próxima primeiro.';
+    if(!o) return pcQuadroTravado(titulo, sub, 'Ainda não consegui ler os orçamentos — abra a tela de novo em instantes.', 'orcamento');
+    var pend=o.pendentes||[];
+    var h='<article class="pm-card pm-rv pm-c6 pc-quadro" onclick="pcIr(\'orcamento\')">'
+      +'<h3 class="pm-tit">'+titulo+'</h3><p class="pm-sub">'+sub+'</p>'
+      +'<div style="display:flex;align-items:flex-end;gap:14px;flex-wrap:wrap;margin-top:14px">'
+      +'<div><div class="pm-kpi" data-pm-alvo="'+pend.length+'">0</div>'
+      +'<p class="pm-rot">esperando resposta do tutor</p></div>'
+      +(pend.length?'':'<span class="pm-badge pm-b-ok">nenhum em aberto</span>')
+      +'</div>';
+    if(pend.length){
+      h+='<div class="pm-lista">'+pend.slice(0,3).map(function(x){
+        var nomes=((x.pets||[]).map(function(p){ return p.nome; }).join(' e '))||'—';
+        var selo=x.entrada?('<span class="pm-badge pm-b-info">entra '+esc(orcBR(x.entrada))+'</span>')
+                          :'<span class="pm-badge pm-b-critico">sem data de entrada</span>';
+        return '<div class="pm-li">'+selo+'<div class="pm-li-txt">'
+          +'<b>'+esc(nomes)+' — '+pmPlural(x.noites||0,'noite','noites')+' · '+esc(fmtCent(x.total_cent||0))+'</b>'
+          +(x.tutor?('<span>'+esc('tutor: '+x.tutor)+'</span>'):'')+'</div></div>';
+      }).join('')
+      +(pend.length>3?('<div class="pm-li"><div class="pm-li-txt"><span>e mais '+(pend.length-3)+'.</span></div></div>'):'')
+      +'</div>';
+    }
+    return h+'</article>';
+  }
+  // 4 · Mensagem de almoço ao tutor — a mesma conta da tela "Quem não comeu hoje".
+  function pcQuadroAlmoco(a){
+    var titulo='Mensagem de almoço ao tutor', sub='Quem não comeu tudo hoje. A mensagem de cada tutor já está escrita — falta enviar.';
+    if(!a) return pcQuadroTravado(titulo, sub, 'A turma do dia (ou o registro do almoço) ainda não chegou ao app.', 'emporio');
+    var h='<article class="pm-card pm-rv pm-c6 pc-quadro" onclick="pcIr(\'emporio\')">'
+      +'<h3 class="pm-tit">'+titulo+'</h3><p class="pm-sub">'+sub+'</p>';
+    if(!a.turma){
+      h+='<div class="pm-lista"><div class="pm-li"><span class="pm-badge pm-b-ok">sem turma</span>'
+        +'<div class="pm-li-txt"><b>Sem turma lançada hoje.</b>'
+        +'<span>Sem turma do dia não há almoço para acompanhar.</span></div></div></div>';
+      return h+'</article>';
+    }
+    var pendentes=a.prontos.length;
+    h+='<div style="display:flex;align-items:flex-end;gap:14px;flex-wrap:wrap;margin-top:14px">'
+      +'<div><div class="pm-kpi ouro" data-pm-alvo="'+pendentes+'">0</div>'
+      +'<p class="pm-rot">'+(pendentes===1?'mensagem pronta para enviar':'mensagens prontas para enviar')+'</p></div>'
+      +(pendentes?'':'<span class="pm-badge pm-b-ok">nada a enviar agora</span>')
+      +'</div>';
+    var total=a.enviadas+pendentes+a.aguardam;
+    if(total){
+      h+='<div class="pm-pill"><i data-pm-pct="'+Math.round((a.enviadas/total)*100)+'"></i></div>'
+        +'<div class="pm-pill-rot"><span><b>'+a.enviadas+'</b> '+(a.enviadas===1?'enviada':'enviadas')+'</span>'
+        +'<span><b>'+pendentes+'</b> '+(pendentes===1?'pronta':'prontas')
+        +(a.aguardam?(' · <b>'+a.aguardam+'</b> aguarda'+(a.aguardam===1?'':'m')+' o 2º horário'):'')+'</span></div>';
+    } else {
+      h+='<p class="pm-rot" style="margin-top:10px">Todo mundo comeu hoje — nenhuma mensagem a enviar.</p>';
+    }
+    if(a.prontos.length){
+      h+='<div class="pm-lista">'+a.prontos.slice(0,2).map(function(x){
+        var selo=x.grave?'<span class="pm-badge pm-b-critico">não comeu</span>'
+                        :'<span class="pm-badge pm-b-ouro">'+esc(x.motivo.indexOf('metade')>=0?'comeu metade':'não comeu')+'</span>';
+        return '<div class="pm-li">'+selo+'<div class="pm-li-txt"><b>'+esc(x.nome)+'</b>'
+          +'<span>mensagem pronta — toque para abrir e enviar</span></div></div>';
+      }).join('')+'</div>';
+    }
+    return h+'</article>';
+  }
+  // 5 · Pendências da recepção — cadastro sem o essencial. Adaptação sem data fica de
+  // fora por decisão da Adriana (04/set): sem data não é pendência.
+  function pcQuadroRecepcao(r){
+    var titulo='Pendências da recepção', sub='Cadastro sem o essencial — a régua é a mesma do check-in.';
+    if(!r) return pcQuadroTravado(titulo, sub, 'O cadastro ainda não chegou do banco — sem ele o quadro não afirma nada.', 'ficha');
+    var completos=r.total-r.incompletos.length;
+    var h='<article class="pm-card pm-rv pm-c6 pc-quadro" onclick="pcIr(\'ficha\')">'
+      +'<h3 class="pm-tit">'+titulo+'</h3><p class="pm-sub">'+sub+'</p>'
+      +'<div class="pm-tiles" style="grid-template-columns:repeat(2,1fr)">'
+      +'<div class="pm-tile"><b data-pm-alvo="'+r.incompletos.length+'">0</b><span>'+(r.incompletos.length===1?'cadastro sem raça ou tutor':'cadastros sem raça ou tutor')+'</span></div>'
+      +'<div class="pm-tile"><b>&mdash;</b><span>adaptação sem data não é pendência (decisão de 04/set)</span></div>'
+      +'</div>';
+    if(r.total){
+      h+='<div class="pm-pill"><i data-pm-pct="'+Math.round((completos/r.total)*100)+'"></i></div>'
+        +'<div class="pm-pill-rot"><span><b>'+completos+' de '+r.total+'</b> cadastros com o essencial completo</span></div>';
+    }
+    if(r.incompletos.length){
+      h+='<div class="pm-lista">'+r.incompletos.slice(0,2).map(function(x){
+        return '<div class="pm-li"><span class="pm-badge pm-b-critico">cadastro</span>'
+          +'<div class="pm-li-txt"><b>'+esc(x.nome)+' — falta '+esc(x.faltas.join(' e '))+'</b>'
+          +'<span>complete no próximo check-in ou na ficha</span></div></div>';
+      }).join('')
+      +(r.incompletos.length>2?('<div class="pm-li"><div class="pm-li-txt"><span>e mais '+(r.incompletos.length-2)+'.</span></div></div>'):'')
+      +'</div>';
+    } else {
+      h+='<div class="pm-lista"><div class="pm-li"><span class="pm-badge pm-b-ok">tudo completo</span>'
+        +'<div class="pm-li-txt"><b>Nenhum cadastro sem o essencial.</b></div></div></div>';
+    }
+    return h+'</article>';
+  }
+
+  // --------------------------------------------------------------------- os gestos
+  function pcIr(v){ try{ if(typeof irParaView==='function') irParaView(v); }catch(e){} /* silencioso de propósito: atalho de tela — falhar não pode derrubar quem chamou */ }
+  // Grava o estado do "Seu dia" da pessoa — sempre com quem e ts. Falha vira rastro.
+  function pcGravarSeuDia(patch, rotulo){
+    if(!DB||!PC_ULTIMO||!PC_ULTIMO.key) return;
+    var reg=Object.assign({}, patch, {quem:PC_ULTIMO.eu, ts:Date.now()});
+    DB.ref('daycare/seu-dia/'+PC_DIA+'/'+PC_ULTIMO.key).update(reg)
+      .catch(function(e){ _logFalhaGrav('daycare/seu-dia/ ('+rotulo+')', e); });
+  }
+  // Água: cada toque enche até aquele copo; tocar o último cheio esvazia um. SEM pontos.
+  function pcCopoTocar(n){
+    var raiz=document.getElementById('pcRoot'); if(!raiz||!PC_ULTIMO) return;
+    var novo=Math.max(0, Math.min(8, pcCopoAlvo(PC_ULTIMO.copos, n)));
+    var antes=PC_ULTIMO.copos; PC_ULTIMO.copos=novo;
+    var parado=(typeof pmSemMovimento==='function')&&pmSemMovimento();
+    raiz.querySelectorAll('.pc-copo').forEach(function(bt){
+      var i=parseInt(bt.getAttribute('data-pc-copo'),10)||0;
+      var enche=(i<=novo), liquido=bt.querySelector('.pc-agua');
+      if(enche && !bt.classList.contains('cheio')){
+        if(liquido) liquido.style.transitionDelay=(parado?0:Math.max(0,i-antes-1)*70)+'ms';
+        bt.classList.add('cheio','pula');
+      } else if(!enche){
+        if(liquido) liquido.style.transitionDelay='0ms';
+        bt.classList.remove('cheio','pula');
+      }
+      bt.setAttribute('aria-pressed', enche?'true':'false');
+    });
+    var rot=document.getElementById('pcCoposRot');
+    if(rot) rot.innerHTML='<b>'+novo+' de 8</b> copos · 250 ml cada'+(novo===8?' — 2 litros: meta do dia completa':' — meta de 2 litros');
+    pcGravarSeuDia({copos:novo}, 'copos');
+  }
+  // Como você está: a carinha ganha cor e paga +5 UMA única vez por dia — trocar a
+  // resposta depois não soma de novo, e a resposta escolhida NUNCA muda o ponto.
+  function pcHumorTocar(t){
+    var raiz=document.getElementById('pcRoot'); if(!raiz||!PC_ULTIMO) return;
+    raiz.querySelectorAll('.pc-humor').forEach(function(b){ b.classList.remove('marcado'); b.setAttribute('aria-pressed','false'); });
+    var bt=raiz.querySelector('.pc-humor[data-pc-humor="'+t+'"]');
+    if(bt){ void bt.offsetWidth; bt.classList.add('marcado'); bt.setAttribute('aria-pressed','true'); }
+    PC_ULTIMO.humor=t;
+    if(PC_ULTIMO.pago){ pcGravarSeuDia({humor:t}, 'humor'); return; }
+    if(!DB||!PC_ULTIMO.key) return;
+    var serieNova=PC_ULTIMO.serie, pagouAgora=false;
+    // Transação: dois toques rápidos (ou dois aparelhos) nunca pagam duas vezes.
+    DB.ref('daycare/seu-dia/'+PC_DIA+'/'+PC_ULTIMO.key).transaction(function(reg){
+      reg=reg||{};
+      if(reg.pontos5){ pagouAgora=false; }
+      else { pagouAgora=true; reg.pontos5=true; reg.serie=serieNova; }
+      reg.humor=t; reg.quem=PC_ULTIMO.eu; reg.ts=Date.now();
+      if(typeof reg.copos!=='number') reg.copos=PC_ULTIMO.copos||0;
+      return reg;
+    }).then(function(res){
+      if(!res||!res.committed){ return; }
+      if(!pagouAgora){ PC_ULTIMO.pago=true; return; }   // outro aparelho pagou primeiro
+      PC_ULTIMO.pago=true;
+      // O ponto entra no placar dos Zelosos — o MESMO nó do check-out — com rastro.
+      DB.ref('daycare/pontos-checkout/'+PC_DIA.slice(0,7)).push({
+        quem:PC_ULTIMO.eu, pontos:5, origem:'seu-dia', dia:PC_DIA, ts:Date.now()
+      }).catch(function(e){ _logFalhaGrav('daycare/pontos-checkout/ (seu-dia)', e); });
+      try{ if(typeof audit==='function') audit('seu-dia-humor', PC_ULTIMO.eu+': +5 no placar dos Zelosos (respondeu como está)', {dia:PC_DIA}); }catch(e){} /* silencioso de propósito: rastro é conveniência — falhar não pode derrubar o gesto */
+      pcCelebrar();
+    }).catch(function(e){ _logFalhaGrav('daycare/seu-dia/ (humor)', e); });
+  }
+  // A celebração curta (≤800 ms). Quem pediu menos movimento vai direto ao estado final.
+  function pcCelebrar(){
+    var raiz=document.getElementById('pcRoot'); if(!raiz||!PC_ULTIMO) return;
+    PC_ULTIMO.pontosSemana=(PC_ULTIMO.pontosSemana||0)+5;
+    var b=document.getElementById('pcPts'); if(b) b.textContent=String(PC_ULTIMO.pontosSemana);
+    var g=document.getElementById('pcGanho'); if(g){ g.hidden=false; requestAnimationFrame(function(){ g.classList.add('mostra'); }); }
+    var hoje=raiz.querySelector('.pc-bola.hoje'); if(hoje) hoje.classList.add('feito');
+    var st=document.getElementById('pcSerieTexto'); if(st) st.textContent=pcTextoSerie(PC_ULTIMO.serie);
+    var ss=document.getElementById('pcSerieSub'); if(ss) ss.textContent='Série mantida. Até amanhã.';
+    var ct=document.getElementById('pcCompletoTxt');
+    if(ct) ct.textContent='Dia completo — a sua série chegou a '+pmPlural(PC_ULTIMO.serie,'dia','dias')+'.';
+    if(PC_ULTIMO.pontosSemana>=PC_META_SEMANA){ var m=document.getElementById('pcMedalha'); if(m) m.classList.add('ganha'); }
+    var mostrar=function(){ var dc=document.getElementById('pcCompleto'); if(dc) dc.classList.add('mostra'); };
+    if((typeof pmSemMovimento==='function')&&pmSemMovimento()){ mostrar(); return; }
+    var festa=document.getElementById('pcFesta');
+    if(festa){ festa.classList.add('roda'); setTimeout(function(){ festa.classList.remove('roda'); mostrar(); }, 820); }
+    else mostrar();
+  }
+
+  // ------------------------------------------------------------------------ a tela toda
+  function pcAbrir(forcar){
+    var raiz=document.getElementById('pcRoot'); if(!raiz) return;
+    // A trava é a MESMA tabela que mostra o item do menu. Quem chegar por link direto e
+    // não puder ver, lê o porquê — nunca uma tela em branco.
+    if(!podePapel('painel-consultoras')){
+      raiz.innerHTML='<div class="pm-card"><h3 class="pm-tit">Esta tela é de quem atende na Central</h3>'
+        +'<p class="pm-sub">O Painel das Consultoras é a mesa do dia da recepção. '
+        +'A rota de quem está com o FILHOt fica no "Meu Painel".</p></div>';
+      return;
+    }
+    PC_DIA=(typeof hojeISO==='function')?hojeISO():'';
+    var eu=(typeof quemSou==='function'?quemSou():'').trim();
+    if(!DB){
+      raiz.innerHTML='<div class="pm-card"><h3 class="pm-tit">Sem conexão com o banco agora</h3>'
+        +'<p class="pm-sub">Assim que a rede voltar, abra esta tela de novo. Os quadros só observam — nada aqui grava sozinho.</p></div>';
+      return;
+    }
+    // A tela abre JÁ com a saudação — e os quadros dizendo que ainda estão lendo.
+    raiz.innerHTML=pcSaudacaoHTML(eu)
+      +'<div class="pm-card"><p class="pm-sub">Ainda lendo o seu dia e os cinco quadros…</p></div>';
+    requestAnimationFrame(function(){ try{ pmAnimar(raiz); }catch(e){} /* silencioso de propósito: animação — falhar não pode derrubar a tela */ });
+    pcLer(forcar===true).then(function(d){
+      if(!d){
+        raiz.innerHTML='<div class="pm-card"><h3 class="pm-tit">Não consegui ler a sua mesa agora</h3>'
+          +'<p class="pm-sub">Nada foi perdido — este painel só observa. Abra a tela de novo em instantes.</p></div>';
+        return;
+      }
+      var hoje=d.semana[d.pos]||null;
+      var pago=!!(hoje&&hoje.pontos5);
+      PC_ULTIMO={eu:d.eu, key:d.key, pos:d.pos, pago:pago,
+        copos:(hoje&&typeof hoje.copos==='number')?hoje.copos:0,
+        humor:(hoje&&hoje.humor)||'',
+        serie: pago?(Number(hoje.serie)||1):pcSerieNova(d.ontem),
+        serieFeita: pago?(Number(hoje.serie)||1):((d.ontem&&d.ontem.pontos5)?(Number(d.ontem.serie)||1):0),
+        pontosSemana: pcPontosSemana(d.semana)};
+      raiz.innerHTML = pcSaudacaoHTML(d.eu)
+        + pcCardSeuDiaHTML(d)
+        + pcAreaHTML()
+        +'<div class="pm-grid">'
+        + pcQuadroMedicacao((d.med&&d.med.ok)?pcDadosMedicacao(d.med.porHosp):null)
+        + pcQuadroCheckins(pcDadosCheckins())
+        + pcQuadroOrcamentos((d.orc&&d.orc.ok)?pcDadosOrcamentos(d.orc.v):null)
+        + pcQuadroAlmoco(pcDadosAlmoco(d.emp))
+        + pcQuadroRecepcao(pcDadosRecepcao())
+        +'</div>';
+      requestAnimationFrame(function(){ try{ pmAnimar(raiz); }catch(e){} /* silencioso de propósito: animação — falhar não pode derrubar a tela */ });
     });
   }
 
