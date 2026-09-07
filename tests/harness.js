@@ -8740,6 +8740,223 @@ async function main() {
   }
   console.log('');
 
+  // ---- v-08: Painel da Supervisão — Pendente × Resolvido, com quem e quando -------
+  // A mesa da Amanda: tudo que está pendente ou resolvido na comunicação da Central
+  // com os tutores. As provas aqui giram em torno de TRÊS coisas: (1) papel a papel —
+  // Supervisão/Gestão/Diretoria veem, consultora e monitor NÃO; (2) "resolvido" SEMPRE
+  // com quem/quando REAIS do dado — e quando a fonte não guarda autor, o painel diz
+  // "sem autor registrado" em vez de inventar; (3) fonte não lida NUNCA vira "0
+  // pendências" — entra na lista honesta do "ainda lendo".
+  console.log('v-08 · Painel da Supervisão — permissão, menu e tela:');
+  {
+    check('PERM: supervisor, gestão e diretoria veem o painel',
+      ['supervisor', 'gestao', 'diretoria'].every((p) => ctx.podePapel('painel-amanda', p)));
+    check('PERM: consultora, monitor, plantonista, aprendiz, vet e conferência NÃO veem',
+      ['consultora', 'monitor', 'plantonista', 'aprendiz', 'vet', 'conferencia'].every((p) => !ctx.podePapel('painel-amanda', p)));
+    check('mordida — o item do menu nasce escondido e é a tabela quem o mostra (PERM_MENU)',
+      /\['painel-amanda','painel-amanda'\]/.test(html) &&
+      /<a data-v="painel-amanda" style="display:none"/.test(html));
+    check('mordida — hierarquia intacta: Cadastro 1º, Consultoras depois, Supervisão em seguida, tudo antes dos sub-menus',
+      html.indexOf('data-v="ficha"') < html.indexOf('data-v="consultoras"') &&
+      html.indexOf('data-v="consultoras"') < html.indexOf('data-v="painel-amanda"') &&
+      html.indexOf('data-v="painel-amanda"') < html.indexOf('<div class="acc" data-acc="c-auaulandia">'));
+    check('a tela v-painel-amanda existe e tem título no mapa (fonte única titles)',
+      /<section class="view" id="v-painel-amanda">/.test(html) &&
+      /'painel-amanda':\['Painel da Supervisão'/.test(html));
+    check('aoAbrirView chama paAbrir (lista única de ganchos — a tela nunca abre vazia)',
+      /if\(v==='painel-amanda'\)\{ if\(typeof paAbrir==='function'\) paAbrir\(\); \}/.test(html));
+    check('paAbrir se tranca pela mesma tabela (link direto não fura a permissão)',
+      /function paAbrir\([\s\S]{0,500}?podePapel\('painel-amanda'\)/.test(html));
+  }
+  console.log('');
+
+  console.log('v-08 · Painel da Supervisão — quem e quando (a honestidade do "resolvido"):');
+  if (typeof ctx.paQuemQuando === 'function') {
+    check('com autor e hora: "por Amanda · 12:30"',
+      ctx.paQuemQuando('Amanda', '12:30') === 'por Amanda · 12:30');
+    check('mordida — sem autor (vazio ou "-"): o painel DIZ "resolvido (sem autor registrado)", nunca inventa',
+      ctx.paQuemQuando('', '12:30') === 'resolvido (sem autor registrado) · 12:30' &&
+      ctx.paQuemQuando('-', '') === 'resolvido (sem autor registrado)' &&
+      ctx.paQuemQuando(null, null) === 'resolvido (sem autor registrado)');
+    const agoraA = new Date();
+    const pA = (n) => String(n).padStart(2, '0');
+    const hojeA = agoraA.getFullYear() + '-' + pA(agoraA.getMonth() + 1) + '-' + pA(agoraA.getDate());
+    const tsHojeA = agoraA.getTime();
+    check('paEhDeHoje: o carimbo de hoje entra; o de ontem e o vazio ficam de fora',
+      ctx.paEhDeHoje(tsHojeA, hojeA) === true &&
+      ctx.paEhDeHoje(tsHojeA - 86400000, hojeA) === false &&
+      ctx.paEhDeHoje(null, hojeA) === false && ctx.paEhDeHoje(tsHojeA, '') === false);
+
+    // ---- o rastro do dia: SÓ o registro que prova o feito conta como feito ----------
+    const movA = ctx.paDadosMovimento({
+      a: { acao: 'checkin', detalhe: 'estadia criada', pet: 'Luna', quem: 'Evelyn', hora: '08:12', ts: 1 },
+      b: { acao: 'checkin', detalhe: 'CORREÇÃO: saída 10/09 — motivo: tutor mudou', pet: 'Luna', quem: 'Evelyn', ts: 2 },
+      c: { acao: 'checkin-bloqueado', detalhe: 'Raça não preenchida', pet: 'Rex', quem: 'Evelyn', ts: 3 },
+      d: { acao: 'checkout', detalhe: 'estadia finalizada', pet: 'Rex', quem: 'Amanda', hora: '17:02', ts: 4 },
+      e: { acao: 'checkout', detalhe: 'etapa 1: bolsa montada', pet: 'Rex', quem: 'Débora', ts: 5 },
+      f: { acao: 'renovacao', detalhe: 'renovou o plano mensal (5x) até 30/09/2026', quem: 'Evelyn', hora: '10:00', ts: 6 }
+    });
+    check('mordida — check-in feito = "estadia criada"; correção e bloqueio NÃO contam como feito',
+      movA.checkins.length === 1 && movA.checkins[0].pet === 'Luna' &&
+      movA.checkins[0].quem === 'Evelyn' && movA.checkins[0].hora === '08:12',
+      JSON.stringify(movA.checkins));
+    check('mordida — check-out feito = "estadia finalizada"; a etapa 1 (bolsa montada) NÃO fecha a saída',
+      movA.checkouts.length === 1 && movA.checkouts[0].pet === 'Rex' && movA.checkouts[0].quem === 'Amanda');
+    check('renovação do rastro entra como resolvido de Planos, com quem e hora',
+      movA.renovacoes.length === 1 && movA.renovacoes[0].quem === 'Evelyn' && movA.renovacoes[0].hora === '10:00');
+
+    // ---- orçamentos: pendente pela régua da Central; decidido HOJE com o carimbo ----
+    const orcA = ctx.paDadosOrcamentos({
+      o1: { status: 'aguardando', pets: [{ nome: 'Luna' }], criado_em: 1, entrada: '2026-09-10', noites: 3, total_cent: 45000 },
+      o2: { status: 'fechado', status_em: tsHojeA, status_por: 'Evelyn', pets: [{ nome: 'Rex' }] },
+      o3: { status: 'fechado', status_em: tsHojeA - 86400000, status_por: 'Amanda', pets: [{ nome: 'Bob' }] },
+      o4: { status: 'nao_fechou', pets: [{ nome: 'Mel' }] }
+    }, hojeA);
+    check('mordida — orçamentos: 1 aguardando pendente; decidido HOJE entra com quem; o de ontem e o sem carimbo ficam de fora',
+      !!orcA && orcA.pendentes.length === 1 && orcA.pendentes[0].pets[0].nome === 'Luna' &&
+      orcA.resolvidosHoje.length === 1 && orcA.resolvidosHoje[0].nomes === 'Rex' &&
+      orcA.resolvidosHoje[0].quem === 'Evelyn' && orcA.resolvidosHoje[0].rotulo === 'fechou',
+      JSON.stringify(orcA));
+    check('quadro honesto: leitura de orçamentos que falhou vira null (nunca "nenhum em aberto")',
+      ctx.paDadosOrcamentos(null, hojeA) === null);
+
+    // ---- a loja: aviso aberto × resolvido assinado; ocorrência sem desfecho é pendência
+    const lojaA = ctx.paDadosLoja(
+      { e1: { status: 'pendente', pet: 'Luna', medNome: 'Apoquel', _ts: 5 },
+        e2: { status: 'resolvido', pet: 'Rex', medNome: 'Simparic',
+              entries: [{ acao: 'tutor trouxe', assinatura: 'Evelyn', quando: '07/09 10:12', ts: tsHojeA, resolucao: true }] },
+        e3: { status: 'resolvido', pet: 'Bob',
+              entries: [{ acao: 'antigo', assinatura: 'Ana', ts: tsHojeA - 7 * 86400000, resolucao: true }] } },
+      { r1: { status: 'em_processo', pet: 'Mel', tipo: 'racao', _ts: 6 } },
+      [{ pet: 'Theo', texto: 'orelha esquerda vermelha', ts: 7, avisado: null },
+       { pet: 'Kiara', texto: 'ok', ts: 8, avisado: { assinatura: 'Amanda', quando: '07/09 09:00', ts: tsHojeA } }],
+      hojeA);
+    check('mordida — loja: 3 abertos (remédio da Luna, ração da Mel em processo, ocorrência do Theo)',
+      lojaA.abertos.length === 3 &&
+      lojaA.abertos.some((a) => /Luna/.test(a.titulo) && /Apoquel/.test(a.titulo) && !a.emProcesso) &&
+      lojaA.abertos.some((a) => /Mel/.test(a.titulo) && a.emProcesso) &&
+      lojaA.abertos.some((a) => /Theo/.test(a.titulo) && a.ocorr),
+      JSON.stringify(lojaA.abertos));
+    check('mordida — loja resolvida HOJE entra assinada (Evelyn, Amanda); a da semana passada NÃO infla o número',
+      lojaA.resolvidos.length === 2 &&
+      lojaA.resolvidos.some((r) => /Rex/.test(r.titulo) && r.quem === 'Evelyn' && r.hora === '07/09 10:12') &&
+      lojaA.resolvidos.some((r) => /Kiara/.test(r.titulo) && r.quem === 'Amanda') &&
+      !lojaA.resolvidos.some((r) => /Bob/.test(r.titulo)),
+      JSON.stringify(lojaA.resolvidos));
+
+    // ---- almoço e saídas: a régua é a MESMA das telas (empréstimo, não cópia) -------
+    check('quadro honesto: paDadosAlmoco reusa a guarda do pcDadosAlmoco (leitura falhou → null)',
+      ctx.paDadosAlmoco({ ok: false }) === null && ctx.paDadosAlmoco(null) === null);
+    vm.runInContext('__bkpA1={HP:HOSP_PLANILHA}; HOSP_PLANILHA=false;', ctx);
+    check('quadro honesto: sem a planilha lida, paDadosSaidas devolve null (nunca "ninguém sai hoje")',
+      ctx.paDadosSaidas() === null);
+    vm.runInContext('HOSP_PLANILHA=__bkpA1.HP;', ctx);
+
+    // ---- planos: a régua é o statusRenov da tela de Renovação -----------------------
+    vm.runInContext(`__bkpA2 = { PEL: PELUDINHOS, cad: pelCadCache, c: CARTEIRA_CARREGADA };
+      CARTEIRA_CARREGADA = true;
+      PELUDINHOS = [ { n: 'Toddy', tutor: 'Ana' }, { n: 'Luna', tutor: 'Bia' }, { n: 'Zeus', tutor: 'Cid' } ];
+      pelCadCache = {
+        'toddy__ana': { renov: { plano: 'mensal', fim: '${ctx.orcMaisDias(hojeA, -3)}' } },
+        'luna__bia':  { renov: { plano: 'mensal', fim: '${ctx.orcMaisDias(hojeA, 40)}' } },
+        'zeus__cid':  { renov: { plano: 'auaulandia' } } };`, ctx);
+    try {
+      const plA = ctx.paDadosPlanos();
+      check('mordida — planos: só o vencido/vencendo entra (Toddy); em dia e "só AuAulândia" ficam de fora',
+        !!plA && plA.length === 1 && plA[0].nome === 'Toddy' && plA[0].vencido === true,
+        JSON.stringify(plA));
+      vm.runInContext('CARTEIRA_CARREGADA = false;', ctx);
+      check('quadro honesto: sem a carteira do banco, paDadosPlanos devolve null (nunca acusa no escuro)',
+        ctx.paDadosPlanos() === null);
+    } finally {
+      vm.runInContext('PELUDINHOS=__bkpA2.PEL; pelCadCache=__bkpA2.cad; CARTEIRA_CARREGADA=__bkpA2.c;', ctx);
+    }
+
+    // ---- a conversa com o tutor: registro sem texto NÃO é resposta ------------------
+    vm.runInContext(`__bkpA3 = { PEL: PELUDINHOS, cad: pelCadCache, c: CARTEIRA_CARREGADA, R: (typeof ALG_RESP!=='undefined'?ALG_RESP:{}) };
+      CARTEIRA_CARREGADA = true;
+      PELUDINHOS = [ { n: 'Luna', tutor: 'Ana' }, { n: 'Rex', tutor: 'Bia' } ];
+      pelCadCache = {};
+      ALG_RESP = {
+        'luna__ana': { quando: '${hojeA}', quem: 'Evelyn', resposta: 'Alimentação: 2 por dia', ts: ${tsHojeA} },
+        'rex__bia':  { quando: '${hojeA}', quem: 'Evelyn', ts: ${tsHojeA} } };`, ctx);
+    try {
+      const tutA = ctx.paDadosTutor({
+        'luna__ana': { nome: 'Luna', tutor: 'Ana', ts: tsHojeA },
+        'rex__bia': { nome: 'Rex', tutor: 'Bia', ts: 1, tratado: { quem: 'Márcia', ts: tsHojeA } }
+      }, hojeA);
+      check('mordida — pergunta feita sem texto é ESPERA (Rex), nunca resposta; a resposta real de hoje entra com quem colou',
+        !!tutA && tutA.esperando.length === 1 && tutA.esperando[0].nome === 'Rex' &&
+        tutA.respostasHoje.length === 1 && tutA.respostasHoje[0].nome === 'Luna' && tutA.respostasHoje[0].quem === 'Evelyn',
+        JSON.stringify({ e: tutA && tutA.esperando.map((x) => x.nome), r: tutA && tutA.respostasHoje }));
+      check('mordida — atenção sem tratamento é pendência da Gestão; a tratada HOJE entra com quem tratou',
+        tutA.atencoes.length === 1 && tutA.atencoes[0].nome === 'Luna' &&
+        tutA.atendidas.length === 1 && tutA.atendidas[0].nome === 'Rex' && tutA.atendidas[0].quem === 'Márcia');
+    } finally {
+      vm.runInContext('PELUDINHOS=__bkpA3.PEL; pelCadCache=__bkpA3.cad; CARTEIRA_CARREGADA=__bkpA3.c; ALG_RESP=__bkpA3.R;', ctx);
+    }
+
+    // ---- a junção: fonte não lida entra no "ainda lendo", nunca vira zero calado ----
+    const vazioA = ctx.paLinhas({ checkins: null, saidas: null, mov: null, almoco: null,
+      loja: null, orc: null, planos: null, cadastro: null, tutor: null });
+    check('mordida — TODAS as fontes por ler: 9 avisos de "ainda lendo" e NENHUM número afirmado',
+      vazioA.pend.length === 0 && vazioA.res.length === 0 && vazioA.lendo.length === 9,
+      JSON.stringify(vazioA.lendo));
+    const cheioA = ctx.paLinhas({
+      checkins: { total: 2, feitos: 1, faltam: [{ nome: 'Luna', tutor: 'Ana' }] },
+      saidas: { saemHoje: 1, naRecepcao: 1 },
+      mov: movA,
+      almoco: [
+        { nome: 'Bidu', motivo: 'comeu só metade', pronto: true, grave: false, aviso: null },
+        { nome: 'Mel', motivo: 'não comeu nem no 2º horário', pronto: true, grave: true, aviso: null },
+        { nome: 'Dolly', motivo: 'comeu só metade', pronto: true, grave: false, aviso: { quem: 'Evelyn', hora: '13:40', ts: tsHojeA } },
+        { nome: 'Ozzy', motivo: 'não comeu no 1º horário', pronto: false, grave: false, aviso: null }],
+      loja: lojaA, orc: orcA,
+      planos: [{ nome: 'Toddy', label: 'venceu há 3 dias', vencido: true, dias: -3 }],
+      cadastro: { total: 3, incompletos: [{ nome: 'Zara', faltas: ['Tutor'] }] },
+      tutor: { esperando: [{ nome: 'Rex' }], vencidos: [], atencoes: [{ nome: 'Luna', ts: 1 }],
+               atendidas: [{ nome: 'Rex', quem: 'Márcia', ts: tsHojeA }],
+               respostasHoje: [{ nome: 'Luna', quem: 'Evelyn', ts: tsHojeA }] }
+    });
+    check('mordida — a mesa cheia: 14 pendentes e 9 resolvidos, cada um no seu lado',
+      cheioA.pend.length === 14 && cheioA.res.length === 9 && cheioA.lendo.length === 0,
+      'pend=' + cheioA.pend.length + ' res=' + cheioA.res.length + ' lendo=' + cheioA.lendo.length);
+    check('mordida — TODO resolvido diz quem e quando (ou confessa "sem autor registrado")',
+      cheioA.res.every((r) => /^por .+ · .+/.test(r.sub) || /^resolvido \(sem autor registrado\)/.test(r.sub)),
+      JSON.stringify(cheioA.res.map((r) => r.sub)));
+    check('mordida — o aviso de almoço da Dolly sai com quem e hora reais do registro (Evelyn · 13:40)',
+      cheioA.res.some((r) => /Dolly/.test(r.titulo) && r.sub === 'por Evelyn · 13:40'));
+    check('mordida — todo pendente diz de quem é a vez (Central, monitor, Gestão ou tutor) ou o que aguarda',
+      cheioA.pend.every((r) => /vez d|aguarda|em processo/.test(r.sub)), JSON.stringify(cheioA.pend.map((r) => r.sub)));
+    check('o tutor esperando na recepção abre a tela certa (checkoutconf — o modo conferência do check-out)',
+      cheioA.pend.some((r) => r.view === 'checkoutconf' && /recepção/.test(r.titulo)));
+    check('resolvidos vêm do mais recente para o mais antigo (a Amanda lê o agora primeiro)',
+      cheioA.res.every((r, i) => i === 0 || (cheioA.res[i - 1].ts || 0) >= (r.ts || 0)));
+
+    // ---- a fatia inteira: só observa, só lê com once, e fala a língua da casa -------
+    // A âncora é o cabeçalho do MÓDULO (com a data) — o comentário da <section> lá em
+    // cima usa o mesmo título sem a data, e ancorar nele engoliria o app inteiro.
+    const iniPA = html.indexOf('PAINEL DA SUPERVISÃO — a mesa da Amanda (v-08, 07/set/2026)');
+    const fatiaPA = (iniPA >= 0) ? html.slice(iniPA, html.indexOf('// INIT do Day Care')) : '';
+    check('a fatia do módulo novo existe no código', fatiaPA.length > 4000, String(fatiaPA.length));
+    check('o Painel da Supervisão NÃO grava nada (nenhum set/update/push/remove/transaction)',
+      !/DB\.ref\([^)]*\)\.(set|update|push|remove|transaction)\b/.test(fatiaPA),
+      (fatiaPA.match(/DB\.ref\([^)]*\)\.(set|update|push|remove|transaction)\b/) || [''])[0]);
+    check('o Painel da Supervisão só lê com once (nenhum ouvinte novo pendurado)',
+      !/\.on\('value'/.test(fatiaPA));
+    check('toda leitura que falha é registrada (nunca falha calada)',
+      /_logLeituraFalhou\(caminho\+' \(Painel da Supervisão\)'/.test(fatiaPA));
+    check('cada linha aponta para a tela que resolve (as 9 telas estão no código da fatia)',
+      ['checkin', 'checkout', 'checkoutconf', 'emporio', 'recepcao', 'orcamento', 'renovacao', 'ficha', 'alergia']
+        .every((v) => fatiaPA.indexOf("view:'" + v + "'") >= 0) &&
+      fatiaPA.indexOf("paIr(\\'") >= 0);
+    check('mordida — nenhum "balcão" e nenhum emoji no módulo novo (a voz é a da casa)',
+      !/balc/i.test(fatiaPA) && !/[\u{1F000}-\u{1FAFF}✀-➿⬀-⯿]/u.test(fatiaPA));
+  } else {
+    check('paQuemQuando existe', false, 'função não encontrada — o módulo v-08 não carregou');
+  }
+  console.log('');
+
   // ---- a prova do retrato: rodada padrão não toca o Firebase --------------------
   console.log('Retrato — a rodada padrão não abre conexão nenhuma com o banco:');
   if (HARNESS_VIVO) {

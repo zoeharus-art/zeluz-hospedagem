@@ -1707,7 +1707,7 @@
     --pm-wash:rgba(90,171,181,.16);
     --pm-tarja:rgba(90,171,181,.62);
   }
-  #v-painelmeu,#v-planodia,#v-paineloperacao,#v-consultoras{max-width:1120px}
+  #v-painelmeu,#v-planodia,#v-paineloperacao,#v-consultoras,#v-painel-amanda{max-width:1120px}
 
   /* ---------- saudação vibrante (o topo que engaja) ---------- */
   .pm-saud1{font-size:28px;font-weight:800;color:var(--z-blue);letter-spacing:-.03em;line-height:1.12}
@@ -2031,6 +2031,39 @@
     80%{opacity:1;transform:translateY(-30px)}100%{opacity:0;transform:translateY(-38px)}}
   /* os quadros são a porta da tela que resolve — o dedo precisa saber disso */
   .pc-quadro{cursor:pointer}
+
+  /* ---------- Painel da Supervisão (v-08) — Pendente × Resolvido, com quem e quando ----
+     Mesma família .pm-, mesmos tokens. Duas colunas no desktop; no celular viram abas
+     (Pendente / Resolvido hoje) — a Amanda cobra pelo celular, e duas colunas espremidas
+     em 500px viram uma coluna só que rola sem fim. Cada linha é um botão: toca e abre a
+     tela onde aquilo se resolve. Nenhuma cor nova; fundo chapado segue proibido. */
+  .pa-cols{display:grid;grid-template-columns:1fr 1fr;gap:12px;align-items:start;margin-top:14px}
+  .pa-col{min-width:0}
+  .pa-col-t{font-size:15px;font-weight:800;color:var(--z-blue);letter-spacing:-.01em;
+    padding-bottom:8px;border-bottom:2px solid var(--pm-linha);margin-bottom:4px}
+  .pa-col-t small{display:block;font-size:11.5px;font-weight:500;color:var(--muted);margin-top:2px}
+  .pa-li{display:flex;gap:9px;align-items:flex-start;width:100%;text-align:left;
+    padding:9px 4px;border:0;border-top:1px solid var(--pm-linha-fina);background:none;
+    cursor:pointer;font-family:var(--font-ui);border-radius:8px;min-width:0}
+  .pa-li:first-of-type{border-top:none}
+  .pa-li:hover{background:var(--z-cream-warm)}
+  .pa-li-txt{min-width:0;flex:1 1 auto}
+  .pa-li-txt b{display:block;font-size:13.5px;font-weight:800;color:var(--z-blue);line-height:1.3}
+  .pa-li-txt span{display:block;font-size:12px;font-weight:500;color:var(--muted);margin-top:1px;line-height:1.4}
+  .pa-li-go{flex:0 0 auto;align-self:center;font-size:18px;font-weight:800;color:var(--z-gold-deep)}
+  .pa-li.pa-mais b{font-weight:600;color:var(--muted)}
+  .pa-tabs{display:none}
+  @media(max-width:760px){
+    .pa-cols{grid-template-columns:1fr}
+    .pa-tabs{display:flex;gap:8px;margin-top:14px}
+    .pa-tab{flex:1 1 0;padding:10px 8px;border-radius:999px;border:1.5px solid var(--line);
+      background:var(--z-white);color:var(--z-blue);font-family:var(--font-ui);
+      font-size:13px;font-weight:800;cursor:pointer}
+    .pa-tab.on{background:var(--z-blue);color:var(--z-cream);border-color:var(--z-blue)}
+    .pa-cols.so-pend .pa-col-res{display:none}
+    .pa-cols.so-res .pa-col-pend{display:none}
+    .pa-cols .pa-col-t{margin-top:2px}
+  }
   @media(min-width:900px){
     .pc-colunas{display:grid;grid-template-columns:1.15fr 1fr 1fr;gap:0 26px;align-items:start}
     .pc-colunas .pc-qz{border-top:none;border-left:1px solid var(--pm-linha-fina);padding-left:22px}
@@ -2121,6 +2154,12 @@
              aplicarPermMenu(), lendo a tabela PERM ('painel-consultoras'). Nada de
              classe so-* nova (regra 3 da Fase 2). -->
         <a data-v="consultoras" style="display:none" title="A sua mesa do dia: o Seu dia e os cinco quadros que precisam de você."><span data-icon="sun"></span><span>Painel das Consultoras</span></a>
+        <!-- PAINEL DA SUPERVISÃO (v-08) — a mesa da Amanda: tudo que está pendente ou
+             resolvido na comunicação da Central com os tutores, com quem e quando. Vive
+             na Central Zêluz porque é a supervisão DELA. Nasce escondido; quem mostra é
+             aplicarPermMenu(), lendo a tabela PERM ('painel-amanda') — nada de classe
+             so-* nova (regra 3 da Fase 2). O Cadastro segue sendo o 1º item. -->
+        <a data-v="painel-amanda" style="display:none" title="Pendente e resolvido na comunicação com os tutores — com quem e quando."><span data-icon="list-check"></span><span>Painel da Supervisão</span></a>
         <div class="acc" data-acc="c-auaulandia">
           <a class="grp grp-sub nav-parent" data-acc-toggle="c-auaulandia"><span>AuAulândia</span><span class="acc-caret" aria-hidden="true"></span></a>
           <div class="acc-panel">
@@ -4021,6 +4060,16 @@
     <div id="poRoot"><div class="pm-card"><div class="pm-sub">Carregando a casa de hoje…</div></div></div>
   </section>
 
+  <!-- ===== PAINEL DA SUPERVISÃO — a mesa da Amanda (v-08) ==========================
+       "A Amanda precisa ver tudo que está pendente ou que foi resolvido para cobrar,
+       corrigir, supervisionar" (Adriana, 25/ago e 04/set). Duas colunas: Pendente (de
+       quem é a vez) × Resolvido hoje (quem resolveu e quando — sempre do dado real).
+       Este painel só OBSERVA: nenhum botão daqui grava coisa alguma; cada linha abre
+       a tela onde aquilo se resolve. -->
+  <section class="view" id="v-painel-amanda">
+    <div id="paRoot"><div class="pm-card"><div class="pm-sub">Carregando o pendente e o resolvido do dia…</div></div></div>
+  </section>
+
   <section class="view" id="v-sair"><div class="soon-box"><img class="ic-st" src="assets/simbolo.png" alt=""><div class="t">Sair</div><div class="d">No sistema real, encerra a sessão com segurança.</div></div></section>
 
   <!-- FOOTER KAIRÓS -->
@@ -4397,6 +4446,7 @@
     // frase longa vira uma coluna estreita e alta em cima da tela.
     painelmeu:['Meu Painel','A sua rota de hoje.'],
     consultoras:['Painel das Consultoras','A sua mesa do dia na Central.'],
+    'painel-amanda':['Painel da Supervisão','Pendente e resolvido, com quem e quando.'],
     paineloperacao:['Painel da Operação','A casa de hoje: quem veio, o time, as noites e o acerto.'],
     planodia:['Escala e plano do dia','A escala de cada um e qual plano vale hoje.'],
     abertura:['Abertura do dia','Monitor 1: como a casa abre.'],sair:['Sair','Encerra a sessão neste aparelho.']};
@@ -4454,6 +4504,7 @@
     if(v==='mesa'){ if(typeof mesaAbrir==='function') mesaAbrir(); }
     if(v==='painelmeu'){ if(typeof pmAbrir==='function') pmAbrir(); }
     if(v==='consultoras'){ if(typeof pcAbrir==='function') pcAbrir(); }
+    if(v==='painel-amanda'){ if(typeof paAbrir==='function') paAbrir(); }
     if(v==='paineloperacao'){ if(typeof poAbrir==='function') poAbrir(); }
     if(v==='planodia'){ if(typeof pdAbrir==='function') pdAbrir(); }
     if(v==='reposicao'){ if(typeof renderReposicao==='function') renderReposicao(); }
@@ -4535,6 +4586,13 @@
     // precisam dela. Quem atende na Central vê; o monitor NÃO — a fatia dele é o Meu
     // Painel. Mesma regra 3 da Fase 2: permissão em um lugar só, provada no harness.
     'painel-consultoras':       ['consultora','supervisor','gestao','diretoria'],
+    // ===== v-08 — o Painel da Supervisão (a mesa da Amanda) ==========================
+    // "A Amanda precisa ver tudo que está pendente ou que foi resolvido para cobrar,
+    // corrigir, supervisionar" (Adriana, 25/ago e 04/set). É a supervisão da Central:
+    // a Supervisão vê, a Gestão e a Diretoria também. A consultora NÃO — a mesa dela é
+    // o Painel das Consultoras; o monitor NÃO — a fatia dele é o Meu Painel. Mesma
+    // regra 3 da Fase 2: permissão em um lugar só, provada no harness papel a papel.
+    'painel-amanda':            ['supervisor','gestao','diretoria'],
     // ===== FASE 2.2 — a fatia da Operação (a Márcia) ==================================
     // A outra ponta da mesma tese: o monitor vê a rota dele, a Márcia vê a casa. Aqui há
     // dinheiro (o acerto das plantonistas) e tempo por etapa POR PESSOA — as duas coisas
@@ -4557,7 +4615,7 @@
   // Nenhum dos dois entra em NAV_PAGINAS_ALL de propósito: "Meu Painel" é a fatia da
   // própria pessoa (não se concede a ninguém, é dela), e a escala é ajuste da Gestão —
   // mesma razão pela qual "Senhas" e "Configurações" também ficam fora daquela lista.
-  const PERM_MENU=[['painelmeu','painel-monitor'],['paineloperacao','painel-operacao'],['planodia','definir-plano-do-dia'],['consultoras','painel-consultoras']];
+  const PERM_MENU=[['painelmeu','painel-monitor'],['paineloperacao','painel-operacao'],['planodia','definir-plano-do-dia'],['consultoras','painel-consultoras'],['painel-amanda','painel-amanda']];
   function aplicarPermMenu(){
     PERM_MENU.forEach(function(par){
       document.querySelectorAll('#nav a[data-v="'+par[0]+'"]').forEach(function(a){
@@ -11763,7 +11821,7 @@
   // Agora existe um carimbo: esta constante é a versão que o aparelho está rodando, e o
   // Firebase guarda a versão publicada. Quando as duas diferem, aparece o aviso — mas
   // NUNCA recarrega sozinho: recarregar no meio de um check-in perderia o trabalho.
-  const APP_VERSAO='2026-09-07-01';
+  const APP_VERSAO='2026-09-07-02';
   function vigiarVersao(){
     if(!DB) return;
     try{
@@ -32244,6 +32302,460 @@
       _logLeituraFalhou('Painel da Operação (montagem da tela)', e);
       raiz.innerHTML='<div class="pm-card"><h3 class="pm-tit">Não consegui montar o painel agora</h3>'
         +'<p class="pm-sub">Nada foi perdido — este painel não grava nada. Abra esta tela de novo em instantes.</p></div>';
+    });
+  }
+
+  /* ====================================================================================
+   * PAINEL DA SUPERVISÃO — a mesa da Amanda (v-08, 07/set/2026)
+   *
+   * "A Amanda precisa ver tudo que está pendente ou que foi resolvido para cobrar,
+   * corrigir, supervisionar" (Adriana, 25/ago e 04/set). Ela supervisiona TODA a
+   * comunicação da Central com os tutores: check-in, check-out, o que resolver com o
+   * cliente (faltou algo, remédio, ração), o aviso de almoço, os dados veterinários e
+   * as ocorrências, cadastro e ficha, renovação de planos e a pesquisa com o tutor.
+   *
+   * O FORMATO É UM SÓ: Pendente × Resolvido, com QUEM e QUANDO. Cada linha diz o que
+   * é, de quem é a vez — e, quando resolvido, quem resolveu e a que horas, sempre do
+   * dado REAL (auditoria, registro de aviso, desfecho assinado). Fonte que não guarda
+   * autor aparece como "resolvido (sem autor registrado)" — honesto, nunca inventado.
+   *
+   * REGRA DE OURO (a mesma dos outros painéis): integrar, nunca recriar. Nenhuma conta
+   * de negócio nasce aqui — as linhas REUSAM empLista (via pcDadosAlmoco), o rastro de
+   * daycare/auditoria, hospedesSemCheckin/contarPendencias, pcDadosOrcamentos
+   * (orcOrdenar), statusRenov, cadastroFaltando (via pcDadosRecepcao), algLista,
+   * ocorrenciasLoja e ocorrenciasDayCare. "Resolvido hoje" só conta o que tem carimbo
+   * de HOJE — resolvido na semana passada não infla o número de ninguém.
+   *
+   * ESTE PAINEL SÓ OBSERVA. Não existe uma única gravação daqui — cada linha abre a
+   * tela onde aquilo se resolve, e é lá que fica o rastro de quem fez.
+   *
+   * UM RELÓGIO SÓ: todos os grupos usam PA_DIA, decidido uma vez por abertura.
+   * ================================================================================== */
+
+  var PA_DIA='';                                      // o relógio único desta abertura
+  var PA_CACHE={quando:0, dia:'', dados:null};
+  var PA_TOM={critico:'pm-b-critico', ouro:'pm-b-ouro', info:'pm-b-info', atencao:'pm-b-atencao', ok:'pm-b-ok'};
+  var PA_ORC_ROTULO={fechado:'fechou', nao_fechou:'não fechou', cancelado:'cancelado'};
+
+  // ------------------------------------------------------------- as contas (puras)
+  function paHora(ts){ if(!ts) return ''; var d=new Date(ts), p=function(x){ return String(x).padStart(2,'0'); }; return p(d.getHours())+':'+p(d.getMinutes()); }
+  function paEhDeHoje(ts, dia){
+    if(!ts||!dia) return false;
+    var d=new Date(ts), p=function(x){ return String(x).padStart(2,'0'); };
+    return (d.getFullYear()+'-'+p(d.getMonth()+1)+'-'+p(d.getDate()))===dia;
+  }
+  // A frase do "quem e quando". Sem autor de verdade (vazio ou "-"), o painel DIZ que
+  // não sabe — nunca pendura o feito em ninguém.
+  function paQuemQuando(quem, hora){
+    var q=String(quem==null?'':quem).trim(), h=String(hora==null?'':hora).trim();
+    if(!q||q==='-') return 'resolvido (sem autor registrado)'+(h?(' · '+h):'');
+    return 'por '+q+(h?(' · '+h):'');
+  }
+  // O rastro do dia: SÓ o registro que prova o feito conta como feito. "checkin-bloqueado",
+  // correção e ajuste de ficha NÃO são check-in feito — a régua é o detalhe exato que o
+  // salvamento grava ('estadia criada' / 'estadia finalizada').
+  function paDadosMovimento(aud){
+    var out={checkins:[], checkouts:[], renovacoes:[]};
+    Object.keys(aud||{}).forEach(function(k){
+      var r=aud[k]||{};
+      if(r.acao==='checkin' && r.detalhe==='estadia criada')
+        out.checkins.push({pet:r.pet||'', quem:r.quem||'', hora:r.hora||paHora(r.ts), ts:r.ts||0});
+      else if(r.acao==='checkout' && r.detalhe==='estadia finalizada')
+        out.checkouts.push({pet:r.pet||'', quem:r.quem||'', hora:r.hora||paHora(r.ts), ts:r.ts||0});
+      else if(r.acao==='renovacao')
+        out.renovacoes.push({detalhe:r.detalhe||'plano renovado', quem:r.quem||'', hora:r.hora||paHora(r.ts), ts:r.ts||0});
+    });
+    ['checkins','checkouts','renovacoes'].forEach(function(c){ out[c].sort(function(a,b){ return (b.ts||0)-(a.ts||0); }); });
+    return out;
+  }
+  // O almoço: a MESMA régua do Painel das Consultoras (pcDadosAlmoco guarda os dados do
+  // dia e valida a carteira) — aqui só se pede a lista completa, porque a Supervisão
+  // precisa também de QUEM avisou e QUANDO (o registro de empAvisar).
+  function paDadosAlmoco(emp){
+    var a=(typeof pcDadosAlmoco==='function')?pcDadosAlmoco(emp):null;
+    if(!a) return null;
+    return (typeof empLista==='function')?empLista():[];
+  }
+  // As saídas de hoje, pela MESMA conta do menu (contarPendencias) — regra em um lugar só.
+  function paDadosSaidas(){
+    if(typeof HOSP_PLANILHA==='undefined'||HOSP_PLANILHA!==true) return null;
+    if(typeof CF_ESTADIAS_LIDO!=='undefined' && !CF_ESTADIAS_LIDO) return null;
+    if(typeof contarPendencias!=='function') return null;
+    var r=contarPendencias();
+    return {saemHoje:r.saemHoje||0, naRecepcao:r.naRecepcao||0};
+  }
+  // A última entrada de resolução de um aviso (é ela que assina o "resolvido").
+  function paUltimaResolucao(a){
+    var e=null; ((a&&a.entries)||[]).forEach(function(x){ if(x&&x.resolucao) e=x; });
+    return e;
+  }
+  // A loja: avisos de remédio/ração (pendente→resolvido, com trilha assinada) e as
+  // ocorrências das duas origens (hospedagem e Day Care), com o desfecho assinado.
+  function paDadosLoja(estoque, racao, ocorrs, dia){
+    var abertos=[], resolvidos=[];
+    var passa=function(cache, rotDe){
+      Object.keys(cache||{}).forEach(function(id){
+        var a=cache[id]||{};
+        if(a.status!=='resolvido'){
+          abertos.push({titulo:rotDe(a), emProcesso:a.status==='em_processo', ts:a._ts||0});
+        } else {
+          var e=paUltimaResolucao(a);
+          if(e && paEhDeHoje(e.ts, dia))
+            resolvidos.push({titulo:rotDe(a)+' — resolvido', quem:e.assinatura||'', hora:e.quando||paHora(e.ts), ts:e.ts||0});
+        }
+      });
+    };
+    passa(estoque, function(a){ return 'Remédio de '+(a.pet||'—')+(a.medNome?(' ('+a.medNome+')'):'')+' acabando'; });
+    passa(racao, function(a){
+      var o=(a.tipo==='medicacao')?('Remédio '+(a.itemNome||'')+' em falta')
+        :(a.tipo==='medicacao-sem-contagem')?('Contar o remédio '+(a.itemNome||''))
+        :(a.tipo==='comida-natural')?'Comida natural em falta':'Ração em falta';
+      return o+' — '+(a.pet||'—');
+    });
+    (ocorrs||[]).forEach(function(o){
+      if(!o.avisado){
+        abertos.push({titulo:'Ocorrência de '+(o.pet||'—'), ocorr:true,
+          texto:String(o.texto||'').slice(0,70), ts:o.ts||0});
+      } else if(paEhDeHoje(o.avisado.ts, dia)){
+        resolvidos.push({titulo:'Ocorrência de '+(o.pet||'—')+' — desfecho registrado',
+          quem:o.avisado.assinatura||o.avisado.quem||'', hora:o.avisado.quando||paHora(o.avisado.ts), ts:o.avisado.ts||0});
+      }
+    });
+    abertos.sort(function(a,b){ return (b.ts||0)-(a.ts||0); });
+    resolvidos.sort(function(a,b){ return (b.ts||0)-(a.ts||0); });
+    return {abertos:abertos, resolvidos:resolvidos};
+  }
+  // Os orçamentos: pendentes pela MESMA régua do Painel das Consultoras (orcOrdenar,
+  // entrada mais próxima primeiro); decididos HOJE com o carimbo que orcMudarStatus
+  // grava (status_por/status_em). Decisão antiga sem carimbo fica de fora — honesto.
+  function paDadosOrcamentos(cache, dia){
+    var base=(typeof pcDadosOrcamentos==='function')?pcDadosOrcamentos(cache):null;
+    if(!base) return null;
+    var res=[];
+    Object.keys(cache||{}).forEach(function(id){
+      var o=cache[id]||{};
+      if((o.status||'aguardando')==='aguardando') return;
+      if(!paEhDeHoje(o.status_em, dia)) return;
+      res.push({nomes:((o.pets||[]).map(function(p){ return p.nome; }).join(' e '))||'—',
+        rotulo:PA_ORC_ROTULO[o.status]||o.status, quem:o.status_por||'', ts:o.status_em||0});
+    });
+    res.sort(function(a,b){ return (b.ts||0)-(a.ts||0); });
+    return {pendentes:base.pendentes||[], resolvidosHoje:res};
+  }
+  // Os planos a cobrar, pela MESMA régua da tela de Renovação (statusRenov): vencido e
+  // "vence em até 15 dias". Sem a carteira do banco, não afirma nada (null).
+  function paDadosPlanos(){
+    if(typeof CARTEIRA_CARREGADA!=='undefined' && !CARTEIRA_CARREGADA) return null;
+    var out=[];
+    (typeof PELUDINHOS!=='undefined'?PELUDINHOS:[]).forEach(function(p){
+      if(typeof pelInativo==='function'&&pelInativo(p)) return;
+      var st=(typeof statusRenov==='function')?statusRenov(typeof pelExtra==='function'?pelExtra(p):{}):null;
+      if(!st) return;
+      if(st.estado==='vencido'||st.estado==='vence')
+        out.push({nome:(typeof pelNome==='function'?(pelNome(p)||''):(p.n||'')), label:st.label,
+                  vencido:st.estado==='vencido', dias:(st.dias==null?0:st.dias)});
+    });
+    out.sort(function(a,b){ return a.dias-b.dias; });
+    return out;
+  }
+  // A conversa com o tutor: a MESMA régua da tela (algLista — registro sem texto é
+  // pergunta feita, nunca resposta) + a mesa de atenção da Gestão (entrevista-atencao).
+  // Espera ALG_RESP já emprestado com a leitura fresca do banco (paAbrir faz isso).
+  function paDadosTutor(atencao, dia){
+    if(typeof CARTEIRA_CARREGADA!=='undefined' && !CARTEIRA_CARREGADA) return null;
+    var L=(typeof algLista==='function')?algLista():{hospede:[], auluno:[]};
+    var fila=(L.hospede||[]).concat(L.auluno||[]);
+    var esperando=fila.filter(function(x){ return x.esperando; });
+    var vencidos=fila.filter(function(x){ return x.vencido; });
+    var atencoes=[], atendidas=[];
+    Object.keys(atencao||{}).forEach(function(k){
+      var r=atencao[k]||{};
+      if(!r.tratado) atencoes.push({nome:r.nome||'', tutor:r.tutor||'', ts:r.ts||0});
+      else if(paEhDeHoje(r.tratado.ts, dia))
+        atendidas.push({nome:r.nome||'', quem:r.tratado.quem||'', ts:r.tratado.ts||0});
+    });
+    var respostasHoje=[];
+    var resp=(typeof ALG_RESP!=='undefined'&&ALG_RESP)||{};
+    Object.keys(resp).forEach(function(k){
+      var r=resp[k]||{};
+      if(!String(r.resposta||'').trim()) return;        // pergunta feita não é resposta
+      if(!paEhDeHoje(r.ts, dia)) return;
+      var p=(typeof algPelDe==='function')?algPelDe(k):null;
+      respostasHoje.push({nome:(p?((typeof pelNome==='function'?pelNome(p):'')||k):k), quem:r.quem||'', ts:r.ts||0});
+    });
+    atencoes.sort(function(a,b){ return (b.ts||0)-(a.ts||0); });
+    return {esperando:esperando, vencidos:vencidos, atencoes:atencoes,
+            atendidas:atendidas, respostasHoje:respostasHoje};
+  }
+
+  // ------------------------------------------------- a junção: as duas colunas da mesa
+  // Recebe as fontes já lidas (null = ainda não chegou) e devolve as linhas prontas.
+  // Fonte que não chegou entra em `lendo` — o painel DIZ o que ainda não sabe, e os
+  // números não contam o que não foi lido (nunca "0 pendências" no escuro).
+  function paLinhas(f){
+    var pend=[], res=[], lendo=[];
+    // 1 · Check-in do dia
+    if(f.checkins==null) lendo.push('os check-ins do dia');
+    else (f.checkins.faltam||[]).forEach(function(h){
+      var tutor=(typeof tutorDe==='function')?tutorDe(h):(h.tutor||'');
+      pend.push({area:'Check-in', tom:'critico', titulo:(h.nome||'—')+' está na casa sem check-in',
+        sub:'vez da Central: lançar o check-in'+(tutor?(' — tutor: '+tutor):''), view:'checkin', ts:0});
+    });
+    // 2 · Check-out do dia
+    if(f.saidas==null) lendo.push('as saídas de hoje');
+    else{
+      if(f.saidas.saemHoje) pend.push({area:'Check-out', tom:'ouro',
+        titulo:pmPlural(f.saidas.saemHoje,'hóspede sai','hóspedes saem')+' hoje — bolsa a montar',
+        sub:'vez do monitor: juntar os pertences; a Central fecha com o tutor depois', view:'checkout', ts:0});
+      if(f.saidas.naRecepcao) pend.push({area:'Check-out', tom:'critico',
+        titulo:pmPlural(f.saidas.naRecepcao,'tutor espera','tutores esperam')+' na recepção para fechar a saída',
+        sub:'vez da Central: conferir a bolsa com o tutor e colher a assinatura', view:'checkoutconf', ts:0});
+    }
+    if(f.mov==null) lendo.push('o rastro do dia (quem fez o quê)');
+    else{
+      f.mov.checkins.forEach(function(r){ res.push({area:'Check-in', titulo:'Check-in de '+(r.pet||'—')+' lançado',
+        sub:paQuemQuando(r.quem, r.hora), view:'checkin', ts:r.ts}); });
+      f.mov.checkouts.forEach(function(r){ res.push({area:'Check-out', titulo:'Check-out de '+(r.pet||'—')+' finalizado',
+        sub:paQuemQuando(r.quem, r.hora), view:'checkout', ts:r.ts}); });
+      f.mov.renovacoes.forEach(function(r){ res.push({area:'Planos', titulo:r.detalhe,
+        sub:paQuemQuando(r.quem, r.hora), view:'renovacao', ts:r.ts}); });
+    }
+    // 3 · Almoço (o aviso ao tutor)
+    if(f.almoco==null) lendo.push('o almoço de hoje');
+    else f.almoco.forEach(function(x){
+      if(x.aviso) res.push({area:'Almoço', titulo:'Tutor de '+x.nome+' avisado ('+x.motivo+')',
+        sub:paQuemQuando(x.aviso.quem, x.aviso.hora||paHora(x.aviso.ts)), view:'emporio', ts:x.aviso.ts||0});
+      else if(x.pronto) pend.push({area:'Almoço', tom:(x.grave?'critico':'ouro'), titulo:x.nome+' — '+x.motivo,
+        sub:'vez da Central: a mensagem já está pronta — copiar e avisar o tutor', view:'emporio', ts:0});
+      else pend.push({area:'Almoço', tom:'info', titulo:x.nome+' — não comeu no 1º horário',
+        sub:'aguarda o 2º horário (por volta das 15h30) — se comer lá, nada a fazer', view:'emporio', ts:0});
+    });
+    // 4 · Loja (remédio, ração, ocorrências)
+    if(f.loja==null) lendo.push('as pendências da loja');
+    else{
+      f.loja.abertos.forEach(function(a){
+        pend.push({area:'Loja', tom:(a.emProcesso?'atencao':'critico'), titulo:a.titulo,
+          sub:a.ocorr?('vez da Central: avisar o tutor e registrar o desfecho — '+a.texto)
+            :(a.emProcesso?'em processo — registrar a próxima providência e fechar'
+                          :'vez da Central: resolver com o tutor'),
+          view:'recepcao', ts:a.ts});
+      });
+      f.loja.resolvidos.forEach(function(r){ res.push({area:'Loja', titulo:r.titulo,
+        sub:paQuemQuando(r.quem, r.hora), view:'recepcao', ts:r.ts}); });
+    }
+    // 5 · Orçamentos
+    if(f.orc==null) lendo.push('os orçamentos');
+    else{
+      (f.orc.pendentes||[]).forEach(function(x){
+        var nomes=((x.pets||[]).map(function(p){ return p.nome; }).join(' e '))||'—';
+        pend.push({area:'Orçamento', tom:(x.entrada?'ouro':'atencao'),
+          titulo:nomes+' — '+pmPlural(x.noites||0,'noite','noites')+' · '+fmtCent(x.total_cent||0),
+          sub:(x.entrada?('aguarda a resposta do tutor — entrada '+orcBR(x.entrada))
+                        :'aguarda a resposta do tutor — sem data de entrada'),
+          view:'orcamento', ts:0});
+      });
+      (f.orc.resolvidosHoje||[]).forEach(function(r){
+        res.push({area:'Orçamento', titulo:'Orçamento de '+r.nomes+' — '+r.rotulo,
+          sub:paQuemQuando(r.quem, paHora(r.ts)), view:'orcamento', ts:r.ts});
+      });
+    }
+    // 6 · Planos a cobrar
+    if(f.planos==null) lendo.push('a carteira de planos');
+    else f.planos.forEach(function(p){
+      pend.push({area:'Planos', tom:(p.vencido?'critico':'ouro'), titulo:p.nome+' — '+p.label,
+        sub:'vez da Central: cobrar a renovação com o tutor', view:'renovacao', ts:0});
+    });
+    // 7 · Cadastro sem o essencial
+    if(f.cadastro==null) lendo.push('o cadastro');
+    else (f.cadastro.incompletos||[]).forEach(function(x){
+      pend.push({area:'Cadastro', tom:'atencao', titulo:x.nome+' — falta '+x.faltas.join(' e '),
+        sub:'vez da Central: completar na ficha ou no próximo check-in', view:'ficha', ts:0});
+    });
+    // 8 · A conversa com o tutor (pesquisa e atenção da Gestão)
+    if(f.tutor==null) lendo.push('as conversas com o tutor');
+    else{
+      if(f.tutor.esperando.length){
+        var nomesE=f.tutor.esperando.slice(0,3).map(function(x){ return x.nome; }).join(', ');
+        pend.push({area:'Tutor', tom:'info',
+          titulo:pmPlural(f.tutor.esperando.length,'pesquisa enviada aguarda','pesquisas enviadas aguardam')+' resposta do tutor',
+          sub:'vez do tutor ('+nomesE+(f.tutor.esperando.length>3?'…':'')+') — se demorar, a Central repergunta',
+          view:'alergia', ts:0});
+      }
+      if(f.tutor.vencidos.length){
+        var nomesV=f.tutor.vencidos.slice(0,3).map(function(x){ return x.nome; }).join(', ');
+        pend.push({area:'Tutor', tom:'ouro',
+          titulo:'A resposta de '+pmPlural(f.tutor.vencidos.length,'FILHOt','FILHOts')+' venceu (mais de 6 meses)',
+          sub:'vez da Central: perguntar de novo ('+nomesV+(f.tutor.vencidos.length>3?'…':'')+')',
+          view:'alergia', ts:0});
+      }
+      f.tutor.atencoes.forEach(function(x){
+        pend.push({area:'Tutor', tom:'critico', titulo:x.nome+' — a resposta pede atenção da Gestão',
+          sub:'vez da Gestão: abrir a ficha e decidir o tratamento', view:'alergia', ts:x.ts});
+      });
+      f.tutor.respostasHoje.forEach(function(x){ res.push({area:'Tutor',
+        titulo:'Resposta do tutor de '+x.nome+' recebida e lida',
+        sub:paQuemQuando(x.quem, paHora(x.ts)), view:'alergia', ts:x.ts}); });
+      f.tutor.atendidas.forEach(function(x){ res.push({area:'Tutor', titulo:x.nome+' — atenção tratada',
+        sub:paQuemQuando(x.quem, paHora(x.ts)), view:'alergia', ts:x.ts}); });
+    }
+    res.sort(function(a,b){ return (b.ts||0)-(a.ts||0); });
+    return {pend:pend, res:res, lendo:lendo};
+  }
+
+  // ---------------------------------------------------------------- as leituras (uma vez)
+  function paPega(caminho){
+    return DB.ref(caminho).once('value').then(function(s){ return {ok:true, v:s.val()}; })
+      .catch(function(e){ _logLeituraFalhou(caminho+' (Painel da Supervisão)', e); return {ok:false, v:null}; });
+  }
+  function paLer(forcar){
+    var dia=PA_DIA;
+    if(!forcar && PA_CACHE.dados && PA_CACHE.dia===dia && (Date.now()-PA_CACHE.quando)<60000)
+      return Promise.resolve(PA_CACHE.dados);
+    if(!DB) return Promise.resolve(null);
+    var ed=(typeof empDataKey==='function')?empDataKey():dia;
+    var pEmp=Promise.all([paPega('daycare/almoco/'+ed), paPega('daycare/atividade/'+ed+'/almoco2'), paPega('daycare/avisos-comida/'+ed)])
+      .then(function(r){ return {ok:(r[0].ok&&r[1].ok&&r[2].ok), a1:r[0].v||{}, a2:r[1].v||{}, avisos:r[2].v||{}}; });
+    var pOrc=DB.ref('auaulandia/orcamentos').limitToLast(60).once('value')
+      .then(function(s){ return {ok:true, v:s.val()||{}}; })
+      .catch(function(e){ _logLeituraFalhou('auaulandia/orcamentos (Painel da Supervisão)', e); return {ok:false, v:null}; });
+    return Promise.all([pEmp, pOrc, paPega('daycare/auditoria/'+dia),
+                        paPega('daycare/alergia-confirmada'), paPega('daycare/entrevista-atencao')])
+      .then(function(r){
+        var d={dia:dia, emp:r[0], orc:r[1], aud:r[2], resp:r[3], aten:r[4]};
+        PA_CACHE={quando:Date.now(), dia:dia, dados:d};
+        return d;
+      }).catch(function(e){ _logLeituraFalhou('Painel da Supervisão (leitura geral)', e); return null; });
+  }
+
+  // ------------------------------------------------------------------------ os desenhos
+  function paSaudacaoHTML(eu){
+    var agora=new Date();
+    return '<div style="margin-bottom:18px">'
+      +'<h1 class="pm-saud1 pm-entra">'+esc(pmComoVai(agora.getHours()))+', '+esc(eu)+'.</h1>'
+      +'<p class="pm-saud3 pm-entra atraso">Tudo que está pendente ou resolvido na conversa da Central com os tutores — para cobrar, corrigir e supervisionar. Cada linha abre a tela onde se resolve.</p>'
+      +'<span class="pm-traco" aria-hidden="true"></span>'
+      +'<div class="pm-data">'+esc(pmDataExtenso(agora))+'</div>'
+      +'</div>';
+  }
+  function paKPIsHTML(nPend, nRes){
+    return '<div class="pm-rv"><div class="pm-tiles pm-grandes" style="grid-template-columns:repeat(2,1fr)">'
+      +'<div class="pm-tile'+(nPend?' pm-t-alerta':'')+'"><b data-pm-alvo="'+nPend+'">0</b>'
+      +'<span>'+(nPend===1?'pendente na comunicação com os tutores':'pendentes na comunicação com os tutores')+'</span></div>'
+      +'<div class="pm-tile pm-t-ouro"><b data-pm-alvo="'+nRes+'">0</b>'
+      +'<span>'+(nRes===1?'resolvido hoje, com quem e quando':'resolvidos hoje, com quem e quando')+'</span></div>'
+      +'</div></div>';
+  }
+  function paLinhaHTML(r){
+    return '<button type="button" class="pa-li" onclick="paIr(\''+escAttr(r.view)+'\')">'
+      +'<span class="pm-badge '+(PA_TOM[r.tom]||'pm-b-ok')+'">'+esc(r.area)+'</span>'
+      +'<span class="pa-li-txt"><b>'+esc(r.titulo)+'</b>'+(r.sub?('<span>'+esc(r.sub)+'</span>'):'')+'</span>'
+      +'<span class="pa-li-go">&rsaquo;</span></button>';
+  }
+  // A coluna: agrupa por assunto e mostra até 6 linhas de cada — o resto vira "e mais N",
+  // que abre a mesma tela (regra "menos informação": o detalhe mora na tela que resolve).
+  function paColunaHTML(rows, vazioTit, vazioSub){
+    if(!rows.length) return '<div class="pm-lista"><div class="pm-li"><span class="pm-badge pm-b-ok">nada aqui</span>'
+      +'<div class="pm-li-txt"><b>'+esc(vazioTit)+'</b><span>'+esc(vazioSub)+'</span></div></div></div>';
+    var porArea={}, ordem=[], MAX=6, h='';
+    rows.forEach(function(r){ if(!porArea[r.area]){ porArea[r.area]=[]; ordem.push(r.area); } porArea[r.area].push(r); });
+    ordem.forEach(function(a){
+      var L=porArea[a];
+      L.slice(0,MAX).forEach(function(r){ h+=paLinhaHTML(r); });
+      if(L.length>MAX) h+='<button type="button" class="pa-li pa-mais" onclick="paIr(\''+escAttr(L[0].view)+'\')">'
+        +'<span class="pa-li-txt"><b>e mais '+(L.length-MAX)+' de '+esc(a)+' — abrir a tela</b></span>'
+        +'<span class="pa-li-go">&rsaquo;</span></button>';
+    });
+    return h;
+  }
+
+  // --------------------------------------------------------------------- os gestos
+  // O clique vai pelo CAMINHO DO MENU quando o item existe: é o _navegarMenu que sabe o
+  // modo das telas de duas caras (checkoutconf abre v-checkout no modo conferência).
+  function paIr(v){
+    try{
+      var a=document.querySelector('#nav a[data-v="'+v+'"]');
+      if(a){ a.click(); return; }
+      if(typeof irParaView==='function') irParaView(v);
+    }catch(e){} /* silencioso de propósito: atalho de tela — falhar não pode derrubar quem chamou */
+  }
+  // No celular as colunas viram abas — este é o ÚNICO estado da tela, e é só visual.
+  function paTab(qual){
+    var c=document.getElementById('paCols'); if(!c) return;
+    c.classList.toggle('so-pend', qual==='pend');
+    c.classList.toggle('so-res', qual==='res');
+    document.querySelectorAll('#v-painel-amanda .pa-tab').forEach(function(b){ b.classList.toggle('on', b.dataset.pa===qual); });
+  }
+
+  // ------------------------------------------------------------------------ a tela toda
+  function paAbrir(forcar){
+    var raiz=document.getElementById('paRoot'); if(!raiz) return;
+    // A trava é a MESMA tabela que mostra o item do menu. Quem chegar por link direto e
+    // não puder ver, lê o porquê — nunca uma tela em branco.
+    if(!podePapel('painel-amanda')){
+      raiz.innerHTML='<div class="pm-card"><h3 class="pm-tit">Esta tela é da Supervisão</h3>'
+        +'<p class="pm-sub">O Painel da Supervisão acompanha o pendente e o resolvido da Central com os tutores. '
+        +'A mesa de quem atende é o Painel das Consultoras; a rota de quem está com o FILHOt, o Meu Painel.</p></div>';
+      return;
+    }
+    PA_DIA=(typeof hojeISO==='function')?hojeISO():'';   // UM relógio para todos os grupos
+    var eu=(typeof quemSou==='function'?quemSou():'').trim();
+    if(!eu||eu==='-') eu='Supervisão';
+    if(!DB){
+      raiz.innerHTML='<div class="pm-card"><h3 class="pm-tit">Sem conexão com o banco agora</h3>'
+        +'<p class="pm-sub">Assim que a rede voltar, abra esta tela de novo. Este painel só observa — nada aqui grava.</p></div>';
+      return;
+    }
+    raiz.innerHTML=paSaudacaoHTML(eu)
+      +'<div class="pm-card"><p class="pm-sub">Ainda lendo o pendente e o resolvido do dia…</p></div>';
+    requestAnimationFrame(function(){ try{ pmAnimar(raiz); }catch(e){} /* silencioso de propósito: animação — falhar não pode derrubar a tela */ });
+    // As ocorrências do Day Care têm pipeline próprio (DC_OCORR) — pede a carga; se ela
+    // ainda estiver descendo nesta primeira pintura, entram na próxima abertura.
+    try{ if(typeof carregarOcorrenciasDayCare==='function') carregarOcorrenciasDayCare(); }catch(e){} /* silencioso de propósito: guarda defensiva — falhar aqui não pode interromper quem chamou */
+    paLer(forcar===true).then(function(d){
+      if(!d){
+        raiz.innerHTML='<div class="pm-card"><h3 class="pm-tit">Não consegui ler o dia agora</h3>'
+          +'<p class="pm-sub">Nada foi perdido — este painel só observa. Abra a tela de novo em instantes.</p></div>';
+        return;
+      }
+      // Empresta à régua da tela do tutor (algLista) a leitura FRESCA do mesmo nó — o
+      // mesmo empréstimo que pcDadosAlmoco faz com os dados do almoço.
+      if(d.resp.ok && typeof ALG_RESP!=='undefined') ALG_RESP=d.resp.v||{};
+      var ocorrs=[];
+      try{ ocorrs=(typeof ocorrenciasLoja==='function'?ocorrenciasLoja():[])
+        .concat(typeof ocorrenciasDayCare==='function'?ocorrenciasDayCare():[]); }catch(e){} /* silencioso de propósito: guarda defensiva — falhar aqui não pode interromper quem chamou */
+      var f={
+        checkins:(typeof pcDadosCheckins==='function')?pcDadosCheckins():null,
+        saidas:paDadosSaidas(),
+        mov:d.aud.ok?paDadosMovimento(d.aud.v||{}):null,
+        almoco:paDadosAlmoco(d.emp),
+        loja:paDadosLoja((typeof AVISOS_ESTOQUE_CACHE!=='undefined'?AVISOS_ESTOQUE_CACHE:{}),
+                         (typeof AVISOS_RACAO_CACHE!=='undefined'?AVISOS_RACAO_CACHE:{}), ocorrs, PA_DIA),
+        orc:d.orc.ok?paDadosOrcamentos(d.orc.v||{}, PA_DIA):null,
+        planos:paDadosPlanos(),
+        cadastro:(typeof pcDadosRecepcao==='function')?pcDadosRecepcao():null,
+        tutor:(d.resp.ok&&d.aten.ok)?paDadosTutor(d.aten.v||{}, PA_DIA):null
+      };
+      var L=paLinhas(f);
+      var lendoNota=L.lendo.length
+        ? '<p class="pm-nota"><strong>Ainda lendo:</strong> '+esc(L.lendo.join(' · '))+'. Os números não contam o que ainda não chegou — isto não quer dizer que não há nada.</p>'
+        : '';
+      raiz.innerHTML=paSaudacaoHTML(eu)
+        + paKPIsHTML(L.pend.length, L.res.length)
+        +'<p class="pm-nota"><strong>Este painel só observa.</strong> Nenhuma linha daqui grava coisa alguma: cada uma abre a tela onde aquilo se resolve — e lá fica o rastro de quem fez.</p>'
+        + lendoNota
+        +'<div class="pa-tabs">'
+        +'<button type="button" class="pa-tab on" data-pa="pend" onclick="paTab(\'pend\')">Pendentes ('+L.pend.length+')</button>'
+        +'<button type="button" class="pa-tab" data-pa="res" onclick="paTab(\'res\')">Resolvidos hoje ('+L.res.length+')</button>'
+        +'</div>'
+        +'<div class="pa-cols so-pend pm-rv" id="paCols">'
+        +'<section class="pa-col pa-col-pend"><h3 class="pa-col-t">Pendente<small>o que é e de quem é a vez</small></h3>'
+        + paColunaHTML(L.pend,'Nada pendente agora','Tudo que dependia da Central com os tutores está em dia.')
+        +'</section>'
+        +'<section class="pa-col pa-col-res"><h3 class="pa-col-t">Resolvido hoje<small>quem resolveu e quando</small></h3>'
+        + paColunaHTML(L.res,'Nada resolvido hoje ainda','Conforme o dia anda, o que for resolvido aparece aqui com quem e quando.')
+        +'</section>'
+        +'</div>';
+      requestAnimationFrame(function(){ try{ pmAnimar(raiz); }catch(e){} /* silencioso de propósito: animação — falhar não pode derrubar a tela */ });
     });
   }
 
