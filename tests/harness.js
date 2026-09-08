@@ -9335,6 +9335,99 @@ async function main() {
   }
   console.log('');
 
+  // ---- v-11: o card "Seu dia" no Meu Painel do monitor — o MESMO card, compacto ----
+  // A gamificação das consultoras chega ao monitor e à plantonista SEM copiar uma linha
+  // de lógica: pcSeuDia* (leitura, estado, desenho e gestos) é um bloco só, e o Meu
+  // Painel só chama. As provas: (1) uma função só — contagem de definições; (2) o nó
+  // daycare/seu-dia mora inteiro no bloco compartilhado; (3) o pmAbrir desenha o card
+  // compacto logo abaixo da saudação; (4) a consultora segue com a versão cheia;
+  // (5) o compacto é o MESMO card (mesmos gestos), só com a classe pc-compacto;
+  // (6) as frases do dia de cada papel não se misturam.
+  console.log('v-11 · Seu dia no Meu Painel — uma lógica só, roupa compacta:');
+  {
+    // (1) Cada peça da lógica existe UMA vez — nenhuma cópia.
+    const pecas = ['pcCardSeuDiaHTML', 'pcSeuDiaLer', 'pcSeuDiaEstado', 'pcSeuDiaCardHTML',
+      'pcGravarSeuDia', 'pcCopoTocar', 'pcHumorTocar', 'pcCelebrar', 'pcCardRaiz'];
+    check('mordida — cada função do card existe UMA única vez no arquivo (nenhuma lógica duplicada)',
+      pecas.every((f) => (html.match(new RegExp('function ' + f + '\\(', 'g')) || []).length === 1),
+      pecas.map((f) => f + '=' + (html.match(new RegExp('function ' + f + '\\(', 'g')) || []).length).join(' '));
+    // (2) O nó daycare/seu-dia inteiro mora no módulo compartilhado (fatia do PC).
+    const ini11 = html.indexOf('PAINEL DAS CONSULTORAS — a mesa da Central Zêluz (v-07, 07/set/2026)');
+    const fatia11 = html.slice(ini11, html.indexOf('PAINEL DA OPERAÇÃO — a fatia da Márcia (Fase 2.2)\n'));
+    const nosTodos = (html.match(/daycare\/seu-dia\//g) || []).length;
+    const nosFatia = (fatia11.match(/daycare\/seu-dia\//g) || []).length;
+    check('mordida — toda menção ao nó daycare/seu-dia mora no bloco compartilhado (nenhuma cópia fora dele)',
+      nosTodos > 0 && nosTodos === nosFatia, 'html=' + nosTodos + ' fatia=' + nosFatia);
+    // (3) O Meu Painel lê junto e desenha o card compacto logo abaixo da saudação.
+    check('pmAbrir lê o Seu dia JUNTO da rota (Promise.all) e a falha do card não derruba a rota',
+      /Promise\.all\(\[\s*pmLer\(forcar===true\),\s*pcSeuDiaLer\(PM_DIA, forcar===true\)\.catch\(/.test(html));
+    check('mordida — o card entra no TOPO do Meu Painel, entre a saudação e a nota "Você vê só o que é seu"',
+      /pmSaudacaoHTML\(eu, turma\.length, papel\)\s*\+ \(sd\?pcSeuDiaCardHTML\(sd, true\):''\)\s*\+'<p class="pm-nota">/.test(html));
+    // (4) A consultora continua vendo a versão cheia (sem o compacto).
+    check('mordida — o Painel das Consultoras segue com a versão CHEIA (pcSeuDiaCardHTML sem compacto)',
+      /pcSaudacaoHTML\(d\.eu\)\s*\+ pcSeuDiaCardHTML\(d\)/.test(html));
+    // (5) Estado + desenho: o compacto é o MESMO card, só com a roupa pc-compacto.
+    vm.runInContext('__bkp11 = { U: PC_ULTIMO, D: PC_DIA };', ctx);
+    try {
+      const d11 = { dia: '2026-09-07', eu: 'Kaique Teste', key: 'kaique-teste', pos: 0,
+        semana: [{ pontos5: true, serie: 2, copos: 3, humor: 'bem' }, null, null, null, null, null, null],
+        ontem: { pontos5: true, serie: 1 }, falhouSeuDia: false };
+      const est = ctx.pcSeuDiaEstado(d11);
+      check('pcSeuDiaEstado: dia pago, série 2, 3 copos, 5 pontos na semana — e o relógio (PC_DIA) vira o do dia lido',
+        est.pago === true && est.serie === 2 && est.copos === 3 && est.pontosSemana === 5 &&
+        ctx.PC_DIA === '2026-09-07', JSON.stringify(est));
+      const cardC = ctx.pcSeuDiaCardHTML(d11, true);
+      const cardF = ctx.pcSeuDiaCardHTML(d11);
+      check('mordida — compacto = MESMO card com a classe pc-compacto; a versão cheia fica sem ela',
+        cardC.indexOf('pc-compacto') >= 0 && cardF.indexOf('pc-compacto') < 0 &&
+        cardC.indexOf('id="pcCardSeuDia"') >= 0 && cardF.indexOf('id="pcCardSeuDia"') >= 0);
+      check('o compacto NÃO perde gesto nenhum: 8 copos e 3 carinhas com os MESMOS manipuladores',
+        (cardC.match(/pcCopoTocar\(/g) || []).length === 8 && (cardC.match(/pcHumorTocar\(/g) || []).length === 3);
+      check('o rodapé do placar continua no compacto (o ponto é o mesmo, o placar é o mesmo)',
+        cardC.indexOf('pontos na semana no placar dos Zelosos') >= 0);
+      check('quem ainda não tem nome não ganha card fantasma (sem key → card vazio)',
+        ctx.pcSeuDiaCardHTML(null) === '' && ctx.pcSeuDiaCardHTML({ key: '' }, true) === '');
+    } finally {
+      vm.runInContext('PC_ULTIMO = __bkp11.U; PC_DIA = __bkp11.D;', ctx);
+    }
+    // O CSS do compacto: os textos longos somem — nada de leitura obrigatória no pátio.
+    check('mordida — o CSS esconde no compacto os textos longos (pm-sub, nota da água, rodapé honesto)',
+      /\.pc-compacto \.pm-sub,\.pc-compacto \.pc-nota-agua,\.pc-compacto \.pc-honesta\{display:none\}/.test(html));
+    check('no desktop as três colunas do compacto cabem numa linha (grid a partir de 640px)',
+      /@media\(min-width:640px\)\{\s*\.pc-compacto \.pc-colunas\{display:grid/.test(html));
+    // (6) Cada papel mantém as suas frases do dia — nada se mistura.
+    check('mordida — as frases do monitor (PM_FRASES) seguem as dele; as da Central (PC_FRASES), as dela',
+      ctx.PM_FRASES[1] === 'Hoje, cada FILHOt vai ser visto de verdade. Pelos seus olhos.' &&
+      ctx.PC_FRASES[1] === 'A Zêluz é a voz dos FILHOts num mundo que ainda aprende a escutá-los. E toda escuta começa no seu acolhimento.');
+    // A plantonista ganha o card no painel DELA — o Meu Painel é dela também (PERM).
+    check('a plantonista vê o Meu Painel (e portanto o card) — nenhuma tela nova foi inventada',
+      ctx.podePapel('painel-monitor', 'plantonista') === true &&
+      ctx.podePapel('painel-monitor', 'monitor') === true &&
+      ctx.podePapel('painel-monitor', 'aprendiz') === true);
+    // O gesto acha o card em QUALQUER painel: pelo botão tocado; sem botão, pelo id.
+    check('mordida — pcCopoTocar e pcHumorTocar acham o card pelo botão (pcCardRaiz), não por um painel fixo',
+      /function pcCopoTocar\(n, el\)\{\s*var raiz=pcCardRaiz\(el\)/.test(html) &&
+      /function pcHumorTocar\(t, el\)\{\s*var raiz=pcCardRaiz\(el\)/.test(html));
+    // A leitura compartilhada só toca o nó do Seu dia — e devolve a semana de 7 lugares.
+    {
+      const lidos = [];
+      ctx.__db11 = { ref: (c) => ({ once: () => { lidos.push(c); return Promise.resolve({ val: () => null }); } }) };
+      vm.runInContext('__bkpDB11 = DB; DB = __db11;', ctx);
+      try {
+        const r11 = await ctx.pcSeuDiaLer('2026-09-07', true);
+        check('pcSeuDiaLer lê SÓ daycare/seu-dia (um caminho por dia já vivido) e devolve a semana de 7 lugares',
+          lidos.length >= 1 && lidos.every((c) => c.indexOf('daycare/seu-dia/') === 0) &&
+          !!r11 && Array.isArray(r11.semana) && r11.semana.length === 7 && r11.dia === '2026-09-07',
+          JSON.stringify(lidos.slice(0, 3)));
+      } finally { vm.runInContext('DB = __bkpDB11;', ctx); }
+    }
+    // Gravou → o cache morre: reabrir qualquer painel relê o dia, nunca estado velho.
+    check('mordida — toda gravação do Seu dia derruba os dois caches (PC_CACHE e PC_SD_CACHE)',
+      /PC_CACHE\.quando=0; PC_SD_CACHE\.quando=0;\s*DB\.ref\('daycare\/seu-dia\/'/.test(html) &&
+      /PC_CACHE\.quando=0; PC_SD_CACHE\.quando=0;\s*if\(!pagouAgora\)/.test(html));
+  }
+  console.log('');
+
   // ---- a prova do retrato: rodada padrão não toca o Firebase --------------------
   console.log('Retrato — a rodada padrão não abre conexão nenhuma com o banco:');
   if (HARNESS_VIVO) {

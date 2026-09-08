@@ -2031,6 +2031,21 @@
     80%{opacity:1;transform:translateY(-30px)}100%{opacity:0;transform:translateY(-38px)}}
   /* os quadros são a porta da tela que resolve — o dedo precisa saber disso */
   .pc-quadro{cursor:pointer}
+  /* O MESMO card "Seu dia" no Meu Painel do monitor/plantonista — versão compacta (v-11,
+     lei do monitor-em-segundos: 3 toques e volta ao pátio). A lógica é uma só; aqui só a
+     roupa encolhe: os textos longos somem e as três colunas cabem numa linha a partir de
+     640px. Nada de leitura obrigatória no pátio. */
+  .pc-compacto .pm-sub,.pc-compacto .pc-nota-agua,.pc-compacto .pc-honesta{display:none}
+  .pc-compacto .pc-qz{padding:9px 0 8px}
+  .pc-compacto .pc-serie{margin-top:4px;padding:8px 10px 7px}
+  .pc-compacto .pc-copo{width:26px;height:34px}
+  .pc-compacto .pc-humor svg{width:38px;height:38px}
+  .pc-compacto .pc-rodape{margin-top:8px;padding-top:8px}
+  @media(min-width:640px){
+    .pc-compacto .pc-colunas{display:grid;grid-template-columns:1.15fr 1fr 1fr;gap:0 18px;align-items:start}
+    .pc-compacto .pc-colunas .pc-qz{border-top:none;border-left:1px solid var(--pm-linha-fina);padding-left:16px}
+    .pc-compacto .pc-colunas .pc-qz:first-child{border-left:none;padding-left:0}
+  }
 
   /* ---------- Painel da Supervisão (v-08) — Pendente × Resolvido, com quem e quando ----
      Mesma família .pm-, mesmos tokens. Duas colunas no desktop; no celular viram abas
@@ -11906,7 +11921,7 @@
   // Agora existe um carimbo: esta constante é a versão que o aparelho está rodando, e o
   // Firebase guarda a versão publicada. Quando as duas diferem, aparece o aviso — mas
   // NUNCA recarrega sozinho: recarregar no meio de um check-in perderia o trabalho.
-  const APP_VERSAO='2026-09-07-04';
+  const APP_VERSAO='2026-09-07-05';
   function vigiarVersao(){
     if(!DB) return;
     try{
@@ -30647,7 +30662,10 @@
    * controle e de aprendizado. O monitor vê onde está falhando e pode consertar a rota."
    *
    * Cinco cards, na ordem em que a manhã acontece: Meu dia · Plano de hoje · Meu protocolo
-   * hoje (a âncora) · Meus pontos · Avisos que ficaram comigo.
+   * hoje (a âncora) · Meus pontos · Avisos que ficaram comigo. No topo, abaixo da
+   * saudação, entra o card "Seu dia" (v-11) — o MESMO do Painel das Consultoras, na
+   * versão compacta (pcSeuDia*, definido lá; nenhuma lógica se repete aqui). As frases
+   * do dia continuam as DESTE painel (PM_FRASES) — cada papel mantém as suas.
    *
    * REGRA DE OURO (docs/FASE2-PAINEL-UNIFICADO.md): integrar, nunca recriar. Nenhuma conta
    * nasce aqui. O horário e o plano saem de plRotaDoDia; o que ficou aberto, de
@@ -31069,7 +31087,14 @@
         +'<p class="pm-sub">Assim que a rede voltar, abra esta tela de novo.</p></div>';
       return;
     }
-    pmLer(forcar===true).then(function(d){
+    // O card "Seu dia" é o MESMO do Painel das Consultoras — uma lógica só (pcSeuDia*).
+    // As duas leituras correm juntas; se a do card falhar, a rota abre sem ele (o card
+    // é cuidado com a pessoa, nunca pode derrubar o dia dela).
+    Promise.all([
+      pmLer(forcar===true),
+      pcSeuDiaLer(PM_DIA, forcar===true).catch(function(e){ _logLeituraFalhou('Seu dia (Meu Painel)', e); return null; })
+    ]).then(function(rr){
+      var d=rr[0], sd=rr[1];
       if(!d){
         raiz.innerHTML='<div class="pm-card"><h3 class="pm-tit">Não consegui ler a sua rota agora</h3>'
           +'<p class="pm-sub">Nada foi perdido. Abra esta tela de novo em instantes.</p></div>';
@@ -31091,6 +31116,7 @@
       PM_ULTIMO={avisos:avisos};
 
       raiz.innerHTML = pmSaudacaoHTML(eu, turma.length, papel)
+        + (sd?pcSeuDiaCardHTML(sd, true):'')
         +'<p class="pm-nota"><strong>Você vê só o que é seu.</strong> Sem tempo por etapa, sem o nome de outras pessoas, sem dinheiro e sem ranking.</p>'
         + pmAreaHTML()
         +'<div class="pm-grid">'
@@ -31475,19 +31501,66 @@
     return DB.ref(caminho).once('value').then(function(s){ return {ok:true, v:s.val()}; })
       .catch(function(e){ _logLeituraFalhou(caminho+' (Painel das Consultoras)', e); return {ok:false, v:null}; });
   }
+
+  // ------------------------------------------------- o "Seu dia" compartilhado (v-11)
+  // O card "Seu dia" é UM SÓ para os dois painéis: o Painel das Consultoras e o Meu
+  // Painel do monitor/plantonista chamam ESTAS funções. Quem muda aqui muda para todos —
+  // nenhuma cópia da lógica existe fora deste bloco.
+  var PC_SD_CACHE={quando:0, dia:'', key:'', dados:null};
+  function pcSeuDiaPega(caminho){
+    return DB.ref(caminho).once('value').then(function(s){ return {ok:true, v:s.val()}; })
+      .catch(function(e){ _logLeituraFalhou(caminho+' (Seu dia)', e); return {ok:false, v:null}; });
+  }
+  // A leitura da semana da pessoa no nó do "Seu dia" — só os dias já vividos, mais o
+  // "ontem" da segunda (o domingo da semana passada, fora da janela).
+  function pcSeuDiaLer(dia, forcar){
+    var eu=(typeof quemSou==='function'?quemSou():'').trim();
+    var key=pcPessoaKey(eu);
+    if(!forcar && PC_SD_CACHE.dados && PC_SD_CACHE.dia===dia && PC_SD_CACHE.key===key
+       && (Date.now()-PC_SD_CACHE.quando)<60000)
+      return Promise.resolve(PC_SD_CACHE.dados);
+    var pos=(new Date().getDay()+6)%7;                 // seg=0 … dom=6
+    var diasSemana=[], i;
+    for(i=0;i<=pos;i++) diasSemana.push(orcMaisDias(dia, i-pos));
+    var pSemana=Promise.all(diasSemana.map(function(d){ return pcSeuDiaPega('daycare/seu-dia/'+d+'/'+key); }));
+    // Na segunda-feira o "ontem" é o domingo da semana passada — fora da janela acima.
+    var pOntem=(pos===0)?pcSeuDiaPega('daycare/seu-dia/'+orcMaisDias(dia,-1)+'/'+key):Promise.resolve(null);
+    return Promise.all([pSemana, pOntem]).then(function(r){
+      var semana=[null,null,null,null,null,null,null], falhouSeuDia=false;
+      (r[0]||[]).forEach(function(x,ix){ if(!x.ok) falhouSeuDia=true; semana[ix]=x.v||null; });
+      var ontem=(pos===0)?((r[1]&&r[1].v)||null):semana[pos-1];
+      var d={dia:dia, eu:eu, key:key, pos:pos, semana:semana, ontem:ontem, falhouSeuDia:falhouSeuDia};
+      PC_SD_CACHE={quando:Date.now(), dia:dia, key:key, dados:d};
+      return d;
+    });
+  }
+  // O estado que o card desenha (PC_ULTIMO) e o relógio das gravações (PC_DIA) — um só
+  // cálculo, seja qual for o painel que o mostre.
+  function pcSeuDiaEstado(d){
+    var hoje=d.semana[d.pos]||null;
+    var pago=!!(hoje&&hoje.pontos5);
+    PC_DIA=d.dia;
+    PC_ULTIMO={eu:d.eu, key:d.key, pos:d.pos, pago:pago,
+      copos:(hoje&&typeof hoje.copos==='number')?hoje.copos:0,
+      humor:(hoje&&hoje.humor)||'',
+      serie: pago?(Number(hoje.serie)||1):pcSerieNova(d.ontem),
+      serieFeita: pago?(Number(hoje.serie)||1):((d.ontem&&d.ontem.pontos5)?(Number(d.ontem.serie)||1):0),
+      pontosSemana: pcPontosSemana(d.semana)};
+    return PC_ULTIMO;
+  }
+  // O card pronto para QUALQUER painel: estado + desenho numa chamada. O Meu Painel usa
+  // compacto=true (lei do monitor-em-segundos); o Painel das Consultoras, a versão cheia.
+  function pcSeuDiaCardHTML(d, compacto){
+    if(!d||!d.key) return '';
+    pcSeuDiaEstado(d);
+    return pcCardSeuDiaHTML(d, compacto===true);
+  }
   function pcLer(forcar){
     var dia=PC_DIA;
     if(!forcar && PC_CACHE.dados && PC_CACHE.dia===dia && (Date.now()-PC_CACHE.quando)<60000)
       return Promise.resolve(PC_CACHE.dados);
     if(!DB) return Promise.resolve(null);
-    var eu=(typeof quemSou==='function'?quemSou():'').trim();
-    var key=pcPessoaKey(eu);
-    var pos=(new Date().getDay()+6)%7;                 // seg=0 … dom=6
-    var diasSemana=[], i;
-    for(i=0;i<=pos;i++) diasSemana.push(orcMaisDias(dia, i-pos));
-    var pSemana=Promise.all(diasSemana.map(function(d){ return pcPega('daycare/seu-dia/'+d+'/'+key); }));
-    // Na segunda-feira o "ontem" é o domingo da semana passada — fora da janela acima.
-    var pOntem=(pos===0)?pcPega('daycare/seu-dia/'+orcMaisDias(dia,-1)+'/'+key):Promise.resolve(null);
+    var pSeu=pcSeuDiaLer(dia, forcar===true);          // a MESMA leitura do Meu Painel
     var pOrc=DB.ref('auaulandia/orcamentos').limitToLast(60).once('value')
       .then(function(s){ return {ok:true, v:s.val()||{}}; })
       .catch(function(e){ _logLeituraFalhou('auaulandia/orcamentos (Painel das Consultoras)', e); return {ok:false, v:null}; });
@@ -31509,12 +31582,8 @@
     var ed=(typeof empDataKey==='function')?empDataKey():dia;
     var pEmp=Promise.all([pcPega('daycare/almoco/'+ed), pcPega('daycare/atividade/'+ed+'/almoco2'), pcPega('daycare/avisos-comida/'+ed)])
       .then(function(r){ return {ok:(r[0].ok&&r[1].ok&&r[2].ok), a1:r[0].v||{}, a2:r[1].v||{}, avisos:r[2].v||{}}; });
-    return Promise.all([pSemana, pOntem, pOrc, pMed, pEmp]).then(function(r){
-      var semana=[null,null,null,null,null,null,null], falhouSeuDia=false;
-      (r[0]||[]).forEach(function(x,ix){ if(!x.ok) falhouSeuDia=true; semana[ix]=x.v||null; });
-      var ontem=(pos===0)?((r[1]&&r[1].v)||null):semana[pos-1];
-      var d={dia:dia, eu:eu, key:key, pos:pos, semana:semana, ontem:ontem, falhouSeuDia:falhouSeuDia,
-             orc:r[2], med:r[3], emp:r[4]};
+    return Promise.all([pSeu, pOrc, pMed, pEmp]).then(function(r){
+      var d=Object.assign({}, r[0], {orc:r[1], med:r[2], emp:r[3]});
       PC_CACHE={quando:Date.now(), dia:dia, dados:d};
       return d;
     }).catch(function(e){ _logLeituraFalhou('Painel das Consultoras (leitura geral)', e); return null; });
@@ -31552,8 +31621,10 @@
   }
 
   // O card "Seu dia" — a tradução fiel do gabarito v4: série com chama, 8 copos de 250 ml
-  // (SEM pontos), as três carinhas SVG e o rodapé honesto.
-  function pcCardSeuDiaHTML(d){
+  // (SEM pontos), as três carinhas SVG e o rodapé honesto. É o MESMO card nos dois
+  // painéis: com compacto=true (Meu Painel do monitor/plantonista) só a roupa encolhe —
+  // a classe pc-compacto esconde os textos longos; a lógica não muda uma linha.
+  function pcCardSeuDiaHTML(d, compacto){
     var U=PC_ULTIMO, i;
     var copoSVG='<svg viewBox="0 0 32 44" aria-hidden="true"><rect class="pc-agua" x="10" y="13" width="12" height="22" rx="2.5"></rect><path class="pc-vidro" d="M7 5h18l-1.7 29.2a3.6 3.6 0 01-3.6 3.4h-7.4a3.6 3.6 0 01-3.6-3.4z"></path></svg>';
     var checkSVG='<svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2.4 6.4l2.4 2.4 4.8-5.2"/></svg>';
@@ -31568,7 +31639,7 @@
     for(i=1;i<=8;i++){
       var cheio=(i<=U.copos);
       copos+='<button type="button" class="pc-copo'+(cheio?' cheio':'')+'" data-pc-copo="'+i+'" aria-pressed="'+(cheio?'true':'false')
-        +'" aria-label="Marcar '+i+(i===1?' copo':' copos')+' de água (250 ml cada)" onclick="pcCopoTocar('+i+')">'+copoSVG+'</button>';
+        +'" aria-label="Marcar '+i+(i===1?' copo':' copos')+' de água (250 ml cada)" onclick="pcCopoTocar('+i+',this)">'+copoSVG+'</button>';
     }
     var caras=[
       ['bem','Bem','<path d="M14.5 21q3.5-4 7 0" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"></path><path d="M26.5 21q3.5-4 7 0" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"></path><path d="M16 28q8 7 16 0" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"></path>','pc-h-bem'],
@@ -31576,7 +31647,7 @@
       ['sobrecarregada','Sobrecarregada','<path d="M13.5 16.5l7.5 2.6" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"></path><path d="M34.5 16.5l-7.5 2.6" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"></path><circle cx="18.5" cy="23.5" r="1.9" fill="currentColor"></circle><circle cx="29.5" cy="23.5" r="1.9" fill="currentColor"></circle><path d="M16.5 31q3.75-3.4 7.5 0t7.5 0" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"></path>','pc-h-sobre']
     ].map(function(c){
       var marcado=(U.humor===c[0]);
-      return '<button type="button" class="pc-humor '+c[3]+(marcado?' marcado':'')+'" data-pc-humor="'+c[0]+'" aria-pressed="'+(marcado?'true':'false')+'" onclick="pcHumorTocar(\''+c[0]+'\')">'
+      return '<button type="button" class="pc-humor '+c[3]+(marcado?' marcado':'')+'" data-pc-humor="'+c[0]+'" aria-pressed="'+(marcado?'true':'false')+'" onclick="pcHumorTocar(\''+c[0]+'\',this)">'
         +'<svg viewBox="0 0 48 48" aria-hidden="true"><circle class="pc-rosto" cx="24" cy="24" r="20"></circle>'
         +'<circle cx="24" cy="24" r="20" fill="none" stroke="currentColor" stroke-width="2.6"></circle>'+c[2]+'</svg>'
         +'<small>'+c[1]+'</small></button>';
@@ -31585,7 +31656,7 @@
     var serieSub=U.pago?'Série mantida. Até amanhã.':'Responda como você está e a série continua.';
     var avisoLeitura=d.falhouSeuDia
       ?'<p class="pm-rot" style="margin-top:8px;color:var(--crm-critico)">Não consegui ler os dias anteriores — a série pode aparecer menor do que é.</p>':'';
-    return '<div class="pm-grid"><article class="pm-card pm-rv pm-c12" id="pcCardSeuDia">'
+    return '<div class="pm-grid"><article class="pm-card pm-rv pm-c12'+(compacto?' pc-compacto':'')+'" id="pcCardSeuDia">'
       +'<h3 class="pm-tit">Seu dia</h3>'
       +'<p class="pm-sub">Um minuto para você, uma vez por dia. Responder como você está soma pontos no placar dos Zelosos — o mesmo que já funciona no aplicativo.</p>'
       +'<div class="pc-colunas">'
@@ -31801,16 +31872,24 @@
 
   // --------------------------------------------------------------------- os gestos
   function pcIr(v){ try{ if(typeof irParaView==='function') irParaView(v); }catch(e){} /* silencioso de propósito: atalho de tela — falhar não pode derrubar quem chamou */ }
+  // O card pode estar no Painel das Consultoras OU no Meu Painel — o gesto acha o card
+  // pelo próprio botão tocado; sem botão (harness), pelo id.
+  function pcCardRaiz(el){
+    var a=(el&&el.closest)?el.closest('#pcCardSeuDia'):null;
+    return a||document.getElementById('pcCardSeuDia');
+  }
   // Grava o estado do "Seu dia" da pessoa — sempre com quem e ts. Falha vira rastro.
+  // Gravou → os dois caches morrem: reabrir qualquer painel relê o dia, nunca estado velho.
   function pcGravarSeuDia(patch, rotulo){
     if(!DB||!PC_ULTIMO||!PC_ULTIMO.key) return;
     var reg=Object.assign({}, patch, {quem:PC_ULTIMO.eu, ts:Date.now()});
+    PC_CACHE.quando=0; PC_SD_CACHE.quando=0;
     DB.ref('daycare/seu-dia/'+PC_DIA+'/'+PC_ULTIMO.key).update(reg)
       .catch(function(e){ _logFalhaGrav('daycare/seu-dia/ ('+rotulo+')', e); });
   }
   // Água: cada toque enche até aquele copo; tocar o último cheio esvazia um. SEM pontos.
-  function pcCopoTocar(n){
-    var raiz=document.getElementById('pcRoot'); if(!raiz||!PC_ULTIMO) return;
+  function pcCopoTocar(n, el){
+    var raiz=pcCardRaiz(el); if(!raiz||!PC_ULTIMO) return;
     var novo=Math.max(0, Math.min(8, pcCopoAlvo(PC_ULTIMO.copos, n)));
     var antes=PC_ULTIMO.copos; PC_ULTIMO.copos=novo;
     var parado=(typeof pmSemMovimento==='function')&&pmSemMovimento();
@@ -31826,14 +31905,14 @@
       }
       bt.setAttribute('aria-pressed', enche?'true':'false');
     });
-    var rot=document.getElementById('pcCoposRot');
+    var rot=raiz.querySelector('#pcCoposRot');
     if(rot) rot.innerHTML='<b>'+novo+' de 8</b> copos · 250 ml cada'+(novo===8?' — 2 litros: meta do dia completa':' — meta de 2 litros');
     pcGravarSeuDia({copos:novo}, 'copos');
   }
   // Como você está: a carinha ganha cor e paga +5 UMA única vez por dia — trocar a
   // resposta depois não soma de novo, e a resposta escolhida NUNCA muda o ponto.
-  function pcHumorTocar(t){
-    var raiz=document.getElementById('pcRoot'); if(!raiz||!PC_ULTIMO) return;
+  function pcHumorTocar(t, el){
+    var raiz=pcCardRaiz(el); if(!raiz||!PC_ULTIMO) return;
     raiz.querySelectorAll('.pc-humor').forEach(function(b){ b.classList.remove('marcado'); b.setAttribute('aria-pressed','false'); });
     var bt=raiz.querySelector('.pc-humor[data-pc-humor="'+t+'"]');
     if(bt){ void bt.offsetWidth; bt.classList.add('marcado'); bt.setAttribute('aria-pressed','true'); }
@@ -31851,6 +31930,7 @@
       return reg;
     }).then(function(res){
       if(!res||!res.committed){ return; }
+      PC_CACHE.quando=0; PC_SD_CACHE.quando=0;
       if(!pagouAgora){ PC_ULTIMO.pago=true; return; }   // outro aparelho pagou primeiro
       PC_ULTIMO.pago=true;
       // O ponto entra no placar dos Zelosos — o MESMO nó do check-out — com rastro.
@@ -31858,24 +31938,24 @@
         quem:PC_ULTIMO.eu, pontos:5, origem:'seu-dia', dia:PC_DIA, ts:Date.now()
       }).catch(function(e){ _logFalhaGrav('daycare/pontos-checkout/ (seu-dia)', e); });
       try{ if(typeof audit==='function') audit('seu-dia-humor', PC_ULTIMO.eu+': +5 no placar dos Zelosos (respondeu como está)', {dia:PC_DIA}); }catch(e){} /* silencioso de propósito: rastro é conveniência — falhar não pode derrubar o gesto */
-      pcCelebrar();
+      pcCelebrar(raiz);
     }).catch(function(e){ _logFalhaGrav('daycare/seu-dia/ (humor)', e); });
   }
   // A celebração curta (≤800 ms). Quem pediu menos movimento vai direto ao estado final.
-  function pcCelebrar(){
-    var raiz=document.getElementById('pcRoot'); if(!raiz||!PC_ULTIMO) return;
+  function pcCelebrar(card){
+    var raiz=card||pcCardRaiz(null); if(!raiz||!PC_ULTIMO) return;
     PC_ULTIMO.pontosSemana=(PC_ULTIMO.pontosSemana||0)+5;
-    var b=document.getElementById('pcPts'); if(b) b.textContent=String(PC_ULTIMO.pontosSemana);
-    var g=document.getElementById('pcGanho'); if(g){ g.hidden=false; requestAnimationFrame(function(){ g.classList.add('mostra'); }); }
+    var b=raiz.querySelector('#pcPts'); if(b) b.textContent=String(PC_ULTIMO.pontosSemana);
+    var g=raiz.querySelector('#pcGanho'); if(g){ g.hidden=false; requestAnimationFrame(function(){ g.classList.add('mostra'); }); }
     var hoje=raiz.querySelector('.pc-bola.hoje'); if(hoje) hoje.classList.add('feito');
-    var st=document.getElementById('pcSerieTexto'); if(st) st.textContent=pcTextoSerie(PC_ULTIMO.serie);
-    var ss=document.getElementById('pcSerieSub'); if(ss) ss.textContent='Série mantida. Até amanhã.';
-    var ct=document.getElementById('pcCompletoTxt');
+    var st=raiz.querySelector('#pcSerieTexto'); if(st) st.textContent=pcTextoSerie(PC_ULTIMO.serie);
+    var ss=raiz.querySelector('#pcSerieSub'); if(ss) ss.textContent='Série mantida. Até amanhã.';
+    var ct=raiz.querySelector('#pcCompletoTxt');
     if(ct) ct.textContent='Dia completo — a sua série chegou a '+pmPlural(PC_ULTIMO.serie,'dia','dias')+'.';
-    if(PC_ULTIMO.pontosSemana>=PC_META_SEMANA){ var m=document.getElementById('pcMedalha'); if(m) m.classList.add('ganha'); }
-    var mostrar=function(){ var dc=document.getElementById('pcCompleto'); if(dc) dc.classList.add('mostra'); };
+    if(PC_ULTIMO.pontosSemana>=PC_META_SEMANA){ var m=raiz.querySelector('#pcMedalha'); if(m) m.classList.add('ganha'); }
+    var mostrar=function(){ var dc=raiz.querySelector('#pcCompleto'); if(dc) dc.classList.add('mostra'); };
     if((typeof pmSemMovimento==='function')&&pmSemMovimento()){ mostrar(); return; }
-    var festa=document.getElementById('pcFesta');
+    var festa=raiz.querySelector('#pcFesta');
     if(festa){ festa.classList.add('roda'); setTimeout(function(){ festa.classList.remove('roda'); mostrar(); }, 820); }
     else mostrar();
   }
@@ -31908,16 +31988,8 @@
           +'<p class="pm-sub">Nada foi perdido — este painel só observa. Abra a tela de novo em instantes.</p></div>';
         return;
       }
-      var hoje=d.semana[d.pos]||null;
-      var pago=!!(hoje&&hoje.pontos5);
-      PC_ULTIMO={eu:d.eu, key:d.key, pos:d.pos, pago:pago,
-        copos:(hoje&&typeof hoje.copos==='number')?hoje.copos:0,
-        humor:(hoje&&hoje.humor)||'',
-        serie: pago?(Number(hoje.serie)||1):pcSerieNova(d.ontem),
-        serieFeita: pago?(Number(hoje.serie)||1):((d.ontem&&d.ontem.pontos5)?(Number(d.ontem.serie)||1):0),
-        pontosSemana: pcPontosSemana(d.semana)};
       raiz.innerHTML = pcSaudacaoHTML(d.eu)
-        + pcCardSeuDiaHTML(d)
+        + pcSeuDiaCardHTML(d)
         + pcAreaHTML()
         +'<div class="pm-grid">'
         + pcQuadroMedicacao((d.med&&d.med.ok)?pcDadosMedicacao(d.med.porHosp):null)
