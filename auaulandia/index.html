@@ -4281,6 +4281,12 @@
   // É `var` de propósito: com `const` a leitura lá embaixo cairia na zona morta temporal e
   // travaria a carga inteira do app, igual ao caso do PELUDINHOS.
   var APPCHECK_SITE_KEY='6Lc9zmotAAAAADTA2O4DGzmZakZxqWPLWMIL0RB1';
+  // ?emulador=1 (só nos testes): o banco passa a ser o emulador local — ver useEmulator abaixo.
+  var __EMULADOR=false, __EMULADOR_PORTA=9000;
+  try{
+    var __mEmu=/[?&]emulador=(\d+)/.exec(location.search||'');
+    if(__mEmu){ __EMULADOR=true; if(Number(__mEmu[1])>1) __EMULADOR_PORTA=Number(__mEmu[1]); }
+  }catch(e){} /* silencioso de propósito: sem parâmetro vale o banco de verdade */
   try{
     firebase.initializeApp({
       apiKey:"AIzaSyD3udp47XruRAEeIYWNGn0ICGCX3a1qr28",
@@ -4298,13 +4304,20 @@
     // requisição veio DESTE site; quem não tem a prova é barrado pelo Firebase, antes das regras.
     // Fica INERTE até a chave reCAPTCHA ser colada abaixo — assim nada quebra enquanto não ligarmos.
     // Passo a passo em SEGURANCA.md (raiz do repo).
-    if(APPCHECK_SITE_KEY && typeof firebase.appCheck==='function'){
+    if(APPCHECK_SITE_KEY && typeof firebase.appCheck==='function' && !__EMULADOR){
       try{
         firebase.appCheck().activate(new firebase.appCheck.ReCaptchaV3Provider(APPCHECK_SITE_KEY), true);
       }catch(e){ console.warn('App Check:',e); }
     }
     firebase.auth().signInAnonymously().then(()=>{
-      DB=firebase.database(); __fbReady=true; wireFirebaseListeners();
+      DB=firebase.database();
+      // BANCO DE MENTIRA PARA OS ROBÔS (08/set/2026). O smoke de navegador abria 7 sessões
+      // novas e visitava 165 telas no banco REAL a cada publicação — dezenas de MB por rodada,
+      // várias rodadas por dia: eram os "robôs" dos 695 MB de 08/set. Com ?emulador=1 na URL o
+      // app fala com o emulador local (porta 9000), carregado com o retrato do backup. Só o
+      // teste usa isto; o app publicado nunca põe esse parâmetro.
+      if(__EMULADOR){ try{ DB.useEmulator('127.0.0.1', __EMULADOR_PORTA); }catch(e){ console.warn('Emulador:',e); } }
+      __fbReady=true; wireFirebaseListeners();
     }).catch(e=>console.warn('Firebase auth:',e));
   }catch(e){ console.warn('Firebase init:',e); }
   // Ouvintes do Firebase só são ligados quando o banco E o script inteiro estão prontos —
@@ -11931,18 +11944,53 @@
   // dias. Quem usa não tem como saber, e reclama de um problema que já foi resolvido.
   //
   // Agora existe um carimbo: esta constante é a versão que o aparelho está rodando, e o
-  // Firebase guarda a versão publicada. Quando as duas diferem, aparece o aviso — mas
-  // NUNCA recarrega sozinho: recarregar no meio de um check-in perderia o trabalho.
-  const APP_VERSAO='2026-09-08-03';
+  // Firebase guarda a versão publicada. Quando as duas diferem, aparece o aviso — e
+  // NUNCA recarrega no meio de um trabalho: recarregar durante um check-in perderia tudo.
+  //
+  // 08/set/2026 — a brecha que custou 695 MB num dia: um aparelho parado no Painel da
+  // Operação com o código VELHO (o que relia 2 MB a cada 30 s) continuou vazando a tarde
+  // inteira DEPOIS de a correção estar publicada — o aviso apareceu, ninguém tocou.
+  // Agora o aparelho PARADO recarrega sozinho: trancado, com a aba escondida, na porta de
+  // entrada ou 3 minutos sem ninguém tocar nele. Mão na tela = nunca recarrega.
+  const APP_VERSAO='2026-09-08-04';
+  var RECARGA_PARADO_MS=3*60*1000, __versaoPublicada=null, __recargaTimer=null;
   function vigiarVersao(){
     if(!DB) return;
     try{
       DB.ref('daycare/config/versao-app').on('value',function(s){
         var pub=s.val();
-        if(!pub||pub===APP_VERSAO) return;
+        if(!pub||pub===APP_VERSAO){ __versaoPublicada=null; return; }
+        __versaoPublicada=pub;
         var el=document.getElementById('avisoVersao'); if(el) el.style.display='block';
+        try{ batimentoGravar('versao-nova'); }catch(e){} /* silencioso de propósito: o batimento é informação, não pode travar o aviso */
+        zRecargaQuandoParado();
       });
     }catch(e){ _logLeituraFalhou('daycare/config/versao-app (vigiarVersao)', e); }
+  }
+  // Por que o aparelho está parado — ou '' quando alguém está usando (então não recarrega).
+  function zMotivoParado(){
+    try{
+      if(!inatLogado()) return 'na porta de entrada';
+      if(_appTrancado) return 'tela trancada';
+      if(document.hidden) return 'aba escondida';
+      if(typeof almocoEmUso==='function' && almocoEmUso()) return '';
+      if(Date.now()-_inatUltimo>=RECARGA_PARADO_MS) return Math.round(RECARGA_PARADO_MS/60000)+' min sem toque';
+    }catch(e){} /* silencioso de propósito: na dúvida, não recarrega */
+    return '';
+  }
+  function zRecargaQuandoParado(){
+    if(__recargaTimer) return;
+    __recargaTimer=setInterval(function(){
+      try{
+        if(!__versaoPublicada){ clearInterval(__recargaTimer); __recargaTimer=null; return; }
+        var motivo=zMotivoParado(); if(!motivo) return;
+        clearInterval(__recargaTimer); __recargaTimer=null;
+        // Trancado continua trancado depois da recarga — recarregar nunca destranca ninguém.
+        try{ if(_appTrancado) sessionStorage.setItem('zeluz_retrancar','1'); }catch(e){} /* silencioso de propósito: sem o sinal, a entrada guardada vale como sempre valeu */
+        try{ if(typeof audit==='function') audit('versao-recarga-automatica', APP_VERSAO+' → '+__versaoPublicada, {motivo:motivo}); }catch(e){} /* silencioso de propósito: o audit() tem bolso próprio */
+        setTimeout(aplicarVersaoNova, 600);   // folga para o rastro sair antes da página ir embora
+      }catch(e){} /* silencioso de propósito: guarda defensiva — falhar aqui não pode interromper quem chamou */
+    }, 15000);
   }
   // Recarrega furando o cache do navegador — sem isso ele serve a mesma página velha.
   function aplicarVersaoNova(){
@@ -11950,6 +11998,55 @@
       var u=location.href.split('#')[0].split('?')[0];
       location.replace(u+'?v='+Date.now());
     }catch(e){ location.reload(true); }
+  }
+
+  // ===== BATIMENTO DO APARELHO (08/set/2026) ==========================================
+  // "Quem está ligado agora, em que versão?" Sem isto, um aparelho esquecido rodando código
+  // velho é invisível — só se descobre pelo número do console do Firebase, no fim do dia.
+  // Cada aparelho logado grava um registro miúdo (~150 bytes) em auaulandia/aparelhos/{id}/visto
+  // ao entrar, a cada 10 minutos com a aba visível e quando o aviso de versão aparece.
+  // Ninguém escuta esse nó com on('value'): a gravação não se espalha para os outros.
+  // Leitura: node tools/aparelhos.js (linha de comando) e a lista da Gestão em Aparelhos.
+  var BATIMENTO_MS=10*60*1000, __batTimer=null;
+  function batimentoGravar(motivo){
+    try{
+      if(!DB || !inatLogado()) return;
+      var id=(typeof getDeviceId==='function')?getDeviceId():''; if(!id) return;
+      var u=(typeof usuarioAtual==='function'?usuarioAtual():null)||{};
+      DB.ref('auaulandia/aparelhos/'+id+'/visto').set({
+        ts:Date.now(), versao:APP_VERSAO, quem:(u.pessoa||u.nome||'-'), role:(u.role||'-'),
+        trancado:!!_appTrancado, motivo:String(motivo||'')
+      }).catch(function(e){ _logFalhaGrav('auaulandia/aparelhos/visto (batimento)', e); });
+    }catch(e){ try{ _logFalhaGrav('auaulandia/aparelhos/visto (batimento, ao montar)', e); }catch(_){} /* silencioso de propósito: o próprio registro de falha não pode derrubar quem chamou */ }
+  }
+  function batimentoIniciar(){
+    batimentoGravar('entrada');
+    if(__batTimer) return;
+    __batTimer=setInterval(function(){ if(document.hidden) return; batimentoGravar('relogio'); }, BATIMENTO_MS);
+  }
+
+  // ===== INTERRUPTOR DE ECONOMIA (08/set/2026) ========================================
+  // daycare/config/economia: { pausar: true|false, painelSeg: 30 } — mexido pela linha de
+  // comando (node tools/economia.js) SEM publicar versão. Se um relógio voltar a vazar,
+  // a Gestão pausa todos os relógios de leitura da frota em um comando, na hora.
+  var ECONOMIA={pausar:false, painelSeg:30}, __painelUltimaVolta=0;
+  function economiaEscutar(){
+    if(!DB) return;
+    try{
+      DB.ref('daycare/config/economia').on('value', function(s){
+        var v=(s&&s.val&&s.val())||{}; if(typeof v!=='object'||!v) v={};
+        ECONOMIA.pausar=!!v.pausar;
+        ECONOMIA.painelSeg=Math.max(30, Number(v.painelSeg)||30);
+      });
+    }catch(e){ _logLeituraFalhou('daycare/config/economia (economiaEscutar)', e); }
+  }
+  function economiaPausada(){ return !!(ECONOMIA&&ECONOMIA.pausar); }
+  // O relógio do Painel continua de 30 em 30 s; esta régua é quem decide se a volta lê o banco.
+  function economiaPainelPodeLer(){
+    if(economiaPausada()) return false;
+    var agora=Date.now();
+    if(agora-__painelUltimaVolta < ECONOMIA.painelSeg*1000) return false;
+    __painelUltimaVolta=agora; return true;
   }
 
   // ===== LOGIN (senhas de teste — depois cada pessoa terá a sua) =====
@@ -12420,6 +12517,7 @@
     document.getElementById('loginScreen').style.display='none';
     document.getElementById('loginErr').textContent='';
     try{ inatIniciar(); }catch(e){} /* silencioso de propósito: guarda defensiva — falhar aqui não pode interromper quem chamou */ // relógio de inatividade começa (e zera) a cada entrada
+    try{ if(typeof batimentoIniciar==='function') batimentoIniciar(); }catch(e){} /* silencioso de propósito: batimento é informação — falhar não pode travar a entrada */
     try{ selectedDate=new Date(); if(typeof updateDateLabel==='function') updateDateLabel(); }catch(e){} /* silencioso de propósito: função opcional, pode não existir nesta tela */ // sempre abre no dia de hoje
     // Escopo restrito (ex.: monitora só do almoço): esconde o resto e entra direto na atividade
     const escopo=(Array.isArray(u.atividades)&&u.atividades.length)?u.atividades:null;
@@ -12620,7 +12718,9 @@
     }
     inatMarcarAtividade();
   }
-  (function(){ try{ renderSenhas(); }catch(e){} /* silencioso de propósito: redesenho de tela — falhar não pode derrubar quem chamou */ try{ renderMonitores(); }catch(e){} /* silencioso de propósito: redesenho de tela — falhar não pode derrubar quem chamou */ try{ const u=JSON.parse(sessionStorage.getItem('zeluz_login')||'null'); if(u&&u.role) aplicarLogin(u); else if(typeof mostrarStatusDevice==='function') mostrarStatusDevice(); }catch(e){} /* silencioso de propósito: sem valor guardado vale o padrão já definido acima */ })();
+  (function(){ try{ renderSenhas(); }catch(e){} /* silencioso de propósito: redesenho de tela — falhar não pode derrubar quem chamou */ try{ renderMonitores(); }catch(e){} /* silencioso de propósito: redesenho de tela — falhar não pode derrubar quem chamou */ try{ const u=JSON.parse(sessionStorage.getItem('zeluz_login')||'null'); if(u&&u.role) aplicarLogin(u); else if(typeof mostrarStatusDevice==='function') mostrarStatusDevice(); }catch(e){} /* silencioso de propósito: sem valor guardado vale o padrão já definido acima */
+    // Recarga automática de versão com a tela trancada: volta trancada (08/set/2026).
+    try{ if(sessionStorage.getItem('zeluz_retrancar')==='1'){ sessionStorage.removeItem('zeluz_retrancar'); setTimeout(function(){ try{ trancarApp(); }catch(e){} /* silencioso de propósito: sem a trava, o relógio de inatividade tranca em 5 min como sempre */ }, 300); } }catch(e){} /* silencioso de propósito: sem o sinal, nada muda */ })();
 
   // ===== LISTA AUTOMÁTICA — mesma planilha do dashboard de hospedagem =====
   const SHEET_ID='1SJ3OZ6E2wMa1JHrQUcgtNffgQLQhCpa01IUQKCv605w';
@@ -14330,7 +14430,7 @@
   // CADA aparelho aberto, o dia inteiro. O dado muda poucas vezes ao dia e a tela já é
   // recarregada na hora em que um relatório é salvo; de 5 em 5 minutos chega — e aba
   // escondida não lê nada.
-  setInterval(function(){ if(document.hidden) return; if(typeof carregarRiscoNaoComer==='function') carregarRiscoNaoComer(); }, 300000);
+  setInterval(function(){ if(document.hidden) return; if(typeof economiaPausada==='function' && economiaPausada()) return; if(typeof carregarRiscoNaoComer==='function') carregarRiscoNaoComer(); }, 300000);
 
   // ==================================================================================
   // ===== ONDA 3 — CUIDADO VET (veterinária) =========================================
@@ -18201,7 +18301,7 @@
   try{
     if(typeof vetFilaTentar==='function'){
       setTimeout(function(){ vetFilaTentar(); }, 4000);
-      setInterval(function(){ vetFilaTentar(); }, 600000);
+      setInterval(function(){ if(typeof economiaPausada==='function' && economiaPausada()) return; vetFilaTentar(); }, 600000);
       setTimeout(function(){ try{ medTgFilaTentar(); }catch(e){ _logFalhaGrav('fila med (arranque)', e); } }, 5000);
       setInterval(function(){ try{ medTgFilaTentar(); }catch(e){ _logFalhaGrav('fila med (relógio)', e); } }, 600000);
       // Lançamento do Day Care que não chegou à planilha (04/set/2026): reenvia sozinho
@@ -18232,6 +18332,8 @@
   try{ if(typeof almEscutarExcecoes==='function') almEscutarExcecoes(); }catch(e){} /* silencioso de propósito: função opcional, pode não existir nesta tela */
   try{ if(typeof ativCarregarTempo==='function') ativCarregarTempo(); }catch(e){} /* silencioso de propósito: função opcional, pode não existir nesta tela */
   try{ if(typeof vigiarVersao==='function') vigiarVersao(); }catch(e){} /* silencioso de propósito: função opcional, pode não existir nesta tela */
+  try{ if(typeof economiaEscutar==='function') economiaEscutar(); }catch(e){} /* silencioso de propósito: sem o interruptor, os relógios seguem no ritmo padrão */
+  try{ if(typeof batimentoGravar==='function') batimentoGravar('banco-pronto'); }catch(e){} /* silencioso de propósito: batimento é informação */
 
   // ===== ADAPTACAO NAO PODE SER ETERNA (Adriana, 12/ago/2026) =======================
   // "EM ADAPTAÇÃO HOJE: Bruce, Hulk, Yumi — essa informação não é real, de onde está tirando
@@ -33908,7 +34010,7 @@
   montarSubnav();
   renderAtual();
   // Painel do Dia ao vivo — atualiza sozinho a cada 30s enquanto estiver aberto no dia de hoje (sala da gestão)
-  setInterval(function(){ try{ if(document.hidden) return; const v=document.getElementById('v-painel'); if(v && getComputedStyle(v).display!=='none' && typeof carregarPainel==='function' && pKey(painelDate)===pKey(new Date())) carregarPainel(); }catch(e){} /* silencioso de propósito: função opcional, pode não existir nesta tela */ }, 30000);
+  setInterval(function(){ try{ if(document.hidden) return; const v=document.getElementById('v-painel'); if(v && getComputedStyle(v).display!=='none' && typeof carregarPainel==='function' && pKey(painelDate)===pKey(new Date()) && (typeof economiaPainelPodeLer!=='function' || economiaPainelPodeLer())) carregarPainel(); }catch(e){} /* silencioso de propósito: função opcional, pode não existir nesta tela */ }, 30000);
   montarMedgrids();
   // Script inteiro carregado: seguro ligar os ouvintes do Firebase (todas as variaveis existem).
   __scriptReady=true; if(typeof wireFirebaseListeners==='function') wireFirebaseListeners();

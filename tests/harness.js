@@ -4698,6 +4698,62 @@ async function main() {
   }
   console.log('');
 
+  console.log('695 MB num dia (08/set): aparelho parado recarrega, batimento, interruptor, robos no emulador:');
+  {
+    // 1. A brecha: codigo velho rodando para sempre num aparelho parado.
+    check('a versao nova recarrega sozinha quando o aparelho esta PARADO (zRecargaQuandoParado)',
+      /function zRecargaQuandoParado\(\)/.test(html) && /function zMotivoParado\(\)/.test(html) &&
+      /zRecargaQuandoParado\(\);/.test(html));
+    check('parado = na porta, trancado, aba escondida ou 3 min sem toque — nunca no meio do almoco',
+      /if\(!inatLogado\(\)\) return 'na porta de entrada'/.test(html) &&
+      /if\(_appTrancado\) return 'tela trancada'/.test(html) &&
+      /if\(document\.hidden\) return 'aba escondida'/.test(html) &&
+      /almocoEmUso\(\)\) return '';/.test(html) &&
+      /RECARGA_PARADO_MS=3\*60\*1000/.test(html));
+    check('recarregar trancado VOLTA trancado (zeluz_retrancar gravado antes e lido no boot)',
+      /sessionStorage\.setItem\('zeluz_retrancar','1'\)/.test(html) &&
+      /sessionStorage\.getItem\('zeluz_retrancar'\)==='1'/.test(html) && /trancarApp\(\); \}catch\(e\)\{\} \/\* silencioso de propósito: sem a trava/.test(html));
+    check('a recarga deixa rastro na auditoria (versao-recarga-automatica com o motivo)',
+      /audit\('versao-recarga-automatica', APP_VERSAO\+' → '\+__versaoPublicada, \{motivo:motivo\}\)/.test(html));
+    check('mao na tela nunca recarrega: o relogio de 15 s so age quando zMotivoParado devolve algo',
+      /var motivo=zMotivoParado\(\); if\(!motivo\) return;/.test(html));
+    // 2. Batimento: quem esta ligado, em que versao.
+    check('batimento do aparelho em auaulandia/aparelhos/{id}/visto com versao, quem, papel e motivo',
+      /DB\.ref\('auaulandia\/aparelhos\/'\+id\+'\/visto'\)\.set\(\{/.test(html) &&
+      /versao:APP_VERSAO, quem:\(u\.pessoa\|\|u\.nome\|\|'-'\), role:\(u\.role\|\|'-'\)/.test(html));
+    check('batimento na entrada, a cada 10 min com a aba visivel, e quando o aviso de versao aparece',
+      /BATIMENTO_MS=10\*60\*1000/.test(html) && /batimentoGravar\('entrada'\)/.test(html) &&
+      /if\(document\.hidden\) return; batimentoGravar\('relogio'\)/.test(html) &&
+      /batimentoGravar\('versao-nova'\)/.test(html) && /batimentoIniciar\(\); \}catch\(e\)\{\}/.test(html));
+    check('ninguem escuta auaulandia/aparelhos com on(value): o batimento nao se espalha',
+      html.indexOf("DB.ref('auaulandia/aparelhos').on('value'") < 0);
+    // 3. Interruptor no banco: segura a frota sem publicar versao.
+    check('daycare/config/economia e escutado e pausa os tres relogios de leitura',
+      /DB\.ref\('daycare\/config\/economia'\)\.on\('value'/.test(html) &&
+      (html.match(/economiaPausada\(\)\) return;/g) || []).length >= 2 &&
+      /economiaPainelPodeLer\(\)\)\) carregarPainel\(\);/.test(html));
+    check('o Painel obedece a painelSeg (minimo 30 s) sem mexer no setInterval',
+      /ECONOMIA\.painelSeg=Math\.max\(30, Number\(v\.painelSeg\)\|\|30\)/.test(html) &&
+      /if\(agora-__painelUltimaVolta < ECONOMIA\.painelSeg\*1000\) return false;/.test(html));
+    check('as ferramentas de linha de comando existem (tools/aparelhos.js e tools/economia.js)',
+      fs.existsSync(path.join(__dirname, '..', 'tools', 'aparelhos.js')) &&
+      fs.existsSync(path.join(__dirname, '..', 'tools', 'economia.js')));
+    // 4. Robos: o app aceita ?emulador= e o smoke usa o emulador por padrao.
+    check('?emulador=N liga DB.useEmulator e desliga o App Check (so nos testes)',
+      /var __EMULADOR=false, __EMULADOR_PORTA=9000;/.test(html) &&
+      /\/\[\?&\]emulador=\(\\d\+\)\//.test(html) &&
+      /if\(__EMULADOR\)\{ try\{ DB\.useEmulator\('127\.0\.0\.1', __EMULADOR_PORTA\);/.test(html) &&
+      /typeof firebase\.appCheck==='function' && !__EMULADOR\)/.test(html));
+    check('o smoke abre o app no emulador por padrao e vigia o banco real (tem de dar zero)',
+      (() => {
+        const s = fs.readFileSync(path.join(__dirname, 'smoke-navegador.js'), 'utf8');
+        return /require\('\.\/lib\/emulador'\)/.test(s) && /function urlApp\(base\)/.test(s) &&
+          /const vazouParaOReal = !SMOKE_VIVO && REAL\.conexoes > 0;/.test(s) &&
+          /\|\| vazouParaOReal \? 1 : 0\)/.test(s) && fs.existsSync(path.join(__dirname, 'lib', 'emulador.js'));
+      })());
+  }
+  console.log('');
+
   console.log('Quem faltou nao se examina, e foto nao nasce fora de ficha (28/ago):');
   {
     check('a tela do corpo agora sabe quem faltou', /function ckFaltou\(o\)/.test(html) &&

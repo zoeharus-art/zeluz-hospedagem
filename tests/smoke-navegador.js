@@ -35,9 +35,43 @@ const path = require('path');
 const http = require('http');
 const { spawn } = require('child_process');
 const { chromium } = require('playwright');
+const retratoLib = require('./lib/retrato');
+const emuladorLib = require('./lib/emulador');
 
 const RAIZ = path.join(__dirname, '..');
 const APP = 'auaulandia/index.html';
+
+// ===================== BANCO DE MENTIRA (08/set/2026) =====================
+// Por padrão o app em teste fala com o EMULADOR local carregado com o retrato do backup —
+// o Firebase de verdade não recebe um byte. SMOKE_VIVO=1 volta ao banco real (gasta banda:
+// cada rodada são 7 sessões novas × dezenas de telas — foram os "robôs" dos 695 MB de 08/set).
+const SMOKE_VIVO = process.env.SMOKE_VIVO === '1';
+const EMU_PORTA = Number(process.env.SMOKE_EMU_PORTA) || 9000;
+const HOSTS_REAIS = /firebaseio\.com|firebasedatabase\.app/;
+// O vigia: tudo que o navegador trocar com o banco REAL cai aqui. No modo padrão tem de
+// terminar em ZERO — é a prova de que o teste não gasta a cota.
+const REAL = { conexoes: 0, bytes: 0, urls: {} };
+function vigiarBancoReal(page) {
+  page.on('websocket', (ws) => {
+    const url = ws.url();
+    if (!HOSTS_REAIS.test(url)) return;
+    REAL.conexoes++;
+    REAL.urls[url.split('?')[0]] = (REAL.urls[url.split('?')[0]] || 0) + 1;
+    ws.on('framereceived', (f) => { REAL.bytes += Buffer.byteLength(String(f.payload || '')); });
+  });
+  page.on('response', async (r) => {
+    const url = r.url();
+    if (!HOSTS_REAIS.test(url)) return;
+    REAL.conexoes++;
+    REAL.urls[url.split('?')[0]] = (REAL.urls[url.split('?')[0]] || 0) + 1;
+    try { const h = r.headers(); REAL.bytes += Number(h['content-length'] || 0); } catch (e) { /* sem tamanho: conta a conexão */ }
+  });
+}
+function urlApp(base) { return base + '/' + APP + (SMOKE_VIVO ? '' : '?emulador=' + EMU_PORTA); }
+function versaoNoDisco() {
+  const m = /APP_VERSAO='([^']+)'/.exec(fs.readFileSync(path.join(RAIZ, APP), 'utf8'));
+  return m ? m[1] : '';
+}
 const SAIDA_MD = path.join(RAIZ, 'docs', 'auditoria-28ago2026', '03-smoke-navegador.md');
 const SAIDA_IMG = path.join(RAIZ, 'docs', 'auditoria-28ago2026', 'capturas-smoke');
 
@@ -350,7 +384,8 @@ async function varrerPapel(navegador, base, papel, senha, quem, origem, aparelho
 
   const resultado = { papel, quem, senha, origem, entrou: false, motivo: '', telas: [], escritasNaCarga: [] };
 
-  await page.goto(base + '/' + APP, { waitUntil: 'load' });
+  vigiarBancoReal(page);
+  await page.goto(urlApp(base), { waitUntil: 'load' });
   await esperarBanco(page);
   await estabilizar(page);
 
@@ -479,6 +514,21 @@ function montarRelatorio(dados) {
   L.push('');
   L.push('> Gerado por `tests/smoke-navegador.js` em ' + agora + '.');
   L.push('> Servidor: ' + dados.servidor + ' · arquivo medido: `' + APP + '` (do disco, nunca o GitHub Pages).');
+  L.push('> Banco: ' + dados.banco + '.');
+  L.push('');
+  L.push('## O banco de mentira — a prova de que o teste não gasta a cota do Firebase');
+  L.push('');
+  L.push('Desde 08/set/2026 o app em teste fala com o **emulador local** (porta ' + EMU_PORTA + '), carregado com o retrato');
+  L.push('do backup da VPS. Antes, cada rodada abria 7 sessões novas no banco real e visitava todas as telas —');
+  L.push('dezenas de MB por rodada, várias rodadas por dia: eram os "robôs" dos 695 MB de 08/set (teto: 360 MB/dia).');
+  L.push('');
+  L.push('| Prova | Resultado |');
+  L.push('|---|---|');
+  L.push('| Modo | ' + (dados.vivo ? '**BANCO REAL** (SMOKE_VIVO=1 — gasta banda de propósito)' : '**emulador local** (padrão)') + ' |');
+  L.push('| Conexões do navegador ao Firebase real | ' + dados.real.conexoes + (dados.vivo ? '' : (dados.real.conexoes ? ' — **VAZOU: o teste tocou o banco real**' : ' — **nenhuma**')) + ' |');
+  L.push('| Bytes recebidos do Firebase real | ' + dados.real.bytes + ' (' + (dados.real.bytes / 1048576).toFixed(2) + ' MB) |');
+  const urlsReais = Object.keys(dados.real.urls);
+  if (urlsReais.length) L.push('| Endereços tocados | ' + urlsReais.map((u) => '`' + esc(u) + '` ×' + dados.real.urls[u]).join(', ') + ' |');
   L.push('');
   L.push('## Por que este teste existe');
   L.push('');
@@ -689,13 +739,31 @@ function montarRelatorio(dados) {
   const base = servidor.base;
   console.log('Servidor: ' + servidor.como);
 
+  // ---- 0. O banco de mentira (padrão) ----
+  let emulador = { parar: () => {} };
+  let bancoDesc = 'Firebase REAL (SMOKE_VIVO=1)';
+  if (!SMOKE_VIVO) {
+    const retrato = retratoLib.carregar();
+    const versao = versaoNoDisco();
+    emulador = await emuladorLib.subir({
+      porta: EMU_PORTA, retrato, versaoApp: versao,
+      regras: fs.readFileSync(path.join(RAIZ, 'database.rules.v2.json'), 'utf8'),
+      log: (m) => console.log('Emulador: ' + m),
+    });
+    bancoDesc = 'emulador local na porta ' + EMU_PORTA + ' com o retrato de ' + retrato.dia + ' e versão carimbada ' + versao;
+  }
+  console.log('Banco: ' + bancoDesc);
+  const pararTudo = () => { try { emulador.parar(); } catch (e) { /* já parou */ } try { servidor.parar(); } catch (e) { /* já parou */ } };
+  process.on('exit', pararTudo);
+
   const navegador = await chromium.launch({ headless: true });
 
   // ---- 1. Descoberta: senhas por papel, aparelho autorizado, e a prova do guarda ----
   const ctxDesc = await navegador.newContext({ viewport: { width: 1440, height: 1800 } });
   const pDesc = await ctxDesc.newPage();
   await pDesc.addInitScript(guardaDeEscrita);
-  await pDesc.goto(base + '/' + APP, { waitUntil: 'load' });
+  vigiarBancoReal(pDesc);
+  await pDesc.goto(urlApp(base), { waitUntil: 'load' });
   await esperarBanco(pDesc);
   await estabilizar(pDesc);
 
@@ -762,15 +830,19 @@ function montarRelatorio(dados) {
   }
 
   await navegador.close();
-  servidor.parar();
+  pararTudo();
 
-  const dados = { servidor: servidor.como, prova, papeis, pulados };
+  const dados = { servidor: servidor.como, banco: bancoDesc, vivo: SMOKE_VIVO, real: REAL, prova, papeis, pulados };
   fs.writeFileSync(SAIDA_MD, montarRelatorio(dados), 'utf8');
 
   const totalFalhas = papeis.reduce((a, r) => a + (r.entrou ? r.telas.filter((t) => t.falhas.length).length : 1), 0);
   const totalTelas = papeis.reduce((a, r) => a + r.telas.length, 0);
+  // No modo padrão, tocar o banco real É falha: a economia da cota é parte do combinado.
+  const vazouParaOReal = !SMOKE_VIVO && REAL.conexoes > 0;
   console.log('');
   console.log('Telas visitadas: ' + totalTelas + ' · falhas: ' + totalFalhas);
+  console.log('Firebase real: ' + REAL.conexoes + ' conexão(ões), ' + (REAL.bytes / 1048576).toFixed(2) + ' MB' +
+    (vazouParaOReal ? ' — VAZOU (o teste devia ficar no emulador)' : (SMOKE_VIVO ? ' (modo vivo, de propósito)' : ' — nenhuma, como devia')));
   console.log('Relatório: ' + SAIDA_MD);
-  process.exit(totalFalhas || !prova.guardaAtivo || prova.existeNoBanco ? 1 : 0);
+  process.exit(totalFalhas || !prova.guardaAtivo || prova.existeNoBanco || vazouParaOReal ? 1 : 0);
 })().catch((e) => { console.error('FALHA NO TESTE:', e); process.exit(1); });
