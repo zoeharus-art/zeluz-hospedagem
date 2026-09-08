@@ -8957,6 +8957,164 @@ async function main() {
   }
   console.log('');
 
+  // ---- v-09: Painel da Diretoria — SÓ ela vê; herança dos KPIs; o dinheiro bate ----
+  console.log('v-09 · Painel da Diretoria — permissão, menu e tela:');
+  {
+    check('PERM: SÓ a diretoria vê o painel (papel a papel, sem promoção)',
+      ctx.podePapel('painel-diretoria', 'diretoria') === true);
+    check('PERM: gestão, supervisão, consultora, monitor, plantonista, aprendiz, vet e conferência NÃO veem',
+      ['gestao', 'supervisor', 'consultora', 'monitor', 'plantonista', 'aprendiz', 'vet', 'conferencia']
+        .every((p) => ctx.podePapel('painel-diretoria', p) === false));
+    // A promoção da Adriana: a senha fixa dela entra como 'gestao' + souAdriana, e para a
+    // tabela ela É a Diretoria (a régua do ehDiretoriaRole). A Márcia (gestao pura) não é.
+    vm.runInContext("__bkp9u = usuarioAtual; usuarioAtual = function(){ return { souAdriana: true }; };", ctx);
+    ctx.__ROLE__.role = 'gestao';
+    check('mordida — a Adriana (gestao + souAdriana) abre o painel: papelDoCorpo a promove a diretoria',
+      ctx.podePapel('painel-diretoria') === true);
+    // E a promoção NÃO muda NENHUMA capacidade antiga: em todas as outras listas,
+    // gestao e diretoria andam juntas — promovida ou não, a resposta é a mesma.
+    vm.runInContext("__permKeys9 = Object.keys(PERM);", ctx);
+    {
+      let igual = true, det = '';
+      (ctx.__permKeys9 || []).forEach((cap) => {
+        if (cap === 'painel-diretoria') return;
+        if (ctx.podePapel(cap) !== ctx.podePapel(cap, 'gestao')) { igual = false; det = cap; }
+      });
+      check('a promoção não muda nenhuma capacidade antiga (promovida responde igual a gestao em todas)',
+        igual, det);
+    }
+    vm.runInContext("usuarioAtual = function(){ return {}; };", ctx);
+    check('mordida — a Márcia (gestao SEM souAdriana) NÃO vê: dinheiro de cliente é decisão de dona',
+      ctx.podePapel('painel-diretoria') === false);
+    vm.runInContext("usuarioAtual = __bkp9u;", ctx);
+    ctx.__ROLE__.role = 'gestao';
+    // Menu e tela
+    check('mordida — o item do menu nasce escondido e é a tabela quem o mostra (PERM_MENU)',
+      /\['painel-diretoria','painel-diretoria'\]/.test(html) &&
+      /<a data-v="painel-diretoria" style="display:none"/.test(html));
+    check('o item fica na RAIZ, depois do Meu Painel e antes da Central Zêluz (a fatia dela não é de categoria nenhuma)',
+      html.indexOf('data-v="painelmeu"') < html.indexOf('data-v="painel-diretoria"') &&
+      html.indexOf('data-v="painel-diretoria"') < html.indexOf('<div class="acc" data-acc="central">'));
+    check('a tela v-painel-diretoria existe e tem título no mapa (fonte única titles)',
+      /<section class="view" id="v-painel-diretoria">/.test(html) &&
+      /'painel-diretoria':\['Painel da Diretoria'/.test(html));
+    check('abrir a tela chama pdirAbrir (a lista única de ganchos)',
+      /if\(v==='painel-diretoria'\)\{ if\(typeof pdirAbrir==='function'\) pdirAbrir\(\); \}/.test(html));
+    check('pdirAbrir se tranca pela mesma tabela (link direto não fura a permissão)',
+      /function pdirAbrir\([\s\S]{0,500}?podePapel\('painel-diretoria'\)/.test(html));
+    check('o financeiro-logica.js entra na página antes do script grande',
+      /<script src="financeiro-logica\.js"><\/script>/.test(html) &&
+      html.indexOf('<script src="financeiro-logica.js">') < html.indexOf('// ---- Firebase (banco gratuito que já temos) ----'));
+  }
+  console.log('');
+
+  console.log('v-09 · a herança dos KPIs e a voz — as MESMAS contas das outras fatias:');
+  {
+    const iniPD = html.indexOf('PAINEL DA DIRETORIA — a mesa da Adriana (v-09, 07/set/2026)');
+    const fatiaPD = (iniPD >= 0) ? html.slice(iniPD, html.indexOf('// INIT do Day Care')) : '';
+    check('a fatia do módulo novo existe no código', fatiaPD.length > 4000, String(fatiaPD.length));
+    check('mordida — os KPIs REUSAM as contas das outras fatias (poTurma, pcDadosCheckins, pcDadosAlmoco, pcDadosOrcamentos, contarPendencias) — nenhuma régua nova',
+      ['poTurma(', 'pcDadosCheckins==', 'pcDadosAlmoco(', 'pcDadosOrcamentos(', 'contarPendencias()']
+        .every((s) => fatiaPD.indexOf(s) >= 0));
+    check('mordida — o dinheiro vem SÓ do financeiro-logica (finResumoMes + finBRL); nenhum "R$" montado à mão na fatia',
+      fatiaPD.indexOf('finResumoMes(') >= 0 && fatiaPD.indexOf('finBRL(') >= 0 &&
+      fatiaPD.indexOf("'R$") < 0);
+    check('o Painel da Diretoria NÃO grava nada (nenhum set/update/push/remove/transaction)',
+      !/DB\.ref\([^)]*\)\.(set|update|push|remove|transaction)\b/.test(fatiaPD),
+      (fatiaPD.match(/DB\.ref\([^)]*\)\.(set|update|push|remove|transaction)\b/) || [''])[0]);
+    check('só lê com once (nenhum ouvinte novo pendurado)', !/\.on\('value'/.test(fatiaPD));
+    check('toda leitura que falha é registrada (nunca falha calada)',
+      /_logLeituraFalhou\(caminho\+' \(Painel da Diretoria\)'/.test(fatiaPD));
+    check('os atalhos abrem as fatias reais (consultoras, painel-amanda, paineloperacao) e a escala que alimenta a fatia do monitor (planodia)',
+      ["pdirIr(\\'", "'consultoras'", "'painel-amanda'", "'paineloperacao'", "'planodia'"]
+        .every((s) => fatiaPD.indexOf(s) >= 0));
+    check('mordida — nenhum "balcão" e nenhum emoji no módulo novo (a voz é a da casa)',
+      !/balc/i.test(fatiaPD) && !/[\u{1F000}-\u{1FAFF}✀-➿⬀-⯿]/u.test(fatiaPD));
+  }
+  console.log('');
+
+  console.log('v-09 · o financeiro sobre o retrato real — os números batem com a conta provada:');
+  if (typeof ctx.pdirFinResumo === 'function' && typeof ctx.finResumoMes === 'function') {
+    const [cadReal9, orcReal9] = await Promise.all([
+      dbRead('daycare/cadastro', token),
+      dbRead('auaulandia/orcamentos', token),
+    ]);
+    if (cadReal9) {
+      // Injeta o dado real nos MESMOS globais que a tela usa e compara com a conta direta:
+      // a tela não pode inventar um caminho próprio até o finResumoMes.
+      ctx.__cad9 = cadReal9; ctx.__irm9 = irmaos || {};
+      vm.runInContext("__bkp9f = { cad: pelCadCache, pel: PELUDINHOS, irm: IRMAOS_CACHE };\n" +
+        "pelCadCache = __cad9; PELUDINHOS = []; IRMAOS_CACHE = __irm9;", ctx);
+      try {
+        const mes9 = '2026-09', hoje9 = '2026-09-07';
+        const daTela = ctx.pdirFinResumo(mes9, hoje9, orcReal9 || {}, null, irmaos || {});
+        const direta = ctx.finResumoMes({ cadastro: cadReal9, peludinhos: [], irmaos: irmaos || {},
+          orcamentos: orcReal9 || {} }, mes9, { hoje: hoje9 });
+        check('a receber do mês na tela = finResumoMes direto, ao centavo',
+          daTela.aReceberTotal === direta.aReceberTotal,
+          ctx.finBRL(daTela.aReceberTotal) + ' vs ' + ctx.finBRL(direta.aReceberTotal));
+        check('a quebra por serviço (Day Care × AuAulândia) bate, ao centavo',
+          daTela.porServico.daycare.aReceber === direta.porServico.daycare.aReceber &&
+          daTela.porServico.auaulandia.aReceber === direta.porServico.auaulandia.aReceber);
+        check('recebido do mês é R$ 0,00 — o banco não tem lançamento de pagamento',
+          daTela.recebidoTotal === 0, ctx.finBRL(daTela.recebidoTotal));
+        check('a conta avisa que não existe registro de pagamento (honestidade vem do módulo)',
+          daTela.avisos.join(' ').indexOf('Não existe registro de pagamento') >= 0);
+        check('a lista dos maiores valores é a mesma (nomes e faltas, na mesma ordem)',
+          JSON.stringify(daTela.porFILHOt.filter((o) => o.falta > 0).slice(0, 5).map((o) => [o.nome, o.falta])) ===
+          JSON.stringify(direta.porFILHOt.filter((o) => o.falta > 0).slice(0, 5).map((o) => [o.nome, o.falta])));
+        // O desenho: o rótulo honesto do "recebido" e os travessões de quem ainda não chegou.
+        const htmlFin = ctx.pdirFinHTML(daTela, false, 'setembro de 2026');
+        check('a tela do dinheiro mostra o rótulo honesto: sem lançamentos ainda, a tela de lançar vem depois',
+          htmlFin.indexOf('sem lançamentos de pagamento ainda') >= 0 &&
+          htmlFin.indexOf(ctx.finBRL(0)) >= 0);
+        check('com o nó de pagamentos existindo, o rótulo de "ainda não há tela" some',
+          ctx.pdirFinHTML(daTela, true, 'setembro de 2026').indexOf('sem lançamentos de pagamento ainda') < 0);
+        check('o desenho carrega os avisos da conta (o que ela não cobre, escrito)',
+          daTela.avisos.every((av) => htmlFin.indexOf(av.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')) >= 0));
+        check('sem o módulo do financeiro, a tela DIZ que ele não veio — nunca inventa número',
+          ctx.pdirFinHTML(null, false, 'setembro de 2026').indexOf('não veio junto com a página') >= 0);
+      } finally {
+        vm.runInContext("pelCadCache = __bkp9f.cad; PELUDINHOS = __bkp9f.pel; IRMAOS_CACHE = __bkp9f.irm;", ctx);
+      }
+    } else {
+      check('dado real do cadastro disponível para a prova do financeiro', false, 'retrato sem daycare/cadastro');
+    }
+    // Os travessões honestos das quatro caixas do topo: fonte que não chegou nunca vira zero.
+    const kpisLendo = ctx.pdirKPIsHTML({ aulunos: null, hospedes: null, feitos: null, pend: null });
+    check('KPI sem fonte lida = travessão com "ainda lendo" (nunca um zero inventado)',
+      (kpisLendo.match(/&mdash;/g) || []).length === 4 && kpisLendo.indexOf('ainda lendo') >= 0 &&
+      kpisLendo.indexOf('data-pm-alvo') < 0);
+    const kpisCheios = ctx.pdirKPIsHTML({ aulunos: 41, hospedes: 12, feitos: 9, pend: 7 });
+    check('KPI com fonte lida = número que conta (data-pm-alvo), com a conta declarada no rótulo',
+      kpisCheios.indexOf('data-pm-alvo="41"') >= 0 && kpisCheios.indexOf('data-pm-alvo="9"') >= 0 &&
+      kpisCheios.indexOf('check-ins feitos, de 12 hóspedes') >= 0 &&
+      kpisCheios.indexOf('pendências acesas no menu') >= 0);
+    // A auditoria viva: só 'gravacao-FALHOU'/'audit-FALHOU' entram, mais recente primeiro.
+    const aud9 = {
+      a: { acao: 'checkin', detalhe: 'estadia criada', ts: 50 },
+      b: { acao: 'gravacao-FALHOU', detalhe: 'daycare/almoco (marcarAlmoco)', quem: 'Wandela', hora: '12:10', ts: 10 },
+      c: { acao: 'gravacao-FALHOU', detalhe: 'auaulandia/cafe (marcarCafe)', quem: 'Giulia', hora: '14:00', ts: 30 },
+      d: { acao: 'audit-FALHOU', detalhe: 'não consegui montar o rastro', ts: 20 },
+    };
+    const falhas9 = ctx.pdirFalhasDeGravacao(aud9);
+    check('pdirFalhasDeGravacao pega SÓ as falhas de gravação (checkin não entra), mais recente primeiro',
+      falhas9.length === 3 && falhas9[0].detalhe.indexOf('cafe') >= 0 && falhas9[2].detalhe.indexOf('almoco') >= 0);
+    check('auditoria não lida = "sem leitura" (nunca "nenhuma falha" no escuro)',
+      ctx.pdirAuditoriaHTML(null, 0).indexOf('Ainda não consegui ler a auditoria') >= 0 &&
+      ctx.pdirAuditoriaHTML(null, 0).indexOf('Nenhuma gravação falhou') < 0);
+    check('dia limpo = "nenhuma gravação falhou", com o convite para o Painel do Dia',
+      ctx.pdirAuditoriaHTML([], 0).indexOf('Nenhuma gravação falhou hoje') >= 0 &&
+      ctx.pdirAuditoriaHTML([], 0).indexOf('Painel do Dia') >= 0);
+    check('o feed mostra até 3 linhas e declara o resto; o bolso local aparece quando tem rastro esperando',
+      ctx.pdirAuditoriaHTML(falhas9.concat([{ detalhe: 'x', quem: '-', hora: '', ts: 1 }]), 2).indexOf('E mais 1 no Painel do Dia') >= 0 &&
+      ctx.pdirAuditoriaHTML(falhas9, 2).indexOf('2 rastros esperam no bolso deste aparelho') >= 0 &&
+      ctx.pdirAuditoriaHTML(falhas9, 0).indexOf('bolso deste aparelho') < 0);
+  } else {
+    check('pdirFinResumo existe', false, 'função não encontrada — o módulo v-09 não carregou');
+  }
+  console.log('');
+
   // ---- a prova do retrato: rodada padrão não toca o Firebase --------------------
   console.log('Retrato — a rodada padrão não abre conexão nenhuma com o banco:');
   if (HARNESS_VIVO) {

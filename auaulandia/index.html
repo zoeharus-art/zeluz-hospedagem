@@ -1707,7 +1707,7 @@
     --pm-wash:rgba(90,171,181,.16);
     --pm-tarja:rgba(90,171,181,.62);
   }
-  #v-painelmeu,#v-planodia,#v-paineloperacao,#v-consultoras,#v-painel-amanda{max-width:1120px}
+  #v-painelmeu,#v-planodia,#v-paineloperacao,#v-consultoras,#v-painel-amanda,#v-painel-diretoria{max-width:1120px}
 
   /* ---------- saudação vibrante (o topo que engaja) ---------- */
   .pm-saud1{font-size:28px;font-weight:800;color:var(--z-blue);letter-spacing:-.03em;line-height:1.12}
@@ -2064,6 +2064,17 @@
     .pa-cols.so-res .pa-col-pend{display:none}
     .pa-cols .pa-col-t{margin-top:2px}
   }
+  /* ===== v-09 — PAINEL DA DIRETORIA (a mesa da Adriana) =============================
+     Mesma família .pm-/.pa-, mesmos tokens — nenhuma cor nova, nenhum componente novo.
+     São só duas grades: as quatro caixas do topo (2 colunas no celular, 4 no desktop) e
+     a lista dos atalhos para as outras fatias (1 coluna no celular, 2 no desktop). */
+  .pdir-tiles{grid-template-columns:repeat(2,1fr)}
+  .pdir-atalhos{display:grid;grid-template-columns:1fr;gap:0 18px;margin-top:12px}
+  @media(min-width:900px){
+    .pdir-tiles{grid-template-columns:repeat(4,1fr)}
+    .pdir-atalhos{grid-template-columns:1fr 1fr}
+    .pdir-atalhos .pa-li{border-top:1px solid var(--pm-linha-fina)}
+  }
   @media(min-width:900px){
     .pc-colunas{display:grid;grid-template-columns:1.15fr 1fr 1fr;gap:0 26px;align-items:start}
     .pc-colunas .pc-qz{border-top:none;border-left:1px solid var(--pm-linha-fina);padding-left:22px}
@@ -2135,6 +2146,15 @@
          Nasce ESCONDIDO: quem mostra é aplicarPermMenu(), lendo a tabela PERM. Nada de
          classe so-* nova (regra 3 da Fase 2: permissão em um lugar só). -->
     <a data-v="painelmeu" style="display:none" title="A sua fatia do dia: o seu horário, o seu plano, o que ficou aberto e os seus pontos."><span data-icon="sun"></span><span>Meu Painel</span></a>
+    <!-- PAINEL DA DIRETORIA (v-09) — a fatia da Adriana. Fica na RAIZ, como o Meu Painel,
+         de propósito: "Adriana = tudo" (decisão dela, 25/ago) — a fatia dela não é de
+         nenhuma categoria, é a casa inteira mais o dinheiro do mês. Não entra na Central
+         Zêluz (que é a mesa das Consultoras e da Supervisão) nem na Operação (a mesa da
+         Márcia): o índice aprovado põe "Painel" na raiz, e este é o painel de quem
+         responde por tudo. Nasce ESCONDIDO: quem mostra é aplicarPermMenu(), lendo a
+         tabela PERM ('painel-diretoria'). Nada de classe so-* nova (regra 3 da Fase 2:
+         permissão em um lugar só). -->
+    <a data-v="painel-diretoria" style="display:none" title="A casa inteira e o dinheiro do mês — a visão de quem responde por tudo."><span data-icon="chart"></span><span>Painel da Diretoria</span></a>
 
     <!-- Achado 8 da varredura (04/set/2026): o menu tinha DUAS categorias "AuAulândia" e
          DUAS "Day Care" — uma dentro de "Serviços", outra dentro de "Central Zêluz". A
@@ -4070,6 +4090,16 @@
     <div id="paRoot"><div class="pm-card"><div class="pm-sub">Carregando o pendente e o resolvido do dia…</div></div></div>
   </section>
 
+  <!-- ===== PAINEL DA DIRETORIA — a mesa da Adriana (v-09) ==========================
+       "Adriana = tudo" (decisão dela, 25/ago): a casa em um olhar (as MESMAS contas das
+       outras fatias — nunca uma régua nova), os atalhos para os painéis de todos, o
+       FINANCEIRO do mês (a conta inteira vem do financeiro-logica.js, provado no
+       harness) e as gravações que falharam no dia. Este painel só OBSERVA: nenhum botão
+       daqui grava coisa alguma; cada quadro abre a tela onde se decide. -->
+  <section class="view" id="v-painel-diretoria">
+    <div id="pdirRoot"><div class="pm-card"><div class="pm-sub">Carregando a casa e o dinheiro do mês…</div></div></div>
+  </section>
+
   <section class="view" id="v-sair"><div class="soon-box"><img class="ic-st" src="assets/simbolo.png" alt=""><div class="t">Sair</div><div class="d">No sistema real, encerra a sessão com segurança.</div></div></section>
 
   <!-- FOOTER KAIRÓS -->
@@ -4124,6 +4154,13 @@
      desenhar: plRotaDoDia (o meu dia), plProtocoloDe (o que ficou aberto) e plAvisosDe
      (o aviso que não saiu). A tela só desenha o resultado; a conta mora aqui fora. -->
 <script src="painel-logica.js"></script>
+<!-- A CONTA do Financeiro (v-09). Mesmo molde do painel-logica.js: funções puras, fora
+     deste arquivo, provadas no harness contra dado REAL antes de existir uma linha de
+     tela. Entra antes do script grande porque é dela que o Painel da Diretoria tira o
+     dinheiro do mês: finResumoMes (a receber, recebido, atraso, inadimplência) e finBRL
+     (o formato completo, R$ 1.234,56 — sempre com centavos). A tela só desenha o
+     resultado; a conta mora aqui fora. -->
+<script src="financeiro-logica.js"></script>
 <script>
   // ---- Firebase (banco gratuito que já temos) ----
   // Declarados AQUI (antes dos ouvintes do Firebase abaixo) para não caírem na zona morta temporal:
@@ -4445,6 +4482,7 @@
     // Dica curta de propósito: no celular ela divide a barra com o seletor de data, e uma
     // frase longa vira uma coluna estreita e alta em cima da tela.
     painelmeu:['Meu Painel','A sua rota de hoje.'],
+    'painel-diretoria':['Painel da Diretoria','A casa inteira e o dinheiro do mês.'],
     consultoras:['Painel das Consultoras','A sua mesa do dia na Central.'],
     'painel-amanda':['Painel da Supervisão','Pendente e resolvido, com quem e quando.'],
     paineloperacao:['Painel da Operação','A casa de hoje: quem veio, o time, as noites e o acerto.'],
@@ -4505,6 +4543,7 @@
     if(v==='painelmeu'){ if(typeof pmAbrir==='function') pmAbrir(); }
     if(v==='consultoras'){ if(typeof pcAbrir==='function') pcAbrir(); }
     if(v==='painel-amanda'){ if(typeof paAbrir==='function') paAbrir(); }
+    if(v==='painel-diretoria'){ if(typeof pdirAbrir==='function') pdirAbrir(); }
     if(v==='paineloperacao'){ if(typeof poAbrir==='function') poAbrir(); }
     if(v==='planodia'){ if(typeof pdAbrir==='function') pdAbrir(); }
     if(v==='reposicao'){ if(typeof renderReposicao==='function') renderReposicao(); }
@@ -4599,11 +4638,33 @@
     // que a fatia do Monitor não mostra a ninguém. Por isso o grupo é o mais fechado do
     // app: Gestão e Diretoria, e mais ninguém. A Supervisão fica de fora de propósito —
     // ela tem a mesa dela em "O que fazer hoje"; quem paga plantonista é a Márcia.
-    'painel-operacao':          ['gestao','diretoria']
+    'painel-operacao':          ['gestao','diretoria'],
+    // ===== v-09 — o Painel da Diretoria (a mesa da Adriana) ==========================
+    // "Adriana = tudo" (decisão dela, 25/ago): ela vê por herança os painéis de todos —
+    // e a fatia PRÓPRIA, com o FINANCEIRO do mês, é SÓ dela. A Márcia (Gestão) tem a
+    // mesa dela no Painel da Operação; dinheiro de cliente (a receber, recebido, maiores
+    // valores) é decisão de dona, não de operação. É o único PERM em que 'gestao' e
+    // 'diretoria' se separam — e é para isso que papelDoCorpo() existe logo abaixo:
+    // a Adriana entra pela senha fixa como 'gestao' + souAdriana, e para a tabela ela
+    // É a Diretoria (a MESMA régua do ehDiretoriaRole, que já guarda o excluir cadastro
+    // e a senha da ponte).
+    'painel-diretoria':         ['diretoria']
   };
+  // O papel de quem está no corpo, com a régua do ehDiretoriaRole: role 'diretoria' vale
+  // por si; 'gestao' com souAdriana (a senha fixa da Adriana) É a Diretoria. A promoção
+  // não muda NENHUMA capacidade antiga — em todas as outras listas, 'gestao' e
+  // 'diretoria' andam juntas — e só existe aqui, no papel lido do corpo: papel passado
+  // por parâmetro (o harness prova papel a papel) nunca é promovido.
+  function papelDoCorpo(){
+    var r=document.body.dataset.role||'';
+    if(r==='gestao'){
+      try{ var u=(typeof usuarioAtual==='function')?usuarioAtual():null; if(u&&u.souAdriana) return 'diretoria'; }catch(e){} /* silencioso de propósito: sem sessão legível vale o papel do corpo */
+    }
+    return r;
+  }
   // Consulta central. Papel omitido = lê o papel do corpo (como as funções antigas fazem).
   function podePapel(capacidade, papel){
-    const r=(papel!=null)?papel:(document.body.dataset.role||'');
+    const r=(papel!=null)?papel:papelDoCorpo();
     const lista=PERM[capacidade];
     return !!lista && lista.indexOf(r)>=0;
   }
@@ -4615,7 +4676,7 @@
   // Nenhum dos dois entra em NAV_PAGINAS_ALL de propósito: "Meu Painel" é a fatia da
   // própria pessoa (não se concede a ninguém, é dela), e a escala é ajuste da Gestão —
   // mesma razão pela qual "Senhas" e "Configurações" também ficam fora daquela lista.
-  const PERM_MENU=[['painelmeu','painel-monitor'],['paineloperacao','painel-operacao'],['planodia','definir-plano-do-dia'],['consultoras','painel-consultoras'],['painel-amanda','painel-amanda']];
+  const PERM_MENU=[['painelmeu','painel-monitor'],['paineloperacao','painel-operacao'],['planodia','definir-plano-do-dia'],['consultoras','painel-consultoras'],['painel-amanda','painel-amanda'],['painel-diretoria','painel-diretoria']];
   function aplicarPermMenu(){
     PERM_MENU.forEach(function(par){
       document.querySelectorAll('#nav a[data-v="'+par[0]+'"]').forEach(function(a){
@@ -11821,7 +11882,7 @@
   // Agora existe um carimbo: esta constante é a versão que o aparelho está rodando, e o
   // Firebase guarda a versão publicada. Quando as duas diferem, aparece o aviso — mas
   // NUNCA recarrega sozinho: recarregar no meio de um check-in perderia o trabalho.
-  const APP_VERSAO='2026-09-07-02';
+  const APP_VERSAO='2026-09-07-03';
   function vigiarVersao(){
     if(!DB) return;
     try{
@@ -32758,6 +32819,356 @@
       requestAnimationFrame(function(){ try{ pmAnimar(raiz); }catch(e){} /* silencioso de propósito: animação — falhar não pode derrubar a tela */ });
     });
   }
+
+  /* ====================================================================================
+   * PAINEL DA DIRETORIA — a mesa da Adriana (v-09, 07/set/2026)
+   *
+   * "Adriana = tudo" (decisão dela, 25/ago): ela vê por herança os painéis de todos e a
+   * fatia própria com o FINANCEIRO. Quatro andares, nesta ordem:
+   *   1. A casa em um olhar — quatro caixas com as MESMAS contas das outras fatias:
+   *      poTurma (a turma da Operação), pcDadosCheckins (o quadro das Consultoras) e
+   *      contarPendencias (a conta única do menu). Nenhuma régua nasce aqui.
+   *   2. As mesas — um atalho por fatia (Consultoras · Supervisão · Operação · a fatia
+   *      do monitor), cada um com números vivos daquela mesa e o clique abrindo a tela.
+   *      O Meu Painel é PESSOAL de cada monitor (a lei da fatia: não se concede a
+   *      ninguém, é dele) — por isso o atalho da fatia do monitor abre a Escala e plano
+   *      do dia, que é a tela real que alimenta o painel de todos eles.
+   *   3. O dinheiro do mês — a conta INTEIRA vem do financeiro-logica.js (finResumoMes,
+   *      provado no harness contra dado real): a receber por serviço, recebido (hoje
+   *      R$ 0,00 — não existe lançamento de pagamento ainda, e o painel DIZ isso), os
+   *      maiores valores a receber e, por honestidade, o que a conta NÃO cobre.
+   *   4. Auditoria viva — as gravações que falharam hoje (rastro 'gravacao-FALHOU' da
+   *      auditoria + o bolso local que ainda não subiu), com o caminho ao Painel do Dia.
+   *
+   * ESTE PAINEL SÓ OBSERVA. Não existe uma única gravação daqui — cada quadro abre a
+   * tela onde se decide, e é lá que fica o rastro de quem fez.
+   *
+   * DINHEIRO NUNCA SAI PELA METADE: os números do financeiro só aparecem com a carteira
+   * inteira lida (CARTEIRA_CARREGADA), os vínculos de irmãos lidos (IRMAOS_OK) e os
+   * orçamentos e pagamentos lidos com sucesso. Faltou leitura = travessão com o motivo
+   * escrito, nunca um total menor fingindo ser o total.
+   *
+   * UM RELÓGIO SÓ: todos os quadros usam PDIR_DIA, decidido uma vez por abertura.
+   * ================================================================================== */
+
+  var PDIR_DIA='';                                    // o relógio único desta abertura
+  var PDIR_CACHE={quando:0, dia:'', dados:null};
+
+  // ------------------------------------------------------------------------- as contas
+  // A CONTA do dinheiro do mês. Nenhum número nasce aqui: quem calcula é o
+  // finResumoMes (financeiro-logica.js), com o que o app já tem vivo — o cadastro
+  // (pelCadCache), o array-mestre (PELUDINHOS), os vínculos de irmãos (IRMAOS_CACHE),
+  // a tabela de preços EM VIGOR (planos(), a mesma da cobrança) e o desconto de irmão
+  // do plano (DESC_PET_PLANO) — mais o que a abertura leu do banco (orçamentos e
+  // pagamentos). Devolve null quando o módulo do financeiro não carregou.
+  function pdirFinResumo(mes, hoje, orcamentos, pagamentos, irmaos){
+    if(typeof finResumoMes!=='function') return null;
+    return finResumoMes({
+      cadastro:(typeof pelCadCache!=='undefined')?pelCadCache:{},
+      peludinhos:(typeof PELUDINHOS!=='undefined')?PELUDINHOS:[],
+      // Os vínculos de irmãos vêm da LEITURA da abertura (o ouvinte IRMAOS_CACHE só liga
+      // na tela da ficha — esperar por ele deixaria o dinheiro trancado à toa).
+      irmaos:irmaos||{},
+      orcamentos:orcamentos||{},
+      pagamentos:pagamentos||null,
+      planos:(typeof planos==='function')?planos():null,
+      descontoIrmao:(typeof DESC_PET_PLANO!=='undefined')?DESC_PET_PLANO:null
+    }, mes, {hoje:hoje});
+  }
+  // As gravações que falharam no dia: o rastro que _logFalhaGrav deixa na auditoria
+  // ('gravacao-FALHOU') e o rastro do próprio caderno quando nem ele conseguiu anotar
+  // ('audit-FALHOU'). Mais recente primeiro.
+  function pdirFalhasDeGravacao(aud){
+    var out=[];
+    Object.keys(aud||{}).forEach(function(k){
+      var r=aud[k]||{};
+      if(r.acao!=='gravacao-FALHOU' && r.acao!=='audit-FALHOU') return;
+      out.push({detalhe:String(r.detalhe||''), quem:String(r.quem||'-'),
+                hora:String(r.hora||''), ts:r.ts||0, reenviado:r.reenviado===true});
+    });
+    out.sort(function(a,b){ return (b.ts||0)-(a.ts||0); });
+    return out;
+  }
+  function pdirMesRotulo(mes){
+    if(!/^\d{4}-\d{2}$/.test(String(mes||''))) return '';
+    var m=parseInt(String(mes).slice(5,7),10);
+    var nomes=(typeof PM_MESES_EXT!=='undefined')?PM_MESES_EXT:null;
+    return (nomes&&nomes[m-1])?(nomes[m-1]+' de '+String(mes).slice(0,4)):String(mes);
+  }
+
+  // ------------------------------------------------------------------------ os desenhos
+  function pdirSaudacaoHTML(eu){
+    var agora=new Date();
+    return '<div style="margin-bottom:18px">'
+      +'<h1 class="pm-saud1 pm-entra">'+esc(pmComoVai(agora.getHours()))+', '+esc(eu)+'.</h1>'
+      +'<p class="pm-saud3 pm-entra atraso">A casa inteira e o dinheiro do mês, num lugar só. Cada quadro abre a tela onde se decide.</p>'
+      +'<span class="pm-traco" aria-hidden="true"></span>'
+      +'<div class="pm-data">'+esc(pmDataExtenso(agora))+'</div>'
+      +'</div>';
+  }
+  // As quatro caixas do topo. Valor null = a fonte ainda não chegou — a caixa mostra o
+  // travessão e diz que está lendo, NUNCA um zero inventado (a lei de 11/ago: nenhuma
+  // tela afirma ausência antes de saber que os dados chegaram).
+  function pdirKPIsHTML(k){
+    var caixa=function(valor, rotulo, tom, rotuloLendo){
+      if(valor==null) return '<div class="pm-tile"><b>&mdash;</b><span>'+esc(rotuloLendo)+' — ainda lendo</span></div>';
+      var cls=(tom==='alerta'&&valor>0)?' pm-t-alerta':((tom==='ouro')?' pm-t-ouro':'');
+      return '<div class="pm-tile'+cls+'"><b data-pm-alvo="'+valor+'">0</b><span>'+esc(rotulo)+'</span></div>';
+    };
+    return '<div class="pm-rv"><div class="pm-tiles pm-grandes pdir-tiles">'
+      + caixa(k.aulunos,'aulunos na turma de hoje','ouro','aulunos na turma')
+      + caixa(k.hospedes,'hóspedes na casa','ouro','hóspedes na casa')
+      + caixa(k.feitos,(k.hospedes==null?'check-ins feitos':('check-ins feitos, de '+k.hospedes+' '+(k.hospedes===1?'hóspede':'hóspedes'))),'','check-ins do dia')
+      + caixa(k.pend,'pendências acesas no menu da casa','alerta','as pendências do menu')
+      +'</div></div>';
+  }
+  // Um atalho de mesa: 1-2 números vivos daquela fatia e o clique abrindo a fatia real.
+  function pdirAtalhoHTML(view, titulo, linha){
+    return '<button type="button" class="pa-li" onclick="pdirIr(\''+escAttr(view)+'\')">'
+      +'<span class="pa-li-txt"><b>'+esc(titulo)+'</b><span>'+esc(linha)+'</span></span>'
+      +'<span class="pa-li-go">&rsaquo;</span></button>';
+  }
+  function pdirAtalhosHTML(a){
+    return '<article class="pm-card pm-rv"><h3 class="pm-tit">Os painéis de cada mesa</h3>'
+      +'<p class="pm-sub">A senhora vê a mesa de todos. Cada linha traz os números vivos daquela fatia e abre a tela dela.</p>'
+      +'<div class="pdir-atalhos">'
+      + pdirAtalhoHTML('consultoras','Painel das Consultoras', a.consultoras)
+      + pdirAtalhoHTML('painel-amanda','Painel da Supervisão', a.supervisao)
+      + pdirAtalhoHTML('paineloperacao','Painel da Operação', a.operacao)
+      + pdirAtalhoHTML('planodia','A fatia do monitor — escala e plano do dia', a.monitor)
+      +'</div>'
+      +'<p class="pm-rot" style="margin-top:10px">O Meu Painel é pessoal de cada monitor — a rota é dele, não se abre de fora. O que alimenta a rota de todos é a escala e o plano do dia, e é isso que este atalho abre.</p>'
+      +'</article>';
+  }
+  // O dinheiro do mês. Recebe o resumo do finResumoMes e desenha — nenhuma conta aqui.
+  // temPagamentos diz se JÁ existe o nó de lançamentos: sem ele, o "recebido" é
+  // R$ 0,00 com o motivo escrito, nunca um zero mudo.
+  function pdirFinHTML(r, temPagamentos, mesRotulo){
+    if(!r) return '<article class="pm-card pm-rv"><h3 class="pm-tit">O módulo do dinheiro não veio junto com a página</h3>'
+      +'<p class="pm-sub">O arquivo financeiro-logica.js não carregou. Recarregue a página; se continuar assim, é problema de publicação — nenhum número foi inventado no lugar.</p></article>';
+    var dc=r.porServico.daycare, aua=r.porServico.auaulandia;
+    var h='<div class="pm-rv"><div class="pm-tiles pm-grandes" style="grid-template-columns:repeat(2,1fr)">'
+      +'<div class="pm-tile pm-t-ouro"><b>'+esc(finBRL(r.aReceberTotal))+'</b>'
+      +'<span>a receber em '+esc(mesRotulo)+' — Day Care '+esc(finBRL(dc.aReceber))+' ('+dc.quantos+') · AuAulândia '+esc(finBRL(aua.aReceber))+' ('+aua.quantos+')</span></div>'
+      +'<div class="pm-tile"><b>'+esc(finBRL(r.recebidoTotal))+'</b>'
+      +'<span>recebido em '+esc(mesRotulo)
+      +(temPagamentos?'':' — sem lançamentos de pagamento ainda: a tela de lançar chega na próxima versão')
+      +'</span></div>'
+      +'</div></div>';
+    h+='<article class="pm-card pm-rv"><h3 class="pm-tit">Maiores valores a receber</h3>'
+      +'<p class="pm-sub">O que falta receber do que vence neste mês, do maior para o menor. Cada linha abre a tela onde se cobra.</p>';
+    var abertos=r.porFILHOt.filter(function(o){ return o.falta>0; });
+    if(!abertos.length){
+      h+='<div class="pm-lista"><div class="pm-li"><span class="pm-badge pm-b-ok">nada em aberto</span>'
+        +'<div class="pm-li-txt"><b>Não há valor a receber neste mês.</b><span>O que vencer daqui em diante aparece aqui.</span></div></div></div>';
+    } else {
+      abertos.slice(0,5).forEach(function(o){
+        var vd=(o.servico==='daycare')?'renovacao':'orcamento';
+        var rotPlano=(o.servico==='daycare')?('plano '+o.plano+(o.compromisso?(' ('+o.compromisso+')'):'')):'hospedagem';
+        h+='<button type="button" class="pa-li" onclick="pdirIr(\''+escAttr(vd)+'\')">'
+          +'<span class="pa-li-txt"><b style="text-transform:capitalize">'+esc(o.nome)+'</b>'
+          +'<span>'+esc(rotPlano)+(o.venceEm?(' · venceu em '+esc(orcBR(o.venceEm))):'')+'</span></span>'
+          +'<span class="pa-li-go" style="font-size:14px;font-variant-numeric:tabular-nums">'+esc(finBRL(o.falta))+'</span>'
+          +'</button>';
+      });
+      if(abertos.length>5) h+='<p class="pm-rot" style="margin-top:8px">E mais '+(abertos.length-5)+' com valor em aberto — o detalhe mora nas telas de Renovação e de Orçamento.</p>';
+    }
+    h+='</article>';
+    // A honestidade da conta: o recorte do atraso, o que venceu sem renovar e o que a
+    // conta NÃO cobre — cada travessão com o motivo escrito, nunca um chute.
+    h+='<article class="pm-card pm-rv"><h3 class="pm-tit">O que a conta diz — e o que ela não cobre</h3><div class="pm-lista">';
+    h+='<div class="pm-li"><span class="pm-badge '+(r.emAtrasoTotal>0?'pm-b-atencao':'pm-b-ok')+'">atraso</span>'
+      +'<div class="pm-li-txt"><b>'+esc(finBRL(r.emAtrasoTotal))+' do "a receber" já venceu.</b>'
+      +'<span>É recorte do valor acima, não uma soma nova.</span></div></div>';
+    h+='<div class="pm-li"><span class="pm-badge '+(r.inadimplenciaTotal>0?'pm-b-atencao':'pm-b-ok')+'">vencidos</span>'
+      +'<div class="pm-li-txt"><b>'+esc(finBRL(r.inadimplenciaTotal))+' em planos que venceram sem renovação.</b>'
+      +'<span>População à parte — não há vigência neste mês, então NÃO está no "a receber".</span></div></div>';
+    if(r.propostasAbertas.quantas>0)
+      h+='<div class="pm-li"><span class="pm-badge pm-b-info">propostas</span>'
+        +'<div class="pm-li-txt"><b>'+esc(pmPlural(r.propostasAbertas.quantas,'orçamento aguarda','orçamentos aguardam'))+' resposta ('+esc(finBRL(r.propostasAbertas.total))+').</b>'
+        +'<span>Proposta não é cobrança: só entra na conta quando o tutor fechar.</span></div></div>';
+    r.avisos.forEach(function(av){
+      h+='<div class="pm-li"><span class="pm-badge pm-b-atencao">atenção</span>'
+        +'<div class="pm-li-txt"><span>'+esc(av)+'</span></div></div>';
+    });
+    h+='</div></article>';
+    return h;
+  }
+  // As gravações que falharam hoje. falhas null = a auditoria do dia não foi lida.
+  function pdirAuditoriaHTML(falhas, bolso){
+    var h='<article class="pm-card pm-rv"><h3 class="pm-tit">Gravações que falharam hoje</h3>'
+      +'<p class="pm-sub">O rastro que o app deixa quando o banco recusa uma gravação — nada disso sumiu calado. O detalhe mora no Painel do Dia.</p>';
+    if(falhas==null){
+      h+='<div class="pm-lista"><div class="pm-li"><span class="pm-badge pm-b-atencao">sem leitura</span>'
+        +'<div class="pm-li-txt"><b>Ainda não consegui ler a auditoria do dia.</b>'
+        +'<span>Isto não quer dizer que não há nada — quer dizer que ainda não sei.</span></div></div></div>';
+    } else if(!falhas.length){
+      h+='<div class="pm-lista"><div class="pm-li"><span class="pm-badge pm-b-ok">nenhuma</span>'
+        +'<div class="pm-li-txt"><b>Nenhuma gravação falhou hoje.</b><span>Se alguma falhar, ela aparece aqui com o quê, quem e quando.</span></div></div></div>';
+    } else {
+      h+='<div class="pm-lista">';
+      falhas.slice(0,3).forEach(function(f){
+        h+='<div class="pm-li"><span class="pm-badge pm-b-critico">falhou</span>'
+          +'<div class="pm-li-txt"><b>'+esc(f.detalhe||'gravação sem rótulo')+'</b>'
+          +'<span>'+esc(f.quem)+(f.hora?(' · '+esc(f.hora)):'')+(f.reenviado?' · reenviada pelo bolso':'')+'</span></div></div>';
+      });
+      if(falhas.length>3) h+='<p class="pm-rot" style="margin-top:8px">E mais '+(falhas.length-3)+' no Painel do Dia.</p>';
+      h+='</div>';
+    }
+    if(bolso>0) h+='<p class="pm-nota" style="margin:12px 0 0"><strong>'+esc(pmPlural(bolso,'rastro espera','rastros esperam'))+' no bolso deste aparelho.</strong> Sobem sozinhos assim que o banco aceitar.</p>';
+    h+='<div class="pm-acao"><button type="button" class="pm-bt" onclick="pdirIr(\'painel\')">Abrir o Painel do Dia</button></div>'
+      +'</article>';
+    return h;
+  }
+
+  // --------------------------------------------------------------------- os gestos
+  // O clique vai pelo CAMINHO DO MENU quando o item existe — é o _navegarMenu que sabe
+  // abrir cada tela do jeito dela (a mesma regra do paIr).
+  function pdirIr(v){
+    try{
+      var a=document.querySelector('#nav a[data-v="'+v+'"]');
+      if(a){ a.click(); return; }
+      if(typeof irParaView==='function') irParaView(v);
+    }catch(e){} /* silencioso de propósito: atalho de tela — falhar não pode derrubar quem chamou */
+  }
+
+  // ---------------------------------------------------------------- as leituras (uma vez)
+  function pdirPega(caminho){
+    return DB.ref(caminho).once('value').then(function(s){ return {ok:true, v:s.val()}; })
+      .catch(function(e){ _logLeituraFalhou(caminho+' (Painel da Diretoria)', e); return {ok:false, v:null}; });
+  }
+  function pdirLer(forcar){
+    var dia=PDIR_DIA;
+    if(!forcar && PDIR_CACHE.dados && PDIR_CACHE.dia===dia && (Date.now()-PDIR_CACHE.quando)<60000)
+      return Promise.resolve(PDIR_CACHE.dados);
+    if(!DB) return Promise.resolve(null);
+    var ed=(typeof empDataKey==='function')?empDataKey():dia;
+    var pEmp=Promise.all([pdirPega('daycare/almoco/'+ed), pdirPega('daycare/atividade/'+ed+'/almoco2'), pdirPega('daycare/avisos-comida/'+ed)])
+      .then(function(r){ return {ok:(r[0].ok&&r[1].ok&&r[2].ok), a1:r[0].v||{}, a2:r[1].v||{}, avisos:r[2].v||{}}; });
+    // Os orçamentos descem INTEIROS de propósito (sem limitToLast): dinheiro não aceita
+    // janela — um orçamento antigo, fechado, com entrada neste mês, é cobrança deste mês.
+    return Promise.all([
+      pdirPega('daycare/chamada/'+dia),
+      pdirPega('daycare/auditoria/'+dia),
+      pdirPega('auaulandia/orcamentos'),
+      pdirPega('daycare/pagamentos'),
+      pdirPega('daycare/plano-do-dia/'+dia),
+      pdirPega('daycare/config/planos'),
+      pEmp,
+      pdirPega('daycare/irmaos')
+    ]).then(function(r){
+      var d={dia:dia, chamada:r[0], aud:r[1], orc:r[2], pag:r[3], planoDia:r[4], planosCfg:r[5], emp:r[6], irm:r[7]};
+      PDIR_CACHE={quando:Date.now(), dia:dia, dados:d};
+      return d;
+    }).catch(function(e){ _logLeituraFalhou('Painel da Diretoria (leitura geral)', e); return null; });
+  }
+
+  // ------------------------------------------------------------------------ a tela toda
+  function pdirAbrir(forcar){
+    var raiz=document.getElementById('pdirRoot'); if(!raiz) return;
+    // A trava é a MESMA tabela que mostra o item do menu. Quem chegar por link direto e
+    // não puder ver, lê o porquê — nunca uma tela em branco.
+    if(!podePapel('painel-diretoria')){
+      raiz.innerHTML='<div class="pm-card"><h3 class="pm-tit">Esta tela é da Diretoria</h3>'
+        +'<p class="pm-sub">O Painel da Diretoria reúne a casa inteira e o dinheiro do mês. '
+        +'A mesa da Gestão é o Painel da Operação; a da Supervisão, o Painel da Supervisão; '
+        +'a de quem atende, o Painel das Consultoras; a rota de quem está com o FILHOt, o Meu Painel.</p></div>';
+      return;
+    }
+    PDIR_DIA=(typeof hojeISO==='function')?hojeISO():'';   // UM relógio para todos os quadros
+    var eu=(typeof quemSou==='function'?quemSou():'').trim();
+    if(!eu||eu==='-') eu='Diretoria';
+    if(!DB){
+      raiz.innerHTML='<div class="pm-card"><h3 class="pm-tit">Sem conexão com o banco agora</h3>'
+        +'<p class="pm-sub">Assim que a rede voltar, abra esta tela de novo. Este painel só observa — nada aqui grava.</p></div>';
+      return;
+    }
+    raiz.innerHTML=pdirSaudacaoHTML(eu)
+      +'<div class="pm-card"><p class="pm-sub">Ainda lendo a casa e o dinheiro do mês…</p></div>';
+    requestAnimationFrame(function(){ try{ pmAnimar(raiz); }catch(e){} /* silencioso de propósito: animação — falhar não pode derrubar a tela */ });
+    pdirLer(forcar===true).then(function(d){
+      if(!d){
+        raiz.innerHTML='<div class="pm-card"><h3 class="pm-tit">Não consegui ler o dia agora</h3>'
+          +'<p class="pm-sub">Nada foi perdido — este painel só observa. Abra a tela de novo em instantes.</p></div>';
+        return;
+      }
+      var carteiraLida=!(typeof CARTEIRA_CARREGADA!=='undefined'&&!CARTEIRA_CARREGADA);
+      var irmaosLidos=d.irm.ok;
+      // 1 · A casa em um olhar — as MESMAS contas das outras fatias, nunca uma nova.
+      var T=null;
+      try{ if(carteiraLida && d.chamada.ok) T=poTurma(d.chamada.v||{}); }catch(e){ T=null; }
+      var C=null;
+      try{ C=(typeof pcDadosCheckins==='function')?pcDadosCheckins():null; }catch(e){ C=null; }
+      var alm=null;
+      try{ alm=(typeof pcDadosAlmoco==='function')?pcDadosAlmoco(d.emp):null; }catch(e){ alm=null; }
+      var pend=null;
+      try{
+        // A soma só é afirmada quando as três fontes que a alimentam chegaram — a mesma
+        // razão pela qual o menu não acende badge no escuro.
+        if(typeof HOSP_PLANILHA!=='undefined'&&HOSP_PLANILHA===true
+           && !(typeof CF_ESTADIAS_LIDO!=='undefined'&&!CF_ESTADIAS_LIDO)
+           && carteiraLida && typeof contarPendencias==='function'){
+          var p=contarPendencias();
+          pend=p.conferir+p.saemHoje+p.naRecepcao+p.semCheckin+p.avisar+p.faltas+p.repComSaldo;
+        }
+      }catch(e){ pend=null; }
+      // 2 · As mesas — os números vivos de cada fatia.
+      var orcs=null;
+      try{ orcs=(d.orc.ok&&typeof pcDadosOrcamentos==='function')?pcDadosOrcamentos(d.orc.v||{}):null; }catch(e){ orcs=null; }
+      var a={
+        consultoras:(C?(pmPlural(C.faltam.length,'check-in a lançar','check-ins a lançar')):'check-ins ainda lendo')
+          +' · '+(orcs?pmPlural((orcs.pendentes||[]).length,'orçamento aguardando resposta','orçamentos aguardando resposta'):'orçamentos ainda lendo'),
+        supervisao:(alm?pmPlural(alm.prontos.length,'tutor a avisar no almoço','tutores a avisar no almoço'):'almoço ainda lendo')
+          +' · '+(pend==null?'pendências ainda lendo':pmPlural(pend,'pendência acesa no menu','pendências acesas no menu')),
+        operacao:(T?(pmPlural(T.faltas.length,'falta na chamada','faltas na chamada')+' · '+pmPlural(T.semMarcar,'ainda sem marcar','ainda sem marcar')):'a turma de hoje ainda lendo'),
+        monitor:(d.planoDia.ok
+          ? ((d.planoDia.v&&d.planoDia.v.plano)
+              ? ('o plano de hoje é '+(((d.planosCfg.v||{})[d.planoDia.v.plano]||{}).nome||d.planoDia.v.plano)
+                 +(d.planoDia.v.definidoPor?(', definido por '+d.planoDia.v.definidoPor):''))
+              : 'ainda sem plano definido para hoje')
+          : 'o plano do dia ainda lendo')
+      };
+      // 3 · O dinheiro do mês — só com a carteira INTEIRA lida; senão, o motivo escrito.
+      var mes=PDIR_DIA.slice(0,7);
+      var mesRotulo=pdirMesRotulo(mes);
+      var finHTML;
+      if(!d.orc.ok){
+        finHTML='<article class="pm-card pm-rv"><h3 class="pm-tit">Não consegui ler os orçamentos</h3>'
+          +'<p class="pm-sub">Sem essa leitura, o dinheiro da AuAulândia ficaria de fora e o total mentiria. Nenhum número parcial foi mostrado — abra a tela de novo em instantes.</p></article>';
+      } else if(!d.pag.ok){
+        finHTML='<article class="pm-card pm-rv"><h3 class="pm-tit">Não consegui ler os lançamentos de pagamento</h3>'
+          +'<p class="pm-sub">Sem essa leitura, "recebido" e "a receber" sairiam errados. Nenhum número parcial foi mostrado — abra a tela de novo em instantes.</p></article>';
+      } else if(!carteiraLida||!irmaosLidos){
+        finHTML='<article class="pm-card pm-rv"><h3 class="pm-tit">Ainda lendo a carteira</h3>'
+          +'<p class="pm-sub">Os números do dinheiro só aparecem com o cadastro inteiro e os vínculos de irmãos lidos — um total pela metade é pior do que nenhum. Abra a tela de novo em instantes.</p></article>';
+      } else {
+        var fin=pdirFinResumo(mes, PDIR_DIA, d.orc.v||{}, d.pag.v||null, d.irm.v||{});
+        var temPag=!!(d.pag.v&&Object.keys(d.pag.v).length);
+        finHTML=pdirFinHTML(fin, temPag, mesRotulo);
+      }
+      // 4 · Auditoria viva.
+      var falhas=d.aud.ok?pdirFalhasDeGravacao(d.aud.v||{}):null;
+      var bolso=0;
+      try{ bolso=(typeof _audFilaLer==='function')?(_audFilaLer()||[]).length:0; }catch(e){ bolso=0; }
+
+      raiz.innerHTML=pdirSaudacaoHTML(eu)
+        + pdirKPIsHTML({aulunos:(T?T.aulunos.length:null),
+                        hospedes:(C?C.total:null),
+                        feitos:(C?C.feitos:null),
+                        pend:pend})
+        +'<p class="pm-nota"><strong>Este painel só observa.</strong> Nenhum quadro daqui grava coisa alguma: cada um abre a tela onde a senhora decide — e lá fica o rastro de quem fez.</p>'
+        + poAreaHTML('AS MESAS','Os painéis de todos','A mesa das Consultoras, a da Supervisão, a da Operação e a fatia do monitor — com os números vivos de cada uma.', PO_IC_PATA)
+        + pdirAtalhosHTML(a)
+        + poAreaHTML('FINANCEIRO','O dinheiro de '+mesRotulo,'A conta inteira vem do módulo do financeiro, provado no harness: a receber por serviço, recebido, os maiores valores e o que a conta não cobre.', PDIR_IC_MOEDA)
+        + finHTML
+        + poAreaHTML('AUDITORIA VIVA','O que não gravou','As gravações que o banco recusou hoje — cada uma com o quê, quem e quando. Nada some calado.', PO_IC_ALERTA)
+        + pdirAuditoriaHTML(falhas, bolso);
+      requestAnimationFrame(function(){ try{ pmAnimar(raiz); }catch(e){} /* silencioso de propósito: animação — falhar não pode derrubar a tela */ });
+    });
+  }
+  // O ícone da moeda (mesmo traço dos ícones das áreas da Operação).
+  var PDIR_IC_MOEDA='<circle cx="16" cy="16" r="10.5" fill="none" stroke="currentColor" stroke-width="2.2"></circle>'
+    +'<path d="M16 10.5v11M12.8 13.2c0-1.5 1.4-2.7 3.2-2.7s3.2 1.2 3.2 2.7-1.4 2.3-3.2 2.8-3.2 1.3-3.2 2.8 1.4 2.7 3.2 2.7 3.2-1.2 3.2-2.7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"></path>';
 
   // INIT do Day Care (no fim: garante todas as variaveis e funcoes definidas)
   montarSubnav();
