@@ -2231,6 +2231,10 @@
           <a class="grp grp-sub nav-parent" data-acc-toggle="c-planos"><span>Planos e cobranças</span><span class="acc-caret" aria-hidden="true"></span></a>
           <div class="acc-panel">
           <a data-v="renovacao" class="so-gestao" title="Quem está no fim do plano."><span data-icon="card"></span><span>Renovação de planos</span></a>
+          <!-- LANÇAR PAGAMENTO (v-10) — nasce ESCONDIDO; quem mostra é aplicarPermMenu(),
+               lendo a tabela PERM ('lancar-pagamento'): a Central lança, a chefia confere,
+               o monitor não vê. Nada de classe so-* nova (regra 3 da Fase 2). -->
+          <a data-v="lancar-pagamento" style="display:none" title="O recebimento do plano vira registro — é o que faz o Financeiro sair de R$ 0,00."><span data-icon="dollar"></span><span>Lançar pagamento</span></a>
           <!-- Sem data-v de propósito: a tela ainda não existe. O clique não navega. -->
           <a class="so-gestao" style="opacity:.55;cursor:default" title="Quem deve no Day Care."><span data-icon="dollar-alert"></span><span>Em débito</span><span class="soon">em breve</span></a>
           </div>
@@ -4100,6 +4104,18 @@
     <div id="pdirRoot"><div class="pm-card"><div class="pm-sub">Carregando a casa e o dinheiro do mês…</div></div></div>
   </section>
 
+  <!-- ===== LANÇAR PAGAMENTO (v-10) =================================================
+       O recebimento vira registro no nó daycare/pagamentos — o MESMO que o
+       financeiro-logica.js lê. A consultora busca o FILHOt (irmãos aparecem como
+       família), o valor CHEIO vem da conta do Financeiro (aqui ninguém digita valor,
+       pagamento parcial não existe) e o registro sai com forma, data, quem e recibo
+       pronto para o tutor. Estornar é só da Gestão e da Diretoria, com motivo — e o
+       registro nunca some: fica riscado, com quem e por quê. -->
+  <section class="view" id="v-lancar-pagamento">
+    <div class="role-note"><span data-icon="dollar"></span><span><strong>O dinheiro que entrou vira registro.</strong> Busque o FILHOt, confira o valor do plano — calculado pela conta do Financeiro, nunca digitado — e registre a forma e a data do recebimento. É este lançamento que faz o "recebido" do mês sair de R$ 0,00.</span></div>
+    <div id="lpRoot"><div class="card"><div class="hint">Carregando…</div></div></div>
+  </section>
+
   <section class="view" id="v-sair"><div class="soon-box"><img class="ic-st" src="assets/simbolo.png" alt=""><div class="t">Sair</div><div class="d">No sistema real, encerra a sessão com segurança.</div></div></section>
 
   <!-- FOOTER KAIRÓS -->
@@ -4485,6 +4501,7 @@
     'painel-diretoria':['Painel da Diretoria','A casa inteira e o dinheiro do mês.'],
     consultoras:['Painel das Consultoras','A sua mesa do dia na Central.'],
     'painel-amanda':['Painel da Supervisão','Pendente e resolvido, com quem e quando.'],
+    'lancar-pagamento':['Lançar pagamento','O recebimento do plano vira registro — é o que faz o Financeiro sair de R$ 0,00.'],
     paineloperacao:['Painel da Operação','A casa de hoje: quem veio, o time, as noites e o acerto.'],
     planodia:['Escala e plano do dia','A escala de cada um e qual plano vale hoje.'],
     abertura:['Abertura do dia','Monitor 1: como a casa abre.'],sair:['Sair','Encerra a sessão neste aparelho.']};
@@ -4551,6 +4568,7 @@
     if(v==='alergia'){ if(typeof algCarregar==='function') algCarregar(); }
     if(v==='peso'){ if(typeof renderPesoTela==='function') renderPesoTela(); }
     if(v==='renovacao'){ if(typeof renderRenovacao==='function') renderRenovacao(); }
+    if(v==='lancar-pagamento'){ if(typeof lpAbrir==='function') lpAbrir(); }
     if(v==='daycare'){ if(typeof abrirDayCare==='function') abrirDayCare(); }
     if(v==='orcamento'){ if(typeof orcInit==='function') orcInit(); }
     if(v==='relatorios'){ if(typeof renderRelatorios==='function') renderRelatorios(); if(typeof orcCarregarLista==='function') orcCarregarLista(); }
@@ -4648,7 +4666,13 @@
     // a Adriana entra pela senha fixa como 'gestao' + souAdriana, e para a tabela ela
     // É a Diretoria (a MESMA régua do ehDiretoriaRole, que já guarda o excluir cadastro
     // e a senha da ponte).
-    'painel-diretoria':         ['diretoria']
+    'painel-diretoria':         ['diretoria'],
+    // ===== v-10 — Lançar pagamento (o recebimento vira registro) =====================
+    // A Central Zêluz lança (é quem recebe o tutor) e a chefia confere. O monitor não
+    // vê: dinheiro de cliente não é assunto da rota dele. ESTORNAR é decisão de chefia:
+    // só Gestão e Diretoria, sempre com motivo escrito — o registro nunca some.
+    'lancar-pagamento':         ['consultora','supervisor','gestao','diretoria'],
+    'estornar-pagamento':       ['gestao','diretoria']
   };
   // O papel de quem está no corpo, com a régua do ehDiretoriaRole: role 'diretoria' vale
   // por si; 'gestao' com souAdriana (a senha fixa da Adriana) É a Diretoria. A promoção
@@ -4676,7 +4700,7 @@
   // Nenhum dos dois entra em NAV_PAGINAS_ALL de propósito: "Meu Painel" é a fatia da
   // própria pessoa (não se concede a ninguém, é dela), e a escala é ajuste da Gestão —
   // mesma razão pela qual "Senhas" e "Configurações" também ficam fora daquela lista.
-  const PERM_MENU=[['painelmeu','painel-monitor'],['paineloperacao','painel-operacao'],['planodia','definir-plano-do-dia'],['consultoras','painel-consultoras'],['painel-amanda','painel-amanda'],['painel-diretoria','painel-diretoria']];
+  const PERM_MENU=[['painelmeu','painel-monitor'],['paineloperacao','painel-operacao'],['planodia','definir-plano-do-dia'],['consultoras','painel-consultoras'],['painel-amanda','painel-amanda'],['painel-diretoria','painel-diretoria'],['lancar-pagamento','lancar-pagamento']];
   function aplicarPermMenu(){
     PERM_MENU.forEach(function(par){
       document.querySelectorAll('#nav a[data-v="'+par[0]+'"]').forEach(function(a){
@@ -11882,7 +11906,7 @@
   // Agora existe um carimbo: esta constante é a versão que o aparelho está rodando, e o
   // Firebase guarda a versão publicada. Quando as duas diferem, aparece o aviso — mas
   // NUNCA recarrega sozinho: recarregar no meio de um check-in perderia o trabalho.
-  const APP_VERSAO='2026-09-07-03';
+  const APP_VERSAO='2026-09-07-04';
   function vigiarVersao(){
     if(!DB) return;
     try{
@@ -30168,6 +30192,455 @@
   function coEnviarWhats(){ window.open('https://wa.me/?text='+encodeURIComponent(coResumoTexto()),'_blank'); }
 
   /* ====================================================================================
+   * LANÇAR PAGAMENTO — o recebimento vira registro (v-10, 07/set/2026)
+   *
+   * A tela que alimenta o nó daycare/pagamentos/{AAAA-MM}/{id} — o MESMO nó que o
+   * financeiro-logica.js lê (finPagamentosDoMes). Sem ela, o "recebido" do Financeiro
+   * ficava em R$ 0,00 para sempre: o banco não tinha registro de pagamento nenhum.
+   *
+   * As três leis da Adriana (02/set/2026), que esta tela obedece sem exceção:
+   *   1. REGIME CAIXA — o plano inteiro (mensalidade × meses do compromisso) entra no
+   *      mês da renovação. Trimestral e semestral pagam TUDO à vista.
+   *   2. PAGAMENTO PARCIAL NÃO EXISTE — o valor é o CHEIO, calculado pela conta do
+   *      Financeiro. NÃO existe campo de valor nesta tela: a consultora não digita
+   *      valor, e o gate finLancamentoValido() barra qualquer diferença antes de gravar.
+   *   3. IRMÃOS — a família resolve a ordem sozinha (daycare/irmaos): 1 paga cheio,
+   *      os demais com o desconto da tabela. A tela mostra a família JUNTA, com o
+   *      valor conjunto, e grava UM registro por FILHOt (a conta confere por chave).
+   *
+   * Quem usa: a Central Zêluz lança (consultora, supervisão) e a chefia confere
+   * (gestão, diretoria). O monitor não vê. ESTORNAR é só da Gestão e da Diretoria,
+   * com motivo obrigatório — e o registro NUNCA some: ganha estornado=true, com quem
+   * e por quê, e sai de toda soma (finPagamentosDoMes pula estornados).
+   *
+   * O formato gravado (o que finPagamentosDoMes espera):
+   *   {chave, servico:'daycare', valor_cent, data, ref, forma, plano, quem, ts}
+   *   ref = o mês da cobrança (finMesDe(renov.inicio)) — pagamento atrasado conta no
+   *   mês certo, nunca no mês em que alguém lembrou de lançar.
+   *
+   * A reserva de hospedagem (AuAulândia) ainda NÃO se lança aqui: o dinheiro dela é
+   * por orçamento, não por plano — fica escrito na tela, nunca escondido.
+   * ================================================================================== */
+
+  var LP_SEL=-1;                                   // índice da ficha escolhida no array-mestre (nome sozinho não identifica ninguém)
+  var LP_CACHE={quando:0, irm:null, pag:null};     // null = a leitura FALHOU (diferente de {} = leu e não há nada)
+  var LP_RECIBO='';                                // o último recibo pronto (o botão copiar lê daqui)
+
+  function lpPode(){ return podePapel('lancar-pagamento'); }
+  function lpPodeEstornar(papel){ return podePapel('estornar-pagamento', papel); }
+  function lpFormaRotulo(f){
+    var m={pix:'Pix', 'cartão':'cartão', cartao:'cartão', dinheiro:'dinheiro'};
+    return m[String(f||'').toLowerCase()]||String(f||'');
+  }
+
+  // O pacote de dados que o finResumoMes espera — tudo do que o app já tem vivo, mais
+  // as duas leituras desta tela (irmãos e pagamentos). Nenhuma conta nasce aqui.
+  function lpDados(){
+    return {
+      cadastro:(typeof pelCadCache!=='undefined')?pelCadCache:{},
+      peludinhos:(typeof PELUDINHOS!=='undefined')?PELUDINHOS:[],
+      irmaos:LP_CACHE.irm||{},
+      orcamentos:{},          // a tela é dos PLANOS; a reserva de hospedagem tem a tela dela
+      pagamentos:LP_CACHE.pag||null,
+      planos:(typeof planos==='function')?planos():null,
+      descontoIrmao:(typeof DESC_PET_PLANO!=='undefined')?DESC_PET_PLANO:null
+    };
+  }
+
+  // ------------------------------------------------------------- as funções puras
+  // (é nelas que o harness morde — nenhuma lê tela, nenhuma lê banco)
+
+  // A família cobrável do FILHOt escolhido, pelos vínculos de daycare/irmaos.
+  // Menos de 2 aulunos cobráveis não é família para fins de cobrança (mesma régua do
+  // finOrdensFamilia). Ordem determinística (alfabética pela chave), nunca sorte.
+  function lpFamiliaDe(chave, cadastro, irmaos){
+    var grupos=finGruposFamilia(irmaos||{}), raizes=Object.keys(grupos), i, m, meus=null;
+    for(i=0;i<raizes.length && !meus;i++){
+      for(m=0;m<grupos[raizes[i]].length;m++) if(grupos[raizes[i]][m]===chave){ meus=grupos[raizes[i]]; break; }
+    }
+    if(!meus) return [chave];
+    var eleg=[];
+    for(m=0;m<meus.length;m++){
+      if(!finObj(cadastro)[meus[m]]) continue;
+      if(finCategoria(meus[m], cadastro)!=='auluno') continue;
+      eleg.push(meus[m]);
+    }
+    if(eleg.indexOf(chave)<0 || eleg.length<2) return [chave];
+    eleg.sort();
+    return eleg;
+  }
+
+  // A cobrança de UM FILHOt — tudo sai do finResumoMes: esta função não calcula valor
+  // nenhum, só acha a linha dele na conta provada. Devolve {ref, linha} ou {motivo}.
+  function lpCobrancaDe(chave, dados, hoje){
+    var cad=finObj(finObj(dados).cadastro);
+    var c=cad[chave];
+    if(!c) return {motivo:'não está no cadastro'};
+    if(c.inativo==='Sim') return {motivo:'está inativo — quem saiu não é cobrado'};
+    var cat=finCategoria(chave, cad);
+    if(cat!=='auluno') return {motivo: cat==='morador'?'é morador da casa — morador nunca gera cobrança'
+      :cat==='avulso'?'é avulso — sem mensalidade; o dia avulso se lança nos Lançamentos do dia'
+      :'é hóspede da AuAulândia — a reserva se acerta na tela de Orçamento de hospedagem'};
+    var r=finObj(c.renov);
+    var ref=finMesDe(r.inicio);
+    if(!ref) return {motivo:'sem plano com data de pagamento lançada — a renovação vem primeiro (Renovação de planos)'};
+    var R=finResumoMes(dados, ref, {hoje:hoje});
+    var i;
+    for(i=0;i<R.porFILHOt.length;i++) if(R.porFILHOt[i].chave===chave) return {ref:ref, linha:R.porFILHOt[i]};
+    for(i=0;i<R.semComoCalcular.length;i++) if(R.semComoCalcular[i].chave===chave) return {motivo:R.semComoCalcular[i].motivo};
+    return {motivo:'sem cobrança no mês do plano ('+ref+') — confira a ficha, na aba Plano'};
+  }
+
+  // A família inteira, cada um com a SUA cobrança (a renovação de cada irmão pode ter
+  // caído em mês diferente) — e o valor conjunto, somado ao centavo.
+  function lpCobrancasFamilia(chave, dados, hoje){
+    var cad=finObj(finObj(dados).cadastro);
+    var fam=lpFamiliaDe(chave, cad, finObj(dados).irmaos);
+    var out={membros:[], totalValor:0, totalFalta:0, abertos:0};
+    var i, cb, c;
+    for(i=0;i<fam.length;i++){
+      cb=lpCobrancaDe(fam[i], dados, hoje);
+      c=finObj(cad[fam[i]]);
+      out.membros.push({chave:fam[i], nome:String(c.n||fam[i].split('__')[0]),
+        tutor:String(c.tutor||fam[i].split('__')[1]||''), ref:cb.ref||'', linha:cb.linha||null, motivo:cb.motivo||''});
+      if(cb.linha){
+        out.totalValor+=cb.linha.valor; out.totalFalta+=cb.linha.falta;
+        if(cb.linha.falta>0) out.abertos++;
+      }
+    }
+    return out;
+  }
+
+  // Data do recebimento: hoje ou para trás — NUNCA futura. Devolve '' quando serve.
+  function lpDataValida(dataISO, hojeISO_){
+    if(!finEhISO(dataISO)) return 'escolha a data em que o dinheiro entrou';
+    if(finEhISO(hojeISO_) && dataISO>hojeISO_) return 'a data do recebimento não pode ser futura — dinheiro que ainda não entrou não se lança';
+    return '';
+  }
+
+  // O registro que vai para o banco — ou o motivo de NÃO ir. O valor NUNCA é
+  // parâmetro: sai da linha da conta (valor cheio, lei 2), e o gate
+  // finLancamentoValido barra qualquer cobrança que não esteja inteira em aberto.
+  function lpRegistroDe(linha, ref, dataISO, hojeISO_, forma, quem, ts){
+    if(!linha || !finEhMes(ref)) return {erro:'sem cobrança para registrar'};
+    var eData=lpDataValida(dataISO, hojeISO_);
+    if(eData) return {erro:eData};
+    var f=String(forma||'').trim();
+    if(!f) return {erro:'escolha a forma do pagamento'};
+    var gate=finLancamentoValido(linha.falta, linha.valor);
+    if(!gate.ok) return {erro:'só existe pagamento do valor cheio — '+gate.motivo};
+    return {chave:String(linha.chave), servico:'daycare', valor_cent:finCent(linha.valor),
+      data:dataISO, ref:ref, forma:f, plano:String(linha.plano||''),
+      quem:String(quem||'-'), ts:(typeof ts==='number'&&ts>0)?ts:Date.now()};
+  }
+
+  // O que o estorno grava POR CIMA do registro — nunca no lugar dele. O registro
+  // original fica intocado: valor, data, forma e quem lançou continuam lá.
+  function lpEstornoPatch(motivo, quem, ts){
+    var m=String(motivo||'').trim();
+    if(m.length<5) return {erro:'escreva o motivo do estorno — é ele que explica, depois, por que o valor saiu da conta'};
+    return {estornado:true, estorno_motivo:m, estorno_quem:String(quem||'-'),
+      estorno_ts:(typeof ts==='number'&&ts>0)?ts:Date.now()};
+  }
+
+  // O recibo pronto para o tutor — a voz da casa: agradece, confirma e diz até quando vale.
+  function lpReciboTexto(itens, forma, dataISO){
+    var lista=finLista(itens); if(!lista.length) return '';
+    var tutor=String(lista[0].tutor||'').trim().split(' ')[0];
+    var total=0, i;
+    for(i=0;i<lista.length;i++) total+=finCent(lista[i].valor);
+    var t='Olá'+(tutor?(', '+tutor):'')+'! Recebemos o pagamento de '+finBRL(total)
+      +' ('+lpFormaRotulo(forma)+'), em '+fmtBR(dataISO)+'. Está tudo certo:\n';
+    for(i=0;i<lista.length;i++){
+      t+='• '+lista[i].nome+' — plano '+lista[i].plano+', '+finBRL(lista[i].valor)
+        +(lista[i].fim?(', com vigência até '+fmtBR(lista[i].fim)):'')+'\n';
+    }
+    t+='Obrigada por confiar '+(lista.length>1?'os seus FILHOts':'o seu FILHOt')
+      +' à Zêluz. Aqui, cada cuidado é ÚNICO.';
+    return t;
+  }
+
+  // Todos os lançamentos do nó, achatados — os estornados INCLUSIVE (o histórico
+  // mostra tudo; quem pula estornado é a soma, dentro do finPagamentosDoMes).
+  function lpLancamentos(pag){
+    var raiz=finObj(pag), out=[], ks=Object.keys(raiz), i, j, b, ids, e2;
+    for(i=0;i<ks.length;i++){
+      if(finEhMes(ks[i])){
+        b=finObj(raiz[ks[i]]); ids=Object.keys(b);
+        for(j=0;j<ids.length;j++){
+          e2=b[ids[j]];
+          if(e2 && typeof e2==='object' && !finEhLista(e2)) out.push({ref:ks[i], id:ids[j], reg:e2});
+        }
+      } else if(raiz[ks[i]] && typeof raiz[ks[i]]==='object' && !finEhLista(raiz[ks[i]]) && raiz[ks[i]].valor_cent!==undefined){
+        out.push({ref:finEhMes(raiz[ks[i]].ref)?raiz[ks[i]].ref:finMesDe(raiz[ks[i]].data), id:ks[i], reg:raiz[ks[i]]});
+      }
+    }
+    out.sort(function(a,b2){ return ((b2.reg&&b2.reg.ts)||0)-((a.reg&&a.reg.ts)||0); });
+    return out;
+  }
+
+  // ---------------------------------------------------------------- leitura e travas
+  function lpLer(forcar){
+    if(!forcar && LP_CACHE.pag!==null && (Date.now()-LP_CACHE.quando)<30000) return Promise.resolve(LP_CACHE);
+    if(!DB){ LP_CACHE={quando:Date.now(), irm:null, pag:null}; return Promise.resolve(LP_CACHE); }
+    var pega=function(caminho){
+      return DB.ref(caminho).once('value').then(function(sn){ return {ok:true, v:sn.val()}; })
+        .catch(function(e){ _logLeituraFalhou(caminho+' (Lançar pagamento)', e); return {ok:false, v:null}; });
+    };
+    return Promise.all([pega('daycare/irmaos'), pega('daycare/pagamentos')]).then(function(r){
+      LP_CACHE={quando:Date.now(), irm:(r[0].ok?(r[0].v||{}):null), pag:(r[1].ok?(r[1].v||{}):null)};
+      return LP_CACHE;
+    });
+  }
+  // Faltou leitura = a conta não é afirmada. Nunca um valor pela metade nesta tela.
+  function lpTrava(){
+    if(typeof CARTEIRA_CARREGADA!=='undefined' && !CARTEIRA_CARREGADA) return 'O cadastro ainda não terminou de chegar — sem ele o valor sairia errado.';
+    if(LP_CACHE.irm===null) return 'Não consegui ler os vínculos de irmãos — sem eles o desconto de família sairia errado.';
+    if(LP_CACHE.pag===null) return 'Não consegui ler os lançamentos já feitos — sem eles a tela poderia cobrar duas vezes.';
+    return '';
+  }
+
+  // ------------------------------------------------------------------------ a tela
+  function lpAbrir(){
+    var raiz=document.getElementById('lpRoot'); if(!raiz) return;
+    // A trava é a MESMA tabela que mostra o item do menu. Quem chegar por link direto
+    // e não puder ver, lê o porquê — nunca uma tela em branco.
+    if(!lpPode()){
+      raiz.innerHTML='<div class="card"><h2 style="font-size:16px">Esta tela é da Central Zêluz e da chefia</h2>'
+        +'<div class="hint">Lançar pagamento é trabalho de quem recebe o tutor (consultora e supervisão) e de quem confere (gestão e diretoria).</div></div>';
+      return;
+    }
+    LP_SEL=-1; LP_RECIBO='';
+    raiz.innerHTML='<div class="card"><div class="hint">Lendo os lançamentos…</div></div>';
+    lpLer(true).then(function(){ lpRender(); });
+  }
+  function lpRender(){
+    var raiz=document.getElementById('lpRoot'); if(!raiz) return;
+    var trava=lpTrava();
+    if(trava){
+      raiz.innerHTML='<div class="card" style="border-left:4px solid var(--crm-critico)"><div class="hint">'
+        +esc(trava)+' Abra a tela de novo em instantes — aqui nenhum número sai pela metade.</div></div>';
+      return;
+    }
+    var h='<div class="card" style="border-left:4px solid var(--z-gold)">'
+      +'<h2 style="font-size:16px">De quem é o pagamento?</h2>'
+      +'<div class="hint">Busque pelo nome do FILHOt ou do tutor. Irmãos aparecem juntos, como família — 1 paga cheio e os demais têm o desconto da tabela, calculado sozinho.</div>'
+      +'<input class="cad-in" id="lpBusca" placeholder="nome do FILHOt ou do tutor" autocomplete="off" style="margin-top:8px" oninput="lpSugerir()">'
+      +'<div id="lpSug" style="display:flex;flex-wrap:wrap;gap:6px;margin-top:8px"></div>'
+      +'</div>'
+      +'<div id="lpStatus" class="hint" style="color:var(--crm-critico);font-weight:800"></div>'
+      +(LP_RECIBO?lpReciboHTML():'')
+      +(LP_SEL>=0?lpCobrancaHTML():'')
+      +lpHistoricoHTML();
+    raiz.innerHTML=h;
+  }
+  function lpStatus(txt){
+    var el=document.getElementById('lpStatus');
+    if(el){ el.textContent=txt||''; if(txt){ try{ el.scrollIntoView({behavior:'smooth',block:'center'}); }catch(e){} /* silencioso de propósito: enfeite de tela (foco, rolagem, mídia) — falhar não muda dado nenhum */ } }
+  }
+  function lpSugerir(){
+    var inp=document.getElementById('lpBusca'), box=document.getElementById('lpSug');
+    if(!inp||!box) return;
+    var q=jsNorm(String(inp.value||'').trim());
+    if(q.length<2){ box.innerHTML=''; return; }
+    var achados=(PELUDINHOS||[]).filter(function(p){
+      if(typeof pelInativo==='function' && pelInativo(p)) return false;
+      return jsNorm(((typeof pelNome==='function')?pelNome(p):p.n)||'').indexOf(q)>=0
+          || jsNorm((typeof pelGet==='function'?pelGet(p,'tutor'):'')||p.tutor||'').indexOf(q)>=0;
+    }).slice(0,8);
+    if(!achados.length){ box.innerHTML='<div class="hint">Ninguém com esse nome no cadastro. Se o FILHOt é novo, o cadastro vem primeiro — a busca nunca vira vínculo no chute.</div>'; return; }
+    box.innerHTML=achados.map(function(p){
+      // O ÍNDICE da ficha viaja junto (lei de 22/ago): o vínculo é com a ficha
+      // escolhida — nome sozinho não identifica ninguém.
+      var idx=PELUDINHOS.indexOf(p);
+      var tut=(typeof pelGet==='function'?pelGet(p,'tutor'):'')||p.tutor||'';
+      return '<button type="button" class="btn" style="background:var(--z-cream-warm);color:var(--z-blue);border:1.5px solid var(--line);padding:6px 12px;font-size:12.5px" onclick="lpEscolher('+idx+')">'
+        +esc(pelNome(p))+(tut?('<span style="color:var(--muted);font-weight:600"> · '+esc(tut)+'</span>'):'')+'</button>';
+    }).join('');
+  }
+  function lpEscolher(idx){
+    if(!(idx>=0)) return;
+    LP_SEL=idx; LP_RECIBO='';
+    lpRender();
+  }
+  function lpTrocar(){ LP_SEL=-1; LP_RECIBO=''; lpRender(); }
+
+  function lpCobrancaHTML(){
+    var p=(PELUDINHOS||[])[LP_SEL]; if(!p) return '';
+    var hoje=(typeof hojeISO==='function')?hojeISO():'';
+    var fam=lpCobrancasFamilia(pelKey(p), lpDados(), hoje);
+    var h='<div class="card" style="border-left:4px solid var(--z-blue)">'
+      +'<div style="display:flex;justify-content:space-between;gap:8px;align-items:baseline">'
+      +'<h2 style="font-size:16px">'+(fam.membros.length>1?'A família — e o valor conjunto':'O que há a receber')+'</h2>'
+      +'<button type="button" class="btn" style="background:none;border:none;color:var(--z-blue);text-decoration:underline;font-size:12.5px;font-weight:700;padding:0" onclick="lpTrocar()">trocar</button>'
+      +'</div>';
+    fam.membros.forEach(function(m){
+      if(m.linha){
+        h+='<div class="pair" style="padding:8px 0;border-bottom:1px solid var(--line)">'
+          +'<span class="k"><strong style="text-transform:capitalize">'+esc(m.nome)+'</strong> · plano '+esc(m.linha.plano)
+          +(m.linha.compromisso?(' ('+esc(m.linha.compromisso)+')'):'')+' · '+m.linha.aulas+'x por semana'
+          +((m.linha.ordemPet>1)?(' · '+m.linha.ordemPet+'º da família, desconto aplicado'):'')
+          +' · mês '+esc(m.ref)+'</span>'
+          +'<span class="val" style="font-variant-numeric:tabular-nums"><strong>'+esc(finBRL(m.linha.valor))+'</strong> · '
+          +(m.linha.falta===0
+            ?'<span style="color:var(--crm-ok);font-weight:800">pago</span>'
+            :'<span style="color:var(--z-gold-deep);font-weight:800">em aberto</span>')
+          +'</span></div>';
+      } else {
+        h+='<div class="pair" style="padding:8px 0;border-bottom:1px solid var(--line)">'
+          +'<span class="k"><strong style="text-transform:capitalize">'+esc(m.nome)+'</strong></span>'
+          +'<span class="val">fica de fora: '+esc(m.motivo)+'</span></div>';
+      }
+    });
+    if(fam.membros.length>1){
+      h+='<div class="pair" style="padding:9px 0">'
+        +'<span class="k"><strong>Total da família</strong></span>'
+        +'<span class="val" style="font-variant-numeric:tabular-nums"><strong>'+esc(finBRL(fam.totalValor))+'</strong>'
+        +(fam.totalFalta>0?(' · em aberto '+esc(finBRL(fam.totalFalta))):'')+'</span></div>';
+    }
+    h+='<div class="hint" style="margin-top:6px">O valor é o CHEIO, calculado pela conta do Financeiro — aqui ninguém digita valor, e pagamento parcial não existe. Trimestral e semestral pagam o período inteiro à vista.</div>';
+    if(fam.abertos>0){
+      h+='<label class="cad-lb" style="margin-top:10px;display:block">Quando o dinheiro entrou</label>'
+        +'<input type="date" class="cad-in" id="lpData" style="max-width:180px" value="'+escAttr(hoje)+'" max="'+escAttr(hoje)+'" min="2020-01-01" onkeydown="return dataSoNoCalendario(event)">'
+        +'<div class="hint" style="margin-top:3px">Pode ser para trás (o Pix de ontem) — nunca para a frente.</div>'
+        +'<button type="button" class="btn btn-gold" style="margin-top:10px;width:100%" onclick="lpRegistrar()">Registrar recebimento — '+esc(finBRL(fam.totalFalta))+'</button>';
+    } else if(fam.totalValor>0){
+      h+='<div class="hint" style="margin-top:8px;color:var(--crm-ok);font-weight:800">Está tudo pago — os lançamentos aparecem na lista abaixo.</div>';
+    }
+    h+='</div>';
+    return h;
+  }
+
+  function lpRegistrar(){
+    var p=(PELUDINHOS||[])[LP_SEL]; if(!p) return;
+    var hoje=(typeof hojeISO==='function')?hojeISO():'';
+    var data=String(((document.getElementById('lpData')||{}).value)||'').trim();
+    var eData=lpDataValida(data, hoje);
+    if(eData){ lpStatus(eData); return; }
+    var fam=lpCobrancasFamilia(pelKey(p), lpDados(), hoje);
+    var abertos=fam.membros.filter(function(m){ return m.linha && m.linha.falta>0; });
+    if(!abertos.length){ lpStatus('Não há valor em aberto para registrar.'); return; }
+    var linhas=['Total: '+finBRL(fam.totalFalta)+', com data de '+fmtBR(data)+'.'];
+    abertos.forEach(function(m){ linhas.push(m.nome+' — plano '+m.linha.plano+', '+finBRL(m.linha.falta)+'.'); });
+    zEscolha('Como o tutor pagou?', linhas, [
+      {t:'Pix', cor:'#234D67', fn:function(){ lpGravar('pix'); }},
+      {t:'Cartão', cor:'#234D67', fn:function(){ lpGravar('cartão'); }},
+      {t:'Dinheiro', cor:'#234D67', fn:function(){ lpGravar('dinheiro'); }},
+      {t:'Outra forma (boleto, transferência)', cor:'#6b5f4b', fn:function(){
+        zTexto('Qual foi a forma?', ['Escreva como o pagamento entrou — por exemplo: boleto, transferência.'],
+          {minimo:3, rotulo:'Forma do pagamento', botao:'Confirmar'})
+          .then(function(v){ if(v) lpGravar(v); });
+      }},
+      {t:'Cancelar — não registrar nada', cor:'#6b5f4b', fn:function(){}}
+    ]);
+  }
+
+  function lpGravar(forma){
+    var p=(PELUDINHOS||[])[LP_SEL]; if(!p) return;
+    if(!DB){ lpStatus('Sem conexão com o banco agora — NADA foi registrado. Tente de novo quando a rede voltar.'); return; }
+    var hoje=(typeof hojeISO==='function')?hojeISO():'';
+    var data=String(((document.getElementById('lpData')||{}).value)||'').trim();
+    var fam=lpCobrancasFamilia(pelKey(p), lpDados(), hoje);
+    var abertos=fam.membros.filter(function(m){ return m.linha && m.linha.falta>0; });
+    if(!abertos.length){ lpStatus('Não há valor em aberto para registrar.'); return; }
+    var pacotes=[], i, r;
+    for(i=0;i<abertos.length;i++){
+      r=lpRegistroDe(abertos[i].linha, abertos[i].ref, data, hoje, forma, quemSou(), Date.now());
+      if(r.erro){ lpStatus(r.erro); return; }
+      pacotes.push({reg:r, nome:abertos[i].nome, tutor:abertos[i].tutor,
+        fim:(abertos[i].linha.vigencia||{}).fim||''});
+    }
+    lpStatus('Registrando…');
+    Promise.all(pacotes.map(function(o){
+      return DB.ref('daycare/pagamentos/'+o.reg.ref).push(o.reg).then(function(){
+        try{ audit('pagamento', o.nome+' — '+finBRL(o.reg.valor_cent)+' ('+lpFormaRotulo(o.reg.forma)+') em '+o.reg.data+', plano '+o.reg.plano+', mês '+o.reg.ref,
+          {pet:o.nome, tutor:o.tutor, valor:finBRL(o.reg.valor_cent), forma:o.reg.forma, ref:o.reg.ref}); }catch(e){} /* silencioso de propósito: o audit() tem bolso próprio e reenvia sozinho — falhar aqui não pode travar a ação */
+      });
+    })).then(function(){
+      LP_RECIBO=lpReciboTexto(pacotes.map(function(o){
+        return {nome:o.nome, tutor:o.tutor, plano:o.reg.plano, valor:o.reg.valor_cent, fim:o.fim};
+      }), forma, data);
+      return lpLer(true);
+    }).then(function(){ lpRender(); })
+    .catch(function(e){
+      _logFalhaGrav('daycare/pagamentos ('+pacotes.map(function(o){ return o.nome; }).join(', ')+')', e);
+      lpLer(true).then(function(){ lpRender(); lpStatus('O banco recusou a gravação — o recibo NÃO saiu. Confira na lista abaixo o que chegou a entrar antes de tentar de novo; o rastro ficou na auditoria.'); });
+    });
+  }
+
+  function lpReciboHTML(){
+    return '<div class="card" style="border-left:4px solid var(--crm-ok)">'
+      +'<h2 style="font-size:16px">Registrado — o recibo do tutor</h2>'
+      +'<div class="hint">O pagamento entrou na conta do mês. Envie a confirmação ao tutor:</div>'
+      +'<textarea class="gest-txt" id="lpReciboTxt" readonly rows="7" style="width:100%;margin-top:8px">'+esc(LP_RECIBO)+'</textarea>'
+      +'<button type="button" class="btn btn-gold" style="margin-top:8px" onclick="lpCopiarRecibo(this)">Copiar para enviar ao tutor</button>'
+      +'</div>';
+  }
+  function lpCopiarRecibo(btn){
+    var txt=LP_RECIBO;
+    var pronto=function(){ btn.textContent='Copiado'; setTimeout(function(){ btn.textContent='Copiar para enviar ao tutor'; },1600); };
+    var naMao=function(){
+      var ta=document.getElementById('lpReciboTxt');
+      if(ta){ ta.select(); try{ document.execCommand('copy'); pronto(); }catch(e){ btn.textContent='Selecione o texto e copie'; } }
+    };
+    if(navigator.clipboard&&navigator.clipboard.writeText) navigator.clipboard.writeText(txt).then(pronto).catch(naMao); else naMao();
+  }
+
+  function lpHistoricoHTML(){
+    var mes=String((typeof hojeISO==='function')?hojeISO():'').slice(0,7);
+    var chaveSel=(LP_SEL>=0&&(PELUDINHOS||[])[LP_SEL])?pelKey(PELUDINHOS[LP_SEL]):'';
+    var todos=lpLancamentos(LP_CACHE.pag||{});
+    var lista=todos.filter(function(o){ return chaveSel?(String(o.reg.chave||'')===chaveSel):(o.ref===mes); });
+    var titulo=chaveSel?'Os lançamentos deste FILHOt':'Os lançamentos do mês';
+    var h='<div class="card"><h2 style="font-size:16px">'+titulo+'</h2>';
+    if(!lista.length){
+      h+='<div class="hint">'+(chaveSel?'Nenhum pagamento lançado para este FILHOt ainda.':'Nenhum pagamento lançado neste mês ainda — é este registro que faz o "recebido" do Financeiro sair de R$ 0,00.')+'</div></div>';
+      return h;
+    }
+    h+='<div class="hint">Estornar é só da Gestão e da Diretoria, com motivo — o registro não some: fica riscado, com quem estornou e por quê.</div>';
+    lista.slice(0,30).forEach(function(o){
+      var cad=finObj((typeof pelCadCache!=='undefined')?pelCadCache:{})[String(o.reg.chave||'')]||{};
+      var nome=String(cad.n||String(o.reg.chave||'').split('__')[0]||'');
+      var est=(o.reg.estornado===true);
+      h+='<div class="pair" style="padding:8px 0;border-bottom:1px solid var(--line)'+(est?';opacity:.62':'')+'">'
+        +'<span class="k"'+(est?' style="text-decoration:line-through"':'')+'><strong style="text-transform:capitalize">'+esc(nome)+'</strong> · '
+        +esc(finBRL(o.reg.valor_cent))+' ('+esc(lpFormaRotulo(o.reg.forma))+') · '+esc(fmtBR(o.reg.data)||String(o.reg.data||''))
+        +' · mês '+esc(o.ref)+' · por '+esc(o.reg.quem||'-')+'</span>'
+        +'<span class="val">'
+        +(est?'<span style="color:var(--crm-critico);font-weight:800">estornado</span>'
+             :(lpPodeEstornar()
+                ?('<button type="button" class="btn" style="background:none;border:1.5px solid var(--crm-critico);color:var(--crm-critico);padding:5px 12px;font-size:12px;font-weight:800" onclick="lpEstornar(\''+escAttr(o.ref)+'\',\''+escAttr(o.id)+'\')">Estornar</button>')
+                :'<span style="color:var(--crm-ok);font-weight:800">registrado</span>'))
+        +'</span></div>'
+        +(est?('<div class="hint" style="margin-top:2px">Estornado por '+esc(o.reg.estorno_quem||'-')+': '+esc(o.reg.estorno_motivo||'')+'</div>'):'');
+    });
+    if(lista.length>30) h+='<div class="hint" style="margin-top:6px">E mais '+(lista.length-30)+' — o detalhe completo mora no Painel da Diretoria.</div>';
+    h+='</div>';
+    return h;
+  }
+
+  function lpEstornar(ref, id){
+    if(!lpPodeEstornar()){ lpStatus('Estornar é só da Gestão e da Diretoria.'); return; }
+    zTexto('Por que estornar este lançamento?',
+      ['O registro não some: fica riscado, com o seu nome e este motivo. É assim que a conta do mês continua conferível.'],
+      {minimo:5, rotulo:'Motivo do estorno', botao:'Estornar'}).then(function(motivo){
+      if(!motivo) return;
+      var patch=lpEstornoPatch(motivo, quemSou(), Date.now());
+      if(patch.erro){ lpStatus(patch.erro); return; }
+      if(!DB){ lpStatus('Sem conexão com o banco agora — nada foi estornado.'); return; }
+      DB.ref('daycare/pagamentos/'+ref+'/'+id).update(patch).then(function(){
+        try{ audit('pagamento-estornado', 'lançamento '+id+' do mês '+ref+' — '+patch.estorno_motivo,
+          {ref:ref, id:id, motivo:patch.estorno_motivo}); }catch(e){} /* silencioso de propósito: o audit() tem bolso próprio e reenvia sozinho — falhar aqui não pode travar a ação */
+        return lpLer(true);
+      }).then(function(){ lpRender(); })
+      .catch(function(e){
+        _logFalhaGrav('daycare/pagamentos/'+ref+'/'+id+' (estorno)', e);
+        lpStatus('O banco recusou o estorno — nada mudou. Tente de novo em instantes.');
+      });
+    });
+  }
+
+  /* ====================================================================================
    * MEU PAINEL — a fatia do Monitor (Fase 2.1)
    *
    * A tese da Adriana virada tela: "o aplicativo é uma ferramenta de feedback, de algum
@@ -32952,7 +33425,7 @@
       +'<span>a receber em '+esc(mesRotulo)+' — Day Care '+esc(finBRL(dc.aReceber))+' ('+dc.quantos+') · AuAulândia '+esc(finBRL(aua.aReceber))+' ('+aua.quantos+')</span></div>'
       +'<div class="pm-tile"><b>'+esc(finBRL(r.recebidoTotal))+'</b>'
       +'<span>recebido em '+esc(mesRotulo)
-      +(temPagamentos?'':' — sem lançamentos de pagamento ainda: a tela de lançar chega na próxima versão')
+      +(temPagamentos?'':' — sem lançamentos de pagamento ainda: lance em Planos e cobranças, na tela Lançar pagamento')
       +'</span></div>'
       +'</div></div>';
     h+='<article class="pm-card pm-rv"><h3 class="pm-tit">Maiores valores a receber</h3>'

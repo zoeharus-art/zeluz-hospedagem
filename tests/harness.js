@@ -9115,6 +9115,226 @@ async function main() {
   }
   console.log('');
 
+  // ===================================================================================
+  // v-10 · LANÇAR PAGAMENTO — o recebimento vira registro (07/set/2026)
+  // A tela que alimenta daycare/pagamentos. As mordidas cobram as três leis da Adriana
+  // (02/set): valor cheio não digitável, parcial impossível, família com o desconto
+  // certo ao centavo — e mais: estorno só de chefia com motivo e histórico intocável,
+  // data futura recusada, e o recebido aparecendo no finResumoMes ao centavo.
+  // ===================================================================================
+  console.log('v-10 · Lançar pagamento — menu, permissão e tela:');
+  {
+    check('mordida — o item do menu nasce escondido e é a tabela quem o mostra (PERM_MENU)',
+      /\['lancar-pagamento','lancar-pagamento'\]/.test(html) &&
+      /<a data-v="lancar-pagamento" style="display:none"/.test(html));
+    check('o item mora no grupo Planos e cobranças, entre a Renovação e o Em débito',
+      html.indexOf('data-v="renovacao"') < html.indexOf('data-v="lancar-pagamento"') &&
+      html.indexOf('data-v="lancar-pagamento"') < html.indexOf('Em débito'));
+    check('a tela v-lancar-pagamento existe e tem título no mapa (fonte única titles)',
+      /<section class="view" id="v-lancar-pagamento">/.test(html) &&
+      /'lancar-pagamento':\['Lançar pagamento'/.test(html));
+    check('abrir a tela chama lpAbrir (a lista única de ganchos)',
+      /if\(v==='lancar-pagamento'\)\{ if\(typeof lpAbrir==='function'\) lpAbrir\(\); \}/.test(html));
+    check('lpAbrir se tranca pela mesma tabela (link direto não fura a permissão)',
+      /function lpAbrir\([\s\S]{0,400}?lpPode\(\)/.test(html) &&
+      /function lpPode\(\)\{ return podePapel\('lancar-pagamento'\); \}/.test(html));
+    check('quem lança: consultora, supervisão, gestão e diretoria — a Central lança, a chefia confere',
+      ['consultora', 'supervisor', 'gestao', 'diretoria'].every((p) => ctx.podePapel('lancar-pagamento', p) === true));
+    check('mordida — o monitor NÃO vê (nem plantonista, aprendiz, vet, conferência, tutor)',
+      ['monitor', 'plantonista', 'aprendiz', 'vet', 'conferencia', 'tutor', ''].every((p) => ctx.podePapel('lancar-pagamento', p) === false));
+    check('mordida — ESTORNAR é só da Gestão e da Diretoria (a consultora lança, não desfaz)',
+      ['gestao', 'diretoria'].every((p) => ctx.podePapel('estornar-pagamento', p) === true) &&
+      ['consultora', 'supervisor', 'monitor', 'plantonista', 'vet', ''].every((p) => ctx.podePapel('estornar-pagamento', p) === false));
+  }
+  console.log('');
+
+  console.log('v-10 · a fatia do código — o que ela pode e o que ela nunca faz:');
+  {
+    const iniLP = html.indexOf('LANÇAR PAGAMENTO — o recebimento vira registro (v-10');
+    const fimLP = html.indexOf('MEU PAINEL — a fatia do Monitor (Fase 2.1)', iniLP);
+    const fatiaLP = (iniLP >= 0 && fimLP > iniLP) ? html.slice(iniLP, fimLP) : '';
+    check('a fatia do módulo novo existe no código', fatiaLP.length > 4000, String(fatiaLP.length));
+    const escritas = fatiaLP.match(/DB\.ref\('([^']*)'[^)]*\)\.(set|update|push|remove|transaction)\b/g) || [];
+    check('mordida — TODA gravação da fatia mira daycare/pagamentos (nenhum outro nó)',
+      escritas.length >= 2 && escritas.every((e) => e.indexOf("'daycare/pagamentos/'") >= 0),
+      JSON.stringify(escritas));
+    check('o lançamento entra com push (id novo) e o estorno com update (por cima, nunca no lugar)',
+      /DB\.ref\('daycare\/pagamentos\/'\+o\.reg\.ref\)\.push\(o\.reg\)/.test(fatiaLP) &&
+      /DB\.ref\('daycare\/pagamentos\/'\+ref\+'\/'\+id\)\.update\(patch\)/.test(fatiaLP));
+    check('toda gravação que falha deixa rastro (_logFalhaGrav) e toda ação crítica audita (pagamento, pagamento-estornado)',
+      /_logFalhaGrav\('daycare\/pagamentos/.test(fatiaLP) &&
+      /audit\('pagamento',/.test(fatiaLP) && /audit\('pagamento-estornado',/.test(fatiaLP));
+    check('toda leitura que falha é registrada (nunca falha calada)',
+      /_logLeituraFalhou\(caminho\+' \(Lançar pagamento\)'/.test(fatiaLP));
+    check('só lê com once (nenhum ouvinte novo pendurado)', !/\.on\('value'/.test(fatiaLP));
+    check('a fatia não usa confirm/prompt/alert do navegador (as perguntas são da casa: zEscolha e zTexto)',
+      !/\b(confirm|prompt|alert)\(/.test(fatiaLP) &&
+      /zEscolha\('Como o tutor pagou\?'/.test(fatiaLP) && /zTexto\('Por que estornar/.test(fatiaLP));
+    check('mordida — VALOR NÃO SE DIGITA: nenhum campo de valor na fatia nem na tela (só a busca e a data)',
+      fatiaLP.indexOf('type="number"') < 0 && fatiaLP.indexOf('lpValor') < 0 &&
+      (fatiaLP.match(/<input/g) || []).length === 2 &&
+      fatiaLP.indexOf('id="lpBusca"') >= 0 && fatiaLP.indexOf('id="lpData"') >= 0);
+    check('a data já nasce travada no calendário: max de hoje (futuro não se escolhe nem no campo)',
+      /id="lpData"[^>]*max="'\+escAttr\(hoje\)\+'"/.test(fatiaLP));
+    check('mordida — o dinheiro vem SÓ do módulo do financeiro (finBRL, finResumoMes, finLancamentoValido)',
+      fatiaLP.indexOf('finBRL(') >= 0 && fatiaLP.indexOf('finResumoMes(') >= 0 &&
+      fatiaLP.indexOf('finLancamentoValido(') >= 0 && fatiaLP.indexOf("'R$") < 0);
+    check('mordida — nenhum "balcão" e nenhum emoji no módulo novo (a voz é a da casa)',
+      !/balc/i.test(fatiaLP) && !/[\u{1F000}-\u{1FAFF}\u2700-\u27BF\u2B00-\u2BFF]/u.test(fatiaLP));
+    check('faltou leitura = a conta não é afirmada (lpTrava cobre carteira, irmãos e pagamentos)',
+      /function lpTrava\(\)/.test(fatiaLP) &&
+      /CARTEIRA_CARREGADA/.test(fatiaLP) &&
+      /irm===null/.test(fatiaLP) && /pag===null/.test(fatiaLP));
+    check('a busca viaja com o ÍNDICE da ficha (nome sozinho não identifica ninguém) e nunca vira vínculo no chute',
+      /PELUDINHOS\.indexOf\(p\)/.test(fatiaLP) && /lpEscolher\('\+idx\+'\)/.test(fatiaLP) &&
+      fatiaLP.indexOf('a busca nunca vira vínculo no chute') >= 0);
+  }
+  console.log('');
+
+  console.log('v-10 · as leis do dinheiro na prática — mordidas ao centavo:');
+  if (typeof ctx.lpRegistroDe !== 'function' || typeof ctx.lpCobrancasFamilia !== 'function') {
+    check('as funções puras do v-10 existem no sandbox', false, 'lpRegistroDe/lpCobrancasFamilia não carregaram');
+  } else {
+    const HOJE_LP = '2026-09-07';
+    // Ayla e Bento são irmãos (vínculo em daycare/irmaos), Silver 3x mensal, SEM ordemPet:
+    // a família resolve sozinha (lei 3). Caju é Gold 2x TRIMESTRAL (lei 1: paga os 3 meses
+    // à vista). Contas feitas à mão ANTES do teste:
+    //   Ayla  (1º da família) . 73.700
+    //   Bento (2º, -7%) ....... 68.541   (73.700 × 0,93)
+    //   família ............... 142.241 = R$ 1.422,41
+    //   Caju .................. 58.900 × 3 = 176.700 = R$ 1.767,00
+    const CADLP = {
+      'ayla__x': { n: 'Ayla', tutor: 'Xuxa Lima', dias: ['seg', 'qua', 'sex'],
+        renov: { plano: 'Silver', inicio: '2026-08-01', aulas: 3 } },
+      'bento__x': { n: 'Bento', tutor: 'Xuxa Lima', dias: ['seg', 'qua', 'sex'],
+        renov: { plano: 'Silver', inicio: '2026-08-01', aulas: 3 } },
+      'caju__z': { n: 'Caju', tutor: 'Zeca Souza', dias: ['ter', 'qui'],
+        renov: { plano: 'Gold', inicio: '2026-08-10', aulas: 2, ordemPet: 1 } },
+      'repolho__zeluz': { n: 'Repolho', tutor: 'Zêluz', renov: { plano: 'morador' } },
+    };
+    const IRMLP = { v1: { a: 'ayla__x', b: 'bento__x' } };
+    const dadosLP = (pag) => ({ cadastro: CADLP, irmaos: IRMLP, orcamentos: {}, pagamentos: pag || null });
+
+    // ---- família: quem é família, e o valor conjunto ao centavo ----
+    check('lpFamiliaDe: os irmãos viram família (ordem determinística) e quem não tem vínculo fica sozinho',
+      JSON.stringify(ctx.lpFamiliaDe('bento__x', CADLP, IRMLP)) === JSON.stringify(['ayla__x', 'bento__x']) &&
+      JSON.stringify(ctx.lpFamiliaDe('caju__z', CADLP, IRMLP)) === JSON.stringify(['caju__z']));
+    const famLP = ctx.lpCobrancasFamilia('bento__x', dadosLP(), HOJE_LP);
+    check('mordida — família com o desconto certo ao centavo: 1º cheio (R$ 737,00) + 2º com 7% (R$ 685,41)',
+      famLP.membros.length === 2 &&
+      famLP.membros[0].linha && famLP.membros[0].linha.valor === 73700 &&
+      famLP.membros[1].linha && famLP.membros[1].linha.valor === 68541,
+      JSON.stringify(famLP.membros.map((m) => m.linha && m.linha.valor)));
+    check('o valor conjunto da família soma ao centavo: R$ 1.422,41',
+      famLP.totalValor === 142241 && ctx.finBRL(famLP.totalValor) === 'R$ 1.422,41' && famLP.abertos === 2,
+      ctx.finBRL(famLP.totalValor));
+    const cbCaju = ctx.lpCobrancaDe('caju__z', dadosLP(), HOJE_LP);
+    check('trimestral paga TUDO à vista: o Gold 2x cobra R$ 1.767,00 (3 meses) no mês da renovação',
+      cbCaju.linha && cbCaju.linha.valor === 176700 && cbCaju.ref === '2026-08',
+      JSON.stringify([cbCaju.ref, cbCaju.linha && cbCaju.linha.valor]));
+    check('morador não vira cobrança — a tela diz o porquê em vez de inventar valor',
+      !ctx.lpCobrancaDe('repolho__zeluz', dadosLP(), HOJE_LP).linha &&
+      /morador/.test(ctx.lpCobrancaDe('repolho__zeluz', dadosLP(), HOJE_LP).motivo));
+
+    // ---- o registro: valor cheio, nunca digitado; data nunca futura ----
+    const linhaAyla = famLP.membros[0].linha, linhaBento = famLP.membros[1].linha;
+    const regAyla = ctx.lpRegistroDe(linhaAyla, famLP.membros[0].ref, '2026-09-05', HOJE_LP, 'pix', 'Amanda Silva', 1000);
+    check('o registro sai no formato que finPagamentosDoMes espera, com o valor CHEIO da conta',
+      !regAyla.erro && regAyla.chave === 'ayla__x' && regAyla.valor_cent === 73700 &&
+      regAyla.servico === 'daycare' && regAyla.ref === '2026-08' && regAyla.data === '2026-09-05' &&
+      regAyla.forma === 'pix' && regAyla.quem === 'Amanda Silva' && regAyla.ts === 1000,
+      JSON.stringify(regAyla));
+    check('mordida — VALOR NÃO É PARÂMETRO: lpRegistroDe não tem por onde receber um valor digitado',
+      ctx.lpRegistroDe.length === 7 &&
+      String(ctx.lpRegistroDe).indexOf('valor_cent:finCent(linha.valor)') >= 0);
+    check('mordida — pagamento PARCIAL é impossível: cobrança que não está inteira em aberto é barrada com o motivo',
+      /falta R\$ 1,00/.test(ctx.lpRegistroDe({ chave: 'a', plano: 'Silver', valor: 73700, falta: 73600 },
+        '2026-08', '2026-09-05', HOJE_LP, 'pix', 'A', 1).erro || '') &&
+      /passa R\$ 1,00/.test(ctx.lpRegistroDe({ chave: 'a', plano: 'Silver', valor: 73700, falta: 73800 },
+        '2026-08', '2026-09-05', HOJE_LP, 'pix', 'A', 1).erro || ''),
+      JSON.stringify(ctx.lpRegistroDe({ chave: 'a', plano: 'Silver', valor: 73700, falta: 73600 }, '2026-08', '2026-09-05', HOJE_LP, 'pix', 'A', 1)));
+    check('mordida — data FUTURA recusada; hoje e para trás servem; sem forma não grava',
+      /futura/.test(ctx.lpRegistroDe(linhaAyla, '2026-08', '2026-09-08', HOJE_LP, 'pix', 'A', 1).erro || '') &&
+      !ctx.lpRegistroDe(linhaAyla, '2026-08', HOJE_LP, HOJE_LP, 'pix', 'A', 1).erro &&
+      !ctx.lpRegistroDe(linhaAyla, '2026-08', '2026-08-30', HOJE_LP, 'pix', 'A', 1).erro &&
+      /forma/.test(ctx.lpRegistroDe(linhaAyla, '2026-08', '2026-09-05', HOJE_LP, '', 'A', 1).erro || ''));
+    check('lpDataValida sozinha também recusa lixo e futuro (é ela que a tela consulta antes de perguntar a forma)',
+      ctx.lpDataValida('2026-09-08', HOJE_LP) !== '' && ctx.lpDataValida('amanhã', HOJE_LP) !== '' &&
+      ctx.lpDataValida(HOJE_LP, HOJE_LP) === '');
+
+    // ---- o recebido aparece na conta, ao centavo ----
+    const regBento = ctx.lpRegistroDe(linhaBento, famLP.membros[1].ref, '2026-09-05', HOJE_LP, 'pix', 'Amanda Silva', 2000);
+    const pagLP = { '2026-08': { p1: regAyla, p2: regBento } };
+    const rPago = ctx.finResumoMes(dadosLP(pagLP), '2026-08', { hoje: HOJE_LP });
+    check('mordida — o lançamento da tela aparece no finResumoMes ao centavo (recebido R$ 1.422,41)',
+      rPago.recebidoTotal === 142241, ctx.finBRL(rPago.recebidoTotal));
+    check('as duas cobranças da família viram "pago" e saem do "a receber"',
+      rPago.porFILHOt.filter((o) => o.chave === 'ayla__x' || o.chave === 'bento__x')
+        .every((o) => o.situacao === 'pago' && o.falta === 0));
+    const famPaga = ctx.lpCobrancasFamilia('bento__x', dadosLP(pagLP), HOJE_LP);
+    check('a tela, relendo, mostra a família paga (nada em aberto para registrar duas vezes)',
+      famPaga.abertos === 0 && famPaga.totalFalta === 0);
+
+    // ---- estorno: só chefia, com motivo, e o histórico fica intocável ----
+    check('estorno sem motivo (ou motivo curto) é barrado antes de tocar no banco',
+      !!ctx.lpEstornoPatch('', 'Márcia', 1).erro && !!ctx.lpEstornoPatch('ok', 'Márcia', 1).erro);
+    const patchLP = ctx.lpEstornoPatch('Pix devolvido ao tutor — valor lançado em duplicidade', 'Márcia', 3000);
+    check('o estorno é um remendo POR CIMA: não carrega valor, chave nem data (o registro original fica intocado)',
+      patchLP.estornado === true && patchLP.estorno_quem === 'Márcia' && patchLP.estorno_ts === 3000 &&
+      patchLP.valor_cent === undefined && patchLP.chave === undefined && patchLP.data === undefined,
+      JSON.stringify(patchLP));
+    const pagEstornado = { '2026-08': { p1: regAyla, p2: Object.assign({}, regBento, patchLP) } };
+    const rEstorno = ctx.finResumoMes(dadosLP(pagEstornado), '2026-08', { hoje: HOJE_LP });
+    check('mordida — estornado sai de TODA soma ao centavo: recebido volta a R$ 737,00 e o Bento reabre',
+      rEstorno.recebidoTotal === 73700 &&
+      rEstorno.porFILHOt.filter((o) => o.chave === 'bento__x').every((o) => o.situacao === 'aberto' && o.falta === 68541),
+      ctx.finBRL(rEstorno.recebidoTotal));
+    check('finPagamentosDoMes pula o estornado, mas o registro CONTINUA no nó com tudo que tinha',
+      ctx.finPagamentosDoMes(pagEstornado, '2026-08').length === 1 &&
+      pagEstornado['2026-08'].p2.valor_cent === 68541 && pagEstornado['2026-08'].p2.quem === 'Amanda Silva' &&
+      pagEstornado['2026-08'].p2.data === '2026-09-05');
+    check('o histórico da tela mostra TUDO — estornado inclusive, mais recente primeiro',
+      ctx.lpLancamentos(pagEstornado).length === 2 &&
+      ctx.lpLancamentos(pagEstornado)[0].id === 'p2' &&
+      ctx.lpLancamentos(pagEstornado)[0].reg.estornado === true);
+
+    // ---- o recibo: a voz da casa, com o formato completo ----
+    const recibo = ctx.lpReciboTexto([
+      { nome: 'Ayla', tutor: 'Xuxa Lima', plano: 'Silver', valor: 73700, fim: '2026-08-31' },
+      { nome: 'Bento', tutor: 'Xuxa Lima', plano: 'Silver', valor: 68541, fim: '2026-08-31' },
+    ], 'pix', '2026-09-05');
+    check('o recibo agradece com o total completo (R$ 1.422,41), a forma e a data — e fecha com o slogan da casa',
+      recibo.indexOf('R$ 1.422,41') >= 0 && recibo.indexOf('Pix') >= 0 && recibo.indexOf('05/09/2026') >= 0 &&
+      recibo.indexOf('Ayla') >= 0 && recibo.indexOf('Bento') >= 0 &&
+      recibo.indexOf('os seus FILHOts') >= 0 &&
+      recibo.indexOf('Aqui, cada cuidado é ÚNICO.') >= 0, recibo);
+    check('o recibo não carrega emoji nem palavra proibida (a voz é a da casa)',
+      !/[\u{1F000}-\u{1FAFF}\u2700-\u27BF\u2B00-\u2BFF]/u.test(recibo) &&
+      !/balc|cachorr|\bdono\b/i.test(recibo));
+
+    // ---- e o Painel da Diretoria passa a mostrar o recebido REAL ----
+    if (typeof ctx.pdirFinResumo === 'function') {
+      ctx.__cadLP10 = CADLP; ctx.__irmLP10 = IRMLP;
+      vm.runInContext("__bkpLP10 = { cad: pelCadCache, pel: PELUDINHOS };\n" +
+        "pelCadCache = __cadLP10; PELUDINHOS = [];", ctx);
+      try {
+        const noPainel = ctx.pdirFinResumo('2026-08', HOJE_LP, {}, pagLP, IRMLP);
+        check('mordida — o recebido REAL chega ao Painel da Diretoria ao centavo, pelo MESMO caminho (pdirFinResumo)',
+          noPainel.recebidoTotal === 142241, ctx.finBRL(noPainel.recebidoTotal));
+        const painelHTML = ctx.pdirFinHTML(noPainel, true, 'agosto de 2026');
+        check('o painel desenha o recebido com finBRL e, com o nó existindo, sem o rótulo de "sem lançamentos"',
+          painelHTML.indexOf('R$ 1.422,41') >= 0 &&
+          painelHTML.indexOf('sem lançamentos de pagamento ainda') < 0);
+      } finally {
+        vm.runInContext("pelCadCache = __bkpLP10.cad; PELUDINHOS = __bkpLP10.pel;", ctx);
+      }
+    }
+    check('o rótulo do painel sem lançamentos agora aponta para a tela nova (nada de "próxima versão")',
+      html.indexOf('sem lançamentos de pagamento ainda: lance em Planos e cobranças, na tela Lançar pagamento') >= 0 &&
+      html.indexOf('a tela de lançar chega na próxima versão') < 0);
+  }
+  console.log('');
+
   // ---- a prova do retrato: rodada padrão não toca o Firebase --------------------
   console.log('Retrato — a rodada padrão não abre conexão nenhuma com o banco:');
   if (HARNESS_VIVO) {

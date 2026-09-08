@@ -49,9 +49,13 @@
  *    · DECLARADO  — o que renov.inicio afirma, sem lançamento por trás.
  *    · A RECEBER  — o que vence no mês e não tem pagamento lançado.
  *
- *  Nó NOVO proposto (ver docs/FINANCEIRO-DASHBOARD.md):
+ *  Nó de pagamentos (ver docs/FINANCEIRO-DASHBOARD.md) — desde 07/set/2026 a tela
+ *  "Lançar pagamento" (index.html, v-10) grava nele:
  *    daycare/pagamentos/{AAAA-MM}/{id} =
- *      {chave, valor_cent, data, forma, plano, ref, quem, ts}
+ *      {chave, servico, valor_cent, data, forma, plano, ref, quem, ts}
+ *  ESTORNO (só gestão/diretoria): o registro NUNCA some — ganha
+ *  {estornado:true, estorno_motivo, estorno_quem, estorno_ts} e sai de toda soma
+ *  (finPagamentosDoMes pula estornados). Histórico intocável, conta limpa.
  *
  * ---------------------------------------------------------------------------
  * AS 3 DECISÕES DA ADRIANA (02/set/2026) — as 3 perguntas do
@@ -370,6 +374,9 @@ function finPagamentosDoMes(pagamentos, mes) {
     for (i = 0; i < ks.length; i++) {
       p = b[ks[i]];
       if (!p || typeof p !== 'object' || finEhLista(p)) continue;
+      /* Estornado NÃO é caixa: o registro fica no nó (com quem estornou e por quê),
+         mas o valor sai de TODA soma — recebido, pago por chave, situação. */
+      if (p.estornado === true) continue;
       comp = finEhMes(p.ref) ? p.ref : finMesDe(p.data);
       if (comp !== mes) continue;
       out.push({
