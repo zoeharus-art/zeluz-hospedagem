@@ -8587,10 +8587,17 @@
       });
     }).catch(function(){ return false; });
   }
+  // 07/set/2026 — economia: o placar de doses do dia era relido INTEIRO do banco a cada
+  // volta (30 s no alarme, 60 s no painel da Gestão), em todos os aparelhos. Agora o dia
+  // desce uma vez (zMapaVivo) e cada dose nova chega sozinha; reler vira consulta de memória.
+  function medLogHoje(){
+    var p='auaulandia/medicacao-log/'+dataKeyAtual();
+    if(typeof zMapaUma==='function') return zMapaUma(p).then(function(v){ return Object.assign({},v); });
+    return DB.ref(p).once('value').then(function(s){ return s.val()||{}; });
+  }
   function dosesMedDoDia(){
     if(!DB||!MED_AGENDA_TODOS||!MED_AGENDA_TODOS.length) return Promise.resolve([]);
-    return DB.ref('auaulandia/medicacao-log/'+dataKeyAtual()).once('value').then(function(snap){
-      const log=snap.val()||{};
+    return medLogHoje().then(function(log){
       return MED_AGENDA_TODOS.map(function(it){
         const doseId=magDoseId(it.itemId,it.horario);
         const reg=log[it.key]&&log[it.key][doseId];
@@ -11921,7 +11928,7 @@
   // Agora existe um carimbo: esta constante é a versão que o aparelho está rodando, e o
   // Firebase guarda a versão publicada. Quando as duas diferem, aparece o aviso — mas
   // NUNCA recarrega sozinho: recarregar no meio de um check-in perderia o trabalho.
-  const APP_VERSAO='2026-09-08-01';
+  const APP_VERSAO='2026-09-08-02';
   function vigiarVersao(){
     if(!DB) return;
     try{
@@ -14243,8 +14250,7 @@
       if(!ehHojeAua()) return;
       if(despMedNaTela) return; // já tem um na tela
       if(!MED_AGENDA_TODOS.length||!DB) return;
-      DB.ref('auaulandia/medicacao-log/'+dataKeyAtual()).once('value').then(function(snap){
-        const log=snap.val()||{};
+      medLogHoje().then(function(log){
         const fila=MED_AGENDA_TODOS.slice().sort((a,b)=>(a.horario||'').localeCompare(b.horario||''));
         for(const it of fila){
           const doseId=magDoseId(it.itemId,it.horario);
@@ -14315,7 +14321,11 @@
   setInterval(function(){ if(typeof carregarMedAtrasadaGestora==='function') carregarMedAtrasadaGestora(); }, 60000);
   // Onda 5 — mantém o selo "NÃO COMEU" do card vivo mesmo sem navegar (ex.: plantonista com a lista
   // aberta a noite toda, esperando alguém marcar o relatório do jantar).
-  setInterval(function(){ if(typeof carregarRiscoNaoComer==='function') carregarRiscoNaoComer(); }, 60000);
+  // 07/set/2026 — economia: este relógio disparava ~3 leituras por hóspede por minuto em
+  // CADA aparelho aberto, o dia inteiro. O dado muda poucas vezes ao dia e a tela já é
+  // recarregada na hora em que um relatório é salvo; de 5 em 5 minutos chega — e aba
+  // escondida não lê nada.
+  setInterval(function(){ if(document.hidden) return; if(typeof carregarRiscoNaoComer==='function') carregarRiscoNaoComer(); }, 300000);
 
   // ==================================================================================
   // ===== ONDA 3 — CUIDADO VET (veterinária) =========================================
@@ -25186,6 +25196,15 @@
   function pLabel(){ const d=painelDate; return DIAS[d.getDay()]+', '+String(d.getDate()).padStart(2,'0')+' de '+MESES[d.getMonth()]; }
   function painelMuda(n){ const nv=new Date(painelDate); nv.setDate(nv.getDate()+n); painelDate=nv; carregarPainel(); }
   function painelHoje(){ painelDate=new Date(); carregarPainel(); }
+  // A auditoria do dia é o nó mais pesado que o painel lia — e ele a relia INTEIRA a cada
+  // volta de 30 s (com o quadro da equipe junto, ~2,2 MB por volta; a causa dominante dos
+  // 68 MB/h medidos em 07/set/2026). Agora ela desce UMA vez por sessão (zMapaVivo,
+  // child_added) e depois só o registro novo viaja. Em dia passado ninguém grava: depois
+  // da primeira carga o ouvinte fica em silêncio — custo zero.
+  function audVivaDoDia(k){
+    if(typeof zMapaUma!=='function') return DB.ref('daycare/auditoria/'+k).once('value').then(function(s){ return s.val(); }).catch(function(){ return null; });
+    return zMapaUma('daycare/auditoria/'+k).then(function(v){ return Object.assign({},v); }).catch(function(){ return null; });
+  }
   function carregarPainel(){
     if(!document.getElementById('painelWrap')) return;
     const k=pKey(painelDate);
@@ -25196,7 +25215,7 @@
       get('daycare/almoco/'+k), get('daycare/almoco-turno/'+k),
       get('daycare/almoco-prep/'+k), get('daycare/almoco-final/'+k), get('daycare/almoco-exec/'+k),
       get('daycare/atividade/'+k), get('daycare/banho/'+k),
-      get('daycare/auditoria/'+k), get('auaulandia/checkout/'+k),
+      audVivaDoDia(k), get('auaulandia/checkout/'+k),
       get('daycare/almoco-prep-turno/'+k), get('daycare/almoco-final-turno/'+k)
     ]).then(r=>{
       painelData={ chamada:r[0]||{}, avulsos:r[1]||{}, almoco:r[2]||{}, almTurno:r[3]||{},
@@ -25219,6 +25238,7 @@
   const LOGIN_ERA={'monitor 6':'Giulia'};
   function nomeReal(n){ const v=String(n||'').trim(); return LOGIN_ERA[v.toLowerCase()]||v; }
   var monDias=30, monCache=null, monAud=null;
+  var _eqDiaCache={};   // dias fechados do quadro da equipe: descem UMA vez por sessão
   const MON_ETAPAS=[
     {k:'prep',   t:'Montagem',    no:'daycare/almoco-prep-turno/',  cor:'#2E7D8A'},
     {k:'almoco', t:'Almoço',      no:'daycare/almoco-turno/',       cor:'#DEB428'},
@@ -25241,16 +25261,25 @@
     const dias=[]; const hoje=new Date(); const p=n=>String(n).padStart(2,'0');
     for(let i=0;i<monDias;i++){ const d=new Date(hoje.getTime()-i*86400000); dias.push(d.getFullYear()+'-'+p(d.getMonth()+1)+'-'+p(d.getDate())); }
     const get=path=>DB.ref(path).once('value').then(s=>s.val()).catch(()=>null);
-    Promise.all(dias.map(function(k){
+    // 07/set/2026 — economia: esta função, chamada pelo relógio de 30 s do painel, relia
+    // 5 nós × 30 dias (~2 MB, quase tudo auditoria) a CADA volta. Dia passado não muda
+    // (o app só grava no dia corrente; o bolso da auditoria, única exceção, é raro):
+    // desce uma vez por sessão e fica em _eqDiaCache. Só o dia de HOJE é relido — e a
+    // auditoria de hoje vem do mapa vivo (só o registro novo viaja).
+    Promise.all(dias.map(function(k, idx){
+      const ehHojeK=(idx===0);   // dias[0] é hoje — os demais estão fechados
+      if(!ehHojeK && _eqDiaCache[k]) return Promise.resolve(_eqDiaCache[k]);
       return Promise.all([
         get('daycare/almoco-prep-turno/'+k), get('daycare/almoco-turno/'+k),
         get('daycare/almoco-final-turno/'+k), get('daycare/almoco/'+k),
-        get('daycare/auditoria/'+k)
+        ehHojeK ? audVivaDoDia(k) : get('daycare/auditoria/'+k)
       ]).then(function(r){
         // quantos FILHOts o dia teve de verdade: quem foi marcado no almoço (a chamada quase
         // não é preenchida, então ela não serve de base). É CONTEXTO do tempo, não pontuação.
         const marcas=r[3]||{};
-        return { dia:k, prep:r[0]||{}, almoco:r[1]||{}, final:r[2]||{}, caes:Object.keys(marcas).length, aud:r[4]||{} };
+        const d={ dia:k, prep:r[0]||{}, almoco:r[1]||{}, final:r[2]||{}, caes:Object.keys(marcas).length, aud:r[4]||{} };
+        if(!ehHojeK) _eqDiaCache[k]=d;
+        return d;
       });
     })).then(function(res){
       monAud=res;   // a auditoria completa fica para a visão de plantão
@@ -33719,7 +33748,7 @@
   montarSubnav();
   renderAtual();
   // Painel do Dia ao vivo — atualiza sozinho a cada 30s enquanto estiver aberto no dia de hoje (sala da gestão)
-  setInterval(function(){ try{ const v=document.getElementById('v-painel'); if(v && getComputedStyle(v).display!=='none' && typeof carregarPainel==='function' && pKey(painelDate)===pKey(new Date())) carregarPainel(); }catch(e){} /* silencioso de propósito: função opcional, pode não existir nesta tela */ }, 30000);
+  setInterval(function(){ try{ if(document.hidden) return; const v=document.getElementById('v-painel'); if(v && getComputedStyle(v).display!=='none' && typeof carregarPainel==='function' && pKey(painelDate)===pKey(new Date())) carregarPainel(); }catch(e){} /* silencioso de propósito: função opcional, pode não existir nesta tela */ }, 30000);
   montarMedgrids();
   // Script inteiro carregado: seguro ligar os ouvintes do Firebase (todas as variaveis existem).
   __scriptReady=true; if(typeof wireFirebaseListeners==='function') wireFirebaseListeners();
