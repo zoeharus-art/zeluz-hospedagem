@@ -9428,6 +9428,144 @@ async function main() {
   }
   console.log('');
 
+  console.log('Check-up, inativos e oportunidades — os cinco consertos de 08/set:');
+  {
+    // (1) Inativos achável em 2 toques: o botão vive na tela Cadastro de Peludinhos,
+    // com a contagem, e abre a mesma lista que tem o "Voltou" (reativar) por FILHOt.
+    check('inativos — o botão "Inativos (N)" mora na toolbar do Cadastro de Peludinhos e abre a lista',
+      /id="pelInativosBtn"[^>]*onclick="irParaView\('inativos'\)"/.test(html) &&
+      /bIn\.textContent='Inativos \('\+PELUDINHOS\.filter\(p=>pelInativo\(p\)\)\.length\+'\)'/.test(html));
+    check('inativos — reativar passa por confirmação (zPergunta), grava na ficha (setPelExtra) e deixa rastro (audit)',
+      /function reativarPeludinho/.test(html) &&
+      /await zPergunta\(nome\+' voltou para o Day Care\?'/.test(html) &&
+      /setPelExtra\(p,\{inativo:'Nao', dataSaida:'', motivoSaida:'', saidas:hist\}\);\n    if\(typeof audit==='function'\) audit\('peludinho-reativado'/.test(html));
+
+    // (2/3) A data do check-up mora em TRÊS campos; a contagem lê os três — era só
+    // checkup_data, e a tela NEGAVA 30 fichas que têm a data (Becca: checkup=2024-11-27).
+    check('prevCheckupData lê checkup_data, checkup_t e o campo legado checkup — nessa ordem',
+      ctx.prevCheckupData({ checkup_data: 'a' }) === 'a' &&
+      ctx.prevCheckupData({ checkup_t: 'b' }) === 'b' &&
+      ctx.prevCheckupData({ checkup: 'c' }) === 'c' &&
+      ctx.prevCheckupData({ checkup_data: 'a', checkup_t: 'b', checkup: 'c' }) === 'a' &&
+      ctx.prevCheckupData({}) === '');
+    check('idade na linha: com nascimento real diz a idade; sem nascimento diz "idade não cadastrada" — nunca inventa',
+      /prevCheckupIdade/.test(html) &&
+      /idade não cadastrada/.test(ctx.prevCheckupIdade({ n: 'Sintético', tutor: 'Teste Sem Nasc' })) &&
+      /ano/.test(ctx.prevCheckupIdade({ n: 'Sintética2', tutor: 'Teste Com Nasc', nasc: '2018-01-01' })));
+    check('mordida — o corte de 30 nomes morreu (escondia 101 FILHOts) e o nome da linha abre a ficha',
+      html.indexOf('semInfo.slice(0,30)') < 0 &&
+      /function abrirPeludinhoCheckup\(i\)\{ pelOrigem='vacinas'; irParaView\('ficha'\); abrirPeludinho\(i\); \}/.test(html) &&
+      /if\(pelOrigem==='vacinas'\)/.test(html));
+
+    // ---- DADO REAL: o retrato entra no lugar do pelCadCache (testes anteriores o
+    // esvaziam de propósito) e sai do jeito que estava — provas com a vida como ela é.
+    if (RETRATO && RETRATO.daycare && RETRATO.daycare.cadastro && Array.isArray(ctx.PELUDINHOS)) {
+      vm.runInContext("__bkpCadCk = (typeof pelCadCache==='undefined'||!pelCadCache) ? {} : pelCadCache;", ctx);
+      const __bkpPelCk = ctx.PELUDINHOS.slice();
+      ctx.__cadCk = JSON.parse(JSON.stringify(RETRATO.daycare.cadastro));
+      vm.runInContext('pelCadCache = __cadCk;', ctx);
+      try {
+        ctx.mergeNovosAlunos(); ctx.aplicarExclusoes();
+        const cadR = RETRATO.daycare.cadastro;
+        const chaves = new Set(ctx.PELUDINHOS.map((p) => ctx.pelKey(p)));
+        const noRetrato = Object.keys(cadR).filter((k) => cadR[k] && cadR[k].inativo === 'Sim' && chaves.has(k)).length;
+        const naTela = ctx.PELUDINHOS.filter((p) => ctx.pelInativo(p)).length;
+        check('dado real: a contagem de inativos da tela bate com as fichas inativas do retrato (e não é zero)',
+          naTela === noRetrato && naTela > 0, naTela + ' vs ' + noRetrato);
+
+        const ck2 = ctx.prevCheckupContagem();
+        check('mordida — SEM INFORMAÇÃO só tem ficha realmente sem data: a tela não nega ficha que tem check-up',
+          ck2.semInfo.length > 0 && ck2.semInfo.every((o) => !ctx.prevCheckupData(ctx.pelExtra(o.p))),
+          ck2.semInfo.filter((o) => ctx.prevCheckupData(ctx.pelExtra(o.p))).map((o) => ctx.pelNome(o.p)).slice(0, 5).join(', '));
+        const hojeI = ctx.zHojeISO();
+        const umAnoI = (iso) => { const d = new Date(iso + 'T12:00:00'); d.setFullYear(d.getFullYear() + 1);
+          const pd = (x) => String(x).padStart(2, '0'); return d.getFullYear() + '-' + pd(d.getMonth() + 1) + '-' + pd(d.getDate()); };
+        const devVenc = ctx.PELUDINHOS.filter((p) => { const ex = ctx.pelExtra(p) || {};
+          if (ex.inativo === 'Sim' || ex.checkup_fez === 'Nunca fez') return false;
+          const dt = ctx.prevCheckupData(ex); return !!dt && umAnoI(dt) < hojeI; }).length;
+        check('dado real: todo check-up vencido há mais de 12 meses aparece em VENCIDOS (nenhum escondido)',
+          ck2.vencidos.length === devVenc && devVenc > 0, ck2.vencidos.length + ' vs ' + devVenc);
+        const becca = ctx.PELUDINHOS.find((p) => ctx.pelKey(p) === 'becca__jéssica');
+        check('a Becca (becca__jéssica) existe, tem check-up na ficha e a tela reconhece — nunca mais "sem informação"',
+          !!becca && !!ctx.prevCheckupData(ctx.pelExtra(becca)) &&
+          !ck2.semInfo.some((o) => ctx.pelKey(o.p) === 'becca__jéssica'),
+          becca ? ('data=' + ctx.prevCheckupData(ctx.pelExtra(becca))) : 'não achei a Becca');
+        // (5) Idade: mais velhos primeiro, e quem não tem nascimento fecha a lista.
+        const nascI = (o) => { const v = ctx.pelNasc(o.p) || ''; return ctx.parseNascToISO ? (ctx.parseNascToISO(v) || '') : v; };
+        const ordemOk = (lista) => { let ok = true, semN = false;
+          for (let x = 1; x < lista.length; x++) { const a = nascI(lista[x - 1]), b = nascI(lista[x]);
+            if (!a) semN = true;
+            if (semN && b) ok = false;               // com nascimento depois de quem não tem: quebrou
+            if (a && b && a > b) ok = false; }        // mais novo antes de mais velho: quebrou
+          return ok; };
+        check('dado real: as listas vêm do mais velho para o mais novo (nasc crescente), sem nascimento no fim',
+          ordemOk(ck2.semInfo) && ordemOk(ck2.vencidos) && ordemOk(ck2.nunca));
+
+        // (4) A mensagem: parágrafos com quebra REAL, voz Zêluz, botão que diz o que faz.
+        const pMsg = becca || ctx.PELUDINHOS[0];
+        const txt = ctx.prevConviteCheckup(pMsg, 'vencido');
+        const txt2 = ctx.prevConviteCheckup(pMsg, 'nunca');
+        check('a mensagem sai em parágrafos (quebras de linha reais) e fecha com o slogan canônico',
+          txt.split('\n\n').length >= 4 && /Aqui, cada cuidado é ÚNICO\.$/.test(txt) &&
+          txt2.split('\n\n').length >= 4);
+        check('a mensagem respeita o vocabulário Zêluz: sem cachorro/animal/bicho/dono, sem emoji',
+          !/cachorro|animal|bicho|\bdono\b/i.test(txt) && !/[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}]/u.test(txt) &&
+          /Zêluz/.test(txt) && /Veterinária Preventiva/.test(txt));
+      } finally {
+        vm.runInContext('pelCadCache = __bkpCadCk;', ctx);
+        ctx.PELUDINHOS.length = 0; __bkpPelCk.forEach((p) => ctx.PELUDINHOS.push(p));
+      }
+    }
+    check('o botão virou "Copiar mensagem" (o "copiar convite" não dizia nada) e a tela ensina o caminho do WhatsApp',
+      html.indexOf('>Copiar mensagem</button>') > 0 && html.indexOf('Copiar convite') < 0 &&
+      html.indexOf('Envie a mensagem de marcação de check-up para os clientes abaixo: clique em <strong>Copiar</strong>, no WhatsApp clique em <strong>Colar</strong>, revise a mensagem e encaminhe.') > 0);
+    check('o copiar usa navigator.clipboard (preserva as quebras) com o textarea de reserva — e a janelinha quando nada copia',
+      /navigator\.clipboard\.writeText\(txt\)\.then\(function\(\)\{ feito\(true\); \}, function\(\)\{ feito\(prevCopiarTexto\(txt\)\); \}\)/.test(html) &&
+      /zAlertao\('Copie a mensagem', txt\.split\('\\n\\n'\)/.test(html));
+
+    // (6) Oportunidades — CRM-lite: a resposta colhida fica registrada com QUEM e QUANDO,
+    // o estado anterior vira rastro, e ninguém pergunta de novo sem saber o que já foi dito.
+    if (typeof ctx.oportRegistrar === 'function') {
+      const gravadas = [];
+      ctx.__dbOport = { ref: (c) => ({ set: (v) => { gravadas.push({ c: c, v: v }); return Promise.resolve(); } }) };
+      vm.runInContext('__bkpDBOport = DB; DB = __dbOport;', ctx);
+      const papelAntes = ctx.document.body.dataset.role;
+      ctx.document.body.dataset.role = 'gestao';
+      try {
+        const pB = ctx.PELUDINHOS.find((p) => ctx.pelKey(p) === 'becca__jéssica') || ctx.PELUDINHOS[0];
+        const kB = ctx.pelKey(pB);
+        await ctx.oportRegistrar(pB, 'checkup', 'perguntado', '');
+        await ctx.oportRegistrar(pB, 'checkup', 'respondeu', 'não sabe');
+        const reg = ctx.oportDe(kB, 'checkup');
+        check('oportunidade grava no nó certo (daycare/oportunidades/{refKey}/checkup), uma gravação por mudança',
+          gravadas.length === 2 && gravadas.every((g) => g.c === 'daycare/oportunidades/' + kB + '/checkup'));
+        check('a resposta da recepção fica registrada com estado, texto, quem e quando',
+          !!reg && reg.estado === 'respondeu' && reg.texto === 'não sabe' &&
+          typeof reg.quem === 'string' && !!reg.quando && reg.ts > 0);
+        check('mordida — o estado anterior vira rastro (hist): o "perguntado" não some quando a resposta chega',
+          Array.isArray(reg.hist) && reg.hist.length === 1 && reg.hist[0].estado === 'perguntado',
+          JSON.stringify(reg.hist));
+        check('a linha humana conta a história inteira: perguntado, por quem, e o que respondeu',
+          /^perguntado em .* — respondeu: não sabe$/.test(ctx.oportLinha(reg)), ctx.oportLinha(reg));
+        delete ctx.OPORT_CACHE[kB];   // devolve o cache limpo para as provas seguintes
+        ctx.document.body.dataset.role = 'monitor';
+        const antes = gravadas.length;
+        const deixou = await ctx.oportRegistrar(pB, 'checkup', 'marcou', '');
+        check('monitor não registra oportunidade (é conversa da recepção): barrado sem gravar nada',
+          deixou === false && gravadas.length === antes);
+      } finally {
+        ctx.document.body.dataset.role = papelAntes;
+        vm.runInContext('DB = __bkpDBOport;', ctx);
+      }
+      check('a ficha mostra o bloco Oportunidades e a tela do check-up mostra o estado ao lado de cada FILHOt',
+        html.indexOf('${blocoOportunidades(p)}') > 0 &&
+        /var op=oportDe\(pelKey\(o\.p\),'checkup'\);/.test(html) &&
+        /Oportunidade: '\+escAttr\(opTxt\)/.test(html) &&
+        /DB\.ref\('daycare\/oportunidades'\)\.on\('value'/.test(html));
+    }
+  }
+  console.log('');
+
   // ---- a prova do retrato: rodada padrão não toca o Firebase --------------------
   console.log('Retrato — a rodada padrão não abre conexão nenhuma com o banco:');
   if (HARNESS_VIVO) {

@@ -2471,10 +2471,11 @@
 
   <section class="view" id="v-ficha">
     <div id="pel-lista">
-      <div class="role-note"><span data-icon="paw"></span><span>Peludinhos <strong>frequentes</strong> do Day Care. Clique no nome para ver e editar a ficha completa. Quem saiu fica em <strong>Relatórios › Inativos</strong>.</span></div>
+      <div class="role-note"><span data-icon="paw"></span><span>Peludinhos <strong>frequentes</strong> do Day Care. Clique no nome para ver e editar a ficha completa. Quem saiu fica na aba <strong>Inativos</strong> — o botão aqui embaixo abre a lista, e o <strong>Voltou</strong> reativa quem está voltando.</span></div>
       <div class="pel-toolbar">
         <input class="search" id="pelSearch" placeholder="Buscar peludinho, raça ou tutor..." style="width:300px;max-width:100%" oninput="renderPel()">
         <span class="pel-count" id="pelCount"></span>
+        <button type="button" class="btn" id="pelInativosBtn" style="background:var(--z-cream-warm);color:var(--z-blue);border:1.5px solid var(--line);padding:10px 16px;flex:0 0 auto" onclick="irParaView('inativos')">Inativos</button>
         <button class="btn btn-gold so-gestao" style="margin-left:auto;padding:10px 18px;flex:0 0 auto" onclick="inserirAluno()">+ Inserir novo AULUNO</button>
       </div>
       <div class="pel-wrap">
@@ -4341,6 +4342,10 @@
       DB.ref('daycare/reposicao').on('value', s=>{ REPO_CACHE=s.val()||{};
         try{ const v=document.getElementById('v-reposicao'); if(v&&v.classList.contains('active')) renderReposicao(); }catch(e){} /* silencioso de propósito: redesenho de tela — falhar não pode derrubar quem chamou */
         try{ if(typeof renderPendencias==='function') renderPendencias(); }catch(e){} /* silencioso de propósito: redesenho de tela — falhar não pode derrubar quem chamou */ });
+      // Oportunidades (CRM-lite do check-up): nó pequeno, só registros de conversa —
+      // a recepção registra num aparelho e a tela do check-up mostra no outro na hora.
+      DB.ref('daycare/oportunidades').on('value', s=>{ OPORT_CACHE=s.val()||{};
+        try{ const v=document.getElementById('v-vacinas'); if(v&&v.classList.contains('active')&&typeof renderPrevCheckup==='function') renderPrevCheckup(); }catch(e){} /* silencioso de propósito: redesenho de tela — falhar não pode derrubar quem chamou */ });
       // cadastro de almoço editável (sobrepõe a semente) — reflete na grade em tempo real
       // quem já desceu para o banho — um monitor dá baixa e o aviso some em todos os aparelhos
       DB.ref('daycare/banho-aviso/'+dcDataKey()).on('value', s=>{ despBaixa=s.val()||{};
@@ -5142,7 +5147,7 @@
       B.push(mesaBox(pares.length,'Possíveis duplicados','responda para juntar — em dobro ele conta duas vezes na cobrança','#B3261E',"mesaExpandir('duplicados')"));
       B.push(mesaBox(ct===null?null:ct.nunca.length,'Pesquisa não enviada','FILHOts que nunca perguntamos — a campanha precisa andar','#B3261E',ir('alergia')));
       B.push(mesaBox(ct===null?null:ct.aguardando.length,'Pesquisa aguardando resposta','enviada, o tutor ainda não respondeu','#DEB428',ir('alergia')));
-      B.push(mesaBox(ck===null?null:(ck.nunca.length+ck.vencidos.length),'Check-up a convidar','nunca fizeram ou venceu há mais de 12 meses — o convite já está pronto','#DEB428',ir('vacinas')));
+      B.push(mesaBox(ck===null?null:(ck.nunca.length+ck.vencidos.length),'Check-up a marcar','nunca fizeram ou venceu há mais de 12 meses — a mensagem já está pronta','#DEB428',ir('vacinas')));
       if(MESA_EXPAND.atencao) EXTRA+=mesaAtencaoHtml();
       if(MESA_EXPAND.duplicados){ try{ EXTRA+='<div style="margin-top:12px">'+(typeof hospParesPendentesHtml==='function'?hospParesPendentesHtml():'')+'</div>'; }catch(e){} /* silencioso de propósito: guarda defensiva — falhar aqui não pode interromper quem chamou */ }
     } else if(MESA_FATIA==='supervisao'){
@@ -11928,7 +11933,7 @@
   // Agora existe um carimbo: esta constante é a versão que o aparelho está rodando, e o
   // Firebase guarda a versão publicada. Quando as duas diferem, aparece o aviso — mas
   // NUNCA recarrega sozinho: recarregar no meio de um check-in perderia o trabalho.
-  const APP_VERSAO='2026-09-08-02';
+  const APP_VERSAO='2026-09-08-03';
   function vigiarVersao(){
     if(!DB) return;
     try{
@@ -15621,32 +15626,158 @@
   // ===== CHECK-UP — a parte exclusiva (Adriana, 01/set) ===========================
   // "Ter um campo Check-up... com data e vencimento... e um texto pronto convidando —
   //  é uma oportunidade: além de importante, os peludinhos do Day Care têm desconto."
+  //
+  // 08/set/2026 — a data do check-up mora em TRÊS campos da ficha: checkup_data (bloco
+  // "Check-up veterinário"), checkup_t (bloco "Saúde e rotina") e checkup (campo legado,
+  // anterior aos dois). A contagem só lia checkup_data — e NEGAVA 30 fichas que TÊM a
+  // data (a Becca tem checkup=2024-11-27 e a tela dizia "sem informação"). Uma leitura só:
+  function prevCheckupData(ex){ return (ex&&(ex.checkup_data||ex.checkup_t||ex.checkup))||''; }
+  // Idade na lista ("quanto mais velho, mais necessário" — Adriana, 08/set). Sem
+  // nascimento na ficha, a tela diz que não sabe — nunca inventa uma data.
+  function prevCheckupIdade(p){
+    var t=(typeof calcIdade==='function')?calcIdade(pelNasc(p)):'';
+    return t||'idade não cadastrada';
+  }
   function prevConviteCheckup(p, situacao){
     var nome=pelNome(p);
+    var ex=pelExtra(p)||{};
+    var temSexo=!!String(ex.sexo||'').trim();
+    var femea=/^f/i.test(String(ex.sexo||''));
+    var art=temSexo?(femea?'a ':'o '):'';        // sem sexo na ficha: sem artigo — nunca chutar gênero
+    var de=temSexo?(femea?'da ':'do '):'de ';
     var tutor=String(pelGet(p,'tutor')||'').split(/\s+/)[0]||'';
     var motivo=(situacao==='nunca')
-      ? 'que '+nome+' ainda não fez um check-up completo'
-      : 'que o último check-up de '+nome+' já completou um ano';
-    return 'Oi, '+(tutor||'tutor(a)')+', tudo bem? Aqui é da Zêluz. Na entrevista você nos contou '
-      +motivo+'. A nossa Veterinária Preventiva existe exatamente para isso: cuidar antes de qualquer sinal, '
-      +'como nas melhores clínicas de longevidade. E, por fazer parte do Day Care, '+nome
-      +' tem desconto especial no check-up completo. Quer que eu deixe uma avaliação reservada para esta semana? '
+      ? art+nome+' ainda não fez um check-up completo'
+      : 'o último check-up '+de+nome+' já completou mais de um ano';
+    // Parágrafos com quebra de linha REAL: no WhatsApp a mensagem chega arrumada, não num
+    // bloco corrido (a versão antiga era uma linha só — "veio desconfigurada").
+    return 'Olá'+(tutor?(', '+tutor):'')+'! Aqui é da Zêluz.\n\n'
+      +'Estamos cuidando da agenda de check-up dos nossos aulunos e notamos que '+motivo+'.\n\n'
+      +'A nossa Veterinária Preventiva existe exatamente para isso: cuidar antes de qualquer sinal, '
+      +'como nas melhores clínicas de longevidade. E, por fazer parte do Day Care, '+art+nome
+      +' tem desconto especial no check-up completo.\n\n'
+      +'Podemos reservar um horário para esta semana?\n\n'
       +'Aqui, cada cuidado é ÚNICO.';
+  }
+  // Caminho reserva do copiar (textarea+execCommand): preserva as quebras de linha.
+  function prevCopiarTexto(txt){
+    try{
+      var ta=document.createElement('textarea'); ta.value=txt; document.body.appendChild(ta);
+      ta.select(); var ok=false; try{ ok=document.execCommand('copy'); }catch(e){} /* silencioso de propósito: sem permissão de copiar, o texto vai para a janelinha */
+      document.body.removeChild(ta);
+      return ok;
+    }catch(e){ return false; }
   }
   function prevCheckupCopiar(btn, i, situacao){
     try{
       var p=PELUDINHOS[i]; if(!p) return;
       var txt=prevConviteCheckup(p, situacao);
-      var ta=document.createElement('textarea'); ta.value=txt; document.body.appendChild(ta);
-      ta.select(); var ok=false; try{ ok=document.execCommand('copy'); }catch(e){} /* silencioso de propósito: sem permissão de copiar, o texto continua na janelinha */
-      document.body.removeChild(ta);
-      if(ok){ btn.textContent='Copiado'; setTimeout(function(){ btn.textContent='Copiar convite'; },1600); }
-      else if(typeof zAlertao==='function') zAlertao('Copie o convite', [txt], {botao:'Fechei'});
+      var feito=function(ok){
+        if(ok){ btn.textContent='Copiada'; setTimeout(function(){ btn.textContent='Copiar mensagem'; },1600); }
+        else if(typeof zAlertao==='function') zAlertao('Copie a mensagem', txt.split('\n\n'), {botao:'Fechei'});
+      };
+      // navigator.clipboard preserva as quebras de linha; se o navegador negar, o textarea assume.
+      if(navigator.clipboard&&navigator.clipboard.writeText){
+        navigator.clipboard.writeText(txt).then(function(){ feito(true); }, function(){ feito(prevCopiarTexto(txt)); });
+        return;
+      }
+      feito(prevCopiarTexto(txt));
     }catch(e){} /* silencioso de propósito: enfeite de tela — falhar não muda dado nenhum */
+  }
+  // ===== OPORTUNIDADES — CRM-lite na ficha do FILHOt (Adriana, 08/set/2026) ========
+  // "A resposta que a recepção colher fica registrada e visível — nunca perguntar de
+  //  novo sem saber o que já foi dito." A Becca respondeu "não sei" e a resposta não
+  //  tinha onde morar: o campo Já fez check-up? só aceita Sim/Nunca fez.
+  // Nó: daycare/oportunidades/{pelKey}/{tipo} — começa por checkup, extensível a outros
+  // tipos depois. Regras v1 já cobrem (daycare/$colecao/$item, auth != null).
+  var OPORT_CACHE={};
+  function oportDe(k, tipo){ var m=OPORT_CACHE[k]; return (m&&m[tipo])?m[tipo]:null; }
+  // A linha humana de um registro: estado + quem + quando (+ a resposta, quando houver).
+  function oportLinha(o){
+    if(!o||!o.estado) return '';
+    var q=(o.quando?(' em '+o.quando):'')+((o.quem&&o.quem!=='-')?(' por '+o.quem):'');
+    if(o.estado==='perguntado') return 'perguntado'+q+' — aguardando resposta';
+    if(o.estado==='respondeu') return 'perguntado'+q+' — respondeu: '+(o.texto||'');
+    if(o.estado==='marcou') return 'marcou o check-up'+q;
+    if(o.estado==='recusou') return 'recusou'+q+(o.texto?(' — '+o.texto):'');
+    return 'a perguntar';
+  }
+  // Toda mudança guarda QUEM e QUANDO — e o estado anterior vai para o rastro (hist).
+  function oportRegistrar(p, tipo, estado, texto){
+    if(typeof canEditPel==='function'&&!canEditPel()){
+      alert('Só a recepção (consultoras), a Supervisão ou a Gestão registram oportunidades.');
+      return Promise.resolve(false);
+    }
+    var k=pelKey(p), quem=(typeof quemSou==='function')?quemSou():'-';
+    var quando=(typeof agoraBR==='function')?agoraBR():'';
+    var ant=oportDe(k, tipo)||{};
+    var hist=Array.isArray(ant.hist)?ant.hist.slice():[];
+    if(ant.estado) hist.push({estado:ant.estado, texto:ant.texto||'', quem:ant.quem||'-', quando:ant.quando||'', ts:ant.ts||0});
+    var reg={estado:String(estado||''), texto:String(texto||''), quem:quem, quando:quando, ts:Date.now(), hist:hist};
+    OPORT_CACHE[k]=Object.assign({},OPORT_CACHE[k]||{}); OPORT_CACHE[k][tipo]=reg;
+    if(DB){ DB.ref('daycare/oportunidades/'+k+'/'+tipo).set(reg).catch(function(e){ _logFalhaGrav('oportunidade '+tipo+' de '+k, e); }); }
+    else { _logFalhaGrav('oportunidade '+tipo+' de '+k+' (banco reconectando)', new Error('banco reconectando')); }
+    try{ if(typeof audit==='function') audit('oportunidade-'+tipo, oportLinha(reg)||estado, {pet:pelNome(p)}); }catch(e){} /* silencioso de propósito: o audit() tem bolso próprio e reenvia sozinho — falhar aqui não pode travar a ação */
+    return Promise.resolve(true);
+  }
+  // Os quatro gestos da recepção — todos passam por confirmação e redesenham a ficha.
+  function oportPerguntei(){ var p=pelAtual; if(!p) return;
+    zPergunta('Registrar: você perguntou ao tutor sobre o check-up?',
+      ['Fica gravado quem perguntou e quando — e a tela do check-up mostra que a pergunta já foi feita.'],
+      {sim:'Perguntei — registrar', nao:'Cancelar', cor:'#234D67'}).then(function(sim){
+        if(!sim) return;
+        oportRegistrar(p,'checkup','perguntado','').then(function(){ try{ renderPelFicha(); }catch(e){} /* silencioso de propósito: redesenho de tela — falhar não pode derrubar quem chamou */ });
+      });
+  }
+  function oportResponder(){ var p=pelAtual; if(!p) return;
+    zCampo('O que o tutor respondeu?',
+      ['Escreva do jeito que o tutor disse — por exemplo: não sabe · fez em julho, na clínica de confiança · vai conversar em casa.',
+       'A resposta fica na ficha e na tela do check-up: ninguém pergunta de novo sem saber o que já foi dito.'],
+      {campoId:'oportRespCampo', rotulo:'Resposta do tutor', minimo:2, cor:'#234D67',
+       botao:'Registrar a resposta', botaoNao:'Cancelar',
+       erro:'Sem o texto não há o que registrar.',
+       fn:function(v){ oportRegistrar(p,'checkup','respondeu',String(v||'').trim()).then(function(){ try{ renderPelFicha(); }catch(e){} /* silencioso de propósito: redesenho de tela — falhar não pode derrubar quem chamou */ }); }});
+  }
+  function oportMarcou(){ var p=pelAtual; if(!p) return;
+    zPergunta('O tutor marcou o check-up?',
+      ['Fica registrado quem anotou e quando.'],
+      {sim:'Marcou — registrar', nao:'Cancelar', cor:'#234D67'}).then(function(sim){
+        if(!sim) return;
+        oportRegistrar(p,'checkup','marcou','').then(function(){ try{ renderPelFicha(); }catch(e){} /* silencioso de propósito: redesenho de tela — falhar não pode derrubar quem chamou */ });
+      });
+  }
+  function oportRecusou(){ var p=pelAtual; if(!p) return;
+    zCampo('O tutor recusou — o que ele disse?',
+      ['O motivo ajuda a próxima conversa. Por exemplo: acha caro · já tem veterinário próprio · agora não.'],
+      {campoId:'oportRecusaCampo', rotulo:'Motivo (pode ficar em branco)', minimo:0, cor:'#234D67',
+       botao:'Registrar a recusa', botaoNao:'Cancelar',
+       fn:function(v){ oportRegistrar(p,'checkup','recusou',String(v||'').trim()).then(function(){ try{ renderPelFicha(); }catch(e){} /* silencioso de propósito: redesenho de tela — falhar não pode derrubar quem chamou */ }); }});
+  }
+  // O bloco na ficha: onde a conversa está, o rastro de quem mexeu, e os quatro gestos.
+  function blocoOportunidades(p){
+    var k=pelKey(p), o=oportDe(k,'checkup');
+    var podeMexer=(typeof canEditPel==='function')?canEditPel():false;
+    var atual=o?oportLinha(o):'a perguntar — ninguém perguntou ainda';
+    var hist=(o&&Array.isArray(o.hist))?o.hist:[];
+    var histHtml=hist.length?('<div class="hint" style="margin-top:6px"><strong>Rastro:</strong> '
+      +hist.map(function(hh){ return escAttr(oportLinha(hh)); }).join(' · ')+'</div>'):'';
+    var botoes=podeMexer?('<div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:8px">'
+      +'<button type="button" class="btn" style="background:var(--z-cream-warm);color:var(--z-blue);border:1.5px solid var(--line)" onclick="oportPerguntei()">Perguntei ao tutor</button>'
+      +'<button type="button" class="btn btn-gold" onclick="oportResponder()">Registrar a resposta</button>'
+      +'<button type="button" class="btn btn-primary" onclick="oportMarcou()">Marcou o check-up</button>'
+      +'<button type="button" class="btn" style="background:var(--z-cream-warm);color:var(--crm-critico);border:1.5px solid var(--line)" onclick="oportRecusou()">Recusou</button>'
+      +'</div>'):'';
+    return '<h3 class="cad-sub">Oportunidades</h3>'
+      +'<div class="field" style="background:rgba(222,180,40,.08);border-left:4px solid var(--z-gold);border-radius:10px;padding:10px 12px">'
+      +'<label style="font-size:13px;font-weight:800;color:var(--z-blue)">CHECK-UP — onde esta conversa está</label>'
+      +'<div style="margin-top:4px;font-weight:700;color:var(--z-blue)">'+escAttr(atual)+'</div>'
+      +histHtml+botoes
+      +'<div class="hint" style="margin-top:6px">Cada mudança guarda quem registrou e quando. A resposta do tutor fica aqui: ninguém pergunta de novo sem saber o que já foi dito.</div>'
+      +'</div>';
   }
   // Uma conta só, para a Prevenção e para a mesa da Gestão não discordarem.
   function prevCheckupContagem(){
-    var out={nunca:[], vencidos:[], semInfo:[]};
+    var out={nunca:[], vencidos:[], semInfo:[], emDia:[]};
     if(typeof PELUDINHOS==='undefined'||!Array.isArray(PELUDINHOS)) return out;
     var hoje=(typeof zHojeISO==='function')?zHojeISO():'';
     var umAno=function(iso){ try{ var d=new Date(iso+'T12:00:00'); d.setFullYear(d.getFullYear()+1);
@@ -15655,11 +15786,28 @@
       var ex=pelExtra(p)||{};
       if(ex.inativo==='Sim') return;
       if(ex.checkup_fez==='Nunca fez'){ out.nunca.push({i:i,p:p}); return; }
-      if(ex.checkup_data){ var vence=umAno(ex.checkup_data); if(vence&&vence<hoje) out.vencidos.push({i:i,p:p,vence:vence}); return; }
-      if(!ex.checkup_fez) out.semInfo.push({i:i,p:p});
+      var data=prevCheckupData(ex);
+      if(data){ var vence=umAno(data);
+        if(vence&&vence<hoje) out.vencidos.push({i:i,p:p,vence:vence});
+        else out.emDia.push({i:i,p:p,vence:vence});
+        return; }
+      out.semInfo.push({i:i,p:p});
     });
+    // Os mais velhos primeiro ("quanto mais velho, mais necessário"). Sem nascimento
+    // vai para o fim, em ordem alfabética — sem inventar data.
+    var nascISO=function(o){ var v=pelNasc(o.p)||''; return (typeof parseNascToISO==='function')?(parseNascToISO(v)||''):v; };
+    var ordena=function(a,b){
+      var na=nascISO(a), nb=nascISO(b);
+      if(na&&nb&&na!==nb) return na<nb?-1:1;
+      if(na&&!nb) return -1;
+      if(!na&&nb) return 1;
+      return jsNorm(pelNome(a.p)).localeCompare(jsNorm(pelNome(b.p)),'pt');
+    };
+    out.nunca.sort(ordena); out.vencidos.sort(ordena); out.semInfo.sort(ordena);
     return out;
   }
+  // O nome na lista abre a ficha (a linha era texto morto — "a tela não mostra o cadastro").
+  function abrirPeludinhoCheckup(i){ pelOrigem='vacinas'; irParaView('ficha'); abrirPeludinho(i); }
   function renderPrevCheckup(){
     var sec=document.getElementById('v-vacinas'); if(!sec) return;
     var el=document.getElementById('prevCheckup');
@@ -15668,22 +15816,26 @@
     var _ck=prevCheckupContagem();
     var nunca=_ck.nunca, vencidos=_ck.vencidos, semInfo=_ck.semInfo;
     var linha=function(o, extra, situacao){
+      var op=oportDe(pelKey(o.p),'checkup');
+      var opTxt=op?oportLinha(op):'';
       return '<div style="display:flex;gap:8px;align-items:center;padding:6px 0;border-bottom:1px solid var(--line);flex-wrap:wrap">'
-        +'<span style="font-weight:800;color:var(--z-blue)">'+escAttr(pelNome(o.p))+'</span>'
+        +'<a style="font-weight:800;color:var(--z-blue);cursor:pointer;text-decoration:underline dotted" onclick="abrirPeludinhoCheckup('+o.i+')">'+escAttr(pelNome(o.p))+'</a>'
         +'<span style="font-size:12.5px;color:var(--muted)">'+escAttr(pelGet(o.p,'tutor')||'')+'</span>'
+        +'<span style="font-size:12px;font-weight:700;color:var(--z-gold-deep)">'+escAttr(prevCheckupIdade(o.p))+'</span>'
         +(extra||'')
-        +(situacao?('<button type="button" class="btn btn-gold" style="margin-left:auto;padding:5px 12px;font-size:12px;font-weight:800" onclick="prevCheckupCopiar(this,'+o.i+',\''+situacao+'\')">Copiar convite</button>'):'')
+        +(situacao?('<button type="button" class="btn btn-gold" style="margin-left:auto;padding:5px 12px;font-size:12px;font-weight:800" onclick="prevCheckupCopiar(this,'+o.i+',\''+situacao+'\')">Copiar mensagem</button>'):'')
+        +(opTxt?('<span style="flex-basis:100%;font-size:12px;color:var(--muted)">Oportunidade: '+escAttr(opTxt)+'</span>'):'')
         +'</div>';
     };
     var h='<div class="card" style="margin-top:14px"><h2 style="font-size:19px;margin-bottom:3px">Check-up veterinário</h2>'
-      +'<div class="hint">A entrevista com o tutor alimenta esta lista. O convite já sai pronto — Veterinária Preventiva, com o desconto de quem é do Day Care.</div>';
+      +'<div class="hint">Envie a mensagem de marcação de check-up para os clientes abaixo: clique em <strong>Copiar</strong>, no WhatsApp clique em <strong>Colar</strong>, revise a mensagem e encaminhe. Os mais velhos vêm primeiro — quanto mais velho, mais necessário o check-up. O nome abre a ficha.</div>';
     if(nunca.length){ h+='<div style="font-weight:800;font-size:13px;color:var(--crm-critico);margin-top:9px">NUNCA FIZERAM ('+nunca.length+')</div>'
       +nunca.map(function(o){ return linha(o,'','nunca'); }).join(''); }
     if(vencidos.length){ h+='<div style="font-weight:800;font-size:13px;color:var(--z-gold-deep);margin-top:9px">VENCIDOS — mais de 12 meses ('+vencidos.length+')</div>'
       +vencidos.map(function(o){ return linha(o,'<span style="font-size:12px;color:var(--crm-critico);font-weight:700">venceu em '+escAttr(repBRdata?repBRdata(o.vence):o.vence)+'</span>','vencido'); }).join(''); }
-    if(semInfo.length){ h+='<div style="font-weight:800;font-size:13px;color:var(--muted);margin-top:9px">SEM INFORMAÇÃO ('+semInfo.length+') — perguntar na entrevista</div>'
-      +semInfo.slice(0,30).map(function(o){ return linha(o,'',''); }).join('')
-      +(semInfo.length>30?('<div class="hint">e mais '+(semInfo.length-30)+'.</div>'):''); }
+    if(semInfo.length){ h+='<div style="font-weight:800;font-size:13px;color:var(--muted);margin-top:9px">SEM INFORMAÇÃO ('+semInfo.length+') — perguntar ao tutor e registrar no bloco Oportunidades da ficha</div>'
+      +semInfo.map(function(o){ return linha(o,'',''); }).join(''); }
+    if(_ck.emDia.length) h+='<div class="hint" style="margin-top:8px">Com check-up em dia: '+_ck.emDia.length+'.</div>';
     if(!nunca.length&&!vencidos.length&&!semInfo.length) h+='<div class="hint" style="margin-top:8px">Todo mundo com check-up em dia.</div>';
     h+='</div>';
     el.innerHTML=h;
@@ -16725,6 +16877,11 @@
       .sort((a,b)=>jsNorm(pelNome(a.p)).localeCompare(jsNorm(pelNome(b.p)),'pt'));
     const nFreq=PELUDINHOS.filter(p=>!pelInativo(p)).length;
     document.getElementById('pelCount').textContent=`${nFreq} peludinhos frequentes`+(q?` · ${list.length} na busca`:'');
+    // Inativos a UM toque daqui (Adriana, 08/set/2026): havia 13 fichas inativas e ela não
+    // achava onde reativar quem está voltando — a lista vivia só em Relatórios › Inativos.
+    // O botão mostra a contagem e abre a mesma tela, com o "Voltou" em cada linha.
+    const bIn=document.getElementById('pelInativosBtn');
+    if(bIn) bIn.textContent='Inativos ('+PELUDINHOS.filter(p=>pelInativo(p)).length+')';
     document.getElementById('pelBody').innerHTML=list.map((o,row)=>{ const p=o.p; return `<tr onclick="abrirPeludinhoLista(${o.i})" style="cursor:pointer">
       <td class="pel-num">${row+1}</td>
       <td><span class="pel-nome">${pelNome(p)}</span>${p.apelido?` <span class="pel-obs">${p.apelido}</span>`:''}${((pelExtra(p).castrado||p.castrado)==='Não')?' <span class="pel-obs">Não castrado</span>':''}</td>
@@ -17065,6 +17222,8 @@
           </div>
         </div>
 
+        ${blocoOportunidades(p)}
+
         <h3 class="cad-sub">Vacinas</h3>
         ${alertaPrevencao(ex,'vacina','Vacinas')}
         ${blocoVacinas(pbEx('vac'))}
@@ -17311,6 +17470,7 @@
   function salvarFichaPel(){ if(document.activeElement&&document.activeElement.blur) document.activeElement.blur(); const s=document.getElementById('pel-saved2'); if(s){ s.textContent='✓ Ficha salva! Disponível em todos os aparelhos.'; setTimeout(()=>{ if(s) s.textContent=''; },2200); } if(typeof renderDaycare==='function') renderDaycare(); }
   function pelSubtab(el,id){ el.parentNode.querySelectorAll('.subtab2').forEach(x=>x.classList.remove('active')); el.classList.add('active'); document.querySelectorAll('.ppanel2').forEach(x=>x.classList.remove('active')); const t=document.getElementById(id); if(t) t.classList.add('active'); }
   function voltarPel(){ if(pelOrigem==='renovacao'){ irParaView('renovacao'); return; }
+    if(pelOrigem==='vacinas'){ document.getElementById('pel-ficha').style.display='none'; document.getElementById('pel-lista').style.display='block'; irParaView('vacinas'); return; }
     if(pelOrigem==='inativos'){ document.getElementById('pel-ficha').style.display='none'; document.getElementById('pel-lista').style.display='block'; irParaView('inativos'); if(typeof renderInativos==='function') renderInativos(); return; }
     if(pelOrigem==='hospedes'){ document.getElementById('pel-ficha').style.display='none'; document.getElementById('pel-lista').style.display='block'; irParaView('hospedes'); if(typeof renderHospedesAba==='function') renderHospedesAba(); return; }
     if(pelOrigem==='daycare'){ irParaView('daycare'); if(typeof carregarChamada==='function') carregarChamada(); } else { document.getElementById('pel-ficha').style.display='none'; document.getElementById('pel-lista').style.display='block'; } }
