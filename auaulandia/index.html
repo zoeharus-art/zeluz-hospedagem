@@ -1293,6 +1293,10 @@
   .avr-form input{width:100%;padding:10px 12px;border:1.5px solid var(--line);border-radius:9px;background:var(--z-cream);font-family:var(--font-ui);font-size:14px;font-weight:700;color:var(--z-blue);margin-bottom:8px}
   .avr-form-btns{display:flex;gap:8px;flex-wrap:wrap}
   .avr-resolvido-banner{background:rgba(39,174,96,.1);border:1.5px solid var(--crm-ok);border-radius:11px;padding:12px 14px;font-weight:800;color:var(--crm-ok);text-align:center}
+  /* O aviso encerrado por herança (o caso do Kakinho) DIZ que foi assim — a tela não finge
+     que o campo sempre esteve certo. E a dica embaixo do formulário explica o que Encerrar faz. */
+  .avr-herdado{margin:8px 0 0;font-size:12.5px;font-weight:600;line-height:1.5;color:var(--z-blue-soft)}
+  .avr-dica-fecho{margin:8px 0 0;font-size:12px;font-weight:600;line-height:1.5;color:var(--muted)}
   /* EA — o quadro de quem NÃO pode comer. Adriana, 20/ago/2026: "é algo MUITO MUITO
      importante, coloque efeitos, chame atenção." O pulso é lento e a animação respeita
      prefers-reduced-motion: chamar atenção não pode virar tela piscando na cara de quem
@@ -2074,6 +2078,33 @@
   .pa-li-txt span{display:block;font-size:12px;font-weight:500;color:var(--muted);margin-top:1px;line-height:1.4}
   .pa-li-go{flex:0 0 auto;align-self:center;font-size:18px;font-weight:800;color:var(--z-gold-deep)}
   .pa-li.pa-mais b{font-weight:600;color:var(--muted)}
+  /* v-12 (08/set/2026, noite) — Adriana: "está horrível... não dá para entender nada desse
+     dashboard". O que entrou: o card "Seu dia" no topo (o mesmo das Consultoras), um placar
+     que enche como o dos copos de água, o nome de quem abriu e desde quando, e a festa
+     quando a lista de pendentes zera. Nenhuma cor nova — só os tokens que já existem. */
+  .pa-li-meta{display:block;font-size:11.5px;font-weight:700;color:var(--z-gold-deep);margin-top:3px;line-height:1.4}
+  .pa-li.feito b{color:var(--muted);text-decoration:line-through;text-decoration-thickness:1px}
+  .pa-li-ok{flex:0 0 auto;width:22px;height:22px;border-radius:50%;background:rgba(39,174,96,.14);
+    color:var(--crm-ok);font-size:13px;font-weight:800;display:flex;align-items:center;justify-content:center;margin-top:1px}
+  .pa-grupo{margin:14px 0 2px;font-size:11px;font-weight:800;letter-spacing:.09em;text-transform:uppercase;
+    color:var(--muted);display:flex;align-items:center;gap:7px}
+  .pa-grupo i{font-style:normal;font-size:11px;font-weight:800;color:var(--z-blue);
+    background:var(--z-cream-warm);border-radius:999px;padding:1px 8px}
+  .pa-grupo:first-child{margin-top:2px}
+  .pa-placar{margin-top:16px;border:1.5px solid var(--pm-linha);border-radius:16px;padding:16px 18px;
+    background:linear-gradient(180deg,var(--z-cream) 0%,var(--z-white) 100%)}
+  .pa-placar.limpo{border-color:var(--crm-ok)}
+  .pa-placar-topo{display:flex;gap:22px;flex-wrap:wrap;margin-bottom:12px}
+  .pa-placar-lado{min-width:120px}
+  .pa-placar-lado span{display:block;font-size:12px;font-weight:700;color:var(--muted);margin-top:1px}
+  .pa-placar-n{display:block;font-size:38px;font-weight:800;line-height:1;color:var(--z-blue);letter-spacing:-.02em}
+  .pa-placar-n.alerta{color:#9B2C2C}
+  .pa-placar-n.ouro{color:var(--z-gold-deep)}
+  .pa-placar-frase{margin:9px 0 0;font-size:13.5px;font-weight:700;color:var(--z-blue);line-height:1.45}
+  .pa-festa{display:flex;align-items:center;gap:13px;margin-top:12px;padding:12px 14px;border-radius:13px;
+    background:rgba(39,174,96,.1);border:1.5px solid var(--crm-ok)}
+  .pa-festa b{display:block;font-size:15px;font-weight:800;color:var(--crm-ok)}
+  .pa-festa span{display:block;font-size:12.5px;font-weight:600;color:var(--z-blue-soft);margin-top:1px}
   .pa-tabs{display:none}
   @media(max-width:760px){
     .pa-cols{grid-template-columns:1fr}
@@ -2162,22 +2193,26 @@
     <a class="active op-only" data-v="inicio" title="Visão geral do dia"><span data-icon="home"></span><span>Início</span></a>
     <a data-v="mesa" class="so-mesa" title="Tudo o que espera por você hoje — toque num quadro para ir direto ao item."><span data-icon="list-check"></span><span>O que fazer hoje</span></a>
 
-    <!-- PAINÉIS (08/set/2026) — Adriana: "a sidebar virou bagunça". Os painéis estavam
-         espalhados por três lugares: dois na raiz, dois na Central Zêluz e dois na
-         Operação. Agora moram numa categoria só, e essa categoria guarda SÓ painel.
-         A ordem sobe do chão para o alto: quem cuida do FILHOt, quem atende o tutor,
-         quem supervisiona, quem toca a casa, quem responde por tudo.
-         REGRA MANTIDA: ninguém ganhou nem perdeu acesso — os cinco primeiros nascem
+    <!-- DASHBOARDS (08/set/2026, noite) — Adriana: "painel mudar para Dashboards" e
+         "colocar nomes: Adriana / Márcia / Amanda". A categoria nasceu de manhã como
+         "Painéis" (eles estavam espalhados por três lugares: dois na raiz, dois na Central
+         Zêluz e dois na Operação). À noite ela trocou o rótulo e batizou cada dashboard
+         pela PESSOA que se senta nele — ninguém na casa procura "a Supervisão", procura a
+         Amanda. A ordem sobe do chão para o alto: quem cuida do FILHOt, quem atende o
+         tutor, quem supervisiona, quem toca a casa, quem responde por tudo.
+         REGRA MANTIDA: ninguém ganhou nem perdeu acesso — mudou só o NOME VISÍVEL. Os
+         data-v, o data-acc="paineis" (a chave do estado aberto/fechado, guardada em cada
+         aparelho) e as classes so-*/op-only continuam idênticos: os cinco primeiros nascem
          escondidos e quem mostra é o aplicarPermMenu() (tabela PERM); o Painel do Dia
          segue so-master, como era na Operação. -->
     <div class="acc" data-acc="paineis">
-      <a class="grp nav-parent" data-acc-toggle="paineis"><span data-icon="chart"></span><span>Painéis</span><span class="acc-caret" aria-hidden="true"></span></a>
+      <a class="grp nav-parent" data-acc-toggle="paineis"><span data-icon="chart"></span><span>Dashboards</span><span class="acc-caret" aria-hidden="true"></span></a>
       <div class="acc-panel">
-        <a data-v="painelmeu" style="display:none" title="A sua fatia do dia: o seu horário, o seu plano, o que ficou aberto e os seus pontos."><span data-icon="sun"></span><span>Meu Painel</span></a>
-        <a data-v="consultoras" style="display:none" title="A sua mesa do dia: o Seu dia e os cinco quadros que precisam de você."><span data-icon="sun"></span><span>Painel das Consultoras</span></a>
-        <a data-v="painel-amanda" style="display:none" title="Pendente e resolvido na comunicação com os tutores — com quem e quando."><span data-icon="list-check"></span><span>Painel da Supervisão</span></a>
-        <a data-v="paineloperacao" style="display:none" title="A casa de hoje num lugar só: quem veio, quem faltou, o tempo do time, as noites que vêm aí e o acerto."><span data-icon="chart"></span><span>Painel da Operação</span></a>
-        <a data-v="painel-diretoria" style="display:none" title="A casa inteira e o dinheiro do mês — a visão de quem responde por tudo."><span data-icon="chart"></span><span>Painel da Diretoria</span></a>
+        <a data-v="painelmeu" style="display:none" title="A sua fatia do dia: o seu horário, o seu plano, o que ficou aberto e os seus pontos."><span data-icon="sun"></span><span>Meu Dashboard</span></a>
+        <a data-v="consultoras" style="display:none" title="A sua mesa do dia: o Seu dia e os cinco quadros que precisam de você."><span data-icon="sun"></span><span>Dashboard das Consultoras</span></a>
+        <a data-v="painel-amanda" style="display:none" title="O seu dia e as duas listas: o que está esperando você e o que você já resolveu hoje."><span data-icon="list-check"></span><span>Dashboard da Amanda</span></a>
+        <a data-v="paineloperacao" style="display:none" title="A casa de hoje num lugar só: quem veio, quem faltou, o tempo do time, as noites que vêm aí e o acerto."><span data-icon="chart"></span><span>Dashboard da Márcia</span></a>
+        <a data-v="painel-diretoria" style="display:none" title="A casa inteira e o dinheiro do mês — a visão de quem responde por tudo."><span data-icon="chart"></span><span>Dashboard da Adriana</span></a>
         <a data-v="painel" class="so-master" title="Auditoria e cumprimento de protocolos"><span data-icon="chart"></span><span>Painel do Dia</span></a>
       </div>
     </div>
@@ -2221,35 +2256,28 @@
     </div>
 
     <!-- CENTRAL ZÊLUZ — a mesa de quem fala com o tutor: as Consultoras de Bem-Estar, a
-         supervisão da Amanda e a veterinária. Os itens da chegada à saída ficam na raiz da
-         categoria, na ordem do dia; o que é do FILHOt (a ficha e o que se acompanha nela)
-         vive no sub-cabeçalho Peludinhos; dinheiro de plano, em Planos e cobranças. -->
+         supervisão da Amanda e a veterinária.
+         ORDEM (Adriana, 08/set/2026, noite): "Central Zêluz — primeiro Peludinhos, depois
+         Planos e Cobranças, depois os outros itens". O FILHOt vem antes do dinheiro, e o
+         dinheiro antes da rotina: quem abre a Central procura a ficha de um peludinho
+         muito mais vezes do que procura a tela do dia. Por isso os dois sub-cabeçalhos
+         sobem para o topo da gaveta e os itens da chegada à saída ficam embaixo deles, na
+         mesma ordem do dia que já tinham. Nenhum item mudou de gaveta nem de classe. -->
     <div class="acc" data-acc="central">
       <a class="grp nav-parent" data-acc-toggle="central"><span data-icon="bell"></span><span>Central Zêluz</span><span class="acc-caret" aria-hidden="true"></span></a>
       <div class="acc-panel">
-        <a data-v="checkin" title="O tutor chega: entrada, alimentação, medicação, assinatura (1º passo)."><span data-icon="login"></span><span>Check-in</span></a>
-        <a data-v="checkoutconf" class="so-conf-saida" title="Conferir a bolsa junto com o tutor e assinar (2º passo)."><span data-icon="door-out"></span><span>Check-out com o tutor</span></a>
-        <a data-v="orcamento" class="so-recepcao" title="Monte e envie o orçamento ao tutor."><span data-icon="dollar"></span><span>Orçamento de hospedagem</span></a>
-        <a data-v="recepcao" class="so-recepcao" title="Ração acabando, remédio faltando, algo que ficou."><span data-icon="message"></span><span>Pendências com o tutor</span></a>
-        <!-- A veterinária é da Central Zêluz (Adriana, 08/set/2026): ela conversa com o
-             tutor sobre o que viu no corpo do FILHOt. -->
-        <a data-v="cuidadovet" class="so-vet" title="Alterações no corpo que a veterinária precisa ver."><span data-icon="stethoscope"></span><span>Cuidado Vet</span></a>
-        <!-- Saiu do menu "Empório", que foi deletado: ninguém procuraria a mensagem
-             do tutor ali dentro (Adriana, 13/ago/2026). -->
-        <a data-v="emporio" class="so-emporio" title="A mensagem pronta para avisar o tutor."><span data-icon="bowl"></span><span>Quem não comeu hoje</span></a>
-        <a data-v="reposicao" class="so-recepcao" title="Créditos de dias por falta avisada."><span data-icon="refresh"></span><span>Reposições</span></a>
-        <!-- Adriana, 19/ago/2026: é aqui que a recepção lança o que hoje digita na
-             planilha — e a planilha vira só o espelho que alimenta a TV. -->
-        <a data-v="dashdc" class="so-recepcao" title="A planilha do Day Care, item por item."><span data-icon="list-check"></span><span>Lançamentos do dia</span></a>
         <div class="acc" data-acc="c-peludinhos">
           <a class="grp grp-sub nav-parent" data-acc-toggle="c-peludinhos"><span>Peludinhos</span><span class="acc-caret" aria-hidden="true"></span></a>
           <div class="acc-panel">
           <!-- O cadastro abre o sub-cabeçalho porque é dele que sai tudo o que vem embaixo:
-               prevenção, conversa com o tutor e peso são leituras da mesma ficha
+               prevenção, pesquisa com a família e peso são leituras da mesma ficha
                (Adriana, 08/set/2026). Segue so-gestao: monitor NUNCA cadastra. -->
           <a data-v="ficha" class="so-gestao nav-destaque" title="Um cadastro só, para Day Care e AuAulândia — tudo começa aqui."><span data-icon="id-card"></span><span>Cadastro de Peludinhos</span></a>
           <a data-v="vacinas" class="so-gestao" title="Vacina, vermífugo, coleira, exame e peso: quem está atrasado."><span data-icon="shield"></span><span>Prevenção</span></a>
-          <a data-v="alergia" class="so-gestao" title="A pesquisa com o tutor: enviar, colar a resposta, e ela vira ficha sozinha."><span data-icon="drop"></span><span>Conversa com o Tutor</span></a>
+          <!-- Renomeada em 08/set/2026 (noite): "Conversa com o Tutor" → "Pesquisa com a
+               Família Multiespécie". É pesquisa, não conversa — e quem responde é a família
+               inteira, não só quem assina. O data-v e a classe so-gestao não mudaram. -->
+          <a data-v="alergia" class="so-gestao" title="A pesquisa com a família: enviar, colar a resposta, e ela vira ficha sozinha."><span data-icon="drop"></span><span>Pesquisa com a Família Multiespécie</span></a>
           <a data-v="peso" class="so-pesa" title="Pesar qualquer FILHOt: recepção, veterinária e gestão."><span data-icon="scale"></span><span>Peso</span></a>
           </div>
         </div>
@@ -2265,6 +2293,20 @@
           <a class="so-gestao" style="opacity:.55;cursor:default" title="Quem deve no Day Care."><span data-icon="dollar-alert"></span><span>Em débito</span><span class="soon">em breve</span></a>
           </div>
         </div>
+        <a data-v="checkin" title="O tutor chega: entrada, alimentação, medicação, assinatura (1º passo)."><span data-icon="login"></span><span>Check-in</span></a>
+        <a data-v="checkoutconf" class="so-conf-saida" title="Conferir a bolsa junto com o tutor e assinar (2º passo)."><span data-icon="door-out"></span><span>Check-out com o tutor</span></a>
+        <a data-v="orcamento" class="so-recepcao" title="Monte e envie o orçamento ao tutor."><span data-icon="dollar"></span><span>Orçamento de hospedagem</span></a>
+        <a data-v="recepcao" class="so-recepcao" title="Ração acabando, remédio faltando, algo que ficou."><span data-icon="message"></span><span>Pendências com o tutor</span></a>
+        <!-- A veterinária é da Central Zêluz (Adriana, 08/set/2026): ela conversa com o
+             tutor sobre o que viu no corpo do FILHOt. -->
+        <a data-v="cuidadovet" class="so-vet" title="Alterações no corpo que a veterinária precisa ver."><span data-icon="stethoscope"></span><span>Cuidado Vet</span></a>
+        <!-- Saiu do menu "Empório", que foi deletado: ninguém procuraria a mensagem
+             do tutor ali dentro (Adriana, 13/ago/2026). -->
+        <a data-v="emporio" class="so-emporio" title="A mensagem pronta para avisar o tutor."><span data-icon="bowl"></span><span>Quem não comeu hoje</span></a>
+        <a data-v="reposicao" class="so-recepcao" title="Créditos de dias por falta avisada."><span data-icon="refresh"></span><span>Reposições</span></a>
+        <!-- Adriana, 19/ago/2026: é aqui que a recepção lança o que hoje digita na
+             planilha — e a planilha vira só o espelho que alimenta a TV. -->
+        <a data-v="dashdc" class="so-recepcao" title="A planilha do Day Care, item por item."><span data-icon="list-check"></span><span>Lançamentos do dia</span></a>
       </div>
     </div>
 
@@ -4518,7 +4560,7 @@
     checkin:['Check-in','O tutor chega: entrada, alimentação, medicação, assinatura (1º passo).'],
     conferencia:['Conferência do check-in','O monitor confere corpo e pertences de quem chegou (2º passo; o 1º é da Central Zêluz).'],
     orcamento:['Orçamento de hospedagem','Monte e envie o orçamento ao tutor.'],
-    alergia:['Conversa com o Tutor','A pesquisa: enviar, colar a resposta — e ela vira ficha sozinha.'],
+    alergia:['Pesquisa com a Família Multiespécie','A pesquisa: enviar, colar a resposta — e ela vira ficha sozinha.'],
     peso:['Peso','Pesar qualquer FILHOt: recepção, veterinária e gestão.'],
     eahist:['Enriquecimento Ambiental','O que foi feito e quem não participou.'],
     relatorios:['Relatórios','Resumo do dia, aniversariantes, exportações.'],
@@ -4535,12 +4577,12 @@
     mesa:['O que fazer hoje','A sua mesa do dia.'],
     // Dica curta de propósito: no celular ela divide a barra com o seletor de data, e uma
     // frase longa vira uma coluna estreita e alta em cima da tela.
-    painelmeu:['Meu Painel','A sua rota de hoje.'],
-    'painel-diretoria':['Painel da Diretoria','A casa inteira e o dinheiro do mês.'],
-    consultoras:['Painel das Consultoras','A sua mesa do dia na Central.'],
-    'painel-amanda':['Painel da Supervisão','Pendente e resolvido, com quem e quando.'],
+    painelmeu:['Meu Dashboard','A sua rota de hoje.'],
+    'painel-diretoria':['Dashboard da Adriana','A casa inteira e o dinheiro do mês.'],
+    consultoras:['Dashboard das Consultoras','A sua mesa do dia na Central.'],
+    'painel-amanda':['Dashboard da Amanda','O seu dia, o que espera por você e o que você resolveu hoje.'],
     'lancar-pagamento':['Lançar pagamento','O recebimento do plano vira registro — é o que faz o Financeiro sair de R$ 0,00.'],
-    paineloperacao:['Painel da Operação','A casa de hoje: quem veio, o time, as noites e o acerto.'],
+    paineloperacao:['Dashboard da Márcia','A casa de hoje: quem veio, o time, as noites e o acerto.'],
     planodia:['Escala e plano do dia','A escala de cada um e qual plano vale hoje.'],
     abertura:['Abertura do dia','Monitor 1: como a casa abre.'],sair:['Sair','Encerra a sessão neste aparelho.']};
 
@@ -4923,8 +4965,8 @@
     }catch(e){} /* silencioso de propósito: função opcional, pode não existir nesta tela */
     try{ r.avisar=(typeof empLista==='function')?empLista().filter(function(x){ return !x.aviso; }).length:0; }catch(e){} /* silencioso de propósito: função opcional, pode não existir nesta tela */
     try{
-      Object.keys(AVISOS_ESTOQUE_CACHE||{}).forEach(function(id){ if(AVISOS_ESTOQUE_CACHE[id].status!=='resolvido') r.faltas++; });
-      Object.keys(AVISOS_RACAO_CACHE||{}).forEach(function(id){ if(AVISOS_RACAO_CACHE[id].status!=='resolvido') r.faltas++; });
+      Object.keys(AVISOS_ESTOQUE_CACHE||{}).forEach(function(id){ if(!avisoEncerrado(AVISOS_ESTOQUE_CACHE[id])) r.faltas++; });
+      Object.keys(AVISOS_RACAO_CACHE||{}).forEach(function(id){ if(!avisoEncerrado(AVISOS_RACAO_CACHE[id])) r.faltas++; });
       if(typeof ocorrenciasLoja==='function') r.faltas+=ocorrenciasLoja().filter(function(o){ return !o.avisado; }).length;
     }catch(e){} /* silencioso de propósito: função opcional, pode não existir nesta tela */
     try{ if(typeof repSaldo==='function'&&typeof PELUDINHOS!=='undefined')
@@ -7502,12 +7544,91 @@
   // pendente→resolvido, gerado pela Conferência Check-in quando a pesagem acusa deficit.
   var AVISOS_RACAO_CACHE={};
   function agoraBR(){ var d=new Date(),p=function(x){return String(x).padStart(2,'0');}; return p(d.getDate())+'/'+p(d.getMonth()+1)+' '+p(d.getHours())+':'+p(d.getMinutes()); }
-  // Existe aviso NÃO resolvido para este remédio? (evita duplicar e mostra "já enviado")
+  // O mesmo carimbo, mas de um instante guardado (resolvido_em, reaberto_em).
+  function carimboBR(ts){ if(!ts) return ''; var d=new Date(ts),p=function(x){return String(x).padStart(2,'0');}; return p(d.getDate())+'/'+p(d.getMonth()+1)+' '+p(d.getHours())+':'+p(d.getMinutes()); }
+  /* ===== ENCERRAR DE VERDADE — Adriana, 08/set/2026 (o caso do Kakinho) ==============
+   * O QUE ELA VIU: "Pendências com o tutor. Amanda colocou: Kakinho tem 7, ou seja dá até
+   * o final, e consta como processo. Precisa ser encerrado."
+   *
+   * O QUE O BANCO MOSTRA (retrato de 07/09, nó auaulandia/avisos-racao/-P0hscx2wW0rnnV0_hSy):
+   * o aviso é do Kako ("Kakinho"), tutor Márcia Nascimento, remédio PromunDog, do tipo
+   * "medicacao-sem-contagem". A trilha tem UMA entrada — acao "Tem 7 (Ate o final)",
+   * assinatura "Amanda", quando "04/09 17:35" e resolucao:true — e a auditoria daquele dia
+   * traz 'racao-aviso-resolvido' com o id exato deste aviso, às 17:35, por Amanda. Ou seja:
+   * ela respondeu E encerrou. Mesmo assim o campo `status` ficou "em_processo", e por isso
+   * o chamado nunca saiu da lista de abertos.
+   *
+   * POR QUÊ: resolucao:true na trilha só é escrito por quem encerra, e o encerramento grava
+   * trilha e status na MESMA gravação. O único caminho que depois devolve o status a
+   * "em_processo" sem tocar na trilha é o botão Reabrir — e ele gravava CALADO: sem motivo,
+   * sem quem, sem quando e sem uma linha na auditoria. Um toque a mais, no botão que nasce
+   * exatamente onde estava o de encerrar, desfazia o encerramento sem deixar rastro nenhum.
+   *
+   * A REGRA AGORA (vale para os DOIS canais da tela: ração/remédio e estoque):
+   *  1. ENCERRAR carimba o desfecho no próprio nó — resolvido_por, resolvido_em e
+   *     resolvido_motivo. O estado passa a ter dono; não se depende de ler a trilha.
+   *  2. REABRIR pede motivo, confirma, deixa entrada na trilha, carimba reaberto_por/em/
+   *     motivo e escreve na auditoria. Reabrir é decisão, nunca escorregão mudo.
+   *  3. Aviso cuja trilha tem resposta de encerramento e que NUNCA foi reaberto conta como
+   *     ENCERRADO, mesmo com o campo status atrasado. É isto que tira o Kakinho — e
+   *     qualquer irmão dele — da lista de abertos sem ninguém mexer no banco com a mão.
+   */
+  function avisoUltimaResolucao(a){
+    var e=null; (((a&&a.entries)||[])).forEach(function(x){ if(x&&x.resolucao) e=x; });
+    return e;
+  }
+  // Encerrado por HERANÇA: a resposta que encerra está na trilha, ninguém reabriu depois e
+  // nenhuma providência nova foi registrada em cima dela — só o campo status ficou para trás.
+  function avisoEncerradoHerdado(a){
+    a=a||{};
+    if((a.status||'pendente')==='resolvido') return false;   // já encerrado pelo campo
+    if(a.reaberto_em) return false;                          // reabertura explícita manda
+    var e=avisoUltimaResolucao(a); if(!e) return false;
+    var depois=false;
+    ((a.entries)||[]).forEach(function(x){ if(x&&!x.resolucao&&(x.ts||0)>(e.ts||0)) depois=true; });
+    return !depois;                                          // providência posterior reabre de fato
+  }
+  function avisoEncerrado(a){ a=a||{}; return (a.status==='resolvido')||avisoEncerradoHerdado(a); }
+  // O status que a tela mostra e que as contagens usam — um lugar só, para nenhuma lista
+  // discordar de outra sobre o que ainda está aberto.
+  function avisoStatusEfetivo(a){
+    a=a||{};
+    if(avisoEncerrado(a)) return 'resolvido';
+    return a.status||'pendente';
+  }
+  // O rodapé do chamado ENCERRADO: quem encerrou, quando, com que motivo — e, quando o
+  // encerramento veio por herança (o caso do Kakinho), a tela DIZ isso em vez de fingir
+  // que o campo sempre esteve certo. O botão Reabrir continua ali, mas agora cobra motivo.
+  function avisoFechoHTML(a, fnReabrir, id, oque){
+    a=a||{};
+    var e=avisoUltimaResolucao(a);
+    var quem=a.resolvido_por||(e&&e.assinatura)||'';
+    var quando=carimboBR(a.resolvido_em)||((e&&e.quando)||'');
+    var motivo=a.resolvido_motivo||((e&&e.acao)||'');
+    var linha='Encerrada'+(quem?(' por '+escAttr(quem)):'')+(quando?(' em '+escAttr(quando)):'')
+      +(motivo?(' — "'+escAttr(motivo)+'"'):(oque?(' — '+escAttr(oque)+'.'):'.'));
+    var herdado=avisoEncerradoHerdado(a)
+      ? '<p class="avr-herdado">A resposta que encerrou este chamado já estava registrada, mas o estado dele tinha ficado para trás — o app passou a tratá-lo como encerrado. Se ainda faltar alguma coisa, toque em Reabrir e diga o motivo.</p>'
+      : '';
+    return '<div class="avr-resolvido-banner">'+linha+'</div>'+herdado
+      +'<div style="text-align:right;margin-top:8px"><button class="btn" style="background:var(--z-cream-warm);color:var(--z-blue);border:1.5px solid var(--line)" onclick="'+fnReabrir+'(\''+id+'\')">Reabrir</button></div>';
+  }
+  // Reabrir é decisão: pede o motivo na caixa da casa (zCampo), não num prompt do navegador.
+  function avisoPedirMotivoReabrir(fn){
+    var quem=(typeof quemSou==='function'?quemSou():'').trim(); if(!quem) quem='-';
+    zCampo('Reabrir este chamado?',
+      ['Reabrir devolve o chamado para a lista de abertos. Escreva por que ele ainda não está resolvido — fica registrado com o seu nome e a hora.'],
+      {rotulo:'Por que reabrir?', dica:'ex.: o tutor disse que traz, mas ainda não trouxe', minimo:4,
+       erro:'Escreva pelo menos 4 letras — é isso que explica, depois, por que o chamado voltou.',
+       botao:'Reabrir e registrar', botaoNao:'Cancelar — deixar encerrado', cor:'#B8961F',
+       fn:function(motivo){ fn(String(motivo||'').trim(), quem); }});
+  }
+  // Existe aviso NÃO encerrado para este remédio? (evita duplicar e mostra "já enviado")
   function avisoAbertoDoItem(key,itemId){
     var out=null;
     Object.keys(AVISOS_ESTOQUE_CACHE||{}).forEach(function(id){
       var a=AVISOS_ESTOQUE_CACHE[id];
-      if(a && a.key===key && a.itemId===itemId && a.status!=='resolvido') out=Object.assign({id:id},a);
+      if(a && a.key===key && a.itemId===itemId && !avisoEncerrado(a)) out=Object.assign({id:id},a);
     });
     return out;
   }
@@ -7652,8 +7773,8 @@
   }
   var _recepcaoPrevN=null;
   function atualizarBadgeRecepcao(){
-    var n=0; Object.keys(AVISOS_ESTOQUE_CACHE||{}).forEach(function(id){ if(AVISOS_ESTOQUE_CACHE[id].status!=='resolvido') n++; });
-    Object.keys(AVISOS_RACAO_CACHE||{}).forEach(function(id){ if(AVISOS_RACAO_CACHE[id].status!=='resolvido') n++; });
+    var n=0; Object.keys(AVISOS_ESTOQUE_CACHE||{}).forEach(function(id){ if(!avisoEncerrado(AVISOS_ESTOQUE_CACHE[id])) n++; });
+    Object.keys(AVISOS_RACAO_CACHE||{}).forEach(function(id){ if(!avisoEncerrado(AVISOS_RACAO_CACHE[id])) n++; });
     n+=ocorrenciasLoja().filter(function(o){ return !o.avisado; }).length; // ocorrência sem tutor avisado também é pendência da loja
     // O menu inteiro é repintado por atualizarPendenciasNav — assim a Recepção e as outras
     // telas nunca discordam sobre o que está pendente.
@@ -7668,7 +7789,7 @@
   }
   function avisoCardHTML(id){
     var a=AVISOS_ESTOQUE_CACHE[id]||{};
-    var status=a.status||'pendente';
+    var status=avisoStatusEfetivo(a);
     var chip=status==='resolvido'?'<span class="avr-chip resolvido">RESOLVIDO</span>':status==='em_processo'?'<span class="avr-chip processo">EM PROCESSO</span>':'<span class="avr-chip pendente">PENDENTE</span>';
     var cls=status==='resolvido'?'resolvido':status==='em_processo'?'processo':'pendente';
     var motivo=a.motivo==='projecao'?'Estoque projetado para acabar':(a.motivo==='naocobre'?'Não cobre a estadia — conferido na entrada':'Marcado como "está acabando"');
@@ -7683,9 +7804,9 @@
     var trilha=(a.entries&&a.entries.length)?'<div class="avr-trilha">'+a.entries.map(function(e){
       return '<div class="avr-tl'+(e.resolucao?' resol':'')+'"><div class="avr-tl-meta">'+escAttr(e.quando||'')+'</div><div class="avr-tl-acao">"'+escAttr(e.acao||'')+'"</div><div class="avr-tl-assina">— '+escAttr(e.assinatura||'')+'</div></div>';
     }).join('')+'</div>':'';
-    var form=status!=='resolvido'
-      ? '<div class="avr-form"><div class="ff-tit">Registrar providência</div><textarea id="avr_acao_'+id+'" placeholder="O que foi feito? (ex.: liguei para o tutor, ele traz amanhã)"></textarea><input id="avr_assina_'+id+'" placeholder="Seu nome (assinatura)"><div class="avr-form-btns"><button class="btn btn-primary" onclick="avisoAddEntrada(\''+id+'\')">Registrar</button><button class="btn btn-gold" onclick="avisoResolver(\''+id+'\')">Marcar como resolvido</button></div></div>'
-      : '<div class="avr-resolvido-banner">Resolvido — estoque encaminhado.</div><div style="text-align:right;margin-top:8px"><button class="btn" style="background:var(--z-cream-warm);color:var(--z-blue);border:1.5px solid var(--line)" onclick="avisoReabrir(\''+id+'\')">Reabrir</button></div>';
+    var form=(status!=='resolvido')
+      ? '<div class="avr-form"><div class="ff-tit">Registrar providência</div><textarea id="avr_acao_'+id+'" placeholder="O que foi feito? (ex.: liguei para o tutor, ele traz amanhã)"></textarea><input id="avr_assina_'+id+'" placeholder="Seu nome (assinatura)"><div class="avr-form-btns"><button class="btn btn-primary" onclick="avisoAddEntrada(\''+id+'\')">Registrar</button><button class="btn btn-gold" onclick="avisoResolver(\''+id+'\')">Encerrar</button></div><p class="avr-dica-fecho">Encerrar tira o chamado da lista de abertos. O que você escrever fica como motivo, com o seu nome e a hora.</p></div>'
+      : avisoFechoHTML(a, 'avisoReabrir', id, 'estoque encaminhado');
     return '<div class="avr-card '+cls+'"><div class="avr-head"><div class="avr-info"><div class="avr-nome">'+escAttr(a.medNome||'Medicamento')+'</div><div class="avr-sub">'+escAttr(a.hospNome||'')+(a.tutor?(' · Tutor: '+escAttr(a.tutor)):'')+' — '+escAttr(det.join(' · '))+'</div></div>'+chip+'</div><div class="avr-body">'+trilha+form+'</div></div>';
   }
   // ===== PENDENTE NA CARA, RESOLVIDO NA GAVETA — Adriana, 19/ago/2026 ============
@@ -7727,8 +7848,8 @@
     var el=document.getElementById('avisosEstoqueList'); if(!el) return;
     var ids=Object.keys(AVISOS_ESTOQUE_CACHE||{});
     ids.sort(function(a,b){ return (AVISOS_ESTOQUE_CACHE[b]._ts||0)-(AVISOS_ESTOQUE_CACHE[a]._ts||0); });
-    var abertos=ids.filter(function(id){ return AVISOS_ESTOQUE_CACHE[id].status!=='resolvido'; });
-    var fechados=ids.filter(function(id){ return AVISOS_ESTOQUE_CACHE[id].status==='resolvido'; });
+    var abertos=ids.filter(function(id){ return !avisoEncerrado(AVISOS_ESTOQUE_CACHE[id]); });
+    var fechados=ids.filter(function(id){ return avisoEncerrado(AVISOS_ESTOQUE_CACHE[id]); });
     el.innerHTML=_painelPendencias(
       abertos.map(avisoCardHTML).join(''), fechados.map(avisoCardHTML).join(''),
       abertos.length, fechados.length, 'REMÉDIO(S) ACABANDO — sem providência registrada',
@@ -7741,23 +7862,34 @@
     if(!acao||!assina){ alert('Escreva o que foi feito e o seu nome para registrar.'); return; }
     if(!DB) return; var a=AVISOS_ESTOQUE_CACHE[id]; if(!a) return;
     var entries=(a.entries||[]).slice(); entries.push({acao:acao,assinatura:assina,quando:agoraBR(),ts:Date.now()});
-    DB.ref('auaulandia/avisos-estoque/'+id).update({entries:entries, status:(a.status==='resolvido'?'resolvido':'em_processo')}).catch(function(e){ _logFalhaGrav('auaulandia/avisos-estoque/ (avisoAddEntrada)', e); });
+    DB.ref('auaulandia/avisos-estoque/'+id).update({entries:entries, status:(avisoEncerrado(a)?'resolvido':'em_processo')}).catch(function(e){ _logFalhaGrav('auaulandia/avisos-estoque/ (avisoAddEntrada)', e); });
     if(typeof audit==='function') audit('estoque-aviso-entrada',a.key,{med:a.medNome||'',quem:assina});
   }
+  // ENCERRAR — o desfecho vai para o NÓ, não fica só na trilha (a lição do Kakinho).
   function avisoResolver(id){
     var acao=((document.getElementById('avr_acao_'+id)||{}).value||'').trim();
     var assina=((document.getElementById('avr_assina_'+id)||{}).value||'').trim();
-    if(!acao||!assina){ alert('Descreva o que foi feito e assine para marcar como resolvido.'); return; }
+    if(!acao||!assina){ alert('Escreva o motivo do encerramento e assine para encerrar.'); return; }
     if(!DB) return; var a=AVISOS_ESTOQUE_CACHE[id]; if(!a) return;
     var entries=(a.entries||[]).slice(); entries.push({acao:acao,assinatura:assina,quando:agoraBR(),ts:Date.now(),resolucao:true});
-    DB.ref('auaulandia/avisos-estoque/'+id).update({entries:entries, status:'resolvido'}).catch(function(e){ _logFalhaGrav('auaulandia/avisos-estoque/ (avisoResolver)', e); });
+    DB.ref('auaulandia/avisos-estoque/'+id).update({entries:entries, status:'resolvido',
+      resolvido_por:assina, resolvido_em:Date.now(), resolvido_motivo:acao,
+      reaberto_por:null, reaberto_em:null, reaberto_motivo:null}).catch(function(e){ _logFalhaGrav('auaulandia/avisos-estoque/ (avisoResolver)', e); });
     // baixa a flag "acabando" do item, já que foi resolvido
     if(a.key&&a.itemId) DB.ref('auaulandia/medicacao-agenda/'+a.key+'/itens/'+a.itemId+'/estoque/acabando').set(null).catch(function(e){ _logFalhaGrav('auaulandia/medicacao-agenda/ (avisoResolver)', e); });
     if(typeof audit==='function') audit('estoque-aviso-resolvido',a.key,{med:a.medNome||'',quem:assina});
   }
+  // REABRIR — pede motivo, deixa rastro e carimba quem/quando. Antes gravava calado, e foi
+  // por um toque nele que o encerramento do Kakinho se desfez sem ninguém saber.
   function avisoReabrir(id){
     if(!DB) return; var a=AVISOS_ESTOQUE_CACHE[id]; if(!a) return;
-    DB.ref('auaulandia/avisos-estoque/'+id).update({status:'em_processo'}).catch(function(e){ _logFalhaGrav('auaulandia/avisos-estoque/ (avisoReabrir)', e); });
+    avisoPedirMotivoReabrir(function(motivo, quem){
+      var entries=(a.entries||[]).slice();
+      entries.push({acao:'Reaberto: '+motivo, assinatura:quem, quando:agoraBR(), ts:Date.now(), reabertura:true});
+      DB.ref('auaulandia/avisos-estoque/'+id).update({entries:entries, status:'em_processo',
+        reaberto_por:quem, reaberto_em:Date.now(), reaberto_motivo:motivo}).catch(function(e){ _logFalhaGrav('auaulandia/avisos-estoque/ (avisoReabrir)', e); });
+      if(typeof audit==='function') audit('estoque-aviso-reaberto', id, {quem:quem, motivo:motivo});
+    });
   }
 
   // ---- Recepção: OCORRÊNCIAS dos hóspedes (item 3 — a loja precisa ver) ----
@@ -8064,7 +8196,7 @@
   // pesagem acusa que a ração trazida não cobre os dias da estadia.
   function avisoRacaoCardHTML(id){
     var a=AVISOS_RACAO_CACHE[id]||{};
-    var status=a.status||'pendente';
+    var status=avisoStatusEfetivo(a);
     var chip=status==='resolvido'?'<span class="avr-chip resolvido">RESOLVIDO</span>':status==='em_processo'?'<span class="avr-chip processo">EM PROCESSO</span>':'<span class="avr-chip pendente">PENDENTE</span>';
     var cls=status==='resolvido'?'resolvido':status==='em_processo'?'processo':'pendente';
     var det=(a.tipo==='medicacao-sem-contagem')
@@ -8075,9 +8207,9 @@
     var trilha=(a.entries&&a.entries.length)?'<div class="avr-trilha">'+a.entries.map(function(e){
       return '<div class="avr-tl'+(e.resolucao?' resol':'')+'"><div class="avr-tl-meta">'+escAttr(e.quando||'')+'</div><div class="avr-tl-acao">"'+escAttr(e.acao||'')+'"</div><div class="avr-tl-assina">— '+escAttr(e.assinatura||'')+'</div></div>';
     }).join('')+'</div>':'';
-    var form=status!=='resolvido'
-      ? '<div class="avr-form"><div class="ff-tit">Registrar providência</div><textarea id="avrr_acao_'+id+'" placeholder="O que foi feito? (ex.: liguei para o tutor, ele traz amanhã)"></textarea><input id="avrr_assina_'+id+'" placeholder="Seu nome (assinatura)"><div class="avr-form-btns"><button class="btn btn-primary" onclick="avisoRacaoAddEntrada(\''+id+'\')">Registrar</button><button class="btn btn-gold" onclick="avisoRacaoResolver(\''+id+'\')">Marcar como resolvido</button></div></div>'
-      : '<div class="avr-resolvido-banner">Resolvido — ração encaminhada.</div><div style="text-align:right;margin-top:8px"><button class="btn" style="background:var(--z-cream-warm);color:var(--z-blue);border:1.5px solid var(--line)" onclick="avisoRacaoReabrir(\''+id+'\')">Reabrir</button></div>';
+    var form=(status!=='resolvido')
+      ? '<div class="avr-form"><div class="ff-tit">Registrar providência</div><textarea id="avrr_acao_'+id+'" placeholder="O que resolve? (ex.: tem 7 comprimidos, dá até o fim da estadia)"></textarea><input id="avrr_assina_'+id+'" placeholder="Seu nome (assinatura)"><div class="avr-form-btns"><button class="btn btn-primary" onclick="avisoRacaoAddEntrada(\''+id+'\')">Registrar</button><button class="btn btn-gold" onclick="avisoRacaoResolver(\''+id+'\')">Encerrar</button></div><p class="avr-dica-fecho">Encerrar tira o chamado da lista de abertos. O que você escrever fica como motivo, com o seu nome e a hora — é o caso de "tem 7, dá até o final".</p></div>'
+      : avisoFechoHTML(a, 'avisoRacaoReabrir', id, 'ração encaminhada');
     // O mesmo canal atende ração e medicação (itens 3 e 4) — o título diz qual é qual.
     var _rot=(a.tipo==='medicacao')?('💊 Remédio '+escAttr(a.itemNome||''))
             :(a.tipo==='medicacao-sem-contagem')?('❓ Contar remédio '+escAttr(a.itemNome||''))
@@ -8100,8 +8232,8 @@
     var el=document.getElementById('avisosRacaoList'); if(!el) return;
     var ids=Object.keys(AVISOS_RACAO_CACHE||{});
     ids.sort(function(a,b){ return (AVISOS_RACAO_CACHE[b]._ts||0)-(AVISOS_RACAO_CACHE[a]._ts||0); });
-    var abertos=ids.filter(function(id){ return AVISOS_RACAO_CACHE[id].status!=='resolvido'; });
-    var fechados=ids.filter(function(id){ return AVISOS_RACAO_CACHE[id].status==='resolvido'; });
+    var abertos=ids.filter(function(id){ return !avisoEncerrado(AVISOS_RACAO_CACHE[id]); });
+    var fechados=ids.filter(function(id){ return avisoEncerrado(AVISOS_RACAO_CACHE[id]); });
     el.innerHTML=_painelPendencias(
       abertos.map(avisoRacaoCardHTML).join(''), fechados.map(avisoRacaoCardHTML).join(''),
       abertos.length, fechados.length, 'SEM RAÇÃO SUFICIENTE — sem providência registrada',
@@ -8114,21 +8246,33 @@
     if(!acao||!assina){ alert('Escreva o que foi feito e o seu nome para registrar.'); return; }
     if(!DB) return; var a=AVISOS_RACAO_CACHE[id]; if(!a) return;
     var entries=(a.entries||[]).slice(); entries.push({acao:acao,assinatura:assina,quando:agoraBR(),ts:Date.now()});
-    DB.ref('auaulandia/avisos-racao/'+id).update({entries:entries, status:(a.status==='resolvido'?'resolvido':'em_processo')}).catch(function(e){ _logFalhaGrav('auaulandia/avisos-racao/ (avisoRacaoAddEntrada)', e); });
+    DB.ref('auaulandia/avisos-racao/'+id).update({entries:entries, status:(avisoEncerrado(a)?'resolvido':'em_processo')}).catch(function(e){ _logFalhaGrav('auaulandia/avisos-racao/ (avisoRacaoAddEntrada)', e); });
     if(typeof audit==='function') audit('racao-aviso-entrada',id,{quem:assina});
   }
+  // ENCERRAR — este é o botão do caso do Kakinho. O desfecho vai para o NÓ (resolvido_por,
+  // resolvido_em, resolvido_motivo) e não fica só na trilha: assim nenhuma resposta some
+  // dentro de um chamado que continua dizendo "em processo".
   function avisoRacaoResolver(id){
     var acao=((document.getElementById('avrr_acao_'+id)||{}).value||'').trim();
     var assina=((document.getElementById('avrr_assina_'+id)||{}).value||'').trim();
-    if(!acao||!assina){ alert('Descreva o que foi feito e assine para marcar como resolvido.'); return; }
+    if(!acao||!assina){ alert('Escreva o motivo do encerramento e assine para encerrar.'); return; }
     if(!DB) return; var a=AVISOS_RACAO_CACHE[id]; if(!a) return;
     var entries=(a.entries||[]).slice(); entries.push({acao:acao,assinatura:assina,quando:agoraBR(),ts:Date.now(),resolucao:true});
-    DB.ref('auaulandia/avisos-racao/'+id).update({entries:entries, status:'resolvido'}).catch(function(e){ _logFalhaGrav('auaulandia/avisos-racao/ (avisoRacaoResolver)', e); });
-    if(typeof audit==='function') audit('racao-aviso-resolvido',id,{quem:assina});
+    DB.ref('auaulandia/avisos-racao/'+id).update({entries:entries, status:'resolvido',
+      resolvido_por:assina, resolvido_em:Date.now(), resolvido_motivo:acao,
+      reaberto_por:null, reaberto_em:null, reaberto_motivo:null}).catch(function(e){ _logFalhaGrav('auaulandia/avisos-racao/ (avisoRacaoResolver)', e); });
+    if(typeof audit==='function') audit('racao-aviso-resolvido',id,{quem:assina,motivo:acao});
   }
+  // REABRIR — com motivo, com rastro na trilha e na auditoria.
   function avisoRacaoReabrir(id){
     if(!DB) return; var a=AVISOS_RACAO_CACHE[id]; if(!a) return;
-    DB.ref('auaulandia/avisos-racao/'+id).update({status:'em_processo'}).catch(function(e){ _logFalhaGrav('auaulandia/avisos-racao/ (avisoRacaoReabrir)', e); });
+    avisoPedirMotivoReabrir(function(motivo, quem){
+      var entries=(a.entries||[]).slice();
+      entries.push({acao:'Reaberto: '+motivo, assinatura:quem, quando:agoraBR(), ts:Date.now(), reabertura:true});
+      DB.ref('auaulandia/avisos-racao/'+id).update({entries:entries, status:'em_processo',
+        reaberto_por:quem, reaberto_em:Date.now(), reaberto_motivo:motivo}).catch(function(e){ _logFalhaGrav('auaulandia/avisos-racao/ (avisoRacaoReabrir)', e); });
+      if(typeof audit==='function') audit('racao-aviso-reaberto', id, {quem:quem, motivo:motivo});
+    });
   }
 
   // ===== Relatório do turno: medicação em SIM/NÃO (item 3) =====
@@ -11957,7 +12101,7 @@
   // inteira DEPOIS de a correção estar publicada — o aviso apareceu, ninguém tocou.
   // Agora o aparelho PARADO recarrega sozinho: trancado, com a aba escondida, na porta de
   // entrada ou 3 minutos sem ninguém tocar nele. Mão na tela = nunca recarrega.
-  const APP_VERSAO='2026-09-08-05';
+  const APP_VERSAO='2026-09-08-06';
   var RECARGA_PARADO_MS=3*60*1000, __versaoPublicada=null, __recargaTimer=null;
   function vigiarVersao(){
     if(!DB) return;
@@ -12370,6 +12514,25 @@
     MONITORES.splice(i,1); try{ renderMonitores(); }catch(e){} /* silencioso de propósito: redesenho de tela — falhar não pode derrubar quem chamou */ try{ renderSenhas(); }catch(e){} /* silencioso de propósito: redesenho de tela — falhar não pode derrubar quem chamou */ }
   function salvarMonitores(){
     const st=document.getElementById('monitoresStatus'); if(st) st.style.color='';
+    // ===== ITEM 7 (Adriana, 08/set/2026, noite) — "Salvar colaboradores" dava PERMISSION_DENIED =====
+    // SEIS entradas de daycare/config/monitores estavam SEM o campo `role`. A tela nunca
+    // mostrou o buraco, porque ela lê `m.role||'monitor'` e desenha "monitor" como se
+    // estivesse lá; o salvamento, não — mandava o objeto exatamente como estava. E a regra
+    // v2 do banco exige hasChildren(['nome','senha','role']) com os três em texto. Resultado:
+    // o banco recusava a lista INTEIRA por causa de linhas que ninguém via, e a tela só dizia
+    // "Erro ao salvar: PERMISSION_DENIED" — frase que não ensina nada a quem está na recepção.
+    // Agora o salvamento NORMALIZA antes de gravar (o mesmo padrão que a tela já assume) e,
+    // se ainda faltar NOME, diz DE QUEM é a linha em vez de deixar a regra recusar calada.
+    const semNome=[];
+    (MONITORES||[]).forEach((m,i)=>{
+      if(!m) return;
+      m.role=String(m.role||'monitor').trim()||'monitor';
+      m.nome=String(m.nome||'').trim();
+      m.senha=String(m.senha||'').trim();
+      if(!m.nome) semNome.push((i+1)+'ª linha da lista'+(m.senha?(' (senha '+m.senha+')'):''));
+    });
+    if(semNome.length){ if(st){ st.style.color='var(--crm-critico)';
+      st.textContent='Falta o NOME em: '+semNome.join(', ')+'. Toda pessoa precisa de nome, papel e senha — sem isso o banco recusa a lista inteira.'; } return; }
     const senhas=(MONITORES||[]).map(m=>String(m.senha||'').trim());
     // valida senhas: 4-6 dígitos, sem duplicar entre si nem com as senhas fixas
     for(const m of MONITORES){ const s=String(m.senha||'').trim(); if(!/^[0-9]{4,6}$/.test(s)){ if(st){ st.style.color='var(--crm-critico)'; st.textContent='Senha inválida em "'+(m.nome||'?')+'": use 4 a 6 dígitos.'; } return; } if(SENHAS[s]){ if(st){ st.style.color='var(--crm-critico)'; st.textContent='A senha '+s+' já é usada pela Gestão/equipe fixa. Escolha outra.'; } return; } }
@@ -12383,7 +12546,9 @@
         ['A senha e o que cada pessoa vê já valem em todos os aparelhos.',
          'ATENÇÃO: TODA a equipe só entra em CELULAR AUTORIZADO. Se a pessoa digitar a senha e aparecer "aparelho não autorizado", pegue o celular dela, digite a SUA senha da Gestão na tela de entrada e toque em "Autorizar este aparelho".'],
         {ok:true, botao:'Entendi', rodape:'A trava por aparelho vale para todos — supervisão, recepção e veterinária inclusive. Só a Gestão autoriza um celular novo.'});
-    }).catch(e=>{ if(st){ st.style.color='var(--crm-critico)'; st.textContent='Erro ao salvar: '+e.message; } }); }
+    }).catch(e=>{ if(st){ st.style.color='var(--crm-critico)';
+      st.textContent='O banco recusou a gravação — confira se toda pessoa tem nome, papel e senha. ('+((e&&e.message)||e)+')'; }
+      if(typeof _logFalhaGrav==='function') _logFalhaGrav('daycare/config/monitores (salvarMonitores)', e); }); }
     else { if(st){ st.style.color='var(--crm-atencao-text)'; st.textContent='Salvo localmente (sem internet agora).'; } }
     try{ renderSenhas(); }catch(e){} /* silencioso de propósito: redesenho de tela — falhar não pode derrubar quem chamou */
   }
@@ -28764,7 +28929,7 @@
     DB.ref('auaulandia/avisos-racao').once('value').then(function(s){
       var v=s.val()||{}, jaAberto={};
       Object.keys(v).forEach(function(k){ var x=v[k]||{};
-        if((x.status||'pendente')!=='resolvido' && x.estadiaId===id) jaAberto[(x.tipo||'racao')+'|'+jsNorm(x.itemNome||'')]=1; });
+        if(!avisoEncerrado(x) && x.estadiaId===id) jaAberto[(x.tipo||'racao')+'|'+jsNorm(x.itemNome||'')]=1; });
       achados.forEach(function(f){
         var ch=f.tipo+'|'+jsNorm(f.nome);
         if(jaAberto[ch]) return;
@@ -29460,7 +29625,7 @@
     DB.ref('auaulandia/avisos-racao').once('value').then(function(s){
       var v=s.val()||{}, jaAberto=false;
       Object.keys(v).forEach(function(k){ var x=v[k]||{};
-        if((x.status||'pendente')==='resolvido') return;
+        if(avisoEncerrado(x)) return;
         if(x.estadiaId!==cfEstadiaId) return;
         if((x.tipo||'racao')===tipo && jsNorm(x.itemNome||'Ração/comida')===jsNorm(itemNome)) jaAberto=true;
       });
@@ -31033,7 +31198,7 @@
         +'</span></div>'
         +(est?('<div class="hint" style="margin-top:2px">Estornado por '+esc(o.reg.estorno_quem||'-')+': '+esc(o.reg.estorno_motivo||'')+'</div>'):'');
     });
-    if(lista.length>30) h+='<div class="hint" style="margin-top:6px">E mais '+(lista.length-30)+' — o detalhe completo mora no Painel da Diretoria.</div>';
+    if(lista.length>30) h+='<div class="hint" style="margin-top:6px">E mais '+(lista.length-30)+' — o detalhe completo mora no Dashboard da Adriana.</div>';
     h+='</div>';
     return h;
   }
@@ -31474,7 +31639,7 @@
     // e não puder ver, vê o porquê — nunca uma tela em branco.
     if(!podePapel('painel-monitor')){
       raiz.innerHTML='<div class="pm-card"><h3 class="pm-tit">Esta tela é de quem está com o FILHOt</h3>'
-        +'<p class="pm-sub">O Meu Painel mostra a rota de cada monitor, plantonista e aprendiz. '
+        +'<p class="pm-sub">O Meu Dashboard mostra a rota de cada monitor, plantonista e aprendiz. '
         +'A visão da casa inteira fica em "O que fazer hoje" e no Painel do Dia.</p></div>';
       return;
     }
@@ -31581,7 +31746,7 @@
     var ids=Object.keys(PD_PLANOS||{});
     var atual=String((PD_DODIA&&PD_DODIA.plano)||'');
     var h='<p class="pm-nota"><strong>É daqui que sai o "Meu dia" de cada monitor.</strong> '
-      +'O que você escrever aqui aparece no Painel de cada um — só a parte dele.</p>';
+      +'O que você escrever aqui aparece no Dashboard de cada um — só a parte dele.</p>';
 
     // ---- 1. o plano de hoje ----
     h+='<article class="pm-card" style="margin-bottom:16px"><h3 class="pm-tit">Qual plano vale hoje</h3>'
@@ -31686,7 +31851,7 @@
     DB.ref('daycare/config/escala').set(escala).then(function(){
       PD_ESCALA=escala;
       pdMsg('pdMsgEscala', pmPlural(Object.keys(escala).length,'pessoa','pessoas')
-        +' com horário salvo. Cada uma já vê o dela no Meu Painel.', true);
+        +' com horário salvo. Cada uma já vê o dela no Meu Dashboard.', true);
       if(typeof audit==='function') audit('escala','salvou a escala de '+Object.keys(escala).length+' pessoa(s)',{});
     }).catch(function(e){
       _logFalhaGrav('daycare/config/escala (pdSalvarEscala)', e);
@@ -31734,7 +31899,7 @@
     if(!v.ok){ pdMsg('pdMsgPlano','Não salvei: '+v.erros.join(' · '), false); return; }
     DB.ref('daycare/config/planos/'+id).set(plano).then(function(){
       PD_PLANOS[id]=plano;
-      pdMsg('pdMsgPlano','Plano salvo. Quem está nele já vê a própria rota no Meu Painel.', true);
+      pdMsg('pdMsgPlano','Plano salvo. Quem está nele já vê a própria rota no Meu Dashboard.', true);
       if(typeof audit==='function') audit('plano-do-dia','salvou o '+(plano.nome||id),{alvo:id});
     }).catch(function(e){
       _logFalhaGrav('daycare/config/planos/'+id+' (pdSalvarPlano)', e);
@@ -31749,7 +31914,7 @@
       definidoPor:(typeof quemSou==='function'?quemSou():'')||'Gestão', ts:Date.now() };
     DB.ref('daycare/plano-do-dia/'+dia).set(reg).then(function(){
       PD_DODIA=reg;
-      pdMsg('pdMsgDia','Hoje é o '+((PD_PLANOS[id]&&PD_PLANOS[id].nome)||id)+'. O Painel de cada um já mostra isso.', true);
+      pdMsg('pdMsgDia','Hoje é o '+((PD_PLANOS[id]&&PD_PLANOS[id].nome)||id)+'. O Dashboard de cada um já mostra isso.', true);
       pdRender(dia);
       if(typeof audit==='function') audit('plano-do-dia','o dia '+dia+' passou a valer o '+((PD_PLANOS[id]&&PD_PLANOS[id].nome)||id),{alvo:id});
     }).catch(function(e){
@@ -32371,8 +32536,8 @@
     // não puder ver, lê o porquê — nunca uma tela em branco.
     if(!podePapel('painel-consultoras')){
       raiz.innerHTML='<div class="pm-card"><h3 class="pm-tit">Esta tela é de quem atende na Central</h3>'
-        +'<p class="pm-sub">O Painel das Consultoras é a mesa do dia da recepção. '
-        +'A rota de quem está com o FILHOt fica no "Meu Painel".</p></div>';
+        +'<p class="pm-sub">O Dashboard das Consultoras é a mesa do dia da recepção. '
+        +'A rota de quem está com o FILHOt fica no "Meu Dashboard".</p></div>';
       return;
     }
     PC_DIA=(typeof hojeISO==='function')?hojeISO():'';
@@ -33237,8 +33402,8 @@
     // não puder ver, lê o porquê — nunca uma tela em branco.
     if(!podePapel('painel-operacao')){
       raiz.innerHTML='<div class="pm-card"><h3 class="pm-tit">Esta tela é de quem responde pela casa</h3>'
-        +'<p class="pm-sub">O Painel da Operação reúne o acerto das plantonistas e o tempo de cada Zeloso. '
-        +'A mesa do dia de quem atende fica em "O que fazer hoje"; a rota de quem está com o FILHOt, no "Meu Painel".</p></div>';
+        +'<p class="pm-sub">O Dashboard da Márcia reúne o acerto das plantonistas e o tempo de cada Zeloso. '
+        +'A mesa do dia de quem atende fica em "O que fazer hoje"; a rota de quem está com o FILHOt, no "Meu Dashboard".</p></div>';
       return;
     }
     PO_DIA=(typeof hojeISO==='function')?hojeISO():'';        // UM relógio para todos os quadros
@@ -33406,12 +33571,19 @@
     var passa=function(cache, rotDe){
       Object.keys(cache||{}).forEach(function(id){
         var a=cache[id]||{};
-        if(a.status!=='resolvido'){
-          abertos.push({titulo:rotDe(a), emProcesso:a.status==='em_processo', ts:a._ts||0});
+        // O estado vem do avisoStatusEfetivo — a MESMA régua da tela "Pendências com o
+        // tutor". Sem isso, um chamado já encerrado (o caso do Kakinho) continuaria
+        // cobrando a Amanda aqui depois de ela o ter fechado lá.
+        var st=(typeof avisoStatusEfetivo==='function')?avisoStatusEfetivo(a):(a.status||'pendente');
+        if(st!=='resolvido'){
+          abertos.push({titulo:rotDe(a), emProcesso:st==='em_processo',
+            quem:a.criado_por||'', desde:a._ts||0, ts:a._ts||0});
         } else {
           var e=paUltimaResolucao(a);
-          if(e && paEhDeHoje(e.ts, dia))
-            resolvidos.push({titulo:rotDe(a)+' — resolvido', quem:e.assinatura||'', hora:e.quando||paHora(e.ts), ts:e.ts||0});
+          var quem=a.resolvido_por||(e&&e.assinatura)||'';
+          var ts=a.resolvido_em||(e&&e.ts)||0;
+          if(ts && paEhDeHoje(ts, dia))
+            resolvidos.push({titulo:rotDe(a)+' — encerrada', quem:quem, hora:(e&&e.quando)||paHora(ts), ts:ts});
         }
       });
     };
@@ -33425,7 +33597,7 @@
     (ocorrs||[]).forEach(function(o){
       if(!o.avisado){
         abertos.push({titulo:'Ocorrência de '+(o.pet||'—'), ocorr:true,
-          texto:String(o.texto||'').slice(0,70), ts:o.ts||0});
+          texto:String(o.texto||'').slice(0,70), quem:o.quem||'', desde:o.ts||0, ts:o.ts||0});
       } else if(paEhDeHoje(o.avisado.ts, dia)){
         resolvidos.push({titulo:'Ocorrência de '+(o.pet||'—')+' — desfecho registrado',
           quem:o.avisado.assinatura||o.avisado.quem||'', hora:o.avisado.quando||paHora(o.avisado.ts), ts:o.avisado.ts||0});
@@ -33546,9 +33718,9 @@
       f.loja.abertos.forEach(function(a){
         pend.push({area:'Loja', tom:(a.emProcesso?'atencao':'critico'), titulo:a.titulo,
           sub:a.ocorr?('vez da Central: avisar o tutor e registrar o desfecho — '+a.texto)
-            :(a.emProcesso?'em processo — registrar a próxima providência e fechar'
+            :(a.emProcesso?'em processo — registrar a próxima providência e encerrar'
                           :'vez da Central: resolver com o tutor'),
-          view:'recepcao', ts:a.ts});
+          quem:a.quem||'', desde:a.desde||0, view:'recepcao', ts:a.ts});
       });
       f.loja.resolvidos.forEach(function(r){ res.push({area:'Loja', titulo:r.titulo,
         sub:paQuemQuando(r.quem, r.hora), view:'recepcao', ts:r.ts}); });
@@ -33600,7 +33772,8 @@
       }
       f.tutor.atencoes.forEach(function(x){
         pend.push({area:'Tutor', tom:'critico', titulo:x.nome+' — a resposta pede atenção da Gestão',
-          sub:'vez da Gestão: abrir a ficha e decidir o tratamento', view:'alergia', ts:x.ts});
+          sub:'vez da Gestão: abrir a ficha e decidir o tratamento'+(x.tutor?(' — tutor: '+x.tutor):''),
+          desde:x.ts||0, view:'alergia', ts:x.ts});
       });
       f.tutor.respostasHoje.forEach(function(x){ res.push({area:'Tutor',
         titulo:'Resposta do tutor de '+x.nome+' recebida e lida',
@@ -33642,35 +33815,78 @@
     var agora=new Date();
     return '<div style="margin-bottom:18px">'
       +'<h1 class="pm-saud1 pm-entra">'+esc(pmComoVai(agora.getHours()))+', '+esc(eu)+'.</h1>'
-      +'<p class="pm-saud3 pm-entra atraso">Tudo que está pendente ou resolvido na conversa da Central com os tutores — para cobrar, corrigir e supervisionar. Cada linha abre a tela onde se resolve.</p>'
+      +'<p class="pm-saud3 pm-entra atraso">Duas listas com nome e sobrenome: o que está esperando você e o que você já resolveu hoje. Toque em qualquer linha para ir direto ao lugar onde aquilo se resolve.</p>'
       +'<span class="pm-traco" aria-hidden="true"></span>'
       +'<div class="pm-data">'+esc(pmDataExtenso(agora))+'</div>'
       +'</div>';
   }
-  function paKPIsHTML(nPend, nRes){
-    return '<div class="pm-rv"><div class="pm-tiles pm-grandes" style="grid-template-columns:repeat(2,1fr)">'
-      +'<div class="pm-tile'+(nPend?' pm-t-alerta':'')+'"><b data-pm-alvo="'+nPend+'">0</b>'
-      +'<span>'+(nPend===1?'pendente na comunicação com os tutores':'pendentes na comunicação com os tutores')+'</span></div>'
-      +'<div class="pm-tile pm-t-ouro"><b data-pm-alvo="'+nRes+'">0</b>'
-      +'<span>'+(nRes===1?'resolvido hoje, com quem e quando':'resolvidos hoje, com quem e quando')+'</span></div>'
-      +'</div></div>';
+  // ---- o tempo que a pendência espera --------------------------------------------
+  // Idade é informação: "há 4 dias" cobra de um jeito, "há 2 horas" de outro. Sem carimbo,
+  // a linha fica calada — nunca inventa um "agora" que ninguém registrou.
+  function paDesde(ts){
+    ts=Number(ts)||0; if(!ts) return '';
+    var min=Math.floor((Date.now()-ts)/60000);
+    if(min<0) return '';
+    if(min<2) return 'agora mesmo';
+    if(min<60) return 'há '+min+' minutos';
+    var h=Math.floor(min/60);
+    if(h<24) return 'há '+h+(h===1?' hora':' horas');
+    var d=Math.floor(h/24);
+    return 'há '+d+(d===1?' dia':' dias');
   }
-  function paLinhaHTML(r){
-    return '<button type="button" class="pa-li" onclick="paIr(\''+escAttr(r.view)+'\')">'
-      +'<span class="pm-badge '+(PA_TOM[r.tom]||'pm-b-ok')+'">'+esc(r.area)+'</span>'
-      +'<span class="pa-li-txt"><b>'+esc(r.titulo)+'</b>'+(r.sub?('<span>'+esc(r.sub)+'</span>'):'')+'</span>'
+  // A terceira linha da pendência: desde quando espera e quem abriu. Fonte que não guarda
+  // o autor não ganha um autor inventado — a linha só diz o que se sabe.
+  function paMetaHTML(r){
+    var p=[], q=paDesde(r.desde);
+    if(q) p.push('espera '+q);
+    if(r.quem&&r.quem!=='-'&&r.quem!=='sistema') p.push('aberto por '+r.quem);
+    return p.length?('<span class="pa-li-meta">'+esc(p.join(' · '))+'</span>'):'';
+  }
+  // ---- o placar do dia (o espírito do "Seu dia": barra que enche e festa no fim) ----
+  // Adriana, 08/set/2026: "não dá para entender nada desse dashboard". Contagem seca não
+  // move ninguém — o que move é ver a barra andar e a lista zerar.
+  function paPlacarHTML(nPend, nRes){
+    var total=nPend+nRes;
+    var pct=total?Math.round((nRes/total)*100):0;
+    var limpou=(nPend===0);
+    var frase=limpou
+      ? (nRes?('Lista limpa. Você fechou '+pmPlural(nRes,'coisa','coisas')+' hoje e nada da Central está esperando por você.')
+             :'Nada esperando por você agora. Assim que algo chegar, aparece aqui com nome e hora.')
+      : ('Você já fechou '+pmPlural(nRes,'coisa','coisas')+' hoje. '
+         +(nPend===1?'Falta 1.':('Faltam '+nPend+'.')));
+    var h='<div class="pm-rv pa-placar'+(limpou?' limpo':'')+'">'
+      +'<div class="pa-placar-topo">'
+      +'<div class="pa-placar-lado"><b class="pa-placar-n'+(nPend?' alerta':'')+'" data-pm-alvo="'+nPend+'">0</b>'
+      +'<span>'+(nPend===1?'esperando você':'esperando você')+'</span></div>'
+      +'<div class="pa-placar-lado"><b class="pa-placar-n ouro" data-pm-alvo="'+nRes+'">0</b>'
+      +'<span>você resolveu hoje</span></div>'
+      +'</div>'
+      +'<div class="pm-pill"><i data-pm-pct="'+pct+'"></i></div>'
+      +'<p class="pa-placar-frase">'+esc(frase)+'</p>';
+    if(limpou&&nRes)
+      h+='<div class="pa-festa"><img src="assets/stickers/auau.png" alt="" width="46" height="62">'
+        +'<div><b>Mesa limpa!</b><span>Nenhum tutor esperando resposta da Central agora.</span></div></div>';
+    return h+'</div>';
+  }
+  function paLinhaHTML(r, resolvido){
+    var meta=resolvido?'':paMetaHTML(r);
+    return '<button type="button" class="pa-li'+(resolvido?' feito':'')+'" onclick="paIr(\''+escAttr(r.view)+'\')">'
+      +(resolvido?'<span class="pa-li-ok" aria-hidden="true">&#10003;</span>'
+                 :'<span class="pm-badge '+(PA_TOM[r.tom]||'pm-b-ok')+'">'+esc(r.area)+'</span>')
+      +'<span class="pa-li-txt"><b>'+esc(r.titulo)+'</b>'+(r.sub?('<span>'+esc(r.sub)+'</span>'):'')+meta+'</span>'
       +'<span class="pa-li-go">&rsaquo;</span></button>';
   }
   // A coluna: agrupa por assunto e mostra até 6 linhas de cada — o resto vira "e mais N",
   // que abre a mesma tela (regra "menos informação": o detalhe mora na tela que resolve).
-  function paColunaHTML(rows, vazioTit, vazioSub){
+  function paColunaHTML(rows, vazioTit, vazioSub, resolvido){
     if(!rows.length) return '<div class="pm-lista"><div class="pm-li"><span class="pm-badge pm-b-ok">nada aqui</span>'
       +'<div class="pm-li-txt"><b>'+esc(vazioTit)+'</b><span>'+esc(vazioSub)+'</span></div></div></div>';
     var porArea={}, ordem=[], MAX=6, h='';
     rows.forEach(function(r){ if(!porArea[r.area]){ porArea[r.area]=[]; ordem.push(r.area); } porArea[r.area].push(r); });
     ordem.forEach(function(a){
       var L=porArea[a];
-      L.slice(0,MAX).forEach(function(r){ h+=paLinhaHTML(r); });
+      h+='<p class="pa-grupo">'+esc(a)+' <i>'+L.length+'</i></p>';
+      L.slice(0,MAX).forEach(function(r){ h+=paLinhaHTML(r, resolvido===true); });
       if(L.length>MAX) h+='<button type="button" class="pa-li pa-mais" onclick="paIr(\''+escAttr(L[0].view)+'\')">'
         +'<span class="pa-li-txt"><b>e mais '+(L.length-MAX)+' de '+esc(a)+' — abrir a tela</b></span>'
         +'<span class="pa-li-go">&rsaquo;</span></button>';
@@ -33702,9 +33918,9 @@
     // A trava é a MESMA tabela que mostra o item do menu. Quem chegar por link direto e
     // não puder ver, lê o porquê — nunca uma tela em branco.
     if(!podePapel('painel-amanda')){
-      raiz.innerHTML='<div class="pm-card"><h3 class="pm-tit">Esta tela é da Supervisão</h3>'
-        +'<p class="pm-sub">O Painel da Supervisão acompanha o pendente e o resolvido da Central com os tutores. '
-        +'A mesa de quem atende é o Painel das Consultoras; a rota de quem está com o FILHOt, o Meu Painel.</p></div>';
+      raiz.innerHTML='<div class="pm-card"><h3 class="pm-tit">Este dashboard é da Supervisão</h3>'
+        +'<p class="pm-sub">O Dashboard da Amanda mostra o dia dela e as duas listas da Central com os tutores. '
+        +'A mesa de quem atende é o Dashboard das Consultoras; a rota de quem está com o FILHOt, o Meu Dashboard.</p></div>';
       return;
     }
     PA_DIA=(typeof hojeISO==='function')?hojeISO():'';   // UM relógio para todos os grupos
@@ -33716,15 +33932,23 @@
       return;
     }
     raiz.innerHTML=paSaudacaoHTML(eu)
-      +'<div class="pm-card"><p class="pm-sub">Ainda lendo o pendente e o resolvido do dia…</p></div>';
+      +'<div class="pm-card"><p class="pm-sub">Ainda lendo o seu dia e as duas listas…</p></div>';
     requestAnimationFrame(function(){ try{ pmAnimar(raiz); }catch(e){} /* silencioso de propósito: animação — falhar não pode derrubar a tela */ });
     // As ocorrências do Day Care têm pipeline próprio (DC_OCORR) — pede a carga; se ela
     // ainda estiver descendo nesta primeira pintura, entram na próxima abertura.
     try{ if(typeof carregarOcorrenciasDayCare==='function') carregarOcorrenciasDayCare(); }catch(e){} /* silencioso de propósito: guarda defensiva — falhar aqui não pode interromper quem chamou */
-    paLer(forcar===true).then(function(d){
+    // O card "Seu dia" é o MESMO das Consultoras e do monitor (pcSeuDia*) — a Amanda é
+    // Zelosa como as outras e também precisa de água, de série e de dizer como está.
+    // Adriana, 08/set/2026: "ela é uma colaboradora, precisa de água e etc". Uma função só,
+    // três usos: nenhuma cópia da lógica nasce aqui.
+    Promise.all([
+      paLer(forcar===true),
+      pcSeuDiaLer(PA_DIA, forcar===true).catch(function(e){ _logLeituraFalhou('Seu dia (Dashboard da Amanda)', e); return null; })
+    ]).then(function(rr){
+      var d=rr[0], sd=rr[1];
       if(!d){
         raiz.innerHTML='<div class="pm-card"><h3 class="pm-tit">Não consegui ler o dia agora</h3>'
-          +'<p class="pm-sub">Nada foi perdido — este painel só observa. Abra a tela de novo em instantes.</p></div>';
+          +'<p class="pm-sub">Nada foi perdido — as listas só observam. Abra a tela de novo em instantes.</p></div>';
         return;
       }
       // Empresta à régua da tela do tutor (algLista) a leitura FRESCA do mesmo nó — o
@@ -33750,19 +33974,20 @@
         ? '<p class="pm-nota"><strong>Ainda lendo:</strong> '+esc(L.lendo.join(' · '))+'. Os números não contam o que ainda não chegou — isto não quer dizer que não há nada.</p>'
         : '';
       raiz.innerHTML=paSaudacaoHTML(eu)
-        + paKPIsHTML(L.pend.length, L.res.length)
-        +'<p class="pm-nota"><strong>Este painel só observa.</strong> Nenhuma linha daqui grava coisa alguma: cada uma abre a tela onde aquilo se resolve — e lá fica o rastro de quem fez.</p>'
+        + (sd?pcSeuDiaCardHTML(sd):'')
+        + paPlacarHTML(L.pend.length, L.res.length)
+        +'<p class="pm-nota"><strong>As listas só observam.</strong> Nenhuma linha delas grava coisa alguma: cada uma abre a tela onde aquilo se resolve — e lá fica o rastro de quem fez. O card "Seu dia" é seu: os copos de água e a resposta de como você está ficam guardados no seu nome.</p>'
         + lendoNota
         +'<div class="pa-tabs">'
-        +'<button type="button" class="pa-tab on" data-pa="pend" onclick="paTab(\'pend\')">Pendentes ('+L.pend.length+')</button>'
-        +'<button type="button" class="pa-tab" data-pa="res" onclick="paTab(\'res\')">Resolvidos hoje ('+L.res.length+')</button>'
+        +'<button type="button" class="pa-tab on" data-pa="pend" onclick="paTab(\'pend\')">Esperando você ('+L.pend.length+')</button>'
+        +'<button type="button" class="pa-tab" data-pa="res" onclick="paTab(\'res\')">Você resolveu hoje ('+L.res.length+')</button>'
         +'</div>'
         +'<div class="pa-cols so-pend pm-rv" id="paCols">'
-        +'<section class="pa-col pa-col-pend"><h3 class="pa-col-t">Pendente<small>o que é e de quem é a vez</small></h3>'
-        + paColunaHTML(L.pend,'Nada pendente agora','Tudo que dependia da Central com os tutores está em dia.')
+        +'<section class="pa-col pa-col-pend"><h3 class="pa-col-t">O que está esperando você<small>o item, de quem é a vez, desde quando espera e quem abriu</small></h3>'
+        + paColunaHTML(L.pend,'Nada esperando por você','Tudo que dependia da Central com os tutores está em dia.')
         +'</section>'
-        +'<section class="pa-col pa-col-res"><h3 class="pa-col-t">Resolvido hoje<small>quem resolveu e quando</small></h3>'
-        + paColunaHTML(L.res,'Nada resolvido hoje ainda','Conforme o dia anda, o que for resolvido aparece aqui com quem e quando.')
+        +'<section class="pa-col pa-col-res"><h3 class="pa-col-t">O que você resolveu hoje<small>o item, a que horas e quem fez</small></h3>'
+        + paColunaHTML(L.res,'Nada resolvido ainda hoje','Conforme o dia anda, o que for resolvido aparece aqui com quem e quando.', true)
         +'</section>'
         +'</div>';
       requestAnimationFrame(function(){ try{ pmAnimar(raiz); }catch(e){} /* silencioso de propósito: animação — falhar não pode derrubar a tela */ });
@@ -33881,12 +34106,12 @@
     return '<article class="pm-card pm-rv"><h3 class="pm-tit">Os painéis de cada mesa</h3>'
       +'<p class="pm-sub">A senhora vê a mesa de todos. Cada linha traz os números vivos daquela fatia e abre a tela dela.</p>'
       +'<div class="pdir-atalhos">'
-      + pdirAtalhoHTML('consultoras','Painel das Consultoras', a.consultoras)
-      + pdirAtalhoHTML('painel-amanda','Painel da Supervisão', a.supervisao)
-      + pdirAtalhoHTML('paineloperacao','Painel da Operação', a.operacao)
+      + pdirAtalhoHTML('consultoras','Dashboard das Consultoras', a.consultoras)
+      + pdirAtalhoHTML('painel-amanda','Dashboard da Amanda', a.supervisao)
+      + pdirAtalhoHTML('paineloperacao','Dashboard da Márcia', a.operacao)
       + pdirAtalhoHTML('planodia','A fatia do monitor — escala e plano do dia', a.monitor)
       +'</div>'
-      +'<p class="pm-rot" style="margin-top:10px">O Meu Painel é pessoal de cada monitor — a rota é dele, não se abre de fora. O que alimenta a rota de todos é a escala e o plano do dia, e é isso que este atalho abre.</p>'
+      +'<p class="pm-rot" style="margin-top:10px">O Meu Dashboard é pessoal de cada monitor — a rota é dele, não se abre de fora. O que alimenta a rota de todos é a escala e o plano do dia, e é isso que este atalho abre.</p>'
       +'</article>';
   }
   // O dinheiro do mês. Recebe o resumo do finResumoMes e desenha — nenhuma conta aqui.
@@ -34019,9 +34244,9 @@
     // não puder ver, lê o porquê — nunca uma tela em branco.
     if(!podePapel('painel-diretoria')){
       raiz.innerHTML='<div class="pm-card"><h3 class="pm-tit">Esta tela é da Diretoria</h3>'
-        +'<p class="pm-sub">O Painel da Diretoria reúne a casa inteira e o dinheiro do mês. '
-        +'A mesa da Gestão é o Painel da Operação; a da Supervisão, o Painel da Supervisão; '
-        +'a de quem atende, o Painel das Consultoras; a rota de quem está com o FILHOt, o Meu Painel.</p></div>';
+        +'<p class="pm-sub">O Dashboard da Adriana reúne a casa inteira e o dinheiro do mês. '
+        +'A mesa da Márcia é o Dashboard da Márcia; a da Amanda, o Dashboard da Amanda; '
+        +'a de quem atende, o Dashboard das Consultoras; a rota de quem está com o FILHOt, o Meu Dashboard.</p></div>';
       return;
     }
     PDIR_DIA=(typeof hojeISO==='function')?hojeISO():'';   // UM relógio para todos os quadros

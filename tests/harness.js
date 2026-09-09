@@ -2360,7 +2360,7 @@ async function main() {
     // 08/set/2026 — Adriana juntou TODOS os painéis numa categoria só ("Painéis"), no topo
     // do menu. O da Operação continua sendo a porta da Márcia, mas a porta agora fica na
     // prateleira dos painéis: depois do da Supervisão e antes do da Diretoria.
-    check('o item mora na categoria Painéis, entre o da Supervisão e o da Diretoria',
+    check('o item mora na categoria Dashboards, entre o da Amanda e o da Adriana',
       html.indexOf('data-v="paineloperacao"') > html.indexOf('data-acc="paineis"') &&
       html.indexOf('data-v="paineloperacao"') < html.indexOf('data-acc="servicos"') &&
       html.indexOf('data-v="painel-amanda"') < html.indexOf('data-v="paineloperacao"') &&
@@ -3417,9 +3417,11 @@ async function main() {
     // critério: QUEM FAZ. Serviços = monitor e plantonista (o corpo do FILHOt);
     // Central Zêluz = consultoras, supervisão e veterinária (o tutor). E os painéis, que
     // estavam espalhados por três lugares, viraram uma categoria só, no topo.
-    check('menu: os grupos estão na ordem de 08/set (Painéis › Serviços › Central Zêluz › Operação › Em breve)',
+    // 08/set/2026, noite — Adriana: "painel mudar para Dashboards". A categoria e os itens
+    // trocaram de NOME; data-v, data-acc e classes de acesso ficaram exatamente onde estavam.
+    check('menu: os grupos estão na ordem de 08/set (Dashboards › Serviços › Central Zêluz › Operação › Em breve)',
       JSON.stringify(grupos.map((g) => g.titulo)) === JSON.stringify(
-        ['Painéis', 'Serviços', 'Central Zêluz', 'Operação', 'Em breve']),
+        ['Dashboards', 'Serviços', 'Central Zêluz', 'Operação', 'Em breve']),
       JSON.stringify(grupos.map((g) => g.titulo)));
     check('mordida — cada serviço aparece UMA vez só no menu (nunca mais duas gavetas iguais)',
       JSON.stringify(subs.map((s) => s.titulo)) === JSON.stringify([
@@ -3449,8 +3451,8 @@ async function main() {
      ['dashdc', 'Central Zêluz'], ['orcamento', 'Central Zêluz'], ['recepcao', 'Central Zêluz'],
      ['vacinas', 'Central Zêluz'], ['alergia', 'Central Zêluz'], ['peso', 'Central Zêluz'],
      ['config', 'Operação'], ['acerto', 'Operação'], ['ritmo', 'Operação'], ['pessoas', 'Operação'],
-     ['painelmeu', 'Painéis'], ['consultoras', 'Painéis'], ['paineloperacao', 'Painéis'],
-     ['painel', 'Painéis'],
+     ['painelmeu', 'Dashboards'], ['consultoras', 'Dashboards'], ['paineloperacao', 'Dashboards'],
+     ['painel', 'Dashboards'],
      ['agenda', 'Em breve']].forEach(([k, g]) => {
       check('menu: ' + k + ' está no grupo ' + g, porV[k] && porV[k].grupo === g,
         porV[k] ? porV[k].grupo : 'sumiu');
@@ -3474,7 +3476,10 @@ async function main() {
       hospedes: 'Hóspedes de hoje', hospedagem: 'Plantão da noite',
       abertura: 'Abertura do dia', eahist: 'Enriquecimento Ambiental',
       acerto: 'Financeiro do plantão', renovacao: 'Renovação de planos',
-      dashdc: 'Lançamentos do dia', alergia: 'Conversa com o Tutor', // renomeada em 01/set (pesquisa com o tutor)
+      dashdc: 'Lançamentos do dia',
+      // Renomeada em 08/set/2026 (noite): "Conversa com o Tutor" → "Pesquisa com a Família
+      // Multiespécie". É pesquisa, não conversa, e quem responde é a família inteira.
+      alergia: 'Pesquisa com a Família Multiespécie',
       ficha: 'Cadastro de Peludinhos', config: 'Configurações',
     };
     Object.keys(ESPERADO).forEach((k) => {
@@ -3575,7 +3580,7 @@ async function main() {
     // As 4 categorias: ícone, seta, clicável, e cada uma com sua chave de estado.
     const cats = [...nav.matchAll(/<a class="grp nav-parent" data-acc-toggle="([a-z]+)"([^>]*)>([\s\S]*?)<\/a>/g)]
       .map((mm) => ({ chave: mm[1], attrs: mm[2], dentro: mm[3] }));
-    check('menu: as 5 categorias são linhas clicáveis (nav-parent) — Painéis e Serviços entraram em 08/set',
+    check('menu: as 5 categorias são linhas clicáveis (nav-parent) — Dashboards e Serviços entraram em 08/set',
       cats.length === 5, JSON.stringify(cats.map((c) => c.chave)));
     cats.forEach((c) => {
       check('menu: categoria ' + c.chave + ' tem ícone', /data-icon="[a-z]+"/.test(c.dentro), c.dentro.slice(0, 60));
@@ -3623,15 +3628,15 @@ async function main() {
     };
     const vsDe = (trecho, comHifen) =>
       [...trecho.matchAll(comHifen ? /data-v="([a-z-]+)"/g : /data-v="([a-z]+)"/g)].map((x) => x[1]);
-    check('menu: o subgrupo Peludinhos tem exatamente Cadastro, Prevenção, Conversa com o Tutor e Peso, nessa ordem',
+    check('menu: o subgrupo Peludinhos tem exatamente Cadastro, Prevenção, Pesquisa com a Família e Peso, nessa ordem',
       JSON.stringify(vsDe(fatia('c-peludinhos', 'c-planos'))) === JSON.stringify(
         ['ficha', 'vacinas', 'alergia', 'peso']),
       JSON.stringify(vsDe(fatia('c-peludinhos', 'c-planos'))));
-    check('menu: a categoria Painéis guarda SÓ painel (nenhuma tela de trabalho entrou junto)',
+    check('menu: a categoria Dashboards guarda SÓ dashboard (nenhuma tela de trabalho entrou junto)',
       JSON.stringify(vsDe(fatia('paineis', 'servicos'), true)) === JSON.stringify(
         ['painelmeu', 'consultoras', 'painel-amanda', 'paineloperacao', 'painel-diretoria', 'painel']),
       JSON.stringify(vsDe(fatia('paineis', 'servicos'), true)));
-    check('menu: nenhum painel ficou fora da categoria Painéis',
+    check('menu: nenhum dashboard ficou fora da categoria Dashboards',
       (() => {
         const i = nav.indexOf('data-acc-toggle="paineis"');
         const f = nav.indexOf('data-acc-toggle="servicos"');
@@ -8757,13 +8762,13 @@ async function main() {
     // 08/set/2026: o painel saiu da Central e foi para a categoria Painéis, logo depois
     // do Meu Painel. A ordem da categoria sobe do chão para o alto: monitor, consultoras,
     // supervisão, operação, diretoria. O Cadastro desceu para o subgrupo Peludinhos.
-    check('mordida — o Painel das Consultoras mora em Painéis, logo depois do Meu Painel',
+    check('mordida — o Dashboard das Consultoras mora em Dashboards, logo depois do Meu Dashboard',
       html.indexOf('data-acc="paineis"') < html.indexOf('data-v="consultoras"') &&
       html.indexOf('data-v="painelmeu"') < html.indexOf('data-v="consultoras"') &&
       html.indexOf('data-v="consultoras"') < html.indexOf('data-acc="servicos"'));
     check('a tela v-consultoras existe e tem título no mapa (fonte única titles)',
       /<section class="view" id="v-consultoras">/.test(html) &&
-      /consultoras:\['Painel das Consultoras'/.test(html));
+      /consultoras:\['Dashboard das Consultoras'/.test(html));
     check('pcAbrir se tranca pela mesma tabela (link direto não fura a permissão)',
       /function pcAbrir\([\s\S]{0,400}?podePapel\('painel-consultoras'\)/.test(html));
     // As sete frases do dia — os textos EXATOS do gabarito v4, rotação fixa por dia.
@@ -9009,13 +9014,13 @@ async function main() {
     check('mordida — o item do menu nasce escondido e é a tabela quem o mostra (PERM_MENU)',
       /\['painel-amanda','painel-amanda'\]/.test(html) &&
       /<a data-v="painel-amanda" style="display:none"/.test(html));
-    check('mordida — hierarquia intacta: na categoria Painéis, Consultoras antes da Supervisão',
+    check('mordida — hierarquia intacta: na categoria Dashboards, Consultoras antes da Amanda',
       html.indexOf('data-acc="paineis"') < html.indexOf('data-v="consultoras"') &&
       html.indexOf('data-v="consultoras"') < html.indexOf('data-v="painel-amanda"') &&
       html.indexOf('data-v="painel-amanda"') < html.indexOf('data-acc="servicos"'));
     check('a tela v-painel-amanda existe e tem título no mapa (fonte única titles)',
       /<section class="view" id="v-painel-amanda">/.test(html) &&
-      /'painel-amanda':\['Painel da Supervisão'/.test(html));
+      /'painel-amanda':\['Dashboard da Amanda'/.test(html));
     check('aoAbrirView chama paAbrir (lista única de ganchos — a tela nunca abre vazia)',
       /if\(v==='painel-amanda'\)\{ if\(typeof paAbrir==='function'\) paAbrir\(\); \}/.test(html));
     check('paAbrir se tranca pela mesma tabela (link direto não fura a permissão)',
@@ -9250,7 +9255,7 @@ async function main() {
       html.indexOf('data-v="painel-diretoria"') < html.indexOf('<div class="acc" data-acc="central">'));
     check('a tela v-painel-diretoria existe e tem título no mapa (fonte única titles)',
       /<section class="view" id="v-painel-diretoria">/.test(html) &&
-      /'painel-diretoria':\['Painel da Diretoria'/.test(html));
+      /'painel-diretoria':\['Dashboard da Adriana'/.test(html));
     check('abrir a tela chama pdirAbrir (a lista única de ganchos)',
       /if\(v==='painel-diretoria'\)\{ if\(typeof pdirAbrir==='function'\) pdirAbrir\(\); \}/.test(html));
     check('pdirAbrir se tranca pela mesma tabela (link direto não fura a permissão)',
@@ -9815,6 +9820,249 @@ async function main() {
         /var op=oportDe\(pelKey\(o\.p\),'checkup'\);/.test(html) &&
         /Oportunidade: '\+escAttr\(opTxt\)/.test(html) &&
         /DB\.ref\('daycare\/oportunidades'\)\.on\('value'/.test(html));
+    }
+  }
+  console.log('');
+
+  // ================================================================================
+  // v-12 (08/set/2026, noite) — os seis pedidos da Adriana
+  //   1. "painel mudar para Dashboards"
+  //   2. "colocar nomes: Adriana / Márcia / Amanda"
+  //   3. "Dashboard da Supervisão - Amanda - está horrível... ela é uma colaboradora,
+  //       precisa de água e etc... não dá para entender nada desse dashboard"
+  //   4. "Kakinho tem 7, ou seja dá até o final, e consta como processo. Precisa ser encerrado"
+  //   5. "Central Zêluz - primeiro Peludinhos, depois Planos e Cobranças, depois os outros"
+  //   6. "Conversa com o tutor - mudar para Pesquisa com a Família Multiespécie"
+  // A promessa que atravessa os seis: mudou NOME e ORDEM; acesso, não.
+  // ================================================================================
+  console.log('v-12 · Dashboards, a Central em ordem e o encerramento do Kakinho:');
+  {
+    const nav12 = html.slice(html.indexOf('<nav class="nav" id="nav">'), html.indexOf('</nav>'));
+
+    // ---- 1 e 2: os nomes ----
+    check('1 · a categoria do menu se chama Dashboards (e "Painéis" sumiu do menu)',
+      /<a class="grp nav-parent" data-acc-toggle="paineis">[\s\S]{0,120}?<span>Dashboards<\/span>/.test(nav12) &&
+      nav12.indexOf('>Painéis<') < 0);
+    check('1 · a chave do estado aberto/fechado NÃO mudou (data-acc="paineis") — ninguém perde a gaveta que já deixou aberta',
+      /data-acc="paineis"/.test(nav12) && /data-acc-toggle="paineis"/.test(nav12));
+    [['painelmeu', 'Meu Dashboard'], ['consultoras', 'Dashboard das Consultoras'],
+     ['painel-amanda', 'Dashboard da Amanda'], ['paineloperacao', 'Dashboard da Márcia'],
+     ['painel-diretoria', 'Dashboard da Adriana'], ['painel', 'Painel do Dia']].forEach(([v, nome]) => {
+      const mm = new RegExp('<a data-v="' + v + '"[^>]*>[\\s\\S]{0,200}?<span>([^<]+)</span></a>').exec(nav12);
+      check('2 · o item ' + v + ' se chama "' + nome + '" no menu', !!mm && mm[1] === nome, mm ? mm[1] : 'sumiu');
+    });
+    check('2 · o mapa titles{} diz os mesmos nomes do menu (fonte única do cabeçalho da tela)',
+      /painelmeu:\['Meu Dashboard'/.test(html) &&
+      /consultoras:\['Dashboard das Consultoras'/.test(html) &&
+      /'painel-amanda':\['Dashboard da Amanda'/.test(html) &&
+      /paineloperacao:\['Dashboard da Márcia'/.test(html) &&
+      /'painel-diretoria':\['Dashboard da Adriana'/.test(html) &&
+      /painel:\['Painel do Dia'/.test(html));
+    check('2 · o Painel do Dia continua com o nome antigo (ela não pediu para mudar)',
+      nav12.indexOf('<span>Painel do Dia</span>') > 0);
+
+    // ---- 5: a ordem dentro da Central Zêluz ----
+    const iCentral = nav12.indexOf('data-acc-toggle="central"');
+    const iOperacao = nav12.indexOf('data-acc-toggle="operacao"');
+    const central12 = nav12.slice(iCentral, iOperacao);
+    const ordemCentral = [...central12.matchAll(/data-acc-toggle="(c-[a-z]+)"|<a data-v="([a-z-]+)"/g)]
+      .map((m) => m[1] || m[2]);
+    check('5 · na Central Zêluz vem Peludinhos, depois Planos e cobranças, e só então os itens do dia',
+      ordemCentral[0] === 'c-peludinhos' &&
+      ordemCentral.indexOf('c-planos') > ordemCentral.indexOf('peso') &&
+      ordemCentral.indexOf('checkin') > ordemCentral.indexOf('c-planos'),
+      JSON.stringify(ordemCentral));
+    check('5 · os itens do dia mantiveram a ordem que já tinham (chegada → saída)',
+      JSON.stringify(ordemCentral.slice(ordemCentral.indexOf('checkin'))) === JSON.stringify(
+        ['checkin', 'checkoutconf', 'orcamento', 'recepcao', 'cuidadovet', 'emporio', 'reposicao', 'dashdc']),
+      JSON.stringify(ordemCentral.slice(ordemCentral.indexOf('checkin'))));
+
+    // ---- 6: a pesquisa com a família ----
+    check('6 · o item alergia se chama "Pesquisa com a Família Multiespécie" no menu e no titles{}',
+      /<a data-v="alergia"[^>]*>[\s\S]{0,220}?<span>Pesquisa com a Família Multiespécie<\/span>/.test(nav12) &&
+      /alergia:\['Pesquisa com a Família Multiespécie'/.test(html));
+    check('6 · "Conversa com o Tutor" não sobrou em nenhum rótulo de tela',
+      html.indexOf('>Conversa com o Tutor<') < 0 && html.indexOf("['Conversa com o Tutor'") < 0);
+    check('6 · o data-v e a classe de acesso da tela não mudaram (so-gestao, como antes)',
+      /<a data-v="alergia" class="so-gestao"/.test(nav12));
+
+    // ---- a promessa: ninguém ganhou nem perdeu acesso ----
+    // A mesma mordida do commit de 08/set de manhã: cada <a data-v> com a MESMA classe.
+    const classesDe = (trecho) => {
+      const out = {};
+      // O Início escreve class= ANTES do data-v; os outros, depois. A leitura pega a tag
+      // inteira para não deixar nenhum item de fora da prova.
+      [...trecho.matchAll(/<a [^>]*data-v="([a-z-]+)"[^>]*>/g)].forEach((m) => {
+        const cls = (/class="([^"]*)"/.exec(m[0]) || ['', ''])[1];
+        out[m[1]] = cls.split(/\s+/).filter((c) => /^(so-|op-)/.test(c)).sort().join(' ');
+      });
+      return out;
+    };
+    const ACESSO_ESPERADO = {
+      inicio: 'op-only', mesa: 'so-mesa', painelmeu: '', consultoras: '', 'painel-amanda': '',
+      paineloperacao: '', 'painel-diretoria': '', painel: 'so-master',
+      conferencia: 'so-conferencia', hospedes: 'so-hosp', hospedagem: '', gestdia: 'so-gestao',
+      checkout: '', abertura: 'so-abertura', checkin: '', checkoutconf: 'so-conf-saida',
+      orcamento: 'so-recepcao', recepcao: 'so-recepcao', cuidadovet: 'so-vet', emporio: 'so-emporio',
+      reposicao: 'so-recepcao', dashdc: 'so-recepcao', ficha: 'so-gestao', vacinas: 'so-gestao',
+      alergia: 'so-gestao', peso: 'so-pesa', renovacao: 'so-gestao', 'lancar-pagamento': '',
+      acerto: 'so-master', ritmo: 'so-gestao', eahist: 'so-gestao', pessoas: 'so-master',
+      planodia: '', config: 'so-master', agenda: '', relatorios: 'so-gestao', sair: ''
+    };
+    const achado = classesDe(nav12);
+    const difere = Object.keys(ACESSO_ESPERADO).filter((k) => achado[k] !== ACESSO_ESPERADO[k]);
+    check('promessa — os 36 itens do menu mantiveram exatamente as classes so-*/op-only que já tinham',
+      difere.length === 0 && Object.keys(achado).length === Object.keys(ACESSO_ESPERADO).length,
+      JSON.stringify(difere.map((k) => k + ': "' + achado[k] + '" ≠ "' + ACESSO_ESPERADO[k] + '"')));
+
+    // ---- 3: o Dashboard da Amanda ----
+    check('3 · a Amanda ganhou o card "Seu dia" — e é a MESMA função dos outros dois painéis (3 usos, 1 lógica)',
+      (html.match(/pcSeuDiaCardHTML\(/g) || []).length === 4 &&      // 1 declaração + 3 usos
+      /function paAbrir\([\s\S]{0,9000}?pcSeuDiaCardHTML\(sd\)/.test(html));
+    check('3 · o Seu dia da Amanda é lido pela MESMA leitura (pcSeuDiaLer) e a falha é registrada',
+      /pcSeuDiaLer\(PA_DIA, forcar===true\)\.catch\(function\(e\)\{ _logLeituraFalhou\('Seu dia \(Dashboard da Amanda\)', e\); return null; \}\)/.test(html));
+    check('3 · as colunas falam a língua de gente: "O que está esperando você" e "O que você resolveu hoje"',
+      html.indexOf('O que está esperando você<small>o item, de quem é a vez, desde quando espera e quem abriu</small>') > 0 &&
+      html.indexOf('O que você resolveu hoje<small>o item, a que horas e quem fez</small>') > 0);
+    check('3 · as abas do celular também mudaram de nome (nunca "Pendente × Resolvido")',
+      html.indexOf('>Esperando você (') > 0 && html.indexOf('>Você resolveu hoje (') > 0);
+    check('3 · cada linha continua clicável e abre a tela onde aquilo se resolve (a lei do quadro clicável)',
+      /function paLinhaHTML\(r, resolvido\)\{[\s\S]{0,700}?onclick="paIr\(/.test(html));
+    check('3 · a linha pendente diz desde quando espera e quem abriu (paMetaHTML), sem inventar autor',
+      typeof ctx.paMetaHTML === 'function' &&
+      ctx.paMetaHTML({ desde: Date.now() - 7200000, quem: 'Amanda Silva' }).indexOf('espera há 2 horas') > 0 &&
+      ctx.paMetaHTML({ desde: Date.now() - 7200000, quem: 'Amanda Silva' }).indexOf('aberto por Amanda Silva') > 0 &&
+      ctx.paMetaHTML({ desde: 0, quem: '' }) === '' &&
+      ctx.paMetaHTML({ desde: Date.now() - 60000, quem: '-' }).indexOf('aberto por') < 0,
+      ctx.paMetaHTML ? ctx.paMetaHTML({ desde: Date.now() - 7200000, quem: 'Amanda Silva' }) : 'função não existe');
+    check('3 · paDesde fala em minutos, horas e dias — e cala quando não há carimbo',
+      ctx.paDesde(0) === '' && ctx.paDesde(Date.now() - 30000) === 'agora mesmo' &&
+      ctx.paDesde(Date.now() - 25 * 60000) === 'há 25 minutos' &&
+      ctx.paDesde(Date.now() - 3 * 3600000) === 'há 3 horas' &&
+      ctx.paDesde(Date.now() - 4 * 86400000) === 'há 4 dias',
+      [ctx.paDesde(0), ctx.paDesde(Date.now() - 30000), ctx.paDesde(Date.now() - 25 * 60000),
+       ctx.paDesde(Date.now() - 3 * 3600000), ctx.paDesde(Date.now() - 4 * 86400000)].join(' | '));
+    if (typeof ctx.paPlacarHTML === 'function') {
+      const limpo = ctx.paPlacarHTML(0, 5);
+      const cheio = ctx.paPlacarHTML(4, 1);
+      const zerado = ctx.paPlacarHTML(0, 0);
+      check('3 · estilo Duolingo: barra que enche, número que sobe e FESTA quando a lista de pendentes zera',
+        /class="pm-pill"><i data-pm-pct="100"/.test(limpo) && limpo.indexOf('pa-festa') > 0 &&
+        limpo.indexOf('Mesa limpa!') > 0 && limpo.indexOf('assets/stickers/auau.png') > 0);
+      check('3 · com pendência aberta não há festa, e a frase diz quanto já saiu e quanto falta',
+        cheio.indexOf('pa-festa') < 0 && cheio.indexOf('Você já fechou 1 coisa hoje. Faltam 4.') > 0 &&
+        /data-pm-pct="20"/.test(cheio), cheio.slice(cheio.indexOf('pa-placar-frase')).slice(0, 120));
+      check('3 · dia sem nada não finge festa — diz honestamente que nada espera por ela',
+        zerado.indexOf('pa-festa') < 0 && zerado.indexOf('Nada esperando por você agora') > 0);
+    } else check('3 · paPlacarHTML existe', false, 'função não encontrada');
+    check('3 · a nota da tela ficou honesta: as listas observam, mas o "Seu dia" grava no nome dela',
+      html.indexOf('<strong>As listas só observam.</strong>') > 0 &&
+      html.indexOf('O card "Seu dia" é seu: os copos de água e a resposta de como você está ficam guardados no seu nome.') > 0);
+
+    // ---- 4: o encerramento do Kakinho ----
+    check('4 · existe um lugar só que decide se um chamado está encerrado (avisoEncerrado/avisoStatusEfetivo)',
+      typeof ctx.avisoEncerrado === 'function' && typeof ctx.avisoStatusEfetivo === 'function' &&
+      typeof ctx.avisoEncerradoHerdado === 'function');
+    const kak = { status: 'em_processo', entries: [{ acao: 'Tem 7 (Ate o final)', assinatura: 'Amanda',
+      quando: '04/09 17:35', resolucao: true, ts: 1788554115698 }] };
+    check('4 · o caso do Kakinho: resposta que encerra na trilha + status atrasado = ENCERRADO',
+      ctx.avisoEncerrado(kak) === true && ctx.avisoStatusEfetivo(kak) === 'resolvido' &&
+      ctx.avisoEncerradoHerdado(kak) === true);
+    check('4 · mordida — chamado SEM resposta de encerramento continua aberto (não fecha por engano)',
+      ctx.avisoEncerrado({ status: 'em_processo', entries: [{ acao: 'liguei para o tutor', ts: 1 }] }) === false &&
+      ctx.avisoEncerrado({ status: 'pendente', entries: [] }) === false &&
+      ctx.avisoStatusEfetivo({ status: 'pendente' }) === 'pendente');
+    check('4 · mordida — quem foi REABERTO de propósito volta a contar como aberto (a reabertura manda)',
+      ctx.avisoEncerrado({ status: 'em_processo', reaberto_em: 2, reaberto_por: 'Amanda',
+        entries: [{ resolucao: true, ts: 1 }] }) === false);
+    check('4 · mordida — providência registrada DEPOIS do encerramento reabre o assunto na prática',
+      ctx.avisoEncerrado({ status: 'em_processo',
+        entries: [{ resolucao: true, ts: 10 }, { acao: 'o tutor não trouxe', ts: 20 }] }) === false);
+    check('4 · ENCERRAR carimba o desfecho no nó (resolvido_por, resolvido_em, resolvido_motivo), não só na trilha',
+      /resolvido_por:assina, resolvido_em:Date\.now\(\), resolvido_motivo:acao/.test(html) &&
+      (html.match(/resolvido_por:assina/g) || []).length === 2);
+    check('4 · o botão diz "Encerrar" — nos dois canais da tela (ração/remédio e estoque)',
+      (html.match(/>Encerrar<\/button>/g) || []).length === 2 &&
+      html.indexOf('>Marcar como resolvido</button>') < 0);
+    check('4 · REABRIR pede motivo na caixa da casa, deixa entrada na trilha e escreve na auditoria',
+      /function avisoPedirMotivoReabrir\(fn\)\{[\s\S]{0,700}?zCampo\('Reabrir este chamado\?'/.test(html) &&
+      /audit\('racao-aviso-reaberto', id, \{quem:quem, motivo:motivo\}\)/.test(html) &&
+      /audit\('estoque-aviso-reaberto', id, \{quem:quem, motivo:motivo\}\)/.test(html) &&
+      (html.match(/reaberto_por:quem, reaberto_em:Date\.now\(\), reaberto_motivo:motivo/g) || []).length === 2);
+    check('4 · nenhuma gravação dos avisos ficou com .catch vazio (rastro sempre)',
+      !/avisos-(racao|estoque)[^\n]*\.catch\(function\(e\)\{\s*\}\)/.test(html));
+    check('4 · as listas e as contagens usam a MESMA régua (nenhuma sobrou olhando o campo status cru)',
+      !/AVISOS_(RACAO|ESTOQUE)_CACHE\[id\]\.status!=='resolvido'/.test(html) &&
+      !/AVISOS_(RACAO|ESTOQUE)_CACHE\[id\]\.status==='resolvido'/.test(html));
+    check('4 · o Dashboard da Amanda lê o mesmo estado efetivo (não cobra o que a tela já encerrou)',
+      /var st=\(typeof avisoStatusEfetivo==='function'\)\?avisoStatusEfetivo\(a\):\(a\.status\|\|'pendente'\);/.test(html));
+    check('4 · o chamado encerrado por herança DIZ que foi assim — a tela não finge que o campo sempre esteve certo',
+      html.indexOf('A resposta que encerrou este chamado já estava registrada, mas o estado dele tinha ficado para trás') > 0);
+
+    // ---- 7: "Salvar colaboradores" recusado pelo banco (bug ao vivo de 08/set) ----
+    // Seis pessoas estavam gravadas SEM o campo `role`. A tela desenhava "monitor" (lê
+    // m.role||'monitor'), mas o salvamento mandava o objeto como estava — e a regra v2 exige
+    // hasChildren(['nome','senha','role']) em texto. O banco recusava a lista INTEIRA e a
+    // tela dizia só "PERMISSION_DENIED". Aqui a prova roda a função REAL contra um banco de
+    // mentira e olha o que ela mandaria gravar.
+    if (typeof ctx.salvarMonitores === 'function') {
+      const gravadoMon = [];
+      ctx.__dbMon = { ref: (c) => ({ set: (v) => { gravadoMon.push({ c: c, v: JSON.parse(JSON.stringify(v)) }); return Promise.resolve(); } }) };
+      vm.runInContext('__bkpDBMon = DB; DB = __dbMon; __bkpMon = MONITORES;', ctx);
+      try {
+        // (a) lista com role faltando nas duas primeiras — o caso real
+        vm.runInContext("MONITORES = [{nome:'Sem Papel Um', senha:'4321'}, {nome:'Sem Papel Dois', senha:'4322'}, {nome:'Com Papel', senha:'4323', role:'vet'}];", ctx);
+        ctx.salvarMonitores();
+        const enviado = gravadoMon.length ? gravadoMon[gravadoMon.length - 1] : null;
+        check('7 · salvarMonitores normaliza antes de gravar: TODA pessoa vai com nome, papel e senha em texto',
+          !!enviado && enviado.c === 'daycare/config/monitores' && enviado.v.length === 3 &&
+          enviado.v.every((m) => typeof m.role === 'string' && m.role &&
+            typeof m.nome === 'string' && typeof m.senha === 'string'),
+          JSON.stringify(enviado && enviado.v));
+        check('7 · quem estava sem papel vira "monitor" (o mesmo que a tela já mostrava) e quem tinha o seu não é mexido',
+          !!enviado && enviado.v[0].role === 'monitor' && enviado.v[1].role === 'monitor' &&
+          enviado.v[2].role === 'vet',
+          JSON.stringify(enviado && enviado.v.map((m) => m.role)));
+        check('7 · a lista em memória também fica normalizada (a tela e o banco passam a dizer a mesma coisa)',
+          vm.runInContext("MONITORES.every(function(m){ return typeof m.role==='string' && !!m.role; })", ctx) === true);
+
+        // (b) pessoa SEM NOME: não grava e a tela diz QUAL linha está sem nome
+        const antesN = gravadoMon.length;
+        vm.runInContext("MONITORES = [{nome:'Tem Nome', senha:'4321', role:'monitor'}, {nome:'', senha:'4324', role:'monitor'}];", ctx);
+        ctx.salvarMonitores();
+        check('7 · pessoa sem nome NÃO vai para o banco — a gravação para antes, em vez de a regra recusar calada',
+          gravadoMon.length === antesN);
+        check('7 · e a tela diz QUAL linha está sem nome, com a senha dela, em vez de "PERMISSION_DENIED"',
+          html.indexOf("st.textContent='Falta o NOME em: '+semNome.join(', ')+'. Toda pessoa precisa de nome, papel e senha — sem isso o banco recusa a lista inteira.'") > 0 &&
+          /semNome\.push\(\(i\+1\)\+'ª linha da lista'\+\(m\.senha\?\(' \(senha '\+m\.senha\+'\)'\):''\)\)/.test(html));
+      } finally {
+        vm.runInContext('DB = __bkpDBMon; MONITORES = __bkpMon;', ctx);
+      }
+      check('7 · o erro do banco vira frase humana (e vai para a auditoria como gravação que falhou)',
+        html.indexOf("st.textContent='O banco recusou a gravação — confira se toda pessoa tem nome, papel e senha. ('+((e&&e.message)||e)+')'") > 0 &&
+        /_logFalhaGrav\('daycare\/config\/monitores \(salvarMonitores\)', e\)/.test(html) &&
+        html.indexOf("st.textContent='Erro ao salvar: '+e.message") < 0);
+    } else check('7 · salvarMonitores existe', false, 'função não encontrada');
+
+    // ---- 4 (dado real): o Kakinho do retrato sai da lista de abertos ----
+    if (!HARNESS_VIVO && RETRATO) {
+      const racao = retratoLib.ler(RETRATO, 'auaulandia/avisos-racao') || {};
+      const kako = racao['-P0hscx2wW0rnnV0_hSy'] || null;
+      check('4 · dado real: o aviso do Kako ("Kakinho") está no retrato, com a resposta da Amanda e o status atrasado',
+        !!kako && kako.hospNome === 'Kako' && kako.status === 'em_processo' &&
+        (kako.entries || []).length === 1 && kako.entries[0].resolucao === true &&
+        /Tem 7/.test(kako.entries[0].acao || ''),
+        kako ? JSON.stringify({ status: kako.status, acao: (kako.entries || [{}])[0].acao }) : 'não achei o aviso');
+      if (kako) {
+        check('4 · dado real: com a regra nova, o chamado do Kakinho SAI da lista de abertos',
+          ctx.avisoEncerrado(kako) === true && ctx.avisoStatusEfetivo(kako) === 'resolvido');
+        const abertosAntes = Object.keys(racao).filter((k) => (racao[k].status || 'pendente') !== 'resolvido');
+        const abertosAgora = Object.keys(racao).filter((k) => !ctx.avisoEncerrado(racao[k]));
+        check('4 · dado real: a regra fecha só o que tem resposta de encerramento — o resto continua aberto',
+          abertosAntes.length === 2 && abertosAgora.length === 1 &&
+          abertosAgora.indexOf('-P0hscx2wW0rnnV0_hSy') < 0,
+          'antes ' + abertosAntes.length + ' → agora ' + abertosAgora.length + ': ' + JSON.stringify(abertosAgora));
+      }
     }
   }
   console.log('');
