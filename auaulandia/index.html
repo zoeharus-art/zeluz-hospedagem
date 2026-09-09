@@ -137,6 +137,13 @@
   .nav .acc-panel a[data-v],
   .nav .acc-panel a:not([data-v]):not(.nav-parent){margin-left:22px;padding-left:12px;
     border-left:2px solid rgba(222,180,40,.30);border-radius:0 11px 11px 0}  /* Opção F: a trilha é dourada baixa */
+  /* RÓTULO dentro de um sub-cabeçalho (08/set/2026): "Planos e cobranças" precisava morar
+     dentro do Day Care, e um terceiro nível de sanfona faria um filho MAIOR que o pai —
+     o que a lei dos três níveis proíbe. A saída é um rótulo miúdo (11,5px/800), abaixo do
+     item (14px/500): ele separa sem fingir que é cabeçalho. Não é clicável e não navega. */
+  .nav .nav-rotulo{margin:12px 0 3px 22px;padding:0 0 0 12px;
+    font-size:11.5px;font-weight:800;letter-spacing:.6px;text-transform:none;
+    color:var(--z-gold);opacity:.72;line-height:1.4}
   /* Item solto no fim da barra (Relatórios): fica separado do que vem antes por um fio. */
   .nav a.nav-solto{margin-top:14px;border-top:1px solid rgba(255,255,255,.12);padding-top:8px;border-radius:0 0 11px 11px}
   .nav a{
@@ -1352,11 +1359,13 @@
   /* ...e o caminho até o Peso, incluindo os dois grupos que o contêm — senão o item
      existiria dentro de uma gaveta invisível (Adriana, 28/ago/2026). */
   body[data-role="vet"] .nav a[data-v="peso"],
-  /* Reagrupamento de 08/set/2026: a veterinária é da Central Zêluz. O Cuidado Vet ficou
-     na raiz da categoria (por isso basta o cabeçalho dela) e o Peso mora no
-     sub-cabeçalho Peludinhos — os dois cabeçalhos do caminho precisam aparecer. */
+  /* Reagrupamento de 08/set/2026 (noite): a Central Zêluz virou três partes. O Cuidado Vet
+     desceu para o sub-cabeçalho AuAulândia e o Peso ficou em Peludinhos — a veterinária
+     precisa dos TRÊS cabeçalhos do caminho (a categoria e os dois sub-cabeçalhos), senão
+     os itens dela existiriam dentro de gavetas invisíveis (Adriana, 28/ago/2026). */
   body[data-role="vet"] .nav .acc[data-acc="central"]>a.grp,
-  body[data-role="vet"] .nav .acc[data-acc="c-peludinhos"]>a.grp{display:flex !important}
+  body[data-role="vet"] .nav .acc[data-acc="c-peludinhos"]>a.grp,
+  body[data-role="vet"] .nav .acc[data-acc="c-auaulandia"]>a.grp{display:flex !important}
   /* Onda 4 — Conferência Check-in: no menu só para a Wandela (papel "conferencia") + Gestão/Supervisão/Diretoria */
   /* Peludinhos Hóspedes — quem mexe em data de estadia: Gestão, Supervisão, Consultora e Diretoria */
   .nav a.so-hosp{display:none}
@@ -2082,6 +2091,33 @@
      dashboard". O que entrou: o card "Seu dia" no topo (o mesmo das Consultoras), um placar
      que enche como o dos copos de água, o nome de quem abriu e desde quando, e a festa
      quando a lista de pendentes zera. Nenhuma cor nova — só os tokens que já existem. */
+  /* ===== GRÁFICO DO TEMPO DAS ATIVIDADES (08/set/2026) ==============================
+     Adriana: "tempo das atividades vira gráfico por atividade." Barra horizontal em CSS
+     puro — nenhuma biblioteca entra no app por causa de um gráfico. A barra é uma <i> com
+     largura em %; o número exato fica ao lado dela, sempre legível, porque barra sozinha
+     não se lê. Aparece no Dashboard da Adriana e no da Márcia, do mesmo jeito. */
+  .atv-graf{margin-top:12px;display:flex;flex-direction:column;gap:12px}
+  .atv-linha{min-width:0}
+  .atv-cab{display:flex;align-items:baseline;gap:8px;justify-content:space-between}
+  .atv-nome{font-size:13.5px;font-weight:800;color:var(--z-blue);min-width:0;
+    overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .atv-min{flex:0 0 auto;font-size:13px;font-weight:900;color:var(--z-gold-deep)}
+  .atv-trilho{margin-top:4px;height:12px;border-radius:999px;background:var(--z-blue-soft);overflow:hidden}
+  .atv-barra{display:block;height:100%;border-radius:999px;
+    background:linear-gradient(90deg,var(--z-gold) 0%,var(--z-gold-deep) 100%)}
+  .atv-pe{margin-top:4px;display:flex;gap:10px;flex-wrap:wrap;justify-content:space-between;
+    font-size:11.5px;font-weight:700;color:var(--muted);line-height:1.4}
+  .atv-sem{color:var(--z-blue);opacity:.85}
+  /* ===== LINHA DO TEMPO DO DIA — as fichas de mês e de dia ==========================
+     Alvo de toque de 40px (a lei do teste do iPhone): quem usa isto está no computador da
+     Gestão, mas o app é o mesmo no celular. */
+  .lt-chips{display:flex;flex-wrap:wrap;gap:7px;margin-top:9px}
+  .lt-chip{min-height:40px;padding:9px 14px;border-radius:11px;cursor:pointer;
+    background:var(--z-cream-warm);border:1.5px solid var(--line);color:var(--z-blue);
+    font-family:var(--font-ui);font-size:13px;font-weight:800}
+  .lt-chip:hover{border-color:var(--z-gold)}
+  .lt-chip.on{background:var(--z-blue);border-color:var(--z-blue);color:var(--z-cream)}
+  .lt-chip.lt-dia{min-width:44px;text-align:center;padding:9px 10px}
   .pa-li-meta{display:block;font-size:11.5px;font-weight:700;color:var(--z-gold-deep);margin-top:3px;line-height:1.4}
   .pa-li.feito b{color:var(--muted);text-decoration:line-through;text-decoration-thickness:1px}
   .pa-li-ok{flex:0 0 auto;width:22px;height:22px;border-radius:50%;background:rgba(39,174,96,.14);
@@ -2213,7 +2249,12 @@
         <a data-v="painel-amanda" style="display:none" title="O seu dia e as duas listas: o que está esperando você e o que você já resolveu hoje."><span data-icon="list-check"></span><span>Dashboard da Amanda</span></a>
         <a data-v="paineloperacao" style="display:none" title="A casa de hoje num lugar só: quem veio, quem faltou, o tempo do time, as noites que vêm aí e o acerto."><span data-icon="chart"></span><span>Dashboard da Márcia</span></a>
         <a data-v="painel-diretoria" style="display:none" title="A casa inteira e o dinheiro do mês — a visão de quem responde por tudo."><span data-icon="chart"></span><span>Dashboard da Adriana</span></a>
-        <a data-v="painel" class="so-master" title="Auditoria e cumprimento de protocolos"><span data-icon="chart"></span><span>Painel do Dia</span></a>
+        <!-- O "Painel do Dia" saiu daqui em 08/set/2026 (noite). Adriana: "o Painel do Dia é
+             um dashboard e precisa ir para quem precisa ver." Cada bloco dele foi para o
+             dashboard da PESSOA que age sobre aquilo — o mapa está em docs/INDICE-MENU-APP.md.
+             A tela v-painel continua existindo (link antigo não morre), mas sem item no menu;
+             a classe so-master que ela tinha passou para a "Linha do tempo do dia", na
+             Operação — ninguém ganhou nem perdeu acesso. -->
       </div>
     </div>
 
@@ -2257,12 +2298,12 @@
 
     <!-- CENTRAL ZÊLUZ — a mesa de quem fala com o tutor: as Consultoras de Bem-Estar, a
          supervisão da Amanda e a veterinária.
-         ORDEM (Adriana, 08/set/2026, noite): "Central Zêluz — primeiro Peludinhos, depois
-         Planos e Cobranças, depois os outros itens". O FILHOt vem antes do dinheiro, e o
-         dinheiro antes da rotina: quem abre a Central procura a ficha de um peludinho
-         muito mais vezes do que procura a tela do dia. Por isso os dois sub-cabeçalhos
-         sobem para o topo da gaveta e os itens da chegada à saída ficam embaixo deles, na
-         mesma ordem do dia que já tinham. Nenhum item mudou de gaveta nem de classe. -->
+         TRÊS PARTES (Adriana, 08/set/2026, 23h30): Peludinhos · AuAulândia · Day Care,
+         nesta ordem. Peludinhos é a ficha (cadastro, prevenção, pesquisa com a família e
+         peso); AuAulândia é "todos os itens pertinentes à hospedagem"; Day Care é o dia do
+         auluno — e o antigo sub-cabeçalho "Planos e cobranças" entrou inteiro nele, como
+         rótulo, porque sub-cabeçalho dentro de sub-cabeçalho não existe.
+         Nenhum item mudou de classe so-*/op-only: mudou grupo e ordem, nunca acesso. -->
     <div class="acc" data-acc="central">
       <a class="grp nav-parent" data-acc-toggle="central"><span data-icon="bell"></span><span>Central Zêluz</span><span class="acc-caret" aria-hidden="true"></span></a>
       <div class="acc-panel">
@@ -2281,9 +2322,38 @@
           <a data-v="peso" class="so-pesa" title="Pesar qualquer FILHOt: recepção, veterinária e gestão."><span data-icon="scale"></span><span>Peso</span></a>
           </div>
         </div>
-        <div class="acc" data-acc="c-planos">
-          <a class="grp grp-sub nav-parent" data-acc-toggle="c-planos"><span>Planos e cobranças</span><span class="acc-caret" aria-hidden="true"></span></a>
+        <!-- AUAULÂNDIA — "todos os itens pertinentes à hospedagem" (Adriana, 08/set/2026,
+             23h30). É o lado da Central: quem FALA com o tutor sobre a hospedagem. O outro
+             lado — o que o monitor faz com o FILHOt na casa — continua em Serviços, e
+             nenhuma tela aparece nos dois lugares: os nomes se repetem, os itens não. -->
+        <div class="acc" data-acc="c-auaulandia">
+          <a class="grp grp-sub nav-parent" data-acc-toggle="c-auaulandia"><span>AuAulândia</span><span class="acc-caret" aria-hidden="true"></span></a>
           <div class="acc-panel">
+          <a data-v="checkin" title="O tutor chega: entrada, alimentação, medicação, assinatura (1º passo)."><span data-icon="login"></span><span>Check-in</span></a>
+          <a data-v="checkoutconf" class="so-conf-saida" title="Conferir a bolsa junto com o tutor e assinar (2º passo)."><span data-icon="door-out"></span><span>Check-out com o tutor</span></a>
+          <a data-v="recepcao" class="so-recepcao" title="Ração acabando, remédio faltando, algo que ficou."><span data-icon="message"></span><span>Pendências com o tutor</span></a>
+          <!-- A veterinária é da Central Zêluz (Adriana, 08/set/2026): ela conversa com o
+               tutor sobre o que viu no corpo do FILHOt. -->
+          <a data-v="cuidadovet" class="so-vet" title="Alterações no corpo que a veterinária precisa ver."><span data-icon="stethoscope"></span><span>Cuidado Vet</span></a>
+          <a data-v="orcamento" class="so-recepcao" title="Monte e envie o orçamento ao tutor."><span data-icon="dollar"></span><span>Orçamento de hospedagem</span></a>
+          </div>
+        </div>
+        <!-- DAY CARE — o dia do auluno visto pela Central. "Planos e cobranças" deixou de
+             ser um sub-cabeçalho e virou um RÓTULO dentro do Day Care (Adriana pediu o
+             subgrupo inteiro aqui dentro): sub-cabeçalho dentro de sub-cabeçalho não
+             existe, e o rótulo é menor que o item (11,5px/800) — nunca um filho maior que
+             o pai. Nenhum item mudou de classe so-*. -->
+        <div class="acc" data-acc="c-daycare">
+          <a class="grp grp-sub nav-parent" data-acc-toggle="c-daycare"><span>Day Care</span><span class="acc-caret" aria-hidden="true"></span></a>
+          <div class="acc-panel">
+          <!-- Saiu do menu "Empório", que foi deletado: ninguém procuraria a mensagem
+               do tutor ali dentro (Adriana, 13/ago/2026). -->
+          <a data-v="emporio" class="so-emporio" title="A mensagem pronta para avisar o tutor."><span data-icon="bowl"></span><span>Quem não comeu hoje</span></a>
+          <a data-v="reposicao" class="so-recepcao" title="Créditos de dias por falta avisada."><span data-icon="refresh"></span><span>Reposições</span></a>
+          <!-- Adriana, 19/ago/2026: é aqui que a recepção lança o que hoje digita na
+               planilha — e a planilha vira só o espelho que alimenta a TV. -->
+          <a data-v="dashdc" class="so-recepcao" title="A planilha do Day Care, item por item."><span data-icon="list-check"></span><span>Lançamentos do dia</span></a>
+          <div class="nav-rotulo">Planos e cobranças</div>
           <a data-v="renovacao" class="so-gestao" title="Quem está no fim do plano."><span data-icon="card"></span><span>Renovação de planos</span></a>
           <!-- LANÇAR PAGAMENTO (v-10) — nasce ESCONDIDO; quem mostra é aplicarPermMenu(),
                lendo a tabela PERM ('lancar-pagamento'): a Central lança, a chefia confere,
@@ -2293,38 +2363,33 @@
           <a class="so-gestao" style="opacity:.55;cursor:default" title="Quem deve no Day Care."><span data-icon="dollar-alert"></span><span>Em débito</span><span class="soon">em breve</span></a>
           </div>
         </div>
-        <a data-v="checkin" title="O tutor chega: entrada, alimentação, medicação, assinatura (1º passo)."><span data-icon="login"></span><span>Check-in</span></a>
-        <a data-v="checkoutconf" class="so-conf-saida" title="Conferir a bolsa junto com o tutor e assinar (2º passo)."><span data-icon="door-out"></span><span>Check-out com o tutor</span></a>
-        <a data-v="orcamento" class="so-recepcao" title="Monte e envie o orçamento ao tutor."><span data-icon="dollar"></span><span>Orçamento de hospedagem</span></a>
-        <a data-v="recepcao" class="so-recepcao" title="Ração acabando, remédio faltando, algo que ficou."><span data-icon="message"></span><span>Pendências com o tutor</span></a>
-        <!-- A veterinária é da Central Zêluz (Adriana, 08/set/2026): ela conversa com o
-             tutor sobre o que viu no corpo do FILHOt. -->
-        <a data-v="cuidadovet" class="so-vet" title="Alterações no corpo que a veterinária precisa ver."><span data-icon="stethoscope"></span><span>Cuidado Vet</span></a>
-        <!-- Saiu do menu "Empório", que foi deletado: ninguém procuraria a mensagem
-             do tutor ali dentro (Adriana, 13/ago/2026). -->
-        <a data-v="emporio" class="so-emporio" title="A mensagem pronta para avisar o tutor."><span data-icon="bowl"></span><span>Quem não comeu hoje</span></a>
-        <a data-v="reposicao" class="so-recepcao" title="Créditos de dias por falta avisada."><span data-icon="refresh"></span><span>Reposições</span></a>
-        <!-- Adriana, 19/ago/2026: é aqui que a recepção lança o que hoje digita na
-             planilha — e a planilha vira só o espelho que alimenta a TV. -->
-        <a data-v="dashdc" class="so-recepcao" title="A planilha do Day Care, item por item."><span data-icon="list-check"></span><span>Lançamentos do dia</span></a>
       </div>
     </div>
 
     <div class="acc so-gestao" data-acc="operacao">
       <a class="grp nav-parent" data-acc-toggle="operacao"><span data-icon="users"></span><span>Operação</span><span class="acc-caret" aria-hidden="true"></span></a>
+      <!-- ORDEM ALFABÉTICA (Adriana, 08/set/2026, 23h30): "Operação: itens em ordem
+           alfabética". Configurações · Enriquecimento Ambiental · Escala e plano do dia ·
+           Financeiro do plantão · Linha do tempo do dia · Ritmo do Time · Time.
+           O #pSubnav continua colado no Time — é o submenu dele. -->
       <div class="acc-panel">
-        <a data-v="acerto" class="so-master" title="Acerto das plantonistas: noites, dobras, quanto pagamos."><span data-icon="dollar"></span><span>Financeiro do plantão</span></a>
-        <a data-v="ritmo" class="so-gestao" title="Tempo por etapa, dia a dia."><span data-icon="clock"></span><span>Ritmo do Time</span></a>
+        <a data-v="config" class="so-master" title="Telegram, ponte da planilha, horários esperados e os logins."><span data-icon="settings"></span><span>Configurações</span></a>
         <!-- Enriquecimento Ambiental é da Operação (o grupo da Márcia), não dos Serviços:
              aqui é o histórico do que foi montado, não a atividade do dia. -->
         <a data-v="eahist" class="so-gestao" title="O que foi feito e quem não participou."><span data-icon="ball"></span><span>Enriquecimento Ambiental</span></a>
+        <!-- ESCALA E PLANO DO DIA (Fase 2.1) — o que alimenta o "Meu dia" de cada monitor.
+             Mora na Operação: é o grupo da Márcia, e é ela quem define o plano do dia.
+             Escondido por padrão; aplicarPermMenu() mostra pelo PERM. -->
+        <a data-v="planodia" style="display:none" title="A escala de cada um e qual plano vale hoje — é daqui que sai o &quot;Meu dia&quot; do monitor."><span data-icon="clipboard"></span><span>Escala e plano do dia</span></a>
+        <a data-v="acerto" class="so-master" title="Acerto das plantonistas: noites, dobras, quanto pagamos."><span data-icon="dollar"></span><span>Financeiro do plantão</span></a>
+        <!-- LINHA DO TEMPO DO DIA (08/set/2026, noite) — era o último bloco do Painel do
+             Dia. Virou tela própria, com navegação por MÊS ("senão é bagunça", Adriana).
+             Herdou a classe so-master do item "Painel do Dia" que saiu do menu: quem via
+             continua vendo, quem não via continua sem ver. -->
+        <a data-v="linhadotempo" class="so-master" title="Tudo o que aconteceu, em ordem — escolha o mês e o dia."><span data-icon="clock"></span><span>Linha do tempo do dia</span></a>
+        <a data-v="ritmo" class="so-gestao" title="Tempo por etapa, dia a dia."><span data-icon="clock"></span><span>Ritmo do Time</span></a>
         <a data-v="pessoas" class="so-master" title="Pessoas, senhas e quem acessa o quê."><span data-icon="users"></span><span>Time</span></a>
         <div class="subnav so-master" id="pSubnav" style="display:none"></div>
-        <!-- ESCALA E PLANO DO DIA (Fase 2.1) — o que alimenta o "Meu dia" de cada monitor.
-             Mora na Operação, ao lado de Time: é o grupo da Márcia, e é ela quem define o
-             plano do dia. Escondido por padrão; aplicarPermMenu() mostra pelo PERM. -->
-        <a data-v="planodia" style="display:none" title="A escala de cada um e qual plano vale hoje — é daqui que sai o &quot;Meu dia&quot; do monitor."><span data-icon="clipboard"></span><span>Escala e plano do dia</span></a>
-        <a data-v="config" class="so-master" title="Telegram e ponte da planilha."><span data-icon="settings"></span><span>Configurações</span></a>
       </div>
     </div>
 
@@ -3869,6 +3934,32 @@
       <div class="hint">A ponte que leva o que a recepção lança para a planilha do Day Care — e de lá para a TV. Ela se configura na própria tela onde o lançamento acontece, para quem mexe ver o efeito na hora: <strong>Central Zêluz &rsaquo; Day Care &rsaquo; Lançamentos do dia</strong>.</div>
       <button type="button" class="btn btn-gold" style="margin-top:9px" onclick="abrirItemDoMenu('dashdc')">Abrir Lançamentos do dia</button>
     </div>
+
+    <!-- HORÁRIOS ESPERADOS — veio do Painel do Dia, que foi dissolvido (08/set/2026).
+         É a janela em que cada protocolo deve acontecer; fora dela, o quadro "Cumprimento
+         dos protocolos" (nos dashboards da Adriana e da Márcia) marca "fora do horário".
+         Ele mora aqui e não nos dashboards por uma razão de princípio: dashboard SÓ
+         OBSERVA — quem GRAVA é a tela de ajuste. Os ids são os mesmos de antes
+         (painelCfg, abrirAuditCfg, setAuditCfg): nada de lógica mudou. -->
+    <div class="card so-master">
+      <h2 style="font-size:19px">Horários esperados de cada protocolo</h2>
+      <div class="hint">A janela em que cada protocolo deve acontecer. É esta régua que faz o quadro <strong>Cumprimento dos protocolos</strong> — no Dashboard da Adriana e no da Márcia — dizer &ldquo;no prazo&rdquo; ou &ldquo;fora do horário&rdquo;. Ajuste à rotina real da casa.</div>
+      <button type="button" class="btn btn-gold" style="margin-top:9px" onclick="abrirAuditCfg()">Abrir os horários</button>
+      <div id="painelCfg" style="display:none;margin-top:10px"></div>
+    </div>
+
+    <!-- LOGINS E SEGURANÇA (Adriana, 08/set/2026, 23h40): "tudo de login vai para dentro
+         de Configurações › Logins/Segurança" — e "Time continua Time, não mexe em nada".
+         Por isso NADA saiu da tela Time: senhas e colaboradores continuam lá. O que entrou
+         aqui é o bloco "O que cada pessoa fez hoje", que era do Painel do Dia: ele não é
+         cadastro de pessoa, é o RASTRO de quem usou o app hoje — matéria de segurança. -->
+    <div class="card so-master">
+      <h2 style="font-size:19px">Logins e segurança</h2>
+      <div class="hint">Quem usou o app hoje e o que cada um fez. É o rastro que o sistema guarda sozinho — ninguém digita nada aqui. Para mudar senha, papel ou quem acessa o quê, a tela é <strong>Operação &rsaquo; Time</strong>.</div>
+      <div id="cfgLoginsWrap" style="margin-top:10px"><div class="hint">Carregando o rastro de hoje…</div></div>
+      <div class="hint" style="margin-top:8px">O detalhe minuto a minuto — tudo o que aconteceu, em ordem — está em <strong>Operação &rsaquo; Linha do tempo do dia</strong>.</div>
+      <button type="button" class="btn" style="margin-top:8px;background:var(--z-cream-warm);color:var(--z-blue);border:1.5px solid var(--line)" onclick="abrirItemDoMenu('linhadotempo')">Abrir a Linha do tempo do dia</button>
+    </div>
   </section>
 
   <!-- ===== ORÇAMENTO DE HOSPEDAGEM (Adriana, 12/ago/2026) ==========================
@@ -4068,17 +4159,23 @@
     </div>
   </div>
 
+  <!-- ===== O QUE SOBROU DO PAINEL DO DIA (dissolvido em 08/set/2026, noite) ==========
+       Adriana: "o Painel do Dia é um dashboard e precisa ir para quem precisa ver."
+       Cada bloco do dia foi para o dashboard de quem AGE sobre ele:
+         Urgente a resolver ...................... Dashboard da Márcia
+         Prevenção vencida · Falta pesar ......... Dashboard da Amanda
+         Plantão agora ........................... Dashboard da Adriana
+         Cumprimento dos protocolos .............. Dashboard da Adriana E da Márcia
+         Tempo das atividades (gráfico) .......... Dashboard da Adriana E da Márcia
+         O que cada pessoa fez hoje .............. Configurações › Logins e segurança
+         Linha do tempo do dia ................... Operação › Linha do tempo do dia
+         Partiram · doses sem dono ............... removidos a pedido dela
+       Esta tela NÃO tem mais item no menu. Ela continua existindo por dois motivos:
+       link antigo não pode morrer, e o DETALHE multi-dia (o tempo das atividades por dia
+       da semana, dia a dia e por pessoa, e a confiabilidade das plantonistas freelance)
+       não cabe num quadro de dashboard. Os dois gráficos dos dashboards abrem aqui. -->
   <section class="view" id="v-painel">
-    <div class="role-note so-gestao"><span data-icon="chart"></span><span><strong>Painel do Dia.</strong> Visão completa de como o dia transcorreu: presença, almoço, atividades e — o mais importante — <strong>se cada protocolo foi cumprido, no horário, e por quem</strong>. Esta tela só observa: não altera nada.</span></div>
-    <div class="p-datenav">
-      <button onclick="painelMuda(-1)" title="Dia anterior">‹</button>
-      <span id="painelDateLabel">—</span>
-      <button onclick="painelMuda(1)" title="Próximo dia">›</button>
-      <button class="hoje" onclick="painelHoje()">Hoje</button>
-      <button class="p-cfg-btn so-master" onclick="abrirAuditCfg()">⚙ Horários esperados</button>
-    </div>
-    <div id="painelCfg" class="card so-master" style="display:none"></div>
-    <div id="painelWrap"><div class="p-empty">Carregando o dia…</div></div>
+    <div class="role-note so-gestao"><span data-icon="chart"></span><span><strong>O detalhe do tempo.</strong> O Painel do Dia virou parte dos dashboards — cada bloco foi para quem age sobre ele. O que ficou aqui é o que não cabe num quadro: <strong>o tempo das atividades por dia da semana, dia a dia e por pessoa</strong>, e a <strong>confiabilidade das plantonistas</strong>. Esta tela só observa: não altera nada.</span></div>
 
     <!-- QUEM FEZ O QUÊ — por monitor (Adriana, 11/ago/2026): "cada atividade é feita por uma
          pessoa. A Amanda é quem está fazendo o Almoço; a Leticya fez porque a Amanda estava de
@@ -4110,6 +4207,19 @@
       <div id="monPlantaoWrap"><div class="p-empty">Carregando…</div></div>
     </div>
   </section>
+
+  <!-- ===== LINHA DO TEMPO DO DIA (08/set/2026, noite) ================================
+       Era o último bloco do Painel do Dia. Adriana: "linha do tempo do dia vira tela
+       própria, com navegação por MÊS — junho, julho, agosto, setembro… senão é bagunça."
+       Como funciona: escolhe-se o MÊS, depois o DIA. Só o dia escolhido é lido do banco
+       (um nó, uma vez) — nada de baixar o mês inteiro para mostrar uma tela. Abre no mês
+       corrente, com o dia de hoje já escolhido.
+       Esta tela só OBSERVA: não existe uma única gravação aqui. -->
+  <section class="view" id="v-linhadotempo">
+    <div class="role-note so-master"><span data-icon="clock"></span><span><strong>Tudo o que aconteceu, em ordem.</strong> Escolha o mês, depois o dia. Cada linha traz a hora, quem fez e o que foi — é o rastro que o app guarda de cada ação. Esta tela só observa: não altera nada.</span></div>
+    <div id="ltRoot"><div class="card"><div class="hint">Carregando os meses…</div></div></div>
+  </section>
+
   <!-- ===== MEU PAINEL — a fatia do Monitor (Fase 2.1) ===============================
        "A ideia é o aplicativo ser uma ferramenta de feedback, de algum controle e de
         aprendizado. O monitor vê onde está falhando e pode consertar a rota." (Adriana)
@@ -4411,8 +4521,8 @@
       DB.ref('daycare/banho-aviso/'+dcDataKey()).on('value', s=>{ despBaixa=s.val()||{};
         try{ if(despNaTela&&despBaixa[despNaTela]) fecharDespertador(null); }catch(e){} /* silencioso de propósito: guarda defensiva — falhar aqui não pode interromper quem chamou */ });
       DB.ref('daycare/almoco-cad').on('value', s=>{ almCadCache=s.val()||{}; try{ if(typeof renderAlmStep==='function'&&dcAtiv==='almoco') renderAlmStep(); }catch(e){} /* silencioso de propósito: redesenho de tela — falhar não pode derrubar quem chamou */ });
-      DB.ref('daycare/config/auditoria').on('value', s=>{ const v=s.val(); if(v&&typeof v==='object'){ try{ AUDIT_CFG=Object.assign({},AUDIT_CFG,v); }catch(e){} /* silencioso de propósito: guarda defensiva — se o valor não vier, o anterior continua valendo */ if(typeof renderPainelDia==='function') renderPainelDia(); } });
-      DB.ref('daycare/config/monitores').on('value', s=>{ const v=s.val(); if(Array.isArray(v)&&v.length){ MONITORES=v; } else { MONITORES=MONITORES_DEFAULT.map(m=>Object.assign({},m)); } try{ if(typeof renderSenhas==='function') renderSenhas(); }catch(e){} /* silencioso de propósito: redesenho de tela — falhar não pode derrubar quem chamou */ try{ if(typeof renderMonitores==='function') renderMonitores(); }catch(e){} /* silencioso de propósito: redesenho de tela — falhar não pode derrubar quem chamou */ try{ if(typeof renderPainelDia==='function') renderPainelDia(); }catch(e){} /* silencioso de propósito: redesenho de tela — falhar não pode derrubar quem chamou */ });
+      DB.ref('daycare/config/auditoria').on('value', s=>{ const v=s.val(); if(v&&typeof v==='object'){ try{ AUDIT_CFG=Object.assign({},AUDIT_CFG,v); }catch(e){} /* silencioso de propósito: guarda defensiva — se o valor não vier, o anterior continua valendo */ } });   /* o Painel do Dia foi dissolvido em 08/set/2026: quem lê o AUDIT_CFG agora é o quadro de protocolos, redesenhado ao abrir o dashboard */
+      DB.ref('daycare/config/monitores').on('value', s=>{ const v=s.val(); if(Array.isArray(v)&&v.length){ MONITORES=v; } else { MONITORES=MONITORES_DEFAULT.map(m=>Object.assign({},m)); } try{ if(typeof renderSenhas==='function') renderSenhas(); }catch(e){} /* silencioso de propósito: redesenho de tela — falhar não pode derrubar quem chamou */ try{ if(typeof renderMonitores==='function') renderMonitores(); }catch(e){} /* silencioso de propósito: redesenho de tela — falhar não pode derrubar quem chamou */ });   /* nada de redesenhar o Painel do Dia: ele foi dissolvido em 08/set/2026 */
       // Sincronização em tempo real das pernoites/hóspedes manuais entre TODOS os aparelhos.
       // (antes usava .once() e quem já estava com o app aberto não via a inserção do outro celular)
       // Achado 3 (04/set/2026): este redisparo, sem freio, redesceu a planilha a cada
@@ -4564,7 +4674,8 @@
     peso:['Peso','Pesar qualquer FILHOt: recepção, veterinária e gestão.'],
     eahist:['Enriquecimento Ambiental','O que foi feito e quem não participou.'],
     relatorios:['Relatórios','Resumo do dia, aniversariantes, exportações.'],
-    config:['Configurações','Telegram e ponte da planilha.'],
+    config:['Configurações','Telegram, ponte da planilha, horários esperados e os logins.'],
+    linhadotempo:['Linha do tempo do dia','Tudo o que aconteceu, em ordem — escolha o mês e o dia.'],
     acerto:['Financeiro do plantão','Acerto das plantonistas: noites, dobras, quanto pagamos.'],
     ritmo:['Ritmo do Time','Tempo por etapa, dia a dia.'],
     checkout:['Check-out','O monitor monta a bolsa e devolve tudo (1º passo; a Central fecha com o tutor).'],
@@ -4573,7 +4684,7 @@
     hospedes:['Hóspedes de hoje','Quem está na casa, medicação e alimentação.'],
     recepcao:['Pendências com o tutor','Ração acabando, remédio faltando, algo que ficou.'],
     agenda:['Agenda','Frequência e reservas'],pessoas:['Time','Pessoas, senhas e quem acessa o quê.'],
-    painel:['Painel do Dia','Auditoria e cumprimento de protocolos'],
+    painel:['Detalhe do tempo','O que sobrou do Painel do Dia: o tempo por dia e por pessoa, e o plantão.'],
     mesa:['O que fazer hoje','A sua mesa do dia.'],
     // Dica curta de propósito: no celular ela divide a barra com o seletor de data, e uma
     // frase longa vira uma coluna estreita e alta em cima da tela.
@@ -4652,7 +4763,8 @@
     if(v==='daycare'){ if(typeof abrirDayCare==='function') abrirDayCare(); }
     if(v==='orcamento'){ if(typeof orcInit==='function') orcInit(); }
     if(v==='relatorios'){ if(typeof renderRelatorios==='function') renderRelatorios(); if(typeof orcCarregarLista==='function') orcCarregarLista(); }
-    if(v==='config'){ if(typeof configCarregar==='function') configCarregar(); }
+    if(v==='config'){ if(typeof configCarregar==='function') configCarregar(); if(typeof cfgLoginsCarregar==='function') cfgLoginsCarregar(); }
+    if(v==='linhadotempo'){ if(typeof ltAbrir==='function') ltAbrir(); }
     if(v==='acerto'){ if(typeof acertoCarregar==='function') acertoCarregar(); }
     if(v==='ritmo'){ if(typeof ritmoCarregar==='function') ritmoCarregar(); }
     if(v==='vacinas'){
@@ -12101,7 +12213,7 @@
   // inteira DEPOIS de a correção estar publicada — o aviso apareceu, ninguém tocou.
   // Agora o aparelho PARADO recarrega sozinho: trancado, com a aba escondida, na porta de
   // entrada ou 3 minutos sem ninguém tocar nele. Mão na tela = nunca recarrega.
-  const APP_VERSAO='2026-09-08-06';
+  const APP_VERSAO='2026-09-08-07';
   var RECARGA_PARADO_MS=3*60*1000, __versaoPublicada=null, __recargaTimer=null;
   function vigiarVersao(){
     if(!DB) return;
@@ -12350,7 +12462,12 @@
       {k:'emporio', t:'Quem não comeu hoje'}, {k:'reposicao', t:'Reposições'}
     ]},
     {grp:'Central Zêluz · Planos e cobranças', itens:[ {k:'renovacao', t:'Renovação de planos'} ]},
-    {grp:'Operação', itens:[ {k:'pessoas', t:'Time'}, {k:'painel', t:'Painel do Dia'} ]},
+    // 08/set/2026: o "Painel do Dia" saiu do menu (foi dissolvido nos dashboards) e quem
+    // herdou o lugar dele na Operação foi a "Linha do tempo do dia". Esta lista tem de
+    // dizer o MESMO que o sidebar — conceder uma tela que não existe no menu é conceder
+    // nada. Quem já tinha 'painel' concedido não perde acesso a coisa alguma: a tela
+    // continua existindo por link, e a classe so-master é a mesma nos dois.
+    {grp:'Operação', itens:[ {k:'pessoas', t:'Time'}, {k:'linhadotempo', t:'Linha do tempo do dia'} ]},
     {grp:'Relatórios', itens:[ {k:'relatorios', t:'Relatórios'} ]}
     // "Senhas" não entra aqui de propósito: não é item de menu e não se concede a ninguém.
     // "Configurações" (config) também não: é so-master, e ajuste de sistema não se concede.
@@ -22751,22 +22868,26 @@
           +'<span class="val"><strong>'+pesoFmt(o.kg)+' kg</strong>'+(o.quem?('<span style="color:var(--muted);font-weight:600;font-size:11.5px"> · '+escAttr(o.quem)+'</span>'):'')+'</span></div>';
       }).join('')+'</div>';
   }
-  // ===== QUEM ESTÁ SEM PESAR — a régua de 45 em 45 dias (Adriana, 08/set/2026) ======
-  // "Um box único no topo: X sem pesar há N dias, clicável, que abre a lista. Régua de 45
-  //  em 45 dias. Mais atrasados primeiro. Quem nunca foi pesado aparece como nunca pesado,
-  //  honesto, no topo."
+  // ===== QUEM ESTÁ SEM PESAR — a régua de 30 em 30 dias (Adriana, 08/set/2026) ======
+  // "Um box único no topo: X sem pesar há N dias, clicável, que abre a lista. Mais
+  //  atrasados primeiro. Quem nunca foi pesado aparece como nunca pesado, honesto, no topo."
+  //
+  // A régua nasceu 45 e virou 30 na mesma noite, por decisão dela: "Peso pode manter os 30
+  // dias mesmo, e a Gestão decide que dia irá pesar." São 30 em TODO lugar — nesta tela e
+  // no quadro "Falta pesar" do Dashboard da Amanda, que lê esta mesma função. Duas telas
+  // nunca contam de jeitos diferentes.
   //
   // Por que existe: até aqui a tela só respondia "quem eu vou pesar agora?" — e a pergunta
   // que ninguém fazia era "quem a casa deixou de pesar?". Peso velho vira dose de remédio
   // calculada em cima de um FILHOt que já não existe, e some o primeiro sinal de que algo
   // mudou no corpo.
   //
-  // A régua anda de 45 em 45: até 45 dias está em dia; de 45 a 90, atrasado; de 90 em
+  // A régua anda de 30 em 30: até 30 dias está em dia; de 31 a 60, atrasado; de 60 em
   // diante, muito atrasado. O dado é o MESMO da ficha e da Prevenção — o histórico `pesos`
   // do cadastro, lido por pesosDe()/ultimoPeso(). Nada é inventado: aqui só se mede,
   // ordena e mostra. Quem não tem um peso sequer não vira "há muito tempo": vira
   // "nunca pesado", que é o que a ficha de verdade diz.
-  var PESO_REGUA_DIAS=45;
+  var PESO_REGUA_DIAS=30;
   var PESOT_ATRASO_ABERTO=false;
   // Ordem de aflição: quanto maior, mais em cima. Nunca pesado é o pior caso; logo abaixo
   // vem o peso cuja data não dá para ler (existe registro, mas não dá para contar os dias).
@@ -22833,7 +22954,8 @@
     catch(e){ _logFalhaGrav('pesoAtrasoLista', e); return ''; }
     var n=lista.length;
     if(!n) return '<div class="card"><h2 style="font-size:16px">Peso em dia</h2>'
-      +'<div class="hint">Ninguém está sem pesar há mais de '+PESO_REGUA_DIAS+' dias.</div></div>';
+      +'<div class="hint">Ninguém está sem pesar há mais de '+PESO_REGUA_DIAS+' dias. '
+      +'Pesagem a cada '+PESO_REGUA_DIAS+' dias; a Gestão decide o dia.</div></div>';
     var conta={nunca:0, semdata:0, muito:0, atrasado:0};
     lista.forEach(function(o){ conta[o.faixa]=(conta[o.faixa]||0)+1; });
     var partes=[];
@@ -22850,6 +22972,7 @@
       +'<span style="display:block;font-size:19px;font-weight:900;color:var(--z-blue);line-height:1.2">'
       +n+' sem pesar há mais de '+PESO_REGUA_DIAS+' dias</span>'
       +'<span style="display:block;font-size:12.5px;color:var(--muted);font-weight:600;margin-top:3px">'+partes.join(' · ')+'</span>'
+      +'<span style="display:block;font-size:12px;color:var(--muted);font-weight:600;margin-top:2px">Pesagem a cada '+PESO_REGUA_DIAS+' dias; a Gestão decide o dia.</span>'
       +'</span>'
       +'<span style="flex:0 0 auto;font-size:12.5px;font-weight:800;color:var(--z-blue);text-decoration:underline">'
       +(aberto?'fechar':'ver a lista')+'</span>'
@@ -22885,7 +23008,7 @@
       var ex=pelExtra(o.p), u=ultimoPeso(ex);
       var k=dcKey(o.p.n,o.p.tutor);
       var dias=u?pesoDiasDesde(u.data):null;
-      var atrasado=(!u || (dias!=null && dias>45));
+      var atrasado=(!u || (dias!=null && dias>PESO_REGUA_DIAS));   // a MESMA régua do box do topo
       var fot=fotoDe({nome:o.p.n, tutor:o.p.tutor, refKey:pelKey(o.p)});
       return '<div class="pet" style="cursor:default;'+(atrasado?'border:2px solid var(--z-gold)':'')+'">'
         +(fot?('<div class="ph" style="background-image:url(\''+fot+'\');background-size:cover;background-position:center"></div>')
@@ -24621,7 +24744,7 @@
     if(n>0) partes.push('<strong>'+n+(n===1?' lançamento ainda não chegou':' lançamentos ainda não chegaram')+' à planilha — o app está reenviando sozinho.</strong>');
     if(m>0) partes.push('<strong>'+m+(m===1?' lançamento esgotou':' lançamentos esgotaram')+' as 5 tentativas de reenvio</strong> — use o botão "reenviar" na linha dele.');
     return '<div class="card" style="border-left:4px solid var(--crm-atencao)">'+partes.join('<br>')
-      +'<div class="hint" style="margin-top:3px">Cada lançamento vai para a planilha do dia em que foi feito. O rastro de cada tentativa fica na auditoria (Painel do Dia).</div></div>';
+      +'<div class="hint" style="margin-top:3px">Cada lançamento vai para a planilha do dia em que foi feito. O rastro de cada tentativa fica na auditoria (Operação › Linha do tempo do dia).</div></div>';
   }
 
   // ===== A PLANILHA SE PREENCHE SOZINHA — Adriana, 25/ago/2026 =====================
@@ -24942,144 +25065,22 @@
     return out;
   }
 
-  // ===== VER TODAS AS FOTOS E DIZER DE QUEM É CADA UMA — Adriana, 28/ago/2026 =====
-  // "Deixa eu verificar as fotos e escolher qual é de quem, como me deu a opção mais cedo.
-  //  E por que não consertou todas mais cedo, quando eu relatei?"
+  // ===== A GALERIA "TODAS AS FOTOS — DE QUEM É CADA UMA" SAIU (08/set/2026, 23h50) =====
+  // Adriana: "em Relatórios tirar essa 'todas as fotos, de quem é cada uma'… as fotos, os
+  // monitores tiram e alteram, de acordo com nome, raça e nome do tutor. Precisa aceitar
+  // isso… Tem duas Amoras e terão mais ainda."
   //
-  // A resposta é uma linha do código de hoje de manhã, no semFotoDados():
-  //      if(chaves[k]) return;   // tem foto, tudo certo
-  // A ferramenta só olhava quem estava SEM foto. "Tem foto" era tratado como "está certo" —
-  // e foto ERRADA tem foto. A Luna e a Jujuba nunca entraram na lista porque as duas já
-  // tinham retrato na ficha; o problema era justamente qual retrato era.
+  // A galeria nasceu de uma suspeita que a casa já resolveu: a de que foto guardada com o
+  // mesmo NOME pudesse ser de outro FILHOt. Só que a identidade da foto nunca foi o nome —
+  // é a chave da FICHA (pelKey: nome__tutor, com a raça na própria ficha). Duas Amoras de
+  // tutores diferentes são duas chaves diferentes, duas fotos independentes: cada monitor
+  // troca a da sua e nenhuma sobrescreve a outra. A galeria juntava as duas na mesma
+  // gaveta "Amora" e pedia decisão onde não havia dúvida — com mais homônimos chegando,
+  // isso só pioraria.
   //
-  // Esta tela desfaz essa suposição: agrupa TUDO por nome — as fichas e as fotos soltas —
-  // e deixa a pessoa dizer de quem é cada imagem. Ninguém decide por semelhança de nome.
-  var GAL_ARMADO='';       // chave de foto aguardando o 2º toque para apagar
-  function galFotoNome(k){ return String(k||'').split('__')[0]; }
-  // Monta os grupos: para cada NOME, as fichas com aquele nome e todas as fotos daquele nome.
-  function galDados(){
-    var chaves=fotoChavesConhecidas();
-    var porNome={};
-    var add=function(nome){ var n=jsNorm(nome||''); if(!n) return null;
-      if(!porNome[n]) porNome[n]={nome:nome, fichas:[], fotos:[]}; return porNome[n]; };
-    (PELUDINHOS||[]).forEach(function(p){
-      if(typeof pelInativo==='function' && pelInativo(p)) return;
-      var nome=(typeof pelNome==='function')?pelNome(p):(p.n||'');
-      var g=add(nome); if(!g) return;
-      var k=pelKey(p);
-      g.fichas.push({p:p, chave:k, nome:nome,
-        raca:((typeof pelGet==='function')?pelGet(p,'raca'):'')||p.raca||'',
-        tutor:((typeof pelGet==='function')?pelGet(p,'tutor'):'')||p.tutor||'',
-        foto:chaves[k]?((FOTOS||{})[k]||''):''});
-    });
-    Object.keys(chaves).forEach(function(fk){
-      var g=add(galFotoNome(fk).replace(/-/g,' '));
-      if(!g) return;
-      g.fotos.push({chave:fk, url:(FOTOS||{})[fk]||'', daFicha:g.fichas.some(function(f){ return f.chave===fk; })});
-    });
-    var grupos=Object.keys(porNome).map(function(n){ return porNome[n]; });
-    // Ordem: primeiro o que exige decisão (mais de uma foto, ou foto sem ficha), depois o resto.
-    var pendente=function(g){
-      var soltas=g.fotos.filter(function(f){ return !f.daFicha; });
-      return soltas.length>0 || g.fotos.length>1 || (g.fichas.length>1 && g.fotos.length>0);
-    };
-    grupos.forEach(function(g){ g.decidir=pendente(g); });
-    grupos.sort(function(a,b){ return (b.decidir?1:0)-(a.decidir?1:0)
-      || jsNorm(a.nome).localeCompare(jsNorm(b.nome),'pt'); });
-    return grupos;
-  }
-  function galRetrato(url, tam){
-    tam=tam||96;
-    return url
-      ? '<div style="width:'+tam+'px;height:'+tam+'px;border-radius:13px;flex:0 0 '+tam+'px;background-image:url(\'' + url + '\');background-size:cover;background-position:center"></div>'
-      : '<div style="width:'+tam+'px;height:'+tam+'px;border-radius:13px;flex:0 0 '+tam+'px;background:var(--z-blue-soft);display:flex;align-items:center;justify-content:center;color:var(--muted);font-size:11px;font-weight:800;text-align:center">sem foto</div>';
-  }
-  function galGrupoHTML(g){
-    var soltas=g.fotos.filter(function(f){ return !f.daFicha; });
-    var h='<div style="border:1.5px solid '+(g.decidir?'var(--crm-atencao)':'var(--line)')+';border-radius:14px;padding:12px;margin-bottom:10px">'
-      +'<div style="font-weight:900;color:var(--z-blue);font-size:16px">'+escAttr(g.nome)
-      +(g.fichas.length>1?(' <span style="font-size:12px;color:var(--crm-critico);font-weight:800">'+g.fichas.length+' FILHOts com este nome</span>'):'')
-      +'</div>';
-    // as fichas e o retrato que cada uma mostra hoje
-    g.fichas.forEach(function(f){
-      h+='<div style="display:flex;gap:11px;align-items:center;margin-top:10px;padding-top:10px;border-top:1px solid var(--line)">'
-        +galRetrato(f.foto)
-        +'<div style="flex:1;min-width:0">'
-        +'<div style="font-weight:800;color:var(--z-blue);font-size:14px">'+escAttr(f.raca||'raça não cadastrada')+'</div>'
-        +'<div class="hint" style="margin:1px 0">tutor: '+escAttr(f.tutor||'não cadastrado')+'</div>'
-        +(f.foto
-          ? ('<button type="button" class="btn" style="margin-top:5px;padding:6px 11px;font-size:12px;font-weight:800;background:none;border:1.5px solid var(--crm-critico);color:var(--crm-critico)"'
-             +' onclick="galApagar(\'' + escAttr(f.chave).replace(/'/g, "\\'") + '\')">'
-             +(GAL_ARMADO===f.chave?'Confirmar: apagar':'Não é ele — apagar')+'</button>')
-          : '<div class="hint" style="margin-top:4px">Sem retrato na ficha.</div>')
-        +'</div></div>';
-    });
-    // as fotos soltas daquele nome: de quem são?
-    soltas.forEach(function(f){
-      h+='<div style="display:flex;gap:11px;align-items:center;margin-top:10px;padding-top:10px;border-top:1px dashed var(--line)">'
-        +galRetrato(f.url)
-        +'<div style="flex:1;min-width:0">'
-        +'<div style="font-weight:800;color:var(--crm-atencao-text);font-size:13.5px">Foto sem ficha</div>'
-        +'<div class="hint" style="margin:1px 0">guardada como <strong>'+escAttr(f.chave)+'</strong></div>'
-        +'<div style="display:flex;flex-wrap:wrap;gap:5px;margin-top:6px">'
-        +g.fichas.map(function(fc){
-          return '<button type="button" class="btn btn-primary" style="padding:6px 11px;font-size:12px;font-weight:800"'
-            +' onclick="galAtribuir(\'' + escAttr(f.chave).replace(/'/g, "\\'") + '\',\'' + escAttr(fc.chave).replace(/'/g, "\\'") + '\')">'
-            +'É d' + (/^f/i.test(String(pelGet(fc.p,'sexo')||'')) ? 'a ' : 'o ') + escAttr(g.nome)
-            +(fc.raca?(' '+escAttr(fc.raca)):'')+(fc.tutor?(' · '+escAttr(primeiroNome(fc.tutor))):'')+'</button>';
-        }).join('')
-        +'<button type="button" class="btn" style="padding:6px 11px;font-size:12px;font-weight:800;background:none;border:1.5px solid var(--crm-critico);color:var(--crm-critico)"'
-        +' onclick="galApagar(\'' + escAttr(f.chave).replace(/'/g, "\\'") + '\')">'
-        +(GAL_ARMADO===f.chave?'Confirmar: apagar':'Não é de ninguém — apagar')+'</button>'
-        +'</div></div></div>';
-    });
-    return h+'</div>';
-  }
-  var GAL_SO_DECIDIR=true;
-  function galAlternar(){ GAL_SO_DECIDIR=!GAL_SO_DECIDIR; renderRelatorios(); }
-  function galeriaFotosHTML(){
-    var grupos;
-    try{ grupos=galDados(); }catch(e){ return ''; }
-    if(!grupos.length) return '';
-    var decidir=grupos.filter(function(g){ return g.decidir; });
-    var mostrar=GAL_SO_DECIDIR?decidir:grupos;
-    var nFotos=0; grupos.forEach(function(g){ nFotos+=g.fotos.length; });
-    return '<div class="card" style="margin-bottom:12px;border-left:4px solid var(--z-gold)">'
-      +'<h2 style="font-size:17px">Todas as fotos — de quem é cada uma</h2>'
-      +'<div class="hint"><strong>O que fazer aqui:</strong> em cada nome abaixo há uma foto que não está na ficha de ninguém. '
-      +'Olhe o retrato e diga de quem é — ou que não é de ninguém. Nada é apagado sem dois toques.</div>'
-      +'<div class="hint" style="margin-top:3px">'+nFotos+' fotos guardadas · '+decidir.length+' nome(s) a decidir.</div>'
-      +'<button type="button" class="btn" style="margin:8px 0;padding:7px 12px;font-size:12.5px;font-weight:800;background:var(--z-cream-warm);color:var(--z-blue);border:1.5px solid var(--line)"'
-      +' onclick="galAlternar()">'+(GAL_SO_DECIDIR?('Ver todos os '+grupos.length+' nomes'):('Ver só os '+decidir.length+' que precisam de decisão'))+'</button>'
-      +(mostrar.length?mostrar.map(galGrupoHTML).join(''):'<div class="hint">Nada a decidir: cada foto está na ficha de alguém.</div>')
-      +'</div>';
-  }
-  // Atribuir: a foto solta passa a ser a da ficha. A original continua onde estava — se a
-  // pessoa errar, nada foi perdido.
-  function galAtribuir(chaveFoto, chaveFicha){
-    var url=(FOTOS||{})[chaveFoto];
-    if(!url){ alert('A foto sumiu do banco. Recarregue a tela.'); return; }
-    GAL_ARMADO='';
-    salvarFotoCad(chaveFicha, url).then(function(){
-      try{ if(typeof audit==='function') audit('foto','disse que a foto '+chaveFoto+' é de '+chaveFicha,{alvo:chaveFicha}); }catch(e){} /* silencioso de propósito: o audit() tem bolso próprio e reenvia sozinho — falhar aqui não pode travar a ação */
-      try{ renderRelatorios(); }catch(e){} /* silencioso de propósito: redesenho de tela — falhar não pode derrubar quem chamou */
-      try{ if(typeof renderDaycare==='function') renderDaycare(); }catch(e){} /* silencioso de propósito: redesenho de tela — falhar não pode derrubar quem chamou */
-    }).catch(function(e){ alert('NÃO consegui guardar: '+((e&&e.message)||e)); });
-  }
-  // Apagar em dois toques. Foto errada é pior que foto nenhuma: ninguém desconfia dela.
-  function galApagar(chave){
-    if(GAL_ARMADO!==chave){ GAL_ARMADO=chave; try{ renderRelatorios(); }catch(e){} /* silencioso de propósito: redesenho de tela — falhar não pode derrubar quem chamou */ return; }
-    GAL_ARMADO='';
-    if(!DB){ alert('Sem conexão com o banco. Tente de novo.'); return; }
-    DB.ref('daycare/fotos/'+chave).remove().then(function(){
-      try{ delete FOTOS[chave]; }catch(e){} /* silencioso de propósito: guarda defensiva — falhar aqui não pode interromper quem chamou */
-      return DB.ref('daycare/fotos-v').set(String(Date.now()));
-    }).then(function(){
-      try{ if(typeof audit==='function') audit('foto','APAGOU a foto '+chave+' (não era de ninguém)',{alvo:chave}); }catch(e){} /* silencioso de propósito: o audit() tem bolso próprio e reenvia sozinho — falhar aqui não pode travar a ação */
-      try{ renderRelatorios(); }catch(e){} /* silencioso de propósito: redesenho de tela — falhar não pode derrubar quem chamou */
-      try{ if(typeof renderDaycare==='function') renderDaycare(); }catch(e){} /* silencioso de propósito: redesenho de tela — falhar não pode derrubar quem chamou */
-    }).catch(function(e){ alert('NÃO apaguei: '+((e&&e.message)||e)); });
-  }
+  // O que continua: "FILHOts SEM foto na ficha" (o relatório) e a conferência de foto
+  // solta com o mesmo nome (fotosConferirHTML), que só aparece quando existe uma foto órfã
+  // de verdade — chave sem ficha, não homônimo.
   function semFotoDados(){
     var chaves=fotoChavesConhecidas();
     var sem=[], soltas=[];
@@ -25548,7 +25549,7 @@
     var el=document.getElementById('relGrid'); if(!el) return;
     if(!FOTO_CONF.__lido){ FOTO_CONF.__lido=true; try{ fotoConfCarregar().then(function(){ try{ renderRelatorios(); }catch(e){} /* silencioso de propósito: redesenho de tela — falhar não pode derrubar quem chamou */ }); }catch(e){} /* silencioso de propósito: redesenho de tela — falhar não pode derrubar quem chamou */ }
     el.innerHTML='<div id="relStatus" class="card" style="display:none;margin-bottom:12px;border-left:4px solid var(--z-gold)"></div>'
-      +fotosConferirHTML()+galeriaFotosHTML()+RELATORIOS.map(function(r){
+      +fotosConferirHTML()+RELATORIOS.map(function(r){
       return '<div class="card" style="margin-bottom:12px"><h2 style="font-size:17px">'+relEsc(r.t)+'</h2>'
         +'<div class="hint" style="margin-bottom:10px">'+relEsc(r.d)+'</div>'
         +'<button class="btn btn-gold" onclick="'+r.fn+'">Baixar Excel</button>'
@@ -25724,18 +25725,16 @@
     relNoite:  { ini:'06:30', fim:'08:00', label:'Relatório da Noite' },
     checkout:  { ini:'06:30', fim:'08:00', label:'Protocolo do Plantão' }
   };
-  function salvarAuditCfg(){ if(DB) DB.ref('daycare/config/auditoria').set(AUDIT_CFG).catch(function(e){ _logFalhaGrav('daycare/config/auditoria (salvarAuditCfg)', e); }); if(typeof renderPainelDia==='function') renderPainelDia(); }
+  function salvarAuditCfg(){ if(DB) DB.ref('daycare/config/auditoria').set(AUDIT_CFG).catch(function(e){ _logFalhaGrav('daycare/config/auditoria (salvarAuditCfg)', e); }); }   /* o quadro de protocolos relê o AUDIT_CFG toda vez que o dashboard abre */
   // hh:mm dentro da janela? retorna 'ok' | 'fora' | 'sem' (sem hora registrada)
   function noPrazo(hhmm, faixa){ if(!hhmmValido(hhmm)) return 'sem'; if(!faixa) return 'ok'; return (hhmm>=faixa.ini && hhmm<=faixa.fim)?'ok':'fora'; }
   function hhmmValido(s){ return typeof s==='string' && /^\d{2}:\d{2}$/.test(s); }
 
-  // ---- Painel do Dia (Dashboard de Gestão — só observa) ----
-  let painelDate=new Date();
-  let painelData={};   // snapshot do dia carregado
+  // ---- O dia, para quem olha de fora (só observa) ----
+  // A navegação por data saiu daqui em 08/set/2026: a tela que a tinha foi dissolvida, e
+  // quem quer ver outro dia usa a Linha do tempo do dia (Operação), que navega por mês.
+  let painelData={};   // snapshot do dia carregado, preenchido pelo pdiaLer()
   function pKey(d){ const p=x=>String(x).padStart(2,'0'); return d.getFullYear()+'-'+p(d.getMonth()+1)+'-'+p(d.getDate()); }
-  function pLabel(){ const d=painelDate; return DIAS[d.getDay()]+', '+String(d.getDate()).padStart(2,'0')+' de '+MESES[d.getMonth()]; }
-  function painelMuda(n){ const nv=new Date(painelDate); nv.setDate(nv.getDate()+n); painelDate=nv; carregarPainel(); }
-  function painelHoje(){ painelDate=new Date(); carregarPainel(); }
   // A auditoria do dia é o nó mais pesado que o painel lia — e ele a relia INTEIRA a cada
   // volta de 30 s (com o quadro da equipe junto, ~2,2 MB por volta; a causa dominante dos
   // 68 MB/h medidos em 07/set/2026). Agora ela desce UMA vez por sessão (zMapaVivo,
@@ -25745,25 +25744,49 @@
     if(typeof zMapaUma!=='function') return DB.ref('daycare/auditoria/'+k).once('value').then(function(s){ return s.val(); }).catch(function(){ return null; });
     return zMapaUma('daycare/auditoria/'+k).then(function(v){ return Object.assign({},v); }).catch(function(){ return null; });
   }
+  // A tela do Painel do Dia foi DISSOLVIDA em 08/set/2026 (noite): os blocos do dia foram
+  // para o dashboard de quem age sobre eles. O que sobrou nesta tela é o detalhe multi-dia
+  // (tempo das atividades e plantão) — e ele já tem carga própria. Nenhuma leitura do dia
+  // acontece mais aqui: quem lê o dia agora é o pdiaLer(), sob demanda dos dashboards.
   function carregarPainel(){
-    if(!document.getElementById('painelWrap')) return;
-    const k=pKey(painelDate);
-    if(!DB){ painelData={}; renderPainelDia(); return; }
-    const get=p=>DB.ref(p).once('value').then(s=>s.val()).catch(()=>null);
-    Promise.all([
-      get('daycare/chamada/'+k), get('daycare/avulsos/'+k),
-      get('daycare/almoco/'+k), get('daycare/almoco-turno/'+k),
-      get('daycare/almoco-prep/'+k), get('daycare/almoco-final/'+k), get('daycare/almoco-exec/'+k),
-      get('daycare/atividade/'+k), get('daycare/banho/'+k),
-      audVivaDoDia(k), get('auaulandia/checkout/'+k),
-      get('daycare/almoco-prep-turno/'+k), get('daycare/almoco-final-turno/'+k)
-    ]).then(r=>{
-      painelData={ chamada:r[0]||{}, avulsos:r[1]||{}, almoco:r[2]||{}, almTurno:r[3]||{},
-        almPrep:r[4]||{}, almFinal:r[5]||{}, almExec:!!r[6], atividade:r[7]||{}, banho:r[8]||{},
-        auditoria:r[9]||{}, checkout:r[10]||{}, almPrepTurno:r[11]||{}, almFinalTurno:r[12]||{} };
-      renderPainelDia();
-    }).catch(()=>{ painelData={}; renderPainelDia(); });
+    if(!document.getElementById('monEquipeWrap')) return;
     carregarEquipe();
+  }
+
+  /* ====================================================================================
+   * O DIA, LIDO UMA VEZ — pdiaLer()
+   *
+   * Os quadros "Cumprimento dos protocolos" e "Tempo das atividades" nasceram no Painel do
+   * Dia e agora vivem em DOIS dashboards (o da Adriana e o da Márcia). Se cada um lesse o
+   * seu, a casa pagaria a leitura duas vezes — e foi leitura repetida que fez os 695 MB de
+   * 07/set. Então existe UM leitor, com cache de 60 s por dia: quem abrir primeiro paga,
+   * quem abrir depois na mesma janela não paga nada.
+   *
+   * São exatamente os nós de que protoStatus() e o gráfico do tempo precisam — nem um a
+   * mais. A auditoria vem do mapa vivo (audVivaDoDia): desce uma vez por sessão e depois só
+   * o registro novo viaja.
+   * ================================================================================== */
+  var PDIA_CACHE={dia:'', quando:0, dados:null};
+  function pdiaLer(k, forcar){
+    if(!k) return Promise.resolve(null);
+    if(!forcar && PDIA_CACHE.dados && PDIA_CACHE.dia===k && (Date.now()-PDIA_CACHE.quando)<60000)
+      return Promise.resolve(PDIA_CACHE.dados);
+    if(!DB) return Promise.resolve(null);
+    var get=function(p){ return DB.ref(p).once('value').then(function(s){ return s.val(); })
+      .catch(function(e){ _logLeituraFalhou(p+' (o dia dos dashboards)', e); return null; }); };
+    return Promise.all([
+      get('daycare/chamada/'+k), get('daycare/almoco/'+k), get('daycare/almoco-turno/'+k),
+      get('daycare/almoco-prep/'+k), get('daycare/almoco-final/'+k),
+      audVivaDoDia(k), get('auaulandia/checkout/'+k), get('daycare/tempo-atividade/'+k),
+      get('daycare/avulsos/'+k)
+    ]).then(function(r){
+      var d={ dia:k, chamada:r[0]||{}, almoco:r[1]||{}, almTurno:r[2]||{},
+              almPrep:r[3]||{}, almFinal:r[4]||{}, auditoria:r[5]||{}, checkout:r[6]||{},
+              tempo:r[7]||{}, avulsos:r[8]||{} };
+      PDIA_CACHE={dia:k, quando:Date.now(), dados:d};
+      painelData=d;   // o protoStatus() sem argumento continua achando o dia onde sempre achou
+      return d;
+    }).catch(function(e){ _logLeituraFalhou('o dia dos dashboards (leitura geral)', e); return null; });
   }
 
   // ===== TEMPO DAS ATIVIDADES — por etapa, por dia da semana e por pessoa ===============
@@ -25909,11 +25932,10 @@
     if(totZero){
       h+='<div class="dc-meia" style="margin-top:10px"><strong>'+totZero+' passage'+(totZero>1?'ns':'m')+' assinada'+(totZero>1?'s':'')+' com leitura de 0 segundo</strong> no período. Vale conversar antes de virar hábito.</div>';
     }
-    if(dosesSemDono){
-      h+='<div class="dc-faltas" style="margin-top:10px"><strong>'+dosesSemDono+' dose'+(dosesSemDono>1?'s':'')+' de medicação SEM o nome de quem deu.</strong> '
-        +'O registro guardava o remédio, o FILHOt, a hora e o horário previsto — mas gravava só "Plantonista" no lugar da pessoa. '
-        +'São registros de ANTES de 11/ago/2026 — a partir dessa data toda dose grava quem deu, e aparece na coluna ao lado.</div>';
-    }
+    // O aviso das "doses SEM o nome de quem deu" SAIU em 08/set/2026, a pedido da Adriana
+    // ("pode tirar isso"). Eram registros anteriores a 11/ago/2026, quando a dose passou a
+    // gravar QUEM deu: o buraco está fechado há um mês e o cartaz virou ruído. A contagem
+    // continua sendo feita acima (dosesSemDono) — ela só não vira mais aviso na tela.
     if(bloqueios){
       const dias=Object.keys(bloqPorDia).sort().reverse().slice(0,6)
         .map(function(k){ return fmtBR(k)+' ('+bloqPorDia[k]+')'; }).join(' · ');
@@ -26029,38 +26051,12 @@
     }
     box.innerHTML=h;
   }
-  // As marcações do almoço são gravadas por chave (nome__tutor normalizado). Para a Gestão
-  // ler, a chave precisa virar nome de novo.
-  function nomeDaChaveDC(k){
-    for(const p of PELUDINHOS){ if(dcKey(p.n,p.tutor)===k){
-      // xará no cadastro: sem raça/tutor a Gestão lê "Olivia, Olivia" e não sabe quem é
-      const xaras=PELUDINHOS.filter(x=>jsNorm(x.n)===jsNorm(p.n));
-      if(xaras.length<2) return p.n;
-      const mesmaRaca=xaras.filter(x=>jsNorm(x.raca||'')===jsNorm(p.raca||''));
-      return p.n+' - '+(mesmaRaca.length>1?(p.tutor||'sem tutor'):(p.raca||'sem raça'));
-    } }
-    for(const a of Object.values((painelData||{}).avulsos||{})){ if(a&&dcKey(a.nome,a.tutor||'')===k) return a.nome; }
-    return k;
-  }
-  // Relação nominal de quem não comeu e de quem comeu metade — o número sozinho não deixa agir.
-  function relAlmocoHTML(){
-    const D=painelData||{}; const marcas=D.almoco||{};
-    const por=(v)=>Object.keys(marcas).filter(k=>marcas[k]===v).map(nomeDaChaveDC).sort((a,b)=>jsNorm(a).localeCompare(jsNorm(b)));
-    const nao=por('nao'), met=por('metade');
-    const ini=(D.almTurno||{}).inicio, fim=(D.almTurno||{}).fim;
-    let h='';
-    if(nao.length) h+='<div class="dc-faltas"><strong>NÃO COMERAM ('+nao.length+') — vão para o 2º horário (Monitor III):</strong> '+nao.join(', ')+'</div>';
-    if(met.length) h+='<div class="dc-meia"><strong>COMERAM METADE ('+met.length+'):</strong> '+met.join(', ')+'</div>';
-    if(!Object.keys(marcas).length){
-      h+='<div class="dc-meia">'+(ini&&!fim
-        ? '<strong>Almoço em andamento desde '+ini+'</strong> — nenhum peludinho marcado ainda. As marcações aparecem aqui conforme a monitora vai tocando em "Comeu tudo / Metade / Não comeu".'
-        : '<strong>Nenhuma marcação de almoço hoje.</strong> Assim que a monitora marcar na grade, a relação aparece aqui.')+'</div>';
-    }
-    return h;
-  }
   // status de um protocolo: {ok:bool, prazo:'ok'|'fora'|'sem', hora, quem, detalhe}
+  // `d` deixou de ser ignorado em 08/set/2026: os dashboards da Adriana e da Márcia passam
+  // o dia que ACABARAM de ler, em vez de depender do painelData que só a tela antiga enchia.
+  // Sem argumento, continua lendo o painelData — nenhum chamador antigo muda de comportamento.
   function protoStatus(d){
-    const D=painelData, st={};
+    const D=d||painelData||{}, st={};
     // Chamada — feita se há ao menos 1 marcação; hora = 1º registro de chamada na auditoria
     const chKeys=Object.keys(D.chamada||{}); const aud=Object.values(D.auditoria||{});
     const ch1=aud.filter(a=>a.acao==='chamada').sort((a,b)=>(a.ts||0)-(b.ts||0))[0];
@@ -26084,8 +26080,6 @@
     st.checkout.prazo=noPrazo(st.checkout.hora, AUDIT_CFG.checkout);
     return st;
   }
-  function pillPrazo(p){ if(p==='ok') return '<span class="p-pill ok">no prazo</span>'; if(p==='fora') return '<span class="p-pill warn">fora do horário</span>'; return '<span class="p-pill neutro">sem registro de hora</span>'; }
-  function pillFeito(ok){ return ok?'<span class="p-pill ok">cumprido</span>':'<span class="p-pill bad">pendente</span>'; }
   // Varre TODAS as fichas e junta o que exige ação da Gestão: prevenção vencida (bloqueia
   // frequentar), peso sem registro no mês, e saídas a contatar (D9). É o "urgente a resolver".
   // Óbito não entra em lista de retomada. A palavra pode vir escrita de várias formas,
@@ -26121,42 +26115,155 @@
     luto.sort(function(a,b){ return String(b.quando||'').localeCompare(String(a.quando||'')); });
     return {venc:venc, semPeso:semPeso, saiu:saiu, velha:velha, luto:luto};
   }
-  function cardUrgenciasHTML(){
-    const u=urgenciasGestao();
-    const total=u.venc.length+u.saiu.length;
-    let h='<div class="card"><h2>Urgente a resolver</h2>'
-      +'<div class="hint">Prevenção vencida, saídas a contatar e peso do mês. Para Gestão, Supervisora e Consultora.</div>';
-    if(u.saiu.length) h+='<div class="dc-faltas"><strong>SAÍRAM &mdash; a Márcia precisa entrar em contato ('+u.saiu.length+'):</strong>'
-      +'<div style="margin-top:5px">'+u.saiu.map(function(s){
-          return '<div style="display:flex;gap:8px;align-items:baseline;padding:3px 0;border-top:1px solid rgba(0,0,0,.08)">'
-            +'<span style="font-weight:800;min-width:110px">'+escAttr(s.nome||'')+'</span>'
-            +'<span style="font-size:12.5px;flex:1">'+escAttr(s.motivo||'sem motivo anotado')+'</span>'
-            +'<span style="font-size:12px;font-weight:700;opacity:.8">'+escAttr(s.quando?fmtBR(s.quando):'sem data')+'</span></div>';
-        }).join('')+'</div></div>';
-    if(u.venc.length) h+='<div class="dc-faltas"><strong>PREVENÇÃO VENCIDA &mdash; não podem frequentar ('+u.venc.length+'):</strong> '
-      +u.venc.map(function(v){ return v.nome+': '+v.itens.map(function(i){ return i.nome+(i.familia?(' ['+i.familia+']'):''); }).join(', '); }).join(' · ')+'</div>';
-    if(u.velha.length) h+='<div class="dc-meia"><strong>Ficha por migrar ('+u.velha.length+'):</strong> '
-      +'a data do antiparasitário está só no campo antigo do cadastro. Pode já ter sido dado sem ninguém lançar no campo novo — <strong>não bloqueia frequentar</strong>. Confira em Prevenção &rsaquo; Ficha por migrar.</div>';
-    if(u.luto.length) h+='<div class="dc-meia" style="border-left:4px solid var(--z-blue)"><strong>Partiram ('+u.luto.length+'):</strong> '
-      +u.luto.map(function(s){ return escAttr(s.nome||'')+(s.quando?(' — '+escAttr(fmtBR(s.quando))):''); }).join(' · ')
-      +'<div class="hint" style="margin-top:3px">Aqui não se cobra retorno. Fica registrado para ninguém mandar campanha nem cobrar reposição a estas famílias.</div></div>';
-    if(u.semPeso.length) h+='<div class="dc-meia"><strong>Falta pesar este mês ('+u.semPeso.length+'):</strong> '
-      +u.semPeso.slice(0,30).join(', ')+(u.semPeso.length>30?' e mais '+(u.semPeso.length-30):'')+'</div>';
-    if(!u.saiu.length && !u.venc.length && !u.semPeso.length && !u.velha.length) h+='<div class="alm-fora">Nada urgente: prevenção em dia, todos pesados, nenhuma saída pendente.</div>';
-    return h+'</div>';
-  }
-  function renderPainelDia(){
-    const wrap=document.getElementById('painelWrap'); if(!wrap) return;
-    const lab=document.getElementById('painelDateLabel'); if(lab) lab.textContent=pLabel();
-    const D=painelData; const aud=Object.values(D.auditoria||{}).slice().sort((a,b)=>(a.ts||0)-(b.ts||0));
-    // ---- resumo do dia ----
+  /* ====================================================================================
+   * OS BLOCOS QUE ERAM DO PAINEL DO DIA — cada um na mesa de quem AGE sobre ele
+   * (Adriana, 08/set/2026, 23h30: "o Painel do Dia é um dashboard e precisa ir para quem
+   * precisa ver.")
+   *
+   * REGRA DE OURO: uma função, vários usos. O quadro "Cumprimento dos protocolos" e o
+   * gráfico "Tempo das atividades" aparecem em DOIS dashboards — e são a MESMA função,
+   * nunca uma cópia. Se a régua mudar, muda nos dois no mesmo instante.
+   *
+   * Todos estes blocos só OBSERVAM: nenhum grava coisa alguma. Cada linha é um botão que
+   * abre a tela onde aquilo se resolve (a lei do quadro clicável, 01/set/2026).
+   * ================================================================================== */
 
-    let veio=0,faltou=0; Object.values(D.chamada||{}).forEach(v=>{ if(v==='veio')veio++; else if(v==='faltou')faltou++; });
-    let aTudo=0,aMet=0,aNao=0; Object.values(D.almoco||{}).forEach(v=>{ if(v==='tudo')aTudo++; else if(v==='metade')aMet++; else if(v==='nao')aNao++; });
-    const ativFeitas=Object.keys(D.atividade||{}).length;
-    const st=protoStatus();
-    // ---- cumprimento (score do dia) ----
-    const protos=[
+  // ---------------------------------------------------------------- A1 · a Márcia
+  // "Urgente a resolver" ficou com o que é DELA: quem saiu da casa e precisa de um
+  // telefonema, e a ficha que precisa de migração. A prevenção vencida e o peso foram
+  // para a Amanda; "Partiram" saiu de vez ("não tem necessidade de aparecer para
+  // ninguém"). Nada aqui lê o banco: sai tudo do cadastro que já está na memória.
+  function blocoUrgenteHTML(){
+    var u;
+    try{ u=urgenciasGestao(); }
+    catch(e){ _logFalhaGrav('urgenciasGestao (quadro Urgente a resolver)', e); u=null; }
+    var h='<article class="pm-card pm-rv pm-c4"><h3 class="pm-tit">Urgente a resolver</h3>'
+      +'<p class="pm-sub">Quem saiu da casa e ainda não recebeu um telefonema, e a ficha que ficou pela metade. A prevenção vencida e o peso são da Amanda — estão no dashboard dela.</p>';
+    if(!u) return h+poSemLeituraHTML('o cadastro')+'</article>';
+    if(!u.saiu.length && !u.velha.length)
+      return h+poVazioHTML('Nada urgente por aqui.','Ninguém saiu sem contato e nenhuma ficha está pela metade.')+'</article>';
+    h+='<div class="pm-lista">';
+    if(u.saiu.length){
+      h+='<p class="pa-grupo">Saíram — a senhora precisa ligar <i>'+u.saiu.length+'</i></p>';
+      u.saiu.slice(0,6).forEach(function(s){
+        h+='<button type="button" class="pa-li" onclick="paIr(\'ficha\')">'
+          +'<span class="pm-badge pm-b-critico">saiu</span>'
+          +'<span class="pa-li-txt"><b>'+esc(s.nome||'')+'</b>'
+          +'<span>'+esc(s.motivo||'sem motivo anotado')+'</span>'
+          +'<span class="pa-li-meta">'+esc(s.quando?fmtBR(s.quando):'sem data')+'</span></span>'
+          +'<span class="pa-li-go">&rsaquo;</span></button>';
+      });
+      if(u.saiu.length>6) h+='<button type="button" class="pa-li pa-mais" onclick="paIr(\'ficha\')">'
+        +'<span class="pa-li-txt"><b>e mais '+(u.saiu.length-6)+' que saíram — abrir o cadastro</b></span>'
+        +'<span class="pa-li-go">&rsaquo;</span></button>';
+    }
+    if(u.velha.length){
+      h+='<p class="pa-grupo">Ficha por migrar <i>'+u.velha.length+'</i></p>'
+        +'<button type="button" class="pa-li" onclick="paIr(\'vacinas\')">'
+        +'<span class="pm-badge pm-b-atencao">conferir</span>'
+        +'<span class="pa-li-txt"><b>'+u.velha.length+' ficha'+(u.velha.length>1?'s':'')+' com o antiparasitário só no campo antigo</b>'
+        +'<span>Pode já ter sido dado sem ninguém lançar no campo novo. Isto não bloqueia frequentar.</span></span>'
+        +'<span class="pa-li-go">&rsaquo;</span></button>';
+    }
+    return h+'</div></article>';
+  }
+
+  // ---------------------------------------------------------------- A2 · a Amanda
+  // Prevenção vencida é o único item desta lista que BLOQUEIA frequentar — por isso ele
+  // vem só, em quadro próprio, e não misturado com o resto.
+  function blocoPrevencaoVencidaHTML(){
+    var u;
+    try{ u=urgenciasGestao(); }
+    catch(e){ _logFalhaGrav('urgenciasGestao (quadro Prevenção vencida)', e); u=null; }
+    var h='<article class="pm-card pm-rv pm-c4"><h3 class="pm-tit">Prevenção vencida — não podem frequentar</h3>'
+      +'<p class="pm-sub">Vacina, vermífugo, coleira ou exame fora da validade. Enquanto estiver assim, o FILHOt não pode vir — é a única lista desta mesa que barra alguém na porta.</p>';
+    if(!u) return h+poSemLeituraHTML('o cadastro')+'</article>';
+    if(!u.venc.length) return h+poVazioHTML('Prevenção em dia.','Ninguém está impedido de frequentar hoje.')+'</article>';
+    h+='<div class="pm-lista"><p class="pa-grupo">Impedidos de frequentar <i>'+u.venc.length+'</i></p>';
+    u.venc.slice(0,8).forEach(function(v){
+      var itens=(v.itens||[]).map(function(i){ return i.nome+(i.familia?(' ['+i.familia+']'):''); }).join(', ');
+      h+='<button type="button" class="pa-li" onclick="paIr(\'vacinas\')">'
+        +'<span class="pm-badge pm-b-critico">vencida</span>'
+        +'<span class="pa-li-txt"><b>'+esc(v.nome||'')+'</b><span>'+esc(itens)+'</span></span>'
+        +'<span class="pa-li-go">&rsaquo;</span></button>';
+    });
+    if(u.venc.length>8) h+='<button type="button" class="pa-li pa-mais" onclick="paIr(\'vacinas\')">'
+      +'<span class="pa-li-txt"><b>e mais '+(u.venc.length-8)+' com prevenção vencida — abrir a Prevenção</b></span>'
+      +'<span class="pa-li-go">&rsaquo;</span></button>';
+    return h+'</div></article>';
+  }
+
+  // ---------------------------------------------------------------- A4 · a Amanda
+  // Adriana, 08/set: "quando foram pesados? precisa da data do último peso… só pesamos de
+  // 30 em 30 dias." Então o quadro não diz só QUEM: diz a DATA do último peso e há quantos
+  // dias. Quem nunca foi pesado é dito assim, honesto, e vem no topo.
+  // A régua é a MESMA da tela Peso (PESO_REGUA_DIAS = 30) e a lista é a MESMA função
+  // (pesoAtrasoLista) — dois lugares nunca contam de jeitos diferentes.
+  function blocoFaltaPesarHTML(){
+    var lista;
+    try{ lista=pesoAtrasoLista(); }
+    catch(e){ _logFalhaGrav('pesoAtrasoLista (quadro Falta pesar)', e); lista=null; }
+    var h='<article class="pm-card pm-rv pm-c4"><h3 class="pm-tit">Falta pesar</h3>'
+      +'<p class="pm-sub">A casa pesa de '+PESO_REGUA_DIAS+' em '+PESO_REGUA_DIAS+' dias — a Gestão decide o dia. Peso velho vira dose de remédio calculada sobre um FILHOt que já mudou.</p>';
+    if(!lista) return h+poSemLeituraHTML('o histórico de peso')+'</article>';
+    if(!lista.length) return h+poVazioHTML('Todo mundo pesado.','Ninguém está há mais de '+PESO_REGUA_DIAS+' dias sem subir na balança.')+'</article>';
+    var nunca=lista.filter(function(o){ return o.faixa==='nunca'; }).length;
+    h+='<div style="margin-top:12px"><div class="pm-kpi hero" data-pm-alvo="'+lista.length+'">0</div>'
+      +'<p class="pm-rot">sem pesar há mais de '+PESO_REGUA_DIAS+' dias'
+      +(nunca?(' · '+nunca+(nunca===1?' nunca pesado':' nunca pesados')):'')+'</p></div>';
+    h+='<div class="pm-lista"><p class="pa-grupo">Do mais atrasado para o menos <i>'+lista.length+'</i></p>';
+    lista.slice(0,8).forEach(function(o){
+      var nome=(typeof pelNome==='function')?pelNome(o.p):(o.p.n||'');
+      var tutor='';
+      try{ tutor=(typeof pelGet==='function'?pelGet(o.p,'tutor'):'')||o.p.tutor||''; }catch(e){ tutor=''; }
+      var quando;
+      if(o.faixa==='nunca') quando='Nunca foi pesado';
+      else if(o.faixa==='semdata') quando='Último peso: '+pesoFmt(o.u.kg)+' kg — sem data legível';
+      else quando='Último: '+pesoFmt(o.u.kg)+' kg em '+fmtBR(o.u.data)+' · há '+o.dias+' dias';
+      h+='<button type="button" class="pa-li" onclick="paIr(\'peso\')">'
+        +'<span class="pm-badge '+(o.faixa==='atrasado'?'pm-b-ouro':'pm-b-critico')+'">'
+        +esc((PESO_FAIXA_ROTULO[o.faixa]||PESO_FAIXA_ROTULO.atrasado).txt)+'</span>'
+        +'<span class="pa-li-txt"><b>'+esc(nome)+(tutor?(' · tutor: '+esc(tutor)):'')+'</b>'
+        +'<span>'+esc(quando)+'</span></span>'
+        +'<span class="pa-li-go">&rsaquo;</span></button>';
+    });
+    if(lista.length>8) h+='<button type="button" class="pa-li pa-mais" onclick="paIr(\'peso\')">'
+      +'<span class="pa-li-txt"><b>e mais '+(lista.length-8)+' a pesar — abrir a tela Peso</b></span>'
+      +'<span class="pa-li-go">&rsaquo;</span></button>';
+    return h+'</div></article>';
+  }
+
+  // ---------------------------------------------------------------- A5 · a Adriana
+  // Quem deveria estar no Day Care AGORA, pela escala de monitores. Não é presença: é o
+  // que a escala promete. Quem confere de verdade é a Escala e plano do dia.
+  function blocoPlantaoAgoraHTML(){
+    var agora=(typeof horaAgora==='function')?horaAgora():'';
+    var h='<article class="pm-card pm-rv pm-c4"><h3 class="pm-tit">Plantão agora <span style="font-size:13px;font-weight:800;color:var(--z-gold-deep)">'+esc(agora)+'</span></h3>'
+      +'<p class="pm-sub">Quem a escala coloca no Day Care neste horário. É o combinado, não a presença — quem marca presença é a própria pessoa, na tela dela.</p>';
+    var lista=(typeof MONITORES!=='undefined'&&MONITORES)?MONITORES:null;
+    if(!lista) return h+poSemLeituraHTML('a escala dos Zelosos')+'</article>';
+    if(!lista.length) return h+poVazioHTML('Nenhum Zeloso cadastrado.','Cadastre o time em Operação › Time para esta lista existir.')+'</article>';
+    var dentro=lista.filter(function(m){ return m.entrada&&m.saida&&(m.entrada<=agora)&&(agora<=m.saida); });
+    h+='<div style="margin-top:12px"><div class="pm-kpi hero'+(dentro.length?' ouro':'')+'" data-pm-alvo="'+dentro.length+'">0</div>'
+      +'<p class="pm-rot">'+(dentro.length===1?'Zeloso em turno':'Zelosos em turno')+' de '+lista.length+' na escala</p></div>';
+    h+='<div class="pm-lista">';
+    lista.forEach(function(m){
+      var on=m.entrada&&m.saida&&(m.entrada<=agora)&&(agora<=m.saida);
+      h+='<button type="button" class="pa-li" onclick="paIr(\'planodia\')">'
+        +'<span class="pm-badge '+(on?'pm-b-ok':'pm-b-info')+'">'+(on?'em turno':'fora')+'</span>'
+        +'<span class="pa-li-txt"><b>'+esc(m.nome||'-')+'</b>'
+        +'<span>'+esc((m.entrada||'--')+' às '+(m.saida||'--'))+'</span></span>'
+        +'<span class="pa-li-go">&rsaquo;</span></button>';
+    });
+    return h+'</div></article>';
+  }
+
+  // ------------------------------------------------- A6 · a Adriana E a Márcia
+  // UMA função, dois dashboards. A régua de horário é o AUDIT_CFG, que se ajusta em
+  // Configurações › Horários esperados — nunca aqui: dashboard só observa.
+  function pdiaProtocolos(D){
+    var st=protoStatus(D||painelData||{});
+    return [
       {nome:'Chamada', ok:st.chamada.ok, prazo:st.chamada.prazo, hora:st.chamada.hora, quem:st.chamada.quem, extra:st.chamada.n+' marcados'},
       {nome:'Almoço — Início', ok:!!st.almoco.ini, prazo:st.almoco.prazo, hora:st.almoco.ini, quem:st.almoco.quemIni, extra:''},
       {nome:'Almoço — Encerramento', ok:!!st.almoco.fim, prazo:'ok', hora:st.almoco.fim, quem:st.almoco.quemFim, extra:''},
@@ -26166,81 +26273,308 @@
       {nome:'Relatório do Plantão (Noite)', ok:st.relNoite.length>0, prazo:st.relNoite[0]?noPrazo(st.relNoite[0].hora,AUDIT_CFG.relNoite):'sem', hora:st.relNoite[0]?st.relNoite[0].hora:'', quem:st.relNoite[0]?st.relNoite[0].quem:'', extra:st.relNoite.length+' assinados'},
       {nome:'Protocolo do Plantão', ok:st.checkout.ok, prazo:st.checkout.prazo, hora:st.checkout.hora, quem:st.checkout.quem, extra:st.checkout.n+' itens'}
     ];
-    const cumpridos=protos.filter(p=>p.ok).length;
-    const noPrazoN=protos.filter(p=>p.ok && p.prazo!=='fora').length;
-    const score=Math.round((cumpridos/protos.length)*100);
-    const scoreCor = score>=85?'var(--crm-ok)':(score>=60?'var(--z-gold-deep)':'var(--crm-critico)');
-    // ---- por pessoa ----
-    // Um rastro pode chegar sem hora — é o próprio audit() se socorrendo quando falha em se
-    // montar (acao:'audit-FALHOU', guardado no bolso local). Campo ausente nunca vira a
-    // palavra "undefined" na tela: cai no mesmo traço da Linha do Tempo, aqui embaixo.
-    const porPessoa={};
-    aud.forEach(a=>{ const hr=a.hora||'--:--'; const q=a.quem||'-'; if(!porPessoa[q]) porPessoa[q]={n:0,prim:hr,ult:hr,role:a.role,acoes:{}}; const P=porPessoa[q]; P.n++; P.ult=hr; P.acoes[a.acao]=(P.acoes[a.acao]||0)+1; });
-    // ---- monta HTML ----
-    let html='';
-    html+=`<div class="p-score"><div class="p-score-num" style="color:${scoreCor}">${score}%</div>
-      <div class="p-score-lab"><b>Protocolos cumpridos hoje</b><br>${cumpridos} de ${protos.length} cumpridos · ${noPrazoN} no horário</div></div>`;
-    html+=`<div class="dc-resumo" style="margin-bottom:16px">
-      <div class="dc-stat ok"><b>${veio}</b>presentes</div>
-      <div class="dc-stat bad"><b>${faltou}</b>faltas</div>
-      <div class="dc-stat ok"><b>${aTudo}</b>comeram tudo</div>
-      <div class="dc-stat pend"><b>${aMet}</b>metade</div>
-      <div class="dc-stat bad"><b>${aNao}</b>não comeram</div>
-      <div class="dc-stat"><b style="color:var(--z-blue)">${ativFeitas}</b>atividades c/ registro</div>
-    </div>`;
-    // ---- Quem não comeu e quem comeu metade — por NOME, para a Gestão agir ----
-    html+=relAlmocoHTML();
-    // ---- Urgente a resolver: prevenção vencida, saídas a contatar, peso do mês ----
-    html+=cardUrgenciasHTML();
-    // ---- Plantão agora (escala de monitores × hora atual) ----
-    const agora=horaAgora();
-    html+=`<div class="card"><h2>Plantão agora <span style="font-size:12px;color:var(--z-blue)">${agora}</span></h2><div class="hint">Quem deveria estar no Day Care neste horário, pela escala de monitores.</div>`;
-    if(!(MONITORES||[]).length) html+='<div class="p-empty">Nenhum monitor cadastrado.</div>';
-    else html+='<div class="p-tl">'+(MONITORES).map(m=>{ const on=m.entrada&&m.saida&&(m.entrada<=agora)&&(agora<=m.saida); return `<div class="p-tl-item"><span class="p-tl-h">${m.entrada||'--'}–${m.saida||'--'}</span><span class="p-tl-q">${m.nome||'-'}</span><span class="p-tl-a">${on?'<span class="p-pill ok">em turno</span>':'<span class="p-pill neutro">fora do turno</span>'}</span></div>`; }).join('')+'</div>';
-    html+='</div>';
-    // ---- Banco de Tempo do Almoço (durações das 3 etapas) ----
-    const pt=D.almPrepTurno||{}, at=D.almTurno||{}, ft=D.almFinalTurno||{};
-    const dP=diffMin(pt.inicio,pt.fim), dA=diffMin(at.inicio,at.fim), dF=diffMin(ft.inicio,ft.fim);
-    const dTot=(dP||dA||dF)!=null?[dP,dA,dF].reduce((s,x)=>s+(x||0),0):null;
-    html+=`<div class="card"><h2>Banco de Tempo — Almoço</h2><div class="hint">Duração de cada etapa hoje. Serve para comparar o ritmo das monitoras ao longo dos dias.</div>
-      <div class="dc-resumo">
-        <div class="dc-stat"><b style="color:var(--z-blue)">${fmtDur(dP)}</b>Preparação</div>
-        <div class="dc-stat"><b style="color:var(--z-blue)">${fmtDur(dA)}</b>Almoço</div>
-        <div class="dc-stat"><b style="color:var(--z-blue)">${fmtDur(dF)}</b>Encerramento</div>
-        <div class="dc-stat ok"><b>${fmtDur(dTot)}</b>Total</div>
-      </div>
-      <div class="hint" style="margin-top:8px">Preparação: ${pt.inicio||'-'} &rarr; ${pt.fim||'-'}${pt.quemInicio?' ('+pt.quemInicio+')':''} &nbsp;·&nbsp; Almoço: ${at.inicio||'-'} &rarr; ${at.fim||'-'}${at.quemInicio?' ('+at.quemInicio+')':''} &nbsp;·&nbsp; Encerramento: ${ft.inicio||'-'} &rarr; ${ft.fim||'-'}${ft.quemInicio?' ('+ft.quemInicio+')':''}</div>
-    </div>`;
-    // cumprimento
-    html+='<div class="card"><h2>Cumprimento dos protocolos</h2><div class="hint">Cada protocolo do dia: foi cumprido? no horário esperado? por quem?</div>';
-    protos.forEach(p=>{
-      html+=`<div class="p-proto ${p.ok?'':'falta'}"><div class="p-proto-l"><div class="p-proto-nm">${p.nome}</div>
-        <div class="p-proto-meta">${p.hora?('às '+p.hora):''}${p.quem?(' · '+p.quem):''}${p.extra?(' · '+p.extra):''}</div></div>
-        <div class="p-proto-r">${pillFeito(p.ok)}${p.ok?pillPrazo(p.prazo):''}</div></div>`;
+  }
+  function blocoProtocolosHTML(D){
+    var h='<article class="pm-card pm-rv pm-c4"><h3 class="pm-tit">Cumprimento dos protocolos</h3>'
+      +'<p class="pm-sub">Cada protocolo de hoje: foi cumprido? no horário esperado? por quem? A janela de cada um se ajusta em Configurações › Horários esperados.</p>';
+    if(!D) return h+poSemLeituraHTML('o dia de hoje')+'</article>';
+    var protos;
+    try{ protos=pdiaProtocolos(D); }
+    catch(e){ _logFalhaGrav('pdiaProtocolos (quadro Cumprimento dos protocolos)', e); return h+poSemLeituraHTML('o dia de hoje')+'</article>'; }
+    var cumpridos=protos.filter(function(p){ return p.ok; }).length;
+    var noHorario=protos.filter(function(p){ return p.ok && p.prazo!=='fora'; }).length;
+    var pct=Math.round((cumpridos/protos.length)*100);
+    h+='<div style="margin-top:12px"><div class="pm-kpi hero'+(pct>=85?' ouro':'')+'" data-pm-alvo="'+pct+'" data-pm-suf="%">0</div>'
+      +'<p class="pm-rot">'+cumpridos+' de '+protos.length+' cumpridos · '+noHorario+' no horário</p></div>'
+      +'<div class="pm-lista">';
+    protos.forEach(function(p){
+      var meta=[];
+      if(p.hora) meta.push('às '+p.hora);
+      if(p.quem) meta.push(p.quem);
+      if(p.extra) meta.push(p.extra);
+      var selo=p.ok?(p.prazo==='fora'?['pm-b-ouro','fora do horário']
+                     :(p.prazo==='sem'?['pm-b-info','sem hora']:['pm-b-ok','no prazo']))
+                  :['pm-b-critico','pendente'];
+      h+='<div class="pm-li"><span class="pm-badge '+selo[0]+'">'+esc(selo[1])+'</span>'
+        +'<div class="pm-li-txt"><b>'+esc(p.nome)+'</b>'
+        +'<span>'+esc(meta.length?meta.join(' · '):'ainda sem registro')+'</span></div></div>';
     });
-    html+='</div>';
-    // por pessoa
-    html+='<div class="card"><h2>O que cada pessoa fez hoje</h2><div class="hint">Ações registradas no sistema, com horário. Quanto mais rastro, mais auditável.</div>';
-    const pessoas=Object.keys(porPessoa);
-    if(!pessoas.length) html+='<div class="p-empty">Nenhuma ação registrada neste dia ainda.</div>';
-    else pessoas.forEach(q=>{ const P=porPessoa[q]; const resumo=Object.keys(P.acoes).map(a=>ACAO_LABEL[a]?(ACAO_LABEL[a]+' ('+P.acoes[a]+')'):(a+' ('+P.acoes[a]+')')).join(' · ');
-      html+=`<div class="p-pessoa"><div class="p-pessoa-h"><b>${q}</b><span class="p-pessoa-role">${P.role||''}</span><span class="p-pessoa-n">${P.n} ações</span></div>
-        <div class="p-pessoa-time">das ${P.prim} às ${P.ult}</div>
-        <div class="p-pessoa-ac">${resumo}</div></div>`; });
-    html+='</div>';
-    // linha do tempo
-    html+='<div class="card"><h2>Linha do tempo do dia</h2><div class="hint">Tudo o que aconteceu, em ordem. Rastreabilidade total.</div>';
-    if(!aud.length) html+='<div class="p-empty">Sem registros para este dia.</div>';
-    else { html+='<div class="p-tl">'; aud.forEach(a=>{
-      // Achado 4 da varredura (04/set/2026): a dose aparecia como a chave crua
-      // ("palito__fulano"). O audit já leva remédio, horário e FILHOt — é isso que se lê.
-      let det=a.detalhe?(' — '+a.detalhe):'';
-      if((a.acao==='medicacao-dose'||a.acao==='medicacao-dose-avulsa')&&(a.med||a.horario||a.pet)){
-        det=' — '+escAttr(a.med||'medicamento')+(a.horario?(' às '+escAttr(a.horario)):'')+(a.pet?(' ('+escAttr(a.pet)+')'):'');
+    return h+'</div></article>';
+  }
+
+  // ------------------------------------------------ A10 · a Adriana E a Márcia
+  // Adriana: "tempo das atividades vira GRÁFICO por atividade." E a lei de 11/ago: "volume
+  // é irrelevante, o que importa é TEMPO" — min/FILHOt é o que compara um dia de 40 com um
+  // de 50. Barras em CSS puro, sem biblioteca nenhuma: é uma div com largura em %.
+  // A fonte é daycare/tempo-atividade/{dia} — o mesmo nó do Ritmo do Time.
+  var ATV_SEMANA_CACHE={};   // {dia:{slug:{...}}} — dia fechado nunca muda, desce uma vez
+  function atvNomeDoSlug(s){
+    try{
+      for(var i=0;i<ATIVS_DC.length;i++) if(ATIVS_DC[i].s===s) return ATIVS_DC[i].t;
+    }catch(e){ /* silencioso de propósito: a lista de atividades é opcional aqui */ }
+    return String(s||'').replace(/-/g,' ');
+  }
+  // Puro: recebe o nó do dia e devolve uma linha por atividade ENCERRADA. Etapa sem fim não
+  // entra — sem o fim não existe duração, e somar o que está em curso inventa minutos.
+  function atvTempoDoDia(tempoDoDia){
+    var linhas=[], abertas=0;
+    Object.keys(tempoDoDia||{}).forEach(function(slug){
+      var t=(tempoDoDia||{})[slug]||{};
+      if(!t.inicio) return;
+      if(!t.fim){ abertas++; return; }
+      var dur=(typeof diffMin==='function')?diffMin(t.inicio,t.fim):null;
+      if(dur===null||dur===undefined) return;
+      var caes=Number(t.caes)||0;
+      linhas.push({slug:slug, nome:atvNomeDoSlug(slug), min:dur, caes:caes,
+                   porPet:(caes>0?(dur/caes):null), quem:String(t.quemInicio||t.quemFim||'').trim()});
+    });
+    linhas.sort(function(a,b){ return b.min-a.min; });
+    return {linhas:linhas, abertas:abertas,
+            total:linhas.reduce(function(s,l){ return s+l.min; },0)};
+  }
+  // Puro: a média de min/FILHOt por atividade nos dias que vieram (a "semana ao lado").
+  function atvTempoSemana(dias){
+    var acc={};
+    (dias||[]).forEach(function(d){
+      var r=atvTempoDoDia(d||{});
+      r.linhas.forEach(function(l){
+        if(l.porPet===null) return;
+        if(!acc[l.slug]) acc[l.slug]={n:0, soma:0};
+        acc[l.slug].n++; acc[l.slug].soma+=l.porPet;
+      });
+    });
+    var out={};
+    Object.keys(acc).forEach(function(s){ out[s]={n:acc[s].n, media:acc[s].soma/acc[s].n}; });
+    return out;
+  }
+  // Os 6 dias anteriores. Dia fechado não muda: desce UMA vez por sessão e fica no cache.
+  function atvSemanaLer(dia){
+    if(!DB||!dia) return Promise.resolve(null);
+    var dias=[];
+    for(var i=1;i<=6;i++){ dias.push((typeof orcMaisDias==='function')?orcMaisDias(dia,-i):null); }
+    dias=dias.filter(Boolean);
+    if(!dias.length) return Promise.resolve(null);
+    return Promise.all(dias.map(function(d){
+      if(ATV_SEMANA_CACHE[d]) return Promise.resolve(ATV_SEMANA_CACHE[d]);
+      return DB.ref('daycare/tempo-atividade/'+d).once('value').then(function(s){
+        var v=s.val()||{}; ATV_SEMANA_CACHE[d]=v; return v;
+      }).catch(function(e){ _logLeituraFalhou('daycare/tempo-atividade/'+d+' (semana do gráfico)', e); return null; });
+    })).then(function(res){
+      var bons=res.filter(Boolean);
+      return bons.length?atvTempoSemana(bons):null;
+    });
+  }
+  function atvMin(m){
+    if(m===null||m===undefined) return '—';
+    var h=Math.floor(m/60), r=Math.round(m%60);
+    return h?(h+'h'+String(r).padStart(2,'0')):(r+' min');
+  }
+  function atvPorPet(v){ return (v===null||v===undefined)?'—':((Math.round(v*10)/10).toFixed(1).replace('.',',')+' min/FILHOt'); }
+  function blocoTempoAtividadesHTML(tempoDoDia, semana){
+    var h='<article class="pm-card pm-rv pm-c4"><h3 class="pm-tit">Tempo das atividades</h3>'
+      +'<p class="pm-sub">Quanto tempo cada atividade levou hoje. O que compara um dia de 40 com um de 50 não é o volume — é o <strong>minuto por FILHOt</strong>.</p>';
+    if(!tempoDoDia) return h+poSemLeituraHTML('o tempo das atividades')+'</article>';
+    var r;
+    try{ r=atvTempoDoDia(tempoDoDia); }
+    catch(e){ _logFalhaGrav('atvTempoDoDia (gráfico do tempo)', e); return h+poSemLeituraHTML('o tempo das atividades')+'</article>'; }
+    if(!r.linhas.length){
+      h+=poVazioHTML('Nenhuma atividade cronometrada e encerrada hoje.',
+        r.abertas?(r.abertas+' começaram e ninguém encerrou — sem o fim não existe duração.')
+                 :'Assim que uma atividade for iniciada e encerrada, a barra dela aparece aqui.');
+      return h+poIrHTML('painel','Ver o detalhe por dia e por pessoa')+'</article>';
+    }
+    var maior=r.linhas[0].min||1;
+    h+='<div style="margin-top:12px"><div class="pm-kpi hero" data-pm-alvo="'+r.total+'">0</div>'
+      +'<p class="pm-rot">minutos de atividade cronometrada hoje, em '+r.linhas.length
+      +(r.linhas.length===1?' atividade':' atividades')+'</p></div>'
+      +'<div class="atv-graf" role="img" aria-label="'+escAttr('Minutos por atividade hoje: '
+        +r.linhas.map(function(l){ return l.nome+' '+Math.round(l.min)+' minutos'; }).join(', '))+'">';
+    r.linhas.forEach(function(l){
+      var sem=(semana||{})[l.slug]||null;
+      var pct=Math.max(3, Math.round((l.min/maior)*100));
+      h+='<div class="atv-linha">'
+        +'<div class="atv-cab"><span class="atv-nome">'+esc(l.nome)+'</span>'
+        +'<span class="atv-min">'+esc(atvMin(l.min))+'</span></div>'
+        +'<div class="atv-trilho"><i class="atv-barra" style="width:'+pct+'%"></i></div>'
+        +'<div class="atv-pe"><span>'+esc(l.caes?(atvPorPet(l.porPet)+' · '+l.caes+' FILHOts'):'sem o número de FILHOts do dia')+'</span>'
+        +(sem?('<span class="atv-sem">semana: '+esc(atvPorPet(sem.media))+' ('+sem.n+(sem.n===1?' dia':' dias')+')</span>'):'')
+        +'</div></div>';
+    });
+    h+='</div>';
+    if(r.abertas) h+='<p class="pm-sub" style="margin-top:10px"><strong>'+r.abertas
+      +(r.abertas>1?' atividades começaram':' atividade começou')+' e ninguém encerrou.</strong> Sem o encerramento não existe duração — elas ficam de fora do gráfico.</p>';
+    if(!semana) h+='<p class="pm-sub" style="margin-top:8px">A comparação com a semana aparece assim que os dias anteriores forem lidos.</p>';
+    return h+poIrHTML('painel','Ver o detalhe por dia e por pessoa')+'</article>';
+  }
+
+  // ------------------------------------- A7 · Configurações › Logins e segurança
+  // "O que cada pessoa fez hoje" era do Painel do Dia. Adriana, 08/set às 23h40: "Time
+  // continua Time, não mexe em nada… tudo de login vai para dentro de Configurações ›
+  // Logins/Segurança." Este bloco não é cadastro de pessoa — é o RASTRO de quem usou o
+  // app hoje, que é matéria de segurança. Só observa.
+  // A hora pode faltar: é o próprio audit() se socorrendo quando falha em se montar
+  // (acao:'audit-FALHOU', guardado no bolso local). Registro sem hora NÃO entra na conta do
+  // primeiro nem do último — senão "--:--" venceria qualquer horário na comparação de texto
+  // e a tela diria "das --:-- às --:--" para quem trabalhou o dia inteiro.
+  function pessoasDoDia(aud){
+    var por={};
+    Object.keys(aud||{}).forEach(function(id){
+      var a=(aud||{})[id]; if(!a) return;
+      var q=a.quem||'-';
+      var hr=(typeof hhmmValido==='function' && hhmmValido(a.hora))?a.hora:'';
+      if(!por[q]) por[q]={nome:q, n:0, prim:'', ult:'', role:a.role||'', acoes:{}, tsUlt:-1};
+      var P=por[q]; P.n++;
+      if(!P.role && a.role) P.role=a.role;
+      if(hr){
+        if(!P.prim || hr<P.prim) P.prim=hr;
+        if((a.ts||0)>=P.tsUlt){ P.tsUlt=(a.ts||0); P.ult=hr; }
       }
-      html+=`<div class="p-tl-item"><span class="p-tl-h">${a.hora||'--:--'}</span><span class="p-tl-q">${a.quem||'-'}</span><span class="p-tl-a">${ACAO_LABEL[a.acao]||a.acao}${det}</span></div>`; }); html+='</div>'; }
-    html+='</div>';
-    wrap.innerHTML=html;
+      P.acoes[a.acao]=(P.acoes[a.acao]||0)+1;
+    });
+    return Object.keys(por).map(function(q){
+      var P=por[q];
+      if(!P.prim) P.prim='--:--';
+      if(!P.ult) P.ult='--:--';
+      return P;
+    }).sort(function(a,b){ return b.n-a.n; });
+  }
+  function blocoPessoasFezHojeHTML(aud){
+    if(!aud) return '<div class="hint">Ainda não consegui ler o rastro de hoje. Isto não quer dizer que ninguém usou o app — quer dizer que ainda não sei. Abra a tela de novo em instantes.</div>';
+    var lista;
+    try{ lista=pessoasDoDia(aud); }
+    catch(e){ _logFalhaGrav('pessoasDoDia (Logins e segurança)', e); return '<div class="hint">Não consegui montar o rastro de hoje.</div>'; }
+    if(!lista.length) return '<div class="hint">Nenhuma ação registrada hoje ainda. A primeira marcação de qualquer Zeloso já aparece aqui.</div>';
+    return '<div class="p-tl">'+lista.map(function(P){
+      var resumo=Object.keys(P.acoes).map(function(a){
+        return (ACAO_LABEL[a]||a)+' ('+P.acoes[a]+')'; }).join(' · ');
+      return '<div class="p-pessoa"><div class="p-pessoa-h"><b>'+esc(P.nome)+'</b>'
+        +'<span class="p-pessoa-role">'+esc(P.role||'')+'</span>'
+        +'<span class="p-pessoa-n">'+P.n+(P.n===1?' ação':' ações')+'</span></div>'
+        +'<div class="p-pessoa-time">das '+esc(P.prim)+' às '+esc(P.ult)+'</div>'
+        +'<div class="p-pessoa-ac">'+esc(resumo)+'</div></div>';
+    }).join('')+'</div>';
+  }
+  function cfgLoginsCarregar(){
+    var box=document.getElementById('cfgLoginsWrap'); if(!box) return;
+    var hoje=(typeof hojeISO==='function')?hojeISO():'';
+    if(!DB||!hoje){ box.innerHTML=blocoPessoasFezHojeHTML(null); return; }
+    audVivaDoDia(hoje).then(function(v){ box.innerHTML=blocoPessoasFezHojeHTML(v||{}); })
+      .catch(function(e){ _logLeituraFalhou('daycare/auditoria (Logins e segurança)', e);
+        box.innerHTML=blocoPessoasFezHojeHTML(null); });
+  }
+
+  /* ====================================================================================
+   * A8 · LINHA DO TEMPO DO DIA — tela própria, navegação por MÊS
+   * Adriana: "linha do tempo do dia vira tela própria, com navegação por mês — junho,
+   * julho, agosto, setembro… senão é bagunça."
+   * Escolhe-se o mês, depois o dia. SÓ o dia escolhido é lido do banco (um nó, uma vez) —
+   * nada de baixar o mês inteiro para desenhar uma tela. Abre no mês corrente com hoje já
+   * escolhido. Esta tela só observa.
+   * ================================================================================== */
+  var LT_MES_ORIGEM='2026-06';        // o primeiro mês em que o app guardou rastro
+  var LT_MES='', LT_DIA='', LT_DADOS=null, LT_ESTADO='vazio';
+  function ltMeses(){
+    var hoje=(typeof hojeISO==='function')?hojeISO():'';
+    var fim=hoje.slice(0,7)||LT_MES_ORIGEM;
+    var out=[], m=LT_MES_ORIGEM, guarda=0;
+    while(m<=fim && guarda++<240){
+      out.push(m);
+      var a=+m.slice(0,4), n=+m.slice(5,7)+1;
+      if(n>12){ n=1; a++; }
+      m=a+'-'+String(n).padStart(2,'0');
+    }
+    return out.reverse();             // mês mais recente primeiro
+  }
+  function ltMesRotulo(m){
+    var n=+m.slice(5,7)-1;
+    return (MESES[n]||m)+' de '+m.slice(0,4);
+  }
+  function ltDiasDoMes(m){
+    var hoje=(typeof hojeISO==='function')?hojeISO():'';
+    var a=+m.slice(0,4), n=+m.slice(5,7);
+    var ultimo=new Date(a, n, 0).getDate();
+    var out=[];
+    for(var d=1;d<=ultimo;d++){
+      var iso=m+'-'+String(d).padStart(2,'0');
+      if(hoje && iso>hoje) break;     // dia que ainda não aconteceu não vira botão
+      out.push(iso);
+    }
+    return out.reverse();             // o dia mais recente primeiro
+  }
+  function ltEscolherMes(m){
+    LT_MES=m;
+    var dias=ltDiasDoMes(m);
+    LT_DIA=dias.length?dias[0]:'';
+    LT_DADOS=null; LT_ESTADO=LT_DIA?'lendo':'vazio';
+    ltRender();
+    if(LT_DIA) ltLer(LT_DIA);
+  }
+  function ltEscolherDia(iso){
+    LT_DIA=iso; LT_DADOS=null; LT_ESTADO='lendo'; ltRender(); ltLer(iso);
+  }
+  function ltLer(iso){
+    if(!DB){ LT_ESTADO='semdb'; ltRender(); return; }
+    var hoje=(typeof hojeISO==='function')?hojeISO():'';
+    var p=(iso===hoje)?audVivaDoDia(iso)
+                      :DB.ref('daycare/auditoria/'+iso).once('value').then(function(s){ return s.val(); });
+    p.then(function(v){
+      if(LT_DIA!==iso) return;        // a pessoa já trocou de dia
+      LT_DADOS=v||{}; LT_ESTADO='ok'; ltRender();
+    }).catch(function(e){
+      _logLeituraFalhou('daycare/auditoria/'+iso+' (Linha do tempo do dia)', e);
+      if(LT_DIA!==iso) return;
+      LT_DADOS=null; LT_ESTADO='falhou'; ltRender();
+    });
+  }
+  function ltLinhasHTML(){
+    if(LT_ESTADO==='semdb') return '<div class="p-empty">Sem conexão com o banco agora. Abra a tela de novo quando a rede voltar.</div>';
+    if(LT_ESTADO==='lendo') return '<div class="p-empty">Lendo o dia…</div>';
+    if(LT_ESTADO==='falhou') return '<div class="p-empty">Não consegui ler este dia. Isto não quer dizer que ele está vazio — quer dizer que ainda não sei. Toque no dia de novo.</div>';
+    if(LT_ESTADO!=='ok') return '<div class="p-empty">Escolha um dia acima.</div>';
+    var aud=Object.keys(LT_DADOS||{}).map(function(k){ return LT_DADOS[k]; })
+      .filter(Boolean).sort(function(a,b){ return (a.ts||0)-(b.ts||0); });
+    if(!aud.length) return '<div class="p-empty">Nenhum registro neste dia.</div>';
+    return '<div class="p-tl">'+aud.map(function(a){
+      var det=a.detalhe?(' — '+a.detalhe):'';
+      if((a.acao==='medicacao-dose'||a.acao==='medicacao-dose-avulsa')&&(a.med||a.horario||a.pet)){
+        det=' — '+(a.med||'medicamento')+(a.horario?(' às '+a.horario):'')+(a.pet?(' ('+a.pet+')'):'');
+      }
+      return '<div class="p-tl-item"><span class="p-tl-h">'+esc(a.hora||'--:--')+'</span>'
+        +'<span class="p-tl-q">'+esc(a.quem||'-')+'</span>'
+        +'<span class="p-tl-a">'+esc((ACAO_LABEL[a.acao]||a.acao||'')+det)+'</span></div>';
+    }).join('')+'</div>';
+  }
+  function ltRender(){
+    var raiz=document.getElementById('ltRoot'); if(!raiz) return;
+    var meses=ltMeses();
+    var h='<div class="card"><h2 style="font-size:17px">Escolha o mês</h2>'
+      +'<div class="lt-chips">'+meses.map(function(m){
+        return '<button type="button" class="lt-chip'+(m===LT_MES?' on':'')+'" onclick="ltEscolherMes(\''+m+'\')">'
+          +esc(ltMesRotulo(m))+'</button>'; }).join('')+'</div>';
+    var dias=LT_MES?ltDiasDoMes(LT_MES):[];
+    if(LT_MES){
+      h+='<h2 style="font-size:17px;margin-top:14px">Escolha o dia</h2>';
+      if(!dias.length) h+='<div class="hint">Este mês ainda não tem nenhum dia passado.</div>';
+      else h+='<div class="hint">Cada dia é lido do banco só quando a senhora toca nele — nada aqui baixa o mês inteiro.</div>'
+        +'<div class="lt-chips">'+dias.map(function(d){
+          return '<button type="button" class="lt-chip lt-dia'+(d===LT_DIA?' on':'')+'" onclick="ltEscolherDia(\''+d+'\')">'
+            +esc(String(+d.slice(8,10)))+'</button>'; }).join('')+'</div>';
+    }
+    h+='</div>';
+    h+='<div class="card"><h2 style="font-size:17px">'
+      +(LT_DIA?esc(fmtBR(LT_DIA)):'Nenhum dia escolhido')+'</h2>'
+      +'<div class="hint">Tudo o que aconteceu, em ordem: a hora, quem fez e o que foi.</div>'
+      +ltLinhasHTML()+'</div>';
+    raiz.innerHTML=h;
+  }
+  function ltAbrir(){
+    if(!LT_MES){
+      var hoje=(typeof hojeISO==='function')?hojeISO():'';
+      ltEscolherMes(hoje.slice(0,7)||LT_MES_ORIGEM);
+      return;
+    }
+    ltRender();
+    if(LT_DIA && LT_ESTADO!=='ok') ltLer(LT_DIA);
   }
   const ACAO_LABEL={ chamada:'Chamada', almoco_ini:'Iniciou o almoço', almoco_fim:'Encerrou o almoço',
     almoco_grade:'Marcou no almoço', almoco_prep:'Checklist preparação', almoco_final:'Checklist finalização',
@@ -26253,7 +26587,9 @@
     if(el.style.display==='block'){ el.style.display='none'; return; }
     el.style.display='block';
     const ordem=['abertura','chamada','almoco','relInicio','relNoite','checkout'];
-    let h='<h2>Horários esperados de cada protocolo</h2><div class="hint">Define a janela em que cada protocolo deve acontecer. Fora dela, o Painel marca “fora do horário”. Ajuste à rotina real.</div>';
+    // O título já está no cartão de Configurações que abriga este editor (08/set/2026) —
+    // repeti-lo aqui daria duas vezes a mesma frase na mesma tela.
+    let h='';
     ordem.forEach(k=>{ const c=AUDIT_CFG[k]||{ini:'',fim:'',label:k}; h+=`<div class="p-cfg-row"><span class="p-cfg-lab">${c.label}</span>
       <label>de <input type="time" value="${c.ini}" onchange="setAuditCfg('${k}','ini',this.value)"></label>
       <label>até <input type="time" value="${c.fim}" onchange="setAuditCfg('${k}','fim',this.value)"></label></div>`; });
@@ -31640,7 +31976,7 @@
     if(!podePapel('painel-monitor')){
       raiz.innerHTML='<div class="pm-card"><h3 class="pm-tit">Esta tela é de quem está com o FILHOt</h3>'
         +'<p class="pm-sub">O Meu Dashboard mostra a rota de cada monitor, plantonista e aprendiz. '
-        +'A visão da casa inteira fica em "O que fazer hoje" e no Painel do Dia.</p></div>';
+        +'A visão da casa inteira fica em "O que fazer hoje" e nos dashboards.</p></div>';
       return;
     }
     PM_DIA=(typeof hojeISO==='function')?hojeISO():'';          // UM relógio para todos os cards
@@ -32984,6 +33320,15 @@
     +'<path d="M16 12.5v6M16 21.8v.2" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"></path>';
 
   // O link é sempre para a tela que JÁ existe. O painel não resolve nada: ele aponta.
+  // Troca o conteúdo de UM quadro já desenhado, sem redesenhar o painel inteiro (a mesma
+  // ideia do quadro do acerto). Se a pessoa já saiu da tela, não faz nada.
+  // A caixa que segura o quadro vai com display:contents — assim ela some do layout e quem
+  // o pm-grid enxerga continua sendo o <article> do cartão, com a mesma largura dos outros.
+  function poTrocarQuadro(id, html){
+    var el=document.getElementById(id); if(!el) return;
+    el.innerHTML=html;
+    try{ pmAnimar(el); }catch(e){} /* silencioso de propósito: animação — falhar não pode derrubar o quadro */
+  }
   function poIrHTML(view, rotulo){
     return '<div class="pm-acao"><button type="button" class="pm-bt" onclick="irParaView(\''
       +esc(view)+'\')">'+esc(rotulo)+'</button></div>';
@@ -33416,6 +33761,12 @@
     // A pintura NÃO espera a carga lenta do acerto (~2,5 s): a tela abre com o que já
     // chegou e o quadro do dinheiro se redesenha sozinho quando a conta termina.
     var cargas=poCargasPesadas();
+    // O DIA e a SEMANA que os dois quadros vindos do Painel do Dia usam (protocolos e o
+    // gráfico do tempo). O pdiaLer() é o MESMO leitor do Dashboard da Adriana, com cache
+    // de 60 s: quem abrir primeiro paga a leitura, quem abrir depois não paga nada.
+    // Nenhum dos dois segura a primeira pintura — eles se desenham quando chegam.
+    var diaProtoP=pdiaLer((typeof hojeISO==='function')?hojeISO():'', forcar===true)
+      .catch(function(e){ _logLeituraFalhou('o dia (quadros do Dashboard da Márcia)', e); return null; });
     cargas.rapidas.then(function(){ return poLer(forcar===true); }).then(function(d){
       if(!d){
         raiz.innerHTML='<div class="pm-card"><h3 class="pm-tit">Não consegui ler a casa de hoje</h3>'
@@ -33456,8 +33807,28 @@
         + poCardAcerto(!ACERTO_PRONTO)
         + poCardMedicacao(med)
         + poCardEA(ea)
+        +'</div>'
+        // OS QUADROS QUE VIERAM DO PAINEL DO DIA (Adriana, 08/set/2026, 23h30).
+        // "Urgente a resolver" é dela; "Cumprimento dos protocolos" e o gráfico do tempo
+        // são a MESMA função que desenha os dois quadros no Dashboard da Adriana — nunca
+        // uma cópia. Os dois últimos nascem dizendo que ainda estão lendo e se trocam
+        // sozinhos quando o dia chega: nada segura a primeira pintura.
+        + poAreaHTML('O DIA POR DENTRO','O protocolo e o tempo',
+            'O que a casa combinou fazer hoje, se foi feito no horário, e quanto tempo cada atividade levou.', PO_IC_ALERTA)
+        +'<div class="pm-grid">'
+        + blocoUrgenteHTML()
+        +'<div id="poCardProtocolos" style="display:contents">'+blocoProtocolosHTML(null)+'</div>'
+        +'<div id="poCardTempoAtv" style="display:contents">'+blocoTempoAtividadesHTML(d.tempo, null)+'</div>'
         +'</div>';
       requestAnimationFrame(function(){ pmAnimar(raiz); });
+      // O dia chegou: troca SÓ os dois quadros, sem reiniciar a animação do painel inteiro.
+      diaProtoP.then(function(D){
+        poTrocarQuadro('poCardProtocolos', blocoProtocolosHTML(D));
+        if(!D) return null;
+        return atvSemanaLer(D.dia).then(function(sem){
+          poTrocarQuadro('poCardTempoAtv', blocoTempoAtividadesHTML(D.tempo, sem));
+        });
+      }).catch(function(e){ _logLeituraFalhou('Dashboard da Márcia (protocolos e tempo)', e); });
       // A conta do acerto chegou (ou já estava): troca SÓ o quadro do dinheiro, sem
       // reiniciar a animação do painel inteiro. Se a carga falhou, ACERTO_PRONTO segue
       // false e o quadro continua dizendo que ainda não leu — nunca um número inventado.
@@ -33989,6 +34360,15 @@
         +'<section class="pa-col pa-col-res"><h3 class="pa-col-t">O que você resolveu hoje<small>o item, a que horas e quem fez</small></h3>'
         + paColunaHTML(L.res,'Nada resolvido ainda hoje','Conforme o dia anda, o que for resolvido aparece aqui com quem e quando.', true)
         +'</section>'
+        +'</div>'
+        // DOIS QUADROS QUE VIERAM DO PAINEL DO DIA (Adriana, 08/set/2026, 23h30): a
+        // prevenção vencida e quem falta pesar são da Amanda — é ela quem cobra o tutor.
+        // Os dois saem do cadastro que já está na memória: nenhuma leitura nova de banco.
+        + poAreaHTML('A FICHA DE CADA UM','O que impede e o que atrasa',
+            'Quem está impedido de frequentar por prevenção vencida, e quem a casa deixou de pesar.', PO_IC_ALERTA)
+        +'<div class="pm-grid">'
+        + blocoPrevencaoVencidaHTML()
+        + blocoFaltaPesarHTML()
         +'</div>';
       requestAnimationFrame(function(){ try{ pmAnimar(raiz); }catch(e){} /* silencioso de propósito: animação — falhar não pode derrubar a tela */ });
     });
@@ -34171,7 +34551,7 @@
   // As gravações que falharam hoje. falhas null = a auditoria do dia não foi lida.
   function pdirAuditoriaHTML(falhas, bolso){
     var h='<article class="pm-card pm-rv"><h3 class="pm-tit">Gravações que falharam hoje</h3>'
-      +'<p class="pm-sub">O rastro que o app deixa quando o banco recusa uma gravação — nada disso sumiu calado. O detalhe mora no Painel do Dia.</p>';
+      +'<p class="pm-sub">O rastro que o app deixa quando o banco recusa uma gravação — nada disso sumiu calado. O detalhe minuto a minuto mora na Linha do tempo do dia.</p>';
     if(falhas==null){
       h+='<div class="pm-lista"><div class="pm-li"><span class="pm-badge pm-b-atencao">sem leitura</span>'
         +'<div class="pm-li-txt"><b>Ainda não consegui ler a auditoria do dia.</b>'
@@ -34186,11 +34566,11 @@
           +'<div class="pm-li-txt"><b>'+esc(f.detalhe||'gravação sem rótulo')+'</b>'
           +'<span>'+esc(f.quem)+(f.hora?(' · '+esc(f.hora)):'')+(f.reenviado?' · reenviada pelo bolso':'')+'</span></div></div>';
       });
-      if(falhas.length>3) h+='<p class="pm-rot" style="margin-top:8px">E mais '+(falhas.length-3)+' no Painel do Dia.</p>';
+      if(falhas.length>3) h+='<p class="pm-rot" style="margin-top:8px">E mais '+(falhas.length-3)+' na Linha do tempo do dia.</p>';
       h+='</div>';
     }
     if(bolso>0) h+='<p class="pm-nota" style="margin:12px 0 0"><strong>'+esc(pmPlural(bolso,'rastro espera','rastros esperam'))+' no bolso deste aparelho.</strong> Sobem sozinhos assim que o banco aceitar.</p>';
-    h+='<div class="pm-acao"><button type="button" class="pm-bt" onclick="pdirIr(\'painel\')">Abrir o Painel do Dia</button></div>'
+    h+='<div class="pm-acao"><button type="button" class="pm-bt" onclick="pdirIr(\'linhadotempo\')">Abrir a Linha do tempo do dia</button></div>'
       +'</article>';
     return h;
   }
@@ -34335,9 +34715,29 @@
         + pdirAtalhosHTML(a)
         + poAreaHTML('FINANCEIRO','O dinheiro de '+mesRotulo,'A conta inteira vem do módulo do financeiro, provado no harness: a receber por serviço, recebido, os maiores valores e o que a conta não cobre.', PDIR_IC_MOEDA)
         + finHTML
+        // OS QUADROS QUE VIERAM DO PAINEL DO DIA (Adriana, 08/set/2026, 23h30).
+        // "Plantão agora" é só dela. "Cumprimento dos protocolos" e o gráfico do tempo são
+        // a MESMA função que desenha os dois quadros no Dashboard da Márcia — uma função,
+        // dois usos: se a régua mudar, muda nos dois no mesmo instante.
+        + poAreaHTML('O DIA POR DENTRO','Quem está na casa, o protocolo e o tempo',
+            'Quem a escala coloca no Day Care agora, se cada protocolo foi cumprido no horário, e quanto tempo cada atividade levou.', PO_IC_ALERTA)
+        +'<div class="pm-grid">'
+        + blocoPlantaoAgoraHTML()
+        +'<div id="pdirCardProtocolos" style="display:contents">'+blocoProtocolosHTML(null)+'</div>'
+        +'<div id="pdirCardTempoAtv" style="display:contents">'+blocoTempoAtividadesHTML(null, null)+'</div>'
+        +'</div>'
         + poAreaHTML('AUDITORIA VIVA','O que não gravou','As gravações que o banco recusou hoje — cada uma com o quê, quem e quando. Nada some calado.', PO_IC_ALERTA)
         + pdirAuditoriaHTML(falhas, bolso);
       requestAnimationFrame(function(){ try{ pmAnimar(raiz); }catch(e){} /* silencioso de propósito: animação — falhar não pode derrubar a tela */ });
+      // O dia chega depois e troca SÓ os dois quadros — o mesmo leitor com cache de 60 s
+      // que o Dashboard da Márcia usa, para a casa não pagar a leitura duas vezes.
+      pdiaLer(PDIR_DIA, forcar===true).then(function(D){
+        poTrocarQuadro('pdirCardProtocolos', blocoProtocolosHTML(D));
+        if(!D) return null;
+        return atvSemanaLer(D.dia).then(function(sem){
+          poTrocarQuadro('pdirCardTempoAtv', blocoTempoAtividadesHTML(D.tempo, sem));
+        });
+      }).catch(function(e){ _logLeituraFalhou('Dashboard da Adriana (protocolos e tempo)', e); });
     });
   }
   // O ícone da moeda (mesmo traço dos ícones das áreas da Operação).
@@ -34347,8 +34747,10 @@
   // INIT do Day Care (no fim: garante todas as variaveis e funcoes definidas)
   montarSubnav();
   renderAtual();
-  // Painel do Dia ao vivo — atualiza sozinho a cada 30s enquanto estiver aberto no dia de hoje (sala da gestão)
-  setInterval(function(){ try{ if(document.hidden) return; const v=document.getElementById('v-painel'); if(v && getComputedStyle(v).display!=='none' && typeof carregarPainel==='function' && pKey(painelDate)===pKey(new Date()) && (typeof economiaPainelPodeLer!=='function' || economiaPainelPodeLer())) carregarPainel(); }catch(e){} /* silencioso de propósito: função opcional, pode não existir nesta tela */ }, 30000);
+  // O relógio de 30 s do Painel do Dia SAIU em 08/set/2026, junto com a tela que ele
+  // atualizava. Ele relia o dia inteiro a cada volta — foi a causa dominante dos 68 MB/h
+  // medidos em 07/set. O que sobrou na tela é histórico fechado: não muda sozinho, e por
+  // isso não precisa de relógio nenhum. Os dashboards leem sob demanda, com cache de 60 s.
   montarMedgrids();
   // Script inteiro carregado: seguro ligar os ouvintes do Firebase (todas as variaveis existem).
   __scriptReady=true; if(typeof wireFirebaseListeners==='function') wireFirebaseListeners();

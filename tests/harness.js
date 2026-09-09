@@ -3341,7 +3341,10 @@ async function main() {
       checkoutconf: 'so-conf-saida',
       abertura: 'so-abertura',
       agenda: '',
-      painel: 'so-master',
+      // v-07 (08/set/2026, noite): o item "Painel do Dia" saiu do menu — a tela foi
+      // dissolvida nos dashboards. A classe so-master que ele carregava passou para a
+      // "Linha do tempo do dia", que nasceu na Operação: ninguém ganhou nem perdeu acesso.
+      linhadotempo: 'so-master',
       emporio: 'so-emporio',
       ficha: 'so-gestao',
       pessoas: 'so-master',
@@ -3423,10 +3426,25 @@ async function main() {
       JSON.stringify(grupos.map((g) => g.titulo)) === JSON.stringify(
         ['Dashboards', 'Serviços', 'Central Zêluz', 'Operação', 'Em breve']),
       JSON.stringify(grupos.map((g) => g.titulo)));
-    check('mordida — cada serviço aparece UMA vez só no menu (nunca mais duas gavetas iguais)',
+    // v-07 (08/set/2026, noite) — Adriana pediu a Central Zêluz em três partes: Peludinhos,
+    // AuAulândia ("todos os itens pertinentes à hospedagem") e Day Care. Os NOMES voltam a
+    // se repetir entre Serviços e Central, mas o problema de 04/set não volta: lá eram duas
+    // gavetas com os MESMOS itens; aqui o critério é quem faz — o monitor de um lado, quem
+    // fala com o tutor do outro — e nenhum data-v aparece nas duas (a mordida abaixo).
+    check('menu: a Central Zêluz tem as três partes, na ordem que ela ditou',
       JSON.stringify(subs.map((s) => s.titulo)) === JSON.stringify([
-        'AuAulândia', 'Day Care', 'Peludinhos', 'Planos e cobranças']),
+        'AuAulândia', 'Day Care', 'Peludinhos', 'AuAulândia', 'Day Care']),
       JSON.stringify(subs.map((s) => s.titulo)));
+    check('mordida — nome repetido não é gaveta repetida: nenhuma tela mora nos dois lados',
+      (() => {
+        const iS = nav.indexOf('data-acc-toggle="servicos"');
+        const iC = nav.indexOf('data-acc-toggle="central"');
+        const iO = nav.indexOf('data-acc-toggle="operacao"');
+        const emServicos = [...nav.slice(iS, iC).matchAll(/data-v="([a-z-]+)"/g)].map((x) => x[1]);
+        const naCentral = [...nav.slice(iC, iO).matchAll(/data-v="([a-z-]+)"/g)].map((x) => x[1]);
+        return emServicos.length > 0 && naCentral.length > 0
+          && emServicos.every((v) => naCentral.indexOf(v) < 0);
+      })());
     const grpDe = (t) => (grupos.find((g) => g.titulo === t) || { pos: -1 }).pos;
     // Adriana, 27/ago/2026: "Relatórios é um item à parte, no fim" — saiu de entre Operação
     // e Em breve e foi para DEPOIS de tudo, sozinho, logo antes do Sair.
@@ -3452,7 +3470,7 @@ async function main() {
      ['vacinas', 'Central Zêluz'], ['alergia', 'Central Zêluz'], ['peso', 'Central Zêluz'],
      ['config', 'Operação'], ['acerto', 'Operação'], ['ritmo', 'Operação'], ['pessoas', 'Operação'],
      ['painelmeu', 'Dashboards'], ['consultoras', 'Dashboards'], ['paineloperacao', 'Dashboards'],
-     ['painel', 'Dashboards'],
+     ['linhadotempo', 'Operação'],
      ['agenda', 'Em breve']].forEach(([k, g]) => {
       check('menu: ' + k + ' está no grupo ' + g, porV[k] && porV[k].grupo === g,
         porV[k] ? porV[k].grupo : 'sumiu');
@@ -3601,13 +3619,17 @@ async function main() {
     // Quero que abra os títulos, e ao clicar nele abre o restante; clico de novo, fecha."
     const subsAcc = [...nav.matchAll(/<a class="grp grp-sub nav-parent" data-acc-toggle="([a-z-]+)"([^>]*)>([\s\S]*?)<\/a>/g)]
       .map((mm) => ({ chave: mm[1], dentro: mm[3] }));
-    check('menu: os 4 sub-cabeçalhos são linhas clicáveis que abrem e fecham (unificação de 04/set)',
-      subsAcc.length === 4, JSON.stringify(subsAcc.map((x) => x.chave)));
+    // v-07 (08/set/2026, noite): a Central Zêluz virou TRÊS partes (Peludinhos ·
+    // AuAulândia · Day Care) e "Planos e cobranças" deixou de ser sub-cabeçalho — virou um
+    // rótulo dentro do Day Care, porque sub-cabeçalho dentro de sub-cabeçalho não existe.
+    // São 5 sub-cabeçalhos: 2 em Serviços e 3 na Central.
+    check('menu: os 5 sub-cabeçalhos são linhas clicáveis que abrem e fecham',
+      subsAcc.length === 5, JSON.stringify(subsAcc.map((x) => x.chave)));
     subsAcc.forEach((x) => {
       check('menu: sub-cabeçalho ' + x.chave + ' tem seta', /acc-caret/.test(x.dentro));
     });
     check('menu: cada sub-cabeçalho guarda o próprio estado (chave própria, com a letra da categoria)',
-      new Set(subsAcc.map((x) => x.chave)).size === 4 && subsAcc.every((x) => /^[cs]-/.test(x.chave)),
+      new Set(subsAcc.map((x) => x.chave)).size === 5 && subsAcc.every((x) => /^[cs]-/.test(x.chave)),
       JSON.stringify(subsAcc.map((x) => x.chave)));
     check('menu: sub-cabeçalho fechado esconde os itens dele (mesma mecânica da categoria)',
       subsAcc.every((x) => {
@@ -3629,12 +3651,25 @@ async function main() {
     const vsDe = (trecho, comHifen) =>
       [...trecho.matchAll(comHifen ? /data-v="([a-z-]+)"/g : /data-v="([a-z]+)"/g)].map((x) => x[1]);
     check('menu: o subgrupo Peludinhos tem exatamente Cadastro, Prevenção, Pesquisa com a Família e Peso, nessa ordem',
-      JSON.stringify(vsDe(fatia('c-peludinhos', 'c-planos'))) === JSON.stringify(
+      JSON.stringify(vsDe(fatia('c-peludinhos', 'c-auaulandia'))) === JSON.stringify(
         ['ficha', 'vacinas', 'alergia', 'peso']),
-      JSON.stringify(vsDe(fatia('c-peludinhos', 'c-planos'))));
+      JSON.stringify(vsDe(fatia('c-peludinhos', 'c-auaulandia'))));
+    check('menu: o subgrupo AuAulândia da Central é a hospedagem vista pelo tutor',
+      JSON.stringify(vsDe(fatia('c-auaulandia', 'c-daycare'), true)) === JSON.stringify(
+        ['checkin', 'checkoutconf', 'recepcao', 'cuidadovet', 'orcamento']),
+      JSON.stringify(vsDe(fatia('c-auaulandia', 'c-daycare'), true)));
+    check('menu: o subgrupo Day Care da Central traz o dia do auluno e, no fim, Planos e cobranças',
+      JSON.stringify(vsDe(fatia('c-daycare', 'operacao'), true)) === JSON.stringify(
+        ['emporio', 'reposicao', 'dashdc', 'renovacao', 'lancar-pagamento']),
+      JSON.stringify(vsDe(fatia('c-daycare', 'operacao'), true)));
+    check('menu: "Planos e cobranças" virou RÓTULO dentro do Day Care — nunca um filho maior que o pai',
+      fatia('c-daycare', 'operacao').indexOf('<div class="nav-rotulo">Planos e cobranças</div>') > 0
+      && nav.indexOf('data-acc-toggle="c-planos"') < 0
+      && px((/\.nav \.nav-rotulo\{([^}]*)\}/.exec(html) || [, ''])[1], 'font-size')
+         < px(cssItem, 'font-size'));
     check('menu: a categoria Dashboards guarda SÓ dashboard (nenhuma tela de trabalho entrou junto)',
       JSON.stringify(vsDe(fatia('paineis', 'servicos'), true)) === JSON.stringify(
-        ['painelmeu', 'consultoras', 'painel-amanda', 'paineloperacao', 'painel-diretoria', 'painel']),
+        ['painelmeu', 'consultoras', 'painel-amanda', 'paineloperacao', 'painel-diretoria']),
       JSON.stringify(vsDe(fatia('paineis', 'servicos'), true)));
     check('menu: nenhum dashboard ficou fora da categoria Dashboards',
       (() => {
@@ -3652,9 +3687,10 @@ async function main() {
       JSON.stringify(vsDe(fatia('servicos', 'central'))));
     check('menu: o Day Care do monitor (blocoDaycare) mudou de gaveta sem sair do bloco único',
       fatia('s-daycare', 'central').indexOf('id="blocoDaycare"') > 0);
-    check('menu: a veterinária enxerga o caminho até as duas telas dela (Central e Peludinhos)',
-      /body\[data-role="vet"\] \.nav \.acc\[data-acc="central"\]>a\.grp,\s*body\[data-role="vet"\] \.nav \.acc\[data-acc="c-peludinhos"\]>a\.grp\{display:flex !important\}/.test(html)
-      && html.indexOf('data-acc="c-auaulandia"') < 0);
+    // v-07: o Cuidado Vet desceu para o sub-cabeçalho AuAulândia da Central. Sem revelar
+    // esse cabeçalho, o item da veterinária existiria dentro de uma gaveta invisível.
+    check('menu: a veterinária enxerga o caminho inteiro até as duas telas dela',
+      /body\[data-role="vet"\] \.nav \.acc\[data-acc="central"\]>a\.grp,\s*body\[data-role="vet"\] \.nav \.acc\[data-acc="c-peludinhos"\]>a\.grp,\s*body\[data-role="vet"\] \.nav \.acc\[data-acc="c-auaulandia"\]>a\.grp\{display:flex !important\}/.test(html));
     check('menu: a pendência sobe em dois degraus (item, sub-cabeçalho, categoria)',
       /\.acc-panel a\.nav-pend:not\(\.nav-parent\)/.test(html));
     check('menu: ao medir cabeçalho vazio, cabeçalho não conta como item',
@@ -3880,8 +3916,18 @@ async function main() {
                          velha: (ambos.desatualizado || []).map((x) => x.nome) }));
       check('"quem saiu" sai ordenado por data, do mais recente',
         /saiu\.sort\(function\(a,b\)\{ return String\(b\.quando/.test(html));
-      check('quem faleceu sai da lista de contato',
-        /function saidaPorObito\(motivo\)/.test(html) && /Partiram \('/.test(html));
+      // v-07 (08/set/2026): o cartaz "Partiram" foi REMOVIDO a pedido da Adriana ("não tem
+      // necessidade de aparecer para ninguém"). A regra continua: quem faleceu não entra na
+      // lista de quem a Márcia precisa ligar — só não vira mais um bloco na tela.
+      check('quem faleceu sai da lista de contato — e o cartaz "Partiram" saiu da tela',
+        /function saidaPorObito\(motivo\)/.test(html)
+        && /\(saidaPorObito\(reg\.motivo\)\?luto:saiu\)\.push\(reg\);/.test(html)
+        && html.indexOf("<strong>Partiram ('+u.luto.length+'):</strong>") < 0
+        && html.indexOf('Aqui não se cobra retorno') < 0);
+      // ...e continua existindo onde ela QUER: a lista de Inativos, para ninguém os pôr de
+      // volta na chamada nem mandar campanha à família (essa tela ela não mandou mexer).
+      check('mas o "Partiram" da lista de Inativos ficou de pé (é outra tela, outro propósito)',
+        html.indexOf('<div style="font-weight:800;color:var(--z-blue);font-size:15px">Partiram (${luto.length})</div>') > 0);
       if (typeof ctx.saidaPorObito === 'function') {
         ['Faleceu em 15/08', 'obito', 'Morreu ontem', 'FALECIDA'].forEach((m) =>
           check('reconhece obito escrito como "' + m + '"', ctx.saidaPorObito(m) === true));
@@ -4345,13 +4391,12 @@ async function main() {
       /body\[data-role="consultora"\] \.nav a\.so-pesa/.test(html) &&
       /body\[data-role="vet"\] \.nav a\.so-pesa/.test(html) &&
       /body\[data-role="supervisor"\] \.nav a\.so-pesa/.test(html));
-    // 08/set/2026: a veterinária é da Central Zêluz. O Cuidado Vet subiu para a raiz da
-    // categoria e o Peso ficou no subgrupo Peludinhos — o caminho tem dois cabeçalhos,
-    // não três, e o c-auaulandia deixou de existir.
+    // 08/set/2026 (noite): a Central Zêluz virou três partes. O Peso está em Peludinhos e o
+    // Cuidado Vet, em AuAulândia — a veterinária precisa dos TRÊS cabeçalhos do caminho.
     check('e a veterinaria enxerga o CAMINHO ate ela (nao so o item)',
-      /body\[data-role="vet"\] \.nav a\[data-v="peso"\],[\s\S]{0,700}acc="c-peludinhos"\]>a\.grp\{display:flex !important\}/.test(html)
+      /body\[data-role="vet"\] \.nav a\[data-v="peso"\],[\s\S]{0,900}acc="c-auaulandia"\]>a\.grp\{display:flex !important\}/.test(html)
       && /body\[data-role="vet"\] \.nav \.acc\[data-acc="central"\]>a\.grp/.test(html)
-      && html.indexOf('data-acc="c-auaulandia"') < 0);
+      && /body\[data-role="vet"\] \.nav \.acc\[data-acc="c-peludinhos"\]>a\.grp/.test(html));
     check('a tela tem titulo proprio', /peso:\['Peso'/.test(html));
     check('a busca mostra raca e tutor (nome sozinho nao identifica)',
       /pesoTelaBuscar[\s\S]{0,1400}ativIdent\(o\.p\)/.test(html));
@@ -4362,26 +4407,28 @@ async function main() {
   console.log('');
 
   // ════════════════════════════════════════════════════════════════════════════════
-  // v-05 (08/set/2026) — QUEM ESTÁ SEM PESAR: o box do topo e a régua de 45 em 45
+  // v-05/v-07 (08/set/2026) — QUEM ESTÁ SEM PESAR: o box do topo e a régua de 30 em 30
   // ════════════════════════════════════════════════════════════════════════════════
   // Adriana: "um box único no topo, X sem pesar há N dias, clicável, que abre a lista.
-  // Régua de 45 em 45 dias. Mais atrasados primeiro. Quem nunca foi pesado aparece como
-  // nunca pesado, honesto, no topo."
+  // Mais atrasados primeiro. Quem nunca foi pesado aparece como nunca pesado, honesto, no
+  // topo." A régua nasceu 45 e virou 30 na mesma noite (v-07): "Peso pode manter os 30 dias
+  // mesmo, e a Gestão decide que dia irá pesar" — 30 em TODO lugar, aqui e no quadro
+  // "Falta pesar" do Dashboard da Amanda, que lê ESTA mesma função.
   //
   // A bancada abaixo é de mentira DE PROPÓSITO: ordem e faixa só se provam com datas
   // conhecidas. O dado que a tela lê é o mesmo da ficha (o histórico `pesos` do cadastro).
   console.log('Peso — quem está sem pesar (o box do topo, 08/set):');
   {
-    check('a régua é de 45 em 45 dias', ctx.PESO_REGUA_DIAS === 45, String(ctx.PESO_REGUA_DIAS));
+    check('a régua é de 30 em 30 dias', ctx.PESO_REGUA_DIAS === 30, String(ctx.PESO_REGUA_DIAS));
     const faixa = (u, d) => ctx.pesoAtrasoFaixa(u, d);
     check('faixa: sem nenhum peso na ficha = "nunca" (e não "há muito tempo")',
       faixa(null, null) === 'nunca');
-    check('faixa: 0 a 45 dias está em dia (não entra na lista)',
-      faixa({ kg: 9 }, 0) === 'ok' && faixa({ kg: 9 }, 45) === 'ok');
-    check('faixa: 46 a 89 dias é "atrasado"',
-      faixa({ kg: 9 }, 46) === 'atrasado' && faixa({ kg: 9 }, 89) === 'atrasado');
-    check('faixa: 90 dias em diante é "muito atrasado"',
-      faixa({ kg: 9 }, 90) === 'muito' && faixa({ kg: 9 }, 400) === 'muito');
+    check('faixa: 0 a 30 dias está em dia (não entra na lista)',
+      faixa({ kg: 9 }, 0) === 'ok' && faixa({ kg: 9 }, 30) === 'ok');
+    check('faixa: 31 a 59 dias é "atrasado"',
+      faixa({ kg: 9 }, 31) === 'atrasado' && faixa({ kg: 9 }, 59) === 'atrasado');
+    check('faixa: 60 dias em diante é "muito atrasado"',
+      faixa({ kg: 9 }, 60) === 'muito' && faixa({ kg: 9 }, 400) === 'muito');
     check('faixa: peso com data ilegível não vira "nunca" — vira "peso sem data"',
       faixa({ kg: 9 }, null) === 'semdata' && faixa({ kg: 9 }, NaN) === 'semdata');
 
@@ -4397,8 +4444,8 @@ async function main() {
       const pels = [
         { n: 'Dolly', tutor: 'Carolina' },        // nunca pesada
         { n: 'Toddy', tutor: 'Renata' },          // pesado hoje
-        { n: 'Heidi', tutor: 'Luciana' },         // 40 dias — em dia
-        { n: 'Romeo', tutor: 'Beatriz' },         // 60 dias — atrasado
+        { n: 'Heidi', tutor: 'Luciana' },         // 40 dias — atrasado (com a régua de 30)
+        { n: 'Romeo', tutor: 'Beatriz' },         // 60 dias — muito atrasado
         { n: 'Maya', tutor: 'Fernanda' },         // 200 dias — muito atrasado
         { n: 'Theo', tutor: 'Paula' },            // 120 dias — muito atrasado
         { n: 'Lana', tutor: 'Sofia' },            // 300 dias, MAS inativa: não entra
@@ -4432,18 +4479,20 @@ async function main() {
         Object.assign(ctx, { __bkpPelPeso: bkpPel, __bkpCadPeso: bkpCad }));
     }
 
-    check('só entra quem passou dos 45 dias — quem pesou hoje e há 40 dias fica de fora',
-      res.nomes.indexOf('Toddy') < 0 && res.nomes.indexOf('Heidi') < 0, JSON.stringify(res.nomes));
+    check('só entra quem passou dos 30 dias — quem pesou hoje fica de fora, quem pesou há 40 entra',
+      res.nomes.indexOf('Toddy') < 0 && res.nomes.indexOf('Heidi') >= 0, JSON.stringify(res.nomes));
     check('FILHOt inativo não entra na lista (a Lana saiu da casa)',
       res.nomes.indexOf('Lana') < 0, JSON.stringify(res.nomes));
     check('mordida — quem NUNCA foi pesado vem no topo, e depois os mais atrasados primeiro',
-      JSON.stringify(res.nomes) === JSON.stringify(['Dolly', 'Maya', 'Theo', 'Romeo']),
+      JSON.stringify(res.nomes) === JSON.stringify(['Dolly', 'Maya', 'Theo', 'Romeo', 'Heidi']),
       JSON.stringify(res.nomes));
-    check('cada linha carrega a sua faixa (nunca · muito · muito · atrasado)',
-      JSON.stringify(res.faixas) === JSON.stringify(['nunca', 'muito', 'muito', 'atrasado']),
+    check('cada linha carrega a sua faixa (nunca · muito · muito · muito · atrasado)',
+      JSON.stringify(res.faixas) === JSON.stringify(['nunca', 'muito', 'muito', 'muito', 'atrasado']),
       JSON.stringify(res.faixas));
-    check('o box do topo diz QUANTOS e a régua ("4 sem pesar há mais de 45 dias")',
-      res.html.indexOf('4 sem pesar há mais de 45 dias') > 0, res.html.slice(0, 200));
+    check('o box do topo diz QUANTOS e a régua ("5 sem pesar há mais de 30 dias")',
+      res.html.indexOf('5 sem pesar há mais de 30 dias') > 0, res.html.slice(0, 200));
+    check('e diz de quanto em quanto tempo a casa pesa, e quem escolhe o dia',
+      res.html.indexOf('Pesagem a cada 30 dias; a Gestão decide o dia.') > 0);
     check('o box é CLICÁVEL — é um botão que abre a lista',
       /<button[^>]*id="pesoAtrasoBox"[^>]*onclick="pesoAtrasoAlternar\(\)"/.test(res.html)
       && /aria-expanded="false"/.test(res.html));
@@ -4451,7 +4500,7 @@ async function main() {
       res.html.indexOf('id="pesoAtrasoLista"') < 0 && res.html.indexOf('Dolly') < 0);
     check('aberto, a lista aparece com todo mundo dela e o botão vira "fechar"',
       res.htmlAberto.indexOf('id="pesoAtrasoLista"') > 0
-      && ['Dolly', 'Maya', 'Theo', 'Romeo'].every((n) => res.htmlAberto.indexOf(n) > 0)
+      && ['Dolly', 'Maya', 'Theo', 'Romeo', 'Heidi'].every((n) => res.htmlAberto.indexOf(n) > 0)
       && /aria-expanded="true"/.test(res.htmlAberto) && res.htmlAberto.indexOf('fechar') > 0,
       res.htmlAberto.slice(0, 160));
     check('quem nunca foi pesado é dito assim, sem maquiagem',
@@ -4464,9 +4513,9 @@ async function main() {
       /onclick="pesoTelaEscolher\(\d+\)"/.test(res.linha));
     check('o box nasce no TOPO da tela, nas duas situações (com e sem FILHOt escolhido)',
       (html.match(/el\.innerHTML=pesoAtrasoHTML\(\)\+/g) || []).length === 2);
-    check('o resumo do box separa nunca pesado, mais de 90 dias e a faixa de 45 a 90',
-      res.html.indexOf('1 nunca pesado') > 0 && res.html.indexOf('2 há mais de 90 dias') > 0
-      && res.html.indexOf('1 entre 45 e 90 dias') > 0, res.html.slice(0, 400));
+    check('o resumo do box separa nunca pesado, mais de 60 dias e a faixa de 30 a 60',
+      res.html.indexOf('1 nunca pesado') > 0 && res.html.indexOf('3 há mais de 60 dias') > 0
+      && res.html.indexOf('1 entre 30 e 60 dias') > 0, res.html.slice(0, 400));
 
     // ---- e agora contra o CADASTRO DE VERDADE (o retrato da casa) ----------------
     // A bancada de cima prova a régua; esta prova que o box não fica mudo na vida real.
@@ -4496,8 +4545,8 @@ async function main() {
         real.n > 0, 'lista com ' + real.n);
       check('e ninguém que está em dia entrou na lista',
         real.forasteiros === 0, String(real.forasteiros));
-      check('o box do topo anuncia o número real, com a régua de 45 dias',
-        real.html.indexOf(real.n + ' sem pesar há mais de 45 dias') > 0,
+      check('o box do topo anuncia o número real, com a régua de 30 dias',
+        real.html.indexOf(real.n + ' sem pesar há mais de 30 dias') > 0,
         real.html.slice(0, 220));
       check('as fichas que nunca receberam um peso aparecem como "nunca pesado"',
         real.nunca > 0 && real.html.indexOf('nunca pesado') > 0,
@@ -4926,11 +4975,16 @@ async function main() {
     check('ninguem escuta auaulandia/aparelhos com on(value): o batimento nao se espalha',
       html.indexOf("DB.ref('auaulandia/aparelhos').on('value'") < 0);
     // 3. Interruptor no banco: segura a frota sem publicar versao.
-    check('daycare/config/economia e escutado e pausa os tres relogios de leitura',
+    check('daycare/config/economia e escutado e pausa os relogios de leitura que sobraram',
       /DB\.ref\('daycare\/config\/economia'\)\.on\('value'/.test(html) &&
-      (html.match(/economiaPausada\(\)\) return;/g) || []).length >= 2 &&
-      /economiaPainelPodeLer\(\)\)\) carregarPainel\(\);/.test(html));
-    check('o Painel obedece a painelSeg (minimo 30 s) sem mexer no setInterval',
+      (html.match(/economiaPausada\(\)\) return;/g) || []).length >= 2);
+    // v-07 (08/set/2026): o TERCEIRO relógio — o do Painel do Dia, que relia o dia inteiro a
+    // cada 30 s e foi a causa dominante dos 68 MB/h de 07/set — sumiu junto com a tela. O que
+    // sobrou ali é histórico fechado: não muda sozinho e não precisa de relógio.
+    check('o relogio de 30 s do Painel do Dia SUMIU (a tela foi dissolvida)',
+      html.indexOf("getElementById('v-painel'); if(v && getComputedStyle(v)") < 0
+      && html.indexOf('economiaPainelPodeLer()) carregarPainel()') < 0);
+    check('mas a trava painelSeg continua de pe, para quem ainda a consulta',
       /ECONOMIA\.painelSeg=Math\.max\(30, Number\(v\.painelSeg\)\|\|30\)/.test(html) &&
       /if\(agora-__painelUltimaVolta < ECONOMIA\.painelSeg\*1000\) return false;/.test(html));
     check('as ferramentas de linha de comando existem (tools/aparelhos.js e tools/economia.js)',
@@ -4995,29 +5049,57 @@ async function main() {
   }
   console.log('');
 
-  console.log('Galeria: ver TODAS as fotos e dizer de quem e cada uma (28/ago):');
+  console.log('A galeria "todas as fotos" SAIU — a foto e da FICHA, nao do nome (v-07, 08/set):');
   {
-    check('a galeria existe e entra na tela de Relatorios',
-      /function galeriaFotosHTML\(\)/.test(html) && /fotosConferirHTML\(\)\+galeriaFotosHTML\(\)/.test(html));
-    check('agrupa por NOME: fichas e fotos soltas juntas',
-      /function galDados\(\)/.test(html) && /g\.fichas\.push/.test(html) && /g\.fotos\.push/.test(html));
-    check('a galeria diz em uma frase o que fazer ali',
-      /<strong>O que fazer aqui:<\/strong>/.test(html));
-    check('quem tem xara aparece marcado', /FILHOts com este nome/.test(html));
-    check('da para dizer de quem e a foto solta', /function galAtribuir\(chaveFoto, chaveFicha\)/.test(html));
-    check('e da para apagar em dois toques, dos dois lados',
-      /function galApagar\(chave\)/.test(html) && /if\(GAL_ARMADO!==chave\)\{ GAL_ARMADO=chave;/.test(html));
-    check('atribuir NAO apaga a original (erro nao perde nada)',
-      /A original continua onde estava/.test(html));
-    check('abre mostrando so o que precisa de decisao', /var GAL_SO_DECIDIR=true;/.test(html));
-    check('mas da para ver todos os nomes', /Ver todos os '\+grupos\.length\+' nomes/.test(html));
-    if (typeof ctx.galFotoNome === 'function') {
-      check('o nome sai da chave', ctx.galFotoNome('luna__shihtzu') === 'luna');
-      check('e tutor com __ nao confunde', ctx.galFotoNome('nelson mandela__lara') === 'nelson mandela');
+    // Adriana, 08/set/2026 às 23h50: "em Relatórios tirar essa 'todas as fotos, de quem é
+    // cada uma'... as fotos, os monitores tiram e alteram, de acordo com nome, raça e nome
+    // do tutor. Precisa aceitar isso... Tem duas Amoras e terão mais ainda."
+    check('a galeria saiu de Relatórios — funcao, chamada e estado, tudo fora',
+      html.indexOf('function galeriaFotosHTML(') < 0 && html.indexOf('galeriaFotosHTML()') < 0
+      && html.indexOf('function galDados(') < 0 && html.indexOf('GAL_SO_DECIDIR') < 0
+      && html.indexOf('Todas as fotos — de quem é cada uma') < 0);
+    check('e o resto de Relatórios ficou de pé (a conferencia de foto solta e os relatorios)',
+      /fotosConferirHTML\(\)\+RELATORIOS\.map/.test(html)
+      && /function fotosConferirHTML\(\)/.test(html));
+    check('a foto e guardada pela chave da FICHA (pelKey = nome__tutor), nunca pelo nome',
+      /function pelKey\(p\)\{ return \(\(p\.n\|\|''\)\+'__'\+\(p\.tutor\|\|''\)\)/.test(html)
+      && /var chave=pelKey\(o\.p\);/.test(html)
+      && /salvarFotoCad\(chave, dataUrl\)/.test(html));
+    // A PROVA COM DUAS AMORAS: mesmo nome, tutores diferentes. Chaves diferentes, fotos
+    // independentes — cada monitor troca a da sua e nenhuma sobrescreve a outra.
+    if (typeof ctx.pelKey === 'function') {
+      const amoraA = { n: 'Amora', tutor: 'Carolina', raca: 'Spitz' };
+      const amoraB = { n: 'Amora', tutor: 'Luciana', raca: 'Shih Tzu' };
+      const kA = ctx.pelKey(amoraA), kB = ctx.pelKey(amoraB);
+      check('duas Amoras de tutores diferentes tem CHAVES de foto diferentes',
+        kA !== kB && kA === 'amora__carolina' && kB === 'amora__luciana', kA + ' vs ' + kB);
+      check('e nenhuma das duas chaves e "fantasma" (raca no lugar do tutor) — as duas gravam',
+        ctx.fotoChaveFantasma(kA) === false && ctx.fotoChaveFantasma(kB) === false);
+      // roda a gravacao DE VERDADE contra um banco de mentira: duas fotos, duas chaves,
+      // nenhuma sobrescreve a outra e nenhum aviso de "duplicado" aparece.
+      const gravado = {};
+      ctx.__dbFoto = { ref: (c) => ({ set: (v) => { gravado[c] = v; return Promise.resolve(); } }) };
+      vm.runInContext('__bkpDBFoto = DB; DB = __dbFoto; __bkpFOTOS = FOTOS;', ctx);
+      try {
+        vm.runInContext('FOTOS = {};', ctx);
+        await ctx.salvarFotoCad(kA, 'data:image/jpeg;base64,AAAA');
+        await ctx.salvarFotoCad(kB, 'data:image/jpeg;base64,BBBB');
+        check('a foto da Amora da Carolina e a da Amora da Luciana vivem em nos SEPARADOS',
+          gravado['daycare/fotos/' + kA] === 'data:image/jpeg;base64,AAAA' &&
+          gravado['daycare/fotos/' + kB] === 'data:image/jpeg;base64,BBBB',
+          JSON.stringify(Object.keys(gravado)));
+        check('e a segunda NAO apagou a primeira na memoria do aparelho',
+          vm.runInContext("FOTOS['" + kA + "']==='data:image/jpeg;base64,AAAA' && FOTOS['" + kB + "']==='data:image/jpeg;base64,BBBB'", ctx) === true);
+      } catch (e) {
+        check('as duas Amoras gravam foto sem se atropelar', false, String(e));
+      } finally {
+        vm.runInContext('DB = __bkpDBFoto; FOTOS = __bkpFOTOS;', ctx);
+      }
     }
-    // a suposicao que causou o problema nao pode voltar
-    check('o semFotoDados ainda pula quem tem foto — POR ISSO a galeria existe',
-      /if\(chaves\[k\]\) return;/.test(html));
+    check('quem tem xara nao recebe foto por semelhanca de nome (melhor sem foto que a do outro)',
+      /if\(h&&h\.nome&&nomeTemXara\(h\.nome\)\) return '';/.test(html));
+    // a suposicao que causou o problema da galeria nao pode voltar
+
     check('da para mandar um link que abre direto na tela',
       /var _h=String\(location\.hash\|\|''\)\.replace\('#',''\)\.trim\(\);/.test(html) &&
       /if\(_h && document\.getElementById\('v-'\+_h\)\) v=_h;/.test(html));
@@ -7150,48 +7232,45 @@ async function main() {
   }
   console.log('');
 
-  // ---- v-painel: renderPainelDia — rastro sem "hora" nunca vira a palavra "undefined" na
-  // tela (smoke de navegador, 04/set/2026: Painel do Dia mostrava "das 07:53 às undefined"
-  // para Supervisão/Gestão/Diretoria). A causa: audit() se socorre no catch quando falha em
-  // se montar e guarda { acao:'audit-FALHOU' } SEM 'hora' nem 'quem' — e "O que cada pessoa
-  // fez hoje" escrevia a.hora direto no template, sem o fallback que o resto da função já usa.
-  console.log('v-painel — renderPainelDia (rastro sem hora nunca vira "undefined" na tela):');
-  if (typeof ctx.renderPainelDia === 'function') {
-    const gebPainel = ctx.document.getElementById;
-    const elPainel = { innerHTML: '', style: {} };
-    const elLabel = { style: {}, get textContent() { return this._t || ''; }, set textContent(v) { this._t = v; } };
-    ctx.document.getElementById = function (id) {
-      if (id === 'painelWrap') return elPainel;
-      if (id === 'painelDateLabel') return elLabel;
-      return gebPainel.call(ctx.document, id);
+  // ---- "O que cada pessoa fez hoje": rastro sem "hora" nunca vira "undefined" na tela ----
+  // Smoke de navegador, 04/set/2026: o Painel do Dia mostrava "das 07:53 às undefined". A
+  // causa: audit() se socorre no catch quando falha em se montar e guarda
+  // { acao:'audit-FALHOU' } SEM 'hora' nem 'quem'. Em 08/set (v-07) o bloco mudou de casa —
+  // foi para Configurações › Logins e segurança — e virou função pura (pessoasDoDia +
+  // blocoPessoasFezHojeHTML). A mordida continua, agora sobre a função nova.
+  console.log('Logins e segurança — o rastro sem hora nunca vira "undefined" na tela:');
+  if (typeof ctx.blocoPessoasFezHojeHTML === 'function') {
+    const aud = {
+      a1: { ts: 1000, hora: '07:53', quem: 'Teste Harness', role: 'plantonista', acao: 'planilha-hospedagem' },
+      a2: { ts: 2000, quem: 'Teste Harness', role: 'plantonista', acao: 'audit-FALHOU', detalhe: 'não consegui montar o rastro de "x"' },
     };
-    // painelData é `let` no script — vive na lexical scope do contexto, não como
-    // propriedade do sandbox. "ctx.painelData=" de fora não alcança essa ligação;
-    // tem de reatribuir por DENTRO do próprio contexto (mesmo truque do __bkp3 acima).
-    ctx.__bkpPainelData = ctx.painelData;
-    try {
-      // a1: rastro normal, com hora. a2: MESMA pessoa, ts maior (processado por último),
-      // igual ao audit-FALHOU real — sem 'hora' nenhuma no registro.
-      ctx.__novoPainelData = {
-        auditoria: {
-          a1: { ts: 1000, hora: '07:53', quem: 'Teste Harness', role: 'plantonista', acao: 'planilha-hospedagem' },
-          a2: { ts: 2000, quem: 'Teste Harness', role: 'plantonista', acao: 'audit-FALHOU', detalhe: 'não consegui montar o rastro de "x"' },
-        },
-      };
-      vm.runInContext('painelData = __novoPainelData;', ctx);
-      ctx.renderPainelDia();
-      const out = String(elPainel.innerHTML || '');
-      check('mordida — campo "hora" ausente no rastro NUNCA vira a palavra "undefined" na tela',
-        !/\bundefined\b/.test(out), out.slice(Math.max(0, out.indexOf('Teste Harness') - 20), out.indexOf('Teste Harness') + 120));
-      check('mordida — o fallback aparece no lugar dela: "das 07:53 às --:--"',
-        out.indexOf('das 07:53 às --:--') >= 0,
-        out.slice(Math.max(0, out.indexOf('Teste Harness') - 30), out.indexOf('Teste Harness') + 200));
-    } finally {
-      vm.runInContext('painelData = __bkpPainelData;', ctx);
-      ctx.document.getElementById = gebPainel;
-    }
+    const out = String(ctx.blocoPessoasFezHojeHTML(aud) || '');
+    check('mordida — campo "hora" ausente no rastro NUNCA vira a palavra "undefined" na tela',
+      !/undefined/.test(out), out.slice(0, 240));
+    // v-07: o registro SEM hora não entra na conta do primeiro nem do último. Antes ele
+    // entrava e vencia qualquer horário na comparação de texto ("--:--" < "07:53"), o que
+    // fazia a tela dizer "das --:-- às --:--" para quem trabalhou o dia inteiro. Com uma
+    // hora conhecida só, o primeiro e o último são ela mesma — que é a verdade.
+    check('mordida — o registro sem hora não sequestra o intervalo: "das 07:53 às 07:53"',
+      out.indexOf('das 07:53 às 07:53') >= 0, out.slice(0, 300));
+    const out2 = String(ctx.blocoPessoasFezHojeHTML({
+      b1: { ts: 1000, hora: '07:53', quem: 'Duas Horas', acao: 'chamada' },
+      b2: { ts: 5000, hora: '18:20', quem: 'Duas Horas', acao: 'checkout' },
+      b3: { ts: 9000, quem: 'Duas Horas', acao: 'audit-FALHOU' },
+    }) || '');
+    check('e com duas horas conhecidas o intervalo sai inteiro: "das 07:53 às 18:20"',
+      out2.indexOf('das 07:53 às 18:20') >= 0, out2.slice(0, 300));
+    check('quem só tem registro sem hora nenhuma aparece com o traço, não com "undefined"',
+      String(ctx.blocoPessoasFezHojeHTML({ c1: { ts: 1, quem: 'Sem Hora', acao: 'audit-FALHOU' } }))
+        .indexOf('das --:-- às --:--') > 0);
+    check('a pessoa aparece com o papel e a contagem de ações',
+      out.indexOf('Teste Harness') > 0 && out.indexOf('plantonista') > 0 && out.indexOf('2 ações') > 0);
+    check('sem leitura, a tela DIZ que não sabe — nunca "ninguém usou o app"',
+      String(ctx.blocoPessoasFezHojeHTML(null)).indexOf('ainda não sei') > 0);
+    check('com leitura e nenhum registro, a frase é outra (honesta, e diferente)',
+      String(ctx.blocoPessoasFezHojeHTML({})).indexOf('Nenhuma ação registrada hoje ainda') > 0);
   } else {
-    check('renderPainelDia existe', false, 'função não encontrada — Painel do Dia não pode ser provado');
+    check('blocoPessoasFezHojeHTML existe', false, 'função não encontrada');
   }
   console.log('');
 
@@ -8506,8 +8585,11 @@ async function main() {
       JSON.stringify(grupos) === JSON.stringify(['Central Zêluz', 'Central Zêluz · AuAulândia',
         'Central Zêluz · Day Care', 'Central Zêluz · Planos e cobranças', 'Operação', 'Relatórios']),
       JSON.stringify(grupos));
+    // v-07 (08/set/2026, noite): 'painel' saiu do menu e quem herdou o lugar dele na Operação
+    // foi 'linhadotempo'. Esta lista tem de dizer o MESMO que o sidebar — conceder uma tela
+    // que não existe no menu é conceder nada. São as mesmas 16 chaves, com uma trocada.
     const CHAVES_DE_SEMPRE = ['checkin', 'conferencia', 'recepcao', 'cuidadovet', 'hospedagem', 'checkout',
-      'checkoutconf', 'emporio', 'painel', 'ficha', 'hospedes', 'pessoas', 'renovacao', 'reposicao',
+      'checkoutconf', 'emporio', 'linhadotempo', 'ficha', 'hospedes', 'pessoas', 'renovacao', 'reposicao',
       'orcamento', 'relatorios'];
     const chaves = navKeys.slice().sort();
     check('mordida — as CHAVES são exatamente as 16 de antes: nenhuma permissão nova nasceu, nenhuma sumiu',
@@ -9361,11 +9443,13 @@ async function main() {
     check('auditoria não lida = "sem leitura" (nunca "nenhuma falha" no escuro)',
       ctx.pdirAuditoriaHTML(null, 0).indexOf('Ainda não consegui ler a auditoria') >= 0 &&
       ctx.pdirAuditoriaHTML(null, 0).indexOf('Nenhuma gravação falhou') < 0);
-    check('dia limpo = "nenhuma gravação falhou", com o convite para o Painel do Dia',
+    // v-07 (08/set/2026): o Painel do Dia foi dissolvido — o convite passou a apontar para a
+    // Linha do tempo do dia, que é onde o rastro minuto a minuto passou a morar.
+    check('dia limpo = "nenhuma gravação falhou", com o convite para a Linha do tempo do dia',
       ctx.pdirAuditoriaHTML([], 0).indexOf('Nenhuma gravação falhou hoje') >= 0 &&
-      ctx.pdirAuditoriaHTML([], 0).indexOf('Painel do Dia') >= 0);
+      ctx.pdirAuditoriaHTML([], 0).indexOf('Linha do tempo do dia') >= 0);
     check('o feed mostra até 3 linhas e declara o resto; o bolso local aparece quando tem rastro esperando',
-      ctx.pdirAuditoriaHTML(falhas9.concat([{ detalhe: 'x', quem: '-', hora: '', ts: 1 }]), 2).indexOf('E mais 1 no Painel do Dia') >= 0 &&
+      ctx.pdirAuditoriaHTML(falhas9.concat([{ detalhe: 'x', quem: '-', hora: '', ts: 1 }]), 2).indexOf('E mais 1 na Linha do tempo do dia') >= 0 &&
       ctx.pdirAuditoriaHTML(falhas9, 2).indexOf('2 rastros esperam no bolso deste aparelho') >= 0 &&
       ctx.pdirAuditoriaHTML(falhas9, 0).indexOf('bolso deste aparelho') < 0);
   } else {
@@ -9847,7 +9931,7 @@ async function main() {
       /data-acc="paineis"/.test(nav12) && /data-acc-toggle="paineis"/.test(nav12));
     [['painelmeu', 'Meu Dashboard'], ['consultoras', 'Dashboard das Consultoras'],
      ['painel-amanda', 'Dashboard da Amanda'], ['paineloperacao', 'Dashboard da Márcia'],
-     ['painel-diretoria', 'Dashboard da Adriana'], ['painel', 'Painel do Dia']].forEach(([v, nome]) => {
+     ['painel-diretoria', 'Dashboard da Adriana']].forEach(([v, nome]) => {
       const mm = new RegExp('<a data-v="' + v + '"[^>]*>[\\s\\S]{0,200}?<span>([^<]+)</span></a>').exec(nav12);
       check('2 · o item ' + v + ' se chama "' + nome + '" no menu', !!mm && mm[1] === nome, mm ? mm[1] : 'sumiu');
     });
@@ -9856,10 +9940,12 @@ async function main() {
       /consultoras:\['Dashboard das Consultoras'/.test(html) &&
       /'painel-amanda':\['Dashboard da Amanda'/.test(html) &&
       /paineloperacao:\['Dashboard da Márcia'/.test(html) &&
-      /'painel-diretoria':\['Dashboard da Adriana'/.test(html) &&
-      /painel:\['Painel do Dia'/.test(html));
-    check('2 · o Painel do Dia continua com o nome antigo (ela não pediu para mudar)',
-      nav12.indexOf('<span>Painel do Dia</span>') > 0);
+      /'painel-diretoria':\['Dashboard da Adriana'/.test(html));
+    // v-07 (08/set/2026, noite): "o Painel do Dia é um dashboard e precisa ir para quem
+    // precisa ver". O item saiu do menu — a tela continua existindo por link, sem item.
+    check('2 · o "Painel do Dia" não tem mais item no menu (a tela foi dissolvida nos dashboards)',
+      nav12.indexOf('<span>Painel do Dia</span>') < 0 && nav12.indexOf('data-v="painel"') < 0
+      && html.indexOf('<section class="view" id="v-painel">') > 0);
 
     // ---- 5: a ordem dentro da Central Zêluz ----
     const iCentral = nav12.indexOf('data-acc-toggle="central"');
@@ -9867,15 +9953,16 @@ async function main() {
     const central12 = nav12.slice(iCentral, iOperacao);
     const ordemCentral = [...central12.matchAll(/data-acc-toggle="(c-[a-z]+)"|<a data-v="([a-z-]+)"/g)]
       .map((m) => m[1] || m[2]);
-    check('5 · na Central Zêluz vem Peludinhos, depois Planos e cobranças, e só então os itens do dia',
-      ordemCentral[0] === 'c-peludinhos' &&
-      ordemCentral.indexOf('c-planos') > ordemCentral.indexOf('peso') &&
-      ordemCentral.indexOf('checkin') > ordemCentral.indexOf('c-planos'),
+    // v-07 (08/set/2026, 23h30): "Central Zêluz em três partes — Peludinhos, AuAulândia
+    // (todos os itens pertinentes à hospedagem) e Day Care". Nesta ordem.
+    check('5 · a Central Zêluz tem as três partes na ordem dela: Peludinhos, AuAulândia, Day Care',
+      JSON.stringify(ordemCentral.filter((x) => /^c-/.test(x))) === JSON.stringify(
+        ['c-peludinhos', 'c-auaulandia', 'c-daycare']),
       JSON.stringify(ordemCentral));
-    check('5 · os itens do dia mantiveram a ordem que já tinham (chegada → saída)',
-      JSON.stringify(ordemCentral.slice(ordemCentral.indexOf('checkin'))) === JSON.stringify(
-        ['checkin', 'checkoutconf', 'orcamento', 'recepcao', 'cuidadovet', 'emporio', 'reposicao', 'dashdc']),
-      JSON.stringify(ordemCentral.slice(ordemCentral.indexOf('checkin'))));
+    check('5 · "Planos e cobranças" entrou INTEIRO no Day Care, no fim dele',
+      JSON.stringify(ordemCentral.slice(ordemCentral.indexOf('c-daycare'))) === JSON.stringify(
+        ['c-daycare', 'emporio', 'reposicao', 'dashdc', 'renovacao', 'lancar-pagamento']),
+      JSON.stringify(ordemCentral.slice(ordemCentral.indexOf('c-daycare'))));
 
     // ---- 6: a pesquisa com a família ----
     check('6 · o item alergia se chama "Pesquisa com a Família Multiespécie" no menu e no titles{}',
@@ -9900,7 +9987,7 @@ async function main() {
     };
     const ACESSO_ESPERADO = {
       inicio: 'op-only', mesa: 'so-mesa', painelmeu: '', consultoras: '', 'painel-amanda': '',
-      paineloperacao: '', 'painel-diretoria': '', painel: 'so-master',
+      paineloperacao: '', 'painel-diretoria': '', linhadotempo: 'so-master',
       conferencia: 'so-conferencia', hospedes: 'so-hosp', hospedagem: '', gestdia: 'so-gestao',
       checkout: '', abertura: 'so-abertura', checkin: '', checkoutconf: 'so-conf-saida',
       orcamento: 'so-recepcao', recepcao: 'so-recepcao', cuidadovet: 'so-vet', emporio: 'so-emporio',
@@ -9911,6 +9998,8 @@ async function main() {
     };
     const achado = classesDe(nav12);
     const difere = Object.keys(ACESSO_ESPERADO).filter((k) => achado[k] !== ACESSO_ESPERADO[k]);
+    // v-07: a ÚNICA diferença permitida é o item "Painel do Dia", que saiu — e a classe
+    // so-master dele passou inteira para a "Linha do tempo do dia". A contagem continua 36.
     check('promessa — os 36 itens do menu mantiveram exatamente as classes so-*/op-only que já tinham',
       difere.length === 0 && Object.keys(achado).length === Object.keys(ACESSO_ESPERADO).length,
       JSON.stringify(difere.map((k) => k + ': "' + achado[k] + '" ≠ "' + ACESSO_ESPERADO[k] + '"')));
@@ -10064,6 +10153,271 @@ async function main() {
           'antes ' + abertosAntes.length + ' → agora ' + abertosAgora.length + ': ' + JSON.stringify(abertosAgora));
       }
     }
+  }
+  console.log('');
+
+  // ════════════════════════════════════════════════════════════════════════════════
+  // v-07 (08/set/2026, 23h30) — O PAINEL DO DIA FOI DISSOLVIDO
+  // Adriana: "o Painel do Dia é um dashboard e precisa ir para quem precisa ver."
+  // Cada bloco foi para a mesa de quem AGE sobre ele; dois deles aparecem em dois
+  // dashboards e são a MESMA função, nunca uma cópia.
+  // ════════════════════════════════════════════════════════════════════════════════
+  console.log('v-07 — o Painel do Dia dissolvido: cada bloco na mesa de quem age:');
+  {
+    const trecho = (nome) => {
+      const i = html.indexOf('function ' + nome + '(');
+      if (i < 0) return '';
+      const f = html.indexOf('\n  }', i);
+      return f < 0 ? html.slice(i) : html.slice(i, f);
+    };
+    const poA = trecho('poAbrir'), pdirA = trecho('pdirAbrir'), paA = trecho('paAbrir');
+    check('as três funções de dashboard foram achadas para a leitura',
+      poA.length > 200 && pdirA.length > 200 && paA.length > 200);
+
+    // ---- A1: "Urgente a resolver" → Dashboard da Márcia ----
+    check('A1 · "Urgente a resolver" existe e mora SÓ no Dashboard da Márcia',
+      /function blocoUrgenteHTML\(\)/.test(html)
+      && poA.indexOf('blocoUrgenteHTML()') > 0
+      && pdirA.indexOf('blocoUrgenteHTML()') < 0 && paA.indexOf('blocoUrgenteHTML()') < 0);
+    if (typeof ctx.blocoUrgenteHTML === 'function') {
+      const u = String(ctx.blocoUrgenteHTML() || '');
+      check('A1 · o quadro dela fala de quem saiu e de ficha por migrar — e diz onde foram o resto',
+        u.indexOf('Urgente a resolver') > 0
+        && u.indexOf('A prevenção vencida e o peso são da Amanda') > 0);
+      check('A1 · e NÃO carrega mais a prevenção vencida, o peso nem o "Partiram"',
+        u.indexOf('não podem frequentar') < 0 && u.indexOf('Falta pesar') < 0
+        && u.indexOf('Partiram') < 0);
+    }
+
+    // ---- A2: prevenção vencida → Dashboard da Amanda ----
+    check('A2 · "Prevenção vencida" existe e mora SÓ no Dashboard da Amanda',
+      /function blocoPrevencaoVencidaHTML\(\)/.test(html)
+      && paA.indexOf('blocoPrevencaoVencidaHTML()') > 0
+      && poA.indexOf('blocoPrevencaoVencidaHTML()') < 0
+      && pdirA.indexOf('blocoPrevencaoVencidaHTML()') < 0);
+    if (typeof ctx.blocoPrevencaoVencidaHTML === 'function') {
+      const v = String(ctx.blocoPrevencaoVencidaHTML() || '');
+      check('A2 · o quadro diz que essa é a lista que BARRA alguém na porta, e abre a Prevenção',
+        v.indexOf('não podem frequentar') > 0
+        && (v.indexOf("paIr('vacinas')") > 0 || v.indexOf('Prevenção em dia') > 0));
+    }
+
+    // ---- A3: "Partiram" removido (o cartaz do painel) — provado acima, junto do óbito ----
+
+    // ---- A4: "Falta pesar" com DATA → Dashboard da Amanda ----
+    check('A4 · "Falta pesar" existe e mora SÓ no Dashboard da Amanda, ao lado da prevenção',
+      /function blocoFaltaPesarHTML\(\)/.test(html)
+      && paA.indexOf('blocoFaltaPesarHTML()') > 0
+      && poA.indexOf('blocoFaltaPesarHTML()') < 0 && pdirA.indexOf('blocoFaltaPesarHTML()') < 0);
+    check('A4 · ele NÃO recalcula nada: usa a MESMA lista da tela Peso (pesoAtrasoLista)',
+      /function blocoFaltaPesarHTML\(\)\{[\s\S]{0,300}?lista=pesoAtrasoLista\(\);/.test(html));
+    if (typeof ctx.blocoFaltaPesarHTML === 'function') {
+      const bkpPelFP = ctx.PELUDINHOS;
+      vm.runInContext("__bkpCadFP = (typeof pelCadCache==='undefined' || !pelCadCache) ? {} : pelCadCache;", ctx);
+      const bkpCadFP = ctx.__bkpCadFP;
+      let fp = '';
+      try {
+        const hoje = new Date(ctx.hojeISO() + 'T12:00:00');
+        const menos = (d) => new Date(hoje.getTime() - d * 86400000).toISOString().slice(0, 10);
+        vm.runInContext('PELUDINHOS = __pelsFP; pelCadCache = __cadFP;', Object.assign(ctx, {
+          __pelsFP: [{ n: 'Maya', tutor: 'Fernanda' }, { n: 'Dolly', tutor: 'Carolina' }],
+          __cadFP: {
+            'maya__fernanda': { pesos: [{ data: menos(200), kg: 4.7 }] },
+            'dolly__carolina': { pesos: [] },
+          },
+        }));
+        fp = String(ctx.blocoFaltaPesarHTML() || '');
+      } finally {
+        vm.runInContext('PELUDINHOS = __bkpPelFP; pelCadCache = __bkpCadFP;',
+          Object.assign(ctx, { __bkpPelFP: bkpPelFP, __bkpCadFP: bkpCadFP }));
+      }
+      check('A4 · cada linha traz a DATA do último peso e há quantos dias (foi o que ela pediu)',
+        /Último: 4,7 kg em \d{2}\/\d{2}\/\d{4} · há 200 dias/.test(fp), fp.slice(0, 500));
+      check('A4 · quem nunca subiu na balança é dito assim, honesto',
+        fp.indexOf('Nunca foi pesado') > 0);
+      check('A4 · a régua escrita no quadro é a de 30 dias, e diz quem escolhe o dia',
+        fp.indexOf('A casa pesa de 30 em 30 dias — a Gestão decide o dia') > 0, fp.slice(0, 300));
+      check('A4 · tocar na linha leva à tela Peso, onde aquilo se resolve',
+        fp.indexOf("paIr('peso')") > 0);
+    }
+
+    // ---- A5: "Plantão agora" → Dashboard da Adriana ----
+    check('A5 · "Plantão agora" existe e mora SÓ no Dashboard da Adriana',
+      /function blocoPlantaoAgoraHTML\(\)/.test(html)
+      && pdirA.indexOf('blocoPlantaoAgoraHTML()') > 0
+      && poA.indexOf('blocoPlantaoAgoraHTML()') < 0 && paA.indexOf('blocoPlantaoAgoraHTML()') < 0);
+    if (typeof ctx.blocoPlantaoAgoraHTML === 'function') {
+      const pa = String(ctx.blocoPlantaoAgoraHTML() || '');
+      check('A5 · o quadro diz que é o combinado da escala, não a presença',
+        pa.indexOf('É o combinado, não a presença') > 0);
+    }
+
+    // ---- A6: "Cumprimento dos protocolos" → Adriana E Márcia, UMA função ----
+    check('A6 · "Cumprimento dos protocolos" é declarado UMA vez e usado nos DOIS dashboards',
+      (html.match(/function blocoProtocolosHTML\(/g) || []).length === 1
+      && poA.indexOf('blocoProtocolosHTML(') > 0 && pdirA.indexOf('blocoProtocolosHTML(') > 0);
+    check('A6 · a conta dos protocolos também é uma só (pdiaProtocolos), e não nasce no HTML',
+      (html.match(/function pdiaProtocolos\(/g) || []).length === 1
+      && /function blocoProtocolosHTML\(D\)\{[\s\S]{0,900}?protos=pdiaProtocolos\(D\);/.test(html));
+    check('A6 · o dia é lido por UM leitor só (pdiaLer), com cache — a casa não paga duas vezes',
+      (html.match(/function pdiaLer\(/g) || []).length === 1
+      && poA.indexOf('pdiaLer(') > 0 && pdirA.indexOf('pdiaLer(') > 0
+      && /PDIA_CACHE\.dia===k && \(Date\.now\(\)-PDIA_CACHE\.quando\)<60000/.test(html));
+    if (typeof ctx.blocoProtocolosHTML === 'function') {
+      const semDia = String(ctx.blocoProtocolosHTML(null) || '');
+      check('A6 · sem o dia lido, o quadro DIZ que ainda não sabe — nunca "0% cumprido"',
+        semDia.indexOf('Ainda não consegui ler o dia de hoje') > 0 && semDia.indexOf('0%') < 0,
+        semDia.slice(0, 260));
+      const comDia = String(ctx.blocoProtocolosHTML({
+        chamada: { a: 'veio', b: 'veio' }, almoco: {}, almTurno: { inicio: '11:40', fim: '12:30' },
+        almPrep: {}, almFinal: {}, checkout: {},
+        auditoria: { x: { ts: 1, hora: '08:10', quem: 'Amanda', acao: 'chamada' } },
+      }) || '');
+      check('A6 · com o dia lido, ele diz quantos protocolos foram cumpridos e quantos no horário',
+        /\d+ de 8 cumpridos · \d+ no horário/.test(comDia), comDia.slice(0, 400));
+      check('A6 · e manda ajustar a janela em Configurações — o dashboard não grava régua nenhuma',
+        comDia.indexOf('Configurações › Horários esperados') > 0);
+    }
+
+    // ---- A7: "O que cada pessoa fez hoje" → Configurações › Logins e segurança ----
+    check('A7 · o bloco foi para Configurações, numa seção chamada "Logins e segurança"',
+      html.indexOf('<h2 style="font-size:19px">Logins e segurança</h2>') > 0
+      && html.indexOf('id="cfgLoginsWrap"') > 0
+      && /if\(v==='config'\)\{[^\n]*cfgLoginsCarregar\(\);/.test(html));
+    check('A7 · a tela Time NÃO foi tocada: senhas e colaboradores continuam lá',
+      html.indexOf("['ativ','p-ativ','Atividades'],['monitores','p-monitores','Colaboradores'],['senhas','p-senhas','Senhas']") > 0
+      && html.indexOf('id="cfgLoginsWrap"') > html.indexOf('id="v-config"'));
+    check('A7 · e a seção diz onde se muda senha e papel (é em Time, não aqui)',
+      html.indexOf('a tela é <strong>Operação &rsaquo; Time</strong>') > 0);
+
+    // ---- A8: "Linha do tempo do dia" → tela própria na Operação, por MÊS ----
+    check('A8 · a tela existe, abre sozinha e herdou a classe so-master do Painel do Dia',
+      /<section class="view" id="v-linhadotempo">/.test(html)
+      && /if\(v==='linhadotempo'\)\{ if\(typeof ltAbrir==='function'\) ltAbrir\(\); \}/.test(html)
+      && /<a data-v="linhadotempo" class="so-master"/.test(html));
+    check('A8 · a navegação é por MÊS e depois por DIA ("senão é bagunça")',
+      /function ltMeses\(\)/.test(html) && /function ltDiasDoMes\(m\)/.test(html)
+      && /function ltEscolherMes\(m\)/.test(html) && /function ltEscolherDia\(iso\)/.test(html)
+      && html.indexOf('Escolha o mês') > 0 && html.indexOf('Escolha o dia') > 0);
+    check('A8 · só o dia escolhido é lido do banco — nada baixa o mês inteiro',
+      html.indexOf('Cada dia é lido do banco só quando a senhora toca nele') > 0
+      && /function ltLer\(iso\)\{[\s\S]{0,400}?DB\.ref\('daycare\/auditoria\/'\+iso\)\.once\('value'\)/.test(html));
+    if (typeof ctx.ltMeses === 'function') {
+      const meses = ctx.ltMeses();
+      check('A8 · a lista de meses começa em junho/2026 e vai até o mês corrente, do mais novo ao mais velho',
+        meses[meses.length - 1] === '2026-06' && meses[0] === ctx.hojeISO().slice(0, 7)
+        && meses.length >= 4, JSON.stringify(meses));
+      check('A8 · e os rótulos são em português, com o nome do mês',
+        ctx.ltMesRotulo('2026-06') === 'Junho de 2026'
+        || /junho/i.test(ctx.ltMesRotulo('2026-06')), ctx.ltMesRotulo('2026-06'));
+      const diasSet = ctx.ltDiasDoMes('2026-07');
+      check('A8 · um mês fechado traz os 31 dias, do mais recente para o mais antigo',
+        diasSet.length === 31 && diasSet[0] === '2026-07-31' && diasSet[30] === '2026-07-01');
+      const diasHoje = ctx.ltDiasDoMes(ctx.hojeISO().slice(0, 7));
+      check('A8 · e o mês corrente para em HOJE: dia que ainda não aconteceu não vira botão',
+        diasHoje[0] === ctx.hojeISO()
+        && diasHoje.every((d) => d <= ctx.hojeISO()), JSON.stringify(diasHoje.slice(0, 3)));
+    }
+    check('A8 · a tela só OBSERVA: não existe uma gravação sequer nas funções dela',
+      !/DB\.ref\([^)]*\)\.(set|update|push|remove|transaction)\(/.test(
+        html.slice(html.indexOf('function ltMeses('), html.indexOf('function ltAbrir('))));
+
+    // ---- A9: as doses sem dono saíram ----
+    check('A9 · o cartaz das "doses SEM o nome de quem deu" saiu ("pode tirar isso")',
+      html.indexOf('de medicação SEM o nome de quem deu') < 0
+      && html.indexOf('São registros de ANTES de 11/ago/2026') < 0);
+    check('A9 · mas a coluna "Doses dadas" por plantonista continua de pé',
+      html.indexOf('<th>Doses dadas</th>') > 0);
+
+    // ---- A10: "Tempo das atividades" virou GRÁFICO, nos dois dashboards ----
+    check('A10 · o gráfico é declarado UMA vez e usado nos DOIS dashboards',
+      (html.match(/function blocoTempoAtividadesHTML\(/g) || []).length === 1
+      && poA.indexOf('blocoTempoAtividadesHTML(') > 0 && pdirA.indexOf('blocoTempoAtividadesHTML(') > 0);
+    check('A10 · as barras são CSS puro — nenhuma biblioteca de gráfico entrou no app',
+      /\.atv-barra\{display:block;height:100%/.test(html)
+      && html.indexOf('chart.js') < 0 && html.indexOf('Chart.js') < 0 && html.indexOf('d3.') < 0);
+    check('A10 · a fonte é daycare/tempo-atividade — a MESMA do Ritmo do Time',
+      /function atvSemanaLer\(dia\)\{[\s\S]{0,700}?daycare\/tempo-atividade\//.test(html)
+      && /get\('daycare\/tempo-atividade\/'\+k\)/.test(html));
+    if (typeof ctx.atvTempoDoDia === 'function') {
+      const r = ctx.atvTempoDoDia({
+        almoco: { inicio: '11:30', fim: '12:30', caes: 40, quemInicio: 'Amanda' },
+        ea: { inicio: '09:00', fim: '09:20', caes: 40, quemInicio: 'Leticya' },
+        jogos: { inicio: '15:00', quemInicio: 'Giulia' },              // começou e não encerrou
+        massagem: { inicio: '16:00', fim: '16:10' },                    // sem o nº de FILHOts
+      });
+      check('A10 · só entra atividade ENCERRADA — a que ninguém fechou fica de fora e é contada à parte',
+        r.linhas.length === 3 && r.abertas === 1
+        && r.linhas.every((l) => l.slug !== 'jogos'),
+        JSON.stringify({ n: r.linhas.length, abertas: r.abertas }));
+      check('A10 · a maior barra vem primeiro, e os minutos são a duração de verdade',
+        r.linhas[0].slug === 'almoco' && r.linhas[0].min === 60 && r.linhas[1].min === 20,
+        JSON.stringify(r.linhas.map((l) => [l.slug, l.min])));
+      check('A10 · min/FILHOt é o que compara um dia de 40 com um de 50 (a lei de 11/ago)',
+        Math.abs(r.linhas[0].porPet - 1.5) < 1e-9 && Math.abs(r.linhas[1].porPet - 0.5) < 1e-9,
+        JSON.stringify(r.linhas.map((l) => l.porPet)));
+      check('A10 · sem o número de FILHOts do dia, min/FILHOt fica nulo — não se inventa divisor',
+        r.linhas.filter((l) => l.slug === 'massagem')[0].porPet === null);
+      check('A10 · o slug vira o nome que a casa usa (a mesma lista de atividades do Day Care)',
+        r.linhas[0].nome === 'Almoço' && r.linhas.some((l) => /Enriquecimento/.test(l.nome)),
+        JSON.stringify(r.linhas.map((l) => l.nome)));
+      const sem = ctx.atvTempoSemana([
+        { almoco: { inicio: '11:30', fim: '12:30', caes: 40 } },
+        { almoco: { inicio: '11:30', fim: '12:00', caes: 30 } },
+      ]);
+      // dia 1: 60 min / 40 FILHOts = 1,5 · dia 2: 30 min / 30 FILHOts = 1,0 → média 1,25
+      check('A10 · a semana ao lado é a MÉDIA de min/FILHOt dos dias que vieram',
+        sem.almoco.n === 2 && Math.abs(sem.almoco.media - 1.25) < 1e-9, JSON.stringify(sem));
+      const g = String(ctx.blocoTempoAtividadesHTML({
+        almoco: { inicio: '11:30', fim: '12:30', caes: 40 },
+      }, sem) || '');
+      check('A10 · o gráfico desenha barra com largura em %, o número exato ao lado e a semana',
+        /<i class="atv-barra" style="width:100%"><\/i>/.test(g)
+        && g.indexOf('1h00') > 0 && g.indexOf('1,5 min/FILHOt') > 0
+        && g.indexOf('semana: 1,3 min/FILHOt (2 dias)') > 0, g.slice(0, 700));
+      check('A10 · sem leitura, o gráfico DIZ que não sabe — nunca desenha barra vazia',
+        String(ctx.blocoTempoAtividadesHTML(null, null)).indexOf('Ainda não consegui ler o tempo das atividades') > 0);
+    }
+
+    // ---- B: a Central Zêluz em três partes (a estrutura já foi mordida no bloco do menu) ----
+    check('B · a Central Zêluz virou Peludinhos · AuAulândia · Day Care, nessa ordem',
+      (() => {
+        const i = html.indexOf('data-acc-toggle="central"');
+        const f = html.indexOf('data-acc-toggle="operacao"');
+        const partes = [...html.slice(i, f).matchAll(/data-acc-toggle="(c-[a-z]+)"/g)].map((m) => m[1]);
+        return JSON.stringify(partes) === JSON.stringify(['c-peludinhos', 'c-auaulandia', 'c-daycare']);
+      })());
+
+    // ---- C: a Operação em ordem alfabética ----
+    check('C · a Operação está em ordem alfabética, e o submenu do Time continua colado nele',
+      (() => {
+        const i = html.indexOf('data-acc-toggle="operacao"');
+        const f = html.indexOf('data-acc-toggle="embreve"');
+        const bloco = html.slice(i, f);
+        const rotulos = [...bloco.matchAll(/<a data-v="[a-z-]+"[^>]*>[\s\S]{0,200}?<span>([^<]+)<\/span><\/a>/g)]
+          .map((m) => m[1]);
+        const ordenado = rotulos.slice().sort((a, b) => a.localeCompare(b, 'pt', { sensitivity: 'base' }));
+        return JSON.stringify(rotulos) === JSON.stringify(ordenado)
+          && rotulos.length === 7
+          && bloco.indexOf('id="pSubnav"') > bloco.indexOf('data-v="pessoas"');
+      })(),
+      (() => {
+        const i = html.indexOf('data-acc-toggle="operacao"');
+        const f = html.indexOf('data-acc-toggle="embreve"');
+        return JSON.stringify([...html.slice(i, f).matchAll(/<a data-v="[a-z-]+"[^>]*>[\s\S]{0,200}?<span>([^<]+)<\/span><\/a>/g)].map((m) => m[1]));
+      })());
+
+    // ---- a promessa desta versão: os quadros só OBSERVAM e nada grava calado ----
+    const blocos = html.slice(html.indexOf('function blocoUrgenteHTML('),
+                              html.indexOf('function cfgLoginsCarregar('));
+    check('v-07 · nenhum dos quadros novos grava no banco (dashboard só observa)',
+      !/DB\.ref\([^)]*\)\.(set|update|push|remove|transaction)\(/.test(blocos),
+      blocos.slice(0, 120));
+    check('v-07 · nenhuma leitura nova ficou com .catch vazio — toda falha deixa rastro',
+      !/\.catch\(function\([a-z]*\)\{\s*\}\)/.test(
+        html.slice(html.indexOf('function pdiaLer('), html.indexOf('function ltAbrir('))));
+    check('v-07 · a versão foi carimbada como 2026-09-08-07',
+      /const APP_VERSAO='2026-09-08-07';/.test(html));
   }
   console.log('');
 
