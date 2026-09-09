@@ -873,6 +873,13 @@
   .renov-msgs{display:flex;flex-direction:column;gap:14px}
   .renov-msg-tit{font-size:12.5px;font-weight:800;color:var(--z-blue);margin-bottom:5px}
     .peso-hist{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+    /* Linha da lista de quem está sem pesar (08/set/2026): é um botão, porque tocar nela
+       leva direto a pesar aquele FILHOt — quadro clicável leva ao item. */
+    .peso-atraso-linha{display:flex;gap:10px;align-items:center;width:100%;text-align:left;
+      background:var(--z-white);border:1.5px solid var(--line);border-radius:12px;
+      padding:9px 11px;margin-top:6px;cursor:pointer;min-height:48px}
+    .peso-atraso-linha:hover{border-color:var(--z-blue-soft)}
+    .peso-atraso-linha:active{transform:scale(.99)}
   .peso-hist span{font-size:11.5px;font-weight:600;color:var(--z-blue);background:var(--z-cream-warm);border:1px solid var(--line);border-radius:7px;padding:2px 8px}
   /* despertador do banho — 5 min antes, para ninguem esquecer de descer com o FILHOt */
   /* Os alarmes ficam ACIMA da tela trancada (z-index 180): tela bloqueada não pode esconder um
@@ -1341,10 +1348,10 @@
   /* ...e o caminho até o Peso, incluindo os dois grupos que o contêm — senão o item
      existiria dentro de uma gaveta invisível (Adriana, 28/ago/2026). */
   body[data-role="vet"] .nav a[data-v="peso"],
+  /* Reagrupamento de 08/set/2026: a veterinária é da Central Zêluz. O Cuidado Vet ficou
+     na raiz da categoria (por isso basta o cabeçalho dela) e o Peso mora no
+     sub-cabeçalho Peludinhos — os dois cabeçalhos do caminho precisam aparecer. */
   body[data-role="vet"] .nav .acc[data-acc="central"]>a.grp,
-  /* Cuidado Vet mudou de gaveta com a unificação do menu (04/set/2026): agora mora em
-     Central Zêluz › AuAulândia — a veterinária precisa ver este sub-cabeçalho também. */
-  body[data-role="vet"] .nav .acc[data-acc="c-auaulandia"]>a.grp,
   body[data-role="vet"] .nav .acc[data-acc="c-peludinhos"]>a.grp{display:flex !important}
   /* Onda 4 — Conferência Check-in: no menu só para a Wandela (papel "conferencia") + Gestão/Supervisão/Diretoria */
   /* Peludinhos Hóspedes — quem mexe em data de estadia: Gestão, Supervisão, Consultora e Diretoria */
@@ -2145,7 +2152,7 @@
   <nav class="nav" id="nav">
     <button class="nav-collapse-btn" onclick="toggleSidebarColapso()" title="Recolher menu" aria-label="Recolher menu"><span data-icon="chevron"></span></button>
 
-    <!-- ÍNDICE APROVADO PELA ADRIANA (26/ago/2026) — docs/INDICE-MENU-APP.md.
+    <!-- ÍNDICE APROVADO PELA ADRIANA — docs/INDICE-MENU-APP.md (reagrupado em 08/set/2026).
          O menu tem de ser autoexplicativo: cada item tem TÍTULO curto e uma DICA
          (o title=, que é a mesma frase do subtítulo em titles{}). São TRÊS níveis, cada um
          um degrau abaixo do outro (Adriana, 27/ago/2026): CATEGORIA recolhível (17/700 creme,
@@ -2154,89 +2161,93 @@
          classes so-*/op-only que já tinha. Só mudou grupo, ordem, título e dica. -->
     <a class="active op-only" data-v="inicio" title="Visão geral do dia"><span data-icon="home"></span><span>Início</span></a>
     <a data-v="mesa" class="so-mesa" title="Tudo o que espera por você hoje — toque num quadro para ir direto ao item."><span data-icon="list-check"></span><span>O que fazer hoje</span></a>
-    <!-- MEU PAINEL (Fase 2.1) — a fatia de quem trabalha com o FILHOt. Fica na RAIZ, colado
-         em "O que fazer hoje", porque são o mesmo gesto para públicos diferentes: a mesa do
-         dia da Central/Operação e a rota do dia do Monitor. O índice aprovado (26/ago) põe
-         "Painel" na raiz, sem grupo — este é o primeiro pedaço dele.
-         Nasce ESCONDIDO: quem mostra é aplicarPermMenu(), lendo a tabela PERM. Nada de
-         classe so-* nova (regra 3 da Fase 2: permissão em um lugar só). -->
-    <a data-v="painelmeu" style="display:none" title="A sua fatia do dia: o seu horário, o seu plano, o que ficou aberto e os seus pontos."><span data-icon="sun"></span><span>Meu Painel</span></a>
-    <!-- PAINEL DA DIRETORIA (v-09) — a fatia da Adriana. Fica na RAIZ, como o Meu Painel,
-         de propósito: "Adriana = tudo" (decisão dela, 25/ago) — a fatia dela não é de
-         nenhuma categoria, é a casa inteira mais o dinheiro do mês. Não entra na Central
-         Zêluz (que é a mesa das Consultoras e da Supervisão) nem na Operação (a mesa da
-         Márcia): o índice aprovado põe "Painel" na raiz, e este é o painel de quem
-         responde por tudo. Nasce ESCONDIDO: quem mostra é aplicarPermMenu(), lendo a
-         tabela PERM ('painel-diretoria'). Nada de classe so-* nova (regra 3 da Fase 2:
-         permissão em um lugar só). -->
-    <a data-v="painel-diretoria" style="display:none" title="A casa inteira e o dinheiro do mês — a visão de quem responde por tudo."><span data-icon="chart"></span><span>Painel da Diretoria</span></a>
 
-    <!-- Achado 8 da varredura (04/set/2026): o menu tinha DUAS categorias "AuAulândia" e
-         DUAS "Day Care" — uma dentro de "Serviços", outra dentro de "Central Zêluz". A
-         mesma casa em duas gavetas: ninguém sabia em qual procurar. Unificado: cada
-         serviço tem UM sub-cabeçalho, na Central Zêluz, com os itens na ordem do dia
-         (chegada → cuidado → saída). As classes so-* de cada item seguem mandando quem
-         vê o quê — nenhuma permissão mudou de dono. -->
-    <div class="acc" data-acc="central">
-      <a class="grp nav-parent" data-acc-toggle="central"><span data-icon="bell"></span><span>Central Zêluz</span><span class="acc-caret" aria-hidden="true"></span></a>
+    <!-- PAINÉIS (08/set/2026) — Adriana: "a sidebar virou bagunça". Os painéis estavam
+         espalhados por três lugares: dois na raiz, dois na Central Zêluz e dois na
+         Operação. Agora moram numa categoria só, e essa categoria guarda SÓ painel.
+         A ordem sobe do chão para o alto: quem cuida do FILHOt, quem atende o tutor,
+         quem supervisiona, quem toca a casa, quem responde por tudo.
+         REGRA MANTIDA: ninguém ganhou nem perdeu acesso — os cinco primeiros nascem
+         escondidos e quem mostra é o aplicarPermMenu() (tabela PERM); o Painel do Dia
+         segue so-master, como era na Operação. -->
+    <div class="acc" data-acc="paineis">
+      <a class="grp nav-parent" data-acc-toggle="paineis"><span data-icon="chart"></span><span>Painéis</span><span class="acc-caret" aria-hidden="true"></span></a>
       <div class="acc-panel">
-        <!-- Fica na raiz da categoria de propósito: não é de AuAulândia nem de Day Care,
-             é o cadastro único dos dois (Adriana, 26/ago/2026). -->
-        <a data-v="ficha" class="so-gestao nav-destaque" title="Um cadastro só, para Day Care e AuAulândia — tudo começa aqui."><span data-icon="id-card"></span><span>Cadastro de Peludinhos</span></a>
-        <!-- PAINEL DAS CONSULTORAS (v-07) — a mesa do dia de quem atende na Central.
-             Vem logo depois do Cadastro (que É o primeiro item da categoria, por decisão
-             de 26/ago — o harness morde isso). Nasce ESCONDIDO; quem mostra é
-             aplicarPermMenu(), lendo a tabela PERM ('painel-consultoras'). Nada de
-             classe so-* nova (regra 3 da Fase 2). -->
+        <a data-v="painelmeu" style="display:none" title="A sua fatia do dia: o seu horário, o seu plano, o que ficou aberto e os seus pontos."><span data-icon="sun"></span><span>Meu Painel</span></a>
         <a data-v="consultoras" style="display:none" title="A sua mesa do dia: o Seu dia e os cinco quadros que precisam de você."><span data-icon="sun"></span><span>Painel das Consultoras</span></a>
-        <!-- PAINEL DA SUPERVISÃO (v-08) — a mesa da Amanda: tudo que está pendente ou
-             resolvido na comunicação da Central com os tutores, com quem e quando. Vive
-             na Central Zêluz porque é a supervisão DELA. Nasce escondido; quem mostra é
-             aplicarPermMenu(), lendo a tabela PERM ('painel-amanda') — nada de classe
-             so-* nova (regra 3 da Fase 2). O Cadastro segue sendo o 1º item. -->
         <a data-v="painel-amanda" style="display:none" title="Pendente e resolvido na comunicação com os tutores — com quem e quando."><span data-icon="list-check"></span><span>Painel da Supervisão</span></a>
-        <div class="acc" data-acc="c-auaulandia">
-          <a class="grp grp-sub nav-parent" data-acc-toggle="c-auaulandia"><span>AuAulândia</span><span class="acc-caret" aria-hidden="true"></span></a>
+        <a data-v="paineloperacao" style="display:none" title="A casa de hoje num lugar só: quem veio, quem faltou, o tempo do time, as noites que vêm aí e o acerto."><span data-icon="chart"></span><span>Painel da Operação</span></a>
+        <a data-v="painel-diretoria" style="display:none" title="A casa inteira e o dinheiro do mês — a visão de quem responde por tudo."><span data-icon="chart"></span><span>Painel da Diretoria</span></a>
+        <a data-v="painel" class="so-master" title="Auditoria e cumprimento de protocolos"><span data-icon="chart"></span><span>Painel do Dia</span></a>
+      </div>
+    </div>
+
+    <!-- SERVIÇOS (08/set/2026) — o trabalho de quem fica com o FILHOt: monitor e
+         plantonista. AuAulândia e Day Care ficam aqui, cada um no seu sub-cabeçalho.
+         A Central Zêluz, logo abaixo, é o outro lado do mesmo dia: quem fala com o tutor
+         (consultoras, supervisão da Amanda e a veterinária). O critério é QUEM FAZ, e por
+         isso nenhuma tela aparece nos dois lados — cada uma mora num lugar só.
+         REGRA MANTIDA: nenhum item trocou de classe so-*/op-only ao mudar de gaveta. -->
+    <div class="acc" data-acc="servicos">
+      <a class="grp nav-parent" data-acc-toggle="servicos"><span data-icon="paw"></span><span>Serviços</span><span class="acc-caret" aria-hidden="true"></span></a>
+      <div class="acc-panel">
+        <div class="acc" data-acc="s-auaulandia">
+          <a class="grp grp-sub nav-parent" data-acc-toggle="s-auaulandia"><span>AuAulândia</span><span class="acc-caret" aria-hidden="true"></span></a>
           <div class="acc-panel">
-          <a data-v="checkin" title="O tutor chega: entrada, alimentação, medicação, assinatura (1º passo)."><span data-icon="login"></span><span>Check-in</span></a>
           <a data-v="conferencia" class="so-conferencia" title="O monitor confere corpo e pertences de quem chegou (2º passo)."><span data-icon="clipboard"></span><span>Conferência do check-in</span></a>
           <a data-v="hospedes" class="so-hosp" title="Quem está na casa, medicação e alimentação."><span data-icon="bed"></span><span>Hóspedes de hoje</span></a>
-          <a data-v="cuidadovet" class="so-vet" title="Alterações no corpo que a veterinária precisa ver."><span data-icon="stethoscope"></span><span>Cuidado Vet</span></a>
           <a data-v="hospedagem" title="O relatório de cada hóspede, turno a turno."><span data-icon="moon"></span><span>Plantão da noite</span></a>
           <a data-v="gestdia" class="so-gestao" title="A conferência da Gestão: medicações por horário, problemas e os três tempos do plantão."><span data-icon="clipboard"></span><span>Conferência do dia</span></a>
           <!-- SEMPRE 2 conferências: uma na ENTRADA e uma na SAÍDA (Adriana, 03/ago/2026).
-               Check-out = os monitores juntam; o Check-out com o tutor fecha com o tutor. -->
+               Aqui fica o passo do monitor — juntar a bolsa. Fechar com o tutor e assinar
+               é da Central Zêluz, e por isso o Check-out com o tutor mora lá. -->
           <a data-v="checkout" title="O monitor monta a bolsa e devolve tudo (1º passo)."><span data-icon="bag"></span><span>Check-out</span></a>
-          <a data-v="checkoutconf" class="so-conf-saida" title="Conferir a bolsa junto com o tutor e assinar (2º passo)."><span data-icon="door-out"></span><span>Check-out com o tutor</span></a>
-          <a data-v="orcamento" class="so-recepcao" title="Monte e envie o orçamento ao tutor."><span data-icon="dollar"></span><span>Orçamento de hospedagem</span></a>
-          <a data-v="recepcao" class="so-recepcao" title="Ração acabando, remédio faltando, algo que ficou."><span data-icon="message"></span><span>Pendências com o tutor</span></a>
           </div>
         </div>
-        <div class="acc" data-acc="c-daycare">
-          <a class="grp grp-sub nav-parent" data-acc-toggle="c-daycare"><span>Day Care</span><span class="acc-caret" aria-hidden="true"></span></a>
+        <div class="acc" data-acc="s-daycare">
+          <a class="grp grp-sub nav-parent" data-acc-toggle="s-daycare"><span>Day Care</span><span class="acc-caret" aria-hidden="true"></span></a>
           <div class="acc-panel">
           <!-- O #blocoDaycare continua sendo o elemento que a trava de permissão granular
                esconde (aplicarPaginasPessoa): quem tem escopo restrito e nenhuma atividade
-               não vê o dia do Day Care — só os itens de recepção logo abaixo. -->
+               não vê o dia do Day Care. -->
           <div class="so-day" id="blocoDaycare">
             <a data-v="abertura" class="so-abertura" title="Monitor 1: como a casa abre."><span data-icon="sun"></span><span>Abertura do dia</span></a>
-            <!-- Turminhas (dias) + Atividades vivem no #dcSubnav (montarSubnav). -->
+            <!-- Chamada, almoço, EA e as demais atividades vivem no #dcSubnav (montarSubnav). -->
             <div class="subnav so-day" id="dcSubnav"></div>
           </div>
-          <!-- Saiu do menu "Empório", que foi deletado: ninguém procuraria a mensagem
-               do tutor ali dentro (Adriana, 13/ago/2026). -->
-          <a data-v="emporio" class="so-emporio" title="A mensagem pronta para avisar o tutor."><span data-icon="bowl"></span><span>Quem não comeu hoje</span></a>
-          <a data-v="reposicao" class="so-recepcao" title="Créditos de dias por falta avisada."><span data-icon="refresh"></span><span>Reposições</span></a>
-          <!-- Adriana, 19/ago/2026: é aqui que a recepção lança o que hoje digita na
-               planilha — e a planilha vira só o espelho que alimenta a TV. -->
-          <a data-v="dashdc" class="so-recepcao" title="A planilha do Day Care, item por item."><span data-icon="list-check"></span><span>Lançamentos do dia</span></a>
           </div>
         </div>
+      </div>
+    </div>
+
+    <!-- CENTRAL ZÊLUZ — a mesa de quem fala com o tutor: as Consultoras de Bem-Estar, a
+         supervisão da Amanda e a veterinária. Os itens da chegada à saída ficam na raiz da
+         categoria, na ordem do dia; o que é do FILHOt (a ficha e o que se acompanha nela)
+         vive no sub-cabeçalho Peludinhos; dinheiro de plano, em Planos e cobranças. -->
+    <div class="acc" data-acc="central">
+      <a class="grp nav-parent" data-acc-toggle="central"><span data-icon="bell"></span><span>Central Zêluz</span><span class="acc-caret" aria-hidden="true"></span></a>
+      <div class="acc-panel">
+        <a data-v="checkin" title="O tutor chega: entrada, alimentação, medicação, assinatura (1º passo)."><span data-icon="login"></span><span>Check-in</span></a>
+        <a data-v="checkoutconf" class="so-conf-saida" title="Conferir a bolsa junto com o tutor e assinar (2º passo)."><span data-icon="door-out"></span><span>Check-out com o tutor</span></a>
+        <a data-v="orcamento" class="so-recepcao" title="Monte e envie o orçamento ao tutor."><span data-icon="dollar"></span><span>Orçamento de hospedagem</span></a>
+        <a data-v="recepcao" class="so-recepcao" title="Ração acabando, remédio faltando, algo que ficou."><span data-icon="message"></span><span>Pendências com o tutor</span></a>
+        <!-- A veterinária é da Central Zêluz (Adriana, 08/set/2026): ela conversa com o
+             tutor sobre o que viu no corpo do FILHOt. -->
+        <a data-v="cuidadovet" class="so-vet" title="Alterações no corpo que a veterinária precisa ver."><span data-icon="stethoscope"></span><span>Cuidado Vet</span></a>
+        <!-- Saiu do menu "Empório", que foi deletado: ninguém procuraria a mensagem
+             do tutor ali dentro (Adriana, 13/ago/2026). -->
+        <a data-v="emporio" class="so-emporio" title="A mensagem pronta para avisar o tutor."><span data-icon="bowl"></span><span>Quem não comeu hoje</span></a>
+        <a data-v="reposicao" class="so-recepcao" title="Créditos de dias por falta avisada."><span data-icon="refresh"></span><span>Reposições</span></a>
+        <!-- Adriana, 19/ago/2026: é aqui que a recepção lança o que hoje digita na
+             planilha — e a planilha vira só o espelho que alimenta a TV. -->
+        <a data-v="dashdc" class="so-recepcao" title="A planilha do Day Care, item por item."><span data-icon="list-check"></span><span>Lançamentos do dia</span></a>
         <div class="acc" data-acc="c-peludinhos">
           <a class="grp grp-sub nav-parent" data-acc-toggle="c-peludinhos"><span>Peludinhos</span><span class="acc-caret" aria-hidden="true"></span></a>
           <div class="acc-panel">
-          <!-- A tela existia como "em breve" e nunca teve entrada no menu. Agora é o
-               relatório de quem deve vacina, vermífugo, coleira, exame ou peso. -->
+          <!-- O cadastro abre o sub-cabeçalho porque é dele que sai tudo o que vem embaixo:
+               prevenção, conversa com o tutor e peso são leituras da mesma ficha
+               (Adriana, 08/set/2026). Segue so-gestao: monitor NUNCA cadastra. -->
+          <a data-v="ficha" class="so-gestao nav-destaque" title="Um cadastro só, para Day Care e AuAulândia — tudo começa aqui."><span data-icon="id-card"></span><span>Cadastro de Peludinhos</span></a>
           <a data-v="vacinas" class="so-gestao" title="Vacina, vermífugo, coleira, exame e peso: quem está atrasado."><span data-icon="shield"></span><span>Prevenção</span></a>
           <a data-v="alergia" class="so-gestao" title="A pesquisa com o tutor: enviar, colar a resposta, e ela vira ficha sozinha."><span data-icon="drop"></span><span>Conversa com o Tutor</span></a>
           <a data-v="peso" class="so-pesa" title="Pesar qualquer FILHOt: recepção, veterinária e gestão."><span data-icon="scale"></span><span>Peso</span></a>
@@ -2260,14 +2271,10 @@
     <div class="acc so-gestao" data-acc="operacao">
       <a class="grp nav-parent" data-acc-toggle="operacao"><span data-icon="users"></span><span>Operação</span><span class="acc-caret" aria-hidden="true"></span></a>
       <div class="acc-panel">
-        <!-- PAINEL DA OPERAÇÃO (Fase 2.2) — a fatia da Márcia. Primeiro do grupo de propósito:
-             é a porta da Operação, a visão do dia inteiro de onde se entra em cada tela
-             detalhada abaixo. Nasce ESCONDIDO; quem mostra é aplicarPermMenu(), lendo a
-             tabela PERM. Nada de classe so-* nova (regra 3 da Fase 2). -->
-        <a data-v="paineloperacao" style="display:none" title="A casa de hoje num lugar só: quem veio, quem faltou, o tempo do time, as noites que vêm aí e o acerto."><span data-icon="chart"></span><span>Painel da Operação</span></a>
         <a data-v="acerto" class="so-master" title="Acerto das plantonistas: noites, dobras, quanto pagamos."><span data-icon="dollar"></span><span>Financeiro do plantão</span></a>
         <a data-v="ritmo" class="so-gestao" title="Tempo por etapa, dia a dia."><span data-icon="clock"></span><span>Ritmo do Time</span></a>
-        <!-- Enriquecimento Ambiental é da Operação (o grupo da Márcia), não dos Serviços. -->
+        <!-- Enriquecimento Ambiental é da Operação (o grupo da Márcia), não dos Serviços:
+             aqui é o histórico do que foi montado, não a atividade do dia. -->
         <a data-v="eahist" class="so-gestao" title="O que foi feito e quem não participou."><span data-icon="ball"></span><span>Enriquecimento Ambiental</span></a>
         <a data-v="pessoas" class="so-master" title="Pessoas, senhas e quem acessa o quê."><span data-icon="users"></span><span>Time</span></a>
         <div class="subnav so-master" id="pSubnav" style="display:none"></div>
@@ -2276,8 +2283,6 @@
              plano do dia. Escondido por padrão; aplicarPermMenu() mostra pelo PERM. -->
         <a data-v="planodia" style="display:none" title="A escala de cada um e qual plano vale hoje — é daqui que sai o &quot;Meu dia&quot; do monitor."><span data-icon="clipboard"></span><span>Escala e plano do dia</span></a>
         <a data-v="config" class="so-master" title="Telegram e ponte da planilha."><span data-icon="settings"></span><span>Configurações</span></a>
-        <!-- Último da Operação até a Fase 2, quando Início e Painel do Dia viram um só. -->
-        <a data-v="painel" class="so-master" title="Auditoria e cumprimento de protocolos"><span data-icon="chart"></span><span>Painel do Dia</span></a>
       </div>
     </div>
 
@@ -11952,7 +11957,7 @@
   // inteira DEPOIS de a correção estar publicada — o aviso apareceu, ninguém tocou.
   // Agora o aparelho PARADO recarrega sozinho: trancado, com a aba escondida, na porta de
   // entrada ou 3 minutos sem ninguém tocar nele. Mão na tela = nunca recarrega.
-  const APP_VERSAO='2026-09-08-04';
+  const APP_VERSAO='2026-09-08-05';
   var RECARGA_PARADO_MS=3*60*1000, __versaoPublicada=null, __recargaTimer=null;
   function vigiarVersao(){
     if(!DB) return;
@@ -22530,7 +22535,7 @@
     var el=document.getElementById('pesoTelaPainel'); if(!el) return;
     var p=(PESOT_I===null)?null:(PELUDINHOS||[])[PESOT_I];
     if(!p){
-      el.innerHTML='<div class="card"><h2 style="font-size:17px">Quem vamos pesar?</h2>'
+      el.innerHTML=pesoAtrasoHTML()+'<div class="card"><h2 style="font-size:17px">Quem vamos pesar?</h2>'
         +'<input class="cad-in" id="pesoTelaB" placeholder="Nome do FILHOt ou do tutor…" autocomplete="off" oninput="pesoTelaBuscar()" value="'+escAttr(PESOT_BUSCA)+'">'
         +'<div id="pesoTelaSug" style="display:flex;flex-direction:column;gap:5px;margin-top:8px"></div>'
         +'</div>'+pesoTelaHojeHTML();
@@ -22541,7 +22546,7 @@
     var ex=pelExtra(p)||{}, hist=pesosDe(ex).slice().sort(function(a,b){ return (a.data<b.data?1:-1); });
     var u=hist[0];
     var fot=(typeof fotoCad==='function')?fotoCad(pelKey(p)):'';
-    el.innerHTML='<div class="card">'
+    el.innerHTML=pesoAtrasoHTML()+'<div class="card">'
       +'<div style="display:flex;gap:12px;align-items:center">'
       +(fot?('<div style="width:64px;height:64px;border-radius:14px;flex:0 0 64px;background-image:url(\''+fot+'\');background-size:cover;background-position:center"></div>')
            :('<div style="width:64px;height:64px;border-radius:14px;flex:0 0 64px;background:var(--z-blue-soft)"></div>'))
@@ -22580,6 +22585,114 @@
           +'<span class="k"><strong>'+escAttr(o.p.n||'')+'</strong> <span style="color:var(--muted);font-weight:600">'+ativIdent(o.p)+'</span></span>'
           +'<span class="val"><strong>'+pesoFmt(o.kg)+' kg</strong>'+(o.quem?('<span style="color:var(--muted);font-weight:600;font-size:11.5px"> · '+escAttr(o.quem)+'</span>'):'')+'</span></div>';
       }).join('')+'</div>';
+  }
+  // ===== QUEM ESTÁ SEM PESAR — a régua de 45 em 45 dias (Adriana, 08/set/2026) ======
+  // "Um box único no topo: X sem pesar há N dias, clicável, que abre a lista. Régua de 45
+  //  em 45 dias. Mais atrasados primeiro. Quem nunca foi pesado aparece como nunca pesado,
+  //  honesto, no topo."
+  //
+  // Por que existe: até aqui a tela só respondia "quem eu vou pesar agora?" — e a pergunta
+  // que ninguém fazia era "quem a casa deixou de pesar?". Peso velho vira dose de remédio
+  // calculada em cima de um FILHOt que já não existe, e some o primeiro sinal de que algo
+  // mudou no corpo.
+  //
+  // A régua anda de 45 em 45: até 45 dias está em dia; de 45 a 90, atrasado; de 90 em
+  // diante, muito atrasado. O dado é o MESMO da ficha e da Prevenção — o histórico `pesos`
+  // do cadastro, lido por pesosDe()/ultimoPeso(). Nada é inventado: aqui só se mede,
+  // ordena e mostra. Quem não tem um peso sequer não vira "há muito tempo": vira
+  // "nunca pesado", que é o que a ficha de verdade diz.
+  var PESO_REGUA_DIAS=45;
+  var PESOT_ATRASO_ABERTO=false;
+  // Ordem de aflição: quanto maior, mais em cima. Nunca pesado é o pior caso; logo abaixo
+  // vem o peso cuja data não dá para ler (existe registro, mas não dá para contar os dias).
+  function pesoAtrasoOrdem(o){
+    if(!o.u) return 1e9;
+    return (o.dias!=null && o.dias>=0) ? o.dias : 1e8;
+  }
+  function pesoAtrasoFaixa(u, dias){
+    if(!u) return 'nunca';
+    if(!(dias!=null && dias>=0)) return 'semdata';
+    if(dias<=PESO_REGUA_DIAS) return 'ok';
+    if(dias<PESO_REGUA_DIAS*2) return 'atrasado';
+    return 'muito';
+  }
+  function pesoAtrasoLista(){
+    var out=[];
+    (PELUDINHOS||[]).forEach(function(p,i){
+      if(typeof pelInativo==='function' && pelInativo(p)) return;
+      var u=ultimoPeso(pelExtra(p)||{});
+      var dias=(u&&u.data)?pesoDiasDesde(u.data):null;
+      var faixa=pesoAtrasoFaixa(u, dias);
+      if(faixa==='ok') return;
+      out.push({p:p, i:i, u:u||null, dias:dias, faixa:faixa});
+    });
+    out.sort(function(a,b){
+      var oa=pesoAtrasoOrdem(a), ob=pesoAtrasoOrdem(b);
+      if(oa!==ob) return ob-oa;   // mais atrasado primeiro
+      var na=jsNorm(((typeof pelNome==='function')?pelNome(a.p):a.p.n)||'');
+      var nb=jsNorm(((typeof pelNome==='function')?pelNome(b.p):b.p.n)||'');
+      return na.localeCompare(nb,'pt');
+    });
+    return out;
+  }
+  function pesoAtrasoAlternar(){ PESOT_ATRASO_ABERTO=!PESOT_ATRASO_ABERTO; renderPesoTela(); }
+  var PESO_FAIXA_ROTULO={
+    nunca:{txt:'nunca pesado', cor:'#b3261e'},
+    semdata:{txt:'peso sem data', cor:'#b3261e'},
+    muito:{txt:'muito atrasado', cor:'#b3261e'},
+    atrasado:{txt:'atrasado', cor:'var(--z-gold-deep)'}
+  };
+  function pesoAtrasoLinhaHTML(o){
+    var f=PESO_FAIXA_ROTULO[o.faixa]||PESO_FAIXA_ROTULO.atrasado;
+    var nome=escAttr(((typeof pelNome==='function')?pelNome(o.p):(o.p.n||'')));
+    var tutor='';
+    try{ tutor=(typeof pelGet==='function'?pelGet(o.p,'tutor'):'')||o.p.tutor||''; }catch(e){} /* silencioso de propósito: função opcional, pode não existir nesta tela */
+    var direita;
+    if(o.faixa==='nunca') direita='Nunca foi pesado';
+    else if(o.faixa==='semdata') direita='Último peso: '+pesoFmt(o.u.kg)+' kg — sem data legível';
+    else direita='Último: <strong>'+pesoFmt(o.u.kg)+' kg</strong> em '+fmtBR(o.u.data)+' · há '+o.dias+' dias';
+    return '<button type="button" class="peso-atraso-linha" onclick="pesoTelaEscolher('+o.i+')"'
+      +' title="Pesar '+nome+' agora">'
+      +'<span style="flex:1;min-width:0">'
+      +'<span style="display:block;font-weight:800;color:var(--z-blue);font-size:14px">'+nome
+      +(tutor?('<span style="color:var(--muted);font-weight:600"> · tutor: '+escAttr(tutor)+'</span>'):'')+'</span>'
+      +'<span style="display:block;font-size:12.5px;color:var(--muted);font-weight:600;margin-top:2px">'+direita+'</span>'
+      +'</span>'
+      +'<span style="flex:0 0 auto;font-size:11px;font-weight:800;color:'+f.cor+';border:1.5px solid '+f.cor
+      +';border-radius:999px;padding:3px 9px;white-space:nowrap">'+f.txt+'</span>'
+      +'</button>';
+  }
+  function pesoAtrasoHTML(){
+    var lista;
+    try{ lista=pesoAtrasoLista(); }
+    catch(e){ _logFalhaGrav('pesoAtrasoLista', e); return ''; }
+    var n=lista.length;
+    if(!n) return '<div class="card"><h2 style="font-size:16px">Peso em dia</h2>'
+      +'<div class="hint">Ninguém está sem pesar há mais de '+PESO_REGUA_DIAS+' dias.</div></div>';
+    var conta={nunca:0, semdata:0, muito:0, atrasado:0};
+    lista.forEach(function(o){ conta[o.faixa]=(conta[o.faixa]||0)+1; });
+    var partes=[];
+    if(conta.nunca) partes.push(conta.nunca+(conta.nunca===1?' nunca pesado':' nunca pesados'));
+    if(conta.semdata) partes.push(conta.semdata+' sem data legível');
+    if(conta.muito) partes.push(conta.muito+' há mais de '+(PESO_REGUA_DIAS*2)+' dias');
+    if(conta.atrasado) partes.push(conta.atrasado+' entre '+PESO_REGUA_DIAS+' e '+(PESO_REGUA_DIAS*2)+' dias');
+    var aberto=!!PESOT_ATRASO_ABERTO;
+    return '<div class="card" style="padding:0;overflow:hidden">'
+      +'<button type="button" id="pesoAtrasoBox" onclick="pesoAtrasoAlternar()"'
+      +' aria-expanded="'+(aberto?'true':'false')+'"'
+      +' style="width:100%;text-align:left;background:none;border:none;cursor:pointer;padding:15px 16px;display:flex;gap:12px;align-items:center;min-height:56px">'
+      +'<span style="flex:1;min-width:0">'
+      +'<span style="display:block;font-size:19px;font-weight:900;color:var(--z-blue);line-height:1.2">'
+      +n+' sem pesar há mais de '+PESO_REGUA_DIAS+' dias</span>'
+      +'<span style="display:block;font-size:12.5px;color:var(--muted);font-weight:600;margin-top:3px">'+partes.join(' · ')+'</span>'
+      +'</span>'
+      +'<span style="flex:0 0 auto;font-size:12.5px;font-weight:800;color:var(--z-blue);text-decoration:underline">'
+      +(aberto?'fechar':'ver a lista')+'</span>'
+      +'</button>'
+      +(aberto?('<div id="pesoAtrasoLista" style="border-top:1px solid var(--line);padding:6px 10px 10px">'
+        +'<div class="hint" style="margin:6px 4px 8px">Do mais atrasado para o menos. Toque num nome para pesar agora.</div>'
+        +lista.map(pesoAtrasoLinhaHTML).join('')+'</div>'):'')
+      +'</div>';
   }
   function renderPesoAtiv(){
     var el=document.getElementById('genGrid'); if(!el) return;

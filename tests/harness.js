@@ -2357,10 +2357,14 @@ async function main() {
       /if\(v==='paineloperacao'\)\{ if\(typeof poAbrir==='function'\) poAbrir\(\); \}/.test(html));
     check('o item entra na PERM_MENU, junto dos outros dois do Painel',
       /PERM_MENU=\[\['painelmeu','painel-monitor'\],\['paineloperacao','painel-operacao'\],/.test(html));
-    // Ela é a PORTA da Operação: fica antes do Financeiro do plantão, primeiro do grupo.
-    check('o item é o PRIMEIRO do grupo Operação (antes do Financeiro do plantão)',
-      html.indexOf('data-v="paineloperacao"') < html.indexOf('data-v="acerto"') &&
-      html.indexOf('data-v="paineloperacao"') > html.indexOf('data-acc="operacao"'));
+    // 08/set/2026 — Adriana juntou TODOS os painéis numa categoria só ("Painéis"), no topo
+    // do menu. O da Operação continua sendo a porta da Márcia, mas a porta agora fica na
+    // prateleira dos painéis: depois do da Supervisão e antes do da Diretoria.
+    check('o item mora na categoria Painéis, entre o da Supervisão e o da Diretoria',
+      html.indexOf('data-v="paineloperacao"') > html.indexOf('data-acc="paineis"') &&
+      html.indexOf('data-v="paineloperacao"') < html.indexOf('data-acc="servicos"') &&
+      html.indexOf('data-v="painel-amanda"') < html.indexOf('data-v="paineloperacao"') &&
+      html.indexOf('data-v="paineloperacao"') < html.indexOf('data-v="painel-diretoria"'));
 
     // ---- 2. PERMISSÃO, papel a papel — o coração desta entrega ----
     // Aqui há dinheiro e tempo por etapa por pessoa. O grupo é o mais fechado do app.
@@ -3409,8 +3413,13 @@ async function main() {
     // 04/set/2026 (achado 8): o menu tinha DUAS "AuAulândia" e DOIS "Day Care" (Serviços
     // e Central Zêluz). Unificado: a categoria Serviços saiu e cada serviço tem UM
     // sub-cabeçalho, dentro da Central Zêluz.
-    check('menu: os grupos estão na ordem do índice (Serviços saiu — unificação de 04/set)',
-      JSON.stringify(grupos.map((g) => g.titulo)) === JSON.stringify(['Central Zêluz', 'Operação', 'Em breve']),
+    // 08/set/2026 — Adriana: "a sidebar virou bagunça". Serviços voltou, mas com outro
+    // critério: QUEM FAZ. Serviços = monitor e plantonista (o corpo do FILHOt);
+    // Central Zêluz = consultoras, supervisão e veterinária (o tutor). E os painéis, que
+    // estavam espalhados por três lugares, viraram uma categoria só, no topo.
+    check('menu: os grupos estão na ordem de 08/set (Painéis › Serviços › Central Zêluz › Operação › Em breve)',
+      JSON.stringify(grupos.map((g) => g.titulo)) === JSON.stringify(
+        ['Painéis', 'Serviços', 'Central Zêluz', 'Operação', 'Em breve']),
       JSON.stringify(grupos.map((g) => g.titulo)));
     check('mordida — cada serviço aparece UMA vez só no menu (nunca mais duas gavetas iguais)',
       JSON.stringify(subs.map((s) => s.titulo)) === JSON.stringify([
@@ -3432,10 +3441,16 @@ async function main() {
       && /\.nav a\.nav-solto\{[^}]*border-top:/.test(html));
     check('menu: Relatórios não perdeu quem o vê ao virar item solto',
       porV.relatorios && porV.relatorios.vis === 'so-gestao', porV.relatorios ? porV.relatorios.vis : 'sumiu');
-    [['conferencia', 'Central Zêluz'], ['checkout', 'Central Zêluz'], ['cuidadovet', 'Central Zêluz'], ['abertura', 'Central Zêluz'],
+    [['conferencia', 'Serviços'], ['checkout', 'Serviços'], ['hospedes', 'Serviços'],
+     ['hospedagem', 'Serviços'], ['gestdia', 'Serviços'], ['abertura', 'Serviços'],
+     ['cuidadovet', 'Central Zêluz'],
      ['checkin', 'Central Zêluz'], ['checkoutconf', 'Central Zêluz'], ['ficha', 'Central Zêluz'],
-     ['emporio', 'Central Zêluz'], ['renovacao', 'Central Zêluz'],
-     ['config', 'Operação'], ['acerto', 'Operação'], ['painel', 'Operação'],
+     ['emporio', 'Central Zêluz'], ['renovacao', 'Central Zêluz'], ['reposicao', 'Central Zêluz'],
+     ['dashdc', 'Central Zêluz'], ['orcamento', 'Central Zêluz'], ['recepcao', 'Central Zêluz'],
+     ['vacinas', 'Central Zêluz'], ['alergia', 'Central Zêluz'], ['peso', 'Central Zêluz'],
+     ['config', 'Operação'], ['acerto', 'Operação'], ['ritmo', 'Operação'], ['pessoas', 'Operação'],
+     ['painelmeu', 'Painéis'], ['consultoras', 'Painéis'], ['paineloperacao', 'Painéis'],
+     ['painel', 'Painéis'],
      ['agenda', 'Em breve']].forEach(([k, g]) => {
       check('menu: ' + k + ' está no grupo ' + g, porV[k] && porV[k].grupo === g,
         porV[k] ? porV[k].grupo : 'sumiu');
@@ -3560,8 +3575,8 @@ async function main() {
     // As 4 categorias: ícone, seta, clicável, e cada uma com sua chave de estado.
     const cats = [...nav.matchAll(/<a class="grp nav-parent" data-acc-toggle="([a-z]+)"([^>]*)>([\s\S]*?)<\/a>/g)]
       .map((mm) => ({ chave: mm[1], attrs: mm[2], dentro: mm[3] }));
-    check('menu: as 3 categorias são linhas clicáveis (nav-parent) — Serviços saiu na unificação',
-      cats.length === 3, JSON.stringify(cats.map((c) => c.chave)));
+    check('menu: as 5 categorias são linhas clicáveis (nav-parent) — Painéis e Serviços entraram em 08/set',
+      cats.length === 5, JSON.stringify(cats.map((c) => c.chave)));
     cats.forEach((c) => {
       check('menu: categoria ' + c.chave + ' tem ícone', /data-icon="[a-z]+"/.test(c.dentro), c.dentro.slice(0, 60));
       check('menu: categoria ' + c.chave + ' tem seta', /acc-caret/.test(c.dentro));
@@ -3586,8 +3601,9 @@ async function main() {
     subsAcc.forEach((x) => {
       check('menu: sub-cabeçalho ' + x.chave + ' tem seta', /acc-caret/.test(x.dentro));
     });
-    check('menu: cada sub-cabeçalho guarda o próprio estado (chave própria)',
-      new Set(subsAcc.map((x) => x.chave)).size === 4 && subsAcc.every((x) => /^c-/.test(x.chave)));
+    check('menu: cada sub-cabeçalho guarda o próprio estado (chave própria, com a letra da categoria)',
+      new Set(subsAcc.map((x) => x.chave)).size === 4 && subsAcc.every((x) => /^[cs]-/.test(x.chave)),
+      JSON.stringify(subsAcc.map((x) => x.chave)));
     check('menu: sub-cabeçalho fechado esconde os itens dele (mesma mecânica da categoria)',
       subsAcc.every((x) => {
         const i = nav.indexOf('data-acc-toggle="' + x.chave + '"');
@@ -3597,13 +3613,43 @@ async function main() {
       px(cssSubAcc, 'font-size') === 15 && /color:var\(--z-gold\)/.test(cssSubAcc), cssSubAcc);
     check('menu: o sub-cabeçalho tem alvo de toque de 44px',
       px(cssSubAcc, 'min-height') >= 44, cssSubAcc);
-    check('menu: Cadastro de Peludinhos fica na RAIZ da Central Zêluz (fora de sub-cabeçalho)',
+    // Adriana, 08/set/2026: "Central Zêluz com um subgrupo Peludinhos contendo Cadastro,
+    // Prevenção, Conversas com o Tutor e Peso". O Cadastro abre o subgrupo — é dele que
+    // saem as outras três leituras da mesma ficha.
+    const fatia = (de, ate) => {
+      const i = nav.indexOf('data-acc-toggle="' + de + '"');
+      const f = ate ? nav.indexOf('data-acc-toggle="' + ate + '"') : nav.length;
+      return (i < 0 || f < i) ? '' : nav.slice(i, f);
+    };
+    const vsDe = (trecho, comHifen) =>
+      [...trecho.matchAll(comHifen ? /data-v="([a-z-]+)"/g : /data-v="([a-z]+)"/g)].map((x) => x[1]);
+    check('menu: o subgrupo Peludinhos tem exatamente Cadastro, Prevenção, Conversa com o Tutor e Peso, nessa ordem',
+      JSON.stringify(vsDe(fatia('c-peludinhos', 'c-planos'))) === JSON.stringify(
+        ['ficha', 'vacinas', 'alergia', 'peso']),
+      JSON.stringify(vsDe(fatia('c-peludinhos', 'c-planos'))));
+    check('menu: a categoria Painéis guarda SÓ painel (nenhuma tela de trabalho entrou junto)',
+      JSON.stringify(vsDe(fatia('paineis', 'servicos'), true)) === JSON.stringify(
+        ['painelmeu', 'consultoras', 'painel-amanda', 'paineloperacao', 'painel-diretoria', 'painel']),
+      JSON.stringify(vsDe(fatia('paineis', 'servicos'), true)));
+    check('menu: nenhum painel ficou fora da categoria Painéis',
       (() => {
-        const iFicha = nav.indexOf('data-v="ficha"');
-        const iCentral = nav.indexOf('data-acc-toggle="central"');
-        const iPrimeiroSub = nav.indexOf('data-acc-toggle="c-auaulandia"');
-        return iCentral < iFicha && iFicha < iPrimeiroSub;
+        const i = nav.indexOf('data-acc-toggle="paineis"');
+        const f = nav.indexOf('data-acc-toggle="servicos"');
+        const fora = nav.slice(0, i) + nav.slice(f);
+        return ['painelmeu', 'consultoras', 'painel-amanda', 'paineloperacao', 'painel-diretoria']
+          .every((k) => fora.indexOf('data-v="' + k + '"') < 0);
       })());
+    check('menu: Serviços = AuAulândia + Day Care, o trabalho de monitor e plantonista',
+      JSON.stringify([...fatia('servicos', 'central').matchAll(/data-acc-toggle="(s-[a-z]+)"/g)]
+        .map((x) => x[1])) === JSON.stringify(['s-auaulandia', 's-daycare'])
+      && JSON.stringify(vsDe(fatia('servicos', 'central'))) === JSON.stringify(
+        ['conferencia', 'hospedes', 'hospedagem', 'gestdia', 'checkout', 'abertura']),
+      JSON.stringify(vsDe(fatia('servicos', 'central'))));
+    check('menu: o Day Care do monitor (blocoDaycare) mudou de gaveta sem sair do bloco único',
+      fatia('s-daycare', 'central').indexOf('id="blocoDaycare"') > 0);
+    check('menu: a veterinária enxerga o caminho até as duas telas dela (Central e Peludinhos)',
+      /body\[data-role="vet"\] \.nav \.acc\[data-acc="central"\]>a\.grp,\s*body\[data-role="vet"\] \.nav \.acc\[data-acc="c-peludinhos"\]>a\.grp\{display:flex !important\}/.test(html)
+      && html.indexOf('data-acc="c-auaulandia"') < 0);
     check('menu: a pendência sobe em dois degraus (item, sub-cabeçalho, categoria)',
       /\.acc-panel a\.nav-pend:not\(\.nav-parent\)/.test(html));
     check('menu: ao medir cabeçalho vazio, cabeçalho não conta como item',
@@ -4294,17 +4340,164 @@ async function main() {
       /body\[data-role="consultora"\] \.nav a\.so-pesa/.test(html) &&
       /body\[data-role="vet"\] \.nav a\.so-pesa/.test(html) &&
       /body\[data-role="supervisor"\] \.nav a\.so-pesa/.test(html));
-    // 04/set/2026: com a unificação do menu o Cuidado Vet mora em Central › AuAulândia —
-    // o caminho da veterinária ganhou o grp c-auaulandia no meio (janela maior no regex).
+    // 08/set/2026: a veterinária é da Central Zêluz. O Cuidado Vet subiu para a raiz da
+    // categoria e o Peso ficou no subgrupo Peludinhos — o caminho tem dois cabeçalhos,
+    // não três, e o c-auaulandia deixou de existir.
     check('e a veterinaria enxerga o CAMINHO ate ela (nao so o item)',
       /body\[data-role="vet"\] \.nav a\[data-v="peso"\],[\s\S]{0,700}acc="c-peludinhos"\]>a\.grp\{display:flex !important\}/.test(html)
-      && /body\[data-role="vet"\] \.nav \.acc\[data-acc="c-auaulandia"\]>a\.grp/.test(html));
+      && /body\[data-role="vet"\] \.nav \.acc\[data-acc="central"\]>a\.grp/.test(html)
+      && html.indexOf('data-acc="c-auaulandia"') < 0);
     check('a tela tem titulo proprio', /peso:\['Peso'/.test(html));
     check('a busca mostra raca e tutor (nome sozinho nao identifica)',
       /pesoTelaBuscar[\s\S]{0,1400}ativIdent\(o\.p\)/.test(html));
     check('procura qualquer FILHOt do cadastro, nao so a turma do dia',
       /function pesoTelaBuscar\(\)[\s\S]{0,700}\(PELUDINHOS\|\|\[\]\)\.forEach/.test(html));
     check('a tela mostra quem ja foi pesado hoje', /function pesoTelaHojeHTML\(\)/.test(html));
+  }
+  console.log('');
+
+  // ════════════════════════════════════════════════════════════════════════════════
+  // v-05 (08/set/2026) — QUEM ESTÁ SEM PESAR: o box do topo e a régua de 45 em 45
+  // ════════════════════════════════════════════════════════════════════════════════
+  // Adriana: "um box único no topo, X sem pesar há N dias, clicável, que abre a lista.
+  // Régua de 45 em 45 dias. Mais atrasados primeiro. Quem nunca foi pesado aparece como
+  // nunca pesado, honesto, no topo."
+  //
+  // A bancada abaixo é de mentira DE PROPÓSITO: ordem e faixa só se provam com datas
+  // conhecidas. O dado que a tela lê é o mesmo da ficha (o histórico `pesos` do cadastro).
+  console.log('Peso — quem está sem pesar (o box do topo, 08/set):');
+  {
+    check('a régua é de 45 em 45 dias', ctx.PESO_REGUA_DIAS === 45, String(ctx.PESO_REGUA_DIAS));
+    const faixa = (u, d) => ctx.pesoAtrasoFaixa(u, d);
+    check('faixa: sem nenhum peso na ficha = "nunca" (e não "há muito tempo")',
+      faixa(null, null) === 'nunca');
+    check('faixa: 0 a 45 dias está em dia (não entra na lista)',
+      faixa({ kg: 9 }, 0) === 'ok' && faixa({ kg: 9 }, 45) === 'ok');
+    check('faixa: 46 a 89 dias é "atrasado"',
+      faixa({ kg: 9 }, 46) === 'atrasado' && faixa({ kg: 9 }, 89) === 'atrasado');
+    check('faixa: 90 dias em diante é "muito atrasado"',
+      faixa({ kg: 9 }, 90) === 'muito' && faixa({ kg: 9 }, 400) === 'muito');
+    check('faixa: peso com data ilegível não vira "nunca" — vira "peso sem data"',
+      faixa({ kg: 9 }, null) === 'semdata' && faixa({ kg: 9 }, NaN) === 'semdata');
+
+    // ---- bancada: 6 FILHOts com datas conhecidas ----
+    const bkpPel = ctx.PELUDINHOS;
+    let bkpCad = null;
+    vm.runInContext("__bkpCadPeso = (typeof pelCadCache==='undefined' || !pelCadCache) ? {} : pelCadCache;", ctx);
+    bkpCad = ctx.__bkpCadPeso;
+    let res = null;
+    try {
+      const hoje = new Date(ctx.hojeISO() + 'T12:00:00');
+      const menos = (d) => new Date(hoje.getTime() - d * 86400000).toISOString().slice(0, 10);
+      const pels = [
+        { n: 'Dolly', tutor: 'Carolina' },        // nunca pesada
+        { n: 'Toddy', tutor: 'Renata' },          // pesado hoje
+        { n: 'Heidi', tutor: 'Luciana' },         // 40 dias — em dia
+        { n: 'Romeo', tutor: 'Beatriz' },         // 60 dias — atrasado
+        { n: 'Maya', tutor: 'Fernanda' },         // 200 dias — muito atrasado
+        { n: 'Theo', tutor: 'Paula' },            // 120 dias — muito atrasado
+        { n: 'Lana', tutor: 'Sofia' },            // 300 dias, MAS inativa: não entra
+      ];
+      const cad = {};
+      const poe = (nome, tutor, dias, kg, extra) => {
+        const k = (nome + '__' + tutor).toLowerCase();
+        cad[k] = Object.assign({ pesos: dias === null ? [] : [{ data: menos(dias), kg: kg }] }, extra || {});
+      };
+      poe('Dolly', 'Carolina', null, 0);
+      poe('Toddy', 'Renata', 0, 8.4);
+      poe('Heidi', 'Luciana', 40, 6.2);
+      poe('Romeo', 'Beatriz', 60, 11.35);
+      poe('Maya', 'Fernanda', 200, 4.7);
+      poe('Theo', 'Paula', 120, 15);
+      poe('Lana', 'Sofia', 300, 9.1, { inativo: 'Sim' });
+      vm.runInContext('PELUDINHOS = __pelsPeso; pelCadCache = __cadPeso;',
+        Object.assign(ctx, { __pelsPeso: pels, __cadPeso: cad }));
+      const lista = ctx.pesoAtrasoLista();
+      res = {
+        nomes: lista.map((o) => o.p.n),
+        faixas: lista.map((o) => o.faixa),
+        html: ctx.pesoAtrasoHTML(),
+        linha: lista.length ? ctx.pesoAtrasoLinhaHTML(lista[1] || lista[0]) : '',
+      };
+      vm.runInContext('PESOT_ATRASO_ABERTO = true;', ctx);
+      res.htmlAberto = ctx.pesoAtrasoHTML();
+      vm.runInContext('PESOT_ATRASO_ABERTO = false;', ctx);
+    } finally {
+      vm.runInContext('PELUDINHOS = __bkpPelPeso; pelCadCache = __bkpCadPeso;',
+        Object.assign(ctx, { __bkpPelPeso: bkpPel, __bkpCadPeso: bkpCad }));
+    }
+
+    check('só entra quem passou dos 45 dias — quem pesou hoje e há 40 dias fica de fora',
+      res.nomes.indexOf('Toddy') < 0 && res.nomes.indexOf('Heidi') < 0, JSON.stringify(res.nomes));
+    check('FILHOt inativo não entra na lista (a Lana saiu da casa)',
+      res.nomes.indexOf('Lana') < 0, JSON.stringify(res.nomes));
+    check('mordida — quem NUNCA foi pesado vem no topo, e depois os mais atrasados primeiro',
+      JSON.stringify(res.nomes) === JSON.stringify(['Dolly', 'Maya', 'Theo', 'Romeo']),
+      JSON.stringify(res.nomes));
+    check('cada linha carrega a sua faixa (nunca · muito · muito · atrasado)',
+      JSON.stringify(res.faixas) === JSON.stringify(['nunca', 'muito', 'muito', 'atrasado']),
+      JSON.stringify(res.faixas));
+    check('o box do topo diz QUANTOS e a régua ("4 sem pesar há mais de 45 dias")',
+      res.html.indexOf('4 sem pesar há mais de 45 dias') > 0, res.html.slice(0, 200));
+    check('o box é CLICÁVEL — é um botão que abre a lista',
+      /<button[^>]*id="pesoAtrasoBox"[^>]*onclick="pesoAtrasoAlternar\(\)"/.test(res.html)
+      && /aria-expanded="false"/.test(res.html));
+    check('fechado, o box não despeja a lista na tela',
+      res.html.indexOf('id="pesoAtrasoLista"') < 0 && res.html.indexOf('Dolly') < 0);
+    check('aberto, a lista aparece com todo mundo dela e o botão vira "fechar"',
+      res.htmlAberto.indexOf('id="pesoAtrasoLista"') > 0
+      && ['Dolly', 'Maya', 'Theo', 'Romeo'].every((n) => res.htmlAberto.indexOf(n) > 0)
+      && /aria-expanded="true"/.test(res.htmlAberto) && res.htmlAberto.indexOf('fechar') > 0,
+      res.htmlAberto.slice(0, 160));
+    check('quem nunca foi pesado é dito assim, sem maquiagem',
+      res.htmlAberto.indexOf('nunca pesado') > 0 && res.htmlAberto.indexOf('Nunca foi pesado') > 0);
+    check('a linha traz FILHOt, tutor, o último peso em kg com vírgula, a data e há quantos dias',
+      /Maya/.test(res.linha) && /tutor: Fernanda/.test(res.linha)
+      && /4,7 kg/.test(res.linha) && /há 200 dias/.test(res.linha)
+      && /\d{2}\/\d{2}\/\d{4}/.test(res.linha), res.linha.slice(0, 300));
+    check('tocar na linha leva direto a pesar aquele FILHOt (quadro clicável leva ao item)',
+      /onclick="pesoTelaEscolher\(\d+\)"/.test(res.linha));
+    check('o box nasce no TOPO da tela, nas duas situações (com e sem FILHOt escolhido)',
+      (html.match(/el\.innerHTML=pesoAtrasoHTML\(\)\+/g) || []).length === 2);
+    check('o resumo do box separa nunca pesado, mais de 90 dias e a faixa de 45 a 90',
+      res.html.indexOf('1 nunca pesado') > 0 && res.html.indexOf('2 há mais de 90 dias') > 0
+      && res.html.indexOf('1 entre 45 e 90 dias') > 0, res.html.slice(0, 400));
+
+    // ---- e agora contra o CADASTRO DE VERDADE (o retrato da casa) ----------------
+    // A bancada de cima prova a régua; esta prova que o box não fica mudo na vida real.
+    // No retrato de hoje a casa pesou quase todo mundo nas últimas semanas — o que sobra
+    // são as fichas que nunca receberam UM peso. É exatamente esse número que a Adriana
+    // precisa ver ao abrir a tela.
+    const cadPeso = await dbRead('daycare/cadastro', token) || {};
+    {
+      const bkpPel2 = ctx.PELUDINHOS;
+      vm.runInContext("__bkpCadPeso2 = (typeof pelCadCache==='undefined' || !pelCadCache) ? {} : pelCadCache;", ctx);
+      const bkpCad2 = ctx.__bkpCadPeso2;
+      let real = null;
+      try {
+        vm.runInContext('pelCadCache = __cadPesoReal;', Object.assign(ctx, { __cadPesoReal: cadPeso }));
+        const lista = ctx.pesoAtrasoLista();
+        real = {
+          n: lista.length,
+          forasteiros: lista.filter((o) => o.faixa === 'ok').length,
+          nunca: lista.filter((o) => o.faixa === 'nunca').length,
+          html: ctx.pesoAtrasoHTML(),
+        };
+      } finally {
+        vm.runInContext('PELUDINHOS = __bkpPelPeso2; pelCadCache = __bkpCadPeso2;',
+          Object.assign(ctx, { __bkpPelPeso2: bkpPel2, __bkpCadPeso2: bkpCad2 }));
+      }
+      check('com o cadastro de verdade o box não fica mudo — ele tem gente para mostrar',
+        real.n > 0, 'lista com ' + real.n);
+      check('e ninguém que está em dia entrou na lista',
+        real.forasteiros === 0, String(real.forasteiros));
+      check('o box do topo anuncia o número real, com a régua de 45 dias',
+        real.html.indexOf(real.n + ' sem pesar há mais de 45 dias') > 0,
+        real.html.slice(0, 220));
+      check('as fichas que nunca receberam um peso aparecem como "nunca pesado"',
+        real.nunca > 0 && real.html.indexOf('nunca pesado') > 0,
+        'nunca pesados: ' + real.nunca);
+    }
   }
   console.log('');
 
@@ -7783,12 +7976,12 @@ async function main() {
       /\.nav a\.grp\{font-size:17px;font-weight:700/.test(html) &&
       /\.nav a\.grp\.grp-sub\{font-size:15px;font-weight:700/.test(html) &&
       /font-size:14px;font-weight:500/.test(html));
-    const iniCentral = html.indexOf('<div class="acc" data-acc="central">');
+    // 08/set/2026: o Cadastro desceu para o subgrupo Peludinhos (decisão da Adriana) e
+    // continua sendo o PRIMEIRO item de lá — só o título clicável do subgrupo vem antes.
+    const iniPel = html.indexOf('<div class="acc" data-acc="c-peludinhos">');
     const iniFicha = html.indexOf('data-v="ficha"');
-    const entre = (iniCentral >= 0 && iniFicha > iniCentral) ? html.slice(iniCentral, iniFicha) : '';
-    // o corte termina DENTRO do próprio link do ficha, então o "<a " dele também conta:
-    // 2 = o título clicável da categoria + o próprio Cadastro. Qualquer item no meio daria 3+.
-    check('mordida — o Cadastro é o PRIMEIRO item da categoria Central Zêluz (só o título da categoria vem antes)',
+    const entre = (iniPel >= 0 && iniFicha > iniPel) ? html.slice(iniPel, iniFicha) : '';
+    check('mordida — o Cadastro é o PRIMEIRO item do subgrupo Peludinhos (só o título do subgrupo vem antes)',
       entre !== '' && (entre.match(/<a /g) || []).length === 2, 'links no corte: ' + ((entre.match(/<a /g) || []).length));
     check('quem vê: recepção, supervisão, gestão e diretoria (o .so-gestao só é escondido de monitor/plantonista/aprendiz/tutor)',
       /body\[data-role="monitor"\] \.so-gestao,\s*body\[data-role="plantonista"\] \.so-gestao,\s*body\[data-role="aprendiz"\] \.so-gestao,\s*body\[data-role="tutor"\]\s+\.so-gestao\{display:none !important\}/.test(html) &&
@@ -8561,9 +8754,13 @@ async function main() {
     check('mordida — o item do menu nasce escondido e é a tabela quem o mostra (PERM_MENU)',
       /\['consultoras','painel-consultoras'\]/.test(html) &&
       /<a data-v="consultoras" style="display:none"/.test(html));
-    check('mordida — o Cadastro segue sendo o 1º item da Central; o Painel vem logo depois dele',
-      html.indexOf('data-v="ficha"') < html.indexOf('data-v="consultoras"') &&
-      html.indexOf('data-v="consultoras"') < html.indexOf('<div class="acc" data-acc="c-auaulandia">'));
+    // 08/set/2026: o painel saiu da Central e foi para a categoria Painéis, logo depois
+    // do Meu Painel. A ordem da categoria sobe do chão para o alto: monitor, consultoras,
+    // supervisão, operação, diretoria. O Cadastro desceu para o subgrupo Peludinhos.
+    check('mordida — o Painel das Consultoras mora em Painéis, logo depois do Meu Painel',
+      html.indexOf('data-acc="paineis"') < html.indexOf('data-v="consultoras"') &&
+      html.indexOf('data-v="painelmeu"') < html.indexOf('data-v="consultoras"') &&
+      html.indexOf('data-v="consultoras"') < html.indexOf('data-acc="servicos"'));
     check('a tela v-consultoras existe e tem título no mapa (fonte única titles)',
       /<section class="view" id="v-consultoras">/.test(html) &&
       /consultoras:\['Painel das Consultoras'/.test(html));
@@ -8812,10 +9009,10 @@ async function main() {
     check('mordida — o item do menu nasce escondido e é a tabela quem o mostra (PERM_MENU)',
       /\['painel-amanda','painel-amanda'\]/.test(html) &&
       /<a data-v="painel-amanda" style="display:none"/.test(html));
-    check('mordida — hierarquia intacta: Cadastro 1º, Consultoras depois, Supervisão em seguida, tudo antes dos sub-menus',
-      html.indexOf('data-v="ficha"') < html.indexOf('data-v="consultoras"') &&
+    check('mordida — hierarquia intacta: na categoria Painéis, Consultoras antes da Supervisão',
+      html.indexOf('data-acc="paineis"') < html.indexOf('data-v="consultoras"') &&
       html.indexOf('data-v="consultoras"') < html.indexOf('data-v="painel-amanda"') &&
-      html.indexOf('data-v="painel-amanda"') < html.indexOf('<div class="acc" data-acc="c-auaulandia">'));
+      html.indexOf('data-v="painel-amanda"') < html.indexOf('data-acc="servicos"'));
     check('a tela v-painel-amanda existe e tem título no mapa (fonte única titles)',
       /<section class="view" id="v-painel-amanda">/.test(html) &&
       /'painel-amanda':\['Painel da Supervisão'/.test(html));
