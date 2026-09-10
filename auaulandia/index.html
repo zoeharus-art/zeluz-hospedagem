@@ -5391,18 +5391,37 @@
   // apagar a legenda faria o histórico exibir o código cru. Nada do extrato se reescreve.
   const REP_MOTIVOS={ cio:'Cio', doente:'Doente / internado', viagem:'Tutor viajou',
     atrasado:'Tutor não conseguiu trazer', outro:'Outro',
-    fora:'Tutor está fora', zeluz:'Zêluz fechada' };
+    fora:'Tutor está fora', zeluz:'Zêluz fechada',
+    reposicao:'Veio repor', estorno:'Estorno',
+    hospedagem:'Usada em hospedagem' };
   function repLancamentos(p){
     try{ const o=(REPO_CACHE[pelKey(p)]||{}).lancamentos||{};
       return Object.keys(o).map(function(k){ return Object.assign({_id:k}, o[k]); })
         .sort(function(a,b){ return (b.ts||0)-(a.ts||0); });
     }catch(e){ return []; }
   }
-  // Saldo = créditos − usos − estornos. Calculado, nunca guardado: número guardado
-  // diverge do extrato no primeiro erro de rede, e aí ninguém sabe qual dos dois vale.
+  // Saldo = créditos − usos. Calculado, nunca guardado: número guardado diverge do
+  // extrato no primeiro erro de rede, e aí ninguém sabe qual dos dois vale.
+  //
+  // O ESTORNO ANULA O QUE ELE APONTA (10/set/2026) — antes o estorno era sempre −1.
+  // Isso estava certo enquanto só se estornava CRÉDITO (+1 do crédito, −1 do estorno = 0),
+  // mas ficava errado ao estornar um USO: em vez de DEVOLVER o dia, tirava outro (−2).
+  // Agora o par (lançamento, estorno que aponta para ele) simplesmente sai da conta —
+  // que é o que "estornar" quer dizer. Para crédito o resultado é idêntico ao de antes;
+  // para uso, o crédito volta, e é isso que faz a reserva de hospedagem cancelada
+  // devolver o dia ao FILHOt. Estorno órfão (sem estornaId, ou apontando para lançamento
+  // que não existe mais) continua valendo −1: o histórico antigo não se reescreve.
   function repSaldo(p){
+    const L=repLancamentos(p);
+    const existe={}; L.forEach(function(l){ existe[l._id]=true; });
+    const anulados={};
+    L.forEach(function(l){ if(l.tipo==='estorno'&&l.estornaId&&existe[l.estornaId]) anulados[l.estornaId]=true; });
     let s=0;
-    repLancamentos(p).forEach(function(l){ if(l.tipo==='credito') s++; else s--; });
+    L.forEach(function(l){
+      if(l.tipo==='estorno'){ if(!(l.estornaId&&existe[l.estornaId])) s--; return; }
+      if(anulados[l._id]) return;
+      s+=(l.tipo==='credito')?1:-1;
+    });
     return s;
   }
   // ---- Agendamento: "no dia 28 eu quero a reposição" ---------------------------------
@@ -5701,8 +5720,14 @@
     if(!repPodeLancar()){ alert('Só a recepção, a Gestão ou a Supervisão marcam o uso da reposição.'); return; }
     const s=repSaldo(p);
     if(s<=0){ alert(pelNome(p)+' não tem saldo de reposição.'); return; }
+    // Dia prometido numa hospedagem que ainda aguarda resposta não pode ser gasto aqui sem
+    // que a recepção saiba: se o tutor fechar depois, faltaria dia para a reserva.
+    const presos=repReservado(p,'');
     if(!await zPergunta('Marcar reposição de '+pelNome(p)+'?',
-      ['Ele veio REPOR hoje.', 'Saldo agora: '+s+'. Depois de marcar: '+(s-1)+'.'],
+      ['Ele veio REPOR hoje.', 'Saldo agora: '+s+'. Depois de marcar: '+(s-1)+'.'].concat(
+        presos>0?[(presos+' '+(presos===1?'dia dele está reservado':'dias dele estão reservados')
+          +' em orçamento de hospedagem. Livre'+((s-presos)===1?'':'s')+' hoje: '+Math.max(0,s-presos)
+          +'. Se usar aqui, pode faltar dia quando o tutor fechar a hospedagem.')]:[]),
       {sim:'Marcar', nao:'Não marcar'})) return;
     const obs=((await zTexto('Alguma observação?',
       ['É opcional — se não houver nada a dizer, deixe em branco e confirme.'],
@@ -5727,6 +5752,140 @@
       if(typeof audit==='function') audit('reposicao-estorno', pelNome(p), {motivo:motivo});
       setTimeout(function(){ renderReposicao(); repAbrirExtrato(i); }, 300);
     }).catch(function(e){ alert('Não consegui estornar: '+((e&&e.message)||e)); });
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════════════════
+  // REPOSIÇÃO USADA EM HOSPEDAGEM — A BAIXA NA FICHA (Adriana, 10/set/2026)
+  // ═══════════════════════════════════════════════════════════════════════════════════
+  // "O orçamento está fazendo contas certas, está conseguindo tirar quando o peludinho tem
+  //  reposição, no entanto não está tirando da ficha deles — dando baixa. Hospedagem da Maya
+  //  SRD (Luciana). Hospedagem da Serena (Ana Flávia). Foram usadas reposições, a soma do
+  //  orçamento está correta, mas não subtraiu as reposições que foram utilizadas."
+  //
+  // O QUE ESTAVA ERRADO: o orçamento ABATIA o valor (uma diária de hotel virava pernoite a
+  // cada reposição) e nem sequer GUARDAVA quantas usou. O Banco de Reposições continuava
+  // intacto — o mesmo dia podia ser abatido de novo no orçamento seguinte, de graça.
+  //
+  // A REGRA, EM UMA FRASE: enquanto o orçamento está AGUARDANDO, o dia fica RESERVADO
+  // (aparece na ficha, ninguém mais pode gastar, mas o saldo não caiu); quando o tutor
+  // FECHA, a reserva vira BAIXA de verdade; se a reserva for cancelada, não fechou, voltou
+  // para pendente ou foi apagada, o dia VOLTA para o FILHOt.
+  //
+  //   status do orçamento     reserva      baixa (lançamento tipo 'uso')
+  //   ----------------------  -----------  ------------------------------
+  //   aguardando              SIM          não
+  //   fechado                 —            SIM
+  //   nao_fechou / cancelado  —            não (estorno devolve o crédito)
+  //   apagado                 —            não (estorno devolve o crédito)
+  //
+  // DUAS VEZES É IMPOSSÍVEL: a chave do lançamento é DETERMINÍSTICA — 'orc-{id}-{n}'. Rodar
+  // o acerto dez vezes escreve exatamente o mesmo nó dez vezes: o saldo não se mexe. Não há
+  // push() aqui de propósito — push() gera chave nova a cada chamada, e chave nova é baixa
+  // duplicada. O estorno da baixa segue a mesma lei: 'est-orc-{id}-{n}'.
+  //
+  // ATÔMICO: reserva/baixa/estorno e o próprio orçamento vão no MESMO update de raiz. Ou os
+  // dois lados mudam, ou nenhum — o dinheiro nunca fica dizendo uma coisa e a ficha outra.
+  var REP_ORC_MAX=60;                 // trava de sanidade: ninguém repõe 60 dias numa estadia
+  function repChaveBaixa(orcId,n){ return 'orc-'+orcId+'-'+n; }
+  function repChaveEstorno(orcId,n){ return 'est-orc-'+orcId+'-'+n; }
+  // Como o orçamento aparece para gente: os últimos 6 caracteres da chave. É o que a
+  // consultora consegue conferir de olho na lista sem decorar 20 caracteres aleatórios.
+  function repOrcCurto(orcId){ return String(orcId||'').slice(-6).toUpperCase(); }
+  // Reservas de UM FILHOt: {orcId:{n, entrada, saida, tutor, em, por}}
+  function repReservas(p){
+    try{ return (REPO_CACHE[pelKey(p)]||{}).reservas||{}; }catch(e){ return {}; }
+  }
+  // Quantos dias estão reservados em orçamentos que ainda aguardam resposta.
+  // `exceto` é o orçamento que está aberto na tela: a reserva dele não bloqueia ele mesmo.
+  function repReservado(p, exceto){
+    var R=repReservas(p), s=0;
+    Object.keys(R).forEach(function(id){ if(id===exceto) return; s+=Math.max(0,+((R[id]||{}).n)||0); });
+    return s;
+  }
+  // O que dá para PROMETER hoje: o saldo menos o que já está reservado.
+  function repDisponivel(p, exceto){ return Math.max(0, repSaldo(p)-repReservado(p, exceto)); }
+  // As baixas já gravadas de um orçamento, para este FILHOt (as que NÃO estão estornadas).
+  function repBaixasDoOrc(p, orcId){
+    var L=repLancamentos(p), out=[];
+    var estornado={}; L.forEach(function(l){ if(l.tipo==='estorno'&&l.estornaId) estornado[l.estornaId]=true; });
+    L.forEach(function(l){ if(l.orcId===orcId && l.tipo==='uso' && !estornado[l._id]) out.push(l); });
+    return out;
+  }
+  // Acha a ficha pela chave salva no orçamento. FILHOt sem cadastro não tem Banco de
+  // Reposições — e por isso nunca entra aqui (o próprio orçamento já lhe dá saldo zero).
+  function repPelaChave(key){
+    try{ return (PELUDINHOS||[]).filter(function(x){ return pelKey(x)===key; })[0]||null; }catch(e){ return null; }
+  }
+  // ---- O ACERTO --------------------------------------------------------------------
+  // Recebe o orçamento COMO ELE VAI FICAR e devolve o pedaço de update que põe o Banco
+  // de Reposições em dia com ele. Função pura: não grava nada, não lê a tela, só monta o
+  // patch — é por isso que o harness consegue prová-la sem banco nenhum.
+  //   o.status: 'aguardando' | 'fechado' | 'nao_fechou' | 'cancelado' | 'apagado'
+  // Devolve {patch, baixadas, estornadas, reservadas, linhas:[texto]}.
+  function repOrcAcerto(orcId, o){
+    var patch={}, baixadas=0, estornadas=0, reservadas=0, linhas=[];
+    if(!orcId||!o) return {patch:patch, baixadas:0, estornadas:0, reservadas:0, linhas:linhas};
+    var st=String(o.status||'aguardando');
+    var quem=(typeof quemSou==='function')?quemSou():'-';
+    var agora=Date.now();
+    var hoje=(typeof repHojeISO==='function')?repHojeISO():'';
+    (o.pets||[]).forEach(function(sp){
+      var key=(sp&&sp.key)||''; if(!key) return;
+      if(sp.sem_cadastro) return;                       // sem ficha, sem Banco de Reposições
+      var p=repPelaChave(key); if(!p) return;           // ficha sumiu do cadastro: não invento nó
+      var pedidas=Math.max(0, Math.min(REP_ORC_MAX, +(sp.reposicoes||0)||0));
+      var alvo=(st==='fechado')?pedidas:0;              // quantas baixas DEVEM existir
+      var reserva=(st==='aguardando')?pedidas:0;        // quantos dias ficam presos, sem baixar
+      var base='daycare/reposicao/'+key;
+      // 1) a reserva
+      if(reserva>0){
+        patch[base+'/reservas/'+orcId]={ n:reserva, entrada:o.entrada||'', saida:o.saida||'',
+          tutor:sp.tutor||o.tutor||'', pet:sp.nome||'', em:agora, por:quem };
+        reservadas+=reserva;
+      } else {
+        patch[base+'/reservas/'+orcId]=null;
+      }
+      // 2) as baixas — chave determinística, uma por dia usado
+      var existe={}; repLancamentos(p).forEach(function(l){ existe[l._id]=true; });
+      var jaTem=0;
+      for(var q=1;q<=REP_ORC_MAX;q++) if(existe[repChaveBaixa(orcId,q)]) jaTem=q;
+      var quantos=Math.max(alvo, jaTem);                // varre até onde há o que acertar
+      for(var n=1;n<=quantos;n++){
+        var kBaixa=base+'/lancamentos/'+repChaveBaixa(orcId,n);
+        var kEst  =base+'/lancamentos/'+repChaveEstorno(orcId,n);
+        if(n<=alvo){
+          patch[kBaixa]={ tipo:'uso', data:o.entrada||hoje, motivo:'hospedagem',
+            obs:'Usada no orçamento de hospedagem '+repOrcCurto(orcId)
+                +(o.entrada?(', entrada '+repBRdata(o.entrada)):''),
+            orcId:orcId, orcSeq:n, quem:quem, ts:agora };
+          // Se este dia já tinha sido devolvido e a reserva voltou a fechar, o estorno sai:
+          // ele era o acerto de máquina, não história de gente. A história de gente é o
+          // status do orçamento (que guarda quem mudou, quando e por quê) e a auditoria.
+          patch[kEst]=null;
+          baixadas++;
+        } else if(existe[repChaveBaixa(orcId,n)]){
+          // Existe baixa e ela não deve mais existir: devolve o dia com um estorno — nunca
+          // apagando a baixa, porque o extrato precisa contar que ela existiu. Estorno só
+          // se escreve quando há o que estornar: estorno órfão vale −1 no saldo e roubaria
+          // um dia do FILHOt em silêncio.
+          patch[kEst]={ tipo:'estorno', data:hoje, motivo:'estorno',
+            obs:'Devolvida — o orçamento de hospedagem '+repOrcCurto(orcId)+' '
+                +(st==='cancelado'?'foi cancelado':(st==='apagado'?'foi apagado':(st==='nao_fechou'?'não fechou':'voltou a aguardar resposta'))),
+            estornaId:repChaveBaixa(orcId,n), orcId:orcId, orcSeq:n, quem:quem, ts:agora };
+          estornadas++;
+        }
+      }
+      if(pedidas>0) linhas.push((sp.nome||key)+': '+(alvo?(alvo+' baixada(s)'):(reserva?(reserva+' reservada(s)'):'devolvida(s)')));
+    });
+    return {patch:patch, baixadas:baixadas, estornadas:estornadas, reservadas:reservadas, linhas:linhas};
+  }
+  // O acerto que a máquina fez, dito em português para a consultora.
+  function repOrcResumo(a){
+    if(!a) return '';
+    if(a.baixadas) return a.baixadas+' '+(a.baixadas===1?'dia de reposição foi abatido':'dias de reposição foram abatidos')+' na ficha.';
+    if(a.estornadas) return a.estornadas+' '+(a.estornadas===1?'dia de reposição voltou':'dias de reposição voltaram')+' para a ficha.';
+    if(a.reservadas) return a.reservadas+' '+(a.reservadas===1?'dia de reposição ficou reservado':'dias de reposição ficaram reservados')+' — só sai da ficha quando o tutor fechar.';
+    return '';
   }
   // ---- Telas ----
   // ===== LISTA DE TROCA — "não vem amanhã, vem na sexta" ================================
@@ -5911,9 +6070,11 @@
     const rs=document.getElementById('repResumo');
     const hojeISO=repHojeISO();
     const vemHoje=repAgendadosPara(hojeISO);
+    const totalPresos=todos.reduce(function(a,o){ return a+repReservado(o.p,''); },0);
     if(rs) rs.innerHTML='<div class="dc-resumo">'
       +'<div class="dc-stat pend"><b>'+comSaldo.length+'</b>com dias a repor</div>'
-      +'<div class="dc-stat"><b>'+totalDias+'</b>dias no total</div></div>'
+      +'<div class="dc-stat"><b>'+totalDias+'</b>dias no total</div>'
+      +(totalPresos?('<div class="dc-stat"><b>'+totalPresos+'</b>reservados em hospedagem</div>'):'')+'</div>'
       +(vemHoje.length?('<div class="alm-fora" style="margin-top:10px;border-left:4px solid var(--gold)">'
         +'<b>Marcados para repor HOJE ('+vemHoje.length+'):</b> '
         +vemHoje.map(function(o){ return escAttr(pelNome(o.p)); }).join(' · ')
@@ -5929,11 +6090,17 @@
       const agTxt=ag.length?('<div class="rp-sub" style="color:var(--gold);font-weight:700">Vem repor em '
         +ag.slice(0,3).map(repBRdata).join(' · ')+(ag.length>3?(' e mais '+(ag.length-3)):'')
         +(ag[0]===hojeISO?' — é HOJE':'')+'</div>'):'';
+      // Dias presos numa reserva de hospedagem que ainda aguarda resposta: continuam sendo
+      // dele (o saldo não caiu), mas já estão prometidos — não podem ser gastos duas vezes.
+      const presos=repReservado(o.p,'');
+      const resTxt=presos?('<div class="rp-sub" style="color:var(--crm-critico);font-weight:700">'
+        +presos+' '+(presos===1?'dia reservado':'dias reservados')+' em orçamento de hospedagem — '
+        +Math.max(0,o.saldo-presos)+' '+((o.saldo-presos)===1?'livre':'livres')+'</div>'):'';
       return '<div class="rep-row"><div class="rp-n">'+o.saldo+'</div>'
         +'<div class="rp-txt"><div class="rp-nome">'+escAttr(pelNome(o.p))+'</div>'
         +'<div class="rp-sub">'+escAttr(pelGet(o.p,'tutor')||'sem tutor')
         +(ult?(' · último: '+(ult.tipo==='credito'?'faltou':(ult.tipo==='uso'?'repôs':'estorno'))+' em '+repBRdata(ult.data)):'')+'</div>'
-        +agTxt+'</div>'
+        +resTxt+agTxt+'</div>'
         +'<div class="rp-acoes">'
         +(o.saldo>0?'<button class="usar" onclick="repUsar('+o.i+')">Veio repor hoje</button>':'')
         +'<button onclick="repAbrirExtrato('+o.i+')">Extrato</button>'
@@ -5944,17 +6111,35 @@
   function repAbrirExtrato(i){
     const p=PELUDINHOS[i]; if(!p) return;
     const L=repLancamentos(p);
+    const saldo=repSaldo(p), presos=repReservado(p,'');
+    // O que já foi estornado aparece riscado: o extrato conta a história inteira, mas quem
+    // lê precisa ver de relance o que ainda vale e o que foi desfeito.
+    const anulado={}; L.forEach(function(l){ if(l.tipo==='estorno'&&l.estornaId) anulado[l.estornaId]=true; });
     document.getElementById('repExtTit').textContent='Extrato — '+pelNome(p);
-    document.getElementById('repExtSub').innerHTML='Saldo atual: <b>'+repSaldo(p)+'</b> dia(s) de reposição. Nada aqui é apagado — um erro se corrige com estorno.';
-    document.getElementById('repExtLista').innerHTML=L.length?L.map(function(l){
-      const rot=(l.tipo==='credito')?'+1 CRÉDITO':(l.tipo==='uso'?'−1 USO':'−1 ESTORNO');
-      return '<div class="rep-lanc"><span class="lc-tipo '+l.tipo+'">'+rot+'</span>'
-        +'<span class="lc-corpo">'+repBRdata(l.data)+' · '+(REP_MOTIVOS[l.motivo]||l.motivo||'—')
+    document.getElementById('repExtSub').innerHTML='Saldo atual: <b>'+saldo+'</b> dia(s) de reposição'
+      +(presos?(' · <b>'+presos+'</b> reservado(s) em orçamento de hospedagem · <b>'+Math.max(0,saldo-presos)+'</b> livre(s)'):'')
+      +'. Nada aqui é apagado — um erro se corrige com estorno.';
+    // As reservas de hospedagem que ainda aguardam resposta: o dia ainda é dele, mas já
+    // está prometido. Fica ANTES do extrato porque é o que explica o "livre" acima.
+    const R=repReservas(p);
+    const resIds=Object.keys(R).filter(function(id){ return +((R[id]||{}).n)>0; });
+    const resHTML=resIds.length?('<div class="alm-fora" style="margin-bottom:10px;border-left:4px solid var(--gold)">'
+      +'<b>Reservado em orçamento de hospedagem:</b><br>'
+      +resIds.map(function(id){ const r=R[id]||{};
+        return r.n+' dia(s) — orçamento '+escAttr(repOrcCurto(id))
+          +(r.entrada?(', entrada '+repBRdata(r.entrada)):'')
+          +'<span style="color:var(--muted)"> (ainda aguardando resposta do tutor)</span>'; }).join('<br>')
+      +'</div>'):'';
+    document.getElementById('repExtLista').innerHTML=resHTML+(L.length?L.map(function(l){
+      const rot=(l.tipo==='credito')?'+1 CRÉDITO':(l.tipo==='uso'?'−1 USO':(l.estornaId?'ESTORNO':'−1 ESTORNO'));
+      const risco=anulado[l._id]?'text-decoration:line-through;opacity:.6':'';
+      return '<div class="rep-lanc"><span class="lc-tipo '+l.tipo+'" style="'+risco+'">'+rot+'</span>'
+        +'<span class="lc-corpo" style="'+risco+'">'+repBRdata(l.data)+' · '+(REP_MOTIVOS[l.motivo]||l.motivo||'—')
         +(l.obs?('<div style="font-weight:500;color:var(--z-blue-soft);margin-top:2px">"'+escAttr(l.obs)+'"</div>'):'')
         +'<div class="lc-meta">'+escAttr(l.quem||'—')+(l.periodo?(' · período '+repBRdata(l.periodo.de)+' a '+repBRdata(l.periodo.ate)):'')+'</div></span>'
-        +(l.tipo==='credito'?'<button onclick="repEstornar('+i+',\''+l._id+'\')" style="border:1px solid var(--line);background:#fff;border-radius:8px;padding:5px 10px;font-size:11.5px;font-weight:700;color:var(--crm-critico);cursor:pointer;font-family:inherit">Estornar</button>':'')
+        +((l.tipo==='credito'&&!anulado[l._id])?'<button onclick="repEstornar('+i+',\''+l._id+'\')" style="border:1px solid var(--line);background:#fff;border-radius:8px;padding:5px 10px;font-size:11.5px;font-weight:700;color:var(--crm-critico);cursor:pointer;font-family:inherit">Estornar</button>':'')
         +'</div>';
-    }).join(''):'<div class="alm-fora">Nenhum lançamento ainda.</div>';
+    }).join(''):'<div class="alm-fora">Nenhum lançamento ainda.</div>');
     document.getElementById('repExtratoModal').classList.add('on');
   }
   function repFecharExtrato(){ document.getElementById('repExtratoModal').classList.remove('on'); }
@@ -10287,6 +10472,7 @@
     document.getElementById('orcAvNome').value=''; document.getElementById('orcAvTutor').value='';
     var _ar=document.getElementById('orcAvRaca'); if(_ar) _ar.value='';
     ORC_AV_SEXO=''; orcAvSexoSet('');
+    orcNovoComecou();
     orcRenderSel(); orcCalcular();
   }
   var ORC_SEL=[];   // [{key,nome,tutor,dias:[],planoKey,hospOff}]
@@ -10380,9 +10566,13 @@
          semPlano:ORC_AULUNO&&!pl.ativo});
     var b=document.getElementById('orcBusca'); if(b) b.value='';
     var s=document.getElementById('orcSug'); if(s) s.innerHTML='';
+    orcNovoComecou();
     orcRenderSel(); orcCalcular();
   }
-  function orcRemover(key){ ORC_SEL=ORC_SEL.filter(function(s){ return s.key!==key; }); orcRenderSel(); orcCalcular(); }
+  function orcRemover(key){ ORC_SEL=ORC_SEL.filter(function(s){ return s.key!==key; }); delete ORC_REP[key]; orcRenderSel(); orcCalcular(); }
+  // Mexeu na lista de FILHOts depois de salvar? Entao comecou outro orcamento: a reserva do
+  // anterior volta a bloquear. Sem isto, dois orcamentos seguidos prometeriam o mesmo dia.
+  function orcNovoComecou(){ if(!ORC_EDITANDO) ORC_RESERVA_IGNORAR=''; }
   function orcRenderSel(){
     var el=document.getElementById('orcSelecionados'); if(!el) return;
     if(!ORC_SEL.length){ el.innerHTML='<div class="hint">Nenhum FILHOt escolhido ainda.</div>'; return; }
@@ -10452,11 +10642,33 @@
   // Os dois preços ficam à vista o tempo todo: quem faz o orçamento confere antes de mandar.
   // Quantas reposições cada FILHOt vai usar neste orçamento: {chave: n}
   var ORC_REP={};
+  // O orçamento que está ABERTO na tela (editando ou recém-salvo). A reserva DELE não
+  // bloqueia ele mesmo — senão, ao reabrir a reserva para mudar as datas, os dias que ele
+  // próprio segurou apareceriam como "já usados por outro" e sumiriam da conta.
+  var ORC_RESERVA_IGNORAR='';
+  // Quantos dias este FILHOt pode usar NESTE orçamento: o saldo do Banco menos o que já
+  // está preso em outros orçamentos aguardando resposta. Prometer duas vezes o mesmo dia
+  // é prometer um desconto que não existe.
   function orcSaldoRep(sel){
     try{
       if(!sel || sel.semCadastro) return 0;
       var p=(PELUDINHOS||[]).filter(function(x){ return pelKey(x)===sel.key; })[0];
-      return p?repSaldo(p):0;
+      if(!p) return 0;
+      // Reserva JÁ FECHADA sendo reaberta para mudar as datas: os dias que ela mesma
+      // abateu voltam para a mesa — são dela. Sem isto, reabrir uma reserva fechada
+      // apagaria o desconto de reposição e o tutor receberia um valor maior do que
+      // combinamos com ele.
+      var meus=ORC_RESERVA_IGNORAR?repBaixasDoOrc(p, ORC_RESERVA_IGNORAR).length:0;
+      return repDisponivel(p, ORC_RESERVA_IGNORAR)+meus;
+    }catch(e){ return 0; }
+  }
+  // Quantos dias estão presos em OUTROS orçamentos — é o que a tela precisa dizer quando
+  // o saldo do Banco é maior que o disponível aqui.
+  function orcRepPresos(sel){
+    try{
+      if(!sel || sel.semCadastro) return 0;
+      var p=(PELUDINHOS||[]).filter(function(x){ return pelKey(x)===sel.key; })[0];
+      return p?repReservado(p, ORC_RESERVA_IGNORAR):0;
     }catch(e){ return 0; }
   }
   function orcRepUsadas(sel){
@@ -10672,10 +10884,16 @@
     }
     h+='</div>';
     if(max<saldo) h+='<div class="hint" style="margin-top:5px">Nesta estadia só dá para usar '+max+': as outras noites já são pernoite (dia dele no Day Care).</div>';
+    var presos=orcRepPresos(p.sel);
+    if(presos>0) h+='<div class="hint" style="margin-top:5px;color:var(--crm-critico);font-weight:700">'
+      +presos+' '+(presos===1?'dia dele já está reservado':'dias dele já estão reservados')
+      +' em outro orçamento aguardando resposta — por isso não aparece'+(presos===1?'':'m')+' aqui.</div>';
     if(usa>0) h+='<div style="margin-top:6px;font-size:13px;font-weight:800;color:var(--crm-ok)">'
       +usa+' '+(usa===1?'reposição usada':'reposições usadas')+' — economia de '+fmtCent(p.repEconomia)
       +'. Sobram '+(saldo-usa)+'.</div>'
-      +'<div class="hint" style="margin-top:2px">O saldo só cai no check-in, quando ele entrar de verdade. Orçamento não é reserva.</div>';
+      +'<div class="hint" style="margin-top:2px">Ao salvar, '+(usa===1?'esse dia fica RESERVADO':'esses dias ficam RESERVADOS')
+      +' na ficha dele — ninguém mais usa. A baixa de verdade acontece quando o tutor <strong>fechar</strong>; '
+      +'se a reserva for cancelada ou não fechar, '+(usa===1?'o dia volta':'os dias voltam')+' para ele.</div>';
     return h+'</div>';
   }
   function orcArtigoDe(sel){ return orcEhFemea(sel)?'da':'do'; }
@@ -10703,6 +10921,11 @@
     var o=ORC_LISTA_CACHE[id]||{};
     if(!o.pets||!o.pets.length){ alert('Esta reserva não tem FILHOt salvo — não dá para reabrir. Use "Cancelar reserva" e faça um orçamento novo.'); return; }
     ORC_EDITANDO=id;
+    ORC_RESERVA_IGNORAR=id;
+    // Quantas reposições esta reserva já usava — sem isto, reabrir para mudar as datas
+    // esqueceria os dias combinados e o valor subiria sem ninguém pedir.
+    ORC_REP={};
+    (o.pets||[]).forEach(function(sp){ if(sp&&sp.key&&+sp.reposicoes>0) ORC_REP[sp.key]=+sp.reposicoes; });
     ORC_EDIT_ANTES={entrada:o.entrada||'', saida:o.saida||'', total_cent:o.total_cent||0,
                     status:o.status||'aguardando',
                     pets:(o.pets||[]).map(function(p){ return {nome:p.nome||'', raca:p.raca||'', tutor:p.tutor||o.tutor||''}; })};
@@ -10756,7 +10979,7 @@
       +'</div>';
   }
   function orcCancelarEdicao(){
-    ORC_EDITANDO=null; ORC_EDIT_ANTES=null;
+    ORC_EDITANDO=null; ORC_EDIT_ANTES=null; ORC_RESERVA_IGNORAR=''; ORC_REP={};
     ORC_SEL=[]; try{ orcRenderSel(); orcCalcular(); }catch(e){} /* silencioso de propósito: guarda defensiva — falhar aqui não pode interromper quem chamou */
     orcRenderAvisoEdicao();
   }
@@ -10779,19 +11002,39 @@
         trocas:p.sel.trocas||{},
         ordem:p.ordem, desconto_pct:p.off, diarias:p.nDia, pernoites:p.nPer,
         sem_cadastro:!!p.sel.semCadastro,
+        // Quantas reposições este FILHOt usou AQUI. Sem este número gravado, o dia
+        // abatido no valor não tinha como virar baixa na ficha — foi exatamente o
+        // buraco que a Adriana viu em 10/set/2026 (Maya e Serena).
+        reposicoes:p.repUsa||0, reposicao_economia_cent:p.repEconomia||0,
         // Quebra guardada: a planilha recebe só a hospedagem; a pernoite tem outra conta.
         subtotal_diarias_cent:p.liqDia, subtotal_pernoites_cent:p.brutoPer,
         subtotal_cent:p.total }; }),
+      reposicoes_total:C.pets.reduce(function(a,p){ return a+(p.repUsa||0); },0),
       mensagem:(document.getElementById('orcMsg')||{}).value||''
     };
     var st=document.getElementById('orcSalvoStatus');
     if(st){ st.style.color='var(--muted)'; st.textContent='Salvando…'; }
-    DB.ref('auaulandia/orcamentos').push(reg).then(function(){
-      if(st){ st.style.color='var(--crm-ok)'; st.textContent='✅ Orçamento salvo. Está na lista abaixo como "aguardando" — marque lá quando o tutor fechar ou desistir.'; }
+    // A chave nasce ANTES da gravação: é ela que dá nome à reserva de reposição, e os dois
+    // lados (orçamento e Banco de Reposições) vão no MESMO update de raiz. Ou entram os
+    // dois, ou nenhum — nunca um orçamento prometendo desconto sem o dia preso na ficha.
+    var ref=DB.ref('auaulandia/orcamentos').push();
+    var id=ref.key;
+    var acerto=repOrcAcerto(id, reg);
+    var patch=Object.assign({}, acerto.patch);
+    patch['auaulandia/orcamentos/'+id]=reg;
+    DB.ref().update(patch).then(function(){
+      var extra=repOrcResumo(acerto);
+      if(st){ st.style.color='var(--crm-ok)'; st.textContent='✅ Orçamento salvo. Está na lista abaixo como "aguardando" — marque lá quando o tutor fechar ou desistir.'+(extra?(' '+extra):''); }
       if(typeof audit==='function') audit('orcamento-criado','orçamento de '+reg.pets.map(function(p){return p.nome;}).join(' e ')+' — '+fmtCent(reg.total_cent),{pet:(reg.pets[0]||{}).nome||''});
+      if(acerto.reservadas&&typeof audit==='function') audit('reposicao-reserva-orcamento',
+        'reservou '+acerto.reservadas+' dia(s) de reposição no orçamento '+repOrcCurto(id)+' — '+acerto.linhas.join(' · '),
+        {pet:(reg.pets[0]||{}).nome||''});
+      ORC_RESERVA_IGNORAR=id;              // a reserva que acabou de nascer não bloqueia a tela
+      try{ orcCalcular(); }catch(e){} /* silencioso de propósito: redesenho de tela — falhar não pode derrubar quem chamou */
       orcCarregarLista();
     }).catch(function(e){
       if(st){ st.style.color='var(--crm-critico)'; st.textContent='⚠️ NÃO foi salvo: '+((e&&e.message)||e)+'. Copie a mensagem antes de sair da tela.'; }
+      _logFalhaGrav('auaulandia/orcamentos + daycare/reposicao (orcSalvar)', e);
     });
   }
   // Grava a alteração no MESMO registro (o histórico da reserva não se parte em dois) e
@@ -10835,8 +11078,10 @@
         plano:p.sel.rotulo, compromisso:p.sel.compromisso||'', trocas:p.sel.trocas||{},
         ordem:p.ordem, desconto_pct:p.off, diarias:p.nDia, pernoites:p.nPer,
         sem_cadastro:!!p.sel.semCadastro,
+        reposicoes:p.repUsa||0, reposicao_economia_cent:p.repEconomia||0,
         subtotal_diarias_cent:p.liqDia, subtotal_pernoites_cent:p.brutoPer,
         subtotal_cent:p.total }; }),
+      reposicoes_total:C.pets.reduce(function(a,p){ return a+(p.repUsa||0); },0),
       mensagem:(document.getElementById('orcMsg')||{}).value||'',
       alterado_por:quem.nome, alterado_role:quem.role||'', alterado_ts:Date.now(),
       alterado_em_br:brDataHora, alterado_motivo:motivo,
@@ -10848,8 +11093,20 @@
       para_entrada:C.entrada, para_saida:C.saida, para_total_cent:C.total,
       motivo:motivo, por:quem.nome, em_br:brDataHora, ts:Date.now()
     }).catch(function(e){ _logFalhaGrav('auaulandia/orcamentos/ (orcSalvarEdicao)', e); });
-    DB.ref('auaulandia/orcamentos/'+id).update(patch).then(function(){
-      ORC_LISTA_CACHE[id]=Object.assign({}, o, patch);
+    // Datas novas, contas novas — e o Banco de Reposições acompanha no MESMO update: se a
+    // estadia encolheu e sobrou reposição, o dia volta; se cresceu, o dia desce. Idempotente:
+    // as baixas têm chave fixa por orçamento, então re-salvar não abate duas vezes.
+    var novoO=Object.assign({}, o, patch);
+    var acertoEd=repOrcAcerto(id, novoO);
+    var raizEd=Object.assign({}, acertoEd.patch);
+    Object.keys(patch).forEach(function(campo){ raizEd['auaulandia/orcamentos/'+id+'/'+campo]=patch[campo]; });
+    DB.ref().update(raizEd).then(function(){
+      ORC_LISTA_CACHE[id]=novoO;
+      if(acertoEd.baixadas||acertoEd.estornadas||acertoEd.reservadas){
+        if(typeof audit==='function') audit('reposicao-baixa-orcamento',
+          'acerto do Banco após mudar as datas do orçamento '+repOrcCurto(id)+' — '+repOrcResumo(acertoEd)+' ('+acertoEd.linhas.join(' · ')+')',
+          {pet:(C.pets[0]&&C.pets[0].sel.nome)||'', quem:quem.nome});
+      }
       if(typeof audit==='function') audit('orcamento-datas-alteradas',
         'mudou a reserva de '+nomes+': '+orcBR(antes.entrada)+'–'+orcBR(antes.saida)+' → '+orcBR(C.entrada)+'–'+orcBR(C.saida)+' ('+motivo+')',
         {pet:(C.pets[0]&&C.pets[0].sel.nome)||'', quem:quem.nome});
@@ -10858,19 +11115,21 @@
         orcEnviarPlanilha(id);
       });
       var _id=id;
-      ORC_EDITANDO=null; ORC_EDIT_ANTES=null; ORC_SEL=[];
+      ORC_EDITANDO=null; ORC_EDIT_ANTES=null; ORC_SEL=[]; ORC_REP={}; ORC_RESERVA_IGNORAR='';
       try{ orcRenderSel(); orcCalcular(); }catch(e){} /* silencioso de propósito: guarda defensiva — falhar aqui não pode interromper quem chamou */
       orcRenderAvisoEdicao();
       orcCarregarLista();
+      var _rep=repOrcResumo(acertoEd);
       if(typeof zAlertao==='function') zAlertao('RESERVA ALTERADA',
         ['Agora é de '+orcBR(C.entrada)+' a '+orcBR(C.saida)+' — '+fmtCent(C.total)+'.',
-         'Liberei as noites antigas na planilha e lancei as novas.',
-         'Confira na lista abaixo se apareceu "Lançado na planilha". Se disser que NÃO entrou, toque em "reenviar".'],
+         'Liberei as noites antigas na planilha e lancei as novas.'].concat(_rep?[_rep]:[]).concat(
+         ['Confira na lista abaixo se apareceu "Lançado na planilha". Se disser que NÃO entrou, toque em "reenviar".']),
         {ok:true, botao:'Certo'});
-      else if(st){ st.style.color='var(--crm-ok)'; st.textContent='✅ Reserva alterada.'; }
+      else if(st){ st.style.color='var(--crm-ok)'; st.textContent='✅ Reserva alterada.'+(_rep?(' '+_rep):''); }
       return _id;
     }).catch(function(e){
       if(st){ st.style.color='var(--crm-critico)'; st.textContent='⚠️ NÃO salvou: '+((e&&e.message)||e)+'. Nada foi alterado.'; }
+      _logFalhaGrav('auaulandia/orcamentos + daycare/reposicao (orcSalvarEdicao)', e);
     });
   }
   // Libera na planilha as noites de um período (usado quando a data muda). Não risca o
@@ -10997,10 +11256,17 @@
       ['Valor: '+fmtCent(o.total_cent||0)+'.', 'Não dá para desfazer.'],
       {sim:'Apagar', nao:'Manter'})) return;
     if(!DB) return;
-    DB.ref('auaulandia/orcamentos/'+id).remove().then(function(){
+    // Apagar o orçamento SEM devolver os dias deixaria crédito preso numa reserva que não
+    // existe mais — dia comido por um registro fantasma. Some o orçamento, voltam os dias,
+    // no mesmo update.
+    var acertoAp=repOrcAcerto(id, Object.assign({}, o, {status:'apagado'}));
+    var patchAp=Object.assign({}, acertoAp.patch);
+    patchAp['auaulandia/orcamentos/'+id]=null;
+    DB.ref().update(patchAp).then(function(){
       delete ORC_LISTA_CACHE[id]; orcRenderLista();
-      if(typeof audit==='function') audit('orcamento-apagado','apagou o orçamento de '+nomes,{});
-    }).catch(function(e){ _logFalhaGrav('auaulandia/orcamentos/ (orcApagar)', e); });
+      if(typeof audit==='function') audit('orcamento-apagado','apagou o orçamento de '+nomes
+        +(acertoAp.estornadas?(' — '+repOrcResumo(acertoAp)):''),{});
+    }).catch(function(e){ _logFalhaGrav('auaulandia/orcamentos + daycare/reposicao (orcApagar)', e); });
   }
   // ===== CANCELAR RESERVA — Adriana, 14/ago/2026 ===================================
   // "tem situação que o tutor faz reserva, está tudo preparado, mas algo acontece que impede
@@ -11041,17 +11307,31 @@
     var agora=new Date();
     var pp=function(x){ return String(x).padStart(2,'0'); };
     var brDataHora=pp(agora.getDate())+'/'+pp(agora.getMonth()+1)+'/'+agora.getFullYear()+' às '+pp(agora.getHours())+':'+pp(agora.getMinutes());
-    DB.ref('auaulandia/orcamentos/'+id).update({
-      status:'cancelado', status_em:Date.now(), status_por:quem.nome,
-      cancelado_por:quem.nome, cancelado_role:quem.role||'', cancelado_ts:Date.now(),
-      cancelado_em_br:brDataHora, cancelado_motivo:motivo
-    }).then(function(){
+    // Cancelar DEVOLVE os dias de reposição — no mesmo update do cancelamento. O tutor
+    // desistiu da viagem: o crédito continua sendo dele.
+    var acertoCan=repOrcAcerto(id, Object.assign({}, o, {status:'cancelado'}));
+    var patchCan=Object.assign({}, acertoCan.patch);
+    patchCan['auaulandia/orcamentos/'+id+'/status']='cancelado';
+    patchCan['auaulandia/orcamentos/'+id+'/status_em']=Date.now();
+    patchCan['auaulandia/orcamentos/'+id+'/status_por']=quem.nome;
+    patchCan['auaulandia/orcamentos/'+id+'/cancelado_por']=quem.nome;
+    patchCan['auaulandia/orcamentos/'+id+'/cancelado_role']=quem.role||'';
+    patchCan['auaulandia/orcamentos/'+id+'/cancelado_ts']=Date.now();
+    patchCan['auaulandia/orcamentos/'+id+'/cancelado_em_br']=brDataHora;
+    patchCan['auaulandia/orcamentos/'+id+'/cancelado_motivo']=motivo;
+    DB.ref().update(patchCan).then(function(){
       if(ORC_LISTA_CACHE[id]) ORC_LISTA_CACHE[id].status='cancelado';
       if(typeof audit==='function') audit('orcamento-cancelado','cancelou a reserva de '+nomes+' ('+orcBR(o.entrada||'')+' a '+orcBR(o.saida||'')+') — '+motivo,{pet:(o.pets&&o.pets[0]&&o.pets[0].nome)||'',quem:quem.nome});
+      if(acertoCan.estornadas&&typeof audit==='function') audit('reposicao-baixa-orcamento',
+        'cancelamento do orçamento '+repOrcCurto(id)+' — '+repOrcResumo(acertoCan)+' ('+acertoCan.linhas.join(' · ')+')',
+        {pet:(o.pets&&o.pets[0]&&o.pets[0].nome)||'', quem:quem.nome});
       orcCarregarLista();
       orcTirarDaPlanilha(id, quem.nome, brDataHora);
+      if(acertoCan.estornadas&&typeof zAlertao==='function') zAlertao('RESERVAS DEVOLVIDAS À FICHA',
+        [repOrcResumo(acertoCan), acertoCan.linhas.join(' · ')], {ok:true, botao:'Certo'});
     }).catch(function(e){
       alert('NÃO consegui cancelar: '+((e&&e.message)||e)+'\n\nNada foi alterado. Confira a internet e tente de novo.');
+      _logFalhaGrav('auaulandia/orcamentos + daycare/reposicao (orcCancelar)', e);
     });
   }
   // Desfaz na planilha o que a reserva escreveu: libera as noites do calendário e risca a
@@ -11112,14 +11392,33 @@
           {botao:'Entendi'});
       });
   }
+  // ===== "FECHOU" É O MOMENTO DA BAIXA (Adriana, 10/set/2026) =======================
+  // Enquanto o orçamento aguarda, o dia de reposição fica RESERVADO — visível na ficha,
+  // mas ainda do FILHOt. Quando o tutor fecha, a reserva vira baixa de verdade. Voltar
+  // para pendente, "não fechou" ou cancelar DEVOLVE o dia. Tudo num update de raiz só:
+  // status e ficha nunca contam histórias diferentes.
   function orcStatus(id,novo){
     if(!DB) return;
-    DB.ref('auaulandia/orcamentos/'+id).update({status:novo, status_em:Date.now(), status_por:(typeof quemSou==='function'?quemSou():'-')}).then(function(){
+    var quem=(typeof quemSou==='function')?quemSou():'-';
+    var o=Object.assign({}, ORC_LISTA_CACHE[id]||{}, {status:novo});
+    var acerto=repOrcAcerto(id, o);
+    var patch=Object.assign({}, acerto.patch);
+    patch['auaulandia/orcamentos/'+id+'/status']=novo;
+    patch['auaulandia/orcamentos/'+id+'/status_em']=Date.now();
+    patch['auaulandia/orcamentos/'+id+'/status_por']=quem;
+    DB.ref().update(patch).then(function(){
       if(ORC_LISTA_CACHE[id]) ORC_LISTA_CACHE[id].status=novo;
       orcRenderLista();
       if(typeof audit==='function') audit('orcamento-status','orçamento marcado como '+novo,{});
+      if(acerto.baixadas||acerto.estornadas){
+        if(typeof audit==='function') audit('reposicao-baixa-orcamento',
+          'orçamento '+repOrcCurto(id)+' marcado como '+novo+' — '+repOrcResumo(acerto)+' ('+acerto.linhas.join(' · ')+')',
+          {pet:((o.pets||[])[0]||{}).nome||'', quem:quem});
+        if(typeof zAlertao==='function') zAlertao(acerto.baixadas?'RESERVAS ABATIDAS NA FICHA':'RESERVAS DEVOLVIDAS À FICHA',
+          [repOrcResumo(acerto), acerto.linhas.join(' · ')], {ok:true, botao:'Certo'});
+      }
       if(novo==='fechado') orcEnviarPlanilha(id);
-    }).catch(function(e){ _logFalhaGrav('auaulandia/orcamentos/ (orcStatus)', e); });
+    }).catch(function(e){ _logFalhaGrav('auaulandia/orcamentos + daycare/reposicao (orcStatus)', e); });
   }
   // ===== A PLANILHA SE PREENCHE SOZINHA (Adriana, 12/ago/2026) =======================
   // "Duas abas precisam ser preenchidas e temos diversos erros humanos de esquecimento."
@@ -12213,7 +12512,7 @@
   // inteira DEPOIS de a correção estar publicada — o aviso apareceu, ninguém tocou.
   // Agora o aparelho PARADO recarrega sozinho: trancado, com a aba escondida, na porta de
   // entrada ou 3 minutos sem ninguém tocar nele. Mão na tela = nunca recarrega.
-  const APP_VERSAO='2026-09-08-07';
+  const APP_VERSAO='2026-09-10-01';
   var RECARGA_PARADO_MS=3*60*1000, __versaoPublicada=null, __recargaTimer=null;
   function vigiarVersao(){
     if(!DB) return;
@@ -24595,6 +24894,22 @@
          {t:'Não lançar', fn:function(){}}]);
       return;
     }
+    // Tem saldo, mas parte dele já está prometida numa hospedagem que aguarda resposta.
+    // Não bloqueia — só conta a verdade antes, para ninguém descobrir depois.
+    var presosRep=0; try{ presosRep=repReservado(pRep,''); }catch(e){ presosRep=0; }
+    if(presosRep>0 && (saldoRep-presosRep)<1){
+      zEscolha(pelNome(pRep)+' tem saldo, mas ele está reservado',
+        ['Saldo no Banco: '+saldoRep+'. Reservado em orçamento de hospedagem: '+presosRep+'. Livre: '+Math.max(0,saldoRep-presosRep)+'.',
+         'Se abater aqui, pode faltar dia quando o tutor fechar a hospedagem — e o valor combinado com ele muda.',
+         'Confira com a Gestão antes, ou lance sem abater e resolva na tela de Reposições.'],
+        [{t:'Abater mesmo assim', cor:'#B3261E', fn:function(){ gravar(true, pRep, saldoRep); }},
+         {t:'Lançar sem abater', fn:function(){
+            if(typeof audit==='function') audit('dashboard-daycare','Reposição lançada SEM abater (saldo reservado em hospedagem): '+valor,{pet:valor});
+            gravar(false);
+          }},
+         {t:'Não lançar', fn:function(){}}]);
+      return;
+    }
     gravar(true, pRep, saldoRep);
   }
   // Espelha na planilha. O lançamento no app já está salvo — isto é o que faz a TV enxergar.
@@ -25257,7 +25572,7 @@
     var ids=Object.keys(ORC_LISTA_CACHE||{});
     if(!ids.length){ alert('Nenhum orçamento salvo ainda. Abra "Orçamento de hospedagem" primeiro para carregar a lista.'); return; }
     ids.sort(function(a,b){ return (ORC_LISTA_CACHE[b].criado_em||0)-(ORC_LISTA_CACHE[a].criado_em||0); });
-    var stt={aguardando:'Aguardando', fechado:'FECHOU', nao_fechou:'Não fechou'};
+    var stt={aguardando:'Aguardando', fechado:'FECHOU', nao_fechou:'Não fechou', cancelado:'Cancelado'};
     var linhas=[];
     ids.forEach(function(id){
       var o=ORC_LISTA_CACHE[id]||{};
@@ -25265,7 +25580,8 @@
       (o.pets||[]).forEach(function(p){
         linhas.push([dt, o.tutor||'', p.nome||'', p.plano||'', p.compromisso||'', p.desconto_pct+'%',
           orcBR(o.entrada||''), orcBR(o.saida||''), o.noites||0, p.diarias||0, p.pernoites||0,
-          o.alta_temporada?'ALTA':'baixa',
+          o.alta_temporada?'ALTA':'baixa', p.reposicoes||0,
+          ((p.reposicao_economia_cent||0)/100).toFixed(2).replace('.',','),
           ((p.subtotal_cent||0)/100).toFixed(2).replace('.',','),
           ((o.total_cent||0)/100).toFixed(2).replace('.',','),
           stt[o.status||'aguardando']||'', o.criado_por||'']);
@@ -25273,7 +25589,7 @@
     });
     relBaixarXLS(relTabelaHTML('Orçamentos de hospedagem',
       linhas.length+' linhas · uma por FILHOt de cada orçamento · gerado em '+new Date().toLocaleString('pt-BR'),
-      ['Feito em','Tutor','FILHOt','Plano','Compromisso','Desconto','Entrada','Saída','Noites','Diárias','Pernoites','Temporada','Subtotal R$','Total do orçamento R$','Situação','Quem fez'],
+      ['Feito em','Tutor','FILHOt','Plano','Compromisso','Desconto','Entrada','Saída','Noites','Diárias','Pernoites','Temporada','Reposições usadas','Economia da reposição R$','Subtotal R$','Total do orçamento R$','Situação','Quem fez'],
       linhas), 'orcamentos-hospedagem', linhas.length);
   }
   // ---- Relatório: check-in do corpo de hoje ----

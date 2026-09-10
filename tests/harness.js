@@ -3988,8 +3988,14 @@ async function main() {
       /n\.pernoite=true; n\.porReposicao=true;/.test(html));
     check('nunca usa mais reposicoes do que ha diarias',
       /var repUsa=Math\.min\(repPedidas, nDiaBruto\);/.test(html));
-    check('o saldo NAO cai no orcamento — so no check-in',
-      /O saldo s\u00f3 cai no check-in|O saldo só cai no check-in/.test(html));
+    // 10/set/2026 — a lei mudou: o orcamento AGUARDANDO reserva o dia (ele continua do
+    // FILHOt, mas ninguem mais usa) e a baixa acontece quando o tutor FECHA. O texto antigo
+    // ("o saldo so cai no check-in") era a promessa que o codigo nunca cumpriu: nao havia
+    // baixa nenhuma — nem no check-in, nem em lugar nenhum.
+    check('a tela conta a lei nova: reserva enquanto aguarda, baixa quando o tutor fecha',
+      /fica RESERVADO|ficam RESERVADOS/.test(html) &&
+      /A baixa de verdade acontece quando o tutor <strong>fechar<\/strong>/.test(html) &&
+      !/O saldo só cai no check-in/.test(html));
     check('linha zerada nao aparece na conta (0 diarias x R$ 130,00)',
       /if\(p\.nDia>0\) h\+=/.test(html) && /if\(p\.nPer>0\) h\+=/.test(html));
     check('a mensagem ao tutor conta a reposicao usada',
@@ -4030,6 +4036,231 @@ async function main() {
       ctx.ORC_REP = {};
       check('FILHOt sem cadastro (avulso) nao tem reposicao',
         ctx.orcSaldoRep({ key: 'x', semCadastro: true }) === 0);
+    }
+  }
+  console.log('');
+
+  console.log('Reposicao usada em hospedagem: a BAIXA na ficha (10/set):');
+  {
+    // Adriana, 10/set/2026: "O orcamento esta fazendo contas certas, esta conseguindo tirar
+    // quando o peludinho tem reposicao, no entanto nao esta tirando da ficha deles - dando
+    // baixa. Hospedagem da Maya SRD (Luciana). Hospedagem da Serena (Ana Flavia)."
+    //
+    // A lei nova: AGUARDANDO reserva o dia (visivel na ficha, ninguem mais gasta), FECHADO
+    // baixa de verdade, cancelado/nao fechou/apagado devolve. Chave deterministica por
+    // orcamento => baixar duas vezes o mesmo orcamento e impossivel.
+
+    // ---- o codigo esta la ----
+    check('o orcamento GRAVA quantas reposicoes cada FILHOt usou (era o buraco)',
+      /reposicoes:p\.repUsa\|\|0, reposicao_economia_cent:p\.repEconomia\|\|0/.test(html) &&
+      /reposicoes_total:C\.pets\.reduce/.test(html));
+    check('a chave da baixa e DETERMINISTICA (push\(\) geraria baixa duplicada)',
+      /function repChaveBaixa\(orcId,n\)\{ return 'orc-'\+orcId\+'-'\+n; \}/.test(html) &&
+      /function repChaveEstorno\(orcId,n\)\{ return 'est-orc-'\+orcId\+'-'\+n; \}/.test(html));
+    check('orcamento e ficha vao no MESMO update de raiz (nunca desandam separados)',
+      (html.match(/DB\.ref\(\)\.update\(/g) || []).length >= 4);
+    check('nenhuma das gravacoes novas ficou com .catch vazio',
+      /_logFalhaGrav\('auaulandia\/orcamentos \+ daycare\/reposicao \(orcSalvar\)', e\)/.test(html) &&
+      /_logFalhaGrav\('auaulandia\/orcamentos \+ daycare\/reposicao \(orcStatus\)', e\)/.test(html) &&
+      /_logFalhaGrav\('auaulandia\/orcamentos \+ daycare\/reposicao \(orcCancelar\)', e\)/.test(html) &&
+      /_logFalhaGrav\('auaulandia\/orcamentos \+ daycare\/reposicao \(orcApagar\)', e\)/.test(html));
+    check('a auditoria ganhou o rastro reposicao-baixa-orcamento',
+      /audit\('reposicao-baixa-orcamento'/.test(html));
+
+    // ---- o saldo: estorno agora DEVOLVE o que aponta ----
+    if (typeof ctx.repSaldo === 'function') {
+      const bkpCache = ctx.REPO_CACHE;
+      const P = { n: 'Teste', tutor: 'Harness' };
+      const K = ctx.pelKey(P);
+      const monta = (lanc) => { ctx.REPO_CACHE = { [K]: { lancamentos: lanc } }; };
+      monta({ c1: { tipo: 'credito', ts: 1 }, c2: { tipo: 'credito', ts: 2 } });
+      check('saldo: dois creditos valem 2', ctx.repSaldo(P) === 2, String(ctx.repSaldo(P)));
+      monta({ c1: { tipo: 'credito', ts: 1 }, u1: { tipo: 'uso', ts: 2 } });
+      check('saldo: credito usado volta a zero', ctx.repSaldo(P) === 0, String(ctx.repSaldo(P)));
+      monta({ c1: { tipo: 'credito', ts: 1 }, e1: { tipo: 'estorno', estornaId: 'c1', ts: 2 } });
+      check('saldo: estornar um CREDITO continua dando 0 (como antes)',
+        ctx.repSaldo(P) === 0, String(ctx.repSaldo(P)));
+      monta({ c1: { tipo: 'credito', ts: 1 }, u1: { tipo: 'uso', ts: 2 }, e1: { tipo: 'estorno', estornaId: 'u1', ts: 3 } });
+      check('saldo: estornar um USO DEVOLVE o dia (antes tirava outro: -1 virava -2)',
+        ctx.repSaldo(P) === 1, String(ctx.repSaldo(P)));
+      monta({ c1: { tipo: 'credito', ts: 1 }, e1: { tipo: 'estorno', estornaId: 'nao-existe', ts: 2 } });
+      check('saldo: estorno orfao continua valendo -1 (historico antigo nao se reescreve)',
+        ctx.repSaldo(P) === 0, String(ctx.repSaldo(P)));
+      ctx.REPO_CACHE = bkpCache;
+    } else check('repSaldo existe', false);
+
+    // ---- o acerto: reserva, baixa, estorno, idempotencia ----
+    if (typeof ctx.repOrcAcerto === 'function') {
+      const bkpCache = ctx.REPO_CACHE, bkpPel = ctx.PELUDINHOS;
+      const P = { n: 'Maya', tutor: 'Luciana' };
+      const K = ctx.pelKey(P);
+      ctx.PELUDINHOS = [P];
+      const credito = (n) => { const o = {}; for (let i = 1; i <= n; i++) o['c' + i] = { tipo: 'credito', ts: i }; return o; };
+      const orc = (status, reps) => ({ status, entrada: '2026-09-15', saida: '2026-09-24', tutor: 'Luciana',
+        pets: [{ key: K, nome: 'Maya', tutor: 'Luciana', reposicoes: reps }] });
+      const ID = '-PTESTE01';
+      const bx = (n) => 'daycare/reposicao/' + K + '/lancamentos/orc-' + ID + '-' + n;
+      const es = (n) => 'daycare/reposicao/' + K + '/lancamentos/est-orc-' + ID + '-' + n;
+      const rv = 'daycare/reposicao/' + K + '/reservas/' + ID;
+
+      // 1) AGUARDANDO: reserva, nao baixa
+      ctx.REPO_CACHE = { [K]: { lancamentos: credito(4) } };
+      let a = ctx.repOrcAcerto(ID, orc('aguardando', 4));
+      check('aguardando: RESERVA os 4 dias e nao baixa nenhum',
+        a.reservadas === 4 && a.baixadas === 0 && a.patch[rv] && a.patch[rv].n === 4 && !a.patch[bx(1)],
+        JSON.stringify(Object.keys(a.patch)));
+      check('aguardando: o saldo do FILHOt NAO muda (o dia ainda e dele)', ctx.repSaldo(P) === 4);
+
+      // 2) FECHADO: baixa os 4, solta a reserva
+      a = ctx.repOrcAcerto(ID, orc('fechado', 4));
+      check('fechado: baixa os 4 dias, um lancamento por dia, e solta a reserva',
+        a.baixadas === 4 && a.patch[rv] === null &&
+        [1, 2, 3, 4].every((n) => a.patch[bx(n)] && a.patch[bx(n)].tipo === 'uso' && a.patch[bx(n)].orcId === ID),
+        JSON.stringify(a.baixadas));
+      check('fechado: a baixa diz POR QUE existe (o orcamento e a data de entrada)',
+        /orçamento de hospedagem/.test(a.patch[bx(1)].obs) && /15\/09\/2026/.test(a.patch[bx(1)].obs),
+        a.patch[bx(1)].obs);
+      check('fechado: a baixa vale o dia da ENTRADA, nao "hoje"', a.patch[bx(1)].data === '2026-09-15');
+
+      // aplica as baixas no cache, como o banco faria
+      const comBaixa = credito(4);
+      [1, 2, 3, 4].forEach((n) => { comBaixa['orc-' + ID + '-' + n] = a.patch[bx(n)]; });
+      ctx.REPO_CACHE = { [K]: { lancamentos: comBaixa } };
+      check('depois da baixa, o saldo cai de 4 para 0 (a ficha da Maya)', ctx.repSaldo(P) === 0, String(ctx.repSaldo(P)));
+
+      // 3) IDEMPOTENCIA: rodar de novo escreve exatamente a mesma coisa
+      const a2 = ctx.repOrcAcerto(ID, orc('fechado', 4));
+      const chaves1 = Object.keys(a.patch).sort(), chaves2 = Object.keys(a2.patch).sort();
+      check('idempotente: rodar o acerto de novo mexe nas MESMAS chaves (nada duplica)',
+        JSON.stringify(chaves1) === JSON.stringify(chaves2), JSON.stringify(chaves2));
+      const depois = Object.assign({}, comBaixa);
+      [1, 2, 3, 4].forEach((n) => { depois['orc-' + ID + '-' + n] = a2.patch[bx(n)]; });
+      ctx.REPO_CACHE = { [K]: { lancamentos: depois } };
+      check('idempotente: aplicar o acerto duas vezes deixa o saldo em 0, nunca em -4',
+        ctx.repSaldo(P) === 0, String(ctx.repSaldo(P)));
+
+      // 4) CANCELADO: estorna e devolve os 4
+      const aC = ctx.repOrcAcerto(ID, orc('cancelado', 4));
+      check('cancelado: escreve um estorno para cada baixa que existe',
+        aC.estornadas === 4 && [1, 2, 3, 4].every((n) => aC.patch[es(n)] && aC.patch[es(n)].estornaId === 'orc-' + ID + '-' + n),
+        String(aC.estornadas));
+      const comEstorno = Object.assign({}, depois);
+      [1, 2, 3, 4].forEach((n) => { comEstorno['est-orc-' + ID + '-' + n] = aC.patch[es(n)]; });
+      ctx.REPO_CACHE = { [K]: { lancamentos: comEstorno } };
+      check('cancelado: os 4 dias VOLTAM para a ficha (saldo 0 -> 4)', ctx.repSaldo(P) === 4, String(ctx.repSaldo(P)));
+      check('cancelado: o estorno diz que foi o cancelamento do orcamento',
+        /foi cancelado/.test(aC.patch[es(1)].obs), aC.patch[es(1)].obs);
+
+      // 5) sem baixa nenhuma, cancelar nao inventa estorno orfao (roubaria um dia)
+      ctx.REPO_CACHE = { [K]: { lancamentos: credito(4) } };
+      const aV = ctx.repOrcAcerto(ID, orc('cancelado', 4));
+      check('cancelar um orcamento que nunca fechou nao escreve estorno orfao',
+        aV.estornadas === 0 && !aV.patch[es(1)] && aV.patch[rv] === null,
+        JSON.stringify(Object.keys(aV.patch)));
+
+      // 6) FILHOt sem cadastro (avulso) nao tem Banco de Reposicoes
+      const aS = ctx.repOrcAcerto(ID, { status: 'fechado', entrada: '2026-09-15',
+        pets: [{ key: 'avulso__x__y', nome: 'X', sem_cadastro: true, reposicoes: 3 }] });
+      check('avulso sem cadastro nunca cria no de reposicao', Object.keys(aS.patch).length === 0);
+
+      // 7) a reserva prende o dia: outro orcamento nao pode prometer o mesmo
+      ctx.REPO_CACHE = { [K]: { lancamentos: credito(4), reservas: { [ID]: { n: 3 } } } };
+      check('reservado: 4 no Banco, 3 presos => 1 livre para um orcamento NOVO',
+        ctx.repDisponivel(P, '') === 1, String(ctx.repDisponivel(P, '')));
+      check('reservado: a propria reserva nao bloqueia ela mesma ao reabrir',
+        ctx.repDisponivel(P, ID) === 4, String(ctx.repDisponivel(P, ID)));
+
+      ctx.REPO_CACHE = bkpCache; ctx.PELUDINHOS = bkpPel;
+    } else check('repOrcAcerto existe', false, 'funcao nao encontrada');
+
+    // ---- DADO REAL: os dois casos que a Adriana viu ----
+    if (!HARNESS_VIVO && RETRATO) {
+      const rep = retratoLib.ler(RETRATO, 'daycare/reposicao') || {};
+      const orcs = retratoLib.ler(RETRATO, 'auaulandia/orcamentos') || {};
+      const saldoBruto = (k) => {
+        const L = (rep[k] || {}).lancamentos || {};
+        return Object.keys(L).reduce((s, id) => s + (L[id].tipo === 'credito' ? 1 : -1), 0);
+      };
+      // Quantas reposicoes cada orcamento usou: quem conta e a MENSAGEM que o app escreveu
+      // na epoca ("Ja usando N dias de reposicao"). O campo `reposicoes` so passa a existir
+      // nos orcamentos feitos desta versao em diante.
+      const reRep = /^(?:(.+?)\s+—\s+)?Já usando (\d+) dias? de reposição/;
+      const usadasNo = (id) => String((orcs[id] || {}).mensagem || '').split('\n')
+        .reduce((s, L) => { const m = reRep.exec(L.trim()); return s + (m ? +m[2] : 0); }, 0);
+
+      check('dado real: a Maya (Luciana) e a Serena (Ana Flavia) estao no Banco de Reposicoes',
+        !!rep['maya__luciana'] && !!rep['serena__ana flávia']);
+      check('dado real: as duas tinham 4 creditos cada, sem nenhum uso',
+        saldoBruto('maya__luciana') === 4 && saldoBruto('serena__ana flávia') === 4,
+        'maya=' + saldoBruto('maya__luciana') + ' serena=' + saldoBruto('serena__ana flávia'));
+
+      const fechados = Object.keys(orcs).filter((id) => (orcs[id] || {}).status === 'fechado' && usadasNo(id) > 0);
+      const doPet = (k) => fechados.filter((id) => ((orcs[id] || {}).pets || []).some((p) => p.key === k));
+      const mayaOrc = doPet('maya__luciana'), serOrc = doPet('serena__ana flávia');
+      check('dado real: a Maya tem 1 orcamento FECHADO que usou reposicao, com 4 dias',
+        mayaOrc.length === 1 && usadasNo(mayaOrc[0]) === 4, JSON.stringify(mayaOrc.map((i) => [i, usadasNo(i)])));
+      check('dado real: a Serena tem 2 orcamentos FECHADOS que usaram reposicao, 1 dia cada',
+        serOrc.length === 2 && serOrc.every((i) => usadasNo(i) === 1), JSON.stringify(serOrc.map((i) => [i, usadasNo(i)])));
+      check('dado real: o saldo que DEVERIA estar na ficha e 0 (Maya) e 2 (Serena)',
+        saldoBruto('maya__luciana') - 4 === 0 && saldoBruto('serena__ana flávia') - 2 === 2);
+      check('dado real: nenhuma baixa de orcamento existe ainda no banco - e exatamente o bug relatado',
+        Object.keys((rep['maya__luciana'] || {}).lancamentos || {}).every((id) => !/^orc-/.test(id)) &&
+        Object.keys((rep['serena__ana flávia'] || {}).lancamentos || {}).every((id) => !/^orc-/.test(id)));
+      // ---- a ferramenta do acerto retroativo, provada contra o retrato ----
+      // tools/reposicao-acerto.js e quem conserta o que ficou para tras. A conta dele e
+      // provada AQUI, sem tocar no banco: aplica o patch proposto em cima do retrato e
+      // confere o saldo que sobra.
+      const acertoTool = require('../tools/reposicao-acerto');
+      const lev = acertoTool.levantar(orcs, rep);
+      const M = lev.porPet['maya__luciana'], S = lev.porPet['serena__ana flávia'];
+      check('acerto: a ferramenta acha a Maya e a Serena, e só elas',
+        Object.keys(lev.porPet).length === 2 && !!M && !!S, JSON.stringify(Object.keys(lev.porPet)));
+      check('acerto: propõe 4 baixas para a Maya e 2 para a Serena',
+        M.faltando === 4 && S.faltando === 2, 'maya=' + (M && M.faltando) + ' serena=' + (S && S.faltando));
+      check('acerto: cada baixa carrega o rastro (quem, orçamento, motivo e o aviso de retroativa)',
+        Object.keys(M.patch).every((k) => {
+          const l = M.patch[k];
+          return l.quem === 'tools/reposicao-acerto.js' && l.orcId === mayaOrc[0] &&
+                 l.motivo === 'hospedagem' && l.retroativo === true && /baixa retroativa/.test(l.obs);
+        }), JSON.stringify(M.patch[Object.keys(M.patch)[0]]));
+      check('acerto: as chaves são as MESMAS do app (orc-{id}-{n}) — rodar duas vezes não duplica',
+        Object.keys(M.patch).sort().join(',') ===
+        [1, 2, 3, 4].map((n) => 'lancamentos/' + acertoTool.chaveBaixa(mayaOrc[0], n)).sort().join(','),
+        JSON.stringify(Object.keys(M.patch)));
+      // aplica o patch em cima do retrato e confere o saldo com a MESMA funcao do app
+      {
+        const bkpCache = ctx.REPO_CACHE;
+        const aplica = (k, f) => {
+          const L = Object.assign({}, (rep[k] || {}).lancamentos || {});
+          Object.keys(f.patch).forEach((cam) => { L[cam.replace('lancamentos/', '')] = f.patch[cam]; });
+          return L;
+        };
+        ctx.REPO_CACHE = {
+          'maya__luciana': { lancamentos: aplica('maya__luciana', M) },
+          'serena__ana flávia': { lancamentos: aplica('serena__ana flávia', S) }
+        };
+        check('acerto: depois de aplicado, a ficha da Maya fica com saldo 0 (era 4, usou 4)',
+          ctx.repSaldo({ n: 'Maya', tutor: 'Luciana' }) === 0,
+          String(ctx.repSaldo({ n: 'Maya', tutor: 'Luciana' })));
+        check('acerto: e a da Serena fica com saldo 2 (era 4, usou 1 + 1)',
+          ctx.repSaldo({ n: 'Serena', tutor: 'Ana Flávia' }) === 2,
+          String(ctx.repSaldo({ n: 'Serena', tutor: 'Ana Flávia' })));
+        // rodar de novo em cima do banco JA acertado nao propoe mais nada
+        const lev2 = acertoTool.levantar(orcs, ctx.REPO_CACHE);
+        check('acerto: rodar de novo em cima do banco já acertado não propõe baixa nenhuma',
+          Object.keys(lev2.porPet).every((k) => lev2.porPet[k].faltando === 0),
+          JSON.stringify(Object.keys(lev2.porPet).map((k) => [k, lev2.porPet[k].faltando])));
+        ctx.REPO_CACHE = bkpCache;
+      }
+      check('acerto: o número de reposições volta para dentro do orçamento antigo também',
+        Object.keys(lev.porOrc).length === 3 &&
+        lev.porOrc[mayaOrc[0]] && lev.porOrc[mayaOrc[0]].reposicoes_total === 4,
+        JSON.stringify(lev.porOrc));
+
+      const mo = orcs[mayaOrc[0]] || {};
+      check('dado real: no orcamento da Maya, 4 reposicoes viraram 4 pernoites (3 diarias + 6 pernoites em 9 noites)',
+        (mo.pets || [{}])[0].diarias === 3 && (mo.pets || [{}])[0].pernoites === 6 && mo.noites === 9,
+        JSON.stringify((mo.pets || [{}])[0]));
     }
   }
   console.log('');
@@ -10147,9 +10378,15 @@ async function main() {
           ctx.avisoEncerrado(kako) === true && ctx.avisoStatusEfetivo(kako) === 'resolvido');
         const abertosAntes = Object.keys(racao).filter((k) => (racao[k].status || 'pendente') !== 'resolvido');
         const abertosAgora = Object.keys(racao).filter((k) => !ctx.avisoEncerrado(racao[k]));
+        // A prova é da REGRA, nunca da contagem do dia: o retrato muda toda madrugada e
+        // um número fixo aqui vira falha falsa (foi o que aconteceu em 10/set/2026,
+        // quando o outro chamado foi resolvido de verdade). O que tem de valer sempre:
+        // a regra nunca REABRE nada, o Kakinho sai, e tudo o que saiu tinha resposta.
+        const saiu = abertosAntes.filter((k) => abertosAgora.indexOf(k) < 0);
         check('4 · dado real: a regra fecha só o que tem resposta de encerramento — o resto continua aberto',
-          abertosAntes.length === 2 && abertosAgora.length === 1 &&
-          abertosAgora.indexOf('-P0hscx2wW0rnnV0_hSy') < 0,
+          abertosAgora.every((k) => abertosAntes.indexOf(k) >= 0) &&
+          abertosAgora.indexOf('-P0hscx2wW0rnnV0_hSy') < 0 &&
+          saiu.every((k) => ctx.avisoEncerrado(racao[k]) === true),
           'antes ' + abertosAntes.length + ' → agora ' + abertosAgora.length + ': ' + JSON.stringify(abertosAgora));
       }
     }
@@ -10416,8 +10653,8 @@ async function main() {
     check('v-07 · nenhuma leitura nova ficou com .catch vazio — toda falha deixa rastro',
       !/\.catch\(function\([a-z]*\)\{\s*\}\)/.test(
         html.slice(html.indexOf('function pdiaLer('), html.indexOf('function ltAbrir('))));
-    check('v-07 · a versão foi carimbada como 2026-09-08-07',
-      /const APP_VERSAO='2026-09-08-07';/.test(html));
+    check('v-10 · a versão foi carimbada como 2026-09-10-01',
+      /const APP_VERSAO='2026-09-10-01';/.test(html));
   }
   console.log('');
 
