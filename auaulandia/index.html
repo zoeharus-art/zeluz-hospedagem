@@ -11362,12 +11362,14 @@
         {botao:'Entendi'});
       return;
     }
-    // Um cancelamento por FILHOt: cada um está numa coluna. O 1º também risca a linha do
-    // financeiro; os demais só liberam as noites deles no calendário.
+    // Um cancelamento por FILHOt: cada um tem a SUA coluna no calendário e, desde 11/set/2026,
+    // a SUA linha no financeiro — então TODAS são riscadas (soCalendario nunca mais liga).
+    // Reserva antiga, feita quando o dinheiro ia numa linha só, responde "NAO ACHEI a linha
+    // desta reserva no financeiro" para os demais: é a verdade, e fica dita na tela.
     Promise.all(nomes.map(function(n,i){
       return fetch(cfg.url,{method:'POST', headers:{'Content-Type':'text/plain;charset=utf-8'},
         body:JSON.stringify({ token:cfg.token||'', acao:'cancelar', peludoTutor:n,
-          soCalendario:(i>0), entrada:o.entrada||'', saida:o.saida||'',
+          soCalendario:false, entrada:o.entrada||'', saida:o.saida||'',
           canceladoPor:quem||'', canceladoEm:quando||'' })})
         .then(function(r){ return r.text().catch(function(){ return ''; }); })
         .then(function(txt){ try{ return JSON.parse(txt); }catch(e){ return {ok:false, erro:String(txt).slice(0,120)}; } });
@@ -11426,6 +11428,58 @@
   // para Dash). O dashboard da Gestão NÃO muda: ele continua lendo a mesma planilha, do
   // mesmo jeito — a diferença é que agora ninguém precisa lembrar de digitar.
   // A ponte é um Apps Script publicado na própria planilha (integracao-planilha/Codigo.gs).
+  // Uma linha de planilha por FILHOt do orçamento. Função PURA (não lê tela nem banco):
+  // é ela que o harness prova com 2, 3 e 6 FILHOts.
+  //
+  // NOME: "Primeiro vem o nome do peludo, depois a raça e depois tutor = Romeo/SRD/Jeanine"
+  // (Adriana, 14/ago/2026). Orçamento antigo sem raça cai para Nome/Tutor — nunca escreve
+  // "//" nem deixa a raça vazia entre duas barras.
+  //
+  // DINHEIRO: cada um leva o subtotal de DIÁRIAS dele (a pernoite tem outra conta e não vai
+  // para a planilha — 13/ago/2026). Orçamento antigo não guardava essa quebra: aí o total da
+  // reserva é rateado pelas diárias de cada um, e o último absorve o arredondamento — a soma
+  // das linhas fecha com o total da reserva AO CENTAVO.
+  //
+  // HÓSPEDES: 1 por linha. É somando a coluna que a casa sabe quantos FILHOts vão dormir
+  // aqui — as vagas e o acerto das plantonistas são por número de FILHOts.
+  function orcLinhasPlanilha(o, hoje){
+    o=o||{};
+    var pets=(o.pets||[]).slice();
+    if(!pets.length) pets=[{nome:'', raca:'', tutor:o.tutor||'',
+                            diarias:+o.noites||0, subtotal_diarias_cent:+o.total_cent||0}];
+    var nomeDe=function(p){
+      var partes=[String(p.nome||'').trim()];
+      var r=String(p.raca||'').trim(); if(r) partes.push(r);
+      var t=String(p.tutor||o.tutor||'').trim(); if(t) partes.push(t);
+      return partes.join('/');
+    };
+    var cent=pets.map(function(p){ return Math.max(0, Math.round(+p.subtotal_diarias_cent||0)); });
+    if(!cent.reduce(function(a,x){ return a+x; }, 0)){
+      var alvo=Math.max(0, Math.round(+o.total_cent||0));
+      var dias=pets.map(function(p){ return Math.max(0, +p.diarias||0); });
+      var somaDias=dias.reduce(function(a,x){ return a+x; }, 0);
+      var acum=0;
+      cent=pets.map(function(p, i){
+        var v=(i===pets.length-1) ? (alvo-acum)
+            : (somaDias ? Math.round(alvo*dias[i]/somaDias) : Math.round(alvo/pets.length));
+        acum+=v; return v;
+      });
+    }
+    return pets.map(function(p, i){
+      var dia=(+p.diarias||0) || (+o.noites||0);
+      var valor=Math.max(0, cent[i]||0);
+      var reserva=Math.ceil(valor/2);
+      return {
+        hospedes:1,
+        peludoTutor:nomeDe(p),
+        entrada:o.entrada||'', saida:o.saida||'', noites:dia,
+        reserva:reserva/100, dataReserva:hoje||'',
+        total:valor/100,
+        valorDiaria: dia ? Math.round(valor/dia)/100 : 0,
+        aPagar:(valor-reserva)/100, dataAPagar:o.entrada||''
+      };
+    });
+  }
   function orcEnviarPlanilha(id){
     var o=ORC_LISTA_CACHE[id]||{};
     var cfg=(orcSheetsCfg||{});
@@ -11435,39 +11489,26 @@
         {botao:'Entendi', rodape:'Enquanto isso, lance à mão nas abas Hospedagem e Calendario Hospedagem para Dash. Para ligar de vez: Orçamento → Tabela e feriados → Ponte com a planilha.'});
       return;
     }
-    var pets=(o.pets||[]);
-    // Adriana, 14/ago/2026: "está colocando apenas o nome do peludo e do tutor, precisamos da
-    // raça. Primeiro vem o nome do peludo, depois a raça e depois tutor = Romeo/SRD/Jeanine."
-    // Orçamentos antigos não guardavam a raça — para esses, cai para Nome/Tutor, que é o que
-    // se tinha. Nunca escreve "//" nem deixa a raça vazia entre duas barras.
-    var nomeDe=function(p){
-      var partes=[String(p.nome||'').trim()];
-      var r=String(p.raca||'').trim(); if(r) partes.push(r);
-      var t=String(p.tutor||o.tutor||'').trim(); if(t) partes.push(t);
-      return partes.join('/');
-    };
-    var nomes=pets.map(nomeDe);
-    // Uma linha no financeiro para a reserva inteira (o dinheiro é um só). No calendário,
-    // cada FILHOt ocupa a SUA coluna — Adriana, 17/ago/2026: "cada um fica em uma coluna".
-    // Antes os dois iam juntos numa célula ("Romeo/SRD e Thor/Golden/Jeanine") e o dashboard
-    // contava um hóspede onde havia dois.
+    // ===== CADA FILHOt, UMA LINHA (Adriana, 11/set/2026) ==========================
+    // "Duas irmãs entraram para a hospedagem, a Nala e a Irma, e você simplesmente mandou
+    //  para o dashboard e a planilha o nome de uma, da Nala. Se fizemos o orçamento para 2,
+    //  3, 4, 6… precisamos que cada um entre na planilha para sabermos quantos hóspedes
+    //  teremos. Temos limite de vagas, e precisamos pagar as plantonistas, então sempre
+    //  precisa ir todos, cada um para uma linha da tabela."
+    //
+    // O que havia: a aba Hospedagem recebia UMA linha por reserva, com o nome do PRIMEIRO
+    // FILHOt e o dinheiro inteiro; os demais só entravam no calendário, por um segundo
+    // pedido (acao:'calendario'). Quem abria a tabela via um hóspede onde havia dois — e a
+    // conta das vagas e do acerto das plantonistas, que é por NÚMERO DE FILHOts, saía
+    // errada. "Uma dupla não é uma pessoa" (18/ago/2026).
+    //
+    // Agora cada FILHOt tem a sua linha, com o nome/raça/tutor dele, as diárias dele e o
+    // dinheiro dele — e o mesmo pedido grava o calendário dele, na coluna dele. Os envios
+    // vão UM DE CADA VEZ: a ponte escolhe a coluna livre lendo o calendário, e dois pedidos
+    // ao mesmo tempo escolheriam a mesma.
+    var linhas=orcLinhasPlanilha(o, (typeof hojeISO==='function')?hojeISO():'');
+    var nomes=linhas.map(function(L){ return L.peludoTutor; });
     var peludoTutor=nomes.join(' e ');
-    // PERNOITE NÃO VAI PARA A PLANILHA (Adriana, 13/ago/2026): ela é lançada pela recepção
-    // ou pela plantonista da noite e serve para outra conta — o acerto de quem dorme aqui.
-    // Na planilha entra só a HOSPEDAGEM: as diárias de hotel e o dinheiro delas.
-    var diarias=0, valorDiarias=0;
-    pets.forEach(function(p){ diarias+=(p.diarias||0); valorDiarias+=(p.subtotal_diarias_cent||0); });
-    if(!valorDiarias) valorDiarias=(o.total_cent||0);   // orçamento antigo, sem a quebra salva
-    var payload={
-      token:cfg.token||'', hospedes:pets.length||1, peludoTutor:peludoTutor,
-      entrada:o.entrada||'', saida:o.saida||'', noites:diarias,
-      reserva:Math.ceil(valorDiarias/2)/100, dataReserva:(typeof hojeISO==='function')?hojeISO():'',
-      total:valorDiarias/100,
-      valorDiaria: diarias? Math.round(valorDiarias/diarias)/100 : 0,
-      aPagar:(valorDiarias-Math.ceil(valorDiarias/2))/100, dataAPagar:o.entrada||''
-    };
-    // O 1º envio grava o financeiro E o calendário do 1º FILHOt. Os demais só o calendário,
-    // cada um na sua coluna — sem repetir a linha do dinheiro, que é uma só para a reserva.
     var mandar=function(corpo){
       return fetch(cfg.url,{method:'POST', headers:{'Content-Type':'text/plain;charset=utf-8'}, body:JSON.stringify(corpo)})
         .then(function(r){ return r.text().catch(function(){ return ''; }); })
@@ -11475,15 +11516,14 @@
     };
     // no-cors não deixa ler a resposta; por isso a confirmação é o registro no Firebase
     // e o aviso na tela. Falha de rede NUNCA vira silêncio.
-    mandar(Object.assign({}, payload, {peludoTutor:(nomes[0]||peludoTutor)}))
-      .then(function(j1){
-        var extras=nomes.slice(1);
-        if(!extras.length) return [j1];
-        return Promise.all(extras.map(function(n){
-          return mandar({ token:cfg.token||'', acao:'calendario', peludoTutor:n,
-                          entrada:o.entrada||'', saida:o.saida||'' });
-        })).then(function(rs){ return [j1].concat(rs); });
-      })
+    var respostas=[];
+    linhas.reduce(function(fila, L){
+      return fila.then(function(){
+        return mandar(Object.assign({token:cfg.token||''}, L))
+          .then(function(j){ respostas.push(j); });
+      });
+    }, Promise.resolve())
+      .then(function(){ return respostas; })
       .then(function(js){
         var ok=js.every(function(j){ return j && j.ok; });
         var msg=js.map(function(j,i){ return (nomes[i]||'')+': '+[(j&&j.calendario)||'',(j&&j.financeiro)||''].filter(Boolean).join(' · '); }).join(' | ');
@@ -12512,7 +12552,7 @@
   // inteira DEPOIS de a correção estar publicada — o aviso apareceu, ninguém tocou.
   // Agora o aparelho PARADO recarrega sozinho: trancado, com a aba escondida, na porta de
   // entrada ou 3 minutos sem ninguém tocar nele. Mão na tela = nunca recarrega.
-  const APP_VERSAO='2026-09-10-01';
+  const APP_VERSAO='2026-09-11-01';
   var RECARGA_PARADO_MS=3*60*1000, __versaoPublicada=null, __recargaTimer=null;
   function vigiarVersao(){
     if(!DB) return;
@@ -21270,8 +21310,28 @@
   // "Tudo", Lanna "Tudo", Kira "cenoura"...). Criar um campo novo e vazio jogou todo mundo em
   // "a confirmar" enquanto o dado estava ali do lado. Agora a base é o que já existe; ea_restr
   // só refina quando alguém escreve algo específico do EA.
-  function eaRestricaoDe(ex){
-    return String(ex.ea_restr||ex.restricao||ex.restricoes||ex.alergia||'').trim();
+  // ⚠ 11/set/2026 — a Jasmim apareceu no EA como "NÃO PODE COMER NADA" porque a resposta da
+  // tutora ("Não, até o presente momento não teve nada disso") tinha virado o campo `alergia`
+  // e a palavra "nada" era lida como restrição a TUDO. Agora a negativa NÃO é restrição: o
+  // campo que é só uma negativa vale como campo vazio, e o FILHOt não entra na lista de quem
+  // não pode. Os nomes do FILHOt e do tutor entram no filtro — a ficha da Hana dizia "Hana
+  // não tem nenhuma atividade física com restrição" (a regra dela, de 04/set).
+  function eaRestricaoDe(ex, nomes){
+    var r=String((ex&&(ex.ea_restr||ex.restricao||ex.restricoes||ex.alergia))||'').trim();
+    if(!r) return '';
+    if(typeof zNegativaPura==='function' && zNegativaPura(r, nomes)) return '';
+    return r;
+  }
+  // "Restrição a tudo" é o Ragnar, a Lanna, o Zen: não podem comer NADA do que foi montado.
+  // A palavra "nada" sozinha NÃO diz isso — "nunca percebi sensibilidade a nada alimentar" é
+  // justamente o contrário. Só conta como TUDO quando a frase manda: "não pode nada",
+  // "nada além da ração". Recebe o texto JÁ normalizado (jsNorm).
+  function eaRestricaoTudo(rn){
+    var n=String(rn||'');
+    if(/\btudo\b|\btodos\b|\btodas\b/.test(n)) return true;
+    if(/\bnao pode[a-z]*( comer| ter| receber| ingerir)?\s+nada\b/.test(n)) return true;
+    if(/\bnada\b\s+(alem|fora|exceto|a nao ser|que nao)\b/.test(n)) return true;
+    return false;
   }
   // "Abrobrinha" está cadastrado assim na ficha do Palito. Comparar letra a letra deixaria ele
   // comer abobrinha. Aceita UM erro de digitação em palavras de 6 letras ou mais.
@@ -21297,7 +21357,8 @@
     var out=[]; EA_SEM_RESP=0;
     (turmaDoDia()||[]).forEach(function(o){
       var ex=(typeof pelExtra==='function'?pelExtra(o.p):{})||{};
-      var r=eaRestricaoDe(ex);
+      var r=eaRestricaoDe(ex, [(typeof pelNome==='function')?pelNome(o.p):'',
+                               (typeof pelGet==='function')?(pelGet(o.p,'tutor')||''):'']);
       var nao=!!ex.ea_restr_nao;
       if(nao) return;                                   // tutor liberou tudo
       if(!r){ EA_SEM_RESP++; return; }                  // sem resposta: conta, mas não polui a tela
@@ -21308,7 +21369,7 @@
       // em que ele muda, ninguém percebe. Agora o quadro só existe DEPOIS de escolher o que
       // vai ser montado, e aí ele aparece com força.
       if(!oque) return;
-      if(/\btudo\b|\btodos\b|\bnada\b/.test(rn)){ out.push({o:o, motivo:r, tipo:'tudo'}); return; }
+      if(eaRestricaoTudo(rn)){ out.push({o:o, motivo:r, tipo:'tudo'}); return; }
       var bateu=palavras.filter(function(w){ return eaCasa(rn,w); });
       if(bateu.length) out.push({o:o, motivo:r, tipo:'item'});
     });
@@ -22376,6 +22437,8 @@
   function algRespostaPreocupa(txt){
     var n=(typeof jsNorm==='function')?jsNorm(String(txt||'')):String(txt||'').toLowerCase();
     if(!n) return false;
+    // Mesmo detector do resto do sistema: uma negativa nunca acorda a Gestão (11/set/2026).
+    if(zNegativaPura(txt)) return false;
     if(/^(nao|nada|nenhum|nenhuma|nunca)\b/.test(n) && n.length<=100 && !/\b(mas|porem|so que|exceto|as vezes|apenas quando)\b/.test(n)) return false;
     return true;
   }
@@ -22406,19 +22469,78 @@
       urgAvisar('entrevista-'+k, texto);
     }catch(e){ try{ if(typeof audit==='function') audit('entrevista-atencao','NÃO avisou a Gestão sobre '+k+': '+((e&&e.message)||e),{}); }catch(x){} /* silencioso de propósito: o audit() tem bolso próprio — falhar aqui não trava a gravação */ }
   }
+  // ===== "NÃO" NUNCA VIRA RESTRIÇÃO (Adriana, 11/set/2026) ==========================
+  // "Jasmim no EA apareceu como 'não pode comer nada', e não tem esse dado, de onde tirou
+  //  isso? A tutora respondeu a pergunta dizendo 'Não, até o presente momento não teve nada
+  //  disso' e você colocou como alergia."
+  //
+  // Eram DOIS erros em fila. O primeiro aqui: o filtro que segurava as negativas procurava
+  // os pedaços soltos "da ", "do ", "de ", "se " para decidir se a frase tinha conteúdo — e
+  // "na[da ]disso" contém "da ". Toda negativa com a palavra "nada" escapava e virava campo
+  // de ficha. O segundo no Enriquecimento Ambiental, que lia a palavra "nada" como restrição
+  // a TUDO (ver eaRestricaoTudo).
+  //
+  // A REGRA, agora em UMA função só, usada pelos dois lados e provada no harness com o texto
+  // exato das tutoras: a frase é negativa quando (a) tem marca de negação — não, nenhuma,
+  // nunca, sem, liberado — e (b) NENHUMA palavra fora do vocabulário da negação (tempo,
+  // cortesia, e as próprias palavras da pergunta). Qualquer coisa concreta que o tutor cite
+  // (frango, cenoura, abobrinha, coleira, perfume) fica fora do vocabulário — e aí a frase é
+  // CONTEÚDO, nunca negativa. É o lado seguro: na dúvida, a restrição continua valendo.
+  // "pode", "comer", "dar" e "misturar" ficam de fora de propósito: sem eles, "não pode comer
+  // nada" continua sendo uma restrição de verdade, e não uma negativa.
+  var Z_NEG_MARCA=/\b(nao|nunca|jamais|nenhum|nenhuma|nenhuns|nenhumas|nada|sem|negativo|negativa|livre|livres|liberada|liberado|liberadas|liberados|liberacao|inexistente|nem)\b/;
+  var Z_NEG_MAPA=(function(){
+    var L=('nao n nunca jamais nenhum nenhuma nenhuns nenhumas nada sem negativo negativa '
+      +'livre livres liberada liberado liberadas liberados liberacao inexistente zero nem '
+      +'a o as os um uma uns umas de do da dos das em no na nos nas por pro pra para com ao aos '
+      +'que se e ou ate como ele ela eles elas lhe me meu minha nosso nossa seu sua '
+      +'isso isto esse essa este esta disso disto dessa desse desta deste dessas desses '
+      +'algum alguma alguns algumas qualquer quaisquer ainda tambem tbm td ja so mesmo muito bem '
+      +'momento momentos presente hoje agora enquanto atualmente data dia dias vez vezes hora horas tempo ano anos recentemente '
+      +'teve tem temos tinha tinham tivemos tiveram tive houve ha haver havia foi for fomos era eram '
+      +'esta estao estamos estava ser sao sido apresentou apresenta apresentaram apresentado sentiu sente '
+      +'sofre sofreu notei notou notado notamos percebi percebeu percebido percebemos observei observamos observado '
+      +'sei sabe saiba sabemos soube conheco conhecemos conhecido conhecida conhecimento lembro recordo '
+      +'aconteceu ocorreu ocorre identificado identificamos relatado declarar declarado registrado detectado detectamos '
+      +'evitar evitada evitado evitadas evitados adaptar adaptada adaptado adaptacao precisa precisou precisam '
+      +'restricao restricoes restrita restrito alergia alergias alergico alergica sensibilidade sensibilidades '
+      +'intolerancia intolerancias reacao reacoes alimentar alimentares problema problemas '
+      +'atividade atividades fisica fisicas fisico limitacao limitacoes mania manias comportamento comportamentos '
+      +'mudanca mudancas alteracao alteracoes novidade novidades situacao situacoes queixa queixas sintoma sintomas '
+      +'caso casos tipo tipos coisa coisas eu tu voce voces tenho tenha tenham vi visto achei acho '
+      +'parece pareceu consta aparente aparentemente relatou '
+      +'gracas deus felizmente obrigada obrigado ok certo certa normal tranquilo tranquila otimo otima bom boa saudavel').split(' ');
+    var M={}; L.forEach(function(w){ if(w) M[w]=1; }); return M;
+  })();
+  // `nomes` (opcional): o nome do FILHOt e o do tutor. "Hana não tem nenhuma atividade física
+  // com restrição" é negativa — o "Hana" ali é o próprio FILHOt, não um alimento.
+  function zNegativaPura(v, nomes){
+    var extras={};
+    (nomes||[]).forEach(function(n){
+      jsNorm(String(n||'')).replace(/[^a-z0-9]+/g,' ').split(' ').forEach(function(w){ if(w) extras[w]=1; });
+    });
+    var partes=String(v||'').split(/ \u00B7 |\n+|[.!?;]+\s+/);
+    var viu=false;
+    for(var i=0;i<partes.length;i++){
+      var n=jsNorm(partes[i]).replace(/[^a-z0-9]+/g,' ').replace(/\s+/g,' ').trim();
+      if(!n) continue;
+      viu=true;
+      if(!Z_NEG_MARCA.test(n)) return false;          // sem marca de negação, é conteúdo
+      var toks=n.split(' ');
+      for(var j=0;j<toks.length;j++){
+        var w=toks[j];
+        if(!w || Z_NEG_MAPA[w] || extras[w]) continue;
+        return false;                                 // palavra concreta: isto é conteúdo
+      }
+    }
+    return viu;                                       // texto vazio não é negativa: é nada
+  }
   // "Não", "Nada novo", "Nenhuma restrição" não são conteúdo de ficha — são a ausência
   // dele. Negativa pura fica só na entrevista; campo de ficha não recebe (01/set, após
   // o mutirão gravar "Não" em Alergia e Manias de meia turma).
-  function algNegativoPuro(v){
-    var CONT=/(misturar|dar |dou |pode|evitar|apenas|somente|exceto|menos |do |da |de |quando|se |mas |porem|sim)/;
-    var partes=String(v||'').split(' \u00B7 ');
-    for(var i=0;i<partes.length;i++){
-      var n=jsNorm(partes[i]).replace(/[!.,;:\u2026]+/g,'').replace(/^nao,? ?/,'nao ').replace(/^ñao/,'nao');
-      if(!n) continue;
-      if(CONT.test(n+' ')) return false;
-      if(!(/^(nao|nada|nenhuma?|nunca|nao me lembro|nao recordo)( |$)/.test(n) && n.length<=90)) return false;
-    }
-    return true;
+  function algNegativoPuro(v, nomes){
+    if(!String(v||'').trim()) return true;          // nada escrito não é conteúdo de ficha
+    return zNegativaPura(v, nomes);
   }
   // A resposta se trata sozinha (Adriana, 01/set: "tela limpa"). Campo vazio recebe;
   // campo preenchido NUNCA é sobrescrito — divergência vira ATENÇÃO para a Gestão.
@@ -22429,13 +22551,17 @@
       var c=algCur(k), p=algPelDe(k);
       if(!c || !p) return Promise.resolve(false);   // sem ficha não há onde gravar — fica na lista
       var patch={}, quais=[], divergencias=[];
+      // Os nomes do FILHOt e do tutor entram no filtro de negativa: "Hana não tem nenhuma
+      // atividade física com restrição" é uma negativa — o "Hana" ali é o próprio FILHOt.
+      var _nomes=[(typeof pelNome==='function')?pelNome(p):'',
+                  (typeof pelGet==='function')?(pelGet(p,'tutor')||''):''];
       Object.keys(c.campos).forEach(function(q){
         var f=c.campos[q];
         var v=String(f.txt||'').trim();
         if(!v || !f.campo) return;
         var atual=String(f.atual||'').trim();
         if(!atual){
-          if(algNegativoPuro(v)) return;   // fica na entrevista; ficha limpa
+          if(algNegativoPuro(v, _nomes)) return;   // fica na entrevista; ficha limpa
           patch[f.campo]=patch[f.campo]?(patch[f.campo]+' \u00B7 '+v):v; quais.push(f.campo);
         }
         else if(typeof algCurConflito==='function' && algCurConflito(f)){

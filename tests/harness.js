@@ -4929,7 +4929,7 @@ async function main() {
   {
     check('algTratarAuto existe: preenche so campo VAZIO e nunca sobrescreve a ficha',
       (html.match(/function algTratarAuto/g)||[]).length === 1 &&
-      html.indexOf('if(algNegativoPuro(v)) return;') > 0 &&
+      html.indexOf('if(algNegativoPuro(v, _nomes)) return;') > 0 &&
       /divergencias\.push/.test(html));
     check('negativa pura ("Nao", "Nada novo") NAO vira texto de campo — fica so na entrevista',
       (html.match(/function algNegativoPuro/g)||[]).length === 1);
@@ -7460,6 +7460,141 @@ async function main() {
       ctx.orcOrdenar([pend10, fech05, semData], '2026-09-04').length === 3);
   } else {
     check('orcOrdenar existe', false, 'função não encontrada no script — orçamento não pode ordenar a lista por ENTRADA');
+  }
+  console.log('');
+
+  // ---- v-orcamento: UMA LINHA DE PLANILHA POR FILHOt (Adriana, 11/set/2026) ----
+  // "Duas irmãs entraram para a hospedagem, a Nala e a Irma, e você simplesmente mandou
+  //  para o dashboard e a planilha o nome de uma, da Nala. (…) sempre precisa ir todos,
+  //  cada um para uma linha da tabela."
+  console.log('Orçamento → planilha: cada FILHOt uma linha (11/set):');
+  if (typeof ctx.orcLinhasPlanilha === 'function') {
+    const reserva = (n, centCada) => ({
+      entrada: '2026-09-20', saida: '2026-09-23', noites: 3, tutor: 'Riva',
+      total_cent: centCada * n,
+      pets: Array.from({ length: n }, (_, i) => ({
+        nome: 'FILHOt' + (i + 1), raca: 'SRD', tutor: 'Riva',
+        diarias: 3, subtotal_diarias_cent: centCada }))
+    });
+    [2, 3, 6].forEach((n) => {
+      const L = ctx.orcLinhasPlanilha(reserva(n, 39000), '2026-09-11');
+      check('orçamento com ' + n + ' FILHOts gera ' + n + ' linhas na planilha (uma por FILHOt)',
+        Array.isArray(L) && L.length === n, JSON.stringify((L || []).map((x) => x.peludoTutor)));
+      check('as ' + n + ' linhas têm nomes DIFERENTES — ninguém vai junto numa célula só',
+        new Set(L.map((x) => x.peludoTutor)).size === n, JSON.stringify(L.map((x) => x.peludoTutor)));
+      check('cada linha conta 1 hóspede (é somando a coluna que a casa sabe quantas vagas usou)',
+        L.every((x) => x.hospedes === 1) && L.reduce((a, x) => a + x.hospedes, 0) === n);
+      check('o dinheiro das ' + n + ' linhas soma exatamente o da reserva (zero centavo perdido)',
+        Math.round(L.reduce((a, x) => a + x.total * 100, 0)) === 39000 * n,
+        JSON.stringify(L.map((x) => x.total)));
+      check('nome vem como Nome/Raça/Tutor, e toda linha leva entrada, saída e noites',
+        L.every((x) => /^FILHOt\d+\/SRD\/Riva$/.test(x.peludoTutor) && x.entrada === '2026-09-20'
+          && x.saida === '2026-09-23' && x.noites === 3), JSON.stringify(L[0]));
+    });
+    // o caso da Nala e da Irma, do jeito que a consultora monta na tela
+    const irmas = {
+      entrada: '2026-09-12', saida: '2026-09-15', noites: 3, tutor: 'Riva', total_cent: 78000,
+      pets: [
+        { nome: 'Nala', raca: 'Spitz', tutor: 'Riva', diarias: 3, subtotal_diarias_cent: 39000 },
+        { nome: 'Irma', raca: 'Spitz', tutor: 'Riva', diarias: 3, subtotal_diarias_cent: 39000 }]
+    };
+    const LI = ctx.orcLinhasPlanilha(irmas, '2026-09-11');
+    check('mordida — a Irma NÃO fica para trás: as duas irmãs viram duas linhas com nome próprio',
+      LI.length === 2 && LI[0].peludoTutor === 'Nala/Spitz/Riva' && LI[1].peludoTutor === 'Irma/Spitz/Riva',
+      JSON.stringify(LI.map((x) => x.peludoTutor)));
+    check('metade na reserva e metade na entrada, por FILHOt (R$ 390,00 → 195 + 195)',
+      LI.every((x) => x.reserva === 195 && x.aPagar === 195 && x.valorDiaria === 130));
+    // orçamento antigo, sem a quebra do dinheiro salva: rateia e fecha no centavo
+    const antigo = {
+      entrada: '2026-08-01', saida: '2026-08-04', noites: 3, tutor: 'Ana', total_cent: 40001,
+      pets: [{ nome: 'A', raca: '', tutor: 'Ana', diarias: 3 }, { nome: 'B', raca: '', tutor: 'Ana', diarias: 3 }]
+    };
+    const LA = ctx.orcLinhasPlanilha(antigo, '2026-09-11');
+    check('orçamento antigo (sem a quebra salva) rateia o total e NÃO perde nem 1 centavo',
+      LA.length === 2 && Math.round(LA.reduce((a, x) => a + x.total * 100, 0)) === 40001,
+      JSON.stringify(LA.map((x) => x.total)));
+    check('sem raça, o nome cai para Nome/Tutor — nunca escreve barra dupla',
+      LA.every((x) => x.peludoTutor.indexOf('//') < 0) && LA[0].peludoTutor === 'A/Ana',
+      JSON.stringify(LA.map((x) => x.peludoTutor)));
+    check('mordida — reserva sem pets salvos ainda gera 1 linha (nunca some da planilha)',
+      ctx.orcLinhasPlanilha({ entrada: '2026-09-01', saida: '2026-09-02', noites: 1, tutor: 'X', total_cent: 13000 }, '').length === 1);
+    check('mordida — orcLinhasPlanilha não estoura com objeto vazio',
+      ctx.orcLinhasPlanilha({}).length === 1);
+    check('o envio à planilha usa as linhas (e não mais o nome do primeiro FILHOt sozinho)',
+      html.indexOf('var linhas=orcLinhasPlanilha(o,') > 0 &&
+      html.indexOf("acao:'calendario', peludoTutor:n") < 0);
+    check('cancelar risca TODAS as linhas do financeiro (soCalendario nunca mais liga)',
+      html.indexOf('soCalendario:(i>0)') < 0 && html.indexOf('soCalendario:false') > 0);
+  } else {
+    check('orcLinhasPlanilha existe', false, 'função não encontrada — a planilha voltaria a receber um FILHOt só');
+  }
+  console.log('');
+
+  // ---- "NÃO" NUNCA VIRA RESTRIÇÃO (Adriana, 11/set/2026) ----
+  // "Jasmim no EA apareceu como 'não pode comer nada', e não tem esse dado, de onde tirou
+  //  isso? A tutora respondeu a pergunta dizendo 'Não, até o presente momento não teve nada
+  //  disso' e você colocou como alergia."
+  console.log('Resposta negativa do tutor nunca vira restrição (11/set):');
+  if (typeof ctx.zNegativaPura === 'function') {
+    const jasmim = 'Não, até o presente momento não teve nada disso.';
+    check('o texto EXATO da tutora da Jasmim é lido como negativa — não vira alergia',
+      ctx.zNegativaPura(jasmim) === true, JSON.stringify(jasmim));
+    [
+      'Não', 'Nao', 'Nada', 'Nenhuma', 'Sem restrições', 'nunca teve nada disso',
+      'Não, não teve nada disso', 'Até o momento não!', 'não que eu tenha notado',
+      'nunca percebi alergia e nem sensibilidade a nada alimentar', 'Atividades físicas liberadas',
+      'nenhuma atividade a ser evitada', '* Nenhuma restrição'
+    ].forEach((t) => {
+      check('negativa reconhecida: ' + JSON.stringify(t), ctx.zNegativaPura(t) === true);
+    });
+    [
+      'Frango', 'Cordeiro e Lavanda', 'Tudo', 'Restrição a tudo', 'não pode comer nada',
+      'Não pode nada além da ração dele', 'Tem alergia - Abrobinha (tudo que for verde)',
+      'Não, mas evitamos dar frango', 'Cenoura', 'sem petiscos de boi'
+    ].forEach((t) => {
+      check('CONTEÚDO continua sendo conteúdo (a restrição não se perde): ' + JSON.stringify(t),
+        ctx.zNegativaPura(t) === false);
+    });
+    check('o nome do FILHOt não conta como alimento (a Hana, regra de 04/set)',
+      ctx.zNegativaPura('Hana não tem nenhuma atividade física com restrição', ['Hana', 'Alessandra']) === true);
+    check('mordida — texto vazio não é negativa nem conteúdo (é nada)',
+      ctx.zNegativaPura('') === false && ctx.zNegativaPura(null) === false);
+  } else {
+    check('zNegativaPura existe', false, 'função não encontrada');
+  }
+  if (typeof ctx.eaRestricaoDe === 'function' && typeof ctx.eaRestricaoTudo === 'function') {
+    check('EA — a ficha da Jasmim deixa de ser restrição (o campo negativo vale como vazio)',
+      ctx.eaRestricaoDe({ alergia: 'Não, até o presente momento não teve nada disso.' }, ['Jasmin', 'Riva']) === '');
+    check('EA — "nada" numa negativa NÃO é mais restrição a TUDO',
+      ctx.eaRestricaoTudo('nunca percebi alergia e nem sensibilidade a nada alimentar') === false);
+    check('EA — quem TEM restrição a tudo continua aparecendo (Ragnar, Lanna, Zen)',
+      ctx.eaRestricaoTudo('restricao a tudo') === true && ctx.eaRestricaoTudo('tudo') === true
+      && ctx.eaRestricaoDe({ restricao: 'Tudo' }) === 'Tudo');
+    check('EA — "não pode comer nada" continua valendo como restrição a TUDO',
+      ctx.eaRestricaoTudo('nao pode comer nada') === true && ctx.eaRestricaoTudo('nada alem da racao') === true);
+    check('EA — restrição a um item continua intacta (cenoura, frango, abobrinha)',
+      ctx.eaRestricaoDe({ ea_restr: 'Cenoura' }) === 'Cenoura' && ctx.eaRestricaoTudo('cenoura') === false);
+    // varredura no retrato: quantas fichas ainda têm uma negativa gravada como restrição
+    if (RETRATO) {
+      const cad = retratoLib.ler(RETRATO, 'daycare/cadastro') || {};
+      const CAMPOS = ['alergia', 'restricao', 'restricoes', 'ea_restr'];
+      const falsos = [];
+      Object.keys(cad).forEach((k) => {
+        const ex = cad[k] || {};
+        const nomes = [String(k).split('__')[0] || '', String(k).split('__')[1] || '', ex.tutor || ''];
+        CAMPOS.forEach((c) => {
+          const v = String(ex[c] || '').trim();
+          if (v && ctx.zNegativaPura(v, nomes)) falsos.push(k + '/' + c);
+        });
+      });
+      check('a varredura acha os campos que nasceram de uma negativa (é o que a ferramenta limpa)',
+        falsos.length > 0 && falsos.indexOf('jasmin__riva/alergia') >= 0,
+        falsos.length + ' campo(s): ' + falsos.slice(0, 14).join(' · '));
+      console.log('  ' + falsos.length + ' campo(s) de ficha nasceram de uma resposta negativa — '
+        + 'tools/alergia-falso-positivo.js --ver lista todos');
+    }
+  } else {
+    check('eaRestricaoDe/eaRestricaoTudo existem', false, 'funções não encontradas');
   }
   console.log('');
 
@@ -10653,8 +10788,8 @@ async function main() {
     check('v-07 · nenhuma leitura nova ficou com .catch vazio — toda falha deixa rastro',
       !/\.catch\(function\([a-z]*\)\{\s*\}\)/.test(
         html.slice(html.indexOf('function pdiaLer('), html.indexOf('function ltAbrir('))));
-    check('v-10 · a versão foi carimbada como 2026-09-10-01',
-      /const APP_VERSAO='2026-09-10-01';/.test(html));
+    check('v-11 · a versão foi carimbada como 2026-09-11-01',
+      /const APP_VERSAO='2026-09-11-01';/.test(html));
   }
   console.log('');
 
