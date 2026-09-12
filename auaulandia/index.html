@@ -980,6 +980,18 @@
   .alm-regra.obg{border-left-color:var(--crm-critico);background:rgba(192,57,43,.07)}
   .alm-regra.warn{border-left-color:var(--z-gold);background:rgba(222,180,40,.1)}
   .alm-next{margin-top:14px;text-align:center}
+  /* Protocolo passo a passo (Adriana, 12/set/2026) — o mesmo formato do Almoço, agora
+     também no Check-in do corpo. Quem lê é o monitor, no celular, com o FILHOt na mão:
+     fonte de 16 px para ser lida de relance, um passo por linha, e quem marcou e a que
+     horas logo abaixo do passo. */
+  .proto-item{align-items:flex-start;font-size:16px;line-height:1.45;padding:13px 15px}
+  .proto-item .proto-txt{flex:1}
+  .proto-quem{display:block;margin-top:4px;font-size:14px;font-weight:700;color:var(--muted)}
+  .proto-vazio{background:rgba(222,180,40,.14);border:1.5px solid var(--z-gold);border-radius:11px;padding:14px 16px;font-size:16px;line-height:1.45;font-weight:700;color:var(--z-blue)}
+  .proto-cfg-item{display:flex;gap:10px;align-items:flex-start;background:#fff;border:1.5px solid var(--line);border-radius:11px;padding:11px 13px;margin-bottom:8px;flex-wrap:wrap}
+  .proto-cfg-num{font-weight:800;color:var(--z-gold-deep);font-size:15px;min-width:22px}
+  .proto-cfg-txt{flex:1;min-width:180px;font-size:15px;line-height:1.4;color:var(--z-blue);font-weight:600}
+  .proto-cfg-bt{border:1.5px solid var(--line);background:var(--z-cream-warm);color:var(--z-blue);border-radius:9px;padding:6px 11px;font-family:inherit;font-weight:800;font-size:13px;cursor:pointer}
   .mini-banho{position:absolute;top:8px;left:8px;font-size:10px;font-weight:800;color:#fff;background:var(--z-auaulandia);padding:3px 8px;border-radius:8px;z-index:3}
   .alm-card .mini-banho{top:32px}
   /* ANSIOSO — come em caixa própria. 2º da ordem de servir (depois de quem tem banho). */
@@ -2666,12 +2678,26 @@
          Entrada: 7h-10h30, quem passa por aqui esta PRESENTE. Saida: no fim do dia.
          Ponto a ponto, foto obrigatoria em qualquer alteracao, alerta com desfecho na Coordenacao. -->
     <div id="scr-checkin" class="dc-scr" style="display:none">
-      <div class="role-note"><span data-icon="heart"></span><span id="ckNota"></span></div>
-      <div id="ckResumo"></div>
-      <div class="pel-toolbar"><span class="pel-count" id="ckCount"></span></div>
-      <div class="pets-grid" id="ckGrid"></div>
-      <!-- ficha de um FILHOt -->
-      <div id="ckFicha" style="display:none"></div>
+      <!-- TRÊS ETAPAS (Adriana, 12/set/2026): "no Almoço tem o início, a execução e a
+           finalização, tudo estruturado. Precisamos da mesma estrutura no Check-in do
+           corpo: Início, Check-in e Fim" — o protocolo dentro do sistema, passo a passo,
+           para uma criança de 12 anos conseguir executar. A barra só aparece na ENTRADA:
+           o check-out do corpinho continua como era. -->
+      <div class="subtabs ck-steps" id="ckSteps" style="display:none">
+        <div class="dctab2" data-step="inicio" onclick="setCkStep('inicio')">1. Início</div>
+        <div class="dctab2 active" data-step="exec" onclick="setCkStep('exec')">2. Check-in</div>
+        <div class="dctab2" data-step="fim" onclick="setCkStep('fim')">3. Fim</div>
+      </div>
+      <div id="ck-inicio" class="alm-step" style="display:none"></div>
+      <div id="ck-exec" class="alm-step">
+        <div class="role-note"><span data-icon="heart"></span><span id="ckNota"></span></div>
+        <div id="ckResumo"></div>
+        <div class="pel-toolbar"><span class="pel-count" id="ckCount"></span></div>
+        <div class="pets-grid" id="ckGrid"></div>
+        <!-- ficha de um FILHOt -->
+        <div id="ckFicha" style="display:none"></div>
+      </div>
+      <div id="ck-fim" class="alm-step" style="display:none"></div>
     </div>
     <!-- CHECK-IN DOS PERTENCES (Adriana, 13/ago/2026) — a tabela de papel virou tela.
          13 itens, item a item: trouxe ou não trouxe. Trouxe ABRE o detalhe, igual ao corpo. -->
@@ -3948,6 +3974,17 @@
       <div id="painelCfg" style="display:none;margin-top:10px"></div>
     </div>
 
+    <!-- PROTOCOLOS PASSO A PASSO (Adriana, 12/set/2026) — a lei de 22/ago: "regra nova não
+         pode exigir programador". Os passos do Início e do Fim do Almoço e do Check-in do
+         corpo moram no banco (daycare/config/protocolos/{atividade}/{etapa}) e se editam
+         aqui: acrescentar, reescrever, subir, descer e tirar. Toda mudança deixa rastro na
+         auditoria, com quem mexeu e o que mudou. -->
+    <div class="card so-master">
+      <h2 style="font-size:19px">Protocolos passo a passo</h2>
+      <div class="hint">O passo a passo que aparece na tela de quem executa, na hora de executar. Escreva <strong>um passo por linha, começando pelo verbo</strong> — &ldquo;Limpe o mop&hellip;&rdquo;, &ldquo;Separe a terra&hellip;&rdquo; — e sem palavra difícil: quem lê está com o peludinho na mão. A régua é a de sempre: uma criança de 12 anos tem de conseguir executar só com o que está escrito.</div>
+      <div id="protoWrap" style="margin-top:12px"><div class="hint">Carregando os protocolos&hellip;</div></div>
+    </div>
+
     <!-- LOGINS E SEGURANÇA (Adriana, 08/set/2026, 23h40): "tudo de login vai para dentro
          de Configurações › Logins/Segurança" — e "Time continua Time, não mexe em nada".
          Por isso NADA saiu da tela Time: senhas e colaboradores continuam lá. O que entrou
@@ -4493,6 +4530,13 @@
       DB.ref('auaulandia/cadastro').on('value', s=>{ cadCache=s.val()||{}; if(typeof renderHosp==='function') renderHosp(); });
       DB.ref('daycare/config/sensiveis').on('value', s=>{ const v=s.val(); if(Array.isArray(v)){ try{ SENS=new Set(v); }catch(e){} /* silencioso de propósito: guarda defensiva — se o valor não vier, o anterior continua valendo */ } });
       DB.ref('daycare/config/atividades').on('value', s=>{ const v=s.val(); if(Array.isArray(v)&&v.length){ ATIVIDADES=v; if(typeof renderAtiv==='function') renderAtiv(); } });
+      // Os passos de cada protocolo (12/set/2026). Nó pequeno e raro de mudar: desce uma vez
+      // e a mudança da Gestão chega sozinha na tela de quem está executando.
+      DB.ref('daycare/config/protocolos').on('value', s=>{ const v=s.val(); PROTOCOLOS=(v&&typeof v==='object')?v:{};
+        try{ if(typeof renderCheckin==='function'&&(dcAtiv==='checkin-corpo'||dcAtiv==='checkout-corpo')) renderCheckin(); }catch(e){} /* silencioso de propósito: redesenho de tela — falhar não pode derrubar quem chamou */
+        try{ if(typeof renderAlmSeFor==='function') renderAlmSeFor(); }catch(e){} /* silencioso de propósito: redesenho de tela — falhar não pode derrubar quem chamou */
+        try{ if(typeof protoRender==='function'&&document.getElementById('protoWrap')) protoRender(); }catch(e){} /* silencioso de propósito: redesenho de tela — falhar não pode derrubar quem chamou */
+      });
       zMapaVivo('daycare/cadastro','_pelcad', v=>{ pelCadCache=Object.assign({},v); CARTEIRA_CARREGADA=true; try{ if(typeof renderRenovacao==='function') renderRenovacao(); }catch(e){} /* silencioso de propósito: redesenho de tela — falhar não pode derrubar quem chamou */ if(typeof mergeNovosAlunos==='function') mergeNovosAlunos(); if(typeof aplicarExclusoes==='function') aplicarExclusoes(); if(typeof renderPel==='function') renderPel(); if(typeof renderDaycare==='function') renderDaycare(); if(typeof renderKPIs==='function') renderKPIs();
         // Prevenção (Adriana, 04/set/2026: "110 sem cadastro, não tem nada" — verificado:
         // o dado EXISTE). Causa raiz: prevDados()/pelInativo() leem pelExtra(p), que só existe
@@ -4763,7 +4807,7 @@
     if(v==='daycare'){ if(typeof abrirDayCare==='function') abrirDayCare(); }
     if(v==='orcamento'){ if(typeof orcInit==='function') orcInit(); }
     if(v==='relatorios'){ if(typeof renderRelatorios==='function') renderRelatorios(); if(typeof orcCarregarLista==='function') orcCarregarLista(); }
-    if(v==='config'){ if(typeof configCarregar==='function') configCarregar(); if(typeof cfgLoginsCarregar==='function') cfgLoginsCarregar(); }
+    if(v==='config'){ if(typeof configCarregar==='function') configCarregar(); if(typeof cfgLoginsCarregar==='function') cfgLoginsCarregar(); if(typeof protoCarregar==='function') protoCarregar(); }
     if(v==='linhadotempo'){ if(typeof ltAbrir==='function') ltAbrir(); }
     if(v==='acerto'){ if(typeof acertoCarregar==='function') acertoCarregar(); }
     if(v==='ritmo'){ if(typeof ritmoCarregar==='function') ritmoCarregar(); }
@@ -12559,7 +12603,7 @@
   // inteira DEPOIS de a correção estar publicada — o aviso apareceu, ninguém tocou.
   // Agora o aparelho PARADO recarrega sozinho: trancado, com a aba escondida, na porta de
   // entrada ou 3 minutos sem ninguém tocar nele. Mão na tela = nunca recarrega.
-  const APP_VERSAO='2026-09-11-02';
+  const APP_VERSAO='2026-09-12-01';
   var RECARGA_PARADO_MS=3*60*1000, __versaoPublicada=null, __recargaTimer=null;
   function vigiarVersao(){
     if(!DB) return;
@@ -19080,8 +19124,64 @@
     'ENTREGAR a lista de quem não comeu para o Monitor III (2º horário)'
   ];
   const ALM_TEMPO_EXTRA=['Maria Flor','João e Juju','Cookie e Cristal','Cookie (SRD)'];
+
+  // ===== PROTOCOLOS PASSO A PASSO — O TEXTO MORA NO BANCO (Adriana, 12/set/2026) ======
+  // Adriana: "na atividade Almoço tem o protocolo a seguir: o início, que é a preparação do
+  // espaço, a execução e a finalização, tudo estruturado. Precisamos criar a mesma estrutura
+  // para o Check-in do corpo: Início, Check-in e Fim. A ideia é o protocolo estar no sistema,
+  // passo a passo, para que uma criança de 12 anos consiga executar."
+  //
+  // E a lei de 22/ago/2026: REGRA NOVA NÃO PODE EXIGIR PROGRAMADOR. O teste é "se amanhã
+  // mudar, quem resolve?" — se a resposta for o Claude, não está pronto. Por isso os passos
+  // saíram do código e passaram a morar em daycare/config/protocolos/{atividade}/{etapa},
+  // editáveis em Configurações › Protocolos passo a passo.
+  //
+  // O que está aqui embaixo é o VALOR PADRÃO: vale enquanto o nó do banco não existe, e é
+  // ele que a semeadura grava UMA vez (transaction que aborta se o nó já existe — nunca
+  // sobrescreve o que a Gestão escreveu). Nada muda para quem usa.
+  //
+  // Os 11 passos do Início do Check-in do corpo são os que Adriana ditou em 12/set/2026,
+  // reescritos com o verbo na frente — é assim que quem lê sabe o que fazer com as mãos.
+  const CK_INICIO_PADRAO=[
+    'Limpe o mop com água e sabão: 1 tampa de sabão para 3 litros de água',
+    'Separe o tablado para xixi',
+    'Separe a terra, para usar em caso de cocô mole',
+    'Ponha 2 águas para os peludinhos',
+    'Prepare a caixa de isopor com gelo seco para a comida de geladeira',
+    'Prepare a caixa de isopor para a comida dos peludinhos ansiosos com alimentação',
+    'Monte o gaveteiro transparente para separar a alimentação seca de pequeno e de médio porte',
+    'Arrume o gaveteiro preto: 1 gaveta para medicamento e 2 para o kit dental',
+    'Separe a caixa de petisco',
+    'Ponha as 2 caixas de plástico vermelhas, tipo engradado, para as bolsas dos peludinhos',
+    'Deixe à mão a prancheta de check-in de pertences e corpo, para casos extraordinários: falta de luz, falta de internet ou aparelho com erro'
+  ];
+  // O Fim do Check-in do corpo nasce VAZIO de propósito: Adriana não ditou os passos, e
+  // inventar protocolo é pior do que não ter. A tela diz isso com todas as letras e aponta
+  // onde a Gestão escreve.
+  const PROTO_PADRAO={
+    'checkin-corpo':{ inicio:CK_INICIO_PADRAO, fim:[] },
+    'almoco':{ inicio:ALM_PREP, fim:ALM_FINAL }
+  };
+  const PROTO_ATIVS=[
+    {a:'checkin-corpo', t:'Check-in do corpo', etapas:[{e:'inicio',t:'Início — preparação do espaço'},{e:'fim',t:'Fim'}]},
+    {a:'almoco',        t:'Almoço',            etapas:[{e:'inicio',t:'Preparação'},{e:'fim',t:'Finalização'}]}
+  ];
+  var PROTOCOLOS={};   // {atividade:{etapa:{passos:[...], atualizadoEm, atualizadoPor}}}
+  // O nó existe? Então ELE manda — inclusive quando a Gestão apagou todos os passos. A
+  // constante do código só vale antes da semeadura. Sem essa distinção, tirar o último
+  // passo faria a lista antiga ressuscitar sozinha na tela do monitor.
+  function protoNo(a,e){ const x=PROTOCOLOS[a]; const n=x&&x[e]; return (n&&typeof n==='object')?n:null; }
+  function protoPassos(a,e){
+    const n=protoNo(a,e);
+    if(n){ const v=n.passos; return Array.isArray(v)?v.filter(function(t){ return String(t||'').trim(); }):[]; }
+    const d=(PROTO_PADRAO[a]||{})[e]; return Array.isArray(d)?d.slice():[];
+  }
+  function protoNomeAtiv(a){ const f=PROTO_ATIVS.find(function(x){ return x.a===a; }); return f?f.t:a; }
+  function protoNomeEtapa(a,e){ const f=PROTO_ATIVS.find(function(x){ return x.a===a; }); if(!f) return e;
+    const g=f.etapas.find(function(x){ return x.e===e; }); return g?g.t:e; }
+
   function isAprendiz(){ return document.body.dataset.role==='aprendiz'; }
-  function prepCompleto(){ return ALM_PREP.every((_,i)=>almPrep[i]); }
+  function prepCompleto(){ const l=protoPassos('almoco','inicio'); return l.length?l.every((_,i)=>almPrep[i]):true; }
   function stepLocked(step){ if(!isAprendiz()) return false; if(step==='prep') return false; if(step==='exec') return !prepCompleto(); return !(prepCompleto()&&almExecOk); }
   function setAlmStep(step){ if(stepLocked(step)){ alert('Conclua a etapa anterior primeiro (modo treinamento).'); return; } almStep=step; renderAlmStep(); }
   function renderAlmStep(){
@@ -19092,13 +19192,15 @@
     else if(almStep==='grade') renderAlmoco();
     else if(almStep==='final') renderAlmFinal();
   }
-  function renderAlmPrep(){ const el=document.getElementById('alm-prep'); if(!el) return; const done=ALM_PREP.filter((_,i)=>almPrep[i]).length;
+  function renderAlmPrep(){ const el=document.getElementById('alm-prep'); if(!el) return;
+    const passos=protoPassos('almoco','inicio'); const done=passos.filter((_,i)=>almPrep[i]).length;
     el.innerHTML=barraTurno('Preparação', almPrepTurno, 'iniciarPrep', 'encerrarPrep')
-      +`<div class="role-note"><span data-icon="paw"></span><span>1ª etapa &mdash; <strong>Organização do espaço</strong>. Marque cada item conforme prepara. (${done}/${ALM_PREP.length})</span></div>`
-      +ALM_PREP.map((t,i)=>`<label class="todo-item ${almPrep[i]?'on':''}" onclick="toggleAlmPrep(${i})"><span class="todo-box">${almPrep[i]?'&#10003;':''}</span>${t}</label>`).join('')
+      +`<div class="role-note"><span data-icon="paw"></span><span>1ª etapa &mdash; <strong>Organização do espaço</strong>. Marque cada item conforme prepara. (${done}/${passos.length})</span></div>`
+      +(passos.length?passos.map((t,i)=>`<label class="todo-item ${almPrep[i]?'on':''}" onclick="toggleAlmPrep(${i})"><span class="todo-box">${almPrep[i]?'&#10003;':''}</span>${t}</label>`).join('')
+        :'<div class="proto-vazio">A Gestão ainda não escreveu os passos da Preparação &mdash; Configurações &rsaquo; Protocolos passo a passo.</div>')
       +(isAprendiz()?(prepCompleto()?`<div class="alm-next"><button class="btn btn-primary" onclick="setAlmStep('exec')">Preparação feita &rarr; Como Executar</button></div>`:`<div class="alm-next"><span class="hint">Marque todos os itens para liberar a próxima etapa.</span></div>`):'');
   }
-  function toggleAlmPrep(i){ almPrep[i]=!almPrep[i]; if(DB) DB.ref('daycare/almoco-prep/'+dcDataKey()+'/'+i).set(almPrep[i]||null).catch(function(e){ _logFalhaGrav('daycare/almoco-prep/ (toggleAlmPrep)', e); }); if(typeof audit==='function'&&almPrep[i]) audit('almoco_prep','preparação: '+(ALM_PREP[i]||('item '+(i+1)))); renderAlmStep(); }
+  function toggleAlmPrep(i){ almPrep[i]=!almPrep[i]; if(DB) DB.ref('daycare/almoco-prep/'+dcDataKey()+'/'+i).set(almPrep[i]||null).catch(function(e){ _logFalhaGrav('daycare/almoco-prep/ (toggleAlmPrep)', e); }); if(typeof audit==='function'&&almPrep[i]) audit('almoco_prep','preparação: '+(protoPassos('almoco','inicio')[i]||('item '+(i+1)))); renderAlmStep(); }
   function renderAlmExec(){ const el=document.getElementById('alm-exec'); if(!el) return;
     el.innerHTML=`<div class="role-note"><span data-icon="alert"></span><span>2ª etapa &mdash; <strong>Como executar</strong>. Regras obrigatórias. Leia antes de servir.</span></div>`
       +`<div class="alm-regras">`+ALM_REGRAS.map(r=>`<div class="alm-regra ${r.obg?'obg':''}">${r.obg?'<b>OBRIGATÓRIO:</b> ':''}${r.t}</div>`).join('')
@@ -19106,13 +19208,15 @@
       +(isAprendiz()?`<div class="alm-next"><button class="btn btn-primary" onclick="confirmarExec()">Li e entendi &rarr; Ir para o Almoço</button></div>`:'');
   }
   function confirmarExec(){ almExecOk=true; if(DB) DB.ref('daycare/almoco-exec/'+dcDataKey()).set(true).catch(function(e){ _logFalhaGrav('daycare/almoco-exec/ (confirmarExec)', e); }); if(typeof audit==='function') audit('almoco_exec','confirmou que leu as regras de execução'); setAlmStep('grade'); }
-  function renderAlmFinal(){ const el=document.getElementById('alm-final'); if(!el) return; const done=ALM_FINAL.filter((_,i)=>almFinal[i]).length;
+  function renderAlmFinal(){ const el=document.getElementById('alm-final'); if(!el) return;
+    const passos=protoPassos('almoco','fim'); const done=passos.filter((_,i)=>almFinal[i]).length;
     el.innerHTML=barraTurno('Finalização', almFinalTurno, 'iniciarFinal', 'encerrarFinal')
-      +`<div class="role-note"><span data-icon="moon"></span><span>3ª etapa &mdash; <strong>Finalização</strong>. (${done}/${ALM_FINAL.length})</span></div>`
-      +ALM_FINAL.map((t,i)=>`<label class="todo-item ${almFinal[i]?'on':''}" onclick="toggleAlmFinal(${i})"><span class="todo-box">${almFinal[i]?'&#10003;':''}</span>${t}</label>`).join('')
+      +`<div class="role-note"><span data-icon="moon"></span><span>3ª etapa &mdash; <strong>Finalização</strong>. (${done}/${passos.length})</span></div>`
+      +(passos.length?passos.map((t,i)=>`<label class="todo-item ${almFinal[i]?'on':''}" onclick="toggleAlmFinal(${i})"><span class="todo-box">${almFinal[i]?'&#10003;':''}</span>${t}</label>`).join('')
+        :'<div class="proto-vazio">A Gestão ainda não escreveu os passos da Finalização &mdash; Configurações &rsaquo; Protocolos passo a passo.</div>')
       +bancoTempoHTML();
   }
-  function toggleAlmFinal(i){ almFinal[i]=!almFinal[i]; if(DB) DB.ref('daycare/almoco-final/'+dcDataKey()+'/'+i).set(almFinal[i]||null).catch(function(e){ _logFalhaGrav('daycare/almoco-final/ (toggleAlmFinal)', e); }); if(typeof audit==='function'&&almFinal[i]) audit('almoco_final','finalização: '+(ALM_FINAL[i]||('item '+(i+1)))); renderAlmFinal(); }
+  function toggleAlmFinal(i){ almFinal[i]=!almFinal[i]; if(DB) DB.ref('daycare/almoco-final/'+dcDataKey()+'/'+i).set(almFinal[i]||null).catch(function(e){ _logFalhaGrav('daycare/almoco-final/ (toggleAlmFinal)', e); }); if(typeof audit==='function'&&almFinal[i]) audit('almoco_final','finalização: '+(protoPassos('almoco','fim')[i]||('item '+(i+1)))); renderAlmFinal(); }
   function seloBanho(k){ if(!temBanho(k)) return '';
     const h=horaBanhoDe(k); // hora vem da planilha; marcado à mão não tem hora
     return '<span class="mini-banho">BANHO'+(h?' '+h:'')+'</span>'; }
@@ -19427,13 +19531,29 @@
     Promise.all([
       zMapaUma(ckNo()).catch(function(){ return {}; }),
       DB.ref('daycare/chamada/'+dcDataKey()).once('value').then(function(s){ return s.val()||{}; }).catch(function(){ return null; }),
-      DB.ref('daycare/falta-tardia/'+dcDataKey()).once('value').then(function(s){ return s.val()||{}; }).catch(function(){ return {}; })
+      DB.ref('daycare/falta-tardia/'+dcDataKey()).once('value').then(function(s){ return s.val()||{}; }).catch(function(){ return {}; }),
+      // As marcas do Início e do Fim (12/set/2026). Falhar aqui deixa rastro: uma lista de
+      // protocolo que volta vazia por erro de leitura faria a monitora refazer o que já fez.
+      DB.ref(ckEtapaNo('inicio')).once('value').then(function(s){ return s.val()||{}; })
+        .catch(function(e){ _logLeituraFalhou(ckEtapaNo('inicio')+' (carregarCheckin)', e); return {}; }),
+      DB.ref(ckEtapaNo('fim')).once('value').then(function(s){ return s.val()||{}; })
+        .catch(function(e){ _logLeituraFalhou(ckEtapaNo('fim')+' (carregarCheckin)', e); return {}; })
     ]).then(function(r){
       ckDados=Object.assign({},r[0]);
       if(r[1]) dcChamada=r[1];
       CK_FALTA_TARDIA=r[2]||{};
+      ckIni=r[3]||{}; ckFimM=r[4]||{};
+      ckDecideStep();
       renderCheckin();
     }).catch(function(){ ckDados={}; renderCheckin(); });
+  }
+  // Em que etapa a tela abre. Quem já sabe o caminho cai direto no check-in; quem está em
+  // treinamento começa pelo Início, que é onde o protocolo ensina a preparar o espaço.
+  function ckDecideStep(){
+    if(!ckTemEtapas()){ ckStep='exec'; return; }
+    const passos=protoPassos('checkin-corpo','inicio');
+    const completo=passos.length?passos.every(function(_,i){ return ckIni[i]; }):true;
+    ckStep=(isAprendiz()&&!completo)?'inicio':'exec';
   }
   // A chamada é a resposta de quem está no prédio. Quem faltou não se examina — nem na
   // entrada nem na saída (Adriana, 28/ago/2026).
@@ -19444,7 +19564,110 @@
   function ckFeito(o){ const r=ckDe(o); return !!(r&&r.fim); }
   function ckTemAlerta(o){ const r=ckDe(o); if(!r||!r.pontos) return false;
     return Object.keys(r.pontos).some(function(k){ return r.pontos[k]&&r.pontos[k].alterado; }); }
+
+  // ===== AS TRÊS ETAPAS DO CHECK-IN DO CORPO (Adriana, 12/set/2026) ==================
+  // Mesma mecânica do Almoço, item por item: barra de tempo com Iniciar/Encerrar, lista
+  // marcável e rastro de QUEM marcou e A QUE HORAS. O que muda em relação ao Almoço é que
+  // aqui a marca não é um "sim" solto: cada passo guarda a pessoa e o horário, porque é
+  // isso que responde, depois, "quem preparou a sala hoje?".
+  //
+  // TEMPO: cada etapa é um cronômetro próprio dentro de daycare/tempo-atividade/{dia} —
+  // os slugs checkin-corpo-inicio e checkin-corpo-fim, ao lado do checkin-corpo que já
+  // existia. Assim as três entram no Ritmo do Time em min/FILHOt, que é a leitura que
+  // interessa ("volume é irrelevante, o que importa é TEMPO").
+  var ckStep='exec', ckIni={}, ckFimM={};
+  const CK_ETAPA_SLUG={inicio:'checkin-corpo-inicio', fim:'checkin-corpo-fim'};
+  function ckTemEtapas(){ return ckEhEntrada(); }
+  function ckEtapaNo(etapa){ return 'daycare/checkin-corpo-'+etapa+'/'+dcDataKey(); }
+  function ckMarcasDe(etapa){ return etapa==='inicio'?ckIni:ckFimM; }
+  function setCkStep(s){ ckStep=s; renderCheckin(); try{ window.scrollTo(0,0); }catch(e){} /* silencioso de propósito: enfeite de tela (foco, rolagem, mídia) — falhar não muda dado nenhum */ }
+  function ckAplicarEtapas(){
+    const tem=ckTemEtapas(), passo=tem?ckStep:'exec';
+    const bar=document.getElementById('ckSteps'); if(bar) bar.style.display=tem?'':'none';
+    ['inicio','exec','fim'].forEach(function(st){ const el=document.getElementById('ck-'+st); if(el) el.style.display=(st===passo)?'block':'none'; });
+    if(bar) bar.querySelectorAll('.dctab2').forEach(function(b){ b.classList.toggle('active', b.dataset.step===passo); });
+    // A barra genérica do cronômetro obedece à etapa: some no Início e no Fim (que têm o
+    // seu próprio relógio) e volta no check-in em si. Nunca dois relógios na mesma tela.
+    try{ if(typeof renderBarraAtiv==='function') renderBarraAtiv(); }catch(e){} /* silencioso de propósito: redesenho de tela — falhar não pode derrubar quem chamou */
+  }
+  // Marcar e desmarcar. Desmarcar grava null (tira o passo), e o rastro da auditoria
+  // registra os dois sentidos — nada some sem deixar dito quem tirou.
+  function ckToggleEtapa(etapa,i){
+    const marcas=ckMarcasDe(etapa), texto=protoPassos('checkin-corpo',etapa)[i]||('passo '+(i+1));
+    if(marcas[i]){
+      delete marcas[i];
+      if(DB) DB.ref(ckEtapaNo(etapa)+'/'+i).set(null).catch(function(e){ _logFalhaGrav(ckEtapaNo(etapa)+' (ckToggleEtapa)', e); });
+      if(typeof audit==='function') audit('checkin_'+etapa, 'desmarcou: '+texto);
+    }else{
+      const reg={quem:(typeof quemSou==='function')?quemSou():'-', hora:horaAgora(), ts:Date.now()};
+      marcas[i]=reg;
+      if(DB) DB.ref(ckEtapaNo(etapa)+'/'+i).set(reg).catch(function(e){ _logFalhaGrav(ckEtapaNo(etapa)+' (ckToggleEtapa)', e); });
+      if(typeof audit==='function') audit('checkin_'+etapa, (etapa==='inicio'?'início: ':'fim: ')+texto);
+    }
+    renderCheckin();
+  }
+  // A barra de tempo da etapa. Segue ativIniciarAgora à risca: relê o banco ANTES de
+  // gravar (a lição de 20/ago — reabrir o app não pode apagar o horário de quem começou)
+  // e guarda o número de FILHOts do dia junto, que é o denominador do min/FILHOt.
+  async function ckEtapaIniciar(etapa){
+    const slug=CK_ETAPA_SLUG[etapa];
+    if(DB){
+      try{ const s=await DB.ref(ativTempoNo(slug)).once('value');
+        ATIV_TEMPO[slug]=Object.assign({},ATIV_TEMPO[slug]||{},s.val()||{});
+      }catch(e){ _logLeituraFalhou(ativTempoNo(slug)+' (ckEtapaIniciar)', e); }
+    }
+    const t=ATIV_TEMPO[slug]||{};
+    const r=await turnoTrocar(ativTempoNo(slug),'inicio','quemInicio',t,'O início desta etapa');
+    if(!r) return;
+    const caes=(typeof turmaDoDia==='function')?turmaDoDia().length:0;
+    ATIV_TEMPO[slug]=Object.assign({},t,r.patch,{caes:caes});
+    if(DB) DB.ref(ativTempoNo(slug)).update({caes:caes}).catch(function(e){ _logFalhaGrav(ativTempoNo(slug)+' (ckEtapaIniciar)', e); });
+    if(typeof audit==='function') audit('ativ_ini','iniciou '+ativNome(slug)+' às '+r.h,{});
+    renderCheckin();
+  }
+  async function ckEtapaEncerrar(etapa){
+    const slug=CK_ETAPA_SLUG[etapa], t=ATIV_TEMPO[slug]||{};
+    if(!t.inicio){ alert('Esta etapa ainda não foi iniciada. Toque em "Iniciar" primeiro — sem o começo não dá para medir o tempo.'); return; }
+    const r=await turnoTrocar(ativTempoNo(slug),'fim','quemFim',t,'O fim desta etapa');
+    if(!r) return;
+    ATIV_TEMPO[slug]=Object.assign({},t,r.patch);
+    if(typeof audit==='function') audit('ativ_fim','encerrou '+ativNome(slug)+' às '+r.h,{});
+    renderCheckin();
+  }
+  function ckIniciarInicio(){ return ckEtapaIniciar('inicio'); }
+  function ckEncerrarInicio(){ return ckEtapaEncerrar('inicio'); }
+  function ckIniciarFim(){ return ckEtapaIniciar('fim'); }
+  function ckEncerrarFim(){ return ckEtapaEncerrar('fim'); }
+  // Uma etapa desenhada: barra de tempo, nota do que é, lista marcável com quem e hora.
+  // Lista vazia NÃO vira silêncio — vira cartaz dizendo onde a Gestão escreve os passos.
+  function ckEtapaHTML(etapa, nota){
+    const slug=CK_ETAPA_SLUG[etapa], passos=protoPassos('checkin-corpo',etapa), marcas=ckMarcasDe(etapa);
+    const feitos=passos.filter(function(_,i){ return marcas[i]; }).length;
+    const lista=passos.length
+      ? passos.map(function(t,i){ const m=marcas[i];
+          return '<label class="todo-item proto-item'+(m?' on':'')+'" onclick="ckToggleEtapa(\''+etapa+'\','+i+')">'
+            +'<span class="todo-box">'+(m?'&#10003;':'')+'</span>'
+            +'<span class="proto-txt">'+esc(t)
+            +(m?'<span class="proto-quem">'+esc(m.quem||'-')+' &middot; '+esc(m.hora||'-')+'</span>':'')
+            +'</span></label>';
+        }).join('')
+      : '<div class="proto-vazio">A Gestão ainda não escreveu os passos '+(etapa==='inicio'?'do Início':'do Fim')+' &mdash; Configurações &rsaquo; Protocolos passo a passo.</div>';
+    return barraTurno(protoNomeEtapa('checkin-corpo',etapa), ATIV_TEMPO[slug]||{},
+        etapa==='inicio'?'ckIniciarInicio':'ckIniciarFim', etapa==='inicio'?'ckEncerrarInicio':'ckEncerrarFim')
+      +'<div class="role-note"><span data-icon="'+(etapa==='inicio'?'sun':'moon')+'"></span><span>'+nota
+      +(passos.length?(' ('+feitos+'/'+passos.length+')'):'')+'</span></div>'
+      +lista;
+  }
+  function renderCkInicio(){ const el=document.getElementById('ck-inicio'); if(!el) return;
+    el.innerHTML=ckEtapaHTML('inicio','<strong>1ª etapa &mdash; prepare o espaço.</strong> Faça na ordem e toque em cada passo quando terminar. O app guarda quem fez e a que horas.'); }
+  function renderCkFim(){ const el=document.getElementById('ck-fim'); if(!el) return;
+    el.innerHTML=ckEtapaHTML('fim','<strong>3ª etapa &mdash; feche o check-in.</strong> Toque em cada passo quando terminar. O app guarda quem fez e a que horas.'); }
   function renderCheckin(){
+    ckAplicarEtapas();
+    if(ckTemEtapas()&&ckStep!=='exec'){ if(ckStep==='inicio') renderCkInicio(); else renderCkFim(); return; }
+    return renderCheckinExec();
+  }
+  function renderCheckinExec(){
     const grid=document.getElementById('ckGrid'); if(!grid) return;
     const ficha=document.getElementById('ckFicha');
     if(ckAtual){ grid.style.display='none'; if(ficha){ ficha.style.display='block'; ficha.innerHTML=ckFichaHtml(); } return; }
@@ -24465,7 +24688,11 @@
     if(typeof audit==='function') audit('ativ_fim','encerrou '+ativNome(slug)+' às '+r.h,{});
     renderBarraAtiv();
   }
-  function ativNome(slug){ var f=ATIVS_DC.find(function(a){ return a.s===slug; }); return f?f.t:slug; }
+  // As etapas do Check-in do corpo (12/set/2026) são cronômetros próprios, mas NÃO entram
+  // em ATIVS_DC — se entrassem, virariam item de menu e o monitor teria três "atividades"
+  // onde só existe uma. Aqui elas ganham nome para o Ritmo do Time e para a auditoria.
+  const ATIV_ROTULO_EXTRA={'checkin-corpo-inicio':'Check-in do corpo — Início','checkin-corpo-fim':'Check-in do corpo — Fim'};
+  function ativNome(slug){ if(ATIV_ROTULO_EXTRA[slug]) return ATIV_ROTULO_EXTRA[slug]; var f=ATIVS_DC.find(function(a){ return a.s===slug; }); return f?f.t:slug; }
   function ativPar(slug){
     var p=ATIV_SIMULTANEAS.find(function(x){ return x.indexOf(slug)>=0; });
     if(!p) return '';
@@ -24478,7 +24705,12 @@
     // na mesma tela dizendo coisas diferentes é o que a Adriana chamou, com razão, de
     // arquitetura ridícula (20/ago/2026). A etapa "Atividade" alimenta este mesmo
     // cronômetro por dentro, então o Ritmo do Time continua recebendo o tempo do EA.
-    if(!dcAtiv||dcAtiv==='almoco'||dcAtiv==='chamada'||dcAtiv==='ea'){ el.innerHTML=''; return; }
+    // 12/set/2026 — mesma razão do EA: no Check-in do corpo o Início e o Fim tem cronômetro
+    // PRÓPRIO. Deixar a barra genérica junto seria a tela mostrando dois relógios dizendo
+    // coisas diferentes. Na etapa do meio (o check-in em si) ela volta, porque é DELA que
+    // sai o min/FILHOt daquela etapa.
+    if(!dcAtiv||dcAtiv==='almoco'||dcAtiv==='chamada'||dcAtiv==='ea'
+       ||(dcAtiv==='checkin-corpo'&&typeof ckStep!=='undefined'&&ckStep!=='exec')){ el.innerHTML=''; return; }
     // Enquanto o tempo não chegou do banco, a barra DIZ que está carregando. Nunca "—":
     // "não iniciado" e "ainda não sei" são coisas diferentes, e confundi-las fez a monitora
     // reiniciar o cronômetro por cima do horário verdadeiro.
@@ -26667,6 +26899,122 @@
     checkout:  { ini:'06:30', fim:'08:00', label:'Protocolo do Plantão' }
   };
   function salvarAuditCfg(){ if(DB) DB.ref('daycare/config/auditoria').set(AUDIT_CFG).catch(function(e){ _logFalhaGrav('daycare/config/auditoria (salvarAuditCfg)', e); }); }   /* o quadro de protocolos relê o AUDIT_CFG toda vez que o dashboard abre */
+
+  // ===== CONFIGURAÇÕES › PROTOCOLOS PASSO A PASSO (Adriana, 12/set/2026) =============
+  // A tela onde a Gestão escreve o passo a passo que o monitor vê. Acrescentar, reescrever,
+  // subir, descer e tirar — sem programador, que é a lei de 22/ago/2026. Toda mudança grava
+  // quem mexeu e quando, e deixa o rastro na auditoria com o texto de antes e o de depois.
+  function protoData(ts){
+    try{ const d=new Date(ts), p=x=>String(x).padStart(2,'0');
+      return p(d.getDate())+'/'+p(d.getMonth()+1)+'/'+d.getFullYear()+' às '+p(d.getHours())+':'+p(d.getMinutes());
+    }catch(e){ return '—'; }
+  }
+  // Semeadura: grava o valor padrão UMA vez, e só se o nó ainda não existe. A transação
+  // aborta devolvendo undefined quando já há algo lá — é a trava contra sobrescrever o que
+  // a Gestão escreveu (e contra ressuscitar um passo que ela tirou de propósito).
+  function protoSemear(){
+    if(!DB) return;
+    PROTO_ATIVS.forEach(function(x){ x.etapas.forEach(function(et){
+      const caminho='daycare/config/protocolos/'+x.a+'/'+et.e;
+      DB.ref(caminho).transaction(function(atual){
+        if(atual!==null) return;   // já existe: não encosta
+        return {passos:((PROTO_PADRAO[x.a]||{})[et.e]||[]).slice(),
+                semeadoEm:Date.now(), semeadoPor:(typeof quemSou==='function')?quemSou():'-'};
+      }, function(err, gravou){
+        if(err){ _logFalhaGrav(caminho+' (protoSemear)', err); return; }
+        if(gravou&&typeof audit==='function') audit('protocolo','gravou o padrão de '+protoNomeAtiv(x.a)+' · '+protoNomeEtapa(x.a,et.e));
+      });
+    }); });
+  }
+  function protoCarregar(){
+    const el=document.getElementById('protoWrap'); if(!el) return;
+    if(!DB){ el.innerHTML='<div class="hint">Sem conexão com o banco agora — os protocolos não podem ser editados.</div>'; return; }
+    protoSemear();
+    DB.ref('daycare/config/protocolos').once('value').then(function(s){
+      const v=s.val(); PROTOCOLOS=(v&&typeof v==='object')?v:{};
+      protoRender();
+    }).catch(function(e){
+      _logLeituraFalhou('daycare/config/protocolos (protoCarregar)', e);
+      el.innerHTML='<div class="hint">Não consegui ler os protocolos agora. <button type="button" class="proto-cfg-bt" onclick="protoCarregar()">Tentar de novo</button></div>';
+    });
+  }
+  function protoRender(){
+    const el=document.getElementById('protoWrap'); if(!el) return;
+    el.innerHTML=PROTO_ATIVS.map(function(x){
+      return '<div style="margin-bottom:18px">'
+        +'<div style="font-weight:800;color:var(--z-blue);font-size:16.5px;margin-bottom:7px">'+esc(x.t)+'</div>'
+        +x.etapas.map(function(et){
+          const passos=protoPassos(x.a,et.e), no=protoNo(x.a,et.e);
+          const quando=(no&&no.atualizadoEm)?(' · última mudança: '+esc(no.atualizadoPor||'-')+', '+esc(protoData(no.atualizadoEm))):'';
+          return '<div style="margin:0 0 12px 0;padding:12px 14px;background:var(--z-cream-warm);border:1px solid var(--line);border-radius:12px">'
+            +'<div style="font-weight:800;color:var(--z-blue-deep);font-size:14.5px;margin-bottom:7px">'+esc(et.t)+' · '+passos.length+(passos.length===1?' passo':' passos')+quando+'</div>'
+            +(passos.length?passos.map(function(t,i){
+                return '<div class="proto-cfg-item">'
+                  +'<span class="proto-cfg-num">'+(i+1)+'</span>'
+                  +'<span class="proto-cfg-txt">'+esc(t)+'</span>'
+                  +'<span style="display:flex;gap:6px;flex-wrap:wrap">'
+                  +'<button type="button" class="proto-cfg-bt"'+(i===0?' disabled':'')+' onclick="protoMover(\''+x.a+'\',\''+et.e+'\','+i+',-1)">Subir</button>'
+                  +'<button type="button" class="proto-cfg-bt"'+(i===passos.length-1?' disabled':'')+' onclick="protoMover(\''+x.a+'\',\''+et.e+'\','+i+',1)">Descer</button>'
+                  +'<button type="button" class="proto-cfg-bt" onclick="protoEditar(\''+x.a+'\',\''+et.e+'\','+i+')">Reescrever</button>'
+                  +'<button type="button" class="proto-cfg-bt" style="border-color:var(--crm-critico);color:var(--crm-critico)" onclick="protoTirar(\''+x.a+'\',\''+et.e+'\','+i+')">Tirar</button>'
+                  +'</span></div>';
+              }).join('')
+              :'<div class="hint">Nenhum passo escrito ainda. Quem executa vê, na tela, um aviso dizendo que a Gestão ainda não escreveu os passos.</div>')
+            +'<button type="button" class="btn btn-gold" style="margin-top:9px;padding:8px 15px;font-size:14px" onclick="protoNovo(\''+x.a+'\',\''+et.e+'\')">Acrescentar passo</button>'
+            +'</div>';
+        }).join('')
+        +'</div>';
+    }).join('');
+  }
+  const PROTO_DICA='Um passo por linha, começando pelo verbo — "Limpe o mop…", "Separe a terra…". Sem palavra difícil: uma criança de 12 anos tem de conseguir executar só com o que está escrito.';
+  function protoGravar(a,e,lista,oque){
+    if(!DB){ alert('Sem conexão com o banco agora — o protocolo não foi salvo.'); return; }
+    const quem=(typeof quemSou==='function')?quemSou():'-', agora=Date.now();
+    DB.ref('daycare/config/protocolos/'+a+'/'+e).update({passos:lista, atualizadoEm:agora, atualizadoPor:quem})
+      .then(function(){ if(typeof audit==='function') audit('protocolo', protoNomeAtiv(a)+' · '+protoNomeEtapa(a,e)+': '+oque); })
+      .catch(function(err){
+        _logFalhaGrav('daycare/config/protocolos/'+a+'/'+e+' (protoGravar)', err);
+        alert('Não consegui salvar o protocolo agora. A mudança NÃO foi gravada — tente de novo.');
+      });
+    PROTOCOLOS[a]=PROTOCOLOS[a]||{};
+    PROTOCOLOS[a][e]=Object.assign({}, PROTOCOLOS[a][e]||{}, {passos:lista, atualizadoEm:agora, atualizadoPor:quem});
+    protoRender();
+  }
+  async function protoNovo(a,e){
+    const lista=protoPassos(a,e).slice();
+    const novo=await zTexto('Acrescentar um passo', [protoNomeAtiv(a)+' · '+protoNomeEtapa(a,e), PROTO_DICA],
+      {rotulo:'Texto do passo', grande:3, minimo:3, botao:'Acrescentar', cor:'#234D67',
+       erro:'Escreva o passo — pelo menos 3 letras.'});
+    if(novo==null) return;
+    const t=String(novo).trim(); if(!t) return;
+    lista.push(t);
+    protoGravar(a,e,lista,'acrescentou o passo '+lista.length+' — "'+t+'"');
+  }
+  async function protoEditar(a,e,i){
+    const lista=protoPassos(a,e).slice(), atual=lista[i]||'';
+    const novo=await zTexto('Reescrever o passo '+(i+1), [protoNomeAtiv(a)+' · '+protoNomeEtapa(a,e), PROTO_DICA],
+      {valor:atual, rotulo:'Texto do passo', grande:3, minimo:3, botao:'Salvar o passo', cor:'#234D67',
+       erro:'Escreva o passo — pelo menos 3 letras.'});
+    if(novo==null) return;
+    const t=String(novo).trim(); if(!t||t===atual) return;
+    lista[i]=t;
+    protoGravar(a,e,lista,'reescreveu o passo '+(i+1)+' — de "'+atual+'" para "'+t+'"');
+  }
+  async function protoTirar(a,e,i){
+    const lista=protoPassos(a,e).slice(), t=lista[i]||'';
+    const ok=await zPergunta('Tirar este passo do protocolo?',
+      ['"'+t+'"', 'Quem executa deixa de ver este passo a partir de agora. Fica registrado na auditoria quem tirou.'],
+      {sim:'Tirar o passo', nao:'Manter como está'});
+    if(!ok) return;
+    lista.splice(i,1);
+    protoGravar(a,e,lista,'tirou o passo — "'+t+'"');
+  }
+  function protoMover(a,e,i,d){
+    const lista=protoPassos(a,e).slice(), j=i+d;
+    if(j<0||j>=lista.length) return;
+    const t=lista[i]; lista[i]=lista[j]; lista[j]=t;
+    protoGravar(a,e,lista,(d<0?'subiu':'desceu')+' o passo "'+t+'" para a posição '+(j+1));
+  }
   // hh:mm dentro da janela? retorna 'ok' | 'fora' | 'sem' (sem hora registrada)
   function noPrazo(hhmm, faixa){ if(!hhmmValido(hhmm)) return 'sem'; if(!faixa) return 'ok'; return (hhmm>=faixa.ini && hhmm<=faixa.fim)?'ok':'fora'; }
   function hhmmValido(s){ return typeof s==='string' && /^\d{2}:\d{2}$/.test(s); }

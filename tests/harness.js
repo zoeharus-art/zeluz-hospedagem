@@ -5242,7 +5242,7 @@ async function main() {
     check('a tela do corpo agora sabe quem faltou', /function ckFaltou\(o\)/.test(html) &&
       /dcChamada\[dcKey\(o\.p\.n,o\.p\.tutor\)\]==='faltou'/.test(html));
     check('e le a chamada ao abrir (quem entra direto na atividade nao passou por ela)',
-      /daycare\/chamada\/'\+dcDataKey\(\)\)\.once\('value'\)[\s\S]{0,420}CK_FALTA_TARDIA=/.test(html)); // janela alargada em 31/ago: o ouvinte econômico acrescentou o Object.assign no meio
+      /daycare\/chamada\/'\+dcDataKey\(\)\)\.once\('value'\)[\s\S]{0,900}CK_FALTA_TARDIA=/.test(html)); // janela alargada em 31/ago (ouvinte econômico) e em 12/set (as marcas do Início e do Fim entraram no mesmo Promise.all)
     check('a falta tem caminho de VOLTA em dois toques (caso dos 13 aulunos, 01/set)',
       /function ckDesfazerFalta/.test(html) && /Veio, sim/.test(html) &&
       /Confirmar: veio/.test(html) && /falta-desfeita/.test(html));
@@ -10952,6 +10952,170 @@ async function main() {
         return JSON.stringify([...html.slice(i, f).matchAll(/<a data-v="[a-z-]+"[^>]*>[\s\S]{0,200}?<span>([^<]+)<\/span><\/a>/g)].map((m) => m[1]));
       })());
 
+    // ---- v-13: o protocolo do Check-in do corpo (Início · Check-in · Fim) -------------
+    // Adriana, 12/set/2026: "a mesma estrutura do Almoço no Check-in do corpo, passo a
+    // passo, para que uma criança de 12 anos consiga executar" — e a lei de 22/ago: regra
+    // nova não pode exigir programador.
+    {
+      const inicio = JSON.parse(vm.runInContext('JSON.stringify(CK_INICIO_PADRAO)', ctx));
+      const DITADOS = [
+        'Limpe o mop com água e sabão: 1 tampa de sabão para 3 litros de água',
+        'Separe o tablado para xixi',
+        'Separe a terra, para usar em caso de cocô mole',
+        'Ponha 2 águas para os peludinhos',
+        'Prepare a caixa de isopor com gelo seco para a comida de geladeira',
+        'Prepare a caixa de isopor para a comida dos peludinhos ansiosos com alimentação',
+        'Monte o gaveteiro transparente para separar a alimentação seca de pequeno e de médio porte',
+        'Arrume o gaveteiro preto: 1 gaveta para medicamento e 2 para o kit dental',
+        'Separe a caixa de petisco',
+        'Ponha as 2 caixas de plástico vermelhas, tipo engradado, para as bolsas dos peludinhos',
+        'Deixe à mão a prancheta de check-in de pertences e corpo, para casos extraordinários: falta de luz, falta de internet ou aparelho com erro',
+      ];
+      check('v-13 · o Início traz EXATAMENTE os 11 passos ditados pela Adriana, com o verbo na frente',
+        JSON.stringify(inicio) === JSON.stringify(DITADOS), JSON.stringify(inicio));
+      check('v-13 · e nenhum passo é texto de gente grande: todos começam por verbo e cabem numa linha',
+        inicio.length === 11 && inicio.every((t) => /^(Limpe|Separe|Ponha|Prepare|Monte|Arrume|Deixe)\b/.test(t) && t.indexOf('\n') < 0));
+
+      check('v-13 · o Fim nasce VAZIO — o app não inventa protocolo que ninguém ditou',
+        JSON.parse(vm.runInContext("JSON.stringify(PROTO_PADRAO['checkin-corpo'].fim)", ctx)).length === 0);
+      const telaFim = String(ctx.ckEtapaHTML('fim', 'nota de teste'));
+      check('v-13 · e a tela do Fim diz, com todas as letras, onde a Gestão escreve os passos',
+        /A Gestão ainda não escreveu os passos do Fim/.test(telaFim) &&
+        /Configurações .{0,12} Protocolos passo a passo/.test(telaFim), telaFim.slice(0, 200));
+      check('v-13 · a barra de tempo do Fim vem junto (a etapa é cronometrada como as do Almoço)',
+        /ckIniciarFim\(\)/.test(telaFim) && /ckEncerrarFim\(\)/.test(telaFim));
+
+      // marcar e desmarcar: cada passo guarda QUEM e A QUE HORAS, e os dois sentidos vão
+      // para a auditoria (a lei de 11/ago — toda ação crítica grava quem fez).
+      const marca = JSON.parse(vm.runInContext(`(function(){
+        var bkp={DB:DB, audit:audit, ini:ckIni, render:renderCheckin};
+        var grav=[], trilha=[];
+        DB={ ref:function(p){ return { set:function(v){ grav.push({caminho:p, valor:v}); return {catch:function(){ return this; }}; } }; } };
+        audit=function(a,d){ trilha.push(a+' | '+d); };
+        renderCheckin=function(){};
+        ckIni={};
+        ckToggleEtapa('inicio',0);
+        var depoisDeMarcar=JSON.parse(JSON.stringify(ckIni[0]||null));
+        ckToggleEtapa('inicio',0);
+        var depoisDeDesmarcar=(ckIni[0]===undefined)?'sumiu':'ficou';
+        DB=bkp.DB; audit=bkp.audit; ckIni=bkp.ini; renderCheckin=bkp.render;
+        return JSON.stringify({grav:grav, marcou:depoisDeMarcar, desmarcou:depoisDeDesmarcar, trilha:trilha});
+      })()`, ctx));
+      check('v-13 · marcar um passo grava QUEM marcou e A QUE HORAS',
+        !!marca.marcou && typeof marca.marcou.quem === 'string' && /^\d{2}:\d{2}$/.test(marca.marcou.hora || '')
+        && typeof marca.marcou.ts === 'number', JSON.stringify(marca.marcou));
+      check('v-13 · e grava no nó do dia da etapa (daycare/checkin-corpo-inicio/{dia}/{passo})',
+        /^daycare\/checkin-corpo-inicio\/\d{4}-\d{2}-\d{2}\/0$/.test((marca.grav[0] || {}).caminho || ''),
+        JSON.stringify(marca.grav));
+      check('v-13 · desmarcar tira o passo gravando null — e os DOIS sentidos deixam rastro',
+        marca.desmarcou === 'sumiu' && marca.grav.length === 2 && marca.grav[1].valor === null
+        && marca.trilha.length === 2 && /desmarcou/.test(marca.trilha[1] || ''), JSON.stringify(marca.trilha));
+
+      // semeadura: grava o padrão UMA vez e nunca por cima do que a Gestão escreveu.
+      const semeou = JSON.parse(vm.runInContext(`(function(){
+        var bkp={DB:DB, audit:audit};
+        var vistos=[];
+        DB={ ref:function(p){ return { transaction:function(f,cb){
+          var jaExiste=/almoco.inicio$/.test(p);
+          var atual=jaExiste?{passos:['o que a Gestão escreveu']}:null;
+          var r=f(atual);
+          vistos.push({caminho:p, jaExiste:jaExiste, resultado:(r===undefined?'abortou':'gravou'), valor:(r||null)});
+          if(cb) cb(null, r!==undefined);
+        } }; } };
+        audit=function(){};
+        protoSemear();
+        DB=bkp.DB; audit=bkp.audit;
+        return JSON.stringify(vistos);
+      })()`, ctx));
+      const doAlmoco = semeou.find((x) => /almoco\/inicio$/.test(x.caminho));
+      const doCheckin = semeou.find((x) => /checkin-corpo\/inicio$/.test(x.caminho));
+      check('v-13 · a semeadura ABORTA quando o nó já existe — nunca por cima do que a Gestão escreveu',
+        !!doAlmoco && doAlmoco.resultado === 'abortou', JSON.stringify(doAlmoco));
+      check('v-13 · e grava o padrão só onde não havia nada (os 11 passos do Início)',
+        !!doCheckin && doCheckin.resultado === 'gravou'
+        && JSON.stringify((doCheckin.valor || {}).passos) === JSON.stringify(DITADOS),
+        JSON.stringify(doCheckin && doCheckin.resultado));
+      check('v-13 · a semeadura cobre as 4 etapas (Almoço e Check-in do corpo, início e fim)',
+        semeou.length === 4 && semeou.every((x) => /^daycare\/config\/protocolos\//.test(x.caminho)),
+        JSON.stringify(semeou.map((x) => x.caminho)));
+
+      // editar em Configurações › Protocolos grava com rastro.
+      const edicao = JSON.parse(vm.runInContext(`(function(){
+        var bkp={DB:DB, audit:audit, protos:PROTOCOLOS};
+        var grav=[], trilha=[];
+        DB={ ref:function(p){ return { update:function(v){ grav.push({caminho:p, valor:v});
+          return { then:function(f){ if(f) f(); return this; }, catch:function(){ return this; } }; } }; } };
+        audit=function(a,d){ trilha.push(a+' | '+d); };
+        PROTOCOLOS={};
+        protoGravar('checkin-corpo','fim',['Guarde o tablado de xixi'],'acrescentou o passo 1');
+        var lido=protoPassos('checkin-corpo','fim');
+        DB=bkp.DB; audit=bkp.audit; PROTOCOLOS=bkp.protos;
+        return JSON.stringify({grav:grav, trilha:trilha, lido:lido});
+      })()`, ctx));
+      check('v-13 · a Gestão edita o protocolo sem programador — e a gravação vai para o banco',
+        edicao.grav.length === 1 && edicao.grav[0].caminho === 'daycare/config/protocolos/checkin-corpo/fim'
+        && JSON.stringify(edicao.grav[0].valor.passos) === JSON.stringify(['Guarde o tablado de xixi']),
+        JSON.stringify(edicao.grav));
+      check('v-13 · com rastro: quem mexeu, quando, e o que mudou na auditoria',
+        typeof edicao.grav[0].valor.atualizadoEm === 'number'
+        && typeof edicao.grav[0].valor.atualizadoPor === 'string'
+        && edicao.trilha.length === 1 && /^protocolo \| /.test(edicao.trilha[0])
+        && /acrescentou o passo 1/.test(edicao.trilha[0]), JSON.stringify(edicao.trilha));
+      check('v-13 · e a tela de quem executa passa a ler o que ela escreveu, na hora',
+        JSON.stringify(edicao.lido) === JSON.stringify(['Guarde o tablado de xixi']));
+
+      // o nó do banco MANDA: tirar o último passo não pode ressuscitar a lista do código.
+      const semPasso = JSON.parse(vm.runInContext(`(function(){
+        var bkp=PROTOCOLOS;
+        PROTOCOLOS={'almoco':{'inicio':{passos:[], atualizadoEm:1, atualizadoPor:'Gestão'}}};
+        var r=protoPassos('almoco','inicio');
+        PROTOCOLOS=bkp;
+        return JSON.stringify(r);
+      })()`, ctx));
+      check('v-13 · tirar TODOS os passos não ressuscita a lista antiga do código',
+        semPasso.length === 0, JSON.stringify(semPasso));
+
+      // as três etapas contam no tempo-atividade, que é onde nasce o min/FILHOt.
+      check('v-13 · Início e Fim são cronômetros no mesmo nó do Ritmo do Time (tempo-atividade)',
+        String(ctx.ativTempoNo('checkin-corpo-inicio')).indexOf('daycare/tempo-atividade/') === 0
+        && /checkin-corpo-inicio$/.test(String(ctx.ativTempoNo('checkin-corpo-inicio')))
+        && /checkin-corpo-fim$/.test(String(ctx.ativTempoNo('checkin-corpo-fim'))));
+      check('v-13 · e têm nome de gente no relatório (nunca o slug cru)',
+        ctx.ativNome('checkin-corpo-inicio') === 'Check-in do corpo — Início'
+        && ctx.ativNome('checkin-corpo-fim') === 'Check-in do corpo — Fim');
+      check('v-13 · o Iniciar relê o banco ANTES de gravar (a lição de 20/ago: reabrir o app não apaga horário)',
+        /async function ckEtapaIniciar\(etapa\)\{[\s\S]{0,500}once\('value'\)[\s\S]{0,400}turnoTrocar\(ativTempoNo\(slug\),'inicio'/.test(html));
+
+      // a estrutura na tela, e o acesso: Protocolos é seção DENTRO de Configurações.
+      check('v-13 · o Check-in do corpo ganhou as três etapas na tela, na ordem ditada',
+        (() => {
+          const i = html.indexOf('id="scr-checkin"'), f = html.indexOf('id="scr-pert"');
+          const bloco = html.slice(i, f);
+          const passos = [...bloco.matchAll(/data-step="([a-z]+)"/g)].map((m) => m[1]);
+          return JSON.stringify(passos) === JSON.stringify(['inicio', 'exec', 'fim'])
+            && bloco.indexOf('id="ck-inicio"') > 0 && bloco.indexOf('id="ck-fim"') > 0;
+        })());
+      check('v-13 · nunca dois relógios na mesma tela: a barra genérica some no Início e no Fim',
+        /dcAtiv==='checkin-corpo'&&typeof ckStep!=='undefined'&&ckStep!=='exec'\)\)\{ el\.innerHTML=''; return; \}/.test(html)
+        && /A barra genérica do cronômetro obedece à etapa/.test(html));
+      check('v-13 · a barra de etapas só existe na ENTRADA — o check-out do corpinho fica como era',
+        /function ckTemEtapas\(\)\{ return ckEhEntrada\(\); \}/.test(html));
+      check('v-13 · Protocolos entrou DENTRO de Configurações — nenhum item novo no menu',
+        [...html.matchAll(/<a data-v="[a-z-]+"/g)].length === 36
+        && !/data-v="protocolos"/.test(html)
+        && html.indexOf('id="protoWrap"') > html.indexOf('id="v-config"')
+        && html.indexOf('id="protoWrap"') < html.indexOf('id="v-orcamento"'));
+      check('v-13 · a tela do monitor lê de longe: passo em 16 px (ele interage em SEGUNDOS)',
+        /\.proto-item\{[^}]*font-size:16px/.test(html) && /class="todo-item proto-item/.test(html));
+      check('v-13 · o Almoço passou a ler os passos do banco (mesma fonte que a Gestão edita)',
+        /const passos=protoPassos\('almoco','inicio'\);/.test(html)
+        && /const passos=protoPassos\('almoco','fim'\);/.test(html)
+        && !/\+ALM_PREP\.map\(/.test(html) && !/\+ALM_FINAL\.map\(/.test(html));
+      check('v-13 · nenhuma gravação nova ficou com .catch vazio — toda falha deixa rastro',
+        !/\.catch\(function\([a-z]*\)\{\s*\}\)/.test(
+          html.slice(html.indexOf('function protoData('), html.indexOf('function protoMover('))));
+    }
+
     // ---- a promessa desta versão: os quadros só OBSERVAM e nada grava calado ----
     const blocos = html.slice(html.indexOf('function blocoUrgenteHTML('),
                               html.indexOf('function cfgLoginsCarregar('));
@@ -10961,8 +11125,8 @@ async function main() {
     check('v-07 · nenhuma leitura nova ficou com .catch vazio — toda falha deixa rastro',
       !/\.catch\(function\([a-z]*\)\{\s*\}\)/.test(
         html.slice(html.indexOf('function pdiaLer('), html.indexOf('function ltAbrir('))));
-    check('v-12 · a versão foi carimbada como 2026-09-11-02',
-      /const APP_VERSAO='2026-09-11-02';/.test(html));
+    check('v-13 · a versão foi carimbada como 2026-09-12-01',
+      /const APP_VERSAO='2026-09-12-01';/.test(html));
   }
   console.log('');
 
