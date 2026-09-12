@@ -7598,6 +7598,179 @@ async function main() {
   }
   console.log('');
 
+  // ---- A MESA "O QUE A IA ENTENDEU" (Adriana, 11/set/2026) ----
+  // "Eu preciso ter autonomia de corrigir o dado se a IA mandou para o lugar errado ou
+  //  'entendeu errado'." O tratamento automático preenche a ficha sozinho; esta mesa é onde
+  //  a Gestão, a Supervisão e a Central Zêluz confirmam, corrigem, movem ou limpam — sempre
+  //  com rastro, e NUNCA sozinha.
+  console.log('A mesa de revisão — "O que a IA entendeu" (11/set):');
+  {
+    const papelAntes = ctx.document.body.dataset.role;
+    const PODEM = ['consultora', 'supervisor', 'gestao', 'diretoria'];
+    const NAO_PODEM = ['monitor', 'plantonista', 'aprendiz', 'vet', 'tutor'];
+    check('acesso — Central Zêluz (consultora), Supervisão, Gestão e Diretoria revisam o que a IA entendeu',
+      PODEM.every((r) => ctx.podePapel('revisar-ia', r)),
+      PODEM.filter((r) => !ctx.podePapel('revisar-ia', r)).join(', ') || 'todos podem');
+    check('acesso — monitor, plantonista, aprendiz, veterinária e tutor NÃO revisam',
+      NAO_PODEM.every((r) => !ctx.podePapel('revisar-ia', r)),
+      NAO_PODEM.filter((r) => ctx.podePapel('revisar-ia', r)).join(', ') || 'nenhum deles pode');
+    ctx.document.body.dataset.role = 'monitor';
+    check('papel sem permissão não recebe nem a mesa nem o atalho da ficha (HTML vazio — não é esconder com CSS)',
+      ctx.iaRevBoxHtml() === '' && ctx.iaRevMarcaFicha({ n: 'Jasmin', tutor: 'Riva Campos Oliveira' }, 'alergia') === '');
+    ctx.document.body.dataset.role = 'gestao';
+
+    if (RETRATO && RETRATO.daycare && RETRATO.daycare.cadastro && Array.isArray(ctx.PELUDINHOS)) {
+      vm.runInContext("__bkpCadIA = (typeof pelCadCache==='undefined'||!pelCadCache) ? {} : pelCadCache;", ctx);
+      const bkpPelIA = ctx.PELUDINHOS.slice();
+      const bkpResp = ctx.ALG_RESP, bkpRev = ctx.IA_REV, bkpLido = ctx.IA_REV_LIDO, bkpSet = ctx.setPelExtra;
+      ctx.__cadIA = JSON.parse(JSON.stringify(RETRATO.daycare.cadastro));
+      vm.runInContext('pelCadCache = __cadIA;', ctx);
+      try {
+        ctx.mergeNovosAlunos(); ctx.aplicarExclusoes();
+        ctx.ALG_RESP = JSON.parse(JSON.stringify(retratoLib.ler(RETRATO, 'daycare/alergia-confirmada') || {}));
+        ctx.IA_REV = {}; ctx.IA_REV_LIDO = true; ctx.IA_REV_ERRO = '';
+        ctx.iaRevEsquecerCache();
+
+        // 1) os 12 do retrato aparecem na mesa marcados como "parece uma negativa"
+        const CAMPOS = ['alergia', 'restricao', 'restricoes', 'ea_restr'];
+        const esperados = [];
+        Object.keys(ctx.__cadIA).forEach((k) => {
+          const ex = ctx.__cadIA[k] || {};
+          const nomes = [String(k).split('__')[0] || '', String(k).split('__')[1] || '', ex.tutor || ''];
+          CAMPOS.forEach((c) => {
+            const v = String(ex[c] || '').trim();
+            if (v && ctx.zNegativaPura(v, nomes)) esperados.push(k + '/' + c);
+          });
+        });
+        const itens = ctx.iaRevItens();
+        const negs = itens.filter((x) => x.estado === 'negativa').map((x) => x.k + '/' + x.campo);
+        const faltando = esperados.filter((x) => negs.indexOf(x) < 0);
+        check('a mesa lista os 12 campos do retrato como "A revisar — parece uma negativa" (os mesmos que a ferramenta acha)',
+          esperados.length === 12 && faltando.length === 0 && negs.length === esperados.length,
+          'ferramenta=' + esperados.length + ' mesa=' + negs.length + (faltando.length ? (' faltando: ' + faltando.join(' · ')) : ''));
+        const jas = itens.filter((x) => x.k === 'jasmin__riva' && x.campo === 'alergia')[0];
+        check('a Jasmin está na mesa com o texto CRU da tutora à vista, o campo que a IA usou e a marcação sugerida',
+          !!jas && jas.estado === 'negativa' && /até o presente momento/i.test(String(jas.valor || '')) &&
+          String(jas.tutorTexto || '').length > 0,
+          jas ? JSON.stringify({ estado: jas.estado, valor: jas.valor, tutor: jas.tutorTexto.slice(0, 60) }) : 'não achei a Jasmin');
+        check('a marcação é SUGERIDA, nunca aplicada: o campo continua gravado na ficha até alguém decidir',
+          !!jas && String(ctx.pelExtra(jas.p).alergia || '').trim() === jas.valor && jas.valor !== '');
+        const htmlMesa = ctx.iaRevBoxHtml();
+        check('a tela da mesa mostra os 12, o botão de limpar todos e diz que a IA só sugere',
+          /12 parecem uma negativa/.test(htmlMesa) &&
+          /Limpar todos os 12 que parecem uma negativa/.test(htmlMesa) &&
+          /A IA apenas sugere: nada muda sem um toque seu/.test(htmlMesa) &&
+          /O TUTOR ESCREVEU/.test(htmlMesa));
+
+        // 2) o banco e a ficha viram papel: tudo o que SAIRIA fica anotado, nada sai
+        const gravou = [], patches = [];
+        ctx.__iaGravou = gravou;
+        vm.runInContext("__bkpDBIA = DB; DB = { ref: function(p){ return {"
+          + " set: function(v){ __iaGravou.push({caminho:p, valor:v, metodo:'set'}); return Promise.resolve(); },"
+          + " update: function(v){ __iaGravou.push({caminho:p, valor:v, metodo:'update'}); return Promise.resolve(); },"
+          + " push: function(v){ __iaGravou.push({caminho:p, valor:v, metodo:'push'}); return Promise.resolve(); },"
+          + " once: function(){ return Promise.resolve({ val:function(){ return null; }, exists:function(){ return false; } }); }"
+          + " }; } };", ctx);
+        ctx.setPelExtra = function (p, patch) { patches.push({ k: ctx.pelKey(p), patch: patch }); return Promise.resolve({ ok: true }); };
+        const dormir = (ms) => new Promise((r) => setTimeout(r, ms));
+
+        // 2.a) NADA muda sem clique
+        ctx.iaRevEsquecerCache();
+        ctx.iaRevItens(); ctx.iaRevBoxHtml(); ctx.iaRevMarcaFicha(jas.p, 'alergia');
+        check('nada muda sem clique — montar a lista, desenhar a mesa e desenhar o atalho da ficha não gravam uma linha sequer',
+          gravou.length === 0 && patches.length === 0,
+          JSON.stringify({ banco: gravou.slice(0, 2), ficha: patches.slice(0, 2) }));
+
+        // 2.b) "Está certo" grava rastro
+        ctx.iaRevOk('jasmin__riva', 'alergia');
+        await dormir(30);
+        const regOk = gravou.filter((g) => g.caminho === 'daycare/ia-revisao/jasmin__riva/alergia');
+        const audOk = gravou.filter((g) => /^daycare\/auditoria\//.test(g.caminho) && g.valor && g.valor.acao === 'ia-revisao');
+        check('"Está certo" grava o rastro: estado confirmado, quem, quando, o que estava e o que ficou',
+          regOk.length === 1 && regOk[0].valor.estado === 'confirmado' &&
+          regOk[0].valor.antes === jas.valor && regOk[0].valor.depois === jas.valor &&
+          !!regOk[0].valor.quem && !!regOk[0].valor.ts,
+          JSON.stringify(regOk[0] && regOk[0].valor));
+        check('"Está certo" também deixa rastro na auditoria (quem decidiu, sobre qual FILHOt)',
+          audOk.length >= 1 && /confirmou o que a IA entendeu/.test(String(audOk[0].valor.detalhe || '')),
+          audOk.length ? String(audOk[0].valor.detalhe).slice(0, 110) : 'nenhum rastro de auditoria');
+        check('"Está certo" NÃO toca na ficha — confirmar é dizer que o que está lá está certo',
+          patches.length === 0, JSON.stringify(patches.slice(0, 2)));
+
+        // 2.c) "Limpar" guarda o original e esvazia
+        gravou.length = 0; patches.length = 0;
+        ctx.IA_REV = {}; ctx.iaRevEsquecerCache();
+        const valorJas = String(ctx.pelExtra(jas.p).alergia || '').trim();
+        ctx.iaRevLimpar('jasmin__riva', 'alergia', true);
+        await dormir(30);
+        const regLimpo = gravou.filter((g) => g.caminho === 'daycare/ia-revisao/jasmin__riva/alergia');
+        check('"Limpar" esvazia o campo na ficha E guarda o texto original em {campo}_original',
+          patches.length === 1 && patches[0].patch.alergia === null &&
+          patches[0].patch.alergia_original === valorJas && valorJas !== '',
+          JSON.stringify(patches[0] && patches[0].patch));
+        check('"Limpar" grava o rastro: estado limpo, o que estava antes, e o motivo',
+          regLimpo.length === 1 && regLimpo[0].valor.estado === 'limpo' &&
+          regLimpo[0].valor.antes === valorJas && regLimpo[0].valor.depois === '' && !!regLimpo[0].valor.quem,
+          JSON.stringify(regLimpo[0] && regLimpo[0].valor));
+
+        // 2.d) "Mover" limpa o campo antigo e preenche o novo
+        gravou.length = 0; patches.length = 0;
+        ctx.IA_REV = {}; ctx.iaRevEsquecerCache();
+        const exJas = ctx.pelExtra(jas.p) || {};
+        const destino = ['problema', 'alim_obs', 'manias', 'medicacao'].filter((c) => !String(exJas[c] || '').trim())[0] || 'alim_obs';
+        ctx.iaRevAplicarCorrecao('jasmin__riva', 'alergia', 'Frango', destino);
+        await dormir(30);
+        const pMove = patches[0] ? patches[0].patch : {};
+        check('"Mover" limpa o campo antigo e preenche o campo certo — num só gesto, sem passo intermediário',
+          patches.length === 1 && pMove.alergia === null && pMove[destino] === 'Frango',
+          'destino=' + destino + ' ' + JSON.stringify(pMove));
+        const regVelho = gravou.filter((g) => g.caminho === 'daycare/ia-revisao/jasmin__riva/alergia')[0];
+        const regNovo = gravou.filter((g) => g.caminho === 'daycare/ia-revisao/jasmin__riva/' + destino)[0];
+        check('"Mover" grava rastro dos DOIS campos: de onde saiu (campoNovo) e para onde foi (veioDe)',
+          !!regVelho && regVelho.valor.estado === 'corrigido' && regVelho.valor.campoNovo === destino &&
+          !!regNovo && regNovo.valor.veioDe === 'alergia' && regNovo.valor.depois === 'Frango',
+          JSON.stringify({ velho: regVelho && regVelho.valor, novo: regNovo && regNovo.valor }));
+
+        // 2.e) o atalho na ficha traz as MESMAS três decisões
+        const marca = ctx.iaRevMarcaFicha(jas.p, 'alergia');
+        check('o atalho na ficha do FILHOt traz as três decisões (está certo · corrigir ou mover · limpar)',
+          /iaRevOk\(/.test(marca) && /iaRevCorrigir\(/.test(marca) && /iaRevLimpar\(/.test(marca) &&
+          /PREENCHIDO PELA RESPOSTA DO TUTOR/.test(marca), marca.slice(0, 90));
+      } finally {
+        try { vm.runInContext('DB = __bkpDBIA;', ctx); } catch (e) { /* o banco de mentira nem chegou a entrar */ }
+        ctx.setPelExtra = bkpSet;
+        ctx.ALG_RESP = bkpResp; ctx.IA_REV = bkpRev; ctx.IA_REV_LIDO = bkpLido;
+        try { ctx.iaRevEsquecerCache(); } catch (e) { /* nada a esquecer */ }
+        ctx.PELUDINHOS = bkpPelIA;
+        vm.runInContext('pelCadCache = __bkpCadIA;', ctx);
+      }
+    }
+    ctx.document.body.dataset.role = papelAntes;
+  }
+  // Estrutural: a mesa vive DENTRO da tela que já existe — nenhum item de menu novo.
+  check('a mesa não criou item de menu: o acesso continua sendo a tela Pesquisa com a Família Multiespécie',
+    html.indexOf('<a data-v="alergia" class="so-gestao"') >= 0 &&
+    html.indexOf('data-v="iarevisao"') < 0 && html.indexOf('data-v="ia-revisao"') < 0 &&
+    html.indexOf('data-v="revisao"') < 0 && /id="algPainel"/.test(html));
+  // A tarja vermelha (ficha, almoço, check-in, carteira) le o campo CRU — entao limpar o
+  // campo apaga a tarja por consequencia. E o texto guardado em {campo}_original NAO pode
+  // acender tarja nenhuma: ele e memoria, nao restricao.
+  if (typeof ctx.alertPills === 'function') {
+    const negativa = 'Não, até o presente momento não teve nada disso.';
+    check('a tarja ALÉRGICO acende com o campo preenchido e SE APAGA quando ele é limpo',
+      ctx.alertPills({ alergia: negativa }).indexOf('ALERGIA') >= 0 &&
+      ctx.alertPills({ alergia: null }).indexOf('ALERGIA') < 0 &&
+      ctx.alertPills({ alergia: '' }).indexOf('alert-pill') < 0);
+    check('o texto guardado em {campo}_original é memória, não restrição: não acende tarja nenhuma',
+      ctx.alertPills({ alergia_original: negativa, ea_restr_original: negativa, restricao_original: negativa })
+        .indexOf('alert-pill') < 0);
+  }
+  check('a mesa não deixou .catch vazio — toda gravação e toda leitura dela deixam rastro',
+    !/\.catch\(function\([a-z]*\)\{\s*\}\)/.test(
+      html.slice(html.indexOf('var IA_REV={};'), html.indexOf('function algPesqCampanha('))),
+    'há um .catch vazio no bloco da mesa');
+  console.log('');
+
   // ---- "O que cada pessoa fez hoje": rastro sem "hora" nunca vira "undefined" na tela ----
   // Smoke de navegador, 04/set/2026: o Painel do Dia mostrava "das 07:53 às undefined". A
   // causa: audit() se socorre no catch quando falha em se montar e guarda
@@ -10788,8 +10961,8 @@ async function main() {
     check('v-07 · nenhuma leitura nova ficou com .catch vazio — toda falha deixa rastro',
       !/\.catch\(function\([a-z]*\)\{\s*\}\)/.test(
         html.slice(html.indexOf('function pdiaLer('), html.indexOf('function ltAbrir('))));
-    check('v-11 · a versão foi carimbada como 2026-09-11-01',
-      /const APP_VERSAO='2026-09-11-01';/.test(html));
+    check('v-12 · a versão foi carimbada como 2026-09-11-02',
+      /const APP_VERSAO='2026-09-11-02';/.test(html));
   }
   console.log('');
 

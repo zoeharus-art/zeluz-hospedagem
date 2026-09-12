@@ -4864,7 +4864,14 @@
     // vê: dinheiro de cliente não é assunto da rota dele. ESTORNAR é decisão de chefia:
     // só Gestão e Diretoria, sempre com motivo escrito — o registro nunca some.
     'lancar-pagamento':         ['consultora','supervisor','gestao','diretoria'],
-    'estornar-pagamento':       ['gestao','diretoria']
+    'estornar-pagamento':       ['gestao','diretoria'],
+    // ===== v 2026-09-11-02 — a mesa "O que a IA entendeu" ============================
+    // "alergias e outros campos: a gestão, a supervisora e os consultores podem alterar"
+    // (Adriana, 11/set/2026). Quem corrige o que o tratamento automático gravou na ficha e
+    // quem já corrige ficha na recepção: Central Zêluz (consultora), Supervisão, Gestão e
+    // Diretoria. Monitor, plantonista e veterinária ficam de fora — a ficha do cliente não
+    // é assunto da rota deles.
+    'revisar-ia':               ['consultora','supervisor','gestao','diretoria']
   };
   // O papel de quem está no corpo, com a régua do ehDiretoriaRole: role 'diretoria' vale
   // por si; 'gestao' com souAdriana (a senha fixa da Adriana) É a Diretoria. A promoção
@@ -12552,7 +12559,7 @@
   // inteira DEPOIS de a correção estar publicada — o aviso apareceu, ninguém tocou.
   // Agora o aparelho PARADO recarrega sozinho: trancado, com a aba escondida, na porta de
   // entrada ou 3 minutos sem ninguém tocar nele. Mão na tela = nunca recarrega.
-  const APP_VERSAO='2026-09-11-01';
+  const APP_VERSAO='2026-09-11-02';
   var RECARGA_PARADO_MS=3*60*1000, __versaoPublicada=null, __recargaTimer=null;
   function vigiarVersao(){
     if(!DB) return;
@@ -17906,7 +17913,7 @@
           <div class="field"><label>Data de nascimento</label><input type="date" class="cad-in" value="${pelNasc(p)||''}" onchange="setPelNasc(this.value,this)" min="${nascMinISO()}" max="${zHojeISO()}" onkeydown="return dataSoNoCalendario(event)"></div>
           <div class="field"><label>Sexo</label><div class="seg" data-single>${segBtnsPel('sexo',sexo,['Macho','Fêmea'])}</div></div>
           <div class="field"><label>Castrado?</label><div class="seg gold" data-single>${segBtnsPel('castrado',castr,['Sim','Não'])}</div></div>
-          <div class="field"><label>Microchip</label><input class="cad-in" value="${escAttr(ex.microchip||'')}" placeholder="Número do microchip" onchange="setPelExtra(pelAtual,{microchip:this.value})"></div>
+          <div class="field"><label>Microchip</label><input class="cad-in" value="${escAttr(ex.microchip||'')}" placeholder="Número do microchip" onchange="setPelExtra(pelAtual,{microchip:this.value})">${iaRevMarcaFicha(p,'microchip')}</div>
           <div class="field"><label>Tutor 1 (nome)</label>${can
             ? `<input class="cad-in" value="${escAttr(pelGet(p,'tutor'))}" onchange="onTutorPel(this.value)">`
             : `<input class="cad-in" value="${escAttr(pelGet(p,'tutor'))}" readonly style="background:var(--z-cream-warm);color:var(--muted)" title="Só a recepção, a Supervisão ou a Gestão mudam o nome do tutor">`}</div>
@@ -17984,15 +17991,15 @@
           <div class="field" style="grid-column:1/-1;background:rgba(222,180,40,.10);border-left:4px solid var(--z-gold);border-radius:10px;padding:10px 12px">
             <label style="font-size:13px;font-weight:800;color:var(--z-blue)">ALIMENTAÇÃO — o que e quanto ele come</label>
             <div class="cad-grid" style="margin-top:6px">
-              <div class="field"><label>Ração (marca)</label><input class="cad-in" value="${escAttr(ex.alim_racao_marca||ex.alimentacao||'')}" placeholder="Ex: Hills Gastrointestinal" onchange="setPelExtra(pelAtual,{alim_racao_marca:this.value});refreshPills()"></div>
-              <div class="field"><label>Quanto de ração por refeição</label><input class="cad-in" value="${escAttr(ex.alim_racao_qtd||'')}" placeholder="Ex: 60 gramas" onchange="setPelExtra(pelAtual,{alim_racao_qtd:this.value})"></div>
-              <div class="field"><label>Comida natural (o quê)</label><input class="cad-in" value="${escAttr(ex.alim_nat||'')}" placeholder="Ex: patê gastrô — ou vazio" onchange="setPelExtra(pelAtual,{alim_nat:this.value})"></div>
-              <div class="field"><label>Quanto de natural por refeição</label><input class="cad-in" value="${escAttr(ex.alim_nat_qtd||'')}" placeholder="Ex: 1 colher" onchange="setPelExtra(pelAtual,{alim_nat_qtd:this.value})"></div>
-              <div class="field" style="grid-column:1/-1"><label>Horários das refeições</label><input class="cad-in" value="${escAttr(ex.alim_horarios||'')}" placeholder="Ex: 07:00, 12:00 e 18:00" onchange="setPelExtra(pelAtual,{alim_horarios:this.value})"></div>
+              <div class="field"><label>Ração (marca)</label><input class="cad-in" value="${escAttr(ex.alim_racao_marca||ex.alimentacao||'')}" placeholder="Ex: Hills Gastrointestinal" onchange="setPelExtra(pelAtual,{alim_racao_marca:this.value});refreshPills()">${iaRevMarcaFicha(p,'alim_racao_marca')}</div>
+              <div class="field"><label>Quanto de ração por refeição</label><input class="cad-in" value="${escAttr(ex.alim_racao_qtd||'')}" placeholder="Ex: 60 gramas" onchange="setPelExtra(pelAtual,{alim_racao_qtd:this.value})">${iaRevMarcaFicha(p,'alim_racao_qtd')}</div>
+              <div class="field"><label>Comida natural (o quê)</label><input class="cad-in" value="${escAttr(ex.alim_nat||'')}" placeholder="Ex: patê gastrô — ou vazio" onchange="setPelExtra(pelAtual,{alim_nat:this.value})">${iaRevMarcaFicha(p,'alim_nat')}</div>
+              <div class="field"><label>Quanto de natural por refeição</label><input class="cad-in" value="${escAttr(ex.alim_nat_qtd||'')}" placeholder="Ex: 1 colher" onchange="setPelExtra(pelAtual,{alim_nat_qtd:this.value})">${iaRevMarcaFicha(p,'alim_nat_qtd')}</div>
+              <div class="field" style="grid-column:1/-1"><label>Horários das refeições</label><input class="cad-in" value="${escAttr(ex.alim_horarios||'')}" placeholder="Ex: 07:00, 12:00 e 18:00" onchange="setPelExtra(pelAtual,{alim_horarios:this.value})">${iaRevMarcaFicha(p,'alim_horarios')}</div>
               <div class="field" style="grid-column:1/-1"><label>Em quais refeições</label><div class="seg gold">${['Café da manhã','Almoço','Jantar'].map(function(r){var on=(String(ex.alim_refs||'').indexOf(r)>=0);return '<button type="button" class="'+(on?'on':'')+'" onclick="pelAlimRef(\''+r+'\')">'+r+'</button>';}).join('')}</div>
                 <div class="hint" style="margin-top:3px">${escAttr(ex.alim_refs||'')||'<span style="color:var(--crm-critico);font-weight:800">Nenhuma refeição marcada.</span>'}</div></div>
               <div class="field" style="grid-column:1/-1"><label>Mistura ração com natural?</label><div class="seg gold" data-single>${segBtnsPel('alim_mistura',ex.alim_mistura||'',['Sim','Nao'])}</div></div>
-              <div class="field" style="grid-column:1/-1"><label>Observação da comida</label><input class="cad-in" value="${escAttr(ex.alim_obs||'')}" placeholder="Ex: come devagar, comedouro lento" onchange="setPelExtra(pelAtual,{alim_obs:this.value})"></div>
+              <div class="field" style="grid-column:1/-1"><label>Observação da comida</label><input class="cad-in" value="${escAttr(ex.alim_obs||'')}" placeholder="Ex: come devagar, comedouro lento" onchange="setPelExtra(pelAtual,{alim_obs:this.value})">${iaRevMarcaFicha(p,'alim_obs')}</div>
             </div>
           </div>
         </div>
@@ -18056,20 +18063,20 @@
         <div class="hint">Tudo que o monitor precisa saber antes de cuidar e dar o almoço.</div>
         <div id="pelPills2">${alertPills(ex)}</div>
         <div class="cad-grid">
-          <div class="field"><label>Alergia</label><input class="cad-in" value="${escAttr(ex.alergia||'')}" placeholder="Ex: frango — ou deixe vazio" onchange="setPelExtra(pelAtual,{alergia:this.value});refreshPills()"></div>
-          <div class="field"><label>Restrição alimentar</label><input class="cad-in" value="${escAttr(ex.restricao||'')}" placeholder="Ex: sem grãos" onchange="setPelExtra(pelAtual,{restricao:this.value});refreshPills()"></div>
+          <div class="field"><label>Alergia</label><input class="cad-in" value="${escAttr(ex.alergia||'')}" placeholder="Ex: frango — ou deixe vazio" onchange="setPelExtra(pelAtual,{alergia:this.value});refreshPills()">${iaRevMarcaFicha(p,'alergia')}</div>
+          <div class="field"><label>Restrição alimentar</label><input class="cad-in" value="${escAttr(ex.restricao||'')}" placeholder="Ex: sem grãos" onchange="setPelExtra(pelAtual,{restricao:this.value});refreshPills()">${iaRevMarcaFicha(p,'restricao')}</div>
           <!-- O bloco ALIMENTAÇÃO mudou para a aba Rotina & Alimentação (Adriana, 01/set: "almoço em campo almoço"). -->
-          <div class="field"><label>Medicação</label><input class="cad-in" value="${escAttr(ex.medicacao||'')}" placeholder="Nome, dose, horário" onchange="setPelExtra(pelAtual,{medicacao:this.value});refreshPills()"></div>
-          <div class="field"><label>Algum problema de saúde</label><input class="cad-in" value="${escAttr(ex.problema||'')}" placeholder="Ex: cardíaco — ou vazio" onchange="setPelExtra(pelAtual,{problema:this.value});refreshPills()"></div>
+          <div class="field"><label>Medicação</label><input class="cad-in" value="${escAttr(ex.medicacao||'')}" placeholder="Nome, dose, horário" onchange="setPelExtra(pelAtual,{medicacao:this.value});refreshPills()">${iaRevMarcaFicha(p,'medicacao')}</div>
+          <div class="field"><label>Algum problema de saúde</label><input class="cad-in" value="${escAttr(ex.problema||'')}" placeholder="Ex: cardíaco — ou vazio" onchange="setPelExtra(pelAtual,{problema:this.value});refreshPills()">${iaRevMarcaFicha(p,'problema')}</div>
           <!-- O veterinário de emergência mudou para a aba Prevenção, junto do Check-up (Adriana, 01/set). -->
-          <div class="field" style="grid-column:1/-1"><label>O que o tutor contou</label><input class="cad-in" value="${escAttr(ex.obs_tutor||'')}" placeholder="Check-up, cio, mudanças em casa — o que veio na resposta do tutor" onchange="setPelExtra(pelAtual,{obs_tutor:this.value})"></div>
+          <div class="field" style="grid-column:1/-1"><label>O que o tutor contou</label><input class="cad-in" value="${escAttr(ex.obs_tutor||'')}" placeholder="Check-up, cio, mudanças em casa — o que veio na resposta do tutor" onchange="setPelExtra(pelAtual,{obs_tutor:this.value})">${iaRevMarcaFicha(p,'obs_tutor')}</div>
           ${(function(){ var ev=ex.entrevista; if(!(ev&&ev.itens&&ev.itens.length)) return '';
             return '<div class="field" style="grid-column:1/-1;background:rgba(35,77,103,.06);border-left:4px solid var(--z-blue);border-radius:10px;padding:10px 12px">'
               +'<label style="font-size:13px;font-weight:800;color:var(--z-blue)">ENTREVISTA COM O TUTOR'+(ev.quando?(' — respondida em '+escAttr(repBRdata?repBRdata(ev.quando):ev.quando)):'')+'</label>'
               +ev.itens.map(function(it){ return '<div style="margin-top:7px"><div style="font-size:12px;color:var(--muted);font-weight:600">'+escAttr(it.p||'')+'</div>'
                 +'<div style="font-size:13.5px;font-weight:700;color:var(--ink,#333)">'+escAttr(it.r||'—')+'</div></div>'; }).join('')
               +'</div>'; })()}
-          <div class="field"><label>Manias</label><input class="cad-in" value="${escAttr(ex.manias||'')}" placeholder="Ex: protege a comida" onchange="setPelExtra(pelAtual,{manias:this.value});refreshPills()"></div>
+          <div class="field"><label>Manias</label><input class="cad-in" value="${escAttr(ex.manias||'')}" placeholder="Ex: protege a comida" onchange="setPelExtra(pelAtual,{manias:this.value});refreshPills()">${iaRevMarcaFicha(p,'manias')}</div>
           <div class="field"><label>Em adaptacao (45 dias)?</label><div class="seg gold" data-single>${segBtnsPel('adaptacao',ex.adaptacao||'',['Sim','Nao'])}</div></div>
           <div class="field"><label>Adaptacao comecou em</label><input type="date" class="cad-in" value="${escAttr(ex.adaptacao_desde||'')}" onchange="setPelExtra(pelAtual,{adaptacao_desde:this.value});renderPelFicha()" min="2015-01-01" max="2035-12-31" onkeydown="return dataSoNoCalendario(event)">
             <div class="hint" style="margin-top:4px">${adaptTextoFicha(ex)}</div></div>
@@ -18093,6 +18100,7 @@
             <div style="margin-top:5px">
               <button type="button" class="btn" style="padding:5px 12px;font-size:12px;font-weight:800;border:1.5px solid var(--line);background:${ex.ea_restr_nao?'var(--z-gold)':'var(--z-cream-warm)'};color:var(--z-blue)" onclick="setPelExtra(pelAtual,{ea_restr_nao:${ex.ea_restr_nao?'false':'true'}, ea_restr:''});renderPelFicha()">${ex.ea_restr_nao?'✓ não tem restrição — perguntei ao tutor':'não tem restrição (perguntei ao tutor)'}</button>
             </div>
+            ${iaRevMarcaFicha(p,'ea_restr')}
             <div class="hint" style="margin-top:4px">${(!ex.ea_restr&&ex.restricao)?'Herdado da restrição alimentar já cadastrada: <strong>'+escAttr(ex.restricao)+'</strong>. Se no EA for diferente, escreva acima.':((!ex.ea_restr&&!ex.ea_restr_nao)?'<span style="color:var(--crm-critico);font-weight:800">FALTA RESPONDER.</span> Sem resposta, ele entra na contagem de pendências da gestão — e o monitor não vê palpite na tela dele.':'Ele aparece na lista do EA sempre que a atividade do dia tiver algo que ele não pode.')}</div>
           </div>
           <!-- O EA acontece em DUAS matilhas: pequeno e médio porte. É por elas que a tela
@@ -21671,6 +21679,7 @@
     document.getElementById('algPainel').innerHTML='<div class="card"><div class="hint">Carregando…</div></div>';
     algPesqCarregarCampanha();
     DB.ref('daycare/alergia-confirmada').once('value').then(function(s){ ALG_RESP=s.val()||{}; algRender();
+      try{ if(iaRevPode()) iaRevGarantir(); }catch(e){} /* silencioso de propósito: sem a mesa a tela da pesquisa continua inteira */
       // cada resposta pendente se trata sozinha — a tela fica limpa (Adriana, 01/set)
       try{ if(typeof PELUDINHOS!=='undefined'&&PELUDINHOS.length) algTratarFila(); else setTimeout(function(){ try{ algTratarFila(); }catch(e){} /* silencioso de propósito: guarda defensiva — falhar aqui não pode interromper quem chamou */ }, 3000); }catch(e){} /* silencioso de propósito: idem */ })
       .catch(function(e){
@@ -22603,6 +22612,464 @@
     };
     um();
   }
+  // ===== A MESA DE REVISÃO — "O QUE A IA ENTENDEU" (Adriana, 11/set/2026) ============
+  // "Eu preciso ter autonomia de corrigir o dado se a IA mandou para o lugar errado ou
+  //  'entendeu errado'."
+  //
+  // O tratamento automático da resposta do tutor (algTratarAuto, logo acima) preenche campos
+  // da ficha sozinho. Em 11/set/2026 apareceram 12 campos, em 10 fichas, que nasceram de uma
+  // NEGATIVA: a tutora da Jasmin escreveu "Não, até o presente momento não teve nada disso" e
+  // aquilo virou alergia. O app já não erra assim — mas o que ficou gravado só saía com um
+  // programador rodando um script. Não pode: regra nova não pode exigir programador.
+  //
+  // Esta mesa põe lado a lado o que o TUTOR escreveu e o que a IA GRAVOU, e deixa a decisão
+  // em um toque: está certo, corrigir (inclusive MOVER para o campo certo) ou limpar. A IA
+  // apenas sugere; nada muda sem clique. Toda decisão deixa rastro na auditoria — quem,
+  // quando, o que estava e o que ficou. A ferramenta de linha de comando
+  // (tools/alergia-falso-positivo.js) continua existindo como alternativa.
+  var IA_REV={};                 // daycare/ia-revisao — {chave:{campo:{estado,...}}}
+  var IA_REV_LIDO=false, IA_REV_LENDO=false, IA_REV_ERRO='';
+  var IA_REV_VER_REVISADOS=false;
+  // A lista inteira tem centenas de campos — o tratamento automático preencheu muita ficha.
+  // Mostrar centenas de cartões de uma vez é a mesma coisa que não mostrar nada: ninguém termina.
+  // Então a mesa abre com os primeiros IA_REV_PASSO (os que parecem negativa vêm primeiro,
+  // pela ordenação) e cresce de IA_REV_PASSO em IA_REV_PASSO. A CONTA é sempre honesta: o
+  // número total aparece em cima, mesmo quando a tela mostra só uma parte.
+  var IA_REV_PASSO=25, IA_REV_MOSTRAR=25;
+  // Todos os campos que o tratamento pode escrever: os da lista de destino da própria tela
+  // (ALG_CAMPOS) mais 'restricoes', que existe em fichas antigas e ainda acende a tarja.
+  var IA_REV_CAMPOS=(function(){
+    var L=[];
+    try{ L=ALG_CAMPOS.filter(function(x){ return x.c; }).map(function(x){ return x.c; }); }catch(e){ L=['alergia','restricao','ea_restr']; }
+    if(L.indexOf('restricoes')<0) L.push('restricoes');
+    return L;
+  })();
+  // Os campos que acendem a tarja vermelha da equipe — são estes que uma negativa estraga.
+  var IA_REV_RESTR={alergia:1, restricao:1, restricoes:1, ea_restr:1};
+  function iaRevPode(){
+    try{ return (typeof podePapel==='function') && podePapel('revisar-ia'); }catch(e){ return false; } /* silencioso de propósito: sem a tabela de permissões ninguém revisa */
+  }
+  function iaRevBarrado(){
+    zAlertao('Esta mesa é da Gestão, da Supervisão e da Central Zêluz',
+      ['Quem revisa o que a IA entendeu é a Gestão, a Diretoria, a Supervisão e as Consultoras da Central Zêluz.',
+       'Se há algo errado nesta ficha, peça a uma delas — o texto do tutor continua guardado inteiro.']);
+    try{ if(typeof audit==='function') audit('ia-revisao','BARROU: papel sem permissão para revisar o que a IA entendeu',{}); }catch(e){} /* silencioso de propósito: o audit() tem bolso próprio — falhar aqui não muda a recusa */
+  }
+  // Lê, uma vez por sessão, o que já foi revisado. Enquanto não chegou, a mesa DIZ que está
+  // carregando: nenhuma tela afirma "não há nada a revisar" antes de saber que o dado chegou.
+  function iaRevGarantir(aoFim){
+    if(IA_REV_LIDO){ if(typeof aoFim==='function') aoFim(); return; }
+    if(IA_REV_LENDO) return;
+    if(!DB){ IA_REV_ERRO='banco reconectando'; return; }
+    IA_REV_LENDO=true; IA_REV_ERRO='';
+    var tarefas=[DB.ref('daycare/ia-revisao').once('value').then(function(s){ IA_REV=s.val()||{}; })];
+    if(!(ALG_RESP&&Object.keys(ALG_RESP).length)){
+      tarefas.push(DB.ref('daycare/alergia-confirmada').once('value').then(function(s){ ALG_RESP=s.val()||{}; }));
+    }
+    Promise.all(tarefas).then(function(){
+      IA_REV_LIDO=true; IA_REV_LENDO=false; IA_REV_ERRO='';
+      iaRevEsquecerCache();
+      try{ if(document.getElementById('algPainel')) algRender(); }catch(e){} /* silencioso de propósito: redesenho de tela — falhar não pode derrubar quem chamou */
+      try{ if(typeof renderPelFicha==='function'&&document.getElementById('pel-saved')) renderPelFicha(); }catch(e){} /* silencioso de propósito: idem */
+      if(typeof aoFim==='function') aoFim();
+    }).catch(function(e){
+      IA_REV_LENDO=false; IA_REV_ERRO=(e&&e.message)||String(e);
+      _logLeituraFalhou('daycare/ia-revisao (mesa do que a IA entendeu)', e);
+      try{ if(document.getElementById('algPainel')) algRender(); }catch(x){} /* silencioso de propósito: redesenho de tela — falhar não pode derrubar quem chamou */
+    });
+  }
+  // A pergunta que gerou aquele campo — a mesma lista que monta a mensagem ao tutor.
+  function iaRevPergunta(p, campo){
+    try{
+      var Q=(typeof algPerguntas==='function')?algPerguntas(p):[];
+      var q=Q.filter(function(x){ return x.campo===campo; })[0];
+      return q?String(q.t||''):'';
+    }catch(e){ return ''; } /* silencioso de propósito: sem a pergunta o cartão sai só com o texto do tutor */
+  }
+  // O que o TUTOR escreveu, palavra por palavra. Primeiro na entrevista gravada na ficha
+  // (pergunta a pergunta); se não houver, a resposta inteira, como ela chegou.
+  // Devolve {txt, inteiro}: `inteiro` marca a resposta que NÃO ficou guardada pergunta a
+  // pergunta — nesse caso o que aparece é o textão inteiro do tutor, e a tela DIZ isso.
+  function iaRevTextoTutor(ex, p, campo, r){
+    try{
+      var ev=ex&&ex.entrevista;
+      var per=iaRevPergunta(p, campo);
+      if(ev&&ev.itens&&ev.itens.length&&per){
+        var it=ev.itens.filter(function(x){ return String(x.p||'')===per; })[0];
+        if(it&&String(it.r||'').trim()) return {txt:String(it.r).trim(), inteiro:false};
+      }
+      return {txt:String((r&&r.resposta)||'').trim(), inteiro:true};
+    }catch(e){ return {txt:'', inteiro:false}; } /* silencioso de propósito: sem o texto cru o cartão ainda mostra o que foi gravado */
+  }
+  var _IA_REV_CACHE=null;
+  function iaRevEsquecerCache(){ _IA_REV_CACHE=null; }
+  function iaRevItens(){ if(_IA_REV_CACHE) return _IA_REV_CACHE; _IA_REV_CACHE=iaRevMontar(); return _IA_REV_CACHE; }
+  // Monta a lista. NÃO grava nada — é leitura pura do que já está no cadastro.
+  function iaRevMontar(){
+    var out=[], vistos={}, lista=[];
+    try{
+      (typeof PELUDINHOS!=='undefined'?(PELUDINHOS||[]):[]).forEach(function(p){
+        lista.push(p); try{ vistos[pelKey(p)]=1; }catch(e){} /* silencioso de propósito: ficha sem chave legível fica de fora */
+      });
+    }catch(e){} /* silencioso de propósito: sem a lista de FILHOts a mesa ainda tenta o cadastro cru */
+    // Rede de segurança: ficha que está no cadastro mas ainda não entrou na lista da tela não
+    // pode sumir da mesa — é justamente onde um erro passa despercebido.
+    try{
+      var _cad=(typeof pelCadCache!=='undefined'&&pelCadCache)?pelCadCache:{};
+      Object.keys(_cad).forEach(function(k){
+        if(vistos[k]) return;
+        var c=_cad[k]||{};
+        var n=String(c.nome||c.n||'').trim(); if(!n) return;
+        lista.push({n:n, tutor:String(c.tutor||'')});
+      });
+    }catch(e){} /* silencioso de propósito: guarda defensiva — a lista principal continua valendo */
+    lista.forEach(function(p){
+      var k, ex;
+      try{ k=pelKey(p); ex=pelExtra(p)||{}; }catch(e){ return; } /* silencioso de propósito: ficha ilegível fica de fora */
+      var r=((typeof ALG_RESP!=='undefined'&&ALG_RESP)?ALG_RESP[k]:null)||{};
+      var autoCampos={};
+      if(r.ficha&&r.ficha.auto&&Array.isArray(r.ficha.campos)) r.ficha.campos.forEach(function(c){ if(c) autoCampos[c]=1; });
+      var nomes=[];
+      try{ nomes=[pelNome(p), String(pelGet(p,'tutor')||'')]; }catch(e){ nomes=[p.n||'', p.tutor||'']; }
+      var reg=(IA_REV||{})[k]||{};
+      IA_REV_CAMPOS.forEach(function(campo){
+        var bruto=ex[campo];
+        if(bruto!=null&&typeof bruto==='object') return;      // entrevista e afins não são campo de texto
+        var valor=String(bruto==null?'':bruto).trim();
+        var rev=reg[campo]||null;
+        var negativa=false;
+        try{ negativa=!!(valor && IA_REV_RESTR[campo] && typeof zNegativaPura==='function' && zNegativaPura(valor, nomes)); }
+        catch(e){ negativa=false; } /* silencioso de propósito: sem o filtro o campo só deixa de ganhar a marcação sugerida */
+        if(!autoCampos[campo] && !negativa && !rev) return;   // neste campo não há o que revisar
+        var estado=rev?String(rev.estado||'confirmado'):(negativa?'negativa':'revisar');
+        var inativo=false;
+        try{ inativo=(typeof pelInativo==='function')?!!pelInativo(p):false; }catch(e){ inativo=false; } /* silencioso de propósito: a ficha entra na mesa do mesmo jeito */
+        var cru=iaRevTextoTutor(ex, p, campo, r);
+        out.push({k:k, p:p, campo:campo, nome:nomes[0]||k, tutor:nomes[1]||'',
+                  valor:valor, negativa:negativa, auto:!!autoCampos[campo], rev:rev, estado:estado,
+                  pergunta:iaRevPergunta(p, campo), tutorTexto:cru.txt, tutorInteiro:cru.inteiro,
+                  quando:(rev&&rev.quando)||((r.ficha&&r.ficha.quando)||''), inativo:inativo});
+      });
+    });
+    var ordem={negativa:0, revisar:1, corrigido:2, limpo:3, confirmado:4};
+    out.sort(function(a,b){
+      var oa=(ordem[a.estado]==null?9:ordem[a.estado]), ob=(ordem[b.estado]==null?9:ordem[b.estado]);
+      return oa-ob || jsNorm(a.nome).localeCompare(jsNorm(b.nome)) || a.campo.localeCompare(b.campo);
+    });
+    return out;
+  }
+  function iaRevAbertos(){ return iaRevItens().filter(function(x){ return x.estado==='negativa'||x.estado==='revisar'; }); }
+  function iaRevNegativas(){ return iaRevItens().filter(function(x){ return x.estado==='negativa'; }); }
+  function iaRevAchar(k, campo){ return iaRevItens().filter(function(x){ return x.k===k && x.campo===campo; })[0]||null; }
+  // ---- o rastro -----------------------------------------------------------------
+  function iaRevGravarRegistro(k, campo, reg, aoFim){
+    IA_REV[k]=IA_REV[k]||{}; IA_REV[k][campo]=reg;
+    var fim=function(){
+      iaRevEsquecerCache();
+      try{ if(document.getElementById('algPainel')) algRender(); }catch(e){} /* silencioso de propósito: redesenho de tela — falhar não pode derrubar quem chamou */
+      try{ if(typeof renderPelFicha==='function'&&document.getElementById('pel-saved')) renderPelFicha(); }catch(e){} /* silencioso de propósito: idem */
+      try{ if(typeof refreshPills==='function') refreshPills(); }catch(e){} /* silencioso de propósito: idem */
+      if(typeof aoFim==='function') aoFim();
+    };
+    if(!DB){
+      _logFalhaGrav('ia-revisao '+k+'/'+campo+' (banco reconectando)', new Error('banco reconectando'));
+      zAlertao('Anotei NESTE aparelho, mas NÃO salvou no sistema',
+        ['O banco está reconectando. Refaça esta revisão quando a conexão voltar.']);
+      fim(); return;
+    }
+    DB.ref('daycare/ia-revisao/'+k+'/'+campo).set(reg).then(fim).catch(function(e){
+      _logFalhaGrav('ia-revisao '+k+'/'+campo, e);
+      zAlertao('NÃO consegui guardar o registro da revisão',
+        [((e&&e.message)||String(e)),
+         'O campo da ficha pode já ter mudado. Confira a ficha e refaça a revisão.']);
+      fim();
+    });
+  }
+  // ---- 1. Está certo ------------------------------------------------------------
+  function iaRevOk(k, campo){
+    if(!iaRevPode()){ iaRevBarrado(); return; }
+    var it=iaRevAchar(k, campo);
+    if(!it){ zAlertao('Não achei este campo para revisar', ['A tela pode estar desatualizada. Abra a mesa de novo.']); return; }
+    var reg={estado:'confirmado', campo:campo, quem:(typeof quemSou==='function'?quemSou():'-'),
+             quando:(typeof zHojeISO==='function')?zHojeISO():'', ts:Date.now(),
+             antes:it.valor, depois:it.valor, texto_tutor:it.tutorTexto};
+    try{ if(typeof audit==='function') audit('ia-revisao','confirmou o que a IA entendeu — '+it.nome+' · '+algCampoNome(campo)+': "'+it.valor+'"',{pet:it.nome}); }catch(e){} /* silencioso de propósito: o audit() tem bolso próprio — falhar aqui não trava a decisão */
+    iaRevGravarRegistro(k, campo, reg);
+  }
+  // ---- 2. Corrigir (e, se for o caso, MOVER para o campo certo) ------------------
+  function iaRevCorrigir(k, campo){
+    if(!iaRevPode()){ iaRevBarrado(); return; }
+    var it=iaRevAchar(k, campo);
+    if(!it){ zAlertao('Não achei este campo para revisar', ['A tela pode estar desatualizada. Abra a mesa de novo.']); return; }
+    var opcoes=[];
+    try{ opcoes=ALG_CAMPOS.filter(function(x){ return x.c; }).map(function(x){ return {v:x.c, t:x.t}; }); }catch(e){ opcoes=[]; } /* silencioso de propósito: sem a lista sobra o próprio campo */
+    if(!opcoes.filter(function(o){ return o.v===campo; }).length) opcoes.unshift({v:campo, t:algCampoNome(campo)});
+    zCampo('Corrigir o que a IA entendeu',
+      [it.nome+(it.tutor?(' · tutor: '+it.tutor):''),
+       it.pergunta?('Pergunta feita ao tutor: '+it.pergunta):'',
+       it.tutorTexto?('O tutor escreveu: “'+it.tutorTexto+'”'):'',
+       'A IA gravou isto no campo “'+algCampoNome(campo)+'”. Corrija o texto abaixo. Se o lugar estiver errado, escolha o campo certo: o antigo fica vazio.'],
+      {grande:4, valor:it.valor, rotulo:'O que deve ficar gravado na ficha', cor:'#234D67',
+       botao:'Salvar a correção', botaoNao:'Cancelar — não mexer em nada', minimo:1,
+       erro:'Escreva o que deve ficar gravado. Para deixar o campo vazio, use "Não é restrição — limpar".',
+       escolha:{rotulo:'Em qual campo da ficha isto deve ficar', opcoes:opcoes, valor:campo},
+       fn:function(texto, destino){ iaRevAplicarCorrecao(k, campo, texto, destino||campo); }});
+  }
+  function iaRevAplicarCorrecao(k, campoAntigo, texto, campoNovo){
+    var it=iaRevAchar(k, campoAntigo); if(!it) return;
+    texto=String(texto||'').trim();
+    campoNovo=String(campoNovo||campoAntigo);
+    var seguir=function(){
+      var patch={};
+      if(campoNovo!==campoAntigo){ patch[campoAntigo]=null; patch[campoNovo]=texto; }
+      else patch[campoAntigo]=texto;
+      var grava;
+      try{ grava=setPelExtra(it.p, patch); }
+      catch(e){
+        zAlertao('NÃO consegui gravar na ficha', [((e&&e.message)||String(e)), 'Abra a ficha e escreva à mão — o texto do tutor continua guardado.']);
+        try{ if(typeof audit==='function') audit('ia-revisao','NÃO gravou a correção de '+it.nome+' · '+algCampoNome(campoAntigo)+': '+((e&&e.message)||e),{pet:it.nome}); }catch(x){} /* silencioso de propósito: o audit() tem bolso próprio */
+        return;
+      }
+      if(!grava||typeof grava.then!=='function') grava=Promise.resolve({ok:true});
+      grava.then(function(res){
+        if(res&&res.ok===false){
+          zAlertao('NÃO consegui gravar na ficha',
+            [((res.erro&&res.erro.message)||'a gravação foi recusada'),
+             'Nada foi registrado como revisado. Tente de novo em instantes.']);
+          return;
+        }
+        var reg={estado:'corrigido', campo:campoAntigo, campoNovo:(campoNovo!==campoAntigo?campoNovo:''),
+                 quem:(typeof quemSou==='function'?quemSou():'-'),
+                 quando:(typeof zHojeISO==='function')?zHojeISO():'', ts:Date.now(),
+                 antes:it.valor, depois:(campoNovo!==campoAntigo?'':texto), texto_tutor:it.tutorTexto};
+        try{ if(typeof audit==='function') audit('ia-revisao','corrigiu o que a IA entendeu — '+it.nome+' · '
+          +algCampoNome(campoAntigo)+': "'+it.valor+'" → "'+texto+'"'
+          +(campoNovo!==campoAntigo?(' · MOVEU para '+algCampoNome(campoNovo)+' (o campo antigo ficou vazio)'):''),{pet:it.nome}); }catch(e){} /* silencioso de propósito: o audit() tem bolso próprio */
+        iaRevGravarRegistro(k, campoAntigo, reg);
+        if(campoNovo!==campoAntigo){
+          iaRevGravarRegistro(k, campoNovo, {estado:'corrigido', campo:campoNovo, veioDe:campoAntigo,
+            quem:reg.quem, quando:reg.quando, ts:reg.ts, antes:'', depois:texto, texto_tutor:it.tutorTexto});
+        }
+      });
+    };
+    // Mover para um campo que já tem conteúdo apagaria o que está lá. Isso nunca acontece
+    // sozinho: a pessoa vê o que existe e decide.
+    var atualDestino='';
+    if(campoNovo!==campoAntigo){
+      try{ atualDestino=String((pelExtra(it.p)||{})[campoNovo]||'').trim(); }catch(e){ atualDestino=''; } /* silencioso de propósito: sem leitura, a pergunta abaixo simplesmente não aparece */
+    }
+    if(atualDestino && atualDestino!==texto){
+      zPergunta('O campo "'+algCampoNome(campoNovo)+'" já tem conteúdo',
+        ['Está gravado hoje: “'+atualDestino+'”.',
+         'Se continuar, ele passa a ser: “'+texto+'”.',
+         'O que estava escrito não volta sozinho.'],
+        {sim:'Substituir pelo texto novo', nao:'Cancelar — não mexer em nada', cor:'#B3261E'})
+        .then(function(ok){ if(ok) seguir(); });
+      return;
+    }
+    seguir();
+  }
+  // ---- 3. Não é restrição — limpar ----------------------------------------------
+  // O texto original NÃO some: fica em {campo}_original, e o que o tutor escreveu continua
+  // inteiro na entrevista da ficha. O que sai é só a marca que acende a tarja da equipe.
+  function iaRevLimpar(k, campo, semPerguntar, aoFim){
+    if(!iaRevPode()){ iaRevBarrado(); return; }
+    var it=iaRevAchar(k, campo);
+    if(!it){ if(typeof aoFim==='function') aoFim(); return; }
+    var fazer=function(){
+      var patch={};
+      patch[campo]=null;
+      if(it.valor) patch[campo+'_original']=it.valor;
+      if(campo==='ea_restr') patch.ea_restr_nao=true;   // "perguntei ao tutor, está tudo liberado"
+      var grava;
+      try{ grava=setPelExtra(it.p, patch); }
+      catch(e){
+        zAlertao('NÃO consegui limpar o campo na ficha', [((e&&e.message)||String(e)), 'Abra a ficha e apague à mão — o texto do tutor continua guardado.']);
+        try{ if(typeof audit==='function') audit('ia-revisao','NÃO limpou '+algCampoNome(campo)+' de '+it.nome+': '+((e&&e.message)||e),{pet:it.nome}); }catch(x){} /* silencioso de propósito: o audit() tem bolso próprio */
+        if(typeof aoFim==='function') aoFim();
+        return;
+      }
+      if(!grava||typeof grava.then!=='function') grava=Promise.resolve({ok:true});
+      grava.then(function(res){
+        if(res&&res.ok===false){
+          zAlertao('NÃO consegui limpar o campo na ficha',
+            [((res.erro&&res.erro.message)||'a gravação foi recusada'), 'Nada foi registrado como revisado.']);
+          if(typeof aoFim==='function') aoFim();
+          return;
+        }
+        var reg={estado:'limpo', campo:campo, quem:(typeof quemSou==='function'?quemSou():'-'),
+                 quando:(typeof zHojeISO==='function')?zHojeISO():'', ts:Date.now(),
+                 antes:it.valor, depois:'', texto_tutor:it.tutorTexto,
+                 motivo:'a resposta do tutor não é uma restrição'};
+        try{ if(typeof audit==='function') audit('ia-revisao','limpou o que a IA entendeu — '+it.nome+' · '
+          +algCampoNome(campo)+': "'+it.valor+'" (o texto ficou guardado em '+campo+'_original)',{pet:it.nome}); }catch(e){} /* silencioso de propósito: o audit() tem bolso próprio */
+        iaRevGravarRegistro(k, campo, reg, aoFim);
+      });
+    };
+    if(semPerguntar){ fazer(); return; }
+    zPergunta('Limpar "'+algCampoNome(campo)+'" d'+(/[aA]$/.test(it.nome)?'a ':'o ')+it.nome+'?',
+      [(it.tutorTexto?('O tutor escreveu: “'+it.tutorTexto+'”'):''),
+       'Está gravado na ficha: “'+it.valor+'”.',
+       'O campo fica vazio e a tarja vermelha se apaga. O texto continua guardado na entrevista da ficha e em '+campo+'_original.'],
+      {sim:'Limpar — não é restrição', nao:'Cancelar — não mexer em nada', cor:'#B3261E'})
+      .then(function(ok){ if(ok) fazer(); else if(typeof aoFim==='function') aoFim(); });
+  }
+  // ---- limpar de uma vez tudo o que parece uma negativa --------------------------
+  function iaRevLimparTodasNegativas(){
+    if(!iaRevPode()){ iaRevBarrado(); return; }
+    var alvo=iaRevNegativas();
+    if(!alvo.length){ zAlertao('Não há nada marcado como negativa', ['A mesa está sem campos com cara de resposta negativa.'], {ok:true}); return; }
+    var linhas=alvo.map(function(x){ return x.nome+' · '+algCampoNome(x.campo)+': “'+x.valor+'”'; });
+    zPergunta('Limpar '+alvo.length+' campo(s) que parecem uma negativa?',
+      ['Vou limpar, um a um:'].concat(linhas).concat(
+        ['Cada texto continua guardado na entrevista da ficha e em {campo}_original. Nada some.']),
+      {sim:'Limpar os '+alvo.length, nao:'Cancelar — não mexer em nada', cor:'#B3261E'})
+      .then(function(ok){
+        if(!ok) return;
+        var i=0, feitos=0;
+        var um=function(){
+          if(i>=alvo.length){
+            zAlertao('Pronto', [feitos+' campo(s) limpos. O texto do tutor continua guardado em cada ficha.'], {ok:true});
+            return;
+          }
+          var x=alvo[i++];
+          iaRevLimpar(x.k, x.campo, true, function(){ feitos++; setTimeout(um, 250); });
+        };
+        um();
+      });
+  }
+  // ---- a tela -------------------------------------------------------------------
+  function iaRevSituacao(it){
+    if(it.estado==='negativa')   return {t:'A revisar — parece uma negativa', c:'var(--crm-critico)'};
+    if(it.estado==='confirmado') return {t:'Confirmado', c:'var(--crm-ok)'};
+    if(it.estado==='corrigido')  return {t:'Corrigido', c:'var(--z-blue)'};
+    if(it.estado==='limpo')      return {t:'Limpo', c:'var(--z-blue-soft)'};
+    return {t:'A revisar', c:'var(--z-gold-deep)'};
+  }
+  function iaRevCartaoHtml(it){
+    var s=iaRevSituacao(it), ka=algEsc(it.k), ca=algEsc(it.campo);
+    var h='<div style="border:1.5px solid var(--line);border-left:4px solid '+s.c+';border-radius:12px;padding:11px 13px;margin-top:9px;background:var(--z-cream-warm)">';
+    h+='<div style="display:flex;gap:8px;align-items:baseline;flex-wrap:wrap">'
+      +'<span style="font-weight:800;font-size:15px;color:var(--z-blue)">'+escAttr(it.nome)+'</span>'
+      +(it.tutor?('<span class="hint" style="margin:0">tutor: '+escAttr(it.tutor)+'</span>'):'')
+      +(it.inativo?('<span class="hint" style="margin:0">ficha inativa</span>'):'')
+      +'<span style="margin-left:auto;font-size:11.5px;font-weight:800;color:'+s.c+';border:1.5px solid '+s.c+';border-radius:999px;padding:3px 10px">'+escAttr(s.t)+'</span>'
+      +'</div>';
+    if(it.pergunta) h+='<div class="hint" style="margin-top:6px">Pergunta: '+escAttr(it.pergunta)+'</div>';
+    h+='<div style="margin-top:7px;padding:8px 10px;background:var(--z-cream);border-radius:8px;border:1px solid var(--line)">'
+      +'<div style="font-size:11.5px;font-weight:800;color:var(--muted)">O TUTOR ESCREVEU'
+      +((it.tutorInteiro&&it.tutorTexto)?' — A RESPOSTA INTEIRA (esta ficha não guardou pergunta a pergunta)':'')+'</div>'
+      // Quando a resposta não ficou guardada pergunta a pergunta, o que aparece aqui é a
+      // resposta INTEIRA — um textão de quase 2 mil letras, repetido em cada campo daquela
+      // ficha. O texto continua todo aqui (nada é cortado): a caixa é que rola por dentro.
+      +'<div style="font-size:14px;font-weight:700;color:var(--z-blue);white-space:pre-wrap;max-height:150px;overflow:auto">'
+      +escAttr(it.tutorTexto||'(a resposta não ficou guardada pergunta a pergunta)')+'</div></div>';
+    h+='<div style="margin-top:7px;padding:8px 10px;background:var(--z-cream);border-radius:8px;border:1px solid var(--line)">'
+      +'<div style="font-size:11.5px;font-weight:800;color:var(--muted)">A IA GRAVOU EM: '+escAttr(algCampoNome(it.campo))+'</div>'
+      +'<div style="font-size:14px;font-weight:700;color:'+(it.valor?'var(--crm-critico)':'var(--muted)')+';white-space:pre-wrap">'
+      +escAttr(it.valor||'(campo vazio)')+'</div></div>';
+    if(it.quando) h+='<div class="hint" style="margin-top:5px">'+(it.rev?'revisado':'gravado')+' em '+escAttr((typeof repBRdata==='function')?repBRdata(it.quando):it.quando)+((it.rev&&it.rev.quem)?(' por '+escAttr(it.rev.quem)):'')+'</div>';
+    if(it.rev&&it.rev.estado==='corrigido'&&it.rev.campoNovo)
+      h+='<div class="hint" style="margin-top:2px">movido para <strong>'+escAttr(algCampoNome(it.rev.campoNovo))+'</strong></div>';
+    if(it.rev&&it.rev.estado==='limpo')
+      h+='<div class="hint" style="margin-top:2px">o texto original ficou guardado em <strong>'+escAttr(it.campo)+'_original</strong></div>';
+    h+='<div style="display:flex;gap:7px;flex-wrap:wrap;margin-top:9px">'
+      +'<button type="button" class="btn" style="padding:7px 13px;font-size:12.5px;font-weight:800;border:1.5px solid var(--crm-ok);background:'+(it.estado==='confirmado'?'var(--crm-ok);color:#FFFDF6':'transparent;color:var(--crm-ok)')+'" onclick="iaRevOk(\''+ka+'\',\''+ca+'\')">Está certo</button>'
+      +'<button type="button" class="btn" style="padding:7px 13px;font-size:12.5px;font-weight:800;border:1.5px solid var(--z-blue);background:transparent;color:var(--z-blue)" onclick="iaRevCorrigir(\''+ka+'\',\''+ca+'\')">Corrigir ou mover</button>'
+      +(it.valor?('<button type="button" class="btn" style="padding:7px 13px;font-size:12.5px;font-weight:800;border:1.5px solid var(--crm-critico);background:transparent;color:var(--crm-critico)" onclick="iaRevLimpar(\''+ka+'\',\''+ca+'\')">Não é restrição — limpar</button>'):'')
+      +'</div>';
+    h+='</div>';
+    return h;
+  }
+  function iaRevBoxHtml(){
+    if(!iaRevPode()) return '';
+    var h='<div class="card">';
+    h+='<h2 style="font-size:19px;margin:0">O que a IA entendeu</h2>';
+    h+='<div class="hint" style="margin-top:4px">A resposta do tutor vira ficha sozinha, pergunta a pergunta. Aqui está tudo o que foi preenchido assim, com o texto do tutor ao lado. '
+      +'<strong>A IA apenas sugere: nada muda sem um toque seu.</strong> Se ela mandou para o lugar errado, ou entendeu errado, corrija aqui mesmo.</div>';
+    if(IA_REV_ERRO){
+      h+='<div style="margin-top:10px;border-left:4px solid var(--crm-critico);background:var(--z-cream-warm);border-radius:10px;padding:10px 12px">'
+        +'<div style="font-weight:800;color:var(--crm-critico)">Não consegui ler as revisões já feitas</div>'
+        +'<div class="hint">'+escAttr(IA_REV_ERRO)+'. Isto <strong>não</strong> quer dizer que não há nada a revisar — quer dizer que não deu para consultar.</div>'
+        +'<button type="button" class="btn btn-gold" style="margin-top:8px" onclick="iaRevTentarDeNovo()">Tentar de novo</button></div></div>';
+      return h;
+    }
+    if(!IA_REV_LIDO){
+      h+='<div class="hint" style="margin-top:10px">Carregando o que já foi revisado…</div></div>';
+      return h;
+    }
+    var todos=iaRevItens();
+    var abertos=todos.filter(function(x){ return x.estado==='negativa'||x.estado==='revisar'; });
+    var negativas=todos.filter(function(x){ return x.estado==='negativa'; });
+    var revisados=todos.filter(function(x){ return x.estado!=='negativa'&&x.estado!=='revisar'; });
+    h+='<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px">'
+      +'<span style="font-size:13px;font-weight:800;color:'+(abertos.length?'var(--z-gold-deep)':'var(--crm-ok)')+';border:1.5px solid '+(abertos.length?'var(--z-gold-deep)':'var(--crm-ok)')+';border-radius:999px;padding:5px 12px">'
+      +(abertos.length?(abertos.length+' a revisar'):'Nada a revisar')+'</span>'
+      +(negativas.length?('<span style="font-size:13px;font-weight:800;color:var(--crm-critico);border:1.5px solid var(--crm-critico);border-radius:999px;padding:5px 12px">'+negativas.length+' parecem uma negativa</span>'):'')
+      +(revisados.length?('<a href="#" onclick="iaRevVerRevisados();return false" style="text-decoration:none;font-size:13px;font-weight:800;color:var(--z-blue);border:1.5px solid var(--z-blue);border-radius:999px;padding:5px 12px">'+revisados.length+' já revisados</a>'):'')
+      +'</div>';
+    if(negativas.length){
+      h+='<button type="button" class="btn btn-primary" style="width:100%;margin-top:10px" onclick="iaRevLimparTodasNegativas()">'
+        +'Limpar todos os '+negativas.length+' que parecem uma negativa</button>'
+        +'<div class="hint" style="margin-top:4px">A lista com os nomes aparece antes de qualquer coisa ser apagada.</div>';
+    }
+    if(!abertos.length&&!revisados.length){
+      h+='<div class="hint" style="margin-top:12px">Nenhum campo foi preenchido automaticamente até agora — não há o que revisar.</div>';
+    }
+    if(abertos.length){
+      var mostra=Math.min(IA_REV_MOSTRAR, abertos.length);
+      h+='<div style="font-weight:800;font-size:13.5px;color:var(--z-blue);margin-top:14px">A revisar ('+abertos.length+')</div>';
+      if(abertos.length>mostra) h+='<div class="hint" style="margin-top:2px">Mostrando '+mostra+' de '+abertos.length+' — os que parecem uma negativa vem primeiro.</div>';
+      h+=abertos.slice(0, mostra).map(iaRevCartaoHtml).join('');
+      if(abertos.length>mostra){
+        h+='<button type="button" class="btn btn-gold" style="width:100%;margin-top:10px" onclick="iaRevMostrarMais()">'
+          +'Mostrar mais '+Math.min(IA_REV_PASSO, abertos.length-mostra)+' ('+(abertos.length-mostra)+' ainda não aparecem)</button>';
+      }
+    }
+    if(revisados.length&&IA_REV_VER_REVISADOS){
+      var mostraR=Math.min(IA_REV_MOSTRAR, revisados.length);
+      h+='<div style="font-weight:800;font-size:13.5px;color:var(--z-blue);margin-top:16px">Já revisados ('+revisados.length+')</div>';
+      h+=revisados.slice(0, mostraR).map(iaRevCartaoHtml).join('');
+      if(revisados.length>mostraR) h+='<button type="button" class="btn btn-gold" style="width:100%;margin-top:10px" onclick="iaRevMostrarMais()">Mostrar mais '+Math.min(IA_REV_PASSO, revisados.length-mostraR)+'</button>';
+    }
+    h+='</div>';
+    return h;
+  }
+  function iaRevMostrarMais(){ IA_REV_MOSTRAR+=IA_REV_PASSO; try{ algRender(); }catch(e){} /* silencioso de propósito: redesenho de tela — falhar não pode derrubar quem chamou */ }
+  function iaRevVerRevisados(){ IA_REV_VER_REVISADOS=!IA_REV_VER_REVISADOS; try{ algRender(); }catch(e){} /* silencioso de propósito: redesenho de tela — falhar não pode derrubar quem chamou */ }
+  function iaRevTentarDeNovo(){ IA_REV_LIDO=false; IA_REV_ERRO=''; iaRevGarantir(); try{ algRender(); }catch(e){} /* silencioso de propósito: idem */ }
+  // ---- o atalho na ficha do FILHOt ----------------------------------------------
+  // Ao lado de cada campo que a IA preencheu, a mesma decisão em um toque — sem sair da ficha.
+  function iaRevMarcaFicha(p, campo){
+    try{
+      if(!iaRevPode()) return '';
+      if(!p) return '';
+      // A ficha também precisa do que já foi revisado. Desce uma vez por sessão e a tela
+      // se redesenha sozinha quando chega — nunca afirma "não há nada" antes de saber.
+      if(!IA_REV_LIDO&&!IA_REV_LENDO&&DB) iaRevGarantir();
+      var k=pelKey(p), ex=pelExtra(p)||{};
+      var r=((typeof ALG_RESP!=='undefined'&&ALG_RESP)?ALG_RESP[k]:null)||{};
+      var auto=!!(r.ficha&&r.ficha.auto&&Array.isArray(r.ficha.campos)&&r.ficha.campos.indexOf(campo)>=0);
+      var valor=String(ex[campo]==null?'':ex[campo]).trim();
+      var nomes=[pelNome(p), String(pelGet(p,'tutor')||'')];
+      var negativa=false;
+      try{ negativa=!!(valor && IA_REV_RESTR[campo] && typeof zNegativaPura==='function' && zNegativaPura(valor, nomes)); }
+      catch(e){ negativa=false; } /* silencioso de propósito: sem o filtro o campo só perde a marcação sugerida */
+      var rev=((IA_REV||{})[k]||{})[campo]||null;
+      if(!auto&&!negativa&&!rev) return '';
+      var s=iaRevSituacao({estado:rev?String(rev.estado||'confirmado'):(negativa?'negativa':'revisar')});
+      var ka=algEsc(k), ca=algEsc(campo);
+      var h='<div style="margin-top:5px;padding:7px 9px;border-radius:9px;background:var(--z-cream-warm);border:1px solid var(--line);border-left:3px solid '+s.c+'">'
+        +'<div style="font-size:11.5px;font-weight:800;color:'+s.c+'">PREENCHIDO PELA RESPOSTA DO TUTOR — '+escAttr(s.t)+'</div>';
+      if(rev&&rev.quem) h+='<div class="hint" style="margin:2px 0 0">por '+escAttr(rev.quem)+(rev.quando?(' em '+escAttr((typeof repBRdata==='function')?repBRdata(rev.quando):rev.quando)):'')+'</div>';
+      h+='<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:6px">'
+        +'<button type="button" class="btn" style="padding:5px 11px;font-size:11.5px;font-weight:800;border:1.5px solid var(--crm-ok);background:transparent;color:var(--crm-ok)" onclick="iaRevOk(\''+ka+'\',\''+ca+'\')">Está certo</button>'
+        +'<button type="button" class="btn" style="padding:5px 11px;font-size:11.5px;font-weight:800;border:1.5px solid var(--z-blue);background:transparent;color:var(--z-blue)" onclick="iaRevCorrigir(\''+ka+'\',\''+ca+'\')">Corrigir ou mover</button>'
+        +(valor?('<button type="button" class="btn" style="padding:5px 11px;font-size:11.5px;font-weight:800;border:1.5px solid var(--crm-critico);background:transparent;color:var(--crm-critico)" onclick="iaRevLimpar(\''+ka+'\',\''+ca+'\')">Limpar</button>'):'')
+        +'</div></div>';
+      return h;
+    }catch(e){ return ''; } /* silencioso de propósito: o atalho é um extra — sem ele a ficha continua inteira */
+  }
   // ===== O QUADRO DA PESQUISA (Adriana, 01/set) ====================================
   // "Pesquisa de agosto/26 — tantos responderam, tantos a responder... os 102 que
   //  nunca nem perguntamos em vermelho... o pessoal tem que dar conta."
@@ -22874,13 +23341,45 @@
       }).join('')
       +'</div>';
   }
+  // A tela tem DUAS abas desde 11/set/2026: a pesquisa de sempre e a mesa "O que a IA
+  // entendeu". A mesa só aparece para quem pode revisar — o menu e o acesso à tela não mudam.
+  var ALG_ABA='pesquisa';
+  function algAba(x){
+    ALG_ABA=(x==='ia'&&!iaRevPode())?'pesquisa':x;
+    if(ALG_ABA==='ia'){ IA_REV_MOSTRAR=IA_REV_PASSO; IA_REV_VER_REVISADOS=false; }
+    try{ algRender(); }catch(e){} /* silencioso de propósito: redesenho de tela — falhar não pode derrubar quem chamou */
+    try{ window.scrollTo({top:0,behavior:'smooth'}); }catch(e){} /* silencioso de propósito: enfeite de tela */
+  }
+  function algAbasHtml(){
+    if(!iaRevPode()) return '';
+    var n=0; try{ n=IA_REV_LIDO?iaRevAbertos().length:0; }catch(e){ n=0; } /* silencioso de propósito: sem a conta a aba sai sem o número */
+    var bt=function(k,t,cor){
+      var on=(ALG_ABA===k);
+      return '<a href="#" onclick="algAba(\''+k+'\');return false" style="text-decoration:none;border:1.5px solid '+cor+';'
+        +'background:'+(on?cor:'transparent')+';color:'+(on?'#FFFDF6':cor)+';border-radius:999px;padding:7px 14px;font-size:13.5px;font-weight:800">'+t+'</a>';
+    };
+    return '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px">'
+      +bt('pesquisa','Pesquisa e respostas','var(--z-blue)')
+      +bt('ia','O que a IA entendeu'+(n?(' ('+n+')'):''),'var(--z-gold-deep)')
+      +'</div>';
+  }
   function algRender(){
     var el=document.getElementById('algPainel'); if(!el) return;
+    try{ iaRevEsquecerCache(); }catch(e){} /* silencioso de propósito: o cache é um atalho — sem ele a mesa só recalcula */
     if(typeof PELUDINHOS==='undefined'){ el.innerHTML='<div class="card"><div class="hint">Carregando o cadastro…</div></div>'; return; }
+    if(ALG_ABA==='ia'&&!iaRevPode()) ALG_ABA='pesquisa';
+    var _abas=''; try{ _abas=algAbasHtml(); }catch(e){} /* silencioso de propósito: sem as abas a tela abre na pesquisa */
+    if(ALG_ABA==='ia'){
+      var _mesa='';
+      try{ _mesa=iaRevBoxHtml(); }
+      catch(e){ _mesa='<div class="card" style="border-left:4px solid var(--crm-critico)"><h2 style="font-size:17px">Não consegui montar a mesa</h2><div class="hint">'+escAttr((e&&e.message)||String(e))+'</div></div>'; }
+      el.innerHTML=_abas+_mesa;
+      return;
+    }
     var L=algLista();
     var total=L.hospede.length+L.auluno.length;
     var _pesq=''; try{ _pesq=algPesqBoxHtml(); }catch(e){} /* silencioso de propósito: guarda defensiva — sem o quadro, a lista continua */
-    el.innerHTML=_pesq+'<div class="card" style="border-left:4px solid '+(total?'var(--crm-atencao)':'var(--crm-ok)')+'">'
+    el.innerHTML=_abas+_pesq+'<div class="card" style="border-left:4px solid '+(total?'var(--crm-atencao)':'var(--crm-ok)')+'">'
       +'<h2 style="font-size:19px">'+(total?(total+' a confirmar'):'Todos confirmados')+'</h2>'
       +'<div class="hint">A pergunta é refeita a cada <strong>'+ALG_MESES+' meses</strong>: a lista de restrições de um FILHOt muda com o tempo, e o que ele não podia ano passado pode não ser o mesmo de hoje.</div>'
       +'</div>'
@@ -28234,6 +28733,16 @@
       + (op.grande
           ? '<textarea id="'+escAttr(cid)+'" rows="'+(parseInt(op.grande,10)||6)+'" placeholder="'+escAttr(op.dica||'')+'" style="width:100%;box-sizing:border-box;margin-top:6px;padding:14px;border:2px solid #234D67;border-radius:12px;font-family:inherit;font-size:16px;font-weight:600;color:#234D67;background:#FFFFFF;resize:vertical;line-height:1.45">'+escAttr(op.valor||'')+'</textarea>'
           : '<input id="'+escAttr(cid)+'" type="'+escAttr(op.tipo||'text')+'" value="'+escAttr(op.valor||'')+'" placeholder="'+escAttr(op.dica||'')+'" style="width:100%;box-sizing:border-box;margin-top:6px;padding:14px;border:2px solid #234D67;border-radius:12px;font-family:inherit;font-size:17px;font-weight:600;color:#234D67;background:#FFFFFF">')
+      // LISTA DE ESCOLHA (11/set/2026): a mesa "O que a IA entendeu" precisa perguntar
+      // DUAS coisas de uma vez — o texto e o campo da ficha em que ele deve ficar. A lista
+      // é um <select> da própria página, pelo mesmo motivo do campo de texto: janela nativa
+      // no celular pode sumir e devolver vazio sem ninguém tocar em nada.
+      + (op.escolha
+          ? '<label for="'+escAttr(cid)+'Sel" style="display:block;margin-top:14px;font-size:15px;font-weight:800">'+esc(op.escolha.rotulo||'Escolha')+'</label>'
+            +'<select id="'+escAttr(cid)+'Sel" style="width:100%;box-sizing:border-box;margin-top:6px;padding:13px;border:2px solid #234D67;border-radius:12px;font-family:inherit;font-size:16px;font-weight:700;color:#234D67;background:#FFFFFF">'
+            +(op.escolha.opcoes||[]).map(function(o){ return '<option value="'+escAttr(o.v)+'"'+((String(o.v)===String(op.escolha.valor||''))?' selected':'')+'>'+esc(o.t)+'</option>'; }).join('')
+            +'</select>'
+          : '')
       + '<div id="zCampoErro" style="display:none;margin-top:8px;font-size:15px;font-weight:800;color:#B3261E"></div>'
       +'</div>'
       +'<div style="padding:0 22px 22px;display:flex;flex-direction:column;gap:9px">'
@@ -28241,7 +28750,7 @@
       +'<button type="button" id="zCampoNao" style="width:100%;border:0;border-radius:14px;background:#6b5f4b;color:#FFFDF6;font-family:inherit;font-weight:800;font-size:17px;padding:15px;cursor:pointer">'+esc(op.botaoNao||'Cancelar — não mexer em nada')+'</button>'
       +'</div></div>';
     document.body.appendChild(d);
-    var inp=d.querySelector('#'+cid), err=d.querySelector('#zCampoErro');
+    var inp=d.querySelector('#'+cid), err=d.querySelector('#zCampoErro'), sel=d.querySelector('#'+cid+'Sel');
     var bNao=d.querySelector('#zCampoNao'); if(bNao) bNao.addEventListener('click',function(){ d.remove(); if(typeof op.aoCancelar==='function') op.aoCancelar(); });
     var bOk=d.querySelector('#zCampoOk'); if(bOk) bOk.addEventListener('click',function(){
       var v=(((inp&&inp.value)||'')+'').trim();
@@ -28250,7 +28759,8 @@
         try{ if(inp&&inp.focus) inp.focus(); }catch(e){} /* silencioso de propósito: enfeite de tela (foco, rolagem, mídia) — falhar não muda dado nenhum */
         return;
       }
-      d.remove(); if(typeof op.fn==='function') op.fn(v);
+      var escolhido=sel?sel.value:undefined;
+      d.remove(); if(typeof op.fn==='function') op.fn(v, escolhido);
     });
     try{ if(inp&&inp.focus) inp.focus(); }catch(e){} /* silencioso de propósito: enfeite de tela (foco, rolagem, mídia) — falhar não muda dado nenhum */
     try{ if(navigator.vibrate) navigator.vibrate([180,90,180]); }catch(e){} /* silencioso de propósito: enfeite de tela (foco, rolagem, mídia) — falhar não muda dado nenhum */
