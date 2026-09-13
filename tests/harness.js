@@ -10988,7 +10988,7 @@ async function main() {
         'Mop limpo com água e sabão - 1 tampa de sabão para 3 litros de água',
         'Tablado para xixi',
         'Terra para uso em caso de cocô mole',
-        '2 águas para os peludinhos',
+        '2 vasilhas inox de água fresca - precisa ser trocada diversas vezes durante o check-in',
         'Caixa de isopor com gelo seco para comida de geladeira',
         'Caixa de isopor para comidas dos peludinhos ansiosos com alimentação',
         'Gaveteiro transparente para separação de alimentação seca de pequeno e médio porte',
@@ -10996,11 +10996,12 @@ async function main() {
         'Caixa de petisco',
         '2 caixas de plástico vermelha - tipo engradado (para colocação das bolsas dos peludinhos)',
         'Prancheta de check-in de pertence e corpo para casos extraordinários (falta de luz/internet/aparelho dando erro)',
+        'Pegar a chave para abrir o portão para os aulunos',   // 13/set: o 12º passo, ditado por ela
       ];
-      check('v-13 · o Início traz EXATAMENTE os 11 passos ditados pela Adriana, nas palavras dela',
+      check('v-13 · o Início traz EXATAMENTE os 12 passos ditados pela Adriana (11 em 12/set + a chave do portão em 13/set), nas palavras dela',
         JSON.stringify(inicio) === JSON.stringify(DITADOS), JSON.stringify(inicio));
-      check('v-13 · nenhum passo foi "redigido" por ninguém: não começa por verbo de comando nem foi cortado',
-        inicio.length === 11 && inicio.every((t) => !/^(Limpe|Separe|Ponha|Prepare|Monte|Arrume|Deixe|Lave|Encha|Confira)\b/.test(t) && t.indexOf('\n') < 0));
+      check('v-13 · nenhum passo foi "redigido" por ninguém: não começa por verbo de comando imposto nem foi cortado',
+        inicio.length === 12 && inicio.every((t) => !/^(Limpe|Separe|Ponha|Prepare|Monte|Arrume|Deixe|Lave|Encha|Confira)\b/.test(t) && t.indexOf('\n') < 0));
 
       check('v-13 · o Fim nasce VAZIO — o app não inventa protocolo que ninguém ditou',
         JSON.parse(vm.runInContext("JSON.stringify(PROTO_PADRAO['checkin-corpo'].fim)", ctx)).length === 0);
