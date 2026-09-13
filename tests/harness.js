@@ -4188,11 +4188,22 @@ async function main() {
       const usadasNo = (id) => String((orcs[id] || {}).mensagem || '').split('\n')
         .reduce((s, L) => { const m = reRep.exec(L.trim()); return s + (m ? +m[2] : 0); }, 0);
 
+      // O acerto retroativo foi APLICADO em 11/set/2026 com o OK da Adriana (Maya 4→0,
+      // Serena 4→2). O retrato de antes prova o bug; o de depois prova o conserto. A prova
+      // vale nos dois estados — o backup muda toda madrugada e o teste não pode envelhecer.
+      const temBaixaOrc = (k) => Object.keys((rep[k] || {}).lancamentos || {}).some((id) => /^orc-/.test(id));
+      const jaAcertado = temBaixaOrc('maya__luciana') || temBaixaOrc('serena__ana flávia');
       check('dado real: a Maya (Luciana) e a Serena (Ana Flavia) estao no Banco de Reposicoes',
         !!rep['maya__luciana'] && !!rep['serena__ana flávia']);
-      check('dado real: as duas tinham 4 creditos cada, sem nenhum uso',
-        saldoBruto('maya__luciana') === 4 && saldoBruto('serena__ana flávia') === 4,
-        'maya=' + saldoBruto('maya__luciana') + ' serena=' + saldoBruto('serena__ana flávia'));
+      if (!jaAcertado) {
+        check('dado real: as duas tinham 4 creditos cada, sem nenhum uso',
+          saldoBruto('maya__luciana') === 4 && saldoBruto('serena__ana flávia') === 4,
+          'maya=' + saldoBruto('maya__luciana') + ' serena=' + saldoBruto('serena__ana flávia'));
+      } else {
+        check('dado real (depois do acerto de 11/set): Maya com saldo 0 e Serena com saldo 2',
+          saldoBruto('maya__luciana') === 0 && saldoBruto('serena__ana flávia') === 2,
+          'maya=' + saldoBruto('maya__luciana') + ' serena=' + saldoBruto('serena__ana flávia'));
+      }
 
       const fechados = Object.keys(orcs).filter((id) => (orcs[id] || {}).status === 'fechado' && usadasNo(id) > 0);
       const doPet = (k) => fechados.filter((id) => ((orcs[id] || {}).pets || []).some((p) => p.key === k));
@@ -4201,11 +4212,18 @@ async function main() {
         mayaOrc.length === 1 && usadasNo(mayaOrc[0]) === 4, JSON.stringify(mayaOrc.map((i) => [i, usadasNo(i)])));
       check('dado real: a Serena tem 2 orcamentos FECHADOS que usaram reposicao, 1 dia cada',
         serOrc.length === 2 && serOrc.every((i) => usadasNo(i) === 1), JSON.stringify(serOrc.map((i) => [i, usadasNo(i)])));
-      check('dado real: o saldo que DEVERIA estar na ficha e 0 (Maya) e 2 (Serena)',
-        saldoBruto('maya__luciana') - 4 === 0 && saldoBruto('serena__ana flávia') - 2 === 2);
-      check('dado real: nenhuma baixa de orcamento existe ainda no banco - e exatamente o bug relatado',
-        Object.keys((rep['maya__luciana'] || {}).lancamentos || {}).every((id) => !/^orc-/.test(id)) &&
-        Object.keys((rep['serena__ana flávia'] || {}).lancamentos || {}).every((id) => !/^orc-/.test(id)));
+      if (!jaAcertado) {
+        check('dado real: o saldo que DEVERIA estar na ficha e 0 (Maya) e 2 (Serena)',
+          saldoBruto('maya__luciana') - 4 === 0 && saldoBruto('serena__ana flávia') - 2 === 2);
+        check('dado real: nenhuma baixa de orcamento existe ainda no banco - e exatamente o bug relatado',
+          Object.keys((rep['maya__luciana'] || {}).lancamentos || {}).every((id) => !/^orc-/.test(id)) &&
+          Object.keys((rep['serena__ana flávia'] || {}).lancamentos || {}).every((id) => !/^orc-/.test(id)));
+      } else {
+        const baixas = (k) => Object.keys((rep[k] || {}).lancamentos || {}).filter((id) => /^orc-/.test(id));
+        check('dado real (depois do acerto): 4 baixas na Maya e 2 na Serena, com as chaves do app (orc-{id}-{n})',
+          baixas('maya__luciana').length === 4 && baixas('serena__ana flávia').length === 2,
+          JSON.stringify([baixas('maya__luciana'), baixas('serena__ana flávia')]));
+      }
       // ---- a ferramenta do acerto retroativo, provada contra o retrato ----
       // tools/reposicao-acerto.js e quem conserta o que ficou para tras. A conta dele e
       // provada AQUI, sem tocar no banco: aplica o patch proposto em cima do retrato e
@@ -4213,6 +4231,11 @@ async function main() {
       const acertoTool = require('../tools/reposicao-acerto');
       const lev = acertoTool.levantar(orcs, rep);
       const M = lev.porPet['maya__luciana'], S = lev.porPet['serena__ana flávia'];
+      if (jaAcertado) {
+        check('acerto (depois de aplicado): a ferramenta não propõe mais baixa nenhuma — idempotente no dado real',
+          Object.keys(lev.porPet).every((k) => lev.porPet[k].faltando === 0),
+          JSON.stringify(Object.keys(lev.porPet).map((k) => [k, lev.porPet[k].faltando])));
+      } else {
       check('acerto: a ferramenta acha a Maya e a Serena, e só elas',
         Object.keys(lev.porPet).length === 2 && !!M && !!S, JSON.stringify(Object.keys(lev.porPet)));
       check('acerto: propõe 4 baixas para a Maya e 2 para a Serena',
@@ -4256,6 +4279,7 @@ async function main() {
         Object.keys(lev.porOrc).length === 3 &&
         lev.porOrc[mayaOrc[0]] && lev.porOrc[mayaOrc[0]].reposicoes_total === 4,
         JSON.stringify(lev.porOrc));
+      }
 
       const mo = orcs[mayaOrc[0]] || {};
       check('dado real: no orcamento da Maya, 4 reposicoes viraram 4 pernoites (3 diarias + 6 pernoites em 9 noites)',
@@ -10958,23 +10982,25 @@ async function main() {
     // nova não pode exigir programador.
     {
       const inicio = JSON.parse(vm.runInContext('JSON.stringify(CK_INICIO_PADRAO)', ctx));
+      // 12/set, à noite — Adriana: "foram alterados os meus textos, não autorizei isso.
+      // Quero exatamente o que eu escrevi." Texto ditado se copia, não se redige.
       const DITADOS = [
-        'Limpe o mop com água e sabão: 1 tampa de sabão para 3 litros de água',
-        'Separe o tablado para xixi',
-        'Separe a terra, para usar em caso de cocô mole',
-        'Ponha 2 águas para os peludinhos',
-        'Prepare a caixa de isopor com gelo seco para a comida de geladeira',
-        'Prepare a caixa de isopor para a comida dos peludinhos ansiosos com alimentação',
-        'Monte o gaveteiro transparente para separar a alimentação seca de pequeno e de médio porte',
-        'Arrume o gaveteiro preto: 1 gaveta para medicamento e 2 para o kit dental',
-        'Separe a caixa de petisco',
-        'Ponha as 2 caixas de plástico vermelhas, tipo engradado, para as bolsas dos peludinhos',
-        'Deixe à mão a prancheta de check-in de pertences e corpo, para casos extraordinários: falta de luz, falta de internet ou aparelho com erro',
+        'Mop limpo com água e sabão - 1 tampa de sabão para 3 litros de água',
+        'Tablado para xixi',
+        'Terra para uso em caso de cocô mole',
+        '2 águas para os peludinhos',
+        'Caixa de isopor com gelo seco para comida de geladeira',
+        'Caixa de isopor para comidas dos peludinhos ansiosos com alimentação',
+        'Gaveteiro transparente para separação de alimentação seca de pequeno e médio porte',
+        'Gaveteiro preto - para separação de medicamento (1 gaveta) e 2 de kit dental',
+        'Caixa de petisco',
+        '2 caixas de plástico vermelha - tipo engradado (para colocação das bolsas dos peludinhos)',
+        'Prancheta de check-in de pertence e corpo para casos extraordinários (falta de luz/internet/aparelho dando erro)',
       ];
-      check('v-13 · o Início traz EXATAMENTE os 11 passos ditados pela Adriana, com o verbo na frente',
+      check('v-13 · o Início traz EXATAMENTE os 11 passos ditados pela Adriana, nas palavras dela',
         JSON.stringify(inicio) === JSON.stringify(DITADOS), JSON.stringify(inicio));
-      check('v-13 · e nenhum passo é texto de gente grande: todos começam por verbo e cabem numa linha',
-        inicio.length === 11 && inicio.every((t) => /^(Limpe|Separe|Ponha|Prepare|Monte|Arrume|Deixe)\b/.test(t) && t.indexOf('\n') < 0));
+      check('v-13 · nenhum passo foi "redigido" por ninguém: não começa por verbo de comando nem foi cortado',
+        inicio.length === 11 && inicio.every((t) => !/^(Limpe|Separe|Ponha|Prepare|Monte|Arrume|Deixe|Lave|Encha|Confira)\b/.test(t) && t.indexOf('\n') < 0));
 
       check('v-13 · o Fim nasce VAZIO — o app não inventa protocolo que ninguém ditou',
         JSON.parse(vm.runInContext("JSON.stringify(PROTO_PADRAO['checkin-corpo'].fim)", ctx)).length === 0);
@@ -11125,8 +11151,8 @@ async function main() {
     check('v-07 · nenhuma leitura nova ficou com .catch vazio — toda falha deixa rastro',
       !/\.catch\(function\([a-z]*\)\{\s*\}\)/.test(
         html.slice(html.indexOf('function pdiaLer('), html.indexOf('function ltAbrir('))));
-    check('v-13 · a versão foi carimbada como 2026-09-12-01',
-      /const APP_VERSAO='2026-09-12-01';/.test(html));
+    check('v-13 · a versão é 2026-09-12-01 ou mais nova (o Check-in do corpo em 3 etapas entrou na -12-01)',
+      (() => { const m = /const APP_VERSAO='(\d{4}-\d{2}-\d{2}-\d{2})';/.exec(html); return !!m && m[1] >= '2026-09-12-01'; })());
   }
   console.log('');
 

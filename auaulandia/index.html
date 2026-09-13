@@ -3981,7 +3981,7 @@
          auditoria, com quem mexeu e o que mudou. -->
     <div class="card so-master">
       <h2 style="font-size:19px">Protocolos passo a passo</h2>
-      <div class="hint">O passo a passo que aparece na tela de quem executa, na hora de executar. Escreva <strong>um passo por linha, começando pelo verbo</strong> — &ldquo;Limpe o mop&hellip;&rdquo;, &ldquo;Separe a terra&hellip;&rdquo; — e sem palavra difícil: quem lê está com o peludinho na mão. A régua é a de sempre: uma criança de 12 anos tem de conseguir executar só com o que está escrito.</div>
+      <div class="hint">O passo a passo que aparece na tela de quem executa, na hora de executar. Escreva <strong>um passo por linha, nas suas palavras</strong> — o app mostra exatamente o que a Gestão escreveu, sem redigir nada — e sem palavra difícil: quem lê está com o peludinho na mão. A régua é a de sempre: uma criança de 12 anos tem de conseguir executar só com o que está escrito.</div>
       <div id="protoWrap" style="margin-top:12px"><div class="hint">Carregando os protocolos&hellip;</div></div>
     </div>
 
@@ -12603,7 +12603,7 @@
   // inteira DEPOIS de a correção estar publicada — o aviso apareceu, ninguém tocou.
   // Agora o aparelho PARADO recarrega sozinho: trancado, com a aba escondida, na porta de
   // entrada ou 3 minutos sem ninguém tocar nele. Mão na tela = nunca recarrega.
-  const APP_VERSAO='2026-09-12-01';
+  const APP_VERSAO='2026-09-12-02';
   var RECARGA_PARADO_MS=3*60*1000, __versaoPublicada=null, __recargaTimer=null;
   function vigiarVersao(){
     if(!DB) return;
@@ -19141,19 +19141,22 @@
   // sobrescreve o que a Gestão escreveu). Nada muda para quem usa.
   //
   // Os 11 passos do Início do Check-in do corpo são os que Adriana ditou em 12/set/2026,
-  // reescritos com o verbo na frente — é assim que quem lê sabe o que fazer com as mãos.
+  // NAS PALAVRAS DELA. A primeira versão "pôs o verbo na frente" e trocou o sentido
+  // ("Limpe o mop" — o mop já está limpo; a solução é para usar na limpeza). Adriana:
+  // "não autorizei isso. Quero exatamente o que eu escrevi." Texto ditado se copia, não
+  // se redige. Só a grafia foi corrigida (alimentação, prancheta, cocô).
   const CK_INICIO_PADRAO=[
-    'Limpe o mop com água e sabão: 1 tampa de sabão para 3 litros de água',
-    'Separe o tablado para xixi',
-    'Separe a terra, para usar em caso de cocô mole',
-    'Ponha 2 águas para os peludinhos',
-    'Prepare a caixa de isopor com gelo seco para a comida de geladeira',
-    'Prepare a caixa de isopor para a comida dos peludinhos ansiosos com alimentação',
-    'Monte o gaveteiro transparente para separar a alimentação seca de pequeno e de médio porte',
-    'Arrume o gaveteiro preto: 1 gaveta para medicamento e 2 para o kit dental',
-    'Separe a caixa de petisco',
-    'Ponha as 2 caixas de plástico vermelhas, tipo engradado, para as bolsas dos peludinhos',
-    'Deixe à mão a prancheta de check-in de pertences e corpo, para casos extraordinários: falta de luz, falta de internet ou aparelho com erro'
+    'Mop limpo com água e sabão - 1 tampa de sabão para 3 litros de água',
+    'Tablado para xixi',
+    'Terra para uso em caso de cocô mole',
+    '2 águas para os peludinhos',
+    'Caixa de isopor com gelo seco para comida de geladeira',
+    'Caixa de isopor para comidas dos peludinhos ansiosos com alimentação',
+    'Gaveteiro transparente para separação de alimentação seca de pequeno e médio porte',
+    'Gaveteiro preto - para separação de medicamento (1 gaveta) e 2 de kit dental',
+    'Caixa de petisco',
+    '2 caixas de plástico vermelha - tipo engradado (para colocação das bolsas dos peludinhos)',
+    'Prancheta de check-in de pertence e corpo para casos extraordinários (falta de luz/internet/aparelho dando erro)'
   ];
   // O Fim do Check-in do corpo nasce VAZIO de propósito: Adriana não ditou os passos, e
   // inventar protocolo é pior do que não ter. A tela diz isso com todas as letras e aponta
@@ -26966,7 +26969,7 @@
         +'</div>';
     }).join('');
   }
-  const PROTO_DICA='Um passo por linha, começando pelo verbo — "Limpe o mop…", "Separe a terra…". Sem palavra difícil: uma criança de 12 anos tem de conseguir executar só com o que está escrito.';
+  const PROTO_DICA='Um passo por linha, nas suas palavras — o app mostra exatamente o que você escrever. Sem palavra difícil: uma criança de 12 anos tem de conseguir executar só com o que está escrito.';
   function protoGravar(a,e,lista,oque){
     if(!DB){ alert('Sem conexão com o banco agora — o protocolo não foi salvo.'); return; }
     const quem=(typeof quemSou==='function')?quemSou():'-', agora=Date.now();
