@@ -5266,7 +5266,7 @@ async function main() {
     check('a tela do corpo agora sabe quem faltou', /function ckFaltou\(o\)/.test(html) &&
       /dcChamada\[dcKey\(o\.p\.n,o\.p\.tutor\)\]==='faltou'/.test(html));
     check('e le a chamada ao abrir (quem entra direto na atividade nao passou por ela)',
-      /daycare\/chamada\/'\+dcDataKey\(\)\)\.once\('value'\)[\s\S]{0,900}CK_FALTA_TARDIA=/.test(html)); // janela alargada em 31/ago (ouvinte econômico) e em 12/set (as marcas do Início e do Fim entraram no mesmo Promise.all)
+      /daycare\/chamada\/'\+dcDataKey\(\)\)\.once\('value'\)[\s\S]{0,1500}CK_FALTA_TARDIA=/.test(html)); // janela alargada em 31/ago (ouvinte econômico), em 12/set (as marcas do Início e do Fim) e em 13/set (a carga do treinamento entrou no mesmo Promise.all)
     check('a falta tem caminho de VOLTA em dois toques (caso dos 13 aulunos, 01/set)',
       /function ckDesfazerFalta/.test(html) && /Veio, sim/.test(html) &&
       /Confirmar: veio/.test(html) && /falta-desfeita/.test(html));
@@ -9526,8 +9526,14 @@ async function main() {
       check('mordida — coPontosDoMesDe (Meus pontos do check-out) ignora o registro seu-dia: 1 bolsa, 10 pontos, perfeita',
         !!R && R.bolsas === 1 && R.total === 10 && R.perfeitas === 1 && R.maximo === 10, JSON.stringify(R));
     } finally { vm.runInContext('DB = __bkpP7;', ctx); }
-    check('mordida — o placar do check-out da Gestão (Ritmo do Time) pula os registros seu-dia',
-      /function ritmoPontosCarregar\(\)\{[\s\S]{0,1600}?if\(\(r\.origem\|\|''\)==='seu-dia'\) return;/.test(html));
+    check('mordida — o placar do check-out da Gestão (Ritmo do Time) pula os registros que não são bolsa',
+      /function ritmoPontosCarregar\(\)\{[\s\S]{0,1600}?if\(!pontoEhBolsa\(r\)\) return;/.test(html));
+    // v-14: a régua de "isto é bolsa?" agora é UMA função — o quadro da Gestão e o card do
+    // monitor perguntam no mesmo lugar, e ela ignora as duas origens que não são bolsa.
+    check('v-14 · pontoEhBolsa é a régua única: ignora seu-dia E protocolo-inicio, e deixa passar a bolsa',
+      ctx.pontoEhBolsa({ pontos: 10 }) === true
+      && ctx.pontoEhBolsa({ origem: 'seu-dia' }) === false
+      && ctx.pontoEhBolsa({ origem: 'protocolo-inicio' }) === false);
   }
   console.log('');
 
@@ -11063,8 +11069,35 @@ async function main() {
         && JSON.stringify((doCheckin.valor || {}).passos) === JSON.stringify(DITADOS),
         JSON.stringify(doCheckin && doCheckin.resultado));
       check('v-13 · a semeadura cobre as 4 etapas (Almoço e Check-in do corpo, início e fim)',
-        semeou.length === 4 && semeou.every((x) => /^daycare\/config\/protocolos\//.test(x.caminho)),
+        semeou.filter((x) => !/\/(porques|perguntas)$/.test(x.caminho)).length === 4
+        && semeou.every((x) => /^daycare\/config\/protocolos\//.test(x.caminho)),
         JSON.stringify(semeou.map((x) => x.caminho)));
+      // v-14: os porquês e a pergunta da semana entraram DEPOIS dos passos, então o nó da
+      // etapa já existe e a transação de cima aborta. Cada um tem a sua própria semeadura.
+      const seedPorques = semeou.find((x) => /checkin-corpo\/inicio\/porques$/.test(x.caminho));
+      const seedPerguntas = semeou.find((x) => /checkin-corpo\/inicio\/perguntas$/.test(x.caminho));
+      check('v-14 · os porquês têm semeadura própria (o nó da etapa já existia — a de cima abortaria)',
+        !!seedPorques && seedPorques.resultado === 'gravou', JSON.stringify(seedPorques && seedPorques.caminho));
+      check('v-14 · e os porquês semeados são EXATAMENTE os que a Adriana escreveu, na posição de cada passo',
+        !!seedPorques && JSON.stringify(seedPorques.valor) === JSON.stringify([
+          'O mop já está limpo. A solução de 1 tampa de sabão para 3 litros de água é para poder usar na limpeza.',
+          '',
+          'É pouca coisa e o vasilhame já é o certo. Cocô mole pode ter bactérias, e o ambiente não pode contaminar os outros.',
+          'Vários peludinhos chegam com sede. Água limpa e fresca, e troque durante o check-in.',
+          'Gelo seco não queima a mão. Peludinho merece comida boa, não comida azeda.',
+          'Verifique rápido a mochila e tire as comidas, pondo nos locais certos.',
+          'Gaveteiro é onde se guardam as coisas. É material de trabalho: agiliza e organiza.',
+          'Gaveteiro é onde se guardam as coisas. É material de trabalho: agiliza e organiza.',
+          '', '', '', '',
+        ]), JSON.stringify(seedPorques && seedPorques.valor));
+      check('v-14 · a pergunta da semana semeada é a da terra, com a certa e a explicação da Adriana',
+        !!seedPerguntas && seedPerguntas.valor.length === 1
+        && seedPerguntas.valor[0].passo === 2
+        && seedPerguntas.valor[0].pergunta === 'Você marcou duas vezes que não deu para separar a terra. Por que a terra importa?'
+        && seedPerguntas.valor[0].certa === 1
+        && seedPerguntas.valor[0].alternativas[1] === 'Porque um cocô mole pode conter bactérias, e o ambiente não pode contaminar os outros'
+        && /Errar aqui não tira ponto\.$/.test(seedPerguntas.valor[0].explicacao),
+        JSON.stringify(seedPerguntas && seedPerguntas.valor));
 
       // editar em Configurações › Protocolos grava com rastro.
       const edicao = JSON.parse(vm.runInContext(`(function(){
@@ -11141,6 +11174,246 @@ async function main() {
       check('v-13 · nenhuma gravação nova ficou com .catch vazio — toda falha deixa rastro',
         !/\.catch\(function\([a-z]*\)\{\s*\}\)/.test(
           html.slice(html.indexOf('function protoData('), html.indexOf('function protoMover('))));
+    }
+
+    // ---- v-14: A TRILHA QUE TREINA (molde B, aprovado pela Adriana em 13/set/2026) ----
+    // "Aprovado o B, pode levar para o app". Uma tela por passo para quem está em
+    // treinamento; a lista de marcar de sempre para quem já tem prática.
+    {
+      const DOZE = JSON.parse(vm.runInContext('JSON.stringify(CK_INICIO_PADRAO)', ctx));
+      // Um ambiente controlado: os 12 passos no banco, nenhum marcado, e o interruptor na mão.
+      const monta = (corpo) => JSON.parse(vm.runInContext(`(function(){
+        var bkp={DB:DB, audit:audit, ini:ckIni, protos:PROTOCOLOS, tre:TREINAMENTO, mon:MONITORES,
+                 render:renderCheckin, prender:protoRender, quem:quemSou, ckt:CKT, feitos:PROTO_FEITOS,
+                 pts:CKT_PONTOS_MES, sem:CKT_SEMANA, semp:CKT_SEMANA_PEDIDA};
+        var grav=[], trilha=[], empurrou=[];
+        DB={ ref:function(p){ return {
+          set:function(v){ grav.push({metodo:'set', caminho:p, valor:v});
+            return { then:function(f){ if(f) f(); return this; }, catch:function(){ return this; } }; },
+          update:function(v){ grav.push({metodo:'update', caminho:p, valor:v});
+            return { then:function(f){ if(f) f(); return this; }, catch:function(){ return this; } }; },
+          push:function(v){ empurrou.push({caminho:p, valor:v});
+            return { then:function(f){ if(f) f(); return this; }, catch:function(){ return this; } }; },
+          transaction:function(f,cb){ var r=f(null);
+            grav.push({metodo:'transaction', caminho:p, valor:(r===undefined?null:r)});
+            if(cb) cb(null, r!==undefined); }
+        }; } };
+        audit=function(a,d){ trilha.push(a+' | '+d); };
+        renderCheckin=function(){}; protoRender=function(){};
+        quemSou=function(){ return 'Letícya'; };
+        PROTOCOLOS={'checkin-corpo':{inicio:{passos:JSON.parse(JSON.stringify(CK_INICIO_PADRAO)),
+          porques:CK_INICIO_PORQUES.slice(), perguntas:JSON.parse(JSON.stringify(CK_INICIO_PERGUNTAS))}}};
+        TREINAMENTO={'m1':{ativo:true, por:'Gestão', em:1}};
+        MONITORES=[{id:'m1', nome:'Letícya', role:'monitor', senha:'1005'}];
+        ckIni={}; CKT={porque:false, motivo:false, quizResp:null};
+        PROTO_FEITOS={}; CKT_PONTOS_MES=0; CKT_SEMANA=null; CKT_SEMANA_PEDIDA=true;
+        var res=(${corpo})({grav:grav, trilha:trilha, empurrou:empurrou});
+        DB=bkp.DB; audit=bkp.audit; ckIni=bkp.ini; PROTOCOLOS=bkp.protos; TREINAMENTO=bkp.tre;
+        MONITORES=bkp.mon; renderCheckin=bkp.render; protoRender=bkp.prender; quemSou=bkp.quem;
+        CKT=bkp.ckt; PROTO_FEITOS=bkp.feitos; CKT_PONTOS_MES=bkp.pts; CKT_SEMANA=bkp.sem; CKT_SEMANA_PEDIDA=bkp.semp;
+        return JSON.stringify(res);
+      })()`, ctx));
+
+      // ---- Regra 1: quem marca é a GESTÃO, e a marca grava com rastro ----
+      const interruptor = monta(`function(io){
+        TREINAMENTO={};
+        protoTreinoVirar('m1');
+        var ligado=JSON.parse(JSON.stringify(TREINAMENTO));
+        var telaLigada=protoTreinoHTML();
+        protoTreinoVirar('m1');
+        return {grav:io.grav, trilha:io.trilha, ligado:ligado, desligado:JSON.parse(JSON.stringify(TREINAMENTO)), tela:telaLigada};
+      }`);
+      check('v-14 · Regra 1 — a Gestão liga o treinamento e a marca vai para daycare/config/treinamento/{id}',
+        interruptor.grav.length === 2
+        && interruptor.grav[0].caminho === 'daycare/config/treinamento/m1'
+        && interruptor.grav[0].valor.ativo === true
+        && typeof interruptor.grav[0].valor.por === 'string'
+        && typeof interruptor.grav[0].valor.em === 'number',
+        JSON.stringify(interruptor.grav[0]));
+      check('v-14 · desligar apaga a marca (null) — e os DOIS sentidos deixam rastro na auditoria',
+        interruptor.grav[1].valor === null && !interruptor.desligado.m1
+        && interruptor.trilha.length === 2 && /^treinamento \| marcou /.test(interruptor.trilha[0])
+        && /^treinamento \| tirou /.test(interruptor.trilha[1]),
+        JSON.stringify(interruptor.trilha));
+      check('v-14 · a lista de quem está em treinamento sai do cadastro de colaboradores, com quem marcou',
+        /Letícya/.test(interruptor.tela) && /em treinamento — marcada por/.test(interruptor.tela)
+        && /protoTreinoVirar/.test(interruptor.tela));
+      check('v-14 · sem marca = com prática (o interruptor é a única chave, fora o papel aprendiz)',
+        /function ckEmTreinamento\(\)\{ return emTreinamento\(meuMonId\(\)\) \|\| isAprendiz\(\); \}/.test(html));
+
+      // ---- Regra 2: em treinamento é UMA TELA POR PASSO ----
+      const tela1 = monta(`function(){ return {h:ckTrilhaHTML('inicio')}; }`).h;
+      check('v-14 · Regra 2 — em treinamento a tela mostra UM passo por vez: "Passo 1 de 12" e só o texto do passo 1',
+        /Passo 1 de 12/.test(tela1)
+        && tela1.indexOf(DOZE[0]) > 0
+        && tela1.indexOf(DOZE[1]) < 0 && tela1.indexOf(DOZE[11]) < 0,
+        tela1.slice(0, 160));
+      check('v-14 · com o selo "Em treinamento", a barra de progresso, o Feito e o Não deu para fazer',
+        /class="ckt-selo">Em treinamento</.test(tela1) && /class="ckt-barra"/.test(tela1)
+        && /class="ckt-bt ok"[^>]*>&#10003; Feito</.test(tela1)
+        && /class="ckt-bt nao"[^>]*>Não deu para fazer</.test(tela1));
+      check('v-14 · o porquê nasce FECHADO: só o botão aparece, o texto não',
+        /Por que isto importa\?<\/button>/.test(tela1)
+        && tela1.indexOf('O mop já está limpo.') < 0);
+      check('v-14 · e a trilha não mostra ponto, dia seguido nem a lista dos 12 (isso é do fim)',
+        tela1.indexOf('dias seguidos') < 0 && tela1.indexOf('Confira: os') < 0
+        && tela1.indexOf('pontos no mês') < 0);
+      const comPorque = monta(`function(){ CKT.porque=true; return {h:ckTrilhaHTML('inicio')}; }`).h;
+      check('v-14 · tocar em "Por que isto importa?" abre o porquê que a Gestão escreveu, nas palavras dela',
+        comPorque.indexOf('O mop já está limpo. A solução de 1 tampa de sabão para 3 litros de água é para poder usar na limpeza.') > 0);
+      // Regra 4: porquê em branco NÃO vira invenção — vira a frase que diz que falta escrever.
+      const semPorque = monta(`function(){ ckIni={0:{quem:'x',hora:'07:00',ts:1}}; CKT.porque=true; return {h:ckTrilhaHTML('inicio')}; }`).h;
+      check('v-14 · Regra 4 — passo sem porquê diz "A Gestão ainda não escreveu o porquê deste item" (nunca inventa)',
+        /Passo 2 de 12/.test(semPorque)
+        && semPorque.indexOf('A Gestão ainda não escreveu o porquê deste item.') > 0
+        && /class="ckt-porque vazio"/.test(semPorque));
+
+      // ---- Regra 3: com prática, a lista de sempre com a frase exata ----
+      const lista = JSON.parse(vm.runInContext(`(function(){
+        var bkp={protos:PROTOCOLOS, tre:TREINAMENTO, ini:ckIni};
+        PROTOCOLOS={'checkin-corpo':{inicio:{passos:JSON.parse(JSON.stringify(CK_INICIO_PADRAO))}}};
+        TREINAMENTO={}; ckIni={};
+        var r={treino:ckEmTreinamento(), h:ckEtapaHTML('inicio','nota'), frase:CK_FRASE_PRATICA};
+        PROTOCOLOS=bkp.protos; TREINAMENTO=bkp.tre; ckIni=bkp.ini;
+        return JSON.stringify(r);
+      })()`, ctx));
+      check('v-14 · Regra 3 — quem tem prática continua com a lista de marcar, os 12 itens de uma vez',
+        lista.treino === false
+        && DOZE.every((t) => lista.h.indexOf(t) > 0)
+        && (lista.h.match(/class="todo-item proto-item/g) || []).length === 12);
+      check('v-14 · e com a frase de advertência EXATA da Adriana no topo',
+        lista.frase === 'Tem dúvida? Reveja para ver se não esqueceu nada. Pode perder ponto por não seguir o protocolo correto.'
+        && lista.h.indexOf('<div class="ckt-aviso">' + lista.frase + '</div>') > 0,
+        lista.frase);
+
+      // ---- Regra 5: "não deu" grava o motivo e NÃO tira ponto ----
+      const naoDeu = monta(`function(io){
+        cktNaoDeu('inicio','acabou-material');
+        return {grav:io.grav, trilha:io.trilha, empurrou:io.empurrou, marca:JSON.parse(JSON.stringify(ckIni[0]||null))};
+      }`);
+      check('v-14 · Regra 5 — "Não deu para fazer" grava quem, hora, ts E o motivo escolhido',
+        !!naoDeu.marca && naoDeu.marca.naoDeu === 'acabou-material'
+        && typeof naoDeu.marca.quem === 'string' && /^\d{2}:\d{2}$/.test(naoDeu.marca.hora || '')
+        && typeof naoDeu.marca.ts === 'number', JSON.stringify(naoDeu.marca));
+      check('v-14 · no nó do dia da etapa, com rastro na auditoria dizendo o motivo',
+        naoDeu.grav.length === 1
+        && /^daycare\/checkin-corpo-inicio\/\d{4}-\d{2}-\d{2}\/0$/.test(naoDeu.grav[0].caminho)
+        && /não deu para fazer \(Acabou o material\)/.test(naoDeu.trilha[0] || ''),
+        JSON.stringify(naoDeu.trilha));
+      check('v-14 · e NÃO tira ponto: nenhum registro foi empurrado para o placar dos Zelosos',
+        naoDeu.empurrou.length === 0, JSON.stringify(naoDeu.empurrou));
+      check('v-14 · os três motivos são os do molde, e nenhum outro',
+        JSON.stringify(JSON.parse(vm.runInContext('JSON.stringify(CK_NAO_DEU)', ctx)))
+        === JSON.stringify({ 'acabou-material': 'Acabou o material', 'nao-sei': 'Não sei fazer', 'faltou-tempo': 'Faltou tempo' }));
+
+      // ---- Regra 6: ponto e dias seguidos só DEPOIS de 3 Inícios completos ----
+      const fecha = (diasAntes) => monta(`function(io){
+        PROTO_FEITOS={'checkin-corpo-inicio':${JSON.stringify(diasAntes)}};
+        for(var i=0;i<12;i++){ ckIni[i]={quem:'Letícya', hora:'07:0'+(i%10), ts:i+1}; }
+        cktSeAcabou('inicio');
+        return {empurrou:io.empurrou, grav:io.grav, trilha:io.trilha,
+                placar:cktMostraPlacar('inicio'), h:ckTrilhaHTML('inicio')};
+      }`);
+      const antesDe3 = fecha({ '2026-09-11': true });
+      check('v-14 · Regra 6 — antes de 3 Inícios, nada de ponto: nenhum registro no placar dos Zelosos',
+        antesDe3.empurrou.length === 0 && antesDe3.placar === false, JSON.stringify(antesDe3.empurrou));
+      check('v-14 · e a tela também não mostra ponto nem dias seguidos antes do 3º',
+        antesDe3.h.indexOf('dias seguidos') < 0 && antesDe3.h.indexOf('pontos no mês') < 0);
+      check('v-14 · o dia concluído é registrado por pessoa em daycare/protocolo-feitos/{etapa}/{pessoa}/{dia}',
+        antesDe3.grav.some((g) => g.metodo === 'transaction'
+          && /^daycare\/protocolo-feitos\/checkin-corpo-inicio\/leticya\/\d{4}-\d{2}-\d{2}$/.test(g.caminho)),
+        JSON.stringify(antesDe3.grav.map((g) => g.caminho)));
+      const noTerceiro = fecha({ '2026-09-10': true, '2026-09-11': true });
+      check('v-14 · do 3º Início em diante o ponto entra — no placar dos Zelosos que já existe',
+        noTerceiro.empurrou.length === 1
+        && /^daycare\/pontos-checkout\/\d{4}-\d{2}$/.test(noTerceiro.empurrou[0].caminho)
+        && noTerceiro.empurrou[0].valor.pontos === 10
+        && noTerceiro.empurrou[0].valor.origem === 'protocolo-inicio'
+        && noTerceiro.empurrou[0].valor.quem === 'Letícya',
+        JSON.stringify(noTerceiro.empurrou));
+      check('v-14 · e a tela do fim passa a mostrar pontos e dias seguidos',
+        noTerceiro.placar === true && /Início pronto/.test(noTerceiro.h)
+        && /dias seguidos/.test(noTerceiro.h) && /pontos no mês/.test(noTerceiro.h));
+      check('v-14 · a conferência dos 12 passos só aparece no FIM, com o estado de cada um',
+        /Confira: os 12 passos/.test(noTerceiro.h)
+        && (noTerceiro.h.match(/class="li ok"/g) || []).length === 12);
+      check('v-14 · dias seguidos conta os dias emendados (10, 11 e hoje = 3)',
+        Number(vm.runInContext(`(function(){ var b=PROTO_FEITOS;
+          PROTO_FEITOS={'checkin-corpo-inicio':{'2026-09-10':1,'2026-09-11':1,'2026-09-12':1,'2026-09-08':1}};
+          var n=protoSeguidos('checkin-corpo-inicio'); PROTO_FEITOS=b; return n; })()`, ctx)) === 3);
+
+      // ---- Regra 7: a pergunta da semana só depois de DUAS vezes "não deu" no mesmo passo ----
+      const pergunta = (semana) => monta(`function(){
+        PROTO_FEITOS={'checkin-corpo-inicio':{'2026-09-09':1,'2026-09-10':1,'2026-09-11':1}};
+        for(var i=0;i<12;i++){ ckIni[i]={quem:'Letícya', hora:'07:00', ts:i+1}; }
+        CKT_SEMANA=${JSON.stringify(semana)};
+        return {q:cktPerguntaDaVez('inicio'), h:ckTrilhaHTML('inicio')};
+      }`);
+      const umaVez = pergunta({ '2': 1 });
+      check('v-14 · Regra 7 — uma marcação de "não deu" não faz pergunta nenhuma',
+        umaVez.q === null && umaVez.h.indexOf('Pergunta da semana') < 0);
+      const duasVezes = pergunta({ '2': 2 });
+      check('v-14 · duas marcações no mesmo passo fazem nascer a pergunta da semana, a da terra',
+        !!duasVezes.q
+        && /Por que a terra importa\?/.test(duasVezes.h)
+        && /Pergunta da semana/.test(duasVezes.h)
+        && duasVezes.h.indexOf('Porque um cocô mole pode conter bactérias, e o ambiente não pode contaminar os outros') > 0,
+        JSON.stringify(duasVezes.q));
+      const respondeu = monta(`function(){
+        PROTO_FEITOS={'checkin-corpo-inicio':{'2026-09-09':1,'2026-09-10':1,'2026-09-11':1}};
+        for(var i=0;i<12;i++){ ckIni[i]={quem:'Letícya', hora:'07:00', ts:i+1}; }
+        CKT_SEMANA={'2':2}; CKT.quizResp={q:0, op:0};
+        return {h:ckTrilhaHTML('inicio')};
+      }`).h;
+      check('v-14 · errar a pergunta mostra a certa e a explicação — e não tira ponto nenhum',
+        /class="op certo"/.test(respondeu) && /class="op errou"/.test(respondeu)
+        && /Errar aqui não tira ponto\./.test(respondeu)
+        && !/pontos?\s*(perdido|a menos)/.test(respondeu));
+
+      // ---- a Gestão escreve o porquê e a pergunta sem programador ----
+      const cfg = monta(`function(io){
+        protoGravarCampos('checkin-corpo','inicio',{porques:['a','b']},'escreveu o porquê do passo 1');
+        return {grav:io.grav, trilha:io.trilha};
+      }`);
+      check('v-14 · o porquê mora ao lado dos passos e se edita em Configurações › Protocolos',
+        cfg.grav.length === 1 && cfg.grav[0].caminho === 'daycare/config/protocolos/checkin-corpo/inicio'
+        && JSON.stringify(cfg.grav[0].valor.porques) === JSON.stringify(['a', 'b'])
+        && typeof cfg.grav[0].valor.atualizadoEm === 'number'
+        && /^protocolo \| /.test(cfg.trilha[0] || ''), JSON.stringify(cfg.grav));
+      check('v-14 · reordenar um passo leva o porquê junto (senão o porquê do 3 grudava no 4)',
+        /function protoMover\(a,e,i,d\)\{[\s\S]{0,400}const q=pq\[i\]; pq\[i\]=pq\[j\]; pq\[j\]=q;/.test(html)
+        && /lista\.splice\(i,1\); pq\.splice\(i,1\);/.test(html));
+    check('v-14 · a tela de Configurações mostra o porquê de cada passo, a pergunta da semana e o interruptor',
+        /onclick="protoEditarPorque\(/.test(html)
+        && /onclick="protoEditarPergunta\(/.test(html)
+        && html.slice(html.indexOf('function protoRender('), html.indexOf('function protoPerguntasHTML(')).indexOf('Quem está em treinamento') > 0);
+
+      // ---- o Time NÃO foi tocado ("Time continua Time, não mexe em nada") ----
+      const time = html.slice(html.indexOf('function renderMonitores('), html.indexOf('// ===== TRAVA POR APARELHO'));
+      check('v-14 · Regra 1 — a tela Time continua intocada: nada de treinamento dentro dela',
+        time.indexOf('treinamento') < 0 && time.indexOf('TREINAMENTO') < 0
+        && time.indexOf('protoTreinoVirar') < 0);
+      check('v-14 · daycare/config/treinamento é gravado num lugar só — dentro do interruptor da Gestão',
+        (html.match(/DB\.ref\('daycare\/config\/treinamento[^)]*\)\.(set|update|push|remove|transaction)\(/g) || []).length === 1
+        && /function protoTreinoVirar\(id\)\{[\s\S]{0,900}DB\.ref\('daycare\/config\/treinamento\/'\+id\)\.set\(reg\)/.test(html),
+        JSON.stringify(html.match(/DB\.ref\('daycare\/config\/treinamento[^)]*\)\.[a-z]+\(/g) || []));
+      check('v-14 · e nenhum item novo no menu: o acesso é exatamente o mesmo de antes',
+        [...html.matchAll(/<a data-v="[a-z-]+"/g)].length === 36 && !/data-v="treinamento"/.test(html));
+
+      // ---- as medidas do molde: o polegar acha sem procurar ----
+      check('v-14 · as medidas do molde: ação a partir de 22 px, leitura a partir de 18 px, Feito com 58 px',
+        /\.ckt-acao\{[^}]*font-size:24px/.test(html)
+        && /\.ckt-bt\{[^}]*min-height:58px[^}]*font-size:22px/.test(html)
+        && /\.ckt-bt\.nao\{[^}]*min-height:52px[^}]*font-size:18px/.test(html)
+        && /\.ckt-porque\{[^}]*font-size:19px/.test(html)
+        && /\.ckt-motivo button\{[^}]*min-height:56px[^}]*font-size:22px/.test(html));
+      check('v-14 · o interruptor da Gestão também tem alvo de 44 px (ela marca no celular)',
+        /\.ckt-cfg-bt\{[^}]*min-height:44px/.test(html));
+      check('v-14 · nenhuma gravação da trilha ficou com .catch vazio — toda falha deixa rastro',
+        !/\.catch\(function\([a-z]*\)\{\s*\}\)/.test(
+          html.slice(html.indexOf('const CK_FRASE_PRATICA='), html.indexOf('function renderCkInicio('))));
+      check('v-14 · a versão carimbada é a desta entrega',
+        /const APP_VERSAO='2026-09-13-02';/.test(html));
     }
 
     // ---- a promessa desta versão: os quadros só OBSERVAM e nada grava calado ----

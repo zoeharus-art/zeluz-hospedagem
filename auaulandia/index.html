@@ -992,6 +992,72 @@
   .proto-cfg-num{font-weight:800;color:var(--z-gold-deep);font-size:15px;min-width:22px}
   .proto-cfg-txt{flex:1;min-width:180px;font-size:15px;line-height:1.4;color:var(--z-blue);font-weight:600}
   .proto-cfg-bt{border:1.5px solid var(--line);background:var(--z-cream-warm);color:var(--z-blue);border-radius:9px;padding:6px 11px;font-family:inherit;font-weight:800;font-size:13px;cursor:pointer}
+  /* ===== TRILHA QUE TREINA (molde B, aprovado pela Adriana em 13/set/2026) ===========
+     Uma tela por passo para quem a Gestao marcou como "em treinamento". As medidas sao as
+     do molde aprovado: acao a partir de 22 px, leitura a partir de 18 px, alvo de toque
+     nunca abaixo de 44 px, e o Feito com 58 px de altura — o polegar acha sem procurar,
+     porque quem le esta com o peludinho na mao. Cor e fonte saem dos tokens da marca,
+     nunca de valor solto. */
+  .ckt-selo{display:inline-block;margin-bottom:12px;padding:6px 14px;border-radius:999px;
+    border:1.5px solid var(--z-gold);color:var(--z-gold-deep);background:rgba(222,180,40,.12);
+    font-weight:800;font-size:14px;letter-spacing:.03em}
+  .ckt-conta{font-weight:800;color:var(--z-blue);font-size:22px;line-height:1.2;margin-bottom:10px}
+  .ckt-barra{height:8px;border-radius:999px;background:var(--z-cream-warm);border:1px solid var(--line);overflow:hidden;margin-bottom:18px}
+  .ckt-barra i{display:block;height:100%;background:var(--z-gold);border-radius:999px;transition:width .35s ease}
+  .ckt-cartao{background:var(--z-white);border:1.5px solid var(--z-gold);border-radius:16px;padding:18px 16px 16px;box-shadow:var(--shadow)}
+  .ckt-acao{font-weight:700;color:var(--z-blue);font-size:24px;line-height:1.3;margin-bottom:16px}
+  .ckt-bt{width:100%;min-height:58px;border:none;border-radius:16px;font-family:inherit;font-weight:700;
+    font-size:22px;display:flex;align-items:center;justify-content:center;gap:9px;line-height:1.2;cursor:pointer}
+  .ckt-bt.ok{background:var(--crm-ok);color:var(--z-white)}
+  .ckt-bt.nao{background:var(--z-white);color:var(--z-blue-soft);border:1.5px solid var(--line);min-height:52px;font-size:18px;margin-top:10px}
+  .ckt-bt.porque{background:var(--z-cream-warm);color:var(--z-blue);border:1.5px solid var(--z-blue-soft);min-height:52px;font-size:18px;margin-bottom:14px}
+  .ckt-porque{background:var(--z-cream-warm);border-left:4px solid var(--z-blue-soft);border-radius:12px;
+    padding:14px 15px;font-size:19px;line-height:1.55;color:var(--z-blue-deep);margin-bottom:14px}
+  .ckt-porque.vazio{border-left-color:var(--line);color:var(--muted);font-weight:600}
+  .ckt-motivo{margin-top:12px;background:rgba(41,128,185,.12);border-radius:12px;padding:13px 14px}
+  .ckt-motivo p{font-size:18px;font-weight:700;color:var(--crm-info);margin-bottom:10px;line-height:1.4}
+  .ckt-motivo button{width:100%;min-height:56px;padding:0 14px;margin-bottom:8px;border-radius:12px;
+    border:1.5px solid var(--crm-info);background:var(--z-white);font-family:inherit;font-weight:700;
+    font-size:22px;color:var(--crm-info);line-height:1.2;cursor:pointer}
+  .ckt-motivo button:last-child{margin-bottom:0}
+  .ckt-nota{margin-top:14px;font-size:18px;color:var(--muted);font-weight:600;line-height:1.5}
+  .ckt-placar{display:flex;gap:10px;margin-bottom:14px}
+  .ckt-pino{flex:1;background:var(--z-blue);border:1px solid var(--z-gold);border-radius:12px;padding:10px 12px}
+  .ckt-pino b{display:block;font-size:22px;font-weight:800;color:var(--z-gold-light);line-height:1.1}
+  .ckt-pino span{font-size:14px;color:var(--z-cream);opacity:.9}
+  .ckt-fim{text-align:center;padding:8px 0 4px}
+  .ckt-fim h3{font-size:25px;font-weight:700;color:var(--z-blue);margin-bottom:8px}
+  .ckt-fim .p{font-size:19px;color:var(--z-blue-soft);line-height:1.5;margin-bottom:18px}
+  .ckt-confira{text-align:left;margin-bottom:20px}
+  .ckt-confira .tt{font-weight:700;color:var(--z-blue);font-size:22px;margin-bottom:12px}
+  .ckt-confira .li{display:flex;align-items:flex-start;gap:11px;background:var(--z-white);border:1px solid var(--line);
+    border-radius:12px;padding:12px 13px;margin-bottom:7px;font-size:18px;line-height:1.35;color:var(--z-blue-deep)}
+  .ckt-confira .li .n{flex:0 0 auto;width:28px;height:28px;border-radius:999px;background:var(--z-cream-warm);
+    border:1.5px solid var(--z-gold);display:grid;place-items:center;font-size:15px;font-weight:800;color:var(--z-blue)}
+  .ckt-confira .li.ok{background:rgba(39,174,96,.1);border-color:var(--crm-ok)}
+  .ckt-confira .li.ok .n{background:var(--crm-ok);border-color:var(--crm-ok);color:var(--z-white)}
+  .ckt-confira .li .est{display:block;margin-top:4px;font-size:15px;font-weight:700;color:var(--muted)}
+  .ckt-quiz{background:var(--z-white);border:1.5px solid var(--z-gold);border-radius:16px;padding:18px 16px;text-align:left}
+  .ckt-quiz .tag{font-weight:800;font-size:15px;letter-spacing:.05em;color:var(--z-gold-deep);margin-bottom:8px}
+  .ckt-quiz h4{font-weight:700;font-size:22px;color:var(--z-blue);line-height:1.3;margin-bottom:14px}
+  .ckt-quiz .op{width:100%;min-height:58px;border-radius:12px;border:1.5px solid var(--line);background:var(--z-cream);
+    font-family:inherit;font-size:18px;font-weight:600;color:var(--z-blue-deep);padding:12px 14px;text-align:left;
+    margin-bottom:9px;line-height:1.35;cursor:pointer}
+  .ckt-quiz .op.certo{background:rgba(39,174,96,.12);border-color:var(--crm-ok);color:var(--crm-ok);font-weight:800}
+  .ckt-quiz .op.errou{background:rgba(241,196,15,.18);border-color:var(--crm-atencao-text);color:var(--crm-atencao-text)}
+  .ckt-quiz .resposta{margin-top:6px;background:var(--z-cream-warm);border-left:4px solid var(--z-blue-soft);
+    border-radius:12px;padding:13px 14px;font-size:18px;line-height:1.55;color:var(--z-blue-deep)}
+  /* A frase de advertencia de quem ja tem pratica — texto exato definido pela Adriana. */
+  .ckt-aviso{background:rgba(222,180,40,.18);border-left:4px solid var(--z-gold);border-radius:12px;
+    padding:14px 15px;font-size:19px;line-height:1.5;color:var(--z-blue-deep);font-weight:600;margin-bottom:16px}
+  /* Configuracoes > Protocolos: o interruptor de quem esta em treinamento. */
+  .ckt-cfg-linha{display:flex;gap:10px;align-items:center;justify-content:space-between;background:#fff;
+    border:1.5px solid var(--line);border-radius:11px;padding:11px 13px;margin-bottom:8px;flex-wrap:wrap}
+  .ckt-cfg-nome{flex:1;min-width:150px;font-size:15px;font-weight:700;color:var(--z-blue)}
+  .ckt-cfg-nome span{display:block;font-size:13px;font-weight:600;color:var(--muted);margin-top:2px}
+  .ckt-cfg-bt{min-height:44px;border:1.5px solid var(--line);background:var(--z-cream-warm);color:var(--z-blue);
+    border-radius:11px;padding:9px 15px;font-family:inherit;font-weight:800;font-size:14px;cursor:pointer}
+  .ckt-cfg-bt.on{background:var(--z-gold);border-color:var(--z-gold-deep);color:var(--z-blue)}
   .mini-banho{position:absolute;top:8px;left:8px;font-size:10px;font-weight:800;color:#fff;background:var(--z-auaulandia);padding:3px 8px;border-radius:8px;z-index:3}
   .alm-card .mini-banho{top:32px}
   /* ANSIOSO — come em caixa própria. 2º da ordem de servir (depois de quem tem banho). */
@@ -4532,6 +4598,12 @@
       DB.ref('daycare/config/atividades').on('value', s=>{ const v=s.val(); if(Array.isArray(v)&&v.length){ ATIVIDADES=v; if(typeof renderAtiv==='function') renderAtiv(); } });
       // Os passos de cada protocolo (12/set/2026). Nó pequeno e raro de mudar: desce uma vez
       // e a mudança da Gestão chega sozinha na tela de quem está executando.
+      // Quem a Gestão marcou como "em treinamento" (13/set/2026). Nó minúsculo: desce uma
+      // vez e a marca nova chega sozinha na tela de quem está executando.
+      DB.ref('daycare/config/treinamento').on('value', s=>{ const v=s.val(); TREINAMENTO=(v&&typeof v==='object')?v:{};
+        try{ if(typeof renderCheckin==='function'&&dcAtiv==='checkin-corpo') renderCheckin(); }catch(e){} /* silencioso de propósito: redesenho de tela — falhar não pode derrubar quem chamou */
+        try{ if(typeof protoRender==='function'&&document.getElementById('protoWrap')) protoRender(); }catch(e){} /* silencioso de propósito: redesenho de tela — falhar não pode derrubar quem chamou */
+      });
       DB.ref('daycare/config/protocolos').on('value', s=>{ const v=s.val(); PROTOCOLOS=(v&&typeof v==='object')?v:{};
         try{ if(typeof renderCheckin==='function'&&(dcAtiv==='checkin-corpo'||dcAtiv==='checkout-corpo')) renderCheckin(); }catch(e){} /* silencioso de propósito: redesenho de tela — falhar não pode derrubar quem chamou */
         try{ if(typeof renderAlmSeFor==='function') renderAlmSeFor(); }catch(e){} /* silencioso de propósito: redesenho de tela — falhar não pode derrubar quem chamou */
@@ -12603,7 +12675,7 @@
   // inteira DEPOIS de a correção estar publicada — o aviso apareceu, ninguém tocou.
   // Agora o aparelho PARADO recarrega sozinho: trancado, com a aba escondida, na porta de
   // entrada ou 3 minutos sem ninguém tocar nele. Mão na tela = nunca recarrega.
-  const APP_VERSAO='2026-09-13-01';
+  const APP_VERSAO='2026-09-13-02';
   var RECARGA_PARADO_MS=3*60*1000, __versaoPublicada=null, __recargaTimer=null;
   function vigiarVersao(){
     if(!DB) return;
@@ -19159,12 +19231,58 @@
     'Prancheta de check-in de pertence e corpo para casos extraordinários (falta de luz/internet/aparelho dando erro)',
     'Pegar a chave para abrir o portão para os aulunos'   // 13/set: o 12º passo, ditado por ela
   ];
+  // ===== OS PORQUÊS (Adriana, 13/set/2026 — molde B, "Aprovado o B, pode levar para o app")
+  // Cada passo pode ter um PORQUÊ, e ele mora ao lado dos passos no banco
+  // (daycare/config/protocolos/{atividade}/{etapa}/porques), lista paralela a `passos` e
+  // editável na mesma tela. Quem está em treinamento vê o passo e, atrás de um botão
+  // fechado, o motivo dele. Onde a Gestão ainda não escreveu, a tela DIZ isso e fica
+  // vazia — porquê inventado é pior do que porquê em branco.
+  //
+  // Os cinco abaixo são os que Adriana escreveu, nas palavras dela. Os outros sete passos
+  // ficam vazios de propósito: ela ainda não ditou.
+  const CK_INICIO_PORQUES=[
+    'O mop já está limpo. A solução de 1 tampa de sabão para 3 litros de água é para poder usar na limpeza.',
+    '',
+    'É pouca coisa e o vasilhame já é o certo. Cocô mole pode ter bactérias, e o ambiente não pode contaminar os outros.',
+    'Vários peludinhos chegam com sede. Água limpa e fresca, e troque durante o check-in.',
+    'Gelo seco não queima a mão. Peludinho merece comida boa, não comida azeda.',
+    'Verifique rápido a mochila e tire as comidas, pondo nos locais certos.',
+    'Gaveteiro é onde se guardam as coisas. É material de trabalho: agiliza e organiza.',
+    'Gaveteiro é onde se guardam as coisas. É material de trabalho: agiliza e organiza.',
+    '', '', '', ''
+  ];
+  // A PERGUNTA DA SEMANA. Também mora no banco, também editável pela Gestão
+  // (daycare/config/protocolos/{atividade}/{etapa}/perguntas). Só aparece para quem está em
+  // treinamento, depois de 3 Inícios completos, e SÓ quando a pessoa marcou "não deu para
+  // fazer" naquele passo pelo menos duas vezes na semana. Errar não tira ponto: a pergunta
+  // ensina, não pune — quem é punido por dizer a verdade passa a mentir no aplicativo.
+  const CK_INICIO_PERGUNTAS=[{
+    passo:2,   // o passo da terra (3º da lista)
+    pergunta:'Você marcou duas vezes que não deu para separar a terra. Por que a terra importa?',
+    alternativas:[
+      'Para deixar o pátio com cheiro de mato',
+      'Porque um cocô mole pode conter bactérias, e o ambiente não pode contaminar os outros',
+      'Para o peludinho cavar e gastar energia'
+    ],
+    certa:1,
+    explicacao:'O foco é o bem-estar de todos os aulunos: um cocô mole pode conter bactérias, e o nosso ambiente não pode ser foco de contaminação dos outros. Errar aqui não tira ponto.'
+  }];
   // O Fim do Check-in do corpo nasce VAZIO de propósito: Adriana não ditou os passos, e
   // inventar protocolo é pior do que não ter. A tela diz isso com todas as letras e aponta
   // onde a Gestão escreve.
   const PROTO_PADRAO={
     'checkin-corpo':{ inicio:CK_INICIO_PADRAO, fim:[] },
     'almoco':{ inicio:ALM_PREP, fim:ALM_FINAL }
+  };
+  // Os porquês e as perguntas em listas próprias: o PROTO_PADRAO continua sendo só a lista
+  // de passos (quem lê ele espera um array), e quem quer o porquê pede ao lugar do porquê.
+  const PROTO_PORQUES_PADRAO={
+    'checkin-corpo':{ inicio:CK_INICIO_PORQUES, fim:[] },
+    'almoco':{ inicio:[], fim:[] }
+  };
+  const PROTO_PERGUNTAS_PADRAO={
+    'checkin-corpo':{ inicio:CK_INICIO_PERGUNTAS, fim:[] },
+    'almoco':{ inicio:[], fim:[] }
   };
   const PROTO_ATIVS=[
     {a:'checkin-corpo', t:'Check-in do corpo', etapas:[{e:'inicio',t:'Início — preparação do espaço'},{e:'fim',t:'Fim'}]},
@@ -19183,6 +19301,47 @@
   function protoNomeAtiv(a){ const f=PROTO_ATIVS.find(function(x){ return x.a===a; }); return f?f.t:a; }
   function protoNomeEtapa(a,e){ const f=PROTO_ATIVS.find(function(x){ return x.a===a; }); if(!f) return e;
     const g=f.etapas.find(function(x){ return x.e===e; }); return g?g.t:e; }
+
+  // Os porquês seguem a MESMA regra dos passos: o nó do banco manda; a constante do código
+  // só vale enquanto a semeadura não aconteceu. Porquê fora do ar devolve '' — e '' é o que
+  // faz a tela dizer "a Gestão ainda não escreveu o porquê deste item".
+  const PROTO_SEM_PORQUE='A Gestão ainda não escreveu o porquê deste item.';
+  function protoPorques(a,e){
+    const n=protoNo(a,e);
+    if(n&&Object.prototype.hasOwnProperty.call(n,'porques')){
+      const v=n.porques; return Array.isArray(v)?v.map(function(t){ return String(t||''); }):[];
+    }
+    const d=(PROTO_PORQUES_PADRAO[a]||{})[e]; return Array.isArray(d)?d.slice():[];
+  }
+  function protoPorque(a,e,i){ return String(protoPorques(a,e)[i]||'').trim(); }
+  function protoPerguntas(a,e){
+    const n=protoNo(a,e);
+    if(n&&Object.prototype.hasOwnProperty.call(n,'perguntas')){
+      const v=n.perguntas; return Array.isArray(v)?v.filter(function(p){ return p&&p.pergunta; }):[];
+    }
+    const d=(PROTO_PERGUNTAS_PADRAO[a]||{})[e]; return Array.isArray(d)?d.slice():[];
+  }
+
+  // ===== QUEM ESTÁ EM TREINAMENTO (Adriana, 13/set/2026) =============================
+  // "Quem está em treinamento é a Gestão quem marca." O interruptor NÃO mora na tela Time
+  // (ordem dela: "Time continua Time, não mexe em nada") — mora em Configurações ›
+  // Protocolos passo a passo, ao lado dos passos que a pessoa vai ler. O que fica gravado é
+  // daycare/config/treinamento/{id-do-colaborador} = {ativo:true, por, em}.
+  //
+  // SEM MARCA = COM PRÁTICA. A única exceção é o papel 'aprendiz', que no app já significa,
+  // com todas as letras, alguém em treinamento: tirar a trilha dele seria jogar um novato na
+  // lista de marcar por causa de um interruptor que ninguém ligou ainda.
+  var TREINAMENTO={};
+  function emTreinamento(id){ const r=TREINAMENTO[String(id||'')]; return !!(r&&r.ativo===true); }
+  function meuMonId(){
+    const u=(typeof usuarioAtual==='function')?usuarioAtual():null;
+    if(u&&u.monId) return String(u.monId);
+    // Sem monId na sessão (papéis fixos), procura pelo nome no cadastro de colaboradores.
+    const eu=(typeof quemSou==='function')?quemSou():'';
+    const f=(MONITORES||[]).find(function(m){ return m&&m.nome&&jsNorm(m.nome)===jsNorm(eu); });
+    return f?String(f.id):'';
+  }
+  function ckEmTreinamento(){ return emTreinamento(meuMonId()) || isAprendiz(); }
 
   function isAprendiz(){ return document.body.dataset.role==='aprendiz'; }
   function prepCompleto(){ const l=protoPassos('almoco','inicio'); return l.length?l.every((_,i)=>almPrep[i]):true; }
@@ -19541,7 +19700,11 @@
       DB.ref(ckEtapaNo('inicio')).once('value').then(function(s){ return s.val()||{}; })
         .catch(function(e){ _logLeituraFalhou(ckEtapaNo('inicio')+' (carregarCheckin)', e); return {}; }),
       DB.ref(ckEtapaNo('fim')).once('value').then(function(s){ return s.val()||{}; })
-        .catch(function(e){ _logLeituraFalhou(ckEtapaNo('fim')+' (carregarCheckin)', e); return {}; })
+        .catch(function(e){ _logLeituraFalhou(ckEtapaNo('fim')+' (carregarCheckin)', e); return {}; }),
+      // Só quem está em treinamento paga estas duas leituras: os dias em que esta pessoa já
+      // concluiu o Início (é o que decide se o placar aparece) e os pontos dela no mês com
+      // origem 'protocolo-inicio'. Quem tem prática não lê nada disto.
+      ckCargaTreinamento()
     ]).then(function(r){
       ckDados=Object.assign({},r[0]);
       if(r[1]) dcChamada=r[1];
@@ -19551,13 +19714,34 @@
       renderCheckin();
     }).catch(function(){ ckDados={}; renderCheckin(); });
   }
+  // O que a trilha precisa saber antes de desenhar: quantos Inícios esta pessoa já fechou
+  // (o placar só nasce no 3º) e quantos pontos ela tem no mês por este caminho. Falhar aqui
+  // deixa rastro: um placar que volta vazio por erro de leitura apaga o esforço de quem fez.
+  function ckCargaTreinamento(){
+    PROTO_FEITOS={}; CKT_PONTOS_MES=0; CKT_SEMANA=null; CKT_SEMANA_PEDIDA=false;
+    CKT={porque:false, motivo:false, quizResp:null};
+    if(!DB||!ckEmTreinamento()) return Promise.resolve(null);
+    const eu=(typeof quemSou==='function')?quemSou():'-', mes=dcDataKey().slice(0,7);
+    return Promise.all(['inicio','fim'].map(function(et){
+      const p=protoFeitosNo(cktSlug(et),eu);
+      return DB.ref(p).once('value').then(function(sn){ PROTO_FEITOS[cktSlug(et)]=sn.val()||{}; })
+        .catch(function(e){ _logLeituraFalhou(p+' (ckCargaTreinamento)', e); });
+    }).concat([
+      DB.ref('daycare/pontos-checkout/'+mes).once('value').then(function(sn){
+        const v=sn.val()||{}; var t=0;
+        Object.keys(v).forEach(function(k){ const r=v[k]||{};
+          if((r.origem||'')==='protocolo-inicio' && jsNorm(r.quem||'')===jsNorm(eu)) t+=(r.pontos||0); });
+        CKT_PONTOS_MES=t;
+      }).catch(function(e){ _logLeituraFalhou('daycare/pontos-checkout/'+mes+' (ckCargaTreinamento)', e); })
+    ])).then(function(){ return null; });
+  }
   // Em que etapa a tela abre. Quem já sabe o caminho cai direto no check-in; quem está em
   // treinamento começa pelo Início, que é onde o protocolo ensina a preparar o espaço.
   function ckDecideStep(){
     if(!ckTemEtapas()){ ckStep='exec'; return; }
     const passos=protoPassos('checkin-corpo','inicio');
     const completo=passos.length?passos.every(function(_,i){ return ckIni[i]; }):true;
-    ckStep=(isAprendiz()&&!completo)?'inicio':'exec';
+    ckStep=(ckEmTreinamento()&&!completo)?'inicio':'exec';
   }
   // A chamada é a resposta de quem está no prédio. Quem faltou não se examina — nem na
   // entrada nem na saída (Adriana, 28/ago/2026).
@@ -19596,6 +19780,22 @@
   }
   // Marcar e desmarcar. Desmarcar grava null (tira o passo), e o rastro da auditoria
   // registra os dois sentidos — nada some sem deixar dito quem tirou.
+  // A marca de um passo — uma regra só, para a lista de quem tem prática e a trilha de quem
+  // está em treinamento gravarem a MESMA coisa (a lição de 18/ago: o número da tela é o
+  // número que se paga; regra escrita em dois lugares vira duas verdades).
+  // `naoDeu` vazio = fez. `naoDeu` preenchido = disse a verdade sobre o que não deu — e isso
+  // NÃO tira ponto nenhum.
+  const CK_NAO_DEU={'acabou-material':'Acabou o material','nao-sei':'Não sei fazer','faltou-tempo':'Faltou tempo'};
+  function ckGravarPasso(etapa,i,naoDeu){
+    const marcas=ckMarcasDe(etapa), texto=protoPassos('checkin-corpo',etapa)[i]||('passo '+(i+1));
+    const reg={quem:(typeof quemSou==='function')?quemSou():'-', hora:horaAgora(), ts:Date.now()};
+    if(naoDeu&&CK_NAO_DEU[naoDeu]) reg.naoDeu=naoDeu;
+    marcas[i]=reg;
+    if(DB) DB.ref(ckEtapaNo(etapa)+'/'+i).set(reg).catch(function(e){ _logFalhaGrav(ckEtapaNo(etapa)+' (ckGravarPasso)', e); });
+    if(typeof audit==='function') audit('checkin_'+etapa,
+      (reg.naoDeu?('não deu para fazer ('+CK_NAO_DEU[reg.naoDeu]+'): '):(etapa==='inicio'?'início: ':'fim: '))+texto);
+    return reg;
+  }
   function ckToggleEtapa(etapa,i){
     const marcas=ckMarcasDe(etapa), texto=protoPassos('checkin-corpo',etapa)[i]||('passo '+(i+1));
     if(marcas[i]){
@@ -19603,10 +19803,7 @@
       if(DB) DB.ref(ckEtapaNo(etapa)+'/'+i).set(null).catch(function(e){ _logFalhaGrav(ckEtapaNo(etapa)+' (ckToggleEtapa)', e); });
       if(typeof audit==='function') audit('checkin_'+etapa, 'desmarcou: '+texto);
     }else{
-      const reg={quem:(typeof quemSou==='function')?quemSou():'-', hora:horaAgora(), ts:Date.now()};
-      marcas[i]=reg;
-      if(DB) DB.ref(ckEtapaNo(etapa)+'/'+i).set(reg).catch(function(e){ _logFalhaGrav(ckEtapaNo(etapa)+' (ckToggleEtapa)', e); });
-      if(typeof audit==='function') audit('checkin_'+etapa, (etapa==='inicio'?'início: ':'fim: ')+texto);
+      ckGravarPasso(etapa,i,'');
     }
     renderCheckin();
   }
@@ -19660,12 +19857,226 @@
         etapa==='inicio'?'ckIniciarInicio':'ckIniciarFim', etapa==='inicio'?'ckEncerrarInicio':'ckEncerrarFim')
       +'<div class="role-note"><span data-icon="'+(etapa==='inicio'?'sun':'moon')+'"></span><span>'+nota
       +(passos.length?(' ('+feitos+'/'+passos.length+')'):'')+'</span></div>'
+      +(passos.length?('<div class="ckt-aviso">'+CK_FRASE_PRATICA+'</div>'):'')
       +lista;
   }
+
+  /* ==================================================================================
+   * A TRILHA QUE TREINA — molde B, aprovado pela Adriana em 13/set/2026
+   * ("Aprovado o B, pode levar para o app").
+   *
+   * Quem a Gestão marcou como "em treinamento" não vê a lista dos doze itens: vê UMA TELA
+   * POR PASSO, com as palavras da Gestão, o porquê atrás de um botão fechado, e dois
+   * caminhos — Feito e Não deu para fazer. Quem já tem prática continua com a lista de
+   * marcar de sempre, um toque por item, com a frase de advertência no topo.
+   *
+   * O que a trilha NÃO faz: punir. "Não deu para fazer" pergunta o motivo em um toque e
+   * segue — não tira ponto e não quebra a contagem de dias. Quem é punido por dizer a
+   * verdade passa a mentir no aplicativo.
+   *
+   * Ponto e dias seguidos só entram DEPOIS de 3 Inícios completos da pessoa: primeiro ela
+   * aprende o serviço, a disputa vem depois. E vão para o placar dos Zelosos que já existe
+   * (daycare/pontos-checkout/{mês}), com origem 'protocolo-inicio' — os dois leitores do
+   * placar do check-out ignoram esta origem, como já ignoram a do "Seu dia".
+   * ================================================================================= */
+  const CK_FRASE_PRATICA='Tem dúvida? Reveja para ver se não esqueceu nada. Pode perder ponto por não seguir o protocolo correto.';
+  const CKT_PONTOS_POR_INICIO=10;     // a mesma bolsa de 10 do check-out
+  const CKT_MINIMO_PLACAR=3;          // antes de 3 Inícios completos, nada de ponto na tela
+  var CKT={porque:false, motivo:false, quizResp:null};
+  var PROTO_FEITOS={};                // {slug:{dia:true}} — só do usuário que está logado
+  var CKT_PONTOS_MES=0;               // pontos de origem 'protocolo-inicio' no mês, desta pessoa
+  var CKT_SEMANA=null;                // {indiceDoPasso: quantas vezes "não deu" na semana}
+  var CKT_SEMANA_PEDIDA=false;
+
+  function protoPessoaKey(nome){ return (jsNorm(nome||'')||'-').replace(/[.#$\[\]\/]/g,'-'); }
+  function protoFeitosNo(slug,nome){ return 'daycare/protocolo-feitos/'+slug+'/'+protoPessoaKey(nome); }
+  function protoFeitosDias(slug){
+    const m=PROTO_FEITOS[slug]||{};
+    return Object.keys(m).filter(function(d){ return /^\d{4}-\d{2}-\d{2}$/.test(d); }).sort();
+  }
+  function protoFeitosConta(slug){ return protoFeitosDias(slug).length; }
+  // Dias seguidos: conta para trás a partir do dia mais recente em que a pessoa concluiu.
+  function protoSeguidos(slug){
+    const dias=protoFeitosDias(slug); if(!dias.length) return 0;
+    var n=1;
+    for(var i=dias.length-1;i>0;i--){ if(orcMaisDias(dias[i],-1)===dias[i-1]) n++; else break; }
+    return n;
+  }
+  function cktSlug(etapa){ return CK_ETAPA_SLUG[etapa]||('checkin-corpo-'+etapa); }
+  function cktMostraPlacar(etapa){ return protoFeitosConta(cktSlug(etapa))>=CKT_MINIMO_PLACAR; }
+  // O passo da vez: o primeiro sem marca. -1 quando não sobrou nenhum.
+  function cktIndice(etapa){
+    const passos=protoPassos('checkin-corpo',etapa), marcas=ckMarcasDe(etapa);
+    for(var i=0;i<passos.length;i++){ if(!marcas[i]) return i; }
+    return -1;
+  }
+  function cktVirarPorque(){ CKT.porque=!CKT.porque; renderCheckin(); }
+  function cktAbrirMotivo(){ CKT.motivo=true; renderCheckin(); }
+  function cktFeito(etapa){ CKT.porque=false; CKT.motivo=false;
+    const i=cktIndice(etapa); if(i<0) return;
+    ckGravarPasso(etapa,i,'');
+    cktSeAcabou(etapa);
+    renderCheckin();
+  }
+  function cktNaoDeu(etapa,motivo){ CKT.porque=false; CKT.motivo=false;
+    const i=cktIndice(etapa); if(i<0) return;
+    ckGravarPasso(etapa,i,motivo);
+    cktSeAcabou(etapa);
+    renderCheckin();
+  }
+  // Acabou a trilha: registra o dia da pessoa e, a partir do 3º, solta o ponto no placar
+  // dos Zelosos. A transação é a trava contra contar duas vezes o mesmo dia — e só quem
+  // criou o dia ganha o ponto (reabrir o app não vira ponto novo).
+  function cktSeAcabou(etapa){
+    if(cktIndice(etapa)>=0) return;
+    const slug=cktSlug(etapa), eu=(typeof quemSou==='function')?quemSou():'-', dia=dcDataKey();
+    if(!DB){ PROTO_FEITOS[slug]=Object.assign({},PROTO_FEITOS[slug]||{}); PROTO_FEITOS[slug][dia]=true; return; }
+    DB.ref(protoFeitosNo(slug,eu)+'/'+dia).transaction(function(atual){
+      if(atual!==null) return;                    // o dia já estava fechado: não conta de novo
+      return {quem:eu, hora:horaAgora(), ts:Date.now()};
+    }, function(err, gravou){
+      if(err){ _logFalhaGrav(protoFeitosNo(slug,eu)+'/'+dia+' (cktSeAcabou)', err); return; }
+      PROTO_FEITOS[slug]=Object.assign({},PROTO_FEITOS[slug]||{}); PROTO_FEITOS[slug][dia]=true;
+      if(!gravou){ renderCheckin(); return; }
+      if(typeof audit==='function') audit('protocolo-trilha', eu+' concluiu o '+protoNomeEtapa('checkin-corpo',etapa)+' ('+protoFeitosConta(slug)+'º)', {dia:dia});
+      if(protoFeitosConta(slug)>=CKT_MINIMO_PLACAR){
+        DB.ref('daycare/pontos-checkout/'+dia.slice(0,7)).push({
+          quem:eu, pontos:CKT_PONTOS_POR_INICIO, origem:'protocolo-inicio', dia:dia, ts:Date.now()
+        }).then(function(){ CKT_PONTOS_MES+=CKT_PONTOS_POR_INICIO; renderCheckin(); })
+          .catch(function(e){ _logFalhaGrav('daycare/pontos-checkout/ (protocolo-inicio)', e); });
+        if(typeof audit==='function') audit('protocolo-trilha', eu+': +'+CKT_PONTOS_POR_INICIO+' no placar dos Zelosos (Início completo)', {dia:dia});
+      }
+      renderCheckin();
+    });
+  }
+  // A pergunta da semana só existe quando a pessoa marcou "não deu" no mesmo passo pelo
+  // menos DUAS vezes nos últimos 7 dias. Ler os 7 dias é caro: só acontece uma vez por
+  // sessão, e só para quem está em treinamento e já chegou ao fim da trilha.
+  function cktCarregarSemana(etapa){
+    if(CKT_SEMANA||CKT_SEMANA_PEDIDA||!DB) return;
+    CKT_SEMANA_PEDIDA=true;
+    const eu=jsNorm((typeof quemSou==='function')?quemSou():''), hoje=dcDataKey(), dias=[];
+    for(var i=0;i<7;i++) dias.push(orcMaisDias(hoje,-i));
+    Promise.all(dias.map(function(d){
+      const p='daycare/checkin-corpo-'+etapa+'/'+d;
+      return DB.ref(p).once('value').then(function(sn){ return sn.val()||{}; })
+        .catch(function(e){ _logLeituraFalhou(p+' (pergunta da semana)', e); return {}; });
+    })).then(function(rs){
+      const conta={};
+      rs.forEach(function(v){ Object.keys(v||{}).forEach(function(k){
+        const r=v[k]; if(!r||!r.naoDeu) return;
+        if(jsNorm(r.quem||'')!==eu) return;
+        conta[k]=(conta[k]||0)+1;
+      }); });
+      CKT_SEMANA=conta;
+      try{ if(dcAtiv==='checkin-corpo') renderCheckin(); }catch(e){} /* silencioso de propósito: redesenho de tela — falhar não pode derrubar quem chamou */
+    }).catch(function(e){ _logLeituraFalhou('daycare/checkin-corpo-'+etapa+' (pergunta da semana)', e); CKT_SEMANA={}; });
+  }
+  function cktPerguntaDaVez(etapa){
+    if(!CKT_SEMANA) return null;
+    const qs=protoPerguntas('checkin-corpo',etapa);
+    for(var i=0;i<qs.length;i++){
+      const q=qs[i], p=Number(q.passo);
+      if(!isFinite(p)) continue;
+      if((CKT_SEMANA[String(p)]||0)>=2) return {q:q, i:i};
+    }
+    return null;
+  }
+  function cktResponder(qi,op){ CKT.quizResp={q:qi, op:op}; renderCheckin(); }
+
+  function cktPlacarHTML(etapa){
+    if(!cktMostraPlacar(etapa)) return '';
+    const slug=cktSlug(etapa);
+    return '<div class="ckt-placar">'
+      +'<div class="ckt-pino"><b>'+protoSeguidos(slug)+'</b><span>dias seguidos</span></div>'
+      +'<div class="ckt-pino"><b>'+CKT_PONTOS_MES+'</b><span>pontos no mês</span></div>'
+      +'</div>';
+  }
+  function cktPassoHTML(etapa,i){
+    const passos=protoPassos('checkin-corpo',etapa), total=passos.length;
+    const pct=Math.round((i/total)*100), porque=protoPorque('checkin-corpo',etapa,i);
+    var h='<div class="ckt-conta">Passo '+(i+1)+' de '+total+'</div>'
+      +'<div class="ckt-barra"><i style="width:'+pct+'%"></i></div>'
+      +'<div class="ckt-cartao">'
+      +'<div class="ckt-acao">'+esc(passos[i])+'</div>'
+      +'<button type="button" class="ckt-bt porque" onclick="cktVirarPorque()">Por que isto importa?</button>';
+    if(CKT.porque){
+      h+='<div class="ckt-porque'+(porque?'':' vazio')+'">'+esc(porque||PROTO_SEM_PORQUE)+'</div>';
+    }
+    h+='<button type="button" class="ckt-bt ok" onclick="cktFeito(\''+etapa+'\')">&#10003; Feito</button>'
+      +'<button type="button" class="ckt-bt nao" onclick="cktAbrirMotivo()">Não deu para fazer</button>';
+    if(CKT.motivo){
+      h+='<div class="ckt-motivo"><p>O que aconteceu?</p>'
+        +Object.keys(CK_NAO_DEU).map(function(k){
+            return '<button type="button" onclick="cktNaoDeu(\''+etapa+'\',\''+k+'\')">'+CK_NAO_DEU[k]+'</button>';
+          }).join('')
+        +'</div>';
+    }
+    return h+'</div><div class="ckt-nota">Não deu para fazer não tira ponto.</div>';
+  }
+  function cktConfiraHTML(etapa){
+    const passos=protoPassos('checkin-corpo',etapa), marcas=ckMarcasDe(etapa);
+    return '<div class="ckt-confira"><div class="tt">Confira: os '+passos.length+' passos</div>'
+      +passos.map(function(t,i){
+        const m=marcas[i], nd=m&&m.naoDeu;
+        return '<div class="li'+(m&&!nd?' ok':'')+'"><span class="n">'+(i+1)+'</span><span>'+esc(t)
+          +(m?('<span class="est">'+(nd?('não deu — '+esc(CK_NAO_DEU[nd]||nd)):('feito por '+esc(m.quem||'-')+' às '+esc(m.hora||'-')))+'</span>'):'')
+          +'</span></div>';
+      }).join('')
+      +'</div>';
+  }
+  function cktFimHTML(etapa){
+    const slug=cktSlug(etapa);
+    cktCarregarSemana(etapa);
+    var h='<div class="ckt-fim"><h3>'+(etapa==='inicio'?'Início pronto':'Fim pronto')+'</h3>'
+      +'<p class="p">Os peludinhos podem entrar.</p>';
+    if(cktMostraPlacar(etapa)){
+      h+='<div class="ckt-placar">'
+        +'<div class="ckt-pino"><b>'+CKT_PONTOS_MES+'</b><span>pontos no mês</span></div>'
+        +'<div class="ckt-pino"><b>'+protoSeguidos(slug)+'</b><span>dias seguidos</span></div>'
+        +'<div class="ckt-pino"><b>'+protoFeitosConta(slug)+'</b><span>Inícios completos</span></div>'
+        +'</div>';
+    }
+    h+='</div>'+cktConfiraHTML(etapa);
+    const pq=cktMostraPlacar(etapa)?cktPerguntaDaVez(etapa):null;
+    if(pq){
+      const q=pq.q, resp=(CKT.quizResp&&CKT.quizResp.q===pq.i)?CKT.quizResp.op:null;
+      h+='<div class="ckt-quiz"><div class="tag">Pergunta da semana</div><h4>'+esc(q.pergunta)+'</h4>'
+        +(q.alternativas||[]).map(function(t,j){
+            var cls=''; if(resp!==null){ if(j===Number(q.certa)) cls=' certo'; else if(j===resp) cls=' errou'; }
+            return '<button type="button" class="op'+cls+'" onclick="cktResponder('+pq.i+','+j+')">'+esc(t)+'</button>';
+          }).join('')
+        +(resp!==null?('<div class="resposta">'+esc(q.explicacao||'')+'</div>'):'')
+        +'</div>';
+    }
+    // O caminho natural depois do Início é o Check-in em si — a trilha entrega a pessoa lá.
+    if(etapa==='inicio') h+='<button type="button" class="ckt-bt ok" style="margin-top:16px" onclick="setCkStep(\'exec\')">Ir para o Check-in</button>';
+    return h;
+  }
+  // A etapa desenhada no molde da trilha: cronômetro, selo, e uma tela por passo.
+  function ckTrilhaHTML(etapa, nota){
+    const slug=cktSlug(etapa), passos=protoPassos('checkin-corpo',etapa);
+    var h=barraTurno(protoNomeEtapa('checkin-corpo',etapa), ATIV_TEMPO[slug]||{},
+        etapa==='inicio'?'ckIniciarInicio':'ckIniciarFim', etapa==='inicio'?'ckEncerrarInicio':'ckEncerrarFim')
+      +'<div class="ckt-selo">Em treinamento</div>';
+    if(!passos.length){
+      return h+'<div class="proto-vazio">A Gestão ainda não escreveu os passos '
+        +(etapa==='inicio'?'do Início':'do Fim')+' &mdash; Configurações &rsaquo; Protocolos passo a passo.</div>';
+    }
+    const i=cktIndice(etapa);
+    // No fim o placar vem dentro do cartao de chegada (3 pinos) — repetir aqui em cima
+    // seria dizer a mesma coisa duas vezes na mesma tela.
+    if(i<0) return h+cktFimHTML(etapa);
+    return h+cktPlacarHTML(etapa)+cktPassoHTML(etapa,i);
+  }
   function renderCkInicio(){ const el=document.getElementById('ck-inicio'); if(!el) return;
-    el.innerHTML=ckEtapaHTML('inicio','<strong>1ª etapa &mdash; prepare o espaço.</strong> Faça na ordem e toque em cada passo quando terminar. O app guarda quem fez e a que horas.'); }
+    el.innerHTML=ckEmTreinamento()
+      ? ckTrilhaHTML('inicio')
+      : ckEtapaHTML('inicio','<strong>1ª etapa &mdash; prepare o espaço.</strong> Faça na ordem e toque em cada passo quando terminar. O app guarda quem fez e a que horas.'); }
   function renderCkFim(){ const el=document.getElementById('ck-fim'); if(!el) return;
-    el.innerHTML=ckEtapaHTML('fim','<strong>3ª etapa &mdash; feche o check-in.</strong> Toque em cada passo quando terminar. O app guarda quem fez e a que horas.'); }
+    el.innerHTML=ckEmTreinamento()
+      ? ckTrilhaHTML('fim')
+      : ckEtapaHTML('fim','<strong>3ª etapa &mdash; feche o check-in.</strong> Toque em cada passo quando terminar. O app guarda quem fez e a que horas.'); }
   function renderCheckin(){
     ckAplicarEtapas();
     if(ckTemEtapas()&&ckStep!=='exec'){ if(ckStep==='inicio') renderCkInicio(); else renderCkFim(); return; }
@@ -24785,10 +25196,10 @@
       var por={};
       ks.forEach(function(k){
         var r=v[k]||{}, nome=(r.quem||'—').trim();
-        // O ponto do "Seu dia" (origem:'seu-dia') mora no mesmo placar, mas este quadro é
-        // o placar do CHECK-OUT (bolsas de 10). Um +5 de bem-estar aqui viraria "1 bolsa
-        // · 5 de 10" — uma falta que a pessoa nunca cometeu. Fica de fora.
-        if((r.origem||'')==='seu-dia') return;
+        // O ponto do "Seu dia" e o do Início do protocolo moram no mesmo placar, mas este
+        // quadro é o do CHECK-OUT (bolsas de 10). Um +5 de bem-estar aqui viraria "1 bolsa
+        // · 5 de 10" — uma falta que a pessoa nunca cometeu. Ficam de fora.
+        if(!pontoEhBolsa(r)) return;
         por[nome]=por[nome]||{nome:nome, pontos:0, saidas:0, perdas:[]};
         por[nome].pontos+=(r.pontos||0); por[nome].saidas++;
         if((r.pontos||0)<10) por[nome].perdas.push(r);
@@ -26928,7 +27339,25 @@
         if(err){ _logFalhaGrav(caminho+' (protoSemear)', err); return; }
         if(gravou&&typeof audit==='function') audit('protocolo','gravou o padrão de '+protoNomeAtiv(x.a)+' · '+protoNomeEtapa(x.a,et.e));
       });
+      // Os porquês e as perguntas entraram DEPOIS dos passos (13/set/2026), então o nó da
+      // etapa já existe no banco e a transação de cima aborta. Por isso cada um tem a sua
+      // própria semeadura, no seu próprio filho: grava UMA vez, e nunca por cima do que a
+      // Gestão escreveu.
+      protoSemearFilho(caminho+'/porques',   ((PROTO_PORQUES_PADRAO[x.a]||{})[et.e]||[]).slice(),
+        'gravou os porquês padrão de '+protoNomeAtiv(x.a)+' · '+protoNomeEtapa(x.a,et.e));
+      protoSemearFilho(caminho+'/perguntas', ((PROTO_PERGUNTAS_PADRAO[x.a]||{})[et.e]||[]).slice(),
+        'gravou a pergunta da semana de '+protoNomeAtiv(x.a)+' · '+protoNomeEtapa(x.a,et.e));
     }); });
+  }
+  function protoSemearFilho(caminho, valor, oque){
+    if(!DB||!valor.length) return;
+    DB.ref(caminho).transaction(function(atual){
+      if(atual!==null) return;   // já existe: não encosta
+      return valor;
+    }, function(err, gravou){
+      if(err){ _logFalhaGrav(caminho+' (protoSemearFilho)', err); return; }
+      if(gravou&&typeof audit==='function') audit('protocolo', oque);
+    });
   }
   function protoCarregar(){
     const el=document.getElementById('protoWrap'); if(!el) return;
@@ -26944,7 +27373,13 @@
   }
   function protoRender(){
     const el=document.getElementById('protoWrap'); if(!el) return;
-    el.innerHTML=PROTO_ATIVS.map(function(x){
+    el.innerHTML=
+      '<div style="margin-bottom:18px;padding:12px 14px;background:var(--z-cream-warm);border:1px solid var(--line);border-radius:12px">'
+      +'<div style="font-weight:800;color:var(--z-blue);font-size:16.5px;margin-bottom:4px">Quem está em treinamento</div>'
+      +'<div class="hint" style="margin-bottom:9px">Quem está marcado vê <strong>uma tela por passo</strong>, com o porquê atrás de um botão e os caminhos &ldquo;Feito&rdquo; e &ldquo;Não deu para fazer&rdquo;. Quem não está marcado vê a lista de marcar de sempre, um toque por item. <strong>Quem marca é a Gestão</strong> — nunca a própria pessoa. O cadastro de quem é quem continua em <strong>Operação &rsaquo; Time</strong>.</div>'
+      +protoTreinoHTML()
+      +'</div>'
+      +PROTO_ATIVS.map(function(x){
       return '<div style="margin-bottom:18px">'
         +'<div style="font-weight:800;color:var(--z-blue);font-size:16.5px;margin-bottom:7px">'+esc(x.t)+'</div>'
         +x.etapas.map(function(et){
@@ -26953,36 +27388,69 @@
           return '<div style="margin:0 0 12px 0;padding:12px 14px;background:var(--z-cream-warm);border:1px solid var(--line);border-radius:12px">'
             +'<div style="font-weight:800;color:var(--z-blue-deep);font-size:14.5px;margin-bottom:7px">'+esc(et.t)+' · '+passos.length+(passos.length===1?' passo':' passos')+quando+'</div>'
             +(passos.length?passos.map(function(t,i){
+                const pq=protoPorque(x.a,et.e,i);
                 return '<div class="proto-cfg-item">'
                   +'<span class="proto-cfg-num">'+(i+1)+'</span>'
-                  +'<span class="proto-cfg-txt">'+esc(t)+'</span>'
+                  +'<span class="proto-cfg-txt">'+esc(t)
+                  +'<span style="display:block;margin-top:4px;font-size:13.5px;font-weight:600;color:'+(pq?'var(--z-blue-soft)':'var(--muted)')+'">'
+                  +'Por que isto importa? '+(pq?esc(pq):'A Gestão ainda não escreveu o porquê deste item.')+'</span></span>'
                   +'<span style="display:flex;gap:6px;flex-wrap:wrap">'
                   +'<button type="button" class="proto-cfg-bt"'+(i===0?' disabled':'')+' onclick="protoMover(\''+x.a+'\',\''+et.e+'\','+i+',-1)">Subir</button>'
                   +'<button type="button" class="proto-cfg-bt"'+(i===passos.length-1?' disabled':'')+' onclick="protoMover(\''+x.a+'\',\''+et.e+'\','+i+',1)">Descer</button>'
                   +'<button type="button" class="proto-cfg-bt" onclick="protoEditar(\''+x.a+'\',\''+et.e+'\','+i+')">Reescrever</button>'
+                  +'<button type="button" class="proto-cfg-bt" onclick="protoEditarPorque(\''+x.a+'\',\''+et.e+'\','+i+')">Por que isto importa?</button>'
                   +'<button type="button" class="proto-cfg-bt" style="border-color:var(--crm-critico);color:var(--crm-critico)" onclick="protoTirar(\''+x.a+'\',\''+et.e+'\','+i+')">Tirar</button>'
                   +'</span></div>';
               }).join('')
               :'<div class="hint">Nenhum passo escrito ainda. Quem executa vê, na tela, um aviso dizendo que a Gestão ainda não escreveu os passos.</div>')
             +'<button type="button" class="btn btn-gold" style="margin-top:9px;padding:8px 15px;font-size:14px" onclick="protoNovo(\''+x.a+'\',\''+et.e+'\')">Acrescentar passo</button>'
+            +protoPerguntasHTML(x.a,et.e)
             +'</div>';
         }).join('')
         +'</div>';
     }).join('');
   }
+  // A lista das perguntas da semana desta etapa, com o passo a que cada uma pertence.
+  function protoPerguntasHTML(a,e){
+    const qs=protoPerguntas(a,e), passos=protoPassos(a,e);
+    return '<div style="margin-top:12px;padding-top:10px;border-top:1px dashed var(--line)">'
+      +'<div style="font-weight:800;color:var(--z-blue-deep);font-size:14.5px;margin-bottom:6px">Pergunta da semana · '+qs.length+(qs.length===1?' pergunta':' perguntas')+'</div>'
+      +(qs.length?qs.map(function(q,i){
+          const p=Number(q.passo), rot=(p>=0&&passos[p])?('passo '+(p+1)+' — '+passos[p]):'passo não definido';
+          return '<div class="proto-cfg-item">'
+            +'<span class="proto-cfg-txt">'+esc(q.pergunta||'')
+            +'<span style="display:block;margin-top:4px;font-size:13.5px;font-weight:600;color:var(--muted)">'+esc(rot)
+            +' · certa: '+esc(((q.alternativas||[])[Number(q.certa)])||'-')+'</span></span>'
+            +'<span style="display:flex;gap:6px;flex-wrap:wrap">'
+            +'<button type="button" class="proto-cfg-bt" onclick="protoEditarPergunta(\''+a+'\',\''+e+'\','+i+')">Reescrever</button>'
+            +'<button type="button" class="proto-cfg-bt" style="border-color:var(--crm-critico);color:var(--crm-critico)" onclick="protoTirarPergunta(\''+a+'\',\''+e+'\','+i+')">Tirar</button>'
+            +'</span></div>';
+        }).join('')
+        :'<div class="hint">Nenhuma pergunta escrita. Sem pergunta, a trilha termina no &ldquo;Confira: os passos&rdquo; e mais nada.</div>')
+      +'<button type="button" class="btn btn-gold" style="margin-top:9px;padding:8px 15px;font-size:14px" onclick="protoEditarPergunta(\''+a+'\',\''+e+'\',-1)">Acrescentar pergunta</button>'
+      +'</div>';
+  }
   const PROTO_DICA='Um passo por linha, nas suas palavras — o app mostra exatamente o que você escrever. Sem palavra difícil: uma criança de 12 anos tem de conseguir executar só com o que está escrito.';
-  function protoGravar(a,e,lista,oque){
+  const PROTO_DICA_PORQUE='Por que este passo existe, nas suas palavras — no máximo duas frases curtas. Quem está em treinamento lê isto atrás de um botão, quando quer entender. Deixe em branco e o app diz, com todas as letras, que a Gestão ainda não escreveu o porquê.';
+  // Uma gravação só, para passos e porquês: quem muda a lista muda os dois juntos. Separar
+  // seria deixar o porquê do passo 3 grudado no passo 4 no dia em que alguém reordena.
+  function protoGravarCampos(a,e,campos,oque){
     if(!DB){ alert('Sem conexão com o banco agora — o protocolo não foi salvo.'); return; }
     const quem=(typeof quemSou==='function')?quemSou():'-', agora=Date.now();
-    DB.ref('daycare/config/protocolos/'+a+'/'+e).update({passos:lista, atualizadoEm:agora, atualizadoPor:quem})
+    const patch=Object.assign({}, campos, {atualizadoEm:agora, atualizadoPor:quem});
+    DB.ref('daycare/config/protocolos/'+a+'/'+e).update(patch)
       .then(function(){ if(typeof audit==='function') audit('protocolo', protoNomeAtiv(a)+' · '+protoNomeEtapa(a,e)+': '+oque); })
       .catch(function(err){
-        _logFalhaGrav('daycare/config/protocolos/'+a+'/'+e+' (protoGravar)', err);
+        _logFalhaGrav('daycare/config/protocolos/'+a+'/'+e+' (protoGravarCampos)', err);
         alert('Não consegui salvar o protocolo agora. A mudança NÃO foi gravada — tente de novo.');
       });
     PROTOCOLOS[a]=PROTOCOLOS[a]||{};
-    PROTOCOLOS[a][e]=Object.assign({}, PROTOCOLOS[a][e]||{}, {passos:lista, atualizadoEm:agora, atualizadoPor:quem});
+    PROTOCOLOS[a][e]=Object.assign({}, PROTOCOLOS[a][e]||{}, patch);
     protoRender();
+  }
+  function protoGravar(a,e,lista,oque,porques){
+    const campos=(porques===undefined)?{passos:lista}:{passos:lista, porques:porques};
+    protoGravarCampos(a,e,campos,oque);
   }
   async function protoNovo(a,e){
     const lista=protoPassos(a,e).slice();
@@ -26991,8 +27459,28 @@
        erro:'Escreva o passo — pelo menos 3 letras.'});
     if(novo==null) return;
     const t=String(novo).trim(); if(!t) return;
-    lista.push(t);
-    protoGravar(a,e,lista,'acrescentou o passo '+lista.length+' — "'+t+'"');
+    const pq=protoPorquesAlinhados(a,e,lista.length);
+    lista.push(t); pq.push('');
+    protoGravar(a,e,lista,'acrescentou o passo '+lista.length+' — "'+t+'"',pq);
+  }
+  // Os porquês com o MESMO tamanho da lista de passos: o índice é o vínculo entre os dois.
+  function protoPorquesAlinhados(a,e,tamanho){
+    const pq=protoPorques(a,e).slice();
+    while(pq.length<tamanho) pq.push('');
+    pq.length=tamanho;
+    return pq;
+  }
+  async function protoEditarPorque(a,e,i){
+    const passo=protoPassos(a,e)[i]||('passo '+(i+1)), atual=protoPorque(a,e,i);
+    const novo=await zTexto('Por que isto importa? — passo '+(i+1),
+      ['"'+passo+'"', PROTO_DICA_PORQUE],
+      {valor:atual, rotulo:'O porquê deste passo', grande:3, minimo:0, botao:'Salvar o porquê', cor:'#234D67'});
+    if(novo==null) return;
+    const t=String(novo).trim(); if(t===atual) return;
+    const pq=protoPorquesAlinhados(a,e,protoPassos(a,e).length);
+    pq[i]=t;
+    protoGravarCampos(a,e,{porques:pq},
+      (t?('escreveu o porquê do passo '+(i+1)+' — "'+t+'"'):('apagou o porquê do passo '+(i+1))));
   }
   async function protoEditar(a,e,i){
     const lista=protoPassos(a,e).slice(), atual=lista[i]||'';
@@ -27010,14 +27498,96 @@
       ['"'+t+'"', 'Quem executa deixa de ver este passo a partir de agora. Fica registrado na auditoria quem tirou.'],
       {sim:'Tirar o passo', nao:'Manter como está'});
     if(!ok) return;
-    lista.splice(i,1);
-    protoGravar(a,e,lista,'tirou o passo — "'+t+'"');
+    const pq=protoPorquesAlinhados(a,e,lista.length);
+    lista.splice(i,1); pq.splice(i,1);
+    protoGravar(a,e,lista,'tirou o passo — "'+t+'"',pq);
   }
   function protoMover(a,e,i,d){
     const lista=protoPassos(a,e).slice(), j=i+d;
     if(j<0||j>=lista.length) return;
+    const pq=protoPorquesAlinhados(a,e,lista.length);
     const t=lista[i]; lista[i]=lista[j]; lista[j]=t;
-    protoGravar(a,e,lista,(d<0?'subiu':'desceu')+' o passo "'+t+'" para a posição '+(j+1));
+    const q=pq[i]; pq[i]=pq[j]; pq[j]=q;
+    protoGravar(a,e,lista,(d<0?'subiu':'desceu')+' o passo "'+t+'" para a posição '+(j+1),pq);
+  }
+  // ===== A PERGUNTA DA SEMANA, editável pela Gestão ==================================
+  // Um campo por vez, em cartazes da própria página (a janela nativa some no tablet). Quem
+  // escreve é a Gestão; a inteligência do app é só escolher A HORA de mostrar.
+  async function protoEditarPergunta(a,e,i){
+    const lista=protoPerguntas(a,e).slice(), q=(i>=0?lista[i]:null)||{};
+    const passos=protoPassos(a,e);
+    const texto=await zTexto((i<0?'Acrescentar uma pergunta da semana':'Reescrever a pergunta '+(i+1)),
+      [protoNomeAtiv(a)+' · '+protoNomeEtapa(a,e), 'A pergunta só aparece para quem está em treinamento e marcou "não deu para fazer" no mesmo passo duas vezes na semana. Errar não tira ponto.'],
+      {valor:q.pergunta||'', rotulo:'A pergunta', grande:3, minimo:5, botao:'Continuar', cor:'#234D67',
+       erro:'Escreva a pergunta — pelo menos 5 letras.'});
+    if(texto==null) return;
+    const alts=await zTexto('As alternativas', ['Uma alternativa por linha. Escreva pelo menos duas.'],
+      {valor:(q.alternativas||[]).join('\n'), rotulo:'Alternativas (uma por linha)', grande:5, minimo:5,
+       botao:'Continuar', cor:'#234D67', erro:'Escreva as alternativas — uma por linha.'});
+    if(alts==null) return;
+    const opcoes=String(alts).split('\n').map(function(t){ return t.trim(); }).filter(Boolean);
+    if(opcoes.length<2){ alert('Escreva pelo menos duas alternativas, uma por linha.'); return; }
+    const certa=await zTexto('Qual é a certa?', opcoes.map(function(t,j){ return (j+1)+'. '+t; }),
+      {valor:String((Number(q.certa)||0)+1), rotulo:'Número da alternativa certa', minimo:1, botao:'Continuar',
+       cor:'#234D67', erro:'Escreva o número da alternativa certa.'});
+    if(certa==null) return;
+    const ic=Number(String(certa).replace(/\D/g,''))-1;
+    if(!(ic>=0&&ic<opcoes.length)){ alert('O número da alternativa certa precisa estar entre 1 e '+opcoes.length+'.'); return; }
+    const expl=await zTexto('A explicação', ['O que a pessoa lê depois de responder — certo ou errado. Errar não tira ponto.'],
+      {valor:q.explicacao||'', rotulo:'Explicação', grande:4, minimo:0, botao:'Continuar', cor:'#234D67'});
+    if(expl==null) return;
+    const pp=await zTexto('De qual passo é esta pergunta?',
+      passos.map(function(t,j){ return (j+1)+'. '+t; }),
+      {valor:String((Number(q.passo)||0)+1), rotulo:'Número do passo', minimo:1, botao:'Salvar a pergunta',
+       cor:'#234D67', erro:'Escreva o número do passo.'});
+    if(pp==null) return;
+    const ip=Number(String(pp).replace(/\D/g,''))-1;
+    if(!(ip>=0&&ip<passos.length)){ alert('O número do passo precisa estar entre 1 e '+passos.length+'.'); return; }
+    const nova={passo:ip, pergunta:String(texto).trim(), alternativas:opcoes, certa:ic, explicacao:String(expl).trim()};
+    if(i<0) lista.push(nova); else lista[i]=nova;
+    protoGravarCampos(a,e,{perguntas:lista},
+      (i<0?'acrescentou a pergunta da semana — "':'reescreveu a pergunta '+(i+1)+' — "')+nova.pergunta+'"');
+  }
+  async function protoTirarPergunta(a,e,i){
+    const lista=protoPerguntas(a,e).slice(), q=lista[i]||{};
+    const ok=await zPergunta('Tirar esta pergunta da semana?',
+      ['"'+(q.pergunta||'')+'"', 'Quem está em treinamento deixa de vê-la. Fica registrado na auditoria quem tirou.'],
+      {sim:'Tirar a pergunta', nao:'Manter como está'});
+    if(!ok) return;
+    lista.splice(i,1);
+    protoGravarCampos(a,e,{perguntas:lista},'tirou a pergunta da semana — "'+(q.pergunta||'')+'"');
+  }
+  // ===== QUEM ESTÁ EM TREINAMENTO — o interruptor da Gestão ==========================
+  // A tela Time não foi tocada (ordem da Adriana: "Time continua Time, não mexe em nada").
+  // O interruptor mora aqui, ao lado dos passos que a pessoa vai ler.
+  function protoTreinoHTML(){
+    const gente=(MONITORES||[]).filter(function(m){ return m&&String(m.nome||'').trim(); });
+    if(!gente.length) return '<div class="hint">Nenhum colaborador cadastrado ainda — o cadastro é <strong>Operação &rsaquo; Time</strong>.</div>';
+    return gente.map(function(m){
+      const on=emTreinamento(m.id), r=TREINAMENTO[String(m.id)]||{};
+      return '<div class="ckt-cfg-linha">'
+        +'<span class="ckt-cfg-nome">'+esc(m.nome)
+        +'<span>'+(on?('em treinamento — marcada por '+esc(r.por||'-')+(r.em?(', '+esc(protoData(r.em))):'')):'com prática — vê a lista de marcar')+'</span></span>'
+        +'<button type="button" class="ckt-cfg-bt'+(on?' on':'')+'" onclick="protoTreinoVirar(\''+esc(m.id)+'\')">'
+        +(on?'Em treinamento':'Com prática')+'</button></div>';
+    }).join('');
+  }
+  function protoTreinoVirar(id){
+    const m=(MONITORES||[]).find(function(x){ return x&&String(x.id)===String(id); });
+    const nome=(m&&m.nome)||id, ligar=!emTreinamento(id);
+    if(!DB){ alert('Sem conexão com o banco agora — a marca NÃO foi salva.'); return; }
+    const quem=(typeof quemSou==='function')?quemSou():'-';
+    const reg=ligar?{ativo:true, por:quem, em:Date.now()}:null;
+    TREINAMENTO=Object.assign({},TREINAMENTO);
+    if(ligar) TREINAMENTO[String(id)]=reg; else delete TREINAMENTO[String(id)];
+    DB.ref('daycare/config/treinamento/'+id).set(reg)
+      .then(function(){ if(typeof audit==='function') audit('treinamento',
+        (ligar?'marcou ':'tirou ')+esc(nome)+(ligar?' como em treinamento (vê a trilha passo a passo)':' do treinamento (volta para a lista de marcar)')); })
+      .catch(function(e){
+        _logFalhaGrav('daycare/config/treinamento/'+id+' (protoTreinoVirar)', e);
+        alert('Não consegui salvar a marca agora. A mudança NÃO foi gravada — tente de novo.');
+      });
+    protoRender();
   }
   // hh:mm dentro da janela? retorna 'ok' | 'fora' | 'sem' (sem hora registrada)
   function noPrazo(hhmm, faixa){ if(!hhmmValido(hhmm)) return 'sem'; if(!faixa) return 'ok'; return (hhmm>=faixa.ini && hhmm<=faixa.fim)?'ok':'fora'; }
@@ -32063,17 +32633,20 @@
   // cards chamam esta função e desenham o mesmo resultado de jeitos diferentes.
   // Devolve uma promessa de {eu, mes, bolsas, total, perfeitas, maximo, perdidos, todos}
   // — ou null quando não há de quem contar (sem banco, sem nome, sem bolsa no mês).
+  // A régua única de "isto é uma bolsa do check-out?". Escrita UMA vez: os dois leitores do
+  // placar (o quadro da Gestão e o "Meus pontos" do monitor) perguntam aqui.
+  function pontoEhBolsa(r){ const o=(r&&r.origem)||''; return o!=='seu-dia' && o!=='protocolo-inicio'; }
   function coPontosDoMesDe(nome){
     var eu=String(nome||'').trim();
     if(!DB||!eu) return Promise.resolve(null);
     return DB.ref('daycare/pontos-checkout/'+coMesAtual()).once('value').then(function(s){
       var v=s.val()||{}; CO_PT_MES=v;
       var meus=Object.keys(v).map(function(k){ return v[k]; })
-        // O placar dos Zelosos agora guarda também o ponto do "Seu dia" (origem:'seu-dia',
-        // Painel das Consultoras, v-07). Ele NÃO é bolsa: aqui a conta é de bolsas (10
-        // pontos cada, perfeitas===10) — sem este filtro, um +5 de bem-estar viraria
-        // "1 bolsa com falta" no card de quem respondeu.
-        .filter(function(r){ return r && (r.origem||'')!=='seu-dia' && jsNorm(r.quem||'')===jsNorm(eu); })
+        // O placar dos Zelosos guarda também o ponto do "Seu dia" (origem:'seu-dia', v-07) e
+        // o do Início do protocolo (origem:'protocolo-inicio', v-14). Nenhum dos dois é
+        // bolsa: aqui a conta é de bolsas (10 pontos cada, perfeitas===10) — sem este filtro
+        // um +5 de bem-estar viraria "1 bolsa com falta" no card de quem respondeu.
+        .filter(function(r){ return r && pontoEhBolsa(r) && jsNorm(r.quem||'')===jsNorm(eu); })
         .sort(function(a,b){ return (a.ts||0)-(b.ts||0); });   // do mais velho para o mais novo
       if(!meus.length) return null;
       return {
