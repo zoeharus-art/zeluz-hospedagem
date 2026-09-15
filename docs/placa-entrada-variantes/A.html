@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Placa de entrada · Variante A · Semáforo</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Poppins:wght@600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --z-gold:#DEB428; --z-blue:#234D67; --z-blue-deep:#1A3A4F;
+    --z-cream:#FFFDF6; --z-white:#FFFFFF;
+    --z-alerta:#B3261E; --z-alerta-fundo:#8C1D17;
+    --crm-critico:#C0392B; --crm-atencao:#F1C40F; --crm-ok:#27AE60;
+    --line:#e7e0d2; --muted:#7c8a93;
+    --font-ui:'Inter',sans-serif;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:var(--font-ui);color:var(--z-blue-deep);-webkit-font-smoothing:antialiased}
+
+  /* ===== CAIXA DE ENTRADA (reprodução fiel do login do app) ===== */
+  .login-screen{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;
+    background:radial-gradient(120% 80% at 50% 0%,rgba(222,180,40,.12),transparent 55%),linear-gradient(165deg,#2A597A,#1A3A4F);
+    padding:24px;overflow-y:auto}
+  .login-box{background:var(--z-cream);border-radius:22px;padding:34px 30px;width:100%;max-width:360px;
+    text-align:center;box-shadow:0 24px 70px rgba(0,0,0,.35);overflow:hidden}
+  .marca{font-family:var(--font-ui);font-weight:800;font-size:30px;letter-spacing:.14em;
+    color:var(--z-gold);line-height:1;margin-bottom:12px}
+  .login-sub{font-size:11px;letter-spacing:1.4px;color:var(--muted);font-weight:600;margin-bottom:20px}
+  .login-title{font-size:16px;font-weight:700;color:var(--z-blue);margin-bottom:16px}
+  #pwd{width:100%;text-align:center;font-size:26px;letter-spacing:8px;font-family:var(--font-ui);font-weight:700;
+    color:var(--z-blue);background:var(--z-white);border:2px solid var(--line);border-radius:14px;padding:14px;outline:none}
+  .login-btn{width:100%;margin-top:14px;background:var(--z-blue);color:var(--z-cream);border:none;border-radius:14px;
+    padding:14px;font-family:var(--font-ui);font-weight:700;font-size:15px;cursor:pointer}
+
+  /* ===== VARIANTE A — SEMÁFORO =====================================================
+     A faixa vermelha atravessa o cartão de canto a canto: não é um selo posto sobre a
+     tela, é a tela que para. Em cima, três luzes de semáforo na horizontal — a vermelha
+     acesa, as outras duas apagadas. Sem ícone nenhum: a forma já diz PARE.
+     A terceira linha desce para uma faixa interna mais escura porque é a regra dura;
+     a quarta volta ao vermelho, menor, porque é o porquê, não o grito. */
+  .placa{margin:0 -30px 22px;background:var(--z-alerta);user-select:none;pointer-events:none;
+    box-shadow:0 10px 26px rgba(179,38,30,.26)}
+  .placa-semaforo{background:var(--z-blue-deep);display:flex;align-items:center;justify-content:center;
+    gap:11px;padding:9px 0}
+  .luz{width:11px;height:11px;border-radius:50%}
+  .luz-pare{background:var(--crm-critico);box-shadow:0 0 0 3px rgba(192,57,43,.28)}
+  .luz-atencao{background:var(--crm-atencao);opacity:.26}
+  .luz-siga{background:var(--crm-ok);opacity:.26}
+  .placa-corpo{padding:20px 22px 0;text-align:center}
+  .placa-t{font-weight:800;font-size:25px;line-height:1.14;letter-spacing:-.01em;color:var(--z-cream)}
+  .placa-l{font-weight:600;font-size:14px;line-height:1.38;color:var(--z-cream);margin-top:11px}
+  .placa-regra{background:var(--z-alerta-fundo);margin-top:18px;padding:14px 16px;text-align:center}
+  .placa-regra p{font-weight:800;font-size:14.5px;line-height:1.35;color:var(--z-cream)}
+  /* "É VIOLAÇÃO," e "e é INACEITÁVEL." nunca se partem no meio da expressão:
+     a palavra que dói tem de chegar ao olho junto com o verbo que a introduz. */
+  .junto{white-space:nowrap}
+  .placa-nota{padding:14px 22px 18px;text-align:center;font-weight:500;font-size:12px;
+    line-height:1.4;color:var(--z-cream);opacity:.93}
+
+  @media (max-width:400px){
+    .placa{margin-left:-24px;margin-right:-24px}
+    .login-box{padding:30px 24px}
+    .placa-t{font-size:23px}
+    .placa-l{font-size:13.5px}
+    .placa-regra p{font-size:14px}
+    .placa-nota{font-size:11.5px}
+  }
+</style>
+</head>
+<body>
+<div class="login-screen">
+  <div class="login-box">
+    <div class="marca">ZÊLUZ</div>
+    <div class="login-sub">AUAULÂNDIA · DAY CARE</div>
+
+    <div class="placa" role="note">
+      <div class="placa-semaforo">
+        <span class="luz luz-pare"></span>
+        <span class="luz luz-atencao"></span>
+        <span class="luz luz-siga"></span>
+      </div>
+      <div class="placa-corpo">
+        <div class="placa-t">Você CUIDA de Vidas!</div>
+        <div class="placa-l">Você é o Guardião dele!</div>
+        <div class="placa-l">Cada passo do protocolo protege e gera bem-estar.</div>
+      </div>
+      <div class="placa-regra">
+        <p>Pular um passo não é atalho. <span class="junto">É VIOLAÇÃO,</span> <span class="junto">e é INACEITÁVEL.</span></p>
+      </div>
+      <div class="placa-nota">Seguir os protocolos e ter atenção a cada detalhe é o que faz todos, FILHOts e Zelosos, voltarem para casa melhores do que chegaram.</div>
+    </div>
+
+    <div class="login-title">Entrar com sua senha</div>
+    <input id="pwd" type="password" value="1234" readonly>
+    <button class="login-btn" type="button">Entrar</button>
+  </div>
+</div>
+</body>
+</html>

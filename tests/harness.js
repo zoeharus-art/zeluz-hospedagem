@@ -11544,7 +11544,7 @@ async function main() {
         !/\.catch\(function\([a-z]*\)\{\s*\}\)/.test(
           html.slice(html.indexOf('const CK_FRASE_PRATICA='), html.indexOf('function renderCkInicio('))));
       check('v-14 · a versão carimbada é a desta entrega',
-        /const APP_VERSAO='2026-09-15-04';/.test(html));
+        /const APP_VERSAO='2026-09-15-05';/.test(html));
     }
 
     // ---- v-15: O PLANO SÓ GRAVA NO CONFIRMAR (caso Cookie/Yara, 15/set/2026) --------
@@ -12054,51 +12054,86 @@ async function main() {
       && /DB\.ref\('daycare\/config\/prevencao'\)\.set\(\{coleiras:coleiras, avisoApos:apos, avisoColeiraDias:dias\}\)/.test(html));
 
     // ─────────────────────────────── 4 · a placa da entrada
+    // Reescrito em 15/set/2026 (v-18): a CEO escolheu, entre as três variantes desenhadas
+    // (docs/placa-entrada-variantes), o desenho B — "placa de obra". Saíram daqui os checks
+    // da placa antiga: o octógono em clip-path (três camadas de --pl-corte), o anel branco
+    // por dentro do vermelho e o negrito de "inaceitável/erro/violação". Entraram os do B:
+    // fita listrada em volta, etiqueta creme para palavra em CAIXA ALTA e o texto novo.
     const iBox = html.indexOf('<div class="login-box">');
     const iPwd = html.indexOf('<input id="loginPwd"');
     const iPlaca = html.indexOf('<div class="entrada-placa" id="entradaPlaca"');
-    check('v-16 · a placa fica na tela de entrada, ACIMA do campo de senha — todo mundo vê, antes de qualquer papel',
+    check('v-18 · a placa fica na tela de entrada, ACIMA do campo de senha — todo mundo vê, antes de qualquer papel',
       iBox > 0 && iPlaca > iBox && iPwd > iPlaca, JSON.stringify({ iBox, iPlaca, iPwd }));
     // O texto é ditado pela Adriana, palavra por palavra — inclusive as maiúsculas de
-    // CUIDA, Vidas, VIDAS, TODOS. Mexer numa letra aqui é mexer na régua da casa.
-    check('v-16 · a placa traz as cinco linhas ditadas, ao pé da letra',
+    // CUIDA, Vidas, VIOLAÇÃO, INACEITÁVEL. Mexer numa letra aqui é mexer na régua da casa.
+    check('v-18 · a placa traz as cinco linhas novas ditadas, ao pé da letra',
       html.indexOf('<div class="entrada-placa-t" id="entradaPlacaT">Você CUIDA de Vidas!</div>') > 0
-      && html.indexOf('<div class="entrada-placa-l" id="entradaPlacaL0">Um FILHOt é como um bebê humano.</div>') > 0
-      && html.indexOf('<div class="entrada-placa-l" id="entradaPlacaL1">Os protocolos existem para proteger VIDAS!</div>') > 0
-      && html.indexOf('<div class="entrada-placa-l" id="entradaPlacaL2">Violar os protocolos é <strong>inaceitável</strong>!</div>') > 0
-      && html.indexOf('<div class="entrada-placa-l entrada-placa-nota" id="entradaPlacaL3">Eles existem para que TODOS, FILHOts e Zelosos, voltem para casa melhores do que chegaram.</div>') > 0);
-    check('v-16 · "inaceitável" (e o par erro/violação) sai em negrito mesmo quando a Gestão reescreve a frase',
+      && html.indexOf('<div class="entrada-placa-l" id="entradaPlacaL0">Você é o Guardião deles!</div>') > 0
+      && html.indexOf('<div class="entrada-placa-l" id="entradaPlacaL1">Cada passo do protocolo protege e gera bem-estar.</div>') > 0
+      && html.indexOf('<div class="entrada-placa-regra" id="entradaPlacaL2">Pular um passo não é atalho. <span class="entrada-placa-junto">É <span class="entrada-placa-etiqueta">VIOLAÇÃO</span>,</span> <span class="entrada-placa-junto">e é <span class="entrada-placa-etiqueta">INACEITÁVEL</span>.</span></div>') > 0
+      && html.indexOf('<div class="entrada-placa-nota" id="entradaPlacaL3">Seguir os protocolos e ter atenção a cada detalhe é o que faz todos, FILHOts e Zelosos, voltarem para casa melhores do que chegaram.</div>') > 0);
+    // O padrão do código e o HTML que já nasce escrito contam a MESMA história: o que a
+    // função gera para a linha 3 tem de ser, caractere por caractere, o que está no HTML.
+    check('v-18 · o texto padrão do código é o texto novo, e o HTML estático nasce igual ao que a função gera',
+      /titulo:'Você CUIDA de Vidas!',\n\s*linhas:\['Você é o Guardião deles!',/.test(html)
+      && html.indexOf("'Pular um passo não é atalho. É VIOLAÇÃO, e é INACEITÁVEL.',") > 0
+      && html.indexOf("'Seguir os protocolos e ter atenção a cada detalhe é o que faz todos, FILHOts e Zelosos, voltarem para casa melhores do que chegaram.'") > 0
+      && typeof ctx.entradaLinhaHTML === 'function'
+      && html.indexOf('<div class="entrada-placa-regra" id="entradaPlacaL2">'
+           + ctx.entradaLinhaHTML('Pular um passo não é atalho. É VIOLAÇÃO, e é INACEITÁVEL.') + '</div>') > 0,
       typeof ctx.entradaLinhaHTML === 'function'
-      && ctx.entradaLinhaHTML('Violar os protocolos é inaceitável!')
-         === 'Violar os protocolos é <strong>inaceitável</strong>!'
-      && ctx.entradaLinhaHTML('Seguiu o protocolo e deu errado? Erro. Revisamos juntos.')
-         .indexOf('<strong>Erro</strong>') > 0
-      && ctx.entradaLinhaHTML('Não seguiu o protocolo? Violação.').indexOf('<strong>Violação</strong>') > 0
-      // "errado" não vira "erro" em negrito: a palavra tem de estar inteira
+        ? ctx.entradaLinhaHTML('Pular um passo não é atalho. É VIOLAÇÃO, e é INACEITÁVEL.') : 'função não existe');
+    // A etiqueta é GENÉRICA: o texto é editável pela Gestão em Configurações, então a regra
+    // não pode ter lista de palavras. Palavra inteira em caixa alta, 4 letras ou mais.
+    check('v-18 · palavra inteira em CAIXA ALTA com 4+ letras vira etiqueta creme, e o trecho que a apresenta não quebra no meio',
+      typeof ctx.entradaLinhaHTML === 'function'
+      && ctx.entradaLinhaHTML('Pular um passo não é atalho. É VIOLAÇÃO, e é INACEITÁVEL.')
+         === 'Pular um passo não é atalho. <span class="entrada-placa-junto">É <span class="entrada-placa-etiqueta">VIOLAÇÃO</span>,</span> <span class="entrada-placa-junto">e é <span class="entrada-placa-etiqueta">INACEITÁVEL</span>.</span>'
+      // regra genérica: uma palavra que a Gestão escrever amanhã também vira etiqueta
+      && ctx.entradaLinhaHTML('Isso é DESCUIDO.')
+         === 'Isso <span class="entrada-placa-junto">é <span class="entrada-placa-etiqueta">DESCUIDO</span>.</span>'
+      && ctx.entradaLinhaHTML('Aqui não se ATRASA hoje.').indexOf('<span class="entrada-placa-etiqueta">ATRASA</span>') > 0
+      // "FILHOts" NÃO vira etiqueta: tem minúsculas coladas, não é palavra inteira em caixa alta
+      && ctx.entradaLinhaHTML('todos, FILHOts e Zelosos,').indexOf('entrada-placa-etiqueta') < 0
+      // três letras não bastam: "VIP" continua texto comum
+      && ctx.entradaLinhaHTML('O dia do VIP.').indexOf('entrada-placa-etiqueta') < 0
       && ctx.entradaLinhaHTML('Deu errado.') === 'Deu errado.',
       typeof ctx.entradaLinhaHTML === 'function'
-        ? ctx.entradaLinhaHTML('Violar os protocolos é inaceitável!') : 'função não existe');
-    check('v-16 · o texto é da casa, não do código: mora em daycare/config/mensagem-entrada, com o padrão no app',
+        ? ctx.entradaLinhaHTML('Pular um passo não é atalho. É VIOLAÇÃO, e é INACEITÁVEL.') : 'função não existe');
+    check('v-18 · o texto é da casa, não do código: mora em daycare/config/mensagem-entrada, com o padrão no app',
       /DB\.ref\('daycare\/config\/mensagem-entrada'\)\.once\('value'\)/.test(html)
       && /const ENTRADA_MSG_PADRAO=\{\s*\n\s*titulo:'Você CUIDA de Vidas!',/.test(html)
       && /try\{ entradaMsgCarregar\(\); \}catch\(e\)\{\}/.test(html));
-    // O anel branco vai POR DENTRO do vermelho, como na placa de pare de verdade: branco
-    // por fora sumia contra o creme da caixa de entrada (visto na captura de 390px).
-    check('v-16 · a placa é placa: vermelho de sinalização, texto creme, anel branco por dentro e cantos de octógono',
-      /\.entrada-placa\{--pl-corte:20px;background:#B3261E/.test(html)
-      && /\.entrada-placa-anel\{--pl-corte:15px;background:#FFFFFF/.test(html)
-      && /\.entrada-placa-in\{--pl-corte:12px;background:#B3261E;color:var\(--z-cream\)/.test(html)
-      && (html.match(/clip-path:polygon\(var\(--pl-corte\) 0/g) || []).length === 3);
-    check('v-16 · a placa não bloqueia nada e não é clicável (sem onclick, sem botão dentro)',
+    // O desenho B: retângulo vermelho com a FITA LISTRADA vermelho/creme em volta — a
+    // mesma fita de área interditada —, título e linhas em creme, e um filete creme
+    // translúcido separando a última linha (o porquê) do resto.
+    check('v-18 · desenho B: fita listrada vermelho/creme em volta, miolo vermelho, texto creme e filete antes da última linha',
+      /\.entrada-placa\{margin:0 0 22px;padding:5px;user-select:none;pointer-events:none;/.test(html)
+      && /background:repeating-linear-gradient\(45deg,#B3261E 0 9px,var\(--z-cream\) 9px 18px\)/.test(html)
+      && /\.entrada-placa-in\{background:#B3261E;border-radius:3px;padding:20px 18px 18px;text-align:center\}/.test(html)
+      && /\.entrada-placa-t\{[^}]*color:var\(--z-cream\)\}/.test(html)
+      && /\.entrada-placa-etiqueta\{background:var\(--z-cream\);color:#B3261E;font-weight:800;/.test(html)
+      && /\.entrada-placa-junto\{white-space:nowrap\}/.test(html)
+      && /\.entrada-placa-nota\{margin-top:15px;padding-top:13px;border-top:1px solid rgba\(255,253,246,\.28\)/.test(html));
+    // O octógono foi embora de vez: nenhum clip-path, nenhum --pl-corte, nenhum anel branco.
+    check('v-18 · o octógono saiu: sem clip-path, sem --pl-corte e sem o anel branco da placa antiga',
+      html.indexOf('--pl-corte') < 0
+      && html.indexOf('entrada-placa-anel') < 0
+      && (html.match(/clip-path:polygon/g) || []).length === 0
+      && html.indexOf('.entrada-placa-l strong') < 0,
+      JSON.stringify({ corte: html.indexOf('--pl-corte'), anel: html.indexOf('entrada-placa-anel'),
+        clip: (html.match(/clip-path:polygon/g) || []).length }));
+    check('v-18 · a placa não bloqueia nada e não é clicável (pointer-events:none, sem onclick, sem botão dentro)',
       (() => {
         const i = html.indexOf('<div class="entrada-placa" id="entradaPlaca"');
         const f = html.indexOf('<div class="login-title">', i);
         const t = html.slice(i, f);
-        return i > 0 && f > i && t.indexOf('onclick') < 0 && t.indexOf('<button') < 0 && t.indexOf('<a ') < 0;
+        return i > 0 && f > i && t.indexOf('onclick') < 0 && t.indexOf('<button') < 0 && t.indexOf('<a ') < 0
+          && /\.entrada-placa\{[^}]*pointer-events:none/.test(html);
       })());
-    check('v-16 · a placa cabe no celular: o título encolhe em 400px e nada nela usa emoji',
-      /@media \(max-width:400px\)\{\s*\n\s*\.entrada-placa-in\{padding:18px 11px 16px\}\s*\n\s*\.entrada-placa-t\{font-size:21px\}/.test(html));
-    check('v-16 · Configurações › Mensagem de entrada edita título, as 4 linhas e o liga/desliga, com rastro',
+    check('v-18 · a placa cabe no celular: título, regra e nota encolhem em 400px e nada nela usa emoji',
+      /@media \(max-width:400px\)\{\s*\n\s*\.entrada-placa-in\{padding:18px 14px 16px\}\s*\n\s*\.entrada-placa-t\{font-size:22px\}\s*\n\s*\.entrada-placa-l\{font-size:13px\}\s*\n\s*\.entrada-placa-regra\{font-size:13\.5px\}\s*\n\s*\.entrada-placa-nota\{font-size:11\.5px\}/.test(html));
+    check('v-18 · Configurações › Mensagem de entrada edita título, as 4 linhas e o liga/desliga, com rastro',
       html.indexOf('<h2 style="font-size:19px">Mensagem de entrada</h2>') > 0
       && /function cfgEntradaSalvar\(\)\{/.test(html)
       && /audit\('config-mensagem-entrada'/.test(html)
@@ -12324,8 +12359,8 @@ async function main() {
           + 'AVISO_COLEIRA_APOS = __bkpC.apos;', ctx);
       }
     } else { check('v-17 · prevCfgCarregar existe', false, 'função não encontrada'); }
-    check('v-17 · a versão carimbada desta entrega é a 2026-09-15-04',
-      /const APP_VERSAO='2026-09-15-04';/.test(html));
+    check('v-17 · a versão carimbada desta entrega é a 2026-09-15-05 (a placa B entrou na mesma versão)',
+      /const APP_VERSAO='2026-09-15-05';/.test(html));
   }
   console.log('');
 

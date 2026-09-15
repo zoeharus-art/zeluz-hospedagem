@@ -53,31 +53,42 @@
     padding:14px;font-family:var(--font-ui);font-weight:700;font-size:15px;cursor:pointer}
   .login-btn:hover{background:#1b3d52}
   .login-err{min-height:20px;margin-top:10px;font-size:13px;font-weight:600;color:var(--crm-critico)}
-  /* ===== A PLACA DA ENTRADA (Adriana, 15/set/2026) ==================================
+  /* ===== A PLACA DA ENTRADA — desenho B, "placa de obra" (Adriana, 15/set/2026) =======
      "Algo inspirador, mas que eles entendam a importância de seguir protocolos... ela tem
      que ser um alerta, como um semáforo, como uma placa de pare."
-     Então é uma PLACA: vermelho de sinalização, creme por cima, moldura branca grossa e os
-     cantos cortados em octógono. O corte é em PIXELS (20/16), não na proporção do octógono
-     equilátero da placa de pare: o equilátero comeria as pontas do texto num celular de
+     De três variantes desenhadas (docs/placa-entrada-variantes) a CEO escolheu a B: um
+     RETÂNGULO de sinalização com a FITA LISTRADA vermelho/creme correndo em volta — a
+     mesma fita de área interditada. Fina, para sinalizar sem virar enfeite.
+     O octógono saiu de cena: o corte em clip-path comia as pontas do texto num celular de
      390px, e a placa existe para ser LIDA. Ela não bloqueia nada e não é clicável. */
-  .entrada-placa{--pl-corte:20px;background:#B3261E;margin:0 0 20px;padding:7px;
-    clip-path:polygon(var(--pl-corte) 0,calc(100% - var(--pl-corte)) 0,100% var(--pl-corte),100% calc(100% - var(--pl-corte)),calc(100% - var(--pl-corte)) 100%,var(--pl-corte) 100%,0 calc(100% - var(--pl-corte)),0 var(--pl-corte));box-shadow:0 10px 26px rgba(179,38,30,.30);user-select:none}
-  /* O anel branco fica DENTRO do vermelho, como na placa de pare de verdade — branco por
-     fora sumiria contra o creme da caixa de entrada. */
-  .entrada-placa-anel{--pl-corte:15px;background:#FFFFFF;padding:4px;clip-path:polygon(var(--pl-corte) 0,calc(100% - var(--pl-corte)) 0,100% var(--pl-corte),100% calc(100% - var(--pl-corte)),calc(100% - var(--pl-corte)) 100%,var(--pl-corte) 100%,0 calc(100% - var(--pl-corte)),0 var(--pl-corte))}
-  .entrada-placa-in{--pl-corte:12px;background:#B3261E;color:var(--z-cream);
-    padding:20px 14px 18px;text-align:center;clip-path:polygon(var(--pl-corte) 0,calc(100% - var(--pl-corte)) 0,100% var(--pl-corte),100% calc(100% - var(--pl-corte)),calc(100% - var(--pl-corte)) 100%,var(--pl-corte) 100%,0 calc(100% - var(--pl-corte)),0 var(--pl-corte))}
-  .entrada-placa-t{font-family:var(--font-ui);font-weight:800;font-size:23px;line-height:1.12;
-    letter-spacing:.2px;margin-bottom:11px}
-  .entrada-placa-l{font-family:var(--font-ui);font-weight:600;font-size:13px;line-height:1.35;margin-top:5px}
-  .entrada-placa-l strong{font-weight:800;text-decoration:underline;text-underline-offset:2px}
-  /* A quarta linha é o PORQUÊ, não o grito: vem mais miúda, para não disputar com o
-     título e para nunca estourar a placa num celular de 390px. */
-  .entrada-placa-nota{font-weight:600;font-size:12px;line-height:1.35;margin-top:11px;opacity:.94}
+  .entrada-placa{margin:0 0 22px;padding:5px;user-select:none;pointer-events:none;
+    background:repeating-linear-gradient(45deg,#B3261E 0 9px,var(--z-cream) 9px 18px);
+    border-radius:6px;box-shadow:0 10px 26px rgba(179,38,30,.26)}
+  .entrada-placa-in{background:#B3261E;border-radius:3px;padding:20px 18px 18px;text-align:center}
+  .entrada-placa-t{font-family:var(--font-ui);font-weight:800;font-size:24px;line-height:1.14;
+    letter-spacing:-.01em;color:var(--z-cream)}
+  .entrada-placa-l{font-family:var(--font-ui);font-weight:600;font-size:13.5px;line-height:1.38;
+    color:var(--z-cream);margin-top:10px}
+  /* A linha da regra respira mais (line-height 1.75) porque as etiquetas engordam a linha. */
+  .entrada-placa-regra{font-family:var(--font-ui);margin-top:15px;font-weight:700;font-size:14px;
+    line-height:1.75;color:var(--z-cream)}
+  /* As palavras em CAIXA ALTA saem do vermelho e viram etiqueta: fundo creme, letra
+     vermelha. É o único lugar da placa onde a cor inverte — então é exatamente para lá
+     que o olho vai. Creme sobre vermelho dá 6,4:1 de contraste, acima do AA. */
+  .entrada-placa-etiqueta{background:var(--z-cream);color:#B3261E;font-weight:800;
+    padding:2px 7px;border-radius:3px;white-space:nowrap}
+  /* "É VIOLAÇÃO," e "e é INACEITÁVEL." nunca se partem no meio: a etiqueta precisa chegar
+     ao olho junto com a palavrinha que a apresenta. */
+  .entrada-placa-junto{white-space:nowrap}
+  /* A última linha é o PORQUÊ, não o grito: vem depois de um filete creme translúcido,
+     mais miúda, para não disputar com o título nem estourar a placa num celular de 390px. */
+  .entrada-placa-nota{margin-top:15px;padding-top:13px;border-top:1px solid rgba(255,253,246,.28);
+    font-weight:500;font-size:12px;line-height:1.4;color:var(--z-cream);opacity:.93}
   @media (max-width:400px){
-    .entrada-placa-in{padding:18px 11px 16px}
-    .entrada-placa-t{font-size:21px}
-    .entrada-placa-l{font-size:12.5px}
+    .entrada-placa-in{padding:18px 14px 16px}
+    .entrada-placa-t{font-size:22px}
+    .entrada-placa-l{font-size:13px}
+    .entrada-placa-regra{font-size:13.5px}
     .entrada-placa-nota{font-size:11.5px}
   }
   /* Rodapé da barra — Opção F: quem está usando, e em que papel. O nome vem primeiro,
@@ -2336,13 +2347,13 @@
          exigir programador). O que está escrito aqui é o padrão, palavra por palavra — e é
          o que aparece enquanto a configuração ainda não desceu do banco. -->
     <div class="entrada-placa" id="entradaPlaca" role="note">
-      <div class="entrada-placa-anel"><div class="entrada-placa-in">
+      <div class="entrada-placa-in">
         <div class="entrada-placa-t" id="entradaPlacaT">Você CUIDA de Vidas!</div>
-        <div class="entrada-placa-l" id="entradaPlacaL0">Um FILHOt é como um bebê humano.</div>
-        <div class="entrada-placa-l" id="entradaPlacaL1">Os protocolos existem para proteger VIDAS!</div>
-        <div class="entrada-placa-l" id="entradaPlacaL2">Violar os protocolos é <strong>inaceitável</strong>!</div>
-        <div class="entrada-placa-l entrada-placa-nota" id="entradaPlacaL3">Eles existem para que TODOS, FILHOts e Zelosos, voltem para casa melhores do que chegaram.</div>
-      </div></div>
+        <div class="entrada-placa-l" id="entradaPlacaL0">Você é o Guardião deles!</div>
+        <div class="entrada-placa-l" id="entradaPlacaL1">Cada passo do protocolo protege e gera bem-estar.</div>
+        <div class="entrada-placa-regra" id="entradaPlacaL2">Pular um passo não é atalho. <span class="entrada-placa-junto">É <span class="entrada-placa-etiqueta">VIOLAÇÃO</span>,</span> <span class="entrada-placa-junto">e é <span class="entrada-placa-etiqueta">INACEITÁVEL</span>.</span></div>
+        <div class="entrada-placa-nota" id="entradaPlacaL3">Seguir os protocolos e ter atenção a cada detalhe é o que faz todos, FILHOts e Zelosos, voltarem para casa melhores do que chegaram.</div>
+      </div>
     </div>
     <div class="login-title">Entrar com sua senha</div>
     <input id="loginPwd" type="password" inputmode="numeric" maxlength="6" placeholder="• • • •"
@@ -12859,7 +12870,7 @@
   // inteira DEPOIS de a correção estar publicada — o aviso apareceu, ninguém tocou.
   // Agora o aparelho PARADO recarrega sozinho: trancado, com a aba escondida, na porta de
   // entrada ou 3 minutos sem ninguém tocar nele. Mão na tela = nunca recarrega.
-  const APP_VERSAO='2026-09-15-04';
+  const APP_VERSAO='2026-09-15-05';
   var RECARGA_PARADO_MS=3*60*1000, __versaoPublicada=null, __recargaTimer=null;
   function vigiarVersao(){
     if(!DB) return;
@@ -16766,24 +16777,38 @@
   }
   // ===== A PLACA DA ENTRADA — texto da casa, não do código (Adriana, 15/set/2026) =====
   // "Você CUIDA de Vidas!" e as quatro linhas abaixo dela são a régua da casa, ditada por
-  // ela: o FILHOt é como um bebê humano, o protocolo existe para proteger VIDAS, violar é
-  // inaceitável — e o porquê de tudo é que todos, FILHOts e Zelosos, voltem para casa
-  // melhores do que chegaram. O padrão vive aqui para o app nunca abrir sem a placa; o
-  // texto de verdade vem de daycare/config/mensagem-entrada.
+  // ela: o Zeloso é o Guardião, cada passo do protocolo protege e gera bem-estar, pular um
+  // passo é VIOLAÇÃO e é INACEITÁVEL — e o porquê de tudo é que todos, FILHOts e Zelosos,
+  // voltem para casa melhores do que chegaram. O padrão vive aqui para o app nunca abrir
+  // sem a placa; o texto de verdade vem de daycare/config/mensagem-entrada.
   const ENTRADA_MSG_PADRAO={
     titulo:'Você CUIDA de Vidas!',
-    linhas:['Um FILHOt é como um bebê humano.',
-            'Os protocolos existem para proteger VIDAS!',
-            'Violar os protocolos é inaceitável!',
-            'Eles existem para que TODOS, FILHOts e Zelosos, voltem para casa melhores do que chegaram.'],
+    linhas:['Você é o Guardião deles!',
+            'Cada passo do protocolo protege e gera bem-estar.',
+            'Pular um passo não é atalho. É VIOLAÇÃO, e é INACEITÁVEL.',
+            'Seguir os protocolos e ter atenção a cada detalhe é o que faz todos, FILHOts e Zelosos, voltarem para casa melhores do que chegaram.'],
     ativa:true
   };
   var ENTRADA_MSG={ titulo:ENTRADA_MSG_PADRAO.titulo, linhas:ENTRADA_MSG_PADRAO.linhas.slice(), ativa:true };
-  // As palavras que a placa existe para gritar saem em negrito — mesmo quando a Gestão
-  // reescreve a frase em volta delas. "inaceitável" é a de hoje; "Erro" e "Violação"
-  // continuam na lista porque são o par que a casa usa para separar as duas coisas.
+  // Desenho B: QUALQUER palavra inteira em CAIXA ALTA com 4 letras ou mais vira etiqueta —
+  // fundo creme, letra vermelha, o único lugar da placa onde a cor inverte. A regra é
+  // genérica de propósito: hoje são VIOLAÇÃO e INACEITÁVEL; amanhã a Gestão reescreve a
+  // frase em Configurações e a etiqueta acompanha, sem precisar de programador (a lei de
+  // 22/ago). "FILHOts" NÃO vira etiqueta: tem minúsculas coladas, e a regra exige a palavra
+  // INTEIRA em caixa alta — por isso a conferência de que não há letra nem número grudado
+  // nas duas pontas.
+  // A palavrinha que apresenta a etiqueta vai junto dela num nowrap ("É VIOLAÇÃO," /
+  // "e é INACEITÁVEL."): até duas palavras de uma ou duas letras antes dela, mais a
+  // pontuação logo depois. A etiqueta precisa chegar ao olho junto com quem a apresenta.
+  var RE_ENTRADA_ETIQ=/(^|[^\p{L}\p{N}])((?:\p{L}{1,2}[ \u00A0]+){0,2})(\p{Lu}{4,})(?![\p{L}\p{N}])([.,;:!?)\]]*)/gu;
   function entradaLinhaHTML(txt){
-    return escAttr(String(txt||'')).replace(/\b(inaceitável|erro|violação)\b/gi, '<strong>$1</strong>');
+    return escAttr(String(txt||'')).replace(RE_ENTRADA_ETIQ,function(_m,antes,curtas,palavra,pont){
+      var etiq='<span class="entrada-placa-etiqueta">'+palavra+'</span>';
+      // Sem nada para colar (sem palavrinha antes e sem pontuação depois) a etiqueta vai
+      // sozinha: ela já tem nowrap próprio, e um <span> vazio em volta só suja o HTML.
+      if(!curtas&&!pont) return antes+etiq;
+      return antes+'<span class="entrada-placa-junto">'+curtas+etiq+pont+'</span>';
+    });
   }
   function entradaPlacaAplicar(){
     var el=document.getElementById('entradaPlaca'); if(!el) return;
