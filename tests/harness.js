@@ -5123,7 +5123,7 @@ async function main() {
   }
   console.log('');
 
-  console.log('Foto do corpo: enviada ao grupo da vet vira carimbo e sai do banco (01/set):');
+  console.log('Foto do corpo: enviada ao grupo da vet vira carimbo (01/set):');
   {
     check('o carimbo fotoTg existe e e gravado no envio direto E no reenvio da fila',
       (html.match(/function ckFotoMarcarEnviada/g)||[]).length === 1 &&
@@ -5131,17 +5131,111 @@ async function main() {
       /if\(a\.refNo&&a\.refK&&a\.refPt\) ckFotoMarcarEnviada/.test(html));
     check('a fila guarda o endereco do ponto (refNo/refK/refPt) para carimbar depois',
       /refNo:\(typeof ckNo==='function'\?ckNo\(\):''\), refK:dcKey\(p\.n,p\.tutor\), refPt:pt\.k/.test(html));
-    check('a faxina so olha DIAS PASSADOS (comeca em ontem) e nunca o dia de hoje',
-      /for\(var i=1;i<=CK_FAXINA_DIAS;i\+\+\) dias\.push\(orcMaisDias\(hoje,-i\)\)/.test(html));
     check('as fotos EXTRAS tambem vao ao grupo, e o carimbo exige TODAS enviadas',
       /foto extra '\+\(i\+1\)/.test(html) && /var todas=rs\.every/.test(html) &&
       /extras:\(at\.extras\|\|\[\]\)\.filter\(Boolean\)/.test(html));
-    check('a faxina apaga as extras carimbadas junto com foto e foto2',
-      /if\(at\.extras&&at\.extras\.length\) up\[k\+'\/pontos\/'\+ptk\+'\/extras'\]=null;/.test(html));
-    check('a faxina so apaga foto COM carimbo de enviada, e deixa o rastro fotoApagada',
-      /at\.fotoTg && at\.fotoTg\.ok/.test(html) && /fotoApagada/.test(html));
     check('a faxina tem trava diaria no banco (um aparelho por dia)',
       /daycare\/limpeza-fotos\//.test(html));
+  }
+  console.log('');
+
+  // ===== v 2026-09-15-01 — as fotos do check-in do corpo ============================
+  // Os tres checks antigos desta area (a faxina apagava a foto JA NO DIA SEGUINTE, de
+  // dentro do registro do dia, exigindo o carimbo fotoTg) foram REESCRITOS: eles prendiam
+  // o app ao comportamento que custou as fotos da Cookie. Agora a foto mora num no irmao,
+  // fica 21 dias e a faxina so toca no que passou disso.
+  console.log('Fotos do check-in do corpo: rascunho que nao se perde, no proprio, galeria (15/set):');
+  {
+    // --- 1) o rascunho espelhado no aparelho ---
+    check('a chave do rascunho local e por tipo + dia + FILHOt',
+      /var CK_RASC_PREFIXO='zeluz_ckrasc_';/.test(html) &&
+      /function ckRascChave\(k, tipo, dia\)\{\s*\n\s*return CK_RASC_PREFIXO\+\(tipo\|\|\(ckEhEntrada\(\)\?'entrada':'saida'\)\)\+'_'\+\(dia\|\|dcDataKey\(\)\)\+'_'\+k;/.test(html));
+    check('todo mutador do rascunho espelha no aparelho (pontos, alertas, fotos, coleiras, coco)',
+      (html.match(/ckRascEspelhar\(\)/g)||[]).length >= 12 &&
+      /pt\[alvo\]=c\.toDataURL\('image\/jpeg',0\.72\); pt\.alterado=true;\s*\n\s*ckRascunho\.pontos\[pk\]=pt; ckRascEspelhar\(\);/.test(html) &&
+      /function ckSetTexto\(campo,v\)\{ if\(!ckRascunho\) return; ckRascunho\[campo\]=v; ckRascEspelhar\(\); \}/.test(html) &&
+      /ckRascunho\.cocoPassos\[i\]=!ckRascunho\.cocoPassos\[i\];\s*\n\s*ckRascEspelhar\(\);/.test(html));
+    check('ckAbrir recupera o rascunho do aparelho e avisa discretamente',
+      /var _local=ckRascLer\(k\);/.test(html) &&
+      /CK_RECUPERADO='Recuperei o que voc\u00ea j\u00e1 tinha preenchido\.';/.test(html) &&
+      /\+\(CK_RECUPERADO\?\('<div class="ck-recuperado">'\+escAttr\(CK_RECUPERADO\)\+'<\/div>'\):''\)/.test(html));
+    check('so vale rascunho DE HOJE — o de ontem e recusado na leitura e apagado na abertura',
+      /if\(!v\|\|v\.dia!==dcDataKey\(\)\|\|!v\.r/.test(html) &&
+      /function ckRascLimparVelhos\(\)/.test(html) &&
+      /ckRascLimparVelhos==='function'\) ckRascLimparVelhos\(\)/.test(html));
+    check('salvou no banco: o espelho do aparelho e apagado',
+      /ckRascApagar\(k\);/.test(html) && /function ckRascApagar\(k\)/.test(html));
+    check('aparelho sem espaco (QuotaExceededError) vira cartaz claro, nao silencio',
+      /Quota\|QUOTA_EXCEEDED\|NS_ERROR_DOM_QUOTA/.test(html) &&
+      /O APARELHO EST\u00c1 SEM ESPA\u00c7O PARA GUARDAR A FOTO/.test(html));
+
+    // --- 2) nada barra em silencio ---
+    check('o Salvar barrado pela validacao deixa rastro na auditoria',
+      /audit\('checkin-corpo-barrado',/.test(html) &&
+      /\{alvo:k, faltas:faltas\.length\}/.test(html) &&
+      html.indexOf("audit('checkin-corpo-barrado'") < html.indexOf("if(zFalta(faltas, {botao:'ckBtnSalvar'})) return;"));
+    check('foto que nao abre avisa em vez de sumir (FileReader e Image com onerror)',
+      (html.match(/function ckFotoNaoAbriu\(input\)/g)||[]).length === 1 &&
+      (html.match(/fr\.onerror=function\(\)\{ ckFotoNaoAbriu\(input\); \};/g)||[]).length === 3 &&
+      (html.match(/img\.onerror=function\(\)\{ ckFotoNaoAbriu\(input\); \};/g)||[]).length === 2 &&
+      /Tire a foto de novo\. Se repetir, mande pelo seu celular no grupo da veterin\u00e1ria\./.test(html));
+
+    // --- 3) a imagem saiu de dentro do registro do dia ---
+    check('as imagens moram em daycare/fotos-corpo/{dia} — no irmao, sem ouvinte',
+      /function ckFotosNo\(dia\)\{ return 'daycare\/fotos-corpo\/'/.test(html) &&
+      /DB\.ref\(ckFotosNo\(\)\+'\/'\+k\)\.update\(_fotosUp\)/.test(html));
+    check('no registro do dia fica so fotoRef:true — o base64 sai',
+      /delete at\.foto; delete at\.foto2; delete at\.extras;\s*\n\s*at\.fotoRef=true;/.test(html));
+    check('entrada e saida do mesmo dia nao se sobrescrevem (o tipo entra na chave do ponto)',
+      /function ckFotoPtKey\(ptk, tipo\)\{ return \(tipo\|\|\(ckEhEntrada\(\)\?'entrada':'saida'\)\)\+'-'\+ptk; \}/.test(html));
+    check('a miniatura de check-in ja salvo desce SOB DEMANDA, so quando alguem reabre',
+      /function ckFotosDoBanco\(k\)/.test(html) && /ckFotosDoBanco\(k\);/.test(html) &&
+      /return at\.fotoRef && !at\.foto && !at\.foto2/.test(html));
+    check('registro antigo com foto inline continua legivel (a leitura so acrescenta)',
+      /if\(f\.foto && !at\.foto\)\{ at\.foto=f\.foto; mud/.test(html));
+    check('nenhum ouvinte do no do dia passa a carregar o no das fotos',
+      /zMapaVivo\(p,'_ck'/.test(html) &&
+      !/zMapaVivo\([^)]*fotos-corpo/.test(html) &&
+      !/daycare\/fotos-corpo[^']*'\)\.on\(/.test(html));
+    check('a faxina so apaga fotos com MAIS de 21 dias, no no novo',
+      /var CK_FAXINA_DIAS=21;/.test(html) &&
+      /for\(var i=CK_FAXINA_DIAS\+1;i<=CK_FAXINA_DIAS\+CK_FAXINA_JANELA;i\+\+\) dias\.push\(orcMaisDias\(hoje,-i\)\)/.test(html) &&
+      /DB\.ref\(ckFotosNo\(d\)\)\.remove\(\)/.test(html));
+    check('a faxina nao BAIXA o que vai apagar (seria o proprio peso que ela combate)',
+      !/ckFotosNo\(d\)\)\.once\('value'\)/.test(html));
+
+    // --- 4) a galeria ---
+    check('a galeria existe na ficha do FILHOt e no Cuidado Vet',
+      /<div id="pelFotosCorpoWrap"/.test(html) && /<div id="vetFotosCorpo"><\/div>/.test(html) &&
+      /ckGaleriaCarregar\(dcKey\(p\.n,p\.tutor\), pelNome\(p\), 'pelFotosCorpo'\)/.test(html) &&
+      /ckGaleriaCarregar\(dcKey\(cad\.nome\|\|h\.nome\|\|'', tutor\), \(cad\.nome\|\|h\.nome\|\|''\), 'vetFotosCorpo'\)/.test(html));
+    check('a galeria mostra data, ponto, alertas e quem fez',
+      /ckgal-data/.test(html) && /ckgal-ponto/.test(html) && /ckgal-alertas/.test(html) && /ckgal-quem/.test(html));
+    check('a foto abre grande, fecha com toque no fundo e com Esc',
+      /function ckAbrirFotoGrande\(src, arquivo\)/.test(html) &&
+      /ev\.key==='Escape'\|\|ev\.keyCode===27/.test(html) &&
+      /if\(ev\.target===d\) fechar\(\);/.test(html));
+    check('tem Baixar (a\[download\]) e Enviar (Web Share com File, com queda para baixar)',
+      /a\.download=CK_LB\.arquivo;/.test(html) &&
+      /navigator\.canShare\(\{files:\[file\]\}\) && navigator\.share/.test(html) &&
+      /function ckFotoEnviar\(\)\{[\s\S]*?ckFotoBaixar\(\);/.test(html));
+    check('o nome do arquivo e NomeDoFILHOt-ponto-data.jpg',
+      /function ckArquivoDaFoto\(nome, ptk, dia, tipo, sufixo\)/.test(html) &&
+      /return limpo\+'-'\+String\(ptk\|\|'ponto'\)\+'-'\+String\(dia\|\|''\)/.test(html));
+    check('quem ve a galeria vem da tabela PERM — e o monitor NAO ve',
+      /'ver-fotos-corpo':\s*\['gestao','supervisor','diretoria','consultora','vet'\]/.test(html) &&
+      /function podeVerFotosCorpo\(\)\{ return \(typeof podePapel==='function'\) && podePapel\('ver-fotos-corpo'\); \}/.test(html));
+
+    // --- 5) o que saiu e o que se separou ---
+    check('o bloco "Quem precisa ver isto?" saiu inteiro',
+      !/Quem precisa ver isto\?/.test(html) && !/CK_DESTINOS/.test(html) &&
+      !/ckDestinoHTML/.test(html) && !/function ckDestino\(/.test(html));
+    check('"Pele molhada" e "Pele vermelha" sao DOIS chips — coisas diferentes',
+      /'Pele molhada','Pele vermelha'/.test(html) && !/Pele molhada ou vermelha/.test(html));
+    check('"Pele vermelha" nao e tratada como machucado (nao pede foto de longe)',
+      typeof ctx.ckEhMachucado !== 'function' ||
+      (ctx.ckEhMachucado({alertas:['Pele vermelha']}) === false &&
+       ctx.ckEhMachucado({alertas:['Machucado']}) === true));
   }
   console.log('');
 
@@ -11413,7 +11507,7 @@ async function main() {
         !/\.catch\(function\([a-z]*\)\{\s*\}\)/.test(
           html.slice(html.indexOf('const CK_FRASE_PRATICA='), html.indexOf('function renderCkInicio('))));
       check('v-14 · a versão carimbada é a desta entrega',
-        /const APP_VERSAO='2026-09-13-02';/.test(html));
+        /const APP_VERSAO='2026-09-15-01';/.test(html));
     }
 
     // ---- a promessa desta versão: os quadros só OBSERVAM e nada grava calado ----

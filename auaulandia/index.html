@@ -481,6 +481,33 @@
   .ck-extras .ex-item img{width:66px;height:66px;object-fit:cover;border-radius:9px;border:1.5px solid var(--line);display:block}
   .ck-extras .ex-item button{position:absolute;top:-6px;right:-6px;width:22px;height:22px;border-radius:50%;border:none;background:var(--crm-critico);color:#fff;font-weight:800;cursor:pointer;line-height:1}
   .ck-extras .ex-add{display:inline-flex;align-items:center;justify-content:center;width:66px;height:66px;border:1.5px dashed var(--z-gold);border-radius:9px;font-size:11.5px;font-weight:700;color:var(--z-blue);text-align:center;cursor:pointer;padding:4px}
+  /* Aviso discreto de rascunho recuperado (15/set/2026) */
+  .ck-recuperado{margin:8px 0 2px;padding:8px 11px;border-radius:10px;background:var(--z-cream-warm);
+    border-left:4px solid var(--z-gold);font-size:12.5px;font-weight:700;color:var(--z-blue)}
+  /* Galeria "Fotos do corpo" — ficha do FILHOt e Cuidado Vet */
+  .ckgal{display:flex;flex-direction:column;gap:10px}
+  .ckgal-item{border:1.5px solid var(--line);border-radius:12px;padding:10px 11px;background:var(--z-white)}
+  .ckgal-topo{display:flex;gap:9px;flex-wrap:wrap;align-items:baseline;font-size:12px;font-weight:600;color:var(--muted)}
+  .ckgal-data{font-size:14px;font-weight:800;color:var(--z-blue)}
+  .ckgal-tipo{font-weight:700}
+  .ckgal-quem{margin-left:auto}
+  .ckgal-ponto{margin-top:3px;font-size:14.5px;font-weight:800;color:var(--z-blue)}
+  .ckgal-alertas{display:flex;flex-wrap:wrap;gap:5px;margin-top:5px}
+  .ckgal-alertas span{font-size:11.5px;font-weight:700;color:var(--z-blue);background:var(--z-cream-warm);
+    border:1px solid var(--line);border-radius:999px;padding:3px 9px}
+  .ckgal-local{margin-top:4px;font-size:12.5px;font-weight:600;color:var(--z-blue-soft)}
+  .ckgal-fotos{display:flex;flex-wrap:wrap;gap:8px;margin-top:9px}
+  .ckgal-foto{border:1.5px solid var(--line);border-radius:10px;background:var(--z-white);padding:5px;
+    cursor:pointer;font-family:inherit;display:flex;flex-direction:column;align-items:center;gap:4px}
+  .ckgal-foto img{width:92px;height:92px;object-fit:cover;border-radius:7px;display:block}
+  .ckgal-foto span{font-size:11px;font-weight:700;color:var(--z-blue-soft)}
+  /* A foto em tamanho grande */
+  .ck-lb{position:fixed;inset:0;z-index:99998;background:rgba(16,10,8,.92);display:flex;
+    flex-direction:column;align-items:center;justify-content:center;gap:12px;padding:14px}
+  .ck-lb img{max-width:100%;max-height:72vh;border-radius:14px;background:var(--z-cream);
+    box-shadow:0 20px 60px rgba(0,0,0,.6)}
+  .ck-lb-bar{display:flex;gap:10px;flex-wrap:wrap;justify-content:center}
+  .ck-lb-nome{color:var(--z-cream);font-size:12.5px;font-weight:600;opacity:.85;text-align:center;word-break:break-all}
   .ck-b{flex:1;padding:13px 10px;border-radius:11px;border:1.5px solid var(--line);background:#fff;
     font-family:inherit;font-size:14.5px;font-weight:800;color:var(--muted);cursor:pointer}
   .ck-b.ok.on{background:#1E8449;border-color:#1E8449;color:#fff}
@@ -3718,6 +3745,14 @@
         <div id="vetObsList" style="margin-top:10px"></div>
       </div>
 
+      <!-- Fotos do corpo — o que o check-in fotografou nos últimos 21 dias (15/set/2026).
+           A veterinária via a foto só no grupo do Telegram; aqui ela fica junto da ficha. -->
+      <div class="card" id="vetFotosCorpoWrap" style="display:none">
+        <h2 style="font-size:19px">Fotos do corpo — últimos 21 dias</h2>
+        <div class="hint">O que o monitor fotografou em cada check-in e check-out, com o ponto examinado, o que foi marcado e quem olhou. Toque na foto para ver em tamanho grande, baixar ou enviar.</div>
+        <div id="vetFotosCorpo"></div>
+      </div>
+
       <!-- Nova consulta (receituário datado) -->
       <div class="card">
         <h2 style="font-size:19px">Registrar consulta</h2>
@@ -4272,7 +4307,7 @@
          Tempo das atividades (gráfico) .......... Dashboard da Adriana E da Márcia
          O que cada pessoa fez hoje .............. Configurações › Logins e segurança
          Linha do tempo do dia ................... Operação › Linha do tempo do dia
-         Partiram · doses sem dono ............... removidos a pedido dela
+         Partiram · doses sem responsável ......... removidos a pedido dela
        Esta tela NÃO tem mais item no menu. Ela continua existindo por dois motivos:
        link antigo não pode morrer, e o DETALHE multi-dia (o tempo das atividades por dia
        da semana, dia a dia e por pessoa, e a confiabilidade das plantonistas freelance)
@@ -4987,7 +5022,14 @@
     // quem já corrige ficha na recepção: Central Zêluz (consultora), Supervisão, Gestão e
     // Diretoria. Monitor, plantonista e veterinária ficam de fora — a ficha do cliente não
     // é assunto da rota deles.
-    'revisar-ia':               ['consultora','supervisor','gestao','diretoria']
+    'revisar-ia':               ['consultora','supervisor','gestao','diretoria'],
+    // ===== v 2026-09-15-01 — a galeria "Fotos do corpo" ==============================
+    // A foto do check-in ia só para o grupo do Telegram: quem precisava rever depois não
+    // tinha ONDE (Adriana, 15/set/2026). Agora ela fica 21 dias e abre grande. Quem vê:
+    // Gestão, Supervisão, Diretoria, Central Zêluz (consultora) e a Veterinária. O monitor
+    // NÃO entra: a fatia dele é a miniatura do próprio check-in, em segundos — galeria é
+    // leitura de chefia, e leitura longa tira a monitora de perto do FILHOt.
+    'ver-fotos-corpo':          ['gestao','supervisor','diretoria','consultora','vet']
   };
   // O papel de quem está no corpo, com a régua do ehDiretoriaRole: role 'diretoria' vale
   // por si; 'gestao' com souAdriana (a senha fixa da Adriana) É a Diretoria. A promoção
@@ -7986,7 +8028,7 @@
    *
    * A REGRA AGORA (vale para os DOIS canais da tela: ração/remédio e estoque):
    *  1. ENCERRAR carimba o desfecho no próprio nó — resolvido_por, resolvido_em e
-   *     resolvido_motivo. O estado passa a ter dono; não se depende de ler a trilha.
+   *     resolvido_motivo. O estado passa a ter responsável; não se depende da trilha.
    *  2. REABRIR pede motivo, confirma, deixa entrada na trilha, carimba reaberto_por/em/
    *     motivo e escreve na auditoria. Reabrir é decisão, nunca escorregão mudo.
    *  3. Aviso cuja trilha tem resposta de encerramento e que NUNCA foi reaberto conta como
@@ -8883,7 +8925,7 @@
   function registrarDoseAgendadaGlobal(it,doseId){
     if(!DB||!it) return;
     // A dose de Tyross de 29/08 entrou assinada como "Plantonista" — o papel, não a
-    // pessoa. Dose de remédio sem dono não é registro, é boato: bloqueia e pede o nome.
+    // pessoa. Dose de remédio sem responsável não é registro, é boato: bloqueia e pede o nome.
     const _quem=pessoaDoTurno();
     if(!_quem || LOGIN_GENERICO.test(String(_quem).trim()) || (typeof nomeAssinaturaValido==='function' && !nomeAssinaturaValido(_quem))){
       try{ pedirNomeDoTurno({forcar:true}); }catch(e){ /* sem o modal, o zAlertao abaixo ainda explica o caminho */ }
@@ -9094,7 +9136,7 @@
           try{ if(typeof audit==='function') audit('telegram-medicacao','DESISTIU após 5 tentativas: '+String(item.erro||'').slice(0,80),{}); }catch(e){ /* rastro */ }
           return;
         }
-        // Dono: o item é CLAMADO por transaction antes do envio. Aparelho que chega
+        // Responsável: o item é CLAMADO por transaction antes do envio. Aparelho que chega
         // depois vê o lockTs recente e não manda a mesma mensagem de novo.
         DB.ref('auaulandia/med-tg-fila/'+id).transaction(function(atual){
           // Cache frio devolve null na 1ª rodada mesmo com o item vivo no servidor —
@@ -12675,7 +12717,7 @@
   // inteira DEPOIS de a correção estar publicada — o aviso apareceu, ninguém tocou.
   // Agora o aparelho PARADO recarrega sozinho: trancado, com a aba escondida, na porta de
   // entrada ou 3 minutos sem ninguém tocar nele. Mão na tela = nunca recarrega.
-  const APP_VERSAO='2026-09-13-02';
+  const APP_VERSAO='2026-09-15-01';
   var RECARGA_PARADO_MS=3*60*1000, __versaoPublicada=null, __recargaTimer=null;
   function vigiarVersao(){
     if(!DB) return;
@@ -12774,10 +12816,10 @@
 
   // ===== LOGIN (senhas de teste — depois cada pessoa terá a sua) =====
   // ===== FAXINA NAS SENHAS FIXAS (Adriana, 13/ago/2026) =============================
-  // O relatório de senhas virou um monte de acesso sem dono: a Wandela tinha DUAS senhas
+  // O relatório de senhas virou um monte de acesso sem responsável: a Wandela tinha DUAS senhas
   // (0915 e 1006), existia "Monitor Aprendiz" e "Consultora · Recepção" — logins de PAPEL,
   // sem nome de gente, que ninguém sabe quem usou. Login de papel não responde por nada.
-  // Ficam aqui só os acessos com dono; todo o resto é cadastrado em Time → Colaboradores,
+  // Ficam aqui só os acessos com responsável; todo o resto é cadastrado em Time → Colaboradores,
   // com nome, horário e dias.
   // ===== SÓ A GESTÃO É FIXA (Adriana, 13/ago/2026) ==================================
   // Aqui ficam apenas os acessos que não podem depender de cadastro nenhum — se o Firebase
@@ -15340,6 +15382,7 @@
     document.getElementById('vcAssina').value=(typeof quemSou==='function')?quemSou():'';
     var st=document.getElementById('vc-status'); if(st) st.textContent='';
     renderVcFotos();
+    try{ ckGaleriaCarregar(dcKey(cad.nome||h.nome||'', tutor), (cad.nome||h.nome||''), 'vetFotosCorpo'); }catch(e){ _logFalhaGrav('galeria de fotos do corpo no Cuidado Vet', e); }
     vetFecharMedForm();
     vetCarregarMed(h);
     vetCarregarConsultas(h);
@@ -17053,7 +17096,7 @@
         +'<div><label class="cad-lb">Feito em</label><input type="date" class="cad-in" id="prevT_'+chave+'_'+it.k+'" value="'+escAttr(feito)+'" max="'+hojeISO()+'" onchange="prevRecalcular(\''+chave+'\',\''+it.k+'\')" min="2015-01-01" onkeydown="return dataSoNoCalendario(event)"></div>'
         +'<div><label class="cad-lb">Vale até</label><input type="date" class="cad-in" id="prevP_'+chave+'_'+it.k+'" value="'+escAttr(prox)+'" placeholder="calculo sozinho" min="2015-01-01" max="2035-12-31" onkeydown="return dataSoNoCalendario(event)"></div>'
         // Quem deu: em casa o tutor às vezes antecipa por ordem do veterinário — o registro
-        // precisa dizer QUEM deu, senão a conta da próxima dose fica sem dono (Adriana, 22/ago).
+        // precisa dizer QUEM deu, senão a conta da próxima dose fica sem responsável (Adriana, 22/ago).
         +'<div style="grid-column:1/-1"><label class="cad-lb">Quem deu</label>'
         +['Day Care','Tutor em casa'].map(function(op){
             var on=(String(ex[it.k.replace(/_p$/,'')+'_ondefoi']||'')===op);
@@ -18172,6 +18215,13 @@
         <div class="hint" style="margin-top:6px;padding:8px 10px;background:var(--z-cream-warm);border-radius:8px"><strong>O que é analisado em cada exame:</strong> ${(typeof CK_PONTOS!=='undefined'?CK_PONTOS.map(function(pt){ return pt.t; }).join(' · '):'')} — e ainda xixi, cocô (com protocolo próprio para alteração) e vômito.</div>
         <h3 class="cad-sub">Histórico de check-ins</h3>
         <div id="pelHistCk"><div class="hint">Carregando…</div></div>
+        <!-- Fotos do corpo: o que foi fotografado em cada check-in, guardado por 21 dias
+             (Adriana, 15/set/2026). Só aparece para quem a tabela PERM autoriza. -->
+        <div id="pelFotosCorpoWrap" style="display:none">
+          <h3 class="cad-sub">Fotos do corpo</h3>
+          <div class="hint">Cada alteração marcada no check-in guarda a foto aqui por 21 dias. Toque na foto para ver em tamanho grande, baixar ou enviar ao tutor e à veterinária.</div>
+          <div id="pelFotosCorpo"></div>
+        </div>
       </div></div>
 
       <div class="ppanel2" id="ps-atencao"><div class="alert-card" style="margin-bottom:0">
@@ -18237,6 +18287,7 @@
     }
     abrirAbaInicialPel();
     try{ carregarHistCheckin(p); }catch(e){} /* silencioso de propósito: guarda defensiva — falhar aqui não pode interromper quem chamou */
+    try{ ckGaleriaCarregar(dcKey(p.n,p.tutor), pelNome(p), 'pelFotosCorpo'); }catch(e){ _logFalhaGrav('galeria de fotos do corpo na ficha', e); }
     window.scrollTo({top:0,behavior:'smooth'});
   }
   // A ficha abre no PLANO para quem cuida de plano (Diretoria, Gestão, Supervisão e
@@ -19046,6 +19097,9 @@
     ATIVIDADES.splice(i,1); salvarAtiv(); renderAtiv(); }
   renderAtiv();
   try{ if(typeof tgCarregarCfg==='function') tgCarregarCfg(); }catch(e){} /* silencioso de propósito: função opcional, pode não existir nesta tela */
+  // Rascunho de check-in de dia anterior não serve para hoje: sai na abertura do app, para
+  // não confundir quem reabre a mesma ficha amanhã nem ocupar espaço do aparelho à toa.
+  try{ if(typeof ckRascLimparVelhos==='function') ckRascLimparVelhos(); }catch(e){} /* silencioso de propósito: limpeza de conveniência — falhar não pode derrubar a abertura */
   // Avisos da vet que não saíram na hora: tenta de novo ao abrir o app e a cada 10 minutos.
   // Quem fotografou o machucado já foi embora — insistir é trabalho do app, não dela.
   try{
@@ -19460,7 +19514,7 @@
      alertas:['Mancando','Anda diferente do normal','Lambe a pata sem parar','Pata molhada','Unha quebrada','Machucado no coxim']},
     {k:'pele', t:'Pele e pelagem', ver:'A pele está limpa, seca e sem ferida?',
      como:'Passe a mão devagar do pescoço até o rabo, no sentido contrário ao pelo, para enxergar a pele por baixo. Sinta se tem caroço ou lugar quente. Procure ferida, casquinha, falha de pelo, nó de pelo, pulga (bichinho preto que corre) e carrapato (bolinha grudada). Cheiro forte na pele também é sinal.',
-     alertas:['Pele molhada ou vermelha','Nó de pelo','Pulga','Carrapato','Machucado','Arranhão','Falha de pelo','Cor estranha','Cheiro forte']},
+     alertas:['Pele molhada','Pele vermelha','Nó de pelo','Pulga','Carrapato','Machucado','Arranhão','Falha de pelo','Cor estranha','Cheiro forte']},
     {k:'orelhas', t:'Orelhas', ver:'As duas orelhas estão limpas, secas e sem cheiro?',
      como:'Levante uma orelha de cada vez e olhe por dentro. Tem que estar rosinha e seca. Sujeira preta ou marrom, cheiro azedo, vermelhidão ou líquido são alerta. Se ele balança muito a cabeça ou coça a orelha, olhe com mais calma.',
      alertas:['Vermelha por dentro','Cheiro forte','Sujeira preta','Ferida','Saindo líquido','Balança muito a cabeça']},
@@ -19556,7 +19610,7 @@
     if(!ckRascunho) return;
     ckRascunho.cocoPassos=ckRascunho.cocoPassos||{};
     ckRascunho.cocoPassos[i]=!ckRascunho.cocoPassos[i];
-    renderCheckin();
+    ckRascEspelhar(); renderCheckin();
   }
   function ckProtocoloCocoHTML(k){
     if(!ckCocoGrave(k)) return '';
@@ -19664,6 +19718,112 @@
   function ckEhEntrada(){ return dcAtiv==='checkin-corpo'; }
   function ckNo(){ return 'daycare/'+(ckEhEntrada()?'checkin':'checkout')+'-corpo/'+dcDataKey(); }
   var ckDados={}, ckAtual=null, ckRascunho=null, ckFrase='';
+  // O aviso discreto de recuperação: nasce vazio a cada abertura de FILHOt.
+  var CK_RECUPERADO='';
+  // ===== O RASCUNHO NÃO SE PERDE MAIS (Adriana, 15/set/2026) =========================
+  // Caso real e medido: a Giulia fez o check-in do corpo da Cookie com DUAS fotos de Pele e
+  // pelagem e "não conseguiu enviar". No banco não existia nada — nem registro, nem rastro.
+  // O Salvar foi barrado pela validação (ou a tela fechou), e o rascunho, que só morava na
+  // MEMÓRIA, morreu levando as fotos junto. Uma foto perdida é um FILHOt que a veterinária
+  // nunca vê e um tutor sem resposta.
+  // Agora cada toque espelha o rascunho no PRÓPRIO APARELHO. Fechou a tela, recarregou o
+  // app, acabou a bateria: ao abrir o mesmo FILHOt de novo, tudo volta — inclusive as fotos.
+  // O espelho é DO DIA e some quando o check-in é gravado de verdade.
+  var CK_RASC_PREFIXO='zeluz_ckrasc_';
+  var _ckQuotaAvisada=false;
+  function ckRascChave(k, tipo, dia){
+    return CK_RASC_PREFIXO+(tipo||(ckEhEntrada()?'entrada':'saida'))+'_'+(dia||dcDataKey())+'_'+k;
+  }
+  // Chamado por TODO mutador do rascunho — inclusive os que NÃO redesenham a tela (texto
+  // digitado), porque texto digitado também se perdia.
+  function ckRascEspelhar(){
+    if(!ckAtual||!ckAtual.p||!ckRascunho) return;
+    try{
+      var k=dcKey(ckAtual.p.n, ckAtual.p.tutor);
+      localStorage.setItem(ckRascChave(k), JSON.stringify({dia:dcDataKey(), ts:Date.now(), r:ckRascunho}));
+    }catch(e){
+      var _n=String((e&&e.name)||'')+' '+String((e&&e.message)||'');
+      if(/Quota|QUOTA_EXCEEDED|NS_ERROR_DOM_QUOTA/i.test(_n)){
+        // Calar aqui seria repetir exatamente o erro que custou as fotos da Cookie: a
+        // pessoa PRECISA saber que este check-in não está protegido neste aparelho.
+        if(!_ckQuotaAvisada){
+          _ckQuotaAvisada=true;
+          if(typeof zAlertao==='function') zAlertao('O APARELHO ESTÁ SEM ESPAÇO PARA GUARDAR A FOTO',
+            ['Não consegui guardar uma cópia deste check-in aqui no aparelho.',
+             'SALVE AGORA, antes de sair da tela. Se ela fechar, o que você preencheu se perde.',
+             'Depois avise a Gestão: este aparelho precisa de espaço livre.'],
+            {botao:'Vou salvar agora'});
+          else alert('O aparelho está sem espaço para guardar a foto. Salve agora, antes de sair da tela.');
+        }
+      } else _logFalhaGrav('espelho do rascunho do check-in no aparelho', e);
+    }
+  }
+  function ckRascLer(k){
+    try{
+      var v=JSON.parse(localStorage.getItem(ckRascChave(k))||'null');
+      if(!v||v.dia!==dcDataKey()||!v.r||typeof v.r!=='object') return null;
+      return v.r;
+    }catch(e){ return null; }
+  }
+  function ckRascApagar(k){ try{ localStorage.removeItem(ckRascChave(k)); }catch(e){} /* silencioso de propósito: apagar o espelho é limpeza — o dado de verdade já está no banco */ }
+  // Rascunho de ontem não serve para hoje: some na abertura do app, para não confundir
+  // quem abre a mesma ficha no dia seguinte nem entupir o espaço do aparelho.
+  function ckRascLimparVelhos(){
+    try{
+      var hoje=dcDataKey(), fora=[];
+      for(var i=0;i<localStorage.length;i++){
+        var ch=localStorage.key(i);
+        if(ch && ch.indexOf(CK_RASC_PREFIXO)===0 && ch.indexOf('_'+hoje+'_')<0) fora.push(ch);
+      }
+      fora.forEach(function(ch){ try{ localStorage.removeItem(ch); }catch(e){} /* silencioso de propósito: limpeza de conveniência */ });
+      return fora.length;
+    }catch(e){ return 0; }
+  }
+  // ===== AS FOTOS SAÍRAM DE DENTRO DO REGISTRO DO DIA (15/set/2026) =================
+  // O base64 morava em daycare/checkin-corpo/{dia}/{k}/pontos/{pt}/foto — ou seja, DENTRO
+  // do nó do dia, que tem ouvinte vivo (zMapaVivo). Toda leitura do dia descia as fotos
+  // junto: foi um dos vilões dos 695 MB de 08/set. Agora a imagem mora num nó IRMÃO, que
+  // ninguém escuta, e desce só quando alguém pede para ver. No registro do dia fica só
+  // fotoRef:true (mais o carimbo fotoTg, que já existia).
+  function ckFotosNo(dia){ return 'daycare/fotos-corpo/'+(dia||dcDataKey()); }
+  // Entrada e saída do MESMO dia olham os MESMOS pontos: sem o tipo na chave, o check-out
+  // apagaria por cima a foto da manhã. Por isso a chave do ponto carrega o tipo.
+  function ckFotoPtKey(ptk, tipo){ return (tipo||(ckEhEntrada()?'entrada':'saida'))+'-'+ptk; }
+  // Miniatura de check-in já salvo: o registro do dia só tem fotoRef, então as imagens
+  // descem sob demanda, uma vez, quando a monitora reabre o FILHOt.
+  var _ckFotosVer=0;
+  function ckFotosDoBanco(k){
+    if(!DB||!ckRascunho) return;
+    var pontos=ckRascunho.pontos||{};
+    var precisa=Object.keys(pontos).some(function(ptk){
+      var at=pontos[ptk]||{};
+      return at.fotoRef && !at.foto && !at.foto2 && !(at.extras&&at.extras.length);
+    });
+    if(!precisa) return;
+    var meu=++_ckFotosVer, dia=dcDataKey(), tipo=ckEhEntrada()?'entrada':'saida';
+    DB.ref(ckFotosNo(dia)+'/'+k).once('value').then(function(sn){
+      if(meu!==_ckFotosVer||!ckRascunho) return;    // trocou de FILHOt no meio do caminho
+      var v=sn.val()||{}, mudou=false;
+      Object.keys(ckRascunho.pontos||{}).forEach(function(ptk){
+        var at=ckRascunho.pontos[ptk]||{}; if(!at.fotoRef) return;
+        var f=v[ckFotoPtKey(ptk,tipo)]; if(!f) return;
+        if(f.foto && !at.foto){ at.foto=f.foto; mudou=true; }
+        if(f.foto2 && !at.foto2){ at.foto2=f.foto2; mudou=true; }
+        if(Array.isArray(f.extras) && f.extras.length && !(at.extras&&at.extras.length)){ at.extras=f.extras.slice(); mudou=true; }
+        ckRascunho.pontos[ptk]=at;
+      });
+      if(mudou) renderCheckin();
+    }).catch(function(e){ _logLeituraFalhou(ckFotosNo(dia)+'/'+k+' (ckFotosDoBanco)', e); });
+  }
+  // A foto que não abriu não pode sumir calada: sem isto, o arquivo corrompido (ou o
+  // formato que o aparelho não decodifica) deixava a monitora achando que fotografou.
+  function ckFotoNaoAbriu(input){
+    try{ if(input) input.value=''; }catch(e){} /* silencioso de propósito: limpar o campo é conveniência */
+    if(typeof zAlertao==='function') zAlertao('A foto não abriu',
+      ['Tire a foto de novo. Se repetir, mande pelo seu celular no grupo da veterinária.'],
+      {botao:'Vou tirar de novo'});
+    else alert('A foto não abriu. Tire a foto de novo. Se repetir, mande pelo seu celular no grupo da veterinária.');
+  }
   function ckSexo(p){ try{ const s=String(pelGet(p,'sexo')||'').toLowerCase();
     if(s.indexOf('f')===0||s.indexOf('fê')===0||s.indexOf('fe')===0) return 'femea';
     if(s.indexOf('m')===0) return 'macho'; }catch(e){} /* silencioso de propósito: guarda defensiva — falhar aqui não pode interromper quem chamou */
@@ -20216,15 +20376,26 @@
     const salvo=ckDados[k];
     ckRascunho=salvo?JSON.parse(JSON.stringify(salvo)):{pontos:{}, coleiraRep:'', coleiraId:'', coco:''};
     if(!ckRascunho.pontos) ckRascunho.pontos={};
+    // O que ficou pela metade NESTE aparelho vence o que veio do banco: o espelho só
+    // sobrevive enquanto o check-in não foi gravado. Se ele está aqui, é trabalho que
+    // ainda não chegou ao banco — e é exatamente isso que se perdia (caso Cookie).
+    CK_RECUPERADO='';
+    var _local=ckRascLer(k);
+    if(_local){
+      ckRascunho=_local;
+      if(!ckRascunho.pontos) ckRascunho.pontos={};
+      CK_RECUPERADO='Recuperei o que você já tinha preenchido.';
+    }
+    ckFotosDoBanco(k);        // fotos moram em nó próprio: descem só quando alguém abre
     renderCheckin(); window.scrollTo({top:0,behavior:'smooth'});
   }
-  function ckVoltar(){ ckAtual=null; ckRascunho=null; renderCheckin(); }
+  function ckVoltar(){ ckAtual=null; ckRascunho=null; CK_RECUPERADO=''; renderCheckin(); }
   function ckMarcar(pk,alterado){
     if(!ckRascunho) return;
     const at=ckRascunho.pontos[pk]||{};
     ckRascunho.pontos[pk]=Object.assign({},at,{alterado:!!alterado, semDado:''});
-    if(!alterado){ delete ckRascunho.pontos[pk].alertas; delete ckRascunho.pontos[pk].foto; delete ckRascunho.pontos[pk].foto2; delete ckRascunho.pontos[pk].obs; delete ckRascunho.pontos[pk].ligou; }
-    renderCheckin();
+    if(!alterado){ delete ckRascunho.pontos[pk].alertas; delete ckRascunho.pontos[pk].foto; delete ckRascunho.pontos[pk].foto2; delete ckRascunho.pontos[pk].obs; delete ckRascunho.pontos[pk].ligou; delete ckRascunho.pontos[pk].extras; delete ckRascunho.pontos[pk].fotoRef; }
+    ckRascEspelhar(); renderCheckin();
   }
   // "Não vi" e "Não fez" contam como ponto RESPONDIDO — não são alteração e não pedem foto.
   function ckSemDado(pk,tipo){
@@ -20232,7 +20403,7 @@
     const at=ckRascunho.pontos[pk]||{};
     ckRascunho.pontos[pk]=Object.assign({},at,{alterado:false, semDado:tipo});
     delete ckRascunho.pontos[pk].alertas; delete ckRascunho.pontos[pk].foto; delete ckRascunho.pontos[pk].foto2; delete ckRascunho.pontos[pk].ligou;
-    renderCheckin();
+    ckRascEspelhar(); renderCheckin();
   }
   // ===== NEM TODA ALTERAÇÃO É LIGAÇÃO (Adriana, 13/ago/2026) ========================
   // "Tudo que tiver alterado precisa ter uma pergunta: ligar para o supervisor? Nem tudo
@@ -20242,26 +20413,29 @@
     if(!ckRascunho) return;
     const at=ckRascunho.pontos[pk]||{};
     at.ligou=v; at.ligou_quem=(typeof quemSou==='function'?quemSou():'-'); at.ligou_ts=Date.now();
-    ckRascunho.pontos[pk]=at; renderCheckin();
+    ckRascunho.pontos[pk]=at; ckRascEspelhar(); renderCheckin();
   }
   function ckAlerta(pk,txt){
     const pt=ckRascunho.pontos[pk]||{alterado:true};
     const arr=Array.isArray(pt.alertas)?pt.alertas.slice():[];
     const i=arr.indexOf(txt); if(i>=0) arr.splice(i,1); else arr.push(txt);
-    pt.alertas=arr; pt.alterado=true; ckRascunho.pontos[pk]=pt; renderCheckin();
+    pt.alertas=arr; pt.alterado=true; ckRascunho.pontos[pk]=pt; ckRascEspelhar(); renderCheckin();
   }
-  function ckObs(pk,v){ const pt=ckRascunho.pontos[pk]||{alterado:true}; pt.obs=v; ckRascunho.pontos[pk]=pt; }
-  function ckSet(campo,v){ if(!ckRascunho) return; ckRascunho[campo]=v; renderCheckin(); }
+  function ckObs(pk,v){ if(!ckRascunho) return; const pt=ckRascunho.pontos[pk]||{alterado:true}; pt.obs=v; ckRascunho.pontos[pk]=pt; ckRascEspelhar(); }
+  function ckSet(campo,v){ if(!ckRascunho) return; ckRascunho[campo]=v; ckRascEspelhar(); renderCheckin(); }
   // Campo de texto: grava SEM redesenhar — redesenhar a cada letra tira o foco de quem digita.
-  function ckSetTexto(campo,v){ if(!ckRascunho) return; ckRascunho[campo]=v; }
+  // Espelha a cada letra: o texto digitado também se perdia junto com a tela.
+  function ckSetTexto(campo,v){ if(!ckRascunho) return; ckRascunho[campo]=v; ckRascEspelhar(); }
   // A foto é a prova. Comprimida para 640px: o app já apanhou de foto pesada antes.
   // Machucado, ferida, corte, arranhão: o que precisa de DUAS fotos e da parte do corpo.
   // ---- Fotos extras: quantas forem necessárias, em qualquer ponto ----
   function ckFotoExtra(pk,input){
     const f=input&&input.files&&input.files[0]; if(!f) return;
     const fr=new FileReader();
+    fr.onerror=function(){ ckFotoNaoAbriu(input); };
     fr.onload=function(e){
       const img=new Image();
+      img.onerror=function(){ ckFotoNaoAbriu(input); };
       img.onload=function(){
         const max=640, esc=Math.min(1,max/Math.max(img.width,img.height));
         const c=document.createElement('canvas'); c.width=Math.round(img.width*esc); c.height=Math.round(img.height*esc);
@@ -20269,13 +20443,13 @@
         const pt=ckRascunho.pontos[pk]||{alterado:true};
         pt.extras=Array.isArray(pt.extras)?pt.extras:[];
         pt.extras.push(c.toDataURL('image/jpeg',0.72));
-        ckRascunho.pontos[pk]=pt; renderCheckin();
+        ckRascunho.pontos[pk]=pt; ckRascEspelhar(); renderCheckin();
       };
       img.src=e.target.result;
     };
     fr.readAsDataURL(f);
   }
-  function ckDelExtra(pk,i){ if(!ckRascunho) return; var pt=ckRascunho.pontos[pk]||{}; (pt.extras||[]).splice(i,1); ckRascunho.pontos[pk]=pt; renderCheckin(); }
+  function ckDelExtra(pk,i){ if(!ckRascunho) return; var pt=ckRascunho.pontos[pk]||{}; (pt.extras||[]).splice(i,1); ckRascunho.pontos[pk]=pt; ckRascEspelhar(); renderCheckin(); }
   function ckFotosExtraHTML(pt,at){
     var ex=Array.isArray(at.extras)?at.extras:[];
     return '<div class="ck-extras">'
@@ -20283,26 +20457,11 @@
       +'<label class="ex-add">+ outra foto<input type="file" accept="image/*" capture="environment" style="display:none" onchange="ckFotoExtra(\''+pt.k+'\',this)"></label>'
       +'</div>';
   }
-  // ---- Para quem esta alteração vai ----
-  const CK_DESTINOS=[
-    {k:'tutor', t:'Tutor'},
-    {k:'vet_zeluz', t:'Veterinária da Zêluz'},
-    {k:'vet_externo', t:'Veterinário externo'}
-  ];
-  function ckDestino(pk,d){
-    if(!ckRascunho) return;
-    var pt=ckRascunho.pontos[pk]||{alterado:true};
-    pt.destinos=Array.isArray(pt.destinos)?pt.destinos:[];
-    var i=pt.destinos.indexOf(d);
-    if(i>=0) pt.destinos.splice(i,1); else pt.destinos.push(d);
-    ckRascunho.pontos[pk]=pt; renderCheckin();
-  }
-  function ckDestinoHTML(pt,at){
-    var d=Array.isArray(at.destinos)?at.destinos:[];
-    return '<div style="margin-top:9px"><div style="font-size:12.5px;font-weight:800;color:var(--z-blue);margin-bottom:5px">Quem precisa ver isto?</div>'
-      +'<div class="ck-alertas">'+CK_DESTINOS.map(function(x){
-          return '<button type="button" class="ck-chip'+(d.indexOf(x.k)>=0?' on':'')+'" onclick="ckDestino(\''+pt.k+'\',\''+x.k+'\')">'+x.t+'</button>'; }).join('')+'</div></div>';
-  }
+  // ===== O BLOCO "QUEM PRECISA VER ISTO?" SAIU (Adriana, 15/set/2026) ===============
+  // "Quem precisa ver isso não precisa disso — tudo que consta é encaminhado ao Telegram
+  //  da nossa veterinária." Era mais um toque na tela da monitora para escolher uma coisa
+  //  que o app já faz sozinho: TODA alteração vai ao grupo da Veterinária, com as fotos.
+  //  O campo 'destinos' gravado antes continua no banco e é simplesmente ignorado.
   // ---- Ligar ou não ligar: a decisão fica registrada ----
   function ckLigarHTML(pt,at){
     if(at.ligou==='sim') return '<div class="ck-ligar" style="border-color:var(--crm-ok);background:rgba(39,174,96,.09)">'
@@ -20323,20 +20482,22 @@
     var a=(at&&at.alertas)||[];
     return a.some(function(x){ return /machuc|ferid|corte|arranh|lesão|lesao|inchaç|inchac/i.test(String(x)); });
   }
-  function ckCampo(pk,campo,v){ if(!ckRascunho) return; var pt=ckRascunho.pontos[pk]||{alterado:true}; pt[campo]=v; ckRascunho.pontos[pk]=pt; }
+  function ckCampo(pk,campo,v){ if(!ckRascunho) return; var pt=ckRascunho.pontos[pk]||{alterado:true}; pt[campo]=v; ckRascunho.pontos[pk]=pt; ckRascEspelhar(); }
   function ckFoto(pk,input,campo){
     const f=input&&input.files&&input.files[0]; if(!f) return;
     const alvo=campo||'foto';
     const fr=new FileReader();
+    fr.onerror=function(){ ckFotoNaoAbriu(input); };
     fr.onload=function(e){
       const img=new Image();
+      img.onerror=function(){ ckFotoNaoAbriu(input); };
       img.onload=function(){
         const max=640, esc=Math.min(1,max/Math.max(img.width,img.height));
         const c=document.createElement('canvas'); c.width=Math.round(img.width*esc); c.height=Math.round(img.height*esc);
         c.getContext('2d').drawImage(img,0,0,c.width,c.height);
         const pt=ckRascunho.pontos[pk]||{alterado:true};
         pt[alvo]=c.toDataURL('image/jpeg',0.72); pt.alterado=true;
-        ckRascunho.pontos[pk]=pt; renderCheckin();
+        ckRascunho.pontos[pk]=pt; ckRascEspelhar(); renderCheckin();
       };
       img.src=e.target.result;
     };
@@ -20356,10 +20517,11 @@
       input.value=''; return;
     }
     const fr=new FileReader();
+    fr.onerror=function(){ ckFotoNaoAbriu(input); };
     fr.onload=function(e){
       const pt=ckRascunho.pontos[pk]||{alterado:true};
       pt.video=e.target.result; pt.alterado=true;
-      ckRascunho.pontos[pk]=pt; renderCheckin();
+      ckRascunho.pontos[pk]=pt; ckRascEspelhar(); renderCheckin();
     };
     fr.readAsDataURL(f);
   }
@@ -20433,6 +20595,9 @@
       +'<div class="ck-topo">'+ph+'<div><div class="ck-nome">'+escAttr(pelNome(p))+'</div>'
       +'<div class="ck-sub">'+escAttr(p.raca||'')+(p.tutor?(' · '+escAttr(p.tutor)):'')+'</div></div>'
       +'<button class="btn" style="margin-left:auto;background:var(--z-cream-warm);color:var(--z-blue);border:1.5px solid var(--line)" onclick="ckVoltar()">Voltar</button></div>'
+      // O aviso de recuperação vem ANTES do protocolo: é a primeira coisa que ela precisa
+      // saber ao reabrir o FILHOt — nada do que ela fez se perdeu.
+      +(CK_RECUPERADO?('<div class="ck-recuperado">'+escAttr(CK_RECUPERADO)+'</div>'):'')
       +ckProtocoloHTML(entrada)
       +(entrada?'<div class="ck-vem">Chame <strong>'+escAttr(pelNome(p))+'</strong> pelo nome com o comando <strong>VEM</strong> e observe como ele responde.</div>':'')
       +daEntrada
@@ -20501,10 +20666,9 @@
               +'<label class="btn btn-gold" style="padding:9px 14px;font-size:13px;cursor:pointer">'+(at.foto?'Trocar foto':'Tirar foto')
                 +'<input type="file" accept="image/*" capture="environment" style="display:none" onchange="ckFoto(\''+pt.k+'\',this)"></label>'
             +'</div>')
-        // Fotos EXTRAS: qualquer ponto pode ter mais de um ângulo. E cada alteração diz
-        // PARA QUEM vai — tutor, veterinária da Zêluz ou veterinário externo (Adriana).
+        // Fotos EXTRAS: qualquer ponto pode ter mais de um ângulo. Para onde vai já está
+        // decidido: toda alteração segue para o grupo da Veterinária (15/set/2026).
         +ckFotosExtraHTML(pt,at)
-        +ckDestinoHTML(pt,at)
         // Cocô grave acende o protocolo das fezes aqui mesmo, dentro do ponto.
         +(pt.k==='coco'?ckProtocoloCocoHTML(ckCocoGraveNosAlertas(at)):'')
         // Nem toda alteração é ligação — mas toda alteração exige a DECISÃO registrada.
@@ -20691,12 +20855,16 @@
       return res;
     });
   }
-  // ===== FAXINA DAS FOTOS JÁ ENVIADAS (Adriana, 01/set) ==========================
-  // "Não precisa ficar guardada se tiver sido enviada." A foto que o grupo da vet já
-  // recebeu (carimbo fotoTg.ok) é apagada do banco NO DIA SEGUINTE em diante — nunca
-  // no próprio dia, porque o check-out compara o corpo com a foto da entrada. Roda
-  // uma vez por dia, no primeiro aparelho da Gestão/Supervisão que abrir o app.
-  var CK_FAXINA_DIAS=21;
+  // ===== FAXINA DAS FOTOS DO CORPO (01/set, refeita em 15/set/2026) ================
+  // Antes: a foto vivia dentro do registro do dia e era apagada JÁ NO DIA SEGUINTE assim
+  // que o grupo da veterinária confirmava. Isso resolvia o peso do banco e criava outro
+  // problema: quem precisava rever a foto depois — Gestão, Supervisão, Central Zêluz,
+  // a veterinária da casa e o tutor — não tinha mais onde. A foto só existia no Telegram.
+  // Agora a imagem mora em daycare/fotos-corpo/{dia}, fora de qualquer ouvinte, e FICA
+  // 21 dias — o mesmo prazo que a galeria "Fotos do corpo" mostra na ficha do FILHOt.
+  // A faxina só toca no que passou disso.
+  var CK_FAXINA_DIAS=21;      // quanto tempo a foto fica de pé (e a galeria enxerga)
+  var CK_FAXINA_JANELA=40;    // quantos dias além dos 21 são varridos por rodada
   function ckLimparFotosEnviadas(){
     if(!DB) return Promise.resolve(0);
     var role=document.body.dataset.role;
@@ -20705,39 +20873,174 @@
     var trava='daycare/limpeza-fotos/'+hoje;
     return DB.ref(trava).once('value').then(function(sn){
       if(sn.val()) return 0;                            // outro aparelho já fez hoje
-      var dias=[]; for(var i=1;i<=CK_FAXINA_DIAS;i++) dias.push(orcMaisDias(hoje,-i));
-      var apagadas=0;
-      var porNo=function(no){
-        return Promise.all(dias.map(function(d){
-          return DB.ref(no+'/'+d).once('value').then(function(s2){
-            var v=s2.val()||{}; var up={};
-            Object.keys(v).forEach(function(k){
-              var pontos=(v[k]&&v[k].pontos)||{};
-              Object.keys(pontos).forEach(function(ptk){
-                var at=pontos[ptk]||{};
-                if((at.foto||at.foto2||(at.extras&&at.extras.length)) && at.fotoTg && at.fotoTg.ok){
-                  if(at.foto)  up[k+'/pontos/'+ptk+'/foto']=null;
-                  if(at.foto2) up[k+'/pontos/'+ptk+'/foto2']=null;
-                  if(at.extras&&at.extras.length) up[k+'/pontos/'+ptk+'/extras']=null;
-                  up[k+'/pontos/'+ptk+'/fotoApagada']={ts:Date.now(), motivo:'já enviada ao grupo da veterinária'};
-                  apagadas++;
-                }
-              });
-            });
-            if(!Object.keys(up).length) return;
-            return DB.ref(no+'/'+d).update(up)
-              .catch(function(e){ _logFalhaGrav('faxina de fotos '+no+'/'+d, e); });
-          }).catch(function(){ /* dia sem nó ou sem permissão: nada a fazer */ });
-        }));
-      };
-      return porNo('daycare/checkin-corpo').then(function(){ return porNo('daycare/checkout-corpo'); }).then(function(){
-        return DB.ref(trava).set({ts:Date.now(), apagadas:apagadas,
+      var dias=[];
+      for(var i=CK_FAXINA_DIAS+1;i<=CK_FAXINA_DIAS+CK_FAXINA_JANELA;i++) dias.push(orcMaisDias(hoje,-i));
+      // Apaga sem LER: ler o nó para contar as fotos baixaria justamente os megabytes que
+      // esta faxina existe para eliminar. Remover um nó que não existe não custa nada.
+      var varridos=0;
+      return Promise.all(dias.map(function(d){
+        return DB.ref(ckFotosNo(d)).remove().then(function(){ varridos++; })
+          .catch(function(e){ _logFalhaGrav('faxina de fotos '+ckFotosNo(d), e); });
+      })).then(function(){
+        return DB.ref(trava).set({ts:Date.now(), varridos:varridos, guarda:CK_FAXINA_DIAS,
           quem:(typeof quemSou==='function'?quemSou():'-')}).then(function(){
-          if(apagadas && typeof audit==='function') audit('limpeza-fotos','apagou '+apagadas+' foto(s) do corpo já enviadas ao grupo da veterinária (últimos '+CK_FAXINA_DIAS+' dias)',{});
-          return apagadas;
+          if(varridos && typeof audit==='function') audit('limpeza-fotos',
+            'varreu '+varridos+' dia(s) de fotos do corpo com mais de '+CK_FAXINA_DIAS+' dias',{});
+          return varridos;
         });
       });
     }).catch(function(e){ _logLeituraFalhou('daycare/limpeza-fotos/ (ckLimparFotosEnviadas)', e); return 0; });
+  }
+  // ===== GALERIA "FOTOS DO CORPO" (Adriana, 15/set/2026) ===========================
+  // A foto do check-in ia só para o grupo do Telegram. Quem precisava revê-la depois — a
+  // Gestão, a Supervisão, a Central Zêluz, a veterinária da casa e o tutor que pergunta —
+  // não tinha ONDE. Agora ela fica 21 dias na ficha do FILHOt e no Cuidado Vet, abre em
+  // tamanho grande e tem Baixar e Enviar. O monitor não vê a galeria: a fatia dele é a
+  // miniatura do próprio check-in, em segundos — leitura longa é da chefia.
+  function podeVerFotosCorpo(){ return (typeof podePapel==='function') && podePapel('ver-fotos-corpo'); }
+  function ckArquivoDaFoto(nome, ptk, dia, tipo, sufixo){
+    var limpo=String(nome||'FILHOt').normalize('NFD').replace(/[\u0300-\u036f]/g,'')
+      .replace(/[^A-Za-z0-9]+/g,'-').replace(/^-+|-+$/g,'') || 'FILHOt';
+    return limpo+'-'+String(ptk||'ponto')+'-'+String(dia||'')
+      +((tipo==='saida')?'-saida':'')+(sufixo?('-'+sufixo):'')+'.jpg';
+  }
+  var CK_GAL_VER=0;
+  function ckGaleriaCarregar(k, nome, alvoId){
+    var id=alvoId||'pelFotosCorpo';
+    var box=document.getElementById(id); if(!box) return;
+    var caixa=document.getElementById(id+'Wrap');
+    if(!podeVerFotosCorpo()){ box.innerHTML=''; if(caixa) caixa.style.display='none'; return; }
+    if(caixa) caixa.style.display='';
+    if(!DB||!k){ box.innerHTML='<div class="hint">Sem conexão com o banco agora.</div>'; return; }
+    var meu=++CK_GAL_VER;
+    box.innerHTML='<div class="hint">Carregando as fotos…</div>';
+    var hoje=dcDataKey(), dias=[hoje];
+    for(var i=1;i<CK_FAXINA_DIAS;i++) dias.push(orcMaisDias(hoje,-i));
+    // Uma leitura pequena por dia, e só quando alguém abre a ficha. O nó do dia (que tem
+    // ouvinte vivo) continua sem tocar em imagem nenhuma.
+    Promise.all(dias.map(function(d){
+      return DB.ref(ckFotosNo(d)+'/'+k).once('value').then(function(sn){ return {dia:d, v:sn.val()||{}}; })
+        .catch(function(e){ _logLeituraFalhou(ckFotosNo(d)+'/'+k+' (galeria)', e); return {dia:d, v:{}}; });
+    })).then(function(rs){
+      if(meu!==CK_GAL_VER) return;
+      var itens=[];
+      rs.forEach(function(r){
+        Object.keys(r.v||{}).forEach(function(chave){
+          var f=r.v[chave]||{};
+          var tipo=f.tipo||(String(chave).indexOf('saida-')===0?'saida':'entrada');
+          var ptk=String(chave).replace(/^(entrada|saida)-/,'');
+          var fotos=[];
+          if(f.foto)  fotos.push({src:f.foto,  rot:'de perto', suf:''});
+          if(f.foto2) fotos.push({src:f.foto2, rot:'de longe',  suf:'de-longe'});
+          (Array.isArray(f.extras)?f.extras:[]).forEach(function(ex,ix){
+            if(ex) fotos.push({src:ex, rot:'outro ângulo', suf:'extra-'+(ix+1)});
+          });
+          if(!fotos.length) return;
+          itens.push({dia:r.dia, tipo:tipo, ptk:ptk, ponto:f.ponto||ptk,
+            alertas:(Array.isArray(f.alertas)?f.alertas:[]), local:f.local||'',
+            quem:f.quem||'-', hora:f.hora||'', ts:f.ts||0, fotos:fotos});
+        });
+      });
+      itens.sort(function(a,b){ return (b.dia===a.dia)?((b.ts||0)-(a.ts||0)):(a.dia<b.dia?1:-1); });
+      ckGaleriaRender(box, itens, nome);
+    }).catch(function(e){
+      if(meu!==CK_GAL_VER) return;
+      box.innerHTML='<div class="hint">Não consegui ler as fotos agora. Tente abrir a ficha de novo.</div>';
+      _logLeituraFalhou('galeria de fotos do corpo', e);
+    });
+  }
+  function ckGaleriaRender(box, itens, nome){
+    if(!itens.length){
+      box.innerHTML='<div class="hint">Nenhuma foto do corpo nos últimos '+CK_FAXINA_DIAS+' dias. '
+        +'Cada alteração marcada no check-in guarda a foto aqui por '+CK_FAXINA_DIAS+' dias.</div>';
+      return;
+    }
+    var h='<div class="hint" style="margin-bottom:8px">'+itens.length+' registro(s) com foto nos últimos '
+      +CK_FAXINA_DIAS+' dias. Toque na foto para ver em tamanho grande, baixar ou enviar.</div>'
+      +'<div class="ckgal">';
+    itens.forEach(function(it){
+      h+='<div class="ckgal-item">'
+        +'<div class="ckgal-topo"><span class="ckgal-data">'+escAttr(fmtBR(it.dia)||it.dia)+'</span>'
+          +'<span class="ckgal-tipo">'+(it.tipo==='saida'?'check-out':'check-in')
+            +(it.hora?(' · '+escAttr(it.hora)):'')+'</span>'
+          +'<span class="ckgal-quem">'+escAttr(it.quem)+'</span></div>'
+        +'<div class="ckgal-ponto">'+escAttr(it.ponto)+'</div>'
+        +(it.alertas.length?('<div class="ckgal-alertas">'+it.alertas.map(function(a){
+            return '<span>'+escAttr(a)+'</span>'; }).join('')+'</div>'):'')
+        +(it.local?('<div class="ckgal-local">Onde: '+escAttr(it.local)+'</div>'):'')
+        +'<div class="ckgal-fotos">'
+        + it.fotos.map(function(f){
+            var arq=ckArquivoDaFoto(nome, it.ptk, it.dia, it.tipo, f.suf);
+            return '<button type="button" class="ckgal-foto" title="Ver em tamanho grande" '
+              +'onclick="ckFotoGrande(this,\''+arq.replace(/'/g,"\\'")+'\')">'
+              +'<img src="'+f.src+'" alt="'+escAttr(it.ponto+' — '+f.rot)+'">'
+              +'<span>'+escAttr(f.rot)+'</span></button>';
+          }).join('')
+        +'</div></div>';
+    });
+    box.innerHTML=h+'</div>';
+  }
+  // ---- A foto em tamanho grande, com Baixar e Enviar ----
+  var CK_LB={src:'', arquivo:''};
+  // A origem é a própria miniatura da tela: nada de repassar um dataURL de 60 KB por
+  // dentro de um atributo onclick — isso incharia o HTML da ficha inteira.
+  function ckFotoGrande(botao, arquivo){
+    try{
+      var img=botao&&botao.querySelector('img');
+      ckAbrirFotoGrande(img?img.getAttribute('src'):'', arquivo);
+    }catch(e){ _logFalhaGrav('abrir a foto em tamanho grande', e); }
+  }
+  function ckAbrirFotoGrande(src, arquivo){
+    if(!src) return;
+    CK_LB={src:src, arquivo:arquivo||'foto-do-corpo.jpg'};
+    var old=document.getElementById('ckLbBox'); if(old) old.remove();
+    var d=document.createElement('div'); d.id='ckLbBox'; d.className='ck-lb';
+    var bt='border:0;border-radius:12px;font-family:inherit;font-weight:800;font-size:15px;padding:12px 20px;cursor:pointer';
+    d.innerHTML='<img id="ckLbImg" src="'+src+'" alt="Foto do corpo">'
+      +'<div class="ck-lb-bar">'
+        +'<button type="button" id="ckLbBaixar" style="'+bt+';background:#DEB428;color:#234D67">Baixar</button>'
+        +'<button type="button" id="ckLbEnviar" style="'+bt+';background:#234D67;color:#FFFDF6">Enviar</button>'
+        +'<button type="button" id="ckLbFechar" style="'+bt+';background:#FFFDF6;color:#234D67">Fechar</button>'
+      +'</div>'
+      +'<div class="ck-lb-nome">'+escAttr(CK_LB.arquivo)+'</div>';
+    document.body.appendChild(d);
+    var fechar=function(){
+      try{ document.removeEventListener('keydown', aoTeclar); }catch(e){} /* silencioso de propósito: limpeza de ouvinte */
+      var el=document.getElementById('ckLbBox'); if(el) el.remove();
+    };
+    var aoTeclar=function(ev){ if(ev&&(ev.key==='Escape'||ev.keyCode===27)) fechar(); };
+    d.addEventListener('click', function(ev){ if(ev.target===d) fechar(); });
+    d.querySelector('#ckLbFechar').addEventListener('click', fechar);
+    d.querySelector('#ckLbBaixar').addEventListener('click', ckFotoBaixar);
+    d.querySelector('#ckLbEnviar').addEventListener('click', ckFotoEnviar);
+    document.addEventListener('keydown', aoTeclar);
+  }
+  function ckFotoBaixar(){
+    try{
+      var a=document.createElement('a'); a.href=CK_LB.src; a.download=CK_LB.arquivo;
+      document.body.appendChild(a); a.click();
+      setTimeout(function(){ try{ document.body.removeChild(a); }catch(e){} /* silencioso de propósito: limpeza do elemento temporário */ }, 1500);
+    }catch(e){ _logFalhaGrav('baixar a foto do corpo', e); }
+  }
+  function ckDataUrlBlob(u){
+    var p=String(u||'').split(','); if(p.length<2) return null;
+    var mime=((/data:([^;]+)/.exec(p[0])||[])[1])||'image/jpeg';
+    var bin=atob(p[1]), n=bin.length, arr=new Uint8Array(n);
+    for(var i=0;i<n;i++) arr[i]=bin.charCodeAt(i);
+    return new Blob([arr],{type:mime});
+  }
+  // Mesmo padrão do receituário e da ficha de check-in: Web Share com arquivo, e quando o
+  // aparelho não compartilha arquivo, baixa — nunca fica sem saída.
+  function ckFotoEnviar(){
+    var blob=null; try{ blob=ckDataUrlBlob(CK_LB.src); }catch(e){ blob=null; }
+    var file=null;
+    if(blob){ try{ file=new File([blob],CK_LB.arquivo,{type:blob.type}); }catch(e){ file=null; } }
+    if(file && navigator.canShare && navigator.canShare({files:[file]}) && navigator.share){
+      navigator.share({files:[file], title:CK_LB.arquivo, text:'Foto do check-in do corpo — Zêluz'})
+        .catch(function(){ /* a pessoa cancelou — sem erro */ }) /* silencioso de propósito: cancelar não é falha */;
+      return;
+    }
+    ckFotoBaixar();
   }
   function vetFilaGuardar(p, pt, at, hora, motivo){
     if(!DB) return;
@@ -20800,25 +21103,58 @@
       var a=R.pontos[pt.k]||{};
       var alvo='ckPt-'+pt.k;
       if(typeof a.alterado!=='boolean'){
-        faltas.push({el:alvo, msg:'Falta olhar: '+pt.t+'. Toque em Normal ou em Alterado.'}); return;
+        faltas.push({el:alvo, curto:'olhar '+pt.t, msg:'Falta olhar: '+pt.t+'. Toque em Normal ou em Alterado.'}); return;
       }
       if(a.alterado && !a.foto && !(pt.k==='consciencia'&&a.video)){
-        faltas.push({el:alvo, msg:'Falta a foto de '+pt.t+'. É ela que mostra ao tutor e à veterinária o que você viu.'});
+        faltas.push({el:alvo, curto:'foto de '+pt.t, msg:'Falta a foto de '+pt.t+'. É ela que mostra ao tutor e à veterinária o que você viu.'});
       }
       if(a.alterado && ckEhMachucado(a) && !a.foto2){
-        faltas.push({el:alvo, msg:'Falta a foto DE LONGE de '+pt.t+' — a de perto mostra como é, a de longe mostra onde fica no corpo.'});
+        faltas.push({el:alvo, curto:'foto de longe de '+pt.t, msg:'Falta a foto DE LONGE de '+pt.t+' — a de perto mostra como é, a de longe mostra onde fica no corpo.'});
       }
       if(a.alterado && ckEhMachucado(a) && !String(a.local||'').trim()){
-        faltas.push({el:alvo, msg:'Falta dizer em que parte do corpo é o machucado de '+pt.t+' — "no dorso, perto da escápula", "na patinha dianteira".'});
+        faltas.push({el:alvo, curto:'parte do corpo em '+pt.t, msg:'Falta dizer em que parte do corpo é o machucado de '+pt.t+' — "no dorso, perto da escápula", "na patinha dianteira".'});
       }
     });
-    if(entrada && !R.coleiraRep) faltas.push({el:'ckColeiraRep', msg:'Falta dizer qual coleira repelente ele está usando — ou marcar "Não veio".'});
-    if(entrada && !R.coleiraId)  faltas.push({el:'ckColeiraId',  msg:'Falta dizer se ele veio com a coleira de identificação.'});
+    if(entrada && !R.coleiraRep) faltas.push({el:'ckColeiraRep', curto:'coleira repelente', msg:'Falta dizer qual coleira repelente ele está usando — ou marcar "Não veio".'});
+    if(entrada && !R.coleiraId)  faltas.push({el:'ckColeiraId',  curto:'coleira de identificação', msg:'Falta dizer se ele veio com a coleira de identificação.'});
+    // ===== BARRAR EM SILÊNCIO FOI O QUE ESCONDEU O CASO DA COOKIE (15/set/2026) ======
+    // A Giulia tirou duas fotos e não conseguiu enviar. No banco não havia NADA: nem o
+    // check-in, nem qualquer rastro de que alguém tentou. A validação barrava e ficava
+    // calada para quem estava longe da tela. Agora toda tentativa barrada deixa marca —
+    // é assim que a Gestão descobre que alguém está travado ANTES de a foto se perder.
+    if(faltas.length && typeof audit==='function'){
+      audit('checkin-corpo-barrado',
+        pelNome(p)+' — faltou: '+faltas.map(function(f){ return f.curto||f.msg; }).join(', ').slice(0,240),
+        {alvo:k, faltas:faltas.length});
+    }
     if(zFalta(faltas, {botao:'ckBtnSalvar'})) return;
     zLimparFalta();
     // O cocô virou ponto do exame — a validação de "ponto a ponto" já cobre.
     const quem=pessoaDoTurno();
-    const reg=Object.assign({}, R, {nome:pelNome(p), tutor:p.tutor||'', quem:quem, hora:horaAgora(), fim:Date.now(), tipo:entrada?'entrada':'saida'});
+    // ===== A IMAGEM NÃO ENTRA MAIS NO REGISTRO DO DIA (15/set/2026) =================
+    // O base64 ficava em .../pontos/{pt}/foto. O nó do dia tem ouvinte vivo: cada leitura
+    // descia todas as fotos do dia junto. Agora a foto vai para daycare/fotos-corpo/{dia},
+    // um nó irmão que NINGUÉM escuta, e no registro do dia fica só fotoRef:true.
+    const _tipoCk=entrada?'entrada':'saida';
+    var _fotosUp={}, _regPontos={};
+    Object.keys(R.pontos||{}).forEach(function(ptk){
+      var at=Object.assign({}, R.pontos[ptk]||{});
+      if(at.foto||at.foto2||(at.extras&&at.extras.length)){
+        var _rot=(pontos.filter(function(y){ return y.k===ptk; })[0]||{}).t||ptk;
+        // ponto, alertas e local viajam JUNTO da imagem: sem isso a galeria teria de
+        // reabrir o registro do dia inteiro só para saber o que a foto mostra.
+        _fotosUp[ckFotoPtKey(ptk,_tipoCk)]={
+          foto:at.foto||'', foto2:at.foto2||'', extras:(at.extras||[]).filter(Boolean),
+          ponto:_rot, alertas:(at.alertas||[]), local:at.local||'', obs:at.obs||'',
+          tipo:_tipoCk, pet:pelNome(p), tutor:p.tutor||'', hora:horaAgora(),
+          quem:quem, ts:Date.now()
+        };
+        delete at.foto; delete at.foto2; delete at.extras;
+        at.fotoRef=true;
+      }
+      _regPontos[ptk]=at;
+    });
+    const reg=Object.assign({}, R, {pontos:_regPontos, nome:pelNome(p), tutor:p.tutor||'', quem:quem, hora:horaAgora(), fim:Date.now(), tipo:entrada?'entrada':'saida'});
     ckDados[k]=reg;
     const alterados=pontos.filter(function(pt){ return (R.pontos[pt.k]||{}).alterado; });
     // Cada alteração vira um aviso no grupo da veterinária, com a foto. Se a ponte não
@@ -20855,6 +21191,12 @@
     }
     if(DB){
       DB.ref(ckNo()+'/'+k).set(reg).catch(function(e){ alert('Erro ao salvar: '+e.message); });
+      // As imagens, no nó irmão. Falhar aqui não pode ser silêncio: o registro do dia diria
+      // fotoRef:true sem foto nenhuma atrás — e a galeria mostraria um buraco sem explicação.
+      if(Object.keys(_fotosUp).length){
+        DB.ref(ckFotosNo()+'/'+k).update(_fotosUp)
+          .catch(function(e){ _logFalhaGrav('fotos do corpo de '+pelNome(p)+' ('+ckFotosNo()+'/'+k+')', e); });
+      }
       // presença: quem passou pelo check-in de entrada está aqui (acaba a chamada em separado)
       if(entrada) DB.ref('daycare/chamada/'+dcDataKey()+'/'+k).set('veio').catch(function(e){ _logFalhaGrav('presença pelo check-in '+k, e); });
       // histórico do FILHOt: a segunda dor da Adriana — a folha não deixa ver o passado dele
@@ -20906,7 +21248,9 @@
     }
     if(typeof audit==='function') audit(entrada?'checkin-corpo':'checkout-corpo',
       pelNome(p)+(alterados.length?(' — '+alterados.length+' alteração(ões)'):' — tudo normal'), {alvo:k, assinou:quem});
-    ckAtual=null; ckRascunho=null; renderCheckin();
+    ckRascApagar(k);            // gravado no banco: o espelho do aparelho já cumpriu o papel
+    ckAtual=null; ckRascunho=null; CK_RECUPERADO='';
+    renderCheckin();
   }
   // O check-out precisa do que a entrada viu para poder comparar.
   function ckCarregarEntradaDoDia(){
@@ -22105,7 +22449,7 @@
       // A fonte na tela: é ciência, e o monitor precisa ver isso.
       +'<div style="border-top:2px solid var(--z-gold);margin-top:10px;padding-top:8px;font-size:12px;color:var(--z-blue-soft);font-weight:700;line-height:1.45">'
       +'Estes cinco tipos são a classificação de <strong>Bloomsmith, Brent &amp; Schapiro (1991)</strong>, '
-      +'a mesma usada em zoológicos, na etologia clínica e no bem-estar animal no mundo inteiro. '
+      +'a mesma usada em zoológicos, na etologia clínica e no bem-estar dos FILHOts no mundo inteiro. '
       +'Isto é ciência aplicada ao dia do FILHOt — não é passatempo.</div>'
       +'</div>'
       // ---- o passo a passo do EA (é também o cronômetro que vai para o Ritmo do Time) ----
@@ -26983,7 +27327,7 @@
     }).catch(function(e){ if(st){ st.style.color='var(--crm-critico)'; st.textContent='Não consegui falar com a ponte: '+((e&&e.message)||e); } });
   }
   // A tela Configurações (índice de 26/ago/2026). Os campos do Telegram saíram de Relatórios
-  // e vieram para cá com os MESMOS ids — só o gancho de "ao abrir a tela" mudou de dono.
+  // e vieram para cá com os MESMOS ids — só o gancho de "ao abrir a tela" mudou de lugar.
   function configCarregar(){
     try{
       var u=document.getElementById('tgUrl'), s=document.getElementById('tgSenha');
@@ -29805,7 +30149,7 @@
   }
   // A estadia dona da agenda já terminou? Só o passado conta como passado.
   function medEstadiaEncerrada(estadiaId){
-    if(!estadiaId) return Promise.resolve(true);   // agenda sem dono: veio de antes, é passado
+    if(!estadiaId) return Promise.resolve(true);   // agenda sem estadia: veio de antes, é passado
     var julga=function(e){
       e=e||{};
       if((e.status||'ativa')!=='ativa') return true;
@@ -32866,7 +33210,7 @@
   //
   // O ponto é de quem MONTOU A BOLSA (etapa 1), não de quem conferiu — é o trabalho dele que
   // está sendo medido. Quem marca é a consultora, na etapa 2, e o nome dela fica junto: nota
-  // sem dono não é avaliação, é boato.
+  // sem responsável não é avaliação, é boato.
   var CO_FALTOU={};
   var CO_PONTOS=[10,5,2,0];   // 0 faltas = 10 · 1 falta = −50% · 2 = −80% · 3 ou mais = zero
   function coPontosDe(n){ return CO_PONTOS[Math.min(n, CO_PONTOS.length-1)]; }
@@ -33917,7 +34261,7 @@
    * A tela mínima que alimenta o "Meu dia" de cada monitor. Sem ela preenchida, o Painel
    * do monitor diz que a Gestão ainda não montou a escala — e nunca inventa horário.
    * A validação do plano é a plPlanoValido (painel-logica.js), provada no harness: hora
-   * sem o zero na frente, atividade sem nome ou plano sem dono NÃO são gravados.
+   * sem o zero na frente, atividade sem nome ou plano sem responsável NÃO são gravados.
    * ================================================================================== */
   var PD_ESCALA={}, PD_PLANOS={}, PD_DODIA={};
 
