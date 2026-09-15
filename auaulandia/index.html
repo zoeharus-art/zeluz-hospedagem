@@ -12717,7 +12717,7 @@
   // inteira DEPOIS de a correção estar publicada — o aviso apareceu, ninguém tocou.
   // Agora o aparelho PARADO recarrega sozinho: trancado, com a aba escondida, na porta de
   // entrada ou 3 minutos sem ninguém tocar nele. Mão na tela = nunca recarrega.
-  const APP_VERSAO='2026-09-15-01';
+  const APP_VERSAO='2026-09-15-02';
   var RECARGA_PARADO_MS=3*60*1000, __versaoPublicada=null, __recargaTimer=null;
   function vigiarVersao(){
     if(!DB) return;
@@ -14511,8 +14511,27 @@
   }
   // ---- renovação por FILHOt ----
   function renovDe(ex){ return (ex&&ex.renov)||{}; }
-  // Grava início/fim do plano na ficha SEM apagar o resto do renov (plano, aulas...). Alimenta o statusRenov.
-  function setPelRenov(campo,val){ if(!pelAtual) return; var cur=Object.assign({}, renovDe(pelExtra(pelAtual))); cur[campo]=val; setPelExtra(pelAtual,{renov:cur}); try{ if(typeof renderPelFicha==='function') renderPelFicha(); }catch(e){} /* silencioso de propósito: redesenho de tela — falhar não pode derrubar quem chamou */ }
+  // ===== UMA PORTA SÓ PARA O PLANO (Adriana, 15/set/2026) ============================
+  // Esta função era a SEGUNDA porta: a aba Identificação tinha "Plano Day Care — início" e
+  // "— fim" gravando direto no banco, sem escolher plano, sem validar, sem resumo e sem
+  // rastro. Dois lugares mexendo no mesmo dinheiro divergem — é a lei de 18/ago ("o número
+  // da tela é o que se paga"). Agora aqueles campos são SOMENTE LEITURA com link para a aba
+  // Plano, e esta função não grava mais nada: leva quem chamou para a porta certa e deixa
+  // rastro da tentativa. Esconder não é impedir.
+  function setPelRenov(campo,val){
+    if(!pelAtual) return;
+    try{ if(typeof audit==='function') audit('plano-porta-antiga',
+      'tentou mudar "'+campo+'" do plano fora da aba Plano — mandado para a aba Plano',
+      {alvo:(typeof dcKey==='function'?dcKey(pelAtual.n,pelAtual.tutor):'')}); }catch(e){} /* silencioso de propósito: o audit() tem bolso próprio e reenvia sozinho */
+    irParaAbaPlano();
+  }
+  // Leva a pessoa para a aba Plano da ficha aberta — o único lugar que altera plano.
+  function irParaAbaPlano(){
+    try{
+      const bt=Array.prototype.find.call(document.querySelectorAll('.subtab2'), function(b){ return (b.getAttribute('onclick')||'').indexOf("'ps-plano'")>=0; });
+      if(bt&&typeof pelSubtab==='function'){ pelSubtab(bt,'ps-plano'); bt.scrollIntoView({behavior:'smooth', block:'center'}); }
+    }catch(e){} /* silencioso de propósito: enfeite de tela (foco, rolagem) — falhar não muda dado nenhum */
+  }
   // ===== IMPORTAR PLANOS DA PLANILHA (Gestão) — colunas: Peludo · Raça · Tutor · Começo · Fim =====
   const PLANOS_SHEET_ID='1XwvjuMK-qI56jHE8KKQGpf2PTGg413d851-VEE-R_lE';
   function _csvLinha(linha){ var out=[], cur='', q=false; for(var i=0;i<linha.length;i++){ var c=linha[i]; if(q){ if(c==='"'){ if(linha[i+1]==='"'){ cur+='"'; i++; } else q=false; } else cur+=c; } else { if(c==='"') q=true; else if(c===',') { out.push(cur); cur=''; } else cur+=c; } } out.push(cur); return out; }
@@ -14599,7 +14618,7 @@
     if(!d.length) return ''; if(d.length===1) return d[0];
     return d.slice(0,-1).join(', ')+' e '+d[d.length-1]; }
   function msgPlanoFinalizou(p,ex){
-    const r=renovDe(ex); const aulas=r.aulas||nAulasDe(p);
+    const r=renovDe(ex); const aulas=nAulasDe(p);   // aulas = dias marcados (uma verdade só)
     return 'Olá, '+primeiroNome(pelGet(p,'tutor'))+', como está?\n\n'
       +'O plano de DayCare do(a) '+p.n+' está pronto para ser renovado.\n\n'
       +'Hoje ele(a) vem '+aulas+'x por semana, nos dias '+(diasPorExtenso(p)||'combinados')+', no plano '+(r.plano||'—')+'.\n\n'
@@ -14611,7 +14630,7 @@
       +'Ou deseja alterar o plano ou os dias da semana do(a) '+p.n+'? 🐾💛';
   }
   function msgRenovado(p,ex){
-    const r=renovDe(ex); const aulas=r.aulas||nAulasDe(p);
+    const r=renovDe(ex); const aulas=nAulasDe(p);   // aulas = dias marcados (uma verdade só)
     return 'Olá, '+primeiroNome(pelGet(p,'tutor'))+', como está? 💛\n\n'
       +'O plano '+(r.plano||'—')+', de '+aulas+'x por semana, do(a) '+p.n+', foi renovado.\n\n'
       +'A nova vigência será de '+(r.inicio?fmtBR(r.inicio):'—')+' até '+(r.fim?fmtBR(r.fim):'—')
@@ -14621,16 +14640,187 @@
   }
 
   // ---- aba PLANO na ficha ----
+  // ===== NADA GRAVA ANTES DO CONFIRMAR (Adriana, 15/set/2026 — caso Cookie/Yara) ======
+  // Ela foi renovar o plano da Cookie, que é de 1x por semana porque a tutora tem muitas
+  // reposições a pagar. Assim que tocou na data do pagamento, o app GRAVOU sozinho — sem
+  // Confirmar, sem resumo, sem avisar que os dias da semana lá em cima ainda diziam outra
+  // coisa. No banco ficou um plano Gold de 2x com um único dia marcado: o plano dizendo
+  // uma coisa e os dias dizendo outra. E não havia como desfazer.
+  // Agora o bloco inteiro trabalha num RASCUNHO desta tela. Tipo de plano, nº do peludinho
+  // na família e data do pagamento só mexem no rascunho e redesenham a tela. O banco só
+  // recebe quando ela toca em Confirmar — e o Confirmar mostra antes o resumo do que vai
+  // ser gravado. Errou? "Desfazer a última renovação" devolve o plano anterior.
+  var renovRascunho=null;    // {_k, plano, ordemPet, inicio} — o que está NA TELA, ainda não gravado
+  function renovRascKey(){ try{ return pelAtual?pelKey(pelAtual):''; }catch(e){ return ''; } /* silencioso de propósito: sem FILHOt aberto não há rascunho */ }
+  function renovRascLimpar(){ renovRascunho=null; }
+  // O renov que a TELA mostra: o gravado, com o rascunho por cima — e só do FILHOt aberto.
+  // Rascunho de outra ficha nunca vaza para esta (a lei de 19/ago: dado de uma tela só mente).
+  function renovEdit(ex){
+    var base=Object.assign({}, renovDe(ex));
+    var k=renovRascKey();
+    if(renovRascunho && k && renovRascunho._k===k)
+      Object.keys(renovRascunho).forEach(function(c){ if(c!=='_k') base[c]=renovRascunho[c]; });
+    return base;
+  }
+  function renovRascSet(patch){
+    var k=renovRascKey(); if(!k) return;
+    if(!renovRascunho||renovRascunho._k!==k) renovRascunho={_k:k};
+    Object.keys(patch||{}).forEach(function(c){ renovRascunho[c]=patch[c]; });
+    try{ zLimparFalta(); }catch(e){} /* silencioso de propósito: limpar marca de falta é enfeite de tela */
+    try{ renderPelFicha(); }catch(e){} /* silencioso de propósito: redesenho de tela — falhar não pode derrubar quem chamou */
+  }
+  // Tem alteração à espera do Confirmar? É o que autoriza o app a dizer "nada foi gravado ainda".
+  function renovRascSujo(ex){
+    var k=renovRascKey();
+    if(!renovRascunho||!k||renovRascunho._k!==k) return false;
+    var g=renovDe(ex);
+    return ['plano','ordemPet','inicio'].some(function(c){
+      if(!(c in renovRascunho)) return false;
+      if(c==='ordemPet') return Number(renovRascunho[c]||1)!==Number(g[c]||1);
+      return String(renovRascunho[c]||'')!==String(g[c]||'');
+    });
+  }
+  // ---- FREQUÊNCIA ESCOLHIDA NO PRÓPRIO FORMULÁRIO, GUIADA ----------------------------
+  // REGRA ÚNICA: aulas por semana = quantidade de dias marcados nos chips do topo da ficha.
+  // O seletor abaixo é ATALHO E EXPLICAÇÃO — nunca uma segunda verdade. É a lei de 18/ago:
+  // "o número da tela é o que se paga"; a mesma regra em dois lugares diverge.
+  // Por isso escolher 1x com 3 dias marcados NÃO grava nada: aponta em vermelho para os
+  // chips lá em cima e diz, com os dias pelo nome, exatamente o que fazer.
+  const RENOV_NX=[1,2,3,5];
+  function renovDiasNomes(p){ return (pelDias(p)||[]).map(function(x){ return DIA_LBL[x]||x; }).join(', '); }
+  function renovDiasTexto(p){
+    var d=pelDias(p)||[];
+    if(!d.length) return 'hoje nenhum dia está marcado';
+    return (d.length===1?'hoje está marcado ':'hoje estão marcados ')+renovDiasNomes(p);
+  }
+  function setRenovAulas(n){
+    if(!pelAtual) return;
+    var atual=(pelDias(pelAtual)||[]).length;
+    if(atual===n){ try{ zLimparFalta(); }catch(e){} /* silencioso de propósito: enfeite de tela */ renovPlanoRedesenhar(); return; }
+    var msg='Marque '+(n===1?'só 1 dia':n+' dias')+' da semana lá em cima ('+renovDiasTexto(pelAtual)+'). '
+      +'As aulas por semana são sempre a quantidade de dias marcados — é esse número que entra na mensalidade.';
+    if(typeof zFalta==='function') zFalta([{el:'pelDiasEdit', msg:msg}], {});
+    else try{ alert(msg); }catch(e){} /* silencioso de propósito: guarda defensiva */
+  }
+  // Redesenha SÓ o bloco Plano — usado quando os chips de dias mudam, para o seletor Nx
+  // espelhar os chips na mesma hora (sem isso a tela ficaria com duas verdades).
+  function renovPlanoRedesenhar(){
+    try{
+      var box=document.getElementById('planoBloco'); if(!box||!pelAtual) return;
+      box.outerHTML=blocoPlano(pelExtra(pelAtual), pelAtual);
+    }catch(e){} /* silencioso de propósito: redesenho de tela — falhar não pode derrubar quem chamou */
+  }
+  // ---- HISTÓRICO DE RENOVAÇÕES E DESFAZER --------------------------------------------
+  // "Quando errar, eu PRECISO conseguir consertar" (Adriana, 15/set/2026). O renov era um
+  // objeto único: gravar em cima apagava o anterior para sempre. Agora toda troca guarda o
+  // que saiu em daycare/cadastro/{k}/renov_hist, com quem trocou e quando.
+  function renovHistDe(ex){
+    var h=(ex&&ex.renov_hist)||{};
+    return Object.keys(h).map(function(id){ return Object.assign({_id:id}, h[id]||{}); })
+      .filter(function(o){ return o.plano||o.inicio; })
+      .sort(function(a,b){ return (b.substituidoEm||0)-(a.substituidoEm||0); });
+  }
+  function renovQuemAgora(){ try{ var u=_sessao()||{}; return u.nome||u.pessoa||'-'; }catch(e){ return '-'; } }
+  function renovQuandoBR(ts){
+    try{ var d=new Date(ts), p=function(x){ return String(x).padStart(2,'0'); };
+      return p(d.getDate())+'/'+p(d.getMonth()+1)+'/'+d.getFullYear()+' às '+p(d.getHours())+':'+p(d.getMinutes());
+    }catch(e){ return '—'; }
+  }
+  function renovHistGravar(k, antigo, motivo){
+    if(!antigo||!(antigo.plano||antigo.inicio)) return Promise.resolve();
+    var reg=Object.assign({}, antigo, {substituidoEm:Date.now(), por:renovQuemAgora(), motivo:(motivo||'renovação')});
+    if(!DB){ _logFalhaGrav('histórico de renovação '+k+' (banco reconectando)', new Error('banco reconectando')); return Promise.resolve(); }
+    return DB.ref('daycare/cadastro/'+k+'/renov_hist').push(reg)
+      .catch(function(e){ _logFalhaGrav('histórico de renovação '+k, e); });
+  }
+  // Quem desfaz é quem já podia mexer no plano: a recepção (consultoras), a Supervisão e a
+  // Gestão. Nada de permissão nova — a tabela PERM continua sendo o lugar único.
+  function renovPodeDesfazer(){ try{ return canEditPel() && podePapel('ver-plano'); }catch(e){ return false; } }
+  function renovHistHTML(ex){
+    var hist=renovHistDe(ex); if(!hist.length) return '';
+    var linhas=hist.slice(0,6).map(function(o){
+      var pl=planos()[o.plano]||{};
+      var rot=pl.rotulo?(pl.rotulo+' · '+(pl.compromisso||'')):(o.plano||'—');
+      return '<div style="padding:7px 0;border-top:1px dashed var(--z-cream-warm);font-size:12.5px;font-weight:600;color:var(--z-blue)">'
+        +'<strong>'+esc(rot)+'</strong> · '+esc(String(o.aulas||'—'))+'x · '
+        +(o.inicio?fmtBR(o.inicio):'—')+' → '+(o.fim?fmtBR(o.fim):'—')
+        +'<div style="font-size:11.5px;font-weight:600;color:var(--muted)">saiu em '+esc(renovQuandoBR(o.substituidoEm))
+        +' · por '+esc(o.por||'—')+(o.motivo?' · '+esc(o.motivo):'')+'</div></div>';
+    }).join('');
+    return '<div id="renovHist" style="margin-top:10px;padding:11px 13px;border-radius:12px;background:var(--z-cream-warm)">'
+      +'<div style="font-size:12.5px;font-weight:800;color:var(--z-blue)">Renovações anteriores ('+hist.length+')</div>'
+      +linhas
+      +(renovPodeDesfazer()
+        ? '<div class="alm-next" style="margin-top:9px"><button class="btn" id="renovDesfazer" style="background:var(--crm-critico);color:var(--z-cream)" onclick="desfazerRenovacao()">Desfazer a última renovação</button></div>'
+        : '<div class="hint" style="margin-top:6px;font-size:11.5px">Só a recepção, a Supervisão ou a Gestão desfazem uma renovação.</div>')
+      +'</div>';
+  }
+  async function desfazerRenovacao(){
+    if(!pelAtual) return;
+    if(!renovPodeDesfazer()){
+      if(typeof zAlertao==='function') zAlertao('ESTA AÇÃO NÃO É SUA',
+        ['Desfazer uma renovação mexe em cobrança.',
+         'Só a recepção (consultoras), a Supervisão ou a Gestão fazem isso.'], {botao:'Entendi'});
+      return;
+    }
+    const ex=pelExtra(pelAtual), hist=renovHistDe(ex), atual=renovDe(ex);
+    if(!hist.length){
+      if(typeof zAlertao==='function') zAlertao('NÃO HÁ RENOVAÇÃO ANTERIOR GUARDADA',
+        ['Este FILHOt não tem nenhuma renovação anterior no histórico.',
+         'O histórico começa a ser guardado a partir da primeira renovação confirmada nesta versão do app.',
+         'Para corrigir o plano atual, ajuste os dias lá em cima, o plano e a data, e toque em Confirmar.'],
+        {botao:'Entendi'});
+      return;
+    }
+    const ant=hist[0];
+    const plAnt=planos()[ant.plano]||{}, plAtu=planos()[atual.plano]||{};
+    const ok=await zPergunta('DESFAZER A ÚLTIMA RENOVAÇÃO',
+      [pelNome(pelAtual)+' · '+(pelGet(pelAtual,'tutor')||'tutor a confirmar'),
+       'SAI: '+(plAtu.rotulo||atual.plano||'—')+' · '+(atual.aulas||'—')+'x · '
+         +(atual.inicio?fmtBR(atual.inicio):'—')+' → '+(atual.fim?fmtBR(atual.fim):'—'),
+       'VOLTA: '+(plAnt.rotulo||ant.plano||'—')+' · '+(ant.aulas||'—')+'x · '
+         +(ant.inicio?fmtBR(ant.inicio):'—')+' → '+(ant.fim?fmtBR(ant.fim):'—'),
+       'O que sai vai para o histórico — nada se perde, e o rastro fica na Linha do tempo do dia.'],
+      {sim:'Desfazer e voltar o plano anterior', nao:'Voltar', corTitulo:'#234D67'});
+    if(!ok) return;
+    const k=pelKey(pelAtual);
+    await renovHistGravar(k, atual, 'desfeita');
+    const volta={ plano:ant.plano||'', aulas:ant.aulas||'', inicio:ant.inicio||'', fim:ant.fim||'',
+                  mesRenov:ant.mesRenov||'', quando:ant.quando||'', ordemPet:ant.ordemPet||1 };
+    await setPelExtra(pelAtual,{renov:volta});
+    if(DB) DB.ref('daycare/cadastro/'+k+'/renov_hist/'+ant._id).remove()
+      .catch(function(e){ _logFalhaGrav('tirar do histórico '+k+'/'+ant._id, e); });
+    renovRascLimpar();
+    if(typeof audit==='function') audit('renovacao-desfeita',
+      'voltou o plano de '+(atual.plano||'—')+' ('+(atual.aulas||'—')+'x) para '+(volta.plano||'—')
+      +' ('+(volta.aulas||'—')+'x) · '+(volta.inicio?fmtBR(volta.inicio):'—')+' → '+(volta.fim?fmtBR(volta.fim):'—'),
+      {alvo:dcKey(pelAtual.n,pelAtual.tutor)});
+    renderPelFicha();
+    if(typeof zAlertao==='function') zAlertao('RENOVAÇÃO DESFEITA',
+      ['O plano voltou a ser '+(plAnt.rotulo||volta.plano||'—')+', de '+(volta.aulas||'—')+'x por semana.',
+       'Vale até '+(volta.fim?fmtBR(volta.fim):'—')+'.'], {ok:true, botao:'Fechar'});
+  }
+
+  // ---- aba PLANO na ficha ----
   function blocoPlano(ex,p){
-    const r=renovDe(ex), st=statusRenov(ex), aulas=r.aulas||nAulasDe(p);
+    const gravado=renovDe(ex), r=renovEdit(ex), st=statusRenov(ex);
+    // AULAS = DIAS MARCADOS. Sempre. Nem o que está gravado nem o que alguém digitou —
+    // é a quantidade de chips do topo da ficha que manda, aqui e na mensalidade.
+    const aulas=nAulasDe(p);
+    const sujo=renovRascSujo(ex);
     // A consultora fala com o tutor em MENSAL / TRIMESTRAL / SEMESTRAL — é isso que precisa
     // estar na frente. Silver/Gold/Black continuam sendo o nome comercial (e definem o valor),
     // mas cada um tem um compromisso fixo, então marcar o tipo já escolhe o plano.
     const selPlano=function(k){ const pl=planos()[k];
       const tipo=(pl.compromisso||'').charAt(0).toUpperCase()+(pl.compromisso||'').slice(1);
-      return '<button class="'+(r.plano===k?'on':'')+'" onclick="pick(this);setRenov({plano:\''+k+'\'})">'+tipo+' · '+pl.rotulo+'</button>'; };
+      return '<button class="'+(r.plano===k?'on':'')+'" onclick="pick(this);renovRascSet({plano:\''+k+'\'})">'+tipo+' · '+pl.rotulo+'</button>'; };
     const clsSt=st.estado==='vencido'?'vd-venc':(st.estado==='vence'?'vd-perto':(st.estado==='ok'?'vd-ok':'vd-sem'));
-    const mens=(r.plano&&r.plano!=='auaulandia'&&r.plano!=='avulso')?mensalidade(r.plano,aulas,r.ordemPet||1):0;
+    const mens=(r.plano&&r.plano!=='auaulandia'&&r.plano!=='avulso'&&r.plano!=='morador')?mensalidade(r.plano,aulas,r.ordemPet||1):0;
+    // A vigência do rascunho é CALCULADA na hora, a partir do plano e da data que estão na
+    // tela — nunca lida de um campo gravado que pode estar velho.
+    const calc=(r.plano&&r.inicio&&planos()[r.plano])?aplicarRenovacao(r.plano, aulas, r.inicio):null;
+    const fimTela=calc?calc.fim:'';
+    const mesTela=calc?calc.mesRenov:'';
     // A categoria escolhida no TOPO da ficha manda aqui. Hóspede e avulso não têm plano
     // mensal — em vez de campos vazios, o bloco explica o que vale para cada um.
     const cat=pelCategoria(p);
@@ -14638,10 +14828,24 @@
     const btnAvu='<button class="'+(cat==='avulso'?'on':'')+'" onclick="setPelCategoria(\'avulso\')">Avulso · diária</button>';
     const btnMor='<button class="'+(cat==='morador'?'on':'')+'" onclick="setPelCategoria(\'morador\')">Morador(a) Zêluz</button>';
     const soHosp=(cat==='hospede'), soAvulso=(cat==='avulso'), soMorador=(cat==='morador');
-    return '<div class="prev-bloco">'
-      +'<div class="prev-tit">Plano <span class="vd '+((soHosp||soAvulso)?'vd-ok':clsSt)+'">'+st.label+'</span></div>'
+    const semPlanoMensal=(soHosp||soAvulso||soMorador);
+    // DADO INCONSISTENTE APARECE (Adriana, 15/set/2026). A Cookie ficou com plano gravado de
+    // 2x e um único dia marcado. Em vez de esconder, a ficha mostra e ensina a consertar —
+    // "sem programador" é lei desde 22/ago/2026.
+    const incoerente=(!semPlanoMensal && gravado.aulas && Number(gravado.aulas)!==aulas);
+    const faixaIncoerente=incoerente
+      ? '<div class="field" style="grid-column:1/-1"><div id="planoIncoerente" class="hint" style="background:rgba(222,180,40,.22);border-left:4px solid var(--z-gold);border-radius:10px;padding:11px 13px;font-weight:700;color:var(--z-blue)">'
+        +'O plano gravado diz '+esc(String(gravado.aulas))+'x, mas os dias marcados são '+aulas
+        +' ('+esc(renovDiasNomes(p)||'nenhum')+'). Confira os dias lá em cima e toque em <strong>Confirmar</strong> para acertar.'
+        +'</div></div>'
+      : '';
+    return '<div class="prev-bloco" id="planoBloco">'
+      +'<div class="prev-tit">Plano <span class="vd '+(semPlanoMensal?'vd-ok':clsSt)+'">'+st.label+'</span></div>'
+      // TEXTO DE APOIO — o sistema orienta o que fazer, em uma linha, antes de qualquer campo.
+      +(semPlanoMensal?'':'<div id="planoComoFazer" class="hint" style="margin:0 0 9px;font-weight:700;color:var(--z-blue)">Primeiro marque os dias da semana lá em cima. Depois escolha o plano e a data. Nada é gravado antes do Confirmar.</div>')
       +'<div class="cad-grid">'
-        +'<div class="field" style="grid-column:1/-1"><label>Tipo de plano <span style="font-weight:600;color:'+(!r.plano?'var(--crm-critico)':'var(--muted)')+'">'+(!r.plano?'— OBRIGATÓRIO: escolha antes de lançar a vigência':'(define até quando vale)')+'</span></label><div class="seg gold" data-single'+(!r.plano?' style="outline:2px solid var(--crm-critico);outline-offset:3px;border-radius:11px"':'')+'>'
+        +faixaIncoerente
+        +'<div class="field" style="grid-column:1/-1"><label>Tipo de plano <span style="font-weight:600;color:'+(!r.plano?'var(--crm-critico)':'var(--muted)')+'">'+(!r.plano?'— OBRIGATÓRIO: escolha antes de lançar a data':'(define até quando vale)')+'</span></label><div class="seg gold" data-single'+(!r.plano?' style="outline:2px solid var(--crm-critico);outline-offset:3px;border-radius:11px"':'')+'>'
           +['Silver','Gold','Black'].map(selPlano).join('')+btnAvu+btnAua+btnMor+'</div></div>'
       + (soHosp
           ? '<div class="field" style="grid-column:1/-1"><div class="hint" style="background:rgba(46,125,138,.12);border-left:4px solid #2E7D8A;border-radius:10px;padding:11px 13px;font-weight:700;color:var(--z-blue)">'
@@ -14658,9 +14862,15 @@
             +'🏠 Este FILHOt é <strong>nosso</strong> — mora com a equipe Zêluz.<br>'
             +'Vem com a gente, ajuda a Márcia na avaliação e participa da rotina. A ficha de saúde é a mesma de todos (vacinas, alimentação, medicação, alergias), mas <strong>não gera cobrança nem plano</strong> e nunca aparece na Renovação.'
             +'</div></div>'
-          : '<div class="field"><label>Aulas por semana (dos dias marcados)</label><input class="cad-in" value="'+aulas+'x" readonly></div>'
+          // SELETOR DE AULAS POR SEMANA — atalho e explicação dos chips do topo, nunca uma
+          // segunda verdade. Vem ACIMA da data, porque é a primeira coisa a acertar.
+          : '<div class="field" style="grid-column:1/-1"><label>Aulas por semana <span style="font-weight:600;color:var(--muted)">— é a quantidade de dias marcados lá em cima</span></label>'
+            +'<div class="seg gold" data-single id="planoAulasSeg">'
+              +RENOV_NX.map(function(n){ return '<button type="button" class="'+(aulas===n?'on':'')+'" onclick="setRenovAulas('+n+')">'+n+'x</button>'; }).join('')
+            +'</div>'
+            +'<div class="hint" style="font-size:11px;margin-top:3px">Hoje: '+aulas+'x por semana'+(renovDiasNomes(p)?' ('+esc(renovDiasNomes(p))+')':' — nenhum dia marcado')+'. Para trocar, marque os dias no alto da ficha.</div></div>'
             +'<div class="field"><label>Nº do peludinho na família</label><div class="seg gold" data-single>'
-              +[1,2,3].map(function(n){ return '<button class="'+((r.ordemPet||1)===n?'on':'')+'" onclick="pick(this);setRenov({ordemPet:'+n+'})">'+n+'º</button>'; }).join('')+'</div></div>'
+              +[1,2,3].map(function(n){ return '<button class="'+((r.ordemPet||1)===n?'on':'')+'" onclick="pick(this);renovRascSet({ordemPet:'+n+'})">'+n+'º</button>'; }).join('')+'</div></div>'
             // Sem plano escolhido a data não calcula vencimento nenhum — e a consultora
             // achava que tinha lançado (Adriana, 04/ago/2026). O campo fica travado e diz
             // o que falta, em vez de aceitar uma data que não vira nada.
@@ -14668,81 +14878,111 @@
             // consultor tem na mão. O vencimento sai daqui sozinho — ele não digita, não calcula
             // e não erra. O mês do pagamento conta como o 1º mês do plano.
             +'<div class="field"><label>Data do pagamento'+(!r.plano?' <span style="color:var(--crm-critico);font-weight:800">— escolha o plano primeiro</span>':'')+'</label>'
-              +'<input type="date" class="cad-in" value="'+(r.inicio||'')+'"'+(!r.plano?' disabled style="opacity:.55;cursor:not-allowed" onclick="avisoEscolhaPlano()"':'')+' onchange="setRenovInicio(this.value)" min="2015-01-01" max="2035-12-31" onkeydown="return dataSoNoCalendario(event)">'
-              +(r.plano?'<div class="hint" style="font-size:11px;margin-top:3px">O mês deste pagamento já conta como o 1º mês do plano. O vencimento é calculado sozinho.</div>':'')+'</div>'
+              +'<input type="date" class="cad-in" id="planoDataPag" value="'+(r.inicio||'')+'"'+(!r.plano?' disabled style="opacity:.55;cursor:not-allowed" onclick="avisoEscolhaPlano()"':'')+' onchange="setRenovInicio(this.value)" min="2015-01-01" max="2035-12-31" onkeydown="return dataSoNoCalendario(event)">'
+              +(r.plano?'<div class="hint" style="font-size:11px;margin-top:3px">O mês deste pagamento já conta como o 1º mês do plano. O vencimento é calculado sozinho — e só grava no Confirmar.</div>':'')+'</div>'
             +'<div class="field"><label>Mensalidade'+((r.ordemPet||1)>1?' (com desconto)':'')+'</label><div class="prev-calc">'+(mens?fmtCent(mens):'escolha o plano')+'</div></div>'
             // O vencimento em destaque: é o número que a consultora confere antes de confirmar.
             +'<div class="field" style="grid-column:1/-1"><label>Vale até '+(r.plano?'<span style="font-weight:600;color:var(--muted)">— calculado pelo sistema</span>':'')+'</label>'
-              +'<div class="prev-calc" style="font-size:19px;font-weight:800;'+(r.fim&&r.fim<hojeISO()?'color:var(--crm-critico)':'')+'">'
-              +(r.fim?(fmtBR(r.fim)+(r.fim<hojeISO()?' — JÁ VENCIDO':'')+' <span style="font-size:12.5px;font-weight:600;color:var(--muted)">· renova em '+(r.mesRenov||'—')+'</span>'):'preencha o plano e a data do pagamento')
+              +'<div class="prev-calc" style="font-size:19px;font-weight:800;'+(fimTela&&fimTela<hojeISO()?'color:var(--crm-critico)':'')+'">'
+              +(fimTela?(fmtBR(fimTela)+(fimTela<hojeISO()?' — JÁ VENCIDO':'')+' <span style="font-size:12.5px;font-weight:600;color:var(--muted)">· renova em '+(mesTela||'—')+'</span>'):'preencha o plano e a data do pagamento')
               +'</div>'
-              +(r.fim&&r.fim<hojeISO()?'<div class="dc-faltas" style="margin-top:6px;border-color:#B3261E;color:#B3261E"><strong>Esta vigência já nasceu vencida.</strong> Confira a data do pagamento — provavelmente é de um mês anterior. Enquanto ficar assim, ele continua aparecendo na lista de cobrança.</div>':'')
+              +(fimTela&&fimTela<hojeISO()?'<div class="dc-faltas" style="margin-top:6px;border-color:#B3261E;color:#B3261E"><strong>Esta vigência já nasce vencida.</strong> Confira a data do pagamento — provavelmente é de um mês anterior. O Confirmar vai perguntar antes de gravar.</div>':'')
               +'</div>')
       +'</div>'
-      + ((soHosp||soAvulso||soMorador) ? '' : '<div class="alm-next" style="margin-top:8px"><button class="btn btn-gold" onclick="confirmarRenovacao()">Confirmar / renovar plano</button></div>')
+      + (semPlanoMensal ? '' :
+          '<div class="alm-next" style="margin-top:8px"><button class="btn btn-gold" id="planoConfirmar" onclick="confirmarRenovacao()">Confirmar / renovar plano</button></div>'
+          +(sujo?'<div id="planoNaoGravado" class="dc-faltas" style="margin-top:6px;border-color:#B3261E;color:#B3261E"><strong>Nada foi gravado ainda.</strong> Confira o resumo e toque em Confirmar / renovar plano.</div>':'')
+          +renovHistHTML(ex))
       +'</div>';
   }
-  function setRenov(patch){ const r=Object.assign({}, renovDe(pelExtra(pelAtual)), patch);
-    setPelExtra(pelAtual,{renov:r}); renderPelFicha();
-    // O cache do cadastro só é atualizado quando o banco confirma. Sem este segundo
-    // desenho, quem clicava em "Só AuAulândia" via o bloco continuar igual e achava que
-    // não tinha pego — só mudava ao reabrir a ficha.
-    setTimeout(function(){ try{ renderPelFicha(); }catch(e){} /* silencioso de propósito: redesenho de tela — falhar não pode derrubar quem chamou */ }, 400); }
   // Alerta único de "falta escolher o plano" — usado pelo campo de data e pelo Confirmar.
   function avisoEscolhaPlano(){
-    if(typeof zAlertao!=='function'){ alert('Escolha o plano (Mensal, Trimestral ou Semestral) antes de lançar a vigência.'); return; }
+    if(typeof zAlertao!=='function'){ alert('Escolha o plano (Mensal, Trimestral ou Semestral) antes de lançar a data do pagamento.'); return; }
     zAlertao('FALTA ESCOLHER O PLANO',
-      ['Escolha primeiro se é <b>Mensal (Silver)</b>, <b>Trimestral (Gold)</b> ou <b>Semestral (Black)</b>.'.replace(/<\/?b>/g,''),
-       'É o plano que define até quando a vigência vale. Sem ele, a data de início não gera vencimento nenhum — o plano fica lançado pela metade e ninguém percebe na hora de cobrar.'],
+      ['Escolha primeiro se é Mensal (Silver), Trimestral (Gold) ou Semestral (Black).',
+       'É o plano que define até quando a vigência vale. Sem ele, a data do pagamento não gera vencimento nenhum — o plano fica lançado pela metade e ninguém percebe na hora de cobrar.'],
       {rodape:'Se este FILHOt não tem plano mensal, use "Avulso · diária", "Só AuAulândia · hospedagem" ou "Morador(a) Zêluz".', botao:'Escolher o plano'});
   }
-  async function setRenovInicio(iso){ const r=renovDe(pelExtra(pelAtual));
+  // A DATA SÓ MEXE NO RASCUNHO. Não chama setRenov, não fala com o banco, não pergunta nada:
+  // era exatamente isso que gravava sozinho no caso Cookie/Yara. A pergunta da vigência
+  // nascida vencida continua existindo — mudou de lugar, agora é no Confirmar.
+  function setRenovInicio(iso){
+    if(!pelAtual) return;
+    const r=renovEdit(pelExtra(pelAtual));
     if(!r.plano){ avisoEscolhaPlano(); renderPelFicha(); return; }   // data sem plano não vira vencimento
-    let calc=aplicarRenovacao(r.plano, r.aulas||nAulasDe(pelAtual), iso);
-    // TRAVA CONTRA VIGÊNCIA NASCIDA VENCIDA (Adriana, 11/ago/2026).
-    // Caso real: o Beau foi renovado em 04/ago, mas a data lançada foi 01/jul — o plano nasceu
-    // vencido em 31/jul e ele continuou na lista de cobrança como se nada tivesse sido feito.
-    // O sistema aceitou calado. Agora ele pergunta, e a decisão continua sendo do consultor.
-    if(calc && calc.fim && calc.fim < hojeISO()){
-      const pl=planos()[r.plano]||{};
-      const meses=PLANO_MESES[pl.compromisso]||1;
-      // mesmo pagamento, começando no mês seguinte ao lançado
-      const a=iso.split('-').map(Number);
-      const p2=x=>String(x).padStart(2,'0');
-      const isoProx=(a[1]===12? (a[0]+1)+'-01-01' : a[0]+'-'+p2(a[1]+1)+'-01');
-      const fimProx=fimVigenciaISO(isoProx, meses);
-      const usarProx=await zPergunta('ATENÇÃO — esta vigência já nasce VENCIDA',
-        ['Data do pagamento: '+fmtBR(iso),
-         'Plano: '+(pl.rotulo||r.plano)+' ('+(pl.compromisso||'')+')',
-         'Vale até: '+fmtBR(calc.fim)+' — que já passou.',
-         'Assim ele CONTINUA na lista de cobrança, como se não tivesse renovado.'],
-        {sim:'Começar em '+fmtBR(isoProx)+', valendo até '+fmtBR(fimProx),
-         nao:'Manter '+fmtBR(iso)+' mesmo assim'});
-      if(usarProx) calc=aplicarRenovacao(r.plano, r.aulas||nAulasDe(pelAtual), isoProx);
-    }
-    setRenov(Object.assign({inicio:(calc&&calc.inicio)||iso}, calc||{})); }
-  async function confirmarRenovacao(){ const ex=pelExtra(pelAtual), r=renovDe(ex);
+    renovRascSet({inicio:iso});
+  }
+  // O CONFIRMAR é a única porta do banco: valida, mostra o resumo, pergunta, e só então grava.
+  async function confirmarRenovacao(){
+    if(!pelAtual) return;
+    const ex=pelExtra(pelAtual), gravado=renovDe(ex), r=renovEdit(ex);
     if(!r.plano){ avisoEscolhaPlano(); return; }
+    const aulas=nAulasDe(pelAtual);
+    const dias=pelDias(pelAtual)||[];
+    if(!dias.length){
+      if(typeof zFalta==='function') zFalta([{el:'pelDiasEdit', msg:'Marque os dias da semana em que este FILHOt vem. Sem dia marcado não há aulas por semana — e sem aulas não há mensalidade.'}], {botao:'planoConfirmar'});
+      else alert('Marque os dias da semana antes de confirmar o plano.');
+      return;
+    }
     if(!r.inicio){
-      if(typeof zAlertao==='function') zAlertao('FALTA A DATA DO PAGAMENTO',
-        ['O plano está escolhido, mas falta dizer QUANDO o tutor pagou.',
-         'Preencha a "Data do pagamento" — é dela que o sistema calcula sozinho o vencimento e o mês da próxima renovação.'],
-        {botao:'Preencher a data'});
+      if(typeof zFalta==='function') zFalta([{el:'planoDataPag', msg:'Diga QUANDO o tutor pagou. É desta data que o sistema calcula sozinho o vencimento e o mês da próxima renovação.'}], {botao:'planoConfirmar'});
       else alert('Preencha a data do pagamento.');
       return;
     }
-    const calc=aplicarRenovacao(r.plano, r.aulas||nAulasDe(pelAtual), r.inicio);
-    // Última barreira: confirmar uma renovação que já nasce vencida é registrar um trabalho
-    // que não vale (Adriana, 11/ago/2026 — caso Beau). Avisa antes de gravar.
-    if(calc && calc.fim && calc.fim < hojeISO()){
-      if(!await zPergunta('ATENÇÃO — você está confirmando uma renovação JÁ VENCIDA',
-        ['Pagamento em '+fmtBR(r.inicio)+' · vale até '+fmtBR(calc.fim)+', que já passou.',
-         'Ele vai continuar aparecendo na lista de cobrança, como se não tivesse renovado.'],
-        {sim:'Gravar assim mesmo (lançamento atrasado)', nao:'Voltar e corrigir a data'})) return;
+    let calc=aplicarRenovacao(r.plano, aulas, r.inicio);
+    if(!calc){
+      if(typeof zAlertao==='function') zAlertao('PLANO NÃO RECONHECIDO',
+        ['O plano "'+(r.plano||'—')+'" não está na tabela de planos deste ano.',
+         'Escolha novamente Mensal (Silver), Trimestral (Gold) ou Semestral (Black).'], {botao:'Escolher o plano'});
+      return;
     }
-    setPelExtra(pelAtual,{renov:Object.assign({}, r, calc, {ordemPet:r.ordemPet||1})});
-    if(typeof audit==='function') audit('renovacao','renovou o plano '+r.plano+' ('+(r.aulas||nAulasDe(pelAtual))+'x) até '+(calc?fmtBR(calc.fim):''),{alvo:dcKey(pelAtual.n,pelAtual.tutor)});
+    // TRAVA CONTRA VIGÊNCIA NASCIDA VENCIDA (Adriana, 11/ago/2026 — caso Beau).
+    // O Beau foi renovado em 04/ago, mas a data lançada foi 01/jul: o plano nasceu vencido em
+    // 31/jul e ele continuou na lista de cobrança como se nada tivesse sido feito. O sistema
+    // aceitou calado. Agora ele pergunta ANTES de gravar, e a decisão continua sendo do consultor.
+    if(calc.fim && calc.fim < hojeISO()){
+      const pl0=planos()[r.plano]||{};
+      const meses=PLANO_MESES[pl0.compromisso]||1;
+      const a=r.inicio.split('-').map(Number);
+      const p2=function(x){ return String(x).padStart(2,'0'); };
+      const isoProx=(a[1]===12? (a[0]+1)+'-01-01' : a[0]+'-'+p2(a[1]+1)+'-01');
+      const fimProx=fimVigenciaISO(isoProx, meses);
+      const usarProx=await zPergunta('ATENÇÃO — esta vigência já nasce VENCIDA',
+        ['Data do pagamento: '+fmtBR(r.inicio),
+         'Plano: '+(pl0.rotulo||r.plano)+' ('+(pl0.compromisso||'')+')',
+         'Vale até: '+fmtBR(calc.fim)+' — que já passou.',
+         'Assim ele CONTINUA na lista de cobrança, como se não tivesse renovado.'],
+        {sim:'Começar em '+fmtBR(isoProx)+', valendo até '+fmtBR(fimProx),
+         nao:'Manter '+fmtBR(r.inicio)+' mesmo assim'});
+      if(usarProx) calc=aplicarRenovacao(r.plano, aulas, isoProx);
+    }
+    // RESUMO ANTES DE GRAVAR. "O sistema inteiro precisa orientar o que fazer" (Adriana).
+    // Ela lê o que vai para o banco, com o dinheiro na frente, e decide.
+    const pl=planos()[r.plano]||{};
+    const mens=mensalidade(r.plano, aulas, r.ordemPet||1);
+    const diasTxt=renovDiasNomes(pelAtual)||'nenhum dia marcado';
+    const ok=await zPergunta('CONFIRA ANTES DE GRAVAR',
+      [pelNome(pelAtual)+' · '+(pelGet(pelAtual,'tutor')||'tutor a confirmar'),
+       'Plano '+(pl.rotulo||r.plano)+' ('+(pl.compromisso||'')+') · '+aulas+'x por semana · '+diasTxt,
+       'Início '+fmtBR(calc.inicio)+' · vale até '+fmtBR(calc.fim)+' · renova em '+(calc.mesRenov||'—'),
+       'Mensalidade '+fmtCent(mens)+((r.ordemPet||1)>1?' — '+(r.ordemPet)+'º peludinho da família, com desconto':'')],
+      {sim:'Confirmar e gravar o plano', nao:'Voltar e conferir', cor:'#234D67', corTitulo:'#234D67',
+       rodape:'Ao confirmar, o plano anterior vai para "Renovações anteriores" — e dá para desfazer.'});
+    if(!ok) return;
+    const k=pelKey(pelAtual);
+    await renovHistGravar(k, gravado, 'renovação');
+    const novo=Object.assign({}, gravado, calc, {aulas:aulas, ordemPet:r.ordemPet||1});
+    await setPelExtra(pelAtual,{renov:novo});
+    renovRascLimpar();
+    if(typeof audit==='function') audit('renovacao',
+      'renovou o plano '+novo.plano+' ('+aulas+'x, dias '+diasTxt+') de '+fmtBR(novo.inicio)+' até '+fmtBR(novo.fim)
+      +' · mensalidade '+fmtCent(mens),
+      {alvo:dcKey(pelAtual.n,pelAtual.tutor)});
     renderPelFicha();
+    if(typeof zAlertao==='function') zAlertao('PLANO GRAVADO',
+      [pelNome(pelAtual)+' · '+(pl.rotulo||novo.plano)+' de '+aulas+'x por semana.',
+       'Vale até '+fmtBR(novo.fim)+', com próxima renovação em '+(novo.mesRenov||'—')+'.',
+       'Mensalidade '+fmtCent(mens)+'.'], {ok:true, botao:'Fechar'});
   }
 
   // ---- TELA "Renovação de Planos" (sidebar) ----
@@ -14815,7 +15055,7 @@
       return '<div class="renov-item" onclick="abrirPeludinhoRenov('+o.i+')">'
         +'<div class="renov-nome">'+escAttr(pelNome(o.p))+' <span class="pel-obs">'+escAttr(pelGet(o.p,'raca')||'')+'</span>'
         +'<div class="renov-tutor">'+escAttr(pelGet(o.p,'tutor')||'tutor a confirmar')+'</div></div>'
-        +'<div class="renov-meta">'+(r.plano?escAttr(r.plano)+' · '+(r.aulas||nAulasDe(o.p))+'x':'plano a definir')
+        +'<div class="renov-meta">'+(r.plano?escAttr(r.plano)+' · '+nAulasDe(o.p)+'x':'plano a definir')
         +'<div class="renov-per">'+periodo+'</div></div>'
         +'<span class="vd '+clsSt[o.st.estado]+'">'+o.st.label+'</span></div>';
     }).join('')+'</div>';
@@ -16167,12 +16407,24 @@
   }
   function toggleDiaPel(d){
     if(!canEditPel()||!pelAtual) return;
-    const dias=pelDias(pelAtual).slice(); const i=dias.indexOf(d);
+    const antes=pelDias(pelAtual).slice();
+    const dias=antes.slice(); const i=dias.indexOf(d);
     if(i>=0) dias.splice(i,1); else dias.push(d);
     dias.sort((a,b)=>ORDEM_DIAS.indexOf(a)-ORDEM_DIAS.indexOf(b));
     setPelExtra(pelAtual,{dias:dias, freq:(dias.length?dias.length+'x':'')});
+    // RASTRO EM TODA PORTA (Adriana, 15/set/2026): mexer nos dias muda as aulas por semana
+    // e, com elas, a mensalidade. Mudança de dinheiro sem rastro era porta sem fechadura —
+    // ninguém sabia quem tinha trocado o dia da Cookie nem quando.
+    const nomes=function(a){ return (a&&a.length)?a.map(function(x){ return DIA_LBL[x]||x; }).join(', '):'nenhum'; };
+    if(typeof audit==='function') audit('dias-da-semana',
+      (typeof pelNome==='function'?pelNome(pelAtual):pelAtual.n)+': dias '+nomes(antes)+' → '+nomes(dias),
+      {alvo:dcKey(pelAtual.n,pelAtual.tutor)});
     const w=document.getElementById('pelDiasEdit'); if(w) w.innerHTML=diasEditInner(pelAtual);
     const fi=document.getElementById('pelFreqInput'); if(fi) fi.value=pelFreq(pelAtual)+' por semana';
+    // O seletor "Aulas por semana" do bloco Plano espelha estes chips — redesenha junto,
+    // senão a mesma ficha mostraria duas verdades ao mesmo tempo.
+    try{ zLimparFalta(); }catch(e){} /* silencioso de propósito: limpar marca de falta é enfeite de tela */
+    try{ renovPlanoRedesenhar(); }catch(e){} /* silencioso de propósito: redesenho de tela — falhar não pode derrubar quem chamou */
     renderPel(); if(typeof renderDaycare==='function') renderDaycare();
   }
   // ===== Atividades por peludinho (item D) — quem faz cada atividade seletiva =====
@@ -17997,22 +18249,35 @@
       +'<div class="seg gold" data-single>'+bt+'</div>'
       +'<div class="hint" style="margin-top:4px;font-size:11px">'+esc(info)+'</div>';
   }
-  function setPelCategoria(cat){
+  async function setPelCategoria(cat){
     if(!pelAtual||!canEditPel()) return;
-    const ex=pelExtra(pelAtual)||{}; const r=Object.assign({}, renovDe(ex));
+    const ex=pelExtra(pelAtual)||{}; const antigo=renovDe(ex); const r=Object.assign({}, antigo);
     // A categoria manda no plano: hóspede e avulso não têm mensalidade nem vencimento.
     if(cat==='hospede') r.plano='auaulandia';
     else if(cat==='avulso') r.plano='avulso';
     else if(cat==='morador') r.plano='morador';
     else if(r.plano==='auaulandia'||r.plano==='avulso'||r.plano==='morador') r.plano='';
+    // VIRAR AVULSO / HÓSPEDE / MORADOR APAGA A VIGÊNCIA (Adriana, 15/set/2026). Antes só o
+    // plano trocava e a vigência velha ficava para trás: a ficha dizia "vale até 30/11, 2x
+    // por semana" num FILHOt que já era avulso — dado que mente. O que sai vai para
+    // "Renovações anteriores", com quem trocou e quando; nada se perde.
+    const semPlano=(cat==='hospede'||cat==='avulso'||cat==='morador');
+    const tinhaVigencia=!!(antigo.inicio||antigo.fim||antigo.aulas||antigo.mesRenov);
+    if(semPlano && tinhaVigencia){
+      await renovHistGravar(pelKey(pelAtual), antigo, 'virou '+cat);
+      r.inicio=''; r.fim=''; r.mesRenov=''; r.aulas='';
+    }
+    renovRascLimpar();
     setPelExtra(pelAtual,{categoria:cat, renov:r});
-    if(typeof audit==='function') audit('categoria-peludinho', cat, {alvo:dcKey(pelAtual.n,pelAtual.tutor)});
+    if(typeof audit==='function') audit('categoria-peludinho',
+      cat+((semPlano&&tinhaVigencia)?' — apagou a vigência '+(antigo.inicio?fmtBR(antigo.inicio):'—')+' → '+(antigo.fim?fmtBR(antigo.fim):'—')+' ('+(antigo.aulas||'—')+'x), guardada no histórico':''),
+      {alvo:dcKey(pelAtual.n,pelAtual.tutor)});
     renderPelFicha();
     setTimeout(function(){ try{ renderPelFicha(); }catch(e){} /* silencioso de propósito: redesenho de tela — falhar não pode derrubar quem chamou */ }, 400);
   }
   function abrirPeludinho(i){
     const p=PELUDINHOS[i]; pelAtual=p; pelAtualIdx=i; pelFotoPend=null; const ex=pelExtra(p);
-    if(PB_ULT!==i){ PB_PEND={}; PB_SALVO={}; PB_ULT=i; }   // blocos de prevenção: pendente é por FILHOt
+    if(PB_ULT!==i){ PB_PEND={}; PB_SALVO={}; PB_ULT=i; renovRascLimpar(); }   // blocos de prevenção e rascunho do plano: pendente é por FILHOt
     const idade=calcIdade(pelNasc(p)); const can=canEditPel();
     document.getElementById('pel-lista').style.display='none';
     const f=document.getElementById('pel-ficha'); f.style.display='block';
@@ -18083,8 +18348,14 @@
           ${fieldSens('bairro','Bairro',`<input class="cad-in" value="${escAttr(ex.bairro||'')}" placeholder="Bairro" onchange="setPelExtra(pelAtual,{bairro:this.value})">`)}
           ${fieldSens('indicou','Quem indicou',`<input class="cad-in" value="${escAttr(ex.indicou||'')}" placeholder="Indicação" onchange="setPelExtra(pelAtual,{indicou:this.value})">`)}
           <div class="field"><label>Data de matrícula</label><input type="date" class="cad-in" value="${ex.matricula||''}" onchange="setPelExtra(pelAtual,{matricula:this.value})" min="2015-01-01" max="2035-12-31" onkeydown="return dataSoNoCalendario(event)"></div>
-          <div class="field"><label>Plano Day Care — início</label><input type="date" class="cad-in" value="${(ex.renov&&ex.renov.inicio)||''}" onchange="setPelRenov('inicio',this.value)" min="2015-01-01" max="2035-12-31" onkeydown="return dataSoNoCalendario(event)"></div>
-          <div class="field"><label>Plano Day Care — fim (vencimento)</label><input type="date" class="cad-in" value="${(ex.renov&&ex.renov.fim)||''}" onchange="setPelRenov('fim',this.value)" min="2015-01-01" max="2035-12-31" onkeydown="return dataSoNoCalendario(event)"></div>
+          <!-- SOMENTE LEITURA (Adriana, 15/set/2026): estes dois campos gravavam o plano
+               direto, sem escolher plano, sem resumo e sem rastro — a segunda porta que
+               deixou a Cookie com plano de 2x e um dia só marcado. Agora só MOSTRAM; quem
+               altera é a aba Plano, com Confirmar, histórico e desfazer. Uma porta só. -->
+          <div class="field"><label>Plano Day Care — início</label><input type="date" class="cad-in" value="${(ex.renov&&ex.renov.inicio)||''}" readonly style="background:var(--z-cream-warm);color:var(--muted)" title="O plano se altera na aba Plano" min="2015-01-01" max="2035-12-31" onkeydown="return dataSoNoCalendario(event)">
+            <div class="hint" style="font-size:11px;margin-top:3px"><a href="#" onclick="irParaAbaPlano();return false" style="color:var(--z-blue);font-weight:800">Alterar na aba Plano</a> — com resumo antes de gravar e opção de desfazer.</div></div>
+          <div class="field"><label>Plano Day Care — fim (vencimento)</label><input type="date" class="cad-in" value="${(ex.renov&&ex.renov.fim)||''}" readonly style="background:var(--z-cream-warm);color:var(--muted)" title="O vencimento é calculado pelo sistema na aba Plano" min="2015-01-01" max="2035-12-31" onkeydown="return dataSoNoCalendario(event)">
+            <div class="hint" style="font-size:11px;margin-top:3px">Calculado pelo sistema a partir do plano e da data do pagamento. <a href="#" onclick="irParaAbaPlano();return false" style="color:var(--z-blue);font-weight:800">Alterar na aba Plano</a>.</div></div>
           <div class="field"><label>Frequência (automática pelos dias)</label><input id="pelFreqInput" class="cad-in" value="${escAttr(pelFreq(p))} por semana" readonly></div>
         </div>
         <div id="pel-saved" style="font-size:12px;color:var(--crm-ok);font-weight:700;margin-top:8px"></div>
@@ -18370,7 +18641,8 @@
   }
   function salvarFichaPel(){ if(document.activeElement&&document.activeElement.blur) document.activeElement.blur(); const s=document.getElementById('pel-saved2'); if(s){ s.textContent='✓ Ficha salva! Disponível em todos os aparelhos.'; setTimeout(()=>{ if(s) s.textContent=''; },2200); } if(typeof renderDaycare==='function') renderDaycare(); }
   function pelSubtab(el,id){ el.parentNode.querySelectorAll('.subtab2').forEach(x=>x.classList.remove('active')); el.classList.add('active'); document.querySelectorAll('.ppanel2').forEach(x=>x.classList.remove('active')); const t=document.getElementById(id); if(t) t.classList.add('active'); }
-  function voltarPel(){ if(pelOrigem==='renovacao'){ irParaView('renovacao'); return; }
+  function voltarPel(){ renovRascLimpar();   // sair da ficha descarta o rascunho do plano que não foi confirmado
+    if(pelOrigem==='renovacao'){ irParaView('renovacao'); return; }
     if(pelOrigem==='vacinas'){ document.getElementById('pel-ficha').style.display='none'; document.getElementById('pel-lista').style.display='block'; irParaView('vacinas'); return; }
     if(pelOrigem==='inativos'){ document.getElementById('pel-ficha').style.display='none'; document.getElementById('pel-lista').style.display='block'; irParaView('inativos'); if(typeof renderInativos==='function') renderInativos(); return; }
     if(pelOrigem==='hospedes'){ document.getElementById('pel-ficha').style.display='none'; document.getElementById('pel-lista').style.display='block'; irParaView('hospedes'); if(typeof renderHospedesAba==='function') renderHospedesAba(); return; }
@@ -29959,14 +30231,20 @@
     try{ if(navigator.vibrate && !op.ok) navigator.vibrate([180,90,180]); }catch(e){} /* silencioso de propósito: enfeite de tela (foco, rolagem, mídia) — falhar não muda dado nenhum */
   }
   // Mesmo cartaz, com botões de decisão (usado na trava de duplicidade do check-in).
-  function zEscolha(titulo, linhas, botoes){
+  // op.corTitulo e op.rodape entraram em 15/set/2026: o cartaz de CONFERÊNCIA da renovação
+  // não é um erro — é um resumo para ler e decidir. Vermelho ali ensinaria a pessoa a
+  // fechar sem ler. O padrão segue vermelho, para não mexer em quem já usava.
+  function zEscolha(titulo, linhas, botoes, op){
+    op=op||{};
+    var corTit=op.corTitulo||'#B3261E';
     var old=document.getElementById('zAlertaoBox'); if(old) old.remove();
     var d=document.createElement('div'); d.id='zAlertaoBox';
     d.style.cssText='position:fixed;inset:0;z-index:99999;background:rgba(16,10,8,.78);display:flex;align-items:center;justify-content:center;padding:16px;font-family:Poppins,system-ui,-apple-system,sans-serif';
     d.innerHTML='<div style="background:#FFFDF6;border-radius:20px;max-width:580px;width:100%;box-shadow:0 24px 70px rgba(0,0,0,.45);overflow:hidden;max-height:92vh;display:flex;flex-direction:column">'
-      +'<div style="background:#B3261E;color:#FFFDF6;padding:20px 22px;font-weight:800;font-size:24px;line-height:1.15">'+esc(titulo)+'</div>'
+      +'<div style="background:'+corTit+';color:#FFFDF6;padding:20px 22px;font-weight:800;font-size:24px;line-height:1.15">'+esc(titulo)+'</div>'
       +'<div style="padding:20px 22px;overflow:auto;color:#234D67;font-size:17px;line-height:1.5;font-weight:600">'
       + (Array.isArray(linhas)?linhas:[linhas]).map(function(t){ return '<div style="margin-bottom:10px">'+esc(t)+'</div>'; }).join('')
+      + (op.rodape?'<div style="margin-top:12px;padding-top:12px;border-top:1px dashed #e7e0d2;font-size:15px;font-weight:600;color:#6b5f4b">'+esc(op.rodape)+'</div>':'')
       +'</div><div style="padding:0 22px 22px;display:flex;flex-direction:column;gap:9px" id="zEscolhaBts"></div></div>';
     document.body.appendChild(d);
     var wrap=d.querySelector('#zEscolhaBts');
@@ -30045,7 +30323,7 @@
       zEscolha(titulo, linhas, [
         {t:(op.sim||'Confirmar'), cor:(op.cor||'#B3261E'), fn:function(){ res(true); }},
         {t:(op.nao||'Cancelar'), cor:'#6b5f4b', fn:function(){ res(false); }}
-      ]);
+      ], {corTitulo:op.corTitulo, rodape:op.rodape});
     });
   }
   function zTexto(titulo, linhas, op){
@@ -36129,8 +36407,10 @@
         out.checkins.push({pet:r.pet||'', quem:r.quem||'', hora:r.hora||paHora(r.ts), ts:r.ts||0});
       else if(r.acao==='checkout' && r.detalhe==='estadia finalizada')
         out.checkouts.push({pet:r.pet||'', quem:r.quem||'', hora:r.hora||paHora(r.ts), ts:r.ts||0});
-      else if(r.acao==='renovacao')
-        out.renovacoes.push({detalhe:r.detalhe||'plano renovado', quem:r.quem||'', hora:r.hora||paHora(r.ts), ts:r.ts||0});
+      // A renovação DESFEITA entra na mesma lista de propósito (15/set/2026): desfazer é
+      // movimento de plano igual a renovar, e esconder o desfazer seria a trilha mentindo.
+      else if(r.acao==='renovacao'||r.acao==='renovacao-desfeita')
+        out.renovacoes.push({detalhe:(r.acao==='renovacao-desfeita'?'DESFEZ — ':'')+(r.detalhe||'plano renovado'), quem:r.quem||'', hora:r.hora||paHora(r.ts), ts:r.ts||0});
     });
     ['checkins','checkouts','renovacoes'].forEach(function(c){ out[c].sort(function(a,b){ return (b.ts||0)-(a.ts||0); }); });
     return out;

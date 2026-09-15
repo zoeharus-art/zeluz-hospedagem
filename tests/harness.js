@@ -11507,7 +11507,297 @@ async function main() {
         !/\.catch\(function\([a-z]*\)\{\s*\}\)/.test(
           html.slice(html.indexOf('const CK_FRASE_PRATICA='), html.indexOf('function renderCkInicio('))));
       check('v-14 · a versão carimbada é a desta entrega',
-        /const APP_VERSAO='2026-09-15-01';/.test(html));
+        /const APP_VERSAO='2026-09-15-02';/.test(html));
+    }
+
+    // ---- v-15: O PLANO SÓ GRAVA NO CONFIRMAR (caso Cookie/Yara, 15/set/2026) --------
+    // "Fui renovar o plano da Cookie. Não consegui alterar o plano: assim que coloquei a data
+    // ele já salvou sem eu apertar Confirmar; eu não alterei o dia lá em cima antes e ele não
+    // me disse que eu tinha que fazer isso." Ficou no banco um Gold de 2x com UM dia marcado
+    // — o plano dizendo uma coisa e os chips dizendo outra — e sem como desfazer.
+    // Estes checks provam as sete promessas da entrega. Os antigos que prendiam ao
+    // comportamento de antes (a data gravando via setRenov) foram REESCRITOS aqui.
+    {
+      // ---- a forma do formulário ----
+      check('v-15 · a data do pagamento NÃO grava: só mexe no rascunho (era ela que salvava sozinho)',
+        /onchange="setRenovInicio\(this\.value\)"/.test(html)
+        && /function setRenovInicio\(iso\)\{[\s\S]{0,700}?renovRascSet\(\{inicio:iso\}\);/.test(html)
+        && html.indexOf('function setRenov(patch)') < 0
+        && !/setRenov\(\{/.test(html));
+      check('v-15 · o seletor "Aulas por semana" (1x·2x·3x·5x) existe e vem ACIMA da data do pagamento',
+        /const RENOV_NX=\[1,2,3,5\];/.test(html)
+        && /id="planoAulasSeg"/.test(html)
+        && /onclick="setRenovAulas\('\+n\+'\)"/.test(html)
+        && html.indexOf('id="planoAulasSeg"') < html.indexOf('id="planoDataPag"'));
+      check('v-15 · aulas = dias marcados, em UM lugar só: o bloco Plano lê nAulasDe(p), nunca r.aulas',
+        /function blocoPlano\(ex,p\)\{[\s\S]{0,900}?const aulas=nAulasDe\(p\);/.test(html)
+        && !/const aulas=r\.aulas\|\|nAulasDe\(p\)/.test(html));
+      check('v-15 · o Confirmar mostra RESUMO com duas escolhas antes de gravar',
+        /zPergunta\('CONFIRA ANTES DE GRAVAR'/.test(html)
+        && /sim:'Confirmar e gravar o plano', nao:'Voltar e conferir'/.test(html)
+        && /function zEscolha\(titulo, linhas, botoes, op\)\{/.test(html));
+      check('v-15 · histórico em renov_hist (push, nunca set) e botão Desfazer com rastro próprio',
+        /DB\.ref\('daycare\/cadastro\/'\+k\+'\/renov_hist'\)\.push\(reg\)/.test(html)
+        && !/renov_hist'\)\.set\(/.test(html)
+        && /id="renovDesfazer"[\s\S]{0,120}onclick="desfazerRenovacao\(\)"/.test(html)
+        && /audit\('renovacao-desfeita'/.test(html)
+        && /Renovações anteriores \('\+hist\.length\+'\)/.test(html));
+      check('v-15 · a aba Identificação virou SOMENTE LEITURA — uma porta só para o plano',
+        /Plano Day Care — início<\/label><input type="date"[^>]*readonly/.test(html)
+        && /Plano Day Care — fim \(vencimento\)<\/label><input type="date"[^>]*readonly/.test(html)
+        && !/onchange="setPelRenov\(/.test(html)
+        && /onclick="irParaAbaPlano\(\);return false"/.test(html));
+      check('v-15 · a faixa amarela de dado inconsistente existe na aba Plano',
+        /id="planoIncoerente"/.test(html)
+        && /O plano gravado diz '\+esc\(String\(gravado\.aulas\)\)\+'x, mas os dias marcados são '\+aulas/.test(html));
+      check('v-15 · o texto de apoio abre o bloco Plano, em uma linha',
+        /id="planoComoFazer"[\s\S]{0,260}Primeiro marque os dias da semana lá em cima\. Depois escolha o plano e a data\. Nada é gravado antes do Confirmar\./.test(html));
+      check('v-15 · nenhuma gravação nova do plano ficou com .catch vazio — toda falha deixa rastro',
+        !/\.catch\(function\([a-z]*\)\{\s*\}\)/.test(
+          html.slice(html.indexOf('var renovRascunho=null;'), html.indexOf('// ---- TELA "Renovação de Planos"'))));
+
+      // ---- prova de comportamento: a Cookie da Yara, do jeito que ficou no banco ----
+      // Um ambiente controlado com o dado REAL do defeito: renov diz Gold/2x, chips dizem 1x.
+      const monta15 = async (corpo) => JSON.parse(await vm.runInContext(`(async function(){
+        var bkp={DB:DB, audit:audit, zFalta:zFalta, zLimparFalta:zLimparFalta, zPergunta:zPergunta,
+                 zAlertao:zAlertao, renderPelFicha:renderPelFicha, renderPel:renderPel,
+                 renderDaycare:renderDaycare, canEditPel:canEditPel, podePapel:podePapel,
+                 PELUDINHOS:PELUDINHOS, cad:pelCadCache, pelAtual:pelAtual, pelAtualIdx:pelAtualIdx};
+        var grav=[], empurrou=[], apagou=[], rastro=[], faltas=[], cartazes=[], perguntas=[], respostas=[];
+        function _p(){ return { then:function(f){ if(f) f(); return this; }, catch:function(){ return this; } }; }
+        DB={ ref:function(p){ return {
+          update:function(v){ grav.push({metodo:'update', caminho:p, valor:v}); return _p(); },
+          set:function(v){ grav.push({metodo:'set', caminho:p, valor:v}); return _p(); },
+          push:function(v){ empurrou.push({caminho:p, valor:v}); return _p(); },
+          remove:function(){ apagou.push(p); return _p(); }
+        }; } };
+        audit=function(a,d,m){ rastro.push({acao:a, detalhe:String(d==null?'':d), alvo:(m&&m.alvo)||''}); };
+        zFalta=function(l,o){ faltas.push({msgs:(l||[]).map(function(f){ return {el:String(f.el), msg:f.msg}; }),
+                                          botao:String((o||{}).botao||'')}); return true; };
+        zLimparFalta=function(){};
+        zAlertao=function(t,l,o){ cartazes.push({titulo:t, linhas:(Array.isArray(l)?l:[l]), op:(o||{})}); };
+        zPergunta=function(t,l,o){ perguntas.push({titulo:t, linhas:(Array.isArray(l)?l:[l]), op:(o||{})});
+          return Promise.resolve(respostas.length?respostas.shift():false); };
+        renderPelFicha=function(){}; renderPel=function(){}; renderDaycare=function(){};
+        canEditPel=function(){ return true; }; podePapel=function(){ return true; };
+        PELUDINHOS=[{ n:'Cookie', tutor:'Yara', raca:'SRD', dias:['ter'] }];
+        pelCadCache={ 'cookie__yara':{ n:'Cookie', tutor:'Yara', dias:['ter'], freq:'1x',
+          renov:{plano:'Gold', aulas:2, inicio:'2026-09-11', fim:'2026-11-30',
+                 mesRenov:'novembro de 2026', quando:'2026-09-14', ordemPet:1},
+          renov_hist:{ h1:{plano:'Silver', aulas:1, inicio:'2026-06-01', fim:'2026-06-30',
+                 mesRenov:'junho de 2026', substituidoEm:1757000000000, por:'Amanda', motivo:'renovação'} } } };
+        pelAtual=PELUDINHOS[0]; pelAtualIdx=0;
+        renovRascLimpar();
+        var out;
+        try{ out=await (${corpo})({grav:grav, empurrou:empurrou, apagou:apagou, rastro:rastro,
+              faltas:faltas, cartazes:cartazes, perguntas:perguntas, respostas:respostas}); }
+        finally {
+          DB=bkp.DB; audit=bkp.audit; zFalta=bkp.zFalta; zLimparFalta=bkp.zLimparFalta;
+          zPergunta=bkp.zPergunta; zAlertao=bkp.zAlertao; renderPelFicha=bkp.renderPelFicha;
+          renderPel=bkp.renderPel; renderDaycare=bkp.renderDaycare; canEditPel=bkp.canEditPel;
+          podePapel=bkp.podePapel; PELUDINHOS=bkp.PELUDINHOS; pelCadCache=bkp.cad;
+          pelAtual=bkp.pelAtual; pelAtualIdx=bkp.pelAtualIdx; renovRascLimpar();
+        }
+        return JSON.stringify(out);
+      })()`, ctx));
+
+      // 1) A MORDIDA: colocar a data NÃO grava mais nada — mas a tela já mostra a data.
+      const soData = await monta15(`async function(t){
+        setRenovInicio('2026-10-01');
+        var r=renovEdit(pelExtra(pelAtual));
+        return {grav:t.grav.length, push:t.empurrou.length, perguntas:t.perguntas.length,
+                naTela:r.inicio||'', noBanco:(pelCadCache['cookie__yara'].renov.inicio||''),
+                sujo:renovRascSujo(pelExtra(pelAtual))};
+      }`);
+      check('v-15 · mordida — a data do pagamento NÃO grava no banco (o defeito que a Adriana viveu)',
+        soData.grav === 0 && soData.push === 0 && soData.perguntas === 0,
+        JSON.stringify(soData));
+      check('v-15 · a data aparece na tela (rascunho) e o banco continua com a antiga, até o Confirmar',
+        soData.naTela === '2026-10-01' && soData.noBanco === '2026-09-11' && soData.sujo === true,
+        JSON.stringify(soData));
+
+      // 2) O tipo de plano e o nº do peludinho também só mexem no rascunho.
+      const rascPlano = await monta15(`async function(t){
+        renovRascSet({plano:'Black'}); renovRascSet({ordemPet:2});
+        var r=renovEdit(pelExtra(pelAtual));
+        return {grav:t.grav.length, push:t.empurrou.length, plano:r.plano, ordem:r.ordemPet,
+                noBanco:pelCadCache['cookie__yara'].renov.plano};
+      }`);
+      check('v-15 · tipo de plano e nº do peludinho na família também só mexem no rascunho',
+        rascPlano.grav === 0 && rascPlano.push === 0 && rascPlano.plano === 'Black'
+        && rascPlano.ordem === 2 && rascPlano.noBanco === 'Gold',
+        JSON.stringify(rascPlano));
+
+      // 3) O seletor Nx é atalho, nunca segunda verdade: pedir 1x com 3 dias marcados aponta
+      //    para os chips lá em cima, com os dias pelo nome — e não grava.
+      const nx = await monta15(`async function(t){
+        pelCadCache['cookie__yara'].dias=['ter','qui','sex'];
+        setRenovAulas(1);
+        var f1=t.faltas.length?t.faltas[0]:null;
+        setRenovAulas(3);   // 3 dias marcados: já bate, não reclama
+        return {grav:t.grav.length, push:t.empurrou.length, faltas:t.faltas.length,
+                el:f1?f1.msgs[0].el:'', msg:f1?f1.msgs[0].msg:''};
+      }`);
+      check('v-15 · pedir 1x com 3 dias marcados NÃO grava — aponta para os chips do topo',
+        nx.grav === 0 && nx.push === 0 && nx.faltas === 1 && nx.el === 'pelDiasEdit',
+        JSON.stringify(nx));
+      check('v-15 · e a frase diz o que fazer, com os dias pelo nome',
+        /Marque só 1 dia da semana lá em cima/.test(nx.msg)
+        && /Ter, Qui, Sex/.test(nx.msg)
+        && /quantidade de dias marcados/.test(nx.msg), nx.msg);
+      const nxOk = await monta15(`async function(t){
+        setRenovAulas(1);   // 1 dia marcado, pediu 1x: nada a corrigir
+        return {faltas:t.faltas.length, grav:t.grav.length};
+      }`);
+      check('v-15 · pedir o Nx que já bate com os chips não reclama de nada',
+        nxOk.faltas === 0 && nxOk.grav === 0, JSON.stringify(nxOk));
+
+      // 4) O Confirmar: resumo com o dinheiro na frente, histórico do que saiu, e aulas = chips.
+      const conf = await monta15(`async function(t){
+        t.respostas.push(true);            // a pessoa lê o resumo e confirma
+        await confirmarRenovacao();
+        var up=t.grav.filter(function(g){ return g.metodo==='update'; });
+        return {perg:t.perguntas.length, titulo:t.perguntas[0]?t.perguntas[0].titulo:'',
+                linhas:t.perguntas[0]?t.perguntas[0].linhas:[],
+                sim:t.perguntas[0]?t.perguntas[0].op.sim:'', nao:t.perguntas[0]?t.perguntas[0].op.nao:'',
+                ups:up.length, caminho:up[0]?up[0].caminho:'', renov:up[0]?up[0].valor.renov:null,
+                push:t.empurrou.length, pushCaminho:t.empurrou[0]?t.empurrou[0].caminho:'',
+                pushValor:t.empurrou[0]?t.empurrou[0].valor:null,
+                rastro:t.rastro};
+      }`);
+      check('v-15 · o Confirmar pergunta ANTES de gravar, com Confirmar e Voltar',
+        conf.perg === 1 && conf.titulo === 'CONFIRA ANTES DE GRAVAR'
+        && conf.sim === 'Confirmar e gravar o plano' && conf.nao === 'Voltar e conferir',
+        JSON.stringify({p:conf.perg, t:conf.titulo, s:conf.sim, n:conf.nao}));
+      check('v-15 · o resumo traz FILHOt, tutor, plano, 1x, o dia, a vigência e a mensalidade com centavos',
+        conf.linhas.join(' | ').indexOf('Cookie · Yara') >= 0
+        && /1x por semana · Ter/.test(conf.linhas.join(' | '))
+        && /Início 11\/09\/2026 · vale até 30\/11\/2026/.test(conf.linhas.join(' | '))
+        && /Mensalidade R\$ \d{1,3}(\.\d{3})*,\d{2}/.test(conf.linhas.join(' | ')),
+        JSON.stringify(conf.linhas));
+      check('v-15 · gravou UMA vez, no cadastro da Cookie, com aulas = dias marcados (1x, não 2x)',
+        conf.ups === 1 && conf.caminho === 'daycare/cadastro/cookie__yara'
+        && conf.renov && Number(conf.renov.aulas) === 1 && conf.renov.fim === '2026-11-30',
+        JSON.stringify({ups:conf.ups, c:conf.caminho, r:conf.renov}));
+      check('v-15 · o plano que saiu foi para o histórico, com quem trocou e quando',
+        conf.push === 1 && conf.pushCaminho === 'daycare/cadastro/cookie__yara/renov_hist'
+        && conf.pushValor && Number(conf.pushValor.aulas) === 2
+        && !!conf.pushValor.substituidoEm && !!conf.pushValor.por,
+        JSON.stringify({push:conf.push, c:conf.pushCaminho, v:conf.pushValor}));
+      check('v-15 · e o rastro da renovação diz o plano, as aulas, os dias e o dinheiro',
+        conf.rastro.some(function(r){ return r.acao === 'renovacao'
+          && /1x, dias Ter/.test(r.detalhe) && /R\$ /.test(r.detalhe) && r.alvo === 'cookie__yara'; }),
+        JSON.stringify(conf.rastro));
+
+      // 5) Voltar no resumo não grava nada — a saída do cartaz também é segura.
+      const volta = await monta15(`async function(t){
+        t.respostas.push(false);           // tocou em "Voltar e conferir"
+        await confirmarRenovacao();
+        return {grav:t.grav.length, push:t.empurrou.length, perg:t.perguntas.length};
+      }`);
+      check('v-15 · tocar em "Voltar e conferir" no resumo não grava nada',
+        volta.perg === 1 && volta.grav === 0 && volta.push === 0, JSON.stringify(volta));
+
+      // 6) Sem dia marcado o Confirmar não grava: aponta para os chips.
+      const semDia = await monta15(`async function(t){
+        pelCadCache['cookie__yara'].dias=[];
+        t.respostas.push(true);
+        await confirmarRenovacao();
+        return {grav:t.grav.length, push:t.empurrou.length, faltas:t.faltas.length,
+                el:t.faltas[0]?t.faltas[0].msgs[0].el:'', botao:t.faltas[0]?t.faltas[0].botao:''};
+      }`);
+      check('v-15 · Confirmar sem nenhum dia marcado não grava — manda marcar os dias primeiro',
+        semDia.grav === 0 && semDia.push === 0 && semDia.faltas === 1
+        && semDia.el === 'pelDiasEdit' && semDia.botao === 'planoConfirmar',
+        JSON.stringify(semDia));
+
+      // 7) DESFAZER: volta o plano anterior, guarda o que saiu e deixa rastro próprio.
+      const desf = await monta15(`async function(t){
+        t.respostas.push(true);
+        await desfazerRenovacao();
+        var up=t.grav.filter(function(g){ return g.metodo==='update'; });
+        return {perg:t.perguntas.length, titulo:t.perguntas[0]?t.perguntas[0].titulo:'',
+                linhas:t.perguntas[0]?t.perguntas[0].linhas:[],
+                renov:up[0]?up[0].valor.renov:null, push:t.empurrou.length,
+                pushValor:t.empurrou[0]?t.empurrou[0].valor:null,
+                apagou:t.apagou, rastro:t.rastro};
+      }`);
+      check('v-15 · Desfazer pergunta mostrando o que SAI e o que VOLTA',
+        desf.perg === 1 && desf.titulo === 'DESFAZER A ÚLTIMA RENOVAÇÃO'
+        && /^SAI: /.test(desf.linhas[1] || '') && /^VOLTA: /.test(desf.linhas[2] || ''),
+        JSON.stringify(desf.linhas));
+      check('v-15 · Desfazer restaura o plano anterior (Silver 1x até 30/06) no cadastro',
+        desf.renov && desf.renov.plano === 'Silver' && Number(desf.renov.aulas) === 1
+        && desf.renov.inicio === '2026-06-01' && desf.renov.fim === '2026-06-30',
+        JSON.stringify(desf.renov));
+      check('v-15 · o que saiu no Desfazer vai para o histórico, e a entrada restaurada sai de lá',
+        desf.push === 1 && desf.pushValor && desf.pushValor.motivo === 'desfeita'
+        && desf.apagou.indexOf('daycare/cadastro/cookie__yara/renov_hist/h1') >= 0,
+        JSON.stringify({push:desf.push, v:desf.pushValor, a:desf.apagou}));
+      check('v-15 · e o Desfazer deixa rastro próprio: renovacao-desfeita',
+        desf.rastro.some(function(r){ return r.acao === 'renovacao-desfeita'
+          && /Silver/.test(r.detalhe) && r.alvo === 'cookie__yara'; }),
+        JSON.stringify(desf.rastro));
+
+      // 8) OS CHIPS DE DIAS TÊM RASTRO — mexer nos dias mexe na mensalidade.
+      const chips = await monta15(`async function(t){
+        toggleDiaPel('qui');
+        return {rastro:t.rastro, grav:t.grav};
+      }`);
+      check('v-15 · mexer nos chips de dias deixa rastro (dias-da-semana), com o antes e o depois',
+        chips.rastro.some(function(r){ return r.acao === 'dias-da-semana'
+          && /Cookie: dias Ter → Ter, Qui/.test(r.detalhe) && r.alvo === 'cookie__yara'; }),
+        JSON.stringify(chips.rastro));
+
+      // 9) VIRAR AVULSO APAGA A VIGÊNCIA — com histórico, nunca calado.
+      const avulso = await monta15(`async function(t){
+        await setPelCategoria('avulso');
+        var up=t.grav.filter(function(g){ return g.metodo==='update'; });
+        return {renov:up[0]?up[0].valor.renov:null, cat:up[0]?up[0].valor.categoria:'',
+                push:t.empurrou.length, pushValor:t.empurrou[0]?t.empurrou[0].valor:null,
+                rastro:t.rastro};
+      }`);
+      check('v-15 · virar Avulso apaga início, fim, mês e aulas da vigência velha',
+        avulso.cat === 'avulso' && avulso.renov && avulso.renov.plano === 'avulso'
+        && avulso.renov.inicio === '' && avulso.renov.fim === ''
+        && avulso.renov.mesRenov === '' && avulso.renov.aulas === '',
+        JSON.stringify(avulso.renov));
+      check('v-15 · e a vigência apagada vai para o histórico, com o motivo e rastro na auditoria',
+        avulso.push === 1 && avulso.pushValor && avulso.pushValor.motivo === 'virou avulso'
+        && avulso.rastro.some(function(r){ return r.acao === 'categoria-peludinho'
+             && /apagou a vigência/.test(r.detalhe); }),
+        JSON.stringify({p:avulso.push, v:avulso.pushValor, r:avulso.rastro}));
+
+      // 10) A FAIXA AMARELA aparece no dado torto da Cookie e some quando ele bate.
+      const faixa = await monta15(`async function(t){
+        var torto=blocoPlano(pelExtra(pelAtual), pelAtual);              // renov 2x, chips 1x
+        pelCadCache['cookie__yara'].renov.aulas=1;
+        var certo=blocoPlano(pelExtra(pelAtual), pelAtual);              // agora bate
+        return {torto:torto.indexOf('id="planoIncoerente"')>=0,
+                frase:/O plano gravado diz 2x, mas os dias marcados são 1 \\(Ter\\)/.test(torto),
+                certo:certo.indexOf('id="planoIncoerente"')>=0,
+                temSeletor:torto.indexOf('id="planoAulasSeg"')>=0,
+                temApoio:torto.indexOf('id="planoComoFazer"')>=0,
+                temHist:torto.indexOf('id="renovHist"')>=0,
+                temDesfazer:torto.indexOf('id="renovDesfazer"')>=0,
+                grav:t.grav.length};
+      }`);
+      check('v-15 · a faixa amarela aparece quando o plano gravado e os dias marcados discordam',
+        faixa.torto === true && faixa.frase === true && faixa.certo === false,
+        JSON.stringify(faixa));
+      check('v-15 · e o bloco Plano desenha o seletor Nx, o texto de apoio, o histórico e o Desfazer',
+        faixa.temSeletor && faixa.temApoio && faixa.temHist && faixa.temDesfazer && faixa.grav === 0,
+        JSON.stringify(faixa));
+
+      // 11) Desenhar a tela NUNCA grava (a lei: quadro observa, ação grava).
+      const desenho = await monta15(`async function(t){
+        blocoPlano(pelExtra(pelAtual), pelAtual);
+        renovPlanoRedesenhar();
+        renovHistHTML(pelExtra(pelAtual));
+        return {grav:t.grav.length, push:t.empurrou.length, apagou:t.apagou.length};
+      }`);
+      check('v-15 · desenhar o bloco Plano não grava nada no banco',
+        desenho.grav === 0 && desenho.push === 0 && desenho.apagou === 0, JSON.stringify(desenho));
     }
 
     // ---- a promessa desta versão: os quadros só OBSERVAM e nada grava calado ----
