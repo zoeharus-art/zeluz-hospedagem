@@ -17361,7 +17361,10 @@
   // Copiar é sempre a mesma coisa, venha a mensagem de onde vier (hóspede devendo ou
   // coleira a vencer): tenta a área de transferência e, se o navegador recusar, mostra o
   // texto num campo já selecionado — nunca deixa a pessoa sem a mensagem na mão.
-  function prevCopiarTexto(txt, btn){
+  // O nome NÃO pode ser "prevCopiarTexto": já existe uma função com esse nome (o plano B
+  // do copiar do check-up, lá em cima) e a segunda declaração apagaria a primeira em
+  // silêncio — o harness passa a morder nome de função repetido (15/set/2026).
+  function prevCopiarMensagemTutor(txt, btn){
     var pronto=function(){
       if(btn){ var t=btn.textContent; btn.textContent='✅ Copiado — cole no WhatsApp'; setTimeout(function(){ btn.textContent=t; },3000); }
     };
@@ -17379,7 +17382,7 @@
   function prevCopiarTutor(chave, btn){
     var o=(PREV_CACHE_HOSP||[]).filter(function(x){ return pelKey(x.p)===chave; })[0];
     if(!o){ alert('Não achei este FILHOt para montar a mensagem. Atualize a tela.'); return; }
-    prevCopiarTexto(prevMensagemTutor(o), btn);
+    prevCopiarMensagemTutor(prevMensagemTutor(o), btn);
   }
   // A MESMA mensagem, para quem está com a COLEIRA a vencer — inclusive auluno do Day Care,
   // que antes não tinha mensagem nenhuma (só o hóspede tinha). Cache próprio, para não se
@@ -17387,7 +17390,7 @@
   function prevCopiarColeira(chave, btn){
     var o=(PREV_CACHE_COLEIRA||[]).filter(function(x){ return x.chave===chave; })[0];
     if(!o){ alert('Não achei este FILHOt para montar a mensagem. Atualize a tela.'); return; }
-    prevCopiarTexto(prevMensagemTutor(o), btn);
+    prevCopiarMensagemTutor(prevMensagemTutor(o), btn);
   }
   // Marca que o tutor foi avisado hoje. Some da fila de "a avisar" e fica registrado
   // com quem avisou — se o tutor não responder, dá para cobrar de novo sabendo quando foi.

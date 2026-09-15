@@ -11851,6 +11851,18 @@ async function main() {
   // ════════════════════════════════════════════════════════════════════════════════
   console.log('v-16 — Prevenção sem peso, coleira configurável e a placa da entrada (15/set):');
   {
+    // ─────────────────────────── 0 · nome de função repetido apaga a primeira em silêncio
+    // Aconteceu nesta própria entrega: nasceu um prevCopiarTexto(txt, btn) e já existia um
+    // prevCopiarTexto(txt) — o plano B do copiar do check-up. Em JavaScript a segunda
+    // declaração vence, e o botão antigo passa a chamar a função errada sem dizer nada.
+    // Nenhum teste pegava; agora este pega, para o app inteiro.
+    {
+      const nomes = [...html.matchAll(/^ {2}function ([A-Za-z_$][A-Za-z0-9_$]*)/gm)].map((m) => m[1]);
+      const repetidos = [...new Set(nomes.filter((n, i) => nomes.indexOf(n) !== i))];
+      check('v-16 · nenhuma função do app é declarada duas vezes (a segunda apagaria a primeira em silêncio)',
+        repetidos.length === 0, JSON.stringify(repetidos));
+    }
+
     const hoje = (() => { const d = new Date(); const p = (n) => String(n).padStart(2, '0');
       return d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate()); })();
     const maisDias = (iso, n) => { const a = iso.split('-').map(Number);
