@@ -11999,6 +11999,22 @@ async function main() {
             && q.indexOf('Coleira Cinco') > 0,
             q.slice(0, 220));
         } else { check('v-16 · pcQuadroColeira existe', false, 'função não encontrada'); }
+
+        // O apóstrofo do nome não pode matar o botão. Hoje nenhum FILHOt da casa tem um;
+        // no dia da "Nina D'Or", o onclick fechava a string de JavaScript no meio e o
+        // "Copiar mensagem" parava de funcionar em silêncio. Vale para os DOIS blocos
+        // (coleira a vencer e hóspedes), que escrevem o onclick do mesmo jeito.
+        ctx.__pelApostrofo = [{ n: "Nina D'Or", tutor: "Tutor O'Brien", raca: 'SRD' }];
+        vm.runInContext('PELUDINHOS = __pelApostrofo;', ctx);
+        const kApos = ctx.pelKey(ctx.PELUDINHOS[0]);
+        ctx.__cadApostrofo = { [kApos]: { n: "Nina D'Or", tutor: "Tutor O'Brien", raca: 'SRD',
+          sexo: 'Fêmea', col_nome: 'Seresto', col_p: maisDias(hoje, 4) } };
+        vm.runInContext('pelCadCache = __cadApostrofo;', ctx);
+        const blocoApos = ctx.prevBlocoColeiraVencendo();
+        check('v-16 · nome com apóstrofo não quebra o onclick do botão (a chave sai escapada)',
+          blocoApos.indexOf("prevCopiarColeira('" + kApos.replace(/'/g, "\\'") + "',this)") > 0
+          && blocoApos.indexOf("prevCopiarColeira('nina d'or") < 0,
+          blocoApos.slice(blocoApos.indexOf('prevCopiarColeira'), blocoApos.indexOf('prevCopiarColeira') + 90));
       } finally {
         ctx.__bkpPelV16 = bkpPel; ctx.__bkpCadV16 = bkpCad;
         vm.runInContext('PELUDINHOS = __bkpPelV16; pelCadCache = __bkpCadV16;', ctx);

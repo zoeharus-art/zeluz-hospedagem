@@ -16311,6 +16311,12 @@
   function jsNorm(s){ return (s||'').normalize('NFD').replace(/[̀-ͯ]/g,'').toLowerCase().trim().replace(/\s+/g,' '); }
   function diasHtml(dias){ return ORDEM_DIAS.map(d=>`<span class="dia${(dias||[]).indexOf(d)>=0?' on':''}">${DIA_LBL[d]}</span>`).join(''); }
   function escAttr(s){ return (s||'').toString().replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;'); }
+  // Texto que vai DENTRO de uma string de JavaScript num onclick="fn('...')". O escAttr
+  // cuida do HTML, mas não do APÓSTROFO — e ele fecha a string no meio, matando o botão
+  // sem dizer nada. Hoje nenhum FILHOt da casa tem apóstrofo no nome; no dia em que
+  // entrar uma "Nina D'Or", o botão de copiar a mensagem pararia de funcionar e ninguém
+  // saberia por quê (15/set/2026).
+  function jsAspas(s){ return escAttr(String(s||'').replace(/\\/g,'\\\\').replace(/'/g,"\\'")); }
 
   // --- ficha mestre: campos extras editáveis (persistem local + Firebase) ---
   function pelKey(p){ return ((p.n||'')+'__'+(p.tutor||'')).toLowerCase().replace(/[.#$\[\]\/]/g,'-'); }
@@ -17453,9 +17459,9 @@
         +escAttr('Coleira'+(o.marca?(' '+o.marca):'')+' — '+quanto+' ('+fmtBR(o.prox)+')')+'</span></div>'
         +(av?('<div class="hint" style="margin:4px 0;color:var(--crm-ok);font-weight:700">Tutor avisado em '+fmtBR(av.quando||'')+(av.quem?(' por '+escAttr(av.quem)):'')+'.</div>'):'')
         +'<div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:5px">'
-        +'<button type="button" class="btn btn-gold" style="padding:6px 14px;font-size:12.5px" onclick="prevCopiarColeira(\''+escAttr(o.chave)+'\',this)">Copiar mensagem para o tutor</button>'
-        +'<button type="button" class="btn" style="padding:6px 14px;font-size:12.5px;background:var(--z-cream-warm);color:var(--z-blue);border:1.5px solid var(--line)" onclick="prevMarcarAvisado(\''+escAttr(o.chave)+'\',this)">'+(av?'Avisei de novo':'Já avisei')+'</button>'
-        +'<button type="button" class="btn" style="padding:6px 14px;font-size:12.5px;background:none;border:none;color:var(--z-blue);font-weight:800;text-decoration:underline" onclick="prevAbrir(\''+escAttr(o.chave)+'\')">lançar a coleira nova</button>'
+        +'<button type="button" class="btn btn-gold" style="padding:6px 14px;font-size:12.5px" onclick="prevCopiarColeira(\''+jsAspas(o.chave)+'\',this)">Copiar mensagem para o tutor</button>'
+        +'<button type="button" class="btn" style="padding:6px 14px;font-size:12.5px;background:var(--z-cream-warm);color:var(--z-blue);border:1.5px solid var(--line)" onclick="prevMarcarAvisado(\''+jsAspas(o.chave)+'\',this)">'+(av?'Avisei de novo':'Já avisei')+'</button>'
+        +'<button type="button" class="btn" style="padding:6px 14px;font-size:12.5px;background:none;border:none;color:var(--z-blue);font-weight:800;text-decoration:underline" onclick="prevAbrir(\''+jsAspas(o.chave)+'\')">lançar a coleira nova</button>'
         +'</div></div>';
     });
     return h+'</div>';
@@ -17484,9 +17490,9 @@
         +'</div>'
         +(av?('<div class="hint" style="margin:4px 0;color:var(--crm-ok);font-weight:700">Tutor avisado em '+fmtBR(av.quando||'')+(av.quem?(' por '+escAttr(av.quem)):'')+'.</div>'):'')
         +'<div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:5px">'
-        +'<button type="button" class="btn btn-gold" style="padding:6px 14px;font-size:12.5px" onclick="prevCopiarTutor(\''+ch+'\',this)">Copiar mensagem para o tutor</button>'
-        +'<button type="button" class="btn" style="padding:6px 14px;font-size:12.5px;background:var(--z-cream-warm);color:var(--z-blue);border:1.5px solid var(--line)" onclick="prevMarcarAvisado(\''+ch+'\',this)">'+(av?'Avisei de novo':'Já avisei')+'</button>'
-        +'<button type="button" class="btn" style="padding:6px 14px;font-size:12.5px;background:none;border:none;color:var(--z-blue);font-weight:800;text-decoration:underline" onclick="prevAbrir(\''+ch+'\')">lançar a data que ele mandou</button>'
+        +'<button type="button" class="btn btn-gold" style="padding:6px 14px;font-size:12.5px" onclick="prevCopiarTutor(\''+jsAspas(ch)+'\',this)">Copiar mensagem para o tutor</button>'
+        +'<button type="button" class="btn" style="padding:6px 14px;font-size:12.5px;background:var(--z-cream-warm);color:var(--z-blue);border:1.5px solid var(--line)" onclick="prevMarcarAvisado(\''+jsAspas(ch)+'\',this)">'+(av?'Avisei de novo':'Já avisei')+'</button>'
+        +'<button type="button" class="btn" style="padding:6px 14px;font-size:12.5px;background:none;border:none;color:var(--z-blue);font-weight:800;text-decoration:underline" onclick="prevAbrir(\''+jsAspas(ch)+'\')">lançar a data que ele mandou</button>'
         +'</div></div>';
     });
     return h+'</div>';
