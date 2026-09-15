@@ -5086,9 +5086,13 @@ async function main() {
       /function urgMedAtrasada/.test(html) &&
       /urgAvisar\('med-'\+d\.key\+'-'\+d\.doseId/.test(html) &&
       /d\.status==='atrasada'/.test(html));
+    // Reescrito em 15/set/2026 (v-17): o grupo do item saiu para uma variavel (_g) porque
+    // agora ele serve para DUAS coisas — mandar e, antes disso, conferir se a ponte conhece
+    // esse grupo. O contrato provado continua o mesmo: uma fila so, que leva o grupo.
     check('a fila do Telegram leva o GRUPO — uma fila serve gestao e urgencia',
       /grupo:\(grupo\|\|'gestao'\)/.test(html) &&
-      /tgAvisar\(\{grupo:\(item\.grupo\|\|'gestao'\)/.test(html));
+      /var _g=item\.grupo\|\|'gestao';/.test(html) &&
+      /tgAvisar\(\{grupo:_g, texto:item\.texto\|\|''\}\)/.test(html));
     check('grupo ainda nao configurado na ponte NAO queima tentativa (ate a republicacao)',
       /var _cfg=\/PONTE_SENHA\|configurad\/i\.test\(_e\);/.test(html));
   }
@@ -5177,7 +5181,9 @@ async function main() {
       /function ckRascChave\(k, tipo, dia\)\{\s*\n\s*return CK_RASC_PREFIXO\+\(tipo\|\|\(ckEhEntrada\(\)\?'entrada':'saida'\)\)\+'_'\+\(dia\|\|dcDataKey\(\)\)\+'_'\+k;/.test(html));
     check('todo mutador do rascunho espelha no aparelho (pontos, alertas, fotos, coleiras, coco)',
       (html.match(/ckRascEspelhar\(\)/g)||[]).length >= 12 &&
-      /pt\[alvo\]=c\.toDataURL\('image\/jpeg',0\.72\); pt\.alterado=true;\s*\n\s*ckRascunho\.pontos\[pk\]=pt; ckRascEspelhar\(\);/.test(html) &&
+      // Reescrito em 15/set/2026 (v-17): a JPG comprimida passa por uma const antes de ir
+      // para o ponto, porque a MESMA imagem vai para o banco e para a copia no celular.
+      /const jpg=c\.toDataURL\('image\/jpeg',0\.72\);\s*\n\s*pt\[alvo\]=jpg; pt\.alterado=true;\s*\n\s*ckRascunho\.pontos\[pk\]=pt; ckRascEspelhar\(\);/.test(html) &&
       /function ckSetTexto\(campo,v\)\{ if\(!ckRascunho\) return; ckRascunho\[campo\]=v; ckRascEspelhar\(\); \}/.test(html) &&
       /ckRascunho\.cocoPassos\[i\]=!ckRascunho\.cocoPassos\[i\];\s*\n\s*ckRascEspelhar\(\);/.test(html));
     check('ckAbrir recupera o rascunho do aparelho e avisa discretamente',
@@ -9014,8 +9020,12 @@ async function main() {
     refFila.once = () => Promise.resolve({ val: () => ({ velho: fila.velho, novo: fila.novo }) });
     ctx.__dbT = { ref: (c) => (c === 'auaulandia/med-tg-fila' ? refFila : bancoT.ref(c)) };
     ctx.__provaT = { enviados: [], audits: [] };
-    vm.runInContext('__bkpT2 = { DB: DB, tg: tgAvisar, aud: audit };'
+    vm.runInContext('__bkpT2 = { DB: DB, tg: tgAvisar, aud: audit, gr: tgGrupoNaPonte };'
       + 'DB = __dbT;'
+      // 15/set/2026 (v-17): a fila passou a conferir se a ponte conhece o grupo antes de
+      // mandar (senao a ponte velha entrega no grupo padrao dela, a veterinaria). No teste a
+      // ponte "conhece" tudo — o contrato sob prova aqui e a drenagem, nao a ponte.
+      + 'tgGrupoNaPonte = function(){ return Promise.resolve(true); };'
       + 'tgAvisar = function(o){ __provaT.enviados.push(o.texto); return Promise.resolve({ ok: true }); };'
       + 'audit = function(acao, det){ __provaT.audits.push(acao + ": " + det); };', ctx);
     try {
@@ -9034,7 +9044,7 @@ async function main() {
       check('mordida — o clamor da fila sobrevive ao cache frio (`return null`, não `return;`)',
         /med-tg-fila\/'\+id\)\.transaction\(function\(atual\)\{[\s\S]{0,600}?if\(atual===null\|\|atual===undefined\) return null;/.test(html));
     } finally {
-      vm.runInContext('DB = __bkpT2.DB; tgAvisar = __bkpT2.tg; audit = __bkpT2.aud;', ctx);
+      vm.runInContext('DB = __bkpT2.DB; tgAvisar = __bkpT2.tg; audit = __bkpT2.aud; tgGrupoNaPonte = __bkpT2.gr;', ctx);
     }
   }
   console.log('');
@@ -11534,7 +11544,7 @@ async function main() {
         !/\.catch\(function\([a-z]*\)\{\s*\}\)/.test(
           html.slice(html.indexOf('const CK_FRASE_PRATICA='), html.indexOf('function renderCkInicio('))));
       check('v-14 · a versão carimbada é a desta entrega',
-        /const APP_VERSAO='2026-09-15-03';/.test(html));
+        /const APP_VERSAO='2026-09-15-04';/.test(html));
     }
 
     // ---- v-15: O PLANO SÓ GRAVA NO CONFIRMAR (caso Cookie/Yara, 15/set/2026) --------
@@ -12039,7 +12049,9 @@ async function main() {
       html.indexOf('<h2 style="font-size:19px">Prevenção — coleira repelente</h2>') > 0
       && /function cfgPrevSalvar\(\)\{/.test(html)
       && /audit\('config-prevencao'/.test(html)
-      && /DB\.ref\('daycare\/config\/prevencao'\)\.set\(\{coleiras:coleiras, avisoColeiraDias:dias\}\)/.test(html));
+      // Reescrito em 15/set/2026 (v-17): o no passou a gravar TAMBEM avisoApos (meses e dias
+      // de uso, do jeito que a Adriana fala). avisoColeiraDias continua gravado, ja derivado.
+      && /DB\.ref\('daycare\/config\/prevencao'\)\.set\(\{coleiras:coleiras, avisoApos:apos, avisoColeiraDias:dias\}\)/.test(html));
 
     // ─────────────────────────────── 4 · a placa da entrada
     const iBox = html.indexOf('<div class="login-box">');
@@ -12091,6 +12103,229 @@ async function main() {
       && /function cfgEntradaSalvar\(\)\{/.test(html)
       && /audit\('config-mensagem-entrada'/.test(html)
       && /id="cfgEntL'\+i\+'"/.test(html));
+  }
+  console.log('');
+
+
+  // ════════════════════════════════════════════════════════════════════════════════
+  // v-17 (15/set/2026) — as três entregas do dia:
+  //   · Telegram sem repetição: "Hoje não tem aniversariante" chegou 106 vezes ao grupo
+  //     do Plantão. A trava passou a ser CLAMADA antes do envio, e leitura que falha não
+  //     manda. O bug gêmeo do resumo do dia recebeu o mesmo remédio.
+  //   · Cópia da foto do check-in no celular (Android), com interruptor em Configurações.
+  //   · O 1º aviso da coleira em MESES E DIAS de uso ("eu pedi 7 meses e 12 dias").
+  // ════════════════════════════════════════════════════════════════════════════════
+  console.log('v-17 — Telegram sem repetição, cópia da foto no celular e coleira em meses e dias (15/set):');
+  {
+    // ───────────────── 1 · a trava é CLAMADA antes de mandar (as 106 mensagens)
+    check('v-17 · a trava de envio único existe como porta ÚNICA (clamar, fechar, avisar quando ilegível)',
+      /function tgTravaClamar\(caminho\)\{/.test(html)
+      && /function tgTravaFechar\(caminho, ok, extra\)\{/.test(html)
+      && /function tgTravaIlegivel\(caminho, e\)\{/.test(html)
+      && /DB\.ref\(caminho\)\.transaction\(function\(atual\)\{/.test(html));
+    check('v-17 · leitura de trava que falha NÃO envia — e deixa rastro uma vez por sessão',
+      /\.catch\(function\(e\)\{ tgTravaIlegivel\(caminho, e\); return 'ilegivel'; \}\)/.test(html)
+      && /audit\('telegram-trava-ilegivel'/.test(html)
+      && /if\(TG_TRAVA_AVISADA\[caminho\]\) return;/.test(html));
+    // A ordem no código é a prova estática do conserto: clamar ANTES, mandar DEPOIS.
+    {
+      const aniv = html.slice(html.indexOf('function anivEnviarTelegram('),
+                              html.indexOf('function anivBotao('));
+      check('v-17 · anivEnviarTelegram clama a trava (transaction) ANTES de chamar tgAvisar',
+        aniv.indexOf('tgTravaClamar(caminho)') > 0
+        && aniv.indexOf('tgTravaClamar(caminho)') < aniv.indexOf('tgAvisar(')
+        && aniv.indexOf("st==='ilegivel'") > 0 && aniv.indexOf("st==='ilegivel'") < aniv.indexOf('tgAvisar('),
+        aniv.slice(0, 160));
+      check('v-17 · a trava de aniversariantes nunca REABRE: o que não saiu vai para a med-tg-fila',
+        /medTgGuardar\(texto, erro, 'gestao'\);/.test(aniv)
+        && /tgTravaFechar\(caminho, ok, \{quantos:L\.length, manual:!!manual, erro:erro, naFila:!ok\}\)/.test(aniv)
+        && aniv.indexOf('.remove()') < 0);
+      const res = html.slice(html.indexOf('function resumoDiaEnviar('),
+                             html.indexOf('function resumoDiaBotao('));
+      check('v-17 · resumoDiaEnviar (o bug gêmeo) recebeu o MESMO remédio, na mesma ordem',
+        res.indexOf('tgTravaClamar(caminho)') > 0
+        && res.indexOf('tgTravaClamar(caminho)') < res.indexOf('tgAvisar(')
+        && /medTgGuardar\(txt, erro, 'diario'\);/.test(res)
+        && res.indexOf('.once(') < 0,
+        res.slice(0, 160));
+      check('v-17 · o botão da Gestão (manual) continua mandando na hora, por cima da trava',
+        /\(manual\?Promise\.resolve\('clamado'\):tgTravaClamar\(caminho\)\)/.test(aniv)
+        && /\(manual\?Promise\.resolve\('clamado'\):tgTravaClamar\(caminho\)\)/.test(res));
+    }
+    check('v-17 · uma execução automática por sessão por dia, além do relógio de 1 hora',
+      /var ANIV_AUTO_DIA='';/.test(html) && /if\(ANIV_AUTO_DIA===dia\) return;/.test(html)
+      && /var RESUMO_AUTO_DIA='';/.test(html) && /if\(RESUMO_AUTO_DIA===dia\) return;/.test(html)
+      && /if\(r&&r\.travaIlegivel\) ANIV_AUTO_DIA='';/.test(html)
+      && /if\(r&&r\.travaIlegivel\) RESUMO_AUTO_DIA='';/.test(html));
+
+    // ───────────────── 1b · a prova viva: dois aparelhos, uma mensagem só
+    {
+      const estadoA = {};
+      const provaA = { ordem: [], fila: [], audits: [] };
+      ctx.__dbA = bancoFiel(estadoA);
+      ctx.__provaA = provaA;
+      ctx.__travaNoEnvio = () => (estadoA['daycare/aniversario-enviado/2026-09-15'] || null);
+      vm.runInContext('__bkpA = { DB: DB, lista: anivLista, frase: anivFrase, cfg: tgCfgPronta,'
+        + ' tg: tgAvisar, guardar: medTgGuardar, aud: audit, dia: dcDataKey, quem: quemSou };'
+        + 'DB = __dbA;'
+        + 'dcDataKey = function(){ return "2026-09-15"; };'
+        + 'quemSou = function(){ return "Aparelho de prova"; };'
+        + 'anivLista = function(){ return [{ emDias: 0, tutor: "Tutor" }]; };'
+        + 'anivFrase = function(){ return "Cookie faz 3 anos"; };'
+        + 'tgCfgPronta = function(){ return Promise.resolve({ url: "x" }); };'
+        + 'tgAvisar = function(o){ __provaA.ordem.push({ texto: o.texto, travaAntes: __travaNoEnvio() });'
+        + '  return Promise.resolve({ ok: true }); };'
+        + 'medTgGuardar = function(t, e, g){ __provaA.fila.push({ erro: e, grupo: g }); };'
+        + 'audit = function(a, d){ __provaA.audits.push(a + ": " + d); };', ctx);
+      try {
+        await ctx.anivEnviarTelegram(false);
+        await passarAsVoltas();
+        check('v-17 · mordida — quando a mensagem sai, a trava JÁ ESTAVA no banco (clamada antes)',
+          provaA.ordem.length === 1 && !!provaA.ordem[0].travaAntes
+          && provaA.ordem[0].travaAntes.estado === 'enviando',
+          JSON.stringify(provaA.ordem));
+        check('v-17 · e a trava fecha com o que aconteceu (estado ok, com quem mandou)',
+          !!estadoA['daycare/aniversario-enviado/2026-09-15']
+          && estadoA['daycare/aniversario-enviado/2026-09-15'].estado === 'ok'
+          && estadoA['daycare/aniversario-enviado/2026-09-15'].por === 'Aparelho de prova',
+          JSON.stringify(estadoA));
+        const r2 = await ctx.anivEnviarTelegram(false);
+        await passarAsVoltas();
+        check('v-17 · mordida — o 2º aparelho NÃO manda de novo (era isto que virava 106 mensagens)',
+          provaA.ordem.length === 1 && !!r2 && r2.jaFoi === true, JSON.stringify(provaA.ordem));
+      } finally {
+        vm.runInContext('DB = __bkpA.DB; anivLista = __bkpA.lista; anivFrase = __bkpA.frase;'
+          + 'tgCfgPronta = __bkpA.cfg; tgAvisar = __bkpA.tg; medTgGuardar = __bkpA.guardar;'
+          + 'audit = __bkpA.aud; dcDataKey = __bkpA.dia; quemSou = __bkpA.quem;', ctx);
+      }
+    }
+
+    // ───────────────── 1c · trava ilegível (banco reconectando) não envia
+    {
+      const provaB = { enviados: [], audits: [] };
+      ctx.__provaB = provaB;
+      ctx.__dbB = { ref: () => ({
+        transaction: () => Promise.reject(new Error('banco reconectando')),
+        set: () => Promise.resolve(), once: () => Promise.resolve({ val: () => null }),
+        limitToFirst() { return this; },
+      }) };
+      vm.runInContext('__bkpB = { DB: DB, lista: anivLista, frase: anivFrase, cfg: tgCfgPronta,'
+        + ' tg: tgAvisar, aud: audit, dia: dcDataKey, avisadas: TG_TRAVA_AVISADA };'
+        + 'DB = __dbB; TG_TRAVA_AVISADA = {};'
+        + 'dcDataKey = function(){ return "2026-09-16"; };'
+        + 'anivLista = function(){ return [{ emDias: 0 }]; };'
+        + 'anivFrase = function(){ return "x"; };'
+        + 'tgCfgPronta = function(){ return Promise.resolve({ url: "x" }); };'
+        + 'tgAvisar = function(o){ __provaB.enviados.push(o.texto); return Promise.resolve({ ok: true }); };'
+        + 'audit = function(a, d){ __provaB.audits.push(a + ": " + d); };', ctx);
+      try {
+        const r = await ctx.anivEnviarTelegram(false);
+        await passarAsVoltas();
+        check('v-17 · mordida — trava ILEGÍVEL (banco reconectando) NÃO envia: silêncio vence repetição',
+          provaB.enviados.length === 0 && !!r && r.travaIlegivel === true,
+          JSON.stringify({ r: r, e: provaB.enviados }));
+        check('v-17 · e a trava ilegível deixa rastro na auditoria (uma vez por sessão)',
+          provaB.audits.filter((a) => /telegram-trava-ilegivel/.test(a)).length === 1,
+          JSON.stringify(provaB.audits));
+      } finally {
+        vm.runInContext('DB = __bkpB.DB; anivLista = __bkpB.lista; anivFrase = __bkpB.frase;'
+          + 'tgCfgPronta = __bkpB.cfg; tgAvisar = __bkpB.tg; audit = __bkpB.aud;'
+          + 'dcDataKey = __bkpB.dia; TG_TRAVA_AVISADA = __bkpB.avisadas;', ctx);
+      }
+    }
+
+    // ───────────────── 2 · a cópia da foto no celular (Android)
+    check('v-17 · a cópia é da JPG JÁ COMPRIMIDA, com o nome da galeria, e só no Android',
+      /function ckCopiarNoCelular\(dataUrl, pk, sufixo\)\{/.test(html)
+      && /return \/Android\/i\.test\(navigator\.userAgent\);/.test(html)
+      && /a\.href=dataUrl; a\.download=ckNomeCopia\(pk, sufixo\);/.test(html)
+      && /return ckArquivoDaFoto\(nome, pk,/.test(html));
+    check('v-17 · falhar a cópia não trava o check-in (try/catch com rastro)',
+      /\}catch\(e\)\{ _logFalhaGrav\('cópia da foto do check-in no celular', e\); \}/.test(html));
+    check('v-17 · as duas portas de foto do check-in copiam: a do ponto e a das fotos extras',
+      /ckCopiarNoCelular\(jpg, pk, \(alvo==='foto2'\)\?'de-longe':''\);/.test(html)
+      && /ckCopiarNoCelular\(jpg, pk, 'extra-'\+pt\.extras\.length\);/.test(html));
+    check('v-17 · o interruptor mora no banco (daycare/config/fotos) e é lido uma vez ao abrir',
+      /DB\.ref\('daycare\/config\/fotos'\)\.once\('value'\)/.test(html)
+      && /try\{ ckFotosCfgCarregar\(\); \}catch\(e\)\{\}/.test(html)
+      && /DB\.ref\('daycare\/config\/fotos'\)\.update\(\{copiaNoCelular:CFG_FOTOS_COPIA\}\)/.test(html)
+      && /audit\('config-fotos'/.test(html));
+    check('v-17 · Configurações › Fotos diz, com todas as letras, que vale no Android',
+      html.indexOf('<h2 style="font-size:19px">Fotos do check-in do corpo</h2>') > 0
+      && html.indexOf('Guardar cópia da foto no celular (Android)') > 0
+      && /if\(typeof cfgFotosRender==='function'\) cfgFotosRender\(\);/.test(html));
+    check('v-17 · e quem tira a foto lê, na própria tela, onde a cópia foi parar',
+      html.indexOf('Uma cópia fica em Downloads no seu celular.') > 0
+      && /\+ckCopiaAvisoHTML\(\)/.test(html));
+    if (typeof ctx.ckCopiaCelularLigada === 'function' && typeof ctx.ckNomeCopia === 'function') {
+      check('v-17 · fora do Android não se baixa nada (o iPhone não leva download para Fotos)',
+        ctx.ckCopiaCelularLigada() === false, 'userAgent do harness não é Android');
+      vm.runInContext('__uaBkp = navigator.userAgent; navigator.userAgent = "Mozilla/5.0 (Linux; Android 14)";', ctx);
+      try {
+        check('v-17 · no Android, com o interruptor ligado, a cópia acontece',
+          ctx.ckCopiaCelularLigada() === true);
+        vm.runInContext('__copBkp = CK_COPIA_CELULAR; CK_COPIA_CELULAR = false;', ctx);
+        check('v-17 · e desligado em Configurações, nem no Android',
+          ctx.ckCopiaCelularLigada() === false);
+        vm.runInContext('CK_COPIA_CELULAR = __copBkp;', ctx);
+        vm.runInContext('__ckaBkp = { at: ckAtual, dia: dcDataKey, ent: ckEhEntrada };'
+          + 'ckAtual = { p: { n: "Cookie", tutor: "Ana" } };'
+          + 'dcDataKey = function(){ return "2026-09-15"; };'
+          + 'ckEhEntrada = function(){ return true; };', ctx);
+        check('v-17 · o arquivo sai com o nome que o time reconhece: Cookie-pele-2026-09-15.jpg',
+          ctx.ckNomeCopia('pele', '') === 'Cookie-pele-2026-09-15.jpg', ctx.ckNomeCopia('pele', ''));
+        vm.runInContext('ckAtual = __ckaBkp.at; dcDataKey = __ckaBkp.dia; ckEhEntrada = __ckaBkp.ent;', ctx);
+      } finally {
+        vm.runInContext('navigator.userAgent = __uaBkp;', ctx);
+      }
+    } else { check('v-17 · ckCopiaCelularLigada/ckNomeCopia existem', false, 'função não encontrada'); }
+
+    // ───────────────── 3 · a coleira em meses e dias de uso
+    check('v-17 · o 1º aviso virou "meses e dias de uso", e a antecedência é DERIVADA da validade',
+      /function avisoColeiraAposDias\(a\)\{/.test(html)
+      && /function avisoColeiraDerivado\(a\)\{/.test(html)
+      && /var n=coleiraDurReferencia\(\)-uso;/.test(html)
+      && /id="cfgPrevAposMeses"/.test(html) && /id="cfgPrevAposDias"/.test(html));
+    check('v-17 · a conta aparece ao lado, calculada, e muda enquanto ela digita',
+      /function cfgPrevAposCalc\(\)\{/.test(html)
+      && /oninput="cfgPrevAposCalc\(\)"/.test(html)
+      && /el\.textContent='= '\+ant\+' dia'\+\(ant>1\?'s':''\)\+' antes de vencer/.test(html));
+    check('v-17 · o 2º número (o destaque) continua existindo, em dias antes de vencer',
+      html.indexOf('Destacar a partir de quantos dias antes de vencer') > 0
+      && /id="cfgPrevAviso2"/.test(html));
+    if (typeof ctx.avisoColeiraDerivado === 'function') {
+      check('v-17 · 7 meses e 12 dias com a Seresto de 240 dias = 18 dias antes de vencer',
+        ctx.avisoColeiraDerivado({ meses: 7, dias: 12 }) === 18,
+        String(ctx.avisoColeiraDerivado({ meses: 7, dias: 12 })));
+      check('v-17 · uso maior que a validade não vira antecedência negativa (devolve 0)',
+        ctx.avisoColeiraDerivado({ meses: 9, dias: 0 }) === 0);
+    } else { check('v-17 · avisoColeiraDerivado existe', false, 'função não encontrada'); }
+    if (typeof ctx.prevCfgCarregar === 'function') {
+      const cfgNo = { coleiras: { Seresto: { dias: 240 }, Scalibur: { dias: 120 }, Leevre: { dias: 180 } },
+        avisoApos: { meses: 7, dias: 12 }, avisoColeiraDias: [18, 7] };
+      const cfgVelho = { coleiras: { Seresto: { dias: 240 } }, avisoColeiraDias: [15, 5] };
+      let qual = cfgNo;
+      ctx.__dbC = { ref: () => ({ once: () => Promise.resolve({ val: () => qual }) }) };
+      vm.runInContext('__bkpC = { DB: DB, dur: COLEIRA_DUR, dias: AVISO_COLEIRA_DIAS, apos: AVISO_COLEIRA_APOS };'
+        + 'DB = __dbC;', ctx);
+      try {
+        await ctx.prevCfgCarregar();
+        check('v-17 · com avisoApos gravado, o app inteiro passa a ler 18 e 7 (uma régua só)',
+          ctx.avisoColeiraMax() === 18 && ctx.avisoColeiraMin() === 7,
+          ctx.avisoColeiraMax() + ' / ' + ctx.avisoColeiraMin());
+        vm.runInContext('AVISO_COLEIRA_APOS = null; AVISO_COLEIRA_DIAS = [12,7];', ctx);
+        qual = cfgVelho;
+        await ctx.prevCfgCarregar();
+        check('v-17 · nó ANTIGO (só avisoColeiraDias) continua valendo — ninguém fica sem aviso na migração',
+          ctx.avisoColeiraMax() === 15 && ctx.avisoColeiraMin() === 5,
+          ctx.avisoColeiraMax() + ' / ' + ctx.avisoColeiraMin());
+      } finally {
+        vm.runInContext('DB = __bkpC.DB; COLEIRA_DUR = __bkpC.dur; AVISO_COLEIRA_DIAS = __bkpC.dias;'
+          + 'AVISO_COLEIRA_APOS = __bkpC.apos;', ctx);
+      }
+    } else { check('v-17 · prevCfgCarregar existe', false, 'função não encontrada'); }
+    check('v-17 · a versão carimbada desta entrega é a 2026-09-15-04',
+      /const APP_VERSAO='2026-09-15-04';/.test(html));
   }
   console.log('');
 

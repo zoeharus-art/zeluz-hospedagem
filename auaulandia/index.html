@@ -4151,6 +4151,16 @@
       <div id="cfgPrevWrap" style="margin-top:12px"><div class="hint">Carregando os números da prevenção&hellip;</div></div>
     </div>
 
+    <!-- FOTOS (Adriana, 15/set/2026) — "não consegue ir para a galeria? É mais fácil para o
+         time encontrar." Página web não escreve na galeria; o que dá é baixar. No Android o
+         arquivo cai em Downloads e a Galeria o lista. No iPhone download de página não vai
+         para Fotos — por isso o interruptor diz, com todas as letras, que vale no Android. -->
+    <div class="card so-master">
+      <h2 style="font-size:19px">Fotos do check-in do corpo</h2>
+      <div class="hint">A foto da alteração sempre vai para o banco e para o grupo da Veterinária. Além disso, o app pode deixar uma <strong>cópia no próprio celular de quem tirou</strong> — para o time achar a foto mais rápido, sem abrir o app.</div>
+      <div id="cfgFotosWrap" style="margin-top:12px"><div class="hint">Carregando o ajuste das fotos&hellip;</div></div>
+    </div>
+
     <!-- MENSAGEM DE ENTRADA (Adriana, 15/set/2026) — a placa que todo mundo vê antes de
          digitar a senha. É a régua da casa sobre protocolo: erro se revisa junto, violação
          não tem "só desta vez". O texto é dela, então se edita aqui. -->
@@ -4708,6 +4718,7 @@
       // Sem elas valem os padrões do código — o app nunca abre sem placa nem sem validade.
       try{ prevCfgCarregar(); }catch(e){} /* silencioso de propósito: guarda defensiva — falhar aqui não pode interromper quem chamou */
       try{ entradaMsgCarregar(); }catch(e){} /* silencioso de propósito: guarda defensiva — falhar aqui não pode interromper quem chamou */
+      try{ ckFotosCfgCarregar(); }catch(e){} /* silencioso de propósito: guarda defensiva — falhar aqui não pode interromper quem chamou */
       DB.ref('daycare/config/sensiveis').on('value', s=>{ const v=s.val(); if(Array.isArray(v)){ try{ SENS=new Set(v); }catch(e){} /* silencioso de propósito: guarda defensiva — se o valor não vier, o anterior continua valendo */ } });
       DB.ref('daycare/config/atividades').on('value', s=>{ const v=s.val(); if(Array.isArray(v)&&v.length){ ATIVIDADES=v; if(typeof renderAtiv==='function') renderAtiv(); } });
       // Os passos de cada protocolo (12/set/2026). Nó pequeno e raro de mudar: desce uma vez
@@ -9230,20 +9241,70 @@
           return atual;
         }).then(function(res){
           if(!res || !res.committed || !res.snapshot || !res.snapshot.val()) return;
-          return tgAvisar({grupo:(item.grupo||'gestao'), texto:item.texto||''}).then(function(r){
-            if(r&&r.ok) return DB.ref('auaulandia/med-tg-fila/'+id).remove();
-            // Ponte sem senha/sem configuração = culpa da PONTE, não da mensagem (dia mudo de
-            // 01/set: PONTE_SENHA sumiu na republicação). Essa falha não queima tentativa —
-            // a mensagem espera a ponte voltar. Carta morta fica só para mensagem que a
-            // ponte VIVA recusa 5 vezes.
-            var _e=String((r&&r.erro)||'');
-            var _cfg=/PONTE_SENHA|configurad/i.test(_e);
-            return DB.ref('auaulandia/med-tg-fila/'+id).update(
-              _cfg?{lockTs:null, erro:_e}:{tentativas:(item.tentativas||0)+1, lockTs:null, erro:_e||item.erro||''});
+          // A ponte VELHA não conhece os grupos novos e manda em silêncio para o padrão dela
+          // (a veterinária). Um resumo do dia ou um aviso de urgência no grupo errado é pior
+          // do que esperar: a mensagem fica na fila, sem queimar tentativa, até o deploy.
+          var _g=item.grupo||'gestao';
+          return tgGrupoNaPonte(_g).then(function(tem){
+            if(!tem) return DB.ref('auaulandia/med-tg-fila/'+id).update({lockTs:null,
+              erro:'a ponte do Telegram ainda não conhece o grupo "'+_g+'" — publique a versão nova de integracao-telegram/Codigo.gs'});
+            return tgAvisar({grupo:_g, texto:item.texto||''}).then(function(r){
+              if(r&&r.ok) return DB.ref('auaulandia/med-tg-fila/'+id).remove();
+              // Ponte sem senha/sem configuração = culpa da PONTE, não da mensagem (dia mudo de
+              // 01/set: PONTE_SENHA sumiu na republicação). Essa falha não queima tentativa —
+              // a mensagem espera a ponte voltar. Carta morta fica só para mensagem que a
+              // ponte VIVA recusa 5 vezes.
+              var _e=String((r&&r.erro)||'');
+              var _cfg=/PONTE_SENHA|configurad/i.test(_e);
+              return DB.ref('auaulandia/med-tg-fila/'+id).update(
+                _cfg?{lockTs:null, erro:_e}:{tentativas:(item.tentativas||0)+1, lockTs:null, erro:_e||item.erro||''});
+            });
           });
         }).catch(function(e){ _logFalhaGrav('reenvio da fila de medicação '+id, e); });
       });
     }).catch(function(e){ _logFalhaGrav('leitura da fila de medicação', e); });
+  }
+  // ===== TRAVA DE ENVIO ÚNICO — clamar ANTES de mandar (Adriana, 15/set/2026) ========
+  // "Hoje não tem aniversariante" chegou 106 vezes ao grupo do Plantão em um dia só.
+  // Três causas, todas na mesma receita errada:
+  //   1) a trava era gravada DEPOIS do envio — recarregar a tela no meio matava a gravação
+  //      e o aparelho seguinte achava que ninguém tinha mandado;
+  //   2) leitura que falhava (banco reconectando) valia como "ainda não mandei";
+  //   3) sem clamor e sem teto, cada aparelho aberto somava ao relógio de 1 hora.
+  // A porta passou a ser uma só, a mesma de urgAvisar e da fila de medicação: quem vai
+  // mandar CLAMA o nó por transaction ANTES de mandar. Achou qualquer coisa lá, não manda.
+  // Não conseguiu ler, TAMBÉM não manda — silêncio é preferível a 106 mensagens, e a
+  // tentativa deixa rastro na auditoria (uma vez por sessão, para não virar outra enxurrada).
+  var TG_TRAVA_AVISADA={};
+  function tgTravaIlegivel(caminho, e){
+    if(TG_TRAVA_AVISADA[caminho]) return;
+    TG_TRAVA_AVISADA[caminho]=true;
+    try{ if(typeof audit==='function') audit('telegram-trava-ilegivel',
+      'NÃO enviei: não consegui ler a trava de '+caminho+' — '+String((e&&e.message)||e||'o banco não respondeu'),{}); }catch(x){ /* auditoria é rastro, não trava */ }
+  }
+  // Devolve 'clamado' (é a minha vez de mandar), 'ja' (outro aparelho já clamou) ou
+  // 'ilegivel' (não deu para saber — e aí ninguém manda).
+  function tgTravaClamar(caminho){
+    if(!DB) return Promise.resolve('ilegivel');
+    return DB.ref(caminho).transaction(function(atual){
+      // Cache frio devolve null na 1ª rodada mesmo com o valor vivo no servidor; devolver o
+      // registro aqui é seguro porque o SDK reexecuta com o valor do servidor antes de
+      // confirmar — quem clamou primeiro continua valendo (mesma lição da fila, 04/set).
+      if(atual===null||atual===undefined) return {ts:Date.now(),
+        por:(typeof quemSou==='function'?quemSou():'-'), estado:'enviando'};
+      return;   // já clamado hoje — aborta a escrita e ninguém repete a mensagem
+    }).then(function(res){
+      if(!res||!res.committed||!res.snapshot||!res.snapshot.val()) return 'ja';
+      return 'clamado';
+    }).catch(function(e){ tgTravaIlegivel(caminho, e); return 'ilegivel'; });
+  }
+  // Fecha a trava com o que aconteceu. Nunca REABRE: mensagem que não saiu vai para a
+  // med-tg-fila (que tem lock, teto de 5 tentativas e validade de 12 h) e é reenviada de lá.
+  function tgTravaFechar(caminho, ok, extra){
+    if(!DB) return Promise.resolve();
+    var reg=Object.assign({ts:Date.now(), estado:(ok?'ok':'falhou'), ok:!!ok,
+      por:(typeof quemSou==='function'?quemSou():'-')}, extra||{});
+    return DB.ref(caminho).set(reg).catch(function(e){ _logFalhaGrav('fechar a trava de envio '+caminho, e); });
   }
   // ===== GRUPO DE URGÊNCIAS — só Adriana e Márcia (Adriana, 02/set/2026) =============
   // "questões como as respostas da Coco que têm sensibilidade, medicação não dada, cocô
@@ -12798,7 +12859,7 @@
   // inteira DEPOIS de a correção estar publicada — o aviso apareceu, ninguém tocou.
   // Agora o aparelho PARADO recarrega sozinho: trancado, com a aba escondida, na porta de
   // entrada ou 3 minutos sem ninguém tocar nele. Mão na tela = nunca recarrega.
-  const APP_VERSAO='2026-09-15-03';
+  const APP_VERSAO='2026-09-15-04';
   var RECARGA_PARADO_MS=3*60*1000, __versaoPublicada=null, __recargaTimer=null;
   function vigiarVersao(){
     if(!DB) return;
@@ -16666,6 +16727,33 @@
   const AVISO_COLEIRA_PADRAO=[12,7];
   var COLEIRA_DUR=Object.assign({}, COLEIRA_DUR_PADRAO);
   var AVISO_COLEIRA_DIAS=AVISO_COLEIRA_PADRAO.slice();   // sempre do maior para o menor
+  // Adriana, 15/set/2026: "eu pedi 7 meses e 12 dias, para avisar." O 1º aviso deixou de ser
+  // "N dias antes de vencer" e passou a ser o que ela fala em voz alta: quando a coleira
+  // COMPLETA tantos meses e tantos dias de uso. A antecedência é DERIVADA daí —
+  // validade − (meses×30 + dias) — e a validade de referência é a da Seresto, que é a coleira
+  // que a casa mais vê e já era o padrão de quem não tem marca na ficha.
+  // Com a Seresto em 240 dias: 240 − (7×30 + 12) = 18 dias antes de vencer.
+  // O 2º número (o destaque forte, hoje 7 dias antes) não mudou.
+  var AVISO_COLEIRA_APOS=null;   // null = a casa ainda usa só os dias de antecedência
+  function coleiraDurReferencia(){
+    return parseInt(COLEIRA_DUR['Seresto'],10)||parseInt(COLEIRA_DUR_PADRAO['Seresto'],10)||240;
+  }
+  // Quantos dias de uso o "meses e dias" representa. 0 = não configurado.
+  function avisoColeiraAposDias(a){
+    a=(a===undefined)?AVISO_COLEIRA_APOS:a;
+    if(!a) return 0;
+    var m=parseInt(a.meses,10)||0, d=parseInt(a.dias,10)||0;
+    if(m<0||d<0) return 0;
+    return m*30+d;
+  }
+  // A antecedência derivada, em dias antes de vencer. 0 = não dá para derivar (e aí vale o
+  // número de dias gravado, como sempre valeu).
+  function avisoColeiraDerivado(a){
+    var uso=avisoColeiraAposDias(a);
+    if(!uso) return 0;
+    var n=coleiraDurReferencia()-uso;
+    return n>0?n:0;
+  }
   // A maior antecedência configurada é a régua do selo "vence em N dias" (era 15 fixo) e o
   // corte do bloco "Coleira vencendo". A menor é o destaque forte.
   function avisoColeiraMax(){
@@ -16746,6 +16834,16 @@
       if(Array.isArray(v.avisoColeiraDias)){
         var lim=v.avisoColeiraDias.map(function(n){ return parseInt(n,10)||0; }).filter(function(n){ return n>0; });
         if(lim.length) AVISO_COLEIRA_DIAS=lim.sort(function(x,y){ return y-x; });
+      }
+      // Compatibilidade: quem só tem avisoColeiraDias gravado continua exatamente como está.
+      // Com avisoApos gravado, o 1º número passa a ser DERIVADO dele — e a lista de dias é
+      // reescrita na memória para que todo o resto do app (selo da ficha, bloco "Coleira
+      // vencendo", quadro das Consultoras) continue lendo UM número só, como sempre leu.
+      if(v.avisoApos && avisoColeiraAposDias(v.avisoApos)>0){
+        AVISO_COLEIRA_APOS={meses:parseInt(v.avisoApos.meses,10)||0, dias:parseInt(v.avisoApos.dias,10)||0};
+        var der=avisoColeiraDerivado();
+        var forte=AVISO_COLEIRA_DIAS[AVISO_COLEIRA_DIAS.length-1]||AVISO_COLEIRA_PADRAO[1];
+        if(der>0) AVISO_COLEIRA_DIAS=[der, forte].sort(function(x,y){ return y-x; });
       }
       return v;
     }).catch(function(e){ _logLeituraFalhou('daycare/config/prevencao (prevCfgCarregar)', e); return null; });
@@ -21023,6 +21121,49 @@
   // Campo de texto: grava SEM redesenhar — redesenhar a cada letra tira o foco de quem digita.
   // Espelha a cada letra: o texto digitado também se perdia junto com a tela.
   function ckSetTexto(campo,v){ if(!ckRascunho) return; ckRascunho[campo]=v; ckRascEspelhar(); }
+  // ===== UMA CÓPIA DA FOTO NO CELULAR (Adriana, 15/set/2026) ========================
+  // "Não consegue ir para a galeria? É mais fácil para o time encontrar."
+  // O navegador não escreve na galeria — não existe essa porta para uma página web. O mais
+  // perto que dá, e que resolve o problema dela, é BAIXAR: no Android o arquivo cai em
+  // Downloads e a Galeria o lista junto com as fotos do aparelho. No iPhone o download de
+  // página não vai para Fotos, então lá não se faz nada automático — quem quiser guardar usa
+  // o Enviar › Salvar imagem, que já existe na galeria de fotos do corpo.
+  // A cópia é a JPG JÁ COMPRIMIDA (a mesma que vai para o banco), nunca o arquivo bruto de
+  // 4 MB da câmera. Falhar aqui não pode travar o check-in: o dado de verdade é o do banco.
+  var CK_COPIA_CELULAR=true;   // padrão de fábrica: ligado
+  function ckCopiaCelularAndroid(){ try{ return /Android/i.test(navigator.userAgent); }catch(e){ return false; } }
+  function ckCopiaCelularLigada(){ return CK_COPIA_CELULAR!==false && ckCopiaCelularAndroid(); }
+  function ckFotosCfgCarregar(){
+    if(!DB) return Promise.resolve(null);
+    return DB.ref('daycare/config/fotos').once('value').then(function(s){
+      var v=s.val()||{};
+      if(v.copiaNoCelular!=null) CK_COPIA_CELULAR=(v.copiaNoCelular!==false);
+      return v;
+    }).catch(function(e){ _logLeituraFalhou('daycare/config/fotos (ckFotosCfgCarregar)', e); return null; });
+  }
+  // Nome do arquivo no mesmo padrão da galeria: Cookie-pele-2026-09-15.jpg
+  function ckNomeCopia(pk, sufixo){
+    // O nome da turma é a base e nunca se perde: se a ficha completa não puder ser lida,
+    // o arquivo ainda sai com o nome do FILHOt, não com um genérico.
+    var nome='';
+    try{ nome=(ckAtual&&ckAtual.p&&ckAtual.p.n)||''; }catch(e){ nome=''; }
+    try{ var n2=(typeof pelNome==='function')?pelNome(ckAtual&&ckAtual.p):''; if(n2) nome=n2; }catch(e){ /* o nome da turma já serve */ }
+    return ckArquivoDaFoto(nome, pk, (typeof dcDataKey==='function'?dcDataKey():''),
+      (ckEhEntrada()?'entrada':'saida'), sufixo||'');
+  }
+  function ckCopiaAvisoHTML(){
+    if(!ckCopiaCelularLigada()) return '';
+    return '<div class="ck-hint" style="margin-top:6px">Uma cópia fica em Downloads no seu celular.</div>';
+  }
+  function ckCopiarNoCelular(dataUrl, pk, sufixo){
+    if(!dataUrl || !ckCopiaCelularLigada()) return;
+    try{
+      var a=document.createElement('a');
+      a.href=dataUrl; a.download=ckNomeCopia(pk, sufixo);
+      document.body.appendChild(a); a.click();
+      setTimeout(function(){ try{ document.body.removeChild(a); }catch(e){} /* silencioso de propósito: limpeza do elemento temporário */ }, 1500);
+    }catch(e){ _logFalhaGrav('cópia da foto do check-in no celular', e); }
+  }
   // A foto é a prova. Comprimida para 640px: o app já apanhou de foto pesada antes.
   // Machucado, ferida, corte, arranhão: o que precisa de DUAS fotos e da parte do corpo.
   // ---- Fotos extras: quantas forem necessárias, em qualquer ponto ----
@@ -21039,8 +21180,10 @@
         c.getContext('2d').drawImage(img,0,0,c.width,c.height);
         const pt=ckRascunho.pontos[pk]||{alterado:true};
         pt.extras=Array.isArray(pt.extras)?pt.extras:[];
-        pt.extras.push(c.toDataURL('image/jpeg',0.72));
+        const jpg=c.toDataURL('image/jpeg',0.72);
+        pt.extras.push(jpg);
         ckRascunho.pontos[pk]=pt; ckRascEspelhar(); renderCheckin();
+        ckCopiarNoCelular(jpg, pk, 'extra-'+pt.extras.length);
       };
       img.src=e.target.result;
     };
@@ -21093,8 +21236,10 @@
         const c=document.createElement('canvas'); c.width=Math.round(img.width*esc); c.height=Math.round(img.height*esc);
         c.getContext('2d').drawImage(img,0,0,c.width,c.height);
         const pt=ckRascunho.pontos[pk]||{alterado:true};
-        pt[alvo]=c.toDataURL('image/jpeg',0.72); pt.alterado=true;
+        const jpg=c.toDataURL('image/jpeg',0.72);
+        pt[alvo]=jpg; pt.alterado=true;
         ckRascunho.pontos[pk]=pt; ckRascEspelhar(); renderCheckin();
+        ckCopiarNoCelular(jpg, pk, (alvo==='foto2')?'de-longe':'');
       };
       img.src=e.target.result;
     };
@@ -21263,6 +21408,9 @@
               +'<label class="btn btn-gold" style="padding:9px 14px;font-size:13px;cursor:pointer">'+(at.foto?'Trocar foto':'Tirar foto')
                 +'<input type="file" accept="image/*" capture="environment" style="display:none" onchange="ckFoto(\''+pt.k+'\',this)"></label>'
             +'</div>')
+        // A cópia no celular (Android): quem tira a foto precisa SABER que ela também ficou
+        // guardada ali — senão procura na galeria e não entende por que não achou.
+        +ckCopiaAvisoHTML()
         // Fotos EXTRAS: qualquer ponto pode ter mais de um ângulo. Para onde vai já está
         // decidido: toda alteração segue para o grupo da Veterinária (15/set/2026).
         +ckFotosExtraHTML(pt,at)
@@ -23206,31 +23354,53 @@
       }).join('')
       +'</div>';
   }
+  function anivMontarTexto(L){
+    var hoje=L.filter(function(x){ return x.emDias===0; });
+    var depois=L.filter(function(x){ return x.emDias>0; });
+    var T=['<b>Aniversariantes</b>',''];
+    T.push(hoje.length?'<b>Hoje:</b>':'Hoje não tem aniversariante.');
+    hoje.forEach(function(x){ T.push('🎂 '+anivFrase(x)+(x.tutor?(' · tutor: '+x.tutor):'')); });
+    if(depois.length){
+      T.push(''); T.push('<b>Nos próximos dias:</b>');
+      depois.forEach(function(x){ T.push(anivFrase(x)); });
+    }
+    return T.join('\n');
+  }
+  // A trava é CLAMADA antes do envio (tgTravaClamar) — ver o bloco "TRAVA DE ENVIO ÚNICO".
+  // O botão da Gestão (manual) passa por cima da trava de propósito: quem apertou quer que
+  // saia agora. O automático nunca passa.
   function anivEnviarTelegram(manual){
     if(!DB) return Promise.resolve({ok:false, erro:'sem conexão'});
     var dia=(typeof dcDataKey==='function')?dcDataKey():'';
-    return DB.ref('daycare/aniversario-enviado/'+dia).once('value').then(function(s){
-      var ja=s.val();
-      if(ja&&ja.ok&&!manual) return {ok:true, jaFoi:true};
+    var caminho='daycare/aniversario-enviado/'+dia;
+    return (manual?Promise.resolve('clamado'):tgTravaClamar(caminho)).then(function(st){
+      if(st==='ja') return {ok:true, jaFoi:true};
+      if(st==='ilegivel') return {ok:false, travaIlegivel:true,
+        erro:'não consegui ler a trava do envio — não mandei para não repetir a mensagem'};
       var L=anivLista();
-      if(!L.length&&!manual) return {ok:true, vazio:true};
+      // Nada para contar e ninguém pediu à mão: fecha a trava como resolvida. Sem isto o
+      // dia seguiria "em aberto" e o relógio da hora tentaria de novo, e de novo.
+      if(!L.length&&!manual) return tgTravaFechar(caminho, true, {quantos:0, vazio:true, manual:false})
+        .then(function(){ return {ok:true, vazio:true}; });
+      var texto=anivMontarTexto(L);
       return tgCfgPronta().then(function(c){
-        if(!c) return {ok:false, erro:'a ponte do Telegram não está configurada'};
-        var hoje=L.filter(function(x){ return x.emDias===0; });
-        var depois=L.filter(function(x){ return x.emDias>0; });
-        var T=['<b>Aniversariantes</b>',''];
-        T.push(hoje.length?'<b>Hoje:</b>':'Hoje não tem aniversariante.');
-        hoje.forEach(function(x){ T.push('🎂 '+anivFrase(x)+(x.tutor?(' · tutor: '+x.tutor):'')); });
-        if(depois.length){
-          T.push(''); T.push('<b>Nos próximos dias:</b>');
-          depois.forEach(function(x){ T.push(anivFrase(x)); });
+        if(!c){
+          var erroC='a ponte do Telegram não está configurada';
+          medTgGuardar(texto, erroC, 'gestao');
+          return tgTravaFechar(caminho, false, {quantos:L.length, manual:!!manual, erro:erroC, naFila:true})
+            .then(function(){ return {ok:false, erro:erroC}; });
         }
-        return tgAvisar({grupo:'gestao', texto:T.join('\n')}).then(function(r){
+        return tgAvisar({grupo:'gestao', texto:texto}).then(function(r){
           var ok=!!(r&&r.ok);
-          DB.ref('daycare/aniversario-enviado/'+dia).set({ts:Date.now(), ok:ok, quantos:L.length,
-            erro: ok?'':String((r&&r.erro)||'a ponte não respondeu')}).catch(function(e){ _logFalhaGrav('daycare/aniversario-enviado/ (anivEnviarTelegram)', e); });
-          if(typeof audit==='function') audit('aniversariantes',(ok?'enviou':'NÃO enviou')+' a lista do dia',{});
-          return ok?{ok:true}:{ok:false, erro:String((r&&r.erro)||'a ponte não respondeu')};
+          var erro=ok?'':String((r&&r.erro)||'a ponte não respondeu');
+          // Falhou: a mensagem vai para a fila (lock + teto de 5 + validade de 12 h). A trava
+          // NÃO reabre — reabrir é exatamente o que fazia a mensagem sair repetida.
+          if(!ok) medTgGuardar(texto, erro, 'gestao');
+          return tgTravaFechar(caminho, ok, {quantos:L.length, manual:!!manual, erro:erro, naFila:!ok})
+            .then(function(){
+              if(typeof audit==='function') audit('aniversariantes',(ok?'enviou':'NÃO enviou (guardado na fila)')+' a lista do dia',{});
+              return ok?{ok:true}:{ok:false, erro:erro};
+            });
         });
       });
     }).catch(function(e){ return {ok:false, erro:String((e&&e.message)||e)}; });
@@ -23243,7 +23413,20 @@
       setTimeout(function(){ try{ btn.textContent=t; }catch(e){} /* silencioso de propósito: guarda defensiva — falhar aqui não pode interromper quem chamou */ }, 6000);
     });
   }
-  function anivAuto(){ try{ if(new Date().getHours()>=7) anivEnviarTelegram(false); }catch(e){} /* silencioso de propósito: guarda defensiva — falhar aqui não pode interromper quem chamou */ }
+  // Uma tentativa automática por sessão por dia, ALÉM da trava do banco. O relógio de 1 h e
+  // a abertura do app disparavam juntos em cada aparelho — o clamor no banco já barra a
+  // repetição, esta flag evita até a ida ao banco. Se a trava ficou ilegível, a flag cai e o
+  // relógio pode tentar de novo mais tarde (sem risco: quem manda continua sendo a trava).
+  var ANIV_AUTO_DIA='';
+  function anivAuto(){
+    try{
+      if(new Date().getHours()<7) return;
+      var dia=(typeof dcDataKey==='function')?dcDataKey():'';
+      if(ANIV_AUTO_DIA===dia) return;
+      ANIV_AUTO_DIA=dia;
+      anivEnviarTelegram(false).then(function(r){ if(r&&r.travaIlegivel) ANIV_AUTO_DIA=''; });
+    }catch(e){} /* silencioso de propósito: guarda defensiva — falhar aqui não pode interromper quem chamou */
+  }
   // ===== ALERGIA A CONFIRMAR — Adriana, 20/ago/2026 ==============================
   // "A consultora clica no nome, abre a mensagem pronta, copia, manda no WhatsApp. Quando o
   //  tutor responde, ela marca 'tutor respondeu' + a data. Duas listas: HÓSPEDES e AULUNOS.
@@ -25178,33 +25361,46 @@
       return L.join('\n');
     });
   }
+  // Bug gêmeo do dos aniversariantes (Adriana, 15/set/2026): a trava era gravada DEPOIS do
+  // envio e a leitura que falhava valia como "ainda não mandei". Passou a usar a MESMA porta
+  // — tgTravaClamar antes de mandar, tgTravaFechar depois, e falha vai para a fila.
   function resumoDiaEnviar(manual){
     if(!DB) return Promise.resolve({ok:false, erro:'sem conexão'});
     var dia=(typeof dcDataKey==='function')?dcDataKey():'';
-    return DB.ref('daycare/resumo-gestao/'+dia).once('value').then(function(s){
-      var ja=s.val();
-      if(ja&&ja.ok&&!manual) return {ok:true, jaFoi:true};
-      return tgCfgPronta().then(function(c){
-        if(!c) return {ok:false, erro:'a ponte do Telegram não está configurada'};
-        // A ponte antiga não conhece o grupo novo e mandaria o resumo para o grupo ERRADO
-        // (o padrão dela é a veterinária). Antes de mandar, confere se ela já sabe do "diario".
-        return tgGrupoNaPonte('diario').then(function(tem){
-          if(!tem){
-            var erroG='a ponte do Telegram ainda não conhece o grupo "Diário do Daycare" — publique a versão nova de integracao-telegram/Codigo.gs (Implantar → Nova versão)';
-            DB.ref('daycare/resumo-gestao/'+dia).set({ts:Date.now(), ok:false, quem:(typeof quemSou==='function'?quemSou():'-'), manual:!!manual, erro:erroG}).catch(function(e){ _logFalhaGrav('daycare/resumo-gestao/ (resumoDiaEnviar)', e); });
-            if(typeof audit==='function') audit('resumo-gestao','NÃO enviou o resumo do dia — '+erroG,{});
-            return {ok:false, erro:erroG};
+    var caminho='daycare/resumo-gestao/'+dia;
+    return (manual?Promise.resolve('clamado'):tgTravaClamar(caminho)).then(function(st){
+      if(st==='ja') return {ok:true, jaFoi:true};
+      if(st==='ilegivel') return {ok:false, travaIlegivel:true,
+        erro:'não consegui ler a trava do envio — não mandei para não repetir a mensagem'};
+      return resumoDiaMontar(dia).then(function(txt){
+        return tgCfgPronta().then(function(c){
+          if(!c){
+            var erroC='a ponte do Telegram não está configurada';
+            medTgGuardar(txt, erroC, 'diario');
+            return tgTravaFechar(caminho, false, {manual:!!manual, erro:erroC, naFila:true})
+              .then(function(){ return {ok:false, erro:erroC}; });
           }
-        return resumoDiaMontar(dia).then(function(txt){
-          return tgAvisar({grupo:'diario', texto:txt}).then(function(r){
-            var ok=!!(r&&r.ok);
-            DB.ref('daycare/resumo-gestao/'+dia).set({ts:Date.now(), ok:ok,
-              quem:(typeof quemSou==='function'?quemSou():'-'), manual:!!manual,
-              erro: ok?'':String((r&&r.erro)||'a ponte não respondeu como esperado')}).catch(function(e){ _logFalhaGrav('daycare/resumo-gestao/ (resumoDiaEnviar)', e); });
-            if(typeof audit==='function') audit('resumo-gestao',(ok?'enviou':'NÃO enviou')+' o resumo do dia',{});
-            return ok?{ok:true}:{ok:false, erro:String((r&&r.erro)||'a ponte não respondeu')};
+          // A ponte antiga não conhece o grupo novo e mandaria o resumo para o grupo ERRADO
+          // (o padrão dela é a veterinária). Antes de mandar, confere se ela já sabe do "diario".
+          return tgGrupoNaPonte('diario').then(function(tem){
+            if(!tem){
+              var erroG='a ponte do Telegram ainda não conhece o grupo "Diário do Daycare" — publique a versão nova de integracao-telegram/Codigo.gs (Implantar → Nova versão)';
+              medTgGuardar(txt, erroG, 'diario');
+              return tgTravaFechar(caminho, false, {manual:!!manual, erro:erroG, naFila:true}).then(function(){
+                if(typeof audit==='function') audit('resumo-gestao','NÃO enviou o resumo do dia (guardado na fila) — '+erroG,{});
+                return {ok:false, erro:erroG};
+              });
+            }
+            return tgAvisar({grupo:'diario', texto:txt}).then(function(r){
+              var ok=!!(r&&r.ok);
+              var erro=ok?'':String((r&&r.erro)||'a ponte não respondeu como esperado');
+              if(!ok) medTgGuardar(txt, erro, 'diario');
+              return tgTravaFechar(caminho, ok, {manual:!!manual, erro:erro, naFila:!ok}).then(function(){
+                if(typeof audit==='function') audit('resumo-gestao',(ok?'enviou':'NÃO enviou (guardado na fila)')+' o resumo do dia',{});
+                return ok?{ok:true}:{ok:false, erro:erro};
+              });
+            });
           });
-        });
         });
       });
     }).catch(function(e){ return {ok:false, erro:String((e&&e.message)||e)}; });
@@ -25220,10 +25416,15 @@
     });
   }
   // Automático: a partir das 18h, quem abrir o app dispara o resumo — uma vez só por dia.
+  // Uma tentativa automática por sessão, além da trava do banco (mesma receita do anivAuto).
+  var RESUMO_AUTO_DIA='';
   function resumoDiaAuto(){
     try{
       if(new Date().getHours()<18) return;
-      resumoDiaEnviar(false);
+      var dia=(typeof dcDataKey==='function')?dcDataKey():'';
+      if(RESUMO_AUTO_DIA===dia) return;
+      RESUMO_AUTO_DIA=dia;
+      resumoDiaEnviar(false).then(function(r){ if(r&&r.travaIlegivel) RESUMO_AUTO_DIA=''; });
     }catch(e){} /* silencioso de propósito: guarda defensiva — falhar aqui não pode interromper quem chamou */
   }
 
@@ -27933,6 +28134,7 @@
       if(st&&!st.textContent) st.textContent=(TG_CFG&&TG_CFG.url)?'Ligado.':'Ainda não ligado — os avisos continuam sendo mandados à mão.';
       CFG_ENT_ATIVA=(ENTRADA_MSG&&ENTRADA_MSG.ativa!==false);
       if(typeof cfgPrevRender==='function') cfgPrevRender();
+      if(typeof cfgFotosRender==='function') cfgFotosRender();
       if(typeof cfgEntradaRender==='function') cfgEntradaRender();
     }catch(e){} /* silencioso de propósito: guarda defensiva — falhar aqui não pode interromper quem chamou */
   }
@@ -27950,19 +28152,51 @@
         +'<input class="cad-in" inputmode="numeric" id="cfgPrevCol_'+escAttr(m)+'" value="'+d+'">'
         +'<div class="hint" style="margin-top:3px">'+(d?('hoje: '+Math.round(d/30)+' meses'):'sem validade definida')+'</div></div>';
     });
+    // 1º aviso em MESES E DIAS DE USO (Adriana, 15/set/2026: "eu pedi 7 meses e 12 dias").
+    // Ela pensa em quanto tempo a coleira já está no pescoço, não em quantos dias faltam —
+    // a antecedência sai da conta, e aparece ao lado, calculada, para não haver surpresa.
+    var ap=AVISO_COLEIRA_APOS||{meses:0, dias:0};
+    if(!avisoColeiraAposDias(ap)){
+      // Sem nada gravado em meses e dias, mostra o equivalente do que está valendo hoje.
+      var usoHoje=coleiraDurReferencia()-(aviso[0]||AVISO_COLEIRA_PADRAO[0]);
+      if(usoHoje<0) usoHoje=0;
+      ap={meses:Math.floor(usoHoje/30), dias:usoHoje%30};
+    }
     h+='</div>'
-      +'<div style="margin-top:14px"><label class="cad-lb">Avisar o tutor com quantos dias de antecedência</label>'
+      +'<div style="margin-top:14px"><label class="cad-lb">Avisar o tutor quando a coleira completar</label>'
       +'<div class="cad-grid2">'
-      +'<div><input class="cad-in" inputmode="numeric" id="cfgPrevAviso1" value="'+(aviso[0]||12)+'">'
-      +'<div class="hint" style="margin-top:3px">1º aviso — a coleira entra no bloco &ldquo;Coleira vencendo&rdquo;</div></div>'
-      +'<div><input class="cad-in" inputmode="numeric" id="cfgPrevAviso2" value="'+(aviso[1]||7)+'">'
+      +'<div><input class="cad-in" inputmode="numeric" id="cfgPrevAposMeses" value="'+(parseInt(ap.meses,10)||0)+'" oninput="cfgPrevAposCalc()">'
+      +'<div class="hint" style="margin-top:3px">meses de uso</div></div>'
+      +'<div><input class="cad-in" inputmode="numeric" id="cfgPrevAposDias" value="'+(parseInt(ap.dias,10)||0)+'" oninput="cfgPrevAposCalc()">'
+      +'<div class="hint" style="margin-top:3px">e mais quantos dias</div></div>'
+      +'</div>'
+      +'<div class="hint" id="cfgPrevAposConta" style="margin-top:6px;font-weight:700;color:var(--z-blue)"></div>'
+      +'<div class="hint" style="margin-top:3px">1º aviso — a coleira entra no bloco &ldquo;Coleira vencendo&rdquo;. A conta usa a validade da Seresto ('+coleiraDurReferencia()+' dias), que é a coleira que a casa mais vê.</div>'
+      +'</div>'
+      +'<div style="margin-top:14px"><label class="cad-lb">Destacar a partir de quantos dias antes de vencer</label>'
+      +'<input class="cad-in" inputmode="numeric" id="cfgPrevAviso2" value="'+(aviso[1]||7)+'">'
       +'<div class="hint" style="margin-top:3px">2º aviso — a partir daqui a linha fica em destaque</div></div>'
-      +'</div></div>'
       +'<div class="hint" style="margin-top:8px">Avisar antes de vencer protege o FILHOt — e é a hora certa de oferecer a coleira nova. Depois de vencida, ele já ficou sem proteção.</div>'
       +'<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px">'
       +'<button type="button" class="btn btn-gold" onclick="cfgPrevSalvar()">Salvar</button></div>'
       +'<div id="cfgPrevSt" class="hint" style="margin-top:6px"></div>';
     w.innerHTML=h;
+    cfgPrevAposCalc();
+  }
+  // O "= N dias antes de vencer" aparece calculado ao lado, e muda enquanto ela digita.
+  // A validade usada é a que está NO CAMPO da Seresto, não a gravada: quem muda as duas
+  // coisas de uma vez precisa ver a conta certa antes de salvar.
+  function cfgPrevAposCalc(){
+    var el=document.getElementById('cfgPrevAposConta'); if(!el) return;
+    var m=parseInt(String((document.getElementById('cfgPrevAposMeses')||{}).value||'').replace(/\D/g,''),10)||0;
+    var d=parseInt(String((document.getElementById('cfgPrevAposDias')||{}).value||'').replace(/\D/g,''),10)||0;
+    var val=parseInt(String((document.getElementById('cfgPrevCol_Seresto')||{}).value||'').replace(/\D/g,''),10)||coleiraDurReferencia();
+    var uso=m*30+d, ant=val-uso;
+    if(!uso){ el.textContent='Preencha os meses e os dias para o app calcular a antecedência.'; return; }
+    if(ant<=0){ el.style.color='var(--crm-critico)';
+      el.textContent='Isso é '+uso+' dias de uso, e a coleira só vale '+val+' — o aviso cairia depois de vencida.'; return; }
+    el.style.color='var(--z-blue)';
+    el.textContent='= '+ant+' dia'+(ant>1?'s':'')+' antes de vencer ('+uso+' dias de uso, validade de '+val+').';
   }
   function cfgPrevSalvar(){
     var st=document.getElementById('cfgPrevSt');
@@ -27972,25 +28206,72 @@
       if(!(v>0)){ ruim=ruim||m; return; }
       coleiras[m]={dias:v};
     });
-    var a1=parseInt(String((document.getElementById('cfgPrevAviso1')||{}).value||'').replace(/\D/g,''),10);
+    var apM=parseInt(String((document.getElementById('cfgPrevAposMeses')||{}).value||'').replace(/\D/g,''),10)||0;
+    var apD=parseInt(String((document.getElementById('cfgPrevAposDias')||{}).value||'').replace(/\D/g,''),10)||0;
     var a2=parseInt(String((document.getElementById('cfgPrevAviso2')||{}).value||'').replace(/\D/g,''),10);
     if(ruim){ if(st){ st.style.color='var(--crm-critico)'; st.textContent='A validade da '+ruim+' precisa ser um número de dias maior que zero.'; } return; }
-    if(!(a1>0)||!(a2>0)){ if(st){ st.style.color='var(--crm-critico)'; st.textContent='Os dois avisos precisam ser números de dias maiores que zero.'; } return; }
+    var apos={meses:apM, dias:apD}, uso=avisoColeiraAposDias(apos);
+    if(!(uso>0)){ if(st){ st.style.color='var(--crm-critico)'; st.textContent='Diga com quantos meses e dias de uso o tutor deve ser avisado — um dos dois precisa ser maior que zero.'; } return; }
+    if(!(a2>0)){ if(st){ st.style.color='var(--crm-critico)'; st.textContent='O destaque precisa ser um número de dias maior que zero.'; } return; }
+    // A antecedência sai da validade que ela ACABOU de digitar para a Seresto.
+    var a1=(coleiras['Seresto']?coleiras['Seresto'].dias:coleiraDurReferencia())-uso;
+    if(!(a1>0)){ if(st){ st.style.color='var(--crm-critico)';
+      st.textContent='Com '+uso+' dias de uso o aviso cairia depois da coleira vencida. Diminua os meses ou os dias.'; } return; }
+    if(a1<a2){ if(st){ st.style.color='var(--crm-critico)';
+      st.textContent='O 1º aviso sai '+a1+' dia(s) antes de vencer e o destaque foi pedido para '+a2+' — o destaque tem de vir depois. Ajuste um dos dois.'; } return; }
     var dias=[a1,a2].sort(function(x,y){ return y-x; });
     if(!DB){ if(st){ st.style.color='var(--crm-critico)'; st.textContent='Banco reconectando — não salvei. Tente de novo em instantes.'; } return; }
-    DB.ref('daycare/config/prevencao').set({coleiras:coleiras, avisoColeiraDias:dias}).then(function(){
+    // Grava os DOIS: avisoApos é o que ela pediu, do jeito que ela fala; avisoColeiraDias é a
+    // conta já feita, que o resto do app (e qualquer aparelho ainda na versão antiga) lê.
+    DB.ref('daycare/config/prevencao').set({coleiras:coleiras, avisoApos:apos, avisoColeiraDias:dias}).then(function(){
       // Vale na hora, sem recarregar: quem acabou de mudar precisa VER a mudança.
       COLEIRA_DUR=Object.assign({}, COLEIRA_DUR_PADRAO);
       Object.keys(coleiras).forEach(function(k){ COLEIRA_DUR[k]=coleiras[k].dias; });
+      AVISO_COLEIRA_APOS=apos;
       AVISO_COLEIRA_DIAS=dias;
       try{ if(typeof audit==='function') audit('config-prevencao',
         'coleiras: '+marcas.map(function(m){ return m+' '+(coleiras[m]?coleiras[m].dias:'—')+'d'; }).join(' · ')
-        +' | aviso: '+dias.join(' e ')+' dias antes', {}); }catch(e){} /* silencioso de propósito: o audit() tem bolso próprio e reenvia sozinho — falhar aqui não pode travar a ação */
+        +' | 1º aviso: '+apM+' meses e '+apD+' dias de uso (= '+a1+' dias antes) · destaque: '+a2+' dias antes', {}); }catch(e){} /* silencioso de propósito: o audit() tem bolso próprio e reenvia sozinho — falhar aqui não pode travar a ação */
       if(st){ st.style.color='var(--crm-ok)'; st.textContent='✓ Salvo. A Prevenção e o Dashboard das Consultoras já estão usando estes números.'; }
       cfgPrevRender();
       try{ var v=document.getElementById('v-vacinas'); if(v&&v.classList.contains('active')&&typeof renderPrevencao==='function') renderPrevencao(); }catch(e){} /* silencioso de propósito: redesenho de tela — falhar não pode derrubar quem chamou */
     }).catch(function(e){
       _logFalhaGrav('daycare/config/prevencao (cfgPrevSalvar)', e);
+      if(st){ st.style.color='var(--crm-critico)'; st.textContent='❌ Não salvou: '+((e&&e.message)||e); }
+    });
+  }
+  // ===== CONFIGURAÇÕES › FOTOS DO CHECK-IN (Adriana, 15/set/2026) ===================
+  // Um interruptor só: guardar (ou não) uma cópia da foto no celular de quem tirou.
+  // Vale no Android — no iPhone o download de uma página não chega ao aplicativo Fotos,
+  // e prometer o que não acontece é pior do que não prometer.
+  var CFG_FOTOS_COPIA=true;
+  function cfgFotosCopiaSet(v){ CFG_FOTOS_COPIA=!!v; }
+  function cfgFotosRender(){
+    var w=document.getElementById('cfgFotosWrap'); if(!w) return;
+    CFG_FOTOS_COPIA=(CK_COPIA_CELULAR!==false);
+    var h='<div><label class="cad-lb">Guardar cópia da foto no celular (Android)</label>'
+      +'<div class="seg gold" data-single id="cfgFotosCopia">'
+      +'<button type="button" class="'+(CFG_FOTOS_COPIA?'on':'')+'" onclick="pick(this);cfgFotosCopiaSet(true)">Guardar</button>'
+      +'<button type="button" class="'+(CFG_FOTOS_COPIA?'':'on')+'" onclick="pick(this);cfgFotosCopiaSet(false)">Não guardar</button>'
+      +'</div></div>'
+      +'<div class="hint" style="margin-top:8px">Ligado, cada foto tirada no check-in do corpo também é baixada para a pasta <strong>Downloads</strong> do celular de quem tirou — e a Galeria do Android a lista junto com as outras fotos. É a cópia já reduzida, a mesma que vai para o banco, nunca a foto pesada da câmera.</div>'
+      +'<div class="hint" style="margin-top:6px">No iPhone nada é baixado sozinho: lá o caminho é abrir a foto na ficha do FILHOt e usar <strong>Enviar &rsaquo; Salvar imagem</strong>.</div>'
+      +'<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px">'
+      +'<button type="button" class="btn btn-gold" onclick="cfgFotosSalvar()">Salvar</button></div>'
+      +'<div id="cfgFotosSt" class="hint" style="margin-top:6px"></div>';
+    w.innerHTML=h;
+  }
+  function cfgFotosSalvar(){
+    var st=document.getElementById('cfgFotosSt');
+    if(!DB){ if(st){ st.style.color='var(--crm-critico)'; st.textContent='Banco reconectando — não salvei. Tente de novo em instantes.'; } return; }
+    DB.ref('daycare/config/fotos').update({copiaNoCelular:CFG_FOTOS_COPIA}).then(function(){
+      CK_COPIA_CELULAR=CFG_FOTOS_COPIA;
+      try{ if(typeof audit==='function') audit('config-fotos',
+        'cópia da foto no celular: '+(CFG_FOTOS_COPIA?'ligada':'desligada'), {}); }catch(e){} /* silencioso de propósito: o audit() tem bolso próprio e reenvia sozinho — falhar aqui não pode travar a ação */
+      if(st){ st.style.color='var(--crm-ok)'; st.textContent='✓ Salvo. Vale para as próximas fotos tiradas no check-in do corpo.'; }
+      cfgFotosRender();
+    }).catch(function(e){
+      _logFalhaGrav('daycare/config/fotos (cfgFotosSalvar)', e);
       if(st){ st.style.color='var(--crm-critico)'; st.textContent='❌ Não salvou: '+((e&&e.message)||e); }
     });
   }
