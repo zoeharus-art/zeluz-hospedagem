@@ -1,6 +1,27 @@
-# Índice do app — menu aprovado pela Adriana (reorganizado em 08/set/2026)
+# Índice do app — menu aprovado pela Adriana (reorganizado em 08/set/2026, ajustado em 15/set/2026)
 
 > Regra: o app tem de ser autoexplicativo, para treinamento rápido. Cada item tem **Título** e **subtítulo** (a explicação curta que aparece como dica no menu e no índice da Gestão no computador). Nomes são decisão da Adriana.
+
+## O que mudou em 15/set/2026 (v 2026-09-15-03)
+
+Adriana, duas frases:
+
+> "No sidebar, Prevenção, Peso e Pesquisa têm que estar dentro de Daycare. Peludinhos apenas cadastro e busca, caso precise olhar algo rápido dentro da ficha."
+
+### Peludinhos ficou com duas linhas
+
+**Cadastro de Peludinhos** e **Buscar peludinho**. Nada mais. É a gaveta da ficha: criar uma e achar uma.
+
+"Buscar peludinho" **não é tela nova**: é a mesma tela do Cadastro, aberta na lista e com o cursor já dentro do campo de busca (`abrirBuscaPeludinho`). Por isso o item não tem `data-v` próprio — tela nova pediria uma view, um título e uma linha de permissão, e criaria uma segunda porta para o mesmo cômodo. A visibilidade dele **espelha** a do Cadastro em `aplicarPaginasPessoa()`: quem não vê o Cadastro não vê o atalho.
+
+### Prevenção, Peso e Pesquisa desceram para o Day Care da Central
+
+O bloco **Central Zêluz › Day Care** passou a ser, em **ordem alfabética** até o rótulo:
+
+Lançamentos do dia · Peso · Pesquisa com a Família Multiespécie · Prevenção · Quem não comeu hoje · Reposições · **Planos e cobranças** (rótulo) · Renovação de planos · Lançar pagamento · Em débito.
+
+Nenhum item mudou de classe `so-*`: mudou de gaveta, nunca de acesso. O harness morde a ordem alfabética e a lista exata dos dois blocos.
+
 
 ## O que mudou em 08/set/2026, às 23h30 (v 2026-09-08-07) — e por quê
 
@@ -40,6 +61,8 @@ E o **relógio de 30 s** que relia o dia inteiro sumiu junto com a tela. Era a c
 ### 2 · Central Zêluz em três partes
 
 **Peludinhos** (Cadastro · Prevenção · Pesquisa com a Família Multiespécie · Peso) › **AuAulândia** (Check-in · Check-out com o tutor · Pendências com o tutor · Cuidado Vet · Orçamento de hospedagem) › **Day Care** (Quem não comeu hoje · Reposições · Lançamentos do dia · **Planos e cobranças**).
+
+> ⚠ **Superado em 15/set/2026** — ver o bloco no topo deste documento: Prevenção, Peso e Pesquisa saíram de Peludinhos e entraram no Day Care, e Peludinhos ganhou o "Buscar peludinho".
 
 "Planos e cobranças" deixou de ser sub-cabeçalho e virou um **rótulo** dentro do Day Care (11,5px/800, dourado): sub-cabeçalho dentro de sub-cabeçalho não existe, e a lei dos três níveis proíbe um filho maior que o pai. O rótulo é **menor** que o item — separa sem fingir que é cabeçalho.
 
@@ -136,9 +159,13 @@ Nunca um filho maior que o pai. Abre só o caminho da tela ativa. A pendência s
 | **Serviços › Day Care** | Abertura do dia (`abertura`) | Monitor 1: como a casa abre. | so-abertura |
 | | *(chamada, almoço, EA e as demais atividades)* | Vivem no `#dcSubnav`, dentro do `#blocoDaycare`. | so-day |
 | **Central Zêluz › Peludinhos** | Cadastro de Peludinhos (`ficha`) | Um cadastro só, para Day Care e AuAulândia — tudo começa aqui. | so-gestao (+ destaque) |
-| | Prevenção (`vacinas`) | Vacina, vermífugo, coleira, exame e peso: quem está atrasado. | so-gestao |
-| | Pesquisa com a Família Multiespécie (`alergia`) | A pesquisa com a família: enviar, colar a resposta, e ela vira ficha sozinha. | so-gestao |
+| | Buscar peludinho *(sem `data-v`)* | Achar um peludinho depressa e abrir a ficha dele. Abre a MESMA tela do Cadastro, já no campo de busca. | so-gestao (espelha o Cadastro) |
+| **Central Zêluz › Day Care** | Lançamentos do dia (`dashdc`) | A planilha do Day Care, item por item. | so-recepcao |
 | | Peso (`peso`) | Pesar qualquer FILHOt: recepção, veterinária e gestão. | so-pesa |
+| | Pesquisa com a Família Multiespécie (`alergia`) | A pesquisa com a família: enviar, colar a resposta, e ela vira ficha sozinha. | so-gestao |
+| | Prevenção (`vacinas`) | Vacina, vermífugo, coleira e exame de fezes: quem está atrasado e quem está para vencer. | so-gestao |
+| | Quem não comeu hoje (`emporio`) | A mensagem pronta para avisar o tutor. | so-emporio |
+| | Reposições (`reposicao`) | Créditos de dias por falta avisada. | so-recepcao |
 | *Central Zêluz › Planos e cobranças* | Renovação de planos (`renovacao`) | Quem está no fim do plano. | so-gestao |
 | | Lançar pagamento (`lancar-pagamento`) | O recebimento do plano vira registro. | tabela PERM |
 | | Em débito | Quem deve no Day Care. | em breve (sem tela) |
@@ -147,15 +174,12 @@ Nunca um filho maior que o pai. Abre só o caminho da tela ativa. A pendência s
 | | Orçamento de hospedagem (`orcamento`) | Monte e envie o orçamento ao tutor. | so-recepcao |
 | | Pendências com o tutor (`recepcao`) | Ração acabando, remédio faltando, algo que ficou. | so-recepcao |
 | | Cuidado Vet (`cuidadovet`) | Alterações no corpo que a veterinária precisa ver. | so-vet |
-| | Quem não comeu hoje (`emporio`) | A mensagem pronta para avisar o tutor. | so-emporio |
-| | Reposições (`reposicao`) | Créditos de dias por falta avisada. | so-recepcao |
-| | Lançamentos do dia (`dashdc`) | A planilha do Day Care, item por item. | so-recepcao |
 | **Operação** (a Márcia) | Financeiro do plantão (`acerto`) | Acerto das plantonistas: noites, dobras, quanto pagamos. | so-master |
 | | Ritmo do Time (`ritmo`) | Tempo por etapa, dia a dia. | so-gestao |
 | | Enriquecimento Ambiental (`eahist`) | O que foi feito e quem não participou. | so-gestao |
 | | Time (`pessoas`) | Pessoas, senhas e quem acessa o quê. | so-master |
 | | Escala e plano do dia (`planodia`) | A escala de cada um e qual plano vale hoje. | tabela PERM |
-| | Configurações (`config`) | Telegram e ponte da planilha. | so-master |
+| | Configurações (`config`) | Telegram, ponte da planilha, horários dos protocolos, protocolos passo a passo, **Prevenção** (validade da coleira e antecedência do aviso), **Mensagem de entrada** (a placa da porta) e o rastro de logins. | so-master |
 | **Em breve** | Agenda (`agenda`) | Frequência e reservas. | todos |
 | — | **Relatórios** (`relatorios`) | Resumo do dia, aniversariantes, exportações. | so-gestao |
 | — | Sair (`sair`) | Encerra a sessão neste aparelho. | todos |

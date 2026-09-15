@@ -3650,18 +3650,43 @@ async function main() {
     };
     const vsDe = (trecho, comHifen) =>
       [...trecho.matchAll(comHifen ? /data-v="([a-z-]+)"/g : /data-v="([a-z]+)"/g)].map((x) => x[1]);
-    check('menu: o subgrupo Peludinhos tem exatamente Cadastro, Prevenção, Pesquisa com a Família e Peso, nessa ordem',
-      JSON.stringify(vsDe(fatia('c-peludinhos', 'c-auaulandia'))) === JSON.stringify(
-        ['ficha', 'vacinas', 'alergia', 'peso']),
+    // v-16 (15/set/2026) — Adriana: "no sidebar, Prevenção, Peso e Pesquisa têm que estar
+    // dentro de Daycare. Peludinhos apenas cadastro e busca, caso precise olhar algo rápido
+    // dentro da ficha." O gabarito antigo cobrava as quatro telas aqui; agora cobra o
+    // contrário — que as três TENHAM SAÍDO e que só o Cadastro tenha data-v próprio.
+    check('menu: o subgrupo Peludinhos ficou só com o Cadastro (Prevenção, Peso e Pesquisa desceram para o Day Care)',
+      JSON.stringify(vsDe(fatia('c-peludinhos', 'c-auaulandia'))) === JSON.stringify(['ficha']),
       JSON.stringify(vsDe(fatia('c-peludinhos', 'c-auaulandia'))));
+    check('menu: e Peludinhos ganhou "Buscar peludinho" — sem data-v, porque é a MESMA tela do Cadastro',
+      /<a class="so-gestao" onclick="abrirBuscaPeludinho\(\)"[^>]*><span data-icon="search"><\/span><span>Buscar peludinho<\/span><\/a>/
+        .test(fatia('c-peludinhos', 'c-auaulandia'))
+      && html.indexOf('<section class="view" id="v-busca"') < 0
+      && /function abrirBuscaPeludinho\(\)\{/.test(html),
+      fatia('c-peludinhos', 'c-auaulandia').slice(-400));
     check('menu: o subgrupo AuAulândia da Central é a hospedagem vista pelo tutor',
       JSON.stringify(vsDe(fatia('c-auaulandia', 'c-daycare'), true)) === JSON.stringify(
         ['checkin', 'checkoutconf', 'recepcao', 'cuidadovet', 'orcamento']),
       JSON.stringify(vsDe(fatia('c-auaulandia', 'c-daycare'), true)));
+    // v-16 (15/set/2026): Prevenção, Peso e Pesquisa entraram aqui, e o bloco inteiro
+    // passou a ser alfabético até o rótulo "Planos e cobranças" (ordem pedida por ela).
     check('menu: o subgrupo Day Care da Central traz o dia do auluno e, no fim, Planos e cobranças',
       JSON.stringify(vsDe(fatia('c-daycare', 'operacao'), true)) === JSON.stringify(
-        ['emporio', 'reposicao', 'dashdc', 'renovacao', 'lancar-pagamento']),
+        ['dashdc', 'peso', 'alergia', 'vacinas', 'emporio', 'reposicao', 'renovacao', 'lancar-pagamento']),
       JSON.stringify(vsDe(fatia('c-daycare', 'operacao'), true)));
+    check('menu: os itens do Day Care da Central estão em ordem alfabética até o rótulo Planos e cobranças',
+      (() => {
+        const bloco = fatia('c-daycare', 'operacao');
+        const ate = bloco.indexOf('<div class="nav-rotulo">Planos e cobranças</div>');
+        const rotulos = [...bloco.slice(0, ate).matchAll(/<a data-v="[a-z-]+"[^>]*>[\s\S]{0,240}?<span>([^<]+)<\/span><\/a>/g)]
+          .map((m) => m[1]);
+        const ordenado = rotulos.slice().sort((a, b) => a.localeCompare(b, 'pt', { sensitivity: 'base' }));
+        return ate > 0 && rotulos.length === 6 && JSON.stringify(rotulos) === JSON.stringify(ordenado);
+      })(),
+      (() => {
+        const bloco = fatia('c-daycare', 'operacao');
+        const ate = bloco.indexOf('<div class="nav-rotulo">Planos e cobranças</div>');
+        return JSON.stringify([...bloco.slice(0, ate).matchAll(/<a data-v="[a-z-]+"[^>]*>[\s\S]{0,240}?<span>([^<]+)<\/span><\/a>/g)].map((m) => m[1]));
+      })());
     check('menu: "Planos e cobranças" virou RÓTULO dentro do Day Care — nunca um filho maior que o pai',
       fatia('c-daycare', 'operacao').indexOf('<div class="nav-rotulo">Planos e cobranças</div>') > 0
       && nav.indexOf('data-acc-toggle="c-planos"') < 0
@@ -10622,9 +10647,11 @@ async function main() {
       JSON.stringify(ordemCentral.filter((x) => /^c-/.test(x))) === JSON.stringify(
         ['c-peludinhos', 'c-auaulandia', 'c-daycare']),
       JSON.stringify(ordemCentral));
-    check('5 · "Planos e cobranças" entrou INTEIRO no Day Care, no fim dele',
+    // v-16 (15/set/2026): o Day Care da Central recebeu Peso, Pesquisa e Prevenção e ficou
+    // alfabético; "Planos e cobranças" continua sendo o RÓTULO do fim.
+    check('5 · "Planos e cobranças" continua INTEIRO no fim do Day Care, agora com Peso, Pesquisa e Prevenção antes dele',
       JSON.stringify(ordemCentral.slice(ordemCentral.indexOf('c-daycare'))) === JSON.stringify(
-        ['c-daycare', 'emporio', 'reposicao', 'dashdc', 'renovacao', 'lancar-pagamento']),
+        ['c-daycare', 'dashdc', 'peso', 'alergia', 'vacinas', 'emporio', 'reposicao', 'renovacao', 'lancar-pagamento']),
       JSON.stringify(ordemCentral.slice(ordemCentral.indexOf('c-daycare'))));
 
     // ---- 6: a pesquisa com a família ----
@@ -11507,7 +11534,7 @@ async function main() {
         !/\.catch\(function\([a-z]*\)\{\s*\}\)/.test(
           html.slice(html.indexOf('const CK_FRASE_PRATICA='), html.indexOf('function renderCkInicio('))));
       check('v-14 · a versão carimbada é a desta entrega',
-        /const APP_VERSAO='2026-09-15-02';/.test(html));
+        /const APP_VERSAO='2026-09-15-03';/.test(html));
     }
 
     // ---- v-15: O PLANO SÓ GRAVA NO CONFIRMAR (caso Cookie/Yara, 15/set/2026) --------
@@ -11811,6 +11838,231 @@ async function main() {
         html.slice(html.indexOf('function pdiaLer('), html.indexOf('function ltAbrir('))));
     check('v-13 · a versão é 2026-09-12-01 ou mais nova (o Check-in do corpo em 3 etapas entrou na -12-01)',
       (() => { const m = /const APP_VERSAO='(\d{4}-\d{2}-\d{2}-\d{2})';/.exec(html); return !!m && m[1] >= '2026-09-12-01'; })());
+  }
+  console.log('');
+
+  // ════════════════════════════════════════════════════════════════════════════════
+  // v-16 (15/set/2026) — as quatro entregas do dia. O menu já é provado lá em cima, no
+  // bloco do sidebar; aqui ficam as outras três:
+  //   · a Prevenção parou de cobrar peso ("está deixando muito poluído. Menos é mais.")
+  //   · a coleira: Seresto passou a valer 8 meses e o app avisa 12 e 7 dias ANTES —
+  //     os dois números editáveis em Configurações › Prevenção
+  //   · a placa da entrada: Erro × Violação, que todo mundo vê antes da senha
+  // ════════════════════════════════════════════════════════════════════════════════
+  console.log('v-16 — Prevenção sem peso, coleira configurável e a placa da entrada (15/set):');
+  {
+    const hoje = (() => { const d = new Date(); const p = (n) => String(n).padStart(2, '0');
+      return d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate()); })();
+    const maisDias = (iso, n) => { const a = iso.split('-').map(Number);
+      const d = new Date(a[0], a[1] - 1, a[2]); d.setDate(d.getDate() + n);
+      const p = (x) => String(x).padStart(2, '0');
+      return d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate()); };
+
+    // ─────────────────────────────── 2 · a Prevenção não cobra mais peso
+    check('v-16 · "Peso do mês" não existe mais em nenhum canto do app',
+      html.indexOf('Peso do mês') < 0, 'ainda aparece no HTML');
+    if (typeof ctx.prevItensDoFiltro === 'function') {
+      const ks = ctx.prevItensDoFiltro().map((x) => x.k);
+      check('v-16 · o filtro da Prevenção (e a exportação em Excel, que lê a MESMA lista) perdeu a coluna de peso',
+        ks.indexOf('peso') < 0 && ks.indexOf('col_p') >= 0, JSON.stringify(ks));
+    } else { check('v-16 · prevItensDoFiltro existe', false, 'função não encontrada'); }
+    if (typeof ctx.prevFaltasDe === 'function') {
+      // Ficha com prevenção em dia e SEM nenhuma pesagem: antes devia "Peso do mês" e caía
+      // na lista; agora sai limpa — quem cobra pesagem é a tela Peso.
+      const f = ctx.prevFaltasDe({ vac_mult_p: '2099-01-01', vac_gripe_p: '2099-01-01',
+        vac_raiva_p: '2099-01-01', ecto_p: '2099-01-01', verm_p: '2099-01-01' });
+      check('v-16 · FILHOt com prevenção em dia e sem pesagem no mês sai LIMPO da Prevenção',
+        f.length === 0, JSON.stringify(f));
+    } else { check('v-16 · prevFaltasDe existe', false, 'função não encontrada'); }
+    check('v-16 · o resumo conta rotina sem o peso, e a tela diz para onde o peso foi',
+      html.indexOf('Rotina (escova, check-up)') > 0
+      && html.indexOf('A pesagem do mês tem tela própria') > 0);
+    check('v-16 · o peso saiu de UM lugar, não do app: a tela Peso e o quadro "Falta pesar" continuam de pé',
+      /function renderPesoTela\(/.test(html) && /function pesoAtrasoLista\(/.test(html)
+      && /function blocoFaltaPesarHTML\(/.test(html));
+
+    // ─────────────────────────────── 3 · a coleira: 8 meses, aviso 12 e 7 dias
+    check('v-16 · o padrão de fábrica da Seresto é 240 dias (8 meses), e Scalibur/Leevre não mudaram',
+      /const COLEIRA_DUR_PADRAO=\{ 'Seresto':240, 'Scalibur':120, 'Leevre':180 \};/.test(html));
+    check('v-16 · o padrão de aviso ao tutor é 12 e 7 dias antes de vencer',
+      /const AVISO_COLEIRA_PADRAO=\[12,7\];/.test(html));
+    check('v-16 · os dois números moram em daycare/config/prevencao (coleiras + avisoColeiraDias) e são lidos ao abrir o app',
+      /DB\.ref\('daycare\/config\/prevencao'\)\.once\('value'\)/.test(html)
+      && /v\.avisoColeiraDias/.test(html)
+      && /try\{ prevCfgCarregar\(\); \}catch\(e\)\{\}/.test(html));
+    if (typeof ctx.avisoColeiraMax === 'function' && typeof ctx.avisoColeiraMin === 'function') {
+      check('v-16 · sem nada configurado, a janela de aviso é 12 dias (e o destaque forte, 7)',
+        ctx.avisoColeiraMax() === 12 && ctx.avisoColeiraMin() === 7,
+        ctx.avisoColeiraMax() + ' / ' + ctx.avisoColeiraMin());
+    } else { check('v-16 · avisoColeiraMax/avisoColeiraMin existem', false, 'função não encontrada'); }
+    check('v-16 · o selo "vence em N dias" deixou de ser 15 fixo e passou a usar a antecedência configurada',
+      /if\(d<=avisoColeiraMax\(\)\) return '<span class="vd vd-perto">/.test(html)
+      && html.indexOf("if(d<=15) return") < 0);
+    if (typeof ctx.prevDiasDoItem === 'function') {
+      const itCol = { k: 'col_p', coleira: true, dias: 0 };
+      check('v-16 · a validade da coleira vem da MARCA (Seresto 240, Scalibur 120) — não há mais 180 fixo',
+        ctx.prevDiasDoItem(itCol, { col_nome: 'Seresto' }) === 240
+        && ctx.prevDiasDoItem(itCol, { col_nome: 'Scalibur' }) === 120
+        && ctx.prevDiasDoItem(itCol, { col_nome: 'Outra', col_outro_dias: '90' }) === 90
+        && ctx.prevDiasDoItem({ k: 'vac_mult_p', dias: 365 }, {}) === 365,
+        JSON.stringify([ctx.prevDiasDoItem(itCol, { col_nome: 'Seresto' }),
+          ctx.prevDiasDoItem(itCol, { col_nome: 'Scalibur' })]));
+      check('v-16 · sem marca na ficha, vale a Seresto (é o que o antigo 180 fixo fazia na prática)',
+        ctx.prevDiasDoItem(itCol, {}) === 240, String(ctx.prevDiasDoItem(itCol, {})));
+    } else { check('v-16 · prevDiasDoItem existe', false, 'função não encontrada'); }
+
+    // a ficha se corrige ao abrir: col_p gravado com o prazo velho vira o prazo novo
+    if (typeof ctx.prevColeiraRecalcular === 'function') {
+      const bkpSet = ctx.setPelExtra;
+      let gravou = null;
+      ctx.__setFalso = function (p, patch) { gravou = patch; };
+      vm.runInContext('setPelExtra = __setFalso;', ctx);
+      let r1, r2, r3;
+      try {
+        const colocada = maisDias(hoje, -100);
+        // ficha antiga: Seresto com "trocar em" calculado nos 180 dias de antes
+        r1 = ctx.prevColeiraRecalcular({ n: 'Harness Coleira', tutor: 'Tutor Harness' },
+          { col_nome: 'Seresto', col_t: colocada, col_p: maisDias(colocada, 180) });
+        const esperado = maisDias(colocada, 240);
+        check('v-16 · abrir a ficha refaz o "Trocar em" da coleira com a validade de hoje (180 → 240)',
+          r1 === true && gravou && gravou.col_p === esperado,
+          JSON.stringify({ voltou: r1, gravou: gravou }));
+        // já certo: não grava de novo (é por isso que o rastro sai UMA vez por FILHOt)
+        gravou = null;
+        r2 = ctx.prevColeiraRecalcular({ n: 'Harness Coleira', tutor: 'Tutor Harness' },
+          { col_nome: 'Seresto', col_t: colocada, col_p: esperado });
+        check('v-16 · ficha já com a validade certa não é gravada de novo (o rastro sai uma vez por FILHOt)',
+          r2 === false && gravou === null, JSON.stringify({ voltou: r2, gravou: gravou }));
+        // sem marca (ou sem data): não se inventa validade
+        gravou = null;
+        r3 = ctx.prevColeiraRecalcular({ n: 'Harness Coleira', tutor: 'Tutor Harness' },
+          { col_t: colocada, col_p: '' });
+        check('v-16 · sem marca de coleira na ficha, nada é recalculado — não se inventa validade',
+          r3 === false && gravou === null, JSON.stringify({ voltou: r3, gravou: gravou }));
+      } finally {
+        ctx.__setReal = bkpSet;
+        vm.runInContext('setPelExtra = __setReal;', ctx);
+      }
+      check('v-16 · e o recálculo deixa rastro próprio na auditoria (coleira-recalculada)',
+        /audit\('coleira-recalculada'/.test(html));
+      check('v-16 · o recálculo roda ao ABRIR a ficha, não só ao salvar',
+        /function abrirPeludinho\(i\)\{[\s\S]{0,700}?prevColeiraRecalcular\(p, ex\)/.test(html));
+    } else { check('v-16 · prevColeiraRecalcular existe', false, 'função não encontrada'); }
+
+    // o bloco "Coleira vencendo" na Prevenção, com dado injetado
+    if (typeof ctx.prevColeiraVencendo === 'function' && typeof ctx.pelKey === 'function') {
+      const bkpPel = ctx.PELUDINHOS, bkpCad = ctx.pelCadCache;
+      try {
+        const fichas = [
+          { n: 'Coleira Cinco', tutor: 'Tutor A', raca: 'SRD', sexo: 'Fêmea', col_nome: 'Seresto', col_p: maisDias(hoje, 5) },
+          { n: 'Coleira Onze', tutor: 'Tutor B', raca: 'Westie', sexo: 'Macho', col_nome: 'Seresto', col_p: maisDias(hoje, 11) },
+          { n: 'Coleira Longe', tutor: 'Tutor C', raca: 'Spitz', sexo: 'Macho', col_nome: 'Leevre', col_p: maisDias(hoje, 40) },
+          { n: 'Coleira Vencida', tutor: 'Tutor D', raca: 'SRD', sexo: 'Macho', col_nome: 'Seresto', col_p: maisDias(hoje, -3) },
+        ];
+        ctx.__pelV16 = fichas.map((f) => ({ n: f.n, tutor: f.tutor, raca: f.raca }));
+        vm.runInContext('PELUDINHOS = __pelV16;', ctx);
+        const cad = {};
+        fichas.forEach((f, i) => { cad[ctx.pelKey(ctx.PELUDINHOS[i])] = f; });
+        ctx.__cadV16 = cad;
+        vm.runInContext('pelCadCache = __cadV16;', ctx);
+
+        const lista = ctx.prevColeiraVencendo();
+        check('v-16 · o bloco lista só quem vence DENTRO da janela (5 e 11 dias) — quem vence em 40 fica fora, e quem já venceu continua na lista de quem deve',
+          lista.length === 2 && lista[0].nome === 'Coleira Cinco' && lista[1].nome === 'Coleira Onze',
+          JSON.stringify(lista.map((o) => o.nome + ':' + o.dias)));
+        check('v-16 · o destaque forte é de 7 dias para baixo (5 dias entra, 11 não)',
+          lista[0].urgente === true && lista[1].urgente === false,
+          JSON.stringify(lista.map((o) => o.dias + '=' + o.urgente)));
+        const bloco = ctx.prevBlocoColeiraVencendo();
+        check('v-16 · o bloco "Coleira vencendo — hora de oferecer a nova" desenha o convite e os dois botões',
+          bloco.indexOf('Coleira vencendo — hora de oferecer a nova') > 0
+          && bloco.indexOf('Copiar mensagem para o tutor') > 0
+          && bloco.indexOf('prevCopiarColeira(') > 0
+          && bloco.indexOf('prevMarcarAvisado(') > 0,
+          bloco.slice(0, 200));
+        // a mensagem pronta — agora também para auluno do Day Care, não só hóspede
+        const msg = ctx.prevMensagemTutor(lista[0]);
+        check('v-16 · a mensagem ao tutor fala do que AINDA VAI vencer (não só do vencido) e oferece a coleira nova',
+          msg.indexOf('vence em') > 0 && msg.indexOf('faltam 5 dias') > 0
+          && msg.indexOf('Coleira repelente Seresto') > 0
+          && msg.indexOf('separamos a coleira nova aqui no Empório') > 0
+          && msg.indexOf('Coleira Cinco') > 0,
+          msg.slice(0, 260));
+        check('v-16 · e a mensagem respeita o gênero do FILHOt (fêmea: "dela", "ela")',
+          msg.indexOf('da Coleira Cinco') > 0 && msg.indexOf('protege ela') > 0,
+          msg.slice(0, 160));
+        // o MESMO número no Dashboard das Consultoras — uma conta só para a casa inteira
+        if (typeof ctx.pcQuadroColeira === 'function') {
+          const q = ctx.pcQuadroColeira();
+          check('v-16 · o Dashboard das Consultoras mostra o MESMO número (é venda), lendo a MESMA conta',
+            q.indexOf('Coleira vencendo') > 0 && q.indexOf('data-pm-alvo="2"') > 0
+            && q.indexOf('Coleira Cinco') > 0,
+            q.slice(0, 220));
+        } else { check('v-16 · pcQuadroColeira existe', false, 'função não encontrada'); }
+      } finally {
+        ctx.__bkpPelV16 = bkpPel; ctx.__bkpCadV16 = bkpCad;
+        vm.runInContext('PELUDINHOS = __bkpPelV16; pelCadCache = __bkpCadV16;', ctx);
+      }
+    } else { check('v-16 · prevColeiraVencendo existe', false, 'função não encontrada'); }
+    check('v-16 · o quadro da coleira entrou na mesa das Consultoras (e o quadro só observa)',
+      /\+ pcQuadroColeira\(\)/.test(html)
+      && !/pcQuadroColeira[\s\S]{0,2600}?DB\.ref\([^)]*\)\.(set|update|push|remove)\(/.test(html));
+    check('v-16 · Configurações › Prevenção deixa a Gestão mudar os dois números, com rastro (config-prevencao)',
+      html.indexOf('<h2 style="font-size:19px">Prevenção — coleira repelente</h2>') > 0
+      && /function cfgPrevSalvar\(\)\{/.test(html)
+      && /audit\('config-prevencao'/.test(html)
+      && /DB\.ref\('daycare\/config\/prevencao'\)\.set\(\{coleiras:coleiras, avisoColeiraDias:dias\}\)/.test(html));
+
+    // ─────────────────────────────── 4 · a placa da entrada
+    const iBox = html.indexOf('<div class="login-box">');
+    const iPwd = html.indexOf('<input id="loginPwd"');
+    const iPlaca = html.indexOf('<div class="entrada-placa" id="entradaPlaca"');
+    check('v-16 · a placa fica na tela de entrada, ACIMA do campo de senha — todo mundo vê, antes de qualquer papel',
+      iBox > 0 && iPlaca > iBox && iPwd > iPlaca, JSON.stringify({ iBox, iPlaca, iPwd }));
+    // O texto é ditado pela Adriana, palavra por palavra — inclusive as maiúsculas de
+    // CUIDA, Vidas, VIDAS, TODOS. Mexer numa letra aqui é mexer na régua da casa.
+    check('v-16 · a placa traz as cinco linhas ditadas, ao pé da letra',
+      html.indexOf('<div class="entrada-placa-t" id="entradaPlacaT">Você CUIDA de Vidas!</div>') > 0
+      && html.indexOf('<div class="entrada-placa-l" id="entradaPlacaL0">Um FILHOt é como um bebê humano.</div>') > 0
+      && html.indexOf('<div class="entrada-placa-l" id="entradaPlacaL1">Os protocolos existem para proteger VIDAS!</div>') > 0
+      && html.indexOf('<div class="entrada-placa-l" id="entradaPlacaL2">Violar os protocolos é <strong>inaceitável</strong>!</div>') > 0
+      && html.indexOf('<div class="entrada-placa-l entrada-placa-nota" id="entradaPlacaL3">Eles existem para que TODOS, FILHOts e Zelosos, voltem para casa melhores do que chegaram.</div>') > 0);
+    check('v-16 · "inaceitável" (e o par erro/violação) sai em negrito mesmo quando a Gestão reescreve a frase',
+      typeof ctx.entradaLinhaHTML === 'function'
+      && ctx.entradaLinhaHTML('Violar os protocolos é inaceitável!')
+         === 'Violar os protocolos é <strong>inaceitável</strong>!'
+      && ctx.entradaLinhaHTML('Seguiu o protocolo e deu errado? Erro. Revisamos juntos.')
+         .indexOf('<strong>Erro</strong>') > 0
+      && ctx.entradaLinhaHTML('Não seguiu o protocolo? Violação.').indexOf('<strong>Violação</strong>') > 0
+      // "errado" não vira "erro" em negrito: a palavra tem de estar inteira
+      && ctx.entradaLinhaHTML('Deu errado.') === 'Deu errado.',
+      typeof ctx.entradaLinhaHTML === 'function'
+        ? ctx.entradaLinhaHTML('Violar os protocolos é inaceitável!') : 'função não existe');
+    check('v-16 · o texto é da casa, não do código: mora em daycare/config/mensagem-entrada, com o padrão no app',
+      /DB\.ref\('daycare\/config\/mensagem-entrada'\)\.once\('value'\)/.test(html)
+      && /const ENTRADA_MSG_PADRAO=\{\s*\n\s*titulo:'Você CUIDA de Vidas!',/.test(html)
+      && /try\{ entradaMsgCarregar\(\); \}catch\(e\)\{\}/.test(html));
+    // O anel branco vai POR DENTRO do vermelho, como na placa de pare de verdade: branco
+    // por fora sumia contra o creme da caixa de entrada (visto na captura de 390px).
+    check('v-16 · a placa é placa: vermelho de sinalização, texto creme, anel branco por dentro e cantos de octógono',
+      /\.entrada-placa\{--pl-corte:20px;background:#B3261E/.test(html)
+      && /\.entrada-placa-anel\{--pl-corte:15px;background:#FFFFFF/.test(html)
+      && /\.entrada-placa-in\{--pl-corte:12px;background:#B3261E;color:var\(--z-cream\)/.test(html)
+      && (html.match(/clip-path:polygon\(var\(--pl-corte\) 0/g) || []).length === 3);
+    check('v-16 · a placa não bloqueia nada e não é clicável (sem onclick, sem botão dentro)',
+      (() => {
+        const i = html.indexOf('<div class="entrada-placa" id="entradaPlaca"');
+        const f = html.indexOf('<div class="login-title">', i);
+        const t = html.slice(i, f);
+        return i > 0 && f > i && t.indexOf('onclick') < 0 && t.indexOf('<button') < 0 && t.indexOf('<a ') < 0;
+      })());
+    check('v-16 · a placa cabe no celular: o título encolhe em 400px e nada nela usa emoji',
+      /@media \(max-width:400px\)\{\s*\n\s*\.entrada-placa-in\{padding:18px 11px 16px\}\s*\n\s*\.entrada-placa-t\{font-size:21px\}/.test(html));
+    check('v-16 · Configurações › Mensagem de entrada edita título, as 4 linhas e o liga/desliga, com rastro',
+      html.indexOf('<h2 style="font-size:19px">Mensagem de entrada</h2>') > 0
+      && /function cfgEntradaSalvar\(\)\{/.test(html)
+      && /audit\('config-mensagem-entrada'/.test(html)
+      && /id="cfgEntL'\+i\+'"/.test(html));
   }
   console.log('');
 

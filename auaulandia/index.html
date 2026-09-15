@@ -53,6 +53,33 @@
     padding:14px;font-family:var(--font-ui);font-weight:700;font-size:15px;cursor:pointer}
   .login-btn:hover{background:#1b3d52}
   .login-err{min-height:20px;margin-top:10px;font-size:13px;font-weight:600;color:var(--crm-critico)}
+  /* ===== A PLACA DA ENTRADA (Adriana, 15/set/2026) ==================================
+     "Algo inspirador, mas que eles entendam a importância de seguir protocolos... ela tem
+     que ser um alerta, como um semáforo, como uma placa de pare."
+     Então é uma PLACA: vermelho de sinalização, creme por cima, moldura branca grossa e os
+     cantos cortados em octógono. O corte é em PIXELS (20/16), não na proporção do octógono
+     equilátero da placa de pare: o equilátero comeria as pontas do texto num celular de
+     390px, e a placa existe para ser LIDA. Ela não bloqueia nada e não é clicável. */
+  .entrada-placa{--pl-corte:20px;background:#B3261E;margin:0 0 20px;padding:7px;
+    clip-path:polygon(var(--pl-corte) 0,calc(100% - var(--pl-corte)) 0,100% var(--pl-corte),100% calc(100% - var(--pl-corte)),calc(100% - var(--pl-corte)) 100%,var(--pl-corte) 100%,0 calc(100% - var(--pl-corte)),0 var(--pl-corte));box-shadow:0 10px 26px rgba(179,38,30,.30);user-select:none}
+  /* O anel branco fica DENTRO do vermelho, como na placa de pare de verdade — branco por
+     fora sumiria contra o creme da caixa de entrada. */
+  .entrada-placa-anel{--pl-corte:15px;background:#FFFFFF;padding:4px;clip-path:polygon(var(--pl-corte) 0,calc(100% - var(--pl-corte)) 0,100% var(--pl-corte),100% calc(100% - var(--pl-corte)),calc(100% - var(--pl-corte)) 100%,var(--pl-corte) 100%,0 calc(100% - var(--pl-corte)),0 var(--pl-corte))}
+  .entrada-placa-in{--pl-corte:12px;background:#B3261E;color:var(--z-cream);
+    padding:20px 14px 18px;text-align:center;clip-path:polygon(var(--pl-corte) 0,calc(100% - var(--pl-corte)) 0,100% var(--pl-corte),100% calc(100% - var(--pl-corte)),calc(100% - var(--pl-corte)) 100%,var(--pl-corte) 100%,0 calc(100% - var(--pl-corte)),0 var(--pl-corte))}
+  .entrada-placa-t{font-family:var(--font-ui);font-weight:800;font-size:23px;line-height:1.12;
+    letter-spacing:.2px;margin-bottom:11px}
+  .entrada-placa-l{font-family:var(--font-ui);font-weight:600;font-size:13px;line-height:1.35;margin-top:5px}
+  .entrada-placa-l strong{font-weight:800;text-decoration:underline;text-underline-offset:2px}
+  /* A quarta linha é o PORQUÊ, não o grito: vem mais miúda, para não disputar com o
+     título e para nunca estourar a placa num celular de 390px. */
+  .entrada-placa-nota{font-weight:600;font-size:12px;line-height:1.35;margin-top:11px;opacity:.94}
+  @media (max-width:400px){
+    .entrada-placa-in{padding:18px 11px 16px}
+    .entrada-placa-t{font-size:21px}
+    .entrada-placa-l{font-size:12.5px}
+    .entrada-placa-nota{font-size:11.5px}
+  }
   /* Rodapé da barra — Opção F: quem está usando, e em que papel. O nome vem primeiro,
      grande; o papel embaixo, miúdo e espaçado. O "Sair" vira pílula, sem borda dura. */
   .who-user{display:flex;align-items:center;justify-content:space-between;gap:10px}
@@ -2303,6 +2330,20 @@
   <div class="login-box">
     <img src="assets/logo-wordmark.png" alt="Zêluz" class="login-logo">
     <div class="login-sub">AuAulândia · Day Care</div>
+    <!-- A PLACA — todo mundo vê, antes de qualquer papel, porque a régua é da casa inteira.
+         O texto é da Gestão, não do código: mora em daycare/config/mensagem-entrada e se
+         edita em Configurações › Mensagem de entrada (a lei de 22/ago: regra nova não pode
+         exigir programador). O que está escrito aqui é o padrão, palavra por palavra — e é
+         o que aparece enquanto a configuração ainda não desceu do banco. -->
+    <div class="entrada-placa" id="entradaPlaca" role="note">
+      <div class="entrada-placa-anel"><div class="entrada-placa-in">
+        <div class="entrada-placa-t" id="entradaPlacaT">Você CUIDA de Vidas!</div>
+        <div class="entrada-placa-l" id="entradaPlacaL0">Um FILHOt é como um bebê humano.</div>
+        <div class="entrada-placa-l" id="entradaPlacaL1">Os protocolos existem para proteger VIDAS!</div>
+        <div class="entrada-placa-l" id="entradaPlacaL2">Violar os protocolos é <strong>inaceitável</strong>!</div>
+        <div class="entrada-placa-l entrada-placa-nota" id="entradaPlacaL3">Eles existem para que TODOS, FILHOts e Zelosos, voltem para casa melhores do que chegaram.</div>
+      </div></div>
+    </div>
     <div class="login-title">Entrar com sua senha</div>
     <input id="loginPwd" type="password" inputmode="numeric" maxlength="6" placeholder="• • • •"
       onkeydown="if(event.key==='Enter')doLogin()">
@@ -2350,7 +2391,7 @@
       <a class="grp nav-parent" data-acc-toggle="paineis"><span data-icon="chart"></span><span>Dashboards</span><span class="acc-caret" aria-hidden="true"></span></a>
       <div class="acc-panel">
         <a data-v="painelmeu" style="display:none" title="A sua fatia do dia: o seu horário, o seu plano, o que ficou aberto e os seus pontos."><span data-icon="sun"></span><span>Meu Dashboard</span></a>
-        <a data-v="consultoras" style="display:none" title="A sua mesa do dia: o Seu dia e os cinco quadros que precisam de você."><span data-icon="sun"></span><span>Dashboard das Consultoras</span></a>
+        <a data-v="consultoras" style="display:none" title="A sua mesa do dia: o Seu dia e os seis quadros que precisam de você."><span data-icon="sun"></span><span>Dashboard das Consultoras</span></a>
         <a data-v="painel-amanda" style="display:none" title="O seu dia e as duas listas: o que está esperando você e o que você já resolveu hoje."><span data-icon="list-check"></span><span>Dashboard da Amanda</span></a>
         <a data-v="paineloperacao" style="display:none" title="A casa de hoje num lugar só: quem veio, quem faltou, o tempo do time, as noites que vêm aí e o acerto."><span data-icon="chart"></span><span>Dashboard da Márcia</span></a>
         <a data-v="painel-diretoria" style="display:none" title="A casa inteira e o dinheiro do mês — a visão de quem responde por tudo."><span data-icon="chart"></span><span>Dashboard da Adriana</span></a>
@@ -2415,16 +2456,18 @@
         <div class="acc" data-acc="c-peludinhos">
           <a class="grp grp-sub nav-parent" data-acc-toggle="c-peludinhos"><span>Peludinhos</span><span class="acc-caret" aria-hidden="true"></span></a>
           <div class="acc-panel">
-          <!-- O cadastro abre o sub-cabeçalho porque é dele que sai tudo o que vem embaixo:
-               prevenção, pesquisa com a família e peso são leituras da mesma ficha
-               (Adriana, 08/set/2026). Segue so-gestao: monitor NUNCA cadastra. -->
+          <!-- 15/set/2026 — Adriana: "Peludinhos apenas cadastro e busca, caso precise
+               olhar algo rápido dentro da ficha." Prevenção, Peso e Pesquisa com a Família
+               desceram para o Day Care da Central: são o dia do auluno, e é lá que a
+               consultora trabalha. Aqui fica só a ficha — criar uma e achar uma.
+               O cadastro segue so-gestao: monitor NUNCA cadastra. -->
           <a data-v="ficha" class="so-gestao nav-destaque" title="Um cadastro só, para Day Care e AuAulândia — tudo começa aqui."><span data-icon="id-card"></span><span>Cadastro de Peludinhos</span></a>
-          <a data-v="vacinas" class="so-gestao" title="Vacina, vermífugo, coleira, exame e peso: quem está atrasado."><span data-icon="shield"></span><span>Prevenção</span></a>
-          <!-- Renomeada em 08/set/2026 (noite): "Conversa com o Tutor" → "Pesquisa com a
-               Família Multiespécie". É pesquisa, não conversa — e quem responde é a família
-               inteira, não só quem assina. O data-v e a classe so-gestao não mudaram. -->
-          <a data-v="alergia" class="so-gestao" title="A pesquisa com a família: enviar, colar a resposta, e ela vira ficha sozinha."><span data-icon="drop"></span><span>Pesquisa com a Família Multiespécie</span></a>
-          <a data-v="peso" class="so-pesa" title="Pesar qualquer FILHOt: recepção, veterinária e gestão."><span data-icon="scale"></span><span>Peso</span></a>
+          <!-- Sem data-v de propósito: NÃO é tela nova. É a MESMA tela do Cadastro, aberta
+               com o cursor já no campo de busca (abrirBuscaPeludinho). Tela nova custaria
+               uma view, um título e uma linha de permissão; isto custa três linhas e não
+               abre porta nenhuma que o Cadastro não abra — a visibilidade dele espelha a
+               do item ficha em aplicarPaginasPessoa(). -->
+          <a class="so-gestao" onclick="abrirBuscaPeludinho()" title="Achar um peludinho depressa e abrir a ficha dele."><span data-icon="search"></span><span>Buscar peludinho</span></a>
           </div>
         </div>
         <!-- AUAULÂNDIA — "todos os itens pertinentes à hospedagem" (Adriana, 08/set/2026,
@@ -2451,13 +2494,25 @@
         <div class="acc" data-acc="c-daycare">
           <a class="grp grp-sub nav-parent" data-acc-toggle="c-daycare"><span>Day Care</span><span class="acc-caret" aria-hidden="true"></span></a>
           <div class="acc-panel">
+          <!-- ORDEM ALFABÉTICA dentro do bloco (Adriana, 15/set/2026), até o rótulo
+               "Planos e cobranças": Lançamentos do dia · Peso · Pesquisa com a Família
+               Multiespécie · Prevenção · Quem não comeu hoje · Reposições.
+               Prevenção, Peso e Pesquisa vieram de Peludinhos nesta data — "no sidebar,
+               Prevenção, Peso e Pesquisa têm que estar dentro de Daycare". Nenhum deles
+               mudou de classe so-*: mudou de gaveta, nunca de acesso. -->
+          <!-- Adriana, 19/ago/2026: é aqui que a recepção lança o que hoje digita na
+               planilha — e a planilha vira só o espelho que alimenta a TV. -->
+          <a data-v="dashdc" class="so-recepcao" title="A planilha do Day Care, item por item."><span data-icon="list-check"></span><span>Lançamentos do dia</span></a>
+          <a data-v="peso" class="so-pesa" title="Pesar qualquer FILHOt: recepção, veterinária e gestão."><span data-icon="scale"></span><span>Peso</span></a>
+          <!-- Renomeada em 08/set/2026 (noite): "Conversa com o Tutor" → "Pesquisa com a
+               Família Multiespécie". É pesquisa, não conversa — e quem responde é a família
+               inteira, não só quem assina. O data-v e a classe so-gestao não mudaram. -->
+          <a data-v="alergia" class="so-gestao" title="A pesquisa com a família: enviar, colar a resposta, e ela vira ficha sozinha."><span data-icon="drop"></span><span>Pesquisa com a Família Multiespécie</span></a>
+          <a data-v="vacinas" class="so-gestao" title="Vacina, vermífugo, coleira e exame de fezes: quem está atrasado e quem está para vencer."><span data-icon="shield"></span><span>Prevenção</span></a>
           <!-- Saiu do menu "Empório", que foi deletado: ninguém procuraria a mensagem
                do tutor ali dentro (Adriana, 13/ago/2026). -->
           <a data-v="emporio" class="so-emporio" title="A mensagem pronta para avisar o tutor."><span data-icon="bowl"></span><span>Quem não comeu hoje</span></a>
           <a data-v="reposicao" class="so-recepcao" title="Créditos de dias por falta avisada."><span data-icon="refresh"></span><span>Reposições</span></a>
-          <!-- Adriana, 19/ago/2026: é aqui que a recepção lança o que hoje digita na
-               planilha — e a planilha vira só o espelho que alimenta a TV. -->
-          <a data-v="dashdc" class="so-recepcao" title="A planilha do Day Care, item por item."><span data-icon="list-check"></span><span>Lançamentos do dia</span></a>
           <div class="nav-rotulo">Planos e cobranças</div>
           <a data-v="renovacao" class="so-gestao" title="Quem está no fim do plano."><span data-icon="card"></span><span>Renovação de planos</span></a>
           <!-- LANÇAR PAGAMENTO (v-10) — nasce ESCONDIDO; quem mostra é aplicarPermMenu(),
@@ -3825,7 +3880,7 @@
        "ou é vermífugo ou exame — tem tutor que opta por um, outro por outro." Essa regra
        já existia no cadastro (dispensaSe) e o relatório a respeita. -->
   <section class="view" id="v-vacinas">
-    <div class="role-note"><span data-icon="alert"></span><span><strong>Quem está faltando alguma coisa.</strong> Vacinas, antiparasitário, coleira, vermífugo (ou exame de fezes) e a pesagem do mês. Toque num item para ver só ele. Quem faz <strong>exame de fezes</strong> não precisa de vermífugo — e o contrário também vale.</span></div>
+    <div class="role-note"><span data-icon="alert"></span><span><strong>Quem está faltando alguma coisa.</strong> Vacinas, antiparasitário, coleira, vermífugo (ou exame de fezes). Toque num item para ver só ele. A pesagem do mês tem tela própria — <strong>Peso</strong>, aqui do lado. Quem faz <strong>exame de fezes</strong> não precisa de vermífugo — e o contrário também vale.</span></div>
     <div class="card"><div id="prevResumo"></div></div>
     <div class="card">
       <div style="display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-bottom:10px" id="prevFiltros"></div>
@@ -4084,6 +4139,25 @@
       <h2 style="font-size:19px">Protocolos passo a passo</h2>
       <div class="hint">O passo a passo que aparece na tela de quem executa, na hora de executar. Escreva <strong>um passo por linha, nas suas palavras</strong> — o app mostra exatamente o que a Gestão escreveu, sem redigir nada — e sem palavra difícil: quem lê está com o peludinho na mão. A régua é a de sempre: uma criança de 12 anos tem de conseguir executar só com o que está escrito.</div>
       <div id="protoWrap" style="margin-top:12px"><div class="hint">Carregando os protocolos&hellip;</div></div>
+    </div>
+
+    <!-- PREVENÇÃO — a validade da coleira e a antecedência do aviso (Adriana, 15/set/2026).
+         "Coleira repelente Seresto, avisar com 7 e 12 dias, meses não 6 meses." A validade
+         mudou uma vez e vai mudar de novo; a antecedência do aviso é decisão comercial. Os
+         dois são número de negócio — moram aqui, não no código (lei de 22/ago/2026). -->
+    <div class="card so-master">
+      <h2 style="font-size:19px">Prevenção — coleira repelente</h2>
+      <div class="hint">Quanto tempo cada coleira protege e com quanta antecedência o app avisa que ela está para vencer. É a mesma régua do bloco <strong>Coleira vencendo</strong> na Prevenção, do quadro no Dashboard das Consultoras e do selo &ldquo;vence em N dias&rdquo; na ficha.</div>
+      <div id="cfgPrevWrap" style="margin-top:12px"><div class="hint">Carregando os números da prevenção&hellip;</div></div>
+    </div>
+
+    <!-- MENSAGEM DE ENTRADA (Adriana, 15/set/2026) — a placa que todo mundo vê antes de
+         digitar a senha. É a régua da casa sobre protocolo: erro se revisa junto, violação
+         não tem "só desta vez". O texto é dela, então se edita aqui. -->
+    <div class="card so-master">
+      <h2 style="font-size:19px">Mensagem de entrada</h2>
+      <div class="hint">A placa que aparece na tela de entrada, acima do campo de senha. <strong>Todo mundo vê</strong>, qualquer que seja o papel — ela não bloqueia nada e não é clicável. As palavras <strong>inaceitável</strong>, <strong>erro</strong> e <strong>violação</strong> saem em negrito sozinhas, onde estiverem escritas.</div>
+      <div id="cfgEntradaWrap" style="margin-top:12px"><div class="hint">Carregando a mensagem de entrada&hellip;</div></div>
     </div>
 
     <!-- LOGINS E SEGURANÇA (Adriana, 08/set/2026, 23h40): "tudo de login vai para dentro
@@ -4629,6 +4703,11 @@
       try{ _audReenviarBolso(); }catch(e){} /* silencioso de propósito: guarda defensiva — falhar aqui não pode interromper quem chamou */
       // preCadastro() removido em 29/ago/2026: gravava o chip de 2 FILHOts a cada abertura, antes do login (auditoria 03-smoke).
       DB.ref('auaulandia/cadastro').on('value', s=>{ cadCache=s.val()||{}; if(typeof renderHosp==='function') renderHosp(); });
+      // 15/set/2026 — duas leituras minúsculas e de UMA vez só (once, não ouvinte): a
+      // validade da coleira + a antecedência do aviso, e o texto da placa da entrada.
+      // Sem elas valem os padrões do código — o app nunca abre sem placa nem sem validade.
+      try{ prevCfgCarregar(); }catch(e){} /* silencioso de propósito: guarda defensiva — falhar aqui não pode interromper quem chamou */
+      try{ entradaMsgCarregar(); }catch(e){} /* silencioso de propósito: guarda defensiva — falhar aqui não pode interromper quem chamou */
       DB.ref('daycare/config/sensiveis').on('value', s=>{ const v=s.val(); if(Array.isArray(v)){ try{ SENS=new Set(v); }catch(e){} /* silencioso de propósito: guarda defensiva — se o valor não vier, o anterior continua valendo */ } });
       DB.ref('daycare/config/atividades').on('value', s=>{ const v=s.val(); if(Array.isArray(v)&&v.length){ ATIVIDADES=v; if(typeof renderAtiv==='function') renderAtiv(); } });
       // Os passos de cada protocolo (12/set/2026). Nó pequeno e raro de mudar: desce uma vez
@@ -4759,7 +4838,9 @@
       chart:'M4 20h16M7 20v-5M12 20v-9M17 20v-13',
       'file-text':'M6 3h9l5 5v13H6zM15 3v5h5M9 12h8M9 16h8M9 20h5',
       info:'M12 3a9 9 0 100 18a9 9 0 000-18zM12 8v.01M12 11v5',
-      alert:'M12 3l10 17H2zM12 9v5M12 17v.01'
+      alert:'M12 3l10 17H2zM12 9v5M12 17v.01',
+      // 15/set/2026 — a lupa do item "Buscar peludinho".
+      search:'M11 4a7 7 0 100 14a7 7 0 000-14zM20 20l-4.3-4.3'
     }[n]||'';
     return `<svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">${p.split('M').filter(Boolean).map(d=>'<path d="M'+d+'"/>').join('')}</svg>`;
   }
@@ -4816,7 +4897,7 @@
     reposicao:['Reposições','Créditos de dias por falta avisada.'],
     daycare:['Day Care','Chamada, almoço, atividades, EA.'],hospedagem:['Plantão da noite','O relatório de cada hóspede, turno a turno.'],
     gestdia:['Conferência do dia','Medicações por horário, problemas e os três tempos do plantão.'],
-    aulunos:['Aulunos','A turma do dia.'],dashdc:['Lançamentos do dia','A planilha do Day Care, item por item.'],vacinas:['Prevenção','Vacina, vermífugo, coleira, exame e peso: quem está atrasado.'],
+    aulunos:['Aulunos','A turma do dia.'],dashdc:['Lançamentos do dia','A planilha do Day Care, item por item.'],vacinas:['Prevenção','Vacina, vermífugo, coleira e exame de fezes: quem está atrasado e quem está para vencer.'],
     cuidadovet:['Cuidado Vet','Alterações no corpo que a veterinária precisa ver.'],
     checkin:['Check-in','O tutor chega: entrada, alimentação, medicação, assinatura (1º passo).'],
     conferencia:['Conferência do check-in','O monitor confere corpo e pertences de quem chegou (2º passo; o 1º é da Central Zêluz).'],
@@ -4982,7 +5063,7 @@
     // Quem monta a escala e diz qual plano vale hoje é SEMPRE a Márcia (Adriana, 26/ago).
     'definir-plano-do-dia':     ['gestao','diretoria'],
     // ===== v-07 — o Painel das Consultoras (a mesa da Central Zêluz) ==================
-    // A tela da recepção: o "Seu dia" (bem-estar de quem cuida) e os cinco quadros que
+    // A tela da recepção: o "Seu dia" (bem-estar de quem cuida) e os seis quadros que
     // precisam dela. Quem atende na Central vê; o monitor NÃO — a fatia dele é o Meu
     // Painel. Mesma regra 3 da Fase 2: permissão em um lugar só, provada no harness.
     'painel-consultoras':       ['consultora','supervisor','gestao','diretoria'],
@@ -12717,7 +12798,7 @@
   // inteira DEPOIS de a correção estar publicada — o aviso apareceu, ninguém tocou.
   // Agora o aparelho PARADO recarrega sozinho: trancado, com a aba escondida, na porta de
   // entrada ou 3 minutos sem ninguém tocar nele. Mão na tela = nunca recarrega.
-  const APP_VERSAO='2026-09-15-02';
+  const APP_VERSAO='2026-09-15-03';
   var RECARGA_PARADO_MS=3*60*1000, __versaoPublicada=null, __recargaTimer=null;
   function vigiarVersao(){
     if(!DB) return;
@@ -13290,6 +13371,17 @@
     //  a trava é exatamente a mesma: quem tem escopo restrito e nenhuma atividade não vê o Day Care.)
     try{ var acc=document.getElementById('blocoDaycare');
       if(acc){ if(restrito && !(Array.isArray(u.atividades)&&u.atividades.length)) acc.style.setProperty('display','none','important'); else acc.style.removeProperty('display'); }
+    }catch(e){} /* silencioso de propósito: guarda defensiva — falhar aqui não pode interromper quem chamou */
+    // "Buscar peludinho" abre a MESMA tela do Cadastro e por isso espelha a visibilidade
+    // dele: quem não pode ver o Cadastro não pode ver o atalho — senão o atalho viraria
+    // uma porta lateral para uma tela fechada (Adriana, 15/set/2026).
+    try{
+      var _fic=document.querySelector('#nav a[data-v="ficha"]');
+      var _bus=document.querySelector('#nav a[onclick="abrirBuscaPeludinho()"]');
+      if(_fic&&_bus){
+        if(_fic.style.display) _bus.style.setProperty('display', _fic.style.display, 'important');
+        else _bus.style.removeProperty('display');
+      }
     }catch(e){} /* silencioso de propósito: guarda defensiva — falhar aqui não pode interromper quem chamou */
     // Decidido quem vê o quê, some com o rótulo que ficou sem nenhum item embaixo.
     try{ if(typeof ajustarSubcabecalhosMenu==='function') ajustarSubcabecalhosMenu(); }catch(e){} /* silencioso de propósito: função opcional, pode não existir nesta tela */
@@ -16555,7 +16647,103 @@
   // Regras dadas pela Adriana. A monitora/consultora informa o que deu e quando;
   // a data da próxima sai sozinha (errar isso é FILHOt desprotegido).
   const ECTO_DUR={ 'Pipeta':30, 'Bravecto':90, 'Credelli':30, 'Simparic':35, 'Nexgard':30 };
-  const COLEIRA_DUR={ 'Seresto':180, 'Scalibur':120, 'Leevre':180 }; // 6, 4 e 6 meses
+  // ===== COLEIRA REPELENTE — validade e aviso, editáveis sem programador ============
+  // Adriana, 15/set/2026: "Coleira repelente Seresto, avisar com 7 e 12 dias, meses não
+  // 6 meses. Assim avisamos o tutor, para que consigamos vender para ele."
+  // Duas mudanças de uma vez: a Seresto passou a valer 8 meses (240 dias) e o app deixou
+  // de só olhar o que JÁ venceu — passa a avisar ANTES, com 12 dias e, mais forte, com 7.
+  // Os dois números são de negócio, não de código: moram em daycare/config/prevencao e se
+  // editam em Configurações › Prevenção (a lei de 22/ago: "regra nova não pode exigir
+  // programador"). O que fica aqui é só o padrão de fábrica, para o app funcionar íntegro
+  // mesmo sem banco — nunca uma validade inventada.
+  const COLEIRA_DUR_PADRAO={ 'Seresto':240, 'Scalibur':120, 'Leevre':180 }; // 8, 4 e 6 meses
+  const AVISO_COLEIRA_PADRAO=[12,7];
+  var COLEIRA_DUR=Object.assign({}, COLEIRA_DUR_PADRAO);
+  var AVISO_COLEIRA_DIAS=AVISO_COLEIRA_PADRAO.slice();   // sempre do maior para o menor
+  // A maior antecedência configurada é a régua do selo "vence em N dias" (era 15 fixo) e o
+  // corte do bloco "Coleira vencendo". A menor é o destaque forte.
+  function avisoColeiraMax(){
+    var m=0; (AVISO_COLEIRA_DIAS||[]).forEach(function(n){ n=parseInt(n,10)||0; if(n>m) m=n; });
+    return m||15;
+  }
+  function avisoColeiraMin(){
+    var m=0; (AVISO_COLEIRA_DIAS||[]).forEach(function(n){ n=parseInt(n,10)||0; if(n>0&&(!m||n<m)) m=n; });
+    return m||7;
+  }
+  // ===== A PLACA DA ENTRADA — texto da casa, não do código (Adriana, 15/set/2026) =====
+  // "Você CUIDA de Vidas!" e as quatro linhas abaixo dela são a régua da casa, ditada por
+  // ela: o FILHOt é como um bebê humano, o protocolo existe para proteger VIDAS, violar é
+  // inaceitável — e o porquê de tudo é que todos, FILHOts e Zelosos, voltem para casa
+  // melhores do que chegaram. O padrão vive aqui para o app nunca abrir sem a placa; o
+  // texto de verdade vem de daycare/config/mensagem-entrada.
+  const ENTRADA_MSG_PADRAO={
+    titulo:'Você CUIDA de Vidas!',
+    linhas:['Um FILHOt é como um bebê humano.',
+            'Os protocolos existem para proteger VIDAS!',
+            'Violar os protocolos é inaceitável!',
+            'Eles existem para que TODOS, FILHOts e Zelosos, voltem para casa melhores do que chegaram.'],
+    ativa:true
+  };
+  var ENTRADA_MSG={ titulo:ENTRADA_MSG_PADRAO.titulo, linhas:ENTRADA_MSG_PADRAO.linhas.slice(), ativa:true };
+  // As palavras que a placa existe para gritar saem em negrito — mesmo quando a Gestão
+  // reescreve a frase em volta delas. "inaceitável" é a de hoje; "Erro" e "Violação"
+  // continuam na lista porque são o par que a casa usa para separar as duas coisas.
+  function entradaLinhaHTML(txt){
+    return escAttr(String(txt||'')).replace(/\b(inaceitável|erro|violação)\b/gi, '<strong>$1</strong>');
+  }
+  function entradaPlacaAplicar(){
+    var el=document.getElementById('entradaPlaca'); if(!el) return;
+    if(ENTRADA_MSG.ativa===false){ el.style.display='none'; return; }
+    el.style.display='block';
+    var t=document.getElementById('entradaPlacaT');
+    if(t) t.textContent=ENTRADA_MSG.titulo||ENTRADA_MSG_PADRAO.titulo;
+    for(var i=0;i<4;i++){
+      var d=document.getElementById('entradaPlacaL'+i); if(!d) continue;
+      var txt=(ENTRADA_MSG.linhas&&ENTRADA_MSG.linhas[i]!=null)?ENTRADA_MSG.linhas[i]:'';
+      d.innerHTML=entradaLinhaHTML(txt);
+      d.style.display=String(txt).trim()?'block':'none';
+    }
+  }
+  // Uma leitura só, ao abrir o app. Sem banco (ou sem nada gravado) vale o padrão — a
+  // placa nunca some por falha de rede, porque ela já nasce escrita no HTML.
+  function entradaMsgCarregar(){
+    if(!DB) return Promise.resolve(null);
+    return DB.ref('daycare/config/mensagem-entrada').once('value').then(function(s){
+      var v=s.val();
+      if(v&&typeof v==='object'){
+        var tit=String(v.titulo||'').trim();
+        var ls=Array.isArray(v.linhas)?v.linhas:null;
+        ENTRADA_MSG={
+          titulo: tit||ENTRADA_MSG_PADRAO.titulo,
+          linhas: ls?ENTRADA_MSG_PADRAO.linhas.map(function(pad,i){ return (ls[i]!=null)?String(ls[i]):pad; })
+                    :ENTRADA_MSG_PADRAO.linhas.slice(),
+          ativa: (v.ativa!==false)
+        };
+      }
+      entradaPlacaAplicar();
+      return ENTRADA_MSG;
+    }).catch(function(e){ _logLeituraFalhou('daycare/config/mensagem-entrada (entradaMsgCarregar)', e); return null; });
+  }
+  // Lê a configuração UMA vez, ao abrir o app (once, não ouvinte: nó minúsculo e raro de
+  // mudar — ouvinte aqui só gastaria banda). Quem salva na tela de Configurações relê.
+  function prevCfgCarregar(){
+    if(!DB) return Promise.resolve(null);
+    return DB.ref('daycare/config/prevencao').once('value').then(function(s){
+      var v=s.val()||{};
+      var c=v.coleiras||{};
+      var novo=Object.assign({}, COLEIRA_DUR_PADRAO);
+      Object.keys(c).forEach(function(k){
+        var d=parseInt((c[k]&&c[k].dias!=null)?c[k].dias:c[k],10);
+        if(d>0) novo[k]=d;
+      });
+      COLEIRA_DUR=novo;
+      if(Array.isArray(v.avisoColeiraDias)){
+        var lim=v.avisoColeiraDias.map(function(n){ return parseInt(n,10)||0; }).filter(function(n){ return n>0; });
+        if(lim.length) AVISO_COLEIRA_DIAS=lim.sort(function(x,y){ return y-x; });
+      }
+      return v;
+    }).catch(function(e){ _logLeituraFalhou('daycare/config/prevencao (prevCfgCarregar)', e); return null; });
+  }
   const VERMIF_2A_DOSE=21;   // 2 doses: repete em 21 dias
   const VERMIF_PROX=120;     // e a próxima 4 meses depois da última dose
   const FEZES_PROX=120;      // exame de fezes renova em 4 meses
@@ -16587,7 +16775,10 @@
     if(d==null) return '';
     if(d<0) return '<span class="vd vd-venc">VENCIDO há '+(-d)+' dia'+((-d)>1?'s':'')+'</span>';
     if(d===0) return '<span class="vd vd-perto">vence HOJE</span>';
-    if(d<=15) return '<span class="vd vd-perto">vence em '+d+' dia'+(d>1?'s':'')+'</span>';
+    // A janela de "vence em breve" deixou de ser 15 fixo: é a MAIOR antecedência
+    // configurada em Configurações › Prevenção (padrão 12 dias). Uma régua só para o app
+    // inteiro — o selo da ficha e o bloco de coleira vencendo nunca discordam.
+    if(d<=avisoColeiraMax()) return '<span class="vd vd-perto">vence em '+d+' dia'+(d>1?'s':'')+'</span>';
     return '<span class="vd vd-ok">em dia até '+fmtBR(iso)+'</span>';
   }
   // O que a Zêluz exige para frequentar (folder 2026): múltipla, gripe, raiva, vermífugo
@@ -16604,7 +16795,9 @@
     // o que a equipe já tinha lançado (116 vermífugos e 103 carrapaticidas invisíveis).
     {k:'ecto_p',      base:'ecto_t',      nome:'Ectoparasitas',             dias:30,  nomeK:'ecto_nome', grupo:'antip',
      alt:'carrapaticida_p', altBase:'carrapaticida_t'},
-    {k:'col_p',       base:'col_t',       nome:'Coleira repelente',         dias:180, opcional:true, grupo:'antip'},
+    // A validade da coleira depende da MARCA e é editável em Configurações › Prevenção —
+    // por isso não há prazo fixo aqui. Quem sabe é prevDiasDoItem(), lendo coleiraDur(ex).
+    {k:'col_p',       base:'col_t',       nome:'Coleira repelente',         dias:0, coleira:true, opcional:true, grupo:'antip'},
     {k:'verm_p',      base:'verm_t',      nome:'Vermífugo',                 dias:VERMIF_PROX, dispensaSe:'fezes_t', nomeK:'verm_nome', grupo:'antip',
      alt:'vermifugo_p', altBase:'vermifugo_t'},
     {k:'fezes_p',     base:'fezes_t',     nome:'Exame de fezes',            dias:FEZES_PROX, opcional:true, grupo:'antip'},
@@ -16615,6 +16808,13 @@
     {k:'escova_p',    base:'escova_t',    nome:'Troca de escova de dentes', dias:90,  grupo:'saude', opcional:true, rotina:true},
     {k:'checkup_p',   base:'checkup_t',   nome:'Check-up',                  dias:365, grupo:'saude', opcional:true, rotina:true}
   ];
+  // Quantos dias este item vale PARA ESTE FILHOt. Só a coleira varia: cada marca dura um
+  // tempo e esse tempo é configurável. Sem marca na ficha vale a Seresto — que é a coleira
+  // que a casa mais vê e é exatamente o que o antigo "180 fixo" já fazia na prática.
+  function prevDiasDoItem(it, ex){
+    if(it && it.coleira){ var d=coleiraDur(ex||{}); return d||COLEIRA_DUR['Seresto']||0; }
+    return (it&&it.dias)||0;
+  }
   // O valor do item, aceitando o nome novo e o antigo da ficha (ver `alt` em PREV_ITENS).
   function prevValor(ex, it){
     ex=ex||{};
@@ -16676,12 +16876,13 @@
   // A regra do vermífugo já existia no cadastro e vale aqui: quem fez exame de fezes não
   // precisa de vermífugo, e quem toma vermífugo não precisa do exame. É escolha do tutor.
   var PREV_FILTRO='tudo';
-  // A pesagem não está em PREV_ITENS (não é data de validade, é "pesou este mês?"), mas é
-  // pendência do mesmo jeito — entra como item próprio.
+  // O PESO SAIU DA PREVENÇÃO (Adriana, 15/set/2026): "em Prevenção não precisa cobrar peso,
+  // está deixando muito poluído. Foco em clareza, menos é mais." Pesar não é validade que
+  // vence — é rotina mensal, e já tem tela inteira só dela (Peso, com a régua de 30 dias) e
+  // um quadro no Dashboard da Amanda. Cobrar nos dois lugares enchia esta lista de linhas
+  // cinzentas e afogava o que importa aqui: vacina e antiparasitário vencidos.
   function prevItensDoFiltro(){
-    var l=PREV_ITENS.map(function(it){ return {k:it.k, nome:it.nome}; });
-    l.push({k:'peso', nome:'Peso do mês'});
-    return l;
+    return PREV_ITENS.map(function(it){ return {k:it.k, nome:it.nome}; });
   }
   function prevFaltasDe(ex){
     ex=ex||{};
@@ -16703,11 +16904,7 @@
       if(venceuISO(v)) out.push({k:it.k, nome:it.nome, tipo:'venc', data:v, dias:-diasAteISO(v),
                                  rotina:!!it.rotina, antigo:(prevOrigem(ex,it)==='antigo')});
     });
-    if(!pesouEsteMes(ex)){
-      var u=ultimoPeso(ex);
-      out.push({k:'peso', nome:'Peso do mês', tipo:u?'venc':'sem', data:(u&&u.data)||'',
-                dias:(u&&u.data)?-diasAteISO(u.data):0, rotina:true});
-    }
+    // O peso não entra aqui desde 15/set/2026 — ver o comentário em prevItensDoFiltro().
     return out;
   }
   // Ficha de prevenção em branco: nenhum item de vacina/antiparasitário preenchido.
@@ -16735,7 +16932,7 @@
     {k:'deve',   t:'Devendo',       dica:'Vacina ou antiparasitário vencido, ou faltando numa ficha que já tem os outros.'},
     {k:'semcad', t:'Sem cadastro',  dica:'Ficha de prevenção inteiramente em branco — nunca preenchemos nenhuma data. Não quer dizer que esteja devendo.'},
     {k:'antigo', t:'Ficha por migrar', dica:'A data está só no campo antigo do cadastro (carrapaticida/vermífugo), que a equipe deixou de usar. Pode ser que já tenha sido dado e ninguém lançou no campo novo — confira com o tutor antes de cobrar.'},
-    {k:'rotina', t:'Rotina',        dica:'Só peso do mês, escova ou check-up. Rotina da casa, não prevenção.'},
+    {k:'rotina', t:'Rotina',        dica:'Só escova de dentes ou check-up. Rotina da casa, não prevenção. (O peso saiu daqui em 15/set/2026 — tem tela própria.)'},
     {k:'erro',   t:'Data errada',   dica:'Alguém digitou o ano errado na ficha (0026, 0207). Precisa de correção manual.'},
     {k:'tudo',   t:'Tudo',          dica:'Todo mundo com qualquer pendência, das quatro situações acima.'}
   ];
@@ -17015,7 +17212,7 @@
         +'<span class="val" style="font-weight:800;color:'+(vencPrev?'var(--crm-critico)':'var(--crm-ok)')+'">'+vencPrev+'</span></div>'
         +'<div class="pair"><span class="k">Sem data no cadastro</span>'
         +'<span class="val" style="font-weight:800;color:'+(semPrev?'var(--crm-atencao-text)':'var(--crm-ok)')+'">'+semPrev+'</span></div>'
-        +'<div class="pair"><span class="k">Rotina (peso, escova, check-up)</span>'
+        +'<div class="pair"><span class="k">Rotina (escova, check-up)</span>'
         +'<span class="val" style="font-weight:800;color:var(--muted)">'+rotina+'</span></div>'
         +(quebrada?('<div class="pair"><span class="k"><strong>Datas impossíveis</strong> — alguém digitou o ano errado</span>'
         +'<span class="val" style="font-weight:800;color:var(--crm-critico)">'+quebrada+'</span></div>'):'');
@@ -17056,13 +17253,18 @@
     }
 
     var el=document.getElementById('prevLista'); if(!el) return;
+    // O TOPO da tela vale SEMPRE, inclusive quando ninguém está devendo nada: a coleira a
+    // vencer é justamente o caso em que ainda não há dívida nenhuma — e é a hora de vender
+    // a nova. A caixa de mensagem (plano B do "copiar") mora aqui pelo mesmo motivo: ela
+    // precisa existir na tela em qualquer um dos caminhos abaixo.
+    var topo='<div id="prevMsgCaixa" class="card" style="display:none"></div>'+prevBlocoColeiraVencendo();
     if(!lista.length){
       var vazio = (PREV_TIPO==='deve')   ? 'Ninguém devendo vacina ou antiparasitário. Prevenção em dia.'
                 : (PREV_TIPO==='semcad') ? 'Todas as fichas de prevenção têm pelo menos uma data.'
                 : (PREV_TIPO==='rotina') ? 'Nada de rotina pendente.'
                 : (PREV_TIPO==='erro')   ? 'Nenhuma data impossível na ficha.'
                 : 'Ninguém com pendência. Prevenção em dia.';
-      el.innerHTML='<div class="card"><div class="hint" style="color:var(--crm-ok);font-weight:700">'
+      el.innerHTML=topo+'<div class="card"><div class="hint" style="color:var(--crm-ok);font-weight:700">'
         +(PREV_FILTRO==='tudo'?escAttr(vazio):'Ninguém devendo este item nesta situação.')+'</div></div>';
       return;
     }
@@ -17071,9 +17273,9 @@
     var hosp=lista.filter(function(o){ return prevEhHospede(o.p); });
     PREV_CACHE_HOSP=hosp;
     lista=lista.filter(function(o){ return !prevEhHospede(o.p); });
-    var htmlHosp='<div id="prevMsgCaixa" class="card" style="display:none"></div>'+prevBlocoHospedes(hosp);
-    if(!lista.length){ el.innerHTML=htmlHosp||'<div class="card"><div class="hint">Só hóspedes nesta lista.</div></div>'; return; }
-    el.innerHTML=htmlHosp+'<div class="card"><h2 style="font-size:17px">Aulunos — '+lista.length+' FILHOt'+(lista.length>1?'s':'')+'</h2>'
+    var htmlHosp=prevBlocoHospedes(hosp);
+    if(!lista.length){ el.innerHTML=topo+(htmlHosp||'<div class="card"><div class="hint">Só hóspedes nesta lista.</div></div>'); return; }
+    el.innerHTML=topo+htmlHosp+'<div class="card"><h2 style="font-size:17px">Aulunos — '+lista.length+' FILHOt'+(lista.length>1?'s':'')+'</h2>'
       +lista.map(function(o){
         var _ch=pelKey(o.p);
         if(PREV_ABERTO===_ch) return prevEdicaoHTML(o);
@@ -17123,25 +17325,37 @@
     var tutor=(typeof primeiroNome==='function')?primeiroNome(o.tutor):String(o.tutor||'').split(' ')[0];
     var venc=o.faltas.filter(function(f){ return f.tipo==='venc' && !f.rotina; });
     var lista=venc.map(function(f){ return '· ' + f.nome + (f.data?(' — venceu em '+fmtBR(f.data)):''); });
+    // 15/set/2026 — a mesma mensagem passou a servir para o que AINDA NÃO venceu. É o
+    // pedido da Adriana: avisar com 12 e 7 dias, enquanto ainda dá tempo de trocar a
+    // coleira sem o FILHOt ficar um só dia sem proteção.
+    var vencendo=o.faltas.filter(function(f){ return f.tipo==='vencendo' && !f.rotina; })
+                    .map(function(f){ return '· ' + f.nome + (f.data?(' — vence em '+fmtBR(f.data)):'')
+                      + ((f.dias!=null)?(f.dias===0?' (é hoje)':(' (faltam '+f.dias+' dia'+(f.dias>1?'s':'')+')')):''); });
     var sem=o.faltas.filter(function(f){ return f.tipo==='sem' && !f.rotina; })
                     .map(function(f){ return '· ' + f.nome + ' — ainda não temos a data'; });
+    var ela=(/^f/i.test(String(o.sexo||'')));
     var L=[];
     L.push('Oi'+(tutor?(', '+tutor):'')+', tudo bem?');
     L.push('');
-    L.push('Passando para avisar sobre a prevenção d' + (/^f/i.test(String(o.sexo||''))?'a ':'o ') + o.nome + ':');
+    L.push('Passando para avisar sobre a prevenção d' + (ela?'a ':'o ') + o.nome + ':');
     L.push('');
     venc.length && L.push(lista.join('\n'));
+    vencendo.length && L.push(vencendo.join('\n'));
     sem.length && L.push(sem.join('\n'));
     L.push('');
-    L.push('A prevenção em dia é o que protege ' + (/^f/i.test(String(o.sexo||''))?'ela':'ele') + ' e todos os aumiguinhos que se hospedam com a gente.');
+    L.push('A prevenção em dia é o que protege ' + (ela?'ela':'ele') + ' e todos os aumiguinhos que se hospedam com a gente.');
     L.push('');
+    if(vencendo.length){
+      L.push('Se quiser, já separamos a coleira nova aqui no Empório e colocamos n' + (ela?'ela':'ele') + ' na próxima visita — assim ' + (ela?'ela':'ele') + ' não fica nenhum dia sem proteção.');
+      L.push('');
+    }
     L.push('Se já estiver feito, é só nos mandar a data que atualizamos aqui. E se preferir fazer conosco, agendamos com a nossa veterinária — assim fica tudo num lugar só.');
     return L.join('\n');
   }
-  function prevCopiarTutor(chave, btn){
-    var o=(PREV_CACHE_HOSP||[]).filter(function(x){ return pelKey(x.p)===chave; })[0];
-    if(!o){ alert('Não achei este FILHOt para montar a mensagem. Atualize a tela.'); return; }
-    var txt=prevMensagemTutor(o);
+  // Copiar é sempre a mesma coisa, venha a mensagem de onde vier (hóspede devendo ou
+  // coleira a vencer): tenta a área de transferência e, se o navegador recusar, mostra o
+  // texto num campo já selecionado — nunca deixa a pessoa sem a mensagem na mão.
+  function prevCopiarTexto(txt, btn){
     var pronto=function(){
       if(btn){ var t=btn.textContent; btn.textContent='✅ Copiado — cole no WhatsApp'; setTimeout(function(){ btn.textContent=t; },3000); }
     };
@@ -17156,11 +17370,24 @@
     if(navigator.clipboard&&navigator.clipboard.writeText) navigator.clipboard.writeText(txt).then(pronto).catch(naTela);
     else naTela();
   }
+  function prevCopiarTutor(chave, btn){
+    var o=(PREV_CACHE_HOSP||[]).filter(function(x){ return pelKey(x.p)===chave; })[0];
+    if(!o){ alert('Não achei este FILHOt para montar a mensagem. Atualize a tela.'); return; }
+    prevCopiarTexto(prevMensagemTutor(o), btn);
+  }
+  // A MESMA mensagem, para quem está com a COLEIRA a vencer — inclusive auluno do Day Care,
+  // que antes não tinha mensagem nenhuma (só o hóspede tinha). Cache próprio, para não se
+  // confundir com a lista dos hóspedes quando o FILHOt estiver nas duas.
+  function prevCopiarColeira(chave, btn){
+    var o=(PREV_CACHE_COLEIRA||[]).filter(function(x){ return x.chave===chave; })[0];
+    if(!o){ alert('Não achei este FILHOt para montar a mensagem. Atualize a tela.'); return; }
+    prevCopiarTexto(prevMensagemTutor(o), btn);
+  }
   // Marca que o tutor foi avisado hoje. Some da fila de "a avisar" e fica registrado
   // com quem avisou — se o tutor não responder, dá para cobrar de novo sabendo quando foi.
   function prevMarcarAvisado(chave, btn){
     if(!DB) return;
-    var o=(PREV_CACHE_HOSP||[]).filter(function(x){ return pelKey(x.p)===chave; })[0];
+    var o=(PREV_CACHE_HOSP||[]).concat(PREV_CACHE_COLEIRA||[]).filter(function(x){ return pelKey(x.p)===chave; })[0];
     var reg={quando:(typeof zHojeISO==='function')?zHojeISO():'', ts:Date.now(),
              quem:(typeof quemSou==='function'?quemSou():'-'),
              itens:o?o.faltas.filter(function(f){ return !f.rotina; }).map(function(f){ return f.nome; }).join(' · '):''};
@@ -17174,6 +17401,65 @@
     });
   }
   var PREV_CACHE_HOSP=[];
+  var PREV_CACHE_COLEIRA=[];
+  // ===== COLEIRA VENCENDO — a hora de oferecer a nova (Adriana, 15/set/2026) =========
+  // "Coleira repelente Seresto, avisar com 7 e 12 dias... assim avisamos o tutor, para que
+  // consigamos vender para ele." O que JÁ venceu sempre apareceu na lista de quem deve; o
+  // que faltava era o ANTES — a janela em que ainda dá para trocar sem o FILHOt ficar um
+  // dia sequer desprotegido. Esta é a ÚNICA conta de coleira a vencer do app: a Prevenção
+  // e o Dashboard das Consultoras leem daqui, para nunca contarem de jeitos diferentes.
+  function prevColeiraVencendo(){
+    var lim=avisoColeiraMax(), forte=avisoColeiraMin(), out=[];
+    (PELUDINHOS||[]).forEach(function(p){
+      if(typeof pelInativo==='function' && pelInativo(p)) return;
+      var ex=pelExtra(p)||{};
+      var prox=ex.col_p||'';
+      if(!/^\d{4}-\d{2}-\d{2}$/.test(prox)) return;
+      if(prevDataQuebrada(prox)) return;              // ano digitado errado não é vencimento
+      var d=diasAteISO(prox);
+      if(d==null || d<0 || d>lim) return;             // vencida já está na lista de quem deve
+      var nome=(typeof pelNome==='function'?pelNome(p):'')||p.n||'';
+      out.push({p:p, chave:pelKey(p), dias:d, prox:prox, nome:nome,
+        tutor:(typeof pelGet==='function'?pelGet(p,'tutor'):'')||p.tutor||'',
+        raca:(typeof pelGet==='function'?pelGet(p,'raca'):'')||p.raca||'',
+        sexo:(typeof pelGet==='function'?pelGet(p,'sexo'):'')||p.sexo||'',
+        marca:ex.col_nome||'',
+        urgente:(d<=forte),
+        // no formato que prevMensagemTutor entende — uma mensagem só para a casa inteira
+        faltas:[{k:'col_p', nome:'Coleira repelente'+(ex.col_nome?(' '+ex.col_nome):''),
+                 tipo:'vencendo', data:prox, dias:d, rotina:false}]});
+    });
+    out.sort(function(a,b){ return a.dias-b.dias; });
+    return out;
+  }
+  function prevBlocoColeiraVencendo(){
+    var lista=[];
+    try{ lista=prevColeiraVencendo(); }catch(e){ _logFalhaGrav('prevColeiraVencendo (bloco da Prevenção)', e); lista=[]; }
+    PREV_CACHE_COLEIRA=lista;
+    if(!lista.length) return '';
+    var lim=avisoColeiraMax(), forte=avisoColeiraMin();
+    var h='<div class="card" id="prevColeiraBloco" style="border-left:4px solid var(--z-gold)">'
+      +'<h2 style="font-size:17px">Coleira vencendo — hora de oferecer a nova</h2>'
+      +'<div class="hint">Vence em até '+lim+' dia'+(lim>1?'s':'')+'. Avisar agora protege o FILHOt e é a hora certa de oferecer a coleira nova — depois de vencida ele já ficou sem proteção. Com <strong>'+forte+' dia'+(forte>1?'s':'')+' ou menos</strong> a linha fica em destaque.</div>';
+    lista.forEach(function(o){
+      var av=PREV_AVISOS[o.chave];
+      var quanto=(o.dias===0)?'vence HOJE':('vence em '+o.dias+' dia'+(o.dias>1?'s':''));
+      h+='<div style="border-top:1px solid var(--line);padding:11px 0'+(o.urgente?';border-left:3px solid var(--crm-critico);padding-left:9px':'')+'">'
+        +'<div style="font-weight:800;color:var(--z-blue);font-size:15px">'+escAttr(o.nome)
+        +' <span style="font-weight:600;font-size:12.5px;color:var(--muted)">'+escAttr(o.raca||'')+(o.tutor?(' · '+escAttr(o.tutor)):'')+'</span></div>'
+        +'<div style="display:flex;flex-wrap:wrap;gap:5px;margin:5px 0">'
+        +'<span style="border-radius:999px;padding:3px 11px;font-size:12px;font-weight:800;'
+        +(o.urgente?'background:#F6D8D4;color:#8E1B10':'background:rgba(222,180,40,.22);color:var(--z-blue)')+'">'
+        +escAttr('Coleira'+(o.marca?(' '+o.marca):'')+' — '+quanto+' ('+fmtBR(o.prox)+')')+'</span></div>'
+        +(av?('<div class="hint" style="margin:4px 0;color:var(--crm-ok);font-weight:700">Tutor avisado em '+fmtBR(av.quando||'')+(av.quem?(' por '+escAttr(av.quem)):'')+'.</div>'):'')
+        +'<div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:5px">'
+        +'<button type="button" class="btn btn-gold" style="padding:6px 14px;font-size:12.5px" onclick="prevCopiarColeira(\''+escAttr(o.chave)+'\',this)">Copiar mensagem para o tutor</button>'
+        +'<button type="button" class="btn" style="padding:6px 14px;font-size:12.5px;background:var(--z-cream-warm);color:var(--z-blue);border:1.5px solid var(--line)" onclick="prevMarcarAvisado(\''+escAttr(o.chave)+'\',this)">'+(av?'Avisei de novo':'Já avisei')+'</button>'
+        +'<button type="button" class="btn" style="padding:6px 14px;font-size:12.5px;background:none;border:none;color:var(--z-blue);font-weight:800;text-decoration:underline" onclick="prevAbrir(\''+escAttr(o.chave)+'\')">lançar a coleira nova</button>'
+        +'</div></div>';
+    });
+    return h+'</div>';
+  }
   function prevBlocoHospedes(hosp){
     if(!hosp.length) return '';
     var hoje=(typeof zHojeISO==='function')?zHojeISO():'';
@@ -17241,8 +17527,11 @@
       var it=PREV_ITENS.find(function(x){ return x.k===k; })||{};
       var dt=String((document.getElementById('prevT_'+chave+'_'+k)||{}).value||'').trim();
       var alvo=document.getElementById('prevP_'+chave+'_'+k);
-      if(!alvo||!dt||!it.dias) return;
-      alvo.value=addDiasISO(dt,it.dias);
+      // A coleira não tem prazo fixo — depende da marca e da configuração (prevDiasDoItem).
+      var _p=prevPetDe(chave);
+      var _dias=prevDiasDoItem(it, _p?(pelExtra(_p)||{}):{});
+      if(!alvo||!dt||!_dias) return;
+      alvo.value=addDiasISO(dt,_dias);
     }catch(e){} /* silencioso de propósito: guarda defensiva — falhar aqui não pode interromper quem chamou */
   }
   // Onde foi dado: Day Care ou Tutor em casa. Fica na ficha, junto da data.
@@ -17300,7 +17589,9 @@
     if(!dt){ alert('Escolha a data em que foi feito.'); return; }
     // Se o "Vale até" ficou com um valor ANTERIOR à data que acabou de ser lançada, ele é
     // resto da ficha velha — recalcula. Data futura escrita à mão é respeitada.
-    var calc=(it.dias?addDiasISO(dt,it.dias):'');
+    // A coleira não tem prazo fixo: prevDiasDoItem lê a marca e a configuração.
+    var _dias=prevDiasDoItem(it, pelExtra(p)||{});
+    var calc=(_dias?addDiasISO(dt,_dias):'');
     var proxFinal=(prox && prox>dt) ? prox : (calc||prox||'');
     var nomeItem=it.nome||'este item';
     var gravar=function(dtFinal, proxDef, atrasoConfirmado){
@@ -17322,7 +17613,7 @@
     if(!checagem.ok && checagem.confirmar){
       zEscolha(checagem.motivo, ['Feito em '+fmtBR(dt)+' · Vale até '+(proxFinal?fmtBR(proxFinal):'—')], [
         {t:'Corrigir para '+fmtBR(checagem.sugestao), cor:'#1E8449', fn:function(){
-          var novoProx=(it.dias?addDiasISO(checagem.sugestao,it.dias):checagem.sugestao);
+          var novoProx=(_dias?addDiasISO(checagem.sugestao,_dias):checagem.sugestao);
           gravar(checagem.sugestao, novoProx, false);
         }},
         {t:'Está certo, deixar em atraso', cor:'#6b5f4b', fn:function(){ gravar(dt, proxFinal, true); }}
@@ -17754,6 +18045,28 @@
   // --- Coleira repelente ---
   function coleiraDur(ex){ if(ex.col_nome==='Outra') return parseInt(ex.col_outro_dias,10)||0;
     return COLEIRA_DUR[ex.col_nome]||0; }
+  // ===== A FICHA SE CORRIGE AO ABRIR (Adriana, 15/set/2026) =========================
+  // A Seresto passou de 6 para 8 meses. As fichas já gravadas guardaram o "Trocar em"
+  // calculado com o prazo velho — e recalcular só na hora de SALVAR deixaria dezenas de
+  // FILHOts com validade errada até alguém digitar a data de novo. Então a ficha se
+  // conserta sozinha ao abrir: refaz o "Trocar em" a partir da data em que a coleira foi
+  // colocada, com a validade que vale HOJE. Grava SÓ quando o valor muda — ou seja, uma
+  // vez por FILHOt — e deixa rastro, para ninguém achar que a data mudou sozinha no escuro.
+  function prevColeiraRecalcular(p, ex){
+    ex=ex||{};
+    if(!p) return false;
+    if(!/^\d{4}-\d{2}-\d{2}$/.test(ex.col_t||'')) return false;   // sem data de colocação não há o que refazer
+    var d=coleiraDur(ex); if(!d) return false;                     // sem marca (ou "Outra" sem dias) não se inventa validade
+    var novo=addDiasISO(ex.col_t, d);
+    if(!novo || novo===(ex.col_p||'')) return false;
+    var antigo=ex.col_p||'';
+    setPelExtra(p, {col_p:novo});
+    try{ if(typeof audit==='function') audit('coleira-recalculada',
+      (pelNome(p)||'')+': coleira '+(ex.col_nome||'sem marca')+' vale '+d+' dias — trocar em '+fmtBR(novo)
+      +(antigo?(' (antes '+fmtBR(antigo)+')'):' (antes sem data)'),
+      {pet:pelNome(p)||''}); }catch(e){} /* silencioso de propósito: o audit() tem bolso próprio e reenvia sozinho — falhar aqui não pode travar a ação */
+    return true;
+  }
   function blocoColeira(ex){
     const nome=ex.col_nome||'', dur=coleiraDur(ex);
     const prox=(ex.col_t&&dur)?addDiasISO(ex.col_t,dur):'';
@@ -18277,6 +18590,9 @@
   }
   function abrirPeludinho(i){
     const p=PELUDINHOS[i]; pelAtual=p; pelAtualIdx=i; pelFotoPend=null; const ex=pelExtra(p);
+    // A validade da coleira mudou (Seresto: 6 → 8 meses) e as fichas antigas guardaram o
+    // "Trocar em" velho. Abrir a ficha conserta o dela — uma vez só, com rastro.
+    try{ prevColeiraRecalcular(p, ex); }catch(e){} /* silencioso de propósito: guarda defensiva — falhar aqui não pode interromper quem chamou */
     if(PB_ULT!==i){ PB_PEND={}; PB_SALVO={}; PB_ULT=i; renovRascLimpar(); }   // blocos de prevenção e rascunho do plano: pendente é por FILHOt
     const idade=calcIdade(pelNasc(p)); const can=canEditPel();
     document.getElementById('pel-lista').style.display='none';
@@ -27606,7 +27922,111 @@
       if(u&&TG_CFG) u.value=TG_CFG.url||''; if(s&&TG_CFG) s.value=TG_CFG.senha||'';
       var st=document.getElementById('tgStatus');
       if(st&&!st.textContent) st.textContent=(TG_CFG&&TG_CFG.url)?'Ligado.':'Ainda não ligado — os avisos continuam sendo mandados à mão.';
+      CFG_ENT_ATIVA=(ENTRADA_MSG&&ENTRADA_MSG.ativa!==false);
+      if(typeof cfgPrevRender==='function') cfgPrevRender();
+      if(typeof cfgEntradaRender==='function') cfgEntradaRender();
     }catch(e){} /* silencioso de propósito: guarda defensiva — falhar aqui não pode interromper quem chamou */
+  }
+  // ===== CONFIGURAÇÕES › PREVENÇÃO (Adriana, 15/set/2026) ===========================
+  // A validade de cada coleira e a antecedência do aviso, editáveis por quem manda na casa.
+  // Nada aqui exige programador: é o que a lei de 22/ago cobra de toda regra nova.
+  function cfgPrevRender(){
+    var w=document.getElementById('cfgPrevWrap'); if(!w) return;
+    var marcas=Object.keys(COLEIRA_DUR_PADRAO);
+    var aviso=(AVISO_COLEIRA_DIAS||[]).slice().sort(function(a,b){ return b-a; });
+    var h='<div class="cad-grid2">';
+    marcas.forEach(function(m){
+      var d=parseInt(COLEIRA_DUR[m],10)||0;
+      h+='<div><label class="cad-lb">'+escAttr(m)+' — vale quantos dias?</label>'
+        +'<input class="cad-in" inputmode="numeric" id="cfgPrevCol_'+escAttr(m)+'" value="'+d+'">'
+        +'<div class="hint" style="margin-top:3px">'+(d?('hoje: '+Math.round(d/30)+' meses'):'sem validade definida')+'</div></div>';
+    });
+    h+='</div>'
+      +'<div style="margin-top:14px"><label class="cad-lb">Avisar o tutor com quantos dias de antecedência</label>'
+      +'<div class="cad-grid2">'
+      +'<div><input class="cad-in" inputmode="numeric" id="cfgPrevAviso1" value="'+(aviso[0]||12)+'">'
+      +'<div class="hint" style="margin-top:3px">1º aviso — a coleira entra no bloco &ldquo;Coleira vencendo&rdquo;</div></div>'
+      +'<div><input class="cad-in" inputmode="numeric" id="cfgPrevAviso2" value="'+(aviso[1]||7)+'">'
+      +'<div class="hint" style="margin-top:3px">2º aviso — a partir daqui a linha fica em destaque</div></div>'
+      +'</div></div>'
+      +'<div class="hint" style="margin-top:8px">Avisar antes de vencer protege o FILHOt — e é a hora certa de oferecer a coleira nova. Depois de vencida, ele já ficou sem proteção.</div>'
+      +'<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px">'
+      +'<button type="button" class="btn btn-gold" onclick="cfgPrevSalvar()">Salvar</button></div>'
+      +'<div id="cfgPrevSt" class="hint" style="margin-top:6px"></div>';
+    w.innerHTML=h;
+  }
+  function cfgPrevSalvar(){
+    var st=document.getElementById('cfgPrevSt');
+    var marcas=Object.keys(COLEIRA_DUR_PADRAO), coleiras={}, ruim='';
+    marcas.forEach(function(m){
+      var v=parseInt(String((document.getElementById('cfgPrevCol_'+m)||{}).value||'').replace(/\D/g,''),10);
+      if(!(v>0)){ ruim=ruim||m; return; }
+      coleiras[m]={dias:v};
+    });
+    var a1=parseInt(String((document.getElementById('cfgPrevAviso1')||{}).value||'').replace(/\D/g,''),10);
+    var a2=parseInt(String((document.getElementById('cfgPrevAviso2')||{}).value||'').replace(/\D/g,''),10);
+    if(ruim){ if(st){ st.style.color='var(--crm-critico)'; st.textContent='A validade da '+ruim+' precisa ser um número de dias maior que zero.'; } return; }
+    if(!(a1>0)||!(a2>0)){ if(st){ st.style.color='var(--crm-critico)'; st.textContent='Os dois avisos precisam ser números de dias maiores que zero.'; } return; }
+    var dias=[a1,a2].sort(function(x,y){ return y-x; });
+    if(!DB){ if(st){ st.style.color='var(--crm-critico)'; st.textContent='Banco reconectando — não salvei. Tente de novo em instantes.'; } return; }
+    DB.ref('daycare/config/prevencao').set({coleiras:coleiras, avisoColeiraDias:dias}).then(function(){
+      // Vale na hora, sem recarregar: quem acabou de mudar precisa VER a mudança.
+      COLEIRA_DUR=Object.assign({}, COLEIRA_DUR_PADRAO);
+      Object.keys(coleiras).forEach(function(k){ COLEIRA_DUR[k]=coleiras[k].dias; });
+      AVISO_COLEIRA_DIAS=dias;
+      try{ if(typeof audit==='function') audit('config-prevencao',
+        'coleiras: '+marcas.map(function(m){ return m+' '+(coleiras[m]?coleiras[m].dias:'—')+'d'; }).join(' · ')
+        +' | aviso: '+dias.join(' e ')+' dias antes', {}); }catch(e){} /* silencioso de propósito: o audit() tem bolso próprio e reenvia sozinho — falhar aqui não pode travar a ação */
+      if(st){ st.style.color='var(--crm-ok)'; st.textContent='✓ Salvo. A Prevenção e o Dashboard das Consultoras já estão usando estes números.'; }
+      cfgPrevRender();
+      try{ var v=document.getElementById('v-vacinas'); if(v&&v.classList.contains('active')&&typeof renderPrevencao==='function') renderPrevencao(); }catch(e){} /* silencioso de propósito: redesenho de tela — falhar não pode derrubar quem chamou */
+    }).catch(function(e){
+      _logFalhaGrav('daycare/config/prevencao (cfgPrevSalvar)', e);
+      if(st){ st.style.color='var(--crm-critico)'; st.textContent='❌ Não salvou: '+((e&&e.message)||e); }
+    });
+  }
+  // ===== CONFIGURAÇÕES › MENSAGEM DE ENTRADA (Adriana, 15/set/2026) =================
+  function cfgEntradaRender(){
+    var w=document.getElementById('cfgEntradaWrap'); if(!w) return;
+    var m=ENTRADA_MSG||ENTRADA_MSG_PADRAO;
+    var rot=['Linha 1','Linha 2','Linha 3','Linha 4'];
+    var h='<div><label class="cad-lb">Título (a linha grande)</label>'
+      +'<input class="cad-in" id="cfgEntTitulo" value="'+escAttr(m.titulo||'')+'"></div>';
+    for(var i=0;i<4;i++){
+      var t=(m.linhas&&m.linhas[i]!=null)?m.linhas[i]:'';
+      h+='<div style="margin-top:9px"><label class="cad-lb">'+rot[i]+'</label>'
+        +'<input class="cad-in" id="cfgEntL'+i+'" value="'+escAttr(t)+'"></div>';
+    }
+    h+='<div style="margin-top:12px"><label class="cad-lb">Mostrar a placa na entrada?</label>'
+      +'<div class="seg gold" data-single id="cfgEntAtiva">'
+      +'<button type="button" class="'+((m.ativa!==false)?'on':'')+'" onclick="pick(this);cfgEntAtivaSet(true)">Mostrar</button>'
+      +'<button type="button" class="'+((m.ativa===false)?'on':'')+'" onclick="pick(this);cfgEntAtivaSet(false)">Não mostrar</button>'
+      +'</div></div>'
+      +'<div class="hint" style="margin-top:8px">Deixe uma linha em branco e ela some da placa. Sem título, volta o texto padrão — a entrada nunca fica sem a placa por engano.</div>'
+      +'<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px">'
+      +'<button type="button" class="btn btn-gold" onclick="cfgEntradaSalvar()">Salvar</button></div>'
+      +'<div id="cfgEntSt" class="hint" style="margin-top:6px"></div>';
+    w.innerHTML=h;
+  }
+  var CFG_ENT_ATIVA=true;
+  function cfgEntAtivaSet(v){ CFG_ENT_ATIVA=!!v; }
+  function cfgEntradaSalvar(){
+    var st=document.getElementById('cfgEntSt');
+    var tit=String((document.getElementById('cfgEntTitulo')||{}).value||'').trim();
+    var linhas=[];
+    for(var i=0;i<4;i++) linhas.push(String((document.getElementById('cfgEntL'+i)||{}).value||'').trim());
+    if(!DB){ if(st){ st.style.color='var(--crm-critico)'; st.textContent='Banco reconectando — não salvei. Tente de novo em instantes.'; } return; }
+    var reg={titulo:tit||ENTRADA_MSG_PADRAO.titulo, linhas:linhas, ativa:CFG_ENT_ATIVA};
+    DB.ref('daycare/config/mensagem-entrada').set(reg).then(function(){
+      ENTRADA_MSG={titulo:reg.titulo, linhas:reg.linhas.slice(), ativa:reg.ativa};
+      entradaPlacaAplicar();
+      try{ if(typeof audit==='function') audit('config-mensagem-entrada',
+        (reg.ativa?'placa ligada':'placa desligada')+': '+reg.titulo, {}); }catch(e){} /* silencioso de propósito: o audit() tem bolso próprio e reenvia sozinho — falhar aqui não pode travar a ação */
+      if(st){ st.style.color='var(--crm-ok)'; st.textContent='✓ Salvo. Quem entrar a partir de agora já vê a placa nova.'; }
+    }).catch(function(e){
+      _logFalhaGrav('daycare/config/mensagem-entrada (cfgEntradaSalvar)', e);
+      if(st){ st.style.color='var(--crm-critico)'; st.textContent='❌ Não salvou: '+((e&&e.message)||e); }
+    });
   }
   // Abre uma tela COMO SE a pessoa tivesse clicado no menu — assim os ganchos de
   // aoAbrirView rodam e a tela nunca abre vazia (a lei de 13/ago/2026: uma lista só de ganchos).
@@ -27614,6 +28034,24 @@
     var a=document.querySelector('#nav a[data-v="'+v+'"]');
     if(a){ a.click(); return; }
     if(typeof irParaView==='function') irParaView(v);
+  }
+  // ===== BUSCAR PELUDINHO (Adriana, 15/set/2026) ====================================
+  // "Peludinhos apenas cadastro e busca, caso precise olhar algo rápido dentro da ficha."
+  // NÃO é tela nova: é a MESMA tela do Cadastro, aberta na lista e com o cursor já dentro
+  // do campo de busca. Tela nova pediria uma view, um título e uma linha de permissão —
+  // e criaria uma segunda porta para o mesmo cômodo. Quem vê o Cadastro vê isto, e só.
+  function abrirBuscaPeludinho(){
+    try{ if(typeof irParaView==='function') irParaView('ficha'); }catch(e){} /* silencioso de propósito: guarda defensiva — falhar aqui não pode interromper quem chamou */
+    // irParaView não roda o gancho da ficha de propósito (quem chama já escolheu um FILHOt);
+    // aqui a gente QUER a lista, então repete o gancho à mão — é o mesmo de aoAbrirView.
+    try{
+      var l=document.getElementById('pel-lista'), fi=document.getElementById('pel-ficha');
+      if(l&&fi){ l.style.display='block'; fi.style.display='none'; }
+      if(typeof renderPel==='function') renderPel();
+    }catch(e){} /* silencioso de propósito: redesenho de tela — falhar não pode derrubar quem chamou */
+    try{ if(typeof closeNav==='function') closeNav(); }catch(e){} /* silencioso de propósito: enfeite de tela (foco, rolagem, mídia) — falhar não muda dado nenhum */
+    var b=document.getElementById('pelSearch');
+    if(b){ try{ b.focus(); b.select(); }catch(e){} /* silencioso de propósito: enfeite de tela (foco, rolagem, mídia) — falhar não muda dado nenhum */ }
   }
   // A decisao de quem olhou: {chaveDaFicha: {chaveDaFoto: 'sim'|'nao'}}
   var FOTO_CONF={};
@@ -34763,7 +35201,7 @@
    *
    * Gabarito: docs/esboco-consultoras-v4.html, aprovado na prática com as seis correções
    * diretas da Adriana. Por decisão da fundadora, o card "Seu dia" (o cuidado com quem
-   * cuida — semente da NR-1) abre a página; embaixo, cinco quadros com DADO REAL.
+   * cuida — semente da NR-1) abre a página; embaixo, seis quadros com DADO REAL.
    *
    * REGRA DE OURO (a mesma do Meu Painel e do Painel da Operação): integrar, nunca
    * recriar. Nenhuma conta de negócio nasce aqui — os quadros REUSAM projecaoEstoque,
@@ -35274,6 +35712,42 @@
     return h+'</article>';
   }
 
+  // 6 · Coleira vencendo — é VENDA (Adriana, 15/set/2026: "assim avisamos o tutor, para
+  // que consigamos vender para ele"). A conta é a MESMA da Prevenção (prevColeiraVencendo):
+  // dois lugares nunca contam de jeitos diferentes. O quadro só observa — o gesto de avisar
+  // acontece na Prevenção, onde está a mensagem pronta.
+  function pcQuadroColeira(){
+    var lim=12; try{ lim=avisoColeiraMax(); }catch(e){ lim=12; } /* silencioso de propósito: guarda defensiva — se o valor não vier, o padrão continua valendo */
+    var titulo='Coleira vencendo';
+    var sub='Quem está a até '+lim+' dia'+(lim>1?'s':'')+' de ficar sem proteção. Avisar agora protege o FILHOt — e é a hora certa de oferecer a coleira nova.';
+    var lista=null;
+    try{ lista=prevColeiraVencendo(); }catch(e){ _logFalhaGrav('prevColeiraVencendo (quadro Coleira vencendo)', e); lista=null; }
+    if(!lista) return pcQuadroTravado(titulo, sub, 'O cadastro ainda não chegou do banco — sem ele o quadro não afirma nada.', 'vacinas');
+    var h='<article class="pm-card pm-rv pm-c6 pc-quadro" onclick="pcIr(\'vacinas\')">'
+      +'<h3 class="pm-tit">'+titulo+'</h3><p class="pm-sub">'+sub+'</p>'
+      +'<div style="display:flex;align-items:flex-end;gap:14px;flex-wrap:wrap;margin-top:14px">'
+      +'<div><div class="pm-kpi ouro" data-pm-alvo="'+lista.length+'">0</div>'
+      +'<p class="pm-rot">'+(lista.length===1?'coleira a vencer':'coleiras a vencer')+'</p></div>'
+      +(lista.length?'':'<span class="pm-badge pm-b-ok">nenhuma vencendo</span>')
+      +'</div>';
+    if(lista.length){
+      h+='<div class="pm-lista">'+lista.slice(0,3).map(function(o){
+        var selo=o.urgente
+          ? '<span class="pm-badge pm-b-critico">'+(o.dias===0?'vence hoje':('faltam '+o.dias+' dia'+(o.dias>1?'s':'')))+'</span>'
+          : '<span class="pm-badge pm-b-ouro">faltam '+o.dias+' dia'+(o.dias>1?'s':'')+'</span>';
+        return '<div class="pm-li">'+selo+'<div class="pm-li-txt">'
+          +'<b>'+esc(o.nome)+(o.marca?(' — '+esc(o.marca)):'')+'</b>'
+          +'<span>'+esc((o.tutor?('tutor: '+o.tutor+' · '):'')+'trocar em '+fmtBR(o.prox))+'</span></div></div>';
+      }).join('')
+      +(lista.length>3?('<div class="pm-li"><div class="pm-li-txt"><span>e mais '+(lista.length-3)+'.</span></div></div>'):'')
+      +'</div>';
+    } else {
+      h+='<div class="pm-lista"><div class="pm-li"><span class="pm-badge pm-b-ok">tudo em dia</span>'
+        +'<div class="pm-li-txt"><b>Nenhuma coleira vencendo agora.</b></div></div></div>';
+    }
+    return h+'</article>';
+  }
+
   // --------------------------------------------------------------------- os gestos
   function pcIr(v){ try{ if(typeof irParaView==='function') irParaView(v); }catch(e){} /* silencioso de propósito: atalho de tela — falhar não pode derrubar quem chamou */ }
   // O card pode estar no Painel das Consultoras OU no Meu Painel — o gesto acha o card
@@ -35384,7 +35858,7 @@
     }
     // A tela abre JÁ com a saudação — e os quadros dizendo que ainda estão lendo.
     raiz.innerHTML=pcSaudacaoHTML(eu)
-      +'<div class="pm-card"><p class="pm-sub">Ainda lendo o seu dia e os cinco quadros…</p></div>';
+      +'<div class="pm-card"><p class="pm-sub">Ainda lendo o seu dia e os seis quadros…</p></div>';
     requestAnimationFrame(function(){ try{ pmAnimar(raiz); }catch(e){} /* silencioso de propósito: animação — falhar não pode derrubar a tela */ });
     pcLer(forcar===true).then(function(d){
       if(!d){
@@ -35401,6 +35875,7 @@
         + pcQuadroOrcamentos((d.orc&&d.orc.ok)?pcDadosOrcamentos(d.orc.v):null)
         + pcQuadroAlmoco(pcDadosAlmoco(d.emp))
         + pcQuadroRecepcao(pcDadosRecepcao())
+        + pcQuadroColeira()
         +'</div>';
       requestAnimationFrame(function(){ try{ pmAnimar(raiz); }catch(e){} /* silencioso de propósito: animação — falhar não pode derrubar a tela */ });
     });
