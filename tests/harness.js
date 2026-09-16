@@ -7561,54 +7561,229 @@ async function main() {
   }
   console.log('');
 
-  // ---- v-orcamento: orcOrdenar — pendente primeiro, fechado depois, por ENTRADA ----
-  // Pedido verbatim (Adriana, 04/set/2026): "A sequência é: orçamentos PENDENTES,
-  // depois os FECHADOS, por ordem de ENTRADA do peludinho — se ele entrará dia
-  // 05/09, precisa estar na frente do que entrará dia 10/09."
+  // ---- v-orcamento: orcOrdenar — quem FECHOU sobe, na ordem da HOSPEDAGEM ----------
+  // Pedido verbatim (Adriana, 16/set/2026): "Quando o cliente fecha, eu preciso que ele
+  // apareça mais em cima e não lá para baixo. Que a ordem seja da hospedagem."
+  // Isto INVERTE a regra de 04/set (pendentes na frente). O que fechou é trabalho marcado
+  // — tem FILHOt chegando; quem ainda pensa pode esperar a rolagem. E o que já foi embora
+  // desce para o fim, como histórico.
+  // Os quatro grupos: 0 fechado por vir/em curso · 1 aguardando · 2 não fechou/cancelado ·
+  // 3 fechado já terminado (mais recente na frente).
   console.log('v-orcamento — orcOrdenar (fila da lista de orçamentos):');
   if (typeof ctx.orcOrdenar === 'function') {
+    const HJ = '2026-09-04';
     const pend10 = { id: 'pend10', status: 'aguardando', entrada: '2026-09-10' };
-    const fech05 = { id: 'fech05', status: 'fechado', entrada: '2026-09-05' };
-    const r1 = ctx.orcOrdenar([fech05, pend10], '2026-09-04').map((o) => o.id);
-    check('mordida — pendente com entrada 10/09 vem ANTES de fechado com entrada 05/09 (grupo manda mais que data)',
-      r1[0] === 'pend10' && r1[1] === 'fech05', JSON.stringify(r1));
+    const fech05 = { id: 'fech05', status: 'fechado', entrada: '2026-09-05', saida: '2026-09-08' };
+    const r1 = ctx.orcOrdenar([pend10, fech05], HJ).map((o) => o.id);
+    check('mordida — fechado com entrada 05/09 vem ANTES de pendente com entrada 10/09 (quem fechou sobe)',
+      r1[0] === 'fech05' && r1[1] === 'pend10', JSON.stringify(r1));
 
     const pend05 = { id: 'pend05', status: 'aguardando', entrada: '2026-09-05' };
-    const r2 = ctx.orcOrdenar([pend10, pend05], '2026-09-04').map((o) => o.id);
+    const r2 = ctx.orcOrdenar([pend10, pend05], HJ).map((o) => o.id);
     check('dentro dos pendentes, 05/09 vem antes de 10/09',
       r2[0] === 'pend05' && r2[1] === 'pend10', JSON.stringify(r2));
 
+    const fech10 = { id: 'fech10', status: 'fechado', entrada: '2026-09-10', saida: '2026-09-12' };
+    const r2b = ctx.orcOrdenar([fech10, fech05], HJ).map((o) => o.id);
+    check('dentro dos fechados por vir, a hospedagem mais PRÓXIMA vem primeiro',
+      r2b[0] === 'fech05' && r2b[1] === 'fech10', JSON.stringify(r2b));
+
+    // Em curso: entrou dia 01 e sai dia 06 — hoje é 04. Não é passado, é agora.
+    const emCurso = { id: 'emCurso', status: 'fechado', entrada: '2026-09-01', saida: '2026-09-06' };
+    const r2c = ctx.orcOrdenar([fech05, emCurso], HJ).map((o) => o.id);
+    check('hospedagem EM CURSO fica no grupo de cima (a saída ainda não passou) e na frente da que vem',
+      r2c[0] === 'emCurso' && r2c[1] === 'fech05', JSON.stringify(r2c));
+
     const semData = { id: 'semData', status: 'aguardando', entrada: '' };
-    const r3 = ctx.orcOrdenar([semData, pend10, pend05], '2026-09-04').map((o) => o.id);
+    const r3 = ctx.orcOrdenar([semData, pend10, pend05], HJ).map((o) => o.id);
     check('sem data de entrada vai ao FIM do seu grupo (nunca ao topo)',
       r3[0] === 'pend05' && r3[1] === 'pend10' && r3[2] === 'semData', JSON.stringify(r3));
 
+    // Fechado SEM data nenhuma não pode ser escondido no histórico: ninguém pode afirmar
+    // que já terminou. Fica no grupo de cima, no fim dele, com o aviso da tela.
     const semDataFechado = { id: 'semDataFechado', status: 'fechado', entrada: '' };
-    const r3b = ctx.orcOrdenar([semDataFechado, semData, fech05, pend05], '2026-09-04').map((o) => o.id);
+    const r3b = ctx.orcOrdenar([semDataFechado, semData, fech05, pend05], HJ).map((o) => o.id);
     check('sem data fica no FIM do PRÓPRIO grupo — não migra para outro grupo nem os embaralha',
-      JSON.stringify(r3b) === JSON.stringify(['pend05', 'semData', 'fech05', 'semDataFechado']), JSON.stringify(r3b));
+      JSON.stringify(r3b) === JSON.stringify(['fech05', 'semDataFechado', 'pend05', 'semData']), JSON.stringify(r3b));
 
     const eA = { id: 'eA', status: 'aguardando', entrada: '2026-09-05' };
     const eB = { id: 'eB', status: 'aguardando', entrada: '2026-09-05' };
-    const r4 = ctx.orcOrdenar([eA, eB], '2026-09-04').map((o) => o.id);
-    const r4inv = ctx.orcOrdenar([eB, eA], '2026-09-04').map((o) => o.id);
+    const r4 = ctx.orcOrdenar([eA, eB], HJ).map((o) => o.id);
+    const r4inv = ctx.orcOrdenar([eB, eA], HJ).map((o) => o.id);
     check('empate de data mantém ordem estável (não embaralha quem chegou igual)',
       r4[0] === 'eA' && r4[1] === 'eB' && r4inv[0] === 'eB' && r4inv[1] === 'eA',
       JSON.stringify(r4) + ' / ' + JSON.stringify(r4inv));
 
+    // Fixture com os QUATRO estados que a tela mostra, de uma vez.
     const naoFechou = { id: 'naoFechou', status: 'nao_fechou', entrada: '2026-09-01' };
-    const cancelado = { id: 'cancelado', status: 'cancelado', entrada: '2026-09-01' };
+    const cancelado = { id: 'cancelado', status: 'cancelado', entrada: '2026-09-02' };
+    const passado = { id: 'passado', status: 'fechado', entrada: '2026-08-20', saida: '2026-08-25' };
     const semStatus = { id: 'semStatus', entrada: '2026-09-20' }; // sem status = trata como aguardando
-    const r5 = ctx.orcOrdenar([cancelado, naoFechou, fech05, pend10, semStatus], '2026-09-04').map((o) => o.id);
-    check('ordem completa dos 4 grupos: pendente > fechado > não fechou > cancelado (sem status entra como pendente)',
-      JSON.stringify(r5) === JSON.stringify(['pend10', 'semStatus', 'fech05', 'naoFechou', 'cancelado']),
+    const r5 = ctx.orcOrdenar([passado, cancelado, naoFechou, pend10, fech05, semStatus], HJ).map((o) => o.id);
+    check('ordem completa dos 4 grupos: fechado por vir > aguardando > não fechou/cancelado > hospedagem passada',
+      JSON.stringify(r5) === JSON.stringify(['fech05', 'pend10', 'semStatus', 'naoFechou', 'cancelado', 'passado']),
       JSON.stringify(r5));
 
-    check('mordida — lista vazia não estoura', JSON.stringify(ctx.orcOrdenar([], '2026-09-04')) === '[]');
+    const passadoVelho = { id: 'passadoVelho', status: 'fechado', entrada: '2026-07-01', saida: '2026-07-05' };
+    const r6 = ctx.orcOrdenar([passadoVelho, passado], HJ).map((o) => o.id);
+    check('no histórico, a hospedagem que acabou por ÚLTIMO vem primeiro',
+      r6[0] === 'passado' && r6[1] === 'passadoVelho', JSON.stringify(r6));
+
+    check('os quatro rótulos de grupo existem, na ordem da tela',
+      JSON.stringify(ctx.ORC_GRUPO_ROTULO) === JSON.stringify(['Fechados — próximas hospedagens',
+        'Aguardando resposta', 'Não fechou / cancelado', 'Hospedagens passadas']),
+      JSON.stringify(ctx.ORC_GRUPO_ROTULO));
+
+    check('mordida — sem `hoje` ninguém vira histórico (não dá para afirmar que terminou)',
+      ctx.orcGrupoDe(passado, '') === 0, String(ctx.orcGrupoDe(passado, '')));
+    check('mordida — lista vazia não estoura', JSON.stringify(ctx.orcOrdenar([], HJ)) === '[]');
     check('mordida — orcOrdenar não muda a quantidade de itens nem inventa nenhum',
-      ctx.orcOrdenar([pend10, fech05, semData], '2026-09-04').length === 3);
+      ctx.orcOrdenar([pend10, fech05, semData], HJ).length === 3);
   } else {
     check('orcOrdenar existe', false, 'função não encontrada no script — orçamento não pode ordenar a lista por ENTRADA');
+  }
+  console.log('');
+
+  // ---- v-19 · o botão Check-in no orçamento fechado (Adriana, 16/set/2026) ----------
+  // "Coloque um botão Check-in nele, para ir direto ao check-in de entrada."
+  console.log('v-19 — orçamento fechado com atalho de Check-in:');
+  if (typeof ctx.orcCheckinBotaoEstado === 'function') {
+    const HJ = '2026-09-04';
+    const pet = { key: 'thor__renata', nome: 'Thor', tutor: 'Renata' };
+    const fechadoPorVir = { status: 'fechado', entrada: '2026-09-05', saida: '2026-09-08', tutor: 'Renata' };
+    const pendente = { status: 'aguardando', entrada: '2026-09-05', saida: '2026-09-08', tutor: 'Renata' };
+    const naoFechou = { status: 'nao_fechou', entrada: '2026-09-05', tutor: 'Renata' };
+    const passado = { status: 'fechado', entrada: '2026-08-20', saida: '2026-08-25', tutor: 'Renata' };
+    check('v-19 · fechado com hospedagem por vir: o botão aparece',
+      ctx.orcCheckinBotaoEstado(fechadoPorVir, pet, HJ, {}) === 'abrir');
+    check('v-19 · pendente, não fechou e hospedagem passada NÃO ganham botão',
+      ctx.orcCheckinBotaoEstado(pendente, pet, HJ, {}) === 'nenhum'
+      && ctx.orcCheckinBotaoEstado(naoFechou, pet, HJ, {}) === 'nenhum'
+      && ctx.orcCheckinBotaoEstado(passado, pet, HJ, {}) === 'nenhum',
+      [ctx.orcCheckinBotaoEstado(pendente, pet, HJ, {}), ctx.orcCheckinBotaoEstado(naoFechou, pet, HJ, {}),
+        ctx.orcCheckinBotaoEstado(passado, pet, HJ, {})].join(','));
+    // O check-in já feito é reconhecido pela MESMA dupla do check-in: refKey, ou nome+tutor.
+    const est1 = { e1: { refKey: 'thor__renata', nome: 'Thor', tutor: 'Renata', entrada: '2026-09-05', status: 'ativa' } };
+    check('v-19 · com o check-in feito para ESTA entrada, o botão vira "feito"',
+      ctx.orcCheckinBotaoEstado(fechadoPorVir, pet, HJ, est1) === 'feito');
+    const est2 = { e1: { refKey: 'thor__renata', nome: 'Thor', tutor: 'Renata', entrada: '2026-09-20', status: 'ativa' } };
+    check('v-19 · check-in de OUTRA entrada não conta (o mesmo FILHOt hospeda várias vezes)',
+      ctx.orcCheckinBotaoEstado(fechadoPorVir, pet, HJ, est2) === 'abrir');
+    const est3 = { e1: { nome: 'Thor', tutor: 'Renata', entrada: '2026-09-05', status: 'ativa' } };
+    check('v-19 · sem refKey, nome + tutor reconhecem o mesmo FILHOt',
+      ctx.orcCheckinBotaoEstado(fechadoPorVir, pet, HJ, est3) === 'feito');
+    const est4 = { e1: { nome: 'Thor', tutor: 'Luciana', entrada: '2026-09-05', status: 'ativa' } };
+    check('v-19 · mordida — Thor de OUTRO tutor não vale (nome sozinho não identifica ninguém)',
+      ctx.orcCheckinBotaoEstado(fechadoPorVir, pet, HJ, est4) === 'abrir');
+    const semEntrada = { status: 'fechado', entrada: '', tutor: 'Renata' };
+    check('v-19 · fechado sem data de entrada continua no grupo de cima e com botão (ninguém some do trabalho)',
+      ctx.orcCheckinBotaoEstado(semEntrada, pet, HJ, est1) === 'abrir');
+    check('v-19 · o atalho existe na tela, deixa rastro e NÃO grava check-in nenhum',
+      /function orcAbrirCheckin\(id, petKey\)\{/.test(html)
+      && /audit\('orcamento-atalho-checkin'/.test(html)
+      && /onclick="orcAbrirCheckin\(/.test(html)
+      && !/orcAbrirCheckin[\s\S]{0,2400}?DB\.ref\([^)]*\)\.(set|update|push|remove)\(/.test(html));
+    check('v-19 · o botão abre a MESMA tela de Check-in, com o FILHOt escolhido e as datas do orçamento',
+      /abrirItemDoMenu\('checkin'\)/.test(html)
+      && /ciEscolher\(idx\)/.test(html)
+      && /ei\.value=o\.entrada/.test(html) && /si\.value=o\.saida/.test(html)
+      && /ciCalcDias\(\)/.test(html));
+    check('v-19 · quem vê o botão é quem já pode fazer check-in — a régua é o próprio item do menu',
+      /function orcPodeCheckin\(\)\{/.test(html)
+      && /querySelector\('#nav a\[data-v="checkin"\]'\)/.test(html));
+    check('v-19 · o estado dos check-ins vem do retrato compartilhado (não baixa o nó de novo)',
+      /zMapaUma\('auaulandia\/estadias'\)[\s\S]{0,200}?ORC_ESTADIAS_CACHE=v\|\|\{\}/.test(html));
+    check('v-19 · "Já fez check-in" sai desabilitado (é aviso, não botão)',
+      /Já fez check-in/.test(html) && /<button class="btn" disabled/.test(html));
+  } else {
+    check('v-19 · orcCheckinBotaoEstado existe', false, 'função não encontrada');
+  }
+  console.log('');
+
+  // ---- v-19 · o mesmo orçamento lançado duas vezes (Adriana, 16/set/2026) ----------
+  // Aconteceu com o Tônico: a Adriana lançou e FECHOU um segundo orçamento para 05/10 a
+  // 10/10 com um já fechado para as mesmas datas, e o app não disse nada. "Tinha que dizer
+  // que já foi lançado e mostrar. Isso não pode ocorrer."
+  console.log('v-19 — orçamento duplicado (o caso do Tônico):');
+  if (typeof ctx.orcDuplicados === 'function') {
+    const tonico = { key: 'tonico__adriana', nome: 'Tônico', tutor: 'Adriana' };
+    const nala = { key: 'nala__adriana', nome: 'Nala', tutor: 'Adriana' };
+    const outro = { key: 'thor__renata', nome: 'Thor', tutor: 'Renata' };
+    const jaFechado = { id: 'orc1', status: 'fechado', entrada: '2026-10-05', saida: '2026-10-10',
+      tutor: 'Adriana', criado_por: 'Adriana', criado_em: 1758000000000, pets: [tonico] };
+    const novoIgual = { entrada: '2026-10-05', saida: '2026-10-10', tutor: 'Adriana', pets: [tonico] };
+    check('v-19 · o segundo orçamento do Tônico nas MESMAS datas é reconhecido como duplicado',
+      ctx.orcDuplicados([jaFechado], novoIgual, null).length === 1);
+    check('v-19 · e o duplicado vem com o nome do FILHOt que colidiu, para o cartaz falar em português',
+      ctx.orcDuplicados([jaFechado], novoIgual, null)[0].pets[0] === 'Tônico');
+
+    // Sobreposição: não precisa ser a mesma data, basta encostar.
+    check('v-19 · encostou, é duplicado: 08/10 a 12/10 invade 05/10 a 10/10',
+      ctx.orcDuplicados([jaFechado], { entrada: '2026-10-08', saida: '2026-10-12', pets: [tonico] }, null).length === 1);
+    check('v-19 · o dia da saída conta: entrar no dia 10 ainda é o dia em que ele sai',
+      ctx.orcDuplicados([jaFechado], { entrada: '2026-10-10', saida: '2026-10-14', pets: [tonico] }, null).length === 1);
+    check('v-19 · período que não encosta NÃO é duplicado (o mesmo FILHOt hospeda várias vezes no ano)',
+      ctx.orcDuplicados([jaFechado], { entrada: '2026-10-11', saida: '2026-10-14', pets: [tonico] }, null).length === 0);
+    check('v-19 · outro FILHOt nas mesmas datas não é duplicado',
+      ctx.orcDuplicados([jaFechado], { entrada: '2026-10-05', saida: '2026-10-10', pets: [outro] }, null).length === 0);
+    check('v-19 · irmãos: basta UM coincidir — a hospedagem é a mesma',
+      ctx.orcDuplicados([jaFechado], { entrada: '2026-10-05', saida: '2026-10-10', pets: [nala, tonico] }, null).length === 1);
+    check('v-19 · sem `key` (orçamento avulso), nome + tutor identificam — e o mesmo nome de OUTRO tutor não',
+      ctx.orcDuplicados([{ id: 'x', status: 'fechado', entrada: '2026-10-05', saida: '2026-10-10',
+        pets: [{ nome: 'Tônico', tutor: 'Adriana' }] }], { entrada: '2026-10-06', saida: '2026-10-08',
+        pets: [{ nome: 'Tônico', tutor: 'Adriana' }] }, null).length === 1
+      && ctx.orcDuplicados([{ id: 'x', status: 'fechado', entrada: '2026-10-05', saida: '2026-10-10',
+        pets: [{ nome: 'Tônico', tutor: 'Luciana' }] }], { entrada: '2026-10-06', saida: '2026-10-08',
+        pets: [{ nome: 'Tônico', tutor: 'Adriana' }] }, null).length === 0);
+    const naoFechou = Object.assign({}, jaFechado, { id: 'orc2', status: 'nao_fechou' });
+    const cancelado = Object.assign({}, jaFechado, { id: 'orc3', status: 'cancelado' });
+    check('v-19 · "não fechou" e "cancelado" não ocupam nada — não travam um lançamento novo',
+      ctx.orcDuplicados([naoFechou, cancelado], novoIgual, null).length === 0);
+    const aguardando = Object.assign({}, jaFechado, { id: 'orc4', status: 'aguardando' });
+    check('v-19 · um orçamento AGUARDANDO resposta já trava — a vaga está prometida',
+      ctx.orcDuplicados([aguardando], novoIgual, null).length === 1);
+    check('v-19 · ao marcar "Fechou", o próprio orçamento não se acusa de duplicado (ignorarId)',
+      ctx.orcDuplicados([jaFechado], jaFechado, 'orc1').length === 0);
+    check('v-19 · mordida — sem data de entrada não se acusa ninguém (não dá para afirmar sobreposição)',
+      ctx.orcDuplicados([jaFechado], { entrada: '', saida: '', pets: [tonico] }, null).length === 0
+      && ctx.orcDuplicados([], novoIgual, null).length === 0);
+
+    // A faixa na lista: os DOIS lados marcados, os que já existem hoje inclusive.
+    const par = [jaFechado, Object.assign({}, jaFechado, { id: 'orc5', criado_por: 'Adriana' })];
+    const mapa = ctx.orcDuplicadosNaLista(par);
+    check('v-19 · na lista, os DOIS orçamentos sobrepostos ganham a faixa (não só o novo)',
+      !!mapa.orc1 && !!mapa.orc5 && mapa.orc1[0].id === 'orc5' && mapa.orc5[0].id === 'orc1',
+      JSON.stringify(Object.keys(mapa)));
+    check('v-19 · lista sem duplicidade nenhuma devolve mapa vazio',
+      JSON.stringify(ctx.orcDuplicadosNaLista([jaFechado])) === '{}');
+
+    check('v-19 · a trava é ANTES de gravar: com duplicado, orcSalvar sai sem tocar no banco',
+      /var dups=orcDuplicados\(orcListaArray\(\), reg, null\);[\s\S]{0,420}?orcCartazDuplicado\(dups, reg,[\s\S]{0,140}?return;/.test(html));
+    check('v-19 · "Fechou" também é barrado — foi por ali que o segundo Tônico passou',
+      /if\(novo==='fechado' && !ORC_DUP_OK_STATUS\[id\]\)\{[\s\S]{0,420}?orcCartazDuplicado\(dupsS, atual,[\s\S]{0,120}?return;/.test(html));
+    check('v-19 · o cartaz mostra datas e situação do existente, quem lançou e quando, e o que se tenta lançar',
+      /JÁ EXISTE UM ORÇAMENTO/.test(html)
+      && /'O que já está lançado: '\+orcResumoDuplicado\(d\)/.test(html)
+      && /'Lançado por '\+\(o\.criado_por\|\|'-'\)/.test(html)
+      && /'O que você está lançando agora: '/.test(html));
+    check('v-19 · o botão "Ver o orçamento existente" rola até o card e o acende',
+      /\{t:'Ver o orçamento existente'[\s\S]{0,120}?orcVerNaLista\(d\.id\)/.test(html)
+      && /function orcVerNaLista\(id\)\{/.test(html)
+      && /id="orc-card-'\+id\+'"/.test(html)
+      && /el\.style\.boxShadow='0 0 0 4px var\(--crm-critico\)';/.test(html));
+    check('v-19 · só a Gestão/Diretoria passa por cima, e a passagem fica registrada',
+      /function orcPodeForcarDuplicado\(\)\{[\s\S]{0,220}?r==='gestao'\|\|r==='diretoria'/.test(html)
+      && /if\(orcPodeForcarDuplicado\(\)\) bts\.push\(\{t:'É outra hospedagem mesmo'/.test(html)
+      && /reg\.duplicado_confirmado=ORC_DUP_OK;/.test(html)
+      && /duplicado_confirmado'\]=forcado;/.test(html)
+      && (html.match(/audit\('orcamento-duplicado-confirmado'/g) || []).length === 2);
+    check('v-19 · a faixa vermelha "Duplicado com …" sai nos cards, com saída para o outro',
+      /Duplicado com '\+escAttr\(orcResumoDuplicado\(outro\)\)/.test(html)
+      && html.indexOf('orcVerNaLista(') > 0
+      && html.indexOf('Ver o outro orçamento') > 0
+      && html.indexOf('Mesmo FILHOt, datas que se sobrepõem. Confira antes de cobrar duas vezes.') > 0);
+  } else {
+    check('v-19 · orcDuplicados existe', false, 'função não encontrada');
   }
   console.log('');
 
@@ -11544,7 +11719,7 @@ async function main() {
         !/\.catch\(function\([a-z]*\)\{\s*\}\)/.test(
           html.slice(html.indexOf('const CK_FRASE_PRATICA='), html.indexOf('function renderCkInicio('))));
       check('v-14 · a versão carimbada é a desta entrega',
-        /const APP_VERSAO='2026-09-15-05';/.test(html));
+        /const APP_VERSAO='2026-09-16-01';/.test(html));
     }
 
     // ---- v-15: O PLANO SÓ GRAVA NO CONFIRMAR (caso Cookie/Yara, 15/set/2026) --------
@@ -12359,8 +12534,118 @@ async function main() {
           + 'AVISO_COLEIRA_APOS = __bkpC.apos;', ctx);
       }
     } else { check('v-17 · prevCfgCarregar existe', false, 'função não encontrada'); }
-    check('v-17 · a versão carimbada desta entrega é a 2026-09-15-05 (a placa B entrou na mesma versão)',
-      /const APP_VERSAO='2026-09-15-05';/.test(html));
+    check('v-19 · a versão carimbada desta entrega é a 2026-09-16-01',
+      /const APP_VERSAO='2026-09-16-01';/.test(html));
+
+    // ───────── v-19 · o aparelho autorizado que não se perde no iPhone (16/set/2026)
+    // Auditoria de 16/set: o iPhone da Leticya gerou DOIS ids em trinta segundos
+    // (67b018a8-… e 666236ee-…) e ela foi barrada duas vezes com a senha certa. O id
+    // morava só no localStorage — que no Safari em aba privada, com "Bloquear todos os
+    // cookies", ou abrindo ora pelo ícone ora pelo navegador, simplesmente some.
+    check('v-19 · o id do aparelho mora em TRÊS lugares: localStorage, IndexedDB e cookie',
+      /function __devIdLerLS\(\)\{/.test(html) && /function __devIdGravarLS\(id\)\{/.test(html)
+      && /function __devIdLerCookie\(\)\{/.test(html) && /function __devIdGravarCookie\(id\)\{/.test(html)
+      && /function __idbKV\(chave, valor\)\{/.test(html)
+      && /idb\.open\('zeluz',1\)/.test(html) && /createObjectStore\('kv'\)/.test(html)
+      && /__idbKV\('device_id'/.test(html));
+    check('v-19 · o cookie é de 10 anos e SameSite=Lax (sobrevive ao Safari jogar o localStorage fora)',
+      /max-age=315360000; path=\/; SameSite=Lax/.test(html));
+    check('v-19 · vale o PRIMEIRO que existir — localStorage, depois IndexedDB, depois cookie — e quem acha regrava nos outros',
+      /var id=doLS\|\|doIdb\|\|__devIdLerCookie\(\)\|\|'';/.test(html)
+      && /function devIdGravarEmTodos\(id\)\{/.test(html)
+      && /__devIdGravarLS\(id\);[\s\S]{0,40}?__devIdGravarCookie\(id\);/.test(html));
+    check('v-19 · a checagem de autorização ESPERA a resolução do id (o IndexedDB responde depois)',
+      /function deviceAutorizado\(cb\)\{[\s\S]{0,1200}?devIdResolver\(\)\.then\(function\(r\)\{ seguir\(r&&r\.id\); \}\)/.test(html));
+    check('v-19 · o IndexedDB nunca pendura o app: tem prazo e devolve vazio quando falha',
+      /setTimeout\(function\(\)\{ ok\(''\); \}, 2500\);/.test(html)
+      && /req\.onerror=function\(\)\{ ok\(''\); \};/.test(html));
+    check('v-19 · a resolução começa no ARRANQUE, não na hora em que a pessoa digita a senha',
+      /try\{ devIdResolver\(\); \}catch\(e\)\{\}/.test(html));
+    if (typeof ctx.getDeviceId === 'function' && typeof ctx.devIdResolver === 'function') {
+      const r = await ctx.devIdResolver();
+      check('v-19 · sem armazenamento nenhum (o caso do iPhone travado) ainda nasce UM id, e o app não quebra',
+        !!(r && r.id) && r.inventado === true, JSON.stringify(r));
+      check('v-19 · o id resolvido é o MESMO que o getDeviceId síncrono devolve — uma fonte só por carga',
+        ctx.getDeviceId() === r.id && ctx.getDeviceId() === ctx.getDeviceId(), ctx.getDeviceId() + ' / ' + r.id);
+    } else { check('v-19 · getDeviceId/devIdResolver existem', false, 'função não encontrada'); }
+
+    // O celular que não guarda NADA: o aviso é fixo, abaixo da senha, e deixa rastro uma vez.
+    check('v-19 · a tela de entrada tem o lugar do aviso, ABAIXO da senha',
+      html.indexOf('<div id="deviceSemMemoria"') > 0
+      && html.indexOf('<input id="loginPwd"') < html.indexOf('<div id="deviceSemMemoria"'));
+    check('v-19 · o aviso é o texto ditado, palavra por palavra',
+      html.indexOf('Este celular não guarda a autorização.') > 0
+      && html.indexOf('Verifique: aba anônima/privada, ou Ajustes &rsaquo; Safari &rsaquo; Bloquear todos os cookies. Abra o app sempre do mesmo jeito (pelo ícone na tela inicial).') > 0);
+    check('v-19 · o teste é gravar-e-ler-de-volta nos três, e o rastro sai uma vez por sessão, com o tipo do aparelho',
+      /function devTesteArmazenamento\(\)\{/.test(html)
+      && /okLS=\(localStorage\.getItem\('zeluz_teste'\)===alvo\)/.test(html)
+      && /audit\('aparelho-sem-memoria'/.test(html)
+      && /var __semMemoriaJaAvisado=false;/.test(html)
+      && /__semMemoriaJaAvisado=true;/.test(html)
+      && /\{ua:uaCurto\(\)\}/.test(html));
+    if (typeof ctx.devTesteArmazenamento === 'function') {
+      // O sandbox tem `document.cookie` como campo comum — escrever e ler de volta sempre
+      // funcionaria, e isso NÃO é o iPhone com "Bloquear todos os cookies". Aqui o cookie
+      // é emudecido de verdade: aceita a escrita e devolve vazio, como o Safari bloqueado.
+      const bkpCookie = Object.getOwnPropertyDescriptor(ctx.document, 'cookie');
+      Object.defineProperty(ctx.document, 'cookie', { configurable: true, get() { return ''; }, set() { } });
+      try {
+        const semNada = await ctx.devTesteArmazenamento();
+        check('v-19 · com localStorage mudo, cookie mudo e sem IndexedDB, o teste diz "não guarda"',
+          semNada && semNada.guarda === false, JSON.stringify(semNada));
+      } finally { Object.defineProperty(ctx.document, 'cookie', bkpCookie); }
+      const comCookie = await ctx.devTesteArmazenamento();
+      check('v-19 · bastando UM dos três guardar, o aviso não aparece (não assustar quem está bem)',
+        comCookie && comCookie.guarda === true, JSON.stringify(comCookie));
+    } else { check('v-19 · devTesteArmazenamento existe', false, 'função não encontrada'); }
+
+    // O TIPO do aparelho: curto, para a Gestão ler de relance.
+    if (typeof ctx.uaCurto === 'function') {
+      const uaBkp = ctx.navigator.userAgent;
+      const comUA = (u) => { ctx.navigator.userAgent = u; return ctx.uaCurto(); };
+      try {
+        check('v-19 · iPhone no Safari vira "iPhone · Safari"',
+          comUA('Mozilla/5.0 (iPhone; CPU iPhone OS 17_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.5 Mobile/15E148 Safari/604.1') === 'iPhone · Safari',
+          comUA('Mozilla/5.0 (iPhone; CPU iPhone OS 17_5 like Mac OS X) Version/17.5 Mobile/15E148 Safari/604.1'));
+        check('v-19 · Android no Chrome vira "Android · Chrome"',
+          comUA('Mozilla/5.0 (Linux; Android 14; SM-A546E) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Mobile Safari/537.36') === 'Android · Chrome',
+          comUA('Mozilla/5.0 (Linux; Android 14; SM-A546E) Chrome/126.0.0.0 Mobile Safari/537.36'));
+        check('v-19 · Chrome no iPhone (CriOS) continua sendo iPhone — o que importa é o aparelho',
+          comUA('Mozilla/5.0 (iPhone; CPU iPhone OS 17_5 like Mac OS X) CriOS/126.0.6478.54 Mobile/15E148 Safari/604.1') === 'iPhone · Chrome');
+        check('v-19 · mordida — sem User-Agent não se inventa tipo nenhum', comUA('') === '');
+      } finally { ctx.navigator.userAgent = uaBkp; }
+    } else { check('v-19 · uaCurto existe', false, 'função não encontrada'); }
+
+    check('v-19 · o login barrado grava o TIPO do aparelho (a Gestão via só um id de 36 letras)',
+      /audit\('login-barrado'[\s\S]{0,900}?ua:\(typeof uaCurto==='function'\?uaCurto\(\):''\)/.test(html));
+    check('v-19 · o batimento do aparelho também carrega o tipo — é o celular falando de si mesmo',
+      /auaulandia\/aparelhos\/'\+id\+'\/visto[\s\S]{0,900}?ua:\(typeof uaCurto==='function'\?uaCurto\(\):''\)/.test(html));
+    check('v-19 · autorizar um aparelho grava o tipo junto com o nome',
+      /const reg=\{nome:nome, por:u\.nome, ts:Date\.now\(\), ua:uaCurto\(\)\};/.test(html));
+
+    // Configurações › Logins e segurança: a lista de celulares autorizados, com o tipo.
+    check('v-19 · Configurações › Logins e segurança lista os celulares autorizados',
+      html.indexOf('<h2 style="font-size:17px;margin-top:18px">Celulares autorizados</h2>') > 0
+      && html.indexOf('<div id="cfgAparelhosWrap"') > 0
+      && /function cfgAparelhosCarregar\(\)\{/.test(html)
+      && /try\{ cfgAparelhosCarregar\(\); \}catch\(e\)\{\}/.test(html));
+    if (typeof ctx.cfgAparelhosLista === 'function') {
+      const no = {
+        a1: { nome: 'iPhone Daycare 1', por: 'Adriana', ts: 100, visto: { ts: 900, ua: 'iPhone · Safari', quem: 'Leticya' } },
+        a2: { nome: 'Celular do Octávio', por: 'Márcia', ts: 200, ua: 'Android · Chrome' },
+        a3: { nome: 'Tablet da Recepção', por: 'Adriana', ts: 300 },
+      };
+      const L = ctx.cfgAparelhosLista(no);
+      check('v-19 · o tipo aparece quando HÁ — do próprio aparelho (visto.ua) ou de quem autorizou (ua)',
+        L.length === 3 && L[0].tipo === 'iPhone · Safari' && L[0].quem === 'Leticya'
+        && L.find((x) => x.id === 'a2').tipo === 'Android · Chrome',
+        JSON.stringify(L.map((x) => x.id + ':' + x.tipo)));
+      check('v-19 · sem tipo nenhum a lista não inventa nada (fica vazio, e a tela omite)',
+        L.find((x) => x.id === 'a3').tipo === '');
+      check('v-19 · quem foi usado por último aparece no topo',
+        L[0].id === 'a1', JSON.stringify(L.map((x) => x.id)));
+      check('v-19 · mordida — nó vazio não estoura', JSON.stringify(ctx.cfgAparelhosLista({})) === '[]');
+    } else { check('v-19 · cfgAparelhosLista existe', false, 'função não encontrada'); }
   }
   console.log('');
 

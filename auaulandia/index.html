@@ -2360,6 +2360,10 @@
       onkeydown="if(event.key==='Enter')doLogin()">
     <button class="login-btn" onclick="doLogin()">Entrar</button>
     <div class="login-err" id="loginErr"></div>
+    <!-- Celular que não guarda nada (16/set/2026): aba privada, "Bloquear todos os cookies"
+         ou o app aberto ora pelo Safari ora pelo ícone. Sem armazenamento, nenhuma
+         autorização dura — e a pessoa seria barrada todo dia sem entender por quê. -->
+    <div id="deviceSemMemoria" style="display:none;margin-top:12px"></div>
     <button type="button" onclick="autorizarAparelho()" style="margin-top:16px;background:none;border:1.5px solid rgba(35,77,103,.25);color:var(--z-blue);border-radius:10px;padding:10px 14px;font-family:var(--font-ui);font-weight:600;font-size:12.5px;cursor:pointer;width:100%">Autorizar este aparelho (Gestão)</button>
     <div id="deviceStatus" style="font-size:11.5px;margin-top:8px;font-weight:600"></div>
   </div>
@@ -4190,6 +4194,12 @@
       <h2 style="font-size:19px">Logins e segurança</h2>
       <div class="hint">Quem usou o app hoje e o que cada um fez. É o rastro que o sistema guarda sozinho — ninguém digita nada aqui. Para mudar senha, papel ou quem acessa o quê, a tela é <strong>Operação &rsaquo; Time</strong>.</div>
       <div id="cfgLoginsWrap" style="margin-top:10px"><div class="hint">Carregando o rastro de hoje…</div></div>
+      <!-- Celulares autorizados (16/set/2026). Antes a Gestão só via o id de 36 letras na
+           tela de quem foi barrado — e id não diz se aquilo é um iPhone ou um Android.
+           Aqui a lista mostra o nome, o tipo do aparelho e quem foi o último a usar. -->
+      <h2 style="font-size:17px;margin-top:18px">Celulares autorizados</h2>
+      <div class="hint">Os aparelhos em que a equipe consegue entrar. O tipo (iPhone, Android) aparece assim que alguém usa o app naquele celular.</div>
+      <div id="cfgAparelhosWrap" style="margin-top:10px"><div class="hint">Carregando os celulares autorizados…</div></div>
       <div class="hint" style="margin-top:8px">O detalhe minuto a minuto — tudo o que aconteceu, em ordem — está em <strong>Operação &rsaquo; Linha do tempo do dia</strong>.</div>
       <button type="button" class="btn" style="margin-top:8px;background:var(--z-cream-warm);color:var(--z-blue);border:1.5px solid var(--line)" onclick="abrirItemDoMenu('linhadotempo')">Abrir a Linha do tempo do dia</button>
     </div>
@@ -11331,6 +11341,21 @@
       mensagem:(document.getElementById('orcMsg')||{}).value||''
     };
     var st=document.getElementById('orcSalvoStatus');
+    // TRAVA DE DUPLICIDADE (16/set/2026) — antes de gravar, nunca depois. Se já existe
+    // orçamento do mesmo FILHOt (ou de um irmão) com datas que se sobrepõem, NADA é gravado.
+    var dups=orcDuplicados(orcListaArray(), reg, null);
+    if(dups.length && !ORC_DUP_OK){
+      if(st){ st.style.color='var(--crm-critico)'; st.textContent='NÃO foi salvo: já existe orçamento deste FILHOt para estas datas. Veja o cartaz.'; }
+      orcCartazDuplicado(dups, reg, function(){ ORC_DUP_OK={quem:(typeof quemSou==='function'?quemSou():'-'), ts:Date.now()}; orcSalvar(); });
+      return;
+    }
+    if(ORC_DUP_OK){
+      reg.duplicado_confirmado=ORC_DUP_OK;
+      if(typeof audit==='function') audit('orcamento-duplicado-confirmado',
+        ORC_DUP_OK.quem+' confirmou que é OUTRA hospedagem e lançou mesmo assim — '+reg.pets.map(function(p){return p.nome;}).join(' e ')+' · '+orcBR(reg.entrada)+' a '+orcBR(reg.saida),
+        {pet:(reg.pets[0]||{}).nome||'', quem:ORC_DUP_OK.quem});
+      ORC_DUP_OK=null;
+    }
     if(st){ st.style.color='var(--muted)'; st.textContent='Salvando…'; }
     // A chave nasce ANTES da gravação: é ela que dá nome à reserva de reposição, e os dois
     // lados (orçamento e Banco de Reposições) vão no MESMO update de raiz. Ou entram os
@@ -11476,48 +11501,274 @@
     if(!DB) return;
     DB.ref('auaulandia/orcamentos').limitToLast(60).once('value').then(function(s){
       ORC_LISTA_CACHE=s.val()||{}; orcRenderLista();
+      // Quem já fez check-in (para o botão virar "Já fez check-in"). Vem do retrato
+      // compartilhado que o app já mantém — não baixa o nó de novo.
+      try{ orcCarregarEstadias(); }catch(e){} /* silencioso de propósito: o estado do botão é informação extra — falhar não pode derrubar a lista */
     }).catch(function(e){ _logLeituraFalhou('auaulandia/orcamentos (orcCarregarLista)', e); });
   }
-  // Ordem da lista (Adriana, 04/set/2026): "orçamentos PENDENTES, depois os FECHADOS,
-  // por ordem de ENTRADA do peludinho — se ele entrará dia 05/09, precisa estar na
-  // frente do que entrará dia 10/09." Primeiro agrupa por situação (pendente na
-  // frente, cancelado por último — é onde a tela já os tratava como "encerrados"),
-  // depois dentro de cada grupo ordena por data de ENTRADA crescente (quem chega
-  // primeiro aparece primeiro). Sem data de entrada vai para o fim do seu próprio
-  // grupo — nunca para o topo — e a tela mostra um aviso, porque a Consultora
-  // precisa completar a data, não adivinhar. Função pura: não lê nem escreve nada,
-  // só recebe a lista e devolve a ordem certa — é isso que o harness prova.
-  var ORC_GRUPO_ORDEM={aguardando:0, fechado:1, nao_fechou:2, cancelado:3};
+  // ===== A ORDEM DA LISTA É A ORDEM DA HOSPEDAGEM (Adriana, 16/set/2026) =============
+  // "Quando o cliente fecha, eu preciso que ele apareça mais em cima e não lá para baixo.
+  //  Que a ordem seja da hospedagem."
+  // Até 15/set a regra era a de 04/set (pendentes na frente, fechados depois). Ela se
+  // inverteu na prática: quem FECHOU virou trabalho marcado — tem FILHOt chegando, quarto
+  // para preparar, check-in para fazer. Quem ainda está pensando pode esperar a rolagem.
+  // Os quatro grupos, nesta ordem:
+  //   0 · fechado com hospedagem POR VIR ou EM CURSO — por data de entrada, a mais próxima na frente
+  //   1 · aguardando resposta                        — por data de entrada
+  //   2 · não fechou / cancelado                     — por data de entrada
+  //   3 · fechado cuja hospedagem JÁ TERMINOU        — a mais recente na frente (é histórico)
+  // Sem data de entrada continua indo para o FIM do próprio grupo — nunca para o topo — e a
+  // tela avisa, porque a Consultora precisa completar a data, não adivinhar.
+  // Funções puras: não leem nem escrevem nada. É isso que o harness prova.
+  var ORC_GRUPO_ROTULO=['Fechados — próximas hospedagens','Aguardando resposta','Não fechou / cancelado','Hospedagens passadas'];
+  // "Já terminou" = a SAÍDA já passou. Sem saída, vale a entrada; sem nenhuma das duas, não
+  // dá para afirmar que terminou — e um fechado sem data não pode ser escondido no histórico.
+  function orcHospedagemPassada(o, hoje){
+    o=o||{};
+    if((o.status||'')!=='fechado') return false;
+    var fim=o.saida||o.entrada||'';
+    if(!fim||!hoje) return false;
+    return fim<hoje;                               // AAAA-MM-DD compara certo como texto
+  }
+  function orcGrupoDe(o, hoje){
+    o=o||{};
+    var st=o.status||'aguardando';
+    if(st==='fechado') return orcHospedagemPassada(o,hoje)?3:0;
+    if(st==='nao_fechou'||st==='cancelado') return 2;
+    return 1;                                      // aguardando — e qualquer status desconhecido
+  }
   function orcOrdenar(lista, hoje){
-    // `hoje` (AAAA-MM-DD) faz parte do contrato pedido por Adriana mas a regra de
-    // hoje não usa data-corrente nenhuma — reservado para uma futura prioridade
-    // por urgência (ex.: entrada já vencida). Não inventar uso agora.
-    void hoje;
-    var pares=(lista||[]).map(function(o,i){ return {o:(o||{}), i:i}; });
+    hoje=hoje||'';
+    var pares=(lista||[]).map(function(o,i){ return {o:(o||{}), i:i, g:orcGrupoDe(o,hoje)}; });
     pares.sort(function(A,B){
+      if(A.g!==B.g) return A.g-B.g;
       var oa=A.o, ob=B.o;
-      var ga=ORC_GRUPO_ORDEM.hasOwnProperty(oa.status)?ORC_GRUPO_ORDEM[oa.status]:ORC_GRUPO_ORDEM.aguardando;
-      var gb=ORC_GRUPO_ORDEM.hasOwnProperty(ob.status)?ORC_GRUPO_ORDEM[ob.status]:ORC_GRUPO_ORDEM.aguardando;
-      if(ga!==gb) return ga-gb;
-      var ea=!!oa.entrada, eb=!!ob.entrada;
-      if(ea!==eb) return ea?-1:1;                 // com data de entrada vem antes de sem data
-      if(ea && eb && oa.entrada!==ob.entrada) return oa.entrada<ob.entrada?-1:1; // AAAA-MM-DD compara certo como texto
+      // No histórico (grupo 3) a régua é a saída, porque "mais recente" é quem acabou por último.
+      var da=(A.g===3)?(oa.saida||oa.entrada||''):(oa.entrada||'');
+      var db=(B.g===3)?(ob.saida||ob.entrada||''):(ob.entrada||'');
+      if(!!da!==!!db) return da?-1:1;               // com data vem antes de sem data
+      if(da&&db&&da!==db) return (A.g===3)?(da>db?-1:1):(da<db?-1:1);
       return A.i-B.i;                              // empate: mantém a ordem em que chegou (estável)
     });
     return pares.map(function(x){ return x.o; });
+  }
+  // ===== NÃO LANÇAR O MESMO ORÇAMENTO DUAS VEZES (Adriana, 16/set/2026) ==============
+  // Aconteceu hoje: a própria Adriana lançou e FECHOU um segundo orçamento do Tônico para
+  // 05/10 a 10/10 quando já existia um fechado para as mesmas datas — e o app não disse
+  // nada. "Tinha que dizer que já foi lançado e mostrar. Isso não pode ocorrer."
+  // Duas reservas do mesmo FILHOt nas mesmas noites cobram duas vezes, ocupam duas vagas
+  // na planilha e confundem o check-in. A trava é ANTES de gravar, nunca depois.
+  // Funções puras: recebem a lista e o candidato e devolvem quem colide. O harness prova.
+  function orcPeriodoSobrepoe(a, b){
+    var ae=(a&&a.entrada)||'', as=(a&&a.saida)||ae;
+    var be=(b&&b.entrada)||'', bs=(b&&b.saida)||be;
+    if(!ae||!be) return false;
+    return ae<=bs && as>=be;                       // AAAA-MM-DD compara certo como texto
+  }
+  // A identidade do FILHOt: a chave do cadastro quando existe; senão nome + tutor
+  // normalizados — a mesma dupla que o check-in usa. Nome sozinho nunca (22/ago/2026).
+  function orcChavePet(p, o){
+    p=p||{};
+    if(p.key) return String(p.key);
+    var nrm=(typeof jsNorm==='function')?jsNorm:function(x){ return String(x||'').toLowerCase(); };
+    var n=nrm(p.nome||''), t=nrm(p.tutor||(o&&o.tutor)||'');
+    return n?(n+'__'+t):'';
+  }
+  // Irmãos: basta UM deles coincidir para ser duplicidade — a hospedagem é a mesma.
+  function orcDuplicados(lista, novo, ignorarId){
+    var chaves={};
+    (((novo||{}).pets)||[]).forEach(function(p){ var k=orcChavePet(p,novo); if(k) chaves[k]=true; });
+    if(!Object.keys(chaves).length) return [];
+    var out=[];
+    (lista||[]).forEach(function(o){
+      if(!o) return;
+      if(ignorarId && o.id===ignorarId) return;
+      var st=o.status||'aguardando';
+      if(st!=='aguardando'&&st!=='fechado') return;   // não fechou e cancelado não ocupam nada
+      if(!orcPeriodoSobrepoe(novo,o)) return;
+      var quais=[];
+      (o.pets||[]).forEach(function(p){ var k=orcChavePet(p,o); if(k&&chaves[k]) quais.push(p.nome||''); });
+      if(quais.length) out.push({id:o.id, o:o, pets:quais});
+    });
+    return out;
+  }
+  // Quem já está duplicado HOJE, na lista que a tela desenha. Os DOIS lados ganham a
+  // faixa — não adianta marcar só o novo: o antigo é tão suspeito quanto.
+  function orcDuplicadosNaLista(todos){
+    var mapa={};
+    (todos||[]).forEach(function(a){
+      if(!a) return;
+      var st=a.status||'aguardando';
+      if(st!=='aguardando'&&st!=='fechado') return;
+      var outros=orcDuplicados(todos, a, a.id);
+      if(outros.length) mapa[a.id]=outros;
+    });
+    return mapa;
+  }
+  function orcListaArray(){
+    return Object.keys(ORC_LISTA_CACHE||{}).map(function(id){ return Object.assign({id:id}, ORC_LISTA_CACHE[id]||{}); });
+  }
+  // Passar por cima é decisão de dona: só Gestão e Diretoria. A Consultora não decide
+  // sozinha cobrar duas vezes o mesmo tutor.
+  function orcPodeForcarDuplicado(){
+    var r=(document.body&&document.body.dataset)?document.body.dataset.role:'';
+    return r==='gestao'||r==='diretoria';
+  }
+  function orcDataBR(ts){
+    try{ var d=new Date(ts); var pp=function(x){return String(x).padStart(2,'0');};
+      return pp(d.getDate())+'/'+pp(d.getMonth()+1)+'/'+d.getFullYear(); }catch(e){ return ''; }
+  }
+  function orcResumoDuplicado(d){
+    var o=(d&&d.o)||{};
+    return orcBR(o.entrada||'')+' a '+orcBR(o.saida||'')+' · '+((o.status==='fechado')?'FECHADO':'aguardando resposta');
+  }
+  // O cartaz. É o zEscolha — o MESMO cartaz do zAlertao, com botões de decisão (foi feito
+  // exatamente para isto, na trava de duplicidade do check-in). Cartaz sem saída obrigaria
+  // a recarregar a página só para desistir.
+  function orcCartazDuplicado(dups, novo, aoConfirmar){
+    var d=(dups||[])[0]||{}, o=d.o||{};
+    var quem=(d.pets||[]).filter(Boolean).join(' e ');
+    var titulo='JÁ EXISTE UM ORÇAMENTO'+(quem?(' DO '+String(quem).toUpperCase()):'')+' PARA ESTAS DATAS';
+    var linhas=[
+      'O que já está lançado: '+orcResumoDuplicado(d)+'.',
+      'Lançado por '+(o.criado_por||'-')+(o.criado_em?(' em '+orcDataBR(o.criado_em)):'')+'.',
+      'O que você está lançando agora: '+orcBR((novo&&novo.entrada)||'')+' a '+orcBR((novo&&novo.saida)||'')+'.'
+    ];
+    if((dups||[]).length>1) linhas.push('E há mais '+(dups.length-1)+' orçamento(s) do mesmo FILHOt nessas datas.');
+    var bts=[{t:'Ver o orçamento existente', cor:'#234D67', fn:function(){ orcVerNaLista(d.id); }}];
+    if(orcPodeForcarDuplicado()) bts.push({t:'É outra hospedagem mesmo', cor:'#B3261E', fn:function(){ if(typeof aoConfirmar==='function') aoConfirmar(); }});
+    bts.push({t:'Cancelar — não lançar', cor:'#6b5f4b', fn:function(){}});
+    if(typeof zEscolha==='function'){
+      zEscolha(titulo, linhas, bts, {rodape:orcPodeForcarDuplicado()
+        ? 'Se for mesmo outra hospedagem, toque em "É outra hospedagem mesmo" — fica registrado quem decidiu.'
+        : 'Se for mesmo outra hospedagem, chame a Gestão: só ela libera um segundo orçamento nas mesmas datas.'});
+    } else if(typeof zAlertao==='function'){
+      zAlertao(titulo, linhas, {botao:'Entendi'});
+    }
+  }
+  // Leva o olho até o card do orçamento que já existe e o acende por alguns segundos.
+  function orcVerNaLista(id){
+    var el=document.getElementById('orc-card-'+id);
+    if(!el){ try{ orcRenderLista(); }catch(e){} /* silencioso de propósito: redesenho de tela — falhar não pode derrubar quem chamou */ el=document.getElementById('orc-card-'+id); }
+    if(!el) return;
+    try{ el.scrollIntoView({behavior:'smooth', block:'center'}); }catch(e){ /* navegador antigo: sem rolagem suave, mas o destaque abaixo continua valendo */ }
+    el.style.boxShadow='0 0 0 4px var(--crm-critico)';
+    setTimeout(function(){ try{ el.style.boxShadow=''; }catch(e){} /* silencioso de propósito: enfeite de tela (foco, rolagem, mídia) — falhar não muda dado nenhum */ }, 4000);
+  }
+  // ===== ATALHO PARA O CHECK-IN (Adriana, 16/set/2026) ===============================
+  // "Coloque um botão Check-in nele, para ir direto ao check-in de entrada. Será um ótimo
+  //  atalho." O botão abre a MESMA tela de Check-in de sempre, com o FILHOt já escolhido e
+  //  as datas do orçamento preenchidas — e NÃO grava nada: quem conclui o check-in é a
+  //  pessoa, na tela de sempre, com a assinatura do tutor.
+  var ORC_ESTADIAS_CACHE=null;      // retrato compartilhado de auaulandia/estadias (zMapaUma)
+  // Este orçamento já virou check-in? Vale a mesma dupla de identificação do check-in:
+  // refKey quando existe, senão nome + tutor normalizados. A data de ENTRADA tem de ser a
+  // mesma — o mesmo FILHOt pode hospedar várias vezes no ano, e cada entrada é um check-in.
+  function orcCheckinJaFeito(estadias, pet, o){
+    var ent=(o&&o.entrada)||''; if(!ent) return false;
+    var k=(pet&&pet.key)||'';
+    var nome=(typeof jsNorm==='function')?jsNorm((pet&&pet.nome)||''):String((pet&&pet.nome)||'').toLowerCase();
+    var tut=(typeof jsNorm==='function')?jsNorm((pet&&pet.tutor)||(o&&o.tutor)||''):String((pet&&pet.tutor)||(o&&o.tutor)||'').toLowerCase();
+    var v=estadias||{}, achou=false;
+    Object.keys(v).forEach(function(id){
+      if(achou) return;
+      var e=v[id]||{};
+      if((e.entrada||'')!==ent) return;
+      if((e.status||'ativa')==='cancelada') return;
+      var eNome=(typeof jsNorm==='function')?jsNorm(e.nome||''):String(e.nome||'').toLowerCase();
+      var eTut=(typeof jsNorm==='function')?jsNorm(e.tutor||''):String(e.tutor||'').toLowerCase();
+      if((e.refKey&&k&&e.refKey===k) || (nome&&eNome===nome&&eTut===tut)) achou=true;
+    });
+    return achou;
+  }
+  // 'nenhum' · 'abrir' · 'feito'. Função pura — é ela que o harness prova.
+  function orcCheckinBotaoEstado(o, pet, hoje, estadias){
+    if(orcGrupoDe(o, hoje)!==0) return 'nenhum';     // só fechado com hospedagem por vir ou em curso
+    return orcCheckinJaFeito(estadias, pet, o)?'feito':'abrir';
+  }
+  // Quem vê o botão é quem já pode fazer check-in — a MESMA régua da tela: o item do menu.
+  // Ler o item em vez de repetir a tabela PERM aqui garante que, se a Gestão tirar o
+  // Check-in de alguém em Pessoas, o atalho some junto. Uma régua só.
+  function orcPodeCheckin(){
+    try{
+      var a=document.querySelector('#nav a[data-v="checkin"]');
+      if(!a) return false;
+      return getComputedStyle(a).display!=='none';
+    }catch(e){ return false; }
+  }
+  function orcCarregarEstadias(){
+    if(typeof zMapaUma!=='function') return;
+    zMapaUma('auaulandia/estadias').then(function(v){   // retrato compartilhado — não re-baixa o nó inteiro
+      ORC_ESTADIAS_CACHE=v||{};
+      try{ orcRenderLista(); }catch(e){} /* silencioso de propósito: redesenho de tela — falhar não pode derrubar quem chamou */
+    }).catch(function(){ ORC_ESTADIAS_CACHE=ORC_ESTADIAS_CACHE||{}; });
+  }
+  // Abre o Check-in com o FILHOt escolhido e as datas do orçamento. Nada é gravado aqui.
+  function orcAbrirCheckin(id, petKey){
+    var o=ORC_LISTA_CACHE[id]||{};
+    var pets=o.pets||[];
+    var pet=null;
+    for(var i=0;i<pets.length;i++){ if(!petKey || (pets[i]&&pets[i].key===petKey)){ pet=pets[i]; break; } }
+    if(!pet) pet=pets[0]||null;
+    if(!pet){ alert('Este orçamento não tem FILHOt salvo — abra o Check-in pelo menu.'); return; }
+    try{ if(typeof audit==='function') audit('orcamento-atalho-checkin',
+      'abriu o check-in de '+(pet.nome||'?')+' pelo orçamento fechado',
+      {orcamento:id, entrada:(o.entrada||''), saida:(o.saida||''), tutor:(pet.tutor||o.tutor||'')}); }catch(e){} /* silencioso de propósito: o audit() tem bolso próprio e reenvia sozinho — falhar aqui não pode travar a ação */
+    try{ if(typeof abrirItemDoMenu==='function') abrirItemDoMenu('checkin'); }catch(e){} /* silencioso de propósito: guarda defensiva — falhar aqui não pode interromper quem chamou */
+    var lista=(typeof PELUDINHOS!=='undefined'?PELUDINHOS:[])||[];
+    var idx=-1;
+    for(var j=0;j<lista.length;j++){
+      if(pet.key && (typeof pelKey==='function') && pelKey(lista[j])===pet.key){ idx=j; break; }
+    }
+    if(idx<0 && pet.nome && typeof jsNorm==='function'){
+      var nn=jsNorm(pet.nome), tt=jsNorm(pet.tutor||o.tutor||'');
+      for(var m=0;m<lista.length;m++){
+        if(jsNorm(lista[m].n||'')===nn && (!tt || jsNorm(lista[m].tutor||'')===tt)){ idx=m; break; }
+      }
+    }
+    // Sem cadastro (orçamento avulso): não dá para escolher sozinho — o nome sozinho não
+    // identifica ninguém (22/ago/2026). Deixa a busca do check-in preenchida e a pessoa decide.
+    if(idx<0){
+      var b=document.getElementById('ciBusca');
+      if(b){ b.value=pet.nome||''; try{ if(typeof renderCiBusca==='function') renderCiBusca(); }catch(e){} /* silencioso de propósito: redesenho de tela — falhar não pode derrubar quem chamou */ }
+      return;
+    }
+    try{ if(typeof ciEscolher==='function') ciEscolher(idx); }catch(e){ return; }
+    // As datas do orçamento entram DEPOIS do ciEscolher — ele zera a ficha e põe "hoje" na
+    // entrada. Quem manda no cálculo continua sendo o check-in (ciCalcDias), como sempre.
+    try{
+      var ei=document.getElementById('ciEntrada'); if(ei&&o.entrada) ei.value=o.entrada;
+      var si=document.getElementById('ciSaida'); if(si&&o.saida) si.value=o.saida;
+      if(typeof ciCalcDias==='function') ciCalcDias();
+    }catch(e){} /* silencioso de propósito: redesenho de tela — falhar não pode derrubar quem chamou */
   }
   function orcRenderLista(){
     var el=document.getElementById('orcLista'); if(!el) return;
     // Base antes de agrupar: mais recente primeiro — é o desempate de quem tem
     // status e data de entrada iguais (o "empate mantém ordem estável" do orcOrdenar).
-    var todos=Object.keys(ORC_LISTA_CACHE||{}).map(function(id){
-      return Object.assign({id:id}, ORC_LISTA_CACHE[id]||{});
-    }).sort(function(a,b){ return (b.criado_em||0)-(a.criado_em||0); });
-    var ids=orcOrdenar(todos, (typeof zHojeISO==='function')?zHojeISO():'').map(function(o){ return o.id; });
+    var todos=orcListaArray().sort(function(a,b){ return (b.criado_em||0)-(a.criado_em||0); });
+    var HOJE=(typeof zHojeISO==='function')?zHojeISO():'';
+    // Os duplicados que JÁ existem hoje (o segundo Tônico entre eles) aparecem marcados.
+    var DUP=orcDuplicadosNaLista(todos);
+    var ids=orcOrdenar(todos, HOJE).map(function(o){ return o.id; });
     if(!ids.length){ el.innerHTML='<div class="hint">Nenhum orçamento salvo ainda.</div>'; return; }
+    var podeCi=orcPodeCheckin();
+    var grupoAtual=-1, primeiro=true;
     var lb={aguardando:['PENDENTE','pendente'], fechado:['FECHOU','resolvido'], nao_fechou:['NÃO FECHOU','processo'], cancelado:['CANCELADO','processo']};
     el.innerHTML=ids.map(function(id){
       var o=ORC_LISTA_CACHE[id]||{}, stt=o.status||'aguardando', L=lb[stt]||lb.aguardando;
+      // Cabeçalho do grupo: aparece uma vez, quando o grupo muda. A lista deixou de ser
+      // uma pilha só — a Consultora enxerga de relance o que é trabalho marcado e o que é
+      // histórico.
+      var cab='';
+      var g=orcGrupoDe(o, HOJE);
+      if(g!==grupoAtual){
+        grupoAtual=g;
+        cab='<div style="margin:'+(primeiro?'0':'18px')+' 0 8px;font-family:var(--font-ui);font-weight:800;font-size:13px;'
+          +'letter-spacing:.4px;color:var(--z-blue);border-bottom:2px solid var(--line);padding-bottom:5px">'
+          +escAttr(ORC_GRUPO_ROTULO[g]||'')+'</div>';
+      }
+      primeiro=false;
       var nomes=(o.pets||[]).map(function(p){ return p.nome; }).join(' e ');
       var dt=''; try{ var d=new Date(o.criado_em); var pp=function(x){return String(x).padStart(2,'0');}; dt=pp(d.getDate())+'/'+pp(d.getMonth()+1)+'/'+d.getFullYear(); }catch(e){} /* silencioso de propósito: guarda defensiva — falhar aqui não pode interromper quem chamou */
       var apagar=(document.body.dataset.role==='gestao'||document.body.dataset.role==='diretoria'||document.body.dataset.role==='supervisor')
@@ -11538,13 +11789,29 @@
       // A tutora antecipou/adiou: MUDAR AS DATAS, sem perder a reserva nem redigitar tudo.
       var mudar=(stt==='fechado'||stt==='aguardando')
         ? '<button class="btn btn-gold" onclick="orcMudarDatas(\''+id+'\')">Mudar as datas</button>' : '';
+      // O ATALHO DO CHECK-IN. Só no grupo 0 (fechado com hospedagem por vir ou em curso) e
+      // só para quem já pode fazer check-in. Com dois FILHOts (irmãos) sai um botão para
+      // cada: assim cada um mostra o próprio estado e ninguém fica para trás sem aviso.
+      var ciBtns='';
+      if(podeCi && orcGrupoDe(o, HOJE)===0){
+        var pets=(o.pets||[]);
+        var muitos=pets.length>1;
+        ciBtns=pets.map(function(p){
+          var est=orcCheckinBotaoEstado(o, p, HOJE, ORC_ESTADIAS_CACHE);
+          var rot=muitos?('Check-in de '+(p.nome||'?')):'Check-in';
+          if(est==='feito') return '<button class="btn" disabled style="background:var(--z-cream-warm);color:var(--muted);border:1.5px solid var(--line);cursor:default">'
+            +escAttr(muitos?('Já fez check-in: '+(p.nome||'?')):'Já fez check-in')+'</button>';
+          if(est!=='abrir') return '';
+          return '<button class="btn btn-primary" onclick="orcAbrirCheckin(\''+id+'\',\''+escAttr(p.key||'').replace(/'/g,"\\'")+'\')">'+escAttr(rot)+'</button>';
+        }).join('');
+      }
       var btns;
       if(stt==='cancelado'){
         btns='<div style="text-align:right;margin-top:6px">'+apagar+'</div>';
       } else if(stt==='aguardando'){
         btns='<div class="avr-form-btns" style="margin-top:8px"><button class="btn btn-primary" onclick="orcStatus(\''+id+'\',\'fechado\')">Fechou</button><button class="btn" style="background:var(--z-cream-warm);color:var(--z-blue);border:1.5px solid var(--line)" onclick="orcStatus(\''+id+'\',\'nao_fechou\')">Não fechou</button>'+mudar+cancelar+apagar+'</div>';
       } else {
-        btns='<div class="avr-form-btns" style="margin-top:8px;justify-content:flex-end">'+apagar+mudar+cancelar
+        btns='<div class="avr-form-btns" style="margin-top:8px;justify-content:flex-end">'+ciBtns+apagar+mudar+cancelar
           +'<button class="btn" style="background:var(--z-cream-warm);color:var(--z-blue);border:1.5px solid var(--line)" onclick="orcStatus(\''+id+'\',\'aguardando\')">Voltar para pendente</button></div>';
       }
       if(stt==='cancelado'&&o.cancelado_por){
@@ -11556,7 +11823,21 @@
       // Consultora precisa completar, não adivinhar (é por isso que ele vai para o
       // fim do grupo dele em orcOrdenar, nunca para o topo).
       var semData=o.entrada?'':'<div style="font-size:12px;color:var(--crm-critico);font-weight:700;margin-top:2px">⚠ sem data de entrada — complete para entrar na ordem por chegada</div>';
-      return '<div class="avr-card '+L[1]+'"><div class="avr-head"><div class="avr-info">'
+      // A faixa da duplicidade: nos DOIS cards, para que a Consultora veja o par inteiro.
+      var faixa='';
+      var meus=DUP[id]||null;
+      if(meus&&meus.length){
+        var outro=meus[0];
+        faixa='<div style="background:var(--crm-critico);color:#FFFDF6;border-radius:10px;padding:8px 11px;margin-bottom:9px;font-weight:800;font-size:13px;line-height:1.35">'
+          +'Duplicado com '+escAttr(orcResumoDuplicado(outro))
+          +(outro.o&&outro.o.criado_por?(' — lançado por '+escAttr(outro.o.criado_por)):'')
+          +(meus.length>1?(' · e mais '+(meus.length-1)):'')
+          +'<div style="font-weight:600;font-size:12px;margin-top:3px">Mesmo FILHOt, datas que se sobrepõem. Confira antes de cobrar duas vezes.</div>'
+          +'<button class="btn" style="margin-top:7px;background:#FFFDF6;color:var(--crm-critico);border:0;font-weight:800" onclick="orcVerNaLista(\''+outro.id+'\')">Ver o outro orçamento</button>'
+          +(o.duplicado_confirmado?('<div style="font-weight:600;font-size:12px;margin-top:6px">'+escAttr((o.duplicado_confirmado.quem||'A Gestão')+' confirmou que é outra hospedagem.')+'</div>'):'')
+          +'</div>';
+      }
+      return cab+'<div class="avr-card '+L[1]+'" id="orc-card-'+id+'">'+faixa+'<div class="avr-head"><div class="avr-info">'
         +'<strong>'+escAttr(nomes||'—')+'</strong> <span style="color:var(--muted);font-size:12px">'+escAttr(o.tutor||'')+'</span>'
         +'<div style="font-size:12.5px;color:var(--z-blue-soft)">'+orcBR(o.entrada||'')+' a '+orcBR(o.saida||'')+' · '+(o.noites||0)+' noites'+(o.alta_temporada?' · ALTA':'')+' · feito em '+dt+' por '+escAttr(o.criado_por||'-')+'</div>'
         +semData
@@ -11717,16 +11998,38 @@
   // mas ainda do FILHOt. Quando o tutor fecha, a reserva vira baixa de verdade. Voltar
   // para pendente, "não fechou" ou cancelar DEVOLVE o dia. Tudo num update de raiz só:
   // status e ficha nunca contam histórias diferentes.
+  // A decisão de passar por cima da duplicidade. Vive fora das funções porque elas são
+  // chamadas de novo depois da confirmação — e nada pode ficar preso no meio do caminho.
+  var ORC_DUP_OK=null, ORC_DUP_OK_STATUS={};
   function orcStatus(id,novo){
     if(!DB) return;
     var quem=(typeof quemSou==='function')?quemSou():'-';
+    // "Fechou" é o momento em que a reserva vira compromisso: é aqui que a duplicidade
+    // custa dinheiro. Foi exatamente por aqui que o segundo Tônico passou (16/set/2026).
+    if(novo==='fechado' && !ORC_DUP_OK_STATUS[id]){
+      var atual=Object.assign({id:id}, ORC_LISTA_CACHE[id]||{});
+      var dupsS=orcDuplicados(orcListaArray(), atual, id);
+      if(dupsS.length){
+        orcCartazDuplicado(dupsS, atual, function(){ ORC_DUP_OK_STATUS[id]={quem:quem, ts:Date.now()}; orcStatus(id,novo); });
+        return;
+      }
+    }
     var o=Object.assign({}, ORC_LISTA_CACHE[id]||{}, {status:novo});
     var acerto=repOrcAcerto(id, o);
     var patch=Object.assign({}, acerto.patch);
     patch['auaulandia/orcamentos/'+id+'/status']=novo;
     patch['auaulandia/orcamentos/'+id+'/status_em']=Date.now();
     patch['auaulandia/orcamentos/'+id+'/status_por']=quem;
+    var forcado=ORC_DUP_OK_STATUS[id]||null;
+    if(forcado) patch['auaulandia/orcamentos/'+id+'/duplicado_confirmado']=forcado;
     DB.ref().update(patch).then(function(){
+      if(forcado){
+        delete ORC_DUP_OK_STATUS[id];
+        if(ORC_LISTA_CACHE[id]) ORC_LISTA_CACHE[id].duplicado_confirmado=forcado;
+        if(typeof audit==='function') audit('orcamento-duplicado-confirmado',
+          forcado.quem+' confirmou que é OUTRA hospedagem e fechou mesmo assim — '+((o.pets||[]).map(function(p){return p.nome;}).join(' e '))+' · '+orcBR(o.entrada||'')+' a '+orcBR(o.saida||''),
+          {pet:((o.pets||[])[0]||{}).nome||'', quem:forcado.quem});
+      }
       if(ORC_LISTA_CACHE[id]) ORC_LISTA_CACHE[id].status=novo;
       orcRenderLista();
       if(typeof audit==='function') audit('orcamento-status','orçamento marcado como '+novo,{});
@@ -12870,7 +13173,7 @@
   // inteira DEPOIS de a correção estar publicada — o aviso apareceu, ninguém tocou.
   // Agora o aparelho PARADO recarrega sozinho: trancado, com a aba escondida, na porta de
   // entrada ou 3 minutos sem ninguém tocar nele. Mão na tela = nunca recarrega.
-  const APP_VERSAO='2026-09-15-05';
+  const APP_VERSAO='2026-09-16-01';
   var RECARGA_PARADO_MS=3*60*1000, __versaoPublicada=null, __recargaTimer=null;
   function vigiarVersao(){
     if(!DB) return;
@@ -12933,6 +13236,10 @@
       var u=(typeof usuarioAtual==='function'?usuarioAtual():null)||{};
       DB.ref('auaulandia/aparelhos/'+id+'/visto').set({
         ts:Date.now(), versao:APP_VERSAO, quem:(u.pessoa||u.nome||'-'), role:(u.role||'-'),
+        // O TIPO do celular vem por aqui — de dentro do próprio aparelho, que é o único que
+        // sabe. Assim a lista da Gestão mostra "iPhone" mesmo quando quem autorizou foi a
+        // Gestão de longe, pela tela "quem tentou entrar e não conseguiu".
+        ua:(typeof uaCurto==='function'?uaCurto():''),
         trancado:!!_appTrancado, motivo:String(motivo||'')
       }).catch(function(e){ _logFalhaGrav('auaulandia/aparelhos/visto (batimento)', e); });
     }catch(e){ try{ _logFalhaGrav('auaulandia/aparelhos/visto (batimento, ao montar)', e); }catch(_){} /* silencioso de propósito: o próprio registro de falha não pode derrubar quem chamou */ }
@@ -13327,23 +13634,202 @@
     try{ renderSenhas(); }catch(e){} /* silencioso de propósito: redesenho de tela — falhar não pode derrubar quem chamou */
   }
   // ===== TRAVA POR APARELHO: só celulares autorizados pela Gestão entram =====
-  function getDeviceId(){ let id=null; try{ id=localStorage.getItem('zeluz_device_id'); }catch(e){} /* silencioso de propósito: sem valor guardado vale o padrão já definido acima */
-    if(!id){ id=(self.crypto&&crypto.randomUUID)?crypto.randomUUID():('dev-'+Date.now()+'-'+Math.floor(Math.random()*1e9)); try{ localStorage.setItem('zeluz_device_id',id); }catch(e){} /* silencioso de propósito: guardar no aparelho é conveniência — o dado de verdade mora no banco */ }
-    return id; }
+  // ===== O APARELHO NÃO PODE ESQUECER QUE FOI AUTORIZADO (Adriana, 16/set/2026) ======
+  // Auditoria de 16/set: a Gestão autorizou o iPhone da Leticya e às 11h05 ela foi barrada
+  // DUAS vezes com o aparelho 67b018a8-… e, trinta segundos depois, com outro id inteiro,
+  // 666236ee-… O mesmo celular gerou dois identificadores em meio minuto.
+  // A causa: o id morava só no localStorage. No iPhone isso não basta — aba privada do
+  // Safari, "Bloquear todos os cookies" e abrir ora pelo Safari ora pelo ícone da tela
+  // inicial (armazenamentos separados) fazem o valor sumir. Sem valor guardado, cada carga
+  // inventava um id novo — e um id novo nunca está na lista de autorizados.
+  // Agora o id mora em TRÊS lugares: localStorage, IndexedDB e cookie. Vale o primeiro que
+  // existir, nessa ordem, e quem acha regrava nos outros dois. Como o IndexedDB só responde
+  // depois (é assíncrono), a checagem de autorização ESPERA a resolução — ver deviceAutorizado.
+  var DEV_ID_CHAVE='zeluz_device_id';
+  var __devIdMem=null;          // o id já resolvido nesta carga (fonte única daqui para a frente)
+  var __devIdPronto=null;       // a promessa da resolução — criada uma vez só
+  function __devIdNovo(){ return (self.crypto&&crypto.randomUUID)?crypto.randomUUID():('dev-'+Date.now()+'-'+Math.floor(Math.random()*1e9)); }
+  function __devIdLerLS(){ try{ return localStorage.getItem(DEV_ID_CHAVE)||''; }catch(e){ return ''; } }
+  function __devIdGravarLS(id){ try{ localStorage.setItem(DEV_ID_CHAVE,id); return true; }catch(e){ return false; } }
+  // Cookie: 10 anos, SameSite=Lax. É o armazenamento que sobrevive quando o localStorage
+  // do Safari é jogado fora, e o que atravessa "abrir pelo ícone" × "abrir pelo Safari".
+  function __devIdLerCookie(){
+    try{
+      var m=(' '+(document.cookie||'')).match(new RegExp('[; ]'+DEV_ID_CHAVE+'=([^;]*)'));
+      return m?decodeURIComponent(m[1]):'';
+    }catch(e){ return ''; }
+  }
+  function __devIdGravarCookie(id){
+    try{
+      document.cookie=DEV_ID_CHAVE+'='+encodeURIComponent(id)+'; max-age=315360000; path=/; SameSite=Lax';
+      return __devIdLerCookie()===id;
+    }catch(e){ return false; }
+  }
+  // IndexedDB: base 'zeluz', armazém 'kv', chave 'device_id'. Promessa pequena, com prazo —
+  // navegador em modo privado pode abrir a base e nunca responder, e o app não pode ficar
+  // pendurado por causa disso. Sem IndexedDB (ou dando erro) devolve vazio, sem derrubar nada.
+  function __idbKV(chave, valor){
+    return new Promise(function(res){
+      var fim=false, ok=function(v){ if(!fim){ fim=true; res(v); } };
+      setTimeout(function(){ ok(''); }, 2500);
+      try{
+        var idb=(self.indexedDB||null); if(!idb){ ok(''); return; }
+        var req=idb.open('zeluz',1);
+        req.onupgradeneeded=function(){ try{ req.result.createObjectStore('kv'); }catch(e){ /* já existe */ } };
+        req.onerror=function(){ ok(''); };
+        req.onblocked=function(){ ok(''); };
+        req.onsuccess=function(){
+          try{
+            var db=req.result;
+            if(!db.objectStoreNames.contains('kv')){ ok(''); try{ db.close(); }catch(e){} /* silencioso de propósito: fechar a base é higiene — falhar não muda dado nenhum */ return; }
+            var modo=(valor==null)?'readonly':'readwrite';
+            var tx=db.transaction('kv',modo), st=tx.objectStore('kv');
+            if(valor==null){
+              var g=st.get(chave);
+              g.onsuccess=function(){ ok(String(g.result||'')); try{ db.close(); }catch(e){} /* silencioso de propósito: fechar a base é higiene — falhar não muda dado nenhum */ };
+              g.onerror=function(){ ok(''); try{ db.close(); }catch(e){} /* silencioso de propósito: fechar a base é higiene — falhar não muda dado nenhum */ };
+            } else {
+              st.put(String(valor), chave);
+              tx.oncomplete=function(){ ok(String(valor)); try{ db.close(); }catch(e){} /* silencioso de propósito: fechar a base é higiene — falhar não muda dado nenhum */ };
+              tx.onerror=function(){ ok(''); try{ db.close(); }catch(e){} /* silencioso de propósito: fechar a base é higiene — falhar não muda dado nenhum */ };
+              tx.onabort=function(){ ok(''); try{ db.close(); }catch(e){} /* silencioso de propósito: fechar a base é higiene — falhar não muda dado nenhum */ };
+            }
+          }catch(e){ ok(''); }
+        };
+      }catch(e){ ok(''); }
+    });
+  }
+  function devIdGravarEmTodos(id){
+    if(!id) return;
+    __devIdGravarLS(id);
+    __devIdGravarCookie(id);
+    try{ __idbKV('device_id', id); }catch(e){ /* silencioso de propósito: guardar no aparelho é conveniência — o dado de verdade mora no banco */ }
+  }
+  // A resolução completa (com IndexedDB). Roda uma vez por carga e é o que manda:
+  // se o localStorage sumiu mas o IndexedDB guardou, o id VELHO volta a valer — e o
+  // celular continua autorizado, que é o ponto de tudo isto.
+  function devIdResolver(){
+    if(__devIdPronto) return __devIdPronto;
+    __devIdPronto=new Promise(function(res){
+      var doLS=__devIdLerLS();
+      __idbKV('device_id', null).then(function(doIdb){
+        var id=doLS||doIdb||__devIdLerCookie()||'';
+        var inventado=false;
+        if(!id){ id=__devIdNovo(); inventado=true; }
+        __devIdMem=id;
+        devIdGravarEmTodos(id);
+        res({id:id, inventado:inventado, ls:!!doLS, idb:!!doIdb});
+      }).catch(function(){
+        var id=doLS||__devIdLerCookie()||__devIdNovo();
+        __devIdMem=id; devIdGravarEmTodos(id);
+        res({id:id, inventado:!doLS, ls:!!doLS, idb:false});
+      });
+    });
+    return __devIdPronto;
+  }
+  // Versão síncrona, para quem já existia e não sabe esperar (batimento, audit). Nunca
+  // grava no IndexedDB por conta própria: quem manda no IndexedDB é o devIdResolver, e é
+  // por isso que um id inventado aqui não apaga o id verdadeiro guardado lá.
+  function getDeviceId(){
+    if(__devIdMem) return __devIdMem;
+    var id=__devIdLerLS()||__devIdLerCookie()||'';
+    if(!id) id=__devIdNovo();
+    __devIdMem=id;
+    __devIdGravarLS(id); __devIdGravarCookie(id);
+    return id;
+  }
+  // ===== O CELULAR QUE NÃO GUARDA NADA ==============================================
+  // Se os três armazenamentos falharem no teste de gravar-e-ler-de-volta, nenhuma
+  // autorização vai durar: a pessoa seria barrada todo dia e ninguém entenderia por quê.
+  // Nesse caso a tela de entrada diz o que fazer, em português de gente.
+  var __semMemoriaJaAvisado=false;
+  function devTesteArmazenamento(){
+    var alvo='t'+Date.now();
+    var okLS=false, okCookie=false;
+    try{ localStorage.setItem('zeluz_teste',alvo); okLS=(localStorage.getItem('zeluz_teste')===alvo); localStorage.removeItem('zeluz_teste'); }catch(e){ okLS=false; }
+    try{
+      document.cookie='zeluz_teste='+alvo+'; max-age=60; path=/; SameSite=Lax';
+      okCookie=((' '+(document.cookie||'')).indexOf('zeluz_teste='+alvo)>=0);
+    }catch(e){ okCookie=false; }
+    if(okLS||okCookie) return Promise.resolve({ls:okLS, cookie:okCookie, idb:null, guarda:true});
+    return __idbKV('zeluz_teste', alvo).then(function(v){
+      var okIdb=(v===alvo);
+      return {ls:false, cookie:false, idb:okIdb, guarda:okIdb};
+    }).catch(function(){ return {ls:false, cookie:false, idb:false, guarda:false}; });
+  }
+  function devAvisoSemMemoriaHTML(){
+    return '<div style="border:2px solid var(--crm-critico);border-radius:12px;padding:12px 14px;'
+      +'background:rgba(179,38,30,.08);text-align:left;line-height:1.45">'
+      +'<div style="font-weight:800;color:var(--crm-critico);font-size:14px;margin-bottom:4px">Este celular não guarda a autorização.</div>'
+      +'<div style="font-size:13px;color:var(--z-blue);font-weight:600">Verifique: aba anônima/privada, ou Ajustes &rsaquo; Safari &rsaquo; Bloquear todos os cookies. Abra o app sempre do mesmo jeito (pelo ícone na tela inicial).</div>'
+      +'</div>';
+  }
+  function devChecarMemoria(){
+    var el=document.getElementById('deviceSemMemoria'); if(!el) return Promise.resolve(true);
+    return devTesteArmazenamento().then(function(r){
+      if(r.guarda){ el.style.display='none'; el.innerHTML=''; return true; }
+      el.style.display='block';
+      el.innerHTML=devAvisoSemMemoriaHTML();
+      if(!__semMemoriaJaAvisado){
+        __semMemoriaJaAvisado=true;
+        try{ if(typeof audit==='function') audit('aparelho-sem-memoria',
+          'o celular não guardou o teste em localStorage, cookie nem IndexedDB — a autorização não dura',
+          {ua:uaCurto()}); }catch(e){} /* silencioso de propósito: o audit() tem bolso próprio e reenvia sozinho — falhar aqui não pode travar a ação */
+      }
+      return false;
+    }).catch(function(){ return true; });
+  }
+  // ===== QUE APARELHO É ESSE (curto, para a Gestão ler de relance) ====================
+  // Só o necessário para a Gestão saber o TIPO do celular — "iPhone · Safari". Nada de
+  // cadeia de User-Agent inteira: ela não cabe na tela e não diz nada a ninguém.
+  function uaCurto(){
+    var ua='';
+    try{ ua=String((navigator&&navigator.userAgent)||''); }catch(e){ return ''; }
+    if(!ua) return '';
+    var sis='Outro';
+    if(/iPhone/i.test(ua)) sis='iPhone';
+    else if(/iPad/i.test(ua)) sis='iPad';
+    else if(/Android/i.test(ua)) sis='Android';
+    else if(/Windows/i.test(ua)) sis='Windows';
+    else if(/Macintosh|Mac OS X/i.test(ua)) sis='Mac';
+    var nav='';
+    if(/EdgA?\//i.test(ua)) nav='Edge';
+    else if(/CriOS|Chrome\//i.test(ua)) nav='Chrome';
+    else if(/FxiOS|Firefox\//i.test(ua)) nav='Firefox';
+    else if(/Safari\//i.test(ua)) nav='Safari';
+    return nav?(sis+' · '+nav):sis;
+  }
+  // Começa a resolver o id JÁ, no arranque: o IndexedDB leva alguns milissegundos e ninguém
+  // pode esperar por ele na hora em que a pessoa digita a senha.
+  try{ devIdResolver(); }catch(e){} /* silencioso de propósito: guarda defensiva — falhar aqui não pode interromper o arranque */
   function deviceLocalOk(){ try{ return localStorage.getItem('zeluz_device_ok')==='1'; }catch(e){ return false; } }
   // cb(autorizado, semResposta) — semResposta=true quando não deu para perguntar ao banco
   // (sem internet). Quem chama decide o que fazer nesse caso; ver doLogin.
-  function deviceAutorizado(cb){ const id=getDeviceId();
-    if(DB){ DB.ref('auaulandia/aparelhos/'+id).once('value').then(s=>{ const ok=!!s.val(); try{ if(ok) localStorage.setItem('zeluz_device_ok','1'); else localStorage.removeItem('zeluz_device_ok'); }catch(e){} /* silencioso de propósito: guardar no aparelho é conveniência — o dado de verdade mora no banco */ cb(ok,false); }).catch(()=>cb(deviceLocalOk(),true)); }
-    else { cb(deviceLocalOk(),true); } }
-  function mostrarStatusDevice(){ const el=document.getElementById('deviceStatus'); if(!el) return; deviceAutorizado(function(ok){ el.innerHTML= ok?'Este aparelho está autorizado &#10003;':'Este aparelho ainda <strong>não está autorizado</strong>. A Gestão precisa autorizar.'; el.style.color= ok?'var(--crm-ok)':'var(--crm-atencao-text)'; }); }
+  // A checagem ESPERA a resolução do id (o IndexedDB responde depois). Sem essa espera, o
+  // iPhone que perdeu o localStorage perguntaria ao banco por um id recém-inventado e seria
+  // barrado — mesmo tendo o id verdadeiro guardado no IndexedDB. Se a resolução falhar, o
+  // getDeviceId síncrono assume: o app nunca fica pendurado por causa de armazenamento.
+  function deviceAutorizado(cb){
+    var seguir=function(id){
+      if(!id) id=getDeviceId();
+      if(DB){ DB.ref('auaulandia/aparelhos/'+id).once('value').then(s=>{ const ok=!!s.val(); try{ if(ok) localStorage.setItem('zeluz_device_ok','1'); else localStorage.removeItem('zeluz_device_ok'); }catch(e){} /* silencioso de propósito: guardar no aparelho é conveniência — o dado de verdade mora no banco */ cb(ok,false); }).catch(()=>cb(deviceLocalOk(),true)); }
+      else { cb(deviceLocalOk(),true); }
+    };
+    try{ devIdResolver().then(function(r){ seguir(r&&r.id); }).catch(function(){ seguir(''); }); }
+    catch(e){ seguir(''); }
+  }
+  function mostrarStatusDevice(){ try{ devChecarMemoria(); }catch(e){} /* silencioso de propósito: o aviso é informação extra — falhar não pode travar a tela de entrada */
+    const el=document.getElementById('deviceStatus'); if(!el) return; deviceAutorizado(function(ok){ el.innerHTML= ok?'Este aparelho está autorizado &#10003;':'Este aparelho ainda <strong>não está autorizado</strong>. A Gestão precisa autorizar.'; el.style.color= ok?'var(--crm-ok)':'var(--crm-atencao-text)'; }); }
   async function autorizarAparelho(){ const err=document.getElementById('loginErr'); err.style.color='';
     const v=(document.getElementById('loginPwd').value||'').trim(); const u=senhasRuntime()[v];
     if(!u||(u.role!=='gestao'&&u.role!=='diretoria')){ err.style.color='var(--crm-critico)'; err.textContent='Digite a senha da GESTÃO no campo acima e toque em Autorizar.'; return; }
     const nome=((await zTexto('Dê um nome para ESTE aparelho',
       ['Por exemplo: "iPhone Daycare 1". É esse nome que aparece na lista de aparelhos autorizados.'],
       {rotulo:'Nome do aparelho', botao:'Autorizar este aparelho', cor:'#234D67', minimo:3}))||'').trim(); if(!nome) return;
-    const id=getDeviceId(); const reg={nome:nome, por:u.nome, ts:Date.now()};
+    // O id vem da resolução completa (localStorage → IndexedDB → cookie): autorizar um id
+    // inventado na hora seria autorizar um celular que amanhã se chama outra coisa.
+    const id=((await devIdResolver().catch(function(){ return null; }))||{}).id||getDeviceId();
+    const reg={nome:nome, por:u.nome, ts:Date.now(), ua:uaCurto()};
     if(DB){ DB.ref('auaulandia/aparelhos/'+id).set(reg).then(()=>{ try{ localStorage.setItem('zeluz_device_ok','1'); }catch(e){} /* silencioso de propósito: guardar no aparelho é conveniência — o dado de verdade mora no banco */ err.style.color='var(--crm-ok)'; err.textContent='✅ Aparelho "'+nome+'" autorizado! Agora a equipe entra normalmente neste celular.'; mostrarStatusDevice(); }).catch(e=>{ err.style.color='var(--crm-critico)'; err.textContent='Erro ao autorizar: '+e.message; }); }
     else { try{ localStorage.setItem('zeluz_device_ok','1'); }catch(e){} /* silencioso de propósito: guardar no aparelho é conveniência — o dado de verdade mora no banco */ err.style.color='var(--crm-atencao-text)'; err.textContent='Aparelho autorizado localmente (sem internet no momento).'; } }
   // ===== LOGIN DE POSTO PEDE O NOME DE QUEM ESTÁ USANDO (Adriana, 29/ago/2026) ========
@@ -13408,6 +13894,9 @@
       try{ audit('login-barrado',
         'aparelho não autorizado — '+(u.nome||'?')+' digitou a senha certa e não conseguiu entrar',
         { quem:(u.nome||'?'), role:(u.role||'?'),
+          // 16/set/2026: sem o TIPO do aparelho a Gestão via um id de 36 letras e não sabia
+          // se aquilo era o iPhone da Leticya ou um Android qualquer. Agora vem "iPhone · Safari".
+          ua:(typeof uaCurto==='function'?uaCurto():''),
           aparelho:(typeof getDeviceId==='function'?getDeviceId():'') }); }catch(e){} /* silencioso de propósito: o audit() tem bolso próprio e reenvia sozinho — falhar aqui não pode travar a ação */
       err.style.color='var(--crm-critico)';
       err.innerHTML='Este aparelho não está autorizado.<br>Peça à <strong>Gestão</strong> para autorizar (botão abaixo).';
@@ -29686,7 +30175,40 @@
         +'<div class="p-pessoa-ac">'+esc(resumo)+'</div></div>';
     }).join('')+'</div>';
   }
+  // ---- Celulares autorizados: nome, TIPO do aparelho e quem usou por último ----------
+  // O tipo vem de dois lugares: `ua`, gravado na hora de autorizar (quando quem autorizou
+  // estava com o celular na mão), e `visto.ua`, que o próprio aparelho grava toda vez que
+  // alguém entra nele. O segundo vale mais — é sempre o aparelho falando de si mesmo.
+  // Função pura: recebe o nó e devolve a lista pronta para desenhar.
+  function cfgAparelhosLista(no){
+    return Object.keys(no||{}).map(function(id){
+      var a=(no||{})[id]||{}, v=a.visto||{};
+      return { id:id, nome:a.nome||'(sem nome)', por:a.por||'', ts:a.ts||0,
+               tipo:String(v.ua||a.ua||''), quem:v.quem||'', visto:v.ts||0 };
+    }).sort(function(x,y){ return (y.visto||y.ts||0)-(x.visto||x.ts||0); });
+  }
+  function cfgAparelhosHTML(no){
+    var lista=cfgAparelhosLista(no);
+    if(!lista.length) return '<div class="hint">Nenhum celular autorizado ainda.</div>';
+    return '<div class="p-tl">'+lista.map(function(a){
+      var quando=a.visto?(' · último acesso em '+ciBRdata(new Date(a.visto).toISOString().slice(0,10))):'';
+      return '<div class="p-pessoa"><div class="p-pessoa-h"><b>'+esc(a.nome)+'</b>'
+        +(a.tipo?('<span class="p-pessoa-role">'+esc(a.tipo)+'</span>'):'')
+        +'</div>'
+        +'<div class="p-pessoa-time">'+esc((a.quem?('último a usar: '+a.quem):'ainda não foi usado'))+esc(quando)+'</div>'
+        +(a.por?('<div class="p-pessoa-ac">autorizado por '+esc(a.por)+'</div>'):'')
+        +'</div>';
+    }).join('')+'</div>';
+  }
+  function cfgAparelhosCarregar(){
+    var box=document.getElementById('cfgAparelhosWrap'); if(!box) return;
+    if(!DB){ box.innerHTML='<div class="hint">Sem internet agora — a lista de celulares vem do banco.</div>'; return; }
+    DB.ref('auaulandia/aparelhos').once('value').then(function(s){ box.innerHTML=cfgAparelhosHTML(s.val()||{}); })
+      .catch(function(e){ _logLeituraFalhou('auaulandia/aparelhos (Celulares autorizados)', e);
+        box.innerHTML='<div class="hint">Não consegui ler a lista de celulares agora. Abra a tela de novo em instantes.</div>'; });
+  }
   function cfgLoginsCarregar(){
+    try{ cfgAparelhosCarregar(); }catch(e){} /* silencioso de propósito: redesenho de tela — falhar não pode derrubar quem chamou */
     var box=document.getElementById('cfgLoginsWrap'); if(!box) return;
     var hoje=(typeof hojeISO==='function')?hojeISO():'';
     if(!DB||!hoje){ box.innerHTML=blocoPessoasFezHojeHTML(null); return; }
