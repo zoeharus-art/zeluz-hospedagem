@@ -254,7 +254,10 @@ function _mandarDocumento(chatId, legenda, base64, nomeArquivo) {
       muteHttpExceptions: true
     });
     var j = {}; try { j = JSON.parse(r.getContentText()); } catch (e) { j = {}; }
-    if (j.ok) return { ok: true };
+    // O app guarda um RECIBO da ficha de check-in (17/set/2026) e o message_id é a prova
+    // de que o arquivo entrou no grupo. Devolver o número aqui é de graça; quem ainda
+    // estiver na versão antiga da ponte só grava o recibo sem msgId — o app aceita null.
+    if (j.ok) return { ok: true, msgId: (j.result && j.result.message_id) || null };
     return { ok: false, erro: 'telegram recusou o documento: ' + String(r.getContentText()).slice(0, 160) };
   } catch (err) {
     return { ok: false, erro: 'falha ao montar o documento: ' + String(err) };

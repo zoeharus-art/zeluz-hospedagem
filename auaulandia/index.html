@@ -3280,22 +3280,16 @@
     #v-checkin .ci-alim-summary .def-ok{color:var(--crm-ok)}    /* Spa Dermoprotetor — box próprio (banho na saída) */
     #v-checkin .ci-spa-conf{display:flex;align-items:center;gap:9px;margin-top:10px;font-weight:600;color:var(--z-blue);cursor:pointer;font-size:14px}
     #v-checkin .ci-spa-conf input{width:20px;height:20px;flex:0 0 auto}
-    /* Área de impressão do PDF — invisível na tela, some no print o resto */
-    #ci-print{display:none}
-    @media print{
-      body *{visibility:hidden !important}
-      #ci-print,#ci-print *{visibility:visible !important}
-      #ci-print{display:block !important;position:absolute;left:0;top:0;width:100%;padding:24px 30px}
-      #ci-print .pf-h1{font-size:22px;font-weight:800;color:#234D67;margin-bottom:2px}
-      #ci-print .pf-sub{font-size:13px;color:#555;margin-bottom:14px}
-      #ci-print .pf-sec{margin-bottom:12px;border:1px solid #ddd;border-radius:10px;padding:12px 14px}
-      #ci-print .pf-sec h3{font-size:13px;color:#234D67;margin:0 0 6px;letter-spacing:.3px}
-      #ci-print .pf-med{border:2px solid #C0392B;border-radius:10px;padding:12px 14px;margin-bottom:12px}
-      #ci-print .pf-med h3{color:#C0392B;font-weight:800}
-      #ci-print .pf-med .pf-mrow{font-size:15px;font-weight:700;color:#111;margin-bottom:4px}
-      #ci-print .pf-sig-img{max-width:320px;border-bottom:2px solid #234D67}
-      #ci-print .pf-row{font-size:13.5px;color:#222;margin-bottom:3px}
-    }
+    /* ===== A IMPRESSÃO DO NAVEGADOR SAIU DE CENA (Adriana, 17/set/2026) =============
+       Havia aqui uma área de impressão e um bloco de estilo só para o papel, que escondiam o app inteiro com
+       `body *{visibility:hidden}` e deixavam visível só a folha. Esconder, porém, NÃO tira
+       o formulário do fluxo da página: ele continuava ocupando as folhas, e o PDF do
+       check-in saía com 8 páginas — as sete primeiras em branco — e sem as informações
+       novas (alergia, emergência, quadro de doses), porque aquela folha era montada por um
+       código ANTIGO, paralelo ao PDF aprovado.
+       A ficha agora é SEMPRE o PDF do layout aprovado (ciBuildPdfBlob → zPdfDocBlob),
+       gerado dentro do app e baixado no aparelho. Não existe mais window.print no sistema,
+       logo não existe mais CSS de impressão para manter. */
   </style>
   <section class="view" id="v-gestdia">
     <!-- Adriana, 31/ago/2026: "a tela para a Gestão verificar está péssima, confusa...
@@ -3530,17 +3524,18 @@
 
       <div class="card">
         <div class="ci-actions">
-          <button id="ciBtnSalvar" class="btn btn-primary" onclick="ciSalvar()">💾 Salvar no sistema</button>
-          <button class="btn btn-gold" onclick="ciGerarPDF()">🖨️ Gerar PDF</button>
+          <button id="ciBtnSalvar" class="btn btn-primary" onclick="ciSalvar()">💾 Salvar e gerar a ficha em PDF</button>
+          <button class="btn btn-gold" onclick="ciBaixarFichaPdf()">🖨️ Baixar a ficha em PDF</button>
           <button class="btn btn-wa" onclick="ciEnviarWhatsApp()">WhatsApp</button>
           <button class="btn" style="background:var(--z-cream-warm);color:var(--z-blue);border:1.5px solid var(--line)" onclick="ciEnviarEmail()">E-mail</button>
         </div>
         <div id="ci-status" class="rel-status" style="margin-top:10px"></div>
+        <!-- O 8º item do ciFaltando(): informativo, nunca trava o salvar. Fica à vista para
+             ninguém achar que precisa lembrar de gerar o PDF — o Salvar faz isso. -->
+        <div id="ciFichaAviso" style="margin-top:10px;font-size:13px;font-weight:700;color:var(--z-blue);background:rgba(222,180,40,.14);border:1.5px solid var(--z-gold);border-radius:12px;padding:10px 13px">A ficha em PDF é gerada e guardada ao salvar — ela também vai para o grupo da Gestão no Telegram. Você não precisa fazer nada.</div>
       </div>
     </div>
   </section>
-  <!-- Área de impressão do PDF do check-in (preenchida por JS) -->
-  <div id="ci-print"></div>
 
   <!-- ===== Onda 4 — CONFERÊNCIA CHECK-IN (Wandela) ===== -->
   <section class="view" id="v-conferencia">
@@ -13492,7 +13487,7 @@
   // inteira DEPOIS de a correção estar publicada — o aviso apareceu, ninguém tocou.
   // Agora o aparelho PARADO recarrega sozinho: trancado, com a aba escondida, na porta de
   // entrada ou 3 minutos sem ninguém tocar nele. Mão na tela = nunca recarrega.
-  const APP_VERSAO='2026-09-17-02';
+  const APP_VERSAO='2026-09-17-03';
   var RECARGA_PARADO_MS=3*60*1000, __versaoPublicada=null, __recargaTimer=null;
   function vigiarVersao(){
     if(!DB) return;
@@ -32036,8 +32031,18 @@
       if(!ciAssinaturaDataURL())
         F.push({t:'Falta a ASSINATURA com o dedo no quadro. Se ninguém veio, marque "O tutor não veio".', f:'ciSig'});
     }
+    // 8º item — INFORMATIVO, nunca trava (Adriana, 17/set/2026). A ficha em PDF passou a ser
+    // obrigatória, mas quem faz o check-in não tem de lembrar dela: o Salvar gera, baixa no
+    // aparelho e manda ao grupo. Este item entra na lista para a regra existir num lugar só;
+    // o ciSalvar() separa `info` dos bloqueios (ciFichaInfo abaixo é a mesma frase da tela).
+    F.push({t:CI_FICHA_INFO, f:'ciFichaAviso', info:true});
     return F;
   }
+  // A frase é UMA só — a tela (#ciFichaAviso) e o 8º item do "o que falta" dizem o mesmo.
+  var CI_FICHA_INFO='A ficha em PDF é gerada e guardada ao salvar — não precisa fazer nada.';
+  // O que de fato impede o salvamento. `info` fica de fora: item informativo que bloqueia é
+  // beco sem saída (a pessoa não consegue "resolver" um aviso).
+  function ciFaltandoBloqueios(){ return ciFaltando().filter(function(x){ return x && !x.info; }); }
   // ===== O REMÉDIO DA ESTADIA ANTERIOR (Adriana, 29/ago/2026) ======================
   // "Na última hospedagem o Arthur tomava Apoquel — não toma mais?"
   //
@@ -32235,7 +32240,7 @@
     }
     if(!ciHosp){ zAlertao('O CHECK-IN NÃO FOI SALVO',['Nenhum FILHOt está aberto. Volte, toque no peludinho e refaça o check-in.']); return; }
     const dados=ciColetarFicha();
-    const _faltas=ciFaltando();
+    const _faltas=ciFaltandoBloqueios();
     if(_faltas.length){
       // Adriana, 14/ago/2026: "eu tive que ficar procurando, foi uma merda."
       // Antes: um alerta listava o que faltava, a pessoa fechava — e o texto sumia junto.
@@ -32319,6 +32324,7 @@
     });
   }
   // Desabilita o botão enquanto grava (2 toques = 2 check-ins).
+  var CI_BTN_SALVAR_TXT='💾 Salvar e gerar a ficha em PDF';
   var __ciTravadoDesde=0, __ciTimerPreso=null;
   function __ciTravar(on){
     __ciSalvando=!!on;
@@ -32338,8 +32344,11 @@
         try{ if(typeof audit==='function') audit('checkin-bloqueado','salvamento sem resposta do banco em 25s',{pet:(typeof ciHosp!=='undefined'&&ciHosp&&ciHosp.nome)||''}); }catch(e){} /* silencioso de propósito: o audit() tem bolso próprio e reenvia sozinho — falhar aqui não pode travar a ação */
       }, 25000);
     }
+    // O rótulo mora numa constante: quando ele mudou para "Salvar e gerar a ficha em PDF"
+    // (17/set/2026) esta busca por texto deixaria de achar o botão — e a trava anti-duplo-toque
+    // pararia de funcionar calada, que é o pior defeito possível aqui.
     try{ document.querySelectorAll('button').forEach(function(b){
-      if(/Salvar no sistema/i.test(b.textContent||'')){ b.disabled=!!on; b.style.opacity=on?'.55':''; b.textContent=on?'⏳ Salvando…':'💾 Salvar no sistema'; }
+      if(b.id==='ciBtnSalvar' || new RegExp(CI_BTN_SALVAR_TXT.replace(/^[^A-Za-zÀ-ÿ]+/,''),'i').test(b.textContent||'')){ b.disabled=!!on; b.style.opacity=on?'.55':''; b.textContent=on?'⏳ Salvando…':CI_BTN_SALVAR_TXT; }
     }); }catch(e){} /* silencioso de propósito: guarda defensiva — falhar aqui não pode interromper quem chamou */
   }
   // Vai ao banco (fonte da verdade) procurar estadia ATIVA deste FILHOt.
@@ -32555,42 +32564,60 @@
         {pet:ciHosp.nome||'',entrada:dados.entrada,meds:Object.keys(meds).length,quem:(P.correcao&&P.correcao.quem)||undefined});
       if(typeof carregarAgendaMedTodos==='function') carregarAgendaMedTodos();
       if(st){ st.style.color='var(--crm-ok)'; st.textContent='✅ Salvo.'; }
+      // ===== A FICHA EM PDF É OBRIGATÓRIA (Adriana, 17/set/2026) ====================
+      // O diálogo de sucesso só aparece DEPOIS de a ficha ser gerada, baixada no aparelho e
+      // entregue ao grupo da Gestão. E ele só afirma "enviada" quando HOUVER recibo: sem
+      // recibo, o que aparece é o cartaz vermelho mandando mandar o PDF pelo celular.
+      // Os efeitos colaterais (limpar o modo corrigir, o audit da remoção ignorada) rodam
+      // aqui, na hora — só o diálogo espera o recibo.
+      const _pet=(ciHosp.nome||'');
+      const _petTit=_pet.toUpperCase();
+      const _estadiaTxt=(_pet||'O FILHOt')+' — estadia de '+ciBRdata(dados.entrada)+' até '+(dados.saida?ciBRdata(dados.saida):'data a confirmar')+'.';
+      const _eid=(modo==='novo')?ref.key:estadiaId;
+      let _tit='', _linhas=[], _rodape='', _botao='Fechar';
       if(modo==='corrigir'){
         ciCorrigindoId=null; window.__ciAntes=null;
-        zAlertao('✅ CORREÇÃO SALVA — '+((ciHosp.nome||'').toUpperCase()),
-          ((P.correcao&&P.correcao.diff)||['A ficha foi atualizada.']),
-          {ok:true, botao:'Fechar',
-           rodape:'Motivo: '+((P.correcao&&P.correcao.motivo)||'—')+' · registrado por '+((P.correcao&&P.correcao.quem)||'—')+'. '
-                 +((P.chegouNovo&&P.chegouNovo.length)
-                    ? ('CHEGOU MATERIAL NOVO ('+P.chegouNovo.join(', ')+'): voltou para a Conferência para alguém conferir o que entrou.')
-                    : 'RESOLVIDO — não volta para a Conferência. A solução ficou anexada e segue para o Check-out.')
-                 +' O alarme da medicação já foi refeito.'});
+        _tit='✅ CORREÇÃO SALVA — '+_petTit;
+        _linhas=((P.correcao&&P.correcao.diff)||['A ficha foi atualizada.']).slice();
+        _rodape='Motivo: '+((P.correcao&&P.correcao.motivo)||'—')+' · registrado por '+((P.correcao&&P.correcao.quem)||'—')+'. '
+               +((P.chegouNovo&&P.chegouNovo.length)
+                  ? ('CHEGOU MATERIAL NOVO ('+P.chegouNovo.join(', ')+'): voltou para a Conferência para alguém conferir o que entrou.')
+                  : 'RESOLVIDO — não volta para a Conferência. A solução ficou anexada e segue para o Check-out.')
+               +' O alarme da medicação já foi refeito.';
       }
       else if(modo==='acrescentar'){
         const _nr=(P.naoRemovidos||[]);
         if(_nr.length){
           // A remoção NÃO acontece no acrescentar. Ela precisa saber agora, e não descobrir
           // depois na Conferência que o item continua lá.
-          zAlertao('⚠️ ACRESCENTADO — MAS NADA FOI REMOVIDO',
-            (novosItens.length?novosItens:[]).concat(
-              ['———', 'Estes itens você tirou da tela, mas eles CONTINUAM no check-in:']
-            ).concat(_nr.map(function(x){ return '• '+x; })),
-            {botao:'Entendi',
-             rodape:'Esta tela só ACRESCENTA — ela nunca apaga, para não perder pertence do tutor. Para TIRAR um item de verdade, abra o check-in em CORRIGIR: lá você diz o motivo, assina, e o item sai.'});
-          if(typeof audit==='function') audit('checkin-remocao-ignorada','tentou remover no modo acrescentar: '+_nr.join(' | '),{pet:ciHosp.nome||''});
+          _tit='⚠️ ACRESCENTADO — MAS NADA FOI REMOVIDO';
+          _botao='Entendi';
+          _linhas=(novosItens.length?novosItens:[]).concat(
+            ['———', 'Estes itens você tirou da tela, mas eles CONTINUAM no check-in:']
+          ).concat(_nr.map(function(x){ return '• '+x; }));
+          _rodape='Esta tela só ACRESCENTA — ela nunca apaga, para não perder pertence do tutor. Para TIRAR um item de verdade, abra o check-in em CORRIGIR: lá você diz o motivo, assina, e o item sai.';
+          if(typeof audit==='function') audit('checkin-remocao-ignorada','tentou remover no modo acrescentar: '+_nr.join(' | '),{pet:_pet});
         } else {
-          zAlertao('✅ ACRESCENTADO AO CHECK-IN DE '+((ciHosp.nome||'').toUpperCase()),
-            novosItens.length?novosItens:['A ficha foi atualizada.'],
-            {ok:true, botao:'Fechar', rodape:novosItens.length?'Voltou para a Conferência: a conferente vai ver o que entrou de novo e conferir.':'Nada novo para conferir.'});
+          _tit='✅ ACRESCENTADO AO CHECK-IN DE '+_petTit;
+          _linhas=(novosItens.length?novosItens:['A ficha foi atualizada.']).slice();
+          _rodape=novosItens.length?'Voltou para a Conferência: a conferente vai ver o que entrou de novo e conferir.':'Nada novo para conferir.';
         }
       } else {
-        zAlertao('✅ CHECK-IN SALVO',
-          [(ciHosp.nome||'O FILHOt')+' — estadia de '+ciBRdata(dados.entrada)+' até '+(dados.saida?ciBRdata(dados.saida):'data a confirmar')+'.',
-           'Já aparece na Conferência e no Plantão.',
-           'O resumo e a ficha em PDF foram mandados para o grupo do plantão no Telegram.'],
-          {ok:true, botao:'Fechar'});
-        try{ ciMandarTelegram(); }catch(e){ _logFalhaGrav('telegram do check-in', e); }
+        _tit='✅ CHECK-IN SALVO';
+        _linhas=[_estadiaTxt, 'Já aparece na Conferência e no Plantão.'];
       }
+      ciFichaObrigatoria(_eid, _pet).then(function(f){
+        if(f.ok){
+          zAlertao(_tit, _linhas.concat([ciFichaLinhaOk(f)]),
+            {ok:(_tit.indexOf('⚠')<0), botao:_botao, rodape:_rodape||undefined});
+          return;
+        }
+        // NÃO afirmar envio. O título é a ordem que a Adriana ditou.
+        zAlertao('⚠ A FICHA NÃO CHEGOU AO TELEGRAM — MANDE O PDF BAIXADO PELO SEU CELULAR AGORA',
+          [(modo==='novo')?('O check-in ESTÁ SALVO. '+_estadiaTxt):('A alteração no check-in de '+(_pet||'este FILHOt')+' ESTÁ SALVA.')]
+            .concat(_linhas).concat(ciFichaLinhasFalha(f)),
+          {botao:'Vou mandar agora', rodape:_rodape||undefined});
+      });
     }).catch(function(e){
       __ciTravar(false);
       const msg=(e&&e.message)||String(e);
@@ -32617,37 +32644,112 @@
     if(e.nivel) return ' — veio: '+e.nivel;
     return '';
   }
-  // ===== O GRUPO DO PLANTÃO RECEBE A FICHA — Adriana, 31/ago/2026 =================
-  // "Enviar esse arquivo imediatamente para o grupo no Telegram de hospedagem."
-  // Sai sozinho ao salvar o check-in: primeiro o resumo detalhado em texto (leitura
-  // imediata no grupo), depois o PDF da ficha como arquivo. Falha nunca é silêncio:
-  // o texto cai na fila de reenvio da medicação, que já tenta de novo sozinha.
-  function ciMandarTelegram(){
+  // ===== A FICHA EM PDF É OBRIGATÓRIA (Adriana, 17/set/2026) ======================
+  // "quero o layout aprovado (1 página) e que salvar o PDF seja OBRIGATÓRIO."
+  //
+  // Antes o envio ao Telegram era um "se der": disparava DEPOIS do diálogo de sucesso, sem
+  // ninguém esperar resposta — e o diálogo AFIRMAVA "a ficha foi mandada para o grupo"
+  // mesmo com a ponte fora do ar. Silêncio que virava falsa confirmação.
+  //
+  // Agora salvar só termina depois de três coisas, nesta ordem:
+  //   1. GERAR a ficha com o montador aprovado (ciBuildPdfBlob);
+  //   2. BAIXAR o arquivo no aparelho de quem fez o check-in;
+  //   3. ENTREGAR ao grupo da Gestão no Telegram e ESPERAR o recibo.
+  // Sem recibo, o diálogo NÃO diz que foi enviado: aparece o cartaz vermelho mandando a
+  // pessoa mandar o PDF baixado pelo celular dela agora, e o aviso fica na fila
+  // (med-tg-fila, a mesma com lock, teto de 5 tentativas e validade de 12 h).
+  //
+  // O ARQUIVO NUNCA VAI PARA O BANCO. Base64 no banco foi o que custou 695 MB num dia
+  // (08/set/2026). No banco fica só o RECIBO: nome, quando, quem, páginas, bytes e o que
+  // o Telegram respondeu — em auaulandia/estadias/{id}/pdf.
+  var CI_TG_PRAZO=20000;   // a ponte é um Apps Script: sem prazo, o salvar ficaria pendurado
+  function ciFichaAoTelegram(blob, nomeArq, pet){
+    if(typeof tgAvisar!=='function') return Promise.resolve({ok:false, erro:'este aparelho não tem a ponte do Telegram'});
+    var _pet=String(pet||'');
+    // 1) o resumo em TEXTO — leitura imediata no grupo. Não é o recibo (o recibo é o
+    //    arquivo), mas a falha dele também vai para a fila de reenvio.
+    var texto=''; try{ texto=ciResumoTexto(); }catch(e){ texto=''; }
+    var _msgCk='📋 <b>CHECK-IN — '+medTgEsc(_pet)+'</b>\n\n'+medTgEsc(texto||'(não consegui montar o resumo — leia a ficha em anexo)');
     try{
-      var texto='';
-      try{ texto=ciResumoTexto(); }catch(e){ texto=''; }
-      if(!texto || typeof tgAvisar!=='function') return;
-      var nomeArq='checkin-'+String((ciHosp&&ciHosp.nome)||'filhot').replace(/[^a-zA-Z0-9]+/g,'-')+'-'+((typeof hojeISO==='function')?hojeISO():'')+'.pdf';
-      var _msgCk='📋 <b>CHECK-IN — '+medTgEsc((ciHosp&&ciHosp.nome)||'')+'</b>\n\n'+medTgEsc(texto);
       tgAvisar({grupo:'gestao', texto:_msgCk}).then(function(r){
         if(!(r&&r.ok)) medTgGuardar(_msgCk, (r&&r.erro)||'a ponte não respondeu');
       }).catch(function(e){ medTgGuardar(_msgCk, String((e&&e.message)||e)); });
-      // o PDF vai em seguida — e se a ponte ainda for a versão sem sendDocument, o grupo
-      // já recebeu o conteúdo em texto acima: nada se perde
-      var blob=null; try{ blob=ciBuildPdfBlob(); }catch(e){ blob=null; }
-      if(blob && typeof FileReader!=='undefined'){
-        var fr=new FileReader();
-        fr.onload=function(){
-          var b64=String(fr.result||'').replace(/^data:[^;]+;base64,/,'');
-          if(!b64) return;
-          tgAvisar({grupo:'gestao', documentoBase64:b64, nomeArquivo:nomeArq,
-                    texto:'📎 Ficha de check-in — '+((ciHosp&&ciHosp.nome)||'')})
-            .catch(function(e){ _logFalhaGrav('PDF do check-in para o grupo', e); });
-        };
-        fr.readAsDataURL(blob);
+    }catch(e){ medTgGuardar(_msgCk, String((e&&e.message)||e)); }
+    // 2) a FICHA em PDF — é DELA que sai o recibo de que o diálogo de sucesso depende.
+    if(!blob) return Promise.resolve({ok:false, erro:'o PDF não foi gerado neste aparelho'});
+    if(typeof FileReader==='undefined') return Promise.resolve({ok:false, erro:'este aparelho não sabe ler o arquivo para enviar'});
+    var envio=new Promise(function(resolve){
+      var fr=new FileReader();
+      fr.onerror=function(){ resolve({ok:false, erro:'não consegui ler o PDF para enviar'}); };
+      fr.onload=function(){
+        var b64=String(fr.result||'').replace(/^data:[^;]+;base64,/,'');
+        if(!b64){ resolve({ok:false, erro:'o PDF saiu vazio na leitura'}); return; }
+        tgAvisar({grupo:'gestao', documentoBase64:b64, nomeArquivo:nomeArq,
+                  texto:'📎 Ficha de check-in — '+medTgEsc(_pet)})
+          .then(function(r){
+            if(r&&r.ok) resolve({ok:true, msgId:(r.msgId||r.message_id||null)});
+            else resolve({ok:false, erro:(r&&r.erro)||'a ponte não respondeu'});
+          })
+          .catch(function(e){ resolve({ok:false, erro:String((e&&e.message)||e)}); });
+      };
+      try{ fr.readAsDataURL(blob); }catch(e){ resolve({ok:false, erro:String((e&&e.message)||e)}); }
+    });
+    var prazo=new Promise(function(resolve){ setTimeout(function(){ resolve({ok:false, erro:'a ponte do Telegram não respondeu em 20 segundos'}); }, CI_TG_PRAZO); });
+    return Promise.race([envio, prazo]);
+  }
+  // Só o RECIBO vai ao banco — nunca o arquivo.
+  function ciFichaGuardarRecibo(estadiaId, rec){
+    if(!DB || !estadiaId) return Promise.resolve(false);
+    return DB.ref('auaulandia/estadias/'+estadiaId+'/pdf').set(rec).then(function(){ return true; })
+      .catch(function(e){ _logFalhaGrav('recibo da ficha em PDF', e); return false; });
+  }
+  // O passo obrigatório. Devolve SEMPRE — nunca rejeita — {ok, nome, paginas, baixou, recibo}.
+  function ciFichaObrigatoria(estadiaId, pet){
+    var st=document.getElementById('ci-status');
+    var _pet=String(pet||(ciHosp&&ciHosp.nome)||'');
+    var nome=ciFichaNomeArq(_pet);
+    var blob=null, erroGerar='';
+    try{ blob=ciBuildPdfBlob(); }catch(e){ erroGerar=(e&&e.message)||String(e); _logFalhaGrav('montar a ficha em PDF (ao salvar)', e); }
+    var baixou=blob?ciBaixarBlob(blob, nome):false;
+    if(st){ st.style.color='var(--muted)'; st.textContent='Salvo. Gerando a ficha em PDF e mandando ao grupo da Gestão…'; }
+    return ciFichaAoTelegram(blob, nome, _pet).then(function(tg){
+      tg=tg||{ok:false, erro:'sem resposta da ponte'};
+      var rec={ nome:nome, ts:Date.now(), quem:(typeof quemSou==='function'?quemSou():'-'),
+                paginas:((blob&&blob.paginas)||0), bytes:((blob&&(blob.bytes||blob.size))||0),
+                baixado:!!baixou, tg:{ok:!!tg.ok} };
+      if(tg.msgId) rec.tg.msgId=tg.msgId;
+      if(!tg.ok) rec.tg.erro=String(tg.erro||'a ponte não respondeu').slice(0,180);
+      if(erroGerar) rec.erro=String(erroGerar).slice(0,180);
+      if(!tg.ok){
+        // Rastro na MESMA fila da medicação (lock + teto + validade). A fila só carrega
+        // TEXTO — arquivo não pode entrar no banco — então o texto diz onde o PDF está.
+        medTgGuardar('⚠ <b>A FICHA EM PDF DO CHECK-IN NÃO CHEGOU</b>\n'
+          +medTgEsc(_pet)+' — arquivo <b>'+medTgEsc(nome)+'</b>'
+          +(baixou?(' está baixado no aparelho de '+medTgEsc(rec.quem)+'.'):' NÃO foi baixado em aparelho nenhum.')
+          +'\nMotivo: '+medTgEsc(rec.tg.erro),
+          rec.tg.erro);
       }
-      try{ if(typeof audit==='function') audit('checkin-telegram','mandou resumo e ficha ao grupo do plantão',{pet:(ciHosp&&ciHosp.nome)||''}); }catch(e){ /* rastro, não trava */ }
-    }catch(e){ _logFalhaGrav('envio do check-in ao Telegram', e); }
+      if(typeof audit==='function') audit('checkin-ficha-pdf',
+        (tg.ok?'ficha entregue ao grupo':'ficha NÃO chegou ao grupo: '+rec.tg.erro)
+        +' · '+nome+' · '+rec.paginas+' página(s) · '+rec.bytes+' bytes'+(baixou?' · baixada no aparelho':' · NÃO baixada'),
+        {pet:_pet});
+      return ciFichaGuardarRecibo(estadiaId, rec).then(function(){
+        return {ok:!!tg.ok, nome:nome, paginas:rec.paginas, baixou:!!baixou, recibo:rec, erroGerar:erroGerar};
+      });
+    });
+  }
+  // As frases do cartaz. Ficam aqui para o diálogo de sucesso e o de falha nunca divergirem
+  // no que afirmam — a regra "só diz enviada quando houver recibo" mora num lugar só.
+  function ciFichaLinhasFalha(f){
+    return [ f.baixou
+        ? ('A ficha em PDF está BAIXADA neste celular: procure o arquivo "'+f.nome+'" em Downloads e mande no grupo da Gestão agora.')
+        : ('E a ficha em PDF NÃO foi baixada neste aparelho: toque em "Baixar a ficha em PDF" na tela do check-in e mande o arquivo no grupo.'),
+      'Motivo: '+((f.recibo&&f.recibo.tg&&f.recibo.tg.erro)||f.erroGerar||'a ponte do Telegram não respondeu')+'.',
+      'O aviso ficou na fila e o sistema tenta o TEXTO sozinho — mas o ARQUIVO só vai pelo seu celular.' ];
+  }
+  function ciFichaLinhaOk(f){
+    var p=f.paginas?(f.paginas+(f.paginas===1?' página':' páginas')):'';
+    return 'Ficha em PDF'+(p?(' ('+p+')'):'')+': baixada neste aparelho e ENTREGUE ao grupo da Gestão no Telegram.';
   }
   // ---- Resumo em texto (WhatsApp / e-mail) ----
   function ciBRdata(iso){ if(!iso) return '—'; const p=iso.split('-'); return p.length===3?(p[2]+'/'+p[1]+'/'+p[0]):iso; }
@@ -32680,7 +32782,14 @@
   var CI_PDF_TROCA={0x2014:'-',0x2013:'-',0x2018:"'",0x2019:"'",0x201C:'"',0x201D:'"',0x2026:'...',0x2022:'-',0x00A0:' '};
   function ciPdfLatin1(str){ let out=''; const s=String(str); for(let i=0;i<s.length;i++){ const c=s.codePointAt(i); if(c>0xFFFF) i++; if(CI_PDF_TROCA[c]!=null){ out+=CI_PDF_TROCA[c]; continue; } out += (c<=0xFF? String.fromCharCode(c) : '?'); } return out; }
   function ciPdfEsc(s){ return ciPdfLatin1(s).replace(/\\/g,'\\\\').replace(/\(/g,'\\(').replace(/\)/g,'\\)'); }
-  function ciPdfFileName(){ const nm=((ciHosp&&ciHosp.nome)?ciHosp.nome:'checkin').replace(/[^a-zA-Z0-9]+/g,'-').replace(/^-+|-+$/g,''); return 'checkin-'+(nm||'filhot')+'-'+ciHoje()+'.pdf'; }
+  // O nome do arquivo que aparece em Downloads. Um lugar só: o botão da tela, o salvar
+  // obrigatório, a reemissão e o anexo do Telegram usam o MESMO nome — é por ele que a
+  // consultora acha o PDF no celular quando o grupo não recebeu.
+  function ciFichaNomeArq(nome){
+    var nm=String(nome||'checkin').replace(/[^a-zA-Z0-9]+/g,'-').replace(/^-+|-+$/g,'');
+    return 'Checkin-'+(nm||'filhot')+'-'+ciHoje()+'.pdf';
+  }
+  function ciPdfFileName(){ return ciFichaNomeArq((ciHosp&&ciHosp.nome)?ciHosp.nome:'checkin'); }
   function ciAssinaturaJpeg(){
     try{
       const c=document.getElementById('ciSig'); if(!c||!CI_SIG.hasInk) return null;
@@ -32867,18 +32976,65 @@
     for(var j=0;j<objs.length;j++){ xref += (('0000000000'+offsets[j]).slice(-10))+' 00000 n \n'; }
     push(xref);
     push('trailer\n<< /Size '+(objs.length+1)+' /Root 1 0 R >>\nstartxref\n'+xrefOff+'\n%%EOF');
-    return new Blob(chunks,{type:'application/pdf'});
+    // O recibo da ficha precisa dizer QUANTAS páginas e quantos bytes saíram — foi exatamente
+    // isso que a Adriana viu dar errado ("8 páginas e sem as informações"). O número mora aqui,
+    // onde ele é conhecido de verdade, e viaja pregado no Blob. Os bytes do PDF não mudam.
+    var _blob=new Blob(chunks,{type:'application/pdf'});
+    try{ _blob.paginas=n; _blob.bytes=len; }catch(e){ /* Blob selado em algum navegador: o recibo sai sem o número e o PDF continua igual */ }
+    return _blob;
   }
 
   // A ficha em PDF, agora sobre o motor com a cara da marca. O conteúdo é o mesmo que a
   // recepção confere na tela — detalhado, com horários e a quantidade que veio.
-  function ciBuildPdfBlob(){
-    const d=ciColetarFicha(); const meds=Object.values(ciColetarMeds());
-    const assina=(document.getElementById('ciAssinaNome').value||'').trim();
-    const a=d.ficha.alim||{}; const spa=d.ficha.spa||{};
+  // ===== A FICHA TEM UM MONTADOR SÓ (Adriana, 17/set/2026) =========================
+  // Antes existiam DOIS códigos de ficha: este (o layout aprovado, com logo, alergia em
+  // vermelho, quadro de doses e rodapé "página X de Y") e um outro, antigo, que ia para a
+  // impressão do navegador — e era o antigo que saía pelos botões "Gerar PDF" e "Reemitir
+  // ficha". Agora o montador é um só; o que muda é a FONTE dos dados:
+  //   ciFichaFonteTela()          — o formulário do check-in, como está na tela agora
+  //   ciFichaFonteEstadia(est,ex) — a estadia já SALVA no banco (reemissão)
+  // Os dois entregam o mesmo formato, então a reemissão sai idêntica ao original.
+  function ciFichaFonteTela(){
+    return {
+      hosp: ciHosp,
+      d: ciColetarFicha(),
+      meds: Object.values(ciColetarMeds()),
+      assina: (document.getElementById('ciAssinaNome').value||'').trim(),
+      ex: (typeof extraDoHosp==='function'&&ciHosp)?(extraDoHosp(ciHosp)||{}):{},
+      quemDeixou: ((document.getElementById('ciQuemDeixou')||{}).value||'').trim(),
+      assinatura: ciAssinaturaJpeg(),
+      foto: CI_FOTO_JPEG
+    };
+  }
+  // A ficha da estadia SALVA. A assinatura gravada é um dataURL de PNG (o quadro do dedo) e
+  // o montador do PDF só embute JPEG — por isso a reemissão sai com o quadro de assinatura
+  // trazendo o NOME de quem assinou, e não a rabisco. É o mesmo que a folha antiga fazia
+  // quando não havia imagem, e continua valendo como documento porque o original assinado
+  // está guardado na estadia.
+  function ciFichaFonteEstadia(est, ex){
+    est=est||{};
+    return {
+      hosp: {nome:est.nome||'', raca:est.raca||'', tutor:est.tutor||''},
+      d: { entrada:est.entrada||'', saida:est.saida||'', saidaPer:est.saidaPer||'',
+           ficha:est.ficha||{}, pertences:est.pertences||[] },
+      meds: est.medicacao||[],
+      assina: est.assinado_por||'',
+      ex: ex||{},
+      quemDeixou: est.quemDeixou||'',
+      assinatura: null,
+      foto: null
+    };
+  }
+  function ciBuildPdfBlob(){ return ciFichaPdfBlob(ciFichaFonteTela()); }
+  function ciFichaPdfBlob(F){
+    F=F||{};
+    const H=F.hosp||{};
+    const d=F.d||{}; const meds=F.meds||[];
+    const assina=F.assina||'';
+    const a=(d.ficha&&d.ficha.alim)||{}; const spa=(d.ficha&&d.ficha.spa)||{};
     const S=[];
     // --- estadia ---
-    var exH=(typeof extraDoHosp==='function'&&ciHosp)?(extraDoHosp(ciHosp)||{}):{};
+    var exH=F.ex||{};
     // --- ALERGIA E RESTRIÇÃO primeiro de tudo (Adriana, 01/set): "isso tem que
     //     aparecer no cabeçalho em vermelho e um tópico só para isso" ---
     var LN=[];
@@ -32888,7 +33044,7 @@
     if(_eaR) LN.push({k:'Enriquecimento Ambiental', v:_eaR});
     if(LN.length) S.push({titulo:'ALERGIA E RESTRIÇÃO — O QUE ELE NÃO PODE', vermelha:true, linhas:LN});
     var _per={'Manhã':'busca pela manhã','Tarde':'busca à tarde','Noite':'busca à noite'}[d.saidaPer]||'';
-    var _qd=((document.getElementById('ciQuemDeixou')||{}).value||'').trim();
+    var _qd=String(F.quemDeixou||'').trim();
     S.push({titulo:'ESTADIA', linhas:[
       {k:'Entrada', v:ciBRdata(d.entrada)+(a.dias?('  ('+a.dias+' dia(s))'):'')},
       {k:'Saída', v:(d.saida?ciBRdata(d.saida):'a confirmar')+(_per?('  ·  '+_per):'')}
@@ -32899,7 +33055,7 @@
       var LE=[];
       // Telefone do TUTOR é sigiloso (Adriana, 01/set) — não sai no PDF. O do
       // veterinário e o da clínica são justamente para emergência: ficam.
-      LE.push({k:'Tutor', v:((ciHosp&&ciHosp.tutor)||'—')});
+      LE.push({k:'Tutor', v:(H.tutor||'—')});
       if(ex.tutor2) LE.push({k:'Tutor 2', v:ex.tutor2});
       LE.push({k:'Veterinário(a)', v: ex.vetNome?((ex.vetNome)+(ex.vetTel?('  ·  '+ex.vetTel):'')):'não informado — completar na ficha'});
       if(ex.vetClinica||ex.vetEnd) LE.push({k:'Clínica', v:(ex.vetClinica||'—')+(ex.vetEnd?('  ·  '+ex.vetEnd):'')});
@@ -32958,7 +33114,7 @@
         {tab:{cab:['Horário','Medicamento','Dose','Como veio · período'], pesos:[0.62,1.35,1.05,1.75], rows:rowsMed}},
         {t:'Cada linha do quadro é UMA dose. O mesmo remédio aparece em todos os horários em que deve ser dado.', cinza:true}
       ];
-      if(d.ficha.medObs) LMx.push({t:'Observação: '+d.ficha.medObs});
+      if(d.ficha&&d.ficha.medObs) LMx.push({t:'Observação: '+d.ficha.medObs});
       S.push({titulo:'MEDICAÇÃO E SUPLEMENTOS — DOSE A DOSE, POR HORÁRIO', vermelha:true, linhas:LMx});
     }
     // --- banho na saída ---
@@ -32967,11 +33123,11 @@
       {k:'Dia da saída', v:(d.saida?ciBRdata(d.saida):'a confirmar')}
     ]});
     // --- observações gerais do check-in ---
-    if(d.ficha.obsGeral){
+    if(d.ficha&&d.ficha.obsGeral){
       S.push({titulo:'OBSERVAÇÕES', linhas:[{t:d.ficha.obsGeral}]});
     }
     // --- pertences, compactos ---
-    if(d.pertences.length){
+    if((d.pertences||[]).length){
       S.push({titulo:'PERTENCES ('+d.pertences.length+')', linhas:[
         {t:d.pertences.map(function(p){ return p.nome+(p.spec?(' ('+p.spec+')'):''); }).join('  ·  ')}
       ]});
@@ -32979,14 +33135,25 @@
     var _alerta=[exH.alergia?('ALERGIA: '+exH.alergia):'', exH.restricao?('NÃO PODE: '+exH.restricao):''].filter(Boolean).join('  ·  ');
     return zPdfDocBlob({
       titulo:'Zêluz · AuAulândia — Ficha de Check-in',
-      sub:(ciHosp.nome||'')+(ciHosp.raca?(' · '+ciHosp.raca):'')+(ciHosp.tutor?(' · Tutor: '+ciHosp.tutor):'')+'  —  emitida em '+ciBRdata((typeof hojeISO==='function')?hojeISO():''),
+      sub:(H.nome||'')+(H.raca?(' · '+H.raca):'')+(H.tutor?(' · Tutor: '+H.tutor):'')+'  —  emitida em '+ciBRdata((typeof hojeISO==='function')?hojeISO():''),
       alertaCab:_alerta.slice(0,110),
       secoes:S
-    },{ assinatura: ciAssinaturaJpeg(), assinaNome: assina, foto: CI_FOTO_JPEG });
+    },{ assinatura: F.assinatura||null, assinaNome: assina, foto: F.foto||null });
   }
   // (o montador antigo da ficha foi substituído pelo zPdfDocBlob acima — 31/ago/2026;
   //  o histórico do git guarda a versão anterior)
-  function ciBaixarBlob(blob,nome){ try{ const u=URL.createObjectURL(blob); const a=document.createElement('a'); a.href=u; a.download=nome; document.body.appendChild(a); a.click(); setTimeout(function(){ try{ document.body.removeChild(a); }catch(e){} /* silencioso de propósito: guarda defensiva — falhar aqui não pode interromper quem chamou */ URL.revokeObjectURL(u); },1500); }catch(e){} /* silencioso de propósito: enfeite de tela (foco, rolagem, mídia) — falhar não muda dado nenhum */ }
+  // Baixa no aparelho e DIZ se conseguiu. O retorno passou a importar em 17/set/2026: o
+  // recibo da ficha grava se o arquivo ficou guardado no celular de quem fez o check-in, e
+  // o cartaz de falha do Telegram só pode mandar "procure em Downloads" se isso for verdade.
+  function ciBaixarBlob(blob,nome){
+    if(!blob) return false;
+    try{
+      const u=URL.createObjectURL(blob); const a=document.createElement('a');
+      a.href=u; a.download=nome; document.body.appendChild(a); a.click();
+      setTimeout(function(){ try{ document.body.removeChild(a); }catch(e){} /* silencioso de propósito: guarda defensiva — falhar aqui não pode interromper quem chamou */ URL.revokeObjectURL(u); },1500);
+      return true;
+    }catch(e){ return false; }
+  }
 
   // ---- WhatsApp: manda o PDF como ANEXO (Web Share API com arquivo) ----
   function ciEnviarWhatsApp(){
@@ -33022,110 +33189,104 @@
     if(st){ st.style.color='var(--crm-atencao-text)'; st.textContent=(blob?('📎 PDF "'+nome+'" baixado e '):'')+'Gmail aberto — anexe o PDF ao e-mail. (Anexar automático pela URL não é possível.)'; }
   }
 
-  // ===== IMPRESSÃO — BLOCO DE ASSINATURA E ABERTURA (Fase 1, passo 3, 25/ago/2026) =====
-  // O quadro "Assinatura do tutor" da folha impressa e a abertura da janela de impressão
-  // são escritos uma vez só. Usam o mesmo #ci-print as três folhas: check-in, reemissão
-  // da ficha e check-out.
-  function zPrintAssinaturaHtml(sig, assina){ return '<div class="pf-sec"><h3>Assinatura do tutor</h3>'+(sig?('<img class="pf-sig-img" src="'+sig+'">'):'<div class="pf-row">(sem assinatura)</div>')+'<div class="pf-row" style="margin-top:6px">'+esc(assina||'—')+'</div></div>'; }
-  function zPrintAbrir(h){ var pr=document.getElementById('ci-print'); if(pr) pr.innerHTML=h; setTimeout(function(){ window.print(); },60); }
-
-  // ---- PDF via window.print (offline, sem lib) ----
-  function ciGerarPDF(){
-    if(!ciHosp) return;
-    // Blindagem: NADA pode deixar o PDF em branco. Qualquer erro ao montar os detalhes é
-    // capturado, o PDF sai com o cabeçalho + o que deu certo, e a mensagem do erro aparece
-    // na tela (ci-status) para a Adriana reportar — é a evidência para achar a raiz exata.
-    var h='', __err='';
+  // ===== A FICHA EM PDF — UM CAMINHO SÓ (Adriana, 17/set/2026) =====================
+  // O que existia aqui: um bloco de HTML escondido e a impressão do navegador. Três defeitos de
+  // uma vez, e a Adriana viu os três no mesmo arquivo:
+  //   1. OITO páginas — o CSS escondia o formulário (visibility:hidden), mas esconder não
+  //      tira do fluxo da página: ele continuava ocupando sete folhas em branco;
+  //   2. SEM as informações — aquela folha era um SEGUNDO montador, que nunca recebeu a
+  //      alergia em vermelho, a seção de emergência nem o quadro de doses por horário;
+  //   3. dependia do diálogo de impressão do navegador, que é justamente onde a folha se
+  //      perde no celular de quem está com o tutor na frente.
+  // Agora "Baixar a ficha em PDF" e "Reemitir ficha" usam o MESMO montador aprovado
+  // (ciFichaPdfBlob → zPdfDocBlob): o arquivo é baixado no aparelho e, onde o aparelho
+  // souber compartilhar arquivo, o Enviar aparece em seguida.
+  function ciFichaEntregar(blob, nome, titulo){
+    var st=document.getElementById('ci-status');
+    if(!blob){
+      if(st){ st.style.color='var(--crm-critico)'; st.textContent='⚠️ Não consegui montar a ficha em PDF neste aparelho. Avise a Adriana.'; }
+      return false;
+    }
+    var baixou=ciBaixarBlob(blob, nome);
+    var _pag=blob.paginas?(blob.paginas+(blob.paginas===1?' página':' páginas')):'';
+    if(st){
+      st.style.color=baixou?'var(--crm-ok)':'var(--crm-critico)';
+      st.textContent=baixou
+        ? ('✅ Ficha em PDF'+(_pag?(' — '+_pag):'')+' baixada neste aparelho: '+nome)
+        : '⚠️ Este aparelho não deixou baixar o arquivo. Use o Enviar que apareceu.';
+    }
+    // O Enviar é EXTRA — nunca substitui o download. Se fosse só ele, cancelar o
+    // compartilhamento deixaria a pessoa sem arquivo nenhum.
     try{
-    const d=ciColetarFicha(); const meds=ciColetarMeds(); const mv=Object.values(meds);
-    const assina=(document.getElementById('ciAssinaNome').value||'').trim();
-    const sig=ciAssinaturaDataURL();
-    // ||{} obrigatório: hóspede sem alimentação preenchida deixava alim indefinido e a leitura
-    // a.tipo estourava TypeError. Mesmo guard que o ciBuildPdfBlob já usa.
-    const a=(d.ficha&&d.ficha.alim)||{};
-    h='<div class="pf-h1">Zêluz · AuAulândia — Ficha de Check-in</div>';
-    h+='<div class="pf-sub">'+esc(ciHosp.nome)+(ciHosp.raca?(' · '+esc(ciHosp.raca)):'')+(ciHosp.tutor?(' · Tutor: '+esc(ciHosp.tutor)):'')+'</div>';
-    h+='<div class="pf-sec"><h3>Estadia</h3><div class="pf-row">Entrada: <strong>'+ciBRdata(d.entrada)+'</strong>'+(a.dias?('  ·  '+esc(a.dias)+' dia(s)'):'')+'</div><div class="pf-row" style="font-size:15px"><strong>SAÍDA: '+(d.saida?ciBRdata(d.saida):'a confirmar')+'</strong></div></div>';
-    if(a.tipo||a.marca||a.qtd||a.refs){
-      var uni=ciUnidLbl(a.unidade); var temNat=!!(a.comida&&a.comida.qtd);
-      var racaoQ=a.qtd?(a.qtd+uni):'(quantidade não informada)';
-      h+='<div class="pf-sec"><h3>Alimentação</h3>';
-      h+='<div class="pf-row"><strong>Tipo:</strong> '+esc(a.tipo||'—')+(a.marca?('  ·  <strong>Marca:</strong> '+esc(a.marca)):'')+'</div>';
-        (function(){ var pr=(typeof ciAlimPorRefTexto==='function')?ciAlimPorRefTexto(a):''; if(!pr) return;
-          h+='<div class="pf-row" style="margin-top:5px;font-weight:800;color:#234D67">EM CADA REFEIÇÃO:</div>';
-          pr.split(' · ').forEach(function(l){ h+='<div class="pf-row">• '+esc(l)+'</div>'; }); })();
-      if(temNat){
-        var meals=ciComidaRefNomesCap(a.comida.refeicoes); var comQ=a.comida.qtd+'g';
-        h+='<div class="pf-row" style="margin-top:6px;font-weight:800;color:#234D67">COMO ALIMENTAR (leia com atenção — não trocar):</div>';
-        h+='<div class="pf-row"><strong>1) Ração:</strong> '+esc(racaoQ)+' por refeição'+(a.refeicoes?('  ('+esc(a.refeicoes)+'x ao dia)'):'')+'</div>';
-        h+='<div class="pf-row"><strong>2) Comida natural:</strong> '+esc(comQ)+' por refeição — <strong>SOMENTE em: '+(meals.length?esc(meals.join(', ')):'(marcar quais)')+'</strong></div>';
-        h+='<div class="pf-row" style="margin-top:4px">▸ Nas refeições com comida natural ('+(meals.length?esc(meals.join(', ')):'—')+'): dar <strong>'+esc(racaoQ)+' de ração + '+esc(comQ)+' de comida natural</strong>.</div>';
-        h+='<div class="pf-row">▸ Nas outras refeições: <strong>só a ração ('+esc(racaoQ)+')</strong>.</div>';
-        if(a.dias) h+='<div class="pf-row" style="margin-top:4px;color:#555">Para a estadia ('+esc(a.dias)+' dia(s)): ração aprox. '+esc((a.minimo||0)+uni)+(a.trazida?(' (trazido '+esc(a.trazida)+'g)'):'')+' · comida natural aprox. '+esc((a.comida.minimo||0)+'g')+(a.comida.trazida?(' (trazido '+esc(a.comida.trazida)+'g)'):'')+'</div>';
-      } else {
-        h+='<div class="pf-row"><strong>Ração:</strong> '+esc(racaoQ)+' por refeição'+(a.refeicoes?('  ('+esc(a.refeicoes)+'x ao dia)'):'')+'</div>';
-        if(a.dias) h+='<div class="pf-row" style="color:#555">Estadia: '+esc(a.dias)+' dia(s) · ração necessária aprox.: '+esc((a.minimo||0)+uni)+(a.trazida?(' · trazido: '+esc(a.trazida)+'g'):'')+'</div>';
+      var file=new File([blob], nome, {type:'application/pdf'});
+      if(navigator.canShare && navigator.canShare({files:[file]}) && navigator.share){
+        navigator.share({files:[file], title:(titulo||'Ficha de check-in'), text:nome})
+          .catch(function(){ /* a pessoa fechou o compartilhamento — o arquivo já está baixado */ });
       }
-      h+='</div>';
-    }
-    var spa=(d.ficha.spa)||{};
-    var bl='<strong>Banho na saída:</strong> '+esc(spa.banho||'não informado'); if(spa.banho==='Sim'){ if(spa.tipo) bl+=' — <strong>'+esc(spa.tipo)+'</strong>'; bl += spa.aConfirmar?' — horário a confirmar':(spa.horario?(' — às '+esc(spa.horario)):''); }
-    h+='<div class="pf-sec"><h3>Spa Dermoprotetor — Banho na saída</h3><div class="pf-row">'+bl+'</div><div class="pf-row" style="margin-top:4px;font-size:15px"><strong>DIA DA SAÍDA: '+(d.saida?ciBRdata(d.saida):'a confirmar')+'</strong></div></div>';
-    if(mv.length){ h+='<div class="pf-med"><h3>⚠ MEDICAÇÃO / SUPLEMENTOS — HORÁRIOS</h3>'; mv.forEach(function(it){ var per=medPeriodoTxt(it); h+='<div class="pf-mrow">'+esc(it.nome)+' — '+esc(medDoseTxt(it))+' — '+esc((it.horarios||[]).join(', '))+(per?(' — '+esc(per)):'')+'</div>'; }); h+='</div>'; }
-    if(d.pertences.length){ h+='<div class="pf-sec"><h3>Pertences</h3>'+d.pertences.map(function(p){ return '<div class="pf-row">• '+esc(p.nome)+(p.spec?(' — '+esc(p.spec)):'')+'</div>'; }).join('')+'</div>'; }
-    h+=zPrintAssinaturaHtml(sig, assina);
-    }catch(e){ __err=(e&&e.message)||String(e); }
-    if(!h || h.indexOf('pf-h1')<0){
-      h='<div class="pf-h1">Zêluz · AuAulândia — Ficha de Check-in</div>'
-       +'<div class="pf-sub">'+esc((ciHosp&&ciHosp.nome)||'')+((ciHosp&&ciHosp.raca)?(' · '+esc(ciHosp.raca)):'')+((ciHosp&&ciHosp.tutor)?(' · Tutor: '+esc(ciHosp.tutor)):'')+'</div>';
-    }
-    if(__err) h+='<div class="pf-row" style="color:#C0392B;margin-top:8px">Aviso: alguns detalhes nao puderam ser montados ('+esc(__err)+'). Avise a Adriana.</div>';
-    var __st=document.getElementById('ci-status'); if(__st&&__err){ __st.style.color='var(--crm-critico)'; __st.textContent='PDF gerado com aviso — me mande esta mensagem: '+__err; }
-    zPrintAbrir(h);
+    }catch(e){ /* sem Web Share neste aparelho: o download acima já resolveu */ }
+    return baixou;
   }
-  // ===== Reemitir a ficha de check-in (PDF) a qualquer momento, a partir dos dados SALVOS na
-  // estadia (auaulandia/estadias) — sem precisar refazer o check-in. Botão na ficha do hóspede.
+  // Botão "Baixar a ficha em PDF" da tela do check-in.
+  function ciBaixarFichaPdf(){
+    if(!ciHosp){
+      if(typeof zAlertao==='function') zAlertao('NENHUM FILHOt ESTÁ ABERTO',
+        ['Volte, toque no peludinho e abra o check-in dele para gerar a ficha.'],{botao:'Entendi'});
+      return;
+    }
+    var blob=null;
+    try{ blob=ciBuildPdfBlob(); }
+    catch(e){
+      _logFalhaGrav('montar a ficha em PDF (botão)', e);
+      if(typeof zAlertao==='function') zAlertao('A FICHA EM PDF NÃO FOI GERADA',
+        ['Motivo: '+((e&&e.message)||e)+'.',
+         'Nada foi perdido: a ficha continua preenchida na tela. Mande esta mensagem para a Adriana.'],
+        {botao:'Entendi'});
+      return;
+    }
+    ciFichaEntregar(blob, ciPdfFileName(), 'Ficha de check-in — '+(ciHosp.nome||''));
+  }
+  // ===== Reemitir a ficha de check-in (PDF) a qualquer momento, a partir dos dados SALVOS
+  // na estadia (auaulandia/estadias) — sem refazer o check-in. Botão na ficha do hóspede.
+  // A partir de 17/set/2026 a reemissão sai IDÊNTICA à original: mesmo montador, mesmas
+  // seções. Antes ela era a folha antiga, e a Adriana recebia um documento diferente.
   function reemitirFichaAtual(){
     var h=(typeof currentHosp!=='undefined')?currentHosp:null; if(!h){ return; }
     var k=(typeof medAgendaKey==='function')?medAgendaKey(h):'';
     var reg=(k&&typeof CF_ESTADIAS!=='undefined')?CF_ESTADIAS[k]:null;
     var est=reg&&reg.e;
-    if(!est){ alert('Ainda não há um check-in salvo para reemitir a ficha deste hóspede.'); return; }
-    reemitirFichaPdf(est);
+    if(!est){
+      if(typeof zAlertao==='function') zAlertao('AINDA NÃO HÁ FICHA PARA REEMITIR',
+        ['Este FILHOt não tem check-in salvo. Faça o check-in dele — a ficha em PDF sai sozinha ao salvar.'],
+        {botao:'Entendi'});
+      else alert('Ainda não há um check-in salvo para reemitir a ficha deste hóspede.');
+      return;
+    }
+    reemitirFichaPdf(est, h);
   }
-  function reemitirFichaPdf(est){
-    if(!est) return; var h='', __err='';
-    try{
-      var f=est.ficha||{}; var a=f.alim||{}; var spa=f.spa||{}; var mv=est.medicacao||[];
-      h='<div class="pf-h1">Zêluz · AuAulândia — Ficha de Check-in</div>';
-      h+='<div class="pf-sub">'+esc(est.nome||'')+(est.raca?(' · '+esc(est.raca)):'')+(est.tutor?(' · Tutor: '+esc(est.tutor)):'')+'</div>';
-      h+='<div class="pf-sec"><h3>Estadia</h3><div class="pf-row">Entrada: <strong>'+ciBRdata(est.entrada)+'</strong>'+(a.dias?('  ·  '+esc(a.dias)+' dia(s)'):'')+'</div><div class="pf-row" style="font-size:15px"><strong>SAÍDA: '+(est.saida?ciBRdata(est.saida):'a confirmar')+'</strong></div></div>';
-      if(a.tipo||a.marca||a.qtd||a.refs){
-        var uni=ciUnidLbl(a.unidade); var temNat=!!(a.comida&&a.comida.qtd); var racaoQ=a.qtd?(a.qtd+uni):'(quantidade não informada)';
-        h+='<div class="pf-sec"><h3>Alimentação</h3>';
-        h+='<div class="pf-row"><strong>Tipo:</strong> '+esc(a.tipo||'—')+(a.marca?('  ·  <strong>Marca:</strong> '+esc(a.marca)):'')+'</div>';
-        (function(){ var pr=(typeof ciAlimPorRefTexto==='function')?ciAlimPorRefTexto(a):''; if(!pr) return;
-          h+='<div class="pf-row" style="margin-top:5px;font-weight:800;color:#234D67">EM CADA REFEIÇÃO:</div>';
-          pr.split(' · ').forEach(function(l){ h+='<div class="pf-row">• '+esc(l)+'</div>'; }); })();
-        if(temNat){
-          var meals=ciComidaRefNomesCap(a.comida.refeicoes); var comQ=a.comida.qtd+'g';
-          h+='<div class="pf-row" style="margin-top:6px;font-weight:800;color:#234D67">COMO ALIMENTAR (leia com atenção — não trocar):</div>';
-          h+='<div class="pf-row"><strong>1) Ração:</strong> '+esc(racaoQ)+' por refeição'+(a.refeicoes?('  ('+esc(a.refeicoes)+'x ao dia)'):'')+'</div>';
-          h+='<div class="pf-row"><strong>2) Comida natural:</strong> '+esc(comQ)+' por refeição — <strong>SOMENTE em: '+(meals.length?esc(meals.join(', ')):'(marcar quais)')+'</strong></div>';
-        } else {
-          h+='<div class="pf-row"><strong>Ração:</strong> '+esc(racaoQ)+' por refeição'+(a.refeicoes?('  ('+esc(a.refeicoes)+'x ao dia)'):'')+'</div>';
-        }
-        h+='</div>';
-      }
-      var bl='<strong>Banho na saída:</strong> '+esc(spa.banho||'não informado'); if(spa.banho==='Sim'){ if(spa.tipo) bl+=' — <strong>'+esc(spa.tipo)+'</strong>'; bl+= spa.aConfirmar?' — horário a confirmar':(spa.horario?(' — às '+esc(spa.horario)):''); }
-      h+='<div class="pf-sec"><h3>Spa Dermoprotetor — Banho na saída</h3><div class="pf-row">'+bl+'</div></div>';
-      if(mv.length){ h+='<div class="pf-med"><h3>⚠ MEDICAÇÃO / SUPLEMENTOS — HORÁRIOS</h3>'; mv.forEach(function(it){ var per=medPeriodoTxt(it); h+='<div class="pf-mrow">'+esc(it.nome)+' — '+esc(medDoseTxt(it))+' — '+esc((it.horarios||[]).join(', '))+(per?(' — '+esc(per)):'')+'</div>'; }); h+='</div>'; }
-      if((est.pertences||[]).length){ h+='<div class="pf-sec"><h3>Pertences</h3>'+est.pertences.map(function(p){ return '<div class="pf-row">• '+esc(p.nome)+(p.spec?(' — '+esc(p.spec)):'')+'</div>'; }).join('')+'</div>'; }
-      h+=zPrintAssinaturaHtml(est.assinatura, est.assinado_por);
-    }catch(e){ __err=(e&&e.message)||String(e); }
-    if(!h || h.indexOf('pf-h1')<0){ h='<div class="pf-h1">Zêluz · AuAulândia — Ficha de Check-in</div><div class="pf-sub">'+esc((est&&est.nome)||'')+'</div>'; }
-    if(__err) h+='<div class="pf-row" style="color:#C0392B;margin-top:8px">Aviso: '+esc(__err)+'</div>';
-    zPrintAbrir(h);
+  function reemitirFichaPdf(est, hosp){
+    if(!est) return;
+    var ex={};
+    try{ if(hosp && typeof extraDoHosp==='function') ex=extraDoHosp(hosp)||{}; }catch(e){ ex={}; }
+    var blob=null;
+    try{ blob=ciFichaPdfBlob(ciFichaFonteEstadia(est, ex)); }
+    catch(e){
+      _logFalhaGrav('reemitir a ficha em PDF', e);
+      if(typeof zAlertao==='function') zAlertao('A FICHA NÃO FOI REEMITIDA',
+        ['Motivo: '+((e&&e.message)||e)+'.','Mande esta mensagem para a Adriana.'],{botao:'Entendi'});
+      return;
+    }
+    var nome=ciFichaNomeArq(est.nome||'');
+    var baixou=ciFichaEntregar(blob, nome, 'Ficha de check-in — '+(est.nome||''));
+    if(typeof audit==='function') audit('checkin-ficha-reemitida', nome+' · '+((blob.paginas||'?')+' página(s)'), {pet:(est.nome||'')});
+    if(typeof zAlertao!=='function') return;
+    if(baixou) zAlertao('✅ FICHA REEMITIDA',
+      [(est.nome||'O FILHOt')+' — a ficha em PDF'+(blob.paginas?(' ('+blob.paginas+(blob.paginas===1?' página':' páginas')+')'):'')+' foi baixada neste aparelho.',
+       'Arquivo: '+nome+'. Procure em Downloads para mandar ao tutor ou imprimir.',
+       'A assinatura original continua guardada na estadia — esta folha traz o NOME de quem assinou.'],
+      {ok:true, botao:'Fechar'});
+    else zAlertao('A FICHA NÃO FOI BAIXADA',
+      ['Este aparelho não deixou guardar o arquivo.','Tente pelo Enviar que apareceu, ou abra o app em outro celular.'],
+      {botao:'Entendi'});
   }
 
   // ==================================================================================
@@ -35440,16 +35601,44 @@
     var assina=(document.getElementById('coAssinaNome').value||'').trim(); if(assina){ L.push(''); L.push('Conferido e assinado por: '+assina); }
     return L.join('\n');
   }
+  // O comprovante do check-out também saiu da impressão do navegador (17/set/2026): era a
+  // MESMA folha escondida, com o mesmo defeito das oito páginas. Agora ele nasce do
+  // montador da marca (zPdfDocBlob) e é baixado no aparelho, igual à ficha do check-in.
   function coGerarPDF(){
     if(!coEstadia) return;
-    var h='<div class="pf-h1">Zêluz · AuAulândia — Check-out</div>';
-    h+='<div class="pf-sub">'+esc(coEstadia.nome||'')+(coEstadia.raca?(' · '+esc(coEstadia.raca)):'')+(coEstadia.tutor?(' · Tutor: '+esc(coEstadia.tutor)):'')+'</div>';
-    h+='<div class="pf-sec"><h3>Saída</h3><div class="pf-row">'+(coEstadia.saida?esc(ciBRdata(coEstadia.saida)):'hoje')+'</div></div>';
-    var itens=coItensLista(); if(itens.length){ h+='<div class="pf-sec"><h3>Itens que voltaram</h3>'+itens.map(function(it){ return '<div class="pf-row">• '+esc(it.label)+'</div>'; }).join('')+'</div>'; }
-    var obs=(document.getElementById('coObs').value||'').trim(); if(obs) h+='<div class="pf-sec"><h3>Observações</h3><div class="pf-row">'+esc(obs)+'</div></div>';
-    var assina=(document.getElementById('coAssinaNome').value||'').trim(); var sig=CO_SIG.dataURL();
-    h+=zPrintAssinaturaHtml(sig, assina);
-    zPrintAbrir(h);
+    var st=document.getElementById('co-status');
+    var itens=coItensLista();
+    var obs=(document.getElementById('coObs').value||'').trim();
+    var assina=(document.getElementById('coAssinaNome').value||'').trim();
+    var S=[{titulo:'SAÍDA', linhas:[
+      {k:'Dia da saída', v:(coEstadia.saida?ciBRdata(coEstadia.saida):'hoje')},
+      {k:'Tutor', v:(coEstadia.tutor||'—')}
+    ]}];
+    if(itens.length){
+      S.push({titulo:'ITENS QUE VOLTARAM ('+itens.length+')',
+              linhas:[{t:itens.map(function(it){ return it.label; }).join('  ·  ')}]});
+    }
+    if(obs) S.push({titulo:'OBSERVAÇÕES', linhas:[{t:obs}]});
+    var blob=null;
+    try{
+      blob=zPdfDocBlob({
+        titulo:'Zêluz · AuAulândia — Check-out',
+        sub:(coEstadia.nome||'')+(coEstadia.raca?(' · '+coEstadia.raca):'')+(coEstadia.tutor?(' · Tutor: '+coEstadia.tutor):''),
+        secoes:S
+      },{ assinatura:null, assinaNome:assina });
+    }catch(e){
+      _logFalhaGrav('montar o comprovante de check-out', e);
+      if(st){ st.style.color='var(--crm-critico)'; st.textContent='⚠️ Não consegui montar o comprovante em PDF: '+((e&&e.message)||e); }
+      return;
+    }
+    var nm=String(coEstadia.nome||'checkout').replace(/[^a-zA-Z0-9]+/g,'-').replace(/^-+|-+$/g,'');
+    var nome='Checkout-'+(nm||'filhot')+'-'+ciHoje()+'.pdf';
+    var baixou=ciBaixarBlob(blob, nome);
+    if(st){
+      st.style.color=baixou?'var(--crm-ok)':'var(--crm-critico)';
+      st.textContent=baixou?('✅ Comprovante em PDF baixado: '+nome)
+                           :'⚠️ Este aparelho não deixou baixar o comprovante.';
+    }
   }
   function coEnviarWhats(){ window.open('https://wa.me/?text='+encodeURIComponent(coResumoTexto()),'_blank'); }
 

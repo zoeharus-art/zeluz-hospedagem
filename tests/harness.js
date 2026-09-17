@@ -634,7 +634,15 @@ async function main() {
     // Gabarito atualizado em 31/ago/2026 (2ª vez, intencional): a ficha passou para o
     // motor com a cara da marca (zPdfDocBlob) — faixas por seção, cabeçalho e rodapé.
     // No sandbox não há atob, então o logo fica de fora e o hash é determinístico.
-    const GABARITO_PDF_CHECKIN = '53149fbe092c876bd08e140186770b502c7a214ab603ee395f389c50de56bf2b'; // 6355 bytes — microchip com o final separado por espaco (destaque dos ultimos 4, 01/set) — quadro de medicação por horário + seção EMERGÊNCIA + período da busca (PDF v3, 31/ago)
+    // Gabarito atualizado em 17/set/2026, por motivo legítimo e conferido linha a linha:
+    // o elemento de mentira do sandbox (universal('el')) devolvia um OBJETO em .value, então
+    // `((document.getElementById('ciQuemDeixou')||{}).value||'').trim()` era TRUTHY e a
+    // ficha do gabarito saía com uma linha fantasma "Quem trouxe:" de valor vazio — linha
+    // que nunca existiu no PDF de verdade (no navegador o campo é '' quando o tutor veio).
+    // Agora a fonte da ficha faz String(...) antes de decidir, e o teste passou a dizer
+    // explicitamente que o campo está vazio. Diferença medida: 6355 → 6212 bytes, e o que
+    // saiu foi SÓ essa linha (diff do texto do PDF: -"Quem trouxe:" -"").
+    const GABARITO_PDF_CHECKIN = '3fcd40b4f2e78a096f0f91fc9e3996efe81dbe50c758a066a59732ff8a95ebb7'; // 6212 bytes — microchip com o final separado por espaco (destaque dos ultimos 4, 01/set) — quadro de medicação por horário + seção EMERGÊNCIA + período da busca (PDF v3, 31/ago)
     const GABARITO_PDF_VET = '83338caf3f53ba3f20a6f7dd5de1bdc7fb3d7f0fcdbb9260cac499190cbc792d'; // 2086 bytes
     const GABARITO_PDF_TEXTO = '82c7cd6e0345969d1db34d3c9fdb04e8038668720292fea9a7373f0e0f51207e'; // 848 bytes
 
@@ -660,9 +668,13 @@ async function main() {
     ['ciColetarFicha', 'ciColetarMeds', 'ciAssinaturaJpeg', 'vetHosp', 'VET_MED_CACHE', 'tutorDe', 'hojeISO', 'extraDoHosp']
       .forEach((k) => { orig[k] = ctx[k]; });
     let bCheckin = null, bVet = null, bTexto = null, bSemSig = null, bComSig = null, erro = '';
+    let blobCk = null;   // o Blob em si: é nele que viaja a contagem de páginas
     try {
       ctx.document.getElementById = function (id) {
         if (id === 'ciAssinaNome') return { value: 'Maria Tutora' };
+        // O tutor VEIO neste check-in: "quem deixou" está vazio. Dizer isso explicitamente
+        // é o que tira a linha fantasma "Quem trouxe:" do gabarito (ver a nota acima).
+        if (id === 'ciQuemDeixou') return { value: '' };
         return geOrig.call(this, id);
       };
       porCiHosp({ nome: 'Toddy', raca: 'Spitz Alemão', tutor: 'Carolina' });
@@ -696,7 +708,8 @@ async function main() {
       ctx.VET_MED_CACHE = { m1: { nome: 'Simparic', q: '1', u: 'comprimido', horarios: ['09:00'] } };
       ctx.tutorDe = () => 'Beatriz'; // sem depender do cache de cadastros
 
-      bCheckin = blobBytes(ctx.ciBuildPdfBlob());
+      blobCk = ctx.ciBuildPdfBlob();
+      bCheckin = blobBytes(blobCk);
       bVet = blobBytes(ctx.vetConsultaBlob(CONSULTA));
       bTexto = blobBytes(ctx.zPdfTextBlob(LINHAS_SIMPLES));
       try {
@@ -752,19 +765,149 @@ async function main() {
     const conta = (s) => html.split(s).length - 1;
     check('startxref aparece 2 vezes (os DOIS montadores: texto e marca)', conta('startxref') === 2, 'achei ' + conta('startxref'));
     check('%%EOF aparece 2 vezes (os DOIS montadores: texto e marca)', conta('%%EOF') === 2, 'achei ' + conta('%%EOF'));
-    check('<h3>Assinatura do tutor</h3> aparece 1 vez no código (antes eram 3)',
-      conta('<h3>Assinatura do tutor</h3>') === 1, 'achei ' + conta('<h3>Assinatura do tutor</h3>'));
-    check('window.print() aparece 1 vez no código (antes eram 3)', conta('window.print()') === 1, 'achei ' + conta('window.print()'));
-    check('zPrintAssinaturaHtml existe', typeof ctx.zPrintAssinaturaHtml === 'function');
-    check('zPrintAbrir existe', typeof ctx.zPrintAbrir === 'function');
-    if (typeof ctx.zPrintAssinaturaHtml === 'function') {
-      const comImg = '<div class="pf-sec"><h3>Assinatura do tutor</h3><img class="pf-sig-img" src="data:x"><div class="pf-row" style="margin-top:6px">Ana</div></div>';
-      const semImg = '<div class="pf-sec"><h3>Assinatura do tutor</h3><div class="pf-row">(sem assinatura)</div><div class="pf-row" style="margin-top:6px">—</div></div>';
-      check('bloco de assinatura COM imagem sai exatamente como antes',
-        ctx.zPrintAssinaturaHtml('data:x', 'Ana') === comImg, ctx.zPrintAssinaturaHtml('data:x', 'Ana'));
-      check('bloco de assinatura SEM imagem sai exatamente como antes',
-        ctx.zPrintAssinaturaHtml('', '') === semImg, ctx.zPrintAssinaturaHtml('', ''));
+    // ───────── v-21 · A FICHA EM PDF DO CHECK-IN (17/set/2026) ─────────
+    // Adriana: "o PDF do Check-in saiu com 8 páginas e sem as informações; quero o layout
+    // aprovado (1 página) e que salvar o PDF seja OBRIGATÓRIO."
+    // As oito páginas vinham do montador ANTIGO (window.print sobre #ci-print, que escondia
+    // o formulário sem tirá-lo do fluxo). Estes checks provam que o montador antigo não
+    // existe mais e que a ficha é UMA página no caso típico.
+    check('v-21 · a ficha do caso típico é UMA página (/Count 1 dentro do PDF)',
+      !!bCheckin && /\/Count 1\b/.test(bCheckin.toString('latin1')),
+      bCheckin ? ((bCheckin.toString('latin1').match(/\/Count (\d+)/) || [])[0] || 'sem /Count') : erro);
+    check('v-21 · o Blob carrega a contagem de páginas (é ela que vai para o recibo)',
+      !!blobCk && blobCk.paginas === 1 && blobCk.bytes === (bCheckin ? bCheckin.length : -1),
+      blobCk ? (blobCk.paginas + ' página(s) · ' + blobCk.bytes + ' bytes') : 'não gerou');
+    // o montador antigo e a impressão do navegador saíram do código
+    check('v-21 · window.print() NÃO existe mais em lugar nenhum', conta('window.print()') === 0, 'achei ' + conta('window.print()'));
+    check('v-21 · ciGerarPDF (o montador de 8 páginas) foi aposentado', conta('ciGerarPDF') === 0, 'achei ' + conta('ciGerarPDF'));
+    check('v-21 · zPrintAbrir e zPrintAssinaturaHtml foram aposentados',
+      conta('zPrintAbrir') === 0 && conta('zPrintAssinaturaHtml') === 0,
+      'zPrintAbrir: ' + conta('zPrintAbrir') + ' · zPrintAssinaturaHtml: ' + conta('zPrintAssinaturaHtml'));
+    check('v-21 · o bloco #ci-print e o CSS de impressão saíram do HTML',
+      conta('id="ci-print"') === 0 && conta('@media print') === 0 && conta('visibility:hidden !important') === 0);
+    check('v-21 · a ficha tem um montador só: nenhum "pf-sec"/"pf-row" sobrou no código',
+      conta('pf-sec') === 0 && conta('pf-row') === 0 && conta('pf-h1') === 0);
+    // a reemissão usa o MESMO montador aprovado (antes era a folha antiga)
+    check('v-21 · reemitir a ficha passa pelo montador aprovado, com os dados da estadia salva',
+      /function ciFichaFonteEstadia\(est, ex\)/.test(html)
+      && /blob=ciFichaPdfBlob\(ciFichaFonteEstadia\(est, ex\)\)/.test(html));
+    check('v-21 · o botão da tela baixa a ficha aprovada (não abre a impressão)',
+      /onclick="ciBaixarFichaPdf\(\)"/.test(html) && /function ciBaixarFichaPdf\(\)/.test(html)
+      && /blob=ciBuildPdfBlob\(\);/.test(html));
+    check('v-21 · o botão principal do check-in diz que vai gerar a ficha',
+      /id="ciBtnSalvar"[^>]*>💾 Salvar e gerar a ficha em PDF</.test(html)
+      && /CI_BTN_SALVAR_TXT='💾 Salvar e gerar a ficha em PDF'/.test(html));
+    check('v-21 · o nome do arquivo é um só, e começa por Checkin-',
+      /return 'Checkin-'\+\(nm\|\|'filhot'\)\+'-'\+ciHoje\(\)\+'\.pdf';/.test(html)
+      && /function ciPdfFileName\(\)\{ return ciFichaNomeArq\(/.test(html));
+    if (typeof ctx.ciFichaNomeArq === 'function') {
+      check('v-21 · Bud vira Checkin-Bud-AAAA-MM-DD.pdf',
+        /^Checkin-Bud-\d{4}-\d{2}-\d{2}\.pdf$/.test(ctx.ciFichaNomeArq('Bud')), ctx.ciFichaNomeArq('Bud'));
+    } else { check('v-21 · ciFichaNomeArq existe', false, 'função não encontrada'); }
+
+    // ---- o 8º item do "o que falta" é INFORMATIVO: nunca pode travar o salvar ----
+    check('v-21 · o 8º item entra na lista como informativo',
+      /F\.push\(\{t:CI_FICHA_INFO, f:'ciFichaAviso', info:true\}\);/.test(html)
+      && /var CI_FICHA_INFO='A ficha em PDF é gerada e guardada ao salvar/.test(html));
+    check('v-21 · quem decide o bloqueio ignora o informativo',
+      /function ciFaltandoBloqueios\(\)\{ return ciFaltando\(\)\.filter\(function\(x\)\{ return x && !x\.info; \}\); \}/.test(html)
+      && /const _faltas=ciFaltandoBloqueios\(\);/.test(html)
+      && !/const _faltas=ciFaltando\(\);/.test(html));
+    check('v-21 · a frase informativa também está na tela, embaixo dos botões',
+      /id="ciFichaAviso"/.test(html) && /A ficha em PDF é gerada e guardada ao salvar/.test(html));
+
+    // ---- salvar SÓ TERMINA depois da ficha: gerar → baixar → entregar com recibo ----
+    // Prova estrutural: entre o "Salvo." e a chamada da ficha não existe zAlertao nenhum —
+    // ou seja, nenhum diálogo aparece antes de a ficha ter sido tratada. E os dois diálogos
+    // (o verde e o cartaz vermelho) moram DENTRO do then da ficha.
+    {
+      const iSalvo = html.indexOf("st.textContent='✅ Salvo.'");
+      const iFicha = html.indexOf('ciFichaObrigatoria(_eid, _pet).then(function(f){');
+      const fimGravar = html.indexOf('}).catch(function(e){', iFicha);
+      check('v-21 · o salvar chama a ficha obrigatória depois de gravar a estadia',
+        iSalvo > 0 && iFicha > iSalvo, 'Salvo em ' + iSalvo + ' · ficha em ' + iFicha);
+      check('v-21 · nenhum diálogo aparece ANTES de a ficha ser gerada e entregue',
+        iSalvo > 0 && iFicha > iSalvo && html.slice(iSalvo, iFicha).indexOf('zAlertao(') < 0);
+      const dentro = (iFicha > 0 && fimGravar > iFicha) ? html.slice(iFicha, fimGravar) : '';
+      check('v-21 · os dois diálogos (o verde e o cartaz) estão dentro do then da ficha',
+        dentro.indexOf('zAlertao(_tit,') > 0
+        && dentro.indexOf("zAlertao('⚠ A FICHA NÃO CHEGOU AO TELEGRAM") > 0,
+        dentro ? (dentro.length + ' bytes no then') : 'não achei o trecho');
+      check('v-21 · a frase antiga, que afirmava envio sem recibo, não existe mais',
+        conta('O resumo e a ficha em PDF foram mandados para o grupo do plantão no Telegram.') === 0);
     }
+    check('v-21 · só o RECIBO vai ao banco — o arquivo nunca (base64 no banco = 695 MB/dia)',
+      /DB\.ref\('auaulandia\/estadias\/'\+estadiaId\+'\/pdf'\)\.set\(rec\)/.test(html)
+      && !/documentoBase64:[^,)]*\}\)\.then\(function\(\)\{\s*return DB/.test(html));
+    check('v-21 · falha de entrega cai na MESMA fila da medicação (lock, teto e validade)',
+      /medTgGuardar\('⚠ <b>A FICHA EM PDF DO CHECK-IN NÃO CHEGOU/.test(html));
+    check('v-21 · a ponte tem prazo: o salvar não fica pendurado esperando o Telegram',
+      /var CI_TG_PRAZO=20000;/.test(html) && /Promise\.race\(\[envio, prazo\]\)/.test(html));
+
+    // ---- prova de comportamento: a ficha obrigatória rodando de verdade ----
+    if (typeof ctx.ciFichaObrigatoria === 'function') {
+      const guardado = { tg: [], baixou: [], fila: [], gravou: [], gerou: 0 };
+      const bkp = {};
+      ['ciBuildPdfBlob', 'ciBaixarBlob', 'tgAvisar', 'medTgGuardar', 'ciResumoTexto', 'quemSou', 'audit', 'FileReader']
+        .forEach((k) => { bkp[k] = ctx[k]; });
+      const geOrig2 = ctx.document.getElementById;
+      const rodar = async (respostaDoTelegram) => {
+        guardado.tg = []; guardado.baixou = []; guardado.fila = []; guardado.gravou = []; guardado.gerou = 0;
+        ctx.document.getElementById = function (id) { return (id === 'ci-status') ? { style: {}, textContent: '' } : geOrig2.call(this, id); };
+        ctx.ciBuildPdfBlob = () => { guardado.gerou++; return { paginas: 1, bytes: 6212, _falso: true }; };
+        ctx.ciBaixarBlob = (b, n) => { guardado.baixou.push(n); return true; };
+        ctx.ciResumoTexto = () => 'resumo do check-in';
+        ctx.quemDeixou = '';
+        ctx.quemSou = () => 'Wandela';
+        ctx.audit = () => {};
+        ctx.medTgGuardar = (texto, erro) => { guardado.fila.push({ texto, erro }); };
+        ctx.tgAvisar = (d) => { guardado.tg.push(d); return Promise.resolve(d.documentoBase64 ? respostaDoTelegram : { ok: true }); };
+        ctx.FileReader = class {
+          readAsDataURL() { this.result = 'data:application/pdf;base64,QUJD'; Promise.resolve().then(() => this.onload && this.onload()); }
+        };
+        vm.runInContext('__bkpFicha = DB; DB = { ref: function(p){ return { set: function(v){ __gravouFicha.push({p:p, v:v}); return Promise.resolve(); } }; } };', ctx);
+        ctx.__gravouFicha = guardado.gravou;
+        try { return await ctx.ciFichaObrigatoria('EST1', 'Bud'); }
+        finally {
+          vm.runInContext('DB = __bkpFicha;', ctx);
+          Object.keys(bkp).forEach((k) => { ctx[k] = bkp[k]; });
+          ctx.document.getElementById = geOrig2;
+        }
+      };
+
+      const comRecibo = await rodar({ ok: true, msgId: 4242 });
+      check('v-21 · com recibo: gera a ficha, baixa no aparelho e diz que entregou',
+        comRecibo.ok === true && guardado.gerou === 1
+        && guardado.baixou.length === 1 && /^Checkin-Bud-/.test(guardado.baixou[0]),
+        JSON.stringify({ ok: comRecibo.ok, gerou: guardado.gerou, baixou: guardado.baixou }));
+      check('v-21 · com recibo: o banco recebe SÓ o recibo, no caminho da estadia',
+        guardado.gravou.length === 1
+        && guardado.gravou[0].p === 'auaulandia/estadias/EST1/pdf'
+        && guardado.gravou[0].v.paginas === 1 && guardado.gravou[0].v.bytes === 6212
+        && guardado.gravou[0].v.quem === 'Wandela' && guardado.gravou[0].v.tg.ok === true
+        && guardado.gravou[0].v.tg.msgId === 4242
+        && JSON.stringify(guardado.gravou[0].v).indexOf('QUJD') < 0,
+        JSON.stringify(guardado.gravou));
+      check('v-21 · com recibo: a frase do diálogo afirma a entrega',
+        /ENTREGUE ao grupo da Gestão/.test(ctx.ciFichaLinhaOk(comRecibo))
+        && /1 página/.test(ctx.ciFichaLinhaOk(comRecibo)), ctx.ciFichaLinhaOk(comRecibo));
+      check('v-21 · com recibo: nada foi para a fila de reenvio', guardado.fila.length === 0, JSON.stringify(guardado.fila));
+
+      const semRecibo = await rodar({ ok: false, erro: 'a ponte respondeu fora do ar' });
+      check('v-21 · sem recibo: o resultado NÃO é ok (o diálogo não pode afirmar envio)',
+        semRecibo.ok === false && semRecibo.baixou === true, JSON.stringify({ ok: semRecibo.ok, baixou: semRecibo.baixou }));
+      check('v-21 · sem recibo: o recibo gravado diz que não chegou, com o motivo',
+        guardado.gravou.length === 1 && guardado.gravou[0].v.tg.ok === false
+        && /fora do ar/.test(guardado.gravou[0].v.tg.erro), JSON.stringify(guardado.gravou));
+      check('v-21 · sem recibo: o aviso entra na fila com rastro de onde o PDF está',
+        guardado.fila.length >= 1
+        && guardado.fila.some((x) => /NÃO CHEGOU/.test(x.texto) && /Checkin-Bud-/.test(x.texto)),
+        JSON.stringify(guardado.fila.map((x) => x.erro)));
+      check('v-21 · sem recibo: as frases mandam a pessoa mandar o PDF baixado, agora',
+        ctx.ciFichaLinhasFalha(semRecibo).join(' | ').indexOf('mande no grupo da Gestão agora') > 0
+        && /fora do ar/.test(ctx.ciFichaLinhasFalha(semRecibo).join(' | ')),
+        ctx.ciFichaLinhasFalha(semRecibo).join(' | '));
+    } else { check('v-21 · ciFichaObrigatoria existe', false, 'função não encontrada'); }
   }
   console.log('');
 
@@ -5631,10 +5774,15 @@ async function main() {
       /function ciMedVeioTxt\(it\)/.test(html) && (html.match(/ciMedVeioTxt\(it\)/g) || []).length >= 3);
 
     // ---- 8. o grupo recebe o check-in ----
-    check('salvar o check-in manda resumo e PDF ao grupo',
-      /function ciMandarTelegram\(\)/.test(html) &&
-      /try\{ ciMandarTelegram\(\); \}catch/.test(html) &&
-      /documentoBase64:b64/.test(html));
+    // Reescrita em 17/set/2026: o envio deixou de ser "se der" (ciMandarTelegram solto,
+    // depois do diálogo) e virou passo obrigatório do salvar, com recibo — ver os checks
+    // v-21 na seção do PDF. Aqui fica o que ainda vale: o resumo em texto e o ARQUIVO vão
+    // ao grupo, e o salvar espera a resposta.
+    check('salvar o check-in manda resumo e PDF ao grupo, e ESPERA o recibo',
+      /function ciFichaAoTelegram\(blob, nomeArq, pet\)/.test(html) &&
+      /ciFichaObrigatoria\(_eid, _pet\)\.then\(function\(f\)\{/.test(html) &&
+      /documentoBase64:b64/.test(html) &&
+      !/function ciMandarTelegram\(\)/.test(html));
     check('falha do texto cai na fila (nunca silencio)', /medTgGuardar\(_msgCk/.test(html));
 
     // ---- 9. o retrato do vigia ----
@@ -12093,7 +12241,7 @@ async function main() {
         !/\.catch\(function\([a-z]*\)\{\s*\}\)/.test(
           html.slice(html.indexOf('const CK_FRASE_PRATICA='), html.indexOf('function renderCkInicio('))));
       check('v-14 · a versão carimbada é a desta entrega',
-        /const APP_VERSAO='2026-09-17-02';/.test(html));
+        /const APP_VERSAO='2026-09-17-03';/.test(html));
     }
 
     // ---- v-15: O PLANO SÓ GRAVA NO CONFIRMAR (caso Cookie/Yara, 15/set/2026) --------
@@ -12908,8 +13056,8 @@ async function main() {
           + 'AVISO_COLEIRA_APOS = __bkpC.apos;', ctx);
       }
     } else { check('v-17 · prevCfgCarregar existe', false, 'função não encontrada'); }
-    check('v-20 · a versão carimbada desta entrega é a 2026-09-17-02',
-      /const APP_VERSAO='2026-09-17-02';/.test(html));
+    check('v-21 · a versão carimbada desta entrega é a 2026-09-17-03',
+      /const APP_VERSAO='2026-09-17-03';/.test(html));
 
     // ───────── v-19 · o aparelho autorizado que não se perde no iPhone (16/set/2026)
     // Auditoria de 16/set: o iPhone da Leticya gerou DOIS ids em trinta segundos
