@@ -31,7 +31,18 @@
  * nunca manda para o grupo errado calada.
  */
 
-var TOKEN_BOT = 'COLE_AQUI_O_TOKEN';
+// TOKEN_BOT — igual à PONTE_SENHA, mora nas Propriedades do script (nome TOKEN_BOT).
+// 17/set/2026: ao colar este arquivo no Apps Script, o token que estava escrito aqui foi
+// apagado e o Telegram passou a responder 404 para tudo. Lendo da propriedade, colar o
+// código de novo nunca mais derruba a ponte. A constante abaixo é só o último recurso.
+var TOKEN_BOT_FIXO = 'COLE_AQUI_O_TOKEN';
+var TOKEN_BOT = (function () {
+  try {
+    var t = PropertiesService.getScriptProperties().getProperty('TOKEN_BOT');
+    if (t && String(t).indexOf(':') > 0) return String(t).trim();
+  } catch (e) { Logger.log('TOKEN_BOT: não consegui ler as Propriedades do script — ' + e); }
+  return TOKEN_BOT_FIXO;
+})();
 
 /* ---------------------------------------------------------------------------
  * PONTE_SENHA — a palavra-chave que autoriza o app a falar com esta ponte.
