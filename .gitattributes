@@ -1,0 +1,6 @@
+# Trava de fim de linha: o app e os testes leem o arquivo real; CRLF quebra checks (regra da casa desde set/2026).
+*.html text eol=lf
+*.js text eol=lf
+*.md text eol=lf
+*.json text eol=lf
+*.gs text eol=lf
