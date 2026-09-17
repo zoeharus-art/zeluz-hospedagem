@@ -864,6 +864,24 @@
   .subtab2{padding:8px 15px;border-radius:999px;font-size:13px;font-weight:600;cursor:pointer;background:var(--z-white);border:1.5px solid var(--line);color:var(--muted)}
   .subtab2.active{background:var(--z-blue);color:var(--z-cream);border-color:var(--z-blue)}
   .ppanel2{display:none}.ppanel2.active{display:block}
+  /* ===== SANFONA DO AVISO (Adriana, 17/set/2026) ================================
+     O cartão "Cadastro incompleto" aparecia inteiro, exposto, a cada check-in de uma
+     aluna de anos. Agora nasce RECOLHIDO: uma linha só, que abre ao toque. Continua
+     sendo aviso — nunca travou e não trava o check-in. Alvo de 44 px porque a
+     consultora marca no celular, com pressa, com o FILHOt no colo. */
+  .z-sanfona{display:flex;align-items:center;gap:10px;width:100%;min-height:44px;
+    padding:4px 2px;background:none;border:none;cursor:pointer;text-align:left;
+    font-family:inherit;font-size:15.5px;font-weight:800;color:var(--z-blue)}
+  .z-sanfona .z-sanfona-seta{margin-left:auto;flex:0 0 auto;font-size:13px;color:var(--muted);
+    transition:transform .15s}
+  .z-sanfona[aria-expanded="true"] .z-sanfona-seta{transform:rotate(180deg)}
+  /* A faixa de versão nova mora no TOPO, fixa, e o toque atualiza (17/set/2026): no
+     computador a recarga automática não acontece no meio do uso, então a faixa é o
+     único caminho — ela não pode ficar escondida no pé da tela. */
+  #faixaVersaoTopo{display:none;position:fixed;left:0;right:0;top:0;z-index:240;
+    background:var(--z-gold);color:var(--z-blue);border:none;width:100%;
+    font-family:inherit;font-size:14px;font-weight:800;padding:11px 14px;min-height:44px;
+    cursor:pointer;box-shadow:0 3px 14px rgba(0,0,0,.2)}
   /* card de alertas de saude (destaque) */
   .alert-card{background:#fff;border:1px solid var(--line);border-left:5px solid var(--crm-atencao);border-radius:var(--radius);padding:18px 20px;margin-bottom:16px;box-shadow:var(--shadow)}
   .alert-pills{display:flex;flex-wrap:wrap;gap:8px;margin:6px 0 14px}
@@ -2353,6 +2371,13 @@
      tinha sido corrigido. O celular guarda a página e não avisa ninguém. Agora o
      app compara a sua versão com a publicada e mostra este aviso — sem nunca
      recarregar sozinho: recarregar no meio de um check-in perderia o trabalho. -->
+<!-- ===== FAIXA DE VERSÃO NOVA, NO TOPO (Adriana, 17/set/2026) ====================
+     "Estou no computador e o Dell e a Recepção continuam na 2026-09-16-01 com o carimbo
+     em 17-03." A recarga automática só dispara com o aparelho PARADO 3 minutos — no
+     computador, quem está trabalhando nunca fica parado, então a versão velha ficava
+     rodando o dia inteiro. O aviso do pé da tela é fácil de ignorar; esta faixa fica no
+     TOPO, é a primeira coisa que se vê, e o toque em qualquer ponto dela atualiza. -->
+<button type="button" id="faixaVersaoTopo" onclick="aplicarVersaoNova()">Nova versão pronta — toque para atualizar</button>
 <div id="avisoVersao" style="display:none;position:fixed;left:0;right:0;bottom:0;z-index:190;background:var(--z-gold);color:var(--z-blue);padding:12px 14px;box-shadow:0 -3px 14px rgba(0,0,0,.2)">
   <div style="max-width:560px;margin:0 auto;display:flex;align-items:center;gap:12px;flex-wrap:wrap">
     <div style="flex:1;min-width:180px;font-size:13.5px;line-height:1.4">
@@ -3367,20 +3392,37 @@
         <div id="ciPills"></div>
       </div>
 
-      <!-- Cadastro incompleto — o check-in é o momento de completar (decisão da Adriana, 29/jul/2026) -->
+      <!-- Cadastro incompleto — o check-in é o momento de completar (decisão da Adriana, 29/jul/2026).
+           17/set/2026, no check-in da Lisa (tutora Nilce, aluna há anos): o cartão aparecia
+           INTEIRO, exposto, e incomodava — a ficha está boa, o que falta é detalhe. Agora
+           ele nasce RECOLHIDO, numa linha só, e abre ao toque. Continua sendo AVISO: nunca
+           travou o check-in e continua não travando. O estado (aberto/recolhido) fica
+           guardado NESTE aparelho: quem gosta de ver aberto vê aberto sempre. -->
       <div class="card" id="ciCadFaltaCard" style="display:none">
-        <h2 style="font-size:19px">Cadastro incompleto</h2>
-        <div class="hint">O FILHOt está aqui agora — é a hora de completar. Preencha o que souber e salve; o que ficar em branco continua pendente para a próxima vez.</div>
-        <div id="ciCadFaltaCampos"></div>
-        <button type="button" class="btn btn-primary" style="margin-top:10px" onclick="ciSalvarCadastroFalta()">Salvar no cadastro</button>
-        <div id="ciCadFaltaStatus" class="rel-status"></div>
+        <button type="button" class="z-sanfona" id="ciCadFaltaCab" aria-expanded="false"
+                aria-controls="ciCadFaltaCorpo" onclick="ciCadFaltaAlternar()">
+          <span id="ciCadFaltaResumo">Cadastro incompleto</span>
+          <span class="z-sanfona-seta" aria-hidden="true">&#9662;</span>
+        </button>
+        <div id="ciCadFaltaCorpo" style="display:none">
+          <div class="hint">O FILHOt está aqui agora — é a hora de completar. Preencha o que souber e salve; o que ficar em branco continua pendente para a próxima vez. <strong>Isto é aviso: não trava o check-in.</strong></div>
+          <div id="ciCadFaltaCampos"></div>
+          <button type="button" class="btn btn-primary" style="margin-top:10px" onclick="ciSalvarCadastroFalta()">Salvar no cadastro</button>
+          <div id="ciCadFaltaStatus" class="rel-status"></div>
+        </div>
       </div>
 
       <div class="card">
         <h2>Restrição / Alergia</h2>
         <div class="hint">Segurança do FILHOt. Se ele tem QUALQUER restrição ou alergia — alimentar, ambiental, de manejo — registre aqui. Aparece em vermelho para toda a equipe.</div>
-        <div class="field"><label>Tem restrição ou alergia?</label>
-          <div class="seg" id="ciRestricaoTem" data-single><button onclick="pick(this);ciRestricaoChange()">Não</button><button onclick="pick(this);ciRestricaoChange()">Sim</button></div></div>
+        <!-- 17/set/2026, check-in da Lisa (tutora Nilce): "restrição tem que estar no
+             cadastro; se ela não tem, tem que estar na ficha; não pode perguntar toda vez;
+             precisa confirmar se continua não tendo." Quando a ficha já diz "não tem", a
+             pergunta dá lugar a UMA linha e UM botão: "Continua assim". -->
+        <div id="ciRestricaoConfirma" style="display:none"></div>
+        <div class="field" id="ciRestricaoPergunta"><label>Tem restrição ou alergia?</label>
+          <div class="seg" id="ciRestricaoTem" data-single><button onclick="pick(this);ciRestricaoChange()">Não</button><button onclick="pick(this);ciRestricaoChange()">Sim</button></div>
+          <div class="hint" style="margin-top:4px">"Não" fica <strong>registrado na ficha</strong> com o seu nome e a data — na próxima vez o app só pede para confirmar.</div></div>
         <div id="ciRestricaoDetalhe" style="display:none">
           <div class="field" style="margin-top:8px"><label>O que ele NÃO pode? (escreva TUDO se for tudo, ou liste os itens específicos)</label>
             <textarea class="cad-in" id="ciRestricaoTexto" style="min-height:64px" placeholder="Ex: TUDO fora da ração dele · ou: sem frango, sem grãos, não pode subir escada" onchange="ciSalvarRestricao()"></textarea></div>
@@ -7104,7 +7146,67 @@
     if(mc.length<=4) return '<strong style="font-size:1.12em;color:var(--z-gold-deep);letter-spacing:.5px">'+escAttr(mc)+'</strong>';
     return escAttr(mc.slice(0,-4))+'<strong style="font-size:1.12em;color:var(--z-gold-deep);letter-spacing:.5px">'+escAttr(mc.slice(-4))+'</strong>';
   }
-  function chipDe(h){ try{ const ex=extraDoHosp(h); return String((ex&&(ex.chip||ex.microchip))||'').trim(); }catch(e){ return ''; } }
+  // ===== "NÃO TEM" É UMA RESPOSTA (Adriana, 17/set/2026) ==========================
+  // Caso Lisa, tutora Nilce, aluna há anos: a cada check-in o app pedia de novo o
+  // microchip e a restrição. "Restrição tem que estar no cadastro; se ela não tem, tem
+  // que estar na ficha; não pode perguntar toda vez; precisa confirmar se continua não
+  // tendo." Dado AUSENTE e dado RESPONDIDO COMO AUSENTE são coisas diferentes: o
+  // primeiro é pendência, o segundo é informação — e informação não se cobra, se
+  // CONFIRMA. É por isso que existe este punhado de funções num lugar só: quem lê o
+  // microchip em seis telas diferentes precisa ler a MESMA regra.
+  var Z_NAO_TEM='nao-tem';
+  function zEhNaoTem(v){ return String(v==null?'':v).trim().toLowerCase()===Z_NAO_TEM; }
+  // O número de verdade. "nao-tem" NÃO é número: nunca vai para a tela nem para o PDF.
+  function zChipNumero(ex){
+    var v=String((ex&&(ex.chip||ex.microchip))||'').trim();
+    return zEhNaoTem(v)?'':v;
+  }
+  function zChipNaoTem(ex){ return zEhNaoTem(ex&&ex.microchip) || zEhNaoTem(ex&&ex.chip); }
+  // Respondido = tem número OU alguém já disse que não tem. Só o não-respondido é cobrado.
+  function zChipRespondido(ex){ return !!zChipNumero(ex) || zChipNaoTem(ex); }
+  // O selo do "não tem" de restrição/alergia: {quem, ts}. É ele que permite CONFIRMAR
+  // em vez de perguntar de novo — e é ele que diz desde quando e por quem.
+  function zNaoTemSelo(ex, campo){
+    var s=(ex||{})[campo+'_nenhuma'];
+    if(!s) return null;
+    if(typeof s!=='object') return {quem:'', ts:0};
+    return (s.ts||s.quem)?s:null;
+  }
+  function zSeloData(sl){
+    var ts=(sl&&sl.ts)||0; if(!ts) return '';
+    try{ var d=new Date(ts); return String(d.getDate()).padStart(2,'0')+'/'+String(d.getMonth()+1).padStart(2,'0'); }
+    catch(e){ return ''; }
+  }
+  // "Sem restrição alimentar · confirmado em 17/09 por Amanda Silva"
+  function zSeloFrase(rot, sl){
+    var d=zSeloData(sl), q=String((sl&&sl.quem)||'').trim();
+    return String(rot||'')+(d?(' · confirmado em '+d):'')+(q?(' por '+q):'');
+  }
+  // O que o PDF do check-in imprime no campo Microchip. Três respostas diferentes, e a
+  // diferença importa para quem lê a ficha numa emergência: o número (com os 4 últimos
+  // separados, como a casa já lia), "sem microchip" (alguém respondeu) e "sem registro"
+  // (ninguém sabe ainda).
+  function zPdfMicrochipTexto(ex){
+    var mc=zChipNumero(ex);
+    if(mc) return (mc.length>4)?(mc.slice(0,-4)+'  '+mc.slice(-4)):mc;
+    return zChipNaoTem(ex)?'sem microchip':'sem registro';
+  }
+  // As ausências CONFIRMADAS que entram no quadro vermelho do PDF. Campo com conteúdo
+  // não entra aqui (ele já foi impresso como conteúdo); campo sem selo nenhum também
+  // não — silêncio não se imprime.
+  function zPdfAusenciasLinhas(ex){
+    ex=ex||{};
+    var out=[];
+    [{c:'alergia', r:'Alergia', s:'Sem alergia'},
+     {c:'restricao', r:'Restrição alimentar', s:'Sem restrição'}].forEach(function(f){
+      if(String(ex[f.c]||'').trim()) return;
+      var sl=zNaoTemSelo(ex, f.c); if(!sl) return;
+      var d=zSeloData(sl);
+      out.push({k:f.r, v:f.s+(d?(' (confirmado em '+d+')'):' (confirmado)')});
+    });
+    return out;
+  }
+  function chipDe(h){ try{ return zChipNumero(extraDoHosp(h)); }catch(e){ return ''; } }
   // ================= CAFÉ DA MANHÃ DOS HÓSPEDES =====================================
   // Mora na AuAulândia porque é só de quem dormiu aqui (Adriana, 13/ago/2026: "só pega
   // hóspedes e é focada na AuAulândia"). Mesmo protocolo do almoço: cada um come o que
@@ -7559,7 +7661,12 @@
     const tp=h.mascote?'Moradora':(h.hospede?'Hóspede':(h.pernoite?'Pernoite':'Hóspede'));
     const tut=tutorDe(h)||cad.tutor;
     document.getElementById('hf-meta').innerHTML = (p.length?p.join(' · ')+' · ':'') + '<strong>'+tp+'</strong>' + (h.mascote?' · Nossa Zelozinha':(tut?' · Tutor: '+tut:' · Tutor a confirmar'));
-    const cl=document.getElementById('hf-chipline'); if(cl){ var _mc=(cad.chip||cad.microchip||(typeof chipDe==='function'?chipDe(h):'')||''); cl.innerHTML='Microchip: '+(_mc?chipHtml(_mc):'--'); }
+    const cl=document.getElementById('hf-chipline');
+    if(cl){
+      var _mc=zChipNumero(cad)||((typeof chipDe==='function')?chipDe(h):'');
+      // "--" é "não sei"; "sem microchip" é uma resposta. A ficha não confunde as duas.
+      cl.innerHTML='Microchip: '+(_mc?chipHtml(_mc):(zChipNaoTem(cad)?'sem microchip':'--'));
+    }
   }
   // ===== A FÁBRICA DE DUPLICADOS (achada em 04/ago/2026) =============================
   // Esta função roda a CADA TECLA (oninput) e gravava em daycare/cadastro/{cadKey}. Como o
@@ -13487,20 +13594,44 @@
   // inteira DEPOIS de a correção estar publicada — o aviso apareceu, ninguém tocou.
   // Agora o aparelho PARADO recarrega sozinho: trancado, com a aba escondida, na porta de
   // entrada ou 3 minutos sem ninguém tocar nele. Mão na tela = nunca recarrega.
-  const APP_VERSAO='2026-09-17-03';
+  const APP_VERSAO='2026-09-17-04';
   var RECARGA_PARADO_MS=3*60*1000, __versaoPublicada=null, __recargaTimer=null;
   function vigiarVersao(){
     if(!DB) return;
     try{
       DB.ref('daycare/config/versao-app').on('value',function(s){
         var pub=s.val();
-        if(!pub||pub===APP_VERSAO){ __versaoPublicada=null; return; }
+        // Versão igual (ou nó vazio) = nada a avisar. E a faixa APAGA: se ela ficasse
+        // acesa depois de atualizar, seria um botão que não resolve nada.
+        if(!pub||pub===APP_VERSAO){ __versaoPublicada=null; zFaixaVersao(false); return; }
         __versaoPublicada=pub;
         var el=document.getElementById('avisoVersao'); if(el) el.style.display='block';
+        zFaixaVersao(true);
         try{ batimentoGravar('versao-nova'); }catch(e){} /* silencioso de propósito: o batimento é informação, não pode travar o aviso */
         zRecargaQuandoParado();
       });
     }catch(e){ _logLeituraFalhou('daycare/config/versao-app (vigiarVersao)', e); }
+  }
+  // A faixa do topo é fixa: sem empurrar o conteúdo, ela cobriria o cabeçalho. Por isso
+  // ela vem junto com um respiro no <body> enquanto está acesa.
+  function zFaixaVersao(acender){
+    try{
+      var f=document.getElementById('faixaVersaoTopo'); if(!f) return;
+      f.style.display=acender?'block':'none';
+      document.body.style.paddingTop=acender?(f.offsetHeight+'px'):'';
+    }catch(e){} /* silencioso de propósito: a faixa é aviso — falhar ao desenhá-la não pode derrubar o vigia da versão */
+  }
+  // Computador ou celular. No computador a recarga automática por "3 min sem toque" NÃO
+  // vale: a Adriana passa minutos lendo um relatório sem tocar em nada, e recarregar
+  // debaixo dela é perder o trabalho (17/set/2026). Trancado, aba escondida e porta de
+  // entrada continuam valendo em qualquer aparelho — ali ninguém perde nada.
+  function zEhComputador(){
+    try{
+      var t=(typeof uaCurto==='function')?uaCurto():'';
+      if(!/^(Windows|Mac)/.test(t)) return false;
+      var toques=0; try{ toques=(navigator&&navigator.maxTouchPoints)||0; }catch(e){ toques=0; }
+      return toques<=1;                      // Windows com tela de toque conta como celular
+    }catch(e){ return false; }
   }
   // Por que o aparelho está parado — ou '' quando alguém está usando (então não recarrega).
   function zMotivoParado(){
@@ -13509,6 +13640,9 @@
       if(_appTrancado) return 'tela trancada';
       if(document.hidden) return 'aba escondida';
       if(typeof almocoEmUso==='function' && almocoEmUso()) return '';
+      // No computador, tempo sem toque NÃO é sinal de aparelho abandonado — é gente
+      // lendo a tela. Lá a atualização é pela faixa do topo, no tempo da pessoa.
+      if(zEhComputador()) return '';
       if(Date.now()-_inatUltimo>=RECARGA_PARADO_MS) return Math.round(RECARGA_PARADO_MS/60000)+' min sem toque';
     }catch(e){} /* silencioso de propósito: na dúvida, não recarrega */
     return '';
@@ -16604,7 +16738,11 @@
     if(cad.foto){ av.style.backgroundImage="url('"+cad.foto+"')"; av.style.backgroundSize='cover'; av.style.backgroundPosition='center'; av.textContent=''; }
     else { av.style.backgroundImage='none'; av.textContent=(h.ini||(h.nome||'?')[0]||'?'); av.style.background=(h.cor||'#234D67'); }
     document.getElementById('vf-nome').textContent=cad.nome||h.nome||'—';
-    (function(){ var _mc=(cad.chip||cad.microchip)||''; document.getElementById('vf-chipline').innerHTML='Microchip: '+(_mc?chipHtml(_mc):'--'); })();
+    (function(){
+      var _mc=zChipNumero(cad);
+      document.getElementById('vf-chipline').innerHTML='Microchip: '
+        +(_mc?chipHtml(_mc):(zChipNaoTem(cad)?'sem microchip':'--'));
+    })();
     var tutor=(typeof tutorDe==='function')?tutorDe(h):(h.tutor||'');
     var _vidade=(typeof calcIdade==='function')?calcIdade(cad.nasc||h.nasc||''):'';
     document.getElementById('vf-meta').innerHTML=[ (racaDe(h)?escAttr(racaDe(h)):''), (_vidade?escAttr(_vidade):''), (h.mascote?'Nossa Zelozinha':(tutor?'Tutor: '+escAttr(tutor):'Tutor a confirmar')) ].filter(Boolean).join(' · ');
@@ -17240,7 +17378,10 @@
   //   alergia/restricao — quem tem a capacidade 'editar-alergia' (inclui monitor)
   // Qualquer outro campo é identidade ou contrato do cliente: só consultora e gestão.
   var PEL_LIVRES={pesos:1, foto:1};
-  var PEL_ALERGIA={alergia:1, restricao:1};
+  // O selo de ausência é parte do mesmo dado: quem registra a alergia registra também o
+  // "não tem" dela (17/set/2026) — senão o monitor que pode dizer "tem" não pode dizer
+  // "não tem", que é a metade que mais se usa.
+  var PEL_ALERGIA={alergia:1, restricao:1, alergia_nenhuma:1, restricao_nenhuma:1};
   function pelCamposBarrados(patch){
     if(typeof canEditPel==='function' && canEditPel()) return [];
     var podeAlergia=false;
@@ -17293,6 +17434,58 @@
     }
     const s=document.getElementById('pel-saved'); if(s){ s.style.color='var(--crm-ok)'; s.textContent='✓ Salvo'; setTimeout(()=>{ if(s) s.textContent=''; },1200); }
     return _pFicha;
+  }
+  // ===== "NÃO TEM" NA FICHA (Adriana, 17/set/2026) ================================
+  // A ficha é o lugar onde a ausência fica registrada: um botão por campo, e depois de
+  // gravado uma linha dizendo desde quando e por quem. Sem isto, "não tem" só existia
+  // como campo vazio — e campo vazio é indistinguível de "ninguém perguntou ainda".
+  function pelNaoTemHTML(ex, campo, rot){
+    var sl=zNaoTemSelo(ex||{}, campo);
+    if(String((ex||{})[campo]||'').trim()) return '';        // tem conteúdo: nada a dizer
+    if(sl) return '<div class="hint" style="margin-top:4px;color:var(--crm-ok);font-weight:700">'
+      +escAttr(zSeloFrase('Sem '+rot, sl))+' · <button type="button" class="btn" style="background:none;border:none;padding:0;color:var(--z-blue);text-decoration:underline;font-weight:700;font-size:12px" onclick="pelNaoTemLimpar(\''+campo+'\')">apagar este registro</button></div>';
+    return '<button type="button" class="btn" style="margin-top:5px;min-height:44px;padding:8px 14px;font-size:12.5px;font-weight:800;background:none;color:var(--z-blue);border:1.5px solid var(--z-blue)" onclick="pelNaoTemGravar(\''+campo+'\',\''+rot+'\')">Não tem</button>';
+  }
+  function pelChipNaoTemHTML(ex){
+    if(zChipNumero(ex)) return '';
+    if(zChipNaoTem(ex)){
+      // o selo do microchip tem nome próprio (microchip_nao_tem): o valor do campo é
+      // 'nao-tem' e o selo diz desde quando e por quem
+      var s2=(ex&&ex.microchip_nao_tem)||null;
+      return '<div class="hint" style="margin-top:4px;color:var(--crm-ok);font-weight:700">'
+        +escAttr(zSeloFrase('Sem microchip', s2))+' · <button type="button" class="btn" style="background:none;border:none;padding:0;color:var(--z-blue);text-decoration:underline;font-weight:700;font-size:12px" onclick="pelChipNaoTemLimpar()">apagar este registro</button></div>';
+    }
+    return '<button type="button" class="btn" style="margin-top:5px;min-height:44px;padding:8px 14px;font-size:12.5px;font-weight:800;background:none;color:var(--z-blue);border:1.5px solid var(--z-blue)" onclick="pelChipNaoTemGravar()">Não tem microchip</button>';
+  }
+  function pelNaoTemGravar(campo, rot){
+    if(!pelAtual) return;
+    var quem=(typeof quemSou==='function')?quemSou():'-';
+    var patch={}; patch[campo]=''; patch[campo+'_nenhuma']={quem:quem, ts:Date.now()};
+    setPelExtra(pelAtual, patch);
+    if(typeof audit==='function') audit(campo==='alergia'?'alergia-nao-tem':'restricao-nao-tem',
+      ((typeof pelNome==='function')?pelNome(pelAtual):'')+' — registrado que não tem '+rot,
+      {alvo:(typeof pelKey==='function'?pelKey(pelAtual):''), quem:quem});
+    try{ renderPelFicha(); }catch(e){ try{ refreshPills(); }catch(_){} /* silencioso de propósito: a ficha se redesenha na próxima abertura */ }
+  }
+  function pelNaoTemLimpar(campo){
+    if(!pelAtual) return;
+    var patch={}; patch[campo+'_nenhuma']=null;
+    setPelExtra(pelAtual, patch);
+    try{ renderPelFicha(); }catch(e){} /* silencioso de propósito: a ficha se redesenha na próxima abertura */
+  }
+  function pelChipNaoTemGravar(){
+    if(!pelAtual) return;
+    var quem=(typeof quemSou==='function')?quemSou():'-';
+    setPelExtra(pelAtual, {microchip:Z_NAO_TEM, microchip_nao_tem:{quem:quem, ts:Date.now()}});
+    if(typeof audit==='function') audit('cadastro-microchip-nao-tem',
+      ((typeof pelNome==='function')?pelNome(pelAtual):'')+' — registrado que não tem microchip',
+      {alvo:(typeof pelKey==='function'?pelKey(pelAtual):''), quem:quem});
+    try{ renderPelFicha(); }catch(e){} /* silencioso de propósito: a ficha se redesenha na próxima abertura */
+  }
+  function pelChipNaoTemLimpar(){
+    if(!pelAtual) return;
+    setPelExtra(pelAtual, {microchip:'', microchip_nao_tem:null});
+    try{ renderPelFicha(); }catch(e){} /* silencioso de propósito: a ficha se redesenha na próxima abertura */
   }
   // Marca/desmarca uma refeição na Alimentação. Guarda como texto legível ("Almoço · Jantar"),
   // que é o que a plantonista lê na ficha.
@@ -19620,7 +19813,7 @@
           <div class="field"><label>Data de nascimento</label><input type="date" class="cad-in" value="${pelNasc(p)||''}" onchange="setPelNasc(this.value,this)" min="${nascMinISO()}" max="${zHojeISO()}" onkeydown="return dataSoNoCalendario(event)"></div>
           <div class="field"><label>Sexo</label><div class="seg" data-single>${segBtnsPel('sexo',sexo,['Macho','Fêmea'])}</div></div>
           <div class="field"><label>Castrado?</label><div class="seg gold" data-single>${segBtnsPel('castrado',castr,['Sim','Não'])}</div></div>
-          <div class="field"><label>Microchip</label><input class="cad-in" value="${escAttr(ex.microchip||'')}" placeholder="Número do microchip" onchange="setPelExtra(pelAtual,{microchip:this.value})">${iaRevMarcaFicha(p,'microchip')}</div>
+          <div class="field"><label>Microchip</label><input class="cad-in" value="${escAttr(zChipNumero(ex))}" placeholder="Número do microchip" onchange="setPelExtra(pelAtual,{microchip:this.value})">${iaRevMarcaFicha(p,'microchip')}${pelChipNaoTemHTML(ex)}</div>
           <div class="field"><label>Tutor 1 (nome)</label>${can
             ? `<input class="cad-in" value="${escAttr(pelGet(p,'tutor'))}" onchange="onTutorPel(this.value)">`
             : `<input class="cad-in" value="${escAttr(pelGet(p,'tutor'))}" readonly style="background:var(--z-cream-warm);color:var(--muted)" title="Só a recepção, a Supervisão ou a Gestão mudam o nome do tutor">`}</div>
@@ -19783,8 +19976,8 @@
         <div class="hint">Tudo que o monitor precisa saber antes de cuidar e dar o almoço.</div>
         <div id="pelPills2">${alertPills(ex)}</div>
         <div class="cad-grid">
-          <div class="field"><label>Alergia</label><input class="cad-in" value="${escAttr(ex.alergia||'')}" placeholder="Ex: frango — ou deixe vazio" onchange="setPelExtra(pelAtual,{alergia:this.value});refreshPills()">${iaRevMarcaFicha(p,'alergia')}</div>
-          <div class="field"><label>Restrição alimentar</label><input class="cad-in" value="${escAttr(ex.restricao||'')}" placeholder="Ex: sem grãos" onchange="setPelExtra(pelAtual,{restricao:this.value});refreshPills()">${iaRevMarcaFicha(p,'restricao')}</div>
+          <div class="field"><label>Alergia</label><input class="cad-in" value="${escAttr(ex.alergia||'')}" placeholder="Ex: frango — ou deixe vazio" onchange="setPelExtra(pelAtual,{alergia:this.value});refreshPills()">${iaRevMarcaFicha(p,'alergia')}${pelNaoTemHTML(ex,'alergia','alergia')}</div>
+          <div class="field"><label>Restrição alimentar</label><input class="cad-in" value="${escAttr(ex.restricao||'')}" placeholder="Ex: sem grãos" onchange="setPelExtra(pelAtual,{restricao:this.value});refreshPills()">${iaRevMarcaFicha(p,'restricao')}${pelNaoTemHTML(ex,'restricao','restrição alimentar')}</div>
           <!-- O bloco ALIMENTAÇÃO mudou para a aba Rotina & Alimentação (Adriana, 01/set: "almoço em campo almoço"). -->
           <div class="field"><label>Medicação</label><input class="cad-in" value="${escAttr(ex.medicacao||'')}" placeholder="Nome, dose, horário" onchange="setPelExtra(pelAtual,{medicacao:this.value});refreshPills()">${iaRevMarcaFicha(p,'medicacao')}</div>
           <div class="field"><label>Algum problema de saúde</label><input class="cad-in" value="${escAttr(ex.problema||'')}" placeholder="Ex: cardíaco — ou vazio" onchange="setPelExtra(pelAtual,{problema:this.value});refreshPills()">${iaRevMarcaFicha(p,'problema')}</div>
@@ -24412,7 +24605,9 @@
     var nome=pelNome(p);
     var femea=/^f/i.test(String(ex.sexo||''));
     var castrada=/^s/i.test(String(ex.castrado||''));
-    var temChip=!!String(ex.microchip||ex.chip||'').trim();
+    // Respondido é respondido: quem disse "não tem microchip" não recebe a pergunta de
+    // novo na Pesquisa com a Família (Adriana, 17/set/2026).
+    var temChip=zChipRespondido(ex);
     var Q=[];
     Q.push({k:'refeicoes', secao:'*ALIMENTAÇÃO*', curta:'Refeições e horários', campo:'alim_horarios',
       t:'Quantas refeições '+(femea?'ela ':'ele ')+'faz por dia, e em que horários?'});
@@ -24756,6 +24951,10 @@
       var txt=String(sep.por[q.k]||'').trim();
       if(!txt) return;
       var atual=String(ex[q.campo]||'').trim();
+      // "Não tem" gravado pela Gestão VENCE o que a IA leu (17/set/2026): campo com selo
+      // de ausência não é campo vazio — é campo RESPONDIDO. Então ele vem desmarcado e a
+      // mesa pergunta, em vez de a resposta do tutor entrar sozinha por cima.
+      if(!atual && zNaoTemSelo(ex, q.campo)) atual='(registrado como "não tem")';
       campos[q.k]={txt:txt, campo:q.campo, curta:q.curta, atual:atual,
                    porAssunto:!!(sep.assunto&&sep.assunto[q.k]),
                    // campo vazio já vem marcado; campo com outro conteúdo vem DESMARCADO,
@@ -24811,6 +25010,8 @@
       // o campo vem da PERGUNTA REAL (algPerguntas), nunca de um palpite do leitor
       var campo=r.campo||q.campo||'';
       var atual=String(ex[campo]||'').trim();
+      // mesma lei do "não tem" vence a IA (ver algCur, acima)
+      if(!atual && zNaoTemSelo(ex, campo)) atual='(registrado como "não tem")';
       campos[q.k]={txt:txt, campo:campo, curta:q.curta, atual:atual,
                    via:String(r.via||''), alerta:!!r.alerta, porAssunto:false,
                    // campo vazio já vem marcado; campo com outro conteúdo vem DESMARCADO,
@@ -25186,11 +25387,20 @@
       // atividade física com restrição" é uma negativa — o "Hana" ali é o próprio FILHOt.
       var _nomes=[(typeof pelNome==='function')?pelNome(p):'',
                   (typeof pelGet==='function')?(pelGet(p,'tutor')||''):''];
+      var _exAgora=(typeof pelExtra==='function'?pelExtra(p):{})||{};
       Object.keys(c.campos).forEach(function(q){
         var f=c.campos[q];
         var v=String(f.txt||'').trim();
         if(!v || !f.campo) return;
         var atual=String(f.atual||'').trim();
+        // O selo de "não tem" é decisão de gente da casa: a leitura automática NUNCA
+        // escreve por cima dele. Vira divergência para a Gestão decidir (17/set/2026).
+        if(zNaoTemSelo(_exAgora, f.campo)){
+          if(!algNegativoPuro(v, _nomes))
+            divergencias.push({campo:(typeof algCampoNome==='function'?algCampoNome(f.campo):f.campo),
+                               tutor:v, ficha:'registrado como "não tem"'});
+          return;
+        }
         if(!atual){
           if(algNegativoPuro(v, _nomes)) return;   // fica na entrevista; ficha limpa
           patch[f.campo]=patch[f.campo]?(patch[f.campo]+' \u00B7 '+v):v; quais.push(f.campo);
@@ -27496,8 +27706,13 @@
   var DASH_QTD_PIP=[{v:'PIPETA', t:'Pipeta (o tubo inteiro)'}].concat(DASH_QTD);
   // "Nada a observar" existe de propósito: obrigatório é ESCOLHER, não é ter observação.
   // Sem essa opção a pessoa inventaria um texto só para o botão liberar.
+  // LOJA (Adriana, 17/set/2026): o produto NÃO veio de casa — foi comprado aqui, na loja
+  // da Zêluz, e aplicado aqui. Sem essa opção a consultora escolhia "na bolsa" (que é
+  // mentira) ou "nada a observar" (que é silêncio), e depois ninguém sabia se o
+  // carrapaticida do mês saiu do Empório ou da mochila do tutor.
   var DASH_ONDE=[
     {v:'NA BOLSA', t:'Está na bolsa dele'},
+    {v:'LOJA',     t:'Comprado aqui na loja'},
     {v:'BANHO',    t:'Vai passar depois do banho'},
     {v:'',         t:'Nada a observar'}
   ];
@@ -27505,14 +27720,18 @@
   // "Sem shampoo" e uma resposta legitima — a maioria usa o da casa.
   var DASH_SHAM=[
     {v:'SHAMPOO',      t:'Sim, trouxe o dele'},
+    {v:'LOJA',         t:'Comprou aqui na loja'},
     {v:'SEM SHAMPOO',  t:'Não trouxe'}
   ];
   var DASH_SHAM_ONDE=[
     {v:'NA RECEPÇÃO', t:'Está na recepção'},
     {v:'NA BOLSA',    t:'Está na bolsa dele'}
   ];
+  // A coleira pode ter sido COMPRADA aqui — e aí não "veio" de lugar nenhum: saiu da
+  // loja (Adriana, 17/set/2026). É a mesma pergunta de origem, com a resposta que faltava.
   var DASH_COL_VEIO=[
     {v:'NA BOLSA',  t:'Sim, veio na bolsa'},
+    {v:'LOJA',      t:'Comprada aqui na loja'},
     {v:'N\u00c3O VEIO', t:'N\u00e3o veio'}
   ];
   var DASH_COL_ONDE=[
@@ -27541,9 +27760,10 @@
     {k:'reposicao',     t:'Reposição',                  col:'Reposição',                      icone:'🔄'},
     {k:'banho',         t:'Banho',                      col:'Banho',                          colHora:'Hora Banho',      hora:true, icone:'🛁', campos:[
       {c:'sham', rot:'Trouxe shampoo?',        ops:DASH_SHAM, obrig:true},
-      // só faz sentido perguntar onde está se ele trouxe — senão a planilha diria
-      // "SEM SHAMPOO · NA BOLSA", que é uma frase que não quer dizer nada
-      {c:'onde', rot:'Onde está o shampoo?',   ops:DASH_SHAM_ONDE, obrig:true, dep:{c:'sham', v:'SHAMPOO'}}]},
+      // só faz sentido perguntar onde está se ele TEM shampoo — trazido de casa ou comprado
+      // aqui na loja. Senão a planilha diria "SEM SHAMPOO · NA BOLSA", que é uma frase que
+      // não quer dizer nada. Duas respostas liberam a pergunta — daí a lista no `v`.
+      {c:'onde', rot:'Onde está o shampoo?',   ops:DASH_SHAM_ONDE, obrig:true, dep:{c:'sham', v:['SHAMPOO','LOJA']}}]},
     {k:'vet',           t:'Veterinário',                col:'Veterinário',                    colHora:'Hora Veterinário',hora:true, icone:'🩺'},
     {k:'saicedo',       t:'Sai mais cedo',              col:'Peludinho que sairá cedo',       colHora:'Hora Saída Cedo', hora:true, icone:'🚶'},
     {k:'avaliacao',     t:'Avaliação (Márcia)',         col:'Avaliação',                      colHora:'Horário',         hora:true, icone:'📋'},
@@ -27897,10 +28117,13 @@
   function dashDet(k){ DASH_DET[k]=DASH_DET[k]||{}; return DASH_DET[k]; }
   // Campo que depende da resposta de outro. Sem trouxe shampoo, "onde está" não existe:
   // não é perguntado, não é cobrado e não vai para a planilha (Adriana, 28/ago/2026).
+  // `dep.v` aceita UMA resposta ou uma LISTA delas (o shampoo vale trazido de casa E
+  // comprado na loja — 17/set/2026). Quem não depende de ninguém não usa `dep`.
   function dashCampoAtivo(k, c){
     if(!c || !c.dep) return true;
-    var d=dashDet(k);
-    return d[c.dep.c]===c.dep.v;
+    var d=dashDet(k), alvo=c.dep.v;
+    if(Array.isArray(alvo)) return alvo.indexOf(d[c.dep.c])>=0;
+    return d[c.dep.c]===alvo;
   }
   function dashSetDet(k, campo, valor){
     var d=dashDet(k);
@@ -28727,7 +28950,11 @@
     (PELUDINHOS||[]).forEach(function(p){
       if(typeof pelInativo==='function' && pelInativo(p)) return;
       var ex=(typeof pelExtra==='function'?pelExtra(p):{})||{};
-      var chip=String(ex.microchip||'').trim();
+      // zChipNumero e não ex.microchip: "nao-tem" não é número. Quem confirmou que NÃO
+      // tem microchip continua nesta lista de propósito — ela serve para "cobrar do tutor
+      // ou agendar a aplicação", e é exatamente esse FILHOt que precisa da aplicação
+      // (17/set/2026). O que muda é que ninguém pergunta de novo no check-in.
+      var chip=zChipNumero(ex);
       if(chip) return;                                  // já tem: fora do relatório
       out.push({
         nome:(typeof pelNome==='function'?pelNome(p):'')||p.n||'',
@@ -30891,7 +31118,11 @@
   function ciCadValor(p,campo){
     var ex=(typeof pelExtra==='function')?pelExtra(p):{};
     if(campo==='nasc') return String((typeof pelNasc==='function'?pelNasc(p):'')||'').trim();
-    if(campo==='chip') return String(ex.chip||ex.microchip||p.chip||p.microchip||'').trim();
+    // "não tem" conta como respondido: o cartão para de cobrar (17/set/2026).
+    if(campo==='chip'){
+      if(zChipNaoTem(ex)||zEhNaoTem(p.chip)||zEhNaoTem(p.microchip)) return Z_NAO_TEM;
+      return String(zChipNumero(ex)||p.chip||p.microchip||'').trim();
+    }
     if(campo==='vetNome'||campo==='vetTel'||campo==='vetClinica'||campo==='vetEnd') return String(ex[campo]||'').trim();
     return String((typeof pelGet==='function'?pelGet(p,campo):'')||'').trim();
   }
@@ -30920,10 +31151,90 @@
       : '<div class="role-note"><span data-icon="paw"></span><span>Falta pouco para o cadastro ficar completo.</span></div>';
     wrap.innerHTML=aviso+falta.map(function(f){
       return '<div class="field"><label>'+escAttr(f.t)+(f.critico?' <span style="color:var(--crm-critico)">(essencial)</span>':'')+'</label>'
-        +'<input class="cad-in" id="ciCadF_'+f.c+'" type="'+(f.tipo||'text')+'" placeholder="'+escAttr(f.tipo==='date'?'':('Informe '+f.t.toLowerCase()))+'"></div>';
+        +'<input class="cad-in" id="ciCadF_'+f.c+'" type="'+(f.tipo||'text')+'" placeholder="'+escAttr(f.tipo==='date'?'':('Informe '+f.t.toLowerCase()))+'">'
+        // "Preencher agora" leva o dedo ao campo QUE JÁ ESTÁ AQUI — e abre a sanfona se
+        // estiver recolhida. Não manda ninguém para outra tela: sair do check-in no meio
+        // é perder o check-in (17/set/2026).
+        +'<div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:5px">'
+        +'<button type="button" class="btn" style="min-height:44px;padding:8px 14px;font-size:12.5px;font-weight:800;background:var(--z-cream-warm);color:var(--z-blue);border:1.5px solid var(--line)"'
+        +' onclick="ciCadFaltaPreencher(\''+f.c+'\')">Preencher agora</button>'
+        // O microchip é o único que tem "não tem" como resposta legítima: muitos FILHOts
+        // realmente não têm chip, e cobrar para sempre é ruído (Adriana, 17/set/2026).
+        +(f.c==='chip'
+          ? ('<button type="button" class="btn" style="min-height:44px;padding:8px 14px;font-size:12.5px;font-weight:800;background:none;color:var(--z-blue);border:1.5px solid var(--z-blue)"'
+             +' onclick="ciMarcarSemMicrochip(this)">Não tem microchip</button>')
+          : '')
+        +'</div></div>';
     }).join('');
     card.style.display='block';
+    ciCadFaltaResumir(falta.length);
+    ciCadFaltaAplicarEstado(ciCadFaltaAberto());
     try{ wrap.querySelectorAll('[data-icon]').forEach(function(x){ x.innerHTML=ic(x.dataset.icon); x.style.display='inline-flex'; }); }catch(e){} /* silencioso de propósito: guarda defensiva — falhar aqui não pode interromper quem chamou */
+  }
+  // ---- a sanfona: uma linha só, e o aparelho lembra como a pessoa deixou ------------
+  var CI_CAD_ABERTO_CH='zeluz_ci_cadfalta_aberto';
+  function ciCadFaltaAberto(){
+    try{ return localStorage.getItem(CI_CAD_ABERTO_CH)==='1'; }catch(e){ return false; }  // o padrão é RECOLHIDO
+  }
+  var CI_CAD_FALTA_N=0;
+  function ciCadFaltaResumir(n){ CI_CAD_FALTA_N=n||0; ciCadFaltaPintarResumo(ciCadFaltaAberto()); }
+  // "toque para ver" só enquanto está escondido: convite que aparece com o conteúdo à
+  // vista é mentirinha de tela, e tela que mente é tela em que ninguém confia.
+  function ciCadFaltaPintarResumo(aberto){
+    var r=document.getElementById('ciCadFaltaResumo'); if(!r) return;
+    var quantos=(CI_CAD_FALTA_N===1)?'1 item':(CI_CAD_FALTA_N+' itens');
+    r.textContent='Cadastro incompleto · '+quantos+(aberto?'':' — toque para ver');
+  }
+  function ciCadFaltaAplicarEstado(aberto){
+    var cab=document.getElementById('ciCadFaltaCab'), corpo=document.getElementById('ciCadFaltaCorpo');
+    if(corpo) corpo.style.display=aberto?'block':'none';
+    if(cab) cab.setAttribute('aria-expanded', aberto?'true':'false');
+    ciCadFaltaPintarResumo(aberto);
+  }
+  function ciCadFaltaAlternar(){
+    var aberto=!ciCadFaltaAberto();
+    try{ localStorage.setItem(CI_CAD_ABERTO_CH, aberto?'1':'0'); }catch(e){} /* silencioso de propósito: guardar a preferência é conveniência — sem ela vale o padrão recolhido */
+    ciCadFaltaAplicarEstado(aberto);
+  }
+  // Abre a sanfona (se preciso) e põe o cursor no campo pedido.
+  function ciCadFaltaPreencher(campo){
+    if(!ciCadFaltaAberto()) ciCadFaltaAlternar();
+    else ciCadFaltaAplicarEstado(true);
+    setTimeout(function(){
+      try{
+        var el=document.getElementById('ciCadF_'+campo);
+        if(el){ el.scrollIntoView({block:'center'}); el.focus(); }
+      }catch(e){} /* silencioso de propósito: enfeite de tela (foco, rolagem) — falhar não muda dado nenhum */
+    }, 60);
+  }
+  // ---- "Não tem microchip" (Adriana, 17/set/2026) ----------------------------------
+  // É RESPOSTA, não desistência: grava 'nao-tem' no cadastro (daycare/cadastro/{k}, o nó
+  // único de sempre) com quem disse e quando. A partir daí o item sai do cartão e a
+  // ficha e o PDF dizem "sem microchip" em vez de cobrar. Gravação de identificação
+  // nunca é muda: se o banco recusar, a tela diz — não sai "✅" por educação.
+  function ciMarcarSemMicrochip(btn){
+    var st=document.getElementById('ciCadFaltaStatus');
+    var _st=function(cor,txt){ if(st){ st.style.color=cor; st.textContent=txt; } };
+    var p=(typeof ciPelAtual!=='undefined'&&ciPelAtual)?ciPelAtual:null;
+    if(!p){ _st('var(--crm-critico)','Abra a ficha de um FILHOt primeiro.'); return; }
+    var quem=(typeof quemSou==='function')?quemSou():'-';
+    var patch={microchip:Z_NAO_TEM, microchip_nao_tem:{quem:quem, ts:Date.now()}};
+    if(btn) btn.disabled=true;
+    _st('var(--muted)','Salvando…');
+    var pr; try{ pr=setPelExtra(p, patch); }catch(e){ pr=Promise.resolve({ok:false, erro:e}); }
+    if(!pr||typeof pr.then!=='function') pr=Promise.resolve({ok:true});
+    pr.then(function(r){
+      if(btn) btn.disabled=false;
+      if(!(r&&r.ok!==false)){
+        _st('var(--crm-critico)','⚠ Anotado NESTE aparelho, mas NÃO salvou no sistema. Verifique a conexão e tente de novo.');
+        return;
+      }
+      if(typeof audit==='function') audit('cadastro-microchip-nao-tem',
+        ((typeof pelNome==='function')?pelNome(p):'')+' — registrado que não tem microchip',
+        {pet:((typeof pelNome==='function')?pelNome(p):''), quem:quem});
+      ciRenderCadastroFalta(p);
+      _st('var(--crm-ok)','✅ Registrado: sem microchip. A ficha e o PDF passam a dizer isso — ninguém pergunta de novo.');
+    });
   }
   function ciSalvarCadastroFalta(){
     var st=document.getElementById('ciCadFaltaStatus');
@@ -31053,21 +31364,119 @@
   function ciVoltar(){ document.getElementById('ci-ficha').style.display='none'; document.getElementById('ci-escolha').style.display='block'; renderCiBusca(); }
 
   // ---- Restrição / Alergia no Check-in (grava no cadastro-mestre e dispara a tarja vermelha) ----
+  // O texto de restrição que é CONTEÚDO. "Não", "nenhuma", "nada" não são restrição —
+  // são a ausência dela, e quem decide isso é o zNegativaPura (a mesma régua da
+  // Pesquisa com a Família, para as duas telas nunca discordarem).
+  function ciRestricaoConteudo(ex){
+    ex=ex||{};
+    var nomes=[];
+    try{ nomes=[(ciHosp&&ciHosp.nome)||'', (ciHosp&&ciHosp.tutor)||'']; }catch(e){ nomes=[]; }
+    return [ex.restricao||'', ex.alergia||''].filter(function(v){
+      v=String(v||'').trim(); if(!v) return false;
+      try{ if(typeof zNegativaPura==='function' && zNegativaPura(v, nomes)) return false; }catch(e){} /* silencioso de propósito: sem a régua, o texto vale como conteúdo — o lado seguro */
+      return true;
+    }).join(' · ');
+  }
+  // Vale a confirmação quando NÃO há conteúdo e existe selo de ausência em restrição ou
+  // em alergia. O selo mais recente é o que aparece na frase.
+  function ciRestricaoSelo(ex){
+    var a=zNaoTemSelo(ex||{}, 'restricao'), b=zNaoTemSelo(ex||{}, 'alergia');
+    if(!a&&!b) return null;
+    if(a&&b) return ((a.ts||0)>=(b.ts||0))?a:b;
+    return a||b;
+  }
   function ciRenderRestricao(ex){
     ex=ex||{};
-    const atual=[ex.restricao||'', ex.alergia||''].filter(Boolean).join(' · ');
+    const atual=ciRestricaoConteudo(ex);
     const seg=document.getElementById('ciRestricaoTem');
     const det=document.getElementById('ciRestricaoDetalhe');
     const txt=document.getElementById('ciRestricaoTexto');
+    const perg=document.getElementById('ciRestricaoPergunta');
+    const conf=document.getElementById('ciRestricaoConfirma');
     if(txt) txt.value=atual;
     if(seg){ setSeg('ciRestricaoTem', atual?'Sim':''); }
     if(det) det.style.display=atual?'block':'none';
+    var selo=atual?null:ciRestricaoSelo(ex);
+    if(conf){
+      if(selo){
+        conf.style.display='block';
+        conf.innerHTML='<div class="role-note" style="border-color:var(--crm-ok)">'
+          +'<span data-icon="paw"></span><span><strong>'+escAttr(zSeloFrase('Sem restrição alimentar nem alergia', selo))+'</strong></span></div>'
+          +'<div style="display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-top:8px">'
+          +'<button type="button" class="btn btn-primary" style="min-height:44px" onclick="ciConfirmarSemRestricao(this)">Continua assim</button>'
+          +'<button type="button" class="btn" style="background:none;border:none;color:var(--z-blue);text-decoration:underline;font-weight:700;font-size:12.5px;min-height:44px" onclick="ciMudouRestricao()">Mudou — registrar</button>'
+          +'</div><div id="ciRestricaoConfStatus" class="hint" style="margin-top:5px"></div>';
+        try{ conf.querySelectorAll('[data-icon]').forEach(function(x){ x.innerHTML=ic(x.dataset.icon); x.style.display='inline-flex'; }); }catch(e){} /* silencioso de propósito: guarda defensiva — falhar aqui não pode interromper quem chamou */
+      } else { conf.style.display='none'; conf.innerHTML=''; }
+    }
+    // Com o selo na tela, a pergunta some: é isso que significa "não perguntar toda vez".
+    if(perg) perg.style.display=selo?'none':'block';
   }
   function ciRestricaoChange(){
     const sim=(segVal('ciRestricaoTem')==='Sim');
     const det=document.getElementById('ciRestricaoDetalhe'); if(det) det.style.display=sim?'block':'none';
-    if(!sim){ const txt=document.getElementById('ciRestricaoTexto'); if(txt && txt.value){ txt.value=''; ciSalvarRestricao(); } }
+    if(!sim){
+      const txt=document.getElementById('ciRestricaoTexto');
+      if(txt && txt.value){ txt.value=''; }
+      // "Não" não é só apagar o campo: é REGISTRAR que não tem, com nome e data. Era essa
+      // a falta que fazia o app perguntar a mesma coisa todo mês (17/set/2026).
+      ciMarcarSemRestricao();
+    }
     else { const txt=document.getElementById('ciRestricaoTexto'); if(txt) setTimeout(function(){ try{ txt.focus(); }catch(e){} /* silencioso de propósito: enfeite de tela (foco, rolagem, mídia) — falhar não muda dado nenhum */ },40); }
+  }
+  // Grava (ou reconfirma) o "não tem" de restrição E de alergia — a pergunta do check-in
+  // é uma só, então a resposta vale para as duas. `novo=false` só atualiza o ts.
+  function ciMarcarSemRestricao(botao, soConfirmar){
+    if(!ciHosp) return;
+    var key=ciHosp.refKey;
+    var alvo=soConfirmar
+      ? document.getElementById('ciRestricaoConfStatus')
+      : document.getElementById('ciRestricaoStatus');
+    var setSt=function(cor,t){
+      if(!alvo) return;
+      if(alvo.id==='ciRestricaoStatus') alvo.style.display=t?'block':'none';
+      alvo.style.color=cor; alvo.textContent=t||'';
+    };
+    if(!key){ setSt('var(--crm-critico)','Sem a ficha do FILHOt não dá para registrar.'); return; }
+    var quem=(typeof quemSou==='function')?quemSou():'-';
+    var selo={quem:quem, ts:Date.now()};
+    var patch={restricao:'', alergia:'', restricao_nenhuma:selo, alergia_nenhuma:selo};
+    var p=(PELUDINHOS||[]).find(function(x){ return pelKey(x)===key; });
+    if(botao) botao.disabled=true;
+    setSt('var(--muted)','Salvando…');
+    var pr;
+    try{ pr=p?setPelExtra(p, patch):Promise.resolve({ok:false, erro:new Error('sem ficha no cadastro')}); }
+    catch(e){ pr=Promise.resolve({ok:false, erro:e}); }
+    if(!pr||typeof pr.then!=='function') pr=Promise.resolve({ok:true});
+    pr.then(function(r){
+      if(botao) botao.disabled=false;
+      if(!(r&&r.ok!==false)){
+        setSt('var(--crm-critico)','⚠ Anotado NESTE aparelho, mas NÃO salvou no sistema. Verifique a conexão e tente de novo.');
+        return;
+      }
+      if(typeof audit==='function') audit(soConfirmar?'restricao-confirmada':'restricao-nao-tem',
+        (ciHosp.nome||'')+(soConfirmar?' — confirmado que continua sem restrição nem alergia':' — registrado que não tem restrição nem alergia'),
+        {pet:(ciHosp.nome||''), quem:quem});
+      if(p) ciRenderRestricao(pelExtra(p));
+      var st2=document.getElementById(soConfirmar?'ciRestricaoConfStatus':'ciRestricaoStatus');
+      if(st2){
+        if(st2.id==='ciRestricaoStatus') st2.style.display='block';
+        st2.style.color='var(--crm-ok)';
+        st2.textContent=soConfirmar?'✅ Confirmado hoje. Na próxima vez é só confirmar de novo.'
+                                   :'✅ Registrado na ficha: sem restrição nem alergia. Ninguém pergunta de novo — só confirma.';
+      }
+      try{ document.getElementById('ciPills').innerHTML=(typeof alertPills==='function'&&p)?alertPills(pelExtra(p)):''; }catch(e){} /* silencioso de propósito: a tarja se redesenha na próxima abertura */
+    });
+  }
+  function ciConfirmarSemRestricao(botao){ ciMarcarSemRestricao(botao, true); }
+  // "Mudou — registrar": devolve a pergunta à tela SEM apagar o selo. O selo só cai
+  // quando alguém escrever a restrição de verdade (ciSalvarRestricao).
+  function ciMudouRestricao(){
+    var perg=document.getElementById('ciRestricaoPergunta');
+    var conf=document.getElementById('ciRestricaoConfirma');
+    if(conf) conf.style.display='none';
+    if(perg) perg.style.display='block';
+    try{ setSeg('ciRestricaoTem',''); }catch(e){} /* silencioso de propósito: a escolha some sozinha no próximo desenho */
   }
   function ciSalvarRestricao(){
     if(!ciHosp) return;
@@ -31080,15 +31489,19 @@
     if(key){
       let local={}; try{ local=JSON.parse(localStorage.getItem('zeluz_pel_'+key)||'{}'); }catch(e){} /* silencioso de propósito: sem valor guardado vale o padrão já definido acima */
       local.restricao=val;
+      // Escrever uma restrição de verdade DERRUBA o selo de "não tem": as duas coisas
+      // juntas na ficha seriam duas verdades na mesma tela (17/set/2026).
+      var _patch={restricao:val};
+      if(val){ _patch.restricao_nenhuma=null; _patch.alergia_nenhuma=null; local.restricao_nenhuma=null; local.alergia_nenhuma=null; }
       try{ localStorage.setItem('zeluz_pel_'+key,JSON.stringify(local)); }catch(e){} /* silencioso de propósito: guardar no aparelho é conveniência — o dado de verdade mora no banco */
-      if(typeof pelCadCache!=='undefined') pelCadCache[key]=Object.assign({},pelCadCache[key]||{},{restricao:val});
+      if(typeof pelCadCache!=='undefined') pelCadCache[key]=Object.assign({},pelCadCache[key]||{},_patch);
       // Alergia/restrição é dado de SEGURANÇA — nunca gravar em silêncio. Sucesso confirma e audita;
       // falha (ou banco reconectando) avisa na tela e vira rastro na auditoria, sem travar a operação
       // (o valor já ficou salvo neste aparelho). Antes, o .catch era vazio e o audit afirmava
       // "atualizada" mesmo quando a gravação falhava.
       if(DB){
         setSt('var(--muted)','Salvando…');
-        DB.ref('daycare/cadastro/'+key).update({restricao:val}).then(function(){
+        DB.ref('daycare/cadastro/'+key).update(_patch).then(function(){
           setSt('var(--crm-ok)', val?'✅ Restrição salva.':'✅ Restrição removida.');
           if(typeof audit==='function') audit('checkin','restrição/alergia atualizada',{pet:petNome,restricao:val});
         }).catch(function(e){
@@ -33040,6 +33453,10 @@
     var LN=[];
     if(exH.alergia) LN.push({k:'Alergia', v:exH.alergia});
     if(exH.restricao) LN.push({k:'Restrição alimentar', v:exH.restricao});
+    // O que foi RESPONDIDO como ausente também é informação, e é informação que a
+    // plantonista precisa (Adriana, 17/set/2026): "sem restrição" impresso vale mais que
+    // um silêncio que ninguém sabe se é falta de restrição ou falta de pergunta.
+    zPdfAusenciasLinhas(exH).forEach(function(l){ LN.push(l); });
     var _eaR=String(exH.ea_restr||'').trim();
     if(_eaR) LN.push({k:'Enriquecimento Ambiental', v:_eaR});
     if(LN.length) S.push({titulo:'ALERGIA E RESTRIÇÃO — O QUE ELE NÃO PODE', vermelha:true, linhas:LN});
@@ -33059,8 +33476,7 @@
       if(ex.tutor2) LE.push({k:'Tutor 2', v:ex.tutor2});
       LE.push({k:'Veterinário(a)', v: ex.vetNome?((ex.vetNome)+(ex.vetTel?('  ·  '+ex.vetTel):'')):'não informado — completar na ficha'});
       if(ex.vetClinica||ex.vetEnd) LE.push({k:'Clínica', v:(ex.vetClinica||'—')+(ex.vetEnd?('  ·  '+ex.vetEnd):'')});
-      var _mcp=String(ex.microchip||'').trim();
-      LE.push({k:'Microchip', v: _mcp?(_mcp.length>4?(_mcp.slice(0,-4)+'  '+_mcp.slice(-4)):_mcp):'sem registro'});
+      LE.push({k:'Microchip', v: zPdfMicrochipTexto(ex)});
       S.push({titulo:'EMERGÊNCIA — CONTATOS E IDENTIFICAÇÃO', linhas:LE});
     })();
     // --- alimentação, refeição a refeição, com horário ---

@@ -3029,8 +3029,8 @@ async function main() {
     check('festa exige o tema', /c:'tema'/.test(item('festa')) && /ops:DASH_TEMAS/.test(item('festa')));
     check('banho pergunta o shampoo e onde ele esta',
       /c:'sham'/.test(item('banho')) && /ops:DASH_SHAM_ONDE/.test(item('banho')));
-    check('e "onde esta" so vale se ele trouxe',
-      /dep:\{c:'sham', v:'SHAMPOO'\}/.test(item('banho')));
+    check('e "onde esta" so vale se ele TEM shampoo (trouxe de casa ou comprou na loja)',
+      /dep:\{c:'sham', v:\['SHAMPOO','LOJA'\]\}/.test(item('banho')));
     check('vet continua num clique so', !/campos:/.test(item('vet')));
     check('todo campo desses e obrigatorio',
       (item('vermifugo').match(/obrig:true/g) || []).length === 2 &&
@@ -3140,6 +3140,393 @@ async function main() {
         ctx.dashDetFalta('banho') === 'Trouxe shampoo?', JSON.stringify(ctx.dashDetFalta('banho')));
       ctx.DASH_DET = {}; ctx.DASH_SEL = {};
     }
+  }
+  console.log('');
+
+  // ===== v-22 - A ORIGEM "LOJA" (Adriana, 17/set/2026) ==============================
+  // "Carrapaticida, troca de coleira, vermifugo e os outros que tem observacao / campo de
+  // 'onde esta' precisam ganhar a opcao Loja." Ou seja: o produto nao veio de casa - foi
+  // comprado aqui, na loja da Zeluz. Sem essa resposta a consultora era obrigada a mentir
+  // ("na bolsa") ou a calar ("nada a observar"), e ninguem sabia de onde saiu o produto.
+  console.log('v-22 · Lancamentos do dia — a origem "Loja" em todo tipo que pergunta de onde veio:');
+  {
+    const opsDe = (nome) => (ctx[nome] || []).map((o) => o.v);
+    const campoOps = (k, campo) => {
+      const it = (ctx.DASH_ITENS || []).find((i) => i.k === k);
+      const c = ((it && it.campos) || []).find((x) => x.c === campo);
+      return c ? c.ops.map((o) => o.v) : null;
+    };
+    const item = (k) => {
+      const i = html.indexOf("{k:'" + k + "',");
+      if (i < 0) return '';
+      const fim = html.indexOf("\n    {k:'", i + 5);
+      return html.slice(i, fim > 0 ? fim : i + 900);
+    };
+
+    // (a) as listas de opcoes: cada campo de ORIGEM tem LOJA, com o rotulo em portugues
+    check('v-22 · vermifugo e carrapaticida (DASH_ONDE): a observacao oferece LOJA',
+      opsDe('DASH_ONDE').indexOf('LOJA') >= 0, JSON.stringify(opsDe('DASH_ONDE')));
+    check('v-22 · o rotulo do botao fala como gente: "Comprado aqui na loja"',
+      (ctx.DASH_ONDE || []).some((o) => o.v === 'LOJA' && o.t === 'Comprado aqui na loja'),
+      JSON.stringify((ctx.DASH_ONDE || []).map((o) => o.t)));
+    check('v-22 · troca de coleira (DASH_COL_VEIO): "Comprada aqui na loja" entra na pergunta de origem',
+      (ctx.DASH_COL_VEIO || []).some((o) => o.v === 'LOJA' && o.t === 'Comprada aqui na loja'),
+      JSON.stringify((ctx.DASH_COL_VEIO || []).map((o) => o.v)));
+    check('v-22 · banho (DASH_SHAM): "Comprou aqui na loja" entra ao lado de trouxe / nao trouxe',
+      (ctx.DASH_SHAM || []).some((o) => o.v === 'LOJA' && o.t === 'Comprou aqui na loja'),
+      JSON.stringify((ctx.DASH_SHAM || []).map((o) => o.v)));
+    check('v-22 · "onde vai ser trocada" NAO virou origem: continua Day Care / banho, sem LOJA em dobro',
+      JSON.stringify(opsDe('DASH_COL_ONDE')) === JSON.stringify(['DAYCARE', 'BANHO']),
+      JSON.stringify(opsDe('DASH_COL_ONDE')));
+    check('v-22 · dose nao e lugar: as quantidades e os temas de festa nao ganharam origem',
+      opsDe('DASH_QTD').indexOf('LOJA') < 0 && opsDe('DASH_QTD_PIP').indexOf('LOJA') < 0 &&
+      opsDe('DASH_TEMAS').indexOf('LOJA') < 0);
+
+    // (b) cada TIPO com campo de origem oferece LOJA na tela
+    [['vermifugo', 'onde'], ['carrapaticida', 'onde'], ['coleira', 'veio'], ['banho', 'sham']]
+      .forEach(function (par) {
+        const ops = campoOps(par[0], par[1]);
+        check('v-22 · ' + par[0] + ' oferece LOJA no campo "' + par[1] + '"',
+          !!ops && ops.indexOf('LOJA') >= 0, JSON.stringify(ops));
+      });
+    check('v-22 · o carrapaticida continua com a pipeta na quantidade E a loja na observacao',
+      (campoOps('carrapaticida', 'qtd') || [])[0] === 'PIPETA' &&
+      (campoOps('carrapaticida', 'onde') || []).indexOf('LOJA') >= 0,
+      JSON.stringify([campoOps('carrapaticida', 'qtd'), campoOps('carrapaticida', 'onde')]));
+    check('v-22 · quem nao pergunta origem continua num clique so (vet, hidratacao)',
+      !/campos:/.test(item('vet')) && !/campos:/.test(item('hidratacao')));
+
+    // (c) o texto que vai para a planilha e para a TV
+    if (typeof ctx.dashSetDet === 'function' && typeof ctx.dashDetTexto === 'function') {
+      ctx.DASH_DET = {}; ctx.DASH_SEL = {};
+      ctx.dashSetDet('vermifugo', 'qtd', '1 COMPRIMIDO');
+      ctx.dashSetDet('vermifugo', 'onde', 'LOJA');
+      check('v-22 · vermifugo comprado na loja sai "(1 COMPRIMIDO \u00b7 LOJA)"',
+        ctx.dashDetFalta('vermifugo') === '' &&
+        ctx.dashDetTexto('vermifugo') === ' (1 COMPRIMIDO \u00b7 LOJA)',
+        JSON.stringify(ctx.dashDetTexto('vermifugo')));
+
+      ctx.DASH_DET = {};
+      ctx.dashSetDet('carrapaticida', 'qtd', 'PIPETA');
+      ctx.dashSetDet('carrapaticida', 'onde', 'LOJA');
+      check('v-22 · carrapaticida: pipeta comprada aqui sai "(PIPETA \u00b7 LOJA)"',
+        ctx.dashDetFalta('carrapaticida') === '' &&
+        ctx.dashDetTexto('carrapaticida') === ' (PIPETA \u00b7 LOJA)',
+        JSON.stringify(ctx.dashDetTexto('carrapaticida')));
+
+      ctx.DASH_DET = {};
+      ctx.dashSetDet('coleira', 'veio', 'LOJA');
+      check('v-22 · coleira comprada na loja AINDA pergunta onde vai ser trocada',
+        ctx.dashDetFalta('coleira') === 'Onde vai ser trocada?', JSON.stringify(ctx.dashDetFalta('coleira')));
+      ctx.dashSetDet('coleira', 'onde', 'DAYCARE');
+      check('v-22 · coleira sai "(LOJA \u00b7 DAYCARE)" — comprada aqui, trocada no Day Care',
+        ctx.dashDetTexto('coleira') === ' (LOJA \u00b7 DAYCARE)', JSON.stringify(ctx.dashDetTexto('coleira')));
+
+      // o shampoo comprado na loja TEM onde estar: a pergunta de baixo continua valendo
+      ctx.DASH_DET = {}; ctx.DASH_SEL = {};
+      ctx.dashSetDet('banho', 'sham', 'LOJA');
+      check('v-22 · shampoo comprado na loja: a tela ainda pergunta onde ele esta',
+        ctx.dashDetFalta('banho') === 'Onde est\u00e1 o shampoo?', JSON.stringify(ctx.dashDetFalta('banho')));
+      ctx.dashSetDet('banho', 'onde', 'NA RECEP\u00c7\u00c3O');
+      check('v-22 · banho sai "(LOJA \u00b7 NA RECEP\u00c7\u00c3O)"',
+        ctx.dashDetTexto('banho') === ' (LOJA \u00b7 NA RECEP\u00c7\u00c3O)', JSON.stringify(ctx.dashDetTexto('banho')));
+      ctx.dashSetDet('banho', 'sham', 'SEM SHAMPOO');
+      check('v-22 · trocar "comprou na loja" por "nao trouxe" esquece o lugar do shampoo',
+        ctx.dashDetTexto('banho') === ' (SEM SHAMPOO)' && ctx.dashDetFalta('banho') === '',
+        JSON.stringify([ctx.dashDetTexto('banho'), ctx.dashDetFalta('banho')]));
+      ctx.DASH_DET = {}; ctx.DASH_SEL = {};
+    }
+  }
+  console.log('');
+
+  // ---- v-22 - a GRAVACAO: a origem 'loja' entra no MESMO no que a tela ja usa -------
+  console.log('v-22 · a origem "Loja" e GRAVADA em daycare/dashboard e vai inteira para a planilha:');
+  if (typeof ctx.dashLancar === 'function') {
+    const v22 = { espelhos: [] };
+    const dbV22 = criarDBComPush({});
+    ctx.__v22 = v22; ctx.__v22db = dbV22;
+    vm.runInContext(
+      '__bkpV22 = { DB: DB, dados: DASH_DADOS, diaSel: DASH_DIA_SEL, esp: dashEspelhar,'
+      + ' rd: renderDash, au: audit, det: DASH_DET, sel: DASH_SEL, seli: DASH_SEL_I, turma: DC_DASH_TURMA };'
+      + "DASH_DADOS = {}; DASH_DIA_SEL = '2026-09-17'; DASH_DET = {}; DASH_SEL = {}; DASH_SEL_I = {};"
+      + "DC_DASH_TURMA = { reposicao: [], avulso: [], quando: 0, dia: '' };"
+      + 'dashEspelhar = function(){ __v22.espelhos.push(Array.prototype.slice.call(arguments)); return Promise.resolve({ ok: true }); };'
+      + 'renderDash = function(){}; audit = function(){};'
+      + 'DB = __v22db;', ctx);
+    try {
+      const doDia = (k) => ((((dbV22.__store.daycare || {}).dashboard || {})['2026-09-17'] || {})[k] || {});
+      const valores = (k) => Object.keys(doDia(k)).map((id) => doDia(k)[id].valor);
+
+      ctx.dashSetDet('carrapaticida', 'qtd', 'PIPETA');
+      ctx.dashSetDet('carrapaticida', 'onde', 'LOJA');
+      ctx.dashLancar('carrapaticida', 'Elizabeth/SRD');
+      await drenar(6);
+      check('v-22 · mordida — carrapaticida comprado na loja GRAVADO em daycare/dashboard/2026-09-17',
+        JSON.stringify(valores('carrapaticida')) === JSON.stringify(['Elizabeth/SRD (PIPETA \u00b7 LOJA)']),
+        JSON.stringify(valores('carrapaticida')));
+      check('v-22 · mordida — e foi para a planilha com a origem DENTRO do mesmo valor (coluna Carrapaticida)',
+        v22.espelhos.length === 1 && v22.espelhos[0][0] === 'carrapaticida'
+        && /\(PIPETA \u00b7 LOJA\)$/.test((v22.espelhos[0][2] || {}).valor || ''),
+        JSON.stringify(v22.espelhos.map((e) => [e[0], (e[2] || {}).valor])));
+
+      ctx.dashSetDet('coleira', 'veio', 'LOJA');
+      ctx.dashSetDet('coleira', 'onde', 'BANHO');
+      ctx.dashLancar('coleira', 'Toshi/Shih Tzu');
+      await drenar(6);
+      check('v-22 · mordida — coleira comprada na loja grava "(LOJA \u00b7 BANHO)"',
+        JSON.stringify(valores('coleira')) === JSON.stringify(['Toshi/Shih Tzu (LOJA \u00b7 BANHO)']),
+        JSON.stringify(valores('coleira')));
+
+      ctx.dashSetDet('vermifugo', 'qtd', '1 COMPRIMIDO');
+      ctx.dashSetDet('vermifugo', 'onde', 'LOJA');
+      ctx.dashLancar('vermifugo', 'Serena/SRD');
+      await drenar(6);
+      check('v-22 · mordida — vermifugo comprado na loja grava "(1 COMPRIMIDO \u00b7 LOJA)"',
+        JSON.stringify(valores('vermifugo')) === JSON.stringify(['Serena/SRD (1 COMPRIMIDO \u00b7 LOJA)']),
+        JSON.stringify(valores('vermifugo')));
+
+      check('v-22 · o lancamento nao "esquece" a origem no caminho: 3 gravacoes, 3 espelhos para a planilha',
+        v22.espelhos.length === 3, String(v22.espelhos.length));
+      check('v-22 · nada foi gravado fora de daycare/dashboard/2026-09-17',
+        Object.keys((dbV22.__store.daycare || {}).dashboard || {}).length === 1,
+        JSON.stringify(Object.keys((dbV22.__store.daycare || {}).dashboard || {})));
+      // a turma do dia continua tirando o parentese para achar a ficha: ninguem vira
+      // um FILHOt chamado "Serena/SRD (1 COMPRIMIDO . LOJA)" na TV (licao de 04/set)
+      check('v-22 · a turma do dia continua limpando o parentese antes de casar a ficha',
+        html.indexOf("var limpo=valor.replace(/\\s*\\(.*\\)\\s*$/,'').trim();") > 0);
+    } finally {
+      vm.runInContext('DB=__bkpV22.DB; DASH_DADOS=__bkpV22.dados; DASH_DIA_SEL=__bkpV22.diaSel;'
+        + 'dashEspelhar=__bkpV22.esp; renderDash=__bkpV22.rd; audit=__bkpV22.au; DASH_DET=__bkpV22.det;'
+        + 'DASH_SEL=__bkpV22.sel; DASH_SEL_I=__bkpV22.seli; DC_DASH_TURMA=__bkpV22.turma;', ctx);
+    }
+  } else { check('v-22 · dashLancar existe', false, 'funcao nao encontrada'); }
+  console.log('');
+
+  // ===== v-22 - O CARTAO "CADASTRO INCOMPLETO" NASCE RECOLHIDO ======================
+  // Adriana, 17/set/2026, no check-in da Lisa (tutora Nilce, aluna ha anos): o cartao
+  // aparecia inteiro, exposto, e incomodava. Continua sendo AVISO — nao trava o check-in.
+  console.log('v-22 · Check-in — o cartao de cadastro incompleto recolhido e o microchip "nao tem":');
+  {
+    check('v-22 · o cartao virou sanfona: cabecalho que abre e corpo separado',
+      html.indexOf('id="ciCadFaltaCab"') > 0 && html.indexOf('id="ciCadFaltaCorpo" style="display:none"') > 0
+      && /class="z-sanfona"/.test(html));
+    check('v-22 · o corpo nasce FECHADO no HTML e o cabecalho diz que esta fechado',
+      /id="ciCadFaltaCorpo" style="display:none"/.test(html)
+      && /id="ciCadFaltaCab" aria-expanded="false"/.test(html));
+    check('v-22 · o alvo do toque tem 44 px (a consultora marca no celular, com pressa)',
+      /\.z-sanfona\{[^}]*min-height:44px/.test(html));
+    check('v-22 · continua sendo aviso: a tela diz em portugues que nao trava o check-in',
+      /Isto é aviso: não trava o check-in/.test(html));
+    check('v-22 · nada de gate novo: o salvar do check-in nao passou a exigir o cadastro',
+      !/cadastroFaltando\([^)]*\)\.length[^;]{0,60}(return|alert|bloq)/.test(html));
+
+    if (typeof ctx.ciCadFaltaAberto === 'function' && typeof ctx.ciCadFaltaAlternar === 'function') {
+      // O localStorage do sandbox devolve null sempre, e getElementById devolve um Proxy:
+      // nenhum dos dois serve para PROVAR memoria e texto. Aqui entram uma loja de verdade
+      // e elementos de verdade — restaurados no finally.
+      const lsOrig = ctx.localStorage, geOrig22 = ctx.document.getElementById;
+      const loja22 = { _m: {}, getItem(k) { return (k in this._m) ? this._m[k] : null; },
+        setItem(k, v) { this._m[k] = String(v); }, removeItem(k) { delete this._m[k]; } };
+      const els22 = {
+        ciCadFaltaResumo: { textContent: '' },
+        ciCadFaltaCorpo: { style: { display: 'none' } },
+        ciCadFaltaCab: { _a: {}, setAttribute(k, v) { this._a[k] = v; }, getAttribute(k) { return this._a[k]; } },
+      };
+      try {
+        ctx.localStorage = loja22;
+        ctx.document.getElementById = function (id) { return els22[id] || geOrig22.call(this, id); };
+        check('v-22 · mordida — aparelho novo (nada guardado): o padrao e RECOLHIDO',
+          ctx.ciCadFaltaAberto() === false);
+        ctx.ciCadFaltaAlternar();
+        check('v-22 · mordida — tocou: abriu, o corpo apareceu E ficou guardado NESTE aparelho',
+          ctx.ciCadFaltaAberto() === true && loja22.getItem('zeluz_ci_cadfalta_aberto') === '1'
+          && els22.ciCadFaltaCorpo.style.display === 'block'
+          && els22.ciCadFaltaCab.getAttribute('aria-expanded') === 'true',
+          JSON.stringify([loja22.getItem('zeluz_ci_cadfalta_aberto'), els22.ciCadFaltaCorpo.style.display]));
+        ctx.ciCadFaltaAlternar();
+        check('v-22 · mordida — tocou de novo: recolheu, e o aparelho lembra disso tambem',
+          ctx.ciCadFaltaAberto() === false && loja22.getItem('zeluz_ci_cadfalta_aberto') === '0'
+          && els22.ciCadFaltaCorpo.style.display === 'none'
+          && els22.ciCadFaltaCab.getAttribute('aria-expanded') === 'false');
+        if (typeof ctx.ciCadFaltaResumir === 'function') {
+          ctx.ciCadFaltaResumir(2);   // recolhido neste ponto (o toque acima fechou de novo)
+          check('v-22 · a linha unica diz quantos faltam: "Cadastro incompleto · 2 itens — toque para ver"',
+            els22.ciCadFaltaResumo.textContent === 'Cadastro incompleto · 2 itens — toque para ver',
+            JSON.stringify(els22.ciCadFaltaResumo.textContent));
+          ctx.ciCadFaltaResumir(1);
+          check('v-22 · um item so nao vira "1 itens"',
+            els22.ciCadFaltaResumo.textContent === 'Cadastro incompleto · 1 item — toque para ver',
+            JSON.stringify(els22.ciCadFaltaResumo.textContent));
+          ctx.ciCadFaltaResumir(2); ctx.ciCadFaltaAlternar();
+          check('v-22 · com o cartao ABERTO o convite "toque para ver" sai da linha (tela nao mente)',
+            els22.ciCadFaltaResumo.textContent === 'Cadastro incompleto · 2 itens',
+            JSON.stringify(els22.ciCadFaltaResumo.textContent));
+          ctx.ciCadFaltaAlternar();
+          check('v-22 · recolheu: o convite volta',
+            els22.ciCadFaltaResumo.textContent === 'Cadastro incompleto · 2 itens — toque para ver',
+            JSON.stringify(els22.ciCadFaltaResumo.textContent));
+        }
+      } finally { ctx.localStorage = lsOrig; ctx.document.getElementById = geOrig22; }
+    } else { check('v-22 · ciCadFaltaAberto/ciCadFaltaAlternar existem', false, 'funcoes nao encontradas'); }
+
+    // ---- "Nao tem microchip" TIRA o item do cartao -------------------------------
+    if (typeof ctx.cadastroFaltando === 'function' && typeof ctx.zChipRespondido === 'function') {
+      const pOrig = ctx.PELUDINHOS, cadOrig = ctx.pelCadCache;
+      try {
+        vm.runInContext(`
+          __bkpMC = { PEL: PELUDINHOS, cad: pelCadCache };
+          // Sem nascimento de proposito: assim, depois de resolver o microchip, AINDA
+          // sobra pendencia — o cartao nao pode ficar vazio de mentira.
+          PELUDINHOS = [{ n: 'Lisa', raca: 'Shih Tzu', tutor: 'Nilce' }];
+          pelCadCache = { 'lisa__nilce': { vetNome: 'Dra. Tanara', vetTel: '(31) 99999-0000', vetClinica: 'Amigo Fiel' } };
+        `, ctx);
+        const falta = () => ctx.cadastroFaltando(ctx.PELUDINHOS[0]).map((f) => f.c);
+        check('v-22 · mordida — sem resposta nenhuma, o microchip esta na lista do que falta',
+          falta().indexOf('chip') >= 0, JSON.stringify(falta()));
+        vm.runInContext("pelCadCache['lisa__nilce'].microchip = 'nao-tem';"
+          + "pelCadCache['lisa__nilce'].microchip_nao_tem = { quem: 'Amanda Silva', ts: 1789000000000 };", ctx);
+        check('v-22 · mordida — depois de "Nao tem microchip", o item SAI do cartao',
+          falta().indexOf('chip') < 0, JSON.stringify(falta()));
+        check('v-22 · e o cartao nao fica vazio de mentira: o nascimento, que falta de verdade, continua la',
+          falta().indexOf('nasc') >= 0, JSON.stringify(falta()));
+        check('v-22 · "nao-tem" nunca vira numero de microchip em tela nenhuma',
+          ctx.zChipNumero({ microchip: 'nao-tem' }) === '' &&
+          ctx.zChipNaoTem({ microchip: 'nao-tem' }) === true &&
+          ctx.zChipRespondido({ microchip: 'nao-tem' }) === true &&
+          ctx.zChipRespondido({}) === false);
+        check('v-22 · a Pesquisa com a Familia nao pergunta de novo a quem ja respondeu',
+          /var temChip=zChipRespondido\(ex\);/.test(html));
+        check('v-22 · o relatorio "sem microchip" CONTINUA listando quem confirmou que nao tem',
+          /var chip=zChipNumero\(ex\);/.test(html));
+      } finally {
+        vm.runInContext('PELUDINHOS=__bkpMC.PEL; pelCadCache=__bkpMC.cad;', ctx);
+        ctx.PELUDINHOS = pOrig; ctx.pelCadCache = cadOrig;
+      }
+    } else { check('v-22 · cadastroFaltando/zChipRespondido existem', false, 'funcoes nao encontradas'); }
+
+    // ---- o PDF -------------------------------------------------------------------
+    if (typeof ctx.zPdfMicrochipTexto === 'function') {
+      check('v-22 · PDF — numero continua saindo com os 4 ultimos separados',
+        ctx.zPdfMicrochipTexto({ microchip: '985113001234' }) === '98511300  1234',
+        JSON.stringify(ctx.zPdfMicrochipTexto({ microchip: '985113001234' })));
+      check('v-22 · PDF — quem respondeu que nao tem sai "sem microchip"',
+        ctx.zPdfMicrochipTexto({ microchip: 'nao-tem' }) === 'sem microchip');
+      check('v-22 · PDF — quem ninguem perguntou ainda sai "sem registro" (nao e a mesma coisa)',
+        ctx.zPdfMicrochipTexto({}) === 'sem registro');
+    } else { check('v-22 · zPdfMicrochipTexto existe', false, 'funcao nao encontrada'); }
+  }
+  console.log('');
+
+  // ===== v-22 - RESTRICAO / ALERGIA: "NAO TEM" CONFIRMAVEL ==========================
+  // "Restricao tem que estar no cadastro; se ela nao tem, tem que estar na ficha; nao pode
+  // perguntar toda vez; precisa confirmar se continua nao tendo." (Adriana, 17/set/2026)
+  console.log('v-22 · Restricao e alergia — "nao tem" e uma resposta, e se CONFIRMA:');
+  {
+    if (typeof ctx.zNaoTemSelo === 'function') {
+      check('v-22 · o selo de ausencia guarda QUEM disse e QUANDO',
+        JSON.stringify(ctx.zNaoTemSelo({ restricao_nenhuma: { quem: 'Amanda Silva', ts: 1789000000000 } }, 'restricao'))
+          === JSON.stringify({ quem: 'Amanda Silva', ts: 1789000000000 }));
+      check('v-22 · sem selo, nao ha nada a confirmar (campo vazio e pendencia, nao resposta)',
+        ctx.zNaoTemSelo({}, 'restricao') === null && ctx.zNaoTemSelo({ restricao: '' }, 'alergia') === null);
+      const sl = { quem: 'Amanda Silva', ts: new Date(2026, 8, 17, 12, 0, 0).getTime() };
+      check('v-22 · a frase da tela diz desde quando e por quem',
+        ctx.zSeloFrase('Sem restrição alimentar', sl) === 'Sem restrição alimentar · confirmado em 17/09 por Amanda Silva',
+        JSON.stringify(ctx.zSeloFrase('Sem restrição alimentar', sl)));
+      check('v-22 · PDF — "Sem restrição (confirmado em DD/MM)"',
+        JSON.stringify(ctx.zPdfAusenciasLinhas({ restricao_nenhuma: sl }))
+          === JSON.stringify([{ k: 'Restrição alimentar', v: 'Sem restrição (confirmado em 17/09)' }]),
+        JSON.stringify(ctx.zPdfAusenciasLinhas({ restricao_nenhuma: sl })));
+      check('v-22 · PDF — campo COM conteudo nao ganha linha de ausencia (seria contradicao na mesma pagina)',
+        JSON.stringify(ctx.zPdfAusenciasLinhas({ restricao: 'sem grãos', restricao_nenhuma: sl })) === '[]');
+      check('v-22 · PDF — sem selo nenhum, o quadro nao inventa "sem restricao"',
+        JSON.stringify(ctx.zPdfAusenciasLinhas({})) === '[]');
+    } else { check('v-22 · zNaoTemSelo existe', false, 'funcao nao encontrada'); }
+
+    if (typeof ctx.ciRestricaoConteudo === 'function') {
+      check('v-22 · negativa pura NAO e restricao: "Não", "nenhuma" nao acendem tarja nenhuma',
+        ctx.ciRestricaoConteudo({ restricao: 'Não' }) === '' &&
+        ctx.ciRestricaoConteudo({ alergia: 'nenhuma' }) === '',
+        JSON.stringify([ctx.ciRestricaoConteudo({ restricao: 'Não' }), ctx.ciRestricaoConteudo({ alergia: 'nenhuma' })]));
+      check('v-22 · restricao de verdade continua sendo conteudo',
+        ctx.ciRestricaoConteudo({ restricao: 'sem grãos', alergia: 'frango' }) === 'sem grãos · frango',
+        JSON.stringify(ctx.ciRestricaoConteudo({ restricao: 'sem grãos', alergia: 'frango' })));
+    } else { check('v-22 · ciRestricaoConteudo existe', false, 'funcao nao encontrada'); }
+
+    check('v-22 · na tela: a pergunta da lugar a UM botao "Continua assim" e ao link "Mudou — registrar"',
+      /Continua assim<\/button>/.test(html) && /Mudou — registrar<\/button>/.test(html)
+      && /id="ciRestricaoConfirma"/.test(html) && /id="ciRestricaoPergunta"/.test(html));
+    check('v-22 · com o selo na tela, a PERGUNTA some (e isso e o pedido: nao perguntar toda vez)',
+      /if\(perg\) perg\.style\.display=selo\?'none':'block';/.test(html));
+    check('v-22 · "Nao" no check-in GRAVA o nao-tem (antes so apagava o campo e perguntava de novo no mes seguinte)',
+      /if\(!sim\)\{[\s\S]{0,400}ciMarcarSemRestricao\(\);/.test(html));
+    check('v-22 · confirmar tem rastro proprio: audit "restricao-confirmada"',
+      /audit\(soConfirmar\?'restricao-confirmada':'restricao-nao-tem'/.test(html));
+    check('v-22 · escrever uma restricao de verdade DERRUBA o selo (duas verdades na mesma ficha, nunca)',
+      /if\(val\)\{ _patch\.restricao_nenhuma=null; _patch\.alergia_nenhuma=null;/.test(html));
+    check('v-22 · o selo vai para daycare\/cadastro no mesmo update de sempre',
+      /DB\.ref\('daycare\/cadastro\/'\+key\)\.update\(_patch\)/.test(html));
+    check('v-22 · quem pode registrar alergia pode registrar o "nao tem" dela',
+      /var PEL_ALERGIA=\{alergia:1, restricao:1, alergia_nenhuma:1, restricao_nenhuma:1\};/.test(html));
+    check('v-22 · na ficha existe o botao "Nao tem" por campo, com quem e quando depois de gravado',
+      /function pelNaoTemHTML\(ex, campo, rot\)\{/.test(html)
+      && /function pelNaoTemGravar\(campo, rot\)\{/.test(html)
+      && /pelNaoTemHTML\(ex,'alergia','alergia'\)/.test(html)
+      && /pelNaoTemHTML\(ex,'restricao','restrição alimentar'\)/.test(html));
+    check('v-22 · e o microchip da ficha nunca mostra "nao-tem" dentro da caixa de texto',
+      /value="\$\{escAttr\(zChipNumero\(ex\)\)\}"/.test(html));
+    // a mesa "O que a IA entendeu": o "nao tem" da Gestao vence o que a IA leu
+    check('v-22 · a IA NAO escreve por cima do "nao tem": campo com selo vem desmarcado na mesa',
+      (html.match(/if\(!atual && zNaoTemSelo\(ex, (q\.campo|campo)\)\) atual='\(registrado como "não tem"\)';/g) || []).length === 2);
+    check('v-22 · e o tratamento automatico transforma a leitura em DIVERGENCIA para a Gestao',
+      /if\(zNaoTemSelo\(_exAgora, f\.campo\)\)\{[\s\S]{0,320}ficha:'registrado como "não tem"'/.test(html));
+  }
+  console.log('');
+
+  // ===== v-22 - FAIXA DE VERSAO NOVA NO TOPO ========================================
+  // "Estou no computador e o Dell e a Recepcao continuam na 16-01 com o carimbo em 17-03."
+  console.log('v-22 · Versao nova sem esperar: faixa fixa no topo, e nada de recarga no meio do uso:');
+  {
+    check('v-22 · a faixa existe, no topo, e o toque em qualquer ponto dela atualiza',
+      /<button type="button" id="faixaVersaoTopo" onclick="aplicarVersaoNova\(\)">Nova versão pronta — toque para atualizar<\/button>/.test(html)
+      && /#faixaVersaoTopo\{display:none;position:fixed;left:0;right:0;top:0/.test(html));
+    check('v-22 · ela nasce apagada (senao piscaria em todo arranque)',
+      /#faixaVersaoTopo\{display:none/.test(html));
+    check('v-22 · versao DIFERENTE acende a faixa; versao IGUAL apaga',
+      /if\(!pub\|\|pub===APP_VERSAO\)\{ __versaoPublicada=null; zFaixaVersao\(false\); return; \}/.test(html)
+      && /__versaoPublicada=pub;[\s\S]{0,260}zFaixaVersao\(true\);/.test(html));
+    if (typeof ctx.zFaixaVersao === 'function') {
+      const geOrigF = ctx.document.getElementById;
+      const elFaixa = { style: { display: 'none' }, offsetHeight: 44 };
+      const padOrig = ctx.document.body.style.paddingTop;
+      try {
+        ctx.document.getElementById = function (id) { return (id === 'faixaVersaoTopo') ? elFaixa : geOrigF.call(this, id); };
+        ctx.zFaixaVersao(true);
+        check('v-22 · mordida — acender mostra a faixa e abre respiro no topo (ela e fixa: cobriria o cabecalho)',
+          elFaixa.style.display === 'block' && ctx.document.body.style.paddingTop === '44px',
+          JSON.stringify([elFaixa.style.display, ctx.document.body.style.paddingTop]));
+        ctx.zFaixaVersao(false);
+        check('v-22 · mordida — apagar esconde a faixa e devolve o topo ao normal',
+          elFaixa.style.display === 'none' && ctx.document.body.style.paddingTop === '',
+          JSON.stringify([elFaixa.style.display, ctx.document.body.style.paddingTop]));
+      } finally { ctx.document.getElementById = geOrigF; ctx.document.body.style.paddingTop = padOrig; }
+    } else { check('v-22 · zFaixaVersao existe', false, 'funcao nao encontrada'); }
+    if (typeof ctx.zEhComputador === 'function' && typeof ctx.zMotivoParado === 'function') {
+      const uaBkp = ctx.navigator.userAgent;
+      try {
+        ctx.navigator.userAgent = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/126.0.0.0 Safari/537.36';
+        check('v-22 · o Dell da Adriana e reconhecido como computador',
+          ctx.zEhComputador() === true, ctx.uaCurto());
+        ctx.navigator.userAgent = 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_5 like Mac OS X) Safari/604.1';
+        check('v-22 · o iPhone da plantonista NAO e computador (la a recarga parada continua valendo)',
+          ctx.zEhComputador() === false, ctx.uaCurto());
+        ctx.navigator.userAgent = 'Mozilla/5.0 (Linux; Android 14; SM-A546E) Chrome/126.0.0.0 Mobile Safari/537.36';
+        check('v-22 · o Android da recepcao tambem nao e computador', ctx.zEhComputador() === false);
+      } finally { ctx.navigator.userAgent = uaBkp; }
+      check('v-22 · no computador, "3 min sem toque" deixa de ser motivo de recarga automatica',
+        /if\(zEhComputador\(\)\) return '';[\s\S]{0,140}RECARGA_PARADO_MS\) return/.test(html));
+      check('v-22 · trancado, aba escondida e porta de entrada continuam valendo em qualquer aparelho',
+        /if\(!inatLogado\(\)\) return 'na porta de entrada';[\s\S]{0,200}if\(document\.hidden\) return 'aba escondida';/.test(html));
+    } else { check('v-22 · zEhComputador/zMotivoParado existem', false, 'funcoes nao encontradas'); }
   }
   console.log('');
 
@@ -12241,7 +12628,7 @@ async function main() {
         !/\.catch\(function\([a-z]*\)\{\s*\}\)/.test(
           html.slice(html.indexOf('const CK_FRASE_PRATICA='), html.indexOf('function renderCkInicio('))));
       check('v-14 · a versão carimbada é a desta entrega',
-        /const APP_VERSAO='2026-09-17-03';/.test(html));
+        /const APP_VERSAO='2026-09-17-04';/.test(html));
     }
 
     // ---- v-15: O PLANO SÓ GRAVA NO CONFIRMAR (caso Cookie/Yara, 15/set/2026) --------
@@ -13056,8 +13443,8 @@ async function main() {
           + 'AVISO_COLEIRA_APOS = __bkpC.apos;', ctx);
       }
     } else { check('v-17 · prevCfgCarregar existe', false, 'função não encontrada'); }
-    check('v-21 · a versão carimbada desta entrega é a 2026-09-17-03',
-      /const APP_VERSAO='2026-09-17-03';/.test(html));
+    check('v-22 · a versão carimbada desta entrega é a 2026-09-17-04',
+      /const APP_VERSAO='2026-09-17-04';/.test(html));
 
     // ───────── v-19 · o aparelho autorizado que não se perde no iPhone (16/set/2026)
     // Auditoria de 16/set: o iPhone da Leticya gerou DOIS ids em trinta segundos
