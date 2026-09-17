@@ -3422,9 +3422,13 @@ async function main() {
     // estavam espalhados por três lugares, viraram uma categoria só, no topo.
     // 08/set/2026, noite — Adriana: "painel mudar para Dashboards". A categoria e os itens
     // trocaram de NOME; data-v, data-acc e classes de acesso ficaram exatamente onde estavam.
-    check('menu: os grupos estão na ordem de 08/set (Dashboards › Serviços › Central Zêluz › Operação › Em breve)',
+    // REESCRITO EM 17/set/2026 — Adriana renomeou duas categorias: "Serviços" virou
+    // "Ecossistema Daycare" e "Operação" virou "Configurações" (que ficou só com o que é
+    // ajuste). Os data-acc, os data-v e as classes so-* não mudaram: mudou o nome visível.
+    // O check antigo cobrava os nomes de 08/set — ele prendia a tela ao passado.
+    check('menu: os grupos estão na ordem de 17/set (Dashboards › Ecossistema Daycare › Central Zêluz › Configurações › Em breve)',
       JSON.stringify(grupos.map((g) => g.titulo)) === JSON.stringify(
-        ['Dashboards', 'Serviços', 'Central Zêluz', 'Operação', 'Em breve']),
+        ['Dashboards', 'Ecossistema Daycare', 'Central Zêluz', 'Configurações', 'Em breve']),
       JSON.stringify(grupos.map((g) => g.titulo)));
     // v-07 (08/set/2026, noite) — Adriana pediu a Central Zêluz em três partes: Peludinhos,
     // AuAulândia ("todos os itens pertinentes à hospedagem") e Day Care. Os NOMES voltam a
@@ -3461,16 +3465,21 @@ async function main() {
       && /\.nav a\.nav-solto\{[^}]*border-top:/.test(html));
     check('menu: Relatórios não perdeu quem o vê ao virar item solto',
       porV.relatorios && porV.relatorios.vis === 'so-gestao', porV.relatorios ? porV.relatorios.vis : 'sumiu');
-    [['conferencia', 'Serviços'], ['checkout', 'Serviços'], ['hospedes', 'Serviços'],
-     ['hospedagem', 'Serviços'], ['gestdia', 'Serviços'], ['abertura', 'Serviços'],
+    // REESCRITO EM 17/set/2026 — dois nomes de categoria mudaram e TRÊS itens mudaram de
+    // gaveta por pedido dela: "Enriquecimento Ambiental, Ritmo do Time e Linha do tempo do
+    // dia vão para Dashboards, é o administrativo". O que este check protege continua igual:
+    // cada tela mora numa gaveta SÓ, e é esta a gaveta.
+    [['conferencia', 'Ecossistema Daycare'], ['checkout', 'Ecossistema Daycare'], ['hospedes', 'Ecossistema Daycare'],
+     ['hospedagem', 'Ecossistema Daycare'], ['gestdia', 'Ecossistema Daycare'], ['abertura', 'Ecossistema Daycare'],
      ['cuidadovet', 'Central Zêluz'],
      ['checkin', 'Central Zêluz'], ['checkoutconf', 'Central Zêluz'], ['ficha', 'Central Zêluz'],
      ['emporio', 'Central Zêluz'], ['renovacao', 'Central Zêluz'], ['reposicao', 'Central Zêluz'],
      ['dashdc', 'Central Zêluz'], ['orcamento', 'Central Zêluz'], ['recepcao', 'Central Zêluz'],
      ['vacinas', 'Central Zêluz'], ['alergia', 'Central Zêluz'], ['peso', 'Central Zêluz'],
-     ['config', 'Operação'], ['acerto', 'Operação'], ['ritmo', 'Operação'], ['pessoas', 'Operação'],
+     ['config', 'Configurações'], ['acerto', 'Configurações'], ['pessoas', 'Configurações'],
+     ['planodia', 'Configurações'],
      ['painelmeu', 'Dashboards'], ['consultoras', 'Dashboards'], ['paineloperacao', 'Dashboards'],
-     ['linhadotempo', 'Operação'],
+     ['eahist', 'Dashboards'], ['linhadotempo', 'Dashboards'], ['ritmo', 'Dashboards'],
      ['agenda', 'Em breve']].forEach(([k, g]) => {
       check('menu: ' + k + ' está no grupo ' + g, porV[k] && porV[k].grupo === g,
         porV[k] ? porV[k].grupo : 'sumiu');
@@ -3692,10 +3701,36 @@ async function main() {
       && nav.indexOf('data-acc-toggle="c-planos"') < 0
       && px((/\.nav \.nav-rotulo\{([^}]*)\}/.exec(html) || [, ''])[1], 'font-size')
          < px(cssItem, 'font-size'));
-    check('menu: a categoria Dashboards guarda SÓ dashboard (nenhuma tela de trabalho entrou junto)',
-      JSON.stringify(vsDe(fatia('paineis', 'servicos'), true)) === JSON.stringify(
-        ['painelmeu', 'consultoras', 'painel-amanda', 'paineloperacao', 'painel-diretoria']),
+    // REESCRITO EM 17/set/2026 — Adriana: "Enriquecimento Ambiental, Ritmo do Time e Linha
+    // do tempo do dia vão para a categoria Dashboards (é o administrativo), em ordem
+    // alfabética depois dos dashboards das pessoas". O check antigo exigia SÓ os cinco
+    // dashboards de pessoa; agora a régua é: os cinco de pessoa primeiro, na ordem dela, e
+    // depois os três administrativos em ordem alfabética. Nada de trabalho do dia entrou.
+    check('menu: Dashboards = os cinco das pessoas e depois os três administrativos, em ordem alfabética',
+      (() => {
+        const vs = vsDe(fatia('paineis', 'servicos'), true);
+        const pessoas = ['painelmeu', 'consultoras', 'painel-amanda', 'paineloperacao', 'painel-diretoria'];
+        const admin = ['eahist', 'linhadotempo', 'ritmo'];
+        return JSON.stringify(vs) === JSON.stringify(pessoas.concat(admin));
+      })(),
       JSON.stringify(vsDe(fatia('paineis', 'servicos'), true)));
+    check('menu: os três administrativos dos Dashboards estão em ordem alfabética pelo rótulo',
+      (() => {
+        const bloco = fatia('paineis', 'servicos');
+        const rot = [...bloco.matchAll(/<a data-v="(eahist|linhadotempo|ritmo)"[^>]*>[\s\S]{0,240}?<span>([^<]+)<\/span><\/a>/g)]
+          .map((m) => m[2]);
+        const ord = rot.slice().sort((a, b) => a.localeCompare(b, 'pt', { sensitivity: 'base' }));
+        return rot.length === 3 && JSON.stringify(rot) === JSON.stringify(ord);
+      })());
+    // Ninguém ganhou acesso na mudança de gaveta: a Operação tinha so-gestao na categoria,
+    // e so-master (Gestão, Diretoria, Supervisão) é MAIS ESTREITO que so-gestao. Cada item
+    // trouxe a sua própria classe — é isto que o check prova, item por item.
+    check('menu: os três administrativos mudaram de gaveta sem mudar de acesso',
+      porV.eahist && porV.eahist.vis === 'so-gestao'
+      && porV.ritmo && porV.ritmo.vis === 'so-gestao'
+      && porV.linhadotempo && porV.linhadotempo.vis === 'so-master',
+      JSON.stringify([porV.eahist && porV.eahist.vis, porV.ritmo && porV.ritmo.vis,
+        porV.linhadotempo && porV.linhadotempo.vis]));
     check('menu: nenhum dashboard ficou fora da categoria Dashboards',
       (() => {
         const i = nav.indexOf('data-acc-toggle="paineis"');
@@ -3704,7 +3739,9 @@ async function main() {
         return ['painelmeu', 'consultoras', 'painel-amanda', 'paineloperacao', 'painel-diretoria']
           .every((k) => fora.indexOf('data-v="' + k + '"') < 0);
       })());
-    check('menu: Serviços = AuAulândia + Day Care, o trabalho de monitor e plantonista',
+    // A categoria virou "Ecossistema Daycare" em 17/set/2026; o data-acc="servicos" e os
+    // itens continuam os mesmos — é por isso que a fatia ainda se chama 'servicos'.
+    check('menu: Ecossistema Daycare = AuAulândia + Day Care, o trabalho de monitor e plantonista',
       JSON.stringify([...fatia('servicos', 'central').matchAll(/data-acc-toggle="(s-[a-z]+)"/g)]
         .map((x) => x[1])) === JSON.stringify(['s-auaulandia', 's-daycare'])
       && JSON.stringify(vsDe(fatia('servicos', 'central'))) === JSON.stringify(
@@ -3720,8 +3757,10 @@ async function main() {
       /\.acc-panel a\.nav-pend:not\(\.nav-parent\)/.test(html));
     check('menu: ao medir cabeçalho vazio, cabeçalho não conta como item',
       /!a\.classList\.contains\('nav-parent'\)/.test(html));
-    check('menu: Enriquecimento Ambiental (eahist) continua na Operação',
-      porV.eahist && porV.eahist.grupo === 'Operação', porV.eahist ? porV.eahist.grupo : 'sumiu');
+    // REESCRITO EM 17/set/2026: o Enriquecimento Ambiental saiu da Operação (que virou
+    // "Configurações", só com ajuste) e subiu para Dashboards, por pedido dela.
+    check('menu: Enriquecimento Ambiental (eahist) mora nos Dashboards',
+      porV.eahist && porV.eahist.grupo === 'Dashboards', porV.eahist ? porV.eahist.grupo : 'sumiu');
     check('menu: a pendência de item escondido sobe para a linha da categoria',
       /function navPendSubirParaOPai\(\)[\s\S]{0,900}?\.acc-panel a\.nav-pend/.test(html)
       && /navPendSubirParaOPai\(\);/.test(html));
@@ -7561,50 +7600,52 @@ async function main() {
   }
   console.log('');
 
-  // ---- v-orcamento: orcOrdenar — quem FECHOU sobe, na ordem da HOSPEDAGEM ----------
-  // Pedido verbatim (Adriana, 16/set/2026): "Quando o cliente fecha, eu preciso que ele
-  // apareça mais em cima e não lá para baixo. Que a ordem seja da hospedagem."
-  // Isto INVERTE a regra de 04/set (pendentes na frente). O que fechou é trabalho marcado
-  // — tem FILHOt chegando; quem ainda pensa pode esperar a rolagem. E o que já foi embora
-  // desce para o fim, como histórico.
-  // Os quatro grupos: 0 fechado por vir/em curso · 1 aguardando · 2 não fechou/cancelado ·
-  // 3 fechado já terminado (mais recente na frente).
-  console.log('v-orcamento — orcOrdenar (fila da lista de orçamentos):');
+  // ---- v-orcamento: as QUATRO SEÇÕES recolhidas (Adriana, 17/set/2026) -------------
+  // REESCRITO NESTA DATA. Ela ditou o desenho novo: "a tela de orçamento vira seções
+  // FECHADAS (recolhidas), como a Conferência do check-in: cada seção mostra só o título
+  // com a contagem e abre ao toque, para ninguém ficar procurando." E a regra que manda
+  // em tudo: "quem já está hospedado sai da lista de orçamentos, não faz sentido."
+  // Os checks de 16/set — que cobravam "Fechados — próximas hospedagens" no topo e os
+  // quatro grupos antigos — prendiam a tela ao desenho anterior e foram substituídos.
+  // As quatro seções, nesta ordem:
+  //   0 Orçamentos a confirmar · 1 Estadias fechadas (sem check-in ainda)
+  //   2 Cancelados             · 3 Já hospedados / passadas
+  console.log('v-orcamento — as quatro seções da lista (orcGrupoDe / orcOrdenar):');
   if (typeof ctx.orcOrdenar === 'function') {
     const HJ = '2026-09-04';
     const pend10 = { id: 'pend10', status: 'aguardando', entrada: '2026-09-10' };
     const fech05 = { id: 'fech05', status: 'fechado', entrada: '2026-09-05', saida: '2026-09-08' };
-    const r1 = ctx.orcOrdenar([pend10, fech05], HJ).map((o) => o.id);
-    check('mordida — fechado com entrada 05/09 vem ANTES de pendente com entrada 10/09 (quem fechou sobe)',
-      r1[0] === 'fech05' && r1[1] === 'pend10', JSON.stringify(r1));
+    const r1 = ctx.orcOrdenar([fech05, pend10], HJ).map((o) => o.id);
+    check('a confirmar vem ANTES das estadias fechadas (é a decisão que ainda falta)',
+      r1[0] === 'pend10' && r1[1] === 'fech05', JSON.stringify(r1));
 
     const pend05 = { id: 'pend05', status: 'aguardando', entrada: '2026-09-05' };
     const r2 = ctx.orcOrdenar([pend10, pend05], HJ).map((o) => o.id);
-    check('dentro dos pendentes, 05/09 vem antes de 10/09',
-      r2[0] === 'pend05' && r2[1] === 'pend10', JSON.stringify(r2));
+    check('dentro dos a confirmar, 05/09 vem antes de 10/09', r2[0] === 'pend05' && r2[1] === 'pend10', JSON.stringify(r2));
 
     const fech10 = { id: 'fech10', status: 'fechado', entrada: '2026-09-10', saida: '2026-09-12' };
     const r2b = ctx.orcOrdenar([fech10, fech05], HJ).map((o) => o.id);
-    check('dentro dos fechados por vir, a hospedagem mais PRÓXIMA vem primeiro',
+    check('dentro das estadias fechadas, a hospedagem mais PRÓXIMA vem primeiro',
       r2b[0] === 'fech05' && r2b[1] === 'fech10', JSON.stringify(r2b));
 
-    // Em curso: entrou dia 01 e sai dia 06 — hoje é 04. Não é passado, é agora.
+    // Em curso SEM check-in continua trabalho: o FILHOt chegou e ninguém o recebeu no app.
     const emCurso = { id: 'emCurso', status: 'fechado', entrada: '2026-09-01', saida: '2026-09-06' };
-    const r2c = ctx.orcOrdenar([fech05, emCurso], HJ).map((o) => o.id);
-    check('hospedagem EM CURSO fica no grupo de cima (a saída ainda não passou) e na frente da que vem',
-      r2c[0] === 'emCurso' && r2c[1] === 'fech05', JSON.stringify(r2c));
+    check('hospedagem EM CURSO sem check-in fica em "Estadias fechadas" (é trabalho, não histórico)',
+      ctx.orcGrupoDe(emCurso, HJ, false) === 1, String(ctx.orcGrupoDe(emCurso, HJ, false)));
+    check('com o check-in FEITO, o mesmo orçamento sai da lista de trabalho e vira histórico',
+      ctx.orcGrupoDe(emCurso, HJ, true) === 3, String(ctx.orcGrupoDe(emCurso, HJ, true)));
 
     const semData = { id: 'semData', status: 'aguardando', entrada: '' };
     const r3 = ctx.orcOrdenar([semData, pend10, pend05], HJ).map((o) => o.id);
-    check('sem data de entrada vai ao FIM do seu grupo (nunca ao topo)',
-      r3[0] === 'pend05' && r3[1] === 'pend10' && r3[2] === 'semData', JSON.stringify(r3));
+    check('sem data de entrada vai ao FIM da sua seção (nunca ao topo)',
+      JSON.stringify(r3) === JSON.stringify(['pend05', 'pend10', 'semData']), JSON.stringify(r3));
 
     // Fechado SEM data nenhuma não pode ser escondido no histórico: ninguém pode afirmar
-    // que já terminou. Fica no grupo de cima, no fim dele, com o aviso da tela.
+    // que já terminou. Fica em "Estadias fechadas", no fim dela, com o aviso da tela.
     const semDataFechado = { id: 'semDataFechado', status: 'fechado', entrada: '' };
     const r3b = ctx.orcOrdenar([semDataFechado, semData, fech05, pend05], HJ).map((o) => o.id);
-    check('sem data fica no FIM do PRÓPRIO grupo — não migra para outro grupo nem os embaralha',
-      JSON.stringify(r3b) === JSON.stringify(['fech05', 'semDataFechado', 'pend05', 'semData']), JSON.stringify(r3b));
+    check('sem data fica no FIM da PRÓPRIA seção — não migra de seção nem as embaralha',
+      JSON.stringify(r3b) === JSON.stringify(['pend05', 'semData', 'fech05', 'semDataFechado']), JSON.stringify(r3b));
 
     const eA = { id: 'eA', status: 'aguardando', entrada: '2026-09-05' };
     const eB = { id: 'eB', status: 'aguardando', entrada: '2026-09-05' };
@@ -7620,27 +7661,70 @@ async function main() {
     const passado = { id: 'passado', status: 'fechado', entrada: '2026-08-20', saida: '2026-08-25' };
     const semStatus = { id: 'semStatus', entrada: '2026-09-20' }; // sem status = trata como aguardando
     const r5 = ctx.orcOrdenar([passado, cancelado, naoFechou, pend10, fech05, semStatus], HJ).map((o) => o.id);
-    check('ordem completa dos 4 grupos: fechado por vir > aguardando > não fechou/cancelado > hospedagem passada',
-      JSON.stringify(r5) === JSON.stringify(['fech05', 'pend10', 'semStatus', 'naoFechou', 'cancelado', 'passado']),
+    check('ordem completa das 4 seções: a confirmar > estadias fechadas > cancelados > já hospedados/passadas',
+      JSON.stringify(r5) === JSON.stringify(['pend10', 'semStatus', 'fech05', 'cancelado', 'naoFechou', 'passado']),
       JSON.stringify(r5));
+    check('"não fechou" e "cancelado" caem na MESMA seção (Cancelados)',
+      ctx.orcGrupoDe(naoFechou, HJ, false) === 2 && ctx.orcGrupoDe(cancelado, HJ, false) === 2,
+      [ctx.orcGrupoDe(naoFechou, HJ, false), ctx.orcGrupoDe(cancelado, HJ, false)].join(','));
 
     const passadoVelho = { id: 'passadoVelho', status: 'fechado', entrada: '2026-07-01', saida: '2026-07-05' };
     const r6 = ctx.orcOrdenar([passadoVelho, passado], HJ).map((o) => o.id);
     check('no histórico, a hospedagem que acabou por ÚLTIMO vem primeiro',
       r6[0] === 'passado' && r6[1] === 'passadoVelho', JSON.stringify(r6));
 
-    check('os quatro rótulos de grupo existem, na ordem da tela',
-      JSON.stringify(ctx.ORC_GRUPO_ROTULO) === JSON.stringify(['Fechados — próximas hospedagens',
-        'Aguardando resposta', 'Não fechou / cancelado', 'Hospedagens passadas']),
+    check('os quatro rótulos de seção existem, na ordem que ela ditou',
+      JSON.stringify(ctx.ORC_GRUPO_ROTULO) === JSON.stringify(['Orçamentos a confirmar',
+        'Estadias fechadas', 'Cancelados', 'Já hospedados / passadas']),
       JSON.stringify(ctx.ORC_GRUPO_ROTULO));
+    check('as seções 2 e 3 são LINHA (uma por item), as 0 e 1 são card',
+      ctx.ORC_GRUPO_LINHA[2] === true && ctx.ORC_GRUPO_LINHA[3] === true
+      && !ctx.ORC_GRUPO_LINHA[0] && !ctx.ORC_GRUPO_LINHA[1],
+      JSON.stringify(ctx.ORC_GRUPO_LINHA));
 
-    check('mordida — sem `hoje` ninguém vira histórico (não dá para afirmar que terminou)',
-      ctx.orcGrupoDe(passado, '') === 0, String(ctx.orcGrupoDe(passado, '')));
+    check('mordida — sem `hoje` um fechado sem check-in continua trabalho (não dá para afirmar que terminou)',
+      ctx.orcGrupoDe(passado, '', false) === 1, String(ctx.orcGrupoDe(passado, '', false)));
     check('mordida — lista vazia não estoura', JSON.stringify(ctx.orcOrdenar([], HJ)) === '[]');
     check('mordida — orcOrdenar não muda a quantidade de itens nem inventa nenhum',
       ctx.orcOrdenar([pend10, fech05, semData], HJ).length === 3);
+    check('mordida — sem a função `feito`, ninguém é dado como hospedado (o retrato pode não ter descido)',
+      ctx.orcOrdenar([emCurso], HJ).length === 1 && ctx.orcGrupoDe(emCurso, HJ) === 1);
+
+    // ---- a tela: seções recolhidas, contagem no título, estado por aparelho ----
+    check('v-20 · a tela desenha SEÇÃO com cabeçalho clicável, contagem e seta',
+      /class="orc-sec/.test(html) && /onclick="orcSecToggle\(/.test(html)
+      && /class="orc-sec-n"/.test(html) && /class="orc-sec-caret"/.test(html));
+    check('v-20 · as seções nascem RECOLHIDAS e o que a pessoa abriu fica guardado no aparelho',
+      /function orcSecAberta\(g\)\{ return ORC_SEC_ABERTA\[String\(g\)\]===true; \}/.test(html)
+      && /ORC_SEC_CHAVE='zeluz_orc_secoes_v1'/.test(html)
+      && /localStorage\.setItem\(ORC_SEC_CHAVE/.test(html));
+    check('v-20 · seção recolhida não desenha o corpo (é isso que faz a tela caber na mão)',
+      /\(aberta\?\('<div class="orc-sec-corpo">'\+corpo\+'<\/div>'\):''\)/.test(html));
+    check('v-20 · seção vazia não aparece — título com zero só faria procurar o que não há',
+      /if\(!itens\.length\) return '';/.test(html));
+    check('v-20 · Cancelados e Já hospedados saem em UMA LINHA, com "ver" que expande ali mesmo',
+      /function orcLinhaHistoricoHtml\(id, o, g\)\{/.test(html)
+      && /class="orc-l-data"/.test(html) && /class="orc-l-nome"/.test(html)
+      && /class="orc-l-tutor"/.test(html) && /onclick="orcLinhaVer\(/.test(html));
+    check('v-20 · a linha de Cancelados mostra o motivo, e DIZ quando não há motivo gravado',
+      /sem motivo registrado/.test(html) && /o\.cancelado_motivo/.test(html));
+    check('v-20 · a linha de Já hospedados mostra a planilha e deixa reenviar quando NÃO entrou',
+      /lançado na planilha/.test(html) && /NÃO entrou na planilha/.test(html)
+      && /onclick="orcEnviarPlanilha\(/.test(html));
+    check('v-20 · as linhas de histórico NÃO ganham Cancelar, Mudar datas, apagar nem Check-in',
+      (() => {
+        const i = html.indexOf('function orcLinhaHistoricoHtml(id, o, g){');
+        const f = html.indexOf('function orcRenderLista(){');
+        const bloco = html.slice(i, f);
+        return i > 0 && f > i
+          && bloco.indexOf('orcCancelar(') < 0 && bloco.indexOf('orcMudarDatas(') < 0
+          && bloco.indexOf('orcApagar(') < 0 && bloco.indexOf('orcAbrirCheckin(') < 0;
+      })());
+    check('v-20 · apontar para um orçamento abre a seção dele antes de rolar (senão não levaria a lugar nenhum)',
+      /function orcAbrirSecaoDe\(id\)\{/.test(html)
+      && /function orcVerNaLista\(id\)\{[\s\S]{0,400}?orcAbrirSecaoDe\(id\)/.test(html));
   } else {
-    check('orcOrdenar existe', false, 'função não encontrada no script — orçamento não pode ordenar a lista por ENTRADA');
+    check('orcOrdenar existe', false, 'função não encontrada no script — a lista de orçamentos não pode agrupar');
   }
   console.log('');
 
@@ -7697,6 +7781,287 @@ async function main() {
       /Já fez check-in/.test(html) && /<button class="btn" disabled/.test(html));
   } else {
     check('v-19 · orcCheckinBotaoEstado existe', false, 'função não encontrada');
+  }
+  console.log('');
+
+  // ================================================================================
+  // v-20 · OS QUATRO DEFEITOS DE 17/set/2026, cada um com a sua prova
+  // ================================================================================
+
+  // ---- A · o hóspede que sumia do dashboard ---------------------------------------
+  // A Maya (tutora Luciana) fez check-in e não aparecia em "Hóspedes de hoje". Duas
+  // causas provadas no dado real daquele dia, e as duas estão travadas aqui.
+  console.log('v-20 · A — o hóspede que sumia do dashboard:');
+  {
+    // A.1 — o selo (carimbo) nunca pode andar na frente do dado. A cópia local era
+    // gravada 600 ms depois de o selo novo chegar, sem esperar o retrato: quando o dado
+    // atrasava ficava guardado {selo NOVO, retrato VELHO}, o selo batia na sessão
+    // seguinte, a cópia virava "o retrato" — e a estadia da Maya nunca mais descia.
+    check('v-20 · A.1 · a cópia local é gravada com o selo DO RETRATO, nunca com o selo recém-anunciado',
+      /zCopiaGravar\(path, m\.carimboDoMapa, m\.mapa\)/.test(html)
+      && !/setTimeout\(function\(\)\{ zCopiaGravar\(path, m\.carimbo, m\.mapa\); \}, 600\)/.test(html));
+    check('v-20 · A.1 · o selo só entra no retrato quando o DADO chega (child_added/changed/removed)',
+      (html.match(/m\.carimboDoMapa=m\.carimbo;/g) || []).length >= 4);
+    check('v-20 · A.1 · selo mexido por OUTRO aparelho só é anotado — não é colado no retrato',
+      /if\(m\.vivo\)\{\s*\n\s*m\.carimbo=v;[\s\S]{0,700}?return;\s*\n\s*\}/.test(html)
+      && /if\(m\.plantando\)\{ m\.plantando=false; m\.carimboDoMapa=v;/.test(html));
+
+    // A.2 — a anti-duplicação do Plantão comparava NOME sozinho. Há três Mayas no
+    // cadastro (maya__luciana, maya__marcela, maya__ana carolina...): qualquer Maya na
+    // planilha do dia engolia, calada, a hóspede Maya que tinha feito check-in.
+    if (typeof ctx.hospMesmoFilhot === 'function') {
+      check('v-20 · A.2 · mesma Maya (nome e tutor iguais) é a MESMA — não entra duas vezes',
+        ctx.hospMesmoFilhot({ nome: 'Maya', tutor: 'Luciana' }, { nome: 'Maya', tutor: 'Luciana' }) === true);
+      check('v-20 · A.2 · Maya de OUTRA tutora é OUTRO FILHOt — não pode engolir a hóspede',
+        ctx.hospMesmoFilhot({ nome: 'Maya', tutor: 'Marcela' }, { nome: 'Maya', tutor: 'Luciana Couto Renno' }) === false);
+      check('v-20 · A.2 · tutor curto na planilha e inteiro no cadastro é a MESMA pessoa',
+        ctx.hospMesmoFilhot({ nome: 'Maya', tutor: 'Luciana' }, { nome: 'Maya', tutor: 'Luciana Couto Renno' }) === true);
+      check('v-20 · A.2 · com as duas chaves em mão, são elas que mandam',
+        ctx.hospMesmoFilhot({ nome: 'Maya', tutor: 'x', refKey: 'maya__luciana' },
+          { nome: 'Maya', tutor: 'y', refKey: 'maya__luciana' }) === true
+        && ctx.hospMesmoFilhot({ nome: 'Maya', tutor: 'x', refKey: 'maya__marcela' },
+          { nome: 'Maya', tutor: 'x', refKey: 'maya__luciana' }) === false);
+      check('v-20 · A.2 · célula da planilha só com o nome: o nome é o que há (não some ninguém)',
+        ctx.hospMesmoFilhot({ nome: 'Repolho', tutor: '' }, { nome: 'Repolho', tutor: 'Adriana' }) === true);
+      check('v-20 · A.2 · nomes diferentes nunca são o mesmo FILHOt',
+        ctx.hospMesmoFilhot({ nome: 'Maya', tutor: 'Luciana' }, { nome: 'Juma', tutor: 'Luciana' }) === false);
+      check('v-20 · A.2 · mordida — vazio, nulo e torto não estouram',
+        ctx.hospMesmoFilhot(null, null) === false
+        && ctx.hospMesmoFilhot({}, {}) === false
+        && ctx.hospMesmoFilhot({ nome: 'Maya' }, null) === false);
+      check('v-20 · A.2 · o Plantão usa a régua nome+tutor, não mais o nome sozinho',
+        /if\(hospedes\.some\(function\(h\)\{ return hospMesmoFilhot\(h, e\); \}\)\) return;/.test(html)
+        && !/hospedes\.some\(function\(h\)\{ return jsNorm\(h\.nome\|\|''\)===jsNorm\(e\.nome\|\|''\); \}\)/.test(html));
+    } else {
+      check('v-20 · A.2 · hospMesmoFilhot existe', false, 'função não encontrada');
+    }
+
+    // A.3 — cancelar a reserva duplicada apagou do calendário as noites da reserva BOA:
+    // o texto da célula é idêntico ("Maya/SRD/Luciana") e o calendário não sabe de qual
+    // das duas ela era. A planilha é a fonte do dashboard — por isso a hóspede sumiu.
+    if (typeof ctx.orcNoitesDeOutraReserva === 'function') {
+      const bom = { id: 'bom', status: 'fechado', entrada: '2026-09-15', saida: '2026-09-24',
+        tutor: 'Luciana', pets: [{ key: 'maya__luciana', nome: 'Maya', tutor: 'Luciana' }] };
+      const cancelando = { id: 'cancelando', status: 'cancelado', entrada: '2026-09-15', saida: '2026-09-24',
+        tutor: 'Luciana', pets: [{ key: 'maya__luciana', nome: 'Maya', tutor: 'Luciana' }] };
+      const presas = ctx.orcNoitesDeOutraReserva([bom, cancelando], 'cancelando', cancelando);
+      check('v-20 · A.3 · o caso Maya: cancelar a duplicada NÃO pode liberar as noites da reserva viva',
+        presas.length === 1 && presas[0].nome === 'Maya' && presas[0].outroId === 'bom',
+        JSON.stringify(presas));
+      const sozinho = ctx.orcNoitesDeOutraReserva([cancelando], 'cancelando', cancelando);
+      check('v-20 · A.3 · sem outra reserva viva, o calendário é liberado como sempre foi',
+        sozinho.length === 0, JSON.stringify(sozinho));
+      const outroPeriodo = { id: 'outro', status: 'fechado', entrada: '2026-10-01', saida: '2026-10-05',
+        tutor: 'Luciana', pets: [{ key: 'maya__luciana', nome: 'Maya', tutor: 'Luciana' }] };
+      check('v-20 · A.3 · reserva do mesmo FILHOt em OUTRO período não segura estas noites',
+        ctx.orcNoitesDeOutraReserva([outroPeriodo, cancelando], 'cancelando', cancelando).length === 0);
+      const outroPet = { id: 'outroPet', status: 'fechado', entrada: '2026-09-15', saida: '2026-09-24',
+        tutor: 'Marcela', pets: [{ key: 'maya__marcela', nome: 'Maya', tutor: 'Marcela' }] };
+      check('v-20 · A.3 · Maya de outra tutora, nas mesmas noites, não segura nada (é outra coluna)',
+        ctx.orcNoitesDeOutraReserva([outroPet, cancelando], 'cancelando', cancelando).length === 0);
+      const aguardando = { id: 'ag', status: 'aguardando', entrada: '2026-09-15', saida: '2026-09-24',
+        tutor: 'Luciana', pets: [{ key: 'maya__luciana', nome: 'Maya', tutor: 'Luciana' }] };
+      check('v-20 · A.3 · orçamento que só AGUARDA não segura noite (ele nunca entrou no calendário)',
+        ctx.orcNoitesDeOutraReserva([aguardando, cancelando], 'cancelando', cancelando).length === 0);
+      check('v-20 · A.3 · mordida — lista vazia, nulo e sem pets não estouram',
+        ctx.orcNoitesDeOutraReserva([], 'x', cancelando).length === 0
+        && ctx.orcNoitesDeOutraReserva(null, 'x', null).length === 0
+        && ctx.orcNoitesDeOutraReserva([bom], 'x', { pets: [] }).length === 0);
+      check('v-20 · A.3 · o cancelamento consulta a trava, avisa na tela e deixa rastro',
+        /orcNoitesDeOutraReserva\(orcListaArray\(\), id, o\)/.test(html)
+        && /AS NOITES CONTINUAM OCUPADAS POR OUTRA RESERVA/.test(html)
+        && /audit\('orcamento-cancelado-calendario-preservado'/.test(html));
+    } else {
+      check('v-20 · A.3 · orcNoitesDeOutraReserva existe', false, 'função não encontrada');
+    }
+  }
+  console.log('');
+
+  // ---- B · o Check-in que já tinha sido feito e o app não reconhecia --------------
+  // Bud e Stella (Leonardo) apareceram com o botão "Check-in" no dia 17/09, já recebidos.
+  // A regra antiga exigia entrada IDÊNTICA entre estadia e orçamento — e a tela do
+  // check-in vinha com a data da última hospedagem (item C). Um dia de diferença e o app
+  // não reconhecia o próprio check-in.
+  console.log('v-20 · B — "já fez check-in" por cruzamento de período:');
+  if (typeof ctx.orcCheckinJaFeito === 'function') {
+    const o = { status: 'fechado', entrada: '2026-09-17', saida: '2026-09-21', tutor: 'Leonardo' };
+    const bud = { key: 'bud__leonardo', nome: 'Bud', tutor: 'Leonardo' };
+    const naData = { e1: { refKey: 'bud__leonardo', nome: 'Bud', tutor: 'Leonardo', entrada: '2026-09-17', saida: '2026-09-21', status: 'ativa' } };
+    check('v-20 · B · check-in na data exata continua contando',
+      ctx.orcCheckinJaFeito(naData, bud, o) === true);
+    const umDiaDepois = { e1: { refKey: 'bud__leonardo', nome: 'Bud', tutor: 'Leonardo', entrada: '2026-09-18', saida: '2026-09-21', status: 'ativa' } };
+    check('v-20 · B · o caso Bud: check-in com UM DIA de diferença também conta (o período cruza)',
+      ctx.orcCheckinJaFeito(umDiaDepois, bud, o) === true);
+    const julho = { e1: { refKey: 'bud__leonardo', nome: 'Bud', tutor: 'Leonardo', entrada: '2026-07-24', saida: '2026-07-28', status: 'encerrada' } };
+    check('v-20 · B · a hospedagem de JULHO do mesmo Bud não conta como esta (não cruza)',
+      ctx.orcCheckinJaFeito(julho, bud, o) === false);
+    const jaSaiu = { e1: { refKey: 'bud__leonardo', nome: 'Bud', tutor: 'Leonardo', entrada: '2026-09-17', saida: '2026-09-19', status: 'encerrada' } };
+    check('v-20 · B · check-in já encerrado (o FILHOt foi embora) continua sendo check-in feito',
+      ctx.orcCheckinJaFeito(jaSaiu, bud, o) === true);
+    const cancelada = { e1: { refKey: 'bud__leonardo', nome: 'Bud', tutor: 'Leonardo', entrada: '2026-09-17', saida: '2026-09-21', status: 'cancelada' } };
+    check('v-20 · B · estadia CANCELADA não é check-in', ctx.orcCheckinJaFeito(cancelada, bud, o) === false);
+    const outroTutor = { e1: { nome: 'Bud', tutor: 'Thais', entrada: '2026-09-17', saida: '2026-09-21', status: 'ativa' } };
+    check('v-20 · B · mordida — Bud de OUTRO tutor não vale (nome sozinho não identifica ninguém)',
+      ctx.orcCheckinJaFeito(outroTutor, bud, o) === false);
+    check('v-20 · B · mordida — sem estadia nenhuma, sem entrada, e nó torto não estouram',
+      ctx.orcCheckinJaFeito({}, bud, o) === false
+      && ctx.orcCheckinJaFeito(naData, bud, { status: 'fechado', entrada: '' }) === false
+      && ctx.orcCheckinJaFeito({ e1: null }, bud, o) === false);
+    // Com irmãos, basta UM recebido para o orçamento sair da lista de trabalho.
+    const irmaos = { status: 'fechado', entrada: '2026-09-17', saida: '2026-09-21', tutor: 'Leonardo',
+      pets: [{ key: 'bud__leonardo', nome: 'Bud', tutor: 'Leonardo' },
+        { key: 'stella__leonardo', nome: 'Stella', tutor: 'Leonardo' }] };
+    // Com irmãos, "todos" e não "algum": receber o Bud e sumir com o card deixaria a
+    // Stella sem botão e sem aviso — e ninguém fica para trás sem aviso (13/ago/2026).
+    const soBud = naData;
+    const budEStella = { e1: naData.e1,
+      e2: { refKey: 'stella__leonardo', nome: 'Stella', tutor: 'Leonardo', entrada: '2026-09-17', saida: '2026-09-21', status: 'ativa' } };
+    check('v-20 · B · com irmãos, UM check-in NÃO tira o orçamento da lista (o outro ainda precisa entrar)',
+      ctx.orcCheckinFeitoNoOrcamento(irmaos, soBud) === false,
+      String(ctx.orcCheckinFeitoNoOrcamento(irmaos, soBud)));
+    check('v-20 · B · quando o ÚLTIMO irmão entra, o orçamento desce para o histórico',
+      ctx.orcCheckinFeitoNoOrcamento(irmaos, budEStella) === true);
+    check('v-20 · B · e o card parcial mostra o aviso de quem entrou e o botão de quem falta',
+      ctx.orcCheckinBotaoEstado(irmaos, irmaos.pets[0], '2026-09-16', soBud) === 'feito'
+      && ctx.orcCheckinBotaoEstado(irmaos, irmaos.pets[1], '2026-09-16', soBud) === 'abrir');
+    check('v-20 · B · sem FILHOt salvo, orçamento fechado nunca é dado como hospedado',
+      ctx.orcCheckinFeitoNoOrcamento({ status: 'fechado', entrada: '2026-09-17', pets: [] }, naData) === false);
+    check('v-20 · B · orçamento que só aguarda nunca é dado como hospedado',
+      ctx.orcCheckinFeitoNoOrcamento({ status: 'aguardando', entrada: '2026-09-17', pets: [bud] }, naData) === false);
+    check('v-20 · B · FILHOt sozinho recebido: aí sim o orçamento sai da lista de trabalho',
+      ctx.orcCheckinFeitoNoOrcamento({ status: 'fechado', entrada: '2026-09-17', saida: '2026-09-21', tutor: 'Leonardo', pets: [bud] }, naData) === true);
+    check('v-20 · B · quem já fez check-in perde o botão e ganha o aviso, e a régua é o cruzamento',
+      ctx.orcCheckinBotaoEstado(o, bud, '2026-09-16', umDiaDepois) === 'feito'
+      && ctx.orcCheckinBotaoEstado(o, bud, '2026-09-16', {}) === 'abrir');
+  } else {
+    check('v-20 · B · orcCheckinJaFeito existe', false, 'função não encontrada');
+  }
+  console.log('');
+
+  // ---- C · as datas do orçamento têm de ganhar do passado -------------------------
+  // Cicatrizes no banco naquele dia: a estadia da Lisa gravada 17/set 15h58 com entrada
+  // 19/09 e SAÍDA 12/09 (a saída da hospedagem de 10 a 12/09) — período invertido; e o
+  // Pufe salvo 16/set 14h45 com 02/09 a 04/09, as datas da vez anterior.
+  console.log('v-20 · C — as datas do orçamento mandam no Check-in:');
+  if (typeof ctx.orcDatasQueValem === 'function') {
+    const ultima = { entrada: '2026-09-10', saida: '2026-09-12' };
+    const bilhete = { orcId: 'x', petKey: 'lisa__enilce', entrada: '2026-09-18', saida: '2026-09-19' };
+    const v = ctx.orcDatasQueValem(bilhete, ultima);
+    check('v-20 · C · o caso Lisa: com bilhete do orçamento, o passado NÃO entra',
+      v.entrada === '2026-09-18' && v.saida === '2026-09-19', JSON.stringify(v));
+    const semBilhete = ctx.orcDatasQueValem(null, ultima);
+    check('v-20 · C · sem bilhete (quem chegou pela busca), a última estadia pré-preenche como sempre',
+      semBilhete.entrada === '2026-09-10' && semBilhete.saida === '2026-09-12', JSON.stringify(semBilhete));
+    const meio = ctx.orcDatasQueValem({ entrada: '2026-09-18', saida: '' }, ultima);
+    check('v-20 · C · bilhete sem saída não apaga a saída conhecida — completa o que falta',
+      meio.entrada === '2026-09-18' && meio.saida === '2026-09-12', JSON.stringify(meio));
+    check('v-20 · C · mordida — nulo, vazio e torto não estouram',
+      JSON.stringify(ctx.orcDatasQueValem(null, null)) === JSON.stringify({ entrada: '', saida: '' })
+      && JSON.stringify(ctx.orcDatasQueValem({}, {})) === JSON.stringify({ entrada: '', saida: '' }));
+    check('v-20 · C · o atalho pendura o bilhete ANTES de navegar, e diz de qual FILHOt ele é',
+      /ORC_CI_DATAS=\{orcId:id, petKey:String\(pet\.key\|\|''\), entrada:\(o\.entrada\|\|''\), saida:\(o\.saida\|\|''\)\};/.test(html));
+    check('v-20 · C · o pré-preenchimento da última estadia respeita o bilhete (não escreve por cima)',
+      /const _vale=\(typeof orcDatasQueValem==='function'\)\?orcDatasQueValem\(_bil, e\)/.test(html)
+      && !/if\(e\.entrada\)\{ const _e=document\.getElementById\('ciEntrada'\); if\(_e\) _e\.value=e\.entrada; \}/.test(html));
+    check('v-20 · C · saída ANTES da entrada nunca é escrita na tela (foi assim que a Lisa nasceu torta)',
+      /if\(_vale\.saida && \(!_vale\.entrada \|\| _vale\.saida>=_vale\.entrada\)\)\{/.test(html));
+    check('v-20 · C · o bilhete é de UM FILHOt: escolher outro na busca o descarta',
+      /pelKey\(p\)!==ORC_CI_DATAS\.petKey\) ORC_CI_DATAS=null;/.test(html));
+  } else {
+    check('v-20 · C · orcDatasQueValem existe', false, 'função não encontrada');
+  }
+  console.log('');
+
+  // ---- D · a Pipoca, cadastro completo, acusada de incompleta ---------------------
+  // "O botão é para facilitar e não problematizar." O atalho procurava a ficha só por
+  // pelKey idêntica e abria a tela antes de o cadastro descer.
+  console.log('v-20 · D — o atalho acha a ficha e não acusa cadastro cheio:');
+  if (typeof ctx.orcAcharPeludinho === 'function') {
+    const lista = [
+      { n: 'Pipoca', tutor: 'João', raca: 'Maltês' },
+      { n: 'Maya', tutor: 'Luciana', raca: 'SRD' },
+      { n: 'Maya', tutor: 'Marcela', raca: 'SRD' },
+      { n: 'Juma', tutor: 'Caroline Moreira Nogueira', raca: 'Westie' },
+    ];
+    check('v-20 · D · chave igual acha na hora',
+      ctx.orcAcharPeludinho(lista, { key: 'pipoca__joão', nome: 'Pipoca', tutor: 'João' }) === 0);
+    check('v-20 · D · o caso Pipoca: tutor curto no orçamento e inteiro no cadastro ainda acha',
+      ctx.orcAcharPeludinho(lista, { key: 'pipoca__joão francisco peixoto de carvalho soares', nome: 'Pipoca', tutor: 'João Francisco Peixoto de Carvalho Soares' }) === 0);
+    check('v-20 · D · sem chave, nome + tutor acham',
+      ctx.orcAcharPeludinho(lista, { nome: 'Maya', tutor: 'Marcela' }) === 2);
+    check('v-20 · D · nome único basta, mesmo sem tutor nenhum',
+      ctx.orcAcharPeludinho(lista, { nome: 'Pipoca' }) === 0);
+    check('v-20 · D · mordida — com XARÁ e sem tutor, PARA (há três Mayas no cadastro)',
+      ctx.orcAcharPeludinho(lista, { nome: 'Maya' }) === -1);
+    check('v-20 · D · mordida — quem não está na lista devolve -1, nunca um palpite',
+      ctx.orcAcharPeludinho(lista, { key: 'tonico__maize', nome: 'Tonico', tutor: 'Maize' }) === -1);
+    check('v-20 · D · mordida — lista vazia, nulo e pet torto não estouram',
+      ctx.orcAcharPeludinho([], { nome: 'Pipoca' }) === -1
+      && ctx.orcAcharPeludinho(null, null) === -1
+      && ctx.orcAcharPeludinho(lista, {}) === -1);
+    check('v-20 · D · o atalho ESPERA o cadastro descer antes de abrir a ficha',
+      /zMapaUma\('daycare\/cadastro'\)\.catch\(function\(\)\{ return null; \}\)/.test(html)
+      && /return pronto\.then\(function\(\)\{[\s\S]{0,400}?orcAcharPeludinho\(lista, pet, o\.tutor\)/.test(html));
+    check('v-20 · D · sem o cadastro em mão, o cartão "Cadastro incompleto" fica CALADO',
+      /if\(typeof CARTEIRA_CARREGADA!=='undefined' && !CARTEIRA_CARREGADA\)\{\s*\n\s*card\.style\.display='none'; wrap\.innerHTML=''; return;/.test(html));
+    check('v-20 · D · quando o cadastro chega, o cartão é redesenhado (senão ficaria calado para sempre)',
+      /ciRenderCadastroFalta\(ciPelAtual\)/.test(html));
+  } else {
+    check('v-20 · D · orcAcharPeludinho existe', false, 'função não encontrada');
+  }
+  console.log('');
+
+  // ---- F · saída antecipada: crédito das noites não usadas ------------------------
+  // Adriana: "tem como sair antes, ficar com crédito, algo assim." Mora em Hóspedes de
+  // hoje, onde o hóspede vive — ela mesma corrigiu o desenho da manhã: "quem já está
+  // hospedado sai da lista de orçamentos".
+  console.log('v-20 · F — saída antecipada e o crédito das noites:');
+  if (typeof ctx.hospNoitesNaoUsadas === 'function') {
+    const e = { nome: 'Juma', tutor: 'Caroline Moreira Nogueira', entrada: '2026-09-14', saida: '2026-09-23' };
+    check('v-20 · F · saiu em 19/09 de uma estadia até 23/09: 4 noites não usadas',
+      ctx.hospNoitesNaoUsadas(e, '2026-09-19') === 4, String(ctx.hospNoitesNaoUsadas(e, '2026-09-19')));
+    check('v-20 · F · saiu um dia antes: 1 noite',
+      ctx.hospNoitesNaoUsadas(e, '2026-09-22') === 1, String(ctx.hospNoitesNaoUsadas(e, '2026-09-22')));
+    check('v-20 · F · saiu na data combinada: nenhum crédito (cumpriu a estadia)',
+      ctx.hospNoitesNaoUsadas(e, '2026-09-23') === 0);
+    check('v-20 · F · ficou MAIS tempo não gera crédito negativo — isso é "Mudar datas"',
+      ctx.hospNoitesNaoUsadas(e, '2026-09-25') === 0);
+    check('v-20 · F · sem saída combinada não há o que devolver (não se inventa crédito)',
+      ctx.hospNoitesNaoUsadas({ entrada: '2026-09-14' }, '2026-09-19') === 0);
+    check('v-20 · F · data antes da entrada é impossível: zero, nunca um número torto',
+      ctx.hospNoitesNaoUsadas(e, '2026-09-10') === 0);
+    check('v-20 · F · mordida — nulo, vazio e data sem sentido não estouram',
+      ctx.hospNoitesNaoUsadas(null, null) === 0
+      && ctx.hospNoitesNaoUsadas({}, '') === 0
+      && ctx.hospNoitesNaoUsadas(e, 'ontem') === 0);
+    check('v-20 · F · a frase da tela conta a conta em português, e diz quando não há noite',
+      /noite não usada — 1 crédito/.test(html) && /Nenhuma noite sobrando nesta data\./.test(html));
+    check('v-20 · F · o botão mora em Hóspedes de hoje, só para quem está na casa AGORA',
+      /hospPodeAntecipada\(\)&&st==='agora'&&hospNoitesNaoUsadas\(e, hospHojeISO\(\)\)>0/.test(html)
+      && /Saída antecipada<\/button>/.test(html));
+    check('v-20 · F · só Gestão, Diretoria ou Supervisão lançam (crédito é dinheiro do tutor)',
+      /function hospPodeAntecipada\(\)\{[\s\S]{0,260}?r==='gestao'\|\|r==='diretoria'\|\|r==='supervisor'/.test(html));
+    check('v-20 · F · grava saida_real e credito_noites — na estadia e no orçamento',
+      /\/saida_real'\]=real;/.test(html) && /\/credito_noites'\]=noites;/.test(html)
+      && /auaulandia\/orcamentos\/'\+orcId\+'\/saida_real'\]=real;/.test(html));
+    check('v-20 · F · o crédito entra em daycare/reposicao/{k}/lancamentos com o motivo dela',
+      /daycare\/reposicao\/'\+kPel\+'\/lancamentos\/sa-'\+id\+'-'\+n\]/.test(html)
+      && /Saída antecipada — hospedagem '\+perDe\+' a '\+perAte/.test(html)
+      && /tipo:'credito'/.test(html));
+    check('v-20 · F · chave DETERMINÍSTICA: dois toques no botão não lançam crédito em dobro',
+      /\/sa-'\+id\+'-'\+n\]/.test(html)
+      && !/daycare\/reposicao[\s\S]{0,120}?lancamentos'\)\.push\(\{\s*tipo:'credito', data:real/.test(html));
+    check('v-20 · F · tudo num update de raiz: ou a baixa e o crédito entram juntos, ou nenhum',
+      /DB\.ref\(\)\.update\(patch\)\.then\(function\(\)\{[\s\S]{0,400}?audit\('hospedagem-saida-antecipada'/.test(html));
+    check('v-20 · F · deixa rastro e leva ao Check-out, que é o passo seguinte da vida real',
+      /audit\('hospedagem-saida-antecipada'/.test(html)
+      && /abrirItemDoMenu\('checkout'\)/.test(html));
+    check('v-20 · F · FILHOt sem ficha no cadastro: a tela DIZ que o crédito não foi lançado',
+      /não tem ficha no cadastro — o crédito NÃO foi lançado/.test(html));
+    check('v-20 · F · a hospedagem é encerrada com a data real (senão o hóspede reaparece amanhã)',
+      /\/status'\]='encerrada';/.test(html) && /\/encerradaEm'\]=real;/.test(html));
+  } else {
+    check('v-20 · F · hospNoitesNaoUsadas existe', false, 'função não encontrada');
   }
   console.log('');
 
@@ -9448,9 +9813,14 @@ async function main() {
     vm.runInContext('__navAll = NAV_PAGINAS_ALL; __navKeys = NAV_PAGINAS_KEYS;', ctx);
     const navAll = ctx.__navAll || [], navKeys = ctx.__navKeys || [];
     const grupos = navAll.map((g) => g.grp);
-    check('mordida — os grupos são os do menu de hoje (Central Zêluz e suas partes, Operação, Relatórios) — "Gestão" morreu',
+    // REESCRITO EM 17/set/2026: "Operação" virou "Configurações" e a "Linha do tempo do
+    // dia" subiu para Dashboards. Esta lista existe para dizer o MESMO que o sidebar — se
+    // ela ficasse no nome antigo, a Gestão leria na tela do Time uma gaveta que não existe.
+    // As CHAVES não mudaram (o check das 16 chaves, abaixo, é a prova).
+    check('mordida — os grupos são os do menu de hoje (Central Zêluz e suas partes, Dashboards, Configurações, Relatórios)',
       JSON.stringify(grupos) === JSON.stringify(['Central Zêluz', 'Central Zêluz · AuAulândia',
-        'Central Zêluz · Day Care', 'Central Zêluz · Planos e cobranças', 'Operação', 'Relatórios']),
+        'Central Zêluz · Day Care', 'Central Zêluz · Planos e cobranças', 'Dashboards',
+        'Configurações', 'Relatórios']),
       JSON.stringify(grupos));
     // v-07 (08/set/2026, noite): 'painel' saiu do menu e quem herdou o lugar dele na Operação
     // foi 'linhadotempo'. Esta lista tem de dizer o MESMO que o sidebar — conceder uma tela
@@ -11269,8 +11639,12 @@ async function main() {
         return JSON.stringify(partes) === JSON.stringify(['c-peludinhos', 'c-auaulandia', 'c-daycare']);
       })());
 
-    // ---- C: a Operação em ordem alfabética ----
-    check('C · a Operação está em ordem alfabética, e o submenu do Time continua colado nele',
+    // ---- C: a gaveta de ajuste em ordem alfabética ----
+    // REESCRITO EM 17/set/2026: "Operação" virou "Configurações" e ficou com QUATRO itens
+    // (Configurações · Escala e plano do dia · Financeiro do plantão · Time) — os três
+    // administrativos subiram para Dashboards. A promessa continua a mesma: ordem
+    // alfabética e o #pSubnav colado no Time, que é o submenu dele.
+    check('C · a gaveta Configurações está em ordem alfabética, e o submenu do Time continua colado nele',
       (() => {
         const i = html.indexOf('data-acc-toggle="operacao"');
         const f = html.indexOf('data-acc-toggle="embreve"');
@@ -11279,7 +11653,7 @@ async function main() {
           .map((m) => m[1]);
         const ordenado = rotulos.slice().sort((a, b) => a.localeCompare(b, 'pt', { sensitivity: 'base' }));
         return JSON.stringify(rotulos) === JSON.stringify(ordenado)
-          && rotulos.length === 7
+          && rotulos.length === 4
           && bloco.indexOf('id="pSubnav"') > bloco.indexOf('data-v="pessoas"');
       })(),
       (() => {
@@ -11719,7 +12093,7 @@ async function main() {
         !/\.catch\(function\([a-z]*\)\{\s*\}\)/.test(
           html.slice(html.indexOf('const CK_FRASE_PRATICA='), html.indexOf('function renderCkInicio('))));
       check('v-14 · a versão carimbada é a desta entrega',
-        /const APP_VERSAO='2026-09-16-01';/.test(html));
+        /const APP_VERSAO='2026-09-17-01';/.test(html));
     }
 
     // ---- v-15: O PLANO SÓ GRAVA NO CONFIRMAR (caso Cookie/Yara, 15/set/2026) --------
@@ -12534,8 +12908,8 @@ async function main() {
           + 'AVISO_COLEIRA_APOS = __bkpC.apos;', ctx);
       }
     } else { check('v-17 · prevCfgCarregar existe', false, 'função não encontrada'); }
-    check('v-19 · a versão carimbada desta entrega é a 2026-09-16-01',
-      /const APP_VERSAO='2026-09-16-01';/.test(html));
+    check('v-20 · a versão carimbada desta entrega é a 2026-09-17-01',
+      /const APP_VERSAO='2026-09-17-01';/.test(html));
 
     // ───────── v-19 · o aparelho autorizado que não se perde no iPhone (16/set/2026)
     // Auditoria de 16/set: o iPhone da Leticya gerou DOIS ids em trinta segundos

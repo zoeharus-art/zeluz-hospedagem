@@ -1442,6 +1442,34 @@
   .avr-form textarea{width:100%;min-height:60px;padding:10px 12px;border:1.5px solid var(--line);border-radius:9px;background:var(--z-cream);font-family:var(--font-ui);font-size:14px;color:var(--z-blue);margin-bottom:8px}
   .avr-form input{width:100%;padding:10px 12px;border:1.5px solid var(--line);border-radius:9px;background:var(--z-cream);font-family:var(--font-ui);font-size:14px;font-weight:700;color:var(--z-blue);margin-bottom:8px}
   .avr-form-btns{display:flex;gap:8px;flex-wrap:wrap}
+  /* ===== SEÇÕES RECOLHIDAS DO ORÇAMENTO (Adriana, 17/set/2026) ======================
+     "Seções fechadas, como a Conferência do check-in: cada seção mostra só o título com a
+     contagem e abre ao toque." O cabeçalho é a área de toque inteira (mínimo 48px de alto,
+     dedo de gente), a contagem é uma pastilha e a seta gira ao abrir. Cores dos tokens. */
+  .orc-sec{border:1.5px solid var(--line);border-radius:14px;margin-bottom:12px;background:var(--z-white);overflow:hidden}
+  .orc-sec-head{display:flex;align-items:center;gap:10px;min-height:48px;padding:11px 14px;cursor:pointer;user-select:none;background:var(--z-cream-warm)}
+  .orc-sec-tit{flex:1;font-family:var(--font-ui);font-weight:800;font-size:14px;letter-spacing:.2px;color:var(--z-blue)}
+  .orc-sec-n{min-width:26px;height:24px;padding:0 8px;border-radius:12px;background:var(--z-blue);color:var(--z-cream);
+             font-weight:800;font-size:13px;display:inline-flex;align-items:center;justify-content:center}
+  .orc-sec-caret{color:var(--z-blue);font-size:15px;transform:rotate(-90deg);transition:transform .16s ease}
+  .orc-sec.aberta .orc-sec-caret{transform:none}
+  .orc-sec-corpo{padding:12px 12px 4px}
+  /* UMA LINHA POR ITEM nas seções de histórico. Em celular a linha empilha (grid de uma
+     coluna) — texto legível sem zoom, sem rolagem lateral. */
+  .orc-linha{display:grid;grid-template-columns:1fr;gap:2px 10px;align-items:center;
+             padding:10px 2px;border-bottom:1px solid var(--line);font-size:13.5px;line-height:1.45}
+  .orc-linha:last-child{border-bottom:0}
+  .orc-linha.aberta{background:var(--z-cream-warm);border-radius:10px;padding:10px 8px}
+  .orc-l-data{font-weight:800;color:var(--z-blue);white-space:nowrap}
+  .orc-l-nome{font-weight:800;color:var(--z-blue)}
+  .orc-l-tutor{color:var(--z-blue-soft)}
+  .orc-l-fim{font-size:12.5px}
+  .orc-l-ver{justify-self:start;background:none;border:0;padding:2px 0;color:var(--z-blue);
+             font-family:var(--font-ui);font-weight:800;font-size:12.5px;text-decoration:underline;cursor:pointer}
+  @media(min-width:760px){
+    .orc-linha{grid-template-columns:auto 1.1fr 1fr auto auto}
+    .orc-l-ver{justify-self:end}
+  }
   .avr-resolvido-banner{background:rgba(39,174,96,.1);border:1.5px solid var(--crm-ok);border-radius:11px;padding:12px 14px;font-weight:800;color:var(--crm-ok);text-align:center}
   /* O aviso encerrado por herança (o caso do Kakinho) DIZ que foi assim — a tela não finge
      que o campo sempre esteve certo. E a dica embaixo do formulário explica o que Encerrar faz. */
@@ -2413,9 +2441,18 @@
         <!-- O "Painel do Dia" saiu daqui em 08/set/2026 (noite). Adriana: "o Painel do Dia é
              um dashboard e precisa ir para quem precisa ver." Cada bloco dele foi para o
              dashboard da PESSOA que age sobre aquilo — o mapa está em docs/INDICE-MENU-APP.md.
-             A tela v-painel continua existindo (link antigo não morre), mas sem item no menu;
-             a classe so-master que ela tinha passou para a "Linha do tempo do dia", na
-             Operação — ninguém ganhou nem perdeu acesso. -->
+             A tela v-painel continua existindo (link antigo não morre), mas sem item no menu. -->
+        <!-- OS TRÊS ADMINISTRATIVOS (Adriana, 17/set/2026) — "Enriquecimento Ambiental,
+             Ritmo do Time e Linha do tempo do dia vão para Dashboards, é o administrativo",
+             em ORDEM ALFABÉTICA depois dos dashboards das pessoas: Enriquecimento Ambiental ·
+             Linha do tempo do dia · Ritmo do Time. Vieram da categoria Operação, que virou
+             "Configurações" e ficou só com o que é ajuste.
+             NINGUÉM GANHOU NEM PERDEU ACESSO: cada item trouxe a SUA classe so-*, e a
+             so-gestao que a gaveta da Operação tinha era mais larga que as deles
+             (so-master ⊂ so-gestao: só Gestão, Diretoria e Supervisão veem as duas). -->
+        <a data-v="eahist" class="so-gestao" title="O que foi feito e quem não participou."><span data-icon="ball"></span><span>Enriquecimento Ambiental</span></a>
+        <a data-v="linhadotempo" class="so-master" title="Tudo o que aconteceu, em ordem — escolha o mês e o dia."><span data-icon="clock"></span><span>Linha do tempo do dia</span></a>
+        <a data-v="ritmo" class="so-gestao" title="Tempo por etapa, dia a dia."><span data-icon="clock"></span><span>Ritmo do Time</span></a>
       </div>
     </div>
 
@@ -2425,8 +2462,11 @@
          (consultoras, supervisão da Amanda e a veterinária). O critério é QUEM FAZ, e por
          isso nenhuma tela aparece nos dois lados — cada uma mora num lugar só.
          REGRA MANTIDA: nenhum item trocou de classe so-*/op-only ao mudar de gaveta. -->
+    <!-- 17/set/2026 — Adriana: a categoria "Serviços" passa a chamar-se "Ecossistema
+         Daycare". Só o NOME VISÍVEL muda: o data-acc="servicos" (a chave do aberto/fechado
+         guardada em cada aparelho), os data-v e as classes so-* continuam idênticos. -->
     <div class="acc" data-acc="servicos">
-      <a class="grp nav-parent" data-acc-toggle="servicos"><span data-icon="paw"></span><span>Serviços</span><span class="acc-caret" aria-hidden="true"></span></a>
+      <a class="grp nav-parent" data-acc-toggle="servicos"><span data-icon="paw"></span><span>Ecossistema Daycare</span><span class="acc-caret" aria-hidden="true"></span></a>
       <div class="acc-panel">
         <div class="acc" data-acc="s-auaulandia">
           <a class="grp grp-sub nav-parent" data-acc-toggle="s-auaulandia"><span>AuAulândia</span><span class="acc-caret" aria-hidden="true"></span></a>
@@ -2541,28 +2581,24 @@
       </div>
     </div>
 
+    <!-- CONFIGURAÇÕES (Adriana, 17/set/2026) — a categoria "Operação" passou a chamar-se
+         "Configurações" e ficou SÓ com o que é ajuste da casa: Configurações, Escala e plano
+         do dia, Financeiro do plantão e Time (com o #pSubnav colado nele, que é o submenu
+         do Time). Enriquecimento Ambiental, Linha do tempo do dia e Ritmo do Time subiram
+         para Dashboards — "é o administrativo".
+         O data-acc="operacao" (chave do aberto/fechado em cada aparelho) e todas as classes
+         so-* continuam idênticos: mudou o nome e a gaveta, nunca o acesso.
+         ORDEM ALFABÉTICA, como ela pediu em 08/set: Configurações · Escala e plano do dia ·
+         Financeiro do plantão · Time. -->
     <div class="acc so-gestao" data-acc="operacao">
-      <a class="grp nav-parent" data-acc-toggle="operacao"><span data-icon="users"></span><span>Operação</span><span class="acc-caret" aria-hidden="true"></span></a>
-      <!-- ORDEM ALFABÉTICA (Adriana, 08/set/2026, 23h30): "Operação: itens em ordem
-           alfabética". Configurações · Enriquecimento Ambiental · Escala e plano do dia ·
-           Financeiro do plantão · Linha do tempo do dia · Ritmo do Time · Time.
-           O #pSubnav continua colado no Time — é o submenu dele. -->
+      <a class="grp nav-parent" data-acc-toggle="operacao"><span data-icon="settings"></span><span>Configurações</span><span class="acc-caret" aria-hidden="true"></span></a>
       <div class="acc-panel">
         <a data-v="config" class="so-master" title="Telegram, ponte da planilha, horários esperados e os logins."><span data-icon="settings"></span><span>Configurações</span></a>
-        <!-- Enriquecimento Ambiental é da Operação (o grupo da Márcia), não dos Serviços:
-             aqui é o histórico do que foi montado, não a atividade do dia. -->
-        <a data-v="eahist" class="so-gestao" title="O que foi feito e quem não participou."><span data-icon="ball"></span><span>Enriquecimento Ambiental</span></a>
         <!-- ESCALA E PLANO DO DIA (Fase 2.1) — o que alimenta o "Meu dia" de cada monitor.
-             Mora na Operação: é o grupo da Márcia, e é ela quem define o plano do dia.
+             É ajuste: é aqui que a Márcia define quem trabalha e qual plano vale hoje.
              Escondido por padrão; aplicarPermMenu() mostra pelo PERM. -->
         <a data-v="planodia" style="display:none" title="A escala de cada um e qual plano vale hoje — é daqui que sai o &quot;Meu dia&quot; do monitor."><span data-icon="clipboard"></span><span>Escala e plano do dia</span></a>
         <a data-v="acerto" class="so-master" title="Acerto das plantonistas: noites, dobras, quanto pagamos."><span data-icon="dollar"></span><span>Financeiro do plantão</span></a>
-        <!-- LINHA DO TEMPO DO DIA (08/set/2026, noite) — era o último bloco do Painel do
-             Dia. Virou tela própria, com navegação por MÊS ("senão é bagunça", Adriana).
-             Herdou a classe so-master do item "Painel do Dia" que saiu do menu: quem via
-             continua vendo, quem não via continua sem ver. -->
-        <a data-v="linhadotempo" class="so-master" title="Tudo o que aconteceu, em ordem — escolha o mês e o dia."><span data-icon="clock"></span><span>Linha do tempo do dia</span></a>
-        <a data-v="ritmo" class="so-gestao" title="Tempo por etapa, dia a dia."><span data-icon="clock"></span><span>Ritmo do Time</span></a>
         <a data-v="pessoas" class="so-master" title="Pessoas, senhas e quem acessa o quê."><span data-icon="users"></span><span>Time</span></a>
         <div class="subnav so-master" id="pSubnav" style="display:none"></div>
       </div>
@@ -4276,7 +4312,7 @@
 
     <div class="card">
       <h2 style="font-size:19px">Orçamentos feitos</h2>
-      <div class="hint">Todo orçamento salvo fica aqui com o desfecho: <strong>aguardando</strong>, <strong>fechado</strong> ou <strong>não fechou</strong>. É esta lista que vai alimentar o CRM.</div>
+      <div class="hint">Quatro seções, todas recolhidas: toque no título para abrir a que você precisa. Quem já fez check-in sai daqui e passa a viver em <strong>Hóspedes de hoje</strong> — é lá que se faz a saída antecipada e o check-out.</div>
       <div id="orcLista"></div>
     </div>
 
@@ -4765,6 +4801,13 @@
         // padrão de guarda das outras telas aqui embaixo: só redesenha quem está com a
         // tela aberta agora.
         try{ const v=document.getElementById('v-vacinas'); if(v&&v.classList.contains('active')){ if(typeof renderPrevencao==='function') renderPrevencao(); if(typeof renderPrevCheckup==='function') renderPrevCheckup(); } }catch(e){} /* silencioso de propósito: redesenho de tela — falhar não pode derrubar quem chamou */
+        // Check-in aberto na ficha de alguém (item D, 17/set/2026): o cartão "Cadastro
+        // incompleto" fica calado até o cadastro chegar — se ninguém o redesenhasse aqui,
+        // ele ficaria calado para sempre e o que falta de verdade nunca seria cobrado.
+        try{ const vci=document.getElementById('ci-ficha');
+          if(vci && vci.style.display!=='none' && typeof ciPelAtual!=='undefined' && ciPelAtual
+             && typeof ciRenderCadastroFalta==='function') ciRenderCadastroFalta(ciPelAtual);
+        }catch(e){} /* silencioso de propósito: redesenho de tela — falhar não pode derrubar quem chamou */
       });
       // As fotos vêm de um nó separado, sem ouvinte — ver o comentário lá em cima.
       try{ carregarFotos(); }catch(e){ console.warn('fotos:',e); }
@@ -10017,7 +10060,17 @@
     if(!DB) return null;
     var m=Z_MAPAS[path];
     if(!m){
-      m=Z_MAPAS[path]={mapa:{}, pronto:false, slots:{}, t:null, prontoCbs:[], vivo:false, carimbo:null};
+      // ===== O SELO ANDA COM O DADO, NUNCA NA FRENTE DELE (Adriana, 17/set/2026) =====
+      // A Maya fez check-in às 15h28 de 17/set, a estadia estava certa no banco — e ela
+      // não aparecia em "Hóspedes de hoje". Causa: a cópia local era gravada 600 ms depois
+      // de o SELO novo chegar, sem esperar o DADO. Quando o dado atrasava (celular na
+      // mochila, aba em segundo plano), ficava guardado {selo NOVO, retrato VELHO} — e na
+      // sessão seguinte o selo batia, a cópia virava "o retrato" e a Maya nunca mais descia.
+      // Erro para MENOS (selo antigo com retrato novo) custa um download. Erro para MAIS
+      // custa um hóspede invisível, para sempre. Então o selo só avança quando o DADO chega:
+      // `carimboDoMapa` é o selo que vale para o retrato que está na memória, e é ELE que
+      // vai para a cópia — nunca o `carimbo` recém-anunciado.
+      m=Z_MAPAS[path]={mapa:{}, pronto:false, slots:{}, t:null, prontoCbs:[], vivo:false, carimbo:null, carimboDoMapa:null, plantando:false};
       var solta=function(){
         if(m.t) return;
         m.t=setTimeout(function(){ m.t=null; Object.keys(m.slots).forEach(function(k){
@@ -10025,10 +10078,13 @@
           // Coleção carimbada, no modo vivo: o retrato que acabou de assentar vira a
           // cópia local — é ela que poupa o download da próxima sessão.
           if(m.vivo && m.pronto && Z_CARIMBOS[path]){
-            zCopiaGravar(path, m.carimbo, m.mapa);
+            zCopiaGravar(path, m.carimboDoMapa, m.mapa);
             // O carimbo ainda não existe no banco (ninguém nunca gravou lá): planta o 1,
             // uma vez só — sem ele nenhuma sessão consegue reaproveitar a cópia.
-            if(m.carimbo===null && !m.carimboPlantado){ m.carimboPlantado=true; zCarimbar(path); }
+            // O selo ainda não existe no banco: planta o 1, uma vez só. É a NOSSA própria
+            // escrita, e o retrato em memória acabou de descer inteiro — então, quando o 1
+            // voltar, ele PODE ser colado no retrato (m.plantando diz que fomos nós).
+            if(m.carimbo===null && !m.carimboPlantado){ m.carimboPlantado=true; m.plantando=true; zCarimbar(path); }
           }
         },90);
       };
@@ -10044,16 +10100,18 @@
         if(m.vivo) return; m.vivo=true;
         var r=DB.ref(path);
         if(typeof r.on==='function'){
-          r.on('child_added',  function(sn){ m.mapa[sn.key]=sn.val(); if(m.pronto) solta(); });
-          r.on('child_changed',function(sn){ m.mapa[sn.key]=sn.val(); solta(); });
-          r.on('child_removed',function(sn){ delete m.mapa[sn.key]; solta(); });
+          // O dado chegou: AGORA o retrato pode usar o selo que o banco anunciou.
+          r.on('child_added',  function(sn){ m.mapa[sn.key]=sn.val(); m.carimboDoMapa=m.carimbo; if(m.pronto) solta(); });
+          r.on('child_changed',function(sn){ m.mapa[sn.key]=sn.val(); m.carimboDoMapa=m.carimbo; solta(); });
+          r.on('child_removed',function(sn){ delete m.mapa[sn.key]; m.carimboDoMapa=m.carimbo; solta(); });
         }
         // O primeiro retrato: este once é servido do cache que os child_* acabaram de
         // baixar — o nó NÃO desce duas vezes. Ele só marca o "pronto". (Sem .on — a
         // bancada de testes, por exemplo — ele vira o once() que sempre existiu.)
         // Quando o vivo liga por cima da cópia local (carimbo mudou), este retrato
         // cheio SUBSTITUI o mapa — é o que tira da cópia quem foi apagado no banco.
-        r.once('value').then(function(sn){ pronto(sn&&sn.val?sn.val():null); })
+        // Retrato cheio recém-baixado: ele VALE o selo que o banco anunciou.
+        r.once('value').then(function(sn){ m.carimboDoMapa=m.carimbo; pronto(sn&&sn.val?sn.val():null); })
           .catch(function(){ pronto(null); });   // sem permissão/sem rede: entrega vazio, como o catch fazia
       };
       var noCarimbo=Z_CARIMBOS[path];
@@ -10065,7 +10123,7 @@
           // Rede lenta/fora: depois de 8s sem resposta do carimbo, a cópia local segura
           // a tela. Se o carimbo chegar depois dizendo outra coisa, o vivo liga e corrige.
           esperaCopia=setTimeout(function(){
-            if(!m.pronto && !m.vivo){ m.carimbo=copia.v; pronto(copia.mapa); }
+            if(!m.pronto && !m.vivo){ m.carimbo=copia.v; m.carimboDoMapa=copia.v; pronto(copia.mapa); }
           }, 8000);
         } else {
           ligarVivo();      // sem cópia: desce tudo (como hoje) e guarda a primeira cópia
@@ -10075,13 +10133,18 @@
           if(esperaCopia){ clearTimeout(esperaCopia); esperaCopia=null; }
           if(m.vivo){
             m.carimbo=v;
-            // A cópia nova espera o dado assentar: o evento do dado viaja antes do carimbo.
-            if(m.pronto) setTimeout(function(){ zCopiaGravar(path, m.carimbo, m.mapa); }, 600);
+            // Selo que NÓS plantamos agora: o retrato é o que acabou de descer inteiro, e
+            // não há dado nenhum a esperar. Pode colar e guardar a cópia.
+            if(m.plantando){ m.plantando=false; m.carimboDoMapa=v; if(m.pronto) solta(); return; }
+            // Selo mexido por OUTRO aparelho: só ANOTA. Quem o cola no retrato é o evento
+            // do DADO (child_*), e a cópia é gravada no solta() que vem depois dele.
+            // Gravar aqui, por relógio de 600 ms, era o que produzia {selo novo, retrato
+            // velho} — e foi assim que a Maya desapareceu de "Hóspedes de hoje" em 17/set.
             return;
           }
           m.carimbo=v;
           if(copia && v!==null && v===copia.v){
-            if(!m.pronto) pronto(copia.mapa);   // carimbo igual: a cópia local É o retrato
+            if(!m.pronto){ m.carimboDoMapa=copia.v; pronto(copia.mapa); }   // selo igual: a cópia local É o retrato
           } else {
             ligarVivo();                        // mudou (ou o carimbo nunca existiu): desce
           }
@@ -11506,21 +11569,26 @@
       try{ orcCarregarEstadias(); }catch(e){} /* silencioso de propósito: o estado do botão é informação extra — falhar não pode derrubar a lista */
     }).catch(function(e){ _logLeituraFalhou('auaulandia/orcamentos (orcCarregarLista)', e); });
   }
-  // ===== A ORDEM DA LISTA É A ORDEM DA HOSPEDAGEM (Adriana, 16/set/2026) =============
-  // "Quando o cliente fecha, eu preciso que ele apareça mais em cima e não lá para baixo.
-  //  Que a ordem seja da hospedagem."
-  // Até 15/set a regra era a de 04/set (pendentes na frente, fechados depois). Ela se
-  // inverteu na prática: quem FECHOU virou trabalho marcado — tem FILHOt chegando, quarto
-  // para preparar, check-in para fazer. Quem ainda está pensando pode esperar a rolagem.
-  // Os quatro grupos, nesta ordem:
-  //   0 · fechado com hospedagem POR VIR ou EM CURSO — por data de entrada, a mais próxima na frente
-  //   1 · aguardando resposta                        — por data de entrada
-  //   2 · não fechou / cancelado                     — por data de entrada
-  //   3 · fechado cuja hospedagem JÁ TERMINOU        — a mais recente na frente (é histórico)
+  // ===== A TELA DE ORÇAMENTO VIROU QUATRO SEÇÕES RECOLHIDAS (Adriana, 17/set/2026) ===
+  // Ditado por ela: "seções fechadas, como a Conferência do check-in: cada seção mostra só
+  // o título com a contagem e abre ao toque, para ninguém ficar procurando." E a regra que
+  // manda tudo: "quem já está hospedado sai da lista de orçamentos, não faz sentido."
+  // As quatro seções, nesta ordem:
+  //   0 · Orçamentos a confirmar   — aguardando resposta. Cards: Fechou · Não fechou ·
+  //                                  Mudar as datas · Cancelar reserva
+  //   1 · Estadias fechadas        — fechado, hospedagem por vir, CHECK-IN AINDA NÃO FEITO.
+  //                                  Cards: Check-in · Mudar as datas · Cancelar reserva
+  //   2 · Cancelados               — UMA linha: data · nome · tutor · por que cancelou
+  //   3 · Já hospedados / passadas — UMA linha: data · nome · tutor · planilha (ou reenviar)
+  // O grupo "Na Zêluz agora", desenhado de manhã, NÃO existe: quem fez check-in vive na
+  // tela de Hóspedes de hoje, e é lá que a Saída antecipada mora.
   // Sem data de entrada continua indo para o FIM do próprio grupo — nunca para o topo — e a
   // tela avisa, porque a Consultora precisa completar a data, não adivinhar.
   // Funções puras: não leem nem escrevem nada. É isso que o harness prova.
-  var ORC_GRUPO_ROTULO=['Fechados — próximas hospedagens','Aguardando resposta','Não fechou / cancelado','Hospedagens passadas'];
+  var ORC_GRUPO_ROTULO=['Orçamentos a confirmar','Estadias fechadas','Cancelados','Já hospedados / passadas'];
+  // A seção 2 e a 3 são LINHA, não card: uma linha por item, sem botão além do que a
+  // Adriana pediu. Esta lista é a régua — o harness lê daqui, não do HTML.
+  var ORC_GRUPO_LINHA={2:true, 3:true};
   // "Já terminou" = a SAÍDA já passou. Sem saída, vale a entrada; sem nenhuma das duas, não
   // dá para afirmar que terminou — e um fechado sem data não pode ser escondido no histórico.
   function orcHospedagemPassada(o, hoje){
@@ -11530,27 +11598,47 @@
     if(!fim||!hoje) return false;
     return fim<hoje;                               // AAAA-MM-DD compara certo como texto
   }
-  function orcGrupoDe(o, hoje){
+  // `feito` = este orçamento já virou check-in (quem chama descobre com
+  // orcCheckinFeitoNoOrcamento). Fechado com check-in feito SAI da lista de trabalho e
+  // desce para "Já hospedados / passadas" — mesmo que a hospedagem ainda esteja em curso.
+  function orcGrupoDe(o, hoje, feito){
     o=o||{};
     var st=o.status||'aguardando';
-    if(st==='fechado') return orcHospedagemPassada(o,hoje)?3:0;
     if(st==='nao_fechou'||st==='cancelado') return 2;
-    return 1;                                      // aguardando — e qualquer status desconhecido
+    if(st!=='fechado') return 0;                   // aguardando — e qualquer status desconhecido
+    if(feito) return 3;                            // já está na casa: saiu da lista de orçamentos
+    return orcHospedagemPassada(o,hoje)?3:1;
   }
-  function orcOrdenar(lista, hoje){
+  // `feitoDe` é opcional: função (o)->bool. Sem ela, ninguém conta como já hospedado.
+  function orcOrdenar(lista, hoje, feitoDe){
     hoje=hoje||'';
-    var pares=(lista||[]).map(function(o,i){ return {o:(o||{}), i:i, g:orcGrupoDe(o,hoje)}; });
+    var fd=(typeof feitoDe==='function')?feitoDe:function(){ return false; };
+    var pares=(lista||[]).map(function(o,i){ return {o:(o||{}), i:i, g:orcGrupoDe(o,hoje,fd(o))}; });
     pares.sort(function(A,B){
       if(A.g!==B.g) return A.g-B.g;
       var oa=A.o, ob=B.o;
-      // No histórico (grupo 3) a régua é a saída, porque "mais recente" é quem acabou por último.
-      var da=(A.g===3)?(oa.saida||oa.entrada||''):(oa.entrada||'');
-      var db=(B.g===3)?(ob.saida||ob.entrada||''):(ob.entrada||'');
+      // Nas duas seções de histórico (2 e 3) a régua é o fim: "mais recente" é quem acabou
+      // por último. Nas duas de trabalho (0 e 1) é a entrada: o que chega antes vem antes.
+      var hist=(A.g===2||A.g===3);
+      var da=hist?(oa.saida||oa.entrada||''):(oa.entrada||'');
+      var db=hist?(ob.saida||ob.entrada||''):(ob.entrada||'');
       if(!!da!==!!db) return da?-1:1;               // com data vem antes de sem data
-      if(da&&db&&da!==db) return (A.g===3)?(da>db?-1:1):(da<db?-1:1);
+      if(da&&db&&da!==db) return hist?(da>db?-1:1):(da<db?-1:1);
       return A.i-B.i;                              // empate: mantém a ordem em que chegou (estável)
     });
     return pares.map(function(x){ return x.o; });
+  }
+  // ===== RECOLHIDO OU ABERTO, LEMBRADO NO APARELHO ==================================
+  // Cada celular guarda o que deixou aberto. Nasce tudo recolhido — é o pedido dela.
+  var ORC_SEC_CHAVE='zeluz_orc_secoes_v1';
+  var ORC_SEC_ABERTA={};
+  (function(){ try{ var raw=localStorage.getItem(ORC_SEC_CHAVE); if(raw) ORC_SEC_ABERTA=JSON.parse(raw)||{}; }catch(e){ ORC_SEC_ABERTA={}; } /* silencioso de propósito: sem valor guardado, nasce tudo recolhido */ })();
+  function orcSecAberta(g){ return ORC_SEC_ABERTA[String(g)]===true; }
+  function orcSecToggle(g){
+    var k=String(g);
+    ORC_SEC_ABERTA[k]=!orcSecAberta(g);
+    try{ localStorage.setItem(ORC_SEC_CHAVE, JSON.stringify(ORC_SEC_ABERTA)); }catch(e){} /* silencioso de propósito: guardar no aparelho é conveniência — a tela já mudou */
+    orcRenderLista();
   }
   // ===== NÃO LANÇAR O MESMO ORÇAMENTO DUAS VEZES (Adriana, 16/set/2026) ==============
   // Aconteceu hoje: a própria Adriana lançou e FECHOU um segundo orçamento do Tônico para
@@ -11648,6 +11736,9 @@
   }
   // Leva o olho até o card do orçamento que já existe e o acende por alguns segundos.
   function orcVerNaLista(id){
+    // Desde 17/set as seções nascem RECOLHIDAS: apontar para um orçamento dentro de uma
+    // seção fechada levaria a lugar nenhum. Abre a seção dele primeiro, depois rola.
+    try{ if(typeof orcAbrirSecaoDe==='function') orcAbrirSecaoDe(id); }catch(e){} /* silencioso de propósito: redesenho de tela — falhar não pode derrubar quem chamou */
     var el=document.getElementById('orc-card-'+id);
     if(!el){ try{ orcRenderLista(); }catch(e){} /* silencioso de propósito: redesenho de tela — falhar não pode derrubar quem chamou */ el=document.getElementById('orc-card-'+id); }
     if(!el) return;
@@ -11655,36 +11746,58 @@
     el.style.boxShadow='0 0 0 4px var(--crm-critico)';
     setTimeout(function(){ try{ el.style.boxShadow=''; }catch(e){} /* silencioso de propósito: enfeite de tela (foco, rolagem, mídia) — falhar não muda dado nenhum */ }, 4000);
   }
-  // ===== ATALHO PARA O CHECK-IN (Adriana, 16/set/2026) ===============================
+  // ===== ATALHO PARA O CHECK-IN (Adriana, 16/set/2026; corrigido em 17/set) ==========
   // "Coloque um botão Check-in nele, para ir direto ao check-in de entrada. Será um ótimo
-  //  atalho." O botão abre a MESMA tela de Check-in de sempre, com o FILHOt já escolhido e
-  //  as datas do orçamento preenchidas — e NÃO grava nada: quem conclui o check-in é a
-  //  pessoa, na tela de sempre, com a assinatura do tutor.
+  //  atalho." E, no dia seguinte: "o botão é para facilitar e não problematizar."
+  // Ele abre a MESMA tela de Check-in, com o FILHOt já escolhido, a FICHA INTEIRA puxada
+  // (como se a pessoa o tivesse achado na busca) e as DATAS DO ORÇAMENTO — e NÃO grava
+  // nada: quem conclui o check-in é a pessoa, com a assinatura do tutor.
   var ORC_ESTADIAS_CACHE=null;      // retrato compartilhado de auaulandia/estadias (zMapaUma)
-  // Este orçamento já virou check-in? Vale a mesma dupla de identificação do check-in:
-  // refKey quando existe, senão nome + tutor normalizados. A data de ENTRADA tem de ser a
-  // mesma — o mesmo FILHOt pode hospedar várias vezes no ano, e cada entrada é um check-in.
+  // ===== "JÁ FEZ CHECK-IN" É CRUZAMENTO DE PERÍODO, NÃO DATA IDÊNTICA (17/set/2026) ==
+  // O Bud e a Stella (Leonardo) apareceram com o botão "Check-in" no dia em que já haviam
+  // sido recebidos. A regra antiga exigia que a estadia tivesse a entrada IGUAL, caractere
+  // por caractere, à do orçamento — e a tela do check-in vinha com a data da ÚLTIMA
+  // hospedagem (o defeito do item C, que esta versão também conserta). Bastava um dia de
+  // diferença para o app não reconhecer o próprio check-in.
+  // Agora conta como feito quando é o MESMO FILHOt e o período da estadia CRUZA o período
+  // do orçamento. Duas hospedagens diferentes do mesmo FILHOt no ano não se cruzam — por
+  // isso o cruzamento é exato e não confunde uma vez com a outra.
   function orcCheckinJaFeito(estadias, pet, o){
-    var ent=(o&&o.entrada)||''; if(!ent) return false;
-    var k=(pet&&pet.key)||'';
-    var nome=(typeof jsNorm==='function')?jsNorm((pet&&pet.nome)||''):String((pet&&pet.nome)||'').toLowerCase();
-    var tut=(typeof jsNorm==='function')?jsNorm((pet&&pet.tutor)||(o&&o.tutor)||''):String((pet&&pet.tutor)||(o&&o.tutor)||'').toLowerCase();
+    o=o||{};
+    var ent=o.entrada||''; if(!ent) return false;
+    var kPet=orcChavePet(pet, o); if(!kPet) return false;
     var v=estadias||{}, achou=false;
     Object.keys(v).forEach(function(id){
       if(achou) return;
       var e=v[id]||{};
-      if((e.entrada||'')!==ent) return;
-      if((e.status||'ativa')==='cancelada') return;
-      var eNome=(typeof jsNorm==='function')?jsNorm(e.nome||''):String(e.nome||'').toLowerCase();
-      var eTut=(typeof jsNorm==='function')?jsNorm(e.tutor||''):String(e.tutor||'').toLowerCase();
-      if((e.refKey&&k&&e.refKey===k) || (nome&&eNome===nome&&eTut===tut)) achou=true;
+      if((e.status||'ativa')==='cancelada') return;          // cancelada não é check-in
+      if(!orcPeriodoSobrepoe(o, {entrada:(e.entrada||''), saida:(e.saida||e.entrada||'')})) return;
+      if(orcMesmoPetEm(pet, o, {key:(e.refKey||''), nome:(e.nome||''), tutor:(e.tutor||'')}, e)) achou=true;
     });
     return achou;
   }
+  // TODOS os FILHOts deste orçamento já foram recebidos? É isto que tira o orçamento da
+  // lista de trabalho — a regra de 17/set: "quem já está hospedado sai da lista de
+  // orçamentos, não faz sentido".
+  // POR QUE "TODOS" E NÃO "ALGUM": com irmãos, receber um e sumir com o card deixaria o
+  // outro sem botão de Check-in e sem aviso — e a lei da casa é que ninguém fica para trás
+  // sem aviso. Enquanto falta receber um, a hospedagem é trabalho: o card continua em
+  // "Estadias fechadas", com "Já fez check-in" para quem entrou e "Check-in de {nome}"
+  // para quem falta. Quando o último entra, o orçamento desce para o histórico.
+  // Orçamento fechado SEM FILHOt salvo nunca é dado como hospedado — não há o que conferir.
+  function orcCheckinFeitoNoOrcamento(o, estadias){
+    o=o||{};
+    if((o.status||'')!=='fechado') return false;
+    var pets=o.pets||[];
+    if(!pets.length) return false;
+    for(var i=0;i<pets.length;i++){ if(!orcCheckinJaFeito(estadias, pets[i], o)) return false; }
+    return true;
+  }
   // 'nenhum' · 'abrir' · 'feito'. Função pura — é ela que o harness prova.
   function orcCheckinBotaoEstado(o, pet, hoje, estadias){
-    if(orcGrupoDe(o, hoje)!==0) return 'nenhum';     // só fechado com hospedagem por vir ou em curso
-    return orcCheckinJaFeito(estadias, pet, o)?'feito':'abrir';
+    if(orcCheckinJaFeito(estadias, pet, o)) return 'feito';
+    // Só a seção "Estadias fechadas" (grupo 1) tem botão de Check-in.
+    return (orcGrupoDe(o, hoje, false)===1)?'abrir':'nenhum';
   }
   // Quem vê o botão é quem já pode fazer check-in — a MESMA régua da tela: o item do menu.
   // Ler o item em vez de repetir a tabela PERM aqui garante que, se a Gestão tirar o
@@ -11703,44 +11816,237 @@
       try{ orcRenderLista(); }catch(e){} /* silencioso de propósito: redesenho de tela — falhar não pode derrubar quem chamou */
     }).catch(function(){ ORC_ESTADIAS_CACHE=ORC_ESTADIAS_CACHE||{}; });
   }
-  // Abre o Check-in com o FILHOt escolhido e as datas do orçamento. Nada é gravado aqui.
+  // ===== ACHAR A FICHA DO FILHOt (item D — Adriana, 17/set/2026) =====================
+  // A Pipoca (aluna do Day Care, cadastro completo) tocou em Check-in e caiu em "cadastro
+  // incompleto". O atalho procurava a ficha SÓ por pelKey idêntica; quando o tutor está
+  // escrito curto num lado e inteiro no outro ("João" x "João Francisco Peixoto de
+  // Carvalho Soares"), a chave não bate, o atalho desistia e a pessoa era despejada na
+  // busca — sem a ficha, sem o microchip, sem nada. Agora há uma ESCADA de identificação,
+  // da mais segura para a menos, e ela para antes de adivinhar:
+  //   1 - pelKey igual                            (a chave do cadastro)
+  //   2 - pelKey igual sem acento/caixa            (mesma chave escrita diferente)
+  //   3 - nome + tutor iguais
+  //   4 - nome igual + um tutor é começo do outro  (João x João Francisco...)
+  //   5 - nome igual e ÚNICO na lista              (sem xará, não há como errar)
+  // Nome sozinho havendo xará NUNCA casa — há três Mayas no cadastro (22/ago/2026).
+  // Devolve o índice em PELUDINHOS, ou -1. Função pura: é ela que o harness prova.
+  function orcAcharPeludinho(lista, pet, tutorOrc){
+    lista=lista||[]; pet=pet||{};
+    var nrm=(typeof jsNorm==='function')?jsNorm:function(x){ return String(x||'').toLowerCase(); };
+    var kPet=String(pet.key||'');
+    var pk=function(p){ return (typeof pelKey==='function')?pelKey(p):String((p.n||'')+'__'+(p.tutor||'')).toLowerCase(); };
+    var i;
+    if(kPet){
+      for(i=0;i<lista.length;i++) if(pk(lista[i])===kPet) return i;
+      for(i=0;i<lista.length;i++) if(nrm(pk(lista[i]))===nrm(kPet)) return i;
+    }
+    var nome=nrm(pet.nome||''); if(!nome) return -1;
+    var tut=nrm(pet.tutor||tutorOrc||'');
+    var mesmoNome=[];
+    for(i=0;i<lista.length;i++) if(nrm(lista[i].n||'')===nome) mesmoNome.push(i);
+    if(!mesmoNome.length) return -1;
+    if(tut){
+      for(i=0;i<mesmoNome.length;i++) if(nrm(lista[mesmoNome[i]].tutor||'')===tut) return mesmoNome[i];
+      for(i=0;i<mesmoNome.length;i++){
+        var t=nrm(lista[mesmoNome[i]].tutor||'');
+        if(t && (t.indexOf(tut)===0 || tut.indexOf(t)===0)) return mesmoNome[i];
+      }
+    }
+    // Sem xará, o nome basta. Com xará, PARA — nome sozinho não identifica ninguém.
+    return (mesmoNome.length===1)?mesmoNome[0]:-1;
+  }
+  // ===== AS DATAS DO ORÇAMENTO MANDAM (item C — Adriana, 17/set/2026) ================
+  // "O botão Check-in do orçamento não leva as datas do orçamento: pega a data da última
+  //  hospedagem." Era verdade, e o banco tem as cicatrizes: a estadia da Lisa gravada em
+  // 17/set às 15h58 saiu com entrada 19/09 e SAÍDA 12/09 (a saída da hospedagem de 10 a
+  // 12/09) — período invertido; e o Pufe foi salvo às 14h45 de 16/set com 02/09 a 04/09,
+  // as datas da vez anterior, e precisou ser refeito às 14h50.
+  // Causa: ciEscolher chama ciPreencherUltimaEstadia, que lê a última estadia por once() e,
+  // quando a resposta chega, escreve entrada e saída na tela — DEPOIS de o atalho já ter
+  // posto as datas certas. Quem escreve por último ganha, e quem escrevia por último era
+  // o passado. Agora o atalho pendura um bilhete (ORC_CI_DATAS) com as datas do orçamento
+  // e de quem elas são; o pré-preenchimento da última estadia respeita o bilhete e não
+  // toca nas datas. Função pura para o harness: orcDatasQueValem.
+  var ORC_CI_DATAS=null;   // {orcId, petKey, entrada, saida} ou null
+  function orcDatasQueValem(bilhete, estadia){
+    var e=estadia||{};
+    var doPassado={entrada:(e.entrada||''), saida:(e.saida||'')};
+    if(!bilhete) return doPassado;
+    return {entrada:(bilhete.entrada||doPassado.entrada), saida:(bilhete.saida||doPassado.saida)};
+  }
+  function orcLimparBilheteDatas(){ ORC_CI_DATAS=null; }
+  // Abre o Check-in com o FILHOt escolhido, a ficha inteira e as datas do orçamento.
+  // Nada é gravado aqui. Devolve promessa: espera o cadastro descer antes de resolver a
+  // ficha — sem ele, pelExtra() volta vazio e a tela acusa de incompleto um cadastro cheio.
   function orcAbrirCheckin(id, petKey){
     var o=ORC_LISTA_CACHE[id]||{};
     var pets=o.pets||[];
     var pet=null;
     for(var i=0;i<pets.length;i++){ if(!petKey || (pets[i]&&pets[i].key===petKey)){ pet=pets[i]; break; } }
     if(!pet) pet=pets[0]||null;
-    if(!pet){ alert('Este orçamento não tem FILHOt salvo — abra o Check-in pelo menu.'); return; }
+    if(!pet){ alert('Este orçamento não tem FILHOt salvo — abra o Check-in pelo menu.'); return Promise.resolve(false); }
     try{ if(typeof audit==='function') audit('orcamento-atalho-checkin',
       'abriu o check-in de '+(pet.nome||'?')+' pelo orçamento fechado',
       {orcamento:id, entrada:(o.entrada||''), saida:(o.saida||''), tutor:(pet.tutor||o.tutor||'')}); }catch(e){} /* silencioso de propósito: o audit() tem bolso próprio e reenvia sozinho — falhar aqui não pode travar a ação */
+    // O BILHETE vai ANTES de qualquer navegação: é ele que impede o passado de sobrescrever
+    // as datas quando a leitura da última estadia voltar.
+    ORC_CI_DATAS={orcId:id, petKey:String(pet.key||''), entrada:(o.entrada||''), saida:(o.saida||'')};
     try{ if(typeof abrirItemDoMenu==='function') abrirItemDoMenu('checkin'); }catch(e){} /* silencioso de propósito: guarda defensiva — falhar aqui não pode interromper quem chamou */
-    var lista=(typeof PELUDINHOS!=='undefined'?PELUDINHOS:[])||[];
-    var idx=-1;
-    for(var j=0;j<lista.length;j++){
-      if(pet.key && (typeof pelKey==='function') && pelKey(lista[j])===pet.key){ idx=j; break; }
-    }
-    if(idx<0 && pet.nome && typeof jsNorm==='function'){
-      var nn=jsNorm(pet.nome), tt=jsNorm(pet.tutor||o.tutor||'');
-      for(var m=0;m<lista.length;m++){
-        if(jsNorm(lista[m].n||'')===nn && (!tt || jsNorm(lista[m].tutor||'')===tt)){ idx=m; break; }
+    // Espera o cadastro (daycare/cadastro) estar em mão. É o retrato compartilhado: se já
+    // desceu, resolve na hora; se não, o atalho aguarda em vez de abrir uma ficha oca.
+    var pronto=(typeof zMapaUma==='function')
+      ? zMapaUma('daycare/cadastro').catch(function(){ return null; })
+      : Promise.resolve(null);
+    return pronto.then(function(){
+      var lista=(typeof PELUDINHOS!=='undefined'?PELUDINHOS:[])||[];
+      var idx=orcAcharPeludinho(lista, pet, o.tutor);
+      // Sem cadastro (orçamento avulso) ou com xará sem tutor que decida: não dá para
+      // escolher sozinho — o nome sozinho não identifica ninguém (22/ago/2026). Deixa a
+      // busca do check-in preenchida, com as datas já guardadas no bilhete, e a pessoa decide.
+      if(idx<0){
+        var b=document.getElementById('ciBusca');
+        if(b){ b.value=pet.nome||''; try{ if(typeof renderCiBusca==='function') renderCiBusca(); }catch(e){} /* silencioso de propósito: redesenho de tela — falhar não pode derrubar quem chamou */ }
+        return false;
       }
+      try{ if(typeof ciEscolher==='function') ciEscolher(idx); }catch(e){ return false; }
+      // As datas do orçamento entram DEPOIS do ciEscolher — ele zera a ficha e põe "hoje" na
+      // entrada. Quem manda no cálculo continua sendo o check-in (ciCalcDias), como sempre.
+      try{
+        var ei=document.getElementById('ciEntrada'); if(ei&&o.entrada) ei.value=o.entrada;
+        var si=document.getElementById('ciSaida'); if(si&&o.saida) si.value=o.saida;
+        if(typeof ciCalcDias==='function') ciCalcDias();
+      }catch(e){} /* silencioso de propósito: redesenho de tela — falhar não pode derrubar quem chamou */
+      return true;
+    });
+  }
+  // ===== O CARD DE TRABALHO (seções 0 e 1) ==========================================
+  // O card inteiro, como sempre foi, com os botões da seção. É desenhado só para os
+  // orçamentos das duas seções de trabalho — as de histórico são UMA LINHA.
+  function orcCardHtml(id, o, HOJE, DUP, podeCi, g){
+    var stt=o.status||'aguardando';
+    var lb={aguardando:['PENDENTE','pendente'], fechado:['FECHOU','resolvido'], nao_fechou:['NÃO FECHOU','processo'], cancelado:['CANCELADO','processo']};
+    var L=lb[stt]||lb.aguardando;
+    var nomes=(o.pets||[]).map(function(p){ return p.nome; }).join(' e ');
+    var dt=orcDataBR(o.criado_em);
+    var apagar=(document.body.dataset.role==='gestao'||document.body.dataset.role==='diretoria'||document.body.dataset.role==='supervisor')
+      ? '<button class="btn" style="background:none;border:none;color:var(--crm-critico);font-weight:700;padding:0 4px" onclick="orcApagar(\'' + id + '\')">apagar</button>' : '';
+    // Fechou mas a planilha não recebeu: a falha aparece e dá para reenviar. Nunca some.
+    var planilha='';
+    if(stt==='fechado') planilha=orcPlanilhaHtml(id, o);
+    // O tutor desistiu da viagem: CANCELAR libera a vaga na planilha e risca a linha do
+    // financeiro. Diferente de "não fechou" (nunca virou reserva) e de "apagar" (some o
+    // registro). Cancelar guarda o histórico e desfaz o que a reserva ocupou.
+    var cancelar='<button class="btn" style="background:var(--crm-critico);color:#fff" onclick="orcCancelar(\'' + id + '\')">Cancelar reserva</button>';
+    // A tutora antecipou/adiou: MUDAR AS DATAS, sem perder a reserva nem redigitar tudo.
+    var mudar='<button class="btn btn-gold" onclick="orcMudarDatas(\'' + id + '\')">Mudar as datas</button>';
+    // O ATALHO DO CHECK-IN — só na seção "Estadias fechadas" e só para quem já pode fazer
+    // check-in. Com dois FILHOts (irmãos) sai um botão para cada: assim cada um mostra o
+    // próprio estado e ninguém fica para trás sem aviso.
+    var ciBtns='';
+    if(podeCi && g===1){
+      var pets=(o.pets||[]);
+      var muitos=pets.length>1;
+      ciBtns=pets.map(function(pp){
+        var est=orcCheckinBotaoEstado(o, pp, HOJE, ORC_ESTADIAS_CACHE);
+        var rot=muitos?('Check-in de '+(pp.nome||'?')):'Check-in';
+        if(est==='feito') return '<button class="btn" disabled style="background:var(--z-cream-warm);color:var(--muted);border:1.5px solid var(--line);cursor:default">'
+          +escAttr(muitos?('Já fez check-in: '+(pp.nome||'?')):'Já fez check-in')+'</button>';
+        if(est!=='abrir') return '';
+        return '<button class="btn btn-primary" onclick="orcAbrirCheckin(\'' + id + '\',\'' + escAttr(pp.key||'').replace(/'/g, "\\'") + '\')">'+escAttr(rot)+'</button>';
+      }).join('');
     }
-    // Sem cadastro (orçamento avulso): não dá para escolher sozinho — o nome sozinho não
-    // identifica ninguém (22/ago/2026). Deixa a busca do check-in preenchida e a pessoa decide.
-    if(idx<0){
-      var b=document.getElementById('ciBusca');
-      if(b){ b.value=pet.nome||''; try{ if(typeof renderCiBusca==='function') renderCiBusca(); }catch(e){} /* silencioso de propósito: redesenho de tela — falhar não pode derrubar quem chamou */ }
-      return;
+    var btns;
+    if(g===0){
+      btns='<div class="avr-form-btns" style="margin-top:8px"><button class="btn btn-primary" onclick="orcStatus(\'' + id + '\',\'fechado\')">Fechou</button>'
+        +'<button class="btn" style="background:var(--z-cream-warm);color:var(--z-blue);border:1.5px solid var(--line)" onclick="orcStatus(\'' + id + '\',\'nao_fechou\')">Não fechou</button>'
+        +mudar+cancelar+apagar+'</div>';
+    } else {
+      btns='<div class="avr-form-btns" style="margin-top:8px;justify-content:flex-end">'+ciBtns+mudar+cancelar+apagar
+        +'<button class="btn" style="background:var(--z-cream-warm);color:var(--z-blue);border:1.5px solid var(--line)" onclick="orcStatus(\'' + id + '\',\'aguardando\')">Voltar para pendente</button></div>';
     }
-    try{ if(typeof ciEscolher==='function') ciEscolher(idx); }catch(e){ return; }
-    // As datas do orçamento entram DEPOIS do ciEscolher — ele zera a ficha e põe "hoje" na
-    // entrada. Quem manda no cálculo continua sendo o check-in (ciCalcDias), como sempre.
-    try{
-      var ei=document.getElementById('ciEntrada'); if(ei&&o.entrada) ei.value=o.entrada;
-      var si=document.getElementById('ciSaida'); if(si&&o.saida) si.value=o.saida;
-      if(typeof ciCalcDias==='function') ciCalcDias();
-    }catch(e){} /* silencioso de propósito: redesenho de tela — falhar não pode derrubar quem chamou */
+    // Sem data de entrada: a ordem por chegada não tem como valer para este — a
+    // Consultora precisa completar, não adivinhar (é por isso que ele vai para o
+    // fim do grupo dele em orcOrdenar, nunca para o topo).
+    var semData=o.entrada?'':'<div style="font-size:12px;color:var(--crm-critico);font-weight:700;margin-top:2px">⚠ sem data de entrada — complete para entrar na ordem por chegada</div>';
+    // A faixa da duplicidade: nos DOIS cards, para que a Consultora veja o par inteiro.
+    var faixa='';
+    var meus=DUP[id]||null;
+    if(meus&&meus.length){
+      var outro=meus[0];
+      faixa='<div style="background:var(--crm-critico);color:#FFFDF6;border-radius:10px;padding:8px 11px;margin-bottom:9px;font-weight:800;font-size:13px;line-height:1.35">'
+        +'Duplicado com '+escAttr(orcResumoDuplicado(outro))
+        +(outro.o&&outro.o.criado_por?(' — lançado por '+escAttr(outro.o.criado_por)):'')
+        +(meus.length>1?(' · e mais '+(meus.length-1)):'')
+        +'<div style="font-weight:600;font-size:12px;margin-top:3px">Mesmo FILHOt, datas que se sobrepõem. Confira antes de cobrar duas vezes.</div>'
+        +'<button class="btn" style="margin-top:7px;background:#FFFDF6;color:var(--crm-critico);border:0;font-weight:800" onclick="orcVerNaLista(\'' + outro.id + '\')">Ver o outro orçamento</button>'
+        +(o.duplicado_confirmado?('<div style="font-weight:600;font-size:12px;margin-top:6px">'+escAttr((o.duplicado_confirmado.quem||'A Gestão')+' confirmou que é outra hospedagem.')+'</div>'):'')
+        +'</div>';
+    }
+    return '<div class="avr-card '+L[1]+'" id="orc-card-'+id+'">'+faixa+'<div class="avr-head"><div class="avr-info">'
+      +'<strong>'+escAttr(nomes||'—')+'</strong> <span style="color:var(--muted);font-size:12px">'+escAttr(o.tutor||'')+'</span>'
+      +'<div style="font-size:12.5px;color:var(--z-blue-soft)">'+orcBR(o.entrada||'')+' a '+orcBR(o.saida||'')+' · '+(o.noites||0)+' noites'+(o.alta_temporada?' · ALTA':'')+' · feito em '+dt+' por '+escAttr(o.criado_por||'-')+'</div>'
+      +semData
+      +'<div style="font-size:15px;font-weight:800;color:var(--z-blue);margin-top:3px">'+fmtCent(o.total_cent||0)+'</div>'
+      +planilha
+      +'</div><span class="avr-chip '+L[1]+'">'+L[0]+'</span></div>'+btns+'</div>';
+  }
+  // "Lançado na planilha" / "NÃO entrou na planilha" + reenviar. Um lugar só, usado pelo
+  // card de trabalho e pela linha do histórico — a frase não pode divergir entre as duas.
+  function orcPlanilhaHtml(id, o){
+    return (o.planilha_ok===true)
+      ? '<div style="font-size:12px;color:var(--crm-ok);margin-top:4px">Lançado na planilha</div>'
+      : '<div style="font-size:12px;color:var(--crm-critico);margin-top:4px">NÃO entrou na planilha'+(o.planilha_msg?(' — '+escAttr(o.planilha_msg)):'')
+        +' <button class="btn" style="background:none;border:none;color:var(--z-blue);font-weight:700;text-decoration:underline;padding:0 4px" onclick="orcEnviarPlanilha(\'' + id + '\')">reenviar</button></div>';
+  }
+  // ===== AS LINHAS DO HISTÓRICO (seções 2 e 3) ======================================
+  // Adriana, 17/set/2026: "UMA linha por item". Nada de card, nada de botão além do que
+  // ela pediu. O "ver" expande a própria linha — não abre modal, não sai da tela.
+  var ORC_LINHA_ABERTA={};
+  function orcLinhaVer(id){
+    ORC_LINHA_ABERTA[id]=!ORC_LINHA_ABERTA[id];
+    orcRenderLista();
+  }
+  function orcLinhaHistoricoHtml(id, o, g){
+    var nomes=(o.pets||[]).map(function(pp){ return pp.nome; }).join(' e ')||'—';
+    var datas=orcBR(o.entrada||'')+(o.saida?(' a '+orcBR(o.saida)):'');
+    var aberta=!!ORC_LINHA_ABERTA[id];
+    var fim='';
+    if(g===2){
+      // Cancelados: por que cancelou. O motivo já está gravado desde 14/ago/2026; quando
+      // não houver, a linha DIZ que não houve — nunca fica em branco fingindo que não
+      // existe motivo nenhum.
+      var motivo=String(o.cancelado_motivo||'').trim();
+      fim=motivo
+        ? '<span style="color:var(--muted)">'+escAttr(motivo)+'</span>'
+        : '<span style="color:var(--crm-critico);font-weight:700">sem motivo registrado</span>';
+    } else {
+      fim=(o.planilha_ok===true)
+        ? '<span style="color:var(--crm-ok);font-weight:700">lançado na planilha</span>'
+        : '<span style="color:var(--crm-critico);font-weight:700">NÃO entrou na planilha</span>'
+          +' <button class="btn" style="background:none;border:none;color:var(--z-blue);font-weight:700;text-decoration:underline;padding:0 2px" onclick="orcEnviarPlanilha(\'' + id + '\')">reenviar</button>';
+    }
+    var detalhe='';
+    if(aberta){
+      var L=[];
+      L.push('Valor: '+fmtCent(o.total_cent||0)+' · '+(o.noites||0)+' noites'+(o.alta_temporada?' · ALTA':''));
+      L.push('Orçamento feito em '+orcDataBR(o.criado_em)+' por '+(o.criado_por||'-'));
+      if(g===2){
+        if(o.cancelado_por) L.push('Cancelado por '+o.cancelado_por+(o.cancelado_em_br?(' em '+o.cancelado_em_br):''));
+        if(o.cancelado_planilha_msg) L.push('Planilha: '+o.cancelado_planilha_msg);
+        if((o.status||'')==='nao_fechou') L.push('O tutor não fechou esta reserva — ela nunca ocupou vaga.');
+      } else {
+        if(o.planilha_msg) L.push('Planilha: '+o.planilha_msg);
+      }
+      detalhe='<div style="grid-column:1/-1;font-size:12.5px;color:var(--z-blue-soft);line-height:1.5;padding:6px 0 2px">'
+        +L.map(function(t){ return escAttr(t); }).join('<br>')+'</div>';
+    }
+    return '<div class="orc-linha'+(aberta?' aberta':'')+'" id="orc-card-'+id+'">'
+      +'<span class="orc-l-data">'+escAttr(datas||'sem data')+'</span>'
+      +'<span class="orc-l-nome">'+escAttr(nomes)+'</span>'
+      +'<span class="orc-l-tutor">'+escAttr(o.tutor||'tutor a confirmar')+'</span>'
+      +'<span class="orc-l-fim">'+fim+'</span>'
+      +'<button class="orc-l-ver" onclick="orcLinhaVer(\'' + id + '\')">'+(aberta?'fechar':'ver')+'</button>'
+      +detalhe+'</div>';
   }
   function orcRenderLista(){
     var el=document.getElementById('orcLista'); if(!el) return;
@@ -11748,103 +12054,53 @@
     // status e data de entrada iguais (o "empate mantém ordem estável" do orcOrdenar).
     var todos=orcListaArray().sort(function(a,b){ return (b.criado_em||0)-(a.criado_em||0); });
     var HOJE=(typeof zHojeISO==='function')?zHojeISO():'';
-    // Os duplicados que JÁ existem hoje (o segundo Tônico entre eles) aparecem marcados.
+    // Os duplicados que JÁ existem hoje aparecem marcados, nos dois cards.
     var DUP=orcDuplicadosNaLista(todos);
-    var ids=orcOrdenar(todos, HOJE).map(function(o){ return o.id; });
-    if(!ids.length){ el.innerHTML='<div class="hint">Nenhum orçamento salvo ainda.</div>'; return; }
+    // Quem já fez check-in SAI da lista de trabalho (Adriana, 17/set/2026). O retrato das
+    // estadias é o compartilhado; enquanto ele não desce, ninguém é dado como hospedado —
+    // e é por isso que o orcCarregarEstadias redesenha a lista quando ele chega.
+    var feitoDe=function(o){ return orcCheckinFeitoNoOrcamento(o, ORC_ESTADIAS_CACHE); };
+    var ordenados=orcOrdenar(todos, HOJE, feitoDe);
+    if(!ordenados.length){ el.innerHTML='<div class="hint">Nenhum orçamento salvo ainda.</div>'; return; }
     var podeCi=orcPodeCheckin();
-    var grupoAtual=-1, primeiro=true;
-    var lb={aguardando:['PENDENTE','pendente'], fechado:['FECHOU','resolvido'], nao_fechou:['NÃO FECHOU','processo'], cancelado:['CANCELADO','processo']};
-    el.innerHTML=ids.map(function(id){
-      var o=ORC_LISTA_CACHE[id]||{}, stt=o.status||'aguardando', L=lb[stt]||lb.aguardando;
-      // Cabeçalho do grupo: aparece uma vez, quando o grupo muda. A lista deixou de ser
-      // uma pilha só — a Consultora enxerga de relance o que é trabalho marcado e o que é
-      // histórico.
-      var cab='';
-      var g=orcGrupoDe(o, HOJE);
-      if(g!==grupoAtual){
-        grupoAtual=g;
-        cab='<div style="margin:'+(primeiro?'0':'18px')+' 0 8px;font-family:var(--font-ui);font-weight:800;font-size:13px;'
-          +'letter-spacing:.4px;color:var(--z-blue);border-bottom:2px solid var(--line);padding-bottom:5px">'
-          +escAttr(ORC_GRUPO_ROTULO[g]||'')+'</div>';
-      }
-      primeiro=false;
-      var nomes=(o.pets||[]).map(function(p){ return p.nome; }).join(' e ');
-      var dt=''; try{ var d=new Date(o.criado_em); var pp=function(x){return String(x).padStart(2,'0');}; dt=pp(d.getDate())+'/'+pp(d.getMonth()+1)+'/'+d.getFullYear(); }catch(e){} /* silencioso de propósito: guarda defensiva — falhar aqui não pode interromper quem chamou */
-      var apagar=(document.body.dataset.role==='gestao'||document.body.dataset.role==='diretoria'||document.body.dataset.role==='supervisor')
-        ? '<button class="btn" style="background:none;border:none;color:var(--crm-critico);font-weight:700;padding:0 4px" onclick="orcApagar(\''+id+'\')">apagar</button>' : '';
-      // Fechou mas a planilha não recebeu: a falha aparece e dá para reenviar. Nunca some.
-      var planilha='';
-      if(stt==='fechado'){
-        planilha=(o.planilha_ok===true)
-          ? '<div style="font-size:12px;color:var(--crm-ok);margin-top:4px">Lançado na planilha</div>'
-          : '<div style="font-size:12px;color:var(--crm-critico);margin-top:4px">NÃO entrou na planilha'+(o.planilha_msg?(' — '+escAttr(o.planilha_msg)):'')
-            +' <button class="btn" style="background:none;border:none;color:var(--z-blue);font-weight:700;text-decoration:underline;padding:0 4px" onclick="orcEnviarPlanilha(\''+id+'\')">reenviar</button></div>';
-      }
-      // O tutor desistiu da viagem: CANCELAR libera a vaga na planilha e risca a linha do
-      // financeiro. Diferente de "não fechou" (nunca virou reserva) e de "apagar" (some o
-      // registro). Cancelar guarda o histórico e desfaz o que a reserva ocupou.
-      var cancelar=(stt==='fechado'||stt==='aguardando')
-        ? '<button class="btn" style="background:var(--crm-critico);color:#fff" onclick="orcCancelar(\''+id+'\')">Cancelar reserva</button>' : '';
-      // A tutora antecipou/adiou: MUDAR AS DATAS, sem perder a reserva nem redigitar tudo.
-      var mudar=(stt==='fechado'||stt==='aguardando')
-        ? '<button class="btn btn-gold" onclick="orcMudarDatas(\''+id+'\')">Mudar as datas</button>' : '';
-      // O ATALHO DO CHECK-IN. Só no grupo 0 (fechado com hospedagem por vir ou em curso) e
-      // só para quem já pode fazer check-in. Com dois FILHOts (irmãos) sai um botão para
-      // cada: assim cada um mostra o próprio estado e ninguém fica para trás sem aviso.
-      var ciBtns='';
-      if(podeCi && orcGrupoDe(o, HOJE)===0){
-        var pets=(o.pets||[]);
-        var muitos=pets.length>1;
-        ciBtns=pets.map(function(p){
-          var est=orcCheckinBotaoEstado(o, p, HOJE, ORC_ESTADIAS_CACHE);
-          var rot=muitos?('Check-in de '+(p.nome||'?')):'Check-in';
-          if(est==='feito') return '<button class="btn" disabled style="background:var(--z-cream-warm);color:var(--muted);border:1.5px solid var(--line);cursor:default">'
-            +escAttr(muitos?('Já fez check-in: '+(p.nome||'?')):'Já fez check-in')+'</button>';
-          if(est!=='abrir') return '';
-          return '<button class="btn btn-primary" onclick="orcAbrirCheckin(\''+id+'\',\''+escAttr(p.key||'').replace(/'/g,"\\'")+'\')">'+escAttr(rot)+'</button>';
+    // Reparte nas quatro seções ANTES de desenhar: o título precisa da contagem, e a
+    // contagem só existe quando a seção está inteira em mão.
+    var secoes=[[],[],[],[]];
+    ordenados.forEach(function(o){ secoes[orcGrupoDe(o, HOJE, feitoDe(o))].push(o); });
+    el.innerHTML=secoes.map(function(itens, g){
+      // Seção vazia não aparece: título com "0" só faria a Consultora procurar o que não há.
+      if(!itens.length) return '';
+      var aberta=orcSecAberta(g);
+      var corpo='';
+      if(aberta){
+        corpo=itens.map(function(o){
+          return ORC_GRUPO_LINHA[g]
+            ? orcLinhaHistoricoHtml(o.id, o, g)
+            : orcCardHtml(o.id, o, HOJE, DUP, podeCi, g);
         }).join('');
+        // "Ver mais" não existe mais: a seção nasce recolhida, então abrir já é a decisão
+        // de quem quer ver — cortar a lista depois disso seria esconder duas vezes.
       }
-      var btns;
-      if(stt==='cancelado'){
-        btns='<div style="text-align:right;margin-top:6px">'+apagar+'</div>';
-      } else if(stt==='aguardando'){
-        btns='<div class="avr-form-btns" style="margin-top:8px"><button class="btn btn-primary" onclick="orcStatus(\''+id+'\',\'fechado\')">Fechou</button><button class="btn" style="background:var(--z-cream-warm);color:var(--z-blue);border:1.5px solid var(--line)" onclick="orcStatus(\''+id+'\',\'nao_fechou\')">Não fechou</button>'+mudar+cancelar+apagar+'</div>';
-      } else {
-        btns='<div class="avr-form-btns" style="margin-top:8px;justify-content:flex-end">'+ciBtns+apagar+mudar+cancelar
-          +'<button class="btn" style="background:var(--z-cream-warm);color:var(--z-blue);border:1.5px solid var(--line)" onclick="orcStatus(\''+id+'\',\'aguardando\')">Voltar para pendente</button></div>';
-      }
-      if(stt==='cancelado'&&o.cancelado_por){
-        planilha='<div style="font-size:12px;color:var(--crm-critico);margin-top:4px;font-weight:700">Cancelado por '+escAttr(o.cancelado_por)+(o.cancelado_em_br?(' em '+escAttr(o.cancelado_em_br)):'')
-          +(o.cancelado_motivo?('<div style="font-weight:600;color:var(--muted)">Motivo: '+escAttr(o.cancelado_motivo)+'</div>'):'')
-          +(o.cancelado_planilha_msg?('<div style="font-weight:600;color:var(--muted)">Planilha: '+escAttr(o.cancelado_planilha_msg)+'</div>'):'')+'</div>';
-      }
-      // Sem data de entrada: a ordem por chegada não tem como valer para este — a
-      // Consultora precisa completar, não adivinhar (é por isso que ele vai para o
-      // fim do grupo dele em orcOrdenar, nunca para o topo).
-      var semData=o.entrada?'':'<div style="font-size:12px;color:var(--crm-critico);font-weight:700;margin-top:2px">⚠ sem data de entrada — complete para entrar na ordem por chegada</div>';
-      // A faixa da duplicidade: nos DOIS cards, para que a Consultora veja o par inteiro.
-      var faixa='';
-      var meus=DUP[id]||null;
-      if(meus&&meus.length){
-        var outro=meus[0];
-        faixa='<div style="background:var(--crm-critico);color:#FFFDF6;border-radius:10px;padding:8px 11px;margin-bottom:9px;font-weight:800;font-size:13px;line-height:1.35">'
-          +'Duplicado com '+escAttr(orcResumoDuplicado(outro))
-          +(outro.o&&outro.o.criado_por?(' — lançado por '+escAttr(outro.o.criado_por)):'')
-          +(meus.length>1?(' · e mais '+(meus.length-1)):'')
-          +'<div style="font-weight:600;font-size:12px;margin-top:3px">Mesmo FILHOt, datas que se sobrepõem. Confira antes de cobrar duas vezes.</div>'
-          +'<button class="btn" style="margin-top:7px;background:#FFFDF6;color:var(--crm-critico);border:0;font-weight:800" onclick="orcVerNaLista(\''+outro.id+'\')">Ver o outro orçamento</button>'
-          +(o.duplicado_confirmado?('<div style="font-weight:600;font-size:12px;margin-top:6px">'+escAttr((o.duplicado_confirmado.quem||'A Gestão')+' confirmou que é outra hospedagem.')+'</div>'):'')
-          +'</div>';
-      }
-      return cab+'<div class="avr-card '+L[1]+'" id="orc-card-'+id+'">'+faixa+'<div class="avr-head"><div class="avr-info">'
-        +'<strong>'+escAttr(nomes||'—')+'</strong> <span style="color:var(--muted);font-size:12px">'+escAttr(o.tutor||'')+'</span>'
-        +'<div style="font-size:12.5px;color:var(--z-blue-soft)">'+orcBR(o.entrada||'')+' a '+orcBR(o.saida||'')+' · '+(o.noites||0)+' noites'+(o.alta_temporada?' · ALTA':'')+' · feito em '+dt+' por '+escAttr(o.criado_por||'-')+'</div>'
-        +semData
-        +'<div style="font-size:15px;font-weight:800;color:var(--z-blue);margin-top:3px">'+fmtCent(o.total_cent||0)+'</div>'
-        +planilha
-        +'</div><span class="avr-chip '+L[1]+'">'+L[0]+'</span></div>'+btns+'</div>';
+      return '<div class="orc-sec'+(aberta?' aberta':'')+'">'
+        +'<div class="orc-sec-head" onclick="orcSecToggle('+g+')">'
+        +'<span class="orc-sec-tit">'+escAttr(ORC_GRUPO_ROTULO[g]||'')+'</span>'
+        +'<span class="orc-sec-n">'+itens.length+'</span>'
+        +'<span class="orc-sec-caret">▾</span></div>'
+        +(aberta?('<div class="orc-sec-corpo">'+corpo+'</div>'):'')
+        +'</div>';
     }).join('');
+  }
+  // Abre a seção onde o orçamento mora e rola até ele — usado pela faixa de duplicidade,
+  // que aponta para o par. Sem isto o "Ver o outro orçamento" levaria a uma seção fechada.
+  function orcAbrirSecaoDe(id){
+    var o=ORC_LISTA_CACHE[id]; if(!o) return;
+    var HOJE=(typeof zHojeISO==='function')?zHojeISO():'';
+    var g=orcGrupoDe(Object.assign({id:id}, o), HOJE, orcCheckinFeitoNoOrcamento(o, ORC_ESTADIAS_CACHE));
+    if(!orcSecAberta(g)){
+      ORC_SEC_ABERTA[String(g)]=true;
+      try{ localStorage.setItem(ORC_SEC_CHAVE, JSON.stringify(ORC_SEC_ABERTA)); }catch(e){} /* silencioso de propósito: guardar no aparelho é conveniência — a tela já mudou */
+      orcRenderLista();
+    }
   }
   // Apagar orçamento (teste, duplicado, erro). A trava de verdade são as regras do Firebase —
   // esconder o botão por papel é só para não tentar quem não deve.
@@ -11933,11 +12189,74 @@
       _logFalhaGrav('auaulandia/orcamentos + daycare/reposicao (orcCancelar)', e);
     });
   }
+  // ===== CANCELAR UMA RESERVA NÃO PODE APAGAR A NOITE DA OUTRA (17/set/2026) ========
+  // A Maya (Luciana) desapareceu de "Hóspedes de hoje" no dia 17/set. No banco havia DOIS
+  // orçamentos dela para as MESMAS noites, 15/09 a 24/09: um fechado (o que vale) e um
+  // cancelado. O cancelamento pediu à ponte para apagar "Maya/SRD/Luciana" das linhas de
+  // 15 a 24/09 do calendário — e o calendário não sabe de qual dos dois a célula era: o
+  // texto é idêntico. Apagou a da reserva BOA. A planilha é a fonte do dashboard, e por
+  // isso a hóspede sumiu da tela enquanto dormia na casa.
+  // Regra nova: antes de liberar o calendário, o app olha se OUTRA reserva VIVA (fechada)
+  // do mesmo FILHOt ocupa noites que se sobrepõem. Se ocupa, o calendário daquele FILHOt
+  // NÃO é mexido — e a tela diz, com nome e datas, qual linha do financeiro riscar à mão.
+  // Perder uma linha de financeiro é visível e se conserta; perder a noite no calendário
+  // apaga o hóspede da tela e ninguém percebe. Função pura: é ela que o harness prova.
+  // O MESMO FILHOt em dois orçamentos. Reaproveita o orcChavePet (a dupla nome+tutor do
+  // check-in); quando um dos lados não tem chave, tolera o tutor escrito curto num e
+  // inteiro no outro ("Luciana" × "Luciana Couto Renno" são a mesma pessoa).
+  function orcMesmoPetEm(a, oa, b, ob){
+    var ka=orcChavePet(a, oa), kb=orcChavePet(b, ob);
+    if(!ka||!kb) return false;
+    if(ka===kb) return true;
+    var pa=ka.split('__'), pb=kb.split('__');
+    if(pa[0]!==pb[0]||!pa[0]) return false;                     // nomes diferentes: nem discute
+    var ta=pa[1]||'', tb=pb[1]||'';
+    if(!ta||!tb) return true;                                   // um lado sem tutor: o nome é o que há
+    return ta.indexOf(tb)===0 || tb.indexOf(ta)===0;
+  }
+  // Devolve [{key, nome, outroId, entrada, saida}] — um item por FILHOt cujas noites
+  // continuam sendo de outra reserva viva. Lista vazia = pode liberar o calendário à vontade.
+  function orcNoitesDeOutraReserva(lista, id, o){
+    var out=[];
+    o=o||{};
+    (o.pets||[]).forEach(function(sp){
+      (lista||[]).forEach(function(x){
+        if(!x || x.id===id) return;
+        if((x.status||'')!=='fechado') return;                  // só reserva VIVA segura noite
+        if(!orcPeriodoSobrepoe(o, x)) return;
+        (x.pets||[]).forEach(function(xp){
+          if(!orcMesmoPetEm(sp, o, xp, x)) return;
+          out.push({key:sp.key||'', nome:sp.nome||xp.nome||'', outroId:x.id,
+                    entrada:x.entrada||'', saida:x.saida||''});
+        });
+      });
+    });
+    return out;
+  }
   // Desfaz na planilha o que a reserva escreveu: libera as noites do calendário e risca a
   // linha do financeiro. Se a ponte falhar, a tela DIZ o que precisa ser feito à mão.
   function orcTirarDaPlanilha(id, quem, quando){
     var o=ORC_LISTA_CACHE[id]||{}, cfg=(orcSheetsCfg||{});
     var pets=(o.pets||[]);
+    // TRAVA DE 17/set/2026: FILHOt cujas noites continuam sendo de outra reserva viva não
+    // entra no pedido de apagar — senão o calendário perde a noite da reserva BOA (caso Maya).
+    var presas=[];
+    try{ presas=orcNoitesDeOutraReserva(orcListaArray(), id, o)||[]; }catch(e){ presas=[]; } /* sem a lista em mão, o comportamento antigo continua valendo */
+    if(presas.length){
+      var chavesPresas={}; presas.forEach(function(x){ chavesPresas[String(x.key||x.nome||'').toLowerCase()]=x; });
+      pets=pets.filter(function(p){ return !chavesPresas[String(p.key||p.nome||'').toLowerCase()]; });
+      var _lin=presas.map(function(x){ return x.nome+' — '+orcBR(x.entrada)+' a '+orcBR(x.saida); })
+        .filter(function(v,i,a){ return a.indexOf(v)===i; });
+      zAlertao('AS NOITES CONTINUAM OCUPADAS POR OUTRA RESERVA',
+        ['Esta reserva foi cancelada no sistema.',
+         'Mas as MESMAS noites já pertencem a outra reserva fechada: '+_lin.join(' · ')+'.',
+         'Por isso eu NÃO apaguei o calendário — apagar tiraria o FILHOt do dashboard mesmo estando hospedado.',
+         'Risque à mão só a linha DESTA reserva na aba Hospedagem. O calendário está certo como está.'],
+        {botao:'Entendi'});
+      if(typeof audit==='function') audit('orcamento-cancelado-calendario-preservado',
+        'cancelou '+repOrcCurto(id)+' sem liberar o calendário — as noites são de outra reserva viva ('+_lin.join(' · ')+')', {});
+      if(!pets.length){ orcCarregarLista(); return; }
+    }
     // Cada FILHOt tem a SUA coluna no calendário — então cada um precisa ser apagado.
     var nomes=pets.map(function(p){
       var partes=[String(p.nome||'').trim()];
@@ -13173,7 +13492,7 @@
   // inteira DEPOIS de a correção estar publicada — o aviso apareceu, ninguém tocou.
   // Agora o aparelho PARADO recarrega sozinho: trancado, com a aba escondida, na porta de
   // entrada ou 3 minutos sem ninguém tocar nele. Mão na tela = nunca recarrega.
-  const APP_VERSAO='2026-09-16-01';
+  const APP_VERSAO='2026-09-17-01';
   var RECARGA_PARADO_MS=3*60*1000, __versaoPublicada=null, __recargaTimer=null;
   function vigiarVersao(){
     if(!DB) return;
@@ -13431,7 +13750,12 @@
     // dizer o MESMO que o sidebar — conceder uma tela que não existe no menu é conceder
     // nada. Quem já tinha 'painel' concedido não perde acesso a coisa alguma: a tela
     // continua existindo por link, e a classe so-master é a mesma nos dois.
-    {grp:'Operação', itens:[ {k:'pessoas', t:'Time'}, {k:'linhadotempo', t:'Linha do tempo do dia'} ]},
+    // 17/set/2026: a categoria "Operação" virou "Configurações" e a "Linha do tempo do dia"
+    // subiu para Dashboards. Esta lista tem de dizer o MESMO que o sidebar — é ela que a
+    // Gestão lê na tela do Time. As CHAVES são as mesmas: nenhuma permissão nasceu, nenhuma
+    // sumiu, ninguém perdeu o que já tinha concedido.
+    {grp:'Dashboards', itens:[ {k:'linhadotempo', t:'Linha do tempo do dia'} ]},
+    {grp:'Configurações', itens:[ {k:'pessoas', t:'Time'} ]},
     {grp:'Relatórios', itens:[ {k:'relatorios', t:'Relatórios'} ]}
     // "Senhas" não entra aqui de propósito: não é item de menu e não se concede a ninguém.
     // "Configurações" (config) também não: é so-master, e ajuste de sistema não se concede.
@@ -14289,6 +14613,29 @@
       carregarManuais();
     }
   }
+  // ===== É O MESMO FILHOt? (Adriana, 17/set/2026) ===================================
+  // Duas fichas só são a mesma quando NOME e TUTOR combinam. Quando um dos dois lados
+  // não tem tutor (a célula da planilha às vezes vem só com o nome), o nome decide —
+  // é o máximo que o dado permite afirmar. Com os dois tutores preenchidos e diferentes,
+  // são FILHOts diferentes, e cada um tem de aparecer no Plantão.
+  // Função pura: é ela que o harness prova.
+  function hospMesmoFilhot(a, b){
+    if(!a||!b) return false;
+    var nA=(typeof jsNorm==='function')?jsNorm(a.nome||''):String(a.nome||'').toLowerCase();
+    var nB=(typeof jsNorm==='function')?jsNorm(b.nome||''):String(b.nome||'').toLowerCase();
+    if(!nA||!nB||nA!==nB) return false;
+    var kA=String(a.refKey||'').toLowerCase(), kB=String(b.refKey||'').toLowerCase();
+    if(kA&&kB) return kA===kB;                 // com as duas chaves, elas mandam
+    var tA=(typeof tutorDe==='function')?tutorDe(a):(a.tutor||'');
+    var tB=b.tutor||'';
+    tA=(typeof jsNorm==='function')?jsNorm(tA||''):String(tA||'').toLowerCase();
+    tB=(typeof jsNorm==='function')?jsNorm(tB||''):String(tB||'').toLowerCase();
+    if(!tA||!tB) return true;                  // um dos lados sem tutor: o nome é o que há
+    if(tA===tB) return true;
+    // "Luciana" e "Luciana Couto Renno" são a mesma pessoa escrita de dois jeitos: a
+    // planilha usa o primeiro nome e o cadastro usa o nome inteiro.
+    return tA.indexOf(tB)===0 || tB.indexOf(tA)===0;
+  }
   function dataKeyAtual(){ const p=x=>String(x).padStart(2,'0'); const d=selectedDate; return d.getFullYear()+'-'+p(d.getMonth()+1)+'-'+p(d.getDate()); }
   function carregarManuais(){
     if(!DB) return;
@@ -14354,9 +14701,13 @@
         var ent=e.entrada||'', sai=e.saida||'';
         if(ent && hojeISOk < ent) return;         // ainda não chegou
         if(sai && hojeISOk > sai) return;          // já passou a saída prevista
-        // Anti-duplicação: se o FILHOt já está no Plantão (planilha/manuais/outra estadia),
-        // por nome normalizado, NÃO adiciona de novo (evita Zeus aparecendo 2x).
-        if(hospedes.some(function(h){ return jsNorm(h.nome||'')===jsNorm(e.nome||''); })) return;
+        // Anti-duplicação: se o FILHOt JÁ está no Plantão (planilha/manuais/outra estadia),
+        // não adiciona de novo (evita Zeus aparecendo 2x). A régua é nome + TUTOR — nunca
+        // o nome sozinho (Adriana, 22/ago/2026: "nome sozinho não identifica ninguém").
+        // Havia TRÊS Mayas no cadastro (maya__luciana, maya__marcela e maya__ana carolina):
+        // com a comparação por nome, qualquer Maya na planilha do dia engolia, calada, a
+        // hóspede Maya que fez check-in — e ela desaparecia de "Hóspedes de hoje".
+        if(hospedes.some(function(h){ return hospMesmoFilhot(h, e); })) return;
         add({nome:e.nome, tutor:e.tutor||'', raca:e.raca||'', refKey:e.refKey||'', hospede:true}, (sai&&hojeISOk===sai), '', '');
       });
       // Aplica o override "removidos hoje" (Gestão tirou do Plantão): remove da lista final.
@@ -30557,6 +30908,15 @@
     var card=document.getElementById('ciCadFaltaCard'), wrap=document.getElementById('ciCadFaltaCampos');
     if(!card||!wrap) return;
     var st=document.getElementById('ciCadFaltaStatus'); if(st) st.textContent='';
+    // ===== NÃO ACUSAR DE INCOMPLETO O QUE AINDA NÃO DESCEU (item D, 17/set/2026) ====
+    // A Pipoca caiu em "cadastro incompleto" com a ficha cheia: o cadastro
+    // (daycare/cadastro) alimenta o pelExtra(), e enquanto ele não chega TODO campo que só
+    // mora lá — microchip, veterinário de emergência — lê como vazio. O atalho do orçamento
+    // abria a ficha na mesma hora, antes do retrato, e a tela cobrava o que já existia.
+    // Sem o cadastro em mão o cartão fica calado; quando ele desce, esta função roda de novo.
+    if(typeof CARTEIRA_CARREGADA!=='undefined' && !CARTEIRA_CARREGADA){
+      card.style.display='none'; wrap.innerHTML=''; return;
+    }
     var falta=cadastroFaltando(p);
     if(!falta.length){ card.style.display='none'; wrap.innerHTML=''; return; }
     var criticos=falta.filter(function(f){ return f.critico; });
@@ -30633,6 +30993,13 @@
     const p=PELUDINHOS[i]; if(!p) return;
     ciSalvoAgora=false;   // a partir daqui existe um check-in em andamento que ainda não foi salvo
     ciPelAtual=p;
+    // O bilhete com as datas do orçamento (item C) vale só para o FILHOt do atalho. Quem
+    // chegou pela busca, ou escolheu outro FILHOt, começa sem bilhete — senão as datas de
+    // um orçamento alheio entrariam num check-in que não é dele.
+    try{
+      if(typeof ORC_CI_DATAS!=='undefined' && ORC_CI_DATAS && ORC_CI_DATAS.petKey
+         && typeof pelKey==='function' && pelKey(p)!==ORC_CI_DATAS.petKey) ORC_CI_DATAS=null;
+    }catch(e){} /* silencioso de propósito: guarda defensiva — falhar aqui não pode interromper quem chamou */
     const _nasc=(typeof pelNasc==='function')?pelNasc(p):(pelGet(p,'nasc')||'');
     const _idade=(typeof calcIdade==='function'?calcIdade(_nasc):'')||(pelGet(p,'idadeAprox')||'');
     ciHosp={ nome:pelNome(p), tutor:pelGet(p,'tutor')||'', raca:pelGet(p,'raca')||'', refKey:pelKey(p), nasc:_nasc, idade:_idade, ini:(pelNome(p)[0]||'?').toUpperCase(), cor:corPel(i) };
@@ -31226,8 +31593,24 @@
     return Promise.resolve().then(function(){
       e=e||{}; const f=e.ficha||{};
       const spa=f.spa||{};
-      if(e.entrada){ const _e=document.getElementById('ciEntrada'); if(_e) _e.value=e.entrada; }
-      if(e.saida){ const _s=document.getElementById('ciSaida'); if(_s) _s.value=e.saida; }
+      // ===== AS DATAS DO ORÇAMENTO MANDAM (item C — Adriana, 17/set/2026) ============
+      // Este pré-preenchimento vem da ÚLTIMA estadia e chega por once(), ou seja, DEPOIS
+      // que o atalho do orçamento já pôs as datas certas na tela. Escrevendo aqui sem
+      // olhar, o passado ganhava: a Lisa foi gravada hoje com entrada 19/09 e saída 12/09
+      // (a saída da vez anterior) e o Pufe com 02/09 a 04/09. Se há bilhete do orçamento
+      // (ORC_CI_DATAS) para ESTE FILHOt, as datas dele NÃO são tocadas.
+      // A ficha, a alimentação, a medicação e os pertences continuam sendo pré-preenchidos
+      // normalmente — é isso que faz o atalho "facilitar e não problematizar".
+      const _bil=(typeof ORC_CI_DATAS!=='undefined'&&ORC_CI_DATAS
+                  && (!ORC_CI_DATAS.petKey || !ciHosp || !ciHosp.refKey
+                      || String(ORC_CI_DATAS.petKey)===String(ciHosp.refKey)))?ORC_CI_DATAS:null;
+      const _vale=(typeof orcDatasQueValem==='function')?orcDatasQueValem(_bil, e):{entrada:(e.entrada||''), saida:(e.saida||'')};
+      if(_vale.entrada){ const _e=document.getElementById('ciEntrada'); if(_e) _e.value=_vale.entrada; }
+      // Saída ANTES da entrada é período impossível — foi assim que a estadia da Lisa
+      // nasceu torta. Melhor deixar em branco e a recepção preencher que gravar invertido.
+      if(_vale.saida && (!_vale.entrada || _vale.saida>=_vale.entrada)){
+        const _s=document.getElementById('ciSaida'); if(_s) _s.value=_vale.saida;
+      }
       if(e.saidaPer) setSeg('ciSaidaPer',e.saidaPer);
       // Reabrir uma pernoite tem que mostrar que ela É pernoite — senão a recepção corrige a
       // ficha e o botão volta calado para "Hospedagem", mudando o que ninguém pediu para mudar.
@@ -32793,6 +33176,7 @@
   var hospAbaBaixa=null;  // id da estadia recebendo BAIXA (check-out) na própria linha
   var hospNovaPend=null;  // FILHOt escolhido para uma hospedagem nova, esperando as datas
   var HOSP_SO_PLANILHA=[]; // hóspedes do dia que vieram só da planilha (ainda sem estadia no app)
+  var hospAbaAntecipada=null;  // id da estadia com o cartaz da saída antecipada aberto
 
   function hospAbaPode(){ return podePapel('aba-hospedes'); }
   function hospHojeISO(){ return zHojeISO(); }
@@ -32840,6 +33224,32 @@
         + '<div class="he-acoes"><button class="btn btn-primary" onclick="hospConfirmarBaixa(\''+id+'\')">Confirmar baixa</button>'
         + '<button class="btn" onclick="hospCancelarBaixa()">Cancelar</button></div></div>';
     }
+    // ===== SAÍDA ANTECIPADA — Adriana, 17/set/2026 ==================================
+    // "Tem como sair antes, ficar com crédito, algo assim." O tutor volta de viagem mais
+    // cedo e busca o FILHOt antes da data combinada: as noites que ele não usou não podem
+    // virar prejuízo dele nem presente da casa — viram CRÉDITO na ficha, do mesmo jeito que
+    // a falta avisada do Day Care já virava (o Banco de Reposições, 31/ago/2026).
+    // Mora aqui, em Hóspedes de hoje, porque é aqui que o hóspede vive: de manhã este botão
+    // foi desenhado na tela de Orçamento, e ela corrigiu — "quem já está hospedado sai da
+    // lista de orçamentos". O cartaz abre na própria linha, sem modal que o teclado do
+    // celular esconde, e mostra a conta ANTES de confirmar.
+    if(hospAbaAntecipada===id){
+      const hj=hospHojeISO();
+      const prev=e.saida||'';
+      const real=(document.getElementById('hospAntData')||{}).value||hj;
+      const n=hospNoitesNaoUsadas(e, real);
+      return '<div class="hosp-est he-edit">'
+        + av
+        + '<div class="he-main"><div class="he-nome">Saída antecipada — '+escAttr(e.nome||'')+'</div>'
+        + '<div class="he-sub">A saída combinada era '+escAttr(prev?((typeof ciBRdata==='function')?ciBRdata(prev):prev):'sem data')+'. '
+        + 'Em que dia ele foi embora de verdade? As noites que ele não usou voltam como crédito na ficha dele.</div>'
+        + '<div class="he-sub" id="hospAntConta" style="font-weight:800;color:var(--z-blue)">'+escAttr(hospAntecipadaFrase(e, real))+'</div></div>'
+        + '<label style="font-size:12px;font-weight:700;color:var(--muted)">Foi embora em<br><input type="date" class="cad-in" id="hospAntData" value="'+escAttr(real)+'" max="'+escAttr(hj)+'" min="'+escAttr(e.entrada||'2015-01-01')+'" onchange="hospAntecipadaRecalcular(\''+id+'\')" onkeydown="return dataSoNoCalendario(event)"></label>'
+        + '<div class="he-acoes"><button class="btn btn-primary" onclick="hospConfirmarAntecipada(\''+id+'\')">Confirmar saída antecipada</button>'
+        + '<button class="btn" onclick="hospCancelarAntecipada()">Cancelar</button></div>'
+        + (n>0?'':'<div class="he-sub" style="width:100%;color:var(--muted)">Nesta data não há noite sobrando — nenhum crédito será lançado, só a baixa.</div>')
+        + '</div>';
+    }
     // Hóspede que só existe na planilha de hoje: ainda não tem estadia com data no app.
     // Sem estadia não há o que editar — o botão registra as datas e cria a pasta da estadia.
     if(e._soPlanilha){
@@ -32871,10 +33281,168 @@
       + (hospAbaPode()?'<button class="btn btn-primary" onclick="hospEditarDatas(\''+id+'\')">Mudar datas</button>':'')
       + ((hospAbaPode()&&(e.status||'ativa')==='ativa')
           ?'<button class="btn" style="background:#1E8449;color:#fff" onclick="hospDarBaixa(\''+id+'\')">Dar baixa</button>':'')
+      // Só quem está na casa AGORA pode sair antes — e só Gestão, Diretoria ou Supervisão,
+      // porque lançar crédito é mexer no que o tutor paga.
+      + ((hospPodeAntecipada()&&st==='agora'&&hospNoitesNaoUsadas(e, hospHojeISO())>0)
+          ?'<button class="btn btn-gold" onclick="hospSaidaAntecipada(\''+id+'\')">Saída antecipada</button>':'')
       + '<button class="btn" onclick="hospAbrirFicha(\''+id+'\')">Abrir ficha</button>'
       + ((e.status||'ativa')!=='ativa'&&e.encerradaEm
           ?'<div class="he-sub" style="width:100%;color:var(--muted)">Baixa em '+((typeof ciBRdata==='function')?ciBRdata(e.encerradaEm):e.encerradaEm)+(e.encerradaPor?(' — '+escAttr(e.encerradaPor)):'')+'</div>':'')
       + '</div></div>';
+  }
+  // ===== A CONTA DA SAÍDA ANTECIPADA ===============================================
+  // Noites não usadas = da saída REAL até a saída PREVISTA. Quem vai embora no dia 20 de
+  // uma estadia que ia até o 24 deixou de usar 4 noites (20→21, 21→22, 22→23, 23→24).
+  // Sem saída prevista não há o que devolver — não se inventa crédito sobre o que ninguém
+  // combinou. Saída real depois da prevista não gera crédito NEGATIVO: quem ficou mais
+  // tempo se resolve em "Mudar datas", não aqui. Função pura: é ela que o harness prova.
+  function hospNoitesNaoUsadas(e, saidaReal){
+    e=e||{};
+    var prev=e.saida||'';
+    var real=saidaReal||'';
+    if(!prev||!real) return 0;
+    if(real>=prev) return 0;
+    if(e.entrada && real<e.entrada) return 0;      // data impossível: a tela barra antes
+    var d1=new Date(real+'T12:00:00'), d2=new Date(prev+'T12:00:00');
+    if(isNaN(d1)||isNaN(d2)) return 0;
+    var n=Math.round((d2-d1)/86400000);
+    return (n>0&&n<=400)?n:0;                      // trava de sanidade, igual à do repDiasQueViria
+  }
+  function hospAntecipadaFrase(e, saidaReal){
+    var n=hospNoitesNaoUsadas(e, saidaReal);
+    if(!n) return 'Nenhuma noite sobrando nesta data.';
+    return n+(n===1?' noite não usada — 1 crédito':' noites não usadas — '+n+' créditos')+' na ficha de '+((e&&e.nome)||'');
+  }
+  // Lançar crédito é decisão de quem responde pelo dinheiro.
+  function hospPodeAntecipada(){
+    var r=(document.body&&document.body.dataset)?document.body.dataset.role:'';
+    return r==='gestao'||r==='diretoria'||r==='supervisor';
+  }
+  function hospSaidaAntecipada(id){
+    if(!hospPodeAntecipada()){ alert('Só a Gestão, a Diretoria ou a Supervisão podem lançar uma saída antecipada — ela gera crédito na ficha.'); return; }
+    hospAbaAntecipada=id; hospAbaBaixa=null; hospAbaEdit=null; hospNovaPend=null; renderHospedesAba();
+    setTimeout(function(){ try{ const el=document.getElementById('hospAntData'); if(el){ el.scrollIntoView({behavior:'smooth',block:'center'}); el.focus(); } }catch(e){} /* silencioso de propósito: enfeite de tela (foco, rolagem, mídia) — falhar não muda dado nenhum */ },50);
+  }
+  function hospCancelarAntecipada(){ hospAbaAntecipada=null; renderHospedesAba(); }
+  // A conta muda ao vivo quando a pessoa mexe na data: ela decide vendo o número, não depois.
+  function hospAntecipadaRecalcular(id){
+    try{
+      var e=EST_TODAS[id]||{};
+      var real=(document.getElementById('hospAntData')||{}).value||'';
+      var el=document.getElementById('hospAntConta');
+      if(el) el.textContent=hospAntecipadaFrase(e, real);
+    }catch(x){} /* silencioso de propósito: redesenho de tela — falhar não pode derrubar quem chamou */
+  }
+  // O orçamento fechado desta hospedagem — é nele que saida_real e credito_noites ficam
+  // registrados. Achado pela mesma dupla do check-in (chave do pet) e pelo cruzamento de
+  // período: é a régua que o item B passou a usar. Sem orçamento, devolve ''.
+  function hospOrcamentoDaEstadia(e){
+    e=e||{};
+    var lista=[];
+    try{ lista=(typeof orcListaArray==='function')?orcListaArray():[]; }catch(x){ return ''; }
+    var alvo={key:(e.refKey||''), nome:(e.nome||''), tutor:(e.tutor||'')};
+    var achado='';
+    lista.forEach(function(o){
+      if(achado||!o) return;
+      if((o.status||'')!=='fechado') return;
+      if(!orcPeriodoSobrepoe({entrada:(e.entrada||''), saida:(e.saida||e.entrada||'')}, o)) return;
+      (o.pets||[]).forEach(function(pp){
+        if(achado) return;
+        if(orcMesmoPetEm(alvo, {tutor:(e.tutor||'')}, pp, o)) achado=o.id;
+      });
+    });
+    return achado;
+  }
+  async function hospConfirmarAntecipada(id){
+    if(!hospPodeAntecipada()){ alert('Sem permissão para lançar saída antecipada.'); return; }
+    const e=EST_TODAS[id]||{};
+    const real=(document.getElementById('hospAntData')||{}).value||'';
+    const hj=hospHojeISO();
+    if(zFalta1('hospAntData', !real
+        ? ('Falta o dia em que '+(e.nome||'o FILHOt')+' foi embora.')
+        : (real>hj
+            ? 'Essa data ainda não chegou. A saída antecipada registra um dia que já aconteceu.'
+            : ((e.entrada&&real<e.entrada)
+                ? ('A saída não pode ser antes da entrada ('+((typeof ciBRdata==='function')?ciBRdata(e.entrada):e.entrada)+').')
+                : ((e.saida&&real>=e.saida)
+                    ? 'Nesta data não há saída antecipada — ele cumpriu a estadia. Use "Dar baixa".'
+                    : ''))))) return;
+    if(!DB){ alert('Sem conexão com o banco agora — nada foi lançado. Tente de novo em instantes.'); return; }
+    const noites=hospNoitesNaoUsadas(e, real);
+    const quem=(typeof quemSou==='function'?quemSou():'-');
+    const perDe=((typeof ciBRdata==='function')?ciBRdata(e.entrada||''):(e.entrada||''));
+    const perAte=((typeof ciBRdata==='function')?ciBRdata(e.saida||''):(e.saida||''));
+    const motivo='Saída antecipada — hospedagem '+perDe+' a '+perAte;
+    const orcId=hospOrcamentoDaEstadia(e);
+    if(!await zPergunta('Saída antecipada de '+(e.nome||'esta hospedagem')+'?',
+      ['Foi embora em: '+((typeof ciBRdata==='function')?ciBRdata(real):real)+' — a saída combinada era '+(perAte||'sem data')+'.',
+       noites+(noites===1?' noite não usada vira 1 crédito':' noites não usadas viram '+noites+' créditos')+' na ficha dele.',
+       orcId?('Fica registrado no orçamento '+repOrcCurto(orcId)+'.')
+            :'Não achei o orçamento desta hospedagem — o registro fica na própria estadia.',
+       'Quem está lançando: '+quem],
+      {sim:'Lançar a saída antecipada', nao:'Voltar sem lançar'})) return;
+    // O crédito usa CHAVE DETERMINÍSTICA ('sa-{estadia}-{n}'), nunca push(): dois toques no
+    // botão, ou uma rede que repete o pedido, escreveriam o MESMO nó — e o saldo não se
+    // mexe duas vezes. É a lei do repOrcAcerto (10/set/2026), aqui também.
+    const patch={};
+    patch['auaulandia/estadias/'+id+'/saida_real']=real;
+    patch['auaulandia/estadias/'+id+'/credito_noites']=noites;
+    patch['auaulandia/estadias/'+id+'/saida_antecipada']={ em:real, noites:noites, por:quem, ts:Date.now(), orcamento:orcId||'' };
+    // A hospedagem termina aqui: a saída passa a ser a real e a estadia sai do Plantão —
+    // exatamente o que "Dar baixa" já fazia, para o hóspede não reaparecer amanhã.
+    patch['auaulandia/estadias/'+id+'/status']='encerrada';
+    patch['auaulandia/estadias/'+id+'/saida']=real;
+    patch['auaulandia/estadias/'+id+'/encerradaEm']=real;
+    patch['auaulandia/estadias/'+id+'/encerradaPor']=quem;
+    patch['auaulandia/estadias/'+id+'/encerradaTs']=Date.now();
+    if(orcId){
+      patch['auaulandia/orcamentos/'+orcId+'/saida_real']=real;
+      patch['auaulandia/orcamentos/'+orcId+'/credito_noites']=noites;
+    }
+    // O crédito só existe para FILHOt com ficha — sem cadastro não há Banco de Reposições
+    // (a mesma regra do repOrcAcerto). Nesse caso a tela DIZ, em vez de fingir que lançou.
+    let pel=null;
+    try{ pel=(typeof repPelaChave==='function'&&e.refKey)?repPelaChave(e.refKey):null; }catch(x){ pel=null; }
+    if(!pel){
+      try{
+        const lista=(typeof PELUDINHOS!=='undefined'?PELUDINHOS:[])||[];
+        const idx=(typeof orcAcharPeludinho==='function')
+          ? orcAcharPeludinho(lista, {key:(e.refKey||''), nome:(e.nome||''), tutor:(e.tutor||'')}, e.tutor||'')
+          : -1;
+        if(idx>=0) pel=lista[idx];
+      }catch(x){ pel=null; }
+    }
+    const kPel=(pel&&typeof pelKey==='function')?pelKey(pel):'';
+    if(kPel && noites>0){
+      for(let n=1;n<=noites;n++){
+        patch['daycare/reposicao/'+kPel+'/lancamentos/sa-'+id+'-'+n]={
+          tipo:'credito', data:real, motivo:'hospedagem-saida-antecipada',
+          obs:motivo, estadiaId:id, orcId:orcId||'', seq:n, quem:quem, ts:Date.now()
+        };
+      }
+    }
+    DB.ref().update(patch).then(function(){
+      if(typeof audit==='function') audit('hospedagem-saida-antecipada',
+        (e.nome||'')+' foi embora em '+real+' (a saída era '+(e.saida||'—')+') — '+noites+' noite(s) não usada(s)'
+        +(kPel?(' viraram crédito na ficha'):(' NÃO viraram crédito: FILHOt sem ficha no cadastro'))
+        +(orcId?(' · orçamento '+repOrcCurto(orcId)):''),
+        {pet:(e.nome||''), quem:quem});
+      hospAbaAntecipada=null;
+      if(typeof carregarHospedes==='function') carregarHospedes();
+      if(typeof orcCarregarLista==='function') orcCarregarLista();
+      renderHospedesAba();
+      const linhas=['Foi embora em '+((typeof ciBRdata==='function')?ciBRdata(real):real)+'.'];
+      if(kPel&&noites>0) linhas.push(noites+(noites===1?' crédito de noite entrou':' créditos de noite entraram')+' na ficha de '+(e.nome||'')+' — motivo: '+motivo+'.');
+      else if(noites>0) linhas.push('ATENÇÃO: '+noites+' noite(s) sobraram, mas '+(e.nome||'este FILHOt')+' não tem ficha no cadastro — o crédito NÃO foi lançado. Cadastre e lance à mão em Reposições.');
+      else linhas.push('Não havia noite sobrando: nenhum crédito foi lançado.');
+      linhas.push('Agora feche a bolsa e a saída no Check-out.');
+      if(typeof zAlertao==='function') zAlertao('SAÍDA ANTECIPADA REGISTRADA', linhas, {ok:true, botao:'Ir ao Check-out'});
+      // Leva ao Check-out: é o passo seguinte da vida real — a bolsa e a assinatura.
+      try{ if(typeof abrirItemDoMenu==='function') abrirItemDoMenu('checkout'); }catch(x){} /* silencioso de propósito: guarda defensiva — falhar aqui não pode interromper quem chamou */
+    }).catch(function(err){
+      alert('NÃO consegui registrar a saída antecipada: '+((err&&err.message)||err)+'\n\nNada foi alterado. Confira a internet e tente de novo.');
+      _logFalhaGrav('auaulandia/estadias + daycare/reposicao (hospConfirmarAntecipada)', err);
+    });
   }
   function hospDarBaixa(id){
     if(!hospAbaPode()){ alert('Só a Recepção, a Supervisão, a Gestão ou a Diretoria podem dar baixa numa hospedagem.'); return; }

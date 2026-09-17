@@ -1,6 +1,40 @@
-# Índice do app — menu aprovado pela Adriana (reorganizado em 08/set/2026, ajustado em 15/set/2026)
+# Índice do app — menu aprovado pela Adriana (reorganizado em 08/set/2026, ajustado em 15 e 17/set/2026)
 
 > Regra: o app tem de ser autoexplicativo, para treinamento rápido. Cada item tem **Título** e **subtítulo** (a explicação curta que aparece como dica no menu e no índice da Gestão no computador). Nomes são decisão da Adriana.
+
+## O que mudou em 17/set/2026 (v 2026-09-17-01)
+
+Adriana, três frases:
+
+> "Serviços passa a ser Ecossistema Daycare." · "Operação passa a ser Configurações, e fica só o que é ajuste." · "Enriquecimento Ambiental, Ritmo do Time e Linha do tempo do dia vão para Dashboards, é o administrativo."
+
+### Duas categorias trocaram de nome
+
+| Antes | Agora |
+|---|---|
+| **Serviços** | **Ecossistema Daycare** |
+| **Operação** | **Configurações** |
+
+Só o **nome visível** mudou. Os `data-acc` (`servicos` e `operacao` — a chave do aberto/fechado guardada em cada aparelho), os `data-v` e as classes `so-*` continuam idênticos. Quem já tinha o menu aberto numa categoria continua com ela aberta.
+
+### Três itens mudaram de gaveta: subiram para Dashboards
+
+**Enriquecimento Ambiental** (`eahist`) · **Linha do tempo do dia** (`linhadotempo`) · **Ritmo do Time** (`ritmo`).
+
+Ficam **depois** dos cinco dashboards das pessoas e entre si em **ordem alfabética**. A categoria Dashboards passou a ter, nesta ordem: Meu Dashboard · Dashboard das Consultoras · Dashboard da Amanda · Dashboard da Márcia · Dashboard da Adriana · Enriquecimento Ambiental · Linha do tempo do dia · Ritmo do Time.
+
+**Ninguém ganhou nem perdeu acesso.** Cada item trouxe a sua própria classe: `eahist` e `ritmo` seguem `so-gestao`, `linhadotempo` segue `so-master`. A gaveta da Operação tinha `so-gestao` na categoria, e `so-master` (Gestão, Diretoria e Supervisão) é **mais estreito** que `so-gestao` — então a classe da gaveta nunca foi o que decidia para estes três.
+
+### A gaveta Configurações ficou só com o que é ajuste
+
+Em **ordem alfabética**: Configurações (`config`) · Escala e plano do dia (`planodia`) · Financeiro do plantão (`acerto`) · Time (`pessoas`), com o `#pSubnav` colado no Time — é o submenu dele.
+
+### A tela do Time fala a mesma língua
+
+`NAV_PAGINAS_ALL` (a lista que a Gestão lê para conceder telas) acompanhou os nomes: o grupo "Operação" virou "Configurações" e a "Linha do tempo do dia" passou para um grupo "Dashboards". **As chaves são as mesmas** — nenhuma permissão nasceu, nenhuma sumiu, e ninguém perdeu o que já estava concedido.
+
+**Provas:** `tests/harness.js` (ordem das categorias, mapa item→gaveta, ordem alfabética dos três administrativos, as classes `so-*` item por item, os grupos do `NAV_PAGINAS_ALL`) e a captura `docs/capturas-v20/menu-ecossistema-configuracoes-dashboards.png`.
+
 
 ## O que mudou em 15/set/2026 (v 2026-09-15-03)
 
@@ -46,7 +80,7 @@ A tela era um dashboard escondido atrás de um nome de tela. Cada bloco dela foi
 | Cumprimento dos protocolos | **Dashboard da Adriana E da Márcia** (uma função, dois usos) |
 | Tempo das atividades — agora **gráfico de barras** por atividade | **Dashboard da Adriana E da Márcia** (uma função, dois usos) |
 | O que cada pessoa fez hoje | **Configurações › Logins e segurança** |
-| Linha do tempo do dia | **Operação › Linha do tempo do dia** (tela nova, navegação por mês) |
+| Linha do tempo do dia | **Dashboards › Linha do tempo do dia** (tela nova, navegação por mês; nasceu na Operação e subiu para Dashboards em 17/set/2026) |
 | Partiram | **removido** — "não tem necessidade de aparecer para ninguém" |
 | N doses de medicação sem o nome de quem deu | **removido** — "pode tirar isso" |
 
@@ -151,12 +185,15 @@ Nunca um filho maior que o pai. Abre só o caminho da tela ativa. A pendência s
 | | Dashboard da Márcia (`paineloperacao`) | A casa de hoje num lugar só: quem veio, quem faltou, o tempo do time, as noites que vêm aí e o acerto. | tabela PERM |
 | | Dashboard da Adriana (`painel-diretoria`) | A casa inteira e o dinheiro do mês — a visão de quem responde por tudo. | tabela PERM |
 | | Painel do Dia (`painel`) | Auditoria e cumprimento de protocolos. | so-master |
-| **Serviços › AuAulândia** | Conferência do check-in (`conferencia`) | O monitor confere corpo e pertences de quem chegou (2º passo; o 1º é da Central Zêluz). | so-conferencia |
+| | Enriquecimento Ambiental (`eahist`) | O que foi feito e quem não participou. | so-gestao |
+| | Linha do tempo do dia (`linhadotempo`) | Tudo o que aconteceu, em ordem — escolha o mês e o dia. | so-master |
+| | Ritmo do Time (`ritmo`) | Tempo por etapa, dia a dia. | so-gestao |
+| **Ecossistema Daycare › AuAulândia** | Conferência do check-in (`conferencia`) | O monitor confere corpo e pertences de quem chegou (2º passo; o 1º é da Central Zêluz). | so-conferencia |
 | | Hóspedes de hoje (`hospedes`) | Quem está na casa, medicação e alimentação. | so-hosp |
 | | Plantão da noite (`hospedagem`) | O relatório de cada hóspede, turno a turno. | todos |
 | | Conferência do dia (`gestdia`) | Medicações por horário, problemas e os três tempos do plantão. | so-gestao |
 | | Check-out (`checkout`) | O monitor monta a bolsa e devolve tudo (1º passo; a Central fecha com o tutor). | todos |
-| **Serviços › Day Care** | Abertura do dia (`abertura`) | Monitor 1: como a casa abre. | so-abertura |
+| **Ecossistema Daycare › Day Care** | Abertura do dia (`abertura`) | Monitor 1: como a casa abre. | so-abertura |
 | | *(chamada, almoço, EA e as demais atividades)* | Vivem no `#dcSubnav`, dentro do `#blocoDaycare`. | so-day |
 | **Central Zêluz › Peludinhos** | Cadastro de Peludinhos (`ficha`) | Um cadastro só, para Day Care e AuAulândia — tudo começa aqui. | so-gestao (+ destaque) |
 | | Buscar peludinho *(sem `data-v`)* | Achar um peludinho depressa e abrir a ficha dele. Abre a MESMA tela do Cadastro, já no campo de busca. | so-gestao (espelha o Cadastro) |
@@ -174,12 +211,10 @@ Nunca um filho maior que o pai. Abre só o caminho da tela ativa. A pendência s
 | | Orçamento de hospedagem (`orcamento`) | Monte e envie o orçamento ao tutor. | so-recepcao |
 | | Pendências com o tutor (`recepcao`) | Ração acabando, remédio faltando, algo que ficou. | so-recepcao |
 | | Cuidado Vet (`cuidadovet`) | Alterações no corpo que a veterinária precisa ver. | so-vet |
-| **Operação** (a Márcia) | Financeiro do plantão (`acerto`) | Acerto das plantonistas: noites, dobras, quanto pagamos. | so-master |
-| | Ritmo do Time (`ritmo`) | Tempo por etapa, dia a dia. | so-gestao |
-| | Enriquecimento Ambiental (`eahist`) | O que foi feito e quem não participou. | so-gestao |
-| | Time (`pessoas`) | Pessoas, senhas e quem acessa o quê. | so-master |
+| **Configurações** (só o que é ajuste) | Configurações (`config`) | Telegram, ponte da planilha, horários dos protocolos, protocolos passo a passo, **Prevenção** (validade da coleira e antecedência do aviso), **Mensagem de entrada** (a placa da porta) e o rastro de logins. | so-master |
 | | Escala e plano do dia (`planodia`) | A escala de cada um e qual plano vale hoje. | tabela PERM |
-| | Configurações (`config`) | Telegram, ponte da planilha, horários dos protocolos, protocolos passo a passo, **Prevenção** (validade da coleira e antecedência do aviso), **Mensagem de entrada** (a placa da porta) e o rastro de logins. | so-master |
+| | Financeiro do plantão (`acerto`) | Acerto das plantonistas: noites, dobras, quanto pagamos. | so-master |
+| | Time (`pessoas`) | Pessoas, senhas e quem acessa o quê. | so-master |
 | **Em breve** | Agenda (`agenda`) | Frequência e reservas. | todos |
 | — | **Relatórios** (`relatorios`) | Resumo do dia, aniversariantes, exportações. | so-gestao |
 | — | Sair (`sair`) | Encerra a sessão neste aparelho. | todos |
