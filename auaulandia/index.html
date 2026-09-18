@@ -2010,6 +2010,11 @@
   .pm-li-txt b{display:block;font-size:13.5px;font-weight:800;color:var(--z-blue)}
   .pm-li-txt span{display:block;font-size:12px;font-weight:500;color:var(--muted);margin-top:1px}
   .pm-li-fim{flex:0 0 auto;align-self:center}
+  /* Recebimentos do mês (18/set/2026) — o valor à direita de cada linha do quadro. */
+  .rec-val{font-size:14px;font-weight:800;color:var(--z-blue);font-variant-numeric:tabular-nums;white-space:nowrap}
+  .rec-val-sem{font-size:12.5px;font-weight:700;color:var(--muted)}
+  .rec-val-total{font-size:19px;color:var(--z-gold-deep)}
+  .rec-total{border-top:2px solid var(--z-gold)}
 
   /* ---------- badges (semáforo alpha), chips e botões pílula ---------- */
   .pm-badge{display:inline-flex;align-items:center;gap:6px;padding:3px 10px;border-radius:999px;
@@ -2595,10 +2600,17 @@
           <a data-v="reposicao" class="so-recepcao" title="Créditos de dias por falta avisada."><span data-icon="refresh"></span><span>Reposições</span></a>
           <div class="nav-rotulo">Planos e cobranças</div>
           <a data-v="renovacao" class="so-gestao" title="Quem está no fim do plano."><span data-icon="card"></span><span>Renovação de planos</span></a>
-          <!-- LANÇAR PAGAMENTO (v-10) — nasce ESCONDIDO; quem mostra é aplicarPermMenu(),
-               lendo a tabela PERM ('lancar-pagamento'): a Central lança, a chefia confere,
-               o monitor não vê. Nada de classe so-* nova (regra 3 da Fase 2). -->
-          <a data-v="lancar-pagamento" style="display:none" title="O recebimento do plano vira registro — é o que faz o Financeiro sair de R$ 0,00."><span data-icon="dollar"></span><span>Lançar pagamento</span></a>
+          <!-- "LANÇAR PAGAMENTO" SAIU DAQUI em 18/set/2026. Adriana: "Plano e cobranças..
+               delete lançar pagamentos.. inútil, a soma dos recebimentos vai para o meu
+               dashboard e da Márcia com os valores, quanto foi de mensalidade, trimestral e
+               semestral esse mês de setembro, quanto foi de diária avulsa e etc.. não faz
+               sentido ter mais algo."
+               A porta fechou: o item saiu do menu E do PERM_MENU. O código da tela ficou
+               parado no arquivo de propósito — não se apaga código de dinheiro sem decisão
+               dela —, mas sem entrada de menu ninguém chega lá. O nó daycare/pagamentos
+               nunca recebeu um único lançamento: nasceu vazio e vazio ficou.
+               Quem responde à pergunta dela agora é o quadro "Recebimentos do mês", nos
+               Dashboards da Adriana e da Márcia. -->
           <!-- Sem data-v de propósito: a tela ainda não existe. O clique não navega. -->
           <a class="so-gestao" style="opacity:.55;cursor:default" title="Quem deve no Day Care."><span data-icon="dollar-alert"></span><span>Em débito</span><span class="soon">em breve</span></a>
           </div>
@@ -5250,7 +5262,10 @@
   // Nenhum dos dois entra em NAV_PAGINAS_ALL de propósito: "Meu Painel" é a fatia da
   // própria pessoa (não se concede a ninguém, é dela), e a escala é ajuste da Gestão —
   // mesma razão pela qual "Senhas" e "Configurações" também ficam fora daquela lista.
-  const PERM_MENU=[['painelmeu','painel-monitor'],['paineloperacao','painel-operacao'],['planodia','definir-plano-do-dia'],['consultoras','painel-consultoras'],['painel-amanda','painel-amanda'],['painel-diretoria','painel-diretoria'],['lancar-pagamento','lancar-pagamento']];
+  const PERM_MENU=[['painelmeu','painel-monitor'],['paineloperacao','painel-operacao'],['planodia','definir-plano-do-dia'],['consultoras','painel-consultoras'],['painel-amanda','painel-amanda'],['painel-diretoria','painel-diretoria']];
+  // 18/set/2026: 'lancar-pagamento' saiu desta tabela junto com o item do menu (Adriana:
+  // "delete lançar pagamentos.. inútil"). A capacidade continua na tabela PERM — tirá-la de
+  // lá mudaria o que podePapel() responde a quem ainda pergunta, e isso não foi pedido.
   function aplicarPermMenu(){
     PERM_MENU.forEach(function(par){
       document.querySelectorAll('#nav a[data-v="'+par[0]+'"]').forEach(function(a){
@@ -13594,7 +13609,7 @@
   // inteira DEPOIS de a correção estar publicada — o aviso apareceu, ninguém tocou.
   // Agora o aparelho PARADO recarrega sozinho: trancado, com a aba escondida, na porta de
   // entrada ou 3 minutos sem ninguém tocar nele. Mão na tela = nunca recarrega.
-  const APP_VERSAO='2026-09-17-04';
+  const APP_VERSAO='2026-09-18-01';
   var RECARGA_PARADO_MS=3*60*1000, __versaoPublicada=null, __recargaTimer=null;
   function vigiarVersao(){
     if(!DB) return;
@@ -13873,6 +13888,10 @@
     {grp:'Central Zêluz · Day Care', itens:[
       {k:'emporio', t:'Quem não comeu hoje'}, {k:'reposicao', t:'Reposições'}
     ]},
+    // 18/set/2026: "Lançar pagamento" saiu do sidebar (Adriana: "delete lançar pagamentos..
+    // inútil"). Ele nunca esteve nesta lista — quem o mostrava era a tabela PERM_MENU, e de
+    // lá ele também saiu. Esta lista continua dizendo o MESMO que o sidebar: em Planos e
+    // cobranças só existe a Renovação de planos. Não recoloque o item aqui.
     {grp:'Central Zêluz · Planos e cobranças', itens:[ {k:'renovacao', t:'Renovação de planos'} ]},
     // 08/set/2026: o "Painel do Dia" saiu do menu (foi dissolvido nos dashboards) e quem
     // herdou o lugar dele na Operação foi a "Linha do tempo do dia". Esta lista tem de
@@ -38751,6 +38770,12 @@
     // Nenhum dos dois segura a primeira pintura — eles se desenham quando chegam.
     var diaProtoP=pdiaLer((typeof hojeISO==='function')?hojeISO():'', forcar===true)
       .catch(function(e){ _logLeituraFalhou('o dia (quadros do Dashboard da Márcia)', e); return null; });
+    // As duas fontes do quadro "Recebimentos do mês" (orçamentos e vínculos de irmãos).
+    // Este painel não as lia — agora lê, com o MESMO cache de 60 s do Dashboard da Adriana:
+    // quem abrir primeiro paga a leitura, quem abrir depois não paga nada. Não segura a
+    // primeira pintura: o quadro nasce dizendo que ainda está lendo e se troca sozinho.
+    var recP=recFontesLer(forcar===true)
+      .catch(function(e){ _logLeituraFalhou('as fontes dos Recebimentos do mês (Dashboard da Márcia)', e); return false; });
     cargas.rapidas.then(function(){ return poLer(forcar===true); }).then(function(d){
       if(!d){
         raiz.innerHTML='<div class="pm-card"><h3 class="pm-tit">Não consegui ler a casa de hoje</h3>'
@@ -38777,6 +38802,9 @@
         + poCardTempo(Tempo)
         + poCardComida(comida, Object.keys(d.almoco||{}).length+Object.keys(d.almoco2||{}).length)
         +'</div>'
+        + poAreaHTML('FINANCEIRO','Os recebimentos do mês',
+            'Quanto entrou no mês, separado por tipo — o MESMO quadro do Dashboard da Adriana, com a mesma conta.', PDIR_IC_MOEDA)
+        +'<div id="poCardRecebimentos" style="display:contents">'+recCardHTML()+'</div>'
         + poAreaHTML('A CASA INTEIRA','O que pede a sua decisão',
             'O que ficou esperando a veterinária, os problemas do dia e as ligações de boas-vindas da adaptação.', PO_IC_ALERTA)
         +'<div class="pm-grid">'
@@ -38805,6 +38833,11 @@
         +'<div id="poCardTempoAtv" style="display:contents">'+blocoTempoAtividadesHTML(d.tempo, null)+'</div>'
         +'</div>';
       requestAnimationFrame(function(){ pmAnimar(raiz); });
+      // As fontes do dinheiro chegaram: troca SÓ o quadro dos recebimentos. Se a leitura
+      // falhou, REC_FONTES segue vazio e o quadro continua dizendo que ainda não sabe —
+      // nunca um total pela metade.
+      recP.then(function(){ recRedesenhar(); })
+        .catch(function(e){ _logLeituraFalhou('Dashboard da Márcia (quadro dos recebimentos)', e); });
       // O dia chegou: troca SÓ os dois quadros, sem reiniciar a animação do painel inteiro.
       diaProtoP.then(function(D){
         poTrocarQuadro('poCardProtocolos', blocoProtocolosHTML(D));
@@ -39361,6 +39394,213 @@
   }
 
   /* ====================================================================================
+   * RECEBIMENTOS DO MÊS, POR TIPO (v-12, 18/set/2026)
+   *
+   * Adriana, 18/set/2026: "Plano e cobranças.. delete lançar pagamentos.. inútil, a soma
+   * dos recebimentos vai para o meu dashboard e da Márcia com os valores, quanto foi de
+   * mensalidade, trimestral e semestral esse mês de setembro, quanto foi de diária avulsa
+   * e etc.. não faz sentido ter mais algo."
+   *
+   * DE ONDE VEM CADA NÚMERO — e esta é a parte que ela precisa saber, porque a casa NÃO
+   * tem extrato de caixa dentro do app:
+   *
+   *  · Mensalidade, trimestral e semestral saem da ficha de cada FILHOt
+   *    (daycare/cadastro/{chave}/renov). O campo `inicio` é o que a tela da Renovação
+   *    chama de DATA DO PAGAMENTO, e o `plano` diz o compromisso — Silver é mensal, Gold
+   *    é trimestral, Black é semestral. O valor é o do período INTEIRO (mensalidade x
+   *    meses), caindo no mês do pagamento: o regime de caixa que ela decidiu em
+   *    02/set/2026.
+   *  · Hospedagem sai de auaulandia/orcamentos, só os FECHADOS: a parcela da reserva no
+   *    mês em que o tutor fechou e a parcela do dia no mês da entrada.
+   *  · Diária avulsa: o app registra QUEM veio de avulso, nunca QUANTO se cobrou — não
+   *    existe preço de diária avulsa em lugar nenhum do banco. Por isso a linha aparece
+   *    SEM VALOR, dizendo o porquê. Inventar um preço num quadro de dinheiro seria mentir.
+   *
+   * NENHUMA CONTA NASCE AQUI. Cada linha é a soma das linhas que o finResumoMes já
+   * calculou e o harness já provou (porFILHOt). Se a régua do dinheiro mudar, ela muda lá
+   * — e este quadro acompanha sozinho, nos dois dashboards, no mesmo instante.
+   *
+   * ESTE QUADRO SÓ OBSERVA: não existe uma única gravação neste bloco.
+   * ================================================================================== */
+
+  var REC_MES='';                                   // '' = o mês de hoje
+  var REC_FONTES={quando:0, orc:null, irm:null};    // orçamentos e vínculos de irmãos
+
+  function recMesDeHoje(){
+    var d=(typeof hojeISO==='function')?hojeISO():'';
+    return /^\d{4}-\d{2}/.test(d)?d.slice(0,7):'';
+  }
+  function recMesAtual(){ return REC_MES||recMesDeHoje(); }
+  function recMesRotulo(mes){ return (typeof pdirMesRotulo==='function')?pdirMesRotulo(mes):String(mes||''); }
+  // O mês vizinho, sem depender de fuso nem de Date: só aritmética de ano e mês.
+  function recMesVizinho(mes, passo){
+    if(!/^\d{4}-(0[1-9]|1[0-2])$/.test(String(mes||''))) return '';
+    var a=parseInt(String(mes).slice(0,4),10), m=parseInt(String(mes).slice(5,7),10)+(parseInt(passo,10)||0);
+    while(m<1){ m+=12; a--; }
+    while(m>12){ m-=12; a++; }
+    return a+'-'+(m<10?('0'+m):String(m));
+  }
+  // O seletor. Mês que ainda não começou não se abre: não há recebimento no futuro.
+  function recAndar(passo){
+    if(passo===0){ REC_MES=''; }
+    else {
+      var prox=recMesVizinho(recMesAtual(), passo), hoje=recMesDeHoje();
+      if(!prox||(hoje&&prox>hoje)) return;
+      REC_MES=(prox===hoje)?'':prox;
+    }
+    recRedesenhar();
+  }
+
+  // Os tipos, na ordem em que ela pediu. "semtipo" só aparece quando existe alguém nele —
+  // linha vazia num quadro de dinheiro só atrapalha.
+  var REC_TIPOS=[
+    {k:'mensal',     rot:'Mensalidade',                    sub:'plano Silver — um mês', un:['FILHOt','FILHOts']},
+    {k:'trimestral', rot:'Trimestral',                     sub:'plano Gold — três meses à vista', un:['FILHOt','FILHOts']},
+    {k:'semestral',  rot:'Semestral',                      sub:'plano Black — seis meses à vista', un:['FILHOt','FILHOts']},
+    {k:'semtipo',    rot:'Plano sem compromisso definido', sub:'a ficha tem plano, mas ele não diz se é mensal, trimestral ou semestral', un:['FILHOt','FILHOts']},
+    {k:'hospedagem', rot:'Hospedagem na AuAulândia',       sub:'parcelas das reservas fechadas que caem no mês', un:['reserva','reservas']}
+  ];
+
+  // A QUEBRA POR TIPO. `r` é o resumo pronto do finResumoMes — aqui só se agrupa e soma.
+  function recQuebra(r){
+    var out={linhas:{}, total:0, deTabela:0, semComoCalcular:0}, i;
+    for(i=0;i<REC_TIPOS.length;i++) out.linhas[REC_TIPOS[i].k]={valor:0, quantos:0, deTabela:0};
+    if(!r) return out;
+    (r.porFILHOt||[]).forEach(function(o){
+      var k;
+      if(o.servico==='auaulandia') k='hospedagem';
+      else {
+        k=String(o.compromisso||'');
+        if(k!=='mensal'&&k!=='trimestral'&&k!=='semestral') k='semtipo';
+      }
+      var L=out.linhas[k]; if(!L) return;
+      L.valor+=(o.valor||0); L.quantos++;
+      if(o.planoDeduzido===true){ L.deTabela++; out.deTabela++; }
+      out.total+=(o.valor||0);
+    });
+    out.semComoCalcular=(r.semComoCalcular||[]).length;
+    return out;
+  }
+
+  // Quantos FILHOts a carteira tem como AVULSOS. É contagem de gente, NÃO de dinheiro: o
+  // app sabe quem veio de avulso, nunca quanto se cobrou pelo dia. Sai do cadastro que já
+  // está na memória — nenhuma leitura nova de banco.
+  function recAvulsosNaCarteira(){
+    try{
+      var cad=(typeof pelCadCache!=='undefined'&&pelCadCache)?pelCadCache:null;
+      if(!cad||typeof finCategoria!=='function') return null;
+      var n=0;
+      Object.keys(cad).forEach(function(k){
+        var c=cad[k]||{};
+        if(c.inativo==='Sim') return;
+        if(finCategoria(k, cad)==='avulso') n++;
+      });
+      return n;
+    }catch(e){ return null; }
+  }
+
+  // As duas fontes que este quadro precisa e que não vivem na memória do app. O Dashboard
+  // da Adriana já as lê na abertura dele e só as ENTREGA aqui; o da Márcia, que não lia
+  // nenhuma das duas, lê por este caminho — com cache de 60 s, para a casa não pagar a
+  // mesma leitura duas vezes.
+  function recGuardarFontes(orc, irm){ REC_FONTES={quando:Date.now(), orc:orc||{}, irm:irm||{}}; }
+  function recFontesLer(forcar){
+    if(!forcar && REC_FONTES.quando && (Date.now()-REC_FONTES.quando)<60000) return Promise.resolve(true);
+    if(!DB) return Promise.resolve(false);
+    var pega=function(caminho){
+      return DB.ref(caminho).once('value').then(function(s){ return {ok:true, v:s.val()}; })
+        .catch(function(e){ _logLeituraFalhou(caminho+' (Recebimentos do mês)', e); return {ok:false, v:null}; });
+    };
+    return Promise.all([pega('auaulandia/orcamentos'), pega('daycare/irmaos')]).then(function(r){
+      if(!r[0].ok||!r[1].ok) return false;      // faltou leitura: o quadro não afirma nada
+      recGuardarFontes(r[0].v||{}, r[1].v||{});
+      return true;
+    });
+  }
+
+  // DINHEIRO NUNCA SAI PELA METADE: sem o módulo do financeiro, sem a carteira inteira ou
+  // sem as duas fontes lidas, o quadro diz o que falta em vez de mostrar um total menor
+  // fingindo ser o total.
+  function recTrava(){
+    if(typeof finResumoMes!=='function') return 'o módulo do dinheiro (financeiro-logica.js) não carregou com a página';
+    if(typeof CARTEIRA_CARREGADA!=='undefined' && !CARTEIRA_CARREGADA) return 'a carteira do banco ainda não chegou neste aparelho';
+    if(!REC_FONTES.quando) return 'os orçamentos e os vínculos de irmãos ainda não chegaram';
+    return '';
+  }
+  function recResumoDoMes(mes){
+    if(recTrava()) return null;
+    return finResumoMes({
+      cadastro:(typeof pelCadCache!=='undefined')?pelCadCache:{},
+      peludinhos:(typeof PELUDINHOS!=='undefined')?PELUDINHOS:[],
+      irmaos:REC_FONTES.irm||{},
+      orcamentos:REC_FONTES.orc||{},
+      pagamentos:null,
+      planos:(typeof planos==='function')?planos():null,
+      descontoIrmao:(typeof DESC_PET_PLANO!=='undefined')?DESC_PET_PLANO:null
+    }, mes, {hoje:(typeof hojeISO==='function')?hojeISO():''});
+  }
+
+  // O desenho. Um só, usado pelos DOIS dashboards — nunca uma cópia.
+  function recCardHTML(){
+    var mes=recMesAtual(), hoje=recMesDeHoje(), rot=recMesRotulo(mes);
+    var h='<article class="pm-card pm-rv"><h3 class="pm-tit">Recebimentos de '+esc(rot)+'</h3>'
+      +'<p class="pm-sub">Quanto entrou no mês, separado por tipo. Cada linha sai da mesma conta do Financeiro — nenhum número nasce neste quadro.</p>'
+      +'<div class="pm-acao">'
+      +'<button type="button" class="pm-bt" onclick="recAndar(-1)">&lsaquo; mês anterior</button>'
+      +'<button type="button" class="pm-bt"'+((hoje&&mes>=hoje)?' disabled':'')+' onclick="recAndar(1)">próximo mês &rsaquo;</button>'
+      +'<button type="button" class="pm-bt"'+(REC_MES?'':' disabled')+' onclick="recAndar(0)">este mês</button>'
+      +'</div>';
+    var motivo=recTrava();
+    if(motivo){
+      return h+'<div class="pm-lista"><div class="pm-li"><span class="pm-badge pm-b-atencao">ainda lendo</span>'
+        +'<div class="pm-li-txt"><b>Ainda não sei dizer.</b>'
+        +'<span>'+esc(motivo)+'. Um total pela metade é pior do que nenhum — abra a tela de novo em instantes.</span>'
+        +'</div></div></div></article>';
+    }
+    var q=recQuebra(recResumoDoMes(mes)), av=recAvulsosNaCarteira();
+    h+='<div class="pm-lista">';
+    REC_TIPOS.forEach(function(t){
+      var L=q.linhas[t.k];
+      if(t.k==='semtipo' && L.quantos===0) return;
+      h+='<div class="pm-li">'
+        +'<div class="pm-li-txt"><b>'+esc(t.rot)+'</b><span>'+esc(t.sub)+' &middot; '
+        +esc(L.quantos===0?('ninguém em '+rot):pmPlural(L.quantos, t.un[0], t.un[1]))
+        +(L.deTabela>0?(' &middot; '+L.deTabela+' com a data vinda da planilha antiga'):'')
+        +'</span></div>'
+        +'<span class="pm-li-fim rec-val">'+esc(finBRL(L.valor))+'</span>'
+        +'</div>';
+    });
+    h+='<div class="pm-li">'
+      +'<div class="pm-li-txt"><b>Diária avulsa</b>'
+      +'<span>o app registra quem veio de avulso, nunca o preço do dia — não há valor para somar'
+      +(av==null?'':(' &middot; '+esc(pmPlural(av,'FILHOt avulso na carteira','FILHOts avulsos na carteira'))))
+      +'</span></div>'
+      +'<span class="pm-li-fim rec-val rec-val-sem">sem valor</span>'
+      +'</div>';
+    h+='<div class="pm-li rec-total">'
+      +'<div class="pm-li-txt"><b>Total de '+esc(rot)+'</b><span>a soma das linhas com valor acima</span></div>'
+      +'<span class="pm-li-fim rec-val rec-val-total">'+esc(finBRL(q.total))+'</span>'
+      +'</div></div>';
+    h+='<p class="pm-nota"><strong>De onde vem cada valor.</strong> Os planos saem da data do pagamento lançada na ficha de cada FILHOt, na Renovação de planos, com o período inteiro caindo no mês do pagamento. A hospedagem sai dos orçamentos fechados. '
+      +(q.deTabela>0?('<strong>'+q.deTabela+'</strong> '+(q.deTabela===1?'ficha traz':'fichas trazem')+' a data vinda da planilha antiga, e não de alguém da Central dizendo que recebeu. '):'')
+      +(q.semComoCalcular>0?('<strong>'+q.semComoCalcular+'</strong> '+(q.semComoCalcular===1?'ficha ficou':'fichas ficaram')+' de fora por falta de dado na própria ficha. '):'')
+      +'Isto é o que a casa LANÇOU, não o extrato do banco.</p>'
+      +'</article>';
+    return h;
+  }
+
+  // Redesenha o quadro onde ele estiver na tela — no Dashboard da Adriana, no da Márcia,
+  // ou nos dois. Uma função, dois usos: a mesma lei dos quadros de protocolo e de tempo.
+  function recRedesenhar(){
+    ['pdirCardRecebimentos','poCardRecebimentos'].forEach(function(id){
+      var alvo=document.getElementById(id);
+      if(!alvo) return;
+      alvo.innerHTML=recCardHTML();
+      try{ pmAnimar(alvo); }catch(e){} /* silencioso de propósito: animação — falhar não pode derrubar o quadro */
+    });
+  }
+
+  /* ====================================================================================
    * PAINEL DA DIRETORIA — a mesa da Adriana (v-09, 07/set/2026)
    *
    * "Adriana = tudo" (decisão dela, 25/ago): ela vê por herança os painéis de todos e a
@@ -39492,7 +39732,11 @@
       +'<span>a receber em '+esc(mesRotulo)+' — Day Care '+esc(finBRL(dc.aReceber))+' ('+dc.quantos+') · AuAulândia '+esc(finBRL(aua.aReceber))+' ('+aua.quantos+')</span></div>'
       +'<div class="pm-tile"><b>'+esc(finBRL(r.recebidoTotal))+'</b>'
       +'<span>recebido em '+esc(mesRotulo)
-      +(temPagamentos?'':' — sem lançamentos de pagamento ainda: lance em Planos e cobranças, na tela Lançar pagamento')
+      // 18/set/2026: a tela "Lançar pagamento" saiu do menu (Adriana: "delete lançar
+      // pagamentos.. inútil"). O nó daycare/pagamentos nunca recebeu um lançamento, então
+      // este card é R$ 0,00 para sempre — e diz o porquê, apontando para o quadro que
+      // responde de verdade à pergunta dela.
+      +(temPagamentos?'':' — a casa não registra pagamento lançado; o que entrou por plano e por hospedagem está no quadro "Recebimentos do mês", logo abaixo')
       +'</span></div>'
       +'</div></div>';
     h+='<article class="pm-card pm-rv"><h3 class="pm-tit">Maiores valores a receber</h3>'
@@ -39682,6 +39926,9 @@
         finHTML='<article class="pm-card pm-rv"><h3 class="pm-tit">Ainda lendo a carteira</h3>'
           +'<p class="pm-sub">Os números do dinheiro só aparecem com o cadastro inteiro e os vínculos de irmãos lidos — um total pela metade é pior do que nenhum. Abra a tela de novo em instantes.</p></article>';
       } else {
+        // As MESMAS duas fontes que o quadro "Recebimentos do mês" precisa. Aqui elas já
+        // desceram: entregar em vez de reler é o que impede a casa de pagar duas vezes.
+        recGuardarFontes(d.orc.v||{}, d.irm.v||{});
         var fin=pdirFinResumo(mes, PDIR_DIA, d.orc.v||{}, d.pag.v||null, d.irm.v||{});
         var temPag=!!(d.pag.v&&Object.keys(d.pag.v).length);
         finHTML=pdirFinHTML(fin, temPag, mesRotulo);
@@ -39701,6 +39948,10 @@
         + pdirAtalhosHTML(a)
         + poAreaHTML('FINANCEIRO','O dinheiro de '+mesRotulo,'A conta inteira vem do módulo do financeiro, provado no harness: a receber por serviço, recebido, os maiores valores e o que a conta não cobre.', PDIR_IC_MOEDA)
         + finHTML
+        // RECEBIMENTOS DO MÊS, POR TIPO (Adriana, 18/set/2026) — o quadro que substituiu a
+        // tela "Lançar pagamento". O MESMO desenho do Dashboard da Márcia: uma função,
+        // dois usos. O seletor de mês mexe nos dois ao mesmo tempo.
+        +'<div id="pdirCardRecebimentos" style="display:contents">'+recCardHTML()+'</div>'
         // OS QUADROS QUE VIERAM DO PAINEL DO DIA (Adriana, 08/set/2026, 23h30).
         // "Plantão agora" é só dela. "Cumprimento dos protocolos" e o gráfico do tempo são
         // a MESMA função que desenha os dois quadros no Dashboard da Márcia — uma função,

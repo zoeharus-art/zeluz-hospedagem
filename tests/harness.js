@@ -4208,9 +4208,12 @@ async function main() {
       JSON.stringify(vsDe(fatia('c-auaulandia', 'c-daycare'), true)));
     // v-16 (15/set/2026): Prevenção, Peso e Pesquisa entraram aqui, e o bloco inteiro
     // passou a ser alfabético até o rótulo "Planos e cobranças" (ordem pedida por ela).
+    // 18/set/2026: "Lançar pagamento" SAIU daqui (Adriana: "delete lançar pagamentos..
+    // inútil"). Em Planos e cobranças ficou só a Renovação de planos — e o "Em débito",
+    // que não tem data-v porque a tela ainda não existe.
     check('menu: o subgrupo Day Care da Central traz o dia do auluno e, no fim, Planos e cobranças',
       JSON.stringify(vsDe(fatia('c-daycare', 'operacao'), true)) === JSON.stringify(
-        ['dashdc', 'peso', 'alergia', 'vacinas', 'emporio', 'reposicao', 'renovacao', 'lancar-pagamento']),
+        ['dashdc', 'peso', 'alergia', 'vacinas', 'emporio', 'reposicao', 'renovacao']),
       JSON.stringify(vsDe(fatia('c-daycare', 'operacao'), true)));
     check('menu: os itens do Day Care da Central estão em ordem alfabética até o rótulo Planos e cobranças',
       (() => {
@@ -11183,11 +11186,14 @@ async function main() {
           JSON.stringify(direta.porFILHOt.filter((o) => o.falta > 0).slice(0, 5).map((o) => [o.nome, o.falta])));
         // O desenho: o rótulo honesto do "recebido" e os travessões de quem ainda não chegou.
         const htmlFin = ctx.pdirFinHTML(daTela, false, 'setembro de 2026');
-        check('a tela do dinheiro mostra o rótulo honesto: sem lançamentos ainda, a tela de lançar vem depois',
-          htmlFin.indexOf('sem lançamentos de pagamento ainda') >= 0 &&
+        // 18/set/2026: a frase mudou junto com a saída do "Lançar pagamento". O card segue
+        // R$ 0,00 e honesto — mas agora manda para o quadro que responde de verdade.
+        check('a tela do dinheiro mostra o rótulo honesto e manda para o quadro dos recebimentos',
+          htmlFin.indexOf('a casa não registra pagamento lançado') >= 0 &&
+          htmlFin.indexOf('Recebimentos do mês') >= 0 &&
           htmlFin.indexOf(ctx.finBRL(0)) >= 0);
-        check('com o nó de pagamentos existindo, o rótulo de "ainda não há tela" some',
-          ctx.pdirFinHTML(daTela, true, 'setembro de 2026').indexOf('sem lançamentos de pagamento ainda') < 0);
+        check('com o nó de pagamentos existindo, o rótulo do "não registra" some',
+          ctx.pdirFinHTML(daTela, true, 'setembro de 2026').indexOf('a casa não registra pagamento lançado') < 0);
         check('o desenho carrega os avisos da conta (o que ela não cobre, escrito)',
           daTela.avisos.every((av) => htmlFin.indexOf(av.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')) >= 0));
         check('sem o módulo do financeiro, a tela DIZ que ele não veio — nunca inventa número',
@@ -11242,27 +11248,30 @@ async function main() {
   // certo ao centavo — e mais: estorno só de chefia com motivo e histórico intocável,
   // data futura recusada, e o recebido aparecendo no finResumoMes ao centavo.
   // ===================================================================================
-  console.log('v-10 · Lançar pagamento — menu, permissão e tela:');
+  // 18/SET/2026 — A PORTA FECHOU. Adriana: "Plano e cobranças.. delete lançar pagamentos..
+  // inútil, a soma dos recebimentos vai para o meu dashboard e da Márcia com os valores".
+  // O item saiu do menu E da PERM_MENU. O código da tela ficou parado no arquivo de
+  // propósito (não se apaga código de dinheiro sem decisão dela) e as mordidas das leis do
+  // dinheiro continuam valendo abaixo — o que estes checks provam é que NINGUÉM CHEGA LÁ.
+  console.log('v-10 · Lançar pagamento — a porta que fechou em 18/set/2026:');
   {
-    check('mordida — o item do menu nasce escondido e é a tabela quem o mostra (PERM_MENU)',
-      /\['lancar-pagamento','lancar-pagamento'\]/.test(html) &&
-      /<a data-v="lancar-pagamento" style="display:none"/.test(html));
-    check('o item mora no grupo Planos e cobranças, entre a Renovação e o Em débito',
-      html.indexOf('data-v="renovacao"') < html.indexOf('data-v="lancar-pagamento"') &&
-      html.indexOf('data-v="lancar-pagamento"') < html.indexOf('Em débito'));
-    check('a tela v-lancar-pagamento existe e tem título no mapa (fonte única titles)',
-      /<section class="view" id="v-lancar-pagamento">/.test(html) &&
-      /'lancar-pagamento':\['Lançar pagamento'/.test(html));
-    check('abrir a tela chama lpAbrir (a lista única de ganchos)',
-      /if\(v==='lancar-pagamento'\)\{ if\(typeof lpAbrir==='function'\) lpAbrir\(\); \}/.test(html));
-    check('lpAbrir se tranca pela mesma tabela (link direto não fura a permissão)',
-      /function lpAbrir\([\s\S]{0,400}?lpPode\(\)/.test(html) &&
-      /function lpPode\(\)\{ return podePapel\('lancar-pagamento'\); \}/.test(html));
-    check('quem lança: consultora, supervisão, gestão e diretoria — a Central lança, a chefia confere',
-      ['consultora', 'supervisor', 'gestao', 'diretoria'].every((p) => ctx.podePapel('lancar-pagamento', p) === true));
-    check('mordida — o monitor NÃO vê (nem plantonista, aprendiz, vet, conferência, tutor)',
+    check('o item NÃO existe mais no menu (nenhum <a data-v="lancar-pagamento">)',
+      html.indexOf('data-v="lancar-pagamento"') < 0);
+    check('e saiu também da PERM_MENU — não há linha que possa revelá-lo de novo',
+      html.indexOf("['lancar-pagamento','lancar-pagamento']") < 0 &&
+      html.indexOf("['painel-diretoria','painel-diretoria']];") > 0);
+    check('em Planos e cobranças ficou só a Renovação de planos, antes do Em débito',
+      html.indexOf('data-v="renovacao"') < html.indexOf('Em débito'));
+    check('a remoção está DOCUMENTADA no código, com a data e a frase dela',
+      html.indexOf('"LANÇAR PAGAMENTO" SAIU DAQUI em 18/set/2026') > 0 &&
+      html.indexOf('delete lançar pagamentos.. inútil') > 0);
+    check('a lista espelho do menu continua dizendo o MESMO que o sidebar (só a Renovação)',
+      html.indexOf("{grp:'Central Zêluz · Planos e cobranças', itens:[ {k:'renovacao', t:'Renovação de planos'} ]}") > 0 &&
+      html.indexOf('Não recoloque o item aqui.') > 0);
+    check('a capacidade continua na tabela PERM (tirá-la mudaria o que podePapel responde)',
+      ['consultora', 'supervisor', 'gestao', 'diretoria'].every((p) => ctx.podePapel('lancar-pagamento', p) === true) &&
       ['monitor', 'plantonista', 'aprendiz', 'vet', 'conferencia', 'tutor', ''].every((p) => ctx.podePapel('lancar-pagamento', p) === false));
-    check('mordida — ESTORNAR é só da Gestão e da Diretoria (a consultora lança, não desfaz)',
+    check('mordida — ESTORNAR continua só da Gestão e da Diretoria',
       ['gestao', 'diretoria'].every((p) => ctx.podePapel('estornar-pagamento', p) === true) &&
       ['consultora', 'supervisor', 'monitor', 'plantonista', 'vet', ''].every((p) => ctx.podePapel('estornar-pagamento', p) === false));
   }
@@ -11449,9 +11458,199 @@ async function main() {
         vm.runInContext("pelCadCache = __bkpLP10.cad; PELUDINHOS = __bkpLP10.pel;", ctx);
       }
     }
-    check('o rótulo do painel sem lançamentos agora aponta para a tela nova (nada de "próxima versão")',
-      html.indexOf('sem lançamentos de pagamento ainda: lance em Planos e cobranças, na tela Lançar pagamento') >= 0 &&
-      html.indexOf('a tela de lançar chega na próxima versão') < 0);
+    check('o rótulo do painel NÃO manda mais para a tela que saiu — aponta para o quadro novo',
+      html.indexOf('lance em Planos e cobranças, na tela Lançar pagamento') < 0 &&
+      html.indexOf('a tela de lançar chega na próxima versão') < 0 &&
+      html.indexOf('está no quadro "Recebimentos do mês", logo abaixo') >= 0);
+  }
+  console.log('');
+
+  // ===================================================================================
+  // v-12 · RECEBIMENTOS DO MÊS, POR TIPO — o quadro que substituiu o "Lançar pagamento"
+  // ===================================================================================
+  // Adriana, 18/set/2026: "a soma dos recebimentos vai para o meu dashboard e da Márcia
+  // com os valores, quanto foi de mensalidade, trimestral e semestral esse mês de
+  // setembro, quanto foi de diária avulsa e etc."
+  // As mordidas: a soma bate ao centavo contra contas feitas à MÃO antes do teste; o mesmo
+  // desenho serve os dois dashboards (nunca uma cópia); sem as fontes lidas o quadro não
+  // afirma número nenhum; mês futuro não se abre; e a diária avulsa aparece SEM VALOR,
+  // porque o app não guarda preço de dia avulso em lugar nenhum.
+  console.log('v-12 · Recebimentos do mês — o quadro nos dois dashboards:');
+  {
+    const precisaREC = ['recQuebra', 'recCardHTML', 'recRedesenhar', 'recMesVizinho', 'recAndar',
+      'recFontesLer', 'recGuardarFontes', 'recTrava', 'recResumoDoMes', 'recAvulsosNaCarteira',
+      'recMesAtual', 'recMesDeHoje'];
+    check('as funções do quadro existem no sandbox',
+      precisaREC.every((f) => typeof ctx[f] === 'function'),
+      precisaREC.filter((f) => typeof ctx[f] !== 'function').join(', '));
+
+    const iniREC = html.indexOf('RECEBIMENTOS DO MÊS, POR TIPO (v-12, 18/set/2026)');
+    const fimREC = html.indexOf('PAINEL DA DIRETORIA — a mesa da Adriana (v-09', iniREC);
+    const fatiaREC = (iniREC >= 0 && fimREC > iniREC) ? html.slice(iniREC, fimREC) : '';
+    check('a fatia do quadro existe no código', fatiaREC.length > 3000, String(fatiaREC.length));
+    check('mordida — SÓ OBSERVA: nenhuma gravação na fatia inteira',
+      !/DB\.ref\([^)]*\)\.(set|update|push|remove|transaction)\b/.test(fatiaREC));
+    check('só lê com once (nenhum ouvinte novo pendurado no Firebase)',
+      !/\.on\('value'/.test(fatiaREC) && /\.once\('value'\)/.test(fatiaREC));
+    check('toda leitura que falha é registrada (nunca falha calada)',
+      /_logLeituraFalhou\(caminho\+' \(Recebimentos do mês\)'/.test(fatiaREC));
+    check('a fatia não usa confirm/prompt/alert do navegador',
+      !/\b(confirm|prompt|alert)\(/.test(fatiaREC));
+    check('nenhum emoji e nenhuma palavra proibida na voz do quadro',
+      !/[\u{1F000}-\u{1FAFF}✀-➿⬀-⯿]/u.test(fatiaREC) &&
+      !/cachorr|\bc[ãa]es\b|\bdono\b|funcion[áa]rio|balc/i.test(fatiaREC));
+    check('nenhuma cor cravada na mão: o quadro usa só os tokens do Design Language',
+      !/#[0-9A-Fa-f]{3,8}\b/.test(fatiaREC) &&
+      fatiaREC.indexOf('rec-val-total') >= 0 && fatiaREC.indexOf('rec-total') >= 0 &&
+      /\.rec-val-total\{font-size:19px;color:var\(--z-gold-deep\)\}/.test(html));
+    check('o dinheiro sai SÓ do módulo do financeiro (finResumoMes e finBRL) — nenhum "R$" na mão',
+      fatiaREC.indexOf('finResumoMes(') >= 0 && fatiaREC.indexOf('finBRL(') >= 0 &&
+      fatiaREC.indexOf("'R$") < 0);
+
+    // ---- o mês: aritmética pura, sem Date e sem fuso ----
+    check('recMesVizinho vira o ano nos dois sentidos',
+      ctx.recMesVizinho('2026-01', -1) === '2025-12' &&
+      ctx.recMesVizinho('2026-12', 1) === '2027-01' &&
+      ctx.recMesVizinho('2026-09', -1) === '2026-08' &&
+      ctx.recMesVizinho('lixo', -1) === '',
+      [ctx.recMesVizinho('2026-01', -1), ctx.recMesVizinho('2026-12', 1)].join(' | '));
+    check('mordida — mês FUTURO não se abre: não existe recebimento no que ainda não começou',
+      (() => {
+        vm.runInContext("REC_MES='';", ctx);
+        ctx.recAndar(1);
+        const depois = vm.runInContext('REC_MES', ctx);
+        return depois === '';
+      })());
+  }
+  console.log('');
+
+  console.log('v-12 · a soma por tipo — mordidas ao centavo:');
+  if (typeof ctx.recQuebra !== 'function' || typeof ctx.finResumoMes !== 'function') {
+    check('as funções do quadro carregaram', false, 'recQuebra/finResumoMes ausentes');
+  } else {
+    // Contas feitas à MÃO antes do teste, com a tabela 2026 do próprio financeiro-logica:
+    //   Ayla  · Silver 3x, 1º da família ... 73.700 x 1 mês  =  73.700
+    //   Caju  · Gold   2x, 1º ............... 58.900 x 3 meses = 176.700
+    //   Dinda · Black  1x, 1º ............... 33.800 x 6 meses = 202.800
+    //   Elo   · Silver 3x, pagou em AGOSTO .. fora de setembro =       0
+    //   reserva fechada em setembro, entrada em outubro ....... =  13.000 (só a parcela 1)
+    //   TOTAL de setembro ..................................... = 466.200 = R$ 4.662,00
+    const CADREC = {
+      'ayla__x':  { n: 'Ayla',  tutor: 'Xuxa',  renov: { plano: 'Silver', inicio: '2026-09-01', aulas: 3, ordemPet: 1 } },
+      'caju__z':  { n: 'Caju',  tutor: 'Zeca',  renov: { plano: 'Gold',   inicio: '2026-09-10', aulas: 2, ordemPet: 1 } },
+      'dinda__w': { n: 'Dinda', tutor: 'Wanda', renov: { plano: 'Black',  inicio: '2026-09-05', aulas: 1, ordemPet: 1 } },
+      'elo__v':   { n: 'Elo',   tutor: 'Vera',  renov: { plano: 'Silver', inicio: '2026-08-01', aulas: 3, ordemPet: 1 } },
+      'repolho__zeluz': { n: 'Repolho', tutor: 'Zêluz', renov: { plano: 'morador' } },
+      'pipoca__t': { n: 'Pipoca', tutor: 'Tina', categoria: 'avulso', renov: { plano: 'avulso' } },
+    };
+    const ORCREC = {
+      r1: { status: 'fechado', status_em: Date.UTC(2026, 8, 12), entrada: '2026-10-02', saida: '2026-10-04',
+            parcela1_cent: 13000, parcela2_cent: 13000, total_cent: 26000, tutor: 'Jeanine',
+            pets: [{ nome: 'Romeo' }] },
+      r2: { status: 'aguardando', criado_em: Date.UTC(2026, 8, 14), total_cent: 39000, pets: [{ nome: 'Pingo' }] },
+    };
+    const rREC = ctx.finResumoMes({ cadastro: CADREC, peludinhos: [], irmaos: {}, orcamentos: ORCREC, pagamentos: null },
+      '2026-09', { hoje: '2026-09-18' });
+    const qREC = ctx.recQuebra(rREC);
+    check('mensalidade (Silver) soma R$ 737,00 — um FILHOt',
+      qREC.linhas.mensal.valor === 73700 && qREC.linhas.mensal.quantos === 1,
+      ctx.finBRL(qREC.linhas.mensal.valor));
+    check('trimestral (Gold) soma o período INTEIRO à vista: R$ 1.767,00',
+      qREC.linhas.trimestral.valor === 176700 && qREC.linhas.trimestral.quantos === 1,
+      ctx.finBRL(qREC.linhas.trimestral.valor));
+    check('semestral (Black) soma o período INTEIRO à vista: R$ 2.028,00',
+      qREC.linhas.semestral.valor === 202800 && qREC.linhas.semestral.quantos === 1,
+      ctx.finBRL(qREC.linhas.semestral.valor));
+    check('hospedagem traz só a parcela da reserva fechada em setembro (R$ 130,00) — a do dia é de outubro',
+      qREC.linhas.hospedagem.valor === 13000 && qREC.linhas.hospedagem.quantos === 1,
+      ctx.finBRL(qREC.linhas.hospedagem.valor));
+    check('mordida — proposta AGUARDANDO não é recebimento: fica fora da soma',
+      rREC.propostasAbertas.quantas === 1 && qREC.linhas.hospedagem.quantos === 1);
+    check('mordida — quem pagou em AGOSTO não entra em setembro (regime de caixa)',
+      qREC.linhas.mensal.quantos === 1);
+    check('mordida — morador e avulso nunca viram cobrança: não aparecem em tipo nenhum',
+      qREC.linhas.semtipo.valor === 0 && qREC.linhas.semtipo.quantos === 0);
+    check('mordida — o TOTAL do mês bate ao centavo: R$ 4.662,00',
+      qREC.total === 466200 && ctx.finBRL(qREC.total) === 'R$ 4.662,00', ctx.finBRL(qREC.total));
+    check('a soma das linhas é EXATAMENTE o total (nenhum valor se perde nem se conta duas vezes)',
+      ['mensal', 'trimestral', 'semestral', 'semtipo', 'hospedagem']
+        .reduce((a, k) => a + qREC.linhas[k].valor, 0) === qREC.total);
+    check('ficha vinda da planilha antiga é CONTADA à parte (a data não foi digitada por ninguém)',
+      (() => {
+        const cad2 = JSON.parse(JSON.stringify(CADREC));
+        cad2['ayla__x'].renov.plano_deduzido = true;
+        const q2 = ctx.recQuebra(ctx.finResumoMes({ cadastro: cad2, peludinhos: [], irmaos: {}, orcamentos: {}, pagamentos: null },
+          '2026-09', { hoje: '2026-09-18' }));
+        return q2.deTabela === 1 && q2.linhas.mensal.deTabela === 1 && q2.linhas.mensal.valor === 73700;
+      })());
+
+    // ---- o desenho: o MESMO nos dois dashboards ----
+    vm.runInContext("__bkpREC = { cad: pelCadCache, pel: PELUDINHOS, cart: CARTEIRA_CARREGADA, fon: REC_FONTES, mes: REC_MES };", ctx);
+    ctx.__cadREC = CADREC; ctx.__orcREC = ORCREC;
+    try {
+      vm.runInContext("pelCadCache = __cadREC; PELUDINHOS = []; CARTEIRA_CARREGADA = true; REC_MES = '2026-09';" +
+        "recGuardarFontes(__orcREC, {});", ctx);
+      const cardREC = ctx.recCardHTML();
+      check('o quadro mostra as quatro linhas com valor e o total, no formato R$ 1.234,56',
+        cardREC.indexOf('R$ 737,00') >= 0 && cardREC.indexOf('R$ 1.767,00') >= 0 &&
+        cardREC.indexOf('R$ 2.028,00') >= 0 && cardREC.indexOf('R$ 130,00') >= 0 &&
+        cardREC.indexOf('R$ 4.662,00') >= 0,
+        cardREC.slice(0, 200));
+      check('cada tipo aparece com o nome que ela usa (mensalidade, trimestral, semestral, hospedagem)',
+        cardREC.indexOf('>Mensalidade<') >= 0 && cardREC.indexOf('>Trimestral<') >= 0 &&
+        cardREC.indexOf('>Semestral<') >= 0 && cardREC.indexOf('Hospedagem na AuAulândia') >= 0);
+      check('mordida — DIÁRIA AVULSA aparece SEM VALOR e diz por quê (o app não guarda o preço do dia)',
+        cardREC.indexOf('>Diária avulsa<') >= 0 && cardREC.indexOf('sem valor') >= 0 &&
+        cardREC.indexOf('nunca o preço do dia') >= 0);
+      check('o avulso da carteira é contado como GENTE, não como dinheiro',
+        ctx.recAvulsosNaCarteira() === 1 && cardREC.indexOf('1 FILHOt avulso na carteira') >= 0,
+        String(ctx.recAvulsosNaCarteira()));
+      check('o total vem rotulado com o mês por extenso e o seletor de mês está na tela',
+        cardREC.indexOf('Total de setembro de 2026') >= 0 &&
+        cardREC.indexOf('recAndar(-1)') >= 0 && cardREC.indexOf('recAndar(1)') >= 0 &&
+        cardREC.indexOf('recAndar(0)') >= 0);
+      check('o rodapé diz DE ONDE vem cada valor — e que isto não é o extrato do banco',
+        cardREC.indexOf('De onde vem cada valor') >= 0 &&
+        cardREC.indexOf('não o extrato do banco') >= 0);
+      check('mordida — sem as fontes lidas o quadro NÃO afirma número nenhum',
+        (() => {
+          vm.runInContext("REC_FONTES = {quando:0, orc:null, irm:null};", ctx);
+          const vazio = ctx.recCardHTML();
+          return ctx.recTrava() !== '' && vazio.indexOf('Ainda não sei dizer') >= 0 &&
+            vazio.indexOf('R$ 4.662,00') < 0;
+        })());
+      check('mordida — sem a carteira inteira lida, idem: um total pela metade é pior do que nenhum',
+        (() => {
+          vm.runInContext("recGuardarFontes(__orcREC, {}); CARTEIRA_CARREGADA = false;", ctx);
+          const vazio = ctx.recCardHTML();
+          const r = ctx.recTrava() !== '' && vazio.indexOf('Ainda não sei dizer') >= 0;
+          vm.runInContext("CARTEIRA_CARREGADA = true;", ctx);
+          return r;
+        })());
+    } finally {
+      vm.runInContext("pelCadCache = __bkpREC.cad; PELUDINHOS = __bkpREC.pel; CARTEIRA_CARREGADA = __bkpREC.cart;" +
+        "REC_FONTES = __bkpREC.fon; REC_MES = __bkpREC.mes;", ctx);
+    }
+  }
+  console.log('');
+
+  console.log('v-12 · o quadro está nos DOIS dashboards — uma função, dois usos:');
+  {
+    check('o Dashboard da Adriana desenha o quadro, dentro do FINANCEIRO',
+      /<div id="pdirCardRecebimentos" style="display:contents">'\+recCardHTML\(\)\+'<\/div>/.test(html) &&
+      html.indexOf('pdirCardRecebimentos') < html.indexOf('AUDITORIA VIVA'));
+    check('o Dashboard da Márcia desenha o MESMO quadro, com a MESMA função',
+      /<div id="poCardRecebimentos" style="display:contents">'\+recCardHTML\(\)\+'<\/div>/.test(html));
+    check('mordida — é a MESMA função nos dois: recCardHTML aparece uma vez por painel e em lugar nenhum mais',
+      (html.match(/recCardHTML\(\)/g) || []).length === 4,
+      String((html.match(/recCardHTML\(\)/g) || []).length));
+    check('o seletor de mês redesenha os DOIS quadros pelo mesmo caminho (recRedesenhar)',
+      /function recRedesenhar\(\)\{[\s\S]{0,200}\['pdirCardRecebimentos','poCardRecebimentos'\]/.test(html));
+    check('o Dashboard da Adriana ENTREGA as fontes que já leu (não relê o que já desceu)',
+      /recGuardarFontes\(d\.orc\.v\|\|\{\}, d\.irm\.v\|\|\{\}\);/.test(html));
+    check('o Dashboard da Márcia lê as duas fontes por fora, sem segurar a primeira pintura',
+      /var recP=recFontesLer\(forcar===true\)/.test(html) &&
+      /recP\.then\(function\(\)\{ recRedesenhar\(\); \}\)/.test(html));
   }
   console.log('');
 
@@ -11741,7 +11940,7 @@ async function main() {
     // alfabético; "Planos e cobranças" continua sendo o RÓTULO do fim.
     check('5 · "Planos e cobranças" continua INTEIRO no fim do Day Care, agora com Peso, Pesquisa e Prevenção antes dele',
       JSON.stringify(ordemCentral.slice(ordemCentral.indexOf('c-daycare'))) === JSON.stringify(
-        ['c-daycare', 'dashdc', 'peso', 'alergia', 'vacinas', 'emporio', 'reposicao', 'renovacao', 'lancar-pagamento']),
+        ['c-daycare', 'dashdc', 'peso', 'alergia', 'vacinas', 'emporio', 'reposicao', 'renovacao']),
       JSON.stringify(ordemCentral.slice(ordemCentral.indexOf('c-daycare'))));
 
     // ---- 6: a pesquisa com a família ----
@@ -11772,15 +11971,17 @@ async function main() {
       checkout: '', abertura: 'so-abertura', checkin: '', checkoutconf: 'so-conf-saida',
       orcamento: 'so-recepcao', recepcao: 'so-recepcao', cuidadovet: 'so-vet', emporio: 'so-emporio',
       reposicao: 'so-recepcao', dashdc: 'so-recepcao', ficha: 'so-gestao', vacinas: 'so-gestao',
-      alergia: 'so-gestao', peso: 'so-pesa', renovacao: 'so-gestao', 'lancar-pagamento': '',
+      alergia: 'so-gestao', peso: 'so-pesa', renovacao: 'so-gestao',
       acerto: 'so-master', ritmo: 'so-gestao', eahist: 'so-gestao', pessoas: 'so-master',
       planodia: '', config: 'so-master', agenda: '', relatorios: 'so-gestao', sair: ''
     };
     const achado = classesDe(nav12);
     const difere = Object.keys(ACESSO_ESPERADO).filter((k) => achado[k] !== ACESSO_ESPERADO[k]);
     // v-07: a ÚNICA diferença permitida é o item "Painel do Dia", que saiu — e a classe
-    // so-master dele passou inteira para a "Linha do tempo do dia". A contagem continua 36.
-    check('promessa — os 36 itens do menu mantiveram exatamente as classes so-*/op-only que já tinham',
+    // so-master dele passou inteira para a "Linha do tempo do dia".
+    // 18/set/2026: "Lançar pagamento" saiu do menu (Adriana: "delete lançar pagamentos..
+    // inútil") — 36 itens viraram 35. Nenhum outro mudou de classe.
+    check('promessa — os 35 itens do menu mantiveram exatamente as classes so-*/op-only que já tinham',
       difere.length === 0 && Object.keys(achado).length === Object.keys(ACESSO_ESPERADO).length,
       JSON.stringify(difere.map((k) => k + ': "' + achado[k] + '" ≠ "' + ACESSO_ESPERADO[k] + '"')));
 
@@ -12376,7 +12577,7 @@ async function main() {
       check('v-13 · a barra de etapas só existe na ENTRADA — o check-out do corpinho fica como era',
         /function ckTemEtapas\(\)\{ return ckEhEntrada\(\); \}/.test(html));
       check('v-13 · Protocolos entrou DENTRO de Configurações — nenhum item novo no menu',
-        [...html.matchAll(/<a data-v="[a-z-]+"/g)].length === 36
+        [...html.matchAll(/<a data-v="[a-z-]+"/g)].length === 35
         && !/data-v="protocolos"/.test(html)
         && html.indexOf('id="protoWrap"') > html.indexOf('id="v-config"')
         && html.indexOf('id="protoWrap"') < html.indexOf('id="v-orcamento"'));
@@ -12613,7 +12814,7 @@ async function main() {
         && /function protoTreinoVirar\(id\)\{[\s\S]{0,900}DB\.ref\('daycare\/config\/treinamento\/'\+id\)\.set\(reg\)/.test(html),
         JSON.stringify(html.match(/DB\.ref\('daycare\/config\/treinamento[^)]*\)\.[a-z]+\(/g) || []));
       check('v-14 · e nenhum item novo no menu: o acesso é exatamente o mesmo de antes',
-        [...html.matchAll(/<a data-v="[a-z-]+"/g)].length === 36 && !/data-v="treinamento"/.test(html));
+        [...html.matchAll(/<a data-v="[a-z-]+"/g)].length === 35 && !/data-v="treinamento"/.test(html));
 
       // ---- as medidas do molde: o polegar acha sem procurar ----
       check('v-14 · as medidas do molde: ação a partir de 22 px, leitura a partir de 18 px, Feito com 58 px',
@@ -12628,7 +12829,7 @@ async function main() {
         !/\.catch\(function\([a-z]*\)\{\s*\}\)/.test(
           html.slice(html.indexOf('const CK_FRASE_PRATICA='), html.indexOf('function renderCkInicio('))));
       check('v-14 · a versão carimbada é a desta entrega',
-        /const APP_VERSAO='2026-09-17-04';/.test(html));
+        /const APP_VERSAO='2026-09-18-01';/.test(html));
     }
 
     // ---- v-15: O PLANO SÓ GRAVA NO CONFIRMAR (caso Cookie/Yara, 15/set/2026) --------
@@ -13443,8 +13644,8 @@ async function main() {
           + 'AVISO_COLEIRA_APOS = __bkpC.apos;', ctx);
       }
     } else { check('v-17 · prevCfgCarregar existe', false, 'função não encontrada'); }
-    check('v-22 · a versão carimbada desta entrega é a 2026-09-17-04',
-      /const APP_VERSAO='2026-09-17-04';/.test(html));
+    check('v-23 · a versão carimbada desta entrega é a 2026-09-18-01',
+      /const APP_VERSAO='2026-09-18-01';/.test(html));
 
     // ───────── v-19 · o aparelho autorizado que não se perde no iPhone (16/set/2026)
     // Auditoria de 16/set: o iPhone da Leticya gerou DOIS ids em trinta segundos

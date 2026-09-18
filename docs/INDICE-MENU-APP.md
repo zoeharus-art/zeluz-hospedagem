@@ -1,6 +1,52 @@
-# Índice do app — menu aprovado pela Adriana (reorganizado em 08/set/2026, ajustado em 15 e 17/set/2026)
+# Índice do app — menu aprovado pela Adriana (reorganizado em 08/set/2026, ajustado em 15, 17 e 18/set/2026)
 
 > Regra: o app tem de ser autoexplicativo, para treinamento rápido. Cada item tem **Título** e **subtítulo** (a explicação curta que aparece como dica no menu e no índice da Gestão no computador). Nomes são decisão da Adriana.
+
+## O que mudou em 18/set/2026 (v 2026-09-18-01)
+
+Adriana, uma frase:
+
+> "Plano e cobranças.. delete lançar pagamentos.. inútil, a soma dos recebimentos vai para o meu dashboard e da Márcia com os valores, quanto foi de mensalidade, trimestral e semestral esse mês de setembro, quanto foi de diária avulsa e etc.. não faz sentido ter mais algo."
+
+### Saiu do menu: **Lançar pagamento**
+
+O item `lancar-pagamento` saiu de **Central Zêluz › Day Care › Planos e cobranças** e saiu também da tabela `PERM_MENU` — a única linha que podia revelá-lo. O menu foi de **36** para **35** itens com `data-v`. Nenhum outro item mudou de gaveta nem de classe `so-*`.
+
+O nó `daycare/pagamentos`, que essa tela alimentaria, **nunca recebeu um único lançamento**: nasceu vazio e vazio ficou. Por isso o card "recebido" do Dashboard da Adriana era R$ 0,00 desde sempre.
+
+O **código da tela ficou parado no arquivo**, sem porta de entrada. Não se apaga código de dinheiro sem decisão dela — e as leis que ele guarda (valor cheio, pagamento parcial impossível, estorno só da chefia) continuam provadas no harness.
+
+### Entrou nos dois dashboards: **Recebimentos do mês**
+
+Um quadro novo, o **MESMO** nos dois — uma função (`recCardHTML`), dois usos:
+
+| Dashboard | Onde |
+|---|---|
+| **Dashboard da Adriana** (`painel-diretoria`) | área FINANCEIRO, logo abaixo da conta do mês |
+| **Dashboard da Márcia** (`paineloperacao`) | área FINANCEIRO, nova, antes de "O que pede a sua decisão" |
+
+Ele mostra, com seletor de mês (`‹ mês anterior · próximo mês › · este mês` — o mês que ainda não começou não se abre):
+
+| Linha | De onde vem o valor |
+|---|---|
+| **Mensalidade** (plano Silver) | a data do pagamento lançada na ficha, valor de 1 mês |
+| **Trimestral** (plano Gold) | idem, valor de 3 meses à vista |
+| **Semestral** (plano Black) | idem, valor de 6 meses à vista |
+| **Plano sem compromisso definido** | só aparece quando existe alguém nele |
+| **Hospedagem na AuAulândia** | orçamentos **fechados**: parcela da reserva no mês em que fechou, parcela do dia no mês da entrada |
+| **Diária avulsa** | **sem valor** — o app registra quem veio de avulso, nunca o preço do dia |
+| **Total do mês** | a soma das linhas com valor |
+
+**Nenhuma conta nasce no quadro.** Cada linha é a soma das linhas que o `finResumoMes` (`financeiro-logica.js`) já calcula e o harness já prova. Sem a carteira inteira lida, ou sem os orçamentos e os vínculos de irmãos, o quadro **diz que ainda não sabe** em vez de mostrar um total pela metade. E ele **só observa**: não existe uma única gravação nesse bloco.
+
+### O que ficou para a Adriana decidir
+
+O app **não tem extrato de caixa**. O que o quadro soma é o que a casa **lançou**, não o que entrou no banco. Duas decisões continuam com ela:
+
+1. **Diária avulsa** — não existe preço de dia avulso em lugar nenhum do banco. Enquanto ela não disser qual é (ou onde se lança), essa linha fica sem valor.
+2. **Fichas vindas da planilha antiga** (`plano_deduzido`) — a data do pagamento veio de importação, não de alguém da Central dizendo "recebi". O quadro as soma, mas **conta quantas são**, no rodapé.
+
+---
 
 ## O que mudou em 17/set/2026 (v 2026-09-17-01)
 
@@ -52,7 +98,9 @@ Adriana, duas frases:
 
 O bloco **Central Zêluz › Day Care** passou a ser, em **ordem alfabética** até o rótulo:
 
-Lançamentos do dia · Peso · Pesquisa com a Família Multiespécie · Prevenção · Quem não comeu hoje · Reposições · **Planos e cobranças** (rótulo) · Renovação de planos · Lançar pagamento · Em débito.
+Lançamentos do dia · Peso · Pesquisa com a Família Multiespécie · Prevenção · Quem não comeu hoje · Reposições · **Planos e cobranças** (rótulo) · Renovação de planos · Em débito.
+
+> *18/set/2026: "Lançar pagamento" saiu desta lista — ver a seção do topo.*
 
 Nenhum item mudou de classe `so-*`: mudou de gaveta, nunca de acesso. O harness morde a ordem alfabética e a lista exata dos dois blocos.
 
@@ -204,8 +252,9 @@ Nunca um filho maior que o pai. Abre só o caminho da tela ativa. A pendência s
 | | Quem não comeu hoje (`emporio`) | A mensagem pronta para avisar o tutor. | so-emporio |
 | | Reposições (`reposicao`) | Créditos de dias por falta avisada. | so-recepcao |
 | *Central Zêluz › Planos e cobranças* | Renovação de planos (`renovacao`) | Quem está no fim do plano. | so-gestao |
-| | Lançar pagamento (`lancar-pagamento`) | O recebimento do plano vira registro. | tabela PERM |
 | | Em débito | Quem deve no Day Care. | em breve (sem tela) |
+
+> *"Lançar pagamento" (`lancar-pagamento`) saiu do menu em 18/set/2026, por decisão da Adriana. Não recolocar.*
 | *Central Zêluz (a ordem do dia)* | Check-in (`checkin`) | O tutor chega: entrada, alimentação, medicação, assinatura (1º passo). | todos |
 | | Check-out com o tutor (`checkoutconf`) | Conferir a bolsa junto com o tutor e assinar (2º passo). | so-conf-saida |
 | | Orçamento de hospedagem (`orcamento`) | Monte e envie o orçamento ao tutor. | so-recepcao |
