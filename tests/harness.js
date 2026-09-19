@@ -3732,8 +3732,295 @@ async function main() {
     check('v-25 · a auditoria da tabela diz o que mudou, de quanto para quanto',
       /audit\('orcamento-precos',\s*\n?\s*mudou\.length\?\('alterou a tabela de hospedagem — '\+mudou\.join/.test(html)
       && /\{antes:antes, depois:novo\}/.test(html));
-    check('v-25 · a versão carimbada desta entrega é a 2026-09-19-03',
-      /const APP_VERSAO='2026-09-19-03';/.test(html));
+    check('v-25 · a versão carimbada desta entrega é a 2026-09-19-04',
+      /const APP_VERSAO='2026-09-19-04';/.test(html));
+  }
+  console.log('');
+
+  // ===== v-26 · COMEÇOU NO MEIO DO MÊS (Adriana, 18/set/2026) =======================
+  // "Quando o peludo começa no meio do mês temos duas opções: pagar diária avulsa 170,00
+  // cada, ou pagar o próximo mês inteiro, e as diárias avulsas do mês anterior pelo valor
+  // do plano. E esse é o caso da Maria Eduarda e do Bethoven — estou fazendo o cadastro
+  // deles e não consigo ter essa opção aqui dentro."
+  console.log('v-26 · Plano — quem começa no meio do mês, e a diária avulsa com preço:');
+  {
+    const fatiaView26 = (id) => {
+      const i = html.indexOf('id="' + id + '"');
+      if (i < 0) return '';
+      const j = html.indexOf('<section class="view"', i + 10);
+      return html.slice(i, j < 0 ? html.length : j);
+    };
+    const daConfig26 = fatiaView26('v-config');
+
+    // ---- (a) Configurações › Valores do Day Care ------------------------------------
+    check('v-26 · o cartão "Valores do Day Care" existe em Configurações e é só da Gestão',
+      /<div class="card so-master" id="cardValoresDaycare">/.test(html)
+      && daConfig26.indexOf('<h2 style="font-size:19px">Valores do Day Care</h2>') > 0
+      && daConfig26.indexOf('id="cfgValoresWrap"') > 0);
+    check('v-26 · ele vem logo depois do cartão dos valores da hospedagem',
+      daConfig26.indexOf('id="cardValoresHospedagem"') >= 0
+      && daConfig26.indexOf('id="cardValoresHospedagem"') < daConfig26.indexOf('id="cardValoresDaycare"')
+      && daConfig26.indexOf('id="cardValoresDaycare"') < daConfig26.indexOf('Avisos no Telegram</h2>'));
+    check('v-26 · abrir Configurações desenha e relê os valores do Day Care',
+      /if\(typeof cfgValoresRender==='function'\) cfgValoresRender\(\);/.test(html)
+      && /if\(typeof dcValoresCarregar==='function'\) dcValoresCarregar\(\);/.test(html)
+      && /try\{ dcValoresCarregar\(\); \}catch\(e\)\{\}/.test(html));
+    check('v-26 · o valor mora no banco em daycare/config/valores, com diaria_avulsa_cent',
+      /DB\.ref\('daycare\/config\/valores'\)\.once\('value'\)/.test(html)
+      && /DB\.ref\('daycare\/config\/valores'\)\.update\(\{diaria_avulsa_cent:novo\}\)/.test(html));
+    check('v-26 · nada é salvo antes do botão "Salvar valores", e o rastro diz de quanto para quanto',
+      /onclick="cfgValoresSalvar\(\)">Salvar valores<\/button>/.test(html)
+      && /audit\('config-valores-daycare',\s*\n?\s*'diária avulsa: '\+fmtCent\(antes\)\+' → '\+fmtCent\(novo\)/.test(html)
+      && /\{antes:antes, depois:novo\}/.test(html));
+    check('v-26 · valor zerado ou vazio NÃO passa — preço em branco viraria conta em R$ 0,00',
+      /if\(isNaN\(n\)\|\|n<=0\)\{[^}]*Nada foi salvo\./.test(html));
+
+    if (typeof ctx.diariaAvulsaCent === 'function') {
+      check('v-26 · sem nada no banco, a diária avulsa é a tabela de 2026: R$ 170,00 (17000)',
+        ctx.diariaAvulsaCent() === 17000, String(ctx.diariaAvulsaCent()));
+      vm.runInContext('__bkp26v = dcValoresCfg; dcValoresCfg = {diaria_avulsa_cent:19500};', ctx);
+      check('v-26 · o que a Gestão salvar sobrepõe o padrão',
+        ctx.diariaAvulsaCent() === 19500, String(ctx.diariaAvulsaCent()));
+      vm.runInContext('dcValoresCfg = {diaria_avulsa_cent:0};', ctx);
+      check('v-26 · zero gravado no banco não vira preço zero na conta — volta ao padrão',
+        ctx.diariaAvulsaCent() === 17000, String(ctx.diariaAvulsaCent()));
+      vm.runInContext('dcValoresCfg = __bkp26v;', ctx);
+    } else { check('v-26 · diariaAvulsaCent existe', false, 'função não encontrada'); }
+
+    // ---- (b) as diárias que ainda caem no mês ---------------------------------------
+    if (typeof ctx.mmDiariasRestantes === 'function') {
+      // 18/09/2026 é uma sexta-feira. De 18/09 a 30/09 caem as terças 22 e 29.
+      const r1 = ctx.mmDiariasRestantes('2026-09-18', ['ter'], {});
+      check('v-26 · o caso dela: de 18/09 a 30/09 caem 2 terças — 2 diárias',
+        r1.n === 2 && r1.datas.join(',') === '2026-09-22,2026-09-29' && r1.fim === '2026-09-30',
+        JSON.stringify(r1.datas));
+      check('v-26 · e a conta vem escrita em português, para a consultora conferir',
+        /de 18\/09 a 30\/09 caem 2 terças: 2 diárias/.test(r1.frase), r1.frase);
+      const r2 = ctx.mmDiariasRestantes('2026-09-18', ['ter'], { '2026-09-22': 'recesso da Zêluz' });
+      check('v-26 · feriado não conta — "feriados não funcionamos, e não tem reposição"',
+        r2.n === 1 && r2.feriados.length === 1 && /1 feriado ficou de fora/.test(r2.frase), r2.frase);
+      const r3 = ctx.mmDiariasRestantes('2026-09-18', ['seg', 'qua', 'sex'], {});
+      check('v-26 · 3x por semana a partir de 18/09: 2 segundas, 2 quartas e 2 sextas = 6',
+        r3.n === 6 && /2 segundas, 2 quartas e 2 sextas/.test(r3.frase), r3.n + ' · ' + r3.frase);
+      check('v-26 · o dia do começo conta quando é um dia dele (18/09 é sexta)',
+        ctx.mmDiariasRestantes('2026-09-18', ['sex'], {}).n === 2);
+      check('v-26 · sem dia marcado a tela DIZ que falta — não devolve zero calado',
+        ctx.mmDiariasRestantes('2026-09-18', [], {}).n === 0
+        && /nenhum dia da semana está marcado na ficha/.test(ctx.mmDiariasRestantes('2026-09-18', [], {}).frase));
+      check('v-26 · mordida — data torta, nula e vazia não estouram',
+        ctx.mmDiariasRestantes('', ['ter'], {}).n === 0
+        && ctx.mmDiariasRestantes(null, null, null).n === 0
+        && ctx.mmDiariasRestantes('18/09/2026', ['ter'], {}).n === 0);
+      check('v-26 · o último dia do mês é achado sem depender de fuso (fevereiro bissexto)',
+        ctx.mmUltimoDiaDoMes('2028-02-03') === '2028-02-29'
+        && ctx.mmUltimoDiaDoMes('2026-02-03') === '2026-02-28'
+        && ctx.mmUltimoDiaDoMes('2026-12-01') === '2026-12-31');
+    } else { check('v-26 · mmDiariasRestantes existe', false, 'função não encontrada'); }
+
+    // ---- (c) a conta do caso Duda + Bethoven ----------------------------------------
+    if (typeof ctx.mmConta === 'function' && typeof ctx.mensalidade === 'function') {
+      const duda = ctx.mensalidade('Silver', 1, 1);       // 1x por semana, 1º da família
+      const beth = ctx.mensalidade('Silver', 1, 2);       // 2º da família: 7% de desconto
+      check('v-26 · Silver de 1x: Duda R$ 387,00 e Bethoven R$ 359,91 (2º da família, 7%)',
+        duda === 38700 && beth === 35991, duda + ' / ' + beth);
+      check('v-26 · a diária pelo plano é a mensalidade ÷ (dias na semana × 4 semanas)',
+        ctx.mmDiariaPlanoCent(38700, 1) === 9675 && ctx.mmDiariaPlanoCent(35991, 1) === 8998
+        && ctx.mmDiariaPlanoCent(61700, 2) === 7713,
+        [ctx.mmDiariaPlanoCent(38700, 1), ctx.mmDiariaPlanoCent(35991, 1)].join(' / '));
+      const C = ctx.mmConta([
+        { chave: 'maria eduarda__ana', nome: 'Duda', aulas: 1, ordem: 1, mensalidade_cent: duda, diarias: 2 },
+        { chave: 'bethoven__ana', nome: 'Bethoven', aulas: 1, ordem: 2, mensalidade_cent: beth, diarias: 2 },
+      ], 17000);
+      check('v-26 · OPÇÃO 1 — 2 diárias × R$ 170,00 × 2 FILHOts = R$ 680,00',
+        C.op1.total_cent === 68000 && C.membros[0].op1_cent === 34000 && C.membros[1].op1_cent === 34000,
+        String(C.op1.total_cent));
+      check('v-26 · OPÇÃO 2 — Duda R$ 580,50 (387,00 + 2 × 96,75)',
+        C.membros[0].op2_cent === 58050 && C.membros[0].diaria_plano_cent === 9675,
+        String(C.membros[0].op2_cent));
+      check('v-26 · OPÇÃO 2 — Bethoven R$ 539,87 (359,91 + 2 × 89,98)',
+        C.membros[1].op2_cent === 53987 && C.membros[1].diaria_plano_cent === 8998,
+        String(C.membros[1].op2_cent));
+      check('v-26 · OPÇÃO 2 — total R$ 1.120,37, pela REGRA que ela enunciou (a conta aberta manda)',
+        C.op2.total_cent === 112037, String(C.op2.total_cent));
+      check('v-26 · arredondamento em centavos, meio para cima, POR FILHOt (nunca no total)',
+        C.membros[1].diaria_plano_cent === Math.round(35991 / 4));
+      check('v-26 · mordida — sem membro nenhum os dois totais são zero, e nada estoura',
+        ctx.mmConta([], 17000).op1.total_cent === 0 && ctx.mmConta(null, null).op2.total_cent === 0);
+    } else { check('v-26 · mmConta e mensalidade existem', false, 'função não encontrada'); }
+
+    // ---- (d) o texto para o tutor ----------------------------------------------------
+    if (typeof ctx.mmTextoTutor === 'function' && typeof ctx.mmConta === 'function') {
+      const C = ctx.mmConta([
+        { chave: 'a', nome: 'Duda', aulas: 1, ordem: 1, mensalidade_cent: 38700, diarias: 2 },
+        { chave: 'b', nome: 'Bethoven', aulas: 1, ordem: 2, mensalidade_cent: 35991, diarias: 2 },
+      ], 17000);
+      const T = ctx.mmTextoTutor(C, { mesAtual: 'setembro', mesProximo: 'outubro' });
+      check('v-26 · o texto abre como o dela: "Encaminho a nossa tabela de valores."',
+        T.indexOf('Encaminho a nossa tabela de valores. Como estamos no meio do mês, temos duas opções:') === 0);
+      check('v-26 · opção 1 no texto: 2 diárias para cada, R$ 680,00, R$ 170,00 cada',
+        /1 — Pagar a diária avulsa para cada um — são 2 diárias para cada — R\$ 680,00 \(R\$ 170,00 cada diária avulsa\)\./.test(T), T);
+      check('v-26 · opção 2 no texto: o mês fechado de outubro e a metade de setembro',
+        T.indexOf('2 — Pagar o mês fechado de outubro e a metade do mês de setembro.') > 0
+        && T.indexOf('Mensalidade: R$ 387,00 (Duda) e R$ 359,91 (Bethoven).') > 0);
+      check('v-26 · a frase-chave dela, na norma culta, está inteira',
+        T.indexOf('O plano é contabilizado em mês de 4 semanas. Semanas a mais não são cobradas a mais, '
+          + 'feriados não funcionamos e não há reposição, como funciona em escolas, academias etc.') > 0, T);
+      check('v-26 · a conta vai ABERTA, linha a linha, com o total da 2ª proposta',
+        T.indexOf('Duda: R$ 387,00 + 2 × R$ 96,75 = R$ 580,50') > 0
+        && T.indexOf('Bethoven: R$ 359,91 + 2 × R$ 89,98 = R$ 539,87') > 0
+        && T.indexOf('Total da 2ª proposta: R$ 1.120,37') > 0, T);
+      check('v-26 · e fecha com a pergunta dela',
+        /Qual fica melhor para vocês\?$/.test(T.trim()));
+      const T1 = ctx.mmTextoTutor(ctx.mmConta([
+        { chave: 'a', nome: 'Cookie', aulas: 2, ordem: 1, mensalidade_cent: 61700, diarias: 3 },
+      ], 17000), { mesAtual: 'setembro', mesProximo: 'outubro' });
+      check('v-26 · FILHOt sozinho: o texto não fala em "para cada um"',
+        T1.indexOf('para cada') < 0 && /são 3 diárias — R\$ 510,00/.test(T1), T1);
+      check('v-26 · mordida — conta vazia devolve texto vazio, nunca um texto pela metade',
+        ctx.mmTextoTutor(ctx.mmConta([], 17000), {}) === '');
+    } else { check('v-26 · mmTextoTutor existe', false, 'função não encontrada'); }
+
+    // ---- (e) o bloco na tela, com a família inteira ----------------------------------
+    // Cookie e Cristal (tutora Yara) são irmãs de verdade no banco: Gold de 1x às terças,
+    // a Cookie 1ª da família e a Cristal 2ª. É o mesmo desenho do caso Duda + Bethoven.
+    if (typeof ctx.mmBlocoHTML === 'function') {
+      const geOrig26 = ctx.document.getElementById;
+      const pCookie = { n: 'Cookie', tutor: 'Yara' }, pCristal = { n: 'Cristal', tutor: 'Yara' };
+      const cadFake = {
+        'cookie__yara': { n: 'Cookie', tutor: 'Yara', dias: ['ter'], renov: { plano: 'Silver', aulas: 1, ordemPet: 1, inicio: '2026-09-18' } },
+        'cristal__yara': { n: 'Cristal', tutor: 'Yara', dias: ['ter'], renov: { plano: 'Silver', aulas: 1, ordemPet: 2, inicio: '2026-09-18' } },
+      };
+      ctx.__pel26 = [pCookie, pCristal];
+      ctx.__cad26 = cadFake;
+      ctx.__irm26 = { 'cookie__yara~~cristal__yara': { a: 'cookie__yara', b: 'cristal__yara' } };
+      vm.runInContext('__bkp26b = { pel: PELUDINHOS, cad: pelCadCache, irm: IRMAOS_CACHE, at: pelAtual,'
+        + ' hoje: hojeISO, fer: orcFeriadosCfg, rasc: mmRascunho, ren: renovRascunho };'
+        + 'PELUDINHOS = __pel26; pelCadCache = __cad26; IRMAOS_CACHE = __irm26; pelAtual = __pel26[0];'
+        + 'orcFeriadosCfg = {}; mmRascunho = null; renovRascunho = null;'
+        + 'hojeISO = function(){ return "2026-09-18"; };', ctx);
+      try {
+        ctx.document.getElementById = function () { return null; };
+        const H = ctx.mmBlocoHTML(ctx.pelExtra(pCookie), pCookie);
+        check('v-26 · o bloco "Começou no meio do mês?" aparece na aba Plano de quem tem plano',
+          H.indexOf('id="mmBloco"') > 0 && H.indexOf('Começou no meio do mês?') > 0);
+        check('v-26 · a família entra inteira: Cookie 1ª e Cristal 2ª, cada uma com a sua conta',
+          H.indexOf('Cookie') > 0 && H.indexOf('Cristal') > 0
+          && H.indexOf('1º da família') > 0 && H.indexOf('2º da família') > 0);
+        check('v-26 · opção 1 na tela: R$ 680,00 (2 diárias × R$ 170,00 × 2 FILHOts)',
+          /id="mmTotal1"><strong>R\$ 680,00<\/strong>/.test(H), H.slice(H.indexOf('mmTotal1') - 60, H.indexOf('mmTotal1') + 60));
+        check('v-26 · opção 2 na tela: R$ 1.120,37, com a conta aberta de cada FILHOt',
+          /id="mmTotal2"><strong>R\$ 1\.120,37<\/strong>/.test(H)
+          && H.indexOf('R$ 387,00 + 2 × R$ 96,75') > 0 && H.indexOf('R$ 359,91 + 2 × R$ 89,98') > 0);
+        check('v-26 · a conta em palavras aparece para ser conferida ("caem 2 terças")',
+          H.indexOf('de 18/09 a 30/09 caem 2 terças: 2 diárias') > 0);
+        check('v-26 · o número das diárias é editável, e diz que fica "conferido por você"',
+          H.indexOf('id="mmDias_0"') > 0 && H.indexOf('onchange="mmSetDiarias(') > 0
+          && H.indexOf('conferido por você') > 0);
+        check('v-26 · a mensagem para o tutor vem pronta, com o botão de copiar',
+          H.indexOf('id="mmTexto"') > 0 && H.indexOf('Qual fica melhor para vocês?') > 0
+          && H.indexOf('onclick="mmCopiarTexto(this)"') > 0);
+        check('v-26 · os dois botões de registrar mostram o total de cada opção',
+          H.indexOf('id="mmOpcao1"') > 0 && H.indexOf('id="mmOpcao2"') > 0
+          && /Tutor escolheu a opção 1 — R\$ 680,00/.test(H)
+          && /Tutor escolheu a opção 2 — R\$ 1\.120,37/.test(H));
+        check('v-26 · o bloco diz de onde vem a diária avulsa, e como trocá-la sem programador',
+          H.indexOf('Configurações &rsaquo; Valores do Day Care') > 0 && H.indexOf('R$ 170,00') > 0);
+
+        // --- o rascunho: mudar a data e o número NÃO grava nada
+        const escritas = [];
+        vm.runInContext('__bkp26c = { set: setPelExtra, red: renovPlanoRedesenhar, db: DB };'
+          + 'setPelExtra = function(p, patch){ __esc26.push(JSON.stringify(patch)); return Promise.resolve({ok:true}); };'
+          + 'renovPlanoRedesenhar = function(){};'
+          + 'DB = { ref: function(){ __esc26.push("DB.ref"); return { set:function(){ return Promise.resolve(); },'
+          + ' update:function(){ return Promise.resolve(); }, push:function(){ return Promise.resolve(); },'
+          + ' once:function(){ return Promise.resolve({ val:function(){ return null; } }); } }; } };', ctx);
+        ctx.__esc26 = escritas;
+        try {
+          ctx.mmSetInicio('2026-09-01');
+          ctx.mmSetDiarias('cristal__yara', '3');
+          check('v-26 · NADA grava antes do Confirmar: mexer na data e nas diárias só mexe no rascunho',
+            escritas.length === 0, JSON.stringify(escritas));
+          const H2 = ctx.mmBlocoHTML(ctx.pelExtra(pCookie), pCookie);
+          check('v-26 · o rascunho manda na tela: de 01/09 caem 5 terças, e a Cristal fica com as 3 conferidas',
+            H2.indexOf('de 01/09 a 30/09 caem 5 terças: 5 diárias') > 0
+            && H2.indexOf('value="5"') > 0 && H2.indexOf('value="3"') > 0
+            && H2.indexOf('conferido por você — o sistema tinha contado 5') > 0,
+            H2.indexOf('caem 5 terças') > 0 ? 'as terças bateram; o resto não' : 'a frase das terças não bateu');
+          check('v-26 · o rascunho é de UMA ficha só — não vaza para a ficha do lado',
+            (() => {
+              vm.runInContext('pelAtual = __pel26[1];', ctx);
+              const H3 = ctx.mmBlocoHTML(ctx.pelExtra(pCristal), pCristal);
+              vm.runInContext('pelAtual = __pel26[0];', ctx);
+              return H3.indexOf('caem 4 terças') < 0;
+            })());
+        } finally {
+          vm.runInContext('setPelExtra = __bkp26c.set; renovPlanoRedesenhar = __bkp26c.red; DB = __bkp26c.db;', ctx);
+        }
+      } finally {
+        ctx.document.getElementById = geOrig26;
+        vm.runInContext('PELUDINHOS = __bkp26b.pel; pelCadCache = __bkp26b.cad; IRMAOS_CACHE = __bkp26b.irm;'
+          + 'pelAtual = __bkp26b.at; hojeISO = __bkp26b.hoje; orcFeriadosCfg = __bkp26b.fer;'
+          + 'mmRascunho = __bkp26b.rasc; renovRascunho = __bkp26b.ren;', ctx);
+      }
+    } else { check('v-26 · mmBlocoHTML existe', false, 'função não encontrada'); }
+
+    // ---- (f) a gravação, o rastro e o desfazer ---------------------------------------
+    check('v-26 · o bloco mora dentro da aba Plano, depois do Confirmar',
+      /\+mmBlocoHTML\(ex,p\)\s*\n?\s*\+renovHistHTML\(ex\)/.test(html));
+    check('v-26 · o Confirmar mostra o resumo ANTES de gravar, e só grava se ela disser sim',
+      /const ok=await zPergunta\('CONFIRA ANTES DE GRAVAR', linhas,/.test(html)
+      && /sim:'Confirmar e gravar a escolha'/.test(html)
+      && /if\(!ok\) return;\s*\n\s*const quem=renovQuemAgora\(\), ts=Date\.now\(\);/.test(html));
+    check('v-26 · grava em renov/meio_mes, com opção, começo, diárias, os três valores, o texto e QUEM',
+      /rQ\.meio_mes=\{opcao:opcao, inicio:D\.inicio, diarias:m\.diarias,/.test(html)
+      && /diaria_avulsa_cent:D\.conta\.diaria_avulsa_cent, diaria_plano_cent:m\.diaria_plano_cent,/.test(html)
+      && /mensalidade_cent:m\.mensalidade_cent, total_cent:\(\(opcao===1\)\?m\.op1_cent:m\.op2_cent\),/.test(html)
+      && /texto:D\.texto, quem:quem, ts:ts\};/.test(html));
+    check('v-26 · grava no FILHOt E em cada irmão da conta (a família paga junto)',
+      /for\(let i=0;i<ms\.length;i\+\+\)\{\s*\n\s*const m=ms\[i\], q=m\.pet;/.test(html)
+      && /await setPelExtra\(q, \{renov:rQ\}\);/.test(html));
+    check('v-26 · toda gravação deixa rastro com o valor de ANTES (a lei do audit)',
+      /audit\('plano-meio-mes',/.test(html)
+      && /\{alvo:dcKey\(q\.n, q\.tutor\), antes:antes\}\);/.test(html));
+    check('v-26 · o Desfazer tira o registro da família inteira, também com rastro e com o antes',
+      /async function mmDesfazer\(\)\{/.test(html)
+      && /delete rQ\.meio_mes;/.test(html)
+      && /audit\('plano-meio-mes-desfeito',/.test(html)
+      && /id="mmDesfazer"/.test(html));
+    check('v-26 · a ficha mostra a escolha registrada — opção, valor, quem registrou e quando',
+      /Começou em '\+esc\(fmtBR\(reg\.inicio\|\|''\)\.slice\(0,5\)\)\+' pela <strong>opção /.test(html)
+      && /registrado por '\+esc\(reg\.quem\|\|'—'\)\+' em '/.test(html));
+    check('v-26 · quem não pode mexer em cobrança não registra nem desfaz',
+      (html.match(/if\(typeof canEditPel==='function' && !canEditPel\(\)\)\{/g) || []).length >= 2);
+    check('v-26 · FILHOt sem plano ou sem dias fica DE FORA da conta, dizendo o que falta e onde',
+      /pendentes\.push\(\{chave:chave, nome:nome, falta:'ainda não tem plano escolhido/.test(html)
+      && /pendentes\.push\(\{chave:chave, nome:nome, falta:'ainda não tem os dias da semana marcados/.test(html)
+      && html.indexOf('o app não calcula com zero em silêncio') > 0);
+    check('v-26 · tabela de planos sem preço para a faixa também para a conta, em vez de mostrar R$ 0,00',
+      /if\(!\(mens>0\)\)\{ pendentes\.push\(\{chave:chave, nome:nome,/.test(html)
+      && html.indexOf('a tabela de planos não tem valor para ') > 0);
+    check('v-26 · o rascunho do meio de mês é limpo ao trocar de ficha (nada vaza entre FILHOts)',
+      /PB_ULT=i; renovRascLimpar\(\); mmRascLimpar\(\); \}/.test(html));
+    // Achado ao fotografar a v-26: a irmã Cristal não entrava na conta. O irmaosCarregar()
+    // é chamado na carga do script, quando DB ainda é null — voltava sem ligar ouvinte, e o
+    // `var IRMAOS_CACHE={}, IRMAOS_OK=false` que vem DEPOIS zerava o que ele tivesse feito.
+    // daycare/irmaos nunca descia: o vínculo que a Recepção cadastra desde 22/ago/2026 só
+    // valia pela semente do código.
+    check('v-26 · daycare/irmaos passa a descer de verdade — o ouvinte liga com o banco na mão',
+      /try\{ irmaosCarregar\(\); \}catch\(e\)\{\}/.test(
+        html.slice(html.indexOf('function wireFirebaseListeners()'),
+          html.indexOf("DB.ref('daycare/config/sensiveis')"))));
+
+    // ---- (g) o quadro de Recebimentos deixou de dizer "sem valor" ---------------------
+    check('v-26 · Recebimentos do mês mostra o preço do dia avulso, sem inventar a quantidade',
+      /const avCent=\(typeof diariaAvulsaCent==='function'\)\?diariaAvulsaCent\(\):0;/.test(html)
+      && html.indexOf('hoje o dia avulso custa ') > 0
+      && /<span class="pm-li-fim rec-val rec-val-sem">'\+esc\(fmtCent\(avCent\)\)\+' cada<\/span>/.test(html));
+    check('v-26 · e continua FORA da soma — o app não sabe quantas diárias foram cobradas',
+      html.indexOf('nunca quantas diárias foram cobradas — por isso não entra na soma') > 0);
+
+    check('v-26 · a versão carimbada desta entrega é a 2026-09-19-04',
+      /const APP_VERSAO='2026-09-19-04';/.test(html));
   }
   console.log('');
 
@@ -12035,9 +12322,13 @@ async function main() {
       check('cada tipo aparece com o nome que ela usa (mensalidade, trimestral, semestral, hospedagem)',
         cardREC.indexOf('>Mensalidade<') >= 0 && cardREC.indexOf('>Trimestral<') >= 0 &&
         cardREC.indexOf('>Semestral<') >= 0 && cardREC.indexOf('Hospedagem na AuAulândia') >= 0);
-      check('mordida — DIÁRIA AVULSA aparece SEM VALOR e diz por quê (o app não guarda o preço do dia)',
-        cardREC.indexOf('>Diária avulsa<') >= 0 && cardREC.indexOf('sem valor') >= 0 &&
-        cardREC.indexOf('nunca o preço do dia') >= 0);
+      // 18/set/2026: o PREÇO do dia avulso passou a existir (Configurações › Valores do Day
+      // Care) e a linha o mostra. O que continua não existindo é QUANTAS diárias foram
+      // cobradas — por isso a linha segue fora da soma, dizendo o porquê.
+      check('mordida — DIÁRIA AVULSA mostra o preço do dia e continua FORA da soma',
+        cardREC.indexOf('>Diária avulsa<') >= 0 && cardREC.indexOf('R$ 170,00 cada') >= 0 &&
+        cardREC.indexOf('nunca quantas diárias foram cobradas') >= 0,
+        cardREC.slice(cardREC.indexOf('>Diária avulsa<'), cardREC.indexOf('>Diária avulsa<') + 320));
       check('o avulso da carteira é contado como GENTE, não como dinheiro',
         ctx.recAvulsosNaCarteira() === 1 && cardREC.indexOf('1 FILHOt avulso na carteira') >= 0,
         String(ctx.recAvulsosNaCarteira()));
@@ -13265,7 +13556,7 @@ async function main() {
         !/\.catch\(function\([a-z]*\)\{\s*\}\)/.test(
           html.slice(html.indexOf('const CK_FRASE_PRATICA='), html.indexOf('function renderCkInicio('))));
       check('v-14 · a versão carimbada é a desta entrega',
-        /const APP_VERSAO='2026-09-19-03';/.test(html));
+        /const APP_VERSAO='2026-09-19-04';/.test(html));
     }
 
     // ---- v-15: O PLANO SÓ GRAVA NO CONFIRMAR (caso Cookie/Yara, 15/set/2026) --------
@@ -14080,8 +14371,8 @@ async function main() {
           + 'AVISO_COLEIRA_APOS = __bkpC.apos;', ctx);
       }
     } else { check('v-17 · prevCfgCarregar existe', false, 'função não encontrada'); }
-    check('v-24 · a versão carimbada desta entrega é a 2026-09-19-03',
-      /const APP_VERSAO='2026-09-19-03';/.test(html));
+    check('v-24 · a versão carimbada desta entrega é a 2026-09-19-04',
+      /const APP_VERSAO='2026-09-19-04';/.test(html));
 
     // ───────── v-19 · o aparelho autorizado que não se perde no iPhone (16/set/2026)
     // Auditoria de 16/set: o iPhone da Leticya gerou DOIS ids em trinta segundos

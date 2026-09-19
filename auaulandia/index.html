@@ -4208,6 +4208,14 @@
       <div class="hint">O preço do <strong>pernoite</strong> e da <strong>diária de hotel</strong> em cada temporada — baixa, alta e <strong>fim de ano</strong> —, os feriados em que a casa não recebe nem entrega, e a ponte com a planilha de Hospedagem. Os valores valem para todos os orçamentos <strong>novos</strong>: os já salvos guardam o preço da época. Nada é gravado antes do botão <strong>Salvar tabela</strong>.</div>
       <div id="orcConfig"></div>
     </div>
+    <!-- VALORES DO DAY CARE (Adriana, 18/set/2026) — a diária avulsa não existia em lugar
+         nenhum do banco, e sem ela não há conta de quem começa no meio do mês. É preço, e
+         preço muda: mora aqui, nas mãos dela (lei de 22/ago/2026). -->
+    <div class="card so-master" id="cardValoresDaycare">
+      <h2 style="font-size:19px">Valores do Day Care</h2>
+      <div class="hint">O preço da <strong>diária avulsa</strong> — o dia solto, de quem não tem plano mensal, e a base da 1ª opção de quem começa no meio do mês. As mensalidades dos planos (Mensal · Trimestral · Semestral) continuam na tabela comercial. Nada é gravado antes do botão <strong>Salvar valores</strong>.</div>
+      <div id="cfgValoresWrap" style="margin-top:12px"><div class="hint">Carregando os valores do Day Care&hellip;</div></div>
+    </div>
     <div class="card so-master">
       <h2 style="font-size:19px">Avisos no Telegram</h2>
       <div class="hint">Quando a monitora marca uma alteração no check-in e tira a foto, a foto vai <strong>sozinha</strong> para o grupo da veterinária — com o nome do FILHOt, o que foi encontrado e quem viu. Ninguém precisa lembrar de mandar.</div>
@@ -4839,6 +4847,15 @@
       try{ prevCfgCarregar(); }catch(e){} /* silencioso de propósito: guarda defensiva — falhar aqui não pode interromper quem chamou */
       try{ entradaMsgCarregar(); }catch(e){} /* silencioso de propósito: guarda defensiva — falhar aqui não pode interromper quem chamou */
       try{ ckFotosCfgCarregar(); }catch(e){} /* silencioso de propósito: guarda defensiva — falhar aqui não pode interromper quem chamou */
+      try{ dcValoresCarregar(); }catch(e){} /* silencioso de propósito: guarda defensiva — falhar aqui não pode interromper quem chamou */
+      // OS IRMÃOS DO BANCO SÓ SE LIGAM AQUI (18/set/2026). O irmaosCarregar() lá embaixo é
+      // chamado na carga do script, quando DB ainda é null: ele voltava sem ligar ouvinte
+      // nenhum — e, pior, o `var IRMAOS_CACHE={}, IRMAOS_OK=false` que vem DEPOIS zerava o
+      // que ele tivesse feito. Resultado: daycare/irmaos nunca descia, e o vínculo que a
+      // Recepção cadastra desde 22/ago/2026 valia só pela semente do código. Ligado aqui,
+      // com o banco na mão, a dupla nova vale na hora — na conferência de pertences e na
+      // conta de quem começa no meio do mês.
+      try{ irmaosCarregar(); }catch(e){} /* silencioso de propósito: guarda defensiva — falhar aqui não pode interromper quem chamou */
       DB.ref('daycare/config/sensiveis').on('value', s=>{ const v=s.val(); if(Array.isArray(v)){ try{ SENS=new Set(v); }catch(e){} /* silencioso de propósito: guarda defensiva — se o valor não vier, o anterior continua valendo */ } });
       DB.ref('daycare/config/atividades').on('value', s=>{ const v=s.val(); if(Array.isArray(v)&&v.length){ ATIVIDADES=v; if(typeof renderAtiv==='function') renderAtiv(); } });
       // Os passos de cada protocolo (12/set/2026). Nó pequeno e raro de mudar: desce uma vez
@@ -13780,7 +13797,7 @@
   // inteira DEPOIS de a correção estar publicada — o aviso apareceu, ninguém tocou.
   // Agora o aparelho PARADO recarrega sozinho: trancado, com a aba escondida, na porta de
   // entrada ou 3 minutos sem ninguém tocar nele. Mão na tela = nunca recarrega.
-  const APP_VERSAO='2026-09-19-03';
+  const APP_VERSAO='2026-09-19-04';
   var RECARGA_PARADO_MS=3*60*1000, __versaoPublicada=null, __recargaTimer=null;
   function vigiarVersao(){
     if(!DB) return;
@@ -15832,6 +15849,140 @@
     const pct=DESC_PET_PLANO[ordemPet]|| (ordemPet>=3?12:0);
     return Math.round(base*(100-pct)/100);
   }
+  // ===== VALORES DO DAY CARE (Adriana, 18/set/2026) ==================================
+  // A diária avulsa não existia em lugar nenhum do banco — e sem ela não há como fazer a
+  // conta de quem começa no meio do mês. Preço muda todo ano, então ele mora no banco e se
+  // edita em Configurações › Valores do Day Care: é a lei de 22/ago/2026, "regra nova não
+  // pode exigir programador". O padrão de fábrica é a tabela de 2026.
+  const DIARIA_AVULSA_PADRAO=17000;          // R$ 170,00
+  var dcValoresCfg=null;                     // vem do Firebase; null = vale o padrão
+  function dcValores(){ return dcValoresCfg||{}; }
+  function diariaAvulsaCent(){
+    const v=dcValores().diaria_avulsa_cent;
+    return (typeof v==='number'&&v>0)?Math.round(v):DIARIA_AVULSA_PADRAO;
+  }
+  function dcValoresCarregar(){
+    if(!DB) return Promise.resolve(null);
+    return DB.ref('daycare/config/valores').once('value').then(function(s){
+      const v=s.val()||{};
+      if(v&&typeof v==='object') dcValoresCfg=v;
+      try{ if(document.getElementById('cfgValoresWrap')) cfgValoresRender(); }catch(e){} /* silencioso de propósito: redesenho de tela — falhar não pode derrubar quem chamou */
+      return v;
+    }).catch(function(e){ _logLeituraFalhou('daycare/config/valores (dcValoresCarregar)', e); return null; });
+  }
+
+  // ===== COMEÇOU NO MEIO DO MÊS — as contas (Adriana, 18/set/2026) ===================
+  // "Quando o peludo começa no meio do mês temos duas opções: pagar diária avulsa, ou pagar
+  // o próximo mês inteiro e as diárias avulsas do mês anterior pelo valor do plano." Era o
+  // caso da Maria Eduarda e do Bethoven, que ela estava cadastrando e não tinha como fazer
+  // aqui dentro. Estas funções são PURAS: não leem tela, não leem banco, não gravam nada.
+  // O plano é contabilizado em MÊS DE 4 SEMANAS — 1x=4, 2x=8, 3x=12, 4x=16, 5x=20 diárias.
+  // Por isso a diária pelo valor do plano é a mensalidade dividida por (dias na semana × 4).
+  const MM_SEMANAS_DO_PLANO=4;
+  const MM_DIA_NUM={dom:0, seg:1, ter:2, qua:3, qui:4, sex:5, sab:6};
+  const MM_DIA_PLURAL={seg:'segundas', ter:'terças', qua:'quartas', qui:'quintas', sex:'sextas'};
+  function mmJuntar(lista){
+    const L=(lista||[]).filter(Boolean);
+    if(!L.length) return '';
+    if(L.length===1) return L[0];
+    return L.slice(0,-1).join(', ')+' e '+L[L.length-1];
+  }
+  function mmUltimoDiaDoMes(iso){
+    if(!/^\d{4}-\d{2}-\d{2}$/.test(iso||'')) return '';
+    const a=iso.split('-').map(Number);
+    const d=new Date(a[0], a[1], 0);            // dia 0 do mês seguinte = último dia deste
+    const p=x=>String(x).padStart(2,'0');
+    return d.getFullYear()+'-'+p(d.getMonth()+1)+'-'+p(d.getDate());
+  }
+  // Quantas diárias ainda caem NESTE mês, a partir do primeiro dia do FILHOt: conta os dias
+  // da semana marcados na ficha dele e tira os feriados (a mesma lista do orçamento —
+  // "feriados não funcionamos"). Devolve também a conta escrita em português.
+  function mmDiariasRestantes(iniISO, dias, feriados){
+    const vazio={n:0, datas:[], feriados:[], fim:'', frase:''};
+    if(!/^\d{4}-\d{2}-\d{2}$/.test(iniISO||'')) return vazio;
+    const marcados=(dias||[]).filter(function(x){ return MM_DIA_NUM[x]!=null; });
+    const fim=mmUltimoDiaDoMes(iniISO);
+    const a=iniISO.split('-').map(Number);
+    const ult=Number(String(fim).split('-')[2])||0;
+    const F=feriados||{};
+    const p=x=>String(x).padStart(2,'0');
+    const rotuloDe={}; Object.keys(MM_DIA_NUM).forEach(function(k){ rotuloDe[MM_DIA_NUM[k]]=k; });
+    const datas=[], fora=[], porDia={};
+    for(let d=a[2]; d<=ult; d++){
+      const iso=a[0]+'-'+p(a[1])+'-'+p(d);
+      const rot=rotuloDe[new Date(a[0], a[1]-1, d).getDay()];
+      if(marcados.indexOf(rot)<0) continue;
+      if(F[iso]){ fora.push({iso:iso, nome:F[iso]}); continue; }
+      datas.push(iso); porDia[rot]=(porDia[rot]||0)+1;
+    }
+    const partes=Object.keys(porDia).sort(function(x,y){ return MM_DIA_NUM[x]-MM_DIA_NUM[y]; })
+      .map(function(k){ return porDia[k]+' '+(porDia[k]===1?((typeof DIA_EXT!=='undefined'&&DIA_EXT[k])||k):(MM_DIA_PLURAL[k]||k)); });
+    const janela='de '+fmtBR(iniISO).slice(0,5)+' a '+fmtBR(fim).slice(0,5);
+    const frase=!marcados.length
+      ? 'nenhum dia da semana está marcado na ficha — sem dia marcado não há diária para contar'
+      : (janela+(partes.length?(' caem '+mmJuntar(partes)):' não cai nenhum dos dias da ficha')
+         +': '+datas.length+' diária'+(datas.length===1?'':'s')
+         +(fora.length?(' — '+fora.length+' '+(fora.length===1?'feriado ficou de fora':'feriados ficaram de fora')
+           +' ('+fora.map(function(f){ return fmtBR(f.iso).slice(0,5)+' '+f.nome; }).join(' · ')+')'):''));
+    return {n:datas.length, datas:datas, feriados:fora, fim:fim, frase:frase};
+  }
+  // A diária pelo valor do plano. Centavos, meio para cima, por FILHOt.
+  function mmDiariaPlanoCent(mensalidadeCent, aulas){
+    const n=Math.max(1, Number(aulas)||1)*MM_SEMANAS_DO_PLANO;
+    return Math.round((Math.round(Number(mensalidadeCent)||0))/n);
+  }
+  // A conta das duas opções, para a família inteira. Cada membro entra com o que é DELE:
+  // dias na semana, mensalidade já com o desconto do Nº na família, e as diárias do mês.
+  function mmConta(membros, avulsaCent){
+    const av=Math.max(0, Math.round(Number(avulsaCent)||0));
+    const M=(membros||[]).map(function(m){
+      const aulas=Math.max(1, Number(m.aulas)||1);
+      const mens=Math.round(Number(m.mensalidade_cent)||0);
+      const n=Math.max(0, Math.round(Number(m.diarias)||0));
+      const dp=mmDiariaPlanoCent(mens, aulas);
+      return Object.assign({}, m, {aulas:aulas, diarias:n, mensalidade_cent:mens,
+        diaria_plano_cent:dp, op1_cent:n*av, op2_cent:mens+n*dp});
+    });
+    const t1=M.reduce(function(s,m){ return s+m.op1_cent; }, 0);
+    const t2=M.reduce(function(s,m){ return s+m.op2_cent; }, 0);
+    return {membros:M, diaria_avulsa_cent:av, op1:{total_cent:t1}, op2:{total_cent:t2}};
+  }
+  function mmMesNome(iso){ const a=String(iso||'').split('-'); return MES_NOME[Number(a[1])-1]||''; }
+  function mmMesProximoNome(iso){ const a=String(iso||'').split('-'); return MES_NOME[(Number(a[1]))%12]||''; }
+  // O TEXTO PARA O TUTOR — é o texto DELA, copiado (18/set/2026), só com a ortografia na
+  // norma culta e os números deste caso. Não se redige por cima do que ela ditou.
+  function mmTextoTutor(conta, op){
+    op=op||{};
+    const ms=(conta&&conta.membros)||[];
+    if(!ms.length) return '';
+    const varios=ms.length>1;
+    const iguais=ms.every(function(m){ return m.diarias===ms[0].diarias; });
+    const nDi=function(n){ return n+' diária'+(n===1?'':'s'); };
+    const comNome=function(campo){ return mmJuntar(ms.map(function(m){ return fmtCent(m[campo])+' ('+m.nome+')'; })); };
+    const L=[];
+    L.push('Encaminho a nossa tabela de valores. Como estamos no meio do mês, temos duas opções:');
+    L.push('');
+    L.push('1 — Pagar a diária avulsa'+(varios?' para cada um':'')+' — '
+      +(iguais?('são '+nDi(ms[0].diarias)+(varios?' para cada':''))
+              :('são '+mmJuntar(ms.map(function(m){ return nDi(m.diarias)+' para '+m.nome; }))))
+      +' — '+fmtCent(conta.op1.total_cent)+' ('+fmtCent(conta.diaria_avulsa_cent)+' cada diária avulsa).');
+    L.push('');
+    L.push('2 — Pagar o mês fechado de '+(op.mesProximo||'—')+' e a metade do mês de '+(op.mesAtual||'—')+'.');
+    L.push('Mensalidade: '+comNome('mensalidade_cent')+'.');
+    L.push('Como temos '+(iguais?nDi(ms[0].diarias)
+        :mmJuntar(ms.map(function(m){ return nDi(m.diarias)+' de '+m.nome; })))
+      +' de '+(op.mesAtual||'—')+', cada uma pelo valor do plano: '+comNome('diaria_plano_cent')+'.');
+    L.push('O plano é contabilizado em mês de 4 semanas. Semanas a mais não são cobradas a mais, '
+      +'feriados não funcionamos e não há reposição, como funciona em escolas, academias etc.');
+    ms.forEach(function(m){
+      L.push(m.nome+': '+fmtCent(m.mensalidade_cent)+' + '+m.diarias+' × '+fmtCent(m.diaria_plano_cent)
+        +' = '+fmtCent(m.op2_cent));
+    });
+    L.push('Total da 2ª proposta: '+fmtCent(conta.op2.total_cent));
+    L.push('');
+    L.push('Qual fica melhor para vocês?');
+    return L.join('\n');
+  }
   // ---- renovação por FILHOt ----
   function renovDe(ex){ return (ex&&ex.renov)||{}; }
   // ===== UMA PORTA SÓ PARA O PLANO (Adriana, 15/set/2026) ============================
@@ -16215,6 +16366,7 @@
       + (semPlanoMensal ? '' :
           '<div class="alm-next" style="margin-top:8px"><button class="btn btn-gold" id="planoConfirmar" onclick="confirmarRenovacao()">Confirmar / renovar plano</button></div>'
           +(sujo?'<div id="planoNaoGravado" class="dc-faltas" style="margin-top:6px;border-color:#B3261E;color:#B3261E"><strong>Nada foi gravado ainda.</strong> Confira o resumo e toque em Confirmar / renovar plano.</div>':'')
+          +mmBlocoHTML(ex,p)
           +renovHistHTML(ex))
       +'</div>';
   }
@@ -16306,6 +16458,286 @@
       [pelNome(pelAtual)+' · '+(pl.rotulo||novo.plano)+' de '+aulas+'x por semana.',
        'Vale até '+fmtBR(novo.fim)+', com próxima renovação em '+(novo.mesRenov||'—')+'.',
        'Mensalidade '+fmtCent(mens)+'.'], {ok:true, botao:'Fechar'});
+  }
+
+  // ===== COMEÇOU NO MEIO DO MÊS — a tela (Adriana, 18/set/2026) =====================
+  // "Construa uma solução para isso, à prova de burros e autoexplicativa." O bloco aparece
+  // dentro da aba Plano assim que há um plano Mensal, Trimestral ou Semestral escolhido.
+  // Ele NÃO grava nada enquanto ela não tocar em "Tutor escolheu a opção 1 / 2" e confirmar
+  // o resumo — é a lei de 15/set/2026 ("nada grava antes do Confirmar"). E errou? Desfazer.
+  var mmRascunho=null;    // {_k, inicio, dias:{chave:n}} — o que está NA TELA, nada gravado
+  function mmRascKey(){ try{ return pelAtual?pelKey(pelAtual):''; }catch(e){ return ''; } /* silencioso de propósito: sem FILHOt aberto não há rascunho */ }
+  function mmRascLimpar(){ mmRascunho=null; }
+  // Rascunho de outra ficha nunca vaza para esta (a lei de 19/ago: dado de uma tela só mente).
+  function mmRasc(){ const k=mmRascKey(); return (mmRascunho&&k&&mmRascunho._k===k)?mmRascunho:{}; }
+  function mmRascGarantir(){
+    const k=mmRascKey(); if(!k) return null;
+    if(!mmRascunho||mmRascunho._k!==k) mmRascunho={_k:k, dias:{}};
+    if(!mmRascunho.dias) mmRascunho.dias={};
+    return mmRascunho;
+  }
+  function mmSetInicio(iso){
+    const r=mmRascGarantir(); if(!r) return;
+    r.inicio=iso;
+    r.dias={};                 // mudou a data, as diárias contadas à mão perdem o sentido
+    renovPlanoRedesenhar();
+  }
+  // O número conferido POR ELA vale mais que o do sistema — mas o sistema diz qual era o dele.
+  function mmSetDiarias(chave, valor){
+    const r=mmRascGarantir(); if(!r) return;
+    const n=parseInt(String(valor==null?'':valor).replace(/\D/g,''), 10);
+    if(isNaN(n)) delete r.dias[chave]; else r.dias[chave]=Math.max(0, Math.min(31, n));
+    renovPlanoRedesenhar();
+  }
+  function mmInicioDaTela(){ return mmRasc().inicio||hojeISO(); }
+  // A família cobrável: o FILHOt aberto mais os irmãos gravados em daycare/irmaos. Chave
+  // exata dos dois lados — nome sozinho não identifica ninguém (a lei de 22/ago/2026).
+  function mmFamiliaPets(p){
+    const lista=[p];
+    try{
+      (irmaosDoBanco(p)||[]).forEach(function(v){
+        const q=(typeof PELUDINHOS!=='undefined'?PELUDINHOS:[]).find(function(x){ return pelKey(x)===v.chaveOutro; });
+        if(q && lista.indexOf(q)<0 && !pelInativo(q)) lista.push(q);
+      });
+    }catch(e){ _logFalhaGrav('mmFamiliaPets', e); }
+    return lista;
+  }
+  // Junta o que a tela precisa: quem está pronto para entrar na conta e quem está faltando
+  // dado. Ninguém entra na conta com zero em silêncio — quem falta aparece dizendo o que falta.
+  function mmDados(p){
+    const ini=mmInicioDaTela();
+    const fer=(typeof orcFeriados==='function')?orcFeriados():{};
+    const over=mmRasc().dias||{};
+    const eu=pelKey(p);
+    const prontos=[], pendentes=[];
+    mmFamiliaPets(p).forEach(function(q){
+      const chave=pelKey(q), nome=pelNome(q), ex=pelExtra(q)||{};
+      const r=(chave===eu)?renovEdit(ex):renovDe(ex);     // na ficha aberta vale o rascunho do plano
+      const pl=planos()[r.plano];
+      const dias=pelDias(q)||[];
+      if(!pl){ pendentes.push({chave:chave, nome:nome, falta:'ainda não tem plano escolhido — abra a ficha dele, aba Plano, e escolha Mensal, Trimestral ou Semestral'}); return; }
+      if(!dias.length){ pendentes.push({chave:chave, nome:nome, falta:'ainda não tem os dias da semana marcados — marque os dias no alto da ficha dele'}); return; }
+      const aulas=nAulasDe(q), ordem=Number(r.ordemPet)||1;
+      const mens=mensalidade(r.plano, aulas, ordem);
+      // Tabela sem preço para esta faixa não vira conta em R$ 0,00 calada: a tela diz onde arrumar.
+      if(!(mens>0)){ pendentes.push({chave:chave, nome:nome,
+        falta:'a tabela de planos não tem valor para '+(pl.rotulo||r.plano)+' de '+aulas+'x por semana — confira a tabela comercial'}); return; }
+      const c=mmDiariasRestantes(ini, dias, fer);
+      prontos.push({chave:chave, nome:nome, pet:q, plano:r.plano, planoRotulo:pl.rotulo||r.plano,
+        compromisso:pl.compromisso||'', aulas:aulas, ordem:ordem,
+        mensalidade_cent:mens,
+        diariasAuto:c.n, frase:c.frase, fimMes:c.fim,
+        diarias:(over[chave]!=null?over[chave]:c.n),
+        conferido:(over[chave]!=null)});
+    });
+    prontos.sort(function(a,b){ return (a.ordem-b.ordem)||String(a.nome).localeCompare(String(b.nome),'pt-BR'); });
+    const conta=mmConta(prontos, diariaAvulsaCent());
+    return {inicio:ini, conta:conta, pendentes:pendentes,
+      mesAtual:mmMesNome(ini), mesProximo:mmMesProximoNome(ini),
+      texto:mmTextoTutor(conta, {mesAtual:mmMesNome(ini), mesProximo:mmMesProximoNome(ini)})};
+  }
+  function mmRegistroDe(ex){ const r=renovDe(ex)||{}; return (r.meio_mes&&typeof r.meio_mes==='object')?r.meio_mes:null; }
+  function mmBlocoHTML(ex, p){
+    const r=renovEdit(ex);
+    if(['Silver','Gold','Black'].indexOf(r.plano)<0) return '';    // só quem tem plano mensal
+    const D=mmDados(p);
+    const ms=D.conta.membros;
+    const reg=mmRegistroDe(ex);
+    const ini=D.inicio;
+    let h='<div id="mmBloco" style="margin-top:14px;padding:13px 14px;border-radius:13px;'
+      +'background:var(--z-cream-warm);border-left:4px solid var(--z-gold)">'
+      +'<div class="ff-tit">Começou no meio do mês?</div>'
+      +'<div class="hint" style="margin-top:2px">Quando o FILHOt começa com o mês já corrido, o tutor escolhe entre <strong>pagar as diárias avulsas</strong> ou <strong>pagar o próximo mês inteiro mais as diárias que faltam neste mês pelo valor do plano</strong>. O app faz as duas contas, escreve a mensagem e só grava quando você confirmar.</div>';
+    // --- o que já ficou registrado
+    if(reg){
+      h+='<div id="mmRegistrado" class="hint" style="margin-top:9px;background:rgba(46,125,138,.14);border-left:4px solid #2E7D8A;border-radius:10px;padding:10px 12px;font-weight:700;color:var(--z-blue)">'
+        +'Começou em '+esc(fmtBR(reg.inicio||'').slice(0,5))+' pela <strong>opção '+esc(String(reg.opcao||'—'))+'</strong>'
+        +' — '+esc(fmtCent(reg.total_cent||0))
+        +' — registrado por '+esc(reg.quem||'—')+' em '+esc(renovQuandoBR(reg.ts).split(' às ')[0])
+        +'</div>'
+        +'<div class="alm-next" style="margin-top:8px"><button type="button" class="btn" id="mmDesfazer" style="background:var(--crm-critico);color:var(--z-cream)" onclick="mmDesfazer()">Desfazer este registro</button></div>';
+    }
+    // --- a data do primeiro dia
+    h+='<div class="cad-grid" style="margin-top:10px">'
+      +'<div class="field"><label>Primeiro dia dele(s) no Day Care</label>'
+      +'<input type="date" class="cad-in" id="mmInicio" value="'+escAttr(ini)+'" onchange="mmSetInicio(this.value)" min="2015-01-01" max="2035-12-31" onkeydown="return dataSoNoCalendario(event)">'
+      +'<div class="hint" style="font-size:11px;margin-top:3px">O sistema conta sozinho quantas diárias ainda caem em '+esc(D.mesAtual||'—')+', pelos dias da semana da ficha, tirando os feriados.</div></div>'
+      +'<div class="field"><label>Diária avulsa (tabela)</label><div class="prev-calc">'+esc(fmtCent(D.conta.diaria_avulsa_cent))+'</div>'
+      +'<div class="hint" style="font-size:11px;margin-top:3px">Muda em <strong>Configurações &rsaquo; Valores do Day Care</strong>.</div></div>'
+      +'</div>';
+    // --- quem ainda não dá para calcular
+    if(D.pendentes.length){
+      h+='<div id="mmPendentes" class="dc-faltas" style="margin-top:9px;border-color:#B3261E;color:#B3261E">'
+        +'<strong>Falta dado para fazer a conta '+(D.pendentes.length===1?'de um FILHOt':'de '+D.pendentes.length+' FILHOts')+':</strong>'
+        +D.pendentes.map(function(x){ return '<div style="margin-top:4px">'+esc(x.nome)+' — '+esc(x.falta)+'.</div>'; }).join('')
+        +'<div style="margin-top:4px">A conta abaixo é só de quem está pronto — o app não calcula com zero em silêncio.</div></div>';
+    }
+    if(!ms.length){
+      h+='<div class="hint" style="margin-top:9px;font-weight:700;color:var(--crm-critico)">Sem plano e sem dias marcados não há conta para fazer. Preencha o que falta acima e volte aqui.</div></div>';
+      return h;
+    }
+    // --- as diárias de cada um, conferíveis
+    h+='<div style="margin-top:10px"><div class="ff-tit" style="font-size:13px">Diárias que ainda caem em '+esc(D.mesAtual||'—')+'</div>';
+    ms.forEach(function(m, i){
+      h+='<div style="padding:9px 0;border-top:1px dashed var(--line)">'
+        +'<div style="font-size:13px;font-weight:800;color:var(--z-blue)">'+esc(m.nome)+' <span style="font-weight:600;color:var(--muted)">· '+esc(m.planoRotulo)+' · '+m.aulas+'x por semana · '+m.ordem+'º da família</span></div>'
+        +'<div class="hint" style="font-size:11.5px">'+esc(m.frase)+'</div>'
+        +'<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:5px">'
+        +'<label class="cad-lb" style="margin:0">Diárias</label>'
+        // A chave vai por data-atributo, não dentro do onclick: nome com apóstrofo (D'Artagnan)
+        // quebraria a chamada — e quebrar calado é pior do que não ter o campo.
+        +'<input class="cad-in" style="max-width:96px" inputmode="numeric" id="mmDias_'+i+'" value="'+m.diarias+'" data-chave="'+escAttr(m.chave)+'" onchange="mmSetDiarias(this.dataset.chave, this.value)">'
+        +'<span class="hint" style="font-size:11px;margin:0">'
+        +(m.conferido?('conferido por você — o sistema tinha contado '+m.diariasAuto):'contado pelo sistema — corrija aqui se for outro número, fica como <strong>conferido por você</strong>')
+        +'</span></div></div>';
+    });
+    h+='</div>';
+    // --- opção 1
+    h+='<div style="margin-top:12px;padding:11px 13px;border-radius:12px;background:var(--z-cream)">'
+      +'<div class="ff-tit" style="font-size:13px">Opção 1 — diárias avulsas</div>'
+      +ms.map(function(m){
+        return '<div class="pair"><span class="k">'+esc(m.nome)+' — '+m.diarias+' × '+esc(fmtCent(D.conta.diaria_avulsa_cent))+'</span>'
+          +'<span class="val">'+esc(fmtCent(m.op1_cent))+'</span></div>'; }).join('')
+      +'<div class="pair" style="border-top:1.5px solid var(--line);margin-top:5px;padding-top:6px"><span class="k"><strong>Total da opção 1</strong></span>'
+      +'<span class="val" id="mmTotal1"><strong>'+esc(fmtCent(D.conta.op1.total_cent))+'</strong></span></div>'
+      +'</div>';
+    // --- opção 2
+    h+='<div style="margin-top:10px;padding:11px 13px;border-radius:12px;background:var(--z-cream)">'
+      +'<div class="ff-tit" style="font-size:13px">Opção 2 — '+esc(D.mesProximo||'—')+' inteiro + as diárias de '+esc(D.mesAtual||'—')+' pelo valor do plano</div>'
+      +'<div class="hint" style="font-size:11.5px">A diária pelo plano é a mensalidade dividida por '+MM_SEMANAS_DO_PLANO+' semanas: '
+      +ms.map(function(m){ return esc(m.nome)+' '+esc(fmtCent(m.mensalidade_cent))+' ÷ '+(m.aulas*MM_SEMANAS_DO_PLANO)+' = '+esc(fmtCent(m.diaria_plano_cent)); }).join(' · ')
+      +'.</div>'
+      +ms.map(function(m){
+        return '<div class="pair"><span class="k">'+esc(m.nome)+' — '+esc(fmtCent(m.mensalidade_cent))+' + '+m.diarias+' × '+esc(fmtCent(m.diaria_plano_cent))+'</span>'
+          +'<span class="val">'+esc(fmtCent(m.op2_cent))+'</span></div>'; }).join('')
+      +'<div class="pair" style="border-top:1.5px solid var(--line);margin-top:5px;padding-top:6px"><span class="k"><strong>Total da opção 2</strong></span>'
+      +'<span class="val" id="mmTotal2"><strong>'+esc(fmtCent(D.conta.op2.total_cent))+'</strong></span></div>'
+      +'</div>';
+    // --- a mensagem para o tutor
+    h+='<div style="margin-top:12px"><div class="ff-tit" style="font-size:13px">Mensagem para o tutor</div>'
+      +'<div class="hint" style="font-size:11.5px">Confira, copie e mande. Nada é enviado automaticamente.</div>'
+      +'<textarea id="mmTexto" class="gest-txt" style="min-height:230px;width:100%" readonly>'+esc(D.texto)+'</textarea>'
+      +'<div class="alm-next" style="margin-top:8px"><button type="button" class="btn btn-gold" id="mmCopiar" onclick="mmCopiarTexto(this)">Copiar mensagem</button></div>'
+      +'</div>';
+    // --- registrar a escolha do tutor
+    h+='<div style="margin-top:12px"><div class="ff-tit" style="font-size:13px">O tutor decidiu?</div>'
+      +'<div class="hint" style="font-size:11.5px">Só toque aqui depois que ele responder. O app mostra o resumo do que vai ser gravado e pergunta antes — nada é gravado enquanto você não confirmar.</div>'
+      +'<div class="alm-next" style="margin-top:7px;display:flex;gap:8px;flex-wrap:wrap">'
+      +'<button type="button" class="btn btn-primary" id="mmOpcao1" onclick="mmConfirmar(1)">Tutor escolheu a opção 1 — '+esc(fmtCent(D.conta.op1.total_cent))+'</button>'
+      +'<button type="button" class="btn btn-primary" id="mmOpcao2" onclick="mmConfirmar(2)">Tutor escolheu a opção 2 — '+esc(fmtCent(D.conta.op2.total_cent))+'</button>'
+      +'</div></div>';
+    h+='</div>';
+    return h;
+  }
+  function mmCopiarTexto(btn){
+    const ta=document.getElementById('mmTexto'); if(!ta) return;
+    const txt=ta.value||'';
+    const pronto=function(){ if(btn){ btn.textContent='Copiado'; setTimeout(function(){ if(btn) btn.textContent='Copiar mensagem'; }, 1600); } };
+    const naMao=function(){
+      ta.removeAttribute('readonly'); ta.select();
+      try{ document.execCommand('copy'); pronto(); }catch(e){ if(btn) btn.textContent='Selecione o texto e copie'; }
+      ta.setAttribute('readonly','readonly');
+    };
+    if(navigator.clipboard&&navigator.clipboard.writeText) navigator.clipboard.writeText(txt).then(pronto).catch(naMao);
+    else naMao();
+  }
+  // O CONFIRMAR é a única porta do banco, aqui como no resto da aba Plano.
+  async function mmConfirmar(opcao){
+    if(!pelAtual) return;
+    if(typeof canEditPel==='function' && !canEditPel()){
+      if(typeof zAlertao==='function') zAlertao('ESTA AÇÃO NÃO É SUA',
+        ['Registrar como o tutor vai pagar mexe em cobrança.',
+         'Só a recepção (consultoras), a Supervisão ou a Gestão fazem isso.'], {botao:'Entendi'});
+      return;
+    }
+    const ex=pelExtra(pelAtual);
+    const D=mmDados(pelAtual);
+    const ms=D.conta.membros;
+    if(!ms.length){
+      if(typeof zAlertao==='function') zAlertao('AINDA NÃO DÁ PARA REGISTRAR',
+        ['Nenhum FILHOt desta família tem plano e dias suficientes para a conta.',
+         'Escolha o plano na aba Plano e marque os dias da semana no alto da ficha.'], {botao:'Entendi'});
+      return;
+    }
+    if(!ms.some(function(m){ return m.diarias>0; })){
+      const segue=await zPergunta('NENHUMA DIÁRIA CAI NESTE MÊS',
+        ['A partir de '+fmtBR(D.inicio)+' não cai nenhum dos dias da semana da ficha até o fim de '+(D.mesAtual||'—')+'.',
+         'Isso acontece quando o mês já acabou para os dias dele, ou quando os dias marcados estão errados.',
+         'Se registrar assim, a opção 1 fica em R$ 0,00.'],
+        {sim:'Registrar mesmo assim', nao:'Voltar e conferir'});
+      if(!segue) return;
+    }
+    const total=(opcao===1)?D.conta.op1.total_cent:D.conta.op2.total_cent;
+    const linhas=[(pelGet(pelAtual,'tutor')||'tutor a confirmar')+' · primeiro dia '+fmtBR(D.inicio),
+      (opcao===1)?('OPÇÃO 1 — diárias avulsas a '+fmtCent(D.conta.diaria_avulsa_cent)+' cada')
+                 :('OPÇÃO 2 — '+(D.mesProximo||'—')+' inteiro + as diárias de '+(D.mesAtual||'—')+' pelo valor do plano')];
+    ms.forEach(function(m){
+      linhas.push(m.nome+': '+((opcao===1)
+        ? (m.diarias+' × '+fmtCent(D.conta.diaria_avulsa_cent)+' = '+fmtCent(m.op1_cent))
+        : (fmtCent(m.mensalidade_cent)+' + '+m.diarias+' × '+fmtCent(m.diaria_plano_cent)+' = '+fmtCent(m.op2_cent))));
+    });
+    linhas.push('TOTAL: '+fmtCent(total));
+    if(D.pendentes.length) linhas.push('Fora da conta: '+D.pendentes.map(function(x){ return x.nome; }).join(', ')+' — falta dado na ficha.');
+    const ok=await zPergunta('CONFIRA ANTES DE GRAVAR', linhas,
+      {sim:'Confirmar e gravar a escolha', nao:'Voltar e conferir', cor:'#234D67', corTitulo:'#234D67',
+       rodape:'Grava na ficha de cada FILHOt da conta. Errou? O botão "Desfazer este registro" tira tudo, com rastro.'});
+    if(!ok) return;
+    const quem=renovQuemAgora(), ts=Date.now();
+    for(let i=0;i<ms.length;i++){
+      const m=ms[i], q=m.pet;
+      const exQ=pelExtra(q)||{}, rQ=Object.assign({}, renovDe(exQ));
+      const antes=(rQ.meio_mes&&typeof rQ.meio_mes==='object')?rQ.meio_mes:null;
+      rQ.meio_mes={opcao:opcao, inicio:D.inicio, diarias:m.diarias,
+        diaria_avulsa_cent:D.conta.diaria_avulsa_cent, diaria_plano_cent:m.diaria_plano_cent,
+        mensalidade_cent:m.mensalidade_cent, total_cent:((opcao===1)?m.op1_cent:m.op2_cent),
+        texto:D.texto, quem:quem, ts:ts};
+      await setPelExtra(q, {renov:rQ});
+      if(typeof audit==='function') audit('plano-meio-mes',
+        m.nome+' — começou em '+fmtBR(D.inicio)+' pela opção '+opcao+' · '+m.diarias+' diária'+(m.diarias===1?'':'s')
+        +' · total '+fmtCent(rQ.meio_mes.total_cent),
+        {alvo:dcKey(q.n, q.tutor), antes:antes});
+    }
+    mmRascLimpar();
+    renderPelFicha();
+    if(typeof zAlertao==='function') zAlertao('ESCOLHA REGISTRADA',
+      ['Opção '+opcao+' · total '+fmtCent(total)+'.',
+       'Ficou na ficha de '+mmJuntar(ms.map(function(m){ return m.nome; }))+'.',
+       'A mensagem para o tutor continua no bloco, pronta para copiar.'], {ok:true, botao:'Fechar'});
+  }
+  async function mmDesfazer(){
+    if(!pelAtual) return;
+    if(typeof canEditPel==='function' && !canEditPel()){
+      if(typeof zAlertao==='function') zAlertao('ESTA AÇÃO NÃO É SUA',
+        ['Desfazer um registro de cobrança é da recepção, da Supervisão ou da Gestão.'], {botao:'Entendi'});
+      return;
+    }
+    const reg=mmRegistroDe(pelExtra(pelAtual));
+    if(!reg){
+      if(typeof zAlertao==='function') zAlertao('NÃO HÁ REGISTRO PARA DESFAZER',
+        ['Este FILHOt não tem escolha de meio de mês registrada.'], {botao:'Entendi'});
+      return;
+    }
+    const pets=mmFamiliaPets(pelAtual).filter(function(q){ return !!mmRegistroDe(pelExtra(q)); });
+    const ok=await zPergunta('DESFAZER O REGISTRO DE MEIO DE MÊS',
+      ['SAI: opção '+(reg.opcao||'—')+' · começo em '+fmtBR(reg.inicio||'')+' · '+fmtCent(reg.total_cent||0),
+       'De: '+mmJuntar(pets.map(function(q){ return pelNome(q); })),
+       'A conta na tela continua igual — só o registro sai. O rastro fica na Linha do tempo do dia.'],
+      {sim:'Desfazer o registro', nao:'Voltar', corTitulo:'#234D67'});
+    if(!ok) return;
+    for(let i=0;i<pets.length;i++){
+      const q=pets[i], exQ=pelExtra(q)||{}, rQ=Object.assign({}, renovDe(exQ));
+      const antes=mmRegistroDe(exQ);
+      delete rQ.meio_mes;
+      await setPelExtra(q, {renov:rQ});
+      if(typeof audit==='function') audit('plano-meio-mes-desfeito',
+        pelNome(q)+' — tirou o registro de meio de mês (opção '+((antes&&antes.opcao)||'—')
+        +' · '+fmtCent((antes&&antes.total_cent)||0)+')',
+        {alvo:dcKey(q.n, q.tutor), antes:antes});
+    }
+    renderPelFicha();
+    if(typeof zAlertao==='function') zAlertao('REGISTRO DESFEITO',
+      ['O registro de meio de mês saiu da ficha de '+mmJuntar(pets.map(function(q){ return pelNome(q); }))+'.'],
+      {ok:true, botao:'Fechar'});
   }
 
   // ---- TELA "Renovação de Planos" (sidebar) ----
@@ -19943,7 +20375,7 @@
     // A validade da coleira mudou (Seresto: 6 → 8 meses) e as fichas antigas guardaram o
     // "Trocar em" velho. Abrir a ficha conserta o dela — uma vez só, com rastro.
     try{ prevColeiraRecalcular(p, ex); }catch(e){} /* silencioso de propósito: guarda defensiva — falhar aqui não pode interromper quem chamou */
-    if(PB_ULT!==i){ PB_PEND={}; PB_SALVO={}; PB_ULT=i; renovRascLimpar(); }   // blocos de prevenção e rascunho do plano: pendente é por FILHOt
+    if(PB_ULT!==i){ PB_PEND={}; PB_SALVO={}; PB_ULT=i; renovRascLimpar(); mmRascLimpar(); }   // blocos de prevenção e rascunhos do plano: pendente é por FILHOt
     const idade=calcIdade(pelNasc(p)); const can=canEditPel();
     document.getElementById('pel-lista').style.display='none';
     const f=document.getElementById('pel-ficha'); f.style.display='block';
@@ -29490,6 +29922,8 @@
       CFG_ENT_ATIVA=(ENTRADA_MSG&&ENTRADA_MSG.ativa!==false);
       if(typeof cfgPrevRender==='function') cfgPrevRender();
       if(typeof cfgFotosRender==='function') cfgFotosRender();
+      if(typeof cfgValoresRender==='function') cfgValoresRender();
+      if(typeof dcValoresCarregar==='function') dcValoresCarregar();
       if(typeof cfgEntradaRender==='function') cfgEntradaRender();
     }catch(e){} /* silencioso de propósito: guarda defensiva — falhar aqui não pode interromper quem chamou */
   }
@@ -29627,6 +30061,42 @@
       cfgFotosRender();
     }).catch(function(e){
       _logFalhaGrav('daycare/config/fotos (cfgFotosSalvar)', e);
+      if(st){ st.style.color='var(--crm-critico)'; st.textContent='❌ Não salvou: '+((e&&e.message)||e); }
+    });
+  }
+  // ===== CONFIGURAÇÕES › VALORES DO DAY CARE (Adriana, 18/set/2026) =================
+  // A diária avulsa. Um número só, e é dinheiro: por isso o rastro diz de quanto para
+  // quanto, e nada sai daqui sem o botão. Zero e vazio não passam — preço em branco viraria
+  // conta em R$ 0,00 na cara do tutor.
+  function cfgValoresRender(){
+    const w=document.getElementById('cfgValoresWrap'); if(!w) return;
+    const v=diariaAvulsaCent();
+    const padrao=(dcValores().diaria_avulsa_cent==null);
+    w.innerHTML='<div><label class="cad-lb">Diária avulsa</label>'
+      +'<input class="cad-in" id="cfgDiariaAvulsa" inputmode="decimal" value="'+(v/100).toFixed(2).replace('.',',')+'">'
+      +'<div class="hint" style="margin-top:3px">Hoje vale <strong>'+esc(fmtCent(v))+'</strong>'
+      +(padrao?' — ainda é o valor de fábrica da tabela de 2026; salve para deixá-lo seu.':' — salvo por você.')+'</div></div>'
+      +'<div class="hint" style="margin-top:8px">Este é o valor que a aba <strong>Plano</strong> da ficha usa na 1ª opção de quem começa no meio do mês, e o que o quadro <strong>Recebimentos do mês</strong> mostra como preço do dia avulso.</div>'
+      +'<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px">'
+      +'<button type="button" class="btn btn-gold" onclick="cfgValoresSalvar()">Salvar valores</button></div>'
+      +'<div id="cfgValoresSt" class="hint" style="margin-top:6px"></div>';
+  }
+  function cfgValoresSalvar(){
+    const st=document.getElementById('cfgValoresSt');
+    const bruto=String(((document.getElementById('cfgDiariaAvulsa')||{}).value||'')).replace(/\./g,'').replace(',','.');
+    const n=parseFloat(bruto);
+    if(isNaN(n)||n<=0){ if(st){ st.style.color='var(--crm-critico)'; st.textContent='A diária avulsa precisa ser um valor maior que zero. Nada foi salvo.'; } return; }
+    const novo=Math.round(n*100), antes=diariaAvulsaCent();
+    if(!DB){ if(st){ st.style.color='var(--crm-critico)'; st.textContent='Banco reconectando — não salvei. Tente de novo em instantes.'; } return; }
+    DB.ref('daycare/config/valores').update({diaria_avulsa_cent:novo}).then(function(){
+      dcValoresCfg=Object.assign({}, dcValoresCfg||{}, {diaria_avulsa_cent:novo});
+      try{ if(typeof audit==='function') audit('config-valores-daycare',
+        'diária avulsa: '+fmtCent(antes)+' → '+fmtCent(novo), {antes:antes, depois:novo}); }catch(e){} /* silencioso de propósito: o audit() tem bolso próprio e reenvia sozinho */
+      if(st){ st.style.color='var(--crm-ok)'; st.textContent='✓ Salvo. Vale para as contas novas — o que já foi registrado guarda o preço da época.'; }
+      cfgValoresRender();
+      try{ if(typeof recRedesenhar==='function') recRedesenhar(); }catch(e){} /* silencioso de propósito: redesenho de tela — falhar não pode derrubar quem chamou */
+    }).catch(function(e){
+      _logFalhaGrav('daycare/config/valores (cfgValoresSalvar)', e);
       if(st){ st.style.color='var(--crm-critico)'; st.textContent='❌ Não salvou: '+((e&&e.message)||e); }
     });
   }
@@ -39661,9 +40131,10 @@
    *    02/set/2026.
    *  · Hospedagem sai de auaulandia/orcamentos, só os FECHADOS: a parcela da reserva no
    *    mês em que o tutor fechou e a parcela do dia no mês da entrada.
-   *  · Diária avulsa: o app registra QUEM veio de avulso, nunca QUANTO se cobrou — não
-   *    existe preço de diária avulsa em lugar nenhum do banco. Por isso a linha aparece
-   *    SEM VALOR, dizendo o porquê. Inventar um preço num quadro de dinheiro seria mentir.
+   *  · Diária avulsa: desde 18/set/2026 o PREÇO do dia existe (Configurações › Valores do
+   *    Day Care) e a linha o mostra. O que continua não existindo é o registro de QUANTAS
+   *    diárias foram cobradas no mês — por isso a linha não entra na soma, e diz o porquê.
+   *    Inventar uma quantidade num quadro de dinheiro seria mentir.
    *
    * NENHUMA CONTA NASCE AQUI. Cada linha é a soma das linhas que o finResumoMes já
    * calculou e o harness já provou (porFILHOt). Se a régua do dinheiro mudar, ela muda lá
@@ -39819,12 +40290,17 @@
         +'<span class="pm-li-fim rec-val">'+esc(finBRL(L.valor))+'</span>'
         +'</div>';
     });
+    // A diária avulsa passou a TER preço (Adriana, 18/set/2026 — Configurações › Valores do
+    // Day Care). O que continua não existindo é o registro de QUANTAS diárias foram cobradas
+    // no mês: por isso o quadro mostra o preço do dia, e não uma soma inventada.
+    const avCent=(typeof diariaAvulsaCent==='function')?diariaAvulsaCent():0;
     h+='<div class="pm-li">'
       +'<div class="pm-li-txt"><b>Diária avulsa</b>'
-      +'<span>o app registra quem veio de avulso, nunca o preço do dia — não há valor para somar'
+      +'<span>hoje o dia avulso custa '+esc(fmtCent(avCent))+' (Configurações &rsaquo; Valores do Day Care). '
+      +'O app registra quem veio de avulso, nunca quantas diárias foram cobradas — por isso não entra na soma'
       +(av==null?'':(' &middot; '+esc(pmPlural(av,'FILHOt avulso na carteira','FILHOts avulsos na carteira'))))
       +'</span></div>'
-      +'<span class="pm-li-fim rec-val rec-val-sem">sem valor</span>'
+      +'<span class="pm-li-fim rec-val rec-val-sem">'+esc(fmtCent(avCent))+' cada</span>'
       +'</div>';
     h+='<div class="pm-li rec-total">'
       +'<div class="pm-li-txt"><b>Total de '+esc(rot)+'</b><span>a soma das linhas com valor acima</span></div>'
