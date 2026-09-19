@@ -3532,6 +3532,211 @@ async function main() {
   }
   console.log('');
 
+  // ===== v-25 - FIM DE ANO E A TABELA QUE MUDOU DE CASA (Adriana, 19/set/2026) ======
+  // Duas frases dela no mesmo dia:
+  //   "Em orcamento quero que coloque mais uma opcao: fim de ano! que ira do dia 21/12 a
+  //    11/01/27."
+  //   "Sobre os valores de hospedagem, eu preciso ter autonomia para modificar sem depender
+  //    de voces. Em configuracoes precisa ter como colocar valores de hospedagem."
+  // A tabela (valores + feriados + ponte da planilha) saiu da tela de Orcamento e foi para
+  // Configuracoes. E nasceu a terceira temporada — ZERADA de proposito: sem preco, a conta
+  // NAO acontece, e a tela diz o que falta em vez de entregar hospedagem de graca.
+  console.log('v-25 · Orçamento — fim de ano e os valores da hospedagem em Configurações:');
+  {
+    const fatiaView = (id) => {
+      const i = html.indexOf('id="' + id + '"');
+      if (i < 0) return '';
+      const j = html.indexOf('<section class="view"', i + 10);
+      return html.slice(i, j < 0 ? html.length : j);
+    };
+    const daConfig = fatiaView('v-config');
+    const doOrcamento = fatiaView('v-orcamento');
+
+    // ---- (a) a tabela mudou de casa -------------------------------------------------
+    check('v-25 · o #orcConfig mora dentro da tela de Configurações',
+      daConfig.indexOf('<div id="orcConfig"></div>') > 0, 'fatia de v-config com ' + daConfig.length + ' letras');
+    check('v-25 · e NÃO existe mais na tela de Orçamento — uma tabela só, num lugar só',
+      doOrcamento.indexOf('id="orcConfig"') < 0);
+    check('v-25 · o cartão chama-se "Valores da hospedagem" e é o PRIMEIRO da tela de Configurações',
+      daConfig.indexOf('<h2 style="font-size:19px">Valores da hospedagem</h2>') > 0
+      && daConfig.indexOf('id="cardValoresHospedagem"') > 0
+      && daConfig.indexOf('Valores da hospedagem</h2>') < daConfig.indexOf('Avisos no Telegram</h2>'));
+    check('v-25 · continua sendo só da Gestão (so-master), como era na tela de Orçamento',
+      /<div class="card so-master" id="cardValoresHospedagem">/.test(html));
+    check('v-25 · a tela de Orçamento deixou a placa dizendo onde os valores estão, com botão',
+      doOrcamento.indexOf('Configurações &rsaquo; Valores da hospedagem') > 0
+      && doOrcamento.indexOf("abrirItemDoMenu('config')") > 0);
+    check('v-25 · abrir Configurações desenha a tabela (senão ela abriria vazia)',
+      /if\(v==='config'\)\{[^}]*orcAbrirConfig\(\)/.test(html)
+      && /function orcAbrirConfig\(\)\{/.test(html));
+    check('v-25 · a tela de Configurações diz, no alto, que os valores da hospedagem moram ali',
+      daConfig.indexOf('<strong>valores da hospedagem</strong>') > 0);
+
+    // ---- (b) a tabela de fábrica ----------------------------------------------------
+    const mpf = html.match(/ORC_PRECOS_PADRAO=\{ pernoite:\{baixa:(\d+), alta:(\d+), fim:(\d+)\}, diaria:\{baixa:(\d+), alta:(\d+), fim:(\d+)\},\s*\n?\s*fim_de:'(\d{2}-\d{2})', fim_ate:'(\d{2}-\d{2})' \}/);
+    check('v-25 · ORC_PRECOS_PADRAO tem pernoite.fim e diaria.fim ZERADOS — quem põe preço é ela',
+      !!mpf && +mpf[3] === 0 && +mpf[6] === 0, JSON.stringify(mpf && mpf.slice(1)));
+    check('v-25 · o período de fábrica é 21/12 a 11/01, guardado como MM-DD',
+      !!mpf && mpf[7] === '12-21' && mpf[8] === '01-11');
+
+    // ---- (c) o seletor e a tabela desenhados de verdade ------------------------------
+    if (typeof ctx.orcRenderConfig === 'function' && typeof ctx.orcRenderTemporada === 'function') {
+      const geOrig25 = ctx.document.getElementById;
+      const els25 = {
+        orcConfig: { innerHTML: '' }, orcTemporada: { innerHTML: '' }, orcTemporadaNota: { innerHTML: '' },
+      };
+      try {
+        ctx.document.getElementById = function (id) {
+          return (id in els25) ? els25[id] : geOrig25.call(this, id);
+        };
+        vm.runInContext("__bkp25={precos:orcPrecosCfg, temp:ORC_TEMP, man:ORC_TEMP_MANUAL, auto:ORC_TEMP_AUTO, sel:ORC_SEL, rep:ORC_REP};"
+          + "orcPrecosCfg=null; ORC_TEMP='baixa'; ORC_TEMP_MANUAL=false; ORC_TEMP_AUTO=false;", ctx);
+
+        ctx.orcRenderConfig();
+        const cfg = els25.orcConfig.innerHTML;
+        check('v-25 · a tabela desenha os dois campos de fim de ano',
+          cfg.indexOf('id="orcPvFim"') > 0 && cfg.indexOf('id="orcDvFim"') > 0
+          && cfg.indexOf('Pernoite — fim de ano') > 0 && cfg.indexOf('Diária de hotel — fim de ano') > 0);
+        check('v-25 · e o PERÍODO editável — começa em / termina em, em dia/mês',
+          cfg.indexOf('id="orcFimDe"') > 0 && cfg.indexOf('id="orcFimAte"') > 0
+          && cfg.indexOf('Fim de ano começa em (dia/mês)') > 0
+          && cfg.indexOf('Fim de ano termina em (dia/mês)') > 0);
+        check('v-25 · o período de hoje aparece escrito como 21/12 a 11/01',
+          cfg.indexOf('21/12') > 0 && cfg.indexOf('11/01') > 0);
+        check('v-25 · o bloco do fim de ano tem endereço próprio (#orcCfgFimAno)',
+          cfg.indexOf('id="orcCfgFimAno"') > 0);
+        check('v-25 · nada grava antes do botão: a tela diz isso com todas as letras',
+          cfg.indexOf('Nada é gravado antes deste botão') > 0
+          && cfg.indexOf('onclick="orcSalvarPrecos()"') > 0);
+        check('v-25 · os feriados e a ponte da planilha vieram junto — é o mesmo #orcConfig',
+          cfg.indexOf('Feriados (não entregamos)') > 0 && cfg.indexOf('Ponte com a planilha') > 0);
+
+        ctx.orcRenderTemporada();
+        const sel = els25.orcTemporada.innerHTML;
+        check('v-25 · o seletor tem TRÊS botões: Baixa · Alta · Fim de ano',
+          sel.indexOf('Baixa temporada') > 0 && sel.indexOf('Alta temporada') > 0
+          && sel.indexOf('Fim de ano') > 0 && (sel.match(/<button /g) || []).length === 3,
+          String((sel.match(/<button /g) || []).length) + ' botões');
+        check('v-25 · sem preço, o botão do fim de ano NÃO mostra R$ 0,00 — diz que falta preencher',
+          sel.indexOf('Sem valor ainda') > 0 && sel.indexOf('preencha em Configurações') > 0);
+      } finally {
+        ctx.document.getElementById = geOrig25;
+        vm.runInContext("orcPrecosCfg=__bkp25.precos; ORC_TEMP=__bkp25.temp; ORC_TEMP_MANUAL=__bkp25.man;"
+          + "ORC_TEMP_AUTO=__bkp25.auto; ORC_SEL=__bkp25.sel; ORC_REP=__bkp25.rep;", ctx);
+      }
+    } else { check('v-25 · orcRenderConfig e orcRenderTemporada existem', false, 'função não encontrada'); }
+
+    // ---- (d) a temporada se marca sozinha e a conta usa o preço certo -----------------
+    if (typeof ctx.orcCalcular === 'function' && typeof ctx.orcNoFimDeAno === 'function') {
+      // O ano é calculado a partir de HOJE: o teste não pode apodrecer em dezembro.
+      const hj = new Date();
+      const anoFim = (hj.getMonth() === 11 && hj.getDate() >= 20) ? hj.getFullYear() + 1 : hj.getFullYear();
+      const ENT = anoFim + '-12-23', SAI = (anoFim + 1) + '-01-03';
+      const geOrig25b = ctx.document.getElementById;
+      const els = {
+        orcEntrada: { value: ENT }, orcSaida: { value: SAI },
+        orcCardResultado: { style: {} }, orcCardMsg: { style: {} },
+        orcAvisoData: { innerHTML: '' }, orcTemporada: { innerHTML: '' },
+        orcTemporadaNota: { innerHTML: '' }, orcResultado: { innerHTML: '' },
+        orcMsg: { value: '' }, orcSalvoStatus: { style: {}, textContent: '' },
+      };
+      try {
+        ctx.document.getElementById = function (id) {
+          return (id in els) ? els[id] : geOrig25b.call(this, id);
+        };
+        vm.runInContext("__bkp25b={precos:orcPrecosCfg, temp:ORC_TEMP, man:ORC_TEMP_MANUAL, auto:ORC_TEMP_AUTO,"
+          + "sel:ORC_SEL, rep:ORC_REP, calc:ORC_CALC, aul:ORC_AULUNO};"
+          + "orcPrecosCfg={pernoite:{baixa:8500,alta:9700,fim:0},diaria:{baixa:13000,alta:15000,fim:0},"
+          + "fim_de:'12-21',fim_ate:'01-11'};"
+          + "ORC_TEMP='baixa'; ORC_TEMP_MANUAL=false; ORC_TEMP_AUTO=false; ORC_REP={}; ORC_AULUNO=false;"
+          + "ORC_SEL=[{key:'fim-de-ano__harness', nome:'Teste', tutor:'Harness', raca:'SRD', dias:[],"
+          + "trocas:{}, planoKey:'', rotulo:'não é auluno', compromisso:'', hospOff:0, semCadastro:true}];", ctx);
+
+        check('v-25 · 23/12 e 03/01 caem no fim de ano; 15/11 não cai',
+          ctx.orcNoFimDeAno(ENT) && ctx.orcNoFimDeAno(SAI) && !ctx.orcNoFimDeAno(anoFim + '-11-15'));
+        check('v-25 · a virada do ano é respeitada: 21/12 e 11/01 são as bordas, 12/01 já está fora',
+          ctx.orcNoFimDeAno(anoFim + '-12-21') && ctx.orcNoFimDeAno((anoFim + 1) + '-01-11')
+          && !ctx.orcNoFimDeAno((anoFim + 1) + '-01-12'));
+
+        // --- sem preço: a conta NÃO sai, e a tela diz por quê
+        ctx.orcCalcular();
+        check('v-25 · uma estadia de 23/12 a 03/01 marca "Fim de ano" sozinha',
+          ctx.ORC_TEMP === 'fim' && ctx.ORC_TEMP_AUTO === true, 'ORC_TEMP=' + ctx.ORC_TEMP);
+        check('v-25 · e a tela diz que foi ela quem marcou — a pessoa pode trocar à mão',
+          els.orcTemporadaNota.innerHTML.indexOf('Marcado sozinho: a estadia cai no fim de ano') > 0
+          && els.orcTemporadaNota.innerHTML.indexOf('21/12 a 11/01') > 0,
+          els.orcTemporadaNota.innerHTML.slice(0, 120));
+        check('v-25 · com o preço do fim de ano zerado, o total NÃO é calculado',
+          ctx.ORC_CALC === null && els.orcCardResultado.style.display === 'none'
+          && els.orcCardMsg.style.display === 'none');
+        check('v-25 · e aparece "Falta o valor do fim de ano" — nunca em silêncio',
+          els.orcAvisoData.innerHTML.indexOf('Falta o valor do fim de ano') > 0
+          && els.orcAvisoData.innerHTML.indexOf('Configurações') > 0,
+          els.orcAvisoData.innerHTML.slice(0, 160));
+        check('v-25 · o botão de salvar também trava com a MESMA frase',
+          (() => {
+            els.orcSalvoStatus.textContent = '';
+            ctx.orcSalvar();
+            return els.orcSalvoStatus.textContent.indexOf('Falta o valor do fim de ano') === 0;
+          })(), els.orcSalvoStatus.textContent);
+
+        // --- com preço: a conta usa o preço do FIM DE ANO
+        vm.runInContext("orcPrecosCfg={pernoite:{baixa:8500,alta:9700,fim:12000},"
+          + "diaria:{baixa:13000,alta:15000,fim:19000},fim_de:'12-21',fim_ate:'01-11'};", ctx);
+        ctx.orcCalcular();
+        const C = ctx.ORC_CALC;
+        check('v-25 · com o preço preenchido, a conta sai e fica marcada como fim de ano',
+          !!C && C.temporada === 'fim' && C.alta === false, JSON.stringify(C && { t: C.temporada, n: C.noites }));
+        check('v-25 · e o valor usado é o do FIM DE ANO (19000 a diária), não o da baixa',
+          !!C && C.pets[0].vDia === 19000 && C.pets[0].vPer === 12000
+          && C.total === C.noites * 19000,
+          JSON.stringify(C && { vDia: C.pets[0].vDia, total: C.total, noites: C.noites }));
+        check('v-25 · o resumo escreve "temporada de FIM DE ANO" em português',
+          els.orcResultado.innerHTML.indexOf('temporada de FIM DE ANO') > 0);
+
+        // --- trocar à mão desliga o automático
+        ctx.orcSetTemporada('baixa');
+        check('v-25 · trocar à mão manda no automático: volta para baixa e lá fica',
+          ctx.ORC_TEMP === 'baixa' && ctx.ORC_TEMP_MANUAL === true
+          && ctx.ORC_CALC && ctx.ORC_CALC.temporada === 'baixa'
+          && ctx.ORC_CALC.pets[0].vDia === 13000);
+        check('v-25 · e o aviso "marcado sozinho" some quando a escolha passa a ser dela',
+          els.orcTemporadaNota.innerHTML.indexOf('Marcado sozinho') < 0);
+      } finally {
+        ctx.document.getElementById = geOrig25b;
+        vm.runInContext("orcPrecosCfg=__bkp25b.precos; ORC_TEMP=__bkp25b.temp; ORC_TEMP_MANUAL=__bkp25b.man;"
+          + "ORC_TEMP_AUTO=__bkp25b.auto; ORC_SEL=__bkp25b.sel; ORC_REP=__bkp25b.rep;"
+          + "ORC_CALC=__bkp25b.calc; ORC_AULUNO=__bkp25b.aul;", ctx);
+      }
+    } else { check('v-25 · orcCalcular e orcNoFimDeAno existem', false, 'função não encontrada'); }
+
+    // ---- (e) o que já está no banco continua sendo lido -------------------------------
+    if (typeof ctx.orcTempDe === 'function' && typeof ctx.orcTempCurto === 'function') {
+      check('v-25 · orçamento antigo com alta_temporada:true lê como "alta"',
+        ctx.orcTempDe({ alta_temporada: true }) === 'alta');
+      check('v-25 · orçamento antigo com alta_temporada:false lê como "baixa"',
+        ctx.orcTempDe({ alta_temporada: false }) === 'baixa' && ctx.orcTempDe({}) === 'baixa');
+      check('v-25 · quando existe o campo novo, é ele que manda',
+        ctx.orcTempDe({ temporada: 'fim', alta_temporada: false }) === 'fim'
+        && ctx.orcTempDe({ temporada: 'baixa', alta_temporada: true }) === 'baixa');
+      check('v-25 · a etiqueta curta das listas: ALTA · FIM DE ANO · (baixa não escreve nada)',
+        ctx.orcTempCurto({ temporada: 'alta' }) === 'ALTA'
+        && ctx.orcTempCurto({ temporada: 'fim' }) === 'FIM DE ANO'
+        && ctx.orcTempCurto({ temporada: 'baixa' }) === '');
+    } else { check('v-25 · orcTempDe e orcTempCurto existem', false, 'função não encontrada'); }
+
+    check('v-25 · gravar escreve o campo NOVO e mantém o antigo (nada que já lê alta_temporada quebra)',
+      (html.match(/temporada:C\.temporada\|\|\(C\.alta\?'alta':'baixa'\), alta_temporada:!!C\.alta,/g) || []).length === 2);
+    check('v-25 · a lista de orçamentos e o relatório mostram FIM DE ANO',
+      (html.match(/orcTempCurto\(o\)/g) || []).length >= 3);
+    check('v-25 · a auditoria da tabela diz o que mudou, de quanto para quanto',
+      /audit\('orcamento-precos',\s*\n?\s*mudou\.length\?\('alterou a tabela de hospedagem — '\+mudou\.join/.test(html)
+      && /\{antes:antes, depois:novo\}/.test(html));
+    check('v-25 · a versão carimbada desta entrega é a 2026-09-19-03',
+      /const APP_VERSAO='2026-09-19-03';/.test(html));
+  }
+  console.log('');
+
   // ===== v-22 - O CARTAO "CADASTRO INCOMPLETO" NASCE RECOLHIDO ======================
   // Adriana, 17/set/2026, no check-in da Lisa (tutora Nilce, aluna ha anos): o cartao
   // aparecia inteiro, exposto, e incomodava. Continua sendo AVISO — nao trava o check-in.
@@ -4837,10 +5042,11 @@ async function main() {
     {
       // os precos sao `const` dentro do script, entao o teste os le do arquivo: e a
       // mesma fonte que a tela usa, e assim a conta e conferida de verdade
-      const mp = html.match(/ORC_PRECOS_PADRAO=\{ pernoite:\{baixa:(\d+), alta:(\d+)\}, diaria:\{baixa:(\d+), alta:(\d+)\}/);
+      // 19/set/2026: a tabela ganhou a terceira temporada (fim de ano), que nasce ZERADA.
+      const mp = html.match(/ORC_PRECOS_PADRAO=\{ pernoite:\{baixa:(\d+), alta:(\d+), fim:(\d+)\}, diaria:\{baixa:(\d+), alta:(\d+), fim:(\d+)\}/);
       check('achei a tabela de precos no arquivo', !!mp);
-      const P = mp ? { pernoite: { baixa: +mp[1], alta: +mp[2] }, diaria: { baixa: +mp[3], alta: +mp[4] } }
-                   : { pernoite: { baixa: 0, alta: 0 }, diaria: { baixa: 0, alta: 0 } };
+      const P = mp ? { pernoite: { baixa: +mp[1], alta: +mp[2], fim: +mp[3] }, diaria: { baixa: +mp[4], alta: +mp[5], fim: +mp[6] } }
+                   : { pernoite: { baixa: 0, alta: 0, fim: 0 }, diaria: { baixa: 0, alta: 0, fim: 0 } };
       check('o pernoite e mais barato que a diaria (senao a troca nao economiza nada)',
         P.pernoite.baixa < P.diaria.baixa && P.pernoite.alta < P.diaria.alta,
         JSON.stringify(P));
@@ -13059,7 +13265,7 @@ async function main() {
         !/\.catch\(function\([a-z]*\)\{\s*\}\)/.test(
           html.slice(html.indexOf('const CK_FRASE_PRATICA='), html.indexOf('function renderCkInicio('))));
       check('v-14 · a versão carimbada é a desta entrega',
-        /const APP_VERSAO='2026-09-19-02';/.test(html));
+        /const APP_VERSAO='2026-09-19-03';/.test(html));
     }
 
     // ---- v-15: O PLANO SÓ GRAVA NO CONFIRMAR (caso Cookie/Yara, 15/set/2026) --------
@@ -13874,8 +14080,8 @@ async function main() {
           + 'AVISO_COLEIRA_APOS = __bkpC.apos;', ctx);
       }
     } else { check('v-17 · prevCfgCarregar existe', false, 'função não encontrada'); }
-    check('v-24 · a versão carimbada desta entrega é a 2026-09-19-02',
-      /const APP_VERSAO='2026-09-19-02';/.test(html));
+    check('v-24 · a versão carimbada desta entrega é a 2026-09-19-03',
+      /const APP_VERSAO='2026-09-19-03';/.test(html));
 
     // ───────── v-19 · o aparelho autorizado que não se perde no iPhone (16/set/2026)
     // Auditoria de 16/set: o iPhone da Leticya gerou DOIS ids em trinta segundos

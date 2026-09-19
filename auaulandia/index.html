@@ -2630,7 +2630,7 @@
     <div class="acc so-gestao" data-acc="operacao">
       <a class="grp nav-parent" data-acc-toggle="operacao"><span data-icon="settings"></span><span>Configurações</span><span class="acc-caret" aria-hidden="true"></span></a>
       <div class="acc-panel">
-        <a data-v="config" class="so-master" title="Telegram, ponte da planilha, horários esperados e os logins."><span data-icon="settings"></span><span>Configurações</span></a>
+        <a data-v="config" class="so-master" title="Valores da hospedagem, Telegram, ponte da planilha, horários esperados e os logins."><span data-icon="settings"></span><span>Configurações</span></a>
         <!-- ESCALA E PLANO DO DIA (Fase 2.1) — o que alimenta o "Meu dia" de cada monitor.
              É ajuste: é aqui que a Márcia define quem trabalha e qual plano vale hoje.
              Escondido por padrão; aplicarPermMenu() mostra pelo PERM. -->
@@ -4198,7 +4198,16 @@
        só o que se lê e se baixa. Os ids dos campos são os MESMOS (tgUrl, tgSenha, tgStatus),
        então tgCarregarCfg/tgSalvarCfg/tgTestar continuam achando tudo onde sempre acharam. -->
   <section class="view" id="v-config">
-    <div class="role-note so-master"><span data-icon="lock"></span><span>Os <strong>ajustes do sistema</strong>. Mexer aqui muda o jeito como o app fala com o Telegram e com a planilha — por isso só a Gestão e a Diretoria entram.</span></div>
+    <div class="role-note so-master"><span data-icon="lock"></span><span>Os <strong>ajustes do sistema</strong>. É aqui que moram os <strong>valores da hospedagem</strong> — pernoite, diária e fim de ano — e o jeito como o app fala com o Telegram e com a planilha. Por isso só a Gestão e a Diretoria entram.</span></div>
+    <!-- VALORES DA HOSPEDAGEM (Adriana, 19/set/2026) — veio da tela de Orçamento. "Preciso
+         ter autonomia para modificar sem depender de vocês." É a lei de 22/ago/2026: o que
+         ela muda sozinha tem de estar na tela. O #orcConfig é o mesmo de sempre — a tabela,
+         os feriados e a ponte da planilha de Hospedagem desenham dentro dele. -->
+    <div class="card so-master" id="cardValoresHospedagem">
+      <h2 style="font-size:19px">Valores da hospedagem</h2>
+      <div class="hint">O preço do <strong>pernoite</strong> e da <strong>diária de hotel</strong> em cada temporada — baixa, alta e <strong>fim de ano</strong> —, os feriados em que a casa não recebe nem entrega, e a ponte com a planilha de Hospedagem. Os valores valem para todos os orçamentos <strong>novos</strong>: os já salvos guardam o preço da época. Nada é gravado antes do botão <strong>Salvar tabela</strong>.</div>
+      <div id="orcConfig"></div>
+    </div>
     <div class="card so-master">
       <h2 style="font-size:19px">Avisos no Telegram</h2>
       <div class="hint">Quando a monitora marca uma alteração no check-in e tira a foto, a foto vai <strong>sozinha</strong> para o grupo da veterinária — com o nome do FILHOt, o que foi encontrado e quem viu. Ninguém precisa lembrar de mandar.</div>
@@ -4340,6 +4349,7 @@
       <div style="margin-top:14px">
         <label class="cad-lb">Temporada</label>
         <div id="orcTemporada" class="orc-temp"></div>
+        <div id="orcTemporadaNota"></div>
       </div>
     </div>
 
@@ -4365,10 +4375,14 @@
       <div id="orcLista"></div>
     </div>
 
-    <div class="card so-master">
-      <h2 style="font-size:19px">Tabela e feriados</h2>
-      <div class="hint">Só a Gestão altera. Os valores valem para todos os orçamentos novos — os já salvos guardam o preço da época.</div>
-      <div id="orcConfig"></div>
+    <!-- A TABELA MUDOU DE CASA (Adriana, 19/set/2026): "Sobre os valores de hospedagem, eu
+         preciso ter autonomia para modificar sem depender de vocês. Em configurações
+         precisa ter como colocar valores de hospedagem." Os valores, os feriados e a ponte
+         da planilha vivem agora em Configurações › Valores da hospedagem — o #orcConfig é
+         o MESMO, só mudou de tela. Aqui fica a placa que diz onde eles estão. -->
+    <div class="card">
+      <div class="hint">Os <strong>valores da hospedagem</strong>, os feriados e a ponte com a planilha agora moram em <strong>Configurações &rsaquo; Valores da hospedagem</strong>. Só a Gestão altera; os orçamentos já salvos guardam o preço da época.</div>
+      <button type="button" class="btn btn-gold so-master" style="margin-top:9px" onclick="abrirItemDoMenu('config')">Abrir Configurações &rsaquo; Valores da hospedagem</button>
     </div>
   </section>
 
@@ -5119,7 +5133,7 @@
     if(v==='daycare'){ if(typeof abrirDayCare==='function') abrirDayCare(); }
     if(v==='orcamento'){ if(typeof orcInit==='function') orcInit(); }
     if(v==='relatorios'){ if(typeof renderRelatorios==='function') renderRelatorios(); if(typeof orcCarregarLista==='function') orcCarregarLista(); }
-    if(v==='config'){ if(typeof configCarregar==='function') configCarregar(); if(typeof cfgLoginsCarregar==='function') cfgLoginsCarregar(); if(typeof protoCarregar==='function') protoCarregar(); }
+    if(v==='config'){ if(typeof configCarregar==='function') configCarregar(); if(typeof cfgLoginsCarregar==='function') cfgLoginsCarregar(); if(typeof protoCarregar==='function') protoCarregar(); if(typeof orcAbrirConfig==='function') orcAbrirConfig(); }
     if(v==='linhadotempo'){ if(typeof ltAbrir==='function') ltAbrir(); }
     if(v==='acerto'){ if(typeof acertoCarregar==='function') acertoCarregar(); }
     if(v==='ritmo'){ if(typeof ritmoCarregar==='function') ritmoCarregar(); }
@@ -10866,9 +10880,47 @@
   // DIÁRIA de hotel. O desconto do plano cai SÓ na diária — pernoite nunca tem desconto.
   //
   // Preços em CENTAVOS (nunca float: R$ 0,01 de erro em orçamento é dinheiro real).
-  const ORC_PRECOS_PADRAO={ pernoite:{baixa:8500, alta:9700}, diaria:{baixa:13000, alta:15000} };
+  //
+  // ===== FIM DE ANO — a terceira temporada (Adriana, 19/set/2026) ===================
+  // "Em orçamento quero que coloque mais uma opção: fim de ano! Que irá do dia 21/12 a
+  //  11/01/27." O valor NASCE ZERADO de propósito: quem põe preço é ela, na tela de
+  //  Configurações. Zero não vira conta — a tela diz o que falta e trava, nunca calcula
+  //  uma hospedagem de graça em silêncio.
+  // O PERÍODO também é dela: fim_de e fim_ate ficam no banco no formato MM-DD, então no
+  //  ano que vem ela muda a data sozinha, sem programador (lei de 22/ago/2026).
+  const ORC_PRECOS_PADRAO={ pernoite:{baixa:8500, alta:9700, fim:0}, diaria:{baixa:13000, alta:15000, fim:0},
+                            fim_de:'12-21', fim_ate:'01-11' };
   let orcPrecosCfg=null;
   function orcPrecos(){ return orcPrecosCfg||ORC_PRECOS_PADRAO; }
+  // MM-DD guardado no banco; dd/mm na tela e na boca de quem fala.
+  function orcMD(v, padrao){ var t=String(v||'').trim(); return /^\d{2}-\d{2}$/.test(t)?t:padrao; }
+  function orcFimDe(){ return orcMD(orcPrecos().fim_de, ORC_PRECOS_PADRAO.fim_de); }
+  function orcFimAte(){ return orcMD(orcPrecos().fim_ate, ORC_PRECOS_PADRAO.fim_ate); }
+  function orcMDBR(md){ var t=orcMD(md,''); return t?(t.slice(3)+'/'+t.slice(0,2)):'—'; }
+  function orcFimPeriodoBR(){ return orcMDBR(orcFimDe())+' a '+orcMDBR(orcFimAte()); }
+  // O fim de ano VIRA O ANO: começa em dezembro e acaba em janeiro. Por isso a comparação
+  // é por dia-e-mês, e quando o começo é depois do fim o intervalo é a UNIÃO das duas pontas.
+  function orcNoFimDeAno(iso){
+    if(!iso||String(iso).length<10) return false;
+    var md=String(iso).slice(5), de=orcFimDe(), ate=orcFimAte();
+    return (de<=ate) ? (md>=de&&md<=ate) : (md>=de||md<=ate);
+  }
+  // 'baixa' | 'alta' | 'fim' — nunca booleano. O booleano só sobrevive gravado, por
+  // compatibilidade com o que já está no banco e nas telas que leem alta_temporada.
+  function orcTempDe(o){
+    o=o||{};
+    var t=String(o.temporada||'').toLowerCase();
+    if(t==='baixa'||t==='alta'||t==='fim') return t;
+    return o.alta_temporada?'alta':'baixa';
+  }
+  function orcTempLabel(t){ return t==='alta'?'ALTA temporada':(t==='fim'?'temporada de FIM DE ANO':'baixa temporada'); }
+  function orcTempCurto(o){ var t=(typeof o==='string')?o:orcTempDe(o); return t==='alta'?'ALTA':(t==='fim'?'FIM DE ANO':''); }
+  function orcPrecoDe(t){
+    var P=orcPrecos(), k=(t==='alta'||t==='fim')?t:'baixa';
+    return { dia:+(((P.diaria)||{})[k])||0, per:+(((P.pernoite)||{})[k])||0 };
+  }
+  const ORC_FALTA_FIM='Falta o valor do fim de ano — preencha em Configurações › Valores da hospedagem.';
+  function orcFaltaPrecoFim(){ var v=orcPrecoDe('fim'); return !v.dia||!v.per; }
   // Não entregamos domingo nem feriado. Feriados nacionais + estaduais (MG) + municipais de
   // Belo Horizonte — 15/08 (Assunção de Nossa Senhora) e 08/12 (Imaculada Conceição) são os
   // dois municipais de BH; 12/12 (aniversário da cidade) NÃO é feriado, foi unificado ao 08/12
@@ -11188,23 +11240,54 @@
     ORC_REP[key]=Math.max(0, +n||0);
     orcCalcular();
   }
-  var ORC_ALTA=false;
-  function orcSetTemporada(alta){ ORC_ALTA=!!alta; orcRenderTemporada(); orcCalcular(); }
+  // Três temporadas desde 19/set/2026. ORC_TEMP substituiu o antigo ORC_ALTA (booleano):
+  // com três opções, sim/não já não dá conta. O gravado continua levando alta_temporada
+  // junto, para nada que já lê esse campo quebrar.
+  var ORC_TEMP='baixa';
+  var ORC_TEMP_MANUAL=false;   // alguém escolheu à mão: o automático não mexe mais
+  var ORC_TEMP_AUTO=false;     // foi o sistema que marcou: a tela diz isso com todas as letras
+  function orcSetTemporada(t){
+    ORC_TEMP=(t==='alta'||t==='fim')?t:'baixa';
+    ORC_TEMP_MANUAL=true; ORC_TEMP_AUTO=false;
+    orcRenderTemporada(); orcCalcular();
+  }
+  // A estadia que cai no fim de ano marca o botão SOZINHA — ninguém tem de lembrar da data.
+  // Se a pessoa trocar à mão, o automático cala a boca para sempre naquele orçamento.
+  function orcAutoTemporada(){
+    if(ORC_TEMP_MANUAL) return;
+    var ent=(document.getElementById('orcEntrada')||{}).value||'';
+    var sai=(document.getElementById('orcSaida')||{}).value||'';
+    var cai=orcNoFimDeAno(ent)||orcNoFimDeAno(sai);
+    if(cai&&ORC_TEMP!=='fim'){ ORC_TEMP='fim'; ORC_TEMP_AUTO=true; orcRenderTemporada(); return; }
+    if(!cai&&ORC_TEMP_AUTO&&ORC_TEMP==='fim'){ ORC_TEMP='baixa'; ORC_TEMP_AUTO=false; orcRenderTemporada(); }
+  }
   function orcRenderTemporada(){
-    var el=document.getElementById('orcTemporada'); if(!el) return;
-    var P=orcPrecos();
-    var bt=function(alta,tit){
-      var d=alta?P.diaria.alta:P.diaria.baixa, p=alta?P.pernoite.alta:P.pernoite.baixa;
-      return '<button type="button" class="'+((ORC_ALTA===alta)?'on':'')+'" onclick="orcSetTemporada('+(alta?'true':'false')+')">'
-        +'<span class="tt">'+tit+'</span><span class="vv">Diária de hotel <strong>'+fmtCent(d)+'</strong><br>Pernoite <strong>'+fmtCent(p)+'</strong></span></button>';
+    var el=document.getElementById('orcTemporada');
+    var nota=document.getElementById('orcTemporadaNota');
+    if(nota){
+      var n='';
+      if(ORC_TEMP==='fim'&&ORC_TEMP_AUTO) n='<div class="hint" style="margin-top:6px;background:rgba(222,180,40,.16);border-left:4px solid var(--z-gold);border-radius:9px;padding:8px 11px;font-weight:700;color:var(--z-blue)">Marcado sozinho: a estadia cai no fim de ano ('+orcFimPeriodoBR()+'). Dá para trocar à mão.</div>';
+      if(ORC_TEMP==='fim'&&orcFaltaPrecoFim()) n+='<div class="dc-faltas" style="margin-top:8px"><strong>'+ORC_FALTA_FIM+'</strong></div>';
+      nota.innerHTML=n;
+    }
+    if(!el) return;
+    var bt=function(t,tit){
+      var v=orcPrecoDe(t), falta=(t==='fim'&&orcFaltaPrecoFim());
+      return '<button type="button" class="'+((ORC_TEMP===t)?'on':'')+'" onclick="orcSetTemporada(\''+t+'\')">'
+        +'<span class="tt">'+tit+'</span><span class="vv">'
+        +(falta ? 'Sem valor ainda<br>preencha em Configurações'
+                : ('Diária de hotel <strong>'+fmtCent(v.dia)+'</strong><br>Pernoite <strong>'+fmtCent(v.per)+'</strong>'))
+        +'</span></button>';
     };
-    el.innerHTML=bt(false,'Baixa temporada')+bt(true,'Alta temporada');
+    el.innerHTML=bt('baixa','Baixa temporada')+bt('alta','Alta temporada')+bt('fim','Fim de ano');
   }
   var ORC_CALC=null;
   function orcCalcular(){
     var cardR=document.getElementById('orcCardResultado'), cardM=document.getElementById('orcCardMsg');
     var av=document.getElementById('orcAvisoData'); if(av) av.innerHTML='';
-    var alta=ORC_ALTA;
+    orcAutoTemporada();
+    var temp=ORC_TEMP, alta=(temp==='alta');
+    var PT=orcPrecoDe(temp);
     var P=orcPrecos();
     var ent=(document.getElementById('orcEntrada')||{}).value||'';
     var sai=(document.getElementById('orcSaida')||{}).value||'';
@@ -11234,6 +11317,13 @@
     if(hj&&ent<hj){ barrar('<strong>A entrada em '+orcBR(ent)+' já passou.</strong><div style="font-weight:600;margin-top:4px">Orçamento é sempre para frente — não dá para reservar um dia que já foi. Confira se o ano está certo.</div>'); return; }
     if(hj&&sai<hj){ barrar('<strong>A saída em '+orcBR(sai)+' já passou.</strong><div style="font-weight:600;margin-top:4px">Confira a data — provavelmente o mês ou o ano saiu errado.</div>'); return; }
     if(saiReal<=ent){ barrar('<strong>A saída tem que ser depois da entrada.</strong><div style="font-weight:600;margin-top:4px">Entrada '+orcBR(ent)+' · saída '+orcBR(sai)+'. Confira as duas datas.</div>'); return; }
+    // FIM DE ANO SEM VALOR NÃO VIRA CONTA (19/set/2026). Calcular com zero entregaria ao
+    // tutor uma hospedagem de graça — e ninguém repararia. A tela DIZ o que falta e onde
+    // se resolve; o botão de salvar nem chega a aparecer, porque a conta não existe.
+    if(temp==='fim'&&orcFaltaPrecoFim()){
+      barrar('<strong>'+ORC_FALTA_FIM+'</strong><div style="font-weight:600;margin-top:4px">O período de fim de ano ('+orcFimPeriodoBR()+') ainda está sem preço. Enquanto não tiver, este orçamento não fecha.</div>');
+      return;
+    }
     // Estadia muito longa ou muito distante: não bloqueia, mas PERGUNTA. Quase sempre é
     // dedo trocado no ano — e o tutor recebe um orçamento absurdo se ninguém reparar.
     var diasAte=Math.round((new Date(ent+'T12:00:00')-new Date((hj||ent)+'T12:00:00'))/86400000);
@@ -11262,7 +11352,7 @@
       }
       var nPer=lista.filter(function(x){ return x.pernoite; }).length;
       var nDia=lista.length-nPer;
-      var vDia=alta?P.diaria.alta:P.diaria.baixa, vPer=alta?P.pernoite.alta:P.pernoite.baixa;
+      var vDia=PT.dia, vPer=PT.per;
       var brutoDia=nDia*vDia, brutoPer=nPer*vPer;
       var descValor=Math.round(brutoDia*off/100);
       var liqDia=brutoDia-descValor;
@@ -11275,14 +11365,14 @@
     });
     var total=pets.reduce(function(a,p){ return a+p.total; },0);
     var p1=Math.ceil(total/2), p2=total-p1;
-    ORC_CALC={entrada:ent, saida:saiReal, saidaPedida:sai, alta:alta, noites:noites.length, pets:pets, total:total, p1:p1, p2:p2};
+    ORC_CALC={entrada:ent, saida:saiReal, saidaPedida:sai, alta:alta, temporada:temp, noites:noites.length, pets:pets, total:total, p1:p1, p2:p2};
     orcRenderResultado(); orcRenderMsg();
     if(cardR) cardR.style.display='block'; if(cardM) cardM.style.display='block';
   }
   function orcRenderResultado(){
     var el=document.getElementById('orcResultado'); if(!el||!ORC_CALC) return;
     var C=ORC_CALC, h='';
-    h+='<div class="hint" style="margin-bottom:10px">De <strong>'+orcBR(C.entrada)+'</strong> a <strong>'+orcBR(C.saida)+'</strong> · '+C.noites+' noite'+(C.noites>1?'s':'')+' · '+(C.alta?'ALTA temporada':'baixa temporada')+'</div>';
+    h+='<div class="hint" style="margin-bottom:10px">De <strong>'+orcBR(C.entrada)+'</strong> a <strong>'+orcBR(C.saida)+'</strong> · '+C.noites+' noite'+(C.noites>1?'s':'')+' · '+orcTempLabel(C.temporada||(C.alta?'alta':'baixa'))+'</div>';
     C.pets.forEach(function(p){
       h+='<div style="border:1.5px solid var(--line);border-radius:12px;padding:12px 14px;margin-bottom:10px">';
       h+='<div style="font-weight:800;color:var(--z-blue);font-size:15px;margin-bottom:6px">'+escAttr(p.sel.nome)+' <span style="font-weight:600;font-size:12.5px;color:var(--z-blue-soft)">'+escAttr(p.sel.rotulo)+(p.ordem>1?(' · '+p.ordem+'º FILHOt'):'')+'</span></div>';
@@ -11438,7 +11528,9 @@
                     status:o.status||'aguardando',
                     pets:(o.pets||[]).map(function(p){ return {nome:p.nome||'', raca:p.raca||'', tutor:p.tutor||o.tutor||''}; })};
     ORC_AULUNO=!!o.auluno;
-    ORC_ALTA=!!o.alta_temporada;
+    // A temporada da reserva é a que ela foi feita — reabrir para mudar as datas não pode
+    // reescrever essa decisão sozinho. Por isso entra como escolha À MÃO.
+    ORC_TEMP=orcTempDe(o); ORC_TEMP_MANUAL=true; ORC_TEMP_AUTO=false;
     // Remonta cada FILHOt A PARTIR DO CADASTRO ATUAL (plano, dias, desconto) — é o que um
     // orçamento novo faria. Só cai para o que está salvo se ele não existir mais no cadastro.
     ORC_SEL=(o.pets||[]).map(function(sp){
@@ -11488,18 +11580,31 @@
   }
   function orcCancelarEdicao(){
     ORC_EDITANDO=null; ORC_EDIT_ANTES=null; ORC_RESERVA_IGNORAR=''; ORC_REP={};
+    ORC_TEMP='baixa'; ORC_TEMP_MANUAL=false; ORC_TEMP_AUTO=false; try{ orcRenderTemporada(); }catch(e){} /* silencioso de propósito: guarda defensiva — falhar aqui não pode interromper quem chamou */
     ORC_SEL=[]; try{ orcRenderSel(); orcCalcular(); }catch(e){} /* silencioso de propósito: guarda defensiva — falhar aqui não pode interromper quem chamou */
     orcRenderAvisoEdicao();
   }
   function orcSalvar(){
-    if(!ORC_CALC){ return; }
+    // Fim de ano sem preço não fecha — e NUNCA em silêncio: a mesma frase da tela aparece
+    // aqui, no lugar onde a pessoa apertou (19/set/2026).
+    if(ORC_TEMP==='fim'&&orcFaltaPrecoFim()){
+      var sf=document.getElementById('orcSalvoStatus');
+      if(sf){ sf.style.color='var(--crm-critico)'; sf.textContent=ORC_FALTA_FIM; }
+      else alert(ORC_FALTA_FIM);
+      return;
+    }
+    if(!ORC_CALC){
+      var s1=document.getElementById('orcSalvoStatus');
+      if(s1){ s1.style.color='var(--crm-critico)'; s1.textContent='A conta ainda não está pronta — confira o FILHOt, as datas e a temporada acima.'; }
+      return;
+    }
     if(ORC_EDITANDO) return orcSalvarEdicao();
     if(!DB){ var s0=document.getElementById('orcSalvoStatus'); if(s0){ s0.style.color='var(--crm-critico)'; s0.textContent='Sem conexão com o banco — o orçamento NÃO foi salvo. Copie a mensagem e tente de novo quando a internet voltar.'; } return; }
     var C=ORC_CALC;
     var reg={
       criado_em:Date.now(), criado_por:(typeof quemSou==='function'?quemSou():'-'),
       entrada:C.entrada, saida:C.saida, saida_pedida:C.saidaPedida, noites:C.noites,
-      alta_temporada:!!C.alta, total_cent:C.total, parcela1_cent:C.p1, parcela2_cent:C.p2,
+      temporada:C.temporada||(C.alta?'alta':'baixa'), alta_temporada:!!C.alta, total_cent:C.total, parcela1_cent:C.p1, parcela2_cent:C.p2,
       tutor:(C.pets[0]&&C.pets[0].sel.tutor)||'',
       precos_da_epoca:orcPrecos(),
       status:'aguardando',                       // aguardando · fechado · nao_fechou
@@ -11594,7 +11699,7 @@
     if(st){ st.style.color='var(--muted)'; st.textContent='Salvando a alteração…'; }
     var patch={
       entrada:C.entrada, saida:C.saida, saida_pedida:C.saidaPedida, noites:C.noites,
-      alta_temporada:!!C.alta, total_cent:C.total, parcela1_cent:C.p1, parcela2_cent:C.p2,
+      temporada:C.temporada||(C.alta?'alta':'baixa'), alta_temporada:!!C.alta, total_cent:C.total, parcela1_cent:C.p1, parcela2_cent:C.p2,
       precos_da_epoca:orcPrecos(), auluno:!!ORC_AULUNO,
       pets:C.pets.map(function(p){ return {
         key:p.sel.key, nome:p.sel.nome, raca:p.sel.raca||'', tutor:p.sel.tutor||'',
@@ -12101,7 +12206,7 @@
     }
     return '<div class="avr-card '+L[1]+'" id="orc-card-'+id+'">'+faixa+'<div class="avr-head"><div class="avr-info">'
       +'<strong>'+escAttr(nomes||'—')+'</strong> <span style="color:var(--muted);font-size:12px">'+escAttr(o.tutor||'')+'</span>'
-      +'<div style="font-size:12.5px;color:var(--z-blue-soft)">'+orcBR(o.entrada||'')+' a '+orcBR(o.saida||'')+' · '+(o.noites||0)+' noites'+(o.alta_temporada?' · ALTA':'')+' · feito em '+dt+' por '+escAttr(o.criado_por||'-')+'</div>'
+      +'<div style="font-size:12.5px;color:var(--z-blue-soft)">'+orcBR(o.entrada||'')+' a '+orcBR(o.saida||'')+' · '+(o.noites||0)+' noites'+(orcTempCurto(o)?(' · '+orcTempCurto(o)):'')+' · feito em '+dt+' por '+escAttr(o.criado_por||'-')+'</div>'
       +semData
       +'<div style="font-size:15px;font-weight:800;color:var(--z-blue);margin-top:3px">'+fmtCent(o.total_cent||0)+'</div>'
       +planilha
@@ -12145,7 +12250,7 @@
     var detalhe='';
     if(aberta){
       var L=[];
-      L.push('Valor: '+fmtCent(o.total_cent||0)+' · '+(o.noites||0)+' noites'+(o.alta_temporada?' · ALTA':''));
+      L.push('Valor: '+fmtCent(o.total_cent||0)+' · '+(o.noites||0)+' noites'+(orcTempCurto(o)?(' · '+orcTempCurto(o)):''));
       L.push('Orçamento feito em '+orcDataBR(o.criado_em)+' por '+(o.criado_por||'-'));
       if(g===2){
         if(o.cancelado_por) L.push('Cancelado por '+o.cancelado_por+(o.cancelado_em_br?(' em '+o.cancelado_em_br):''));
@@ -12606,13 +12711,30 @@
     var F=orcFeriados();
     var hoje=(typeof hojeISO==='function')?hojeISO():'';
     var futuros=Object.keys(F).filter(function(d){ return !hoje||d>=hoje; }).sort();
+    var txt=function(id,lb,v,ph){ return '<div><label class="cad-lb">'+lb+'</label><input class="cad-in" id="'+id+'" value="'+escAttr(v||'')+'" placeholder="'+escAttr(ph||'')+'" inputmode="numeric"></div>'; };
     el.innerHTML='<div class="cad-grid2">'
       +campo('orcPvBaixa','Pernoite — baixa temporada',P.pernoite.baixa)
       +campo('orcPvAlta','Pernoite — alta temporada',P.pernoite.alta)
       +campo('orcDvBaixa','Diária de hotel — baixa temporada',P.diaria.baixa)
       +campo('orcDvAlta','Diária de hotel — alta temporada',P.diaria.alta)
       +'</div>'
+      // ===== FIM DE ANO (Adriana, 19/set/2026) — valor E período nas mãos dela ========
+      +'<div id="orcCfgFimAno" style="margin-top:16px;padding:12px 14px;border-radius:12px;'
+      +'background:rgba(222,180,40,.14);border-left:4px solid var(--z-gold)">'
+      +'<div class="ff-tit">Fim de ano</div>'
+      +'<div class="hint">A temporada mais cheia do ano tem preço próprio. Enquanto estes dois valores estiverem em <strong>0,00</strong>, o orçamento de fim de ano <strong>não fecha</strong> — a tela avisa quem estiver atendendo. As datas também são suas: no ano que vem é só trocá-las aqui.</div>'
+      +'<div class="cad-grid2" style="margin-top:8px">'
+      +campo('orcPvFim','Pernoite — fim de ano',(P.pernoite&&P.pernoite.fim)||0)
+      +campo('orcDvFim','Diária de hotel — fim de ano',(P.diaria&&P.diaria.fim)||0)
+      +'</div>'
+      +'<div class="cad-grid2" style="margin-top:8px">'
+      +txt('orcFimDe','Fim de ano começa em (dia/mês)',orcMDBR(orcFimDe()),'21/12')
+      +txt('orcFimAte','Fim de ano termina em (dia/mês)',orcMDBR(orcFimAte()),'11/01')
+      +'</div>'
+      +'<div class="hint" style="margin-top:6px">Hoje vale de <strong>'+orcFimPeriodoBR()+'</strong>. Quando a entrada ou a saída cair aí dentro, o orçamento marca <strong>Fim de ano</strong> sozinho — e quem atende pode trocar à mão.</div>'
+      +'</div>'
       +'<button class="btn btn-gold" style="margin-top:10px" onclick="orcSalvarPrecos()">Salvar tabela</button>'
+      +'<div class="hint" style="margin-top:4px">Nada é gravado antes deste botão. Os orçamentos já salvos guardam o preço da época — mudar aqui não mexe no passado.</div>'
       +'<div id="orcCfgStatus" class="hint" style="margin-top:6px"></div>'
       +'<div style="margin-top:16px"><div class="ff-tit">Feriados (não entregamos)</div>'
       +'<div class="hint">Nacionais, de Minas e os dois municipais de BH — 15/08 e 08/12 — já vêm prontos. Acrescente recesso e datas próprias da Zêluz.</div>'
@@ -12667,16 +12789,52 @@
     });
   }
   function orcLerReal(id){ var v=((document.getElementById(id)||{}).value||'').replace(/\./g,'').replace(',','.'); var n=parseFloat(v); return isNaN(n)?null:Math.round(n*100); }
+  // "21/12" digitado vira "12-21" guardado. Dia e mês que não existem não passam — data
+  // inventada no banco viraria uma temporada que nunca começa.
+  function orcLerDiaMes(id){
+    var t=String(((document.getElementById(id)||{}).value||'')).trim().replace(/\s/g,'');
+    var m=/^(\d{1,2})[\/\-.](\d{1,2})$/.exec(t); if(!m) return null;
+    var d=+m[1], mes=+m[2];
+    if(mes<1||mes>12||d<1||d>31) return null;
+    var maxDia=[31,29,31,30,31,30,31,31,30,31,30,31][mes-1];
+    if(d>maxDia) return null;
+    var pp=function(x){ return String(x).padStart(2,'0'); };
+    return pp(mes)+'-'+pp(d);
+  }
+  // O rastro de quem mexeu no dinheiro: o que mudou, de quanto para quanto.
+  function orcDifPrecos(a,b){
+    a=a||{}; b=b||{};
+    var L=[], vv=function(o,g,k){ return +(((o[g])||{})[k])||0; };
+    [['pernoite','baixa','Pernoite baixa'],['pernoite','alta','Pernoite alta'],['pernoite','fim','Pernoite fim de ano'],
+     ['diaria','baixa','Diária baixa'],['diaria','alta','Diária alta'],['diaria','fim','Diária fim de ano']]
+      .forEach(function(c){
+        var va=vv(a,c[0],c[1]), vb=vv(b,c[0],c[1]);
+        if(va!==vb) L.push(c[2]+': '+fmtCent(va)+' → '+fmtCent(vb));
+      });
+    var pa=orcMDBR(orcMD(a.fim_de,ORC_PRECOS_PADRAO.fim_de))+' a '+orcMDBR(orcMD(a.fim_ate,ORC_PRECOS_PADRAO.fim_ate));
+    var pb=orcMDBR(orcMD(b.fim_de,ORC_PRECOS_PADRAO.fim_de))+' a '+orcMDBR(orcMD(b.fim_ate,ORC_PRECOS_PADRAO.fim_ate));
+    if(pa!==pb) L.push('Período do fim de ano: '+pa+' → '+pb);
+    return L;
+  }
   function orcSalvarPrecos(){
     var pb=orcLerReal('orcPvBaixa'), pa=orcLerReal('orcPvAlta'), db=orcLerReal('orcDvBaixa'), da=orcLerReal('orcDvAlta');
+    var pf=orcLerReal('orcPvFim'), df=orcLerReal('orcDvFim');
     var st=document.getElementById('orcCfgStatus');
-    if(pb==null||pa==null||db==null||da==null){ if(st){ st.style.color='var(--crm-critico)'; st.textContent='Algum valor está em branco ou inválido. Nada foi salvo.'; } return; }
-    var novo={pernoite:{baixa:pb,alta:pa}, diaria:{baixa:db,alta:da}};
-    if(!DB){ orcPrecosCfg=novo; if(st){ st.style.color='var(--crm-atencao-text)'; st.textContent='Sem banco: vale só neste aparelho até a internet voltar.'; } orcCalcular(); return; }
+    if(pb==null||pa==null||db==null||da==null||pf==null||df==null){ if(st){ st.style.color='var(--crm-critico)'; st.textContent='Algum valor está em branco ou inválido. Nada foi salvo.'; } return; }
+    var de=orcLerDiaMes('orcFimDe'), ate=orcLerDiaMes('orcFimAte');
+    if(!de||!ate){ if(st){ st.style.color='var(--crm-critico)'; st.textContent='As datas do fim de ano precisam estar como dia/mês — por exemplo 21/12 e 11/01. Nada foi salvo.'; } return; }
+    var antes=JSON.parse(JSON.stringify(orcPrecos()));
+    var novo={pernoite:{baixa:pb,alta:pa,fim:pf}, diaria:{baixa:db,alta:da,fim:df}, fim_de:de, fim_ate:ate};
+    var mudou=orcDifPrecos(antes,novo);
+    var avisoFim=(!pf||!df)?' O fim de ano continua SEM valor — orçamento dessa temporada ainda não fecha.':'';
+    if(!DB){ orcPrecosCfg=novo; if(st){ st.style.color='var(--crm-atencao-text)'; st.textContent='Sem banco: vale só neste aparelho até a internet voltar.'+avisoFim; } orcRenderTemporada(); orcCalcular(); return; }
     DB.ref('auaulandia/config/orcamento/precos').set(novo).then(function(){
-      orcPrecosCfg=novo; if(st){ st.style.color='var(--crm-ok)'; st.textContent='✅ Tabela salva — vale para todos os orçamentos novos.'; }
-      if(typeof audit==='function') audit('orcamento-precos','alterou a tabela de hospedagem',{});
-      orcCalcular();
+      orcPrecosCfg=novo;
+      if(st){ st.style.color=avisoFim?'var(--crm-atencao-text)':'var(--crm-ok)'; st.textContent='✅ Tabela salva — vale para todos os orçamentos novos.'+avisoFim; }
+      if(typeof audit==='function') audit('orcamento-precos',
+        mudou.length?('alterou a tabela de hospedagem — '+mudou.join(' · ')):'salvou a tabela de hospedagem sem mudar valor nenhum',
+        {antes:antes, depois:novo});
+      orcRenderConfig(); orcRenderTemporada(); orcCalcular();
     }).catch(function(e){ if(st){ st.style.color='var(--crm-critico)'; st.textContent='⚠️ NÃO salvou: '+((e&&e.message)||e); } });
   }
   function orcAddFeriado(){
@@ -12691,6 +12849,19 @@
     var F=Object.assign({},orcFeriados()); delete F[d];
     if(!DB){ orcFeriadosCfg=F; orcRenderConfig(); orcCalcular(); return; }
     DB.ref('auaulandia/config/orcamento/feriados').set(F).then(function(){ orcFeriadosCfg=F; orcRenderConfig(); orcCalcular(); }).catch(function(e){ _logFalhaGrav('auaulandia/config/orcamento/feriados (orcDelFeriado)', e); });
+  }
+  // Configurações › Valores da hospedagem abre sem passar pela tela de Orçamento — então
+  // ela precisa buscar a tabela no banco por conta própria. Sem isto, a Gestão veria o
+  // preço de fábrica e salvaria por cima do que já estava combinado.
+  function orcAbrirConfig(){
+    if(!DB){ orcRenderConfig(); return; }
+    DB.ref('auaulandia/config/orcamento').once('value').then(function(s){
+      var v=s.val()||{};
+      if(v.precos) orcPrecosCfg=v.precos;
+      if(v.feriados) orcFeriadosCfg=v.feriados;
+      if(v.sheets) orcSheetsCfg=v.sheets;
+      orcRenderConfig(); orcRenderTemporada();
+    }).catch(function(){ orcRenderConfig(); });
   }
   function orcInit(){
     if(DB){
@@ -13609,7 +13780,7 @@
   // inteira DEPOIS de a correção estar publicada — o aviso apareceu, ninguém tocou.
   // Agora o aparelho PARADO recarrega sozinho: trancado, com a aba escondida, na porta de
   // entrada ou 3 minutos sem ninguém tocar nele. Mão na tela = nunca recarrega.
-  const APP_VERSAO='2026-09-19-02';
+  const APP_VERSAO='2026-09-19-03';
   var RECARGA_PARADO_MS=3*60*1000, __versaoPublicada=null, __recargaTimer=null;
   function vigiarVersao(){
     if(!DB) return;
@@ -29178,7 +29349,7 @@
       (o.pets||[]).forEach(function(p){
         linhas.push([dt, o.tutor||'', p.nome||'', p.plano||'', p.compromisso||'', p.desconto_pct+'%',
           orcBR(o.entrada||''), orcBR(o.saida||''), o.noites||0, p.diarias||0, p.pernoites||0,
-          o.alta_temporada?'ALTA':'baixa', p.reposicoes||0,
+          orcTempCurto(o)||'baixa', p.reposicoes||0,
           ((p.reposicao_economia_cent||0)/100).toFixed(2).replace('.',','),
           ((p.subtotal_cent||0)/100).toFixed(2).replace('.',','),
           ((o.total_cent||0)/100).toFixed(2).replace('.',','),

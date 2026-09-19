@@ -1,6 +1,54 @@
-# Índice do app — menu aprovado pela Adriana (reorganizado em 08/set/2026, ajustado em 15, 17 e 18/set/2026)
+# Índice do app — menu aprovado pela Adriana (reorganizado em 08/set/2026, ajustado em 15, 17, 18 e 19/set/2026)
 
 > Regra: o app tem de ser autoexplicativo, para treinamento rápido. Cada item tem **Título** e **subtítulo** (a explicação curta que aparece como dica no menu e no índice da Gestão no computador). Nomes são decisão da Adriana.
+
+## O que mudou em 19/set/2026 (v 2026-09-19-03)
+
+Adriana, duas frases:
+
+> "Em orçamento quero que coloque mais uma opção: fim de ano! Que irá do dia 21/12 a 11/01/27."
+
+> "Sobre os valores de hospedagem, eu preciso ter autonomia para modificar sem depender de vocês. Em configurações precisa ter como colocar valores de hospedagem."
+
+### Os valores da hospedagem mudaram de tela
+
+O cartão que era **Orçamento de hospedagem › Tabela e feriados** virou **Configurações › Valores da hospedagem** — e é o **primeiro** cartão da tela de Configurações. É o mesmo `#orcConfig` de sempre: os preços, os **feriados** em que a casa não recebe nem entrega, e a **ponte com a planilha de Hospedagem** foram junto. Nada se duplicou — a tabela existe num lugar só.
+
+A tela de Orçamento ficou com uma **placa** dizendo onde os valores moram, mais um botão `Abrir Configurações › Valores da hospedagem` (só a Gestão o vê, como antes).
+
+| Antes | Agora |
+|---|---|
+| Orçamento de hospedagem › **Tabela e feriados** (`so-master`) | **Configurações › Valores da hospedagem** (`so-master`, `#cardValoresHospedagem`) |
+
+A classe `so-master` é a mesma: **ninguém ganhou nem perdeu acesso**. `config` continua fora do `NAV_PAGINAS_ALL` — ajuste de sistema não se concede a ninguém, é da Gestão e da Diretoria.
+
+### Nasceu a terceira temporada: **Fim de ano**
+
+O seletor de Temporada tem agora **três** botões: Baixa · Alta · **Fim de ano**.
+
+| O que | Onde se mexe | Guardado como |
+|---|---|---|
+| Pernoite — fim de ano | Configurações › Valores da hospedagem | `precos.pernoite.fim` (centavos) |
+| Diária de hotel — fim de ano | idem | `precos.diaria.fim` (centavos) |
+| Fim de ano **começa em** (padrão 21/12) | idem, em dia/mês | `precos.fim_de` = `12-21` |
+| Fim de ano **termina em** (padrão 11/01) | idem, em dia/mês | `precos.fim_ate` = `01-11` |
+
+Os dois valores **nascem zerados de propósito**: quem põe preço é ela. O **período** também é dela — no ano que vem muda a data na tela, sem programador (a lei de 22/ago/2026).
+
+- **Marca sozinho:** quando a entrada ou a saída cai dentro do período (a virada do ano é respeitada — 21/12 de um ano a 11/01 do seguinte), o botão **Fim de ano** acende sozinho e a tela diz *"Marcado sozinho: a estadia cai no fim de ano (21/12 a 11/01)"*. Quem atende pode trocar à mão — e a partir daí o automático não mexe mais.
+- **Sem preço não vira conta:** com o valor em R$ 0,00, o total **não** é calculado. A tela mostra *"Falta o valor do fim de ano — preencha em Configurações › Valores da hospedagem"* e o salvar trava com a **mesma** frase. Nunca em silêncio, nunca hospedagem de graça.
+- **Nada grava antes do botão** `Salvar tabela` — e a gravação deixa rastro na auditoria (`orcamento-precos`) com **o que mudou, de quanto para quanto**, e o valor anterior inteiro.
+- **O passado não muda:** cada orçamento já salvo guarda o `precos_da_epoca`.
+
+### Compatibilidade
+
+O orçamento passou a gravar `temporada` (`baixa` · `alta` · `fim`) **e** continua gravando `alta_temporada` (verdadeiro só para `alta`). Quem já lia o campo antigo — lista, resumo, planilha e relatório — não quebrou. Orçamento antigo com `alta_temporada:true` é lido como `alta`.
+
+Na lista de orçamentos, no resumo e no relatório em XLS a etiqueta é **FIM DE ANO** quando for o caso.
+
+**Provas:** bloco `v-25` do `tests/harness.js` (a tabela dentro de `#v-config` e fora do Orçamento, os campos e o período, o preço de fábrica zerado, os três botões, a estadia de 23/12 a 03/01 que marca sozinha, o total que não sai sem preço e o que sai com ele, a leitura do campo antigo e a versão carimbada).
+
+---
 
 ## O que mudou em 18/set/2026 (v 2026-09-18-01)
 
@@ -260,7 +308,7 @@ Nunca um filho maior que o pai. Abre só o caminho da tela ativa. A pendência s
 | | Orçamento de hospedagem (`orcamento`) | Monte e envie o orçamento ao tutor. | so-recepcao |
 | | Pendências com o tutor (`recepcao`) | Ração acabando, remédio faltando, algo que ficou. | so-recepcao |
 | | Cuidado Vet (`cuidadovet`) | Alterações no corpo que a veterinária precisa ver. | so-vet |
-| **Configurações** (só o que é ajuste) | Configurações (`config`) | Telegram, ponte da planilha, horários dos protocolos, protocolos passo a passo, **Prevenção** (validade da coleira e antecedência do aviso), **Mensagem de entrada** (a placa da porta) e o rastro de logins. | so-master |
+| **Configurações** (só o que é ajuste) | Configurações (`config`) | **Valores da hospedagem** (pernoite, diária e fim de ano, feriados e ponte da planilha de Hospedagem), Telegram, ponte da planilha, horários dos protocolos, protocolos passo a passo, **Prevenção** (validade da coleira e antecedência do aviso), **Mensagem de entrada** (a placa da porta) e o rastro de logins. | so-master |
 | | Escala e plano do dia (`planodia`) | A escala de cada um e qual plano vale hoje. | tabela PERM |
 | | Financeiro do plantão (`acerto`) | Acerto das plantonistas: noites, dobras, quanto pagamos. | so-master |
 | | Time (`pessoas`) | Pessoas, senhas e quem acessa o quê. | so-master |
