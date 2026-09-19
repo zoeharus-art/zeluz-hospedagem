@@ -3302,6 +3302,182 @@ async function main() {
   } else { check('v-22 · dashLancar existe', false, 'funcao nao encontrada'); }
   console.log('');
 
+  // ===== v-24 - MEDICACAO: o remedio escrito a mao (Adriana, 18/set/2026) ==========
+  // "Hoje toshi tem medicamento de ouvido e nao tenho como colocar. As opcoes e esta na
+  // bolsa dele ou na recepcao." Virou um item a mais em Lancamentos do dia — e o PRIMEIRO
+  // com campo escrito a mao: o remedio de cada FILHOt e o dele, nao cabe em botao nenhum.
+  console.log('v-24 · Lançamentos do dia — Medicação, o primeiro campo escrito à mão:');
+  {
+    const itMed = (ctx.DASH_ITENS || []).find((i) => i.k === 'medicacao');
+    const campoMed = (c) => ((itMed && itMed.campos) || []).find((x) => x.c === c);
+
+    check('v-24 · o item Medicação existe em Lançamentos do dia',
+      !!itMed && itMed.t === 'Medicação', JSON.stringify(itMed && { k: itMed.k, t: itMed.t }));
+    check('v-24 · a coluna da planilha é exatamente "Medicação" — com ç e ã (acento trocado apaga um bloco da TV)',
+      !!itMed && itMed.col === 'Medicação' && /col:'Medicação'/.test(html),
+      JSON.stringify(itMed && itMed.col));
+    check('v-24 · ele nasceu logo depois do Carrapaticida — a ordem da tela é a ordem da planilha',
+      (function () {
+        const ks = (ctx.DASH_ITENS || []).map((i) => i.k);
+        return ks.indexOf('medicacao') === ks.indexOf('carrapaticida') + 1
+          && ks.indexOf('coleira') === ks.indexOf('medicacao') + 1;
+      })(), JSON.stringify((ctx.DASH_ITENS || []).map((i) => i.k)));
+    check('v-24 · Medicação não tem horário nem data — é remédio, não agendamento',
+      !!itMed && !itMed.hora && !itMed.colHora && !itMed.dataIni);
+
+    // (a) as duas respostas de ONDE — e so essas duas
+    check('v-24 · DASH_MED_ONDE oferece "NA BOLSA" e "NA RECEPÇÃO", com o rótulo em português',
+      Array.isArray(ctx.DASH_MED_ONDE) && ctx.DASH_MED_ONDE.length === 2
+      && ctx.DASH_MED_ONDE[0].v === 'NA BOLSA' && ctx.DASH_MED_ONDE[0].t === 'Está na bolsa dele'
+      && ctx.DASH_MED_ONDE[1].v === 'NA RECEPÇÃO' && ctx.DASH_MED_ONDE[1].t === 'Está na recepção',
+      JSON.stringify(ctx.DASH_MED_ONDE));
+    check('v-24 · aqui não existe "nada a observar": quem vai dar o remédio precisa saber onde ele está',
+      (ctx.DASH_MED_ONDE || []).every((o) => !!o.v));
+
+    // (b) as duas perguntas: uma escrita a mao, uma de botao — as duas obrigatorias
+    check('v-24 · "Qual remédio e como dar" é campo de TEXTO, obrigatório e com exemplo no placeholder',
+      !!campoMed('qual') && campoMed('qual').texto === true && campoMed('qual').obrig === true
+      && campoMed('qual').rot === 'Qual remédio e como dar'
+      && /gotas no ouvido/.test(campoMed('qual').ph || ''), JSON.stringify(campoMed('qual')));
+    check('v-24 · "Onde está o remédio?" continua sendo BOTÃO — origem não se digita',
+      !!campoMed('onde') && campoMed('onde').obrig === true && !campoMed('onde').texto
+      && campoMed('onde').ops === ctx.DASH_MED_ONDE);
+
+    // (c) a tela: o input de texto existe de verdade, nasce vazio e devolve o que ja foi escrito
+    if (typeof ctx.dashPainelHTML === 'function' && itMed) {
+      ctx.DASH_DET = {}; ctx.DASH_SEL = {}; ctx.DASH_SEL.medicacao = 'Toshi/Shih Tzu';
+      const pv = ctx.dashPainelHTML(itMed);
+      check('v-24 · o painel desenha um campo de texto de verdade (não um botão disfarçado)',
+        /<input type="text" class="cad-in" id="dashT_medicacao_qual" maxlength="80"/.test(pv), pv.slice(0, 500));
+      check('v-24 · o exemplo aparece dentro do campo, e o campo nasce vazio',
+        /placeholder="Ex\.: gotas no ouvido, 2x ao dia"/.test(pv) && /value=""/.test(pv));
+      check('v-24 · e os dois botões de ONDE continuam desenhados ao lado',
+        pv.indexOf('Está na bolsa dele') > 0 && pv.indexOf('Está na recepção') > 0);
+      check('v-24 · sem nada escrito, o botão não deixa lançar e diz o que falta',
+        /Falta responder acima/.test(pv)
+        && ctx.dashDetFalta('medicacao') === 'Qual remédio e como dar · Onde está o remédio?',
+        JSON.stringify(ctx.dashDetFalta('medicacao')));
+      ctx.dashSetDetTexto('medicacao', 'qual', 'gotas no ouvido');
+      check('v-24 · o que já foi escrito volta no campo — redesenhar a tela não apaga o que a colega digitou',
+        /value="gotas no ouvido"/.test(ctx.dashPainelHTML(itMed)));
+      ctx.DASH_DET = {}; ctx.DASH_SEL = {};
+    } else { check('v-24 · dashPainelHTML existe', false, 'função não encontrada'); }
+
+    check('v-24 · o campo grava a cada tecla SEM redesenhar — senão o cursor salta da mão de quem digita',
+      /function dashSetDetTexto\(k, campo, v\)\{\n\s*dashDet\(k\)\[campo\]=String\(v==null\?'':v\);\n\s*\}/.test(html)
+      && /oninput="dashSetDetTexto\(/.test(html));
+    check('v-24 · o redesenho vem no onchange (ao sair do campo) — nunca uma gravação antes do botão Lançar',
+      /oninput="dashSetDetTexto\([\s\S]{0,220}?onchange="try\{renderDash\(\)\}catch\(e\)\{\}/.test(html));
+
+    // (d) o texto que vai para a planilha e para a TV
+    if (typeof ctx.dashSetDetTexto === 'function' && typeof ctx.dashDetTexto === 'function') {
+      ctx.DASH_DET = {}; ctx.DASH_SEL = {};
+      ctx.dashSetDetTexto('medicacao', 'qual', 'gotas no ouvido, 2x ao dia');
+      check('v-24 · só o remédio escrito ainda não lança: falta dizer onde ele está',
+        ctx.dashDetFalta('medicacao') === 'Onde está o remédio?',
+        JSON.stringify(ctx.dashDetFalta('medicacao')));
+      ctx.dashSetDet('medicacao', 'onde', 'NA BOLSA');
+      check('v-24 · respondido tudo, nada falta', ctx.dashDetFalta('medicacao') === '',
+        JSON.stringify(ctx.dashDetFalta('medicacao')));
+      check('v-24 · o texto escrito à mão sai em MAIÚSCULA, na ordem das perguntas',
+        ctx.dashDetTexto('medicacao') === ' (GOTAS NO OUVIDO, 2X AO DIA · NA BOLSA)',
+        JSON.stringify(ctx.dashDetTexto('medicacao')));
+      ctx.dashSetDetTexto('medicacao', 'qual', '  pomada   no olho\n  1x ao dia  ');
+      check('v-24 · quebra de linha e espaço dobrado viram uma linha só — a célula da planilha é uma linha',
+        ctx.dashDetTexto('medicacao') === ' (POMADA NO OLHO 1X AO DIA · NA BOLSA)',
+        JSON.stringify(ctx.dashDetTexto('medicacao')));
+      ctx.dashSetDetTexto('medicacao', 'qual', '    ');
+      check('v-24 · só espaço em branco NÃO é resposta — o botão volta a cobrar o remédio',
+        ctx.dashDetFalta('medicacao') === 'Qual remédio e como dar'
+        && ctx.dashDetTexto('medicacao') === ' (NA BOLSA)',
+        JSON.stringify([ctx.dashDetFalta('medicacao'), ctx.dashDetTexto('medicacao')]));
+      ctx.DASH_DET = {}; ctx.DASH_SEL = {};
+      ctx.dashSetDet('vermifugo', 'qtd', '2 COMPRIMIDOS'); ctx.dashSetDet('vermifugo', 'onde', 'NA BOLSA');
+      check('v-24 · e nada disso mexeu em quem já existia: o vermífugo continua igual',
+        ctx.dashDetTexto('vermifugo') === ' (2 COMPRIMIDOS · NA BOLSA)',
+        JSON.stringify(ctx.dashDetTexto('vermifugo')));
+      ctx.DASH_DET = {}; ctx.DASH_SEL = {};
+    } else { check('v-24 · dashSetDetTexto existe', false, 'função não encontrada'); }
+
+    // (e) a GRAVACAO: o remedio vai inteiro para o no do dia E para a planilha
+    if (typeof ctx.dashLancar === 'function') {
+      const v24 = { espelhos: [] };
+      const dbV24 = criarDBComPush({});
+      ctx.__v24 = v24; ctx.__v24db = dbV24;
+      vm.runInContext(
+        '__bkpV24 = { DB: DB, dados: DASH_DADOS, diaSel: DASH_DIA_SEL, esp: dashEspelhar,'
+        + ' rd: renderDash, au: audit, det: DASH_DET, sel: DASH_SEL, seli: DASH_SEL_I, turma: DC_DASH_TURMA };'
+        + "DASH_DADOS = {}; DASH_DIA_SEL = '2026-09-19'; DASH_DET = {}; DASH_SEL = {}; DASH_SEL_I = {};"
+        + "DC_DASH_TURMA = { reposicao: [], avulso: [], quando: 0, dia: '' };"
+        + 'dashEspelhar = function(){ __v24.espelhos.push(Array.prototype.slice.call(arguments)); return Promise.resolve({ ok: true }); };'
+        + 'renderDash = function(){}; audit = function(){};'
+        + 'DB = __v24db;', ctx);
+      try {
+        const doDiaMed = () => ((((dbV24.__store.daycare || {}).dashboard || {})['2026-09-19'] || {}).medicacao || {});
+        ctx.dashSetDetTexto('medicacao', 'qual', 'gotas no ouvido, 2x ao dia');
+        ctx.dashSetDet('medicacao', 'onde', 'NA BOLSA');
+        ctx.dashLancar('medicacao', 'Toshi/Shih Tzu');
+        await drenar(6);
+        const regs = Object.keys(doDiaMed()).map((id) => doDiaMed()[id]);
+        check('v-24 · mordida — o remédio do Toshi GRAVADO em daycare/dashboard/2026-09-19',
+          regs.length === 1
+          && regs[0].valor === 'Toshi/Shih Tzu (GOTAS NO OUVIDO, 2X AO DIA · NA BOLSA)',
+          JSON.stringify(regs.map((r) => r.valor)));
+        check('v-24 · o MESMO objeto de detalhes também fica no nó, resposta por resposta',
+          regs.length === 1 && !!regs[0].det
+          && regs[0].det.qual === 'GOTAS NO OUVIDO, 2X AO DIA' && regs[0].det.onde === 'NA BOLSA',
+          JSON.stringify(regs[0] && regs[0].det));
+        check('v-24 · e foi para a planilha com o remédio DENTRO do mesmo valor (coluna Medicação)',
+          v24.espelhos.length === 1 && v24.espelhos[0][0] === 'medicacao'
+          && /\(GOTAS NO OUVIDO, 2X AO DIA · NA BOLSA\)$/.test((v24.espelhos[0][2] || {}).valor || ''),
+          JSON.stringify(v24.espelhos.map((e) => [e[0], (e[2] || {}).valor])));
+        check('v-24 · depois de lançar, o campo escrito à mão zera — o remédio do Toshi não gruda no próximo FILHOt',
+          JSON.stringify(ctx.DASH_DET.medicacao || {}) === '{}' && !ctx.DASH_SEL.medicacao,
+          JSON.stringify(ctx.DASH_DET.medicacao));
+      } finally {
+        vm.runInContext('DB=__bkpV24.DB; DASH_DADOS=__bkpV24.dados; DASH_DIA_SEL=__bkpV24.diaSel;'
+          + 'dashEspelhar=__bkpV24.esp; renderDash=__bkpV24.rd; audit=__bkpV24.au; DASH_DET=__bkpV24.det;'
+          + 'DASH_SEL=__bkpV24.sel; DASH_SEL_I=__bkpV24.seli; DC_DASH_TURMA=__bkpV24.turma;', ctx);
+      }
+    } else { check('v-24 · dashLancar existe', false, 'funcao nao encontrada'); }
+
+    // (f) enquanto a Gestao nao republicar a ponte, a planilha responde que nao tem a coluna
+    check('v-24 · o app reconhece o erro "não tem a coluna" venha ele com acento ou sem',
+      typeof ctx.dashPlanFilaSemColuna === 'function'
+      && ctx.dashPlanFilaSemColuna('a aba "Setembro" nao tem a coluna "Medicação"')
+      && ctx.dashPlanFilaSemColuna('a aba não tem a coluna "Medicação"')
+      && !ctx.dashPlanFilaSemColuna('a ponte não respondeu'));
+    check('v-24 · coluna que falta NÃO é erro de configuração: a fila continua tentando e desiste com rastro',
+      typeof ctx.dashPlanFilaErroDeConfig === 'function'
+      && !ctx.dashPlanFilaErroDeConfig('a aba nao tem a coluna "Medicação"'));
+    if (typeof ctx.dashFilaAvisoHTML === 'function') {
+      const bkpAviso = [ctx.DASH_FILA_PEND, ctx.DASH_FILA_MORTA, ctx.DASH_FILA_SEMCOL];
+      try {
+        ctx.DASH_FILA_PEND = 1; ctx.DASH_FILA_MORTA = 0; ctx.DASH_FILA_SEMCOL = true;
+        const av = ctx.dashFilaAvisoHTML();
+        check('v-24 · o aviso que já existe ganha a frase que diz o que fazer — e onde apertar',
+          av.indexOf('A planilha ainda não tem essa coluna.') > 0
+          && av.indexOf('Criar as colunas que faltam nos meses') > 0
+          && av.indexOf('depois de republicar a ponte') > 0, av);
+        ctx.DASH_FILA_SEMCOL = false;
+        check('v-24 · sem esse erro, o aviso continua exatamente como era — nada de frase sobrando',
+          ctx.dashFilaAvisoHTML().indexOf('A planilha ainda não tem essa coluna') < 0);
+        ctx.DASH_FILA_PEND = 0; ctx.DASH_FILA_MORTA = 0; ctx.DASH_FILA_SEMCOL = true;
+        check('v-24 · e sem lançamento nenhum parado, o aviso continua sem aparecer',
+          ctx.dashFilaAvisoHTML() === '');
+      } finally {
+        ctx.DASH_FILA_PEND = bkpAviso[0]; ctx.DASH_FILA_MORTA = bkpAviso[1]; ctx.DASH_FILA_SEMCOL = bkpAviso[2];
+      }
+    } else { check('v-24 · dashFilaAvisoHTML existe', false, 'função não encontrada'); }
+
+    // (g) a tela avisa a equipe que Medicacao e lancado a mao, como os outros
+    check('v-24 · o cartão "O que se preenche sozinho" passou a citar Medicação entre os lançados à mão',
+      html.indexOf('Troca de coleira, Hidratação, Vermífugo, Carrapaticida, Medicação e Festa.') > 0);
+    check('v-24 · Medicação NÃO entrou no que se preenche sozinho — ninguém sabe o remédio sem o tutor dizer',
+      !(ctx.DASH_AUTO_COLS || {}).medicacao);
+  }
+  console.log('');
+
   // ===== v-22 - O CARTAO "CADASTRO INCOMPLETO" NASCE RECOLHIDO ======================
   // Adriana, 17/set/2026, no check-in da Lisa (tutora Nilce, aluna ha anos): o cartao
   // aparecia inteiro, exposto, e incomodava. Continua sendo AVISO — nao trava o check-in.
@@ -12829,7 +13005,7 @@ async function main() {
         !/\.catch\(function\([a-z]*\)\{\s*\}\)/.test(
           html.slice(html.indexOf('const CK_FRASE_PRATICA='), html.indexOf('function renderCkInicio('))));
       check('v-14 · a versão carimbada é a desta entrega',
-        /const APP_VERSAO='2026-09-18-01';/.test(html));
+        /const APP_VERSAO='2026-09-19-01';/.test(html));
     }
 
     // ---- v-15: O PLANO SÓ GRAVA NO CONFIRMAR (caso Cookie/Yara, 15/set/2026) --------
@@ -13644,8 +13820,8 @@ async function main() {
           + 'AVISO_COLEIRA_APOS = __bkpC.apos;', ctx);
       }
     } else { check('v-17 · prevCfgCarregar existe', false, 'função não encontrada'); }
-    check('v-23 · a versão carimbada desta entrega é a 2026-09-18-01',
-      /const APP_VERSAO='2026-09-18-01';/.test(html));
+    check('v-24 · a versão carimbada desta entrega é a 2026-09-19-01',
+      /const APP_VERSAO='2026-09-19-01';/.test(html));
 
     // ───────── v-19 · o aparelho autorizado que não se perde no iPhone (16/set/2026)
     // Auditoria de 16/set: o iPhone da Leticya gerou DOIS ids em trinta segundos

@@ -4025,7 +4025,7 @@
         <strong>Hóspedes com restrições</strong> · <strong>Adaptação</strong>.
         Reposição, falta e aniversário vão até <strong>14 dias à frente</strong>.
         Ele confere sozinho a cada 5 minutos e nunca apaga o que uma pessoa escreveu.</div>
-      <div class="hint" style="margin-top:6px">O que tem <strong>horário</strong> continua sendo lançado aqui embaixo — é a hora que faz o alarme tocar na TV: <strong>Banho</strong> · <strong>Veterinário</strong> · <strong>Avaliação</strong> · <strong>Sai cedo</strong>. E também Troca de coleira, Hidratação, Vermífugo, Carrapaticida e Festa.</div>
+      <div class="hint" style="margin-top:6px">O que tem <strong>horário</strong> continua sendo lançado aqui embaixo — é a hora que faz o alarme tocar na TV: <strong>Banho</strong> · <strong>Veterinário</strong> · <strong>Avaliação</strong> · <strong>Sai cedo</strong>. E também Troca de coleira, Hidratação, Vermífugo, Carrapaticida, Medicação e Festa.</div>
       <button type="button" class="btn btn-gold" style="margin-top:9px" onclick="dashAutoBotao(this)">Conferir a planilha agora</button>
     </div>
     <div id="dashBlocos"></div>
@@ -13609,7 +13609,7 @@
   // inteira DEPOIS de a correção estar publicada — o aviso apareceu, ninguém tocou.
   // Agora o aparelho PARADO recarrega sozinho: trancado, com a aba escondida, na porta de
   // entrada ou 3 minutos sem ninguém tocar nele. Mão na tela = nunca recarrega.
-  const APP_VERSAO='2026-09-18-01';
+  const APP_VERSAO='2026-09-19-01';
   var RECARGA_PARADO_MS=3*60*1000, __versaoPublicada=null, __recargaTimer=null;
   function vigiarVersao(){
     if(!DB) return;
@@ -27769,6 +27769,15 @@
     {v:'BOLT', t:'Bolt'}
   ];
 
+  // MEDICAÇÃO (Adriana, 18/set/2026): "Hoje toshi tem medicamento de ouvido e não tenho
+  // como colocar. As opções é está na bolsa dele ou na recepção." São só essas duas: ou o
+  // remédio veio com ele, ou ficou no balcão. Aqui NÃO existe "nada a observar" — quem vai
+  // dar o remédio precisa saber onde ele está, sempre.
+  var DASH_MED_ONDE=[
+    {v:'NA BOLSA',    t:'Está na bolsa dele'},
+    {v:'NA RECEPÇÃO', t:'Está na recepção'}
+  ];
+
   // O tipo da adaptação — em MAIÚSCULA porque é assim que a célula da planilha fala.
   var DASH_ADAPT_TIPO=[
     {v:'DAY CARE',   t:'Day Care (45 dias corridos)'},
@@ -27794,6 +27803,12 @@
     {k:'carrapaticida', t:'Carrapaticida',              col:'Carrapaticida',                  icone:'🔬', campos:[
       {c:'qtd',  rot:'Quanto foi dado',   ops:DASH_QTD_PIP, obrig:true},
       {c:'onde', rot:'Alguma observação', ops:DASH_ONDE, obrig:true}]},
+    // Medicação (Adriana, 18/set/2026): o remédio de cada FILHOt é o dele — "medicamento de
+    // ouvido" não cabe em botão nenhum. Por isso o QUAL é escrito à mão (o único campo de
+    // texto da tela) e o ONDE continua em botão, que é o que não pode ficar no "mais ou menos".
+    {k:'medicacao',     t:'Medicação',                  col:'Medicação',                      icone:'💉', campos:[
+      {c:'qual', rot:'Qual remédio e como dar', texto:true, obrig:true, ph:'Ex.: gotas no ouvido, 2x ao dia'},
+      {c:'onde', rot:'Onde está o remédio?',    ops:DASH_MED_ONDE, obrig:true}]},
     {k:'coleira',       t:'Troca de coleira',           col:'Troca de Coleira',               icone:'🏷️', campos:[
       {c:'veio', rot:'A coleira veio?',       ops:DASH_COL_VEIO, obrig:true},
       {c:'onde', rot:'Onde vai ser trocada?', ops:DASH_COL_ONDE, obrig:true}]},
@@ -28153,6 +28168,19 @@
     (it&&it.campos||[]).forEach(function(c){ if(c.dep && !dashCampoAtivo(k,c)) delete d[c.c]; });
     try{ renderDash(); }catch(e){} /* silencioso de propósito: redesenho de tela — falhar não pode derrubar quem chamou */
   }
+  // O campo ESCRITO À MÃO (Medicação, 18/set/2026). Grava a cada tecla e NÃO redesenha a
+  // tela: redesenhar aqui tiraria o cursor da mão de quem está digitando — é a mesma lição
+  // do algCurTexto. O redesenho vem depois, no `onchange`/blur, quando o botão "Lançar" e a
+  // frase "Vai para a planilha assim" precisam falar a verdade.
+  function dashSetDetTexto(k, campo, v){
+    dashDet(k)[campo]=String(v==null?'':v);
+  }
+  // Como o texto escrito à mão vai para a planilha: numa linha só, em MAIÚSCULA, do mesmo
+  // jeito que as respostas de botão — é assim que a coluna sempre foi escrita e é assim
+  // que a TV lê. Sem quebra de linha, sem espaço dobrado, sem espaço nas pontas.
+  function dashDetTextoLimpo(v){
+    return String(v==null?'':v).trim().replace(/\s+/g,' ').toUpperCase();
+  }
   function dashEscolher(k, rot, idx){
     DASH_SEL[k]=rot; DASH_DET[k]={};
     if(typeof idx==='number'&&idx>=0) DASH_SEL_I[k]=idx; else delete DASH_SEL_I[k];
@@ -28168,7 +28196,11 @@
   function dashDetTexto(k){
     var it=dashItem(k); if(!it||!it.campos) return '';
     var d=dashDet(k), partes=[];
-    it.campos.forEach(function(c){ if(dashCampoAtivo(k,c) && d[c.c]) partes.push(d[c.c]); });
+    it.campos.forEach(function(c){
+      if(!dashCampoAtivo(k,c)) return;
+      var v=c.texto?dashDetTextoLimpo(d[c.c]):d[c.c];
+      if(v) partes.push(v);
+    });
     return partes.length ? (' (' + partes.join(' · ') + ')') : '';
   }
   // O que ainda não foi respondido. Vira frase na tela — nunca um botão que não responde.
@@ -28189,7 +28221,10 @@
     }
     it.campos.forEach(function(c){
       if(!dashCampoAtivo(k,c)) return;
-      if(c.obrig && !d.hasOwnProperty(c.c)) falta.push(c.rot);
+      // Botão: basta a chave existir (escolher "nada a observar" é uma resposta).
+      // Escrito à mão: só espaço em branco NÃO é resposta — o remédio tem de estar escrito.
+      var vazio=c.texto?!dashDetTextoLimpo(d[c.c]):!d.hasOwnProperty(c.c);
+      if(c.obrig && vazio) falta.push(c.rot);
     });
     return falta.join(' · ');
   }
@@ -28218,6 +28253,20 @@
     }
     it.campos.forEach(function(c){
       if(!dashCampoAtivo(it.k,c)) return;
+      // O campo ESCRITO À MÃO (Medicação, 18/set/2026): "gotas no ouvido, 2x ao dia" não
+      // cabe em botão nenhum. Grava a cada tecla SEM redesenhar (senão o cursor salta da
+      // mão de quem digita) e redesenha ao sair do campo, para o botão "Lançar" e a frase
+      // "Vai para a planilha assim" dizerem a verdade.
+      if(c.texto){
+        var txt=String(d[c.c]==null?'':d[c.c]);
+        h+='<label class="cad-lb" style="margin-top:9px;display:block">'+escAttr(c.rot)
+          +(c.obrig&&!dashDetTextoLimpo(txt)?' <span style="color:var(--crm-critico);font-weight:900">— falta responder</span>':'')+'</label>'
+          +'<input type="text" class="cad-in" id="dashT_'+it.k+'_'+c.c+'" maxlength="80"'
+          +' placeholder="'+escAttr(c.ph||'')+'" value="'+escAttr(txt)+'" autocomplete="off"'
+          +' oninput="dashSetDetTexto(\''+it.k+'\',\''+c.c+'\',this.value)"'
+          +' onchange="try{renderDash()}catch(e){}/* silencioso de propósito: redesenho de tela */">';
+        return;
+      }
       var respondido=d.hasOwnProperty(c.c);
       h+='<label class="cad-lb" style="margin-top:9px;display:block">'+escAttr(c.rot)
         +(c.obrig&&!respondido?' <span style="color:var(--crm-critico);font-weight:900">— falta responder</span>':'')+'</label>'
@@ -28350,9 +28399,19 @@
     }
     // O detalhe vai na MESMA célula: "Olivia/SRD (2 COMPRIMIDOS · NA BOLSA)". É o que a
     // recepção já escrevia à mão, e é assim que a TV lê.
+    // O MESMO objeto de detalhes também é gravado no nó do lançamento — resposta por
+    // resposta, inclusive a escrita à mão, já no formato que foi para a planilha (uma
+    // linha, em MAIÚSCULA). A célula guarda a frase inteira; isto guarda as partes.
+    var __det=null;
     if(it.campos){
       var __falta=dashDetFalta(k);
       if(__falta){ alert('Antes de lançar, responda: '+__falta+'.'); return; }
+      var __d=dashDet(k); __det={};
+      it.campos.forEach(function(c){
+        if(!dashCampoAtivo(k,c)) return;
+        var v=c.texto?dashDetTextoLimpo(__d[c.c]):__d[c.c];
+        if(v) __det[c.c]=v;
+      });
       valor = valor + dashDetTexto(k);
     }
     var lista=DASH_DADOS[k]||{};
@@ -28360,6 +28419,8 @@
       alert(valor+' já está lançado em '+it.t+' hoje.'); return;
     }
     var reg={valor:valor, hora:hora, quem:(typeof quemSou==='function'?quemSou():'-'), ts:Date.now(), planilha_ok:null};
+    // `undefined` não existe no Firebase: só entra se houver detalhe mesmo.
+    if(__det && Object.keys(__det).length) reg.det=__det;
     var gravar=function(abaterRep, pRep, saldoRep){
       var ref=DB.ref(dashNo()+'/'+k).push();
       ref.set(reg).then(function(){
@@ -28466,6 +28527,10 @@
         if(dia===dashDia()&&DASH_DADOS[k]&&DASH_DADOS[k][id]) DASH_DADOS[k][id].planilha_ok=ok;
         renderDash();
       }
+      if(!ok && dashPlanFilaSemColuna(r&&r.erro)){
+        DASH_FILA_SEMCOL=true;   // a recepção vê na hora, não daqui a 10 minutos
+        try{ renderDash(); }catch(e){} /* silencioso de propósito: redesenho de tela — falhar não pode derrubar quem chamou */
+      }
       if(!ok && typeof audit==='function') audit('dashboard-daycare','NÃO foi para a planilha: '+(reg.valor||'')+' em '+it.t+' — '+((r&&r.erro)||''),{pet:reg.valor||''});
       return r;
     });
@@ -28486,6 +28551,12 @@
   var DASH_FILA_DIAS=7;      // varre hoje e os 7 dias anteriores
   var DASH_FILA_PEND=0;      // falhas declaradas aguardando reenvio (alimenta o aviso)
   var DASH_FILA_MORTA=0;     // esgotaram as 5 tentativas — só o botão manual resolve
+  // Coluna que ainda não existe na planilha (Medicação, 18/set/2026): enquanto a Gestão não
+  // republicar a ponte, a aba do mês não tem a coluna e TODO lançamento daquele tipo volta
+  // com esse erro. Não é falha de rede nem senha errada — é um botão de resolver a um palmo
+  // de distância, e o aviso precisa dizer qual.
+  var DASH_FILA_SEMCOL=false;
+  function dashPlanFilaSemColuna(msg){ return /n[ãa]o tem a coluna/i.test(String(msg||'')); }
   // Seleção pura (provada no harness): o que de UM dia precisa de reenvio automático.
   // SÓ falha declarada (planilha_ok===false); null e true ficam de fora.
   function dashPlanFilaPendentes(dados){
@@ -28552,17 +28623,20 @@
       if(!cfg) return;                             // sem ponte não há para onde reenviar
       var hoje=(typeof zHojeISO==='function')?zHojeISO():'';
       var dias=[]; for(var i=0;i<=DASH_FILA_DIAS;i++){ var d=(i===0)?hoje:((typeof orcMaisDias==='function')?orcMaisDias(hoje,-i):''); if(d) dias.push(d); }
-      var pend=0, morta=0;
+      var pend=0, morta=0, semcol=false;
       return Promise.all(dias.map(function(dia){
         return DB.ref('daycare/dashboard/'+dia).once('value').then(function(s){
           var itens=dashPlanFilaPendentes(s.val()||{});
           var vivos=[];
-          itens.forEach(function(x){ if(dashPlanFilaMorto(x.reg)) morta++; else { pend++; vivos.push(x); } });
+          itens.forEach(function(x){
+            if(dashPlanFilaSemColuna(x.reg&&x.reg.planilha_msg)) semcol=true;
+            if(dashPlanFilaMorto(x.reg)) morta++; else { pend++; vivos.push(x); }
+          });
           return Promise.all(vivos.map(function(x){ return dashPlanFilaReenviar(dia, x.k, x.id); }))
             .then(function(res){ res.forEach(function(ok){ if(ok===true) pend--; }); });
         }).catch(function(e){ _logFalhaGrav('fila da planilha (leitura de '+dia+')', e); });
       })).then(function(){
-        DASH_FILA_PEND=pend; DASH_FILA_MORTA=morta;
+        DASH_FILA_PEND=pend; DASH_FILA_MORTA=morta; DASH_FILA_SEMCOL=semcol;
         try{ renderDash(); }catch(e){} /* silencioso de propósito: redesenho de tela — falhar não pode derrubar quem chamou */
       });
     });
@@ -28572,6 +28646,7 @@
     var n=DASH_FILA_PEND, m=DASH_FILA_MORTA;
     if(!(n>0||m>0)) return '';
     var partes=[];
+    if(DASH_FILA_SEMCOL) partes.push('<strong>A planilha ainda não tem essa coluna.</strong> Peça à Gestão para apertar «Criar as colunas que faltam nos meses», aqui embaixo, depois de republicar a ponte.');
     if(n>0) partes.push('<strong>'+n+(n===1?' lançamento ainda não chegou':' lançamentos ainda não chegaram')+' à planilha — o app está reenviando sozinho.</strong>');
     if(m>0) partes.push('<strong>'+m+(m===1?' lançamento esgotou':' lançamentos esgotaram')+' as 5 tentativas de reenvio</strong> — use o botão "reenviar" na linha dele.');
     return '<div class="card" style="border-left:4px solid var(--crm-atencao)">'+partes.join('<br>')

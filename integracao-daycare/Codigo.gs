@@ -1,6 +1,9 @@
 /**
  * ZÊLUZ · Day Care — ponte entre o APP e a planilha que alimenta o dashboard da TV
  * ============================================================================
+ * Versão 4 (18/set/2026) — coluna "Medicação" (o remédio do dia e onde ele está) e a
+ *                           senha guardada nas Propriedades do script, para não se
+ *                           perder quando alguém colar este arquivo por cima.
  * Versão 3 (26/ago/2026) — três ações novas: diagnostico, removerColunas e criarMeses.
  *                           A planilha parava em março/2029 e a Adriana pediu até
  *                           dezembro/2035, na mesma estrutura (cada dia repetido 50x).
@@ -24,22 +27,45 @@
  * 1. Abra a planilha do Day Care no navegador (a mesma que o dashboard lê).
  * 2. Menu  Extensões → Apps Script.
  * 3. Apague o que estiver lá e cole TODO este arquivo.
- * 4. Na linha do TOKEN (logo abaixo), troque por uma senha sua — qualquer texto que
- *    ninguém adivinhe. É ela que impede um estranho de escrever na planilha.
+ * 4. A SENHA — o jeito certo, uma vez só:
+ *      Configurações do projeto (a engrenagem, na coluna da esquerda)
+ *      → Propriedades do script → Adicionar propriedade
+ *          Propriedade:  PONTE_SENHA
+ *          Valor:        uma senha sua, qualquer texto que ninguém adivinhe
+ *      → Salvar propriedades do script.
+ *    É ela que impede um estranho de escrever na planilha. Guardada ali, a senha
+ *    NÃO se perde quando alguém colar uma versão nova deste arquivo por cima — foi
+ *    exatamente isso que derrubou a ponte por dois dias em 15/set/2026.
+ *    A linha `var TOKEN` mais abaixo fica só como reserva, para quem nunca criou a
+ *    propriedade. Nunca escreva a senha de verdade dentro deste arquivo.
  * 5. Salve (o disquete).
  * 6. Implantar → Nova implantação → engrenagem → App da Web.
  *      Executar como:  Eu
  *      Quem pode acessar:  Qualquer pessoa
  *    → Implantar. Autorize quando ele pedir (é a sua conta acessando a sua planilha).
  * 7. Copie a URL que termina em /exec e cole no app:
- *      Day Care → Dashboard Day Care → Ponte com a planilha  (URL + o token do passo 4)
+ *      Day Care → Dashboard Day Care → Ponte com a planilha  (URL + a senha do passo 4)
+ *
+ * PARA CONFERIR SE A SENHA ESTÁ GUARDADA: chame a ação `diagnostico` — ela responde
+ * `senha_em_propriedades: true` (o valor da senha nunca aparece).
  *
  * QUANDO MUDAR ESTE ARQUIVO: salvar NÃO publica. É preciso
  *   Implantar → Gerenciar implantações → lápis → Nova versão → Implantar.
  * ============================================================================
  */
 
+/** Reserva. O certo é a propriedade PONTE_SENHA (veja o passo 4 acima). */
 var TOKEN = 'COLE_AQUI_UMA_SENHA_SUA';
+
+/**
+ * A senha que vale. Primeiro procura nas Propriedades do script (PONTE_SENHA), que
+ * sobrevivem a colar código novo por cima; só cai no TOKEN se não achar nada lá.
+ */
+function _senha() {
+  var p = '';
+  try { p = PropertiesService.getScriptProperties().getProperty('PONTE_SENHA') || ''; } catch (e) {}
+  return p || TOKEN;
+}
 
 /** Os rótulos EXATOS das colunas, como estão na planilha — inclusive onde há erro de
  *  digitação. O dashboard procura por estes nomes; mudar um acento aqui apaga o bloco
@@ -54,6 +80,7 @@ var COL = {
   aniversariante:  'AUniversariante',
   vermifugo:       'Vermifugo',
   carrapaticida:   'Carrapaticida',
+  medicacao:       'Medicação',
   adaptacao:       'Adaptação',
   avulso:          'Avulso',
   faltas:          'Faltas Avisadas',
@@ -70,9 +97,12 @@ var COL = {
   auluRestricao:   'Aulunos com restriçóes'
 };
 
-/** As duas colunas que a Adriana criou em junho e faltam nos outros meses. Os nomes
- *  são copiados dali TAL E QUAL, com a grafia que está lá — é o que o dashboard lê. */
-var COLUNAS_NOVAS = [COL.festa, COL.auluRestricao];
+/** As três colunas que faltam nos meses antigos e que esta ponte cria sozinha. As duas
+ *  primeiras a Adriana criou à mão em junho/2026, só na aba daquele mês; a de Medicação
+ *  nasceu em 18/set/2026, quando o Toshi passou a tomar gotas no ouvido e a recepção não
+ *  tinha onde anotar o remédio nem onde ele está (na bolsa dele ou na recepção). Os nomes
+ *  são copiados da planilha TAL E QUAL, com a grafia que está lá — é o que o dashboard lê. */
+var COLUNAS_NOVAS = [COL.festa, COL.auluRestricao, COL.medicacao];
 
 var MESES = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho',
              'Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
@@ -83,7 +113,7 @@ var MESES = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho',
 function doPost(e) {
   try {
     var d = JSON.parse((e && e.postData && e.postData.contents) || '{}');
-    if (String(d.token || '') !== TOKEN) return _json({ ok: false, erro: 'token invalido' });
+    if (String(d.token || '') !== _senha()) return _json({ ok: false, erro: 'token invalido' });
     var acao = String(d.acao || 'lancar');
     if (acao === 'garantirColunas') return _json(garantirColunas());
     if (acao === 'diagnostico')     return _json(diagnostico());
@@ -110,8 +140,9 @@ function doGet(e) {
 // ===========================================================================
 /**
  * A Adriana criou "Festa na Zêluz" e "Aulunos com restrições" só na aba de junho — por
- * isso não apareciam no dashboard em agosto. Isto percorre TODA aba de Day Care e cria
- * o que faltar, no fim da faixa de títulos, sem tocar no que já existe.
+ * isso não apareciam no dashboard em agosto. "Medicação" é mais nova ainda (18/set/2026)
+ * e não existe em nenhum mês. Isto percorre TODA aba de Day Care e cria o que faltar,
+ * no fim da faixa de títulos, sem tocar no que já existe.
  * Roda sozinho a cada lançamento (é barato) e também pode ser chamado à mão.
  */
 function garantirColunas() {
@@ -122,9 +153,10 @@ function garantirColunas() {
       if (_acharCol(tit, nome) > 0) { jaTinha.push(sh.getName() + ' · ' + nome); return; }
       var col = _primeiraColunaLivre(sh, tit);
       sh.getRange(1, col).setValue(nome);
-      // ⚠ 25/ago/2026 — sem esta linha as DUAS colunas novas iam para o MESMO lugar: a
-      // lista de títulos era lida uma vez só, então a segunda achava a mesma "primeira
-      // coluna livre" e escrevia por cima da primeira. Só a última sobrevivia.
+      // ⚠ 25/ago/2026 — sem esta linha TODAS as colunas novas iam para o MESMO lugar: a
+      // lista de títulos era lida uma vez só, então a seguinte achava a mesma "primeira
+      // coluna livre" e escrevia por cima da anterior. Só a última sobrevivia.
+      // Com três colunas na lista (18/set/2026) a releitura ficou ainda mais necessária.
       tit = _titulos(sh);
       criadas.push(sh.getName() + ' · ' + nome + ' (coluna ' + col + ')');
     });
@@ -245,7 +277,10 @@ function lerDia(d) {
 
 /** Quantas abas, quantas células e até quando vai o Day Care. Não muda nada.
  *  Serve para saber se ainda cabe: uma planilha do Google aguenta 10 milhões de
- *  células no total — criar sete anos de uma vez sem olhar isso é temerário. */
+ *  células no total — criar sete anos de uma vez sem olhar isso é temerário.
+ *  Diz também se a senha está guardada nas Propriedades do script — só se ESTÁ ou
+ *  NÃO ESTÁ, nunca o valor dela. Se vier `false`, a ponte está dependendo da linha
+ *  `var TOKEN` e vai cair no dia em que alguém colar este arquivo por cima. */
 function diagnostico() {
   var ss = SpreadsheetApp.getActiveSpreadsheet();
   var todas = ss.getSheets(), celulas = 0, dc = [];
@@ -253,6 +288,10 @@ function diagnostico() {
     celulas += sh.getMaxRows() * sh.getMaxColumns();
     if (_norm(sh.getName()).indexOf('daycare') >= 0) dc.push(sh.getName());
   });
+  var guardada = false;
+  try {
+    guardada = !!(PropertiesService.getScriptProperties().getProperty('PONTE_SENHA') || '');
+  } catch (e) { guardada = false; }
   return {
     ok: true,
     abas: todas.length,
@@ -260,7 +299,8 @@ function diagnostico() {
     celulas_usadas: celulas,
     celulas_limite: 10000000,
     celulas_livres: 10000000 - celulas,
-    ultimas_daycare: dc.slice(-8)
+    ultimas_daycare: dc.slice(-8),
+    senha_em_propriedades: guardada
   };
 }
 
