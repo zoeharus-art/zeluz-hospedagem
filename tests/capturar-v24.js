@@ -1,6 +1,6 @@
 'use strict';
 /*
- * CAPTURA DA v 2026-09-19-01 — "Medicação" nos Lançamentos do dia.
+ * CAPTURA DA v 2026-09-19-02 — "Medicação" nos Lançamentos do dia, agora com horário.
  *
  * POR QUE ESTA CAPTURA EXISTE
  * Adriana, 18/set/2026: "em lançamento do dia precisamos de uma coluna a mais na planilha,
@@ -15,10 +15,12 @@
  *   lancamentos-1280.png · lancamentos-500.png — a tela inteira
  *
  * E ELA CONFERE, antes de fotografar: o cartão Medicação existe entre os itens; a busca
- * acha o Toshi; o campo de texto e os dois botões (bolsa / recepção) aparecem; sem
- * responder, o botão diz "Falta responder acima"; respondido, diz "Lançar na planilha" e
- * a frase traz o texto em MAIÚSCULA com "NA BOLSA". O botão Lançar NÃO é apertado: a ponte
- * da planilha é real (script.google.com) e esta captura não fala com ninguém lá fora.
+ * acha o Toshi; o campo de texto, o relógio e os dois botões (bolsa / recepção) aparecem;
+ * sem responder, o botão diz "Falta responder acima" e cobra o "Horário"; preenchidos o
+ * remédio, a hora e o lugar, ele diz "Lançar na planilha" e a frase traz o texto em
+ * MAIÚSCULA com "NA BOLSA". No fim confere a ORDEM dos cartões: Medicação entre Avulso e
+ * Vermífugo (Adriana, 19/set/2026). O botão Lançar NÃO é apertado: a ponte da planilha é
+ * real (script.google.com) e esta captura não fala com ninguém lá fora.
  *
  * NADA É GRAVADO: o mesmo guarda de escrita do smoke embrulha set/update/push/remove antes
  * de o app carregar, e o banco é o EMULADOR local com o retrato do backup.
@@ -39,6 +41,7 @@ const EMU_PORTA = Number(process.env.CAP_EMU_PORTA) || 9009;
 const SAIDA = path.join(RAIZ, 'docs', 'capturas-v24');
 const SENHA_DIRETORIA = '1101';
 const REMEDIO = 'gotas no ouvido, 2x ao dia';
+const HORA = '09:30';
 
 // ------------------------------------------------------------------ servidor local
 function tipoDe(p) {
@@ -166,8 +169,8 @@ async function cartaoMedicacao(page) {
     // 1 · o cartão existe, e o texto da tela cita Medicação entre o que se lança à mão
     let card = await cartaoMedicacao(page);
     if (!card) { problemas.push('não achei o cartão "Medicação" em Lançamentos do dia (' + larg.rot + ')'); await ctx.close(); continue; }
-    const citado = await page.evaluate(() => /Carrapaticida,\s*Medica\u00e7\u00e3o/.test(document.querySelector('#v-dashdc') ? document.querySelector('#v-dashdc').innerText : ''));
-    if (!citado) problemas.push('o cartão "O que se preenche sozinho" não cita Medicação entre o que se lança à mão (' + larg.rot + ')');
+    const citado = await page.evaluate(() => /Sai cedo\s*·\s*Medica\u00e7\u00e3o/.test(document.querySelector('#v-dashdc') ? document.querySelector('#v-dashdc').innerText : ''));
+    if (!citado) problemas.push('o cartão "O que se preenche sozinho" não cita Medicação entre os que têm horário (' + larg.rot + ')');
     await card.scrollIntoViewIfNeeded();
     await page.waitForTimeout(400);
     await card.screenshot({ path: path.join(SAIDA, 'medicacao-vazio-' + larg.rot + '.png') });
@@ -189,12 +192,23 @@ async function cartaoMedicacao(page) {
     if (!/Qual rem\u00e9dio/.test(textoCard)) problemas.push('não apareceu a pergunta "Qual remédio" (' + larg.rot + ')');
     if (!/Onde est\u00e1 o rem\u00e9dio/.test(textoCard)) problemas.push('não apareceu a pergunta "Onde está o remédio?" (' + larg.rot + ')');
     if (!/Est\u00e1 na recep\u00e7\u00e3o/.test(textoCard)) problemas.push('faltou o botão "Está na recepção" (' + larg.rot + ')');
+    // 19/set/2026: o horário também é cobrado — o botão não pode aceitar e a hora sumir
+    const antesPrecisa = (/Antes precisa responder:\s*(.+)/.exec(textoCard) || [])[1] || '';
+    if (antesPrecisa.indexOf('Hor\u00e1rio') < 0) problemas.push('o cartão devia listar "Horário" entre o que falta (' + larg.rot + '): ' + antesPrecisa);
+    if (!await card.$('#dashH_medicacao')) problemas.push('não achei o relógio do horário (#dashH_medicacao) no cartão (' + larg.rot + ')');
 
     // 4 · escreve o remédio e marca "Está na bolsa dele"
     const txt = await card.$('input[type="text"]:not([id^="dashB_"])');
     if (!txt) { problemas.push('não achei o campo de texto do remédio (' + larg.rot + ')'); await ctx.close(); continue; }
     await txt.fill(REMEDIO);
     await txt.dispatchEvent('change');
+    await page.waitForTimeout(500);
+    card = await cartaoMedicacao(page);
+    // o relógio: é a hora que faz o alarme tocar na TV
+    const hora = await card.$('#dashH_medicacao');
+    if (!hora) { problemas.push('não achei o relógio do horário depois de escrever o remédio (' + larg.rot + ')'); await ctx.close(); continue; }
+    await hora.fill(HORA);
+    await hora.dispatchEvent('change');
     await page.waitForTimeout(500);
     card = await cartaoMedicacao(page);
     const botoes = await card.$$('button');
@@ -216,13 +230,23 @@ async function cartaoMedicacao(page) {
     if (/Falta responder acima/.test(textoCard)) problemas.push('respondido tudo, ainda diz "Falta responder acima" (' + larg.rot + ')');
     const remedioNaTela = await card.$eval('input[type="text"]:not([id^="dashB_"])', (el) => el.value).catch(() => '');
     if (remedioNaTela !== REMEDIO) problemas.push('o texto do remédio sumiu do campo depois de marcar o botão (' + larg.rot + '): "' + remedioNaTela + '"');
+    const horaNaTela = await card.$eval('#dashH_medicacao', (el) => el.value).catch(() => '');
+    if (horaNaTela !== HORA) problemas.push('o horário sumiu do relógio depois de marcar o botão (' + larg.rot + '): "' + horaNaTela + '"');
 
     await card.scrollIntoViewIfNeeded();
     await page.waitForTimeout(400);
     await card.screenshot({ path: path.join(SAIDA, 'medicacao-toshi-' + larg.rot + '.png') });
     console.log('medicacao-toshi-' + larg.rot + '.png');
 
-    // 6 · a tela inteira
+    // 6 · a ORDEM dos cartões — Adriana, 19/set/2026: "antes do vermífugo, depois do Avulso"
+    const titulos = await page.$$eval('#dashBlocos .card h2', (hs) => hs.map((h) => (h.textContent || '').trim()));
+    const posDe = (rot) => titulos.findIndex((t) => t.indexOf(rot) >= 0);
+    const pAvulso = posDe('Avulso'); const pMed = posDe('Medica\u00e7\u00e3o'); const pVerm = posDe('Verm\u00edfugo');
+    if (!(pAvulso >= 0 && pMed === pAvulso + 1 && pVerm === pMed + 1)) {
+      problemas.push('a ordem dos cartões não é Avulso → Medicação → Vermífugo (' + larg.rot + '): ' + JSON.stringify(titulos));
+    } else if (larg.w === 1280) { console.log('Ordem dos cartões: … ' + titulos.slice(pAvulso, pVerm + 1).join(' → ') + ' …'); }
+
+    // 7 · a tela inteira
     await page.evaluate(() => window.scrollTo(0, 0));
     await page.waitForTimeout(500);
     await page.screenshot({ path: path.join(SAIDA, 'lancamentos-' + larg.rot + '.png'), fullPage: true });

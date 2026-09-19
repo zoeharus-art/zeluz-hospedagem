@@ -1,6 +1,10 @@
 /**
  * ZÊLUZ · Day Care — ponte entre o APP e a planilha que alimenta o dashboard da TV
  * ============================================================================
+ * Versão 5 (19/set/2026) — coluna "Hora Medicação", ao lado de "Medicação". O horário é
+ *                           o que faz o alarme tocar na TV, como já acontece no Banho e
+ *                           no Veterinário. Sem ele o remédio aparece na tela e nada
+ *                           avisa a hora de dar.
  * Versão 4 (18/set/2026) — coluna "Medicação" (o remédio do dia e onde ele está) e a
  *                           senha guardada nas Propriedades do script, para não se
  *                           perder quando alguém colar este arquivo por cima.
@@ -81,6 +85,7 @@ var COL = {
   vermifugo:       'Vermifugo',
   carrapaticida:   'Carrapaticida',
   medicacao:       'Medicação',
+  medicacaoHora:   'Hora Medicação',
   adaptacao:       'Adaptação',
   avulso:          'Avulso',
   faltas:          'Faltas Avisadas',
@@ -97,12 +102,16 @@ var COL = {
   auluRestricao:   'Aulunos com restriçóes'
 };
 
-/** As três colunas que faltam nos meses antigos e que esta ponte cria sozinha. As duas
+/** As quatro colunas que faltam nos meses antigos e que esta ponte cria sozinha. As duas
  *  primeiras a Adriana criou à mão em junho/2026, só na aba daquele mês; a de Medicação
  *  nasceu em 18/set/2026, quando o Toshi passou a tomar gotas no ouvido e a recepção não
- *  tinha onde anotar o remédio nem onde ele está (na bolsa dele ou na recepção). Os nomes
- *  são copiados da planilha TAL E QUAL, com a grafia que está lá — é o que o dashboard lê. */
-var COLUNAS_NOVAS = [COL.festa, COL.auluRestricao, COL.medicacao];
+ *  tinha onde anotar o remédio nem onde ele está (na bolsa dele ou na recepção); a de
+ *  Hora Medicação nasceu em 19/set/2026, porque o horário é o que faz o alarme tocar na
+ *  TV — sem ele o remédio aparece na tela, mas nada avisa a hora de dar, como já
+ *  acontece no Banho e no Veterinário. Ela vem logo depois de Medicação para nascer ao
+ *  lado dela na planilha. Os nomes são copiados da planilha TAL E QUAL, com a grafia que
+ *  está lá — é o que o dashboard lê. */
+var COLUNAS_NOVAS = [COL.festa, COL.auluRestricao, COL.medicacao, COL.medicacaoHora];
 
 var MESES = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho',
              'Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
@@ -141,7 +150,8 @@ function doGet(e) {
 /**
  * A Adriana criou "Festa na Zêluz" e "Aulunos com restrições" só na aba de junho — por
  * isso não apareciam no dashboard em agosto. "Medicação" é mais nova ainda (18/set/2026)
- * e não existe em nenhum mês. Isto percorre TODA aba de Day Care e cria o que faltar,
+ * e "Hora Medicação" nasceu no dia seguinte (19/set/2026) — nenhuma das duas existe nos
+ * meses antigos. Isto percorre TODA aba de Day Care e cria o que faltar,
  * no fim da faixa de títulos, sem tocar no que já existe.
  * Roda sozinho a cada lançamento (é barato) e também pode ser chamado à mão.
  */
@@ -156,7 +166,7 @@ function garantirColunas() {
       // ⚠ 25/ago/2026 — sem esta linha TODAS as colunas novas iam para o MESMO lugar: a
       // lista de títulos era lida uma vez só, então a seguinte achava a mesma "primeira
       // coluna livre" e escrevia por cima da anterior. Só a última sobrevivia.
-      // Com três colunas na lista (18/set/2026) a releitura ficou ainda mais necessária.
+      // Com quatro colunas na lista (19/set/2026) a releitura ficou ainda mais necessária.
       tit = _titulos(sh);
       criadas.push(sh.getName() + ' · ' + nome + ' (coluna ' + col + ')');
     });
@@ -193,7 +203,21 @@ function lancar(d) {
     if (COLUNAS_NOVAS.indexOf(nomeCol) >= 0) { garantirColunas(); tit = _titulos(sh); cAlvo = _acharCol(tit, nomeCol); }
     if (!cAlvo) return { ok: false, erro: 'a aba "' + sh.getName() + '" nao tem a coluna "' + nomeCol + '"' };
   }
-  var cHora = d.colunaHora ? _acharCol(tit, String(d.colunaHora)) : 0;
+  var nomeColHora = d.colunaHora ? String(d.colunaHora) : '';
+  var cHora = nomeColHora ? _acharCol(tit, nomeColHora) : 0;
+  if (nomeColHora && !cHora && COLUNAS_NOVAS.indexOf(nomeColHora) >= 0) {
+    // Mesmo caso da coluna principal: é uma coluna nova que ainda não existe nesta aba.
+    // Sem isto a hora sumia CALADA — o remédio entrava na planilha e o alarme da TV
+    // nunca tocava, porque "Hora Medicação" simplesmente não estava lá (19/set/2026).
+    garantirColunas();
+    tit = _titulos(sh);
+    cHora = _acharCol(tit, nomeColHora);
+  }
+  // Se mesmo assim não existir, o lançamento continua (o FILHOt não pode se perder por
+  // causa da hora) — mas volta dizendo que a hora ficou de fora, em vez de calar.
+  var avisoHora = (nomeColHora && !cHora)
+    ? 'a aba "' + sh.getName() + '" nao tem a coluna de hora "' + nomeColHora + '": a hora nao foi gravada'
+    : '';
 
   var linhas = _linhasDoDia(sh, cData, dia);
   if (!linhas.length) return { ok: false, erro: 'nao achei nenhuma linha de ' + dia + ' na aba ' + sh.getName() };
@@ -204,7 +228,7 @@ function lancar(d) {
     var atual = String(sh.getRange(linhas[i], cAlvo).getValue() || '').trim();
     if (atual && _norm(atual) === alvoNorm) {
       if (cHora && d.hora) sh.getRange(linhas[i], cHora).setValue(String(d.hora));
-      return { ok: true, jaEstava: true, linha: linhas[i], aba: sh.getName() };
+      return { ok: true, jaEstava: true, linha: linhas[i], aba: sh.getName(), avisoHora: avisoHora };
     }
   }
   // Primeira célula vazia da coluna dentro do dia.
@@ -213,7 +237,7 @@ function lancar(d) {
     if (!v) {
       sh.getRange(linhas[j], cAlvo).setValue(valor);
       if (cHora && d.hora) sh.getRange(linhas[j], cHora).setValue(String(d.hora));
-      return { ok: true, linha: linhas[j], aba: sh.getName() };
+      return { ok: true, linha: linhas[j], aba: sh.getName(), avisoHora: avisoHora };
     }
   }
   // Bloco do dia cheio: acrescenta uma linha logo abaixo da última do dia, com a data.
@@ -223,7 +247,7 @@ function lancar(d) {
   sh.getRange(nova, cData).setValue(_dataDe(dia));
   sh.getRange(nova, cAlvo).setValue(valor);
   if (cHora && d.hora) sh.getRange(nova, cHora).setValue(String(d.hora));
-  return { ok: true, linha: nova, aba: sh.getName(), linhaNova: true };
+  return { ok: true, linha: nova, aba: sh.getName(), linhaNova: true, avisoHora: avisoHora };
 }
 
 /** Tira o valor da coluna (a recepção desfez o lançamento no app). Limpa a hora junto. */

@@ -4025,7 +4025,7 @@
         <strong>Hóspedes com restrições</strong> · <strong>Adaptação</strong>.
         Reposição, falta e aniversário vão até <strong>14 dias à frente</strong>.
         Ele confere sozinho a cada 5 minutos e nunca apaga o que uma pessoa escreveu.</div>
-      <div class="hint" style="margin-top:6px">O que tem <strong>horário</strong> continua sendo lançado aqui embaixo — é a hora que faz o alarme tocar na TV: <strong>Banho</strong> · <strong>Veterinário</strong> · <strong>Avaliação</strong> · <strong>Sai cedo</strong>. E também Troca de coleira, Hidratação, Vermífugo, Carrapaticida, Medicação e Festa.</div>
+      <div class="hint" style="margin-top:6px">O que tem <strong>horário</strong> continua sendo lançado aqui embaixo — é a hora que faz o alarme tocar na TV: <strong>Banho</strong> · <strong>Veterinário</strong> · <strong>Avaliação</strong> · <strong>Sai cedo</strong> · <strong>Medicação</strong>. E também Troca de coleira, Hidratação, Vermífugo, Carrapaticida e Festa.</div>
       <button type="button" class="btn btn-gold" style="margin-top:9px" onclick="dashAutoBotao(this)">Conferir a planilha agora</button>
     </div>
     <div id="dashBlocos"></div>
@@ -13609,7 +13609,7 @@
   // inteira DEPOIS de a correção estar publicada — o aviso apareceu, ninguém tocou.
   // Agora o aparelho PARADO recarrega sozinho: trancado, com a aba escondida, na porta de
   // entrada ou 3 minutos sem ninguém tocar nele. Mão na tela = nunca recarrega.
-  const APP_VERSAO='2026-09-19-01';
+  const APP_VERSAO='2026-09-19-02';
   var RECARGA_PARADO_MS=3*60*1000, __versaoPublicada=null, __recargaTimer=null;
   function vigiarVersao(){
     if(!DB) return;
@@ -27796,6 +27796,15 @@
     {k:'saicedo',       t:'Sai mais cedo',              col:'Peludinho que sairá cedo',       colHora:'Hora Saída Cedo', hora:true, icone:'🚶'},
     {k:'avaliacao',     t:'Avaliação (Márcia)',         col:'Avaliação',                      colHora:'Horário',         hora:true, icone:'📋'},
     {k:'avulso',        t:'Avulso',                     col:'Avulso',                         icone:'📌'},
+    // Medicação (Adriana, 18/set/2026): o remédio de cada FILHOt é o dele — "medicamento de
+    // ouvido" não cabe em botão nenhum. Por isso o QUAL é escrito à mão (o único campo de
+    // texto da tela) e o ONDE continua em botão, que é o que não pode ficar no "mais ou menos".
+    // 19/set/2026, Adriana: "precisa estar antes do vermífugo, depois do Avulso e precisa ter
+    // horário". O horário é o que faz o alarme tocar na TV — quem dá o remédio precisa saber
+    // a hora, senão o FILHOt toma duas vezes ou nenhuma.
+    {k:'medicacao',     t:'Medicação',                  col:'Medicação',                      colHora:'Hora Medicação', hora:true, icone:'💉', campos:[
+      {c:'qual', rot:'Qual remédio e como dar', texto:true, obrig:true, ph:'Ex.: gotas no ouvido, 2x ao dia'},
+      {c:'onde', rot:'Onde está o remédio?',    ops:DASH_MED_ONDE, obrig:true}]},
     // campos → a tela PERGUNTA antes de deixar lançar; obrig:true não deixa passar em branco
     {k:'vermifugo',     t:'Vermífugo',                  col:'Vermifugo',                      icone:'💊', campos:[
       {c:'qtd',  rot:'Quanto foi dado',   ops:DASH_QTD, obrig:true},
@@ -27803,12 +27812,6 @@
     {k:'carrapaticida', t:'Carrapaticida',              col:'Carrapaticida',                  icone:'🔬', campos:[
       {c:'qtd',  rot:'Quanto foi dado',   ops:DASH_QTD_PIP, obrig:true},
       {c:'onde', rot:'Alguma observação', ops:DASH_ONDE, obrig:true}]},
-    // Medicação (Adriana, 18/set/2026): o remédio de cada FILHOt é o dele — "medicamento de
-    // ouvido" não cabe em botão nenhum. Por isso o QUAL é escrito à mão (o único campo de
-    // texto da tela) e o ONDE continua em botão, que é o que não pode ficar no "mais ou menos".
-    {k:'medicacao',     t:'Medicação',                  col:'Medicação',                      icone:'💉', campos:[
-      {c:'qual', rot:'Qual remédio e como dar', texto:true, obrig:true, ph:'Ex.: gotas no ouvido, 2x ao dia'},
-      {c:'onde', rot:'Onde está o remédio?',    ops:DASH_MED_ONDE, obrig:true}]},
     {k:'coleira',       t:'Troca de coleira',           col:'Troca de Coleira',               icone:'🏷️', campos:[
       {c:'veio', rot:'A coleira veio?',       ops:DASH_COL_VEIO, obrig:true},
       {c:'onde', rot:'Onde vai ser trocada?', ops:DASH_COL_ONDE, obrig:true}]},

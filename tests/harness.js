@@ -3316,14 +3316,21 @@ async function main() {
     check('v-24 · a coluna da planilha é exatamente "Medicação" — com ç e ã (acento trocado apaga um bloco da TV)',
       !!itMed && itMed.col === 'Medicação' && /col:'Medicação'/.test(html),
       JSON.stringify(itMed && itMed.col));
-    check('v-24 · ele nasceu logo depois do Carrapaticida — a ordem da tela é a ordem da planilha',
+    // 19/set/2026, Adriana: "precisa estar antes do vermífugo, depois do Avulso".
+    check('v-24 · ele mora logo depois do Avulso e antes do Vermífugo — a ordem da tela é a ordem dos cartões',
       (function () {
         const ks = (ctx.DASH_ITENS || []).map((i) => i.k);
-        return ks.indexOf('medicacao') === ks.indexOf('carrapaticida') + 1
-          && ks.indexOf('coleira') === ks.indexOf('medicacao') + 1;
+        return ks.indexOf('medicacao') === ks.indexOf('avulso') + 1
+          && ks.indexOf('vermifugo') === ks.indexOf('medicacao') + 1;
       })(), JSON.stringify((ctx.DASH_ITENS || []).map((i) => i.k)));
-    check('v-24 · Medicação não tem horário nem data — é remédio, não agendamento',
-      !!itMed && !itMed.hora && !itMed.colHora && !itMed.dataIni);
+    // 19/set/2026, Adriana: "e precisa ter horário".
+    check('v-24 · Medicação tem horário, como Banho e Veterinário — é a hora que faz o alarme tocar na TV',
+      !!itMed && itMed.hora === true && !itMed.dataIni
+      && /colHora:'Hora Medicação', hora:true/.test(html), JSON.stringify(itMed && itMed.hora));
+    check('v-24 · a coluna do horário é exatamente "Hora Medicação" — o mesmo nome que a ponte cria na planilha',
+      !!itMed && itMed.colHora === 'Hora Medicação', JSON.stringify(itMed && itMed.colHora));
+    check('v-24 · o horário vai para a planilha pela mesma porta dos outros (colunaHora + hora)',
+      html.indexOf("colunaHora:it.colHora||''") > 0 && html.indexOf("hora:reg.hora||''") > 0);
 
     // (a) as duas respostas de ONDE — e so essas duas
     check('v-24 · DASH_MED_ONDE oferece "NA BOLSA" e "NA RECEPÇÃO", com o rótulo em português',
@@ -3346,20 +3353,40 @@ async function main() {
     // (c) a tela: o input de texto existe de verdade, nasce vazio e devolve o que ja foi escrito
     if (typeof ctx.dashPainelHTML === 'function' && itMed) {
       ctx.DASH_DET = {}; ctx.DASH_SEL = {}; ctx.DASH_SEL.medicacao = 'Toshi/Shih Tzu';
-      const pv = ctx.dashPainelHTML(itMed);
-      check('v-24 · o painel desenha um campo de texto de verdade (não um botão disfarçado)',
-        /<input type="text" class="cad-in" id="dashT_medicacao_qual" maxlength="80"/.test(pv), pv.slice(0, 500));
-      check('v-24 · o exemplo aparece dentro do campo, e o campo nasce vazio',
-        /placeholder="Ex\.: gotas no ouvido, 2x ao dia"/.test(pv) && /value=""/.test(pv));
-      check('v-24 · e os dois botões de ONDE continuam desenhados ao lado',
-        pv.indexOf('Está na bolsa dele') > 0 && pv.indexOf('Está na recepção') > 0);
-      check('v-24 · sem nada escrito, o botão não deixa lançar e diz o que falta',
-        /Falta responder acima/.test(pv)
-        && ctx.dashDetFalta('medicacao') === 'Qual remédio e como dar · Onde está o remédio?',
-        JSON.stringify(ctx.dashDetFalta('medicacao')));
-      ctx.dashSetDetTexto('medicacao', 'qual', 'gotas no ouvido');
-      check('v-24 · o que já foi escrito volta no campo — redesenhar a tela não apaga o que a colega digitou',
-        /value="gotas no ouvido"/.test(ctx.dashPainelHTML(itMed)));
+      // O relógio mora DENTRO do painel, e é lá que ele é cobrado. Sem um campo de verdade o
+      // teste leria o objeto universal do sandbox e a hora nunca faltaria — justamente o buraco
+      // que deixaria o botão dizer "Lançar" e depois recusar.
+      const geMed = ctx.document.getElementById;
+      const campoHoraMed = { value: '' };
+      ctx.document.getElementById = function (id) {
+        return id === 'dashH_medicacao' ? campoHoraMed : geMed.call(this, id);
+      };
+      try {
+        const pv = ctx.dashPainelHTML(itMed);
+        check('v-24 · o painel desenha um campo de texto de verdade (não um botão disfarçado)',
+          /<input type="text" class="cad-in" id="dashT_medicacao_qual" maxlength="80"/.test(pv), pv.slice(0, 500));
+        check('v-24 · o exemplo aparece dentro do campo, e o campo nasce vazio',
+          /placeholder="Ex\.: gotas no ouvido, 2x ao dia"/.test(pv) && /value=""/.test(pv));
+        check('v-24 · e os dois botões de ONDE continuam desenhados ao lado',
+          pv.indexOf('Está na bolsa dele') > 0 && pv.indexOf('Está na recepção') > 0);
+        check('v-24 · o painel desenha o relógio do horário, como no Banho',
+          /<input type="time" class="cad-in" id="dashH_medicacao"/.test(pv), pv.slice(0, 700));
+        check('v-24 · sem nada respondido, o botão não deixa lançar e cobra o Horário na frente',
+          /Falta responder acima/.test(pv)
+          && ctx.dashDetFalta('medicacao') === 'Horário · Qual remédio e como dar · Onde está o remédio?',
+          JSON.stringify(ctx.dashDetFalta('medicacao')));
+        ctx.dashSetDetTexto('medicacao', 'qual', 'gotas no ouvido');
+        check('v-24 · o que já foi escrito volta no campo — redesenhar a tela não apaga o que a colega digitou',
+          /value="gotas no ouvido"/.test(ctx.dashPainelHTML(itMed)));
+        ctx.dashSetDet('medicacao', 'onde', 'NA BOLSA');
+        check('v-24 · remédio escrito e lugar marcado, ainda falta SÓ o horário',
+          ctx.dashDetFalta('medicacao') === 'Horário', JSON.stringify(ctx.dashDetFalta('medicacao')));
+        campoHoraMed.value = '09:30';
+        check('v-24 · escolhida a hora, nada falta e o botão passa a dizer "Lançar na planilha"',
+          ctx.dashDetFalta('medicacao') === ''
+          && /Lançar na planilha/.test(ctx.dashPainelHTML(itMed)),
+          JSON.stringify(ctx.dashDetFalta('medicacao')));
+      } finally { ctx.document.getElementById = geMed; }
       ctx.DASH_DET = {}; ctx.DASH_SEL = {};
     } else { check('v-24 · dashPainelHTML existe', false, 'função não encontrada'); }
 
@@ -3412,10 +3439,25 @@ async function main() {
         + 'dashEspelhar = function(){ __v24.espelhos.push(Array.prototype.slice.call(arguments)); return Promise.resolve({ ok: true }); };'
         + 'renderDash = function(){}; audit = function(){};'
         + 'DB = __v24db;', ctx);
+      // o relógio do painel, com hora de verdade — sem ele o lançamento é recusado,
+      // que é exatamente o que tem de acontecer quando ninguém escolheu a hora.
+      const geLanc = ctx.document.getElementById;
+      const campoHoraLanc = { value: '' };
+      ctx.document.getElementById = function (id) {
+        return id === 'dashH_medicacao' ? campoHoraLanc : geLanc.call(this, id);
+      };
       try {
         const doDiaMed = () => ((((dbV24.__store.daycare || {}).dashboard || {})['2026-09-19'] || {}).medicacao || {});
         ctx.dashSetDetTexto('medicacao', 'qual', 'gotas no ouvido, 2x ao dia');
         ctx.dashSetDet('medicacao', 'onde', 'NA BOLSA');
+        // 1) sem hora escolhida, NADA é gravado — o botão não pode aceitar e o dia sumir a hora
+        ctx.dashLancar('medicacao', 'Toshi/Shih Tzu');
+        await drenar(3);
+        check('v-24 · sem horário escolhido o lançamento NÃO acontece — nada é gravado',
+          Object.keys(doDiaMed()).length === 0 && v24.espelhos.length === 0,
+          JSON.stringify(Object.keys(doDiaMed())));
+        // 2) com a hora, aí sim
+        campoHoraLanc.value = '09:30';
         ctx.dashLancar('medicacao', 'Toshi/Shih Tzu');
         await drenar(6);
         const regs = Object.keys(doDiaMed()).map((id) => doDiaMed()[id]);
@@ -3434,7 +3476,15 @@ async function main() {
         check('v-24 · depois de lançar, o campo escrito à mão zera — o remédio do Toshi não gruda no próximo FILHOt',
           JSON.stringify(ctx.DASH_DET.medicacao || {}) === '{}' && !ctx.DASH_SEL.medicacao,
           JSON.stringify(ctx.DASH_DET.medicacao));
+        check('v-24 · a HORA foi gravada no nó do lançamento, como no Banho — é ela que a lista do dia mostra',
+          regs.length === 1 && regs[0].hora === '09:30', JSON.stringify(regs[0] && regs[0].hora));
+        check('v-24 · e a hora seguiu junto para a planilha (coluna Hora Medicação)',
+          v24.espelhos.length === 1 && (v24.espelhos[0][2] || {}).hora === '09:30',
+          JSON.stringify(v24.espelhos.map((e) => [e[0], (e[2] || {}).hora])));
+        check('v-24 · a lista de lançados do dia desenha a hora ao lado do nome (o mesmo trecho dos outros)',
+          html.indexOf("o.hora?(' <span style=\"color:var(--z-blue-soft);font-weight:800\">'+escAttr(o.hora)") > 0);
       } finally {
+        ctx.document.getElementById = geLanc;
         vm.runInContext('DB=__bkpV24.DB; DASH_DADOS=__bkpV24.dados; DASH_DIA_SEL=__bkpV24.diaSel;'
           + 'dashEspelhar=__bkpV24.esp; renderDash=__bkpV24.rd; audit=__bkpV24.au; DASH_DET=__bkpV24.det;'
           + 'DASH_SEL=__bkpV24.sel; DASH_SEL_I=__bkpV24.seli; DC_DASH_TURMA=__bkpV24.turma;', ctx);
@@ -3471,8 +3521,12 @@ async function main() {
     } else { check('v-24 · dashFilaAvisoHTML existe', false, 'função não encontrada'); }
 
     // (g) a tela avisa a equipe que Medicacao e lancado a mao, como os outros
-    check('v-24 · o cartão "O que se preenche sozinho" passou a citar Medicação entre os lançados à mão',
-      html.indexOf('Troca de coleira, Hidratação, Vermífugo, Carrapaticida, Medicação e Festa.') > 0);
+    check('v-24 · o cartão "O que se preenche sozinho" põe Medicação entre os que têm HORÁRIO',
+      html.indexOf('<strong>Banho</strong> · <strong>Veterinário</strong> · <strong>Avaliação</strong>'
+        + ' · <strong>Sai cedo</strong> · <strong>Medicação</strong>.') > 0);
+    check('v-24 · e saiu da segunda lista — quem tem horário não é citado duas vezes',
+      html.indexOf('E também Troca de coleira, Hidratação, Vermífugo, Carrapaticida e Festa.') > 0
+      && html.indexOf('Carrapaticida, Medicação e Festa.') < 0);
     check('v-24 · Medicação NÃO entrou no que se preenche sozinho — ninguém sabe o remédio sem o tutor dizer',
       !(ctx.DASH_AUTO_COLS || {}).medicacao);
   }
@@ -13005,7 +13059,7 @@ async function main() {
         !/\.catch\(function\([a-z]*\)\{\s*\}\)/.test(
           html.slice(html.indexOf('const CK_FRASE_PRATICA='), html.indexOf('function renderCkInicio('))));
       check('v-14 · a versão carimbada é a desta entrega',
-        /const APP_VERSAO='2026-09-19-01';/.test(html));
+        /const APP_VERSAO='2026-09-19-02';/.test(html));
     }
 
     // ---- v-15: O PLANO SÓ GRAVA NO CONFIRMAR (caso Cookie/Yara, 15/set/2026) --------
@@ -13820,8 +13874,8 @@ async function main() {
           + 'AVISO_COLEIRA_APOS = __bkpC.apos;', ctx);
       }
     } else { check('v-17 · prevCfgCarregar existe', false, 'função não encontrada'); }
-    check('v-24 · a versão carimbada desta entrega é a 2026-09-19-01',
-      /const APP_VERSAO='2026-09-19-01';/.test(html));
+    check('v-24 · a versão carimbada desta entrega é a 2026-09-19-02',
+      /const APP_VERSAO='2026-09-19-02';/.test(html));
 
     // ───────── v-19 · o aparelho autorizado que não se perde no iPhone (16/set/2026)
     // Auditoria de 16/set: o iPhone da Leticya gerou DOIS ids em trinta segundos
