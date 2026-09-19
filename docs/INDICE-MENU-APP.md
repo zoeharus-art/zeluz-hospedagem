@@ -2,6 +2,68 @@
 
 > Regra: o app tem de ser autoexplicativo, para treinamento rápido. Cada item tem **Título** e **subtítulo** (a explicação curta que aparece como dica no menu e no índice da Gestão no computador). Nomes são decisão da Adriana.
 
+## O que mudou em 19/set/2026 (v 2026-09-19-05)
+
+Adriana, em 18/set/2026:
+
+> "Em toda a parte do dia, vermífugo, carrapaticida, coleira que tem que trocar, tudo, se o peludo não estiver lá no dia, igual hoje, tá lá que o Batata tem que tomar vermífugo. No entanto, o Batata não foi hoje. Então isso precisa de um alerta avisando que vira uma pendência para colocar para o próximo dia que o Batata vier. Então tem que ter uma área de pendências, porque isso é muito sério, senão vai esquecendo."
+
+### Tela nova: **Pendências de prevenção**
+
+| Onde fica | Central Zêluz › Day Care, logo depois de **Lançamentos do dia** (a ordem alfabética do bloco) |
+|---|---|
+| `data-v` | `pendencias` |
+| Quem vê | Central Zêluz (consultora), Supervisão, Gestão e Diretoria — pela capacidade `pendencias-prevencao` na tabela `PERM`, revelada por `aplicarPermMenu()`. O monitor **não** vê: vermífugo e coleira resolvem-se na recepção, com a bolsa do tutor. |
+| Também é concedível | sim — entrou em `NAV_PAGINAS_ALL` (tela do Time), com o **mesmo rótulo** do sidebar |
+| Onde os dados moram | `daycare/pendencias/{chave do FILHOt}/{item}` |
+
+**O que vira pendência (e só isto):** `vermifugo` · `carrapaticida` · `coleira` · `medicacao` · `hidratacao` — o que é **aplicado no FILHOt** e tem data. Banho, veterinário, avulso, falta avisada, festa, reposição, adaptação e avaliação **não**: ou não dependem de o corpo dele estar aqui, ou já têm o seu lugar no sistema.
+
+**Os dois caminhos, que são os dela:**
+
+1. **Lançado DEPOIS de o dia fechar ou de a falta ser marcada** — o cartaz aparece na hora, para quem lançou: *"O Batata não veio em 18/09. O lançamento de Vermífugo ficou guardado como PENDÊNCIA."*
+2. **Lançado ANTES** (ela deixa marcado para a segunda-feira) — quando aquele dia fecha (a falta automática das `CK_HORA_FALTA` horas) **ou** quando alguém marca a falta na chamada / no check-in, o app varre os lançamentos daquele dia e abre as pendências de quem não veio. É o caso do Caco, marcado para a terça 22.
+
+**Idempotente:** a chave é fixa — `{chave}/{item}`. Rodar duas vezes não duplica; o segundo dia entra na lista `dias` e a pendência continua sendo **uma**.
+
+**Sair da lista tem dois caminhos, e só dois:**
+
+| Botão | O que faz |
+|---|---|
+| **Resolvido hoje** | Relança o MESMO item no dia de **hoje**, pela MESMA porta dos Lançamentos do dia (`dashLancar`) — e por isso vai à planilha e à TV, com as mesmas respostas (`1 COMPRIMIDO · NA BOLSA`). A pendência fica `resolvida`, com **quem** resolveu e em que dia. Confirma antes, mostrando a frase inteira que vai para a planilha. |
+| **Tirar pendência** | Pede o motivo em **botão** — *Tutor aplicou em casa* · *Não precisa mais* · *Lançado por engano*. Fica `cancelada`, com o motivo, quem e quando. **Nada some sem rastro.** |
+
+**O aviso que não depende de abrir a tela:** no dia em que o FILHOt com pendência aberta **faz check-in** ou é marcado **Veio** na chamada, o cartaz aparece na hora para quem está ali, com o item, o dia e o que estava lançado — e um botão que leva direto às Pendências. Um cartaz por FILHOt por dia.
+
+**Onde mais ele aparece:** um quadro **só de leitura** — *"Pendências de prevenção de quem veio hoje"* — no **Dashboard da Márcia** e no **Dashboard da Amanda** (a MESMA função, `blocoPendPrevHTML`), e um quadro em **O que fazer hoje** nas três mesas (Gestão, Supervisão e Recepção). Ao lado do item do menu, o contador `(3)`.
+
+**Telegram:** de propósito, **nenhum aviso sai daqui**. Os grupos que existem na ponte são o da veterinária, o do almoço, o do plantão da AuAulândia, o Diário do Daycare e o de URGÊNCIAS (só Adriana e Márcia) — nenhum deles é o grupo da recepção, e mandar para o grupo errado é o erro que já custou caro. Quando existir um grupo da recepção, é ali que a linha nasce.
+
+### O lançamento passou a guardar a CHAVE do FILHOt
+
+Todo lançamento novo em **Lançamentos do dia** grava `chave` (a mesma `dcKey(nome, tutor)` do resto do app) junto com o valor. Sem ela a pendência teria de adivinhar de quem é o vermífugo pelo texto da célula — e *nome sozinho não identifica ninguém*. Os lançamentos **antigos** continuam valendo: a chave é resolvida pelo texto, com `planCasar`, e **casamento ambíguo não conta** (nesse caso a pendência não nasce, e a auditoria diz por quê). Sem ficha casada o lançamento entra do mesmo jeito — nada trava.
+
+### Permissão: o papel é o piso, a concessão só LIBERA
+
+`pendencias` é o **primeiro** item que está nas duas listas — na tabela `PERM_MENU` (visibilidade pelo papel) e em `NAV_PAGINAS_ALL` (concessão pessoa a pessoa, na tela do Time). A regra entre elas é uma só: **o papel é o piso e a concessão por pessoa só libera, nunca esconde.** Assim a Consultora vê a tela no dia em que ela nasce, e a Gestão ainda pode dá-la a alguém cujo papel não a traria. Para os itens antigos do `PERM_MENU` nada muda — nenhum deles está na lista de concessão.
+
+O menu foi de **35** para **36** itens com `data-v`. Nenhum outro item mudou de gaveta nem de classe `so-*`.
+
+### A senha da ponte de Hospedagem parou de aparecer escrita
+
+Em **Configurações › Valores da hospedagem**, o campo *Palavra-chave* (`orcShToken`) mostrava a senha da ponte **em texto puro** (`value="…"`). Era o último campo do app assim — a ponte do Day Care já fazia o certo desde 19/ago/2026. Agora é a **mesma regra** dos dois lados:
+
+- campo `type="password"` que **nasce vazio**;
+- ao lado, só o aviso **✓ senha guardada — deixe em branco para manter, ou digite outra para trocar** (ou *nenhuma senha guardada*, em vermelho);
+- **salvar sem digitar mantém** a senha que está lá (dá para corrigir só a URL);
+- depois de salvar, o campo zera: a senha **nunca** é escrita de volta na tela.
+
+A URL continua aparecendo — ela não é segredo, e é o que a Gestão corrige.
+
+**Provas:** bloco `v-27` do `tests/harness.js` (o item no menu, no espelho e no `PERM`; a função pura `pendDeveAbrir`; a chave gravada no lançamento; a criação idempotente; a varredura do dia; o "Resolvido hoje" que relança por `dashLancar` e marca resolvida com quem; o cancelar que exige motivo; o cartaz da chegada; e a senha da ponte escondida) e a captura `tests/capturar-v27.js` (`docs/capturas-v27/`).
+
+---
+
 ## O que mudou em 19/set/2026 (v 2026-09-19-03)
 
 Adriana, duas frases:
@@ -294,6 +356,7 @@ Nunca um filho maior que o pai. Abre só o caminho da tela ativa. A pendência s
 | **Central Zêluz › Peludinhos** | Cadastro de Peludinhos (`ficha`) | Um cadastro só, para Day Care e AuAulândia — tudo começa aqui. | so-gestao (+ destaque) |
 | | Buscar peludinho *(sem `data-v`)* | Achar um peludinho depressa e abrir a ficha dele. Abre a MESMA tela do Cadastro, já no campo de busca. | so-gestao (espelha o Cadastro) |
 | **Central Zêluz › Day Care** | Lançamentos do dia (`dashdc`) | A planilha do Day Care, item por item. | so-recepcao |
+| | Pendências de prevenção (`pendencias`) | O que ficou para a próxima vinda: vermífugo, carrapaticida, coleira, medicação e hidratação de quem não veio. | `PERM` `pendencias-prevencao` (consultora · supervisão · gestão · diretoria) |
 | | Peso (`peso`) | Pesar qualquer FILHOt: recepção, veterinária e gestão. | so-pesa |
 | | Pesquisa com a Família Multiespécie (`alergia`) | A pesquisa com a família: enviar, colar a resposta, e ela vira ficha sozinha. | so-gestao |
 | | Prevenção (`vacinas`) | Vacina, vermífugo, coleira e exame de fezes: quem está atrasado e quem está para vencer. | so-gestao |

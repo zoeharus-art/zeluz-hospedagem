@@ -2588,6 +2588,16 @@
           <!-- Adriana, 19/ago/2026: é aqui que a recepção lança o que hoje digita na
                planilha — e a planilha vira só o espelho que alimenta a TV. -->
           <a data-v="dashdc" class="so-recepcao" title="A planilha do Day Care, item por item."><span data-icon="list-check"></span><span>Lançamentos do dia</span></a>
+          <!-- PENDÊNCIAS DE PREVENÇÃO (Adriana, 18/set/2026) — "tá lá que o Batata tem que
+               tomar vermífugo. No entanto, o Batata não foi hoje. Então isso precisa de um
+               alerta avisando que vira uma pendência para colocar para o próximo dia que o
+               Batata vier… é uma pendência dentro do daycare, onde elas precisam entrar e ver."
+               Fica ao lado dos Lançamentos do dia porque é a outra metade do mesmo trabalho:
+               ali se lança, aqui se recupera o que não deu para fazer. Nasce escondido e quem
+               o revela é aplicarPermMenu() (tabela PERM) — a regra 3 da Fase 2, permissão num
+               lugar só. O contador entra em <span> COM atributos de propósito: o rótulo do
+               item é o último <span> puro, e é por ele que a tela do Time se espelha. -->
+          <a data-v="pendencias" style="display:none" title="O que ficou para a próxima vinda: vermífugo, carrapaticida, coleira, medicação e hidratação de quem não veio."><span data-icon="alert"></span><span>Pendências de prevenção</span><span id="navPendN" style="margin-left:6px;font-weight:800;color:var(--crm-critico)"></span></a>
           <a data-v="peso" class="so-pesa" title="Pesar qualquer FILHOt: recepção, veterinária e gestão."><span data-icon="scale"></span><span>Peso</span></a>
           <!-- Renomeada em 08/set/2026 (noite): "Conversa com o Tutor" → "Pesquisa com a
                Família Multiespécie". É pesquisa, não conversa — e quem responde é a família
@@ -4049,6 +4059,21 @@
       <div id="dashPonteStatus" class="hint" style="margin-top:6px"></div>
     </div>
   </section>
+  <!-- ===== PENDÊNCIAS DE PREVENÇÃO (Adriana, 18/set/2026) =========================
+       "Em toda a parte do dia, vermífugo, carrapaticida, coleira que tem que trocar, tudo,
+        se o peludo não estiver lá no dia, igual hoje, tá lá que o Batata tem que tomar
+        vermífugo. No entanto, o Batata não foi hoje. Então isso precisa de um alerta
+        avisando que vira uma pendência para colocar para o próximo dia que o Batata vier…
+        isso é muito sério, senão vai esquecendo."
+       A tela é a caixa de entrada da recepção: o que foi lançado para um FILHOt que não
+       veio não se perde nem fica só na planilha de um dia que passou — fica AQUI até
+       alguém dizer o que aconteceu. Dois caminhos e só dois: "Resolvido hoje" (relança o
+       MESMO item no dia de hoje, pela mesma porta dos Lançamentos do dia, e vai para a
+       planilha e para a TV) e "Tirar pendência" (com motivo — nada some sem rastro). -->
+  <section class="view" id="v-pendencias">
+    <div class="role-note"><span data-icon="alert"></span><span><strong>O que ficou para a próxima vinda.</strong> Vermífugo, carrapaticida, troca de coleira, medicação e hidratação lançados para um FILHOt que <strong>não veio</strong> naquele dia. Quando ele voltar, a recepção resolve aqui — e o lançamento entra no dia de hoje, na planilha e na TV. <strong>Nada sai daqui sem alguém dizer o quê e por quê.</strong></span></div>
+    <div id="pendRoot"><div class="card"><div class="hint">Carregando as pendências…</div></div></div>
+  </section>
   <section class="view" id="v-abertura">
     <div class="role-note"><span data-icon="sun"></span><span><strong>Rotina de abertura do turno — Monitor 1.</strong> Marque cada item conforme executa. Fica registrado com horário e quem fez.</span></div>
     <div class="card"><div id="aberturaM1Prog" class="hint" style="margin-bottom:10px"></div><div id="aberturaM1List"></div></div>
@@ -5052,7 +5077,8 @@
     reposicao:['Reposições','Créditos de dias por falta avisada.'],
     daycare:['Day Care','Chamada, almoço, atividades, EA.'],hospedagem:['Plantão da noite','O relatório de cada hóspede, turno a turno.'],
     gestdia:['Conferência do dia','Medicações por horário, problemas e os três tempos do plantão.'],
-    aulunos:['Aulunos','A turma do dia.'],dashdc:['Lançamentos do dia','A planilha do Day Care, item por item.'],vacinas:['Prevenção','Vacina, vermífugo, coleira e exame de fezes: quem está atrasado e quem está para vencer.'],
+    aulunos:['Aulunos','A turma do dia.'],dashdc:['Lançamentos do dia','A planilha do Day Care, item por item.'],
+    pendencias:['Pendências de prevenção','O que ficou para a próxima vinda de quem não veio.'],vacinas:['Prevenção','Vacina, vermífugo, coleira e exame de fezes: quem está atrasado e quem está para vencer.'],
     cuidadovet:['Cuidado Vet','Alterações no corpo que a veterinária precisa ver.'],
     checkin:['Check-in','O tutor chega: entrada, alimentação, medicação, assinatura (1º passo).'],
     conferencia:['Conferência do check-in','O monitor confere corpo e pertences de quem chegou (2º passo; o 1º é da Central Zêluz).'],
@@ -5160,6 +5186,7 @@
       if(typeof renderPrevCheckup==='function') renderPrevCheckup();
     }
     if(v==='dashdc'){ if(typeof dashCarregar==='function') dashCarregar(); }
+    if(v==='pendencias'){ if(typeof pendAbrir==='function') pendAbrir(); }
     const pn=document.getElementById('pSubnav'); if(pn) pn.style.display=(v==='pessoas')?'block':'none';
     if(v==='pessoas'){ if(typeof montarPSubnav==='function') montarPSubnav(); if(typeof abrirPessoas==='function') abrirPessoas('ativ'); return 'parar'; }
     if(v==='painel'){ if(typeof carregarPainel==='function') carregarPainel(); }
@@ -5265,7 +5292,14 @@
     // Gestão, Supervisão, Diretoria, Central Zêluz (consultora) e a Veterinária. O monitor
     // NÃO entra: a fatia dele é a miniatura do próprio check-in, em segundos — galeria é
     // leitura de chefia, e leitura longa tira a monitora de perto do FILHOt.
-    'ver-fotos-corpo':          ['gestao','supervisor','diretoria','consultora','vet']
+    'ver-fotos-corpo':          ['gestao','supervisor','diretoria','consultora','vet'],
+    // ===== v 2026-09-19-05 — Pendências de prevenção =================================
+    // "É uma pendência dentro do daycare, onde ELAS precisam entrar e ver" (Adriana,
+    // 18/set/2026). Elas são as Consultoras de Bem-Estar da recepção — e com elas a
+    // Supervisão, a Gestão e a Diretoria. O MESMO grupo que já vê os Lançamentos do dia
+    // (so-recepcao): quem lança é quem recupera o que não deu para fazer. O monitor não
+    // entra — vermífugo e coleira se resolvem na recepção, com a bolsa do tutor.
+    'pendencias-prevencao':     ['consultora','supervisor','gestao','diretoria']
   };
   // O papel de quem está no corpo, com a régua do ehDiretoriaRole: role 'diretoria' vale
   // por si; 'gestao' com souAdriana (a senha fixa da Adriana) É a Diretoria. A promoção
@@ -5293,14 +5327,25 @@
   // Nenhum dos dois entra em NAV_PAGINAS_ALL de propósito: "Meu Painel" é a fatia da
   // própria pessoa (não se concede a ninguém, é dela), e a escala é ajuste da Gestão —
   // mesma razão pela qual "Senhas" e "Configurações" também ficam fora daquela lista.
-  const PERM_MENU=[['painelmeu','painel-monitor'],['paineloperacao','painel-operacao'],['planodia','definir-plano-do-dia'],['consultoras','painel-consultoras'],['painel-amanda','painel-amanda'],['painel-diretoria','painel-diretoria']];
+  const PERM_MENU=[['painelmeu','painel-monitor'],['paineloperacao','painel-operacao'],['planodia','definir-plano-do-dia'],['consultoras','painel-consultoras'],['painel-amanda','painel-amanda'],['pendencias','pendencias-prevencao'],['painel-diretoria','painel-diretoria']];
   // 18/set/2026: 'lancar-pagamento' saiu desta tabela junto com o item do menu (Adriana:
   // "delete lançar pagamentos.. inútil"). A capacidade continua na tabela PERM — tirá-la de
   // lá mudaria o que podePapel() responde a quem ainda pergunta, e isso não foi pedido.
+  // "Pendências de prevenção" (19/set/2026) é o PRIMEIRO item que está nas DUAS listas: a
+  // visibilidade padrão vem daqui (a tabela PERM, pelo papel) e ele TAMBÉM aparece na tela
+  // do Time, onde a Gestão concede tela a tela (NAV_PAGINAS_ALL). A regra entre as duas é
+  // uma só, e simples de explicar: o PAPEL é o piso, e a concessão por pessoa só LIBERA —
+  // nunca esconde. Assim a Consultora vê a tela no dia em que ela nasce (é o trabalho dela:
+  // "elas precisam entrar e ver"), e a Gestão ainda pode dá-la a alguém cujo papel não a
+  // traria. Para todos os itens ANTIGOS do PERM_MENU nada muda: nenhum deles está na lista
+  // de concessão, e por isso a segunda metade da conta é sempre falsa para eles.
   function aplicarPermMenu(){
+    var u=null; try{ u=(typeof usuarioAtual==='function')?usuarioAtual():null; }catch(e){} /* silencioso de propósito: sem sessão legível vale o papel do corpo */
+    var pset=(u&&Array.isArray(u.paginas))?u.paginas:[];
     PERM_MENU.forEach(function(par){
+      var pode=podePapel(par[1]) || pset.indexOf(par[0])>=0;
       document.querySelectorAll('#nav a[data-v="'+par[0]+'"]').forEach(function(a){
-        a.style.setProperty('display', podePapel(par[1])?'flex':'none', 'important');
+        a.style.setProperty('display', pode?'flex':'none', 'important');
       });
     });
   }
@@ -5626,6 +5671,9 @@
     DB.ref('daycare/chamados-recepcao/'+dcDataKey()).once('value').then(function(s){ MESA_CHAMADOS=s.val()||{}; mesaRender(); })
       .catch(function(e){ _logLeituraFalhou('daycare/chamados-recepcao (mesa)', e); });
     try{ if(typeof carregarOcorrenciasDayCare==='function') carregarOcorrenciasDayCare(); }catch(e){} /* silencioso de propósito: guarda defensiva — falhar aqui não pode interromper quem chamou */
+    // As pendências de prevenção são da mesa das três: a Gestão cobra, a Supervisão
+    // supervisiona e a Recepção resolve na vinda seguinte.
+    try{ if(typeof pendCarregar==='function') pendCarregar().then(mesaRender); }catch(e){} /* silencioso de propósito: guarda defensiva — falhar aqui não pode interromper quem chamou */
     mesaCarregarDoses(0);
   }
   function mesaCarregarDoses(tent){
@@ -5712,6 +5760,11 @@
     var medAtr=(typeof ehHojeAua==='function'&&!ehHojeAua())?0
       :(MESA_DOSES===null?null:MESA_DOSES.filter(function(d){ return d.status==='atrasada'; }).length);
     var ir=function(v){ return "irParaView('"+v+"')"; };
+    // O MESMO quadro nas três fatias (19/set/2026). Enquanto o nó não desceu, pendN é null
+    // e o quadro mostra "…" — nunca afirma zero antes de ler.
+    var pendN=(typeof pendContar==='function')?pendContar():0;
+    var quadroPend=mesaBox(pendN,'Pendências de prevenção',
+      'vermífugo, coleira ou remédio de quem não veio — resolver na próxima vinda','#B3261E',ir('pendencias'));
     var B=[], EXTRA='';
     if(MESA_FATIA==='gestao'){
       var at=(MESA_ATENCAO===null)?null:mesaAtencaoLista().length;
@@ -5724,6 +5777,7 @@
       B.push(mesaBox(ct===null?null:ct.nunca.length,'Pesquisa não enviada','FILHOts que nunca perguntamos — a campanha precisa andar','#B3261E',ir('alergia')));
       B.push(mesaBox(ct===null?null:ct.aguardando.length,'Pesquisa aguardando resposta','enviada, o tutor ainda não respondeu','#DEB428',ir('alergia')));
       B.push(mesaBox(ck===null?null:(ck.nunca.length+ck.vencidos.length),'Check-up a marcar','nunca fizeram ou venceu há mais de 12 meses — a mensagem já está pronta','#DEB428',ir('vacinas')));
+      B.push(quadroPend);
       if(MESA_EXPAND.atencao) EXTRA+=mesaAtencaoHtml();
       if(MESA_EXPAND.duplicados){ try{ EXTRA+='<div style="margin-top:12px">'+(typeof hospParesPendentesHtml==='function'?hospParesPendentesHtml():'')+'</div>'; }catch(e){} /* silencioso de propósito: guarda defensiva — falhar aqui não pode interromper quem chamou */ }
     } else if(MESA_FATIA==='supervisao'){
@@ -5735,6 +5789,7 @@
       B.push(mesaBox(nvl(estOk,P.saemHoje),'Saem hoje','a monitora precisa juntar as coisas','#DEB428',ir('checkout')));
       B.push(mesaBox(P.faltas||0,'Faltas em aberto','ração ou remédio que não cobre a estadia','#DEB428',ir('recepcao')));
       B.push(mesaBox(mesaRepHoje(),'Reposições marcadas para hoje','o tutor avisou que vem repor','#2E7D8A',ir('reposicao')));
+      B.push(quadroPend);
     } else {
       var cham=(MESA_CHAMADOS===null)?null
         :Object.keys(MESA_CHAMADOS).filter(function(k){ return (MESA_CHAMADOS[k]||{}).status==='aberto'; }).length;
@@ -5744,6 +5799,7 @@
       B.push(mesaBox(nvl(estOk,P.naRecepcao),'Tutor esperando para assinar','check-out conferido junto com o tutor','#1E8449',ir('checkoutconf')));
       B.push(mesaBox(P.avisar||0,'Avisar tutores — não comeram','a mensagem já sai pronta','#E08856',ir('emporio')));
       B.push(mesaBox(mesaRepHoje(),'Reposições marcadas para hoje','o tutor avisou que vem repor','#2E7D8A',ir('reposicao')));
+      B.push(quadroPend);
     }
     return {tiles:B.filter(Boolean).join(''), extra:EXTRA};
   }
@@ -8847,6 +8903,12 @@
             if(typeof audit==='function') audit('falta-automatica',
               marcados.length+' sem check-in até as '+CK_HORA_FALTA+'h: '+marcados.map(function(m){ return m.nome; }).join(', '),
               {assinou:'sistema'});
+            // PENDÊNCIA DE PREVENÇÃO (caminho b, 19/set/2026): "eu coloquei hoje para
+            // segunda-feira… o Caco não foi, ele entra como pendência". O dia fechou —
+            // varre o que foi lançado nele e guarda o que era de quem não veio.
+            try{ if(typeof pendVarrerDia==='function')
+              pendVarrerDia(hoje, marcados.map(function(m){ return m.k; })); }
+            catch(e){ _logFalhaGrav('abrir as pendências de prevenção do dia '+hoje, e); }
             try{ if(dcAtiv==='checkin-corpo' && typeof renderCheckin==='function') renderCheckin(); }catch(e){} /* silencioso de propósito: redesenho de tela — falhar não pode derrubar quem chamou */
           }).catch(function(e){
             _logFalhaGrav('falta automática das '+CK_HORA_FALTA+'h', e);
@@ -12762,17 +12824,30 @@
           return '<div class="pair"><span class="k">'+orcBR(d)+' — '+escAttr(F[d])+'</span><span class="val"><button class="x" style="background:none;border:none;color:var(--crm-critico);font-weight:800;cursor:pointer" onclick="orcDelFeriado(\''+d+'\')">tirar</button></span></div>';
         }).join(''):'<div class="hint">Nenhum feriado daqui para a frente.</div>')+'</div></div>'
       // Ponte com a planilha de Hospedagem
-      +'<div style="margin-top:18px;padding-top:14px;border-top:1.5px solid var(--line)">'
+      +'<div id="orcCfgPonte" style="margin-top:18px;padding-top:14px;border-top:1.5px solid var(--line)">'
       +'<div class="ff-tit">Ponte com a planilha</div>'
       +'<div class="hint">Quando alguém marca <strong>Fechou</strong> num orçamento, o sistema escreve sozinho nas duas abas da planilha de Hospedagem — <strong>Hospedagem</strong> e <strong>Calendario Hospedagem para Dash</strong>. O dashboard da Gestão continua igual: ele lê a mesma planilha. Acaba o esquecimento de lançar à mão.</div>'
       +'<div class="hint" style="margin-top:6px">Para ligar: abra a planilha → <strong>Extensões → Apps Script</strong>, cole o arquivo <code>integracao-planilha/Codigo.gs</code>, publique como <strong>App da Web</strong> (executar como você, acesso "qualquer pessoa") e cole aqui a URL que termina em <code>/exec</code>.</div>'
       +'<div style="margin-top:8px"><label class="cad-lb">URL do App da Web</label><input class="cad-in" id="orcShUrl" placeholder="https://script.google.com/macros/s/.../exec" value="'+escAttr((orcSheetsCfg&&orcSheetsCfg.url)||'')+'"></div>'
-      +'<div style="margin-top:8px"><label class="cad-lb">Palavra-chave (a mesma do PONTE_SENHA no Apps Script)</label><input class="cad-in" id="orcShToken" placeholder="a mesma PONTE_SENHA do Apps Script" value="'+escAttr((orcSheetsCfg&&orcSheetsCfg.token)||'')+'"></div>'
+      // A SENHA NUNCA VOLTA PARA A TELA (Adriana, 19/set/2026). Era o ÚLTIMO campo do app que
+      // ainda escrevia a palavra-chave em value=": quem abrisse Configurações › Valores da
+      // hospedagem lia a senha da ponte de Hospedagem em texto puro. A ponte do Day Care já
+      // fazia o certo desde 19/ago (dashPonteToken/dashSalvarPonte) — aqui é a MESMA regra:
+      // campo type="password" que nasce VAZIO, um aviso ao lado dizendo que há uma guardada,
+      // e salvar em branco MANTÉM a que está lá. Trocar é digitar a nova por cima; ler,
+      // ninguém lê.
+      +'<div style="margin-top:8px"><label class="cad-lb">Palavra-chave (a mesma do PONTE_SENHA no Apps Script)</label><input type="password" class="cad-in" id="orcShToken" placeholder="a mesma PONTE_SENHA do Apps Script" autocomplete="new-password"><div id="orcShTokenSt" class="hint" style="margin-top:3px">'+orcShTokenStatusHTML()+'</div></div>'
       +'<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px">'
       +'<button class="btn btn-gold" onclick="orcSalvarSheets()">Salvar ponte</button>'
       +'<button class="btn" style="background:var(--z-cream-warm);color:var(--z-blue);border:1.5px solid var(--line)" onclick="orcTestarSheets()">Testar agora</button></div>'
       +'<div id="orcShStatus" class="hint" style="margin-top:6px">'+((orcSheetsCfg&&orcSheetsCfg.url)?'Ponte configurada.':'Ainda não configurada — hoje o lançamento continua sendo à mão.')+'</div>'
       +'</div>';
+  }
+  // O aviso ao lado do campo: diz que EXISTE uma senha guardada, nunca qual é.
+  function orcShTokenStatusHTML(){
+    return (orcSheetsCfg&&orcSheetsCfg.token)
+      ? '<span style="color:var(--crm-ok);font-weight:800">✓ senha guardada</span> — deixe em branco para manter, ou digite outra para trocar.'
+      : '<span style="color:var(--crm-critico);font-weight:800">nenhuma senha guardada</span>';
   }
   function orcSalvarSheets(){
     var url=((document.getElementById('orcShUrl')||{}).value||'').trim();
@@ -12781,10 +12856,17 @@
     if(url&&!/^https:\/\/script\.google\.com\/.*\/exec$/.test(url)){
       if(st){ st.style.color='var(--crm-critico)'; st.textContent='Essa URL não parece a do App da Web. Ela começa com https://script.google.com/ e termina em /exec.'; } return;
     }
-    var novo={url:url, token:tok};
+    // Campo em branco = MANTÉM a senha que já está guardada. Assim dá para corrigir a URL
+    // sem redigitar a senha — e sem ela nunca ter aparecido na tela. A mesma regra da
+    // ponte do Day Care (dashSalvarPonte).
+    var tokenFinal=tok||((orcSheetsCfg&&orcSheetsCfg.token)||'');
+    var novo={url:url, token:tokenFinal};
     if(!DB){ orcSheetsCfg=novo; if(st){ st.textContent='Sem banco: vale só neste aparelho.'; } return; }
     DB.ref('auaulandia/config/orcamento/sheets').set(novo).then(function(){
       orcSheetsCfg=novo;
+      // A senha NUNCA é escrita de volta: o campo zera e só o aviso muda.
+      var _t=document.getElementById('orcShToken'); if(_t) _t.value='';
+      var _ts=document.getElementById('orcShTokenSt'); if(_ts) _ts.innerHTML=orcShTokenStatusHTML();
       if(st){ st.style.color='var(--crm-ok)'; st.textContent=url?'✅ Ponte salva. O próximo orçamento marcado como "Fechou" já cai na planilha.':'Ponte desligada — o lançamento volta a ser à mão.'; }
       if(typeof audit==='function') audit('orcamento-ponte-planilha',url?'ligou a ponte com a planilha':'desligou a ponte',{});
     }).catch(function(e){ if(st){ st.style.color='var(--crm-critico)'; st.textContent='Não salvou: '+((e&&e.message)||e); } });
@@ -13797,7 +13879,7 @@
   // inteira DEPOIS de a correção estar publicada — o aviso apareceu, ninguém tocou.
   // Agora o aparelho PARADO recarrega sozinho: trancado, com a aba escondida, na porta de
   // entrada ou 3 minutos sem ninguém tocar nele. Mão na tela = nunca recarrega.
-  const APP_VERSAO='2026-09-19-04';
+  const APP_VERSAO='2026-09-19-05';
   var RECARGA_PARADO_MS=3*60*1000, __versaoPublicada=null, __recargaTimer=null;
   function vigiarVersao(){
     if(!DB) return;
@@ -14074,7 +14156,12 @@
       {k:'orcamento', t:'Orçamento de hospedagem'}, {k:'recepcao', t:'Pendências com o tutor'}
     ]},
     {grp:'Central Zêluz · Day Care', itens:[
-      {k:'emporio', t:'Quem não comeu hoje'}, {k:'reposicao', t:'Reposições'}
+      {k:'emporio', t:'Quem não comeu hoje'},
+      // 19/set/2026: a tela nova nasceu nos DOIS lugares de uma vez — no menu e aqui. O que
+      // não está nesta lista NÃO pode ser concedido a ninguém (a lição de 13/ago, com o
+      // Orçamento de hospedagem). O rótulo é o MESMO do sidebar, letra por letra.
+      {k:'pendencias', t:'Pendências de prevenção'},
+      {k:'reposicao', t:'Reposições'}
     ]},
     // 18/set/2026: "Lançar pagamento" saiu do sidebar (Adriana: "delete lançar pagamentos..
     // inútil"). Ele nunca esteve nesta lista — quem o mostrava era a tabela PERM_MENU, e de
@@ -14633,6 +14720,9 @@
     // Fase 2.1: os itens do Painel se mostram pela TABELA, não por classe so-*. Roda DEPOIS
     // do aplicarPaginasPessoa de propósito — quem manda no fim é a tabela central.
     try{ aplicarPermMenu(); }catch(e){} /* silencioso de propósito: guarda defensiva — falhar aqui não pode interromper quem chamou */
+    // As pendências de prevenção descem na entrada: é delas que saem o contador ao lado do
+    // item do menu e os quadros dos dashboards. Uma leitura pequena, uma vez por sessão.
+    try{ if(typeof pendCarregar==='function' && typeof podePapel==='function' && podePapel('pendencias-prevencao')) pendCarregar(); }catch(e){} /* silencioso de propósito: guarda defensiva — falhar aqui não pode interromper a entrada */
     // sanfona: preferencia + esconde vazios + garante tela unica. Roda AGORA e DE NOVO no proximo
     // frame: no F5 (sessao restaurada) o aplicarLogin roda antes do navegador desenhar, e ai
     // offsetParent media 0 filhos -> escondia o Day Care por engano. O rAF remede apos o desenho.
@@ -21320,6 +21410,12 @@
       return;
     }
     if(typeof audit==='function') audit('chamada', next?(next==='veio'?'marcou presença':'marcou falta'):'desmarcou', {alvo:k});
+    // PENDÊNCIA DE PREVENÇÃO (19/set/2026): marcar a falta abre o que foi lançado para ele
+    // naquele dia; marcar a presença avisa, na hora, o que ficou esperando a vinda dele.
+    try{
+      if(next==='faltou' && typeof pendVarrerDia==='function') pendVarrerDia(dcDataKey(), [k]);
+      if(next==='veio' && typeof pendAvisarChegada==='function') pendAvisarChegada(k);
+    }catch(e){ _logFalhaGrav('as pendências de prevenção de '+k+' (chamada)', e); }
     renderDaycare();
   }
   function carregarChamada(){
@@ -22707,6 +22803,8 @@
       return DB.ref('daycare/falta-tardia/'+dia+'/'+k).remove();
     }).then(function(){
       if(typeof audit==='function') audit('falta-desfeita','desfez a falta de '+k+' — ele veio, sim',{alvo:k});
+      try{ if(typeof pendAvisarChegada==='function') pendAvisarChegada(k); }
+      catch(e){ _logFalhaGrav('avisar a pendência de prevenção de '+k, e); }
     }).catch(function(e){
       dcChamada[k]='faltou'; renderCheckin();
       alert('NÃO consegui gravar a volta: '+((e&&e.message)||e)+'\n\nTente de novo — sem isso ele continua fora do almoço e do check-in.');
@@ -22734,6 +22832,9 @@
     }).then(function(){
       if(typeof audit==='function') audit(tardia?'falta-tardia':'falta',
         (tardia?'marcou falta no FIM DO DIA (devia ter sido no check-in) de ':'marcou falta de ')+k, {alvo:k});
+      // A falta é a resposta: o que foi lançado para ele hoje vira pendência da próxima vinda.
+      try{ if(typeof pendVarrerDia==='function') pendVarrerDia(dia, [k]); }
+      catch(e){ _logFalhaGrav('abrir as pendências de prevenção de '+k, e); }
     }).catch(function(e){
       delete dcChamada[k]; delete CK_FALTA_TARDIA[k]; renderCheckin();
       alert('NÃO consegui gravar a falta: '+((e&&e.message)||e)+'\n\nTente de novo — sem isso as outras telas continuam achando que ele está aqui.');
@@ -23619,6 +23720,10 @@
       }
       // presença: quem passou pelo check-in de entrada está aqui (acaba a chamada em separado)
       if(entrada) DB.ref('daycare/chamada/'+dcDataKey()+'/'+k).set('veio').catch(function(e){ _logFalhaGrav('presença pelo check-in '+k, e); });
+      // Ele chegou: o que ficou da última vez aparece AGORA, para quem está no check-in —
+      // "aviso que depende de abrir a tela não é aviso" (28/ago/2026).
+      if(entrada){ try{ if(typeof pendAvisarChegada==='function') pendAvisarChegada(k); }
+        catch(e){ _logFalhaGrav('avisar a pendência de prevenção de '+k+' no check-in', e); } }
       // histórico do FILHOt: a segunda dor da Adriana — a folha não deixa ver o passado dele
       DB.ref('daycare/checkin-hist/'+k).push({data:dcDataKey(), tipo:entrada?'entrada':'saida', hora:reg.hora,
         quem:quem, alteracoes:alterados.map(function(pt){ return {ponto:pt.t, alertas:(R.pontos[pt.k].alertas||[]), obs:(R.pontos[pt.k].obs||'')}; }),
@@ -28987,9 +29092,13 @@
       return false;
     });
   }
-  function dashLancar(k, valor, idx){
+  // horaOpc (19/set/2026): quem relança uma PENDÊNCIA de prevenção não está na tela de
+  // Lançamentos — o relógio #dashH_{item} não existe ali, e ler o do outro dia daria a hora
+  // errada. Então a hora pode vir por parâmetro. Uma porta só para lançar continua sendo a
+  // regra: pendência e recepção usam esta MESMA função.
+  function dashLancar(k, valor, idx, horaOpc){
     var it=dashItem(k); if(!it||!DB) return;
-    var hora=it.hora?String((document.getElementById('dashH_'+k)||{}).value||''):'';
+    var hora=it.hora?((horaOpc!=null&&horaOpc!=='')?String(horaOpc):String((document.getElementById('dashH_'+k)||{}).value||'')):'';
     if(it.hora&&!hora){ alert('Escolha o horário antes — é ele que faz o alarme tocar na TV.'); return; }
     // Adaptação: a DATA de início é obrigatória — sem o dia 1 não existe contagem.
     var dataIni=it.dataIni?String((document.getElementById('dashD_'+k)||{}).value||'').slice(0,10):'';
@@ -28998,11 +29107,15 @@
     var tipoAdapt=it.dataIni?String((dashDet(k)||{}).tipo||''):'';
     // A ficha que recebe a data é a ESCOLHIDA na busca; sem índice guardado, tenta casar
     // o texto com o cadastro — e nunca aceita casamento ambíguo (nome não identifica ninguém).
-    var pAdapt=null;
-    if(it.dataIni){
-      if(typeof DASH_SEL_I[k]==='number') pAdapt=PELUDINHOS[DASH_SEL_I[k]]||null;
-      if(!pAdapt){ try{ var mAd=planCasar(valorBase); if(mAd&&mAd.p&&!mAd.ambiguo) pAdapt=mAd.p; }catch(e){} /* silencioso de propósito: sem casamento o aviso de ficha não casada assume */ }
-    }
+    // A FICHA do lançamento, resolvida SEMPRE (19/set/2026) — não só na adaptação. É dela
+    // que sai a `chave` gravada em cada lançamento novo: sem a chave, a pendência de
+    // prevenção teria de adivinhar de quem é o vermífugo pelo texto da célula, e "nome
+    // sozinho não identifica ninguém". Casamento ambíguo NÃO conta.
+    var pDoLanc=null;
+    if(typeof idx==='number' && idx>=0 && PELUDINHOS[idx]) pDoLanc=PELUDINHOS[idx];
+    if(!pDoLanc && typeof DASH_SEL_I[k]==='number') pDoLanc=PELUDINHOS[DASH_SEL_I[k]]||null;
+    if(!pDoLanc){ try{ var mLanc=planCasar(valorBase); if(mLanc&&mLanc.p&&!mLanc.ambiguo) pDoLanc=mLanc.p; }catch(e){} /* silencioso de propósito: sem casamento seguro o lançamento entra sem chave, como era antes */ }
+    var pAdapt=it.dataIni?pDoLanc:null;
     // O detalhe vai na MESMA célula: "Olivia/SRD (2 COMPRIMIDOS · NA BOLSA)". É o que a
     // recepção já escrevia à mão, e é assim que a TV lê.
     // O MESMO objeto de detalhes também é gravado no nó do lançamento — resposta por
@@ -29025,11 +29138,17 @@
       alert(valor+' já está lançado em '+it.t+' hoje.'); return;
     }
     var reg={valor:valor, hora:hora, quem:(typeof quemSou==='function'?quemSou():'-'), ts:Date.now(), planilha_ok:null};
+    // A CHAVE do FILHOt viaja com o lançamento. `undefined` não existe no Firebase: só entra
+    // quando a ficha foi casada com segurança.
+    try{ if(pDoLanc&&pDoLanc.n){ var _ch=dcKey(pDoLanc.n,pDoLanc.tutor); if(_ch) reg.chave=_ch; } }catch(e){} /* silencioso de propósito: sem chave o lançamento entra igual — a pendência é que passa a depender do texto */
     // `undefined` não existe no Firebase: só entra se houver detalhe mesmo.
     if(__det && Object.keys(__det).length) reg.det=__det;
+    // `gravar` devolve a promessa (true = entrou, false = não salvou). Quem chama de fora
+    // — as Pendências de prevenção — precisa SABER se o lançamento entrou antes de dar a
+    // pendência por resolvida. Os outros pontos de chamada ignoram o retorno, como sempre.
     var gravar=function(abaterRep, pRep, saldoRep){
       var ref=DB.ref(dashNo()+'/'+k).push();
-      ref.set(reg).then(function(){
+      return ref.set(reg).then(function(){
         DASH_DADOS[k]=DASH_DADOS[k]||{}; DASH_DADOS[k][ref.key]=reg;
         var b=document.getElementById('dashB_'+k); if(b) b.value='';
         var s=document.getElementById('dashS_'+k); if(s) s.innerHTML='';
@@ -29043,10 +29162,15 @@
         // Reposição: o lançamento abate 1 do Banco — só DEPOIS de o lançamento existir,
         // para nunca descontar saldo de um lançamento que não entrou.
         if(abaterRep) dashRepAbater(pRep, saldoRep);
+        // PENDÊNCIA DE PREVENÇÃO (caminho a, 19/set/2026): lançou para um dia em que ele não
+        // estava? O cartaz aparece na hora e o item fica guardado para a próxima vinda.
+        try{ if(typeof pendAvaliarLancamento==='function') pendAvaliarLancamento(k, reg, dashDia()); }
+        catch(e){ _logFalhaGrav('avaliar a pendência de prevenção de '+valor, e); }
         dashEspelhar(k, ref.key, reg, 'lancar');
-      }).catch(function(e){ alert('Não salvou: '+((e&&e.message)||e)); });
+        return true;
+      }).catch(function(e){ alert('Não salvou: '+((e&&e.message)||e)); return false; });
     };
-    if(k!=='reposicao'){ gravar(false); return; }
+    if(k!=='reposicao') return gravar(false);
     // ---- Reposição: casar a ficha e conferir o saldo ANTES de gravar ----------------
     // A ficha é a ESCOLHIDA na busca (idx viaja no clique); sem índice, tenta casar o
     // texto — e nunca aceita casamento ambíguo (nome sozinho não identifica ninguém).
@@ -29095,6 +29219,467 @@
     }
     gravar(true, pRep, saldoRep);
   }
+  /* ====================================================================================
+   * PENDÊNCIAS DE PREVENÇÃO — o que ficou para a próxima vinda (Adriana, 18/set/2026)
+   *
+   * "Em toda a parte do dia, vermífugo, carrapaticida, coleira que tem que trocar, tudo, se
+   *  o peludo não estiver lá no dia, igual hoje, tá lá que o Batata tem que tomar vermífugo.
+   *  No entanto, o Batata não foi hoje. Então isso precisa de um alerta avisando que vira uma
+   *  pendência para colocar para o próximo dia que o Batata vier. Então tem que ter uma área
+   *  de pendências, porque isso é muito sério, senão vai esquecendo."
+   *
+   * O QUE VIRA PENDÊNCIA: só o que é APLICADO NO FILHOt e tem data — vermífugo,
+   * carrapaticida, troca de coleira, medicação e hidratação. Banho, veterinário, avulso,
+   * falta avisada, festa, reposição, adaptação e avaliação NÃO: ou não dependem de o corpo
+   * dele estar aqui, ou já têm o seu próprio lugar no sistema.
+   *
+   * OS DOIS CAMINHOS, que são os dela:
+   *  (a) lançado DEPOIS de o dia fechar ou de a falta ser marcada → o cartaz aparece na
+   *      hora, para quem lançou, e a pendência nasce no mesmo gesto;
+   *  (b) lançado ANTES (ela deixa marcado para a segunda-feira) → quando aquele dia fecha,
+   *      ou quando alguém marca a falta, o app varre os lançamentos do dia e abre as
+   *      pendências de quem não veio.
+   *
+   * IDEMPOTENTE: a chave é fixa — daycare/pendencias/{chave do FILHOt}/{item}. Rodar duas
+   * vezes não duplica; se já houver uma aberta, o dia mais recente entra na lista `dias` e
+   * a pendência continua sendo UMA.
+   *
+   * NADA SOME SEM RASTRO: sair daqui é "Resolvido hoje" (relança o MESMO item no dia de
+   * hoje, pela MESMA porta — dashLancar — e portanto vai à planilha e à TV) ou "Tirar
+   * pendência" com motivo escolhido. Os dois gravam quem, quando e o quê na auditoria.
+   * ==================================================================================== */
+  var PEND_ITENS=['vermifugo','carrapaticida','coleira','medicacao','hidratacao'];
+  var PEND_ABERTAS=null;      // {chave: {item: registro}} — null = ainda não lido
+  var PEND_MOTIVOS=[
+    {v:'tutor-aplicou', t:'Tutor aplicou em casa'},
+    {v:'nao-precisa',   t:'Não precisa mais'},
+    {v:'engano',        t:'Lançado por engano'}
+  ];
+  function pendItemConta(k){ return PEND_ITENS.indexOf(String(k||''))>=0; }
+  function pendRotulo(k){ var it=(typeof dashItem==='function')?dashItem(k):null; return (it&&it.t)||String(k||''); }
+  function pendNo(chave,item){ return 'daycare/pendencias/'+chave+'/'+item; }
+  // "Batata/SRD (1 COMPRIMIDO · NA BOLSA)" → "Batata/SRD". O MESMO recorte que a turma do
+  // dia já faz para achar a ficha: o parêntese é detalhe, não nome.
+  function pendBase(valor){ return String(valor||'').replace(/\s*\(.*\)\s*$/,'').trim(); }
+
+  // ===== A REGRA, numa função PURA =================================================
+  // Não lê banco, não escreve, não desenha: recebe o item, o que a chamada diz daquele dia
+  // e se o dia já fechou, e responde sim ou não. É ela que o harness morde.
+  //   estado: 'veio' | 'faltou' | '' (ninguém respondeu ainda)
+  //   diaFechado: a trava da falta automática daquele dia já foi tomada
+  function pendDeveAbrir(item, estado, diaFechado){
+    if(!pendItemConta(item)) return false;      // banho, vet, avulso… não geram pendência
+    var e=String(estado||'');
+    if(e==='veio') return false;                // ele está aqui: quem lançou resolve hoje
+    if(e==='faltou') return true;               // a chamada já disse que não veio
+    return !!diaFechado;                        // sem resposta e o dia fechado: não veio
+  }
+
+  // A chave do FILHOt de um lançamento. Os novos trazem `chave` gravada; os antigos só têm
+  // o texto — e aí a resolução é a MESMA do resto da tela (planCasar). Casamento ambíguo
+  // NÃO conta: nome sozinho não identifica ninguém, e pendência no FILHOt errado é pior do
+  // que pendência nenhuma.
+  function pendChaveDoLancamento(reg){
+    if(reg&&reg.chave) return String(reg.chave);
+    var txt=pendBase(reg&&reg.valor);
+    if(!txt) return '';
+    try{ var m=planCasar(txt); if(m&&m.p&&!m.ambiguo&&m.p.n) return dcKey(m.p.n,m.p.tutor); }
+    catch(e){ /* silencioso de propósito: sem casamento seguro a pendência não nasce — e o audit de quem chamou diz isso */ }
+    return '';
+  }
+
+  // O nome e o tutor para a tela, tirados do cadastro quando dá — o texto do lançamento
+  // ("Batata/SRD") serve de reserva, nunca de invenção.
+  function pendIdentidade(chave, base){
+    var o={nome:pendBase(base), tutor:''};
+    try{
+      (PELUDINHOS||[]).forEach(function(p){
+        if(o.tutor) return;
+        if(dcKey(p.n,p.tutor)===chave){ o.nome=pelNome(p)||o.nome; o.tutor=(pelGet(p,'tutor')||p.tutor||''); }
+      });
+    }catch(e){ /* silencioso de propósito: sem cadastro em memória vale o texto do próprio lançamento */ }
+    return o;
+  }
+
+  // Grava (ou reabre) UMA pendência. Transação porque dois aparelhos podem varrer o mesmo
+  // dia ao mesmo tempo — a chave fixa {chave}/{item} é o que impede a duplicata.
+  function pendGravar(chave,item,dados){
+    if(!DB||!chave||!item) return Promise.resolve(false);
+    return DB.ref(pendNo(chave,item)).transaction(function(atual){
+      if(atual && atual.status==='aberta'){
+        var dias=Array.isArray(atual.dias)?atual.dias.slice():(atual.dia?[String(atual.dia)]:[]);
+        if(dias.indexOf(dados.dia)<0) dias.push(dados.dia);
+        dias.sort();
+        atual.dias=dias;
+        atual.dia=dias[dias.length-1];      // a mais recente é a que a tela mostra
+        atual.valor=dados.valor; atual.base=dados.base; atual.hora=dados.hora||'';
+        if(dados.det) atual.det=dados.det; else delete atual.det;
+        atual.atualizado_ts=Date.now();
+        return atual;
+      }
+      // Não existia, ou estava resolvida/cancelada e o lançamento voltou: nasce de novo.
+      var novo={dia:dados.dia, dias:[dados.dia], item:item, valor:dados.valor, base:dados.base,
+                hora:dados.hora||'', nome:dados.nome||'', tutor:dados.tutor||'',
+                origem:'lancamento', criado_ts:Date.now(), criado_por:'sistema', status:'aberta'};
+      if(dados.det) novo.det=dados.det;
+      return novo;
+    }).then(function(res){
+      if(!res||!res.committed) return false;
+      if(typeof audit==='function') audit('pendencia-prevencao',
+        'abriu pendência de '+pendRotulo(item)+' para '+(dados.nome||dados.base||chave)+' — não veio em '+dados.dia,
+        {alvo:chave, pet:(dados.nome||dados.base||''), assinou:'sistema'});
+      if(PEND_ABERTAS){ PEND_ABERTAS[chave]=PEND_ABERTAS[chave]||{}; PEND_ABERTAS[chave][item]=(res.snapshot?res.snapshot.val():null); }
+      try{ pendAtualizarBadge(); }catch(e){ /* silencioso de propósito: enfeite de menu — falhar não muda dado nenhum */ }
+      return true;
+    }).catch(function(e){
+      _logFalhaGrav('a pendência de '+pendRotulo(item)+' de '+(dados.nome||chave), e);
+      return false;
+    });
+  }
+
+  // ---- caminho (a): lançou AGORA, para um dia em que ele não estava --------------------
+  function pendAvaliarLancamento(item, reg, dia){
+    if(!DB||!pendItemConta(item)||!reg) return Promise.resolve(false);
+    var chave=pendChaveDoLancamento(reg);
+    if(!chave){
+      // Sem ficha casada não se abre pendência no escuro — mas também não se cala.
+      if(typeof audit==='function') audit('pendencia-prevencao',
+        'NÃO consegui saber de quem é o lançamento "'+(reg.valor||'')+'" ('+pendRotulo(item)+') — pendência não aberta',{});
+      return Promise.resolve(false);
+    }
+    return Promise.all([
+      DB.ref('daycare/chamada/'+dia+'/'+chave).once('value').then(function(s){ return s.val()||''; })
+        .catch(function(e){ _logLeituraFalhou('daycare/chamada/ (pendAvaliarLancamento)', e); return ''; }),
+      DB.ref(faltaAutoTrava(dia)).once('value').then(function(s){ return !!s.val(); })
+        .catch(function(e){ _logLeituraFalhou(faltaAutoTrava(dia)+' (pendAvaliarLancamento)', e); return false; })
+    ]).then(function(rr){
+      if(!pendDeveAbrir(item, rr[0], rr[1])) return false;
+      var id=pendIdentidade(chave, reg.valor);
+      return pendGravar(chave, item, {dia:dia, valor:(reg.valor||''), base:pendBase(reg.valor),
+        hora:(reg.hora||''), det:(reg.det||null), nome:id.nome, tutor:id.tutor}).then(function(ok){
+        if(!ok) return false;
+        if(typeof zAlertao==='function') zAlertao((id.nome||'Ele')+' não veio em '+((typeof fmtBR==='function'?fmtBR(dia):'')||dia),
+          ['O lançamento de '+pendRotulo(item)+' ficou guardado como PENDÊNCIA.',
+           'Na próxima vez que ele vier, a recepção resolve em Central Zêluz › Day Care › Pendências de prevenção — e o lançamento entra no dia, na planilha e na TV.',
+           'Nada se perdeu: o que você lançou continua registrado neste dia.'],
+          {ok:true, botao:'Entendi'});
+        return true;
+      });
+    });
+  }
+
+  // ---- caminho (b): o dia fechou (ou alguém marcou falta) → varre o que foi lançado ----
+  // `chaves` é a lista de quem não veio. Idempotente: a chave fixa {chave}/{item} impede a
+  // segunda pendência, então rodar de novo não duplica nada.
+  function pendVarrerDia(dia, chaves){
+    if(!DB||!dia||!Array.isArray(chaves)||!chaves.length) return Promise.resolve(0);
+    var quero={}; chaves.forEach(function(k){ if(k) quero[k]=1; });
+    return DB.ref('daycare/dashboard/'+dia).once('value').then(function(s){
+      var tudo=s.val()||{}, tarefas=[];
+      PEND_ITENS.forEach(function(item){
+        var lista=tudo[item]||{};
+        Object.keys(lista).forEach(function(id){
+          var reg=lista[id]||{};
+          var chave=pendChaveDoLancamento(reg);
+          if(!chave||!quero[chave]) return;
+          var idn=pendIdentidade(chave, reg.valor);
+          tarefas.push(pendGravar(chave, item, {dia:dia, valor:(reg.valor||''), base:pendBase(reg.valor),
+            hora:(reg.hora||''), det:(reg.det||null), nome:idn.nome, tutor:idn.tutor}));
+        });
+      });
+      if(!tarefas.length) return 0;
+      return Promise.all(tarefas).then(function(rs){ return rs.filter(Boolean).length; });
+    }).catch(function(e){
+      _logLeituraFalhou('daycare/dashboard/'+dia+' (pendVarrerDia)', e);
+      return 0;
+    });
+  }
+
+  // ---- o aviso que NÃO depende de abrir a tela -----------------------------------------
+  // Ele chegou: quem está no check-in fica sabendo na hora, sem precisar lembrar de visitar
+  // outra tela. (A lei de 28/ago: "aviso que depende de abrir a tela não é aviso".)
+  var PEND_AVISADO={};        // {dia||chave: true} — um cartaz por FILHOt por dia
+  function pendAvisarChegada(chave){
+    if(!DB||!chave) return Promise.resolve(false);
+    var dia=(typeof dcDataKey==='function')?dcDataKey():'';
+    var sel=dia+'||'+chave;
+    if(PEND_AVISADO[sel]) return Promise.resolve(false);
+    return DB.ref('daycare/pendencias/'+chave).once('value').then(function(s){
+      var o=s.val()||{};
+      var abertas=Object.keys(o).filter(function(i){ return (o[i]||{}).status==='aberta'; });
+      if(!abertas.length) return false;
+      PEND_AVISADO[sel]=true;
+      var nome=(o[abertas[0]]||{}).nome||'';
+      var linhas=abertas.map(function(i){
+        var r=o[i]||{};
+        return pendRotulo(i)+' de '+(((typeof fmtBR==='function'?fmtBR(r.dia||''):'')||r.dia)||'')
+          +(r.valor?(' — '+r.valor):'');
+      });
+      linhas.push('Avise a recepção: em Central Zêluz › Day Care › Pendências de prevenção ela resolve, e o lançamento entra no dia de hoje.');
+      if(typeof zAlertao==='function') zAlertao((nome||'Ele')+' chegou e tem pendência', linhas,
+        {botao:'Abrir Pendências', aoFechar:function(){
+          try{ if(typeof abrirItemDoMenu==='function') abrirItemDoMenu('pendencias'); }
+          catch(e){ /* silencioso de propósito: atalho de tela — falhar não pode derrubar quem chamou */ }
+        }});
+      if(typeof audit==='function') audit('pendencia-prevencao',
+        'avisou na chegada: '+(nome||chave)+' tem '+abertas.length+' pendência(s) aberta(s)',{alvo:chave});
+      return true;
+    }).catch(function(e){
+      _logLeituraFalhou('daycare/pendencias/'+chave+' (pendAvisarChegada)', e);
+      return false;
+    });
+  }
+
+  // ---- a lista, o contador e a tela ----------------------------------------------------
+  // A chamada de HOJE desce junto: o quadro dos dashboards precisa saber QUEM veio, e o
+  // dcChamada só existe depois de alguém abrir a tela da Chamada no Day Care. Ler de lá
+  // faria o quadro dizer "nada para recuperar" quando na verdade ele ainda não sabe — a
+  // lição de 13/ago: lista curta MENTE.
+  var PEND_CHAMADA=null;      // {chave: 'veio'|'faltou'} do dia de hoje — null = não lido
+  function pendCarregar(){
+    if(!DB) return Promise.resolve(null);
+    var hoje=(typeof dcDataKey==='function')?dcDataKey():'';
+    return Promise.all([
+      DB.ref('daycare/pendencias').once('value').then(function(s){ PEND_ABERTAS=s.val()||{}; })
+        .catch(function(e){ _logLeituraFalhou('daycare/pendencias (pendCarregar)', e); }),
+      DB.ref('daycare/chamada/'+hoje).once('value').then(function(s){ PEND_CHAMADA=s.val()||{}; })
+        .catch(function(e){ _logLeituraFalhou('daycare/chamada/ (pendCarregar)', e); })
+    ]).then(function(){
+      try{ pendAtualizarBadge(); }catch(e){ /* silencioso de propósito: enfeite de menu — falhar não muda dado nenhum */ }
+      return PEND_ABERTAS;
+    });
+  }
+  // Uma linha por pendência ABERTA, da mais antiga para a mais nova — quem espera há mais
+  // tempo aparece primeiro.
+  function pendLista(){
+    var o=PEND_ABERTAS||{}, out=[];
+    Object.keys(o).forEach(function(chave){
+      var itens=o[chave]||{};
+      Object.keys(itens).forEach(function(item){
+        var r=itens[item]||{};
+        if(r.status!=='aberta') return;
+        out.push({chave:chave, item:item, dia:String(r.dia||''),
+          dias:(Array.isArray(r.dias)?r.dias:[]),
+          valor:String(r.valor||''), base:String(r.base||pendBase(r.valor)),
+          hora:String(r.hora||''), det:(r.det||null),
+          nome:String(r.nome||''), tutor:String(r.tutor||''), criado_ts:(r.criado_ts||0)});
+      });
+    });
+    out.sort(function(a,b){ return (a.dia===b.dia)?((a.criado_ts||0)-(b.criado_ts||0)):(a.dia<b.dia?-1:1); });
+    return out;
+  }
+  function pendContar(){ return (PEND_ABERTAS===null)?null:pendLista().length; }
+  function pendAtualizarBadge(){
+    var el=document.getElementById('navPendN'); if(!el) return;
+    var n=pendContar();
+    el.textContent=(n===null||n===0)?'':('('+n+')');
+  }
+  function pendAbrir(){
+    var raiz=document.getElementById('pendRoot'); if(!raiz) return;
+    // A trava é a MESMA tabela que mostra o item no menu. Quem chegar por link direto e não
+    // puder ver lê o porquê — nunca uma tela em branco.
+    if(!podePapel('pendencias-prevencao')){
+      raiz.innerHTML='<div class="card"><h2 style="font-size:19px">Esta tela é da Central Zêluz</h2>'
+        +'<div class="hint">As pendências de prevenção são resolvidas por quem atende o tutor: as Consultoras de Bem-Estar, a Supervisão e a Gestão.</div></div>';
+      return;
+    }
+    if(!DB){
+      raiz.innerHTML='<div class="card"><h2 style="font-size:19px">Sem conexão com o banco agora</h2>'
+        +'<div class="hint">Abra esta tela de novo quando a rede voltar. Nada se perdeu — as pendências ficam guardadas no banco.</div></div>';
+      return;
+    }
+    pendRender();
+    pendCarregar().then(pendRender);
+  }
+  function pendRender(){
+    var raiz=document.getElementById('pendRoot'); if(!raiz) return;
+    if(PEND_ABERTAS===null){ raiz.innerHTML='<div class="card"><div class="hint">Carregando as pendências…</div></div>'; return; }
+    var L=pendLista();
+    var h='<div class="card" style="border-left:4px solid '+(L.length?'var(--crm-critico)':'var(--z-gold)')+'">'
+      +'<h2 style="font-size:19px;margin-bottom:2px">'
+      +(L.length?(L.length+(L.length===1?' pendência aberta':' pendências abertas')):'Nenhuma pendência aberta')+'</h2>'
+      +'<div class="hint">'+(L.length
+          ? 'Da mais antiga para a mais recente. Quando o FILHOt vier, toque em <strong>Resolvido hoje</strong>: o item é lançado no dia de hoje pela mesma porta dos Lançamentos do dia — e segue para a planilha e para a TV.'
+          : 'Tudo o que foi lançado para quem não veio já foi resolvido ou tirado, com motivo. Quando alguém lançar vermífugo, carrapaticida, troca de coleira, medicação ou hidratação para um FILHOt que faltou, a pendência aparece aqui sozinha.')
+      +'</div></div>';
+    L.forEach(function(r){
+      var quando=((typeof fmtBR==='function'?fmtBR(r.dia):'')||r.dia);
+      var outros=(r.dias||[]).filter(function(d){ return d!==r.dia; });
+      h+='<div class="card" style="border-left:4px solid var(--crm-critico)">'
+        +'<div style="display:flex;gap:8px;align-items:baseline;flex-wrap:wrap">'
+        +'<strong style="font-size:17px;color:var(--z-blue)">'+escAttr(r.nome||r.base)+'</strong>'
+        +'<span style="font-weight:800;color:var(--crm-critico)">'+escAttr(pendRotulo(r.item))+'</span>'
+        +(r.tutor?('<span class="hint" style="margin:0">tutor: '+escAttr(r.tutor)+'</span>'):'')
+        +'</div>'
+        +'<div class="hint" style="margin-top:4px">Não veio em <strong>'+escAttr(quando)+'</strong>'
+        +(outros.length?(' · e também em '+escAttr(outros.map(function(d){ return ((typeof fmtBR==='function'?fmtBR(d):'')||d); }).join(', '))):'')
+        +'</div>'
+        +'<div class="hint" style="margin-top:4px">Estava lançado assim: <strong>'+escAttr(r.valor||r.base)+'</strong>'
+        +(r.hora?(' · horário <strong>'+escAttr(r.hora)+'</strong>'):'')+'</div>'
+        +'<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px">'
+        +'<button type="button" class="btn btn-primary" style="font-weight:800" onclick="pendResolverHoje('+argPend(r.chave)+','+argPend(r.item)+')">Resolvido hoje</button>'
+        +'<button type="button" class="btn" style="background:var(--z-cream-warm);color:var(--z-blue);border:1.5px solid var(--line);font-weight:800" onclick="pendTirar('+argPend(r.chave)+','+argPend(r.item)+')">Tirar pendência</button>'
+        +'</div></div>';
+    });
+    raiz.innerHTML=h;
+    try{ pendAtualizarBadge(); }catch(e){ /* silencioso de propósito: enfeite de menu — falhar não muda dado nenhum */ }
+  }
+  // A chave e o item viajam DENTRO de um onclick. O apóstrofo de um tutor "D'Ávila"
+  // quebraria a chamada em duas se o argumento fosse escrito entre aspas simples. Então o
+  // argumento sai como JSON (aspas duplas, tudo escapado) e passa pelo escAttr, que
+  // transforma a aspa dupla em &quot; — o navegador devolve a aspa ao ler o atributo.
+  function argPend(v){ return escAttr(JSON.stringify(String(v==null?'':v))); }
+  function pendAchar(chave,item){
+    var r=((PEND_ABERTAS||{})[chave]||{})[item];
+    return (r&&r.status==='aberta')?r:null;
+  }
+  // "Resolvido hoje": relança o MESMO item no dia de HOJE pela MESMA porta (dashLancar) —
+  // é isso que faz o lançamento chegar à planilha e à TV. Nada grava antes do Confirmar: o
+  // cartaz mostra a frase inteira que vai para a planilha e só então acontece.
+  function pendResolverHoje(chave,item){
+    var r=pendAchar(chave,item); if(!r) return;
+    if(!DB){ alert('Sem conexão com o banco — o lançamento não chegaria à planilha. Tente de novo em instantes.'); return; }
+    var hoje=(typeof dcDataKey==='function')?dcDataKey():'';
+    var frase=(r.valor||r.base);
+    zEscolha('Lançar '+pendRotulo(item)+' de '+(r.nome||r.base)+' hoje?',
+      ['Vai para os Lançamentos do dia de '+(((typeof fmtBR==='function'?fmtBR(hoje):'')||hoje))+' assim: '+frase+(r.hora?(' · '+r.hora):'')+'.',
+       'Dali segue para a planilha e para a TV, como qualquer outro lançamento do dia.',
+       'A pendência fica registrada como resolvida, com o seu nome e a hora.'],
+      [{t:'Sim, lançar agora', cor:'#1E8449', fn:function(){ pendResolverConfirmado(chave,item); }},
+       {t:'Agora não', fn:function(){}}],
+      {corTitulo:'#234D67'});
+  }
+  function pendResolverConfirmado(chave,item){
+    var r=pendAchar(chave,item); if(!r||!DB) return;
+    var hoje=(typeof dcDataKey==='function')?dcDataKey():'';
+    // "Hoje" é hoje: o relançamento nunca pode cair no dia que ficou escolhido na tela de
+    // Lançamentos. E a lista do dia precisa ser a de HOJE, senão a checagem de repetido
+    // olharia para o dia errado.
+    DASH_DIA_SEL='';
+    DB.ref('daycare/dashboard/'+hoje).once('value').then(function(s){
+      DASH_DADOS=dashLimparFantasmas(s.val()||{});
+      // As respostas voltam exatamente como foram gravadas — dashLancar as reescreve na
+      // célula, guarda no nó e no fim limpa o rascunho sozinho.
+      DASH_DET[item]=r.det?JSON.parse(JSON.stringify(r.det)):{};
+      // A ficha escolhida na OUTRA tela não pode grudar aqui: quem manda é o nome desta
+      // pendência. Sem isto o vermífugo do Batata sairia com a chave do último FILHOt que
+      // alguém tivesse buscado em Lançamentos do dia.
+      delete DASH_SEL[item]; delete DASH_SEL_I[item];
+      var fechar=function(jaEstava){
+        var reg={status:'resolvida', resolvido_ts:Date.now(), resolvido_dia:hoje,
+                 resolvido_por:(typeof quemSou==='function'?quemSou():'-')};
+        if(jaEstava) reg.resolvido_obs='o item já estava lançado hoje';
+        return DB.ref(pendNo(chave,item)).update(reg).then(function(){
+          if(PEND_ABERTAS&&PEND_ABERTAS[chave]&&PEND_ABERTAS[chave][item])
+            Object.assign(PEND_ABERTAS[chave][item], reg);
+          if(typeof audit==='function') audit('pendencia-prevencao',
+            'resolveu a pendência de '+pendRotulo(item)+' de '+(r.nome||r.base)+' (era do dia '+r.dia+') — '
+            +(jaEstava?'o item já estava lançado hoje':'relançada hoje'),
+            {alvo:chave, pet:(r.nome||r.base||'')});
+          pendRender();
+        });
+      };
+      // Já lançado hoje? Então está resolvido — fecha sem tentar lançar de novo (dashLancar
+      // recusaria o repetido e a pendência ficaria presa para sempre).
+      var lista=DASH_DADOS[item]||{}, alvo=jsNorm(r.base), jaHoje=false;
+      Object.keys(lista).forEach(function(id){ if(jsNorm(pendBase((lista[id]||{}).valor))===alvo) jaHoje=true; });
+      if(jaHoje) return fechar(true);
+      // A pendência só fecha DEPOIS de o lançamento entrar de verdade. Fechar no escuro
+      // seria o FILHOt ficar sem o vermífugo e ninguém saber.
+      var pLanc=dashLancar(item, r.base, -1, (r.hora||''));
+      if(!pLanc||typeof pLanc.then!=='function'){
+        if(typeof zAlertao==='function') zAlertao('O lançamento NÃO entrou',
+          ['A tela de Lançamentos do dia recusou este item agora (pode faltar uma resposta obrigatória).',
+           'A pendência continua ABERTA de propósito — ela não se fecha sem o lançamento existir.'],
+          {botao:'Entendi'});
+        return null;
+      }
+      return pLanc.then(function(entrou){
+        if(entrou===false){
+          if(typeof zAlertao==='function') zAlertao('O lançamento NÃO foi salvo',
+            ['A pendência continua ABERTA — ela não se fecha sem o lançamento existir.',
+             'Tente de novo em instantes.'],{botao:'Entendi'});
+          return null;
+        }
+        return fechar(false);
+      });
+    }).catch(function(e){
+      _logFalhaGrav('resolver a pendência de '+pendRotulo(item)+' de '+(r.nome||r.base), e);
+      if(typeof zAlertao==='function') zAlertao('NÃO consegui fechar a pendência',
+        ['O erro foi: '+((e&&e.message)||e),
+         'Confira em Lançamentos do dia se o item entrou hoje. A pendência continua aberta de propósito — ela não some sem certeza.'],
+        {botao:'Entendi'});
+    });
+  }
+  // "Tirar pendência": o motivo é obrigatório e vem em BOTÃO — motivo escrito à mão vira
+  // "ok" e "resolvido", que não dizem nada a quem ler depois.
+  function pendTirar(chave,item){
+    var r=pendAchar(chave,item); if(!r) return;
+    zEscolha('Por que tirar a pendência de '+pendRotulo(item)+' de '+(r.nome||r.base)+'?',
+      ['Ela sai da lista, mas NÃO some: fica registrada com o motivo, o seu nome e a hora.'],
+      PEND_MOTIVOS.map(function(m){
+        return {t:m.t, fn:function(){ pendTirarConfirmado(chave,item,m.v,m.t); }};
+      }).concat([{t:'Deixar como está', cor:'#6b5f4b', fn:function(){}}]),
+      {corTitulo:'#234D67'});
+  }
+  function pendTirarConfirmado(chave,item,motivo,rotulo){
+    var r=pendAchar(chave,item); if(!r||!DB) return;
+    if(!motivo){ alert('Escolha o motivo — sem ele a pendência não sai da lista.'); return; }
+    var reg={status:'cancelada', motivo:motivo, motivo_texto:(rotulo||''), cancelado_ts:Date.now(),
+             cancelado_por:(typeof quemSou==='function'?quemSou():'-')};
+    DB.ref(pendNo(chave,item)).update(reg).then(function(){
+      if(PEND_ABERTAS&&PEND_ABERTAS[chave]&&PEND_ABERTAS[chave][item])
+        Object.assign(PEND_ABERTAS[chave][item], reg);
+      if(typeof audit==='function') audit('pendencia-prevencao',
+        'tirou a pendência de '+pendRotulo(item)+' de '+(r.nome||r.base)+' — motivo: '+(rotulo||motivo),
+        {alvo:chave, pet:(r.nome||r.base||'')});
+      pendRender();
+    }).catch(function(e){
+      _logFalhaGrav('tirar a pendência de '+pendRotulo(item)+' de '+(r.nome||r.base), e);
+      if(typeof zAlertao==='function') zAlertao('NÃO consegui tirar a pendência',
+        ['O erro foi: '+((e&&e.message)||e), 'Ela continua na lista — nada some sem gravação certa.'],
+        {botao:'Entendi'});
+    });
+  }
+  // O quadro dos dashboards (a Márcia e a Amanda): SÓ LEITURA, com o caminho para cá. A
+  // MESMA função nos dois lugares — uma conta, dois usos.
+  // A chamada de hoje, com a leitura própria na frente. O dcChamada entra só como reforço
+  // (a tela da Chamada pode ter acabado de marcar alguém) — nunca sozinho.
+  function pendChamadaHoje(){
+    var base=(PEND_CHAMADA&&typeof PEND_CHAMADA==='object')?PEND_CHAMADA:null;
+    var viva=null; try{ viva=(dcChamada&&Object.keys(dcChamada).length)?dcChamada:null; }catch(e){ viva=null; }
+    if(!base&&!viva) return null;                       // ninguém leu nada: não se afirma
+    return Object.assign({}, base||{}, viva||{});
+  }
+  function pendPresentesHoje(){
+    var cham=pendChamadaHoje(); if(!cham) return null;  // null = ainda não sei quem veio
+    return pendLista().filter(function(r){ return cham[r.chave]==='veio'; });
+  }
+  function blocoPendPrevHTML(){
+    var h='<article class="pm-card pm-rv pm-c4"><h3 class="pm-tit">Pendências de prevenção de quem veio hoje</h3>'
+      +'<p class="pm-sub">Vermífugo, carrapaticida, troca de coleira, medicação ou hidratação lançados num dia em que o FILHOt não veio. Ele está aqui hoje — é a chance de resolver.</p>';
+    if(PEND_ABERTAS===null) return h+poSemLeituraHTML('as pendências de prevenção')+'</article>';
+    var L=pendPresentesHoje();
+    if(L===null) return h+poSemLeituraHTML('a chamada de hoje')+'</article>';
+    if(!L.length) return h+poVazioHTML('Nada para recuperar hoje.','Ninguém que veio hoje tem prevenção esperando a próxima vinda.')+'</article>';
+    h+='<div class="pm-lista"><p class="pa-grupo">Estão aqui hoje <i>'+L.length+'</i></p>';
+    L.slice(0,8).forEach(function(r){
+      h+='<button type="button" class="pa-li" onclick="paIr(\'pendencias\')">'
+        +'<span class="pm-badge pm-b-critico">pendente</span>'
+        +'<span class="pa-li-txt"><b>'+esc(r.nome||r.base)+'</b><span>'+esc(pendRotulo(r.item))+' de '
+        +esc(((typeof fmtBR==='function'?fmtBR(r.dia):'')||r.dia))+'</span></span>'
+        +'<span class="pa-li-go">&rsaquo;</span></button>';
+    });
+    if(L.length>8) h+='<button type="button" class="pa-li pa-mais" onclick="paIr(\'pendencias\')">'
+      +'<span class="pa-li-txt"><b>e mais '+(L.length-8)+' — abrir as Pendências de prevenção</b></span>'
+      +'<span class="pa-li-go">&rsaquo;</span></button>';
+    return h+'</div></article>';
+  }
+  // TELEGRAM, de propósito NENHUM aviso sai daqui. Os grupos que existem na ponte são o da
+  // veterinária, o do almoço, o do plantão da AuAulândia, o Diário do Daycare e o de
+  // URGÊNCIAS (só Adriana e Márcia). Nenhum deles é o grupo da recepção — e mandar para o
+  // grupo errado é o erro que já custou caro nesta casa. Quando existir um grupo da
+  // recepção na ponte, é aqui que a linha nasce; inventar um agora, não.
   // Espelha na planilha. O lançamento no app já está salvo — isto é o que faz a TV enxergar.
   // diaOpc: a fila de reenvio manda lançamento de dias passados — a ponte precisa receber
   // O DIA DO LANÇAMENTO (03/09 vai para a planilha de 03/09), nunca o dia aberto na tela.
@@ -39530,6 +40115,7 @@
         + poCardVet(vet)
         + poCardProblemas(probs)
         + poCardLigacoes(poLigacoes())
+        +'<div id="poCardPendPrev" style="display:contents">'+blocoPendPrevHTML()+'</div>'
         +'</div>'
         + poAreaHTML('AUAULÂNDIA','As noites que vêm aí',
             'Quantos hóspedes por noite, quanto se paga às plantonistas, quem toma remédio e o Enriquecimento do dia.', PO_IC_LUA)
@@ -39557,6 +40143,11 @@
       // nunca um total pela metade.
       recP.then(function(){ recRedesenhar(); })
         .catch(function(e){ _logLeituraFalhou('Dashboard da Márcia (quadro dos recebimentos)', e); });
+      // As pendências de prevenção: o quadro nasce com o que já está em memória e se troca
+      // sozinho quando a leitura fresca chega. Nada segura a primeira pintura.
+      if(typeof pendCarregar==='function') pendCarregar().then(function(){
+        var _c=document.getElementById('poCardPendPrev'); if(_c) _c.innerHTML=blocoPendPrevHTML();
+      }).catch(function(e){ _logLeituraFalhou('Dashboard da Márcia (pendências de prevenção)', e); });
       // O dia chegou: troca SÓ os dois quadros, sem reiniciar a animação do painel inteiro.
       diaProtoP.then(function(D){
         poTrocarQuadro('poCardProtocolos', blocoProtocolosHTML(D));
@@ -40107,7 +40698,12 @@
         +'<div class="pm-grid">'
         + blocoPrevencaoVencidaHTML()
         + blocoFaltaPesarHTML()
+        +'<div id="paCardPendPrev" style="display:contents">'+blocoPendPrevHTML()+'</div>'
         +'</div>';
+      // O mesmo quadro da Márcia, com a mesma leitura: nasce com o que há e se troca sozinho.
+      if(typeof pendCarregar==='function') pendCarregar().then(function(){
+        var _c=document.getElementById('paCardPendPrev'); if(_c) _c.innerHTML=blocoPendPrevHTML();
+      }).catch(function(e){ _logLeituraFalhou('Dashboard da Amanda (pendências de prevenção)', e); });
       requestAnimationFrame(function(){ try{ pmAnimar(raiz); }catch(e){} /* silencioso de propósito: animação — falhar não pode derrubar a tela */ });
     });
   }

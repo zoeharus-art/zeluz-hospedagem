@@ -3732,8 +3732,8 @@ async function main() {
     check('v-25 · a auditoria da tabela diz o que mudou, de quanto para quanto',
       /audit\('orcamento-precos',\s*\n?\s*mudou\.length\?\('alterou a tabela de hospedagem — '\+mudou\.join/.test(html)
       && /\{antes:antes, depois:novo\}/.test(html));
-    check('v-25 · a versão carimbada desta entrega é a 2026-09-19-04',
-      /const APP_VERSAO='2026-09-19-04';/.test(html));
+    check('v-25 · a versão carimbada desta entrega é a 2026-09-19-05',
+      /const APP_VERSAO='2026-09-19-05';/.test(html));
   }
   console.log('');
 
@@ -4019,10 +4019,384 @@ async function main() {
     check('v-26 · e continua FORA da soma — o app não sabe quantas diárias foram cobradas',
       html.indexOf('nunca quantas diárias foram cobradas — por isso não entra na soma') > 0);
 
-    check('v-26 · a versão carimbada desta entrega é a 2026-09-19-04',
-      /const APP_VERSAO='2026-09-19-04';/.test(html));
+    check('v-26 · a versão carimbada desta entrega é a 2026-09-19-05',
+      /const APP_VERSAO='2026-09-19-05';/.test(html));
   }
   console.log('');
+
+  // ===== v-27 · PENDÊNCIAS DE PREVENÇÃO + A SENHA DA PONTE DE HOSPEDAGEM ============
+  // Adriana, 18/set/2026: "se o peludo não estiver lá no dia, igual hoje, tá lá que o Batata
+  // tem que tomar vermífugo. No entanto, o Batata não foi hoje. Então isso precisa de um
+  // alerta avisando que vira uma pendência para colocar para o próximo dia que o Batata
+  // vier… é uma pendência dentro do daycare, onde elas precisam entrar e ver."
+  // E, no mesmo dia: a senha da ponte de Hospedagem ainda aparecia ESCRITA em Configurações.
+  console.log('v-27 · Pendências de prevenção, e a senha da ponte de Hospedagem escondida:');
+  {
+    // ---- (a) o menu: o item novo no grupo certo, no espelho e no PERM ----------------
+    const fatiaV27 = (de, ate) => {
+      const i = html.indexOf('data-acc-toggle="' + de + '"');
+      const j = html.indexOf('data-acc-toggle="' + ate + '"');
+      return (i < 0 || j < 0) ? '' : html.slice(i, j);
+    };
+    const doDayCare27 = fatiaV27('c-daycare', 'operacao');
+    check('v-27 · o item "Pendências de prevenção" existe em Central Zêluz › Day Care',
+      /<a data-v="pendencias"[^>]*>[\s\S]{0,320}?<span>Pendências de prevenção<\/span>/.test(doDayCare27),
+      doDayCare27.slice(0, 200));
+    check('v-27 · ele mora logo depois dos Lançamentos do dia (a ordem alfabética do bloco)',
+      doDayCare27.indexOf('data-v="dashdc"') < doDayCare27.indexOf('data-v="pendencias"')
+      && doDayCare27.indexOf('data-v="pendencias"') < doDayCare27.indexOf('data-v="peso"'));
+    check('v-27 · nasce escondido e quem o revela é a tabela PERM — nenhuma classe so-* nova',
+      /<a data-v="pendencias" style="display:none"/.test(html)
+      && html.indexOf("['pendencias','pendencias-prevencao']") > 0);
+    check('v-27 · a tabela PERM_MENU continua terminando no Dashboard da Adriana',
+      html.indexOf("['painel-diretoria','painel-diretoria']];") > 0);
+    check('v-27 · quem vê: Central Zêluz, Supervisão, Gestão e Diretoria — o monitor não',
+      ['consultora', 'supervisor', 'gestao', 'diretoria'].every((r) => ctx.podePapel('pendencias-prevencao', r) === true)
+      && ['monitor', 'plantonista', 'aprendiz', 'vet', 'conferencia', 'tutor', ''].every((r) => ctx.podePapel('pendencias-prevencao', r) === false));
+    // A lista espelho (a tela do Time) tem de dizer o MESMO que o sidebar — senão a
+    // permissão não pode ser concedida a ninguém (a lição do Orçamento, 13/ago/2026).
+    vm.runInContext('__nav27 = NAV_PAGINAS_ALL;', ctx);
+    const doGrupo27 = (ctx.__nav27 || []).find((g) => g.grp === 'Central Zêluz · Day Care');
+    check('v-27 · a tela do Time também o concede, no MESMO grupo e com o MESMO rótulo',
+      !!doGrupo27 && doGrupo27.itens.some((i) => i.k === 'pendencias' && i.t === 'Pendências de prevenção'),
+      JSON.stringify(doGrupo27 && doGrupo27.itens));
+    check('v-27 · o titles{} dá nome e dica à tela (senão o cabeçalho abre vazio)',
+      /pendencias:\['Pendências de prevenção'/.test(html));
+    check('v-27 · a tela existe e o gancho de abrir está na lista ÚNICA (aoAbrirView)',
+      html.indexOf('<section class="view" id="v-pendencias">') > 0
+      && /if\(v==='pendencias'\)\{ if\(typeof pendAbrir==='function'\) pendAbrir\(\); \}/.test(html));
+    // Concessão por pessoa × tabela PERM: quem tem escopo restrito manda.
+    check('v-27 · o papel é o piso e a concessão por pessoa só LIBERA — nunca esconde',
+      /var pode=podePapel\(par\[1\]\) \|\| pset\.indexOf\(par\[0\]\)>=0;/.test(html)
+      && /a\.style\.setProperty\('display', pode\?'flex':'none', 'important'\);/.test(html));
+
+    // ---- (b) a função PURA que decide ------------------------------------------------
+    if (typeof ctx.pendDeveAbrir === 'function') {
+      check('v-27 · dia fechado e ninguém respondeu: vermífugo vira pendência',
+        ctx.pendDeveAbrir('vermifugo', '', true) === true);
+      check('v-27 · marcado FALTOU: vira pendência mesmo com o dia ainda aberto',
+        ctx.pendDeveAbrir('vermifugo', 'faltou', false) === true);
+      check('v-27 · marcado VEIO: NÃO vira pendência — ele está aqui, resolve-se hoje',
+        ctx.pendDeveAbrir('vermifugo', 'veio', true) === false);
+      check('v-27 · dia ainda aberto e sem resposta: NÃO vira pendência (ainda dá tempo de chegar)',
+        ctx.pendDeveAbrir('vermifugo', '', false) === false);
+      check('v-27 · BANHO não vira pendência — nem faltando, nem com o dia fechado',
+        ctx.pendDeveAbrir('banho', 'faltou', true) === false
+        && ctx.pendDeveAbrir('vet', 'faltou', true) === false
+        && ctx.pendDeveAbrir('faltas', 'faltou', true) === false
+        && ctx.pendDeveAbrir('reposicao', 'faltou', true) === false);
+      check('v-27 · os cinco que contam são os que se aplicam NO FILHOt e têm data',
+        JSON.stringify(ctx.PEND_ITENS) === JSON.stringify(['vermifugo', 'carrapaticida', 'coleira', 'medicacao', 'hidratacao']),
+        JSON.stringify(ctx.PEND_ITENS));
+      check('v-27 · mordida — item vazio, nulo ou desconhecido nunca vira pendência',
+        ctx.pendDeveAbrir('', 'faltou', true) === false
+        && ctx.pendDeveAbrir(null, 'faltou', true) === false
+        && ctx.pendDeveAbrir('inventado', 'faltou', true) === false);
+      check('v-27 · a decisão é PURA: não lê banco, não escreve, não desenha',
+        /function pendDeveAbrir\(item, estado, diaFechado\)\{[\s\S]{0,420}?\n  \}/.test(html)
+        && !/function pendDeveAbrir\([\s\S]{0,420}?DB\.ref/.test(html));
+    } else { check('v-27 · pendDeveAbrir existe', false, 'função não encontrada'); }
+
+    // ---- (c) o lançamento guarda a CHAVE do FILHOt -----------------------------------
+    if (typeof ctx.dashLancar === 'function') {
+      const v27 = { espelhos: [], alertas: [] };
+      const dbV27 = criarDBComPush({});
+      ctx.__v27 = v27; ctx.__v27db = dbV27;
+      const pelOrig27 = ctx.PELUDINHOS;
+      vm.runInContext(
+        '__bkpV27 = { DB: DB, dados: DASH_DADOS, diaSel: DASH_DIA_SEL, esp: dashEspelhar, rd: renderDash,'
+        + ' au: audit, det: DASH_DET, sel: DASH_SEL, seli: DASH_SEL_I, turma: DC_DASH_TURMA,'
+        + ' cham: dcChamada, alert: zAlertao, pend: PEND_ABERTAS };'
+        + "DASH_DADOS = {}; DASH_DIA_SEL = '2026-09-18'; DASH_DET = {}; DASH_SEL = {}; DASH_SEL_I = {};"
+        + "DC_DASH_TURMA = { reposicao: [], avulso: [], quando: 0, dia: '' }; PEND_ABERTAS = {};"
+        + 'dashEspelhar = function(){ __v27.espelhos.push(Array.prototype.slice.call(arguments)); return Promise.resolve({ ok: true }); };'
+        + 'renderDash = function(){}; audit = function(){};'
+        + 'zAlertao = function(t, l, o){ __v27.alertas.push({ titulo: t, linhas: l, op: o }); };'
+        + 'DB = __v27db;', ctx);
+      try {
+        ctx.PELUDINHOS = [{ n: 'Batata', raca: 'SRD', tutor: 'Roberta' }];
+        const doDia27 = (item) => ((((dbV27.__store.daycare || {}).dashboard || {})['2026-09-18'] || {})[item] || {});
+        ctx.dashSetDet('vermifugo', 'qtd', '1 COMPRIMIDO');
+        ctx.dashSetDet('vermifugo', 'onde', 'NA BOLSA');
+        ctx.dashLancar('vermifugo', 'Batata/SRD', 0);
+        await drenar(8);
+        const regs27 = Object.keys(doDia27('vermifugo')).map((id) => doDia27('vermifugo')[id]);
+        check('v-27 · o lançamento novo guarda a CHAVE do FILHOt (nome sozinho não identifica ninguém)',
+          regs27.length === 1 && regs27[0].chave === 'batata__roberta',
+          JSON.stringify(regs27.map((r) => [r.valor, r.chave])));
+        check('v-27 · e continua guardando o que já guardava — valor, detalhes e quem',
+          regs27.length === 1 && regs27[0].valor === 'Batata/SRD (1 COMPRIMIDO · NA BOLSA)'
+          && !!regs27[0].det && regs27[0].det.qtd === '1 COMPRIMIDO',
+          JSON.stringify(regs27[0]));
+        // Sem ficha casada o lançamento entra do mesmo jeito — só sem chave. Nada trava.
+        ctx.PELUDINHOS = [];
+        ctx.dashLancar('hidratacao', 'Fantasma/SRD');
+        await drenar(6);
+        const hid27 = Object.keys(doDia27('hidratacao')).map((id) => doDia27('hidratacao')[id]);
+        check('v-27 · mordida — sem ficha casada o lançamento entra igual, só sem chave (nada trava)',
+          hid27.length === 1 && hid27[0].chave === undefined, JSON.stringify(hid27));
+
+        // ---- (d) a pendência nasce, e nasce UMA só ---------------------------------
+        ctx.PELUDINHOS = [{ n: 'Batata', raca: 'SRD', tutor: 'Roberta' }];
+        const reg27 = { valor: 'Batata/SRD (1 COMPRIMIDO · NA BOLSA)', hora: '', chave: 'batata__roberta',
+          det: { qtd: '1 COMPRIMIDO', onde: 'NA BOLSA' } };
+        await dbV27.ref('daycare/chamada/2026-09-18/batata__roberta').set('faltou');
+        v27.alertas.length = 0;
+        await ctx.pendAvaliarLancamento('vermifugo', reg27, '2026-09-18');
+        await drenar(6);
+        const noPend = () => (((dbV27.__store.daycare || {}).pendencias || {}).batata__roberta || {}).vermifugo || null;
+        check('v-27 · quem não veio vira pendência em daycare/pendencias/{chave}/{item}, com status aberta',
+          !!noPend() && noPend().status === 'aberta' && noPend().dia === '2026-09-18'
+          && noPend().item === 'vermifugo' && noPend().criado_por === 'sistema'
+          && noPend().valor === 'Batata/SRD (1 COMPRIMIDO · NA BOLSA)',
+          JSON.stringify(noPend()));
+        check('v-27 · e o cartaz aparece NA HORA para quem lançou, com o caminho para resolver',
+          v27.alertas.length === 1 && /Batata não veio em 18\/09/.test(v27.alertas[0].titulo)
+          && v27.alertas[0].linhas.join(' ').indexOf('PENDÊNCIA') > 0
+          && v27.alertas[0].linhas.join(' ').indexOf('Pendências de prevenção') > 0,
+          JSON.stringify(v27.alertas.map((a) => a.titulo)));
+        // IDEMPOTENTE: rodar de novo (outro aparelho, outra varredura) não duplica.
+        await ctx.pendAvaliarLancamento('vermifugo', reg27, '2026-09-18');
+        await ctx.pendVarrerDia('2026-09-18', ['batata__roberta']);
+        await drenar(8);
+        const todas = ((dbV27.__store.daycare || {}).pendencias || {}).batata__roberta || {};
+        check('v-27 · rodar duas vezes NÃO duplica: a chave é fixa {chave}/{item}',
+          Object.keys(todas).length === 1 && Object.keys(todas)[0] === 'vermifugo',
+          JSON.stringify(Object.keys(todas)));
+        check('v-27 · o mesmo item num SEGUNDO dia entra na lista `dias` — continua sendo UMA pendência',
+          Array.isArray(noPend().dias) && noPend().dias.length === 1
+          && noPend().dias[0] === '2026-09-18', JSON.stringify(noPend().dias));
+        // Quem VEIO não gera pendência nenhuma — a varredura do dia respeita a chamada.
+        await dbV27.ref('daycare/chamada/2026-09-18/fantasma__ninguem').set('veio');
+        await ctx.pendAvaliarLancamento('carrapaticida',
+          { valor: 'Fantasma/SRD', chave: 'fantasma__ninguem' }, '2026-09-18');
+        await drenar(6);
+        check('v-27 · quem VEIO não vira pendência — nada é gravado para ele',
+          !((dbV27.__store.daycare || {}).pendencias || {}).fantasma__ninguem);
+        check('v-27 · e BANHO nunca entra, nem para quem faltou',
+          await ctx.pendAvaliarLancamento('banho', { valor: 'Batata/SRD', chave: 'batata__roberta' }, '2026-09-18') === false
+          && !(((dbV27.__store.daycare || {}).pendencias || {}).batata__roberta || {}).banho);
+
+        // ---- (e) a varredura do dia que fechou (o caso do Caco) --------------------
+        await dbV27.ref('daycare/dashboard/2026-09-22/coleira').set({
+          c1: { valor: 'Caco/Lhasa (A COLEIRA VEIO · AQUI)', chave: 'caco__ana', hora: '' } });
+        await dbV27.ref('daycare/chamada/2026-09-22/caco__ana').set('faltou');
+        const abertas = await ctx.pendVarrerDia('2026-09-22', ['caco__ana']);
+        await drenar(8);
+        const doCaco = ((dbV27.__store.daycare || {}).pendencias || {}).caco__ana || {};
+        check('v-27 · lançado ANTES (para a terça 22) e ele não foi: a varredura do dia abre a pendência',
+          abertas === 1 && !!doCaco.coleira && doCaco.coleira.status === 'aberta'
+          && doCaco.coleira.dia === '2026-09-22', JSON.stringify(doCaco));
+        check('v-27 · a varredura roda no fecho automático do dia E quando alguém marca a falta',
+          /pendVarrerDia\(hoje, marcados\.map\(function\(m\)\{ return m\.k; \}\)\)/.test(html)
+          && /if\(next==='faltou' && typeof pendVarrerDia==='function'\) pendVarrerDia\(dcDataKey\(\), \[k\]\);/.test(html)
+          && /if\(typeof pendVarrerDia==='function'\) pendVarrerDia\(dia, \[k\]\); \}/.test(html));
+
+        // ---- (f) "Resolvido hoje" relança pelo MESMO dashLancar --------------------
+        vm.runInContext('__bkpLanc27 = { lanc: dashLancar, quem: quemSou };'
+          + 'dashLancar = function(k, valor, idx, hora){ __v27.relancou = { k: k, valor: valor, idx: idx, hora: hora, det: JSON.parse(JSON.stringify(DASH_DET[k] || {})) };'
+          + '  return Promise.resolve(__v27.lancouOk !== false); };'
+          + "quemSou = function(){ return 'Leticya'; };", ctx);
+        try {
+          ctx.PEND_ABERTAS = { batata__roberta: { vermifugo: JSON.parse(JSON.stringify(noPend())) } };
+          const hoje27 = ctx.dcDataKey();
+          ctx.pendResolverConfirmado('batata__roberta', 'vermifugo');
+          await drenar(10);
+          check('v-27 · "Resolvido hoje" relança pela MESMA porta (dashLancar), com o nome sem o parêntese',
+            !!v27.relancou && v27.relancou.k === 'vermifugo' && v27.relancou.valor === 'Batata/SRD',
+            JSON.stringify(v27.relancou));
+          check('v-27 · as respostas do lançamento original voltam inteiras — a célula sai igual',
+            !!v27.relancou && v27.relancou.det.qtd === '1 COMPRIMIDO' && v27.relancou.det.onde === 'NA BOLSA',
+            JSON.stringify(v27.relancou && v27.relancou.det));
+          check('v-27 · o relançamento cai em HOJE, nunca no dia que ficou escolhido na outra tela',
+            ctx.DASH_DIA_SEL === '', JSON.stringify(ctx.DASH_DIA_SEL));
+          check('v-27 · a pendência fica RESOLVIDA, com quem resolveu e em que dia (nada some sem rastro)',
+            !!noPend() && noPend().status === 'resolvida' && noPend().resolvido_por === 'Leticya'
+            && noPend().resolvido_dia === hoje27 && !!noPend().resolvido_ts,
+            JSON.stringify(noPend()));
+          check('v-27 · e ela sai da lista de abertas (pendLista só mostra o que está aberto)',
+            ctx.pendLista().every((r) => !(r.chave === 'batata__roberta' && r.item === 'vermifugo')),
+            JSON.stringify(ctx.pendLista().map((r) => r.chave + '/' + r.item)));
+          // A LEI: a pendência não se fecha sem o lançamento existir. Se o lançamento não
+          // entrou, ela CONTINUA aberta — senão o FILHOt fica sem o vermífugo e ninguém sabe.
+          await dbV27.ref('daycare/pendencias/caco__ana/coleira/status').set('aberta');
+          ctx.PEND_ABERTAS = { caco__ana: { coleira: JSON.parse(JSON.stringify(doCaco.coleira)) } };
+          v27.lancouOk = false;
+          ctx.pendResolverConfirmado('caco__ana', 'coleira');
+          await drenar(10);
+          check('v-27 · lançamento que NÃO entrou deixa a pendência ABERTA — nunca se fecha no escuro',
+            (((dbV27.__store.daycare || {}).pendencias || {}).caco__ana || {}).coleira.status === 'aberta',
+            JSON.stringify((((dbV27.__store.daycare || {}).pendencias || {}).caco__ana || {}).coleira));
+          v27.lancouOk = true;
+          check('v-27 · e o código diz isso em português: a pendência continua ABERTA de propósito',
+            html.indexOf('A pendência continua ABERTA de propósito — ela não se fecha sem o lançamento existir.') > 0
+            && /if\(entrou===false\)\{/.test(html));
+          check('v-27 · o dashLancar devolve a promessa do lançamento (é ela que autoriza o fecho)',
+            /if\(k!=='reposicao'\) return gravar\(false\);/.test(html)
+            && /return ref\.set\(reg\)\.then\(function\(\)\{/.test(html)
+            && /\}\)\.catch\(function\(e\)\{ alert\('Não salvou: '\+\(\(e&&e\.message\)\|\|e\)\); return false; \}\);/.test(html));
+
+          // ---- (g) cancelar EXIGE motivo ------------------------------------------
+          ctx.PEND_ABERTAS = { caco__ana: { coleira: JSON.parse(JSON.stringify(doCaco.coleira)) } };
+          ctx.pendTirarConfirmado('caco__ana', 'coleira', '', '');
+          await drenar(4);
+          const doCacoAgora = () => (((dbV27.__store.daycare || {}).pendencias || {}).caco__ana || {}).coleira || {};
+          check('v-27 · sem motivo a pendência NÃO sai: continua aberta',
+            doCacoAgora().status === 'aberta', JSON.stringify(doCacoAgora()));
+          ctx.pendTirarConfirmado('caco__ana', 'coleira', 'tutor-aplicou', 'Tutor aplicou em casa');
+          await drenar(6);
+          check('v-27 · com motivo ela fica CANCELADA, com o motivo, quem e quando — nunca apagada',
+            doCacoAgora().status === 'cancelada' && doCacoAgora().motivo === 'tutor-aplicou'
+            && doCacoAgora().motivo_texto === 'Tutor aplicou em casa'
+            && doCacoAgora().cancelado_por === 'Leticya' && !!doCacoAgora().cancelado_ts,
+            JSON.stringify(doCacoAgora()));
+          check('v-27 · os três motivos são BOTÃO (motivo escrito à mão vira "ok" e não diz nada)',
+            JSON.stringify((ctx.PEND_MOTIVOS || []).map((m) => m.t)) === JSON.stringify(
+              ['Tutor aplicou em casa', 'Não precisa mais', 'Lançado por engano']),
+            JSON.stringify(ctx.PEND_MOTIVOS));
+
+          // ---- (h) o aviso da chegada, que não depende de abrir a tela -------------
+          v27.alertas.length = 0;
+          ctx.PEND_AVISADO = {};
+          await dbV27.ref('daycare/pendencias/toshi__ana/medicacao').set({
+            status: 'aberta', dia: '2026-09-18', item: 'medicacao', nome: 'Toshi',
+            valor: 'Toshi/Shih Tzu (GOTAS NO OUVIDO · NA BOLSA)', base: 'Toshi/Shih Tzu' });
+          await ctx.pendAvisarChegada('toshi__ana');
+          await drenar(6);
+          check('v-27 · ele chegou e tem pendência: o cartaz aparece na hora, com o item e o dia',
+            v27.alertas.length === 1 && /Toshi chegou e tem pendência/.test(v27.alertas[0].titulo)
+            && /Medicação de 18\/09/.test(v27.alertas[0].linhas.join(' ')),
+            JSON.stringify(v27.alertas.map((a) => a.titulo + ' :: ' + (a.linhas || []).join(' | '))));
+          check('v-27 · e o botão do cartaz leva direto às Pendências',
+            v27.alertas[0].op && v27.alertas[0].op.botao === 'Abrir Pendências'
+            && typeof v27.alertas[0].op.aoFechar === 'function');
+          await ctx.pendAvisarChegada('toshi__ana');
+          await drenar(4);
+          check('v-27 · um cartaz por FILHOt por dia — o segundo toque não repete o susto',
+            v27.alertas.length === 1, String(v27.alertas.length));
+          v27.alertas.length = 0;
+          await ctx.pendAvisarChegada('sem__pendencia');
+          await drenar(4);
+          check('v-27 · mordida — quem não tem pendência não recebe cartaz nenhum',
+            v27.alertas.length === 0);
+          check('v-27 · o aviso está preso ao check-in e à chamada — não depende de abrir a tela',
+            /if\(entrada\)\{ try\{ if\(typeof pendAvisarChegada==='function'\) pendAvisarChegada\(k\); \}/.test(html)
+            && /if\(next==='veio' && typeof pendAvisarChegada==='function'\) pendAvisarChegada\(k\);/.test(html));
+        } finally {
+          vm.runInContext('dashLancar = __bkpLanc27.lanc; quemSou = __bkpLanc27.quem;', ctx);
+        }
+      } finally {
+        ctx.PELUDINHOS = pelOrig27;
+        vm.runInContext('DB=__bkpV27.DB; DASH_DADOS=__bkpV27.dados; DASH_DIA_SEL=__bkpV27.diaSel;'
+          + 'dashEspelhar=__bkpV27.esp; renderDash=__bkpV27.rd; audit=__bkpV27.au; DASH_DET=__bkpV27.det;'
+          + 'DASH_SEL=__bkpV27.sel; DASH_SEL_I=__bkpV27.seli; DC_DASH_TURMA=__bkpV27.turma;'
+          + 'dcChamada=__bkpV27.cham; zAlertao=__bkpV27.alert; PEND_ABERTAS=__bkpV27.pend;', ctx);
+      }
+    } else { check('v-27 · dashLancar existe', false, 'função não encontrada'); }
+
+    // ---- (i) a tela: os dois botões, a ordem e o quadro dos dashboards ---------------
+    check('v-27 · a tela tem os DOIS caminhos, e só eles: "Resolvido hoje" e "Tirar pendência"',
+      html.indexOf('>Resolvido hoje</button>') > 0 && html.indexOf('>Tirar pendência</button>') > 0);
+    // A chave viaja dentro de um onclick: o apóstrofo de um tutor "D'Ávila" partiria a
+    // chamada em duas. JSON.stringify + escAttr é a forma segura (o navegador devolve a
+    // aspa ao ler o atributo) — e nenhum argumento sai entre aspas simples.
+    check('v-27 · o botão passa a chave como JSON escapado — apóstrofo no nome não quebra a chamada',
+      /function argPend\(v\)\{ return escAttr\(JSON\.stringify\(String\(v==null\?'':v\)\)\); \}/.test(html)
+      && html.indexOf("onclick=\"pendResolverHoje('+argPend(r.chave)+','+argPend(r.item)+')\"") > 0
+      && html.indexOf("onclick=\"pendTirar('+argPend(r.chave)+','+argPend(r.item)+')\"") > 0);
+    if (typeof ctx.argPend === 'function') {
+      check('v-27 · mordida — argPend devolve JSON com as aspas já em &quot;, pronto para o atributo',
+        ctx.argPend("d'avila__jose") === '&quot;d\'avila__jose&quot;', ctx.argPend("d'avila__jose"));
+    } else { check('v-27 · argPend existe', false, 'função não encontrada'); }
+    check('v-27 · a mais antiga aparece primeiro (quem espera há mais tempo vem na frente)',
+      /out\.sort\(function\(a,b\)\{ return \(a\.dia===b\.dia\)\?\(\(a\.criado_ts\|\|0\)-\(b\.criado_ts\|\|0\)\):\(a\.dia<b\.dia\?-1:1\); \}\);/.test(html));
+    check('v-27 · o contador ao lado do item do menu vem da MESMA lista (pendContar)',
+      html.indexOf('id="navPendN"') > 0 && /function pendAtualizarBadge\(\)\{/.test(html)
+      && /el\.textContent=\(n===null\|\|n===0\)\?'':\('\('\+n\+'\)'\);/.test(html));
+    check('v-27 · "O que fazer hoje" mostra o quadro nas três mesas — Gestão, Supervisão e Recepção',
+      (html.match(/B\.push\(quadroPend\);/g) || []).length === 3);
+    check('v-27 · o quadro dos dashboards é SÓ LEITURA e é a MESMA função nos dois (Márcia e Amanda)',
+      (html.match(/blocoPendPrevHTML\(\)/g) || []).length === 5      // 1 declaração + 2 usos + 2 redesenhos
+      && /function blocoPendPrevHTML\(\)\{/.test(html)
+      && html.indexOf('id="poCardPendPrev"') > 0 && html.indexOf('id="paCardPendPrev"') > 0);
+    if (typeof ctx.blocoPendPrevHTML === 'function') {
+      const bkpPend = ctx.PEND_ABERTAS, bkpCham = ctx.PEND_CHAMADA;
+      try {
+        ctx.PEND_ABERTAS = null; ctx.PEND_CHAMADA = {};
+        check('v-27 · sem leitura o quadro DIZ que ainda não sabe — nunca afirma "nada pendente"',
+          ctx.blocoPendPrevHTML().indexOf('Ainda não consegui ler as pendências de prevenção') > 0);
+        // A lição de 13/ago: lista curta MENTE. Sem a chamada lida, o quadro NÃO diz "nada".
+        ctx.PEND_ABERTAS = {}; ctx.PEND_CHAMADA = null;
+        vm.runInContext('__bkpCham27 = dcChamada; dcChamada = {};', ctx);
+        check('v-27 · sem a chamada de hoje o quadro também diz que ainda não sabe',
+          ctx.blocoPendPrevHTML().indexOf('Ainda não consegui ler a chamada de hoje') > 0,
+          ctx.blocoPendPrevHTML().slice(0, 300));
+        check('v-27 · e ele lê a chamada por conta própria — nunca depende de alguém abrir a Chamada',
+          /DB\.ref\('daycare\/chamada\/'\+hoje\)\.once\('value'\)\.then\(function\(s\)\{ PEND_CHAMADA=s\.val\(\)\|\|\{\}; \}\)/.test(html));
+        ctx.PEND_CHAMADA = {};
+        check('v-27 · lido e vazio, o quadro diz que não há nada para recuperar hoje',
+          ctx.blocoPendPrevHTML().indexOf('Nada para recuperar hoje.') > 0);
+        ctx.PEND_ABERTAS = { batata__roberta: { vermifugo: { status: 'aberta', dia: '2026-09-18',
+          item: 'vermifugo', nome: 'Batata', base: 'Batata/SRD', valor: 'Batata/SRD (1 COMPRIMIDO)' } } };
+        ctx.PEND_CHAMADA = { batata__roberta: 'faltou' };
+        check('v-27 · quem NÃO veio hoje não entra no quadro — ele é dos que estão aqui agora',
+          ctx.blocoPendPrevHTML().indexOf('Nada para recuperar hoje.') > 0);
+        ctx.PEND_CHAMADA = { batata__roberta: 'veio' };
+        const q27 = ctx.blocoPendPrevHTML();
+        check('v-27 · e quem veio aparece, com o item e o dia, e o toque leva às Pendências',
+          q27.indexOf('Batata') > 0 && q27.indexOf('Vermífugo de 18/09') > 0
+          && q27.indexOf("paIr('pendencias')") > 0, q27.slice(0, 400));
+      } finally {
+        ctx.PEND_ABERTAS = bkpPend; ctx.PEND_CHAMADA = bkpCham;
+        vm.runInContext('dcChamada = __bkpCham27;', ctx);
+      }
+    } else { check('v-27 · blocoPendPrevHTML existe', false, 'função não encontrada'); }
+    check('v-27 · nenhum aviso de Telegram foi inventado: não há grupo da recepção na ponte',
+      html.indexOf('TELEGRAM, de propósito NENHUM aviso sai daqui') > 0);
+
+    // ---- (j) a senha da ponte de Hospedagem, escondida como a do Day Care -----------
+    check('v-27 · o campo orcShToken é type="password" e NÃO traz mais a senha escrita',
+      /<input type="password" class="cad-in" id="orcShToken"/.test(html)
+      && !/id="orcShToken"[^>]*value="'\+escAttr\(\(orcSheetsCfg&&orcSheetsCfg\.token\)/.test(html)
+      && html.indexOf("id=\"orcShToken\" placeholder=\"a mesma PONTE_SENHA do Apps Script\" value=") < 0);
+    check('v-27 · ao lado dele, o aviso de que existe uma guardada — o mesmo texto da ponte do Day Care',
+      /function orcShTokenStatusHTML\(\)\{/.test(html)
+      && html.indexOf('id="orcShTokenSt"') > 0
+      && (html.match(/deixe em branco para manter, ou digite outra para trocar\./g) || []).length >= 3);
+    check('v-27 · salvar sem digitar MANTÉM a senha guardada (dá para corrigir só a URL)',
+      /var tokenFinal=tok\|\|\(\(orcSheetsCfg&&orcSheetsCfg\.token\)\|\|''\);/.test(html)
+      && /var novo=\{url:url, token:tokenFinal\};/.test(html));
+    check('v-27 · depois de salvar, o campo zera: a senha nunca é escrita de volta na tela',
+      /var _t=document\.getElementById\('orcShToken'\); if\(_t\) _t\.value='';/.test(html));
+    if (typeof ctx.orcRenderConfig === 'function') {
+      const geOrig27 = ctx.document.getElementById;
+      const els27 = { orcConfig: { innerHTML: '' }, orcTemporada: { innerHTML: '' }, orcTemporadaNota: { innerHTML: '' } };
+      try {
+        ctx.document.getElementById = function (id) { return (id in els27) ? els27[id] : geOrig27.call(this, id); };
+        vm.runInContext("__bkpSh27 = orcSheetsCfg; orcSheetsCfg = { url:'https://script.google.com/macros/s/x/exec', token:'senha-secreta-do-apps-script' };", ctx);
+        ctx.orcRenderConfig();
+        const cfg27 = els27.orcConfig.innerHTML;
+        check('v-27 · mordida — com senha guardada, ela NÃO aparece em lugar nenhum da tela desenhada',
+          cfg27.indexOf('senha-secreta-do-apps-script') < 0 && cfg27.indexOf('id="orcShToken"') > 0
+          && cfg27.indexOf('type="password"') > 0 && cfg27.indexOf('✓ senha guardada') > 0,
+          cfg27.slice(Math.max(0, cfg27.indexOf('orcShToken') - 120), cfg27.indexOf('orcShToken') + 260));
+        check('v-27 · e a URL continua aparecendo — ela não é segredo, e é o que a Gestão corrige',
+          cfg27.indexOf('https://script.google.com/macros/s/x/exec') > 0);
+        vm.runInContext("orcSheetsCfg = { url:'', token:'' };", ctx);
+        ctx.orcRenderConfig();
+        check('v-27 · sem senha guardada, a tela diz isso em vermelho — nunca finge que há uma',
+          els27.orcConfig.innerHTML.indexOf('nenhuma senha guardada') > 0);
+      } finally {
+        ctx.document.getElementById = geOrig27;
+        vm.runInContext('orcSheetsCfg = __bkpSh27;', ctx);
+      }
+    } else { check('v-27 · orcRenderConfig existe', false, 'função não encontrada'); }
+
+    check('v-27 · a versão carimbada desta entrega é a 2026-09-19-05',
+      /const APP_VERSAO='2026-09-19-05';/.test(html));
+  }
+  console.log('');
+
 
   // ===== v-22 - O CARTAO "CADASTRO INCOMPLETO" NASCE RECOLHIDO ======================
   // Adriana, 17/set/2026, no check-in da Lisa (tutora Nilce, aluna ha anos): o cartao
@@ -4935,7 +5309,7 @@ async function main() {
     // que não tem data-v porque a tela ainda não existe.
     check('menu: o subgrupo Day Care da Central traz o dia do auluno e, no fim, Planos e cobranças',
       JSON.stringify(vsDe(fatia('c-daycare', 'operacao'), true)) === JSON.stringify(
-        ['dashdc', 'peso', 'alergia', 'vacinas', 'emporio', 'reposicao', 'renovacao']),
+        ['dashdc', 'pendencias', 'peso', 'alergia', 'vacinas', 'emporio', 'reposicao', 'renovacao']),
       JSON.stringify(vsDe(fatia('c-daycare', 'operacao'), true)));
     check('menu: os itens do Day Care da Central estão em ordem alfabética até o rótulo Planos e cobranças',
       (() => {
@@ -11086,11 +11460,14 @@ async function main() {
     // v-07 (08/set/2026, noite): 'painel' saiu do menu e quem herdou o lugar dele na Operação
     // foi 'linhadotempo'. Esta lista tem de dizer o MESMO que o sidebar — conceder uma tela
     // que não existe no menu é conceder nada. São as mesmas 16 chaves, com uma trocada.
+    // 19/set/2026: nasceu a 17ª — 'pendencias' (Pendências de prevenção). É a PRIMEIRA chave
+    // nova desde que esta lista existe, e nasceu nos dois lugares de uma vez: no sidebar e
+    // aqui. Nenhuma das 16 antigas saiu.
     const CHAVES_DE_SEMPRE = ['checkin', 'conferencia', 'recepcao', 'cuidadovet', 'hospedagem', 'checkout',
       'checkoutconf', 'emporio', 'linhadotempo', 'ficha', 'hospedes', 'pessoas', 'renovacao', 'reposicao',
-      'orcamento', 'relatorios'];
+      'orcamento', 'relatorios', 'pendencias'];
     const chaves = navKeys.slice().sort();
-    check('mordida — as CHAVES são exatamente as 16 de antes: nenhuma permissão nova nasceu, nenhuma sumiu',
+    check('mordida — as CHAVES são as 16 de antes MAIS a das Pendências de prevenção: nenhuma sumiu',
       JSON.stringify(chaves) === JSON.stringify(CHAVES_DE_SEMPRE.slice().sort()), JSON.stringify(chaves));
     // Cada rótulo da tela Time é O MESMO que o sidebar mostra para aquele data-v.
     const rotuloDoMenu = (k) => {
@@ -12667,7 +13044,7 @@ async function main() {
     // alfabético; "Planos e cobranças" continua sendo o RÓTULO do fim.
     check('5 · "Planos e cobranças" continua INTEIRO no fim do Day Care, agora com Peso, Pesquisa e Prevenção antes dele',
       JSON.stringify(ordemCentral.slice(ordemCentral.indexOf('c-daycare'))) === JSON.stringify(
-        ['c-daycare', 'dashdc', 'peso', 'alergia', 'vacinas', 'emporio', 'reposicao', 'renovacao']),
+        ['c-daycare', 'dashdc', 'pendencias', 'peso', 'alergia', 'vacinas', 'emporio', 'reposicao', 'renovacao']),
       JSON.stringify(ordemCentral.slice(ordemCentral.indexOf('c-daycare'))));
 
     // ---- 6: a pesquisa com a família ----
@@ -12697,7 +13074,7 @@ async function main() {
       conferencia: 'so-conferencia', hospedes: 'so-hosp', hospedagem: '', gestdia: 'so-gestao',
       checkout: '', abertura: 'so-abertura', checkin: '', checkoutconf: 'so-conf-saida',
       orcamento: 'so-recepcao', recepcao: 'so-recepcao', cuidadovet: 'so-vet', emporio: 'so-emporio',
-      reposicao: 'so-recepcao', dashdc: 'so-recepcao', ficha: 'so-gestao', vacinas: 'so-gestao',
+      reposicao: 'so-recepcao', dashdc: 'so-recepcao', pendencias: '', ficha: 'so-gestao', vacinas: 'so-gestao',
       alergia: 'so-gestao', peso: 'so-pesa', renovacao: 'so-gestao',
       acerto: 'so-master', ritmo: 'so-gestao', eahist: 'so-gestao', pessoas: 'so-master',
       planodia: '', config: 'so-master', agenda: '', relatorios: 'so-gestao', sair: ''
@@ -12708,7 +13085,7 @@ async function main() {
     // so-master dele passou inteira para a "Linha do tempo do dia".
     // 18/set/2026: "Lançar pagamento" saiu do menu (Adriana: "delete lançar pagamentos..
     // inútil") — 36 itens viraram 35. Nenhum outro mudou de classe.
-    check('promessa — os 35 itens do menu mantiveram exatamente as classes so-*/op-only que já tinham',
+    check('promessa — os 36 itens do menu mantiveram exatamente as classes so-*/op-only que já tinham',
       difere.length === 0 && Object.keys(achado).length === Object.keys(ACESSO_ESPERADO).length,
       JSON.stringify(difere.map((k) => k + ': "' + achado[k] + '" ≠ "' + ACESSO_ESPERADO[k] + '"')));
 
@@ -13304,7 +13681,7 @@ async function main() {
       check('v-13 · a barra de etapas só existe na ENTRADA — o check-out do corpinho fica como era',
         /function ckTemEtapas\(\)\{ return ckEhEntrada\(\); \}/.test(html));
       check('v-13 · Protocolos entrou DENTRO de Configurações — nenhum item novo no menu',
-        [...html.matchAll(/<a data-v="[a-z-]+"/g)].length === 35
+        [...html.matchAll(/<a data-v="[a-z-]+"/g)].length === 36
         && !/data-v="protocolos"/.test(html)
         && html.indexOf('id="protoWrap"') > html.indexOf('id="v-config"')
         && html.indexOf('id="protoWrap"') < html.indexOf('id="v-orcamento"'));
@@ -13541,7 +13918,7 @@ async function main() {
         && /function protoTreinoVirar\(id\)\{[\s\S]{0,900}DB\.ref\('daycare\/config\/treinamento\/'\+id\)\.set\(reg\)/.test(html),
         JSON.stringify(html.match(/DB\.ref\('daycare\/config\/treinamento[^)]*\)\.[a-z]+\(/g) || []));
       check('v-14 · e nenhum item novo no menu: o acesso é exatamente o mesmo de antes',
-        [...html.matchAll(/<a data-v="[a-z-]+"/g)].length === 35 && !/data-v="treinamento"/.test(html));
+        [...html.matchAll(/<a data-v="[a-z-]+"/g)].length === 36 && !/data-v="treinamento"/.test(html));
 
       // ---- as medidas do molde: o polegar acha sem procurar ----
       check('v-14 · as medidas do molde: ação a partir de 22 px, leitura a partir de 18 px, Feito com 58 px',
@@ -13556,7 +13933,7 @@ async function main() {
         !/\.catch\(function\([a-z]*\)\{\s*\}\)/.test(
           html.slice(html.indexOf('const CK_FRASE_PRATICA='), html.indexOf('function renderCkInicio('))));
       check('v-14 · a versão carimbada é a desta entrega',
-        /const APP_VERSAO='2026-09-19-04';/.test(html));
+        /const APP_VERSAO='2026-09-19-05';/.test(html));
     }
 
     // ---- v-15: O PLANO SÓ GRAVA NO CONFIRMAR (caso Cookie/Yara, 15/set/2026) --------
@@ -14371,8 +14748,8 @@ async function main() {
           + 'AVISO_COLEIRA_APOS = __bkpC.apos;', ctx);
       }
     } else { check('v-17 · prevCfgCarregar existe', false, 'função não encontrada'); }
-    check('v-24 · a versão carimbada desta entrega é a 2026-09-19-04',
-      /const APP_VERSAO='2026-09-19-04';/.test(html));
+    check('v-24 · a versão carimbada desta entrega é a 2026-09-19-05',
+      /const APP_VERSAO='2026-09-19-05';/.test(html));
 
     // ───────── v-19 · o aparelho autorizado que não se perde no iPhone (16/set/2026)
     // Auditoria de 16/set: o iPhone da Leticya gerou DOIS ids em trinta segundos
