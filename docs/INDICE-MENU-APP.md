@@ -1,6 +1,61 @@
-# Índice do app — menu aprovado pela Adriana (reorganizado em 08/set/2026, ajustado em 15, 17, 18 e 19/set/2026)
+# Índice do app — menu aprovado pela Adriana (reorganizado em 08/set/2026, ajustado em 15, 17, 18, 19 e 21/set/2026)
 
 > Regra: o app tem de ser autoexplicativo, para treinamento rápido. Cada item tem **Título** e **subtítulo** (a explicação curta que aparece como dica no menu e no índice da Gestão no computador). Nomes são decisão da Adriana.
+
+## O que mudou em 21/set/2026 (v 2026-09-21-01)
+
+Adriana, em 21/set/2026:
+
+> "Nós temos dentro do aplicativo a parte de trocas: vacinação, que é importantíssimo no nosso processo, a vermifugação, o carrapaticida, a troca de coleiras, tudo isso é muito importante, nós temos também a troca de escova dental. Todas essas questões são de suma importância. Eu preciso facilitar esse processo. Como? Tudo que for vencer no dia, eu ter um calendário do dia para o setor de consultoria, onde vai mandar; isso tem que mandar para o peludo antes dele vir. Vamos imaginar que o dia do Otávio seja amanhã. Hoje tem que perguntar para o tutor: fulano, amanhã pode fazer isso, isso e isso no Otávio? (…) O fluxo hoje não está dando certo: as pessoas estão mandando e não estão finalizando aquilo dali. A gente precisa que dê uma resposta. (…) Então tem que perguntar: já foi atualizada a ficha? E a pessoa tem que clicar em sim ou não."
+
+### Tela nova: **Vence amanhã**
+
+| Onde fica | Central Zêluz › Day Care, **logo depois de Prevenção** |
+|---|---|
+| `data-v` | `vencimentos` |
+| Quem vê | Central Zêluz (consultora), Supervisão, Gestão e Diretoria — pela capacidade `vencimentos-amanha` na tabela `PERM`, revelada por `aplicarPermMenu()`. O monitor **não** vê: quem fala com o tutor é a recepção. |
+| Também é concedível | sim — entrou em `NAV_PAGINAS_ALL` (tela do Time), com o **mesmo rótulo** do sidebar |
+| Onde os dados moram | `daycare/vencimentos/{dia}/{chave do FILHOt}` |
+| O texto e o prazo | `daycare/config/textos/vencimento` — editáveis em **Configurações › Mensagens prontas** |
+
+**Por que ela não é alfabética no bloco.** Todo o subgrupo Day Care da Central está em ordem alfabética até *Planos e cobranças*; "Vence amanhã" fura a ordem e fica colado em **Prevenção** porque é a outra metade do mesmo trabalho: a Prevenção diz **quem deve**, esta diz **o que fazer hoje** a respeito de quem vem amanhã. Separá-las por uma letra faria a consultora procurar em dois cantos do menu.
+
+**O dia-alvo.** Por padrão, o **próximo dia de Day Care** — amanhã; se amanhã for sábado, domingo ou feriado, o próximo dia útil. A lista de feriados é a **mesma** do Orçamento (`orcEhFeriado`), que a Gestão já edita: duas listas discordariam. O seletor tem **Hoje**, **Amanhã** e o calendário para qualquer outro dia.
+
+**Quem entra na lista.** Cada FILHOt da turma daquele dia (mesma porta do Day Care, `turmaDoDia`, com a aba trocada e devolvida) que tenha pelo menos um item de `PREV_ITENS` **vencido ou vencendo até o dia-alvo mais a folga** (padrão 7 dias, ajustável). Entram vacinas, carrapaticida, coleira, vermífugo, exame de fezes, **troca de escova de dentes** e check-up. Ficam de fora: item sem data (não há o que avisar), data quebrada (ano 0026 é ficha para corrigir) e a regra de sempre — *ou é vermífugo ou exame de fezes*.
+
+**O cartão traz**, nesta ordem: nome, raça e tutor · telefone (quando a ficha tem) · os itens com a data (*"Carrapaticida — venceu em 22/07"*) · a **mensagem pronta** numa caixa **editável antes de copiar** · **Copiar mensagem** e **Mandei** · os quatro botões de resposta do tutor · e, quando é a hora, a pergunta da ficha.
+
+**A mensagem.** O modelo é o dela, e mora em Configurações — não no código. As chaves: `{tutor}` (primeiro nome), `{filhot}` (só o nome), `{ofilhot}` (o nome com o artigo certo: *"o Otávio"*, *"a Lana"*), `{dele}`, `{ela}`, `{itens}` (a lista com as datas) e `{dia}` (*"amanhã, terça-feira (22/09)"*). Há **dois** modelos: o padrão e o de **vacina** — vacina não se faz na recepção, então a frase vira *"Podemos agendar com a veterinária?"*. Quando a lista **mistura** vacina com os demais vale o padrão, e a tela avisa a consultora em uma linha.
+
+**A resposta do tutor, em botão** (resposta escrita à mão vira "ok" e não diz nada a quem ler depois):
+
+| Botão | O que faz |
+|---|---|
+| **Pode fazer na Zêluz** | Abre um bloco que pergunta, item por item, **onde está o produto** (na bolsa dele · comprar aqui na loja) e a outra resposta que os Lançamentos do dia já exigem (quanto vai ser dado; onde a coleira vai ser trocada). **Nada grava enquanto ela responde** — só no **Confirmar**, que mostra antes a frase inteira que vai para a planilha. Aí o item é lançado em `daycare/dashboard/{dia-alvo}` pela **mesma porta** dos Lançamentos do dia (`dashLancar`), com `det.onde` — e por isso vai à planilha e à TV. Se ele faltar no dia, vira **pendência** sozinho. |
+| **Tutor faz em casa / no veterinário** | Registra a resposta e abre a pergunta da ficha na hora — a data nova só existe com o tutor. |
+| **Não quer agora** | Registra e o cartão fica aberto. |
+| **Não respondeu** | Registra e o cartão fica aberto: continua contando como assunto em aberto. |
+
+Trocar de botão **troca** a resposta, e a auditoria registra que mudou — errar aqui tem conserto.
+
+**"Já foi atualizada a ficha?" — Sim / Não.** Só **Sim** fecha o cartão (`ficha_atualizada`, com quem e quando). **Não** o mantém aberto com a frase *"Falta atualizar a ficha: {itens}"* e o link **Abrir a ficha**. Para quem vai **fazer na Zêluz** a pergunta só aparece **depois do dia-alvo**: até lá a ficha se atualiza quando a aplicação for registrada, e perguntar antes é cobrar o que ainda não aconteceu. Cartão fechado pode ser **reaberto**.
+
+**Idempotente:** a chave é `{dia}/{chave do FILHOt}`. Reabrir a tela não duplica nem apaga o que já foi respondido, e confirmar de novo não lança duas vezes — quando o item já está no dia, o cartão diz *"já estava lançado"* em vez de mentir que lançou.
+
+**O aviso que não depende de abrir a tela:** um quadro **Vence amanhã — N mensagens para mandar** em **O que fazer hoje** (nas três mesas: Gestão, Supervisão e Recepção) e no **Dashboard das Consultoras**. Ao lado do item do menu, o contador dos que ainda estão **sem resposta**. Enquanto o dia não desceu do banco, o quadro mostra "…" — nunca afirma que não há nada.
+
+**Uma conta só:** `vencContagem()` devolve *total*, *para mandar* e *sem resposta*. O menu, a mesa e o Dashboard das Consultoras leem daí — "quase igual" é como nascem duas telas brigando.
+
+**Telegram:** de propósito, **nenhum aviso sai daqui** — a mesma razão das Pendências de prevenção. Os grupos que existem na ponte são o da veterinária, o do almoço, o do plantão da AuAulândia, o Diário do Daycare e o de URGÊNCIAS. Nenhum deles é o grupo da recepção, que é quem faz este trabalho — e mandar para o grupo errado é o erro que já custou caro. Quando existir um grupo da recepção, é ali que a linha nasce.
+
+### Cartão novo em Configurações: **Mensagens prontas**
+
+Os **dois textos** da mensagem e a **folga em dias** moram no banco e se editam aqui, sem programador (a lei de 22/ago). Salvar sem `{itens}` é recusado — a mensagem tem de dizer **o que** está vencendo — e a folga precisa ficar entre 1 e 90 dias. Há um botão **Voltar ao texto de fábrica** que devolve os campos ao padrão **sem gravar**: quem grava continua sendo o Salvar.
+
+**Provas:** bloco `v-28` do `tests/harness.js` (o item no menu, no espelho e no `PERM`; o calendário que pula fim de semana e feriado; a função pura `vencItensDe`; a mensagem com o texto de Configurações e a concordância de gênero; a lista provada contra o **cadastro real** do retrato — quem vem na terça e está vencendo entra, quem está em dia não; "Mandei", as respostas e o lançamento no dia-alvo com `det.onde`; a idempotência; a pergunta da ficha; e os quadros da mesa e das Consultoras) e a captura `tests/capturar-v28.js` (`docs/capturas-v28/`).
+
+---
 
 ## O que mudou em 19/set/2026 (v 2026-09-19-05)
 
@@ -360,6 +415,7 @@ Nunca um filho maior que o pai. Abre só o caminho da tela ativa. A pendência s
 | | Peso (`peso`) | Pesar qualquer FILHOt: recepção, veterinária e gestão. | so-pesa |
 | | Pesquisa com a Família Multiespécie (`alergia`) | A pesquisa com a família: enviar, colar a resposta, e ela vira ficha sozinha. | so-gestao |
 | | Prevenção (`vacinas`) | Vacina, vermífugo, coleira e exame de fezes: quem está atrasado e quem está para vencer. | so-gestao |
+| | Vence amanhã (`vencimentos`) | Mande hoje a mensagem de quem vem no próximo dia com prevenção vencendo. | `PERM` `vencimentos-amanha` (consultora · supervisão · gestão · diretoria) |
 | | Quem não comeu hoje (`emporio`) | A mensagem pronta para avisar o tutor. | so-emporio |
 | | Reposições (`reposicao`) | Créditos de dias por falta avisada. | so-recepcao |
 | *Central Zêluz › Planos e cobranças* | Renovação de planos (`renovacao`) | Quem está no fim do plano. | so-gestao |
@@ -371,7 +427,7 @@ Nunca um filho maior que o pai. Abre só o caminho da tela ativa. A pendência s
 | | Orçamento de hospedagem (`orcamento`) | Monte e envie o orçamento ao tutor. | so-recepcao |
 | | Pendências com o tutor (`recepcao`) | Ração acabando, remédio faltando, algo que ficou. | so-recepcao |
 | | Cuidado Vet (`cuidadovet`) | Alterações no corpo que a veterinária precisa ver. | so-vet |
-| **Configurações** (só o que é ajuste) | Configurações (`config`) | **Valores da hospedagem** (pernoite, diária e fim de ano, feriados e ponte da planilha de Hospedagem), Telegram, ponte da planilha, horários dos protocolos, protocolos passo a passo, **Prevenção** (validade da coleira e antecedência do aviso), **Mensagem de entrada** (a placa da porta) e o rastro de logins. | so-master |
+| **Configurações** (só o que é ajuste) | Configurações (`config`) | **Valores da hospedagem** (pernoite, diária e fim de ano, feriados e ponte da planilha de Hospedagem), Telegram, ponte da planilha, horários dos protocolos, protocolos passo a passo, **Prevenção** (validade da coleira e antecedência do aviso), **Mensagens prontas** (o texto de *Vence amanhã* e a folga em dias), **Mensagem de entrada** (a placa da porta) e o rastro de logins. | so-master |
 | | Escala e plano do dia (`planodia`) | A escala de cada um e qual plano vale hoje. | tabela PERM |
 | | Financeiro do plantão (`acerto`) | Acerto das plantonistas: noites, dobras, quanto pagamos. | so-master |
 | | Time (`pessoas`) | Pessoas, senhas e quem acessa o quê. | so-master |
