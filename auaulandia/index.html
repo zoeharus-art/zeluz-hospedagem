@@ -849,6 +849,12 @@
   table.pel tbody tr:hover{background:rgba(222,180,40,.07)}
   table.pel .pel-nome{font-weight:700;color:var(--z-blue)}
   table.pel .pel-num{color:var(--muted);font-weight:700}
+  /* A linha que resume a ficha embaixo do nome, na busca do cadastro (21/set/2026):
+     raça · quantas vezes vem e os dias · tutor · idade · último peso com a data.
+     width:0 + min-width:100% — a linha NÃO empurra a largura da coluna. Sem isso ela
+     rouba espaço de Raça, Tutor e Idade, e no celular a tabela vira "SR D" e "ID AD E";
+     e a regra da casa (26/ago/2026) é clara: no celular a tabela não esconde coluna. */
+  table.pel .pel-busca-sub{display:block;width:0;min-width:100%;max-width:420px;margin-top:4px;font-size:11.5px;font-weight:600;line-height:1.45;color:var(--muted);white-space:normal;overflow-wrap:anywhere}
   .pel-freq{display:inline-block;background:rgba(90,171,181,.16);color:#2b7e88;font-weight:700;font-size:12px;padding:3px 11px;border-radius:999px}
   .pel-obs{display:inline-block;font-size:10px;font-weight:700;color:#a85a2e;background:rgba(224,136,86,.14);padding:2px 7px;border-radius:999px;margin-left:7px}
   .dias-cell{white-space:nowrap}
@@ -13945,7 +13951,7 @@
   // inteira DEPOIS de a correção estar publicada — o aviso apareceu, ninguém tocou.
   // Agora o aparelho PARADO recarrega sozinho: trancado, com a aba escondida, na porta de
   // entrada ou 3 minutos sem ninguém tocar nele. Mão na tela = nunca recarrega.
-  const APP_VERSAO='2026-09-21-01';
+  const APP_VERSAO='2026-09-21-02';
   var RECARGA_PARADO_MS=3*60*1000, __versaoPublicada=null, __recargaTimer=null;
   function vigiarVersao(){
     if(!DB) return;
@@ -20272,6 +20278,106 @@
       </div>`:''}`;
   }
   function renderAlmSeFor(){ try{ if(dcAtiv==='almoco'&&typeof renderAlmStep==='function') renderAlmStep(); }catch(e){} /* silencioso de propósito: redesenho de tela — falhar não pode derrubar quem chamou */ }
+  // ===== A BUSCA DO CADASTRO PRECISA CONTAR O PESO (Adriana, 21/set/2026) ============
+  // "preciso que a informação peso esteja na busca do cliente aludindo com a data do
+  //  último peso. em cadastro do peludinho, ao procurar aparece a raça, quantas vezes
+  //  vem e os dias, tutor, idade e último peso."
+  //
+  // As colunas já traziam raça, dias, tutor e idade — mas no celular a tabela quebra e a
+  // consultora precisa rolar de lado para juntar as peças. A linha abaixo do nome põe
+  // tudo junto, na mesma ordem em que ela fala, e acrescenta o que faltava: o último
+  // peso COM a data. Peso sem data não serve — 6,5 kg de março não é o FILHOt de hoje.
+  //
+  // Tudo aqui é função PURA (recebe o dado, devolve texto): a mesma conta serve à tela e
+  // ao teste, e ninguém precisa abrir o navegador para saber se a frase está certa.
+  var PESO_VELHO_DIAS=45;   // acima disso a pesagem é antiga e a linha avisa
+  function diasEntreISO(deISO, ateISO){
+    if(!/^\d{4}-\d{2}-\d{2}$/.test(deISO||'')||!/^\d{4}-\d{2}-\d{2}$/.test(ateISO||'')) return null;
+    var a=deISO.split('-').map(Number), b=ateISO.split('-').map(Number);
+    return Math.round((Date.UTC(b[0],b[1]-1,b[2])-Date.UTC(a[0],a[1]-1,a[2]))/86400000);
+  }
+  // Idade escrita como a recepção fala: "3 anos e 2 meses", "5 meses", "1 ano".
+  // Sem data de nascimento NÃO se inventa idade — a linha diz que falta cadastrar.
+  function idadeTexto(nascISO, hojeISOv){
+    var n=(typeof parseNascToISO==='function')?parseNascToISO(nascISO):String(nascISO||'');
+    var h=/^\d{4}-\d{2}-\d{2}$/.test(hojeISOv||'')?hojeISOv:((typeof hojeISO==='function')?hojeISO():'');
+    if(!/^\d{4}-\d{2}-\d{2}$/.test(n||'')||!/^\d{4}-\d{2}-\d{2}$/.test(h||'')) return 'idade não cadastrada';
+    var a=n.split('-').map(Number), b=h.split('-').map(Number);
+    if(Date.UTC(a[0],a[1]-1,a[2])>Date.UTC(b[0],b[1]-1,b[2])) return 'idade não cadastrada';
+    var meses=(b[0]-a[0])*12+(b[1]-a[1]); if(b[2]<a[2]) meses--;
+    if(meses<0) meses=0;
+    var anos=Math.floor(meses/12), resto=meses%12;
+    var pAno=anos+(anos===1?' ano':' anos'), pMes=resto+(resto===1?' mês':' meses');
+    if(anos>=1) return resto?(pAno+' e '+pMes):pAno;
+    if(resto>=1) return pMes;
+    return 'menos de 1 mês';
+  }
+  // O último peso é o de MAIOR data, venha a lista na ordem que vier. Ficha antiga que
+  // guardava só um número solto (ex.peso) continua valendo — e aparece "sem data".
+  function ultimoPesoDe(ex){
+    var lista=(ex&&Array.isArray(ex.pesos))?ex.pesos:[];
+    var melhor=null;
+    lista.forEach(function(r){
+      if(!r||r.kg==null||r.kg==='') return;
+      var kg=Number(r.kg); if(!isFinite(kg)||kg<=0) return;
+      var data=/^\d{4}-\d{2}-\d{2}$/.test(r.data||'')?r.data:'';
+      if(!melhor||(data&&data>melhor.data)||(data&&!melhor.data)) melhor={kg:kg, data:data};
+      else if(!melhor.data&&!data) melhor={kg:kg, data:''};
+    });
+    if(melhor) return melhor;
+    var solto=ex?Number(ex.peso):NaN;
+    if(isFinite(solto)&&solto>0) return {kg:solto, data:''};
+    return null;
+  }
+  function pesoBuscaKg(kg){ return (Math.round((Number(kg)||0)*10)/10).toFixed(1).replace('.',','); }
+  // Data curta: no ano corrente basta dia/mês; fora dele o ano entra, senão "01/09" de
+  // 2024 passa por pesagem recente.
+  function dataCurtaBusca(iso, hojeISOv){
+    if(!/^\d{4}-\d{2}-\d{2}$/.test(iso||'')) return '';
+    var h=/^\d{4}-\d{2}-\d{2}$/.test(hojeISOv||'')?hojeISOv:((typeof hojeISO==='function')?hojeISO():'');
+    var a=iso.split('-');
+    return (h&&h.slice(0,4)===a[0])?(a[2]+'/'+a[1]):(a[2]+'/'+a[1]+'/'+a[0]);
+  }
+  function pesoTextoBusca(ex, hojeISOv){
+    var u=ultimoPesoDe(ex);
+    if(!u) return 'peso não cadastrado';
+    var kg=pesoBuscaKg(u.kg)+' kg';
+    if(!u.data) return kg+' (sem data)';
+    var h=/^\d{4}-\d{2}-\d{2}$/.test(hojeISOv||'')?hojeISOv:((typeof hojeISO==='function')?hojeISO():'');
+    var d=diasEntreISO(u.data,h);
+    var txt=kg+' em '+dataCurtaBusca(u.data,h);
+    if(d!=null&&d>PESO_VELHO_DIAS) txt+=' (há '+d+' dias)';
+    return txt;
+  }
+  function pesoVelhoBusca(ex, hojeISOv){
+    var u=ultimoPesoDe(ex); if(!u||!u.data) return false;
+    var h=/^\d{4}-\d{2}-\d{2}$/.test(hojeISOv||'')?hojeISOv:((typeof hojeISO==='function')?hojeISO():'');
+    var d=diasEntreISO(u.data,h);
+    return d!=null&&d>PESO_VELHO_DIAS;
+  }
+  // "2x por semana (seg, qua)" — quantas vezes vem E em quais dias, na mesma frase.
+  // Aceita tanto a lista de dias quanto a ficha inteira, para servir aos dois chamadores.
+  function diasTextoBusca(ex){
+    var d=Array.isArray(ex)?ex:((ex&&Array.isArray(ex.dias))?ex.dias:[]);
+    var ordem=(typeof ORDEM_DIAS!=='undefined')?ORDEM_DIAS:['seg','ter','qua','qui','sex'];
+    var sel=ordem.filter(function(x){ return d.indexOf(x)>=0; });
+    if(!sel.length) return 'dias não cadastrados';
+    return sel.length+'x por semana ('+sel.join(', ')+')';
+  }
+  // A linha secundária inteira, na ordem em que Adriana pediu. O clique da linha da
+  // tabela continua sendo o mesmo: isto é texto dentro da célula do nome, não um botão.
+  // A tabela JÁ mostra raça, vezes, dias, tutor e idade em colunas. O que faltava (Adriana,
+  // 21/set/2026: "aparece a raça, quantas vezes vem e os dias, tutor, idade e último peso")
+  // era só o peso — e repetir as colunas embaixo do nome duplicava tudo. A linha traz só
+  // o último peso com a data, em cor de atenção quando a pesagem passou de 45 dias.
+  function linhaBuscaCadastro(p, hojeISOv){
+    if(!p) return '';
+    var ex={}; try{ ex=pelExtra(p)||{}; }catch(e){ ex={}; } /* silencioso de propósito: sem ficha extra vale o que veio na lista */
+    var h=/^d{4}-d{2}-d{2}$/.test(hojeISOv||'')?hojeISOv:((typeof hojeISO==='function')?hojeISO():'');
+    var peso=pesoTextoBusca(ex,h);
+    var corPeso=pesoVelhoBusca(ex,h)?' style="color:var(--crm-atencao-text);font-weight:700"':'';
+    return '<span class="pel-busca-sub"><span'+corPeso+'>último peso: '+escAttr(peso)+'</span></span>';
+  }
   function renderPel(){
     const inp=document.getElementById('pelSearch'); if(!inp) return;
     const q=jsNorm(inp.value);
@@ -20286,9 +20392,10 @@
     // O botão mostra a contagem e abre a mesma tela, com o "Voltou" em cada linha.
     const bIn=document.getElementById('pelInativosBtn');
     if(bIn) bIn.textContent='Inativos ('+PELUDINHOS.filter(p=>pelInativo(p)).length+')';
+    const _hojeBusca=hojeISO();
     document.getElementById('pelBody').innerHTML=list.map((o,row)=>{ const p=o.p; return `<tr onclick="abrirPeludinhoLista(${o.i})" style="cursor:pointer">
       <td class="pel-num">${row+1}</td>
-      <td><span class="pel-nome">${pelNome(p)}</span>${p.apelido?` <span class="pel-obs">${p.apelido}</span>`:''}${((pelExtra(p).castrado||p.castrado)==='Não')?' <span class="pel-obs">Não castrado</span>':''}</td>
+      <td><span class="pel-nome">${pelNome(p)}</span>${p.apelido?` <span class="pel-obs">${p.apelido}</span>`:''}${((pelExtra(p).castrado||p.castrado)==='Não')?' <span class="pel-obs">Não castrado</span>':''}${linhaBuscaCadastro(p,_hojeBusca)}</td>
       <td>${pelGet(p,'raca')||'—'}</td>
       <td><span class="pel-freq">${pelFreq(p)}</span></td>
       <td class="dias-cell">${diasHtml(pelDias(p))}</td>

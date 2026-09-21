@@ -3732,8 +3732,8 @@ async function main() {
     check('v-25 · a auditoria da tabela diz o que mudou, de quanto para quanto',
       /audit\('orcamento-precos',\s*\n?\s*mudou\.length\?\('alterou a tabela de hospedagem — '\+mudou\.join/.test(html)
       && /\{antes:antes, depois:novo\}/.test(html));
-    check('v-25 · a versão carimbada desta entrega é a 2026-09-21-01',
-      /const APP_VERSAO='2026-09-21-01';/.test(html));
+    check('v-25 · a versão carimbada desta entrega é a 2026-09-21-02',
+      /const APP_VERSAO='2026-09-21-02';/.test(html));
   }
   console.log('');
 
@@ -4019,8 +4019,8 @@ async function main() {
     check('v-26 · e continua FORA da soma — o app não sabe quantas diárias foram cobradas',
       html.indexOf('nunca quantas diárias foram cobradas — por isso não entra na soma') > 0);
 
-    check('v-26 · a versão carimbada desta entrega é a 2026-09-21-01',
-      /const APP_VERSAO='2026-09-21-01';/.test(html));
+    check('v-26 · a versão carimbada desta entrega é a 2026-09-21-02',
+      /const APP_VERSAO='2026-09-21-02';/.test(html));
   }
   console.log('');
 
@@ -4392,8 +4392,8 @@ async function main() {
       }
     } else { check('v-27 · orcRenderConfig existe', false, 'função não encontrada'); }
 
-    check('v-27 · a versão carimbada desta entrega é a 2026-09-21-01',
-      /const APP_VERSAO='2026-09-21-01';/.test(html));
+    check('v-27 · a versão carimbada desta entrega é a 2026-09-21-02',
+      /const APP_VERSAO='2026-09-21-02';/.test(html));
   }
   console.log('');
 
@@ -4967,8 +4967,8 @@ async function main() {
         delete ctx.document.activeElement; delete ctx.__focoAuto;
       }
     } else { check('v-28 · vencRedesenhoAuto existe', false, 'função não encontrada'); }
-    check('v-28 · a versão carimbada desta entrega é a 2026-09-21-01',
-      /const APP_VERSAO='2026-09-21-01';/.test(html));
+    check('v-28 · a versão carimbada desta entrega é a 2026-09-21-02',
+      /const APP_VERSAO='2026-09-21-02';/.test(html));
   }
   console.log('');
 
@@ -14509,7 +14509,7 @@ async function main() {
         !/\.catch\(function\([a-z]*\)\{\s*\}\)/.test(
           html.slice(html.indexOf('const CK_FRASE_PRATICA='), html.indexOf('function renderCkInicio('))));
       check('v-14 · a versão carimbada é a desta entrega',
-        /const APP_VERSAO='2026-09-21-01';/.test(html));
+        /const APP_VERSAO='2026-09-21-02';/.test(html));
     }
 
     // ---- v-15: O PLANO SÓ GRAVA NO CONFIRMAR (caso Cookie/Yara, 15/set/2026) --------
@@ -15324,8 +15324,8 @@ async function main() {
           + 'AVISO_COLEIRA_APOS = __bkpC.apos;', ctx);
       }
     } else { check('v-17 · prevCfgCarregar existe', false, 'função não encontrada'); }
-    check('v-24 · a versão carimbada desta entrega é a 2026-09-21-01',
-      /const APP_VERSAO='2026-09-21-01';/.test(html));
+    check('v-24 · a versão carimbada desta entrega é a 2026-09-21-02',
+      /const APP_VERSAO='2026-09-21-02';/.test(html));
 
     // ───────── v-19 · o aparelho autorizado que não se perde no iPhone (16/set/2026)
     // Auditoria de 16/set: o iPhone da Leticya gerou DOIS ids em trinta segundos
@@ -15436,6 +15436,148 @@ async function main() {
         L[0].id === 'a1', JSON.stringify(L.map((x) => x.id)));
       check('v-19 · mordida — nó vazio não estoura', JSON.stringify(ctx.cfgAparelhosLista({})) === '[]');
     } else { check('v-19 · cfgAparelhosLista existe', false, 'função não encontrada'); }
+  }
+  console.log('');
+
+  // ===== v-29 · A BUSCA DO CADASTRO CONTA O PESO (Adriana, 21/set/2026) =============
+  // "preciso que a informação peso esteja na busca do cliente aludindo com a data do
+  //  último peso. em cadastro do peludinho, ao procurar aparece a raça, quantas vezes
+  //  vem e os dias, tutor, idade e último peso."
+  // A linha embaixo do nome é montada por funções PURAS — é o que este bloco prova.
+  console.log('v-29 · A linha da busca do cadastro: raça, dias, tutor, idade e o último peso com data:');
+  {
+    // ---- (a) idade escrita como a recepção fala ------------------------------------
+    if (typeof ctx.idadeTexto === 'function') {
+      check('v-29 · anos E meses: quem nasceu em 09/05/2023, em 21/09/2026 tem "3 anos e 4 meses"',
+        ctx.idadeTexto('2023-05-09', '2026-09-21') === '3 anos e 4 meses',
+        ctx.idadeTexto('2023-05-09', '2026-09-21'));
+      check('v-29 · só meses: filhote de 09/04/2026 tem "5 meses" (não "0 anos e 5 meses")',
+        ctx.idadeTexto('2026-04-09', '2026-09-21') === '5 meses',
+        ctx.idadeTexto('2026-04-09', '2026-09-21'));
+      check('v-29 · sem data NÃO se inventa idade — a linha diz que falta cadastrar',
+        ctx.idadeTexto('', '2026-09-21') === 'idade não cadastrada'
+        && ctx.idadeTexto(null, '2026-09-21') === 'idade não cadastrada',
+        ctx.idadeTexto('', '2026-09-21'));
+      check('v-29 · singular na norma culta: "1 ano", "1 ano e 1 mês"',
+        ctx.idadeTexto('2025-09-21', '2026-09-21') === '1 ano'
+        && ctx.idadeTexto('2025-08-21', '2026-09-21') === '1 ano e 1 mês',
+        ctx.idadeTexto('2025-08-21', '2026-09-21'));
+      check('v-29 · a ficha antiga em dd/mm/aaaa também é lida (é o formato que a recepção digita)',
+        ctx.idadeTexto('09/05/2023', '2026-09-21') === '3 anos e 4 meses',
+        ctx.idadeTexto('09/05/2023', '2026-09-21'));
+      check('v-29 · mordida — data no futuro e lixo não viram idade nenhuma',
+        ctx.idadeTexto('2027-01-01', '2026-09-21') === 'idade não cadastrada'
+        && ctx.idadeTexto('banana', '2026-09-21') === 'idade não cadastrada');
+    } else { check('v-29 · idadeTexto existe', false, 'função não encontrada'); }
+
+    // ---- (b) o último peso é o de MAIOR data, venha na ordem que vier ---------------
+    if (typeof ctx.ultimoPesoDe === 'function') {
+      const fora = ctx.ultimoPesoDe({ pesos: [
+        { data: '2026-03-02', kg: 7.1 }, { data: '2026-09-01', kg: 6.5 }, { data: '2026-08-30', kg: 6.9 },
+      ] });
+      check('v-29 · fora de ordem no banco, o último continua sendo o de 01/09 (6,5 kg)',
+        !!fora && fora.kg === 6.5 && fora.data === '2026-09-01', JSON.stringify(fora));
+      check('v-29 · sem pesagem nenhuma devolve null — não se chuta um número',
+        ctx.ultimoPesoDe({}) === null && ctx.ultimoPesoDe({ pesos: [] }) === null);
+      check('v-29 · a ficha antiga com o número solto (ex.peso) continua valendo, sem data',
+        JSON.stringify(ctx.ultimoPesoDe({ peso: 8 })) === '{"kg":8,"data":""}',
+        JSON.stringify(ctx.ultimoPesoDe({ peso: 8 })));
+      check('v-29 · mordida — linha sem kg, com kg vazio ou negativo não entra',
+        ctx.ultimoPesoDe({ pesos: [{ data: '2026-09-01' }, { data: '2026-09-02', kg: '' },
+          { data: '2026-09-03', kg: -2 }] }) === null);
+    } else { check('v-29 · ultimoPesoDe existe', false, 'função não encontrada'); }
+
+    // ---- (c) o texto do peso: sempre COM a data, e avisando quando ela é velha ------
+    if (typeof ctx.pesoTextoBusca === 'function') {
+      check('v-29 · "6,5 kg em 01/09" — vírgula, uma casa e a data curta do ano corrente',
+        ctx.pesoTextoBusca({ pesos: [{ data: '2026-09-01', kg: 6.5 }] }, '2026-09-21') === '6,5 kg em 01/09',
+        ctx.pesoTextoBusca({ pesos: [{ data: '2026-09-01', kg: 6.5 }] }, '2026-09-21'));
+      check('v-29 · acima de 45 dias a pesagem é antiga e a linha DIZ há quantos dias',
+        ctx.pesoTextoBusca({ pesos: [{ data: '2026-06-01', kg: 6.5 }] }, '2026-09-21') === '6,5 kg em 01/06 (há 112 dias)',
+        ctx.pesoTextoBusca({ pesos: [{ data: '2026-06-01', kg: 6.5 }] }, '2026-09-21'));
+      check('v-29 · em 45 dias exatos ainda NÃO avisa — a régua é "mais de 45"',
+        ctx.pesoTextoBusca({ pesos: [{ data: '2026-08-07', kg: 6.5 }] }, '2026-09-21').indexOf('há ') < 0
+        && ctx.pesoTextoBusca({ pesos: [{ data: '2026-08-06', kg: 6.5 }] }, '2026-09-21').indexOf('(há 46 dias)') > 0,
+        ctx.pesoTextoBusca({ pesos: [{ data: '2026-08-07', kg: 6.5 }] }, '2026-09-21'));
+      check('v-29 · de outro ano o ano ENTRA na data (senão 01/09 de 2025 passa por recente)',
+        ctx.pesoTextoBusca({ pesos: [{ data: '2025-09-01', kg: 6.5 }] }, '2026-09-21') === '6,5 kg em 01/09/2025 (há 385 dias)',
+        ctx.pesoTextoBusca({ pesos: [{ data: '2025-09-01', kg: 6.5 }] }, '2026-09-21'));
+      check('v-29 · sem pesagem a linha diz "peso não cadastrado" — não fica em branco',
+        ctx.pesoTextoBusca({}, '2026-09-21') === 'peso não cadastrado',
+        ctx.pesoTextoBusca({}, '2026-09-21'));
+      check('v-29 · o número solto da ficha antiga aparece marcado como "(sem data)"',
+        ctx.pesoTextoBusca({ peso: 8 }, '2026-09-21') === '8,0 kg (sem data)',
+        ctx.pesoTextoBusca({ peso: 8 }, '2026-09-21'));
+      check('v-29 · e o alerta de peso velho usa o MESMO critério do texto (uma régua só)',
+        ctx.pesoVelhoBusca({ pesos: [{ data: '2026-06-01', kg: 6.5 }] }, '2026-09-21') === true
+        && ctx.pesoVelhoBusca({ pesos: [{ data: '2026-09-01', kg: 6.5 }] }, '2026-09-21') === false
+        && ctx.pesoVelhoBusca({ peso: 8 }, '2026-09-21') === false);
+    } else { check('v-29 · pesoTextoBusca existe', false, 'função não encontrada'); }
+
+    // ---- (d) quantas vezes vem E em quais dias, na mesma frase ----------------------
+    if (typeof ctx.diasTextoBusca === 'function') {
+      check('v-29 · "2x por semana (seg, qua)" — e na ordem da semana, não na do banco',
+        ctx.diasTextoBusca({ dias: ['qua', 'seg'] }) === '2x por semana (seg, qua)',
+        ctx.diasTextoBusca({ dias: ['qua', 'seg'] }));
+      check('v-29 · sem dia marcado a linha DIZ que falta — não devolve vazio calado',
+        ctx.diasTextoBusca({}) === 'dias não cadastrados'
+        && ctx.diasTextoBusca({ dias: [] }) === 'dias não cadastrados');
+      check('v-29 · aceita a lista de dias direto (é o que a tela tem em mãos)',
+        ctx.diasTextoBusca(['seg', 'qua', 'sex']) === '3x por semana (seg, qua, sex)',
+        ctx.diasTextoBusca(['seg', 'qua', 'sex']));
+      check('v-29 · mordida — dia inventado no banco não entra na conta',
+        ctx.diasTextoBusca(['seg', 'sab', 'dom']) === '1x por semana (seg)',
+        ctx.diasTextoBusca(['seg', 'sab', 'dom']));
+    } else { check('v-29 · diasTextoBusca existe', false, 'função não encontrada'); }
+
+    // ---- (e) a linha inteira, contra o CADASTRO DE VERDADE (o retrato da casa) ------
+    const cad29 = await dbRead('daycare/cadastro', token) || {};
+    if (typeof ctx.linhaBuscaCadastro === 'function' && cad29['cookie__raquel']) {
+      ctx.__cad29 = cad29;
+      vm.runInContext('__bkp29 = { cad: pelCadCache, hoje: zHojeISO };'
+        + 'pelCadCache = __cad29;'
+        + "zHojeISO = function(){ return '2026-09-21'; };", ctx);
+      try {
+        const cookie = ctx.PELUDINHOS.filter((p) => p && p.n === 'Cookie' && p.tutor === 'Raquel')[0];
+        const linha = cookie ? ctx.linhaBuscaCadastro(cookie, '2026-09-21') : '';
+        console.log('  a Cookie na busca: ' + linha.replace(/<[^>]*>/g, ''));
+        check('v-29 · a Cookie (Raquel) está no cadastro do retrato, com pesos e com dias',
+          !!cookie && Array.isArray(cad29['cookie__raquel'].pesos) && cad29['cookie__raquel'].pesos.length > 0
+          && Array.isArray(cookie.dias) && cookie.dias.length === 2,
+          JSON.stringify(cookie && cookie.dias));
+        check('v-29 · a linha traz o ÚLTIMO PESO com a data — era o que faltava',
+          linha.indexOf('último peso: 6,5 kg em 01/09') >= 0, linha);
+        check('v-29 · a linha NÃO repete o que a tabela já mostra em coluna (raça, dias, tutor, idade)',
+          linha.indexOf('SRD') < 0 && linha.indexOf('tutor:') < 0 && linha.indexOf('por semana') < 0 && linha.indexOf('anos') < 0, linha);
+        check('v-29 · a linha é só o peso',
+          linha.replace(/<[^>]*>/g, '') === 'último peso: 6,5 kg em 01/09', linha.replace(/<[^>]*>/g, ''));
+        check('v-29 · a pesagem recente NÃO fica em cor de atenção (só a velha fica)',
+          linha.indexOf('crm-atencao-text') < 0, linha);
+        check('v-29 · mordida — ficha sem nada não estoura e diz o que falta',
+          ctx.linhaBuscaCadastro({ n: 'Zé', tutor: 'Ninguém' }, '2026-09-21').replace(/<[^>]*>/g, '')
+            === 'último peso: peso não cadastrado',
+          ctx.linhaBuscaCadastro({ n: 'Zé', tutor: 'Ninguém' }, '2026-09-21').replace(/<[^>]*>/g, ''));
+        check('v-29 · e sem FILHOt nenhum devolve vazio (não quebra o desenho da lista)',
+          ctx.linhaBuscaCadastro(null, '2026-09-21') === '');
+      } finally {
+        vm.runInContext('pelCadCache = __bkp29.cad; zHojeISO = __bkp29.hoje;', ctx);
+      }
+    } else { check('v-29 · linhaBuscaCadastro existe e o retrato tem a Cookie', false, 'função ou cadastro ausente'); }
+
+    // ---- (f) a fiação: a linha entra NA BUSCA DO CADASTRO, e só nela ----------------
+    check('v-29 · renderPel (a busca do cadastro) desenha a linha dentro da célula do nome',
+      /<span class="pel-nome">\$\{pelNome\(p\)\}<\/span>[\s\S]{0,260}?\$\{linhaBuscaCadastro\(p,_hojeBusca\)\}<\/td>/.test(html));
+    check('v-29 · a data de hoje é calculada UMA vez por desenho, não uma por linha',
+      /const _hojeBusca=hojeISO\(\);\n\s*document\.getElementById\('pelBody'\)\.innerHTML=/.test(html));
+    check('v-29 · o clique que abre a ficha continua o mesmo (a linha é texto, não botão)',
+      /<tr onclick="abrirPeludinhoLista\(\$\{o\.i\}\)" style="cursor:pointer">/.test(html));
+    check('v-29 · a linha NÃO entrou nas outras buscas (Inativos e as sugestões do dia seguem como estavam)',
+      (html.match(/linhaBuscaCadastro\(/g) || []).length === 2,
+      String((html.match(/linhaBuscaCadastro\(/g) || []).length));
+    check('v-29 · a linha tem estilo próprio: menor, em var(--muted), e quebrando no celular',
+      /table\.pel \.pel-busca-sub\{[^}]*font-size:11\.5px[^}]*color:var\(--muted\)[^}]*white-space:normal/.test(html));
+    check('v-29 · a versão carimbada desta entrega é a 2026-09-21-02',
+      /const APP_VERSAO='2026-09-21-02';/.test(html));
   }
   console.log('');
 
