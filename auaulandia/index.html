@@ -4277,7 +4277,7 @@
          preço muda: mora aqui, nas mãos dela (lei de 22/ago/2026). -->
     <div class="card so-master" id="cardValoresDaycare">
       <h2 style="font-size:19px">Valores do Day Care</h2>
-      <div class="hint">O preço da <strong>diária avulsa</strong> — o dia solto, de quem não tem plano mensal, e a base da 1ª opção de quem começa no meio do mês. As mensalidades dos planos (Mensal · Trimestral · Semestral) continuam na tabela comercial. Nada é gravado antes do botão <strong>Salvar valores</strong>.</div>
+      <div class="hint">O preço da <strong>diária avulsa</strong> — o dia solto, de quem não tem plano mensal, e a base da 1ª opção de quem começa no meio do mês. As mensalidades dos planos (Mensal · Trimestral · Semestral) continuam na tabela comercial. Aqui moram também os dois números da <strong>dose do vermífugo pelo peso</strong>. Nada é gravado antes do botão <strong>Salvar valores</strong>.</div>
       <div id="cfgValoresWrap" style="margin-top:12px"><div class="hint">Carregando os valores do Day Care&hellip;</div></div>
     </div>
     <div class="card so-master">
@@ -13951,7 +13951,7 @@
   // inteira DEPOIS de a correção estar publicada — o aviso apareceu, ninguém tocou.
   // Agora o aparelho PARADO recarrega sozinho: trancado, com a aba escondida, na porta de
   // entrada ou 3 minutos sem ninguém tocar nele. Mão na tela = nunca recarrega.
-  const APP_VERSAO='2026-09-21-02';
+  const APP_VERSAO='2026-09-21-03';
   var RECARGA_PARADO_MS=3*60*1000, __versaoPublicada=null, __recargaTimer=null;
   function vigiarVersao(){
     if(!DB) return;
@@ -20038,6 +20038,17 @@
       +'</div>'+pbRodape('col','coleira')+'</div>';
   }
   // --- Vermifugação ---
+  // A DOSE PELO PESO na ficha (Adriana, 21/set/2026): quem abre a Prevenção para conferir
+  // o vermífugo precisa ver, na mesma tela, quanto o peso manda dar — ou que o peso está
+  // velho/encostado na virada e a balança vem antes.
+  function vermFichaTextoHTML(ex){
+    var a=vermAvaliar(ex||{});
+    if(a.pesar) return '<strong>Pese de novo antes de dar</strong> — '+escAttr(a.motivo)+'.'
+      +(a.kg!=null?(' Último peso: '+escAttr(pesoBuscaKg(a.kg))+' kg'
+        +(a.data?(' em '+escAttr(dataCurtaBusca(a.data))):' (sem data)')+'.'):'');
+    return '<strong>'+escAttr(a.dose.texto)+'</strong> ('+escAttr(pesoBuscaKg(a.kg))+' kg em '
+      +escAttr(dataCurtaBusca(a.data))+')';
+  }
   function blocoVerm(ex){
     const fez=!!ex.fezes_t;
     const d2=(ex.verm_t&&ex.verm_doses==='2 doses')?addDiasISO(ex.verm_t,VERMIF_2A_DOSE):'';
@@ -20055,6 +20066,7 @@
           ? '<div class="field"><label>2ª dose (21 dias depois)</label><div class="prev-calc">'+(d2?fmtBR(d2):'informe a 1ª dose')+'</div></div>'
           : '')
         +'<div class="field"><label>Próximo vermífugo</label><div class="prev-calc">'+(prox?fmtBR(prox)+' · 4 meses'+(ex.verm_doses==='2 doses'?' após a 2ª dose':''):'informe a data')+'</div></div>'
+        +'<div class="field" style="grid-column:1/-1"><label>Dose pelo peso</label><div class="prev-calc">'+vermFichaTextoHTML(ex)+'</div></div>'
       +'</div>'+pbRodape('verm','vermífugo')+'</div>';
   }
   // --- Exame de fezes ---
@@ -20354,6 +20366,104 @@
     var h=/^\d{4}-\d{2}-\d{2}$/.test(hojeISOv||'')?hojeISOv:((typeof hojeISO==='function')?hojeISO():'');
     var d=diasEntreISO(u.data,h);
     return d!=null&&d>PESO_VELHO_DIAS;
+  }
+  // ===== O VERMÍFUGO SAI DO PESO — Adriana, 21/set/2026 ============================
+  // "Peludinhos até 2 kg e até 5 kg tomam meio comprimido. Peludinhos a partir de 5 kg
+  //  tomam um comprimido inteiro. Se for maior, se for 12 kg vai tomar um e meio, e assim
+  //  consecutivamente. (…) já pode colocar, associar o peso com isso. Se o peso, vamos
+  //  supor, um peludo que está pesando 4,900, 4,800, precisa pesar de novo. (…) Um peludo
+  //  que está com 10,100 kg, talvez ele emagreceu, precisa pesar de novo. Eu preciso que o
+  //  peso seja vinculado, facilitando se precisa de pesar ou não."
+  //
+  // A RÉGUA: meio comprimido a cada 5 kg. Até 5,0 kg é meio; passou de 5,0 é um inteiro;
+  // passou de 10,0 é um e meio, e assim por diante. Em 5,0 exatos ainda é MEIO — a conta
+  // só sobe quando o peso PASSA da faixa.
+  //
+  // E o peso encostado na virada não decide nada sozinho: 4,8 · 4,9 · 5,0 · 5,1 · 10,1
+  // estão a menos de um passo de mudar a dose. Nesses casos a tela NÃO sugere dose nenhuma
+  // — manda pesar de novo. É a lei de nunca calcular em silêncio com dado que falta: meio
+  // comprimido a mais ou a menos é remédio, não arredondamento.
+  //
+  // Os dois números são de NEGÓCIO e mudam sem programador (lei de 22/ago/2026): moram em
+  // Configurações › Valores do Day Care, no mesmo nó daycare/config/valores.
+  //
+  // Tudo aqui é função PURA (recebe o dado, devolve a conta): a mesma régua serve aos
+  // Lançamentos do dia, ao Vence amanhã, à ficha e ao teste — uma conta só, quatro telas.
+  var VERM_FAIXA_PADRAO=5;      // meio comprimido a cada 5 kg
+  var VERM_MARGEM_PADRAO=0.3;   // a menos disso da virada, pese de novo
+  function vermFaixaKg(){
+    var v=(typeof dcValores==='function')?Number((dcValores()||{}).verm_faixa_kg):NaN;
+    return (isFinite(v)&&v>0)?v:VERM_FAIXA_PADRAO;
+  }
+  function vermMargemKg(){
+    var v=(typeof dcValores==='function')?Number((dcValores()||{}).verm_margem_kg):NaN;
+    return (isFinite(v)&&v>=0)?v:VERM_MARGEM_PADRAO;
+  }
+  // Número de quilo como se fala: 5 · 0,3 · 4,5. Sem casa decimal inventada.
+  function vermNumTexto(n){
+    var v=Math.round(Number(n)*100)/100;
+    if(!isFinite(v)) return '';
+    return String(v).replace('.',',');
+  }
+  // O que a pessoa digita no campo de quilo: aceita 0,3 e 0.3 — e só isso.
+  function vermNumLer(v){
+    var t=String(v==null?'':v).trim().replace(',','.');
+    if(!/^\d+(\.\d+)?$/.test(t)) return NaN;
+    return parseFloat(t);
+  }
+  // Os rótulos são os MESMOS botões de "Quanto foi dado" (DASH_QTD) — em MAIÚSCULA, que é
+  // como a coluna da planilha sempre foi escrita. Meia dose nenhuma nasce aqui sem botão lá.
+  var VERM_ROTULOS=['','MEIO COMPRIMIDO','1 COMPRIMIDO','1 COMPRIMIDO E MEIO','2 COMPRIMIDOS',
+    '2 COMPRIMIDOS E MEIO','3 COMPRIMIDOS','3 COMPRIMIDOS E MEIO','4 COMPRIMIDOS','4 COMPRIMIDOS E MEIO'];
+  var VERM_TEXTOS=['','meio comprimido','1 comprimido','1 comprimido e meio','2 comprimidos',
+    '2 comprimidos e meio','3 comprimidos','3 comprimidos e meio','4 comprimidos','4 comprimidos e meio'];
+  function vermDoseDe(kg, faixa){
+    var k=Number(kg), f=Number(faixa);
+    if(!isFinite(f)||f<=0) f=VERM_FAIXA_PADRAO;
+    if(!isFinite(k)||k<=0) return {metades:0, rot:'', texto:''};
+    // Arredondar o quociente ANTES do teto: 15/5 tem de dar 3, não 3,0000000001 (que viraria 4).
+    var q=Math.round((k/f)*1e6)/1e6;
+    var m=Math.max(1, Math.ceil(q));
+    return {metades:m, rot:(VERM_ROTULOS[m]||''), texto:(VERM_TEXTOS[m]||'')};
+  }
+  function vermPertoDaVirada(kg, faixa, margem){
+    var k=Number(kg), f=Number(faixa), m=Number(margem);
+    if(!isFinite(f)||f<=0) f=VERM_FAIXA_PADRAO;
+    if(!isFinite(m)||m<0) m=VERM_MARGEM_PADRAO;
+    if(!isFinite(k)||k<=0||m===0) return false;
+    var mult=Math.round(k/f); if(mult<1) mult=1;
+    // Arredondar a distância: 4,7 tem de dar 0,3 redondo, não 0,29999999999 — que entraria
+    // por baixo da margem de 0,3 e mandaria pesar de novo quem não precisa.
+    var d=Math.round(Math.abs(k-mult*f)*1e6)/1e6;
+    return d<m;
+  }
+  function vermAvaliar(ex, hojeISOv){
+    var h=/^\d{4}-\d{2}-\d{2}$/.test(hojeISOv||'')?hojeISOv:((typeof hojeISO==='function')?hojeISO():'');
+    var faixa=vermFaixaKg(), margem=vermMargemKg();
+    var u=ultimoPesoDe(ex);
+    if(!u) return {kg:null, data:'', dose:vermDoseDe(0,faixa), pesar:true, motivo:'sem peso'};
+    var r={kg:u.kg, data:u.data||'', dose:vermDoseDe(u.kg,faixa), pesar:true, motivo:''};
+    if(!u.data){ r.motivo='peso sem data'; return r; }
+    var d=diasEntreISO(u.data,h);
+    if(d==null){ r.motivo='não sei de quando é o peso'; return r; }
+    if(d>PESO_VELHO_DIAS){ r.motivo='peso antigo (há '+d+' dias)'; return r; }
+    if(vermPertoDaVirada(u.kg,faixa,margem)){ r.motivo='perto da virada de faixa ('+pesoBuscaKg(u.kg)+' kg)'; return r; }
+    if(!r.dose.rot){ r.motivo='peso fora da tabela de doses ('+pesoBuscaKg(u.kg)+' kg)'; return r; }
+    r.pesar=false; return r;
+  }
+  // A frase, uma só, usada nos Lançamentos, no Vence amanhã e na ficha:
+  // "Pelo último peso, 6,5 kg em 01/09: 1 comprimido".
+  function vermFrasePeso(a, hojeISOv){
+    if(!a||a.kg==null) return 'Sem peso na ficha.';
+    var q=pesoBuscaKg(a.kg)+' kg'+(a.data?(' em '+dataCurtaBusca(a.data,hojeISOv)):' (sem data)');
+    if(a.pesar||!a.dose||!a.dose.texto) return 'Pelo último peso, '+q+'.';
+    return 'Pelo último peso, '+q+': '+a.dose.texto;
+  }
+  // A mesma avaliação a partir da FICHA do FILHOt — é o que as telas têm em mãos.
+  function vermAvaliarFicha(p, hojeISOv){
+    if(!p) return null;
+    var ex={}; try{ ex=(typeof pelExtra==='function'?pelExtra(p):{})||{}; }catch(e){ ex={}; } /* silencioso de propósito: sem ficha extra a avaliação sai por "sem peso", que é a verdade */
+    return vermAvaliar(ex, hojeISOv);
   }
   // "2x por semana (seg, qua)" — quantas vezes vem E em quais dias, na mesma frase.
   // Aceita tanto a lista de dias quanto a ficha inteira, para servir aos dois chamadores.
@@ -28602,13 +28712,20 @@
   // A recepção escrevia isto à mão, entre parênteses. Aqui vira botão: ninguém digita
   // "2 comprimdos" nem esquece de dizer que o remédio está na bolsa. Os valores saem
   // em MAIÚSCULA porque é assim que a coluna sempre foi escrita e é assim que a TV lê.
+  // A escada sobe de MEIO em MEIO (Adriana, 21/set/2026): a dose do vermífugo é meio
+  // comprimido a cada 5 kg, então 2½, 3½ e 4½ precisavam existir como botão — senão a
+  // sugestão pelo peso apontaria para um botão que não está na tela. A casa recebe até
+  // 21 kg, que dá 2½; os degraus acima existem para a régua nunca ficar sem resposta.
   var DASH_QTD=[
     {v:'MEIO COMPRIMIDO',     t:'\u00bd comprimido'},
     {v:'1 COMPRIMIDO',        t:'1 comprimido'},
     {v:'1 COMPRIMIDO E MEIO', t:'1 e \u00bd'},
     {v:'2 COMPRIMIDOS',       t:'2 comprimidos'},
+    {v:'2 COMPRIMIDOS E MEIO',t:'2 e \u00bd'},
     {v:'3 COMPRIMIDOS',       t:'3 comprimidos'},
-    {v:'4 COMPRIMIDOS',       t:'4 comprimidos'}
+    {v:'3 COMPRIMIDOS E MEIO',t:'3 e \u00bd'},
+    {v:'4 COMPRIMIDOS',       t:'4 comprimidos'},
+    {v:'4 COMPRIMIDOS E MEIO',t:'4 e \u00bd'}
   ];
   // Pipeta é o tubo inteiro: não existe meia pipeta, por isso ela é uma quantidade e
   // não uma observação. Só o carrapaticida oferece.
@@ -29077,6 +29194,10 @@
   function dashEscolher(k, rot, idx){
     DASH_SEL[k]=rot; DASH_DET[k]={};
     if(typeof idx==='number'&&idx>=0) DASH_SEL_I[k]=idx; else delete DASH_SEL_I[k];
+    // VERMÍFUGO (Adriana, 21/set/2026): escolhido o FILHOt, a dose que o peso indica já vem
+    // marcada. É RASCUNHO na tela — o mesmo DASH_DET que a pessoa mexe, e nada vai para o
+    // banco antes do botão Lançar. Se o peso pede balança, NADA vem marcado.
+    try{ vermPreMarcar(k); }catch(e){} /* silencioso de propósito: a sugestão é ajuda — falhar aqui não pode impedir o lançamento à mão */
     var b=document.getElementById('dashB_'+k); if(b) b.value='';
     try{ renderDash(); }catch(e){} /* silencioso de propósito: redesenho de tela — falhar não pode derrubar quem chamou */
   }
@@ -29121,6 +29242,64 @@
     });
     return falta.join(' · ');
   }
+  // ===== O VERMÍFUGO NO PAINEL DOS LANÇAMENTOS (Adriana, 21/set/2026) =============
+  // "Eu preciso que o peso seja vinculado, facilitando se precisa de pesar ou não."
+  // A frase do peso vem ANTES de "Quanto foi dado", porque é ela que responde a pergunta.
+  // A régua SUGERE — nunca impede: a consultora continua podendo escolher outra dose, e a
+  // tela diz, sem drama, que ficou diferente do que o peso indica.
+  function vermFilhotDe(k){
+    var i=DASH_SEL_I[k];
+    if(typeof i!=='number'||i<0) return null;
+    return (typeof PELUDINHOS!=='undefined'&&PELUDINHOS[i])?PELUDINHOS[i]:null;
+  }
+  function vermPreMarcar(k){
+    if(k!=='vermifugo') return;
+    var a=vermAvaliarFicha(vermFilhotDe(k));
+    if(!a||a.pesar||!a.dose||!a.dose.rot) return;
+    dashDet(k).qtd=a.dose.rot;
+  }
+  // Quem NÃO tem a tela de Peso no menu não pode receber um botão que não abre nada —
+  // recebe a frase que diz a quem pedir. O menu é a fonte: a mesma regra de papel que
+  // esconde o item é a que responde aqui.
+  function vermPodePesar(){
+    try{
+      var a=document.querySelector('#nav a[data-v="peso"]');
+      if(!a) return false;
+      var st=(typeof getComputedStyle==='function')?getComputedStyle(a):null;
+      return !st||st.display!=='none';
+    }catch(e){ return false; } /* silencioso de propósito: sem menu para ler, a tela mostra a frase em vez do botão */
+  }
+  // Abre a tela de Peso JÁ com este FILHOt escolhido — pesa e volta. Se a tela não aceitar
+  // a pré-escolha, ela abre na busca, que é o comportamento de sempre.
+  function vermAbrirBalanca(k){
+    var i=DASH_SEL_I[k];
+    try{ if(typeof i==='number'&&i>=0){ PESOT_I=i; PESOT_BUSCA=''; } }catch(e){} /* silencioso de propósito: sem a pré-escolha a tela de Peso abre na busca, como sempre */
+    try{ abrirItemDoMenu('peso'); }catch(e){} /* silencioso de propósito: guarda defensiva — falhar aqui não pode derrubar o painel */
+  }
+  function vermBlocoPainelHTML(k){
+    var p=vermFilhotDe(k);
+    if(!p) return '<div class="hint" style="margin-top:9px;color:var(--crm-atencao-text);font-weight:700">'
+      +'Não consegui ligar este lançamento a uma ficha, então não sei o peso — escolha a quantidade à mão.</div>';
+    var a=vermAvaliarFicha(p); if(!a) return '';
+    if(a.pesar){
+      return '<div style="margin-top:10px;padding:9px 11px;border-radius:11px;background:rgba(222,180,40,.22);border:1px solid var(--z-gold)">'
+        +'<div style="font-weight:800;color:var(--z-blue);font-size:13.5px">Pese de novo antes de dar — '+escAttr(a.motivo)+'</div>'
+        +'<div class="hint" style="margin-top:3px">'+escAttr(vermFrasePeso(a))
+        +' A dose sobe meio comprimido a cada '+escAttr(vermNumTexto(vermFaixaKg()))
+        +' kg, e este peso não decide sozinho: meio comprimido a mais ou a menos é remédio, não arredondamento.</div>'
+        +(vermPodePesar()
+          ? ('<button type="button" class="btn btn-gold" style="margin-top:8px;padding:6px 13px;font-size:12.5px;font-weight:800" onclick="vermAbrirBalanca(\''+k+'\')">Abrir a balança</button>')
+          : '<div class="hint" style="margin-top:6px;font-weight:700">Peça à recepção ou à veterinária para pesar — a tela de Peso não é do seu papel.</div>')
+        +'<div class="hint" style="margin-top:6px">Se for dar assim mesmo, escolha a quantidade abaixo: a regra sugere, não impede.</div></div>';
+    }
+    var marcada=dashDet(k).qtd;
+    var dif=!!(marcada&&a.dose.rot&&marcada!==a.dose.rot);
+    return '<div class="prev-calc" style="margin-top:10px">'+escAttr(vermFrasePeso(a))
+      +'<div class="hint" style="margin-top:3px">Meio comprimido a cada '+escAttr(vermNumTexto(vermFaixaKg()))
+      +' kg — a faixa e a folga da virada mudam em Configurações &rsaquo; Valores do Day Care.</div>'
+      +(dif?('<div class="hint" style="margin-top:4px;color:var(--crm-atencao-text);font-weight:700">A quantidade marcada está diferente da sugestão pelo peso. Se foi de propósito, siga — quem dá o remédio é você.</div>'):'')
+      +'</div>';
+  }
   function dashPainelHTML(it){
     var sel=DASH_SEL[it.k]||'', d=dashDet(it.k);
     var h='<div class="pair" style="padding:7px 0;border-bottom:1px solid var(--line)">'
@@ -29144,6 +29323,8 @@
         +' onchange="try{renderDash()}catch(e){}/* silencioso de propósito: redesenho de tela */">'
         +'<div class="hint" style="margin-top:3px">A data vai para a ficha do FILHOt e começa a contagem.</div>';
     }
+    // A dose que o peso indica vem ANTES de "Quanto foi dado" — é ela que responde a pergunta.
+    if(it.k==='vermifugo') h+=vermBlocoPainelHTML(it.k);
     it.campos.forEach(function(c){
       if(!dashCampoAtivo(it.k,c)) return;
       // O campo ESCRITO À MÃO (Medicação, 18/set/2026): "gotas no ouvido, 2x ao dia" não
@@ -29313,6 +29494,20 @@
         var v=c.texto?dashDetTextoLimpo(__d[c.c]):__d[c.c];
         if(v) __det[c.c]=v;
       });
+      // VERMÍFUGO (Adriana, 21/set/2026): o peso que decidiu a dose viaja COM o lançamento.
+      // Sem isto, olhar o registro meses depois não diria de que peso saiu aquele meio
+      // comprimido — e a pergunta "por que foi essa dose?" ficaria sem resposta. O peso é
+      // lido agora, na hora de lançar: vale o que está na ficha neste instante.
+      if(k==='vermifugo'){
+        try{
+          var __va=vermAvaliarFicha(pDoLanc);
+          if(__va){
+            if(__va.kg!=null) __det.peso_kg=__va.kg;
+            if(__va.data) __det.peso_data=__va.data;
+            if(__va.dose&&__va.dose.rot) __det.dose_sugerida=__va.dose.rot;
+          }
+        }catch(e){} /* silencioso de propósito: o rastro é a mais — falhar aqui não pode impedir o lançamento */
+      }
       valor = valor + dashDetTexto(k);
     }
     var lista=DASH_DADOS[k]||{};
@@ -30268,8 +30463,31 @@
   // O bloco de "Pode fazer na Zêluz": abre RASCUNHO. Nada é gravado até o Confirmar.
   function vencAbrirLanc(chave, forcar){
     VENC_ABERTO[chave]=forcar?true:!VENC_ABERTO[chave];
-    if(!VENC_ABERTO[chave]) delete VENC_ESCOLHA[chave];
+    // VERMÍFUGO (Adriana, 21/set/2026): abrindo o bloco, a dose que o peso indica já vem
+    // marcada — rascunho, como todo o resto daqui: nada é gravado antes do Confirmar.
+    // Fechando, o rascunho inteiro vai embora, como sempre foi.
+    if(!VENC_ABERTO[chave]){ delete VENC_ESCOLHA[chave]; }
+    else { try{ vermPreMarcarVenc(chave); }catch(e){} /* silencioso de propósito: a sugestão é ajuda — falhar aqui não pode impedir a escolha à mão */ }
     vencRender();
+  }
+  // A dose sugerida entra no MESMO rascunho que a pessoa mexe (VENC_ESCOLHA), e só quando o
+  // peso decide sozinho. Se já houver uma escolha feita, ela manda — a sugestão não atropela.
+  function vermPreMarcarVenc(chave){
+    var o=vencAchar(chave); if(!o) return;
+    if(!(o.itens||[]).some(function(x){ return x.k==='verm_p'; })) return;
+    var a=vermAvaliarFicha(o.p); if(!a||a.pesar||!a.dose||!a.dose.rot) return;
+    VENC_ESCOLHA[chave]=VENC_ESCOLHA[chave]||{};
+    var d=VENC_ESCOLHA[chave].verm_p=VENC_ESCOLHA[chave].verm_p||{};
+    if(!d.seg) d.seg=a.dose.rot;
+  }
+  // A linha do vermífugo no cartão: a dose que o peso indica, ou o aviso de pesar de novo.
+  // É ela que a consultora dita ao tutor — e é a mesma que vai pré-marcada lá embaixo.
+  function vermLinhaVencHTML(o, hoje){
+    if(!o||!(o.itens||[]).some(function(x){ return x.k==='verm_p'; })) return '';
+    var a=vermAvaliarFicha(o.p, hoje); if(!a) return '';
+    if(a.pesar) return '<div class="hint" style="margin-top:3px;color:var(--crm-atencao-text);font-weight:700">'
+      +'Vermífugo: '+escAttr(vermFrasePeso(a,hoje))+' Pese de novo antes de dar — '+escAttr(a.motivo)+'.</div>';
+    return '<div class="hint" style="margin-top:3px">Vermífugo — '+escAttr(vermFrasePeso(a,hoje))+'.</div>';
   }
   function vencEscolher(chave, k, campo, valor){
     VENC_ESCOLHA[chave]=VENC_ESCOLHA[chave]||{};
@@ -30578,6 +30796,9 @@
         +escAttr(x.nome+' — '+quanto)+'</span>';
     });
     h+='</div>';
+    // A dose do vermífugo sai do peso (Adriana, 21/set/2026) — aqui, onde a consultora
+    // está olhando quando fala com o tutor.
+    h+=vermLinhaVencHTML(o, hoje);
     // a mensagem pronta, editável antes de copiar
     h+='<textarea class="gest-txt" id="vencMsg_'+escAttr(o.chave)+'" rows="7" style="width:100%">'
       +escAttr(vencMensagem(o,dia,hoje))+'</textarea>';
@@ -30625,6 +30846,15 @@
       var cfg=VENC_LANC[x.k], e=esc[x.k]||{};
       h+='<div style="margin-top:10px;padding-top:9px;border-top:1px solid var(--line)">'
         +'<div style="font-weight:800;color:var(--z-blue);font-size:13.5px">'+escAttr(x.nome)+'</div>';
+      // VERMÍFUGO (21/set/2026): a dose vem do peso. Quando o peso decide sozinho, ela já
+      // está marcada abaixo; quando não decide, NADA vem marcado e a tela diz por quê.
+      if(x.k==='verm_p'){
+        var av=vermAvaliarFicha(o.p);
+        if(av) h+=(av.pesar
+          ? ('<div class="hint" style="margin-top:5px;color:var(--crm-atencao-text);font-weight:700">Pese de novo antes de dar — '
+             +escAttr(av.motivo)+'. '+escAttr(vermFrasePeso(av))+' Nada vem marcado: escolha sabendo disso.</div>')
+          : ('<div class="hint" style="margin-top:5px">'+escAttr(vermFrasePeso(av))+' — já vem marcado abaixo.</div>'));
+      }
       h+='<div class="hint" style="margin:4px 0 3px">Onde está o produto?</div><div style="display:flex;flex-wrap:wrap;gap:6px">';
       VENC_ONDE.forEach(function(op){
         h+='<span class="venc-op'+(e.onde===op.v?' on':'')+'" onclick="vencEscolher(\''+ka+'\',\''+x.k+'\',\'onde\',\''+jsAspas(op.v)+'\')">'+escAttr(op.t)+'</span>';
@@ -31731,27 +31961,55 @@
       +'<div class="hint" style="margin-top:3px">Hoje vale <strong>'+esc(fmtCent(v))+'</strong>'
       +(padrao?' — ainda é o valor de fábrica da tabela de 2026; salve para deixá-lo seu.':' — salvo por você.')+'</div></div>'
       +'<div class="hint" style="margin-top:8px">Este é o valor que a aba <strong>Plano</strong> da ficha usa na 1ª opção de quem começa no meio do mês, e o que o quadro <strong>Recebimentos do mês</strong> mostra como preço do dia avulso.</div>'
+      // VERMÍFUGO (Adriana, 21/set/2026): a régua da dose é número de negócio e muda sem
+      // programador (lei de 22/ago/2026). Os dois campos moram aqui, do lado do outro
+      // número de Day Care, e valem para Lançamentos do dia, Vence amanhã e a ficha.
+      +'<div style="margin-top:16px;padding-top:13px;border-top:1px solid var(--line)">'
+      +'<label class="cad-lb">Vermífugo: meio comprimido a cada (kg)</label>'
+      +'<input class="cad-in" id="cfgVermFaixa" inputmode="decimal" value="'+esc(vermNumTexto(vermFaixaKg()))+'">'
+      +'<div class="hint" style="margin-top:3px">De quantos em quantos quilos a dose sobe meia unidade: até '
+      +esc(vermNumTexto(vermFaixaKg()))+' kg é meio comprimido, até '+esc(vermNumTexto(vermFaixaKg()*2))
+      +' kg é um inteiro, e assim por diante.</div></div>'
+      +'<div style="margin-top:11px"><label class="cad-lb">Pesar de novo se faltar menos de (kg) para a virada</label>'
+      +'<input class="cad-in" id="cfgVermMargem" inputmode="decimal" value="'+esc(vermNumTexto(vermMargemKg()))+'">'
+      +'<div class="hint" style="margin-top:3px">Peso encostado na virada não decide dose sozinho: a tela manda pesar de novo em vez de arredondar meio comprimido.</div></div>'
       +'<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px">'
       +'<button type="button" class="btn btn-gold" onclick="cfgValoresSalvar()">Salvar valores</button></div>'
       +'<div id="cfgValoresSt" class="hint" style="margin-top:6px"></div>';
   }
   function cfgValoresSalvar(){
     const st=document.getElementById('cfgValoresSt');
+    const diz=function(t,c){ if(st){ st.style.color=c; st.textContent=t; } };
     const bruto=String(((document.getElementById('cfgDiariaAvulsa')||{}).value||'')).replace(/\./g,'').replace(',','.');
     const n=parseFloat(bruto);
-    if(isNaN(n)||n<=0){ if(st){ st.style.color='var(--crm-critico)'; st.textContent='A diária avulsa precisa ser um valor maior que zero. Nada foi salvo.'; } return; }
+    if(isNaN(n)||n<=0){ diz('A diária avulsa precisa ser um valor maior que zero. Nada foi salvo.','var(--crm-critico)'); return; }
+    // VERMÍFUGO (21/set/2026): os dois números da régua da dose são conferidos ANTES de
+    // gravar, e nada sai pela metade — ou os três valores estão bons, ou não sai nada.
+    const fx=vermNumLer((document.getElementById('cfgVermFaixa')||{}).value);
+    if(!isFinite(fx)||fx<=0||fx>21){ diz('A faixa do vermífugo precisa ser um peso maior que zero e até 21 kg — é o porte que a casa recebe. Nada foi salvo.','var(--crm-critico)'); return; }
+    const mg=vermNumLer((document.getElementById('cfgVermMargem')||{}).value);
+    if(!isFinite(mg)||mg<0){ diz('A folga da virada precisa ser zero ou mais. Nada foi salvo.','var(--crm-critico)'); return; }
+    if(mg>fx/2){ diz('A folga da virada não pode passar de metade da faixa ('+vermNumTexto(fx/2)+' kg) — senão todo peso ficaria perto da virada e a tela mandaria pesar sempre. Nada foi salvo.','var(--crm-critico)'); return; }
     const novo=Math.round(n*100), antes=diariaAvulsaCent();
-    if(!DB){ if(st){ st.style.color='var(--crm-critico)'; st.textContent='Banco reconectando — não salvei. Tente de novo em instantes.'; } return; }
-    DB.ref('daycare/config/valores').update({diaria_avulsa_cent:novo}).then(function(){
-      dcValoresCfg=Object.assign({}, dcValoresCfg||{}, {diaria_avulsa_cent:novo});
-      try{ if(typeof audit==='function') audit('config-valores-daycare',
-        'diária avulsa: '+fmtCent(antes)+' → '+fmtCent(novo), {antes:antes, depois:novo}); }catch(e){} /* silencioso de propósito: o audit() tem bolso próprio e reenvia sozinho */
-      if(st){ st.style.color='var(--crm-ok)'; st.textContent='✓ Salvo. Vale para as contas novas — o que já foi registrado guarda o preço da época.'; }
+    const fxAntes=vermFaixaKg(), mgAntes=vermMargemKg();
+    if(!DB){ diz('Banco reconectando — não salvei. Tente de novo em instantes.','var(--crm-critico)'); return; }
+    DB.ref('daycare/config/valores').update({diaria_avulsa_cent:novo, verm_faixa_kg:fx, verm_margem_kg:mg}).then(function(){
+      dcValoresCfg=Object.assign({}, dcValoresCfg||{}, {diaria_avulsa_cent:novo, verm_faixa_kg:fx, verm_margem_kg:mg});
+      // O rastro diz de quanto para quanto, valor por valor — e só do que mudou de verdade.
+      const mud=[];
+      if(novo!==antes) mud.push('diária avulsa: '+fmtCent(antes)+' → '+fmtCent(novo));
+      if(fx!==fxAntes) mud.push('vermífugo, meio comprimido a cada: '+vermNumTexto(fxAntes)+' kg → '+vermNumTexto(fx)+' kg');
+      if(mg!==mgAntes) mud.push('vermífugo, folga da virada: '+vermNumTexto(mgAntes)+' kg → '+vermNumTexto(mg)+' kg');
+      try{ if(mud.length && typeof audit==='function') audit('config-valores-daycare', mud.join(' · '),
+        {antes:antes, depois:novo, verm_faixa_antes:fxAntes, verm_faixa_depois:fx,
+         verm_margem_antes:mgAntes, verm_margem_depois:mg}); }catch(e){} /* silencioso de propósito: o audit() tem bolso próprio e reenvia sozinho */
+      diz(mud.length?'✓ Salvo. Vale para as contas novas — o que já foi registrado guarda o preço da época.'
+                    :'Nada mudou: os valores já eram esses.','var(--crm-ok)');
       cfgValoresRender();
       try{ if(typeof recRedesenhar==='function') recRedesenhar(); }catch(e){} /* silencioso de propósito: redesenho de tela — falhar não pode derrubar quem chamou */
     }).catch(function(e){
       _logFalhaGrav('daycare/config/valores (cfgValoresSalvar)', e);
-      if(st){ st.style.color='var(--crm-critico)'; st.textContent='❌ Não salvou: '+((e&&e.message)||e); }
+      diz('❌ Não salvou: '+((e&&e.message)||e),'var(--crm-critico)');
     });
   }
   // ===== CONFIGURAÇÕES › MENSAGEM DE ENTRADA (Adriana, 15/set/2026) =================

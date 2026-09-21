@@ -3732,8 +3732,8 @@ async function main() {
     check('v-25 · a auditoria da tabela diz o que mudou, de quanto para quanto',
       /audit\('orcamento-precos',\s*\n?\s*mudou\.length\?\('alterou a tabela de hospedagem — '\+mudou\.join/.test(html)
       && /\{antes:antes, depois:novo\}/.test(html));
-    check('v-25 · a versão carimbada desta entrega é a 2026-09-21-02',
-      /const APP_VERSAO='2026-09-21-02';/.test(html));
+    check('v-25 · a versão carimbada desta entrega é a 2026-09-21-03',
+      /const APP_VERSAO='2026-09-21-03';/.test(html));
   }
   console.log('');
 
@@ -3767,11 +3767,12 @@ async function main() {
       && /try\{ dcValoresCarregar\(\); \}catch\(e\)\{\}/.test(html));
     check('v-26 · o valor mora no banco em daycare/config/valores, com diaria_avulsa_cent',
       /DB\.ref\('daycare\/config\/valores'\)\.once\('value'\)/.test(html)
-      && /DB\.ref\('daycare\/config\/valores'\)\.update\(\{diaria_avulsa_cent:novo\}\)/.test(html));
+      && /DB\.ref\('daycare\/config\/valores'\)\.update\(\{diaria_avulsa_cent:novo, verm_faixa_kg:fx, verm_margem_kg:mg\}\)/.test(html));
     check('v-26 · nada é salvo antes do botão "Salvar valores", e o rastro diz de quanto para quanto',
       /onclick="cfgValoresSalvar\(\)">Salvar valores<\/button>/.test(html)
-      && /audit\('config-valores-daycare',\s*\n?\s*'diária avulsa: '\+fmtCent\(antes\)\+' → '\+fmtCent\(novo\)/.test(html)
-      && /\{antes:antes, depois:novo\}/.test(html));
+      && /mud\.push\('diária avulsa: '\+fmtCent\(antes\)\+' → '\+fmtCent\(novo\)\)/.test(html)
+      && /audit\('config-valores-daycare', mud\.join\(' · '\)/.test(html)
+      && /\{antes:antes, depois:novo, verm_faixa_antes:fxAntes, verm_faixa_depois:fx,/.test(html));
     check('v-26 · valor zerado ou vazio NÃO passa — preço em branco viraria conta em R$ 0,00',
       /if\(isNaN\(n\)\|\|n<=0\)\{[^}]*Nada foi salvo\./.test(html));
 
@@ -4019,8 +4020,8 @@ async function main() {
     check('v-26 · e continua FORA da soma — o app não sabe quantas diárias foram cobradas',
       html.indexOf('nunca quantas diárias foram cobradas — por isso não entra na soma') > 0);
 
-    check('v-26 · a versão carimbada desta entrega é a 2026-09-21-02',
-      /const APP_VERSAO='2026-09-21-02';/.test(html));
+    check('v-26 · a versão carimbada desta entrega é a 2026-09-21-03',
+      /const APP_VERSAO='2026-09-21-03';/.test(html));
   }
   console.log('');
 
@@ -4392,8 +4393,8 @@ async function main() {
       }
     } else { check('v-27 · orcRenderConfig existe', false, 'função não encontrada'); }
 
-    check('v-27 · a versão carimbada desta entrega é a 2026-09-21-02',
-      /const APP_VERSAO='2026-09-21-02';/.test(html));
+    check('v-27 · a versão carimbada desta entrega é a 2026-09-21-03',
+      /const APP_VERSAO='2026-09-21-03';/.test(html));
   }
   console.log('');
 
@@ -4967,8 +4968,8 @@ async function main() {
         delete ctx.document.activeElement; delete ctx.__focoAuto;
       }
     } else { check('v-28 · vencRedesenhoAuto existe', false, 'função não encontrada'); }
-    check('v-28 · a versão carimbada desta entrega é a 2026-09-21-02',
-      /const APP_VERSAO='2026-09-21-02';/.test(html));
+    check('v-28 · a versão carimbada desta entrega é a 2026-09-21-03',
+      /const APP_VERSAO='2026-09-21-03';/.test(html));
   }
   console.log('');
 
@@ -14509,7 +14510,7 @@ async function main() {
         !/\.catch\(function\([a-z]*\)\{\s*\}\)/.test(
           html.slice(html.indexOf('const CK_FRASE_PRATICA='), html.indexOf('function renderCkInicio('))));
       check('v-14 · a versão carimbada é a desta entrega',
-        /const APP_VERSAO='2026-09-21-02';/.test(html));
+        /const APP_VERSAO='2026-09-21-03';/.test(html));
     }
 
     // ---- v-15: O PLANO SÓ GRAVA NO CONFIRMAR (caso Cookie/Yara, 15/set/2026) --------
@@ -15324,8 +15325,8 @@ async function main() {
           + 'AVISO_COLEIRA_APOS = __bkpC.apos;', ctx);
       }
     } else { check('v-17 · prevCfgCarregar existe', false, 'função não encontrada'); }
-    check('v-24 · a versão carimbada desta entrega é a 2026-09-21-02',
-      /const APP_VERSAO='2026-09-21-02';/.test(html));
+    check('v-24 · a versão carimbada desta entrega é a 2026-09-21-03',
+      /const APP_VERSAO='2026-09-21-03';/.test(html));
 
     // ───────── v-19 · o aparelho autorizado que não se perde no iPhone (16/set/2026)
     // Auditoria de 16/set: o iPhone da Leticya gerou DOIS ids em trinta segundos
@@ -15576,8 +15577,310 @@ async function main() {
       String((html.match(/linhaBuscaCadastro\(/g) || []).length));
     check('v-29 · a linha tem estilo próprio: menor, em var(--muted), e quebrando no celular',
       /table\.pel \.pel-busca-sub\{[^}]*font-size:11\.5px[^}]*color:var\(--muted\)[^}]*white-space:normal/.test(html));
-    check('v-29 · a versão carimbada desta entrega é a 2026-09-21-02',
-      /const APP_VERSAO='2026-09-21-02';/.test(html));
+    check('v-29 · a versão carimbada desta entrega é a 2026-09-21-03',
+      /const APP_VERSAO='2026-09-21-03';/.test(html));
+  }
+  console.log('');
+
+  // ===== v-30 · A DOSE DO VERMÍFUGO SAI DO PESO (Adriana, 21/set/2026) ==============
+  // "o vermífugo funciona da seguinte forma. Peludinhos até 2 kg e até 5 kg tomam meio
+  //  comprimido. Peludinhos a partir de 5 kg tomam um comprimido inteiro. Se for maior, se
+  //  for 12 kg vai tomar um e meio, e assim consecutivamente. (…) Se o peso, vamos supor, um
+  //  peludo que está pesando 4,900, 4,800, precisa pesar de novo. (…) Um peludo que está com
+  //  10,100 kg, talvez ele emagreceu, precisa pesar de novo. Eu preciso que o peso seja
+  //  vinculado, facilitando se precisa de pesar ou não."
+  //
+  // A régua: meio comprimido a cada 5 kg, e o peso encostado na virada não decide sozinho.
+  console.log('v-30 · O vermífugo pelo peso: a dose, a virada e a balança antes do remédio:');
+  {
+    // ---- (a) a tabela de dose: meio comprimido a cada faixa ------------------------
+    if (typeof ctx.vermDoseDe === 'function') {
+      const dose = (kg, f) => ctx.vermDoseDe(kg, f === undefined ? 5 : f);
+      // "até 2 kg e até 5 kg tomam meio comprimido" — 5,0 EXATOS ainda é meio: a conta só
+      // sobe quando o peso PASSA da faixa ("a partir de 5 kg tomam um comprimido inteiro").
+      check('v-30 · 2 kg toma MEIO COMPRIMIDO',
+        dose(2).rot === 'MEIO COMPRIMIDO' && dose(2).metades === 1, JSON.stringify(dose(2)));
+      check('v-30 · 4,9 kg ainda é MEIO COMPRIMIDO',
+        dose(4.9).rot === 'MEIO COMPRIMIDO', JSON.stringify(dose(4.9)));
+      check('v-30 · 5,0 kg exatos ainda é MEIO COMPRIMIDO — "até 5 kg tomam meio"',
+        dose(5).rot === 'MEIO COMPRIMIDO' && dose(5).texto === 'meio comprimido', JSON.stringify(dose(5)));
+      check('v-30 · 5,1 kg passa a 1 COMPRIMIDO — "a partir de 5 kg, um comprimido inteiro"',
+        dose(5.1).rot === '1 COMPRIMIDO', JSON.stringify(dose(5.1)));
+      check('v-30 · 10,0 kg ainda é 1 COMPRIMIDO (a faixa fecha em cima do múltiplo)',
+        dose(10).rot === '1 COMPRIMIDO', JSON.stringify(dose(10)));
+      check('v-30 · 10,1 kg vira 1 COMPRIMIDO E MEIO',
+        dose(10.1).rot === '1 COMPRIMIDO E MEIO', JSON.stringify(dose(10.1)));
+      check('v-30 · 12 kg é 1 COMPRIMIDO E MEIO — o exemplo dela, na letra',
+        dose(12).rot === '1 COMPRIMIDO E MEIO' && dose(12).texto === '1 comprimido e meio',
+        JSON.stringify(dose(12)));
+      check('v-30 · 15,0 fecha em 1 e meio e 15,1 já sobe para 2 COMPRIMIDOS',
+        dose(15).rot === '1 COMPRIMIDO E MEIO' && dose(15.1).rot === '2 COMPRIMIDOS',
+        JSON.stringify([dose(15).rot, dose(15.1).rot]));
+      check('v-30 · 20,5 kg é 2 COMPRIMIDOS E MEIO — e 21 kg, o maior porte da casa, também',
+        dose(20.5).rot === '2 COMPRIMIDOS E MEIO' && dose(21).rot === '2 COMPRIMIDOS E MEIO',
+        JSON.stringify([dose(20.5).rot, dose(21).rot]));
+      check('v-30 · mordida — sem peso, peso negativo ou lixo NÃO viram dose nenhuma',
+        dose(0).rot === '' && dose(-3).rot === '' && dose('banana').rot === ''
+        && dose(null).metades === 0, JSON.stringify([dose(0), dose('banana')]));
+      check('v-30 · a faixa é editável: com 3 kg por meia dose, 6 kg dá 1 COMPRIMIDO',
+        dose(6, 3).rot === '1 COMPRIMIDO' && dose(6.1, 3).rot === '1 COMPRIMIDO E MEIO',
+        JSON.stringify([dose(6, 3).rot, dose(6.1, 3).rot]));
+      check('v-30 · faixa zerada ou inválida cai no padrão de 5 kg — a conta nunca sai sem régua',
+        dose(12, 0).rot === '1 COMPRIMIDO E MEIO' && dose(12, 'x').rot === '1 COMPRIMIDO E MEIO');
+      // A sugestão aponta para um BOTÃO que existe: rótulo fora de DASH_QTD seria uma dose
+      // que a tela não sabe marcar (lei do campo crítico: número + unidade em botão).
+      const qtds = (ctx.DASH_QTD || []).map((o) => o.v);
+      const todos = [];
+      for (let kg = 0.5; kg <= 21.01; kg += 0.1) todos.push(dose(Math.round(kg * 10) / 10).rot);
+      check('v-30 · de 0,5 a 21 kg, TODA dose sugerida é um botão que existe em DASH_QTD',
+        todos.every((r) => r && qtds.indexOf(r) >= 0),
+        JSON.stringify(todos.filter((r) => qtds.indexOf(r) < 0).slice(0, 5)));
+      check('v-30 · e DASH_QTD ganhou as metades que faltavam (2½, 3½ e 4½)',
+        qtds.indexOf('2 COMPRIMIDOS E MEIO') > 0 && qtds.indexOf('3 COMPRIMIDOS E MEIO') > 0
+        && qtds.indexOf('4 COMPRIMIDOS E MEIO') > 0, JSON.stringify(qtds));
+    } else { check('v-30 · vermDoseDe existe', false, 'função não encontrada'); }
+
+    // ---- (b) perto da virada: o peso que não decide sozinho -------------------------
+    if (typeof ctx.vermPertoDaVirada === 'function') {
+      const perto = (kg, f, m) => ctx.vermPertoDaVirada(kg, f === undefined ? 5 : f, m === undefined ? 0.3 : m);
+      check('v-30 · 4,8 kg está perto da virada — "precisa pesar de novo"',
+        perto(4.8) === true);
+      check('v-30 · 4,9 kg também — é o outro número que ela disse',
+        perto(4.9) === true);
+      check('v-30 · 10,1 kg também — "talvez ele emagreceu"',
+        perto(10.1) === true);
+      check('v-30 · 5,0 kg em cima da virada é o caso mais duvidoso de todos: pesa de novo',
+        perto(5) === true);
+      check('v-30 · 7,0 kg está no meio da faixa — não precisa pesar por causa da dose',
+        perto(7) === false);
+      check('v-30 · 4,7 kg fica a 0,3 exatos: NÃO entra (a régua é "faltar MENOS de 0,3")',
+        perto(4.7) === false, String(Math.abs(4.7 - 5)));
+      check('v-30 · a margem é editável: com 0,6 kg de folga, 4,5 passa a pedir balança',
+        perto(4.5, 5, 0.6) === true && perto(4.5) === false);
+      check('v-30 · com 0,1 kg de folga, 4,8 deixa de pedir',
+        perto(4.8, 5, 0.1) === false);
+      check('v-30 · margem zero desliga o aviso — quem quiser, desliga sem programador',
+        perto(4.9, 5, 0) === false && perto(5, 5, 0) === false);
+      check('v-30 · mordida — peso zero, negativo ou lixo não é "perto" de nada',
+        perto(0) === false && perto(-2) === false && perto('banana') === false);
+    } else { check('v-30 · vermPertoDaVirada existe', false, 'função não encontrada'); }
+
+    // ---- (c) a avaliação da ficha: pesar ou não, e por quê --------------------------
+    if (typeof ctx.vermAvaliar === 'function') {
+      const semPeso = ctx.vermAvaliar({}, '2026-09-21');
+      check('v-30 · ficha SEM peso não recebe dose chutada — manda pesar e diz "sem peso"',
+        semPeso.pesar === true && semPeso.motivo === 'sem peso' && semPeso.kg === null
+        && semPeso.dose.rot === '', JSON.stringify(semPeso));
+      const velho = ctx.vermAvaliar({ pesos: [{ data: '2026-07-23', kg: 6.5 }] }, '2026-09-21');
+      check('v-30 · peso de 60 dias é velho demais para decidir dose — pesa de novo',
+        velho.pesar === true && velho.motivo === 'peso antigo (há 60 dias)', JSON.stringify(velho));
+      check('v-30 · a régua do peso velho é a MESMA da busca do cadastro (45 dias) — uma conta só',
+        ctx.vermAvaliar({ pesos: [{ data: '2026-08-07', kg: 6.5 }] }, '2026-09-21').pesar === false
+        && ctx.vermAvaliar({ pesos: [{ data: '2026-08-06', kg: 6.5 }] }, '2026-09-21').motivo === 'peso antigo (há 46 dias)',
+        JSON.stringify(ctx.vermAvaliar({ pesos: [{ data: '2026-08-06', kg: 6.5 }] }, '2026-09-21').motivo));
+      const bom = ctx.vermAvaliar({ pesos: [{ data: '2026-09-01', kg: 6.5 }] }, '2026-09-21');
+      check('v-30 · peso recente de 6,5 kg dá 1 comprimido e NÃO manda pesar',
+        bom.pesar === false && bom.motivo === '' && bom.dose.rot === '1 COMPRIMIDO'
+        && bom.kg === 6.5 && bom.data === '2026-09-01', JSON.stringify(bom));
+      const naVirada = ctx.vermAvaliar({ pesos: [{ data: '2026-09-01', kg: 4.9 }] }, '2026-09-21');
+      check('v-30 · peso recente mas na virada manda pesar, e diz qual peso é o duvidoso',
+        naVirada.pesar === true && naVirada.motivo === 'perto da virada de faixa (4,9 kg)',
+        JSON.stringify(naVirada));
+      const semData = ctx.vermAvaliar({ peso: 8 }, '2026-09-21');
+      check('v-30 · o número solto da ficha antiga não tem data — e sem data não se sabe se vale',
+        semData.pesar === true && semData.motivo === 'peso sem data' && semData.kg === 8,
+        JSON.stringify(semData));
+      check('v-30 · a frase é a mesma em toda tela: "Pelo último peso, 6,5 kg em 01/09: 1 comprimido"',
+        ctx.vermFrasePeso(bom, '2026-09-21') === 'Pelo último peso, 6,5 kg em 01/09: 1 comprimido',
+        ctx.vermFrasePeso(bom, '2026-09-21'));
+      check('v-30 · quando pede balança, a frase NÃO arrisca uma dose',
+        ctx.vermFrasePeso(naVirada, '2026-09-21') === 'Pelo último peso, 4,9 kg em 01/09.',
+        ctx.vermFrasePeso(naVirada, '2026-09-21'));
+      check('v-30 · os dois números vêm de Configurações e têm padrão de fábrica (5 kg e 0,3 kg)',
+        ctx.vermFaixaKg() === 5 && ctx.vermMargemKg() === 0.3,
+        JSON.stringify([ctx.vermFaixaKg(), ctx.vermMargemKg()]));
+      vm.runInContext('__bkp30v = dcValoresCfg; dcValoresCfg = {verm_faixa_kg:4, verm_margem_kg:0.5};', ctx);
+      check('v-30 · mudando em Configurações, a régua inteira muda — sem programador',
+        ctx.vermFaixaKg() === 4 && ctx.vermMargemKg() === 0.5
+        && ctx.vermAvaliar({ pesos: [{ data: '2026-09-01', kg: 6.5 }] }, '2026-09-21').dose.rot === '1 COMPRIMIDO'
+        && ctx.vermAvaliar({ pesos: [{ data: '2026-09-01', kg: 4.2 }] }, '2026-09-21').motivo === 'perto da virada de faixa (4,2 kg)',
+        JSON.stringify([ctx.vermFaixaKg(), ctx.vermMargemKg()]));
+      vm.runInContext('dcValoresCfg = {verm_faixa_kg:0, verm_margem_kg:-1};', ctx);
+      check('v-30 · lixo gravado no banco volta ao padrão — a régua nunca fica sem número',
+        ctx.vermFaixaKg() === 5 && ctx.vermMargemKg() === 0.3);
+      vm.runInContext('dcValoresCfg = __bkp30v;', ctx);
+    } else { check('v-30 · vermAvaliar existe', false, 'função não encontrada'); }
+
+    // ---- (d) o painel de Lançamentos, contra o CADASTRO DE VERDADE ------------------
+    const cad30 = await dbRead('daycare/cadastro', token) || {};
+    const itVerm = (ctx.DASH_ITENS || []).find((i) => i.k === 'vermifugo');
+    if (typeof ctx.dashPainelHTML === 'function' && itVerm && cad30['cookie__raquel'] && cad30['belinha__shirley']) {
+      ctx.__cad30 = cad30;
+      vm.runInContext('__bkp30 = { cad: pelCadCache, pel: PELUDINHOS.slice(), hoje: zHojeISO,'
+        + ' det: DASH_DET, sel: DASH_SEL, seli: DASH_SEL_I };'
+        + 'pelCadCache = __cad30; if (typeof mergeNovosAlunos === "function") mergeNovosAlunos();'
+        + "zHojeISO = function(){ return '2026-09-21'; };"
+        + 'DASH_DET = {}; DASH_SEL = {}; DASH_SEL_I = {};', ctx);
+      try {
+        const acha = (nome, tutor) => ctx.PELUDINHOS.findIndex((p) => p && p.n === nome && p.tutor === tutor);
+        const iCookie = acha('Cookie', 'Raquel');
+        const iBelinha = acha('Belinha', 'Shirley');
+        check('v-30 · o retrato tem a Cookie (6,5 kg em 01/09) e a Belinha (4,8 kg em 28/08)',
+          iCookie >= 0 && iBelinha >= 0, JSON.stringify([iCookie, iBelinha]));
+
+        // -- quem tem peso bom: a dose vem marcada e a frase explica de onde ela saiu
+        ctx.dashEscolher('vermifugo', 'Cookie/SRD', iCookie);
+        const pvOk = ctx.dashPainelHTML(itVerm);
+        console.log('  Cookie (Raquel): ' + (ctx.DASH_DET.vermifugo || {}).qtd);
+        check('v-30 · escolhida a Cookie, o botão da dose já vem PRÉ-MARCADO — rascunho, nada gravado',
+          (ctx.DASH_DET.vermifugo || {}).qtd === '1 COMPRIMIDO',
+          JSON.stringify(ctx.DASH_DET.vermifugo));
+        check('v-30 · e a frase do peso aparece ACIMA de "Quanto foi dado"',
+          pvOk.indexOf('Pelo último peso, 6,5 kg em 01/09: 1 comprimido') >= 0
+          && pvOk.indexOf('Pelo último peso') < pvOk.indexOf('Quanto foi dado'), pvOk.slice(0, 400));
+        check('v-30 · o botão marcado é o da sugestão (fundo cheio), e só ele',
+          (pvOk.match(/background:var\(--z-blue\);color:var\(--z-cream\)"[^>]*>1 comprimido</g) || []).length === 1,
+          String((pvOk.match(/background:var\(--z-blue\)/g) || []).length));
+        check('v-30 · com a dose marcada, só falta a observação — o botão não mente sobre o que falta',
+          ctx.dashDetFalta('vermifugo') === 'Alguma observação',
+          JSON.stringify(ctx.dashDetFalta('vermifugo')));
+        check('v-30 · a regra SUGERE, não impede: a tela diz quando a escolha ficou diferente do peso',
+          ctx.dashPainelHTML(itVerm).indexOf('diferente da sugestão pelo peso') < 0
+          && (ctx.dashSetDet('vermifugo', 'qtd', '2 COMPRIMIDOS'),
+            ctx.dashPainelHTML(itVerm).indexOf('diferente da sugestão pelo peso') > 0),
+          JSON.stringify(ctx.DASH_DET.vermifugo));
+
+        // -- quem está na virada: NADA vem marcado e a tela manda pesar
+        ctx.dashEscolher('vermifugo', 'Belinha/Spitz', iBelinha);
+        const pvPesar = ctx.dashPainelHTML(itVerm);
+        check('v-30 · a Belinha está a 0,2 kg da virada: NADA vem pré-marcado',
+          !(ctx.DASH_DET.vermifugo || {}).hasOwnProperty('qtd'),
+          JSON.stringify(ctx.DASH_DET.vermifugo));
+        check('v-30 · e a tela manda pesar, dizendo o motivo com o peso na frase',
+          pvPesar.indexOf('Pese de novo antes de dar — perto da virada de faixa (4,8 kg)') > 0,
+          pvPesar.slice(0, 600));
+        // O botão só existe para quem TEM a tela de Peso no menu. No sandbox não há menu
+        // nenhum, então o caminho de quem pode pesar é provado com o item do menu no lugar —
+        // e o caminho de quem não pode é o que sai sem stub: a frase, nunca um botão morto.
+        check('v-30 · sem a tela de Peso no papel, sai a frase de a quem pedir — não um botão que não abre nada',
+          pvPesar.indexOf('Peça à recepção ou à veterinária para pesar') > 0
+          && pvPesar.indexOf('Abrir a balança') < 0, pvPesar.slice(0, 700));
+        const qs30 = ctx.document.querySelector;
+        ctx.document.querySelector = function (sel) {
+          return (sel === '#nav a[data-v="peso"]') ? { style: {} } : qs30.call(this, sel);
+        };
+        let pvComMenu = '';
+        try { pvComMenu = ctx.dashPainelHTML(itVerm); } finally { ctx.document.querySelector = qs30; }
+        check('v-30 · com a tela de Peso no menu, aparece o botão "Abrir a balança"',
+          /onclick="vermAbrirBalanca\('vermifugo'\)">Abrir a balança<\/button>/.test(pvComMenu),
+          pvComMenu.slice(0, 700));
+        check('v-30 · sem dose marcada, o botão continua cobrando a quantidade',
+          ctx.dashDetFalta('vermifugo').indexOf('Quanto foi dado') >= 0,
+          JSON.stringify(ctx.dashDetFalta('vermifugo')));
+        check('v-30 · mas a pessoa pode escolher à mão mesmo assim — a regra não tranca a porta',
+          (ctx.dashSetDet('vermifugo', 'qtd', 'MEIO COMPRIMIDO'),
+            (ctx.DASH_DET.vermifugo || {}).qtd === 'MEIO COMPRIMIDO'),
+          JSON.stringify(ctx.DASH_DET.vermifugo));
+
+        // -- a ficha da Prevenção fala a mesma língua
+        if (typeof ctx.vermFichaTextoHTML === 'function') {
+          const fCookie = ctx.vermFichaTextoHTML(cad30['cookie__raquel']);
+          const fBelinha = ctx.vermFichaTextoHTML(cad30['belinha__shirley']);
+          console.log('  ficha da Cookie: ' + fCookie.replace(/<[^>]*>/g, ''));
+          check('v-30 · a ficha diz "Dose pelo peso: 1 comprimido (6,5 kg em 01/09)"',
+            fCookie.replace(/<[^>]*>/g, '') === '1 comprimido (6,5 kg em 01/09)', fCookie);
+          check('v-30 · e para quem está na virada, a ficha manda pesar em vez de sugerir',
+            fBelinha.indexOf('Pese de novo antes de dar') >= 0
+            && fBelinha.indexOf('4,8 kg em 28/08') > 0, fBelinha);
+        } else { check('v-30 · vermFichaTextoHTML existe', false, 'função não encontrada'); }
+
+        // -- Vence amanhã: a linha do cartão e a pré-marca do "Pode fazer na Zêluz"
+        if (typeof ctx.vermLinhaVencHTML === 'function') {
+          const oCookie = { p: ctx.PELUDINHOS[iCookie], chave: 'cookie__raquel',
+            itens: [{ k: 'verm_p', nome: 'Vermífugo' }] };
+          const oBelinha = { p: ctx.PELUDINHOS[iBelinha], chave: 'belinha__shirley',
+            itens: [{ k: 'verm_p', nome: 'Vermífugo' }] };
+          check('v-30 · no cartão do Vence amanhã, o vermífugo vem com a dose do peso',
+            ctx.vermLinhaVencHTML(oCookie, '2026-09-21').indexOf('Vermífugo — Pelo último peso, 6,5 kg em 01/09: 1 comprimido') > 0,
+            ctx.vermLinhaVencHTML(oCookie, '2026-09-21'));
+          check('v-30 · e quem precisa pesar aparece em cor de atenção, com o motivo',
+            ctx.vermLinhaVencHTML(oBelinha, '2026-09-21').indexOf('crm-atencao-text') > 0
+            && ctx.vermLinhaVencHTML(oBelinha, '2026-09-21').indexOf('Pese de novo antes de dar — perto da virada') > 0,
+            ctx.vermLinhaVencHTML(oBelinha, '2026-09-21'));
+          check('v-30 · cartão sem vermífugo na lista não ganha linha nenhuma',
+            ctx.vermLinhaVencHTML({ p: ctx.PELUDINHOS[iCookie], itens: [{ k: 'vac_raiva_p', nome: 'Vacina' }] }, '2026-09-21') === '');
+          const bkpEsc = ctx.VENC_ESCOLHA;
+          ctx.VENC_ESCOLHA = {};
+          ctx.__o30 = oCookie;
+          vm.runInContext('__bkpAchar30 = vencAchar; vencAchar = function(c){ return (c === __o30.chave) ? __o30 : null; };', ctx);
+          try {
+            ctx.vermPreMarcarVenc('cookie__raquel');
+            check('v-30 · abrindo "Pode fazer na Zêluz", a quantidade do vermífugo já vem marcada',
+              ((ctx.VENC_ESCOLHA['cookie__raquel'] || {}).verm_p || {}).seg === '1 COMPRIMIDO',
+              JSON.stringify(ctx.VENC_ESCOLHA['cookie__raquel']));
+            ctx.VENC_ESCOLHA = {};
+            ctx.__o30 = oBelinha;
+            ctx.vermPreMarcarVenc('belinha__shirley');
+            check('v-30 · quem precisa de balança NÃO vem marcado nem aqui',
+              !ctx.VENC_ESCOLHA['belinha__shirley'], JSON.stringify(ctx.VENC_ESCOLHA));
+            ctx.VENC_ESCOLHA = { 'cookie__raquel': { verm_p: { seg: '2 COMPRIMIDOS' } } };
+            ctx.__o30 = oCookie;
+            ctx.vermPreMarcarVenc('cookie__raquel');
+            check('v-30 · e a sugestão NUNCA atropela uma escolha já feita pela consultora',
+              ctx.VENC_ESCOLHA['cookie__raquel'].verm_p.seg === '2 COMPRIMIDOS',
+              JSON.stringify(ctx.VENC_ESCOLHA['cookie__raquel']));
+          } finally {
+            vm.runInContext('vencAchar = __bkpAchar30;', ctx);
+            ctx.VENC_ESCOLHA = bkpEsc;
+          }
+        } else { check('v-30 · vermLinhaVencHTML existe', false, 'função não encontrada'); }
+      } finally {
+        vm.runInContext('pelCadCache = __bkp30.cad; PELUDINHOS = __bkp30.pel; zHojeISO = __bkp30.hoje;'
+          + 'DASH_DET = __bkp30.det; DASH_SEL = __bkp30.sel; DASH_SEL_I = __bkp30.seli;', ctx);
+      }
+    } else { check('v-30 · dashPainelHTML, o item Vermífugo e as duas fichas do retrato existem', false, 'função ou cadastro ausente'); }
+
+    // ---- (e) a fiação: o rastro do peso, a balança e os campos de Configurações -----
+    check('v-30 · o lançamento grava o peso que decidiu a dose (peso_kg · peso_data · dose_sugerida)',
+      /if\(k==='vermifugo'\)\{[\s\S]{0,420}?__det\.peso_kg=__va\.kg;[\s\S]{0,160}?__det\.peso_data=__va\.data;[\s\S]{0,200}?__det\.dose_sugerida=__va\.dose\.rot;/.test(html));
+    check('v-30 · o rastro sai da FICHA casada do lançamento, não do texto da célula',
+      /var __va=vermAvaliarFicha\(pDoLanc\);/.test(html));
+    check('v-30 · a pré-marca acontece ao ESCOLHER o FILHOt e é rascunho — nada grava antes do Lançar',
+      /try\{ vermPreMarcar\(k\); \}catch\(e\)\{\}/.test(html)
+      && /function vermPreMarcar\(k\)\{\n\s*if\(k!=='vermifugo'\) return;\n\s*var a=vermAvaliarFicha\(vermFilhotDe\(k\)\);\n\s*if\(!a\|\|a\.pesar\|\|!a\.dose\|\|!a\.dose\.rot\) return;/.test(html));
+    check('v-30 · "Abrir a balança" leva o FILHOt junto: a tela de Peso abre com ele escolhido',
+      /function vermAbrirBalanca\(k\)\{[\s\S]{0,340}?PESOT_I=i; PESOT_BUSCA='';[\s\S]{0,200}?abrirItemDoMenu\('peso'\)/.test(html));
+    check('v-30 · quem não tem a tela de Peso no papel recebe a frase, não um botão que não abre nada',
+      /function vermPodePesar\(\)\{[\s\S]{0,300}?nav a\[data-v="peso"\]/.test(html)
+      && /Peça à recepção ou à veterinária para pesar/.test(html));
+    check('v-30 · Configurações › Valores do Day Care desenha os DOIS campos novos',
+      /<label class="cad-lb">Vermífugo: meio comprimido a cada \(kg\)<\/label>/.test(html)
+      && /id="cfgVermFaixa"/.test(html)
+      && /<label class="cad-lb">Pesar de novo se faltar menos de \(kg\) para a virada<\/label>/.test(html)
+      && /id="cfgVermMargem"/.test(html));
+    check('v-30 · cada campo vem com a explicação em uma frase, do lado dele',
+      /De quantos em quantos quilos a dose sobe meia unidade/.test(html)
+      && /Peso encostado na virada não decide dose sozinho/.test(html));
+    check('v-30 · os dois números moram no MESMO nó e saem pelo MESMO botão Salvar valores',
+      /DB\.ref\('daycare\/config\/valores'\)\.update\(\{diaria_avulsa_cent:novo, verm_faixa_kg:fx, verm_margem_kg:mg\}\)/.test(html)
+      && /onclick="cfgValoresSalvar\(\)">Salvar valores<\/button>/.test(html));
+    check('v-30 · e o rastro diz de quanto para quanto, valor por valor',
+      /mud\.push\('vermífugo, meio comprimido a cada: '\+vermNumTexto\(fxAntes\)\+' kg → '\+vermNumTexto\(fx\)\+' kg'\)/.test(html)
+      && /mud\.push\('vermífugo, folga da virada: '\+vermNumTexto\(mgAntes\)\+' kg → '\+vermNumTexto\(mg\)\+' kg'\)/.test(html));
+    check('v-30 · número ruim NÃO é salvo pela metade — confere os três antes de gravar',
+      /A faixa do vermífugo precisa ser um peso maior que zero e até 21 kg/.test(html)
+      && /A folga da virada não pode passar de metade da faixa/.test(html));
+    if (typeof ctx.vermNumLer === 'function') {
+      check('v-30 · o campo de quilo aceita 0,3 e 0.3 — e recusa o resto',
+        ctx.vermNumLer('0,3') === 0.3 && ctx.vermNumLer('0.3') === 0.3 && ctx.vermNumLer('5') === 5
+        && isNaN(ctx.vermNumLer('')) && isNaN(ctx.vermNumLer('cinco')) && isNaN(ctx.vermNumLer('-1')),
+        JSON.stringify([ctx.vermNumLer('0,3'), ctx.vermNumLer('cinco')]));
+      check('v-30 · e o número volta para a tela como se fala: 5 · 0,3 · 4,5',
+        ctx.vermNumTexto(5) === '5' && ctx.vermNumTexto(0.3) === '0,3' && ctx.vermNumTexto(4.5) === '4,5',
+        JSON.stringify([ctx.vermNumTexto(5), ctx.vermNumTexto(0.3)]));
+    } else { check('v-30 · vermNumLer existe', false, 'função não encontrada'); }
+    check('v-30 · a versão carimbada desta entrega é a 2026-09-21-03',
+      /const APP_VERSAO='2026-09-21-03';/.test(html));
   }
   console.log('');
 
