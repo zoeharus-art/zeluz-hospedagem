@@ -1,45 +1,54 @@
 'use strict';
 /*
- * CAPTURA DA v 2026-09-21-04 — Vence amanhã, agora com AS MENSAGENS DELA.
+ * CAPTURA DA v 2026-09-21-05 — Vence amanhã com CALENDÁRIO, COBRANÇA e a resposta que
+ * lança sozinha.
  *
  * POR QUE ESTA CAPTURA EXISTE
- * Adriana, 21/set/2026: "Nós temos dentro do aplicativo a parte de trocas: vacinação, a
- * vermifugação, o carrapaticida, a troca de coleiras, a troca de escova dental. Todas essas
- * questões são de suma importância. Eu preciso facilitar esse processo. Como? Tudo que for
- * vencer no dia, eu ter um calendário do dia para o setor de consultoria, onde vai mandar;
- * isso tem que mandar para o peludo ANTES dele vir... O fluxo hoje não está dando certo: as
- * pessoas estão mandando e não estão finalizando aquilo dali. A gente precisa que dê uma
- * resposta... Então tem que perguntar: já foi atualizada a ficha? E a pessoa tem que clicar
- * em sim ou não."
- *
- * 21/set/2026 — Adriana mandou as mensagens que a equipe usa DE VERDADE, e elas
- * substituíram o texto genérico. Agora é UMA MENSAGEM POR ASSUNTO: vacina (com horário ou
- * "ele já vem no dia"), vermífugo/carrapaticida/coleira, a 2ª dose do vermífugo e a troca de
- * escova de dentes. Cada uma com o seu Copiar e o seu Mandei.
+ * Adriana, 21/set/2026: "Preciso que tenha um calendário. Hoje dia 21/09 com tudo que
+ * preciso enviar. Precisa cobrar resposta. Se o tutor respondeu e o que respondeu. Vai
+ * aplicar em casa / Vai mandar na bolsa / Pegar na loja / precisamos desse fluxo de forma
+ * fácil e que tudo seja atualizado. Que no dashboard apareça que tem que dar (sem a
+ * consultoria precisar digitar)."
+ * E, no mesmo dia: "Uma das coisas mais importantes é que eu preciso de cobrar. Isso
+ * precisa ir para o dashboard da consultora, onde ela precisa cobrar... Só fecha quando ela
+ * consegue responder. Às vezes o tutor não responde no dia... Aquilo tem que ficar como
+ * pendente. Ela tem que voltar nessa resposta para colocar o que o tutor respondeu."
  *
  * O QUE ELA FOTOGRAFA
- *   vencimentos-1280.png · vencimentos-500.png — a PRIMEIRA DOBRA da tela: a frase do
- *     dia-alvo, o seletor (Hoje · Amanhã · calendário), as contas e o começo da fila
- *     (a tela inteira, com dezenas de cartões, daria uma foto que ninguém consegue olhar)
+ *   vencimentos-1280.png · vencimentos-500.png — a PRIMEIRA DOBRA: a frase do dia-alvo, o
+ *     aviso da véspera, o seletor, as contas e o começo da fila
+ *   calendario-1280.png · calendario-500.png — o CALENDÁRIO DO MÊS, com os contadores de
+ *     cada dia (a mandar · a cobrar · mandado sem resposta · respondido) e o fim de semana
+ *     apagado
  *   cartao-1280.png · cartao-500.png — UM cartão por inteiro: os itens com a data, as
- *     mensagens prontas nas caixas editáveis (uma por assunto), "Copiar mensagem"/"Mandei"
- *     em cada uma e os quatro botões de resposta do tutor
+ *     mensagens prontas (uma por assunto) e os CINCO botões de resposta nas palavras dela
+ *   cobrar-1280.png · cobrar-500.png — um cartão no estado COBRAR: a faixa laranja com a
+ *     hora em que a mensagem saiu, a mensagem de cobrança pronta e o botão "Cobrei"
+ *   respostas-pendentes-1280.png · respostas-pendentes-500.png — o quadro "Respostas
+ *     pendentes" do Dashboard das Consultoras (ou o da mesa, quando o papel não tem a tela),
+ *     com os botões de resposta dentro
  *   config-mensagens-1280.png · config-mensagens-500.png — Configurações › Mensagens
- *     prontas: as cinco mensagens, o fecho da autorização e a folga em dias, tudo editável
- *     pela Gestão sem programador
+ *     prontas: as seis mensagens, o fecho, a folga, o prazo da cobrança e os padrões do
+ *     lançamento automático
  *
  * E ELA CONFERE, antes de fotografar: o item existe no menu com o rótulo certo; a tela traz
- * o dia-alvo e o seletor; há pelo menos um cartão com mensagem pronta e os quatro botões de
- * resposta; cada mensagem começa com "Olá" e traz uma das frases DELA (e nenhuma traz o
- * texto genérico antigo); o cartão do Configurações traz as cinco mensagens, o fecho, a
- * folga e as variáveis explicadas.
- * NENHUM botão que grava é apertado — nem "Mandei", nem as respostas, nem "Salvar".
+ * o dia-alvo, o aviso da véspera e o calendário; há pelo menos um cartão com mensagem pronta
+ * e os cinco botões nas PALAVRAS DELA; cada mensagem começa com "Olá" e traz uma das frases
+ * dela; o estado "cobrar" mostra a hora, a mensagem de cobrança e o "Cobrei"; o quadro das
+ * respostas pendentes traz botões; o cartão do Configurações traz as seis mensagens, o
+ * fecho, a folga, o prazo e os dois padrões.
+ * NENHUM botão que grava é apertado — nem "Mandei", nem as respostas, nem "Cobrei", nem
+ * "Salvar".
  *
- * NADA É GRAVADO: o mesmo guarda de escrita do smoke embrulha set/update/push/remove/
- * transaction antes de o app carregar, e o banco é o EMULADOR local com o retrato do backup.
- * O Firebase de verdade não recebe um byte.
+ * O ESTADO "COBRAR" é injetado no banco do EMULADOR com uma marca de envio antiga
+ * (enviadas/{assunto}.ts de ontem) pelo próprio navegador, com o guarda de escrita ligado —
+ * o app lê e desenha sozinho. Nada é fabricado na tela: é o mesmo caminho da vida real.
  *
- * Uso:  NODE_PATH=C:/Users/zeluz/projetos-aios/code/node_modules node tests/capturar-v28.js
+ * NADA É GRAVADO NO FIREBASE DE VERDADE: o mesmo guarda de escrita do smoke embrulha
+ * set/update/push/remove/transaction antes de o app carregar, e o banco é o EMULADOR local
+ * com o retrato do backup.
+ *
+ * Uso:  CAP_PORTA=8822 CAP_EMU_PORTA=9022 NODE_PATH=C:/Users/zeluz/projetos-aios/code/node_modules node tests/capturar-v28.js
  */
 
 const fs = require('fs');
@@ -51,8 +60,8 @@ const emuladorLib = require('./lib/emulador');
 
 const RAIZ = path.join(__dirname, '..');
 const APP = 'auaulandia/index.html';
-const PORTA = Number(process.env.CAP_PORTA) || 8816;
-const EMU_PORTA = Number(process.env.CAP_EMU_PORTA) || 9016;
+const PORTA = Number(process.env.CAP_PORTA) || 8822;
+const EMU_PORTA = Number(process.env.CAP_EMU_PORTA) || 9022;
 const SAIDA = path.join(RAIZ, 'docs', 'capturas-v28');
 const SENHA_DIRETORIA = '1101';
 
@@ -132,6 +141,11 @@ async function mascararTelefones(page) {
     nos.forEach((t) => { if (re.test(t.nodeValue)) t.nodeValue = t.nodeValue.replace(re, '+55 ••• ••••'); });
     document.querySelectorAll('textarea').forEach((ta) => { if (re.test(ta.value)) ta.value = ta.value.replace(re, '+55 ••• ••••'); });
   });
+}
+// A chave do FILHOt tem acento e traço; num seletor de id, o que precisa de barra é o que
+// o CSS trata como especial. Escapa à mão para não depender de CSS.escape no contexto do teste.
+function CSS_escapar(v) {
+  return String(v || '').replace(/([ !"#$%&'()*+,.\/:;<=>?@[\\\]^`{|}~])/g, '\\$1');
 }
 async function estabilizar(page) {
   try { await page.waitForLoadState('networkidle', { timeout: 8000 }); } catch (e) { /* rede não aquietou: segue com a folga abaixo */ }
@@ -225,12 +239,18 @@ async function dispensarCartazes(page, quantos) {
       if (!nCartoes) problemas.push('não consegui mostrar nenhum cartão em Vence amanhã (' + larg.rot + ')');
 
       const t = (await tela.innerText()) || '';
-      ['Mande hoje, para quem vem', 'Hoje', 'para mandar', 'sem resposta']
+      ['Mande hoje, para quem vem', 'Hoje', 'para mandar', 'sem resposta',
+        'Mande até', 'a mensagem se manda na véspera', 'Respostas pendentes']
         .forEach((s) => { if (t.indexOf(s) < 0) problemas.push('Vence amanhã (' + larg.rot + '): faltou "' + s + '" na tela'); });
       if (nCartoes) {
-        ['Copiar mensagem', 'Mandei', 'O QUE O TUTOR RESPONDEU', 'Pode fazer na Zêluz',
-          'Tutor faz em casa / no veterinário', 'Não quer agora', 'Não respondeu']
+        // As palavras da resposta são as DELA, na ordem que ela ditou.
+        ['Copiar mensagem', 'Mandei', 'O que o tutor respondeu sobre',
+          'Vai aplicar em casa', 'Vai mandar na bolsa', 'Pegar na loja',
+          'Não respondeu', 'Não quer agora']
           .forEach((s) => { if (t.indexOf(s) < 0) problemas.push('Vence amanhã (' + larg.rot + '): faltou "' + s + '" no cartão'); });
+        // Os botões antigos não podem reaparecer numa tela sem ninguém notar.
+        ['Pode fazer na Zêluz', 'Tutor faz em casa / no veterinário']
+          .forEach((s) => { if (t.indexOf(s) >= 0) problemas.push('o botão antigo "' + s + '" voltou à tela (' + larg.rot + ')'); });
         const msg = await page.$$eval('#vencRoot textarea[id^="vencMsg_"]', (ts) => ts.map((x) => x.value || ''));
         if (!msg.length) problemas.push('nenhuma mensagem pronta desenhada (' + larg.rot + ')');
         else {
@@ -262,18 +282,143 @@ async function dispensarCartazes(page, quantos) {
       await page.screenshot({ path: path.join(SAIDA, 'vencimentos-' + larg.rot + '.png') });
       console.log('vencimentos-' + larg.rot + '.png · ' + nCartoes + ' cartão(ões)');
 
-      // ---- 3 · UM cartão, de perto ------------------------------------------------
+      // ---- 3 · O CALENDÁRIO DO MÊS -------------------------------------------------
+      const cal = await page.$('#vencCal');
+      if (!cal) problemas.push('não achei o calendário do mês (#vencCal) em Vence amanhã (' + larg.rot + ')');
+      else {
+        const tc = (await cal.innerText()) || '';
+        ['a mandar', 'a cobrar', 'mandado, sem resposta', 'respondido']
+          .forEach((x) => { if (tc.indexOf(x) < 0) problemas.push('o calendário (' + larg.rot + ') não explica "' + x + '"'); });
+        const apagados = await page.$$eval('#vencCal .vcal-off', (ns) => ns.length);
+        if (apagados < 4) problemas.push('o calendário (' + larg.rot + ') não apagou os dias sem Day Care: ' + apagados);
+        await page.locator('#vencCal').first().scrollIntoViewIfNeeded();
+        await page.waitForTimeout(700);
+        await page.locator('#vencCal').first().screenshot({
+          path: path.join(SAIDA, 'calendario-' + larg.rot + '.png'),
+          animations: 'disabled', timeout: 30000 });
+        console.log('calendario-' + larg.rot + '.png · ' + apagados + ' dia(s) apagado(s)');
+      }
+
+      // ---- 4 · UM cartão, de perto ------------------------------------------------
       const cartao = await page.$('#vencRoot [id^="vencCard_"]');
       if (cartao) {
-        await cartao.scrollIntoViewIfNeeded();
-        await page.waitForTimeout(400);
+        const umCartao = page.locator('#vencRoot [id^="vencCard_"]').first();
+        await umCartao.scrollIntoViewIfNeeded();
+        await page.waitForTimeout(500);
         await mascararTelefones(page);
-        await cartao.screenshot({ path: path.join(SAIDA, 'cartao-' + larg.rot + '.png') });
+        await umCartao.screenshot({ path: path.join(SAIDA, 'cartao-' + larg.rot + '.png'),
+          animations: 'disabled', timeout: 30000 });
         console.log('cartao-' + larg.rot + '.png');
+      }
+
+      // ---- 5 · UM cartão no estado COBRAR -------------------------------------------
+      // A marca de envio antiga é INJETADA no banco do emulador pelo próprio navegador, com
+      // o guarda de escrita ligado: o app lê e desenha sozinho. Nada é fabricado na tela.
+      const injetou = await page.evaluate(() => {
+        const cartoes = Array.from(document.querySelectorAll('#vencRoot [id^="vencCard_"]'));
+        if (!cartoes.length || typeof vencDiaAlvo !== 'function') return '';
+        const chave = cartoes[0].id.replace(/^vencCard_/, '');
+        const o = (typeof vencAchar === 'function') ? vencAchar(chave) : null;
+        const tipos = (o && typeof vencGrupos === 'function') ? vencGrupos(o).map((g) => g.tipo) : [];
+        if (!tipos.length) return '';
+        const ontem = Date.now() - 26 * 3600000;
+        const env = {}; tipos.forEach((t) => { env[t] = { quem: 'Amanda Silva', ts: ontem }; });
+        VENC_REG = VENC_REG || {};
+        VENC_REG[chave] = Object.assign({}, VENC_REG[chave] || {}, { enviadas: env });
+        if (typeof vencRender === 'function') vencRender();
+        return chave;
+      });
+      if (!injetou) problemas.push('não consegui pôr um cartão no estado "cobrar" (' + larg.rot + ')');
+      else {
+        await page.waitForTimeout(900);
+        const cob = page.locator('#vencCard_' + CSS_escapar(injetou)).first();
+        const tcob = (await cob.count()) ? ((await cob.innerText()) || '') : '';
+        ['COBRAR', 'sem resposta — cobrar', 'Copiar a cobrança', 'Cobrei']
+          .forEach((x) => { if (tcob.indexOf(x) < 0) problemas.push('o cartão em "cobrar" (' + larg.rot + ') não mostra "' + x + '"'); });
+        if (!/Mandado às \d\d:\d\d/.test(tcob))
+          problemas.push('o cartão em "cobrar" (' + larg.rot + ') não diz a que horas a mensagem saiu');
+        if (await cob.count()) {
+          await cob.scrollIntoViewIfNeeded();
+          await page.waitForTimeout(500);
+          await mascararTelefones(page);
+          await cob.screenshot({ path: path.join(SAIDA, 'cobrar-' + larg.rot + '.png'),
+            animations: 'disabled', timeout: 30000 });
+          console.log('cobrar-' + larg.rot + '.png');
+        }
       }
     }
 
-    // ---- 4 · Configurações › Mensagens prontas --------------------------------------
+    // ---- 6 · o quadro "Respostas pendentes" ----------------------------------------
+    // No Dashboard das Consultoras quando o papel tem a tela; senão, na mesa "O que fazer
+    // hoje", que é onde o mesmo quadro aparece.
+    //
+    // O retrato do backup ainda não tem mensagem mandada em daycare/vencimentos — e um
+    // quadro vazio não mostra o que ela pediu para ver. Então a marca de "mandado ontem" é
+    // posta NA MEMÓRIA do app (VENC_PEND), com o guarda de escrita ligado: o app desenha
+    // sozinho, pelo mesmo caminho da vida real, e o banco não recebe um byte.
+    {
+      const podePc = await page.evaluate(() =>
+        (typeof podePapel === 'function') && podePapel('painel-consultoras'));
+      await page.evaluate((v) => { if (typeof abrirItemDoMenu === 'function') abrirItemDoMenu(v); },
+        podePc ? 'consultoras' : 'painelmeu');
+      await page.waitForTimeout(3200);
+      await estabilizar(page);
+      await dispensarCartazes(page, 3);
+      const quantos = await page.evaluate(() => {
+        if (typeof VENC_PEND === 'undefined' || typeof vencLista !== 'function') return 0;
+        const dia = (typeof vencDiaAlvo === 'function') ? vencDiaAlvo() : '';
+        let L = [];
+        try { L = vencLista(dia) || []; } catch (e) { L = []; }
+        if (!dia || !L.length) return 0;
+        const ontem = Date.now() - 26 * 3600000;
+        VENC_PEND = VENC_PEND || {};
+        VENC_PEND[dia] = VENC_PEND[dia] || {};
+        L.slice(0, 3).forEach((o) => {
+          const env = {};
+          vencGrupos(o).forEach((g) => { env[g.tipo] = { quem: 'Amanda Silva', ts: ontem }; });
+          VENC_PEND[dia][o.chave] = Object.assign({}, VENC_PEND[dia][o.chave] || {}, {
+            pet: o.nome, tutor: o.tutor, enviadas: env,
+            itens: (o.itens || []).map((x) => ({ k: x.k, nome: x.nome, vence: x.vence, atrasado: !!x.atrasado })),
+          });
+        });
+        // Pela MESMA porta do app (vencPcQuadro): ela troca o conteúdo E acende o .pm-rv.
+        // Mexer no innerHTML à mão aqui deixaria a foto em branco — e a foto é a prova.
+        if (typeof vencPcQuadro === 'function' && typeof vencPendCardHTML === 'function')
+          vencPcQuadro('pcCardPend', vencPendCardHTML());
+        if (typeof MESA_EXPAND !== 'undefined') MESA_EXPAND.respostas = true;
+        if (typeof mesaRender === 'function' && document.getElementById('mesaRoot')) mesaRender();
+        return Math.min(3, L.length);
+      });
+      if (!quantos) problemas.push('não consegui mostrar nenhuma resposta pendente (' + larg.rot + ')');
+      await page.waitForTimeout(900);
+      // display:contents não tem retângulo próprio — fotografa-se o cartão de dentro.
+      const selPend = (await page.$('#pcCardPend article')) ? '#pcCardPend article' : '#mesaRoot';
+      const alvoPend = (await page.locator(selPend).count()) ? page.locator(selPend).first() : null;
+      if (!alvoPend) problemas.push('não achei o quadro "Respostas pendentes" (' + larg.rot + ')');
+      else {
+        const tp = (await alvoPend.innerText()) || '';
+        ['Respostas pendentes', 'Vai aplicar em casa', 'Vai mandar na bolsa', 'Pegar na loja',
+          'Não respondeu', 'Não quer agora', 'Cobrei']
+          .forEach((x) => { if (tp.indexOf(x) < 0) problemas.push('o quadro das respostas pendentes (' + larg.rot + ') não mostra "' + x + '"'); });
+        await alvoPend.scrollIntoViewIfNeeded();
+        await page.waitForTimeout(1500);
+        await mascararTelefones(page);
+        // O quadro do Dashboard das Consultoras nasce invisível (.pm-rv) — se ele não
+        // estiver aceso, a foto sai em branco e ninguém descobre isso lendo o código.
+        const aceso = await page.evaluate((sel) => {
+          const el = document.querySelector(sel);
+          if (!el) return false;
+          const alvo = el.classList.contains('pm-rv') ? el : el.querySelector('.pm-rv');
+          return !alvo || alvo.classList.contains('dentro');
+        }, selPend);
+        if (!aceso) problemas.push('o quadro das respostas pendentes ficou invisível (.pm-rv sem "dentro") em ' + larg.rot);
+        await alvoPend.screenshot({ path: path.join(SAIDA, 'respostas-pendentes-' + larg.rot + '.png'),
+          animations: 'disabled', timeout: 30000 });
+        console.log('respostas-pendentes-' + larg.rot + '.png · ' + quantos + ' pendente(s)');
+      }
+    }
+
+    // ---- 7 · Configurações › Mensagens prontas --------------------------------------
     await page.evaluate(() => { if (typeof abrirItemDoMenu === 'function') abrirItemDoMenu('config'); });
     await page.waitForTimeout(2600);
     await estabilizar(page);
@@ -286,24 +431,34 @@ async function dispensarCartazes(page, quantos) {
         '{valor_escova}', '{fecho}', 'Vacina — quando é preciso marcar horário',
         'Vacina — quando ele vem num dia de atendimento', 'Vermífugo, carrapaticida e coleira',
         'Vermífugo — a 2ª dose (21 dias depois da 1ª)', 'Troca de escova de dentes',
-        'O fecho da autorização',
-        'Entrar na lista com quantos dias de folga', 'Salvar', 'Voltar ao texto de fábrica']
+        'O fecho da autorização', 'A cobrança — quando o tutor não responde',
+        'Entrar na lista com quantos dias de folga', 'Cobrar resposta depois de (horas)',
+        'Padrões do lançamento automático', 'Carrapaticida — quanto lançar',
+        'Coleira — onde vai ser trocada',
+        'Salvar', 'Voltar ao texto de fábrica']
         .forEach((s) => { if (tc.indexOf(s) < 0) problemas.push('Mensagens prontas (' + larg.rot + '): faltou "' + s + '"'); });
       const campos = await page.evaluate(() => {
         const g = (id) => { const el = document.getElementById(id); return el ? String(el.value || '') : null; };
         return { vacina: g('cfgVencVacina'), creche: g('cfgVencVacinaCreche'), antip: g('cfgVencAntip'),
           verm2: g('cfgVencVerm2'), escova: g('cfgVencEscova'), fecho: g('cfgVencFecho'),
-          margem: g('cfgVencMargem') };
+          cobranca: g('cfgVencCobranca'), margem: g('cfgVencMargem'), cobrancaH: g('cfgVencCobrancaH'),
+          autoEcto: g('cfgVencAutoEcto'), autoCol: g('cfgVencAutoCol') };
       });
       const exigir = [['vacina', 'Temos horário no dia {dia_vet}'], ['creche', 'sem precisar marcar horário'],
         ['antip', '{item}'], ['verm2', 'É dia da segunda dose'],
-        ['escova', '{valor_escova}'], ['fecho', '{quando}']];
+        ['escova', '{valor_escova}'], ['fecho', '{quando}'],
+        ['cobranca', 'Podemos contar com a sua resposta?']];
       exigir.forEach(([k, trecho]) => {
         if (!campos[k] || campos[k].indexOf(trecho) < 0)
           problemas.push('o campo "' + k + '" não trouxe o modelo dela (' + larg.rot + '): ' + JSON.stringify((campos[k] || '').slice(0, 90)));
       });
       if (!/^\d+$/.test(String(campos.margem || '')))
         problemas.push('a folga em dias não veio como número (' + larg.rot + '): ' + JSON.stringify(campos.margem));
+      if (!/^\d+([.,]\d+)?$/.test(String(campos.cobrancaH || '')))
+        problemas.push('o prazo da cobrança não veio como número (' + larg.rot + '): ' + JSON.stringify(campos.cobrancaH));
+      if (!campos.autoEcto || !campos.autoCol)
+        problemas.push('os padrões do lançamento automático vieram vazios (' + larg.rot + '): '
+          + JSON.stringify([campos.autoEcto, campos.autoCol]));
       await cfg.scrollIntoViewIfNeeded();
       // Configurações tem vários cartões que se preenchem sozinhos (protocolos, valores,
       // fotos) e empurram a página enquanto chegam. Sem esta folga a foto sai tremida — ou
@@ -322,5 +477,5 @@ async function dispensarCartazes(page, quantos) {
   await navegador.close();
   pararTudo();
   if (problemas.length) { console.error('\nPROBLEMAS:\n- ' + problemas.join('\n- ')); process.exit(1); }
-  console.log('\nCaptura v-28 pronta em docs/capturas-v28/');
+  console.log('\nCaptura da v 2026-09-21-05 pronta em docs/capturas-v28/');
 })().catch((e) => { console.error(e); process.exit(1); });
