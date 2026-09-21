@@ -1,6 +1,10 @@
 /**
  * ZÊLUZ · Day Care — ponte entre o APP e a planilha que alimenta o dashboard da TV
  * ============================================================================
+ * Versão 6 (21/set/2026) — coluna "Troca de Escova". A escova de dentes do FILHOt é
+ *                           prevenção, e a recepção precisa lançá-la no dia, como já
+ *                           lança a troca de coleira. Sem hora: o que importa é que foi
+ *                           trocada, não a que horas.
  * Versão 5 (19/set/2026) — coluna "Hora Medicação", ao lado de "Medicação". O horário é
  *                           o que faz o alarme tocar na TV, como já acontece no Banho e
  *                           no Veterinário. Sem ele o remédio aparece na tela e nada
@@ -18,7 +22,8 @@
  * PARA QUE SERVE
  * A recepção parou de digitar na planilha: agora ela lança tudo no app do Day Care
  * (banho, veterinário, reposição, avulso, quem sai cedo, vermífugo, carrapaticida,
- * troca de coleira, hidratação, avaliação, adaptação, faltas avisadas…). Esta ponte
+ * troca de coleira, troca de escova, hidratação, avaliação, adaptação, faltas
+ * avisadas…). Esta ponte
  * é quem leva o que foi lançado até a planilha — que continua sendo o que dá vida ao
  * dashboard https://zoeharus-art.github.io/dashboard-daycare1-zeluz/
  *
@@ -86,6 +91,7 @@ var COL = {
   carrapaticida:   'Carrapaticida',
   medicacao:       'Medicação',
   medicacaoHora:   'Hora Medicação',
+  escova:          'Troca de Escova',
   adaptacao:       'Adaptação',
   avulso:          'Avulso',
   faltas:          'Faltas Avisadas',
@@ -102,16 +108,19 @@ var COL = {
   auluRestricao:   'Aulunos com restriçóes'
 };
 
-/** As quatro colunas que faltam nos meses antigos e que esta ponte cria sozinha. As duas
+/** As cinco colunas que faltam nos meses antigos e que esta ponte cria sozinha. As duas
  *  primeiras a Adriana criou à mão em junho/2026, só na aba daquele mês; a de Medicação
  *  nasceu em 18/set/2026, quando o Toshi passou a tomar gotas no ouvido e a recepção não
  *  tinha onde anotar o remédio nem onde ele está (na bolsa dele ou na recepção); a de
  *  Hora Medicação nasceu em 19/set/2026, porque o horário é o que faz o alarme tocar na
  *  TV — sem ele o remédio aparece na tela, mas nada avisa a hora de dar, como já
  *  acontece no Banho e no Veterinário. Ela vem logo depois de Medicação para nascer ao
- *  lado dela na planilha. Os nomes são copiados da planilha TAL E QUAL, com a grafia que
- *  está lá — é o que o dashboard lê. */
-var COLUNAS_NOVAS = [COL.festa, COL.auluRestricao, COL.medicacao, COL.medicacaoHora];
+ *  lado dela na planilha. A de Troca de Escova nasceu em 21/set/2026 — "a troca da escova
+ *  também", disse a Adriana: a escova de dentes do FILHOt é prevenção, e a recepção
+ *  precisa lançá-la no dia como já lança a troca de coleira. Esta não tem hora: o que
+ *  importa é que foi trocada, não a que horas. Os nomes são copiados da planilha TAL E
+ *  QUAL, com a grafia que está lá — é o que o dashboard lê. */
+var COLUNAS_NOVAS = [COL.festa, COL.auluRestricao, COL.medicacao, COL.medicacaoHora, COL.escova];
 
 var MESES = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho',
              'Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
@@ -150,7 +159,8 @@ function doGet(e) {
 /**
  * A Adriana criou "Festa na Zêluz" e "Aulunos com restrições" só na aba de junho — por
  * isso não apareciam no dashboard em agosto. "Medicação" é mais nova ainda (18/set/2026)
- * e "Hora Medicação" nasceu no dia seguinte (19/set/2026) — nenhuma das duas existe nos
+ * e "Hora Medicação" nasceu no dia seguinte (19/set/2026); "Troca de Escova" veio depois
+ * (21/set/2026) — nenhuma das três existe nos
  * meses antigos. Isto percorre TODA aba de Day Care e cria o que faltar,
  * no fim da faixa de títulos, sem tocar no que já existe.
  * Roda sozinho a cada lançamento (é barato) e também pode ser chamado à mão.
@@ -166,7 +176,7 @@ function garantirColunas() {
       // ⚠ 25/ago/2026 — sem esta linha TODAS as colunas novas iam para o MESMO lugar: a
       // lista de títulos era lida uma vez só, então a seguinte achava a mesma "primeira
       // coluna livre" e escrevia por cima da anterior. Só a última sobrevivia.
-      // Com quatro colunas na lista (19/set/2026) a releitura ficou ainda mais necessária.
+      // Com cinco colunas na lista (21/set/2026) a releitura ficou ainda mais necessária.
       tit = _titulos(sh);
       criadas.push(sh.getName() + ' · ' + nome + ' (coluna ' + col + ')');
     });

@@ -1,6 +1,6 @@
 'use strict';
 /*
- * CAPTURA DA v 2026-09-21-01 — Vence amanhã.
+ * CAPTURA DA v 2026-09-21-04 — Vence amanhã, agora com AS MENSAGENS DELA.
  *
  * POR QUE ESTA CAPTURA EXISTE
  * Adriana, 21/set/2026: "Nós temos dentro do aplicativo a parte de trocas: vacinação, a
@@ -12,19 +12,27 @@
  * resposta... Então tem que perguntar: já foi atualizada a ficha? E a pessoa tem que clicar
  * em sim ou não."
  *
+ * 21/set/2026 — Adriana mandou as mensagens que a equipe usa DE VERDADE, e elas
+ * substituíram o texto genérico. Agora é UMA MENSAGEM POR ASSUNTO: vacina (com horário ou
+ * "ele já vem no dia"), vermífugo/carrapaticida/coleira, a 2ª dose do vermífugo e a troca de
+ * escova de dentes. Cada uma com o seu Copiar e o seu Mandei.
+ *
  * O QUE ELA FOTOGRAFA
  *   vencimentos-1280.png · vencimentos-500.png — a PRIMEIRA DOBRA da tela: a frase do
  *     dia-alvo, o seletor (Hoje · Amanhã · calendário), as contas e o começo da fila
  *     (a tela inteira, com dezenas de cartões, daria uma foto que ninguém consegue olhar)
- *   cartao-1280.png · cartao-500.png — UM cartão por inteiro: os itens com a data, a
- *     mensagem pronta na caixa editável, "Copiar mensagem"/"Mandei" e os quatro botões de
- *     resposta do tutor
+ *   cartao-1280.png · cartao-500.png — UM cartão por inteiro: os itens com a data, as
+ *     mensagens prontas nas caixas editáveis (uma por assunto), "Copiar mensagem"/"Mandei"
+ *     em cada uma e os quatro botões de resposta do tutor
  *   config-mensagens-1280.png · config-mensagens-500.png — Configurações › Mensagens
- *     prontas: os dois textos e a folga em dias, editáveis pela Gestão sem programador
+ *     prontas: as cinco mensagens, o fecho da autorização e a folga em dias, tudo editável
+ *     pela Gestão sem programador
  *
  * E ELA CONFERE, antes de fotografar: o item existe no menu com o rótulo certo; a tela traz
  * o dia-alvo e o seletor; há pelo menos um cartão com mensagem pronta e os quatro botões de
- * resposta; o cartão do Configurações traz os dois textos, a folga e as variáveis explicadas.
+ * resposta; cada mensagem começa com "Olá" e traz uma das frases DELA (e nenhuma traz o
+ * texto genérico antigo); o cartão do Configurações traz as cinco mensagens, o fecho, a
+ * folga e as variáveis explicadas.
  * NENHUM botão que grava é apertado — nem "Mandei", nem as respostas, nem "Salvar".
  *
  * NADA É GRAVADO: o mesmo guarda de escrita do smoke embrulha set/update/push/remove/
@@ -225,8 +233,20 @@ async function dispensarCartazes(page, quantos) {
           .forEach((s) => { if (t.indexOf(s) < 0) problemas.push('Vence amanhã (' + larg.rot + '): faltou "' + s + '" no cartão'); });
         const msg = await page.$$eval('#vencRoot textarea[id^="vencMsg_"]', (ts) => ts.map((x) => x.value || ''));
         if (!msg.length) problemas.push('nenhuma mensagem pronta desenhada (' + larg.rot + ')');
-        else if (msg[0].indexOf('Olá') !== 0 || msg[0].indexOf('Passando para avisar:') < 0)
-          problemas.push('a mensagem pronta não saiu como esperado (' + larg.rot + '): "' + msg[0].slice(0, 90) + '"');
+        else {
+          // As mensagens são as DELA. Cada uma começa com "Olá" e traz uma das frases dela;
+          // "Passando para avisar:" era o texto genérico que eu tinha inventado — se ele
+          // reaparecer numa tela, é porque alguém voltou atrás sem querer.
+          const frasesDela = ['Passando para informar que', 'Passando para lembrar que',
+            'É dia da segunda dose', 'está na hora de trocar'];
+          msg.forEach((m, i) => {
+            if (m.indexOf('Olá') !== 0 || !frasesDela.some((f) => m.indexOf(f) > 0))
+              problemas.push('a mensagem ' + (i + 1) + ' não saiu como esperado (' + larg.rot + '): "' + m.slice(0, 100) + '"');
+          });
+          if (msg.some((m) => m.indexOf('Passando para avisar:') >= 0))
+            problemas.push('o texto genérico antigo ("Passando para avisar:") ainda está saindo (' + larg.rot + ')');
+          if (larg.w === 1280) console.log('mensagens prontas desenhadas na tela: ' + msg.length);
+        }
       }
       // Nenhum vocabulário proibido pode ter escapado para a tela.
       ['cachorro', 'cãozinho', 'dono ', 'funcionário'].forEach((p) => {
@@ -262,17 +282,26 @@ async function dispensarCartazes(page, quantos) {
     if (!cfg) problemas.push('não achei o cartão "Mensagens prontas" em Configurações (' + larg.rot + ')');
     else {
       const tc = (await cfg.innerText()) || '';
-      ['Mensagens prontas', '{tutor}', '{ofilhot}', '{itens}', '{dia}',
+      ['Mensagens prontas', '{tutor}', '{ofilhot}', '{dofilhot}', '{quando}', '{vacina}', '{item}',
+        '{valor_escova}', '{fecho}', 'Vacina — quando é preciso marcar horário',
+        'Vacina — quando ele vem num dia de atendimento', 'Vermífugo, carrapaticida e coleira',
+        'Vermífugo — a 2ª dose (21 dias depois da 1ª)', 'Troca de escova de dentes',
+        'O fecho da autorização',
         'Entrar na lista com quantos dias de folga', 'Salvar', 'Voltar ao texto de fábrica']
         .forEach((s) => { if (tc.indexOf(s) < 0) problemas.push('Mensagens prontas (' + larg.rot + '): faltou "' + s + '"'); });
       const campos = await page.evaluate(() => {
         const g = (id) => { const el = document.getElementById(id); return el ? String(el.value || '') : null; };
-        return { texto: g('cfgVencTexto'), vacina: g('cfgVencVacina'), margem: g('cfgVencMargem') };
+        return { vacina: g('cfgVencVacina'), creche: g('cfgVencVacinaCreche'), antip: g('cfgVencAntip'),
+          verm2: g('cfgVencVerm2'), escova: g('cfgVencEscova'), fecho: g('cfgVencFecho'),
+          margem: g('cfgVencMargem') };
       });
-      if (!campos.texto || campos.texto.indexOf('{itens}') < 0)
-        problemas.push('o campo do texto padrão não trouxe o modelo (' + larg.rot + '): ' + JSON.stringify(campos.texto));
-      if (!campos.vacina || campos.vacina.indexOf('veterinária') < 0)
-        problemas.push('o campo do texto de vacina não trouxe o modelo (' + larg.rot + '): ' + JSON.stringify(campos.vacina));
+      const exigir = [['vacina', 'Temos horário no dia {dia_vet}'], ['creche', 'sem precisar marcar horário'],
+        ['antip', '{item}'], ['verm2', 'É dia da segunda dose'],
+        ['escova', '{valor_escova}'], ['fecho', '{quando}']];
+      exigir.forEach(([k, trecho]) => {
+        if (!campos[k] || campos[k].indexOf(trecho) < 0)
+          problemas.push('o campo "' + k + '" não trouxe o modelo dela (' + larg.rot + '): ' + JSON.stringify((campos[k] || '').slice(0, 90)));
+      });
       if (!/^\d+$/.test(String(campos.margem || '')))
         problemas.push('a folga em dias não veio como número (' + larg.rot + '): ' + JSON.stringify(campos.margem));
       await cfg.scrollIntoViewIfNeeded();

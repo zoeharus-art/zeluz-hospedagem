@@ -2887,9 +2887,17 @@ async function main() {
     };
     check('vermifugo aceita o nome antigo do campo', /alt:'vermifugo_p'/.test(linhaItem('verm_p')), linhaItem('verm_p').slice(0, 90));
     check('ectoparasitas aceita o nome antigo do campo', /alt:'carrapaticida_p'/.test(linhaItem('ecto_p')), linhaItem('ecto_p').slice(0, 90));
-    check('escova e check-up sao ROTINA (nao entram na conta de prevencao)',
-      /rotina:true/.test(linhaItem('escova_p')) && /rotina:true/.test(linhaItem('checkup_p')));
-    check('escova e check-up sao opcionais (a casa ainda nao registra)',
+    // 21/set/2026, Adriana: "Será acrescentar na parte de prevenção... e precisa ir para o
+    // lançamento do dia... a troca da escova também." A ESCOVA deixou de ser rotina: conta
+    // como prevenção pendente, igual ao vermífugo. O check-up continua rotina.
+    check('a escova NAO e mais rotina: conta como prevencao (ela pediu em 21/set/2026)',
+      !/rotina:true/.test(linhaItem('escova_p')), linhaItem('escova_p').slice(0, 120));
+    check('o check-up continua sendo ROTINA (nao entra na conta de prevencao)',
+      /rotina:true/.test(linhaItem('checkup_p')));
+    // \`opcional\` continua nos dois: quem NUNCA registrou escova nao e cobrado por isso —
+    // cobrar 222 fichas em branco de uma vez e o jeito conhecido de ninguem acreditar em
+    // pendencia nenhuma (26/ago/2026). Registrou uma vez, os 90 dias passam a valer.
+    check('escova e check-up sao opcionais (quem nunca registrou nao e cobrado)',
       /opcional:true/.test(linhaItem('escova_p')) && /opcional:true/.test(linhaItem('checkup_p')));
 
     if (typeof ctx.prevFaltasDe === 'function') {
@@ -3525,7 +3533,7 @@ async function main() {
       html.indexOf('<strong>Banho</strong> · <strong>Veterinário</strong> · <strong>Avaliação</strong>'
         + ' · <strong>Sai cedo</strong> · <strong>Medicação</strong>.') > 0);
     check('v-24 · e saiu da segunda lista — quem tem horário não é citado duas vezes',
-      html.indexOf('E também Troca de coleira, Hidratação, Vermífugo, Carrapaticida e Festa.') > 0
+      html.indexOf('E também Troca de coleira, <strong>Troca de escova</strong>, Hidratação, Vermífugo, Carrapaticida e Festa.') > 0
       && html.indexOf('Carrapaticida, Medicação e Festa.') < 0);
     check('v-24 · Medicação NÃO entrou no que se preenche sozinho — ninguém sabe o remédio sem o tutor dizer',
       !(ctx.DASH_AUTO_COLS || {}).medicacao);
@@ -3732,8 +3740,8 @@ async function main() {
     check('v-25 · a auditoria da tabela diz o que mudou, de quanto para quanto',
       /audit\('orcamento-precos',\s*\n?\s*mudou\.length\?\('alterou a tabela de hospedagem — '\+mudou\.join/.test(html)
       && /\{antes:antes, depois:novo\}/.test(html));
-    check('v-25 · a versão carimbada desta entrega é a 2026-09-21-03',
-      /const APP_VERSAO='2026-09-21-03';/.test(html));
+    check('v-25 · a versão carimbada desta entrega é a 2026-09-21-04',
+      /const APP_VERSAO='2026-09-21-04';/.test(html));
   }
   console.log('');
 
@@ -3767,7 +3775,7 @@ async function main() {
       && /try\{ dcValoresCarregar\(\); \}catch\(e\)\{\}/.test(html));
     check('v-26 · o valor mora no banco em daycare/config/valores, com diaria_avulsa_cent',
       /DB\.ref\('daycare\/config\/valores'\)\.once\('value'\)/.test(html)
-      && /DB\.ref\('daycare\/config\/valores'\)\.update\(\{diaria_avulsa_cent:novo, verm_faixa_kg:fx, verm_margem_kg:mg\}\)/.test(html));
+      && /DB\.ref\('daycare\/config\/valores'\)\.update\(\{diaria_avulsa_cent:novo, escova_cent:escNovo, verm_faixa_kg:fx, verm_margem_kg:mg\}\)/.test(html));
     check('v-26 · nada é salvo antes do botão "Salvar valores", e o rastro diz de quanto para quanto',
       /onclick="cfgValoresSalvar\(\)">Salvar valores<\/button>/.test(html)
       && /mud\.push\('diária avulsa: '\+fmtCent\(antes\)\+' → '\+fmtCent\(novo\)\)/.test(html)
@@ -4020,8 +4028,8 @@ async function main() {
     check('v-26 · e continua FORA da soma — o app não sabe quantas diárias foram cobradas',
       html.indexOf('nunca quantas diárias foram cobradas — por isso não entra na soma') > 0);
 
-    check('v-26 · a versão carimbada desta entrega é a 2026-09-21-03',
-      /const APP_VERSAO='2026-09-21-03';/.test(html));
+    check('v-26 · a versão carimbada desta entrega é a 2026-09-21-04',
+      /const APP_VERSAO='2026-09-21-04';/.test(html));
   }
   console.log('');
 
@@ -4086,8 +4094,10 @@ async function main() {
         && ctx.pendDeveAbrir('vet', 'faltou', true) === false
         && ctx.pendDeveAbrir('faltas', 'faltou', true) === false
         && ctx.pendDeveAbrir('reposicao', 'faltou', true) === false);
-      check('v-27 · os cinco que contam são os que se aplicam NO FILHOt e têm data',
-        JSON.stringify(ctx.PEND_ITENS) === JSON.stringify(['vermifugo', 'carrapaticida', 'coleira', 'medicacao', 'hidratacao']),
+      // 21/set/2026: a troca de escova entrou, pelo mesmo motivo dos outros — é aplicada
+      // NO FILHOt e, se ele não veio, precisa ficar guardada para a próxima vinda.
+      check('v-27 · os que contam são os que se aplicam NO FILHOt e têm data (com a escova, desde 21/set)',
+        JSON.stringify(ctx.PEND_ITENS) === JSON.stringify(['vermifugo', 'carrapaticida', 'coleira', 'escova', 'medicacao', 'hidratacao']),
         JSON.stringify(ctx.PEND_ITENS));
       check('v-27 · mordida — item vazio, nulo ou desconhecido nunca vira pendência',
         ctx.pendDeveAbrir('', 'faltou', true) === false
@@ -4393,8 +4403,8 @@ async function main() {
       }
     } else { check('v-27 · orcRenderConfig existe', false, 'função não encontrada'); }
 
-    check('v-27 · a versão carimbada desta entrega é a 2026-09-21-03',
-      /const APP_VERSAO='2026-09-21-03';/.test(html));
+    check('v-27 · a versão carimbada desta entrega é a 2026-09-21-04',
+      /const APP_VERSAO='2026-09-21-04';/.test(html));
   }
   console.log('');
 
@@ -4520,58 +4530,73 @@ async function main() {
         && !/function vencItensDe\([\s\S]{0,1700}?DB\.ref/.test(html));
     } else { check('v-28 · vencItensDe existe', false, 'função não encontrada'); }
 
-    // ---- (d) a mensagem pronta, com o texto de Configurações -------------------------
+    // ---- (d) as mensagens prontas, com o texto de Configurações ----------------------
+    // 21/set/2026: Adriana mandou as mensagens que a equipe usa DE VERDADE e elas
+    // substituíram o texto genérico que morava aqui. O que era uma frase só virou UMA
+    // MENSAGEM POR ASSUNTO — vacina, antiparasitário, 2ª dose e escova. Os testes abaixo
+    // mudaram por causa disso: o que se verificava era o texto antigo, que não existe mais.
     if (typeof ctx.vencMensagem === 'function') {
       const bkpCfg28 = ctx.VENC_CFG;
       try {
         ctx.VENC_CFG = {};
         const o28 = { nome: 'Otávio', tutor: 'Marcela Antônia Mendes', sexo: 'M',
           itens: ctx.vencItensDe({ vac_raiva_p: '2026-09-24', verm_p: '2026-09-10' }, '2026-09-22', 7, '2026-09-21') };
-        const msg28 = ctx.vencMensagem(o28, '2026-09-22', '2026-09-21');
-        check('v-28 · a mensagem traz o tutor pelo primeiro nome, o FILHOt, os itens com data e o dia',
-          msg28.indexOf('Olá, Marcela, tudo bem?') === 0
-          && msg28.indexOf('Como está o Otávio?') > 0
-          && msg28.indexOf('o vermífugo venceu em 10/09') > 0
-          && msg28.indexOf('a vacina antirrábica vence em 24/09') > 0
-          && msg28.indexOf('amanhã, terça-feira (22/09)') > 0, msg28);
-      check('v-28 · dois itens se juntam com "e", não com "·" — é conversa, não planilha',
-          msg28.indexOf('10/09 e a vacina') > 0, msg28);
-        check('v-28 · "venceu em" para o que passou, "vence em" para o que ainda vem',
-          /o vermífugo venceu em/.test(msg28) && /a vacina antirrábica vence em/.test(msg28));
+        const M28 = ctx.vencMensagens(o28, '2026-09-22', '2026-09-21');
+        check('v-28 · vacina e vermífugo vencendo viram DUAS mensagens, uma por assunto',
+          M28.length === 2 && M28.map((m) => m.tipo).join(',') === 'vacina,antip',
+          JSON.stringify(M28.map((m) => m.tipo)));
+        const antip28 = ctx.vencMensagem(o28, '2026-09-22', '2026-09-21', 'antip');
+        check('v-28 · a do antiparasitário: o tutor pelo primeiro nome, o FILHOt e o item com o artigo certo',
+          antip28.indexOf('Olá, Marcela, como vai?') === 0
+          && antip28.indexOf('Como está o Otávio?') > 0
+          && antip28.indexOf('vence o vermífugo do Otávio') > 0, antip28);
+        const vac28 = ctx.vencMensagem(o28, '2026-09-22', '2026-09-21', 'vacina');
+        check('v-28 · a da vacina: o nome da vacina e o FILHOt com o "do" junto',
+          vac28.indexOf('Tudo bem com você, Marcela?') > 0
+          && vac28.indexOf('a vacina de Raiva do Otávio') > 0, vac28);
+        const oDois = { nome: 'Otávio', tutor: 'Marcela', sexo: 'M',
+          itens: ctx.vencItensDe({ verm_p: '2026-09-10', col_p: '2026-09-22', col_nome: 'Seresto' }, '2026-09-22', 7, '2026-09-21') };
+        ctx.VENC_CFG = { antip: '{itens}' };
+        check('v-28 · {itens} junta com "e" e diz "venceu em" para o que passou, "vence em" para o que vem',
+          ctx.vencMensagem(oDois, '2026-09-22', '2026-09-21', 'antip')
+          === 'o vermífugo venceu em 10/09 e a coleira repelente Seresto vence em 22/09',
+          ctx.vencMensagem(oDois, '2026-09-22', '2026-09-21', 'antip'));
+        ctx.VENC_CFG = {};
         const oF = { nome: 'Lana', tutor: 'Marcela', sexo: 'F',
           itens: ctx.vencItensDe({ verm_p: '2026-09-10' }, '2026-09-22', 7, '2026-09-21') };
-        check('v-28 · concordância: fêmea vira "a Lana" e "a ficha dela" (norma culta é obrigatória)',
+        check('v-28 · concordância: fêmea vira "a Lana" e "da Lana" (norma culta é obrigatória)',
           ctx.vencMensagem(oF, '2026-09-22', '2026-09-21').indexOf('Como está a Lana?') > 0
-          && ctx.vencMensagem(oF, '2026-09-22', '2026-09-21').indexOf('a ficha dela') > 0,
+          && ctx.vencMensagem(oF, '2026-09-22', '2026-09-21').indexOf('vence o vermífugo da Lana') > 0,
           ctx.vencMensagem(oF, '2026-09-22', '2026-09-21'));
         const oV = { nome: 'Otávio', tutor: 'Marcela', sexo: 'M',
           itens: ctx.vencItensDe({ vac_raiva_p: '2026-09-24' }, '2026-09-22', 7, '2026-09-21') };
-        check('v-28 · só vacina → a frase muda: "Podemos agendar com a veterinária?"',
+        check('v-28 · só vacina → uma mensagem só, e ela é a da vacina',
           ctx.vencSoVacina(oV) === true
-          && ctx.vencMensagem(oV, '2026-09-22', '2026-09-21').indexOf('Podemos agendar com a veterinária?') > 0
-          && ctx.vencMensagem(oV, '2026-09-22', '2026-09-21').indexOf('aqui na Zêluz') < 0);
-        check('v-28 · com vacina MISTURADA vale a frase padrão — e a tela avisa a consultora',
-          ctx.vencSoVacina(o28) === false && ctx.vencTemVacina(o28) === true
-          && msg28.indexOf('aqui na Zêluz') > 0
-          && html.indexOf('Há vacina nesta lista — a aplicação é com a veterinária.') > 0);
-        check('v-28 · ficha sem o nome do tutor não deixa vírgula órfã ("Olá, , tudo bem?")',
-          ctx.vencMensagem({ nome: 'Otávio', tutor: '', sexo: 'M', itens: o28.itens }, '2026-09-22', '2026-09-21')
-            .indexOf('Olá, tudo bem?') === 0);
+          && ctx.vencMensagens(oV, '2026-09-22', '2026-09-21').length === 1
+          && ctx.vencMensagens(oV, '2026-09-22', '2026-09-21')[0].tipo === 'vacina');
+        check('v-28 · com vacina MISTURADA a tela continua sabendo que há vacina na lista',
+          ctx.vencSoVacina(o28) === false && ctx.vencTemVacina(o28) === true);
+        check('v-28 · ficha sem o nome do tutor não deixa vírgula órfã ("Olá, , como vai?")',
+          ctx.vencMensagem({ nome: 'Otávio', tutor: '', sexo: 'M', itens: o28.itens }, '2026-09-22', '2026-09-21', 'antip')
+            .indexOf('Olá, como vai?') === 0
+          && ctx.vencMensagem({ nome: 'Otávio', tutor: '', sexo: 'M', itens: o28.itens }, '2026-09-22', '2026-09-21', 'vacina')
+            .indexOf('Tudo bem com você? Como está o Otávio?') > 0,
+          ctx.vencMensagem({ nome: 'Otávio', tutor: '', sexo: 'M', itens: o28.itens }, '2026-09-22', '2026-09-21', 'vacina'));
         check('v-28 · data do ANO CORRENTE sai curta (24/09); de outro ano sai inteira',
           ctx.vencData('2026-09-24', '2026-09-21') === '24/09'
           && ctx.vencData('2025-09-24', '2026-09-21') === '24/09/2025');
         // O texto vem de Configurações quando existe — a lei de 22/ago.
-        ctx.VENC_CFG = { texto: 'Oi {tutor}! O {filhot} tem {itens}. Dá para {dia}?',
-          textoVacina: 'Oi {tutor}! Vacina d{ela}: {itens}.', margem: 3 };
+        ctx.VENC_CFG = { antip: 'Oi {tutor}! O {filhot} tem {itens}. Dá para {dia}?',
+          vacina_creche: 'Oi {tutor}! Vacina d{ela}: {vacina}.', margem: 3 };
         check('v-28 · o texto de Configurações MANDA — o do código é só o padrão de fábrica',
-          ctx.vencMensagem(o28, '2026-09-22', '2026-09-21')
-          === 'Oi Marcela! O Otávio tem o vermífugo venceu em 10/09 e a vacina antirrábica vence em 24/09. Dá para amanhã, terça-feira (22/09)?',
-          ctx.vencMensagem(o28, '2026-09-22', '2026-09-21'));
+          ctx.vencMensagem(o28, '2026-09-22', '2026-09-21', 'antip')
+          === 'Oi Marcela! O Otávio tem o vermífugo venceu em 10/09. Dá para amanhã, terça-feira (22/09)?',
+          ctx.vencMensagem(o28, '2026-09-22', '2026-09-21', 'antip'));
         check('v-28 · e a folga também: margem de 3 dias vale sobre o padrão de 7',
           ctx.vencMargem() === 3);
-        ctx.VENC_CFG = { texto: '   ', margem: 0 };
+        ctx.VENC_CFG = { antip: '   ', margem: 0 };
         check('v-28 · texto em branco ou folga inválida caem no padrão de fábrica — nunca numa mensagem vazia',
-          ctx.vencMensagem(o28, '2026-09-22', '2026-09-21').indexOf('Olá, Marcela, tudo bem?') === 0
+          ctx.vencMensagem(o28, '2026-09-22', '2026-09-21', 'antip').indexOf('Olá, Marcela, como vai?') === 0
           && ctx.vencMargem() === 7);
       } finally { ctx.VENC_CFG = bkpCfg28; }
     } else { check('v-28 · vencMensagem existe', false, 'função não encontrada'); }
@@ -4736,7 +4761,14 @@ async function main() {
         ctx.vencEscolher('otavio__marcela', 'verm_p', 'seg', '1 COMPRIMIDO');
         ctx.vencEscolher('otavio__marcela', 'ecto_p', 'onde', 'LOJA');
         ctx.vencEscolher('otavio__marcela', 'ecto_p', 'seg', 'PIPETA');
-        check('v-28 · a vacina NÃO pede "onde está o produto": quem aplica é a veterinária',
+        // 21/set/2026: a vacina não se lança na planilha, mas ganhou uma resposta
+        // obrigatória própria — QUANDO a veterinária aplica.
+        check('v-28 · a vacina NÃO pede "onde está o produto": pede QUANDO a veterinária aplica',
+          /vacina: quando a veterinária aplica/.test(ctx.vencFaltaLanc('otavio__marcela'))
+          && !/Vacina Antirrábica: onde/.test(ctx.vencFaltaLanc('otavio__marcela')),
+          ctx.vencFaltaLanc('otavio__marcela'));
+        ctx.vencEscolher('otavio__marcela', '__vet', 'periodo', 'no dia dele');
+        check('v-28 · respondido o período, o Confirmar deixa de cobrar',
           ctx.vencFaltaLanc('otavio__marcela') === '', ctx.vencFaltaLanc('otavio__marcela'));
         check('v-28 · e o rascunho é SÓ memória: o banco continua sem a resposta "zeluz"',
           doNo28().resposta === 'nao' && !doNo28().onde);
@@ -4772,6 +4804,14 @@ async function main() {
         check('v-28 · a VACINA não foi lançada: não há coluna dela, e quem aplica é a veterinária',
           Object.keys(doDia28('vacina') || {}).length === 0
           && !doNo28().lancados.vac_raiva_p, JSON.stringify(doNo28().lancados));
+        check('v-28 · em vez de lançamento, a vacina virou RECADO para a veterinária, com dia e período',
+          doNo28().vet && doNo28().vet.vacinas === 'Raiva' && doNo28().vet.periodo === 'no dia dele'
+          && doNo28().vet.dia === '2026-09-22' && doNo28().vet.dofilhot === 'do Otávio',
+          JSON.stringify(doNo28().vet));
+        check('v-28 · e a linha que sai no grupo dela é a frase dela, com o artigo certo',
+          ctx.vencVetLinha(doNo28().vet)
+          === 'Vacina de Raiva do Otávio — tutor autorizou para 22/09/2026 (no dia dele).',
+          ctx.vencVetLinha(doNo28().vet));
         check('v-28 · o que foi lançado fica registrado no cartão (para a tela dizer o que fez)',
           doNo28().lancados && doNo28().lancados.verm_p === 'lancado' && doNo28().lancados.ecto_p === 'lancado',
           JSON.stringify(doNo28().lancados));
@@ -4785,6 +4825,7 @@ async function main() {
         ctx.vencEscolher('otavio__marcela', 'verm_p', 'seg', '1 COMPRIMIDO');
         ctx.vencEscolher('otavio__marcela', 'ecto_p', 'onde', 'LOJA');
         ctx.vencEscolher('otavio__marcela', 'ecto_p', 'seg', 'PIPETA');
+        ctx.vencEscolher('otavio__marcela', '__vet', 'periodo', 'no dia dele');
         ctx.vencConfirmarZeluz('otavio__marcela');
         await drenar(14);
         check('v-28 · confirmar DE NOVO não duplica o lançamento — o dia já tinha o item',
@@ -4885,15 +4926,21 @@ async function main() {
       && /DB\.ref\('daycare\/config\/textos\/vencimento'\)\.once\('value'\)/.test(html));
     check('v-28 · e é gravado num lugar SÓ — uma porta para escrever, como manda a casa',
       (html.match(/DB\.ref\('daycare\/config\/textos\/vencimento'\)\.(set|update|push|remove|transaction)\(/g) || []).length === 1);
-    check('v-28 · a tela de Configurações desenha os dois textos e a folga em dias',
-      html.indexOf('id="cfgVencTexto"') > 0 && html.indexOf('id="cfgVencVacina"') > 0
-      && html.indexOf('id="cfgVencMargem"') > 0 && /function cfgVencSalvar\(\)\{/.test(html));
+    // 21/set/2026: deixaram de ser dois textos e passaram a ser CINCO mensagens mais o
+    // fecho da autorização — uma por assunto, do jeito que ela escreve.
+    check('v-28 · a tela de Configurações desenha as cinco mensagens, o fecho e a folga em dias',
+      ['cfgVencVacina', 'cfgVencVacinaCreche', 'cfgVencAntip', 'cfgVencVerm2', 'cfgVencEscova',
+        'cfgVencFecho', 'cfgVencMargem'].every((id) => html.indexOf("id:'" + id + "'") > 0
+        || html.indexOf('id="' + id + '"') > 0)
+      && /function cfgVencSalvar\(\)\{/.test(html));
     check('v-28 · o cartão é desenhado UMA vez — redesenhar apagaria o que a Gestão acabou de digitar',
       html.indexOf("if(VENC_CFG===null && typeof vencCfgCarregar==='function') vencCfgCarregar().then(cfgVencRender);") > 0
       && html.indexOf('else cfgVencRender();') > 0
       && (html.match(/cfgVencRender\(\)/g) || []).length === 2);
-    check('v-28 · salvar sem {itens} é recusado: a mensagem tem de dizer O QUE está vencendo',
-      html.indexOf("As duas mensagens precisam conter {itens}") > 0);
+    check('v-28 · salvar sem dizer O QUE está vencendo é recusado, mensagem por mensagem',
+      html.indexOf('As duas mensagens de vacina precisam conter {vacina}') > 0
+      && html.indexOf('precisa conter {item}') > 0
+      && html.indexOf('está em branco. Use o botão de fábrica se quiser recomeçar.') > 0);
     check('v-28 · folga fora de 1..90 é recusada — prazo inventado vira lista mentirosa',
       html.indexOf('A folga precisa ser um número de dias entre 1 e 90.') > 0);
     check('v-28 · dá para voltar ao texto de fábrica, e isso NÃO grava sozinho',
@@ -4910,7 +4957,7 @@ async function main() {
     check('v-28 · o dia VIAJA com a gravação: trocar o seletor no meio não desvia o registro para outro dia',
       html.indexOf('function vencGravar(chave, patch, rotuloAudit, oOpc, diaOpc){') > 0
       && html.indexOf('var dia=diaOpc||vencDiaAlvo();') > 0
-      && (html.match(/, o, dia\)\.then\(function\(/g) || []).length === 2
+      && (html.match(/o, dia\)\.then\(function\(/g) || []).length === 2
       && html.indexOf('if(VENC_REG_DIA===dia){ VENC_REG=VENC_REG||{};') > 0);
     check('v-28 · todo gesto que grava lê QUEM tocou — login de papel não é pessoa',
       (() => {
@@ -4968,8 +5015,8 @@ async function main() {
         delete ctx.document.activeElement; delete ctx.__focoAuto;
       }
     } else { check('v-28 · vencRedesenhoAuto existe', false, 'função não encontrada'); }
-    check('v-28 · a versão carimbada desta entrega é a 2026-09-21-03',
-      /const APP_VERSAO='2026-09-21-03';/.test(html));
+    check('v-28 · a versão carimbada desta entrega é a 2026-09-21-04',
+      /const APP_VERSAO='2026-09-21-04';/.test(html));
   }
   console.log('');
 
@@ -14510,7 +14557,7 @@ async function main() {
         !/\.catch\(function\([a-z]*\)\{\s*\}\)/.test(
           html.slice(html.indexOf('const CK_FRASE_PRATICA='), html.indexOf('function renderCkInicio('))));
       check('v-14 · a versão carimbada é a desta entrega',
-        /const APP_VERSAO='2026-09-21-03';/.test(html));
+        /const APP_VERSAO='2026-09-21-04';/.test(html));
     }
 
     // ---- v-15: O PLANO SÓ GRAVA NO CONFIRMAR (caso Cookie/Yara, 15/set/2026) --------
@@ -14863,7 +14910,7 @@ async function main() {
         f.length === 0, JSON.stringify(f));
     } else { check('v-16 · prevFaltasDe existe', false, 'função não encontrada'); }
     check('v-16 · o resumo conta rotina sem o peso, e a tela diz para onde o peso foi',
-      html.indexOf('Rotina (escova, check-up)') > 0
+      html.indexOf('Rotina (check-up)') > 0
       && html.indexOf('A pesagem do mês tem tela própria') > 0);
     check('v-16 · o peso saiu de UM lugar, não do app: a tela Peso e o quadro "Falta pesar" continuam de pé',
       /function renderPesoTela\(/.test(html) && /function pesoAtrasoLista\(/.test(html)
@@ -15325,8 +15372,8 @@ async function main() {
           + 'AVISO_COLEIRA_APOS = __bkpC.apos;', ctx);
       }
     } else { check('v-17 · prevCfgCarregar existe', false, 'função não encontrada'); }
-    check('v-24 · a versão carimbada desta entrega é a 2026-09-21-03',
-      /const APP_VERSAO='2026-09-21-03';/.test(html));
+    check('v-24 · a versão carimbada desta entrega é a 2026-09-21-04',
+      /const APP_VERSAO='2026-09-21-04';/.test(html));
 
     // ───────── v-19 · o aparelho autorizado que não se perde no iPhone (16/set/2026)
     // Auditoria de 16/set: o iPhone da Leticya gerou DOIS ids em trinta segundos
@@ -15577,8 +15624,8 @@ async function main() {
       String((html.match(/linhaBuscaCadastro\(/g) || []).length));
     check('v-29 · a linha tem estilo próprio: menor, em var(--muted), e quebrando no celular',
       /table\.pel \.pel-busca-sub\{[^}]*font-size:11\.5px[^}]*color:var\(--muted\)[^}]*white-space:normal/.test(html));
-    check('v-29 · a versão carimbada desta entrega é a 2026-09-21-03',
-      /const APP_VERSAO='2026-09-21-03';/.test(html));
+    check('v-29 · a versão carimbada desta entrega é a 2026-09-21-04',
+      /const APP_VERSAO='2026-09-21-04';/.test(html));
   }
   console.log('');
 
@@ -15862,7 +15909,7 @@ async function main() {
       /De quantos em quantos quilos a dose sobe meia unidade/.test(html)
       && /Peso encostado na virada não decide dose sozinho/.test(html));
     check('v-30 · os dois números moram no MESMO nó e saem pelo MESMO botão Salvar valores',
-      /DB\.ref\('daycare\/config\/valores'\)\.update\(\{diaria_avulsa_cent:novo, verm_faixa_kg:fx, verm_margem_kg:mg\}\)/.test(html)
+      /DB\.ref\('daycare\/config\/valores'\)\.update\(\{diaria_avulsa_cent:novo, escova_cent:escNovo, verm_faixa_kg:fx, verm_margem_kg:mg\}\)/.test(html)
       && /onclick="cfgValoresSalvar\(\)">Salvar valores<\/button>/.test(html));
     check('v-30 · e o rastro diz de quanto para quanto, valor por valor',
       /mud\.push\('vermífugo, meio comprimido a cada: '\+vermNumTexto\(fxAntes\)\+' kg → '\+vermNumTexto\(fx\)\+' kg'\)/.test(html)
@@ -15879,8 +15926,272 @@ async function main() {
         ctx.vermNumTexto(5) === '5' && ctx.vermNumTexto(0.3) === '0,3' && ctx.vermNumTexto(4.5) === '4,5',
         JSON.stringify([ctx.vermNumTexto(5), ctx.vermNumTexto(0.3)]));
     } else { check('v-30 · vermNumLer existe', false, 'função não encontrada'); }
-    check('v-30 · a versão carimbada desta entrega é a 2026-09-21-03',
-      /const APP_VERSAO='2026-09-21-03';/.test(html));
+    check('v-30 · a versão carimbada desta entrega é a 2026-09-21-04',
+      /const APP_VERSAO='2026-09-21-04';/.test(html));
+  }
+  console.log('');
+
+  // ===== v-31 · AS MENSAGENS DELA, A 2ª DOSE E A ESCOVA (Adriana, 21/set/2026) ======
+  // "Olá, bom dia! Tudo bem com você, fulana? Como está o fulaninho? Passando para informar
+  //  que a vacina de Raiva do fulaninho vence amanhã. Temos horário no dia X - terça-feira,
+  //  com a nossa Veterinária, pela manhã ou à tarde! Qual período fica melhor para vocês?"
+  //  … "Se o peludinho está na creche não precisa perguntar horário: a veterinária atende
+  //  durante a semana, de segunda a sexta, exceto quinta."
+  //  … "É dia da segunda dose, ainda tem o comprimido em casa?"
+  //  … "A escova de dente do fulaninho está na hora de trocar… devemos trocar a cada 3
+  //  meses. O valor é R$ 11,70."
+  //  … "Será acrescentar na parte de prevenção… e precisa ir para o lançamento do dia… a
+  //  troca da escova também."
+  console.log('v-31 · As mensagens dela, a 2ª dose do vermífugo e a troca de escova:');
+  {
+    // ---- (a) os textos de fábrica são as frases DELA, palavra por palavra ----------
+    const P31 = ctx.VENC_TXT_PADRAO || {};
+    check('v-31 · a mensagem de vacina é a dela, com o convite de horário e a pergunta do período',
+      String(P31.vacina || '').indexOf('Passando para informar que a vacina de') > 0
+      && String(P31.vacina || '').indexOf('Qual período fica melhor para vocês?') > 0
+      && String(P31.vacina || '').indexOf('Temos horário no dia {dia_vet}') > 0,
+      String(P31.vacina || '').slice(0, 120));
+    check('v-31 · a de vacina NA CRECHE diz que não precisa marcar horário — palavra dela',
+      String(P31.vacina_creche || '').indexOf('Passando para informar que a vacina de') > 0
+      && String(P31.vacina_creche || '').indexOf('sem precisar marcar horário') > 0,
+      String(P31.vacina_creche || '').slice(0, 120));
+    check('v-31 · a de vermífugo/carrapaticida/coleira é a dela, e chama o fecho da autorização',
+      String(P31.antip || '').indexOf('Passando para lembrar que {quando} vence {item}') > 0
+      && String(P31.antip || '').indexOf('{fecho}') > 0, String(P31.antip || ''));
+    check('v-31 · a da 2ª dose é a dela, com a pergunta do comprimido em casa',
+      String(P31.verm2 || '').indexOf('É dia da segunda dose, ainda tem o comprimido em casa?') > 0,
+      String(P31.verm2 || ''));
+    check('v-31 · a da escova é a dela, com as bactérias, os 3 meses e o preço',
+      String(P31.escova || '').indexOf('por causa de bactérias, devemos trocar a cada 3 meses') > 0
+      && String(P31.escova || '').indexOf('{valor_escova}') > 0, String(P31.escova || ''));
+    check('v-31 · o fecho da autorização fala do dia dele no Day Care e pede a confirmação',
+      String(P31.fecho || '').indexOf('Podemos fazer {quando}?') === 0
+      && String(P31.fecho || '').indexOf('confirmar por aqui') > 0, String(P31.fecho || ''));
+
+    // ---- (b) {quando}: "amanhã" só quando é MESMO amanhã ---------------------------
+    if (typeof ctx.vencFraseQuando === 'function') {
+      check('v-31 · sexta 25/09 falando de quem vem na segunda 28/09: NÃO é "amanhã"',
+        ctx.vencFraseQuando('2026-09-28', '2026-09-25', false)
+        === 'na segunda-feira (28/09), dia dele no Day Care',
+        ctx.vencFraseQuando('2026-09-28', '2026-09-25', false));
+      check('v-31 · segunda 21/09 falando de quem vem na terça 22/09: é "amanhã"',
+        ctx.vencFraseQuando('2026-09-22', '2026-09-21', false) === 'amanhã',
+        ctx.vencFraseQuando('2026-09-22', '2026-09-21', false));
+      check('v-31 · fêmea: "dia dela no Day Care" (a norma culta é obrigatória)',
+        ctx.vencFraseQuando('2026-09-28', '2026-09-25', true)
+        === 'na segunda-feira (28/09), dia dela no Day Care',
+        ctx.vencFraseQuando('2026-09-28', '2026-09-25', true));
+      check('v-31 · o próprio dia é "hoje", e data inválida não vira frase nenhuma',
+        ctx.vencFraseQuando('2026-09-21', '2026-09-21', false) === 'hoje'
+        && ctx.vencFraseQuando('', '2026-09-21', false) === ''
+        && ctx.vencFraseQuando('abacaxi', '2026-09-21', false) === '');
+    } else { check('v-31 · vencFraseQuando existe', false, 'função não encontrada'); }
+
+    // ---- (c) a agenda da veterinária: de segunda a sexta, EXCETO quinta ------------
+    if (typeof ctx.proximoDiaVet === 'function') {
+      check('v-31 · quinta NÃO é dia de atendimento dela; segunda, terça, quarta e sexta são',
+        ctx.vencEhDiaVet('2026-09-24') === false
+        && ['2026-09-21', '2026-09-22', '2026-09-23', '2026-09-25'].every((d) => ctx.vencEhDiaVet(d) === true)
+        && ctx.vencEhDiaVet('2026-09-26') === false && ctx.vencEhDiaVet('2026-09-27') === false);
+      check('v-31 · da quarta, o próximo dia dela PULA a quinta e cai na sexta',
+        ctx.proximoDiaVet('2026-09-23') === '2026-09-25', ctx.proximoDiaVet('2026-09-23'));
+      check('v-31 · da sexta, pula o fim de semana e cai na segunda',
+        ctx.proximoDiaVet('2026-09-25') === '2026-09-28', ctx.proximoDiaVet('2026-09-25'));
+      check('v-31 · feriado também não é dia dela: 02/11 é Finados, e o domingo 01/11 cai na terça 03',
+        ctx.vencEhDiaVet('2026-11-02') === false && ctx.proximoDiaVet('2026-11-01') === '2026-11-03',
+        ctx.proximoDiaVet('2026-11-01'));
+      check('v-31 · nunca devolve o próprio dia, e data inválida não vira dia nenhum',
+        ctx.proximoDiaVet('2026-09-21') === '2026-09-22'
+        && ctx.proximoDiaVet('') === '' && ctx.proximoDiaVet('abacaxi') === '');
+      check('v-31 · a regra é a FALA dela, escrita ao lado da constante',
+        html.indexOf('segunda a sexta, EXCETO QUINTA') > 0
+        && /var VENC_VET_DIAS=\{seg:1, ter:1, qua:1, sex:1\};/.test(html));
+    } else { check('v-31 · proximoDiaVet existe', false, 'função não encontrada'); }
+
+    // ---- (d) qual texto de vacina vale, e o que a mensagem diz ----------------------
+    if (typeof ctx.vencMensagens === 'function') {
+      const bkp31 = ctx.VENC_CFG;
+      try {
+        ctx.VENC_CFG = {};
+        ['2026-09-21', '2026-09-22', '2026-09-23', '2026-09-25'].forEach((d) => {
+          check('v-31 · dia-alvo ' + d + ' (dia de atendimento dela) → a mensagem é a da creche',
+            ctx.vencChaveTexto('vacina', d) === 'vacina_creche', ctx.vencChaveTexto('vacina', d));
+        });
+        check('v-31 · dia-alvo na QUINTA → a mensagem volta a oferecer horário',
+          ctx.vencChaveTexto('vacina', '2026-09-24') === 'vacina', ctx.vencChaveTexto('vacina', '2026-09-24'));
+        const oCre = { nome: 'Otávio', tutor: 'Marcela Antônia Mendes', sexo: 'M',
+          itens: ctx.vencItensDe({ vac_raiva_p: '2026-09-24' }, '2026-09-22', 7, '2026-09-21') };
+        const mCre = ctx.vencMensagem(oCre, '2026-09-22', '2026-09-21', 'vacina');
+        check('v-31 · na creche: "a vacina de Raiva do Otávio vence amanhã" e sem marcar horário',
+          mCre.indexOf('Olá, bom dia! Tudo bem com você, Marcela? Como está o Otávio?') === 0
+          && mCre.indexOf('a vacina de Raiva do Otávio vence amanhã') > 0
+          && mCre.indexOf('sem precisar marcar horário') > 0
+          && mCre.indexOf('Temos horário') < 0, mCre);
+        const oQui = { nome: 'Otávio', tutor: 'Marcela', sexo: 'M',
+          itens: ctx.vencItensDe({ vac_raiva_p: '2026-09-26' }, '2026-09-24', 7, '2026-09-23') };
+        const mQui = ctx.vencMensagem(oQui, '2026-09-24', '2026-09-23', 'vacina');
+        check('v-31 · na quinta: oferece o dia 25/09 - sexta-feira, e pergunta o período',
+          mQui.indexOf('Temos horário no dia 25/09 - sexta-feira') > 0
+          && mQui.indexOf('Qual período fica melhor para vocês?') > 0, mQui);
+        // duas vacinas na mesma semana: o plural é o app que faz
+        const oDuas = { nome: 'Otávio', tutor: 'Marcela', sexo: 'M',
+          itens: ctx.vencItensDe({ vac_raiva_p: '2026-09-24', vac_mult_p: '2026-09-25' }, '2026-09-22', 7, '2026-09-21') };
+        const mDuas = ctx.vencMensagem(oDuas, '2026-09-22', '2026-09-21', 'vacina');
+        check('v-31 · duas vacinas viram UMA mensagem: "as vacinas de Raiva e Múltipla … vencem"',
+          mDuas.indexOf('as vacinas de Raiva e Múltipla do Otávio vencem') > 0
+          && ctx.vencMensagens(oDuas, '2026-09-22', '2026-09-21').length === 1, mDuas);
+        // vacina + vermífugo: duas conversas, duas mensagens
+        const oMix = { nome: 'Otávio', tutor: 'Marcela', sexo: 'M',
+          itens: ctx.vencItensDe({ vac_raiva_p: '2026-09-24', verm_p: '2026-09-10' }, '2026-09-22', 7, '2026-09-21') };
+        const MMix = ctx.vencMensagens(oMix, '2026-09-22', '2026-09-21');
+        check('v-31 · vacina E vermífugo vencendo → DUAS mensagens, com rótulo próprio cada uma',
+          MMix.length === 2 && MMix[0].tipo === 'vacina' && MMix[1].tipo === 'antip'
+          && MMix[0].rotulo === 'Vacina' && MMix[1].rotulo === 'Vermífugo, carrapaticida e coleira'
+          && MMix[0].texto.indexOf('vacina de Raiva') > 0
+          && MMix[1].texto.indexOf('vence o vermífugo do Otávio') > 0,
+          JSON.stringify(MMix.map((m) => m.tipo)));
+        check('v-31 · a do antiparasitário traz o fecho da autorização, já com o dia dentro',
+          MMix[1].texto.indexOf('Podemos fazer amanhã?') > 0
+          && MMix[1].texto.indexOf('para receber o Otávio') > 0, MMix[1].texto);
+        // o artigo certo de cada item
+        const oCol = { nome: 'Lana', tutor: 'Marcela', sexo: 'F',
+          itens: ctx.vencItensDe({ col_p: '2026-09-22', col_nome: 'Seresto' }, '2026-09-22', 7, '2026-09-21') };
+        check('v-31 · {dofilhot} com fêmea vira "da Lana", e a coleira entra com "a" (nunca "o a coleira")',
+          ctx.vencMensagem(oCol, '2026-09-22', '2026-09-21', 'antip')
+            .indexOf('vence a coleira repelente Seresto da Lana') > 0,
+          ctx.vencMensagem(oCol, '2026-09-22', '2026-09-21', 'antip'));
+        // a escova e o preço
+        const oEsc = { nome: 'Otávio', tutor: 'Marcela', sexo: 'M',
+          itens: ctx.vencItensDe({ escova_p: '2026-09-23' }, '2026-09-22', 7, '2026-09-21') };
+        const mEsc = ctx.vencMensagem(oEsc, '2026-09-22', '2026-09-21', 'escova');
+        check('v-31 · a da escova traz o nome com "do", os 3 meses e o preço de fábrica R$ 11,70',
+          mEsc.indexOf('A escova de dente do Otávio está na hora de trocar') > 0
+          && mEsc.indexOf('devemos trocar a cada 3 meses') > 0
+          && mEsc.indexOf('O valor é R$ 11,70.') > 0, mEsc);
+        check('v-31 · o preço de fábrica são 1170 centavos, e ele mora no nó dos valores do Day Care',
+          ctx.escovaCent() === 1170
+          && /const ESCOVA_PADRAO=1170;/.test(html)
+          && /escova_cent:escNovo/.test(html)
+          && html.indexOf('id="cfgEscova"') > 0, String(ctx.escovaCent()));
+        // os textos de Configurações mandam
+        ctx.VENC_CFG = { escova: 'A escova custa {valor_escova} e é do {filhot}.',
+          verm2: 'Segunda dose d{ofilhot}, {quando}.' };
+        check('v-31 · texto gravado em Configurações MANDA sobre o padrão de fábrica, mensagem a mensagem',
+          ctx.vencMensagem(oEsc, '2026-09-22', '2026-09-21', 'escova')
+          === 'A escova custa R$ 11,70 e é do Otávio.',
+          ctx.vencMensagem(oEsc, '2026-09-22', '2026-09-21', 'escova'));
+      } finally { ctx.VENC_CFG = bkp31; }
+    } else { check('v-31 · vencMensagens existe', false, 'função não encontrada'); }
+
+    // ---- (e) a 2ª dose do vermífugo ------------------------------------------------
+    if (typeof ctx.vermDose2Prevista === 'function') {
+      const duas = { verm_t: '2026-09-01', verm_doses: '2 doses' };
+      check('v-31 · com "2 doses" na ficha, a 2ª dose é esperada 21 dias depois da 1ª',
+        ctx.vermDose2Prevista(duas) === '2026-09-22', ctx.vermDose2Prevista(duas));
+      check('v-31 · com "Dose única" não existe 2ª dose nenhuma — nada é inventado',
+        ctx.vermDose2Prevista({ verm_t: '2026-09-01', verm_doses: 'Dose única' }) === ''
+        && ctx.vermDose2Prevista({ verm_t: '2026-09-01' }) === ''
+        && ctx.vermDose2Prevista({}) === '');
+      check('v-31 · registrada a 2ª dose na ficha, ela SOME da cobrança',
+        ctx.vermDose2Prevista(Object.assign({}, duas, { verm_dose2_t: '2026-09-22' })) === '');
+      check('v-31 · data de 2ª dose ANTERIOR à 1ª é ficha errada, não dose dada: continua cobrando',
+        ctx.vermDose2Prevista(Object.assign({}, duas, { verm_dose2_t: '2026-08-01' })) === '2026-09-22');
+      check('v-31 · quem fez exame de fezes não deve vermífugo — nem a 2ª dose',
+        ctx.vencItensDe(Object.assign({}, duas, { fezes_t: '2026-09-01' }), '2026-09-22', 7, '2026-09-21')
+          .filter((x) => x.k === 'verm_dose2_p').length === 0);
+      const it31 = ctx.vencItensDe(duas, '2026-09-22', 7, '2026-09-21');
+      check('v-31 · a 2ª dose entra em Vence amanhã com o nome dela, 21 dias depois da 1ª',
+        it31.length === 1 && it31[0].k === 'verm_dose2_p'
+        && it31[0].nome === 'Vermífugo — 2ª dose' && it31[0].vence === '2026-09-22',
+        JSON.stringify(it31));
+      check('v-31 · e some assim que a 2ª dose é registrada',
+        ctx.vencItensDe(Object.assign({}, duas, { verm_dose2_t: '2026-09-22' }), '2026-09-22', 7, '2026-09-21').length === 0);
+      const o2 = { nome: 'Otávio', tutor: 'Marcela', sexo: 'M', itens: it31 };
+      const bkp2 = ctx.VENC_CFG;
+      try {
+        ctx.VENC_CFG = {};
+        const M2 = ctx.vencMensagens(o2, '2026-09-22', '2026-09-21');
+        check('v-31 · a 2ª dose tem MENSAGEM PRÓPRIA — não é a mesma do vermífugo comum',
+          M2.length === 1 && M2[0].tipo === 'verm2'
+          && M2[0].texto.indexOf('É dia da segunda dose, ainda tem o comprimido em casa?') > 0,
+          JSON.stringify(M2.map((m) => m.tipo)) + ' · ' + (M2[0] || {}).texto);
+      } finally { ctx.VENC_CFG = bkp2; }
+      check('v-31 · a data da 2ª dose é CALCULADA, não é campo no banco (a ficha não guarda verm_dose2_p)',
+        /calc:vermDose2Prevista/.test(html)
+        && /if\(it && typeof it\.calc==='function'\) return it\.calc\(ex\)\|\|'';/.test(html));
+      check('v-31 · a ficha ganhou o campo "2ª dose dada em", ao lado do vermífugo',
+        html.indexOf('<label>2ª dose dada em</label>') > 0
+        && html.indexOf("pbSet(\\'verm\\',{verm_dose2_t:this.value})") > 0
+        && html.indexOf('<label>2ª dose prevista (21 dias depois)</label>') > 0);
+    } else { check('v-31 · vermDose2Prevista existe', false, 'função não encontrada'); }
+
+    // ---- (f) a escova: prevenção, lançamento do dia e pendência ---------------------
+    if (typeof ctx.prevFaltasDe === 'function') {
+      const fE = ctx.prevFaltasDe({ escova_p: '2026-08-01' }).filter((x) => x.k === 'escova_p');
+      check('v-31 · escova vencida conta como PREVENÇÃO pendente (não é mais rotina)',
+        fE.length === 1 && fE[0].tipo === 'venc' && fE[0].rotina === false, JSON.stringify(fE));
+      const fC = ctx.prevFaltasDe({ checkup_p: '2026-08-01' }).filter((x) => x.k === 'checkup_p');
+      check('v-31 · o check-up continua sendo rotina — só a escova mudou de lado',
+        fC.length === 1 && fC[0].rotina === true, JSON.stringify(fC));
+      check('v-31 · ficha sem escova nenhuma NÃO é cobrada: a casa ainda não registrava',
+        ctx.prevFaltasDe({ vac_mult_p: '2099-01-01', vac_gripe_p: '2099-01-01',
+          vac_raiva_p: '2099-01-01', ecto_p: '2099-01-01', verm_p: '2099-01-01' }).length === 0);
+      check('v-31 · e o resumo da Prevenção deixou de chamar a escova de rotina',
+        html.indexOf('Rotina (check-up)') > 0 && html.indexOf('Rotina (escova, check-up)') < 0);
+    } else { check('v-31 · prevFaltasDe existe', false, 'função não encontrada'); }
+    {
+      const ks31 = (ctx.DASH_ITENS || []).map((i) => i.k);
+      check('v-31 · Lançamentos do dia ganhou "Troca de escova de dentes", logo DEPOIS da coleira',
+        ks31.indexOf('escova') > 0 && ks31.indexOf('escova') === ks31.indexOf('coleira') + 1,
+        JSON.stringify(ks31));
+      const itE31 = (typeof ctx.dashItem === 'function') ? ctx.dashItem('escova') : null;
+      check('v-31 · a coluna na planilha é EXATAMENTE "Troca de Escova" — é por ela que a TV acha o bloco',
+        !!itE31 && itE31.col === 'Troca de Escova' && itE31.t === 'Troca de escova de dentes',
+        JSON.stringify(itE31 && { col: itE31.col, t: itE31.t }));
+      check('v-31 · e pergunta "A escova veio?" — bolsa ou loja, resposta obrigatória',
+        !!itE31 && (itE31.campos || []).length === 1 && itE31.campos[0].c === 'onde'
+        && itE31.campos[0].rot === 'A escova veio?' && itE31.campos[0].obrig === true
+        && JSON.stringify((itE31.campos[0].ops || []).map((o) => o.v)) === JSON.stringify(['NA BOLSA', 'LOJA']),
+        JSON.stringify(itE31 && itE31.campos));
+      check('v-31 · o cartão "O que se preenche sozinho" avisa que a troca de escova é lançada à mão',
+        html.indexOf('Troca de coleira, <strong>Troca de escova</strong>, Hidratação') > 0);
+      check('v-31 · em Vence amanhã a escova agora LANÇA (deixou de ser o caso "sem coluna")',
+        !!(ctx.VENC_LANC && ctx.VENC_LANC.escova_p && ctx.VENC_LANC.escova_p.item === 'escova')
+        && ctx.VENC_LANC.escova_p.rotOnde === 'A escova veio?'
+        && html.indexOf('Não há coluna de escova de dentes na planilha do Day Care') < 0,
+        JSON.stringify(ctx.VENC_LANC && ctx.VENC_LANC.escova_p));
+      check('v-31 · e a escova também vira pendência de prevenção quando ele não vem',
+        (ctx.PEND_ITENS || []).indexOf('escova') >= 0
+        && ctx.pendDeveAbrir('escova', 'faltou', false) === true
+        && ctx.pendDeveAbrir('escova', 'veio', true) === false);
+    }
+
+    // ---- (g) o recado para a veterinária -------------------------------------------
+    check('v-31 · o recado da vacina sai pelo grupo da Veterinária, o MESMO que já recebe foto e peso',
+      /tgAvisar\(\{grupo:'vet', texto:texto\}\)/.test(html)
+      && /function vencAvisarVet\(o, v\)\{/.test(html)
+      && /tgGrupoNaPonte\('vet'\)/.test(html));
+    check('v-31 · sem o grupo na ponte, NÃO manda para o grupo errado — e o rastro diz que não mandou',
+      html.indexOf('a ponte publicada não tem o grupo da Veterinária. Avise à mão.') > 0);
+    check('v-31 · a mesa da Gestão mostra o que a veterinária ainda precisa ouvir',
+      /function vencVetAvisos\(\)\{/.test(html)
+      && html.indexOf("'Avisar a veterinária',") > 0
+      && html.indexOf('vacina autorizada pelo tutor — combinar com ela o dia e o período') > 0);
+    check('v-31 · e a MESMA frase aparece no cartão e na mesa (uma conta, dois lugares)',
+      /function vencVetPendenteTexto\(v\)\{/.test(html)
+      && html.indexOf("'Avisar a veterinária: '+String(v.pet||'')") > 0);
+
+    // A frase dela fala em "vence {quando}", e {quando} é o dia em que ele VEM. Quase todo
+    // mundo nesta tela já está atrasado — a frase pronta soa como se fosse vencer amanhã.
+    // O texto é dela e não se redige; o app DIZ isso a quem vai mandar, com as datas de
+    // verdade, na caixa que ela pode editar antes de copiar.
+    check('v-31 · quando o item JÁ venceu, o cartão avisa antes de a consultora mandar',
+      html.indexOf('Aqui há o que JÁ venceu: ') > 0
+      && html.indexOf('A frase pronta fala em &ldquo;vence&rdquo; — confira antes de mandar.') > 0
+      && /if\(\(m\.itens\|\|\[\]\)\.some\(function\(x\)\{ return x\.atrasado; \}\)\)/.test(html));
+
+    check('v-31 · a versão carimbada desta entrega é a 2026-09-21-04',
+      /const APP_VERSAO='2026-09-21-04';/.test(html));
   }
   console.log('');
 

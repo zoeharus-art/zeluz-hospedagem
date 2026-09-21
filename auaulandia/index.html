@@ -4060,7 +4060,7 @@
         <strong>Hóspedes com restrições</strong> · <strong>Adaptação</strong>.
         Reposição, falta e aniversário vão até <strong>14 dias à frente</strong>.
         Ele confere sozinho a cada 5 minutos e nunca apaga o que uma pessoa escreveu.</div>
-      <div class="hint" style="margin-top:6px">O que tem <strong>horário</strong> continua sendo lançado aqui embaixo — é a hora que faz o alarme tocar na TV: <strong>Banho</strong> · <strong>Veterinário</strong> · <strong>Avaliação</strong> · <strong>Sai cedo</strong> · <strong>Medicação</strong>. E também Troca de coleira, Hidratação, Vermífugo, Carrapaticida e Festa.</div>
+      <div class="hint" style="margin-top:6px">O que tem <strong>horário</strong> continua sendo lançado aqui embaixo — é a hora que faz o alarme tocar na TV: <strong>Banho</strong> · <strong>Veterinário</strong> · <strong>Avaliação</strong> · <strong>Sai cedo</strong> · <strong>Medicação</strong>. E também Troca de coleira, <strong>Troca de escova</strong>, Hidratação, Vermífugo, Carrapaticida e Festa.</div>
       <button type="button" class="btn btn-gold" style="margin-top:9px" onclick="dashAutoBotao(this)">Conferir a planilha agora</button>
     </div>
     <div id="dashBlocos"></div>
@@ -4339,7 +4339,23 @@
          programador"). O que está no código é só o padrão de fábrica. -->
     <div class="card so-master" id="cfgVencCard">
       <h2 style="font-size:19px">Mensagens prontas</h2>
-      <div class="hint">A mensagem que a Central manda ao tutor na véspera, em <strong>Vence amanhã</strong>. Escreva do seu jeito: o que estiver entre chaves é trocado pelo app.<br><strong>{tutor}</strong> o primeiro nome de quem cuida &middot; <strong>{filhot}</strong> só o nome &middot; <strong>{ofilhot}</strong> o nome com o artigo certo (&ldquo;o Otávio&rdquo;, &ldquo;a Lana&rdquo;) &middot; <strong>{dele}</strong> vira &ldquo;dela&rdquo; quando é fêmea &middot; <strong>{ela}</strong> vira &ldquo;ele&rdquo; ou &ldquo;ela&rdquo; &middot; <strong>{itens}</strong> a lista do que vence, com as datas &middot; <strong>{dia}</strong> (&ldquo;amanhã, terça-feira (22/09)&rdquo;).<br>Aqui também mora a folga: quantos dias antes do vencimento o FILHOt já entra na lista.</div>
+      <div class="hint">As mensagens que a Central manda ao tutor na véspera, em <strong>Vence amanhã</strong>. É <strong>uma mensagem por assunto</strong>: quem tem vacina e vermífugo vencendo recebe duas, cada uma com o seu Copiar. Escreva do seu jeito — o que estiver entre chaves é trocado pelo app.<br>
+        <strong>{tutor}</strong> o primeiro nome de quem cuida &middot;
+        <strong>{filhot}</strong> só o nome &middot;
+        <strong>{ofilhot}</strong> o nome com o artigo (&ldquo;o Otávio&rdquo;, &ldquo;a Lana&rdquo;) &middot;
+        <strong>{dofilhot}</strong> o nome com o &ldquo;de&rdquo; junto (&ldquo;do Otávio&rdquo;, &ldquo;da Lana&rdquo;) &middot;
+        <strong>{dele}</strong> vira &ldquo;dela&rdquo; quando é fêmea &middot;
+        <strong>{ela}</strong> vira &ldquo;ele&rdquo; ou &ldquo;ela&rdquo;<br>
+        <strong>{quando}</strong> &ldquo;amanhã&rdquo; só quando é mesmo amanhã; senão &ldquo;na segunda-feira (22/09), dia dele no Day Care&rdquo; &middot;
+        <strong>{dia}</strong> o dia por extenso &middot;
+        <strong>{vacina}</strong> o nome da vacina (Múltipla, Gripe, Raiva) &middot;
+        <strong>{item}</strong> o item com o artigo certo (&ldquo;o vermífugo&rdquo;, &ldquo;a coleira repelente&rdquo;) &middot;
+        <strong>{itens}</strong> a lista do que vence, com as datas<br>
+        <strong>{dia_vet}</strong> e <strong>{semana_vet}</strong> o próximo dia de atendimento da nossa Veterinária (ela não atende às quintas) &middot;
+        <strong>{valor_escova}</strong> o preço da troca de escova &middot;
+        <strong>{fecho}</strong> a frase da autorização, escrita no último campo.<br>
+        Escreva sempre no <strong>singular</strong>: com duas vacinas vencendo, o app troca sozinho &ldquo;a vacina de&rdquo; por &ldquo;as vacinas de&rdquo; e &ldquo;vence&rdquo; por &ldquo;vencem&rdquo;.<br>
+        Aqui também mora a folga: quantos dias antes do vencimento o FILHOt já entra na lista.</div>
       <div id="cfgVencWrap" style="margin-top:12px"><div class="hint">Carregando as mensagens prontas&hellip;</div></div>
     </div>
 
@@ -5846,6 +5862,11 @@
       B.push(mesaBox(ct===null?null:ct.nunca.length,'Pesquisa não enviada','FILHOts que nunca perguntamos — a campanha precisa andar','#B3261E',ir('alergia')));
       B.push(mesaBox(ct===null?null:ct.aguardando.length,'Pesquisa aguardando resposta','enviada, o tutor ainda não respondeu','#DEB428',ir('alergia')));
       B.push(mesaBox(ck===null?null:(ck.nunca.length+ck.vencidos.length),'Check-up a marcar','nunca fizeram ou venceu há mais de 12 meses — a mensagem já está pronta','#DEB428',ir('vacinas')));
+      // 21/set/2026: vacina que o tutor autorizou e a veterinária ainda não combinou.
+      // A MESMA leitura da tela Vence amanhã — uma conta, dois lugares.
+      var avVet=(typeof vencVetAvisos==='function')?vencVetAvisos():null;
+      B.push(mesaBox(avVet===null?null:avVet.length,'Avisar a veterinária',
+        'vacina autorizada pelo tutor — combinar com ela o dia e o período','#2E7D8A',ir('vencimentos')));
       B.push(quadroPend);
       B.push(quadroVence);
       if(MESA_EXPAND.atencao) EXTRA+=mesaAtencaoHtml();
@@ -13951,7 +13972,7 @@
   // inteira DEPOIS de a correção estar publicada — o aviso apareceu, ninguém tocou.
   // Agora o aparelho PARADO recarrega sozinho: trancado, com a aba escondida, na porta de
   // entrada ou 3 minutos sem ninguém tocar nele. Mão na tela = nunca recarrega.
-  const APP_VERSAO='2026-09-21-03';
+  const APP_VERSAO='2026-09-21-04';
   var RECARGA_PARADO_MS=3*60*1000, __versaoPublicada=null, __recargaTimer=null;
   function vigiarVersao(){
     if(!DB) return;
@@ -16031,6 +16052,15 @@
   function diariaAvulsaCent(){
     const v=dcValores().diaria_avulsa_cent;
     return (typeof v==='number'&&v>0)?Math.round(v):DIARIA_AVULSA_PADRAO;
+  }
+  // O PREÇO DA ESCOVA DE DENTES (Adriana, 21/set/2026): "O valor é R$ 11,70." É o número
+  // que vai escrito na mensagem ao tutor, então é dinheiro — e dinheiro muda sem
+  // programador (lei de 22/ago). Mora no MESMO nó da diária avulsa, editável em
+  // Configurações › Valores do Day Care.
+  const ESCOVA_PADRAO=1170;                  // R$ 11,70
+  function escovaCent(){
+    const v=dcValores().escova_cent;
+    return (typeof v==='number'&&v>0)?Math.round(v):ESCOVA_PADRAO;
   }
   function dcValoresCarregar(){
     if(!DB) return Promise.resolve(null);
@@ -18733,6 +18763,32 @@
   }
   // O que a Zêluz exige para frequentar (folder 2026): múltipla, gripe, raiva, vermífugo
   // e antiparasitário em dia. Vencido é item urgente — não é lembrete.
+  // ===== A 2ª DOSE DO VERMÍFUGO (Adriana, 21/set/2026) =============================
+  // "É dia da segunda dose, ainda tem o comprimido em casa?" — a ficha já perguntava
+  // "Quantas doses" (Dose única / 2 doses); o que faltava era a casa COBRAR a segunda.
+  // A data não é campo gravado: é conta. Existe enquanto a 2ª dose não foi registrada e
+  // some no dia em que alguém escreve "2ª dose dada em" na ficha.
+  //   · ficha em "Dose única" → não existe 2ª dose nenhuma, e nada é inventado;
+  //   · quem fez exame de fezes não deve vermífugo (a regra do cadastro vale aqui também);
+  //   · passou dos 21 dias e ninguém registrou? Continua aparecendo, ATRASADA — sumir em
+  //     silêncio é como se perde uma dose (lista curta MENTE).
+  function vermDose2Prevista(ex){
+    ex=ex||{};
+    var t=String((ex&&ex.verm_t)||'');
+    if(!/^\d{4}-\d{2}-\d{2}$/.test(t)) return '';
+    if(String((ex&&ex.verm_doses)||'')!=='2 doses') return '';
+    var dada=String((ex&&ex.verm_dose2_t)||'');
+    if(/^\d{4}-\d{2}-\d{2}$/.test(dada) && dada>=t) return '';   // já foi dada: acabou
+    return addDiasISO(t, VERMIF_2A_DOSE);
+  }
+  // A data que a ficha MOSTRA como 2ª dose: a que foi dada, se houver; senão a prevista.
+  function vermDose2Data(ex){
+    ex=ex||{};
+    var dada=String((ex&&ex.verm_dose2_t)||'');
+    if(/^\d{4}-\d{2}-\d{2}$/.test(dada)) return dada;
+    var t=String((ex&&ex.verm_t)||'');
+    return /^\d{4}-\d{2}-\d{2}$/.test(t)?addDiasISO(t, VERMIF_2A_DOSE):'';
+  }
   const PREV_ITENS=[
     // nomeK = onde fica o NOME do produto/vacina usado (Adriana, 25/ago/2026: "ter o local
     // para colocar o nome — igual o vermífugo tem"). Mesmo campo na ficha e na Prevenção.
@@ -18750,12 +18806,20 @@
     {k:'col_p',       base:'col_t',       nome:'Coleira repelente',         dias:0, coleira:true, opcional:true, grupo:'antip'},
     {k:'verm_p',      base:'verm_t',      nome:'Vermífugo',                 dias:VERMIF_PROX, dispensaSe:'fezes_t', nomeK:'verm_nome', grupo:'antip',
      alt:'vermifugo_p', altBase:'vermifugo_t'},
+    // A 2ª dose não tem campo no banco: a data vem de vermDose2Prevista(), logo acima.
+    {k:'verm_dose2_p', base:'verm_dose2_t', nome:'Vermífugo — 2ª dose',      dias:0, dispensaSe:'fezes_t', grupo:'antip', opcional:true, calc:vermDose2Prevista},
     {k:'fezes_p',     base:'fezes_t',     nome:'Exame de fezes',            dias:FEZES_PROX, opcional:true, grupo:'antip'},
     // Adriana, 19/ago/2026: "troca de escova de dentes, item a inserir; check-up — data do
     // último". Escova troca a cada 3 meses; check-up é anual.
-    // rotina:true → não entra no número de "prevenção pendente". A casa ainda não
-    // registra escova nem check-up; quando começar a registrar, o vencimento aparece.
-    {k:'escova_p',    base:'escova_t',    nome:'Troca de escova de dentes', dias:90,  grupo:'saude', opcional:true, rotina:true},
+    // 21/set/2026, Adriana: "Será acrescentar na parte de prevenção... e precisa ir para o
+    // lançamento do dia... a troca da escova também." A escova DEIXOU de ser rotina: conta
+    // como prevenção pendente, igual ao vermífugo, entra no resumo e nos filtros da tela, e
+    // agora tem coluna nos Lançamentos do dia. Check-up continua rotina.
+    // `opcional:true` fica: quem NUNCA teve escova registrada não é cobrado por isso. Cobrar
+    // de uma vez 222 fichas em branco é exatamente o que fez a tela dizer centenas de
+    // pendências e ninguém acreditar em nenhuma (26/ago/2026). Registrou uma vez, a validade
+    // de 90 dias passa a valer e a cobrança aparece sozinha.
+    {k:'escova_p',    base:'escova_t',    nome:'Troca de escova de dentes', dias:90,  grupo:'saude', opcional:true},
     {k:'checkup_p',   base:'checkup_t',   nome:'Check-up',                  dias:365, grupo:'saude', opcional:true, rotina:true}
   ];
   // Quantos dias este item vale PARA ESTE FILHOt. Só a coleira varia: cada marca dura um
@@ -18768,6 +18832,10 @@
   // O valor do item, aceitando o nome novo e o antigo da ficha (ver `alt` em PREV_ITENS).
   function prevValor(ex, it){
     ex=ex||{};
+    // Item CALCULADO (a 2ª dose do vermífugo, 21/set/2026): não existe campo no banco — a
+    // data sai de uma conta sobre a própria ficha. Tudo o mais do app (Prevenção, Vence
+    // amanhã, filtro, Excel) continua lendo pela MESMA porta, sem saber a diferença.
+    if(it && typeof it.calc==='function') return it.calc(ex)||'';
     var v=ex[it.k];
     if(!v && it.alt) v=ex[it.alt];
     return v||'';
@@ -18882,7 +18950,7 @@
     {k:'deve',   t:'Devendo',       dica:'Vacina ou antiparasitário vencido, ou faltando numa ficha que já tem os outros.'},
     {k:'semcad', t:'Sem cadastro',  dica:'Ficha de prevenção inteiramente em branco — nunca preenchemos nenhuma data. Não quer dizer que esteja devendo.'},
     {k:'antigo', t:'Ficha por migrar', dica:'A data está só no campo antigo do cadastro (carrapaticida/vermífugo), que a equipe deixou de usar. Pode ser que já tenha sido dado e ninguém lançou no campo novo — confira com o tutor antes de cobrar.'},
-    {k:'rotina', t:'Rotina',        dica:'Só escova de dentes ou check-up. Rotina da casa, não prevenção. (O peso saiu daqui em 15/set/2026 — tem tela própria.)'},
+    {k:'rotina', t:'Rotina',        dica:'Só o check-up. Rotina da casa, não prevenção. (O peso saiu daqui em 15/set/2026 e a escova de dentes em 21/set/2026 — a escova agora conta como prevenção.)'},
     {k:'erro',   t:'Data errada',   dica:'Alguém digitou o ano errado na ficha (0026, 0207). Precisa de correção manual.'},
     {k:'tudo',   t:'Tudo',          dica:'Todo mundo com qualquer pendência, das quatro situações acima.'}
   ];
@@ -19147,9 +19215,10 @@
 
     var res=document.getElementById('prevResumo');
     if(res){
-      // Prevenção (vacina e antiparasitário) é uma conta; rotina (peso, escova,
-      // check-up) é outra. Misturar as duas foi o que fez a tela dizer centenas de
-      // pendências e ninguém acreditar em nenhuma (Adriana, 26/ago/2026).
+      // Prevenção (vacina e antiparasitário) é uma conta; rotina é outra. Misturar as duas
+      // foi o que fez a tela dizer centenas de pendências e ninguém acreditar em nenhuma
+      // (Adriana, 26/ago/2026). Em 21/set/2026 a ESCOVA saiu da rotina e entrou na
+      // prevenção, a pedido dela — na rotina só sobrou o check-up.
       var contaPor=function(fn){ return todos.reduce(function(a,o){ return a+o.faltas.filter(fn).length; },0); };
       var vencPrev=contaPor(function(f){ return f.tipo==='venc' && !f.rotina; });
       var semPrev =contaPor(function(f){ return f.tipo==='sem'  && !f.rotina; });
@@ -19162,7 +19231,7 @@
         +'<span class="val" style="font-weight:800;color:'+(vencPrev?'var(--crm-critico)':'var(--crm-ok)')+'">'+vencPrev+'</span></div>'
         +'<div class="pair"><span class="k">Sem data no cadastro</span>'
         +'<span class="val" style="font-weight:800;color:'+(semPrev?'var(--crm-atencao-text)':'var(--crm-ok)')+'">'+semPrev+'</span></div>'
-        +'<div class="pair"><span class="k">Rotina (escova, check-up)</span>'
+        +'<div class="pair"><span class="k">Rotina (check-up)</span>'
         +'<span class="val" style="font-weight:800;color:var(--muted)">'+rotina+'</span></div>'
         +(quebrada?('<div class="pair"><span class="k"><strong>Datas impossíveis</strong> — alguém digitou o ano errado</span>'
         +'<span class="val" style="font-weight:800;color:var(--crm-critico)">'+quebrada+'</span></div>'):'');
@@ -19903,7 +19972,10 @@
       feito:ex.verm_t, prox:ex.verm_p,
       recalc:function(dt){
         if(!dt) return '';
-        if(ex.verm_doses==='2 doses'){ var d2=addDiasISO(dt,VERMIF_2A_DOSE); return addDiasISO(d2,VERMIF_PROX); }
+        if(ex.verm_doses==='2 doses'){
+          var d2=vermDose2Data(Object.assign({},ex,{verm_t:dt}))||addDiasISO(dt,VERMIF_2A_DOSE);
+          return addDiasISO(d2,VERMIF_PROX);
+        }
         return addDiasISO(dt,VERMIF_PROX);
       }}];
     if(b==='fezes') return [{nome:'Exame de fezes', campoFeito:'fezes_t', campoProx:'fezes_p',
@@ -19925,9 +19997,15 @@
     if(b==='ecto'){ var d=ectoDur(ex); patch.ecto_p=(ex.ecto_t&&d)?addDiasISO(ex.ecto_t,d):''; }
     if(b==='col'){ var dc=coleiraDur(ex); patch.col_p=(ex.col_t&&dc)?addDiasISO(ex.col_t,dc):''; }
     if(b==='verm'){
-      if(!ex.verm_t){ patch.verm_2a=''; patch.verm_p=''; }
-      else if(ex.verm_doses==='2 doses'){ var d2=addDiasISO(ex.verm_t,VERMIF_2A_DOSE); patch.verm_2a=d2; patch.verm_p=addDiasISO(d2,VERMIF_PROX); }
-      else { patch.verm_2a=''; patch.verm_p=addDiasISO(ex.verm_t,VERMIF_PROX); }
+      if(!ex.verm_t){ patch.verm_2a=''; patch.verm_p=''; patch.verm_dose2_t=''; }
+      else if(ex.verm_doses==='2 doses'){
+        // A data real da 2ª dose, quando houver; senão a prevista de 21 dias.
+        var d2=vermDose2Data(ex)||addDiasISO(ex.verm_t,VERMIF_2A_DOSE);
+        patch.verm_2a=d2; patch.verm_p=addDiasISO(d2,VERMIF_PROX);
+      }
+      // Voltou para "Dose única": não existe 2ª dose nenhuma — a data registrada sai junto,
+      // senão a ficha guardaria uma dose que o regime atual não prevê.
+      else { patch.verm_2a=''; patch.verm_dose2_t=''; patch.verm_p=addDiasISO(ex.verm_t,VERMIF_PROX); }
     }
     if(b==='fezes'){ patch.fezes_p=ex.fezes_t?addDiasISO(ex.fezes_t,FEZES_PROX):''; }
     // ===== TRAVA DE LÓGICA DA DATA — Adriana, 29/ago/2026 (mesma regra do prevLancar) =====
@@ -20051,7 +20129,12 @@
   }
   function blocoVerm(ex){
     const fez=!!ex.fezes_t;
-    const d2=(ex.verm_t&&ex.verm_doses==='2 doses')?addDiasISO(ex.verm_t,VERMIF_2A_DOSE):'';
+    const duas=(ex.verm_doses==='2 doses');
+    const d2prev=(ex.verm_t&&duas)?addDiasISO(ex.verm_t,VERMIF_2A_DOSE):'';
+    // A 2ª dose DADA manda sobre a prevista (Adriana, 21/set/2026): se a repetição saiu com
+    // atraso, é da data real que sai o "próximo vermífugo" — contar dos 21 dias teóricos
+    // adiantaria a próxima vermifugação em cima de uma dose que ainda nem tinha sido dada.
+    const d2=duas?(vermDose2Data(ex)||d2prev):'';
     const prox=ex.verm_t?addDiasISO(d2||ex.verm_t,VERMIF_PROX):'';
     return '<div class="prev-bloco" id="pb-verm">'
       +'<div class="prev-tit">Vermifugação '+(ex.verm_p?seloValidade(ex.verm_p):'')+'</div>'
@@ -20062,8 +20145,10 @@
           +['Dose única','2 doses'].map(function(d){ return '<button type="button" class="'+(ex.verm_doses===d?'on':'')+'" onclick="pick(this);pbSet(\'verm\',{verm_doses:\''+d+'\'})">'+d+'</button>'; }).join('')
         +'</div></div>'
         +'<div class="field"><label>'+(ex.verm_doses==='2 doses'?'1ª dose em':'Deu em')+'</label><input type="date" class="cad-in" value="'+(ex.verm_t||'')+'" onchange="pbSet(\'verm\',{verm_t:this.value})" min="2015-01-01" max="2035-12-31" onkeydown="return dataSoNoCalendario(event)"></div>'
-        +(ex.verm_doses==='2 doses'
-          ? '<div class="field"><label>2ª dose (21 dias depois)</label><div class="prev-calc">'+(d2?fmtBR(d2):'informe a 1ª dose')+'</div></div>'
+        +(duas
+          ? '<div class="field"><label>2ª dose prevista (21 dias depois)</label><div class="prev-calc">'+(d2prev?fmtBR(d2prev):'informe a 1ª dose')+'</div></div>'
+            +'<div class="field"><label>2ª dose dada em</label><input type="date" class="cad-in" value="'+(ex.verm_dose2_t||'')+'" onchange="pbSet(\'verm\',{verm_dose2_t:this.value})" min="2015-01-01" max="2035-12-31" onkeydown="return dataSoNoCalendario(event)">'
+            +'<div class="hint" style="margin-top:3px">Enquanto esta data estiver em branco, a 2ª dose continua sendo cobrada na Prevenção e em <strong>Vence amanhã</strong>. Preencheu, ela some — e o próximo vermífugo passa a contar desta data.</div></div>'
           : '')
         +'<div class="field"><label>Próximo vermífugo</label><div class="prev-calc">'+(prox?fmtBR(prox)+' · 4 meses'+(ex.verm_doses==='2 doses'?' após a 2ª dose':''):'informe a data')+'</div></div>'
         +'<div class="field" style="grid-column:1/-1"><label>Dose pelo peso</label><div class="prev-calc">'+vermFichaTextoHTML(ex)+'</div></div>'
@@ -20483,7 +20568,7 @@
   function linhaBuscaCadastro(p, hojeISOv){
     if(!p) return '';
     var ex={}; try{ ex=pelExtra(p)||{}; }catch(e){ ex={}; } /* silencioso de propósito: sem ficha extra vale o que veio na lista */
-    var h=/^d{4}-d{2}-d{2}$/.test(hojeISOv||'')?hojeISOv:((typeof hojeISO==='function')?hojeISO():'');
+    var h=/^\d{4}-\d{2}-\d{2}$/.test(hojeISOv||'')?hojeISOv:((typeof hojeISO==='function')?hojeISO():'');
     var peso=pesoTextoBusca(ex,h);
     var corPeso=pesoVelhoBusca(ex,h)?' style="color:var(--crm-atencao-text);font-weight:700"':'';
     return '<span class="pel-busca-sub"><span'+corPeso+'>último peso: '+escAttr(peso)+'</span></span>';
@@ -28764,6 +28849,13 @@
     {v:'DAYCARE', t:'Troca no Day Care'},
     {v:'BANHO',   t:'Troca no banho'}
   ];
+  // TROCA DE ESCOVA (Adriana, 21/set/2026): "e precisa ir para o lançamento do dia... a
+  // troca da escova também." A pergunta é a mesma da coleira: a escova veio de casa ou foi
+  // comprada aqui? Sem isto ninguém sabe se separa a escova da bolsa ou tira uma da loja.
+  var DASH_ESCOVA_VEIO=[
+    {v:'NA BOLSA', t:'Veio na bolsa'},
+    {v:'LOJA',     t:'Comprada aqui na loja'}
+  ];
   // Os temas que a casa faz. Escolher é obrigatório: sem tema ninguém consegue preparar
   // a festa, e a TV anuncia um aniversário sem dizer do quê.
   var DASH_TEMAS=[
@@ -28822,6 +28914,10 @@
     {k:'coleira',       t:'Troca de coleira',           col:'Troca de Coleira',               icone:'🏷️', campos:[
       {c:'veio', rot:'A coleira veio?',       ops:DASH_COL_VEIO, obrig:true},
       {c:'onde', rot:'Onde vai ser trocada?', ops:DASH_COL_ONDE, obrig:true}]},
+    // A coluna na planilha é "Troca de Escova", escrita exatamente assim — é por este nome
+    // que a ponte acha a coluna e a TV acha o bloco. Mudar um acento aqui apaga o bloco.
+    {k:'escova',        t:'Troca de escova de dentes',  col:'Troca de Escova',                icone:'🪥', campos:[
+      {c:'onde', rot:'A escova veio?', ops:DASH_ESCOVA_VEIO, obrig:true}]},
     {k:'hidratacao',    t:'Hidratação patinha e focinho',col:'Hidratação patinha e Focinho',  icone:'💧'},
     // Adaptação (Adriana, 04/set/2026): o lançamento é quem dá o dia 1 — pede a DATA de
     // início e o TIPO. Day Care dispara a contagem de 45 dias corridos na ficha;
@@ -29606,7 +29702,7 @@
    *  de pendências, porque isso é muito sério, senão vai esquecendo."
    *
    * O QUE VIRA PENDÊNCIA: só o que é APLICADO NO FILHOt e tem data — vermífugo,
-   * carrapaticida, troca de coleira, medicação e hidratação. Banho, veterinário, avulso,
+   * carrapaticida, troca de coleira, troca de escova, medicação e hidratação. Banho, veterinário, avulso,
    * falta avisada, festa, reposição, adaptação e avaliação NÃO: ou não dependem de o corpo
    * dele estar aqui, ou já têm o seu próprio lugar no sistema.
    *
@@ -29625,7 +29721,9 @@
    * hoje, pela MESMA porta — dashLancar — e portanto vai à planilha e à TV) ou "Tirar
    * pendência" com motivo escolhido. Os dois gravam quem, quando e o quê na auditoria.
    * ==================================================================================== */
-  var PEND_ITENS=['vermifugo','carrapaticida','coleira','medicacao','hidratacao'];
+  // 21/set/2026: a troca de escova entrou. É a mesma regra dos outros — foi marcada para um
+  // dia em que ele não veio, então fica guardada para a próxima vinda, em vez de se perder.
+  var PEND_ITENS=['vermifugo','carrapaticida','coleira','escova','medicacao','hidratacao'];
   var PEND_ABERTAS=null;      // {chave: {item: registro}} — null = ainda não lido
   var PEND_MOTIVOS=[
     {v:'tutor-aplicou', t:'Tutor aplicou em casa'},
@@ -30096,10 +30194,60 @@
   // O padrão de fábrica da margem: além do que já venceu, entra o que vence nos próximos
   // 7 dias. É número de negócio — a Gestão muda em Configurações.
   var VENC_MARGEM_PADRAO=7;
-  // O texto é o DELA, palavra por palavra. As chaves entre { } são o que muda por FILHOt.
-  var VENC_TEXTO_PADRAO='Olá, {tutor}, tudo bem? Como está {ofilhot}? Passando para avisar: {itens}. Podemos fazer {dia}, aqui na Zêluz? Se preferir fazer em casa ou no veterinário, é só nos avisar para atualizarmos a ficha {dele}.';
-  // Vacina não se "faz aqui": quem aplica é a veterinária, com hora marcada. A frase muda.
-  var VENC_TEXTO_VACINA_PADRAO='Olá, {tutor}, tudo bem? Como está {ofilhot}? Passando para avisar: {itens}. Podemos agendar com a veterinária? Se preferir fazer com o veterinário de confiança, é só nos avisar a data para atualizarmos a ficha {dele}.';
+
+  // ===== AS MENSAGENS SÃO DELA (Adriana, 21/set/2026) =============================
+  // Ela mandou as mensagens que a equipe usa DE VERDADE, e elas substituíram o texto
+  // genérico que morava aqui. O que se corrigiu foi ortografia, acento e crase: a
+  // estrutura, as frases e os emojis são dela — texto ditado se COPIA, não se redige.
+  //
+  // UMA MENSAGEM POR ASSUNTO. Vacina não se fala como vermífugo, e a 2ª dose não se fala
+  // como a 1ª: são conversas diferentes, e misturá-las numa frase só é o que fazia o tutor
+  // responder "ok" sem dizer a quê. Quem tem vacina E vermífugo vencendo recebe DUAS
+  // mensagens, cada uma com o seu Copiar.
+  //
+  // Tudo isto é padrão de FÁBRICA: os seis textos moram em Configurações › Mensagens
+  // prontas (lei de 22/ago: "regra nova não pode exigir programador").
+  var VENC_TXT_PADRAO={
+    // Vacina, quando é preciso marcar horário (quinta a veterinária não atende, ou o
+    // FILHOt não vem no dia).
+    vacina:'Olá, bom dia! Tudo bem com você, {tutor}? Como está {ofilhot}? 🥰🐶\n'
+      +'💉 Passando para informar que a vacina de {vacina} {dofilhot} vence {quando}. Temos horário no dia {dia_vet} - {semana_vet}-feira, com a nossa Veterinária, pela manhã ou à tarde! 🩺\n'
+      +'Qual período fica melhor para vocês?',
+    // Vacina, quando ele já vem no dia: "Se o peludinho está na creche não precisa
+    // perguntar horário" — palavra dela.
+    vacina_creche:'Olá, bom dia! Tudo bem com você, {tutor}? Como está {ofilhot}? 🥰🐶\n'
+      +'💉 Passando para informar que a vacina de {vacina} {dofilhot} vence {quando}. Como {ela} estará conosco nesse dia, a nossa Veterinária faz a aplicação durante o dia {dele} no Day Care, sem precisar marcar horário. Podemos? 🩺',
+    // Vermífugo, carrapaticida e coleira — o artigo certo viaja junto com o item.
+    antip:'Olá, {tutor}, como vai?\n'
+      +'Como está {ofilhot}?\n'
+      +'💊 Passando para lembrar que {quando} vence {item} {dofilhot}.\n'
+      +'{fecho}',
+    // A 2ª dose do vermífugo, 21 dias depois da 1ª.
+    verm2:'Olá, {tutor}, como vai?\n'
+      +'Como está {ofilhot}?\n'
+      +'💊 Passando para lembrar que {quando} vence o vermífugo {dofilhot} ☺️\n'
+      +'É dia da segunda dose, ainda tem o comprimido em casa?',
+    // Troca de escova de dentes — a única que fala preço.
+    escova:'Olá, {tutor}, como está?\n'
+      +'A escova de dente {dofilhot} está na hora de trocar. Assim como a nossa escova, por causa de bactérias, devemos trocar a cada 3 meses.\n'
+      +'O valor é {valor_escova}.\n'
+      +'Podemos fazer a troca?\n'
+      +'{fecho}',
+    // O fecho da autorização, pedido por ela: "completar encantadoramente sobre a
+    // autorização para colocar no dia do daycare". Entra onde estiver escrito {fecho}.
+    fecho:'Podemos fazer {quando}? É só nos confirmar por aqui que deixamos tudo pronto para receber {ofilhot}. 🐾'
+  };
+  // A ordem em que as mensagens aparecem no cartão, e como cada uma se chama na tela.
+  var VENC_ORDEM_TIPOS=['vacina','antip','verm2','escova'];
+  var VENC_TIPO_ROTULO={vacina:'Vacina', antip:'Vermífugo, carrapaticida e coleira',
+                        verm2:'Vermífugo — 2ª dose', escova:'Troca de escova de dentes'};
+  // O nome da vacina como o tutor a conhece — é ele que entra na frase ("a vacina de
+  // Raiva"), não o rótulo interno ("Vacina Antirrábica").
+  var VENC_VACINA_NOME={vac_mult_p:'Múltipla', vac_gripe_p:'Gripe', vac_raiva_p:'Raiva'};
+  // A AGENDA DA VETERINÁRIA, palavra dela: "a veterinária atende durante a semana, de
+  // segunda a sexta, EXCETO QUINTA." Não é número de negócio editável — é a agenda da
+  // profissional, e esta frase é a razão de ser desta constante. Mudou a agenda, muda aqui.
+  var VENC_VET_DIAS={seg:1, ter:1, qua:1, sex:1};
 
   // Como cada item se chama DENTRO da frase, com o artigo certo. Sem esta tabela sairia
   // "o Vacina Antirrábica" e "o Ectoparasitas" — e erro de português numa mensagem ao tutor
@@ -30107,6 +30255,7 @@
   var VENC_FRASE={
     vac_mult_p:'a vacina múltipla', vac_gripe_p:'a vacina de gripe', vac_raiva_p:'a vacina antirrábica',
     ecto_p:'o carrapaticida', col_p:'a coleira repelente', verm_p:'o vermífugo',
+    verm_dose2_p:'a 2ª dose do vermífugo',
     fezes_p:'o exame de fezes', escova_p:'a troca da escova de dentes', checkup_p:'o check-up'
   };
   // O nome curto do item NESTA tela. É o mesmo do texto da mensagem e o mesmo do item dos
@@ -30115,6 +30264,7 @@
   var VENC_ROTULO={
     vac_mult_p:'Vacina Múltipla', vac_gripe_p:'Vacina de Gripe', vac_raiva_p:'Vacina Antirrábica',
     ecto_p:'Carrapaticida', col_p:'Coleira repelente', verm_p:'Vermífugo',
+    verm_dose2_p:'Vermífugo — 2ª dose',
     fezes_p:'Exame de fezes', escova_p:'Troca de escova de dentes', checkup_p:'Check-up'
   };
   var VENC_DIA_NOME={seg:'segunda-feira', ter:'terça-feira', qua:'quarta-feira',
@@ -30128,10 +30278,25 @@
     {v:'nao',   t:'Não quer agora',                      cor:'#B3261E'},
     {v:'sem',   t:'Não respondeu',                       cor:'#6b5f4b'}
   ];
+  // 'vet' NÃO é botão: é o que fica gravado quando o tutor autoriza e o que vence é só
+  // vacina — quem aplica é a veterinária, e o cartão passa a cobrar o aviso a ela.
   function vencRespRotulo(v){
+    if(String(v||'')==='vet') return 'Pode fazer na Zêluz (com a veterinária)';
     var x=VENC_RESPOSTAS.filter(function(r){ return r.v===String(v||''); })[0];
     return x?x.t:'';
   }
+  // O botão "Pode fazer na Zêluz" continua aceso quando a resposta gravada foi 'vet'.
+  function vencRespEh(resp, v){
+    resp=String(resp||'');
+    return resp===v || (v==='zeluz' && resp==='vet');
+  }
+  // O período em que a veterinária aplica. Três respostas e só três — e a terceira só
+  // aparece quando o dia-alvo é dia de atendimento dela.
+  var VENC_VET_PERIODOS=[
+    {v:'manhã',       t:'Pela manhã'},
+    {v:'tarde',       t:'À tarde'},
+    {v:'no dia dele', t:'No dia dele no Day Care', soNoDia:true}
+  ];
   // Onde está o produto. Duas respostas e só duas: ou veio com ele, ou sai da nossa loja.
   var VENC_ONDE=[
     {v:'NA BOLSA', t:'Está na bolsa dele'},
@@ -30141,14 +30306,16 @@
   // `onde` = o campo que recebe NA BOLSA / LOJA · `segunda` = a outra pergunta obrigatória
   // daquele item (o painel dos Lançamentos já a cobra, então ela é cobrada aqui também —
   // o botão não pode dizer "Lançar" e o lançamento recusar depois).
-  // VACINA não entra: quem aplica é a veterinária. ESCOVA DE DENTES também não: não existe
-  // coluna dela na planilha, e inventar uma coluna apagaria um bloco da TV. O que dá para
-  // registrar da escova é ONDE ela está — e isso fica aqui mesmo, dito com todas as letras.
+  // VACINA não entra: quem aplica é a veterinária, e o que ela precisa saber sai por outro
+  // caminho (o aviso no grupo dela). A ESCOVA DE DENTES entrou em 21/set/2026 — "precisa ir
+  // para o lançamento do dia... a troca da escova também" — e agora tem coluna na planilha.
+  // `rotOnde` troca a pergunta quando "onde está o produto" não é o jeito de perguntar.
   var VENC_LANC={
     verm_p:  {item:'vermifugo',     onde:'onde', segunda:{c:'qtd',  rot:'Quanto vai ser dado',   ops:DASH_QTD}},
+    verm_dose2_p:{item:'vermifugo', onde:'onde', segunda:{c:'qtd',  rot:'Quanto vai ser dado',   ops:DASH_QTD}},
     ecto_p:  {item:'carrapaticida', onde:'onde', segunda:{c:'qtd',  rot:'Quanto vai ser dado',   ops:DASH_QTD_PIP}},
     col_p:   {item:'coleira',       onde:'veio', segunda:{c:'onde', rot:'Onde vai ser trocada',  ops:DASH_COL_ONDE}},
-    escova_p:{item:'',              onde:'onde'}
+    escova_p:{item:'escova',        onde:'onde', rotOnde:'A escova veio?', ops:DASH_ESCOVA_VEIO}
   };
   function vencNo(dia, chave){ return 'daycare/vencimentos/'+dia+'/'+chave; }
   function vencRegDe(chave){ return ((VENC_REG||{})[chave])||null; }
@@ -30158,10 +30325,12 @@
     var n=parseInt(((VENC_CFG||{}).margem),10);
     return (n>0&&n<=90)?n:VENC_MARGEM_PADRAO;
   }
-  function vencTexto(soVacina){
+  // O texto gravado pela Gestão manda; o do código é só o padrão de fábrica. Texto em
+  // branco cai no padrão — nunca numa mensagem vazia na mão da consultora.
+  function vencTexto(chave){
     var c=VENC_CFG||{};
-    var t=String(soVacina?(c.textoVacina||''):(c.texto||''));
-    return t.trim()||(soVacina?VENC_TEXTO_VACINA_PADRAO:VENC_TEXTO_PADRAO);
+    var t=String((c&&c[chave])||'');
+    return t.trim()||VENC_TXT_PADRAO[chave]||'';
   }
   function vencCfgCarregar(){
     if(!DB) return Promise.resolve(null);
@@ -30195,9 +30364,47 @@
     } while(d && !vencEhDiaDayCare(d) && guarda<20);
     return vencEhDiaDayCare(d)?d:'';
   }
+  // O DIA DA VETERINÁRIA (Adriana, 21/set/2026): de segunda a sexta, exceto quinta — e
+  // feriado a casa não abre. A lista de feriados é a MESMA do Orçamento, como no calendário
+  // do Day Care: duas listas de feriado discordariam.
+  function vencEhDiaVet(iso){
+    if(!/^\d{4}-\d{2}-\d{2}$/.test(iso||'')) return false;
+    var d=(typeof orcDiaSemana==='function')?orcDiaSemana(iso):'';
+    if(!VENC_VET_DIAS[d]) return false;                       // sábado, domingo ou QUINTA
+    if(typeof orcEhFeriado==='function' && orcEhFeriado(iso)) return false;
+    return true;
+  }
+  // O próximo dia em que ela atende DEPOIS de `aPartirDe`. Nunca devolve o próprio dia: é
+  // um horário que se oferece ao tutor, e oferecer hoje para uma ligação de hoje não serve.
+  function proximoDiaVet(aPartirDe){
+    var iso=String(aPartirDe||'').slice(0,10);
+    if(!/^\d{4}-\d{2}-\d{2}$/.test(iso)) return '';
+    var d=iso, guarda=0;
+    do{
+      d=(typeof orcMaisDias==='function')?orcMaisDias(d,1):addDiasISO(d,1);
+      guarda++;
+    } while(d && !vencEhDiaVet(d) && guarda<20);
+    return vencEhDiaVet(d)?d:'';
+  }
   function vencDiaAlvo(){
     if(VENC_DIA_SEL) return VENC_DIA_SEL;
     return proximoDiaDayCare((typeof zHojeISO==='function')?zHojeISO():'');
+  }
+  // {quando} — A REGRA DELA (21/set/2026): "amanhã" só quando o dia-alvo é LITERALMENTE o
+  // dia seguinte ao de hoje. A mensagem mandada na sexta para quem vem na segunda não pode
+  // dizer "amanhã": diz "na segunda-feira (28/09), dia dele no Day Care". Dizer "amanhã"
+  // num sábado é o tipo de erro que o tutor lê como desatenção.
+  function vencFraseQuando(diaAlvo, hoje, femea){
+    hoje=hoje||((typeof zHojeISO==='function')?zHojeISO():'');
+    if(!/^\d{4}-\d{2}-\d{2}$/.test(diaAlvo||'')) return '';
+    if(diaAlvo===hoje) return 'hoje';
+    var amanha=(typeof orcMaisDias==='function')?orcMaisDias(hoje,1):addDiasISO(hoje,1);
+    if(diaAlvo===amanha) return 'amanhã';
+    var d=(typeof orcDiaSemana==='function')?orcDiaSemana(diaAlvo):'';
+    var nome=VENC_DIA_NOME[d]||'';
+    var br=vencData(diaAlvo, hoje);
+    return (nome?('na '+nome):'no dia')+(br?(' ('+br+')'):'')
+      +', dia '+(femea?'dela':'dele')+' no Day Care';
   }
   // A frase do dia, em português, para a mensagem do tutor: "amanhã, terça-feira (22/09)".
   function vencFraseDia(diaAlvo, hoje){
@@ -30302,10 +30509,51 @@
     if(hoje && String(iso||'').slice(0,4)===String(hoje).slice(0,4)) return br.slice(0,5);
     return br;
   }
+  // O nome do item COM O ARTIGO CERTO: "o vermífugo", "o carrapaticida", "a coleira
+  // repelente". Sem isto sairia "vence o a coleira" — e erro de português numa mensagem ao
+  // tutor desfaz o que o preço promete.
+  function vencNomeComArtigo(it){
+    var base=VENC_FRASE[it.k]||String((it&&it.nome)||'').toLowerCase();
+    if(it&&it.k==='col_p'&&it.marca) base+=' '+it.marca;
+    return base;
+  }
   function vencFraseItem(it, hoje){
-    var base=VENC_FRASE[it.k]||String(it.nome||'').toLowerCase();
-    if(it.k==='col_p'&&it.marca) base+=' '+it.marca;
-    return base+(it.atrasado?' venceu em ':' vence em ')+vencData(it.vence, hoje);
+    return vencNomeComArtigo(it)+(it.atrasado?' venceu em ':' vence em ')+vencData(it.vence, hoje);
+  }
+  // A CONCORDÂNCIA quando é mais de um. A frase mora em Configurações escrita no SINGULAR
+  // ("a vacina de {vacina} ... vence") porque é assim que se escreve uma frase; o plural é
+  // o app que faz, na hora em que duas vacinas vencem na mesma semana.
+  function vencPluralizar(txt, n){
+    if(!(n>1)) return String(txt||'');
+    return String(txt||'')
+      .replace(/\bA vacina de\b/g, 'As vacinas de')
+      .replace(/\ba vacina de\b/g, 'as vacinas de')
+      .replace(/\bvence\b/g, 'vencem');
+  }
+  // De que MENSAGEM cada item faz parte.
+  function vencTipoDoItem(k){
+    k=String(k||'');
+    if(k==='verm_dose2_p') return 'verm2';
+    if(k==='escova_p') return 'escova';
+    if(VENC_VACINA_NOME[k]) return 'vacina';
+    return 'antip';                                          // vermífugo, carrapaticida, coleira, exame, check-up
+  }
+  // Os assuntos deste FILHOt, na ordem em que aparecem no cartão. Vacina E vermífugo
+  // vencendo = duas mensagens, nunca uma frase misturada.
+  function vencGrupos(o){
+    var por={};
+    (((o&&o.itens))||[]).forEach(function(x){
+      var t=vencTipoDoItem(x.k); (por[t]=por[t]||[]).push(x);
+    });
+    return VENC_ORDEM_TIPOS.filter(function(t){ return por[t]&&por[t].length; })
+      .map(function(t){ return {tipo:t, itens:por[t]}; });
+  }
+  // Qual dos textos vale para a vacina: quando o FILHOt vem num dia em que a veterinária
+  // atende, ela aplica durante o Day Care e NÃO se pergunta horário (palavra dela). Na
+  // quinta — ou fora de dia útil — a mensagem oferece o próximo dia de atendimento.
+  function vencChaveTexto(tipo, diaAlvo){
+    if(tipo!=='vacina') return tipo;
+    return vencEhDiaVet(diaAlvo)?'vacina_creche':'vacina';
   }
   // "a, b e c" — norma culta. Lista com "·" é planilha, não é conversa com o tutor.
   function vencJuntar(arr){
@@ -30320,30 +30568,67 @@
   function vencTemVacina(o){
     return !!(o&&o.itens&&o.itens.some(function(x){ return x.vacina; }));
   }
-  function vencMensagem(o, diaAlvo, hoje){
+  // A MENSAGEM DE UM ASSUNTO. Pura no que importa: recebe o FILHOt, o assunto, os itens
+  // daquele assunto, o dia-alvo e o dia de hoje — e devolve o texto pronto. É ela que o
+  // harness morde.
+  function vencMensagemDe(o, tipo, itens, diaAlvo, hoje){
     if(!o) return '';
     diaAlvo=diaAlvo||vencDiaAlvo();
     hoje=hoje||((typeof zHojeISO==='function')?zHojeISO():'');
-    var tutor=(typeof primeiroNome==='function')?primeiroNome(o.tutor):String(o.tutor||'').split(/\s+/)[0]||'';
+    itens=(itens&&itens.length)?itens:((o.itens)||[]);
+    var txt=vencPluralizar(String(vencTexto(vencChaveTexto(tipo, diaAlvo))), itens.length);
+    // O fecho entra ANTES das outras trocas: ele também tem chaves dentro, e elas precisam
+    // ser trocadas depois. Sem {fecho} escrito no texto, nada é acrescentado — quem manda
+    // no lugar da frase é quem escreve a mensagem, não o app.
+    txt=txt.replace(/\{fecho\}/gi, vencTexto('fecho'));
     // "Como está o Lana?" é erro de português numa mensagem ao tutor — e a norma culta é
     // obrigatória em tudo o que sai da Zêluz. O sexo está na ficha; sem ele vale o masculino,
     // que é o genérico da língua, nunca um palpite sobre o nome.
     var femea=/^f/i.test(String(o.sexo||''));
-    var txt=String(vencTexto(vencSoVacina(o)))
-      .replace(/\{tutor\}/g, tutor)
+    var tutor=(typeof primeiroNome==='function')?primeiroNome(o.tutor):String(o.tutor||'').split(/\s+/)[0]||'';
+    var diaVet=proximoDiaVet(hoje);
+    var semVet=(typeof orcDiaSemana==='function')?orcDiaSemana(diaVet):'';
+    txt=txt
+      .replace(/\{tutor\}/gi, tutor)
+      .replace(/\{dofilhot\}/gi, (femea?'da ':'do ')+(o.nome||''))
       .replace(/\{ofilhot\}/gi, (femea?'a ':'o ')+(o.nome||''))
+      .replace(/\{filhot\}/gi, o.nome||'')
       .replace(/\{dele\}/gi, femea?'dela':'dele')
       .replace(/\{ela\}/gi, femea?'ela':'ele')
-      .replace(/\{filhot\}/gi, o.nome||'')
-      .replace(/\{itens\}/g, vencJuntar((o.itens||[]).map(function(x){ return vencFraseItem(x, hoje); })))
-      .replace(/\{dia\}/g, vencFraseDia(diaAlvo, hoje));
-    // Ficha sem o nome do tutor deixaria "Olá, , tudo bem?" — a vírgula órfã sai sozinha.
-    return txt.replace(/\s*,\s*,/g, ',').replace(/[ \t]{2,}/g, ' ').trim();
+      .replace(/\{vacina\}/gi, vencJuntar(itens.map(function(x){ return VENC_VACINA_NOME[x.k]||x.nome; })))
+      .replace(/\{item\}/gi, vencJuntar(itens.map(vencNomeComArtigo)))
+      .replace(/\{itens\}/gi, vencJuntar(itens.map(function(x){ return vencFraseItem(x, hoje); })))
+      .replace(/\{valor_escova\}/gi, (typeof escovaCent==='function')?fmtCent(escovaCent()):'')
+      .replace(/\{dia_vet\}/gi, vencData(diaVet, hoje))
+      .replace(/\{semana_vet\}/gi, String(VENC_DIA_NOME[semVet]||'').replace(/-feira$/,''))
+      .replace(/\{quando\}/gi, vencFraseQuando(diaAlvo, hoje, femea))
+      .replace(/\{dia\}/gi, vencFraseDia(diaAlvo, hoje));
+    // Ficha sem o nome do tutor deixaria "Olá, , como vai?" e "Tudo bem com você, ?" — as
+    // vírgulas órfãs saem sozinhas, no meio e antes da pontuação. As linhas em branco que
+    // sobram de um {fecho} vazio também.
+    return txt.replace(/\s*,\s*,/g, ',').replace(/,\s*([?!.])/g, '$1').replace(/[ \t]{2,}/g, ' ')
+      .split('\n').map(function(l){ return l.trim(); }).join('\n')
+      .replace(/\n{3,}/g, '\n\n').trim();
+  }
+  // Todas as mensagens deste FILHOt, uma por assunto.
+  function vencMensagens(o, diaAlvo, hoje){
+    return vencGrupos(o).map(function(g){
+      return {tipo:g.tipo, rotulo:(VENC_TIPO_ROTULO[g.tipo]||g.tipo), itens:g.itens,
+              texto:vencMensagemDe(o, g.tipo, g.itens, diaAlvo, hoje)};
+    });
+  }
+  // Atalho: a mensagem de UM assunto (a primeira, quando não se diz qual).
+  function vencMensagem(o, diaAlvo, hoje, tipo){
+    var L=vencMensagens(o, diaAlvo, hoje);
+    if(!L.length) return '';
+    if(!tipo) return L[0].texto;
+    var m=L.filter(function(x){ return x.tipo===tipo; })[0];
+    return m?m.texto:'';
   }
   // Copiar é sempre a mesma coisa: tenta a área de transferência e, se o navegador recusar,
   // seleciona o texto no próprio campo — nunca deixa a pessoa sem a mensagem na mão.
-  function vencCopiar(chave, btn){
-    var ta=document.getElementById('vencMsg_'+chave);
+  function vencCopiar(chave, tipo, btn){
+    var ta=document.getElementById('vencMsg_'+chave+'__'+tipo);
     var txt=ta?String(ta.value||''):'';
     if(!txt){ alert('Não achei a mensagem para copiar. Abra a tela de novo.'); return; }
     var pronto=function(){
@@ -30442,12 +30727,22 @@
       return false;
     });
   }
-  // "Mandei" — só diz que a mensagem SAIU. Não é resposta do tutor, e não fecha nada.
-  function vencMandei(chave){
+  // "Mandei" — só diz que aquela mensagem SAIU. Não é resposta do tutor, e não fecha nada.
+  // UMA marca por assunto (21/set/2026): quem mandou a de vacina e ainda não mandou a do
+  // vermífugo precisa VER isso na tela, não adivinhar de memória.
+  function vencMandei(chave, tipo){
     var o=vencAchar(chave); if(!o) return;
+    tipo=String(tipo||'');
     var quem=(typeof quemSou==='function'?quemSou():'-');
-    vencGravar(chave, {msg_enviada:{quem:quem, ts:Date.now()}},
-      'marcou que mandou a mensagem de '+o.nome+' (dia '+vencDiaAlvo()+')', o);
+    var reg={quem:quem, ts:Date.now()};
+    var patch={msg_enviada:{quem:quem, ts:reg.ts, tipo:tipo}};
+    if(tipo){
+      var env=Object.assign({}, (vencRegDe(chave)||{}).enviadas||{});
+      env[tipo]=reg; patch.enviadas=env;
+    }
+    vencGravar(chave, patch,
+      'marcou que mandou a mensagem de '+String(VENC_TIPO_ROTULO[tipo]||'prevenção').toLowerCase()
+      +' de '+o.nome+' (dia '+vencDiaAlvo()+')', o);
   }
   // A resposta do tutor. Trocar de botão TROCA a resposta (e fica registrado que trocou) —
   // errar aqui tem conserto, como manda a casa.
@@ -30501,10 +30796,14 @@
   function vencFaltaLanc(chave, oOpc){
     var o=oOpc||vencAchar(chave); if(!o) return 'este FILHOt saiu da lista';
     var esc=VENC_ESCOLHA[chave]||{}, falta=[];
+    // Vacina não se lança na planilha, mas tem uma resposta obrigatória: QUANDO a
+    // veterinária aplica. Sem ela o recado para a vet sairia pela metade.
+    if((o.itens||[]).some(function(x){ return x.vacina; }) && !((esc.__vet||{}).periodo))
+      falta.push('vacina: quando a veterinária aplica');
     (o.itens||[]).forEach(function(x){
       var cfg=VENC_LANC[x.k]; if(!cfg) return;               // vacina não se lança aqui
       var e=esc[x.k]||{};
-      if(!e.onde) falta.push(x.nome+': onde está o produto');
+      if(!e.onde) falta.push(x.nome+': '+String(cfg.rotOnde||'onde está o produto').toLowerCase().replace(/\?$/,''));
       if(cfg.segunda && !e.seg) falta.push(x.nome+': '+cfg.segunda.rot.toLowerCase());
     });
     return falta.join(' · ');
@@ -30534,7 +30833,15 @@
     }
     var semLanc=(o.itens||[]).filter(function(x){ return !VENC_LANC[x.k]||!VENC_LANC[x.k].item; });
     if(semLanc.length) linhas.push('Não entra nos Lançamentos do dia: '+semLanc.map(function(x){ return x.nome; }).join(' · ')
-      +' — vacina é com a veterinária, e a troca de escova não tem coluna na planilha. Ficam registradas aqui.');
+      +' — quem aplica vacina é a veterinária. Fica registrado aqui.');
+    var vacsConf=(o.itens||[]).filter(function(x){ return x.vacina; });
+    if(vacsConf.length){
+      var perConf=String(((VENC_ESCOLHA[chave]||{}).__vet||{}).periodo||'');
+      var diaVetConf=(perConf==='no dia dele')?dia:(proximoDiaVet((typeof zHojeISO==='function')?zHojeISO():'')||dia);
+      linhas.push('A veterinária recebe UMA linha no grupo dela: vacina de '
+        +vencJuntar(vacsConf.map(function(x){ return VENC_VACINA_NOME[x.k]||x.nome; }))
+        +' em '+(((typeof fmtBR==='function')?fmtBR(diaVetConf):'')||diaVetConf)+' ('+perConf+').');
+    }
     zEscolha('Confirmar a resposta de '+o.nome+' e lançar?', linhas,
       [{t:'Sim, registrar e lançar', cor:'#1E8449', fn:function(){ vencLancarConfirmado(chave); }},
        {t:'Agora não', fn:function(){}}],
@@ -30550,11 +30857,33 @@
     var esc=VENC_ESCOLHA[chave]||{};
     var onde={};
     (o.itens||[]).forEach(function(x){ var e=esc[x.k]||{}; if(e.onde) onde[x.k]=e.onde; });
+    // VACINA (21/set/2026): não vai para a planilha — vira recado para a veterinária, com o
+    // dia e o período que o tutor escolheu. O "d{ofilhot}" da frase dela já sai com o artigo
+    // certo aqui dentro, para o recado não dizer "do Lana".
+    var vacs=(o.itens||[]).filter(function(x){ return x.vacina; });
+    var vetReg=null;
+    if(vacs.length){
+      var femeaV=/^f/i.test(String(o.sexo||''));
+      var per=String((esc.__vet||{}).periodo||'');
+      var hojeV=(typeof zHojeISO==='function')?zHojeISO():'';
+      vetReg={pet:(o.nome||''), dofilhot:(femeaV?'da ':'do ')+(o.nome||''), periodo:per,
+              vacinas:vencJuntar(vacs.map(function(x){ return VENC_VACINA_NOME[x.k]||x.nome; })),
+              dia:(per==='no dia dele')?dia:(proximoDiaVet(hojeV)||dia),
+              quem:quem, ts:Date.now()};
+    }
+    // Só vacina vencendo → a resposta gravada é 'vet': quem faz é a veterinária, e o cartão
+    // passa a cobrar o aviso a ela. Misturado com antiparasitário continua 'zeluz'.
+    var patchResp={resposta:(vencSoVacina(o)?'vet':'zeluz'), resposta_quem:quem,
+                   resposta_ts:Date.now(), onde:onde};
+    if(vetReg) patchResp.vet=vetReg;
     // A resposta do tutor é gravada ANTES do lançamento: mesmo que a planilha recuse, o que
     // o tutor disse não se perde. Foi ele que respondeu — não é o lançamento que autoriza.
-    vencGravar(chave, {resposta:'zeluz', resposta_quem:quem, resposta_ts:Date.now(), onde:onde},
-      'registrou que o tutor de '+o.nome+' autorizou fazer na Zêluz em '+dia, o, dia).then(function(ok){
+    vencGravar(chave, patchResp,
+      'registrou que o tutor de '+o.nome+' autorizou fazer na Zêluz em '+dia
+      +(vetReg?(' — vacina de '+vetReg.vacinas+' para '+(((typeof fmtBR==='function')?fmtBR(vetReg.dia):'')||vetReg.dia)+', '+vetReg.periodo):''),
+      o, dia).then(function(ok){
       if(!ok) return;
+      if(vetReg) vencAvisarVet(o, vetReg);
       var fila=(o.itens||[]).filter(function(x){ return VENC_LANC[x.k]&&VENC_LANC[x.k].item; });
       if(!fila.length){ delete VENC_ABERTO[chave]; delete VENC_ESCOLHA[chave]; vencRender(); return; }
       var bkpDia=DASH_DIA_SEL, bkpDados=DASH_DADOS;
@@ -30608,6 +30937,57 @@
       });
     });
   }
+  // ===== O RECADO PARA A VETERINÁRIA (Adriana, 21/set/2026) ==========================
+  // Vacina não se lança na planilha — quem aplica é ela. O que a casa deve é AVISÁ-LA, e
+  // isso sai pelo MESMO caminho que já leva a foto do check-in e o peso suspeito: o grupo
+  // 'vet' da ponte. E só sai se a ponte publicada TIVER esse grupo — sem ele a mensagem
+  // cairia no grupo padrão em silêncio, que é o erro que já custou caro nesta casa. Quando
+  // não dá para avisar, o audit DIZ que não deu, para alguém avisar à mão.
+  // UMA linha, sem foto e sem enfeite: é um recado, não um relatório.
+  function vencVetLinha(v){
+    v=v||{};
+    var quando=(((typeof fmtBR==='function')?fmtBR(v.dia||''):'')||String(v.dia||''));
+    return 'Vacina de '+String(v.vacinas||'')+' '+String(v.dofilhot||v.pet||'')
+      +' — tutor autorizou para '+quando+' ('+String(v.periodo||'')+').';
+  }
+  function vencAvisarVet(o, v){
+    if(typeof tgAvisar!=='function') return Promise.resolve({ok:false, erro:'ponte não carregada'});
+    var texto=vencVetLinha(v);
+    var pr=(typeof tgGrupoNaPonte==='function')?tgGrupoNaPonte('vet'):Promise.resolve(true);
+    return pr.then(function(tem){
+      if(!tem){
+        try{ if(typeof audit==='function') audit('vence-amanha',
+          'NÃO avisei a veterinária ('+texto+'): a ponte publicada não tem o grupo da Veterinária. Avise à mão.',
+          {alvo:((o&&o.chave)||''), pet:((v&&v.pet)||'')}); }catch(e){} /* silencioso de propósito: o audit() tem bolso próprio e reenvia sozinho */
+        return {ok:false, erro:'a ponte não tem o grupo da Veterinária'};
+      }
+      return tgAvisar({grupo:'vet', texto:texto}).then(function(r){
+        try{ if(typeof audit==='function') audit('vence-amanha',
+          ((r&&r.ok)?'avisou a veterinária: ':'NÃO avisou a veterinária: ')+texto,
+          {alvo:((o&&o.chave)||''), pet:((v&&v.pet)||'')}); }catch(e){} /* silencioso de propósito: o audit() tem bolso próprio e reenvia sozinho */
+        return r||{ok:false};
+      });
+    }).catch(function(e){ return {ok:false, erro:String((e&&e.message)||e)}; });
+  }
+  // O que a veterinária ainda precisa ouvir, no dia que a tela mostra. null = ainda não li
+  // — nunca afirmar zero antes de ler.
+  function vencVetAvisos(){
+    var dia=vencDiaAlvo(); if(!dia) return [];
+    if(VENC_REG===null||VENC_REG_DIA!==dia) return null;
+    var out=[];
+    Object.keys(VENC_REG||{}).forEach(function(ch){
+      var r=VENC_REG[ch]||{};
+      if(!r.vet||r.ficha_atualizada) return;
+      out.push(Object.assign({chave:ch}, r.vet));
+    });
+    return out;
+  }
+  // A linha que a consultora lê no cartão e a Gestão lê na mesa — a MESMA frase nos dois.
+  function vencVetPendenteTexto(v){
+    v=v||{};
+    return 'Avisar a veterinária: '+String(v.pet||'')+', '+String(v.vacinas||'')+', '
+      +((((typeof fmtBR==='function')?fmtBR(v.dia||''):'')||String(v.dia||'')))+' '+String(v.periodo||'');
+  }
   // "Já foi atualizada a ficha?" — só aparece quando FAZ SENTIDO perguntar.
   //  · tutor fez em casa/no veterinário → agora: a data nova só existe com ele.
   //  · vai fazer na Zêluz → só DEPOIS do dia-alvo: até lá a ficha se atualiza sozinha,
@@ -30617,7 +30997,7 @@
     var resp=String((r||{}).resposta||'');
     hoje=hoje||((typeof zHojeISO==='function')?zHojeISO():'');
     if(resp==='casa') return true;
-    if(resp==='zeluz') return !!(dia&&hoje&&dia<hoje);
+    if(resp==='zeluz'||resp==='vet') return !!(dia&&hoje&&dia<hoje);
     return false;
   }
   function vencFicha(chave, sim){
@@ -30799,22 +31179,48 @@
     // A dose do vermífugo sai do peso (Adriana, 21/set/2026) — aqui, onde a consultora
     // está olhando quando fala com o tutor.
     h+=vermLinhaVencHTML(o, hoje);
-    // a mensagem pronta, editável antes de copiar
-    h+='<textarea class="gest-txt" id="vencMsg_'+escAttr(o.chave)+'" rows="7" style="width:100%">'
-      +escAttr(vencMensagem(o,dia,hoje))+'</textarea>';
-    if(vencTemVacina(o)&&!vencSoVacina(o))
-      h+='<div class="hint" style="margin-top:4px;color:var(--crm-atencao-text);font-weight:700">Há vacina nesta lista — a aplicação é com a veterinária. Confira a frase antes de mandar.</div>';
-    h+='<div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:8px">'
-      +'<button type="button" class="btn btn-gold" style="padding:7px 15px;font-size:13px;font-weight:800" onclick="vencCopiar(\''+ka+'\',this)">Copiar mensagem</button>'
-      +'<button type="button" class="btn" style="padding:7px 15px;font-size:13px;font-weight:800;background:var(--z-cream-warm);color:var(--z-blue);border:1.5px solid var(--line)" onclick="vencMandei(\''+ka+'\')">'
-      +(r.msg_enviada?'Mandei de novo':'Mandei')+'</button></div>';
-    if(r.msg_enviada) h+='<div class="hint" style="margin-top:4px;color:var(--crm-ok);font-weight:700">Mensagem marcada como enviada por '+escAttr(r.msg_enviada.quem||'-')+'.</div>';
+    // AS MENSAGENS PRONTAS — uma por ASSUNTO, editáveis antes de copiar (Adriana,
+    // 21/set/2026). Vacina e vermífugo vencendo juntos são duas conversas diferentes: cada
+    // uma tem a sua caixa, o seu Copiar e o seu Mandei. Uma frase misturada é o que fazia o
+    // tutor responder "ok" sem ninguém saber a quê.
+    var envMsg=r.enviadas||{};
+    vencMensagens(o, dia, hoje).forEach(function(m){
+      var jaFoi=envMsg[m.tipo];
+      h+='<div style="margin-top:11px;padding-top:9px;border-top:1px solid var(--line)">'
+        +'<div style="font-size:11px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin-bottom:4px">'
+        +escAttr(m.rotulo)+'</div>';
+      // A frase dela fala em "vence {quando}" — e {quando} é o DIA EM QUE ELE VEM, não a
+      // data do vencimento. Quando o item já venceu (e é o caso mais comum aqui: a tela
+      // existe justamente para quem está atrasado), a frase pronta soa como se fosse vencer
+      // amanhã. O texto é dela e não se redige; o que o app faz é DIZER isso a quem vai
+      // mandar, com as datas de verdade na mão, na caixa que ela pode editar antes de copiar.
+      if((m.itens||[]).some(function(x){ return x.atrasado; }))
+        h+='<div class="hint" style="margin-bottom:5px;color:var(--crm-atencao-text);font-weight:700">'
+          +'Aqui há o que JÁ venceu: '
+          +escAttr(vencJuntar((m.itens||[]).filter(function(x){ return x.atrasado; })
+            .map(function(x){ return vencFraseItem(x, hoje); })))
+          +'. A frase pronta fala em &ldquo;vence&rdquo; — confira antes de mandar.</div>';
+      if(m.tipo==='vacina')
+        h+='<div class="hint" style="margin-bottom:5px">'
+          +(vencEhDiaVet(dia)
+            ? 'Ele vem num dia em que a nossa Veterinária atende — a aplicação é durante o Day Care, sem marcar horário.'
+            : 'A nossa Veterinária não atende às quintas — a mensagem já oferece o próximo dia de atendimento dela.')
+          +'</div>';
+      h+='<textarea class="gest-txt" id="vencMsg_'+escAttr(o.chave)+'__'+escAttr(m.tipo)+'" rows="7" style="width:100%">'
+        +escAttr(m.texto)+'</textarea>'
+        +'<div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:8px">'
+        +'<button type="button" class="btn btn-gold" style="padding:7px 15px;font-size:13px;font-weight:800" onclick="vencCopiar(\''+ka+'\',\''+m.tipo+'\',this)">Copiar mensagem</button>'
+        +'<button type="button" class="btn" style="padding:7px 15px;font-size:13px;font-weight:800;background:var(--z-cream-warm);color:var(--z-blue);border:1.5px solid var(--line)" onclick="vencMandei(\''+ka+'\',\''+m.tipo+'\')">'
+        +(jaFoi?'Mandei de novo':'Mandei')+'</button></div>';
+      if(jaFoi) h+='<div class="hint" style="margin-top:4px;color:var(--crm-ok);font-weight:700">Marcada como enviada por '+escAttr(jaFoi.quem||'-')+'.</div>';
+      h+='</div>';
+    });
     // a resposta do tutor, em botão
     h+='<div style="margin-top:12px;padding-top:10px;border-top:1px dashed var(--line)">'
       +'<div style="font-size:11px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin-bottom:5px">O que o tutor respondeu</div>'
       +'<div style="display:flex;flex-wrap:wrap;gap:7px">';
     VENC_RESPOSTAS.forEach(function(x){
-      var on=(resp===x.v);
+      var on=vencRespEh(resp, x.v);
       h+='<button type="button" class="btn" style="padding:6px 13px;font-size:12.5px;font-weight:800;border:1.5px solid '+x.cor+';'
         +'background:'+(on?x.cor:'transparent')+';color:'+(on?'#fff':x.cor)+'" onclick="vencResponder(\''+ka+'\',\''+x.v+'\')">'+escAttr(x.t)+'</button>';
     });
@@ -30823,9 +31229,13 @@
     h+='</div>';
     // o bloco do "Pode fazer na Zêluz" — rascunho até o Confirmar
     if(VENC_ABERTO[o.chave]) h+=vencBlocoLancHTML(o, dia);
-    else if(resp==='zeluz'&&vencTemLancavel(o))
-      h+='<div style="margin-top:8px"><button type="button" class="btn" style="padding:6px 13px;font-size:12.5px;font-weight:800;background:none;border:none;color:var(--z-blue);text-decoration:underline" onclick="vencAbrirLanc(\''+ka+'\')">lançar de novo (mudou o produto ou a quantidade)</button></div>';
-    if(resp==='zeluz'&&r.lancados&&Object.keys(r.lancados).length)
+    else if(vencRespEh(resp,'zeluz')&&(vencTemLancavel(o)||vencTemVacina(o)))
+      h+='<div style="margin-top:8px"><button type="button" class="btn" style="padding:6px 13px;font-size:12.5px;font-weight:800;background:none;border:none;color:var(--z-blue);text-decoration:underline" onclick="vencAbrirLanc(\''+ka+'\')">refazer (mudou o produto, a quantidade ou o período da vacina)</button></div>';
+    // O que a veterinária ainda precisa ouvir fica ESCRITO no cartão — o aviso já saiu no
+    // grupo dela, mas quem está com o tutor no telefone precisa ver o combinado.
+    if(r.vet) h+='<div class="hint" style="margin-top:6px;color:var(--z-blue);font-weight:800">'
+      +escAttr(vencVetPendenteTexto(r.vet))+'</div>';
+    if(vencRespEh(resp,'zeluz')&&r.lancados&&Object.keys(r.lancados).length)
       h+='<div class="hint" style="margin-top:6px;color:var(--crm-ok);font-weight:700">Lançado para o dia '+escAttr(fmtBR(dia))+': '
         +escAttr(Object.keys(r.lancados).map(function(k){ return (VENC_FRASE[k]||k)+(r.lancados[k]==='ja-estava'?' (já estava lançado)':''); }).join(' · '))+'.</div>';
     // a ficha
@@ -30836,11 +31246,28 @@
     var ka=jsAspas(o.chave);
     var esc=VENC_ESCOLHA[o.chave]||{};
     var alvos=(o.itens||[]).filter(function(x){ return VENC_LANC[x.k]; });
+    var vacs=(o.itens||[]).filter(function(x){ return x.vacina; });
     var h='<div style="margin-top:10px;padding:10px 12px;border-radius:11px;background:var(--z-cream-warm);border:1px solid var(--line)">'
-      +'<div style="font-size:13px;font-weight:800;color:var(--z-blue)">O tutor autorizou. Onde está o produto?</div>'
+      +'<div style="font-size:13px;font-weight:800;color:var(--z-blue)">O tutor autorizou.</div>'
       +'<div class="hint" style="margin-top:2px">Nada é gravado enquanto você responde — só no <strong>Confirmar</strong>, ali embaixo.</div>';
-    if(!alvos.length){
-      h+='<div class="hint" style="margin-top:8px">Nada aqui se lança nos Lançamentos do dia: vacina é com a veterinária. Confirme para registrar a resposta do tutor.</div>';
+    // VACINA: não se lança na planilha — quem aplica é a veterinária. O que a casa precisa
+    // saber é QUANDO, para avisá-la. "No dia dele" só aparece quando o dia-alvo é dia de
+    // atendimento dela: oferecer isso numa quinta seria combinar o que não existe.
+    if(vacs.length){
+      var ev=esc.__vet||{};
+      h+='<div style="margin-top:10px;padding-top:9px;border-top:1px solid var(--line)">'
+        +'<div style="font-weight:800;color:var(--z-blue);font-size:13.5px">'
+        +escAttr(vencJuntar(vacs.map(function(x){ return x.nome; })))+'</div>'
+        +'<div class="hint" style="margin:4px 0 3px">Quando a nossa Veterinária aplica?</div>'
+        +'<div style="display:flex;flex-wrap:wrap;gap:6px">';
+      VENC_VET_PERIODOS.forEach(function(op){
+        if(op.soNoDia && !vencEhDiaVet(dia)) return;
+        h+='<span class="venc-op'+(ev.periodo===op.v?' on':'')+'" onclick="vencEscolher(\''+ka+'\',\'__vet\',\'periodo\',\''+jsAspas(op.v)+'\')">'+escAttr(op.t)+'</span>';
+      });
+      h+='</div><div class="hint" style="margin-top:5px">Vacina não entra nos Lançamentos do dia — não há coluna para ela. O que sai daqui é <strong>uma linha no grupo da Veterinária</strong>, com o dia e o período.</div></div>';
+    }
+    if(!alvos.length && !vacs.length){
+      h+='<div class="hint" style="margin-top:8px">Nada aqui se lança nos Lançamentos do dia. Confirme para registrar a resposta do tutor.</div>';
     }
     alvos.forEach(function(x){
       var cfg=VENC_LANC[x.k], e=esc[x.k]||{};
@@ -30855,8 +31282,8 @@
              +escAttr(av.motivo)+'. '+escAttr(vermFrasePeso(av))+' Nada vem marcado: escolha sabendo disso.</div>')
           : ('<div class="hint" style="margin-top:5px">'+escAttr(vermFrasePeso(av))+' — já vem marcado abaixo.</div>'));
       }
-      h+='<div class="hint" style="margin:4px 0 3px">Onde está o produto?</div><div style="display:flex;flex-wrap:wrap;gap:6px">';
-      VENC_ONDE.forEach(function(op){
+      h+='<div class="hint" style="margin:4px 0 3px">'+escAttr(cfg.rotOnde||'Onde está o produto?')+'</div><div style="display:flex;flex-wrap:wrap;gap:6px">';
+      (cfg.ops||VENC_ONDE).forEach(function(op){
         h+='<span class="venc-op'+(e.onde===op.v?' on':'')+'" onclick="vencEscolher(\''+ka+'\',\''+x.k+'\',\'onde\',\''+jsAspas(op.v)+'\')">'+escAttr(op.t)+'</span>';
       });
       h+='</div>';
@@ -30867,7 +31294,6 @@
         });
         h+='</div>';
       }
-      if(!cfg.item) h+='<div class="hint" style="margin-top:5px">Não há coluna de escova de dentes na planilha do Day Care — isto fica registrado aqui, para a recepção separar a escova.</div>';
       h+='</div>';
     });
     var falta=vencFaltaLanc(o.chave, o);
@@ -31865,15 +32291,33 @@
   // ===== CONFIGURAÇÕES › MENSAGENS PRONTAS (Adriana, 21/set/2026) ==================
   // O texto que vai para o tutor na véspera e a folga em dias. Nada aqui exige
   // programador: é o que a lei de 22/ago cobra de toda regra nova (texto e prazo).
+  // Os seis campos, na ordem em que a consultora os usa. \`id\` é o campo na tela e \`k\` é a
+  // chave no banco — os dois andam juntos daqui até o Salvar e até o rastro.
+  var CFG_VENC_CAMPOS=[
+    {k:'vacina', id:'cfgVencVacina', rot:'Vacina — quando é preciso marcar horário',
+     dica:'Vale quando o FILHOt vem numa quinta (dia em que a nossa Veterinária não atende) ou fora de dia útil. <strong>{vacina}</strong> é o nome da vacina; <strong>{dia_vet}</strong> e <strong>{semana_vet}</strong> trazem o próximo dia de atendimento dela.'},
+    {k:'vacina_creche', id:'cfgVencVacinaCreche', rot:'Vacina — quando ele vem num dia de atendimento',
+     dica:'&ldquo;Se o peludinho está na creche não precisa perguntar horário&rdquo; — a aplicação é durante o Day Care.'},
+    {k:'antip', id:'cfgVencAntip', rot:'Vermífugo, carrapaticida e coleira',
+     dica:'<strong>{item}</strong> já vem com o artigo certo: &ldquo;o vermífugo&rdquo;, &ldquo;o carrapaticida&rdquo;, &ldquo;a coleira repelente&rdquo;. Escreva <strong>{fecho}</strong> onde quiser a frase da autorização.'},
+    {k:'verm2', id:'cfgVencVerm2', rot:'Vermífugo — a 2ª dose (21 dias depois da 1ª)',
+     dica:'Sai só para quem tem &ldquo;2 doses&rdquo; na ficha e ainda não teve a 2ª registrada.'},
+    {k:'escova', id:'cfgVencEscova', rot:'Troca de escova de dentes',
+     dica:'<strong>{valor_escova}</strong> traz o preço de Configurações › Valores do Day Care.'},
+    {k:'fecho', id:'cfgVencFecho', rot:'O fecho da autorização',
+     dica:'Entra no lugar de <strong>{fecho}</strong> nas mensagens acima. Tirou o {fecho} de uma mensagem, ele não aparece nela.'}
+  ];
   function cfgVencRender(){
     var w=document.getElementById('cfgVencWrap'); if(!w) return;
     var c=VENC_CFG||{};
-    var h='<div><label class="cad-lb">Mensagem padrão (carrapaticida, vermífugo, coleira, escova)</label>'
-      +'<textarea class="gest-txt" id="cfgVencTexto" rows="6" style="width:100%">'+escAttr(String(c.texto||'')||VENC_TEXTO_PADRAO)+'</textarea></div>'
-      +'<div style="margin-top:12px"><label class="cad-lb">Mensagem quando só há vacina vencendo</label>'
-      +'<textarea class="gest-txt" id="cfgVencVacina" rows="6" style="width:100%">'+escAttr(String(c.textoVacina||'')||VENC_TEXTO_VACINA_PADRAO)+'</textarea>'
-      +'<div class="hint" style="margin-top:3px">Vacina não se faz na recepção: quem aplica é a veterinária. Por isso a frase muda — &ldquo;podemos agendar com a veterinária?&rdquo; em vez de &ldquo;podemos fazer aqui?&rdquo;.</div></div>'
-      +'<div style="margin-top:12px"><label class="cad-lb">Entrar na lista com quantos dias de folga</label>'
+    var h='';
+    CFG_VENC_CAMPOS.forEach(function(x, i){
+      h+='<div'+(i?' style="margin-top:14px"':'')+'><label class="cad-lb">'+escAttr(x.rot)+'</label>'
+        +'<textarea class="gest-txt" id="'+x.id+'" rows="6" style="width:100%">'
+        +escAttr(String(c[x.k]||'')||VENC_TXT_PADRAO[x.k]||'')+'</textarea>'
+        +(x.dica?('<div class="hint" style="margin-top:3px">'+x.dica+'</div>'):'')+'</div>';
+    });
+    h+='<div style="margin-top:14px"><label class="cad-lb">Entrar na lista com quantos dias de folga</label>'
       +'<input class="cad-in" inputmode="numeric" id="cfgVencMargem" style="max-width:120px" value="'+vencMargem()+'">'
       +'<div class="hint" style="margin-top:3px">Além do que já venceu, entra o que vence nos próximos N dias contados a partir do dia em que o FILHOt vem. Padrão de fábrica: '+VENC_MARGEM_PADRAO+' dias.</div></div>'
       +'<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px">'
@@ -31882,35 +32326,63 @@
       +'<div id="cfgVencSt" class="hint" style="margin-top:6px"></div>';
     w.innerHTML=h;
   }
-  // Só devolve o texto de fábrica ao CAMPO — quem grava continua sendo o botão Salvar.
+  // Só devolve o texto de fábrica aos CAMPOS — quem grava continua sendo o botão Salvar.
   function cfgVencPadrao(){
-    var a=document.getElementById('cfgVencTexto'), b=document.getElementById('cfgVencVacina'),
-        m=document.getElementById('cfgVencMargem'), st=document.getElementById('cfgVencSt');
-    if(a) a.value=VENC_TEXTO_PADRAO;
-    if(b) b.value=VENC_TEXTO_VACINA_PADRAO;
-    if(m) m.value=VENC_MARGEM_PADRAO;
+    CFG_VENC_CAMPOS.forEach(function(x){
+      var el=document.getElementById(x.id); if(el) el.value=VENC_TXT_PADRAO[x.k]||'';
+    });
+    var m=document.getElementById('cfgVencMargem'); if(m) m.value=VENC_MARGEM_PADRAO;
+    var st=document.getElementById('cfgVencSt');
     if(st){ st.style.color='var(--muted)'; st.textContent='Os campos voltaram ao texto de fábrica. Nada foi gravado ainda — toque em Salvar.'; }
+  }
+  // O rastro guarda a frase, não um "mudou o texto": quem ler daqui a três meses precisa
+  // saber o que saiu e o que entrou. Frase inteira no audit ficaria ilegível — vai o começo.
+  function cfgVencCurto(s){
+    s=String(s||'').replace(/\s+/g,' ').trim();
+    return (s.length>70)?(s.slice(0,70)+'…'):s;
   }
   function cfgVencSalvar(){
     var st=document.getElementById('cfgVencSt');
-    var g=function(id){ var el=document.getElementById(id); return el?String(el.value||'').trim():''; };
-    var texto=g('cfgVencTexto'), vacina=g('cfgVencVacina');
-    var margem=parseInt(String(g('cfgVencMargem')).replace(/\D/g,''),10);
-    if(!texto||!vacina){ if(st){ st.style.color='var(--crm-critico)'; st.textContent='As duas mensagens precisam ter texto. Use o botão de fábrica se quiser recomeçar.'; } return; }
-    if(texto.indexOf('{itens}')<0||vacina.indexOf('{itens}')<0){ if(st){ st.style.color='var(--crm-critico)'; st.textContent='As duas mensagens precisam conter {itens} — é ele que diz ao tutor O QUE está vencendo.'; } return; }
-    if(!(margem>0&&margem<=90)){ if(st){ st.style.color='var(--crm-critico)'; st.textContent='A folga precisa ser um número de dias entre 1 e 90.'; } return; }
-    if(!DB){ if(st){ st.style.color='var(--crm-critico)'; st.textContent='Banco reconectando — não salvei. Tente de novo em instantes.'; } return; }
-    var reg={texto:texto, textoVacina:vacina, margem:margem,
-             quem:(typeof quemSou==='function'?quemSou():'-'), ts:Date.now()};
+    var diz=function(t,c){ if(st){ st.style.color=c; st.textContent=t; } };
+    var reg={}, vazio='';
+    CFG_VENC_CAMPOS.forEach(function(x){
+      var el=document.getElementById(x.id);
+      var v=el?String(el.value||'').trim():'';
+      if(!v) vazio=vazio||x.rot;
+      reg[x.k]=v;
+    });
+    if(vazio){ diz('A mensagem &ldquo;'+vazio+'&rdquo; está em branco. Use o botão de fábrica se quiser recomeçar. Nada foi salvo.','var(--crm-critico)'); return; }
+    if(reg.vacina.indexOf('{vacina}')<0 || reg.vacina_creche.indexOf('{vacina}')<0){
+      diz('As duas mensagens de vacina precisam conter {vacina} — é ele que diz ao tutor QUAL vacina está vencendo. Nada foi salvo.','var(--crm-critico)'); return; }
+    if(reg.antip.indexOf('{item}')<0 && reg.antip.indexOf('{itens}')<0){
+      diz('A mensagem de vermífugo, carrapaticida e coleira precisa conter {item} — é ele que diz O QUE está vencendo. Nada foi salvo.','var(--crm-critico)'); return; }
+    var margem=parseInt(String(((document.getElementById('cfgVencMargem')||{}).value||'')).replace(/\D/g,''),10);
+    if(!(margem>0&&margem<=90)){ diz('A folga precisa ser um número de dias entre 1 e 90. Nada foi salvo.','var(--crm-critico)'); return; }
+    if(!DB){ diz('Banco reconectando — não salvei. Tente de novo em instantes.','var(--crm-critico)'); return; }
+    var antes=VENC_CFG||{};
+    var mud=[];
+    CFG_VENC_CAMPOS.forEach(function(x){
+      var a=String(antes[x.k]||'').trim()||VENC_TXT_PADRAO[x.k]||'';
+      if(a!==reg[x.k]) mud.push(x.rot+': "'+cfgVencCurto(a)+'" → "'+cfgVencCurto(reg[x.k])+'"');
+    });
+    var mAntes=(parseInt(antes.margem,10)>0)?parseInt(antes.margem,10):VENC_MARGEM_PADRAO;
+    if(mAntes!==margem) mud.push('folga: '+mAntes+' → '+margem+' dia'+(margem>1?'s':''));
+    reg.margem=margem;
+    reg.quem=(typeof quemSou==='function'?quemSou():'-');
+    reg.ts=Date.now();
     DB.ref('daycare/config/textos/vencimento').set(reg).then(function(){
       VENC_CFG=reg;
-      try{ if(typeof audit==='function') audit('config-mensagens-prontas',
-        'mudou a mensagem de Vence amanhã (folga de '+margem+' dia'+(margem>1?'s':'')+')',{}); }catch(e){} /* silencioso de propósito: o audit() tem bolso próprio e reenvia sozinho — falhar aqui não pode travar a ação */
-      if(st){ st.style.color='var(--crm-ok)'; st.textContent='✓ Salvo. A tela Vence amanhã já está usando este texto.'; }
+      try{ if(mud.length && typeof audit==='function') audit('config-mensagens-prontas',
+        mud.join(' · '),{}); }catch(e){} /* silencioso de propósito: o audit() tem bolso próprio e reenvia sozinho — falhar aqui não pode travar a ação */
+      diz(mud.length?'✓ Salvo. A tela Vence amanhã já está usando estes textos.'
+                    :'Nada mudou: as mensagens já eram essas.','var(--crm-ok)');
+      // NÃO redesenha o cartão: quem acabou de salvar pode estar com o cursor no campo
+      // seguinte, e redesenhar tira o cursor da mão de quem está escrevendo. Os campos já
+      // mostram exatamente o que foi gravado.
       try{ vencRedesenhoAuto(); }catch(e){} /* silencioso de propósito: redesenho de tela — falhar não pode derrubar quem chamou */
     }).catch(function(e){
       _logFalhaGrav('daycare/config/textos/vencimento (cfgVencSalvar)', e);
-      if(st){ st.style.color='var(--crm-critico)'; st.textContent='❌ Não salvou: '+((e&&e.message)||e); }
+      diz('❌ Não salvou: '+((e&&e.message)||e),'var(--crm-critico)');
     });
   }
   // ===== CONFIGURAÇÕES › FOTOS DO CHECK-IN (Adriana, 15/set/2026) ===================
@@ -31961,6 +32433,14 @@
       +'<div class="hint" style="margin-top:3px">Hoje vale <strong>'+esc(fmtCent(v))+'</strong>'
       +(padrao?' — ainda é o valor de fábrica da tabela de 2026; salve para deixá-lo seu.':' — salvo por você.')+'</div></div>'
       +'<div class="hint" style="margin-top:8px">Este é o valor que a aba <strong>Plano</strong> da ficha usa na 1ª opção de quem começa no meio do mês, e o que o quadro <strong>Recebimentos do mês</strong> mostra como preço do dia avulso.</div>'
+      // ESCOVA DE DENTES (Adriana, 21/set/2026): "O valor é R$ 11,70." É o preço que vai
+      // ESCRITO na mensagem ao tutor, então mudar de preço não pode exigir programador.
+      +'<div style="margin-top:16px;padding-top:13px;border-top:1px solid var(--line)">'
+      +'<label class="cad-lb">Escova de dentes (a troca)</label>'
+      +'<input class="cad-in" id="cfgEscova" inputmode="decimal" value="'+(escovaCent()/100).toFixed(2).replace('.',',')+'">'
+      +'<div class="hint" style="margin-top:3px">Hoje vale <strong>'+esc(fmtCent(escovaCent()))+'</strong>'
+      +((dcValores().escova_cent==null)?' — ainda é o valor de fábrica; salve para deixá-lo seu.':' — salvo por você.')
+      +' É o número que entra no lugar de <strong>{valor_escova}</strong> na mensagem de troca de escova, em Configurações › Mensagens prontas.</div></div>'
       // VERMÍFUGO (Adriana, 21/set/2026): a régua da dose é número de negócio e muda sem
       // programador (lei de 22/ago/2026). Os dois campos moram aqui, do lado do outro
       // número de Day Care, e valem para Lançamentos do dia, Vence amanhã e a ficha.
@@ -31990,14 +32470,20 @@
     const mg=vermNumLer((document.getElementById('cfgVermMargem')||{}).value);
     if(!isFinite(mg)||mg<0){ diz('A folga da virada precisa ser zero ou mais. Nada foi salvo.','var(--crm-critico)'); return; }
     if(mg>fx/2){ diz('A folga da virada não pode passar de metade da faixa ('+vermNumTexto(fx/2)+' kg) — senão todo peso ficaria perto da virada e a tela mandaria pesar sempre. Nada foi salvo.','var(--crm-critico)'); return; }
+    // ESCOVA (21/set/2026): preço em branco viraria "O valor é R$ 0,00" na cara do tutor.
+    const brutoEsc=String(((document.getElementById('cfgEscova')||{}).value||'')).replace(/\./g,'').replace(',','.');
+    const nEsc=parseFloat(brutoEsc);
+    if(isNaN(nEsc)||nEsc<=0){ diz('O valor da escova de dentes precisa ser maior que zero — ele vai escrito na mensagem ao tutor. Nada foi salvo.','var(--crm-critico)'); return; }
     const novo=Math.round(n*100), antes=diariaAvulsaCent();
+    const escNovo=Math.round(nEsc*100), escAntes=escovaCent();
     const fxAntes=vermFaixaKg(), mgAntes=vermMargemKg();
     if(!DB){ diz('Banco reconectando — não salvei. Tente de novo em instantes.','var(--crm-critico)'); return; }
-    DB.ref('daycare/config/valores').update({diaria_avulsa_cent:novo, verm_faixa_kg:fx, verm_margem_kg:mg}).then(function(){
-      dcValoresCfg=Object.assign({}, dcValoresCfg||{}, {diaria_avulsa_cent:novo, verm_faixa_kg:fx, verm_margem_kg:mg});
+    DB.ref('daycare/config/valores').update({diaria_avulsa_cent:novo, escova_cent:escNovo, verm_faixa_kg:fx, verm_margem_kg:mg}).then(function(){
+      dcValoresCfg=Object.assign({}, dcValoresCfg||{}, {diaria_avulsa_cent:novo, escova_cent:escNovo, verm_faixa_kg:fx, verm_margem_kg:mg});
       // O rastro diz de quanto para quanto, valor por valor — e só do que mudou de verdade.
       const mud=[];
       if(novo!==antes) mud.push('diária avulsa: '+fmtCent(antes)+' → '+fmtCent(novo));
+      if(escNovo!==escAntes) mud.push('escova de dentes: '+fmtCent(escAntes)+' → '+fmtCent(escNovo));
       if(fx!==fxAntes) mud.push('vermífugo, meio comprimido a cada: '+vermNumTexto(fxAntes)+' kg → '+vermNumTexto(fx)+' kg');
       if(mg!==mgAntes) mud.push('vermífugo, folga da virada: '+vermNumTexto(mgAntes)+' kg → '+vermNumTexto(mg)+' kg');
       try{ if(mud.length && typeof audit==='function') audit('config-valores-daycare', mud.join(' · '),
