@@ -3740,8 +3740,8 @@ async function main() {
     check('v-25 · a auditoria da tabela diz o que mudou, de quanto para quanto',
       /audit\('orcamento-precos',\s*\n?\s*mudou\.length\?\('alterou a tabela de hospedagem — '\+mudou\.join/.test(html)
       && /\{antes:antes, depois:novo\}/.test(html));
-    check('v-25 · a versão carimbada desta entrega é a 2026-09-21-06',
-      /const APP_VERSAO='2026-09-21-06';/.test(html));
+    check('v-25 · a versão carimbada desta entrega é a 2026-09-22-01',
+      /const APP_VERSAO='2026-09-22-01';/.test(html));
   }
   console.log('');
 
@@ -4037,8 +4037,8 @@ async function main() {
       && html.indexOf('sem valor registrado ficaram de fora') > 0
       && html.indexOf('Ainda estou lendo os avulsos lançados no mês') > 0);
 
-    check('v-26 · a versão carimbada desta entrega é a 2026-09-21-06',
-      /const APP_VERSAO='2026-09-21-06';/.test(html));
+    check('v-26 · a versão carimbada desta entrega é a 2026-09-22-01',
+      /const APP_VERSAO='2026-09-22-01';/.test(html));
   }
   console.log('');
 
@@ -4421,8 +4421,8 @@ async function main() {
       }
     } else { check('v-27 · orcRenderConfig existe', false, 'função não encontrada'); }
 
-    check('v-27 · a versão carimbada desta entrega é a 2026-09-21-06',
-      /const APP_VERSAO='2026-09-21-06';/.test(html));
+    check('v-27 · a versão carimbada desta entrega é a 2026-09-22-01',
+      /const APP_VERSAO='2026-09-22-01';/.test(html));
   }
   console.log('');
 
@@ -5033,8 +5033,8 @@ async function main() {
         delete ctx.document.activeElement; delete ctx.__focoAuto;
       }
     } else { check('v-28 · vencRedesenhoAuto existe', false, 'função não encontrada'); }
-    check('v-28 · a versão carimbada desta entrega é a 2026-09-21-06',
-      /const APP_VERSAO='2026-09-21-06';/.test(html));
+    check('v-28 · a versão carimbada desta entrega é a 2026-09-22-01',
+      /const APP_VERSAO='2026-09-22-01';/.test(html));
   }
   console.log('');
 
@@ -7490,9 +7490,9 @@ async function main() {
       /function ckRascChave\(k, tipo, dia\)\{\s*\n\s*return CK_RASC_PREFIXO\+\(tipo\|\|\(ckEhEntrada\(\)\?'entrada':'saida'\)\)\+'_'\+\(dia\|\|dcDataKey\(\)\)\+'_'\+k;/.test(html));
     check('todo mutador do rascunho espelha no aparelho (pontos, alertas, fotos, coleiras, coco)',
       (html.match(/ckRascEspelhar\(\)/g)||[]).length >= 12 &&
-      // Reescrito em 15/set/2026 (v-17): a JPG comprimida passa por uma const antes de ir
-      // para o ponto, porque a MESMA imagem vai para o banco e para a copia no celular.
-      /const jpg=c\.toDataURL\('image\/jpeg',0\.72\);\s*\n\s*pt\[alvo\]=jpg; pt\.alterado=true;\s*\n\s*ckRascunho\.pontos\[pk\]=pt; ckRascEspelhar\(\);/.test(html) &&
+      // Reescrito em 22/set/2026 (v-34): o caminho da foto virou um so (ckFotoReceber), e e
+      // ele quem poe a JPG no ponto e espelha no aparelho.
+      /pt\[alvo\]=jpg; pt\.alterado=true;\s*\n\s*sufixo=\(alvo==='foto2'\)\?'de-longe':'';\s*\n\s*\}\s*\n\s*ckRascunho\.pontos\[pk\]=pt; ckRascEspelhar\(\); renderCheckin\(\);/.test(html) &&
       /function ckSetTexto\(campo,v\)\{ if\(!ckRascunho\) return; ckRascunho\[campo\]=v; ckRascEspelhar\(\); \}/.test(html) &&
       /ckRascunho\.cocoPassos\[i\]=!ckRascunho\.cocoPassos\[i\];\s*\n\s*ckRascEspelhar\(\);/.test(html));
     check('ckAbrir recupera o rascunho do aparelho e avisa discretamente',
@@ -7514,10 +7514,9 @@ async function main() {
       /audit\('checkin-corpo-barrado',/.test(html) &&
       /\{alvo:k, faltas:faltas\.length\}/.test(html) &&
       html.indexOf("audit('checkin-corpo-barrado'") < html.indexOf("if(zFalta(faltas, {botao:'ckBtnSalvar'})) return;"));
-    check('foto que nao abre avisa em vez de sumir (FileReader e Image com onerror)',
+    check('foto que nao abre avisa em vez de sumir (o video ainda usa FileReader com onerror)',
       (html.match(/function ckFotoNaoAbriu\(input\)/g)||[]).length === 1 &&
-      (html.match(/fr\.onerror=function\(\)\{ ckFotoNaoAbriu\(input\); \};/g)||[]).length === 3 &&
-      (html.match(/img\.onerror=function\(\)\{ ckFotoNaoAbriu\(input\); \};/g)||[]).length === 2 &&
+      (html.match(/fr\.onerror=function\(\)\{ ckFotoNaoAbriu\(input\); \};/g)||[]).length === 1 &&
       /Tire a foto de novo\. Se repetir, mande pelo seu celular no grupo da veterin\u00e1ria\./.test(html));
 
     // --- 3) a imagem saiu de dentro do registro do dia ---
@@ -14610,7 +14609,7 @@ async function main() {
         !/\.catch\(function\([a-z]*\)\{\s*\}\)/.test(
           html.slice(html.indexOf('const CK_FRASE_PRATICA='), html.indexOf('function renderCkInicio('))));
       check('v-14 · a versão carimbada é a desta entrega',
-        /const APP_VERSAO='2026-09-21-06';/.test(html));
+        /const APP_VERSAO='2026-09-22-01';/.test(html));
     }
 
     // ---- v-15: O PLANO SÓ GRAVA NO CONFIRMAR (caso Cookie/Yara, 15/set/2026) --------
@@ -15344,8 +15343,9 @@ async function main() {
     check('v-17 · falhar a cópia não trava o check-in (try/catch com rastro)',
       /\}catch\(e\)\{ _logFalhaGrav\('cópia da foto do check-in no celular', e\); \}/.test(html));
     check('v-17 · as duas portas de foto do check-in copiam: a do ponto e a das fotos extras',
-      /ckCopiarNoCelular\(jpg, pk, \(alvo==='foto2'\)\?'de-longe':''\);/.test(html)
-      && /ckCopiarNoCelular\(jpg, pk, 'extra-'\+pt\.extras\.length\);/.test(html));
+      /ckCopiarNoCelular\(jpg, pk, sufixo\);/.test(html)
+      && /sufixo=\(alvo==='foto2'\)\?'de-longe':'';/.test(html)
+      && /sufixo='extra-'\+pt\.extras\.length;/.test(html));
     check('v-17 · o interruptor mora no banco (daycare/config/fotos) e é lido uma vez ao abrir',
       /DB\.ref\('daycare\/config\/fotos'\)\.once\('value'\)/.test(html)
       && /try\{ ckFotosCfgCarregar\(\); \}catch\(e\)\{\}/.test(html)
@@ -15425,8 +15425,8 @@ async function main() {
           + 'AVISO_COLEIRA_APOS = __bkpC.apos;', ctx);
       }
     } else { check('v-17 · prevCfgCarregar existe', false, 'função não encontrada'); }
-    check('v-24 · a versão carimbada desta entrega é a 2026-09-21-06',
-      /const APP_VERSAO='2026-09-21-06';/.test(html));
+    check('v-24 · a versão carimbada desta entrega é a 2026-09-22-01',
+      /const APP_VERSAO='2026-09-22-01';/.test(html));
 
     // ───────── v-19 · o aparelho autorizado que não se perde no iPhone (16/set/2026)
     // Auditoria de 16/set: o iPhone da Leticya gerou DOIS ids em trinta segundos
@@ -15677,8 +15677,8 @@ async function main() {
       String((html.match(/linhaBuscaCadastro\(/g) || []).length));
     check('v-29 · a linha tem estilo próprio: menor, em var(--muted), e quebrando no celular',
       /table\.pel \.pel-busca-sub\{[^}]*font-size:11\.5px[^}]*color:var\(--muted\)[^}]*white-space:normal/.test(html));
-    check('v-29 · a versão carimbada desta entrega é a 2026-09-21-06',
-      /const APP_VERSAO='2026-09-21-06';/.test(html));
+    check('v-29 · a versão carimbada desta entrega é a 2026-09-22-01',
+      /const APP_VERSAO='2026-09-22-01';/.test(html));
   }
   console.log('');
 
@@ -15980,8 +15980,8 @@ async function main() {
         ctx.vermNumTexto(5) === '5' && ctx.vermNumTexto(0.3) === '0,3' && ctx.vermNumTexto(4.5) === '4,5',
         JSON.stringify([ctx.vermNumTexto(5), ctx.vermNumTexto(0.3)]));
     } else { check('v-30 · vermNumLer existe', false, 'função não encontrada'); }
-    check('v-30 · a versão carimbada desta entrega é a 2026-09-21-06',
-      /const APP_VERSAO='2026-09-21-06';/.test(html));
+    check('v-30 · a versão carimbada desta entrega é a 2026-09-22-01',
+      /const APP_VERSAO='2026-09-22-01';/.test(html));
   }
   console.log('');
 
@@ -16244,8 +16244,8 @@ async function main() {
       && html.indexOf('A frase pronta fala em &ldquo;vence&rdquo; — confira antes de mandar.') > 0
       && /if\(\(m\.itens\|\|\[\]\)\.some\(function\(x\)\{ return x\.atrasado; \}\)\)/.test(html));
 
-    check('v-31 · a versão carimbada desta entrega é a 2026-09-21-06',
-      /const APP_VERSAO='2026-09-21-06';/.test(html));
+    check('v-31 · a versão carimbada desta entrega é a 2026-09-22-01',
+      /const APP_VERSAO='2026-09-22-01';/.test(html));
   }
   // ===== v-32 · O CALENDÁRIO, A COBRANÇA E A RESPOSTA QUE LANÇA SOZINHA ============
   // Adriana, 21/set/2026, palavra por palavra:
@@ -16710,8 +16710,8 @@ async function main() {
       }
     } else { check('v-32 · vencResponderTipo e dashLancar existem', false, 'função não encontrada'); }
 
-    check('v-32 · a versão carimbada desta entrega é a 2026-09-21-06',
-      /const APP_VERSAO='2026-09-21-06';/.test(html));
+    check('v-32 · a versão carimbada desta entrega é a 2026-09-22-01',
+      /const APP_VERSAO='2026-09-22-01';/.test(html));
   }
   console.log('');
 
@@ -17105,8 +17105,321 @@ async function main() {
       && /DB\.ref\('daycare\/vagas-pedidos'\)\.on\('value'/.test(html)
       && /try\{ vagasPedCarregar\(\); \}catch\(e\)\{\}/.test(html));
 
-    check('v-33 · a versão carimbada desta entrega é a 2026-09-21-06',
-      /const APP_VERSAO='2026-09-21-06';/.test(html));
+    check('v-33 · a versão carimbada desta entrega é a 2026-09-22-01',
+      /const APP_VERSAO='2026-09-22-01';/.test(html));
+  }
+  console.log('');
+
+  // ===== v-34 · A FOTO QUE NÃO VOLTAVA DA CÂMERA (Giulia/Lana, 22/set/2026) =========
+  // Caso real: Samsung A07, check-in do corpo da Lana, Orelhas marcado como alterado. O
+  // Salvar barrou quatro vezes (9:23, 9:23, 9:24, 9:26) dizendo "faltou: foto de Orelhas"
+  // e não havia rastro nenhum de erro — a foto simplesmente nunca entrava no rascunho.
+  // Estes testes provam os três caminhos fechados: memória (bitmap + relógio + try/catch),
+  // aba morta (fotoPendente) e redesenho externo com a câmera aberta.
+  console.log('v-34 · A foto do check-in do corpo: bitmap, relógio, rascunho e galeria (22/set):');
+  {
+    const bkp34 = {};
+    ['ckAtual','ckRascunho','ckDados','dcAtiv','audit','zAlertao','renderCheckin','ckCopiarNoCelular',
+     'turmaDoDia','localStorage','Image','URL','createImageBitmap','setTimeout','clearTimeout','scrollTo',
+     'CK_FOTO_TIMEOUT','ckFotosDoBanco','CK_FOTO_ESPERANDO','CK_FOTO_STATUS','CK_FOTO_PERDIDA','pelCadCache']
+      .forEach((k) => { bkp34[k] = ctx[k]; });
+    const ceOrig34 = ctx.document.createElement;
+
+    const rastro34 = [];        // tudo que foi para a auditoria
+    const cartazes34 = [];      // tudo que foi dito na cara da monitora
+    let redesenhos34 = 0, copias34 = 0, urlsAbertas34 = 0, urlsFechadas34 = 0, bitmapsFechados34 = 0;
+    let modoCanvas34 = 'ok';    // 'ok' | 'sem-contexto' | 'vazio'
+    let modoBitmap34 = 'ok';    // 'ok' | 'falha' | 'mudo'
+    let modoImagem34 = 'ok';    // 'ok' | 'erro' | 'mudo'
+
+    const loja34 = {
+      dados: {},
+      getItem(k) { return Object.prototype.hasOwnProperty.call(this.dados, k) ? this.dados[k] : null; },
+      setItem(k, v) { this.dados[k] = String(v); },
+      removeItem(k) { delete this.dados[k]; },
+      get length() { return Object.keys(this.dados).length; },
+      key(i) { return Object.keys(this.dados)[i]; },
+    };
+    const arquivo34 = { name: 'lana-orelhas.jpg', size: 5 * 1024 * 1024, type: 'image/jpeg' };
+    const campo34 = () => ({ files: [arquivo34], value: 'C:\\fakepath\\lana-orelhas.jpg' });
+    const esperar34 = (ms) => new Promise((r) => setTimeout(r, ms || 60));
+    const temRastro = (acao) => rastro34.filter((x) => x.acao === acao);
+    const zerar34 = () => {
+      rastro34.length = 0; cartazes34.length = 0;
+      redesenhos34 = 0; copias34 = 0; urlsAbertas34 = 0; urlsFechadas34 = 0; bitmapsFechados34 = 0;
+      loja34.dados = {};
+      ctx.CK_FOTO_ESPERANDO = null; ctx.CK_FOTO_STATUS = {}; ctx.CK_FOTO_PERDIDA = '';
+      ctx.ckAtual = { p: { n: 'Lana', tutor: 'Tutor de teste' } };
+      ctx.ckRascunho = { pontos: { orelhas: { alterado: true } } };
+    };
+
+    try {
+      ctx.document.createElement = function (tag) {
+        if (String(tag).toLowerCase() === 'canvas') {
+          return {
+            width: 0, height: 0,
+            getContext() { return modoCanvas34 === 'sem-contexto' ? null : { drawImage() {} }; },
+            toDataURL() { return modoCanvas34 === 'vazio' ? '' : ('data:image/jpeg;base64,' + 'A'.repeat(400)); },
+          };
+        }
+        return ceOrig34.call(this, tag);
+      };
+      ctx.URL = {
+        createObjectURL() { urlsAbertas34++; return 'blob:harness-' + urlsAbertas34; },
+        revokeObjectURL() { urlsFechadas34++; },
+      };
+      ctx.Image = class {
+        constructor() { this.onload = null; this.onerror = null; this.naturalWidth = 4000; this.naturalHeight = 3000; this._src = ''; }
+        set src(v) {
+          this._src = v;
+          const eu = this;
+          setTimeout(() => {
+            if (modoImagem34 === 'mudo') return;
+            if (modoImagem34 === 'erro') { if (eu.onerror) eu.onerror(); return; }
+            if (eu.onload) eu.onload();
+          }, 1);
+        }
+        get src() { return this._src; }
+      };
+      ctx.createImageBitmap = function () {
+        if (modoBitmap34 === 'falha') return Promise.reject(new Error('sem memória para decodificar'));
+        if (modoBitmap34 === 'mudo') return new Promise(() => {});
+        return Promise.resolve({ width: 640, height: 480, close() { bitmapsFechados34++; } });
+      };
+      // O relógio de verdade é de 15 s; aqui ele é encurtado para a rodada não demorar.
+      ctx.setTimeout = (fn, ms) => setTimeout(fn, Math.min(Number(ms) || 0, 40));
+      ctx.clearTimeout = (id) => clearTimeout(id);
+      ctx.scrollTo = () => {};
+      ctx.localStorage = loja34;
+      ctx.dcAtiv = 'checkin-corpo';
+      ctx.audit = (acao, detalhe, meta) => { rastro34.push({ acao, detalhe: String(detalhe || ''), meta: meta || {} }); };
+      ctx.zAlertao = (titulo, linhas) => { cartazes34.push(String(titulo) + ' | ' + (linhas || []).join(' ')); };
+      ctx.renderCheckin = () => { redesenhos34++; };
+      ctx.ckCopiarNoCelular = () => { copias34++; };
+      ctx.ckFotosDoBanco = () => {};
+      // pelCadCache é 'let' no app: não mora no objeto global, só se troca por dentro.
+      vm.runInContext('__bkp34cad = pelCadCache; pelCadCache = {};', ctx);
+
+      check('v-34 · o relógio da foto é de 15 s e a redução é para 640 px',
+        ctx.CK_FOTO_TIMEOUT === 15000 && ctx.CK_FOTO_MAX === 640
+        && ctx.CK_FOTO_PERDIDA_MS === 10 * 60 * 1000,
+        'timeout=' + ctx.CK_FOTO_TIMEOUT + ' max=' + ctx.CK_FOTO_MAX);
+
+      // ---- (a) o toque grava a marca ANTES de a câmera abrir (a aba pode morrer) ----
+      zerar34();
+      ctx.ckFotoTocou('orelhas', 'foto');
+      const chave34 = ctx.ckRascChave(ctx.dcKey('Lana', 'Tutor de teste'));
+      const espelho34 = JSON.parse(loja34.getItem(chave34) || 'null');
+      check('v-34 · tocar no botão da foto grava fotoPendente no rascunho E no espelho do aparelho',
+        !!ctx.ckRascunho.fotoPendente && ctx.ckRascunho.fotoPendente.pk === 'orelhas'
+        && !!espelho34 && !!espelho34.r && !!espelho34.r.fotoPendente
+        && espelho34.r.fotoPendente.pk === 'orelhas',
+        JSON.stringify(espelho34 && espelho34.r && espelho34.r.fotoPendente));
+      check('v-34 · e com a câmera aberta o app sabe que está esperando a foto',
+        ctx.ckFotoEsperando() === true);
+
+      // ---- (b) o redesenho que vem DE FORA espera a foto (era o que matava o campo) ----
+      redesenhos34 = 0;
+      ctx.ckRedesenharDeFora();
+      const adiou34 = (redesenhos34 === 0);
+      ctx.CK_FOTO_ESPERANDO = null;
+      ctx.ckRedesenharDeFora();
+      check('v-34 · ouvinte do banco NÃO redesenha a ficha com a câmera aberta — e volta a redesenhar depois',
+        adiou34 && redesenhos34 === 1, 'redesenhos=' + redesenhos34);
+      check('v-34 · e a espera tem teto: marca velha não congela a tela para sempre',
+        (function () {
+          ctx.CK_FOTO_ESPERANDO = { pk: 'orelhas', campo: 'foto', ts: Date.now() - (11 * 60 * 1000), fase: 'camera' };
+          const r = ctx.ckFotoEsperando();
+          ctx.CK_FOTO_ESPERANDO = null;
+          return r === false;
+        })());
+
+      // ---- (c) o caminho feliz: bitmap reduzido, foto no rascunho, marca limpa ----
+      zerar34(); modoBitmap34 = 'ok'; modoCanvas34 = 'ok';
+      ctx.ckFotoTocou('orelhas', 'foto');
+      ctx.ckFoto('orelhas', campo34());
+      const guardando34 = (ctx.CK_FOTO_STATUS.orelhas === 'guardando');
+      await esperar34(80);
+      check('v-34 · com createImageBitmap a foto entra no rascunho e a marca de pendência some',
+        String((ctx.ckRascunho.pontos.orelhas || {}).foto || '').indexOf('data:image/jpeg') === 0
+        && !ctx.ckRascunho.fotoPendente && ctx.CK_FOTO_STATUS.orelhas === 'ok'
+        && bitmapsFechados34 === 1,
+        JSON.stringify({ tem: !!(ctx.ckRascunho.pontos.orelhas || {}).foto, st: ctx.CK_FOTO_STATUS.orelhas }));
+      check('v-34 · enquanto processa, o ponto diz "Guardando a foto…" e depois "Foto guardada"',
+        guardando34
+        && ctx.ckFotoStatusHTML('orelhas').indexOf('Foto guardada') > 0
+        && /Guardando a foto/.test(html));
+      check('v-34 · e a cópia no celular continua saindo da MESMA JPG comprimida',
+        copias34 === 1, 'copias=' + copias34);
+
+      // ---- (d) bitmap que falha cai no fallback da <img> e a foto entra do mesmo jeito ----
+      zerar34(); modoBitmap34 = 'falha'; modoImagem34 = 'ok';
+      ctx.ckFotoTocou('orelhas', 'foto');
+      ctx.ckFoto('orelhas', campo34());
+      await esperar34(80);
+      check('v-34 · bitmap que falha cai no fallback da <img> — a foto entra do mesmo jeito',
+        String((ctx.ckRascunho.pontos.orelhas || {}).foto || '').indexOf('data:image/jpeg') === 0
+        && urlsAbertas34 === 1 && temRastro('checkin-foto-falhou').length === 0,
+        JSON.stringify({ urls: urlsAbertas34, falhas: temRastro('checkin-foto-falhou').length }));
+      check('v-34 · o arquivo entra por objectURL (nunca mais o base64 inteiro do original) e é devolvido depois',
+        urlsFechadas34 === 1 && !/fr\.readAsDataURL\(f\);\s*\n\s*\}\s*\n\s*function ckDelExtra/.test(html),
+        'abertas=' + urlsAbertas34 + ' fechadas=' + urlsFechadas34);
+
+      // ---- (e) erro no canvas: NUNCA silêncio — rastro na auditoria e cartaz na tela ----
+      zerar34(); modoBitmap34 = 'ok'; modoCanvas34 = 'sem-contexto';
+      ctx.ckFotoTocou('orelhas', 'foto');
+      ctx.ckFoto('orelhas', campo34());
+      await esperar34(80);
+      const falhou34 = temRastro('checkin-foto-falhou')[0];
+      check('v-34 · canvas que não abre vira rastro checkin-foto-falhou, com tamanho, tipo e aparelho',
+        !!falhou34 && falhou34.detalhe.indexOf('Lana') === 0 && falhou34.detalhe.indexOf('Orelhas') > 0
+        && falhou34.meta.tamanho_mb === 5 && falhou34.meta.tipo === 'image/jpeg'
+        && typeof falhou34.meta.ua === 'string' && falhou34.meta.alvo === 'orelhas',
+        JSON.stringify(falhou34 || null));
+      check('v-34 · e a monitora É AVISADA na hora, com o que fazer — nunca silêncio',
+        cartazes34.length === 1 && /A FOTO NÃO FICOU PRONTA/.test(cartazes34[0])
+        && /resolução menor/.test(cartazes34[0]) && /Escolher da galeria/.test(cartazes34[0]),
+        JSON.stringify(cartazes34));
+      check('v-34 · foto que falha NÃO entra no rascunho e não finge que entrou',
+        !(ctx.ckRascunho.pontos.orelhas || {}).foto && !ctx.CK_FOTO_STATUS.orelhas
+        && !ctx.ckRascunho.fotoPendente);
+
+      // ---- (f) imagem vazia também fala ----
+      zerar34(); modoCanvas34 = 'vazio';
+      ctx.ckFoto('orelhas', campo34());
+      await esperar34(80);
+      check('v-34 · imagem que sai vazia do aparelho também deixa rastro e cartaz',
+        temRastro('checkin-foto-falhou').length === 1 && cartazes34.length === 1
+        && /saiu vazia/.test(temRastro('checkin-foto-falhou')[0].detalhe),
+        JSON.stringify(temRastro('checkin-foto-falhou')[0] || null));
+
+      // ---- (g) o relógio: a foto que nunca fica pronta fala em vez de sumir ----
+      zerar34(); modoCanvas34 = 'ok'; modoBitmap34 = 'mudo'; modoImagem34 = 'mudo';
+      ctx.ckFotoTocou('orelhas', 'foto');
+      ctx.ckFoto('orelhas', campo34());
+      await esperar34(120);
+      const relogio34 = temRastro('checkin-foto-falhou')[0];
+      check('v-34 · foto que nunca fica pronta: o relógio dispara, avisa e grava o motivo',
+        !!relogio34 && /15 segundos/.test(relogio34.detalhe) && cartazes34.length === 1
+        && !(ctx.ckRascunho.pontos.orelhas || {}).foto,
+        JSON.stringify(relogio34 || null));
+      modoBitmap34 = 'ok'; modoImagem34 = 'ok';
+
+      // ---- (h) o seletor que volta sem arquivo não deixa a tela travada ----
+      zerar34();
+      ctx.ckFotoTocou('orelhas', 'foto');
+      ctx.ckFoto('orelhas', { files: [] });
+      check('v-34 · seletor que volta sem arquivo limpa a espera e destrava a tela',
+        !ctx.ckRascunho.fotoPendente && ctx.ckFotoEsperando() === false && redesenhos34 >= 1);
+
+      // ---- (i) a aba que morreu: ckAbrir conta o que houve, em vez de fingir ----
+      zerar34();
+      ctx.turmaDoDia = () => [{ p: { n: 'Lana', tutor: 'Tutor de teste' } }];
+      ctx.ckDados = {};
+      const kLana34 = ctx.dcKey('Lana', 'Tutor de teste');
+      loja34.dados[ctx.ckRascChave(kLana34)] = JSON.stringify({
+        dia: ctx.dcDataKey(), ts: Date.now(),
+        r: { pontos: { orelhas: { alterado: true } }, coleiraRep: '', coleiraId: '', coco: '',
+             fotoPendente: { pk: 'orelhas', campo: 'foto', ts: Date.now() - 20000 } },
+      });
+      ctx.ckAtual = null; ctx.ckRascunho = null;
+      ctx.ckAbrir(kLana34);
+      const perdida34 = temRastro('checkin-foto-perdida')[0];
+      check('v-34 · reabrir o FILHOt com foto pendente e sem foto: rastro checkin-foto-perdida',
+        !!perdida34 && perdida34.detalhe.indexOf('Lana') === 0
+        && perdida34.detalhe.indexOf('Orelhas') > 0 && perdida34.meta.ponto === 'orelhas',
+        JSON.stringify(perdida34 || null));
+      check('v-34 · e o ponto ganha a faixa que explica o que aconteceu e o que fazer',
+        ctx.CK_FOTO_PERDIDA === 'orelhas'
+        && /não voltou para o app/.test(ctx.ckFotoPerdidaHTML('orelhas'))
+        && /câmera estava aberta/.test(ctx.ckFotoPerdidaHTML('orelhas'))
+        && /use a galeria/.test(ctx.ckFotoPerdidaHTML('orelhas'))
+        && ctx.ckFotoPerdidaHTML('olhos') === '',
+        ctx.ckFotoPerdidaHTML('orelhas').slice(0, 90));
+
+      // ---- (j) marca velha (mais de 10 min) não assombra o dia seguinte ----
+      zerar34();
+      loja34.dados[ctx.ckRascChave(kLana34)] = JSON.stringify({
+        dia: ctx.dcDataKey(), ts: Date.now(),
+        r: { pontos: { orelhas: { alterado: true } },
+             fotoPendente: { pk: 'orelhas', campo: 'foto', ts: Date.now() - (30 * 60 * 1000) } },
+      });
+      ctx.ckAtual = null; ctx.ckRascunho = null;
+      ctx.ckAbrir(kLana34);
+      check('v-34 · marca de foto pendente com mais de 10 minutos é descartada, sem faixa e sem rastro',
+        ctx.CK_FOTO_PERDIDA === '' && temRastro('checkin-foto-perdida').length === 0
+        && !ctx.ckRascunho.fotoPendente);
+
+      // ---- (k) a foto que JÁ chegou não vira "perdida" ----
+      zerar34();
+      loja34.dados[ctx.ckRascChave(kLana34)] = JSON.stringify({
+        dia: ctx.dcDataKey(), ts: Date.now(),
+        r: { pontos: { orelhas: { alterado: true, foto: 'data:image/jpeg;base64,AAAA' } },
+             fotoPendente: { pk: 'orelhas', campo: 'foto', ts: Date.now() - 5000 } },
+      });
+      ctx.ckAtual = null; ctx.ckRascunho = null;
+      ctx.ckAbrir(kLana34);
+      check('v-34 · ponto que já tem a foto nunca é apontado como foto perdida',
+        ctx.CK_FOTO_PERDIDA === '' && temRastro('checkin-foto-perdida').length === 0);
+
+      // ---- (l) o segundo caminho: escolher da galeria ----
+      const botoes34 = ctx.ckBotoesFotoHTML('orelhas', '', 'Tirar foto');
+      const inputs34 = botoes34.split('<input').length - 1;
+      const comCaptura34 = botoes34.split('capture="environment"').length - 1;
+      check('v-34 · todo ponto oferece DOIS caminhos: a câmera e "Escolher da galeria" (sem capture)',
+        inputs34 === 2 && comCaptura34 === 1 && botoes34.indexOf('Escolher da galeria') > 0
+        && (botoes34.split("ckFoto('orelhas',this)").length - 1) === 2,
+        botoes34.slice(0, 120));
+      check('v-34 · os dois caminhos avisam o app ANTES de abrir (onclick="ckFotoTocou")',
+        (botoes34.split('ckFotoTocou(&#39;').length - 1) === 2
+        || (botoes34.split("ckFotoTocou('orelhas','foto')").length - 1) === 2,
+        botoes34.slice(0, 200));
+      check('v-34 · a foto DE LONGE do machucado usa o mesmo molde, com o campo foto2',
+        ctx.ckBotoesFotoHTML('pele', 'foto2', 'Tirar').indexOf("ckFoto('pele',this,'foto2')") > 0);
+      check('v-34 · as fotos extras também ganharam a porta da galeria',
+        (function () {
+          const ex = ctx.ckFotosExtraHTML({ k: 'orelhas' }, {});
+          return (ex.split('<input').length - 1) === 2 && (ex.split('capture="environment"').length - 1) === 1
+            && ex.indexOf('galeria') > 0 && (ex.split('ckFotoExtra').length - 1) === 2;
+        })());
+
+      // ---- (m) a foto extra passa pelo MESMO caminho blindado ----
+      zerar34(); modoBitmap34 = 'ok'; modoCanvas34 = 'ok';
+      ctx.ckAtual = { p: { n: 'Lana', tutor: 'Tutor de teste' } };
+      ctx.ckRascunho = { pontos: { orelhas: { alterado: true } } };
+      ctx.ckFotoExtra('orelhas', campo34());
+      await esperar34(80);
+      check('v-34 · a foto extra usa o mesmo caminho: entra na lista, comprimida, com cópia no celular',
+        ((ctx.ckRascunho.pontos.orelhas || {}).extras || []).length === 1
+        && String(ctx.ckRascunho.pontos.orelhas.extras[0]).indexOf('data:image/jpeg') === 0
+        && copias34 === 1);
+    } finally {
+      Object.keys(bkp34).forEach((k) => { ctx[k] = bkp34[k]; });
+      ctx.document.createElement = ceOrig34;
+      vm.runInContext('pelCadCache = __bkp34cad;', ctx);
+    }
+
+    // ---- (n) o que fica escrito no código: a validação, o registro e a versão ----
+    check('v-34 · a validação para de mentir: quem acabou de fotografar lê "não chegou ao app"',
+      /A foto de '\+pt\.t\+' não chegou ao app — tire de novo ou use "Escolher da galeria"\./.test(html)
+      && /var _naoChegou=\(CK_FOTO_PERDIDA===pt\.k\)/.test(html)
+      && /_fpV\.pk===pt\.k && \(Date\.now\(\)-\(_fpV\.ts\|\|0\)\) < CK_FOTO_PERDIDA_MS/.test(html));
+    check('v-34 · o Salvar barrado continua deixando rastro ANTES de pintar a tela de vermelho',
+      html.indexOf("audit('checkin-corpo-barrado'") < html.indexOf("if(zFalta(faltas, {botao:'ckBtnSalvar'})) return;"));
+    check('v-34 · a marca da foto pendente é de rascunho: nunca vai para o registro do banco',
+      /delete reg\.fotoPendente;/.test(html));
+    check('v-34 · nenhum ouvinte do banco chama renderCheckin direto — todos passam por ckRedesenharDeFora',
+      (html.match(/ckRedesenharDeFora\(\)/g) || []).length >= 8
+      && !/zMapaVivo\(p,'_ck'[\s\S]{0,200}renderCheckin\(\)/.test(html));
+    check('v-34 · voltar da ficha e salvar limpam a espera da foto (a tela nunca fica presa)',
+      /function ckVoltar\(\)\{ ckAtual=null; ckRascunho=null; CK_RECUPERADO=''; CK_FOTO_ESPERANDO=null; CK_FOTO_STATUS=\{\}; CK_FOTO_PERDIDA=''; renderCheckin\(\); \}/.test(html));
+    check('v-34 · o pipeline da foto está todo dentro de try/catch, com relógio e objectURL',
+      /function ckImagemReduzida\(f\)\{/.test(html)
+      && /URL\.createObjectURL\(f\)/.test(html) && /URL\.revokeObjectURL\(url\)/.test(html)
+      && /createImageBitmap\(f,\{resizeWidth:CK_FOTO_MAX, resizeQuality:'medium', imageOrientation:'from-image'\}\)/.test(html)
+      && /if\(bmp && bmp\.close\) bmp\.close\(\)/.test(html));
+    check('v-34 · a versão carimbada desta entrega é a 2026-09-22-01',
+      /const APP_VERSAO='2026-09-22-01';/.test(html));
   }
   console.log('');
 

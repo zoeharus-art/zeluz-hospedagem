@@ -558,6 +558,13 @@
   .ck-foto{display:flex;align-items:center;gap:10px;margin-top:9px;flex-wrap:wrap}
   .ck-foto img{width:84px;height:84px;object-fit:cover;border-radius:11px;border:1px solid var(--line)}
   .ck-foto-falta{font-size:12.5px;font-weight:800;color:#B3261E}
+  /* A foto de 22/set/2026: o que está acontecendo com ela fica ESCRITO no ponto. */
+  .ck-fbt{display:flex;flex-wrap:wrap;gap:6px;align-items:center;justify-content:center}
+  .ck-fstatus{margin-top:7px;padding:7px 10px;border-radius:9px;font-size:12.5px;font-weight:700;line-height:1.35}
+  .ck-fstatus.guardando{background:var(--z-cream-warm);color:var(--z-blue);border:1.5px solid var(--z-gold)}
+  .ck-fstatus.ok{background:rgba(39,174,96,.10);color:var(--crm-ok);border:1.5px solid var(--crm-ok)}
+  .ck-fperdida{margin-top:8px;padding:9px 11px;border-radius:10px;background:rgba(222,180,40,.14);
+    border:1.5px solid var(--z-gold);color:var(--z-blue);font-size:12.5px;font-weight:600;line-height:1.4}
   .ck-bloco{border:1px solid var(--line);border-radius:14px;padding:12px 14px;margin-bottom:9px;background:var(--z-white)}
   .ck-bt{font-size:15px;font-weight:800;color:var(--z-blue);margin-bottom:3px}
   .ck-hint{font-size:12px;font-weight:500;color:var(--muted);margin-bottom:8px}
@@ -5031,11 +5038,11 @@
       // Quem a Gestão marcou como "em treinamento" (13/set/2026). Nó minúsculo: desce uma
       // vez e a marca nova chega sozinha na tela de quem está executando.
       DB.ref('daycare/config/treinamento').on('value', s=>{ const v=s.val(); TREINAMENTO=(v&&typeof v==='object')?v:{};
-        try{ if(typeof renderCheckin==='function'&&dcAtiv==='checkin-corpo') renderCheckin(); }catch(e){} /* silencioso de propósito: redesenho de tela — falhar não pode derrubar quem chamou */
+        try{ if(typeof ckRedesenharDeFora==='function'&&dcAtiv==='checkin-corpo') ckRedesenharDeFora(); }catch(e){} /* silencioso de propósito: redesenho de tela — falhar não pode derrubar quem chamou */
         try{ if(typeof protoRender==='function'&&document.getElementById('protoWrap')) protoRender(); }catch(e){} /* silencioso de propósito: redesenho de tela — falhar não pode derrubar quem chamou */
       });
       DB.ref('daycare/config/protocolos').on('value', s=>{ const v=s.val(); PROTOCOLOS=(v&&typeof v==='object')?v:{};
-        try{ if(typeof renderCheckin==='function'&&(dcAtiv==='checkin-corpo'||dcAtiv==='checkout-corpo')) renderCheckin(); }catch(e){} /* silencioso de propósito: redesenho de tela — falhar não pode derrubar quem chamou */
+        try{ if(typeof ckRedesenharDeFora==='function'&&(dcAtiv==='checkin-corpo'||dcAtiv==='checkout-corpo')) ckRedesenharDeFora(); }catch(e){} /* silencioso de propósito: redesenho de tela — falhar não pode derrubar quem chamou */
         try{ if(typeof renderAlmSeFor==='function') renderAlmSeFor(); }catch(e){} /* silencioso de propósito: redesenho de tela — falhar não pode derrubar quem chamou */
         try{ if(typeof protoRender==='function'&&document.getElementById('protoWrap')) protoRender(); }catch(e){} /* silencioso de propósito: redesenho de tela — falhar não pode derrubar quem chamou */
       });
@@ -6627,7 +6634,7 @@
     DB.ref('daycare/trocas').on('value', function(s){
       TROCA_CACHE=s.val()||{};
       try{ if(document.getElementById('repLista')) renderReposicao(); }catch(e){} /* silencioso de propósito: redesenho de tela — falhar não pode derrubar quem chamou */
-      try{ if(dcAtiv==='checkin-corpo') renderCheckin(); }catch(e){} /* silencioso de propósito: redesenho de tela — falhar não pode derrubar quem chamou */
+      try{ if(dcAtiv==='checkin-corpo') ckRedesenharDeFora(); }catch(e){} /* silencioso de propósito: redesenho de tela — falhar não pode derrubar quem chamou */
     });
   }
   function trocaDoDia(dataISO){
@@ -9910,7 +9917,7 @@
             try{ if(typeof pendVarrerDia==='function')
               pendVarrerDia(hoje, marcados.map(function(m){ return m.k; })); }
             catch(e){ _logFalhaGrav('abrir as pendências de prevenção do dia '+hoje, e); }
-            try{ if(dcAtiv==='checkin-corpo' && typeof renderCheckin==='function') renderCheckin(); }catch(e){} /* silencioso de propósito: redesenho de tela — falhar não pode derrubar quem chamou */
+            try{ if(dcAtiv==='checkin-corpo' && typeof ckRedesenharDeFora==='function') ckRedesenharDeFora(); }catch(e){} /* silencioso de propósito: redesenho de tela — falhar não pode derrubar quem chamou */
           }).catch(function(e){
             _logFalhaGrav('falta automática das '+CK_HORA_FALTA+'h', e);
             // Falhou? Solta a trava, para o próximo a entrar (ou o temporizador) tentar de novo.
@@ -14880,7 +14887,7 @@
   // inteira DEPOIS de a correção estar publicada — o aviso apareceu, ninguém tocou.
   // Agora o aparelho PARADO recarrega sozinho: trancado, com a aba escondida, na porta de
   // entrada ou 3 minutos sem ninguém tocar nele. Mão na tela = nunca recarrega.
-  const APP_VERSAO='2026-09-21-06';
+  const APP_VERSAO='2026-09-22-01';
   var RECARGA_PARADO_MS=3*60*1000, __versaoPublicada=null, __recargaTimer=null;
   function vigiarVersao(){
     if(!DB) return;
@@ -22469,7 +22476,7 @@
     try{
       if(dcAtiv==='chamada'){ if(typeof renderDaycare==='function') renderDaycare(); }
       else if(dcAtiv==='almoco'){ if(typeof renderAlmoco==='function') renderAlmoco(); }
-      else if(dcAtiv==='checkin-corpo'||dcAtiv==='checkout-corpo'){ if(typeof renderCheckin==='function') renderCheckin(); }
+      else if(dcAtiv==='checkin-corpo'||dcAtiv==='checkout-corpo'){ if(typeof ckRedesenharDeFora==='function') ckRedesenharDeFora(); }
       else if(dcAtiv==='checkin-pert'||dcAtiv==='checkout-pert'){ if(typeof renderPertences==='function') renderPertences(); }
       else if(typeof renderGenerico==='function') renderGenerico();
       if(typeof renderAdaptBanner==='function') renderAdaptBanner();
@@ -23600,7 +23607,7 @@
         if(Array.isArray(f.extras) && f.extras.length && !(at.extras&&at.extras.length)){ at.extras=f.extras.slice(); mudou=true; }
         ckRascunho.pontos[ptk]=at;
       });
-      if(mudou) renderCheckin();
+      if(mudou) ckRedesenharDeFora();
     }).catch(function(e){ _logLeituraFalhou(ckFotosNo(dia)+'/'+k+' (ckFotosDoBanco)', e); });
   }
   // A foto que não abriu não pode sumir calada: sem isto, o arquivo corrompido (ou o
@@ -23637,7 +23644,7 @@
     (function(){ var p=ckNo(); zMapaVivo(p,'_ck',function(v){
       if(ckNo()!==p) return;                       // trocou de entrada para saída: cada uma tem o seu
       ckDados=Object.assign({},v);
-      try{ if(dcAtiv==='checkin-corpo'||dcAtiv==='checkout-corpo') renderCheckin(); }catch(e){} /* silencioso de propósito: redesenho de tela — falhar não pode derrubar quem chamou */
+      try{ if(dcAtiv==='checkin-corpo'||dcAtiv==='checkout-corpo') ckRedesenharDeFora(); }catch(e){} /* silencioso de propósito: redesenho de tela — falhar não pode derrubar quem chamou */
     }); })();
     Promise.all([
       zMapaUma(ckNo()).catch(function(){ return {}; }),
@@ -23917,7 +23924,7 @@
         conta[k]=(conta[k]||0)+1;
       }); });
       CKT_SEMANA=conta;
-      try{ if(dcAtiv==='checkin-corpo') renderCheckin(); }catch(e){} /* silencioso de propósito: redesenho de tela — falhar não pode derrubar quem chamou */
+      try{ if(dcAtiv==='checkin-corpo') ckRedesenharDeFora(); }catch(e){} /* silencioso de propósito: redesenho de tela — falhar não pode derrubar quem chamou */
     }).catch(function(e){ _logLeituraFalhou('daycare/checkin-corpo-'+etapa+' (pergunta da semana)', e); CKT_SEMANA={}; });
   }
   function cktPerguntaDaVez(etapa){
@@ -24179,10 +24186,24 @@
       if(!ckRascunho.pontos) ckRascunho.pontos={};
       CK_RECUPERADO='Recuperei o que você já tinha preenchido.';
     }
+    // ===== A FOTO QUE SAIU E NÃO VOLTOU (22/set/2026) ==============================
+    // O toque no botão da câmera grava fotoPendente ANTES de a câmera abrir. Se o rascunho
+    // volta com essa marca e o ponto continua sem foto, o aparelho matou a página enquanto
+    // a câmera estava no ar — e a monitora saiu dali achando que tinha fotografado.
+    CK_FOTO_ESPERANDO=null; CK_FOTO_STATUS={}; CK_FOTO_PERDIDA='';
+    var _fp=ckRascunho.fotoPendente;
+    if(_fp && _fp.pk && (Date.now()-(_fp.ts||0)) < CK_FOTO_PERDIDA_MS
+       && !((ckRascunho.pontos[_fp.pk]||{})[_fp.campo||'foto'])){
+      CK_FOTO_PERDIDA=_fp.pk;
+      if(typeof audit==='function') audit('checkin-foto-perdida',
+        pelNome(o.p)+' — '+ckRotuloPonto(_fp.pk, o.p)+' — a foto saiu para a câmera e não voltou ao app',
+        {alvo:k, ponto:_fp.pk});
+    }
+    if(!CK_FOTO_PERDIDA && ckRascunho.fotoPendente){ delete ckRascunho.fotoPendente; ckRascEspelhar(); }
     ckFotosDoBanco(k);        // fotos moram em nó próprio: descem só quando alguém abre
     renderCheckin(); window.scrollTo({top:0,behavior:'smooth'});
   }
-  function ckVoltar(){ ckAtual=null; ckRascunho=null; CK_RECUPERADO=''; renderCheckin(); }
+  function ckVoltar(){ ckAtual=null; ckRascunho=null; CK_RECUPERADO=''; CK_FOTO_ESPERANDO=null; CK_FOTO_STATUS={}; CK_FOTO_PERDIDA=''; renderCheckin(); }
   function ckMarcar(pk,alterado){
     if(!ckRascunho) return;
     const at=ckRascunho.pontos[pk]||{};
@@ -24264,35 +24285,222 @@
   }
   // A foto é a prova. Comprimida para 640px: o app já apanhou de foto pesada antes.
   // Machucado, ferida, corte, arranhão: o que precisa de DUAS fotos e da parte do corpo.
-  // ---- Fotos extras: quantas forem necessárias, em qualquer ponto ----
-  function ckFotoExtra(pk,input){
-    const f=input&&input.files&&input.files[0]; if(!f) return;
-    const fr=new FileReader();
-    fr.onerror=function(){ ckFotoNaoAbriu(input); };
-    fr.onload=function(e){
-      const img=new Image();
-      img.onerror=function(){ ckFotoNaoAbriu(input); };
-      img.onload=function(){
-        const max=640, esc=Math.min(1,max/Math.max(img.width,img.height));
-        const c=document.createElement('canvas'); c.width=Math.round(img.width*esc); c.height=Math.round(img.height*esc);
-        c.getContext('2d').drawImage(img,0,0,c.width,c.height);
-        const pt=ckRascunho.pontos[pk]||{alterado:true};
-        pt.extras=Array.isArray(pt.extras)?pt.extras:[];
-        const jpg=c.toDataURL('image/jpeg',0.72);
-        pt.extras.push(jpg);
-        ckRascunho.pontos[pk]=pt; ckRascEspelhar(); renderCheckin();
-        ckCopiarNoCelular(jpg, pk, 'extra-'+pt.extras.length);
-      };
-      img.src=e.target.result;
-    };
-    fr.readAsDataURL(f);
+  // ===== A FOTO QUE NÃO VOLTAVA DA CÂMERA (Adriana, 22/set/2026) ====================
+  // Caso real e medido: Giulia, Samsung A07, check-in do corpo da Lana. Ela marcou Orelhas
+  // como alterado, fotografou e o Salvar barrou QUATRO vezes seguidas (9:23, 9:23, 9:24 e
+  // 9:26) dizendo "faltou: foto de Orelhas". A foto nunca entrou no rascunho, e nada disso
+  // deixou rastro: nem "a foto não abriu", nem erro nenhum. Só silêncio.
+  //
+  // Três caminhos levam exatamente a esse silêncio — e os três ficam fechados aqui:
+  //
+  //  1) MEMÓRIA. A foto de 50 MP do aparelho virava base64 inteiro (readAsDataURL) e depois
+  //     um bitmap de dezenas de milhões de pixels. Num aparelho de entrada o Chrome desiste
+  //     no meio: o onload nunca dispara e o onerror também não. Agora a imagem é reduzida na
+  //     PRÓPRIA decodificação (createImageBitmap com resizeWidth), o arquivo entra por
+  //     objectURL em vez de base64, tudo está dentro de try/catch e existe um relógio de
+  //     15 segundos que FALA em vez de calar.
+  //
+  //  2) A ABA MORRE. Android de pouca memória mata a página enquanto a câmera está aberta;
+  //     na volta o app recarrega e o 'change' do campo nunca acontece. Agora o TOQUE no
+  //     botão já grava fotoPendente no rascunho do aparelho — e, ao reabrir o FILHOt, a
+  //     faixa amarela conta o que houve, em vez de deixar a monitora achando que fotografou.
+  //
+  //  3) A FICHA É REDESENHADA COM A CÂMERA ABERTA. Qualquer ouvinte do banco (outra monitora
+  //     salvando um check-in, a planilha chegando, a falta automática) chamava renderCheckin
+  //     e o innerHTML inteiro era refeito — levando junto o <input type="file"> que esperava
+  //     a foto. O Chrome CANCELA o seletor quando o campo sai da tela: a foto simplesmente
+  //     não volta. Agora esses redesenhos passam por ckRedesenharDeFora(), que espera a foto
+  //     chegar antes de refazer a tela.
+  var CK_FOTO_MAX=640;                      // a foto guardada é sempre a de 640px
+  var CK_FOTO_TIMEOUT=15000;                // 15 s e a foto fala, em vez de sumir calada
+  var CK_FOTO_PERDIDA_MS=10*60*1000;        // a marca de foto pendente vale por 10 minutos
+  var CK_FOTO_TETO_CAMERA=10*60*1000;       // a câmera aberta não segura a tela para sempre
+  var CK_FOTO_ESPERANDO=null;               // {pk, campo, ts, fase:'camera'|'processando'}
+  var CK_FOTO_STATUS={};                    // pk -> 'guardando' | 'ok'
+  var CK_FOTO_PERDIDA='';                   // ponto cuja foto saiu para a câmera e não voltou
+  function ckFotoEsperando(){
+    if(!CK_FOTO_ESPERANDO) return false;
+    if(Date.now()-(CK_FOTO_ESPERANDO.ts||0) > CK_FOTO_TETO_CAMERA){ CK_FOTO_ESPERANDO=null; return false; }
+    return true;
   }
+  // O redesenho que vem DE FORA (ouvinte do banco, planilha, relógio) nunca pode destruir a
+  // ficha aberta enquanto a câmera está no ar. Ele espera — o rascunho em memória e o espelho
+  // do aparelho são a verdade enquanto o check-in estiver aberto.
+  function ckRedesenharDeFora(){
+    if(typeof renderCheckin!=='function') return;
+    if(ckAtual && ckFotoEsperando()) return;
+    renderCheckin();
+  }
+  function ckRotuloPonto(pk, p){
+    try{
+      var alvo=p||(ckAtual&&ckAtual.p);
+      var achado=(ckPontosDe(alvo)||[]).filter(function(x){ return x.k===pk; })[0];
+      return (achado&&achado.t)||pk;
+    }catch(e){ return pk; }
+  }
+  function ckNomeAtual(){
+    try{ if(typeof pelNome==='function') return pelNome(ckAtual&&ckAtual.p)||'-'; }catch(e){ /* o nome bruto ainda serve */ }
+    try{ return (ckAtual&&ckAtual.p&&ckAtual.p.n)||'-'; }catch(e){ return '-'; }
+  }
+  // Chamado no TOQUE, antes de a câmera abrir: se o aparelho matar a página agora, o app
+  // sabe, ao voltar, que existiu uma foto a caminho.
+  function ckFotoTocou(pk, campo){
+    if(!ckRascunho) return;
+    var c=campo||'foto';
+    CK_FOTO_ESPERANDO={pk:pk, campo:c, ts:Date.now(), fase:'camera'};
+    CK_FOTO_PERDIDA='';
+    ckRascunho.fotoPendente={pk:pk, campo:c, ts:Date.now()};
+    ckRascEspelhar();
+  }
+  function ckFotoChegou(){
+    CK_FOTO_ESPERANDO=null;
+    if(ckRascunho && ckRascunho.fotoPendente){ delete ckRascunho.fotoPendente; ckRascEspelhar(); }
+  }
+  // Reduz a imagem sem nunca montar a foto inteira na memória, quando o navegador sabe fazer
+  // isso. Devolve a JPG de 640px pronta — ou explica, em português, por que não deu.
+  function ckImagemReduzida(f){
+    return new Promise(function(resolve, reject){
+      var url='', bmp=null, acabou=false, relogio=null;
+      function limpar(){
+        try{ if(relogio!=null) clearTimeout(relogio); }catch(e){} /* silencioso de propósito: limpeza do relógio */
+        try{ if(bmp && bmp.close) bmp.close(); }catch(e){} /* silencioso de propósito: devolver a memória do bitmap */
+        try{ if(url) URL.revokeObjectURL(url); }catch(e){} /* silencioso de propósito: devolver a memória do arquivo */
+      }
+      function falhar(msg){ if(acabou) return; acabou=true; limpar(); reject(new Error(msg)); }
+      try{
+        relogio=setTimeout(function(){
+          falhar('a foto não ficou pronta em '+Math.round(CK_FOTO_TIMEOUT/1000)+' segundos (a imagem é grande demais para este aparelho)');
+        }, CK_FOTO_TIMEOUT);
+      }catch(e){ relogio=null; }
+      function desenhar(fonte, lar, alt){
+        if(acabou) return;
+        try{
+          var L=Number(lar)||0, A=Number(alt)||0;
+          if(!L||!A){ falhar('a imagem voltou sem tamanho'); return; }
+          var esc=Math.min(1, CK_FOTO_MAX/Math.max(L,A));
+          var c=document.createElement('canvas');
+          c.width=Math.max(1,Math.round(L*esc)); c.height=Math.max(1,Math.round(A*esc));
+          var d=c.getContext('2d');
+          if(!d){ falhar('o aparelho não abriu a área de desenho (sem memória)'); return; }
+          d.drawImage(fonte,0,0,c.width,c.height);
+          var jpg=c.toDataURL('image/jpeg',0.72);
+          if(!jpg || String(jpg).indexOf('data:image/jpeg')!==0 || String(jpg).length<200){
+            falhar('a imagem saiu vazia do aparelho'); return;
+          }
+          acabou=true; limpar(); resolve(jpg);
+        }catch(e){ falhar((e&&e.message)||'o aparelho não conseguiu reduzir a imagem'); }
+      }
+      function porImagem(){
+        if(acabou) return;
+        try{
+          url=URL.createObjectURL(f);
+          var img=new Image();
+          img.onerror=function(){ falhar('o aparelho não conseguiu abrir a imagem'); };
+          img.onload=function(){ desenhar(img, img.naturalWidth||img.width, img.naturalHeight||img.height); };
+          img.src=url;
+        }catch(e){ falhar((e&&e.message)||'o aparelho não conseguiu abrir a imagem'); }
+      }
+      try{
+        if(typeof createImageBitmap==='function'){
+          var pr=null;
+          // imageOrientation:'from-image' mantém a foto em pé onde o navegador respeita o EXIF.
+          try{ pr=createImageBitmap(f,{resizeWidth:CK_FOTO_MAX, resizeQuality:'medium', imageOrientation:'from-image'}); }
+          catch(e1){ try{ pr=createImageBitmap(f,{resizeWidth:CK_FOTO_MAX, resizeQuality:'medium'}); }catch(e2){ pr=null; } }
+          if(pr && typeof pr.then==='function'){
+            pr.then(function(b){ bmp=b; desenhar(b, b&&b.width, b&&b.height); })
+              .catch(function(){ porImagem(); });   // navegador sem bitmap: cai na <img> de sempre
+            return;
+          }
+        }
+      }catch(e){ /* qualquer tropeço aqui cai no caminho da <img> */ }
+      porImagem();
+    });
+  }
+  function ckFotoFalhou(pk, input, f, e){
+    var motivo=(e&&e.message)||String(e||'motivo desconhecido');
+    try{ if(input) input.value=''; }catch(x){} /* silencioso de propósito: limpar o campo é conveniência */
+    var ponto=ckRotuloPonto(pk);
+    var mb=0; try{ mb=Math.round((((f&&f.size)||0)/1048576)*10)/10; }catch(x){ mb=0; }
+    var ua=''; try{ ua=String((navigator&&navigator.userAgent)||'').slice(0,120); }catch(x){ ua=''; }
+    if(typeof audit==='function') audit('checkin-foto-falhou',
+      ckNomeAtual()+' — '+ponto+' — '+motivo,
+      {alvo:pk, tamanho_mb:mb, tipo:(f&&f.type)||'', ua:ua});
+    var linhas=['A foto de '+ponto+' não ficou pronta — tire de novo com a câmera em resolução menor.',
+                'Se repetir: toque em "Escolher da galeria" e pegue a foto que já está no seu celular.',
+                'O que o aparelho respondeu: '+motivo+(mb?(' — a foto tinha '+mb+' MB'):'')];
+    if(typeof zAlertao==='function') zAlertao('A FOTO NÃO FICOU PRONTA', linhas, {botao:'Vou tirar de novo'});
+    else alert(linhas.join('\n\n'));
+  }
+  // Um caminho só: câmera e galeria, foto do ponto e fotos extras, tudo passa por aqui.
+  function ckFotoReceber(pk, input, campo, extra){
+    var f=(input&&input.files&&input.files[0])||null;
+    if(!f){ ckFotoChegou(); renderCheckin(); return; }   // o seletor voltou sem arquivo nenhum
+    if(!ckRascunho){ ckFotoChegou(); return; }
+    var alvo=campo||'foto';
+    CK_FOTO_ESPERANDO={pk:pk, campo:alvo, ts:Date.now(), fase:'processando'};
+    CK_FOTO_PERDIDA='';
+    CK_FOTO_STATUS[pk]='guardando';
+    renderCheckin();
+    ckImagemReduzida(f).then(function(jpg){
+      ckFotoChegou();
+      if(!ckRascunho) return;
+      CK_FOTO_STATUS[pk]='ok';
+      var pt=ckRascunho.pontos[pk]||{alterado:true};
+      var sufixo='';
+      if(extra){
+        pt.extras=Array.isArray(pt.extras)?pt.extras:[];
+        pt.extras.push(jpg);
+        sufixo='extra-'+pt.extras.length;
+      } else {
+        pt[alvo]=jpg; pt.alterado=true;
+        sufixo=(alvo==='foto2')?'de-longe':'';
+      }
+      ckRascunho.pontos[pk]=pt; ckRascEspelhar(); renderCheckin();
+      ckCopiarNoCelular(jpg, pk, sufixo);
+    }).catch(function(e){
+      ckFotoChegou();
+      delete CK_FOTO_STATUS[pk];
+      ckFotoFalhou(pk, input, f, e);
+      renderCheckin();
+    });
+  }
+  function ckFotoExtra(pk,input){ ckFotoReceber(pk, input, '', true); }
   function ckDelExtra(pk,i){ if(!ckRascunho) return; var pt=ckRascunho.pontos[pk]||{}; (pt.extras||[]).splice(i,1); ckRascunho.pontos[pk]=pt; ckRascEspelhar(); renderCheckin(); }
+  // Dois caminhos para a MESMA foto: a câmera e a galeria. Quando o caminho da câmera falha
+  // naquele aparelho — e falha (Samsung A07, 22/set/2026) —, a galeria salva o check-in: a
+  // monitora fotografa pela câmera do celular e escolhe o arquivo aqui.
+  function ckBotoesFotoHTML(pk, campo, rotulo){
+    var c=campo?(",'"+campo+"'"):'';
+    var cmp=campo||'foto';
+    return '<div class="ck-fbt">'
+      +'<label class="btn btn-gold" style="padding:7px 12px;font-size:12.5px;cursor:pointer">'+rotulo
+        +'<input type="file" accept="image/*" capture="environment" style="display:none"'
+        +' onclick="ckFotoTocou(\''+pk+'\',\''+cmp+'\')"'
+        +' onchange="ckFoto(\''+pk+'\',this'+c+')"></label>'
+      +'<label class="btn ck-galeria" style="padding:7px 12px;font-size:12px;cursor:pointer;background:var(--z-cream-warm);color:var(--z-blue);border:1.5px solid var(--line)">Escolher da galeria'
+        +'<input type="file" accept="image/*" style="display:none"'
+        +' onclick="ckFotoTocou(\''+pk+'\',\''+cmp+'\')"'
+        +' onchange="ckFoto(\''+pk+'\',this'+c+')"></label>'
+      +'</div>';
+  }
+  function ckFotoStatusHTML(pk){
+    var st=CK_FOTO_STATUS[pk]||'';
+    if(st==='guardando') return '<div class="ck-fstatus guardando">Guardando a foto… não saia desta tela.</div>';
+    if(st==='ok') return '<div class="ck-fstatus ok">Foto guardada ✓</div>';
+    return '';
+  }
+  function ckFotoPerdidaHTML(pk){
+    if(CK_FOTO_PERDIDA!==pk) return '';
+    return '<div class="ck-fperdida">A última foto que você tirou aqui não voltou para o app '
+      +'(o celular fechou a página enquanto a câmera estava aberta). Tire de novo — e, se repetir, '
+      +'use a galeria: tire pela câmera do celular e escolha o arquivo.</div>';
+  }
   function ckFotosExtraHTML(pt,at){
     var ex=Array.isArray(at.extras)?at.extras:[];
     return '<div class="ck-extras">'
       +ex.map(function(src,i){ return '<div class="ex-item"><img src="'+src+'" alt=""><button type="button" onclick="ckDelExtra(\''+pt.k+'\','+i+')">&times;</button></div>'; }).join('')
-      +'<label class="ex-add">+ outra foto<input type="file" accept="image/*" capture="environment" style="display:none" onchange="ckFotoExtra(\''+pt.k+'\',this)"></label>'
+      +'<label class="ex-add">+ outra foto<input type="file" accept="image/*" capture="environment" style="display:none" onclick="ckFotoTocou(\''+pt.k+'\',\'extra\')" onchange="ckFotoExtra(\''+pt.k+'\',this)"></label>'
+      +'<label class="ex-add">galeria<input type="file" accept="image/*" style="display:none" onclick="ckFotoTocou(\''+pt.k+'\',\'extra\')" onchange="ckFotoExtra(\''+pt.k+'\',this)"></label>'
       +'</div>';
   }
   // ===== O BLOCO "QUEM PRECISA VER ISTO?" SAIU (Adriana, 15/set/2026) ===============
@@ -24321,28 +24529,7 @@
     return a.some(function(x){ return /machuc|ferid|corte|arranh|lesão|lesao|inchaç|inchac/i.test(String(x)); });
   }
   function ckCampo(pk,campo,v){ if(!ckRascunho) return; var pt=ckRascunho.pontos[pk]||{alterado:true}; pt[campo]=v; ckRascunho.pontos[pk]=pt; ckRascEspelhar(); }
-  function ckFoto(pk,input,campo){
-    const f=input&&input.files&&input.files[0]; if(!f) return;
-    const alvo=campo||'foto';
-    const fr=new FileReader();
-    fr.onerror=function(){ ckFotoNaoAbriu(input); };
-    fr.onload=function(e){
-      const img=new Image();
-      img.onerror=function(){ ckFotoNaoAbriu(input); };
-      img.onload=function(){
-        const max=640, esc=Math.min(1,max/Math.max(img.width,img.height));
-        const c=document.createElement('canvas'); c.width=Math.round(img.width*esc); c.height=Math.round(img.height*esc);
-        c.getContext('2d').drawImage(img,0,0,c.width,c.height);
-        const pt=ckRascunho.pontos[pk]||{alterado:true};
-        const jpg=c.toDataURL('image/jpeg',0.72);
-        pt[alvo]=jpg; pt.alterado=true;
-        ckRascunho.pontos[pk]=pt; ckRascEspelhar(); renderCheckin();
-        ckCopiarNoCelular(jpg, pk, (alvo==='foto2')?'de-longe':'');
-      };
-      img.src=e.target.result;
-    };
-    fr.readAsDataURL(f);
-  }
+  function ckFoto(pk,input,campo){ ckFotoReceber(pk, input, campo||'foto', false); }
   // ===== VÍDEO NA CONSCIÊNCIA (Adriana, 13/ago/2026) ================================
   // "No caso da consciência, tem como gravar em vez de tirar foto?" A resposta dele ao VEM
   // é movimento: andar torto, demorar, cambalear. Foto parada não mostra isso.
@@ -24482,8 +24669,7 @@
           ? '<div class="ck-foto2"><div class="cx'+(at.foto?' ok':'')+'">'
               +(at.foto?'<img src="'+at.foto+'" alt="">':'')
               +'<div class="lb">Foto</div><div class="dc">Como ele está agora</div>'
-              +'<label class="btn btn-gold" style="padding:7px 12px;font-size:12.5px;cursor:pointer">'+(at.foto?'Trocar':'Tirar')
-                +'<input type="file" accept="image/*" capture="environment" style="display:none" onchange="ckFoto(\''+pt.k+'\',this)"></label></div>'
+              +ckBotoesFotoHTML(pt.k, '', (at.foto?'Trocar':'Tirar'))+'</div>'
             +'<div class="cx'+(at.video?' ok':'')+'">'
               +(at.video?'<video src="'+at.video+'" controls playsinline style="width:100%;max-width:110px;height:88px;border-radius:9px;display:block;margin:0 auto 6px"></video>':'')
               +'<div class="lb">Vídeo (melhor)</div><div class="dc">Chame e grave a resposta — 5 a 10 segundos bastam</div>'
@@ -24494,18 +24680,21 @@
           ? '<div class="ck-foto2"><div class="cx'+(at.foto?' ok':'')+'">'
               +(at.foto?'<img src="'+at.foto+'" alt="">':'')
               +'<div class="lb">1 · De perto</div><div class="dc">Bem próximo, para ver como é</div>'
-              +'<label class="btn btn-gold" style="padding:7px 12px;font-size:12.5px;cursor:pointer">'+(at.foto?'Trocar':'Tirar')
-                +'<input type="file" accept="image/*" capture="environment" style="display:none" onchange="ckFoto(\''+pt.k+'\',this)"></label></div>'
+              +ckBotoesFotoHTML(pt.k, '', (at.foto?'Trocar':'Tirar'))+'</div>'
             +'<div class="cx'+(at.foto2?' ok':'')+'">'
               +(at.foto2?'<img src="'+at.foto2+'" alt="">':'')
               +'<div class="lb">2 · De longe</div><div class="dc">Afaste, para saber onde fica no corpo</div>'
-              +'<label class="btn btn-gold" style="padding:7px 12px;font-size:12.5px;cursor:pointer">'+(at.foto2?'Trocar':'Tirar')
-                +'<input type="file" accept="image/*" capture="environment" style="display:none" onchange="ckFoto(\''+pt.k+'\',this,\'foto2\')"></label></div></div>'
+              +ckBotoesFotoHTML(pt.k, 'foto2', (at.foto2?'Trocar':'Tirar'))+'</div></div>'
           : '<div class="ck-foto">'
               +(at.foto?'<img src="'+at.foto+'" alt="">':'<div class="ck-foto-falta">Foto obrigatória</div>')
-              +'<label class="btn btn-gold" style="padding:9px 14px;font-size:13px;cursor:pointer">'+(at.foto?'Trocar foto':'Tirar foto')
-                +'<input type="file" accept="image/*" capture="environment" style="display:none" onchange="ckFoto(\''+pt.k+'\',this)"></label>'
+              +ckBotoesFotoHTML(pt.k, '', (at.foto?'Trocar foto':'Tirar foto'))
             +'</div>')
+        // O que está acontecendo com a foto AGORA — "Guardando a foto…" enquanto processa e
+        // "Foto guardada ✓" quando entra no rascunho. Sem isso a monitora toca em Salvar sem
+        // saber se a foto chegou, que foi exatamente o caso da Lana (22/set/2026).
+        +ckFotoStatusHTML(pt.k)
+        // A foto que saiu para a câmera e não voltou: a faixa conta o que houve.
+        +ckFotoPerdidaHTML(pt.k)
         // A cópia no celular (Android): quem tira a foto precisa SABER que ela também ficou
         // guardada ali — senão procura na galeria e não entende por que não achou.
         +ckCopiaAvisoHTML()
@@ -24949,7 +25138,15 @@
         faltas.push({el:alvo, curto:'olhar '+pt.t, msg:'Falta olhar: '+pt.t+'. Toque em Normal ou em Alterado.'}); return;
       }
       if(a.alterado && !a.foto && !(pt.k==='consciencia'&&a.video)){
-        faltas.push({el:alvo, curto:'foto de '+pt.t, msg:'Falta a foto de '+pt.t+'. É ela que mostra ao tutor e à veterinária o que você viu.'});
+        // Dizer "Falta a foto" para quem ACABOU de fotografar é mentir: ela fotografou, a
+        // foto é que não chegou. A mensagem tem de dizer isso, e o que fazer (22/set/2026).
+        var _fpV=R.fotoPendente;
+        var _naoChegou=(CK_FOTO_PERDIDA===pt.k)
+          || (!!_fpV && _fpV.pk===pt.k && (Date.now()-(_fpV.ts||0)) < CK_FOTO_PERDIDA_MS);
+        faltas.push({el:alvo, curto:'foto de '+pt.t,
+          msg:_naoChegou
+            ? 'A foto de '+pt.t+' não chegou ao app — tire de novo ou use "Escolher da galeria".'
+            : 'Falta a foto de '+pt.t+'. É ela que mostra ao tutor e à veterinária o que você viu.'});
       }
       if(a.alterado && ckEhMachucado(a) && !a.foto2){
         faltas.push({el:alvo, curto:'foto de longe de '+pt.t, msg:'Falta a foto DE LONGE de '+pt.t+' — a de perto mostra como é, a de longe mostra onde fica no corpo.'});
@@ -24998,6 +25195,9 @@
       _regPontos[ptk]=at;
     });
     const reg=Object.assign({}, R, {pontos:_regPontos, nome:pelNome(p), tutor:p.tutor||'', quem:quem, hora:horaAgora(), fim:Date.now(), tipo:entrada?'entrada':'saida'});
+    // A marca da foto a caminho é de rascunho, não de registro: gravou, acabou.
+    delete reg.fotoPendente;
+    CK_FOTO_ESPERANDO=null; CK_FOTO_STATUS={}; CK_FOTO_PERDIDA='';
     ckDados[k]=reg;
     const alterados=pontos.filter(function(pt){ return (R.pontos[pt.k]||{}).alterado; });
     // Cada alteração vira um aviso no grupo da veterinária, com a foto. Se a ponte não
