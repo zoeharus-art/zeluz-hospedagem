@@ -1341,7 +1341,34 @@
   .mag-freq-dias{display:none;flex-wrap:wrap;gap:5px;width:100%}
   .mag-freq-dias.on{display:flex}
   .mag-diaw{width:42px;height:38px;border:1.5px solid var(--line);background:#fff;border-radius:9px;font-size:12px;font-weight:800;color:var(--z-blue);cursor:pointer}
-  .mag-diaw.on{background:var(--z-blue);border-color:var(--z-blue);color:#fff}  /* Celular: a tabela de 3 colunas não cabe — o nome do remédio ficava cortado.
+  .mag-diaw.on{background:var(--z-blue);border-color:var(--z-blue);color:#fff}
+  /* "Quando dar" — a refeição manda no horário (22/set/2026). Mesma cara dos outros blocos
+     da linha de remédio: botão grande, nada de caixa de texto para dado crítico. */
+  .mag-quando{display:flex;flex-wrap:wrap;align-items:center;gap:8px;padding:8px 9px;background:var(--z-cream-warm);border-top:1px dashed var(--line)}
+  .mag-quando .mu-lab{align-self:center;font-size:10.5px;font-weight:800;letter-spacing:.4px;color:var(--muted);text-transform:uppercase}
+  .mag-quando-opts{display:flex;gap:6px;flex-wrap:wrap}
+  .mag-quando-b{border:1.5px solid var(--line);background:var(--z-cream);color:var(--z-blue);border-radius:999px;padding:7px 12px;font-size:12.5px;font-weight:700;font-family:var(--font-ui);cursor:pointer}
+  .mag-quando-b.on{background:var(--z-gold);border-color:var(--z-gold);color:var(--z-blue)}
+  .mag-quando-minw{display:none;flex-wrap:wrap;gap:6px;width:100%;align-items:center}
+  .mag-quando-minw.on{display:flex}
+  .mag-quando-m{border:1.5px solid var(--line);background:#fff;color:var(--z-blue);border-radius:999px;padding:6px 12px;font-size:12.5px;font-weight:800;font-family:var(--font-ui);cursor:pointer}
+  .mag-quando-m.on{background:var(--z-blue);border-color:var(--z-blue);color:var(--z-cream)}
+  .mag-quando-frase{width:100%;font-size:12px;font-weight:700;color:var(--z-blue)}
+  /* A linha "toma remédio" — a MESMA em toda tela onde o FILHOt aparece. */
+  .med-linha{display:block;margin:6px 0 0;font-size:12px;font-weight:800;line-height:1.35;
+    color:var(--crm-atencao-text);background:rgba(222,180,40,.16);border-left:4px solid var(--z-gold);
+    border-radius:8px;padding:6px 10px}
+  .med-linha .med-linha-sub{display:block;font-size:11px;font-weight:600;margin-top:2px}
+  /* Confirme com o tutor — a faixa por remédio trazido da ficha, no Check-in. */
+  .ci-med-conf{display:flex;flex-wrap:wrap;align-items:center;gap:8px;padding:8px 10px;margin-bottom:8px;
+    border-radius:10px;background:rgba(222,180,40,.18);border:1.5px solid var(--z-gold);
+    font-size:12.5px;font-weight:800;color:var(--z-blue)}
+  .ci-med-conf.ok{background:rgba(30,132,73,.12);border-color:var(--crm-ok);color:var(--crm-ok)}
+  .ci-med-conf.mudou{background:rgba(224,136,86,.16);border-color:#E08856;color:#8E4A16}
+  .ci-med-conf button{border:1.5px solid currentColor;background:transparent;color:inherit;border-radius:999px;
+    padding:6px 13px;font-size:12.5px;font-weight:800;font-family:var(--font-ui);cursor:pointer}
+  .ci-med-conf button.on{background:currentColor;color:var(--z-cream)}
+  /* Celular: a tabela de 3 colunas não cabe — o nome do remédio ficava cortado.
      Cada linha vira um bloco empilhado, com rótulo em cada campo e botão no tamanho do dedo. */
   @media (max-width:560px){
     .medgrid-head{display:none}
@@ -4374,6 +4401,16 @@
       <div id="cfgPrevWrap" style="margin-top:12px"><div class="hint">Carregando os números da prevenção&hellip;</div></div>
     </div>
 
+    <!-- HORÁRIOS DAS REFEIÇÕES (Adriana, 22/set/2026) — "Toshi está tomando uma medicação
+         45 minutos antes do jantar". Para o app calcular a hora da dose ele precisa saber a
+         que horas é o jantar da casa. É número de negócio: muda de horário de verão, muda
+         de estação — e ninguém vai chamar um programador por isso. -->
+    <div class="card so-master">
+      <h2 style="font-size:19px">Horários das refeições</h2>
+      <div class="hint">A que horas a casa serve o café da manhã, o almoço e o jantar. É desta hora que sai a hora do remédio amarrado à refeição: <strong>jantar às 18:30 menos 45 minutos = 17:45</strong>. Vale para a aba <strong>Medicamentos</strong> da ficha, para o <strong>Check-in</strong> e para o despertador das doses.</div>
+      <div id="cfgRefWrap" style="margin-top:12px"><div class="hint">Carregando os horários das refeições&hellip;</div></div>
+    </div>
+
     <!-- MENSAGENS PRONTAS (Adriana, 21/set/2026) — "já ter a frase pronta: 'Olá, fulano,
          tudo bom? Como está o fulaninho? Olha, vacina de raiva está vencendo tal dia,
          podemos fazer a troca amanhã?'". O texto é DELA e o prazo é decisão de negócio:
@@ -5019,6 +5056,7 @@
       // validade da coleira + a antecedência do aviso, e o texto da placa da entrada.
       // Sem elas valem os padrões do código — o app nunca abre sem placa nem sem validade.
       try{ prevCfgCarregar(); }catch(e){} /* silencioso de propósito: guarda defensiva — falhar aqui não pode interromper quem chamou */
+      try{ refeicoesCfgCarregar(); }catch(e){} /* silencioso de propósito: sem a leitura valem os horários de fábrica (07:30/12:00/18:30) */
       try{ entradaMsgCarregar(); }catch(e){} /* silencioso de propósito: guarda defensiva — falhar aqui não pode interromper quem chamou */
       try{ vencCfgCarregar(); }catch(e){} /* silencioso de propósito: guarda defensiva — falhar aqui não pode interromper quem chamou */
       try{ ckFotosCfgCarregar(); }catch(e){} /* silencioso de propósito: guarda defensiva — falhar aqui não pode interromper quem chamou */
@@ -8913,7 +8951,8 @@
     if(!el) return {};
     const g=function(sel){ const e=el.querySelector(sel); return e?(e.value||'').trim():''; };
     const continuo=!!el.querySelector('.mag-continuo.on');
-    const o={ local:g('[data-c=local]'), obs:g('[data-c=obs]'), dataInicio:g('[data-c=ini]'), dataFim:continuo?'':g('[data-c=fim]'), continuo:continuo };
+    const o={ local:g('[data-c=local]'), obs:g('[data-c=obs]'), motivo:g('[data-c=motivo]'),
+              dataInicio:g('[data-c=ini]'), dataFim:continuo?'':g('[data-c=fim]'), continuo:continuo };
     return o;
   }
   function parseQtd(d){ const m=String(d||'').trim().match(/^(\d+(?:[.,]\d+)?)\s*(.*)$/); return m?{q:m[1],u:unidadeDe(m[2])}:{q:'',u:''}; }
@@ -8926,6 +8965,179 @@
   function horaOk(h){ return /^([01]\d|2[0-3]):[0-5]\d$/.test(String(h||'').trim()); }
   function nomeMedOk(m){ return (String(m||'').match(/[A-Za-zÀ-ÿ]/g)||[]).length>=2; }
   function pickUnit(btn){ const w=btn.parentElement; const on=btn.classList.contains('on'); w.querySelectorAll('button').forEach(b=>b.classList.remove('on')); if(!on) btn.classList.add('on'); }
+
+  /* ===== O REMÉDIO QUE NÃO TEM HORA, TEM REFEIÇÃO — Adriana, 22/set/2026 ==============
+   * "Toshi está tomando uma medicação 45 minutos antes do jantar e antes do café da manhã."
+   * Remédio amarrado à refeição não tem horário fixo: tem horário DERIVADO. Quem cadastra
+   * responde o que o tutor falou ("45 min antes do jantar") e o app faz a conta com o
+   * horário da refeição — nunca o contrário, porque ninguém decora "17:45" de cabeça.
+   *
+   * Os horários das refeições são número de NEGÓCIO: moram em daycare/config/refeicoes e se
+   * editam em Configurações › Horários das refeições (a lei de 22/ago/2026: "regra nova não
+   * pode exigir programador"). O que está no código é só o padrão de fábrica, para o app
+   * funcionar íntegro mesmo sem banco — nunca um horário inventado em silêncio.
+   * ================================================================================== */
+  const REF_HORAS_PADRAO={cafe:'07:30', almoco:'12:00', jantar:'18:30'};
+  var REF_HORAS=Object.assign({}, REF_HORAS_PADRAO);
+  // curto = como se fala ("do jantar", "do café"); os três são masculinos, a preposição é "do".
+  const MED_QUANDO_REFS=[{k:'cafe',n:'Café da manhã',curto:'café'},{k:'almoco',n:'Almoço',curto:'almoço'},{k:'jantar',n:'Jantar',curto:'jantar'}];
+  const MED_QUANDO_MIN=[0,15,30,45,60];
+  function refHora(ref){ const h=REF_HORAS&&REF_HORAS[ref]; return horaOk(h)?h:(REF_HORAS_PADRAO[ref]||''); }
+  function refCurto(ref){ const r=MED_QUANDO_REFS.filter(function(x){ return x.k===ref; })[0]; return r?r.curto:''; }
+  function refNome(ref){ const r=MED_QUANDO_REFS.filter(function(x){ return x.k===ref; })[0]; return r?r.n:''; }
+  // "45 min antes do jantar" · "antes do café" (0 minuto não vira "0 min").
+  function medQuandoTexto(q){
+    if(!q||!q.ref||q.ref==='fixo') return '';
+    const c=refCurto(q.ref); if(!c) return '';
+    const rel=(q.rel==='depois')?'depois':'antes';
+    const m=parseInt(q.min,10)||0;
+    return (m>0?(m+' min '):'')+rel+' do '+c;
+  }
+  // A hora da dose, derivada da refeição: jantar 18:30 − 45 min = 17:45.
+  // Sem refeição configurada volta '' — e quem chama NÃO inventa horário nenhum.
+  function medQuandoHorario(q){
+    if(!q||!q.ref||q.ref==='fixo') return '';
+    const base=refHora(q.ref); if(!horaOk(base)) return '';
+    const p=base.split(':'); let min=(parseInt(p[0],10)*60)+parseInt(p[1],10);
+    const d=parseInt(q.min,10)||0;
+    min += (q.rel==='depois')?d:-d;
+    if(min<0) min=0;
+    if(min>1439) min=1439;
+    const z=function(x){ return String(x).padStart(2,'0'); };
+    return z(Math.floor(min/60))+':'+z(min%60);
+  }
+  // Os horários que valem para o alarme: derivados da refeição quando há `quando`,
+  // senão os digitados à mão. Uma conta só, usada no salvar da ficha e do check-in.
+  function medHorariosDe(item){
+    item=item||{};
+    const q=item.quando;
+    if(q&&q.ref&&q.ref!=='fixo'){ const h=medQuandoHorario(q); return h?[h]:[]; }
+    return Array.isArray(item.horarios)?item.horarios.slice():[];
+  }
+  // Os botões de "quando" de uma linha. É UM grupo só (refeição + antes/depois), porque é
+  // assim que o tutor fala — "antes do jantar", não "jantar" e depois "antes".
+  function medQuandoBlocoHTML(item){
+    const q=(item&&item.quando)||{};
+    const ref=q.ref||'fixo', rel=(q.rel==='depois')?'depois':'antes';
+    const min=(q.min!=null)?(parseInt(q.min,10)||0):45;
+    let bts='';
+    MED_QUANDO_REFS.forEach(function(r){
+      ['antes','depois'].forEach(function(rl){
+        const on=(ref===r.k && rel===rl);
+        bts+='<button type="button" class="mag-quando-b'+(on?' on':'')+'" data-ref="'+r.k+'" data-rel="'+rl+'"'
+          +' onclick="medQuandoPick(this)">'+(rl==='antes'?'Antes':'Depois')+' do '+r.curto+'</button>';
+      });
+    });
+    bts+='<button type="button" class="mag-quando-b'+(ref==='fixo'?' on':'')+'" data-ref="fixo" data-rel="antes"'
+      +' onclick="medQuandoPick(this)">Horário fixo</button>';
+    const mins=MED_QUANDO_MIN.map(function(m){
+      return '<button type="button" class="mag-quando-m'+(min===m?' on':'')+'" data-min="'+m+'"'
+        +' onclick="medQuandoMin(this)">'+(m===0?'na hora':(m+' min'))+'</button>';
+    }).join('');
+    return '<div class="mag-quando" data-ref="'+ref+'" data-rel="'+rel+'" data-min="'+min+'">'
+      +'<span class="mu-lab">Quando dar</span>'
+      +'<div class="mag-quando-opts">'+bts+'</div>'
+      +'<div class="mag-quando-minw'+(ref==='fixo'?'':' on')+'"><span class="mu-lab">Quanto tempo</span>'+mins+'</div>'
+      +'<div class="mag-quando-frase"></div>'
+      +'</div>';
+  }
+  function medQuandoPick(btn){
+    if(!podeEditarLinhaMed(btn)&&!(btn.closest&&btn.closest('#vetMedForm'))) return;
+    const box=btn.closest('.mag-quando'); if(!box) return;
+    box.querySelectorAll('.mag-quando-b').forEach(function(b){ b.classList.remove('on'); });
+    btn.classList.add('on');
+    box.dataset.ref=btn.dataset.ref; box.dataset.rel=btn.dataset.rel;
+    medQuandoSync(box);
+  }
+  function medQuandoMin(btn){
+    if(!podeEditarLinhaMed(btn)&&!(btn.closest&&btn.closest('#vetMedForm'))) return;
+    const box=btn.closest('.mag-quando'); if(!box) return;
+    box.querySelectorAll('.mag-quando-m').forEach(function(b){ b.classList.remove('on'); });
+    btn.classList.add('on');
+    box.dataset.min=btn.dataset.min;
+    medQuandoSync(box);
+  }
+  // Mostra a frase pronta e a hora derivada, e esconde o bloco de horários quando a dose
+  // está amarrada à refeição — dois lugares dizendo a hora é como nascem duas verdades.
+  function medQuandoSync(box){
+    if(!box) return;
+    const q=coletarQuandoBox(box);
+    const minw=box.querySelector('.mag-quando-minw'); if(minw) minw.classList.toggle('on', q.ref!=='fixo');
+    const fr=box.querySelector('.mag-quando-frase');
+    if(fr){
+      if(q.ref==='fixo'){ fr.textContent='Horário fixo — escreva abaixo a hora exata da dose.'; }
+      else fr.textContent=medQuandoTexto(q)+' — ou seja, às '+medQuandoHorario(q)
+        +' (o '+refCurto(q.ref)+' é às '+refHora(q.ref)+'). Mudou o horário da refeição em Configurações, muda a hora da dose.';
+    }
+    const sc=box.closest('.magitem')||box.closest('#vetMedForm');
+    const hs=sc?sc.querySelector('.mag-horarios'):null;
+    if(hs) hs.style.display=(q.ref==='fixo')?'':'none';
+  }
+  function coletarQuandoBox(box){
+    if(!box) return {ref:'fixo'};
+    const ref=box.dataset.ref||'fixo';
+    if(ref==='fixo') return {ref:'fixo'};
+    return {ref:ref, rel:(box.dataset.rel==='depois')?'depois':'antes', min:parseInt(box.dataset.min,10)||0};
+  }
+  function coletarQuandoMed(el){ return coletarQuandoBox(el?el.querySelector('.mag-quando'):null); }
+  // Roda o sync em todas as linhas de um container recém-desenhado (a frase pronta e o
+  // bloco de horários só existem depois que o HTML está na tela).
+  function medQuandoSyncTodos(sel){
+    try{ document.querySelectorAll(sel+' .mag-quando').forEach(function(b){ medQuandoSync(b); }); }
+    catch(e){} /* silencioso de propósito: enfeite de tela — falhar não muda dado nenhum */
+  }
+
+  /* ===== "ONDE FOR A INFORMAÇÃO DELE PRECISA IR A MEDICAÇÃO" — Adriana, 22/set/2026 ====
+   * A lei do "dado carregado numa tela só some nas outras": o remédio de uso contínuo tem
+   * de aparecer em TODA tela onde o FILHOt aparece — ficha, check-in do corpo, Vence
+   * amanhã, a lista do cadastro e o lançamento do dia. Uma fonte só: a agenda de medicação
+   * (auaulandia/medicacao-agenda), a MESMA que a hospedagem usa. Nada de nó paralelo.
+   * ================================================================================== */
+  // A chave da agenda a partir de uma ficha do cadastro (PELUDINHOS).
+  function medChaveDoPel(p){
+    try{
+      if(!p) return '';
+      // pelKey lê só o nome e o tutor da linha do cadastro — a MESMA conta que o resto do
+      // app usa para achar a ficha. Nada de pelExtra aqui: esta função roda uma vez por
+      // linha da lista de Peludinhos, e tem de ser barata.
+      return medAgendaKey({refKey:pelKey(p), nome:(p.n||''), tutor:(p.tutor||'')});
+    }catch(e){ return ''; } /* silencioso de propósito: sem chave a linha do remédio só não aparece */
+  }
+  // Os remédios de USO CONTÍNUO deste FILHOt, na ordem em que foram cadastrados.
+  // "Parou de tomar" (continuo:false) e suspensos pela vet ficam de fora — mas não somem
+  // do banco: continuam na ficha, com quem parou e por quê.
+  function medContinuosDaChave(key){
+    if(!key) return [];
+    const ficha=(typeof MED_AGENDA_GERAL!=='undefined'?MED_AGENDA_GERAL:{})[key]||{};
+    const itens=ficha.itens||{};
+    return Object.keys(itens).map(function(id){ return Object.assign({_id:id}, itens[id]||{}); })
+      .filter(function(it){ return it.continuo===true && !it.suspenso && nomeMedOk(it.nome); });
+  }
+  // "Enalapril 1 comprimido, 45 min antes do jantar e antes do café" — dois registros do
+  // MESMO remédio viram uma frase só, que é como o tutor fala.
+  function medResumoTexto(key){
+    const itens=medContinuosDaChave(key); if(!itens.length) return '';
+    const ordem=[], mapa={};
+    itens.forEach(function(it){
+      const dose=medEhLocal(it.u)?(it.local||it.u||''):[String(it.q||'').trim(), (it.u||'')].filter(Boolean).join(' ');
+      const ch=jsNorm(it.nome)+'|'+jsNorm(dose);
+      if(!mapa[ch]){ mapa[ch]={nome:it.nome, dose:dose, quandos:[]}; ordem.push(ch); }
+      const qt=medQuandoTexto(it.quando);
+      const txt=qt||((it.horarios||[]).join(' e ')||'');
+      if(txt && mapa[ch].quandos.indexOf(txt)<0) mapa[ch].quandos.push(txt);
+    });
+    return ordem.map(function(ch){
+      const o=mapa[ch];
+      return [o.nome, o.dose].filter(Boolean).join(' ')+(o.quandos.length?(', '+o.quandos.join(' e ')):'');
+    }).join(' · ');
+  }
+  // A linha, sempre igual, em toda tela. `sub` é o recado curto de quem precisa agir.
+  function medLinhaHTML(key, sub){
+    const t=medResumoTexto(key); if(!t) return '';
+    return '<div class="med-linha">💊 toma remédio: '+escAttr(t)
+      +(sub?('<span class="med-linha-sub">'+escAttr(sub)+'</span>'):'')+'</div>';
+  }
+  function medLinhaDoPel(p, sub){ return medLinhaHTML(medChaveDoPel(p), sub); }
   function medRowHTML(kind){ const ph=(kind==='sup')?'Nome do suplemento':'Nome do medicamento';
     const units=MED_UNIDADES.map(u=>'<button type="button" onclick="pickUnit(this)">'+u+'</button>').join('');
     const cab=(kind==='sup')?'Suplemento':'Medicamento';
@@ -8997,7 +9209,9 @@
   // se o botão está dentro do editor de Check-in (#ciMeds), aceita a Consultora; senão exige canEditMed.
   function podeEditarLinhaMed(node){
     const el=(node&&node.closest)?node.closest('.magitem'):null;
-    if(el&&el.closest&&el.closest('#ciMeds')) return canEditCheckinMed();
+    // A aba Medicamentos da ficha (#fmedItens) segue a MESMA regra do Check-in: é ali que a
+    // Consultora registra o que o tutor contou. Monitor e plantonista continuam só lendo.
+    if(el&&el.closest&&(el.closest('#ciMeds')||el.closest('#fmedItens'))) return canEditCheckinMed();
     return canEditMed();
   }
   // Compara a ficha anterior com a nova e devolve o texto do histórico ({acao}) — ou null se nada mudou.
@@ -9006,13 +9220,20 @@
     const mud=[];
     if((prev.nome||'')!==(it.nome||'') || String(prev.q||'')!==String(it.q||'') || (prev.u||'')!==(it.u||'')) mud.push('dose');
     if(JSON.stringify(prev.horarios||[])!==JSON.stringify(it.horarios||[])) mud.push('horário');
+    if(JSON.stringify(prev.quando||{})!==JSON.stringify(it.quando||{})) mud.push('quando dar');
+    if((prev.motivo||'')!==(it.motivo||'')) mud.push('para quê');
+    if((prev.obs||'')!==(it.obs||'')) mud.push('observação');
     if((prev.origem||'tutor')!==(it.origem||'tutor')) mud.push('origem');
     if(JSON.stringify(prev.estoque||{})!==JSON.stringify(it.estoque||{})) mud.push('estoque');
     if(!mud.length) return null;
     return 'Alterou '+mud.join(', ');
   }
-  function medAgendaRowHTML(id,item){
+  // opts.ficha = a linha está na aba Medicamentos da ficha: o rodapé deixa de ser "Remover"
+  // (que apaga) e vira "Parou de tomar" (que encerra sem apagar nada) — a lei do histórico.
+  // opts.confirmar = a linha veio da ficha para o Check-in e precisa da palavra do tutor.
+  function medAgendaRowHTML(id,item,opts){
     item=item||{nome:'',q:'',u:'',horarios:[''],tipo:'medicamento'};
+    opts=opts||{};
     const tipo=item.tipo||'medicamento';
     const units=MED_UNIDADES.map(u=>'<button type="button" onclick="pickUnit(this);medSyncRow(this)" class="'+(u===item.u?'on':'')+'">'+u+'</button>').join('');
     const ehLocal=medEhLocal(item.u);
@@ -9063,7 +9284,28 @@
       +'</div>';
     const suspBanner=item.suspenso?'<div style="background:rgba(192,57,43,.1);border:1.5px solid var(--crm-critico);border-radius:9px;padding:8px 11px;margin-bottom:8px;font-size:12.5px;font-weight:800;color:var(--crm-critico)">SUSPENSO pela Veterinária'+(item.suspensoPor?(' · '+escAttr(item.suspensoPor)):'')+(item.suspensoMotivo?('<span style="display:block;font-weight:600;margin-top:2px">Motivo: '+escAttr(item.suspensoMotivo)+'</span>'):'')+'<span style="display:block;font-weight:600;margin-top:2px">Não gera alarme. Reativação só pela vet, no Cuidado Vet.</span></div>':'';
     const contBadge=cont?'<div style="background:var(--z-gold);color:var(--z-blue);font-weight:800;font-size:12px;letter-spacing:.4px;border-radius:8px;padding:5px 10px;margin-bottom:8px;display:inline-block">♾️ USO CONTÍNUO — sem data de término</div>':'';
-    return '<div class="magitem" data-id="'+id+'">'
+    // Parou de tomar: fica na linha como registro, nunca some. Quem parou e por quê.
+    const paradoBanner=(item.continuo===false&&item.paradoEm)
+      ?('<div style="background:rgba(124,139,153,.16);border:1.5px solid #7C8B99;border-radius:9px;padding:8px 11px;margin-bottom:8px;font-size:12.5px;font-weight:800;color:var(--z-blue)">PAROU DE TOMAR em '+escAttr(item.dataFim||item.paradoEm.data||'—')
+        +(item.paradoEm.quem?(' · registrado por '+escAttr(item.paradoEm.quem)):'')
+        +(item.paradoEm.motivo?('<span style="display:block;font-weight:600;margin-top:2px">Motivo: '+escAttr(item.paradoEm.motivo)+'</span>'):'')
+        +'<span style="display:block;font-weight:600;margin-top:2px">Não gera alarme. O histórico do que já foi dado continua guardado.</span></div>'):'';
+    // Quem informou — a lei do "toda ação crítica grava QUEM fez".
+    const informado=item.informado_por
+      ?('<div class="hint" style="margin-top:5px">Informado por '+escAttr(item.informado_por.quem||'-')
+        +(item.informado_por.quando?(' · '+escAttr(item.informado_por.quando)):'')+'.</div>'):'';
+    // A faixa da confirmação com o tutor, no Check-in (22/set/2026).
+    const confBanner=opts.confirmar?ciMedConfHTML(item):'';
+    const rodape=opts.ficha
+      ? ('<div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end;margin-top:6px">'
+          +(opts.novo
+            ? ('<button type="button" class="ativ-del" title="Descartar esta linha que ainda não foi salva" onclick="fmedDescartar(\''+id+'\')">× Descartar (ainda não salvo)</button>')
+            : ('<button type="button" class="ativ-del" title="Encerrar este medicamento sem apagar o histórico" onclick="fmedParou(\''+id+'\')">Parou de tomar</button>'))
+          +'</div>')
+      : '<div style="text-align:right;margin-top:6px"><button type="button" class="ativ-del so-equipe" title="Remover este item da lista" onclick="magRemoverItem(\''+id+'\')">🗑️ Remover item</button></div>';
+    return '<div class="magitem" data-id="'+id+'"'+(opts.confirmar?' data-daficha="1" data-conf=""':'')+'>'
+      +confBanner
+      +paradoBanner
       +suspBanner
       +contBadge
       +tipoToggle
@@ -9074,12 +9316,17 @@
         +'<label class="mfield mag-local-wrap"'+(ehLocal?'':' style="display:none"')+'><span class="mf-lab">Local de aplicação</span><input data-c="local" placeholder="Ex: orelha esquerda, patinha, dobra da pele" value="'+escAttr(item.local||'')+'"></label>'
       +'</div>'
       +'<div class="medunits"><span class="mu-lab">Medida</span>'+units+'</div>'
+      // "Temos diversos cardíacos" (Adriana, 22/set/2026): PARA QUÊ o remédio serve é o que
+      // faz a recepção perguntar direito ao tutor e a vet olhar com outros olhos.
+      +'<div class="medrow" style="margin-top:8px"><label class="mfield" style="flex:1"><span class="mf-lab">Para quê / motivo</span><input data-c="motivo" placeholder="Ex: cardíaco · tireoide · dor crônica" value="'+escAttr(item.motivo||'')+'"></label></div>'
       +datasBlock
       +freqBlock
+      +medQuandoBlocoHTML(item)
       +'<div class="mag-horarios"><span class="mu-lab">Horários</span><span class="mag-horarios-list">'+horariosHTML+'</span><button type="button" class="med-add" style="width:auto;margin-top:0" onclick="magAddHorario(this)">+ horário</button></div>'
-      +'<div class="medrow" style="margin-top:8px"><label class="mfield" style="flex:1"><span class="mf-lab">Como dar / observação (aparece para quem cuida)</span><input data-c="obs" placeholder="Ex: antes do almoço · de estômago cheio · misturar na comida" value="'+escAttr(item.obs||'')+'"></label></div>'
+      +'<div class="medrow" style="margin-top:8px"><label class="mfield" style="flex:1"><span class="mf-lab">Como dar / observação (aparece para quem cuida)</span><input data-c="obs" placeholder="Ex: de estômago cheio · misturar na comida · esconder no patê" value="'+escAttr(item.obs||'')+'"></label></div>'
       +estoqueBlock
-      +'<div style="text-align:right;margin-top:6px"><button type="button" class="ativ-del so-equipe" title="Remover este item da lista" onclick="magRemoverItem(\''+id+'\')">🗑️ Remover item</button></div>'
+      +informado
+      +rodape
     +'</div>';
   }
   // alterna Medicamento/Suplemento na linha (só 1 fica aceso)
@@ -9168,11 +9415,12 @@
   }
   function magAddNovoItem(){
     if(!canEditMed()) return;
-    const wrap=document.getElementById('magItens'); if(!wrap) return; const id='novo_'+Date.now()+'_'+Math.random().toString(36).slice(2,6); wrap.insertAdjacentHTML('beforeend', medAgendaRowHTML(id,{nome:'',q:'',u:'',horarios:['']})); }
+    const wrap=document.getElementById('magItens'); if(!wrap) return; const id='novo_'+Date.now()+'_'+Math.random().toString(36).slice(2,6); wrap.insertAdjacentHTML('beforeend', medAgendaRowHTML(id,{nome:'',q:'',u:'',horarios:['']})); medQuandoSyncTodos('#magItens'); }
   function renderMedAgenda(){
     const wrap=document.getElementById('magItens'); if(!wrap) return;
     const ids=Object.keys(MED_AGENDA_ITENS);
     wrap.innerHTML = ids.length ? ids.map(id=>medAgendaRowHTML(id,MED_AGENDA_ITENS[id])).join('') : '<div class="hint">Nenhum medicamento agendado ainda.</div>';
+    medQuandoSyncTodos('#magItens');
     renderMedAgendaHoje();
   }
   // Coleta a Origem selecionada na linha (default tutor)
@@ -9207,9 +9455,12 @@
     if(pe.modo==='naocontavel' && pe.acabando) est.acabando=true;
     return est;
   }
-  function coletarMedAgendaForm(){
+  // sel/prevMapa: a MESMA coleta serve ao card diário (#magItens) e à aba Medicamentos da
+  // ficha (#fmedItens). Um coletor só — dois seriam duas verdades sobre o mesmo remédio.
+  function coletarMedAgendaForm(sel, prevMapa){
     const out={};
-    document.querySelectorAll('#magItens .magitem').forEach(function(el){
+    const prev0=prevMapa||MED_AGENDA_ITENS||{};
+    document.querySelectorAll((sel||'#magItens')+' .magitem').forEach(function(el){
       const id=el.dataset.id;
       const nome=(el.querySelector('[data-c=m]').value||'').trim();
       const q=(el.querySelector('[data-c=q]').value||'').trim();
@@ -9217,18 +9468,31 @@
       const tb=el.querySelector('.mag-tipo button.on'); const tipo=(tb&&/supl/i.test(tb.textContent))?'suplemento':'medicamento';
       const horarios=Array.prototype.map.call(el.querySelectorAll('[data-c=h]'), function(inp){ return normHora(inp.value)||''; }).filter(Boolean);
       const exM=coletarExtrasMed(el);
+      const quando=coletarQuandoMed(el);
       if(nome||q||u||horarios.length||exM.local){
         const item={nome:nome,q:(medEhLocal(u)?'':q),u:u,horarios:horarios,tipo:tipo,origem:coletarOrigemEl(el)};
         if(medEhLocal(u)) item.local=exM.local;
+        if(exM.obs) item.obs=exM.obs;          // a observação também se perdia aqui (só o Check-in a guardava)
+        if(exM.motivo) item.motivo=exM.motivo;
+        // A refeição manda no horário: com `quando`, o alarme usa a hora DERIVADA.
+        if(quando && quando.ref && quando.ref!=='fixo'){
+          item.quando=quando;
+          const _hd=medQuandoHorario(quando);
+          if(_hd){ item.horarios=[_hd]; item.derivado_de='quando'; }
+        }
         if(exM.dataInicio) item.dataInicio=exM.dataInicio;
         if(exM.continuo) item.continuo=true; else if(exM.dataFim) item.dataFim=exM.dataFim;
         const _fqM=coletarFreqMed(el); if(_fqM && _fqM.tipo!=='diario') item.freq=_fqM;
-        const est=coletarEstoqueEl(el, MED_AGENDA_ITENS[id]); if(est) item.estoque=est;
+        const est=coletarEstoqueEl(el, prev0[id]); if(est) item.estoque=est;
         // Onda 3: preserva a suspensão e o histórico da vet — re-salvar a agenda pela recepção
         // NUNCA pode ressuscitar uma medicação que a veterinária suspendeu (mata o caso Hulk).
-        const prev=MED_AGENDA_ITENS[id]||{};
+        const prev=prev0[id]||{};
         if(prev.suspenso){ item.suspenso=true; if(prev.suspensoPor)item.suspensoPor=prev.suspensoPor; if(prev.suspensoMotivo)item.suspensoMotivo=prev.suspensoMotivo; if(prev.suspensoTs)item.suspensoTs=prev.suspensoTs; }
         if(prev.historico) item.historico=prev.historico;
+        // "Parou de tomar" e a palavra do tutor no Check-in são registro: re-salvar a ficha
+        // não pode apagá-los em silêncio (a lei do histórico que nunca se perde).
+        if(prev.paradoEm) item.paradoEm=prev.paradoEm;
+        if(prev.confirmado_em_checkin) item.confirmado_em_checkin=prev.confirmado_em_checkin;
         out[id]=item;
       }
     });
@@ -9246,7 +9510,7 @@
       else if(medEhLocal(it.u) && !(it.local||'').trim()) probs.push('"'+it.nome+'" (pomada): escreva o LOCAL de aplicação.');
       else if(medEhTextoLivre(it.u) && !(it.q||'').trim()) probs.push('"'+it.nome+'": escreva a DESCRIÇÃO da dose (ex: 1 medida no medidor do tutor).');
       else if(!medEhLocal(it.u) && !medEhTextoLivre(it.u) && qtdNum(it.q)==null) probs.push('"'+it.nome+'": escreva a QUANTIDADE em número (ex: 1, 0,5, 10).');
-      else if(!it.horarios.length) probs.push('"'+it.nome+'": cadastre pelo menos 1 HORÁRIO válido (ex: 07:30).');
+      else if(!it.horarios.length) probs.push('"'+it.nome+'": escolha QUANDO dar (antes do jantar, por exemplo) ou cadastre pelo menos 1 HORÁRIO válido (ex: 07:30).');
     });
     if(probs.length){ if(st){ st.style.color='var(--crm-critico)'; st.textContent='✋ '+probs[0]; } return; }
     if(!DB){ if(st){ st.style.color='var(--crm-atencao-text)'; st.textContent='Banco conectando...'; } return; }
@@ -14887,7 +15151,7 @@
   // inteira DEPOIS de a correção estar publicada — o aviso apareceu, ninguém tocou.
   // Agora o aparelho PARADO recarrega sozinho: trancado, com a aba escondida, na porta de
   // entrada ou 3 minutos sem ninguém tocar nele. Mão na tela = nunca recarrega.
-  const APP_VERSAO='2026-09-22-01';
+  const APP_VERSAO='2026-09-22-02';
   var RECARGA_PARADO_MS=3*60*1000, __versaoPublicada=null, __recargaTimer=null;
   function vigiarVersao(){
     if(!DB) return;
@@ -19648,6 +19912,19 @@
   }
   // Lê a configuração UMA vez, ao abrir o app (once, não ouvinte: nó minúsculo e raro de
   // mudar — ouvinte aqui só gastaria banda). Quem salva na tela de Configurações relê.
+  // Lê os horários das refeições da casa UMA vez, ao abrir o app (nó minúsculo e raro de
+  // mudar — ouvinte aqui só gastaria banda). Quem salva na tela de Configurações já aplica
+  // na memória na hora. Sem banco, valem os horários de fábrica — nunca um inventado.
+  function refeicoesCfgCarregar(){
+    if(!DB) return Promise.resolve(null);
+    return DB.ref('daycare/config/refeicoes').once('value').then(function(s){
+      var v=s.val()||{};
+      var novo=Object.assign({}, REF_HORAS_PADRAO);
+      MED_QUANDO_REFS.forEach(function(r){ if(horaOk(v[r.k])) novo[r.k]=v[r.k]; });
+      REF_HORAS=novo;
+      return v;
+    }).catch(function(e){ _logLeituraFalhou('daycare/config/refeicoes (refeicoesCfgCarregar)', e); return null; });
+  }
   function prevCfgCarregar(){
     if(!DB) return Promise.resolve(null);
     return DB.ref('daycare/config/prevencao').once('value').then(function(s){
@@ -21542,7 +21819,7 @@
     const _hojeBusca=hojeISO();
     document.getElementById('pelBody').innerHTML=list.map((o,row)=>{ const p=o.p; return `<tr onclick="abrirPeludinhoLista(${o.i})" style="cursor:pointer">
       <td class="pel-num">${row+1}</td>
-      <td><span class="pel-nome">${pelNome(p)}</span>${p.apelido?` <span class="pel-obs">${p.apelido}</span>`:''}${((pelExtra(p).castrado||p.castrado)==='Não')?' <span class="pel-obs">Não castrado</span>':''}${linhaBuscaCadastro(p,_hojeBusca)}</td>
+      <td><span class="pel-nome">${pelNome(p)}</span>${p.apelido?` <span class="pel-obs">${p.apelido}</span>`:''}${((pelExtra(p).castrado||p.castrado)==='Não')?' <span class="pel-obs">Não castrado</span>':''}${linhaBuscaCadastro(p,_hojeBusca)}${medLinhaDoPel(p)}</td>
       <td>${pelGet(p,'raca')||'—'}</td>
       <td><span class="pel-freq">${pelFreq(p)}</span></td>
       <td class="dias-cell">${diasHtml(pelDias(p))}</td>
@@ -21810,6 +22087,9 @@
           <div class="hf-nome">${can?`<input class="pel-nome-input" value="${escAttr(pelNome(p))}" onchange="onNomePel(this.value)" aria-label="Nome do peludinho">`:`${pelNome(p)}`}${p.apelido?` <span style="font-size:14px;color:var(--muted)">(${p.apelido})</span>`:''}</div>
           <div class="hf-meta">${[pelGet(p,'raca'),sexo,idade].filter(Boolean).join(' · ')}${castr==='Não'?' · <strong style="color:var(--z-daycare)">Não castrado</strong>':''}</div>
           <div class="hf-estadia">Tutor: ${escAttr(pelGet(p,'tutor'))}</div>
+          <!-- "E onde for a informação dele precisa ir a medicação" (Adriana, 22/set/2026).
+               No cabeçalho, antes de qualquer aba: quem abre a ficha já sabe. -->
+          <div id="pelMedLinha">${medLinhaDoPel(p,'Detalhes e alterações na aba Medicamentos.')}</div>
           <div id="pelCategoriaEdit" style="margin-top:11px">${categoriaEditInner(p)}</div>
           <div id="pelDiasEdit" style="margin-top:9px">${diasEditInner(p)}</div>
           ${can?'<div class="hint" style="margin-top:4px;font-size:11px">Toque nos dias para marcar quando o peludinho vem — a frequência ajusta sozinha.</div>':''}
@@ -21843,6 +22123,11 @@
         <div class="subtab2" onclick="pelSubtab(this,'ps-ident')">Identificação</div>
         <div class="subtab2" onclick="pelSubtab(this,'ps-comp')">Comportamento</div>
         <div class="subtab2" onclick="pelSubtab(this,'ps-saude')">Prevenção</div>
+        <!-- MEDICAMENTOS (Adriana, 22/set/2026): "temos diversos cardíacos". Fica colado em
+             Prevenção de propósito: as duas abas respondem à mesma pergunta — o que este
+             FILHOt precisa para ficar bem. E é DAQUI que o Check-in da hospedagem puxa o
+             que vai ser perguntado ao tutor. -->
+        <div class="subtab2" onclick="pelSubtab(this,'ps-med');fmedRender()">Medicamentos</div>
         <div class="subtab2" onclick="pelSubtab(this,'ps-rotina')">Rotina &amp; Almoço</div>
         <div class="subtab2" onclick="pelSubtab(this,'ps-exames')">Exames do corpo</div>
         <div class="subtab2" onclick="pelSubtab(this,'ps-atencao')">Atenção &amp; Cuidados</div>
@@ -21924,6 +22209,17 @@
 
         <h3 class="cad-sub">Peso</h3>
         ${blocoPeso(ex)}
+      </div></div>
+
+      <!-- MEDICAMENTOS — a mesma agenda que a hospedagem usa (auaulandia/medicacao-agenda).
+           Não existe nó paralelo: o que se cadastra aqui é o que o Check-in pré-preenche, o
+           que o despertador toca e o que o check-out devolve. Uma fonte só. -->
+      <div class="ppanel2" id="ps-med"><div class="card">
+        <h2 style="font-size:20px">Medicamentos de uso contínuo</h2>
+        <div class="hint">O que este FILHOt toma <strong>sempre</strong> — cardíaco, tireoide, dor crônica. Esta lista vai inteira para o <strong>Check-in da hospedagem</strong>, onde a Consultora confirma com o tutor item por item. Diga <strong>quando</strong> dar (&ldquo;45 min antes do jantar&rdquo;) que o app calcula a hora sozinho, pelo horário da refeição da casa. Nada grava antes de <strong>Salvar medicamentos</strong>.</div>
+        <div id="fmedItens" style="margin-top:12px"></div>
+        <div id="fmedAcoes"></div>
+        <div id="fmed-status" class="rel-status"></div>
       </div></div>
 
       <div class="ppanel2" id="ps-rotina"><div class="card">
@@ -22158,6 +22454,201 @@
   }
   function salvarFichaPel(){ if(document.activeElement&&document.activeElement.blur) document.activeElement.blur(); const s=document.getElementById('pel-saved2'); if(s){ s.textContent='✓ Ficha salva! Disponível em todos os aparelhos.'; setTimeout(()=>{ if(s) s.textContent=''; },2200); } if(typeof renderDaycare==='function') renderDaycare(); }
   function pelSubtab(el,id){ el.parentNode.querySelectorAll('.subtab2').forEach(x=>x.classList.remove('active')); el.classList.add('active'); document.querySelectorAll('.ppanel2').forEach(x=>x.classList.remove('active')); const t=document.getElementById(id); if(t) t.classList.add('active'); }
+
+  /* ===== ABA MEDICAMENTOS DA FICHA — Adriana, 22/set/2026 ============================
+   * "Em cadastro do peludinho preciso de uma aba chamada Medicamentos! Temos diversos
+   * cardíacos. Essa informação precisa ir para check-in de hospedagem para ser perguntada
+   * ao tutor se é isso mesmo, e precisa de detalhes."
+   *
+   * A aba NÃO cria banco novo: lê e grava na MESMA agenda de medicação que a hospedagem
+   * usa (auaulandia/medicacao-agenda/{chave}/itens). Aqui se mostram os de USO CONTÍNUO —
+   * o que ele toma sempre, venha ou não se hospedar.
+   *
+   * NADA GRAVA ANTES DO CONFIRMAR: o botão é "Salvar medicamentos", com resumo do que vai
+   * mudar e rastro de→para na auditoria (ficha-medicamentos). "Parou de tomar" encerra —
+   * grava continuo:false, a data de fim, o motivo e quem registrou — e NUNCA apaga.
+   * ================================================================================== */
+  var FMED_ITENS={};      // o que está salvo no banco para o FILHOt aberto: {id:item}
+  var FMED_KEY='';        // a chave da agenda do FILHOt aberto
+  var FMED_CARREGOU=false;
+  function fmedPodeEditar(){ return canEditCheckinMed(); }
+  // Abrir a aba: lê do banco UMA vez por FILHOt (nó pequeno) e desenha.
+  function fmedRender(){
+    const wrap=document.getElementById('fmedItens'); if(!wrap) return;
+    const key=medChaveDoPel(pelAtual);
+    if(!key){ wrap.innerHTML='<div class="hint">Abra um FILHOt para ver os medicamentos dele.</div>'; return; }
+    if(key!==FMED_KEY){ FMED_KEY=key; FMED_ITENS={}; FMED_CARREGOU=false; }
+    if(!FMED_CARREGOU){
+      wrap.innerHTML='<div class="hint">Lendo os medicamentos deste FILHOt&hellip;</div>';
+      if(!DB){ wrap.innerHTML='<div class="hint">Banco conectando&hellip; abra a aba de novo em instantes.</div>'; return; }
+      DB.ref('auaulandia/medicacao-agenda/'+key+'/itens').once('value').then(function(s){
+        FMED_ITENS=s.val()||{}; FMED_CARREGOU=true; fmedDesenhar();
+      }).catch(function(e){
+        _logLeituraFalhou('auaulandia/medicacao-agenda/ (fmedRender)', e);
+        wrap.innerHTML='<div class="hint" style="color:var(--crm-critico);font-weight:700">Não consegui ler os medicamentos: '+escAttr((e&&e.message)||String(e))+'</div>';
+      });
+      return;
+    }
+    fmedDesenhar();
+  }
+  // Os de uso contínuo primeiro; os encerrados descem, como registro do que já foi.
+  function fmedOrdem(){
+    const ids=Object.keys(FMED_ITENS||{});
+    const vivos=ids.filter(function(i){ return (FMED_ITENS[i]||{}).continuo===true; });
+    const parados=ids.filter(function(i){ return (FMED_ITENS[i]||{}).continuo!==true; });
+    return {vivos:vivos, parados:parados};
+  }
+  function fmedDesenhar(){
+    const wrap=document.getElementById('fmedItens'); if(!wrap) return;
+    const pode=fmedPodeEditar();
+    const o=fmedOrdem();
+    // Rascunhos que a pessoa acabou de acrescentar e ainda não salvou continuam na tela.
+    const rascunhos=[];
+    wrap.querySelectorAll('.magitem[data-id^="fmn_"]').forEach(function(el){ rascunhos.push(el.outerHTML); });
+    let h='';
+    if(!o.vivos.length && !rascunhos.length) h+='<div class="hint">Nenhum medicamento de uso contínuo cadastrado.</div>';
+    h+=o.vivos.map(function(id){ return medAgendaRowHTML(id, FMED_ITENS[id], {ficha:true}); }).join('');
+    h+=rascunhos.join('');
+    if(o.parados.length){
+      h+='<h3 class="cad-sub" style="margin-top:16px">Já não toma mais</h3>'
+        +'<div class="hint" style="margin-bottom:8px">Fica registrado: o que foi dado um dia não se apaga. Para voltar a dar, acrescente de novo com a data de hoje.</div>'
+        +o.parados.map(function(id){ return medAgendaRowHTML(id, FMED_ITENS[id], {ficha:true}); }).join('');
+    }
+    wrap.innerHTML=h;
+    medQuandoSyncTodos('#fmedItens');
+    // Quem só lê não recebe campo editável que não grava — vira leitura, sem mentira.
+    if(!pode) wrap.querySelectorAll('input,button').forEach(function(el){ el.setAttribute('disabled','disabled'); });
+    const ac=document.getElementById('fmedAcoes');
+    if(ac) ac.innerHTML = pode
+      ? ('<button type="button" class="med-add" onclick="fmedAdd()">+ Acrescentar medicamento</button>'
+        +'<button type="button" class="btn btn-primary" style="margin-top:8px;width:100%" id="fmedSalvarBtn" onclick="fmedSalvar()">Salvar medicamentos</button>'
+        +'<div class="hint" style="margin-top:5px">Enquanto você não tocar em <strong>Salvar medicamentos</strong>, nada foi gravado.</div>')
+      : '<div class="hint">Só a Consultora, a Gestão, a Supervisão e a Veterinária alteram medicação. Aqui você só lê.</div>';
+  }
+  function fmedAdd(){
+    if(!fmedPodeEditar()){ alert('Apenas a Consultora, a Gestão, a Supervisão ou a Veterinária cadastram medicação.'); return; }
+    const wrap=document.getElementById('fmedItens'); if(!wrap) return;
+    const vazio=wrap.querySelector('.hint'); if(vazio&&!wrap.querySelector('.magitem')) wrap.innerHTML='';
+    const id='fmn_'+Date.now()+'_'+Math.random().toString(36).slice(2,6);
+    wrap.insertAdjacentHTML('beforeend', medAgendaRowHTML(id,{nome:'',q:'',u:'',horarios:[''],continuo:true,dataInicio:zHojeISO()},{ficha:true,novo:true}));
+    medQuandoSyncTodos('#fmedItens');
+  }
+  // Rascunho não existe no banco: descartar é só tirar da tela (e dizer isso).
+  function fmedDescartar(id){
+    const el=document.querySelector('#fmedItens .magitem[data-id="'+id+'"]'); if(el) el.remove();
+    const st=document.getElementById('fmed-status'); if(st){ st.style.color='var(--muted)'; st.textContent='Linha descartada — ela nunca chegou ao banco.'; }
+  }
+  // O que vai para o banco, a partir do que está na tela. Mesmo coletor do card diário.
+  function fmedColetar(){ return coletarMedAgendaForm('#fmedItens', FMED_ITENS); }
+  // A MESMA validação do check-in, mais o recado certo quando falta o horário da refeição.
+  function fmedValidar(itens){
+    const probs=[];
+    Object.keys(itens).forEach(function(id){
+      const it=itens[id];
+      if(!nomeMedOk(it.nome)) probs.push('escreva o NOME do medicamento por extenso.');
+      else if(!it.u) probs.push('"'+it.nome+'": toque na MEDIDA (comprimido, ml, gota, pomada...).');
+      else if(medEhLocal(it.u) && !(it.local||'').trim()) probs.push('"'+it.nome+'" (pomada): escreva o LOCAL de aplicação.');
+      else if(medEhTextoLivre(it.u) && !(it.q||'').trim()) probs.push('"'+it.nome+'": escreva a DESCRIÇÃO da dose.');
+      else if(!medEhLocal(it.u) && !medEhTextoLivre(it.u) && qtdNum(it.q)==null) probs.push('"'+it.nome+'": escreva a QUANTIDADE em número (ex: 1, 1/2, 0,5).');
+      else if(!(it.horarios||[]).length) probs.push('"'+it.nome+'": escolha QUANDO dar (antes do jantar, por exemplo) ou cadastre pelo menos 1 horário válido.');
+      else if(!it.dataInicio) probs.push('"'+it.nome+'": informe DESDE QUANDO ele toma.');
+    });
+    return probs;
+  }
+  // O resumo do que vai mudar, item a item, ANTES de gravar (de → para).
+  function fmedResumo(itens){
+    const linhas=[];
+    Object.keys(itens).forEach(function(id){
+      const it=itens[id], prev=FMED_ITENS[id];
+      const agora=fmedFrase(it);
+      if(!prev){ linhas.push('NOVO — '+agora); return; }
+      const antes=fmedFrase(prev);
+      if(antes!==agora) linhas.push(antes+'  →  '+agora);
+    });
+    return linhas;
+  }
+  function fmedFrase(it){
+    it=it||{};
+    const dose=medEhLocal(it.u)?(it.local||it.u||''):[String(it.q||'').trim(), (it.u||'')].filter(Boolean).join(' ');
+    const qt=medQuandoTexto(it.quando)||((it.horarios||[]).join(' e '));
+    return [it.nome||'(sem nome)', dose, qt].filter(Boolean).join(', ')
+      +(it.motivo?(' ('+it.motivo+')'):'');
+  }
+  async function fmedSalvar(){
+    const st=document.getElementById('fmed-status');
+    if(!fmedPodeEditar()){ if(st){ st.style.color='var(--crm-critico)'; st.textContent='Você não tem permissão para alterar medicação.'; } return; }
+    if(!FMED_KEY||!pelAtual) return;
+    const itens=fmedColetar();
+    const probs=fmedValidar(itens);
+    if(probs.length){ if(st){ st.style.color='var(--crm-critico)'; st.textContent='✋ '+probs[0]; } return; }
+    if(!DB){ if(st){ st.style.color='var(--crm-atencao-text)'; st.textContent='Banco conectando — não salvei. Tente de novo em instantes.'; } return; }
+    const resumo=fmedResumo(itens);
+    if(!resumo.length){ if(st){ st.style.color='var(--muted)'; st.textContent='Nada mudou — não havia o que salvar.'; } return; }
+    const ok=await zPergunta('Salvar os medicamentos de '+pelNome(pelAtual)+'?', resumo.concat(
+      ['Isso vale também para a hospedagem: no próximo check-in a Consultora confirma cada item com o tutor.']),
+      {sim:'Salvar medicamentos', nao:'Voltar e conferir'});
+    if(!ok) return;
+    const quem=quemSou();
+    if(st){ st.style.color='var(--muted)'; st.textContent='Salvando...'; }
+    const ops=[];
+    ops.push(DB.ref('auaulandia/medicacao-agenda/'+FMED_KEY).update({
+      nome:pelNome(pelAtual)||'', tutor:(typeof pelGet==='function'?pelGet(pelAtual,'tutor'):'')||'', _ts:Date.now(), _quem:quem }));
+    Object.keys(itens).forEach(function(id){
+      const it=itens[id];
+      const acao=medDiffAcao(FMED_ITENS[id], it);
+      if(acao){ const hist=Array.isArray(it.historico)?it.historico.slice():[]; hist.push({quem:quem, quando:agoraBR(), acao:acao+' (ficha)'}); it.historico=hist; }
+      it.informado_por={quem:quem, quando:agoraBR(), ts:Date.now()};
+      ops.push(DB.ref('auaulandia/medicacao-agenda/'+FMED_KEY+'/itens/'+id).update(it));
+    });
+    Promise.all(ops).then(function(){
+      return DB.ref('auaulandia/medicacao-agenda/'+FMED_KEY+'/itens').once('value');
+    }).then(function(s){
+      FMED_ITENS=s.val()||{}; FMED_CARREGOU=true; fmedDesenhar();
+      if(st){ st.style.color='var(--crm-ok)'; st.textContent='✅ Medicamentos salvos. O Check-in da hospedagem já traz esta lista para confirmar com o tutor.'; }
+      if(typeof audit==='function') audit('ficha-medicamentos', resumo.join(' | '),
+        {alvo:FMED_KEY, pet:pelNome(pelAtual)||'', quem:quem});
+      try{ const l=document.getElementById('pelMedLinha'); if(l) l.innerHTML=medLinhaDoPel(pelAtual,'Detalhes e alterações na aba Medicamentos.'); }catch(e){} /* silencioso de propósito: redesenho de tela — falhar não pode derrubar quem chamou */
+      if(typeof carregarAgendaMedTodos==='function') carregarAgendaMedTodos();
+    }).catch(function(e){
+      _logFalhaGrav('auaulandia/medicacao-agenda/ (fmedSalvar)', e);
+      if(st){ st.style.color='var(--crm-critico)'; st.textContent='⚠️ Não salvou: '+((e&&e.message)||e); }
+    });
+  }
+  // PAROU DE TOMAR — encerra sem apagar. Pede o motivo, guarda quem e quando, e o item
+  // continua na ficha, embaixo, em "Já não toma mais".
+  async function fmedParou(id){
+    const st=document.getElementById('fmed-status');
+    if(!fmedPodeEditar()){ if(st){ st.style.color='var(--crm-critico)'; st.textContent='Você não tem permissão para alterar medicação.'; } return; }
+    const it=FMED_ITENS[id]; if(!it||!FMED_KEY||!DB) return;
+    const motivo=await zTexto('Por que '+(pelAtual?pelNome(pelAtual):'ele')+' parou de tomar '+(it.nome||'este medicamento')+'?',
+      ['A vet suspendeu? Acabou o tratamento? O tutor trocou o remédio?',
+       'Nada é apagado: o item desce para "Já não toma mais", com quem registrou e quando.'],
+      {rotulo:'Motivo', dica:'Ex: tratamento encerrado pela vet', botao:'Registrar que parou',
+       botaoNao:'Voltar — continua tomando', minimo:3,
+       erro:'Escreva o motivo em poucas palavras — é ele que explica, depois, por que o remédio saiu.'});
+    if(motivo==null) return;
+    const quem=quemSou(), hoje=zHojeISO();
+    const hist=Array.isArray(it.historico)?it.historico.slice():[];
+    hist.push({quem:quem, quando:agoraBR(), acao:'Parou de tomar — '+(motivo||'sem motivo informado')});
+    if(st){ st.style.color='var(--muted)'; st.textContent='Registrando...'; }
+    DB.ref('auaulandia/medicacao-agenda/'+FMED_KEY+'/itens/'+id).update({
+      continuo:false, dataFim:hoje, historico:hist,
+      paradoEm:{quem:quem, data:hoje, quando:agoraBR(), ts:Date.now(), motivo:(motivo||'')}
+    }).then(function(){
+      FMED_ITENS[id]=Object.assign({}, it, {continuo:false, dataFim:hoje, historico:hist,
+        paradoEm:{quem:quem, data:hoje, quando:agoraBR(), ts:Date.now(), motivo:(motivo||'')}});
+      fmedDesenhar();
+      if(st){ st.style.color='var(--crm-ok)'; st.textContent='✅ Registrado: '+(it.nome||'o medicamento')+' já não é mais dado. O histórico continua guardado.'; }
+      if(typeof audit==='function') audit('ficha-medicamentos',
+        'PAROU DE TOMAR — '+(it.nome||'')+' — motivo: '+(motivo||'não informado'),
+        {alvo:FMED_KEY, pet:(pelAtual?pelNome(pelAtual):''), item:id, quem:quem});
+      try{ const l=document.getElementById('pelMedLinha'); if(l) l.innerHTML=medLinhaDoPel(pelAtual,'Detalhes e alterações na aba Medicamentos.'); }catch(e){} /* silencioso de propósito: redesenho de tela — falhar não pode derrubar quem chamou */
+      if(typeof carregarAgendaMedTodos==='function') carregarAgendaMedTodos();
+    }).catch(function(e){
+      _logFalhaGrav('auaulandia/medicacao-agenda/ (fmedParou)', e);
+      if(st){ st.style.color='var(--crm-critico)'; st.textContent='⚠️ Não registrei: '+((e&&e.message)||e); }
+    });
+  }
   function voltarPel(){ renovRascLimpar();   // sair da ficha descarta o rascunho do plano que não foi confirmado
     if(pelOrigem==='renovacao'){ irParaView('renovacao'); return; }
     if(pelOrigem==='vacinas'){ document.getElementById('pel-ficha').style.display='none'; document.getElementById('pel-lista').style.display='block'; irParaView('vacinas'); return; }
@@ -24628,7 +25119,10 @@
       +ckProtocoloHTML(entrada)
       +(entrada?'<div class="ck-vem">Chame <strong>'+escAttr(pelNome(p))+'</strong> pelo nome com o comando <strong>VEM</strong> e observe como ele responde.</div>':'')
       +daEntrada
-      +tarjaRestricao({n:p.n,tutor:p.tutor});
+      +tarjaRestricao({n:p.n,tutor:p.tutor})
+      // O remédio aparece ONDE O FILHOt APARECE (22/set/2026): quem está com o corpo dele
+      // na frente precisa saber que ele toma algo — e a que horas.
+      +medLinhaDoPel(p,'Uso contínuo, do cadastro. Quem dá a dose registra na tela de Medicação.');
     pontos.forEach(function(pt,i){
       const at=R.pontos[pt.k]||{};
       const marc=(typeof at.alterado==='boolean');
@@ -30439,6 +30933,10 @@
     // marcada. É RASCUNHO na tela — o mesmo DASH_DET que a pessoa mexe, e nada vai para o
     // banco antes do botão Lançar. Se o peso pede balança, NADA vem marcado.
     try{ vermPreMarcar(k); }catch(e){} /* silencioso de propósito: a sugestão é ajuda — falhar aqui não pode impedir o lançamento à mão */
+    // MEDICAÇÃO (Adriana, 22/set/2026): escolhido o FILHOt, o que ele toma de uso contínuo
+    // já vem escrito, com a hora derivada da refeição. A recepção só confirma ONDE está o
+    // remédio (bolsa ou recepção) — não precisa decorar nem copiar da ficha.
+    try{ medPreMarcarLanc(k); }catch(e){} /* silencioso de propósito: a sugestão é ajuda — falhar aqui não pode impedir o lançamento à mão */
     var b=document.getElementById('dashB_'+k); if(b) b.value='';
     try{ renderDash(); }catch(e){} /* silencioso de propósito: redesenho de tela — falhar não pode derrubar quem chamou */
   }
@@ -30492,6 +30990,31 @@
     var i=DASH_SEL_I[k];
     if(typeof i!=='number'||i<0) return null;
     return (typeof PELUDINHOS!=='undefined'&&PELUDINHOS[i])?PELUDINHOS[i]:null;
+  }
+  // O texto que vai para o lançamento: o que ele toma + a hora que sai da refeição.
+  function medTextoLancamento(key){
+    const itens=medContinuosDaChave(key); if(!itens.length) return '';
+    const t=medResumoTexto(key); if(!t) return '';
+    const horas=[];
+    itens.forEach(function(it){ medHorariosDe(it).forEach(function(h){ if(h&&horas.indexOf(h)<0) horas.push(h); }); });
+    horas.sort();
+    return t+(horas.length?(' · às '+horas.join(' e ')):'');
+  }
+  function medPreMarcarLanc(k){
+    if(k!=='medicacao') return;
+    const p=vermFilhotDe(k); if(!p) return;
+    const t=medTextoLancamento(medChaveDoPel(p)); if(!t) return;
+    dashDet(k).qual=t.slice(0,80);   // o campo da tela aceita 80 letras — a planilha lê esta mesma frase
+  }
+  // O aviso no painel: de onde veio a frase e o que ainda falta responder.
+  function medBlocoPainelHTML(k){
+    const p=vermFilhotDe(k);
+    if(!p) return '<div class="hint" style="margin-top:9px;color:var(--crm-atencao-text);font-weight:700">'
+      +'Não consegui ligar este lançamento a uma ficha — escreva à mão qual é o remédio e como dar.</div>';
+    const t=medTextoLancamento(medChaveDoPel(p));
+    if(!t) return '<div class="hint" style="margin-top:9px">Este FILHOt não tem medicamento de uso contínuo na ficha. Escreva à mão o que foi trazido hoje.</div>';
+    return '<div class="prev-calc" style="margin-top:10px">Da ficha dele: '+escAttr(t)
+      +'<div class="hint" style="margin-top:3px">Já veio escrito abaixo. Confira com quem trouxe, ajuste se hoje for diferente, e diga <strong>onde está o remédio</strong>.</div></div>';
   }
   function vermPreMarcar(k){
     if(k!=='vermifugo') return;
@@ -30566,6 +31089,8 @@
     }
     // A dose que o peso indica vem ANTES de "Quanto foi dado" — é ela que responde a pergunta.
     if(it.k==='vermifugo') h+=vermBlocoPainelHTML(it.k);
+    // O mesmo princípio na Medicação: o que a ficha já sabe vem antes da pergunta.
+    if(it.k==='medicacao') h+=medBlocoPainelHTML(it.k);
     it.campos.forEach(function(c){
       if(!dashCampoAtivo(it.k,c)) return;
       // O campo ESCRITO À MÃO (Medicação, 18/set/2026): "gotas no ouvido, 2x ao dia" não
@@ -33255,6 +33780,9 @@
       +' <span style="font-weight:600;font-size:12.5px;color:var(--muted)">'+escAttr(o.raca||'')
       +(o.tutor?(' · tutor: '+escAttr(o.tutor)):'')+'</span></div>';
     if(o.tel) h+='<div class="hint" style="margin:2px 0 0"><a href="tel:'+escAttr(o.tel)+'" style="color:var(--z-blue);font-weight:800">'+escAttr(o.tel)+'</a></div>';
+    // O remédio de uso contínuo entra no cartão (22/set/2026): quem fala com o tutor sobre
+    // vacina também precisa saber que este FILHOt é cardíaco — é a mesma conversa.
+    h+=medLinhaDoPel(o.p,'Uso contínuo, do cadastro. Confirme com o tutor se continua igual.');
     // os itens, com a data — é o que ela dita ao tutor
     h+='<div style="display:flex;flex-wrap:wrap;gap:5px;margin:7px 0">';
     (o.itens||[]).forEach(function(x){
@@ -34470,6 +34998,7 @@
       if(st&&!st.textContent) st.textContent=(TG_CFG&&TG_CFG.url)?'Ligado.':'Ainda não ligado — os avisos continuam sendo mandados à mão.';
       CFG_ENT_ATIVA=(ENTRADA_MSG&&ENTRADA_MSG.ativa!==false);
       if(typeof cfgPrevRender==='function') cfgPrevRender();
+      if(typeof cfgRefRender==='function') cfgRefRender();
       // UM desenho só, nunca dois. Desenhar agora e de novo quando a leitura chega apagaria o
       // que a Gestão já tivesse digitado nesses milissegundos — a mesma lição do algCurTexto
       // (redesenhar tira o cursor da mão de quem está escrevendo). O texto já desceu na
@@ -34483,6 +35012,58 @@
       if(typeof dcValoresCarregar==='function') dcValoresCarregar();
       if(typeof cfgEntradaRender==='function') cfgEntradaRender();
     }catch(e){} /* silencioso de propósito: guarda defensiva — falhar aqui não pode interromper quem chamou */
+  }
+  /* ===== CONFIGURAÇÕES › HORÁRIOS DAS REFEIÇÕES (Adriana, 22/set/2026) ==============
+   * A hora do café, do almoço e do jantar da casa. Sem ela o app não teria como transformar
+   * "45 minutos antes do jantar" em "17:45" — e a plantonista ficaria com um remédio sem
+   * hora — e remédio sem hora ninguém sabe quando dar. Três campos, um Salvar, com rastro.
+   * ================================================================================== */
+  function cfgRefRender(){
+    var w=document.getElementById('cfgRefWrap'); if(!w) return;
+    var h=MED_QUANDO_REFS.map(function(r){
+      return '<div class="field" style="max-width:260px;display:inline-block;margin-right:14px">'
+        +'<label class="cad-lb">'+esc(r.n)+'</label>'
+        +'<input type="time" class="cad-in" id="cfgRef_'+r.k+'" value="'+escAttr(refHora(r.k))+'" onchange="cfgRefPreviaCalc()">'
+        +'</div>';
+    }).join('');
+    w.innerHTML=h
+      +'<div id="cfgRefPrevia" class="hint" style="margin-top:8px"></div>'
+      +'<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px">'
+      +'<button type="button" class="btn btn-gold" onclick="cfgRefSalvar()">Salvar</button></div>'
+      +'<div id="cfgRefSt" class="hint" style="margin-top:6px"></div>';
+    cfgRefPreviaCalc();
+  }
+  // A conta aparece enquanto ela digita — é o exemplo dela, com o número dela.
+  function cfgRefPreviaCalc(){
+    var el=document.getElementById('cfgRefPrevia'); if(!el) return;
+    var j=String((document.getElementById('cfgRef_jantar')||{}).value||'');
+    if(!horaOk(j)){ el.textContent='Preencha o horário do jantar para ver o exemplo.'; return; }
+    var antes=Object.assign({}, REF_HORAS); REF_HORAS=Object.assign({}, REF_HORAS, {jantar:j});
+    var conta=medQuandoHorario({ref:'jantar', rel:'antes', min:45});
+    REF_HORAS=antes;
+    el.textContent='Exemplo: um remédio "45 min antes do jantar" passa a tocar às '+conta+'.';
+  }
+  function cfgRefSalvar(){
+    var st=document.getElementById('cfgRefSt');
+    var novo={}, ruim='';
+    MED_QUANDO_REFS.forEach(function(r){
+      var v=String((document.getElementById('cfgRef_'+r.k)||{}).value||'').trim();
+      if(!horaOk(v)){ ruim=ruim||r.n; return; }
+      novo[r.k]=v;
+    });
+    if(ruim){ if(st){ st.style.color='var(--crm-critico)'; st.textContent='O horário do '+ruim+' precisa estar no formato 07:30.'; } return; }
+    if(!DB){ if(st){ st.style.color='var(--crm-critico)'; st.textContent='Banco reconectando — não salvei. Tente de novo em instantes.'; } return; }
+    var antes=Object.assign({}, REF_HORAS);
+    DB.ref('daycare/config/refeicoes').set(novo).then(function(){
+      REF_HORAS=Object.assign({}, REF_HORAS_PADRAO, novo);   // vale na hora, sem recarregar
+      if(st){ st.style.color='var(--crm-ok)'; st.textContent='✓ Salvo. As doses amarradas à refeição já usam estes horários.'; }
+      try{ if(typeof audit==='function') audit('config-refeicoes',
+        MED_QUANDO_REFS.map(function(r){ return r.n+': '+(antes[r.k]||'—')+' → '+novo[r.k]; }).join(' · '), {}); }catch(e){} /* silencioso de propósito: o audit() tem bolso próprio e reenvia sozinho */
+      cfgRefRender();
+    }).catch(function(e){
+      _logFalhaGrav('daycare/config/refeicoes (cfgRefSalvar)', e);
+      if(st){ st.style.color='var(--crm-critico)'; st.textContent='❌ Não salvou: '+((e&&e.message)||e); }
+    });
   }
   // ===== CONFIGURAÇÕES › PREVENÇÃO (Adriana, 15/set/2026) ===========================
   // A validade de cada coleira e a antecedência do aviso, editáveis por quem manda na casa.
@@ -37343,14 +37924,44 @@
   }
 
   // ---- Medicação (reaproveita medAgendaRowHTML — mesma trava à prova de erro) ----
-  function ciAddMed(item){
+  /* CONFIRME COM O TUTOR (Adriana, 22/set/2026) — "essa informação precisa ir para check-in
+   * de hospedagem para ser perguntada ao tutor se é isso mesmo". O que vem da ficha chega
+   * pré-preenchido com uma faixa por item: Confirmado (é isso mesmo) ou Mudou (abre a
+   * edição). O check-in NÃO fecha com item de ficha sem resposta — perguntado não é
+   * respondido, e remédio sem confirmação é remédio no chute. */
+  function ciMedConfHTML(item){
+    return '<div class="ci-med-conf">'
+      +'<span>Confirme com o tutor: é isso mesmo?</span>'
+      +'<button type="button" data-cf="ok" onclick="ciMedConfirmar(this)">Confirmado</button>'
+      +'<button type="button" data-cf="mudou" onclick="ciMedMudou(this)">Mudou</button>'
+      +'</div>';
+  }
+  function ciMedConfSet(btn, estado){
+    if(!canEditCheckinMed()){ alert('Apenas a Consultora, a Gestão, a Supervisão ou a Veterinária confirmam medicação no check-in.'); return; }
+    const el=btn.closest('.magitem'); if(!el) return;
+    el.dataset.conf=estado;
+    const faixa=el.querySelector('.ci-med-conf'); if(!faixa) return;
+    faixa.classList.toggle('ok', estado==='ok');
+    faixa.classList.toggle('mudou', estado==='mudou');
+    faixa.querySelectorAll('button').forEach(function(b){ b.classList.toggle('on', b.dataset.cf===estado); });
+    const txt=faixa.querySelector('span');
+    if(txt) txt.textContent=(estado==='ok')
+      ? 'Confirmado com o tutor por '+quemSou()+' — segue igual.'
+      : 'Mudou: corrija abaixo. Ao salvar, a ficha do FILHOt é atualizada junto.';
+    try{ if(typeof zLimparFalta==='function') zLimparFalta(); }catch(e){} /* silencioso de propósito: limpar marcação de falta — falhar não muda dado nenhum */
+  }
+  function ciMedConfirmar(btn){ ciMedConfSet(btn,'ok'); }
+  function ciMedMudou(btn){ ciMedConfSet(btn,'mudou'); }
+  // opts.daFicha = a linha veio da agenda do FILHOt e precisa da palavra do tutor.
+  function ciAddMed(item, opts){
     const wrap=document.getElementById('ciMeds'); if(!wrap) return;
     const id='ci_'+Date.now()+'_'+Math.random().toString(36).slice(2,6);
     // Início já vem com a data de entrada da estadia (a Consultora só ajusta se for outro dia).
     const ent=(document.getElementById('ciEntrada')||{}).value||'';
     const base=item||{nome:'',q:'',u:'',horarios:[''],tipo:'medicamento'};
     if(!base.dataInicio && ent) base.dataInicio=ent;
-    wrap.insertAdjacentHTML('beforeend', medAgendaRowHTML(id, base));
+    wrap.insertAdjacentHTML('beforeend', medAgendaRowHTML(id, base, {confirmar:!!(opts&&opts.daFicha)}));
+    medQuandoSyncTodos('#ciMeds');
   }
   // Ação do BOTÃO "+ Acrescentar" no Check-in — gate de papel (Consultora/Gestão/Supervisão/Diretoria/Vet).
   // As chamadas programáticas de ciAddMed (linha inicial, pré-preenchimento) continuam livres.
@@ -37365,11 +37976,26 @@
       const tb=el.querySelector('.mag-tipo button.on'); const tipo=(tb&&/supl/i.test(tb.textContent))?'suplemento':'medicamento';
       const horarios=Array.prototype.map.call(el.querySelectorAll('[data-c=h]'), function(inp){ return normHora(inp.value)||''; }).filter(Boolean);
       const ex=coletarExtrasMed(el);
+      const quando=coletarQuandoMed(el);
       if(nome||q||u||horarios.length||ex.local){
         // No check-in o estoque é sempre "fresco" (a consultora acabou de contar/receber) — prev=null.
         const item={nome:nome,q:(medEhLocal(u)?'':q),u:u,horarios:horarios,tipo:tipo,origem:coletarOrigemEl(el)};
         if(medEhLocal(u)) item.local=ex.local;
         if(ex.obs) item.obs=ex.obs;
+        if(ex.motivo) item.motivo=ex.motivo;
+        // A refeição manda no horário — a mesma conta da ficha (uma fonte só).
+        if(quando && quando.ref && quando.ref!=='fixo'){
+          item.quando=quando;
+          const _hd=medQuandoHorario(quando);
+          if(_hd){ item.horarios=[_hd]; item.derivado_de='quando'; }
+        }
+        // A palavra do tutor, carimbada com quem perguntou e quando (item trazido da ficha).
+        const _cf=el.dataset.conf||'';
+        if(el.dataset.daficha==='1' && _cf){
+          const _carimbo={quem:(typeof quemSou==='function'?quemSou():'-'), quando:(typeof agoraBR==='function'?agoraBR():''), ts:Date.now()};
+          if(_cf==='ok') item.confirmado_em_checkin=_carimbo;
+          else item.mudou_em_checkin=_carimbo;
+        }
         if(ex.dataInicio) item.dataInicio=ex.dataInicio;
         if(ex.continuo) item.continuo=true; else if(ex.dataFim) item.dataFim=ex.dataFim;
         const _fq=coletarFreqMed(el); if(_fq && _fq.tipo!=='diario') item.freq=_fq;
@@ -37389,10 +38015,19 @@
       else if(medEhLocal(it.u) && !(it.local||'').trim()) probs.push('"'+it.nome+'" (pomada): escreva o LOCAL de aplicação.');
       else if(medEhTextoLivre(it.u) && !(it.q||'').trim()) probs.push('"'+it.nome+'": escreva a DESCRIÇÃO da dose (ex: 1 medida no medidor do tutor).');
       else if(!medEhLocal(it.u) && !medEhTextoLivre(it.u) && qtdNum(it.q)==null) probs.push('"'+it.nome+'": escreva a QUANTIDADE em número (ex: 1, 0,5, 10).');
-      else if(!it.horarios.length) probs.push('"'+it.nome+'": cadastre pelo menos 1 HORÁRIO válido (ex: 07:30).');
+      else if(!it.horarios.length) probs.push('"'+it.nome+'": escolha QUANDO dar (antes do jantar, por exemplo) ou cadastre pelo menos 1 HORÁRIO válido (ex: 07:30).');
       else if(!it.dataInicio) probs.push('"'+it.nome+'": informe a DATA DE INÍCIO do medicamento.');
       else if(!it.continuo && !it.dataFim) probs.push('"'+it.nome+'": informe a DATA DE FIM ou marque "Uso contínuo".');
     });
+    // O que veio da ficha e ninguém confirmou com o tutor: o check-in NÃO fecha assim.
+    // A pergunta é a razão de a lista estar aqui — sem resposta, é remédio no chute.
+    try{
+      document.querySelectorAll('#ciMeds .magitem[data-daficha="1"]').forEach(function(el){
+        if(el.dataset.conf) return;
+        const n=((el.querySelector('[data-c=m]')||{}).value||'').trim()||'este medicamento';
+        probs.push('"'+n+'" veio da ficha: pergunte ao tutor se é isso mesmo e toque em Confirmado ou em Mudou.');
+      });
+    }catch(e){} /* silencioso de propósito: guarda defensiva — falhar aqui não pode interromper a validação */
     return probs;
   }
   function ciPreencherMedicacao(){
@@ -37401,8 +38036,11 @@
       const itens=s.val()||{}; const ids=Object.keys(itens);
       if(!ids.length) return;
       const wrap=document.getElementById('ciMeds'); if(!wrap) return; wrap.innerHTML='';
-      ids.forEach(function(id){ ciAddMed(itens[id]); });
-      const ms=document.getElementById('ci-med-status'); if(ms){ ms.style.color='var(--muted)'; ms.textContent='Medicação trazida da última vez — confira com o tutor se continua igual.'; }
+      // Os de USO CONTÍNUO vêm primeiro: são o que a aba Medicamentos da ficha guarda e o
+      // que o tutor precisa confirmar item por item.
+      const ordenados=ids.slice().sort(function(a,b){ return ((itens[b]||{}).continuo?1:0)-((itens[a]||{}).continuo?1:0); });
+      ordenados.forEach(function(id){ ciAddMed(itens[id], {daFicha:true}); });
+      const ms=document.getElementById('ci-med-status'); if(ms){ ms.style.color='var(--crm-atencao-text)'; ms.textContent='Medicação que já está na ficha deste FILHOt — confirme CADA item com o tutor: Confirmado ou Mudou. O check-in não fecha sem isso.'; }
     }).catch(function(e){ _logLeituraFalhou('auaulandia/medicacao-agenda/ (ciPreencherMedicacao)', e); });
   }
 
@@ -38186,6 +38824,21 @@
     zLimparFalta();   // passou: tira o vermelho e devolve o texto do botão
     const meds=ciColetarMeds();
     const temMed=Object.keys(meds).length>0;
+    // A palavra do tutor sobre o que veio da ficha, no rastro — quem perguntou e o que ouviu.
+    // "Mudou" quer dizer que a agenda da ficha foi corrigida aqui: uma fonte só, atualizada.
+    try{
+      const _conf=[], _mud=[];
+      Object.values(meds).forEach(function(m){
+        if(m.confirmado_em_checkin) _conf.push(m.nome||'');
+        else if(m.mudou_em_checkin) _mud.push(m.nome||'');
+      });
+      if((_conf.length||_mud.length) && typeof audit==='function')
+        audit('checkin-medicacao-confirmada',
+          (_conf.length?('confirmados com o tutor: '+_conf.join(' · ')):'')
+          +((_conf.length&&_mud.length)?' | ':'')
+          +(_mud.length?('mudaram (ficha atualizada): '+_mud.join(' · ')):''),
+          {pet:(ciHosp&&ciHosp.nome)||'', tutor:(ciHosp&&ciHosp.tutor)||'', quem:quemSou()});
+    }catch(e){} /* silencioso de propósito: o audit() tem bolso próprio — falhar aqui não pode travar o check-in */
     const semTutor=!!(document.getElementById('ciSemTutor')&&document.getElementById('ciSemTutor').checked);
     let assina='', sig='';
     if(!semTutor){ assina=(document.getElementById('ciAssinaNome').value||'').trim(); sig=ciAssinaturaDataURL(); }

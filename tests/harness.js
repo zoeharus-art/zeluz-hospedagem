@@ -3740,8 +3740,8 @@ async function main() {
     check('v-25 · a auditoria da tabela diz o que mudou, de quanto para quanto',
       /audit\('orcamento-precos',\s*\n?\s*mudou\.length\?\('alterou a tabela de hospedagem — '\+mudou\.join/.test(html)
       && /\{antes:antes, depois:novo\}/.test(html));
-    check('v-25 · a versão carimbada desta entrega é a 2026-09-22-01',
-      /const APP_VERSAO='2026-09-22-01';/.test(html));
+    check('v-25 · a versão carimbada desta entrega é a 2026-09-22-02',
+      /const APP_VERSAO='2026-09-22-02';/.test(html));
   }
   console.log('');
 
@@ -4037,8 +4037,8 @@ async function main() {
       && html.indexOf('sem valor registrado ficaram de fora') > 0
       && html.indexOf('Ainda estou lendo os avulsos lançados no mês') > 0);
 
-    check('v-26 · a versão carimbada desta entrega é a 2026-09-22-01',
-      /const APP_VERSAO='2026-09-22-01';/.test(html));
+    check('v-26 · a versão carimbada desta entrega é a 2026-09-22-02',
+      /const APP_VERSAO='2026-09-22-02';/.test(html));
   }
   console.log('');
 
@@ -4421,8 +4421,8 @@ async function main() {
       }
     } else { check('v-27 · orcRenderConfig existe', false, 'função não encontrada'); }
 
-    check('v-27 · a versão carimbada desta entrega é a 2026-09-22-01',
-      /const APP_VERSAO='2026-09-22-01';/.test(html));
+    check('v-27 · a versão carimbada desta entrega é a 2026-09-22-02',
+      /const APP_VERSAO='2026-09-22-02';/.test(html));
   }
   console.log('');
 
@@ -5033,8 +5033,8 @@ async function main() {
         delete ctx.document.activeElement; delete ctx.__focoAuto;
       }
     } else { check('v-28 · vencRedesenhoAuto existe', false, 'função não encontrada'); }
-    check('v-28 · a versão carimbada desta entrega é a 2026-09-22-01',
-      /const APP_VERSAO='2026-09-22-01';/.test(html));
+    check('v-28 · a versão carimbada desta entrega é a 2026-09-22-02',
+      /const APP_VERSAO='2026-09-22-02';/.test(html));
   }
   console.log('');
 
@@ -14609,7 +14609,7 @@ async function main() {
         !/\.catch\(function\([a-z]*\)\{\s*\}\)/.test(
           html.slice(html.indexOf('const CK_FRASE_PRATICA='), html.indexOf('function renderCkInicio('))));
       check('v-14 · a versão carimbada é a desta entrega',
-        /const APP_VERSAO='2026-09-22-01';/.test(html));
+        /const APP_VERSAO='2026-09-22-02';/.test(html));
     }
 
     // ---- v-15: O PLANO SÓ GRAVA NO CONFIRMAR (caso Cookie/Yara, 15/set/2026) --------
@@ -15425,8 +15425,8 @@ async function main() {
           + 'AVISO_COLEIRA_APOS = __bkpC.apos;', ctx);
       }
     } else { check('v-17 · prevCfgCarregar existe', false, 'função não encontrada'); }
-    check('v-24 · a versão carimbada desta entrega é a 2026-09-22-01',
-      /const APP_VERSAO='2026-09-22-01';/.test(html));
+    check('v-24 · a versão carimbada desta entrega é a 2026-09-22-02',
+      /const APP_VERSAO='2026-09-22-02';/.test(html));
 
     // ───────── v-19 · o aparelho autorizado que não se perde no iPhone (16/set/2026)
     // Auditoria de 16/set: o iPhone da Leticya gerou DOIS ids em trinta segundos
@@ -15666,8 +15666,11 @@ async function main() {
     } else { check('v-29 · linhaBuscaCadastro existe e o retrato tem a Cookie', false, 'função ou cadastro ausente'); }
 
     // ---- (f) a fiação: a linha entra NA BUSCA DO CADASTRO, e só nela ----------------
+    // 22/set/2026: a linha do REMÉDIO passou a morar na mesma célula, logo depois do peso
+    // (a lei do "onde o FILHOt aparece, a medicação aparece"). O que este teste guarda
+    // continua sendo o mesmo: a linha do peso está DENTRO da célula do nome.
     check('v-29 · renderPel (a busca do cadastro) desenha a linha dentro da célula do nome',
-      /<span class="pel-nome">\$\{pelNome\(p\)\}<\/span>[\s\S]{0,260}?\$\{linhaBuscaCadastro\(p,_hojeBusca\)\}<\/td>/.test(html));
+      /<span class="pel-nome">\$\{pelNome\(p\)\}<\/span>[\s\S]{0,260}?\$\{linhaBuscaCadastro\(p,_hojeBusca\)\}(\$\{medLinhaDoPel\(p\)\})?<\/td>/.test(html));
     check('v-29 · a data de hoje é calculada UMA vez por desenho, não uma por linha',
       /const _hojeBusca=hojeISO\(\);\n\s*document\.getElementById\('pelBody'\)\.innerHTML=/.test(html));
     check('v-29 · o clique que abre a ficha continua o mesmo (a linha é texto, não botão)',
@@ -15677,8 +15680,8 @@ async function main() {
       String((html.match(/linhaBuscaCadastro\(/g) || []).length));
     check('v-29 · a linha tem estilo próprio: menor, em var(--muted), e quebrando no celular',
       /table\.pel \.pel-busca-sub\{[^}]*font-size:11\.5px[^}]*color:var\(--muted\)[^}]*white-space:normal/.test(html));
-    check('v-29 · a versão carimbada desta entrega é a 2026-09-22-01',
-      /const APP_VERSAO='2026-09-22-01';/.test(html));
+    check('v-29 · a versão carimbada desta entrega é a 2026-09-22-02',
+      /const APP_VERSAO='2026-09-22-02';/.test(html));
   }
   console.log('');
 
@@ -15980,8 +15983,8 @@ async function main() {
         ctx.vermNumTexto(5) === '5' && ctx.vermNumTexto(0.3) === '0,3' && ctx.vermNumTexto(4.5) === '4,5',
         JSON.stringify([ctx.vermNumTexto(5), ctx.vermNumTexto(0.3)]));
     } else { check('v-30 · vermNumLer existe', false, 'função não encontrada'); }
-    check('v-30 · a versão carimbada desta entrega é a 2026-09-22-01',
-      /const APP_VERSAO='2026-09-22-01';/.test(html));
+    check('v-30 · a versão carimbada desta entrega é a 2026-09-22-02',
+      /const APP_VERSAO='2026-09-22-02';/.test(html));
   }
   console.log('');
 
@@ -16244,8 +16247,8 @@ async function main() {
       && html.indexOf('A frase pronta fala em &ldquo;vence&rdquo; — confira antes de mandar.') > 0
       && /if\(\(m\.itens\|\|\[\]\)\.some\(function\(x\)\{ return x\.atrasado; \}\)\)/.test(html));
 
-    check('v-31 · a versão carimbada desta entrega é a 2026-09-22-01',
-      /const APP_VERSAO='2026-09-22-01';/.test(html));
+    check('v-31 · a versão carimbada desta entrega é a 2026-09-22-02',
+      /const APP_VERSAO='2026-09-22-02';/.test(html));
   }
   // ===== v-32 · O CALENDÁRIO, A COBRANÇA E A RESPOSTA QUE LANÇA SOZINHA ============
   // Adriana, 21/set/2026, palavra por palavra:
@@ -16710,8 +16713,8 @@ async function main() {
       }
     } else { check('v-32 · vencResponderTipo e dashLancar existem', false, 'função não encontrada'); }
 
-    check('v-32 · a versão carimbada desta entrega é a 2026-09-22-01',
-      /const APP_VERSAO='2026-09-22-01';/.test(html));
+    check('v-32 · a versão carimbada desta entrega é a 2026-09-22-02',
+      /const APP_VERSAO='2026-09-22-02';/.test(html));
   }
   console.log('');
 
@@ -17105,8 +17108,8 @@ async function main() {
       && /DB\.ref\('daycare\/vagas-pedidos'\)\.on\('value'/.test(html)
       && /try\{ vagasPedCarregar\(\); \}catch\(e\)\{\}/.test(html));
 
-    check('v-33 · a versão carimbada desta entrega é a 2026-09-22-01',
-      /const APP_VERSAO='2026-09-22-01';/.test(html));
+    check('v-33 · a versão carimbada desta entrega é a 2026-09-22-02',
+      /const APP_VERSAO='2026-09-22-02';/.test(html));
   }
   console.log('');
 
@@ -17418,8 +17421,366 @@ async function main() {
       && /URL\.createObjectURL\(f\)/.test(html) && /URL\.revokeObjectURL\(url\)/.test(html)
       && /createImageBitmap\(f,\{resizeWidth:CK_FOTO_MAX, resizeQuality:'medium', imageOrientation:'from-image'\}\)/.test(html)
       && /if\(bmp && bmp\.close\) bmp\.close\(\)/.test(html));
-    check('v-34 · a versão carimbada desta entrega é a 2026-09-22-01',
-      /const APP_VERSAO='2026-09-22-01';/.test(html));
+    check('v-34 · a versão carimbada desta entrega é a 2026-09-22-02',
+      /const APP_VERSAO='2026-09-22-02';/.test(html));
+  }
+  console.log('');
+
+  // ===== v-35 · A ABA MEDICAMENTOS E O REMÉDIO QUE SEGUE O FILHOt (22/set/2026) ======
+  // Adriana: "Em cadastro do peludinho preciso de uma aba chamada Medicamentos! Temos
+  // diversos cardíacos. Essa informação precisa ir para check-in de hospedagem para ser
+  // perguntada ao tutor se é isso mesmo... Toshi está tomando uma medicação 45 minutos
+  // antes do jantar e antes do café da manhã. E onde for a informação dele precisa ir a
+  // medicação, como em hospedagem. Não só dele, mas de todos."
+  //
+  // O que estes testes guardam: (1) a conta do "quando" (refeição → hora), (2) a aba lê e
+  // grava na MESMA agenda da hospedagem, (3) "Parou de tomar" NUNCA apaga, (4) o check-in
+  // pré-preenche e não fecha sem a palavra do tutor, (5) a linha do remédio aparece em
+  // toda tela onde o FILHOt aparece, (6) quem só lê não edita.
+  console.log('v-35 · A aba Medicamentos, o "quando" pela refeição e a linha que segue o FILHOt:');
+  {
+    // ---- a linha de medicação de mentira, com os mesmos seletores do app -----------
+    // coletarMedAgendaForm/coletarExtrasMed/coletarQuandoMed leem exatamente estes pontos.
+    const campo35 = (v) => ({ value: v == null ? '' : String(v) });
+    const linha35 = (cfg) => {
+      const c = cfg || {};
+      const mapa = {
+        '[data-c=m]': campo35(c.nome),
+        '[data-c=q]': campo35(c.q),
+        '[data-c=local]': campo35(c.local),
+        '[data-c=obs]': campo35(c.obs),
+        '[data-c=motivo]': campo35(c.motivo),
+        '[data-c=ini]': campo35(c.ini),
+        '[data-c=fim]': campo35(c.fim),
+        '.medunits button.on': c.u ? { textContent: c.u } : null,
+        '.mag-tipo button.on': { textContent: c.tipo || 'Medicamento' },
+        '.mag-continuo.on': c.continuo ? {} : null,
+        '.mag-origem button.on': { dataset: { o: c.origem || 'tutor' } },
+        '.mag-estoque': null,
+        '.mag-freq': null,
+        '.mag-quando': c.quando === null ? null
+          : { dataset: { ref: (c.quando && c.quando.ref) || 'fixo',
+                         rel: (c.quando && c.quando.rel) || 'antes',
+                         min: String((c.quando && c.quando.min) != null ? c.quando.min : 0) } },
+      };
+      return {
+        dataset: Object.assign({ id: c.id || 'x1' }, c.dataset || {}),
+        querySelector(sel) { return Object.prototype.hasOwnProperty.call(mapa, sel) ? mapa[sel] : null; },
+        querySelectorAll(sel) {
+          if (sel === '[data-c=h]') return (c.horarios || []).map(campo35);
+          return [];
+        },
+      };
+    };
+    const comLinhas = async (sel, linhas, fn) => {
+      const qsaOrig = ctx.document.querySelectorAll;
+      ctx.document.querySelectorAll = function (s) {
+        return (String(s).indexOf(sel) === 0) ? linhas : [];
+      };
+      try { return await fn(); } finally { ctx.document.querySelectorAll = qsaOrig; }
+    };
+
+    // ---- (a) a conta do "quando": a refeição manda no horário ----------------------
+    check('v-35 · "45 min antes do jantar" é a frase pronta, escrita como o tutor fala',
+      ctx.medQuandoTexto({ ref: 'jantar', rel: 'antes', min: 45 }) === '45 min antes do jantar'
+      && ctx.medQuandoTexto({ ref: 'almoco', rel: 'depois', min: 30 }) === '30 min depois do almoço',
+      ctx.medQuandoTexto({ ref: 'jantar', rel: 'antes', min: 45 }));
+    check('v-35 · sem minutos não sai "0 min": é "antes do café", que é como se diz',
+      ctx.medQuandoTexto({ ref: 'cafe', rel: 'antes', min: 0 }) === 'antes do café'
+      && ctx.medQuandoTexto({ ref: 'fixo' }) === ''
+      && ctx.medQuandoTexto(null) === '');
+    check('v-35 · a hora da dose sai da refeição: jantar 18:30 − 45 min = 17:45',
+      ctx.medQuandoHorario({ ref: 'jantar', rel: 'antes', min: 45 }) === '17:45'
+      && ctx.medQuandoHorario({ ref: 'cafe', rel: 'depois', min: 30 }) === '08:00'
+      && ctx.medQuandoHorario({ ref: 'almoco', rel: 'antes', min: 0 }) === '12:00',
+      ctx.medQuandoHorario({ ref: 'jantar', rel: 'antes', min: 45 }));
+    {
+      const bkp = Object.assign({}, ctx.REF_HORAS);
+      try {
+        ctx.REF_HORAS = { cafe: '06:00', almoco: '11:30', jantar: '20:00' };
+        check('v-35 · mudou o horário da refeição em Configurações, mudou a hora da dose',
+          ctx.medQuandoHorario({ ref: 'jantar', rel: 'antes', min: 45 }) === '19:15'
+          && ctx.medQuandoHorario({ ref: 'cafe', rel: 'antes', min: 15 }) === '05:45',
+          ctx.medQuandoHorario({ ref: 'jantar', rel: 'antes', min: 45 }));
+        ctx.REF_HORAS = { cafe: 'xx', almoco: '', jantar: '99:99' };
+        check('v-35 · horário inválido no banco NÃO inventa hora: cai no padrão de fábrica',
+          ctx.medQuandoHorario({ ref: 'jantar', rel: 'antes', min: 45 }) === '17:45'
+          && ctx.refHora('cafe') === '07:30');
+      } finally { ctx.REF_HORAS = bkp; }
+    }
+    check('v-35 · com "quando", o alarme usa a hora DERIVADA; sem ele, a digitada à mão',
+      JSON.stringify(ctx.medHorariosDe({ quando: { ref: 'jantar', rel: 'antes', min: 45 }, horarios: ['09:00'] })) === '["17:45"]'
+      && JSON.stringify(ctx.medHorariosDe({ horarios: ['07:30', '19:00'] })) === '["07:30","19:00"]'
+      && JSON.stringify(ctx.medHorariosDe({ quando: { ref: 'fixo' }, horarios: ['07:30'] })) === '["07:30"]');
+
+    // ---- (b) a aba lê a MESMA agenda da hospedagem (nada de nó paralelo) -----------
+    const bkpGeral35 = ctx.MED_AGENDA_GERAL;
+    const CHAVE35 = 'toshi__victor-zélia';
+    try {
+      ctx.MED_AGENDA_GERAL = {
+        [CHAVE35]: { nome: 'Toshi', tutor: 'Victor/Zélia', itens: {
+          i1: { nome: 'Enalapril', q: '1', u: 'comprimido', continuo: true, motivo: 'cardíaco',
+                quando: { ref: 'jantar', rel: 'antes', min: 45 }, horarios: ['17:45'], derivado_de: 'quando' },
+          i2: { nome: 'Enalapril', q: '1', u: 'comprimido', continuo: true, motivo: 'cardíaco',
+                quando: { ref: 'cafe', rel: 'antes', min: 0 }, horarios: ['07:30'], derivado_de: 'quando' },
+          i3: { nome: 'Vetmedin', q: '1/2', u: 'comprimido', continuo: false, dataFim: '2026-09-01',
+                paradoEm: { quem: 'Amanda', data: '2026-09-01', motivo: 'trocou de remédio' }, horarios: ['08:00'] },
+          i4: { nome: 'Apoquel', q: '1', u: 'comprimido', continuo: true, suspenso: true, horarios: ['08:00'] },
+        } },
+      };
+      check('v-35 · a aba lê a agenda da hospedagem e mostra SÓ o uso contínuo em vigor',
+        ctx.medContinuosDaChave(CHAVE35).map((x) => x.nome).join(',') === 'Enalapril,Enalapril',
+        ctx.medContinuosDaChave(CHAVE35).map((x) => x.nome).join(','));
+      check('v-35 · quem parou de tomar e quem a vet suspendeu NÃO entram na linha (mas seguem no banco)',
+        ctx.medContinuosDaChave(CHAVE35).every((x) => x.nome !== 'Vetmedin' && x.nome !== 'Apoquel')
+        && !!ctx.MED_AGENDA_GERAL[CHAVE35].itens.i3.paradoEm);
+      check('v-35 · dois registros do MESMO remédio viram uma frase só, como o tutor fala',
+        ctx.medResumoTexto(CHAVE35) === 'Enalapril 1 comprimido, 45 min antes do jantar e antes do café',
+        ctx.medResumoTexto(CHAVE35));
+      check('v-35 · a linha é sempre a mesma: "💊 toma remédio:" com o recado de quem age',
+        ctx.medLinhaHTML(CHAVE35, 'Confira com o tutor.').indexOf('💊 toma remédio: Enalapril 1 comprimido, 45 min antes do jantar e antes do café') > 0
+        && ctx.medLinhaHTML(CHAVE35, 'Confira com o tutor.').indexOf('med-linha-sub') > 0
+        && ctx.medLinhaHTML('quem-nao-toma-nada') === '');
+      check('v-35 · o lançamento do dia recebe o texto COM a hora derivada',
+        ctx.medTextoLancamento(CHAVE35) === 'Enalapril 1 comprimido, 45 min antes do jantar e antes do café · às 07:30 e 17:45',
+        ctx.medTextoLancamento(CHAVE35));
+      check('v-35 · a chave da agenda sai da ficha do cadastro — o Toshi cai no nó dele',
+        ctx.medChaveDoPel({ n: 'Toshi', tutor: 'Victor/Zélia' }) === CHAVE35,
+        ctx.medChaveDoPel({ n: 'Toshi', tutor: 'Victor/Zélia' }));
+
+      // ---- (c) o lançamento do dia já vem escrito -------------------------------
+      const bkpSel = ctx.DASH_SEL_I ? Object.assign({}, ctx.DASH_SEL_I) : null;
+      const bkpDet = ctx.DASH_DET ? Object.assign({}, ctx.DASH_DET) : null;
+      const bkpPel = ctx.PELUDINHOS;
+      try {
+        vm.runInContext('__v35pel = PELUDINHOS; PELUDINHOS = [{n:"Toshi", tutor:"Victor/Zélia"}];', ctx);
+        ctx.DASH_SEL_I.medicacao = 0;
+        ctx.DASH_DET.medicacao = {};
+        ctx.medPreMarcarLanc('medicacao');
+        check('v-35 · escolhido o FILHOt, "qual remédio e como dar" já vem preenchido pela agenda',
+          String(ctx.DASH_DET.medicacao.qual || '').indexOf('Enalapril 1 comprimido, 45 min antes do jantar') === 0,
+          String(ctx.DASH_DET.medicacao.qual || ''));
+        check('v-35 · o texto cabe no campo da tela (80 letras) — nada é cortado no meio sem aviso',
+          String(ctx.DASH_DET.medicacao.qual || '').length <= 80);
+        ctx.DASH_DET.vermifugo = {};
+        ctx.DASH_SEL_I.vermifugo = 0;
+        ctx.medPreMarcarLanc('vermifugo');
+        check('v-35 · e só o lançamento de Medicação é pré-preenchido (o vermífugo segue como era)',
+          !Object.prototype.hasOwnProperty.call(ctx.DASH_DET.vermifugo, 'qual'));
+      } finally {
+        vm.runInContext('PELUDINHOS = __v35pel;', ctx);
+        if (bkpSel) { Object.keys(ctx.DASH_SEL_I).forEach((k) => delete ctx.DASH_SEL_I[k]); Object.assign(ctx.DASH_SEL_I, bkpSel); }
+        if (bkpDet) { Object.keys(ctx.DASH_DET).forEach((k) => delete ctx.DASH_DET[k]); Object.assign(ctx.DASH_DET, bkpDet); }
+        if (bkpPel === undefined) { /* PELUDINHOS é let: já foi devolvido acima */ }
+      }
+    } finally { ctx.MED_AGENDA_GERAL = bkpGeral35; }
+
+    // ---- (d) o que a tela entrega ao banco -----------------------------------------
+    await comLinhas('#fmedItens', [linha35({
+      id: 'n1', nome: 'Enalapril', q: '1', u: 'comprimido', continuo: true, motivo: 'cardíaco',
+      obs: 'esconder no patê', ini: '2026-01-10', horarios: ['09:00'],
+      quando: { ref: 'jantar', rel: 'antes', min: 45 },
+    })], async () => {
+      const col = ctx.coletarMedAgendaForm('#fmedItens', {});
+      const it = col.n1 || {};
+      check('v-35 · a aba grava o "quando", o para quê e a observação — e a hora sai derivada',
+        JSON.stringify(it.quando) === '{"ref":"jantar","rel":"antes","min":45}'
+        && JSON.stringify(it.horarios) === '["17:45"]'
+        && it.derivado_de === 'quando'
+        && it.motivo === 'cardíaco' && it.obs === 'esconder no patê'
+        && it.continuo === true && it.dataInicio === '2026-01-10',
+        JSON.stringify(it).slice(0, 220));
+      check('v-35 · a aba Medicamentos e o card diário usam UM coletor só (nada de dois)',
+        (html.match(/function coletarMedAgendaForm\(/g) || []).length === 1
+        && /function fmedColetar\(\)\{ return coletarMedAgendaForm\('#fmedItens', FMED_ITENS\); \}/.test(html));
+      const probsOk = ctx.fmedValidar(col);
+      check('v-35 · com tudo respondido, a aba não inventa pendência', probsOk.length === 0, JSON.stringify(probsOk));
+    });
+    await comLinhas('#fmedItens', [linha35({
+      id: 'n2', nome: 'Enalapril', q: '1', u: 'comprimido', continuo: true, ini: '2026-01-10',
+      quando: { ref: 'jantar', rel: 'antes', min: 45 },
+    })], async () => {
+      const bkp = Object.assign({}, ctx.REF_HORAS);
+      try {
+        // Banco sem o horário do jantar: a dose NÃO fica sem hora. Vale o padrão de fábrica
+        // (18:30), que é o mesmo que a tela de Configurações mostra — nada é inventado em silêncio.
+        ctx.REF_HORAS = { cafe: '07:30', almoco: '12:00', jantar: '' };
+        const col = ctx.coletarMedAgendaForm('#fmedItens', {});
+        check('v-35 · banco sem o horário do jantar: vale o padrão de fábrica, a dose nunca fica sem hora',
+          JSON.stringify((col.n2 || {}).horarios) === '["17:45"]' && ctx.fmedValidar(col).length === 0,
+          JSON.stringify((col.n2 || {}).horarios));
+      } finally { ctx.REF_HORAS = bkp; }
+    });
+    await comLinhas('#fmedItens', [linha35({ id: 'n3', nome: 'Enalapril', q: '', u: 'comprimido', continuo: true, ini: '2026-01-10', horarios: ['08:00'] })], async () => {
+      const probs = ctx.fmedValidar(ctx.coletarMedAgendaForm('#fmedItens', {}));
+      check('v-35 · dose continua sendo número + medida em botão: sem quantidade não salva',
+        probs.length === 1 && probs[0].indexOf('QUANTIDADE') > 0, JSON.stringify(probs));
+    });
+
+    // ---- (e) nada grava antes do Confirmar, e o resumo é de → para -----------------
+    {
+      const bkpItens = ctx.FMED_ITENS;
+      try {
+        ctx.FMED_ITENS = { a1: { nome: 'Enalapril', q: '1', u: 'comprimido', continuo: true, quando: { ref: 'jantar', rel: 'antes', min: 30 } } };
+        const novos = { a1: { nome: 'Enalapril', q: '1', u: 'comprimido', continuo: true, quando: { ref: 'jantar', rel: 'antes', min: 45 }, motivo: 'cardíaco' },
+                        a2: { nome: 'Vetmedin', q: '1/2', u: 'comprimido', continuo: true, horarios: ['08:00'] } };
+        const res = ctx.fmedResumo(novos);
+        check('v-35 · o resumo mostra de → para no que mudou e NOVO no que entrou',
+          res.length === 2
+          && res[0].indexOf('30 min antes do jantar') > 0 && res[0].indexOf('→') > 0 && res[0].indexOf('45 min antes do jantar') > 0
+          && res[1].indexOf('NOVO — Vetmedin') === 0,
+          JSON.stringify(res));
+        check('v-35 · nada muda, nada grava: o resumo vazio é o que segura o Salvar',
+          ctx.fmedResumo({ a1: ctx.FMED_ITENS.a1 }).length === 0);
+      } finally { ctx.FMED_ITENS = bkpItens; }
+    }
+    check('v-35 · o Salvar da aba só grava DEPOIS do Confirmar, e deixa rastro ficha-medicamentos',
+      html.indexOf("const ok=await zPergunta('Salvar os medicamentos de '") < html.indexOf("ops.push(DB.ref('auaulandia/medicacao-agenda/'+FMED_KEY+'/itens/'+id).update(it));")
+      && /audit\('ficha-medicamentos', resumo\.join\(' \| '\)/.test(html));
+    check('v-35 · e grava na MESMA agenda da hospedagem — a aba não criou nó nenhum',
+      /DB\.ref\('auaulandia\/medicacao-agenda\/'\+FMED_KEY\+'\/itens'\)\.once/.test(html)
+      && !/medicamentos-ficha|ficha\/medicamentos/.test(html));
+
+    // ---- (f) "Parou de tomar" encerra, nunca apaga ---------------------------------
+    {
+      const corpoParou = html.slice(html.indexOf('async function fmedParou('), html.indexOf('function pelSubtab(') > 0 ? html.length : html.length).slice(0, 2600);
+      check('v-35 · "Parou de tomar" grava continuo:false, a data de fim, o motivo e QUEM registrou',
+        /continuo:false, dataFim:hoje, historico:hist,/.test(corpoParou)
+        && /paradoEm:\{quem:quem, data:hoje, quando:agoraBR\(\), ts:Date\.now\(\), motivo:\(motivo\|\|''\)\}/.test(corpoParou));
+      check('v-35 · e NUNCA apaga: não existe remove() no caminho do "Parou de tomar"',
+        corpoParou.indexOf('.remove()') < 0);
+      check('v-35 · o motivo é obrigatório — encerrar remédio sem explicação não passa',
+        /minimo:3,[\s\S]{0,200}Escreva o motivo em poucas palavras/.test(html));
+      check('v-35 · o que parou continua na ficha, embaixo, em "Já não toma mais"',
+        /Já não toma mais/.test(html)
+        && /PAROU DE TOMAR em/.test(html)
+        && /const parados=ids\.filter\(function\(i\)\{ return \(FMED_ITENS\[i\]\|\|\{\}\)\.continuo!==true; \}\);/.test(html));
+      check('v-35 · re-salvar a ficha não apaga o registro de quem parou nem a palavra do tutor',
+        /if\(prev\.paradoEm\) item\.paradoEm=prev\.paradoEm;/.test(html)
+        && /if\(prev\.confirmado_em_checkin\) item\.confirmado_em_checkin=prev\.confirmado_em_checkin;/.test(html));
+    }
+
+    // ---- (g) o check-in da hospedagem: pré-preenche e cobra a palavra do tutor -----
+    {
+      // A linha desenhada DE VERDADE: prova que os três rodapés existem e que a faixa da
+      // confirmação é montada sem tropeçar (ela nasce dentro do medAgendaRowHTML).
+      const base35 = { nome: 'Enalapril', q: '1', u: 'comprimido', continuo: true,
+                       quando: { ref: 'jantar', rel: 'antes', min: 45 }, horarios: ['17:45'] };
+      const noCard = ctx.medAgendaRowHTML('r1', base35);
+      const naFicha = ctx.medAgendaRowHTML('r1', base35, { ficha: true });
+      const rascunho = ctx.medAgendaRowHTML('r2', base35, { ficha: true, novo: true });
+      const noCheckin = ctx.medAgendaRowHTML('r3', base35, { confirmar: true });
+      check('v-35 · a MESMA linha serve aos quatro lugares, com o rodapé certo em cada um',
+        noCard.indexOf('magRemoverItem') > 0 && noCard.indexOf('fmedParou') < 0
+        && naFicha.indexOf("fmedParou('r1')") > 0 && naFicha.indexOf('magRemoverItem') < 0
+        && rascunho.indexOf("fmedDescartar('r2')") > 0 && rascunho.indexOf('ainda não salvo') > 0
+        && noCheckin.indexOf('ci-med-conf') > 0 && noCheckin.indexOf('Confirme com o tutor') > 0
+        && noCheckin.indexOf('data-daficha="1" data-conf=""') > 0);
+      check('v-35 · e toda linha traz o "quando" em BOTÃO, com a frase pronta para o app calcular',
+        naFicha.indexOf('mag-quando-b') > 0 && naFicha.indexOf('data-ref="jantar" data-rel="antes"') > 0
+        && naFicha.indexOf('mag-quando-frase') > 0
+        && /data-ref="jantar" data-rel="antes" data-min="45"/.test(naFicha));
+    }
+    check('v-35 · o check-in traz a lista da ficha marcada para confirmação item por item',
+      /ordenados\.forEach\(function\(id\)\{ ciAddMed\(itens\[id\], \{daFicha:true\}\); \}\);/.test(html)
+      && /Confirme com o tutor: é isso mesmo\?/.test(html)
+      && /data-daficha="1" data-conf=""/.test(html));
+    await comLinhas('#ciMeds', [
+      { dataset: { daficha: '1', conf: '' }, querySelector: (s) => (s === '[data-c=m]' ? { value: 'Enalapril' } : null), querySelectorAll: () => [] },
+    ], async () => {
+      const probs = ctx.ciValidarMeds({});
+      check('v-35 · item da ficha sem Confirmado/Mudou BARRA o check-in, com o nome do remédio',
+        probs.length === 1 && probs[0].indexOf('Enalapril') === 1 && probs[0].indexOf('Confirmado ou em Mudou') > 0,
+        JSON.stringify(probs));
+    });
+    await comLinhas('#ciMeds', [
+      { dataset: { daficha: '1', conf: 'ok' }, querySelector: () => null, querySelectorAll: () => [] },
+    ], async () => {
+      check('v-35 · confirmado com o tutor, o check-in segue', ctx.ciValidarMeds({}).length === 0);
+    });
+    await comLinhas('#ciMeds', [linha35({
+      id: 'c1', nome: 'Enalapril', q: '1', u: 'comprimido', continuo: true, ini: '2026-09-22',
+      quando: { ref: 'jantar', rel: 'antes', min: 45 }, dataset: { daficha: '1', conf: 'ok' },
+    })], async () => {
+      const it = (ctx.ciColetarMeds() || {}).c1 || {};
+      check('v-35 · "Confirmado" carimba quem perguntou e quando, dentro do próprio remédio',
+        !!it.confirmado_em_checkin && !!it.confirmado_em_checkin.quem && !!it.confirmado_em_checkin.ts
+        && !it.mudou_em_checkin, JSON.stringify(it.confirmado_em_checkin || {}));
+      check('v-35 · e o check-in usa a MESMA conta do "quando" da ficha (uma fonte só)',
+        JSON.stringify(it.horarios) === '["17:45"]' && it.derivado_de === 'quando');
+    });
+    await comLinhas('#ciMeds', [linha35({
+      id: 'c2', nome: 'Enalapril', q: '1', u: 'comprimido', continuo: true, ini: '2026-09-22',
+      horarios: ['20:00'], dataset: { daficha: '1', conf: 'mudou' },
+    })], async () => {
+      const it = (ctx.ciColetarMeds() || {}).c2 || {};
+      check('v-35 · "Mudou" também fica carimbado — e é o que vai atualizar a agenda da ficha',
+        !!it.mudou_em_checkin && !it.confirmado_em_checkin && JSON.stringify(it.horarios) === '["20:00"]',
+        JSON.stringify(it.mudou_em_checkin || {}));
+    });
+    check('v-35 · o que o tutor respondeu vira rastro no salvar do check-in',
+      /audit\('checkin-medicacao-confirmada',/.test(html)
+      && /confirmados com o tutor: /.test(html) && /mudaram \(ficha atualizada\): /.test(html));
+    check('v-35 · e o "Mudou" grava na agenda da ficha — a mesma que a aba lê (uma fonte só)',
+      /ops\.push\(DB\.ref\('auaulandia\/medicacao-agenda\/'\+key\+'\/itens\/'\+mid\)\.update\(meds\[mid\]\)\); \}\);/.test(html));
+
+    // ---- (h) onde o FILHOt aparece, a medicação aparece ----------------------------
+    check('v-35 · a linha está no cabeçalho da ficha, antes de qualquer aba',
+      /<div id="pelMedLinha">\$\{medLinhaDoPel\(p,'Detalhes e alterações na aba Medicamentos\.'\)\}<\/div>/.test(html));
+    check('v-35 · a linha está no check-in do corpo, junto da tarja de restrição',
+      /\+tarjaRestricao\(\{n:p\.n,tutor:p\.tutor\}\)[\s\S]{0,320}\+medLinhaDoPel\(p,'Uso contínuo, do cadastro\./.test(html));
+    check('v-35 · a linha está no cartão do Vence amanhã',
+      /h\+=medLinhaDoPel\(o\.p,'Uso contínuo, do cadastro\. Confirme com o tutor se continua igual\.'\);/.test(html));
+    check('v-35 · a linha está na lista do cadastro, na mesma célula do nome',
+      /\$\{linhaBuscaCadastro\(p,_hojeBusca\)\}\$\{medLinhaDoPel\(p\)\}<\/td>/.test(html));
+    check('v-35 · e o painel do lançamento diz de onde veio a frase',
+      /if\(it\.k==='medicacao'\) h\+=medBlocoPainelHTML\(it\.k\);/.test(html)
+      && /try\{ medPreMarcarLanc\(k\); \}catch\(e\)\{\}/.test(html));
+    check('v-35 · a linha tem estilo próprio, em cor de atenção, e não é caixa de texto',
+      /\.med-linha\{[^}]*color:var\(--crm-atencao-text\)/.test(html));
+
+    // ---- (i) permissão: monitor lê, não edita --------------------------------------
+    {
+      const papelAntes = ctx.document.body.dataset.role;
+      try {
+        ctx.document.body.dataset.role = 'monitor';
+        check('v-35 · monitor NÃO edita medicação na ficha (só lê)', ctx.fmedPodeEditar() === false);
+        ctx.document.body.dataset.role = 'plantonista';
+        check('v-35 · plantonista também não edita — ela registra a dose, não a receita', ctx.fmedPodeEditar() === false);
+        ctx.document.body.dataset.role = 'consultora';
+        check('v-35 · a Consultora edita: é ela que ouve o tutor no check-in', ctx.fmedPodeEditar() === true);
+        ctx.document.body.dataset.role = 'vet';
+        check('v-35 · e a Veterinária também', ctx.fmedPodeEditar() === true);
+      } finally { ctx.document.body.dataset.role = papelAntes; }
+    }
+    check('v-35 · quem só lê recebe a tela travada, não um campo que finge gravar',
+      /if\(!pode\) wrap\.querySelectorAll\('input,button'\)\.forEach\(function\(el\)\{ el\.setAttribute\('disabled','disabled'\); \}\);/.test(html)
+      && /if\(el&&el\.closest&&\(el\.closest\('#ciMeds'\)\|\|el\.closest\('#fmedItens'\)\)\) return canEditCheckinMed\(\);/.test(html));
+
+    // ---- (j) a aba existe, no lugar combinado, e os horários moram em Configurações -
+    check('v-35 · a aba Medicamentos fica entre Prevenção e Rotina & Almoço',
+      html.indexOf("pelSubtab(this,'ps-saude')") < html.indexOf("pelSubtab(this,'ps-med')")
+      && html.indexOf("pelSubtab(this,'ps-med')") < html.indexOf("pelSubtab(this,'ps-rotina')")
+      && /<div class="ppanel2" id="ps-med">/.test(html));
+    check('v-35 · abrir a aba lê a agenda do FILHOt (uma vez por FILHOt, nó pequeno)',
+      /pelSubtab\(this,'ps-med'\);fmedRender\(\)/.test(html)
+      && /if\(key!==FMED_KEY\)\{ FMED_KEY=key; FMED_ITENS=\{\}; FMED_CARREGOU=false; \}/.test(html));
+    check('v-35 · os horários das refeições são de NEGÓCIO: moram no banco e se editam sem programador',
+      /DB\.ref\('daycare\/config\/refeicoes'\)\.set\(novo\)/.test(html)
+      && /DB\.ref\('daycare\/config\/refeicoes'\)\.once\('value'\)/.test(html)
+      && /audit\('config-refeicoes',/.test(html)
+      && /<h2 style="font-size:19px">Horários das refeições<\/h2>/.test(html));
+    check('v-35 · o padrão de fábrica é 07:30 · 12:00 · 18:30, e a leitura do banco o substitui',
+      /const REF_HORAS_PADRAO=\{cafe:'07:30', almoco:'12:00', jantar:'18:30'\};/.test(html)
+      && vm.runInContext('REF_HORAS_PADRAO.cafe+"|"+REF_HORAS_PADRAO.almoco+"|"+REF_HORAS_PADRAO.jantar', ctx) === '07:30|12:00|18:30'
+      && /MED_QUANDO_REFS\.forEach\(function\(r\)\{ if\(horaOk\(v\[r\.k\]\)\) novo\[r\.k\]=v\[r\.k\]; \}\);/.test(html));
+    check('v-35 · mudar o "quando" ou o para quê deixa rastro no histórico do remédio',
+      /if\(JSON\.stringify\(prev\.quando\|\|\{\}\)!==JSON\.stringify\(it\.quando\|\|\{\}\)\) mud\.push\('quando dar'\);/.test(html)
+      && /if\(\(prev\.motivo\|\|''\)!==\(it\.motivo\|\|''\)\) mud\.push\('para quê'\);/.test(html)
+      && ctx.medDiffAcao({ nome: 'Enalapril', horarios: ['17:45'] },
+                         { nome: 'Enalapril', horarios: ['17:45'], quando: { ref: 'jantar', rel: 'antes', min: 45 } }) === 'Alterou quando dar');
+    check('v-35 · a versão carimbada desta entrega é a 2026-09-22-02',
+      /const APP_VERSAO='2026-09-22-02';/.test(html));
   }
   console.log('');
 
