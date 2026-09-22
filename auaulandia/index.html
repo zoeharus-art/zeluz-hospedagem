@@ -15151,7 +15151,7 @@
   // inteira DEPOIS de a correção estar publicada — o aviso apareceu, ninguém tocou.
   // Agora o aparelho PARADO recarrega sozinho: trancado, com a aba escondida, na porta de
   // entrada ou 3 minutos sem ninguém tocar nele. Mão na tela = nunca recarrega.
-  const APP_VERSAO='2026-09-22-02';
+  const APP_VERSAO='2026-09-22-03';
   var RECARGA_PARADO_MS=3*60*1000, __versaoPublicada=null, __recargaTimer=null;
   function vigiarVersao(){
     if(!DB) return;
@@ -17495,12 +17495,59 @@
     const p=x=>String(x).padStart(2,'0');
     return d.getFullYear()+'-'+p(d.getMonth()+1)+'-'+p(d.getDate());
   }
-  function aplicarRenovacao(planoKey, aulas, iniISO){
+  // ===== COMEÇOU NO MEIO DO MÊS: O PLANO VALE O PRÓXIMO MÊS INTEIRO =================
+  // (Adriana, 22/set/2026 — caso Beethoven e Maria Eduarda, da Tabatta.)
+  // "Ela escolheu a opção 2: o outubro inteiro mais as diárias de setembro. No entanto, a
+  //  data do plano continua valendo até o dia 30/09. E na verdade ele vai ser calculado até
+  //  o dia 31/10, porque foi o que o tutor escolheu."
+  // Quem entra com o mês já corrido paga as diárias que faltam DESTE mês à parte — avulsas
+  // (opção 1) ou pelo valor do plano (opção 2). Nas DUAS o mês que o plano cobre é o
+  // SEGUINTE: entrou em 22/09 no mensal, vale até 31/10 (não 30/09); no trimestral entram
+  // outubro, novembro e dezembro (31/12); no semestral vai até 31/03. A opção 1 não é
+  // exceção — nela as diárias de setembro são avulsas e pagas à parte; o mês que o
+  // plano cobre continua sendo o seguinte.
+  // O primeiro mês fechado fica em renov.mes_cobranca_1 e o vencimento antigo em
+  // renov.fim_anterior, para o Desfazer ter para onde voltar.
+  function mmMesDe(iso){ return /^\d{4}-\d{2}-\d{2}$/.test(iso||'')?String(iso).slice(0,7):''; }
+  function mmMesSeguinteDe(iso){
+    if(!/^\d{4}-\d{2}-\d{2}$/.test(iso||'')) return '';
+    const a=iso.split('-').map(Number);
+    const ano=(a[1]===12)?a[0]+1:a[0], mes=(a[1]===12)?1:a[1]+1;
+    return ano+'-'+String(mes).padStart(2,'0');
+  }
+  // A conta do meio do mês, num lugar só: o compromisso começa a contar no mês SEGUINTE.
+  function fimVigenciaMeioMesISO(iniISO, meses){ return fimVigenciaISO(iniISO, (Number(meses)||1)+1); }
+  // Esta vigência é de quem começou no meio do mês? Só quando há registro de meio de mês E
+  // ele é do MESMO mês da data do pagamento. Sem essa trava, a renovação do ano que vem
+  // herdaria calada um mês a mais que ninguém pediu.
+  function renovMeioMesVale(r){
+    const reg=(r&&r.meio_mes&&typeof r.meio_mes==='object')?r.meio_mes:null;
+    if(!reg||!r.inicio) return null;
+    if(!mmMesDe(reg.inicio)||mmMesDe(reg.inicio)!==mmMesDe(r.inicio)) return null;
+    return reg;
+  }
+  // A frase que explica o vencimento esticado — a MESMA na ficha e no resumo do Confirmar.
+  function renovMeioMesFrase(reg){
+    if(!reg) return '';
+    const mA=mmMesNome(reg.inicio)||'—', mP=mmMesProximoNome(reg.inicio)||'—';
+    return (Number(reg.opcao)===1)
+      ? ('opção 1 do meio do mês: '+mP+' inteiro + as diárias de '+mA+' avulsas, pagas à parte')
+      : ('opção 2 do meio do mês: '+mP+' inteiro + as diárias de '+mA+' pelo valor do plano');
+  }
+  function aplicarRenovacao(planoKey, aulas, iniISO, opts){
     const pl=planos()[planoKey]; if(!pl||!iniISO) return null;
     const meses=PLANO_MESES[pl.compromisso]||1;
-    const fim=fimVigenciaISO(iniISO, meses);
+    const meioMes=!!(opts&&opts.meioMes);
+    const fim=meioMes?fimVigenciaMeioMesISO(iniISO, meses):fimVigenciaISO(iniISO, meses);
     return { plano:planoKey, aulas:aulas, inicio:iniISO, fim:fim,
-             mesRenov:mesAnoDe(fim), quando:hojeISO() };
+             mesRenov:mesAnoDe(fim), quando:hojeISO(),
+             mes_cobranca_1:(meioMes?mmMesSeguinteDe(iniISO):'') };
+  }
+  // A vigência calculada do jeito certo, de um lugar só: quem desenha a tela, quem confirma
+  // e quem grava leem todos a MESMA conta — a regra do meio do mês inclusive.
+  function renovCalcular(r, planoKey, aulas, iniISO){
+    return aplicarRenovacao(planoKey, aulas, iniISO,
+      {meioMes: !!renovMeioMesVale(Object.assign({}, r||{}, {inicio:iniISO}))});
   }
   // ---- mensagens para o tutor (com emoji: WhatsApp, decisão de Adriana) ----
   // primeiroNome() já existe acima (usado no relatório do tutor)
@@ -17709,9 +17756,13 @@
     const mens=(r.plano&&r.plano!=='auaulandia'&&r.plano!=='avulso'&&r.plano!=='morador')?mensalidade(r.plano,aulas,r.ordemPet||1):0;
     // A vigência do rascunho é CALCULADA na hora, a partir do plano e da data que estão na
     // tela — nunca lida de um campo gravado que pode estar velho.
-    const calc=(r.plano&&r.inicio&&planos()[r.plano])?aplicarRenovacao(r.plano, aulas, r.inicio):null;
+    const regMMTela=renovMeioMesVale(r);
+    const calc=(r.plano&&r.inicio&&planos()[r.plano])?renovCalcular(r, r.plano, aulas, r.inicio):null;
     const fimTela=calc?calc.fim:'';
     const mesTela=calc?calc.mesRenov:'';
+    // POR QUE ESTE VENCIMENTO É O DO MÊS SEGUINTE — a ficha diz, ao lado da data
+    // (Adriana, 22/set/2026). Vencimento esticado sem explicação parece erro de conta.
+    const fraseMMTela=(calc&&regMMTela)?renovMeioMesFrase(regMMTela):'';
     // A categoria escolhida no TOPO da ficha manda aqui. Hóspede e avulso não têm plano
     // mensal — em vez de campos vazios, o bloco explica o que vale para cada um.
     const cat=pelCategoria(p);
@@ -17776,6 +17827,7 @@
             +'<div class="field" style="grid-column:1/-1"><label>Vale até '+(r.plano?'<span style="font-weight:600;color:var(--muted)">— calculado pelo sistema</span>':'')+'</label>'
               +'<div class="prev-calc" style="font-size:19px;font-weight:800;'+(fimTela&&fimTela<hojeISO()?'color:var(--crm-critico)':'')+'">'
               +(fimTela?(fmtBR(fimTela)+(fimTela<hojeISO()?' — JÁ VENCIDO':'')+' <span style="font-size:12.5px;font-weight:600;color:var(--muted)">· renova em '+(mesTela||'—')+'</span>'):'preencha o plano e a data do pagamento')
+              +(fraseMMTela?'<div id="planoMeioMesFrase" style="font-size:12px;font-weight:700;color:var(--z-blue);margin-top:4px">('+esc(fraseMMTela)+')</div>':'')
               +'</div>'
               +(fimTela&&fimTela<hojeISO()?'<div class="dc-faltas" style="margin-top:6px;border-color:#B3261E;color:#B3261E"><strong>Esta vigência já nasce vencida.</strong> Confira a data do pagamento — provavelmente é de um mês anterior. O Confirmar vai perguntar antes de gravar.</div>':'')
               +'</div>')
@@ -17821,7 +17873,10 @@
       else alert('Preencha a data do pagamento.');
       return;
     }
-    let calc=aplicarRenovacao(r.plano, aulas, r.inicio);
+    // A regra do meio do mês entra pela MESMA porta da tela (renovCalcular): quem registrou
+    // a opção 1 ou a 2 neste mês tem o plano valendo o próximo mês inteiro, e o Confirmar
+    // grava esse vencimento — não o do mês que já estava correndo.
+    let calc=renovCalcular(r, r.plano, aulas, r.inicio);
     if(!calc){
       if(typeof zAlertao==='function') zAlertao('PLANO NÃO RECONHECIDO',
         ['O plano "'+(r.plano||'—')+'" não está na tabela de planos deste ano.',
@@ -17834,11 +17889,11 @@
     // aceitou calado. Agora ele pergunta ANTES de gravar, e a decisão continua sendo do consultor.
     if(calc.fim && calc.fim < hojeISO()){
       const pl0=planos()[r.plano]||{};
-      const meses=PLANO_MESES[pl0.compromisso]||1;
       const a=r.inicio.split('-').map(Number);
       const p2=function(x){ return String(x).padStart(2,'0'); };
       const isoProx=(a[1]===12? (a[0]+1)+'-01-01' : a[0]+'-'+p2(a[1]+1)+'-01');
-      const fimProx=fimVigenciaISO(isoProx, meses);
+      const calcProx=renovCalcular(r, r.plano, aulas, isoProx);
+      const fimProx=(calcProx&&calcProx.fim)||'';
       const usarProx=await zPergunta('ATENÇÃO — esta vigência já nasce VENCIDA',
         ['Data do pagamento: '+fmtBR(r.inicio),
          'Plano: '+(pl0.rotulo||r.plano)+' ('+(pl0.compromisso||'')+')',
@@ -17846,24 +17901,30 @@
          'Assim ele CONTINUA na lista de cobrança, como se não tivesse renovado.'],
         {sim:'Começar em '+fmtBR(isoProx)+', valendo até '+fmtBR(fimProx),
          nao:'Manter '+fmtBR(r.inicio)+' mesmo assim'});
-      if(usarProx) calc=aplicarRenovacao(r.plano, aulas, isoProx);
+      if(usarProx) calc=calcProx;
     }
     // RESUMO ANTES DE GRAVAR. "O sistema inteiro precisa orientar o que fazer" (Adriana).
     // Ela lê o que vai para o banco, com o dinheiro na frente, e decide.
     const pl=planos()[r.plano]||{};
     const mens=mensalidade(r.plano, aulas, r.ordemPet||1);
     const diasTxt=renovDiasNomes(pelAtual)||'nenhum dia marcado';
-    const ok=await zPergunta('CONFIRA ANTES DE GRAVAR',
-      [pelNome(pelAtual)+' · '+(pelGet(pelAtual,'tutor')||'tutor a confirmar'),
+    const linhasPlano=[pelNome(pelAtual)+' · '+(pelGet(pelAtual,'tutor')||'tutor a confirmar'),
        'Plano '+(pl.rotulo||r.plano)+' ('+(pl.compromisso||'')+') · '+aulas+'x por semana · '+diasTxt,
        'Início '+fmtBR(calc.inicio)+' · vale até '+fmtBR(calc.fim)+' · renova em '+(calc.mesRenov||'—'),
-       'Mensalidade '+fmtCent(mens)+((r.ordemPet||1)>1?' — '+(r.ordemPet)+'º peludinho da família, com desconto':'')],
+       'Mensalidade '+fmtCent(mens)+((r.ordemPet||1)>1?' — '+(r.ordemPet)+'º peludinho da família, com desconto':'')];
+    const regMMConf=renovMeioMesVale(Object.assign({}, r, {inicio:calc.inicio}));
+    if(regMMConf) linhasPlano.push('O plano passará a valer até '+fmtBR(calc.fim)+' — '+renovMeioMesFrase(regMMConf)+'.');
+    const ok=await zPergunta('CONFIRA ANTES DE GRAVAR', linhasPlano,
       {sim:'Confirmar e gravar o plano', nao:'Voltar e conferir', cor:'#234D67', corTitulo:'#234D67',
        rodape:'Ao confirmar, o plano anterior vai para "Renovações anteriores" — e dá para desfazer.'});
     if(!ok) return;
     const k=pelKey(pelAtual);
     await renovHistGravar(k, gravado, 'renovação');
     const novo=Object.assign({}, gravado, calc, {aulas:aulas, ordemPet:r.ordemPet||1});
+    // Vigência que NÃO é mais do meio do mês não herda o "para onde voltar" da anterior:
+    // aquele vencimento já foi para "Renovações anteriores". Herdar faria o Desfazer do
+    // meio do mês devolver uma data de outro ciclo (Adriana, 22/set/2026).
+    if(!regMMConf) delete novo.fim_anterior;
     await setPelExtra(pelAtual,{renov:novo});
     renovRascLimpar();
     if(typeof audit==='function') audit('renovacao',
@@ -17954,6 +18015,45 @@
       texto:mmTextoTutor(conta, {mesAtual:mmMesNome(ini), mesProximo:mmMesProximoNome(ini)})};
   }
   function mmRegistroDe(ex){ const r=renovDe(ex)||{}; return (r.meio_mes&&typeof r.meio_mes==='object')?r.meio_mes:null; }
+  // O que a escolha do meio do mês faz com o VENCIMENTO de um FILHOt, se for gravada.
+  // O resumo da tela e o gravador chamam esta MESMA função — "o número da tela é o que se
+  // paga" (18/ago/2026): duas contas divergiriam já no primeiro mês.
+  // Só mexe em quem já tem vigência GRAVADA. Plano ainda em rascunho não tem vencimento
+  // para esticar: quando ele for confirmado, o Confirmar já lê o meio do mês e nasce certo.
+  function mmFimNovoDe(q, iniISO, opcao){
+    try{
+      const rQ=Object.assign({}, renovDe(pelExtra(q)||{}));
+      if(!rQ.plano||!rQ.inicio||!planos()[rQ.plano]) return null;
+      rQ.meio_mes={opcao:opcao, inicio:iniISO};
+      const c=renovCalcular(rQ, rQ.plano, Number(rQ.aulas)||nAulasDe(q), rQ.inicio);
+      if(!c||!c.fim) return null;
+      return {de:(rQ.fim||''), para:c.fim, mesRenov:c.mesRenov, mes_cobranca_1:c.mes_cobranca_1};
+    }catch(e){ _logFalhaGrav('conta do vencimento do meio do mês', e); return null; }
+  }
+  // Para onde o vencimento VOLTA quando o registro de meio de mês sai. Espelho da função
+  // acima: o resumo do Desfazer e o gravador leem esta MESMA conta.
+  // Três situações, nesta ordem:
+  //  1. o registro NÃO manda mais nesta vigência (já houve renovação de outro mês) — não se
+  //     mexe em data que não é sua; só a sobra é limpa;
+  //  2. há fim_anterior guardado — volta para ele;
+  //  3. não há (a escolha foi registrada ANTES do Confirmar do plano, e o plano já nasceu
+  //     esticado) — refaz a conta SEM a regra do meio do mês, que é a de sempre.
+  function mmFimDesfeitoDe(q){
+    try{
+      const rQ=Object.assign({}, renovDe(pelExtra(q)||{}));
+      if(!renovMeioMesVale(rQ)) return null;
+      const de=rQ.fim||'';
+      let para='';
+      if(Object.prototype.hasOwnProperty.call(rQ,'fim_anterior')) para=rQ.fim_anterior||'';
+      else{
+        const c=(rQ.plano&&rQ.inicio&&planos()[rQ.plano])
+          ? aplicarRenovacao(rQ.plano, Number(rQ.aulas)||nAulasDe(q), rQ.inicio) : null;
+        para=(c&&c.fim)||'';
+      }
+      if(!para||para===de) return null;
+      return {de:de, para:para};
+    }catch(e){ _logFalhaGrav('conta da volta do meio do mês', e); return null; }
+  }
   function mmBlocoHTML(ex, p){
     const r=renovEdit(ex);
     if(['Silver','Gold','Black'].indexOf(r.plano)<0) return '';    // só quem tem plano mensal
@@ -18094,6 +18194,16 @@
         : (fmtCent(m.mensalidade_cent)+' + '+m.diarias+' × '+fmtCent(m.diaria_plano_cent)+' = '+fmtCent(m.op2_cent))));
     });
     linhas.push('TOTAL: '+fmtCent(total));
+    // O QUE ISSO FAZ COM O VENCIMENTO — ela lê ANTES de gravar (Adriana, 22/set/2026).
+    const fins=ms.map(function(m){ return {nome:m.nome, f:mmFimNovoDe(m.pet, D.inicio, opcao)}; })
+      .filter(function(x){ return x.f && x.f.para && x.f.para!==x.f.de; });
+    if(fins.length){
+      const mesmos=fins.every(function(x){ return x.f.para===fins[0].f.para; });
+      linhas.push(mesmos
+        ? ('O plano passará a valer até '+fmtBR(fins[0].f.para)
+           +(fins[0].f.de?(' — hoje vale até '+fmtBR(fins[0].f.de)):'')+'.')
+        : ('O plano passará a valer até '+mmJuntar(fins.map(function(x){ return fmtBR(x.f.para)+' ('+x.nome+')'; }))+'.'));
+    }
     if(D.pendentes.length) linhas.push('Fora da conta: '+D.pendentes.map(function(x){ return x.nome; }).join(', ')+' — falta dado na ficha.');
     const ok=await zPergunta('CONFIRA ANTES DE GRAVAR', linhas,
       {sim:'Confirmar e gravar a escolha', nao:'Voltar e conferir', cor:'#234D67', corTitulo:'#234D67',
@@ -18108,11 +18218,26 @@
         diaria_avulsa_cent:D.conta.diaria_avulsa_cent, diaria_plano_cent:m.diaria_plano_cent,
         mensalidade_cent:m.mensalidade_cent, total_cent:((opcao===1)?m.op1_cent:m.op2_cent),
         texto:D.texto, quem:quem, ts:ts};
+      // O PLANO PASSA A VALER O PRÓXIMO MÊS INTEIRO — para TODOS os FILHOts da conta, não
+      // só o que abriu a ficha (Adriana, 22/set/2026: "isso vale tanto para ele quanto para
+      // a irmã dele, a Maria Eduarda"). Vale igual na opção 1 e na 2.
+      const nf=mmFimNovoDe(q, D.inicio, opcao);
+      const esticou=!!(nf && nf.para && nf.para!==nf.de);
+      if(esticou){
+        rQ.fim_anterior=nf.de;
+        rQ.fim=nf.para;
+        rQ.mesRenov=nf.mesRenov;
+        rQ.mes_cobranca_1=nf.mes_cobranca_1;
+      }
       await setPelExtra(q, {renov:rQ});
       if(typeof audit==='function') audit('plano-meio-mes',
         m.nome+' — começou em '+fmtBR(D.inicio)+' pela opção '+opcao+' · '+m.diarias+' diária'+(m.diarias===1?'':'s')
         +' · total '+fmtCent(rQ.meio_mes.total_cent),
         {alvo:dcKey(q.n, q.tutor), antes:antes});
+      if(esticou && typeof audit==='function') audit('plano-fim-meio-mes',
+        m.nome+' — plano passou a valer até '+fmtBR(nf.para)+' (era '+(nf.de?fmtBR(nf.de):'—')+')'
+        +' pela opção '+opcao+' do meio do mês · 1º mês fechado '+(nf.mes_cobranca_1||'—'),
+        {alvo:dcKey(q.n, q.tutor), antes:{fim:nf.de}});
     }
     mmRascLimpar();
     renderPelFicha();
@@ -18135,21 +18260,41 @@
       return;
     }
     const pets=mmFamiliaPets(pelAtual).filter(function(q){ return !!mmRegistroDe(pelExtra(q)); });
-    const ok=await zPergunta('DESFAZER O REGISTRO DE MEIO DE MÊS',
-      ['SAI: opção '+(reg.opcao||'—')+' · começo em '+fmtBR(reg.inicio||'')+' · '+fmtCent(reg.total_cent||0),
-       'De: '+mmJuntar(pets.map(function(q){ return pelNome(q); })),
-       'A conta na tela continua igual — só o registro sai. O rastro fica na Linha do tempo do dia.'],
+    // O vencimento esticado VOLTA ao que era — e ela lê isso antes (Adriana, 22/set/2026).
+    const voltas=pets.map(function(q){ const v=mmFimDesfeitoDe(q);
+        return v?{nome:pelNome(q), de:v.de, para:v.para}:null; })
+      .filter(Boolean);
+    const linhasD=['SAI: opção '+(reg.opcao||'—')+' · começo em '+fmtBR(reg.inicio||'')+' · '+fmtCent(reg.total_cent||0),
+       'De: '+mmJuntar(pets.map(function(q){ return pelNome(q); }))];
+    if(voltas.length) linhasD.push('O plano volta a valer até '
+      +mmJuntar(voltas.map(function(x){ return (x.para?fmtBR(x.para):'—')+' ('+x.nome+')'; }))+'.');
+    linhasD.push('A conta na tela continua igual — só o registro sai. O rastro fica na Linha do tempo do dia.');
+    const ok=await zPergunta('DESFAZER O REGISTRO DE MEIO DE MÊS', linhasD,
       {sim:'Desfazer o registro', nao:'Voltar', corTitulo:'#234D67'});
     if(!ok) return;
     for(let i=0;i<pets.length;i++){
       const q=pets[i], exQ=pelExtra(q)||{}, rQ=Object.assign({}, renovDe(exQ));
       const antes=mmRegistroDe(exQ);
       delete rQ.meio_mes;
+      // DESFAZER DESFAZ INTEIRO. Tirar só o registro e deixar o plano esticado seria
+      // desfazer pela metade — e ninguém veria (Adriana, 22/set/2026).
+      const volta=mmFimDesfeitoDe(q);
+      if(volta){
+        rQ.fim=volta.para;
+        rQ.mesRenov=volta.para?mesAnoDe(volta.para):'';
+      }
+      // O "para onde voltar" e o 1º mês fechado são desta escolha: saindo ela, saem eles.
+      rQ.mes_cobranca_1='';
+      delete rQ.fim_anterior;
       await setPelExtra(q, {renov:rQ});
       if(typeof audit==='function') audit('plano-meio-mes-desfeito',
         pelNome(q)+' — tirou o registro de meio de mês (opção '+((antes&&antes.opcao)||'—')
         +' · '+fmtCent((antes&&antes.total_cent)||0)+')',
         {alvo:dcKey(q.n, q.tutor), antes:antes});
+      if(volta && typeof audit==='function') audit('plano-fim-meio-mes',
+        pelNome(q)+' — plano voltou a valer até '+fmtBR(volta.para)
+        +' (estava '+(volta.de?fmtBR(volta.de):'—')+'), porque o meio do mês foi desfeito',
+        {alvo:dcKey(q.n, q.tutor), antes:{fim:volta.de}});
     }
     renderPelFicha();
     if(typeof zAlertao==='function') zAlertao('REGISTRO DESFEITO',

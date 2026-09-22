@@ -3740,8 +3740,8 @@ async function main() {
     check('v-25 · a auditoria da tabela diz o que mudou, de quanto para quanto',
       /audit\('orcamento-precos',\s*\n?\s*mudou\.length\?\('alterou a tabela de hospedagem — '\+mudou\.join/.test(html)
       && /\{antes:antes, depois:novo\}/.test(html));
-    check('v-25 · a versão carimbada desta entrega é a 2026-09-22-02',
-      /const APP_VERSAO='2026-09-22-02';/.test(html));
+    check('v-25 · a versão carimbada desta entrega é a 2026-09-22-03',
+      /const APP_VERSAO='2026-09-22-03';/.test(html));
   }
   console.log('');
 
@@ -4037,8 +4037,8 @@ async function main() {
       && html.indexOf('sem valor registrado ficaram de fora') > 0
       && html.indexOf('Ainda estou lendo os avulsos lançados no mês') > 0);
 
-    check('v-26 · a versão carimbada desta entrega é a 2026-09-22-02',
-      /const APP_VERSAO='2026-09-22-02';/.test(html));
+    check('v-26 · a versão carimbada desta entrega é a 2026-09-22-03',
+      /const APP_VERSAO='2026-09-22-03';/.test(html));
   }
   console.log('');
 
@@ -4421,8 +4421,8 @@ async function main() {
       }
     } else { check('v-27 · orcRenderConfig existe', false, 'função não encontrada'); }
 
-    check('v-27 · a versão carimbada desta entrega é a 2026-09-22-02',
-      /const APP_VERSAO='2026-09-22-02';/.test(html));
+    check('v-27 · a versão carimbada desta entrega é a 2026-09-22-03',
+      /const APP_VERSAO='2026-09-22-03';/.test(html));
   }
   console.log('');
 
@@ -5033,8 +5033,8 @@ async function main() {
         delete ctx.document.activeElement; delete ctx.__focoAuto;
       }
     } else { check('v-28 · vencRedesenhoAuto existe', false, 'função não encontrada'); }
-    check('v-28 · a versão carimbada desta entrega é a 2026-09-22-02',
-      /const APP_VERSAO='2026-09-22-02';/.test(html));
+    check('v-28 · a versão carimbada desta entrega é a 2026-09-22-03',
+      /const APP_VERSAO='2026-09-22-03';/.test(html));
   }
   console.log('');
 
@@ -14609,7 +14609,7 @@ async function main() {
         !/\.catch\(function\([a-z]*\)\{\s*\}\)/.test(
           html.slice(html.indexOf('const CK_FRASE_PRATICA='), html.indexOf('function renderCkInicio('))));
       check('v-14 · a versão carimbada é a desta entrega',
-        /const APP_VERSAO='2026-09-22-02';/.test(html));
+        /const APP_VERSAO='2026-09-22-03';/.test(html));
     }
 
     // ---- v-15: O PLANO SÓ GRAVA NO CONFIRMAR (caso Cookie/Yara, 15/set/2026) --------
@@ -15425,8 +15425,8 @@ async function main() {
           + 'AVISO_COLEIRA_APOS = __bkpC.apos;', ctx);
       }
     } else { check('v-17 · prevCfgCarregar existe', false, 'função não encontrada'); }
-    check('v-24 · a versão carimbada desta entrega é a 2026-09-22-02',
-      /const APP_VERSAO='2026-09-22-02';/.test(html));
+    check('v-24 · a versão carimbada desta entrega é a 2026-09-22-03',
+      /const APP_VERSAO='2026-09-22-03';/.test(html));
 
     // ───────── v-19 · o aparelho autorizado que não se perde no iPhone (16/set/2026)
     // Auditoria de 16/set: o iPhone da Leticya gerou DOIS ids em trinta segundos
@@ -15680,8 +15680,8 @@ async function main() {
       String((html.match(/linhaBuscaCadastro\(/g) || []).length));
     check('v-29 · a linha tem estilo próprio: menor, em var(--muted), e quebrando no celular',
       /table\.pel \.pel-busca-sub\{[^}]*font-size:11\.5px[^}]*color:var\(--muted\)[^}]*white-space:normal/.test(html));
-    check('v-29 · a versão carimbada desta entrega é a 2026-09-22-02',
-      /const APP_VERSAO='2026-09-22-02';/.test(html));
+    check('v-29 · a versão carimbada desta entrega é a 2026-09-22-03',
+      /const APP_VERSAO='2026-09-22-03';/.test(html));
   }
   console.log('');
 
@@ -15983,8 +15983,8 @@ async function main() {
         ctx.vermNumTexto(5) === '5' && ctx.vermNumTexto(0.3) === '0,3' && ctx.vermNumTexto(4.5) === '4,5',
         JSON.stringify([ctx.vermNumTexto(5), ctx.vermNumTexto(0.3)]));
     } else { check('v-30 · vermNumLer existe', false, 'função não encontrada'); }
-    check('v-30 · a versão carimbada desta entrega é a 2026-09-22-02',
-      /const APP_VERSAO='2026-09-22-02';/.test(html));
+    check('v-30 · a versão carimbada desta entrega é a 2026-09-22-03',
+      /const APP_VERSAO='2026-09-22-03';/.test(html));
   }
   console.log('');
 
@@ -16247,8 +16247,8 @@ async function main() {
       && html.indexOf('A frase pronta fala em &ldquo;vence&rdquo; — confira antes de mandar.') > 0
       && /if\(\(m\.itens\|\|\[\]\)\.some\(function\(x\)\{ return x\.atrasado; \}\)\)/.test(html));
 
-    check('v-31 · a versão carimbada desta entrega é a 2026-09-22-02',
-      /const APP_VERSAO='2026-09-22-02';/.test(html));
+    check('v-31 · a versão carimbada desta entrega é a 2026-09-22-03',
+      /const APP_VERSAO='2026-09-22-03';/.test(html));
   }
   // ===== v-32 · O CALENDÁRIO, A COBRANÇA E A RESPOSTA QUE LANÇA SOZINHA ============
   // Adriana, 21/set/2026, palavra por palavra:
@@ -16713,8 +16713,8 @@ async function main() {
       }
     } else { check('v-32 · vencResponderTipo e dashLancar existem', false, 'função não encontrada'); }
 
-    check('v-32 · a versão carimbada desta entrega é a 2026-09-22-02',
-      /const APP_VERSAO='2026-09-22-02';/.test(html));
+    check('v-32 · a versão carimbada desta entrega é a 2026-09-22-03',
+      /const APP_VERSAO='2026-09-22-03';/.test(html));
   }
   console.log('');
 
@@ -17108,8 +17108,8 @@ async function main() {
       && /DB\.ref\('daycare\/vagas-pedidos'\)\.on\('value'/.test(html)
       && /try\{ vagasPedCarregar\(\); \}catch\(e\)\{\}/.test(html));
 
-    check('v-33 · a versão carimbada desta entrega é a 2026-09-22-02',
-      /const APP_VERSAO='2026-09-22-02';/.test(html));
+    check('v-33 · a versão carimbada desta entrega é a 2026-09-22-03',
+      /const APP_VERSAO='2026-09-22-03';/.test(html));
   }
   console.log('');
 
@@ -17421,8 +17421,8 @@ async function main() {
       && /URL\.createObjectURL\(f\)/.test(html) && /URL\.revokeObjectURL\(url\)/.test(html)
       && /createImageBitmap\(f,\{resizeWidth:CK_FOTO_MAX, resizeQuality:'medium', imageOrientation:'from-image'\}\)/.test(html)
       && /if\(bmp && bmp\.close\) bmp\.close\(\)/.test(html));
-    check('v-34 · a versão carimbada desta entrega é a 2026-09-22-02',
-      /const APP_VERSAO='2026-09-22-02';/.test(html));
+    check('v-34 · a versão carimbada desta entrega é a 2026-09-22-03',
+      /const APP_VERSAO='2026-09-22-03';/.test(html));
   }
   console.log('');
 
@@ -17779,8 +17779,261 @@ async function main() {
       && /if\(\(prev\.motivo\|\|''\)!==\(it\.motivo\|\|''\)\) mud\.push\('para quê'\);/.test(html)
       && ctx.medDiffAcao({ nome: 'Enalapril', horarios: ['17:45'] },
                          { nome: 'Enalapril', horarios: ['17:45'], quando: { ref: 'jantar', rel: 'antes', min: 45 } }) === 'Alterou quando dar');
-    check('v-35 · a versão carimbada desta entrega é a 2026-09-22-02',
-      /const APP_VERSAO='2026-09-22-02';/.test(html));
+    check('v-35 · a versão carimbada desta entrega é a 2026-09-22-03',
+      /const APP_VERSAO='2026-09-22-03';/.test(html));
+  }
+  console.log('');
+
+  // ===== v-36 · COMEÇOU NO MEIO DO MÊS: O PLANO VALE O PRÓXIMO MÊS INTEIRO (22/set) ==
+  // Adriana: "Acabei de fazer o lançamento do Beethoven... Ela escolheu a opção 2: o
+  // outubro inteiro mais as diárias de setembro. No entanto, a data do plano continua
+  // valendo até o dia 30/09. E na verdade ele vai ser calculado até o dia 31/10, porque foi
+  // o que o tutor escolheu. Isso vale tanto para ele quanto para a irmã dele, a Maria
+  // Eduarda, da Tabatta."
+  //
+  // O que estes testes guardam: (1) a conta do vencimento esticado (mensal/trimestral/
+  // semestral), (2) a trava que impede a renovação do ano que vem herdar o mês a mais,
+  // (3) a opção 1 estica igual à 2, (4) TODOS os FILHOts da conta recebem o mesmo fim,
+  // (5) fim_anterior guardado e Desfazer devolvendo, (6) a frase na ficha e no resumo,
+  // (7) o rastro na auditoria.
+  console.log('v-36 · Quem começa no meio do mês tem o plano valendo o próximo mês inteiro:');
+  {
+    // ---- (a) a conta pura ----------------------------------------------------------
+    if (typeof ctx.fimVigenciaMeioMesISO === 'function') {
+      check('v-36 · mensal começando em 22/09 vale até 31/10 — não até 30/09',
+        ctx.fimVigenciaMeioMesISO('2026-09-22', 1) === '2026-10-31',
+        ctx.fimVigenciaMeioMesISO('2026-09-22', 1));
+      check('v-36 · trimestral: outubro, novembro e dezembro — vale até 31/12',
+        ctx.fimVigenciaMeioMesISO('2026-09-22', 3) === '2026-12-31',
+        ctx.fimVigenciaMeioMesISO('2026-09-22', 3));
+      check('v-36 · semestral: de outubro a março — vale até 31/03/2027',
+        ctx.fimVigenciaMeioMesISO('2026-09-22', 6) === '2027-03-31',
+        ctx.fimVigenciaMeioMesISO('2026-09-22', 6));
+      check('v-36 · a regra normal continua intocada: sem meio de mês, 22/09 mensal vence em 30/09',
+        ctx.fimVigenciaISO('2026-09-22', 1) === '2026-09-30');
+      check('v-36 · virada de ano: quem começa em 10/12 no mensal vai até 31/01/2027',
+        ctx.fimVigenciaMeioMesISO('2026-12-10', 1) === '2027-01-31',
+        ctx.fimVigenciaMeioMesISO('2026-12-10', 1));
+      check('v-36 · data que não é data não vira vencimento nenhum',
+        ctx.fimVigenciaMeioMesISO('', 1) === '' && ctx.fimVigenciaMeioMesISO('22/09/2026', 1) === '');
+    } else { check('v-36 · fimVigenciaMeioMesISO existe', false, 'função não encontrada'); }
+
+    if (typeof ctx.mmMesSeguinteDe === 'function') {
+      check('v-36 · o 1º mês fechado de quem começa em 22/09 é 2026-10',
+        ctx.mmMesSeguinteDe('2026-09-22') === '2026-10', ctx.mmMesSeguinteDe('2026-09-22'));
+      check('v-36 · e em dezembro o 1º mês fechado vira janeiro do ano seguinte',
+        ctx.mmMesSeguinteDe('2026-12-10') === '2027-01', ctx.mmMesSeguinteDe('2026-12-10'));
+      check('v-36 · mmMesDe devolve o mês da data, e nada de uma não-data',
+        ctx.mmMesDe('2026-09-22') === '2026-09' && ctx.mmMesDe('') === '' && ctx.mmMesDe(null) === '');
+    } else { check('v-36 · mmMesSeguinteDe existe', false, 'função não encontrada'); }
+
+    // ---- (b) a trava: só vale no MESMO mês da data do pagamento --------------------
+    if (typeof ctx.renovMeioMesVale === 'function') {
+      const regSet = { opcao: 2, inicio: '2026-09-22' };
+      check('v-36 · registro de setembro + pagamento de setembro: a regra vale',
+        !!ctx.renovMeioMesVale({ inicio: '2026-09-22', meio_mes: regSet }));
+      check('v-36 · a renovação do mês que vem NÃO herda o mês a mais (trava do mesmo mês)',
+        ctx.renovMeioMesVale({ inicio: '2026-11-01', meio_mes: regSet }) === null);
+      check('v-36 · sem registro de meio de mês, nada muda',
+        ctx.renovMeioMesVale({ inicio: '2026-09-22' }) === null
+        && ctx.renovMeioMesVale({ inicio: '2026-09-22', meio_mes: 'sim' }) === null
+        && ctx.renovMeioMesVale(null) === null);
+    } else { check('v-36 · renovMeioMesVale existe', false, 'função não encontrada'); }
+
+    // ---- (c) aplicarRenovacao e renovCalcular: uma conta só ------------------------
+    if (typeof ctx.renovCalcular === 'function') {
+      const semMM = ctx.aplicarRenovacao('Silver', 1, '2026-09-22');
+      check('v-36 · sem meio de mês o Silver de 22/09 continua vencendo em 30/09, sem 1º mês fechado',
+        semMM.fim === '2026-09-30' && semMM.mes_cobranca_1 === '', JSON.stringify(semMM));
+      const comMM = ctx.aplicarRenovacao('Silver', 1, '2026-09-22', { meioMes: true });
+      check('v-36 · o caso Beethoven: Silver de 22/09 passa a valer até 31/10, renovando em outubro',
+        comMM.fim === '2026-10-31' && comMM.mesRenov === 'outubro de 2026'
+        && comMM.mes_cobranca_1 === '2026-10', JSON.stringify(comMM));
+      check('v-36 · Gold (trimestral) vai até 31/12 e Black (semestral) até 31/03/2027',
+        ctx.aplicarRenovacao('Gold', 1, '2026-09-22', { meioMes: true }).fim === '2026-12-31'
+        && ctx.aplicarRenovacao('Black', 1, '2026-09-22', { meioMes: true }).fim === '2027-03-31');
+      const r2 = { inicio: '2026-09-22', meio_mes: { opcao: 2, inicio: '2026-09-22' } };
+      const r1 = { inicio: '2026-09-22', meio_mes: { opcao: 1, inicio: '2026-09-22' } };
+      check('v-36 · renovCalcular lê o registro sozinho — a tela, o Confirmar e o banco usam ESTA conta',
+        ctx.renovCalcular(r2, 'Silver', 1, '2026-09-22').fim === '2026-10-31');
+      check('v-36 · a OPÇÃO 1 estica igual à 2: as diárias de setembro é que são pagas à parte',
+        ctx.renovCalcular(r1, 'Silver', 1, '2026-09-22').fim === '2026-10-31'
+        && ctx.renovCalcular(r1, 'Silver', 1, '2026-09-22').mes_cobranca_1 === '2026-10');
+      check('v-36 · e sem registro nenhum renovCalcular devolve a vigência de sempre',
+        ctx.renovCalcular({ inicio: '2026-09-22' }, 'Silver', 1, '2026-09-22').fim === '2026-09-30');
+    } else { check('v-36 · renovCalcular existe', false, 'função não encontrada'); }
+
+    // ---- (d) a frase, na ficha e no resumo, com a mesma fonte ----------------------
+    if (typeof ctx.renovMeioMesFrase === 'function') {
+      check('v-36 · a frase da opção 2 diz outubro inteiro + as diárias de setembro',
+        ctx.renovMeioMesFrase({ opcao: 2, inicio: '2026-09-22' })
+          === 'opção 2 do meio do mês: outubro inteiro + as diárias de setembro pelo valor do plano',
+        ctx.renovMeioMesFrase({ opcao: 2, inicio: '2026-09-22' }));
+      check('v-36 · e a da opção 1 deixa claro que as diárias de setembro são avulsas, pagas à parte',
+        ctx.renovMeioMesFrase({ opcao: 1, inicio: '2026-09-22' })
+          === 'opção 1 do meio do mês: outubro inteiro + as diárias de setembro avulsas, pagas à parte',
+        ctx.renovMeioMesFrase({ opcao: 1, inicio: '2026-09-22' }));
+      check('v-36 · sem registro não há frase para inventar', ctx.renovMeioMesFrase(null) === '');
+    } else { check('v-36 · renovMeioMesFrase existe', false, 'função não encontrada'); }
+
+    // ---- (e) a família inteira, pelo caminho de verdade (mmConfirmar) --------------
+    // Beethoven e Maria Eduarda, da Tabatta: irmãos de verdade no banco, Silver de 1x às
+    // terças, pagamento em 22/09 (uma terça), vigência gravada vencendo em 30/09.
+    if (typeof ctx.mmConfirmar === 'function' && typeof ctx.blocoPlano === 'function') {
+      const geOrig36 = ctx.document.getElementById;
+      const pBet = { n: 'Beethoven', tutor: 'Tabatta' }, pDuda = { n: 'Maria Eduarda', tutor: 'Tabatta' };
+      const kB = ctx.pelKey(pBet), kD = ctx.pelKey(pDuda);
+      const fichaDe = (nome, ordem, renov) => ({ n: nome, tutor: 'Tabatta', dias: ['ter'], renov: renov });
+      const renovBase = (ordem) => ({ plano: 'Silver', aulas: 1, ordemPet: ordem, inicio: '2026-09-22',
+        fim: '2026-09-30', mesRenov: 'setembro de 2026' });
+      const cad36 = {}; cad36[kB] = fichaDe('Beethoven', 1, renovBase(1));
+      cad36[kD] = fichaDe('Maria Eduarda', 2, renovBase(2));
+      const irm36 = {}; irm36[kB + '~~' + kD] = { a: kB, b: kD };
+      ctx.__pel36 = [pBet, pDuda];
+      ctx.__cad36 = cad36;
+      ctx.__irm36 = irm36;
+      ctx.__esc36 = [];
+      ctx.__aud36 = [];
+      vm.runInContext('__bkp36 = { pel: PELUDINHOS, cad: pelCadCache, irm: IRMAOS_CACHE, at: pelAtual,'
+        + ' hoje: hojeISO, fer: orcFeriadosCfg, rasc: mmRascunho, ren: renovRascunho,'
+        + ' set: setPelExtra, red: renderPelFicha, rpr: renovPlanoRedesenhar, aud: audit,'
+        + ' pode: canEditPel, perg: zPergunta, alt: zAlertao, quem: renovQuemAgora, db: DB };'
+        + 'PELUDINHOS = __pel36; pelCadCache = __cad36; IRMAOS_CACHE = __irm36; pelAtual = __pel36[0];'
+        + 'orcFeriadosCfg = {}; mmRascunho = null; renovRascunho = null;'
+        + 'hojeISO = function(){ return "2026-09-22"; };'
+        + 'canEditPel = function(){ return true; };'
+        + 'zPergunta = function(){ return Promise.resolve(true); };'
+        + 'zAlertao = function(){};'
+        + 'renderPelFicha = function(){}; renovPlanoRedesenhar = function(){};'
+        + 'renovQuemAgora = function(){ return "Sarah"; };'
+        + 'audit = function(t, m, o){ __aud36.push({t:t, m:m, o:o}); };'
+        + 'setPelExtra = function(p, patch){ __esc36.push({k: pelKey(p), patch: patch});'
+        + ' pelCadCache[pelKey(p)] = Object.assign({}, pelCadCache[pelKey(p)] || {}, patch);'
+        + ' return Promise.resolve({ok:true}); };'
+        + 'DB = null;', ctx);
+      try {
+        ctx.document.getElementById = function () { return null; };
+        await ctx.mmConfirmar(2);
+        const porPet = {};
+        ctx.__esc36.forEach((e) => { porPet[e.k] = (e.patch && e.patch.renov) || {}; });
+        check('v-36 · o Confirmar grava nos DOIS FILHOts da conta — o que abriu a ficha e a irmã',
+          Object.keys(porPet).length === 2 && !!porPet[kB] && !!porPet[kD],
+          Object.keys(porPet).join(','));
+        check('v-36 · o caso relatado: o plano do Beethoven passa a valer até 31/10/2026',
+          porPet[kB].fim === '2026-10-31' && porPet[kB].mesRenov === 'outubro de 2026',
+          JSON.stringify(porPet[kB] && { fim: porPet[kB].fim, mesRenov: porPet[kB].mesRenov }));
+        check('v-36 · e o da Maria Eduarda também — a irmã não fica para trás',
+          porPet[kD].fim === '2026-10-31' && porPet[kD].mesRenov === 'outubro de 2026',
+          JSON.stringify(porPet[kD] && { fim: porPet[kD].fim }));
+        check('v-36 · o 1º mês fechado fica gravado nos dois: 2026-10',
+          porPet[kB].mes_cobranca_1 === '2026-10' && porPet[kD].mes_cobranca_1 === '2026-10');
+        check('v-36 · o vencimento anterior é guardado para o Desfazer ter para onde voltar',
+          porPet[kB].fim_anterior === '2026-09-30' && porPet[kD].fim_anterior === '2026-09-30');
+        check('v-36 · renov.inicio continua sendo o primeiro dia dele — 22/09, não 01/10',
+          porPet[kB].inicio === '2026-09-22' && porPet[kD].inicio === '2026-09-22');
+        check('v-36 · a escolha do tutor continua registrada, com a opção e o começo',
+          porPet[kB].meio_mes && porPet[kB].meio_mes.opcao === 2
+          && porPet[kB].meio_mes.inicio === '2026-09-22');
+        const audFim = ctx.__aud36.filter((a) => a.t === 'plano-fim-meio-mes');
+        check('v-36 · o rastro diz de→para, por FILHOt, com quem pagou o quê',
+          audFim.length === 2
+          && /passou a valer até 31\/10\/2026 \(era 30\/09\/2026\)/.test(audFim[0].m)
+          && /1º mês fechado 2026-10/.test(audFim[0].m)
+          && audFim[0].o && audFim[0].o.antes && audFim[0].o.antes.fim === '2026-09-30',
+          audFim.length ? audFim[0].m : 'nenhum audit plano-fim-meio-mes');
+
+        // --- a ficha diz POR QUE o vencimento é o do mês seguinte
+        const H36 = ctx.blocoPlano(ctx.pelExtra(pBet), pBet);
+        check('v-36 · a ficha mostra "Vale até 31/10/2026" com a frase do meio do mês ao lado',
+          H36.indexOf('id="planoMeioMesFrase"') > 0
+          && H36.indexOf('31/10/2026') > 0
+          && H36.indexOf('opção 2 do meio do mês: outubro inteiro + as diárias de setembro pelo valor do plano') > 0,
+          H36.indexOf('planoMeioMesFrase') > 0 ? 'a frase saiu, o texto não bateu' : 'a frase não saiu');
+
+        // --- e o Desfazer devolve o vencimento
+        ctx.__esc36.length = 0; ctx.__aud36.length = 0;
+        await ctx.mmDesfazer();
+        const undo = {};
+        ctx.__esc36.forEach((e) => { undo[e.k] = (e.patch && e.patch.renov) || {}; });
+        check('v-36 · Desfazer devolve o vencimento dos dois para 30/09/2026',
+          undo[kB] && undo[kB].fim === '2026-09-30' && undo[kD] && undo[kD].fim === '2026-09-30',
+          JSON.stringify(undo[kB] && { fim: undo[kB].fim }));
+        check('v-36 · e não deixa sobra: sai o registro, sai o fim_anterior, sai o 1º mês fechado',
+          undo[kB] && !undo[kB].meio_mes
+          && !Object.prototype.hasOwnProperty.call(undo[kB], 'fim_anterior')
+          && undo[kB].mes_cobranca_1 === ''
+          && undo[kB].mesRenov === 'setembro de 2026',
+          JSON.stringify(undo[kB]));
+        const audUndo = ctx.__aud36.filter((a) => a.t === 'plano-fim-meio-mes');
+        check('v-36 · o Desfazer também deixa rastro de→para',
+          audUndo.length === 2 && /voltou a valer até 30\/09\/2026 \(estava 31\/10\/2026\)/.test(audUndo[0].m),
+          audUndo.length ? audUndo[0].m : 'nenhum audit de volta');
+
+        // --- as duas bordas do Desfazer ------------------------------------------
+        const porFicha = (k, renov) => {
+          ctx.__k36 = k; ctx.__r36 = renov;
+          vm.runInContext('pelCadCache[__k36] = Object.assign({}, pelCadCache[__k36] || {}, {renov: __r36});', ctx);
+        };
+        const regVelho = { opcao: 2, inicio: '2026-09-22', total_cent: 100000, quem: 'Sarah', ts: 1 };
+        const cicloNovo = { plano: 'Silver', aulas: 1, ordemPet: 1, inicio: '2026-11-01', fim: '2026-11-30',
+          mesRenov: 'novembro de 2026', fim_anterior: '2026-09-30', mes_cobranca_1: '2026-10', meio_mes: regVelho };
+        porFicha(kB, cicloNovo);
+        check('v-36 · registro de meio de mês de OUTRO ciclo não mexe no vencimento de hoje',
+          ctx.mmFimDesfeitoDe(pBet) === null, JSON.stringify(ctx.mmFimDesfeitoDe(pBet)));
+        porFicha(kB, { plano: 'Silver', aulas: 1, ordemPet: 1, inicio: '2026-09-22', fim: '2026-10-31',
+          mesRenov: 'outubro de 2026', mes_cobranca_1: '2026-10',
+          meio_mes: { opcao: 2, inicio: '2026-09-22', total_cent: 100000, quem: 'Sarah', ts: 1 } });
+        check('v-36 · plano que já NASCEU esticado (registro antes do Confirmar) volta para 30/09/2026',
+          (() => { const v = ctx.mmFimDesfeitoDe(pBet); return !!v && v.de === '2026-10-31' && v.para === '2026-09-30'; })(),
+          JSON.stringify(ctx.mmFimDesfeitoDe(pBet)));
+        porFicha(kD, { plano: 'Silver', aulas: 1, ordemPet: 2, inicio: '2026-09-22', fim: '2026-09-30',
+          mesRenov: 'setembro de 2026' });
+        porFicha(kB, cicloNovo);
+        ctx.__esc36.length = 0; ctx.__aud36.length = 0;
+        await ctx.mmDesfazer();
+        const velho = {}; ctx.__esc36.forEach((e) => { velho[e.k] = (e.patch && e.patch.renov) || {}; });
+        check('v-36 · desfazer registro velho limpa a sobra e NÃO mexe na data do ciclo de hoje',
+          velho[kB] && velho[kB].fim === '2026-11-30' && !velho[kB].meio_mes
+          && !Object.prototype.hasOwnProperty.call(velho[kB], 'fim_anterior')
+          && velho[kB].mes_cobranca_1 === ''
+          && !velho[kD],
+          JSON.stringify(velho[kB]));
+        check('v-36 · e sem data mudada não se inventa rastro de vencimento',
+          ctx.__aud36.filter((a) => a.t === 'plano-fim-meio-mes').length === 0);
+      } finally {
+        ctx.document.getElementById = geOrig36;
+        vm.runInContext('PELUDINHOS = __bkp36.pel; pelCadCache = __bkp36.cad; IRMAOS_CACHE = __bkp36.irm;'
+          + 'pelAtual = __bkp36.at; hojeISO = __bkp36.hoje; orcFeriadosCfg = __bkp36.fer;'
+          + 'mmRascunho = __bkp36.rasc; renovRascunho = __bkp36.ren; setPelExtra = __bkp36.set;'
+          + 'renderPelFicha = __bkp36.red; renovPlanoRedesenhar = __bkp36.rpr; audit = __bkp36.aud;'
+          + 'canEditPel = __bkp36.pode; zPergunta = __bkp36.perg; zAlertao = __bkp36.alt;'
+          + 'renovQuemAgora = __bkp36.quem; DB = __bkp36.db;', ctx);
+      }
+    } else { check('v-36 · mmConfirmar e blocoPlano existem', false, 'função não encontrada'); }
+
+    // ---- (f) uma regra só, num lugar só --------------------------------------------
+    check('v-36 · a conta do meio do mês mora numa função só, e ninguém calcula fim por fora',
+      (html.match(/function fimVigenciaMeioMesISO\(/g) || []).length === 1
+      && (html.match(/function renovCalcular\(/g) || []).length === 1
+      && /const calc=\(r\.plano&&r\.inicio&&planos\(\)\[r\.plano\]\)\?renovCalcular\(r, r\.plano, aulas, r\.inicio\):null;/.test(html)
+      && /let calc=renovCalcular\(r, r\.plano, aulas, r\.inicio\);/.test(html));
+    check('v-36 · o resumo do Confirmar avisa até quando o plano passará a valer',
+      /linhasPlano\.push\('O plano passará a valer até '\+fmtBR\(calc\.fim\)\+' — '\+renovMeioMesFrase\(regMMConf\)\+'\.'\)/.test(html)
+      && /'O plano passará a valer até '\+fmtBR\(fins\[0\]\.f\.para\)/.test(html));
+    check('v-36 · o resumo e o gravador usam a MESMA conta (mmFimNovoDe), não duas',
+      (html.match(/function mmFimNovoDe\(/g) || []).length === 1
+      && (html.match(/mmFimNovoDe\(m\.pet, D\.inicio, opcao\)/g) || []).length === 1
+      && (html.match(/mmFimNovoDe\(q, D\.inicio, opcao\)/g) || []).length === 1);
+    check('v-36 · o Desfazer devolve o fim por UMA conta só (mmFimDesfeitoDe), resumo e banco juntos',
+      (html.match(/function mmFimDesfeitoDe\(/g) || []).length === 1
+      && (html.match(/=mmFimDesfeitoDe\(q\)/g) || []).length === 2
+      && /rQ\.fim=volta\.para;/.test(html)
+      && /rQ\.mesRenov=volta\.para\?mesAnoDe\(volta\.para\):'';/.test(html)
+      && /delete rQ\.fim_anterior;/.test(html));
+    check('v-36 · vigência que não é mais do meio do mês não herda o "para onde voltar"',
+      /if\(!regMMConf\) delete novo\.fim_anterior;/.test(html));
+    check('v-36 · a versão carimbada desta entrega é a 2026-09-22-03',
+      /const APP_VERSAO='2026-09-22-03';/.test(html));
   }
   console.log('');
 
