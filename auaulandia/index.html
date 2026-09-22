@@ -1639,9 +1639,9 @@
   body[data-role="supervisor"] .nav a.so-conf-saida,
   body[data-role="diretoria"] .nav a.so-conf-saida{display:flex}
   /* ===== REPOSIÇÕES ===== */
-  #repModal,#repExtratoModal{display:none;position:fixed;inset:0;background:rgba(26,58,79,.55);z-index:120;
+  #repModal,#repExtratoModal,#dxModal{display:none;position:fixed;inset:0;background:rgba(26,58,79,.55);z-index:120;
     align-items:center;justify-content:center;padding:18px;overflow-y:auto}
-  #repModal.on,#repExtratoModal.on{display:flex}
+  #repModal.on,#repExtratoModal.on,#dxModal.on{display:flex}
   .rep-card{background:var(--z-cream);border-radius:20px;padding:24px;width:100%;max-width:560px;
     box-shadow:0 24px 70px rgba(0,0,0,.35);max-height:92vh;overflow-y:auto}
   .rep-tit{font-size:21px;font-weight:800;color:var(--z-blue);letter-spacing:-.02em}
@@ -1681,6 +1681,26 @@
   .rep-row .rp-acoes button{border-radius:9px;padding:8px 13px;font-family:var(--font-ui);font-weight:700;
     font-size:12.5px;cursor:pointer;border:1.5px solid var(--line);background:#fff;color:var(--z-blue)}
   .rep-row .rp-acoes button.usar{background:var(--crm-ok);color:#fff;border-color:var(--crm-ok)}
+  /* A CONFIRMAÇÃO DA PLANILHA, linha por linha do crédito (21/set/2026). Cor só onde ela
+     informa: verde = chegou, âmbar = está a caminho, vermelho = não foi. */
+  .rp-plan{display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-size:12px;font-weight:700;margin-top:3px;line-height:1.35}
+  .rp-plan-bt{border-radius:8px;padding:4px 10px;font-family:var(--font-ui);font-weight:800;font-size:11.5px;
+    cursor:pointer;border:1.5px solid var(--line);background:var(--z-white);color:var(--z-blue)}
+  /* AS VAGAS DO DIA — reposição + avulso (21/set/2026). */
+  .vg-ok{margin-top:8px;background:var(--z-cream-warm);border:1.5px solid var(--line);border-radius:12px;
+    padding:10px 13px;font-size:13px;font-weight:700;color:var(--z-blue);line-height:1.45}
+  .vg-ok span{font-weight:500;color:var(--muted)}
+  .vg-cheio{margin-top:8px;background:rgba(192,57,43,.08);border:1.5px solid var(--crm-critico);border-radius:12px;
+    padding:10px 13px;font-size:13px;font-weight:700;color:var(--crm-critico);line-height:1.45}
+  .vg-sub{font-size:12.5px;font-weight:600;color:var(--z-blue);margin-top:6px;line-height:1.45}
+  .vg-bt{margin-top:8px;border-radius:11px;padding:11px 14px;font-family:var(--font-ui);font-weight:800;
+    font-size:14px;cursor:pointer;border:none;background:var(--z-gold);color:var(--z-blue);width:100%}
+  .vg-bt[disabled]{opacity:.5;cursor:not-allowed}
+  .vg-ped{display:flex;align-items:center;gap:10px;flex-wrap:wrap;border:1px solid var(--crm-critico);
+    border-radius:12px;padding:10px 13px;margin-bottom:8px;background:var(--z-white)}
+  .vg-ped strong{font-size:14.5px;font-weight:800;color:var(--z-blue);display:block}
+  .vg-ped small{font-size:12px;font-weight:600;color:var(--muted)}
+  .vg-ped .vg-acoes{margin-left:auto;display:flex;gap:7px;flex-wrap:wrap}
   .rep-lanc{display:flex;gap:11px;align-items:flex-start;padding:10px 0;border-bottom:1px solid var(--line);font-size:13.5px}
   .rep-lanc:last-child{border-bottom:none}
   .rep-lanc .lc-tipo{font-size:11px;font-weight:800;border-radius:999px;padding:3px 9px;flex:0 0 auto;letter-spacing:.03em}
@@ -4292,7 +4312,7 @@
          preço muda: mora aqui, nas mãos dela (lei de 22/ago/2026). -->
     <div class="card so-master" id="cardValoresDaycare">
       <h2 style="font-size:19px">Valores do Day Care</h2>
-      <div class="hint">O preço da <strong>diária avulsa</strong> — o dia solto, de quem não tem plano mensal, e a base da 1ª opção de quem começa no meio do mês. As mensalidades dos planos (Mensal · Trimestral · Semestral) continuam na tabela comercial. Aqui moram também os dois números da <strong>dose do vermífugo pelo peso</strong>. Nada é gravado antes do botão <strong>Salvar valores</strong>.</div>
+      <div class="hint">Os dois preços da <strong>diária avulsa</strong> — o dia a mais que o tutor paga, um valor para quem <strong>é matriculado</strong> e outro para quem <strong>não é</strong> — e as <strong>vagas por dia</strong> para reposição + avulso. As mensalidades dos planos (Mensal · Trimestral · Semestral) continuam na tabela comercial. Aqui moram também o preço da escova e os dois números da <strong>dose do vermífugo pelo peso</strong>. Nada é gravado antes do botão <strong>Salvar valores</strong>.</div>
       <div id="cfgValoresWrap" style="margin-top:12px"><div class="hint">Carregando os valores do Day Care&hellip;</div></div>
     </div>
     <div class="card so-master">
@@ -4520,8 +4540,15 @@
     <div class="card">
       <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap">
         <h2 style="font-size:20px;margin:0">Reposições</h2>
-        <button class="btn btn-gold" style="padding:10px 18px" onclick="repAbrirLancar()">+ Lançar falta avisada</button>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <button class="btn btn-gold" style="padding:10px 18px" onclick="repAbrirLancar()">+ Lançar falta avisada</button>
+          <!-- O DIA EXTRA (Adriana, 21/set/2026): "se o tutor já avisou o dia, precisa ir
+               para avulso". Um gesto só — o app decide se é reposição (tem crédito) ou
+               avulso (não tem), e o avulso já entra nos Lançamentos daquele dia. -->
+          <button class="btn" style="padding:10px 18px;background:var(--z-cream-warm);color:var(--z-blue);border:1.5px solid var(--line)" onclick="dxAbrir()">+ Dia extra (ele vem em outro dia)</button>
+        </div>
       </div>
+      <div id="repEncaixes" style="margin-top:12px"></div>
       <div id="repResumo" style="margin-top:12px"></div>
       <div class="pel-toolbar" style="margin-top:12px">
         <input class="search" id="repBusca" placeholder="Buscar peludinho ou tutor..." style="width:300px;max-width:100%" oninput="renderReposicao()">
@@ -4590,8 +4617,11 @@
         </div>
 
         <label class="rep-lb">O tutor já escolheu o dia de repor? <span style="font-weight:500;color:var(--muted)">(opcional — pode deixar em branco)</span></label>
-        <input type="date" class="rep-in" id="repVolta" min="2015-01-01" max="2035-12-31" onkeydown="return dataSoNoCalendario(event)">
+        <input type="date" class="rep-in" id="repVolta" min="2015-01-01" max="2035-12-31" onchange="repVoltaMudou()" onkeydown="return dataSoNoCalendario(event)">
         <div class="rep-res-sub" id="repVoltaAviso" style="padding:4px 2px">Se ele já disse "no dia 28 eu quero a reposição", marque aqui. A recepção vê o agendamento na tela de Reposições e no extrato do peludinho.</div>
+        <!-- AS VAGAS DO DIA DE REPOR (Adriana, 21/set/2026): são 5 por dia de reposição +
+             avulso. Dia cheio só entra com autorização da Márcia. -->
+        <div id="repVagasBox"></div>
 
         <label class="rep-lb">Detalhe (o que o tutor falou)</label>
         <textarea class="rep-in" id="repObs" rows="2" placeholder="Ex.: tutora ligou às 7h, viajou para Vitória e volta dia 20"></textarea>
@@ -4612,6 +4642,37 @@
       <div class="rep-sub" id="repExtSub"></div>
       <div id="repExtLista"></div>
       <div class="rep-btns"><button class="rep-cancel" onclick="repFecharExtrato()">Fechar</button></div>
+    </div>
+  </div>
+
+  <!-- ===== DIA EXTRA — "ele vem no dia y" (Adriana, 21/set/2026) ==================
+       "Avulso — diária a mais que o tutor paga. Exemplo Toshi, ele não tinha crédito e vai
+        de avulso amanhã... Duda pediu para trocar o dia, é uma reposição, avisou antes, e
+        pediu para trocar, já deu o dia."
+       Um gesto só: escolhe o FILHOt e o dia. TEM crédito → reposição (o dia entra no
+       crédito que ele já tem). NÃO tem → avulso, com o preço de matriculado ou de não
+       matriculado, já lançado nos Lançamentos daquele dia. -->
+  <div id="dxModal" onclick="if(event.target===this)dxFechar()">
+    <div class="rep-card">
+      <div class="rep-tit">Dia extra — ele vem em outro dia</div>
+      <div class="rep-sub">O tutor avisou que o peludinho vem num dia que não é o dele. Eu confiro o <strong>crédito de reposição</strong> e digo se o dia é <strong>reposição</strong> (não se cobra) ou <strong>avulso</strong> (diária a mais). Nada é gravado antes do botão.</div>
+
+      <label class="rep-lb">Qual peludinho?</label>
+      <input class="rep-in" id="dxBusca" placeholder="Digite o nome do FILHOt ou do tutor…" autocomplete="off" oninput="dxBuscar()">
+      <div class="rep-results" id="dxResults"></div>
+      <div class="rep-escolhido" id="dxEscolhido" style="display:none"></div>
+
+      <label class="rep-lb">Em que dia ele vem?</label>
+      <input type="date" class="rep-in" id="dxData" min="2015-01-01" max="2035-12-31" onchange="dxDiaMudou()" onkeydown="return dataSoNoCalendario(event)">
+
+      <div id="dxVeredito" style="margin-top:4px"></div>
+      <div id="dxVagas"></div>
+
+      <div class="rep-warn" id="dxWarn"></div>
+      <div class="rep-btns">
+        <button class="rep-cancel" onclick="dxFechar()">Cancelar</button>
+        <button class="rep-ok" id="dxOk" onclick="dxConfirmar()">Confirmar</button>
+      </div>
     </div>
   </div>
 
@@ -5001,6 +5062,10 @@
       // Banco de reposição: leve (só lançamentos), então pode ter ouvinte — a recepção
       // lança num aparelho e a gestão vê no outro na hora.
       try{ trocaCarregar(); }catch(e){} /* silencioso de propósito: guarda defensiva — falhar aqui não pode interromper quem chamou */
+      // Pedidos de encaixe (21/set/2026): nó pequeno — a recepção pede num aparelho e a
+      // Márcia vê no dela na hora. Sem ouvinte, o pedido dependeria de alguém abrir a tela,
+      // e "aviso que depende de abrir a tela não é aviso".
+      try{ vagasPedCarregar(); }catch(e){} /* silencioso de propósito: guarda defensiva — falhar aqui não pode interromper quem chamou */
       DB.ref('daycare/reposicao').on('value', s=>{ REPO_CACHE=s.val()||{};
         try{ const v=document.getElementById('v-reposicao'); if(v&&v.classList.contains('active')) renderReposicao(); }catch(e){} /* silencioso de propósito: redesenho de tela — falhar não pode derrubar quem chamou */
         try{ if(typeof renderPendencias==='function') renderPendencias(); }catch(e){} /* silencioso de propósito: redesenho de tela — falhar não pode derrubar quem chamou */ });
@@ -6119,6 +6184,8 @@
     document.getElementById('repObs').value='';
     document.getElementById('repWarn').textContent='';
     var _rv=document.getElementById('repVolta'); if(_rv) _rv.value='';
+    var _vb=document.getElementById('repVagasBox'); if(_vb) _vb.innerHTML='';
+    var _bo=document.querySelector('#repModal .rep-ok'); if(_bo){ _bo.disabled=false; _bo.textContent='Lançar reposição'; }
     document.getElementById('repData').value=repHojeISO();
     document.getElementById('repDe').value=repHojeISO();
     document.getElementById('repAte').value='';
@@ -6193,7 +6260,37 @@
       +most+(dias.length>10?(' <b>e mais '+(dias.length-10)+'</b>'):'')
       +'<br><span style="color:var(--muted);font-weight:500">Vou gerar '+dias.length+' crédito'+(dias.length>1?'s':'')+' de reposição.</span>';
   }
-  function repConfirmar(){
+  // ===== O DIA DE REPOR E AS VAGAS (Adriana, 21/set/2026) ==========================
+  // "Se tiver vaga — são 5 por dia de reposição+avulso — se não tiver vaga, primeiro precisa
+  //  de autorização da Márcia." O aviso aparece no instante em que a recepção escolhe o dia,
+  //  com o tutor ainda no telefone.
+  function repVoltaMudou(){
+    var v=String((document.getElementById('repVolta')||{}).value||'').slice(0,10);
+    if(v) vagasGarantirDias([v], repVoltaPintar);
+    repVoltaPintar();
+  }
+  function repVoltaPintar(){
+    var box=document.getElementById('repVagasBox');
+    var v=String((document.getElementById('repVolta')||{}).value||'').slice(0,10);
+    if(box) box.innerHTML=v?vagasAvisoHTML(v,'repPedirEncaixe()'):'';
+    var btn=document.querySelector('#repModal .rep-ok');
+    if(btn){ btn.textContent=repBotaoRotulo(); btn.disabled=false; }
+  }
+  // O rótulo DIZ o que o toque vai fazer. Dia cheio e quem pode encaixar: "Márcia
+  // autorizou". Dia cheio e quem não pode: a falta entra, mas SEM o dia de repor — o
+  // crédito do tutor nunca se perde por causa de uma vaga.
+  function repBotaoRotulo(){
+    var v=String((document.getElementById('repVolta')||{}).value||'').slice(0,10);
+    if(!/^\d{4}-\d{2}-\d{2}$/.test(v)) return 'Lançar reposição';
+    var vg=vagasDoDia(v);
+    if(!vg.lido || !vg.cheio) return 'Lançar reposição';
+    return vagasPodeEncaixar()?'Márcia autorizou':'Lançar a falta sem o dia de repor';
+  }
+  // "Avisar a Márcia": lança a falta (sem o dia de repor, que está lotado) e grava o pedido
+  // de encaixe no MESMO gesto. Um toque, tudo registrado, nada perdido.
+  function repPedirEncaixe(){ repConfirmar({pedirEncaixe:true}); }
+  function repConfirmar(op){
+    op=op||{};
     const w=document.getElementById('repWarn'); w.textContent='';
     const p=repPelSel;
     if(!p){ w.textContent='Escolha o peludinho primeiro.'; return; }
@@ -6203,13 +6300,27 @@
     // até ele aparecer de verdade. É só o aviso para a recepção saber quem vem em que dia.
     const volta=((document.getElementById('repVolta')||{}).value||'').trim();
     if(volta && volta<repHojeISO()){ w.textContent='O dia de repor não pode ser no passado. Se ele já repôs, marque o uso na lista em vez de agendar.'; return; }
+    // AS VAGAS DO DIA DE REPOR. Cheio: a Gestão encaixa (e a autorização fica registrada);
+    // quem não pode encaixar lança a falta e o dia fica esperando a Márcia — o que NÃO
+    // acontece é o dia entrar por cima do limite sem ninguém saber.
+    let voltaEfetiva=volta, autVaga=null, pedirVaga=!!op.pedirEncaixe, diaLotado=false;
+    if(volta){
+      const vg=vagasDoDia(volta);
+      if(!vg.lido){ w.textContent='Ainda estou conferindo as vagas de '+repBRdata(volta)+'. Espere um instante e confirme de novo.'; return; }
+      if(vg.cheio){
+        diaLotado=true;
+        if(vagasPodeEncaixar()) autVaga={quem:(typeof pessoaDoTurno==='function')?pessoaDoTurno():quemSou(), ts:Date.now()};
+        else voltaEfetiva='';           // a falta entra; o dia de repor fica com a Márcia
+      }
+    }
+    if(pedirVaga && !diaLotado) pedirVaga=false;   // o dia tem vaga: não há o que pedir
     const btn=document.querySelector('#repModal .rep-ok'); if(btn){ btn.disabled=true; btn.textContent='Lançando…'; }
-    const soltar=function(){ if(btn){ btn.disabled=false; btn.textContent='Lançar reposição'; } };
+    const soltar=function(){ if(btn){ btn.disabled=false; btn.textContent=repBotaoRotulo(); } };
     let regs=[];
     if(repModoAtual==='dia'){
       const d=(document.getElementById('repData').value||'').trim();
       if(!d){ w.textContent='Informe o dia em que ele não vem.'; soltar(); return; }
-      regs=[{tipo:'credito', data:d, motivo:repMotivoAtual, obs:obs, volta:volta||''}];
+      regs=[{tipo:'credito', data:d, motivo:repMotivoAtual, obs:obs, volta:voltaEfetiva||''}];
     } else {
       const de=(document.getElementById('repDe').value||''), ate=(document.getElementById('repAte').value||'');
       if(!de||!ate){ w.textContent='Informe as duas datas do período.'; soltar(); return; }
@@ -6218,22 +6329,41 @@
       const lote='L'+Date.now();
       // O agendamento vai só no PRIMEIRO do lote: 12 créditos não são 12 dias de volta,
       // é uma volta marcada. Gravar em todos encheria a tela da recepção com o mesmo aviso.
-      regs=dias.map(function(d,ix){ return {tipo:'credito', data:d, motivo:repMotivoAtual, obs:obs, lote:lote, periodo:{de:de,ate:ate}, volta:(ix===0?(volta||''):'')}; });
+      regs=dias.map(function(d,ix){ return {tipo:'credito', data:d, motivo:repMotivoAtual, obs:obs, lote:lote, periodo:{de:de,ate:ate}, volta:(ix===0?(voltaEfetiva||''):'')}; });
     }
+    // A autorização do encaixe viaja COM o crédito: meses depois ainda se sabe quem abriu
+    // a vaga acima do limite, e por que o dia tem seis em vez de cinco.
+    if(autVaga && regs.length) regs[0].autorizacao=autVaga;
     // Saldo lido ANTES de gravar: o listener local do Firebase já terá somado os créditos
   // novos quando o .then rodar — somar de novo dobraria o número (auditoria, 31/ago).
   const _saldoAntes=repSaldo(p);
-  Promise.all(regs.map(function(r){ return repGravar(p,r); })).then(function(){
-      if(typeof audit==='function') audit('reposicao-credito', pelNome(p)+' · '+regs.length+' dia(s) · '+(REP_MOTIVOS[repMotivoAtual]||repMotivoAtual), {obs:obs});
+  Promise.all(regs.map(function(r){ return repGravar(p,r); })).then(function(refs){
+      if(typeof audit==='function') audit('reposicao-credito', pelNome(p)+' · '+regs.length+' dia(s) · '+(REP_MOTIVOS[repMotivoAtual]||repMotivoAtual)
+        +(autVaga?(' — encaixe em '+repBRdata(volta)+' autorizado por '+autVaga.quem):''), {obs:obs});
       repFechar(); soltar();
+      // O PEDIDO DE ENCAIXE, quando o dia de repor está lotado e quem lançou não pode abrir
+      // vaga: vai com a chave do crédito que acabou de nascer, para a autorização da Márcia
+      // já marcar o dia nele — sem a recepção ter de lançar nada de novo.
+      var _credId=''; try{ _credId=(refs&&refs[0]&&refs[0].key)||''; }catch(e){ _credId=''; }
+      if(pedirVaga && volta){
+        vagasPedir(volta, p, 'reposicao', {credito_id:_credId, data:(regs[0]||{}).data||'', volta:volta})
+          .catch(function(e){
+            if(typeof zAlertao==='function') zAlertao('A FALTA ENTROU, MAS NÃO AVISEI A MÁRCIA',
+              ['Não consegui gravar o pedido de encaixe: '+((e&&e.message)||e)+'.',
+               'A falta avisada está salva. Fale com a Márcia sobre o dia '+repBRdata(volta)+'.'],{botao:'Entendi'});
+          });
+      }
       // A confirmação vem com a mensagem pronta para o tutor: é a consultora quem manda,
       // e é agora que ela está com o telefone na mão (Adriana, 31/ago/2026).
-      var _info={qtd:regs.length, data:(regs[0]||{}).data, volta:volta||'', saldo:_saldoAntes+regs.length};
+      var _info={qtd:regs.length, data:(regs[0]||{}).data, volta:voltaEfetiva||'', saldo:_saldoAntes+regs.length};
       if(regs.length>1 && regs[0].periodo){ _info.de=regs[0].periodo.de; _info.ate=regs[0].periodo.ate; }
       repMsgModal('✅ Reposição lançada',
         [pelNome(p)+' ganhou '+regs.length+' dia'+(regs.length>1?'s':'')+' de reposição — motivo: '+(REP_MOTIVOS[repMotivoAtual]||repMotivoAtual)+'.',
          'Saldo agora: '+_info.saldo+'. Quando ele vier repor, marque o uso na tela de Reposições.']
-        .concat(volta?['O tutor escolheu repor em '+repBRdata(volta)+' — fica agendado.']:[]),
+        .concat(voltaEfetiva?['O tutor escolheu repor em '+repBRdata(voltaEfetiva)+' — fica agendado.'
+                  +(autVaga?(' O dia estava lotado: encaixe autorizado por '+autVaga.quem+'.'):'')]:[])
+        .concat((volta&&!voltaEfetiva)?['O dia '+repBRdata(volta)+' está LOTADO, então ele NÃO ficou agendado: '
+                  +(pedirVaga?'a Márcia já recebeu o pedido de encaixe.':'peça o encaixe à Márcia.')]:[]),
         repMensagem(p,'credito',_info));
       setTimeout(renderReposicao, 400);
     }).catch(function(e){
@@ -6487,7 +6617,10 @@
   // NÃO recria o Banco de Reposição: a troca É uma falta avisada (crédito) mais um dia marcado
   // para repor. O crédito só é consumido quando ele aparece de verdade, no check-in de entrada —
   // se marcou e não veio, o crédito continua dele.
-  const TROCA_VAGAS_DIA=5;
+  // As VAGAS DO DIA passaram a ser uma conta só (21/set/2026): reposição agendada + avulso
+  // lançado + troca confirmada, contadas por FILHOt, contra o limite de Configurações
+  // (vagasLimite(), 5 de fábrica). Antes esta tela contava SÓ as trocas e a de Reposições
+  // não contava nada — duas telas, duas verdades, e o dia estourava sem ninguém ver.
   var TROCA_CACHE={};
   function trocaCarregar(){
     if(!DB) return;
@@ -6502,10 +6635,10 @@
     return Object.keys(d).map(function(k){ return Object.assign({_k:k}, d[k]); })
       .filter(function(t){ return t.status!=='cancelada' && t.status!=='recusada'; });
   }
-  function trocaVagasLivres(dataISO){
-    const usadas=trocaDoDia(dataISO).filter(function(t){ return t.status==='confirmada'; }).length;
-    return Math.max(0, TROCA_VAGAS_DIA-usadas);
-  }
+  // UMA CONTA SÓ: as vagas livres do dia vêm de vagasDoDia — reposição agendada + avulso
+  // lançado + troca confirmada. Esta função continua existindo porque a Lista de troca a
+  // chama em vários lugares; o que mudou é que ela já não conta apenas as trocas.
+  function trocaVagasLivres(dataISO){ return vagasDoDia(dataISO).livres; }
   function trocaEhGestora(){ return podePapel('decidir-troca'); }
   function trocaDiaSemana(iso){
     const D=['dom','seg','ter','qua','qui','sex','sab'];
@@ -6541,7 +6674,7 @@
   // A Gestora decide o que passa das 5. Ela avalia matilha e comportamento — o app só pergunta.
   async function trocaDecidir(dataISO,k,ok){
     if(!DB) return;
-    if(!trocaEhGestora()){ alert('Só a Gestão ou a Diretoria decide uma troca acima das '+TROCA_VAGAS_DIA+' vagas.'); return; }
+    if(!trocaEhGestora()){ alert('Só a Gestão ou a Diretoria decide uma troca acima das '+vagasLimite()+' vagas.'); return; }
     const t=(TROCA_CACHE[dataISO]||{})[k]||{};
     if(!ok){
       const motivo=((await zTexto('Recusar a troca de '+(t.nome||'')+' para '+fmtBR(dataISO),
@@ -6555,7 +6688,7 @@
     }
     DB.ref('daycare/trocas/'+dataISO+'/'+k).update({status:'confirmada', acimaDaVaga:true,
       decidiuQuem:(typeof pessoaDoTurno==='function')?pessoaDoTurno():quemSou(), decidiuTs:Date.now()}).catch(function(e){ _logFalhaGrav('daycare/trocas/ (trocaDecidir)', e); });
-    if(typeof audit==='function') audit('troca-confirmada',(t.nome||'')+' em '+fmtBR(dataISO)+' (acima das '+TROCA_VAGAS_DIA+' vagas)',{});
+    if(typeof audit==='function') audit('troca-confirmada',(t.nome||'')+' em '+fmtBR(dataISO)+' (acima das '+vagasLimite()+' vagas)',{});
   }
   async function trocaCancelar(dataISO,k){
     if(!DB) return;
@@ -6589,7 +6722,7 @@
     });
     let h='';
     if(pedidos.length){
-      h+='<div class="dc-faltas" style="margin-bottom:10px"><strong>'+pedidos.length+' pedido'+(pedidos.length>1?'s':'')+' esperando a Gestora</strong> — dia já com as '+TROCA_VAGAS_DIA+' vagas cheias.</div>'
+      h+='<div class="dc-faltas" style="margin-bottom:10px"><strong>'+pedidos.length+' pedido'+(pedidos.length>1?'s':'')+' esperando a Gestora</strong> — dia já com as '+vagasLimite()+' vagas cheias.</div>'
         +'<div class="troca-pedidos">'+pedidos.sort(function(a,b){ return a._dt<b._dt?-1:1; }).map(function(t){
           return '<div class="troca-ped"><div><strong>'+escAttr(t.nome)+'</strong>'
             +'<small>'+escAttr(t.tutor||'')+' · para '+fmtBR(t._dt)+(t.motivo?(' · '+escAttr(t.motivo)):'')+'</small></div>'
@@ -6607,10 +6740,10 @@
       return '<div class="troca-dia'+(cheio?' cheio':'')+'">'
         +'<div class="troca-dh"><span class="troca-data">'+fmtBR(d.iso)+'</span>'
           +'<span class="troca-sem">'+(DIA_FULL[d.dia]||d.dia)+'</span>'
-          +'<span class="troca-vagas'+(cheio?' zero':'')+'">'+(cheio?'sem vaga livre':d.livres+' de '+TROCA_VAGAS_DIA+' vagas')+'</span></div>'
+          +'<span class="troca-vagas'+(cheio?' zero':'')+'">'+(cheio?'sem vaga livre':d.livres+' de '+vagasLimite()+' vagas')+'</span></div>'
         +(nomes?('<div class="troca-nomes">'+nomes+'</div>'):'<div class="troca-vazio">ninguém marcado</div>')
         +'</div>'; }).join('')+'</div>';
-    h+='<div class="hint" style="margin-top:9px">São <strong>'+TROCA_VAGAS_DIA+' vagas por dia</strong> que a recepção marca sem precisar falar com a Gestora. '
+    h+='<div class="hint" style="margin-top:9px">São <strong>'+vagasLimite()+' vagas por dia</strong> que a recepção marca sem precisar falar com a Gestora. '
       +'Passou disso, o pedido sobe para ela — que avalia a matilha e o comportamento do FILHOt antes de abrir a vaga.</div>';
     box.innerHTML=h;
   }
@@ -6648,12 +6781,745 @@
     trocaLancar(p,'',para,motivo).then(function(reg){
       alert(reg.status==='confirmada'
         ? 'Troca marcada: '+pelNome(p)+' vem em '+fmtBR(para)+'.\n\nSobraram '+trocaVagasLivres(para)+' vaga(s) nesse dia.'
-        : 'Pedido enviado para a Gestora.\n\n'+fmtBR(para)+' já está com as '+TROCA_VAGAS_DIA+' vagas cheias. Ela avalia a matilha e o comportamento antes de abrir mais uma.');
+        : 'Pedido enviado para a Gestora.\n\n'+fmtBR(para)+' já está com as '+vagasLimite()+' vagas cheias. Ela avalia a matilha e o comportamento antes de abrir mais uma.');
     }).catch(function(e){ alert(e.message||'Não consegui marcar.'); });
+  }
+  /* ====================================================================================
+   * AS VAGAS DO DIA, A CONFIRMAÇÃO NA PLANILHA E O DIA EXTRA — Adriana, 21/set/2026
+   *
+   * As palavras dela:
+   *  "Reposições. Lançar falta... preciso que automaticamente vá para a tabela. Tablito e
+   *   Biscoito não virão amanhã (precisa ir para falta avisada) e ter confirmação que foi
+   *   lançado; se o tutor já avisou o dia, precisa ir para avulso (também na tabela, de
+   *   lançamentos do dia); precisa ser automático."
+   *  "Avulso — diária a mais que o tutor paga. Exemplo Toshi, ele não tinha crédito e vai
+   *   de avulso amanhã. Tem valor que é cobrado do cliente que é matriculado e não
+   *   matriculado. Não matriculado 170,00, matriculado 97,00. Duda pediu para trocar o dia,
+   *   é uma reposição, avisou antes, e pediu para trocar, já deu o dia. Isso é reposição.
+   *   'Não poderá ir dia xxx, quero que vá dia y' — se tiver vaga — são 5 por dia de
+   *   reposição+avulso — se não tiver vaga, primeiro precisa de autorização da Márcia, se as
+   *   5 já tiverem completas. Porque alguns faltam ou os que estão pedindo são tranquilos e
+   *   dá para encaixar a mais."
+   *
+   * AS TRÊS LEIS DESTE BLOCO
+   *  1. TEM CRÉDITO → é REPOSIÇÃO. NÃO TEM → é AVULSO, e o avulso tem preço (matriculado
+   *     ou não). É o app que decide, não a memória de quem atende.
+   *  2. A VAGA DO DIA É UMA CONTA SÓ: reposição agendada + avulso lançado + troca
+   *     confirmada, contadas por FILHOt. Antes a Lista de troca contava só as trocas e a
+   *     tela de Reposições não contava nada — duas telas, duas verdades, e o dia estourava
+   *     sem ninguém ver.
+   *  3. LANÇOU, TEM DE APARECER: cada crédito diz se JÁ ESTÁ na planilha, se está a caminho
+   *     ou se a ponte recusou — e, quando recusou, diz o porquê e dá o botão de tentar de
+   *     novo. Confirmação muda não é confirmação.
+   *
+   * A FONTE DA VERDADE da confirmação é daycare/dashboard-auto/{dia}: agora ele registra,
+   * nome por nome, se a ponte aceitou (planilha_ok/planilha_msg) — antes guardava só a
+   * lista do que QUERIA escrever, que não prova nada.
+   * ================================================================================== */
+  var REP_PLAN_CACHE={};        // {dia:{ts, auto:{}, avulso:{}, lendo:Promise}}
+  var REP_PLAN_TTL=60000;       // 60 s: a casa não paga a mesma leitura duas vezes
+  var VAGAS_PEDIDOS={};         // daycare/vagas-pedidos — {dia:{chave:pedido}}
+  var VAGAS_LENDO=false;        // evita duas rodadas de leitura ao mesmo tempo
+
+  function vagasNomeChave(v){
+    var t=(typeof pendBase==='function')?pendBase(v):String(v||'');
+    return (typeof dashAutoNomeChave==='function')?dashAutoNomeChave(t)
+      :((typeof jsNorm==='function')?jsNorm(String(t).split('/')[0]):String(t).toLowerCase().trim());
+  }
+  // Lê o registro do automático e os avulsos lançados naquele dia. Dois nós pequenos.
+  function vagasCarregarDia(dia, forcar){
+    if(!/^\d{4}-\d{2}-\d{2}$/.test(dia||'')) return Promise.resolve(null);
+    var c=REP_PLAN_CACHE[dia]||null;
+    if(!forcar && c && c.ts && (Date.now()-c.ts)<REP_PLAN_TTL) return Promise.resolve(c);
+    if(c && c.lendo) return c.lendo;
+    if(!DB) return Promise.resolve(c);
+    var pr=Promise.all([
+      DB.ref('daycare/dashboard-auto/'+dia).once('value').then(function(s){ return s.val()||{}; }),
+      DB.ref('daycare/dashboard/'+dia+'/avulso').once('value').then(function(s){ return s.val()||{}; })
+    ]).then(function(r){
+      REP_PLAN_CACHE[dia]={ts:Date.now(), auto:r[0]||{}, avulso:r[1]||{}};
+      return REP_PLAN_CACHE[dia];
+    }).catch(function(e){
+      _logLeituraFalhou('daycare/dashboard-auto/'+dia+' (as vagas do dia)', e);
+      // Leitura falhou: o que havia antes continua valendo; sem nada antes, a tela DIZ que
+      // ainda está conferindo em vez de afirmar "tem vaga".
+      if(c && c.ts) REP_PLAN_CACHE[dia]={ts:c.ts, auto:c.auto||{}, avulso:c.avulso||{}};
+      else delete REP_PLAN_CACHE[dia];
+      return REP_PLAN_CACHE[dia]||null;
+    });
+    REP_PLAN_CACHE[dia]={ts:(c&&c.ts)||0, auto:(c&&c.auto)||{}, avulso:(c&&c.avulso)||{}, lendo:pr};
+    return pr;
+  }
+  // Garante os dias de uma lista e redesenha UMA vez, quando todos chegarem. Sem laço: na
+  // segunda passada os dias já estão frescos e a função sai sem ler nada.
+  function vagasGarantirDias(dias, depois){
+    var agora=Date.now();
+    var faltam=(dias||[]).filter(function(d){
+      if(!/^\d{4}-\d{2}-\d{2}$/.test(d||'')) return false;
+      var c=REP_PLAN_CACHE[d];
+      return !(c && c.ts && (agora-c.ts)<REP_PLAN_TTL);
+    }).filter(function(d,i,a){ return a.indexOf(d)===i; });
+    if(!faltam.length || VAGAS_LENDO) return Promise.resolve(false);
+    VAGAS_LENDO=true;
+    return Promise.all(faltam.map(function(d){ return vagasCarregarDia(d, false); })).then(function(){
+      VAGAS_LENDO=false;
+      if(typeof depois==='function'){ try{ depois(); }catch(e){ _logFalhaGrav('vagasGarantirDias (redesenho)', e); } }
+      return true;
+    }).catch(function(e){ VAGAS_LENDO=false; _logFalhaGrav('vagasGarantirDias', e); return false; });
+  }
+  // A CONTA DAS VAGAS. Conta FILHOt, não linha: quem está agendado para repor e também
+  // lançado como avulso no mesmo dia ocupa UMA vaga, não duas.
+  function vagasDoDia(dia){
+    var lim=vagasLimite();
+    var out={dia:dia, limite:lim, usadas:0, livres:lim, cheio:false, lido:false,
+             reposicao:[], avulso:[], troca:[]};
+    if(!/^\d{4}-\d{2}-\d{2}$/.test(dia||'')) return out;
+    var vistos={};
+    var add=function(nome, arr){
+      var t=(typeof pendBase==='function')?pendBase(nome):String(nome||'');
+      var c=vagasNomeChave(t);
+      if(!c || vistos[c]) return;
+      vistos[c]=1; arr.push(t);
+    };
+    // 1) reposição AGENDADA para o dia — já está na memória do app, não custa leitura.
+    try{ repAgendadosPara(dia).forEach(function(o){ add(pelNome(o.p), out.reposicao); }); }
+    catch(e){ _logFalhaGrav('vagasDoDia (agendados)', e); }
+    var c=REP_PLAN_CACHE[dia]||{};
+    // 2) o que o automático JÁ ESCREVEU na coluna Reposição daquele dia.
+    var auto=c.auto||{};
+    (Array.isArray(auto.reposicao)?auto.reposicao:[]).forEach(function(v){ add(v, out.reposicao); });
+    // 3) avulso lançado para o dia — do banco e, se for o dia aberto nos Lançamentos, da
+    //    memória também: o avulso lançado agora ocupa a vaga na hora, não em 60 s.
+    var doBanco=c.avulso||{};
+    Object.keys(doBanco).forEach(function(id){ add((doBanco[id]||{}).valor, out.avulso); });
+    try{
+      if(typeof dashDia==='function' && dia===dashDia() && typeof DASH_DADOS!=='undefined'){
+        var viva=(DASH_DADOS||{}).avulso||{};
+        Object.keys(viva).forEach(function(id){ add((viva[id]||{}).valor, out.avulso); });
+      }
+    }catch(e){ _logFalhaGrav('vagasDoDia (avulso do dia aberto)', e); }
+    // 4) troca confirmada — outro gesto para o mesmo dia, mesma vaga.
+    try{ trocaDoDia(dia).forEach(function(t){ if(t.status==='confirmada') add(t.nome, out.troca); }); }
+    catch(e){ _logFalhaGrav('vagasDoDia (trocas)', e); }
+    out.usadas=out.reposicao.length+out.avulso.length+out.troca.length;
+    out.livres=Math.max(0, lim-out.usadas);
+    out.cheio=(out.usadas>=lim);
+    out.lido=!!c.ts;
+    return out;
+  }
+  // Quem abre vaga acima do limite: a Márcia (Gestão) e a Diretoria. A MESMA capacidade que
+  // já decidia a troca acima das 5 — permissão em um lugar só.
+  function vagasPodeEncaixar(){ return podePapel('decidir-troca'); }
+  function vagasFrase(v){
+    if(!v.lido) return 'conferindo as vagas de '+repBRdata(v.dia)+'…';
+    return v.usadas+' de '+v.limite+' vaga'+(v.limite===1?'':'s')+' em '+repBRdata(v.dia);
+  }
+  function vagasDetalheFrase(v){
+    var p=[];
+    if(v.reposicao.length) p.push(v.reposicao.length+' de reposição');
+    if(v.avulso.length) p.push(v.avulso.length+' de avulso');
+    if(v.troca.length) p.push(v.troca.length+' de troca');
+    return p.join(' · ');
+  }
+  // O aviso que aparece ao escolher o dia. `acaoPedir` é o gesto de "Avisar a Márcia" da
+  // tela que chamou — sem ele, o aviso só informa.
+  function vagasAvisoHTML(dia, acaoPedir){
+    if(!/^\d{4}-\d{2}-\d{2}$/.test(dia||'')) return '';
+    var v=vagasDoDia(dia), det=vagasDetalheFrase(v);
+    if(!v.lido) return '<div class="vg-ok"><strong>'+esc(vagasFrase(v))+'</strong></div>';
+    if(!v.cheio){
+      return '<div class="vg-ok"><strong>'+esc(vagasFrase(v))+'</strong>'
+        +'<span> — '+esc(v.livres+' livre'+(v.livres===1?'':'s')+(det?(' · '+det):''))+'</span></div>';
+    }
+    var h='<div class="vg-cheio"><strong>Dia lotado ('+v.usadas+' de '+v.limite+').</strong> '
+      +'Só com autorização da Márcia.'+(det?(' Neste dia já há '+esc(det)+'.'):'')+'</div>';
+    if(vagasPodeEncaixar()){
+      h+='<div class="vg-sub">A senhora pode abrir o encaixe: o botão de gravar vira '
+        +'<strong>«Márcia autorizou»</strong> e a autorização fica registrada com o seu nome.</div>';
+    } else {
+      h+='<div class="vg-sub"><strong>Peça à Márcia.</strong> Só a Gestão abre vaga acima do limite — '
+        +'ela avalia a matilha e o comportamento antes.</div>'
+        +'<button type="button" class="vg-bt"'+(acaoPedir?(' onclick="'+acaoPedir+'"'):' disabled')+'>Avisar a Márcia</button>'
+        +'<button type="button" class="vg-bt" disabled style="background:var(--z-cream-warm);border:1.5px solid var(--line)">Márcia autorizou</button>';
+    }
+    return h;
+  }
+
+  /* ---- A CONFIRMAÇÃO: "foi para a planilha?" --------------------------------------
+   * A janela do automático é hoje até hoje+DASH_AUTO_DIAS. Fora dela ele NÃO passa — e
+   * dizer "vai em até 5 minutos" para um dia que ele nunca visita seria mentira. */
+  function repPlanFimJanela(){
+    var h=(typeof zHojeISO==='function')?zHojeISO():'';
+    if(!h) return '';
+    return (typeof orcMaisDias==='function')?orcMaisDias(h, DASH_AUTO_DIAS):'';
+  }
+  function repPlanNaJanela(dia){
+    var h=(typeof zHojeISO==='function')?zHojeISO():'', f=repPlanFimJanela();
+    return !!(h && f && dia>=h && dia<=f);
+  }
+  // O estado de UM nome em UMA coluna de UM dia, como o automático registrou.
+  // tipo: 'faltas' (Faltas Avisadas) · 'reposicao' (Reposição).
+  function repPlanEstado(dia, p, tipo){
+    if(!/^\d{4}-\d{2}-\d{2}$/.test(dia||'')) return {estado:'nada'};
+    var ehMorador=false;
+    try{ ehMorador=(typeof pelCategoria==='function') && pelCategoria(p)==='morador'; }
+    catch(e){ ehMorador=false; }
+    if(ehMorador) return {estado:'nao-entra', msg:'morador não entra na tabela do dia'};
+    if(!repPlanNaJanela(dia)) return {estado:'fora'};
+    var c=REP_PLAN_CACHE[dia];
+    if(!c || !c.ts) return {estado:'lendo'};
+    var est=((c.auto||{})._estado||{})[tipo]||null;
+    var ch=vagasNomeChave(dashNomeRaca(p));
+    var r=est?est[ch]:null;
+    if(r && r.planilha_ok===true) return {estado:'ok', ts:r.ts||0};
+    if(r && r.planilha_ok===false) return {estado:'falhou', ts:r.ts||0,
+      msg:String(r.planilha_msg||'a ponte não respondeu')};
+    var erro=(c.auto||{})._erro;
+    if(erro && erro.msg) return {estado:'falhou', ts:erro.ts||0, msg:String(erro.msg)};
+    // Sem a coluna no registro: se ele já nasceu com confirmação (_estado_v), o automático
+    // simplesmente ainda não passou por este nome — está a caminho. Sem a marca, o registro
+    // é anterior a esta versão e não prova nada: a tela DIZ que não sabe.
+    if(!est) return (c.auto||{})._estado_v ? {estado:'espera'} : {estado:'antigo'};
+    return {estado:'espera'};
+  }
+  function repPlanQuando(ts){
+    if(!ts) return '';
+    try{
+      var d=new Date(ts), p2=function(x){ return String(x).padStart(2,'0'); };
+      return p2(d.getDate())+'/'+p2(d.getMonth()+1)+' '+p2(d.getHours())+':'+p2(d.getMinutes());
+    }catch(e){ return ''; }
+  }
+  function repPlanLinhaHTML(p, dia, tipo){
+    var rot=(tipo==='faltas')?('Falta avisada de '+repBRdata(dia)):('Reposição em '+repBRdata(dia));
+    var e=repPlanEstado(dia, p, tipo);
+    var bt=function(rotulo){ return '<button type="button" class="rp-plan-bt" onclick="repMandarAgora(\''
+      +escAttr(dia)+'\',this)">'+rotulo+'</button>'; };
+    var cor='var(--muted)', txt='', acao='';
+    if(e.estado==='ok'){ cor='var(--crm-ok)'; txt='lançada na planilha ✓'+(e.ts?(' '+repPlanQuando(e.ts)):''); }
+    else if(e.estado==='falhou'){ cor='var(--crm-critico)'; txt='NÃO foi para a planilha — '+e.msg; acao=bt('tentar de novo'); }
+    else if(e.estado==='espera'){ cor='var(--z-gold-deep)'; txt='vai para a planilha em até '+DASH_AUTO_MIN+' min'; acao=bt('Mandar agora'); }
+    else if(e.estado==='fora'){ cor='var(--z-gold-deep)';
+      txt='fora da conferência automática (ela cuida de hoje até '+repBRdata(repPlanFimJanela())+')'; acao=bt('Mandar agora'); }
+    else if(e.estado==='antigo'){ cor='var(--z-gold-deep)';
+      txt='o registro deste dia é anterior a esta versão — não sei dizer'; acao=bt('Mandar agora'); }
+    else if(e.estado==='nao-entra'){ txt=e.msg; }
+    else if(e.estado==='lendo'){ txt='conferindo a planilha…'; }
+    else return '';
+    return '<div class="rp-plan" style="color:'+cor+'"><span>'+esc(rot)+' — '+esc(txt)+'</span>'+acao+'</div>';
+  }
+  var REP_PLAN_MAX=4;          // mais que isto vira parede de texto; o Extrato tem tudo
+  // Os créditos que AINDA importam para a planilha: hoje e daqui para frente. Crédito de
+  // março não tem o que confirmar — a planilha daquele dia é história.
+  function repCreditosDaPlanilha(p){
+    var out=[];
+    try{
+      var hoje=(typeof zHojeISO==='function')?zHojeISO():'';
+      var L=repLancamentos(p)||[];
+      var anulado={}; L.forEach(function(l){ if(l.tipo==='estorno'&&l.estornaId) anulado[l.estornaId]=true; });
+      L.forEach(function(l){
+        if(l.tipo!=='credito' || anulado[l._id]) return;
+        var temFalta=!!(l.data && (!hoje || l.data>=hoje));
+        var temVolta=!!(l.volta && (!hoje || l.volta>=hoje));
+        if(temFalta||temVolta) out.push(l);
+      });
+    }catch(e){ _logFalhaGrav('repCreditosDaPlanilha', e); }
+    return out;
+  }
+  function repPlanBlocoHTML(p){
+    var L=repCreditosDaPlanilha(p);
+    if(!L.length) return '';
+    var hoje=(typeof zHojeISO==='function')?zHojeISO():'';
+    var mostra=L.slice(0, REP_PLAN_MAX), h='';
+    mostra.forEach(function(l){
+      if(l.data && (!hoje||l.data>=hoje)) h+=repPlanLinhaHTML(p, l.data, 'faltas');
+      if(l.volta && (!hoje||l.volta>=hoje)) h+=repPlanLinhaHTML(p, l.volta, 'reposicao');
+    });
+    if(L.length>mostra.length){
+      h+='<div class="rp-plan" style="color:var(--muted)"><span>e mais '+(L.length-mostra.length)
+        +' lançamento(s) — o Extrato mostra todos</span></div>';
+    }
+    return h;
+  }
+  // Os dias que a tela de Reposições precisa ter lido para não mentir.
+  function repDiasParaConferir(){
+    var dias=[], hoje=(typeof zHojeISO==='function')?zHojeISO():'', fim=repPlanFimJanela();
+    var dentro=function(d){ return /^\d{4}-\d{2}-\d{2}$/.test(d||'') && (!hoje||d>=hoje) && (!fim||d<=fim); };
+    try{
+      (PELUDINHOS||[]).forEach(function(p){
+        if(typeof pelInativo==='function' && pelInativo(p)) return;
+        repCreditosDaPlanilha(p).forEach(function(l){
+          if(dentro(l.data)) dias.push(l.data);
+          if(dentro(l.volta)) dias.push(l.volta);
+        });
+      });
+    }catch(e){ _logFalhaGrav('repDiasParaConferir', e); }
+    try{ trocaProximosDias(10).forEach(function(d){ if(dentro(d.iso)) dias.push(d.iso); }); }
+    catch(e){ _logFalhaGrav('repDiasParaConferir (trocas)', e); }
+    return dias.filter(function(d,i,a){ return a.indexOf(d)===i; });
+  }
+  // MANDAR AGORA: roda a MESMA conferência do automático, só para aquele dia, e DIZ o que
+  // aconteceu. Nada de "toquei e não aconteceu nada".
+  function repMandarAgora(dia, btn){
+    if(!/^\d{4}-\d{2}-\d{2}$/.test(dia||'')){ alert('Dia inválido.'); return; }
+    var t=btn?btn.textContent:'';
+    if(btn){ btn.disabled=true; btn.textContent='mandando…'; }
+    var solta=function(){ if(btn){ btn.disabled=false; btn.textContent=t||'Mandar agora'; } };
+    var pronta=(typeof dashPontePronta==='function')?dashPontePronta():Promise.resolve(null);
+    pronta.then(function(c){
+      if(!c){
+        solta();
+        var falta=['A ponte da planilha não está configurada neste sistema.',
+          'Peça à Gestão para colar a URL e a senha em Central Zêluz › Day Care › Lançamentos do dia — sem isso nada chega à planilha nem à TV.'];
+        if(typeof zAlertao==='function') zAlertao('A PONTE DA PLANILHA NÃO ESTÁ CONFIGURADA', falta, {botao:'Entendi'});
+        else alert(falta.join('\n'));
+        return null;
+      }
+      return dashAutoSincronizar(dia).then(function(r){
+        return vagasCarregarDia(dia, true).then(function(){
+          solta();
+          try{ renderReposicao(); }catch(e){ _logFalhaGrav('repMandarAgora (redesenho)', e); }
+          if(r && r.ok){
+            var l=['Dia '+repBRdata(dia)+': '+(r.posto||0)+' lançado(s) na planilha e '+(r.tirado||0)+' tirado(s).',
+              'Se alguma linha continuar dizendo "NÃO foi para a planilha", o motivo está escrito nela.'];
+            if(typeof zAlertao==='function') zAlertao('CONFERIDO COM A PLANILHA', l, {botao:'Fechar'});
+            else alert(l.join('\n'));
+          } else {
+            var e2=[String((r&&r.erro)||'a ponte não respondeu'),
+              'O lançamento continua salvo aqui no app — só não chegou à planilha.'];
+            if(typeof zAlertao==='function') zAlertao('NÃO FOI PARA A PLANILHA', e2, {botao:'Entendi'});
+            else alert(e2.join('\n'));
+          }
+          return r;
+        });
+      });
+    }).catch(function(e){
+      solta();
+      alert('Não consegui conferir com a planilha: '+((e&&e.message)||e));
+    });
+  }
+
+  /* ---- PEDIDO DE ENCAIXE: a recepção avisa, a Márcia autoriza ---------------------
+   * O pedido carrega o que será lançado — é por isso que a autorização da Márcia já
+   * EXECUTA o lançamento, em vez de devolver o trabalho para a recepção. */
+  function vagasPedCarregar(){
+    if(!DB) return;
+    DB.ref('daycare/vagas-pedidos').on('value', function(s){
+      VAGAS_PEDIDOS=s.val()||{};
+      try{ if(document.getElementById('repLista')) renderReposicao(); }
+      catch(e){ _logFalhaGrav('vagasPedCarregar (tela de Reposições)', e); }
+      try{ var c=document.getElementById('poCardEncaixes'); if(c) c.innerHTML=vagasEncaixesCardHTML(); }
+      catch(e){ _logFalhaGrav('vagasPedCarregar (Dashboard da Márcia)', e); }
+    });
+  }
+  function vagasPedidoDe(dia, chave){ return ((VAGAS_PEDIDOS||{})[dia]||{})[chave]||null; }
+  function vagasPedidosAbertos(){
+    var hoje=(typeof zHojeISO==='function')?zHojeISO():'', out=[];
+    Object.keys(VAGAS_PEDIDOS||{}).forEach(function(dia){
+      if(hoje && dia<hoje) return;            // dia que já passou não se autoriza
+      var d=VAGAS_PEDIDOS[dia]||{};
+      Object.keys(d).forEach(function(ch){
+        var o=d[ch]||{};
+        if(String(o.status||'pedido')!=='pedido') return;
+        out.push(Object.assign({}, o, {_dia:dia, _chave:ch}));
+      });
+    });
+    return out.sort(function(a,b){
+      return (a._dia<b._dia)?-1:((a._dia>b._dia)?1:((a.ts||0)-(b.ts||0)));
+    });
+  }
+  function vagasPedir(dia, p, tipo, payload){
+    if(!DB) return Promise.reject(new Error('sem conexão com o banco'));
+    if(!p) return Promise.reject(new Error('sem o peludinho'));
+    if(!/^\d{4}-\d{2}-\d{2}$/.test(dia||'')) return Promise.reject(new Error('dia inválido'));
+    var ch=pelKey(p);
+    var reg={quem:(typeof pessoaDoTurno==='function')?pessoaDoTurno():quemSou(), ts:Date.now(),
+             tipo:(tipo==='avulso')?'avulso':'reposicao', status:'pedido', dia:dia,
+             pet:pelNome(p), tutor:pelGet(p,'tutor')||'', chave:ch};
+    try{ var k=dcKey(p.n,p.tutor); if(k) reg.alvo=k; }catch(e){ /* sem alvo o pedido vale igual */ }
+    if(payload && typeof payload==='object') reg.payload=payload;
+    return DB.ref('daycare/vagas-pedidos/'+dia+'/'+ch).set(reg).then(function(){
+      if(typeof audit==='function') audit('vaga-pedido',
+        pelNome(p)+' — encaixe pedido em '+repBRdata(dia)+' ('+reg.tipo+'): o dia estava lotado',
+        {alvo:reg.alvo||'', pet:pelNome(p), assinou:reg.quem});
+      vagasAvisarGestao(reg);
+      return reg;
+    });
+  }
+  // O Telegram da Gestão — SÓ se o grupo já existir na ponte. Grupo inventado é o erro que
+  // já custou caro nesta casa.
+  function vagasAvisarGestao(reg){
+    if(typeof tgAvisar!=='function' || typeof tgGrupoNaPonte!=='function') return Promise.resolve(false);
+    return tgGrupoNaPonte('gestao').then(function(tem){
+      if(!tem) return false;
+      var txt='Encaixe pedido: '+(reg.pet||'')+' em '+repBRdata(reg.dia)+' — dia lotado'
+        +'\nTipo: '+((reg.tipo==='avulso')?'avulso (diária a mais)':'reposição')
+        +'\nQuem pediu: '+(reg.quem||'-');
+      return tgAvisar({grupo:'gestao', texto:txt}).then(function(r){ return !!(r&&r.ok); });
+    }).catch(function(){ return false; });
+  }
+  // Põe o `volta` num crédito que já existe. Não apaga nada: o crédito guarda a data da
+  // falta, o motivo e quem lançou; o que entra é o dia combinado, com quem combinou.
+  function repAgendarVolta(p, creditoId, volta, aut){
+    if(!DB) return Promise.reject(new Error('sem conexão com o banco'));
+    if(!p||!creditoId) return Promise.reject(new Error('sem o crédito'));
+    var up={volta:String(volta||''),
+            volta_por:(typeof pessoaDoTurno==='function')?pessoaDoTurno():quemSou(),
+            volta_ts:Date.now()};
+    if(aut) up.autorizacao=aut;
+    return DB.ref('daycare/reposicao/'+pelKey(p)+'/lancamentos/'+creditoId).update(up).then(function(){
+      if(typeof audit==='function') audit('reposicao-agendada',
+        pelNome(p)+' vem repor em '+repBRdata(volta)+(aut?(' — encaixe autorizado por '+(aut.quem||'-')):''),
+        {alvo:(typeof dcKey==='function'?dcKey(p.n,p.tutor):''), pet:pelNome(p)});
+      return true;
+    });
+  }
+  // O crédito que pode receber o dia de volta: o MAIS ANTIGO sem dia marcado e não estornado.
+  function repCreditoLivre(p){
+    try{
+      var L=repLancamentos(p)||[];
+      var anulado={}; L.forEach(function(l){ if(l.tipo==='estorno'&&l.estornaId) anulado[l.estornaId]=true; });
+      var livres=L.filter(function(l){ return l.tipo==='credito' && !l.volta && !anulado[l._id]; });
+      livres.sort(function(a,b){ return String(a.data||'').localeCompare(String(b.data||'')); });
+      return livres[0]||null;
+    }catch(e){ _logFalhaGrav('repCreditoLivre', e); return null; }
+  }
+  // O AVULSO PELA MESMA PORTA dos Lançamentos do dia (dashLancar) — é ela que faz o item
+  // chegar à planilha e à TV. A aba de dia da outra tela é trocada e DEVOLVIDA.
+  function dxLancarAvulso(p, dia, valorCent, matric, aut){
+    if(!p||!DB) return Promise.reject(new Error('sem conexão com o banco'));
+    if(!/^\d{4}-\d{2}-\d{2}$/.test(dia||'')) return Promise.reject(new Error('dia inválido'));
+    var idx=-1; try{ idx=(PELUDINHOS||[]).indexOf(p); }catch(e){ idx=-1; }
+    var bkpDia=DASH_DIA_SEL, bkpDados=DASH_DADOS, bkpDet=(DASH_DET||{}).avulso;
+    var devolver=function(){
+      DASH_DIA_SEL=bkpDia; DASH_DADOS=bkpDados;
+      try{ DASH_DET.avulso=bkpDet||{}; }catch(e){ /* DASH_DET sempre existe nesta tela */ }
+      try{ renderDash(); }catch(e){ /* redesenho de outra tela — falhar não muda dado nenhum */ }
+    };
+    DASH_DIA_SEL=dia;
+    return DB.ref('daycare/dashboard/'+dia).once('value').then(function(s){
+      DASH_DADOS=dashLimparFantasmas(s.val()||{});
+      DASH_DET.avulso={valor_cent:Math.round(valorCent||0), matriculado:!!matric};
+      if(aut) DASH_DET.avulso.autorizacao=aut;
+      try{ delete DASH_SEL.avulso; delete DASH_SEL_I.avulso; }catch(e){ /* nada escolhido: segue */ }
+      var pr=dashLancar('avulso', dashNomeRaca(p), idx);
+      if(!pr || typeof pr.then!=='function') return false;   // já estava lançado: dashLancar avisou
+      return pr;
+    }).then(function(ok){
+      devolver();
+      return ok!==false;
+    }).catch(function(e){ devolver(); throw e; });
+  }
+  // A MÁRCIA AUTORIZA — e o lançamento acontece no mesmo gesto.
+  async function vagasAutorizar(dia, chave){
+    if(!DB) return;
+    if(!vagasPodeEncaixar()){
+      alert('Só a Gestão ou a Diretoria autoriza um encaixe acima das '+vagasLimite()+' vagas.');
+      return;
+    }
+    var ped=vagasPedidoDe(dia, chave);
+    if(!ped){ alert('Não achei este pedido. Atualize a tela e tente de novo.'); return; }
+    var p=(typeof repPelaChave==='function')?repPelaChave(chave):null;
+    if(!p){
+      alert('Não achei a ficha de '+(ped.pet||'')+' neste aparelho. Abra a tela de Reposições e tente de novo.');
+      return;
+    }
+    var v=vagasDoDia(dia), pay=ped.payload||{};
+    var ehAvulso=(ped.tipo==='avulso');
+    var valor=Math.round(pay.valor_cent||0) || diariaAvulsaCent(p);
+    if(!await zPergunta('Autorizar o encaixe de '+(ped.pet||'')+' em '+fmtBR(dia)+'?',
+      ['O dia está com '+v.usadas+' de '+v.limite+' vaga'+(v.limite===1?'':'s')+'.',
+       ehAvulso?('Vai entrar como AVULSO nos Lançamentos do dia '+fmtBR(dia)+' — '+fmtCent(valor)
+                 +(pay.matriculado?' (matriculado)':' (não matriculado)')+'.')
+              :('Vai ficar combinado que '+(ped.pet||'')+' repõe em '+fmtBR(dia)+'.'),
+       'Fica registrado que a autorização foi sua.'],
+      {sim:'Autorizar', nao:'Não autorizar'})) return;
+    var quem=(typeof pessoaDoTurno==='function')?pessoaDoTurno():quemSou();
+    var aut={quem:quem, ts:Date.now()};
+    var acao;
+    if(ehAvulso) acao=dxLancarAvulso(p, dia, valor, !!pay.matriculado, aut);
+    else {
+      // O crédito da falta JÁ existe (foi lançado quando a recepção pediu o encaixe): aqui
+      // só se marca o dia de repor nele. Se a chave se perdeu, procura-se um crédito sem
+      // dia marcado — e, não havendo nenhum, NÃO se inventa crédito: crédito é dinheiro.
+      var cid=pay.credito_id||((repCreditoLivre(p)||{})._id)||'';
+      if(!cid){
+        alert('Não achei o crédito de reposição de '+(ped.pet||'')+' para marcar o dia '+fmtBR(dia)
+          +'. Abra o Extrato dele na tela de Reposições — o pedido continua em aberto.');
+        return;
+      }
+      acao=repAgendarVolta(p, cid, dia, aut);
+    }
+    acao.then(function(ok){
+      if(ok===false){
+        alert('Não consegui lançar — o pedido continua em aberto. Veja a mensagem que apareceu e tente de novo.');
+        return null;
+      }
+      return DB.ref('daycare/vagas-pedidos/'+dia+'/'+chave)
+        .update({status:'autorizado', autorizado_por:quem, autorizado_ts:aut.ts}).then(function(){
+          if(typeof audit==='function') audit('vaga-autorizada',
+            (ped.pet||'')+' — encaixe autorizado em '+repBRdata(dia)+' ('+(ehAvulso?'avulso':'reposição')+')',
+            {alvo:ped.alvo||'', pet:ped.pet||'', assinou:quem});
+          var l=[(ped.pet||'')+' está encaixado em '+fmtBR(dia)+'.'];
+          if(ehAvulso) l.push('Entrou nos Lançamentos do dia como Avulso — '+fmtCent(valor)+' — e vai para a planilha e para a TV.');
+          else l.push('O dia de repor ficou combinado. A recepção já vê na tela de Reposições.');
+          if(typeof zAlertao==='function') zAlertao('ENCAIXE AUTORIZADO', l, {botao:'Fechar'});
+          else alert(l.join('\n'));
+          return true;
+        });
+    }).catch(function(e){
+      _logFalhaGrav('autorizar o encaixe de '+(ped.pet||'')+' em '+dia, e);
+      alert('Não consegui autorizar: '+((e&&e.message)||e)+'. O pedido continua em aberto.');
+    });
+  }
+  async function vagasRecusar(dia, chave){
+    if(!DB) return;
+    if(!vagasPodeEncaixar()){ alert('Só a Gestão ou a Diretoria decide um encaixe.'); return; }
+    var ped=vagasPedidoDe(dia, chave);
+    if(!ped){ alert('Não achei este pedido. Atualize a tela e tente de novo.'); return; }
+    var motivo=((await zTexto('Recusar o encaixe de '+(ped.pet||'')+' em '+fmtBR(dia),
+      ['Por quê? A recepção precisa saber o que dizer ao tutor.'],
+      {rotulo:'Motivo da recusa', botao:'Recusar o encaixe', minimo:3}))||'').trim();
+    if(!motivo) return;
+    var quem=(typeof pessoaDoTurno==='function')?pessoaDoTurno():quemSou();
+    DB.ref('daycare/vagas-pedidos/'+dia+'/'+chave)
+      .update({status:'recusado', motivo_recusa:motivo, autorizado_por:quem, autorizado_ts:Date.now()})
+      .then(function(){
+        if(typeof audit==='function') audit('vaga-recusada',
+          (ped.pet||'')+' — encaixe recusado em '+repBRdata(dia)+': '+motivo,
+          {alvo:ped.alvo||'', pet:ped.pet||'', assinou:quem});
+      }).catch(function(e){
+        _logFalhaGrav('recusar o encaixe de '+(ped.pet||'')+' em '+dia, e);
+        alert('Não consegui recusar: '+((e&&e.message)||e));
+      });
+  }
+  // A lista dos pedidos — a MESMA em dois lugares: na tela de Reposições (onde a recepção
+  // vê o que está esperando) e no Dashboard da Márcia (onde ela decide). Nunca uma cópia.
+  function vagasPedidosHTML(){
+    var L=vagasPedidosAbertos();
+    if(!L.length) return '';
+    var pode=vagasPodeEncaixar();
+    var h='<div class="dc-faltas" style="margin-bottom:10px"><strong>'+L.length+' pedido'+(L.length>1?'s':'')
+      +' de encaixe esperando a Márcia</strong> — o dia já estava com as '+vagasLimite()+' vagas cheias.</div>';
+    L.forEach(function(o){
+      var pay=o.payload||{};
+      // A chave viaja DENTRO de um onclick: apóstrofo em nome de FILHOt ("D'Artagnan")
+      // quebraria o JS da linha — e botão que não responde é bug.
+      var jsD=escAttr(o._dia).replace(/'/g,"\\'"), jsK=escAttr(o._chave).replace(/'/g,"\\'");
+      h+='<div class="vg-ped"><div><strong>'+escAttr(o.pet||'')+'</strong>'
+        +'<small>'+esc(fmtBR(o._dia))+' · '+esc((o.tipo==='avulso')
+            ?('avulso'+(pay.valor_cent?(' de '+fmtCent(pay.valor_cent)):'')+(pay.matriculado?' (matriculado)':' (não matriculado)'))
+            :'reposição')
+        +' · pedido por '+esc(o.quem||'-')+'</small></div>'
+        +(pode?('<div class="vg-acoes">'
+            +'<button class="btn btn-primary" style="padding:7px 12px;font-size:13px" onclick="vagasAutorizar(\''+jsD+'\',\''+jsK+'\')">Autorizar</button>'
+            +'<button class="btn" style="padding:7px 12px;font-size:13px;background:var(--z-cream-warm);color:var(--z-blue);border:1.5px solid var(--line)" onclick="vagasRecusar(\''+jsD+'\',\''+jsK+'\')">Recusar</button></div>')
+          :'<small style="margin-left:auto;color:var(--crm-critico);font-weight:800">com a Márcia</small>')
+        +'</div>';
+    });
+    return h;
+  }
+  // O quadro no Dashboard da Márcia. É o ÚNICO quadro daquele painel que grava — e grava
+  // porque a decisão é só dela; por isso o botão pergunta antes.
+  function vagasEncaixesCardHTML(){
+    var L=vagasPedidosAbertos();
+    var h='<article class="pm-card pm-rv"><h3 class="pm-tit">Pedidos de encaixe</h3>';
+    if(!L.length){
+      return h+'<p class="pm-sub">Nenhum dia estourou o limite de '+vagasLimite()
+        +' vagas (reposição + avulso). Quando estourar, o pedido da recepção aparece aqui para a senhora autorizar.</p></article>';
+    }
+    return h+'<p class="pm-sub">A recepção precisou encaixar alguém num dia que já estava cheio. '
+      +'<strong>Autorizar já lança</strong> — a reposição fica combinada, o avulso entra nos Lançamentos do dia.</p>'
+      +'<div class="troca-pedidos">'+vagasPedidosHTML()+'</div></article>';
+  }
+
+  /* ---- O DIA EXTRA: "ele vem no dia y" -------------------------------------------
+   * Um gesto só, e o app decide o que é: TEM crédito livre → reposição (o dia combinado
+   * entra no crédito que ele já tem); NÃO tem → avulso, com o preço de matriculado ou de
+   * não matriculado. Nada grava antes do Confirmar. */
+  var dxPel=null, dxDia='';
+  function dxAbrir(pel){
+    if(!repPodeLancar()){ alert('Só a recepção, a Gestão ou a Supervisão marcam o dia extra.'); return; }
+    dxPel=pel||null; dxDia='';
+    var el=document.getElementById('dxModal'); if(!el) return;
+    el.classList.add('on');
+    var v=function(id,val){ var x=document.getElementById(id); if(x) x.value=val; };
+    var h=function(id,val){ var x=document.getElementById(id); if(x) x.innerHTML=val; };
+    v('dxBusca',''); v('dxData','');
+    h('dxResults',''); h('dxEscolhido',''); h('dxVeredito',''); h('dxVagas','');
+    var w=document.getElementById('dxWarn'); if(w) w.textContent='';
+    dxPintar();
+    if(!dxPel) setTimeout(function(){ try{ document.getElementById('dxBusca').focus(); }catch(e){ /* enfeite de tela */ } },120);
+  }
+  function dxFechar(){ var el=document.getElementById('dxModal'); if(el) el.classList.remove('on'); }
+  function dxBuscar(){
+    var q=jsNorm((document.getElementById('dxBusca')||{}).value||'');
+    var box=document.getElementById('dxResults'); if(!box) return;
+    if(q.length<2){ box.innerHTML=''; return; }
+    var lista=PELUDINHOS.map(function(p,i){ return {p:p,i:i}; })
+      .filter(function(o){ return !pelInativo(o.p) && jsNorm([o.p.n,pelGet(o.p,'tutor'),o.p.raca].join(' ')).indexOf(q)>=0; })
+      .slice(0,8);
+    box.innerHTML=lista.length?lista.map(function(o){
+      return '<div class="rep-res-item" onclick="dxEscolher('+o.i+')">'
+        +'<div><div class="rep-res-nome">'+escAttr(pelNome(o.p))+'</div>'
+        +'<div class="rep-res-sub">'+escAttr(pelGet(o.p,'raca')||'—')+' · '+escAttr(pelGet(o.p,'tutor')||'sem tutor')
+        +' · saldo '+repSaldo(o.p)+' · '+(dcMatriculado(o.p)?'matriculado':'sem plano ativo')+'</div></div></div>';
+    }).join(''):'<div class="rep-res-sub" style="padding:8px 2px">Nenhum peludinho ativo com esse nome.</div>';
+  }
+  function dxEscolher(i){
+    dxPel=PELUDINHOS[i]||null;
+    var b=document.getElementById('dxBusca'); if(b) b.value='';
+    var r=document.getElementById('dxResults'); if(r) r.innerHTML='';
+    dxPintar();
+  }
+  function dxDiaMudou(){
+    dxDia=String((document.getElementById('dxData')||{}).value||'').slice(0,10);
+    if(dxDia) vagasGarantirDias([dxDia], dxPintar);
+    dxPintar();
+  }
+  // A DECISÃO, em função pura: nada de tela, nada de banco. É ela que o harness prova.
+  function dxVeredito(p, dia){
+    var out={ok:false, tipo:'', saldo:0, livre:0, valor_cent:0, matriculado:false, motivo:'', jaTem:false};
+    if(!p){ out.motivo='Escolha o peludinho primeiro.'; return out; }
+    if(!/^\d{4}-\d{2}-\d{2}$/.test(dia||'')){ out.motivo='Escolha o dia em que ele vem.'; return out; }
+    var hoje=(typeof zHojeISO==='function')?zHojeISO():'';
+    if(hoje && dia<hoje){ out.motivo='Esse dia já passou. Escolha hoje ou um dia à frente.'; return out; }
+    var sem=(typeof trocaDiaSemana==='function')?trocaDiaSemana(dia):'';
+    if(sem==='sab'||sem==='dom'){ out.motivo='O Day Care não funciona no fim de semana. Escolha um dia de semana.'; return out; }
+    try{ out.saldo=repSaldo(p); }catch(e){ out.saldo=0; }
+    try{ out.livre=repDisponivel(p,''); }catch(e){ out.livre=out.saldo; }
+    out.matriculado=dcMatriculado(p);
+    var ch=vagasNomeChave(pelNome(p)), v=vagasDoDia(dia);
+    if(v.reposicao.concat(v.avulso, v.troca).some(function(n){ return vagasNomeChave(n)===ch; })){
+      out.jaTem=true;
+      out.motivo=pelNome(p)+' já está marcado em '+repBRdata(dia)+'. Não precisa marcar de novo.';
+      return out;
+    }
+    out.ok=true;
+    if(out.livre>0){ out.tipo='reposicao'; return out; }
+    out.tipo='avulso';
+    out.valor_cent=diariaAvulsaCent(p);
+    return out;
+  }
+  function dxVeredictoHTML(v){
+    if(!v.ok) return v.motivo?('<div class="vg-ok"><span>'+esc(v.motivo)+'</span></div>'):'';
+    if(v.tipo==='reposicao'){
+      return '<div class="rep-previa"><strong>Ele tem '+v.livre+' dia'+(v.livre===1?'':'s')
+        +' de reposição: este dia é <b>REPOSIÇÃO</b></strong> — não se cobra nada. '
+        +'O dia combinado entra no crédito que ele já tem, e a planilha daquele dia recebe a Reposição.</div>';
+    }
+    var extra=(v.saldo>0 && v.livre<=0)
+      ? (' Ele tem '+v.saldo+' dia(s) de reposição, mas estão reservados em orçamento de hospedagem — por isso este dia sai como avulso.')
+      : '';
+    return '<div class="rep-previa"><strong>Sem crédito de reposição: este dia é <b>AVULSO</b> — '
+      +esc(fmtCent(v.valor_cent))+' ('+(v.matriculado?'matriculado':'não matriculado')+')</strong>.'
+      +esc(extra)+' Ao confirmar, ele entra nos Lançamentos do dia '+esc(repBRdata(dxDia))
+      +' como Avulso — vai para a planilha e para a TV.</div>';
+  }
+  function dxBotaoRotulo(){
+    var v=dxVeredito(dxPel, dxDia);
+    if(!v.ok) return 'Confirmar';
+    var vg=vagasDoDia(dxDia);
+    if(vg.cheio && vagasPodeEncaixar()) return 'Márcia autorizou';
+    if(v.tipo==='avulso') return 'Lançar o avulso';
+    return 'Marcar a reposição';
+  }
+  function dxPintar(){
+    var e=document.getElementById('dxEscolhido');
+    if(e){
+      if(dxPel){
+        e.style.display='block';
+        e.innerHTML=escAttr(pelNome(dxPel))+' <span style="font-weight:500;color:var(--muted);font-size:13px">· '
+          +escAttr(pelGet(dxPel,'tutor')||'sem tutor')+' · saldo <b>'+repSaldo(dxPel)+'</b> · '
+          +(dcMatriculado(dxPel)?'matriculado':'sem plano ativo')+'</span>';
+      } else { e.style.display='none'; e.innerHTML=''; }
+    }
+    var v=dxVeredito(dxPel, dxDia);
+    var vd=document.getElementById('dxVeredito'); if(vd) vd.innerHTML=dxVeredictoHTML(v);
+    var vgEl=document.getElementById('dxVagas');
+    if(vgEl) vgEl.innerHTML=dxDia?vagasAvisoHTML(dxDia,'dxPedir()'):'';
+    var bt=document.getElementById('dxOk');
+    if(bt){
+      var cheio=dxDia?vagasDoDia(dxDia).cheio:false;
+      bt.textContent=dxBotaoRotulo();
+      bt.disabled=!!(v.ok && cheio && !vagasPodeEncaixar());
+    }
+  }
+  function dxConfirmar(){
+    var w=document.getElementById('dxWarn'); if(w) w.textContent='';
+    var diz=function(t){ if(w) w.textContent=t; };
+    var p=dxPel, dia=dxDia, v=dxVeredito(p, dia);
+    if(!v.ok){ diz(v.motivo); return; }
+    var vg=vagasDoDia(dia);
+    if(!vg.lido){ diz('Ainda estou conferindo as vagas de '+repBRdata(dia)+'. Espere um instante e confirme de novo.'); return; }
+    if(vg.cheio && !vagasPodeEncaixar()){
+      diz('O dia '+repBRdata(dia)+' está lotado ('+vg.usadas+' de '+vg.limite+'). Toque em «Avisar a Márcia» — só ela abre o encaixe.');
+      return;
+    }
+    var aut=vg.cheio?{quem:(typeof pessoaDoTurno==='function')?pessoaDoTurno():quemSou(), ts:Date.now()}:null;
+    var bt=document.getElementById('dxOk');
+    if(bt){ bt.disabled=true; bt.textContent='Lançando…'; }
+    var solta=function(){ if(bt){ bt.disabled=false; bt.textContent=dxBotaoRotulo(); } };
+    var pronto=function(linhas){
+      solta(); dxFechar();
+      if(typeof zAlertao==='function') zAlertao('DIA EXTRA MARCADO', linhas, {botao:'Fechar'});
+      else alert(linhas.join('\n'));
+      vagasCarregarDia(dia, true).then(function(){
+        try{ renderReposicao(); }catch(e){ /* a tela pode já ter sido fechada */ }
+      });
+    };
+    var falhou=function(e){ solta(); diz('Não consegui: '+((e&&e.message)||e)+'. Nada foi salvo — tente de novo.'); };
+    if(v.tipo==='reposicao'){
+      var cred=repCreditoLivre(p);
+      if(!cred){ solta(); diz('Não achei um crédito sem dia marcado para agendar. Abra o Extrato dele e confira.'); return; }
+      repAgendarVolta(p, cred._id, dia, aut).then(function(){
+        pronto([pelNome(p)+' vem repor em '+fmtBR(dia)+' — usando a falta de '+repBRdata(cred.data)+'.',
+          'Não se cobra nada: é reposição.',
+          'A planilha daquele dia recebe a Reposição na próxima conferência (até '+DASH_AUTO_MIN+' min).']
+          .concat(aut?['Encaixe acima do limite, autorizado por '+aut.quem+'.']:[]));
+      }).catch(falhou);
+      return;
+    }
+    dxLancarAvulso(p, dia, v.valor_cent, v.matriculado, aut).then(function(ok){
+      if(ok===false){ solta(); diz('Ele já estava lançado como Avulso em '+repBRdata(dia)+'.'); return; }
+      pronto([pelNome(p)+' entra como AVULSO em '+fmtBR(dia)+' — '+fmtCent(v.valor_cent)
+        +' ('+(v.matriculado?'matriculado':'não matriculado')+').',
+        'Está nos Lançamentos do dia '+fmtBR(dia)+': vai para a planilha e para a TV.']
+        .concat(aut?['Encaixe acima do limite, autorizado por '+aut.quem+'.']:[]));
+    }).catch(falhou);
+  }
+  // "Avisar a Márcia" do dia extra: grava o PEDIDO com tudo o que será lançado quando ela
+  // autorizar. Mais nada é gravado agora — o dia continua lotado.
+  function dxPedir(){
+    var w=document.getElementById('dxWarn'); if(w) w.textContent='';
+    var p=dxPel, dia=dxDia, v=dxVeredito(p, dia);
+    if(!v.ok){ if(w) w.textContent=v.motivo; return; }
+    var cred=(v.tipo==='avulso')?null:repCreditoLivre(p);
+    var pay=(v.tipo==='avulso')
+      ? {valor_cent:v.valor_cent, matriculado:!!v.matriculado}
+      : {credito_id:(cred&&cred._id)||'', data:(cred&&cred.data)||'', volta:dia};
+    vagasPedir(dia, p, v.tipo, pay).then(function(){
+      dxFechar();
+      var l=['A Márcia recebeu o pedido de encaixe de '+pelNome(p)+' em '+fmtBR(dia)+'.',
+        'Nada foi lançado ainda: quando ela autorizar, o app lança sozinho e a recepção vê na tela de Reposições.'];
+      if(typeof zAlertao==='function') zAlertao('PEDIDO ENVIADO À MÁRCIA', l, {botao:'Fechar'});
+      else alert(l.join('\n'));
+    }).catch(function(e){
+      if(w) w.textContent='Não consegui avisar a Márcia: '+((e&&e.message)||e)+'. Nada foi salvo.';
+    });
   }
   function renderReposicao(){
     try{ renderTrocas(); }catch(e){} /* silencioso de propósito: redesenho de tela — falhar não pode derrubar quem chamou */
     const el=document.getElementById('repLista'); if(!el) return;
+    // A CONFIRMAÇÃO DA PLANILHA depende de ler o registro do automático dos dias que estão
+    // na tela. Enquanto não chega, cada linha DIZ "conferindo a planilha…" — e quando chega,
+    // a tela se redesenha uma vez só (vagasGarantirDias não repete o que já está fresco).
+    try{ vagasGarantirDias(repDiasParaConferir(), renderReposicao); }
+    catch(e){ _logFalhaGrav('renderReposicao (conferir a planilha)', e); }
+    // Os pedidos de encaixe que esperam a Márcia — a recepção precisa ver que estão presos.
+    try{
+      const bp=document.getElementById('repEncaixes');
+      if(bp) bp.innerHTML=vagasPedidosHTML();
+    }catch(e){ _logFalhaGrav('renderReposicao (pedidos de encaixe)', e); }
     const q=jsNorm((document.getElementById('repBusca')||{}).value||'');
     const todos=PELUDINHOS.map(function(p,i){ return {p:p,i:i,saldo:repSaldo(p)}; }).filter(function(o){ return !pelInativo(o.p); });
     const comSaldo=todos.filter(function(o){ return o.saldo>0; });
@@ -6687,15 +7553,19 @@
       const resTxt=presos?('<div class="rp-sub" style="color:var(--crm-critico);font-weight:700">'
         +presos+' '+(presos===1?'dia reservado':'dias reservados')+' em orçamento de hospedagem — '
         +Math.max(0,o.saldo-presos)+' '+((o.saldo-presos)===1?'livre':'livres')+'</div>'):'';
+      // A CONFIRMAÇÃO, crédito por crédito: foi para a planilha, está a caminho, ou a ponte
+      // recusou (e por quê). É o que ela pediu — "ter confirmação que foi lançado".
+      const planTxt=repPlanBlocoHTML(o.p);
       return '<div class="rep-row"><div class="rp-n">'+o.saldo+'</div>'
         +'<div class="rp-txt"><div class="rp-nome">'+escAttr(pelNome(o.p))+'</div>'
         +'<div class="rp-sub">'+escAttr(pelGet(o.p,'tutor')||'sem tutor')
         +(ult?(' · último: '+(ult.tipo==='credito'?'faltou':(ult.tipo==='uso'?'repôs':'estorno'))+' em '+repBRdata(ult.data)):'')+'</div>'
-        +resTxt+agTxt+'</div>'
+        +resTxt+agTxt+planTxt+'</div>'
         +'<div class="rp-acoes">'
         +(o.saldo>0?'<button class="usar" onclick="repUsar('+o.i+')">Veio repor hoje</button>':'')
         +'<button onclick="repAbrirExtrato('+o.i+')">Extrato</button>'
         +'<button onclick="repAbrirLancar(PELUDINHOS['+o.i+'])">+ Falta</button>'
+        +'<button onclick="dxAbrir(PELUDINHOS['+o.i+'])">Dia extra</button>'
         +'</div></div>';
     }).join('');
   }
@@ -14010,7 +14880,7 @@
   // inteira DEPOIS de a correção estar publicada — o aviso apareceu, ninguém tocou.
   // Agora o aparelho PARADO recarrega sozinho: trancado, com a aba escondida, na porta de
   // entrada ou 3 minutos sem ninguém tocar nele. Mão na tela = nunca recarrega.
-  const APP_VERSAO='2026-09-21-05';
+  const APP_VERSAO='2026-09-21-06';
   var RECARGA_PARADO_MS=3*60*1000, __versaoPublicada=null, __recargaTimer=null;
   function vigiarVersao(){
     if(!DB) return;
@@ -16085,11 +16955,48 @@
   // edita em Configurações › Valores do Day Care: é a lei de 22/ago/2026, "regra nova não
   // pode exigir programador". O padrão de fábrica é a tabela de 2026.
   const DIARIA_AVULSA_PADRAO=17000;          // R$ 170,00
+  // ===== OS DOIS PREÇOS DO DIA AVULSO (Adriana, 21/set/2026) ========================
+  // "Tem valor que é cobrado do cliente que é matriculado e não matriculado. Não
+  //  matriculado 170,00, matriculado 97,00."
+  // A chave antiga (diaria_avulsa_cent) continua sendo a do NÃO matriculado — é ela que a
+  // conta de "começou no meio do mês" usa, e trocar a chave mudaria aquela conta sem
+  // ninguém ter pedido. O preço de quem TEM plano ativo mora na chave nova.
+  const DIARIA_AVULSA_MATRIC_PADRAO=9700;    // R$ 97,00
   var dcValoresCfg=null;                     // vem do Firebase; null = vale o padrão
   function dcValores(){ return dcValoresCfg||{}; }
-  function diariaAvulsaCent(){
+  // MATRICULADO = tem plano ativo na ficha (vigência que ainda não venceu). A régua é a
+  // MESMA do statusRenov, que é a que a Renovação usa — dois jeitos de dizer "tem plano"
+  // divergiriam no primeiro mês. Avulso, hóspede, morador e plano vencido NÃO são.
+  function dcMatriculado(fichaOuEx){
+    try{
+      var x=fichaOuEx; if(!x||typeof x!=='object') return false;
+      var ex=x;
+      if(!x.renov && (x.n!=null||x.tutor!=null)) ex=(typeof pelExtra==='function')?(pelExtra(x)||{}):{};
+      var st=(typeof statusRenov==='function')?(statusRenov(ex||{})||{}):{};
+      return st.estado==='ok' || st.estado==='vence';
+    }catch(e){ return false; }
+  }
+  function diariaAvulsaMatricCent(){
+    const v=dcValores().diaria_avulsa_matric_cent;
+    return (typeof v==='number'&&v>0)?Math.round(v):DIARIA_AVULSA_MATRIC_PADRAO;
+  }
+  // Sem ficha, devolve o de NÃO matriculado: é o que a conta do meio do mês sempre usou.
+  function diariaAvulsaCent(fichaOuEx){
+    if(fichaOuEx && dcMatriculado(fichaOuEx)) return diariaAvulsaMatricCent();
     const v=dcValores().diaria_avulsa_cent;
     return (typeof v==='number'&&v>0)?Math.round(v):DIARIA_AVULSA_PADRAO;
+  }
+  // ===== VAGAS POR DIA — reposição + avulso (Adriana, 21/set/2026) ==================
+  // "São 5 por dia de reposição + avulso. Se não tiver vaga, primeiro precisa de
+  //  autorização da Márcia... porque alguns faltam ou os que estão pedindo são tranquilos e
+  //  dá para encaixar a mais." O número é de NEGÓCIO: mora no banco e se edita em
+  //  Configurações › Valores do Day Care — lei de 22/ago/2026.
+  const VAGAS_DIA_PADRAO=5;
+  function vagasLimite(){
+    const v=dcValores().vagas_dia;
+    const n=(typeof v==='number')?Math.round(v):NaN;
+    if(!isFinite(n)||n<1||n>20) return VAGAS_DIA_PADRAO;
+    return n;
   }
   // O PREÇO DA ESCOVA DE DENTES (Adriana, 21/set/2026): "O valor é R$ 11,70." É o número
   // que vai escrito na mensagem ao tutor, então é dinheiro — e dinheiro muda sem
@@ -29649,6 +30556,21 @@
       }
       valor = valor + dashDetTexto(k);
     }
+    // ===== O AVULSO CARREGA O PREÇO (Adriana, 21/set/2026) =========================
+    // "Tem valor que é cobrado do cliente que é matriculado e não matriculado."
+    // O Avulso não tem campos na tela — o detalhe não vem do laço acima, vem de quem
+    // chamou (o Dia extra e a autorização da Márcia), por DASH_DET. O valor fica no
+    // REGISTRO, nunca na célula: a planilha e a TV continuam mostrando só "Nome/Raça" —
+    // dinheiro não se pendura no quadro que a equipe inteira lê.
+    if(k==='avulso'){
+      var __av=(typeof dashDet==='function')?(dashDet('avulso')||{}):{};
+      if(typeof __av.valor_cent==='number' && __av.valor_cent>0){
+        __det=__det||{};
+        __det.valor_cent=Math.round(__av.valor_cent);
+        __det.matriculado=!!__av.matriculado;
+        if(__av.autorizacao) __det.autorizacao=__av.autorizacao;
+      }
+    }
     var lista=DASH_DADOS[k]||{};
     if(Object.keys(lista).some(function(id){ return jsNorm(lista[id].valor||'')===jsNorm(valor); })){
       alert(valor+' já está lançado em '+it.t+' hoje.'); return;
@@ -29670,6 +30592,8 @@
         var s=document.getElementById('dashS_'+k); if(s) s.innerHTML='';
         // zera tudo: a dose da Olivia não pode grudar no próximo FILHOt
         if(it.campos){ DASH_DET[k]={}; delete DASH_SEL[k]; delete DASH_SEL_I[k]; }
+        // O preço do avulso segue a MESMA lei: o valor do Toshi não pode grudar no próximo.
+        if(k==='avulso'){ DASH_DET[k]={}; delete DASH_SEL[k]; delete DASH_SEL_I[k]; }
         DC_DASH_TURMA.quando=0;   // o avulso lançado agora entra na turma na hora, não em 60s
         renderDash();
         if(typeof audit==='function') audit('dashboard-daycare','lançou '+valor+' em '+it.t,{pet:valor});
@@ -32831,12 +33755,31 @@
       DB.ref(noAuto).once('value').then(function(s){ return s.val()||{}; }).catch(function(){ return {}; })
     ]).then(function(r){
       var naPlanilha=(r[0]&&r[0].conteudo)||{}, jaAuto=r[1]||{};
-      if(!(r[0]&&r[0].ok)) return {ok:false, erro:(r[0]&&r[0].erro)||'não consegui ler o dia na planilha'};
+      if(!(r[0]&&r[0].ok)){
+        var erroLer=(r[0]&&r[0].erro)||'não consegui ler o dia na planilha';
+        // ⚠ NÃO ficar mudo: quem olha a tela de Reposições precisa saber que aquele dia NÃO
+        // foi conferido. `update` (não `set`) preserva o que o automático já tinha escrito.
+        DB.ref(noAuto).update({_erro:{msg:String(erroLer), ts:Date.now()}})
+          .catch(function(e){ _logFalhaGrav('dashAutoSincronizar (registrar a falha do dia '+iso+')', e); });
+        return {ok:false, erro:erroLer};
+      }
       var hojeISOs=(typeof zHojeISO==='function')?zHojeISO():'';
       var desejado=dashAutoCalcular(iso);
       // Dia futuro: só reposição, falta avisada e aniversário.
       if(iso>hojeISOs) Object.keys(desejado).forEach(function(k){ if(!DASH_AUTO_FUTURO[k]) desejado[k]=[]; });
       var tarefas=[], novoRegistro={}, resumo={posto:0, tirado:0};
+      // ===== A CONFIRMAÇÃO, NOME POR NOME (Adriana, 21/set/2026) ====================
+      // "Ter confirmação que foi lançado." Antes este registro guardava só a lista do que o
+      // automático QUERIA escrever — o que não prova nada: a ponte podia ter recusado todas.
+      // Agora, para cada nome, fica gravado se a planilha aceitou (planilha_ok/planilha_msg),
+      // e é disto que a tela de Reposições tira o "lançada na planilha ✓".
+      var estado={};
+      var marcar=function(k, valor, ok, msg){
+        estado[k]=estado[k]||{};
+        var ch=dashAutoNomeChave(valor);
+        if(!ch) return;
+        estado[k][ch]={planilha_ok:!!ok, planilha_msg:ok?'':String(msg||'a ponte não respondeu'), ts:Date.now()};
+      };
       Object.keys(DASH_AUTO_COLS).forEach(function(k){
         var col=DASH_AUTO_COLS[k];
         var atual=(naPlanilha[col]||[]).filter(Boolean);
@@ -32846,9 +33789,14 @@
         var querCh={}; quer.forEach(function(v){ querCh[dashAutoNomeChave(v)]=v; });
         // 1) falta na planilha → lançar
         quer.forEach(function(v){
-          if(atualCh[dashAutoNomeChave(v)]!==undefined) return;      // já está lá (de qualquer jeito)
+          if(atualCh[dashAutoNomeChave(v)]!==undefined){ marcar(k, v, true, ''); return; }   // já está lá (de qualquer jeito)
           tarefas.push(dashPonteChamar({acao:'lancar', dia:iso, coluna:col, valor:v})
-            .then(function(x){ if(x&&x.ok) resumo.posto++; return x; }));
+            .then(function(x){
+              var ok=!!(x&&x.ok);
+              if(ok) resumo.posto++;
+              marcar(k, v, ok, (x&&x.erro)||'');
+              return x;
+            }));
         });
         // 2) foi este mecanismo que pôs e não vale mais → tirar
         antes.forEach(function(v){
@@ -32862,6 +33810,12 @@
       return Promise.all(tarefas).then(function(){
         novoRegistro._ts=Date.now();
         novoRegistro._quem=(typeof quemSou==='function'?quemSou():'-');
+        novoRegistro._estado=estado;        // a confirmação, nome por nome
+        // A marca de que ESTE registro já nasceu com confirmação. O Firebase não guarda
+        // objeto vazio: sem ela, um dia em que o automático não quis escrever nada ficaria
+        // igual a um registro velho, e a tela diria "não sei" onde devia dizer "a caminho".
+        novoRegistro._estado_v=1;
+        novoRegistro._erro=null;            // conferiu o dia: a falha anterior não vale mais
         return DB.ref(noAuto).set(novoRegistro).catch(function(e){ _logFalhaGrav('dashAutoSincronizar', e); }).then(function(){
           if((resumo.posto||resumo.tirado) && typeof audit==='function')
             audit('dashboard-auto','preencheu a planilha de '+iso+': '+resumo.posto+' posto(s), '+resumo.tirado+' tirado(s)',{});
@@ -32870,6 +33824,12 @@
       });
     }).catch(function(e){
       try{ if(typeof audit==='function') audit('dashboard-auto','NÃO consegui preencher a planilha de '+iso+': '+((e&&e.message)||e),{}); }catch(x){} /* silencioso de propósito: o audit() tem bolso próprio e reenvia sozinho — falhar aqui não pode travar a ação */
+      // A falha fica ESCRITA no dia: é ela que a tela de Reposições lê para dizer "NÃO foi
+      // para a planilha" em vez de prometer "vai em até 5 minutos" para sempre.
+      try{
+        DB.ref('daycare/dashboard-auto/'+iso).update({_erro:{msg:String((e&&e.message)||e), ts:Date.now()}})
+          .catch(function(x){ _logFalhaGrav('dashAutoSincronizar (registrar a falha do dia '+iso+')', x); });
+      }catch(x){ _logFalhaGrav('dashAutoSincronizar (registrar a falha do dia '+iso+')', x); }
       return {ok:false, erro:String((e&&e.message)||e)};
     });
   }
@@ -33612,11 +34572,31 @@
     const w=document.getElementById('cfgValoresWrap'); if(!w) return;
     const v=diariaAvulsaCent();
     const padrao=(dcValores().diaria_avulsa_cent==null);
-    w.innerHTML='<div><label class="cad-lb">Diária avulsa</label>'
+    const vm=diariaAvulsaMatricCent();
+    const padraoM=(dcValores().diaria_avulsa_matric_cent==null);
+    const vg=vagasLimite();
+    const padraoV=(dcValores().vagas_dia==null);
+    w.innerHTML='<div><label class="cad-lb">Diária avulsa — não matriculado</label>'
       +'<input class="cad-in" id="cfgDiariaAvulsa" inputmode="decimal" value="'+(v/100).toFixed(2).replace('.',',')+'">'
       +'<div class="hint" style="margin-top:3px">Hoje vale <strong>'+esc(fmtCent(v))+'</strong>'
       +(padrao?' — ainda é o valor de fábrica da tabela de 2026; salve para deixá-lo seu.':' — salvo por você.')+'</div></div>'
-      +'<div class="hint" style="margin-top:8px">Este é o valor que a aba <strong>Plano</strong> da ficha usa na 1ª opção de quem começa no meio do mês, e o que o quadro <strong>Recebimentos do mês</strong> mostra como preço do dia avulso.</div>'
+      // OS DOIS PREÇOS (Adriana, 21/set/2026): "Não matriculado 170,00, matriculado 97,00."
+      // Matriculado = tem plano ativo na ficha. É o app que decide qual dos dois cobrar.
+      +'<div style="margin-top:11px"><label class="cad-lb">Diária avulsa — matriculado</label>'
+      +'<input class="cad-in" id="cfgDiariaAvulsaMatric" inputmode="decimal" value="'+(vm/100).toFixed(2).replace('.',',')+'">'
+      +'<div class="hint" style="margin-top:3px">Hoje vale <strong>'+esc(fmtCent(vm))+'</strong>'
+      +(padraoM?' — ainda é o valor de fábrica; salve para deixá-lo seu.':' — salvo por você.')
+      +' É o preço do dia a mais de quem <strong>tem plano ativo</strong> na ficha. Quem não tem paga o de cima.</div></div>'
+      +'<div class="hint" style="margin-top:8px">O valor de <strong>não matriculado</strong> é o que a aba <strong>Plano</strong> da ficha usa na 1ª opção de quem começa no meio do mês, e o que o quadro <strong>Recebimentos do mês</strong> mostra como preço do dia avulso.</div>'
+      // AS VAGAS DO DIA (Adriana, 21/set/2026): "são 5 por dia de reposição + avulso... se
+      // as 5 já tiverem completas, precisa de autorização da Márcia."
+      +'<div style="margin-top:16px;padding-top:13px;border-top:1px solid var(--line)">'
+      +'<label class="cad-lb">Vagas por dia para reposição + avulso</label>'
+      +'<input class="cad-in" id="cfgVagasDia" inputmode="numeric" value="'+vg+'">'
+      +'<div class="hint" style="margin-top:3px">Hoje são <strong>'+vg+' vaga'+(vg===1?'':'s')+' por dia</strong>'
+      +(padraoV?' — ainda é o número de fábrica; salve para deixá-lo seu.':' — salvo por você.')
+      +' É quanto a recepção marca sozinha, somando reposição agendada, avulso lançado e troca. '
+      +'Acima disso o dia só recebe mais alguém com a <strong>autorização da Márcia</strong>.</div></div>'
       // ESCOVA DE DENTES (Adriana, 21/set/2026): "O valor é R$ 11,70." É o preço que vai
       // ESCRITO na mensagem ao tutor, então mudar de preço não pode exigir programador.
       +'<div style="margin-top:16px;padding-top:13px;border-top:1px solid var(--line)">'
@@ -33658,15 +34638,30 @@
     const brutoEsc=String(((document.getElementById('cfgEscova')||{}).value||'')).replace(/\./g,'').replace(',','.');
     const nEsc=parseFloat(brutoEsc);
     if(isNaN(nEsc)||nEsc<=0){ diz('O valor da escova de dentes precisa ser maior que zero — ele vai escrito na mensagem ao tutor. Nada foi salvo.','var(--crm-critico)'); return; }
+    // MATRICULADO (21/set/2026): preço em branco viraria diária de R$ 0,00 para quem tem
+    // plano — e é o preço que o app cobra sozinho no Dia extra.
+    const brutoM=String(((document.getElementById('cfgDiariaAvulsaMatric')||{}).value||'')).replace(/\./g,'').replace(',','.');
+    const nM=parseFloat(brutoM);
+    if(isNaN(nM)||nM<=0){ diz('A diária avulsa de matriculado precisa ser um valor maior que zero. Nada foi salvo.','var(--crm-critico)'); return; }
+    // VAGAS DO DIA (21/set/2026): número inteiro de 1 a 20. Zero fecharia a casa; vinte já
+    // é mais do que a matilha comporta.
+    const vgN=parseInt(String(((document.getElementById('cfgVagasDia')||{}).value||'')).replace(/\D/g,''),10);
+    if(!isFinite(vgN)||vgN<1||vgN>20){ diz('As vagas por dia precisam ser um número inteiro de 1 a 20. Nada foi salvo.','var(--crm-critico)'); return; }
     const novo=Math.round(n*100), antes=diariaAvulsaCent();
+    const novoM=Math.round(nM*100), antesM=diariaAvulsaMatricCent();
+    const vgAntes=vagasLimite();
     const escNovo=Math.round(nEsc*100), escAntes=escovaCent();
     const fxAntes=vermFaixaKg(), mgAntes=vermMargemKg();
     if(!DB){ diz('Banco reconectando — não salvei. Tente de novo em instantes.','var(--crm-critico)'); return; }
-    DB.ref('daycare/config/valores').update({diaria_avulsa_cent:novo, escova_cent:escNovo, verm_faixa_kg:fx, verm_margem_kg:mg}).then(function(){
-      dcValoresCfg=Object.assign({}, dcValoresCfg||{}, {diaria_avulsa_cent:novo, escova_cent:escNovo, verm_faixa_kg:fx, verm_margem_kg:mg});
+    const _pacote={diaria_avulsa_cent:novo, diaria_avulsa_matric_cent:novoM, vagas_dia:vgN,
+                   escova_cent:escNovo, verm_faixa_kg:fx, verm_margem_kg:mg};
+    DB.ref('daycare/config/valores').update(_pacote).then(function(){
+      dcValoresCfg=Object.assign({}, dcValoresCfg||{}, _pacote);
       // O rastro diz de quanto para quanto, valor por valor — e só do que mudou de verdade.
       const mud=[];
-      if(novo!==antes) mud.push('diária avulsa: '+fmtCent(antes)+' → '+fmtCent(novo));
+      if(novo!==antes) mud.push('diária avulsa (não matriculado): '+fmtCent(antes)+' → '+fmtCent(novo));
+      if(novoM!==antesM) mud.push('diária avulsa (matriculado): '+fmtCent(antesM)+' → '+fmtCent(novoM));
+      if(vgN!==vgAntes) mud.push('vagas por dia (reposição + avulso): '+vgAntes+' → '+vgN);
       if(escNovo!==escAntes) mud.push('escova de dentes: '+fmtCent(escAntes)+' → '+fmtCent(escNovo));
       if(fx!==fxAntes) mud.push('vermífugo, meio comprimido a cada: '+vermNumTexto(fxAntes)+' kg → '+vermNumTexto(fx)+' kg');
       if(mg!==mgAntes) mud.push('vermífugo, folga da virada: '+vermNumTexto(mgAntes)+' kg → '+vermNumTexto(mg)+' kg');
@@ -33677,6 +34672,9 @@
                     :'Nada mudou: os valores já eram esses.','var(--crm-ok)');
       cfgValoresRender();
       try{ if(typeof recRedesenhar==='function') recRedesenhar(); }catch(e){} /* silencioso de propósito: redesenho de tela — falhar não pode derrubar quem chamou */
+      // As vagas por dia mudaram: a tela de Reposições e a Lista de troca contam com o
+      // número novo na hora — dois números diferentes na casa seria pior que nenhum.
+      try{ if(document.getElementById('repLista') && typeof renderReposicao==='function') renderReposicao(); }catch(e){} /* silencioso de propósito: redesenho de tela — falhar não pode derrubar quem chamou */
     }).catch(function(e){
       _logFalhaGrav('daycare/config/valores (cfgValoresSalvar)', e);
       diz('❌ Não salvou: '+((e&&e.message)||e),'var(--crm-critico)');
@@ -43109,8 +44107,12 @@
 
       raiz.innerHTML = poSaudacaoHTML((eu && eu!=='-')?eu:'Operação', T.total)
         + poCaixasHTML(T)
-        +'<p class="pm-nota"><strong>Este painel só observa.</strong> Nenhum botão daqui grava coisa alguma: '
-        +'cada quadro abre a tela onde a senhora decide.</p>'
+        +'<p class="pm-nota"><strong>Este painel observa.</strong> Cada quadro abre a tela onde a senhora decide. '
+        +'A única exceção é <strong>Pedidos de encaixe</strong>: o botão «Autorizar» é a decisão, e é só sua — '
+        +'por isso ele pergunta antes e já lança.</p>'
+        + poAreaHTML('DAY CARE','Pedidos de encaixe',
+            'Dias que estouraram o limite de vagas e esperam a sua palavra.', PO_IC_ALERTA)
+        +'<div id="poCardEncaixes" style="display:contents">'+vagasEncaixesCardHTML()+'</div>'
         + poAreaHTML('DAY CARE','A turma de hoje',
             'Quem não veio, quanto tempo o time levou em cada etapa e quem deixou comida no prato.', PO_IC_PATA)
         +'<div class="pm-grid">'
@@ -43832,6 +44834,70 @@
   // nenhuma das duas, lê por este caminho — com cache de 60 s, para a casa não pagar a
   // mesma leitura duas vezes.
   function recGuardarFontes(orc, irm){ REC_FONTES={quando:Date.now(), orc:orc||{}, irm:irm||{}}; }
+
+  /* ===== AS DIÁRIAS AVULSAS DO MÊS (Adriana, 21/set/2026) ===========================
+   * Até 20/set o app sabia QUEM veio de avulso, nunca QUANTO se cobrou — e por isso a linha
+   * não entrava na soma. Desde a versão de 21/set todo avulso lançado pelo Dia extra guarda
+   * o valor (det.valor_cent) e se o FILHOt é matriculado. Então a linha passa a somar — mas
+   * SÓ o que tem valor gravado, e dizendo desde quando. Avulso lançado à mão, sem preço,
+   * continua fora da soma: contar como zero seria mentir, e inventar preço, pior ainda.
+   *
+   * A leitura é dia a dia (daycare/dashboard/{dia}/avulso): nós minúsculos, e só do mês na
+   * tela. Dias que ainda não chegaram ficam de fora da soma — recebimento é caixa, e o dia
+   * que não aconteceu não entrou. */
+  var REC_AVULSO_DESDE='2026-09-21';
+  var REC_AVULSO={mes:'', quando:0, lendo:false, ok:false, total_cent:0, n:0, semValor:0, futuros:0};
+  function recAvulsoDiasDoMes(mes, hoje){
+    var out=[];
+    if(!/^\d{4}-(0[1-9]|1[0-2])$/.test(String(mes||''))) return out;
+    var a=parseInt(mes.slice(0,4),10), m=parseInt(mes.slice(5,7),10);
+    var ult=new Date(a, m, 0).getDate();
+    var p2=function(x){ return String(x).padStart(2,'0'); };
+    for(var d=1; d<=ult; d++) out.push(mes+'-'+p2(d));
+    return out.filter(function(iso){ return !hoje || iso<=hoje; });
+  }
+  // A conta, em função pura: recebe os avulsos de cada dia e devolve a soma do que TEM preço.
+  function recAvulsoSomar(porDia){
+    var r={total_cent:0, n:0, semValor:0};
+    Object.keys(porDia||{}).forEach(function(dia){
+      var lista=porDia[dia]||{};
+      Object.keys(lista).forEach(function(id){
+        var o=lista[id]||{}, v=((o.det||{}).valor_cent);
+        if(typeof v==='number' && v>0){ r.total_cent+=Math.round(v); r.n++; }
+        else r.semValor++;
+      });
+    });
+    return r;
+  }
+  function recAvulsoLer(mes){
+    if(!DB || !/^\d{4}-(0[1-9]|1[0-2])$/.test(String(mes||''))) return Promise.resolve(false);
+    if(REC_AVULSO.lendo) return Promise.resolve(false);
+    if(REC_AVULSO.mes===mes && REC_AVULSO.quando && (Date.now()-REC_AVULSO.quando)<60000) return Promise.resolve(false);
+    REC_AVULSO.lendo=true;
+    var hoje=(typeof hojeISO==='function')?hojeISO():'';
+    var dias=recAvulsoDiasDoMes(mes, hoje);
+    return Promise.all(dias.map(function(d){
+      return DB.ref('daycare/dashboard/'+d+'/avulso').once('value')
+        .then(function(s){ return {dia:d, v:s.val()||{}}; })
+        .catch(function(e){ _logLeituraFalhou('daycare/dashboard/'+d+'/avulso (Recebimentos do mês)', e); return null; });
+    })).then(function(rs){
+      REC_AVULSO.lendo=false;
+      if(rs.some(function(x){ return x===null; })){
+        // Faltou leitura: o quadro NÃO afirma um total menor fingindo ser o total.
+        REC_AVULSO=Object.assign({}, REC_AVULSO, {mes:mes, quando:Date.now(), ok:false});
+        return false;
+      }
+      var porDia={}; rs.forEach(function(x){ porDia[x.dia]=x.v; });
+      var c=recAvulsoSomar(porDia);
+      REC_AVULSO={mes:mes, quando:Date.now(), lendo:false, ok:true,
+                  total_cent:c.total_cent, n:c.n, semValor:c.semValor, futuros:0};
+      return true;
+    }).catch(function(e){
+      REC_AVULSO.lendo=false;
+      _logLeituraFalhou('as diárias avulsas do mês (Recebimentos do mês)', e);
+      return false;
+    });
+  }
   function recFontesLer(forcar){
     if(!forcar && REC_FONTES.quando && (Date.now()-REC_FONTES.quando)<60000) return Promise.resolve(true);
     if(!DB) return Promise.resolve(false);
@@ -43898,21 +44964,32 @@
         +'<span class="pm-li-fim rec-val">'+esc(finBRL(L.valor))+'</span>'
         +'</div>';
     });
-    // A diária avulsa passou a TER preço (Adriana, 18/set/2026 — Configurações › Valores do
-    // Day Care). O que continua não existindo é o registro de QUANTAS diárias foram cobradas
-    // no mês: por isso o quadro mostra o preço do dia, e não uma soma inventada.
+    // A DIÁRIA AVULSA (Adriana, 18 e 21/set/2026). São DOIS preços — matriculado e não
+    // matriculado — e, desde 21/set, o avulso lançado guarda o valor cobrado. Por isso a
+    // linha soma o que TEM valor gravado e diz, na cara, desde quando.
     const avCent=(typeof diariaAvulsaCent==='function')?diariaAvulsaCent():0;
+    const avMat=(typeof diariaAvulsaMatricCent==='function')?diariaAvulsaMatricCent():0;
+    const avLidos=(REC_AVULSO.ok && REC_AVULSO.mes===mes);
+    const avSoma=avLidos?REC_AVULSO.total_cent:0;
     h+='<div class="pm-li">'
       +'<div class="pm-li-txt"><b>Diária avulsa</b>'
-      +'<span>hoje o dia avulso custa '+esc(fmtCent(avCent))+' (Configurações &rsaquo; Valores do Day Care). '
-      +'O app registra quem veio de avulso, nunca quantas diárias foram cobradas — por isso não entra na soma'
+      +'<span>hoje o dia avulso custa '+esc(fmtCent(avCent))+' para quem <strong>não é matriculado</strong> e '
+      +esc(fmtCent(avMat))+' para quem <strong>é</strong> (Configurações &rsaquo; Valores do Day Care). '
+      +(avLidos
+         ? ('Somados os avulsos lançados em '+esc(rot)+' com valor registrado: '
+            +esc(pmPlural(REC_AVULSO.n,'diária','diárias'))
+            +(REC_AVULSO.semValor>0?(' &middot; '+REC_AVULSO.semValor+' sem valor registrado ficaram de fora'):'')
+            +'. O valor passou a ser gravado <strong>a partir de 21/09/2026</strong>: avulso lançado antes disso não tem preço e não entra.')
+         : 'Ainda estou lendo os avulsos lançados no mês — enquanto não chegam, esta linha não entra na soma.')
       +(av==null?'':(' &middot; '+esc(pmPlural(av,'FILHOt avulso na carteira','FILHOts avulsos na carteira'))))
       +'</span></div>'
-      +'<span class="pm-li-fim rec-val rec-val-sem">'+esc(fmtCent(avCent))+' cada</span>'
+      +'<span class="pm-li-fim rec-val'+(avLidos?'':' rec-val-sem')+'">'+esc(avLidos?fmtCent(avSoma):(fmtCent(avCent)+' cada'))+'</span>'
       +'</div>';
     h+='<div class="pm-li rec-total">'
-      +'<div class="pm-li-txt"><b>Total de '+esc(rot)+'</b><span>a soma das linhas com valor acima</span></div>'
-      +'<span class="pm-li-fim rec-val rec-val-total">'+esc(finBRL(q.total))+'</span>'
+      +'<div class="pm-li-txt"><b>Total de '+esc(rot)+'</b><span>a soma das linhas com valor acima'
+      +(avLidos?', com as diárias avulsas lançadas de 21/09/2026 em diante':' — as diárias avulsas ainda não entraram')
+      +'</span></div>'
+      +'<span class="pm-li-fim rec-val rec-val-total">'+esc(finBRL(q.total+avSoma))+'</span>'
       +'</div></div>';
     h+='<p class="pm-nota"><strong>De onde vem cada valor.</strong> Os planos saem da data do pagamento lançada na ficha de cada FILHOt, na Renovação de planos, com o período inteiro caindo no mês do pagamento. A hospedagem sai dos orçamentos fechados. '
       +(q.deTabela>0?('<strong>'+q.deTabela+'</strong> '+(q.deTabela===1?'ficha traz':'fichas trazem')+' a data vinda da planilha antiga, e não de alguém da Central dizendo que recebeu. '):'')
@@ -43925,12 +45002,22 @@
   // Redesenha o quadro onde ele estiver na tela — no Dashboard da Adriana, no da Márcia,
   // ou nos dois. Uma função, dois usos: a mesma lei dos quadros de protocolo e de tempo.
   function recRedesenhar(){
+    var tem=false;
     ['pdirCardRecebimentos','poCardRecebimentos'].forEach(function(id){
       var alvo=document.getElementById(id);
       if(!alvo) return;
+      tem=true;
       alvo.innerHTML=recCardHTML();
       try{ pmAnimar(alvo); }catch(e){} /* silencioso de propósito: animação — falhar não pode derrubar o quadro */
     });
+    // As diárias avulsas do mês na tela: lê uma vez (cache de 60 s) e redesenha SÓ quando
+    // chega algo novo — sem laço, porque a segunda chamada sai na guarda de cache.
+    if(tem && !recTrava()){
+      try{
+        recAvulsoLer(recMesAtual()).then(function(mudou){ if(mudou) recRedesenhar(); })
+          .catch(function(e){ _logLeituraFalhou('as diárias avulsas do mês (redesenho)', e); });
+      }catch(e){ _logLeituraFalhou('as diárias avulsas do mês (redesenho)', e); }
+    }
   }
 
   /* ====================================================================================

@@ -3740,8 +3740,8 @@ async function main() {
     check('v-25 · a auditoria da tabela diz o que mudou, de quanto para quanto',
       /audit\('orcamento-precos',\s*\n?\s*mudou\.length\?\('alterou a tabela de hospedagem — '\+mudou\.join/.test(html)
       && /\{antes:antes, depois:novo\}/.test(html));
-    check('v-25 · a versão carimbada desta entrega é a 2026-09-21-05',
-      /const APP_VERSAO='2026-09-21-05';/.test(html));
+    check('v-25 · a versão carimbada desta entrega é a 2026-09-21-06',
+      /const APP_VERSAO='2026-09-21-06';/.test(html));
   }
   console.log('');
 
@@ -3773,12 +3773,15 @@ async function main() {
       /if\(typeof cfgValoresRender==='function'\) cfgValoresRender\(\);/.test(html)
       && /if\(typeof dcValoresCarregar==='function'\) dcValoresCarregar\(\);/.test(html)
       && /try\{ dcValoresCarregar\(\); \}catch\(e\)\{\}/.test(html));
+    // 21/set/2026: o pacote do Salvar ganhou o preço de matriculado e as vagas por dia. O
+    // nó continua sendo UM só, e a chave antiga continua sendo a do NÃO matriculado.
     check('v-26 · o valor mora no banco em daycare/config/valores, com diaria_avulsa_cent',
       /DB\.ref\('daycare\/config\/valores'\)\.once\('value'\)/.test(html)
-      && /DB\.ref\('daycare\/config\/valores'\)\.update\(\{diaria_avulsa_cent:novo, escova_cent:escNovo, verm_faixa_kg:fx, verm_margem_kg:mg\}\)/.test(html));
+      && /const _pacote=\{diaria_avulsa_cent:novo, diaria_avulsa_matric_cent:novoM, vagas_dia:vgN,/.test(html)
+      && /DB\.ref\('daycare\/config\/valores'\)\.update\(_pacote\)/.test(html));
     check('v-26 · nada é salvo antes do botão "Salvar valores", e o rastro diz de quanto para quanto',
       /onclick="cfgValoresSalvar\(\)">Salvar valores<\/button>/.test(html)
-      && /mud\.push\('diária avulsa: '\+fmtCent\(antes\)\+' → '\+fmtCent\(novo\)\)/.test(html)
+      && /mud\.push\('diária avulsa \(não matriculado\): '\+fmtCent\(antes\)\+' → '\+fmtCent\(novo\)\)/.test(html)
       && /audit\('config-valores-daycare', mud\.join\(' · '\)/.test(html)
       && /\{antes:antes, depois:novo, verm_faixa_antes:fxAntes, verm_faixa_depois:fx,/.test(html));
     check('v-26 · valor zerado ou vazio NÃO passa — preço em branco viraria conta em R$ 0,00',
@@ -4021,15 +4024,21 @@ async function main() {
           html.indexOf("DB.ref('daycare/config/sensiveis')"))));
 
     // ---- (g) o quadro de Recebimentos deixou de dizer "sem valor" ---------------------
-    check('v-26 · Recebimentos do mês mostra o preço do dia avulso, sem inventar a quantidade',
+    // 21/set/2026 — Adriana: "tem valor que é cobrado do cliente que é matriculado e não
+    // matriculado". A linha passou a mostrar OS DOIS preços; e, desde que o avulso lançado
+    // guarda o valor, ela soma o que TEM valor — dizendo desde quando.
+    check('v-26 · Recebimentos do mês mostra os DOIS preços do dia avulso',
       /const avCent=\(typeof diariaAvulsaCent==='function'\)\?diariaAvulsaCent\(\):0;/.test(html)
+      && /const avMat=\(typeof diariaAvulsaMatricCent==='function'\)\?diariaAvulsaMatricCent\(\):0;/.test(html)
       && html.indexOf('hoje o dia avulso custa ') > 0
-      && /<span class="pm-li-fim rec-val rec-val-sem">'\+esc\(fmtCent\(avCent\)\)\+' cada<\/span>/.test(html));
-    check('v-26 · e continua FORA da soma — o app não sabe quantas diárias foram cobradas',
-      html.indexOf('nunca quantas diárias foram cobradas — por isso não entra na soma') > 0);
+      && html.indexOf('para quem <strong>não é matriculado</strong> e ') > 0);
+    check('v-26 · e só soma o que TEM valor gravado — a partir de 21/09/2026, dizendo o porquê',
+      html.indexOf('O valor passou a ser gravado <strong>a partir de 21/09/2026</strong>') > 0
+      && html.indexOf('sem valor registrado ficaram de fora') > 0
+      && html.indexOf('Ainda estou lendo os avulsos lançados no mês') > 0);
 
-    check('v-26 · a versão carimbada desta entrega é a 2026-09-21-05',
-      /const APP_VERSAO='2026-09-21-05';/.test(html));
+    check('v-26 · a versão carimbada desta entrega é a 2026-09-21-06',
+      /const APP_VERSAO='2026-09-21-06';/.test(html));
   }
   console.log('');
 
@@ -4403,8 +4412,8 @@ async function main() {
       }
     } else { check('v-27 · orcRenderConfig existe', false, 'função não encontrada'); }
 
-    check('v-27 · a versão carimbada desta entrega é a 2026-09-21-05',
-      /const APP_VERSAO='2026-09-21-05';/.test(html));
+    check('v-27 · a versão carimbada desta entrega é a 2026-09-21-06',
+      /const APP_VERSAO='2026-09-21-06';/.test(html));
   }
   console.log('');
 
@@ -5015,8 +5024,8 @@ async function main() {
         delete ctx.document.activeElement; delete ctx.__focoAuto;
       }
     } else { check('v-28 · vencRedesenhoAuto existe', false, 'função não encontrada'); }
-    check('v-28 · a versão carimbada desta entrega é a 2026-09-21-05',
-      /const APP_VERSAO='2026-09-21-05';/.test(html));
+    check('v-28 · a versão carimbada desta entrega é a 2026-09-21-06',
+      /const APP_VERSAO='2026-09-21-06';/.test(html));
   }
   console.log('');
 
@@ -13349,9 +13358,12 @@ async function main() {
       // 18/set/2026: o PREÇO do dia avulso passou a existir (Configurações › Valores do Day
       // Care) e a linha o mostra. O que continua não existindo é QUANTAS diárias foram
       // cobradas — por isso a linha segue fora da soma, dizendo o porquê.
-      check('mordida — DIÁRIA AVULSA mostra o preço do dia e continua FORA da soma',
+      // 21/set/2026: os DOIS preços na linha; e, enquanto a leitura dos avulsos do mês não
+      // chega, ela continua FORA da soma — meio total é pior que nenhum.
+      check('mordida — DIÁRIA AVULSA mostra os dois preços e, sem a leitura, fica FORA da soma',
         cardREC.indexOf('>Diária avulsa<') >= 0 && cardREC.indexOf('R$ 170,00 cada') >= 0 &&
-        cardREC.indexOf('nunca quantas diárias foram cobradas') >= 0,
+        cardREC.indexOf('R$ 97,00 para quem <strong>é</strong>') >= 0 &&
+        cardREC.indexOf('esta linha não entra na soma') >= 0,
         cardREC.slice(cardREC.indexOf('>Diária avulsa<'), cardREC.indexOf('>Diária avulsa<') + 320));
       check('o avulso da carteira é contado como GENTE, não como dinheiro',
         ctx.recAvulsosNaCarteira() === 1 && cardREC.indexOf('1 FILHOt avulso na carteira') >= 0,
@@ -14580,7 +14592,7 @@ async function main() {
         !/\.catch\(function\([a-z]*\)\{\s*\}\)/.test(
           html.slice(html.indexOf('const CK_FRASE_PRATICA='), html.indexOf('function renderCkInicio('))));
       check('v-14 · a versão carimbada é a desta entrega',
-        /const APP_VERSAO='2026-09-21-05';/.test(html));
+        /const APP_VERSAO='2026-09-21-06';/.test(html));
     }
 
     // ---- v-15: O PLANO SÓ GRAVA NO CONFIRMAR (caso Cookie/Yara, 15/set/2026) --------
@@ -15395,8 +15407,8 @@ async function main() {
           + 'AVISO_COLEIRA_APOS = __bkpC.apos;', ctx);
       }
     } else { check('v-17 · prevCfgCarregar existe', false, 'função não encontrada'); }
-    check('v-24 · a versão carimbada desta entrega é a 2026-09-21-05',
-      /const APP_VERSAO='2026-09-21-05';/.test(html));
+    check('v-24 · a versão carimbada desta entrega é a 2026-09-21-06',
+      /const APP_VERSAO='2026-09-21-06';/.test(html));
 
     // ───────── v-19 · o aparelho autorizado que não se perde no iPhone (16/set/2026)
     // Auditoria de 16/set: o iPhone da Leticya gerou DOIS ids em trinta segundos
@@ -15647,8 +15659,8 @@ async function main() {
       String((html.match(/linhaBuscaCadastro\(/g) || []).length));
     check('v-29 · a linha tem estilo próprio: menor, em var(--muted), e quebrando no celular',
       /table\.pel \.pel-busca-sub\{[^}]*font-size:11\.5px[^}]*color:var\(--muted\)[^}]*white-space:normal/.test(html));
-    check('v-29 · a versão carimbada desta entrega é a 2026-09-21-05',
-      /const APP_VERSAO='2026-09-21-05';/.test(html));
+    check('v-29 · a versão carimbada desta entrega é a 2026-09-21-06',
+      /const APP_VERSAO='2026-09-21-06';/.test(html));
   }
   console.log('');
 
@@ -15932,7 +15944,8 @@ async function main() {
       /De quantos em quantos quilos a dose sobe meia unidade/.test(html)
       && /Peso encostado na virada não decide dose sozinho/.test(html));
     check('v-30 · os dois números moram no MESMO nó e saem pelo MESMO botão Salvar valores',
-      /DB\.ref\('daycare\/config\/valores'\)\.update\(\{diaria_avulsa_cent:novo, escova_cent:escNovo, verm_faixa_kg:fx, verm_margem_kg:mg\}\)/.test(html)
+      /const _pacote=\{diaria_avulsa_cent:novo, diaria_avulsa_matric_cent:novoM, vagas_dia:vgN,[\s\S]{0,60}?escova_cent:escNovo, verm_faixa_kg:fx, verm_margem_kg:mg\};/.test(html)
+      && /DB\.ref\('daycare\/config\/valores'\)\.update\(_pacote\)/.test(html)
       && /onclick="cfgValoresSalvar\(\)">Salvar valores<\/button>/.test(html));
     check('v-30 · e o rastro diz de quanto para quanto, valor por valor',
       /mud\.push\('vermífugo, meio comprimido a cada: '\+vermNumTexto\(fxAntes\)\+' kg → '\+vermNumTexto\(fx\)\+' kg'\)/.test(html)
@@ -15949,8 +15962,8 @@ async function main() {
         ctx.vermNumTexto(5) === '5' && ctx.vermNumTexto(0.3) === '0,3' && ctx.vermNumTexto(4.5) === '4,5',
         JSON.stringify([ctx.vermNumTexto(5), ctx.vermNumTexto(0.3)]));
     } else { check('v-30 · vermNumLer existe', false, 'função não encontrada'); }
-    check('v-30 · a versão carimbada desta entrega é a 2026-09-21-05',
-      /const APP_VERSAO='2026-09-21-05';/.test(html));
+    check('v-30 · a versão carimbada desta entrega é a 2026-09-21-06',
+      /const APP_VERSAO='2026-09-21-06';/.test(html));
   }
   console.log('');
 
@@ -16213,8 +16226,8 @@ async function main() {
       && html.indexOf('A frase pronta fala em &ldquo;vence&rdquo; — confira antes de mandar.') > 0
       && /if\(\(m\.itens\|\|\[\]\)\.some\(function\(x\)\{ return x\.atrasado; \}\)\)/.test(html));
 
-    check('v-31 · a versão carimbada desta entrega é a 2026-09-21-05',
-      /const APP_VERSAO='2026-09-21-05';/.test(html));
+    check('v-31 · a versão carimbada desta entrega é a 2026-09-21-06',
+      /const APP_VERSAO='2026-09-21-06';/.test(html));
   }
   // ===== v-32 · O CALENDÁRIO, A COBRANÇA E A RESPOSTA QUE LANÇA SOZINHA ============
   // Adriana, 21/set/2026, palavra por palavra:
@@ -16679,8 +16692,403 @@ async function main() {
       }
     } else { check('v-32 · vencResponderTipo e dashLancar existem', false, 'função não encontrada'); }
 
-    check('v-32 · a versão carimbada desta entrega é a 2026-09-21-05',
-      /const APP_VERSAO='2026-09-21-05';/.test(html));
+    check('v-32 · a versão carimbada desta entrega é a 2026-09-21-06',
+      /const APP_VERSAO='2026-09-21-06';/.test(html));
+  }
+  console.log('');
+
+  // ===== v-33 · A REPOSIÇÃO QUE VAI SOZINHA PARA A TABELA, AS VAGAS E O AVULSO ======
+  // Adriana, 21/set/2026, palavra por palavra:
+  //  "Reposições. Lançar falta... preciso que automaticamente vá para a tabela. Tablito e
+  //   Biscoito não virão amanhã (precisa ir para falta avisada) e ter confirmação que foi
+  //   lançado; se o tutor já avisou o dia, precisa ir para avulso (também na tabela, de
+  //   lançamentos do dia); precisa ser automático."
+  //  "Avulso — diária a mais que o tutor paga. Exemplo Toshi, ele não tinha crédito e vai de
+  //   avulso amanhã. Tem valor que é cobrado do cliente que é matriculado e não matriculado.
+  //   Não matriculado 170,00, matriculado 97,00. Duda pediu para trocar o dia, é uma
+  //   reposição, avisou antes, e pediu para trocar, já deu o dia. Isso é reposição. 'Não
+  //   poderá ir dia xxx, quero que vá dia y' — se tiver vaga — são 5 por dia de
+  //   reposição+avulso — se não tiver vaga, primeiro precisa de autorização da Márcia."
+  console.log('v-33 · A reposição que vai sozinha para a tabela, as vagas do dia e o avulso:');
+  {
+    const HOJE33 = '2026-09-21';
+    const AMANHA33 = '2026-09-22';
+    const DEPOIS33 = '2026-09-25';
+
+    // ---- (a) os DOIS preços e as VAGAS moram em Configurações ----------------------
+    if (typeof ctx.diariaAvulsaCent === 'function' && typeof ctx.vagasLimite === 'function') {
+      const bkpCfg33 = ctx.dcValoresCfg;
+      try {
+        ctx.dcValoresCfg = {};
+        const padroes33 = vm.runInContext('({m:DIARIA_AVULSA_MATRIC_PADRAO, v:VAGAS_DIA_PADRAO, n:DIARIA_AVULSA_PADRAO})', ctx);
+        check('v-33 · de fábrica: avulso de R$ 170,00 para quem NÃO é matriculado e R$ 97,00 para quem é',
+          ctx.diariaAvulsaCent() === 17000 && ctx.diariaAvulsaMatricCent() === 9700
+          && padroes33.m === 9700 && padroes33.n === 17000,
+          ctx.diariaAvulsaCent() + '/' + ctx.diariaAvulsaMatricCent());
+        check('v-33 · de fábrica são 5 vagas por dia (reposição + avulso)',
+          ctx.vagasLimite() === 5 && padroes33.v === 5, String(ctx.vagasLimite()));
+        ctx.dcValoresCfg = { diaria_avulsa_cent: 18000, diaria_avulsa_matric_cent: 10500, vagas_dia: 7 };
+        check('v-33 · e os três são de NEGÓCIO: o que a Gestão salva MANDA sobre o de fábrica',
+          ctx.diariaAvulsaCent() === 18000 && ctx.diariaAvulsaMatricCent() === 10500 && ctx.vagasLimite() === 7);
+        ctx.dcValoresCfg = { vagas_dia: 0 };
+        check('v-33 · número impossível de vagas (0 ou 99) NÃO passa: volta para as 5 de fábrica',
+          ctx.vagasLimite() === 5 && ((ctx.dcValoresCfg = { vagas_dia: 99 }), ctx.vagasLimite() === 5));
+        // A FICHA decide o preço: plano ativo = matriculado.
+        ctx.dcValoresCfg = {};
+        const fichaAtiva = { renov: { plano: 'Silver', inicio: '2026-09-01', fim: '2030-12-31' } };
+        const fichaVencida = { renov: { plano: 'Silver', inicio: '2019-01-01', fim: '2020-01-01' } };
+        const fichaAvulsa = { renov: { plano: 'avulso' } };
+        check('v-33 · quem tem plano ATIVO paga R$ 97,00; plano vencido, avulso e sem ficha pagam R$ 170,00',
+          ctx.diariaAvulsaCent(fichaAtiva) === 9700
+          && ctx.diariaAvulsaCent(fichaVencida) === 17000
+          && ctx.diariaAvulsaCent(fichaAvulsa) === 17000
+          && ctx.diariaAvulsaCent() === 17000,
+          [ctx.diariaAvulsaCent(fichaAtiva), ctx.diariaAvulsaCent(fichaVencida), ctx.diariaAvulsaCent(fichaAvulsa)].join('/'));
+        check('v-33 · e dcMatriculado é a MESMA régua do statusRenov — nunca uma segunda opinião',
+          ctx.dcMatriculado(fichaAtiva) === true && ctx.dcMatriculado(fichaVencida) === false
+          && ctx.dcMatriculado(null) === false);
+        // O MEIO DO MÊS não muda: continua na diária de NÃO matriculado (a chave antiga).
+        check('v-33 · "começou no meio do mês" continua usando a diária de R$ 170,00',
+          /const conta=mmConta\(prontos, diariaAvulsaCent\(\)\);/.test(html)
+          && ctx.mmConta([{ nome: 'x', aulas: 2, mensalidade_cent: 40000, diarias: 3 }],
+            ctx.diariaAvulsaCent()).diaria_avulsa_cent === 17000);
+      } finally { ctx.dcValoresCfg = bkpCfg33; }
+      check('v-33 · Configurações › Valores do Day Care tem os três campos, com o nome que ela usa',
+        html.indexOf('<label class="cad-lb">Diária avulsa — não matriculado</label>') > 0
+        && html.indexOf('<label class="cad-lb">Diária avulsa — matriculado</label>') > 0
+        && html.indexOf('<label class="cad-lb">Vagas por dia para reposição + avulso</label>') > 0
+        && /id="cfgDiariaAvulsaMatric"/.test(html) && /id="cfgVagasDia"/.test(html));
+      check('v-33 · vaga fora de 1 a 20 e preço zerado NÃO são salvos — nada sai pela metade',
+        html.indexOf('As vagas por dia precisam ser um número inteiro de 1 a 20. Nada foi salvo.') > 0
+        && html.indexOf('A diária avulsa de matriculado precisa ser um valor maior que zero. Nada foi salvo.') > 0);
+    } else { check('v-33 · diariaAvulsaCent e vagasLimite existem', false, 'função não encontrada'); }
+
+    // ---- (b) A CONTA DAS VAGAS: reposição + avulso + troca, por FILHOt -------------
+    if (typeof ctx.vagasDoDia === 'function') {
+      const bkp33 = {};
+      ['PELUDINHOS', 'REPO_CACHE', 'TROCA_CACHE', 'REP_PLAN_CACHE',
+        'DASH_DADOS', 'DASH_DIA_SEL', 'dcValoresCfg', 'VAGAS_PEDIDOS'].forEach((k) => { bkp33[k] = ctx[k]; });
+      // pelCadCache e zHojeISO vivem na lexical scope do contexto (o mesmo motivo do DB):
+      // só se trocam por DENTRO, com runInContext.
+      vm.runInContext('__bkp33s = { cad: pelCadCache, hoje: zHojeISO };', ctx);
+      try {
+        vm.runInContext("zHojeISO = function(){ return '" + HOJE33 + "'; }; pelCadCache = {};", ctx);
+        ctx.dcValoresCfg = {};
+        ctx.PELUDINHOS = [
+          { n: 'Tablito', raca: 'Spitz', tutor: 'Duda', dias: ['seg', 'qua'] },
+          { n: 'Biscoito', raca: 'SRD', tutor: 'Rita', dias: ['ter'] },
+          { n: 'Toshi', raca: 'Shih Tzu', tutor: 'Kelly', dias: ['qui'] }
+        ];
+        // O Tablito não vem amanhã (crédito) e o tutor já marcou a volta para o dia 25.
+        ctx.REPO_CACHE = {
+          'tablito__duda': { lancamentos: { c1: { tipo: 'credito', data: AMANHA33, motivo: 'viagem', obs: '', volta: DEPOIS33, ts: 1 } } },
+          'biscoito__rita': { lancamentos: { c2: { tipo: 'credito', data: AMANHA33, motivo: 'viagem', obs: '', volta: '', ts: 2 } } }
+        };
+        ctx.TROCA_CACHE = {};
+        ctx.REP_PLAN_CACHE = {};
+        ctx.DASH_DADOS = {};
+        ctx.DASH_DIA_SEL = '';
+        ctx.VAGAS_PEDIDOS = {};
+        const semLer = ctx.vagasDoDia(DEPOIS33);
+        check('v-33 · enquanto o dia não foi lido, a tela DIZ que está conferindo — nunca afirma "tem vaga"',
+          semLer.lido === false && ctx.vagasFrase(semLer).indexOf('conferindo as vagas') === 0,
+          ctx.vagasFrase(semLer));
+        // o dia lido: o Tablito está agendado para repor; mais um avulso e uma troca.
+        ctx.REP_PLAN_CACHE = {};
+        ctx.REP_PLAN_CACHE[DEPOIS33] = { ts: Date.now(), auto: { reposicao: ['Tablito/Spitz'] },
+          avulso: { a1: { valor: 'Toshi/Shih Tzu' } } };
+        ctx.TROCA_CACHE[DEPOIS33] = { 'biscoito__rita': { nome: 'Biscoito/SRD', status: 'confirmada' } };
+        const v33 = ctx.vagasDoDia(DEPOIS33);
+        check('v-33 · a vaga do dia soma REPOSIÇÃO + AVULSO + troca, e conta FILHOt (o Tablito não conta duas vezes)',
+          v33.usadas === 3 && v33.reposicao.length === 1 && v33.avulso.length === 1
+          && v33.troca.length === 1 && v33.livres === 2 && v33.cheio === false && v33.lido === true,
+          JSON.stringify({ u: v33.usadas, r: v33.reposicao, a: v33.avulso, t: v33.troca }));
+        check('v-33 · a frase é a dela: "3 de 5 vagas em 25/09"',
+          ctx.vagasFrase(v33) === '3 de 5 vagas em 25/09/2026', ctx.vagasFrase(v33));
+        // o mesmo dia, com o limite estourado
+        ctx.REP_PLAN_CACHE[DEPOIS33].avulso = { a1: { valor: 'Toshi/Shih Tzu' }, a2: { valor: 'Bidu/SRD' },
+          a3: { valor: 'Nina/Poodle' }, a4: { valor: 'Lupin/Beagle' } };
+        const cheio33 = ctx.vagasDoDia(DEPOIS33);
+        check('v-33 · na sexta vaga o dia LOTA — e a conta diz quantas são de cada tipo',
+          cheio33.usadas === 6 && cheio33.cheio === true && cheio33.livres === 0
+          && ctx.vagasDetalheFrase(cheio33) === '1 de reposição · 4 de avulso · 1 de troca',
+          ctx.vagasDetalheFrase(cheio33));
+        check('v-33 · a Lista de troca passa a contar a MESMA coisa — nunca duas verdades na casa',
+          ctx.trocaVagasLivres(DEPOIS33) === 0 && ctx.trocaVagasLivres(AMANHA33) === ctx.vagasDoDia(AMANHA33).livres,
+          String(ctx.trocaVagasLivres(DEPOIS33)));
+
+        // ---- (c) O VEREDITO: tem crédito é reposição; não tem é avulso, com preço ----
+        const tablito = ctx.PELUDINHOS[0], toshi = ctx.PELUDINHOS[2];
+        ctx.REP_PLAN_CACHE[AMANHA33] = { ts: Date.now(), auto: {}, avulso: {} };
+        const vd1 = ctx.dxVeredito(tablito, AMANHA33);
+        check('v-33 · Duda avisou antes e o Tablito TEM crédito: o dia é REPOSIÇÃO, sem cobrar nada',
+          vd1.ok === true && vd1.tipo === 'reposicao' && vd1.valor_cent === 0 && vd1.saldo === 1,
+          JSON.stringify(vd1));
+        const vd2 = ctx.dxVeredito(toshi, AMANHA33);
+        check('v-33 · o Toshi NÃO tem crédito: o dia é AVULSO de R$ 170,00 (ele não é matriculado)',
+          vd2.ok === true && vd2.tipo === 'avulso' && vd2.valor_cent === 17000 && vd2.matriculado === false,
+          JSON.stringify(vd2));
+        vm.runInContext("pelCadCache = { 'toshi__kelly': { renov: { plano: 'Silver', inicio: '2026-09-01', fim: '2030-12-31' } } };", ctx);
+        const vd3 = ctx.dxVeredito(toshi, AMANHA33);
+        check('v-33 · com plano ativo na ficha, o MESMO dia avulso passa a custar R$ 97,00',
+          vd3.tipo === 'avulso' && vd3.valor_cent === 9700 && vd3.matriculado === true,
+          JSON.stringify(vd3));
+        vm.runInContext('pelCadCache = {};', ctx);
+        check('v-33 · fim de semana, dia que passou e dia sem escolher NÃO viram lançamento',
+          ctx.dxVeredito(toshi, '2026-09-26').ok === false
+          && ctx.dxVeredito(toshi, '2026-09-19').ok === false
+          && ctx.dxVeredito(toshi, '').ok === false && ctx.dxVeredito(null, AMANHA33).ok === false);
+        check('v-33 · e quem JÁ está marcado naquele dia não é marcado de novo',
+          ctx.dxVeredito(toshi, DEPOIS33).jaTem === true && ctx.dxVeredito(toshi, DEPOIS33).ok === false,
+          ctx.dxVeredito(toshi, DEPOIS33).motivo);
+
+        // ---- (d) A CONFIRMAÇÃO DA PLANILHA, crédito por crédito --------------------
+        ctx.REP_PLAN_CACHE[AMANHA33] = { ts: Date.now(), auto: {
+          _ts: Date.now(),
+          _estado: { faltas: { tablito: { planilha_ok: true, planilha_msg: '', ts: 1790000000000 } } }
+        }, avulso: {} };
+        const e1 = ctx.repPlanEstado(AMANHA33, tablito, 'faltas');
+        check('v-33 · o que a ponte ACEITOU vira "lançada na planilha ✓", com a hora',
+          e1.estado === 'ok' && ctx.repPlanLinhaHTML(tablito, AMANHA33, 'faltas').indexOf('lançada na planilha ✓') > 0,
+          ctx.repPlanLinhaHTML(tablito, AMANHA33, 'faltas'));
+        ctx.REP_PLAN_CACHE[AMANHA33].auto._estado.faltas.tablito =
+          { planilha_ok: false, planilha_msg: 'a planilha não tem a coluna Faltas Avisadas', ts: 1790000000000 };
+        const e2 = ctx.repPlanEstado(AMANHA33, tablito, 'faltas');
+        const l2 = ctx.repPlanLinhaHTML(tablito, AMANHA33, 'faltas');
+        check('v-33 · o que a ponte RECUSOU diz "NÃO foi para a planilha", com o motivo e o botão de tentar de novo',
+          e2.estado === 'falhou' && l2.indexOf('NÃO foi para a planilha — a planilha não tem a coluna') > 0
+          && l2.indexOf('tentar de novo') > 0 && l2.indexOf("repMandarAgora('" + AMANHA33 + "'") > 0,
+          l2);
+        delete ctx.REP_PLAN_CACHE[AMANHA33].auto._estado.faltas.tablito;
+        check('v-33 · o que ainda não foi promete "vai para a planilha em até 5 min" e dá o "Mandar agora"',
+          ctx.repPlanEstado(AMANHA33, tablito, 'faltas').estado === 'espera'
+          && ctx.repPlanLinhaHTML(tablito, AMANHA33, 'faltas').indexOf('vai para a planilha em até 5 min') > 0
+          && ctx.repPlanLinhaHTML(tablito, AMANHA33, 'faltas').indexOf('Mandar agora') > 0);
+        ctx.REP_PLAN_CACHE[AMANHA33].auto._erro = { msg: 'a ponte não respondeu', ts: 1 };
+        check('v-33 · dia que o automático NÃO conseguiu conferir não fica mudo: diz que não foi',
+          ctx.repPlanEstado(AMANHA33, tablito, 'faltas').estado === 'falhou');
+        delete ctx.REP_PLAN_CACHE[AMANHA33].auto._erro;
+        check('v-33 · registro anterior a esta versão não INVENTA confirmação — diz que não sabe',
+          ctx.repPlanEstado('2026-09-23', tablito, 'faltas').estado === 'lendo'
+          && ((ctx.REP_PLAN_CACHE['2026-09-23'] = { ts: Date.now(), auto: { faltas: ['Tablito/Spitz'] }, avulso: {} }),
+            ctx.repPlanEstado('2026-09-23', tablito, 'faltas').estado === 'antigo'));
+        check('v-33 · mas registro NOVO sem o nome ainda é "a caminho" — não vira "não sei"',
+          ((ctx.REP_PLAN_CACHE['2026-09-23'] = { ts: Date.now(), auto: { _ts: Date.now(), _estado_v: 1 }, avulso: {} }),
+            ctx.repPlanEstado('2026-09-23', tablito, 'faltas').estado === 'espera'),
+          ctx.repPlanEstado('2026-09-23', tablito, 'faltas').estado);
+        check('v-33 · dia fora da janela do automático não promete 5 minutos — manda usar o "Mandar agora"',
+          ctx.repPlanEstado('2026-11-30', tablito, 'reposicao').estado === 'fora'
+          && ctx.repPlanEstado('2026-09-10', tablito, 'faltas').estado === 'fora');
+        // o bloco da linha do FILHOt: a falta E o dia de repor, cada um com o seu estado
+        ctx.REP_PLAN_CACHE[AMANHA33].auto._estado = { faltas: { tablito: { planilha_ok: true, planilha_msg: '', ts: 1790000000000 } } };
+        ctx.REP_PLAN_CACHE[DEPOIS33] = { ts: Date.now(), auto: {
+          _ts: Date.now(), _estado: { reposicao: { tablito: { planilha_ok: true, planilha_msg: '', ts: 1790000000000 } } }
+        }, avulso: {} };
+        const bloco33 = ctx.repPlanBlocoHTML(tablito);
+        check('v-33 · a linha do FILHOt mostra a falta E o dia de repor, cada um com o seu estado',
+          bloco33.indexOf('Falta avisada de 22/09/2026 — lançada na planilha ✓') > 0
+          && bloco33.indexOf('Reposição em 25/09/2026 — lançada na planilha ✓') > 0,
+          bloco33);
+        check('v-33 · e os dias a conferir são só os de hoje para a frente — a planilha de março é história',
+          ctx.repDiasParaConferir().indexOf(AMANHA33) >= 0
+          && ctx.repDiasParaConferir().indexOf(DEPOIS33) >= 0
+          && ctx.repDiasParaConferir().every((d) => d >= HOJE33),
+          JSON.stringify(ctx.repDiasParaConferir()));
+
+        // ---- (e) O AUTOMÁTICO passa a GRAVAR a confirmação, nome por nome ----------
+        {
+          const dbA = criarDBComPush({});
+          const chamadas = [];
+          ctx.__v33ponte = (corpo) => {
+            chamadas.push(corpo);
+            if (corpo.acao === 'lerDia') return Promise.resolve({ ok: true, conteudo: {} });
+            if (corpo.valor && corpo.valor.indexOf('Biscoito') === 0)
+              return Promise.resolve({ ok: false, erro: 'a planilha não tem a coluna Faltas Avisadas' });
+            return Promise.resolve({ ok: true });
+          };
+          ctx.__v33db = dbA;
+          vm.runInContext('__bkp33p = { ponte: dashPonteChamar, db: DB, au: audit };'
+            + 'dashPonteChamar = function(c){ return __v33ponte(c); };'
+            + 'audit = function(){}; DB = __v33db;', ctx);
+          try {
+            const r33 = await ctx.dashAutoSincronizar(AMANHA33);
+            const noAuto = ((dbA.__store.daycare || {})['dashboard-auto'] || {})[AMANHA33] || {};
+            check('v-33 · o automático escreve as duas faltas avisadas de amanhã na planilha',
+              r33.ok === true && chamadas.filter((c) => c.acao === 'lancar' && c.coluna === 'Faltas Avisadas').length === 2,
+              JSON.stringify(chamadas.map((c) => c.acao + ':' + (c.valor || ''))));
+            check('v-33 · e GRAVA a confirmação nome por nome: o Tablito entrou, o Biscoito foi recusado com o motivo',
+              noAuto._estado_v === 1
+              && !!(noAuto._estado && noAuto._estado.faltas)
+              && noAuto._estado.faltas.tablito.planilha_ok === true
+              && noAuto._estado.faltas.biscoito.planilha_ok === false
+              && noAuto._estado.faltas.biscoito.planilha_msg.indexOf('não tem a coluna') >= 0,
+              JSON.stringify(noAuto._estado));
+            // e a tela lê exatamente isso
+            ctx.REP_PLAN_CACHE[AMANHA33] = { ts: Date.now(), auto: noAuto, avulso: {} };
+            check('v-33 · a tela de Reposições lê essa confirmação e conta a verdade dos dois',
+              ctx.repPlanEstado(AMANHA33, ctx.PELUDINHOS[0], 'faltas').estado === 'ok'
+              && ctx.repPlanEstado(AMANHA33, ctx.PELUDINHOS[1], 'faltas').estado === 'falhou');
+            // o dia que NEM deu para ler fica marcado como falha — nunca mudo
+            ctx.__v33ponte = () => Promise.resolve({ ok: false, erro: 'a ponte não respondeu' });
+            const rRuim = await ctx.dashAutoSincronizar('2026-09-23');
+            const noRuim = ((dbA.__store.daycare || {})['dashboard-auto'] || {})['2026-09-23'] || {};
+            check('v-33 · dia que a ponte recusou por inteiro fica ESCRITO como falha, com o motivo',
+              rRuim.ok === false && !!(noRuim._erro && noRuim._erro.msg),
+              JSON.stringify(noRuim._erro || null));
+          } finally {
+            vm.runInContext('dashPonteChamar = __bkp33p.ponte; DB = __bkp33p.db; audit = __bkp33p.au;', ctx);
+          }
+        }
+
+        // ---- (f) O AVULSO que nasce sozinho no dia certo, com o preço --------------
+        {
+          const dbB = criarDBComPush({});
+          ctx.__v33db2 = dbB;
+          const avisos33 = [];
+          ctx.__v33avisos = avisos33;
+          vm.runInContext('__bkp33l = { db: DB, esp: dashEspelhar, rd: renderDash, au: audit, al: zAlertao, det: DASH_DET, sel: DASH_SEL, seli: DASH_SEL_I, turma: DC_DASH_TURMA };'
+            + 'DB = __v33db2; dashEspelhar = function(){ return Promise.resolve({ok:true}); };'
+            + 'renderDash = function(){}; audit = function(a,b){ __v33avisos.push(b); };'
+            + 'zAlertao = function(t,l){ __v33avisos.push(t); };'
+            + "DASH_DET = {}; DASH_SEL = {}; DASH_SEL_I = {}; DC_DASH_TURMA = { reposicao:[], avulso:[], quando:0, dia:'' };", ctx);
+          try {
+            const okAv = await ctx.dxLancarAvulso(ctx.PELUDINHOS[2], AMANHA33, 17000, false, null);
+            await drenar(6);
+            const lanc = (((dbB.__store.daycare || {}).dashboard || {})[AMANHA33] || {}).avulso || {};
+            const um = lanc[Object.keys(lanc)[0]] || {};
+            check('v-33 · o avulso entra nos Lançamentos do DIA ESCOLHIDO — não no dia aberto na outra tela',
+              okAv === true && Object.keys(lanc).length === 1 && um.valor === 'Toshi/Shih Tzu',
+              JSON.stringify(Object.keys((dbB.__store.daycare || {}).dashboard || {})));
+            check('v-33 · e o lançamento guarda QUANTO foi cobrado e se ele é matriculado',
+              um.det && um.det.valor_cent === 17000 && um.det.matriculado === false,
+              JSON.stringify(um.det || null));
+            check('v-33 · a célula da planilha continua só com o nome — dinheiro não vai para a TV',
+              String(um.valor).indexOf('R$') < 0 && String(um.valor).indexOf('170') < 0, String(um.valor));
+            check('v-33 · e a tela de Lançamentos volta para o dia em que estava — nada é sequestrado',
+              ctx.DASH_DIA_SEL === '');
+            // o avulso do matriculado sai por R$ 97,00
+            const okAv2 = await ctx.dxLancarAvulso(ctx.PELUDINHOS[1], AMANHA33, 9700, true, { quem: 'Márcia', ts: 5 });
+            await drenar(6);
+            const lanc2 = (((dbB.__store.daycare || {}).dashboard || {})[AMANHA33] || {}).avulso || {};
+            const doMat = Object.keys(lanc2).map((k) => lanc2[k]).filter((x) => String(x.valor).indexOf('Biscoito') === 0)[0] || {};
+            check('v-33 · o avulso de quem é matriculado sai por R$ 97,00, com a autorização registrada',
+              doMat.det && doMat.det.valor_cent === 9700 && doMat.det.matriculado === true
+              && doMat.det.autorizacao && doMat.det.autorizacao.quem === 'Márcia',
+              JSON.stringify(doMat.det || null));
+            check('v-33 · e o preço de um NÃO gruda no próximo: o detalhe é zerado depois de lançar',
+              !((ctx.DASH_DET || {}).avulso || {}).valor_cent,
+              JSON.stringify((ctx.DASH_DET || {}).avulso || null));
+          } finally {
+            vm.runInContext('DB = __bkp33l.db; dashEspelhar = __bkp33l.esp; renderDash = __bkp33l.rd;'
+              + 'audit = __bkp33l.au; zAlertao = __bkp33l.al; DASH_DET = __bkp33l.det; DASH_SEL = __bkp33l.sel;'
+              + 'DASH_SEL_I = __bkp33l.seli; DC_DASH_TURMA = __bkp33l.turma;', ctx);
+          }
+        }
+
+        // ---- (g) DIA LOTADO: a consultora pede, a Márcia autoriza ------------------
+        {
+          const papelAntes = ctx.__ROLE__.role;
+          const dbC = criarDBComPush({});
+          ctx.__v33db3 = dbC;
+          const rastro33 = [];
+          ctx.__v33rastro = rastro33;
+          vm.runInContext('__bkp33g = { db: DB, au: audit, perg: zPergunta, al: zAlertao, tg: tgAvisar, tgg: tgGrupoNaPonte, pt: pessoaDoTurno, esp: dashEspelhar, rd: renderDash, rr: renderReposicao };'
+            + 'DB = __v33db3; audit = function(a,b){ __v33rastro.push(a+"|"+b); };'
+            + 'zPergunta = function(){ return Promise.resolve(true); }; zAlertao = function(){};'
+            + 'tgGrupoNaPonte = function(){ return Promise.resolve(false); };'
+            + 'tgAvisar = function(){ return Promise.resolve({ok:true}); };'
+            + "pessoaDoTurno = function(){ return 'Leticya'; };"
+            + 'dashEspelhar = function(){ return Promise.resolve({ok:true}); };'
+            + 'renderDash = function(){}; renderReposicao = function(){};', ctx);
+          try {
+            ctx.VAGAS_PEDIDOS = {};
+            // o dia 25 volta a ficar LOTADO: 1 reposição + 4 avulsos + 1 troca = 6 de 5
+            ctx.REP_PLAN_CACHE[DEPOIS33].avulso = { a1: { valor: 'Bidu/SRD' }, a2: { valor: 'Nina/Poodle' },
+              a3: { valor: 'Lupin/Beagle' }, a4: { valor: 'Mel/Pug' } };
+            ctx.__ROLE__.role = 'consultora';
+            check('v-33 · a consultora NÃO abre vaga acima do limite',
+              ctx.vagasPodeEncaixar() === false);
+            const avisoCons = ctx.vagasAvisoHTML(DEPOIS33, 'dxPedir()');
+            check('v-33 · para ela o dia lotado é faixa vermelha, "Peça à Márcia" e o botão de autorizar DESABILITADO',
+              avisoCons.indexOf('Dia lotado (6 de 5)') > 0 && avisoCons.indexOf('Peça à Márcia') > 0
+              && avisoCons.indexOf('>Avisar a Márcia<') > 0
+              && /<button type="button" class="vg-bt" disabled[^>]*>Márcia autorizou<\/button>/.test(avisoCons),
+              avisoCons.slice(0, 300));
+            const pedido = await ctx.vagasPedir(DEPOIS33, ctx.PELUDINHOS[2], 'avulso', { valor_cent: 17000, matriculado: false });
+            await drenar(4);
+            const gravado = (((dbC.__store.daycare || {})['vagas-pedidos'] || {})[DEPOIS33] || {})['toshi__kelly'] || {};
+            check('v-33 · "Avisar a Márcia" grava o pedido com QUEM pediu, quando e o que será lançado',
+              gravado.quem === 'Leticya' && gravado.ts > 0 && gravado.tipo === 'avulso'
+              && gravado.status === 'pedido' && gravado.payload.valor_cent === 17000
+              && rastro33.some((x) => x.indexOf('vaga-pedido|') === 0),
+              JSON.stringify(gravado));
+            ctx.VAGAS_PEDIDOS = (dbC.__store.daycare || {})['vagas-pedidos'] || {};
+            const cardM = ctx.vagasEncaixesCardHTML();
+            check('v-33 · e o pedido aparece no Dashboard da Márcia, no quadro "Pedidos de encaixe"',
+              cardM.indexOf('Pedidos de encaixe') > 0 && cardM.indexOf('Toshi') > 0
+              && cardM.indexOf('25/09/2026') > 0,
+              cardM.slice(0, 220));
+            check('v-33 · para a consultora o quadro NÃO oferece o botão de autorizar',
+              cardM.indexOf('vagasAutorizar(') < 0 && cardM.indexOf('com a Márcia') > 0);
+            // agora a Márcia
+            ctx.__ROLE__.role = 'gestao';
+            const cardG = ctx.vagasEncaixesCardHTML();
+            check('v-33 · para a Gestão o MESMO quadro traz "Autorizar" e "Recusar"',
+              cardG.indexOf("vagasAutorizar('" + DEPOIS33 + "','toshi__kelly')") > 0
+              && cardG.indexOf("vagasRecusar('" + DEPOIS33 + "','toshi__kelly')") > 0);
+            const avisoGes = ctx.vagasAvisoHTML(DEPOIS33, 'dxPedir()');
+            ctx.dxPel = ctx.PELUDINHOS[2]; ctx.dxDia = DEPOIS33;
+            const rotGes = ctx.dxBotaoRotulo();
+            ctx.__ROLE__.role = 'consultora';
+            const rotCons = ctx.dxBotaoRotulo();
+            ctx.__ROLE__.role = 'gestao';
+            check('v-33 · e para ela o botão de gravar vira «Márcia autorizou» — para a consultora, não',
+              avisoGes.indexOf('«Márcia autorizou»') > 0 && avisoGes.indexOf('Peça à Márcia') < 0
+              && rotGes === 'Márcia autorizou' && rotCons !== 'Márcia autorizou',
+              rotGes + ' / ' + rotCons);
+            await ctx.vagasAutorizar(DEPOIS33, 'toshi__kelly');
+            await drenar(8);
+            const depois = (((dbC.__store.daycare || {})['vagas-pedidos'] || {})[DEPOIS33] || {})['toshi__kelly'] || {};
+            const lancAut = (((dbC.__store.daycare || {}).dashboard || {})[DEPOIS33] || {}).avulso || {};
+            const umAut = lancAut[Object.keys(lancAut)[0]] || {};
+            check('v-33 · autorizar GRAVA quem autorizou e quando — a decisão tem dono',
+              depois.status === 'autorizado' && depois.autorizado_por === 'Leticya' && depois.autorizado_ts > 0
+              && rastro33.some((x) => x.indexOf('vaga-autorizada|') === 0),
+              JSON.stringify(depois));
+            check('v-33 · e o lançamento acontece no mesmo gesto, com o preço e a autorização dentro dele',
+              Object.keys(lancAut).length === 1 && umAut.det && umAut.det.valor_cent === 17000
+              && umAut.det.autorizacao && umAut.det.autorizacao.quem === 'Leticya',
+              JSON.stringify(umAut.det || null));
+          } finally {
+            ctx.__ROLE__.role = papelAntes;
+            vm.runInContext('DB = __bkp33g.db; audit = __bkp33g.au; zPergunta = __bkp33g.perg; zAlertao = __bkp33g.al;'
+              + 'tgAvisar = __bkp33g.tg; tgGrupoNaPonte = __bkp33g.tgg; pessoaDoTurno = __bkp33g.pt;'
+              + 'dashEspelhar = __bkp33g.esp; renderDash = __bkp33g.rd; renderReposicao = __bkp33g.rr;', ctx);
+          }
+        }
+      } finally {
+        Object.keys(bkp33).forEach((k) => { ctx[k] = bkp33[k]; });
+        vm.runInContext('pelCadCache = __bkp33s.cad; zHojeISO = __bkp33s.hoje;', ctx);
+      }
+    } else { check('v-33 · vagasDoDia existe', false, 'função não encontrada'); }
+
+    // ---- (h) a tela: o gesto do Dia extra e o aviso de vagas existem de verdade ----
+    check('v-33 · a tela de Reposições ganhou o botão "Dia extra" e o modal que decide',
+      html.indexOf('onclick="dxAbrir()"') > 0 && /<div id="dxModal"/.test(html)
+      && /id="dxData"[^>]*onchange="dxDiaMudou\(\)"/.test(html)
+      && /onclick="dxConfirmar\(\)"/.test(html) && /id="repEncaixes"/.test(html));
+    check('v-33 · e o dia de repor da falta avisada mostra as vagas ao ser escolhido',
+      /id="repVolta"[^>]*onchange="repVoltaMudou\(\)"/.test(html) && /id="repVagasBox"/.test(html));
+    check('v-33 · o Dashboard da Márcia ganhou o quadro dos pedidos, e o painel diz que ali ele grava',
+      html.indexOf('id="poCardEncaixes"') > 0
+      && html.indexOf('A única exceção é <strong>Pedidos de encaixe</strong>') > 0);
+    check('v-33 · o pedido de encaixe mora em daycare/vagas-pedidos e tem ouvinte próprio',
+      /DB\.ref\('daycare\/vagas-pedidos\/'\+dia\+'\/'\+ch\)\.set\(reg\)/.test(html)
+      && /DB\.ref\('daycare\/vagas-pedidos'\)\.on\('value'/.test(html)
+      && /try\{ vagasPedCarregar\(\); \}catch\(e\)\{\}/.test(html));
+
+    check('v-33 · a versão carimbada desta entrega é a 2026-09-21-06',
+      /const APP_VERSAO='2026-09-21-06';/.test(html));
   }
   console.log('');
 
