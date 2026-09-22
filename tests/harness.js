@@ -4198,15 +4198,24 @@ async function main() {
           && !(((dbV27.__store.daycare || {}).pendencias || {}).batata__roberta || {}).banho);
 
         // ---- (e) a varredura do dia que fechou (o caso do Caco) --------------------
-        await dbV27.ref('daycare/dashboard/2026-09-22/coleira').set({
+        // 22/set/2026: este trecho usava a data fixa 2026-09-22. Ela era futuro quando o
+        // teste foi escrito e virou HOJE com a virada do calendário — aí o lançamento do
+        // Caco passou a existir no dia de hoje, o "Resolvido hoje" viu o item já lançado e
+        // fechou a pendência sozinho, derrubando três checagens sem defeito nenhum no app.
+        // O dia agora NASCE de hoje: um dia já fechado (hoje − 2), que nunca coincide com o
+        // dia em que o relançamento cai. Assim a checagem não apodrece com o calendário.
+        const diaAtras27 = (n) => { const d = new Date(ctx.dcDataKey() + 'T12:00:00');
+          d.setDate(d.getDate() - n); return d.toISOString().slice(0, 10); };
+        const DIA_FECHADO_27 = diaAtras27(2);
+        await dbV27.ref('daycare/dashboard/' + DIA_FECHADO_27 + '/coleira').set({
           c1: { valor: 'Caco/Lhasa (A COLEIRA VEIO · AQUI)', chave: 'caco__ana', hora: '' } });
-        await dbV27.ref('daycare/chamada/2026-09-22/caco__ana').set('faltou');
-        const abertas = await ctx.pendVarrerDia('2026-09-22', ['caco__ana']);
+        await dbV27.ref('daycare/chamada/' + DIA_FECHADO_27 + '/caco__ana').set('faltou');
+        const abertas = await ctx.pendVarrerDia(DIA_FECHADO_27, ['caco__ana']);
         await drenar(8);
         const doCaco = ((dbV27.__store.daycare || {}).pendencias || {}).caco__ana || {};
-        check('v-27 · lançado ANTES (para a terça 22) e ele não foi: a varredura do dia abre a pendência',
+        check('v-27 · lançado ANTES (para um dia que já fechou) e ele não foi: a varredura do dia abre a pendência',
           abertas === 1 && !!doCaco.coleira && doCaco.coleira.status === 'aberta'
-          && doCaco.coleira.dia === '2026-09-22', JSON.stringify(doCaco));
+          && doCaco.coleira.dia === DIA_FECHADO_27, JSON.stringify(doCaco));
         check('v-27 · a varredura roda no fecho automático do dia E quando alguém marca a falta',
           /pendVarrerDia\(hoje, marcados\.map\(function\(m\)\{ return m\.k; \}\)\)/.test(html)
           && /if\(next==='faltou' && typeof pendVarrerDia==='function'\) pendVarrerDia\(dcDataKey\(\), \[k\]\);/.test(html)
@@ -10586,7 +10595,7 @@ async function main() {
         ctx.IA_REV = {}; ctx.IA_REV_LIDO = true; ctx.IA_REV_ERRO = '';
         ctx.iaRevEsquecerCache();
 
-        // 1) os 12 do retrato aparecem na mesa marcados como "parece uma negativa"
+        // 1) os campos do retrato que parecem negativa aparecem na mesa marcados assim
         const CAMPOS = ['alergia', 'restricao', 'restricoes', 'ea_restr'];
         const esperados = [];
         Object.keys(ctx.__cadIA).forEach((k) => {
@@ -10600,9 +10609,17 @@ async function main() {
         const itens = ctx.iaRevItens();
         const negs = itens.filter((x) => x.estado === 'negativa').map((x) => x.k + '/' + x.campo);
         const faltando = esperados.filter((x) => negs.indexOf(x) < 0);
-        check('a mesa lista os 12 campos do retrato como "A revisar — parece uma negativa" (os mesmos que a ferramenta acha)',
-          esperados.length === 12 && faltando.length === 0 && negs.length === esperados.length,
-          'ferramenta=' + esperados.length + ' mesa=' + negs.length + (faltando.length ? (' faltando: ' + faltando.join(' · ')) : ''));
+        // 22/set/2026: aqui estava escrito o número 12 na unha. Essa âncora apodrece —
+        // basta alguém corrigir uma ficha no retrato e o teste cai sem defeito nenhum no
+        // app (foi o que aconteceu: o retrato passou a ter 11). O que de fato protege é a
+        // comparação entre DUAS fontes independentes que o próprio teste já calcula: a
+        // ferramenta (zNegativaPura varrendo o retrato) e a mesa (iaRevItens). As duas têm
+        // de dar o MESMO número, e esse número tem de ser pelo menos 1 — senão a mesa
+        // estaria vazia e a comparação não provaria nada.
+        const N_NEG = esperados.length;
+        check('a mesa lista os ' + N_NEG + ' campos do retrato como "A revisar — parece uma negativa" (os mesmos que a ferramenta acha — ferramenta === mesa, nunca um número fixo)',
+          N_NEG >= 1 && faltando.length === 0 && negs.length === N_NEG,
+          'ferramenta=' + N_NEG + ' mesa=' + negs.length + (faltando.length ? (' faltando: ' + faltando.join(' · ')) : ''));
         const jas = itens.filter((x) => x.k === 'jasmin__riva' && x.campo === 'alergia')[0];
         check('a Jasmin está na mesa com o texto CRU da tutora à vista, o campo que a IA usou e a marcação sugerida',
           !!jas && jas.estado === 'negativa' && /até o presente momento/i.test(String(jas.valor || '')) &&
@@ -10611,9 +10628,10 @@ async function main() {
         check('a marcação é SUGERIDA, nunca aplicada: o campo continua gravado na ficha até alguém decidir',
           !!jas && String(ctx.pelExtra(jas.p).alergia || '').trim() === jas.valor && jas.valor !== '');
         const htmlMesa = ctx.iaRevBoxHtml();
-        check('a tela da mesa mostra os 12, o botão de limpar todos e diz que a IA só sugere',
-          /12 parecem uma negativa/.test(htmlMesa) &&
-          /Limpar todos os 12 que parecem uma negativa/.test(htmlMesa) &&
+        // Mesmo motivo: a tela tem de mostrar o número que a ferramenta achou, seja ele qual for.
+        check('a tela da mesa mostra os ' + N_NEG + ', o botão de limpar todos e diz que a IA só sugere',
+          new RegExp(N_NEG + ' parecem uma negativa').test(htmlMesa) &&
+          new RegExp('Limpar todos os ' + N_NEG + ' que parecem uma negativa').test(htmlMesa) &&
           /A IA apenas sugere: nada muda sem um toque seu/.test(htmlMesa) &&
           /O TUTOR ESCREVEU/.test(htmlMesa));
 
