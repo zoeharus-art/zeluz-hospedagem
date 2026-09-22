@@ -4589,7 +4589,7 @@
           <!-- O DIA EXTRA (Adriana, 21/set/2026): "se o tutor já avisou o dia, precisa ir
                para avulso". Um gesto só — o app decide se é reposição (tem crédito) ou
                avulso (não tem), e o avulso já entra nos Lançamentos daquele dia. -->
-          <button class="btn" style="padding:10px 18px;background:var(--z-cream-warm);color:var(--z-blue);border:1.5px solid var(--line)" onclick="dxAbrir()">+ Dia extra (ele vem em outro dia)</button>
+          <button class="btn" style="padding:10px 18px;background:var(--z-cream-warm);color:var(--z-blue);border:1.5px solid var(--line)" onclick="dxAbrir()">+ Marcar reposição ou dia extra (ele vem em outro dia)</button>
         </div>
       </div>
       <div id="repEncaixes" style="margin-top:12px"></div>
@@ -4698,7 +4698,7 @@
        matriculado, já lançado nos Lançamentos daquele dia. -->
   <div id="dxModal" onclick="if(event.target===this)dxFechar()">
     <div class="rep-card">
-      <div class="rep-tit">Dia extra — ele vem em outro dia</div>
+      <div class="rep-tit">Marcar reposição ou dia extra — escolha o dia em que ele vem</div>
       <div class="rep-sub">O tutor avisou que o peludinho vem num dia que não é o dele. Eu confiro o <strong>crédito de reposição</strong> e digo se o dia é <strong>reposição</strong> (não se cobra) ou <strong>avulso</strong> (diária a mais). Nada é gravado antes do botão.</div>
 
       <label class="rep-lb">Qual peludinho?</label>
@@ -7610,7 +7610,7 @@
         +(o.saldo>0?'<button class="usar" onclick="repUsar('+o.i+')">Veio repor hoje</button>':'')
         +'<button onclick="repAbrirExtrato('+o.i+')">Extrato</button>'
         +'<button onclick="repAbrirLancar(PELUDINHOS['+o.i+'])">+ Falta</button>'
-        +'<button onclick="dxAbrir(PELUDINHOS['+o.i+'])">Dia extra</button>'
+        +'<button onclick="dxAbrir(PELUDINHOS['+o.i+'])">Marcar reposição</button>'
         +'</div></div>';
     }).join('');
   }
@@ -15151,7 +15151,7 @@
   // inteira DEPOIS de a correção estar publicada — o aviso apareceu, ninguém tocou.
   // Agora o aparelho PARADO recarrega sozinho: trancado, com a aba escondida, na porta de
   // entrada ou 3 minutos sem ninguém tocar nele. Mão na tela = nunca recarrega.
-  const APP_VERSAO='2026-09-22-03';
+  const APP_VERSAO='2026-09-22-04';
   var RECARGA_PARADO_MS=3*60*1000, __versaoPublicada=null, __recargaTimer=null;
   function vigiarVersao(){
     if(!DB) return;
@@ -31342,7 +31342,12 @@
     var dep=Math.max(0, saldoAntes-1);
     var tinha=(saldoAntes===1)?'tinha 1 reposição':('tinha '+saldoAntes+' reposições');
     var fica=(dep>0)?('ficará com '+dep):'ficará sem reposições';
-    return (tutor?(tutor+', '):'')+o+' '+pelNome(p)+' '+tinha+'; como usou 1 em '+repBRdata(diaISO)+', '+fica
+    // Adriana, 22/set/2026: "a tutora vai vir dia 23, e hoje é 22 — 'como usou uma em 23/09'
+    // está errado; tem que ser 'usará'". O verbo obedece ao dia: futuro = usará.
+    var hojeR=(typeof hojeISO==='function')?hojeISO():((typeof dcDataKey==='function')?dcDataKey():'');
+    var verbo=(diaISO&&hojeR&&diaISO>hojeR)?'usará':'usou';
+    var quandoR=(diaISO&&hojeR&&diaISO===hojeR)?'hoje':('em '+repBRdata(diaISO));
+    return (tutor?(tutor+', '):'')+o+' '+pelNome(p)+' '+tinha+'; como '+verbo+' 1 '+quandoR+', '+fica
       +'. As reposições também podem ser usadas em hospedagem, ficando somente o valor da pernoite para acerto.';
   }
   function dashRepAbater(p, saldoAntes){
