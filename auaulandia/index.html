@@ -15151,7 +15151,7 @@
   // inteira DEPOIS de a correção estar publicada — o aviso apareceu, ninguém tocou.
   // Agora o aparelho PARADO recarrega sozinho: trancado, com a aba escondida, na porta de
   // entrada ou 3 minutos sem ninguém tocar nele. Mão na tela = nunca recarrega.
-  const APP_VERSAO='2026-09-22-04';
+  const APP_VERSAO='2026-09-22-05';
   var RECARGA_PARADO_MS=3*60*1000, __versaoPublicada=null, __recargaTimer=null;
   function vigiarVersao(){
     if(!DB) return;
@@ -23164,6 +23164,9 @@
         var out=[];
         Object.keys(d[campo]||{}).forEach(function(id){
           var valor=String((d[campo][id]||{}).valor||'');
+          // O lançamento que nasceu sem ficha de propósito (a avaliação da Márcia) não é
+          // "lançamento sem cadastro": não entra na turma nem vira acusação à recepção.
+          if(dashForaDoCadastro(d[campo][id])) return;
           // o detalhe entre parênteses não é nome: "Billy Paul/Westie (SHAMPOO)" → "Billy Paul/Westie"
           var limpo=valor.replace(/\s*\(.*\)\s*$/,'').trim();
           if(!limpo) return;
@@ -30677,7 +30680,11 @@
       {c:'onde', rot:'Onde está o shampoo?',   ops:DASH_SHAM_ONDE, obrig:true, dep:{c:'sham', v:['SHAMPOO','LOJA']}}]},
     {k:'vet',           t:'Veterinário',                col:'Veterinário',                    colHora:'Hora Veterinário',hora:true, icone:'🩺'},
     {k:'saicedo',       t:'Sai mais cedo',              col:'Peludinho que sairá cedo',       colHora:'Hora Saída Cedo', hora:true, icone:'🚶'},
-    {k:'avaliacao',     t:'Avaliação (Márcia)',         col:'Avaliação',                      colHora:'Horário',         hora:true, icone:'📋'},
+    // foraDoCadastro (Adriana, 22/set/2026): a avaliação da Márcia acontece ANTES do
+    // cadastro — "a gente está conhecendo o peludo, então a gente não tem ele no cadastro".
+    // Só ESTE item aceita o nome escrito à mão. Continua sendo lançamento do dia: aqui NÃO
+    // nasce ficha nenhuma — o cadastro é um só, feito pela Recepção depois.
+    {k:'avaliacao',     t:'Avaliação (Márcia)',         col:'Avaliação',                      colHora:'Horário',         hora:true, icone:'📋', foraDoCadastro:true},
     {k:'avulso',        t:'Avulso',                     col:'Avulso',                         icone:'📌'},
     // Medicação (Adriana, 18/set/2026): o remédio de cada FILHOt é o dele — "medicamento de
     // ouvido" não cabe em botão nenhum. Por isso o QUAL é escrito à mão (o único campo de
@@ -31000,6 +31007,9 @@
                return '<div class="pair" style="padding:6px 0;border-bottom:1px solid var(--line)">'
                  +'<span class="k"><strong>'+escAttr(o.valor||'')+'</strong>'
                  +(o.hora?(' <span style="color:var(--z-blue-soft);font-weight:800">'+escAttr(o.hora)+'</span>'):'')
+                 // Nome escrito à mão na avaliação: não é erro de digitação nem FILHOt perdido —
+                 // é quem ainda está sendo conhecido. A tela diz isso com todas as letras.
+                 +(dashForaDoCadastro(o)?(' <span style="color:var(--z-blue);font-weight:800;font-size:11.5px">em avaliação, sem cadastro ainda</span>'):'')
                  +(o.planilha_ok===false
                     ?(' <span style="color:var(--crm-critico);font-weight:800;font-size:11.5px">'+(dashPlanFilaMorto(o)?'NÃO foi para a TV — reenvio automático esgotado':'NÃO foi para a TV')+'</span>'
                       +' <button class="btn" style="background:none;border:none;color:var(--z-blue);font-size:11.5px;text-decoration:underline;padding:0 4px" onclick="dashReenviar(\''+it.k+'\',\''+id+'\',this)">reenviar</button>')
@@ -31016,11 +31026,16 @@
              }).join('')+'</div>')
           : '<div class="hint">Ninguém lançado hoje.</div>')
         +'<div style="margin-top:8px">'
-        +((it.campos&&DASH_SEL[it.k])
+        +(DASH_FORA[it.k]
+          ? dashForaPainelHTML(it)
+          : (it.campos&&DASH_SEL[it.k])
           ? dashPainelHTML(it)
           : ('<input class="cad-in" id="dashB_'+it.k+'" placeholder="Buscar o FILHOt pelo nome…" autocomplete="off" oninput="dashSugerir(\''+it.k+'\')">'
              +(it.hora?('<div style="margin-top:6px"><label class="cad-lb">Horário</label><input type="time" class="cad-in" id="dashH_'+it.k+'" style="max-width:140px"></div>'):'')
-             +'<div id="dashS_'+it.k+'" style="display:flex;flex-wrap:wrap;gap:5px;margin-top:6px"></div>'))
+             +'<div id="dashS_'+it.k+'" style="display:flex;flex-wrap:wrap;gap:5px;margin-top:6px"></div>'
+             // O caminho de quem ainda não tem ficha. Fica SEMPRE visível, abaixo das
+             // sugestões: quem não achou o nome não pode ficar adivinhando se há saída.
+             +(it.foraDoCadastro?dashForaBotaoHTML(it.k):'')))
         +'</div></div>';
     }).join('');
     DASH_ITENS.forEach(function(i){
@@ -31103,6 +31118,10 @@
   }
   // O que ainda não foi respondido. Vira frase na tela — nunca um botão que não responde.
   function dashDetFalta(k){
+    // Quem escreve o nome à mão tem outra lista de obrigatórios (Nome, Raça e Horário)
+    // — e é a MESMA função que o botão consulta, para ele nunca dizer "Lançar" e depois
+    // recusar.
+    if(DASH_FORA[k]) return dashForaFalta(k);
     var it=dashItem(k); if(!it||!it.campos) return '';
     var d=dashDet(k), falta=[];
     // O horário faz o alarme tocar na TV. No painel ele mora aqui dentro, então é aqui
@@ -31208,6 +31227,132 @@
       +' kg — a faixa e a folga da virada mudam em Configurações &rsaquo; Valores do Day Care.</div>'
       +(dif?('<div class="hint" style="margin-top:4px;color:var(--crm-atencao-text);font-weight:700">A quantidade marcada está diferente da sugestão pelo peso. Se foi de propósito, siga — quem dá o remédio é você.</div>'):'')
       +'</div>';
+  }
+  // ===== A AVALIAÇÃO DE QUEM AINDA NÃO TEM FICHA (Adriana, 22/set/2026) ==========
+  // "A gente está conhecendo o peludo, então a gente não tem ele no cadastro. Então a
+  //  gente pode escrever livremente nesse momento. O nome e a raça do peludo são
+  //  obrigatórios. (…) Eu estou colocando aqui, não tem como salvar."
+  // A avaliação da Márcia acontece ANTES do cadastro — e a busca, que só enxerga quem já
+  // tem ficha, não deixava marcar a avaliação de amanhã. Agora deixa: um mini-painel com o
+  // nome escrito à mão, no lugar da busca.
+  // O que isto NÃO é: criação de ficha. Cadastro é UM SÓ, feito pela Recepção depois, em
+  // Peludinhos (a lei de 03/ago/2026). Aqui nasce um LANÇAMENTO DO DIA e nada mais — por
+  // isso o registro vai marcado com `fora_do_cadastro` e sem `chave` de ficha nenhuma.
+  var DASH_FORA={};   // {item: true} — o mini-painel de escrever o nome está aberto
+  var DASH_FORA_SEXO=[{v:'MACHO',t:'Macho'},{v:'FÊMEA',t:'Fêmea'}];
+  var DASH_FORA_CASTR=[{v:'SIM',t:'Sim'},{v:'NÃO',t:'Não'},{v:'NÃO SEI',t:'Não sei'}];
+  // Nome e raça vão para a planilha como foram escritos (só sem espaço sobrando). Barras e
+  // parênteses saem: são eles que separam "Nome/Raça" e o detalhe — deixá-los passar faria
+  // a célula mentir sobre onde termina o nome.
+  function dashForaLimpo(v){
+    return String(v==null?'':v).replace(/[\/()]/g,' ').replace(/\s+/g,' ').trim();
+  }
+  // Castração em português de verdade: fêmea é castradA. Sem o sexo respondido fica no
+  // masculino — a forma neutra da língua, não um palpite sobre o FILHOt.
+  function dashForaCastrTexto(castr, sexo){
+    var c=String(castr||'').toUpperCase(); if(!c) return '';
+    var a=(String(sexo||'').toUpperCase()==='FÊMEA')?'CASTRADA':'CASTRADO';
+    if(c==='SIM') return a;
+    if(c==='NÃO') return 'NÃO '+a;
+    return 'NÃO SEI SE '+a;
+  }
+  // O que vai para a planilha: "Cadu/Spitz (MACHO · NÃO SEI SE CASTRADO)". O parêntese só
+  // existe se algo opcional foi respondido — sem nada, é só "Cadu/Spitz", igual ao que a
+  // busca escreveria. Sem nome ou sem raça não há valor nenhum: são os dois obrigatórios.
+  function dashForaValor(k){
+    var d=dashDet(k);
+    var nome=dashForaLimpo(d.nome), raca=dashForaLimpo(d.raca);
+    if(!nome||!raca) return '';
+    var partes=[];
+    if(d.sexo) partes.push(String(d.sexo).toUpperCase());
+    var c=dashForaCastrTexto(d.castrado, d.sexo); if(c) partes.push(c);
+    return nome+'/'+raca+(partes.length?(' ('+partes.join(' · ')+')'):'');
+  }
+  // O que ainda falta — cobrado na tela, nunca em silêncio. A ordem é a da leitura do
+  // painel: primeiro o nome, depois a raça, por último o relógio.
+  function dashForaFalta(k){
+    var d=dashDet(k), falta=[];
+    if(!dashForaLimpo(d.nome)) falta.push('Nome');
+    if(!dashForaLimpo(d.raca)) falta.push('Raça');
+    var it=dashItem(k);
+    if(it&&it.hora){
+      var _h=''; try{ _h=String((document.getElementById('dashH_'+k)||{}).value||''); }catch(e){} /* silencioso de propósito: guarda defensiva — se o valor não vier, o anterior continua valendo */
+      if(!_h) falta.push('Horário');
+    }
+    return falta.join(' · ');
+  }
+  // O lançamento que nasceu sem ficha. Serve para a tela NÃO o acusar de "lançamento sem
+  // cadastro": ele está assim de propósito — é o FILHOt que a Márcia vai conhecer.
+  function dashForaDoCadastro(reg){
+    return !!(reg && reg.det && reg.det.fora_do_cadastro);
+  }
+  function dashForaAbrir(k){
+    var it=dashItem(k); if(!it||!it.foraDoCadastro) return;
+    DASH_FORA[k]=true; DASH_DET[k]={};
+    delete DASH_SEL[k]; delete DASH_SEL_I[k];
+    try{ renderDash(); }catch(e){} /* silencioso de propósito: redesenho de tela — falhar não pode derrubar quem chamou */
+  }
+  function dashForaFechar(k){
+    delete DASH_FORA[k]; DASH_DET[k]={};
+    try{ renderDash(); }catch(e){} /* silencioso de propósito: redesenho de tela — falhar não pode derrubar quem chamou */
+  }
+  function dashForaBotaoHTML(k){
+    return '<button type="button" class="btn" style="margin-top:8px;width:100%;padding:8px 12px;font-size:12.5px;font-weight:800;border:1.5px dashed var(--z-blue);background:var(--z-cream-warm);color:var(--z-blue)"'
+      +' onclick="dashForaAbrir(\''+k+'\')">Não está no cadastro? Escrever o nome</button>';
+  }
+  function dashForaPainelHTML(it){
+    var k=it.k, d=dashDet(k);
+    var nome=String(d.nome==null?'':d.nome), raca=String(d.raca==null?'':d.raca);
+    var h='<div class="pair" style="padding:7px 0;border-bottom:1px solid var(--line)">'
+      +'<span class="k"><strong>Escrevendo o nome à mão</strong></span>'
+      +'<span class="val"><button class="btn" style="background:none;border:none;color:var(--z-blue);text-decoration:underline;font-size:12.5px;font-weight:700;padding:0 6px"'
+      +' onclick="dashForaFechar(\''+k+'\')">voltar à busca</button></span></div>'
+      // A frase que evita o mal-entendido: escrever aqui não cadastra ninguém.
+      +'<div class="hint" style="margin-top:7px">É só para a avaliação: o cadastro dele continua sendo feito pela Recepção depois, em Peludinhos.</div>';
+    h+='<label class="cad-lb" style="margin-top:9px;display:block">Nome'
+      +(dashForaLimpo(nome)?'':' <span style="color:var(--crm-critico);font-weight:900">— falta responder</span>')+'</label>'
+      +'<input type="text" class="cad-in" id="dashFN_'+k+'" maxlength="40" placeholder="Ex.: Cadu" autocomplete="off"'
+      +' value="'+escAttr(nome)+'" oninput="dashSetDetTexto(\''+k+'\',\'nome\',this.value)"'
+      +' onchange="try{renderDash()}catch(e){}/* silencioso de propósito: redesenho de tela */">';
+    h+='<label class="cad-lb" style="margin-top:9px;display:block">Raça'
+      +(dashForaLimpo(raca)?'':' <span style="color:var(--crm-critico);font-weight:900">— falta responder</span>')+'</label>'
+      +'<input type="text" class="cad-in" id="dashFR_'+k+'" maxlength="40" placeholder="Ex.: Spitz" autocomplete="off"'
+      +' value="'+escAttr(raca)+'" oninput="dashSetDetTexto(\''+k+'\',\'raca\',this.value)"'
+      +' onchange="try{renderDash()}catch(e){}/* silencioso de propósito: redesenho de tela */">';
+    // Sexo e castração são um a mais: ajudam a Márcia a chegar sabendo, mas ninguém deixa
+    // de marcar a avaliação por não saber ainda. Tocar de novo no botão desmarca.
+    [{c:'sexo', rot:'Sexo (opcional)', ops:DASH_FORA_SEXO},
+     {c:'castrado', rot:'Castrado? (opcional)', ops:DASH_FORA_CASTR}].forEach(function(campo){
+      h+='<label class="cad-lb" style="margin-top:9px;display:block">'+escAttr(campo.rot)+'</label>'
+        +'<div style="display:flex;flex-wrap:wrap;gap:5px;margin-top:4px">';
+      campo.ops.forEach(function(o){
+        var on=(d[campo.c]===o.v);
+        h+='<button type="button" class="btn" style="padding:6px 12px;font-size:12.5px;font-weight:800;border:1.5px solid '
+          +(on?'var(--z-blue)':'var(--line)')+';background:'+(on?'var(--z-blue)':'var(--z-cream-warm)')
+          +';color:'+(on?'var(--z-cream)':'var(--z-blue)')+'"'
+          +' onclick="dashSetDet(\''+k+'\',\''+campo.c+'\',\''+String(o.v).replace(/'/g,"\\'")+'\')">'
+          +escAttr(o.t)+'</button>';
+      });
+      h+='</div>';
+    });
+    // O relógio mora aqui dentro, como no Banho: no lugar da busca não existe outro.
+    if(it.hora){
+      h+='<label class="cad-lb" style="margin-top:9px;display:block">Horário</label>'
+        +'<input type="time" class="cad-in" id="dashH_'+k+'" style="max-width:140px"'
+        +' onchange="try{renderDash()}catch(e){}/* silencioso de propósito: redesenho de tela */">';
+    }
+    var falta=dashDetFalta(k), valor=dashForaValor(k);
+    h+='<div class="hint" style="margin-top:9px">Vai para a planilha assim: <strong>'+escAttr(valor||'—')+'</strong></div>'
+      +'<button class="btn '+(falta?'btn-gold':'btn-primary')+'" style="margin-top:8px;width:100%"'
+      +' onclick="dashForaLancarSel(\''+k+'\')">'+(falta?'Falta responder acima':'Lançar na planilha')+'</button>'
+      +(falta?('<div class="hint" style="margin-top:5px;color:var(--crm-atencao-text)"><strong>Antes precisa responder:</strong> '+escAttr(falta)+'</div>'):'');
+    return h;
+  }
+  function dashForaLancarSel(k){
+    var falta=dashDetFalta(k);
+    if(falta){ alert('Antes de lançar, responda: '+falta+'.\n\nÉ isso que a Márcia lê na planilha e na TV — sem nome e raça ninguém sabe quem vem para a avaliação.'); return; }
+    var valor=dashForaValor(k); if(!valor) return;
+    dashLancar(k, valor);
   }
   function dashPainelHTML(it){
     var sel=DASH_SEL[it.k]||'', d=dashDet(it.k);
@@ -31390,10 +31535,15 @@
     // que sai a `chave` gravada em cada lançamento novo: sem a chave, a pendência de
     // prevenção teria de adivinhar de quem é o vermífugo pelo texto da célula, e "nome
     // sozinho não identifica ninguém". Casamento ambíguo NÃO conta.
+    // O nome escrito à mão na avaliação NÃO procura ficha nenhuma (Adriana, 22/set/2026):
+    // "Cadu" pode casar por acaso com um Cadu do cadastro e o lançamento sairia com a chave
+    // de outro FILHOt. Quem ainda não tem ficha entra sem chave — e é assim que a tela sabe
+    // que ele está em avaliação, não perdido.
+    var __fora=!!DASH_FORA[k];
     var pDoLanc=null;
-    if(typeof idx==='number' && idx>=0 && PELUDINHOS[idx]) pDoLanc=PELUDINHOS[idx];
-    if(!pDoLanc && typeof DASH_SEL_I[k]==='number') pDoLanc=PELUDINHOS[DASH_SEL_I[k]]||null;
-    if(!pDoLanc){ try{ var mLanc=planCasar(valorBase); if(mLanc&&mLanc.p&&!mLanc.ambiguo) pDoLanc=mLanc.p; }catch(e){} /* silencioso de propósito: sem casamento seguro o lançamento entra sem chave, como era antes */ }
+    if(!__fora && typeof idx==='number' && idx>=0 && PELUDINHOS[idx]) pDoLanc=PELUDINHOS[idx];
+    if(!__fora && !pDoLanc && typeof DASH_SEL_I[k]==='number') pDoLanc=PELUDINHOS[DASH_SEL_I[k]]||null;
+    if(!__fora && !pDoLanc){ try{ var mLanc=planCasar(valorBase); if(mLanc&&mLanc.p&&!mLanc.ambiguo) pDoLanc=mLanc.p; }catch(e){} /* silencioso de propósito: sem casamento seguro o lançamento entra sem chave, como era antes */ }
     var pAdapt=it.dataIni?pDoLanc:null;
     // O detalhe vai na MESMA célula: "Olivia/SRD (2 COMPRIMIDOS · NA BOLSA)". É o que a
     // recepção já escrevia à mão, e é assim que a TV lê.
@@ -31437,6 +31587,19 @@
     // chamou (o Dia extra e a autorização da Márcia), por DASH_DET. O valor fica no
     // REGISTRO, nunca na célula: a planilha e a TV continuam mostrando só "Nome/Raça" —
     // dinheiro não se pendura no quadro que a equipe inteira lê.
+    // ===== O NOME ESCRITO À MÃO VIAJA COM O LANÇAMENTO (Adriana, 22/set/2026) ======
+    // A célula da planilha guarda a frase inteira ("Cadu/Spitz (MACHO · NÃO SEI SE
+    // CASTRADO)"); isto guarda as partes — e a marca que diz, para sempre, que este
+    // lançamento nasceu antes do cadastro.
+    if(__fora){
+      var __fd=dashDet(k);
+      __det=__det||{};
+      __det.fora_do_cadastro=true;
+      __det.nome=dashForaLimpo(__fd.nome);
+      __det.raca=dashForaLimpo(__fd.raca);
+      if(__fd.sexo) __det.sexo=__fd.sexo;
+      if(__fd.castrado) __det.castrado=__fd.castrado;
+    }
     if(k==='avulso'){
       var __av=(typeof dashDet==='function')?(dashDet('avulso')||{}):{};
       if(typeof __av.valor_cent==='number' && __av.valor_cent>0){
@@ -31453,7 +31616,7 @@
     var reg={valor:valor, hora:hora, quem:(typeof quemSou==='function'?quemSou():'-'), ts:Date.now(), planilha_ok:null};
     // A CHAVE do FILHOt viaja com o lançamento. `undefined` não existe no Firebase: só entra
     // quando a ficha foi casada com segurança.
-    try{ if(pDoLanc&&pDoLanc.n){ var _ch=dcKey(pDoLanc.n,pDoLanc.tutor); if(_ch) reg.chave=_ch; } }catch(e){} /* silencioso de propósito: sem chave o lançamento entra igual — a pendência é que passa a depender do texto */
+    try{ if(!__fora && pDoLanc&&pDoLanc.n){ var _ch=dcKey(pDoLanc.n,pDoLanc.tutor); if(_ch) reg.chave=_ch; } }catch(e){} /* silencioso de propósito: sem chave o lançamento entra igual — a pendência é que passa a depender do texto */
     // `undefined` não existe no Firebase: só entra se houver detalhe mesmo.
     if(__det && Object.keys(__det).length) reg.det=__det;
     // `gravar` devolve a promessa (true = entrou, false = não salvou). Quem chama de fora
@@ -31469,6 +31632,8 @@
         if(it.campos){ DASH_DET[k]={}; delete DASH_SEL[k]; delete DASH_SEL_I[k]; }
         // O preço do avulso segue a MESMA lei: o valor do Toshi não pode grudar no próximo.
         if(k==='avulso'){ DASH_DET[k]={}; delete DASH_SEL[k]; delete DASH_SEL_I[k]; }
+        // O nome escrito à mão também não gruda: o painel fecha e volta para a busca.
+        if(__fora){ delete DASH_FORA[k]; DASH_DET[k]={}; }
         DC_DASH_TURMA.quando=0;   // o avulso lançado agora entra na turma na hora, não em 60s
         renderDash();
         if(typeof audit==='function') audit('dashboard-daycare','lançou '+valor+' em '+it.t,{pet:valor});

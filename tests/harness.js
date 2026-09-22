@@ -3740,8 +3740,8 @@ async function main() {
     check('v-25 · a auditoria da tabela diz o que mudou, de quanto para quanto',
       /audit\('orcamento-precos',\s*\n?\s*mudou\.length\?\('alterou a tabela de hospedagem — '\+mudou\.join/.test(html)
       && /\{antes:antes, depois:novo\}/.test(html));
-    check('v-25 · a versão carimbada desta entrega é a 2026-09-22-04',
-      /const APP_VERSAO='2026-09-22-04';/.test(html));
+    check('v-25 · a versão carimbada desta entrega é a 2026-09-22-05',
+      /const APP_VERSAO='2026-09-22-05';/.test(html));
   }
   console.log('');
 
@@ -4037,8 +4037,8 @@ async function main() {
       && html.indexOf('sem valor registrado ficaram de fora') > 0
       && html.indexOf('Ainda estou lendo os avulsos lançados no mês') > 0);
 
-    check('v-26 · a versão carimbada desta entrega é a 2026-09-22-04',
-      /const APP_VERSAO='2026-09-22-04';/.test(html));
+    check('v-26 · a versão carimbada desta entrega é a 2026-09-22-05',
+      /const APP_VERSAO='2026-09-22-05';/.test(html));
   }
   console.log('');
 
@@ -4421,8 +4421,8 @@ async function main() {
       }
     } else { check('v-27 · orcRenderConfig existe', false, 'função não encontrada'); }
 
-    check('v-27 · a versão carimbada desta entrega é a 2026-09-22-04',
-      /const APP_VERSAO='2026-09-22-04';/.test(html));
+    check('v-27 · a versão carimbada desta entrega é a 2026-09-22-05',
+      /const APP_VERSAO='2026-09-22-05';/.test(html));
   }
   console.log('');
 
@@ -5033,8 +5033,8 @@ async function main() {
         delete ctx.document.activeElement; delete ctx.__focoAuto;
       }
     } else { check('v-28 · vencRedesenhoAuto existe', false, 'função não encontrada'); }
-    check('v-28 · a versão carimbada desta entrega é a 2026-09-22-04',
-      /const APP_VERSAO='2026-09-22-04';/.test(html));
+    check('v-28 · a versão carimbada desta entrega é a 2026-09-22-05',
+      /const APP_VERSAO='2026-09-22-05';/.test(html));
   }
   console.log('');
 
@@ -14609,7 +14609,7 @@ async function main() {
         !/\.catch\(function\([a-z]*\)\{\s*\}\)/.test(
           html.slice(html.indexOf('const CK_FRASE_PRATICA='), html.indexOf('function renderCkInicio('))));
       check('v-14 · a versão carimbada é a desta entrega',
-        /const APP_VERSAO='2026-09-22-04';/.test(html));
+        /const APP_VERSAO='2026-09-22-05';/.test(html));
     }
 
     // ---- v-15: O PLANO SÓ GRAVA NO CONFIRMAR (caso Cookie/Yara, 15/set/2026) --------
@@ -15425,8 +15425,8 @@ async function main() {
           + 'AVISO_COLEIRA_APOS = __bkpC.apos;', ctx);
       }
     } else { check('v-17 · prevCfgCarregar existe', false, 'função não encontrada'); }
-    check('v-24 · a versão carimbada desta entrega é a 2026-09-22-04',
-      /const APP_VERSAO='2026-09-22-04';/.test(html));
+    check('v-24 · a versão carimbada desta entrega é a 2026-09-22-05',
+      /const APP_VERSAO='2026-09-22-05';/.test(html));
 
     // ───────── v-19 · o aparelho autorizado que não se perde no iPhone (16/set/2026)
     // Auditoria de 16/set: o iPhone da Leticya gerou DOIS ids em trinta segundos
@@ -15680,8 +15680,8 @@ async function main() {
       String((html.match(/linhaBuscaCadastro\(/g) || []).length));
     check('v-29 · a linha tem estilo próprio: menor, em var(--muted), e quebrando no celular',
       /table\.pel \.pel-busca-sub\{[^}]*font-size:11\.5px[^}]*color:var\(--muted\)[^}]*white-space:normal/.test(html));
-    check('v-29 · a versão carimbada desta entrega é a 2026-09-22-04',
-      /const APP_VERSAO='2026-09-22-04';/.test(html));
+    check('v-29 · a versão carimbada desta entrega é a 2026-09-22-05',
+      /const APP_VERSAO='2026-09-22-05';/.test(html));
   }
   console.log('');
 
@@ -15983,8 +15983,8 @@ async function main() {
         ctx.vermNumTexto(5) === '5' && ctx.vermNumTexto(0.3) === '0,3' && ctx.vermNumTexto(4.5) === '4,5',
         JSON.stringify([ctx.vermNumTexto(5), ctx.vermNumTexto(0.3)]));
     } else { check('v-30 · vermNumLer existe', false, 'função não encontrada'); }
-    check('v-30 · a versão carimbada desta entrega é a 2026-09-22-04',
-      /const APP_VERSAO='2026-09-22-04';/.test(html));
+    check('v-30 · a versão carimbada desta entrega é a 2026-09-22-05',
+      /const APP_VERSAO='2026-09-22-05';/.test(html));
   }
   console.log('');
 
@@ -16247,8 +16247,8 @@ async function main() {
       && html.indexOf('A frase pronta fala em &ldquo;vence&rdquo; — confira antes de mandar.') > 0
       && /if\(\(m\.itens\|\|\[\]\)\.some\(function\(x\)\{ return x\.atrasado; \}\)\)/.test(html));
 
-    check('v-31 · a versão carimbada desta entrega é a 2026-09-22-04',
-      /const APP_VERSAO='2026-09-22-04';/.test(html));
+    check('v-31 · a versão carimbada desta entrega é a 2026-09-22-05',
+      /const APP_VERSAO='2026-09-22-05';/.test(html));
   }
   // ===== v-32 · O CALENDÁRIO, A COBRANÇA E A RESPOSTA QUE LANÇA SOZINHA ============
   // Adriana, 21/set/2026, palavra por palavra:
@@ -16713,8 +16713,8 @@ async function main() {
       }
     } else { check('v-32 · vencResponderTipo e dashLancar existem', false, 'função não encontrada'); }
 
-    check('v-32 · a versão carimbada desta entrega é a 2026-09-22-04',
-      /const APP_VERSAO='2026-09-22-04';/.test(html));
+    check('v-32 · a versão carimbada desta entrega é a 2026-09-22-05',
+      /const APP_VERSAO='2026-09-22-05';/.test(html));
   }
   console.log('');
 
@@ -17125,8 +17125,8 @@ async function main() {
       && /DB\.ref\('daycare\/vagas-pedidos'\)\.on\('value'/.test(html)
       && /try\{ vagasPedCarregar\(\); \}catch\(e\)\{\}/.test(html));
 
-    check('v-33 · a versão carimbada desta entrega é a 2026-09-22-04',
-      /const APP_VERSAO='2026-09-22-04';/.test(html));
+    check('v-33 · a versão carimbada desta entrega é a 2026-09-22-05',
+      /const APP_VERSAO='2026-09-22-05';/.test(html));
   }
   console.log('');
 
@@ -17438,8 +17438,8 @@ async function main() {
       && /URL\.createObjectURL\(f\)/.test(html) && /URL\.revokeObjectURL\(url\)/.test(html)
       && /createImageBitmap\(f,\{resizeWidth:CK_FOTO_MAX, resizeQuality:'medium', imageOrientation:'from-image'\}\)/.test(html)
       && /if\(bmp && bmp\.close\) bmp\.close\(\)/.test(html));
-    check('v-34 · a versão carimbada desta entrega é a 2026-09-22-04',
-      /const APP_VERSAO='2026-09-22-04';/.test(html));
+    check('v-34 · a versão carimbada desta entrega é a 2026-09-22-05',
+      /const APP_VERSAO='2026-09-22-05';/.test(html));
   }
   console.log('');
 
@@ -17796,8 +17796,8 @@ async function main() {
       && /if\(\(prev\.motivo\|\|''\)!==\(it\.motivo\|\|''\)\) mud\.push\('para quê'\);/.test(html)
       && ctx.medDiffAcao({ nome: 'Enalapril', horarios: ['17:45'] },
                          { nome: 'Enalapril', horarios: ['17:45'], quando: { ref: 'jantar', rel: 'antes', min: 45 } }) === 'Alterou quando dar');
-    check('v-35 · a versão carimbada desta entrega é a 2026-09-22-04',
-      /const APP_VERSAO='2026-09-22-04';/.test(html));
+    check('v-35 · a versão carimbada desta entrega é a 2026-09-22-05',
+      /const APP_VERSAO='2026-09-22-05';/.test(html));
   }
   console.log('');
 
@@ -18049,8 +18049,222 @@ async function main() {
       && /delete rQ\.fim_anterior;/.test(html));
     check('v-36 · vigência que não é mais do meio do mês não herda o "para onde voltar"',
       /if\(!regMMConf\) delete novo\.fim_anterior;/.test(html));
-    check('v-36 · a versão carimbada desta entrega é a 2026-09-22-04',
-      /const APP_VERSAO='2026-09-22-04';/.test(html));
+    check('v-36 · a versão carimbada desta entrega é a 2026-09-22-05',
+      /const APP_VERSAO='2026-09-22-05';/.test(html));
+  }
+  console.log('');
+
+  // ===== v-38 · A AVALIAÇÃO DE QUEM AINDA NÃO TEM FICHA (Adriana, 22/set/2026) =====
+  // "A gente está conhecendo o peludo, então a gente não tem ele no cadastro. Então a gente
+  //  pode escrever livremente nesse momento. O nome e a raça do peludo são obrigatórios.
+  //  Pode até colocar se é castrado ou não (…) e o horário. Mas precisa aceitar. Eu estou
+  //  colocando aqui, não tem como salvar."
+  // O caso real: a Márcia tem avaliação dia 23, às 10h30, com o Cadu, um Spitz machinho —
+  // e a tela não deixava marcar, porque a busca só enxerga quem já tem ficha.
+  console.log('v-38 · Lançamentos do dia — a avaliação do FILHOt que ainda não tem cadastro:');
+  {
+    const itAv = (ctx.DASH_ITENS || []).find((i) => i.k === 'avaliacao');
+
+    // ---- (a) o caminho existe, e só na Avaliação ---------------------------------
+    check('v-38 · só a Avaliação aceita nome escrito à mão — nenhum outro item do dia abre essa porta',
+      JSON.stringify((ctx.DASH_ITENS || []).filter((i) => i.foraDoCadastro).map((i) => i.k)) === '["avaliacao"]',
+      JSON.stringify((ctx.DASH_ITENS || []).filter((i) => i.foraDoCadastro).map((i) => i.k)));
+    check('v-38 · e a tela só desenha o botão no item marcado — os outros seguem só com a busca',
+      html.indexOf("+(it.foraDoCadastro?dashForaBotaoHTML(it.k):'')") > 0);
+    if (typeof ctx.dashForaBotaoHTML === 'function') {
+      const bt = ctx.dashForaBotaoHTML('avaliacao');
+      check('v-38 · o botão diz, em português, o que faz: "Não está no cadastro? Escrever o nome"',
+        bt.indexOf('Não está no cadastro? Escrever o nome') > 0
+        && /onclick="dashForaAbrir\('avaliacao'\)"/.test(bt), bt.slice(0, 300));
+    } else { check('v-38 · dashForaBotaoHTML existe', false, 'função não encontrada'); }
+    check('v-38 · a Avaliação continua com horário e com a coluna "Avaliação" na planilha',
+      !!itAv && itAv.hora === true && itAv.col === 'Avaliação' && itAv.colHora === 'Horário',
+      JSON.stringify(itAv && { col: itAv.col, colHora: itAv.colHora, hora: itAv.hora }));
+    if (typeof ctx.dashForaAbrir === 'function') {
+      ctx.DASH_FORA = {};
+      ctx.dashForaAbrir('banho');
+      check('v-38 · abrir à força num item que não é a Avaliação não abre nada — a porta é só dela',
+        !ctx.DASH_FORA.banho, JSON.stringify(ctx.DASH_FORA));
+      ctx.dashForaAbrir('avaliacao');
+      check('v-38 · na Avaliação o mini-painel abre', ctx.DASH_FORA.avaliacao === true);
+      ctx.dashForaFechar('avaliacao');
+      check('v-38 · e "voltar à busca" fecha e não deixa sobra do que foi escrito',
+        !ctx.DASH_FORA.avaliacao && JSON.stringify(ctx.DASH_DET.avaliacao || {}) === '{}',
+        JSON.stringify(ctx.DASH_DET.avaliacao));
+    } else { check('v-38 · dashForaAbrir existe', false, 'função não encontrada'); }
+
+    // ---- (b) o que vai para a planilha -------------------------------------------
+    if (typeof ctx.dashForaValor === 'function') {
+      ctx.DASH_DET = { avaliacao: { nome: 'Cadu', raca: 'Spitz', sexo: 'MACHO', castrado: 'NÃO SEI' } };
+      check('v-38 · o caso da Adriana vira "Cadu/Spitz (MACHO · NÃO SEI SE CASTRADO)"',
+        ctx.dashForaValor('avaliacao') === 'Cadu/Spitz (MACHO · NÃO SEI SE CASTRADO)',
+        JSON.stringify(ctx.dashForaValor('avaliacao')));
+      ctx.DASH_DET = { avaliacao: { nome: 'Cadu', raca: 'Spitz' } };
+      check('v-38 · sem sexo e sem castração não sai parêntese nenhum: só "Cadu/Spitz"',
+        ctx.dashForaValor('avaliacao') === 'Cadu/Spitz', JSON.stringify(ctx.dashForaValor('avaliacao')));
+      ctx.DASH_DET = { avaliacao: { nome: 'Cadu', raca: 'Spitz', castrado: 'SIM' } };
+      check('v-38 · só a castração respondida: "Cadu/Spitz (CASTRADO)"',
+        ctx.dashForaValor('avaliacao') === 'Cadu/Spitz (CASTRADO)', JSON.stringify(ctx.dashForaValor('avaliacao')));
+      ctx.DASH_DET = { avaliacao: { nome: 'Mel', raca: 'Poodle', sexo: 'FÊMEA', castrado: 'SIM' } };
+      check('v-38 · português correto: fêmea é castradA, não castradO',
+        ctx.dashForaValor('avaliacao') === 'Mel/Poodle (FÊMEA · CASTRADA)',
+        JSON.stringify(ctx.dashForaValor('avaliacao')));
+      ctx.DASH_DET = { avaliacao: { nome: 'Mel', raca: 'Poodle', sexo: 'FÊMEA', castrado: 'NÃO' } };
+      check('v-38 · e "Não" na fêmea vira "NÃO CASTRADA"',
+        ctx.dashForaValor('avaliacao') === 'Mel/Poodle (FÊMEA · NÃO CASTRADA)',
+        JSON.stringify(ctx.dashForaValor('avaliacao')));
+      ctx.DASH_DET = { avaliacao: { nome: '  Cadu  ', raca: 'Spitz Alemão  ' } };
+      check('v-38 · espaço sobrando não vira nome: "  Cadu  " chega como "Cadu"',
+        ctx.dashForaValor('avaliacao') === 'Cadu/Spitz Alemão', JSON.stringify(ctx.dashForaValor('avaliacao')));
+      ctx.DASH_DET = { avaliacao: { nome: 'Cadu/Rex', raca: 'Spitz (grande)' } };
+      check('v-38 · barra e parêntese digitados no nome não bagunçam a célula da planilha',
+        ctx.dashForaValor('avaliacao') === 'Cadu Rex/Spitz grande', JSON.stringify(ctx.dashForaValor('avaliacao')));
+      ctx.DASH_DET = { avaliacao: { nome: 'Cadu' } };
+      check('v-38 · sem raça não existe valor nenhum para lançar',
+        ctx.dashForaValor('avaliacao') === '', JSON.stringify(ctx.dashForaValor('avaliacao')));
+      ctx.DASH_DET = {};
+    } else { check('v-38 · dashForaValor existe', false, 'função não encontrada'); }
+
+    // ---- (c) o que é cobrado na tela — nunca em silêncio --------------------------
+    if (typeof ctx.dashDetFalta === 'function' && typeof ctx.dashForaPainelHTML === 'function' && itAv) {
+      const ge38 = ctx.document.getElementById;
+      const hora38 = { value: '' };
+      ctx.document.getElementById = function (id) {
+        return id === 'dashH_avaliacao' ? hora38 : ge38.call(this, id);
+      };
+      try {
+        ctx.DASH_FORA = { avaliacao: true }; ctx.DASH_DET = { avaliacao: {} };
+        check('v-38 · painel vazio: faltam Nome, Raça e Horário — os três cobrados de uma vez',
+          ctx.dashDetFalta('avaliacao') === 'Nome · Raça · Horário',
+          JSON.stringify(ctx.dashDetFalta('avaliacao')));
+        ctx.dashSetDetTexto('avaliacao', 'nome', 'Cadu');
+        check('v-38 · escrito o nome, ainda faltam a raça e o horário',
+          ctx.dashDetFalta('avaliacao') === 'Raça · Horário', JSON.stringify(ctx.dashDetFalta('avaliacao')));
+        ctx.dashSetDetTexto('avaliacao', 'raca', '   ');
+        check('v-38 · raça só com espaço NÃO é resposta — continua faltando',
+          ctx.dashDetFalta('avaliacao') === 'Raça · Horário', JSON.stringify(ctx.dashDetFalta('avaliacao')));
+        ctx.dashSetDetTexto('avaliacao', 'raca', 'Spitz');
+        check('v-38 · nome e raça escritos, o horário continua sendo cobrado — é ele que faz o alarme tocar na TV',
+          ctx.dashDetFalta('avaliacao') === 'Horário', JSON.stringify(ctx.dashDetFalta('avaliacao')));
+        const painelFalta = ctx.dashForaPainelHTML(itAv);
+        check('v-38 · e enquanto falta, o botão diz "Falta responder acima" — nunca "Lançar" para depois recusar',
+          /Falta responder acima/.test(painelFalta) && /<strong>Antes precisa responder:<\/strong> Horário/.test(painelFalta),
+          painelFalta.slice(-400));
+        hora38.value = '10:30';
+        check('v-38 · escolhida a hora, nada falta',
+          ctx.dashDetFalta('avaliacao') === '', JSON.stringify(ctx.dashDetFalta('avaliacao')));
+        const painelOk = ctx.dashForaPainelHTML(itAv);
+        check('v-38 · o painel tem campo de Nome e de Raça de verdade, já com o que foi escrito',
+          /<input type="text" class="cad-in" id="dashFN_avaliacao"[^>]*value="Cadu"/.test(painelOk)
+          && /<input type="text" class="cad-in" id="dashFR_avaliacao"[^>]*value="Spitz"/.test(painelOk),
+          painelOk.slice(0, 900));
+        check('v-38 · o relógio mora dentro do painel — no lugar da busca não existe outro',
+          /<input type="time" class="cad-in" id="dashH_avaliacao"/.test(painelOk));
+        check('v-38 · os botões de Sexo e de Castrado estão lá, marcados como opcionais',
+          painelOk.indexOf('Sexo (opcional)') > 0 && painelOk.indexOf('Castrado? (opcional)') > 0
+          && painelOk.indexOf('>Macho</button>') > 0 && painelOk.indexOf('>Fêmea</button>') > 0
+          && painelOk.indexOf('>Não sei</button>') > 0);
+        check('v-38 · a tela diz que isto NÃO cadastra ninguém: o cadastro continua sendo da Recepção, em Peludinhos',
+          painelOk.indexOf('É só para a avaliação: o cadastro dele continua sendo feito pela Recepção depois, em Peludinhos.') > 0);
+        check('v-38 · e mostra, antes de lançar, exatamente o que vai para a planilha',
+          painelOk.indexOf('Vai para a planilha assim: <strong>Cadu/Spitz</strong>') > 0
+          && /Lançar na planilha/.test(painelOk), painelOk.slice(-400));
+        ctx.dashSetDet('avaliacao', 'sexo', 'MACHO');
+        ctx.dashSetDet('avaliacao', 'castrado', 'NÃO SEI');
+        check('v-38 · respondidos sexo e castração, a frase acompanha: "Cadu/Spitz (MACHO · NÃO SEI SE CASTRADO)"',
+          ctx.dashForaPainelHTML(itAv).indexOf('Vai para a planilha assim: <strong>Cadu/Spitz (MACHO · NÃO SEI SE CASTRADO)</strong>') > 0);
+        ctx.dashSetDet('avaliacao', 'castrado', 'NÃO SEI');
+        check('v-38 · tocar de novo no botão desmarca — o opcional não fica preso numa resposta',
+          !ctx.dashDet('avaliacao').hasOwnProperty('castrado'), JSON.stringify(ctx.dashDet('avaliacao')));
+      } finally { ctx.document.getElementById = ge38; }
+      ctx.DASH_FORA = {}; ctx.DASH_DET = {};
+    } else { check('v-38 · dashDetFalta e dashForaPainelHTML existem', false, 'função não encontrada'); }
+
+    // ---- (d) a gravação: marcada como fora do cadastro e SEM chave de ficha -------
+    if (typeof ctx.dashLancar === 'function') {
+      const v38 = { espelhos: [] };
+      const dbV38 = criarDBComPush({});
+      ctx.__v38 = v38; ctx.__v38db = dbV38;
+      const ge38b = ctx.document.getElementById;
+      const hora38b = { value: '10:30' };
+      ctx.document.getElementById = function (id) {
+        return id === 'dashH_avaliacao' ? hora38b : ge38b.call(this, id);
+      };
+      vm.runInContext(
+        '__bkpV38 = { DB: DB, dados: DASH_DADOS, diaSel: DASH_DIA_SEL, esp: dashEspelhar,'
+        + ' rd: renderDash, au: audit, det: DASH_DET, sel: DASH_SEL, seli: DASH_SEL_I, fora: DASH_FORA,'
+        + ' casar: planCasar, turma: DC_DASH_TURMA };'
+        + "DASH_DADOS = {}; DASH_DIA_SEL = '2026-09-23'; DASH_DET = {}; DASH_SEL = {}; DASH_SEL_I = {};"
+        + 'DASH_FORA = {};'
+        + "DC_DASH_TURMA = { reposicao: [], avulso: [], quando: 0, dia: '' };"
+        + 'dashEspelhar = function(){ __v38.espelhos.push(Array.prototype.slice.call(arguments)); return Promise.resolve({ ok: true }); };'
+        // planCasar responde SEMPRE — é a prova de que o nome escrito à mão não sai
+        // procurando ficha por acaso: um "Cadu" do cadastro não pode virar dono deste lançamento.
+        + "planCasar = function(){ return { p: { n: 'Cadu', tutor: 'Outra Tutora' }, ambiguo: false }; };"
+        + 'renderDash = function(){}; audit = function(){};'
+        + 'DB = __v38db;', ctx);
+      try {
+        ctx.dashForaAbrir('avaliacao');
+        ctx.dashSetDetTexto('avaliacao', 'nome', 'Cadu');
+        ctx.dashSetDetTexto('avaliacao', 'raca', 'Spitz');
+        ctx.dashSetDet('avaliacao', 'sexo', 'MACHO');
+        ctx.dashSetDet('avaliacao', 'castrado', 'NÃO SEI');
+        ctx.dashForaLancarSel('avaliacao');
+        await drenar(6);
+        const doDia = ((((dbV38.__store.daycare || {}).dashboard || {})['2026-09-23'] || {}).avaliacao || {});
+        const ids = Object.keys(doDia);
+        const reg = doDia[ids[0]] || {};
+        check('v-38 · a avaliação do Cadu entra em daycare/dashboard/2026-09-23/avaliacao',
+          ids.length === 1 && reg.valor === 'Cadu/Spitz (MACHO · NÃO SEI SE CASTRADO)',
+          JSON.stringify(ids.map((i) => doDia[i].valor)));
+        check('v-38 · com o horário de 10:30 — é ele que faz o alarme tocar na TV',
+          reg.hora === '10:30', JSON.stringify(reg.hora));
+        check('v-38 · o registro diz que nasceu fora do cadastro, com nome, raça, sexo e castração separados',
+          !!reg.det && reg.det.fora_do_cadastro === true && reg.det.nome === 'Cadu'
+          && reg.det.raca === 'Spitz' && reg.det.sexo === 'MACHO' && reg.det.castrado === 'NÃO SEI',
+          JSON.stringify(reg.det));
+        check('v-38 · e NÃO carrega chave de ficha nenhuma — mesmo com o cadastro respondendo que casou',
+          !('chave' in reg), JSON.stringify(Object.keys(reg)));
+        check('v-38 · toda ação crítica grava quem fez: o lançamento sai com o nome de quem lançou',
+          !!reg.quem && reg.quem !== '', JSON.stringify(reg.quem));
+        check('v-38 · foi para a planilha inteiro, pela mesma porta dos outros lançamentos',
+          v38.espelhos.length === 1 && v38.espelhos[0][0] === 'avaliacao'
+          && (v38.espelhos[0][2] || {}).valor === 'Cadu/Spitz (MACHO · NÃO SEI SE CASTRADO)',
+          JSON.stringify(v38.espelhos.map((e) => [e[0], (e[2] || {}).valor])));
+        check('v-38 · lançado, o painel fecha e o Cadu não gruda no próximo FILHOt',
+          !ctx.DASH_FORA.avaliacao && JSON.stringify(ctx.DASH_DET.avaliacao || {}) === '{}',
+          JSON.stringify([ctx.DASH_FORA.avaliacao, ctx.DASH_DET.avaliacao]));
+        check('v-38 · nada foi gravado fora do dia lançado',
+          Object.keys((dbV38.__store.daycare || {}).dashboard || {}).length === 1,
+          JSON.stringify(Object.keys((dbV38.__store.daycare || {}).dashboard || {})));
+      } finally {
+        ctx.document.getElementById = ge38b;
+        vm.runInContext('DB=__bkpV38.DB; DASH_DADOS=__bkpV38.dados; DASH_DIA_SEL=__bkpV38.diaSel;'
+          + 'dashEspelhar=__bkpV38.esp; renderDash=__bkpV38.rd; audit=__bkpV38.au; DASH_DET=__bkpV38.det;'
+          + 'DASH_SEL=__bkpV38.sel; DASH_SEL_I=__bkpV38.seli; DASH_FORA=__bkpV38.fora;'
+          + 'planCasar=__bkpV38.casar; DC_DASH_TURMA=__bkpV38.turma;', ctx);
+      }
+    } else { check('v-38 · dashLancar existe', false, 'função não encontrada'); }
+
+    // ---- (e) quem nasceu sem ficha NÃO é acusado de "lançamento sem cadastro" -----
+    if (typeof ctx.dashForaDoCadastro === 'function') {
+      check('v-38 · o lançamento marcado fora_do_cadastro é reconhecido como tal',
+        ctx.dashForaDoCadastro({ valor: 'Cadu/Spitz', det: { fora_do_cadastro: true } }) === true);
+      check('v-38 · e um lançamento comum não é confundido com ele',
+        ctx.dashForaDoCadastro({ valor: 'Toshi/Shih Tzu' }) === false
+        && ctx.dashForaDoCadastro({ valor: 'x', det: { onde: 'NA BOLSA' } }) === false
+        && ctx.dashForaDoCadastro(null) === false);
+      check('v-38 · a turma do dia pula esses lançamentos antes de acusar a recepção',
+        html.indexOf('if(dashForaDoCadastro(d[campo][id])) return;') > 0);
+      check('v-38 · na lista do dia ele aparece como "em avaliação, sem cadastro ainda" — não como erro',
+        html.indexOf('em avaliação, sem cadastro ainda') > 0
+        && html.indexOf('+(dashForaDoCadastro(o)?(') > 0);
+      check('v-38 · a faixa de "lançamento sem cadastro" continua olhando só Reposição e Avulso',
+        !/dcLancamentosNaoCasados[\s\S]{0,900}'avaliacao'/.test(html));
+    } else { check('v-38 · dashForaDoCadastro existe', false, 'função não encontrada'); }
+
+    check('v-38 · a versão carimbada desta entrega é a 2026-09-22-05',
+      /const APP_VERSAO='2026-09-22-05';/.test(html));
   }
   console.log('');
 
