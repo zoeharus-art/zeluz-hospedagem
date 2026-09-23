@@ -2824,6 +2824,9 @@
     <input class="na-in" id="naTutor" placeholder="Ex: Rebeca Azevedo" autocomplete="off" onkeydown="if(event.key==='Enter')document.getElementById('naTel').focus()">
     <label class="na-lb">Telefone do tutor</label>
     <input class="na-in" id="naTel" placeholder="Ex: (31) 99999-0000" inputmode="tel" autocomplete="off">
+    <!-- Quando o cadastro vem de um pré-cadastro de avulso, esta linha diz de onde veio e o
+         que ainda falta perguntar ao tutor (a data de quem foi marcado só como "em dia"). -->
+    <div id="naPreAviso"></div>
     <div id="naPrev"></div>
     <div class="na-warn" id="naWarn"></div>
     <div class="na-btns">
@@ -2936,6 +2939,9 @@
   <section class="view" id="v-ficha">
     <div id="pel-lista">
       <div class="role-note"><span data-icon="paw"></span><span>Peludinhos <strong>frequentes</strong> do Day Care. Clique no nome para ver e editar a ficha completa. Quem saiu fica na aba <strong>Inativos</strong> — o botão aqui embaixo abre a lista, e o <strong>Voltou</strong> reativa quem está voltando.</span></div>
+      <!-- Pré-cadastros de avulso (23/set/2026): quem veio para uma diária avulsa sem ficha.
+           Cartão recolhido — só aparece quando há alguém na fila esperando virar cadastro. -->
+      <div id="preCadCard"></div>
       <div class="pel-toolbar">
         <input class="search" id="pelSearch" placeholder="Buscar peludinho, raça ou tutor..." style="width:300px;max-width:100%" oninput="renderPel()">
         <span class="pel-count" id="pelCount"></span>
@@ -5069,6 +5075,9 @@
       // com o banco na mão, a dupla nova vale na hora — na conferência de pertences e na
       // conta de quem começa no meio do mês.
       try{ irmaosCarregar(); }catch(e){} /* silencioso de propósito: guarda defensiva — falhar aqui não pode interromper quem chamou */
+      // Pré-cadastros de avulso (23/set/2026): nó pequeno — quem foi escrito à mão no balcão
+      // aparece na busca do Avulso do outro aparelho na hora, sem redigitar.
+      try{ preCadCarregar(); }catch(e){} /* silencioso de propósito: guarda defensiva — falhar aqui não pode interromper quem chamou */
       DB.ref('daycare/config/sensiveis').on('value', s=>{ const v=s.val(); if(Array.isArray(v)){ try{ SENS=new Set(v); }catch(e){} /* silencioso de propósito: guarda defensiva — se o valor não vier, o anterior continua valendo */ } });
       DB.ref('daycare/config/atividades').on('value', s=>{ const v=s.val(); if(Array.isArray(v)&&v.length){ ATIVIDADES=v; if(typeof renderAtiv==='function') renderAtiv(); } });
       // Os passos de cada protocolo (12/set/2026). Nó pequeno e raro de mudar: desce uma vez
@@ -15151,7 +15160,7 @@
   // inteira DEPOIS de a correção estar publicada — o aviso apareceu, ninguém tocou.
   // Agora o aparelho PARADO recarrega sozinho: trancado, com a aba escondida, na porta de
   // entrada ou 3 minutos sem ninguém tocar nele. Mão na tela = nunca recarrega.
-  const APP_VERSAO='2026-09-22-05';
+  const APP_VERSAO='2026-09-23-01';
   var RECARGA_PARADO_MS=3*60*1000, __versaoPublicada=null, __recargaTimer=null;
   function vigiarVersao(){
     if(!DB) return;
@@ -21948,6 +21957,8 @@
     return '<span class="pel-busca-sub"><span'+corPeso+'>último peso: '+escAttr(peso)+'</span></span>';
   }
   function renderPel(){
+    // A fila dos pré-cadastros de avulso mora nesta tela: é aqui que ela vira ficha.
+    try{ preCadRender(); }catch(e){} /* silencioso de propósito: redesenho de tela — falhar não pode derrubar a lista */
     const inp=document.getElementById('pelSearch'); if(!inp) return;
     const q=jsNorm(inp.value);
     // Só os FREQUENTES (ativos) aparecem aqui. Os inativos saíram da tela Peludinhos —
@@ -22800,6 +22811,209 @@
     if(pelOrigem==='inativos'){ document.getElementById('pel-ficha').style.display='none'; document.getElementById('pel-lista').style.display='block'; irParaView('inativos'); if(typeof renderInativos==='function') renderInativos(); return; }
     if(pelOrigem==='hospedes'){ document.getElementById('pel-ficha').style.display='none'; document.getElementById('pel-lista').style.display='block'; irParaView('hospedes'); if(typeof renderHospedesAba==='function') renderHospedesAba(); return; }
     if(pelOrigem==='daycare'){ irParaView('daycare'); if(typeof carregarChamada==='function') carregarChamada(); } else { document.getElementById('pel-ficha').style.display='none'; document.getElementById('pel-lista').style.display='block'; } }
+  // ===== PRÉ-CADASTRO DE AVULSO (Adriana, 23/set/2026) ==============================
+  // "Eu prefiro lançar sem ter que fazer o cadastro: só lançar a diária avulsa, a pessoa
+  //  assinando 'está com todas as vacinações corretas'. (…) Então já tem um pré-cadastro
+  //  com vacina, vermífugo e carrapaticida."
+  // O que isto É: o bilhete do dia — nome, tutor, telefone e a carteirinha conferida no
+  // balcão, guardados para o PRÓXIMO avulso não ser redigitado e para a Recepção promover
+  // a cadastro quando quiser. O que isto NÃO é: ficha. A lei do cadastro único (03/ago/2026)
+  // continua de pé — quem cria ficha é a Recepção, a Gestão ou a Supervisão, no mesmo
+  // "Inserir novo AULUNO" de sempre, e é lá que o pré-cadastro desemboca.
+  var PRE_CAD={};             // {chave: registro} — o que o banco tem
+  var PRE_CAD_ABERTO=false;   // o cartão da tela de Cadastro está aberto?
+  var NA_PRE_CAD='';          // pré-cadastro que está sendo promovido no modal agora
+  // Os cinco itens da carteirinha, na ordem em que a Adriana os ditou. As chaves são as
+  // MESMAS da ficha (vac_mult_t, verm_t…) e as mesmas do cadastro novo (NA_PREV): o
+  // pré-cadastro já nasce falando a língua da ficha que virá depois — e por isso "Promover
+  // a cadastro" consegue preencher os campos de prevenção sem traduzir nada.
+  // Aqui só se guarda a DATA da última: a validade (o `_p`) quem calcula é o cadastro,
+  // quando a ficha nascer. Repetir a conta aqui seria duas verdades sobre o mesmo prazo.
+  var PRE_CAD_PREV=[
+    {k:'vac_mult',  t:'Vacina Múltipla'},
+    {k:'vac_gripe', t:'Vacina de Gripe'},
+    {k:'vac_raiva', t:'Vacina Antirrábica'},
+    {k:'verm',      t:'Vermífugo'},
+    {k:'ecto',      t:'Carrapaticida'}
+  ];
+  function preCadChave(nome, tutor){
+    return (typeof dcKey==='function')?dcKey(nome, tutor):'';
+  }
+  // O que o painel escrito à mão tem, já limpo, no formato que vai para o banco. Campo em
+  // branco NÃO entra: `undefined` não existe no Firebase e apagar o que já estava guardado
+  // seria perder o que alguém conferiu numa vinda anterior.
+  function preCadDados(d){
+    d=d||{};
+    var lim=(typeof dashForaLimpo==='function')?dashForaLimpo:function(v){ return String(v==null?'':v).trim(); };
+    var o={nome:lim(d.nome), raca:lim(d.raca), tutor:lim(d.tutor)};
+    var tel=String(d.tel==null?'':d.tel).trim(); if(tel) o.tel=tel;
+    if(d.sexo) o.sexo=String(d.sexo);
+    if(d.castrado) o.castrado=String(d.castrado);
+    var prev={}, emDia={};
+    PRE_CAD_PREV.forEach(function(it){
+      var dt=String(d['prev_'+it.k]||'').slice(0,10);
+      if(/^\d{4}-\d{2}-\d{2}$/.test(dt)){ prev[it.k+'_t']=dt; return; }
+      if(d['emdia_'+it.k]) emDia[it.k]=true;
+    });
+    if(Object.keys(emDia).length) prev.em_dia=emDia;
+    if(Object.keys(prev).length) o.prev=prev;
+    return o;
+  }
+  // Grava o pré-cadastro. IDEMPOTENTE: o mesmo FILHOt voltando não cria outro registro nem
+  // apaga o que já se sabia dele — atualiza o dia do último avulso e as datas informadas
+  // agora. Quem criou e quando continuam sendo os da PRIMEIRA vez.
+  function preCadGravar(dados, dia, declaracao){
+    if(!DB) return Promise.resolve('');
+    var o=preCadDados(dados);
+    if(!o.nome||!o.tutor) return Promise.resolve('');
+    var chave=preCadChave(o.nome, o.tutor); if(!chave) return Promise.resolve('');
+    var ref=DB.ref('daycare/pre-cadastro/'+chave);
+    // O que JÁ existe é lido do banco antes de escrever. A memória (PRE_CAD) pode ainda não
+    // ter chegado neste aparelho — e escrever por cima dela apagaria quem criou e quando.
+    // Nó minúsculo: uma leitura por avulso não custa nada e evita perder a primeira vez.
+    return ref.once('value').catch(function(e){
+      _logLeituraFalhou('daycare/pre-cadastro/'+chave, e);
+      return {val:function(){ return PRE_CAD[chave]||null; }};
+    }).then(function(s){
+      var antes=(s&&s.val())||PRE_CAD[chave]||null;
+      var patch={nome:o.nome, raca:o.raca, tutor:o.tutor, ultimo_avulso:String(dia||'').slice(0,10)};
+      if(o.tel) patch.tel=o.tel;
+      if(o.sexo) patch.sexo=o.sexo;
+      if(o.castrado) patch.castrado=o.castrado;
+      // A prevenção é mesclada item a item — a data nova entra, a antiga que ninguém tocou fica.
+      var prev=Object.assign({}, (antes&&antes.prev)||{}, o.prev||{});
+      var emDia=Object.assign({}, ((antes&&antes.prev)||{}).em_dia||{}, (o.prev||{}).em_dia||{});
+      if(Object.keys(emDia).length) prev.em_dia=emDia; else delete prev.em_dia;
+      if(Object.keys(prev).length) patch.prev=prev;
+      if(declaracao) patch.declaracao=declaracao;
+      if(!antes){
+        patch.criado_por=(typeof quemSou==='function')?quemSou():'-';
+        patch.criado_ts=Date.now();
+      }
+      PRE_CAD[chave]=Object.assign({}, antes||{}, patch);
+      return ref.update(patch).then(function(){
+        if(typeof audit==='function') audit('pre-cadastro',
+          (antes?'atualizou':'criou')+' o pré-cadastro de '+o.nome+' (tutor '+o.tutor+') — avulso em '+(dia||''),
+          {pet:o.nome, alvo:chave});
+        try{ preCadRender(); }catch(e){} /* silencioso de propósito: redesenho de tela — falhar não pode derrubar quem chamou */
+        return chave;
+      }).catch(function(e){
+        _logFalhaGrav('daycare/pre-cadastro/ ('+o.nome+')', e);
+        return chave;   // o lançamento já entrou; o pré-cadastro é a comodidade da próxima vez
+      });
+    });
+  }
+  function preCadCarregar(){
+    if(!DB) return;
+    DB.ref('daycare/pre-cadastro').on('value', function(s){
+      var v=s.val(); PRE_CAD=(v&&typeof v==='object')?v:{};
+      try{ preCadRender(); }catch(e){} /* silencioso de propósito: redesenho de tela — falhar não pode derrubar quem chamou */
+    }, function(e){ _logLeituraFalhou('daycare/pre-cadastro', e); });
+  }
+  // Os que ainda NÃO viraram ficha. Quem já foi promovido sai da lista: o cartão é uma
+  // fila de trabalho, não um arquivo morto.
+  function preCadPendentes(){
+    return Object.keys(PRE_CAD||{}).map(function(k){
+      return Object.assign({_chave:k}, PRE_CAD[k]||{});
+    }).filter(function(o){ return o.nome && !o.promovido; })
+      .sort(function(a,b){ return String(b.ultimo_avulso||'').localeCompare(String(a.ultimo_avulso||'')); });
+  }
+  // Como o pré-cadastro aparece na busca do Avulso: "pré-cadastro · avulso em 23/09".
+  function preCadEtiqueta(o){
+    var d=String((o&&o.ultimo_avulso)||'');
+    var br=/^\d{4}-\d{2}-\d{2}$/.test(d)?(d.slice(8,10)+'/'+d.slice(5,7)):'';
+    return 'pré-cadastro'+(br?(' · avulso em '+br):'');
+  }
+  function preCadNomeRaca(o){
+    var n=String((o&&o.nome)||''), r=String((o&&o.raca)||'');
+    return r?(n+'/'+r):n;
+  }
+  function preCadAlternar(){
+    PRE_CAD_ABERTO=!PRE_CAD_ABERTO;
+    try{ preCadRender(); }catch(e){} /* silencioso de propósito: redesenho de tela — falhar não pode derrubar quem chamou */
+  }
+  // O que a carteirinha diz, em português, na linha do cartão.
+  function preCadPrevTexto(o){
+    var prev=(o&&o.prev)||{}, emDia=prev.em_dia||{}, partes=[];
+    PRE_CAD_PREV.forEach(function(it){
+      var dt=prev[it.k+'_t'];
+      if(dt) partes.push(it.t+' '+((typeof fmtBR==='function')?fmtBR(dt):dt));
+      else if(emDia[it.k]) partes.push(it.t+' em dia');
+    });
+    return partes.join(' · ');
+  }
+  function preCadRender(){
+    var el=document.getElementById('preCadCard'); if(!el) return;
+    var lista=preCadPendentes();
+    if(!lista.length){ el.innerHTML=''; return; }
+    var h='<div class="card" style="border-left:4px solid var(--z-gold)">'
+      +'<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">'
+      +'<strong style="color:var(--z-blue);font-size:15px">Pré-cadastros de avulso ('+lista.length+')</strong>'
+      +'<button type="button" class="btn" style="background:none;border:none;color:var(--z-blue);text-decoration:underline;font-size:12.5px;font-weight:800;padding:0 6px"'
+      +' onclick="preCadAlternar()">'+(PRE_CAD_ABERTO?'recolher':'ver')+'</button></div>';
+    if(!PRE_CAD_ABERTO){
+      h+='<div class="hint" style="margin-top:4px">Vieram para uma diária avulsa sem cadastro. A carteirinha foi conferida no balcão — falta virar ficha.</div>';
+      return void (el.innerHTML=h+'</div>');
+    }
+    h+='<div class="hint" style="margin-top:4px">Vieram para uma diária avulsa sem cadastro. O que está aqui é o que foi conferido no balcão — <strong>promover a cadastro</strong> abre o «Inserir novo AULUNO» com tudo preenchido.</div>';
+    var pode=(typeof canCriarCadastro==='function')?canCriarCadastro():false;
+    lista.forEach(function(o){
+      var prevTxt=preCadPrevTexto(o);
+      h+='<div style="padding:9px 0;border-bottom:1px solid var(--line)">'
+        +'<div style="font-weight:800;color:var(--z-blue)">'+escAttr(preCadNomeRaca(o))
+        +' <span style="font-weight:600;color:var(--muted);font-size:12.5px">· '+escAttr(o.tutor||'sem tutor')
+        +(o.tel?(' · '+escAttr(o.tel)):'')+'</span></div>'
+        +'<div class="hint" style="margin-top:2px">'+escAttr(preCadEtiqueta(o))
+        +(prevTxt?(' · '+escAttr(prevTxt)):' · prevenção não informada')+'</div>'
+        +(o.declaracao&&o.declaracao.quem
+          ? ('<div class="hint" style="margin-top:2px">Carteirinha conferida por <strong>'+escAttr(o.declaracao.quem)+'</strong>.</div>')
+          : '')
+        +(pode
+          ? ('<button type="button" class="btn btn-gold" style="margin-top:6px;padding:6px 13px;font-size:12.5px;font-weight:800"'
+             +' onclick="preCadPromover(\''+escAttr(o._chave).replace(/'/g,"\\'")+'\')">Promover a cadastro</button>')
+          : '<div class="hint" style="margin-top:4px;font-weight:700">Quem promove a cadastro é a Recepção, a Gestão ou a Supervisão.</div>')
+        +'</div>';
+    });
+    el.innerHTML=h+'</div>';
+  }
+  // Promover = abrir o cadastro de sempre, já preenchido. Não cria ficha por atalho: quem
+  // cria é o MESMO criarAluno(), com as MESMAS obrigatoriedades e o MESMO porteiro.
+  function preCadPromover(chave){
+    var o=PRE_CAD[chave]; if(!o){ alert('Não achei este pré-cadastro. Recarregue a tela e tente de novo.'); return; }
+    if(typeof gateCadastro==='function' && !gateCadastro()) return;
+    inserirAluno();
+    NA_PRE_CAD=chave;
+    var preencher=function(id, v){ var e=document.getElementById(id); if(e) e.value=String(v==null?'':v); };
+    preencher('naNome', o.nome); preencher('naRaca', o.raca); preencher('naTutor', o.tutor); preencher('naTel', o.tel);
+    var prev=(o.prev||{}), emDia=prev.em_dia||{}, semData=[];
+    PRE_CAD_PREV.forEach(function(it){
+      var dt=prev[it.k+'_t'];
+      if(dt){ preencher('naP_'+it.k, dt); return; }
+      if(emDia[it.k]) semData.push(it.t);
+    });
+    var av=document.getElementById('naPreAviso');
+    if(av){
+      av.innerHTML='<div class="hint" style="margin-top:10px;padding:8px 10px;border-radius:10px;background:var(--z-cream-warm);border:1px solid var(--line)">'
+        +'Veio do <strong>pré-cadastro do avulso</strong> de '+escAttr(o.nome||'')+'.'
+        +(semData.length
+          ? (' No balcão marcaram <strong>'+escAttr(semData.join(' · '))+'</strong> como «em dia», sem data — peça a data da carteirinha ao tutor, ou marque «a fazer na Zêluz».')
+          : '')
+        +'</div>';
+    }
+    if(typeof audit==='function') audit('pre-cadastro','abriu o cadastro para promover '+(o.nome||'')+' (tutor '+(o.tutor||'')+')',{pet:(o.nome||''), alvo:chave});
+  }
+  // A ficha nasceu: o pré-cadastro fica marcado como promovido, com a chave da ficha, quem
+  // promoveu e quando. Ele sai da fila do cartão — mas não some do banco: o rastro fica.
+  function preCadMarcarPromovido(chave, fichaKey){
+    if(!chave||!DB) return Promise.resolve(false);
+    var marca={chave:String(fichaKey||''), quem:(typeof quemSou==='function')?quemSou():'-', ts:Date.now()};
+    PRE_CAD[chave]=Object.assign({}, PRE_CAD[chave]||{}, {promovido:marca});
+    return DB.ref('daycare/pre-cadastro/'+chave+'/promovido').set(marca).then(function(){
+      if(typeof audit==='function') audit('pre-cadastro','pré-cadastro promovido a cadastro — ficha '+marca.chave,{alvo:chave});
+      try{ preCadRender(); }catch(e){} /* silencioso de propósito: redesenho de tela — falhar não pode derrubar quem chamou */
+      return true;
+    }).catch(function(e){ _logFalhaGrav('daycare/pre-cadastro/'+chave+'/promovido', e); return false; });
+  }
   // Novo AULUNO: telinha de 2 campos (nome + tutor) → abre a FICHA COMPLETA para o resto
   function inserirAluno(){
     if(!canEditPel()){ alert('Apenas Gestão e Supervisão podem cadastrar um novo aluno.'); return; }
@@ -22808,11 +23022,14 @@
     if(n) n.value=''; if(t) t.value=''; if(w) w.innerHTML='';
     ['naRaca','naTel'].forEach(function(id){ var e=document.getElementById(id); if(e) e.value=''; });
     NA_AFAZER={};
+    // O modal abre limpo: se o anterior veio de um pré-cadastro, nada dele sobra aqui.
+    NA_PRE_CAD='';
+    var _av=document.getElementById('naPreAviso'); if(_av) _av.innerHTML='';
     try{ naRenderPrev(); }catch(e){} /* silencioso de propósito: guarda defensiva — falhar aqui não pode interromper quem chamou */
     m.classList.add('show');
     setTimeout(()=>{ try{ n&&n.focus(); }catch(e){} /* silencioso de propósito: enfeite de tela (foco, rolagem, mídia) — falhar não muda dado nenhum */ },150);
   }
-  function fecharNovoAluno(){ const m=document.getElementById('novoAlunoModal'); if(m) m.classList.remove('show'); }
+  function fecharNovoAluno(){ NA_PRE_CAD=''; const m=document.getElementById('novoAlunoModal'); if(m) m.classList.remove('show'); }
   // ===== CADASTRO NOVO NÃO NASCE PELA METADE — Adriana, 19/ago/2026 ==============
   // Os itens de prevenção que a Zêluz exige para o FILHOt frequentar. Cada um pede a data
   // OU o "a fazer na Zêluz" — as duas respostas servem, o branco não.
@@ -22902,6 +23119,9 @@
     const reg=Object.assign({_novo:true,n:nome,tutor:tutor,raca:raca,tel:tel,nasc:'',dias:[],freq:''}, prevPatch);
     try{ localStorage.setItem('zeluz_pel_'+key,JSON.stringify(reg)); }catch(e){} /* silencioso de propósito: guardar no aparelho é conveniência — o dado de verdade mora no banco */
     if(DB) DB.ref('daycare/cadastro/'+key).update(reg).catch(function(e){ _logFalhaGrav('daycare/cadastro/ (criarAluno)', e); });
+    // A ficha nasceu do pré-cadastro do avulso: ele sai da fila e passa a apontar para ela.
+    // Marcado DEPOIS de a ficha existir — nunca antes, senão a fila perderia quem ainda falta.
+    if(NA_PRE_CAD){ try{ preCadMarcarPromovido(NA_PRE_CAD, key); }catch(e){ _logFalhaGrav('marcar o pré-cadastro como promovido', e); } }
     NA_AFAZER={};
     if(typeof audit==='function') audit('cadastro-novo', nome+' ('+raca+') — tutor '+tutor+' · '+tel, {pet:nome});
     fecharNovoAluno();
@@ -30682,10 +30902,18 @@
     {k:'saicedo',       t:'Sai mais cedo',              col:'Peludinho que sairá cedo',       colHora:'Hora Saída Cedo', hora:true, icone:'🚶'},
     // foraDoCadastro (Adriana, 22/set/2026): a avaliação da Márcia acontece ANTES do
     // cadastro — "a gente está conhecendo o peludo, então a gente não tem ele no cadastro".
-    // Só ESTE item aceita o nome escrito à mão. Continua sendo lançamento do dia: aqui NÃO
-    // nasce ficha nenhuma — o cadastro é um só, feito pela Recepção depois.
+    // Continua sendo lançamento do dia: aqui NÃO nasce ficha nenhuma — o cadastro é um só,
+    // feito pela Recepção depois.
     {k:'avaliacao',     t:'Avaliação (Márcia)',         col:'Avaliação',                      colHora:'Horário',         hora:true, icone:'📋', foraDoCadastro:true},
-    {k:'avulso',        t:'Avulso',                     col:'Avulso',                         icone:'📌'},
+    // O AVULSO TAMBÉM ESCREVE À MÃO (Adriana, 23/set/2026): "Preciso lançar uma diária avulsa,
+    // mas o pequeno não está mais matriculado no daycare. Não consigo lançar em Lançamentos do
+    // dia. (…) Eu prefiro lançar sem ter que fazer o cadastro: só lançar a diária avulsa, a
+    // pessoa assinando 'está com todas as vacinações corretas'. O nome, nome do tutor e vacina.
+    // Então já tem um pré-cadastro com vacina, vermífugo e carrapaticida. Igual a avaliação."
+    // Aqui o painel pede MAIS do que na avaliação — tutor, a prevenção conferida na carteirinha
+    // e a declaração de quem conferiu — e deixa um PRÉ-CADASTRO gravado, que a Recepção promove
+    // a cadastro depois. Cadastro continua sendo UM SÓ: isto não é ficha, é o bilhete do dia.
+    {k:'avulso',        t:'Avulso',                     col:'Avulso',                         icone:'📌', foraDoCadastro:true},
     // Medicação (Adriana, 18/set/2026): o remédio de cada FILHOt é o dele — "medicamento de
     // ouvido" não cabe em botão nenhum. Por isso o QUAL é escrito à mão (o único campo de
     // texto da tela) e o ONDE continua em botão, que é o que não pode ficar no "mais ou menos".
@@ -31007,9 +31235,10 @@
                return '<div class="pair" style="padding:6px 0;border-bottom:1px solid var(--line)">'
                  +'<span class="k"><strong>'+escAttr(o.valor||'')+'</strong>'
                  +(o.hora?(' <span style="color:var(--z-blue-soft);font-weight:800">'+escAttr(o.hora)+'</span>'):'')
-                 // Nome escrito à mão na avaliação: não é erro de digitação nem FILHOt perdido —
-                 // é quem ainda está sendo conhecido. A tela diz isso com todas as letras.
-                 +(dashForaDoCadastro(o)?(' <span style="color:var(--z-blue);font-weight:800;font-size:11.5px">em avaliação, sem cadastro ainda</span>'):'')
+                 // Nome escrito à mão na avaliação, avulso de pré-cadastro, inativo que
+                 // voltou por um dia: nada disso é erro de digitação nem FILHOt perdido. A
+                 // tela diz, com todas as letras, de onde aquele nome veio.
+                 +(dashEtiquetaFora(it.k,o)?(' <span style="color:var(--z-blue);font-weight:800;font-size:11.5px">'+escAttr(dashEtiquetaFora(it.k,o))+'</span>'):'')
                  +(o.planilha_ok===false
                     ?(' <span style="color:var(--crm-critico);font-weight:800;font-size:11.5px">'+(dashPlanFilaMorto(o)?'NÃO foi para a TV — reenvio automático esgotado':'NÃO foi para a TV')+'</span>'
                       +' <button class="btn" style="background:none;border:none;color:var(--z-blue);font-size:11.5px;text-decoration:underline;padding:0 4px" onclick="dashReenviar(\''+it.k+'\',\''+id+'\',this)">reenviar</button>')
@@ -31241,6 +31470,11 @@
   var DASH_FORA={};   // {item: true} — o mini-painel de escrever o nome está aberto
   var DASH_FORA_SEXO=[{v:'MACHO',t:'Macho'},{v:'FÊMEA',t:'Fêmea'}];
   var DASH_FORA_CASTR=[{v:'SIM',t:'Sim'},{v:'NÃO',t:'Não'},{v:'NÃO SEI',t:'Não sei'}];
+  // O AVULSO escrito à mão pede mais do que a avaliação: além do nome e da raça, o TUTOR
+  // (é dele a diária, e é por nome+tutor que o pré-cadastro se identifica), a carteirinha
+  // conferida e a DECLARAÇÃO de quem conferiu. Só ele passa por aqui — a avaliação da
+  // Márcia continua sendo nome, raça e hora (Adriana, 23/set/2026).
+  function dashForaEhAvulso(k){ return k==='avulso'; }
   // Nome e raça vão para a planilha como foram escritos (só sem espaço sobrando). Barras e
   // parênteses saem: são eles que separam "Nome/Raça" e o detalhe — deixá-los passar faria
   // a célula mentir sobre onde termina o nome.
@@ -31263,6 +31497,14 @@
     var d=dashDet(k);
     var nome=dashForaLimpo(d.nome), raca=dashForaLimpo(d.raca);
     if(!nome||!raca) return '';
+    // O AVULSO escrito à mão (23/set/2026) diz na própria célula o que ele é e quanto custa
+    // a categoria: "Cadu/Spitz (AVULSO · NÃO MATRICULADO)". Quem não tem ficha não tem plano
+    // vigente — então é SEMPRE o preço de não matriculado, e a célula não deixa dúvida.
+    // Sexo e castração não entram aqui: vão inteiros para o pré-cadastro, que é onde servem.
+    if(dashForaEhAvulso(k)){
+      if(!dashForaLimpo(d.tutor)) return '';
+      return nome+'/'+raca+' (AVULSO · NÃO MATRICULADO)';
+    }
     var partes=[];
     if(d.sexo) partes.push(String(d.sexo).toUpperCase());
     var c=dashForaCastrTexto(d.castrado, d.sexo); if(c) partes.push(c);
@@ -31274,6 +31516,15 @@
     var d=dashDet(k), falta=[];
     if(!dashForaLimpo(d.nome)) falta.push('Nome');
     if(!dashForaLimpo(d.raca)) falta.push('Raça');
+    // No avulso, o tutor é obrigatório: a diária é dele, e é por nome+tutor que o
+    // pré-cadastro se identifica — "nome sozinho não identifica ninguém".
+    if(dashForaEhAvulso(k)){
+      if(!dashForaLimpo(d.tutor)) falta.push('Tutor');
+      // A declaração é a assinatura de quem conferiu a carteirinha. Sem ela não se lança:
+      // foi exatamente o que a Adriana pediu ("a pessoa assinando que está com todas as
+      // vacinações corretas"), e é o que responde, meses depois, quem deixou entrar.
+      if(!d.declarado) falta.push('Conferi a carteirinha');
+    }
     var it=dashItem(k);
     if(it&&it.hora){
       var _h=''; try{ _h=String((document.getElementById('dashH_'+k)||{}).value||''); }catch(e){} /* silencioso de propósito: guarda defensiva — se o valor não vier, o anterior continua valendo */
@@ -31286,10 +31537,70 @@
   function dashForaDoCadastro(reg){
     return !!(reg && reg.det && reg.det.fora_do_cadastro);
   }
+  // A etiqueta da lista do dia, em português, dizendo de onde aquele nome veio. Vazia para
+  // o lançamento comum — etiqueta em tudo é etiqueta em nada.
+  function dashEtiquetaFora(k, reg){
+    if(reg && reg.det && reg.det.inativo) return 'avulso · inativo';
+    if(!dashForaDoCadastro(reg)) return '';
+    if(dashForaEhAvulso(k)) return 'avulso · pré-cadastro, sem ficha ainda';
+    return 'em avaliação, sem cadastro ainda';
+  }
   function dashForaAbrir(k){
     var it=dashItem(k); if(!it||!it.foraDoCadastro) return;
     DASH_FORA[k]=true; DASH_DET[k]={};
     delete DASH_SEL[k]; delete DASH_SEL_I[k];
+    // O avulso ocupa VAGA do dia como qualquer outro. A conta precisa do retrato daquele
+    // dia: pede a leitura agora e redesenha quando ela chegar, para o painel nunca dizer
+    // "3 de 5" com dado de outro dia.
+    if(dashForaEhAvulso(k)){
+      try{ if(typeof vagasGarantirDias==='function') vagasGarantirDias([dashDia()], renderDash); }
+      catch(e){} /* silencioso de propósito: sem a leitura o painel diz "conferindo as vagas…" e o botão espera */
+    }
+    try{ renderDash(); }catch(e){} /* silencioso de propósito: redesenho de tela — falhar não pode derrubar quem chamou */
+  }
+  // Abre o painel JÁ preenchido com um pré-cadastro: o FILHOt que voltou não é redigitado.
+  // A declaração NÃO vem marcada — a carteirinha é conferida a cada vinda, e quem assina
+  // é quem está no balcão hoje (a assinatura de ontem não vale por hoje).
+  function dashForaAbrirDoPreCad(k, chave){
+    var o=(typeof PRE_CAD!=='undefined'&&PRE_CAD)?PRE_CAD[chave]:null;
+    if(!o) return;
+    dashForaAbrir(k);
+    if(!DASH_FORA[k]) return;
+    var d=dashDet(k);
+    d.nome=o.nome||''; d.raca=o.raca||''; d.tutor=o.tutor||'';
+    if(o.tel) d.tel=o.tel;
+    if(o.sexo) d.sexo=o.sexo;
+    if(o.castrado) d.castrado=o.castrado;
+    var prev=o.prev||{}, emDia=prev.em_dia||{};
+    (typeof PRE_CAD_PREV!=='undefined'?PRE_CAD_PREV:[]).forEach(function(it){
+      if(prev[it.k+'_t']) d['prev_'+it.k]=prev[it.k+'_t'];
+      else if(emDia[it.k]) d['emdia_'+it.k]=true;
+    });
+    var b=document.getElementById('dashB_'+k); if(b) b.value='';
+    try{ renderDash(); }catch(e){} /* silencioso de propósito: redesenho de tela — falhar não pode derrubar quem chamou */
+  }
+  // A caixa da declaração. Tocar de novo desmarca — e aí o botão volta a cobrar.
+  function dashForaDeclarar(k, marcado){
+    var d=dashDet(k);
+    if(marcado==null) d.declarado=!d.declarado;
+    else d.declarado=!!marcado;
+    if(!d.declarado) delete d.declarado;
+    try{ renderDash(); }catch(e){} /* silencioso de propósito: redesenho de tela — falhar não pode derrubar quem chamou */
+  }
+  // "Data da última" da carteirinha. Escolher a data apaga o "Em dia" daquele item: são
+  // duas respostas para a mesma pergunta, e a data é a melhor das duas.
+  function dashForaPrevData(k, item, v){
+    var d=dashDet(k), iso=String(v||'').slice(0,10);
+    if(/^\d{4}-\d{2}-\d{2}$/.test(iso)){ d['prev_'+item]=iso; delete d['emdia_'+item]; }
+    else delete d['prev_'+item];
+    try{ renderDash(); }catch(e){} /* silencioso de propósito: redesenho de tela — falhar não pode derrubar quem chamou */
+  }
+  // "Em dia": a pessoa conferiu a carteirinha mas não copiou a data. Guarda o que ela SABE
+  // (está em dia) sem inventar uma data que ninguém leu.
+  function dashForaPrevEmDia(k, item){
+    var d=dashDet(k);
+    if(d['emdia_'+item]) delete d['emdia_'+item];
+    else { d['emdia_'+item]=true; delete d['prev_'+item]; }
     try{ renderDash(); }catch(e){} /* silencioso de propósito: redesenho de tela — falhar não pode derrubar quem chamou */
   }
   function dashForaFechar(k){
@@ -31308,7 +31619,18 @@
       +'<span class="val"><button class="btn" style="background:none;border:none;color:var(--z-blue);text-decoration:underline;font-size:12.5px;font-weight:700;padding:0 6px"'
       +' onclick="dashForaFechar(\''+k+'\')">voltar à busca</button></span></div>'
       // A frase que evita o mal-entendido: escrever aqui não cadastra ninguém.
-      +'<div class="hint" style="margin-top:7px">É só para a avaliação: o cadastro dele continua sendo feito pela Recepção depois, em Peludinhos.</div>';
+      +(dashForaEhAvulso(k)
+        ? '<div class="hint" style="margin-top:7px">É só para a diária avulsa de hoje: fica um <strong>pré-cadastro</strong> guardado, e o cadastro dele continua sendo feito pela Recepção depois, em Peludinhos.</div>'
+        : '<div class="hint" style="margin-top:7px">É só para a avaliação: o cadastro dele continua sendo feito pela Recepção depois, em Peludinhos.</div>');
+    // O preço vem antes de tudo: quem não tem ficha não tem plano vigente, então é SEMPRE o
+    // valor de não matriculado — e a consultora vê o número antes de digitar qualquer coisa.
+    if(dashForaEhAvulso(k)){
+      h+='<div class="prev-calc" style="margin-top:9px">Diária avulsa — não matriculado: <strong>'
+        +escAttr((typeof fmtCent==='function')?fmtCent(diariaAvulsaCent()):'')+'</strong>'
+        +'<div class="hint" style="margin-top:3px">Sem ficha não há plano vigente: o preço de matriculado não se aplica. O valor muda em Configurações &rsaquo; Valores do Day Care.</div></div>';
+      try{ h+=(typeof vagasAvisoHTML==='function')?vagasAvisoHTML(dashDia()):''; }
+      catch(e){} /* silencioso de propósito: sem o aviso o botão ainda confere as vagas antes de gravar */
+    }
     h+='<label class="cad-lb" style="margin-top:9px;display:block">Nome'
       +(dashForaLimpo(nome)?'':' <span style="color:var(--crm-critico);font-weight:900">— falta responder</span>')+'</label>'
       +'<input type="text" class="cad-in" id="dashFN_'+k+'" maxlength="40" placeholder="Ex.: Cadu" autocomplete="off"'
@@ -31319,6 +31641,21 @@
       +'<input type="text" class="cad-in" id="dashFR_'+k+'" maxlength="40" placeholder="Ex.: Spitz" autocomplete="off"'
       +' value="'+escAttr(raca)+'" oninput="dashSetDetTexto(\''+k+'\',\'raca\',this.value)"'
       +' onchange="try{renderDash()}catch(e){}/* silencioso de propósito: redesenho de tela */">';
+    // O TUTOR é obrigatório no avulso: a diária é dele, e é por nome+tutor que o
+    // pré-cadastro se identifica. O telefone é o que permite ligar quando algo acontece —
+    // pedido, nunca exigido, para a fila do balcão não parar por um número que ninguém sabe.
+    if(dashForaEhAvulso(k)){
+      var tutor=String(d.tutor==null?'':d.tutor), tel=String(d.tel==null?'':d.tel);
+      h+='<label class="cad-lb" style="margin-top:9px;display:block">Tutor — nome e sobrenome'
+        +(dashForaLimpo(tutor)?'':' <span style="color:var(--crm-critico);font-weight:900">— falta responder</span>')+'</label>'
+        +'<input type="text" class="cad-in" id="dashFT_'+k+'" maxlength="60" placeholder="Ex.: Rebeca Azevedo" autocomplete="off"'
+        +' value="'+escAttr(tutor)+'" oninput="dashSetDetTexto(\''+k+'\',\'tutor\',this.value)"'
+        +' onchange="try{renderDash()}catch(e){}/* silencioso de propósito: redesenho de tela */">'
+        +'<label class="cad-lb" style="margin-top:9px;display:block">Telefone do tutor (opcional)</label>'
+        +'<input type="text" class="cad-in" id="dashFF_'+k+'" maxlength="20" inputmode="tel" placeholder="Ex.: (31) 99999-0000" autocomplete="off"'
+        +' value="'+escAttr(tel)+'" oninput="dashSetDetTexto(\''+k+'\',\'tel\',this.value)"'
+        +' onchange="try{renderDash()}catch(e){}/* silencioso de propósito: redesenho de tela */">';
+    }
     // Sexo e castração são um a mais: ajudam a Márcia a chegar sabendo, mas ninguém deixa
     // de marcar a avaliação por não saber ainda. Tocar de novo no botão desmarca.
     [{c:'sexo', rot:'Sexo (opcional)', ops:DASH_FORA_SEXO},
@@ -31335,6 +31672,47 @@
       });
       h+='</div>';
     });
+    // ===== A CARTEIRINHA CONFERIDA NO BALCÃO (Adriana, 23/set/2026) ================
+    // "Não vou ter todos os dados desse pequeno, vou ter dados de vacinação. (…) Então já
+    //  tem um pré-cadastro com vacina, vermífugo e carrapaticida."
+    // Cada item aceita a DATA da última (o melhor dado, que já serve para a ficha) ou o
+    // "Em dia" (o que a pessoa de fato sabe quando não copiou a data). Nenhum dos dois é
+    // exigido: o que é exigido é a DECLARAÇÃO logo abaixo — quem conferiu assume.
+    if(dashForaEhAvulso(k)){
+      h+='<div class="cad-lb" style="margin-top:14px;display:block">Prevenção — conferida na carteirinha</div>'
+        +'<div class="hint" style="margin-top:2px">Escreva a data da última, ou toque em <strong>Em dia</strong> se conferiu e não copiou a data.</div>';
+      (typeof PRE_CAD_PREV!=='undefined'?PRE_CAD_PREV:[]).forEach(function(pv){
+        var dt=String(d['prev_'+pv.k]||''), on=!!d['emdia_'+pv.k];
+        h+='<div style="display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin:6px 0">'
+          +'<span style="min-width:132px;font-size:12.5px;font-weight:800;color:var(--z-blue)">'+escAttr(pv.t)+'</span>'
+          +'<input type="date" class="cad-in" id="dashFP_'+k+'_'+pv.k+'" style="width:auto;margin:0;flex:1;min-width:142px"'
+          +' value="'+escAttr(dt)+'" max="'+escAttr((typeof hojeISO==='function')?hojeISO():'')+'" min="2015-01-01"'
+          +' onkeydown="return dataSoNoCalendario(event)"'
+          +' onchange="dashForaPrevData(\''+k+'\',\''+pv.k+'\',this.value)">'
+          +'<button type="button" class="btn" id="dashFE_'+k+'_'+pv.k+'"'
+          +' style="padding:6px 11px;font-size:12px;font-weight:800;border:1.5px solid '
+          +(on?'var(--z-blue)':'var(--line)')+';background:'+(on?'var(--z-blue)':'var(--z-cream-warm)')
+          +';color:'+(on?'var(--z-cream)':'var(--z-blue)')+'"'
+          +' onclick="dashForaPrevEmDia(\''+k+'\',\''+pv.k+'\')">'+(on?'✓ Em dia':'Em dia')+'</button>'
+          +'</div>';
+      });
+      // A DECLARAÇÃO. É ela que trava o botão — e é ela que grava QUEM conferiu.
+      var dec=!!d.declarado;
+      h+='<div style="margin-top:12px;padding:10px 12px;border-radius:12px;border:1.5px solid '
+        +(dec?'var(--z-blue)':'var(--crm-critico)')+';background:var(--z-cream-warm)">'
+        +'<button type="button" class="btn" style="display:flex;align-items:flex-start;gap:9px;width:100%;text-align:left;background:none;border:none;padding:0"'
+        +' onclick="dashForaDeclarar(\''+k+'\')">'
+        +'<span style="flex:0 0 auto;width:22px;height:22px;border-radius:6px;border:2px solid var(--z-blue);background:'
+        +(dec?'var(--z-blue)':'transparent')+';color:var(--z-cream);font-weight:900;line-height:19px;text-align:center">'
+        +(dec?'✓':'')+'</span>'
+        +'<span style="font-size:13px;font-weight:800;color:var(--z-blue);line-height:1.35">Conferi a carteirinha: está com as vacinações corretas</span>'
+        +'</button>'
+        +'<div class="hint" style="margin-top:5px">'
+        +(dec
+          ? ('Fica registrado com o seu nome: <strong>'+escAttr((typeof quemSou==='function')?quemSou():'-')+'</strong>.')
+          : 'Sem esta conferência o avulso não é lançado — é ela que responde, depois, quem deixou entrar.')
+        +'</div></div>';
+    }
     // O relógio mora aqui dentro, como no Banho: no lugar da busca não existe outro.
     if(it.hora){
       h+='<label class="cad-lb" style="margin-top:9px;display:block">Horário</label>'
@@ -31350,8 +31728,33 @@
   }
   function dashForaLancarSel(k){
     var falta=dashDetFalta(k);
-    if(falta){ alert('Antes de lançar, responda: '+falta+'.\n\nÉ isso que a Márcia lê na planilha e na TV — sem nome e raça ninguém sabe quem vem para a avaliação.'); return; }
+    if(falta){
+      alert(dashForaEhAvulso(k)
+        ? ('Antes de lançar, responda: '+falta+'.\n\nSem o nome, a raça e o tutor ninguém sabe de quem é a diária — e sem a conferência da carteirinha o FILHOt não entra.')
+        : ('Antes de lançar, responda: '+falta+'.\n\nÉ isso que a Márcia lê na planilha e na TV — sem nome e raça ninguém sabe quem vem para a avaliação.'));
+      return;
+    }
     var valor=dashForaValor(k); if(!valor) return;
+    // As VAGAS DO DIA valem igual para quem chega sem ficha: são 5 por dia (reposição +
+    // avulso) e o dia lotado só abre com a Márcia. A mesma regra do Dia extra, aqui.
+    if(dashForaEhAvulso(k)){
+      var vg=null;
+      try{ vg=(typeof vagasDoDia==='function')?vagasDoDia(dashDia()):null; }catch(e){ vg=null; }
+      if(vg){
+        if(!vg.lido){
+          alert('Ainda estou conferindo as vagas de '+((typeof repBRdata==='function')?repBRdata(dashDia()):dashDia())+'. Espere um instante e toque de novo.');
+          try{ if(typeof vagasGarantirDias==='function') vagasGarantirDias([dashDia()], renderDash); }catch(e){} /* silencioso de propósito: a próxima tentativa lê de novo */
+          return;
+        }
+        if(vg.cheio && !(typeof vagasPodeEncaixar==='function' && vagasPodeEncaixar())){
+          alert('O dia '+((typeof repBRdata==='function')?repBRdata(dashDia()):dashDia())+' está lotado ('+vg.usadas+' de '+vg.limite+').\n\nSó a Gestão abre vaga acima do limite — fale com a Márcia antes de lançar.');
+          return;
+        }
+        if(vg.cheio){
+          dashDet(k).autorizacao={quem:(typeof pessoaDoTurno==='function')?pessoaDoTurno():((typeof quemSou==='function')?quemSou():'-'), ts:Date.now()};
+        }
+      }
+    }
     dashLancar(k, valor);
   }
   function dashPainelHTML(it){
@@ -31429,21 +31832,67 @@
     if(!inp||!box) return;
     var q=jsNorm(String(inp.value||'').trim());
     if(q.length<2){ box.innerHTML=''; return; }
-    var achados=(PELUDINHOS||[]).filter(function(p){
-      if(typeof pelInativo==='function' && pelInativo(p)) return false;
+    // ANTES DE ESCREVER À MÃO, PROCURE (Adriana, 23/set/2026). No Avulso a busca enxerga
+    // também quem está nos INATIVOS — "o pequeno não está mais matriculado no daycare" é
+    // exatamente um inativo — e os PRÉ-CADASTROS já escritos numa vinda anterior. Escrever
+    // de novo o que o app já sabe é como duplicar cadastro: é o que esta ordem evita.
+    var ehAvulso=dashForaEhAvulso(k);
+    var inativo=function(p){ return (typeof pelInativo==='function') && pelInativo(p); };
+    var bate=function(p){
       return jsNorm(((typeof pelNome==='function')?pelNome(p):p.n)||'').indexOf(q)>=0
           || jsNorm(p.tutor||'').indexOf(q)>=0;
-    }).slice(0,8);
-    if(!achados.length){ box.innerHTML='<div class="hint">Ninguém com esse nome no cadastro.</div>'; return; }
+    };
+    var ativos=(PELUDINHOS||[]).filter(function(p){ return !inativo(p) && bate(p); });
+    var inativos=ehAvulso?(PELUDINHOS||[]).filter(function(p){ return inativo(p) && bate(p); }):[];
+    var achados=ativos.concat(inativos).slice(0,8);
+    var pres=[];
+    if(ehAvulso){
+      var jaNaLista={};
+      achados.forEach(function(p){
+        try{ jaNaLista[dcKey(p.n, p.tutor)]=1; }catch(e){} /* silencioso de propósito: sem chave a sugestão do pré-cadastro aparece igual */
+      });
+      pres=(typeof preCadPendentes==='function'?preCadPendentes():[]).filter(function(o){
+        if(jaNaLista[o._chave]) return false;   // já tem ficha na lista: a ficha vale mais
+        return jsNorm(o.nome||'').indexOf(q)>=0 || jsNorm(o.tutor||'').indexOf(q)>=0;
+      }).slice(0,4);
+    }
+    if(!achados.length && !pres.length){ box.innerHTML='<div class="hint">Ninguém com esse nome no cadastro.</div>'; return; }
+    var acao=ehAvulso?'dashAvulsoDaBusca':((dashItem(k)||{}).campos?'dashEscolher':'dashLancar');
     box.innerHTML=achados.map(function(p){
       var rot=dashNomeRaca(p), tut=((typeof pelGet==='function')?pelGet(p,'tutor'):'')||p.tutor||'';
       // O índice da ficha viaja junto: quando o lançamento precisa GRAVAR na ficha
       // (adaptação), o vínculo é com a ficha escolhida — nome sozinho não identifica ninguém.
       var idx=PELUDINHOS.indexOf(p);
-      return '<button class="btn" style="background:var(--z-cream-warm);color:var(--z-blue);border:1.5px solid var(--line);padding:6px 12px;font-size:12.5px" '
-        +'onclick="'+((dashItem(k)||{}).campos?'dashEscolher':'dashLancar')+'(\''+k+'\',\''+escAttr(rot).replace(/'/g,"\\'")+'\','+idx+')">'+escAttr(rot)
-        +(tut?('<span style="color:var(--muted);font-weight:600"> · '+escAttr(tut)+'</span>'):'')+'</button>';
+      var ina=inativo(p);
+      return '<button class="btn" style="background:var(--z-cream-warm);color:var(--z-blue);border:1.5px solid '
+        +(ina?'var(--z-gold)':'var(--line)')+';padding:6px 12px;font-size:12.5px" '
+        +'onclick="'+acao+'(\''+k+'\',\''+escAttr(rot).replace(/'/g,"\\'")+'\','+idx+')">'+escAttr(rot)
+        +(tut?('<span style="color:var(--muted);font-weight:600"> · '+escAttr(tut)+'</span>'):'')
+        // O inativo aparece dizendo o que é: escolhê-lo NÃO o reativa — a ficha continua
+        // nos Inativos, e quem reativa é o "Voltou", de propósito e por quem pode.
+        +(ina?('<span style="color:var(--z-blue);font-weight:800"> · inativo — está nos Inativos</span>'):'')
+        +'</button>';
+    }).join('')
+    +pres.map(function(o){
+      return '<button class="btn" style="background:var(--z-cream-warm);color:var(--z-blue);border:1.5px dashed var(--z-blue);padding:6px 12px;font-size:12.5px" '
+        +'onclick="dashForaAbrirDoPreCad(\''+k+'\',\''+escAttr(o._chave).replace(/'/g,"\\'")+'\')">'+escAttr(preCadNomeRaca(o))
+        +(o.tutor?('<span style="color:var(--muted);font-weight:600"> · '+escAttr(o.tutor)+'</span>'):'')
+        +'<span style="color:var(--z-blue);font-weight:800"> · '+escAttr(preCadEtiqueta(o))+'</span></button>';
     }).join('');
+  }
+  // O AVULSO ESCOLHIDO NA BUSCA carrega o preço da ficha dele: matriculado paga um valor,
+  // quem não tem plano vigente paga outro (Adriana, 21/set/2026). Sem isto, o avulso lançado
+  // aqui entrava sem valor nenhum e sumia da conta dos Recebimentos do mês.
+  function dashAvulsoDaBusca(k, rot, idx){
+    var p=(typeof idx==='number' && idx>=0)?(PELUDINHOS[idx]||null):null;
+    DASH_DET[k]={};
+    if(p){
+      var det=dashDet(k);
+      det.valor_cent=diariaAvulsaCent(p);
+      det.matriculado=dcMatriculado(p);
+      if(typeof pelInativo==='function' && pelInativo(p)) det.inativo=true;
+    }
+    dashLancar(k, rot, idx);
   }
   // O que o lançamento de Adaptação grava na ficha (Adriana, 04/set/2026):
   // DAY CARE liga a contagem dos 45 dias corridos (adaptacao:'Sim' + a data);
@@ -31591,6 +32040,9 @@
     // A célula da planilha guarda a frase inteira ("Cadu/Spitz (MACHO · NÃO SEI SE
     // CASTRADO)"); isto guarda as partes — e a marca que diz, para sempre, que este
     // lançamento nasceu antes do cadastro.
+    // O PRÉ-CADASTRO que este lançamento vai deixar. Só o avulso escrito à mão gera um —
+    // e ele é gravado DEPOIS de o lançamento entrar, nunca antes (ver `gravar`).
+    var __preDados=null, __preChave='';
     if(__fora){
       var __fd=dashDet(k);
       __det=__det||{};
@@ -31599,6 +32051,21 @@
       __det.raca=dashForaLimpo(__fd.raca);
       if(__fd.sexo) __det.sexo=__fd.sexo;
       if(__fd.castrado) __det.castrado=__fd.castrado;
+      // ===== O AVULSO ESCRITO À MÃO (Adriana, 23/set/2026) =========================
+      // Quem não tem ficha não tem plano vigente: o preço é SEMPRE o de não matriculado.
+      // A declaração da carteirinha viaja com o lançamento — é ela que responde, meses
+      // depois, quem deixou o FILHOt entrar e com base em quê.
+      if(dashForaEhAvulso(k)){
+        __det.tutor=dashForaLimpo(__fd.tutor);
+        var __tel=String(__fd.tel==null?'':__fd.tel).trim(); if(__tel) __det.tel=__tel;
+        __det.valor_cent=diariaAvulsaCent();
+        __det.matriculado=false;
+        __det.declaracao={quem:(typeof quemSou==='function')?quemSou():'-', ts:Date.now()};
+        if(__fd.autorizacao) __det.autorizacao=__fd.autorizacao;
+        __preDados=__fd;
+        __preChave=preCadChave(__det.nome, __det.tutor);
+        if(__preChave) __det.pre_cadastro=__preChave;
+      }
     }
     if(k==='avulso'){
       var __av=(typeof dashDet==='function')?(dashDet('avulso')||{}):{};
@@ -31608,6 +32075,10 @@
         __det.matriculado=!!__av.matriculado;
         if(__av.autorizacao) __det.autorizacao=__av.autorizacao;
       }
+      // O INATIVO QUE VOLTOU POR UM DIA (Adriana, 23/set/2026): a ficha dele continua
+      // inativa — nada é reativado. O que muda é o preço (sem plano vigente, é o de não
+      // matriculado) e a etiqueta na lista do dia, que diz de onde ele veio.
+      if(__av.inativo){ __det=__det||{}; __det.inativo=true; }
     }
     var lista=DASH_DADOS[k]||{};
     if(Object.keys(lista).some(function(id){ return jsNorm(lista[id].valor||'')===jsNorm(valor); })){
@@ -31635,6 +32106,13 @@
         // O nome escrito à mão também não gruda: o painel fecha e volta para a busca.
         if(__fora){ delete DASH_FORA[k]; DASH_DET[k]={}; }
         DC_DASH_TURMA.quando=0;   // o avulso lançado agora entra na turma na hora, não em 60s
+        // O PRÉ-CADASTRO nasce DEPOIS do lançamento: se o lançamento não entrou, não existe
+        // pré-cadastro de um dia que não aconteceu. E é idempotente — o mesmo FILHOt
+        // voltando atualiza o que já havia, não cria outro.
+        if(__preDados){
+          try{ preCadGravar(__preDados, dashDia(), (__det&&__det.declaracao)||null); }
+          catch(e){ _logFalhaGrav('gravar o pré-cadastro de '+((__det&&__det.nome)||''), e); }
+        }
         renderDash();
         if(typeof audit==='function') audit('dashboard-daycare','lançou '+valor+' em '+it.t,{pet:valor});
         // Adaptação: o lançamento é quem dá o dia 1 — grava a data (e o tipo) na ficha.

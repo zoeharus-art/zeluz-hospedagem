@@ -3740,8 +3740,8 @@ async function main() {
     check('v-25 · a auditoria da tabela diz o que mudou, de quanto para quanto',
       /audit\('orcamento-precos',\s*\n?\s*mudou\.length\?\('alterou a tabela de hospedagem — '\+mudou\.join/.test(html)
       && /\{antes:antes, depois:novo\}/.test(html));
-    check('v-25 · a versão carimbada desta entrega é a 2026-09-22-05',
-      /const APP_VERSAO='2026-09-22-05';/.test(html));
+    check('v-25 · a versão carimbada desta entrega é a 2026-09-23-01',
+      /const APP_VERSAO='2026-09-23-01';/.test(html));
   }
   console.log('');
 
@@ -4037,8 +4037,8 @@ async function main() {
       && html.indexOf('sem valor registrado ficaram de fora') > 0
       && html.indexOf('Ainda estou lendo os avulsos lançados no mês') > 0);
 
-    check('v-26 · a versão carimbada desta entrega é a 2026-09-22-05',
-      /const APP_VERSAO='2026-09-22-05';/.test(html));
+    check('v-26 · a versão carimbada desta entrega é a 2026-09-23-01',
+      /const APP_VERSAO='2026-09-23-01';/.test(html));
   }
   console.log('');
 
@@ -4421,8 +4421,8 @@ async function main() {
       }
     } else { check('v-27 · orcRenderConfig existe', false, 'função não encontrada'); }
 
-    check('v-27 · a versão carimbada desta entrega é a 2026-09-22-05',
-      /const APP_VERSAO='2026-09-22-05';/.test(html));
+    check('v-27 · a versão carimbada desta entrega é a 2026-09-23-01',
+      /const APP_VERSAO='2026-09-23-01';/.test(html));
   }
   console.log('');
 
@@ -5033,8 +5033,8 @@ async function main() {
         delete ctx.document.activeElement; delete ctx.__focoAuto;
       }
     } else { check('v-28 · vencRedesenhoAuto existe', false, 'função não encontrada'); }
-    check('v-28 · a versão carimbada desta entrega é a 2026-09-22-05',
-      /const APP_VERSAO='2026-09-22-05';/.test(html));
+    check('v-28 · a versão carimbada desta entrega é a 2026-09-23-01',
+      /const APP_VERSAO='2026-09-23-01';/.test(html));
   }
   console.log('');
 
@@ -14609,7 +14609,7 @@ async function main() {
         !/\.catch\(function\([a-z]*\)\{\s*\}\)/.test(
           html.slice(html.indexOf('const CK_FRASE_PRATICA='), html.indexOf('function renderCkInicio('))));
       check('v-14 · a versão carimbada é a desta entrega',
-        /const APP_VERSAO='2026-09-22-05';/.test(html));
+        /const APP_VERSAO='2026-09-23-01';/.test(html));
     }
 
     // ---- v-15: O PLANO SÓ GRAVA NO CONFIRMAR (caso Cookie/Yara, 15/set/2026) --------
@@ -15425,8 +15425,8 @@ async function main() {
           + 'AVISO_COLEIRA_APOS = __bkpC.apos;', ctx);
       }
     } else { check('v-17 · prevCfgCarregar existe', false, 'função não encontrada'); }
-    check('v-24 · a versão carimbada desta entrega é a 2026-09-22-05',
-      /const APP_VERSAO='2026-09-22-05';/.test(html));
+    check('v-24 · a versão carimbada desta entrega é a 2026-09-23-01',
+      /const APP_VERSAO='2026-09-23-01';/.test(html));
 
     // ───────── v-19 · o aparelho autorizado que não se perde no iPhone (16/set/2026)
     // Auditoria de 16/set: o iPhone da Leticya gerou DOIS ids em trinta segundos
@@ -15680,8 +15680,8 @@ async function main() {
       String((html.match(/linhaBuscaCadastro\(/g) || []).length));
     check('v-29 · a linha tem estilo próprio: menor, em var(--muted), e quebrando no celular',
       /table\.pel \.pel-busca-sub\{[^}]*font-size:11\.5px[^}]*color:var\(--muted\)[^}]*white-space:normal/.test(html));
-    check('v-29 · a versão carimbada desta entrega é a 2026-09-22-05',
-      /const APP_VERSAO='2026-09-22-05';/.test(html));
+    check('v-29 · a versão carimbada desta entrega é a 2026-09-23-01',
+      /const APP_VERSAO='2026-09-23-01';/.test(html));
   }
   console.log('');
 
@@ -15983,8 +15983,8 @@ async function main() {
         ctx.vermNumTexto(5) === '5' && ctx.vermNumTexto(0.3) === '0,3' && ctx.vermNumTexto(4.5) === '4,5',
         JSON.stringify([ctx.vermNumTexto(5), ctx.vermNumTexto(0.3)]));
     } else { check('v-30 · vermNumLer existe', false, 'função não encontrada'); }
-    check('v-30 · a versão carimbada desta entrega é a 2026-09-22-05',
-      /const APP_VERSAO='2026-09-22-05';/.test(html));
+    check('v-30 · a versão carimbada desta entrega é a 2026-09-23-01',
+      /const APP_VERSAO='2026-09-23-01';/.test(html));
   }
   console.log('');
 
@@ -16247,8 +16247,8 @@ async function main() {
       && html.indexOf('A frase pronta fala em &ldquo;vence&rdquo; — confira antes de mandar.') > 0
       && /if\(\(m\.itens\|\|\[\]\)\.some\(function\(x\)\{ return x\.atrasado; \}\)\)/.test(html));
 
-    check('v-31 · a versão carimbada desta entrega é a 2026-09-22-05',
-      /const APP_VERSAO='2026-09-22-05';/.test(html));
+    check('v-31 · a versão carimbada desta entrega é a 2026-09-23-01',
+      /const APP_VERSAO='2026-09-23-01';/.test(html));
   }
   // ===== v-32 · O CALENDÁRIO, A COBRANÇA E A RESPOSTA QUE LANÇA SOZINHA ============
   // Adriana, 21/set/2026, palavra por palavra:
@@ -16713,8 +16713,8 @@ async function main() {
       }
     } else { check('v-32 · vencResponderTipo e dashLancar existem', false, 'função não encontrada'); }
 
-    check('v-32 · a versão carimbada desta entrega é a 2026-09-22-05',
-      /const APP_VERSAO='2026-09-22-05';/.test(html));
+    check('v-32 · a versão carimbada desta entrega é a 2026-09-23-01',
+      /const APP_VERSAO='2026-09-23-01';/.test(html));
   }
   console.log('');
 
@@ -17125,8 +17125,8 @@ async function main() {
       && /DB\.ref\('daycare\/vagas-pedidos'\)\.on\('value'/.test(html)
       && /try\{ vagasPedCarregar\(\); \}catch\(e\)\{\}/.test(html));
 
-    check('v-33 · a versão carimbada desta entrega é a 2026-09-22-05',
-      /const APP_VERSAO='2026-09-22-05';/.test(html));
+    check('v-33 · a versão carimbada desta entrega é a 2026-09-23-01',
+      /const APP_VERSAO='2026-09-23-01';/.test(html));
   }
   console.log('');
 
@@ -17438,8 +17438,8 @@ async function main() {
       && /URL\.createObjectURL\(f\)/.test(html) && /URL\.revokeObjectURL\(url\)/.test(html)
       && /createImageBitmap\(f,\{resizeWidth:CK_FOTO_MAX, resizeQuality:'medium', imageOrientation:'from-image'\}\)/.test(html)
       && /if\(bmp && bmp\.close\) bmp\.close\(\)/.test(html));
-    check('v-34 · a versão carimbada desta entrega é a 2026-09-22-05',
-      /const APP_VERSAO='2026-09-22-05';/.test(html));
+    check('v-34 · a versão carimbada desta entrega é a 2026-09-23-01',
+      /const APP_VERSAO='2026-09-23-01';/.test(html));
   }
   console.log('');
 
@@ -17796,8 +17796,8 @@ async function main() {
       && /if\(\(prev\.motivo\|\|''\)!==\(it\.motivo\|\|''\)\) mud\.push\('para quê'\);/.test(html)
       && ctx.medDiffAcao({ nome: 'Enalapril', horarios: ['17:45'] },
                          { nome: 'Enalapril', horarios: ['17:45'], quando: { ref: 'jantar', rel: 'antes', min: 45 } }) === 'Alterou quando dar');
-    check('v-35 · a versão carimbada desta entrega é a 2026-09-22-05',
-      /const APP_VERSAO='2026-09-22-05';/.test(html));
+    check('v-35 · a versão carimbada desta entrega é a 2026-09-23-01',
+      /const APP_VERSAO='2026-09-23-01';/.test(html));
   }
   console.log('');
 
@@ -18049,8 +18049,8 @@ async function main() {
       && /delete rQ\.fim_anterior;/.test(html));
     check('v-36 · vigência que não é mais do meio do mês não herda o "para onde voltar"',
       /if\(!regMMConf\) delete novo\.fim_anterior;/.test(html));
-    check('v-36 · a versão carimbada desta entrega é a 2026-09-22-05',
-      /const APP_VERSAO='2026-09-22-05';/.test(html));
+    check('v-36 · a versão carimbada desta entrega é a 2026-09-23-01',
+      /const APP_VERSAO='2026-09-23-01';/.test(html));
   }
   console.log('');
 
@@ -18065,9 +18065,11 @@ async function main() {
   {
     const itAv = (ctx.DASH_ITENS || []).find((i) => i.k === 'avaliacao');
 
-    // ---- (a) o caminho existe, e só na Avaliação ---------------------------------
-    check('v-38 · só a Avaliação aceita nome escrito à mão — nenhum outro item do dia abre essa porta',
-      JSON.stringify((ctx.DASH_ITENS || []).filter((i) => i.foraDoCadastro).map((i) => i.k)) === '["avaliacao"]',
+    // ---- (a) o caminho existe, e só na Avaliação e no Avulso ---------------------
+    // 23/set/2026: o Avulso ganhou a MESMA porta (ver v-39). São dois itens, e só dois —
+    // banho, vet, vermífugo e os demais continuam exigindo ficha.
+    check('v-38 · só a Avaliação e o Avulso aceitam nome escrito à mão — nenhum outro item do dia abre essa porta',
+      JSON.stringify((ctx.DASH_ITENS || []).filter((i) => i.foraDoCadastro).map((i) => i.k)) === '["avaliacao","avulso"]',
       JSON.stringify((ctx.DASH_ITENS || []).filter((i) => i.foraDoCadastro).map((i) => i.k)));
     check('v-38 · e a tela só desenha o botão no item marcado — os outros seguem só com a busca',
       html.indexOf("+(it.foraDoCadastro?dashForaBotaoHTML(it.k):'')") > 0);
@@ -18258,13 +18260,389 @@ async function main() {
         html.indexOf('if(dashForaDoCadastro(d[campo][id])) return;') > 0);
       check('v-38 · na lista do dia ele aparece como "em avaliação, sem cadastro ainda" — não como erro',
         html.indexOf('em avaliação, sem cadastro ainda') > 0
-        && html.indexOf('+(dashForaDoCadastro(o)?(') > 0);
+        && html.indexOf('+(dashEtiquetaFora(it.k,o)?(') > 0
+        && (typeof ctx.dashEtiquetaFora === 'function')
+        && ctx.dashEtiquetaFora('avaliacao', { det: { fora_do_cadastro: true } }) === 'em avaliação, sem cadastro ainda');
       check('v-38 · a faixa de "lançamento sem cadastro" continua olhando só Reposição e Avulso',
         !/dcLancamentosNaoCasados[\s\S]{0,900}'avaliacao'/.test(html));
     } else { check('v-38 · dashForaDoCadastro existe', false, 'função não encontrada'); }
 
-    check('v-38 · a versão carimbada desta entrega é a 2026-09-22-05',
-      /const APP_VERSAO='2026-09-22-05';/.test(html));
+    check('v-38 · a versão carimbada desta entrega é a 2026-09-23-01',
+      /const APP_VERSAO='2026-09-23-01';/.test(html));
+  }
+  console.log('');
+
+  // ===== v-39 · A DIÁRIA AVULSA DE QUEM NÃO ESTÁ MAIS NO CADASTRO (23/set/2026) =====
+  // "Preciso lançar uma diária avulsa, mas o pequeno não está mais matriculado no daycare.
+  //  Não consigo lançar em Lançamentos do dia. Não vou ter todos os dados desse pequeno, vou
+  //  ter dados de vacinação. Ele não vai ser do daycare, também não é hospedagem. Eu prefiro
+  //  lançar sem ter que fazer o cadastro: só lançar a diária avulsa, a pessoa assinando
+  //  'está com todas as vacinações corretas' (…). O nome, nome do tutor e vacina. Então já
+  //  tem um pré-cadastro com vacina, vermífugo e carrapaticida. Igual a avaliação."
+  console.log('v-39 · Avulso — a diária de quem não tem (ou não tem mais) ficha:');
+  {
+    const itAv39 = (ctx.DASH_ITENS || []).find((i) => i.k === 'avulso');
+
+    // ---- (a) a porta existe no Avulso --------------------------------------------
+    check('v-39 · o Avulso aceita nome escrito à mão, como a Avaliação',
+      !!itAv39 && itAv39.foraDoCadastro === true, JSON.stringify(itAv39));
+    check('v-39 · e continua sem horário e com a coluna "Avulso" na planilha',
+      !!itAv39 && !itAv39.hora && itAv39.col === 'Avulso',
+      JSON.stringify(itAv39 && { col: itAv39.col, hora: itAv39.hora }));
+    if (typeof ctx.dashForaBotaoHTML === 'function') {
+      const bt39 = ctx.dashForaBotaoHTML('avulso');
+      check('v-39 · o mesmo botão de sempre: "Não está no cadastro? Escrever o nome"',
+        bt39.indexOf('Não está no cadastro? Escrever o nome') > 0
+        && /onclick="dashForaAbrir\('avulso'\)"/.test(bt39), bt39.slice(0, 300));
+    } else { check('v-39 · dashForaBotaoHTML existe', false, 'função não encontrada'); }
+
+    // ---- (b) o que a tela cobra — nunca em silêncio -------------------------------
+    if (typeof ctx.dashDetFalta === 'function' && typeof ctx.dashForaPainelHTML === 'function' && itAv39) {
+      ctx.DASH_FORA = { avulso: true }; ctx.DASH_DET = { avulso: {} };
+      check('v-39 · painel vazio: faltam Nome, Raça, Tutor e a conferência da carteirinha',
+        ctx.dashDetFalta('avulso') === 'Nome · Raça · Tutor · Conferi a carteirinha',
+        JSON.stringify(ctx.dashDetFalta('avulso')));
+      ctx.dashSetDetTexto('avulso', 'nome', 'Cadu');
+      ctx.dashSetDetTexto('avulso', 'raca', 'Spitz');
+      check('v-39 · escritos nome e raça, o TUTOR continua sendo cobrado — a diária é dele',
+        ctx.dashDetFalta('avulso') === 'Tutor · Conferi a carteirinha',
+        JSON.stringify(ctx.dashDetFalta('avulso')));
+      ctx.dashSetDetTexto('avulso', 'tutor', '   ');
+      check('v-39 · tutor só com espaço NÃO é resposta',
+        ctx.dashDetFalta('avulso') === 'Tutor · Conferi a carteirinha',
+        JSON.stringify(ctx.dashDetFalta('avulso')));
+      ctx.dashSetDetTexto('avulso', 'tutor', 'Rebeca Azevedo');
+      check('v-39 · com tutor, sobra a declaração — sem ela o FILHOt não entra',
+        ctx.dashDetFalta('avulso') === 'Conferi a carteirinha',
+        JSON.stringify(ctx.dashDetFalta('avulso')));
+      const painelFalta39 = ctx.dashForaPainelHTML(itAv39);
+      check('v-39 · e enquanto falta, o botão diz "Falta responder acima" — nunca "Lançar" para depois recusar',
+        /Falta responder acima/.test(painelFalta39)
+        && /<strong>Antes precisa responder:<\/strong> Conferi a carteirinha/.test(painelFalta39),
+        painelFalta39.slice(-400));
+      ctx.dashForaDeclarar('avulso');
+      check('v-39 · marcada a conferência, nada falta',
+        ctx.dashDetFalta('avulso') === '', JSON.stringify(ctx.dashDetFalta('avulso')));
+      ctx.dashForaDeclarar('avulso');
+      check('v-39 · tocar de novo desmarca — a declaração não fica presa em "sim"',
+        ctx.dashDetFalta('avulso') === 'Conferi a carteirinha',
+        JSON.stringify(ctx.dashDetFalta('avulso')));
+      ctx.dashForaDeclarar('avulso', true);
+      const painelOk39 = ctx.dashForaPainelHTML(itAv39);
+      check('v-39 · o painel tem campo de Tutor e de Telefone, o telefone marcado como opcional',
+        /<input type="text" class="cad-in" id="dashFT_avulso"[^>]*value="Rebeca Azevedo"/.test(painelOk39)
+        && /id="dashFF_avulso"/.test(painelOk39) && painelOk39.indexOf('Telefone do tutor (opcional)') > 0,
+        painelOk39.slice(0, 1200));
+      check('v-39 · o preço aparece antes de tudo, escrito por extenso: não matriculado, R$ 170,00',
+        painelOk39.indexOf('Diária avulsa — não matriculado: <strong>R$ 170,00</strong>') > 0,
+        painelOk39.slice(0, 900));
+      check('v-39 · a carteirinha tem os cinco itens, cada um com data da última e o botão "Em dia"',
+        ['vac_mult', 'vac_gripe', 'vac_raiva', 'verm', 'ecto']
+          .every((x) => painelOk39.indexOf('id="dashFP_avulso_' + x + '"') > 0
+            && painelOk39.indexOf('id="dashFE_avulso_' + x + '"') > 0)
+        && painelOk39.indexOf('Prevenção — conferida na carteirinha') > 0
+        && painelOk39.indexOf('Vacina Múltipla') > 0 && painelOk39.indexOf('Vacina de Gripe') > 0
+        && painelOk39.indexOf('Vacina Antirrábica') > 0 && painelOk39.indexOf('Vermífugo') > 0
+        && painelOk39.indexOf('Carrapaticida') > 0);
+      check('v-39 · a declaração está escrita com as palavras da Adriana, e diz de quem é a assinatura',
+        painelOk39.indexOf('Conferi a carteirinha: está com as vacinações corretas') > 0
+        && painelOk39.indexOf('Fica registrado com o seu nome') > 0);
+      check('v-39 · a tela avisa que isto NÃO cadastra: fica um pré-cadastro, o cadastro é da Recepção',
+        painelOk39.indexOf('fica um <strong>pré-cadastro</strong> guardado') > 0
+        && painelOk39.indexOf('feito pela Recepção depois, em Peludinhos') > 0);
+      check('v-39 · e mostra, antes de lançar, exatamente o que vai para a planilha',
+        painelOk39.indexOf('Vai para a planilha assim: <strong>Cadu/Spitz (AVULSO · NÃO MATRICULADO)</strong>') > 0,
+        painelOk39.slice(-500));
+      ctx.DASH_FORA = {}; ctx.DASH_DET = {};
+    } else { check('v-39 · dashDetFalta e dashForaPainelHTML existem', false, 'função não encontrada'); }
+
+    // ---- (c) o valor que vai para a célula ----------------------------------------
+    if (typeof ctx.dashForaValor === 'function') {
+      ctx.DASH_DET = { avulso: { nome: 'Cadu', raca: 'Spitz', tutor: 'Rebeca Azevedo' } };
+      check('v-39 · a célula diz o que é e de que preço: "Cadu/Spitz (AVULSO · NÃO MATRICULADO)"',
+        ctx.dashForaValor('avulso') === 'Cadu/Spitz (AVULSO · NÃO MATRICULADO)',
+        JSON.stringify(ctx.dashForaValor('avulso')));
+      ctx.DASH_DET = { avulso: { nome: 'Cadu', raca: 'Spitz', tutor: 'Rebeca', sexo: 'MACHO', castrado: 'SIM' } };
+      check('v-39 · sexo e castração NÃO poluem a célula — vão inteiros para o pré-cadastro',
+        ctx.dashForaValor('avulso') === 'Cadu/Spitz (AVULSO · NÃO MATRICULADO)',
+        JSON.stringify(ctx.dashForaValor('avulso')));
+      ctx.DASH_DET = { avulso: { nome: 'Cadu', raca: 'Spitz' } };
+      check('v-39 · sem tutor não existe valor nenhum para lançar',
+        ctx.dashForaValor('avulso') === '', JSON.stringify(ctx.dashForaValor('avulso')));
+      ctx.DASH_DET = {};
+    } else { check('v-39 · dashForaValor existe', false, 'função não encontrada'); }
+
+    // ---- (d) a gravação: preço, declaração, pré-cadastro e idempotência -----------
+    if (typeof ctx.dashLancar === 'function' && typeof ctx.preCadGravar === 'function') {
+      const v39 = { espelhos: [] };
+      const dbV39 = criarDBComPush({});
+      ctx.__v39 = v39; ctx.__v39db = dbV39;
+      vm.runInContext(
+        '__bkpV39 = { DB: DB, dados: DASH_DADOS, diaSel: DASH_DIA_SEL, esp: dashEspelhar,'
+        + ' rd: renderDash, au: audit, det: DASH_DET, sel: DASH_SEL, seli: DASH_SEL_I, fora: DASH_FORA,'
+        + ' casar: planCasar, turma: DC_DASH_TURMA, pre: PRE_CAD, vagas: vagasDoDia, quem: quemSou,'
+        + ' pel: PELUDINHOS, cad: pelCadCache };'
+        + "DASH_DADOS = {}; DASH_DIA_SEL = '2026-09-23'; DASH_DET = {}; DASH_SEL = {}; DASH_SEL_I = {};"
+        + 'DASH_FORA = {}; PRE_CAD = {};'
+        + "DC_DASH_TURMA = { reposicao: [], avulso: [], quando: 0, dia: '' };"
+        + "quemSou = function(){ return 'Leticya'; };"
+        // As vagas do dia valem igual para quem chega sem ficha: aqui o dia tem espaço.
+        + "vagasDoDia = function(d){ return { dia: d, limite: 5, usadas: 1, livres: 4, cheio: false,"
+        + '  lido: true, reposicao: [], avulso: [], troca: [] }; };'
+        + 'dashEspelhar = function(){ __v39.espelhos.push(Array.prototype.slice.call(arguments)); return Promise.resolve({ ok: true }); };'
+        // planCasar responde SEMPRE — a prova de que o nome escrito à mão não sai procurando
+        // ficha por acaso e saindo com a chave de outro FILHOt.
+        + "planCasar = function(){ return { p: { n: 'Cadu', tutor: 'Outra Tutora' }, ambiguo: false }; };"
+        + 'renderDash = function(){}; audit = function(){};'
+        + 'DB = __v39db;', ctx);
+      try {
+        ctx.dashForaAbrir('avulso');
+        check('v-39 · no Avulso o mini-painel abre', ctx.DASH_FORA.avulso === true);
+        ctx.dashSetDetTexto('avulso', 'nome', 'Cadu');
+        ctx.dashSetDetTexto('avulso', 'raca', 'Spitz');
+        ctx.dashSetDetTexto('avulso', 'tutor', 'Rebeca Azevedo');
+        ctx.dashSetDetTexto('avulso', 'tel', '(31) 99999-0000');
+        ctx.dashSetDet('avulso', 'sexo', 'MACHO');
+        ctx.dashForaPrevData('avulso', 'vac_mult', '2026-05-10');
+        ctx.dashForaPrevEmDia('avulso', 'verm');
+        ctx.dashForaDeclarar('avulso', true);
+        ctx.dashForaLancarSel('avulso');
+        await drenar(8);
+        const doDia39 = ((((dbV39.__store.daycare || {}).dashboard || {})['2026-09-23'] || {}).avulso || {});
+        const ids39 = Object.keys(doDia39);
+        const reg39 = doDia39[ids39[0]] || {};
+        check('v-39 · o avulso do Cadu entra em daycare/dashboard/2026-09-23/avulso',
+          ids39.length === 1 && reg39.valor === 'Cadu/Spitz (AVULSO · NÃO MATRICULADO)',
+          JSON.stringify(ids39.map((i) => doDia39[i].valor)));
+        check('v-39 · com o preço de NÃO matriculado no registro — R$ 170,00 — e nunca na célula',
+          !!reg39.det && reg39.det.valor_cent === 17000 && reg39.det.matriculado === false
+          && reg39.valor.indexOf('170') < 0,
+          JSON.stringify(reg39.det));
+        check('v-39 · marcado como nascido fora do cadastro, com nome, raça, tutor e telefone separados',
+          !!reg39.det && reg39.det.fora_do_cadastro === true && reg39.det.nome === 'Cadu'
+          && reg39.det.raca === 'Spitz' && reg39.det.tutor === 'Rebeca Azevedo'
+          && reg39.det.tel === '(31) 99999-0000', JSON.stringify(reg39.det));
+        check('v-39 · a declaração viaja com o lançamento, com QUEM conferiu a carteirinha',
+          !!reg39.det && !!reg39.det.declaracao && reg39.det.declaracao.quem === 'Leticya'
+          && typeof reg39.det.declaracao.ts === 'number', JSON.stringify(reg39.det.declaracao));
+        check('v-39 · e aponta para o pré-cadastro que ele deixou',
+          !!reg39.det && reg39.det.pre_cadastro === 'cadu__rebeca-azevedo',
+          JSON.stringify(reg39.det && reg39.det.pre_cadastro));
+        check('v-39 · NÃO carrega chave de ficha nenhuma — mesmo com o cadastro respondendo que casou',
+          !('chave' in reg39), JSON.stringify(Object.keys(reg39)));
+        check('v-39 · foi para a planilha pela mesma porta dos outros lançamentos',
+          v39.espelhos.length === 1 && v39.espelhos[0][0] === 'avulso'
+          && (v39.espelhos[0][2] || {}).valor === 'Cadu/Spitz (AVULSO · NÃO MATRICULADO)',
+          JSON.stringify(v39.espelhos.map((e) => [e[0], (e[2] || {}).valor])));
+
+        const pre39 = ((dbV39.__store.daycare || {})['pre-cadastro'] || {});
+        const p1 = pre39['cadu__rebeca-azevedo'] || {};
+        check('v-39 · o pré-cadastro nasce em daycare/pre-cadastro/{nome__tutor}, com nome, raça e tutor',
+          Object.keys(pre39).length === 1 && p1.nome === 'Cadu' && p1.raca === 'Spitz'
+          && p1.tutor === 'Rebeca Azevedo' && p1.tel === '(31) 99999-0000',
+          JSON.stringify(pre39));
+        check('v-39 · guardando a carteirinha: data onde houve data, "em dia" onde só houve conferência',
+          !!p1.prev && p1.prev.vac_mult_t === '2026-05-10'
+          && !!p1.prev.em_dia && p1.prev.em_dia.verm === true
+          && p1.prev.verm_t === undefined, JSON.stringify(p1.prev));
+        check('v-39 · e quem criou, quando, e o dia do último avulso',
+          p1.criado_por === 'Leticya' && typeof p1.criado_ts === 'number'
+          && p1.ultimo_avulso === '2026-09-23' && !!p1.declaracao && p1.declaracao.quem === 'Leticya',
+          JSON.stringify(p1));
+        check('v-39 · ainda não é ficha nenhuma: nada foi escrito em daycare/cadastro',
+          !((dbV39.__store.daycare || {}).cadastro),
+          JSON.stringify(Object.keys(dbV39.__store.daycare || {})));
+
+        // ---- idempotência: o mesmo FILHOt voltando não cria outro pré-cadastro ------
+        const criadoAntes = p1.criado_ts;
+        vm.runInContext("DASH_DADOS = {}; DASH_DIA_SEL = '2026-09-30';", ctx);
+        ctx.dashForaAbrir('avulso');
+        ctx.dashSetDetTexto('avulso', 'nome', 'Cadu');
+        ctx.dashSetDetTexto('avulso', 'raca', 'Spitz');
+        ctx.dashSetDetTexto('avulso', 'tutor', 'Rebeca Azevedo');
+        ctx.dashForaPrevData('avulso', 'ecto', '2026-09-25');
+        ctx.dashForaDeclarar('avulso', true);
+        ctx.dashForaLancarSel('avulso');
+        await drenar(8);
+        const pre39b = ((dbV39.__store.daycare || {})['pre-cadastro'] || {});
+        const p2 = pre39b['cadu__rebeca-azevedo'] || {};
+        check('v-39 · ele voltou: continua UM pré-cadastro só, na mesma chave',
+          Object.keys(pre39b).length === 1, JSON.stringify(Object.keys(pre39b)));
+        check('v-39 · quem criou e quando NÃO se perdem, e o dia do último avulso avança',
+          p2.criado_ts === criadoAntes && p2.criado_por === 'Leticya'
+          && p2.ultimo_avulso === '2026-09-30', JSON.stringify([p2.criado_ts === criadoAntes, p2.ultimo_avulso]));
+        check('v-39 · a carteirinha é mesclada item a item: a data nova entra e a antiga fica',
+          !!p2.prev && p2.prev.vac_mult_t === '2026-05-10' && p2.prev.ecto_t === '2026-09-25'
+          && !!p2.prev.em_dia && p2.prev.em_dia.verm === true, JSON.stringify(p2.prev));
+
+        // ---- o dia lotado: a vaga vale igual para quem chega sem ficha --------------
+        vm.runInContext("DASH_DADOS = {}; DASH_DIA_SEL = '2026-10-01';"
+          + 'vagasDoDia = function(d){ return { dia: d, limite: 5, usadas: 5, livres: 0, cheio: true,'
+          + '  lido: true, reposicao: [], avulso: [], troca: [] }; };'
+          + 'vagasPodeEncaixar = function(){ return false; };', ctx);
+        ctx.dashForaAbrir('avulso');
+        ctx.dashSetDetTexto('avulso', 'nome', 'Mel');
+        ctx.dashSetDetTexto('avulso', 'raca', 'Poodle');
+        ctx.dashSetDetTexto('avulso', 'tutor', 'Joana Prado');
+        ctx.dashForaDeclarar('avulso', true);
+        ctx.dashForaLancarSel('avulso');
+        await drenar(6);
+        check('v-39 · dia lotado e sem a Márcia: NÃO lança, e nenhum pré-cadastro nasce de um dia que não houve',
+          !((((dbV39.__store.daycare || {}).dashboard || {})['2026-10-01'] || {}).avulso)
+          && !((dbV39.__store.daycare || {})['pre-cadastro'] || {})['mel__joana-prado'],
+          JSON.stringify(Object.keys((dbV39.__store.daycare || {})['pre-cadastro'] || {})));
+
+        // ---- o inativo que voltou por um dia ----------------------------------------
+        vm.runInContext("DASH_DADOS = {}; DASH_DIA_SEL = '2026-10-02'; DASH_FORA = {}; DASH_DET = {};"
+          + 'vagasDoDia = function(d){ return { dia: d, limite: 5, usadas: 1, livres: 4, cheio: false,'
+          + '  lido: true, reposicao: [], avulso: [], troca: [] }; };'
+          + "PELUDINHOS = [{ n:'Toshi', raca:'Shih Tzu', tutor:'Paula Reis', dias:[] }];"
+          + "pelCadCache = { 'toshi__paula reis': { inativo:'Sim', tutor:'Paula Reis' } };"
+          + "planCasar = function(){ return { p: PELUDINHOS[0], ambiguo: false }; };", ctx);
+        check('v-39 · a ficha do Toshi está mesmo inativa antes de tudo',
+          ctx.pelInativo(ctx.PELUDINHOS[0]) === true);
+        ctx.dashAvulsoDaBusca('avulso', 'Toshi/Shih Tzu', 0);
+        await drenar(8);
+        const dia02 = ((((dbV39.__store.daycare || {}).dashboard || {})['2026-10-02'] || {}).avulso || {});
+        const regT = dia02[Object.keys(dia02)[0]] || {};
+        check('v-39 · o inativo escolhido na busca entra como avulso, com a chave da ficha dele',
+          Object.keys(dia02).length === 1 && regT.valor === 'Toshi/Shih Tzu'
+          && regT.chave === 'toshi__paula-reis', JSON.stringify([regT.valor, regT.chave]));
+        check('v-39 · com o preço de quem não tem plano vigente — R$ 170,00 — e marcado como inativo',
+          !!regT.det && regT.det.valor_cent === 17000 && regT.det.matriculado === false
+          && regT.det.inativo === true, JSON.stringify(regT.det));
+        check('v-39 · e a ficha dele continua INATIVA: escolher não reativa ninguém',
+          ctx.pelInativo(ctx.PELUDINHOS[0]) === true
+          && !((dbV39.__store.daycare || {}).cadastro),
+          JSON.stringify((dbV39.__store.daycare || {}).cadastro || null));
+        check('v-39 · nem virou pré-cadastro: quem já tem ficha não ganha bilhete de papel',
+          !((dbV39.__store.daycare || {})['pre-cadastro'] || {})['toshi__paula-reis']);
+        if (typeof ctx.dashEtiquetaFora === 'function') {
+          check('v-39 · na lista do dia ele aparece como "avulso · inativo"',
+            ctx.dashEtiquetaFora('avulso', regT) === 'avulso · inativo',
+            JSON.stringify(ctx.dashEtiquetaFora('avulso', regT)));
+          check('v-39 · e o avulso escrito à mão aparece como pré-cadastro, sem ficha ainda',
+            ctx.dashEtiquetaFora('avulso', reg39) === 'avulso · pré-cadastro, sem ficha ainda',
+            JSON.stringify(ctx.dashEtiquetaFora('avulso', reg39)));
+          check('v-39 · lançamento comum não ganha etiqueta nenhuma — etiqueta em tudo é etiqueta em nada',
+            ctx.dashEtiquetaFora('avulso', { valor: 'Bento/SRD' }) === ''
+            && ctx.dashEtiquetaFora('avulso', null) === '');
+        } else { check('v-39 · dashEtiquetaFora existe', false, 'função não encontrada'); }
+
+        // ---- a busca do Avulso: inativos e pré-cadastros antes de escrever à mão ----
+        if (typeof ctx.dashSugerir === 'function') {
+          const caixa39 = { innerHTML: '' }, campo39 = { value: 'ca' };
+          const ge39 = ctx.document.getElementById;
+          ctx.document.getElementById = function (id) {
+            if (id === 'dashB_avulso') return campo39;
+            if (id === 'dashS_avulso') return caixa39;
+            return ge39.call(this, id);
+          };
+          try {
+            vm.runInContext("PELUDINHOS = [{ n:'Cadu Velho', raca:'SRD', tutor:'Ana', dias:[] }];"
+              + "pelCadCache = { 'cadu velho__ana': { inativo:'Sim', tutor:'Ana' } };", ctx);
+            ctx.dashSugerir('avulso');
+            check('v-39 · a busca do Avulso enxerga os INATIVOS, dizendo que são inativos',
+              caixa39.innerHTML.indexOf('Cadu Velho/SRD') > 0
+              && caixa39.innerHTML.indexOf('inativo — está nos Inativos') > 0,
+              caixa39.innerHTML.slice(0, 500));
+            check('v-39 · e o clique no inativo passa pela porta que carrega o preço da ficha',
+              /onclick="dashAvulsoDaBusca\('avulso'/.test(caixa39.innerHTML),
+              caixa39.innerHTML.slice(0, 500));
+            check('v-39 · o pré-cadastro do Cadu também é sugerido, dizendo quando ele veio',
+              caixa39.innerHTML.indexOf('Cadu/Spitz') > 0
+              && caixa39.innerHTML.indexOf('pré-cadastro · avulso em 30/09') > 0
+              && /onclick="dashForaAbrirDoPreCad\('avulso','cadu__rebeca-azevedo'\)"/.test(caixa39.innerHTML),
+              caixa39.innerHTML.slice(0, 900));
+            // Na Avaliação nada disso muda: inativo continua fora e pré-cadastro não aparece.
+            const caixaAv = { innerHTML: '' }, campoAv = { value: 'ca' };
+            ctx.document.getElementById = function (id) {
+              if (id === 'dashB_avaliacao') return campoAv;
+              if (id === 'dashS_avaliacao') return caixaAv;
+              return ge39.call(this, id);
+            };
+            ctx.dashSugerir('avaliacao');
+            check('v-39 · a Avaliação não mudou: nem inativo, nem pré-cadastro na busca dela',
+              caixaAv.innerHTML.indexOf('Cadu Velho') < 0
+              && caixaAv.innerHTML.indexOf('pré-cadastro') < 0, caixaAv.innerHTML.slice(0, 400));
+            // O pré-cadastro clicado abre o painel JÁ preenchido — e a declaração NÃO vem marcada.
+            vm.runInContext('DASH_FORA = {}; DASH_DET = {};', ctx);
+            ctx.dashForaAbrirDoPreCad('avulso', 'cadu__rebeca-azevedo');
+            const dpre = ctx.dashDet('avulso');
+            check('v-39 · escolher o pré-cadastro preenche nome, raça, tutor, telefone e a carteirinha',
+              dpre.nome === 'Cadu' && dpre.raca === 'Spitz' && dpre.tutor === 'Rebeca Azevedo'
+              && dpre.tel === '(31) 99999-0000' && dpre.prev_vac_mult === '2026-05-10'
+              && dpre.prev_ecto === '2026-09-25' && dpre.emdia_verm === true,
+              JSON.stringify(dpre));
+            check('v-39 · mas a declaração NÃO vem marcada: a carteirinha se confere a cada vinda',
+              !dpre.declarado && ctx.dashDetFalta('avulso') === 'Conferi a carteirinha',
+              JSON.stringify(ctx.dashDetFalta('avulso')));
+          } finally { ctx.document.getElementById = ge39; }
+        } else { check('v-39 · dashSugerir existe', false, 'função não encontrada'); }
+
+        // ---- promover a cadastro: abre o «Inserir novo AULUNO» preenchido ------------
+        if (typeof ctx.preCadPromover === 'function') {
+          const campos39 = {};
+          const ge39b = ctx.document.getElementById;
+          const pega39 = (id) => (campos39[id] = campos39[id] || { value: '', innerHTML: '' });
+          ctx.document.getElementById = function (id) {
+            if (/^na/.test(String(id)) && id !== 'novoAlunoModal') return pega39(id);
+            return ge39b.call(this, id);
+          };
+          try {
+            ctx.preCadPromover('cadu__rebeca-azevedo');
+            check('v-39 · "Promover a cadastro" abre o cadastro de sempre com nome, raça, tutor e telefone',
+              pega39('naNome').value === 'Cadu' && pega39('naRaca').value === 'Spitz'
+              && pega39('naTutor').value === 'Rebeca Azevedo' && pega39('naTel').value === '(31) 99999-0000',
+              JSON.stringify({ n: pega39('naNome').value, r: pega39('naRaca').value,
+                t: pega39('naTutor').value, f: pega39('naTel').value }));
+            check('v-39 · a prevenção com data já vem preenchida na tela do cadastro',
+              pega39('naP_vac_mult').value === '2026-05-10' && pega39('naP_ecto').value === '2026-09-25',
+              JSON.stringify([pega39('naP_vac_mult').value, pega39('naP_ecto').value]));
+            check('v-39 · e o que foi marcado só como "em dia" é COBRADO em português, não inventa data',
+              pega39('naP_verm').value === ''
+              && pega39('naPreAviso').innerHTML.indexOf('Vermífugo') > 0
+              && pega39('naPreAviso').innerHTML.indexOf('peça a data da carteirinha') > 0,
+              pega39('naPreAviso').innerHTML.slice(0, 400));
+            check('v-39 · o modal lembra de qual pré-cadastro veio, para marcá-lo promovido depois',
+              ctx.NA_PRE_CAD === 'cadu__rebeca-azevedo', JSON.stringify(ctx.NA_PRE_CAD));
+            await ctx.preCadMarcarPromovido('cadu__rebeca-azevedo', 'cadu__rebeca azevedo');
+            await drenar(4);
+            const promovido = (((dbV39.__store.daycare || {})['pre-cadastro'] || {})['cadu__rebeca-azevedo'] || {}).promovido;
+            check('v-39 · criada a ficha, o pré-cadastro fica marcado como promovido — com a ficha, quem e quando',
+              !!promovido && promovido.chave === 'cadu__rebeca azevedo' && promovido.quem === 'Leticya'
+              && typeof promovido.ts === 'number', JSON.stringify(promovido));
+            check('v-39 · e sai da fila do cartão: a fila é o que ainda falta, não um arquivo morto',
+              !ctx.preCadPendentes().some((o) => o._chave === 'cadu__rebeca-azevedo'),
+              JSON.stringify(ctx.preCadPendentes().map((o) => o._chave)));
+          } finally { ctx.document.getElementById = ge39b; }
+        } else { check('v-39 · preCadPromover existe', false, 'função não encontrada'); }
+      } finally {
+        vm.runInContext('DB=__bkpV39.DB; DASH_DADOS=__bkpV39.dados; DASH_DIA_SEL=__bkpV39.diaSel;'
+          + 'dashEspelhar=__bkpV39.esp; renderDash=__bkpV39.rd; audit=__bkpV39.au; DASH_DET=__bkpV39.det;'
+          + 'DASH_SEL=__bkpV39.sel; DASH_SEL_I=__bkpV39.seli; DASH_FORA=__bkpV39.fora;'
+          + 'planCasar=__bkpV39.casar; DC_DASH_TURMA=__bkpV39.turma; PRE_CAD=__bkpV39.pre;'
+          + 'vagasDoDia=__bkpV39.vagas; quemSou=__bkpV39.quem; PELUDINHOS=__bkpV39.pel;'
+          + 'pelCadCache=__bkpV39.cad;', ctx);
+      }
+    } else { check('v-39 · dashLancar e preCadGravar existem', false, 'função não encontrada'); }
+
+    // ---- o cartão da tela de Cadastro --------------------------------------------
+    check('v-39 · o cartão "Pré-cadastros de avulso" mora na tela de Cadastro de Peludinhos',
+      html.indexOf('<div id="preCadCard"></div>') > 0
+      && html.indexOf('Pré-cadastros de avulso (') > 0);
+    check('v-39 · ele nasce recolhido e só a Recepção/Gestão vê o botão de promover',
+      /var PRE_CAD_ABERTO=false;/.test(html)
+      && html.indexOf("canCriarCadastro==='function')?canCriarCadastro():false") > 0
+      && html.indexOf('Quem promove a cadastro é a Recepção, a Gestão ou a Supervisão.') > 0);
+    check('v-39 · o pré-cadastro é lido do banco por um ouvinte próprio, em nó separado do cadastro',
+      html.indexOf("DB.ref('daycare/pre-cadastro').on('value'") > 0
+      && html.indexOf('try{ preCadCarregar(); }catch(e){}') > 0);
+    check('v-39 · Recebimentos do mês continua somando o avulso pelo det.valor_cent — sem exceção para quem não tem ficha',
+      html.indexOf("var o=lista[id]||{}, v=((o.det||{}).valor_cent);") > 0);
+
+    check('v-39 · a versão carimbada desta entrega é a 2026-09-23-01',
+      /const APP_VERSAO='2026-09-23-01';/.test(html));
   }
   console.log('');
 
