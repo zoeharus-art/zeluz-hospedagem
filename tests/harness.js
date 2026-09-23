@@ -3740,8 +3740,8 @@ async function main() {
     check('v-25 · a auditoria da tabela diz o que mudou, de quanto para quanto',
       /audit\('orcamento-precos',\s*\n?\s*mudou\.length\?\('alterou a tabela de hospedagem — '\+mudou\.join/.test(html)
       && /\{antes:antes, depois:novo\}/.test(html));
-    check('v-25 · a versão carimbada desta entrega é a 2026-09-23-01',
-      /const APP_VERSAO='2026-09-23-01';/.test(html));
+    check('v-25 · a versão carimbada desta entrega é a 2026-09-23-02',
+      /const APP_VERSAO='2026-09-23-02';/.test(html));
   }
   console.log('');
 
@@ -4037,8 +4037,8 @@ async function main() {
       && html.indexOf('sem valor registrado ficaram de fora') > 0
       && html.indexOf('Ainda estou lendo os avulsos lançados no mês') > 0);
 
-    check('v-26 · a versão carimbada desta entrega é a 2026-09-23-01',
-      /const APP_VERSAO='2026-09-23-01';/.test(html));
+    check('v-26 · a versão carimbada desta entrega é a 2026-09-23-02',
+      /const APP_VERSAO='2026-09-23-02';/.test(html));
   }
   console.log('');
 
@@ -4421,8 +4421,8 @@ async function main() {
       }
     } else { check('v-27 · orcRenderConfig existe', false, 'função não encontrada'); }
 
-    check('v-27 · a versão carimbada desta entrega é a 2026-09-23-01',
-      /const APP_VERSAO='2026-09-23-01';/.test(html));
+    check('v-27 · a versão carimbada desta entrega é a 2026-09-23-02',
+      /const APP_VERSAO='2026-09-23-02';/.test(html));
   }
   console.log('');
 
@@ -5033,8 +5033,8 @@ async function main() {
         delete ctx.document.activeElement; delete ctx.__focoAuto;
       }
     } else { check('v-28 · vencRedesenhoAuto existe', false, 'função não encontrada'); }
-    check('v-28 · a versão carimbada desta entrega é a 2026-09-23-01',
-      /const APP_VERSAO='2026-09-23-01';/.test(html));
+    check('v-28 · a versão carimbada desta entrega é a 2026-09-23-02',
+      /const APP_VERSAO='2026-09-23-02';/.test(html));
   }
   console.log('');
 
@@ -14609,7 +14609,7 @@ async function main() {
         !/\.catch\(function\([a-z]*\)\{\s*\}\)/.test(
           html.slice(html.indexOf('const CK_FRASE_PRATICA='), html.indexOf('function renderCkInicio('))));
       check('v-14 · a versão carimbada é a desta entrega',
-        /const APP_VERSAO='2026-09-23-01';/.test(html));
+        /const APP_VERSAO='2026-09-23-02';/.test(html));
     }
 
     // ---- v-15: O PLANO SÓ GRAVA NO CONFIRMAR (caso Cookie/Yara, 15/set/2026) --------
@@ -15425,8 +15425,8 @@ async function main() {
           + 'AVISO_COLEIRA_APOS = __bkpC.apos;', ctx);
       }
     } else { check('v-17 · prevCfgCarregar existe', false, 'função não encontrada'); }
-    check('v-24 · a versão carimbada desta entrega é a 2026-09-23-01',
-      /const APP_VERSAO='2026-09-23-01';/.test(html));
+    check('v-24 · a versão carimbada desta entrega é a 2026-09-23-02',
+      /const APP_VERSAO='2026-09-23-02';/.test(html));
 
     // ───────── v-19 · o aparelho autorizado que não se perde no iPhone (16/set/2026)
     // Auditoria de 16/set: o iPhone da Leticya gerou DOIS ids em trinta segundos
@@ -15680,8 +15680,8 @@ async function main() {
       String((html.match(/linhaBuscaCadastro\(/g) || []).length));
     check('v-29 · a linha tem estilo próprio: menor, em var(--muted), e quebrando no celular',
       /table\.pel \.pel-busca-sub\{[^}]*font-size:11\.5px[^}]*color:var\(--muted\)[^}]*white-space:normal/.test(html));
-    check('v-29 · a versão carimbada desta entrega é a 2026-09-23-01',
-      /const APP_VERSAO='2026-09-23-01';/.test(html));
+    check('v-29 · a versão carimbada desta entrega é a 2026-09-23-02',
+      /const APP_VERSAO='2026-09-23-02';/.test(html));
   }
   console.log('');
 
@@ -15983,8 +15983,8 @@ async function main() {
         ctx.vermNumTexto(5) === '5' && ctx.vermNumTexto(0.3) === '0,3' && ctx.vermNumTexto(4.5) === '4,5',
         JSON.stringify([ctx.vermNumTexto(5), ctx.vermNumTexto(0.3)]));
     } else { check('v-30 · vermNumLer existe', false, 'função não encontrada'); }
-    check('v-30 · a versão carimbada desta entrega é a 2026-09-23-01',
-      /const APP_VERSAO='2026-09-23-01';/.test(html));
+    check('v-30 · a versão carimbada desta entrega é a 2026-09-23-02',
+      /const APP_VERSAO='2026-09-23-02';/.test(html));
   }
   console.log('');
 
@@ -16247,8 +16247,8 @@ async function main() {
       && html.indexOf('A frase pronta fala em &ldquo;vence&rdquo; — confira antes de mandar.') > 0
       && /if\(\(m\.itens\|\|\[\]\)\.some\(function\(x\)\{ return x\.atrasado; \}\)\)/.test(html));
 
-    check('v-31 · a versão carimbada desta entrega é a 2026-09-23-01',
-      /const APP_VERSAO='2026-09-23-01';/.test(html));
+    check('v-31 · a versão carimbada desta entrega é a 2026-09-23-02',
+      /const APP_VERSAO='2026-09-23-02';/.test(html));
   }
   // ===== v-32 · O CALENDÁRIO, A COBRANÇA E A RESPOSTA QUE LANÇA SOZINHA ============
   // Adriana, 21/set/2026, palavra por palavra:
@@ -16713,8 +16713,8 @@ async function main() {
       }
     } else { check('v-32 · vencResponderTipo e dashLancar existem', false, 'função não encontrada'); }
 
-    check('v-32 · a versão carimbada desta entrega é a 2026-09-23-01',
-      /const APP_VERSAO='2026-09-23-01';/.test(html));
+    check('v-32 · a versão carimbada desta entrega é a 2026-09-23-02',
+      /const APP_VERSAO='2026-09-23-02';/.test(html));
   }
   console.log('');
 
@@ -17125,8 +17125,8 @@ async function main() {
       && /DB\.ref\('daycare\/vagas-pedidos'\)\.on\('value'/.test(html)
       && /try\{ vagasPedCarregar\(\); \}catch\(e\)\{\}/.test(html));
 
-    check('v-33 · a versão carimbada desta entrega é a 2026-09-23-01',
-      /const APP_VERSAO='2026-09-23-01';/.test(html));
+    check('v-33 · a versão carimbada desta entrega é a 2026-09-23-02',
+      /const APP_VERSAO='2026-09-23-02';/.test(html));
   }
   console.log('');
 
@@ -17438,8 +17438,8 @@ async function main() {
       && /URL\.createObjectURL\(f\)/.test(html) && /URL\.revokeObjectURL\(url\)/.test(html)
       && /createImageBitmap\(f,\{resizeWidth:CK_FOTO_MAX, resizeQuality:'medium', imageOrientation:'from-image'\}\)/.test(html)
       && /if\(bmp && bmp\.close\) bmp\.close\(\)/.test(html));
-    check('v-34 · a versão carimbada desta entrega é a 2026-09-23-01',
-      /const APP_VERSAO='2026-09-23-01';/.test(html));
+    check('v-34 · a versão carimbada desta entrega é a 2026-09-23-02',
+      /const APP_VERSAO='2026-09-23-02';/.test(html));
   }
   console.log('');
 
@@ -17796,8 +17796,8 @@ async function main() {
       && /if\(\(prev\.motivo\|\|''\)!==\(it\.motivo\|\|''\)\) mud\.push\('para quê'\);/.test(html)
       && ctx.medDiffAcao({ nome: 'Enalapril', horarios: ['17:45'] },
                          { nome: 'Enalapril', horarios: ['17:45'], quando: { ref: 'jantar', rel: 'antes', min: 45 } }) === 'Alterou quando dar');
-    check('v-35 · a versão carimbada desta entrega é a 2026-09-23-01',
-      /const APP_VERSAO='2026-09-23-01';/.test(html));
+    check('v-35 · a versão carimbada desta entrega é a 2026-09-23-02',
+      /const APP_VERSAO='2026-09-23-02';/.test(html));
   }
   console.log('');
 
@@ -18049,8 +18049,8 @@ async function main() {
       && /delete rQ\.fim_anterior;/.test(html));
     check('v-36 · vigência que não é mais do meio do mês não herda o "para onde voltar"',
       /if\(!regMMConf\) delete novo\.fim_anterior;/.test(html));
-    check('v-36 · a versão carimbada desta entrega é a 2026-09-23-01',
-      /const APP_VERSAO='2026-09-23-01';/.test(html));
+    check('v-36 · a versão carimbada desta entrega é a 2026-09-23-02',
+      /const APP_VERSAO='2026-09-23-02';/.test(html));
   }
   console.log('');
 
@@ -18267,8 +18267,8 @@ async function main() {
         !/dcLancamentosNaoCasados[\s\S]{0,900}'avaliacao'/.test(html));
     } else { check('v-38 · dashForaDoCadastro existe', false, 'função não encontrada'); }
 
-    check('v-38 · a versão carimbada desta entrega é a 2026-09-23-01',
-      /const APP_VERSAO='2026-09-23-01';/.test(html));
+    check('v-38 · a versão carimbada desta entrega é a 2026-09-23-02',
+      /const APP_VERSAO='2026-09-23-02';/.test(html));
   }
   console.log('');
 
@@ -18641,8 +18641,256 @@ async function main() {
     check('v-39 · Recebimentos do mês continua somando o avulso pelo det.valor_cent — sem exceção para quem não tem ficha',
       html.indexOf("var o=lista[id]||{}, v=((o.det||{}).valor_cent);") > 0);
 
-    check('v-39 · a versão carimbada desta entrega é a 2026-09-23-01',
-      /const APP_VERSAO='2026-09-23-01';/.test(html));
+    check('v-39 · a versão carimbada desta entrega é a 2026-09-23-02',
+      /const APP_VERSAO='2026-09-23-02';/.test(html));
+  }
+  console.log('');
+
+  // ===== v-40 · QUEM OCUPA O DIA — UMA FONTE SÓ, E O AUTOMÁTICO NA TELA ============
+  // Adriana, 23/set/2026, palavra por palavra:
+  //  "Em Reposições, em Lista de troca, tem os dias do mês, mas não tem ninguém. No dia
+  //   24/09, por exemplo, tem 'três de cinco vagas' e está escrito que ninguém está
+  //   marcado. Então por que não tem cinco vagas? Preciso saber quem: precisa estar
+  //   marcado aqui e ir para o Lançamento do dia também."
+  //  "Acabei de lançar uma reposição agora, da Safira; foi para a tabela, mas aqui no
+  //   Lançamento do dia não está aparecendo. Ela não está no dia 30 e eu já pedi para
+  //   marcar."
+  // Os dois bugs são o MESMO bug: o app tinha duas gavetas (o lançado à mão em
+  // daycare/dashboard e o que o automático escreveu em daycare/dashboard-auto) e cada
+  // tela olhava uma. A Lista de troca CONTAVA por vagasDoDia e LISTAVA por trocaDoDia.
+  console.log('v-40 · Quem ocupa o dia (uma fonte só) e o automático nos Lançamentos do dia:');
+  {
+    const HOJE40 = '2026-09-21';
+    const DIA40 = '2026-09-25';
+
+    if (typeof ctx.ocupantesDoDia === 'function') {
+      const bkp40 = {};
+      ['PELUDINHOS', 'REPO_CACHE', 'TROCA_CACHE', 'REP_PLAN_CACHE',
+        'DASH_DADOS', 'DASH_DIA_SEL', 'dcValoresCfg'].forEach((k) => { bkp40[k] = ctx[k]; });
+      vm.runInContext('__bkp40s = { cad: pelCadCache, hoje: zHojeISO };', ctx);
+      try {
+        vm.runInContext("zHojeISO = function(){ return '" + HOJE40 + "'; }; pelCadCache = {};", ctx);
+        ctx.dcValoresCfg = {};
+        ctx.PELUDINHOS = [
+          { n: 'Tablito', raca: 'Spitz', tutor: 'Duda', dias: ['seg', 'qua'] },
+          { n: 'Biscoito', raca: 'SRD', tutor: 'Rita', dias: ['ter'] }
+        ];
+        ctx.REPO_CACHE = {};
+        ctx.TROCA_CACHE = {};
+        ctx.DASH_DADOS = {};
+        ctx.DASH_DIA_SEL = '';
+
+        // ---- (a) AS QUATRO FONTES NUMA LISTA SÓ ---------------------------------
+        // A Safira é o caso real: o automático a escreveu, ninguém a lançou à mão.
+        ctx.REP_PLAN_CACHE = {};
+        ctx.REP_PLAN_CACHE[DIA40] = {
+          ts: Date.now(),
+          auto: { reposicao: ['Safira/Pomsky'] },
+          reposicao: { r1: { valor: 'Bruce/SRD' } },
+          avulso: { a1: { valor: 'Toshi/Shih Tzu' } }
+        };
+        const oc40 = ctx.ocupantesDoDia(DIA40);
+        // O nome vai no formato da casa — Nome/Raça, o mesmo da planilha, da TV e dos
+        // Lançamentos do dia. Xará sem raça não se distingue, e o nome é para uma pessoa ler.
+        check('v-40 · a frase dela sai inteira: "3 de 5 vagas em 25/09" com os NOMES de quem ocupa',
+          ctx.vagasFrase(ctx.vagasDoDia(DIA40)) === '3 de 5 vagas em 25/09/2026'
+          && ctx.vagasNomesFrase(ctx.vagasDoDia(DIA40))
+            === 'Safira/Pomsky (reposição), Bruce/SRD (reposição), Toshi/Shih Tzu (avulso)',
+          ctx.vagasNomesFrase(ctx.vagasDoDia(DIA40)));
+        check('v-40 · cada ocupante diz o nome, o tipo e DE ONDE veio — o automático se identifica',
+          oc40.length === 3
+          && oc40[0].nome === 'Safira/Pomsky' && oc40[0].tipo === 'reposicao' && oc40[0].origem === 'auto'
+          && oc40[1].nome === 'Bruce/SRD' && oc40[1].origem === 'manual' && oc40[1].id === 'r1'
+          && oc40[2].tipo === 'avulso' && oc40[2].origem === 'manual'
+          && oc40.every((o) => !!o.chave),
+          JSON.stringify(oc40));
+        // a reposição AGENDADA pelo tutor é a quarta fonte — e não custa leitura nenhuma
+        ctx.REPO_CACHE = {
+          'tablito__duda': { lancamentos: { c1: { tipo: 'credito', data: '2026-09-22', motivo: 'viagem', obs: '', volta: DIA40, ts: 1 } } }
+        };
+        ctx.TROCA_CACHE[DIA40] = { 'biscoito__rita': { nome: 'Biscoito/SRD', status: 'confirmada' } };
+        const oc40b = ctx.ocupantesDoDia(DIA40);
+        check('v-40 · ocupantesDoDia junta as QUATRO fontes: agenda do tutor, automático, lançado à mão e troca',
+          oc40b.length === 5
+          && oc40b.filter((o) => o.origem === 'agenda').length === 1
+          && oc40b.filter((o) => o.origem === 'auto').length === 1
+          && oc40b.filter((o) => o.origem === 'manual' && o.tipo !== 'troca').length === 2
+          && oc40b.filter((o) => o.tipo === 'troca').length === 1,
+          JSON.stringify(oc40b.map((o) => o.nome + '/' + o.tipo + '/' + o.origem)));
+        // ---- (b) DEDUPLICADA POR FILHOt ----------------------------------------
+        // O Tablito está agendado, o automático o escreveu e ainda foi lançado à mão como
+        // avulso: é UMA vaga, não três. A recepção escreve "Tablito - Spitz"; o app,
+        // "Tablito/Spitz" — mesmo FILHOt.
+        ctx.REP_PLAN_CACHE[DIA40] = {
+          ts: Date.now(),
+          auto: { reposicao: ['Tablito/Spitz'] },
+          reposicao: { r1: { valor: 'Tablito - Spitz' } },
+          avulso: { a1: { valor: 'Tablito/Spitz (AVULSO · NÃO MATRICULADO)' } }
+        };
+        ctx.TROCA_CACHE = {};
+        const oc40c = ctx.ocupantesDoDia(DIA40);
+        check('v-40 · o MESMO FILHOt em quatro fontes ocupa UMA vaga, não quatro',
+          oc40c.length === 1 && oc40c[0].origem === 'agenda',
+          JSON.stringify(oc40c));
+        // ---- (c) A CONTA É O COMPRIMENTO DA LISTA ------------------------------
+        ctx.REP_PLAN_CACHE[DIA40] = {
+          ts: Date.now(),
+          auto: { reposicao: ['Safira/Pomsky'] },
+          reposicao: {},
+          avulso: { a1: { valor: 'Toshi/Shih Tzu' }, a2: { valor: 'Bidu/SRD' } }
+        };
+        ctx.REPO_CACHE = {};
+        const v40 = ctx.vagasDoDia(DIA40);
+        check('v-40 · vagasDoDia é a MESMA lista medida: usadas === ocupantesDoDia().length, sempre',
+          v40.usadas === ctx.ocupantesDoDia(DIA40).length
+          && v40.usadas === 3 && v40.livres === 2 && v40.ocupantes.length === 3
+          && v40.reposicao.length === 1 && v40.avulso.length === 2,
+          JSON.stringify({ u: v40.usadas, l: v40.livres }));
+        check('v-40 · e a Lista de troca conta pela MESMA função — nunca duas verdades na casa',
+          ctx.trocaVagasLivres(DIA40) === v40.livres && ctx.trocaVagasLivres(DIA40) === 2,
+          String(ctx.trocaVagasLivres(DIA40)));
+        // ---- (d) A LISTA DE TROCA MOSTRA OS NOMES ------------------------------
+        const prox40 = ctx.trocaProximosDias(10).filter((d) => d.iso === DIA40)[0] || null;
+        check('v-40 · a Lista de troca recebe os OCUPANTES do dia, não só as trocas',
+          !!prox40 && prox40.ocupantes.length === 3 && prox40.usadas === 3
+          && prox40.limite === 5 && prox40.lido === true && prox40.lista.length === 0,
+          JSON.stringify(prox40 && prox40.ocupantes.map((o) => o.nome)));
+        check('v-40 · a tela desenha esses nomes (d.ocupantes), com o tipo ao lado, e o × só na troca',
+          html.indexOf('const nomes=d.ocupantes.map(function(o){') > 0
+          && html.indexOf("<small class=\"troca-tp\">'+esc(VAGAS_TIPO_ROTULO[o.tipo]||o.tipo)+'</small>") > 0
+          && html.indexOf("const pode=(o.tipo==='troca' && o.id && trocaPodeMexer());") > 0);
+        check('v-40 · "ninguém marcado" só quando a lista está vazia DE VERDADE',
+          html.indexOf('const vazio=!nomes&&!peds;') > 0
+          && html.indexOf('+(vazio?\'<div class="troca-vazio">ninguém marcado</div>\'') > 0);
+        check('v-40 · o número do dia deixou de ser ambíguo: diz quantas de quantas E quantas livres',
+          html.indexOf("(d.usadas+' de '+d.limite+' vagas · '+d.livres+' livre'+(d.livres===1?'':'s'))") > 0
+          && html.indexOf("(cheio?('lotado — '+d.usadas+' de '+d.limite)") > 0);
+        check('v-40 · o aviso "n de 5 vagas" (Reposições, Dia extra, Avulso à mão) leva os nomes junto',
+          html.indexOf('var v=vagasDoDia(dia), det=vagasDetalheFrase(v), quem=vagasNomesFrase(v);') > 0
+          && (html.match(/vg-quem">'\+esc\(quem\)/g) || []).length === 2
+          && html.indexOf('var quemJa=\'\'; try{ quemJa=vagasNomesFrase(vg); }catch(e){ quemJa=\'\'; }') > 0);
+        check('v-40 · e o Dashboard da Márcia diz quem já está no dia do pedido de encaixe',
+          html.indexOf("try{ var vDia=vagasDoDia(o._dia); jaTem=vDia.lido?vagasNomesFrase(vDia):''; }catch(e){ jaTem=''; }") > 0
+          && html.indexOf("+(jaTem?('<small>nesse dia já estão: '+esc(jaTem)+'</small>'):'')+'</div>'") > 0);
+        check('v-40 · a reposição lançada À MÃO passou a ser lida — sem ela o dia estourava sem ninguém ver',
+          html.indexOf("DB.ref('daycare/dashboard/'+dia+'/reposicao').once('value')") > 0
+          && html.indexOf('REP_PLAN_CACHE[dia]={ts:Date.now(), auto:r[0]||{}, avulso:r[1]||{}, reposicao:r[2]||{}};') > 0);
+
+        // ---- (e) OS LANÇAMENTOS DO DIA MOSTRAM O AUTOMÁTICO --------------------
+        // O caso da Safira: ela FOI para a planilha (planilha_ok), e a tela dizia nada.
+        ctx.REP_PLAN_CACHE[DIA40] = {
+          ts: Date.now(),
+          auto: {
+            _ts: Date.now(), _estado_v: 1,
+            reposicao: ['Safira/Pomsky', 'Bruce/SRD'],
+            aniversario: ['Chico/Pastor de Shetland'],
+            _estado: {
+              reposicao: { safira: { planilha_ok: true, planilha_msg: '', ts: 1790197671920 } },
+              aniversario: { chico: { planilha_ok: false, planilha_msg: 'a coluna não existe', ts: 1 } }
+            }
+          },
+          reposicao: {}, avulso: {}
+        };
+        const lin40 = ctx.dashAutoLinhas('reposicao', DIA40, null);
+        check('v-40 · o que o automático lançou aparece nos Lançamentos do dia, com etiqueta "automático"',
+          lin40.n === 2 && lin40.html.indexOf('Safira/Pomsky') > 0
+          && (lin40.html.match(/dash-auto-tag">automático</g) || []).length === 2,
+          String(lin40.n));
+        check('v-40 · e diz o estado da planilha: na planilha ✓, a caminho, ou recusada com o motivo',
+          lin40.html.indexOf('na planilha ✓') > 0
+          && lin40.html.indexOf('a caminho da planilha') > 0
+          && ctx.dashAutoLinhas('aniversario', DIA40, null).html.indexOf('a planilha recusou — a coluna não existe') > 0,
+          lin40.html);
+        check('v-40 · a linha do automático NÃO tem "tirar" — ela se corrige na origem, não aqui',
+          lin40.html.indexOf('tirar') < 0 && lin40.html.indexOf('dashRemover') < 0);
+        check('v-40 · quem já está lançado à mão não aparece em dobro no mesmo cartão',
+          ctx.dashAutoLinhas('reposicao', DIA40, ctx.dashChavesDaMao({ x1: { valor: 'Safira - Pomsky' } })).n === 1,
+          String(ctx.dashAutoLinhas('reposicao', DIA40, ctx.dashChavesDaMao({ x1: { valor: 'Safira - Pomsky' } })).n));
+        check('v-40 · o estado agora também é pedido pelo NOME (repPlanEstadoNome) — sem precisar da ficha',
+          ctx.repPlanEstadoNome(DIA40, 'Safira/Pomsky', 'reposicao').estado === 'ok'
+          && ctx.repPlanEstadoNome(DIA40, 'Bruce/SRD', 'reposicao').estado === 'espera',
+          ctx.repPlanEstadoNome(DIA40, 'Bruce/SRD', 'reposicao').estado);
+        check('v-40 · Reposição, Falta avisada e Adaptação desenham o automático dentro do próprio cartão',
+          html.indexOf("var DASH_ITEM_AUTO={reposicao:'reposicao', faltas:'faltas', adaptacao:'adaptacao'};") > 0
+          && html.indexOf('? dashAutoLinhas(DASH_ITEM_AUTO[it.k], __diaDash, dashChavesDaMao(lista))') > 0
+          && html.indexOf("}).join('')+aut.html+'</div>')") > 0);
+        check('v-40 · Aniversariante, Cliente novo e as Restrições ganham cartão só de leitura',
+          html.indexOf('var DASH_AUTO_SO_LEITURA=[') > 0
+          && html.indexOf("{k:'aniversario',  t:'Aniversariante'") > 0
+          && html.indexOf("{k:'clienteNovo',  t:'Cliente novo'") > 0
+          && html.indexOf("{k:'aulunosRestr', t:'Auluno com restrição'") > 0
+          && html.indexOf("{k:'hospRestr',    t:'Hóspede com restrição'") > 0
+          && html.indexOf('+DASH_AUTO_SO_LEITURA.map(function(it){') > 0);
+        check('v-40 · "Ninguém lançado hoje" só quando nem a mão nem o automático puseram nada',
+          html.indexOf("? ('<div style=\"margin-top:6px\">'+aut.html+'</div>')") > 0
+          && html.indexOf('<div class="hint">Ninguém lançado hoje.</div>\'))') > 0);
+        // Pelo vagasCarregarDia, não pelo vagasGarantirDias: o «garantir» tem a trava de uma
+        // rodada por vez e, com outra tela lendo, esta ficaria sem o redesenho.
+        check('v-40 · a tela lê o dia pelo MESMO cache das vagas (60 s) — a casa não paga duas vezes',
+          /function dashCarregar\(\)\{[\s\S]{0,900}vagasCarregarDia\(dashDia\(\), false\)/.test(html)
+          && html.indexOf('.then(function(){ try{ renderDash(); }catch(e){}') > 0
+          && html.indexOf('// rodada por vez (VAGAS_LENDO) e, se outra tela estivesse lendo, esta ficaria sem o') > 0);
+
+        // ---- (f) O CALENDÁRIO MARCA O DIA PELO AUTOMÁTICO TAMBÉM ---------------
+        check('v-40 · o calendário lê as DUAS gavetas — dia com reposição automática deixa de parecer vazio',
+          html.indexOf("Promise.all([faixa('daycare/dashboard'), faixa('daycare/dashboard-auto')])") > 0
+          && html.indexOf('return !dashCalMarcasMeta(k) && Array.isArray(itens[k]) && itens[k].length;') > 0);
+        check('v-40 · e lê só o MÊS que está na tela, por faixa de chave — não o histórico inteiro',
+          html.indexOf("r=r.orderByKey().startAt(ym+'-01').endAt(ym+'-31');") > 0);
+        check('v-40 · a papelada do automático (_ts, _estado, _quem) não conta como lançamento',
+          ctx.dashCalMarcasMeta('_ts') === true && ctx.dashCalMarcasMeta('_estado') === true
+          && ctx.dashCalMarcasMeta('reposicao') === false);
+
+        // ---- (g) "ESSE DIA JÁ É O DIA DELE" — o aviso que evita o erro --------
+        // Adriana, 23/set/2026: "É para evitar erro: se a reposição foi escolhida num dia
+        // que o peludo já vem, tem que avisar que aquele dia já é o dia do peludo. Vamos
+        // supor que pegue errado, tem que avisar."
+        // A Safira vem às sextas; 2026-09-25 é uma sexta-feira. 2026-09-24 é quinta.
+        const SEXTA40 = '2026-09-25';
+        const QUINTA40 = '2026-09-24';
+        const safira40 = { n: 'Safira', raca: 'Pomsky', tutor: 'Lia', dias: ['sex'], sexo: 'FÊMEA' };
+        const tablito40 = { n: 'Tablito', raca: 'Spitz', tutor: 'Duda', dias: ['seg', 'qua'] };
+        check('v-40 · o app sabe quando o dia escolhido é um dia da ficha dele',
+          ctx.repEhDiaDele(safira40, SEXTA40) === true
+          && ctx.repEhDiaDele(safira40, QUINTA40) === false
+          && ctx.repEhDiaDele(tablito40, SEXTA40) === false
+          && ctx.repEhDiaDele(null, SEXTA40) === false
+          && ctx.repEhDiaDele(safira40, '') === false);
+        const aviso40 = ctx.repDiaDeleAvisoHTML(safira40, SEXTA40);
+        check('v-40 · a faixa é a frase dela, com o dia da semana, o nome e a flexão certa',
+          aviso40.indexOf('Atenção: sexta-feira já é dia da Safira no Day Care.') > 0
+          && aviso40.indexOf('Reposição é para um dia em que ela NÃO vem. Confirme se é isso mesmo.') > 0
+          && aviso40.indexOf('vg-dia-dele') > 0,
+          aviso40);
+        check('v-40 · dia FORA da ficha não ganha faixa nenhuma — aviso em tudo é aviso em nada',
+          ctx.repDiaDeleAvisoHTML(safira40, QUINTA40) === ''
+          && ctx.repDiaDeleAvisoHTML(tablito40, SEXTA40) === '');
+        check('v-40 · macho leva a flexão dele: "dia do Tablito… em que ele NÃO vem"',
+          ctx.repDiaDeleAvisoHTML(tablito40, '2026-09-23').indexOf('já é dia do Tablito') > 0
+          && ctx.repDiaDeleAvisoHTML(tablito40, '2026-09-23').indexOf('em que ele NÃO vem') > 0,
+          ctx.repDiaDeleAvisoHTML(tablito40, '2026-09-23'));
+        check('v-40 · a faixa aparece nos DOIS lugares em que se escolhe o dia: falta avisada e dia extra',
+          html.indexOf("if(box) box.innerHTML=v?(repDiaDeleAvisoHTML(repPelSel, v)+vagasAvisoHTML(v,'repPedirEncaixe()')):'';") > 0
+          && html.indexOf("if(vgEl) vgEl.innerHTML=dxDia?(repDiaDeleAvisoHTML(dxPel, dxDia)+vagasAvisoHTML(dxDia,'dxPedir()')):'';") > 0);
+        check('v-40 · e o botão de gravar passa a pedir confirmação explícita, nos dois',
+          ctx.REP_DIA_DELE_BOTAO === 'É isso mesmo, marcar no dia dele'
+          && html.indexOf('if(repEhDiaDele(repPelSel, v) && (!vg.lido || !vg.cheio)) return REP_DIA_DELE_BOTAO;') > 0
+          && html.indexOf('if(repEhDiaDele(dxPel, dxDia)) return REP_DIA_DELE_BOTAO;') > 0);
+        check('v-40 · NÃO bloqueia (pode ser de propósito), mas deixa rastro: audit reposicao-no-dia-dele com quem e dia',
+          html.indexOf("if(typeof audit==='function') audit('reposicao-no-dia-dele',") > 0
+          && html.indexOf('dia:iso, alvo:(typeof pelKey===') > 0
+          && html.indexOf('repAuditDiaDele(p, voltaEfetiva);') > 0
+          && html.indexOf('repAuditDiaDele(p, dia);') > 0);
+        check('v-40 · e o rastro só sai quando o dia É o dele — dia comum não polui a auditoria',
+          html.indexOf('function repAuditDiaDele(p, iso){\n    if(!repEhDiaDele(p, iso)) return;') > 0);
+      } finally {
+        Object.keys(bkp40).forEach((k) => { ctx[k] = bkp40[k]; });
+        vm.runInContext('pelCadCache = __bkp40s.cad; zHojeISO = __bkp40s.hoje;', ctx);
+      }
+    } else { check('v-40 · ocupantesDoDia existe', false, 'função não encontrada'); }
+
+    check('v-40 · a versão carimbada desta entrega é a 2026-09-23-02',
+      /const APP_VERSAO='2026-09-23-02';/.test(html));
   }
   console.log('');
 

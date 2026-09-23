@@ -450,6 +450,8 @@
     padding:4px 8px;font-size:12.5px;font-weight:700;color:var(--z-blue)}
   .troca-nome.ped{border:1px dashed #B3261E;color:#B3261E;background:#fff}
   .troca-nome button{background:none;border:0;color:var(--muted);font-size:15px;line-height:1;cursor:pointer;padding:0 1px}
+  /* O que aquele nome é naquele dia: reposição, avulso, troca ou pedido. */
+  .troca-tp{font-size:10.5px;font-weight:700;color:var(--muted);text-transform:lowercase}
   .troca-vazio{font-size:12px;font-weight:500;color:var(--muted)}
   .troca-pedidos{display:flex;flex-direction:column;gap:8px;margin-bottom:12px}
   .troca-ped{display:flex;align-items:center;gap:10px;flex-wrap:wrap;border:1px solid #B3261E;border-radius:12px;
@@ -1727,6 +1729,16 @@
   .vg-cheio{margin-top:8px;background:rgba(192,57,43,.08);border:1.5px solid var(--crm-critico);border-radius:12px;
     padding:10px 13px;font-size:13px;font-weight:700;color:var(--crm-critico);line-height:1.45}
   .vg-sub{font-size:12.5px;font-weight:600;color:var(--z-blue);margin-top:6px;line-height:1.45}
+  /* A faixa que avisa: o dia escolhido para repor já é dia dele no Day Care. */
+  .vg-dia-dele{margin-top:8px;background:rgba(222,180,40,.16);border:1.5px solid var(--z-gold-deep);
+    border-radius:12px;padding:10px 13px;font-size:13px;font-weight:800;color:var(--z-blue);line-height:1.45}
+  .vg-dia-dele span{display:block;font-weight:600;margin-top:3px}
+  /* Os NOMES de quem já ocupa o dia. Número sem nome não deixa ninguém decidir nada. */
+  .vg-quem{font-size:12.5px;font-weight:700;color:var(--z-blue);margin-top:5px;line-height:1.45}
+  /* A linha que o AUTOMÁTICO lançou: mesma tela, etiqueta dizendo de onde veio e sem "tirar". */
+  .dash-auto{background:rgba(222,180,40,.07)}
+  .dash-auto-tag{display:inline-block;background:var(--z-gold);color:var(--z-blue);border-radius:7px;
+    padding:1px 6px;font-size:10.5px;font-weight:800;letter-spacing:.2px}
   .vg-bt{margin-top:8px;border-radius:11px;padding:11px 14px;font-family:var(--font-ui);font-weight:800;
     font-size:14px;cursor:pointer;border:none;background:var(--z-gold);color:var(--z-blue);width:100%}
   .vg-bt[disabled]{opacity:.5;cursor:not-allowed}
@@ -6326,7 +6338,8 @@
   function repVoltaPintar(){
     var box=document.getElementById('repVagasBox');
     var v=String((document.getElementById('repVolta')||{}).value||'').slice(0,10);
-    if(box) box.innerHTML=v?vagasAvisoHTML(v,'repPedirEncaixe()'):'';
+    // A faixa do "dia dele" vem PRIMEIRO: é o erro que ela quis evitar, não um detalhe.
+    if(box) box.innerHTML=v?(repDiaDeleAvisoHTML(repPelSel, v)+vagasAvisoHTML(v,'repPedirEncaixe()')):'';
     var btn=document.querySelector('#repModal .rep-ok');
     if(btn){ btn.textContent=repBotaoRotulo(); btn.disabled=false; }
   }
@@ -6337,6 +6350,8 @@
     var v=String((document.getElementById('repVolta')||{}).value||'').slice(0,10);
     if(!/^\d{4}-\d{2}-\d{2}$/.test(v)) return 'Lançar reposição';
     var vg=vagasDoDia(v);
+    // Dia que já é dele: o botão DIZ o que o toque vai fazer — é a confirmação explícita.
+    if(repEhDiaDele(repPelSel, v) && (!vg.lido || !vg.cheio)) return REP_DIA_DELE_BOTAO;
     if(!vg.lido || !vg.cheio) return 'Lançar reposição';
     return vagasPodeEncaixar()?'Márcia autorizou':'Lançar a falta sem o dia de repor';
   }
@@ -6394,6 +6409,8 @@
   Promise.all(regs.map(function(r){ return repGravar(p,r); })).then(function(refs){
       if(typeof audit==='function') audit('reposicao-credito', pelNome(p)+' · '+regs.length+' dia(s) · '+(REP_MOTIVOS[repMotivoAtual]||repMotivoAtual)
         +(autVaga?(' — encaixe em '+repBRdata(volta)+' autorizado por '+autVaga.quem):''), {obs:obs});
+      // O rastro de quando o dia de repor é o dia dele. Não é bloqueio: é memória.
+      repAuditDiaDele(p, voltaEfetiva);
       repFechar(); soltar();
       // O PEDIDO DE ENCAIXE, quando o dia de repor está lotado e quem lançou não pode abrir
       // vaga: vai com a chave do crédito que acabou de nascer, para a autorização da Márcia
@@ -6760,7 +6777,14 @@
       const p=function(x){ return String(x).padStart(2,'0'); };
       const iso=d.getFullYear()+'-'+p(d.getMonth()+1)+'-'+p(d.getDate());
       const dia=trocaDiaSemana(iso);
-      if(dia!=='sab'&&dia!=='dom') out.push({iso:iso, dia:dia, livres:trocaVagasLivres(iso), lista:trocaDoDia(iso)});
+      if(dia!=='sab'&&dia!=='dom'){
+        // `ocupantes` é a MESMA lista que deu a conta das vagas — é ela que a tela mostra.
+        // `lista` continua sendo só as trocas daquele dia, porque é delas que sai o pedido
+        // esperando a Gestora; quem OCUPA o dia vem de ocupantesDoDia.
+        var v=vagasDoDia(iso);
+        out.push({iso:iso, dia:dia, livres:v.livres, usadas:v.usadas, limite:v.limite,
+                  lido:v.lido, ocupantes:v.ocupantes, lista:trocaDoDia(iso)});
+      }
     }
     return out;
   }
@@ -6788,14 +6812,31 @@
     }
     h+='<div class="troca-dias">'+dias.map(function(d){
       const cheio=(d.livres<=0);
-      const nomes=d.lista.map(function(t){
-        return '<span class="troca-nome'+(t.status==='pedido'?' ped':'')+'">'+escAttr(t.nome)
-          +(trocaPodeMexer()?'<button title="cancelar" onclick="trocaCancelar(\''+d.iso+'\',\''+t._k+'\')">&times;</button>':'')+'</span>'; }).join('');
+      // OS NOMES DE QUEM OCUPA O DIA — a mesma lista que deu a conta. Antes esta tela
+      // contava por vagasDoDia e listava por trocaDoDia: dizia "3 de 5 vagas" e logo
+      // abaixo "ninguém marcado", que é impossível (Adriana, 23/set/2026).
+      const nomes=d.ocupantes.map(function(o){
+        // O × só existe onde há o que cancelar: a troca é gesto desta tela. Reposição e
+        // avulso se desfazem onde nasceram — na ficha e nos Lançamentos do dia.
+        const pode=(o.tipo==='troca' && o.id && trocaPodeMexer());
+        return '<span class="troca-nome">'+escAttr(o.nome)
+          +'<small class="troca-tp">'+esc(VAGAS_TIPO_ROTULO[o.tipo]||o.tipo)+'</small>'
+          +(pode?('<button title="cancelar" onclick="trocaCancelar(\''+d.iso+'\',\''+escAttr(o.id).replace(/'/g,"\\'")+'\')">&times;</button>'):'')
+          +'</span>'; }).join('');
+      // Pedido esperando a Gestora NÃO ocupa vaga — aparece à parte, para ninguém somar duas vezes.
+      const peds=d.lista.filter(function(t){ return t.status==='pedido'; }).map(function(t){
+        return '<span class="troca-nome ped">'+escAttr(t.nome)+'<small class="troca-tp">pedido</small></span>'; }).join('');
+      // "Ninguém marcado" só quando a lista está vazia DE VERDADE.
+      const vazio=!nomes&&!peds;
       return '<div class="troca-dia'+(cheio?' cheio':'')+'">'
         +'<div class="troca-dh"><span class="troca-data">'+fmtBR(d.iso)+'</span>'
           +'<span class="troca-sem">'+(DIA_FULL[d.dia]||d.dia)+'</span>'
-          +'<span class="troca-vagas'+(cheio?' zero':'')+'">'+(cheio?'sem vaga livre':d.livres+' de '+vagasLimite()+' vagas')+'</span></div>'
-        +(nomes?('<div class="troca-nomes">'+nomes+'</div>'):'<div class="troca-vazio">ninguém marcado</div>')
+          +'<span class="troca-vagas'+(cheio?' zero':'')+'">'
+          +(!d.lido?'conferindo as vagas…'
+            :(cheio?('lotado — '+d.usadas+' de '+d.limite)
+              :(d.usadas+' de '+d.limite+' vagas · '+d.livres+' livre'+(d.livres===1?'':'s'))))
+          +'</span></div>'
+        +(vazio?'<div class="troca-vazio">ninguém marcado</div>':('<div class="troca-nomes">'+nomes+peds+'</div>'))
         +'</div>'; }).join('')+'</div>';
     h+='<div class="hint" style="margin-top:9px">São <strong>'+vagasLimite()+' vagas por dia</strong> que a recepção marca sem precisar falar com a Gestora. '
       +'Passou disso, o pedido sobe para ela — que avalia a matilha e o comportamento do FILHOt antes de abrir a vaga.</div>';
@@ -6880,7 +6921,7 @@
     return (typeof dashAutoNomeChave==='function')?dashAutoNomeChave(t)
       :((typeof jsNorm==='function')?jsNorm(String(t).split('/')[0]):String(t).toLowerCase().trim());
   }
-  // Lê o registro do automático e os avulsos lançados naquele dia. Dois nós pequenos.
+  // Lê o registro do automático e o que foi lançado à mão naquele dia. Três nós pequenos.
   function vagasCarregarDia(dia, forcar){
     if(!/^\d{4}-\d{2}-\d{2}$/.test(dia||'')) return Promise.resolve(null);
     var c=REP_PLAN_CACHE[dia]||null;
@@ -6889,19 +6930,25 @@
     if(!DB) return Promise.resolve(c);
     var pr=Promise.all([
       DB.ref('daycare/dashboard-auto/'+dia).once('value').then(function(s){ return s.val()||{}; }),
-      DB.ref('daycare/dashboard/'+dia+'/avulso').once('value').then(function(s){ return s.val()||{}; })
+      DB.ref('daycare/dashboard/'+dia+'/avulso').once('value').then(function(s){ return s.val()||{}; }),
+      // A reposição lançada À MÃO nos Lançamentos do dia também ocupa a vaga (23/set/2026).
+      // Sem esta leitura, quem a recepção lançou direto no cartão Reposição ficava fora da
+      // conta — e o dia estourava sem ninguém ver, que é exatamente o que esta conta existe
+      // para impedir. Nó pequeno, do mesmo tamanho do avulso.
+      DB.ref('daycare/dashboard/'+dia+'/reposicao').once('value').then(function(s){ return s.val()||{}; })
     ]).then(function(r){
-      REP_PLAN_CACHE[dia]={ts:Date.now(), auto:r[0]||{}, avulso:r[1]||{}};
+      REP_PLAN_CACHE[dia]={ts:Date.now(), auto:r[0]||{}, avulso:r[1]||{}, reposicao:r[2]||{}};
       return REP_PLAN_CACHE[dia];
     }).catch(function(e){
       _logLeituraFalhou('daycare/dashboard-auto/'+dia+' (as vagas do dia)', e);
       // Leitura falhou: o que havia antes continua valendo; sem nada antes, a tela DIZ que
       // ainda está conferindo em vez de afirmar "tem vaga".
-      if(c && c.ts) REP_PLAN_CACHE[dia]={ts:c.ts, auto:c.auto||{}, avulso:c.avulso||{}};
+      if(c && c.ts) REP_PLAN_CACHE[dia]={ts:c.ts, auto:c.auto||{}, avulso:c.avulso||{}, reposicao:c.reposicao||{}};
       else delete REP_PLAN_CACHE[dia];
       return REP_PLAN_CACHE[dia]||null;
     });
-    REP_PLAN_CACHE[dia]={ts:(c&&c.ts)||0, auto:(c&&c.auto)||{}, avulso:(c&&c.avulso)||{}, lendo:pr};
+    REP_PLAN_CACHE[dia]={ts:(c&&c.ts)||0, auto:(c&&c.auto)||{}, avulso:(c&&c.avulso)||{},
+                         reposicao:(c&&c.reposicao)||{}, lendo:pr};
     return pr;
   }
   // Garante os dias de uma lista e redesenha UMA vez, quando todos chegarem. Sem laço: na
@@ -6921,45 +6968,129 @@
       return true;
     }).catch(function(e){ VAGAS_LENDO=false; _logFalhaGrav('vagasGarantirDias', e); return false; });
   }
-  // A CONTA DAS VAGAS. Conta FILHOt, não linha: quem está agendado para repor e também
-  // lançado como avulso no mesmo dia ocupa UMA vaga, não duas.
-  function vagasDoDia(dia){
-    var lim=vagasLimite();
-    var out={dia:dia, limite:lim, usadas:0, livres:lim, cheio:false, lido:false,
-             reposicao:[], avulso:[], troca:[]};
+  /* QUEM OCUPA O DIA — UMA FONTE SÓ (Adriana, 23/set/2026) ---------------------------
+   * As palavras dela: "Em Reposições, em Lista de troca, tem os dias do mês, mas não tem
+   * ninguém. No dia 24/09 tem 'três de cinco vagas' e está escrito que ninguém está
+   * marcado. Então por que não tem cinco vagas? Preciso saber QUEM."
+   *
+   * O que acontecia: a Lista de troca CONTAVA por vagasDoDia (reposição + avulso + troca) e
+   * LISTAVA por trocaDoDia (só as trocas, que estavam vazias). Contava por uma fonte e
+   * listava por outra — duas telas, duas verdades, e a casa sem saber quem vem.
+   *
+   * Agora quem ocupa o dia sai DESTA função, e só dela. Devolve a pessoa inteira — nome,
+   * chave, o tipo (reposição, avulso, troca) e de onde veio (agenda do tutor, o automático,
+   * a mão da recepção) — deduplicada por FILHOt: quem está agendado para repor E lançado
+   * como avulso no mesmo dia ocupa UMA vaga, não duas. Quem conta e quem lista leem o
+   * mesmo. */
+  var VAGAS_TIPO_ROTULO={reposicao:'reposição', avulso:'avulso', troca:'troca'};
+  function ocupantesDoDia(dia){
+    var out=[];
     if(!/^\d{4}-\d{2}-\d{2}$/.test(dia||'')) return out;
     var vistos={};
-    var add=function(nome, arr){
+    var add=function(nome, tipo, origem, id){
       var t=(typeof pendBase==='function')?pendBase(nome):String(nome||'');
       var c=vagasNomeChave(t);
       if(!c || vistos[c]) return;
-      vistos[c]=1; arr.push(t);
+      vistos[c]=1;
+      out.push({nome:t, chave:c, tipo:tipo, origem:origem, id:id||''});
     };
-    // 1) reposição AGENDADA para o dia — já está na memória do app, não custa leitura.
-    try{ repAgendadosPara(dia).forEach(function(o){ add(pelNome(o.p), out.reposicao); }); }
-    catch(e){ _logFalhaGrav('vagasDoDia (agendados)', e); }
+    // 1) reposição AGENDADA pelo tutor — já está na memória do app, não custa leitura.
+    try{
+      repAgendadosPara(dia).forEach(function(o){
+        add(pelNome(o.p), 'reposicao', 'agenda', (typeof pelKey==='function')?pelKey(o.p):'');
+      });
+    }catch(e){ _logFalhaGrav('ocupantesDoDia (agendados)', e); }
     var c=REP_PLAN_CACHE[dia]||{};
     // 2) o que o automático JÁ ESCREVEU na coluna Reposição daquele dia.
     var auto=c.auto||{};
-    (Array.isArray(auto.reposicao)?auto.reposicao:[]).forEach(function(v){ add(v, out.reposicao); });
-    // 3) avulso lançado para o dia — do banco e, se for o dia aberto nos Lançamentos, da
-    //    memória também: o avulso lançado agora ocupa a vaga na hora, não em 60 s.
+    (Array.isArray(auto.reposicao)?auto.reposicao:[]).forEach(function(v){ add(v, 'reposicao', 'auto', ''); });
+    // 3) reposição lançada À MÃO nos Lançamentos do dia — do banco e, se for o dia aberto
+    //    na tela, da memória também: o que acabou de ser lançado ocupa a vaga na hora.
+    var repBanco=c.reposicao||{};
+    Object.keys(repBanco).forEach(function(id){ add((repBanco[id]||{}).valor, 'reposicao', 'manual', id); });
+    // 4) avulso lançado para o dia — mesma regra do banco mais a memória do dia aberto.
     var doBanco=c.avulso||{};
-    Object.keys(doBanco).forEach(function(id){ add((doBanco[id]||{}).valor, out.avulso); });
+    Object.keys(doBanco).forEach(function(id){ add((doBanco[id]||{}).valor, 'avulso', 'manual', id); });
     try{
       if(typeof dashDia==='function' && dia===dashDia() && typeof DASH_DADOS!=='undefined'){
+        var vivaRep=(DASH_DADOS||{}).reposicao||{};
+        Object.keys(vivaRep).forEach(function(id){ add((vivaRep[id]||{}).valor, 'reposicao', 'manual', id); });
         var viva=(DASH_DADOS||{}).avulso||{};
-        Object.keys(viva).forEach(function(id){ add((viva[id]||{}).valor, out.avulso); });
+        Object.keys(viva).forEach(function(id){ add((viva[id]||{}).valor, 'avulso', 'manual', id); });
       }
-    }catch(e){ _logFalhaGrav('vagasDoDia (avulso do dia aberto)', e); }
-    // 4) troca confirmada — outro gesto para o mesmo dia, mesma vaga.
-    try{ trocaDoDia(dia).forEach(function(t){ if(t.status==='confirmada') add(t.nome, out.troca); }); }
-    catch(e){ _logFalhaGrav('vagasDoDia (trocas)', e); }
-    out.usadas=out.reposicao.length+out.avulso.length+out.troca.length;
+    }catch(e){ _logFalhaGrav('ocupantesDoDia (lançamento do dia aberto)', e); }
+    // 5) troca confirmada — outro gesto para o mesmo dia, mesma vaga.
+    try{
+      trocaDoDia(dia).forEach(function(t){ if(t.status==='confirmada') add(t.nome, 'troca', 'manual', t._k); });
+    }catch(e){ _logFalhaGrav('ocupantesDoDia (trocas)', e); }
+    return out;
+  }
+  // A CONTA DAS VAGAS. É a MESMA lista de ocupantesDoDia, medida contra o limite: se a lista
+  // tem três nomes, são três vagas usadas — nunca um número que não se possa mostrar.
+  function vagasDoDia(dia){
+    var lim=vagasLimite();
+    var out={dia:dia, limite:lim, usadas:0, livres:lim, cheio:false, lido:false,
+             reposicao:[], avulso:[], troca:[], ocupantes:[]};
+    if(!/^\d{4}-\d{2}-\d{2}$/.test(dia||'')) return out;
+    out.ocupantes=ocupantesDoDia(dia);
+    out.ocupantes.forEach(function(o){
+      (out[o.tipo]||out.reposicao).push(o.nome);
+    });
+    out.usadas=out.ocupantes.length;
     out.livres=Math.max(0, lim-out.usadas);
     out.cheio=(out.usadas>=lim);
-    out.lido=!!c.ts;
+    out.lido=!!(REP_PLAN_CACHE[dia]||{}).ts;
     return out;
+  }
+  /* "É O DIA DELE" — o aviso que evita o erro (Adriana, 23/set/2026) ------------------
+   * As palavras dela: "É para evitar erro: se a reposição foi escolhida num dia que o peludo
+   * já vem, tem que avisar que aquele dia já é o dia do peludo. Vamos supor que pegue errado,
+   * tem que avisar."
+   *
+   * NÃO bloqueia: pode ser de propósito — o dia dele numa semana em que ele faltou. Mas nunca
+   * em silêncio: faixa amarela no instante em que a data é escolhida, o botão de gravar passa
+   * a dizer "É isso mesmo, marcar no dia dele" e a gravação deixa rastro na auditoria. */
+  var REP_DIA_FULL={seg:'segunda-feira', ter:'terça-feira', qua:'quarta-feira',
+                    qui:'quinta-feira', sex:'sexta-feira', sab:'sábado', dom:'domingo'};
+  function repEhFemea(p){
+    try{
+      var ex=(typeof pelExtra==='function')?(pelExtra(p)||{}):{};
+      return /^f/i.test(String(ex.sexo||(p&&p.sexo)||''));
+    }catch(e){ return false; }
+  }
+  // O dia escolhido cai num dia da semana que já está na ficha dele?
+  function repEhDiaDele(p, iso){
+    try{
+      if(!p || !/^\d{4}-\d{2}-\d{2}$/.test(iso||'')) return false;
+      var dia=(typeof trocaDiaSemana==='function')?trocaDiaSemana(iso):'';
+      if(!dia) return false;
+      var dias=(typeof pelDias==='function')?(pelDias(p)||[]):[];
+      return Array.isArray(dias) && dias.indexOf(dia)>=0;
+    }catch(e){ return false; }
+  }
+  function repDiaDeleAvisoHTML(p, iso){
+    if(!repEhDiaDele(p, iso)) return '';
+    var dia=(typeof trocaDiaSemana==='function')?trocaDiaSemana(iso):'';
+    var f=repEhFemea(p);
+    var nome=(typeof pelNome==='function')?pelNome(p):'';
+    return '<div class="vg-dia-dele"><strong>Atenção: '+esc(REP_DIA_FULL[dia]||dia)+' já é dia '
+      +esc((f?'da ':'do ')+nome)+' no Day Care.</strong> '
+      +'<span>Reposição é para um dia em que '+(f?'ela':'ele')+' NÃO vem. Confirme se é isso mesmo.</span></div>';
+  }
+  // O rótulo do botão quando a data escolhida é o dia dele: quem toca está dizendo, com
+  // todas as letras, que é isso mesmo.
+  var REP_DIA_DELE_BOTAO='É isso mesmo, marcar no dia dele';
+  // O rastro. Fica na auditoria com quem marcou e em que dia — para depois se saber se foi
+  // engano ou escolha.
+  function repAuditDiaDele(p, iso){
+    if(!repEhDiaDele(p, iso)) return;
+    try{
+      if(typeof audit==='function') audit('reposicao-no-dia-dele',
+        ((typeof pelNome==='function')?pelNome(p):'')+' — marcado em '+repBRdata(iso)
+        +', que já é dia '+(REP_DIA_FULL[trocaDiaSemana(iso)]||'')+' dele na ficha',
+        {quem:(typeof pessoaDoTurno==='function')?pessoaDoTurno():((typeof quemSou==='function')?quemSou():'-'),
+         dia:iso, alvo:(typeof pelKey==='function')?pelKey(p):''});
+    }catch(e){ _logFalhaGrav('repAuditDiaDele', e); }
   }
   // Quem abre vaga acima do limite: a Márcia (Gestão) e a Diretoria. A MESMA capacidade que
   // já decidia a troca acima das 5 — permissão em um lugar só.
@@ -6975,18 +7106,27 @@
     if(v.troca.length) p.push(v.troca.length+' de troca');
     return p.join(' · ');
   }
+  // OS NOMES. "Preciso saber QUEM" — número sem nome não serve para decidir nada. Quem usa
+  // esta frase é a mesma lista que a conta usou: se o aviso diz três, aqui vêm três nomes.
+  function vagasNomesFrase(v){
+    return ((v&&v.ocupantes)||[]).map(function(o){
+      return o.nome+' ('+(VAGAS_TIPO_ROTULO[o.tipo]||o.tipo)+')';
+    }).join(', ');
+  }
   // O aviso que aparece ao escolher o dia. `acaoPedir` é o gesto de "Avisar a Márcia" da
   // tela que chamou — sem ele, o aviso só informa.
   function vagasAvisoHTML(dia, acaoPedir){
     if(!/^\d{4}-\d{2}-\d{2}$/.test(dia||'')) return '';
-    var v=vagasDoDia(dia), det=vagasDetalheFrase(v);
+    var v=vagasDoDia(dia), det=vagasDetalheFrase(v), quem=vagasNomesFrase(v);
     if(!v.lido) return '<div class="vg-ok"><strong>'+esc(vagasFrase(v))+'</strong></div>';
     if(!v.cheio){
       return '<div class="vg-ok"><strong>'+esc(vagasFrase(v))+'</strong>'
-        +'<span> — '+esc(v.livres+' livre'+(v.livres===1?'':'s')+(det?(' · '+det):''))+'</span></div>';
+        +'<span> — '+esc(v.livres+' livre'+(v.livres===1?'':'s')+(det?(' · '+det):''))+'</span>'
+        +(quem?('<div class="vg-quem">'+esc(quem)+'</div>'):'')+'</div>';
     }
     var h='<div class="vg-cheio"><strong>Dia lotado ('+v.usadas+' de '+v.limite+').</strong> '
-      +'Só com autorização da Márcia.'+(det?(' Neste dia já há '+esc(det)+'.'):'')+'</div>';
+      +'Só com autorização da Márcia.'+(det?(' Neste dia já há '+esc(det)+'.'):'')
+      +(quem?('<div class="vg-quem">'+esc(quem)+'</div>'):'')+'</div>';
     if(vagasPodeEncaixar()){
       h+='<div class="vg-sub">A senhora pode abrir o encaixe: o botão de gravar vira '
         +'<strong>«Márcia autorizou»</strong> e a autorização fica registrada com o seu nome.</div>';
@@ -7019,11 +7159,18 @@
     try{ ehMorador=(typeof pelCategoria==='function') && pelCategoria(p)==='morador'; }
     catch(e){ ehMorador=false; }
     if(ehMorador) return {estado:'nao-entra', msg:'morador não entra na tabela do dia'};
+    return repPlanEstadoNome(dia, dashNomeRaca(p), tipo);
+  }
+  // O MESMO estado, pedido pelo NOME. O automático guarda listas de "Nome/Raça", não fichas
+  // — e os Lançamentos do dia precisam dizer o estado de cada uma dessas linhas sem ter a
+  // ficha na mão (23/set/2026). Uma régua só: repPlanEstado passou a chamar esta.
+  function repPlanEstadoNome(dia, nomeRaca, tipo){
+    if(!/^\d{4}-\d{2}-\d{2}$/.test(dia||'')) return {estado:'nada'};
     if(!repPlanNaJanela(dia)) return {estado:'fora'};
     var c=REP_PLAN_CACHE[dia];
     if(!c || !c.ts) return {estado:'lendo'};
     var est=((c.auto||{})._estado||{})[tipo]||null;
-    var ch=vagasNomeChave(dashNomeRaca(p));
+    var ch=vagasNomeChave(nomeRaca);
     var r=est?est[ch]:null;
     if(r && r.planilha_ok===true) return {estado:'ok', ts:r.ts||0};
     if(r && r.planilha_ok===false) return {estado:'falhou', ts:r.ts||0,
@@ -7359,11 +7506,18 @@
       // A chave viaja DENTRO de um onclick: apóstrofo em nome de FILHOt ("D'Artagnan")
       // quebraria o JS da linha — e botão que não responde é bug.
       var jsD=escAttr(o._dia).replace(/'/g,"\\'"), jsK=escAttr(o._chave).replace(/'/g,"\\'");
+      // QUEM JÁ OCUPA AQUELE DIA — a mesma lista da conta das vagas. É o que a Márcia
+      // precisa ver para decidir o encaixe: a matilha daquele dia, com nome (23/set/2026).
+      // Só depois de o dia ter sido LIDO: lista pela metade é pior que lista nenhuma,
+      // porque a Márcia decidiria achando que sabe a matilha inteira daquele dia.
+      var jaTem='';
+      try{ var vDia=vagasDoDia(o._dia); jaTem=vDia.lido?vagasNomesFrase(vDia):''; }catch(e){ jaTem=''; }
       h+='<div class="vg-ped"><div><strong>'+escAttr(o.pet||'')+'</strong>'
         +'<small>'+esc(fmtBR(o._dia))+' · '+esc((o.tipo==='avulso')
             ?('avulso'+(pay.valor_cent?(' de '+fmtCent(pay.valor_cent)):'')+(pay.matriculado?' (matriculado)':' (não matriculado)'))
             :'reposição')
-        +' · pedido por '+esc(o.quem||'-')+'</small></div>'
+        +' · pedido por '+esc(o.quem||'-')+'</small>'
+        +(jaTem?('<small>nesse dia já estão: '+esc(jaTem)+'</small>'):'')+'</div>'
         +(pode?('<div class="vg-acoes">'
             +'<button class="btn btn-primary" style="padding:7px 12px;font-size:13px" onclick="vagasAutorizar(\''+jsD+'\',\''+jsK+'\')">Autorizar</button>'
             +'<button class="btn" style="padding:7px 12px;font-size:13px;background:var(--z-cream-warm);color:var(--z-blue);border:1.5px solid var(--line)" onclick="vagasRecusar(\''+jsD+'\',\''+jsK+'\')">Recusar</button></div>')
@@ -7474,6 +7628,8 @@
     if(!v.ok) return 'Confirmar';
     var vg=vagasDoDia(dxDia);
     if(vg.cheio && vagasPodeEncaixar()) return 'Márcia autorizou';
+    // Dia que já é dele: o botão passa a pedir a confirmação com todas as letras.
+    if(repEhDiaDele(dxPel, dxDia)) return REP_DIA_DELE_BOTAO;
     if(v.tipo==='avulso') return 'Lançar o avulso';
     return 'Marcar a reposição';
   }
@@ -7490,7 +7646,8 @@
     var v=dxVeredito(dxPel, dxDia);
     var vd=document.getElementById('dxVeredito'); if(vd) vd.innerHTML=dxVeredictoHTML(v);
     var vgEl=document.getElementById('dxVagas');
-    if(vgEl) vgEl.innerHTML=dxDia?vagasAvisoHTML(dxDia,'dxPedir()'):'';
+    // A faixa do "dia dele" vem PRIMEIRO: é o erro que ela quis evitar, não um detalhe.
+    if(vgEl) vgEl.innerHTML=dxDia?(repDiaDeleAvisoHTML(dxPel, dxDia)+vagasAvisoHTML(dxDia,'dxPedir()')):'';
     var bt=document.getElementById('dxOk');
     if(bt){
       var cheio=dxDia?vagasDoDia(dxDia).cheio:false;
@@ -7514,6 +7671,8 @@
     if(bt){ bt.disabled=true; bt.textContent='Lançando…'; }
     var solta=function(){ if(bt){ bt.disabled=false; bt.textContent=dxBotaoRotulo(); } };
     var pronto=function(linhas){
+      // O rastro de quando o dia extra cai no dia dele. Vale para reposição e para avulso.
+      repAuditDiaDele(p, dia);
       solta(); dxFechar();
       if(typeof zAlertao==='function') zAlertao('DIA EXTRA MARCADO', linhas, {botao:'Fechar'});
       else alert(linhas.join('\n'));
@@ -15160,7 +15319,7 @@
   // inteira DEPOIS de a correção estar publicada — o aviso apareceu, ninguém tocou.
   // Agora o aparelho PARADO recarrega sozinho: trancado, com a aba escondida, na porta de
   // entrada ou 3 minutos sem ninguém tocar nele. Mão na tela = nunca recarrega.
-  const APP_VERSAO='2026-09-23-01';
+  const APP_VERSAO='2026-09-23-02';
   var RECARGA_PARADO_MS=3*60*1000, __versaoPublicada=null, __recargaTimer=null;
   function vigiarVersao(){
     if(!DB) return;
@@ -30948,6 +31107,65 @@
       {c:'tema', rot:'Tema da festa', ops:DASH_TEMAS, obrig:true}]}
   ];
   var DASH_DADOS={}, DASH_PONTE=null, dashBusca={};
+
+  /* ===== O QUE O AUTOMÁTICO LANÇOU APARECE AQUI TAMBÉM (Adriana, 23/set/2026) ========
+   * As palavras dela: "Acabei de lançar uma reposição agora, da Safira; foi para a tabela,
+   * mas aqui no Lançamento do dia não está aparecendo. Ela não está no dia 30 e eu já pedi
+   * para marcar."
+   *
+   * O que acontecia: a Safira FOI para a planilha — o automático a escreveu em
+   * daycare/dashboard-auto/2026-09-30. Só que esta tela lia apenas daycare/dashboard/{dia},
+   * que é o que se lança à mão. Duas gavetas, uma tela só olhando uma delas: a recepção
+   * lançava de novo achando que tinha falhado.
+   *
+   * Agora o cartão mostra as DUAS coisas, com a etiqueta dizendo de onde veio. A linha do
+   * automático NÃO tem botão "tirar": ela se corrige na origem (a tela de Reposições, a
+   * ficha) — apagar aqui seria mentira, porque na passada seguinte ele escreveria de novo. */
+  var DASH_ITEM_AUTO={reposicao:'reposicao', faltas:'faltas', adaptacao:'adaptacao'};
+  // Colunas que SÓ o automático preenche — não há como lançá-las à mão. Ganham um cartão
+  // de leitura no fim da tela, para a casa ver o dia inteiro num lugar só.
+  var DASH_AUTO_SO_LEITURA=[
+    {k:'aniversario',  t:'Aniversariante',        icone:'🎉'},
+    {k:'clienteNovo',  t:'Cliente novo',          icone:'🌱'},
+    {k:'aulunosRestr', t:'Auluno com restrição',  icone:'⚠️'},
+    {k:'hospRestr',    t:'Hóspede com restrição', icone:'⚠️'}
+  ];
+  function dashAutoListaDoDia(dia, autoK){
+    var L=((REP_PLAN_CACHE[dia]||{}).auto||{})[autoK];
+    return Array.isArray(L)?L.filter(function(v){ return String(v||'').trim(); }):[];
+  }
+  // As linhas do automático de UM item, já sem quem a recepção lançou à mão (o mesmo FILHOt
+  // na mesma coluna é UMA linha, não duas). Devolve quantas são e o HTML.
+  function dashAutoLinhas(autoK, dia, jaMao){
+    var visto=jaMao||{};
+    var L=dashAutoListaDoDia(dia, autoK).filter(function(v){ return !visto[dashAutoNomeChave(v)]; });
+    if(!L.length) return {n:0, html:''};
+    var html=L.map(function(v){
+      var e=repPlanEstadoNome(dia, v, autoK);
+      var cor='var(--muted)', txt='';
+      if(e.estado==='ok'){ cor='var(--crm-ok)'; txt='na planilha ✓'+(e.ts?(' '+repPlanQuando(e.ts)):''); }
+      else if(e.estado==='falhou'){ cor='var(--crm-critico)'; txt='a planilha recusou — '+(e.msg||'a ponte não respondeu'); }
+      else if(e.estado==='espera'){ cor='var(--z-gold-deep)'; txt='a caminho da planilha'; }
+      else if(e.estado==='fora'){ cor='var(--z-gold-deep)'; txt='fora da conferência automática'; }
+      else if(e.estado==='antigo'){ cor='var(--z-gold-deep)'; txt='registro anterior a esta versão — não sei dizer'; }
+      else if(e.estado==='lendo'){ txt='conferindo a planilha…'; }
+      return '<div class="pair dash-auto" style="padding:6px 0;border-bottom:1px solid var(--line)">'
+        +'<span class="k"><strong>'+escAttr(v)+'</strong>'
+        +' <span class="dash-auto-tag">automático</span>'
+        +(txt?(' <span style="color:'+cor+';font-weight:800;font-size:11.5px">'+esc(txt)+'</span>'):'')
+        +'</span></div>';
+    }).join('');
+    return {n:L.length, html:html};
+  }
+  // As chaves de quem já está lançado à mão naquele item — para não mostrar em dobro.
+  function dashChavesDaMao(lista){
+    var m={};
+    Object.keys(lista||{}).forEach(function(id){
+      var c=dashAutoNomeChave((lista[id]||{}).valor);
+      if(c) m[c]=1;
+    });
+    return m;
+  }
   function dashItem(k){ return DASH_ITENS.find(function(i){ return i.k===k; }); }
   // O dia que está sendo lançado. Começa em hoje e a recepção troca no seletor da tela.
   var DASH_DIA_SEL='';
@@ -31022,17 +31240,39 @@
     var el=document.getElementById('dashCal'); if(!el) return;
     el.innerHTML=dashCalHTML();
   }
-  // Quais dias do mês já têm alguma coisa lançada — uma leitura só, do mês inteiro.
+  // Quais dias do mês já têm alguma coisa lançada. DUAS gavetas: o que foi lançado à mão
+  // (daycare/dashboard) e o que o automático escreveu (daycare/dashboard-auto). Marcar só
+  // a primeira era dizer que o dia 30 estava vazio com a reposição da Safira dentro dele
+  // (Adriana, 23/set/2026).
+  // A leitura é do MÊS que está na tela, não do nó inteiro: chave é data, então a faixa
+  // por chave desce só o mês — a casa não paga o histórico todo a cada abertura.
+  function dashCalMarcasMeta(k){ return String(k||'').charAt(0)==='_'; }
   function dashCalCarregarMarcas(){
     if(!DB) return;
     var ym=dashCalMesDoDia();
-    DB.ref('daycare/dashboard').once('value').then(function(s){
-      var v=s.val()||{}; DASH_CAL_TEM={};
-      Object.keys(v).forEach(function(dia){
+    var faixa=function(no){
+      var r=DB.ref(no);
+      try{ r=r.orderByKey().startAt(ym+'-01').endAt(ym+'-31'); }
+      catch(e){ r=DB.ref(no); }   /* banco antigo/stub: volta ao nó inteiro, nunca fica sem marca */
+      return r.once('value').then(function(s){ return s.val()||{}; });
+    };
+    Promise.all([faixa('daycare/dashboard'), faixa('daycare/dashboard-auto')]).then(function(r){
+      var mao=r[0]||{}, auto=r[1]||{};
+      DASH_CAL_TEM={};
+      Object.keys(mao).forEach(function(dia){
         if(String(dia).slice(0,7)!==ym) return;
-        var itens=v[dia]||{};
-        var tem=Object.keys(itens).some(function(k){ return itens[k] && Object.keys(itens[k]).length; });
-        if(tem) DASH_CAL_TEM[dia]=true;
+        var itens=mao[dia]||{};
+        if(Object.keys(itens).some(function(k){ return itens[k] && Object.keys(itens[k]).length; }))
+          DASH_CAL_TEM[dia]=true;
+      });
+      Object.keys(auto).forEach(function(dia){
+        if(String(dia).slice(0,7)!==ym) return;
+        var itens=auto[dia]||{};
+        // `_ts`, `_estado`, `_quem` são a papelada do automático, não lançamento: um dia em
+        // que ele passou e não achou nada continua sendo um dia vazio.
+        if(Object.keys(itens).some(function(k){
+          return !dashCalMarcasMeta(k) && Array.isArray(itens[k]) && itens[k].length;
+        })) DASH_CAL_TEM[dia]=true;
       });
       dashCalRender();
     }).catch(function(e){
@@ -31073,6 +31313,18 @@
   }
   function dashCarregar(){
     try{ dashCalCarregarMarcas(); }catch(e){} /* silencioso de propósito: guarda defensiva — falhar aqui não pode interromper quem chamou */
+    // O registro do automático daquele dia — é ele que põe a reposição da Safira na tela.
+    // MESMO cache das vagas (REP_PLAN_CACHE, 60 s): a casa não paga a leitura duas vezes.
+    // Vai por vagasCarregarDia, e não por vagasGarantirDias: o «garantir» tem a trava de uma
+    // rodada por vez (VAGAS_LENDO) e, se outra tela estivesse lendo, esta ficaria sem o
+    // redesenho — e sem redesenho a Safira sumia outra vez.
+    try{
+      if(typeof vagasCarregarDia==='function'){
+        vagasCarregarDia(dashDia(), false)
+          .then(function(){ try{ renderDash(); }catch(e){} /* silencioso de propósito: redesenho de tela */ })
+          .catch(function(e){ _logFalhaGrav('dashCarregar (o registro do automático do dia)', e); });
+      }
+    }catch(e){} /* silencioso de propósito: a próxima passada lê de novo */
     if(!DB){ renderDash(); return; }
     if(!DASH_AUTO_LIGADO){ DASH_AUTO_LIGADO=true; try{ dashAutoLigar(); }catch(e){} /* silencioso de propósito: guarda defensiva — falhar aqui não pode interromper quem chamou */ }
     Promise.all([
@@ -31223,12 +31475,19 @@
       var dt=document.getElementById('dashD_'+i.k);
       __manter[i.k]={b:(b&&b.value)||'', h:(h&&h.value)||'', d:(dt&&dt.value)||''};
     });
+    var __diaDash=dashDia();
     el.innerHTML=DASH_ITENS.map(function(it){
       var lista=DASH_DADOS[it.k]||{};
       var ks=Object.keys(lista).sort(function(a,b){ return (lista[a].ts||0)-(lista[b].ts||0); });
+      // O que o AUTOMÁTICO escreveu neste mesmo item, neste mesmo dia. É por isto que a
+      // reposição da Safira deixou de sumir da tela (23/set/2026).
+      var aut=DASH_ITEM_AUTO[it.k]
+        ? dashAutoLinhas(DASH_ITEM_AUTO[it.k], __diaDash, dashChavesDaMao(lista))
+        : {n:0, html:''};
+      var tot=ks.length+aut.n;
       return '<div class="card">'
         +'<h2 style="font-size:16px">'+it.icone+' '+escAttr(it.t)
-        +(ks.length?(' <span style="font-weight:700;font-size:13px;color:var(--muted)">— '+ks.length+'</span>'):'')+'</h2>'
+        +(tot?(' <span style="font-weight:700;font-size:13px;color:var(--muted)">— '+tot+'</span>'):'')+'</h2>'
         +(ks.length
           ? ('<div style="margin-top:6px">'+ks.map(function(id){
                var o=lista[id]||{};
@@ -31252,8 +31511,10 @@
                       :''))
                  +'</span>'
                  +'<span class="val"><button class="btn" style="background:none;border:none;color:var(--crm-critico);font-weight:800;padding:0 6px" onclick="dashRemover(\''+it.k+'\',\''+id+'\')">tirar</button></span></div>';
-             }).join('')+'</div>')
-          : '<div class="hint">Ninguém lançado hoje.</div>')
+             }).join('')+aut.html+'</div>')
+          : (aut.n
+            ? ('<div style="margin-top:6px">'+aut.html+'</div>')
+            : '<div class="hint">Ninguém lançado hoje.</div>'))
         +'<div style="margin-top:8px">'
         +(DASH_FORA[it.k]
           ? dashForaPainelHTML(it)
@@ -31266,6 +31527,18 @@
              // sugestões: quem não achou o nome não pode ficar adivinhando se há saída.
              +(it.foraDoCadastro?dashForaBotaoHTML(it.k):'')))
         +'</div></div>';
+    }).join('')
+    // As colunas que SÓ o automático preenche. Não há o que lançar à mão nelas — mas a
+    // casa precisa ver o dia inteiro num lugar só (Adriana, 23/set/2026).
+    +DASH_AUTO_SO_LEITURA.map(function(it){
+      var aut=dashAutoLinhas(it.k, __diaDash, null);
+      if(!aut.n) return '';
+      return '<div class="card">'
+        +'<h2 style="font-size:16px">'+it.icone+' '+escAttr(it.t)
+        +' <span style="font-weight:700;font-size:13px;color:var(--muted)">— '+aut.n+'</span></h2>'
+        +'<div style="margin-top:6px">'+aut.html+'</div>'
+        +'<div class="hint" style="margin-top:8px">O app preenche sozinho a partir das fichas. '
+        +'Para mudar, mude na ficha do FILHOt — aqui não se lança à mão.</div></div>';
     }).join('');
     DASH_ITENS.forEach(function(i){
       var m=__manter[i.k]||{};
@@ -31747,7 +32020,12 @@
           return;
         }
         if(vg.cheio && !(typeof vagasPodeEncaixar==='function' && vagasPodeEncaixar())){
-          alert('O dia '+((typeof repBRdata==='function')?repBRdata(dashDia()):dashDia())+' está lotado ('+vg.usadas+' de '+vg.limite+').\n\nSó a Gestão abre vaga acima do limite — fale com a Márcia antes de lançar.');
+          // O nome de quem já ocupa o dia vai junto: quem atende precisa poder dizer ao
+          // tutor QUEM está marcado, não só que "está lotado" (Adriana, 23/set/2026).
+          var quemJa=''; try{ quemJa=vagasNomesFrase(vg); }catch(e){ quemJa=''; }
+          alert('O dia '+((typeof repBRdata==='function')?repBRdata(dashDia()):dashDia())+' está lotado ('+vg.usadas+' de '+vg.limite+').'
+            +(quemJa?('\n\nNesse dia já estão: '+quemJa+'.'):'')
+            +'\n\nSó a Gestão abre vaga acima do limite — fale com a Márcia antes de lançar.');
           return;
         }
         if(vg.cheio){
