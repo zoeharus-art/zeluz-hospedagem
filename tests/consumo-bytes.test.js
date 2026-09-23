@@ -28,6 +28,7 @@ const fs = require('fs');
 const path = require('path');
 const vm = require('vm');
 const retratoLib = require('./lib/retrato');
+const relogiosLib = require('./lib/relogios');
 
 const argApp = (() => {
   const i = process.argv.indexOf('--app');
@@ -384,14 +385,42 @@ async function main() {
 
   // ---------- PROVA 4: os relógios no código-fonte ----------
   console.log('\nProva 4 — os relógios no código-fonte:');
+  // A pergunta aqui é de COMPORTAMENTO, não de texto: cada relógio que relê o banco
+  // tem período folgado e para com a aba escondida? Antes isto era um recorte literal
+  // do código e apodreceu duas vezes — uma guarda nova no meio da linha (economiaPausada,
+  // 08/set) e a tela do Painel do Dia dissolvida (09/set) derrubaram o teste com o app
+  // MELHOR do que antes. Agora lemos os setInterval() de verdade (tests/lib/relogios.js).
   {
     const html = fs.readFileSync(APP, 'utf8');
-    prova('o risco de não comer roda de 5 em 5 minutos (não mais a cada 60 s)',
-      /carregarRiscoNaoComer==='function'\) carregarRiscoNaoComer\(\); \}, 300000\)/.test(html));
-    prova('o relógio do painel não roda com a aba escondida (document.hidden)',
-      /setInterval\(function\(\)\{ try\{ if\(document\.hidden\) return; const v=document\.getElementById\('v-painel'\)/.test(html));
+    const relogios = relogiosLib.lerRelogios(html);
+
+    const doRisco = relogiosLib.relogiosQueChamam(relogios, 'carregarRiscoNaoComer');
+    prova('existe UM relógio do risco de não comer', doRisco.length === 1, doRisco.length + ' encontrado(s)');
+    prova('o risco de não comer roda de 5 em 5 minutos, no mínimo (não mais a cada 60 s)',
+      doRisco.length > 0 && doRisco.every(function (r) { return r.periodoMs >= 300000; }),
+      doRisco.map(function (r) { return 'linha ' + r.linha + ': ' + r.periodoMs + ' ms'; }).join(' · '));
     prova('o relógio do risco de não comer não roda com a aba escondida',
-      /if\(document\.hidden\) return; if\(typeof carregarRiscoNaoComer/.test(html));
+      doRisco.length > 0 && doRisco.every(relogiosLib.paraComAbaEscondida),
+      doRisco.map(function (r) { return 'linha ' + r.linha; }).join(' · '));
+
+    // O Painel do Dia foi dissolvido em 09/set (ceaa89f) e com ele sumiu o relógio de 30 s
+    // que o relia. Não custar NADA é melhor do que custar pouco — por isso a regra é
+    // condicional: se um relógio do Painel voltar, ele tem de parar com a aba escondida.
+    const doPainel = relogiosLib.relogiosQueChamam(relogios, 'carregarPainel');
+    prova('o Painel não tem relógio que relê o banco — e se voltar a ter, ele para com a aba escondida',
+      doPainel.every(relogiosLib.paraComAbaEscondida),
+      doPainel.length === 0 ? 'nenhum relógio relê o Painel (tela dissolvida em 09/set/2026)'
+        : doPainel.map(function (r) { return 'linha ' + r.linha; }).join(' · '));
+
+    // Inventário: quem mais lê o banco de tempos em tempos, e se para com a aba escondida.
+    // Não é cobrança (o alarme de dose PRECISA tocar com a aba escondida) — é o retrato
+    // que faz um relógio novo e guloso aparecer em vez de passar despercebido.
+    const queLeem = relogios.filter(function (r) { return /\bcarregar[A-Z]\w*\s*\(|\bDB\s*\.\s*ref\s*\(/.test(r.corpo); });
+    console.log('    relógios que leem o banco: ' + queLeem.length);
+    queLeem.forEach(function (r) {
+      console.log('      linha ' + r.linha + ' — a cada ' + (r.periodoMs === null ? r.periodoTexto : Math.round(r.periodoMs / 1000) + ' s')
+        + (relogiosLib.paraComAbaEscondida(r) ? ' — para com a aba escondida' : ' — RODA com a aba escondida'));
+    });
   }
 
   console.log('\n== Resultado: ' + ok + ' ok, ' + falha + ' falha(s) ==');
