@@ -3472,6 +3472,9 @@
   <section class="view" id="v-checkin">
     <!-- PASSO 1 — escolher o peludinho -->
     <div id="ci-escolha">
+      <!-- A FILA DAS PERNOITES DO DAY CARE (Adriana, 23/set/2026). Fica ANTES de tudo: quem
+           abre o Check-in vê quem ficou para dormir sem precisar rolar nem buscar nome. -->
+      <div id="ciPernoitesDia"></div>
       <div class="role-note"><span data-icon="paw"></span><span><strong>Check-in da estadia.</strong> Busque o FILHOt que está chegando. No retorno, a ficha já vem pré-preenchida da última estadia — a Consultora só confere e ajusta. Se for a primeira vez dele na Zêluz, use <strong>Novo Hóspede</strong>.</span></div>
       <div class="card">
         <div class="field"><label>Quem está chegando?</label>
@@ -3601,6 +3604,12 @@
       <div class="card">
         <h2>Alimentação</h2>
         <div class="hint">O que ele come nesta estadia. <strong>Nenhuma alimentação pode ser trocada.</strong> Preencha com o tutor — a conferência só pesa a ração e confere se cobre a estadia.</div>
+        <!-- A CONFIRMAÇÃO DO QUE ELE COME (Adriana, 23/set/2026): "essa informação tem que
+             ficar guardada no aplicativo para a gente não refazer o tempo todo. Só confirmar
+             se é isso mesmo, ou se tem diferença." O plano vem da ficha; aqui alguém diz se
+             continua valendo. Na PERNOITE isso é obrigatório — sem a palavra de quem trouxe,
+             o plantão serviria o que o app supôs. -->
+        <div id="ciAlimConfirma"></div>
         <div class="field"><label>Tipo</label>
           <div class="seg" id="ciAlimTipo" data-single><button onclick="pick(this);ciAlimTipoChange()">Ração</button><button onclick="pick(this);ciAlimTipoChange()">Comida natural</button><button onclick="pick(this);ciAlimTipoChange()">Ração + natural</button></div></div>
         <div class="cad-grid">
@@ -5900,6 +5909,9 @@
     // supervisiona e a Recepção manda a mensagem. O aviso não pode depender de alguém
     // lembrar de abrir a tela — a lei de 28/ago.
     try{ if(typeof vencGarantir==='function') vencGarantir(); }catch(e){} /* silencioso de propósito: guarda defensiva — falhar aqui não pode interromper quem chamou */
+    // As pernoites do Day Care são da mesa das três: a Gestão vê a casa cheia, a Supervisão
+    // escala quem dorme e a Recepção é quem faz o check-in.
+    try{ if(typeof pernFilaGarantir==='function') pernFilaGarantir(null, true, mesaRender); }catch(e){} /* silencioso de propósito: guarda defensiva — falhar aqui não pode interromper quem chamou */
     mesaCarregarDoses(0);
   }
   function mesaCarregarDoses(tent){
@@ -5999,6 +6011,14 @@
     // RESPOSTAS PENDENTES (Adriana, 21/set/2026): "ela precisa dar uma resposta. Só fecha
     // quando ela consegue responder." De QUALQUER dia — a pendência não morre com o dia. O
     // toque ABRE a lista aqui mesmo, com os botões dentro: responder não pode custar três telas.
+    // PERNOITES DO DAY CARE (Adriana, 23/set/2026). O número é o total do dia; a frase
+    // embaixo diz quantas ainda esperam o check-in — que é o que precisa de alguém.
+    var pc=(typeof pernContagem==='function')?pernContagem():null;
+    var quadroPern=mesaBox(pc===null?null:pc.total,'Pernoites de hoje',
+      (pc&&pc.semCheckin)
+        ? (pc.semCheckin+' sem check-in — sem ficha o plantão não sabe o que dar de comer nem que remédio dar')
+        : 'ficaram para dormir — todas já com check-in feito',
+      (pc&&pc.semCheckin)?'#B3261E':'#2E7D8A', ir('checkin'));
     var vp=(typeof vencPendContagem==='function')?vencPendContagem():null;
     var quadroRespPend=mesaBox(vp===null?null:vp.total,'Respostas pendentes',
       (vp&&vp.cobrar?(vp.cobrar+' já passaram do prazo — cobrar o tutor'):'mandado e sem resposta — responda aqui mesmo'),
@@ -6020,6 +6040,7 @@
       var avVet=(typeof vencVetAvisos==='function')?vencVetAvisos():null;
       B.push(mesaBox(avVet===null?null:avVet.length,'Avisar a veterinária',
         'vacina autorizada pelo tutor — combinar com ela o dia e o período','#2E7D8A',ir('vencimentos')));
+      B.push(quadroPern);
       B.push(quadroPend);
       B.push(quadroVence);
       B.push(quadroRespPend);
@@ -6034,6 +6055,7 @@
       B.push(mesaBox(nvl(estOk,P.saemHoje),'Saem hoje','a monitora precisa juntar as coisas','#DEB428',ir('checkout')));
       B.push(mesaBox(P.faltas||0,'Faltas em aberto','ração ou remédio que não cobre a estadia','#DEB428',ir('recepcao')));
       B.push(mesaBox(mesaRepHoje(),'Reposições marcadas para hoje','o tutor avisou que vem repor','#2E7D8A',ir('reposicao')));
+      B.push(quadroPern);
       B.push(quadroPend);
       B.push(quadroVence);
       B.push(quadroRespPend);
@@ -6046,6 +6068,7 @@
       B.push(mesaBox(nvl(estOk,P.naRecepcao),'Tutor esperando para assinar','check-out conferido junto com o tutor','#1E8449',ir('checkoutconf')));
       B.push(mesaBox(P.avisar||0,'Avisar tutores — não comeram','a mensagem já sai pronta','#E08856',ir('emporio')));
       B.push(mesaBox(mesaRepHoje(),'Reposições marcadas para hoje','o tutor avisou que vem repor','#2E7D8A',ir('reposicao')));
+      B.push(quadroPern);
       B.push(quadroPend);
       B.push(quadroVence);
       B.push(quadroRespPend);
@@ -8591,10 +8614,25 @@
                  :'<div class="ph" style="background:'+(h.cor||'#234D67')+'">'+(h.ini||'?')+'</div>';
       var alim=cad.alim||cad.alimentacao||'';
       var restr=cad.restricao||cad.alergia||'';
+      // O CAFÉ DO HÓSPEDE (Adriana, 23/set/2026): a quantidade que foi CONFIRMADA no check-in,
+      // e o aviso de que hoje não há ração. Antes este cartão só dizia "Come: ração" — quem
+      // serve não sabia quanto pôr no pote e acabava perguntando a quem passou o plantão.
+      var aC=null; try{ aC=(typeof alimDoHospede==='function')?alimDoHospede(h):null; }catch(e){ aC=null; } /* silencioso de propósito: sem a estadia o cartão fica como era */
+      var linhaCafe='';
+      if(aC&&aC.semRacao){
+        linhaCafe='<div class="alm-restr">SEM RAÇÃO &mdash; comida úmida da casa</div>';
+      } else if(aC&&aC.cafe&&(aC.cafe.on||aC.cafe.racao||aC.cafe.natural||aC.cafe.extra)){
+        var pc=[];
+        if(aC.cafe.racao) pc.push(aC.cafe.racao+(aC.unidade==='gramas'?' g':(aC.unidade?(' '+aC.unidade):''))+' de ração');
+        if(aC.cafe.natural) pc.push(aC.cafe.natural+' g de natural');
+        if(aC.cafe.extra) pc.push(aC.cafe.extra);
+        if(pc.length) linhaCafe='<div class="alm-info"><div class="alm-line"><span>Café</span><b>'+escAttr(pc.join(' + '))+'</b></div></div>';
+      }
       return '<div class="pet alm-card '+(m||'')+'">'+ph
         +'<div class="nm">'+escAttr(h.nome||'')+'</div>'
         +'<div class="br">'+escAttr((typeof racaDe==='function'?(racaDe(h)||''):''))+'</div>'
         +(restr?'<div class="alm-restr">&#9888; '+escAttr(restr)+'</div>':'')
+        +linhaCafe
         +(alim?'<div class="alm-info"><div class="alm-line"><span>Come</span><b>'+escAttr(alim)+'</b></div></div>':'')
         +'<div class="alm-actions"><div class="alm-seg">'
         +'<button class="alm-btn tudo '+(m==='tudo'?'on':'')+'" onclick="marcarCafe(\''+k+'\',\'tudo\')">Comeu</button>'
@@ -8725,11 +8763,18 @@
       var k=(typeof medAgendaKey==='function')?medAgendaKey(h):'';
       var est=((typeof CF_ESTADIAS!=='undefined'&&CF_ESTADIAS)?CF_ESTADIAS[k]:null)||null;
       var a=(est&&est.e&&est.e.ficha&&est.e.ficha.alim)||null;
+      // "NÃO TROUXE RAÇÃO" (Adriana, 23/set/2026). Mora na estadia, não na ficha: é de hoje.
+      // Quem serve precisa ver isso ANTES do número — o número existe, mas a ração não.
+      var semR=!!(est&&est.e&&est.e.alimentacao&&est.e.alimentacao.sem_racao);
+      var conf=(a&&a.confirmacao)||null;
       var j=(a&&a.refs&&a.refs.fixas&&a.refs.fixas.jantar)||null;
+      var cf=(a&&a.refs&&a.refs.fixas&&a.refs.fixas.cafe)||null;
       if(j&&(j.on||j.racao||j.natural||j.extra)){
         return {racao:String(j.racao||''), natural:String(j.natural||''), extra:String(j.extra||''),
                 unidade:String(a.unidade||'gramas'), marca:String(a.marca||a.tipo||''),
-                trazida:String(a.trazida||''), obs:String(a.obs||''), fonte:'checkin', incerto:false};
+                trazida:String(a.trazida||''), obs:String(a.obs||''), fonte:'checkin', incerto:false,
+                semRacao:semR, confirmada:!!(conf&&conf.estado),
+                cafe:(cf?{racao:String(cf.racao||''), natural:String(cf.natural||''), extra:String(cf.extra||''), on:!!cf.on}:null)};
       }
       // Pernoite sem check-in: repete o ALMOÇO do Day Care — e avisa que foi repetido.
       var kc=(typeof dcKey==='function')?dcKey(h.nome,h.tutor):'';
@@ -8737,16 +8782,24 @@
       if(c&&(c.alim||c.quant)){
         return {racao:String(c.quant||''), natural:'', extra:'', unidade:'',
                 marca:String(c.alim||''), trazida:'', obs:String(c.restr||''),
-                fonte:'almoco', incerto:true};
+                fonte:'almoco', incerto:true, semRacao:semR, confirmada:false, cafe:null};
       }
       // Sem quantidade em lugar nenhum. Mas se o Day Care tem RESTRIÇÃO gravada, ela vai
       // junto do aviso: não saber quanto dar é ruim; não saber o que ele não pode é pior.
-      return {fonte:'nenhuma', incerto:true, obs:(c&&String(c.restr||''))||''};
+      return {fonte:'nenhuma', incerto:true, semRacao:semR, confirmada:false, cafe:null, obs:(c&&String(c.restr||''))||''};
     }catch(e){ return {fonte:'nenhuma', incerto:true}; }
   }
   // A faixa que aparece no card. Curta: a plantonista lê de relance, com o pote na mão.
+  // A tarja de "sem ração" — é ela que o plantão precisa ver primeiro. Vale para o jantar
+  // e para o café: a ração não apareceu nem à noite nem de manhã.
+  function alimSemRacaoHTML(a){
+    if(!a||!a.semRacao) return '';
+    return '<div class="hb-jantar hb-jantar-falta">SEM RAÇÃO &mdash; COMIDA ÚMIDA DA CASA'
+      +'<div class="hb-jantar-sub">O tutor não trouxe a ração. Sirva a comida úmida da casa e escreva no relatório o que deu.</div></div>';
+  }
   function alimMarcaDoCard(h){
     var a=alimDoHospede(h); if(!a) return '';
+    if(a.semRacao) return alimSemRacaoHTML(a);
     if(a.fonte==='nenhuma'){
       return '<div class="hb-jantar hb-jantar-falta">JANTAR A CONFIRMAR'
         +(a.obs?('<div class="hb-jantar-sub"><strong>NÃO PODE: '+escAttr(a.obs)+'</strong></div>'):'')
@@ -11243,6 +11296,13 @@
     if(!h){ el.innerHTML=''; return; }
     var a=(typeof alimDoHospede==='function')?alimDoHospede(h):null;
     if(!a){ el.innerHTML=''; return; }
+    if(a.semRacao){
+      el.innerHTML='<div class="janta-box janta-box-falta">'
+        +'<strong>SEM RAÇÃO — '+escAttr(h.nome||'ele')+' come a comida úmida da casa hoje.</strong>'
+        +(a.obs?('<div>NÃO PODE: '+escAttr(a.obs)+'</div>'):'')
+        +'<div>O tutor não trouxe a ração e a recepção registrou isso no check-in. Sirva a comida úmida e <strong>escreva abaixo o que deu</strong>.</div></div>';
+      return;
+    }
     if(a.fonte==='nenhuma'){
       el.innerHTML='<div class="janta-box janta-box-falta">'
         +'<strong>Não há jantar lançado para '+escAttr(h.nome||'ele')+'.</strong>'
@@ -15319,7 +15379,7 @@
   // inteira DEPOIS de a correção estar publicada — o aviso apareceu, ninguém tocou.
   // Agora o aparelho PARADO recarrega sozinho: trancado, com a aba escondida, na porta de
   // entrada ou 3 minutos sem ninguém tocar nele. Mão na tela = nunca recarrega.
-  const APP_VERSAO='2026-09-23-02';
+  const APP_VERSAO='2026-09-23-03';
   var RECARGA_PARADO_MS=3*60*1000, __versaoPublicada=null, __recargaTimer=null;
   function vigiarVersao(){
     if(!DB) return;
@@ -31049,6 +31109,20 @@
     {v:'HOSPEDAGEM', t:'Hospedagem (só registra)'}
   ];
 
+  // ===== A PERNOITE DO DAY CARE (Adriana, 23/set/2026) ==============================
+  // "Preciso que a gente possa colocar também, facilitando, quem vai ficar de pernoite nos
+  //  Lançamentos do dia. Esse lançamento não precisa ir para a tabela. (…) mas ele precisa
+  //  chegar até o check-in de hospedagem. E aí ele entra como pernoite, aquele peludinho
+  //  entra como pernoite. Porque essa pernoite é dos peludos que ficam do Day Care e vão
+  //  dormir porque os tutores não vieram buscar." E: "tem tutor que já deixa avisado que
+  //  ele vai ficar de pernoite já no começo do dia."
+  // O PORQUÊ é pergunta de dois botões: meses depois a casa precisa saber se a noite foi
+  // combinada de manhã ou se foi o tutor que não apareceu — são conversas diferentes.
+  var DASH_PERN_MOTIVO=[
+    {v:'TUTOR AVISOU',          t:'Tutor avisou'},
+    {v:'TUTOR NÃO VEIO BUSCAR', t:'Tutor não veio buscar'}
+  ];
+
   var DASH_ITENS=[
     {k:'reposicao',     t:'Reposição',                  col:'Reposição',                      icone:'🔄'},
     {k:'banho',         t:'Banho',                      col:'Banho',                          colHora:'Hora Banho',      hora:true, icone:'🛁', campos:[
@@ -31073,6 +31147,14 @@
     // e a declaração de quem conferiu — e deixa um PRÉ-CADASTRO gravado, que a Recepção promove
     // a cadastro depois. Cadastro continua sendo UM SÓ: isto não é ficha, é o bilhete do dia.
     {k:'avulso',        t:'Avulso',                     col:'Avulso',                         icone:'📌', foraDoCadastro:true},
+    // PERNOITE — o ÚNICO item SEM `col`, e isso é de propósito. Ele NÃO vai para a planilha
+    // nem para a TV: vai para o CHECK-IN DA HOSPEDAGEM, que é onde a pernoite vira estadia,
+    // com comida, remédio e valor. Item sem `col` nunca chama a ponte (ver dashEspelhar) —
+    // pedir uma coluna que não existe encheria a fila de reenvio de um erro sem conserto.
+    {k:'pernoite',      t:'Pernoite (fica para dormir)',                                      icone:'🌙', campos:[
+      {c:'motivo', rot:'Por quê',                       ops:DASH_PERN_MOTIVO, obrig:true},
+      {c:'aviso',  rot:'Avisado às (opcional)',         horario:true},
+      {c:'obs',    rot:'Observação curta (opcional)',   texto:true, ph:'Ex.: busca amanhã às 8h'}]},
     // Medicação (Adriana, 18/set/2026): o remédio de cada FILHOt é o dele — "medicamento de
     // ouvido" não cabe em botão nenhum. Por isso o QUAL é escrito à mão (o único campo de
     // texto da tela) e o ONDE continua em botão, que é o que não pode ficar no "mais ou menos".
@@ -31325,6 +31407,10 @@
           .catch(function(e){ _logFalhaGrav('dashCarregar (o registro do automático do dia)', e); });
       }
     }catch(e){} /* silencioso de propósito: a próxima passada lê de novo */
+    // A FILA DE PERNOITES do dia aberto (23/set/2026): sem ela, a lista do dia não sabe
+    // dizer se aquela pernoite já virou check-in de hospedagem ou se ainda espera.
+    try{ if(typeof pernFilaCarregar==='function') pernFilaCarregar(dashDia()); }
+    catch(e){} /* silencioso de propósito: sem a fila a linha diz "conferindo o check-in" e a próxima passada lê de novo */
     if(!DB){ renderDash(); return; }
     if(!DASH_AUTO_LIGADO){ DASH_AUTO_LIGADO=true; try{ dashAutoLigar(); }catch(e){} /* silencioso de propósito: guarda defensiva — falhar aqui não pode interromper quem chamou */ }
     Promise.all([
@@ -31498,7 +31584,11 @@
                  // voltou por um dia: nada disso é erro de digitação nem FILHOt perdido. A
                  // tela diz, com todas as letras, de onde aquele nome veio.
                  +(dashEtiquetaFora(it.k,o)?(' <span style="color:var(--z-blue);font-weight:800;font-size:11.5px">'+escAttr(dashEtiquetaFora(it.k,o))+'</span>'):'')
-                 +(o.planilha_ok===false
+                 // Item SEM coluna (a Pernoite) não tem estado de planilha para mostrar:
+                 // o destino dele é o check-in, e é a etiqueta abaixo que conta essa história.
+                 +(!dashVaiParaPlanilha(it)
+                    ? dashPernEtiquetaHTML(it.k, o)
+                    : (o.planilha_ok===false
                     ?(' <span style="color:var(--crm-critico);font-weight:800;font-size:11.5px">'+(dashPlanFilaMorto(o)?'NÃO foi para a TV — reenvio automático esgotado':'NÃO foi para a TV')+'</span>'
                       +' <button class="btn" style="background:none;border:none;color:var(--z-blue);font-size:11.5px;text-decoration:underline;padding:0 4px" onclick="dashReenviar(\''+it.k+'\',\''+id+'\',this)">reenviar</button>')
                     // planilha_ok null = "não sei" (era do aborto silencioso da confirmação —
@@ -31508,7 +31598,7 @@
                     :(o.planilha_ok!==true&&(Date.now()-(o.ts||0))>120000
                       ?(' <span style="color:var(--muted);font-weight:700;font-size:11px">envio à planilha não confirmado</span>'
                         +' <button class="btn" style="background:none;border:none;color:var(--z-blue);font-size:11.5px;text-decoration:underline;padding:0 4px" onclick="dashReenviar(\''+it.k+'\',\''+id+'\',this)">reenviar</button>')
-                      :''))
+                      :'')))
                  +'</span>'
                  +'<span class="val"><button class="btn" style="background:none;border:none;color:var(--crm-critico);font-weight:800;padding:0 6px" onclick="dashRemover(\''+it.k+'\',\''+id+'\')">tirar</button></span></div>';
              }).join('')+aut.html+'</div>')
@@ -31560,6 +31650,10 @@
   // não é perguntado, não é cobrado e não vai para a planilha (Adriana, 28/ago/2026).
   // `dep.v` aceita UMA resposta ou uma LISTA delas (o shampoo vale trazido de casa E
   // comprado na loja — 17/set/2026). Quem não depende de ninguém não usa `dep`.
+  // Campo que se ESCREVE (texto à mão) ou se ESCOLHE NO RELÓGIO (horário do aviso), em
+  // oposição ao campo de botões. Os dois guardam uma string livre — por isso "respondido"
+  // neles é ter conteúdo, não ter a chave; e por isso os dois passam pela mesma limpeza.
+  function dashCampoEhTexto(c){ return !!(c && (c.texto || c.horario)); }
   function dashCampoAtivo(k, c){
     if(!c || !c.dep) return true;
     var d=dashDet(k), alvo=c.dep.v;
@@ -31613,11 +31707,24 @@
     var d=dashDet(k), partes=[];
     it.campos.forEach(function(c){
       if(!dashCampoAtivo(k,c)) return;
-      var v=c.texto?dashDetTextoLimpo(d[c.c]):d[c.c];
+      var v=dashCampoEhTexto(c)?dashDetTextoLimpo(d[c.c]):d[c.c];
       if(v) partes.push(v);
     });
     return partes.length ? (' (' + partes.join(' · ') + ')') : '';
   }
+  // ===== PARA ONDE ESTE LANÇAMENTO VAI (Adriana, 23/set/2026) =====================
+  // Quase todo item vira uma célula na planilha, que é o que a TV lê. A Pernoite não: ela
+  // vai para o CHECK-IN DA HOSPEDAGEM. Dizer "vai para a planilha assim" ali seria a tela
+  // mentindo sobre o caminho do dado — e quem lança precisa saber onde procurar depois.
+  // A regra é uma só e mora no item: sem `col`, não há planilha.
+  function dashVaiParaPlanilha(it){ return !!(it && it.col); }
+  function dashDestinoFraseHTML(it, valor){
+    if(!dashVaiParaPlanilha(it))
+      return '<div class="hint" style="margin-top:9px"><strong>Não vai para a planilha:</strong> vai para o check-in da hospedagem, como <strong>'
+        +escAttr(valor||'—')+'</strong>.</div>';
+    return '<div class="hint" style="margin-top:9px">Vai para a planilha assim: <strong>'+escAttr(valor||'—')+'</strong></div>';
+  }
+  function dashBotaoLancarTexto(it){ return dashVaiParaPlanilha(it)?'Lançar na planilha':'Lançar para o check-in'; }
   // O que ainda não foi respondido. Vira frase na tela — nunca um botão que não responde.
   function dashDetFalta(k){
     // Quem escreve o nome à mão tem outra lista de obrigatórios (Nome, Raça e Horário)
@@ -31642,7 +31749,7 @@
       if(!dashCampoAtivo(k,c)) return;
       // Botão: basta a chave existir (escolher "nada a observar" é uma resposta).
       // Escrito à mão: só espaço em branco NÃO é resposta — o remédio tem de estar escrito.
-      var vazio=c.texto?!dashDetTextoLimpo(d[c.c]):!d.hasOwnProperty(c.c);
+      var vazio=dashCampoEhTexto(c)?!dashDetTextoLimpo(d[c.c]):!d.hasOwnProperty(c.c);
       if(c.obrig && vazio) falta.push(c.rot);
     });
     return falta.join(' · ');
@@ -31993,9 +32100,9 @@
         +' onchange="try{renderDash()}catch(e){}/* silencioso de propósito: redesenho de tela */">';
     }
     var falta=dashDetFalta(k), valor=dashForaValor(k);
-    h+='<div class="hint" style="margin-top:9px">Vai para a planilha assim: <strong>'+escAttr(valor||'—')+'</strong></div>'
+    h+=dashDestinoFraseHTML(it, valor)
       +'<button class="btn '+(falta?'btn-gold':'btn-primary')+'" style="margin-top:8px;width:100%"'
-      +' onclick="dashForaLancarSel(\''+k+'\')">'+(falta?'Falta responder acima':'Lançar na planilha')+'</button>'
+      +' onclick="dashForaLancarSel(\''+k+'\')">'+(falta?'Falta responder acima':dashBotaoLancarTexto(it))+'</button>'
       +(falta?('<div class="hint" style="margin-top:5px;color:var(--crm-atencao-text)"><strong>Antes precisa responder:</strong> '+escAttr(falta)+'</div>'):'');
     return h;
   }
@@ -32068,6 +32175,19 @@
       // cabe em botão nenhum. Grava a cada tecla SEM redesenhar (senão o cursor salta da
       // mão de quem digita) e redesenha ao sair do campo, para o botão "Lançar" e a frase
       // "Vai para a planilha assim" dizerem a verdade.
+      // O RELÓGIO DE UM CAMPO (Pernoite, 23/set/2026): "Avisado às" é a hora em que o tutor
+      // avisou — não a hora de alarme nenhum. Por isso ele mora aqui dentro, como campo, e é
+      // opcional: tutor que não avisou não tem hora de aviso, e inventar uma seria mentira.
+      if(c.horario){
+        var hh=String(d[c.c]==null?'':d[c.c]);
+        h+='<label class="cad-lb" style="margin-top:9px;display:block">'+escAttr(c.rot)
+          +(c.obrig&&!dashDetTextoLimpo(hh)?' <span style="color:var(--crm-critico);font-weight:900">— falta responder</span>':'')+'</label>'
+          +'<input type="time" class="cad-in" id="dashT_'+it.k+'_'+c.c+'" style="max-width:140px"'
+          +' value="'+escAttr(hh)+'"'
+          +' oninput="dashSetDetTexto(\''+it.k+'\',\''+c.c+'\',this.value)"'
+          +' onchange="try{renderDash()}catch(e){}/* silencioso de propósito: redesenho de tela */">';
+        return;
+      }
       if(c.texto){
         var txt=String(d[c.c]==null?'':d[c.c]);
         h+='<label class="cad-lb" style="margin-top:9px;display:block">'+escAttr(c.rot)
@@ -32093,9 +32213,9 @@
       h+='</div>';
     });
     var falta=dashDetFalta(it.k);
-    h+='<div class="hint" style="margin-top:9px">Vai para a planilha assim: <strong>'+escAttr(sel+dashDetTexto(it.k))+'</strong></div>'
+    h+=dashDestinoFraseHTML(it, sel+dashDetTexto(it.k))
       +'<button class="btn '+(falta?'btn-gold':'btn-primary')+'" style="margin-top:8px;width:100%"'
-      +' onclick="dashLancarSel(\''+it.k+'\')">'+(falta?'Falta responder acima':'Lançar na planilha')+'</button>'
+      +' onclick="dashLancarSel(\''+it.k+'\')">'+(falta?'Falta responder acima':dashBotaoLancarTexto(it))+'</button>'
       +(falta?('<div class="hint" style="margin-top:5px;color:var(--crm-atencao-text)"><strong>Antes precisa responder:</strong> '+escAttr(falta)+'</div>'):'');
     return h;
   }
@@ -32284,7 +32404,7 @@
       var __d=dashDet(k); __det={};
       it.campos.forEach(function(c){
         if(!dashCampoAtivo(k,c)) return;
-        var v=c.texto?dashDetTextoLimpo(__d[c.c]):__d[c.c];
+        var v=dashCampoEhTexto(c)?dashDetTextoLimpo(__d[c.c]):__d[c.c];
         if(v) __det[c.c]=v;
       });
       // VERMÍFUGO (Adriana, 21/set/2026): o peso que decidiu a dose viaja COM o lançamento.
@@ -32362,7 +32482,21 @@
     if(Object.keys(lista).some(function(id){ return jsNorm(lista[id].valor||'')===jsNorm(valor); })){
       alert(valor+' já está lançado em '+it.t+' hoje.'); return;
     }
-    var reg={valor:valor, hora:hora, quem:(typeof quemSou==='function'?quemSou():'-'), ts:Date.now(), planilha_ok:null};
+    // PERNOITE: o mesmo FILHOt não fica para dormir duas vezes na mesma noite. O detalhe
+    // entra no texto (o motivo, a hora do aviso), então a comparação acima — que é pelo
+    // valor inteiro — deixaria passar a segunda: a lista do dia mostraria duas linhas para
+    // uma noite só, e a fila do check-in, uma. Aqui a conta é pelo NOME.
+    if(k==='pernoite' && Object.keys(lista).some(function(id){
+        return jsNorm(pernNomeLimpo(lista[id].valor||''))===jsNorm(pernNomeLimpo(valor)); })){
+      alert(pernNomeLimpo(valor)+' já está lançado como pernoite para '+dashDiaTexto()+'.\n\n'
+        +'Se o motivo mudou, tire o lançamento e lance de novo — uma noite é uma linha só.');
+      return;
+    }
+    var reg={valor:valor, hora:hora, quem:(typeof quemSou==='function'?quemSou():'-'), ts:Date.now()};
+    // `planilha_ok:null` quer dizer "ainda não sei se chegou à planilha". Só faz sentido em
+    // quem TEM coluna: na Pernoite ele viraria um "não confirmado" eterno, com um botão de
+    // reenviar que não tem para onde enviar.
+    if(dashVaiParaPlanilha(it)) reg.planilha_ok=null;
     // A CHAVE do FILHOt viaja com o lançamento. `undefined` não existe no Firebase: só entra
     // quando a ficha foi casada com segurança.
     try{ if(!__fora && pDoLanc&&pDoLanc.n){ var _ch=dcKey(pDoLanc.n,pDoLanc.tutor); if(_ch) reg.chave=_ch; } }catch(e){} /* silencioso de propósito: sem chave o lançamento entra igual — a pendência é que passa a depender do texto */
@@ -32402,6 +32536,13 @@
         // estava? O cartaz aparece na hora e o item fica guardado para a próxima vinda.
         try{ if(typeof pendAvaliarLancamento==='function') pendAvaliarLancamento(k, reg, dashDia()); }
         catch(e){ _logFalhaGrav('avaliar a pendência de prevenção de '+valor, e); }
+        // PERNOITE (Adriana, 23/set/2026): o lançamento entrou → a fila do check-in da
+        // hospedagem recebe o FILHOt. Só DEPOIS de o lançamento existir — não há pernoite
+        // de um dia que não aconteceu.
+        if(k==='pernoite'){
+          try{ pernGravarDoLancamento(valorBase, reg, dashDia()); }
+          catch(e){ _logFalhaGrav('pôr a pernoite de '+valorBase+' na fila do check-in', e); }
+        }
         dashEspelhar(k, ref.key, reg, 'lancar');
         return true;
       }).catch(function(e){ alert('Não salvou: '+((e&&e.message)||e)); return false; });
@@ -35213,6 +35354,14 @@
   function dashEspelhar(k, id, reg, acao, diaOpc){
     var dia=diaOpc||dashDia();
     var it=dashItem(k); if(!it) return Promise.resolve({ok:false, erro:'item desconhecido'});
+    // ITEM SEM COLUNA NA PLANILHA (a Pernoite, 23/set/2026). Ele não tem para onde ir na
+    // planilha — o destino dele é o check-in da hospedagem. Chamar a ponte aqui pediria uma
+    // coluna que não existe: a ponte recusaria, o lançamento nasceria marcado como "NÃO foi
+    // para a TV" e a fila de reenvio ficaria tentando para sempre um erro sem conserto.
+    // Sai ANTES de tocar em planilha_ok: quem não vai para a planilha não tem estado de
+    // planilha — e "não sei" numa linha que nunca teve caminho é ruído, não informação.
+    if(!dashVaiParaPlanilha(it))
+      return Promise.resolve({ok:false, semPlanilha:true, erro:'este lançamento não vai para a planilha'});
     // ⚠ 22/ago/2026 — Adriana: "toca no botão e nada acontece". Aqui era um `return` mudo:
     // sem a ponte configurada, a função saía em silêncio e o botão parecia quebrado. É a
     // QUINTA vez do mesmo padrão (aviso da vet, almoço, EA, comida, agora este): caminho de
@@ -35280,7 +35429,7 @@
   function dashPlanFilaPendentes(dados){
     var out=[];
     Object.keys(dados||{}).forEach(function(k){
-      if(!dashItem(k)) return;
+      if(!dashVaiParaPlanilha(dashItem(k))) return;   // sem coluna, sem planilha, sem fila
       var lista=dados[k]||{};
       Object.keys(lista).forEach(function(id){
         var o=lista[id]||{};
@@ -35685,6 +35834,14 @@
   function dashReenviar(k,id,btn){
     var reg=(DASH_DADOS[k]||{})[id];
     if(!reg){ alert('Não achei este lançamento para reenviar. Atualize a tela e tente de novo.'); return; }
+    // O botão nem aparece em item sem coluna (ver renderDash), mas quem chama de fora não
+    // sabe disso. Aqui ele DIZ o porquê em vez de sair calado — a lição do bloqueio invisível.
+    if(!dashVaiParaPlanilha(dashItem(k))){
+      if(typeof zAlertao==='function') zAlertao('ESTE LANÇAMENTO NÃO VAI PARA A PLANILHA',
+        ['A Pernoite não tem coluna na planilha nem aparece na TV: ela vai para o check-in da hospedagem.',
+         'Se ela não apareceu lá, abra o Check-in — o cartão das pernoites do dia fica no alto da tela.'],{botao:'Entendi'});
+      return;
+    }
     var txt=btn?btn.textContent:''; if(btn){ btn.disabled=true; btn.textContent='enviando…'; }
     // O dia vai EXPLÍCITO: é o dia aberto na tela (o botão mora na linha daquele dia).
     // Reenviar o carrapaticida de 03/09 com a tela em 03/09 manda para a planilha de
@@ -35705,14 +35862,328 @@
     var it=dashItem(k), reg=(DASH_DADOS[k]||{})[id];
     if(!it||!reg||!DB) return;
     if(!await zPergunta('Tirar '+reg.valor+' de '+it.t+'?',
-      ['Sai daqui e sai da planilha — some da TV.'],
+      [dashVaiParaPlanilha(it)
+        ? 'Sai daqui e sai da planilha — some da TV.'
+        : 'Sai daqui e sai da fila do check-in da hospedagem — ele deixa de ser esperado para dormir.'],
       {sim:'Tirar', nao:'Manter'})) return;
     DB.ref(dashNo()+'/'+k+'/'+id).remove().then(function(){
       if(DASH_DADOS[k]) delete DASH_DADOS[k][id];
       renderDash();
       if(typeof audit==='function') audit('dashboard-daycare','tirou '+reg.valor+' de '+it.t,{pet:reg.valor||''});
+      // Tirou a pernoite da lista do dia: a fila do check-in não pode continuar pedindo o
+      // check-in de uma noite que ninguém vai fazer.
+      if(k==='pernoite'){ try{ pernRetirarDoLancamento(reg, dashDia()); }catch(e){ _logFalhaGrav('retirar a pernoite da fila do check-in', e); } }
       dashEspelhar(k,id,reg,'remover');
     }).catch(function(e){ alert('Não removeu: '+((e&&e.message)||e)); });
+  }
+  // ===================================================================================
+  // ===== A FILA DAS PERNOITES DO DAY CARE (Adriana, 23/set/2026) =====================
+  // "Esse lançamento não precisa ir para a tabela. Não precisa ir para o dashboard — pode
+  //  até ir também —, mas ele precisa chegar até o check-in de hospedagem. E aí ele entra
+  //  como pernoite, aquele peludinho entra como pernoite."
+  //
+  // Duas gavetas, de propósito, sem duplicar verdade nenhuma:
+  //   daycare/dashboard/{dia}/pernoite/{id} — o LANÇAMENTO (a lista do dia e o calendário)
+  //   daycare/pernoites/{dia}/{chave}       — a FILA que o check-in consome, com o ESTADO
+  // O lançamento conta o que aconteceu; a fila conta o que ainda falta fazer. Guardar o
+  // estado dentro do lançamento obrigaria a recepção a caçar a linha certa lá atrás.
+  //
+  // A fila NÃO cria FILHOt nenhum: ela aponta para a ficha que já existe (o item de Pernoite
+  // busca só no cadastro ativo). Cadastro continua sendo UM SÓ.
+  var PERN_FILA={};            // {chave: registro} do dia que está no cache
+  var PERN_FILA_DIA='';        // qual dia o cache guarda
+  var PERN_FILA_LIDO=false;    // false = ainda não li — a tela diz "conferindo", nunca "nenhuma"
+  // A hora em que a casa fecha e a pernoite sem check-in deixa de ser "ainda dá tempo" e
+  // vira cartaz. É a hora do jantar do plantão. NÃO é o CK_HORA_FALTA (12h), que é a hora
+  // da falta do Day Care: são dois acontecimentos diferentes, e misturá-los daria cartaz
+  // no meio da tarde, quando o tutor ainda vai chegar.
+  var PERN_HORA_ALERTA=19;
+  function pernHoje(){ return (typeof zHojeISO==='function')?zHojeISO():''; }
+  function pernNo(dia){ return 'daycare/pernoites/'+dia; }
+  // A chave é a da FICHA (dcKey) — nome sozinho não identifica ninguém. Sem ficha casada,
+  // cai no texto do lançamento, que ao menos não colide com a chave de outro FILHOt.
+  function pernChaveDe(reg){
+    var ch=String((reg&&reg.chave)||'').trim();
+    if(ch) return ch;
+    var t=(typeof jsNorm==='function')?jsNorm(String((reg&&reg.valor)||'')):String((reg&&reg.valor)||'');
+    t=t.replace(/[.#$\[\]\/ ]/g,'-');
+    return t||('pernoite-'+((reg&&reg.ts)||Date.now()));
+  }
+  // O nome limpo, sem o detalhe entre parênteses que a lista do dia mostra.
+  function pernNomeLimpo(v){ return String(v==null?'':v).replace(/\s*\([^)]*\)\s*$/,'').trim(); }
+  function pernFilaCarregar(dia, aoChegar){
+    dia=dia||pernHoje();
+    if(!DB){ if(typeof aoChegar==='function') aoChegar(); return Promise.resolve({}); }
+    return DB.ref(pernNo(dia)).once('value').then(function(s){
+      PERN_FILA=s.val()||{}; PERN_FILA_DIA=dia; PERN_FILA_LIDO=true;
+      try{ pernCartaoRender(); }catch(e){} /* silencioso de propósito: redesenho de tela — falhar não pode derrubar quem chamou */
+      try{ if(typeof renderDash==='function' && typeof dashDia==='function' && dashDia()===dia) renderDash(); }catch(e){} /* silencioso de propósito: redesenho de tela — falhar não pode derrubar quem chamou */
+      if(typeof aoChegar==='function') aoChegar();
+      return PERN_FILA;
+    }).catch(function(e){
+      _logLeituraFalhou(pernNo(dia)+' (pernFilaCarregar)', e);
+      if(typeof aoChegar==='function') aoChegar();
+      return {};
+    });
+  }
+  // Lê UMA vez por dia. Quem abre depois não paga leitura nenhuma; `forcar` refaz.
+  function pernFilaGarantir(dia, forcar, aoChegar){
+    dia=dia||pernHoje();
+    if(!forcar && PERN_FILA_LIDO && PERN_FILA_DIA===dia){ if(typeof aoChegar==='function') aoChegar(); return Promise.resolve(PERN_FILA); }
+    return pernFilaCarregar(dia, aoChegar);
+  }
+  // A fila do dia que está no cache, em ordem de lançamento. `status` filtra.
+  function pernLista(status){
+    var o=PERN_FILA||{};
+    return Object.keys(o).map(function(ch){ return Object.assign({_chave:ch}, o[ch]||{}); })
+      .filter(function(r){ return !status || String(r.status||'aguardando')===status; })
+      .sort(function(a,b){ return (a.ts||0)-(b.ts||0); });
+  }
+  // {total, semCheckin, feitos} — ou null enquanto o dia não desceu. Null vira "…" na tela:
+  // afirmar "nenhuma pernoite" antes de ler seria a tela mentindo com cara de certeza.
+  function pernContagem(){
+    // O cache pode estar num dia FUTURO: os Lançamentos do dia leem o dia do seletor, e
+    // quem abre o calendário em 30/09 deixa a fila daquele dia em memória. Estes quadros
+    // falam de HOJE — contar outro dia aqui seria a tela mentindo com cara de certeza.
+    if(!PERN_FILA_LIDO || PERN_FILA_DIA!==pernHoje()) return null;
+    var viva=pernLista().filter(function(r){ return String(r.status||'aguardando')!=='cancelado'; });
+    var esp=viva.filter(function(r){ return String(r.status||'aguardando')==='aguardando'; });
+    return {total:viva.length, semCheckin:esp.length, feitos:viva.length-esp.length};
+  }
+  // Passou da hora de fechar e ainda há pernoite sem check-in? O aviso NÃO depende de alguém
+  // abrir a tela certa: ele aparece no Check-in E no Dashboard da Márcia.
+  function pernAtrasadas(){
+    if(!PERN_FILA_LIDO || PERN_FILA_DIA!==pernHoje()) return [];
+    var agora=new Date();
+    if(agora.getHours()<PERN_HORA_ALERTA) return [];
+    return pernLista('aguardando');
+  }
+  function pernAlertaHTML(){
+    var L=pernAtrasadas(); if(!L.length) return '';
+    return '<div class="dc-faltas" style="margin:10px 0;border-color:var(--crm-critico)">'
+      +'<strong>Pernoite lançado e sem check-in: '+escAttr(L.map(function(r){ return pernNomeLimpo(r.nome); }).join(', '))+'.</strong>'
+      +'<div style="font-weight:600;margin-top:4px">Passou das '+PERN_HORA_ALERTA+'h. Sem o check-in, a noite dele não tem ficha: '
+      +'o plantão não sabe o que dar de comer nem que remédio dar. Faça o check-in de pernoite agora — '
+      +'ou, se o tutor buscou, toque em &laquo;Tutor buscou, cancelar&raquo;.</div></div>';
+  }
+  // ---- o que a lista do dia mostra ao lado do nome ---------------------------------
+  function dashPernEtiquetaHTML(k, reg){
+    if(k!=='pernoite') return '';
+    if(!PERN_FILA_LIDO || PERN_FILA_DIA!==((typeof dashDia==='function')?dashDia():''))
+      return ' <span style="color:var(--muted);font-weight:700;font-size:11px">conferindo o check-in…</span>';
+    var f=(PERN_FILA||{})[pernChaveDe(reg)];
+    var st=String((f&&f.status)||'aguardando');
+    if(!f) return ' <span style="color:var(--z-blue);font-weight:800;font-size:11.5px">vai para o check-in da hospedagem</span>';
+    if(st==='checkin_feito') return ' <span style="color:var(--crm-ok);font-weight:800;font-size:11.5px">check-in de pernoite feito</span>';
+    if(st==='cancelado') return ' <span style="color:var(--muted);font-weight:800;font-size:11.5px">cancelado'+(f.cancel_motivo?(' &mdash; '+escAttr(f.cancel_motivo)):'')+'</span>';
+    return ' <span style="color:var(--z-gold-deep);font-weight:800;font-size:11.5px">aguardando o check-in da hospedagem</span>';
+  }
+  // ---- o lançamento entra na fila --------------------------------------------------
+  // Chamado SÓ depois de o lançamento existir: não há pernoite de um dia que não aconteceu.
+  // É idempotente (a chave é a da ficha): lançar de novo atualiza, nunca cria uma segunda.
+  function pernGravarDoLancamento(nomeBase, reg, dia){
+    if(!DB||!reg) return Promise.resolve(false);
+    var ch=pernChaveDe(reg), det=reg.det||{};
+    var o={ nome:pernNomeLimpo(nomeBase||reg.valor||''), chave:ch, dia:dia,
+            motivo:String(det.motivo||''), hora:String(det.aviso||''), obs:String(det.obs||''),
+            quem:String(reg.quem||'-'), ts:Date.now(), status:'aguardando' };
+    return DB.ref(pernNo(dia)+'/'+ch).update(o).then(function(){
+      if(PERN_FILA_DIA===dia) PERN_FILA[ch]=Object.assign({}, PERN_FILA[ch]||{}, o);
+      try{ if(typeof audit==='function') audit('pernoite-daycare','lançou pernoite de '+o.nome+' para '+dia+' — '+(o.motivo||'motivo não declarado'),{pet:o.nome}); }catch(e){} /* silencioso de propósito: o audit() tem bolso próprio e reenvia sozinho */
+      try{ pernCartaoRender(); }catch(e){} /* silencioso de propósito: redesenho de tela — falhar não pode derrubar quem chamou */
+      pernAvisarPlantao(o, dia);
+      return true;
+    }).catch(function(e){
+      // O lançamento entrou; a fila é que não. Isso NUNCA fica mudo: sem a fila, a pernoite
+      // não chega ao check-in — e a noite dele fica sem ficha de comida e de remédio.
+      _logFalhaGrav('fila de pernoites de '+o.nome, e);
+      if(typeof zAlertao==='function') zAlertao('A PERNOITE NÃO CHEGOU AO CHECK-IN',
+        ['O lançamento de '+o.nome+' entrou nos Lançamentos do dia, mas não consegui pôr a pernoite na fila do check-in: '+((e&&e.message)||e)+'.',
+         'Abra o Check-in da hospedagem e faça a pernoite dele à mão — senão o plantão não sabe que ele dorme aqui.'],
+        {botao:'Vou fazer à mão'});
+      return false;
+    });
+  }
+  // O aviso ao grupo do plantão. SÓ sai se o grupo `plantao` existir na ponte: mandar para o
+  // grupo errado é o erro que já custou caro nesta casa, e inventar destino, nunca.
+  function pernAvisarPlantao(o, dia){
+    if(typeof tgGrupoNaPonte!=='function' || typeof tgAvisar!=='function') return Promise.resolve(false);
+    return tgGrupoNaPonte('plantao').then(function(tem){
+      if(!tem) return false;
+      var quando=(dia===pernHoje())?'hoje':('em '+((typeof repBRdata==='function')?repBRdata(dia):dia));
+      var txt='Pernoite '+quando+': '+(o.nome||'')+' — '+(o.motivo||'motivo não declarado')+(o.hora?(' (avisado às '+o.hora+')'):'');
+      return tgAvisar({grupo:'plantao', texto:txt}).then(function(r){
+        try{ if(typeof audit==='function') audit('pernoite-daycare',((r&&r.ok)?'avisou':'NÃO avisou')+' o grupo do plantão sobre a pernoite de '+(o.nome||''),{pet:o.nome||''}); }catch(e){} /* silencioso de propósito: o audit() tem bolso próprio e reenvia sozinho */
+        return !!(r&&r.ok);
+      });
+    }).catch(function(e){ _logFalhaGrav('aviso da pernoite ao grupo do plantão', e); return false; });
+  }
+  // O lançamento foi TIRADO da lista do dia: a fila não pode continuar pedindo o check-in de
+  // uma pernoite que não existe mais.
+  function pernRetirarDoLancamento(reg, dia){
+    if(!DB||!reg) return Promise.resolve(false);
+    var ch=pernChaveDe(reg);
+    var up={ status:'cancelado', cancel_motivo:'o lançamento do dia foi retirado',
+             cancel_quem:(typeof quemSou==='function'?quemSou():'-'), cancel_ts:Date.now() };
+    return DB.ref(pernNo(dia)+'/'+ch).update(up).then(function(){
+      if(PERN_FILA_DIA===dia && PERN_FILA[ch]) Object.assign(PERN_FILA[ch], up);
+      try{ pernCartaoRender(); }catch(e){} /* silencioso de propósito: redesenho de tela — falhar não pode derrubar quem chamou */
+      return true;
+    }).catch(function(e){ _logFalhaGrav('retirar a pernoite da fila', e); return false; });
+  }
+
+  // ---- o cartão no topo do Check-in da hospedagem ----------------------------------
+  // "Ele precisa chegar até o check-in de hospedagem." Este é o lugar onde ele chega.
+  // Fica no ALTO da tela de escolha: quem abre o Check-in vê a fila antes de buscar nome
+  // nenhum — aviso que depende de rolar a tela não é aviso.
+  function pernCartaoRender(){
+    var el=document.getElementById('ciPernoitesDia'); if(!el) return;
+    el.innerHTML=pernCartaoHTML();
+  }
+  function pernCartaoHTML(){
+    var hoje=pernHoje();
+    if(!PERN_FILA_LIDO || PERN_FILA_DIA!==hoje)
+      return '<div class="card"><div class="hint">Conferindo as pernoites lançadas no Day Care…</div></div>';
+    var esp=pernLista('aguardando');
+    var feitos=pernLista('checkin_feito').length;
+    if(!esp.length && !feitos) return '';
+    var diaBR=(typeof repBRdata==='function')?repBRdata(hoje):hoje;
+    var h='<div class="card" style="border-left:4px solid var(--z-gold)">'
+      +'<h2 style="font-size:17px">🌙 Pernoites do Day Care de '+escAttr(diaBR)+' ('+esp.length+')</h2>'
+      +'<div class="hint">Lançadas em <strong>Lançamentos do dia</strong>: o FILHOt fica para dormir. '
+      +'Toque em <strong>Fazer check-in de pernoite</strong> — a ficha já abre com entrada hoje, saída amanhã e o valor da pernoite.</div>';
+    h+=pernAlertaHTML();
+    if(!esp.length){
+      h+='<div class="hint" style="margin-top:8px;color:var(--crm-ok);font-weight:700">Todas as pernoites de hoje já têm check-in feito.</div>';
+      return h+'</div>';
+    }
+    h+='<div style="margin-top:10px">'+esp.map(function(r){
+      var ch=escAttr(String(r._chave||'')).replace(/'/g,'&#39;');
+      return '<div style="border:1.5px solid var(--line);border-radius:12px;padding:11px 13px;margin-bottom:9px;background:var(--z-cream-warm)">'
+        +'<div style="font-weight:800;color:var(--z-blue);font-size:16px">'+escAttr(pernNomeLimpo(r.nome))+'</div>'
+        +'<div class="hint" style="margin-top:2px">'+escAttr(r.motivo||'motivo não declarado')
+        +(r.hora?(' · avisado às '+escAttr(r.hora)):'')
+        +(r.quem?(' · lançado por '+escAttr(r.quem)):'')+'</div>'
+        +(r.obs?('<div class="hint" style="margin-top:2px"><strong>'+escAttr(r.obs)+'</strong></div>'):'')
+        +'<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:9px">'
+        +'<button type="button" class="btn btn-primary" style="flex:1 1 200px" onclick="pernFazerCheckin(\''+ch+'\')">Fazer check-in de pernoite</button>'
+        +'<button type="button" class="btn" style="flex:0 1 auto;background:var(--z-cream);border:1.5px solid var(--crm-critico);color:var(--crm-critico);font-weight:800" onclick="pernCancelar(\''+ch+'\')">Tutor buscou, cancelar</button>'
+        +'</div></div>';
+    }).join('')+'</div>';
+    if(feitos) h+='<div class="hint" style="margin-top:4px;color:var(--crm-ok);font-weight:700">'
+      +(feitos===1?'1 pernoite de hoje já está com o check-in feito.'
+                  :(feitos+' pernoites de hoje já estão com o check-in feito.'))+'</div>';
+    return h+'</div>';
+  }
+  // ---- a temporada e o preço da noite ----------------------------------------------
+  // A ALTA temporada é escolha humana (ninguém sabe sozinho que semana é de alta), então o
+  // app só decide o que ele TEM COMO saber: o fim de ano, que é um intervalo de datas que a
+  // Gestão configura. Fora dele, baixa. O valor sai da MESMA tabela do orçamento — uma conta
+  // só na casa — e é sempre UMA noite: pernoite é, por definição, uma noite.
+  function pernTemporadaDoDia(iso){
+    try{ return (typeof orcNoFimDeAno==='function' && orcNoFimDeAno(iso))?'fim':'baixa'; }
+    catch(e){ return 'baixa'; }
+  }
+  function pernPrecoCent(iso){
+    try{ var v=(typeof orcPrecoDe==='function')?orcPrecoDe(pernTemporadaDoDia(iso)):null; return Math.max(0, Math.round((v&&v.per)||0)); }
+    catch(e){ return 0; }
+  }
+  // ---- abrir o check-in já preenchido ----------------------------------------------
+  // O bilhete abaixo é lido pelo pré-preenchimento da última estadia: sem ele, as datas da
+  // vez passada entravam por cima das de hoje (a mesma lição das datas do orçamento).
+  var PERN_CI_PENDENTE=null;   // {chave, petKey, entrada, saida} ou null
+  function pernFichaIndiceDe(r){
+    if(typeof PELUDINHOS==='undefined' || !Array.isArray(PELUDINHOS)) return -1;
+    var alvo=String((r&&r.chave)||'');
+    var i=-1;
+    if(alvo) PELUDINHOS.forEach(function(p,idx){ try{ if(i<0 && dcKey(p.n,p.tutor)===alvo) i=idx; }catch(e){} /* silencioso de propósito: guarda defensiva */ });
+    if(i<0){
+      // Sem a chave, o nome. Só vale quando ele identifica UM FILHOt — dois com o mesmo nome
+      // não se distinguem, e escolher um deles no chute é pior que pedir à recepção.
+      var nome=(typeof jsNorm==='function')?jsNorm(pernNomeLimpo((r&&r.nome)||'').split('/')[0]):'';
+      var achados=[];
+      if(nome) PELUDINHOS.forEach(function(p,idx){ try{ if(jsNorm(pelNome(p))===nome) achados.push(idx); }catch(e){} /* silencioso de propósito: guarda defensiva */ });
+      if(achados.length===1) i=achados[0];
+    }
+    return i;
+  }
+  function pernFazerCheckin(chave){
+    var r=(PERN_FILA||{})[chave]; if(!r) return;
+    var i=pernFichaIndiceDe(Object.assign({_chave:chave}, r));
+    if(i<0){
+      if(typeof zAlertao==='function') zAlertao('NÃO ACHEI A FICHA DESTE FILHOt',
+        ['A pernoite de '+pernNomeLimpo(r.nome||'')+' foi lançada, mas não consegui ligá-la a uma ficha do cadastro.',
+         'Pode ser xará (dois com o mesmo nome) ou ficha juntada a outra. Busque o nome dele aqui no Check-in e faça a pernoite à mão — a fila continua esperando até alguém fazer.'],
+        {botao:'Vou buscar o nome'});
+      return;
+    }
+    var hoje=pernHoje(), amanha=(typeof ciMaisUmDia==='function')?ciMaisUmDia(hoje):'';
+    var pk=''; try{ pk=pelKey(PELUDINHOS[i]); }catch(e){ pk=''; }
+    PERN_CI_PENDENTE={chave:chave, petKey:pk, entrada:hoje, saida:amanha};
+    try{ if(typeof irParaView==='function') irParaView('checkin'); }catch(e){} /* silencioso de propósito: guarda defensiva — falhar aqui não pode interromper quem chamou */
+    ciEscolher(i);
+    pernAplicarNoCheckin();
+    try{ if(typeof audit==='function') audit('pernoite-daycare','abriu o check-in de pernoite de '+pernNomeLimpo(r.nome||''),{pet:pernNomeLimpo(r.nome||'')}); }catch(e){} /* silencioso de propósito: o audit() tem bolso próprio e reenvia sozinho */
+  }
+  // Põe na tela o que a pernoite já sabe: tipo, entrada hoje, saída amanhã. NADA é gravado
+  // aqui — é a consultora que confere os pertences, a comida e o remédio e toca em Salvar.
+  function pernAplicarNoCheckin(){
+    if(!PERN_CI_PENDENTE) return;
+    try{
+      var e=document.getElementById('ciEntrada'); if(e) e.value=PERN_CI_PENDENTE.entrada||'';
+      var s=document.getElementById('ciSaida');   if(s) s.value=PERN_CI_PENDENTE.saida||'';
+      if(typeof setSeg==='function') setSeg('ciTipoEstadia','Pernoite (uma noite)');
+      ciTipoEstadia='pernoite';
+      if(typeof ciTipoEstadiaChange==='function') ciTipoEstadiaChange('pernoite');
+      if(typeof ciCalcDias==='function') ciCalcDias();
+    }catch(x){} /* silencioso de propósito: guarda defensiva — a consultora ainda pode preencher à mão */
+  }
+  // O check-in foi salvo: a fila fecha, guardando QUAL estadia nasceu dela.
+  function pernMarcarCheckinFeito(estadiaId){
+    if(!PERN_CI_PENDENTE || !DB) return Promise.resolve(false);
+    var ch=PERN_CI_PENDENTE.chave, dia=PERN_FILA_DIA||pernHoje();
+    var up={ status:'checkin_feito', estadiaId:String(estadiaId||''),
+             checkin_quem:(typeof quemSou==='function'?quemSou():'-'), checkin_ts:Date.now() };
+    PERN_CI_PENDENTE=null;
+    return DB.ref(pernNo(dia)+'/'+ch).update(up).then(function(){
+      if(PERN_FILA_DIA===dia && PERN_FILA[ch]) Object.assign(PERN_FILA[ch], up);
+      try{ if(typeof audit==='function') audit('pernoite-daycare','check-in de pernoite feito — estadia '+up.estadiaId,{}); }catch(e){} /* silencioso de propósito: o audit() tem bolso próprio e reenvia sozinho */
+      try{ pernCartaoRender(); }catch(e){} /* silencioso de propósito: redesenho de tela — falhar não pode derrubar quem chamou */
+      return true;
+    }).catch(function(e){
+      // A estadia existe; a fila é que não fechou. Ela continuaria pedindo um check-in já
+      // feito — e alguém faria o segundo. Isto NÃO pode ficar mudo.
+      _logFalhaGrav('fechar a fila da pernoite', e);
+      if(typeof zAlertao==='function') zAlertao('A PERNOITE CONTINUA NA FILA',
+        ['O check-in foi salvo, mas não consegui marcar a pernoite como feita: '+((e&&e.message)||e)+'.',
+         'No Check-in ela ainda vai aparecer como aguardando. NÃO faça o check-in de novo — isso criaria uma segunda estadia. Avise a Gestão.'],
+        {botao:'Entendi'});
+      return false;
+    });
+  }
+  // ---- o tutor veio buscar ----------------------------------------------------------
+  // Cancelar é decisão, não acidente: pede o motivo escrito e grava QUEM cancelou.
+  function pernCancelar(chave){
+    var r=(PERN_FILA||{})[chave]; if(!r) return;
+    if(typeof zTexto!=='function'){ return; }
+    zTexto('Cancelar a pernoite de '+pernNomeLimpo(r.nome||'')+'?',
+      ['O tutor veio buscar, ou a pernoite não vai acontecer? Escreva o que houve — é isso que responde, depois, por que a noite não foi cobrada.',
+       'O lançamento do dia continua registrado: o que muda é que ele deixa de esperar check-in.'],
+      {rotulo:'O que houve', dica:'Ex.: a tutora chegou às 18h40 e levou', minimo:4,
+       botao:'Cancelar a pernoite', botaoNao:'Voltar — não mexer em nada',
+       erro:'Escreva pelo menos 4 letras dizendo o que houve.'})
+    .then(function(motivo){
+      if(motivo===null||!DB) return;
+      var dia=PERN_FILA_DIA||pernHoje();
+      var up={ status:'cancelado', cancel_motivo:String(motivo||'').trim(),
+               cancel_quem:(typeof quemSou==='function'?quemSou():'-'), cancel_ts:Date.now() };
+      DB.ref(pernNo(dia)+'/'+chave).update(up).then(function(){
+        if(PERN_FILA[chave]) Object.assign(PERN_FILA[chave], up);
+        try{ if(typeof audit==='function') audit('pernoite-daycare','cancelou a pernoite de '+pernNomeLimpo(r.nome||'')+' — '+up.cancel_motivo,{pet:pernNomeLimpo(r.nome||'')}); }catch(e){} /* silencioso de propósito: o audit() tem bolso próprio e reenvia sozinho */
+        pernCartaoRender();
+        try{ if(typeof renderDash==='function') renderDash(); }catch(e){} /* silencioso de propósito: redesenho de tela — falhar não pode derrubar quem chamou */
+      }).catch(function(e){ alert('Não consegui cancelar: '+((e&&e.message)||e)+'\n\nNada foi mudado. Tente de novo em instantes.'); });
+    });
   }
   // ===== QUEM AINDA NÃO TEM MICROCHIP — Adriana, 19/ago/2026 =====================
   // "Preciso de relatório de cães sem microchip — em Relatórios."
@@ -38165,6 +38636,8 @@
   }
   function ciTipoEstadiaChange(t){
     ciTipoEstadia=(t==='pernoite')?'pernoite':'hospedagem';
+    // A faixa da alimentação muda de tom: na pernoite ela é gate, na hospedagem é convite.
+    try{ if(typeof ciAlimConfRender==='function') ciAlimConfRender(); }catch(e){} /* silencioso de propósito: redesenho de tela — falhar não pode derrubar quem chamou */
     const box=document.getElementById('ciPernoiteBox');
     if(!ciEhPernoite()){ if(box){ box.style.display='none'; box.innerHTML=''; } return; }
     const ent=((document.getElementById('ciEntrada')||{}).value)||ciHoje();
@@ -38177,6 +38650,21 @@
         +'<div style="font-weight:800;color:#234D67;font-size:14px">Pernoite — sai amanhã ('+((typeof ciBRdata==='function')?ciBRdata(s?s.value:'') : (s?s.value:''))+')</div>'
         +'<div style="font-size:12.5px;color:var(--muted);font-weight:600;margin-top:5px">O tutor costuma trazer pouca coisa: <strong>a comida</strong>, <strong>o remédio se estiver tomando</strong>, uma roupa e a mochila do Day Care. Preencha só o que ele trouxe — o resto pode ficar em branco.</div>'
         +'<div style="font-size:12.5px;color:var(--muted);font-weight:600;margin-top:5px">Isto cai direto no <strong>Plantão da AuAulândia</strong>. O plantonista não precisa lançar de novo.</div>'
+        // O VALOR DA NOITE, à vista de quem lança (Adriana: "quem coloca é a recepção porque
+        // tem que lançar valor"). Uma noite, pelo preço da temporada do dia — sem orçamento.
+        + (function(){
+            var _d=ent||ciHoje();
+            var _v=(typeof pernPrecoCent==='function')?pernPrecoCent(_d):0;
+            var _t=(typeof pernTemporadaDoDia==='function')?pernTemporadaDoDia(_d):'baixa';
+            if(!_v) return '<div style="font-size:12.5px;color:var(--crm-critico);font-weight:800;margin-top:5px">'
+              +'Sem valor de pernoite para esta temporada. Preencha em Configurações &rsaquo; Valores da hospedagem — a noite não pode ser lançada de graça em silêncio.</div>';
+            return '<div style="font-size:12.5px;color:#234D67;font-weight:700;margin-top:5px">Valor: <strong>'
+              +esc((typeof fmtCent==='function')?fmtCent(_v):String(_v))+'</strong> — 1 noite, '
+              +esc((typeof orcTempLabel==='function')?orcTempLabel(_t):_t)+'.</div>';
+          })()
+        + ((typeof PERN_CI_PENDENTE!=='undefined' && PERN_CI_PENDENTE)
+            ? '<div style="font-size:12.5px;color:#234D67;font-weight:700;margin-top:5px">Veio dos <strong>Lançamentos do dia</strong>: ele ficou no Day Care e vai dormir aqui. Ao salvar, a pernoite sai da fila do Check-in.</div>'
+            : '')
         +'<div id="ciPernoiteDup" style="margin-top:8px"></div></div>';
     }
     ciChecarPernoiteJaLancada();
@@ -38207,6 +38695,9 @@
     if(esc&&fic){ esc.style.display='block'; fic.style.display='none'; }
     const b=document.getElementById('ciBusca'); if(b) b.value='';
     carregarPertBanco();
+    // A fila das pernoites do Day Care: o cartão do alto da tela nasce dela.
+    try{ if(typeof pernCartaoRender==='function') pernCartaoRender(); }catch(e){} /* silencioso de propósito: redesenho de tela — falhar não pode derrubar quem chamou */
+    try{ if(typeof pernFilaGarantir==='function') pernFilaGarantir(null, true); }catch(e){} /* silencioso de propósito: sem a fila o cartão diz "conferindo" e a próxima abertura lê de novo */
     renderCiBusca();
     setTimeout(function(){ try{ b&&b.focus(); }catch(e){} /* silencioso de propósito: enfeite de tela (foco, rolagem, mídia) — falhar não muda dado nenhum */ },120);
   }
@@ -38476,6 +38967,12 @@
       if(typeof ORC_CI_DATAS!=='undefined' && ORC_CI_DATAS && ORC_CI_DATAS.petKey
          && typeof pelKey==='function' && pelKey(p)!==ORC_CI_DATAS.petKey) ORC_CI_DATAS=null;
     }catch(e){} /* silencioso de propósito: guarda defensiva — falhar aqui não pode interromper quem chamou */
+    // O bilhete da PERNOITE segue a MESMA lei: ele vale para o FILHOt da fila, e só para ele.
+    // Trocar de peludinho no meio do caminho não pode carregar junto a pernoite de outro.
+    try{
+      if(PERN_CI_PENDENTE && PERN_CI_PENDENTE.petKey
+         && typeof pelKey==='function' && pelKey(p)!==PERN_CI_PENDENTE.petKey) PERN_CI_PENDENTE=null;
+    }catch(e){} /* silencioso de propósito: guarda defensiva — falhar aqui não pode interromper quem chamou */
     const _nasc=(typeof pelNasc==='function')?pelNasc(p):(pelGet(p,'nasc')||'');
     const _idade=(typeof calcIdade==='function'?calcIdade(_nasc):'')||(pelGet(p,'idadeAprox')||'');
     ciHosp={ nome:pelNome(p), tutor:pelGet(p,'tutor')||'', raca:pelGet(p,'raca')||'', refKey:pelKey(p), nasc:_nasc, idade:_idade, ini:(pelNome(p)[0]||'?').toUpperCase(), cor:corPel(i) };
@@ -38509,6 +39006,9 @@
     var _ct=document.getElementById('ciComidaTraz'); if(_ct) _ct.value='';
     var _cw=document.getElementById('ciComidaTrazWrap'); if(_cw) _cw.style.display='none';
     if(typeof ciRefsZerar==='function') ciRefsZerar();
+    // A confirmação da comida é DESTE check-in: nada do FILHOt anterior gruda no próximo.
+    CI_ALIM_CONF=''; CI_ALIM_SEM_RACAO=null; CI_ALIM_PLANO_TINHA=false;
+    try{ ciAlimConfRender(); }catch(e){} /* silencioso de propósito: redesenho de tela — falhar não pode derrubar quem chamou */
     var _bt=document.getElementById('ciBanhoTipo'); if(_bt) _bt.value='';
     var _bh=document.getElementById('ciBanhoHora'); if(_bh){ _bh.value=''; _bh.disabled=false; }
     var _bc=document.getElementById('ciBanhoConfirmar'); if(_bc) _bc.checked=false;
@@ -38764,6 +39264,161 @@
     if(idx>=0) ciEscolher(idx);
   }
 
+  // ===================================================================================
+  // ===== O QUE ELE COME MORA NA FICHA (Adriana, 23/set/2026) =========================
+  // "Peludo fica de pernoite: era para estar a informação dele de comida que ele vai comer.
+  //  Se ele tem ração — Fofucho vai ficar de pernoite hoje — essa informação tem que ficar
+  //  guardada: ele come 40 gramas de manhã, 40 no almoço e 40 à noite. Isso tem que ficar
+  //  guardado no aplicativo para a gente não refazer o tempo todo. Só confirmar se é isso
+  //  mesmo, ou se tem diferença. Por exemplo: não trouxe a ração, aí vai ter que pegar
+  //  comida úmida, está sem ração. Tem que ter a opção 'sem ração → comida úmida'."
+  //
+  // Até aqui o plano de comida só existia DENTRO da última estadia. Pernoite nova, tudo de
+  // novo à mão, com o tutor na frente e a fila do balcão andando. Agora o plano vive na
+  // FICHA — o cadastro-mestre de sempre, campo `alim_plano`; nenhum FILHOt novo nasce daqui
+  // — e o check-in só PEDE CONFIRMAÇÃO. "Mudou" corrige a ficha para a próxima vez.
+  //
+  // O que NÃO vai para a ficha: "não trouxe ração". Isso é de HOJE, desta noite — gravá-lo
+  // na ficha diria que este FILHOt come comida úmida da casa para sempre, o que é falso.
+  var CI_ALIM_CONF='';             // '' | 'confirmado' | 'mudou'
+  var CI_ALIM_SEM_RACAO=null;      // null, ou {quem, ts} — só nesta estadia, nunca na ficha
+  var CI_ALIM_PLANO_TINHA=false;   // a ficha já tinha plano quando este check-in abriu
+  // As quantidades que a casa usa de verdade. Botão evita o erro de digitação de quem está
+  // com o tutor na frente — e o campo ao lado continua aceitando qualquer número.
+  var CI_ALIM_GRAMAS=[20,30,40,50,60,80,100];
+
+  function ciPlanoDaFicha(p){
+    try{
+      var ex=(typeof pelExtra==='function')?pelExtra(p||ciPelAtual):null;
+      var o=ex&&ex.alim_plano;
+      return (o&&typeof o==='object'&&o.refs)?o:null;
+    }catch(e){ return null; } /* silencioso de propósito: sem plano, o check-in preenche como sempre */
+  }
+  // O plano que está NA TELA agora — o mesmo formato que a estadia já grava (`refs`), para
+  // a ficha e a estadia nunca contarem histórias diferentes sobre o mesmo prato.
+  function ciPlanoDaTela(){
+    return {
+      tipo:(typeof segVal==='function')?(segVal('ciAlimTipo')||''):'',
+      unidade:(typeof segVal==='function')?(segVal('ciAlimUnid')||''):'',
+      marca:(((document.getElementById('ciAlimMarca')||{}).value)||'').trim(),
+      refs:{ fixas:JSON.parse(JSON.stringify(ciRefs)), extras:JSON.parse(JSON.stringify(ciRefsExtras||[])) }
+    };
+  }
+  // Põe o plano da ficha na tela. Roda DEPOIS do pré-preenchimento da última estadia: a
+  // ficha é o que foi confirmado por último com o tutor, então é ela que vale.
+  function ciPlanoAplicarDaFicha(){
+    var pl=ciPlanoDaFicha(ciPelAtual);
+    CI_ALIM_PLANO_TINHA=!!pl;
+    if(pl){
+      try{
+        if(pl.tipo && typeof setSeg==='function') setSeg('ciAlimTipo', pl.tipo);
+        if(pl.unidade && typeof setSeg==='function') setSeg('ciAlimUnid', pl.unidade);
+        var m=document.getElementById('ciAlimMarca'); if(m && pl.marca) m.value=pl.marca;
+        if(pl.refs && typeof ciCarregarRefs==='function') ciCarregarRefs({refs:pl.refs});
+      }catch(e){} /* silencioso de propósito: se algo não entrar, a consultora preenche à mão — a faixa abaixo continua cobrando a confirmação */
+    }
+    CI_ALIM_CONF=''; CI_ALIM_SEM_RACAO=null;
+    try{ ciAlimConfRender(); }catch(e){} /* silencioso de propósito: redesenho de tela — falhar não pode derrubar quem chamou */
+  }
+  // Mexeu na comida depois de ter confirmado? Então a confirmação de antes não vale mais —
+  // ela era sobre outro prato. A faixa volta a cobrar, em vez de guardar uma palavra dada
+  // sobre número que já mudou.
+  function ciAlimMexeu(){
+    if(!CI_ALIM_CONF) return;
+    CI_ALIM_CONF='';
+    try{ ciAlimConfRender(); }catch(e){} /* silencioso de propósito: redesenho de tela — falhar não pode derrubar quem chamou */
+  }
+  function ciAlimConfirmar(estado){
+    var e=(estado==='mudou')?'mudou':'confirmado';
+    CI_ALIM_CONF=(CI_ALIM_CONF===e)?'':e;   // tocar de novo desmarca
+    try{ ciAlimConfRender(); }catch(x){} /* silencioso de propósito: redesenho de tela — falhar não pode derrubar quem chamou */
+    try{ if(typeof zLimparFalta==='function') zLimparFalta(); }catch(x){} /* silencioso de propósito: tira o vermelho do gate assim que ele é respondido */
+  }
+  // "Não trouxe a ração, aí vai ter que pegar comida úmida." É de HOJE: fica na ESTADIA,
+  // com quem disse e quando. A ficha continua dizendo o que ele come de verdade.
+  function ciAlimSemRacaoAlternar(){
+    CI_ALIM_SEM_RACAO=CI_ALIM_SEM_RACAO?null:{quem:(typeof quemSou==='function'?quemSou():'-'), ts:Date.now()};
+    try{ ciAlimConfRender(); }catch(e){} /* silencioso de propósito: redesenho de tela — falhar não pode derrubar quem chamou */
+  }
+  function ciAlimSemRacaoEstadia(){
+    if(!CI_ALIM_SEM_RACAO) return null;
+    return {sem_racao:true, comida_umida:true, quem:CI_ALIM_SEM_RACAO.quem||'-', ts:CI_ALIM_SEM_RACAO.ts||Date.now()};
+  }
+  // A frase do plano, em português, para quem está lendo confirmar sem decifrar campo nenhum.
+  function ciAlimResumoFrase(){
+    var unid=(typeof ciUnidLbl==='function')?ciUnidLbl(segVal('ciAlimUnid')):'g';
+    var L=(typeof ciRefsAtivas==='function'?ciRefsAtivas():[]).map(function(r){
+      var p=[];
+      if(ciNum(r.racao)>0) p.push(r.racao+unid.trim()+' de ração');
+      if(ciNum(r.natural)>0) p.push(r.natural+'g de natural');
+      if(r.extra) p.push(r.extra);
+      return r.nome+(r.hora?(' ('+r.hora+')'):'')+': '+(p.length?p.join(' + '):'a definir');
+    });
+    return L.join(' · ');
+  }
+  function ciAlimConfRender(){
+    var el=document.getElementById('ciAlimConfirma'); if(!el) return;
+    var pern=(typeof ciEhPernoite==='function')&&ciEhPernoite();
+    var resumo=ciAlimResumoFrase();
+    var bt=function(est, rot){
+      var on=(CI_ALIM_CONF===est);
+      return '<button type="button" class="btn" style="flex:1 1 170px;padding:10px 14px;font-size:13.5px;font-weight:800;border:1.5px solid '
+        +(on?'var(--z-blue)':'var(--line)')+';background:'+(on?'var(--z-blue)':'var(--z-cream-warm)')
+        +';color:'+(on?'var(--z-cream)':'var(--z-blue)')+'"'
+        +' onclick="ciAlimConfirmar(\'' + est + '\')">'+(on?'&#10003; ':'')+rot+'</button>';
+    };
+    var sem=!!CI_ALIM_SEM_RACAO;
+    var h='<div style="margin-top:10px;padding:11px 13px;border-radius:12px;border:1.5px solid '
+      +((pern&&!CI_ALIM_CONF)?'var(--crm-critico)':'var(--z-gold)')+';background:var(--z-cream-warm)">'
+      +'<div style="font-weight:800;color:var(--z-blue);font-size:14px">Confirme com quem trouxe: é isso mesmo?</div>'
+      +'<div class="hint" style="margin-top:3px">'
+      +(CI_ALIM_PLANO_TINHA
+        ? 'Isto veio da <strong>ficha dele</strong> — foi o que ficou combinado da última vez.'
+        : 'A ficha dele ainda não tem o que ele come guardado. Preencha abaixo e toque em <strong>Mudou</strong>: da próxima vez já vem pronto.')
+      +'</div>'
+      +(resumo?('<div class="prev-calc" style="margin-top:8px">'+escAttr(resumo)+'</div>'):'')
+      +'<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:9px">'
+      +bt('confirmado','Confirmado — é isso mesmo')
+      +bt('mudou','Mudou — guardar na ficha')
+      +'</div>';
+    if(CI_ALIM_CONF==='mudou') h+='<div class="hint" style="margin-top:6px;color:var(--crm-ok);font-weight:700">'
+      +'Ao salvar, o que estiver abaixo passa a ser o que a ficha dele diz — na próxima vez já vem assim.</div>';
+    if(pern&&!CI_ALIM_CONF) h+='<div class="hint" style="margin-top:6px;color:var(--crm-atencao-text);font-weight:800">'
+      +'A pernoite não fecha sem esta resposta: quem serve à noite precisa saber se o número é o de hoje.</div>';
+    // "Não trouxe a ração, aí vai ter que pegar comida úmida, está sem ração."
+    h+='<button type="button" class="btn" style="width:100%;margin-top:10px;padding:10px 14px;font-size:13px;font-weight:800;border:1.5px '
+      +(sem?'solid var(--crm-critico)':'dashed var(--z-blue)')+';background:'+(sem?'var(--crm-critico)':'var(--z-cream)')
+      +';color:'+(sem?'var(--z-cream)':'var(--z-blue)')+'"'
+      +' onclick="ciAlimSemRacaoAlternar()">'+(sem?'&#10003; Sem ração — comida úmida da casa':'Não trouxe ração &rsaquo; comida úmida da casa')+'</button>'
+      +(sem?('<div class="hint" style="margin-top:5px;color:var(--crm-critico);font-weight:800">'
+             +'Vale só para ESTA estadia — a ficha dele continua dizendo o que ele come de verdade. '
+             +'O plantão vai ver <strong>SEM RAÇÃO — comida úmida da casa</strong> no jantar e no café.</div>'):'');
+    el.innerHTML=h+'</div>';
+  }
+  // Grava o plano na FICHA. Só quem edita ficha grava — o porteiro é o mesmo do cadastro
+  // (setPelExtra). Sem permissão, o check-in segue normal e a auditoria diz por que a ficha
+  // não mudou: melhor não gravar do que gravar escondido.
+  function ciPlanoGravarNaFicha(estado){
+    var p=(typeof ciPelAtual!=='undefined')?ciPelAtual:null;
+    if(!p) return Promise.resolve({ok:false, erro:'sem ficha aberta'});
+    if(typeof canEditPel==='function' && !canEditPel()){
+      try{ if(typeof audit==='function') audit('checkin-alimentacao','NÃO gravei o que ele come na ficha (papel sem permissão de editar ficha)',{pet:(ciHosp&&ciHosp.nome)||''}); }catch(e){} /* silencioso de propósito: o audit() tem bolso próprio e reenvia sozinho */
+      return Promise.resolve({ok:false, erro:'sem permissão para alterar a ficha'});
+    }
+    var plano=ciPlanoDaTela();
+    plano.conf={estado:String(estado||''), quem:(typeof quemSou==='function'?quemSou():'-'), ts:Date.now()};
+    return setPelExtra(p,{alim_plano:plano}).then(function(r){
+      if(r&&r.ok){
+        try{ if(typeof audit==='function') audit('checkin-alimentacao',
+          'guardou na ficha o que '+((ciHosp&&ciHosp.nome)||'ele')+' come: '+(ciAlimResumoFrase()||'sem quantidade lançada')
+          +' ('+(estado==='mudou'?'mudou no check-in':'primeira vez que a ficha guarda')+')',
+          {alvo:(typeof pelKey==='function'?pelKey(p):''), pet:(ciHosp&&ciHosp.nome)||''}); }catch(e){} /* silencioso de propósito: o audit() tem bolso próprio e reenvia sozinho */
+      } else {
+        _logFalhaGrav('o que '+((ciHosp&&ciHosp.nome)||'ele')+' come na ficha', (r&&r.erro)||new Error('gravação recusada'));
+      }
+      return r;
+    });
+  }
   // ---- Alimentação: dias automáticos + necessário de ração (igual ao sistema antigo) ----
   function ciUnidLbl(u){ return (!u||u==='gramas')?'g':(' '+u); }
   function ciCalcDias(){
@@ -38788,6 +39443,7 @@
   function ciTemNatural(){ const t=segVal('ciAlimTipo'); return t==='Ração + natural'||t==='Comida natural'; }
   function ciSoNatural(){ return segVal('ciAlimTipo')==='Comida natural'; }
   function ciAlimTipoChange(){
+    ciAlimMexeu();
     const w=document.getElementById('ciComidaTrazWrap');
     if(w) w.style.display=ciTemNatural()?'grid':'none';
     ciRenderRefs();
@@ -38866,9 +39522,22 @@
     const iguais=vals.every(function(v){ return v===vals[0]; });
     return iguais?vals[0]:'';
   }
-  function ciRefToggle(k){ if(!ciRefs[k]) return; ciRefs[k].on=!ciRefs[k].on; ciRenderRefs(); }
-  function ciRefSet(k,campo,v){ if(!ciRefs[k]) return; ciRefs[k][campo]=v; ciCalcRacao(); }
-  function ciExtraSet(i,campo,v){ if(!ciRefsExtras[i]) return; ciRefsExtras[i][campo]=v; ciCalcRacao(); }
+  function ciRefToggle(k){ if(!ciRefs[k]) return; ciRefs[k].on=!ciRefs[k].on; ciAlimMexeu(); ciRenderRefs(); }
+  function ciRefSet(k,campo,v){ if(!ciRefs[k]) return; ciRefs[k][campo]=v; ciAlimMexeu(); ciCalcRacao(); }
+  function ciExtraSet(i,campo,v){ if(!ciRefsExtras[i]) return; ciRefsExtras[i][campo]=v; ciAlimMexeu(); ciCalcRacao(); }
+  // O BOTÃO DE GRAMAS (Adriana, 23/set/2026). Quem está com o tutor na frente não digita:
+  // toca. Tocar de novo no mesmo número desmarca — a mesma lei dos outros botões da casa.
+  // O campo ao lado continua aceitando qualquer valor, para o FILHOt que come 35 g.
+  function ciRefSetQtd(k,campo,v){
+    if(!ciRefs[k]) return;
+    ciRefs[k][campo]=(String(ciRefs[k][campo]||'')===String(v))?'':String(v);
+    ciAlimMexeu(); ciRenderRefs();
+  }
+  function ciExtraSetQtd(i,campo,v){
+    if(!ciRefsExtras[i]) return;
+    ciRefsExtras[i][campo]=(String(ciRefsExtras[i][campo]||'')===String(v))?'':String(v);
+    ciAlimMexeu(); ciRenderRefs();
+  }
   function ciAddRefExtra(){ ciRefsExtras.push({nome:'',hora:'',racao:'',natural:'',extra:''}); ciRenderRefs();
     setTimeout(function(){ try{ const el=document.getElementById('ciExNome'+(ciRefsExtras.length-1)); if(el){ el.scrollIntoView({behavior:'smooth',block:'center'}); el.focus(); } }catch(e){} /* silencioso de propósito: enfeite de tela (foco, rolagem, mídia) — falhar não muda dado nenhum */ },40); }
   function ciRemoveRefExtra(i){ ciRefsExtras.splice(i,1); ciRenderRefs(); }
@@ -38876,10 +39545,31 @@
     const box=document.getElementById('ciRefBlocos'); if(!box) return;
     const unid=ciUnidLbl(segVal('ciAlimUnid'));
     const temNat=ciTemNatural(), soNat=ciSoNatural();
-    const campos=function(pref,r,idx){
+    // OS BOTÕES DE QUANTIDADE (Adriana, 23/set/2026): 20, 30, 40… g. Quem está com o tutor
+    // na frente não digita, toca. Tocar de novo no mesmo número desmarca — a mesma lei dos
+    // outros botões da casa. O campo ao lado continua aceitando qualquer valor, para o
+    // FILHOt que come 35 g. `prefQtd` grava E redesenha (o botão precisa acender); o `pref`
+    // do campo escrito continua sem redesenhar, para o cursor não saltar da mão de quem
+    // digita — a mesma lição do campo de texto da Medicação.
+    const botoesG=function(prefQtd,r,campo){
+      return '<div style="display:flex;flex-wrap:wrap;gap:5px;margin:2px 0 6px">'
+        + CI_ALIM_GRAMAS.map(function(g){
+            var on=(String(r[campo]||'')===String(g));
+            return '<button type="button" class="btn" style="padding:6px 11px;font-size:12.5px;font-weight:800;border:1.5px solid '
+              +(on?'var(--z-blue)':'var(--line)')+';background:'+(on?'var(--z-blue)':'var(--z-cream-warm)')
+              +';color:'+(on?'var(--z-cream)':'var(--z-blue)')+'"'
+              +' onclick="'+prefQtd+'(\''+campo+'\','+g+')">'+g+' g</button>';
+          }).join('')
+        +'</div>';
+    };
+    const campos=function(pref,r,prefQtd){
       let s='<div class="ci-refb-campos cad-grid">';
-      if(!soNat) s+='<div class="field"><label>Ração ('+unid.trim()+')</label><input class="cad-in" inputmode="decimal" value="'+escAttr(r.racao||'')+'" placeholder="Ex: 80" autocomplete="off" oninput="'+pref+'(\'racao\',this.value)"></div>';
-      if(temNat) s+='<div class="field"><label>Comida natural (g)</label><input class="cad-in" inputmode="decimal" value="'+escAttr(r.natural||'')+'" placeholder="Ex: 100" autocomplete="off" oninput="'+pref+'(\'natural\',this.value)"></div>';
+      if(!soNat) s+='<div class="field"><label>Ração ('+unid.trim()+')</label>'
+        +botoesG(prefQtd,r,'racao')
+        +'<input class="cad-in" inputmode="decimal" value="'+escAttr(r.racao||'')+'" placeholder="Ex: 80" autocomplete="off" oninput="'+pref+'(\'racao\',this.value)"></div>';
+      if(temNat) s+='<div class="field"><label>Comida natural (g)</label>'
+        +botoesG(prefQtd,r,'natural')
+        +'<input class="cad-in" inputmode="decimal" value="'+escAttr(r.natural||'')+'" placeholder="Ex: 100" autocomplete="off" oninput="'+pref+'(\'natural\',this.value)"></div>';
       // Item 13 — tem FILHOt cujo almoço NÃO é ração nem comida natural (o Ozzy come 1/4 de
       // pera). Este campo sozinho já vale como refeição: dá para marcar o almoço só com ele.
       s+='<div class="field" style="grid-column:1/-1"><label>O que ele come nesta refeição além (ou no lugar) da ração</label><input class="cad-in" value="'+escAttr(r.extra||'')+'" placeholder="Ex: 1/4 de pera picadinha · 1 petisco Cannix · 1 colher de patê" autocomplete="off" oninput="'+pref+'(\'extra\',this.value)"></div>';
@@ -38893,7 +39583,7 @@
         + '<div class="ci-refb-head" onclick="ciRefToggle(\''+f.k+'\')"><span class="ci-refb-box">'+(r.on?'&#10003;':'')+'</span><span>'+f.i+' '+f.n+'</span>'+resumo+'</div>'
         + (r.on?('<div class="ci-refb-campos cad-grid"><div class="field"><label>Horário</label>'
           + '<input type="time" class="cad-in" value="'+escAttr(r.hora||'')+'" oninput="ciRefSet(\''+f.k+'\',\'hora\',this.value)"></div></div>'):'')
-        + (r.on?campos('ciRefSet.bind(null,\''+f.k+'\')',r):'')
+        + (r.on?campos('ciRefSet.bind(null,\''+f.k+'\')',r,'ciRefSetQtd.bind(null,\''+f.k+'\')'):'')
         + '</div>';
     });
     (ciRefsExtras||[]).forEach(function(e,i){
@@ -38904,7 +39594,7 @@
         + '<div class="field"><label>Nome da refeição</label><input class="cad-in" id="ciExNome'+i+'" value="'+escAttr(e.nome||'')+'" placeholder="Ex: lanche da tarde · ceia" autocomplete="off" oninput="ciExtraSet('+i+',\'nome\',this.value)"></div>'
         + '<div class="field"><label>Horário</label><input type="time" class="cad-in" value="'+escAttr(e.hora||'')+'" oninput="ciExtraSet('+i+',\'hora\',this.value)"></div>'
         + '</div>'
-        + campos('ciExtraSet.bind(null,'+i+')',e)
+        + campos('ciExtraSet.bind(null,'+i+')',e,'ciExtraSetQtd.bind(null,'+i+')')
         + '</div>';
     });
     box.innerHTML=h;
@@ -39216,11 +39906,18 @@
 
   // ---- Última estadia → pré-preenche alimentação + pertences ----
   function ciPreencherUltimaEstadia(){
-    if(!DB) return; const key=ciKey(); if(!key) return;
+    // O PLANO DA FICHA VEM POR ÚLTIMO (Adriana, 23/set/2026). A última estadia diz o que ele
+    // comeu; a ficha diz o que ficou combinado — e foi confirmada com o tutor no check-in
+    // mais recente. Quando as duas discordam, a ficha ganha. Sem estadia nenhuma, a ficha
+    // continua valendo: é justamente o caso da pernoite do FILHOt que só faz Day Care.
+    const aplicarPlano=function(){ try{ if(typeof ciPlanoAplicarDaFicha==='function') ciPlanoAplicarDaFicha(); }catch(e){} /* silencioso de propósito: sem o plano a consultora preenche à mão e a faixa cobra a confirmação */ };
+    if(!DB){ aplicarPlano(); return; }
+    const key=ciKey(); if(!key){ aplicarPlano(); return; }
     DB.ref('auaulandia/estadias').orderByChild('refKey').equalTo(key).limitToLast(1).once('value').then(function(s){
-      const v=s.val()||{}; const ids=Object.keys(v); if(!ids.length) return;
-      ciAplicarEstadiaNaFicha(v[ids[ids.length-1]]||{}, 'Ficha pré-preenchida da última estadia — confira e ajuste.');
-    }).catch(function(e){ _logLeituraFalhou('auaulandia/estadias (ciPreencherUltimaEstadia)', e); });
+      const v=s.val()||{}; const ids=Object.keys(v);
+      if(!ids.length){ aplicarPlano(); return; }
+      return Promise.resolve(ciAplicarEstadiaNaFicha(v[ids[ids.length-1]]||{}, 'Ficha pré-preenchida da última estadia — confira e ajuste.')).then(aplicarPlano);
+    }).catch(function(e){ _logLeituraFalhou('auaulandia/estadias (ciPreencherUltimaEstadia)', e); aplicarPlano(); });
   }
   // Joga uma estadia inteira nos campos do Check-in (usado tanto para pré-preencher da última
   // vez quanto para ACRESCENTAR na estadia em curso — item 6).
@@ -39240,6 +39937,15 @@
                   && (!ORC_CI_DATAS.petKey || !ciHosp || !ciHosp.refKey
                       || String(ORC_CI_DATAS.petKey)===String(ciHosp.refKey)))?ORC_CI_DATAS:null;
       const _vale=(typeof orcDatasQueValem==='function')?orcDatasQueValem(_bil, e):{entrada:(e.entrada||''), saida:(e.saida||'')};
+      // ===== A PERNOITE DO DAY CARE MANDA NAS DATAS (Adriana, 23/set/2026) ===========
+      // O check-in foi aberto pela fila de pernoites, com entrada HOJE e saída AMANHÃ. Este
+      // pré-preenchimento vem da ÚLTIMA estadia e chega DEPOIS, por once() — sem esta
+      // guarda ele escreveria as datas da vez passada por cima, exatamente como aconteceu
+      // com a Lisa no atalho do orçamento. Uma noite não pode nascer torta.
+      const _pn=(typeof PERN_CI_PENDENTE!=='undefined' && PERN_CI_PENDENTE
+                 && (!PERN_CI_PENDENTE.petKey || !ciHosp || !ciHosp.refKey
+                     || String(PERN_CI_PENDENTE.petKey)===String(ciHosp.refKey)))?PERN_CI_PENDENTE:null;
+      if(_pn){ if(_pn.entrada) _vale.entrada=_pn.entrada; if(_pn.saida) _vale.saida=_pn.saida; }
       if(_vale.entrada){ const _e=document.getElementById('ciEntrada'); if(_e) _e.value=_vale.entrada; }
       // Saída ANTES da entrada é período impossível — foi assim que a estadia da Lisa
       // nasceu torta. Melhor deixar em branco e a recepção preencher que gravar invertido.
@@ -39249,7 +39955,7 @@
       if(e.saidaPer) setSeg('ciSaidaPer',e.saidaPer);
       // Reabrir uma pernoite tem que mostrar que ela É pernoite — senão a recepção corrige a
       // ficha e o botão volta calado para "Hospedagem", mudando o que ninguém pediu para mudar.
-      if(typeof ehPernoite==='function' && ehPernoite(e)){ setSeg('ciTipoEstadia','Pernoite (uma noite)'); ciTipoEstadia='pernoite'; try{ ciTipoEstadiaChange('pernoite'); }catch(x){} /* silencioso de propósito: guarda defensiva — falhar aqui não pode interromper quem chamou */ }
+      if(_pn || (typeof ehPernoite==='function' && ehPernoite(e))){ setSeg('ciTipoEstadia','Pernoite (uma noite)'); ciTipoEstadia='pernoite'; try{ ciTipoEstadiaChange('pernoite'); }catch(x){} /* silencioso de propósito: guarda defensiva — falhar aqui não pode interromper quem chamou */ }
       if(f.alim){ setSeg('ciAlimTipo',f.alim.tipo||''); setSeg('ciAlimUnid',f.alim.unidade||''); setSeg('ciBanho',(spa.banho||f.banho||''));
         if(f.alim.marca) document.getElementById('ciAlimMarca').value=f.alim.marca;
         // marcas de refeição Dia 1 / Último dia (se salvas na última estadia)
@@ -39429,6 +40135,10 @@
         obsGeral:((document.getElementById('ciObsGeral')||{}).value||'').trim(),
         medObs:((document.getElementById('ciMedObs')||{}).value||'').trim(),
         alim:{ obs:((document.getElementById('ciAlimObs')||{}).value||'').trim(), tipo:segVal('ciAlimTipo'), marca:(document.getElementById('ciAlimMarca').value||'').trim(),
+               // A palavra de quem trouxe, no rastro da estadia: confirmou o que a ficha
+               // dizia, ou disse que hoje é diferente (Adriana, 23/set/2026). Sem isto, meses
+               // depois ninguém sabe se aquele número foi conferido ou herdado em silêncio.
+               confirmacao:(CI_ALIM_CONF?{estado:CI_ALIM_CONF, quem:(typeof quemSou==='function'?quemSou():'-'), ts:Date.now()}:null),
                // NOVO: a quantidade de CADA refeição (é esta a verdade). Os campos abaixo são
                // derivados dela, só para as telas antigas continuarem lendo a ficha.
                refs:{ fixas:JSON.parse(JSON.stringify(ciRefs)), extras:JSON.parse(JSON.stringify(ciRefsExtras||[])) },
@@ -39655,6 +40365,12 @@
     });
     if(ciTemNatural() && _ativas.length && !_ativas.some(function(r){ return ciNum(r.natural)>0; }))
       F.push({t:'Você marcou comida natural, mas não colocou as gramas em nenhuma refeição.', f:'ciRefBlocos'});
+    // ===== A PERNOITE NÃO FECHA SEM A PALAVRA DE QUEM TROUXE (23/set/2026) ==========
+    // A pernoite nasce de um dia de Day Care e o plano de comida vem da ficha. Sem alguém
+    // dizer "é isso mesmo" ou "mudou", o plantão serviria à noite o que o app SUPÔS — e
+    // quem serve não tem como saber que aquele número é herdado.
+    if(typeof ciEhPernoite==='function' && ciEhPernoite() && !CI_ALIM_CONF)
+      F.push({t:'Falta confirmar a alimentação com quem trouxe: toque em "Confirmado" ou em "Mudou" na faixa da Alimentação.', f:'ciAlimConfirma'});
     const meds=ciColetarMeds();
     // 'ciMedLista' não existe no HTML — o campo real é 'ciMeds'. Com o id errado, o motor do
     // "o que falta" não achava o bloco e caía no aviso escrito, justamente na medicação, que
@@ -39924,7 +40640,10 @@
         ciMedsToLista(meds), ciMudouDose, function(){ ciSalvar(); });
       return;
     }
-    const pacote={ dados:dados, meds:meds, temMed:temMed, semTutor:semTutor, assina:assina, sig:sig, quemDeixou:quemDeixou, key:key };
+    // "Não trouxe a ração, aí vai ter que pegar comida úmida." Vai para a ESTADIA, não para
+    // a ficha: é o que aconteceu HOJE, e a ficha continua dizendo o que ele come de verdade.
+    const alimSem=(typeof ciAlimSemRacaoEstadia==='function')?ciAlimSemRacaoEstadia():null;
+    const pacote={ dados:dados, meds:meds, temMed:temMed, semTutor:semTutor, assina:assina, sig:sig, quemDeixou:quemDeixou, key:key, alimSem:alimSem };
     // TRAVA DURA anti-duplicidade (item 15, caso Ozzy 01/ago/2026: 3 check-ins do mesmo dia).
     // O cache local pode estar atrasado, então a checagem vai ao BANCO antes de criar qualquer coisa.
     // Modo CORRIGIR: não checa duplicidade (a estadia é conhecida) e exige o motivo antes
@@ -40075,6 +40794,10 @@
       : Promise.resolve({})
     ).then(async function(antes){
     const ops=[]; let ref=null, novosItens=[];
+    // A PERNOITE QUE VEIO DA FILA DO DAY CARE (Adriana, 23/set/2026). Marca aqui em cima
+    // porque o fechamento da fila acontece lá embaixo, depois de tudo gravar — e porque o
+    // `origem` da estadia precisa dizer de onde ela nasceu, não só que é pernoite.
+    const _pernDay=!!(typeof PERN_CI_PENDENTE!=='undefined' && PERN_CI_PENDENTE);
     if(modo==='corrigir'){
       // SUBSTITUI. É a diferença que faz a correção existir: aqui a medicação e a
       // alimentação erradas SAEM, em vez de conviverem com as certas.
@@ -40087,6 +40810,8 @@
         entrada:dados.entrada, saida:dados.saida, ficha:dados.ficha,
         pertences:dados.pertences, medicacao:ciMedsToLista(meds),
         gate_conferido:P.temMed,
+        // Corrigir SUBSTITUI: se o "sem ração" saiu da tela, ele sai da estadia também.
+        alimentacao:(P.alimSem||null),
         correcoes:hist, _ts:Date.now(),
         _ultimaEdicao:{quem:(P.correcao&&P.correcao.quem)||quemSou(), ts:Date.now(), corrigiu:(P.correcao&&P.correcao.diff)||[]}
       }));
@@ -40166,6 +40891,9 @@
         entrada:dados.entrada, saida:dados.saida, ficha:dados.ficha,
         pertences:pertFinal, medicacao:medAntes.concat(medNovas),
         gate_conferido:P.temMed||!!antes.gate_conferido,
+        // Acrescentar SOMA e nunca tira: o "sem ração" já registrado continua valendo se
+        // ninguém o marcou de novo nesta passada.
+        alimentacao:(P.alimSem||antes.alimentacao||null),
         _ts:Date.now(), _ultimaEdicao:{quem:quemSou(), ts:Date.now(), acrescentou:novosItens}
       }));
       // Voltou a ter coisa para conferir → a conferência REABRE e a Wandela vê de novo,
@@ -40183,16 +40911,32 @@
     } else {
       ref=DB.ref('auaulandia/estadias').push();
       const _ehPern=(typeof ciEhPernoite==='function' && ciEhPernoite());
+      const _pernTemp=(typeof pernTemporadaDoDia==='function')?pernTemporadaDoDia(dados.entrada||''):'baixa';
+      const _pernValor=(_ehPern&&typeof pernPrecoCent==='function')?pernPrecoCent(dados.entrada||''):0;
       ops.push(ref.set({
         refKey:ciHosp.refKey||'', nome:ciHosp.nome||'', tutor:ciHosp.tutor||'', raca:ciHosp.raca||'',
         entrada:dados.entrada, saida:dados.saida, status:'ativa',
         ficha:dados.ficha, pertences:dados.pertences, medicacao:ciMedsToLista(meds),
+        // "Sem ração — comida úmida da casa", quando é o caso. É o que o plantão lê em
+        // destaque no jantar e no café.
+        alimentacao:(P.alimSem||null),
         gate_conferido:P.temMed, assinatura:P.sig, assinado_por:assinado,
         entregaSemTutor:P.semTutor, quemDeixou:(P.quemDeixou||null),
         // Pernoite marcada na recepção: a tarja PERNOITE, o "fora do check-out" e a conferência
         // enxuta já leem esta bandeira — é a mesma que a aba Hóspedes grava.
         pernoite:(_ehPern||null), pernoite_pedida_por:(_ehPern?quemSou():null),
-        origem:(_ehPern?'pernoite-checkin':'checkin'),
+        tipo:(_ehPern?'pernoite':'hospedagem'),
+        // De ONDE ela nasceu. 'daycare-pernoite' é a que veio do Lançamento do dia: o FILHOt
+        // estava no Day Care e ficou para dormir. Saber isso depois é o que separa a noite
+        // combinada de manhã da noite que virou porque ninguém veio buscar.
+        origem:(_pernDay?'daycare-pernoite':(_ehPern?'pernoite-checkin':'checkin')),
+        pernoite_fila:(_pernDay?String((PERN_CI_PENDENTE&&PERN_CI_PENDENTE.chave)||''):null),
+        // "Quem coloca é a recepção porque tem que lançar valor." UMA noite, pelo preço da
+        // temporada do dia — a MESMA tabela do orçamento, sem orçamento nenhum no meio.
+        noites:(_ehPern?1:null),
+        valor_cent:(_ehPern&&_pernValor?_pernValor:null),
+        temporada:(_ehPern?_pernTemp:null),
+        preco_origem:(_ehPern&&_pernValor?'tabela-pernoite':null),
         criado_por:quemSou(), _ts:Date.now()
       }));
     }
@@ -40205,6 +40949,21 @@
     }
     Promise.all(ops).then(function(){
       __ciTravar(false); ciSalvoAgora=true;
+      // ===== A FICHA APRENDE O QUE ELE COME (Adriana, 23/set/2026) =================
+      // "Isso tem que ficar guardado no aplicativo para a gente não refazer o tempo todo."
+      // Grava quando alguém disse que MUDOU, e também na primeira vez em que a ficha ainda
+      // não tinha plano nenhum — senão o "não refazer" só começaria na terceira vinda.
+      // Só DEPOIS de a estadia existir: ficha nova de check-in que não salvou seria mentira.
+      if(CI_ALIM_CONF==='mudou' || (CI_ALIM_CONF==='confirmado' && !CI_ALIM_PLANO_TINHA)){
+        try{ ciPlanoGravarNaFicha(CI_ALIM_CONF); }
+        catch(e){ _logFalhaGrav('guardar na ficha o que '+((ciHosp&&ciHosp.nome)||'ele')+' come', e); }
+      }
+      // A FILA DA PERNOITE FECHA AQUI: a noite já tem estadia, com comida, remédio e valor.
+      // Guarda qual estadia nasceu dela — é assim que ninguém faz o check-in duas vezes.
+      if(_pernDay){
+        try{ if(typeof pernMarcarCheckinFeito==='function') pernMarcarCheckinFeito((modo==='acrescentar'||modo==='corrigir')?estadiaId:ref.key); }
+        catch(e){ _logFalhaGrav('fechar a fila da pernoite depois do check-in', e); }
+      }
       // Itens 3/4 — já na entrada: o que o tutor trouxe cobre a estadia inteira?
       try{
         var _idEst=(modo==='acrescentar')?estadiaId:ref.key;
@@ -45874,6 +46633,39 @@
     return h+poIrHTML('hospedes','Abrir os hóspedes de hoje')+'</article>';
   }
 
+  // ---- 6a-bis · as pernoites do Day Care de hoje (Adriana, 23/set/2026) ----
+  // "Pernoites de hoje: n (m sem check-in)." A Márcia precisa ver, ANTES de a casa fechar,
+  // quem ficou para dormir e ainda não tem ficha — sem ficha o plantão não sabe o que dar
+  // de comer nem que remédio dar. Nenhum número nasce aqui: é a MESMA fila que o Check-in lê.
+  function poCardPernoites(){
+    var h='<article class="pm-card pm-rv pm-c6">'
+      +'<h3 class="pm-tit">Pernoites do Day Care de hoje</h3>'
+      +'<p class="pm-sub">Quem ficou para dormir — porque o tutor avisou de manhã ou porque não veio buscar. O check-in é o que transforma a noite em ficha: comida, remédio e valor.</p>';
+    var C=(typeof pernContagem==='function')?pernContagem():null;
+    if(C===null) return h+poSemLeituraHTML('as pernoites lançadas hoje')
+      +poIrHTML('checkin','Abrir o Check-in da hospedagem')+'</article>';
+    if(!C.total) return h+poVazioHTML('Nenhuma pernoite lançada hoje.','Quando a recepção lançar uma em Lançamentos do dia, ela aparece aqui e no Check-in.')
+      +poIrHTML('checkin','Abrir o Check-in da hospedagem')+'</article>';
+    h+='<div style="display:flex;align-items:flex-end;gap:16px;flex-wrap:wrap;margin-top:14px">'
+      +'<div><div class="pm-kpi hero" data-pm-alvo="'+C.total+'">0</div>'
+      +'<p class="pm-rot">'+(C.total===1?'pernoite lançada hoje':'pernoites lançadas hoje')
+      +' — '+esc(pmPlural(C.semCheckin,'ainda sem check-in','ainda sem check-in'))+'</p></div></div>';
+    if(C.semCheckin){
+      h+='<div class="pm-lista">';
+      (typeof pernLista==='function'?pernLista('aguardando'):[]).slice(0,4).forEach(function(r){
+        h+='<div class="pm-li"><span class="pm-badge pm-b-critico">sem check-in</span>'
+          +'<div class="pm-li-txt"><b>'+esc(pernNomeLimpo(r.nome||''))+'</b>'
+          +'<span>'+esc((r.motivo||'motivo não declarado')+(r.hora?(' · avisado às '+r.hora):''))+'</span></div></div>';
+      });
+      h+='</div>';
+      if(C.semCheckin>4) h+='<p class="pm-sub" style="margin-top:10px">Mais '
+        +pmPlural(C.semCheckin-4,'pernoite','pernoites')+' esperando o check-in.</p>';
+    } else {
+      h+='<p class="pm-sub" style="margin-top:12px">Todas já têm check-in feito — cada uma com a ficha da noite dela.</p>';
+    }
+    return h+poIrHTML('checkin','Abrir o Check-in da hospedagem')+'</article>';
+  }
+
   // ---- 6b · o acerto das plantonistas ----
   // O número aqui é o MESMO do Financeiro do plantão, pela mesma função. Este quadro só
   // confere; quem lança, marca como pago e recalcula é aquela tela.
@@ -45993,6 +46785,12 @@
       return;
     }
     PO_DIA=(typeof hojeISO==='function')?hojeISO():'';        // UM relógio para todos os quadros
+    // A fila das pernoites do Day Care. Não segura a primeira pintura: o quadro nasce dizendo
+    // que ainda está lendo e se troca sozinho quando o dia chega.
+    try{ if(typeof pernFilaGarantir==='function') pernFilaGarantir(null, true, function(){
+      try{ var _c=document.getElementById('poCardPernoitesBox'); if(_c) _c.innerHTML=poCardPernoites(); }
+      catch(e){} /* silencioso de propósito: redesenho de tela — falhar não pode derrubar quem chamou */
+    }); }catch(e){} /* silencioso de propósito: sem a fila o quadro diz que ainda não leu */
     if(!DB){
       raiz.innerHTML='<div class="pm-card"><h3 class="pm-tit">Sem conexão com o banco agora</h3>'
         +'<p class="pm-sub">Assim que a rede voltar, abra esta tela de novo. Nada aqui é gravado — o painel só observa.</p></div>';
@@ -46059,6 +46857,7 @@
             'Quantos hóspedes por noite, quanto se paga às plantonistas, quem toma remédio e o Enriquecimento do dia.', PO_IC_LUA)
         +'<div class="pm-grid">'
         + poCardNoites(noites)
+        +'<div id="poCardPernoitesBox" style="display:contents">'+poCardPernoites()+'</div>'
         + poCardAcerto(!ACERTO_PRONTO)
         + poCardMedicacao(med)
         + poCardEA(ea)
