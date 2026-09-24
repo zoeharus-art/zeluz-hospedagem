@@ -1,6 +1,6 @@
 'use strict';
 /*
- * CAPTURA DA v 2026-09-24-03 — a chamada viva e a tela "Hoje na Zêluz".
+ * CAPTURA DA v 2026-09-24-05 — "Hoje na Zêluz", agora com a ANTECIPAÇÃO.
  *
  * POR QUE ESTA CAPTURA EXISTE
  * Adriana, 24/set/2026: "Em turminhas daycare, não está aparecendo quem veio. Essa ficha
@@ -26,10 +26,23 @@
  *   turminhas-chamada-1280.png · -500.png .............. a Chamada do dia, com os cartões
  *     verdes dizendo "presente pelo check-in às hh:mm"
  *
+ *   hoje-fazer-hoje-1280.png · -500.png ............... o filtro "Fazer hoje" ligado: quem
+ *     está na casa AGORA e tem algo vencendo antes de voltar
+ *   hoje-pergunta-aberta-1280.png · -500.png .......... a dobra aberta na própria linha, com
+ *     a mensagem pronta, o Copiar, o Mandei e os botões de resposta
+ *
+ * A ANTECIPAÇÃO (Adriana, 24/set/2026): "Se o peludo está aqui hoje e vai vencer algo amanhã,
+ * ou no sábado, ou no domingo, ao invés de esperar o próximo dia que ele vem — porque talvez
+ * o peludinho só venha uma vez na semana — já aparecer: vence tal dia, comunicar com o tutor
+ * se pode fazer hoje." O caso é injetado na MEMÓRIA da página (uma data de carrapaticida e
+ * vermífugo no cadastro em memória, entre amanhã e a próxima vinda do FILHOt escolhido) —
+ * nenhum byte vai para o banco, o guarda de escrita continua de pé.
+ *
  * E ELA CONFERE, antes de fotografar: a tela existe e abriu; o cabeçalho traz os dois
- * números; há botão para cada um dos sete filtros; quem tem pendência aparece antes de quem
- * não tem; a Chamada mostra a frase da origem da presença; nenhum vocabulário proibido
- * escapou para a tela.
+ * números; há botão para cada um dos filtros, inclusive o "Fazer hoje"; quem tem pendência
+ * aparece antes de quem não tem; o destaque laranja diz o que vence e quando ele volta; a
+ * dobra aberta traz a mensagem pronta e os botões "Pode fazer hoje"; a Chamada mostra a
+ * frase da origem da presença; nenhum vocabulário proibido escapou para a tela.
  *
  * NADA É GRAVADO. O mesmo guarda de escrita do smoke embrulha set/update/push/remove/
  * transaction antes de o app carregar, e o banco é o EMULADOR local com o retrato do
@@ -37,7 +50,7 @@
  * da página (o mesmo retrato que o ouvinte vivo entrega), nunca no banco: o retrato é de
  * ontem e o nó da chamada de hoje nasce vazio — sem isso a foto sairia de uma casa vazia.
  *
- * Uso:  CAP_PORTA=8829 CAP_EMU_PORTA=9029 node tests/capturar-v35.js
+ * Uso:  CAP_PORTA=8830 CAP_EMU_PORTA=9030 node tests/capturar-v35.js
  */
 
 const fs = require('fs');
@@ -49,8 +62,8 @@ const emuladorLib = require('./lib/emulador');
 
 const RAIZ = path.join(__dirname, '..');
 const APP = 'auaulandia/index.html';
-const PORTA = Number(process.env.CAP_PORTA) || 8829;
-const EMU_PORTA = Number(process.env.CAP_EMU_PORTA) || 9029;
+const PORTA = Number(process.env.CAP_PORTA) || 8830;
+const EMU_PORTA = Number(process.env.CAP_EMU_PORTA) || 9030;
 const SAIDA = path.join(RAIZ, 'docs', 'capturas-v35');
 const SENHA_DIRETORIA = '1101';
 
@@ -186,6 +199,31 @@ function injetarCasaDeHoje(page) {
   });
 }
 
+// ------------------------------------------------- o caso "fazer hoje", na MEMÓRIA da página
+// Escolhe alguém que ESTÁ na casa hoje e cuja próxima vinda é depois de amanhã, e põe no
+// cadastro em memória um carrapaticida e um vermífugo vencendo AMANHÃ — exatamente a situação
+// que ela descreveu. Nada vai para o banco: o guarda de escrita continua de pé.
+function injetarFazerHoje(page) {
+  return page.evaluate(() => {
+    const hoje = zHojeISO();
+    const amanha = addDiasISO(hoje, 1);
+    let alvo = null;
+    (hojeLista() || []).forEach((o) => {
+      if (alvo) return;
+      const prox = proximaVindaDe(o.p, hoje);
+      if (!prox || !amanha || !(amanha < prox)) return;
+      alvo = o;
+    });
+    if (!alvo) return { ok: false };
+    const k = pelKey(alvo.p);
+    pelCadCache[k] = Object.assign({}, pelCadCache[k] || {}, { ecto_p: amanha, verm_p: amanha });
+    if (typeof hojeAtualizarBadge === 'function') hojeAtualizarBadge();
+    if (typeof hojeRender === 'function') hojeRender();
+    return { ok: true, chave: alvo.chave, nome: alvo.nome, vence: amanha,
+      volta: proximaVindaDe(alvo.p, hoje) };
+  });
+}
+
 (async () => {
   fs.mkdirSync(SAIDA, { recursive: true });
   const servidor = await subirServidor(PORTA);
@@ -254,7 +292,7 @@ function injetarCasaDeHoje(page) {
     if (larg.w === 1280) console.log('  cabeçalho: ' + cab);
 
     const filtros = await page.$$eval('#hojeRoot [id^="hojeF-"]', (ns) => ns.map((x) => x.id.replace('hojeF-', '')));
-    ['todos', 'pend', 'vacina', 'verm', 'ecto', 'col', 'escova'].forEach((f) => {
+    ['todos', 'fazer', 'pend', 'vacina', 'verm', 'ecto', 'col', 'escova'].forEach((f) => {
       if (filtros.indexOf(f) < 0) problemas.push('falta o botão de filtro "' + f + '" (' + larg.rot + ')');
     });
 
@@ -302,6 +340,65 @@ function injetarCasaDeHoje(page) {
     console.log('hoje-so-pendencia-' + larg.rot + '.png · ' + soPend.length + ' de ' + linhas.length);
     await page.click('#hojeF-todos');
     await page.waitForTimeout(500);
+
+    // ---- 3b · "FAZER HOJE": o que vence antes de ele voltar ------------------------
+    const fh = await injetarFazerHoje(page);
+    if (!fh.ok) problemas.push('não achei ninguém na casa para o caso "fazer hoje" (' + larg.rot + ')');
+    else {
+      if (larg.w === 1280) console.log('  fazer hoje: ' + fh.nome + ' — vence ' + fh.vence + ', volta ' + fh.volta);
+      await page.waitForTimeout(600);
+      const temFiltro = await page.$('#hojeF-fazer');
+      if (!temFiltro) problemas.push('não achei o filtro "Fazer hoje" (' + larg.rot + ')');
+      else {
+        await page.click('#hojeF-fazer');
+        await page.waitForTimeout(700);
+        const linhasFH = await page.$$eval('#hojeRoot .card:last-child > div', (ns) => ns
+          .map((x) => (x.innerText || '').replace(/\s+/g, ' ').trim()).filter(Boolean));
+        if (!linhasFH.length) problemas.push('o filtro "Fazer hoje" saiu vazio (' + larg.rot + ')');
+        if (!linhasFH.some((l) => /fazer hoje\?/.test(l)))
+          problemas.push('nenhuma linha traz o destaque "— fazer hoje?" (' + larg.rot + '): '
+            + JSON.stringify(linhasFH.slice(0, 2)));
+        if (!linhasFH.some((l) => /só volta/.test(l)))
+          problemas.push('o destaque não diz quando ele volta (' + larg.rot + ')');
+        if (larg.w === 1280) linhasFH.slice(0, 2).forEach((l) => console.log('  ' + l.slice(0, 190)));
+        await page.evaluate(() => window.scrollTo(0, 0));
+        await page.waitForTimeout(300);
+        await mascararTelefones(page);
+        await page.screenshot({ path: path.join(SAIDA, 'hoje-fazer-hoje-' + larg.rot + '.png'), fullPage: true });
+        console.log('hoje-fazer-hoje-' + larg.rot + '.png · ' + linhasFH.length + ' com pergunta a fazer');
+
+        // a DOBRA aberta: a mensagem pronta e os botões de resposta, na própria linha
+        const abriu = await page.evaluate((chave) => {
+          if (typeof hojeAbrirPergunta !== 'function') return false;
+          hojeAbrirPergunta(chave, 'antip');
+          return !!document.getElementById('hojeMsg_' + chave + '__antip');
+        }, fh.chave);
+        if (!abriu) problemas.push('a dobra da pergunta não abriu (' + larg.rot + ')');
+        else {
+          const dobra = await page.evaluate((chave) => {
+            const ta = document.getElementById('hojeMsg_' + chave + '__antip');
+            const raiz = document.getElementById('hojeRoot');
+            return { msg: ta ? String(ta.value || '') : '', html: raiz ? raiz.innerHTML : '' };
+          }, fh.chave);
+          if (dobra.msg.indexOf('está conosco hoje') < 0)
+            problemas.push('a mensagem pronta não fala do FILHOt na casa (' + larg.rot + '): ' + dobra.msg.slice(0, 120));
+          if (dobra.msg.indexOf('Podemos fazer hoje de uma vez?') < 0)
+            problemas.push('a mensagem não pede o sim de hoje (' + larg.rot + ')');
+          if (dobra.html.indexOf('Pode fazer hoje') < 0)
+            problemas.push('faltam os botões "Pode fazer hoje" (' + larg.rot + ')');
+          if (dobra.html.indexOf('Vai mandar na bolsa') >= 0)
+            problemas.push('"Vai mandar na bolsa" apareceu com ele já na casa (' + larg.rot + ')');
+          if (larg.w === 1280) console.log('  mensagem: ' + dobra.msg.split('\n').join(' / ').slice(0, 200));
+          await page.waitForTimeout(400);
+          await mascararTelefones(page);
+          await page.screenshot({ path: path.join(SAIDA, 'hoje-pergunta-aberta-' + larg.rot + '.png'), fullPage: true });
+          console.log('hoje-pergunta-aberta-' + larg.rot + '.png');
+          await page.evaluate((chave) => { if (typeof hojeAbrirPergunta === 'function') hojeAbrirPergunta(chave, 'antip'); }, fh.chave);
+        }
+        await page.click('#hojeF-todos');
+        await page.waitForTimeout(500);
+      }
+    }
 
     // ---- 4 · a Chamada das Turminhas, com a origem da presença ---------------------
     await page.evaluate(() => { if (typeof abrirAtividade === 'function') abrirAtividade('chamada'); });

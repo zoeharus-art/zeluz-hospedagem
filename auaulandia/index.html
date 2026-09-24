@@ -6066,6 +6066,12 @@
         ? (pc.semCheckin+' sem check-in — sem ficha o plantão não sabe o que dar de comer nem que remédio dar')
         : 'ficaram para dormir — todas já com check-in feito',
       (pc&&pc.semCheckin)?'#B3261E':'#2E7D8A', ir('checkin'));
+    // PERGUNTAR HOJE (Adriana, 24/set/2026): quem JÁ está na casa e tem algo vencendo antes
+    // de voltar. É o quadro que morre no fim do dia — amanhã ele não está mais aqui.
+    var ha=null; try{ ha=(typeof hojeAnteciparContagem==='function')?hojeAnteciparContagem():null; }
+    catch(e){ ha=null; } /* silencioso de propósito: guarda defensiva — se o valor não vier, o quadro não aparece */
+    var quadroFazerHoje=mesaBox(ha===null?null:ha.total,'Perguntar hoje ao tutor',
+      'está na casa AGORA e vence antes de voltar — aproveitar e fazer hoje','#E08856',ir('hoje'));
     var vp=(typeof vencPendContagem==='function')?vencPendContagem():null;
     var quadroRespPend=mesaBox(vp===null?null:vp.total,'Respostas pendentes',
       (vp&&vp.cobrar?(vp.cobrar+' já passaram do prazo — cobrar o tutor'):'mandado e sem resposta — responda aqui mesmo'),
@@ -6089,6 +6095,7 @@
         'vacina autorizada pelo tutor — combinar com ela o dia e o período','#2E7D8A',ir('vencimentos')));
       B.push(quadroPern);
       B.push(quadroPend);
+      B.push(quadroFazerHoje);
       B.push(quadroVence);
       B.push(quadroRespPend);
       if(MESA_EXPAND.atencao) EXTRA+=mesaAtencaoHtml();
@@ -6104,6 +6111,7 @@
       B.push(mesaBox(mesaRepHoje(),'Reposições marcadas para hoje','o tutor avisou que vem repor','#2E7D8A',ir('reposicao')));
       B.push(quadroPern);
       B.push(quadroPend);
+      B.push(quadroFazerHoje);
       B.push(quadroVence);
       B.push(quadroRespPend);
     } else {
@@ -6117,6 +6125,7 @@
       B.push(mesaBox(mesaRepHoje(),'Reposições marcadas para hoje','o tutor avisou que vem repor','#2E7D8A',ir('reposicao')));
       B.push(quadroPern);
       B.push(quadroPend);
+      B.push(quadroFazerHoje);
       B.push(quadroVence);
       B.push(quadroRespPend);
     }
@@ -7229,7 +7238,7 @@
     try{ ehMorador=(typeof pelCategoria==='function') && pelCategoria(p)==='morador'; }
     catch(e){ ehMorador=false; }
     if(ehMorador) return {estado:'nao-entra', msg:'morador não entra na tabela do dia'};
-    return repPlanEstadoNome(dia, dashNomeRaca(p), tipo);
+    return repPlanEstadoNome(dia, dashNomePlanilha(p), tipo);
   }
   // O MESMO estado, pedido pelo NOME. O automático guarda listas de "Nome/Raça", não fichas
   // — e os Lançamentos do dia precisam dizer o estado de cada uma dessas linhas sem ter a
@@ -7472,7 +7481,7 @@
       DASH_DET.avulso={valor_cent:Math.round(valorCent||0), matriculado:!!matric};
       if(aut) DASH_DET.avulso.autorizacao=aut;
       try{ delete DASH_SEL.avulso; delete DASH_SEL_I.avulso; }catch(e){ /* nada escolhido: segue */ }
-      var pr=dashLancar('avulso', dashNomeRaca(p), idx);
+      var pr=dashLancar('avulso', dashNomePlanilha(p), idx);
       if(!pr || typeof pr.then!=='function') return false;   // já estava lançado: dashLancar avisou
       return pr;
     }).then(function(ok){
@@ -15445,7 +15454,7 @@
   // inteira DEPOIS de a correção estar publicada — o aviso apareceu, ninguém tocou.
   // Agora o aparelho PARADO recarrega sozinho: trancado, com a aba escondida, na porta de
   // entrada ou 3 minutos sem ninguém tocar nele. Mão na tela = nunca recarrega.
-  const APP_VERSAO='2026-09-24-04';
+  const APP_VERSAO='2026-09-24-05';
   var RECARGA_PARADO_MS=3*60*1000, __versaoPublicada=null, __recargaTimer=null;
   function vigiarVersao(){
     if(!DB) return;
@@ -18700,7 +18709,14 @@
   const PLAN_LIXO=/\b(shampoo|xampu|banho|tosa|hidratacao|trimming|ozonio)\b/g;
   function planNorm(x){ return String(x||'').normalize('NFD').replace(/[̀-ͯ]/g,'').toLowerCase().replace(/\s+/g,' ').trim(); }
   function planPartir(txt){
-    let t=planNorm(txt).replace(PLAN_LIXO,' ').replace(/\s+/g,' ').trim();
+    // O TUTOR ENTRE PARÊNTESES (Adriana, 24/set/2026): "são três Mayas: duas SRD e uma
+    // Spitz. Precisa de um terceiro ponto para saber qual é a Maya." Quando há xará, a
+    // célula sai "Maya/SRD (Luciana)" — e o primeiro nome do tutor é esse terceiro ponto.
+    // Sem tirá-lo daqui, ele entraria na RAÇA ("srd (luciana)") e as duas Mayas SRD
+    // continuariam empatadas.
+    var pp=(typeof dashPartesValor==='function')?dashPartesValor(txt):{base:String(txt||''), tutor:''};
+    const tut=planNorm(pp.tutor||'');
+    let t=planNorm(pp.base).replace(PLAN_LIXO,' ').replace(/\s+/g,' ').trim();
     if(!t) return null;
     // A recepção escreve "Ozzy - Lhasa", "Hoppy - Spitz" — com HÍFEN, não com barra. O app
     // só entendia a barra, então o hífen virava parte do nome: "ozzy - lhasa" não casava com
@@ -18708,8 +18724,8 @@
     // dia. Hífen e travessão entre espaços passam a valer como separador, igual à barra.
     // Nenhum FILHOt do cadastro tem hífen no nome, então não há o que quebrar.
     t=t.replace(/\s+[-–—]\s+/g,'/');
-    if(t.indexOf('/')>=0){ const a=t.split('/'); return {nome:(a[0]||'').trim(), raca:(a[1]||'').trim()}; }
-    return {nome:t, raca:''};
+    if(t.indexOf('/')>=0){ const a=t.split('/'); return {nome:(a[0]||'').trim(), raca:(a[1]||'').trim(), tutor:tut}; }
+    return {nome:t, raca:'', tutor:tut};
   }
   function planDist(a,b){ const m=a.length,n=b.length; if(!m) return n; if(!n) return m;
     let prev=Array.from({length:n+1},(_,j)=>j), cur=new Array(n+1);
@@ -18744,6 +18760,18 @@
       const porRaca=cands.filter(p=>planRacaBate(p.raca,q.raca));
       if(porRaca.length===1) return {p:porRaca[0], conf:(conf==='fuzzy'?'fuzzy':'raca'), ambiguo:false, txt:cel};
       if(porRaca.length) cands=porRaca; else return {p:null, conf:'conflito-raca', ambiguo:true, txt:cel};
+    }
+    // O TERCEIRO PONTO (Adriana, 24/set/2026). Duas Mayas SRD: o que as separa é o tutor,
+    // e é ele que veio entre parênteses na célula. Só desempata — nunca cria casamento onde
+    // não havia: se o tutor não bater com nenhum candidato, a dúvida continua de pé.
+    if(cands.length>1 && q.tutor){
+      const porTutor=cands.filter(function(p){
+        const t=planNorm(((typeof pelGet==='function')?pelGet(p,'tutor'):'')||p.tutor||'');
+        if(!t) return false;
+        return t===q.tutor || t.split(' ')[0]===q.tutor || t.indexOf(q.tutor)>=0;
+      });
+      if(porTutor.length===1) return {p:porTutor[0], conf:(conf==='fuzzy'?'fuzzy':'tutor'), ambiguo:false, txt:cel};
+      if(porTutor.length) cands=porTutor;
     }
     // Nome único mas raça diverge ("nina/poodle" e a Nina do cadastro é Westie): pode ser
     // outro FILHOt que não está no cadastro. Não casar em silêncio — a comida/banho iria pro errado.
@@ -31574,6 +31602,90 @@
     return r?(n+'/'+r):n;
   }
 
+  /* ====================================================================================
+   * AS TRÊS MAYAS (Adriana, 24/set/2026)
+   * "Em Lançamentos do dia estou tentando lançar a Maya da Luciana Renno. Tem outra Maya,
+   *  da Marcela, e não está deixando, porque 'já tem a Maya'. As duas são SRD. Precisa de
+   *  um terceiro ponto para saber qual é a Maya. São três Mayas: duas SRD e uma Spitz."
+   *
+   * Nome/Raça deixou de identificar quando a casa passou a ter xará COM A MESMA RAÇA. O
+   * terceiro ponto é o TUTOR, e ele entra entre parênteses — mas só para quem tem xará:
+   * a Maya Spitz continua "Maya/Spitz", porque acrescentar o tutor a quem não precisa só
+   * encompridaria a célula que a TV lê.
+   *
+   * COMO O CASAMENTO REVERSO SABE que "(Luciana)" é tutor e "(1 COMPRIMIDO · NA BOLSA)" é
+   * detalhe: TODO detalhe de lançamento sai em MAIÚSCULA (dashDetTextoLimpo e as tabelas
+   * DASH_*). O parêntese que tem uma minúscula é o tutor — e dashTutorCurto garante que ele
+   * sempre tenha uma. Uma régua só, e ela é verificável.
+   * ================================================================================== */
+  // ⚠ RAÇA COM PARÊNTESE existe de verdade no cadastro: "SRD (vira-lata)", "Spitz Alemão
+  // (Lulu da Pomerânia)". Por isso não basta "tem minúscula, logo é tutor" — o parêntese só é
+  // TUTOR quando o que está dentro dele é o primeiro nome de um tutor de verdade do cadastro.
+  // É a MESMA lista que dashNomePlanilha usa para escrever: quem escreve e quem lê falam a
+  // mesma língua. Sem cadastro em memória, nenhum parêntese é tutor — e o comportamento volta
+  // a ser exatamente o de antes, que é o certo para quem ainda não sabe nada.
+  var DASH_TUTOR1={}, DASH_TUTOR1_N=-1;
+  function dashTutoresPrimeiroNome(){
+    var n=(typeof PELUDINHOS!=='undefined'&&Array.isArray(PELUDINHOS))?PELUDINHOS.length:0;
+    if(n!==DASH_TUTOR1_N){
+      DASH_TUTOR1={}; DASH_TUTOR1_N=n;
+      try{
+        (PELUDINHOS||[]).forEach(function(p){ var t=dashTutorCurto(p); if(t) DASH_TUTOR1[jsNorm(t)]=1; });
+      }catch(e){ DASH_TUTOR1={}; } /* silencioso de propósito: sem cadastro, nenhum parêntese é tutor */
+    }
+    return DASH_TUTOR1;
+  }
+  // "Maya/SRD (Luciana) (1 COMPRIMIDO · NA BOLSA)" → base, tutor e detalhe, separados.
+  function dashPartesValor(v){
+    var s=String(v==null?'':v).trim();
+    var grupos=[], m, re=/\s*\(([^()]*)\)\s*$/;
+    var guarda=0;
+    while(guarda++<6 && (m=re.exec(s))){ grupos.unshift(m[1]); s=s.slice(0, m.index); }
+    var tutores=dashTutoresPrimeiroNome();
+    var nm=function(x){ return (typeof jsNorm==='function')?jsNorm(x):String(x||'').trim().toLowerCase(); };
+    var tutor='', det=[];
+    grupos.forEach(function(g){
+      var t=String(g||'').trim();
+      // Duas provas: tem minúscula (todo DETALHE de lançamento sai em MAIÚSCULA) e é o
+      // primeiro nome de um tutor do cadastro. As duas, nunca uma só.
+      if(!tutor && /[a-zà-öø-ÿ]/.test(t) && tutores[nm(t)]) tutor=t;
+      else det.push(t);
+    });
+    return {base:s.trim(), tutor:tutor, det:det.join(' · ')};
+  }
+  // Quantos FILHOts ATIVOS a casa tem com este MESMO Nome/Raça. 2 ou mais = há xará.
+  function dashXaraDe(p){
+    var base=(typeof jsNorm==='function')?jsNorm(dashNomeRaca(p)):String(dashNomeRaca(p)||'').toLowerCase();
+    if(!base) return 0;
+    var n=0;
+    try{
+      (PELUDINHOS||[]).forEach(function(q){
+        if(!q||!q.n) return;
+        if(typeof pelInativo==='function' && pelInativo(q)) return;
+        if(jsNorm(dashNomeRaca(q))!==base) return;
+        n++;
+      });
+    }catch(e){ return 0; } /* silencioso de propósito: sem cadastro em memória o nome sai como sempre saiu */
+    return n;
+  }
+  // O primeiro nome do tutor, em Maiúscula-minúscula. A minúscula não é enfeite: é ela que
+  // diz ao casamento reverso que este parêntese é o TUTOR, não o detalhe do lançamento.
+  function dashTutorCurto(p){
+    var t=((typeof pelGet==='function')?pelGet(p,'tutor'):'')||(p&&p.tutor)||'';
+    var pn=(typeof primeiroNome==='function')?primeiroNome(t):(String(t).split(/\s+/)[0]||'');
+    pn=String(pn||'').trim();
+    if(pn.length<2) return '';                 // uma letra não desempata nem se lê: melhor nada
+    return pn.charAt(0).toUpperCase()+pn.slice(1).toLowerCase();
+  }
+  // O NOME QUE VAI PARA A PLANILHA E PARA A TV. Uma função só — e todo lugar que monta o
+  // valor de um lançamento passa por ela (à mão, automático, Vence amanhã, pendências).
+  function dashNomePlanilha(p){
+    var base=dashNomeRaca(p);
+    if(!base || dashXaraDe(p)<2) return base;
+    var t=dashTutorCurto(p);
+    return t?(base+' ('+t+')'):base;
+  }
+
   // ===== O CALENDÁRIO (Adriana, 26/ago/2026) ======================================
   // "Um calendário, clica no dia — fica mais visual e didático." O mês inteiro na tela;
   // um toque escolhe. Dourado = hoje. Azul cheio = o dia que está sendo lançado.
@@ -32551,15 +32663,22 @@
     if(!achados.length && !pres.length){ box.innerHTML='<div class="hint">Ninguém com esse nome no cadastro.</div>'; return; }
     var acao=ehAvulso?'dashAvulsoDaBusca':((dashItem(k)||{}).campos?'dashEscolher':'dashLancar');
     box.innerHTML=achados.map(function(p){
-      var rot=dashNomeRaca(p), tut=((typeof pelGet==='function')?pelGet(p,'tutor'):'')||p.tutor||'';
+      // O que vai para a planilha JÁ é o nome desambiguado (Adriana, 24/set/2026): quem tem
+      // xará com a mesma raça leva o primeiro nome do tutor entre parênteses. É o mesmo
+      // texto que a sugestão mostra e o mesmo que a célula recebe — uma escrita só.
+      var rot=dashNomePlanilha(p), tut=((typeof pelGet==='function')?pelGet(p,'tutor'):'')||p.tutor||'';
+      var xara=(dashXaraDe(p)>1);
       // O índice da ficha viaja junto: quando o lançamento precisa GRAVAR na ficha
       // (adaptação), o vínculo é com a ficha escolhida — nome sozinho não identifica ninguém.
       var idx=PELUDINHOS.indexOf(p);
       var ina=inativo(p);
       return '<button class="btn" style="background:var(--z-cream-warm);color:var(--z-blue);border:1.5px solid '
-        +(ina?'var(--z-gold)':'var(--line)')+';padding:6px 12px;font-size:12.5px" '
+        +(ina?'var(--z-gold)':(xara?'var(--z-blue)':'var(--line)'))+';padding:6px 12px;font-size:12.5px" '
         +'onclick="'+acao+'(\''+k+'\',\''+escAttr(rot).replace(/'/g,"\\'")+'\','+idx+')">'+escAttr(rot)
-        +(tut?('<span style="color:var(--muted);font-weight:600"> · '+escAttr(tut)+'</span>'):'')
+        // COM XARÁ o tutor não é enfeite: é o que diz QUAL dos dois é. Por isso ele aparece
+        // em destaque, escrito por extenso e com a palavra "tutor" na frente.
+        +(tut?('<span style="'+(xara?'color:var(--z-blue);font-weight:800':'color:var(--muted);font-weight:600')
+               +'"> · tutor '+escAttr(tut)+'</span>'):'')
         // O inativo aparece dizendo o que é: escolhê-lo NÃO o reativa — a ficha continua
         // nos Inativos, e quem reativa é o "Voltou", de propósito e por quem pode.
         +(ina?('<span style="color:var(--z-blue);font-weight:800"> · inativo — está nos Inativos</span>'):'')
@@ -32773,15 +32892,32 @@
       if(__av.inativo){ __det=__det||{}; __det.inativo=true; }
     }
     var lista=DASH_DADOS[k]||{};
-    if(Object.keys(lista).some(function(id){ return jsNorm(lista[id].valor||'')===jsNorm(valor); })){
-      alert(valor+' já está lançado em '+it.t+' hoje.'); return;
-    }
+    // ===== A TRAVA É PELA FICHA, NUNCA PELO TEXTO (Adriana, 24/set/2026) ============
+    // "Estou tentando lançar a Maya da Luciana Renno. Tem outra Maya, da Marcela, e não está
+    //  deixando, porque 'já tem a Maya'."
+    // Duas fichas diferentes escreviam o MESMO texto ("Maya/SRD") e a segunda era barrada
+    // como repetida — o app dizendo que a Maya da Luciana já estava na casa quando quem
+    // estava era a da Marcela. Texto igual continua barrando (é o que pega o toque duplo e
+    // o lançamento pela planilha, que vêm sem ficha); mas quando os DOIS lados têm chave e
+    // as chaves são de FILHOts diferentes, passa: chave é a ficha, e ficha é a verdade.
+    var __chaveNova='';
+    try{ if(!__fora && pDoLanc&&pDoLanc.n) __chaveNova=dcKey(pDoLanc.n,pDoLanc.tutor)||''; }
+    catch(e){ __chaveNova=''; } /* silencioso de propósito: sem chave a trava volta a ser a do texto, como sempre foi */
+    var __repetido=Object.keys(lista).some(function(id){
+      var r=lista[id]||{};
+      if(jsNorm(r.valor||'')!==jsNorm(valor)) return false;      // outro texto: outro lançamento
+      if(__chaveNova && r.chave) return String(r.chave)===__chaveNova;
+      return true;                                               // sem as duas chaves, vale o texto
+    });
+    if(__repetido){ alert(valor+' já está lançado em '+it.t+' hoje.'); return; }
     // PERNOITE: o mesmo FILHOt não fica para dormir duas vezes na mesma noite. O detalhe
     // entra no texto (o motivo, a hora do aviso), então a comparação acima — que é pelo
     // valor inteiro — deixaria passar a segunda: a lista do dia mostraria duas linhas para
     // uma noite só, e a fila do check-in, uma. Aqui a conta é pelo NOME.
     if(k==='pernoite' && Object.keys(lista).some(function(id){
-        return jsNorm(pernNomeLimpo(lista[id].valor||''))===jsNorm(pernNomeLimpo(valor)); })){
+        var r=lista[id]||{};
+        if(__chaveNova && r.chave) return String(r.chave)===__chaveNova;   // ficha contra ficha
+        return jsNorm(pernNomeLimpo(r.valor||''))===jsNorm(pernNomeLimpo(valor)); })){
       alert(pernNomeLimpo(valor)+' já está lançado como pernoite para '+dashDiaTexto()+'.\n\n'
         +'Se o motivo mudou, tire o lançamento e lance de novo — uma noite é uma linha só.');
       return;
@@ -32933,7 +33069,13 @@
   function pendNo(chave,item){ return 'daycare/pendencias/'+chave+'/'+item; }
   // "Batata/SRD (1 COMPRIMIDO · NA BOLSA)" → "Batata/SRD". O MESMO recorte que a turma do
   // dia já faz para achar a ficha: o parêntese é detalhe, não nome.
-  function pendBase(valor){ return String(valor||'').replace(/\s*\(.*\)\s*$/,'').trim(); }
+  // ⚠ 24/set/2026 — o parêntese do TUTOR fica: "Maya/SRD (Luciana)" continua "Maya/SRD
+  // (Luciana)". Ele não é detalhe, é o que diz QUAL Maya — tirá-lo aqui faria a pendência
+  // relançar no FILHOt errado, que é justamente o que esta casa não admite.
+  function pendBase(valor){
+    var pp=dashPartesValor(valor);
+    return pp.base+(pp.tutor?(' ('+pp.tutor+')'):'');
+  }
 
   // ===== A REGRA, numa função PURA =================================================
   // Não lê banco, não escreve, não desenha: recebe o item, o que a chamada diz daquele dia
@@ -33460,7 +33602,24 @@
     // A COBRANÇA (Adriana, 21/set/2026): "as pessoas estão mandando e não estão finalizando
     // aquilo dali... eu preciso de cobrar". É outra conversa — não se reenvia a mensagem
     // original, que soaria como se a casa tivesse esquecido de ter mandado.
-    cobranca:'Oi, {tutor}! Passando só para saber se você viu a nossa mensagem sobre {ofilhot}. Podemos contar com a sua resposta? 🐾'
+    cobranca:'Oi, {tutor}! Passando só para saber se você viu a nossa mensagem sobre {ofilhot}. Podemos contar com a sua resposta? 🐾',
+    // ===== "APROVEITANDO QUE ELE ESTÁ AQUI" (Adriana, 24/set/2026) ==================
+    // As palavras são dela: "Olha, aproveitando que ele está aqui, já está para vencer o
+    // vermífugo, o carrapaticida, podemos fazer hoje de uma vez?" É uma conversa curta, de
+    // um sim só — por isso não leva o {fecho}, que fala do dia de vir ao Day Care.
+    // {item} traz o nome com o artigo certo · {vencer} vira "vence" ou "vencem" · {dia} é o
+    // dia do vencimento · {volta} é o próximo dia em que ele vem.
+    // {volta} existe e está documentado, mas fora do texto de fábrica de propósito: quando
+    // não há próxima vinda marcada ele sai vazio, e frase que depende de um pedaço que pode
+    // faltar é frase que um dia chega torta ao tutor.
+    antecipar:'Olá, {tutor}, tudo bem? 🐾\n'
+      +'Aproveitando que {ofilhot} está conosco hoje: {item} {vencer} {dia}.\n'
+      +'Podemos fazer hoje de uma vez? É só nos confirmar por aqui que já deixamos tudo pronto.',
+    // VACINA antecipada: só sai em dia de atendimento da nossa Veterinária — por isso a
+    // frase pode prometer a aplicação para hoje, sem marcar horário.
+    antecipar_vacina:'Olá, {tutor}, tudo bem? 🐾\n'
+      +'💉 Aproveitando que {ofilhot} está conosco hoje: a vacina de {vacina} {vencer} {dia}.\n'
+      +'A nossa Veterinária atende hoje e pode aplicar durante o dia {dele} aqui. Podemos fazer hoje de uma vez?'
   };
   // A ordem em que as mensagens aparecem no cartão, e como cada uma se chama na tela.
   var VENC_ORDEM_TIPOS=['vacina','antip','verm2','escova'];
@@ -33494,6 +33653,16 @@
   };
   var VENC_DIA_NOME={seg:'segunda-feira', ter:'terça-feira', qua:'quarta-feira',
                      qui:'quinta-feira', sex:'sexta-feira'};
+  // ⚠ VENC_DIA_NOME é, ao mesmo tempo, a lista de DIAS EM QUE HÁ DAY CARE (vencEhDiaDayCare
+  // e turmaDe a usam como tal): sábado e domingo NÃO podem entrar lá. Mas um vencimento cai
+  // no sábado, e a frase ao tutor precisa dizer "no sábado (26/09)" — dizer "no dia (26/09)"
+  // é o app falando como máquina. Por isso a frase tem a sua própria tabela, completa.
+  var VENC_DIA_FRASE={seg:'segunda-feira', ter:'terça-feira', qua:'quarta-feira',
+                      qui:'quinta-feira', sex:'sexta-feira', sab:'sábado', dom:'domingo'};
+  // "NA sexta-feira" e "NO sábado": a preposição segue o gênero do dia. Norma culta é
+  // obrigatória em tudo o que sai da Zêluz — e "na sábado" numa mensagem ao tutor desfaz
+  // o que o preço promete.
+  function vencNoDia(sigla){ return (sigla==='sab'||sigla==='dom')?'no ':'na '; }
 
   // ===== A RESPOSTA DO TUTOR, NAS PALAVRAS DELA (Adriana, 21/set/2026) =============
   // "Vai aplicar em casa / Vai mandar na bolsa / Pegar na loja / precisamos desse fluxo de
@@ -33525,9 +33694,61 @@
     {v:'sem',       t:'Não respondeu',                 cor:'#6b5f4b', fecha:false},
     {v:'nao',       t:'Não quer agora',                cor:'#B3261E', fecha:true}
   ];
+  /* ====================================================================================
+   * "APROVEITANDO QUE ELE ESTÁ AQUI" — a antecipação (Adriana, 24/set/2026)
+   * "Se o peludo está aqui hoje e vai vencer algo amanhã, ou no sábado, ou no domingo, ao
+   *  invés de esperar o próximo dia que ele vem — porque talvez o peludinho só venha uma vez
+   *  na semana — já aparecer: vence tal dia, comunicar com o tutor se pode fazer hoje. (…)
+   *  'Olha, aproveitando que ele está aqui, já está para vencer o vermífugo, o carrapaticida,
+   *  podemos fazer hoje de uma vez?' É algo mais rápido e estratégico para precisar de um sim
+   *  do tutor."
+   *
+   * O assunto antecipado é o MESMO assunto de sempre, com um prefixo: `ant_antip`,
+   * `ant_vacina`… Mesmo nó (daycare/vencimentos/{hoje}/{chave}), mesmo estado, mesma tela de
+   * Respostas pendentes, mesma cobrança, mesmo calendário. Sem prefixo, a pergunta de hoje
+   * sobrescreveria a mensagem que a véspera já mandou para o mesmo dia — duas conversas
+   * diferentes ocupando o mesmo lugar, que é como nascem as duas verdades desta casa.
+   * ================================================================================== */
+  var HOJE_ANT_PREF='ant_';
+  function hojeTipoAnt(tipo){ return HOJE_ANT_PREF+String(tipo||''); }
+  function vencEhAntecipado(t){ return String(t||'').indexOf(HOJE_ANT_PREF)===0; }
+  function vencTipoBase(t){
+    t=String(t||'');
+    return vencEhAntecipado(t)?t.slice(HOJE_ANT_PREF.length):t;
+  }
+  // O nome do assunto na tela. O antecipado diz que é antecipado — quem lê a lista de
+  // Respostas pendentes precisa saber que aquela foi a pergunta feita com o FILHOt na casa.
+  function vencRotuloTipo(t){
+    var base=vencTipoBase(t);
+    var rot=VENC_TIPO_ROTULO[base]||base;
+    return vencEhAntecipado(t)?('Fazer hoje — '+rot):rot;
+  }
+  // ===== OS BOTÕES DA ANTECIPAÇÃO ==================================================
+  // "Vai mandar na bolsa" não faz sentido aqui: ele JÁ ESTÁ na casa. A pergunta que resta é
+  // de onde sai o produto — da bolsa dele ou da nossa loja —, e cada resposta lança HOJE,
+  // pela MESMA porta dos Lançamentos do dia. A dose do vermífugo continua saindo do peso.
+  var VENC_RESPOSTAS_HOJE=[
+    {v:'hoje_bolsa', t:'Pode fazer hoje — está na bolsa', cor:'#1E8449', fecha:true, lanca:'NA BOLSA'},
+    {v:'hoje_loja',  t:'Pode fazer hoje — pegar na loja', cor:'#8A6D1F', fecha:true, lanca:'LOJA'},
+    {v:'casa',       t:'Vai aplicar em casa',             cor:'#234D67', fecha:true, ficha:true},
+    {v:'sem',        t:'Não respondeu',                   cor:'#6b5f4b', fecha:false},
+    {v:'nao',        t:'Não quer agora',                  cor:'#B3261E', fecha:true}
+  ];
+  // VACINA antecipada só existe em dia de atendimento da veterinária — por isso o período é
+  // de HOJE, e `hoje:true` é o que impede o recado dela de cair no próximo dia de atendimento.
+  var VENC_RESPOSTAS_HOJE_VACINA=[
+    {v:'vet_hoje_manha', t:'Pode aplicar hoje, de manhã',   cor:'#1E8449', fecha:true, periodo:'manhã', hoje:true},
+    {v:'vet_hoje_tarde', t:'Pode aplicar hoje, à tarde',    cor:'#1E8449', fecha:true, periodo:'tarde', hoje:true},
+    {v:'vet_tutor',      t:'Vai levar ao veterinário dele', cor:'#234D67', fecha:true, ficha:true},
+    {v:'sem',            t:'Não respondeu',                 cor:'#6b5f4b', fecha:false},
+    {v:'nao',            t:'Não quer agora',                cor:'#B3261E', fecha:true}
+  ];
   // Os botões DAQUELE assunto, já sem o que não cabe no dia-alvo.
   function vencRespostasDe(tipo, diaAlvo){
-    var L=(String(tipo||'')==='vacina')?VENC_RESPOSTAS_VACINA:VENC_RESPOSTAS;
+    var t=String(tipo||''), vac=(vencTipoBase(t)==='vacina');
+    var L=vencEhAntecipado(t)
+      ? (vac?VENC_RESPOSTAS_HOJE_VACINA:VENC_RESPOSTAS_HOJE)
+      : (vac?VENC_RESPOSTAS_VACINA:VENC_RESPOSTAS);
     return L.filter(function(x){ return !x.soNoDia || vencEhDiaVet(diaAlvo); });
   }
   // A definição de UMA resposta, olhando nas duas tabelas — o histórico de um dia antigo
@@ -33535,7 +33756,9 @@
   function vencRespDef(v){
     v=String(v||'');
     return VENC_RESPOSTAS.filter(function(x){ return x.v===v; })[0]
-        || VENC_RESPOSTAS_VACINA.filter(function(x){ return x.v===v; })[0] || null;
+        || VENC_RESPOSTAS_VACINA.filter(function(x){ return x.v===v; })[0]
+        || VENC_RESPOSTAS_HOJE.filter(function(x){ return x.v===v; })[0]
+        || VENC_RESPOSTAS_HOJE_VACINA.filter(function(x){ return x.v===v; })[0] || null;
   }
   // Os rótulos antigos continuam legíveis: o banco tem respostas gravadas antes de 21/set
   // ('zeluz', 'vet', 'casa') e quem lê o histórico precisa entender o que está escrito lá.
@@ -33673,12 +33896,12 @@
   function vencFraseDia(diaAlvo, hoje){
     hoje=hoje||((typeof zHojeISO==='function')?zHojeISO():'');
     var d=(typeof orcDiaSemana==='function')?orcDiaSemana(diaAlvo):'';
-    var nome=VENC_DIA_NOME[d]||'';
+    var nome=VENC_DIA_FRASE[d]||'';
     var br=vencData(diaAlvo, hoje);
     var amanha=(typeof orcMaisDias==='function')?orcMaisDias(hoje,1):'';
     if(diaAlvo===hoje) return 'hoje'+(nome?(', '+nome):'')+(br?(' ('+br+')'):'');
     if(diaAlvo===amanha) return 'amanhã'+(nome?(', '+nome):'')+(br?(' ('+br+')'):'');
-    return (nome?('na '+nome):'no dia')+(br?(' ('+br+')'):'');
+    return (nome?(vencNoDia(d)+nome):'no dia')+(br?(' ('+br+')'):'');
   }
 
   // ---- a turma de um dia QUALQUER ------------------------------------------------------
@@ -33864,6 +34087,13 @@
       .replace(/\{valor_escova\}/gi, (typeof escovaCent==='function')?fmtCent(escovaCent()):'')
       .replace(/\{dia_vet\}/gi, vencData(diaVet, hoje))
       .replace(/\{semana_vet\}/gi, String(VENC_DIA_NOME[semVet]||'').replace(/-feira$/,''))
+      // {vencer} — o VERBO concordando com o número de itens. Tem de se chamar "vencer", e
+      // não "vence": vencPluralizar troca a palavra "vence" dentro do texto, e trocaria o
+      // próprio marcador antes de ele ser substituído.
+      .replace(/\{vencer\}/gi, (itens.length>1?'vencem':'vence'))
+      // {volta} — o próximo dia em que ele vem (a antecipação de 24/set). Vazio quando não
+      // há próxima vinda conhecida: melhor faltar a informação do que inventar um dia.
+      .replace(/\{volta\}/gi, (o&&o.proxima)?vencFraseDia(o.proxima, hoje):'')
       .replace(/\{quando\}/gi, vencFraseQuando(diaAlvo, hoje, femea))
       .replace(/\{dia\}/gi, vencFraseDia(diaAlvo, hoje));
     // Ficha sem o nome do tutor deixaria "Olá, , como vai?" e "Tudo bem com você, ?" — as
@@ -34017,8 +34247,11 @@
     return vencMensagemDe(o, 'cobranca', vencItensDoTipo(o, tipo), diaAlvo, hoje);
   }
   // Os itens de UM assunto deste FILHOt.
+  // O assunto antecipado ('ant_antip') tem os MESMOS itens do assunto ('antip'): o que muda
+  // é a conversa, não o vermífugo.
   function vencItensDoTipo(o, tipo){
-    return (((o&&o.itens))||[]).filter(function(x){ return vencTipoDoItem(x.k)===String(tipo||''); });
+    var base=vencTipoBase(tipo);
+    return (((o&&o.itens))||[]).filter(function(x){ return vencTipoDoItem(x.k)===base; });
   }
   // Os itens daquele assunto que a casa LANÇA nos Lançamentos do dia. Vacina não entra —
   // quem aplica é a veterinária, e o recado dela sai por outro caminho.
@@ -34377,9 +34610,14 @@
         Object.keys(env).forEach(function(tipo){
           var st=vencEstadoTipo(r, tipo, agora);
           if(st!=='cobrar' && st!=='aguardando') return;      // só o que FOI mandado e não teve resposta
-          var itens=(Array.isArray(r.itens)?r.itens:[]).filter(function(x){ return vencTipoDoItem(x.k)===tipo; });
+          // O assunto ANTECIPADO tem retrato próprio (itens_ant): os itens dele vencem
+          // DEPOIS do dia, e o retrato do dia não os conhece.
+          var fonte=vencEhAntecipado(tipo)
+            ? (Array.isArray(r.itens_ant)?r.itens_ant:(Array.isArray(r.itens)?r.itens:[]))
+            : (Array.isArray(r.itens)?r.itens:[]);
+          var itens=fonte.filter(function(x){ return vencTipoDoItem(x.k)===vencTipoBase(tipo); });
           out.push({dia:dia, chave:chave, tipo:tipo, estado:st,
-            rotulo:(VENC_TIPO_ROTULO[tipo]||tipo),
+            rotulo:vencRotuloTipo(tipo),
             pet:String(r.pet||''), tutor:String(r.tutor||''),
             ts:vencEnvioTs(r, tipo),
             enviadaTs:Number((env[tipo]||{}).ts||0),
@@ -34486,13 +34724,17 @@
   // meio a consultora pode trocar o dia no seletor. O dia viaja com a chamada para a gravação
   // nunca cair num dia diferente daquele que ela leu na tela — o número da tela é o número
   // que vale. Quem não passa nada continua usando o dia-alvo de agora, como sempre.
-  function vencGravar(chave, patch, rotuloAudit, oOpc, diaOpc){
+  // semItens: a ANTECIPAÇÃO (24/set/2026) grava no MESMO nó do dia, mas os itens dela são
+  // outros — o que vence DEPOIS de hoje, não o que já venceu. Sobrescrever `itens` aqui
+  // apagaria o retrato do assunto que a véspera gravou para este mesmo dia. Ela guarda o
+  // seu retrato em `itens_ant` e passa por aqui sem encostar no de ninguém.
+  function vencGravar(chave, patch, rotuloAudit, oOpc, diaOpc, semItens){
     var dia=diaOpc||vencDiaAlvo();
     if(!DB||!dia||!chave) return Promise.resolve(false);
     var o=oOpc||vencAchar(chave, dia);
     var reg=Object.assign({}, patch);
     if(o){
-      if(o.itens&&o.itens.length) reg.itens=vencSnapItens(o);
+      if(!semItens && o.itens&&o.itens.length) reg.itens=vencSnapItens(o);
       // O NOME viaja com o registro (21/set/2026). A resposta pendente de 12 dias atrás
       // aparece no dashboard mesmo quando a ficha já foi atualizada e o FILHOt saiu da lista
       // daquele dia — e um quadro que dissesse só "otavio__marcela" não serve a ninguém.
@@ -34535,7 +34777,7 @@
       env[tipo]=reg; patch.enviadas=env;
     }
     vencGravar(chave, patch,
-      'marcou que mandou a mensagem de '+String(VENC_TIPO_ROTULO[tipo]||'prevenção').toLowerCase()
+      'marcou que mandou a mensagem de '+String(tipo?vencRotuloTipo(tipo):'prevenção').toLowerCase()
       +' de '+o.nome+' (dia '+vencDiaAlvo()+')', o);
   }
   // A RESPOSTA DO CARTÃO INTEIRO — o caminho de antes de 21/set/2026, que continua vivo por
@@ -34565,7 +34807,7 @@
    * "Não respondeu" é o contrário de tudo isto: NÃO grava resposta nenhuma. Anota a
    * tentativa (quem tentou, quando) e o assunto continua pendente, que foi o que ela pediu.
    * ================================================================================== */
-  function vencResponderTipo(chave, tipo, v, diaOpc){
+  function vencResponderTipo(chave, tipo, v, diaOpc, oOpc){
     var dia=diaOpc||vencDiaAlvo();
     tipo=String(tipo||''); v=String(v||'');
     if(!DB){
@@ -34575,9 +34817,16 @@
       return Promise.resolve(false);
     }
     if(!dia||!chave||!tipo||!v) return Promise.resolve(false);
-    var o=vencObjDe(chave, dia);
+    var o=oOpc||vencObjDe(chave, dia);
+    // ANTECIPAÇÃO respondida de OUTRA tela (o quadro de Respostas pendentes) não tem o
+    // objeto na mão: os itens dela estão no retrato próprio do registro. Sem isto, o
+    // lançamento automático sairia com os itens do assunto errado.
+    if(!oOpc && vencEhAntecipado(tipo)){
+      var __ra=vencRegDeDia(dia, chave)||{};
+      if(Array.isArray(__ra.itens_ant)) o=Object.assign({}, o, {itens:__ra.itens_ant});
+    }
     var def=vencRespDef(v)||{};
-    var rot=String(VENC_TIPO_ROTULO[tipo]||tipo).toLowerCase();
+    var rot=String(vencRotuloTipo(tipo)).toLowerCase();
     var quem=(typeof quemSou==='function'?quemSou():'-');
     var agora=Date.now();
     var r=vencRegDeDia(dia, chave)||{};
@@ -34585,9 +34834,11 @@
     if(def.fecha===false){
       var tent=Object.assign({}, r.tentativas||{});
       tent[tipo]=(tent[tipo]||[]).concat([{quem:quem, ts:agora}]);
-      return vencGravar(chave, {tentativas:tent},
+      var __pt={tentativas:tent};
+      if(vencEhAntecipado(tipo)){ __pt.antecipado=true; __pt.itens_ant=vencSnapItens(o); }
+      return vencGravar(chave, __pt,
         'anotou que o tutor de '+o.nome+' NÃO respondeu sobre '+rot+' (dia '+dia+') — '
-        +tent[tipo].length+'ª tentativa; o assunto continua pendente', o, dia);
+        +tent[tipo].length+'ª tentativa; o assunto continua pendente', o, dia, vencEhAntecipado(tipo));
     }
     var resps=Object.assign({}, r.respostas||{});
     var antes=String((resps[tipo]||{}).v||'');
@@ -34597,24 +34848,26 @@
     var autoAntes=(r.auto||{})[tipo]||null;
     resps[tipo]={v:v, quem:quem, ts:agora};
     var patch={respostas:resps};
+    // A marca que diz, para sempre, que esta pergunta foi feita com o FILHOt DENTRO da casa.
+    if(vencEhAntecipado(tipo)){ patch.antecipado=true; patch.itens_ant=vencSnapItens(o); }
     // VACINA: não vai para a planilha — vira o recado para a veterinária, com o dia e o
     // período que o tutor escolheu. É o MESMO caminho que já existia; o que mudou foi só
     // a porta de entrada (o período agora está no próprio botão de resposta).
     var vetReg=null;
-    if(tipo==='vacina' && def.periodo){
+    if(vencTipoBase(tipo)==='vacina' && def.periodo){
       var vacs=vencItensDoTipo(o,'vacina');
       var femeaV=/^f/i.test(String(o.sexo||''));
       var hojeV=(typeof zHojeISO==='function')?zHojeISO():'';
       vetReg={pet:(o.nome||''), dofilhot:(femeaV?'da ':'do ')+(o.nome||''), periodo:def.periodo,
               vacinas:vencJuntar(vacs.map(function(x){ return VENC_VACINA_NOME[x.k]||x.nome; })),
-              dia:(def.periodo==='no dia dele')?dia:(proximoDiaVet(hojeV)||dia),
+              dia:(def.hoje||def.periodo==='no dia dele')?dia:(proximoDiaVet(hojeV)||dia),
               quem:quem, ts:agora};
       patch.vet=vetReg;
     }
     var txt=(antes&&antes!==v)
       ? ('mudou a resposta de '+o.nome+' sobre '+rot+' de "'+vencRespRotulo(antes)+'" para "'+def.t+'"')
       : ('registrou a resposta do tutor de '+o.nome+' sobre '+rot+': "'+def.t+'"');
-    return vencGravar(chave, patch, txt+' (dia '+dia+')', o, dia).then(function(ok){
+    return vencGravar(chave, patch, txt+' (dia '+dia+')', o, dia, vencEhAntecipado(tipo)).then(function(ok){
       if(!ok) return false;
       if(vetReg) vencAvisarVet(o, vetReg);
       return vencAutoDesmanchar(chave, tipo, dia, o, autoAntes).then(function(){
@@ -34658,7 +34911,7 @@
       return vencGravar(chave, {auto:autos},
         'desfez o lançamento automático anterior de '+((o&&o.nome)||chave)+' no dia '+auto.dia
         +(res.tirados.length?(' — tirou: '+res.tirados.join(' · ')):' — não havia o que tirar')
-        +(res.erros.length?(' — NÃO consegui tirar: '+res.erros.join(' · ')):''), o, dia).then(function(){
+        +(res.erros.length?(' — NÃO consegui tirar: '+res.erros.join(' · ')):''), o, dia, vencEhAntecipado(tipo)).then(function(){
         try{ renderDash(); }catch(e){ /* silencioso de propósito: redesenho de tela — falhar não pode derrubar quem chamou */ }
         if(res.erros.length && typeof zAlertao==='function') zAlertao('Parte do lançamento anterior NÃO saiu',
           ['Continua lançado: '+res.erros.join(' · ')+'.',
@@ -34688,7 +34941,7 @@
         : ('registrou "'+onde+'" para '+o.nome+' — nada deste assunto se lança nos Lançamentos do dia');
       if(res.falharam.length) frase+=' — NÃO entrou: '+res.falharam.join(' · ');
       if(res.dia!==dia) frase+=' (o dia '+dia+' já passou: foi para o próximo dia dele)';
-      return vencGravar(chave, {auto:auto}, frase, o, dia).then(function(){
+      return vencGravar(chave, {auto:auto}, frase, o, dia, vencEhAntecipado(tipo)).then(function(){
         if(res.falharam.length && typeof zAlertao==='function') zAlertao('Parte NÃO entrou nos Lançamentos do dia',
           ['Não entrou: '+res.falharam.join(' · ')+'.',
            'A resposta do tutor ficou registrada — o que falta é o lançamento.',
@@ -34703,7 +34956,7 @@
     return DB.ref('daycare/dashboard/'+alvo).once('value').then(function(s){
       DASH_DADOS=dashLimparFantasmas(s.val()||{});
       var feitos=[], falharam=[];
-      var base=dashNomeRaca(o.p||{}), alvoNorm=jsNorm(base);
+      var base=dashNomePlanilha(o.p||{}), alvoNorm=jsNorm(base);
       var passo=function(i){
         if(i>=fila.length) return Promise.resolve();
         var x=fila[i], cfg=VENC_LANC[x.k];
@@ -34745,7 +34998,7 @@
     var r=vencRegDeDia(dia, chave)||{};
     var auto=(r.auto||{})[tipo];
     if(!auto||!DB) return Promise.resolve(false);
-    var rot=String(VENC_TIPO_ROTULO[tipo]||tipo).toLowerCase();
+    var rot=String(vencRotuloTipo(tipo)).toLowerCase();
     var linhas=['Sai dos Lançamentos do dia '+(((typeof fmtBR==='function'?fmtBR(auto.dia):'')||auto.dia))
       +', sai da planilha e some da TV:'];
     (Array.isArray(auto.itens)?auto.itens:[]).forEach(function(x){ linhas.push('· '+x.texto+(x.jaEstava?' (já estava lançado antes — esse fica)':'')); });
@@ -34762,7 +35015,7 @@
         return vencGravar(chave, {respostas:resps, auto:autos},
           'DESFEZ a resposta de '+o.nome+' sobre '+rot+' (dia '+dia+')'
           +(res.tirados.length?(' — tirou dos Lançamentos do dia '+auto.dia+': '+res.tirados.join(' · ')):' — não havia lançamento a tirar')
-          +(res.erros.length?(' — NÃO consegui tirar: '+res.erros.join(' · ')):''), o, dia).then(function(){
+          +(res.erros.length?(' — NÃO consegui tirar: '+res.erros.join(' · ')):''), o, dia, vencEhAntecipado(tipo)).then(function(){
           try{ renderDash(); }catch(e){ /* silencioso de propósito: redesenho de tela — falhar não pode derrubar quem chamou */ }
           if(res.erros.length && typeof zAlertao==='function') zAlertao('Parte NÃO saiu dos Lançamentos do dia',
             ['Continua lançado: '+res.erros.join(' · ')+'.',
@@ -34783,8 +35036,8 @@
     var cob=Object.assign({}, r.cobrancas||{});
     cob[tipo]=(cob[tipo]||[]).concat([{quem:quem, ts:Date.now()}]);
     return vencGravar(chave, {cobrancas:cob},
-      'cobrou a resposta do tutor de '+o.nome+' sobre '+String(VENC_TIPO_ROTULO[tipo]||tipo).toLowerCase()
-      +' ('+cob[tipo].length+'ª cobrança, dia '+dia+')', o, dia);
+      'cobrou a resposta do tutor de '+o.nome+' sobre '+String(vencRotuloTipo(tipo)).toLowerCase()
+      +' ('+cob[tipo].length+'ª cobrança, dia '+dia+')', o, dia, vencEhAntecipado(tipo));
   }
   // O bloco de "Pode fazer na Zêluz": abre RASCUNHO. Nada é gravado até o Confirmar.
   function vencAbrirLanc(chave, forcar){
@@ -34858,7 +35111,7 @@
         if(cfg.onde==='veio'){ partes.push(e.onde); partes.push(e.seg); }
         else { partes.push(e.seg); partes.push(e.onde); }
         linhas.push('· '+(typeof dashItem==='function'?(dashItem(cfg.item)||{}).t:cfg.item)+' — '
-          +dashNomeRaca(o.p)+' ('+partes.filter(Boolean).join(' · ')+')');
+          +dashNomePlanilha(o.p)+' ('+partes.filter(Boolean).join(' · ')+')');
       });
       linhas.push('Dali segue para a planilha e para a TV, como qualquer outro lançamento do dia. Se ele faltar no dia, vira pendência sozinho.');
     }
@@ -34934,7 +35187,7 @@
       return DB.ref('daycare/dashboard/'+dia).once('value').then(function(s){
         DASH_DADOS=dashLimparFantasmas(s.val()||{});
         var lancados={}, falharam=[];
-        var base=dashNomeRaca(o.p), alvo=jsNorm(base);
+        var base=dashNomePlanilha(o.p), alvo=jsNorm(base);
         var passo=function(i){
           if(i>=fila.length) return Promise.resolve();
           var x=fila[i], cfg=VENC_LANC[x.k], e=esc[x.k]||{};
@@ -35425,7 +35678,7 @@
     if(!rt && !(r.respostas&&Object.keys(r.respostas).length)) atual=String(r.resposta||'');
     var h='<div style="margin-top:9px">'
       +'<div class="hint" style="margin-bottom:5px">O que o tutor respondeu sobre '
-      +escAttr(String(VENC_TIPO_ROTULO[tipo]||tipo).toLowerCase())+'?</div>'
+      +escAttr(String(vencRotuloTipo(tipo)).toLowerCase())+'?</div>'
       +'<div style="display:flex;flex-wrap:wrap;gap:7px">';
     vencRespostasDe(tipo, dia).forEach(function(x){
       var on=vencRespEh(atual, x.v);
@@ -35629,6 +35882,14 @@
     try{ rtq=vencRespondidosTexto(c.dia, (typeof zHojeISO==='function')?zHojeISO():''); }
     catch(e){ rtq=''; } /* silencioso de propósito: linha de apoio — falhar não pode derrubar o quadro */
     if(rtq) h+='<p class="pm-sub" style="color:var(--crm-ok);font-weight:700;margin-top:6px">'+esc(rtq)+'</p>';
+    // "3 para perguntar hoje" (Adriana, 24/set/2026) — quem JÁ está na casa e tem algo
+    // vencendo antes de voltar. Aparece aqui porque é o trabalho que morre no fim do dia.
+    var haq=null;
+    try{ haq=(typeof hojeAnteciparContagem==='function')?hojeAnteciparContagem():null; }
+    catch(e){ haq=null; } /* silencioso de propósito: linha de apoio — falhar não pode derrubar o quadro */
+    if(haq&&haq.total) h+='<p class="pm-sub" style="color:#E08856;font-weight:700;margin-top:6px">'
+      +haq.total+' para perguntar hoje, com quem já está na casa — '
+      +'<a href="#" onclick="paIr(\'hoje\');return false" style="color:var(--z-blue);font-weight:800">abrir Hoje na Zêluz</a></p>';
     h+='<div class="pm-lista"><button type="button" class="pa-li" onclick="paIr(\'vencimentos\')">'
       +'<span class="pm-badge pm-b-critico">'+c.total+' na lista</span>'
       +'<span class="pa-li-txt"><b>Abrir a tela Vence amanhã</b><span>mandar hoje, para quem vem no dia '
@@ -35732,6 +35993,9 @@
   var HOJE_FILTRO='todos';
   var HOJE_FILTROS=[
     {v:'todos',  t:'Todos'},
+    // "Fazer hoje" (Adriana, 24/set/2026): quem está na casa AGORA e tem algo vencendo antes
+    // de voltar. É o trabalho mais rápido do dia — um sim do tutor resolve.
+    {v:'fazer',  t:'Fazer hoje'},
     {v:'pend',   t:'Só com pendência'},
     {v:'vacina', t:'Vacina'},
     {v:'verm',   t:'Vermífugo'},
@@ -35744,6 +36008,245 @@
     verm_p:'verm', verm_dose2_p:'verm', ecto_p:'ecto', col_p:'col', escova_p:'escova',
     fezes_p:'outro', checkup_p:'outro'};
   function hojeFamilia(it){ return HOJE_FAMILIA[(it&&it.k)||'']||'outro'; }
+
+  /* ====================================================================================
+   * "APROVEITANDO QUE ELE ESTÁ AQUI" — A ANTECIPAÇÃO (Adriana, 24/set/2026)
+   *
+   * "Se o peludo está aqui hoje, dia 24, e vai vencer algo amanhã, que é uma sexta-feira, ou
+   *  no sábado, ou no domingo, ao invés de esperar o próximo dia que ele vem, ou a próxima
+   *  semana — porque talvez o peludinho só venha uma vez na semana — já aparecer: vence tal
+   *  dia, comunicar com o tutor se pode fazer hoje. Se o peludinho vem terça e sexta, e na
+   *  segunda, dia 28, está vencendo algo, ele vem na terça, então a gente pode deixar para a
+   *  próxima terça. Agora, se ele só vai vir na próxima sexta, a gente já antecipa isso. É
+   *  algo mais rápido e estratégico para precisar de um sim do tutor."
+   *
+   * A REGRA, em uma frase: vence DEPOIS de hoje e ANTES da próxima vinda dele → pergunta-se
+   * hoje. Vence no dia da próxima vinda ou depois → não se antecipa: aquele dia resolve, e é
+   * assunto da tela Vence amanhã. Antecipar o que dá tempo seria cobrar o tutor à toa.
+   *
+   * A FOLGA (Configurações › Mensagens prontas) empurra essa janela: com 0, entra só o que
+   * vence ANTES do dia da próxima vinda; cada dia a mais inclui um dia seguinte.
+   *
+   * VACINA só é antecipada em dia de atendimento da nossa Veterinária (segunda a sexta,
+   * exceto quinta) — prometer aplicação num dia em que ela não está é combinar o que não
+   * existe. E tem texto próprio, porque é outra conversa.
+   * ================================================================================== */
+  // Quantos dias ALÉM da próxima vinda ainda entram no "fazer hoje". Número de negócio: mora
+  // em Configurações, como manda a lei de 22/ago ("regra nova não pode exigir programador").
+  var HOJE_ANT_FOLGA_PADRAO=0;
+  function hojeFolgaAntecipar(){
+    var n=parseInt(((VENC_CFG||{}).antecipar_folga),10);
+    return (n>=0&&n<=30)?n:HOJE_ANT_FOLGA_PADRAO;
+  }
+  // A PRÓXIMA VINDA DELE, depois de `apartirDe` (nunca o próprio dia). Duas fontes, e vence
+  // a mais próxima: os dias fixos da ficha (pulando fim de semana e feriado, pelo MESMO
+  // calendário do Day Care) e a reposição ou o avulso que o tutor já agendou. null = não sei
+  // quando ele volta — e "não sei" nunca vira um dia inventado.
+  function proximaVindaDe(p, apartirDe){
+    var iso=String(apartirDe||'').slice(0,10);
+    if(!/^\d{4}-\d{2}-\d{2}$/.test(iso)) return null;
+    var dias=[];
+    try{ dias=(typeof pelDias==='function')?(pelDias(p)||[]):[]; }
+    catch(e){ dias=[]; } /* silencioso de propósito: sem a ficha extra valem os dias do cadastro em memória */
+    if((!dias||!dias.length) && p && Array.isArray(p.dias)) dias=p.dias;
+    // (1) o próximo dia FIXO dele
+    var porFicha='';
+    if(dias&&dias.length){
+      var d=iso, guarda=0;
+      while(guarda++<40){
+        d=proximoDiaDayCare(d); if(!d) break;
+        var sem=(typeof orcDiaSemana==='function')?orcDiaSemana(d):'';
+        if(dias.indexOf(sem)>=0){ porFicha=d; break; }
+      }
+    }
+    // (2) a reposição ou o avulso já AGENDADO — ele pode voltar antes do dia fixo
+    var porAgenda='';
+    try{
+      ((typeof repAgendaDe==='function')?(repAgendaDe(p)||[]):[]).forEach(function(x){
+        var v=String(x||'').slice(0,10);
+        if(!/^\d{4}-\d{2}-\d{2}$/.test(v)) return;
+        if(v<=iso) return;
+        if(!porAgenda||v<porAgenda) porAgenda=v;
+      });
+    }catch(e){ porAgenda=''; } /* silencioso de propósito: sem o banco de reposição vale o dia fixo da ficha */
+    if(porFicha&&porAgenda) return (porAgenda<porFicha)?porAgenda:porFicha;
+    return porFicha||porAgenda||null;
+  }
+  // O QUE PERGUNTAR HOJE. Função pura: recebe a ficha extra, a ficha e o dia de hoje — não lê
+  // banco, não escreve, não desenha. É ela que o harness morde.
+  //   {proxima, folga, teto, itens}
+  function hojeAntecipar(ex, p, hoje){
+    ex=ex||{};
+    hoje=hoje||((typeof zHojeISO==='function')?zHojeISO():'');
+    if(!/^\d{4}-\d{2}-\d{2}$/.test(hoje||'')) return {proxima:null, folga:hojeFolgaAntecipar(), teto:'', itens:[]};
+    var proxima=proximaVindaDe(p, hoje);
+    var folga=hojeFolgaAntecipar();
+    // O ÚLTIMO dia que ainda cabe no "fazer hoje". Sem próxima vinda conhecida não há dia
+    // para o qual adiar: vale a mesma janela de aviso que a casa já usa no Vence amanhã —
+    // nunca uma janela sem fim, que encheria a lista do balcão de ruído.
+    var teto=proxima?addDiasISO(proxima, folga-1):addDiasISO(hoje, vencMargem());
+    if(!teto) return {proxima:proxima, folga:folga, teto:'', itens:[]};
+    var todos=[];
+    try{ todos=(typeof vencItensDe==='function')?(vencItensDe(ex, teto, 0, hoje)||[]):[]; }
+    catch(e){ todos=[]; } /* silencioso de propósito: ficha estranha não derruba a lista inteira */
+    var vetHoje=vencEhDiaVet(hoje);
+    var itens=todos.filter(function(x){
+      if(!(x.vence>hoje)) return false;        // o que JÁ venceu é o alerta da própria linha, não uma pergunta
+      if(x.vacina) return vetHoje;             // vacina só em dia de atendimento da veterinária
+      return !!VENC_LANC[x.k];                 // os dela: vermífugo, 2ª dose, carrapaticida, coleira, escova
+    });
+    return {proxima:proxima, folga:folga, teto:teto, itens:itens};
+  }
+  // Os assuntos da antecipação deste FILHOt, na ordem de sempre.
+  function hojeAntGrupos(itens){
+    var por={};
+    (itens||[]).forEach(function(x){ var t=vencTipoDoItem(x.k); (por[t]=por[t]||[]).push(x); });
+    return VENC_ORDEM_TIPOS.filter(function(t){ return por[t]&&por[t].length; })
+      .map(function(t){ return {tipo:t, itens:por[t]}; });
+  }
+  // O assunto ainda espera resposta? O estado é o MESMO do Vence amanhã — uma régua só.
+  function hojeAntAberto(reg, tipo, agora){
+    return vencEstadoTipo(reg||{}, hojeTipoAnt(tipo), agora)!=='fechado';
+  }
+  // O objeto do cartão para responder/mandar: os itens são os DAQUELE assunto, e só eles.
+  function hojeObjAnt(chave, tipo){
+    var L=[]; try{ L=hojeLista(); }catch(e){ L=[]; } /* silencioso de propósito: sem a lista não há o que responder */
+    var o=L.filter(function(x){ return x.chave===chave; })[0];
+    if(!o) return null;
+    var itens=(o.antec||[]).filter(function(x){ return vencTipoDoItem(x.k)===String(tipo||''); });
+    if(!itens.length) return null;
+    return {chave:o.chave, p:o.p, i:o.i, nome:o.nome, raca:o.raca, tutor:o.tutor,
+            sexo:o.sexo, tel:o.tel, proxima:o.proxima, itens:itens, atrasados:0};
+  }
+  // A MENSAGEM. Sai do MESMO motor das outras (vencMensagemDe), com o texto de Configurações
+  // — o dia-alvo aqui é o dia do VENCIMENTO, que é o que o {dia} da frase precisa dizer.
+  function hojeMsgAntecipar(o, tipo, hoje){
+    if(!o||!(o.itens||[]).length) return '';
+    hoje=hoje||((typeof zHojeISO==='function')?zHojeISO():'');
+    var diaVence=(o.itens||[]).map(function(x){ return x.vence; }).sort()[0]||hoje;
+    var chaveTxt=(String(tipo||'')==='vacina')?'antecipar_vacina':'antecipar';
+    return vencMensagemDe(o, chaveTxt, o.itens, diaVence, hoje);
+  }
+  // A frase do destaque, na tela: "o vermífugo vence na sexta-feira (26/09) e ele só volta na
+  // terça-feira (30/09) — fazer hoje?"
+  function hojeFraseAntecipar(o, g, hoje){
+    var itens=(g&&g.itens)||[];
+    if(!itens.length) return '';
+    hoje=hoje||((typeof zHojeISO==='function')?zHojeISO():'');
+    var dia=itens.map(function(x){ return x.vence; }).sort()[0]||'';
+    var femea=/^f/i.test(String((o&&o.sexo)||''));
+    var nomes=vencJuntar(itens.map(function(x){ return vencNomeComArtigo(x); }));
+    var volta=(o&&o.proxima)?vencFraseDia(o.proxima, hoje):'';
+    return nomes+' '+(itens.length>1?'vencem':'vence')+' '+vencFraseDia(dia, hoje)
+      +(volta?(' e '+(femea?'ela':'ele')+' só volta '+volta):' e não há próxima vinda marcada')
+      +' — fazer hoje?';
+  }
+  // ---- os gestos da antecipação --------------------------------------------------------
+  var HOJE_ANT_ABERTO={};       // {chave|tipo:true} — a dobra da pergunta aberta. NADA gravado.
+  function hojeAbrirPergunta(chave, tipo){
+    var k=chave+'|'+tipo;
+    if(HOJE_ANT_ABERTO[k]) delete HOJE_ANT_ABERTO[k]; else HOJE_ANT_ABERTO[k]=true;
+    hojeRender();
+  }
+  // "Mandei" — só diz que a pergunta SAIU. Não é resposta do tutor, e não fecha nada.
+  function hojeMandei(chave, tipo){
+    var hoje=(typeof zHojeISO==='function')?zHojeISO():'';
+    var o=hojeObjAnt(chave, tipo); if(!o||!hoje) return;
+    var t=hojeTipoAnt(tipo);
+    var quem=(typeof quemSou==='function'?quemSou():'-');
+    var reg={quem:quem, ts:Date.now()};
+    var env=Object.assign({}, (vencRegDeDia(hoje, chave)||{}).enviadas||{});
+    env[t]=reg;
+    vencGravar(chave, {enviadas:env, antecipado:true, itens_ant:vencSnapItens(o),
+                       msg_enviada:{quem:quem, ts:reg.ts, tipo:t}},
+      'perguntou hoje ao tutor de '+o.nome+' se pode fazer '
+      +vencJuntar(o.itens.map(vencNomeComArtigo))+' com ele já na casa (antecipado, dia '+hoje+')',
+      o, hoje, true).then(function(){ hojeRender(); });
+  }
+  // A resposta do tutor. O MESMO caminho do Vence amanhã — com o objeto certo na mão, para o
+  // lançamento automático sair com os itens deste assunto e de mais nenhum.
+  function hojeResponder(chave, tipo, v){
+    var hoje=(typeof zHojeISO==='function')?zHojeISO():'';
+    var o=hojeObjAnt(chave, tipo);
+    if(!o||!hoje) return Promise.resolve(false);
+    return vencResponderTipo(chave, hojeTipoAnt(tipo), v, hoje, o).then(function(ok){
+      try{ hojeRender(); }catch(e){ /* silencioso de propósito: redesenho de tela — falhar não pode derrubar quem chamou */ }
+      return ok;
+    });
+  }
+  // Copiar é sempre a mesma coisa: tenta a área de transferência e, se o navegador recusar,
+  // seleciona o texto no próprio campo — nunca deixa a pessoa sem a mensagem na mão.
+  function hojeCopiarMsg(chave, tipo, btn){
+    var ta=document.getElementById('hojeMsg_'+chave+'__'+tipo);
+    var txt=ta?String(ta.value||''):'';
+    if(!txt){ alert('Não achei a mensagem para copiar. Abra a pergunta de novo.'); return; }
+    var pronto=function(){
+      if(!btn) return;
+      var t=btn.textContent; btn.textContent='✅ Copiado — cole no WhatsApp';
+      setTimeout(function(){ try{ btn.textContent=t; }catch(e){} /* silencioso de propósito: enfeite de botão — falhar não muda dado nenhum */ }, 3000);
+    };
+    var naTela=function(){ try{ ta.focus(); ta.select(); }catch(e){} /* silencioso de propósito: enfeite de tela — falhar não muda dado nenhum */ };
+    if(navigator.clipboard&&navigator.clipboard.writeText) navigator.clipboard.writeText(txt).then(pronto).catch(naTela);
+    else naTela();
+  }
+  // Quantos FILHOts na casa têm pergunta a fazer HOJE. Uma conta, três lugares (a tela, o
+  // contador do menu e os quadros dos dashboards). null = ainda não sei.
+  function hojeAnteciparContagem(){
+    if(typeof PELUDINHOS==='undefined'||!Array.isArray(PELUDINHOS)||!PELUDINHOS.length) return null;
+    var L=[]; try{ L=hojeLista(); }catch(e){ return null; }
+    var total=0, itens=0;
+    L.forEach(function(o){
+      if(!(o.antAbertos||[]).length) return;
+      total++; itens+=(o.antec||[]).length;
+    });
+    return {total:total, itens:itens};
+  }
+  // A DOBRA da pergunta: a mensagem pronta, o Copiar, o Mandei e os botões de resposta — os
+  // MESMOS do Vence amanhã, menos o que não faz sentido com ele já aqui.
+  function hojeAntBlocoHTML(o, g, hoje, reg, agora){
+    var tipo=g.tipo, ka=jsAspas(o.chave);
+    var t=hojeTipoAnt(tipo);
+    var estado=vencEstadoTipo(reg||{}, t, agora);
+    var aberto=!!HOJE_ANT_ABERTO[o.chave+'|'+tipo];
+    var h='<div style="margin-top:6px;padding:8px 11px;border-radius:11px;background:rgba(224,136,86,.12);border:1.5px solid #E08856">'
+      +'<div style="font-weight:800;color:var(--z-blue);font-size:13.5px">⏰ '
+      +escAttr(hojeFraseAntecipar(o, g, hoje))+'</div>'
+      +'<div style="display:flex;flex-wrap:wrap;gap:7px;align-items:center;margin-top:6px">'
+      +'<button type="button" class="btn btn-gold" style="padding:6px 13px;font-size:12.5px;font-weight:800"'
+      +' onclick="hojeAbrirPergunta(\'' + ka + '\',\'' + escAttr(tipo) + '\')">'
+      +(aberto?'fechar':'Perguntar ao tutor')+'</button>'
+      +vencSeloEstado(estado)+'</div>';
+    if(!aberto) return h+'</div>';
+    var oA=hojeObjAnt(o.chave, tipo)||o;
+    var msg=hojeMsgAntecipar(oA, tipo, hoje);
+    var rt=vencRespostaDe(reg||{}, t);
+    h+='<textarea class="gest-txt" id="hojeMsg_'+escAttr(o.chave)+'__'+escAttr(tipo)+'" rows="7" style="width:100%;margin-top:8px">'
+      +escAttr(msg)+'</textarea>'
+      +'<div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:8px">'
+      +'<button type="button" class="btn btn-gold" style="padding:7px 15px;font-size:13px;font-weight:800" onclick="hojeCopiarMsg(\'' + ka + '\',\'' + escAttr(tipo) + '\',this)">Copiar a mensagem</button>'
+      +'<button type="button" class="btn" style="padding:7px 15px;font-size:13px;font-weight:800;background:'
+      +(vencMandada(reg||{}, t)?'var(--z-cream-warm);color:var(--z-blue);border:1.5px solid var(--line)':'var(--z-blue);color:var(--z-cream);border:none')
+      +'" onclick="hojeMandei(\'' + ka + '\',\'' + escAttr(tipo) + '\')">'
+      +(vencMandada(reg||{}, t)?'Mandada — marcar de novo':'Mandei')+'</button>';
+    if(o.tel) h+='<a href="tel:'+escAttr(o.tel)+'" class="btn" style="padding:7px 15px;font-size:13px;font-weight:800;background:var(--z-cream-warm);color:var(--z-blue);border:1.5px solid var(--line);text-decoration:none">'+escAttr(o.tel)+'</a>';
+    h+='</div>';
+    h+='<div class="hint" style="margin:8px 0 5px">O que o tutor respondeu?</div>'
+      +'<div style="display:flex;flex-wrap:wrap;gap:7px">';
+    vencRespostasDe(t, hoje).forEach(function(b){
+      var on=vencRespEh(String((rt||{}).v||''), b.v);
+      h+='<button type="button" class="btn" style="padding:6px 13px;font-size:12.5px;font-weight:800;border:1.5px solid '+b.cor+';'
+        +'background:'+(on?b.cor:'transparent')+';color:'+(on?'#FFFDF6':b.cor)+'"'
+        +' onclick="hojeResponder(\'' + ka + '\',\'' + escAttr(tipo) + '\',\'' + b.v + '\')">'+escAttr(b.t)+'</button>';
+    });
+    h+='</div>';
+    if(rt&&rt.quem) h+='<div class="hint" style="margin-top:4px">Registrado por '+escAttr(rt.quem)
+      +(rt.ts?(' às '+vencHora(rt.ts)):'')+'.</div>';
+    h+=vencAutoLancadoHTML(oA, reg||{}, t, hoje, ka);
+    var tents=vencTentativasDe(reg||{}, t);
+    if(tents.length) h+='<div class="hint" style="margin-top:4px;color:var(--crm-atencao-text);font-weight:700">'
+      +tents.length+' vez'+(tents.length>1?'es':'')+' sem resposta — o assunto continua pendente.</div>';
+    return h+'</div>';
+  }
 
   // ---- as fontes, sem leitura nova -----------------------------------------------------
   function hojeChamadaMapa(){
@@ -35811,6 +36314,7 @@
     var hoje=(typeof zHojeISO==='function')?zHojeISO():'';
     var cham=hojeChamadaMapa()||{}, ck=hojeCheckinMapa()||{};
     var resp=hojeRespPorChave();
+    var agoraAnt=Date.now();
     var out=[], vistos={};
     var turma=[];
     try{ turma=turmaDeHoje()||[]; }
@@ -35831,13 +36335,30 @@
       catch(e){ remedio=false; } /* silencioso de propósito: sem a linha do remédio a lista segue */
       var pend=hojePendDe(chave);
       var respostas=resp[chave]||[];
+      // "APROVEITANDO QUE ELE ESTÁ AQUI" (24/set/2026): o que vence DEPOIS de hoje e ANTES
+      // da próxima vinda dele. A pergunta é de hoje porque amanhã ele já não está aqui.
+      var ant={proxima:null, itens:[]};
+      try{ ant=hojeAntecipar(ex, p, hoje)||ant; }
+      catch(e){ ant={proxima:null, itens:[]}; } /* silencioso de propósito: ficha estranha não derruba a lista inteira */
+      var antReg=null;
+      try{ antReg=vencRegDeDia(hoje, chave)||{}; }
+      catch(e){ antReg={}; } /* silencioso de propósito: sem o registro a pergunta aparece como ainda não feita */
+      var antGrupos=hojeAntGrupos(ant.itens);
+      var antAbertos=antGrupos.filter(function(g){ return hojeAntAberto(antReg, g.tipo, agoraAnt); })
+                              .map(function(g){ return g.tipo; });
       out.push({chave:chave, p:p, i:(typeof o.i==='number')?o.i:-1,
         nome:(typeof pelNome==='function'?pelNome(p):'')||p.n||'',
         raca:(typeof pelGet==='function'?pelGet(p,'raca'):'')||p.raca||'',
         tutor:(typeof pelGet==='function'?pelGet(p,'tutor'):'')||p.tutor||'',
+        // sexo e telefone entram porque a MENSAGEM ao tutor precisa dos dois: sem o sexo
+        // sairia "Como está o Lana?", e sem o telefone a consultora teria de procurar a ficha.
+        sexo:(typeof pelGet==='function'?pelGet(p,'sexo'):'')||p.sexo||'',
+        tel:(typeof poTelDoTutor==='function')?poTelDoTutor(p):'',
         fonte:fonte, hora:hojeHoraDe(chave, ck),
         itens:itens, remedio:remedio, pend:pend, respostas:respostas,
-        pesa:(itens.length+pend.length+respostas.length)});
+        proxima:ant.proxima, antec:ant.itens, antGrupos:antGrupos,
+        antAbertos:antAbertos, antReg:antReg,
+        pesa:(itens.length+pend.length+respostas.length+antAbertos.length)});
     });
     // Quem tem pendência vem PRIMEIRO; dentro de cada grupo, ordem alfabética. É a ordem em
     // que a recepção trabalha: resolve o que está devendo, e o resto é conferência.
@@ -35853,6 +36374,7 @@
   function hojeFiltrada(L, filtro){
     filtro=filtro||'todos';
     if(filtro==='todos') return L;
+    if(filtro==='fazer') return L.filter(function(o){ return (o.antAbertos||[]).length>0; });
     if(filtro==='pend') return L.filter(function(o){ return o.pesa>0; });
     return L.filter(function(o){ return (o.itens||[]).some(function(x){ return hojeFamilia(x)===filtro; }); });
   }
@@ -35860,14 +36382,21 @@
   function hojeContagem(){
     if(typeof PELUDINHOS==='undefined'||!Array.isArray(PELUDINHOS)||!PELUDINHOS.length) return null;
     var L=hojeLista();
-    return {total:L.length, comPendencia:L.filter(function(o){ return o.pesa>0; }).length};
+    return {total:L.length, comPendencia:L.filter(function(o){ return o.pesa>0; }).length,
+            // "fazer hoje" SEM resposta ainda (24/set/2026). Entra na conta do menu porque é
+            // o trabalho que morre no fim do dia: amanhã ele não está mais aqui.
+            fazerHoje:L.filter(function(o){ return (o.antAbertos||[]).length>0; }).length};
   }
   function hojeAtualizarBadge(){
     var el=document.getElementById('navHojeN'); if(!el) return;
     var c=null;
     try{ c=hojeContagem(); }
     catch(e){ c=null; } /* silencioso de propósito: enfeite de menu — falhar não muda dado nenhum */
-    el.textContent=(!c||!c.comPendencia)?'':('('+c.comPendencia+')');
+    // O número é o de PRESENTES COM PENDÊNCIA — e o "fazer hoje" já entra nele, porque
+    // pergunta sem resposta é pendência (hojeLista soma antAbertos no peso). Quando há
+    // pergunta a fazer, o contador diz quantas: é o trabalho que morre no fim do dia.
+    if(!c||!c.comPendencia){ el.textContent=''; return; }
+    el.textContent='('+c.comPendencia+(c.fazerHoje?(' · '+c.fazerHoje+' hoje'):'')+')';
   }
 
   // ---- as frases ----------------------------------------------------------------------
@@ -35898,6 +36427,10 @@
     });
     (o.respostas||[]).forEach(function(x){
       partes.push('sem resposta do tutor: '+String(x.rotulo||'').toLowerCase());
+    });
+    (o.antGrupos||[]).forEach(function(g){
+      if((o.antAbertos||[]).indexOf(g.tipo)<0) return;
+      partes.push('FAZER HOJE? '+hojeFraseAntecipar(o, g, hoje));
     });
     return partes.join(' · ');
   }
@@ -35984,15 +36517,19 @@
     var L=[];
     try{ L=hojeLista(); }
     catch(e){ L=[]; } /* silencioso de propósito: a tela diz o que não soube, nunca fica em branco */
-    var c={total:L.length, comPendencia:L.filter(function(o){ return o.pesa>0; }).length};
+    var c={total:L.length, comPendencia:L.filter(function(o){ return o.pesa>0; }).length,
+           fazerHoje:L.filter(function(o){ return (o.antAbertos||[]).length>0; }).length};
     var F=hojeFiltrada(L, HOJE_FILTRO);
     var dataBR=((typeof fmtBR==='function'?fmtBR(dcDataKey()):'')||dcDataKey());
     var h='<div class="card" style="border-left:4px solid '+(c.comPendencia?'var(--crm-critico)':'var(--z-gold)')+'">'
       +'<h2 style="font-size:19px;margin-bottom:2px">'
-      +c.total+(c.total===1?' presente':' presentes')+' · '+c.comPendencia+' com pendência</h2>'
+      +c.total+(c.total===1?' presente':' presentes')+' · '+c.comPendencia+' com pendência'
+      +(c.fazerHoje?(' · '+c.fazerHoje+' para perguntar hoje'):'')+'</h2>'
       +'<div class="hint">'+escAttr(dataBR)+' — a chamada de hoje, o check-in do corpo, os hóspedes da AuAulândia e os moradores da casa, numa lista só. '
       +'Entra aqui o que <strong>já venceu ou vence hoje</strong>: vacina, vermífugo, carrapaticida, coleira e troca de escova. '
-      +'O que vence nos próximos dias é assunto da tela <strong>Vence amanhã</strong>.</div>';
+      +'E o que vence <strong>antes de ele voltar</strong> aparece em laranja, com a mensagem pronta: '
+      +'aproveitando que ele está na casa, um sim do tutor resolve hoje. '
+      +'O que dá para fazer no próximo dia dele é assunto da tela <strong>Vence amanhã</strong>.</div>';
     h+='<div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:10px">';
     HOJE_FILTROS.forEach(function(f){
       var n=hojeFiltrada(L, f.v).length;
@@ -36018,8 +36555,9 @@
       raiz.innerHTML=h; return;
     }
     h+='<div class="card" style="padding-top:6px">';
+    var agoraH=Date.now();
     F.forEach(function(o){
-      var borda=o.pesa?'var(--crm-critico)':'var(--crm-ok)';
+      var borda=(o.antAbertos||[]).length?'#E08856':(o.pesa?'var(--crm-critico)':'var(--crm-ok)');
       h+='<div style="padding:10px 0 9px;border-top:1px solid var(--line);border-left:3px solid '+borda+';padding-left:10px">'
         +'<div style="display:flex;gap:8px;align-items:baseline;flex-wrap:wrap">'
         +'<strong style="font-size:16px;color:var(--z-blue)">'+escAttr(o.nome)
@@ -36027,9 +36565,9 @@
         +(o.tutor?('<span class="hint" style="margin:0">tutor '+escAttr(o.tutor)+'</span>'):'')
         +'<span class="hint" style="margin:0;color:var(--crm-ok);font-weight:700">'+escAttr(hojeFrasePresenca(o))+'</span>'
         +'</div>';
-      if(!o.pesa){
+      if(!o.pesa && !(o.antec||[]).length){
         h+='<div class="hint" style="margin-top:3px">Nada pendente.</div>';
-      } else {
+      } else if(o.pesa || (o.antec||[]).length){
         var chips=[];
         (o.itens||[]).forEach(function(x){
           chips.push('<span style="color:var(--crm-critico)">⚠ '+escAttr(hojeFraseItem(x, hoje))+'</span>');
@@ -36042,8 +36580,14 @@
         (o.respostas||[]).forEach(function(x){
           chips.push('<span style="color:var(--crm-atencao-text)">sem resposta do tutor: '+escAttr(String(x.rotulo||'').toLowerCase())+'</span>');
         });
-        h+='<div style="margin-top:4px;font-size:13.5px;font-weight:700;color:var(--z-blue);line-height:1.55">'
+        if(chips.length) h+='<div style="margin-top:4px;font-size:13.5px;font-weight:700;color:var(--z-blue);line-height:1.55">'
           +chips.join(' <span style="color:var(--muted)">·</span> ')+'</div>';
+        // "APROVEITANDO QUE ELE ESTÁ AQUI": um bloco por assunto, em destaque, com a
+        // mensagem pronta e os botões de resposta dentro — perguntar não pode custar
+        // outra tela, porque ele vai embora no fim do dia.
+        (o.antGrupos||[]).forEach(function(g){
+          h+=hojeAntBlocoHTML(o, g, hoje, o.antReg||{}, agoraH);
+        });
       }
       h+='</div>';
     });
@@ -36206,9 +36750,29 @@
   function dashAutoDias(n){ return (typeof orcMaisDias==='function')?orcMaisDias((typeof zHojeISO==='function'?zHojeISO():''),n):''; }
   // Compara pelo NOME, não pela linha inteira: a recepção escreve "Ozzy - Lhasa" e o app
   // escreve "Ozzy/Lhasa". São o mesmo FILHOt — lançar de novo criaria uma dupla na TV.
+  // ⚠ 24/set/2026 — com xará, o nome sozinho voltou a mentir: "Maya" são três FILHOts. Quem
+  // tem xará passa a levar o primeiro nome do tutor também aqui — e ele vem do texto, quando
+  // está escrito, ou da FICHA que o texto identifica com segurança (planCasar). Quem NÃO tem
+  // xará continua com a chave de sempre ("tablito"): nenhum registro antigo muda de nome.
+  var DASH_NOMECHAVE_MEMO={}, DASH_NOMECHAVE_N=-1;
   function dashAutoNomeChave(v){
-    var t=String(v||'').split(/[\/\-–—]/)[0];
-    return (typeof jsNorm==='function')?jsNorm(t):String(t).trim().toLowerCase();
+    var s=String(v==null?'':v);
+    // A memória vale enquanto o cadastro for o mesmo: ficha nova pode criar (ou desfazer)
+    // uma xará, e uma resposta guardada de antes diria o contrário do que o app sabe agora.
+    var __n=(typeof PELUDINHOS!=='undefined'&&Array.isArray(PELUDINHOS))?PELUDINHOS.length:0;
+    if(__n!==DASH_NOMECHAVE_N){ DASH_NOMECHAVE_MEMO={}; DASH_NOMECHAVE_N=__n; }
+    if(DASH_NOMECHAVE_MEMO[s]!==undefined) return DASH_NOMECHAVE_MEMO[s];
+    var pp=dashPartesValor(s);
+    var tut=pp.tutor;
+    if(!tut){
+      try{ var m=planCasar(s); if(m&&m.p&&!m.ambiguo&&dashXaraDe(m.p)>1) tut=dashTutorCurto(m.p); }
+      catch(e){ tut=''; } /* silencioso de propósito: sem casamento seguro vale o nome, como sempre foi */
+    }
+    var nm=function(x){ return (typeof jsNorm==='function')?jsNorm(x):String(x||'').trim().toLowerCase(); };
+    var t=String(pp.base||'').split(/[\/\-–—]/)[0];
+    var out=nm(t)+(tut?(' ('+nm(tut)+')'):'');
+    DASH_NOMECHAVE_MEMO[s]=out;
+    return out;
   }
   var DASH_SEM=['dom','seg','ter','qua','qui','sex','sab'];
   function dashAutoVemNoDia(p, iso){
@@ -36258,7 +36822,7 @@
     return det;
   }
   function dashAutoTextoRestricao(p, ex){
-    var base=dashNomeRaca(p);
+    var base=dashNomePlanilha(p);
     var det=dashAutoRestricaoCurta(ex);
     return det?(base+' - '+det):base;
   }
@@ -36286,23 +36850,23 @@
         var ehMorador=(typeof pelCategoria==='function') && pelCategoria(p)==='morador';
         // --- Reposição: quem agendou VOLTAR neste dia
         if(!ehMorador && typeof repAgendaDe==='function' && repAgendaDe(p).indexOf(iso)>=0)
-          out.reposicao.push(dashNomeRaca(p));
+          out.reposicao.push(dashNomePlanilha(p));
         // --- Falta avisada: o dia que gerou o crédito da reposição é o dia da falta
         try{
           if(!ehMorador) (repLancamentos(p)||[]).forEach(function(l){
-            if(l && l.tipo==='credito' && l.data===iso) out.faltas.push(dashNomeRaca(p));
+            if(l && l.tipo==='credito' && l.data===iso) out.faltas.push(dashNomePlanilha(p));
           });
         }catch(e){ _logFalhaGrav('dashAutoCalcular', e); }
         // --- Aniversariante (o app sabe de todos, inclusive dos próximos dias)
         var nasc=String(ex.nasc||p.nasc||'').slice(0,10);
         if(/^\d{4}-\d{2}-\d{2}$/.test(nasc) && nasc.slice(5)===iso.slice(5))
-          out.aniversario.push(dashNomeRaca(p));
+          out.aniversario.push(dashNomePlanilha(p));
         // --- Cliente novo: 45 primeiros dias de matrícula (o período de avaliação)
         var mat=String(ex.matricula||'').slice(0,10);
         if(veio && !ehMorador && /^\d{4}-\d{2}-\d{2}$/.test(mat)){
           var dm=(typeof diasEntreISO==='function')?diasEntreISO(mat,iso):null;
           if(dm===null){ try{ dm=Math.round((new Date(iso+'T12:00:00')-new Date(mat+'T12:00:00'))/86400000); }catch(e){ dm=null; } }
-          if(dm!==null && dm>=0 && dm<=DASH_AUTO_45) out.clienteNovo.push(dashNomeRaca(p));
+          if(dm!==null && dm>=0 && dm<=DASH_AUTO_45) out.clienteNovo.push(dashNomePlanilha(p));
         }
         // --- Auluno com restrição (só quem vem nesse dia — a TV é do dia)
         if(veio && dashAutoTemRestricao(ex)) out.aulunosRestr.push(dashAutoTextoRestricao(p,ex));
@@ -36311,7 +36875,7 @@
         var ad=String(ex.adaptacao_desde||'').slice(0,10);
         if(veio && String(ex.adaptacao_tipo||'')!=='Hospedagem' && /^\d{4}-\d{2}-\d{2}$/.test(ad)){
           var da=null; try{ da=Math.round((new Date(iso+'T12:00:00')-new Date(ad+'T12:00:00'))/86400000); }catch(e){} /* silencioso de propósito: guarda defensiva — se o valor não vier, o anterior continua valendo */
-          if(da!==null && da>=0 && da<=DASH_AUTO_ADAPT) out.adaptacao.push(dashNomeRaca(p));
+          if(da!==null && da>=0 && da<=DASH_AUTO_ADAPT) out.adaptacao.push(dashNomePlanilha(p));
         }
       }catch(e){} /* silencioso de propósito: função opcional, pode não existir nesta tela */
     });
@@ -37401,7 +37965,13 @@
     // A COBRANÇA (Adriana, 21/set/2026): "eu preciso de cobrar". É outra conversa — não o
     // reenvio da primeira, que soaria como se a casa tivesse esquecido de ter mandado.
     {k:'cobranca', id:'cfgVencCobranca', rot:'A cobrança — quando o tutor não responde',
-     dica:'Sai no cartão quando a mensagem já foi mandada e o prazo abaixo passou sem resposta. Aceita as mesmas chaves das outras.'}
+     dica:'Sai no cartão quando a mensagem já foi mandada e o prazo abaixo passou sem resposta. Aceita as mesmas chaves das outras.'},
+    // "APROVEITANDO QUE ELE ESTÁ AQUI" (Adriana, 24/set/2026) — a pergunta feita com o
+    // FILHOt DENTRO da casa, na tela Hoje na Zêluz.
+    {k:'antecipar', id:'cfgVencAntecipar', rot:'Fazer hoje — a pergunta com ele já na casa',
+     dica:'Sai em <strong>Hoje na Zêluz</strong>, para quem está na casa e tem algo vencendo <strong>antes</strong> de voltar. <strong>{item}</strong> traz o nome com o artigo certo, <strong>{vencer}</strong> vira &ldquo;vence&rdquo; ou &ldquo;vencem&rdquo;, <strong>{dia}</strong> é o dia do vencimento e <strong>{volta}</strong> é o próximo dia em que ele vem (fica em branco quando não há vinda marcada).'},
+    {k:'antecipar_vacina', id:'cfgVencAnteciparVacina', rot:'Fazer hoje — vacina',
+     dica:'Só aparece quando hoje é dia de atendimento da nossa Veterinária (segunda a sexta, exceto quinta). <strong>{vacina}</strong> é o nome da vacina.'}
   ];
   function cfgVencRender(){
     var w=document.getElementById('cfgVencWrap'); if(!w) return;
@@ -37416,6 +37986,10 @@
     h+='<div style="margin-top:14px"><label class="cad-lb">Entrar na lista com quantos dias de folga</label>'
       +'<input class="cad-in" inputmode="numeric" id="cfgVencMargem" style="max-width:120px" value="'+vencMargem()+'">'
       +'<div class="hint" style="margin-top:3px">Além do que já venceu, entra o que vence nos próximos N dias contados a partir do dia em que o FILHOt vem. Padrão de fábrica: '+VENC_MARGEM_PADRAO+' dias.</div></div>'
+      // A FOLGA DA ANTECIPAÇÃO — número de negócio, não de código (lei de 22/ago).
+      +'<div style="margin-top:14px"><label class="cad-lb">Antecipar também o que vence até N dias depois da próxima vinda</label>'
+      +'<input class="cad-in" inputmode="numeric" id="cfgVencAntFolga" style="max-width:120px" value="'+hojeFolgaAntecipar()+'">'
+      +'<div class="hint" style="margin-top:3px">Em <strong>Hoje na Zêluz</strong>, a pergunta &ldquo;fazer hoje?&rdquo; nasce para o que vence <strong>antes</strong> do próximo dia em que o FILHOt vem — o que vence depois dá para fazer naquele dia. Com <strong>0</strong> (padrão de fábrica) é só isso. Cada dia a mais empurra a janela um dia para a frente: com 1 entra também o que vence no próprio dia da vinda, com 2 o que vence no dia seguinte, e assim por diante.</div></div>'
       // O PRAZO DA COBRANÇA — número de negócio, não de código.
       +'<div style="margin-top:14px"><label class="cad-lb">Cobrar resposta depois de (horas)</label>'
       +'<input class="cad-in" inputmode="decimal" id="cfgVencCobrancaH" style="max-width:120px" value="'+escAttr(String(vencPrazoCobrancaH()).replace('.',','))+'">'
@@ -37455,6 +38029,7 @@
     });
     var m=document.getElementById('cfgVencMargem'); if(m) m.value=VENC_MARGEM_PADRAO;
     var ch=document.getElementById('cfgVencCobrancaH'); if(ch) ch.value=VENC_COBRANCA_H_PADRAO;
+    var af=document.getElementById('cfgVencAntFolga'); if(af) af.value=HOJE_ANT_FOLGA_PADRAO;
     var ae=document.getElementById('cfgVencAutoEcto'); if(ae) ae.value=VENC_AUTO_ECTO_QTD_PADRAO;
     var ac=document.getElementById('cfgVencAutoCol'); if(ac) ac.value=VENC_AUTO_COL_ONDE_PADRAO;
     var st=document.getElementById('cfgVencSt');
@@ -37485,6 +38060,10 @@
     if(!(margem>0&&margem<=90)){ diz('A folga precisa ser um número de dias entre 1 e 90. Nada foi salvo.','var(--crm-critico)'); return; }
     var cobH=parseFloat(String(((document.getElementById('cfgVencCobrancaH')||{}).value||'')).replace(',','.'));
     if(!(isFinite(cobH)&&cobH>0&&cobH<=240)){ diz('O prazo da cobrança precisa ser um número de horas entre 1 e 240. Nada foi salvo.','var(--crm-critico)'); return; }
+    var antFolgaTxt=String(((document.getElementById('cfgVencAntFolga')||{}).value||'')).replace(/D/g,'');
+    var antFolga=parseInt(antFolgaTxt,10);
+    if(!(antFolgaTxt!=='' && isFinite(antFolga) && antFolga>=0 && antFolga<=30)){
+      diz('A folga da antecipação precisa ser um número de dias entre 0 e 30. Nada foi salvo.','var(--crm-critico)'); return; }
     var autoE=String(((document.getElementById('cfgVencAutoEcto')||{}).value||'')).trim();
     var autoC=String(((document.getElementById('cfgVencAutoCol')||{}).value||'')).trim();
     if(!autoE||!autoC){ diz('Os padrões do lançamento automático não podem ficar em branco — é com eles que o app lança sozinho. Nada foi salvo.','var(--crm-critico)'); return; }
@@ -37499,11 +38078,14 @@
     if(mAntes!==margem) mud.push('folga: '+mAntes+' → '+margem+' dia'+(margem>1?'s':''));
     var cAntes=vencPrazoCobrancaH();
     if(cAntes!==cobH) mud.push('prazo da cobrança: '+cAntes+' → '+cobH+' hora'+(cobH>1?'s':''));
+    var afAntes=hojeFolgaAntecipar();
+    if(afAntes!==antFolga) mud.push('folga da antecipação: '+afAntes+' → '+antFolga+' dia'+(antFolga===1?'':'s'));
     var eAntes=vencAutoEctoQtd(), colAntes=vencAutoColOnde();
     if(eAntes!==autoE) mud.push('carrapaticida no lançamento automático: "'+eAntes+'" → "'+autoE+'"');
     if(colAntes!==autoC) mud.push('coleira no lançamento automático: "'+colAntes+'" → "'+autoC+'"');
     reg.margem=margem;
     reg.cobranca_horas=cobH;
+    reg.antecipar_folga=antFolga;
     reg.auto_ecto_qtd=autoE;
     reg.auto_col_onde=autoC;
     reg.quem=(typeof quemSou==='function'?quemSou():'-');
@@ -37512,7 +38094,8 @@
       VENC_CFG=reg;
       try{ if(mud.length && typeof audit==='function') audit('config-mensagens-prontas',
         mud.join(' · '),{}); }catch(e){} /* silencioso de propósito: o audit() tem bolso próprio e reenvia sozinho — falhar aqui não pode travar a ação */
-      diz(mud.length?'✓ Salvo. A tela Vence amanhã já está usando estes textos.'
+      try{ if(typeof hojeRedesenhar==='function') hojeRedesenhar(); }catch(e){} /* silencioso de propósito: redesenho de tela — falhar não pode derrubar quem chamou */
+      diz(mud.length?'✓ Salvo. As telas Vence amanhã e Hoje na Zêluz já estão usando estes textos.'
                     :'Nada mudou: as mensagens já eram essas.','var(--crm-ok)');
       // NÃO redesenha o cartão: quem acabou de salvar pode estar com o cursor no campo
       // seguinte, e redesenhar tira o cursor da mão de quem está escrevendo. Os campos já
@@ -38699,7 +39282,7 @@
   // nome/raça; ficha sem raça identifica pelo tutor.
   function pelNomeIdent(p){
     if(!p) return '';
-    if(p.raca) return (typeof dashNomeRaca==='function')?dashNomeRaca(p):(String(p.n||'')+'/'+p.raca);
+    if(p.raca) return (typeof dashNomePlanilha==='function')?dashNomePlanilha(p):(String(p.n||'')+'/'+p.raca);
     return p.tutor?(String(p.n||'')+' ('+p.tutor+')'):String(p.n||'');
   }
   function urgenciasGestao(){
