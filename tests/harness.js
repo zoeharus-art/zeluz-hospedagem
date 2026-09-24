@@ -3744,8 +3744,8 @@ async function main() {
     check('v-25 · a auditoria da tabela diz o que mudou, de quanto para quanto',
       /audit\('orcamento-precos',\s*\n?\s*mudou\.length\?\('alterou a tabela de hospedagem — '\+mudou\.join/.test(html)
       && /\{antes:antes, depois:novo\}/.test(html));
-    check('v-25 · a versão carimbada desta entrega é a 2026-09-24-05',
-      /const APP_VERSAO='2026-09-24-05';/.test(html));
+    check('v-25 · a versão carimbada desta entrega é a 2026-09-24-06',
+      /const APP_VERSAO='2026-09-24-06';/.test(html));
   }
   console.log('');
 
@@ -4041,8 +4041,8 @@ async function main() {
       && html.indexOf('sem valor registrado ficaram de fora') > 0
       && html.indexOf('Ainda estou lendo os avulsos lançados no mês') > 0);
 
-    check('v-26 · a versão carimbada desta entrega é a 2026-09-24-05',
-      /const APP_VERSAO='2026-09-24-05';/.test(html));
+    check('v-26 · a versão carimbada desta entrega é a 2026-09-24-06',
+      /const APP_VERSAO='2026-09-24-06';/.test(html));
   }
   console.log('');
 
@@ -4425,8 +4425,8 @@ async function main() {
       }
     } else { check('v-27 · orcRenderConfig existe', false, 'função não encontrada'); }
 
-    check('v-27 · a versão carimbada desta entrega é a 2026-09-24-05',
-      /const APP_VERSAO='2026-09-24-05';/.test(html));
+    check('v-27 · a versão carimbada desta entrega é a 2026-09-24-06',
+      /const APP_VERSAO='2026-09-24-06';/.test(html));
   }
   console.log('');
 
@@ -4449,14 +4449,16 @@ async function main() {
       return (i < 0 || j < 0) ? '' : html.slice(i, j);
     };
     const doDayCare28 = fatiaV28('c-daycare', 'operacao');
-    check('v-28 · o item "Vence amanhã" existe em Central Zêluz › Day Care',
-      /<a data-v="vencimentos"[^>]*>[\s\S]{0,320}?<span>Vence amanhã<\/span>/.test(doDayCare28),
+    // 24/set/2026: "Vence amanhã" virou "Vencimentos" — sub-sanfona com os dias da semana.
+    check('v-28 · o item "Vencimentos" existe em Central Zêluz › Day Care',
+      /<a data-v="vencimentos"[^>]*>[\s\S]{0,320}?<span>Vencimentos<\/span>/.test(doDayCare28),
       doDayCare28.slice(0, 200));
     check('v-28 · ele mora colado em Prevenção — é a outra metade do mesmo trabalho',
       doDayCare28.indexOf('data-v="vacinas"') < doDayCare28.indexOf('data-v="vencimentos"')
       && doDayCare28.indexOf('data-v="vencimentos"') < doDayCare28.indexOf('data-v="emporio"'));
     check('v-28 · nasce escondido e quem o revela é a tabela PERM — nenhuma classe so-* nova',
-      /<a data-v="vencimentos" style="display:none"/.test(html)
+      /<a data-v="vencimentos"[^>]*style="display:none"/.test(html)
+      && !/<a data-v="vencimentos"[^>]*class="[^"]*\bso-/.test(html)
       && html.indexOf("['vencimentos','vencimentos-amanha']") > 0);
     check('v-28 · a tabela PERM_MENU continua terminando no Dashboard da Adriana',
       html.indexOf("['painel-diretoria','painel-diretoria']];") > 0);
@@ -4468,16 +4470,16 @@ async function main() {
     vm.runInContext('__nav28 = NAV_PAGINAS_ALL;', ctx);
     const doGrupo28 = (ctx.__nav28 || []).find((g) => g.grp === 'Central Zêluz · Day Care');
     check('v-28 · a tela do Time também o concede, no MESMO grupo e com o MESMO rótulo',
-      !!doGrupo28 && doGrupo28.itens.some((i) => i.k === 'vencimentos' && i.t === 'Vence amanhã'),
+      !!doGrupo28 && doGrupo28.itens.some((i) => i.k === 'vencimentos' && i.t === 'Vencimentos'),
       JSON.stringify(doGrupo28 && doGrupo28.itens));
     check('v-28 · o rótulo do sidebar e o da tela do Time são a MESMA frase, letra por letra',
       (() => {
         const m = html.match(/<a[^>]*data-v="vencimentos"[^>]*>[\s\S]*?<\/a>/);
         const spans = m ? (m[0].match(/<span>([^<]+)<\/span>/g) || []) : [];
-        return spans.length === 1 && spans[0].replace(/<\/?span>/g, '') === 'Vence amanhã';
+        return spans.length === 1 && spans[0].replace(/<\/?span>/g, '') === 'Vencimentos';
       })());
     check('v-28 · o titles{} dá nome e dica à tela (senão o cabeçalho abre vazio)',
-      /vencimentos:\['Vence amanhã'/.test(html));
+      /vencimentos:\['Está vencendo'/.test(html));
     check('v-28 · a tela existe e o gancho de abrir está na lista ÚNICA (aoAbrirView)',
       html.indexOf('<section class="view" id="v-vencimentos">') > 0
       && /if\(v==='vencimentos'\)\{ if\(typeof vencAbrir==='function'\) vencAbrir\(\); \}/.test(html));
@@ -4548,8 +4550,8 @@ async function main() {
         ctx.vencItensDe({ verm_p: '2026-09-25' }, '2026-09-22', 0, '2026-09-21').length === 0
         && ctx.vencItensDe({ verm_p: '2026-09-25' }, '2026-09-22', 7, '2026-09-21').length === 1);
       check('v-28 · a decisão é PURA: não lê banco, não escreve, não desenha',
-        /function vencItensDe\(ex, diaAlvo, margem, hoje\)\{[\s\S]{0,1700}?\n  \}/.test(html)
-        && !/function vencItensDe\([\s\S]{0,1700}?DB\.ref/.test(html));
+        /function vencItensDe\(ex, diaAlvo, margem, hoje, opc\)\{[\s\S]{0,2800}?\n  \}/.test(html)
+        && !/function vencItensDe\([\s\S]{0,2800}?DB\.ref/.test(html));
     } else { check('v-28 · vencItensDe existe', false, 'função não encontrada'); }
 
     // ---- (d) as mensagens prontas, com o texto de Configurações ----------------------
@@ -4647,8 +4649,12 @@ async function main() {
           L28.length > 0 && L28.length <= turma28.length,
           L28.length + ' de ' + turma28.length);
         // Um FILHOt do retrato que VEM na terça e TEM item vencido: tem de estar na lista.
-        const comVenc28 = turma28.filter((p) => ctx.vencItensDe(ctx.pelExtra(p), '2026-09-22', 7, '2026-09-21').length > 0);
-        const semVenc28 = turma28.filter((p) => ctx.vencItensDe(ctx.pelExtra(p), '2026-09-22', 7, '2026-09-21').length === 0);
+        // 24/set/2026: a tela passou a mostrar também o que NUNCA foi registrado na ficha,
+        // e a régua daqui tem de ser a MESMA da tela — senão o teste cobraria uma verdade
+        // que a tela não tem mais.
+        const itens28 = (p) => ctx.vencItensDe(ctx.pelExtra(p), '2026-09-22', 7, '2026-09-21', { incluirSemRegistro: true });
+        const comVenc28 = turma28.filter((p) => itens28(p).length > 0);
+        const semVenc28 = turma28.filter((p) => itens28(p).length === 0);
         const chaves28 = new Set(L28.map((o) => o.chave));
         check('v-28 · TODO FILHOt do retrato que vem na terça e tem item vencendo está na lista ('
           + comVenc28.length + ')',
@@ -4720,8 +4726,12 @@ async function main() {
         + "zHojeISO = function(){ return '2026-09-21'; };"
         + "quemSou = function(){ return 'Leticya'; };"
         + "PELUDINHOS = [{ n:'Otávio', raca:'Spitz', tutor:'Marcela', dias:['ter'] }];"
+        // A ficha do Otávio é COMPLETA de propósito (24/set/2026): as outras vacinas e a
+        // escova têm data longe, então nada dele cai em 'em aberto — nunca registrado'.
+        // O cartão continua com os MESMOS 3 itens vencendo, e é isso que este bloco mede.
         + "pelCadCache = { 'otávio__marcela': { dias:['ter'], sexo:'M', tutor:'Marcela',"
-        + " verm_p:'2026-09-10', ecto_p:'2026-09-20', vac_raiva_p:'2026-09-24' } };"
+        + " verm_p:'2026-09-10', ecto_p:'2026-09-20', vac_raiva_p:'2026-09-24',"
+        + " vac_mult_p:'2027-05-10', vac_gripe_p:'2027-05-10', escova_p:'2027-05-10' } };"
         + "DASH_DADOS = {}; DASH_DIA_SEL = ''; DASH_DET = {}; DASH_SEL = {}; DASH_SEL_I = {};"
         + "DC_DASH_TURMA = { reposicao: [], avulso: [], quando: 0, dia: '' }; PEND_ABERTAS = {};"
         + "VENC_CFG = {}; VENC_DIA_SEL = ''; VENC_REG = {}; VENC_REG_DIA = '2026-09-22';"
@@ -4910,7 +4920,7 @@ async function main() {
       (html.match(/B\.push\(quadroVence\);/g) || []).length === 3);
     check('v-28 · o quadro da mesa vem da MESMA conta (vencContagem) e leva à tela',
       /var vc=\(typeof vencContagem==='function'\)\?vencContagem\(\):null;/.test(html)
-      && /var quadroVence=mesaBox\(vc===null\?null:vc\.aMandar,'Vence amanhã',/.test(html)
+      && /var quadroVence=mesaBox\(vc===null\?null:vc\.aMandar,'Vencimentos',/.test(html)
       && /ir\('vencimentos'\)\);/.test(html));
     check('v-28 · enquanto o dia não desceu o quadro mostra "…" — nunca afirma que não há nada',
       /mesaBox\(vc===null\?null:vc\.aMandar/.test(html)
@@ -4960,8 +4970,9 @@ async function main() {
       && html.indexOf('else cfgVencRender();') > 0
       && (html.match(/cfgVencRender\(\)/g) || []).length === 2);
     check('v-28 · salvar sem dizer O QUE está vencendo é recusado, mensagem por mensagem',
-      html.indexOf('As duas mensagens de vacina precisam conter {vacina}') > 0
+      html.indexOf('As três mensagens de vacina precisam conter {vacina}') > 0
       && html.indexOf('precisa conter {item}') > 0
+      && html.indexOf('precisa conter {itens_abertos}') > 0
       && html.indexOf('está em branco. Use o botão de fábrica se quiser recomeçar.') > 0);
     check('v-28 · folga fora de 1..90 é recusada — prazo inventado vira lista mentirosa',
       html.indexOf('A folga precisa ser um número de dias entre 1 e 90.') > 0);
@@ -5039,8 +5050,8 @@ async function main() {
         delete ctx.document.activeElement; delete ctx.__focoAuto;
       }
     } else { check('v-28 · vencRedesenhoAuto existe', false, 'função não encontrada'); }
-    check('v-28 · a versão carimbada desta entrega é a 2026-09-24-05',
-      /const APP_VERSAO='2026-09-24-05';/.test(html));
+    check('v-28 · a versão carimbada desta entrega é a 2026-09-24-06',
+      /const APP_VERSAO='2026-09-24-06';/.test(html));
   }
   console.log('');
 
@@ -5885,8 +5896,12 @@ async function main() {
       check('menu: categoria ' + c.chave + ' tem ícone', /data-icon="[a-z]+"/.test(c.dentro), c.dentro.slice(0, 60));
       check('menu: categoria ' + c.chave + ' tem seta', /acc-caret/.test(c.dentro));
     });
+    // 24/set/2026: o pai que TAMBÉM é tela (Vencimentos, com data-v) abre a gaveta E navega.
+    // Categoria e sub-cabeçalho não têm data-v e continuam só abrindo, como sempre.
     check('menu: clicar na categoria abre/fecha (o listener do nav trata nav-parent)',
-      /classList\.contains\('nav-parent'\)\)\{ toggleAcc\(a\); return; \}/.test(html));
+      /classList\.contains\('nav-parent'\)\)\{ toggleAcc\(a\); if\(!a\.dataset\.v\) return; \}/.test(html));
+    check('menu: o pai que também é tela (Vencimentos) abre a gaveta E leva à tela — função enterrada é função inexistente',
+      /<a data-v="vencimentos" class="nav-parent"/.test(html));
     check('menu: o estado de aberto/fechado fica guardado',
       /localStorage\.setItem\('zeluz_acc_'\+k/.test(html) && /localStorage\.getItem\('zeluz_acc_'\+acc\.dataset\.acc\)/.test(html));
     check('menu: ao entrar, abre a corrente inteira (categoria E sub-cabeçalho) da tela ativa',
@@ -13746,7 +13761,11 @@ async function main() {
     const iCentral = nav12.indexOf('data-acc-toggle="central"');
     const iOperacao = nav12.indexOf('data-acc-toggle="operacao"');
     const central12 = nav12.slice(iCentral, iOperacao);
-    const ordemCentral = [...central12.matchAll(/data-acc-toggle="(c-[a-z]+)"|<a data-v="([a-z-]+)"/g)]
+    // 24/set/2026: a leitura passou a exigir `grp grp-sub` no sub-cabeçalho. "Vencimentos"
+    // também virou sanfona (data-acc-toggle="c-vencimentos"), mas é um ITEM com os dias
+    // dentro — não uma parte da Central. Sem esta amarra ele apareceria aqui como se fosse
+    // irmão de Peludinhos, AuAulândia e Day Care.
+    const ordemCentral = [...central12.matchAll(/<a class="grp grp-sub nav-parent" data-acc-toggle="(c-[a-z]+)"|<a data-v="([a-z-]+)"/g)]
       .map((m) => m[1] || m[2]);
     // v-07 (08/set/2026, 23h30): "Central Zêluz em três partes — Peludinhos, AuAulândia
     // (todos os itens pertinentes à hospedagem) e Day Care". Nesta ordem.
@@ -14189,7 +14208,8 @@ async function main() {
       (() => {
         const i = html.indexOf('data-acc-toggle="central"');
         const f = html.indexOf('data-acc-toggle="operacao"');
-        const partes = [...html.slice(i, f).matchAll(/data-acc-toggle="(c-[a-z]+)"/g)].map((m) => m[1]);
+        // só os SUB-CABEÇALHOS (grp grp-sub): "Vencimentos" é sanfona, mas é item (24/set).
+        const partes = [...html.slice(i, f).matchAll(/<a class="grp grp-sub nav-parent" data-acc-toggle="(c-[a-z]+)"/g)].map((m) => m[1]);
         return JSON.stringify(partes) === JSON.stringify(['c-peludinhos', 'c-auaulandia', 'c-daycare']);
       })());
 
@@ -14647,7 +14667,7 @@ async function main() {
         !/\.catch\(function\([a-z]*\)\{\s*\}\)/.test(
           html.slice(html.indexOf('const CK_FRASE_PRATICA='), html.indexOf('function renderCkInicio('))));
       check('v-14 · a versão carimbada é a desta entrega',
-        /const APP_VERSAO='2026-09-24-05';/.test(html));
+        /const APP_VERSAO='2026-09-24-06';/.test(html));
     }
 
     // ---- v-15: O PLANO SÓ GRAVA NO CONFIRMAR (caso Cookie/Yara, 15/set/2026) --------
@@ -15463,8 +15483,8 @@ async function main() {
           + 'AVISO_COLEIRA_APOS = __bkpC.apos;', ctx);
       }
     } else { check('v-17 · prevCfgCarregar existe', false, 'função não encontrada'); }
-    check('v-24 · a versão carimbada desta entrega é a 2026-09-24-05',
-      /const APP_VERSAO='2026-09-24-05';/.test(html));
+    check('v-24 · a versão carimbada desta entrega é a 2026-09-24-06',
+      /const APP_VERSAO='2026-09-24-06';/.test(html));
 
     // ───────── v-19 · o aparelho autorizado que não se perde no iPhone (16/set/2026)
     // Auditoria de 16/set: o iPhone da Leticya gerou DOIS ids em trinta segundos
@@ -15718,8 +15738,8 @@ async function main() {
       String((html.match(/linhaBuscaCadastro\(/g) || []).length));
     check('v-29 · a linha tem estilo próprio: menor, em var(--muted), e quebrando no celular',
       /table\.pel \.pel-busca-sub\{[^}]*font-size:11\.5px[^}]*color:var\(--muted\)[^}]*white-space:normal/.test(html));
-    check('v-29 · a versão carimbada desta entrega é a 2026-09-24-05',
-      /const APP_VERSAO='2026-09-24-05';/.test(html));
+    check('v-29 · a versão carimbada desta entrega é a 2026-09-24-06',
+      /const APP_VERSAO='2026-09-24-06';/.test(html));
   }
   console.log('');
 
@@ -16021,8 +16041,8 @@ async function main() {
         ctx.vermNumTexto(5) === '5' && ctx.vermNumTexto(0.3) === '0,3' && ctx.vermNumTexto(4.5) === '4,5',
         JSON.stringify([ctx.vermNumTexto(5), ctx.vermNumTexto(0.3)]));
     } else { check('v-30 · vermNumLer existe', false, 'função não encontrada'); }
-    check('v-30 · a versão carimbada desta entrega é a 2026-09-24-05',
-      /const APP_VERSAO='2026-09-24-05';/.test(html));
+    check('v-30 · a versão carimbada desta entrega é a 2026-09-24-06',
+      /const APP_VERSAO='2026-09-24-06';/.test(html));
   }
   console.log('');
 
@@ -16285,8 +16305,8 @@ async function main() {
       && html.indexOf('A frase pronta fala em &ldquo;vence&rdquo; — confira antes de mandar.') > 0
       && /if\(\(m\.itens\|\|\[\]\)\.some\(function\(x\)\{ return x\.atrasado; \}\)\)/.test(html));
 
-    check('v-31 · a versão carimbada desta entrega é a 2026-09-24-05',
-      /const APP_VERSAO='2026-09-24-05';/.test(html));
+    check('v-31 · a versão carimbada desta entrega é a 2026-09-24-06',
+      /const APP_VERSAO='2026-09-24-06';/.test(html));
   }
   // ===== v-32 · O CALENDÁRIO, A COBRANÇA E A RESPOSTA QUE LANÇA SOZINHA ============
   // Adriana, 21/set/2026, palavra por palavra:
@@ -16422,8 +16442,12 @@ async function main() {
         + "zHojeISO = function(){ return '2026-09-21'; };"
         + "quemSou = function(){ return 'Leticya'; };"
         + "PELUDINHOS = [{ n:'Otávio', raca:'Spitz', tutor:'Marcela', dias:['ter'] }];"
+        // FICHA COMPLETA de propósito (24/set/2026): desde que o app passou a mostrar o
+        // que NUNCA foi registrado, ficha em branco vira pendência — e este bloco mede
+        // outra coisa. As datas longe deixam o item registrado e fora da janela.
         + "pelCadCache = { 'otávio__marcela': { dias:['ter'], sexo:'M', tutor:'Marcela',"
         + " verm_p:'2026-09-10', ecto_p:'2026-09-20', col_p:'2026-09-22', col_nome:'Seresto',"
+        + " vac_mult_p:'2027-05-10', vac_gripe_p:'2027-05-10', escova_p:'2027-05-10',"
         + " vac_raiva_p:'2026-09-24', pesos:[{ data:'2026-09-20', kg:6.5, quem:'Amanda' }] } };"
         + 'DASH_DADOS = {}; DASH_DIA_SEL = \'\'; DASH_DET = {}; DASH_SEL = {}; DASH_SEL_I = {};'
         + "DC_DASH_TURMA = { reposicao: [], avulso: [], quando: 0, dia: '' }; PEND_ABERTAS = {};"
@@ -16751,8 +16775,8 @@ async function main() {
       }
     } else { check('v-32 · vencResponderTipo e dashLancar existem', false, 'função não encontrada'); }
 
-    check('v-32 · a versão carimbada desta entrega é a 2026-09-24-05',
-      /const APP_VERSAO='2026-09-24-05';/.test(html));
+    check('v-32 · a versão carimbada desta entrega é a 2026-09-24-06',
+      /const APP_VERSAO='2026-09-24-06';/.test(html));
   }
   console.log('');
 
@@ -17163,8 +17187,8 @@ async function main() {
       && /DB\.ref\('daycare\/vagas-pedidos'\)\.on\('value'/.test(html)
       && /try\{ vagasPedCarregar\(\); \}catch\(e\)\{\}/.test(html));
 
-    check('v-33 · a versão carimbada desta entrega é a 2026-09-24-05',
-      /const APP_VERSAO='2026-09-24-05';/.test(html));
+    check('v-33 · a versão carimbada desta entrega é a 2026-09-24-06',
+      /const APP_VERSAO='2026-09-24-06';/.test(html));
   }
   console.log('');
 
@@ -17480,8 +17504,8 @@ async function main() {
       && /URL\.createObjectURL\(f\)/.test(html) && /URL\.revokeObjectURL\(url\)/.test(html)
       && /createImageBitmap\(f,\{resizeWidth:CK_FOTO_MAX, resizeQuality:'medium', imageOrientation:'from-image'\}\)/.test(html)
       && /if\(bmp && bmp\.close\) bmp\.close\(\)/.test(html));
-    check('v-34 · a versão carimbada desta entrega é a 2026-09-24-05',
-      /const APP_VERSAO='2026-09-24-05';/.test(html));
+    check('v-34 · a versão carimbada desta entrega é a 2026-09-24-06',
+      /const APP_VERSAO='2026-09-24-06';/.test(html));
   }
   console.log('');
 
@@ -17838,8 +17862,8 @@ async function main() {
       && /if\(\(prev\.motivo\|\|''\)!==\(it\.motivo\|\|''\)\) mud\.push\('para quê'\);/.test(html)
       && ctx.medDiffAcao({ nome: 'Enalapril', horarios: ['17:45'] },
                          { nome: 'Enalapril', horarios: ['17:45'], quando: { ref: 'jantar', rel: 'antes', min: 45 } }) === 'Alterou quando dar');
-    check('v-35 · a versão carimbada desta entrega é a 2026-09-24-05',
-      /const APP_VERSAO='2026-09-24-05';/.test(html));
+    check('v-35 · a versão carimbada desta entrega é a 2026-09-24-06',
+      /const APP_VERSAO='2026-09-24-06';/.test(html));
   }
   console.log('');
 
@@ -18091,8 +18115,8 @@ async function main() {
       && /delete rQ\.fim_anterior;/.test(html));
     check('v-36 · vigência que não é mais do meio do mês não herda o "para onde voltar"',
       /if\(!regMMConf\) delete novo\.fim_anterior;/.test(html));
-    check('v-36 · a versão carimbada desta entrega é a 2026-09-24-05',
-      /const APP_VERSAO='2026-09-24-05';/.test(html));
+    check('v-36 · a versão carimbada desta entrega é a 2026-09-24-06',
+      /const APP_VERSAO='2026-09-24-06';/.test(html));
   }
   console.log('');
 
@@ -18309,8 +18333,8 @@ async function main() {
         !/dcLancamentosNaoCasados[\s\S]{0,900}'avaliacao'/.test(html));
     } else { check('v-38 · dashForaDoCadastro existe', false, 'função não encontrada'); }
 
-    check('v-38 · a versão carimbada desta entrega é a 2026-09-24-05',
-      /const APP_VERSAO='2026-09-24-05';/.test(html));
+    check('v-38 · a versão carimbada desta entrega é a 2026-09-24-06',
+      /const APP_VERSAO='2026-09-24-06';/.test(html));
   }
   console.log('');
 
@@ -18683,8 +18707,8 @@ async function main() {
     check('v-39 · Recebimentos do mês continua somando o avulso pelo det.valor_cent — sem exceção para quem não tem ficha',
       html.indexOf("var o=lista[id]||{}, v=((o.det||{}).valor_cent);") > 0);
 
-    check('v-39 · a versão carimbada desta entrega é a 2026-09-24-05',
-      /const APP_VERSAO='2026-09-24-05';/.test(html));
+    check('v-39 · a versão carimbada desta entrega é a 2026-09-24-06',
+      /const APP_VERSAO='2026-09-24-06';/.test(html));
   }
   console.log('');
 
@@ -18931,8 +18955,8 @@ async function main() {
       }
     } else { check('v-40 · ocupantesDoDia existe', false, 'função não encontrada'); }
 
-    check('v-40 · a versão carimbada desta entrega é a 2026-09-24-05',
-      /const APP_VERSAO='2026-09-24-05';/.test(html));
+    check('v-40 · a versão carimbada desta entrega é a 2026-09-24-06',
+      /const APP_VERSAO='2026-09-24-06';/.test(html));
   }
   console.log('');
 
@@ -19380,8 +19404,8 @@ async function main() {
       }
     }
 
-    check('v-41 · a versão carimbada desta entrega é a 2026-09-24-05',
-      /const APP_VERSAO='2026-09-24-05';/.test(html));
+    check('v-41 · a versão carimbada desta entrega é a 2026-09-24-06',
+      /const APP_VERSAO='2026-09-24-06';/.test(html));
   }
   console.log('');
 
@@ -19584,8 +19608,8 @@ async function main() {
       } finally { Object.keys(bkp42).forEach((k) => { ctx[k] = bkp42[k]; }); }
     }
 
-    check('v-42 · a versão carimbada desta entrega é a 2026-09-24-05',
-      /const APP_VERSAO='2026-09-24-05';/.test(html));
+    check('v-42 · a versão carimbada desta entrega é a 2026-09-24-06',
+      /const APP_VERSAO='2026-09-24-06';/.test(html));
   }
   console.log('');
 
@@ -19906,8 +19930,8 @@ async function main() {
 
     vm.runInContext('pelCadCache = __bkp43cadG;', ctx);
 
-    check('v-43 · a versão carimbada desta entrega é a 2026-09-24-05',
-      /const APP_VERSAO='2026-09-24-05';/.test(html));
+    check('v-43 · a versão carimbada desta entrega é a 2026-09-24-06',
+      /const APP_VERSAO='2026-09-24-06';/.test(html));
   }
   console.log('');
 
@@ -20066,6 +20090,12 @@ async function main() {
     if (typeof ctx.hojeLista === 'function') {
       vm.runInContext('__hojeDia44 = HOJE_DIA;', ctx);
       const DIA44 = ctx.__hojeDia44;
+      // FICHA COMPLETA de propósito (24/set/2026): desde que o app mostra o que NUNCA foi
+      // registrado, ficha em branco vira pendência — e 'a Amora está limpa' deixaria de ser
+      // verdade. LONGE44 registra tudo com data longe (fora da janela); as datas de verdade
+      // de cada FILHOt vêm DEPOIS no literal e sobrescrevem o que precisa vencer.
+      const LONGE44 = "vac_mult_p:'2027-05-10', vac_gripe_p:'2027-05-10', vac_raiva_p:'2027-05-10',"
+        + " verm_p:'2027-05-10', ecto_p:'2027-05-10', escova_p:'2027-05-10', ";
       vm.runInContext(
         '__bkp44b = { pel: PELUDINHOS, cad: pelCadCache, hoje: zHojeISO, dk: dcDataKey,'
         + '  mapas: Z_MAPAS, pend: PEND_ABERTAS, vp: VENC_PEND, med: MED_AGENDA_GERAL,'
@@ -20080,12 +20110,12 @@ async function main() {
         + "  { n:'Amora', raca:'Shih Tzu', tutor:'Lucia', dias:['" + DIA44 + "'] },"
         + "  { n:'Zeus', raca:'Pastor', tutor:'Paulo', dias:['" + DIA44 + "'] } ];"
         + 'pelCadCache = {'
-        + "  'simba__thais': { dias:['" + DIA44 + "'], tutor:'Thais',"
+        + "  'simba__thais': { " + LONGE44 + "dias:['" + DIA44 + "'], tutor:'Thais',"
         + "    vac_raiva_p:'2026-03-24', verm_p:'2026-08-20', ecto_p:'2026-09-01',"
         + "    col_p:'2026-09-10', col_nome:'Seresto', escova_p:'2026-09-05' },"
-        + "  'batata__roberta': { dias:['" + DIA44 + "'], tutor:'Roberta', ecto_p:'2026-09-15' },"
-        + "  'amora__lucia': { dias:['" + DIA44 + "'], tutor:'Lucia' },"
-        + "  'zeus__paulo': { dias:['" + DIA44 + "'], tutor:'Paulo', verm_p:'2026-01-01' } };"
+        + "  'batata__roberta': { " + LONGE44 + "dias:['" + DIA44 + "'], tutor:'Roberta', ecto_p:'2026-09-15' },"
+        + "  'amora__lucia': { " + LONGE44 + "dias:['" + DIA44 + "'], tutor:'Lucia' },"
+        + "  'zeus__paulo': { " + LONGE44 + "dias:['" + DIA44 + "'], tutor:'Paulo', verm_p:'2026-01-01' } };"
         + 'Z_MAPAS = {};'
         + "Z_MAPAS['daycare/chamada/2026-09-24'] = { mapa: { simba__thais:'veio',"
         + "  amora__lucia:'veio', zeus__paulo:'faltou' } };"
@@ -20182,8 +20212,8 @@ async function main() {
       }
     } else { check('v-44 · hojeLista existe', false, 'função ausente'); }
 
-    check('v-44 · a versão carimbada desta entrega é a 2026-09-24-05',
-      /const APP_VERSAO='2026-09-24-05';/.test(html));
+    check('v-44 · a versão carimbada desta entrega é a 2026-09-24-06',
+      /const APP_VERSAO='2026-09-24-06';/.test(html));
   }
   console.log('');
 
@@ -20397,6 +20427,8 @@ async function main() {
       };
       const VOLTA45 = maisDias(HOJE45, 7);
       const VENCE45 = maisDias(HOJE45, 2);
+      const LONGE45 = "vac_mult_p:'2027-05-10', vac_gripe_p:'2027-05-10', vac_raiva_p:'2027-05-10',"
+        + " verm_p:'2027-05-10', ecto_p:'2027-05-10', escova_p:'2027-05-10', ";
       const db45 = criarDBComPush({});
       const v45 = { rastro: [] };
       ctx.__v45 = v45; ctx.__v45db = db45;
@@ -20414,10 +20446,14 @@ async function main() {
         + "quemSou = function(){ return 'Leticya'; };"
         + "PELUDINHOS = [ { n:'Cookie', raca:'SRD', tutor:'Ana Paula', dias:['" + DIA45 + "'] },"
         + "  { n:'Amora', raca:'Shih Tzu', tutor:'Lucia', dias:['" + DIA45 + "'] } ];"
-        + "pelCadCache = { 'cookie__ana paula': { dias:['" + DIA45 + "'], tutor:'Ana Paula', sexo:'F',"
+        // FICHA COMPLETA de propósito (24/set/2026): com o app mostrando também o que
+        // NUNCA foi registrado, ficha em branco viraria pendência — e o que este bloco
+        // mede é a ANTECIPAÇÃO, não o item em aberto. LONGE45 registra tudo com data
+        // longe; o que precisa vencer vem depois e sobrescreve.
+        + "pelCadCache = { 'cookie__ana paula': { " + LONGE45 + "dias:['" + DIA45 + "'], tutor:'Ana Paula', sexo:'F',"
         + "    ecto_p:'" + VENCE45 + "', verm_p:'" + VENCE45 + "',"
         + "    pesos:[{ data:'" + HOJE45 + "', kg:6.5, quem:'Amanda' }] },"
-        + "  'amora__lucia': { dias:['" + DIA45 + "'], tutor:'Lucia' } };"
+        + "  'amora__lucia': { " + LONGE45 + "dias:['" + DIA45 + "'], tutor:'Lucia' } };"
         + 'Z_MAPAS = {};'
         + "Z_MAPAS['daycare/chamada/" + HOJE45 + "'] = { mapa: { 'cookie__ana-paula':'veio', amora__lucia:'veio' } };"
         + "Z_MAPAS['daycare/checkin-corpo/" + HOJE45 + "'] = { mapa: {} };"
@@ -20691,8 +20727,352 @@ async function main() {
       }
     } else { check('v-45 · dashNomePlanilha existe', false, 'função ausente'); }
 
-    check('v-45 · a versão carimbada desta entrega é a 2026-09-24-05',
-      /const APP_VERSAO='2026-09-24-05';/.test(html));
+    check('v-45 · a versão carimbada desta entrega é a 2026-09-24-06',
+      /const APP_VERSAO='2026-09-24-06';/.test(html));
+  }
+  console.log('');
+
+  // ---- v-46: "Está vencendo" — os dias no menu, o que está EM ABERTO e o agendamento --
+  console.log('v-46 · Vencimentos: os dias no sidebar, o "em aberto" e a vacina agendada (24/set):');
+  {
+    // ---- (a) o MENU: sub-sanfona com os seis dias, e o espelho intacto ---------------
+    const fatia46 = (() => {
+      const i = html.indexOf('data-acc="c-vencimentos"');
+      const j = html.indexOf('</div>', html.indexOf('id="navVencDias"'));
+      return (i < 0 || j < 0) ? '' : html.slice(i, j);
+    })();
+    check('v-46 · "Vencimentos" virou sub-sanfona: o pai é nav-parent e abre a gaveta c-vencimentos',
+      /<a data-v="vencimentos" class="nav-parent" data-acc-toggle="c-vencimentos"/.test(html)
+      && /<div class="acc" data-acc="c-vencimentos" data-acc-perm="vencimentos">/.test(html),
+      fatia46.slice(0, 160));
+    const dias46 = [...fatia46.matchAll(/<a class="nav-dia" data-vdia="([a-z]+)"[^>]*>([^<]+)<\/a>/g)]
+      .map((m) => m[1] + ':' + m[2]);
+    check('v-46 · e a gaveta traz os SEIS filhos, na ordem dela: Hoje e os cinco dias da semana',
+      JSON.stringify(dias46) === JSON.stringify(['hoje:Hoje', 'seg:Segunda', 'ter:Terça',
+        'qua:Quarta', 'qui:Quinta', 'sex:Sexta']),
+      JSON.stringify(dias46));
+    check('v-46 · cada dia chama vencIrDia — quem navega são os filhos, o pai só abre a gaveta',
+      (fatia46.match(/onclick="vencIrDia\('/g) || []).length === 6
+      && /function vencIrDia\(sigla\)\{/.test(html));
+    // A LEI DOS TRÊS NÍVEIS: o dia é o degrau ABAIXO do item. Filho nunca maior que o pai.
+    const px46 = (re) => { const m = html.match(re); return m ? +m[1] : 0; };
+    check('v-46 · o dia é MENOR que o item, que é menor que o sub-cabeçalho, que é menor que a categoria',
+      px46(/\.nav a\.grp\{font-size:(\d+)px/) === 17
+      && px46(/\.nav a\.grp\.grp-sub\{font-size:(\d+)px/) === 15
+      && px46(/\.nav a\{\n\s*display:flex[\s\S]{0,200}?font-size:(\d+)px/) === 14
+      && px46(/a\.nav-dia:not\(\[data-v\]\):not\(\.nav-parent\)\{[\s\S]{0,180}?font-size:(\d+)px/) === 13,
+      JSON.stringify([px46(/\.nav a\.grp\{font-size:(\d+)px/),
+        px46(/\.nav a\.grp\.grp-sub\{font-size:(\d+)px/),
+        px46(/\.nav a\{\n\s*display:flex[\s\S]{0,200}?font-size:(\d+)px/),
+        px46(/a\.nav-dia:not\(\[data-v\]\):not\(\.nav-parent\)\{[\s\S]{0,180}?font-size:(\d+)px/)]));
+    // O ESPELHO: o data-v não mudou, então a permissão e a tela do Time continuam achando
+    // esta tela. E a gaveta INTEIRA se esconde com o pai — senão os dias ficariam à mostra.
+    vm.runInContext('__nav46 = NAV_PAGINAS_ALL;', ctx);
+    const dc46 = (ctx.__nav46 || []).find((g) => g.grp === 'Central Zêluz · Day Care');
+    check('v-46 · o espelho da tela do Time diz o MESMO do sidebar: chave vencimentos, rótulo "Vencimentos"',
+      !!dc46 && dc46.itens.some((i) => i.k === 'vencimentos' && i.t === 'Vencimentos')
+      && html.indexOf("['vencimentos','vencimentos-amanha']") > 0,
+      JSON.stringify(dc46 && dc46.itens));
+    check('v-46 · sem permissão, a GAVETA some junto com o pai — os dias não ficam à mostra',
+      /document\.querySelectorAll\('#nav \.acc\[data-acc-perm="'\+par\[0\]\+'"\]'\)/.test(html));
+    check('v-46 · abrirItemDoMenu não confunde o pai com um item: abre a gaveta e navega pela porta de sempre',
+      /if\(a && a\.classList\.contains\('nav-parent'\)\)\{/.test(html));
+
+    // ---- (b) a PRÓXIMA OCORRÊNCIA de cada dia ---------------------------------------
+    if (typeof ctx.vencProximaOcorrencia === 'function') {
+      vm.runInContext('__bkp46a = { hoje: zHojeISO, fer: orcFeriadosCfg };'
+        + "zHojeISO = function(){ return '2026-09-24'; }; orcFeriadosCfg = null;", ctx);
+      try {
+        // 24/09/2026 é uma QUINTA-feira.
+        check('v-46 · hoje é quinta: "Quinta" é HOJE mesmo — não a semana que vem',
+          ctx.vencProximaOcorrencia('qui', '2026-09-24') === '2026-09-24',
+          ctx.vencProximaOcorrencia('qui', '2026-09-24'));
+        check('v-46 · "Sexta" é amanhã (25/09) e "Segunda" é a que vem (28/09)',
+          ctx.vencProximaOcorrencia('sex', '2026-09-24') === '2026-09-25'
+          && ctx.vencProximaOcorrencia('seg', '2026-09-24') === '2026-09-28',
+          JSON.stringify([ctx.vencProximaOcorrencia('sex', '2026-09-24'),
+            ctx.vencProximaOcorrencia('seg', '2026-09-24')]));
+        check('v-46 · terça e quarta caem na semana seguinte: 29/09 e 30/09',
+          ctx.vencProximaOcorrencia('ter', '2026-09-24') === '2026-09-29'
+          && ctx.vencProximaOcorrencia('qua', '2026-09-24') === '2026-09-30',
+          JSON.stringify([ctx.vencProximaOcorrencia('ter', '2026-09-24'),
+            ctx.vencProximaOcorrencia('qua', '2026-09-24')]));
+        vm.runInContext("orcFeriadosCfg = { '2026-09-25': 'feriado de teste' };", ctx);
+        check('v-46 · FERIADO não é dia de Day Care: com a sexta feriada, "Sexta" pula para 02/10',
+          ctx.vencProximaOcorrencia('sex', '2026-09-24') === '2026-10-02',
+          ctx.vencProximaOcorrencia('sex', '2026-09-24'));
+        vm.runInContext('orcFeriadosCfg = null;', ctx);
+        check('v-46 · sábado e domingo não existem nesta gaveta, e data inválida não vira dia nenhum',
+          ctx.vencProximaOcorrencia('sab', '2026-09-24') === ''
+          && ctx.vencProximaOcorrencia('dom', '2026-09-24') === ''
+          && ctx.vencProximaOcorrencia('qui', 'abacaxi') === '');
+      } finally {
+        vm.runInContext('zHojeISO = __bkp46a.hoje; orcFeriadosCfg = __bkp46a.fer;', ctx);
+      }
+    } else { check('v-46 · vencProximaOcorrencia existe', false, 'função ausente'); }
+
+    // ---- (c) O QUE ESTÁ EM ABERTO na ficha -------------------------------------------
+    if (typeof ctx.vencItensDe === 'function') {
+      const ks46 = (L) => L.map((x) => x.k + (x.sem_registro ? '*' : '')).join(',');
+      const so = { verm_p: '2026-09-20' };
+      check('v-46 · sem pedir, nada muda: a ficha com um item só continua devolvendo um item só',
+        ks46(ctx.vencItensDe(so, '2026-09-24', 7, '2026-09-24')) === 'verm_p',
+        ks46(ctx.vencItensDe(so, '2026-09-24', 7, '2026-09-24')));
+      const comAbertos = ctx.vencItensDe(so, '2026-09-24', 7, '2026-09-24', { incluirSemRegistro: true });
+      check('v-46 · pedindo, entram os DELA que nunca foram registrados: as três vacinas, o carrapaticida e a escova',
+        ks46(comAbertos) === 'verm_p,vac_mult_p*,vac_gripe_p*,vac_raiva_p*,ecto_p*,escova_p*',
+        ks46(comAbertos));
+      check('v-46 · o item em aberto não tem data e NÃO é atraso — ninguém deixou vencer',
+        comAbertos.filter((x) => x.sem_registro).every((x) => x.vence === '' && x.atrasado === false));
+      check('v-46 · o que TEM data vem primeiro; o em aberto vem depois, na ordem da ficha',
+        comAbertos[0].k === 'verm_p' && !comAbertos[0].sem_registro && comAbertos[1].sem_registro);
+      check('v-46 · exame de fezes e check-up NÃO entram em aberto: não foi o que ela pediu',
+        !comAbertos.some((x) => x.k === 'fezes_p' || x.k === 'checkup_p'), ks46(comAbertos));
+      check('v-46 · a COLEIRA só entra quando a ficha diz a marca — sem marca não há coleira para cobrar',
+        !comAbertos.some((x) => x.k === 'col_p')
+        && ctx.vencItensDe({ col_nome: 'Seresto' }, '2026-09-24', 7, '2026-09-24', { incluirSemRegistro: true })
+          .some((x) => x.k === 'col_p' && x.sem_registro === true),
+        ks46(ctx.vencItensDe({ col_nome: 'Seresto' }, '2026-09-24', 7, '2026-09-24', { incluirSemRegistro: true })));
+      check('v-46 · quem fez exame de fezes continua não devendo vermífugo, aqui como antes',
+        !ctx.vencItensDe({ fezes_t: '2026-09-01' }, '2026-09-24', 7, '2026-09-24', { incluirSemRegistro: true })
+          .some((x) => x.k === 'verm_p'));
+      check('v-46 · ficha COMPLETA e em dia não gera nenhum "em aberto"',
+        ctx.vencItensDe({ vac_mult_p: '2027-05-10', vac_gripe_p: '2027-05-10', vac_raiva_p: '2027-05-10',
+          verm_p: '2027-05-10', ecto_p: '2027-05-10', escova_p: '2027-05-10' },
+        '2026-09-24', 7, '2026-09-24', { incluirSemRegistro: true }).length === 0);
+      // Quem pede isto são as DUAS telas dela — e a Prevenção continua exatamente como era.
+      check('v-46 · só a tela Vencimentos e a Hoje na Zêluz pedem o "em aberto"; a Prevenção não mudou',
+        (html.match(/incluirSemRegistro:true/g) || []).length === 2
+        && !/renderPrevencao[\s\S]{0,4000}?incluirSemRegistro/.test(html)
+        && /function prevPendencias\(ex, grupo\)\{/.test(html));
+      check('v-46 · e o item em aberto é assunto PRÓPRIO ("aberto"), nunca misturado com o que vence',
+        ctx.vencTipoDoItemObj({ k: 'vac_raiva_p', sem_registro: true }) === 'aberto'
+        && ctx.vencTipoDoItemObj({ k: 'vac_raiva_p' }) === 'vacina'
+        && ctx.vencTipoDoItemObj({ k: 'ecto_p' }) === 'antip');
+      check('v-46 · o que está em aberto NÃO se lança na planilha: não há o que fazer hoje com ele',
+        ctx.vencComData({ itens: comAbertos }).length === 1
+        && ctx.vencComData({ itens: comAbertos })[0].k === 'verm_p');
+    } else { check('v-46 · vencItensDe existe', false, 'função ausente'); }
+
+    // ---- (d) A MENSAGEM do que está em aberto ----------------------------------------
+    if (typeof ctx.vencMensagemDe === 'function') {
+      const bkp46b = ctx.VENC_CFG;
+      try {
+        ctx.VENC_CFG = {};
+        const abertos = ctx.vencItensDe({ verm_p: '2026-09-20' }, '2026-09-24', 7, '2026-09-24',
+          { incluirSemRegistro: true }).filter((x) => x.sem_registro);
+        const oAb = { chave: 'cookie__ana', p: { n: 'Cookie', tutor: 'Ana Paula', dias: ['qui'] },
+          nome: 'Cookie', tutor: 'Ana Paula', sexo: 'F', itens: abertos };
+        const msgAb = ctx.vencMensagemDe(oAb, 'aberto', abertos, '2026-09-24', '2026-09-24');
+        check('v-46 · a mensagem do "em aberto" chama o tutor pelo primeiro nome e pede a atualização',
+          msgAb.indexOf('Olá, Ana, tudo bem?') === 0
+          && msgAb.indexOf('Está em aberto na ficha da Cookie:') > 0
+          && msgAb.indexOf('Podemos atualizar?') > 0, msgAb);
+        check('v-46 · e lista os itens com o artigo certo, em norma culta ("a, b e c")',
+          msgAb.indexOf('a vacina múltipla, a vacina de gripe, a vacina antirrábica, o carrapaticida e a troca da escova de dentes') > 0,
+          msgAb);
+        check('v-46 · ela oferece a saída: se já foi feito, é só mandar a data ou a carteirinha',
+          msgAb.indexOf('é só nos mandar a data/carteirinha') > 0, msgAb);
+        check('v-46 · o assunto se chama pelo que é, em toda tela',
+          ctx.vencRotuloTipo('aberto') === 'Em aberto na ficha — nunca registrado');
+        // Os BOTÕES do "em aberto" são outros: "na bolsa" e "na loja" não cabem em item
+        // que ninguém sabe se já foi feito. A conversa é pedir a data ou a carteirinha.
+        check('v-46 · os botões do "em aberto" são os da ficha — nada de "na bolsa" nem "na loja"',
+          ctx.vencRespostasDe('aberto', '2026-09-24').map((x) => x.v).join(',') === 'ab_data,ab_fazer,sem,nao'
+          && ctx.vencRespostasDe('aberto', '2026-09-24').every((x) => !x.lanca),
+          JSON.stringify(ctx.vencRespostasDe('aberto', '2026-09-24').map((x) => x.t)));
+        check('v-46 · "Vai mandar a data ou a carteirinha" abre a pergunta da ficha na hora',
+          ctx.vencRespDef('ab_data').ficha === true
+          && ctx.vencPerguntaFichaResp('ab_data', '2026-09-24', '2026-09-24') === true
+          && ctx.vencRespFecha('ab_data') === true && ctx.vencRespFecha('sem') === false);
+      } finally { ctx.VENC_CFG = bkp46b; }
+    } else { check('v-46 · vencMensagemDe existe', false, 'função ausente'); }
+
+    // ---- (e) A VACINA NA QUINTA: agendar no próximo dia dele --------------------------
+    if (typeof ctx.vencProximoVetDele === 'function') {
+      vm.runInContext('__bkp46c = { hoje: zHojeISO, cfg: VENC_CFG, fer: orcFeriadosCfg, repo: REPO_CACHE, cad: pelCadCache };'
+        + "zHojeISO = function(){ return '2026-09-24'; };"
+        + 'VENC_CFG = {}; orcFeriadosCfg = null; REPO_CACHE = {}; pelCadCache = {};', ctx);
+      try {
+        const quiSex = { n: 'Cookie', tutor: 'Ana Paula', dias: ['qui', 'sex'] };
+        const soQui = { n: 'Lana', tutor: 'Bia', dias: ['qui'] };
+        check('v-46 · a nossa Veterinária não atende na quinta: o próximo dia DELE que é dia dela é a sexta 25/09',
+          ctx.vencProximoVetDele(quiSex, '2026-09-24') === '2026-09-25',
+          ctx.vencProximoVetDele(quiSex, '2026-09-24'));
+        check('v-46 · quem só vem na quinta espera a OUTRA quinta? Não: pula para o primeiro dia dele que seja dia dela',
+          ctx.vencProximoVetDele(soQui, '2026-09-24') === '',
+          ctx.vencProximoVetDele(soQui, '2026-09-24'));
+        check('v-46 · sem saber quando ele volta, a resposta é "não sei" — nunca um dia inventado',
+          ctx.vencProximoVetDele({ n: 'Nina', tutor: 'Rui', dias: [] }, '2026-09-24') === ''
+          && ctx.vencProximoVetDele(quiSex, 'abacaxi') === '');
+        const oVac = { chave: 'cookie__ana', p: quiSex, nome: 'Cookie', tutor: 'Ana Paula', sexo: 'F',
+          itens: ctx.vencItensDe({ vac_raiva_p: '2026-09-26' }, '2026-09-24', 7, '2026-09-24') };
+        check('v-46 · numa quinta, com dia dele conhecido, o texto vira o de AGENDAMENTO',
+          ctx.vencChaveTexto('vacina', '2026-09-24', oVac, '2026-09-24') === 'vacina_agendar',
+          ctx.vencChaveTexto('vacina', '2026-09-24', oVac, '2026-09-24'));
+        check('v-46 · em dia de atendimento dela continua sendo o texto da creche',
+          ctx.vencChaveTexto('vacina', '2026-09-25', oVac, '2026-09-24') === 'vacina_creche');
+        check('v-46 · sem saber quando ele volta, volta o texto antigo — que oferece um horário, não um dia',
+          ctx.vencChaveTexto('vacina', '2026-09-24', { p: { n: 'Nina', tutor: 'Rui', dias: [] } }, '2026-09-24') === 'vacina'
+          && ctx.vencChaveTexto('vacina', '2026-09-24') === 'vacina');
+        const mAgd = ctx.vencMensagemDe(oVac, 'vacina', oVac.itens, '2026-09-24', '2026-09-24');
+        check('v-46 · a mensagem diz a agenda da profissional, com as palavras dela',
+          mAgd.indexOf('A nossa Veterinária atende de segunda a sexta, exceto quinta') > 0, mAgd);
+        check('v-46 · e propõe o dia DELE: "sexta-feira (25/09), o próximo dia dela aqui"',
+          mAgd.indexOf('Podemos deixar agendado para sexta-feira (25/09), o próximo dia dela aqui?') > 0, mAgd);
+        check('v-46 · pergunta o período, que é o que a veterinária precisa saber',
+          mAgd.indexOf('Qual período fica melhor: manhã ou tarde?') > 0, mAgd);
+        check('v-46 · e o verbo concorda com o tempo: o que ainda vai vencer "vence"',
+          mAgd.indexOf('A vacina de Raiva da Cookie vence hoje, quinta-feira (24/09)') > 0, mAgd);
+        const oVenceu = Object.assign({}, oVac, {
+          itens: ctx.vencItensDe({ vac_raiva_p: '2026-09-10' }, '2026-09-24', 7, '2026-09-24') });
+        check('v-46 · o que JÁ venceu é dito no passado — "venceu", não "vence"',
+          ctx.vencMensagemDe(oVenceu, 'vacina', oVenceu.itens, '2026-09-24', '2026-09-24')
+            .indexOf('A vacina de Raiva da Cookie venceu') > 0,
+          ctx.vencMensagemDe(oVenceu, 'vacina', oVenceu.itens, '2026-09-24', '2026-09-24'));
+        // O BOTÃO: "Aplicar no dia dele" volta a existir na quinta, porque agora HÁ um dia dele
+        check('v-46 · "Aplicar no dia dele" some na quinta quando não se sabe o dia dele…',
+          ctx.vencRespostasDe('vacina', '2026-09-24').map((x) => x.v).indexOf('vet_dia') < 0);
+        check('v-46 · …e VOLTA quando se sabe: é exatamente o que a mensagem ofereceu ao tutor',
+          ctx.vencRespostasDe('vacina', '2026-09-24', oVac).map((x) => x.v).indexOf('vet_dia') >= 0,
+          JSON.stringify(ctx.vencRespostasDe('vacina', '2026-09-24', oVac).map((x) => x.v)));
+        check('v-46 · o dia agendado é o próximo dia DELE que é dia dela; num dia de atendimento, é o próprio dia',
+          ctx.vencDiaAgendado(oVac, '2026-09-24', '2026-09-24') === '2026-09-25'
+          && ctx.vencDiaAgendado(oVac, '2026-09-25', '2026-09-24') === '2026-09-25',
+          JSON.stringify([ctx.vencDiaAgendado(oVac, '2026-09-24', '2026-09-24'),
+            ctx.vencDiaAgendado(oVac, '2026-09-25', '2026-09-24')]));
+      } finally {
+        vm.runInContext('zHojeISO = __bkp46c.hoje; VENC_CFG = __bkp46c.cfg; orcFeriadosCfg = __bkp46c.fer;'
+          + 'REPO_CACHE = __bkp46c.repo; pelCadCache = __bkp46c.cad;', ctx);
+      }
+    } else { check('v-46 · vencProximoVetDele existe', false, 'função ausente'); }
+
+    // ---- (f) "Aplicar no dia dele" GRAVA o dia agendado -------------------------------
+    if (typeof ctx.vencResponderTipo === 'function') {
+      const db46 = criarDBComPush({});
+      const v46 = { rastro: [], vet: [] };
+      ctx.__v46 = v46; ctx.__v46db = db46;
+      vm.runInContext(
+        '__bkp46d = { DB: DB, pel: PELUDINHOS, cad: pelCadCache, hoje: zHojeISO, quem: quemSou,'
+        + '  cfg: VENC_CFG, reg: VENC_REG, regDia: VENC_REG_DIA, pend: VENC_PEND, cal: VENC_CAL_REG,'
+        + '  dsel: VENC_DIA_SEL,'
+        + '  rd: vencRender, rq: vencRedesenharQuadros, au: audit, al: zAlertao, av: vencAvisarVet,'
+        + '  repo: REPO_CACHE, fer: orcFeriadosCfg };'
+        + "zHojeISO = function(){ return '2026-09-24'; };"
+        + "quemSou = function(){ return 'Leticya'; };"
+        + "PELUDINHOS = [{ n:'Cookie', raca:'SRD', tutor:'Ana Paula', dias:['qui','sex'] }];"
+        + "pelCadCache = { 'cookie__ana paula': { dias:['qui','sex'], tutor:'Ana Paula', sexo:'F' } };"
+        + "VENC_CFG = {}; VENC_REG = {}; VENC_REG_DIA = '2026-09-24'; VENC_PEND = {}; VENC_CAL_REG = null;"
+        // o dia da TELA é a quinta escolhida à mão — é dela que o quadro da veterinária lê
+        + "VENC_DIA_SEL = '2026-09-24';"
+        + 'REPO_CACHE = {}; orcFeriadosCfg = null;'
+        + 'vencRender = function(){}; vencRedesenharQuadros = function(){};'
+        + 'audit = function(a, b){ __v46.rastro.push(b); };'
+        + 'zAlertao = function(t){ __v46.rastro.push(t); };'
+        + 'vencAvisarVet = function(o, v){ __v46.vet.push(v); return Promise.resolve({ ok: true }); };'
+        + 'DB = __v46db;', ctx);
+      const no46 = () => ((((db46.__store.daycare || {}).vencimentos || {})['2026-09-24'] || {})['cookie__ana-paula'] || {});
+      try {
+        const oVac = { chave: 'cookie__ana-paula', p: ctx.PELUDINHOS[0], i: 0, nome: 'Cookie',
+          raca: 'SRD', tutor: 'Ana Paula', sexo: 'F',
+          itens: ctx.vencItensDe({ vac_raiva_p: '2026-09-26' }, '2026-09-24', 7, '2026-09-24') };
+        await ctx.vencResponderTipo('cookie__ana-paula', 'vacina', 'vet_dia', '2026-09-24', oVac);
+        await drenar(8);
+        check('v-46 · "Aplicar no dia dele" grava o DIA AGENDADO (25/09), não o dia da quinta em que se falou',
+          no46().vet && no46().vet.dia === '2026-09-25' && no46().vet.periodo === 'no dia dele'
+          && no46().vet.vacinas === 'Raiva' && no46().vet.dofilhot === 'da Cookie',
+          JSON.stringify(no46().vet));
+        check('v-46 · e o recado que vai para o grupo da Veterinária carrega essa data',
+          v46.vet.length === 1
+          && ctx.vencVetLinha(no46().vet) === 'Vacina de Raiva da Cookie — tutor autorizou para 25/09/2026 (no dia dele).',
+          ctx.vencVetLinha(no46().vet));
+        check('v-46 · o quadro "Avisar a veterinária" mostra o pendente com a data combinada',
+          (() => {
+            const avisos = ctx.vencVetAvisos() || [];
+            return avisos.length === 1 && avisos[0].dia === '2026-09-25'
+              && ctx.vencVetPendenteTexto(avisos[0]) === 'Avisar a veterinária: Cookie, Raiva, 25/09/2026 no dia dele';
+          })(),
+          JSON.stringify(ctx.vencVetAvisos()));
+        check('v-46 · o assunto FECHA — e o rastro diz o que o tutor autorizou',
+          ctx.vencEstadoTipo(no46(), 'vacina', Date.now()) === 'fechado'
+          && v46.rastro.some((t) => /Aplicar no dia dele/.test(String(t || ''))),
+          JSON.stringify(v46.rastro));
+      } finally {
+        vm.runInContext('DB = __bkp46d.DB; PELUDINHOS.length = 0;'
+          + 'Array.prototype.push.apply(PELUDINHOS, __bkp46d.pel);'
+          + 'pelCadCache = __bkp46d.cad; zHojeISO = __bkp46d.hoje; quemSou = __bkp46d.quem;'
+          + 'VENC_CFG = __bkp46d.cfg; VENC_REG = __bkp46d.reg; VENC_REG_DIA = __bkp46d.regDia;'
+          + 'VENC_DIA_SEL = __bkp46d.dsel;'
+          + 'VENC_PEND = __bkp46d.pend; VENC_CAL_REG = __bkp46d.cal;'
+          + 'vencRender = __bkp46d.rd; vencRedesenharQuadros = __bkp46d.rq; audit = __bkp46d.au;'
+          + 'zAlertao = __bkp46d.al; vencAvisarVet = __bkp46d.av; REPO_CACHE = __bkp46d.repo;'
+          + 'orcFeriadosCfg = __bkp46d.fer;', ctx);
+      }
+    } else { check('v-46 · vencResponderTipo existe', false, 'função ausente'); }
+
+    // ---- (g) "Quem vem {dia} com pendência" — a lista organizada ----------------------
+    if (typeof ctx.vencResumoGrupos === 'function') {
+      const it = (ex) => ctx.vencItensDe(ex, '2026-09-24', 7, '2026-09-24', { incluirSemRegistro: true });
+      const L46 = [
+        // Simba deve vermífugo, carrapaticida e escova · Lana, carrapaticida e a vacina ·
+        // Ozzy tem tudo o que importa registrado, menos as vacinas e a escova: ele é o "em aberto".
+        { nome: 'Simba', itens: it({ verm_p: '2026-09-20', ecto_p: '2026-09-22', escova_p: '2026-09-23',
+          vac_mult_p: '2027-05-10', vac_gripe_p: '2027-05-10', vac_raiva_p: '2027-05-10' }) },
+        { nome: 'Lana', itens: it({ ecto_p: '2026-09-26', vac_raiva_p: '2026-09-25',
+          vac_mult_p: '2027-05-10', vac_gripe_p: '2027-05-10',
+          verm_p: '2027-05-10', escova_p: '2027-05-10' }) },
+        { nome: 'Ozzy', itens: it({ verm_p: '2027-05-10', ecto_p: '2027-05-10' }) },
+      ];
+      const G46 = ctx.vencResumoGrupos(L46);
+      check('v-46 · o resumo agrupa por TIPO de pendência, na ordem: vermífugo, carrapaticida, vacinas, escova, em aberto',
+        JSON.stringify(G46.map((g) => g.v)) === JSON.stringify(['verm', 'ecto', 'vacina', 'escova', 'aberto']),
+        JSON.stringify(G46.map((g) => g.v)));
+      check('v-46 · e cada linha traz os NOMES em fila, como ela dita ("Simba · Lana")',
+        JSON.stringify(G46.find((g) => g.v === 'ecto').nomes) === JSON.stringify(['Simba', 'Lana']),
+        JSON.stringify(G46.find((g) => g.v === 'ecto').nomes));
+      check('v-46 · o Ozzy, que só tem ficha incompleta, aparece na linha "em aberto" e em nenhuma outra',
+        G46.find((g) => g.v === 'aberto').nomes.indexOf('Ozzy') >= 0
+        && G46.filter((g) => g.v !== 'aberto').every((g) => g.nomes.indexOf('Ozzy') < 0),
+        JSON.stringify(G46.map((g) => g.v + ':' + g.nomes.join('/'))));
+      check('v-46 · nome não se repete dentro de uma linha, por mais itens que ele deva',
+        G46.every((g) => g.nomes.length === new Set(g.nomes).size));
+      const txt46 = ctx.vencResumoTexto(L46, '2026-09-24', '2026-09-24');
+      check('v-46 · "Copiar resumo" leva o MESMO texto, em texto puro, com o dia por extenso',
+        txt46.indexOf('Está vencendo — quem vem hoje, quinta-feira (24/09)') === 0
+        && txt46.indexOf('Vermífugo: Simba') > 0
+        && txt46.indexOf('Carrapaticida: Simba · Lana') > 0, txt46);
+      check('v-46 · com ninguém devendo, o resumo DIZ isso — não some da tela em silêncio',
+        ctx.vencResumoTexto([], '2026-09-24', '2026-09-24')
+          .indexOf('Ninguém da turma deste dia está com pendência.') > 0,
+        ctx.vencResumoTexto([], '2026-09-24', '2026-09-24'));
+      check('v-46 · e o bloco vem ANTES dos cartões, com o botão de copiar',
+        /\+vencResumoHTML\(L, dia, hoje\)/.test(html)
+        && html.indexOf('Copiar resumo') > 0
+        && html.indexOf('Quem vem ') > 0 && /function vencCopiarResumo\(btn\)\{/.test(html));
+    } else { check('v-46 · vencResumoGrupos existe', false, 'função ausente'); }
+
+    // ---- (g2) o CONTADOR ao lado do item: o de HOJE ----------------------------------
+    check('v-46 · o contador do menu é o de HOJE — "quem está com pendência? Hoje: fulano, fulano"',
+      /var dia=vencEhDiaDayCare\(hoje\)\?hoje:\(proximoDiaDayCare\(hoje\)\|\|''\);/.test(html)
+      && /n=vencListaMemo\(dia\)\.length;/.test(html));
+    check('v-46 · em dia sem Day Care o contador mostra o PRÓXIMO dia — o menu não fica mudo no sábado',
+      /proximoDiaDayCare\(hoje\)\|\|''/.test(html));
+    check('v-46 · e o que já passou do prazo continua pedindo cobrança, de qualquer dia',
+      /if\(p&&p\.cobrar\) partes\.push\(p\.cobrar\+' a cobrar'\);/.test(html));
+    check('v-46 · sem o cadastro lido, o contador SOME — nunca afirma zero antes de saber',
+      /catch\(e\)\{ n=null; \}/.test(html));
+
+    // ---- (h) o título da tela, nas palavras dela -------------------------------------
+    check('v-46 · o título da tela é "Está vencendo", com o subtítulo do dia',
+      /<h2 style="font-size:19px;margin-bottom:2px">Está vencendo<\/h2>/.test(html)
+      && html.indexOf('>quem vem ') > 0
+      && html.indexOf("+' e o que está em aberto</div>'") > 0);
+    check('v-46 · as duas mensagens novas moram em Configurações › Mensagens prontas',
+      html.indexOf("id:'cfgVencAberto'") > 0 && html.indexOf("id:'cfgVencVacinaAgendar'") > 0
+      && /aberto:'Olá, \{tutor\}, tudo bem\? /.test(html)
+      && /vacina_agendar:'Olá, \{tutor\}, tudo bem\? /.test(html));
+    check('v-46 · a versão carimbada desta entrega é a 2026-09-24-06',
+      /const APP_VERSAO='2026-09-24-06';/.test(html));
   }
   console.log('');
 

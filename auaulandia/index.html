@@ -226,6 +226,18 @@
   .dcsub-panel{overflow:hidden;max-height:0;transition:max-height .25s ease}
   .dcsub.dcsub-open > .dcsub-panel{max-height:1500px}
   .acc-panel{margin:1px 0 5px}
+  /* OS DIAS DENTRO DE "VENCIMENTOS" (Adriana, 24/set/2026) — "abrindo no sidebar aparece
+     segunda, terça, quarta, quinta, sexta". É o degrau ABAIXO do item, como manda a lei dos
+     três níveis: categoria 17/700 › sub-cabeçalho 15/700 › item 14/500 › dia 13/500. Filho
+     nunca é maior que o pai. O recuo é maior e a trilha, mais apagada: lê-se de longe que
+     aquilo pertence ao item de cima. O :not() repete o do irmão para vencer a especificidade
+     da regra geral dos filhos — sem ele o recuo de 22px continuaria valendo. */
+  .nav .acc-panel a.nav-dia:not([data-v]):not(.nav-parent){
+    margin-left:36px;padding:8px 12px;min-height:40px;   /* alvo de toque no celular */
+    font-size:13px;font-weight:500;
+    border-left:2px solid rgba(222,180,40,.20);border-radius:0 9px 9px 0}
+  .nav .acc-panel a.nav-dia.active{border-left-color:transparent;border-radius:999px}
+  .nav .acc-panel a.nav-dia .dia-n{margin-left:auto;font-size:11px;font-weight:800;opacity:.85}
   /* (o recuo dos filhos agora vem da trilha em .nav .acc-panel a[data-v]) */
   .acc.acc-open > .nav-parent{background:rgba(255,255,255,.06);opacity:1}
   /* botão de recolher a barra inteira */
@@ -2735,7 +2747,25 @@
                Nasce escondido e quem o revela é aplicarPermMenu() (tabela PERM) — permissão
                num lugar só. O contador entra em <span> COM atributos de propósito: o rótulo
                do item é o último <span> puro, e é por ele que a tela do Time se espelha. -->
-          <a data-v="vencimentos" style="display:none" title="Mande hoje a mensagem de quem vem no próximo dia com vacina, carrapaticida, coleira, vermífugo ou escova vencendo."><span data-icon="alert"></span><span>Vence amanhã</span><span id="navVencN" style="margin-left:6px;font-weight:800;color:var(--crm-critico)"></span></a>
+          <!-- 24/set/2026 — "coloque 'Vencimentos' aqui dentro; o título 'está vencendo', e
+               abrindo no sidebar aparece segunda, terça, quarta, quinta, sexta". Virou
+               sub-sanfona, no MESMO desenho das Turminhas: o pai só abre a gaveta, quem
+               navega são os dias. O `data-v` continua sendo `vencimentos` de propósito — é
+               por ele que a permissão (PERM_MENU) e o espelho da tela do Time (NAV_PAGINAS_ALL)
+               encontram este item; trocá-lo criaria uma tela nova sem permissão nenhuma.
+               O `data-acc-perm` diz a aplicarPermMenu() que a GAVETA INTEIRA se esconde junto
+               com o pai: esconder só o <a> deixaria os dias à mostra para quem não pode ver. -->
+          <div class="acc" data-acc="c-vencimentos" data-acc-perm="vencimentos">
+          <a data-v="vencimentos" class="nav-parent" data-acc-toggle="c-vencimentos" style="display:none" title="Está vencendo: quem vem no dia e o que está vencendo ou em aberto — vacina, carrapaticida, coleira, vermífugo ou escova."><span data-icon="alert"></span><span>Vencimentos</span><span id="navVencN" style="margin-left:6px;font-weight:800;color:var(--crm-critico)"></span><span class="acc-caret" aria-hidden="true"></span></a>
+          <div class="acc-panel" id="navVencDias">
+            <a class="nav-dia" data-vdia="hoje" onclick="vencIrDia('hoje')" title="Quem está aqui HOJE com alguma coisa vencendo ou em aberto.">Hoje</a>
+            <a class="nav-dia" data-vdia="seg" onclick="vencIrDia('seg')" title="A próxima segunda-feira com Day Care.">Segunda</a>
+            <a class="nav-dia" data-vdia="ter" onclick="vencIrDia('ter')" title="A próxima terça-feira com Day Care.">Terça</a>
+            <a class="nav-dia" data-vdia="qua" onclick="vencIrDia('qua')" title="A próxima quarta-feira com Day Care.">Quarta</a>
+            <a class="nav-dia" data-vdia="qui" onclick="vencIrDia('qui')" title="A próxima quinta-feira com Day Care.">Quinta</a>
+            <a class="nav-dia" data-vdia="sex" onclick="vencIrDia('sex')" title="A próxima sexta-feira com Day Care.">Sexta</a>
+          </div>
+          </div>
           <!-- Saiu do menu "Empório", que foi deletado: ninguém procuraria a mensagem
                do tutor ali dentro (Adriana, 13/ago/2026). -->
           <a data-v="emporio" class="so-emporio" title="A mensagem pronta para avisar o tutor."><span data-icon="bowl"></span><span>Quem não comeu hoje</span></a>
@@ -4228,7 +4258,7 @@
     <div id="hojeRoot"><div class="card"><div class="hint">Montando a lista de quem está na casa&hellip;</div></div></div>
   </section>
   <section class="view" id="v-vencimentos">
-    <div class="role-note"><span data-icon="alert"></span><span><strong>Mande hoje, para quem vem amanhã.</strong> Vacina, carrapaticida, coleira, vermífugo e troca de escova que vencem para a turma do próximo dia de Day Care. A mensagem para o tutor já sai pronta — copie, mande no WhatsApp e <strong>registre aqui o que ele respondeu</strong>. O cartão só fecha quando a ficha estiver atualizada.</span></div>
+    <div class="role-note"><span data-icon="alert"></span><span><strong>Está vencendo.</strong> Escolha o dia no menu — Hoje, segunda, terça, quarta, quinta ou sexta — e veja quem vem naquele dia com vacina, carrapaticida, coleira, vermífugo ou troca de escova vencendo, mais o que <strong>nunca foi registrado</strong> na ficha. A mensagem para o tutor já sai pronta — copie, mande no WhatsApp e <strong>registre aqui o que ele respondeu</strong>. O cartão só fecha quando a ficha estiver atualizada.</span></div>
     <div id="vencRoot"><div class="card"><div class="hint">Carregando os vencimentos do próximo dia…</div></div></div>
   </section>
   <!-- ===== PENDÊNCIAS DE PREVENÇÃO (Adriana, 18/set/2026) =========================
@@ -4482,7 +4512,7 @@
          programador"). O que está no código é só o padrão de fábrica. -->
     <div class="card so-master" id="cfgVencCard">
       <h2 style="font-size:19px">Mensagens prontas</h2>
-      <div class="hint">As mensagens que a Central manda ao tutor na véspera, em <strong>Vence amanhã</strong>. É <strong>uma mensagem por assunto</strong>: quem tem vacina e vermífugo vencendo recebe duas, cada uma com o seu Copiar. Escreva do seu jeito — o que estiver entre chaves é trocado pelo app.<br>
+      <div class="hint">As mensagens que a Central manda ao tutor na véspera, em <strong>Vencimentos</strong>. É <strong>uma mensagem por assunto</strong>: quem tem vacina e vermífugo vencendo recebe duas, cada uma com o seu Copiar. Escreva do seu jeito — o que estiver entre chaves é trocado pelo app.<br>
         <strong>{tutor}</strong> o primeiro nome de quem cuida &middot;
         <strong>{filhot}</strong> só o nome &middot;
         <strong>{ofilhot}</strong> o nome com o artigo (&ldquo;o Otávio&rdquo;, &ldquo;a Lana&rdquo;) &middot;
@@ -4493,7 +4523,10 @@
         <strong>{dia}</strong> o dia por extenso &middot;
         <strong>{vacina}</strong> o nome da vacina (Múltipla, Gripe, Raiva) &middot;
         <strong>{item}</strong> o item com o artigo certo (&ldquo;o vermífugo&rdquo;, &ldquo;a coleira repelente&rdquo;) &middot;
-        <strong>{itens}</strong> a lista do que vence, com as datas<br>
+        <strong>{itens}</strong> a lista do que vence, com as datas &middot;
+        <strong>{itens_abertos}</strong> a lista do que nunca foi registrado na ficha &middot;
+        <strong>{vencer}</strong> vira &ldquo;vence&rdquo;, &ldquo;vencem&rdquo;, &ldquo;venceu&rdquo; ou &ldquo;venceram&rdquo;<br>
+        <strong>{proximo_dia_vet_dele}</strong> e <strong>{data}</strong> o próximo dia dele que também é dia da nossa Veterinária<br>
         <strong>{dia_vet}</strong> e <strong>{semana_vet}</strong> o próximo dia de atendimento da nossa Veterinária (ela não atende às quintas) &middot;
         <strong>{valor_escova}</strong> o preço da troca de escova &middot;
         <strong>{fecho}</strong> a frase da autorização, escrita no último campo.<br>
@@ -5339,7 +5372,7 @@
     aulunos:['Aulunos','A turma do dia.'],dashdc:['Lançamentos do dia','A planilha do Day Care, item por item.'],
     hoje:['Hoje na Zêluz','Quem está na Zêluz agora e quem está com pendência.'],
     pendencias:['Pendências de prevenção','O que ficou para a próxima vinda de quem não veio.'],
-    vencimentos:['Vence amanhã','Mande hoje a mensagem de quem vem no próximo dia com prevenção vencendo.'],vacinas:['Prevenção','Vacina, vermífugo, coleira e exame de fezes: quem está atrasado e quem está para vencer.'],
+    vencimentos:['Está vencendo','Quem vem no dia, o que está vencendo e o que está em aberto na ficha.'],vacinas:['Prevenção','Vacina, vermífugo, coleira e exame de fezes: quem está atrasado e quem está para vencer.'],
     cuidadovet:['Cuidado Vet','Alterações no corpo que a veterinária precisa ver.'],
     checkin:['Check-in','O tutor chega: entrada, alimentação, medicação, assinatura (1º passo).'],
     conferencia:['Conferência do check-in','O monitor confere corpo e pertences de quem chegou (2º passo; o 1º é da Central Zêluz).'],
@@ -5374,7 +5407,11 @@
   document.getElementById('nav').addEventListener('click',e=>{
     const a=e.target.closest('a'); if(!a) return;
     // Clique num PAI do accordion → abre/fecha os filhos (sem navegar).
-    if(a.classList.contains('nav-parent')){ toggleAcc(a); return; }
+    // PAI QUE TAMBÉM É TELA (Vencimentos, 24/set/2026): abre a gaveta E vai para a tela.
+    // Item de menu que só abre gaveta e não leva a lugar nenhum é função enterrada — e
+    // função enterrada é função inexistente. Os sub-cabeçalhos (Day Care, AuAulândia…) não
+    // têm data-v e continuam só abrindo, como sempre.
+    if(a.classList.contains('nav-parent')){ toggleAcc(a); if(!a.dataset.v) return; }
     const v=a.dataset.v;
     if(!v) return; // sub-links (dias do Day Care) tratam o próprio clique
     // Não deixa sair do Check-in com a ficha preenchida e não salva (caso Mulan/Lisa, 30/jul).
@@ -5624,6 +5661,13 @@
       var pode=podePapel(par[1]) || pset.indexOf(par[0])>=0;
       document.querySelectorAll('#nav a[data-v="'+par[0]+'"]').forEach(function(a){
         a.style.setProperty('display', pode?'flex':'none', 'important');
+      });
+      // ITEM QUE É PAI DE UMA SUB-SANFONA (Vencimentos, 24/set/2026): esconder só o <a>
+      // deixaria os DIAS de dentro à mostra para quem não pode ver a tela — e o estado
+      // "aberto" da gaveta fica guardado no aparelho, então ela pode nascer aberta. Some a
+      // gaveta inteira: permissão num lugar só continua valendo para os filhos também.
+      document.querySelectorAll('#nav .acc[data-acc-perm="'+par[0]+'"]').forEach(function(g){
+        g.style.setProperty('display', pode?'':'none', 'important');
       });
     });
   }
@@ -6053,7 +6097,7 @@
     // O MESMO quadro nas três fatias (21/set/2026). vc===null = ainda não li o dia — o
     // quadro mostra "…" e nunca afirma que não há nada para mandar.
     var vc=(typeof vencContagem==='function')?vencContagem():null;
-    var quadroVence=mesaBox(vc===null?null:vc.aMandar,'Vence amanhã',
+    var quadroVence=mesaBox(vc===null?null:vc.aMandar,'Vencimentos',
       'mensagens para mandar HOJE — prevenção vencendo de quem vem no próximo dia','#E08856',ir('vencimentos'));
     // RESPOSTAS PENDENTES (Adriana, 21/set/2026): "ela precisa dar uma resposta. Só fecha
     // quando ela consegue responder." De QUALQUER dia — a pendência não morre com o dia. O
@@ -15454,7 +15498,7 @@
   // inteira DEPOIS de a correção estar publicada — o aviso apareceu, ninguém tocou.
   // Agora o aparelho PARADO recarrega sozinho: trancado, com a aba escondida, na porta de
   // entrada ou 3 minutos sem ninguém tocar nele. Mão na tela = nunca recarrega.
-  const APP_VERSAO='2026-09-24-05';
+  const APP_VERSAO='2026-09-24-06';
   var RECARGA_PARADO_MS=3*60*1000, __versaoPublicada=null, __recargaTimer=null;
   function vigiarVersao(){
     if(!DB) return;
@@ -15743,7 +15787,11 @@
       // 21/set/2026: a tela nova nasceu nos DOIS lugares de uma vez — no menu e aqui. O
       // rótulo é o MESMO do sidebar, letra por letra: é esta lista que a Gestão lê na tela
       // do Time, e conceder uma tela com outro nome é conceder uma tela que ninguém acha.
-      {k:'vencimentos', t:'Vence amanhã'},
+      // 24/set/2026: "Vence amanhã" virou "Vencimentos" (sub-sanfona com os dias da semana).
+      // A CHAVE não mudou — quem já tinha a tela concedida continua com ela. O rótulo aqui
+      // acompanha o do sidebar letra por letra: conceder uma tela com outro nome é conceder
+      // uma tela que ninguém acha.
+      {k:'vencimentos', t:'Vencimentos'},
       {k:'reposicao', t:'Reposições'}
     ]},
     // 18/set/2026: "Lançar pagamento" saiu do sidebar (Adriana: "delete lançar pagamentos..
@@ -21854,7 +21902,7 @@
         +(duas
           ? '<div class="field"><label>2ª dose prevista (21 dias depois)</label><div class="prev-calc">'+(d2prev?fmtBR(d2prev):'informe a 1ª dose')+'</div></div>'
             +'<div class="field"><label>2ª dose dada em</label><input type="date" class="cad-in" value="'+(ex.verm_dose2_t||'')+'" onchange="pbSet(\'verm\',{verm_dose2_t:this.value})" min="2015-01-01" max="2035-12-31" onkeydown="return dataSoNoCalendario(event)">'
-            +'<div class="hint" style="margin-top:3px">Enquanto esta data estiver em branco, a 2ª dose continua sendo cobrada na Prevenção e em <strong>Vence amanhã</strong>. Preencheu, ela some — e o próximo vermífugo passa a contar desta data.</div></div>'
+            +'<div class="hint" style="margin-top:3px">Enquanto esta data estiver em branco, a 2ª dose continua sendo cobrada na Prevenção e em <strong>Vencimentos</strong>. Preencheu, ela some — e o próximo vermífugo passa a contar desta data.</div></div>'
           : '')
         +'<div class="field"><label>Próximo vermífugo</label><div class="prev-calc">'+(prox?fmtBR(prox)+' · 4 meses'+(ex.verm_doses==='2 doses'?' após a 2ª dose':''):'informe a data')+'</div></div>'
         +'<div class="field" style="grid-column:1/-1"><label>Dose pelo peso</label><div class="prev-calc">'+vermFichaTextoHTML(ex)+'</div></div>'
@@ -33596,6 +33644,29 @@
       +'O valor é {valor_escova}.\n'
       +'Podemos fazer a troca?\n'
       +'{fecho}',
+    // ===== O QUE ESTÁ EM ABERTO NA FICHA (Adriana, 24/set/2026) ====================
+    // "Com pendência de vermífugo, carrapaticida, todas as vacinas e a escova dentária que
+    //  estava sem nada." — item que NUNCA foi registrado não tem data para vencer, e por
+    //  isso desaparecia de todas as contas. Ele não é cobrança de vencimento: é pedido de
+    //  atualização da ficha, e por isso é OUTRA conversa, com texto próprio.
+    // {itens_abertos} traz a lista com o artigo certo ("o vermífugo, a vacina de gripe e a
+    // troca da escova de dentes"). A abertura é a MESMA da mensagem de antecipação — a voz
+    // é dela nas duas.
+    aberto:'Olá, {tutor}, tudo bem? 🐾\n'
+      +'🔎 Está em aberto na ficha {dofilhot}: {itens_abertos}. Podemos atualizar? Se já foi feito, é só nos mandar a data/carteirinha 📋',
+    // ===== VACINA QUE PRECISA DE AGENDAMENTO (Adriana, 24/set/2026) ================
+    // "Veterinário: não temos na quinta-feira. O que depende de veterinário — vacina de
+    //  gripe, raiva e múltipla — precisa agendar para a próxima vez que o peludo vier:
+    //  'podemos deixar agendado para o próximo dia que ele vai vir, para a próxima quinta
+    //  ou sexta'."
+    // {proximo_dia_vet_dele} é o próximo dia DA FICHA DELE que também é dia de atendimento
+    // da nossa Veterinária; {data} é a data desse dia. Quando não se sabe quando ele volta,
+    // esta mensagem não é oferecida — vale a de cima, que propõe um horário livre. Inventar
+    // um dia para o tutor é pior do que não oferecer nenhum.
+    vacina_agendar:'Olá, {tutor}, tudo bem? 🐾\n'
+      +'💉 A vacina de {vacina} {dofilhot} {vencer} {dia}.\n'
+      +'A nossa Veterinária atende de segunda a sexta, exceto quinta 🩺. Podemos deixar agendado para {proximo_dia_vet_dele} ({data}), o próximo dia {dele} aqui?\n'
+      +'Qual período fica melhor: manhã ou tarde?',
     // O fecho da autorização, pedido por ela: "completar encantadoramente sobre a
     // autorização para colocar no dia do daycare". Entra onde estiver escrito {fecho}.
     fecho:'Podemos fazer {quando}? É só nos confirmar por aqui que deixamos tudo pronto para receber {ofilhot}. 🐾',
@@ -33622,9 +33693,13 @@
       +'A nossa Veterinária atende hoje e pode aplicar durante o dia {dele} aqui. Podemos fazer hoje de uma vez?'
   };
   // A ordem em que as mensagens aparecem no cartão, e como cada uma se chama na tela.
-  var VENC_ORDEM_TIPOS=['vacina','antip','verm2','escova'];
+  // 24/set/2026: 'aberto' entrou no fim da ordem — é o assunto do que NUNCA foi registrado
+  // na ficha. Vem por último de propósito: primeiro se resolve o que tem data e prazo;
+  // depois se pede a carteirinha do que nunca chegou.
+  var VENC_ORDEM_TIPOS=['vacina','antip','verm2','escova','aberto'];
   var VENC_TIPO_ROTULO={vacina:'Vacina', antip:'Vermífugo, carrapaticida e coleira',
-                        verm2:'Vermífugo — 2ª dose', escova:'Troca de escova de dentes'};
+                        verm2:'Vermífugo — 2ª dose', escova:'Troca de escova de dentes',
+                        aberto:'Em aberto na ficha — nunca registrado'};
   // O nome da vacina como o tutor a conhece — é ele que entra na frase ("a vacina de
   // Raiva"), não o rótulo interno ("Vacina Antirrábica").
   var VENC_VACINA_NOME={vac_mult_p:'Múltipla', vac_gripe_p:'Gripe', vac_raiva_p:'Raiva'};
@@ -33651,6 +33726,17 @@
     verm_dose2_p:'Vermífugo — 2ª dose',
     fezes_p:'Exame de fezes', escova_p:'Troca de escova de dentes', checkup_p:'Check-up'
   };
+  // ===== O QUE CONTA COMO "EM ABERTO" (Adriana, 24/set/2026) ======================
+  // "...e a escova dentária que estava SEM NADA." Item da ficha que nunca recebeu data
+  // nenhuma não vence nunca — e some de todas as contas, que é como a casa descobre no
+  // balcão que o FILHOt nunca tomou a vacina de gripe.
+  // A lista é a DELA, item por item: vacinas, vermífugo, carrapaticida e escova de dentes.
+  // O exame de fezes e o check-up ficam FORA (não foram citados, e o exame só existe como
+  // alternativa ao vermífugo). A COLEIRA entra só quando a ficha diz a MARCA (`col_nome`):
+  // sem marca não há coleira nenhuma para cobrar, e cobrar de todos seria o erro de 26/ago
+  // outra vez — centenas de pendências em que ninguém acredita.
+  var VENC_SEM_REG={vac_mult_p:1, vac_gripe_p:1, vac_raiva_p:1,
+                    verm_p:1, ecto_p:1, escova_p:1, col_p:'marca'};
   var VENC_DIA_NOME={seg:'segunda-feira', ter:'terça-feira', qua:'quarta-feira',
                      qui:'quinta-feira', sex:'sexta-feira'};
   // ⚠ VENC_DIA_NOME é, ao mesmo tempo, a lista de DIAS EM QUE HÁ DAY CARE (vencEhDiaDayCare
@@ -33743,13 +33829,29 @@
     {v:'sem',            t:'Não respondeu',                 cor:'#6b5f4b', fecha:false},
     {v:'nao',            t:'Não quer agora',                cor:'#B3261E', fecha:true}
   ];
+  // ===== OS BOTÕES DO "EM ABERTO" (Adriana, 24/set/2026) ==========================
+  // "Vai mandar na bolsa" e "Pegar na loja" não cabem aqui: não se sabe sequer se o item já
+  // foi feito. A conversa é outra — pedir a data ou a carteirinha —, e por isso as respostas
+  // são outras. "Vai mandar a data/carteirinha" abre a pergunta da ficha na hora: a data
+  // nova só existe com o tutor.
+  var VENC_RESPOSTAS_ABERTO=[
+    {v:'ab_data',  t:'Vai mandar a data ou a carteirinha', cor:'#234D67', fecha:true, ficha:true},
+    {v:'ab_fazer', t:'Nunca fez — quer fazer aqui',        cor:'#1E8449', fecha:true},
+    {v:'sem',      t:'Não respondeu',                      cor:'#6b5f4b', fecha:false},
+    {v:'nao',      t:'Não quer agora',                     cor:'#B3261E', fecha:true}
+  ];
   // Os botões DAQUELE assunto, já sem o que não cabe no dia-alvo.
-  function vencRespostasDe(tipo, diaAlvo){
+  // `o` (24/set/2026): com o FILHOt na mão, "Aplicar no dia dele" também vale num dia SEM
+  // veterinária — é exatamente o que a mensagem de agendamento oferece ao tutor na quinta.
+  // Sem `o`, a regra continua a de antes: só em dia de atendimento dela.
+  function vencRespostasDe(tipo, diaAlvo, o){
     var t=String(tipo||''), vac=(vencTipoBase(t)==='vacina');
+    if(vencTipoBase(t)==='aberto') return VENC_RESPOSTAS_ABERTO;
     var L=vencEhAntecipado(t)
       ? (vac?VENC_RESPOSTAS_HOJE_VACINA:VENC_RESPOSTAS_HOJE)
       : (vac?VENC_RESPOSTAS_VACINA:VENC_RESPOSTAS);
-    return L.filter(function(x){ return !x.soNoDia || vencEhDiaVet(diaAlvo); });
+    var temDiaDele=!!(o && vencProximoVetDele(o.p, diaAlvo));
+    return L.filter(function(x){ return !x.soNoDia || vencEhDiaVet(diaAlvo) || temDiaDele; });
   }
   // A definição de UMA resposta, olhando nas duas tabelas — o histórico de um dia antigo
   // pode ter sido gravado com o botão do outro assunto.
@@ -33758,7 +33860,8 @@
     return VENC_RESPOSTAS.filter(function(x){ return x.v===v; })[0]
         || VENC_RESPOSTAS_VACINA.filter(function(x){ return x.v===v; })[0]
         || VENC_RESPOSTAS_HOJE.filter(function(x){ return x.v===v; })[0]
-        || VENC_RESPOSTAS_HOJE_VACINA.filter(function(x){ return x.v===v; })[0] || null;
+        || VENC_RESPOSTAS_HOJE_VACINA.filter(function(x){ return x.v===v; })[0]
+        || VENC_RESPOSTAS_ABERTO.filter(function(x){ return x.v===v; })[0] || null;
   }
   // Os rótulos antigos continuam legíveis: o banco tem respostas gravadas antes de 21/set
   // ('zeluz', 'vet', 'casa') e quem lê o histórico precisa entender o que está escrito lá.
@@ -33921,27 +34024,44 @@
   // Recebe a ficha, o dia-alvo, a margem e o dia de hoje; devolve o que vence (ou já
   // venceu) até o dia-alvo mais a margem. Não lê banco, não escreve, não desenha: é ela
   // que o harness morde.
-  function vencItensDe(ex, diaAlvo, margem, hoje){
-    ex=ex||{};
+  // `opc.incluirSemRegistro` (24/set/2026): além do que vence, traz o que NUNCA foi
+  // registrado na ficha — `sem_registro:true`, sem data. Nasce DESLIGADO de propósito: quem
+  // pede é quem quer ver a ficha inteira (Vencimentos e Hoje na Zêluz). A Prevenção, a
+  // antecipação e todo o resto continuam vendo exatamente o que viam antes.
+  function vencItensDe(ex, diaAlvo, margem, hoje, opc){
+    ex=ex||{}; opc=opc||{};
     if(!/^\d{4}-\d{2}-\d{2}$/.test(diaAlvo||'')) return [];
     hoje=hoje||((typeof zHojeISO==='function')?zHojeISO():'');
     var lim=addDiasISO(diaAlvo, (margem>0?margem:0));
     if(!lim) return [];
-    var out=[];
+    var out=[], abertos=[];
     (PREV_ITENS||[]).forEach(function(it){
       // "ou é vermífugo ou exame de fezes" — quem tem um não deve o outro (a regra do cadastro).
       if(it.dispensaSe && ex[it.dispensaSe]) return;
       if(it.k==='fezes_p' && prevValor(ex,{k:'verm_p',alt:'vermifugo_p'})) return;
       var v=prevValor(ex, it);
-      if(!/^\d{4}-\d{2}-\d{2}$/.test(v)) return;              // sem data não há o que avisar
+      var marca=it.coleira?String(ex.col_nome||'').trim():'';
+      if(!/^\d{4}-\d{2}-\d{2}$/.test(v)){
+        // SEM DATA NENHUMA. Não é vencimento — é ficha em branco, e isso só vira linha
+        // quando quem chamou pediu (`incluirSemRegistro`). A coleira só entra com a marca
+        // escrita na ficha: sem marca não há coleira para cobrar.
+        if(!opc.incluirSemRegistro) return;
+        var quando=VENC_SEM_REG[it.k];
+        if(!quando) return;
+        if(quando==='marca' && !marca) return;
+        abertos.push({k:it.k, nome:(VENC_ROTULO[it.k]||it.nome)+(marca?(' '+marca):''), marca:marca,
+                      vence:'', atrasado:false, vacina:(it.grupo==='vacina'), sem_registro:true});
+        return;
+      }
       if(prevDataQuebrada(v)) return;                         // ano digitado errado não é vencimento
       if(v>lim) return;                                       // ainda longe: não se cobra
-      var marca=it.coleira?String(ex.col_nome||'').trim():'';
       out.push({k:it.k, nome:(VENC_ROTULO[it.k]||it.nome)+(marca?(' '+marca):''), marca:marca, vence:v,
                 atrasado:(v<hoje), vacina:(it.grupo==='vacina')});
     });
     out.sort(function(a,b){ return (a.vence<b.vence)?-1:((a.vence>b.vence)?1:0); });
-    return out;
+    // O que tem data vem primeiro (tem prazo e tem urgência); o que está em aberto vem
+    // depois, na ordem da própria ficha. Misturar os dois pela data ordenaria o vazio.
+    return out.concat(abertos);
   }
 
   // ---- a lista da tela -----------------------------------------------------------------
@@ -33958,7 +34078,10 @@
       var chave=(typeof dcKey==='function')?dcKey(p.n,p.tutor):'';
       if(!chave||vistos[chave]) return;                       // um cartão por FILHOt, sempre
       var ex=(typeof pelExtra==='function')?(pelExtra(p)||{}):{};
-      var itens=vencItensDe(ex, diaAlvo, margem, hoje);
+      // O que está EM ABERTO na ficha entra aqui (24/set/2026): "todos que vieram na aula
+      // precisam aparecer... e quais são as pendências?" — a que nunca foi registrada é
+      // pendência igual, e era justamente a que ninguém via.
+      var itens=vencItensDe(ex, diaAlvo, margem, hoje, {incluirSemRegistro:true});
       if(!itens.length) return;
       vistos[chave]=1;
       var i=PELUDINHOS.indexOf(p);
@@ -34003,7 +34126,14 @@
     if(it&&it.k==='col_p'&&it.marca) base+=' '+it.marca;
     return base;
   }
+  // "venceu em 24/09" · "vence em 26/09" · "em aberto — nunca registrado". Uma frase só,
+  // usada na etiqueta do cartão, na linha de texto puro e no resumo do dia.
+  function vencQuantoTexto(it, hoje){
+    if(it&&it.sem_registro) return 'em aberto — nunca registrado';
+    return (it&&it.atrasado?'venceu em ':'vence em ')+vencData(it&&it.vence, hoje);
+  }
   function vencFraseItem(it, hoje){
+    if(it&&it.sem_registro) return vencNomeComArtigo(it)+' — em aberto, nunca registrado';
     return vencNomeComArtigo(it)+(it.atrasado?' venceu em ':' vence em ')+vencData(it.vence, hoje);
   }
   // A CONCORDÂNCIA quando é mais de um. A frase mora em Configurações escrita no SINGULAR
@@ -34024,22 +34154,66 @@
     if(VENC_VACINA_NOME[k]) return 'vacina';
     return 'antip';                                          // vermífugo, carrapaticida, coleira, exame, check-up
   }
+  // De que mensagem faz parte ESTE item (não só a chave dele). O que nunca foi registrado
+  // é sempre o assunto 'aberto', seja vacina ou vermífugo: a conversa é a mesma — pedir a
+  // carteirinha —, e é ela que a Adriana ditou em 24/set.
+  function vencTipoDoItemObj(x){
+    if(x&&x.sem_registro) return 'aberto';
+    return vencTipoDoItem(x&&x.k);
+  }
+  // Os itens que TÊM data — os que de fato vencem. O que nunca foi registrado (24/set/2026)
+  // não se lança na planilha nem vira recado para a veterinária: não há o que fazer hoje com
+  // ele além de pedir a data ao tutor. Quem lança, quem pergunta o período da vacina e quem
+  // calcula a dose do vermífugo olham por esta porta.
+  function vencComData(o){
+    return (((o&&o.itens))||[]).filter(function(x){ return !(x&&x.sem_registro); });
+  }
   // Os assuntos deste FILHOt, na ordem em que aparecem no cartão. Vacina E vermífugo
   // vencendo = duas mensagens, nunca uma frase misturada.
   function vencGrupos(o){
     var por={};
     (((o&&o.itens))||[]).forEach(function(x){
-      var t=vencTipoDoItem(x.k); (por[t]=por[t]||[]).push(x);
+      var t=vencTipoDoItemObj(x); (por[t]=por[t]||[]).push(x);
     });
     return VENC_ORDEM_TIPOS.filter(function(t){ return por[t]&&por[t].length; })
       .map(function(t){ return {tipo:t, itens:por[t]}; });
   }
+  // O PRÓXIMO DIA DELE QUE TAMBÉM É DIA DA VETERINÁRIA (Adriana, 24/set/2026).
+  // "Veterinário: não temos na quinta-feira... precisa agendar para a próxima vez que o
+  //  peludo vier." Anda pelos dias em que ELE vem (proximaVindaDe, que já pula fim de semana
+  //  e feriado) até cair num dia em que ela atende. '' = não sei quando ele volta — e "não
+  //  sei" nunca vira um dia inventado numa mensagem ao tutor.
+  function vencProximoVetDele(p, base){
+    var d=String(base||'').slice(0,10);
+    if(!/^\d{4}-\d{2}-\d{2}$/.test(d)) return '';
+    if(typeof proximaVindaDe!=='function') return '';
+    var guarda=0;
+    while(guarda++<12){
+      d=proximaVindaDe(p, d);
+      if(!d) return '';
+      if(vencEhDiaVet(d)) return d;
+    }
+    return '';
+  }
+  // Para QUE DIA fica agendada a vacina quando o tutor responde "no dia dele". Era sempre o
+  // dia do cartão — o que só estava certo quando o cartão caía num dia de atendimento dela.
+  // Numa quinta (ou em qualquer dia sem veterinária) o dia combinado é o próximo dia dele
+  // que também seja dia dela: exatamente o que a mensagem ofereceu ao tutor. Uma conta só,
+  // para a tela e o recado nunca dizerem dias diferentes.
+  function vencDiaAgendado(o, dia, hoje){
+    if(vencEhDiaVet(dia)) return dia;
+    return vencProximoVetDele(o&&o.p, hoje||dia)||dia;
+  }
   // Qual dos textos vale para a vacina: quando o FILHOt vem num dia em que a veterinária
   // atende, ela aplica durante o Day Care e NÃO se pergunta horário (palavra dela). Na
-  // quinta — ou fora de dia útil — a mensagem oferece o próximo dia de atendimento.
-  function vencChaveTexto(tipo, diaAlvo){
+  // quinta — ou fora de dia útil — a mensagem propõe o AGENDAMENTO no próximo dia dele que
+  // seja dia de atendimento (24/set/2026). Sem saber quando ele volta, volta a valer o texto
+  // antigo, que oferece o próximo horário livre dela: melhor oferecer um horário do que
+  // inventar um dia de vinda.
+  function vencChaveTexto(tipo, diaAlvo, o, hoje){
     if(tipo!=='vacina') return tipo;
-    return vencEhDiaVet(diaAlvo)?'vacina_creche':'vacina';
+    if(vencEhDiaVet(diaAlvo)) return 'vacina_creche';
+    return (o && vencProximoVetDele(o.p, hoje||diaAlvo)) ? 'vacina_agendar' : 'vacina';
   }
   // "a, b e c" — norma culta. Lista com "·" é planilha, não é conversa com o tutor.
   function vencJuntar(arr){
@@ -34062,7 +34236,7 @@
     diaAlvo=diaAlvo||vencDiaAlvo();
     hoje=hoje||((typeof zHojeISO==='function')?zHojeISO():'');
     itens=(itens&&itens.length)?itens:((o.itens)||[]);
-    var txt=vencPluralizar(String(vencTexto(vencChaveTexto(tipo, diaAlvo))), itens.length);
+    var txt=vencPluralizar(String(vencTexto(vencChaveTexto(tipo, diaAlvo, o, hoje))), itens.length);
     // O fecho entra ANTES das outras trocas: ele também tem chaves dentro, e elas precisam
     // ser trocadas depois. Sem {fecho} escrito no texto, nada é acrescentado — quem manda
     // no lugar da frase é quem escreve a mensagem, não o app.
@@ -34074,6 +34248,14 @@
     var tutor=(typeof primeiroNome==='function')?primeiroNome(o.tutor):String(o.tutor||'').split(/\s+/)[0]||'';
     var diaVet=proximoDiaVet(hoje);
     var semVet=(typeof orcDiaSemana==='function')?orcDiaSemana(diaVet):'';
+    // O DIA AGENDADO (24/set/2026): o próximo dia DELE que também é dia de atendimento dela.
+    // Vazio quando não se sabe quando ele volta — e a mensagem que depende dele nem chega a
+    // ser escolhida nesse caso (vencChaveTexto).
+    var diaVetDele=vencProximoVetDele(o&&o.p, hoje);
+    var semVetDele=(typeof orcDiaSemana==='function')?orcDiaSemana(diaVetDele):'';
+    // "venceu" x "vence" — e no plural. Só quando TODOS os itens já venceram a frase vai
+    // para o passado; misturado, o presente é o que não mente sobre nenhum deles.
+    var todosAtrasados=itens.length>0 && itens.every(function(x){ return x&&x.atrasado; });
     txt=txt
       .replace(/\{tutor\}/gi, tutor)
       .replace(/\{dofilhot\}/gi, (femea?'da ':'do ')+(o.nome||''))
@@ -34087,10 +34269,18 @@
       .replace(/\{valor_escova\}/gi, (typeof escovaCent==='function')?fmtCent(escovaCent()):'')
       .replace(/\{dia_vet\}/gi, vencData(diaVet, hoje))
       .replace(/\{semana_vet\}/gi, String(VENC_DIA_NOME[semVet]||'').replace(/-feira$/,''))
+      // O AGENDAMENTO da vacina: o dia da semana por extenso e a data dele, separados —
+      // é assim que a frase dela pede ("para sexta-feira (25/09)").
+      .replace(/\{proximo_dia_vet_dele\}/gi, String(VENC_DIA_NOME[semVetDele]||''))
+      .replace(/\{data\}/gi, vencData(diaVetDele, hoje))
+      // {itens_abertos} — a lista do que NUNCA foi registrado, com o artigo certo.
+      .replace(/\{itens_abertos\}/gi, vencJuntar(itens.filter(function(x){ return x&&x.sem_registro; })
+        .map(vencNomeComArtigo)))
       // {vencer} — o VERBO concordando com o número de itens. Tem de se chamar "vencer", e
       // não "vence": vencPluralizar troca a palavra "vence" dentro do texto, e trocaria o
       // próprio marcador antes de ele ser substituído.
-      .replace(/\{vencer\}/gi, (itens.length>1?'vencem':'vence'))
+      .replace(/\{vencer\}/gi, todosAtrasados?(itens.length>1?'venceram':'venceu')
+                                              :(itens.length>1?'vencem':'vence'))
       // {volta} — o próximo dia em que ele vem (a antecipação de 24/set). Vazio quando não
       // há próxima vinda conhecida: melhor faltar a informação do que inventar um dia.
       .replace(/\{volta\}/gi, (o&&o.proxima)?vencFraseDia(o.proxima, hoje):'')
@@ -34251,7 +34441,7 @@
   // é a conversa, não o vermífugo.
   function vencItensDoTipo(o, tipo){
     var base=vencTipoBase(tipo);
-    return (((o&&o.itens))||[]).filter(function(x){ return vencTipoDoItem(x.k)===base; });
+    return (((o&&o.itens))||[]).filter(function(x){ return vencTipoDoItemObj(x)===base; });
   }
   // Os itens daquele assunto que a casa LANÇA nos Lançamentos do dia. Vacina não entra —
   // quem aplica é a veterinária, e o recado dela sai por outro caminho.
@@ -34373,10 +34563,24 @@
   // passada — e "aviso que depende de abrir a tela não é aviso".
   function vencAtualizarBadge(){
     var el=document.getElementById('navVencN'); if(!el) return;
+    // O NÚMERO É O DE HOJE (Adriana, 24/set/2026): "quem está com pendência? Hoje: fulano,
+    // fulano." Quem abre o menu de manhã quer saber quanta gente da casa de HOJE está
+    // devendo alguma coisa — não a soma de todos os dias. Em dia sem Day Care (fim de
+    // semana, feriado) vale o PRÓXIMO dia, senão o menu ficaria mudo no sábado.
+    var hoje=(typeof zHojeISO==='function')?zHojeISO():'';
+    var dia=vencEhDiaDayCare(hoje)?hoje:(proximoDiaDayCare(hoje)||'');
+    var n=null;
+    if(dia && typeof PELUDINHOS!=='undefined' && Array.isArray(PELUDINHOS) && PELUDINHOS.length){
+      try{ n=vencListaMemo(dia).length; }
+      catch(e){ n=null; } /* silencioso de propósito: sem a lista o contador some — nunca afirma zero */
+    }
+    // O que ficou para trás não some: quem já passou do prazo continua pedindo cobrança, de
+    // qualquer dia. "Aviso que depende de abrir a tela não é aviso."
     var p=(typeof vencPendContagem==='function')?vencPendContagem():null;
-    if(p&&p.total){ el.textContent='('+p.total+(p.cobrar?(' · '+p.cobrar+' a cobrar'):'')+')'; return; }
-    var c=vencContagem();
-    el.textContent=(!c||!c.semResposta)?'':('('+c.semResposta+')');
+    var partes=[];
+    if(n) partes.push(String(n));
+    if(p&&p.cobrar) partes.push(p.cobrar+' a cobrar');
+    el.textContent=partes.length?('('+partes.join(' · ')+')'):'';
   }
   // A lista de um dia, com memória curta. O calendário do mês e o quadro de pendências
   // perguntam pelo MESMO dia muitas vezes numa mesma pintura de tela; refazer a conta a
@@ -34615,7 +34819,7 @@
           var fonte=vencEhAntecipado(tipo)
             ? (Array.isArray(r.itens_ant)?r.itens_ant:(Array.isArray(r.itens)?r.itens:[]))
             : (Array.isArray(r.itens)?r.itens:[]);
-          var itens=fonte.filter(function(x){ return vencTipoDoItem(x.k)===vencTipoBase(tipo); });
+          var itens=fonte.filter(function(x){ return vencTipoDoItemObj(x)===vencTipoBase(tipo); });
           out.push({dia:dia, chave:chave, tipo:tipo, estado:st,
             rotulo:vencRotuloTipo(tipo),
             pet:String(r.pet||''), tutor:String(r.tutor||''),
@@ -34717,7 +34921,11 @@
   // Toda gravação daqui carrega o nome de quem tocou. Login de papel não é pessoa.
   function vencSnapItens(o){
     return (o.itens||[]).map(function(x){
-      return {k:x.k, nome:x.nome, vence:x.vence, atrasado:!!x.atrasado};
+      var s={k:x.k, nome:x.nome, vence:x.vence, atrasado:!!x.atrasado};
+      // A marca do que nunca foi registrado viaja com o retrato (24/set/2026): sem ela, a
+      // resposta dada dias depois, no quadro das pendentes, cairia no assunto errado.
+      if(x.sem_registro) s.sem_registro=true;
+      return s;
     });
   }
   // diaOpc: o Confirmar do lançamento leva MINUTOS entre abrir o bloco e gravar, e nesse
@@ -34860,7 +35068,11 @@
       var hojeV=(typeof zHojeISO==='function')?zHojeISO():'';
       vetReg={pet:(o.nome||''), dofilhot:(femeaV?'da ':'do ')+(o.nome||''), periodo:def.periodo,
               vacinas:vencJuntar(vacs.map(function(x){ return VENC_VACINA_NOME[x.k]||x.nome; })),
-              dia:(def.hoje||def.periodo==='no dia dele')?dia:(proximoDiaVet(hojeV)||dia),
+              // "no dia dele" agora sabe QUAL dia é (24/set/2026): numa quinta, o dia do
+              // cartão não é dia dela — o combinado é o próximo dia dele que também seja.
+              dia:def.hoje?dia:(def.periodo==='no dia dele'
+                                  ? vencDiaAgendado(o, dia, hojeV)
+                                  : (proximoDiaVet(hojeV)||dia)),
               quem:quem, ts:agora};
       patch.vet=vetReg;
     }
@@ -35053,7 +35265,7 @@
   // peso decide sozinho. Se já houver uma escolha feita, ela manda — a sugestão não atropela.
   function vermPreMarcarVenc(chave){
     var o=vencAchar(chave); if(!o) return;
-    if(!(o.itens||[]).some(function(x){ return x.k==='verm_p'; })) return;
+    if(!vencComData(o).some(function(x){ return x.k==='verm_p'; })) return;
     var a=vermAvaliarFicha(o.p); if(!a||a.pesar||!a.dose||!a.dose.rot) return;
     VENC_ESCOLHA[chave]=VENC_ESCOLHA[chave]||{};
     var d=VENC_ESCOLHA[chave].verm_p=VENC_ESCOLHA[chave].verm_p||{};
@@ -35062,7 +35274,7 @@
   // A linha do vermífugo no cartão: a dose que o peso indica, ou o aviso de pesar de novo.
   // É ela que a consultora dita ao tutor — e é a mesma que vai pré-marcada lá embaixo.
   function vermLinhaVencHTML(o, hoje){
-    if(!o||!(o.itens||[]).some(function(x){ return x.k==='verm_p'; })) return '';
+    if(!o||!vencComData(o).some(function(x){ return x.k==='verm_p'; })) return '';
     var a=vermAvaliarFicha(o.p, hoje); if(!a) return '';
     if(a.pesar) return '<div class="hint" style="margin-top:3px;color:var(--crm-atencao-text);font-weight:700">'
       +'Vermífugo: '+escAttr(vermFrasePeso(a,hoje))+' Pese de novo antes de dar — '+escAttr(a.motivo)+'.</div>';
@@ -35082,9 +35294,9 @@
     var esc=VENC_ESCOLHA[chave]||{}, falta=[];
     // Vacina não se lança na planilha, mas tem uma resposta obrigatória: QUANDO a
     // veterinária aplica. Sem ela o recado para a vet sairia pela metade.
-    if((o.itens||[]).some(function(x){ return x.vacina; }) && !((esc.__vet||{}).periodo))
+    if(vencComData(o).some(function(x){ return x.vacina; }) && !((esc.__vet||{}).periodo))
       falta.push('vacina: quando a veterinária aplica');
-    (o.itens||[]).forEach(function(x){
+    vencComData(o).forEach(function(x){
       var cfg=VENC_LANC[x.k]; if(!cfg) return;               // vacina não se lança aqui
       var e=esc[x.k]||{};
       if(!e.onde) falta.push(x.nome+': '+String(cfg.rotOnde||'onde está o produto').toLowerCase().replace(/\?$/,''));
@@ -35093,7 +35305,7 @@
     return falta.join(' · ');
   }
   function vencTemLancavel(o){
-    return !!(o&&(o.itens||[]).some(function(x){ return VENC_LANC[x.k]; }));
+    return !!(o&&vencComData(o).some(function(x){ return VENC_LANC[x.k]; }));
   }
   function vencConfirmarZeluz(chave){
     var o=vencAchar(chave); if(!o) return;
@@ -35103,7 +35315,7 @@
     var dia=vencDiaAlvo();
     var esc=VENC_ESCOLHA[chave]||{};
     var linhas=['A resposta do tutor fica registrada como "Pode fazer na Zêluz", com o seu nome e a hora.'];
-    var vaiLancar=(o.itens||[]).filter(function(x){ return VENC_LANC[x.k]&&VENC_LANC[x.k].item; });
+    var vaiLancar=vencComData(o).filter(function(x){ return VENC_LANC[x.k]&&VENC_LANC[x.k].item; });
     if(vaiLancar.length){
       linhas.push('Vai para os Lançamentos do dia de '+(((typeof fmtBR==='function'?fmtBR(dia):'')||dia))+' assim:');
       vaiLancar.forEach(function(x){
@@ -35115,10 +35327,10 @@
       });
       linhas.push('Dali segue para a planilha e para a TV, como qualquer outro lançamento do dia. Se ele faltar no dia, vira pendência sozinho.');
     }
-    var semLanc=(o.itens||[]).filter(function(x){ return !VENC_LANC[x.k]||!VENC_LANC[x.k].item; });
+    var semLanc=vencComData(o).filter(function(x){ return !VENC_LANC[x.k]||!VENC_LANC[x.k].item; });
     if(semLanc.length) linhas.push('Não entra nos Lançamentos do dia: '+semLanc.map(function(x){ return x.nome; }).join(' · ')
       +' — quem aplica vacina é a veterinária. Fica registrado aqui.');
-    var vacsConf=(o.itens||[]).filter(function(x){ return x.vacina; });
+    var vacsConf=vencComData(o).filter(function(x){ return x.vacina; });
     if(vacsConf.length){
       var perConf=String(((VENC_ESCOLHA[chave]||{}).__vet||{}).periodo||'');
       var diaVetConf=(perConf==='no dia dele')?dia:(proximoDiaVet((typeof zHojeISO==='function')?zHojeISO():'')||dia);
@@ -35140,11 +35352,11 @@
     var quem=(typeof quemSou==='function'?quemSou():'-');
     var esc=VENC_ESCOLHA[chave]||{};
     var onde={};
-    (o.itens||[]).forEach(function(x){ var e=esc[x.k]||{}; if(e.onde) onde[x.k]=e.onde; });
+    vencComData(o).forEach(function(x){ var e=esc[x.k]||{}; if(e.onde) onde[x.k]=e.onde; });
     // VACINA (21/set/2026): não vai para a planilha — vira recado para a veterinária, com o
     // dia e o período que o tutor escolheu. O "d{ofilhot}" da frase dela já sai com o artigo
     // certo aqui dentro, para o recado não dizer "do Lana".
-    var vacs=(o.itens||[]).filter(function(x){ return x.vacina; });
+    var vacs=vencComData(o).filter(function(x){ return x.vacina; });
     var vetReg=null;
     if(vacs.length){
       var femeaV=/^f/i.test(String(o.sexo||''));
@@ -35152,7 +35364,7 @@
       var hojeV=(typeof zHojeISO==='function')?zHojeISO():'';
       vetReg={pet:(o.nome||''), dofilhot:(femeaV?'da ':'do ')+(o.nome||''), periodo:per,
               vacinas:vencJuntar(vacs.map(function(x){ return VENC_VACINA_NOME[x.k]||x.nome; })),
-              dia:(per==='no dia dele')?dia:(proximoDiaVet(hojeV)||dia),
+              dia:(per==='no dia dele')?vencDiaAgendado(o, dia, hojeV):(proximoDiaVet(hojeV)||dia),
               quem:quem, ts:Date.now()};
     }
     // Só vacina vencendo → a resposta gravada é 'vet': quem faz é a veterinária, e o cartão
@@ -35180,7 +35392,7 @@
       o, dia).then(function(ok){
       if(!ok) return;
       if(vetReg) vencAvisarVet(o, vetReg);
-      var fila=(o.itens||[]).filter(function(x){ return VENC_LANC[x.k]&&VENC_LANC[x.k].item; });
+      var fila=vencComData(o).filter(function(x){ return VENC_LANC[x.k]&&VENC_LANC[x.k].item; });
       if(!fila.length){ delete VENC_ABERTO[chave]; delete VENC_ESCOLHA[chave]; vencRender(); return; }
       var bkpDia=DASH_DIA_SEL, bkpDados=DASH_DADOS;
       DASH_DIA_SEL=dia;
@@ -35354,6 +35566,57 @@
     vencRender();
     vencCarregar(vencDiaAlvo()).then(vencRender);
   }
+  /* ====================================================================================
+   * OS DIAS DA SEMANA NO SIDEBAR (Adriana, 24/set/2026)
+   * "Coloque 'Vencimentos' aqui dentro; o título 'está vencendo', e abrindo no sidebar
+   *  aparece segunda, terça, quarta, quinta, sexta. (…) Todos que vieram na aula precisam
+   *  aparecer: hoje quinta, amanhã sexta, igual às Turminhas."
+   *
+   * Cada dia abre a PRÓXIMA ocorrência dele: numa quinta, "Quinta" é hoje, "Sexta" é amanhã
+   * e "Segunda" é a que vem. Feriado não é dia de Day Care — quando a próxima ocorrência cai
+   * num, pula-se para a semana seguinte: oferecer um dia em que a casa não abre é oferecer
+   * uma lista vazia sem dizer por quê.
+   * ================================================================================== */
+  function vencProximaOcorrencia(sigla, hoje){
+    hoje=hoje||((typeof zHojeISO==='function')?zHojeISO():'');
+    if(!/^\d{4}-\d{2}-\d{2}$/.test(hoje||'')) return '';
+    if(!VENC_DIA_NOME[sigla]) return '';
+    var d=hoje, guarda=0;
+    // Até 8 semanas: o bastante para atravessar qualquer emenda de feriado sem laço infinito.
+    while(guarda++<60){
+      var sem=(typeof orcDiaSemana==='function')?orcDiaSemana(d):'';
+      if(sem===sigla && vencEhDiaDayCare(d)) return d;
+      d=(typeof orcMaisDias==='function')?orcMaisDias(d,1):addDiasISO(d,1);
+      if(!d) return '';
+    }
+    return '';
+  }
+  // O toque no dia do menu: abre a tela e põe o dia-alvo naquele dia. "Hoje" é hoje mesmo,
+  // haja Day Care ou não — é a pergunta da recepção de manhã.
+  function vencIrDia(sigla){
+    var hoje=(typeof zHojeISO==='function')?zHojeISO():'';
+    var alvo=(sigla==='hoje')?hoje:vencProximaOcorrencia(sigla, hoje);
+    try{ if(typeof irParaView==='function') irParaView('vencimentos'); }catch(e){} /* silencioso de propósito: guarda defensiva — o dia abaixo ainda troca */
+    if(alvo) vencTrocarDia(alvo); else vencRender();
+    try{ vencMarcarDiaAtivo(); }catch(e){} /* silencioso de propósito: enfeite de menu — falhar não muda dado nenhum */
+    try{ if(typeof closeNav==='function') closeNav(); }catch(e){} /* silencioso de propósito: enfeite de tela — falhar não muda dado nenhum */
+  }
+  // Qual dos dias do menu está aceso. É o espelho do dia-alvo — a pessoa precisa ver em que
+  // dia ela está sem reler o cabeçalho da tela.
+  function vencMarcarDiaAtivo(){
+    var dias=document.querySelectorAll('#navVencDias a[data-vdia]');
+    if(!dias||!dias.length) return;
+    var hoje=(typeof zHojeISO==='function')?zHojeISO():'';
+    var dia=vencDiaAlvo();
+    var telaAberta=false;
+    try{ var sec=document.getElementById('v-vencimentos'); telaAberta=!!(sec&&sec.classList.contains('active')); }
+    catch(e){ telaAberta=false; } /* silencioso de propósito: sem DOM não há o que acender */
+    dias.forEach(function(a){
+      var k=a.getAttribute('data-vdia');
+      var meu=(k==='hoje')?(dia&&dia===hoje):(dia&&dia===vencProximaOcorrencia(k, hoje));
+      a.classList.toggle('active', !!(telaAberta&&meu));
+    });
+  }
   function vencAbrir(){
     var raiz=document.getElementById('vencRoot'); if(!raiz) return;
     // A trava é a MESMA tabela que mostra o item no menu. Quem chegar por link direto e não
@@ -35456,17 +35719,115 @@
     }catch(e){ /* silencioso de propósito: sem foco legível, redesenhar é o comportamento antigo */ }
     vencRender();
   }
+  /* ====================================================================================
+   * "QUEM VEM {dia} COM PENDÊNCIA" — a lista do dia, organizada (Adriana, 24/set/2026)
+   * "Quem está com pendência? Hoje: fulano, fulano. Amanhã: fulano. E quais são as
+   *  pendências? Tudo organizado para eu arrumar e deixar zerado."
+   *
+   * Antes dos cartões, o retrato do dia em cinco linhas: por TIPO de pendência, os nomes em
+   * fila. É o que ela lê de pé, antes de abrir um cartão sequer — e é o mesmo texto que o
+   * "Copiar resumo" põe no WhatsApp, sem enfeite nenhum. Duas escritas da mesma lista viram
+   * duas verdades; aqui a tela e o texto saem da MESMA função.
+   * ================================================================================== */
+  var VENC_RESUMO_GRUPOS=[
+    {v:'verm',   t:'Vermífugo'},
+    {v:'ecto',   t:'Carrapaticida'},
+    {v:'vacina', t:'Vacinas'},
+    {v:'col',    t:'Coleira'},
+    {v:'escova', t:'Escova de dentes'},
+    {v:'outro',  t:'Exame de fezes e check-up'},
+    {v:'aberto', t:'Em aberto na ficha — nunca registrado'}
+  ];
+  // De que linha do resumo é ESTE item. O que nunca foi registrado vai para 'aberto', seja
+  // vacina ou vermífugo: o trabalho ali é outro — é pedir a carteirinha ao tutor.
+  function vencResumoFamilia(x){
+    if(x&&x.sem_registro) return 'aberto';
+    var k=String((x&&x.k)||'');
+    if(k==='verm_p'||k==='verm_dose2_p') return 'verm';
+    if(k==='ecto_p') return 'ecto';
+    if(k==='col_p') return 'col';
+    if(k==='escova_p') return 'escova';
+    if(VENC_VACINA_NOME[k]) return 'vacina';
+    return 'outro';
+  }
+  // Função PURA: recebe a lista do dia e devolve as linhas com os nomes, sem repetir nome
+  // dentro de uma linha. É ela que o harness morde.
+  function vencResumoGrupos(L){
+    var por={};
+    (L||[]).forEach(function(o){
+      (((o&&o.itens))||[]).forEach(function(x){
+        var f=vencResumoFamilia(x);
+        por[f]=por[f]||[];
+        if(por[f].indexOf(o.nome)<0) por[f].push(o.nome);
+      });
+    });
+    return VENC_RESUMO_GRUPOS.filter(function(g){ return (por[g.v]||[]).length; })
+      .map(function(g){ return {v:g.v, rotulo:g.t, nomes:por[g.v]}; });
+  }
+  // O MESMO resumo em texto puro — é ele que vai para o WhatsApp.
+  function vencResumoTexto(L, dia, hoje){
+    var G=vencResumoGrupos(L);
+    var cab='Está vencendo — quem vem '+vencFraseDia(dia, hoje);
+    if(!G.length) return cab+'\nNinguém da turma deste dia está com pendência.';
+    return cab+'\n'+(L||[]).length+' com pendência\n\n'
+      +G.map(function(g){ return g.rotulo+': '+g.nomes.join(' · '); }).join('\n');
+  }
+  function vencResumoHTML(L, dia, hoje){
+    var G=vencResumoGrupos(L);
+    if(!G.length) return '';
+    var h='<div class="card" style="border-left:4px solid var(--z-blue)">'
+      +'<div style="display:flex;flex-wrap:wrap;gap:8px;align-items:baseline;justify-content:space-between">'
+      +'<h2 style="font-size:18px;margin:0">Quem vem '+escAttr(vencFraseDia(dia,hoje))+' com pendência</h2>'
+      +'<button type="button" class="btn" style="padding:6px 13px;font-size:12.5px;font-weight:800;background:var(--z-cream-warm);color:var(--z-blue);border:1.5px solid var(--line)" onclick="vencCopiarResumo(this)">Copiar resumo</button>'
+      +'</div>'
+      +'<div class="hint" style="margin-top:2px">Por tipo de pendência, quem está devendo. Os cartões, com a mensagem pronta de cada um, vêm logo abaixo.</div>';
+    G.forEach(function(g){
+      h+='<div style="margin-top:9px">'
+        +'<div style="font-size:12.5px;font-weight:800;color:'
+        +(g.v==='aberto'?'#1F5F69':'var(--z-blue)')+'">'+escAttr(g.rotulo)
+        +' <span style="opacity:.65">('+g.nomes.length+')</span></div>'
+        +'<div style="font-size:14px;font-weight:600;color:var(--z-blue);line-height:1.5">'
+        +escAttr(g.nomes.join(' · '))+'</div></div>';
+    });
+    return h+'<textarea id="vencResumoTxt" class="gest-txt" rows="8" style="width:100%;display:none;margin-top:10px"></textarea></div>';
+  }
+  function vencCopiarResumo(btn){
+    var hoje=(typeof zHojeISO==='function')?zHojeISO():'';
+    var dia=vencDiaAlvo();
+    var L=[]; try{ L=vencLista(dia)||[]; }catch(e){ L=[]; } /* silencioso de propósito: sem a lista o texto sai com o cabeçalho, nunca errado */
+    var txt=vencResumoTexto(L, dia, hoje);
+    var pronto=function(){
+      if(!btn) return;
+      var t=btn.textContent; btn.textContent='✅ Copiado — cole no WhatsApp';
+      setTimeout(function(){ try{ btn.textContent=t; }catch(e){} /* silencioso de propósito: enfeite de botão — falhar não muda dado nenhum */ }, 3000);
+    };
+    // Sem área de transferência, o texto aparece num campo já selecionado — nunca se deixa
+    // quem pediu o resumo sem o resumo na mão.
+    var naTela=function(){
+      var ta=document.getElementById('vencResumoTxt'); if(!ta) return;
+      ta.style.display='block'; ta.value=txt;
+      try{ ta.focus(); ta.select(); }catch(e){} /* silencioso de propósito: enfeite de tela — falhar não muda dado nenhum */
+    };
+    if(navigator.clipboard&&navigator.clipboard.writeText) navigator.clipboard.writeText(txt).then(pronto).catch(naTela);
+    else naTela();
+  }
   function vencRender(){
     var raiz=document.getElementById('vencRoot'); if(!raiz) return;
     if(!podePapel('vencimentos-amanha')) return;              // vencAbrir já escreveu o porquê
     var hoje=(typeof zHojeISO==='function')?zHojeISO():'';
     var dia=vencDiaAlvo();
+    // O TÍTULO É O DELA (24/set/2026): "o título 'está vencendo'". O subtítulo diz de quem
+    // é o dia e o que se está olhando — inclusive o que está EM ABERTO, que não vence nunca
+    // e por isso não cabia na frase antiga.
     var cabec=function(miolo){
       return '<div class="card" style="border-left:4px solid var(--z-gold)">'
-        +'<h2 style="font-size:19px;margin-bottom:2px">Mande hoje, para quem vem '+escAttr(vencFraseDia(dia,hoje))+'.</h2>'
+        +'<h2 style="font-size:19px;margin-bottom:2px">Está vencendo</h2>'
+        +'<div style="font-size:14px;font-weight:700;color:var(--z-blue);margin-bottom:4px">quem vem '
+        +escAttr(vencFraseDia(dia,hoje))+' e o que está em aberto</div>'
         +'<div class="hint">A prevenção que vence até '+escAttr((typeof fmtBR==='function')?fmtBR(addDiasISO(dia,vencMargem())):'')
         +' (o dia mais '+vencMargem()+' dia'+(vencMargem()>1?'s':'')+' de folga, ajustável em Configurações › Mensagens prontas). '
-        +'Copie a mensagem, mande no WhatsApp do tutor e registre aqui o que ele respondeu — <strong>o assunto só fecha quando a ficha estiver atualizada</strong>.</div>'
+        +'Copie a mensagem, mande no WhatsApp do tutor e registre aqui o que ele respondeu — <strong>o assunto só fecha quando a ficha estiver atualizada</strong>. '
+        +'Entra também o que <strong>nunca foi registrado</strong> na ficha: vacinas, vermífugo, carrapaticida e a troca de escova sem data nenhuma.</div>'
         +vencAvisoVespera(dia,hoje)
         +vencSeletorHTML(dia,hoje)+'</div>'+miolo;
     };
@@ -35492,9 +35853,10 @@
     }
     if(!L.length){
       raiz.innerHTML=cabec('<div class="card"><h2 style="font-size:18px">Nada vencendo para '+escAttr(vencFraseDia(dia,hoje))+'.</h2>'
-        +'<div class="hint">Ninguém da turma desse dia tem vacina, antiparasitário, coleira ou escova vencendo dentro da janela. '
+        +'<div class="hint">Ninguém da turma desse dia tem vacina, antiparasitário, coleira ou escova vencendo dentro da janela — nem item em aberto na ficha. '
         +'Quem está atrasado de verdade continua aparecendo em <strong>Prevenção</strong>.</div></div>');
       try{ vencAtualizarBadge(); }catch(e){ /* silencioso de propósito: enfeite de menu — falhar não muda dado nenhum */ }
+      try{ vencMarcarDiaAtivo(); }catch(e){ /* silencioso de propósito: enfeite de menu — falhar não muda dado nenhum */ }
       return;
     }
     var c=vencContagem()||{aMandar:0, semResposta:0, cobrar:0, respondido:0, total:L.length};
@@ -35510,6 +35872,8 @@
       +'</div>'
       +vencRespondidosLinha(dia, hoje)
       +'</div>'
+      // A LISTA DO DIA, organizada por tipo de pendência — antes dos cartões (24/set/2026).
+      +vencResumoHTML(L, dia, hoje)
       // O quadro das respostas pendentes de TODOS os dias, aqui também: a consultora que
       // abre esta tela precisa ver o que ficou para trás sem trocar de tela.
       +'<div class="card"><h2 style="font-size:18px;margin-bottom:2px">Respostas pendentes</h2>'
@@ -35519,6 +35883,7 @@
     L.forEach(function(o){ h+=vencCartaoHTML(o, dia, hoje); });
     raiz.innerHTML=h;
     try{ vencAtualizarBadge(); }catch(e){ /* silencioso de propósito: enfeite de menu — falhar não muda dado nenhum */ }
+    try{ vencMarcarDiaAtivo(); }catch(e){ /* silencioso de propósito: enfeite de menu — falhar não muda dado nenhum */ }
   }
   function vencCartaoHTML(o, dia, hoje){
     var r=vencRegDe(o.chave)||{};
@@ -35545,10 +35910,14 @@
     // os itens, com a data — é o que ela dita ao tutor
     h+='<div style="display:flex;flex-wrap:wrap;gap:5px;margin:7px 0">';
     (o.itens||[]).forEach(function(x){
-      var quanto=x.atrasado?('venceu em '+vencData(x.vence,hoje)):('vence em '+vencData(x.vence,hoje));
+      // TRÊS estados, TRÊS cores (24/set/2026): venceu (vermelho), vai vencer (dourado) e
+      // EM ABERTO — nunca registrado (azul). O em aberto não é atraso: ninguém deixou
+      // vencer, a ficha é que nunca recebeu a data. Pintá-lo de vermelho seria acusar a
+      // equipe de uma falta que não houve; escondê-lo seria a falta de verdade.
       h+='<span style="border-radius:999px;padding:3px 11px;font-size:12px;font-weight:800;'
-        +(x.atrasado?'background:#F6D8D4;color:#8E1B10':'background:rgba(222,180,40,.22);color:var(--z-blue)')+'">'
-        +escAttr(x.nome+' — '+quanto)+'</span>';
+        +(x.sem_registro?'background:rgba(46,125,138,.16);color:#1F5F69'
+          :(x.atrasado?'background:#F6D8D4;color:#8E1B10':'background:rgba(222,180,40,.22);color:var(--z-blue)'))+'">'
+        +escAttr(x.nome+' — '+vencQuantoTexto(x, hoje))+'</span>';
     });
     h+='</div>';
     // A dose do vermífugo sai do peso (Adriana, 21/set/2026) — aqui, onde a consultora
@@ -35680,7 +36049,7 @@
       +'<div class="hint" style="margin-bottom:5px">O que o tutor respondeu sobre '
       +escAttr(String(vencRotuloTipo(tipo)).toLowerCase())+'?</div>'
       +'<div style="display:flex;flex-wrap:wrap;gap:7px">';
-    vencRespostasDe(tipo, dia).forEach(function(x){
+    vencRespostasDe(tipo, dia, o).forEach(function(x){
       var on=vencRespEh(atual, x.v);
       h+='<button type="button" class="btn" style="padding:6px 13px;font-size:12.5px;font-weight:800;border:1.5px solid '+x.cor+';'
         +'background:'+(on?x.cor:'transparent')+';color:'+(on?'#FFFDF6':x.cor)+'"'
@@ -35744,7 +36113,7 @@
     if(x.tentativas.length) h+='<div class="hint" style="margin-top:2px;color:var(--crm-atencao-text);font-weight:700">'
       +x.tentativas.length+' vez'+(x.tentativas.length>1?'es':'')+' sem resposta — continua pendente.</div>';
     h+='<div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:8px">';
-    vencRespostasDe(x.tipo, x.dia).forEach(function(b){
+    vencRespostasDe(x.tipo, x.dia, o).forEach(function(b){
       h+='<button type="button" class="btn" style="padding:5px 11px;font-size:12px;font-weight:800;border:1.5px solid '+b.cor+';'
         +'background:transparent;color:'+b.cor+'"'
         +' onclick="vencResponderTipo(\''+ka+'\',\''+escAttr(x.tipo)+'\',\''+b.v+'\',\''+escAttr(x.dia)+'\')">'+escAttr(b.t)+'</button>';
@@ -35766,7 +36135,7 @@
     var h=mostrar.map(function(x){ return vencPendLinhaHTML(x, hoje, agora); }).join('');
     if(L.length>mostrar.length)
       h+='<div class="hint" style="margin-top:8px">e mais '+(L.length-mostrar.length)
-        +' — <a href="#" onclick="irParaView(\'vencimentos\');return false" style="color:var(--z-blue);font-weight:800">abrir a tela Vence amanhã</a>.</div>';
+        +' — <a href="#" onclick="irParaView(\'vencimentos\');return false" style="color:var(--z-blue);font-weight:800">abrir a tela Vencimentos</a>.</div>';
     return h;
   }
   // O cartão do Dashboard das Consultoras.
@@ -35865,7 +36234,7 @@
   // ---- o quadro dos dashboards: SÓ LEITURA, com o caminho para cá ----------------------
   // A MESMA conta da tela e do contador do menu (vencContagem) — uma conta, três lugares.
   function blocoVenceHTML(){
-    var h='<article class="pm-card pm-rv pm-c5"><h3 class="pm-tit">Vence amanhã</h3>'
+    var h='<article class="pm-card pm-rv pm-c5"><h3 class="pm-tit">Vencimentos</h3>'
       +'<p class="pm-sub">Vacina, carrapaticida, coleira, vermífugo e escova vencendo de quem vem no próximo dia de Day Care. A mensagem para o tutor já sai pronta.</p>';
     var c=(typeof vencContagem==='function')?vencContagem():null;
     if(c===null) return h+poSemLeituraHTML('os vencimentos do próximo dia')+'</article>';
@@ -35892,7 +36261,7 @@
       +'<a href="#" onclick="paIr(\'hoje\');return false" style="color:var(--z-blue);font-weight:800">abrir Hoje na Zêluz</a></p>';
     h+='<div class="pm-lista"><button type="button" class="pa-li" onclick="paIr(\'vencimentos\')">'
       +'<span class="pm-badge pm-b-critico">'+c.total+' na lista</span>'
-      +'<span class="pa-li-txt"><b>Abrir a tela Vence amanhã</b><span>mandar hoje, para quem vem no dia '
+      +'<span class="pa-li-txt"><b>Abrir a tela Vencimentos</b><span>mandar hoje, para quem vem no dia '
       +esc((typeof fmtBR==='function'?fmtBR(c.dia):'')||c.dia)+'</span></span>'
       +'<span class="pa-li-go">&rsaquo;</span></button></div>';
     return h+'</article>';
@@ -36100,7 +36469,7 @@
   // Os assuntos da antecipação deste FILHOt, na ordem de sempre.
   function hojeAntGrupos(itens){
     var por={};
-    (itens||[]).forEach(function(x){ var t=vencTipoDoItem(x.k); (por[t]=por[t]||[]).push(x); });
+    (itens||[]).forEach(function(x){ var t=vencTipoDoItemObj(x); (por[t]=por[t]||[]).push(x); });
     return VENC_ORDEM_TIPOS.filter(function(t){ return por[t]&&por[t].length; })
       .map(function(t){ return {tipo:t, itens:por[t]}; });
   }
@@ -36327,8 +36696,10 @@
       vistos[chave]=1;
       var ex=(typeof pelExtra==='function')?(pelExtra(p)||{}):{};
       // folga ZERO: aqui só entra o que JÁ venceu ou vence hoje (ver o cabeçalho do bloco).
+      // 24/set/2026: o que está EM ABERTO na ficha entra aqui também — quem está no balcão
+      // com o FILHOt na mão é quem consegue pedir a carteirinha ao tutor.
       var itens=[];
-      try{ itens=(typeof vencItensDe==='function')?vencItensDe(ex, hoje, 0, hoje):[]; }
+      try{ itens=(typeof vencItensDe==='function')?vencItensDe(ex, hoje, 0, hoje, {incluirSemRegistro:true}):[]; }
       catch(e){ itens=[]; } /* silencioso de propósito: ficha estranha não derruba a lista inteira */
       var remedio=false;
       try{ remedio=!!(typeof medLinhaDoPel==='function' && medLinhaDoPel(p)); }
@@ -36406,6 +36777,7 @@
     var base=String((typeof VENC_FRASE!=='undefined'&&VENC_FRASE[(it&&it.k)||''])||(it&&it.nome)||'')
       .replace(/^(as|os|a|o)\s+/i,'');
     if(it&&it.k==='col_p'&&it.marca) base+=' '+it.marca;
+    if(it&&it.sem_registro) return base+' em aberto — nunca registrado';
     var quando=(typeof vencData==='function')?vencData(it.vence, hoje):String((it&&it.vence)||'');
     return base+(it&&it.atrasado?' venceu ':' vence ')+quando;
   }
@@ -36529,7 +36901,7 @@
       +'Entra aqui o que <strong>já venceu ou vence hoje</strong>: vacina, vermífugo, carrapaticida, coleira e troca de escova. '
       +'E o que vence <strong>antes de ele voltar</strong> aparece em laranja, com a mensagem pronta: '
       +'aproveitando que ele está na casa, um sim do tutor resolve hoje. '
-      +'O que dá para fazer no próximo dia dele é assunto da tela <strong>Vence amanhã</strong>.</div>';
+      +'O que dá para fazer no próximo dia dele é assunto da tela <strong>Vencimentos</strong>.</div>';
     h+='<div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:10px">';
     HOJE_FILTROS.forEach(function(f){
       var n=hojeFiltrada(L, f.v).length;
@@ -37960,6 +38332,12 @@
      dica:'Sai só para quem tem &ldquo;2 doses&rdquo; na ficha e ainda não teve a 2ª registrada.'},
     {k:'escova', id:'cfgVencEscova', rot:'Troca de escova de dentes',
      dica:'<strong>{valor_escova}</strong> traz o preço de Configurações › Valores do Day Care.'},
+    // 24/set/2026 — as duas mensagens novas: o que nunca foi registrado na ficha e a vacina
+    // que precisa de agendamento porque o dia dele não é dia da nossa Veterinária.
+    {k:'aberto', id:'cfgVencAberto', rot:'Em aberto na ficha — nunca registrado',
+     dica:'Sai para o item que <strong>nunca</strong> recebeu data na ficha: vacinas, vermífugo, carrapaticida e a troca de escova. <strong>{itens_abertos}</strong> traz a lista com o artigo certo.'},
+    {k:'vacina_agendar', id:'cfgVencVacinaAgendar', rot:'Vacina — agendar no próximo dia dele',
+     dica:'Vale quando o dia do FILHOt <strong>não</strong> é dia de atendimento da nossa Veterinária (a quinta). <strong>{proximo_dia_vet_dele}</strong> é o próximo dia dele que também é dia dela e <strong>{data}</strong>, a data desse dia. Sem saber quando ele volta, o app usa a mensagem de cima, que oferece horário.'},
     {k:'fecho', id:'cfgVencFecho', rot:'O fecho da autorização',
      dica:'Entra no lugar de <strong>{fecho}</strong> nas mensagens acima. Tirou o {fecho} de uma mensagem, ele não aparece nela.'},
     // A COBRANÇA (Adriana, 21/set/2026): "eu preciso de cobrar". É outra conversa — não o
@@ -38052,8 +38430,11 @@
       reg[x.k]=v;
     });
     if(vazio){ diz('A mensagem &ldquo;'+vazio+'&rdquo; está em branco. Use o botão de fábrica se quiser recomeçar. Nada foi salvo.','var(--crm-critico)'); return; }
-    if(reg.vacina.indexOf('{vacina}')<0 || reg.vacina_creche.indexOf('{vacina}')<0){
-      diz('As duas mensagens de vacina precisam conter {vacina} — é ele que diz ao tutor QUAL vacina está vencendo. Nada foi salvo.','var(--crm-critico)'); return; }
+    if(reg.vacina.indexOf('{vacina}')<0 || reg.vacina_creche.indexOf('{vacina}')<0
+       || String(reg.vacina_agendar||'').indexOf('{vacina}')<0){
+      diz('As três mensagens de vacina precisam conter {vacina} — é ele que diz ao tutor QUAL vacina está vencendo. Nada foi salvo.','var(--crm-critico)'); return; }
+    if(String(reg.aberto||'').indexOf('{itens_abertos}')<0){
+      diz('A mensagem do que está em aberto precisa conter {itens_abertos} — sem ele o tutor não fica sabendo O QUE falta na ficha. Nada foi salvo.','var(--crm-critico)'); return; }
     if(reg.antip.indexOf('{item}')<0 && reg.antip.indexOf('{itens}')<0){
       diz('A mensagem de vermífugo, carrapaticida e coleira precisa conter {item} — é ele que diz O QUE está vencendo. Nada foi salvo.','var(--crm-critico)'); return; }
     var margem=parseInt(String(((document.getElementById('cfgVencMargem')||{}).value||'')).replace(/\D/g,''),10);
@@ -38095,7 +38476,7 @@
       try{ if(mud.length && typeof audit==='function') audit('config-mensagens-prontas',
         mud.join(' · '),{}); }catch(e){} /* silencioso de propósito: o audit() tem bolso próprio e reenvia sozinho — falhar aqui não pode travar a ação */
       try{ if(typeof hojeRedesenhar==='function') hojeRedesenhar(); }catch(e){} /* silencioso de propósito: redesenho de tela — falhar não pode derrubar quem chamou */
-      diz(mud.length?'✓ Salvo. As telas Vence amanhã e Hoje na Zêluz já estão usando estes textos.'
+      diz(mud.length?'✓ Salvo. As telas Vencimentos e Hoje na Zêluz já estão usando estes textos.'
                     :'Nada mudou: as mensagens já eram essas.','var(--crm-ok)');
       // NÃO redesenha o cartão: quem acabou de salvar pode estar com o cursor no campo
       // seguinte, e redesenhar tira o cursor da mão de quem está escrevendo. Os campos já
@@ -38304,6 +38685,15 @@
   // aoAbrirView rodam e a tela nunca abre vazia (a lei de 13/ago/2026: uma lista só de ganchos).
   function abrirItemDoMenu(v){
     var a=document.querySelector('#nav a[data-v="'+v+'"]');
+    // PAI DE SUB-SANFONA (Vencimentos, 24/set/2026): o clique nele SÓ abre a gaveta — quem
+    // navega são os dias. Chamar .click() aqui abriria a gaveta e deixaria quem pediu a tela
+    // sem tela nenhuma. Então a gaveta se abre (para a pessoa ver onde está) e a navegação
+    // vai pela porta de sempre.
+    if(a && a.classList.contains('nav-parent')){
+      try{ if(typeof abrirSanfonasDe==='function') abrirSanfonasDe(a); }catch(e){} /* silencioso de propósito: enfeite de menu — falhar não muda dado nenhum */
+      if(typeof irParaView==='function') irParaView(v);
+      return;
+    }
     if(a){ a.click(); return; }
     if(typeof irParaView==='function') irParaView(v);
   }

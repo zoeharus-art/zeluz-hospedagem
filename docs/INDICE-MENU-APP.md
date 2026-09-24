@@ -41,7 +41,7 @@ No banco daquele dia, `daycare/chamada/2026-09-24` tinha **34 chaves `veio`** e 
 | O pedaço | A fonte |
 |---|---|
 | Quem está na casa | a chamada do dia (ouvinte vivo) + o check-in do corpo do dia + a estadia ativa da AuAulândia + os moradores da casa — tudo por `turmaDeHoje()`, já deduplicado |
-| O que venceu | `vencItensDe(ficha, hoje, 0, hoje)` sobre `PREV_ITENS` — a **mesma** regra do *Vence amanhã* |
+| O que venceu | `vencItensDe(ficha, hoje, 0, hoje, {incluirSemRegistro:true})` sobre `PREV_ITENS` — a **mesma** regra de *Vencimentos*, e desde 24/set/2026 trazendo também o que **nunca foi registrado** na ficha |
 | Remédio contínuo | `medLinhaDoPel(ficha)` — a mesma linha de toda tela |
 | Pendência aberta | `daycare/pendencias/{chave}` (`PEND_ABERTAS`, v-19-05) |
 | Resposta que o tutor não deu | `daycare/vencimentos` dos últimos dias (`VENC_PEND`, v-21-01) |
@@ -53,7 +53,7 @@ No banco daquele dia, `daycare/chamada/2026-09-24` tinha **34 chaves `veio`** e 
 3. a chamada diz `veio` → está (alguém marcou no dedo, sem passar pelo check-in);
 4. hóspede com estadia ativa, ou morador da casa → está: ele dorme aqui e não depende de ninguém marcar chamada.
 
-**A folga é ZERO aqui.** No *Vence amanhã* a folga (padrão 7 dias) existe para a consultora avisar **antes**. Nesta tela a pergunta é outra — *quem está com pendência agora* — e item que só vence daqui a seis dias, numa lista lida em pé no balcão, é ruído. Ruído esconde o que é urgente. Quem quer o de amanhã abre a tela de amanhã.
+**A folga é ZERO aqui.** Em *Vencimentos* a folga (padrão 7 dias) existe para a consultora avisar **antes**. Nesta tela a pergunta é outra — *quem está com pendência agora* — e item que só vence daqui a seis dias, numa lista lida em pé no balcão, é ruído. Ruído esconde o que é urgente. Quem quer o de amanhã abre a tela de amanhã.
 
 **A linha**, na frase que ela ditou:
 
@@ -61,7 +61,7 @@ No banco daquele dia, `daycare/chamada/2026-09-24` tinha **34 chaves `veio`** e 
 Simba/Spitz · tutor Thais · ⚠ vacina antirrábica venceu 24/03 · ⚠ vermífugo venceu 20/08 · 💊 toma remédio · pendência: vermífugo de 18/09
 ```
 
-**O cabeçalho** traz os dois números — *"20 presentes · 13 com pendência"* — e é a **mesma conta** do contador que aparece ao lado do item no menu (`navHojeN` = presentes **com pendência**). O contador desce na **entrada**, junto com os das Pendências de prevenção e do Vence amanhã: quem entra às 8h vê na primeira tela quantos FILHOts já estão na casa devendo alguma coisa.
+**O cabeçalho** traz os dois números — *"20 presentes · 13 com pendência"* — e é a **mesma conta** do contador que aparece ao lado do item no menu (`navHojeN` = presentes **com pendência**). O contador desce na **entrada**, junto com os das Pendências de prevenção e de Vencimentos: quem entra às 8h vê na primeira tela quantos FILHOts já estão na casa devendo alguma coisa.
 
 **A ordem:** quem tem pendência vem **primeiro**; dentro de cada grupo, ordem alfabética. É a ordem em que a recepção trabalha.
 
@@ -77,7 +77,11 @@ Adriana, em 21/set/2026:
 
 > "Nós temos dentro do aplicativo a parte de trocas: vacinação, que é importantíssimo no nosso processo, a vermifugação, o carrapaticida, a troca de coleiras, tudo isso é muito importante, nós temos também a troca de escova dental. Todas essas questões são de suma importância. Eu preciso facilitar esse processo. Como? Tudo que for vencer no dia, eu ter um calendário do dia para o setor de consultoria, onde vai mandar; isso tem que mandar para o peludo antes dele vir. Vamos imaginar que o dia do Otávio seja amanhã. Hoje tem que perguntar para o tutor: fulano, amanhã pode fazer isso, isso e isso no Otávio? (…) O fluxo hoje não está dando certo: as pessoas estão mandando e não estão finalizando aquilo dali. A gente precisa que dê uma resposta. (…) Então tem que perguntar: já foi atualizada a ficha? E a pessoa tem que clicar em sim ou não."
 
-### Tela nova: **Vence amanhã**
+### Tela: **Vencimentos** — "Está vencendo"
+
+> **24/set/2026 — Adriana:** *"Aqui no Day Care, em Vence amanhã, coloque 'Vencimentos' aqui dentro; o título 'está vencendo', e abrindo no sidebar aparece segunda, terça, quarta, quinta, sexta. Preciso que todos os que estejam com alguma pendência de quinta-feira e que estão aí, estejam aqui dentro — os que vieram na aula hoje. (…) Quem está com pendência? Hoje: fulano, fulano. Amanhã: fulano. E quais são as pendências? Tudo organizado para eu arrumar e deixar zerado. Com pendência de vermífugo, carrapaticida, todas as vacinas e a escova dentária que estava sem nada."*
+
+**O que mudou nessa data:** o item do menu virou **sub-sanfona** (`Vencimentos`) com seis filhos — **Hoje · Segunda · Terça · Quarta · Quinta · Sexta** —, o título da tela passou a ser **"Está vencendo"** (subtítulo *"quem vem {dia} e o que está em aberto"*), o que **nunca foi registrado** na ficha passou a contar como pendência e nasceu o bloco **"Quem vem {dia} com pendência"**, com os nomes em fila por tipo e um **Copiar resumo**.
 
 | Onde fica | Central Zêluz › Day Care, **logo depois de Prevenção** |
 |---|---|
@@ -87,15 +91,36 @@ Adriana, em 21/set/2026:
 | Onde os dados moram | `daycare/vencimentos/{dia}/{chave do FILHOt}` |
 | O texto e o prazo | `daycare/config/textos/vencimento` — editáveis em **Configurações › Mensagens prontas** |
 
-**Por que ela não é alfabética no bloco.** Todo o subgrupo Day Care da Central está em ordem alfabética até *Planos e cobranças*; "Vence amanhã" fura a ordem e fica colado em **Prevenção** porque é a outra metade do mesmo trabalho: a Prevenção diz **quem deve**, esta diz **o que fazer hoje** a respeito de quem vem amanhã. Separá-las por uma letra faria a consultora procurar em dois cantos do menu.
+**Por que ela não é alfabética no bloco.** Todo o subgrupo Day Care da Central está em ordem alfabética até *Planos e cobranças*; "Vencimentos" fura a ordem e fica colado em **Prevenção** porque é a outra metade do mesmo trabalho: a Prevenção diz **quem deve**, esta diz **o que fazer hoje** a respeito de quem vem no dia. Separá-las por uma letra faria a consultora procurar em dois cantos do menu.
+
+**A sub-sanfona dos dias (24/set/2026).** O item é `<a data-v="vencimentos" class="nav-parent" data-acc-toggle="c-vencimentos">`, dentro de `<div class="acc" data-acc="c-vencimentos" data-acc-perm="vencimentos">`. O `data-v` **não mudou** — é por ele que a permissão (`PERM_MENU`) e o espelho da tela do Time (`NAV_PAGINAS_ALL`) encontram a tela. Clicar no pai **abre a gaveta E vai para a tela** (item de menu que só abre gaveta é função enterrada). Cada filho é `<a class="nav-dia" data-vdia="…">` e chama `vencIrDia()`: **Hoje** abre o dia de hoje; os outros abrem a **próxima ocorrência** daquele dia da semana — numa quinta, *Quinta* é hoje, *Sexta* é amanhã e *Segunda* é 28/09. Feriado não é dia de Day Care: a próxima ocorrência pula para a semana seguinte.
+
+**A lei dos três níveis continua de pé:** categoria 17px/700 › sub-cabeçalho 15px/700 › item 14px/500 › **dia 13px/500**. Filho nunca é maior que o pai. Sem permissão, a **gaveta inteira** some junto com o pai (`data-acc-perm`) — esconder só o `<a>` deixaria os dias à mostra.
 
 **O dia-alvo.** Por padrão, o **próximo dia de Day Care** — amanhã; se amanhã for sábado, domingo ou feriado, o próximo dia útil. A lista de feriados é a **mesma** do Orçamento (`orcEhFeriado`), que a Gestão já edita: duas listas discordariam. O seletor tem **Hoje**, **Amanhã** e o calendário para qualquer outro dia.
 
-**Quem entra na lista.** Cada FILHOt da turma daquele dia (mesma porta do Day Care, `turmaDoDia`, com a aba trocada e devolvida) que tenha pelo menos um item de `PREV_ITENS` **vencido ou vencendo até o dia-alvo mais a folga** (padrão 7 dias, ajustável). Entram vacinas, carrapaticida, coleira, vermífugo, exame de fezes, **troca de escova de dentes** e check-up. Ficam de fora: item sem data (não há o que avisar), data quebrada (ano 0026 é ficha para corrigir) e a regra de sempre — *ou é vermífugo ou exame de fezes*.
+**Quem entra na lista.** Cada FILHOt da turma daquele dia (mesma porta do Day Care, `turmaDoDia`, com a aba trocada e devolvida) que tenha pelo menos um item de `PREV_ITENS` **vencido ou vencendo até o dia-alvo mais a folga** (padrão 7 dias, ajustável). Entram vacinas, carrapaticida, coleira, vermífugo, exame de fezes, **troca de escova de dentes** e check-up. Ficam de fora: data quebrada (ano 0026 é ficha para corrigir) e a regra de sempre — *ou é vermífugo ou exame de fezes*.
+
+**E o que NUNCA foi registrado (24/set/2026).** *"…e a escova dentária que estava sem nada."* Item de ficha sem data nenhuma não vence nunca — e por isso sumia de todas as contas. Agora ele entra como **"em aberto — nunca registrado"** (`sem_registro:true`), em **cor própria** (azul), nunca em vermelho: ninguém deixou vencer, a ficha é que nunca recebeu a data. A lista é a dela: **as três vacinas, o vermífugo, o carrapaticida e a troca de escova**. O **exame de fezes** e o **check-up** ficam de fora (não foram citados), e a **coleira** só entra quando a ficha diz a marca (`col_nome`) — sem marca não há coleira para cobrar.
+
+Quem liga isso é o parâmetro `vencItensDe(ex, diaAlvo, margem, hoje, {incluirSemRegistro:true})`, e **só duas telas o pedem**: esta e **Hoje na Zêluz**. A **Prevenção não mudou** — continua lendo por `prevPendencias()`, exatamente como antes. O item em aberto **não se lança** na planilha nem vira recado para a veterinária: o que se faz com ele é pedir a data ou a carteirinha ao tutor.
+
+**Antes dos cartões, a lista do dia (24/set/2026).** O bloco **"Quem vem {dia} com pendência"** mostra, por **tipo** de pendência, os nomes em fila — *Vermífugo: Simba · Lana · Ozzy*. A ordem das linhas é: vermífugo · carrapaticida · vacinas · coleira · escova de dentes · exame de fezes e check-up · **em aberto na ficha**. O botão **Copiar resumo** gera o **mesmo** texto em texto puro (`vencResumoTexto`), para colar no WhatsApp — duas escritas da mesma lista viram duas verdades, então tela e texto saem da mesma função.
 
 **O cartão traz**, nesta ordem: nome, raça e tutor · telefone (quando a ficha tem) · os itens com a data (*"Carrapaticida — venceu em 22/07"*) · a **mensagem pronta** numa caixa **editável antes de copiar** · **Copiar mensagem** e **Mandei** · os quatro botões de resposta do tutor · e, quando é a hora, a pergunta da ficha.
 
 **A mensagem.** O modelo é o dela, e mora em Configurações — não no código. As chaves: `{tutor}` (primeiro nome), `{filhot}` (só o nome), `{ofilhot}` (o nome com o artigo certo: *"o Otávio"*, *"a Lana"*), `{dele}`, `{ela}`, `{itens}` (a lista com as datas) e `{dia}` (*"amanhã, terça-feira (22/09)"*). Há **dois** modelos: o padrão e o de **vacina** — vacina não se faz na recepção, então a frase vira *"Podemos agendar com a veterinária?"*. Quando a lista **mistura** vacina com os demais vale o padrão, e a tela avisa a consultora em uma linha.
+
+**As duas mensagens novas (24/set/2026).**
+
+| Modelo | Quando sai | Chaves próprias |
+|---|---|---|
+| **Em aberto na ficha** (`aberto`) | Quando o FILHOt tem item que nunca foi registrado | `{itens_abertos}` — a lista com o artigo certo |
+| **Vacina — agendar no próximo dia dele** (`vacina_agendar`) | Quando o dia do FILHOt **não** é dia de atendimento da nossa Veterinária (a quinta) **e** se sabe quando ele volta | `{proximo_dia_vet_dele}` e `{data}` — o próximo dia da ficha dele que também é dia dela |
+
+Sem saber quando ele volta, vale o texto antigo (`vacina`), que oferece um **horário** em vez de um dia: inventar um dia de vinda para o tutor é pior do que não oferecer nenhum. `{vencer}` passou a concordar também com o **tempo** — *vence · vencem · venceu · venceram*.
+
+**"Aplicar no dia dele" agora grava QUAL dia.** O botão volta a aparecer numa quinta quando há um próximo dia dele que seja dia da veterinária — é exatamente o que a mensagem ofereceu ao tutor —, e `vet.dia` passa a ser esse dia (`vencDiaAgendado`). O quadro **Avisar a veterinária** e a linha que vai para o grupo dela mostram essa data.
 
 **A resposta do tutor, em botão** (resposta escrita à mão vira "ok" e não diz nada a quem ler depois):
 
@@ -112,7 +137,7 @@ Trocar de botão **troca** a resposta, e a auditoria registra que mudou — erra
 
 **Idempotente:** a chave é `{dia}/{chave do FILHOt}`. Reabrir a tela não duplica nem apaga o que já foi respondido, e confirmar de novo não lança duas vezes — quando o item já está no dia, o cartão diz *"já estava lançado"* em vez de mentir que lançou.
 
-**O aviso que não depende de abrir a tela:** um quadro **Vence amanhã — N mensagens para mandar** em **O que fazer hoje** (nas três mesas: Gestão, Supervisão e Recepção) e no **Dashboard das Consultoras**. Ao lado do item do menu, o contador dos que ainda estão **sem resposta**. Enquanto o dia não desceu do banco, o quadro mostra "…" — nunca afirma que não há nada.
+**O aviso que não depende de abrir a tela:** um quadro **Vence amanhã — N mensagens para mandar** em **O que fazer hoje** (nas três mesas: Gestão, Supervisão e Recepção) e no **Dashboard das Consultoras**. Ao lado do item do menu, o contador de **hoje** (quantos da turma de hoje estão com pendência; em dia sem Day Care, o do próximo dia), mais o que já passou do prazo e precisa ser **cobrado**, de qualquer dia. Enquanto o dia não desceu do banco, o quadro mostra "…" — nunca afirma que não há nada.
 
 **Uma conta só:** `vencContagem()` devolve *total*, *para mandar* e *sem resposta*. O menu, a mesa e o Dashboard das Consultoras leem daí — "quase igual" é como nascem duas telas brigando.
 
@@ -485,7 +510,7 @@ Nunca um filho maior que o pai. Abre só o caminho da tela ativa. A pendência s
 | | Peso (`peso`) | Pesar qualquer FILHOt: recepção, veterinária e gestão. | so-pesa |
 | | Pesquisa com a Família Multiespécie (`alergia`) | A pesquisa com a família: enviar, colar a resposta, e ela vira ficha sozinha. | so-gestao |
 | | Prevenção (`vacinas`) | Vacina, vermífugo, coleira e exame de fezes: quem está atrasado e quem está para vencer. | so-gestao |
-| | Vence amanhã (`vencimentos`) | Mande hoje a mensagem de quem vem no próximo dia com prevenção vencendo. | `PERM` `vencimentos-amanha` (consultora · supervisão · gestão · diretoria) |
+| | Vencimentos (`vencimentos`) — sub-sanfona com **Hoje · Segunda · Terça · Quarta · Quinta · Sexta** | "Está vencendo": quem vem no dia com prevenção vencendo, mais o que nunca foi registrado na ficha. | `PERM` `vencimentos-amanha` (consultora · supervisão · gestão · diretoria) |
 | | Quem não comeu hoje (`emporio`) | A mensagem pronta para avisar o tutor. | so-emporio |
 | | Reposições (`reposicao`) | Créditos de dias por falta avisada. | so-recepcao |
 | *Central Zêluz › Planos e cobranças* | Renovação de planos (`renovacao`) | Quem está no fim do plano. | so-gestao |

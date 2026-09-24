@@ -1,7 +1,14 @@
 'use strict';
 /*
- * CAPTURA DA v 2026-09-21-05 — Vence amanhã com CALENDÁRIO, COBRANÇA e a resposta que
- * lança sozinha.
+ * CAPTURA DA v 2026-09-24-06 — "Está vencendo": os DIAS DA SEMANA no menu, o que está EM
+ * ABERTO na ficha, o resumo do dia por tipo de pendência, o CALENDÁRIO, a COBRANÇA e a
+ * resposta que lança sozinha.
+ *
+ * Adriana, 24/set/2026: "Coloque 'Vencimentos' aqui dentro; o título 'está vencendo', e
+ * abrindo no sidebar aparece segunda, terça, quarta, quinta, sexta. (…) Quem está com
+ * pendência? Hoje: fulano, fulano. Amanhã: fulano. E quais são as pendências? Tudo
+ * organizado para eu arrumar e deixar zerado. Com pendência de vermífugo, carrapaticida,
+ * todas as vacinas e a escova dentária que estava sem nada.\"
  *
  * POR QUE ESTA CAPTURA EXISTE
  * Adriana, 21/set/2026: "Preciso que tenha um calendário. Hoje dia 21/09 com tudo que
@@ -15,8 +22,12 @@
  * pendente. Ela tem que voltar nessa resposta para colocar o que o tutor respondeu."
  *
  * O QUE ELA FOTOGRAFA
- *   vencimentos-1280.png · vencimentos-500.png — a PRIMEIRA DOBRA: a frase do dia-alvo, o
- *     aviso da véspera, o seletor, as contas e o começo da fila
+ *   menu-dias-1280.png · menu-dias-500.png — o SIDEBAR com a gaveta "Vencimentos" ABERTA,
+ *     mostrando Hoje · Segunda · Terça · Quarta · Quinta · Sexta
+ *   vencimentos-1280.png · vencimentos-500.png — a PRIMEIRA DOBRA: o título "Está vencendo",
+ *     o subtítulo do dia, o aviso da véspera, o seletor, as contas e o começo da fila
+ *   resumo-dia-1280.png · resumo-dia-500.png — o bloco "Quem vem {dia} com pendência":
+ *     os nomes em fila, agrupados por tipo de pendência, antes dos cartões
  *   calendario-1280.png · calendario-500.png — o CALENDÁRIO DO MÊS, com os contadores de
  *     cada dia (a mandar · a cobrar · mandado sem resposta · respondido) e o fim de semana
  *     apagado
@@ -48,7 +59,7 @@
  * set/update/push/remove/transaction antes de o app carregar, e o banco é o EMULADOR local
  * com o retrato do backup.
  *
- * Uso:  CAP_PORTA=8822 CAP_EMU_PORTA=9022 NODE_PATH=C:/Users/zeluz/projetos-aios/code/node_modules node tests/capturar-v28.js
+ * Uso:  CAP_PORTA=8831 CAP_EMU_PORTA=9031 NODE_PATH=C:/Users/zeluz/projetos-aios/code/node_modules node tests/capturar-v28.js
  */
 
 const fs = require('fs');
@@ -60,8 +71,8 @@ const emuladorLib = require('./lib/emulador');
 
 const RAIZ = path.join(__dirname, '..');
 const APP = 'auaulandia/index.html';
-const PORTA = Number(process.env.CAP_PORTA) || 8822;
-const EMU_PORTA = Number(process.env.CAP_EMU_PORTA) || 9022;
+const PORTA = Number(process.env.CAP_PORTA) || 8831;
+const EMU_PORTA = Number(process.env.CAP_EMU_PORTA) || 9031;
 const SAIDA = path.join(RAIZ, 'docs', 'capturas-v28');
 const SENHA_DIRETORIA = '1101';
 
@@ -202,10 +213,43 @@ async function dispensarCartazes(page, quantos) {
 
     // ---- 1 · o item do menu -------------------------------------------------------
     const itemMenu = await page.$('#nav a[data-v="vencimentos"]');
-    if (!itemMenu) problemas.push('não achei o item "Vence amanhã" no menu (' + larg.rot + ')');
+    if (!itemMenu) problemas.push('não achei o item "Vencimentos" no menu (' + larg.rot + ')');
     const rotuloMenu = itemMenu ? ((await itemMenu.innerText()) || '').replace(/\s+/g, ' ').trim() : '';
-    if (itemMenu && rotuloMenu.indexOf('Vence amanhã') < 0) {
+    if (itemMenu && rotuloMenu.indexOf('Vencimentos') < 0) {
       problemas.push('o rótulo do item do menu não é o esperado (' + larg.rot + '): "' + rotuloMenu + '"');
+    }
+    // A GAVETA DOS DIAS (24/set/2026): o sidebar abre em Hoje · Segunda … Sexta. A foto é a
+    // prova de que ela existe e de que o filho é menor que o pai.
+    const dias = await page.$$eval('#navVencDias a[data-vdia]',
+      (ns) => ns.map((a) => (a.textContent || '').trim()));
+    if (JSON.stringify(dias) !== JSON.stringify(['Hoje', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta'])) {
+      problemas.push('os dias da gaveta "Vencimentos" não são os esperados (' + larg.rot + '): ' + JSON.stringify(dias));
+    }
+    // Abre a corrente inteira (categoria › Day Care › Vencimentos) e fotografa a barra.
+    await page.evaluate(() => {
+      const a = document.querySelector('#nav a[data-v="vencimentos"]');
+      if (a && typeof abrirSanfonasDe === 'function') abrirSanfonasDe(a);
+    });
+    await page.waitForTimeout(700);
+    const barra = await page.$('#nav');
+    if (barra) {
+      const visivel = await page.evaluate(() => {
+        const el = document.querySelector('#navVencDias');
+        return !!(el && el.getBoundingClientRect().height > 0);
+      });
+      if (!visivel) problemas.push('a gaveta "Vencimentos" não abriu no sidebar (' + larg.rot + ')');
+      const tamanhos = await page.evaluate(() => {
+        const px = (sel) => { const el = document.querySelector(sel); return el ? parseFloat(getComputedStyle(el).fontSize) : 0; };
+        return { cat: px('#nav a.grp[data-acc-toggle="central"]'),
+          sub: px('#nav a.grp.grp-sub[data-acc-toggle="c-daycare"]'),
+          item: px('#nav a[data-v="vacinas"]'), dia: px('#nav a.nav-dia[data-vdia="seg"]') };
+      });
+      if (!(tamanhos.cat > tamanhos.sub && tamanhos.sub > tamanhos.item && tamanhos.item > tamanhos.dia)) {
+        problemas.push('a hierarquia do menu inverteu (' + larg.rot + '): ' + JSON.stringify(tamanhos));
+      }
+      await barra.screenshot({ path: path.join(SAIDA, 'menu-dias-' + larg.rot + '.png'),
+        animations: 'disabled', timeout: 30000 });
+      console.log('menu-dias-' + larg.rot + '.png · ' + JSON.stringify(tamanhos));
     }
 
     // ---- 2 · a tela ----------------------------------------------------------------
@@ -239,7 +283,7 @@ async function dispensarCartazes(page, quantos) {
       if (!nCartoes) problemas.push('não consegui mostrar nenhum cartão em Vence amanhã (' + larg.rot + ')');
 
       const t = (await tela.innerText()) || '';
-      ['Mande hoje, para quem vem', 'Hoje', 'para mandar', 'sem resposta',
+      ['Está vencendo', 'quem vem', 'e o que está em aberto', 'Hoje', 'para mandar', 'sem resposta',
         'Mande até', 'a mensagem se manda na véspera', 'Respostas pendentes']
         .forEach((s) => { if (t.indexOf(s) < 0) problemas.push('Vence amanhã (' + larg.rot + '): faltou "' + s + '" na tela'); });
       if (nCartoes) {
@@ -257,8 +301,11 @@ async function dispensarCartazes(page, quantos) {
           // As mensagens são as DELA. Cada uma começa com "Olá" e traz uma das frases dela;
           // "Passando para avisar:" era o texto genérico que eu tinha inventado — se ele
           // reaparecer numa tela, é porque alguém voltou atrás sem querer.
+          // 24/set/2026: entraram as duas mensagens novas — o que está EM ABERTO na ficha e
+          // a vacina que precisa de agendamento porque o dia dele não é dia da Veterinária.
           const frasesDela = ['Passando para informar que', 'Passando para lembrar que',
-            'É dia da segunda dose', 'está na hora de trocar'];
+            'É dia da segunda dose', 'está na hora de trocar',
+            'Está em aberto na ficha', 'A nossa Veterinária atende de segunda a sexta'];
           msg.forEach((m, i) => {
             if (m.indexOf('Olá') !== 0 || !frasesDela.some((f) => m.indexOf(f) > 0))
               problemas.push('a mensagem ' + (i + 1) + ' não saiu como esperado (' + larg.rot + '): "' + m.slice(0, 100) + '"');
@@ -281,6 +328,42 @@ async function dispensarCartazes(page, quantos) {
       await mascararTelefones(page);
       await page.screenshot({ path: path.join(SAIDA, 'vencimentos-' + larg.rot + '.png') });
       console.log('vencimentos-' + larg.rot + '.png · ' + nCartoes + ' cartão(ões)');
+
+      // ---- 2b · "QUEM VEM {dia} COM PENDÊNCIA" — a lista organizada ----------------
+      // "Quem está com pendência? Hoje: fulano, fulano. (…) Tudo organizado para eu arrumar
+      // e deixar zerado." O bloco vem ANTES dos cartões, com os nomes em fila por tipo.
+      // A tela se redesenha sozinha até 9 s depois de abrir (o cadastro chega em partes).
+      // Fotografar antes disso pega o elemento sendo trocado — "element is not stable".
+      await page.waitForTimeout(9500);
+      await estabilizar(page);
+      const resumo = page.locator('#vencRoot .card', { hasText: 'com pendência' }).first();
+      if (!(await resumo.count())) {
+        problemas.push('não achei o bloco "Quem vem … com pendência" (' + larg.rot + ')');
+      } else {
+        const tr = (await resumo.innerText()) || '';
+        if (tr.indexOf('Copiar resumo') < 0) problemas.push('o resumo do dia não traz o botão "Copiar resumo" (' + larg.rot + ')');
+        const linhas = ['Vermífugo', 'Carrapaticida', 'Vacinas', 'Coleira', 'Escova de dentes',
+          'Em aberto na ficha'];
+        if (!linhas.some((x) => tr.indexOf(x) >= 0)) {
+          problemas.push('o resumo do dia não agrupou por tipo de pendência (' + larg.rot + '): ' + tr.slice(0, 160));
+        }
+        // O texto puro é o MESMO da tela — duas escritas da mesma lista viram duas verdades.
+        const txt = await page.evaluate(() => {
+          if (typeof vencResumoTexto !== 'function' || typeof vencLista !== 'function') return '';
+          const dia = vencDiaAlvo();
+          let L = []; try { L = vencLista(dia) || []; } catch (e) { L = []; }
+          return vencResumoTexto(L, dia, (typeof zHojeISO === 'function') ? zHojeISO() : '');
+        });
+        if (txt.indexOf('Está vencendo — quem vem ') !== 0) {
+          problemas.push('o texto do "Copiar resumo" não começa como a tela (' + larg.rot + '): ' + JSON.stringify(txt.slice(0, 80)));
+        }
+        await resumo.scrollIntoViewIfNeeded();
+        await page.waitForTimeout(500);
+        await mascararTelefones(page);
+        await resumo.screenshot({ path: path.join(SAIDA, 'resumo-dia-' + larg.rot + '.png'),
+          animations: 'disabled', timeout: 30000 });
+        console.log('resumo-dia-' + larg.rot + '.png');
+      }
 
       // ---- 3 · O CALENDÁRIO DO MÊS -------------------------------------------------
       const cal = await page.$('#vencCal');
@@ -477,5 +560,5 @@ async function dispensarCartazes(page, quantos) {
   await navegador.close();
   pararTudo();
   if (problemas.length) { console.error('\nPROBLEMAS:\n- ' + problemas.join('\n- ')); process.exit(1); }
-  console.log('\nCaptura da v 2026-09-21-05 pronta em docs/capturas-v28/');
+  console.log('\nCaptura da v 2026-09-24-06 pronta em docs/capturas-v28/');
 })().catch((e) => { console.error(e); process.exit(1); });
