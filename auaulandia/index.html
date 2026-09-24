@@ -567,6 +567,19 @@
   .ck-fstatus.ok{background:rgba(39,174,96,.10);color:var(--crm-ok);border:1.5px solid var(--crm-ok)}
   .ck-fperdida{margin-top:8px;padding:9px 11px;border-radius:10px;background:rgba(222,180,40,.14);
     border:1.5px solid var(--z-gold);color:var(--z-blue);font-size:12.5px;font-weight:600;line-height:1.4}
+  /* ===== UM BOTÃO SÓ, GRANDE, NO TOPO DO PONTO (24/set/2026) ====================
+     O monitor Felipe ESTAVA fotografando — mas a foto entrava por outro caminho da
+     mesma tela (as fotos extras, a de longe, a câmera de outro ponto), e o ponto
+     continuava sem a foto que o Salvar cobrava. O ponto alterado passa a abrir com
+     UM botão largo, o primeiro da lista, impossível de não ver. */
+  .ck-fgrande{margin:10px 0 2px;display:flex;flex-direction:column;gap:7px}
+  .ck-fgrande .fg-btn{display:block;width:100%;box-sizing:border-box;padding:16px 14px;border-radius:13px;
+    border:2px solid var(--z-gold);background:var(--z-gold);color:var(--z-blue);font-family:inherit;
+    font-size:16.5px;font-weight:800;text-align:center;cursor:pointer;line-height:1.25;scroll-margin-top:96px}
+  .ck-fgrande .fg-gal{display:block;width:100%;box-sizing:border-box;padding:11px 14px;border-radius:12px;
+    border:1.5px solid var(--line);background:var(--z-cream-warm);color:var(--z-blue);font-family:inherit;
+    font-size:13.5px;font-weight:700;text-align:center;cursor:pointer}
+  .ck-fgrande .fg-dica{font-size:12px;font-weight:600;color:var(--muted);line-height:1.4}
   .ck-bloco{border:1px solid var(--line);border-radius:14px;padding:12px 14px;margin-bottom:9px;background:var(--z-white)}
   .ck-bt{font-size:15px;font-weight:800;color:var(--z-blue);margin-bottom:3px}
   .ck-hint{font-size:12px;font-weight:500;color:var(--muted);margin-bottom:8px}
@@ -15379,7 +15392,7 @@
   // inteira DEPOIS de a correção estar publicada — o aviso apareceu, ninguém tocou.
   // Agora o aparelho PARADO recarrega sozinho: trancado, com a aba escondida, na porta de
   // entrada ou 3 minutos sem ninguém tocar nele. Mão na tela = nunca recarrega.
-  const APP_VERSAO='2026-09-24-01';
+  const APP_VERSAO='2026-09-24-02';
   var RECARGA_PARADO_MS=3*60*1000, __versaoPublicada=null, __recargaTimer=null;
   function vigiarVersao(){
     if(!DB) return;
@@ -25428,7 +25441,20 @@
     CK_FOTO_ESPERANDO={pk:pk, campo:c, ts:Date.now(), fase:'camera'};
     CK_FOTO_PERDIDA='';
     ckRascunho.fotoPendente={pk:pk, campo:c, ts:Date.now()};
+    // SÍNCRONO e ANTES de o seletor abrir: se o aparelho matar a página agora, a marca
+    // já está no espelho do aparelho. Nada de await, nada de setTimeout aqui.
     ckRascEspelhar();
+    // ===== O RASTRO QUE MOSTRA ONDE A PESSOA TOCA (24/set/2026) =================
+    // Sem isto, a Gestão vê "faltou a foto de X | sem-toque" e não tem como saber que
+    // a monitora tocou na câmera de OUTRO ponto, ou nas fotos extras. Com isto, dá para
+    // ver de longe o caminho que ela usou de verdade. Só nos pontos ALTERADOS: é um
+    // punhado de registros por dia, não um dilúvio.
+    try{
+      if(((ckRascunho.pontos||{})[pk]||{}).alterado && typeof audit==='function')
+        audit('checkin-foto-tocou',
+          ckNomeAtual()+' — '+ckRotuloPonto(pk)+' — tocou no botão de foto ('+c+')',
+          {alvo:pk, ponto:pk, campo:c});
+    }catch(e){} /* silencioso de propósito: o audit() tem bolso próprio — falhar aqui não pode segurar a câmera */
   }
   function ckFotoChegou(){
     CK_FOTO_ESPERANDO=null;
@@ -25589,6 +25615,42 @@
         +' onchange="ckFoto(\''+pk+'\',this'+c+')"></label>'
       +'</div>';
   }
+  // ===== O BOTÃO GRANDE, O PRIMEIRO DA LISTA (Adriana, 24/set/2026) ================
+  // "Um botão só, grande, por ponto alterado." Enquanto o ponto alterado não tem foto
+  // nenhuma, ele abre com este botão largo antes de tudo — antes dos alertas, antes da
+  // descrição, antes das caixinhas. Quem está com o FILHOt na frente não tem de procurar
+  // a câmera no meio da tela: ela é a primeira coisa que aparece.
+  function ckFotoGrandeHTML(pt, at){
+    if(!pt || !at || !at.alterado) return '';
+    if(ckTemFoto(at)) return '';
+    if(pt.k==='consciencia' && at.video) return '';   // lá o vídeo já responde pelo ponto
+    var rot=pt.t||'este ponto';
+    return '<div class="ck-fgrande" id="ckFotoG-'+pt.k+'">'
+      +'<label class="fg-btn" id="ckFotoGB-'+pt.k+'">📷 Tirar a foto de '+rot
+        +'<input type="file" accept="image/*" capture="environment" style="display:none"'
+        +' onclick="ckFotoTocou(\''+pt.k+'\',\'foto\')"'
+        +' oncancel="ckFotoCancelou(\''+pt.k+'\',\'foto\')"'
+        +' onchange="ckFoto(\''+pt.k+'\',this)"></label>'
+      +'<label class="fg-gal" id="ckFotoGG-'+pt.k+'">Escolher da galeria'
+        +'<input type="file" accept="image/*" style="display:none"'
+        +' onclick="ckFotoTocou(\''+pt.k+'\',\'foto\')"'
+        +' oncancel="ckFotoCancelou(\''+pt.k+'\',\'foto\')"'
+        +' onchange="ckFoto(\''+pt.k+'\',this)"></label>'
+      +'<div class="fg-dica">Serve qualquer foto deste ponto: esta, a de longe ou uma das fotos extras.</div>'
+      +'</div>';
+  }
+  // Quando o Salvar barra por falta de foto, é ESTE botão que pisca e que recebe a
+  // frase — não o cartão inteiro do ponto. textContent apagaria o <input type="file">
+  // que mora dentro do rótulo, então mexe-se apenas no texto.
+  function ckFotoBotaoPisca(pk){
+    try{
+      var b=document.getElementById('ckFotoGB-'+pk);
+      if(!b) return false;
+      var t=b.firstChild;
+      if(t && t.nodeType===3) t.nodeValue='📷 toque AQUI para a foto de '+ckRotuloPonto(pk);
+      return true;
+    }catch(e){ return false; }
+  }
   function ckFotoStatusHTML(pk){
     var st=CK_FOTO_STATUS[pk]||'';
     if(st==='guardando') return '<div class="ck-fstatus guardando">Guardando a foto… não saia desta tela.</div>';
@@ -25633,6 +25695,44 @@
   function ckEhMachucado(at){
     var a=(at&&at.alertas)||[];
     return a.some(function(x){ return /machuc|ferid|corte|arranh|lesão|lesao|inchaç|inchac/i.test(String(x)); });
+  }
+  // ===== QUALQUER FOTO DO PONTO É A FOTO DO PONTO (Adriana, 24/set/2026) ===========
+  // Caso real e medido: Valentina, monitor Felipe, Android/Chrome. CINCO barramentos
+  // "faltou: foto de Pele e pelagem | camera:'sem-toque'" entre 09:58 e 10:00 — e ela
+  // afirma, com razão: "o monitor ESTÁ tirando foto". Ele estava. A foto é que entrava
+  // por outra gaveta da mesma tela (as fotos extras, a de longe, a câmera de outro
+  // ponto) enquanto a validação só sabia olhar UMA gaveta, a do campo `foto`.
+  //
+  // Discutir qual botão ele deveria ter tocado é discutir a coisa errada: existe foto
+  // do ponto, e é isso que o tutor e a veterinária precisam ver. A partir daqui QUALQUER
+  // imagem anexada ao ponto — `foto`, `foto2` ou uma das `extras` — conta como a foto
+  // daquele ponto. O que muda é só a ARRUMAÇÃO na hora de gravar (ckPromoverFotos), para
+  // daycare/fotos-corpo e a tela da veterinária continuarem lendo o que sempre leram.
+  function ckFotosDoPonto(at){
+    var L=[];
+    if(!at) return L;
+    if(at.foto) L.push(at.foto);
+    if(at.foto2) L.push(at.foto2);
+    (Array.isArray(at.extras)?at.extras:[]).forEach(function(x){ if(x) L.push(x); });
+    return L;
+  }
+  function ckTemFoto(at){ return ckFotosDoPonto(at).length>0; }
+  // Machucado pede DUAS fotos — uma de perto e uma de longe. Duas imagens quaisquer no
+  // ponto satisfazem: a primeira vale como a de perto, a segunda como a de longe.
+  function ckTemDuasFotos(at){ return ckFotosDoPonto(at).length>=2; }
+  function ckFotoN(at,i){ var L=ckFotosDoPonto(at); return L[i]||''; }
+  // Arruma o ponto ANTES de gravar: a primeira foto vira sempre a principal e, no
+  // machucado, a segunda vira a de longe — não importa por qual botão elas entraram.
+  // O que sobra vai para as extras. Nenhuma imagem se perde no caminho.
+  function ckPromoverFotos(at){
+    var L=ckFotosDoPonto(at);
+    if(!L.length) return at;
+    var duas=ckEhMachucado(at)&&L.length>=2;
+    at.foto=L[0];
+    if(duas) at.foto2=L[1]; else delete at.foto2;
+    var resto=L.slice(duas?2:1);
+    if(resto.length) at.extras=resto; else delete at.extras;
+    return at;
   }
   function ckCampo(pk,campo,v){ if(!ckRascunho) return; var pt=ckRascunho.pontos[pk]||{alterado:true}; pt[campo]=v; ckRascunho.pontos[pk]=pt; ckRascEspelhar(); }
   function ckFoto(pk,input,campo){ ckFotoReceber(pk, input, campo||'foto', false); }
@@ -25764,6 +25864,9 @@
             +ckFotosExtraHTML(pt,at)
           : '');
       if(at.alterado){
+        // O botão grande da câmera é o PRIMEIRO da lista, antes dos alertas e da
+        // descrição: enquanto não há foto nenhuma do ponto, é nele que o olho bate.
+        h+=ckFotoGrandeHTML(pt,at);
         h+='<div class="ck-alertas">'+pt.alertas.map(function(a){
           const on=(at.alertas||[]).indexOf(a)>=0;
           return '<button type="button" class="ck-chip'+(on?' on':'')+'" onclick="ckAlerta(\''+pt.k+'\',\''+String(a).replace(/'/g,"\\'")+'\')">'+a+'</button>'; }).join('')+'</div>'
@@ -25775,8 +25878,8 @@
         +'<input class="cad-in" style="margin-top:8px" placeholder="Descreva o que você viu (opcional)" value="'+escAttr(at.obs||'')+'" oninput="ckObs(\''+pt.k+'\',this.value)">'
         // Vídeo para consciência: a reação dele ao VEM não cabe numa foto parada.
         +(pt.k==='consciencia'
-          ? '<div class="ck-foto2"><div class="cx'+(at.foto?' ok':'')+'">'
-              +(at.foto?'<img src="'+at.foto+'" alt="">':'')
+          ? '<div class="ck-foto2"><div class="cx'+(ckFotoN(at,0)?' ok':'')+'">'
+              +(ckFotoN(at,0)?'<img src="'+ckFotoN(at,0)+'" alt="">':'')
               +'<div class="lb">Foto</div><div class="dc">Como ele está agora</div>'
               +ckBotoesFotoHTML(pt.k, '', (at.foto?'Trocar':'Tirar'))+'</div>'
             +'<div class="cx'+(at.video?' ok':'')+'">'
@@ -25786,16 +25889,18 @@
                 +'<input type="file" accept="video/*" capture="environment" style="display:none" onchange="ckVideo(\''+pt.k+'\',this)"></label></div></div>'
           : ckEhMachucado(at)
           // Machucado: DUAS fotos — de perto para ver como é, de longe para achar no corpo.
-          ? '<div class="ck-foto2"><div class="cx'+(at.foto?' ok':'')+'">'
-              +(at.foto?'<img src="'+at.foto+'" alt="">':'')
+          // As duas caixas mostram a 1ª e a 2ª foto DO PONTO, tenham entrado por onde
+          // tiverem entrado: quem fotografou pelas extras vê o trabalho dele aqui.
+          ? '<div class="ck-foto2"><div class="cx'+(ckFotoN(at,0)?' ok':'')+'">'
+              +(ckFotoN(at,0)?'<img src="'+ckFotoN(at,0)+'" alt="">':'')
               +'<div class="lb">1 · De perto</div><div class="dc">Bem próximo, para ver como é</div>'
               +ckBotoesFotoHTML(pt.k, '', (at.foto?'Trocar':'Tirar'))+'</div>'
-            +'<div class="cx'+(at.foto2?' ok':'')+'">'
-              +(at.foto2?'<img src="'+at.foto2+'" alt="">':'')
+            +'<div class="cx'+(ckFotoN(at,1)?' ok':'')+'">'
+              +(ckFotoN(at,1)?'<img src="'+ckFotoN(at,1)+'" alt="">':'')
               +'<div class="lb">2 · De longe</div><div class="dc">Afaste, para saber onde fica no corpo</div>'
               +ckBotoesFotoHTML(pt.k, 'foto2', (at.foto2?'Trocar':'Tirar'))+'</div></div>'
           : '<div class="ck-foto">'
-              +(at.foto?'<img src="'+at.foto+'" alt="">':'<div class="ck-foto-falta">Foto obrigatória</div>')
+              +(ckFotoN(at,0)?'<img src="'+ckFotoN(at,0)+'" alt="">':'<div class="ck-foto-falta">Foto obrigatória</div>')
               +ckBotoesFotoHTML(pt.k, '', (at.foto?'Trocar foto':'Tirar foto'))
             +'</div>')
         // O que está acontecendo com a foto AGORA — "Guardando a foto…" enquanto processa e
@@ -26246,7 +26351,8 @@
       if(typeof a.alterado!=='boolean'){
         faltas.push({el:alvo, curto:'olhar '+pt.t, msg:'Falta olhar: '+pt.t+'. Toque em Normal ou em Alterado.'}); return;
       }
-      if(a.alterado && !a.foto && !(pt.k==='consciencia'&&a.video)){
+      // Qualquer foto do ponto conta — a do botão grande, a de longe ou uma extra.
+      if(a.alterado && !ckTemFoto(a) && !(pt.k==='consciencia'&&a.video)){
         // Dizer "Falta a foto" para quem ACABOU de fotografar é mentir: ela fotografou, a
         // foto é que não chegou. A mensagem tem de dizer isso, e o que fazer (22/set/2026).
         var _fpV=R.fotoPendente;
@@ -26259,15 +26365,22 @@
         // DIFERENTES), continuava impossível saber, de longe, se a pessoa tinha tocado na
         // câmera e a foto não voltou, ou se ela nunca tocou. Agora o rastro separa os dois.
         if(_naoChegou) CK_FOTO_PERDIDA=pt.k;   // a faixa amarela acende no ponto, aqui mesmo
-        faltas.push({el:alvo,
+        // Quem pisca é o BOTÃO GRANDE da câmera daquele ponto, não o cartão inteiro:
+        // a tela rola até ele e a frase nasce logo abaixo, onde a mão já está.
+        faltas.push({el:(function(_k){ return function(){
+            return document.getElementById('ckFotoGB-'+_k) || document.getElementById('ckPt-'+_k);
+          }; })(pt.k),
+          ponto:pt.k, botaoFoto:1,
           curto:'foto de '+pt.t+(_naoChegou?' (TOCOU NA CÂMERA e a foto não voltou)':' (sem rastro de toque na câmera)'),
           camera:(_naoChegou?'nao-voltou':'sem-toque'),
           msg:_naoChegou
-            ? 'A foto de '+pt.t+' não chegou ao app — tire de novo ou use "Escolher da galeria".'
-            : 'Falta a foto de '+pt.t+'. É ela que mostra ao tutor e à veterinária o que você viu.'});
+            ? 'A foto de '+pt.t+' não chegou ao app — toque AQUI para tirar de novo, ou use "Escolher da galeria".'
+            : 'Falta a foto de '+pt.t+'. Toque AQUI. É ela que mostra ao tutor e à veterinária o que você viu.'});
       }
-      if(a.alterado && ckEhMachucado(a) && !a.foto2){
-        faltas.push({el:alvo, curto:'foto de longe de '+pt.t, msg:'Falta a foto DE LONGE de '+pt.t+' — a de perto mostra como é, a de longe mostra onde fica no corpo.'});
+      // Machucado pede DUAS fotos. Duas imagens quaisquer do ponto servem: a primeira
+      // vale como a de perto, a segunda como a de longe.
+      if(a.alterado && ckEhMachucado(a) && !ckTemDuasFotos(a)){
+        faltas.push({el:alvo, curto:'segunda foto de '+pt.t, msg:'Falta a SEGUNDA foto de '+pt.t+' — a de perto mostra como é, a de longe mostra onde fica no corpo. Serve qualquer foto a mais deste ponto, inclusive em "+ outra foto".'});
       }
       if(a.alterado && ckEhMachucado(a) && !String(a.local||'').trim()){
         faltas.push({el:alvo, curto:'parte do corpo em '+pt.t, msg:'Falta dizer em que parte do corpo é o machucado de '+pt.t+' — "no dorso, perto da escápula", "na patinha dianteira".'});
@@ -26290,7 +26403,11 @@
     // fica na mesma tela — sete Salvar em dois minutos, que foi o caso do Oliver — nunca a
     // via, e por isso nunca lia o caminho da galeria. Agora ela acende no próprio barramento.
     if(faltas.some(function(f){ return f.camera==='nao-voltou'; })) renderCheckin();
-    if(zFalta(faltas, {botao:'ckBtnSalvar'})) return;
+    if(zFalta(faltas, {botao:'ckBtnSalvar'})){
+      // O botão grande da câmera passa a dizer, com todas as letras, o que fazer.
+      faltas.forEach(function(f){ if(f.botaoFoto) ckFotoBotaoPisca(f.ponto); });
+      return;
+    }
     zLimparFalta();
     // O cocô virou ponto do exame — a validação de "ponto a ponto" já cobre.
     const quem=pessoaDoTurno();
@@ -26301,7 +26418,10 @@
     const _tipoCk=entrada?'entrada':'saida';
     var _fotosUp={}, _regPontos={};
     Object.keys(R.pontos||{}).forEach(function(ptk){
-      var at=Object.assign({}, R.pontos[ptk]||{});
+      // A primeira foto do ponto vira a principal e, no machucado, a segunda vira a de
+      // longe — não importa por qual botão elas entraram. É o que mantém
+      // daycare/fotos-corpo e a tela da veterinária lendo exatamente o que sempre leram.
+      var at=ckPromoverFotos(Object.assign({}, R.pontos[ptk]||{}));
       if(at.foto||at.foto2||(at.extras&&at.extras.length)){
         var _rot=(pontos.filter(function(y){ return y.k===ptk; })[0]||{}).t||ptk;
         // ponto, alertas e local viajam JUNTO da imagem: sem isso a galeria teria de
