@@ -15379,7 +15379,7 @@
   // inteira DEPOIS de a correção estar publicada — o aviso apareceu, ninguém tocou.
   // Agora o aparelho PARADO recarrega sozinho: trancado, com a aba escondida, na porta de
   // entrada ou 3 minutos sem ninguém tocar nele. Mão na tela = nunca recarrega.
-  const APP_VERSAO='2026-09-23-03';
+  const APP_VERSAO='2026-09-24-01';
   var RECARGA_PARADO_MS=3*60*1000, __versaoPublicada=null, __recargaTimer=null;
   function vigiarVersao(){
     if(!DB) return;
@@ -25509,10 +25509,36 @@
     if(typeof zAlertao==='function') zAlertao('A FOTO NÃO FICOU PRONTA', linhas, {botao:'Vou tirar de novo'});
     else alert(linhas.join('\n\n'));
   }
+  // ===== A CÂMERA QUE VOLTA DE MÃOS VAZIAS (24/set/2026) ===========================
+  // Era o ÚNICO caminho da foto que apagava a marca EM SILÊNCIO. A monitora toca na
+  // câmera, volta sem foto nenhuma (a permissão de câmera do celular está negada, ela
+  // desistiu, o aparelho engasgou) — e o app esquecia que ela tinha tentado. No Salvar
+  // a frase virava "Falta a foto de X", que é MENTIRA para quem acabou de tentar, e no
+  // banco não ficava rastro nenhum. Agora a marca FICA, a faixa amarela acende na hora
+  // (com o caminho da galeria) e a tentativa vazia deixa rastro.
+  function ckFotoVazia(pk, campo, extra, motivo){
+    CK_FOTO_ESPERANDO=null;
+    var jaTem=!!(ckRascunho&&ckRascunho.pontos&&(ckRascunho.pontos[pk]||{})[campo||'foto']);
+    if(ckRascunho && !extra && !jaTem){
+      CK_FOTO_PERDIDA=pk;
+      if(typeof audit==='function') audit('checkin-foto-vazia',
+        ckNomeAtual()+' — '+ckRotuloPonto(pk)+' — '+(motivo||'a câmera voltou sem foto nenhuma'),
+        {alvo:pk, campo:campo||'foto'});
+    } else ckFotoChegou();
+    renderCheckin();
+  }
+  // O navegador moderno avisa quando a pessoa volta do seletor SEM escolher nada (evento
+  // 'cancel' — Chrome 113+, o Chrome do Android da casa). É o caminho da câmera que abre e
+  // volta vazia, e era aqui que o app ficava mudo até o Salvar. Onde o navegador não tem o
+  // evento, nada muda: o Salvar continua contando a mesma verdade.
+  function ckFotoCancelou(pk, campo, extra){
+    if(!ckRascunho) return;
+    ckFotoVazia(pk, campo, extra, 'voltou do seletor sem escolher foto nenhuma');
+  }
   // Um caminho só: câmera e galeria, foto do ponto e fotos extras, tudo passa por aqui.
   function ckFotoReceber(pk, input, campo, extra){
     var f=(input&&input.files&&input.files[0])||null;
-    if(!f){ ckFotoChegou(); renderCheckin(); return; }   // o seletor voltou sem arquivo nenhum
+    if(!f){ ckFotoVazia(pk, campo, extra, 'a câmera voltou sem foto nenhuma'); return; }
     if(!ckRascunho){ ckFotoChegou(); return; }
     var alvo=campo||'foto';
     CK_FOTO_ESPERANDO={pk:pk, campo:alvo, ts:Date.now(), fase:'processando'};
@@ -25554,10 +25580,12 @@
       +'<label class="btn btn-gold" style="padding:7px 12px;font-size:12.5px;cursor:pointer">'+rotulo
         +'<input type="file" accept="image/*" capture="environment" style="display:none"'
         +' onclick="ckFotoTocou(\''+pk+'\',\''+cmp+'\')"'
+        +' oncancel="ckFotoCancelou(\''+pk+'\',\''+cmp+'\')"'
         +' onchange="ckFoto(\''+pk+'\',this'+c+')"></label>'
       +'<label class="btn ck-galeria" style="padding:7px 12px;font-size:12px;cursor:pointer;background:var(--z-cream-warm);color:var(--z-blue);border:1.5px solid var(--line)">Escolher da galeria'
         +'<input type="file" accept="image/*" style="display:none"'
         +' onclick="ckFotoTocou(\''+pk+'\',\''+cmp+'\')"'
+        +' oncancel="ckFotoCancelou(\''+pk+'\',\''+cmp+'\')"'
         +' onchange="ckFoto(\''+pk+'\',this'+c+')"></label>'
       +'</div>';
   }
@@ -25577,8 +25605,8 @@
     var ex=Array.isArray(at.extras)?at.extras:[];
     return '<div class="ck-extras">'
       +ex.map(function(src,i){ return '<div class="ex-item"><img src="'+src+'" alt=""><button type="button" onclick="ckDelExtra(\''+pt.k+'\','+i+')">&times;</button></div>'; }).join('')
-      +'<label class="ex-add">+ outra foto<input type="file" accept="image/*" capture="environment" style="display:none" onclick="ckFotoTocou(\''+pt.k+'\',\'extra\')" onchange="ckFotoExtra(\''+pt.k+'\',this)"></label>'
-      +'<label class="ex-add">galeria<input type="file" accept="image/*" style="display:none" onclick="ckFotoTocou(\''+pt.k+'\',\'extra\')" onchange="ckFotoExtra(\''+pt.k+'\',this)"></label>'
+      +'<label class="ex-add">+ outra foto<input type="file" accept="image/*" capture="environment" style="display:none" onclick="ckFotoTocou(\''+pt.k+'\',\'extra\')" oncancel="ckFotoCancelou(\''+pt.k+'\',\'extra\',1)" onchange="ckFotoExtra(\''+pt.k+'\',this)"></label>'
+      +'<label class="ex-add">galeria<input type="file" accept="image/*" style="display:none" onclick="ckFotoTocou(\''+pt.k+'\',\'extra\')" oncancel="ckFotoCancelou(\''+pt.k+'\',\'extra\',1)" onchange="ckFotoExtra(\''+pt.k+'\',this)"></label>'
       +'</div>';
   }
   // ===== O BLOCO "QUEM PRECISA VER ISTO?" SAIU (Adriana, 15/set/2026) ===============
@@ -26224,7 +26252,16 @@
         var _fpV=R.fotoPendente;
         var _naoChegou=(CK_FOTO_PERDIDA===pt.k)
           || (!!_fpV && _fpV.pk===pt.k && (Date.now()-(_fpV.ts||0)) < CK_FOTO_PERDIDA_MS);
-        faltas.push({el:alvo, curto:'foto de '+pt.t,
+        // ===== O RASTRO TEM DE DIZER QUAL DOS DOIS MUNDOS É (24/set/2026) ===========
+        // A tela já dizia a verdade; o RASTRO no banco, não: ele gravava só o texto curto
+        // ("foto de Boca e focinho") nos DOIS casos. Por isso, depois de quatro episódios
+        // iguais (Olivia 18/set, Flor 21/set, Lana 22/set, Oliver 24/set — quatro pontos
+        // DIFERENTES), continuava impossível saber, de longe, se a pessoa tinha tocado na
+        // câmera e a foto não voltou, ou se ela nunca tocou. Agora o rastro separa os dois.
+        if(_naoChegou) CK_FOTO_PERDIDA=pt.k;   // a faixa amarela acende no ponto, aqui mesmo
+        faltas.push({el:alvo,
+          curto:'foto de '+pt.t+(_naoChegou?' (TOCOU NA CÂMERA e a foto não voltou)':' (sem rastro de toque na câmera)'),
+          camera:(_naoChegou?'nao-voltou':'sem-toque'),
           msg:_naoChegou
             ? 'A foto de '+pt.t+' não chegou ao app — tire de novo ou use "Escolher da galeria".'
             : 'Falta a foto de '+pt.t+'. É ela que mostra ao tutor e à veterinária o que você viu.'});
@@ -26244,10 +26281,15 @@
     // calada para quem estava longe da tela. Agora toda tentativa barrada deixa marca —
     // é assim que a Gestão descobre que alguém está travado ANTES de a foto se perder.
     if(faltas.length && typeof audit==='function'){
+      var _cam=faltas.filter(function(f){ return f.camera; }).map(function(f){ return f.camera; });
       audit('checkin-corpo-barrado',
         pelNome(p)+' — faltou: '+faltas.map(function(f){ return f.curto||f.msg; }).join(', ').slice(0,240),
-        {alvo:k, faltas:faltas.length});
+        {alvo:k, faltas:faltas.length, camera:(_cam.length?_cam.join('|'):'')});
     }
+    // A faixa amarela "a foto não voltou" nasceu presa ao REABRIR a ficha (ckAbrir). Quem
+    // fica na mesma tela — sete Salvar em dois minutos, que foi o caso do Oliver — nunca a
+    // via, e por isso nunca lia o caminho da galeria. Agora ela acende no próprio barramento.
+    if(faltas.some(function(f){ return f.camera==='nao-voltou'; })) renderCheckin();
     if(zFalta(faltas, {botao:'ckBtnSalvar'})) return;
     zLimparFalta();
     // O cocô virou ponto do exame — a validação de "ponto a ponto" já cobre.

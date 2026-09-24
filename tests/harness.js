@@ -3744,8 +3744,8 @@ async function main() {
     check('v-25 · a auditoria da tabela diz o que mudou, de quanto para quanto',
       /audit\('orcamento-precos',\s*\n?\s*mudou\.length\?\('alterou a tabela de hospedagem — '\+mudou\.join/.test(html)
       && /\{antes:antes, depois:novo\}/.test(html));
-    check('v-25 · a versão carimbada desta entrega é a 2026-09-23-03',
-      /const APP_VERSAO='2026-09-23-03';/.test(html));
+    check('v-25 · a versão carimbada desta entrega é a 2026-09-24-01',
+      /const APP_VERSAO='2026-09-24-01';/.test(html));
   }
   console.log('');
 
@@ -4041,8 +4041,8 @@ async function main() {
       && html.indexOf('sem valor registrado ficaram de fora') > 0
       && html.indexOf('Ainda estou lendo os avulsos lançados no mês') > 0);
 
-    check('v-26 · a versão carimbada desta entrega é a 2026-09-23-03',
-      /const APP_VERSAO='2026-09-23-03';/.test(html));
+    check('v-26 · a versão carimbada desta entrega é a 2026-09-24-01',
+      /const APP_VERSAO='2026-09-24-01';/.test(html));
   }
   console.log('');
 
@@ -4425,8 +4425,8 @@ async function main() {
       }
     } else { check('v-27 · orcRenderConfig existe', false, 'função não encontrada'); }
 
-    check('v-27 · a versão carimbada desta entrega é a 2026-09-23-03',
-      /const APP_VERSAO='2026-09-23-03';/.test(html));
+    check('v-27 · a versão carimbada desta entrega é a 2026-09-24-01',
+      /const APP_VERSAO='2026-09-24-01';/.test(html));
   }
   console.log('');
 
@@ -5037,8 +5037,8 @@ async function main() {
         delete ctx.document.activeElement; delete ctx.__focoAuto;
       }
     } else { check('v-28 · vencRedesenhoAuto existe', false, 'função não encontrada'); }
-    check('v-28 · a versão carimbada desta entrega é a 2026-09-23-03',
-      /const APP_VERSAO='2026-09-23-03';/.test(html));
+    check('v-28 · a versão carimbada desta entrega é a 2026-09-24-01',
+      /const APP_VERSAO='2026-09-24-01';/.test(html));
   }
   console.log('');
 
@@ -7516,7 +7516,7 @@ async function main() {
     // --- 2) nada barra em silencio ---
     check('o Salvar barrado pela validacao deixa rastro na auditoria',
       /audit\('checkin-corpo-barrado',/.test(html) &&
-      /\{alvo:k, faltas:faltas\.length\}/.test(html) &&
+      /\{alvo:k, faltas:faltas\.length, camera:/.test(html) &&
       html.indexOf("audit('checkin-corpo-barrado'") < html.indexOf("if(zFalta(faltas, {botao:'ckBtnSalvar'})) return;"));
     check('foto que nao abre avisa em vez de sumir (o video ainda usa FileReader com onerror)',
       (html.match(/function ckFotoNaoAbriu\(input\)/g)||[]).length === 1 &&
@@ -14642,7 +14642,7 @@ async function main() {
         !/\.catch\(function\([a-z]*\)\{\s*\}\)/.test(
           html.slice(html.indexOf('const CK_FRASE_PRATICA='), html.indexOf('function renderCkInicio('))));
       check('v-14 · a versão carimbada é a desta entrega',
-        /const APP_VERSAO='2026-09-23-03';/.test(html));
+        /const APP_VERSAO='2026-09-24-01';/.test(html));
     }
 
     // ---- v-15: O PLANO SÓ GRAVA NO CONFIRMAR (caso Cookie/Yara, 15/set/2026) --------
@@ -15458,8 +15458,8 @@ async function main() {
           + 'AVISO_COLEIRA_APOS = __bkpC.apos;', ctx);
       }
     } else { check('v-17 · prevCfgCarregar existe', false, 'função não encontrada'); }
-    check('v-24 · a versão carimbada desta entrega é a 2026-09-23-03',
-      /const APP_VERSAO='2026-09-23-03';/.test(html));
+    check('v-24 · a versão carimbada desta entrega é a 2026-09-24-01',
+      /const APP_VERSAO='2026-09-24-01';/.test(html));
 
     // ───────── v-19 · o aparelho autorizado que não se perde no iPhone (16/set/2026)
     // Auditoria de 16/set: o iPhone da Leticya gerou DOIS ids em trinta segundos
@@ -15713,8 +15713,8 @@ async function main() {
       String((html.match(/linhaBuscaCadastro\(/g) || []).length));
     check('v-29 · a linha tem estilo próprio: menor, em var(--muted), e quebrando no celular',
       /table\.pel \.pel-busca-sub\{[^}]*font-size:11\.5px[^}]*color:var\(--muted\)[^}]*white-space:normal/.test(html));
-    check('v-29 · a versão carimbada desta entrega é a 2026-09-23-03',
-      /const APP_VERSAO='2026-09-23-03';/.test(html));
+    check('v-29 · a versão carimbada desta entrega é a 2026-09-24-01',
+      /const APP_VERSAO='2026-09-24-01';/.test(html));
   }
   console.log('');
 
@@ -16016,8 +16016,8 @@ async function main() {
         ctx.vermNumTexto(5) === '5' && ctx.vermNumTexto(0.3) === '0,3' && ctx.vermNumTexto(4.5) === '4,5',
         JSON.stringify([ctx.vermNumTexto(5), ctx.vermNumTexto(0.3)]));
     } else { check('v-30 · vermNumLer existe', false, 'função não encontrada'); }
-    check('v-30 · a versão carimbada desta entrega é a 2026-09-23-03',
-      /const APP_VERSAO='2026-09-23-03';/.test(html));
+    check('v-30 · a versão carimbada desta entrega é a 2026-09-24-01',
+      /const APP_VERSAO='2026-09-24-01';/.test(html));
   }
   console.log('');
 
@@ -16280,8 +16280,8 @@ async function main() {
       && html.indexOf('A frase pronta fala em &ldquo;vence&rdquo; — confira antes de mandar.') > 0
       && /if\(\(m\.itens\|\|\[\]\)\.some\(function\(x\)\{ return x\.atrasado; \}\)\)/.test(html));
 
-    check('v-31 · a versão carimbada desta entrega é a 2026-09-23-03',
-      /const APP_VERSAO='2026-09-23-03';/.test(html));
+    check('v-31 · a versão carimbada desta entrega é a 2026-09-24-01',
+      /const APP_VERSAO='2026-09-24-01';/.test(html));
   }
   // ===== v-32 · O CALENDÁRIO, A COBRANÇA E A RESPOSTA QUE LANÇA SOZINHA ============
   // Adriana, 21/set/2026, palavra por palavra:
@@ -16746,8 +16746,8 @@ async function main() {
       }
     } else { check('v-32 · vencResponderTipo e dashLancar existem', false, 'função não encontrada'); }
 
-    check('v-32 · a versão carimbada desta entrega é a 2026-09-23-03',
-      /const APP_VERSAO='2026-09-23-03';/.test(html));
+    check('v-32 · a versão carimbada desta entrega é a 2026-09-24-01',
+      /const APP_VERSAO='2026-09-24-01';/.test(html));
   }
   console.log('');
 
@@ -17158,8 +17158,8 @@ async function main() {
       && /DB\.ref\('daycare\/vagas-pedidos'\)\.on\('value'/.test(html)
       && /try\{ vagasPedCarregar\(\); \}catch\(e\)\{\}/.test(html));
 
-    check('v-33 · a versão carimbada desta entrega é a 2026-09-23-03',
-      /const APP_VERSAO='2026-09-23-03';/.test(html));
+    check('v-33 · a versão carimbada desta entrega é a 2026-09-24-01',
+      /const APP_VERSAO='2026-09-24-01';/.test(html));
   }
   console.log('');
 
@@ -17359,11 +17359,15 @@ async function main() {
       modoBitmap34 = 'ok'; modoImagem34 = 'ok';
 
       // ---- (h) o seletor que volta sem arquivo não deixa a tela travada ----
+      // REESCRITO em 24/set/2026 (v-42): destravar a tela, sim; APAGAR a marca, não. Apagar
+      // era o que fazia o Salvar dizer 'Falta a foto' para quem tinha acabado de tentar.
       zerar34();
       ctx.ckFotoTocou('orelhas', 'foto');
       ctx.ckFoto('orelhas', { files: [] });
-      check('v-34 · seletor que volta sem arquivo limpa a espera e destrava a tela',
-        !ctx.ckRascunho.fotoPendente && ctx.ckFotoEsperando() === false && redesenhos34 >= 1);
+      check('v-34 · seletor que volta sem arquivo destrava a tela — e a marca da tentativa FICA (v-42)',
+        !!ctx.ckRascunho.fotoPendente && ctx.ckFotoEsperando() === false && redesenhos34 >= 1
+        && ctx.CK_FOTO_PERDIDA === 'orelhas' && temRastro('checkin-foto-vazia').length === 1,
+        JSON.stringify({ marca: ctx.ckRascunho.fotoPendente || null, perdida: ctx.CK_FOTO_PERDIDA }));
 
       // ---- (i) a aba que morreu: ckAbrir conta o que houve, em vez de fingir ----
       zerar34();
@@ -17471,8 +17475,8 @@ async function main() {
       && /URL\.createObjectURL\(f\)/.test(html) && /URL\.revokeObjectURL\(url\)/.test(html)
       && /createImageBitmap\(f,\{resizeWidth:CK_FOTO_MAX, resizeQuality:'medium', imageOrientation:'from-image'\}\)/.test(html)
       && /if\(bmp && bmp\.close\) bmp\.close\(\)/.test(html));
-    check('v-34 · a versão carimbada desta entrega é a 2026-09-23-03',
-      /const APP_VERSAO='2026-09-23-03';/.test(html));
+    check('v-34 · a versão carimbada desta entrega é a 2026-09-24-01',
+      /const APP_VERSAO='2026-09-24-01';/.test(html));
   }
   console.log('');
 
@@ -17829,8 +17833,8 @@ async function main() {
       && /if\(\(prev\.motivo\|\|''\)!==\(it\.motivo\|\|''\)\) mud\.push\('para quê'\);/.test(html)
       && ctx.medDiffAcao({ nome: 'Enalapril', horarios: ['17:45'] },
                          { nome: 'Enalapril', horarios: ['17:45'], quando: { ref: 'jantar', rel: 'antes', min: 45 } }) === 'Alterou quando dar');
-    check('v-35 · a versão carimbada desta entrega é a 2026-09-23-03',
-      /const APP_VERSAO='2026-09-23-03';/.test(html));
+    check('v-35 · a versão carimbada desta entrega é a 2026-09-24-01',
+      /const APP_VERSAO='2026-09-24-01';/.test(html));
   }
   console.log('');
 
@@ -18082,8 +18086,8 @@ async function main() {
       && /delete rQ\.fim_anterior;/.test(html));
     check('v-36 · vigência que não é mais do meio do mês não herda o "para onde voltar"',
       /if\(!regMMConf\) delete novo\.fim_anterior;/.test(html));
-    check('v-36 · a versão carimbada desta entrega é a 2026-09-23-03',
-      /const APP_VERSAO='2026-09-23-03';/.test(html));
+    check('v-36 · a versão carimbada desta entrega é a 2026-09-24-01',
+      /const APP_VERSAO='2026-09-24-01';/.test(html));
   }
   console.log('');
 
@@ -18300,8 +18304,8 @@ async function main() {
         !/dcLancamentosNaoCasados[\s\S]{0,900}'avaliacao'/.test(html));
     } else { check('v-38 · dashForaDoCadastro existe', false, 'função não encontrada'); }
 
-    check('v-38 · a versão carimbada desta entrega é a 2026-09-23-03',
-      /const APP_VERSAO='2026-09-23-03';/.test(html));
+    check('v-38 · a versão carimbada desta entrega é a 2026-09-24-01',
+      /const APP_VERSAO='2026-09-24-01';/.test(html));
   }
   console.log('');
 
@@ -18674,8 +18678,8 @@ async function main() {
     check('v-39 · Recebimentos do mês continua somando o avulso pelo det.valor_cent — sem exceção para quem não tem ficha',
       html.indexOf("var o=lista[id]||{}, v=((o.det||{}).valor_cent);") > 0);
 
-    check('v-39 · a versão carimbada desta entrega é a 2026-09-23-03',
-      /const APP_VERSAO='2026-09-23-03';/.test(html));
+    check('v-39 · a versão carimbada desta entrega é a 2026-09-24-01',
+      /const APP_VERSAO='2026-09-24-01';/.test(html));
   }
   console.log('');
 
@@ -18922,8 +18926,8 @@ async function main() {
       }
     } else { check('v-40 · ocupantesDoDia existe', false, 'função não encontrada'); }
 
-    check('v-40 · a versão carimbada desta entrega é a 2026-09-23-03',
-      /const APP_VERSAO='2026-09-23-03';/.test(html));
+    check('v-40 · a versão carimbada desta entrega é a 2026-09-24-01',
+      /const APP_VERSAO='2026-09-24-01';/.test(html));
   }
   console.log('');
 
@@ -19029,7 +19033,10 @@ async function main() {
 
     // ---- (b) LANÇAR GRAVA AS DUAS GAVETAS ----------------------------------------
     {
-      const DIA41 = '2026-09-23';
+      // O dia é o de HOJE, lido da MESMA fonte que o app usa (zHojeISO). Fixar '2026-09-23'
+      // fazia o bloco passar naquele dia e falhar em todos os seguintes — teste que vence
+      // sozinho é teste que mente: em 24/set ele acusava quatro falhas que não existiam.
+      const DIA41 = ctx.zHojeISO();
       const bkp41 = {};
       ['PELUDINHOS', 'DASH_DADOS', 'DASH_DIA_SEL', 'DASH_SEL', 'DASH_SEL_I', 'DASH_DET',
         'PERN_FILA', 'PERN_FILA_DIA', 'PERN_FILA_LIDO'].forEach((k) => { bkp41[k] = ctx[k]; });
@@ -19368,8 +19375,204 @@ async function main() {
       }
     }
 
-    check('v-41 · a versão carimbada desta entrega é a 2026-09-23-03',
-      /const APP_VERSAO='2026-09-23-03';/.test(html));
+    check('v-41 · a versão carimbada desta entrega é a 2026-09-24-01',
+      /const APP_VERSAO='2026-09-24-01';/.test(html));
+  }
+  console.log('');
+
+  // ===== v-42 · A CÂMERA DE CADA PONTO, E O RASTRO QUE DIZ QUAL DOS DOIS MUNDOS É ===
+  // Caso real, 24/set/2026, monitor Felipe, Android/Chrome: SETE
+  // "checkin-corpo-barrado | Oliver — faltou: foto de Boca e focinho" entre 08:55 e 08:57,
+  // e às 08:57 ele desistiu e salvou "tudo normal". Nenhum rastro de foto. A hipótese era
+  // que o botão da câmera de ALGUM ponto estivesse quebrado.
+  //
+  // A hipótese CAIU. No navegador de verdade (412×915) os 11 pontos abrem o seletor,
+  // gravam fotoPendente e guardam a foto — e no banco o mesmo episódio já tinha acontecido
+  // com QUATRO pontos diferentes (Olivia · Pele 18/set, Flor · Patas 21/set, Lana · Orelhas
+  // 22/set, Oliver · Boca 24/set). Não é o ponto: é a câmera do aparelho.
+  //
+  // O que estava REALMENTE quebrado era a capacidade de descobrir isso de longe:
+  //   1) o rastro do barramento gravava só o texto curto ("foto de Boca e focinho") nos
+  //      DOIS mundos — tocou na câmera e não voltou × nunca tocou;
+  //   2) a câmera que volta de mãos vazias apagava a marca EM SILÊNCIO, e no Salvar a
+  //      frase virava "Falta a foto", que é mentira para quem acabou de tentar;
+  //   3) a faixa amarela "a foto não voltou" só nascia ao REABRIR a ficha — quem fica na
+  //      mesma tela (sete Salvar em dois minutos) nunca lia o caminho da galeria.
+  console.log('v-42 · A câmera de CADA ponto do check-in do corpo, e o rastro honesto (24/set):');
+  {
+    // ---- (a) todo ponto oferece câmera E galeria, e os dois avisam antes de abrir ----
+    // CK_PONTOS é const no app: não mora no objeto global, lê-se por dentro do contexto.
+    const PONTOS42 = vm.runInContext('CK_PONTOS.map(function(pt){ return {k:pt.k, alertas:(pt.alertas||[]).slice()}; })', ctx);
+    if (typeof ctx.ckBotoesFotoHTML === 'function' && Array.isArray(PONTOS42)) {
+      const chaves42 = PONTOS42.map((pt) => pt.k);
+      check('v-42 · o exame tem os 11 pontos de sempre, o íntimo incluído',
+        chaves42.length === 11 && chaves42.indexOf('boca') >= 0 && chaves42.indexOf('intimo') >= 0,
+        chaves42.join(','));
+
+      const quebrados42 = [];
+      chaves42.forEach((k) => {
+        const h = String(ctx.ckBotoesFotoHTML(k, '', 'Tirar foto') || '');
+        const camera = /capture="environment"/.test(h);
+        const galeria = h.indexOf('ck-galeria') > 0 && (h.split('capture="environment"').length - 1) === 1;
+        const toca = (h.split('ckFotoTocou(').length - 1) === 2 && h.indexOf(k) > 0;
+        const recebe = (h.split('ckFoto(').length - 1) === 2;
+        // 'cancel' (Chrome 113+) é quem avisa que a pessoa voltou do seletor de mãos vazias.
+        const cancela = (h.split('oncancel="ckFotoCancelou(').length - 1) === 2;
+        if (!(camera && galeria && toca && recebe && cancela)) {
+          quebrados42.push(k + '{' + [camera ? '' : 'sem-camera', galeria ? '' : 'sem-galeria',
+            toca ? '' : 'sem-ckFotoTocou', recebe ? '' : 'sem-ckFoto',
+            cancela ? '' : 'sem-oncancel'].filter(Boolean).join(',') + '}');
+        }
+      });
+      check('v-42 · TODOS os pontos: câmera + galeria + ckFotoTocou + ckFoto + oncancel — nenhum ponto órfão',
+        quebrados42.length === 0, quebrados42.join(' · '));
+
+      const f2 = chaves42.filter((k) => {
+        const pt = PONTOS42.filter((x) => x.k === k)[0] || {};
+        return (pt.alertas || []).some((a) => /machuc|ferid|corte|arranh|lesão|lesao|inchaç|inchac/i.test(String(a)));
+      });
+      const quebrados2 = f2.filter((k) => {
+        const h = String(ctx.ckBotoesFotoHTML(k, 'foto2', 'Tirar') || '');
+        return !(/capture="environment"/.test(h) && h.indexOf("ckFotoTocou('" + k + "','foto2')") > 0
+          && h.indexOf("ckFoto('" + k + "',this,'foto2')") > 0);
+      });
+      check('v-42 · e a foto DE LONGE (foto2) tem os dois caminhos em todo ponto que aceita machucado',
+        f2.length >= 4 && quebrados2.length === 0, 'pontos=' + f2.join(',') + ' quebrados=' + quebrados2.join(','));
+
+      const ex42 = String(ctx.ckFotosExtraHTML({ k: 'boca', alertas: [] }, {}) || '');
+      check('v-42 · "+ outra foto" e a galeria extra também avisam antes de abrir',
+        (ex42.split('ckFotoTocou(').length - 1) === 2 && (ex42.split('ckFotoExtra(').length - 1) === 2
+        && (ex42.split('capture="environment"').length - 1) === 1, ex42.slice(0, 160));
+    }
+
+    // ---- (b) a câmera que volta SEM FOTO deixa de apagar a marca em silêncio ----
+    if (typeof ctx.ckFotoReceber === 'function') {
+      const bkp42 = {};
+      ['ckAtual', 'ckRascunho', 'dcAtiv', 'audit', 'renderCheckin', 'localStorage',
+        'CK_FOTO_ESPERANDO', 'CK_FOTO_STATUS', 'CK_FOTO_PERDIDA'].forEach((k) => { bkp42[k] = ctx[k]; });
+      const rastro42 = [];
+      const loja42 = {
+        dados: {},
+        getItem(k) { return Object.prototype.hasOwnProperty.call(this.dados, k) ? this.dados[k] : null; },
+        setItem(k, v) { this.dados[k] = String(v); },
+        removeItem(k) { delete this.dados[k]; },
+        get length() { return Object.keys(this.dados).length; },
+        key(i) { return Object.keys(this.dados)[i]; },
+      };
+      try {
+        ctx.localStorage = loja42;
+        ctx.dcAtiv = 'checkin-corpo';
+        ctx.renderCheckin = () => {};
+        ctx.audit = (acao, detalhe, meta) => { rastro42.push({ acao, detalhe: String(detalhe || ''), meta: meta || {} }); };
+        ctx.ckAtual = { p: { n: 'Oliver', tutor: 'Tutor de teste' } };
+        ctx.ckRascunho = { pontos: { boca: { alterado: true } } };
+        ctx.CK_FOTO_ESPERANDO = null; ctx.CK_FOTO_STATUS = {}; ctx.CK_FOTO_PERDIDA = '';
+
+        ctx.ckFotoTocou('boca', 'foto');
+        const marcou42 = !!(ctx.ckRascunho.fotoPendente && ctx.ckRascunho.fotoPendente.pk === 'boca');
+        ctx.ckFotoReceber('boca', { files: [], value: '' }, 'foto', false);
+
+        check('v-42 · a câmera que volta de mãos vazias NÃO apaga a marca — o app continua sabendo que ela tentou',
+          marcou42 && !!ctx.ckRascunho.fotoPendente && ctx.ckRascunho.fotoPendente.pk === 'boca',
+          JSON.stringify(ctx.ckRascunho.fotoPendente || null));
+        check('v-42 · e acende a faixa amarela no ponto, na hora, com o caminho da galeria',
+          ctx.CK_FOTO_PERDIDA === 'boca' && String(ctx.ckFotoPerdidaHTML('boca')).indexOf('use a galeria') > 0,
+          'perdida=' + ctx.CK_FOTO_PERDIDA);
+        check('v-42 · e deixa rastro (checkin-foto-vazia) — a Gestão vê o travamento sem esperar reclamação',
+          rastro42.filter((x) => x.acao === 'checkin-foto-vazia').length === 1
+          && rastro42[0].detalhe.indexOf('Boca e focinho') > 0
+          && rastro42[0].detalhe.indexOf('sem foto nenhuma') > 0,
+          JSON.stringify(rastro42.map((x) => x.acao)));
+        check('v-42 · a espera acaba: a tela volta a aceitar o redesenho do ouvinte do banco',
+          ctx.ckFotoEsperando() === false);
+
+        // o mesmo caminho pelo evento 'cancel' do navegador — o aviso chega ANTES do Salvar
+        rastro42.length = 0;
+        ctx.ckRascunho = { pontos: { boca: { alterado: true } } };
+        ctx.CK_FOTO_PERDIDA = '';
+        ctx.ckFotoTocou('boca', 'foto');
+        ctx.ckFotoCancelou('boca', 'foto');
+        check('v-42 · voltar do seletor sem escolher nada acende a faixa NA HORA, sem esperar o Salvar',
+          ctx.CK_FOTO_PERDIDA === 'boca' && !!ctx.ckRascunho.fotoPendente
+          && rastro42.filter((x) => x.acao === 'checkin-foto-vazia').length === 1
+          && rastro42[0].detalhe.indexOf('sem escolher foto nenhuma') > 0,
+          JSON.stringify(rastro42));
+        check('v-42 · e nas fotos EXTRAS o cancelamento não acende faixa nenhuma — lá a foto é opcional',
+          (function () {
+            ctx.CK_FOTO_PERDIDA = ''; rastro42.length = 0;
+            ctx.ckFotoTocou('boca', 'extra');
+            ctx.ckFotoCancelou('boca', 'extra', 1);
+            return ctx.CK_FOTO_PERDIDA === '' && rastro42.length === 0 && !ctx.ckRascunho.fotoPendente;
+          })(), 'perdida=' + ctx.CK_FOTO_PERDIDA);
+
+        // ---- (c) o rastro do barramento separa os DOIS mundos --------------------
+        if (typeof ctx.ckSalvar === 'function') {
+          const bkpS = {}; ['zFalta', 'zLimparFalta'].forEach((k) => { bkpS[k] = ctx[k]; });
+          vm.runInContext('__bkp42cad = pelCadCache; pelCadCache = {};', ctx);
+          let faltasVistas = [];
+          try {
+            ctx.zFalta = (faltas) => { faltasVistas = faltas || []; return true; };   // barra e para aqui
+            ctx.zLimparFalta = () => {};
+
+            const marcarTudoMenosBoca = () => {
+              const pontos = ctx.ckPontosDe(ctx.ckAtual.p) || [];
+              const ps = {};
+              pontos.forEach((pt) => { ps[pt.k] = { alterado: false }; });
+              ps.boca = { alterado: true };
+              ctx.ckRascunho = { pontos: ps, coleiraRep: 'nao', coleiraId: 'nao' };
+            };
+
+            // mundo 1 — ela TOCOU na câmera e a foto não voltou
+            rastro42.length = 0;
+            marcarTudoMenosBoca();
+            ctx.ckRascunho.fotoPendente = { pk: 'boca', campo: 'foto', ts: Date.now() - 20000 };
+            ctx.CK_FOTO_PERDIDA = '';
+            ctx.ckSalvar();
+            const b1 = rastro42.filter((x) => x.acao === 'checkin-corpo-barrado')[0] || { detalhe: '', meta: {} };
+            check('v-42 · barrado com a foto que NÃO VOLTOU: o rastro diz isso, com todas as letras',
+              b1.detalhe.indexOf('TOCOU NA CÂMERA e a foto não voltou') > 0 && b1.meta.camera === 'nao-voltou',
+              b1.detalhe + ' :: ' + JSON.stringify(b1.meta));
+            check('v-42 · e a faixa amarela acende na MESMA tela — sem precisar reabrir a ficha',
+              ctx.CK_FOTO_PERDIDA === 'boca', 'perdida=' + ctx.CK_FOTO_PERDIDA);
+            check('v-42 · a frase na cara dela continua a honesta ("não chegou ao app")',
+              String((faltasVistas[0] || {}).msg || '').indexOf('não chegou ao app') > 0,
+              JSON.stringify(faltasVistas[0] || null));
+
+            // mundo 2 — não há rastro nenhum de toque na câmera
+            rastro42.length = 0;
+            marcarTudoMenosBoca();
+            ctx.CK_FOTO_PERDIDA = '';
+            ctx.ckSalvar();
+            const b2 = rastro42.filter((x) => x.acao === 'checkin-corpo-barrado')[0] || { detalhe: '', meta: {} };
+            check('v-42 · barrado SEM toque na câmera: o rastro diz o outro mundo, e não mente',
+              b2.detalhe.indexOf('sem rastro de toque na câmera') > 0 && b2.meta.camera === 'sem-toque'
+              && b2.detalhe.indexOf('TOCOU NA CÂMERA') < 0,
+              b2.detalhe + ' :: ' + JSON.stringify(b2.meta));
+            check('v-42 · aqui a faixa amarela NÃO acende — aviso em tudo é aviso em nada',
+              ctx.CK_FOTO_PERDIDA === '', 'perdida=' + ctx.CK_FOTO_PERDIDA);
+            check('v-42 · e a frase é a de sempre ("Falta a foto"), porque é a verdade deste caso',
+              String((faltasVistas[0] || {}).msg || '').indexOf('Falta a foto de') === 0,
+              JSON.stringify(faltasVistas[0] || null));
+
+            // a marca velha (mais de 10 min) não vale como "acabei de tentar"
+            rastro42.length = 0;
+            marcarTudoMenosBoca();
+            ctx.ckRascunho.fotoPendente = { pk: 'boca', campo: 'foto', ts: Date.now() - (11 * 60 * 1000) };
+            ctx.CK_FOTO_PERDIDA = '';
+            ctx.ckSalvar();
+            const b3 = rastro42.filter((x) => x.acao === 'checkin-corpo-barrado')[0] || { detalhe: '', meta: {} };
+            check('v-42 · marca de mais de 10 minutos não conta como tentativa recente — nada de falso positivo',
+              b3.meta.camera === 'sem-toque', JSON.stringify(b3.meta));
+          } finally {
+            Object.keys(bkpS).forEach((k) => { ctx[k] = bkpS[k]; });
+            vm.runInContext('pelCadCache = __bkp42cad;', ctx);
+          }
+        }
+      } finally { Object.keys(bkp42).forEach((k) => { ctx[k] = bkp42[k]; }); }
+    }
+
+    check('v-42 · a versão carimbada desta entrega é a 2026-09-24-01',
+      /const APP_VERSAO='2026-09-24-01';/.test(html));
   }
   console.log('');
 
