@@ -3744,8 +3744,8 @@ async function main() {
     check('v-25 · a auditoria da tabela diz o que mudou, de quanto para quanto',
       /audit\('orcamento-precos',\s*\n?\s*mudou\.length\?\('alterou a tabela de hospedagem — '\+mudou\.join/.test(html)
       && /\{antes:antes, depois:novo\}/.test(html));
-    check('v-25 · a versão carimbada desta entrega é a 2026-09-24-06',
-      /const APP_VERSAO='2026-09-24-06';/.test(html));
+    check('v-25 · a versão carimbada desta entrega é a 2026-09-24-07',
+      /const APP_VERSAO='2026-09-24-07';/.test(html));
   }
   console.log('');
 
@@ -4041,8 +4041,8 @@ async function main() {
       && html.indexOf('sem valor registrado ficaram de fora') > 0
       && html.indexOf('Ainda estou lendo os avulsos lançados no mês') > 0);
 
-    check('v-26 · a versão carimbada desta entrega é a 2026-09-24-06',
-      /const APP_VERSAO='2026-09-24-06';/.test(html));
+    check('v-26 · a versão carimbada desta entrega é a 2026-09-24-07',
+      /const APP_VERSAO='2026-09-24-07';/.test(html));
   }
   console.log('');
 
@@ -4425,8 +4425,8 @@ async function main() {
       }
     } else { check('v-27 · orcRenderConfig existe', false, 'função não encontrada'); }
 
-    check('v-27 · a versão carimbada desta entrega é a 2026-09-24-06',
-      /const APP_VERSAO='2026-09-24-06';/.test(html));
+    check('v-27 · a versão carimbada desta entrega é a 2026-09-24-07',
+      /const APP_VERSAO='2026-09-24-07';/.test(html));
   }
   console.log('');
 
@@ -5050,8 +5050,8 @@ async function main() {
         delete ctx.document.activeElement; delete ctx.__focoAuto;
       }
     } else { check('v-28 · vencRedesenhoAuto existe', false, 'função não encontrada'); }
-    check('v-28 · a versão carimbada desta entrega é a 2026-09-24-06',
-      /const APP_VERSAO='2026-09-24-06';/.test(html));
+    check('v-28 · a versão carimbada desta entrega é a 2026-09-24-07',
+      /const APP_VERSAO='2026-09-24-07';/.test(html));
   }
   console.log('');
 
@@ -14667,7 +14667,7 @@ async function main() {
         !/\.catch\(function\([a-z]*\)\{\s*\}\)/.test(
           html.slice(html.indexOf('const CK_FRASE_PRATICA='), html.indexOf('function renderCkInicio('))));
       check('v-14 · a versão carimbada é a desta entrega',
-        /const APP_VERSAO='2026-09-24-06';/.test(html));
+        /const APP_VERSAO='2026-09-24-07';/.test(html));
     }
 
     // ---- v-15: O PLANO SÓ GRAVA NO CONFIRMAR (caso Cookie/Yara, 15/set/2026) --------
@@ -15483,8 +15483,8 @@ async function main() {
           + 'AVISO_COLEIRA_APOS = __bkpC.apos;', ctx);
       }
     } else { check('v-17 · prevCfgCarregar existe', false, 'função não encontrada'); }
-    check('v-24 · a versão carimbada desta entrega é a 2026-09-24-06',
-      /const APP_VERSAO='2026-09-24-06';/.test(html));
+    check('v-24 · a versão carimbada desta entrega é a 2026-09-24-07',
+      /const APP_VERSAO='2026-09-24-07';/.test(html));
 
     // ───────── v-19 · o aparelho autorizado que não se perde no iPhone (16/set/2026)
     // Auditoria de 16/set: o iPhone da Leticya gerou DOIS ids em trinta segundos
@@ -15738,8 +15738,8 @@ async function main() {
       String((html.match(/linhaBuscaCadastro\(/g) || []).length));
     check('v-29 · a linha tem estilo próprio: menor, em var(--muted), e quebrando no celular',
       /table\.pel \.pel-busca-sub\{[^}]*font-size:11\.5px[^}]*color:var\(--muted\)[^}]*white-space:normal/.test(html));
-    check('v-29 · a versão carimbada desta entrega é a 2026-09-24-06',
-      /const APP_VERSAO='2026-09-24-06';/.test(html));
+    check('v-29 · a versão carimbada desta entrega é a 2026-09-24-07',
+      /const APP_VERSAO='2026-09-24-07';/.test(html));
   }
   console.log('');
 
@@ -16041,8 +16041,8 @@ async function main() {
         ctx.vermNumTexto(5) === '5' && ctx.vermNumTexto(0.3) === '0,3' && ctx.vermNumTexto(4.5) === '4,5',
         JSON.stringify([ctx.vermNumTexto(5), ctx.vermNumTexto(0.3)]));
     } else { check('v-30 · vermNumLer existe', false, 'função não encontrada'); }
-    check('v-30 · a versão carimbada desta entrega é a 2026-09-24-06',
-      /const APP_VERSAO='2026-09-24-06';/.test(html));
+    check('v-30 · a versão carimbada desta entrega é a 2026-09-24-07',
+      /const APP_VERSAO='2026-09-24-07';/.test(html));
   }
   console.log('');
 
@@ -16305,8 +16305,8 @@ async function main() {
       && html.indexOf('A frase pronta fala em &ldquo;vence&rdquo; — confira antes de mandar.') > 0
       && /if\(\(m\.itens\|\|\[\]\)\.some\(function\(x\)\{ return x\.atrasado; \}\)\)/.test(html));
 
-    check('v-31 · a versão carimbada desta entrega é a 2026-09-24-06',
-      /const APP_VERSAO='2026-09-24-06';/.test(html));
+    check('v-31 · a versão carimbada desta entrega é a 2026-09-24-07',
+      /const APP_VERSAO='2026-09-24-07';/.test(html));
   }
   // ===== v-32 · O CALENDÁRIO, A COBRANÇA E A RESPOSTA QUE LANÇA SOZINHA ============
   // Adriana, 21/set/2026, palavra por palavra:
@@ -16775,8 +16775,8 @@ async function main() {
       }
     } else { check('v-32 · vencResponderTipo e dashLancar existem', false, 'função não encontrada'); }
 
-    check('v-32 · a versão carimbada desta entrega é a 2026-09-24-06',
-      /const APP_VERSAO='2026-09-24-06';/.test(html));
+    check('v-32 · a versão carimbada desta entrega é a 2026-09-24-07',
+      /const APP_VERSAO='2026-09-24-07';/.test(html));
   }
   console.log('');
 
@@ -17187,8 +17187,8 @@ async function main() {
       && /DB\.ref\('daycare\/vagas-pedidos'\)\.on\('value'/.test(html)
       && /try\{ vagasPedCarregar\(\); \}catch\(e\)\{\}/.test(html));
 
-    check('v-33 · a versão carimbada desta entrega é a 2026-09-24-06',
-      /const APP_VERSAO='2026-09-24-06';/.test(html));
+    check('v-33 · a versão carimbada desta entrega é a 2026-09-24-07',
+      /const APP_VERSAO='2026-09-24-07';/.test(html));
   }
   console.log('');
 
@@ -17504,8 +17504,8 @@ async function main() {
       && /URL\.createObjectURL\(f\)/.test(html) && /URL\.revokeObjectURL\(url\)/.test(html)
       && /createImageBitmap\(f,\{resizeWidth:CK_FOTO_MAX, resizeQuality:'medium', imageOrientation:'from-image'\}\)/.test(html)
       && /if\(bmp && bmp\.close\) bmp\.close\(\)/.test(html));
-    check('v-34 · a versão carimbada desta entrega é a 2026-09-24-06',
-      /const APP_VERSAO='2026-09-24-06';/.test(html));
+    check('v-34 · a versão carimbada desta entrega é a 2026-09-24-07',
+      /const APP_VERSAO='2026-09-24-07';/.test(html));
   }
   console.log('');
 
@@ -17862,8 +17862,8 @@ async function main() {
       && /if\(\(prev\.motivo\|\|''\)!==\(it\.motivo\|\|''\)\) mud\.push\('para quê'\);/.test(html)
       && ctx.medDiffAcao({ nome: 'Enalapril', horarios: ['17:45'] },
                          { nome: 'Enalapril', horarios: ['17:45'], quando: { ref: 'jantar', rel: 'antes', min: 45 } }) === 'Alterou quando dar');
-    check('v-35 · a versão carimbada desta entrega é a 2026-09-24-06',
-      /const APP_VERSAO='2026-09-24-06';/.test(html));
+    check('v-35 · a versão carimbada desta entrega é a 2026-09-24-07',
+      /const APP_VERSAO='2026-09-24-07';/.test(html));
   }
   console.log('');
 
@@ -18115,8 +18115,8 @@ async function main() {
       && /delete rQ\.fim_anterior;/.test(html));
     check('v-36 · vigência que não é mais do meio do mês não herda o "para onde voltar"',
       /if\(!regMMConf\) delete novo\.fim_anterior;/.test(html));
-    check('v-36 · a versão carimbada desta entrega é a 2026-09-24-06',
-      /const APP_VERSAO='2026-09-24-06';/.test(html));
+    check('v-36 · a versão carimbada desta entrega é a 2026-09-24-07',
+      /const APP_VERSAO='2026-09-24-07';/.test(html));
   }
   console.log('');
 
@@ -18333,8 +18333,8 @@ async function main() {
         !/dcLancamentosNaoCasados[\s\S]{0,900}'avaliacao'/.test(html));
     } else { check('v-38 · dashForaDoCadastro existe', false, 'função não encontrada'); }
 
-    check('v-38 · a versão carimbada desta entrega é a 2026-09-24-06',
-      /const APP_VERSAO='2026-09-24-06';/.test(html));
+    check('v-38 · a versão carimbada desta entrega é a 2026-09-24-07',
+      /const APP_VERSAO='2026-09-24-07';/.test(html));
   }
   console.log('');
 
@@ -18707,8 +18707,8 @@ async function main() {
     check('v-39 · Recebimentos do mês continua somando o avulso pelo det.valor_cent — sem exceção para quem não tem ficha',
       html.indexOf("var o=lista[id]||{}, v=((o.det||{}).valor_cent);") > 0);
 
-    check('v-39 · a versão carimbada desta entrega é a 2026-09-24-06',
-      /const APP_VERSAO='2026-09-24-06';/.test(html));
+    check('v-39 · a versão carimbada desta entrega é a 2026-09-24-07',
+      /const APP_VERSAO='2026-09-24-07';/.test(html));
   }
   console.log('');
 
@@ -18955,8 +18955,8 @@ async function main() {
       }
     } else { check('v-40 · ocupantesDoDia existe', false, 'função não encontrada'); }
 
-    check('v-40 · a versão carimbada desta entrega é a 2026-09-24-06',
-      /const APP_VERSAO='2026-09-24-06';/.test(html));
+    check('v-40 · a versão carimbada desta entrega é a 2026-09-24-07',
+      /const APP_VERSAO='2026-09-24-07';/.test(html));
   }
   console.log('');
 
@@ -19404,8 +19404,8 @@ async function main() {
       }
     }
 
-    check('v-41 · a versão carimbada desta entrega é a 2026-09-24-06',
-      /const APP_VERSAO='2026-09-24-06';/.test(html));
+    check('v-41 · a versão carimbada desta entrega é a 2026-09-24-07',
+      /const APP_VERSAO='2026-09-24-07';/.test(html));
   }
   console.log('');
 
@@ -19608,8 +19608,8 @@ async function main() {
       } finally { Object.keys(bkp42).forEach((k) => { ctx[k] = bkp42[k]; }); }
     }
 
-    check('v-42 · a versão carimbada desta entrega é a 2026-09-24-06',
-      /const APP_VERSAO='2026-09-24-06';/.test(html));
+    check('v-42 · a versão carimbada desta entrega é a 2026-09-24-07',
+      /const APP_VERSAO='2026-09-24-07';/.test(html));
   }
   console.log('');
 
@@ -19930,8 +19930,8 @@ async function main() {
 
     vm.runInContext('pelCadCache = __bkp43cadG;', ctx);
 
-    check('v-43 · a versão carimbada desta entrega é a 2026-09-24-06',
-      /const APP_VERSAO='2026-09-24-06';/.test(html));
+    check('v-43 · a versão carimbada desta entrega é a 2026-09-24-07',
+      /const APP_VERSAO='2026-09-24-07';/.test(html));
   }
   console.log('');
 
@@ -20212,8 +20212,8 @@ async function main() {
       }
     } else { check('v-44 · hojeLista existe', false, 'função ausente'); }
 
-    check('v-44 · a versão carimbada desta entrega é a 2026-09-24-06',
-      /const APP_VERSAO='2026-09-24-06';/.test(html));
+    check('v-44 · a versão carimbada desta entrega é a 2026-09-24-07',
+      /const APP_VERSAO='2026-09-24-07';/.test(html));
   }
   console.log('');
 
@@ -20727,8 +20727,8 @@ async function main() {
       }
     } else { check('v-45 · dashNomePlanilha existe', false, 'função ausente'); }
 
-    check('v-45 · a versão carimbada desta entrega é a 2026-09-24-06',
-      /const APP_VERSAO='2026-09-24-06';/.test(html));
+    check('v-45 · a versão carimbada desta entrega é a 2026-09-24-07',
+      /const APP_VERSAO='2026-09-24-07';/.test(html));
   }
   console.log('');
 
@@ -21071,8 +21071,357 @@ async function main() {
       html.indexOf("id:'cfgVencAberto'") > 0 && html.indexOf("id:'cfgVencVacinaAgendar'") > 0
       && /aberto:'Olá, \{tutor\}, tudo bem\? /.test(html)
       && /vacina_agendar:'Olá, \{tutor\}, tudo bem\? /.test(html));
-    check('v-46 · a versão carimbada desta entrega é a 2026-09-24-06',
-      /const APP_VERSAO='2026-09-24-06';/.test(html));
+    check('v-46 · a versão carimbada desta entrega é a 2026-09-24-07',
+      /const APP_VERSAO='2026-09-24-07';/.test(html));
+  }
+  console.log('');
+
+  // ---- v-47: a DATA FUTURA — "Vence em (próxima)" e corrigir na própria tela -------
+  console.log('v-47 · A data futura: "Vence em (próxima)" na ficha, no cadastro e nas telas (24/set):');
+  {
+    const papelAntes47 = ctx.document.body.dataset.role;
+    const geOrig47 = ctx.document.getElementById;
+    const PODEM47 = ['gestao', 'diretoria', 'supervisor'];
+    const NAO47 = ['consultora', 'monitor', 'plantonista', 'vet', 'aprendiz'];
+
+    // ---- (a) a permissão: só a Adriana (Gestão), a Diretoria e a Amanda (Supervisão) ---
+    check('v-47 · a permissão nova mora na tabela PERM, num lugar só',
+      /'prevencao-vencimento-manual': \['gestao','diretoria','supervisor'\]/.test(html));
+    check('v-47 · Gestão, Diretoria e Supervisão digitam a data futura — é o que ela pediu',
+      PODEM47.every((r) => ctx.podePapel('prevencao-vencimento-manual', r) === true),
+      JSON.stringify(PODEM47.map((r) => [r, ctx.podePapel('prevencao-vencimento-manual', r)])));
+    check('v-47 · consultora, monitor, plantonista, vet e aprendiz NÃO digitam o vencimento — eles leem',
+      NAO47.every((r) => ctx.podePapel('prevencao-vencimento-manual', r) === false),
+      JSON.stringify(NAO47.map((r) => [r, ctx.podePapel('prevencao-vencimento-manual', r)])));
+
+    // ---- o cenário: uma ficha de mentira, sem tocar em banco nenhum -------------------
+    const pel47 = { n: 'Antonio47', tutor: 'Teste47' };
+    const chave47 = ctx.dcKey(pel47.n, pel47.tutor);
+    const grav47 = [], aud47 = [];
+    const campos47 = {};   // os inputs do painel embutido, por id
+    ctx.__pel47 = [pel47]; ctx.__grav47 = grav47; ctx.__aud47 = aud47;
+    ctx.__ex47 = {};
+    vm.runInContext('__bkp47 = { pend: PB_PEND, salvo: PB_SALVO, at: pelAtual, set: setPelExtra,'
+      + ' ex: pelExtra, aud: audit, hoje: zHojeISO, aviso: PREV_RECALC_AVISO, pel: PELUDINHOS,'
+      + ' ab: PREV_CORRIGE_ABERTO, ok: PREV_CORRIGE_OK, hr: hojeRender, vr: vencRender };'
+      + 'PB_PEND = {}; PB_SALVO = {}; PREV_RECALC_AVISO = {}; PREV_CORRIGE_ABERTO = ""; PREV_CORRIGE_OK = {};'
+      + 'PELUDINHOS = __pel47; pelAtual = __pel47[0];'
+      + 'zHojeISO = function(){ return "2026-09-24"; };'
+      + 'pelExtra = function(){ return __ex47; };'
+      + 'setPelExtra = function(p, patch){ __grav47.push(patch); Object.assign(__ex47, patch); return Promise.resolve({ok:true}); };'
+      + 'audit = function(a, d, m){ __aud47.push({ acao:a, detalhe:d, meta:m }); };'
+      + 'hojeRender = function(){ __grav47.push("REDESENHOU:hoje"); };'
+      + 'vencRender = function(){ __grav47.push("REDESENHOU:venc"); };', ctx);
+    ctx.document.getElementById = function (id) { return campos47[id] || null; };
+    const patches47 = () => grav47.filter((x) => typeof x === 'object');
+    const ultimo47 = () => patches47()[patches47().length - 1] || {};
+    const zerar47 = (ex) => { grav47.length = 0; aud47.length = 0; ctx.__ex47 = ex || {}; };
+
+    try {
+      // ================= PARTE 1 — o campo "Vence em" na FICHA =======================
+      ctx.document.body.dataset.role = 'gestao';
+      const blocos47 = [
+        ['o carrapaticida', () => ctx.blocoEcto({}), 'ecto_p', 'ecto'],
+        ['a coleira repelente', () => ctx.blocoColeira({}), 'col_p', 'col'],
+        ['o vermífugo', () => ctx.blocoVerm({}), 'verm_p', 'verm'],
+        ['o exame de fezes', () => ctx.blocoFezes({}), 'fezes_p', 'fezes'],
+      ];
+      blocos47.forEach((b) => {
+        const H = b[1]();
+        check('v-47 · ' + b[0] + ' ganhou o campo "Vence em", que a Gestão digita',
+          H.indexOf("prevVenceManualSet('" + b[2] + "',this.value,'" + b[3] + "')") > 0
+          && H.indexOf('Vence em') > 0, H.slice(0, 140));
+      });
+      const HV47 = ctx.blocoVacinas({});
+      check('v-47 · as três vacinas também: múltipla, gripe e antirrábica',
+        ['vac_mult_p', 'vac_gripe_p', 'vac_raiva_p']
+          .every((k) => HV47.indexOf("prevVenceManualSet('" + k + "',this.value,'vac')") > 0),
+        HV47.slice(0, 160));
+      check('v-47 · e a escova e o check-up, que antes só tinham a data de quando foi feito',
+        html.indexOf("prevUltimaDireta('checkup_t','checkup_p',365,this.value)") > 0
+        && html.indexOf("prevUltimaDireta('escova_t','escova_p',90,this.value)") > 0
+        && html.indexOf("prevVenceManualSet('checkup_p',this.value)") > 0
+        && html.indexOf("prevVenceManualSet('escova_p',this.value)") > 0);
+      check('v-47 · a frase de ajuda dela aparece nos três blocos da ficha, e só para quem digita',
+        /function prevAjudaVenceHTML\(\)\{\s*\n\s*if\(!podeVencManual\(\)\) return '';/.test(html)
+        && (html.match(/\$\{prevAjudaVenceHTML\(\)\}/g) || []).length === 3
+        && html.indexOf('Se você só sabe quando vence, digite em ') > 0);
+
+      // os outros papéis LEEM a mesma data — o campo não some, vira leitura
+      const exLido47 = { ecto_p: '2027-03-24' };
+      ctx.document.body.dataset.role = 'consultora';
+      const Hcons47 = ctx.blocoEcto(exLido47);
+      check('v-47 · a consultora lê "vence em 24/03/2027" e NÃO tem campo para mexer nele',
+        Hcons47.indexOf('vence em 24/03/2027') > 0
+        && Hcons47.indexOf("prevVenceManualSet('ecto_p'") < 0, Hcons47.slice(0, 140));
+      ctx.document.body.dataset.role = 'monitor';
+      check('v-47 · o monitor idem: vê a data, não a escreve',
+        ctx.blocoEcto(exLido47).indexOf('vence em 24/03/2027') > 0
+        && ctx.blocoEcto(exLido47).indexOf('prevVenceManualSet(') < 0);
+      ctx.document.body.dataset.role = 'supervisor';
+      check('v-47 · a Amanda (Supervisão) digita, como a Adriana pediu',
+        ctx.blocoEcto(exLido47).indexOf("prevVenceManualSet('ecto_p'") > 0);
+      ctx.document.body.dataset.role = 'diretoria';
+      check('v-47 · a Diretoria também',
+        ctx.blocoEcto(exLido47).indexOf("prevVenceManualSet('ecto_p'") > 0);
+
+      // DIGITAR grava a data E a marca de "à mão" — e não inventa a data de quando tomou
+      ctx.document.body.dataset.role = 'gestao';
+      zerar47({});
+      ctx.prevVenceManualSet('ecto_p', '2027-03-24', 'ecto');
+      check('v-47 · digitou o "Vence em" do carrapaticida: entra na fila do Salvar, com a marca de "à mão"',
+        ctx.PB_PEND.ecto && ctx.PB_PEND.ecto.ecto_p === '2027-03-24'
+        && ctx.PB_PEND.ecto.ecto_p_manual === true, JSON.stringify(ctx.PB_PEND.ecto));
+      check('v-47 · e NÃO inventa a data em que tomou: "ecto_t" continua fora da fila',
+        !Object.prototype.hasOwnProperty.call(ctx.PB_PEND.ecto, 'ecto_t'),
+        JSON.stringify(ctx.PB_PEND.ecto));
+      check('v-47 · sem a última dose, a tela DIZ "última: não informada" — não inventa data para trás',
+        ctx.blocoEcto({ ecto_p: '2027-03-24', ecto_p_manual: true }).indexOf('última: não informada') > 0);
+      check('v-47 · e o campo avisa que aquela data foi digitada à mão',
+        ctx.blocoEcto({ ecto_p: '2027-03-24', ecto_p_manual: true }).indexOf('Data digitada à mão.') > 0);
+
+      // esconder não é impedir
+      ctx.document.body.dataset.role = 'monitor';
+      vm.runInContext('PB_PEND = {};', ctx);
+      ctx.prevVenceManualSet('ecto_p', '2027-03-24', 'ecto');
+      check('v-47 · esconder não é impedir: papel sem permissão chamando por fora NÃO grava nada',
+        !ctx.PB_PEND.ecto, JSON.stringify(ctx.PB_PEND));
+      ctx.document.body.dataset.role = 'gestao';
+
+      // o Salvar do bloco leva a data à mão e deixa rastro
+      zerar47({ ecto_p: '2026-10-01' });
+      vm.runInContext('PB_PEND = {}; PB_SALVO = {};', ctx);
+      ctx.prevVenceManualSet('ecto_p', '2027-03-24', 'ecto');
+      ctx.pbSalvar('ecto');
+      check('v-47 · o Salvar da ficha leva a data digitada — a conta NÃO a sobrescreve',
+        ultimo47().ecto_p === '2027-03-24' && ultimo47().ecto_p_manual === true,
+        JSON.stringify(ultimo47()));
+      check('v-47 · e deixa rastro próprio: prevencao-proxima-manual, de → para',
+        aud47.some((a) => a.acao === 'prevencao-proxima-manual'
+          && /01\/10\/2026/.test(a.detalhe) && /24\/03\/2027/.test(a.detalhe)
+          && a.meta && a.meta.campo === 'ecto_p'),
+        JSON.stringify(aud47.map((a) => a.acao + ' | ' + a.detalhe)));
+
+      // digitar a ÚLTIMA de novo refaz a conta e desfaz a marca — com aviso na tela
+      zerar47({ ecto_p: '2027-03-24', ecto_p_manual: true, ecto_prod: 'Bravecto', ecto_tipo: 'Comprimido' });
+      vm.runInContext('PB_PEND = {}; PB_SALVO = {}; PREV_RECALC_AVISO = {};', ctx);
+      ctx.pbSet('ecto', { ecto_t: '2026-09-01' });
+      ctx.pbSalvar('ecto');
+      check('v-47 · digitou a "Última" de novo: a conta refaz a próxima (90 dias do Bravecto) e a marca cai',
+        ultimo47().ecto_t === '2026-09-01' && ultimo47().ecto_p === '2026-11-30'
+        && ultimo47().ecto_p_manual === '', JSON.stringify(ultimo47()));
+      check('v-47 · e a tela avisa: "A próxima foi recalculada pela última dose."',
+        ctx.PREV_RECALC_AVISO.ecto_p === true
+        && ctx.blocoEcto({}).indexOf('A próxima foi recalculada pela última dose.') > 0);
+
+      // a mesma regra na vacina, onde o "Vence em" e a dose moram lado a lado
+      zerar47({ vac_raiva_p: '2028-01-10', vac_raiva_p_manual: true });
+      vm.runInContext('PB_PEND = {}; PB_SALVO = {}; PREV_RECALC_AVISO = {};', ctx);
+      ctx.pbSet('vac', { vac_raiva_t: '2026-09-01' });
+      check('v-47 · vacina: digitou a dose de novo, a próxima volta para 1 ano depois e a marca cai',
+        ctx.PB_PEND.vac.vac_raiva_p === '2027-09-01' && ctx.PB_PEND.vac.vac_raiva_p_manual === '',
+        JSON.stringify(ctx.PB_PEND.vac));
+
+      // a coleira que se conserta sozinha ao abrir não mexe em data digitada à mão
+      zerar47({});
+      check('v-47 · a coleira só se recalcula sozinha quando a data NÃO foi digitada à mão',
+        /if\(ex\.col_p_manual\) return false;/.test(html)
+        && ctx.prevColeiraRecalcular(pel47,
+          { col_t: '2026-01-01', col_nome: 'Seresto', col_p: '2026-07-01', col_p_manual: true }) === false);
+      check('v-47 · e continua consertando a ficha de quem nunca digitou nada à mão',
+        ctx.prevColeiraRecalcular(pel47,
+          { col_t: '2026-01-01', col_nome: 'Seresto', col_p: '2026-07-01' }) === true);
+      check('v-47 · lançar a dose na aba Prevenção também desfaz a marca — a validade passa a sair dela',
+        /if\(\(pelExtra\(p\)\|\|\{\}\)\[k\+'_manual'\]\) patch\[k\+'_manual'\]='';/.test(html));
+
+      // toda leitura de vencimento continua sendo pelo "_p"
+      const exMan47 = { vac_raiva_p: '2027-05-10', vac_raiva_p_manual: true };
+      check('v-47 · toda leitura de vencimento continua por "_p": o manual é o que a casa lê',
+        ctx.prevValor(exMan47, { k: 'vac_raiva_p' }) === '2027-05-10');
+      check('v-47 · e o "Está vencendo" / "Hoje na Zêluz" enxergam a MESMA data, sem refazer conta nenhuma',
+        (ctx.vencItensDe(exMan47, '2027-05-10', 0, '2026-09-24') || [])
+          .some((x) => x.k === 'vac_raiva_p' && x.vence === '2027-05-10'),
+        JSON.stringify(ctx.vencItensDe(exMan47, '2027-05-10', 0, '2026-09-24')));
+
+      // ---- o cadastro novo -----------------------------------------------------------
+      const alvoNa47 = { innerHTML: '' };
+      campos47.naPrev = alvoNa47;
+      ctx.document.body.dataset.role = 'gestao';
+      ctx.naRenderPrev();
+      const Hna47 = alvoNa47.innerHTML;
+      check('v-47 · "Inserir novo AULUNO": os cinco itens ganharam o campo "Vence em" para a Gestão',
+        ['vac_mult', 'vac_raiva', 'vac_gripe', 'verm', 'ecto']
+          .every((k) => Hna47.indexOf('id="naV_' + k + '"') > 0), Hna47.slice(0, 220));
+      check('v-47 · e a frase de ajuda está lá, nas palavras dela',
+        Hna47.indexOf('Se você só sabe quando vence') > 0);
+      ctx.document.body.dataset.role = 'consultora';
+      alvoNa47.innerHTML = '';
+      ctx.naRenderPrev();
+      check('v-47 · para a consultora o cadastro continua como era: só a data da última dose',
+        alvoNa47.innerHTML.indexOf('id="naV_') < 0
+        && alvoNa47.innerHTML.indexOf('id="naP_vac_mult"') > 0);
+      delete campos47.naPrev;
+      check('v-47 · no cadastro, o vencimento digitado vira "_p" + a marca, e o "_t" fica em branco',
+        /prevPatch\[it\.k\+'_p'\]=vc;/.test(html)
+        && /prevPatch\[it\.k\+'_p_manual'\]=true;/.test(html)
+        && /if\(dt\) prevPatch\[it\.k\+'_t'\]=dt;/.test(html));
+
+      // ================= PARTE 2 — corrigir na PRÓPRIA tela ==========================
+      check('v-47 · quem atualiza pela tela é o balcão: recepção, Supervisão, Gestão e Diretoria',
+        ['gestao', 'diretoria', 'supervisor', 'consultora']
+          .every((r) => ctx.podePapel('prevencao-lancar-na-tela', r) === true)
+        && ['monitor', 'plantonista', 'aprendiz', 'tutor']
+          .every((r) => ctx.podePapel('prevencao-lancar-na-tela', r) === false));
+
+      ctx.document.body.dataset.role = 'gestao';
+      const chip47 = ctx.prevCorrigeChip(chave47, 'ecto_p', '⚠ carrapaticida venceu 08/09', 'hoje', 'color:var(--crm-critico)');
+      check('v-47 · o chip da pendência É O BOTÃO: "⚠ carrapaticida venceu 08/09" abre o painel',
+        chip47.indexOf('<button') === 0
+        && chip47.indexOf("prevCorrigeAbrir('" + chave47 + "','ecto_p','hoje')") > 0
+        && chip47.indexOf('carrapaticida venceu 08/09') > 0, chip47.slice(0, 160));
+      ctx.document.body.dataset.role = 'monitor';
+      check('v-47 · para o monitor o chip continua sendo texto — ele lê, não corrige',
+        ctx.prevCorrigeChip(chave47, 'ecto_p', '⚠ carrapaticida venceu 08/09', 'hoje', '').indexOf('<span') === 0);
+      ctx.document.body.dataset.role = 'gestao';
+
+      check('v-47 · o chip tocável entra nas DUAS telas: Hoje na Zêluz e Vencimentos',
+        /chips\.push\(prevCorrigeChip\(o\.chave, x\.k, '⚠ '\+hojeFraseItem\(x, hoje\), 'hoje'/.test(html)
+        && /h\+=prevCorrigeChip\(o\.chave, x\.k, x\.nome\+' — '\+vencQuantoTexto\(x, hoje\), 'venc'/.test(html));
+      check('v-47 · e no bloco "Quem vem com pendência" cada nome também é tocável',
+        /g\.alvos\.map\(function\(a\)\{ return prevCorrigeChip\(a\.chave, a\.k, a\.nome, 'venc'/.test(html));
+      check('v-47 · o painel embutido é desenhado logo abaixo dos chips, nas duas telas',
+        (html.match(/prevCorrigePainelHTML\(o\.chave, 'hoje', hoje\)/g) || []).length === 2
+        && html.indexOf("prevCorrigePainelHTML(o.chave, 'venc', hoje)") > 0);
+
+      // o painel, com os três caminhos
+      ctx.PREV_CORRIGE_ABERTO = chave47 + '|ecto_p';
+      zerar47({ ecto_p: '2026-09-08', ecto_prod: 'Bravecto', ecto_tipo: 'Comprimido' });
+      const painel47 = ctx.prevCorrigePainelHTML(chave47, 'hoje', '2026-09-24');
+      check('v-47 · o painel traz os três caminhos: Feito hoje · Feito em… · Vence em…',
+        painel47.indexOf('>Feito hoje<') > 0 && painel47.indexOf('Feito em…') > 0
+        && painel47.indexOf('Vence em…') > 0
+        && painel47.indexOf("prevCorrigeFeitoHoje('" + chave47 + "','ecto_p','hoje')") > 0
+        && painel47.indexOf("prevCorrigeFeitoEm('" + chave47 + "','ecto_p','hoje')") > 0
+        && painel47.indexOf("prevCorrigeVenceEm('" + chave47 + "','ecto_p','hoje')") > 0,
+        painel47.slice(0, 200));
+      check('v-47 · e diz o que vai acontecer: vai para a ficha do FILHOt e vale em todas as telas',
+        painel47.indexOf('vai para a <strong>ficha do FILHOt</strong>') > 0
+        && painel47.indexOf('Vale 90 dias') > 0);
+      ctx.document.body.dataset.role = 'consultora';
+      const painelCons47 = ctx.prevCorrigePainelHTML(chave47, 'hoje', '2026-09-24');
+      check('v-47 · a consultora tem "Feito hoje" e "Feito em…", mas NÃO o "Vence em…"',
+        painelCons47.indexOf('>Feito hoje<') > 0 && painelCons47.indexOf('Vence em…') < 0,
+        painelCons47.slice(0, 160));
+      ctx.document.body.dataset.role = 'monitor';
+      check('v-47 · o monitor não abre painel nenhum',
+        ctx.prevCorrigePainelHTML(chave47, 'hoje', '2026-09-24') === '');
+      ctx.document.body.dataset.role = 'gestao';
+
+      // "Feito hoje" — item por item, com a conta de cada um
+      const feitoHoje47 = (ex, k) => {
+        zerar47(ex);
+        ctx.PREV_CORRIGE_ABERTO = chave47 + '|' + k;
+        ctx.prevCorrigeFeitoHoje(chave47, k, 'hoje');
+        return ultimo47();
+      };
+      const pEcto47 = feitoHoje47({ ecto_prod: 'Bravecto', ecto_tipo: 'Comprimido' }, 'ecto_p');
+      check('v-47 · "Feito hoje" no carrapaticida: grava 24/09 e a próxima em 90 dias (Bravecto)',
+        pEcto47.ecto_t === '2026-09-24' && pEcto47.ecto_p === '2026-12-23', JSON.stringify(pEcto47));
+      const pVac47 = (() => {
+        zerar47({});
+        campos47['prevCorrN_' + chave47 + '_vac_raiva_p'] = { value: 'V10 Nobivac' };
+        ctx.PREV_CORRIGE_ABERTO = chave47 + '|vac_raiva_p';
+        ctx.prevCorrigeFeitoHoje(chave47, 'vac_raiva_p', 'hoje');
+        delete campos47['prevCorrN_' + chave47 + '_vac_raiva_p'];
+        return ultimo47();
+      })();
+      check('v-47 · na vacina, grava a data, a próxima em 1 ano E o nome da vacina digitado no painel',
+        pVac47.vac_raiva_t === '2026-09-24' && pVac47.vac_raiva_p === '2027-09-24'
+        && pVac47.vac_raiva_nome === 'V10 Nobivac', JSON.stringify(pVac47));
+      const pVerm47 = feitoHoje47({ verm_doses: '2 doses' }, 'verm_p');
+      check('v-47 · vermífugo em 2 doses: grava a 1ª dose, a 2ª fica prevista em 21 dias e a próxima conta dela',
+        pVerm47.verm_t === '2026-09-24' && pVerm47.verm_2a === '2026-10-15'
+        && pVerm47.verm_dose2_t === '' && pVerm47.verm_p === '2027-02-12', JSON.stringify(pVerm47));
+      const pCol47 = feitoHoje47({ col_nome: 'Seresto' }, 'col_p');
+      check('v-47 · coleira: a validade sai da MARCA (Seresto, 240 dias), não de um prazo fixo',
+        pCol47.col_t === '2026-09-24' && pCol47.col_p === '2027-05-22', JSON.stringify(pCol47));
+      const pEsc47 = feitoHoje47({}, 'escova_p');
+      check('v-47 · troca de escova: 24/09 e a próxima em 90 dias — sem abrir a ficha do peludinho',
+        pEsc47.escova_t === '2026-09-24' && pEsc47.escova_p === '2026-12-23', JSON.stringify(pEsc47));
+      check('v-47 · e cada atualização deixa o rastro prevencao-atualizada-na-tela, com de → para e o alvo',
+        aud47.some((a) => a.acao === 'prevencao-atualizada-na-tela'
+          && a.meta && a.meta.alvo === chave47 && a.meta.item === 'escova_p'
+          && a.meta.para === '2026-12-23'),
+        JSON.stringify(aud47.map((a) => a.acao + ' | ' + JSON.stringify(a.meta))));
+      check('v-47 · a tela se redesenha na hora — a linha some da lista sem recarregar nada',
+        grav47.indexOf('REDESENHOU:hoje') >= 0, JSON.stringify(grav47.slice(-3)));
+      check('v-47 · e a confirmação verde diz o que ficou em dia, e até quando',
+        ctx.prevCorrigeOkHTML().indexOf('Troca de escova de dentes em dia até 23/12/2026') > 0,
+        ctx.prevCorrigeOkHTML().slice(0, 200));
+
+      // "Feito em…" — a data que o tutor disse
+      zerar47({});
+      campos47['prevCorrT_' + chave47 + '_ecto_p'] = { value: '2026-09-10' };
+      ctx.PREV_CORRIGE_ABERTO = chave47 + '|ecto_p';
+      ctx.prevCorrigeFeitoEm(chave47, 'ecto_p', 'venc');
+      check('v-47 · "Feito em…" grava a data escolhida e recalcula a próxima (pipeta, 30 dias)',
+        ultimo47().ecto_t === '2026-09-10' && ultimo47().ecto_p === '2026-10-10',
+        JSON.stringify(ultimo47()));
+      check('v-47 · e redesenha a tela de onde o toque veio — aqui, os Vencimentos',
+        grav47.indexOf('REDESENHOU:venc') >= 0, JSON.stringify(grav47.slice(-3)));
+      delete campos47['prevCorrT_' + chave47 + '_ecto_p'];
+
+      // "Vence em…" — a data da carteira, digitada à mão
+      zerar47({ ecto_p: '2026-09-08' });
+      campos47['prevCorrV_' + chave47 + '_ecto_p'] = { value: '2027-03-24' };
+      ctx.PREV_CORRIGE_ABERTO = chave47 + '|ecto_p';
+      ctx.prevCorrigeVenceEm(chave47, 'ecto_p', 'hoje');
+      check('v-47 · "Vence em…" na tela grava a data da carteira com a marca de "à mão"',
+        ultimo47().ecto_p === '2027-03-24' && ultimo47().ecto_p_manual === true,
+        JSON.stringify(ultimo47()));
+      check('v-47 · e NÃO inventa a data em que tomou: "ecto_t" não entra no que foi gravado',
+        !Object.prototype.hasOwnProperty.call(ultimo47(), 'ecto_t'), JSON.stringify(ultimo47()));
+      check('v-47 · o rastro sai em dois lugares: atualizada-na-tela e proxima-manual',
+        aud47.some((a) => a.acao === 'prevencao-atualizada-na-tela')
+        && aud47.some((a) => a.acao === 'prevencao-proxima-manual' && a.meta.para === '2027-03-24'),
+        JSON.stringify(aud47.map((a) => a.acao)));
+      // quem não pode digitar vencimento não grava, nem chamando a função por fora
+      zerar47({ ecto_p: '2026-09-08' });
+      ctx.document.body.dataset.role = 'consultora';
+      ctx.prevCorrigeVenceEm(chave47, 'ecto_p', 'hoje');
+      check('v-47 · a consultora pode lançar o que foi feito, mas NÃO escrever um vencimento à mão',
+        patches47().length === 0, JSON.stringify(patches47()));
+      ctx.document.body.dataset.role = 'monitor';
+      ctx.prevCorrigeFeitoHoje(chave47, 'ecto_p', 'hoje');
+      check('v-47 · e o monitor não grava por nenhum dos caminhos',
+        patches47().length === 0, JSON.stringify(patches47()));
+      ctx.document.body.dataset.role = 'gestao';
+      delete campos47['prevCorrV_' + chave47 + '_ecto_p'];
+
+      // data no futuro em "Feito em…" continua sendo recusada
+      zerar47({});
+      campos47['prevCorrT_' + chave47 + '_ecto_p'] = { value: '2027-01-01' };
+      ctx.prevCorrigeFeitoEm(chave47, 'ecto_p', 'hoje');
+      check('v-47 · "foi feito" no futuro continua sendo recusado — e a tela indica o campo certo',
+        patches47().length === 0, JSON.stringify(patches47()));
+      delete campos47['prevCorrT_' + chave47 + '_ecto_p'];
+
+      // a chave das telas é a dcKey; a da ficha é a pelKey — as duas acham o mesmo FILHOt
+      check('v-47 · a chave da tela (dcKey) e a da ficha (pelKey) levam ao MESMO FILHOt',
+        ctx.prevCorrigePetDe(chave47) === pel47
+        && ctx.prevCorrigePetDe(ctx.pelKey(pel47)) === pel47);
+
+      check('v-47 · a versão carimbada desta entrega é a 2026-09-24-07',
+        /const APP_VERSAO='2026-09-24-07';/.test(html));
+    } finally {
+      ctx.document.getElementById = geOrig47;
+      ctx.document.body.dataset.role = papelAntes47;
+      vm.runInContext('PB_PEND = __bkp47.pend; PB_SALVO = __bkp47.salvo; pelAtual = __bkp47.at;'
+        + 'setPelExtra = __bkp47.set; pelExtra = __bkp47.ex; audit = __bkp47.aud;'
+        + 'zHojeISO = __bkp47.hoje; PREV_RECALC_AVISO = __bkp47.aviso; PELUDINHOS = __bkp47.pel;'
+        + 'PREV_CORRIGE_ABERTO = __bkp47.ab; PREV_CORRIGE_OK = __bkp47.ok;'
+        + 'hojeRender = __bkp47.hr; vencRender = __bkp47.vr;', ctx);
+    }
   }
   console.log('');
 

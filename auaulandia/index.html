@@ -5532,6 +5532,21 @@
     // e 30/ago/2026). O monitor continua fora — ele mexe em peso e foto, mais nada.
     'editar-peludinho':         ['gestao','supervisor','diretoria','consultora'],
     'criar-cadastro':           ['gestao','supervisor','diretoria','consultora'],
+    // ===== v 2026-09-24-07 — "Vence em" digitado à mão ================================
+    // "Deixa na minha senha, Adriana Gestão, e na senha da Amanda Supervisora, que a
+    //  gente possa colocar a data futura, quando ele vai ter que tomar" (Adriana,
+    //  24/set/2026). A carteira de vacinação traz o VENCIMENTO impresso: quem tem a
+    //  carteira na mão digita o vencimento, e não a data em que tomou. A consultora fica
+    //  de fora de propósito — ela LANÇA o que foi feito hoje, e aí a conta manda; escrever
+    //  uma validade que não veio de dose nenhuma é decisão de quem responde pela ficha.
+    'prevencao-vencimento-manual': ['gestao','diretoria','supervisor'],
+    // ===== v 2026-09-24-07 — corrigir a prevenção na própria tela ====================
+    // "Está aqui ‘Antônio — carrapaticida venceu’. Eu preciso tocar aqui e já colocar a
+    //  data nova, e isso ir para todo o cadastro do peludo... em vez de entrar na ficha do
+    //  peludo para fazer isso" (Adriana, 24/set/2026). Quem está no balcão com o tutor na
+    //  frente é quem atualiza: a recepção (consultoras), a Supervisão e a Gestão. O monitor
+    //  fica de fora — a lista dele é a Chamada, com o FILHOt na frente, e não o balcão.
+    'prevencao-lancar-na-tela':  ['gestao','diretoria','supervisor','consultora'],
     'gestao-role':              ['gestao','diretoria'],
     'ver-plano':                ['gestao','supervisor','diretoria','consultora'],
     'aba-hospedes':             ['gestao','supervisor','diretoria','consultora'],
@@ -15498,7 +15513,7 @@
   // inteira DEPOIS de a correção estar publicada — o aviso apareceu, ninguém tocou.
   // Agora o aparelho PARADO recarrega sozinho: trancado, com a aba escondida, na porta de
   // entrada ou 3 minutos sem ninguém tocar nele. Mão na tela = nunca recarrega.
-  const APP_VERSAO='2026-09-24-06';
+  const APP_VERSAO='2026-09-24-07';
   var RECARGA_PARADO_MS=3*60*1000, __versaoPublicada=null, __recargaTimer=null;
   function vigiarVersao(){
     if(!DB) return;
@@ -20611,6 +20626,110 @@
     var ano=+String(v).slice(0,4);
     return ano<2015 || ano>2100;
   }
+  // ===== "VENCE EM" DIGITADO À MÃO — Adriana, 24/set/2026 ============================
+  // "Na hora de colocar a proteção obrigatória do peludo... a gente estava colocando quando
+  //  ele tomou, e não a vacina futura dele. Quando o peludo já tomou e a gente já tem as
+  //  vacinas, fica extremamente complicado... Estou tentando fazer um aqui agora e está
+  //  difícil, porque eu tenho que pegar a data passada e não a data que ele vai fazer."
+  // A carteira de vacinação traz o VENCIMENTO impresso. Obrigar quem está com a carteira na
+  // mão a converter de volta para "a data em que tomou", só para o app somar 365 dias e
+  // chegar no mesmo lugar, é trabalho inventado — e é onde ela travou.
+  // Agora cada item de prevenção tem, ao lado da "Última …", um campo "Vence em (próxima)".
+  // Gestão, Diretoria e Supervisão digitam; os demais papéis leem a mesma data, sem mexer.
+  // Quem digita marca X_p_manual: a data é DELA, e nenhuma conta a sobrescreve. Digitar a
+  // "Última" de novo refaz a conta e limpa a marca — a última dose manda, e a tela avisa.
+  // Sem a "Última", NADA é inventado: a ficha continua dizendo que ela não foi informada.
+  function podeVencManual(papel){ return podePapel('prevencao-vencimento-manual', papel); }
+  // Recado curto no próprio campo quando a conta acabou de tomar o lugar da data à mão.
+  // É por campo e some ao trocar de FILHOt (abrirPeludinho zera, junto com PB_PEND).
+  var PREV_RECALC_AVISO={};
+  function prevNomeDe(campoP){
+    var it=(PREV_ITENS||[]).find(function(x){ return x.k===campoP; });
+    return (it&&it.nome)||campoP;
+  }
+  // Escreve o recado direto no DOM (o bloco de escova e check-up não se redesenha) e o
+  // guarda, para o bloco que SE redesenha (pbRender) mostrar exatamente o mesmo recado.
+  function prevAvisoRecalc(campoP){
+    PREV_RECALC_AVISO[campoP]=true;
+    try{ var el=document.getElementById('prevRecalc_'+campoP);
+      if(el){ el.textContent='A próxima foi recalculada pela última dose.'; el.style.display=''; }
+    }catch(e){} /* silencioso de propósito: enfeite de tela (foco, rolagem, mídia) — falhar não muda dado nenhum */
+  }
+  // A data de "Vence em" deste campo está marcada como digitada à mão? Olha primeiro a fila
+  // do bloco (o que ainda não foi salvo) e só depois a ficha já gravada.
+  function prevEraManual(bloco, campoP){
+    var fila=(bloco&&PB_PEND&&PB_PEND[bloco])||{};
+    if(Object.prototype.hasOwnProperty.call(fila, campoP+'_manual')) return !!fila[campoP+'_manual'];
+    var ex=pelAtual?(pelExtra(pelAtual)||{}):{};
+    return !!ex[campoP+'_manual'];
+  }
+  // Rastro de quem digitou o vencimento à mão. O audit() já grava QUEM e o papel.
+  function prevAuditManual(p, campoP, de, para){
+    try{ if(typeof audit==='function') audit('prevencao-proxima-manual',
+      (pelNome(p)||'')+': '+prevNomeDe(campoP)+' — vence em '+(para?fmtBR(para):'—')
+      +' (antes '+(de?fmtBR(de):'sem data')+'), digitado à mão',
+      {pet:pelNome(p)||'', campo:campoP, de:de||'', para:para||''}); }catch(e){} /* silencioso de propósito: o audit() tem bolso próprio e reenvia sozinho — falhar aqui não pode travar a ação */
+  }
+  // O campo "Vence em (próxima)" ao lado da "Última …". Editável para Gestão, Diretoria e
+  // Supervisão; para os outros papéis é a MESMA data, só que de leitura.
+  // opc: {rot, calcTexto, compacto}
+  function prevVenceCampoHTML(ex, campoP, campoT, onchange, opc){
+    ex=ex||{}; opc=opc||{};
+    var v=ex[campoP]||'', manual=!!ex[campoP+'_manual'];
+    var semUltima=!/^\d{4}-\d{2}-\d{2}$/.test(String(ex[campoT]||''));
+    var notas=[];
+    if(manual) notas.push('Data digitada à mão.');
+    else if(opc.calcTexto) notas.push(opc.calcTexto);
+    // Sem a data em que tomou, a tela DIZ isso — e não inventa uma para trás.
+    if(semUltima) notas.push('última: não informada');
+    var hint=notas.length?('<div class="hint" style="margin-top:3px">'+notas.join(' · ')+'</div>'):'';
+    var mostra=!!PREV_RECALC_AVISO[campoP];
+    var aviso='<div class="hint" id="prevRecalc_'+campoP+'" style="margin-top:3px;font-weight:800;color:var(--crm-atencao-text)'
+      +(mostra?'':';display:none')+'">'+(mostra?'A próxima foi recalculada pela última dose.':'')+'</div>';
+    var rot=opc.rot||'Vence em (próxima)';
+    var estF=opc.compacto?' style="margin:0"':'';
+    var estL=opc.compacto?' style="font-size:11px"':'';
+    if(!podeVencManual()){
+      return '<div class="field"'+estF+'><label'+estL+'>'+rot+'</label><div class="prev-calc">'
+        +(v?('vence em '+fmtBR(v)):'sem data')+'</div>'+hint+aviso+'</div>';
+    }
+    return '<div class="field"'+estF+'><label'+estL+'>'+rot+'</label>'
+      +'<input type="date" class="cad-in" value="'+escAttr(v)+'" onchange="'+onchange+'" min="2015-01-01" max="2035-12-31" onkeydown="return dataSoNoCalendario(event)">'
+      +hint+aviso+'</div>';
+  }
+  // Grava o "Vence em" digitado. `bloco` = bloco da ficha que tem Salvar (a data entra na
+  // fila dele, como os campos vizinhos, e só vai para o banco no Salvar). Sem bloco, grava
+  // direto — é como escova e check-up já gravam. Nada grava sem alguém digitar.
+  function prevVenceManualSet(campoP, valor, bloco){
+    if(!podeVencManual()) return;
+    var dt=String(valor||'').trim();
+    if(dt && !/^\d{4}-\d{2}-\d{2}$/.test(dt)) return;
+    delete PREV_RECALC_AVISO[campoP];
+    var patch={}; patch[campoP]=dt; patch[campoP+'_manual']=dt?true:'';
+    if(bloco){ pbSet(bloco, patch); return; }
+    if(!pelAtual) return;
+    var de=(pelExtra(pelAtual)||{})[campoP]||'';
+    setPelExtra(pelAtual, patch);
+    prevAuditManual(pelAtual, campoP, de, dt);
+  }
+  // A frase de ajuda do bloco. Só aparece para quem pode digitar o vencimento — para os
+  // outros papéis ela seria instrução de um campo que eles não têm.
+  function prevAjudaVenceHTML(){
+    if(!podeVencManual()) return '';
+    return '<div class="hint" style="margin-top:-2px">Se você só sabe quando vence, digite em '
+      +'<strong>&laquo;Vence em&raquo;</strong> — não precisa da data em que tomou.</div>';
+  }
+  // "Última …" que grava direto (escova e check-up). Refaz a próxima pela conta e desfaz a
+  // marca de "à mão" — a última dose manda, e o campo avisa que a data foi recalculada.
+  function prevUltimaDireta(campoT, campoP, dias, valor){
+    if(!pelAtual) return;
+    var dt=String(valor||'').trim();
+    var ex=pelExtra(pelAtual)||{};
+    var patch={}; patch[campoT]=dt;
+    patch[campoP]=dt?addDiasISO(dt,dias):'';
+    if(ex[campoP+'_manual']){ patch[campoP+'_manual']=''; prevAvisoRecalc(campoP); }
+    setPelExtra(pelAtual, patch);
+  }
   // grupo (opcional): 'vacina' | 'antip' | 'saude'. Sem grupo = tudo, como sempre foi.
   function prevPendencias(ex, grupo){
     ex=ex||{};
@@ -21374,6 +21493,9 @@
       var patch={};
       if(it.base) patch[it.base]=dtFinal;
       patch[k]=proxDef;
+      // Lançar uma dose nova é dizer que a validade agora sai DELA: a marca de "digitado à
+      // mão" cai junto, senão a ficha ficaria com uma data velha travada (24/set/2026).
+      if((pelExtra(p)||{})[k+'_manual']) patch[k+'_manual']='';
       if(quem) patch[k.replace(/_p$/,'')+'_por']=quem;
       if(it.nomeK){ var nmProd=String((document.getElementById('prevN_'+chave+'_'+k)||{}).value||'').trim(); if(nmProd) patch[it.nomeK]=nmProd; }
       setPelExtra(p, patch);
@@ -21397,6 +21519,205 @@
       return;
     }
     gravar(dt, proxFinal, false);
+  }
+  // ===== CORRIGIR NA PRÓPRIA TELA — Adriana, 24/set/2026 ===========================
+  // "Preciso de uma forma mais fácil de corrigir na ‘Hoje na Zêluz’... Eu preciso tocar
+  //  aqui e já colocar a data nova, e isso ir para todo o cadastro do peludo. Rapidamente:
+  //  ver aqui, mandar a mensagem, e já atualizar por aqui todo mundo que já fez. A troca
+  //  de escova também, em vez de entrar na ficha do peludo para fazer isso."
+  // O chip da pendência vira BOTÃO. Toca e abre, logo abaixo, um painel com três caminhos:
+  //   • Feito hoje — grava a data de hoje e a próxima pela conta do item
+  //   • Feito em… — a data que o tutor disse, com a próxima recalculada
+  //   • Vence em… — a data da carteira, digitada à mão (só Gestão/Diretoria/Supervisão)
+  // Grava na MESMA ficha (setPelExtra): uma fonte só. A ficha, a Prevenção, os Vencimentos
+  // e a Hoje na Zêluz passam a ler o novo valor no mesmo instante — e a linha some da lista.
+  // NADA grava sozinho: cada caminho tem o seu botão, e o botão é a ação explícita.
+  var PREV_CORRIGE_ABERTO='';   // 'chave|item' do painel aberto — um por vez em toda a tela
+  var PREV_CORRIGE_OK={};       // o que acabou de ser atualizado, para a tela confirmar
+  function prevCorrigePode(){ return podePapel('prevencao-lancar-na-tela'); }
+  function prevCorrigeAlvo(chave,k){ return String(chave||'')+'|'+String(k||''); }
+  // O chip. Sem permissão (monitor, plantonista) ele continua sendo o texto de sempre.
+  function prevCorrigeChip(chave, k, texto, tela, estilo){
+    estilo=String(estilo||'');
+    if(!k || !chave || !prevCorrigePode()) return '<span style="'+estilo+'">'+escAttr(texto)+'</span>';
+    var aberto=(PREV_CORRIGE_ABERTO===prevCorrigeAlvo(chave,k));
+    return '<button type="button" class="prev-corrige-chip"'
+      +' style="padding:2px 9px;border-radius:999px;border:1.5px '+(aberto?'solid':'dashed')+' currentColor;'
+      +'background-color:transparent;cursor:pointer;font:inherit;font-weight:800;'+estilo+'"'
+      +' title="Toque para atualizar a data sem sair desta tela"'
+      +' onclick="prevCorrigeAbrir(\''+jsAspas(chave)+'\',\''+jsAspas(k)+'\',\''+tela+'\')">'
+      +escAttr(texto)+' ✎</button>';
+  }
+  function prevCorrigeAbrir(chave,k,tela){
+    if(!prevCorrigePode()){
+      if(typeof zAlertao==='function') zAlertao('QUEM ATUALIZA A PREVENÇÃO É O BALCÃO',
+        ['A data de vacina, vermífugo, carrapaticida, coleira e escova é atualizada pela recepção (Consultoras de Bem-Estar), pela Supervisão ou pela Gestão — são elas que falam com o tutor e veem a carteirinha.',
+         'Você continua vendo tudo o que está vencendo.'], {botao:'Entendi'});
+      return;
+    }
+    var alvo=prevCorrigeAlvo(chave,k);
+    PREV_CORRIGE_ABERTO=(PREV_CORRIGE_ABERTO===alvo)?'':alvo;
+    prevCorrigeRedesenhar(tela);
+  }
+  function prevCorrigeFechar(tela){ PREV_CORRIGE_ABERTO=''; prevCorrigeRedesenhar(tela); }
+  // Redesenha a tela de onde o toque veio, guardando a rolagem — a lição de 22/ago/2026:
+  // "clica em comprimido e a tela sobe. Não pode ter esses erros."
+  function prevCorrigeRedesenhar(tela){
+    var y=0;
+    try{ y=(window.pageYOffset||document.documentElement.scrollTop||0); }catch(e){} /* silencioso de propósito: enfeite de tela (foco, rolagem, mídia) — falhar não muda dado nenhum */
+    try{
+      if(tela==='venc'){ if(typeof vencRender==='function') vencRender(); }
+      else if(typeof hojeRender==='function') hojeRender();
+    }catch(e){} /* silencioso de propósito: redesenho de tela — falhar não pode derrubar quem chamou */
+    try{ window.scrollTo(0,y); }catch(e){} /* silencioso de propósito: enfeite de tela (foco, rolagem, mídia) — falhar não muda dado nenhum */
+  }
+  // A confirmação verde do que acabou de ser atualizado. A linha some da lista na hora —
+  // e quem atualizou precisa VER que sumiu porque ficou em dia, e não por um bug.
+  function prevCorrigeOkHTML(){
+    var ks=Object.keys(PREV_CORRIGE_OK||{});
+    if(!ks.length) return '';
+    var agora=Date.now();
+    var vivos=ks.filter(function(c){ return (agora-((PREV_CORRIGE_OK[c]||{}).ts||0))<600000; });
+    if(!vivos.length) return '';
+    return '<div class="card" style="border-left:4px solid var(--crm-ok)">'
+      +'<div style="font-size:13.5px;font-weight:800;color:var(--z-blue)">Atualizado agora, direto desta tela:</div>'
+      +vivos.map(function(c){ var o=PREV_CORRIGE_OK[c]||{};
+        return '<div style="font-size:13.5px;font-weight:700;color:var(--crm-ok);margin-top:3px">✓ '
+          +escAttr(o.texto||'')+'</div>'; }).join('')
+      +'<div class="hint" style="margin-top:4px">Foi para a ficha do FILHOt — a Prevenção, os Vencimentos e a Hoje na Zêluz já leem esta data.</div></div>';
+  }
+  function prevCorrigeItemDe(k){ return (PREV_ITENS||[]).find(function(x){ return x.k===k; })||{}; }
+  // Quantos dias o item vale PARA ESTE FILHOt, pela MESMA conta que a ficha mostra. A coleira
+  // vem da marca (prevDiasDoItem); o carrapaticida vem do PRODUTO (Bravecto 90, pipeta 30) —
+  // e é essa a conta que o bloco da ficha faz. Dizer 30 aqui e 90 na ficha seriam duas
+  // verdades para a mesma caixinha, e a casa acabaria cobrando o Bravecto dois meses antes.
+  function prevCorrigeDias(it, ex){
+    if(it && it.k==='ecto_p'){ var d=ectoDur(ex||{}); if(d) return d; }
+    return prevDiasDoItem(it, ex||{});
+  }
+  // ACHAR A FICHA PELA CHAVE DA TELA. A Hoje na Zêluz e os Vencimentos falam em `dcKey`
+  // (sem acento, espaço vira "-"); a Prevenção e a ficha falam em `pelKey` (com acento e
+  // com espaço). Procurar por uma só deixaria de fora justamente o "Antônio da Ana Maria"
+  // do caso dela — e o toque no chip não faria nada, em silêncio. Aqui entram as duas.
+  function prevCorrigePetDe(chave){
+    chave=String(chave||''); if(!chave) return null;
+    var L=(typeof PELUDINHOS!=='undefined'&&Array.isArray(PELUDINHOS))?PELUDINHOS:[];
+    var achou=null;
+    L.forEach(function(q){
+      if(achou||!q) return;
+      if(dcKey(q.n,q.tutor)===chave || pelKey(q)===chave) achou=q;
+    });
+    return achou;
+  }
+  // O painel embutido, logo abaixo dos chips daquele FILHOt.
+  function prevCorrigePainelHTML(chave, tela, hoje){
+    if(!PREV_CORRIGE_ABERTO || !prevCorrigePode()) return '';
+    var par=String(PREV_CORRIGE_ABERTO).split('|');
+    if(par[0]!==String(chave||'')) return '';
+    var k=par[1]||''; if(!k) return '';
+    var p=prevCorrigePetDe(chave); if(!p) return '';
+    var it=prevCorrigeItemDe(k);
+    var ex=pelExtra(p)||{};
+    var dias=prevCorrigeDias(it, ex);
+    var id=escAttr(String(chave)+'_'+k), ka=jsAspas(chave), kk=jsAspas(k);
+    hoje=hoje||hojeISO();
+    var h='<div id="prevCorrige_'+id+'" style="margin-top:8px;border:1.5px solid var(--z-gold);border-radius:12px;padding:10px 12px;background:var(--z-cream-warm)">'
+      +'<div style="font-size:13.5px;font-weight:800;color:var(--z-blue)">'
+      +escAttr((it.nome||k)+' — '+(pelNome(p)||''))+'</div>'
+      +'<div class="hint" style="margin-top:2px">O que você gravar aqui vai para a <strong>ficha do FILHOt</strong> e vale em todas as telas. Não precisa abrir a ficha.</div>';
+    if(it.nomeK) h+='<div style="margin-top:8px"><label style="display:block;font-size:11px;font-weight:800;color:var(--muted)">Nome do produto / vacina</label>'
+      +'<input class="cad-in" id="prevCorrN_'+id+'" value="'+escAttr(ex[it.nomeK]||'')+'" placeholder="Ex: V10 Nobivac" style="margin:0;width:100%;max-width:280px"></div>';
+    h+='<div style="display:flex;flex-wrap:wrap;gap:8px;align-items:flex-end;margin-top:9px">'
+      +'<button type="button" class="btn btn-gold" style="padding:8px 16px;font-size:13px;font-weight:800" onclick="prevCorrigeFeitoHoje(\''+ka+'\',\''+kk+'\',\''+tela+'\')">Feito hoje</button>'
+      +'<div><label style="display:block;font-size:11px;font-weight:800;color:var(--muted)">Feito em…</label>'
+      +'<input type="date" class="cad-in" id="prevCorrT_'+id+'" style="margin:0" min="2015-01-01" max="'+escAttr(hoje)+'" onkeydown="return dataSoNoCalendario(event)"></div>'
+      +'<button type="button" class="btn" style="padding:8px 14px;font-size:12.5px;font-weight:800;background:#fff;color:var(--z-blue);border:1.5px solid var(--line)" onclick="prevCorrigeFeitoEm(\''+ka+'\',\''+kk+'\',\''+tela+'\')">Gravar esta data</button>'
+      +'</div>';
+    if(podeVencManual()) h+='<div style="display:flex;flex-wrap:wrap;gap:8px;align-items:flex-end;margin-top:9px;padding-top:9px;border-top:1px dashed var(--line)">'
+      +'<div><label style="display:block;font-size:11px;font-weight:800;color:var(--muted)">Vence em… (a data da carteira)</label>'
+      +'<input type="date" class="cad-in" id="prevCorrV_'+id+'" value="'+escAttr(ex[k]||'')+'" style="margin:0" min="2015-01-01" max="2035-12-31" onkeydown="return dataSoNoCalendario(event)"></div>'
+      +'<button type="button" class="btn" style="padding:8px 14px;font-size:12.5px;font-weight:800;background:#fff;color:var(--z-blue);border:1.5px solid var(--line)" onclick="prevCorrigeVenceEm(\''+ka+'\',\''+kk+'\',\''+tela+'\')">Gravar o vencimento</button>'
+      +'<div class="hint" style="width:100%;margin:0">Se você só sabe quando vence, digite em <strong>&laquo;Vence em&raquo;</strong> — não precisa da data em que tomou.</div></div>';
+    if(dias) h+='<div class="hint" style="margin-top:6px">Vale '+dias+' dia'+(dias>1?'s':'')
+      +' — a próxima data sai sozinha da data em que foi feito.</div>';
+    h+='<div style="margin-top:7px"><button type="button" class="btn" style="padding:4px 0;font-size:12.5px;font-weight:800;background:none;border:none;color:var(--z-blue);text-decoration:underline" onclick="prevCorrigeFechar(\''+tela+'\')">fechar</button></div>';
+    return h+'</div>';
+  }
+  // ---- os três caminhos, todos passando pela MESMA porta de gravação ----------------
+  function prevCorrigeFeitoHoje(chave,k,tela){ prevCorrigeGravarFeito(chave,k,hojeISO(),tela); }
+  function prevCorrigeFeitoEm(chave,k,tela){
+    var id=String(chave)+'_'+k;
+    var v=String(((document.getElementById('prevCorrT_'+id)||{}).value)||'').trim();
+    if(!v){ try{ alert('Escolha a data em que foi feito.'); }catch(e){} /* silencioso de propósito: guarda defensiva — falhar aqui não pode interromper quem chamou */ return; }
+    prevCorrigeGravarFeito(chave,k,v,tela);
+  }
+  function prevCorrigeGravarFeito(chave,k,dt,tela){
+    if(!prevCorrigePode()) return;
+    var p=prevCorrigePetDe(chave); if(!p) return;
+    dt=String(dt||'').trim();
+    if(!/^\d{4}-\d{2}-\d{2}$/.test(dt)) return;
+    var hoje=hojeISO();
+    if(dt>hoje){
+      if(typeof zAlertao==='function') zAlertao('Essa data não faz sentido',
+        ['A data em que foi feito está no futuro. Se o que você sabe é quando VENCE, use o campo &laquo;Vence em…&raquo;.'],
+        {botao:'Vou corrigir'});
+      return;
+    }
+    var it=prevCorrigeItemDe(k);
+    var ex=pelExtra(p)||{};
+    var de=ex[k]||'';
+    var patch={};
+    if(it.base) patch[it.base]=dt;
+    var id=String(chave)+'_'+k;
+    if(it.nomeK){
+      var nm=String(((document.getElementById('prevCorrN_'+id)||{}).value)||'').trim();
+      if(nm) patch[it.nomeK]=nm;
+    }
+    if(k==='verm_p' && ex.verm_doses==='2 doses'){
+      // Vermífugo em 2 doses: a 1ª dose é esta, e a 2ª volta a ser a PREVISTA de 21 dias —
+      // a que estava registrada era da rodada anterior (mesma regra do Salvar da ficha).
+      var d2=addDiasISO(dt, VERMIF_2A_DOSE);
+      patch.verm_dose2_t=''; patch.verm_2a=d2;
+      patch[k]=addDiasISO(d2, VERMIF_PROX);
+    } else {
+      var dias=prevCorrigeDias(it, ex);
+      patch[k]=dias?addDiasISO(dt,dias):'';
+    }
+    // Dose nova manda: a data que alguém tinha digitado à mão deixa de valer.
+    if(ex[k+'_manual']) patch[k+'_manual']='';
+    // "A fazer na Zêluz" marcado no cadastro: foi feito, a promessa sai junto.
+    if(it.base && ex[String(it.base).replace(/_t$/,'')+'_afazer']) patch[String(it.base).replace(/_t$/,'')+'_afazer']='';
+    setPelExtra(p, patch);
+    prevCorrigeRegistrar(p, chave, k, it, de, patch[k]||'',
+      'feito em '+fmtBR(dt), tela);
+  }
+  function prevCorrigeVenceEm(chave,k,tela){
+    if(!prevCorrigePode() || !podeVencManual()) return;
+    var p=prevCorrigePetDe(chave); if(!p) return;
+    var id=String(chave)+'_'+k;
+    var v=String(((document.getElementById('prevCorrV_'+id)||{}).value)||'').trim();
+    if(!/^\d{4}-\d{2}-\d{2}$/.test(v)){ try{ alert('Escolha a data em que vence.'); }catch(e){} /* silencioso de propósito: guarda defensiva — falhar aqui não pode interromper quem chamou */ return; }
+    if(v<'2015-01-01' || v>'2035-12-31'){ try{ alert('Confira o ano dessa data.'); }catch(e){} /* silencioso de propósito: guarda defensiva — falhar aqui não pode interromper quem chamou */ return; }
+    var it=prevCorrigeItemDe(k);
+    var ex=pelExtra(p)||{};
+    var de=ex[k]||'';
+    var patch={}; patch[k]=v; patch[k+'_manual']=true;
+    if(it.base && ex[String(it.base).replace(/_t$/,'')+'_afazer']) patch[String(it.base).replace(/_t$/,'')+'_afazer']='';
+    setPelExtra(p, patch);
+    prevAuditManual(p, k, de, v);
+    prevCorrigeRegistrar(p, chave, k, it, de, v, 'vencimento digitado à mão', tela);
+  }
+  // A porta única do rastro e da confirmação: um lugar só para os três caminhos.
+  function prevCorrigeRegistrar(p, chave, k, it, de, para, comoTexto, tela){
+    var nome=(it&&it.nome)||k;
+    try{ if(typeof audit==='function') audit('prevencao-atualizada-na-tela',
+      (pelNome(p)||'')+': '+nome+' — '+comoTexto+', vence em '+(para?fmtBR(para):'—')
+      +' (antes '+(de?fmtBR(de):'sem data')+'), atualizado na tela '+(tela==='venc'?'Vencimentos':'Hoje na Zêluz'),
+      {alvo:chave, item:k, de:de||'', para:para||'', pet:pelNome(p)||''}); }catch(e){} /* silencioso de propósito: o audit() tem bolso próprio e reenvia sozinho — falhar aqui não pode travar a ação */
+    PREV_CORRIGE_OK[prevCorrigeAlvo(chave,k)]={ts:Date.now(), ate:para||'',
+      texto:(pelNome(p)||'')+' — '+nome+' em dia até '+(para?fmtBR(para):'—')};
+    PREV_CORRIGE_ABERTO='';
+    prevCorrigeRedesenhar(tela);
   }
   function prevEdicaoHTML(o){
     var chave=pelKey(o.p), ex=pelExtra(o.p)||{};
@@ -21694,7 +22015,13 @@
     PB_PEND[b]=Object.assign({},PB_PEND[b]||{},patch||{}); PB_SALVO[b]=false;
     // Vacina: trocou a data da dose e ninguém escreveu a próxima → mostra 1 ano depois já
     // preenchido (a pessoa ainda pode escrever outra por cima antes de salvar).
-    if(b==='vac'){ Object.keys(patch||{}).forEach(function(k){ var m=k.match(/^(vac_\w+)_t$/); if(m&&patch[k]&&(patch[m[1]+'_p']===undefined)) PB_PEND[b][m[1]+'_p']=addDiasISO(patch[k],365); }); }
+    if(b==='vac'){ Object.keys(patch||{}).forEach(function(k){
+      var m=k.match(/^(vac_\w+)_t$/); if(!m||!patch[k]) return;
+      if(patch[m[1]+'_p']===undefined) PB_PEND[b][m[1]+'_p']=addDiasISO(patch[k],365);
+      // Digitou a dose de novo: a conta volta a mandar, a marca de "à mão" cai e a tela
+      // avisa — ninguém descobre depois que a data digitada sumiu em silêncio (24/set/2026).
+      if(prevEraManual(b, m[1]+'_p')){ PB_PEND[b][m[1]+'_p_manual']=''; prevAvisoRecalc(m[1]+'_p'); }
+    }); }
     pbRender(b);
   }
   function pbRender(b){
@@ -21748,20 +22075,35 @@
     var pend=PB_PEND[b]||{};
     if(!Object.keys(pend).length){ PB_SALVO[b]=true; pbRender(b); return; }
     var ex=pbEx(b), patch=Object.assign({},pend);
-    if(b==='ecto'){ var d=ectoDur(ex); patch.ecto_p=(ex.ecto_t&&d)?addDiasISO(ex.ecto_t,d):''; }
-    if(b==='col'){ var dc=coleiraDur(ex); patch.col_p=(ex.col_t&&dc)?addDiasISO(ex.col_t,dc):''; }
+    var exAntes=Object.assign({}, (pelAtual?pelExtra(pelAtual):{})||{});   // cópia: setPelExtra muda o objeto vivo da ficha
+    // ===== O "VENCE EM" DIGITADO À MÃO NÃO É SOBRESCRITO (Adriana, 24/set/2026) =======
+    // A conta só refaz a próxima quando a ÚLTIMA dose entra neste mesmo Salvar. Fora disso,
+    // a data que a Gestão digitou manda — senão salvar o bloco por outro motivo (o nome do
+    // produto, a marca da coleira) apagaria o vencimento que veio da carteira.
+    var pbContaManda=function(campoP, camposT){
+      var mexeuNaUltima=(camposT||[]).some(function(c){ return Object.prototype.hasOwnProperty.call(pend,c); });
+      if(mexeuNaUltima){
+        if(prevEraManual(b, campoP)){ patch[campoP+'_manual']=''; prevAvisoRecalc(campoP); }
+        return true;
+      }
+      if(Object.prototype.hasOwnProperty.call(pend, campoP)) return false;   // acabou de digitar o "Vence em"
+      return !prevEraManual(b, campoP);
+    };
+    if(b==='ecto' && pbContaManda('ecto_p',['ecto_t'])){ var d=ectoDur(ex); patch.ecto_p=(ex.ecto_t&&d)?addDiasISO(ex.ecto_t,d):''; }
+    if(b==='col' && pbContaManda('col_p',['col_t'])){ var dc=coleiraDur(ex); patch.col_p=(ex.col_t&&dc)?addDiasISO(ex.col_t,dc):''; }
     if(b==='verm'){
-      if(!ex.verm_t){ patch.verm_2a=''; patch.verm_p=''; patch.verm_dose2_t=''; }
+      var vermConta=pbContaManda('verm_p',['verm_t','verm_dose2_t','verm_doses']);
+      if(!ex.verm_t){ patch.verm_2a=''; patch.verm_dose2_t=''; if(vermConta) patch.verm_p=''; }
       else if(ex.verm_doses==='2 doses'){
         // A data real da 2ª dose, quando houver; senão a prevista de 21 dias.
         var d2=vermDose2Data(ex)||addDiasISO(ex.verm_t,VERMIF_2A_DOSE);
-        patch.verm_2a=d2; patch.verm_p=addDiasISO(d2,VERMIF_PROX);
+        patch.verm_2a=d2; if(vermConta) patch.verm_p=addDiasISO(d2,VERMIF_PROX);
       }
       // Voltou para "Dose única": não existe 2ª dose nenhuma — a data registrada sai junto,
       // senão a ficha guardaria uma dose que o regime atual não prevê.
-      else { patch.verm_2a=''; patch.verm_dose2_t=''; patch.verm_p=addDiasISO(ex.verm_t,VERMIF_PROX); }
+      else { patch.verm_2a=''; patch.verm_dose2_t=''; if(vermConta) patch.verm_p=addDiasISO(ex.verm_t,VERMIF_PROX); }
     }
-    if(b==='fezes'){ patch.fezes_p=ex.fezes_t?addDiasISO(ex.fezes_t,FEZES_PROX):''; }
+    if(b==='fezes' && pbContaManda('fezes_p',['fezes_t'])){ patch.fezes_p=ex.fezes_t?addDiasISO(ex.fezes_t,FEZES_PROX):''; }
     // ===== TRAVA DE LÓGICA DA DATA — Adriana, 29/ago/2026 (mesma regra do prevLancar) =====
     var exDepois=Object.assign({},ex,patch);
     var itens=pbItensParaChecagem(b, exDepois);
@@ -21777,6 +22119,11 @@
       setPelExtra(pelAtual, patch);
       delete PB_PEND[b]; PB_SALVO[b]=true;
       try{ if(typeof audit==='function') audit('prevencao', (pelNome(pelAtual)||'')+': bloco '+b+' salvo na ficha', {pet:pelNome(pelAtual)||''}); }catch(e){} /* silencioso de propósito: o audit() tem bolso próprio e reenvia sozinho — falhar aqui não pode travar a ação */
+      // Vencimento digitado à mão: rastro próprio, de → para. O audit() já grava QUEM e o papel.
+      Object.keys(patch).forEach(function(c){
+        var mm=c.match(/^(\w+_p)_manual$/);
+        if(mm && patch[c]===true) prevAuditManual(pelAtual, mm[1], exAntes[mm[1]]||'', patch[mm[1]]||'');
+      });
       (confirmados||[]).forEach(function(c){
         try{ if(typeof audit==='function') audit('prevencao-atraso-confirmado', (pelNome(pelAtual)||'')+': '+c.item.nome+' continua em atraso, confirmado na ficha', {pet:pelNome(pelAtual)||''}); }catch(e){} /* silencioso de propósito: o audit() tem bolso próprio e reenvia sozinho — falhar aqui não pode travar a ação */
       });
@@ -21823,8 +22170,9 @@
           : '')
         // Adriana, 25/ago/2026: "ter o local para colocar o nome — igual o vermífugo tem".
         +'<div class="field"><label>Nome do produto usado</label><input class="cad-in" value="'+escAttr(ex.ecto_nome||ex.ecto_outro_nome||'')+'" placeholder="Ex: NexGard Spectra 15 mg · Frontline" onchange="pbSet(\'ecto\',{ecto_nome:this.value})"></div>'
-        +'<div class="field"><label>Aplicado em</label><input type="date" class="cad-in" value="'+(ex.ecto_t||'')+'" onchange="pbSet(\'ecto\',{ecto_t:this.value})" min="2015-01-01" max="2035-12-31" onkeydown="return dataSoNoCalendario(event)"></div>'
-        +'<div class="field"><label>Próxima aplicação</label><div class="prev-calc">'+(prox?fmtBR(prox)+(dur?' · '+dur+' dias':''):'preencha o produto e a data')+'</div></div>'
+        +'<div class="field"><label>Última aplicação</label><input type="date" class="cad-in" value="'+(ex.ecto_t||'')+'" onchange="pbSet(\'ecto\',{ecto_t:this.value})" min="2015-01-01" max="2035-12-31" onkeydown="return dataSoNoCalendario(event)"></div>'
+        +prevVenceCampoHTML(ex,'ecto_p','ecto_t',"prevVenceManualSet('ecto_p',this.value,'ecto')",
+          {calcTexto:(prox?('Pela conta: '+fmtBR(prox)+(dur?' · '+dur+' dias':'')+' — é o que vale ao salvar.'):'Preencha o produto e a última aplicação, ou digite aqui o vencimento.')})
       +'</div>'+pbRodape('ecto','antiparasitário')+'</div>';
   }
   // --- Coleira repelente ---
@@ -21840,6 +22188,7 @@
   function prevColeiraRecalcular(p, ex){
     ex=ex||{};
     if(!p) return false;
+    if(ex.col_p_manual) return false;                              // data digitada à mão não se recalcula sozinha (24/set/2026)
     if(!/^\d{4}-\d{2}-\d{2}$/.test(ex.col_t||'')) return false;   // sem data de colocação não há o que refazer
     var d=coleiraDur(ex); if(!d) return false;                     // sem marca (ou "Outra" sem dias) não se inventa validade
     var novo=addDiasISO(ex.col_t, d);
@@ -21865,8 +22214,9 @@
           ? '<div class="field"><label>Nome da coleira</label><input class="cad-in" value="'+escAttr(ex.col_outro_nome||'')+'" onchange="pbSet(\'col\',{col_outro_nome:this.value})"></div>'
             +'<div class="field"><label>Dura quantos dias?</label><input class="cad-in" inputmode="numeric" value="'+escAttr(ex.col_outro_dias||'')+'" placeholder="Ex: 180" onchange="pbSet(\'col\',{col_outro_dias:this.value})"></div>'
           : '')
-        +'<div class="field"><label>Colocada em</label><input type="date" class="cad-in" value="'+(ex.col_t||'')+'" onchange="pbSet(\'col\',{col_t:this.value})" min="2015-01-01" max="2035-12-31" onkeydown="return dataSoNoCalendario(event)"></div>'
-        +'<div class="field"><label>Trocar em</label><div class="prev-calc">'+(prox?fmtBR(prox)+(dur?' · '+Math.round(dur/30)+' meses':''):'escolha a coleira e a data')+'</div></div>'
+        +'<div class="field"><label>Última colocação</label><input type="date" class="cad-in" value="'+(ex.col_t||'')+'" onchange="pbSet(\'col\',{col_t:this.value})" min="2015-01-01" max="2035-12-31" onkeydown="return dataSoNoCalendario(event)"></div>'
+        +prevVenceCampoHTML(ex,'col_p','col_t',"prevVenceManualSet('col_p',this.value,'col')",
+          {rot:'Vence em (trocar em)', calcTexto:(prox?('Pela conta: '+fmtBR(prox)+(dur?' · '+Math.round(dur/30)+' meses':'')+' — é o que vale ao salvar.'):'Escolha a coleira e a última colocação, ou digite aqui o vencimento.')})
       +'</div>'+pbRodape('col','coleira')+'</div>';
   }
   // --- Vermifugação ---
@@ -21904,7 +22254,8 @@
             +'<div class="field"><label>2ª dose dada em</label><input type="date" class="cad-in" value="'+(ex.verm_dose2_t||'')+'" onchange="pbSet(\'verm\',{verm_dose2_t:this.value})" min="2015-01-01" max="2035-12-31" onkeydown="return dataSoNoCalendario(event)">'
             +'<div class="hint" style="margin-top:3px">Enquanto esta data estiver em branco, a 2ª dose continua sendo cobrada na Prevenção e em <strong>Vencimentos</strong>. Preencheu, ela some — e o próximo vermífugo passa a contar desta data.</div></div>'
           : '')
-        +'<div class="field"><label>Próximo vermífugo</label><div class="prev-calc">'+(prox?fmtBR(prox)+' · 4 meses'+(ex.verm_doses==='2 doses'?' após a 2ª dose':''):'informe a data')+'</div></div>'
+        +prevVenceCampoHTML(ex,'verm_p','verm_t',"prevVenceManualSet('verm_p',this.value,'verm')",
+          {rot:'Vence em (próximo vermífugo)', calcTexto:(prox?('Pela conta: '+fmtBR(prox)+' · 4 meses'+(ex.verm_doses==='2 doses'?' após a 2ª dose':'')+' — é o que vale ao salvar.'):'Informe a última dose, ou digite aqui o vencimento.')})
         +'<div class="field" style="grid-column:1/-1"><label>Dose pelo peso</label><div class="prev-calc">'+vermFichaTextoHTML(ex)+'</div></div>'
       +'</div>'+pbRodape('verm','vermífugo')+'</div>';
   }
@@ -21915,8 +22266,9 @@
       +'<div class="prev-tit">Exame de fezes '+(ex.fezes_p?seloValidade(ex.fezes_p):'')+'</div>'
       +'<div class="prev-nota">Quem faz exame de fezes não precisa de vermífugo.</div>'
       +'<div class="cad-grid">'
-        +'<div class="field"><label>Data do exame</label><input type="date" class="cad-in" value="'+(ex.fezes_t||'')+'" onchange="pbSet(\'fezes\',{fezes_t:this.value})" min="2015-01-01" max="2035-12-31" onkeydown="return dataSoNoCalendario(event)"></div>'
-        +'<div class="field"><label>Renovar em</label><div class="prev-calc">'+(prox?fmtBR(prox)+' · 4 meses':'informe a data')+'</div></div>'
+        +'<div class="field"><label>Último exame</label><input type="date" class="cad-in" value="'+(ex.fezes_t||'')+'" onchange="pbSet(\'fezes\',{fezes_t:this.value})" min="2015-01-01" max="2035-12-31" onkeydown="return dataSoNoCalendario(event)"></div>'
+        +prevVenceCampoHTML(ex,'fezes_p','fezes_t',"prevVenceManualSet('fezes_p',this.value,'fezes')",
+          {rot:'Vence em (renovar em)', calcTexto:(prox?('Pela conta: '+fmtBR(prox)+' · 4 meses — é o que vale ao salvar.'):'Informe o último exame, ou digite aqui o vencimento.')})
         +'<div class="field" style="grid-column:1/-1"><label>Resultado</label><input class="cad-in" value="'+escAttr(ex.fezes_res||'')+'" placeholder="Ex: negativo para giárdia e helmintos" onchange="pbSet(\'fezes\',{fezes_res:this.value})"></div>'
       +'</div>'+pbRodape('fezes','exame de fezes')+'</div>';
   }
@@ -21926,8 +22278,9 @@
       return '<div class="vac-row" style="grid-template-columns:1fr 1fr 1fr">'
         +'<div class="vac-nome" style="grid-column:1/-1">'+label+' '+seloValidade(ex[key+'_p'])+'</div>'
         +'<div class="field" style="margin:0"><label style="font-size:11px">Qual vacina / laboratório</label><input class="cad-in" value="'+escAttr(ex[key+'_nome']||'')+'" placeholder="Ex: V10 Nobivac" onchange="pbSet(\'vac\',{'+key+'_nome:this.value})"></div>'
-        +'<div class="field" style="margin:0"><label style="font-size:11px">Tomou em</label><input type="date" class="cad-in" value="'+(ex[key+'_t']||'')+'" onchange="pbSet(\'vac\',{'+key+'_t:this.value})" min="2015-01-01" max="2035-12-31" onkeydown="return dataSoNoCalendario(event)"></div>'
-        +'<div class="field" style="margin:0"><label style="font-size:11px">Próxima</label><input type="date" class="cad-in" value="'+(ex[key+'_p']||'')+'" onchange="pbSet(\'vac\',{'+key+'_p:this.value})" min="2015-01-01" max="2035-12-31" onkeydown="return dataSoNoCalendario(event)"></div>'
+        +'<div class="field" style="margin:0"><label style="font-size:11px">Última dose (tomou em)</label><input type="date" class="cad-in" value="'+(ex[key+'_t']||'')+'" onchange="pbSet(\'vac\',{'+key+'_t:this.value})" min="2015-01-01" max="2035-12-31" onkeydown="return dataSoNoCalendario(event)"></div>'
+        +prevVenceCampoHTML(ex,key+'_p',key+'_t',"prevVenceManualSet('"+key+"_p',this.value,'vac')",
+          {compacto:true, calcTexto:(ex[key+'_t']?('Pela conta: '+fmtBR(addDiasISO(ex[key+'_t'],365))+' · 1 ano.'):'')})
         +'</div>';
     };
     return '<div id="pb-vac">'
@@ -22598,7 +22951,7 @@
     // A validade da coleira mudou (Seresto: 6 → 8 meses) e as fichas antigas guardaram o
     // "Trocar em" velho. Abrir a ficha conserta o dela — uma vez só, com rastro.
     try{ prevColeiraRecalcular(p, ex); }catch(e){} /* silencioso de propósito: guarda defensiva — falhar aqui não pode interromper quem chamou */
-    if(PB_ULT!==i){ PB_PEND={}; PB_SALVO={}; PB_ULT=i; renovRascLimpar(); mmRascLimpar(); }   // blocos de prevenção e rascunhos do plano: pendente é por FILHOt
+    if(PB_ULT!==i){ PB_PEND={}; PB_SALVO={}; PREV_RECALC_AVISO={}; PB_ULT=i; renovRascLimpar(); mmRascLimpar(); }   // blocos de prevenção e rascunhos do plano: pendente é por FILHOt
     const idade=calcIdade(pelNasc(p)); const can=canEditPel();
     document.getElementById('pel-lista').style.display='none';
     const f=document.getElementById('pel-ficha'); f.style.display='block';
@@ -22717,11 +23070,13 @@
         ${blocoOportunidades(p)}
 
         <h3 class="cad-sub">Vacinas</h3>
+        ${prevAjudaVenceHTML()}
         ${alertaPrevencao(ex,'vacina','Vacinas')}
         ${blocoVacinas(pbEx('vac'))}
 
         <h3 class="cad-sub">Antiparasitários</h3>
         <div class="hint" style="margin-top:-2px">Pipeta, comprimido, coleira, vermífugo e exame de fezes. <strong>Nada aqui é vacina</strong> — o que vencer neste bloco não é dose de vacina atrasada.</div>
+        ${prevAjudaVenceHTML()}
         ${alertaPrevencao(ex,'antip','Antiparasitários')}
         ${blocoEcto(pbEx('ecto'))}
         ${blocoColeira(pbEx('col'))}
@@ -22730,9 +23085,14 @@
         ${blocoCio(ex,p)}
 
         <h3 class="cad-sub">Saúde e rotina</h3>
+        ${prevAjudaVenceHTML()}
         ${alertaPrevencao(ex,'saude','Escova e check-up')}
-        <div class="field" style="max-width:260px"><label>Último check-up</label><input type="date" class="cad-in" value="${ex.checkup_t||ex.checkup||''}" onchange="setPelExtra(pelAtual,{checkup_t:this.value, checkup_p:this.value?addDiasISO(this.value,365):''})" min="2015-01-01" max="2035-12-31" onkeydown="return dataSoNoCalendario(event)"></div>
-        <div class="field" style="max-width:260px"><label>Última troca de escova de dentes</label><input type="date" class="cad-in" value="${ex.escova_t||''}" onchange="setPelExtra(pelAtual,{escova_t:this.value, escova_p:this.value?addDiasISO(this.value,90):''})" min="2015-01-01" max="2035-12-31" onkeydown="return dataSoNoCalendario(event)"></div>
+        <div class="cad-grid">
+          <div class="field"><label>Último check-up</label><input type="date" class="cad-in" value="${ex.checkup_t||ex.checkup||''}" onchange="prevUltimaDireta('checkup_t','checkup_p',365,this.value)" min="2015-01-01" max="2035-12-31" onkeydown="return dataSoNoCalendario(event)"></div>
+          ${prevVenceCampoHTML(ex,'checkup_p','checkup_t',"prevVenceManualSet('checkup_p',this.value)",{calcTexto:(ex.checkup_t?('Pela conta: '+fmtBR(addDiasISO(ex.checkup_t,365))+' · 1 ano.'):'')})}
+          <div class="field"><label>Última troca de escova de dentes</label><input type="date" class="cad-in" value="${ex.escova_t||''}" onchange="prevUltimaDireta('escova_t','escova_p',90,this.value)" min="2015-01-01" max="2035-12-31" onkeydown="return dataSoNoCalendario(event)"></div>
+          ${prevVenceCampoHTML(ex,'escova_p','escova_t',"prevVenceManualSet('escova_p',this.value)",{calcTexto:(ex.escova_t?('Pela conta: '+fmtBR(addDiasISO(ex.escova_t,90))+' · 90 dias.'):'')})}
+        </div>
 
         <h3 class="cad-sub">Peso</h3>
         ${blocoPeso(ex)}
@@ -23413,14 +23773,23 @@
   ];
   function naRenderPrev(){
     var el=document.getElementById('naPrev'); if(!el) return;
+    // "VENCE EM" TAMBÉM NO CADASTRO NOVO (Adriana, 24/set/2026): quem está com a carteira
+    // na mão digita o vencimento impresso. Gestão, Diretoria e Supervisão veem o campo; os
+    // demais papéis cadastram como sempre, pela data em que tomou.
+    var manual=podeVencManual();
     el.innerHTML='<div class="na-lb" style="margin-top:12px">Prevenção — obrigatória</div>'
       +NA_PREV.map(function(it){
         return '<div style="display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin:5px 0">'
           +'<span style="min-width:128px;font-size:12.5px;font-weight:800;color:var(--z-blue)">'+it.t+'</span>'
-          +'<input type="date" class="na-in" id="naP_'+it.k+'" style="width:auto;margin:0;flex:1;min-width:140px" max="'+hojeISO()+'" onchange="naMarcarFeito(\''+it.k+'\')" min="2015-01-01" onkeydown="return dataSoNoCalendario(event)">'
+          +'<input type="date" class="na-in" id="naP_'+it.k+'" style="width:auto;margin:0;flex:1;min-width:140px" max="'+hojeISO()+'" onchange="naMarcarFeito(\''+it.k+'\')" min="2015-01-01" onkeydown="return dataSoNoCalendario(event)" title="Última dose — a data em que tomou">'
+          +(manual?('<input type="date" class="na-in" id="naV_'+it.k+'" style="width:auto;margin:0;flex:1;min-width:140px" min="2015-01-01" max="2035-12-31" onchange="naMarcarFeito(\''+it.k+'\')" onkeydown="return dataSoNoCalendario(event)" title="Vence em (próxima) — a data futura, a que está na carteira">'):'')
           +'<button type="button" class="btn" id="naF_'+it.k+'" style="background:var(--z-cream-warm);color:var(--z-blue);border:1.5px solid var(--line);padding:6px 11px;font-size:12px;font-weight:800" onclick="naAFazer(\''+it.k+'\')">a fazer na Zêluz</button>'
           +'</div>';
-      }).join('');
+      }).join('')
+      +'<div class="hint" style="margin-top:4px">'
+      +(manual?'A 1ª data é a <strong>última dose</strong>; a 2ª é <strong>Vence em (próxima)</strong>. Se você só sabe quando vence, digite em &laquo;Vence em&raquo; — não precisa da data em que tomou.'
+              :'Informe a data da última dose, ou marque &laquo;a fazer na Zêluz&raquo;.')
+      +'</div>';
   }
   var NA_AFAZER={};
   function naAFazer(k){
@@ -23430,10 +23799,15 @@
     if(NA_AFAZER[k]){
       b.style.background='var(--z-gold)'; b.style.color='var(--z-blue)'; b.textContent='✓ a fazer na Zêluz';
       if(d) d.value='';
+      var v=document.getElementById('naV_'+k); if(v) v.value='';
     } else { b.style.background='var(--z-cream-warm)'; b.style.color='var(--z-blue)'; b.textContent='a fazer na Zêluz'; }
   }
   function naMarcarFeito(k){
-    if(NA_AFAZER[k]) naAFazer(k);   // escolheu a data: desmarca o "a fazer"
+    // Vale para as DUAS datas: a última dose e o "Vence em". Escolheu uma, o item deixou
+    // de ser "a fazer na Zêluz" — alguma proteção existe (24/set/2026).
+    var d=document.getElementById('naP_'+k), v=document.getElementById('naV_'+k);
+    var algo=!!((d&&d.value)||(v&&v.value));
+    if(NA_AFAZER[k] && algo) naAFazer(k);
   }
   async function criarAluno(){
     if(!gateCadastro()) return;   // LEI do cadastro único — monitor não cadastra
@@ -23449,11 +23823,23 @@
     if(!tel)   faltando.push('o telefone do tutor');
     else if(String(tel).replace(/\D/g,'').length<10) faltando.push('o telefone completo (com DDD)');
     const prevPatch={};
+    // Guardado para o rastro: quais vencimentos foram digitados à mão neste cadastro.
+    const prevManual=[];
+    const podeManual=podeVencManual();
     NA_PREV.forEach(function(it){
       const dt=((document.getElementById('naP_'+it.k)||{}).value||'').trim();
-      if(dt){
-        if(dt>hojeISO()){ faltando.push('uma data válida em '+it.t+' (essa ainda não chegou)'); return; }
-        prevPatch[it.k+'_t']=dt;
+      const vc=podeManual?(((document.getElementById('naV_'+it.k)||{}).value||'').trim()):'';
+      if(vc && !/^\d{4}-\d{2}-\d{2}$/.test(vc)){ faltando.push('uma data válida em '+it.t+' (Vence em)'); return; }
+      if(vc && (vc<'2015-01-01' || vc>'2035-12-31')){ faltando.push('uma data válida em '+it.t+' (Vence em — confira o ano)'); return; }
+      if(dt && dt>hojeISO()){ faltando.push('uma data válida em '+it.t+' (essa ainda não chegou)'); return; }
+      if(dt) prevPatch[it.k+'_t']=dt;
+      if(vc){
+        // O vencimento digitado manda sobre a conta — e sem a última dose NADA é inventado:
+        // o campo "_t" fica em branco, e a ficha dirá "última: não informada" (24/set/2026).
+        prevPatch[it.k+'_p']=vc;
+        prevPatch[it.k+'_p_manual']=true;
+        prevManual.push(it.t+' vence em '+fmtBR(vc));
+      } else if(dt){
         prevPatch[it.k+'_p']=addDiasISO(dt,it.dias);
       } else if(NA_AFAZER[it.k]){
         prevPatch[it.k+'_afazer']=true;   // nasce como pendência na tela de Prevenção
@@ -23495,6 +23881,9 @@
     if(NA_PRE_CAD){ try{ preCadMarcarPromovido(NA_PRE_CAD, key); }catch(e){ _logFalhaGrav('marcar o pré-cadastro como promovido', e); } }
     NA_AFAZER={};
     if(typeof audit==='function') audit('cadastro-novo', nome+' ('+raca+') — tutor '+tutor+' · '+tel, {pet:nome});
+    if(prevManual.length && typeof audit==='function') audit('prevencao-proxima-manual',
+      nome+': no cadastro novo, '+prevManual.join(' · ')+' — digitado à mão',
+      {pet:nome, campo:'cadastro-novo', de:'', para:prevManual.join(' · ')});
     fecharNovoAluno();
     renderPel();
     const idx=PELUDINHOS.findIndex(p=>pelKey(p)===key);
@@ -35753,16 +36142,22 @@
   // Função PURA: recebe a lista do dia e devolve as linhas com os nomes, sem repetir nome
   // dentro de uma linha. É ela que o harness morde.
   function vencResumoGrupos(L){
-    var por={};
+    var por={}, alvo={};
     (L||[]).forEach(function(o){
       (((o&&o.itens))||[]).forEach(function(x){
         var f=vencResumoFamilia(x);
-        por[f]=por[f]||[];
-        if(por[f].indexOf(o.nome)<0) por[f].push(o.nome);
+        por[f]=por[f]||[]; alvo[f]=alvo[f]||[];
+        if(por[f].indexOf(o.nome)<0){
+          por[f].push(o.nome);
+          // `alvos` anda ao lado de `nomes`, na MESMA ordem: é o que deixa o nome desta
+          // linha virar botão de atualizar a data (24/set/2026). `nomes` fica como estava
+          // — é dele que sai o texto do "Copiar resumo".
+          alvo[f].push({nome:o.nome, chave:(o&&o.chave)||'', k:(x&&x.k)||''});
+        }
       });
     });
     return VENC_RESUMO_GRUPOS.filter(function(g){ return (por[g.v]||[]).length; })
-      .map(function(g){ return {v:g.v, rotulo:g.t, nomes:por[g.v]}; });
+      .map(function(g){ return {v:g.v, rotulo:g.t, nomes:por[g.v], alvos:alvo[g.v]}; });
   }
   // O MESMO resumo em texto puro — é ele que vai para o WhatsApp.
   function vencResumoTexto(L, dia, hoje){
@@ -35782,12 +36177,16 @@
       +'</div>'
       +'<div class="hint" style="margin-top:2px">Por tipo de pendência, quem está devendo. Os cartões, com a mensagem pronta de cada um, vêm logo abaixo.</div>';
     G.forEach(function(g){
+      var linha=(g.alvos&&g.alvos.length)
+        ? g.alvos.map(function(a){ return prevCorrigeChip(a.chave, a.k, a.nome, 'venc', 'font-size:13.5px;color:var(--z-blue)'); })
+                 .join(' <span style="color:var(--muted)">·</span> ')
+        : escAttr(g.nomes.join(' · '));
       h+='<div style="margin-top:9px">'
         +'<div style="font-size:12.5px;font-weight:800;color:'
         +(g.v==='aberto'?'#1F5F69':'var(--z-blue)')+'">'+escAttr(g.rotulo)
         +' <span style="opacity:.65">('+g.nomes.length+')</span></div>'
-        +'<div style="font-size:14px;font-weight:600;color:var(--z-blue);line-height:1.5">'
-        +escAttr(g.nomes.join(' · '))+'</div></div>';
+        +'<div style="font-size:14px;font-weight:600;color:var(--z-blue);line-height:1.8;display:flex;flex-wrap:wrap;gap:6px;align-items:center">'
+        +linha+'</div></div>';
     });
     return h+'<textarea id="vencResumoTxt" class="gest-txt" rows="8" style="width:100%;display:none;margin-top:10px"></textarea></div>';
   }
@@ -35872,6 +36271,7 @@
       +'</div>'
       +vencRespondidosLinha(dia, hoje)
       +'</div>'
+      +prevCorrigeOkHTML()
       // A LISTA DO DIA, organizada por tipo de pendência — antes dos cartões (24/set/2026).
       +vencResumoHTML(L, dia, hoje)
       // O quadro das respostas pendentes de TODOS os dias, aqui também: a consultora que
@@ -35914,12 +36314,13 @@
       // EM ABERTO — nunca registrado (azul). O em aberto não é atraso: ninguém deixou
       // vencer, a ficha é que nunca recebeu a data. Pintá-lo de vermelho seria acusar a
       // equipe de uma falta que não houve; escondê-lo seria a falta de verdade.
-      h+='<span style="border-radius:999px;padding:3px 11px;font-size:12px;font-weight:800;'
-        +(x.sem_registro?'background:rgba(46,125,138,.16);color:#1F5F69'
-          :(x.atrasado?'background:#F6D8D4;color:#8E1B10':'background:rgba(222,180,40,.22);color:var(--z-blue)'))+'">'
-        +escAttr(x.nome+' — '+vencQuantoTexto(x, hoje))+'</span>';
+      // O chip É O BOTÃO de atualizar (24/set/2026) — a mesma porta da Hoje na Zêluz.
+      h+=prevCorrigeChip(o.chave, x.k, x.nome+' — '+vencQuantoTexto(x, hoje), 'venc',
+        'font-size:12px;'+(x.sem_registro?'background:rgba(46,125,138,.16);color:#1F5F69'
+          :(x.atrasado?'background:#F6D8D4;color:#8E1B10':'background:rgba(222,180,40,.22);color:var(--z-blue)')));
     });
     h+='</div>';
+    h+=prevCorrigePainelHTML(o.chave, 'venc', hoje);
     // A dose do vermífugo sai do peso (Adriana, 21/set/2026) — aqui, onde a consultora
     // está olhando quando fala com o tutor.
     h+=vermLinhaVencHTML(o, hoje);
@@ -36914,7 +37315,8 @@
       +'<button type="button" class="btn" style="padding:7px 14px;font-size:13px;font-weight:800;background:var(--z-cream-warm);border:1.5px solid var(--line);color:var(--z-blue)" onclick="relHojeNaCasa()">Baixar Excel</button>'
       +'</div>'
       +'<textarea id="hojeTxt" readonly style="display:none;width:100%;margin-top:9px;min-height:130px;border:1.5px solid var(--line);border-radius:10px;padding:9px;font-size:13px"></textarea>'
-      +'</div>';
+      +'</div>'
+      +prevCorrigeOkHTML();
     if(!L.length){
       h+='<div class="card"><h2 style="font-size:17px">Ninguém marcado na casa ainda</h2>'
         +'<div class="hint">A lista se enche sozinha conforme a Chamada e o Check-in do corpo acontecem — não é preciso reabrir a tela. '
@@ -36939,10 +37341,13 @@
         +'</div>';
       if(!o.pesa && !(o.antec||[]).length){
         h+='<div class="hint" style="margin-top:3px">Nada pendente.</div>';
+        h+=prevCorrigePainelHTML(o.chave, 'hoje', hoje);
       } else if(o.pesa || (o.antec||[]).length){
         var chips=[];
         (o.itens||[]).forEach(function(x){
-          chips.push('<span style="color:var(--crm-critico)">⚠ '+escAttr(hojeFraseItem(x, hoje))+'</span>');
+          // O chip É O BOTÃO de atualizar (24/set/2026): toca e a data nova vai para a ficha
+          // sem sair desta tela. Sem permissão, continua sendo o texto de sempre.
+          chips.push(prevCorrigeChip(o.chave, x.k, '⚠ '+hojeFraseItem(x, hoje), 'hoje', 'color:var(--crm-critico)'));
         });
         if(o.remedio) chips.push('<span>💊 toma remédio</span>');
         (o.pend||[]).forEach(function(x){
@@ -36954,6 +37359,7 @@
         });
         if(chips.length) h+='<div style="margin-top:4px;font-size:13.5px;font-weight:700;color:var(--z-blue);line-height:1.55">'
           +chips.join(' <span style="color:var(--muted)">·</span> ')+'</div>';
+        h+=prevCorrigePainelHTML(o.chave, 'hoje', hoje);
         // "APROVEITANDO QUE ELE ESTÁ AQUI": um bloco por assunto, em destaque, com a
         // mensagem pronta e os botões de resposta dentro — perguntar não pode custar
         // outra tela, porque ele vai embora no fim do dia.
