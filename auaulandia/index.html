@@ -2706,7 +2706,7 @@
                Nasce escondido e quem o revela é aplicarPermMenu() (tabela PERM) — permissão
                num lugar só. O contador entra em <span> COM atributos de propósito: o rótulo
                do item é o último <span> puro, e é por ele que a tela do Time se espelha. -->
-          <a data-v="hoje" style="display:none" title="Quem está na casa hoje e quem está com pendência: vacina, vermífugo, carrapaticida, coleira e escova."><span data-icon="paw"></span><span>Hoje na casa</span><span id="navHojeN" style="margin-left:6px;font-weight:800;color:var(--crm-critico)"></span></a>
+          <a data-v="hoje" style="display:none" title="Quem está na Zêluz hoje e quem está com pendência: vacina, vermífugo, carrapaticida, coleira e escova."><span data-icon="paw"></span><span>Hoje na Zêluz</span><span id="navHojeN" style="margin-left:6px;font-weight:800;color:var(--crm-critico)"></span></a>
           <!-- Adriana, 19/ago/2026: é aqui que a recepção lança o que hoje digita na
                planilha — e a planilha vira só o espelho que alimenta a TV. -->
           <a data-v="dashdc" class="so-recepcao" title="A planilha do Day Care, item por item."><span data-icon="list-check"></span><span>Lançamentos do dia</span></a>
@@ -4224,7 +4224,7 @@
        pelo check-in do corpo, os hóspedes da AuAulândia e os moradores. Quem tem pendência
        vem primeiro; o resto, em ordem alfabética. -->
   <section class="view" id="v-hoje">
-    <div class="role-note"><span data-icon="paw"></span><span><strong>Quem está na casa hoje.</strong> Uma linha por FILHOt, com o que está vencido — vacina, vermífugo, carrapaticida, coleira e troca de escova —, quem toma remédio de uso contínuo e o que ficou pendente da última vinda. <strong>Quem tem pendência vem primeiro.</strong> A lista se atualiza sozinha conforme a chamada e o check-in acontecem.</span></div>
+    <div class="role-note"><span data-icon="paw"></span><span><strong>Quem está na Zêluz hoje.</strong> Uma linha por FILHOt, com o que está vencido — vacina, vermífugo, carrapaticida, coleira e troca de escova —, quem toma remédio de uso contínuo e o que ficou pendente da última vinda. <strong>Quem tem pendência vem primeiro.</strong> A lista se atualiza sozinha conforme a chamada e o check-in acontecem.</span></div>
     <div id="hojeRoot"><div class="card"><div class="hint">Montando a lista de quem está na casa&hellip;</div></div></div>
   </section>
   <section class="view" id="v-vencimentos">
@@ -5337,7 +5337,7 @@
     daycare:['Day Care','Chamada, almoço, atividades, EA.'],hospedagem:['Plantão da noite','O relatório de cada hóspede, turno a turno.'],
     gestdia:['Conferência do dia','Medicações por horário, problemas e os três tempos do plantão.'],
     aulunos:['Aulunos','A turma do dia.'],dashdc:['Lançamentos do dia','A planilha do Day Care, item por item.'],
-    hoje:['Hoje na casa','Quem está na casa agora e quem está com pendência.'],
+    hoje:['Hoje na Zêluz','Quem está na Zêluz agora e quem está com pendência.'],
     pendencias:['Pendências de prevenção','O que ficou para a próxima vinda de quem não veio.'],
     vencimentos:['Vence amanhã','Mande hoje a mensagem de quem vem no próximo dia com prevenção vencendo.'],vacinas:['Prevenção','Vacina, vermífugo, coleira e exame de fezes: quem está atrasado e quem está para vencer.'],
     cuidadovet:['Cuidado Vet','Alterações no corpo que a veterinária precisa ver.'],
@@ -5570,7 +5570,7 @@
     //  MESMO grupo das Pendências de prevenção: quem fala com o tutor é quem cobra a
     //  prevenção. O monitor não entra — ele está com o FILHOt, não no WhatsApp.
     'vencimentos-amanha':       ['consultora','supervisor','gestao','diretoria'],
-    // ===== v 2026-09-24-03 — Hoje na casa ===========================================
+    // ===== v 2026-09-24-03 — Hoje na Zêluz ===========================================
     // "Precisamos na recepção saber todo mundo que está hoje e que está com pendência de
     //  algo (carrapaticida, vermífugo, escova, vacinas)" (Adriana, 24/set/2026). A recepção
     //  são as Consultoras de Bem-Estar — e com elas a Supervisão, a Gestão e a Diretoria. O
@@ -15445,7 +15445,7 @@
   // inteira DEPOIS de a correção estar publicada — o aviso apareceu, ninguém tocou.
   // Agora o aparelho PARADO recarrega sozinho: trancado, com a aba escondida, na porta de
   // entrada ou 3 minutos sem ninguém tocar nele. Mão na tela = nunca recarrega.
-  const APP_VERSAO='2026-09-24-03';
+  const APP_VERSAO='2026-09-24-04';
   var RECARGA_PARADO_MS=3*60*1000, __versaoPublicada=null, __recargaTimer=null;
   function vigiarVersao(){
     if(!DB) return;
@@ -15725,7 +15725,7 @@
       // 24/set/2026: a tela nova nasceu nos DOIS lugares de uma vez — no menu e aqui. O
       // rótulo é o MESMO do sidebar, letra por letra: é esta lista que a Gestão lê na tela
       // do Time, e conceder uma tela com outro nome é conceder uma tela que ninguém acha.
-      {k:'hoje', t:'Hoje na casa'},
+      {k:'hoje', t:'Hoje na Zêluz'},
       {k:'emporio', t:'Quem não comeu hoje'},
       // 19/set/2026: a tela nova nasceu nos DOIS lugares de uma vez — no menu e aqui. O que
       // não está nesta lista NÃO pode ser concedido a ninguém (a lição de 13/ago, com o
@@ -16302,7 +16302,7 @@
     // a tela não é aviso (a lei de 28/ago) — e quem entra às 8h da manhã precisa ver, na
     // primeira tela, quantas mensagens tem de mandar hoje.
     try{ if(typeof vencGarantir==='function' && typeof podePapel==='function' && podePapel('vencimentos-amanha')) vencGarantir(); }catch(e){} /* silencioso de propósito: guarda defensiva — falhar aqui não pode interromper a entrada */
-    // "Hoje na casa" (24/set/2026) entra pela MESMA porta, e pelo mesmo motivo: o contador
+    // "Hoje na Zêluz" (24/set/2026) entra pela MESMA porta, e pelo mesmo motivo: o contador
     // ao lado do item do menu diz quantos FILHOts já estão na casa devendo alguma coisa, e
     // esperar alguém abrir a tela para descobrir isso é justamente o que a lei de 28/ago
     // proíbe. A chamada do dia fica viva daqui em diante — o que for marcado depois chega
@@ -23938,7 +23938,7 @@
       if(chamadaNo()!==p) return;                    // o dia virou: este já não é o de hoje
       dcChamada=Object.assign({}, v||{});
       // Quem depende de saber quem está na casa se redesenha AQUI — a chamada, o check-in
-      // do corpo, a tela "Hoje na casa" e o contador do menu. Um dado carregado numa tela
+      // do corpo, a tela "Hoje na Zêluz" e o contador do menu. Um dado carregado numa tela
       // só some nas outras (13/ago): a fonte é uma, e todas bebem dela.
       try{ if(dcAtiv==='chamada') renderDaycare(); }catch(e){ /* silencioso de propósito: redesenho de tela — falhar não pode derrubar a sincronia */ }
       try{ if((dcAtiv==='checkin-corpo'||dcAtiv==='checkout-corpo') && typeof ckRedesenharDeFora==='function') ckRedesenharDeFora(); }catch(e){ /* silencioso de propósito: redesenho de tela */ }
@@ -26615,7 +26615,7 @@
       // O `if(entrada)` é LEI, não detalhe: o check-OUT não pode encostar na chamada. Ele
       // acontece no fim do dia, e apagar (ou reescrever) o 'veio' ali faria o FILHOt que
       // passou o dia inteiro na casa virar "PENDENTE — marque" na hora de ir embora, e
-      // sumir de "Hoje na casa". Quem sai continua tendo vindo. (24/set/2026)
+      // sumir de "Hoje na Zêluz". Quem sai continua tendo vindo. (24/set/2026)
       if(entrada) DB.ref('daycare/chamada/'+dcDataKey()+'/'+k).set('veio').catch(function(e){ _logFalhaGrav('presença pelo check-in '+k, e); });
       // Ele chegou: o que ficou da última vez aparece AGORA, para quem está no check-in —
       // "aviso que depende de abrir a tela não é aviso" (28/ago/2026).
@@ -35905,7 +35905,7 @@
     var hoje=(typeof zHojeISO==='function')?zHojeISO():'';
     var L=hojeFiltrada(hojeLista(), HOJE_FILTRO);
     var f=(HOJE_FILTROS.filter(function(x){ return x.v===HOJE_FILTRO; })[0]||{}).t||'Todos';
-    var cab='Hoje na casa — '+((typeof fmtBR==='function'?fmtBR(dcDataKey()):'')||dcDataKey());
+    var cab='Hoje na Zêluz — '+((typeof fmtBR==='function'?fmtBR(dcDataKey()):'')||dcDataKey());
     var c=hojeContagem()||{total:0, comPendencia:0};
     return cab+'\n'+c.total+' presentes · '+c.comPendencia+' com pendência'
       +(HOJE_FILTRO==='todos'?'':(' · filtro: '+f))+'\n\n'
@@ -35972,7 +35972,7 @@
     // puder ver lê o porquê — nunca uma tela em branco.
     if(typeof podePapel==='function' && !podePapel('hoje-na-casa')){
       raiz.innerHTML='<div class="card"><h2 style="font-size:19px">Esta tela é da Central Zêluz</h2>'
-        +'<div class="hint">Quem está na casa hoje e o que falta resolver com cada um é trabalho de quem atende o tutor: as Consultoras de Bem-Estar, a Supervisão e a Gestão. No Day Care, a lista de quem veio é a <strong>Chamada</strong>.</div></div>';
+        +'<div class="hint">Quem está na Zêluz hoje e o que falta resolver com cada um é trabalho de quem atende o tutor: as Consultoras de Bem-Estar, a Supervisão e a Gestão. No Day Care, a lista de quem veio é a <strong>Chamada</strong>.</div></div>';
       return;
     }
     hojeRender();
@@ -37081,7 +37081,7 @@
         linhas), 'checkin-corpo', linhas.length);
     }).catch(function(e){ alert('Não consegui ler os dados: '+((e&&e.message)||e)); });
   }
-  // ---- Relatório: Hoje na casa (Adriana, 24/set/2026) ----
+  // ---- Relatório: Hoje na Zêluz (Adriana, 24/set/2026) ----
   // NENHUMA leitura nova: sai da MESMA lista que a tela mostra (hojeLista), com as mesmas
   // frases. Se o Excel dissesse uma coisa e a tela outra, teríamos duas verdades — e é
   // exatamente disso que a recepção não precisa no meio do balcão.
@@ -37090,7 +37090,7 @@
     var L=[];
     try{ L=hojeLista(); }
     catch(e){ L=[]; } /* silencioso de propósito: o aviso abaixo diz que não há o que baixar */
-    if(!L.length){ alert('Ninguém marcado na casa ainda. Abra a tela "Hoje na casa" para ver por quê.'); return; }
+    if(!L.length){ alert('Ninguém marcado na casa ainda. Abra a tela "Hoje na Zêluz" para ver por quê.'); return; }
     var linhas=L.map(function(o){
       return [o.nome, o.raca||'', o.tutor||'', hojeFrasePresenca(o),
         (o.itens||[]).map(function(x){ return hojeFraseItem(x, hoje); }).join(' · ')||'—',
@@ -37099,7 +37099,7 @@
         (o.respostas||[]).map(function(x){ return String(x.rotulo||''); }).join(' · ')||'—'];
     });
     var comPend=L.filter(function(o){ return o.pesa>0; }).length;
-    relBaixarXLS(relTabelaHTML('Hoje na casa — '+orcBR(dcDataKey()),
+    relBaixarXLS(relTabelaHTML('Hoje na Zêluz — '+orcBR(dcDataKey()),
       L.length+' presentes · '+comPend+' com pendência · gerado em '+new Date().toLocaleString('pt-BR'),
       ['FILHOt','Raça','Tutor','Como está na casa','Vencido hoje','Remédio de uso contínuo','Pendência aberta','Sem resposta do tutor'],
       linhas), 'hoje-na-casa', linhas.length);
@@ -37156,7 +37156,7 @@
     relPertencesBranco(achou);
   }
   const RELATORIOS=[
-    {t:'Hoje na casa', d:'Quem está na casa agora — chamada, check-in do corpo, hóspedes e moradores — com o que já venceu (vacina, vermífugo, carrapaticida, coleira, escova), quem toma remédio de uso contínuo e o que ficou pendente. Quem tem pendência vem primeiro.', fn:'relHojeNaCasa()'},
+    {t:'Hoje na Zêluz', d:'Quem está na Zêluz agora — chamada, check-in do corpo, hóspedes e moradores — com o que já venceu (vacina, vermífugo, carrapaticida, coleira, escova), quem toma remédio de uso contínuo e o que ficou pendente. Quem tem pendência vem primeiro.', fn:'relHojeNaCasa()'},
     {t:'Grade de almoço das turminhas', d:'Segunda a sexta: nome, raça, se almoça, comedouro lento, o que come e quanto come. É a contingência de papel — se o sistema cair, a comida sai igual.', fn:'baixarGradeAlmoco()'},
     {t:'Pertences do dia', d:'A tabela que hoje é preenchida à mão: item por item, o que cada FILHOt trouxe, como é e em que veio (pote, sacola ou mochila).', fn:'relPertencesHoje()'},
     {t:'Pertences EM BRANCO — para imprimir', d:'A mesma tabela, com os nomes do dia já escritos e as colunas vazias, para preencher à mão. É a contingência de quando falta internet.', fn:'relPertencesBrancoEscolher()'},

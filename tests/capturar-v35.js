@@ -1,6 +1,6 @@
 'use strict';
 /*
- * CAPTURA DA v 2026-09-24-03 — a chamada viva e a tela "Hoje na casa".
+ * CAPTURA DA v 2026-09-24-03 — a chamada viva e a tela "Hoje na Zêluz".
  *
  * POR QUE ESTA CAPTURA EXISTE
  * Adriana, 24/set/2026: "Em turminhas daycare, não está aparecendo quem veio. Essa ficha
@@ -234,7 +234,7 @@ function injetarCasaDeHoje(page) {
       + ' presentes (' + casa.comPendencia + ' com vencimento, ' + casa.comCheckin + ' pelo check-in)');
     if (!casa.presentes) problemas.push('não consegui montar a casa de hoje (' + larg.rot + '): turma de ' + casa.turma);
 
-    // ---- 2 · a tela "Hoje na casa", pelo caminho do menu ----------------------------
+    // ---- 2 · a tela "Hoje na Zêluz", pelo caminho do menu ----------------------------
     await page.evaluate(() => { if (typeof abrirItemDoMenu === 'function') abrirItemDoMenu('hoje'); });
     await page.waitForTimeout(1800);
     await estabilizar(page);
@@ -246,7 +246,7 @@ function injetarCasaDeHoje(page) {
       const s = document.getElementById('v-hoje');
       return !!(s && s.classList.contains('active'));
     });
-    if (!ativa) problemas.push('a tela "Hoje na casa" não ficou ativa (' + larg.rot + ')');
+    if (!ativa) problemas.push('a tela "Hoje na Zêluz" não ficou ativa (' + larg.rot + ')');
 
     const cab = await page.$eval('#hojeRoot h2', (n) => (n.textContent || '').trim()).catch(() => '');
     if (!/\d+ presentes? · \d+ com pendência/.test(cab))

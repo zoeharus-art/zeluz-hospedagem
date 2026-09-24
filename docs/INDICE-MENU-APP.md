@@ -19,13 +19,13 @@ No banco daquele dia, `daycare/chamada/2026-09-24` tinha **34 chaves `veio`** e 
 | O quê | Como |
 |---|---|
 | O nó do dia | `daycare/chamada/{dia}` passou a ter **ouvinte vivo** (`chamadaVivaLigar`, pelo `zMapaVivo` — o mesmo mecanismo econômico do check-in do corpo): desce **uma vez**, e cada marcação nova chega como delta |
-| Quem se redesenha | a Chamada, o Check-in do corpo, a tela **Hoje na casa** e o contador do menu — todos no mesmo lugar, a partir da mesma fonte |
+| Quem se redesenha | a Chamada, o Check-in do corpo, a tela **Hoje na Zêluz** e o contador do menu — todos no mesmo lugar, a partir da mesma fonte |
 | Quando o dia vira | o ouvinte do dia **velho** é desligado (`zMapaDesligar`): nó de ontem escutando é download que ninguém lê |
 | Segundo download | nenhum — `carregarChamada` e `carregarCheckin` agora pedem `zMapaUma(chamadaNo())`, servido do mesmo retrato |
 | Na linha do FILHOt | o cartão verde diz de **onde** veio a presença: *"presente pelo check-in às 07:52"* (a hora sai do nó do check-in do corpo do dia, que a tela do Check-in já mantém vivo) ou apenas *"presente"* |
 | O check-**out** | continua **sem encostar** na chamada. A gravação é guardada por `if(entrada)`, e agora com comentário de lei: quem sai continua tendo vindo |
 
-### Tela nova: **Hoje na casa**
+### Tela nova: **Hoje na Zêluz**
 
 | Onde fica | Central Zêluz › Day Care, **primeiro item do bloco** |
 |---|---|
@@ -479,7 +479,7 @@ Nunca um filho maior que o pai. Abre só o caminho da tela ativa. A pendência s
 | | *(chamada, almoço, EA e as demais atividades)* | Vivem no `#dcSubnav`, dentro do `#blocoDaycare`. | so-day |
 | **Central Zêluz › Peludinhos** | Cadastro de Peludinhos (`ficha`) | Um cadastro só, para Day Care e AuAulândia — tudo começa aqui. | so-gestao (+ destaque) |
 | | Buscar peludinho *(sem `data-v`)* | Achar um peludinho depressa e abrir a ficha dele. Abre a MESMA tela do Cadastro, já no campo de busca. | so-gestao (espelha o Cadastro) |
-| **Central Zêluz › Day Care** | Hoje na casa (`hoje`) | Quem está na casa hoje e quem está com pendência: vacina, vermífugo, carrapaticida, coleira e escova. | `PERM` `hoje-na-casa` (consultora · supervisão · gestão · diretoria) |
+| **Central Zêluz › Day Care** | Hoje na Zêluz (`hoje`) | Quem está na Zêluz hoje e quem está com pendência: vacina, vermífugo, carrapaticida, coleira e escova. | `PERM` `hoje-na-casa` (consultora · supervisão · gestão · diretoria) |
 | | Lançamentos do dia (`dashdc`) | A planilha do Day Care, item por item. | so-recepcao |
 | | Pendências de prevenção (`pendencias`) | O que ficou para a próxima vinda: vermífugo, carrapaticida, coleira, medicação e hidratação de quem não veio. | `PERM` `pendencias-prevencao` (consultora · supervisão · gestão · diretoria) |
 | | Peso (`peso`) | Pesar qualquer FILHOt: recepção, veterinária e gestão. | so-pesa |
