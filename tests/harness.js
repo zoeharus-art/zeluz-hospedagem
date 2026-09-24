@@ -3744,8 +3744,8 @@ async function main() {
     check('v-25 · a auditoria da tabela diz o que mudou, de quanto para quanto',
       /audit\('orcamento-precos',\s*\n?\s*mudou\.length\?\('alterou a tabela de hospedagem — '\+mudou\.join/.test(html)
       && /\{antes:antes, depois:novo\}/.test(html));
-    check('v-25 · a versão carimbada desta entrega é a 2026-09-24-02',
-      /const APP_VERSAO='2026-09-24-02';/.test(html));
+    check('v-25 · a versão carimbada desta entrega é a 2026-09-24-03',
+      /const APP_VERSAO='2026-09-24-03';/.test(html));
   }
   console.log('');
 
@@ -4041,8 +4041,8 @@ async function main() {
       && html.indexOf('sem valor registrado ficaram de fora') > 0
       && html.indexOf('Ainda estou lendo os avulsos lançados no mês') > 0);
 
-    check('v-26 · a versão carimbada desta entrega é a 2026-09-24-02',
-      /const APP_VERSAO='2026-09-24-02';/.test(html));
+    check('v-26 · a versão carimbada desta entrega é a 2026-09-24-03',
+      /const APP_VERSAO='2026-09-24-03';/.test(html));
   }
   console.log('');
 
@@ -4425,8 +4425,8 @@ async function main() {
       }
     } else { check('v-27 · orcRenderConfig existe', false, 'função não encontrada'); }
 
-    check('v-27 · a versão carimbada desta entrega é a 2026-09-24-02',
-      /const APP_VERSAO='2026-09-24-02';/.test(html));
+    check('v-27 · a versão carimbada desta entrega é a 2026-09-24-03',
+      /const APP_VERSAO='2026-09-24-03';/.test(html));
   }
   console.log('');
 
@@ -5037,8 +5037,8 @@ async function main() {
         delete ctx.document.activeElement; delete ctx.__focoAuto;
       }
     } else { check('v-28 · vencRedesenhoAuto existe', false, 'função não encontrada'); }
-    check('v-28 · a versão carimbada desta entrega é a 2026-09-24-02',
-      /const APP_VERSAO='2026-09-24-02';/.test(html));
+    check('v-28 · a versão carimbada desta entrega é a 2026-09-24-03',
+      /const APP_VERSAO='2026-09-24-03';/.test(html));
   }
   console.log('');
 
@@ -5953,7 +5953,7 @@ async function main() {
     // que não tem data-v porque a tela ainda não existe.
     check('menu: o subgrupo Day Care da Central traz o dia do auluno e, no fim, Planos e cobranças',
       JSON.stringify(vsDe(fatia('c-daycare', 'operacao'), true)) === JSON.stringify(
-        ['dashdc', 'pendencias', 'peso', 'alergia', 'vacinas', 'vencimentos', 'emporio', 'reposicao', 'renovacao']),
+        ['hoje', 'dashdc', 'pendencias', 'peso', 'alergia', 'vacinas', 'vencimentos', 'emporio', 'reposicao', 'renovacao']),
       JSON.stringify(vsDe(fatia('c-daycare', 'operacao'), true)));
     check('menu: os itens do Day Care da Central estão em ordem alfabética até o rótulo Planos e cobranças',
       (() => {
@@ -7702,8 +7702,11 @@ async function main() {
   {
     check('a tela do corpo agora sabe quem faltou', /function ckFaltou\(o\)/.test(html) &&
       /dcChamada\[dcKey\(o\.p\.n,o\.p\.tutor\)\]==='faltou'/.test(html));
-    check('e le a chamada ao abrir (quem entra direto na atividade nao passou por ela)',
-      /daycare\/chamada\/'\+dcDataKey\(\)\)\.once\('value'\)[\s\S]{0,1500}CK_FALTA_TARDIA=/.test(html)); // janela alargada em 31/ago (ouvinte econômico), em 12/set (as marcas do Início e do Fim) e em 13/set (a carga do treinamento entrou no mesmo Promise.all)
+    // 24/set/2026: a chamada deixou de ser lida com once() AQUI também — a tela do corpo
+    // pega o MESMO ouvinte vivo do dia (chamadaVivaLigar + zMapaUma), sem segundo download,
+    // e a presença marcada na Chamada chega nesta tela sozinha.
+    check('e le a chamada ao abrir, pelo ouvinte VIVO do dia (quem entra direto na atividade nao passou por ela)',
+      /chamadaVivaLigar\(\);[\s\S]{0,260}zMapaUma\(chamadaNo\(\)\)[\s\S]{0,1800}CK_FALTA_TARDIA=/.test(html)); // janela alargada em 31/ago (ouvinte econômico), em 12/set (as marcas do Início e do Fim), em 13/set (a carga do treinamento entrou no mesmo Promise.all) e em 24/set (a chamada virou ouvinte vivo)
     check('a falta tem caminho de VOLTA em dois toques (caso dos 13 aulunos, 01/set)',
       /function ckDesfazerFalta/.test(html) && /Veio, sim/.test(html) &&
       /Confirmar: veio/.test(html) && /falta-desfeita/.test(html));
@@ -12171,9 +12174,9 @@ async function main() {
     // com o MESMO rótulo. Nenhuma das 17 anteriores saiu.
     const CHAVES_DE_SEMPRE = ['checkin', 'conferencia', 'recepcao', 'cuidadovet', 'hospedagem', 'checkout',
       'checkoutconf', 'emporio', 'linhadotempo', 'ficha', 'hospedes', 'pessoas', 'renovacao', 'reposicao',
-      'orcamento', 'relatorios', 'pendencias', 'vencimentos'];
+      'orcamento', 'relatorios', 'pendencias', 'vencimentos', 'hoje'];
     const chaves = navKeys.slice().sort();
-    check('mordida — as CHAVES são as 17 de antes MAIS a do Vence amanhã: nenhuma sumiu',
+    check('mordida — as CHAVES são as 18 de antes MAIS a do Hoje na casa: nenhuma sumiu',
       JSON.stringify(chaves) === JSON.stringify(CHAVES_DE_SEMPRE.slice().sort()), JSON.stringify(chaves));
     // Cada rótulo da tela Time é O MESMO que o sidebar mostra para aquele data-v.
     const rotuloDoMenu = (k) => {
@@ -13753,7 +13756,7 @@ async function main() {
     // alfabético; "Planos e cobranças" continua sendo o RÓTULO do fim.
     check('5 · "Planos e cobranças" continua INTEIRO no fim do Day Care, agora com Peso, Pesquisa e Prevenção antes dele',
       JSON.stringify(ordemCentral.slice(ordemCentral.indexOf('c-daycare'))) === JSON.stringify(
-        ['c-daycare', 'dashdc', 'pendencias', 'peso', 'alergia', 'vacinas', 'vencimentos', 'emporio', 'reposicao', 'renovacao']),
+        ['c-daycare', 'hoje', 'dashdc', 'pendencias', 'peso', 'alergia', 'vacinas', 'vencimentos', 'emporio', 'reposicao', 'renovacao']),
       JSON.stringify(ordemCentral.slice(ordemCentral.indexOf('c-daycare'))));
 
     // ---- 6: a pesquisa com a família ----
@@ -13783,7 +13786,7 @@ async function main() {
       conferencia: 'so-conferencia', hospedes: 'so-hosp', hospedagem: '', gestdia: 'so-gestao',
       checkout: '', abertura: 'so-abertura', checkin: '', checkoutconf: 'so-conf-saida',
       orcamento: 'so-recepcao', recepcao: 'so-recepcao', cuidadovet: 'so-vet', emporio: 'so-emporio',
-      reposicao: 'so-recepcao', dashdc: 'so-recepcao', pendencias: '', vencimentos: '', ficha: 'so-gestao', vacinas: 'so-gestao',
+      reposicao: 'so-recepcao', dashdc: 'so-recepcao', pendencias: '', vencimentos: '', hoje: '', ficha: 'so-gestao', vacinas: 'so-gestao',
       alergia: 'so-gestao', peso: 'so-pesa', renovacao: 'so-gestao',
       acerto: 'so-master', ritmo: 'so-gestao', eahist: 'so-gestao', pessoas: 'so-master',
       planodia: '', config: 'so-master', agenda: '', relatorios: 'so-gestao', sair: ''
@@ -13794,7 +13797,7 @@ async function main() {
     // so-master dele passou inteira para a "Linha do tempo do dia".
     // 18/set/2026: "Lançar pagamento" saiu do menu (Adriana: "delete lançar pagamentos..
     // inútil") — 36 itens viraram 35. Nenhum outro mudou de classe.
-    check('promessa — os 37 itens do menu mantiveram exatamente as classes so-*/op-only que já tinham',
+    check('promessa — os 38 itens do menu mantiveram exatamente as classes so-*/op-only que já tinham',
       difere.length === 0 && Object.keys(achado).length === Object.keys(ACESSO_ESPERADO).length,
       JSON.stringify(difere.map((k) => k + ': "' + achado[k] + '" ≠ "' + ACESSO_ESPERADO[k] + '"')));
 
@@ -14390,7 +14393,7 @@ async function main() {
       check('v-13 · a barra de etapas só existe na ENTRADA — o check-out do corpinho fica como era',
         /function ckTemEtapas\(\)\{ return ckEhEntrada\(\); \}/.test(html));
       check('v-13 · Protocolos entrou DENTRO de Configurações — nenhum item novo no menu',
-        [...html.matchAll(/<a data-v="[a-z-]+"/g)].length === 37
+        [...html.matchAll(/<a data-v="[a-z-]+"/g)].length === 38
         && !/data-v="protocolos"/.test(html)
         && html.indexOf('id="protoWrap"') > html.indexOf('id="v-config"')
         && html.indexOf('id="protoWrap"') < html.indexOf('id="v-orcamento"'));
@@ -14627,7 +14630,7 @@ async function main() {
         && /function protoTreinoVirar\(id\)\{[\s\S]{0,900}DB\.ref\('daycare\/config\/treinamento\/'\+id\)\.set\(reg\)/.test(html),
         JSON.stringify(html.match(/DB\.ref\('daycare\/config\/treinamento[^)]*\)\.[a-z]+\(/g) || []));
       check('v-14 · e nenhum item novo no menu: o acesso é exatamente o mesmo de antes',
-        [...html.matchAll(/<a data-v="[a-z-]+"/g)].length === 37 && !/data-v="treinamento"/.test(html));
+        [...html.matchAll(/<a data-v="[a-z-]+"/g)].length === 38 && !/data-v="treinamento"/.test(html));
 
       // ---- as medidas do molde: o polegar acha sem procurar ----
       check('v-14 · as medidas do molde: ação a partir de 22 px, leitura a partir de 18 px, Feito com 58 px',
@@ -14642,7 +14645,7 @@ async function main() {
         !/\.catch\(function\([a-z]*\)\{\s*\}\)/.test(
           html.slice(html.indexOf('const CK_FRASE_PRATICA='), html.indexOf('function renderCkInicio('))));
       check('v-14 · a versão carimbada é a desta entrega',
-        /const APP_VERSAO='2026-09-24-02';/.test(html));
+        /const APP_VERSAO='2026-09-24-03';/.test(html));
     }
 
     // ---- v-15: O PLANO SÓ GRAVA NO CONFIRMAR (caso Cookie/Yara, 15/set/2026) --------
@@ -15458,8 +15461,8 @@ async function main() {
           + 'AVISO_COLEIRA_APOS = __bkpC.apos;', ctx);
       }
     } else { check('v-17 · prevCfgCarregar existe', false, 'função não encontrada'); }
-    check('v-24 · a versão carimbada desta entrega é a 2026-09-24-02',
-      /const APP_VERSAO='2026-09-24-02';/.test(html));
+    check('v-24 · a versão carimbada desta entrega é a 2026-09-24-03',
+      /const APP_VERSAO='2026-09-24-03';/.test(html));
 
     // ───────── v-19 · o aparelho autorizado que não se perde no iPhone (16/set/2026)
     // Auditoria de 16/set: o iPhone da Leticya gerou DOIS ids em trinta segundos
@@ -15713,8 +15716,8 @@ async function main() {
       String((html.match(/linhaBuscaCadastro\(/g) || []).length));
     check('v-29 · a linha tem estilo próprio: menor, em var(--muted), e quebrando no celular',
       /table\.pel \.pel-busca-sub\{[^}]*font-size:11\.5px[^}]*color:var\(--muted\)[^}]*white-space:normal/.test(html));
-    check('v-29 · a versão carimbada desta entrega é a 2026-09-24-02',
-      /const APP_VERSAO='2026-09-24-02';/.test(html));
+    check('v-29 · a versão carimbada desta entrega é a 2026-09-24-03',
+      /const APP_VERSAO='2026-09-24-03';/.test(html));
   }
   console.log('');
 
@@ -16016,8 +16019,8 @@ async function main() {
         ctx.vermNumTexto(5) === '5' && ctx.vermNumTexto(0.3) === '0,3' && ctx.vermNumTexto(4.5) === '4,5',
         JSON.stringify([ctx.vermNumTexto(5), ctx.vermNumTexto(0.3)]));
     } else { check('v-30 · vermNumLer existe', false, 'função não encontrada'); }
-    check('v-30 · a versão carimbada desta entrega é a 2026-09-24-02',
-      /const APP_VERSAO='2026-09-24-02';/.test(html));
+    check('v-30 · a versão carimbada desta entrega é a 2026-09-24-03',
+      /const APP_VERSAO='2026-09-24-03';/.test(html));
   }
   console.log('');
 
@@ -16280,8 +16283,8 @@ async function main() {
       && html.indexOf('A frase pronta fala em &ldquo;vence&rdquo; — confira antes de mandar.') > 0
       && /if\(\(m\.itens\|\|\[\]\)\.some\(function\(x\)\{ return x\.atrasado; \}\)\)/.test(html));
 
-    check('v-31 · a versão carimbada desta entrega é a 2026-09-24-02',
-      /const APP_VERSAO='2026-09-24-02';/.test(html));
+    check('v-31 · a versão carimbada desta entrega é a 2026-09-24-03',
+      /const APP_VERSAO='2026-09-24-03';/.test(html));
   }
   // ===== v-32 · O CALENDÁRIO, A COBRANÇA E A RESPOSTA QUE LANÇA SOZINHA ============
   // Adriana, 21/set/2026, palavra por palavra:
@@ -16746,8 +16749,8 @@ async function main() {
       }
     } else { check('v-32 · vencResponderTipo e dashLancar existem', false, 'função não encontrada'); }
 
-    check('v-32 · a versão carimbada desta entrega é a 2026-09-24-02',
-      /const APP_VERSAO='2026-09-24-02';/.test(html));
+    check('v-32 · a versão carimbada desta entrega é a 2026-09-24-03',
+      /const APP_VERSAO='2026-09-24-03';/.test(html));
   }
   console.log('');
 
@@ -17158,8 +17161,8 @@ async function main() {
       && /DB\.ref\('daycare\/vagas-pedidos'\)\.on\('value'/.test(html)
       && /try\{ vagasPedCarregar\(\); \}catch\(e\)\{\}/.test(html));
 
-    check('v-33 · a versão carimbada desta entrega é a 2026-09-24-02',
-      /const APP_VERSAO='2026-09-24-02';/.test(html));
+    check('v-33 · a versão carimbada desta entrega é a 2026-09-24-03',
+      /const APP_VERSAO='2026-09-24-03';/.test(html));
   }
   console.log('');
 
@@ -17475,8 +17478,8 @@ async function main() {
       && /URL\.createObjectURL\(f\)/.test(html) && /URL\.revokeObjectURL\(url\)/.test(html)
       && /createImageBitmap\(f,\{resizeWidth:CK_FOTO_MAX, resizeQuality:'medium', imageOrientation:'from-image'\}\)/.test(html)
       && /if\(bmp && bmp\.close\) bmp\.close\(\)/.test(html));
-    check('v-34 · a versão carimbada desta entrega é a 2026-09-24-02',
-      /const APP_VERSAO='2026-09-24-02';/.test(html));
+    check('v-34 · a versão carimbada desta entrega é a 2026-09-24-03',
+      /const APP_VERSAO='2026-09-24-03';/.test(html));
   }
   console.log('');
 
@@ -17833,8 +17836,8 @@ async function main() {
       && /if\(\(prev\.motivo\|\|''\)!==\(it\.motivo\|\|''\)\) mud\.push\('para quê'\);/.test(html)
       && ctx.medDiffAcao({ nome: 'Enalapril', horarios: ['17:45'] },
                          { nome: 'Enalapril', horarios: ['17:45'], quando: { ref: 'jantar', rel: 'antes', min: 45 } }) === 'Alterou quando dar');
-    check('v-35 · a versão carimbada desta entrega é a 2026-09-24-02',
-      /const APP_VERSAO='2026-09-24-02';/.test(html));
+    check('v-35 · a versão carimbada desta entrega é a 2026-09-24-03',
+      /const APP_VERSAO='2026-09-24-03';/.test(html));
   }
   console.log('');
 
@@ -18086,8 +18089,8 @@ async function main() {
       && /delete rQ\.fim_anterior;/.test(html));
     check('v-36 · vigência que não é mais do meio do mês não herda o "para onde voltar"',
       /if\(!regMMConf\) delete novo\.fim_anterior;/.test(html));
-    check('v-36 · a versão carimbada desta entrega é a 2026-09-24-02',
-      /const APP_VERSAO='2026-09-24-02';/.test(html));
+    check('v-36 · a versão carimbada desta entrega é a 2026-09-24-03',
+      /const APP_VERSAO='2026-09-24-03';/.test(html));
   }
   console.log('');
 
@@ -18304,8 +18307,8 @@ async function main() {
         !/dcLancamentosNaoCasados[\s\S]{0,900}'avaliacao'/.test(html));
     } else { check('v-38 · dashForaDoCadastro existe', false, 'função não encontrada'); }
 
-    check('v-38 · a versão carimbada desta entrega é a 2026-09-24-02',
-      /const APP_VERSAO='2026-09-24-02';/.test(html));
+    check('v-38 · a versão carimbada desta entrega é a 2026-09-24-03',
+      /const APP_VERSAO='2026-09-24-03';/.test(html));
   }
   console.log('');
 
@@ -18678,8 +18681,8 @@ async function main() {
     check('v-39 · Recebimentos do mês continua somando o avulso pelo det.valor_cent — sem exceção para quem não tem ficha',
       html.indexOf("var o=lista[id]||{}, v=((o.det||{}).valor_cent);") > 0);
 
-    check('v-39 · a versão carimbada desta entrega é a 2026-09-24-02',
-      /const APP_VERSAO='2026-09-24-02';/.test(html));
+    check('v-39 · a versão carimbada desta entrega é a 2026-09-24-03',
+      /const APP_VERSAO='2026-09-24-03';/.test(html));
   }
   console.log('');
 
@@ -18926,8 +18929,8 @@ async function main() {
       }
     } else { check('v-40 · ocupantesDoDia existe', false, 'função não encontrada'); }
 
-    check('v-40 · a versão carimbada desta entrega é a 2026-09-24-02',
-      /const APP_VERSAO='2026-09-24-02';/.test(html));
+    check('v-40 · a versão carimbada desta entrega é a 2026-09-24-03',
+      /const APP_VERSAO='2026-09-24-03';/.test(html));
   }
   console.log('');
 
@@ -19375,8 +19378,8 @@ async function main() {
       }
     }
 
-    check('v-41 · a versão carimbada desta entrega é a 2026-09-24-02',
-      /const APP_VERSAO='2026-09-24-02';/.test(html));
+    check('v-41 · a versão carimbada desta entrega é a 2026-09-24-03',
+      /const APP_VERSAO='2026-09-24-03';/.test(html));
   }
   console.log('');
 
@@ -19579,8 +19582,8 @@ async function main() {
       } finally { Object.keys(bkp42).forEach((k) => { ctx[k] = bkp42[k]; }); }
     }
 
-    check('v-42 · a versão carimbada desta entrega é a 2026-09-24-02',
-      /const APP_VERSAO='2026-09-24-02';/.test(html));
+    check('v-42 · a versão carimbada desta entrega é a 2026-09-24-03',
+      /const APP_VERSAO='2026-09-24-03';/.test(html));
   }
   console.log('');
 
@@ -19901,8 +19904,284 @@ async function main() {
 
     vm.runInContext('pelCadCache = __bkp43cadG;', ctx);
 
-    check('v-43 · a versão carimbada desta entrega é a 2026-09-24-02',
-      /const APP_VERSAO='2026-09-24-02';/.test(html));
+    check('v-43 · a versão carimbada desta entrega é a 2026-09-24-03',
+      /const APP_VERSAO='2026-09-24-03';/.test(html));
+  }
+  console.log('');
+
+  // ===== v-44 · A CHAMADA VIVA E "HOJE NA CASA" ===================================
+  // Adriana, 24/set/2026: "Em turminhas daycare, não está aparecendo quem veio. Essa ficha
+  // precisa ser preenchida; quando faz o check-in do corpo automaticamente já pode preencher
+  // com quem veio. E preciso desse relatório de forma sucinta na Central Zêluz › Day Care:
+  // precisamos na recepção saber todo mundo que está hoje e que está com pendência de algo
+  // (carrapaticida, vermífugo, escova, vacinas)."
+  //
+  // O DIAGNÓSTICO, no banco real daquele dia: daycare/chamada/2026-09-24 tinha 34 chaves
+  // 'veio' e havia 34 check-ins do corpo. O banco estava CERTO — o check-in de entrada já
+  // gravava a presença sozinho. O que não acontecia era o REDESENHO: carregarChamada lia
+  // com once() e a tela ficava com a fotografia do instante em que foi aberta. Quem abriu
+  // às 7h50 via a turma inteira "PENDENTE — marque" o dia todo. É a lei de 28/ago em outra
+  // roupa: aviso que depende de reabrir a tela não é aviso.
+  //
+  // O que esta rodada trava:
+  //   1) a chamada do dia tem ouvinte VIVO e NINGUÉM mais a lê com once();
+  //   2) presença marcada DEPOIS de a tela abrir chega sozinha e redesenha;
+  //   3) o ouvinte do dia VELHO é desligado quando o dia vira;
+  //   4) o check-OUT não encosta na chamada — quem saiu continua tendo vindo;
+  //   5) a tela "Hoje na casa" existe no menu, no espelho do Time e na tabela PERM;
+  //   6) a lista põe quem tem pendência primeiro e o resto em ordem alfabética;
+  //   7) a linha traz vacina, vermífugo, carrapaticida, coleira e escova vencidos, o
+  //      remédio de uso contínuo e a pendência aberta;
+  //   8) os filtros e o contador do menu falam da MESMA lista.
+  console.log('v-44 · A chamada viva e "Hoje na casa" (24/set):');
+  {
+    // ---- (a) a chamada é VIVA, e ninguém mais a lê com once() ---------------------
+    check('v-44 · existe um ouvinte vivo do nó da chamada do DIA, com slot próprio',
+      /function chamadaVivaLigar\(\)\{/.test(html)
+      && /zMapaVivo\(p, '_chamada', function\(v\)\{/.test(html)
+      && /function chamadaNo\(dia\)\{ return 'daycare\/chamada\/'\+\(dia\|\|dcDataKey\(\)\); \}/.test(html));
+    check('v-44 · carregarChamada NÃO lê mais com once() — pega o MESMO retrato do vivo',
+      /function carregarChamada\(\)\{[\s\S]{0,900}zMapaUma\(chamadaNo\(\)\)/.test(html)
+      && !/DB\.ref\('daycare\/chamada\/'\+dcDataKey\(\)\)\.once\('value'\)\.then\(s=>/.test(html));
+    check('v-44 · quando o dia vira, o ouvinte do dia VELHO é desligado (nó de ontem não muda mais)',
+      /zMapaDesligar\(chamadaNo\(_chamadaVivaDia\), '_chamada'\)/.test(html)
+      && /function zMapaDesligar\(path, slot\)\{/.test(html)
+      && /if\(Object\.keys\(m\.slots\)\.length\) return false;/.test(html));
+    check('v-44 · o desligar guarda a referência do nó e do carimbo para poder chamar off()',
+      /m\.ref=r;/.test(html) && /m\.refCarimbo=rc;/.test(html)
+      && /if\(m\.ref&&typeof m\.ref\.off==='function'\) m\.ref\.off\(\)/.test(html));
+    check('v-44 · o cartão do FILHOt diz de ONDE veio a presença, com a hora do check-in',
+      /presente pelo check-in às /.test(html)
+      && /function chamadaHoraCheckin\(k, dia\)\{/.test(html)
+      && /const hCk=\(st==='veio'\)\?chamadaHoraCheckin\(k\):'';/.test(html));
+
+    // ---- (b) o check-OUT não encosta na chamada -----------------------------------
+    {
+      const ckSalvar44 = html.slice(html.indexOf('  function ckSalvar(){'),
+        html.indexOf('  function ckCarregarEntradaDoDia(){'));
+      const escritasChamada44 = (ckSalvar44.match(/DB\.ref\('daycare\/chamada\//g) || []).length;
+      check('v-44 · o check-in grava a presença numa linha SÓ, e ela é guardada por if(entrada)',
+        escritasChamada44 === 1
+        && /if\(entrada\) DB\.ref\('daycare\/chamada\/'\+dcDataKey\(\)\+'\/'\+k\)\.set\('veio'\)/.test(ckSalvar44),
+        'escritas na chamada dentro do ckSalvar: ' + escritasChamada44);
+      check('v-44 · o check-OUT não apaga o "veio": nenhum remove/set(null) na chamada em lugar nenhum',
+        !/daycare\/chamada\/[^)]*\)\.remove\(/.test(html)
+        && !/daycare\/chamada\/'\+dcDataKey\(\)\+'\/'\+k\)\.set\(null\)/.test(html));
+    }
+
+    // ---- (c) a tela nova: menu, espelho do Time e tabela PERM ---------------------
+    const fatiaV44 = (de, ate) => {
+      const i = html.indexOf('data-acc-toggle="' + de + '"');
+      const j = html.indexOf('data-acc-toggle="' + ate + '"');
+      return (i < 0 || j < 0) ? '' : html.slice(i, j);
+    };
+    const doDayCare44 = fatiaV44('c-daycare', 'operacao');
+    check('v-44 · o item "Hoje na casa" existe em Central Zêluz › Day Care',
+      /<a data-v="hoje"[^>]*>[\s\S]{0,320}?<span>Hoje na casa<\/span>/.test(doDayCare44),
+      doDayCare44.slice(0, 160));
+    check('v-44 · ele é o PRIMEIRO do bloco — a pergunta que a recepção faz antes de tudo',
+      doDayCare44.indexOf('data-v="hoje"') > 0
+      && doDayCare44.indexOf('data-v="hoje"') < doDayCare44.indexOf('data-v="dashdc"'));
+    check('v-44 · nasce escondido e quem o revela é a tabela PERM — nenhuma classe so-* nova',
+      /<a data-v="hoje" style="display:none"/.test(html)
+      && html.indexOf("['hoje','hoje-na-casa']") > 0);
+    check('v-44 · a tabela PERM_MENU continua terminando no Dashboard da Adriana',
+      html.indexOf("['painel-diretoria','painel-diretoria']];") > 0);
+    check('v-44 · quem vê: Central Zêluz, Supervisão, Gestão e Diretoria — o monitor não',
+      ['consultora', 'supervisor', 'gestao', 'diretoria'].every((r) => ctx.podePapel('hoje-na-casa', r) === true)
+      && ['monitor', 'plantonista', 'aprendiz', 'vet', 'conferencia', 'tutor', ''].every((r) => ctx.podePapel('hoje-na-casa', r) === false));
+    vm.runInContext('__nav44 = NAV_PAGINAS_ALL;', ctx);
+    const doGrupo44 = (ctx.__nav44 || []).find((g) => g.grp === 'Central Zêluz · Day Care');
+    check('v-44 · a tela do Time também a concede, no MESMO grupo e com o MESMO rótulo',
+      !!doGrupo44 && doGrupo44.itens.some((i) => i.k === 'hoje' && i.t === 'Hoje na casa'),
+      JSON.stringify(doGrupo44 && doGrupo44.itens));
+    check('v-44 · o titles{} dá nome e dica à tela (senão o cabeçalho abre vazio)',
+      /hoje:\['Hoje na casa'/.test(html));
+    check('v-44 · a tela existe e o gancho de abrir está na lista ÚNICA (aoAbrirView)',
+      html.indexOf('<section class="view" id="v-hoje">') > 0
+      && /if\(v==='hoje'\)\{ if\(typeof hojeAbrir==='function'\) hojeAbrir\(\); \}/.test(html));
+    check('v-44 · o contador do menu não espera ninguém abrir a tela: desce na ENTRADA',
+      /podePapel\('hoje-na-casa'\)\) hojeGarantir\(\)/.test(html)
+      && /function hojeAtualizarBadge\(\)\{/.test(html)
+      && /<span id="navHojeN"/.test(html));
+    check('v-44 · quem não pode ver lê o PORQUÊ — nunca uma tela em branco',
+      /if\(typeof podePapel==='function' && !podePapel\('hoje-na-casa'\)\)\{/.test(html)
+      && html.indexOf('Esta tela é da Central Zêluz</h2>') > 0);
+    check('v-44 · o Excel sai da MESMA lista da tela — sem leitura nova e sem segunda verdade',
+      /function relHojeNaCasa\(\)\{[\s\S]{0,400}L=hojeLista\(\);/.test(html)
+      && html.indexOf("fn:'relHojeNaCasa()'") > 0);
+
+    // ---- (d) o ouvinte redesenha: a presença marcada DEPOIS aparece ---------------
+    if (typeof ctx.chamadaVivaLigar === 'function') {
+      const v44 = { pintou: [], slots: {}, desligados: [] };
+      ctx.__v44 = v44;
+      vm.runInContext(
+        '__bkp44a = { DB: DB, mv: zMapaVivo, md: zMapaDesligar, dk: dcDataKey, cham: dcChamada,'
+        + '  rd: renderDaycare, hr: hojeRedesenhar, hb: hojeAtualizarBadge, ativ: dcAtiv, vdia: _chamadaVivaDia };'
+        + 'DB = { ref: function(){ return { on: function(){}, off: function(){},'
+        + '  once: function(){ return Promise.resolve({ val: function(){ return null; } }); } }; } };'
+        + "dcDataKey = function(){ return '2026-09-24'; };"
+        + 'dcAtiv = "chamada"; _chamadaVivaDia = ""; dcChamada = {};'
+        + 'zMapaVivo = function(p, slot, cb){ __v44.slots[p + "|" + slot] = cb; return { mapa: {} }; };'
+        + 'zMapaDesligar = function(p, slot){ __v44.desligados.push(p + "|" + slot); return true; };'
+        + 'renderDaycare = function(){ __v44.pintou.push("chamada"); };'
+        + 'hojeRedesenhar = function(){ __v44.pintou.push("hoje"); };'
+        + 'hojeAtualizarBadge = function(){ __v44.pintou.push("badge"); };', ctx);
+      try {
+        ctx.chamadaVivaLigar();
+        const cb = v44.slots['daycare/chamada/2026-09-24|_chamada'];
+        check('v-44 · ligar a chamada registra o ouvinte no nó do DIA, com o slot _chamada',
+          typeof cb === 'function', JSON.stringify(Object.keys(v44.slots)));
+        // Ninguém tinha vindo quando a tela abriu; a Cookie chega depois.
+        if (typeof cb === 'function') {
+          cb({ simba__thais: 'veio', cookie__ana: 'veio' });
+          vm.runInContext('__v44cham = dcChamada;', ctx);
+          check('v-44 · presença marcada DEPOIS de a tela abrir entra na chamada em memória',
+            !!(ctx.__v44cham && ctx.__v44cham.cookie__ana === 'veio'),
+            JSON.stringify(ctx.__v44cham));
+          check('v-44 · e a tela se REDESENHA sozinha — a Chamada, o "Hoje na casa" e o contador',
+            v44.pintou.indexOf('chamada') >= 0 && v44.pintou.indexOf('hoje') >= 0
+            && v44.pintou.indexOf('badge') >= 0, JSON.stringify(v44.pintou));
+        }
+        // O dia vira: o ouvinte de ontem é desligado antes de o de hoje subir.
+        vm.runInContext("dcDataKey = function(){ return '2026-09-25'; };", ctx);
+        ctx.chamadaVivaLigar();
+        check('v-44 · na virada do dia, o ouvinte do dia VELHO é desligado',
+          v44.desligados.indexOf('daycare/chamada/2026-09-24|_chamada') >= 0,
+          JSON.stringify(v44.desligados));
+        check('v-44 · e o do dia NOVO sobe no lugar',
+          typeof v44.slots['daycare/chamada/2026-09-25|_chamada'] === 'function',
+          JSON.stringify(Object.keys(v44.slots)));
+      } finally {
+        vm.runInContext('DB = __bkp44a.DB; zMapaVivo = __bkp44a.mv; zMapaDesligar = __bkp44a.md;'
+          + 'dcDataKey = __bkp44a.dk; dcChamada = __bkp44a.cham; renderDaycare = __bkp44a.rd;'
+          + 'hojeRedesenhar = __bkp44a.hr; hojeAtualizarBadge = __bkp44a.hb; dcAtiv = __bkp44a.ativ;'
+          + '_chamadaVivaDia = __bkp44a.vdia;', ctx);
+      }
+    } else { check('v-44 · chamadaVivaLigar existe', false, 'função ausente'); }
+
+    // ---- (e) a lista de "Hoje na casa", com dado de verdade -----------------------
+    if (typeof ctx.hojeLista === 'function') {
+      vm.runInContext('__hojeDia44 = HOJE_DIA;', ctx);
+      const DIA44 = ctx.__hojeDia44;
+      vm.runInContext(
+        '__bkp44b = { pel: PELUDINHOS, cad: pelCadCache, hoje: zHojeISO, dk: dcDataKey,'
+        + '  mapas: Z_MAPAS, pend: PEND_ABERTAS, vp: VENC_PEND, med: MED_AGENDA_GERAL,'
+        + '  cham: dcChamada, av: dcAvulsos, turma: DC_DASH_TURMA, plan: planDia,'
+        + '  est: CF_ESTADIAS, filtro: HOJE_FILTRO, cfg: VENC_CFG };'
+        + "zHojeISO = function(){ return '2026-09-24'; };"
+        + "dcDataKey = function(){ return '2026-09-24'; };"
+        // Simba deve tudo · Batata só o carrapaticida · Amora está limpa · Zeus faltou.
+        + 'PELUDINHOS = ['
+        + "  { n:'Simba', raca:'Spitz', tutor:'Thais', dias:['" + DIA44 + "'] },"
+        + "  { n:'Batata', raca:'SRD', tutor:'Roberta', dias:['" + DIA44 + "'] },"
+        + "  { n:'Amora', raca:'Shih Tzu', tutor:'Lucia', dias:['" + DIA44 + "'] },"
+        + "  { n:'Zeus', raca:'Pastor', tutor:'Paulo', dias:['" + DIA44 + "'] } ];"
+        + 'pelCadCache = {'
+        + "  'simba__thais': { dias:['" + DIA44 + "'], tutor:'Thais',"
+        + "    vac_raiva_p:'2026-03-24', verm_p:'2026-08-20', ecto_p:'2026-09-01',"
+        + "    col_p:'2026-09-10', col_nome:'Seresto', escova_p:'2026-09-05' },"
+        + "  'batata__roberta': { dias:['" + DIA44 + "'], tutor:'Roberta', ecto_p:'2026-09-15' },"
+        + "  'amora__lucia': { dias:['" + DIA44 + "'], tutor:'Lucia' },"
+        + "  'zeus__paulo': { dias:['" + DIA44 + "'], tutor:'Paulo', verm_p:'2026-01-01' } };"
+        + 'Z_MAPAS = {};'
+        + "Z_MAPAS['daycare/chamada/2026-09-24'] = { mapa: { simba__thais:'veio',"
+        + "  amora__lucia:'veio', zeus__paulo:'faltou' } };"
+        + "Z_MAPAS['daycare/checkin-corpo/2026-09-24'] = { mapa: {"
+        + "  batata__roberta: { tipo:'entrada', hora:'07:52', nome:'Batata' },"
+        + "  simba__thais: { tipo:'entrada', hora:'08:10', nome:'Simba' } } };"
+        + "PEND_ABERTAS = { simba__thais: { vermifugo: { status:'aberta', dia:'2026-09-18',"
+        + "  valor:'Vermífugo', nome:'Simba' } } };"
+        + 'VENC_PEND = {};'
+        + "MED_AGENDA_GERAL = { 'simba__thais': { nome:'Simba', tutor:'Thais',"
+        + "  itens: { a1: { nome:'Enalapril', q:'1', u:'comprimido', continuo:true, horarios:['07:30'] } } } };"
+        + 'dcChamada = {}; dcAvulsos = [];'
+        + "DC_DASH_TURMA = { reposicao: [], avulso: [], quando: 0, dia: '' };"
+        + "planDia = { banho:[], avulso:[], reposicao:[], adaptacao:[], faltas:[], duvidas:[], lida:false, erro:'' };"
+        + "CF_ESTADIAS = {}; VENC_CFG = {}; HOJE_FILTRO = 'todos';", ctx);
+      try {
+        const L = ctx.hojeLista();
+        const nomes = L.map((o) => o.nome);
+        check('v-44 · está na casa quem a chamada diz "veio" E quem passou pelo check-in do corpo',
+          nomes.indexOf('Simba') >= 0 && nomes.indexOf('Batata') >= 0 && nomes.indexOf('Amora') >= 0,
+          JSON.stringify(nomes));
+        check('v-44 · quem a chamada diz que FALTOU não entra na casa, nem por engano',
+          nomes.indexOf('Zeus') < 0, JSON.stringify(nomes));
+        check('v-44 · quem tem pendência vem PRIMEIRO; o resto, em ordem alfabética',
+          JSON.stringify(nomes) === JSON.stringify(['Batata', 'Simba', 'Amora']),
+          JSON.stringify(nomes));
+        const simba = L.filter((o) => o.nome === 'Simba')[0] || {};
+        const batata = L.filter((o) => o.nome === 'Batata')[0] || {};
+        const amora = L.filter((o) => o.nome === 'Amora')[0] || {};
+        check('v-44 · a presença diz de ONDE veio: check-in com a hora, chamada sem ela',
+          ctx.hojeFrasePresenca(batata) === 'presente pelo check-in às 07:52'
+          && ctx.hojeFrasePresenca(amora) === 'presente',
+          ctx.hojeFrasePresenca(batata) + ' | ' + ctx.hojeFrasePresenca(amora));
+        const ks = (simba.itens || []).map((x) => x.k).sort();
+        check('v-44 · a linha traz os CINCO que ela nomeou: vacina, vermífugo, carrapaticida, coleira e escova',
+          JSON.stringify(ks) === JSON.stringify(['col_p', 'ecto_p', 'escova_p', 'vac_raiva_p', 'verm_p']),
+          JSON.stringify(ks));
+        check('v-44 · quem não deve nada entra na lista sem nenhum alerta',
+          amora.pesa === 0 && (amora.itens || []).length === 0);
+        check('v-44 · o remédio de uso contínuo aparece, e só para quem toma',
+          simba.remedio === true && batata.remedio === false && amora.remedio === false);
+        check('v-44 · a pendência ABERTA da última vinda entra na linha, com o dia',
+          (simba.pend || []).length === 1 && simba.pend[0].dia === '2026-09-18',
+          JSON.stringify(simba.pend));
+        const linha = ctx.hojeLinhaTexto(simba, '2026-09-24');
+        check('v-44 · a linha em texto puro sai na frase dela: nome/raça · tutor · ⚠ o que venceu · 💊 · pendência',
+          linha.indexOf('Simba/Spitz') === 0
+          && linha.indexOf('tutor Thais') > 0
+          && linha.indexOf('⚠ vacina antirrábica venceu 24/03') > 0
+          && linha.indexOf('⚠ vermífugo venceu 20/08') > 0
+          && linha.indexOf('💊 toma remédio') > 0
+          && linha.indexOf('pendência: ') > 0
+          && linha.indexOf('de 18/09') > 0,
+          linha);
+        // ---- os filtros ----
+        const so = (f) => ctx.hojeFiltrada(L, f).map((o) => o.nome);
+        check('v-44 · filtro "Todos" mostra a casa inteira',
+          JSON.stringify(so('todos')) === JSON.stringify(['Batata', 'Simba', 'Amora']));
+        check('v-44 · filtro "Só com pendência" tira quem não deve nada',
+          JSON.stringify(so('pend')) === JSON.stringify(['Batata', 'Simba']), JSON.stringify(so('pend')));
+        check('v-44 · filtro Vacina, Vermífugo, Coleira e Escova pegam só o Simba',
+          JSON.stringify(so('vacina')) === JSON.stringify(['Simba'])
+          && JSON.stringify(so('verm')) === JSON.stringify(['Simba'])
+          && JSON.stringify(so('col')) === JSON.stringify(['Simba'])
+          && JSON.stringify(so('escova')) === JSON.stringify(['Simba']),
+          JSON.stringify([so('vacina'), so('verm'), so('col'), so('escova')]));
+        check('v-44 · filtro Carrapaticida pega os dois que estão devendo pipeta',
+          JSON.stringify(so('ecto')) === JSON.stringify(['Batata', 'Simba']), JSON.stringify(so('ecto')));
+        // ---- o contador do menu ----
+        const c = ctx.hojeContagem();
+        check('v-44 · a conta do menu e a da tela são a MESMA: 3 presentes, 2 com pendência',
+          !!c && c.total === 3 && c.comPendencia === 2, JSON.stringify(c));
+        const bkpGeb44 = ctx.document.getElementById;
+        const span44 = { textContent: '' };
+        try {
+          ctx.document.getElementById = function (id) { return String(id) === 'navHojeN' ? span44 : null; };
+          ctx.hojeAtualizarBadge();
+        } finally { ctx.document.getElementById = bkpGeb44; }
+        check('v-44 · o contador ao lado do item do menu é o de PRESENTES COM PENDÊNCIA',
+          span44.textContent === '(2)', span44.textContent);
+        // ---- o texto do WhatsApp: cabeçalho com os dois números ----
+        const txt = ctx.hojeTexto();
+        check('v-44 · "Copiar lista" leva o cabeçalho com os dois números e uma linha por FILHOt',
+          txt.indexOf('3 presentes · 2 com pendência') > 0
+          && txt.split('\n').filter((l) => l.indexOf(' · tutor ') > 0).length === 3,
+          txt.slice(0, 160));
+      } finally {
+        vm.runInContext('pelCadCache = __bkp44b.cad; zHojeISO = __bkp44b.hoje; dcDataKey = __bkp44b.dk;'
+          + 'Z_MAPAS = __bkp44b.mapas; PEND_ABERTAS = __bkp44b.pend; VENC_PEND = __bkp44b.vp;'
+          + 'MED_AGENDA_GERAL = __bkp44b.med; dcChamada = __bkp44b.cham; dcAvulsos = __bkp44b.av;'
+          + 'DC_DASH_TURMA = __bkp44b.turma; planDia = __bkp44b.plan; CF_ESTADIAS = __bkp44b.est;'
+          + 'HOJE_FILTRO = __bkp44b.filtro; VENC_CFG = __bkp44b.cfg;'
+          + 'PELUDINHOS.length = 0; Array.prototype.push.apply(PELUDINHOS, __bkp44b.pel);', ctx);
+      }
+    } else { check('v-44 · hojeLista existe', false, 'função ausente'); }
+
+    check('v-44 · a versão carimbada desta entrega é a 2026-09-24-03',
+      /const APP_VERSAO='2026-09-24-03';/.test(html));
   }
   console.log('');
 

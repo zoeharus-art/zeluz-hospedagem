@@ -1,6 +1,75 @@
-# Índice do app — menu aprovado pela Adriana (reorganizado em 08/set/2026, ajustado em 15, 17, 18, 19 e 21/set/2026)
+# Índice do app — menu aprovado pela Adriana (reorganizado em 08/set/2026, ajustado em 15, 17, 18, 19, 21 e 24/set/2026)
 
 > Regra: o app tem de ser autoexplicativo, para treinamento rápido. Cada item tem **Título** e **subtítulo** (a explicação curta que aparece como dica no menu e no índice da Gestão no computador). Nomes são decisão da Adriana.
+
+## O que mudou em 24/set/2026 (v 2026-09-24-03)
+
+Adriana, em 24/set/2026:
+
+> "Em turminhas daycare, não está aparecendo quem veio. Essa ficha precisa ser preenchida; quando faz o check-in do corpo automaticamente já pode preencher com quem veio. E preciso desse relatório de forma sucinta na Central Zêluz › Day Care: precisamos na recepção saber todo mundo que está hoje e que está com pendência de algo (carrapaticida, vermífugo, escova, vacinas)."
+
+### O diagnóstico: o banco estava certo, a tela é que não se redesenhava
+
+No banco daquele dia, `daycare/chamada/2026-09-24` tinha **34 chaves `veio`** e havia **34 check-ins do corpo**. O check-in de **entrada** já grava a presença sozinho desde sempre. O que não acontecia era o **redesenho**: `carregarChamada` lia o nó com `once('value')` e a tela ficava com a fotografia do instante em que foi aberta. Quem abriu a Chamada às 7h50 via a turma inteira como *"PENDENTE — marque"* o dia todo, mesmo com todo mundo já dentro da casa.
+
+É a lei de 28/ago em outra roupa: **aviso que depende de reabrir a tela não é aviso**.
+
+### A Chamada ficou viva
+
+| O quê | Como |
+|---|---|
+| O nó do dia | `daycare/chamada/{dia}` passou a ter **ouvinte vivo** (`chamadaVivaLigar`, pelo `zMapaVivo` — o mesmo mecanismo econômico do check-in do corpo): desce **uma vez**, e cada marcação nova chega como delta |
+| Quem se redesenha | a Chamada, o Check-in do corpo, a tela **Hoje na casa** e o contador do menu — todos no mesmo lugar, a partir da mesma fonte |
+| Quando o dia vira | o ouvinte do dia **velho** é desligado (`zMapaDesligar`): nó de ontem escutando é download que ninguém lê |
+| Segundo download | nenhum — `carregarChamada` e `carregarCheckin` agora pedem `zMapaUma(chamadaNo())`, servido do mesmo retrato |
+| Na linha do FILHOt | o cartão verde diz de **onde** veio a presença: *"presente pelo check-in às 07:52"* (a hora sai do nó do check-in do corpo do dia, que a tela do Check-in já mantém vivo) ou apenas *"presente"* |
+| O check-**out** | continua **sem encostar** na chamada. A gravação é guardada por `if(entrada)`, e agora com comentário de lei: quem sai continua tendo vindo |
+
+### Tela nova: **Hoje na casa**
+
+| Onde fica | Central Zêluz › Day Care, **primeiro item do bloco** |
+|---|---|
+| `data-v` | `hoje` |
+| Quem vê | Central Zêluz (consultora), Supervisão, Gestão e Diretoria — pela capacidade `hoje-na-casa` na tabela `PERM`, revelada por `aplicarPermMenu()`. O monitor **não** vê: a lista dele é a Chamada, com o FILHOt na frente. |
+| Também é concedível | sim — entrou em `NAV_PAGINAS_ALL` (tela do Time), com o **mesmo rótulo** do sidebar |
+| Onde os dados moram | em lugar nenhum novo: a tela **junta** o que já existe (ver a tabela abaixo) |
+
+**Por que ela fura a ordem alfabética do bloco.** É a pergunta que a recepção faz primeiro todo dia — quem está aqui agora. Tudo o mais do Day Care se resolve depois de saber isso.
+
+**De onde vem cada pedaço** (nenhuma fonte nova, e nenhum download novo):
+
+| O pedaço | A fonte |
+|---|---|
+| Quem está na casa | a chamada do dia (ouvinte vivo) + o check-in do corpo do dia + a estadia ativa da AuAulândia + os moradores da casa — tudo por `turmaDeHoje()`, já deduplicado |
+| O que venceu | `vencItensDe(ficha, hoje, 0, hoje)` sobre `PREV_ITENS` — a **mesma** regra do *Vence amanhã* |
+| Remédio contínuo | `medLinhaDoPel(ficha)` — a mesma linha de toda tela |
+| Pendência aberta | `daycare/pendencias/{chave}` (`PEND_ABERTAS`, v-19-05) |
+| Resposta que o tutor não deu | `daycare/vencimentos` dos últimos dias (`VENC_PEND`, v-21-01) |
+
+**Quem está na casa — quatro respostas, e a primeira que responder manda:**
+
+1. a chamada diz `faltou` → **não** está (é a palavra de quem marcou, e ela vence tudo);
+2. tem check-in do corpo de **entrada** hoje → está, e com a hora em que entrou;
+3. a chamada diz `veio` → está (alguém marcou no dedo, sem passar pelo check-in);
+4. hóspede com estadia ativa, ou morador da casa → está: ele dorme aqui e não depende de ninguém marcar chamada.
+
+**A folga é ZERO aqui.** No *Vence amanhã* a folga (padrão 7 dias) existe para a consultora avisar **antes**. Nesta tela a pergunta é outra — *quem está com pendência agora* — e item que só vence daqui a seis dias, numa lista lida em pé no balcão, é ruído. Ruído esconde o que é urgente. Quem quer o de amanhã abre a tela de amanhã.
+
+**A linha**, na frase que ela ditou:
+
+```
+Simba/Spitz · tutor Thais · ⚠ vacina antirrábica venceu 24/03 · ⚠ vermífugo venceu 20/08 · 💊 toma remédio · pendência: vermífugo de 18/09
+```
+
+**O cabeçalho** traz os dois números — *"20 presentes · 13 com pendência"* — e é a **mesma conta** do contador que aparece ao lado do item no menu (`navHojeN` = presentes **com pendência**). O contador desce na **entrada**, junto com os das Pendências de prevenção e do Vence amanhã: quem entra às 8h vê na primeira tela quantos FILHOts já estão na casa devendo alguma coisa.
+
+**A ordem:** quem tem pendência vem **primeiro**; dentro de cada grupo, ordem alfabética. É a ordem em que a recepção trabalha.
+
+**Os filtros**, em botão, cada um com a sua contagem: Todos · Só com pendência · Vacina · Vermífugo · Carrapaticida · Coleira · Escova.
+
+**Sai da tela:** **Copiar lista** (texto puro, uma linha por FILHOt, pronto para o WhatsApp — com queda para um campo já selecionado quando o navegador não tem área de transferência) e **Baixar Excel**, que também virou relatório na Central de Relatórios (`relHojeNaCasa`). Os três — tela, texto e Excel — saem da **mesma** lista e das **mesmas** frases: duas escritas da mesma linha viram duas verdades.
+
+---
 
 ## O que mudou em 21/set/2026 (v 2026-09-21-01)
 
@@ -410,7 +479,8 @@ Nunca um filho maior que o pai. Abre só o caminho da tela ativa. A pendência s
 | | *(chamada, almoço, EA e as demais atividades)* | Vivem no `#dcSubnav`, dentro do `#blocoDaycare`. | so-day |
 | **Central Zêluz › Peludinhos** | Cadastro de Peludinhos (`ficha`) | Um cadastro só, para Day Care e AuAulândia — tudo começa aqui. | so-gestao (+ destaque) |
 | | Buscar peludinho *(sem `data-v`)* | Achar um peludinho depressa e abrir a ficha dele. Abre a MESMA tela do Cadastro, já no campo de busca. | so-gestao (espelha o Cadastro) |
-| **Central Zêluz › Day Care** | Lançamentos do dia (`dashdc`) | A planilha do Day Care, item por item. | so-recepcao |
+| **Central Zêluz › Day Care** | Hoje na casa (`hoje`) | Quem está na casa hoje e quem está com pendência: vacina, vermífugo, carrapaticida, coleira e escova. | `PERM` `hoje-na-casa` (consultora · supervisão · gestão · diretoria) |
+| | Lançamentos do dia (`dashdc`) | A planilha do Day Care, item por item. | so-recepcao |
 | | Pendências de prevenção (`pendencias`) | O que ficou para a próxima vinda: vermífugo, carrapaticida, coleira, medicação e hidratação de quem não veio. | `PERM` `pendencias-prevencao` (consultora · supervisão · gestão · diretoria) |
 | | Peso (`peso`) | Pesar qualquer FILHOt: recepção, veterinária e gestão. | so-pesa |
 | | Pesquisa com a Família Multiespécie (`alergia`) | A pesquisa com a família: enviar, colar a resposta, e ela vira ficha sozinha. | so-gestao |

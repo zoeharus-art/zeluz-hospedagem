@@ -1066,7 +1066,9 @@
   .dc-ribbon.pend{background:rgba(222,180,40,.22);color:var(--crm-atencao-text)}
   .dc-ribbon.veio{background:var(--crm-ok);color:#fff}
   .dc-ribbon.faltou{background:var(--crm-critico);color:#fff}
-  .dc-card.veio{border-color:var(--crm-ok);box-shadow:0 0 0 2px rgba(39,174,96,.32)}
+  /* De onde veio a presença: do check-in do corpo (com a hora) ou do dedo de alguém. */
+  .dc-veio-fonte{position:absolute;top:27px;left:0;right:0;text-align:center;font-size:10.5px;font-weight:700;color:var(--crm-ok);padding:0 6px}
+  .dc-card.veio{border-color:var(--crm-ok);box-shadow:0 0 0 2px rgba(39,174,96,.32);padding-top:49px}
   .dc-card.faltou{border-color:var(--crm-critico);box-shadow:0 0 0 2px rgba(192,57,43,.32);opacity:.88}
   /* .dc-card: tarja de restrição agora é banda no fluxo (abaixo da foto) — sem override de posição */
   .dc-actions{display:flex;gap:6px;margin-top:11px}
@@ -2694,6 +2696,17 @@
                Prevenção, Peso e Pesquisa vieram de Peludinhos nesta data — "no sidebar,
                Prevenção, Peso e Pesquisa têm que estar dentro de Daycare". Nenhum deles
                mudou de classe so-*: mudou de gaveta, nunca de acesso. -->
+          <!-- HOJE NA CASA (Adriana, 24/set/2026) — "preciso desse relatório de forma
+               sucinta na Central Zêluz › Day Care: precisamos na recepção saber todo mundo
+               que está hoje e que está com pendência de algo (carrapaticida, vermífugo,
+               escova, vacinas)."
+               É o PRIMEIRO item do bloco de propósito, furando a ordem alfabética: é a
+               pergunta que a recepção faz primeiro todo dia — quem está aqui agora. Tudo o
+               mais do Day Care se resolve depois de saber isso.
+               Nasce escondido e quem o revela é aplicarPermMenu() (tabela PERM) — permissão
+               num lugar só. O contador entra em <span> COM atributos de propósito: o rótulo
+               do item é o último <span> puro, e é por ele que a tela do Time se espelha. -->
+          <a data-v="hoje" style="display:none" title="Quem está na casa hoje e quem está com pendência: vacina, vermífugo, carrapaticida, coleira e escova."><span data-icon="paw"></span><span>Hoje na casa</span><span id="navHojeN" style="margin-left:6px;font-weight:800;color:var(--crm-critico)"></span></a>
           <!-- Adriana, 19/ago/2026: é aqui que a recepção lança o que hoje digita na
                planilha — e a planilha vira só o espelho que alimenta a TV. -->
           <a data-v="dashdc" class="so-recepcao" title="A planilha do Day Care, item por item."><span data-icon="list-check"></span><span>Lançamentos do dia</span></a>
@@ -4203,6 +4216,17 @@
        A tela é a VÉSPERA: a mensagem já pronta para copiar, a resposta do tutor em
        botão, o lançamento já no dia certo (mesma porta dos Lançamentos do dia) e a
        pergunta que fecha o assunto. Nada grava antes de um toque explícito. -->
+  <!-- ===== HOJE NA CASA (Adriana, 24/set/2026) ====================================
+       "Preciso desse relatório de forma sucinta na Central Zêluz › Day Care: precisamos
+        na recepção saber todo mundo que está hoje e que está com pendência de algo
+        (carrapaticida, vermífugo, escova, vacinas)."
+       Uma linha por FILHOt que está na casa AGORA — a chamada de hoje (viva), quem passou
+       pelo check-in do corpo, os hóspedes da AuAulândia e os moradores. Quem tem pendência
+       vem primeiro; o resto, em ordem alfabética. -->
+  <section class="view" id="v-hoje">
+    <div class="role-note"><span data-icon="paw"></span><span><strong>Quem está na casa hoje.</strong> Uma linha por FILHOt, com o que está vencido — vacina, vermífugo, carrapaticida, coleira e troca de escova —, quem toma remédio de uso contínuo e o que ficou pendente da última vinda. <strong>Quem tem pendência vem primeiro.</strong> A lista se atualiza sozinha conforme a chamada e o check-in acontecem.</span></div>
+    <div id="hojeRoot"><div class="card"><div class="hint">Montando a lista de quem está na casa&hellip;</div></div></div>
+  </section>
   <section class="view" id="v-vencimentos">
     <div class="role-note"><span data-icon="alert"></span><span><strong>Mande hoje, para quem vem amanhã.</strong> Vacina, carrapaticida, coleira, vermífugo e troca de escova que vencem para a turma do próximo dia de Day Care. A mensagem para o tutor já sai pronta — copie, mande no WhatsApp e <strong>registre aqui o que ele respondeu</strong>. O cartão só fecha quando a ficha estiver atualizada.</span></div>
     <div id="vencRoot"><div class="card"><div class="hint">Carregando os vencimentos do próximo dia…</div></div></div>
@@ -5313,6 +5337,7 @@
     daycare:['Day Care','Chamada, almoço, atividades, EA.'],hospedagem:['Plantão da noite','O relatório de cada hóspede, turno a turno.'],
     gestdia:['Conferência do dia','Medicações por horário, problemas e os três tempos do plantão.'],
     aulunos:['Aulunos','A turma do dia.'],dashdc:['Lançamentos do dia','A planilha do Day Care, item por item.'],
+    hoje:['Hoje na casa','Quem está na casa agora e quem está com pendência.'],
     pendencias:['Pendências de prevenção','O que ficou para a próxima vinda de quem não veio.'],
     vencimentos:['Vence amanhã','Mande hoje a mensagem de quem vem no próximo dia com prevenção vencendo.'],vacinas:['Prevenção','Vacina, vermífugo, coleira e exame de fezes: quem está atrasado e quem está para vencer.'],
     cuidadovet:['Cuidado Vet','Alterações no corpo que a veterinária precisa ver.'],
@@ -5424,6 +5449,7 @@
     if(v==='dashdc'){ if(typeof dashCarregar==='function') dashCarregar(); }
     if(v==='pendencias'){ if(typeof pendAbrir==='function') pendAbrir(); }
     if(v==='vencimentos'){ if(typeof vencAbrir==='function') vencAbrir(); }
+    if(v==='hoje'){ if(typeof hojeAbrir==='function') hojeAbrir(); }
     const pn=document.getElementById('pSubnav'); if(pn) pn.style.display=(v==='pessoas')?'block':'none';
     if(v==='pessoas'){ if(typeof montarPSubnav==='function') montarPSubnav(); if(typeof abrirPessoas==='function') abrirPessoas('ativ'); return 'parar'; }
     if(v==='painel'){ if(typeof carregarPainel==='function') carregarPainel(); }
@@ -5543,7 +5569,15 @@
     //  as Consultoras de Bem-Estar — e com elas a Supervisão, a Gestão e a Diretoria. O
     //  MESMO grupo das Pendências de prevenção: quem fala com o tutor é quem cobra a
     //  prevenção. O monitor não entra — ele está com o FILHOt, não no WhatsApp.
-    'vencimentos-amanha':       ['consultora','supervisor','gestao','diretoria']
+    'vencimentos-amanha':       ['consultora','supervisor','gestao','diretoria'],
+    // ===== v 2026-09-24-03 — Hoje na casa ===========================================
+    // "Precisamos na recepção saber todo mundo que está hoje e que está com pendência de
+    //  algo (carrapaticida, vermífugo, escova, vacinas)" (Adriana, 24/set/2026). A recepção
+    //  são as Consultoras de Bem-Estar — e com elas a Supervisão, a Gestão e a Diretoria. O
+    //  MESMO grupo dos Lançamentos do dia, das Pendências de prevenção e do Vence amanhã:
+    //  quem fala com o tutor é quem cobra a prevenção. O monitor não entra — a lista dele
+    //  é a Chamada, com o FILHOt na frente, e não o balcão.
+    'hoje-na-casa':             ['consultora','supervisor','gestao','diretoria']
   };
   // O papel de quem está no corpo, com a régua do ehDiretoriaRole: role 'diretoria' vale
   // por si; 'gestao' com souAdriana (a senha fixa da Adriana) É a Diretoria. A promoção
@@ -5571,7 +5605,7 @@
   // Nenhum dos dois entra em NAV_PAGINAS_ALL de propósito: "Meu Painel" é a fatia da
   // própria pessoa (não se concede a ninguém, é dela), e a escala é ajuste da Gestão —
   // mesma razão pela qual "Senhas" e "Configurações" também ficam fora daquela lista.
-  const PERM_MENU=[['painelmeu','painel-monitor'],['paineloperacao','painel-operacao'],['planodia','definir-plano-do-dia'],['consultoras','painel-consultoras'],['painel-amanda','painel-amanda'],['pendencias','pendencias-prevencao'],['vencimentos','vencimentos-amanha'],['painel-diretoria','painel-diretoria']];
+  const PERM_MENU=[['painelmeu','painel-monitor'],['paineloperacao','painel-operacao'],['planodia','definir-plano-do-dia'],['consultoras','painel-consultoras'],['painel-amanda','painel-amanda'],['pendencias','pendencias-prevencao'],['vencimentos','vencimentos-amanha'],['hoje','hoje-na-casa'],['painel-diretoria','painel-diretoria']];
   // 18/set/2026: 'lancar-pagamento' saiu desta tabela junto com o item do menu (Adriana:
   // "delete lançar pagamentos.. inútil"). A capacidade continua na tabela PERM — tirá-la de
   // lá mudaria o que podePapel() responde a quem ainda pergunta, e isso não foi pedido.
@@ -11822,6 +11856,7 @@
       var ligarVivo=function(){
         if(m.vivo) return; m.vivo=true;
         var r=DB.ref(path);
+        m.ref=r;                              // guardado para poder DESLIGAR depois — ver zMapaDesligar()
         if(typeof r.on==='function'){
           // O dado chegou: AGORA o retrato pode usar o selo que o banco anunciou.
           r.on('child_added',  function(sn){ m.mapa[sn.key]=sn.val(); m.carimboDoMapa=m.carimbo; if(m.pronto) solta(); });
@@ -11839,6 +11874,7 @@
       };
       var noCarimbo=Z_CARIMBOS[path];
       var rc=noCarimbo ? DB.ref(noCarimbo) : null;
+      m.refCarimbo=rc;
       if(rc && typeof rc.on==='function'){
         var copia=zCopiaLer(path);
         var esperaCopia=null;
@@ -11888,6 +11924,23 @@
     if(!m) return Promise.resolve({});
     if(m.pronto) return Promise.resolve(m.mapa);
     return new Promise(function(res){ m.prontoCbs.push(res); });
+  }
+  // ===== DESLIGAR O OUVINTE DE UM NÓ DE DIA (24/set/2026) ============================
+  // Coleção que vive para sempre (o cadastro, as estadias) fica viva a sessão inteira, e é
+  // isso que a torna barata. Nó de UM DIA é outra coisa: o de ontem não muda mais e, se
+  // ficar escutando, é conexão aberta e download que ninguém lê. Quem abre um ouvinte de
+  // dia (a chamada de hoje) é obrigado a fechar o do dia anterior — e é este o fecho.
+  // Só desliga de verdade quando NÃO sobrou nenhum slot interessado no caminho: duas telas
+  // podem estar lendo o mesmo nó, e fechar por cima de quem ainda lê é apagar a tela dela.
+  function zMapaDesligar(path, slot){
+    var m=Z_MAPAS[path]; if(!m) return false;
+    if(slot) delete m.slots[slot];
+    if(Object.keys(m.slots).length) return false;   // alguém ainda lê este caminho
+    try{ if(m.ref&&typeof m.ref.off==='function') m.ref.off(); }catch(e){} /* silencioso de propósito: desligar é economia — falhar não muda dado nenhum */
+    try{ if(m.refCarimbo&&typeof m.refCarimbo.off==='function') m.refCarimbo.off(); }catch(e){} /* silencioso de propósito: desligar é economia — falhar não muda dado nenhum */
+    if(m.t){ try{ clearTimeout(m.t); }catch(e){} /* silencioso de propósito: guarda defensiva */ m.t=null; }
+    delete Z_MAPAS[path];
+    return true;
   }
 
   var PLANT_ROTULO={noite:'🌙 COMO DORMIU', dia:'☀ COMO PASSOU O DIA', inicio:'🍽 JANTAR'};
@@ -15392,7 +15445,7 @@
   // inteira DEPOIS de a correção estar publicada — o aviso apareceu, ninguém tocou.
   // Agora o aparelho PARADO recarrega sozinho: trancado, com a aba escondida, na porta de
   // entrada ou 3 minutos sem ninguém tocar nele. Mão na tela = nunca recarrega.
-  const APP_VERSAO='2026-09-24-02';
+  const APP_VERSAO='2026-09-24-03';
   var RECARGA_PARADO_MS=3*60*1000, __versaoPublicada=null, __recargaTimer=null;
   function vigiarVersao(){
     if(!DB) return;
@@ -15669,6 +15722,10 @@
       {k:'orcamento', t:'Orçamento de hospedagem'}, {k:'recepcao', t:'Pendências com o tutor'}
     ]},
     {grp:'Central Zêluz · Day Care', itens:[
+      // 24/set/2026: a tela nova nasceu nos DOIS lugares de uma vez — no menu e aqui. O
+      // rótulo é o MESMO do sidebar, letra por letra: é esta lista que a Gestão lê na tela
+      // do Time, e conceder uma tela com outro nome é conceder uma tela que ninguém acha.
+      {k:'hoje', t:'Hoje na casa'},
       {k:'emporio', t:'Quem não comeu hoje'},
       // 19/set/2026: a tela nova nasceu nos DOIS lugares de uma vez — no menu e aqui. O que
       // não está nesta lista NÃO pode ser concedido a ninguém (a lição de 13/ago, com o
@@ -16245,6 +16302,12 @@
     // a tela não é aviso (a lei de 28/ago) — e quem entra às 8h da manhã precisa ver, na
     // primeira tela, quantas mensagens tem de mandar hoje.
     try{ if(typeof vencGarantir==='function' && typeof podePapel==='function' && podePapel('vencimentos-amanha')) vencGarantir(); }catch(e){} /* silencioso de propósito: guarda defensiva — falhar aqui não pode interromper a entrada */
+    // "Hoje na casa" (24/set/2026) entra pela MESMA porta, e pelo mesmo motivo: o contador
+    // ao lado do item do menu diz quantos FILHOts já estão na casa devendo alguma coisa, e
+    // esperar alguém abrir a tela para descobrir isso é justamente o que a lei de 28/ago
+    // proíbe. A chamada do dia fica viva daqui em diante — o que for marcado depois chega
+    // sozinho, sem ninguém reabrir tela nenhuma.
+    try{ if(typeof hojeGarantir==='function' && typeof podePapel==='function' && podePapel('hoje-na-casa')) hojeGarantir(); }catch(e){} /* silencioso de propósito: guarda defensiva — falhar aqui não pode interromper a entrada */
     // sanfona: preferencia + esconde vazios + garante tela unica. Roda AGORA e DE NOVO no proximo
     // frame: no F5 (sessao restaurada) o aplicarLogin roda antes do navegador desenhar, e ai
     // offsetParent media 0 filhos -> escondia o Day Care por engano. O rAF remede apos o desenho.
@@ -23795,7 +23858,14 @@
         const alerta=tarjaRestricao(p);
         const ph=foto?`<div class="ph" style="background-image:url('${foto}');background-size:cover;background-position:center"></div>`:`<div class="ph" style="background:${corPel(typeof o.i==='number'?o.i:0)}">${(p.n[0]||'?')}</div>`;
         const clickFicha=(typeof o.i==='number')?`onclick="abrirPeludinhoDay(${o.i})" style="cursor:pointer"`:'';
-        const ribbon=st==='veio'?'<div class="dc-ribbon veio">PRESENTE</div>':(st==='faltou'?'<div class="dc-ribbon faltou">FALTOU</div>':'<div class="dc-ribbon pend">PENDENTE — marque</div>');
+        // De ONDE veio a presença. Quase toda ela vem do check-in do corpo, não do dedo de
+        // alguém na chamada — e a monitora precisa saber disso para não sair marcando de
+        // novo o que já está marcado. Com a hora quando o nó do dia já está na memória.
+        const hCk=(st==='veio')?chamadaHoraCheckin(k):'';
+        const ribbon=st==='veio'
+          ?('<div class="dc-ribbon veio">PRESENTE</div>'
+            +'<div class="dc-veio-fonte">'+(hCk?('presente pelo check-in às '+escAttr(hCk)):'presente')+'</div>')
+          :(st==='faltou'?'<div class="dc-ribbon faltou">FALTOU</div>':'<div class="dc-ribbon pend">PENDENTE — marque</div>');
         return `<div class="pet dc-card ${st}${o.foraDia?' fora-dia':''}">
           ${ribbon}${o.hospede?'<span class="mini-fora" style="background:var(--z-gold);color:var(--z-blue)">HÓSPEDE</span>':(o.daPlanilha?seloPlanilha(o):(o.foraDia?seloForaDia(o):seloAdapt(ex)))}
           <div ${clickFicha}>
@@ -23838,11 +23908,66 @@
     }catch(e){ _logFalhaGrav('as pendências de prevenção de '+k+' (chamada)', e); }
     renderDaycare();
   }
+  // ===== A CHAMADA DE HOJE FICA VIVA (Adriana, 24/set/2026) ==========================
+  // "Em turminhas daycare, não está aparecendo quem veio."
+  //
+  // O banco estava CERTO. Em 24/09 o nó daycare/chamada/2026-09-24 tinha 34 chaves 'veio'
+  // e havia 34 check-ins do corpo — o check-in de ENTRADA já grava a presença sozinho
+  // (ver, lá embaixo, o `if(entrada) DB.ref('daycare/chamada/...').set('veio')`). O que
+  // NÃO acontecia era o redesenho: carregarChamada lia com once() e a tela ficava com a
+  // fotografia do instante em que foi aberta. Quem abriu às 7h50 via a turma inteira
+  // "PENDENTE — marque" o dia inteiro, mesmo com todo mundo já dentro da casa. É a lei de
+  // 28/ago em outra roupa: aviso que depende de reabrir a tela não é aviso.
+  //
+  // Agora o nó do DIA tem ouvinte vivo, pelo mesmo mecanismo econômico do check-in do
+  // corpo (zMapaVivo): desce UMA vez, cada marcação nova chega sozinha como delta, e a
+  // tela se redesenha. Quando o dia vira (o app fica aberto a noite toda), o ouvinte do
+  // dia VELHO é desligado — nó de ontem escutando é download que ninguém lê.
+  var _chamadaVivaDia='';
+  function chamadaNo(dia){ return 'daycare/chamada/'+(dia||dcDataKey()); }
+  function chamadaVivaLigar(){
+    if(!DB) return null;
+    var dia=dcDataKey();
+    if(_chamadaVivaDia && _chamadaVivaDia!==dia){
+      try{ zMapaDesligar(chamadaNo(_chamadaVivaDia), '_chamada'); }
+      catch(e){ /* silencioso de propósito: desligar é economia — falhar não muda dado nenhum */ }
+    }
+    _chamadaVivaDia=dia;
+    var p=chamadaNo(dia);
+    return zMapaVivo(p, '_chamada', function(v){
+      if(chamadaNo()!==p) return;                    // o dia virou: este já não é o de hoje
+      dcChamada=Object.assign({}, v||{});
+      // Quem depende de saber quem está na casa se redesenha AQUI — a chamada, o check-in
+      // do corpo, a tela "Hoje na casa" e o contador do menu. Um dado carregado numa tela
+      // só some nas outras (13/ago): a fonte é uma, e todas bebem dela.
+      try{ if(dcAtiv==='chamada') renderDaycare(); }catch(e){ /* silencioso de propósito: redesenho de tela — falhar não pode derrubar a sincronia */ }
+      try{ if((dcAtiv==='checkin-corpo'||dcAtiv==='checkout-corpo') && typeof ckRedesenharDeFora==='function') ckRedesenharDeFora(); }catch(e){ /* silencioso de propósito: redesenho de tela */ }
+      try{ if(typeof hojeRedesenhar==='function') hojeRedesenhar(); }catch(e){ /* silencioso de propósito: redesenho de tela */ }
+      try{ if(typeof hojeAtualizarBadge==='function') hojeAtualizarBadge(); }catch(e){ /* silencioso de propósito: enfeite de menu — falhar não muda dado nenhum */ }
+    });
+  }
+  // A HORA em que ele entrou, quando o check-in do corpo do dia já está na memória desta
+  // sessão (é o MESMO nó que a tela do Check-in mantém vivo — nenhuma leitura nova). Sem
+  // ele na memória, a linha diz só "presente": hora inventada é pior que hora nenhuma.
+  function chamadaHoraCheckin(k, dia){
+    try{
+      var m=Z_MAPAS['daycare/checkin-corpo/'+(dia||dcDataKey())];
+      var r=(m&&m.mapa)?m.mapa[k]:null;
+      if(r && (!r.tipo || r.tipo==='entrada')) return String(r.hora||'');
+    }catch(e){ /* silencioso de propósito: guarda defensiva — sem a hora a linha diz só "presente" */ }
+    return '';
+  }
   function carregarChamada(){
-    dcChamada={}; dcAvulsos=[]; dcBanho={};
+    dcAvulsos=[]; dcBanho={};
     if(DB){
+      // A chamada NÃO é lida com once(): ela fica viva (chamadaVivaLigar, logo acima). O
+      // zMapaUma abaixo é servido do MESMO retrato — não há segundo download.
+      chamadaVivaLigar();
       Promise.all([
-        DB.ref('daycare/chamada/'+dcDataKey()).once('value').then(s=>{ dcChamada=s.val()||{}; }).catch(function(e){ _logLeituraFalhou('daycare/chamada/ (carregarChamada)', e); }),
+        zMapaUma(chamadaNo()).then(v=>{ dcChamada=Object.assign({}, v||{}); }).catch(function(e){ _logLeituraFalhou('daycare/chamada/ (carregarChamada)', e); }),
+        // O check-in do corpo do dia, pelo mesmo ouvinte que a tela do Check-in usa: é dele
+        // que sai o "presente pelo check-in às 07:52" na linha do FILHOt.
+        zMapaUma('daycare/checkin-corpo/'+dcDataKey()).catch(function(e){ _logLeituraFalhou('daycare/checkin-corpo/ (carregarChamada)', e); }),
         DB.ref('daycare/avulsos/'+dcDataKey()).once('value').then(s=>{ dcAvulsos=Object.values(s.val()||{}); }).catch(function(e){ _logLeituraFalhou('daycare/avulsos/ (carregarChamada)', e); }),
         DB.ref('daycare/banho/'+dcDataKey()).once('value').then(s=>{ dcBanho=s.val()||{}; }).catch(function(e){ _logLeituraFalhou('daycare/banho/ (carregarChamada)', e); }),
         // a chamada precisa dos que a planilha trouxe: Reposição e Avulso
@@ -24739,7 +24864,10 @@
     }); })();
     Promise.all([
       zMapaUma(ckNo()).catch(function(){ return {}; }),
-      DB.ref('daycare/chamada/'+dcDataKey()).once('value').then(function(s){ return s.val()||{}; }).catch(function(){ return null; }),
+      // A chamada de hoje vem do ouvinte vivo (24/set/2026): mesmo retrato da tela da
+      // Chamada, sem segundo download — e a presença marcada lá chega AQUI sozinha.
+      (function(){ try{ chamadaVivaLigar(); }catch(e){ /* silencioso de propósito: sem o vivo o once abaixo ainda responde */ }
+        return zMapaUma(chamadaNo()).then(function(v){ return Object.assign({}, v||{}); }).catch(function(){ return null; }); })(),
       DB.ref('daycare/falta-tardia/'+dcDataKey()).once('value').then(function(s){ return s.val()||{}; }).catch(function(){ return {}; }),
       // As marcas do Início e do Fim (12/set/2026). Falhar aqui deixa rastro: uma lista de
       // protocolo que volta vazia por erro de leitura faria a monitora refazer o que já fez.
@@ -26484,6 +26612,10 @@
           .catch(function(e){ _logFalhaGrav('fotos do corpo de '+pelNome(p)+' ('+ckFotosNo()+'/'+k+')', e); });
       }
       // presença: quem passou pelo check-in de entrada está aqui (acaba a chamada em separado)
+      // O `if(entrada)` é LEI, não detalhe: o check-OUT não pode encostar na chamada. Ele
+      // acontece no fim do dia, e apagar (ou reescrever) o 'veio' ali faria o FILHOt que
+      // passou o dia inteiro na casa virar "PENDENTE — marque" na hora de ir embora, e
+      // sumir de "Hoje na casa". Quem sai continua tendo vindo. (24/set/2026)
       if(entrada) DB.ref('daycare/chamada/'+dcDataKey()+'/'+k).set('veio').catch(function(e){ _logFalhaGrav('presença pelo check-in '+k, e); });
       // Ele chegou: o que ficou da última vez aparece AGORA, para quem está no check-in —
       // "aviso que depende de abrir a tela não é aviso" (28/ago/2026).
@@ -35566,6 +35698,359 @@
   }
   // O botão SEMPRE responde: some, vira "enviando", e termina dizendo se foi ou não.
 
+  /* ====================================================================================
+   * HOJE NA CASA — quem está aqui agora, e quem está devendo (Adriana, 24/set/2026)
+   *
+   * "Em turminhas daycare, não está aparecendo quem veio. (…) E preciso desse relatório de
+   *  forma sucinta na Central Zêluz › Day Care: precisamos na recepção saber todo mundo que
+   *  está hoje e que está com pendência de algo (carrapaticida, vermífugo, escova, vacinas)."
+   *
+   * A pergunta da recepção, às 8h da manhã, é uma só: quem está aqui e o que falta resolver
+   * com cada um antes de ele ir embora. Essa resposta estava espalhada por quatro telas
+   * (Chamada, Prevenção, Pendências de prevenção e Vence amanhã) — e juntar as quatro à mão,
+   * FILHOt por FILHOt, é trabalho que ninguém faz no meio do balcão.
+   *
+   * ONDE CADA PEDAÇO MORA (nada de fonte nova: tudo já existe, e é lido de onde sempre foi)
+   *   quem está na casa .... a chamada do dia, VIVA (chamadaVivaLigar) + o check-in do corpo
+   *                          do dia + a estadia ativa da AuAulândia + os moradores da casa
+   *   o que venceu ......... vencItensDe(ficha, hoje, 0, hoje) sobre PREV_ITENS — a MESMA
+   *                          regra do Vence amanhã, com a folga em ZERO (ver abaixo)
+   *   remédio contínuo ..... medLinhaDoPel(ficha) — a mesma linha de toda tela
+   *   pendência aberta ..... daycare/pendencias/{chave} (PEND_ABERTAS, v-19-05)
+   *   resposta que não veio  daycare/vencimentos dos últimos dias (VENC_PEND, v-21-01)
+   *
+   * POR QUE A FOLGA É ZERO AQUI. No Vence amanhã a folga (padrão 7 dias) existe para a
+   * consultora avisar ANTES. Aqui a pergunta é outra — "quem está com pendência AGORA" —
+   * e item que só vence daqui a seis dias, numa lista lida em pé no balcão, é ruído. Ruído
+   * esconde o que é urgente. Quem quer o de amanhã abre a tela de amanhã.
+   *
+   * LEITURA. A chamada tem ouvinte vivo do dia (desce uma vez, o resto chega como delta);
+   * o check-in do corpo é o MESMO nó que a tela do Check-in já mantém vivo; as pendências
+   * são uma leitura por sessão (a que o menu já paga); as respostas pendentes, idem; e o
+   * cadastro já está na memória. Abrir esta tela não custa download novo nenhum.
+   * ==================================================================================== */
+  var HOJE_FILTRO='todos';
+  var HOJE_FILTROS=[
+    {v:'todos',  t:'Todos'},
+    {v:'pend',   t:'Só com pendência'},
+    {v:'vacina', t:'Vacina'},
+    {v:'verm',   t:'Vermífugo'},
+    {v:'ecto',   t:'Carrapaticida'},
+    {v:'col',    t:'Coleira'},
+    {v:'escova', t:'Escova'}
+  ];
+  // De que família é cada item vencido — é o que os botões de filtro perguntam.
+  var HOJE_FAMILIA={vac_mult_p:'vacina', vac_gripe_p:'vacina', vac_raiva_p:'vacina',
+    verm_p:'verm', verm_dose2_p:'verm', ecto_p:'ecto', col_p:'col', escova_p:'escova',
+    fezes_p:'outro', checkup_p:'outro'};
+  function hojeFamilia(it){ return HOJE_FAMILIA[(it&&it.k)||'']||'outro'; }
+
+  // ---- as fontes, sem leitura nova -----------------------------------------------------
+  function hojeChamadaMapa(){
+    try{ var m=Z_MAPAS[chamadaNo()]; if(m&&m.mapa) return m.mapa; }
+    catch(e){ /* silencioso de propósito: sem o mapa vivo vale o que a tela da Chamada deixou */ }
+    return (typeof dcChamada!=='undefined'&&dcChamada)?dcChamada:{};
+  }
+  function hojeCheckinMapa(){
+    try{ var m=Z_MAPAS['daycare/checkin-corpo/'+dcDataKey()]; if(m&&m.mapa) return m.mapa; }
+    catch(e){ /* silencioso de propósito: sem o nó do dia a linha diz só "presente" */ }
+    return {};
+  }
+  // ESTÁ NA CASA? Quatro respostas, nesta ordem — e a primeira que responder manda:
+  //   1) a chamada diz 'faltou' → NÃO está. É a palavra de quem marcou, e ela vence tudo;
+  //   2) tem check-in do corpo de ENTRADA hoje → está, e com a hora em que entrou;
+  //   3) a chamada diz 'veio' → está (alguém marcou no dedo, sem passar pelo check-in);
+  //   4) hóspede com estadia ativa, ou morador da casa → está: ele dorme aqui, e não
+  //      depende de ninguém marcar chamada para existir.
+  function hojeFonteDe(o, cham, ck){
+    var k=dcKey(o.p.n,o.p.tutor);
+    if(cham[k]==='faltou') return '';
+    var r=ck[k];
+    if(r && (!r.tipo || r.tipo==='entrada')) return 'checkin';
+    if(cham[k]==='veio') return 'chamada';
+    if(o&&o.hospede) return 'hospede';
+    if(typeof ehMoradorZeluz==='function' && ehMoradorZeluz(o.p)) return 'morador';
+    return '';
+  }
+  function hojeHoraDe(k, ck){
+    var r=ck[k]; if(!r) return '';
+    if(r.tipo && r.tipo!=='entrada') return '';
+    return String(r.hora||'');
+  }
+  // As pendências ABERTAS de um FILHOt, da mais antiga para a mais nova.
+  function hojePendDe(chave){
+    var todas=(typeof PEND_ABERTAS!=='undefined'&&PEND_ABERTAS)?(PEND_ABERTAS[chave]||{}):{};
+    var out=[];
+    Object.keys(todas).forEach(function(item){
+      var r=todas[item]||{};
+      if(r.status!=='aberta') return;
+      out.push({item:item, dia:String(r.dia||''),
+        rotulo:(typeof pendRotulo==='function')?pendRotulo(item):String(item)});
+    });
+    out.sort(function(a,b){ return (a.dia<b.dia)?-1:((a.dia>b.dia)?1:0); });
+    return out;
+  }
+  // As respostas que o tutor ainda não deu, indexadas por FILHOt.
+  function hojeRespPorChave(){
+    var idx={};
+    try{
+      if(typeof vencPendLista!=='function' || typeof VENC_PEND==='undefined') return idx;
+      var L=vencPendLista(VENC_PEND, (typeof zHojeISO==='function')?zHojeISO():'');
+      (L||[]).forEach(function(x){ (idx[x.chave]=idx[x.chave]||[]).push(x); });
+    }catch(e){ /* silencioso de propósito: sem as respostas a linha sai sem elas, nunca errada */ }
+    return idx;
+  }
+
+  // ---- a lista ------------------------------------------------------------------------
+  // Uma linha por FILHOt que está na casa. A turma vem de turmaDeHoje() — a MESMA porta do
+  // Day Care, que já junta fixos do dia, reposições, avulsos, hóspedes e moradores e já
+  // devolve tudo deduplicado. Duas telas contando a casa por critérios diferentes é como
+  // nascem duas verdades (a lição de 13/ago), e aqui não nasce nenhuma.
+  function hojeLista(){
+    if(typeof PELUDINHOS==='undefined'||!Array.isArray(PELUDINHOS)||!PELUDINHOS.length) return [];
+    var hoje=(typeof zHojeISO==='function')?zHojeISO():'';
+    var cham=hojeChamadaMapa()||{}, ck=hojeCheckinMapa()||{};
+    var resp=hojeRespPorChave();
+    var out=[], vistos={};
+    var turma=[];
+    try{ turma=turmaDeHoje()||[]; }
+    catch(e){ turma=[]; } /* silencioso de propósito: a tela trata a lista vazia e diz por quê */
+    turma.forEach(function(o){
+      var p=o&&o.p; if(!p||!p.n) return;
+      if(typeof pelInativo==='function' && pelInativo(p)) return;
+      var chave=dcKey(p.n,p.tutor); if(!chave||vistos[chave]) return;
+      var fonte=hojeFonteDe(o, cham, ck); if(!fonte) return;
+      vistos[chave]=1;
+      var ex=(typeof pelExtra==='function')?(pelExtra(p)||{}):{};
+      // folga ZERO: aqui só entra o que JÁ venceu ou vence hoje (ver o cabeçalho do bloco).
+      var itens=[];
+      try{ itens=(typeof vencItensDe==='function')?vencItensDe(ex, hoje, 0, hoje):[]; }
+      catch(e){ itens=[]; } /* silencioso de propósito: ficha estranha não derruba a lista inteira */
+      var remedio=false;
+      try{ remedio=!!(typeof medLinhaDoPel==='function' && medLinhaDoPel(p)); }
+      catch(e){ remedio=false; } /* silencioso de propósito: sem a linha do remédio a lista segue */
+      var pend=hojePendDe(chave);
+      var respostas=resp[chave]||[];
+      out.push({chave:chave, p:p, i:(typeof o.i==='number')?o.i:-1,
+        nome:(typeof pelNome==='function'?pelNome(p):'')||p.n||'',
+        raca:(typeof pelGet==='function'?pelGet(p,'raca'):'')||p.raca||'',
+        tutor:(typeof pelGet==='function'?pelGet(p,'tutor'):'')||p.tutor||'',
+        fonte:fonte, hora:hojeHoraDe(chave, ck),
+        itens:itens, remedio:remedio, pend:pend, respostas:respostas,
+        pesa:(itens.length+pend.length+respostas.length)});
+    });
+    // Quem tem pendência vem PRIMEIRO; dentro de cada grupo, ordem alfabética. É a ordem em
+    // que a recepção trabalha: resolve o que está devendo, e o resto é conferência.
+    out.sort(function(a,b){
+      var pa=a.pesa?1:0, pb=b.pesa?1:0;
+      if(pa!==pb) return pb-pa;
+      return jsNorm(a.nome).localeCompare(jsNorm(b.nome));
+    });
+    return out;
+  }
+  // O filtro dos botões. "Só com pendência" é qualquer coisa que pese; os outros são a
+  // família do item vencido — e quem não tem aquele item some da lista.
+  function hojeFiltrada(L, filtro){
+    filtro=filtro||'todos';
+    if(filtro==='todos') return L;
+    if(filtro==='pend') return L.filter(function(o){ return o.pesa>0; });
+    return L.filter(function(o){ return (o.itens||[]).some(function(x){ return hojeFamilia(x)===filtro; }); });
+  }
+  // UMA conta, dois números — para o menu e a tela nunca discordarem. null = ainda não sei.
+  function hojeContagem(){
+    if(typeof PELUDINHOS==='undefined'||!Array.isArray(PELUDINHOS)||!PELUDINHOS.length) return null;
+    var L=hojeLista();
+    return {total:L.length, comPendencia:L.filter(function(o){ return o.pesa>0; }).length};
+  }
+  function hojeAtualizarBadge(){
+    var el=document.getElementById('navHojeN'); if(!el) return;
+    var c=null;
+    try{ c=hojeContagem(); }
+    catch(e){ c=null; } /* silencioso de propósito: enfeite de menu — falhar não muda dado nenhum */
+    el.textContent=(!c||!c.comPendencia)?'':('('+c.comPendencia+')');
+  }
+
+  // ---- as frases ----------------------------------------------------------------------
+  // "vacina antirrábica venceu 24/03". O nome sai do MESMO vocabulário da mensagem ao tutor
+  // (VENC_FRASE), sem o artigo — aqui a frase não começa por ele.
+  function hojeFraseItem(it, hoje){
+    var base=String((typeof VENC_FRASE!=='undefined'&&VENC_FRASE[(it&&it.k)||''])||(it&&it.nome)||'')
+      .replace(/^(as|os|a|o)\s+/i,'');
+    if(it&&it.k==='col_p'&&it.marca) base+=' '+it.marca;
+    var quando=(typeof vencData==='function')?vencData(it.vence, hoje):String((it&&it.vence)||'');
+    return base+(it&&it.atrasado?' venceu ':' vence ')+quando;
+  }
+  function hojeFrasePresenca(o){
+    if(o.fonte==='checkin') return o.hora?('presente pelo check-in às '+o.hora):'presente pelo check-in';
+    if(o.fonte==='hospede') return 'hóspede da AuAulândia — está na casa';
+    if(o.fonte==='morador') return 'morador da casa';
+    return 'presente';
+  }
+  // A linha inteira em TEXTO PURO — é ela que vai para o WhatsApp e para o Excel, e é a
+  // mesma frase que a tela mostra. Duas escritas da mesma linha viram duas verdades.
+  function hojeLinhaTexto(o, hoje){
+    var partes=[o.nome+(o.raca?('/'+o.raca):'')];
+    if(o.tutor) partes.push('tutor '+o.tutor);
+    (o.itens||[]).forEach(function(x){ partes.push('⚠ '+hojeFraseItem(x, hoje)); });
+    if(o.remedio) partes.push('💊 toma remédio');
+    (o.pend||[]).forEach(function(x){
+      partes.push('pendência: '+x.rotulo+(x.dia?(' de '+((typeof fmtBR==='function'?fmtBR(x.dia):'')||x.dia).slice(0,5)):''));
+    });
+    (o.respostas||[]).forEach(function(x){
+      partes.push('sem resposta do tutor: '+String(x.rotulo||'').toLowerCase());
+    });
+    return partes.join(' · ');
+  }
+  function hojeTexto(){
+    var hoje=(typeof zHojeISO==='function')?zHojeISO():'';
+    var L=hojeFiltrada(hojeLista(), HOJE_FILTRO);
+    var f=(HOJE_FILTROS.filter(function(x){ return x.v===HOJE_FILTRO; })[0]||{}).t||'Todos';
+    var cab='Hoje na casa — '+((typeof fmtBR==='function'?fmtBR(dcDataKey()):'')||dcDataKey());
+    var c=hojeContagem()||{total:0, comPendencia:0};
+    return cab+'\n'+c.total+' presentes · '+c.comPendencia+' com pendência'
+      +(HOJE_FILTRO==='todos'?'':(' · filtro: '+f))+'\n\n'
+      +(L.length?L.map(function(o){ return hojeLinhaTexto(o, hoje); }).join('\n')
+                :'Ninguém na lista com este filtro.');
+  }
+  function hojeCopiar(btn){
+    var txt=hojeTexto();
+    var pronto=function(){
+      if(!btn) return;
+      var t=btn.textContent; btn.textContent='✅ Copiado — cole no WhatsApp';
+      setTimeout(function(){ try{ btn.textContent=t; }catch(e){} /* silencioso de propósito: enfeite de botão — falhar não muda dado nenhum */ }, 3000);
+    };
+    // Sem área de transferência (navegador antigo, página sem HTTPS): a lista aparece num
+    // campo já selecionado. Nunca deixar a recepção sem o texto na mão.
+    var naTela=function(){
+      var ta=document.getElementById('hojeTxt');
+      if(!ta) return;
+      ta.style.display='block'; ta.value=txt;
+      try{ ta.focus(); ta.select(); }catch(e){} /* silencioso de propósito: enfeite de tela (foco, seleção) — falhar não muda dado nenhum */
+    };
+    if(navigator.clipboard&&navigator.clipboard.writeText) navigator.clipboard.writeText(txt).then(pronto).catch(naTela);
+    else naTela();
+  }
+
+  // ---- a tela --------------------------------------------------------------------------
+  function hojeFiltrar(v){ HOJE_FILTRO=v||'todos'; hojeRender(); }
+  function hojeRedesenhar(){
+    try{ var sec=document.getElementById('v-hoje'); if(sec&&sec.classList.contains('active')) hojeRender(); }
+    catch(e){ /* silencioso de propósito: redesenho de tela — falhar não pode derrubar quem chamou */ }
+  }
+  // A leitura que a tela e o contador do menu precisam. Uma vez por sessão cada coisa — e,
+  // no caso da chamada, um ouvinte que fica vivo o dia inteiro.
+  function hojeCarregar(){
+    if(!DB) return Promise.resolve(null);
+    var tarefas=[];
+    try{ chamadaVivaLigar(); }
+    catch(e){ /* silencioso de propósito: sem o vivo o zMapaUma abaixo ainda responde */ }
+    tarefas.push(zMapaUma(chamadaNo()).catch(function(e){ _logLeituraFalhou('daycare/chamada/ (hojeCarregar)', e); return {}; }));
+    tarefas.push(zMapaUma('daycare/checkin-corpo/'+dcDataKey()).catch(function(e){ _logLeituraFalhou('daycare/checkin-corpo/ (hojeCarregar)', e); return {}; }));
+    if(typeof PEND_ABERTAS==='undefined' || PEND_ABERTAS===null){
+      try{ if(typeof pendCarregar==='function') tarefas.push(pendCarregar()); }
+      catch(e){ /* silencioso de propósito: a tela diz o que não conseguiu ler */ }
+    }
+    try{ if(typeof vencPendCarregar==='function') tarefas.push(vencPendCarregar()); }
+    catch(e){ /* silencioso de propósito: sem as respostas a lista sai sem elas */ }
+    return Promise.all(tarefas).then(function(){
+      try{ hojeAtualizarBadge(); }
+      catch(e){ /* silencioso de propósito: enfeite de menu — falhar não muda dado nenhum */ }
+      return true;
+    });
+  }
+  // O contador do menu não pode esperar alguém abrir a tela: "aviso que depende de abrir a
+  // tela não é aviso" (28/ago/2026). Quem entra às 8h precisa ver, na primeira tela, quantos
+  // FILHOts já estão na casa devendo alguma coisa.
+  function hojeGarantir(){
+    if(!DB) return;
+    try{ hojeCarregar().then(function(){ hojeAtualizarBadge(); hojeRedesenhar(); }); }
+    catch(e){ /* silencioso de propósito: guarda defensiva — falhar aqui não pode interromper a entrada */ }
+  }
+  function hojeAbrir(){
+    var raiz=document.getElementById('hojeRoot'); if(!raiz) return;
+    // A trava é a MESMA tabela que mostra o item no menu. Quem chegar por link direto e não
+    // puder ver lê o porquê — nunca uma tela em branco.
+    if(typeof podePapel==='function' && !podePapel('hoje-na-casa')){
+      raiz.innerHTML='<div class="card"><h2 style="font-size:19px">Esta tela é da Central Zêluz</h2>'
+        +'<div class="hint">Quem está na casa hoje e o que falta resolver com cada um é trabalho de quem atende o tutor: as Consultoras de Bem-Estar, a Supervisão e a Gestão. No Day Care, a lista de quem veio é a <strong>Chamada</strong>.</div></div>';
+      return;
+    }
+    hojeRender();
+    if(DB) hojeCarregar().then(hojeRender);
+  }
+  function hojeRender(){
+    var raiz=document.getElementById('hojeRoot'); if(!raiz) return;
+    var hoje=(typeof zHojeISO==='function')?zHojeISO():'';
+    var L=[];
+    try{ L=hojeLista(); }
+    catch(e){ L=[]; } /* silencioso de propósito: a tela diz o que não soube, nunca fica em branco */
+    var c={total:L.length, comPendencia:L.filter(function(o){ return o.pesa>0; }).length};
+    var F=hojeFiltrada(L, HOJE_FILTRO);
+    var dataBR=((typeof fmtBR==='function'?fmtBR(dcDataKey()):'')||dcDataKey());
+    var h='<div class="card" style="border-left:4px solid '+(c.comPendencia?'var(--crm-critico)':'var(--z-gold)')+'">'
+      +'<h2 style="font-size:19px;margin-bottom:2px">'
+      +c.total+(c.total===1?' presente':' presentes')+' · '+c.comPendencia+' com pendência</h2>'
+      +'<div class="hint">'+escAttr(dataBR)+' — a chamada de hoje, o check-in do corpo, os hóspedes da AuAulândia e os moradores da casa, numa lista só. '
+      +'Entra aqui o que <strong>já venceu ou vence hoje</strong>: vacina, vermífugo, carrapaticida, coleira e troca de escova. '
+      +'O que vence nos próximos dias é assunto da tela <strong>Vence amanhã</strong>.</div>';
+    h+='<div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:10px">';
+    HOJE_FILTROS.forEach(function(f){
+      var n=hojeFiltrada(L, f.v).length;
+      h+='<span class="dia clic'+(HOJE_FILTRO===f.v?' on':'')+'" id="hojeF-'+f.v+'" onclick="hojeFiltrar(\''+f.v+'\')">'
+        +escAttr(f.t)+' ('+n+')</span>';
+    });
+    h+='</div>';
+    h+='<div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:10px">'
+      +'<button type="button" class="btn btn-gold" style="padding:7px 14px;font-size:13px;font-weight:800" onclick="hojeCopiar(this)">Copiar lista</button>'
+      +'<button type="button" class="btn" style="padding:7px 14px;font-size:13px;font-weight:800;background:var(--z-cream-warm);border:1.5px solid var(--line);color:var(--z-blue)" onclick="relHojeNaCasa()">Baixar Excel</button>'
+      +'</div>'
+      +'<textarea id="hojeTxt" readonly style="display:none;width:100%;margin-top:9px;min-height:130px;border:1.5px solid var(--line);border-radius:10px;padding:9px;font-size:13px"></textarea>'
+      +'</div>';
+    if(!L.length){
+      h+='<div class="card"><h2 style="font-size:17px">Ninguém marcado na casa ainda</h2>'
+        +'<div class="hint">A lista se enche sozinha conforme a Chamada e o Check-in do corpo acontecem — não é preciso reabrir a tela. '
+        +'Se já passou da hora e continua vazia, confira no Day Care se a chamada do dia está sendo marcada.</div></div>';
+      raiz.innerHTML=h; return;
+    }
+    if(!F.length){
+      h+='<div class="card"><h2 style="font-size:17px">Ninguém com este filtro</h2>'
+        +'<div class="hint">Nenhum FILHOt na casa está com este item vencido. Toque em <strong>Todos</strong> para ver a casa inteira.</div></div>';
+      raiz.innerHTML=h; return;
+    }
+    h+='<div class="card" style="padding-top:6px">';
+    F.forEach(function(o){
+      var borda=o.pesa?'var(--crm-critico)':'var(--crm-ok)';
+      h+='<div style="padding:10px 0 9px;border-top:1px solid var(--line);border-left:3px solid '+borda+';padding-left:10px">'
+        +'<div style="display:flex;gap:8px;align-items:baseline;flex-wrap:wrap">'
+        +'<strong style="font-size:16px;color:var(--z-blue)">'+escAttr(o.nome)
+        +(o.raca?('<span style="font-weight:600;color:var(--muted)">/'+escAttr(o.raca)+'</span>'):'')+'</strong>'
+        +(o.tutor?('<span class="hint" style="margin:0">tutor '+escAttr(o.tutor)+'</span>'):'')
+        +'<span class="hint" style="margin:0;color:var(--crm-ok);font-weight:700">'+escAttr(hojeFrasePresenca(o))+'</span>'
+        +'</div>';
+      if(!o.pesa){
+        h+='<div class="hint" style="margin-top:3px">Nada pendente.</div>';
+      } else {
+        var chips=[];
+        (o.itens||[]).forEach(function(x){
+          chips.push('<span style="color:var(--crm-critico)">⚠ '+escAttr(hojeFraseItem(x, hoje))+'</span>');
+        });
+        if(o.remedio) chips.push('<span>💊 toma remédio</span>');
+        (o.pend||[]).forEach(function(x){
+          chips.push('<span style="color:var(--crm-atencao-text)">pendência: '+escAttr(x.rotulo)
+            +(x.dia?(' de '+escAttr(((typeof fmtBR==='function'?fmtBR(x.dia):'')||x.dia).slice(0,5))):'')+'</span>');
+        });
+        (o.respostas||[]).forEach(function(x){
+          chips.push('<span style="color:var(--crm-atencao-text)">sem resposta do tutor: '+escAttr(String(x.rotulo||'').toLowerCase())+'</span>');
+        });
+        h+='<div style="margin-top:4px;font-size:13.5px;font-weight:700;color:var(--z-blue);line-height:1.55">'
+          +chips.join(' <span style="color:var(--muted)">·</span> ')+'</div>';
+      }
+      h+='</div>';
+    });
+    h+='</div>';
+    raiz.innerHTML=h;
+  }
+
   // ===== FILA DE REENVIO À PLANILHA — Adriana, 04/set/2026 =========================
   // A TV lê a planilha: lançamento que não chega lá NÃO EXISTE para a equipe (a
   // Elizabeth/SRD do carrapaticida de 03/09 até hoje não está na planilha). Molde da
@@ -36596,6 +37081,29 @@
         linhas), 'checkin-corpo', linhas.length);
     }).catch(function(e){ alert('Não consegui ler os dados: '+((e&&e.message)||e)); });
   }
+  // ---- Relatório: Hoje na casa (Adriana, 24/set/2026) ----
+  // NENHUMA leitura nova: sai da MESMA lista que a tela mostra (hojeLista), com as mesmas
+  // frases. Se o Excel dissesse uma coisa e a tela outra, teríamos duas verdades — e é
+  // exatamente disso que a recepção não precisa no meio do balcão.
+  function relHojeNaCasa(){
+    var hoje=(typeof zHojeISO==='function')?zHojeISO():'';
+    var L=[];
+    try{ L=hojeLista(); }
+    catch(e){ L=[]; } /* silencioso de propósito: o aviso abaixo diz que não há o que baixar */
+    if(!L.length){ alert('Ninguém marcado na casa ainda. Abra a tela "Hoje na casa" para ver por quê.'); return; }
+    var linhas=L.map(function(o){
+      return [o.nome, o.raca||'', o.tutor||'', hojeFrasePresenca(o),
+        (o.itens||[]).map(function(x){ return hojeFraseItem(x, hoje); }).join(' · ')||'—',
+        o.remedio?'sim':'—',
+        (o.pend||[]).map(function(x){ return x.rotulo+(x.dia?(' de '+(((typeof fmtBR==='function'?fmtBR(x.dia):'')||x.dia).slice(0,5))):''); }).join(' · ')||'—',
+        (o.respostas||[]).map(function(x){ return String(x.rotulo||''); }).join(' · ')||'—'];
+    });
+    var comPend=L.filter(function(o){ return o.pesa>0; }).length;
+    relBaixarXLS(relTabelaHTML('Hoje na casa — '+orcBR(dcDataKey()),
+      L.length+' presentes · '+comPend+' com pendência · gerado em '+new Date().toLocaleString('pt-BR'),
+      ['FILHOt','Raça','Tutor','Como está na casa','Vencido hoje','Remédio de uso contínuo','Pendência aberta','Sem resposta do tutor'],
+      linhas), 'hoje-na-casa', linhas.length);
+  }
   // ---- Relatório: pertences do dia (a tabela de papel, agora gerada) ----
   function relPertencesHoje(){
     if(!DB){ alert('Sem conexão com o banco.'); return; }
@@ -36648,6 +37156,7 @@
     relPertencesBranco(achou);
   }
   const RELATORIOS=[
+    {t:'Hoje na casa', d:'Quem está na casa agora — chamada, check-in do corpo, hóspedes e moradores — com o que já venceu (vacina, vermífugo, carrapaticida, coleira, escova), quem toma remédio de uso contínuo e o que ficou pendente. Quem tem pendência vem primeiro.', fn:'relHojeNaCasa()'},
     {t:'Grade de almoço das turminhas', d:'Segunda a sexta: nome, raça, se almoça, comedouro lento, o que come e quanto come. É a contingência de papel — se o sistema cair, a comida sai igual.', fn:'baixarGradeAlmoco()'},
     {t:'Pertences do dia', d:'A tabela que hoje é preenchida à mão: item por item, o que cada FILHOt trouxe, como é e em que veio (pote, sacola ou mochila).', fn:'relPertencesHoje()'},
     {t:'Pertences EM BRANCO — para imprimir', d:'A mesma tabela, com os nomes do dia já escritos e as colunas vazias, para preencher à mão. É a contingência de quando falta internet.', fn:'relPertencesBrancoEscolher()'},
