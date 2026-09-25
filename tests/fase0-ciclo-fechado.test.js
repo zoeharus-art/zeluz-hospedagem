@@ -651,6 +651,16 @@ prova('cliente novo (avulso) com check-in feito SAI de "Estadias fechadas" (o ca
 prova('xará de outro tutor NÃO conta como o mesmo FILHOt', () => {
   assert.strictEqual(run("orcMesmoPetEm({key:'avulso__pingo__maria luisa'}, {}, {key:'pingo__carla'}, {})"), false);
 });
+prova('QA M1 — o começo do nome do tutor vale só até o fim da palavra ("Maria" não é "Mariana")', () => {
+  assert.strictEqual(run("orcMesmoPetEm({key:'avulso__thor__maria'}, {}, {key:'thor__mariana'}, {})"), false);
+  assert.strictEqual(run("orcMesmoPetEm({key:'avulso__camus__ana'}, {}, {key:'camus__anabela'}, {})"), false);
+  assert.strictEqual(run("orcMesmoPetEm({key:'pipoca__joao'}, {}, {key:'pipoca__joao francisco silva'}, {})"), true);
+  assert.strictEqual(run("orcMesmoPetEm({key:'avulso__pingo__luciana'}, {}, {key:'pingo__luciana couto renno'}, {})"), true);
+});
+prova('QA B3 — tutor com ponto ou barra ("Ana C. Souza", "Ana/Pedro") continua sendo reconhecido', () => {
+  assert.strictEqual(run("orcMesmoPetEm({key:'avulso__mel__ana c. souza'}, {}, {key:'mel__ana c- souza'}, {})"), true);
+  assert.strictEqual(run("orcMesmoPetEm({key:'avulso__mel__ana/pedro'}, {}, {key:'mel__ana-pedro'}, {})"), true);
+});
 prova('Check-in mostra quem chega hoje pelos orçamentos fechados — e não quem já entrou, nem quem chega depois', () => {
   ctx.__L = {
     camus:   { status: 'fechado', entrada: '2026-09-25', saida: '2026-09-28', pets: [{ key: 'avulso__camus__ana', nome: 'Camus', tutor: 'Ana' }] },
@@ -729,6 +739,131 @@ prova('"Mandar no WhatsApp" dos Vencimentos abre a conversa com o texto da caixa
     assert.ok(/^https:\/\/wa\.me\/5531988887777\?text=Oi%2C%20Bia/.test(run('__abriu')), run('__abriu'));
     assert.strictEqual(run('__marcou'), 'thor__bia|vacina');
   } finally { run('document.getElementById=__bkp.ge; vencAchar=__bkp.va; vencMandei=__bkp.vm; window.open=__bkp.wo;'); }
+});
+
+// ================================================================== Está aqui hoje e está atrasado (25/set)
+console.log('\nEstá aqui hoje e está atrasado — "podemos fazer hoje?"');
+const ATRAS_BKP = "__bkp={pv:proximaVindaDe, cfg:VENC_CFG}; proximaVindaDe=function(){ return '2026-09-29'; }; VENC_CFG={};";
+const ATRAS_VOLTA = 'proximaVindaDe=__bkp.pv; VENC_CFG=__bkp.cfg;';
+const ksAnt = (expr) => JSON.parse(JSON.stringify(run(expr))).itens.map((x) => x.k).sort().join(',');
+prova('o carrapaticida que JÁ venceu, com ela na casa, vira a pergunta "fazer hoje"', () => {
+  run(ATRAS_BKP);
+  try {
+    assert.strictEqual(ksAnt("hojeAntecipar({ecto_p:'2026-09-01'}, {n:'Mel', tutor:'Ana'}, '2026-09-24')"), 'ecto_p');
+    assert.strictEqual(ksAnt("hojeAntecipar({verm_p:'2026-09-24'}, {n:'Mel', tutor:'Ana'}, '2026-09-24')"), 'verm_p', 'vence hoje também');
+  } finally { run(ATRAS_VOLTA); }
+});
+prova('a mensagem da véspera já saiu (ou foi respondida) para hoje: não pergunta de novo', () => {
+  run(ATRAS_BKP);
+  try {
+    assert.strictEqual(ksAnt("hojeAntecipar({ecto_p:'2026-09-01'}, {n:'Mel'}, '2026-09-24', {enviadas:{antip:{quem:'x', ts:1}}})"), '');
+    assert.strictEqual(ksAnt("hojeAntecipar({ecto_p:'2026-09-01'}, {n:'Mel'}, '2026-09-24', {respostas:{antip:{v:'nao', quem:'x', ts:1}}})"), '');
+    assert.strictEqual(ksAnt("hojeAntecipar({ecto_p:'2026-09-01'}, {n:'Mel'}, '2026-09-24', {enviadas:{vacina:{quem:'x', ts:1}}})"), 'ecto_p',
+      'a véspera falou de OUTRO assunto: este continua sendo perguntado');
+  } finally { run(ATRAS_VOLTA); }
+});
+prova('vacina vencida só vira pergunta em dia de Veterinária (quinta não; sexta sim)', () => {
+  run(ATRAS_BKP);
+  try {
+    assert.strictEqual(ksAnt("hojeAntecipar({vac_raiva_p:'2026-09-01'}, {n:'Mel'}, '2026-09-24')"), '', 'quinta');
+    assert.strictEqual(ksAnt("hojeAntecipar({vac_raiva_p:'2026-09-01'}, {n:'Mel'}, '2026-09-25')"), 'vac_raiva_p', 'sexta');
+  } finally { run(ATRAS_VOLTA); }
+});
+prova('a mensagem do atrasado diz cada item com a data dele e pede para fazer hoje', () => {
+  run(ATRAS_BKP);
+  try {
+    const o = "{nome:'Mel', tutor:'Ana Souza', sexo:'Fêmea', itens:[{k:'ecto_p', nome:'Carrapaticida', vence:'2026-09-01', atrasado:true},{k:'col_p', nome:'Coleira', marca:'Seresto', vence:'2026-09-27', atrasado:false}]}";
+    const m = run('hojeMsgAntecipar(' + o + ", 'antip', '2026-09-24')");
+    assert.ok(/^Olá, Ana, tudo bem\?/.test(m), m);
+    assert.ok(m.indexOf('Aproveitando que a Mel está conosco hoje: o carrapaticida venceu em 01/09 e a coleira') > 0, m);
+    assert.ok(/vence em 27\/09\./.test(m), 'o item que ainda não venceu não finge estar atrasado: ' + m);
+    assert.ok(/O prazo já chegou/.test(m), m);
+    const f = run('hojeFraseAntecipar(' + o + ", {itens:" + o + ".itens}, '2026-09-24')");
+    assert.ok(/— ela está aqui hoje: fazer hoje\?$/.test(f), f);
+    // o que só vence DEPOIS continua com a pergunta de antes (antecipar)
+    const m2 = run("hojeMsgAntecipar({nome:'Mel', tutor:'Ana', sexo:'F', itens:[{k:'ecto_p', nome:'Carrapaticida', vence:'2026-09-26', atrasado:false}]}, 'antip', '2026-09-24')");
+    assert.ok(/Podemos fazer hoje de uma vez\?/.test(m2) && !/O prazo já chegou/.test(m2), m2);
+  } finally { run(ATRAS_VOLTA); }
+});
+prova('"Mandar no WhatsApp" direto (sem abrir a dobra) abre a conversa e marca que saiu', () => {
+  run(`__bkp2={oa:hojeObjAnt, hm:hojeMandei, wo:window.open, cfg:VENC_CFG}; VENC_CFG={};
+       __abriu=null; __marcou=null;
+       hojeObjAnt=function(){ return {chave:'mel__ana', nome:'Mel', tutor:'Ana', sexo:'F', tel:'31977776666',
+         itens:[{k:'verm_p', nome:'Vermífugo', vence:'2026-09-20', atrasado:true}]}; };
+       hojeMandei=function(c,t){ __marcou=c+'|'+t; };
+       window.open=function(u){ __abriu=u; return {}; };`);
+  try {
+    run("hojeWhatsDireto('mel__ana','antip')");
+    assert.ok(/^https:\/\/wa\.me\/5531977776666\?text=Ol%C3%A1%2C%20Ana/.test(run('__abriu')), run('__abriu'));
+    assert.ok(/venceu%20em/.test(run('__abriu')));
+    assert.strictEqual(run('__marcou'), 'mel__ana|antip');
+  } finally { run('hojeObjAnt=__bkp2.oa; hojeMandei=__bkp2.hm; window.open=__bkp2.wo; VENC_CFG=__bkp2.cfg;'); }
+});
+
+// ================================================================== Quem chamar hoje (25/set)
+console.log('\nQuem chamar hoje — uma lista só, um toque por linha');
+const CT_BKP = `__bk={hl:hojeLista, vl:vencLista, pd:proximoDiaDayCare, vp:VENC_PEND, vr:VENC_REG, vrd:VENC_REG_DIA, hz:zHojeISO, pl:PELUDINHOS, cfg:VENC_CFG};
+  zHojeISO=function(){ return '2026-09-24'; };
+  proximoDiaDayCare=function(){ return '2026-09-25'; };
+  PELUDINHOS=[{n:'x'}]; VENC_REG=null; VENC_REG_DIA=''; VENC_CFG={};
+  __MEL={chave:'mel__ana', nome:'Mel', tutor:'Ana', tel:'31999990000', sexo:'F', antReg:{},
+    antGrupos:[{tipo:'antip', itens:[{k:'ecto_p', nome:'Carrapaticida', vence:'2026-09-01', atrasado:true}]}],
+    antec:[{k:'ecto_p', nome:'Carrapaticida', vence:'2026-09-01', atrasado:true}]};
+  hojeLista=function(){ return [__MEL]; };
+  vencLista=function(){ return [
+    {chave:'mel__ana', nome:'Mel', tutor:'Ana', tel:'31999990000', sexo:'F', itens:[{k:'ecto_p', nome:'Carrapaticida', vence:'2026-09-01', atrasado:true}]},
+    {chave:'thor__bia', nome:'Thor', tutor:'Bia', tel:'', sexo:'M', itens:[{k:'verm_p', nome:'Vermífugo', vence:'2026-09-26', atrasado:false}]}]; };`;
+const CT_VOLTA = 'hojeLista=__bk.hl; vencLista=__bk.vl; proximoDiaDayCare=__bk.pd; VENC_PEND=__bk.vp; VENC_REG=__bk.vr; VENC_REG_DIA=__bk.vrd; zHojeISO=__bk.hz; PELUDINHOS=__bk.pl; VENC_CFG=__bk.cfg;';
+const AGORA = Date.UTC(2026, 8, 24, 18, 0, 0);
+prova('na casa com atrasado entra em "aqui"; o MESMO assunto não se repete na mensagem do próximo dia', () => {
+  run(CT_BKP + "VENC_PEND={'2026-09-24':{}, '2026-09-25':{}};");
+  try {
+    const d = JSON.parse(JSON.stringify(run('contatosDados(' + AGORA + ')')));
+    assert.deepStrictEqual(d.aqui.map((x) => x.chave + '|' + x.tipo), ['mel__ana|antip']);
+    assert.ok(d.aqui[0].atrasado && /está aqui hoje: fazer hoje\?$/.test(d.aqui[0].frase), d.aqui[0].frase);
+    assert.deepStrictEqual(d.amanha.map((x) => x.chave + '|' + x.tipo), ['thor__bia|antip'], 'a Mel não recebe duas vezes o mesmo pedido');
+    assert.strictEqual(d.dia, '2026-09-25');
+  } finally { run(CT_VOLTA); }
+});
+prova('a pergunta de hoje já saiu: a Mel sai de "aqui" e continua fora do próximo dia', () => {
+  run(CT_BKP + `VENC_PEND={'2026-09-24':{'mel__ana':{enviadas:{ant_antip:{quem:'x', ts:${AGORA - 3600000}}}}}, '2026-09-25':{}};
+    __MEL.antReg=VENC_PEND['2026-09-24']['mel__ana'];`);
+  try {
+    const d = JSON.parse(JSON.stringify(run('contatosDados(' + AGORA + ')')));
+    assert.strictEqual(d.aqui.length, 0);
+    assert.deepStrictEqual(d.amanha.map((x) => x.chave), ['thor__bia']);
+    assert.strictEqual(d.aguardando, 1, 'a pergunta de hoje espera resposta dentro do prazo');
+  } finally { run(CT_VOLTA); }
+});
+prova('mensagem do próximo dia já mandada sai da lista; a que passou do prazo vai para "cobrar"', () => {
+  run(CT_BKP + `VENC_PEND={'2026-09-22':{'lua__rita':{pet:'Lua', tutor:'Rita', enviadas:{vacina:{quem:'x', ts:${AGORA - 3 * 86400000}}}}},
+                 '2026-09-25':{'thor__bia':{enviadas:{antip:{quem:'x', ts:${AGORA - 600000}}}}}};`);
+  try {
+    const d = JSON.parse(JSON.stringify(run('contatosDados(' + AGORA + ')')));
+    assert.deepStrictEqual(d.amanha.map((x) => x.chave), [], 'o Thor já recebeu a mensagem do próximo dia');
+    assert.deepStrictEqual(d.cobrar.map((x) => x.nome + '|' + x.tipo + '|' + x.dia), ['Lua|vacina|2026-09-22']);
+  } finally { run(CT_VOLTA); }
+});
+prova('o cartão do próximo dia avisa que HOJE o assunto já foi perguntado (e o "msg_enviada" antigo não conta)', () => {
+  run(CT_BKP + `VENC_PEND={'2026-09-24':{'mel__ana':{respostas:{ant_antip:{v:'nao', quem:'x', ts:1}}}, 'thor__bia':{msg_enviada:{quem:'x', ts:1}}}};`);
+  try {
+    assert.ok(/já foi perguntado ao tutor/.test(run("vencJaPerguntadoHojeHTML('mel__ana','antip','2026-09-25','2026-09-24')")));
+    assert.strictEqual(run("vencJaPerguntadoHoje('thor__bia','antip','2026-09-25','2026-09-24')"), null);
+    assert.strictEqual(run("vencJaPerguntadoHoje('mel__ana','antip','2026-09-24','2026-09-24')"), null, 'no próprio dia não há aviso');
+  } finally { run(CT_VOLTA); }
+});
+prova('"Mandar no WhatsApp" do próximo dia grava no PRÓXIMO DIA — não no dia que a tela de Vencimentos tem aberto', () => {
+  run(CT_BKP + `VENC_PEND={}; __bk2={vg:vencGravar, wo:window.open, sel:VENC_DIA_SEL};
+    VENC_DIA_SEL='2026-09-29';
+    __grav=null; __abriu=null;
+    vencGravar=function(chave, patch, txt, o, dia){ __grav={chave:chave, dia:dia, tipo:patch.msg_enviada.tipo, env:Object.keys(patch.enviadas)}; return Promise.resolve(true); };
+    window.open=function(u){ __abriu=u; return {}; };`);
+  try {
+    run("vencWhatsNoDia('thor__bia','antip','2026-09-25')");
+    const g = JSON.parse(JSON.stringify(run('__grav')));
+    assert.deepStrictEqual(g, { chave: 'thor__bia', dia: '2026-09-25', tipo: 'antip', env: ['antip'] });
+    assert.ok(/^https:\/\/wa\.me\/\?text=/.test(run('__abriu')), 'sem telefone: abre para escolher o contato');
+  } finally { run(CT_VOLTA + 'vencGravar=__bk2.vg; window.open=__bk2.wo; VENC_DIA_SEL=__bk2.sel;'); }
 });
 
 // ------------------------------------------------ o fim

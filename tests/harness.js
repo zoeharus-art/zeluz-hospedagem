@@ -20311,9 +20311,16 @@ async function main() {
         const r4 = ctx.hojeAntecipar({ escova_p: '2026-09-29' }, cookie, '2026-09-24');
         check('v-45 · vence NO PRÓPRIO dia da volta → não antecipa: aquele dia resolve',
           ks(r4) === '', ks(r4));
+        // 25/set/2026 (Adriana): "O peludo está aqui hoje? Vamos fazer hoje, porque está
+        // atrasado." O que JÁ venceu passou a virar pergunta — menos quando a mensagem da
+        // véspera já tratou do assunto para hoje.
         const r5 = ctx.hojeAntecipar({ ecto_p: '2026-09-01' }, cookie, '2026-09-24');
-        check('v-45 · o que JÁ venceu não vira pergunta — ele é o alerta da própria linha',
-          ks(r5) === '', ks(r5));
+        check('v-45 · o que JÁ venceu, com ela na casa, vira a pergunta "fazer hoje"',
+          ks(r5) === 'ecto_p', ks(r5));
+        const r5b = ctx.hojeAntecipar({ ecto_p: '2026-09-01' }, cookie, '2026-09-24',
+          { enviadas: { antip: { quem: 'x', ts: 1 } } });
+        check('v-45 · a véspera já mandou a mensagem do assunto para hoje → não pergunta de novo',
+          ks(r5b) === '', ks(r5b));
         // a FOLGA, editável em Configurações
         vm.runInContext('VENC_CFG = { antecipar_folga: 1 };', ctx);
         check('v-45 · com folga 1, o que vence no dia da volta passa a entrar no "fazer hoje"',

@@ -95,6 +95,34 @@ Cartão marcado "atualizado" antes desta versão e com a ficha ainda devendo **v
 - Foto de ficha que existe não é candidata: o Thor novo vai para "precisa fotografar".
 - Card novo **"Duas fichas com a MESMA foto"**: mostra as fichas que ficaram com a foto copiada antes desta correção. A foto certa se tira em «Trocar».
 
+### (N) Quem chamar hoje, e "está aqui hoje, está atrasado: podemos fazer hoje?"
+
+> **Adriana, 25/set/2026:** *"Que a gente consiga bater o olho e ver. Que o consultor vire e fale: eu tenho que entrar em contato com fulano, ciclano. E ele só deu um clique, copia a mensagem, já manda."* · *"O peludo está aqui hoje? Vamos fazer hoje. Podemos fazer, tutor? Hoje o peludo já está aqui. Vamos fazer hoje, porque está atrasado."*
+
+**Tela nova: Central Zêluz › Day Care › Quem chamar hoje**, logo abaixo de Hoje na Zêluz, com o contador no menu. Uma lista só, em três gavetas, com **um botão por linha**:
+
+| Gaveta | Quem entra | O botão |
+|---|---|---|
+| **Estão aqui hoje — podemos fazer hoje?** | quem está na casa com algo que **já venceu**, vence hoje ou vence antes de voltar, e a pergunta ainda não saiu | **Mandar no WhatsApp**: abre a conversa do tutor com a mensagem pronta e marca que saiu |
+| **Vêm (próximo dia da casa) — avisar** | a mensagem da véspera que ainda não saiu | o mesmo; grava sempre no próximo dia da casa, qualquer que seja o dia aberto na tela de Vencimentos |
+| **Não responderam — cobrar** | mensagem mandada, prazo vencido e nenhuma resposta | **Cobrar no WhatsApp**: abre com a cobrança e marca **Cobrei** |
+
+- **Nada novo é gravado por esta tela.** Cada botão usa o mesmo gesto da tela de origem, e o estado continua em `daycare/vencimentos/{dia}/{chave}`. A resposta do tutor se registra no cartão do FILHOt, em Hoje na Zêluz ou em Vencimentos.
+- **O mesmo pedido não sai duas vezes.** Quem foi (ou vai ser) perguntado hoje, com ele na casa, não aparece de novo na gaveta do próximo dia. O cartão de Vencimentos do próximo dia avisa: *"Hoje, com o FILHOt na casa, este assunto já foi perguntado ao tutor — resposta: …"*.
+- Enquanto os textos de Configurações não carregam, os botões esperam: mandar o texto de fábrica no lugar do que a Gestão escreveu seria mandar a mensagem errada.
+- A mesma leitura (`contatosDados`) devolve tudo em campos com nome: é a porta para um agente ler, no futuro, "com quem falar hoje".
+
+**Hoje na Zêluz: o atrasado virou pergunta.** Antes, o que já tinha vencido era só o alerta vermelho da linha, sem mensagem. Agora:
+- vermífugo, 2ª dose, carrapaticida, coleira e escova que **já venceram** (ou vencem hoje) entram no bloco laranja "fazer hoje?";
+- a vacina vencida entra só em **dia de atendimento da Veterinária** (segunda a sexta, exceto quinta);
+- **não entra** quando a mensagem da véspera já tratou do assunto para hoje (saiu ou foi respondida);
+- o bloco ganhou **Mandar no WhatsApp** direto, sem abrir a dobra. **Ver a mensagem** abre o texto para editar; depois de mandada, o botão vira **Registrar a resposta**.
+
+**Mensagens novas em Configurações › Mensagens prontas** (editáveis, com `{itens}` obrigatório):
+- *Fazer hoje — já venceu e ele está na casa:* "Olá, {tutor}, tudo bem? 🐾 / Aproveitando que {ofilhot} está conosco hoje: {itens}. / O prazo já chegou, então o melhor é fazer hoje mesmo. Podemos? É só nos confirmar por aqui que já deixamos tudo pronto."
+- *Fazer hoje — vacina que já venceu:* a mesma abertura, com "A nossa Veterinária atende hoje e pode aplicar durante o dia {dele} aqui. O prazo já chegou: podemos fazer hoje mesmo?"
+- `{itens}` traz cada item com a sua data ("o carrapaticida venceu em 01/09 e a coleira repelente Seresto vence em 27/09"): misturado, nenhum finge estar atrasado.
+
 ### (M) WhatsApp em um toque
 
 > **Adriana, 25/set/2026:** *"Ele só deu um clique, copia a mensagem, já manda automaticamente e a gente já resolve."*
@@ -149,6 +177,18 @@ Onde havia mensagem pronta para o tutor, o botão principal agora é **Mandar no
 
 O check-in do corpo e o de pertences não foram tocados. A ficha do check-in da hospedagem também não: só entrou o cartão no alto.
 
+**Correções da 4ª rodada do QA (orçamento e reposição):**
+
+| Achado | Correção |
+|---|---|
+| **M1:** tutor "Maria" contava como "Mariana" (e "Ana" como "Anabela"): um orçamento podia sumir do cartão ou prender as noites de outra reserva | o começo do nome do tutor vale só até o fim da palavra. "João" continua sendo "João Francisco…" |
+| **M2:** com o tutor escrito de outro jeito, o "Fazer check-in" achava a ficha, mas as datas da última estadia sobrescreviam as do orçamento | o bilhete das datas passa a levar a chave da ficha achada |
+| **B1:** leitura das estadias que falhou mandava todo mundo fazer check-in | estadias vazias escondem o cartão ("não sei" não é "ninguém entrou") |
+| **B2:** os 60 orçamentos eram baixados de novo a cada toque | lidos há menos de 3 minutos, vale o que está em mão |
+| **B3:** tutor com ponto ou barra ("Ana C. Souza", "Ana/Pedro") não era reconhecido | ponto, barra, cerquilha, cifrão e colchete viram espaço nos dois lados |
+| **B4:** o aviso de desmarcar dizia "0 reposições sem dia" | sem a conta em mão, diz "continua valendo e volta a ficar sem dia marcado" |
+| **B5:** cliente de primeira vez: o Novo Hóspede não traz as datas do orçamento | o cartão escreve as datas na linha e diz para cadastrar em Novo Hóspede |
+
 ### (J) Reposição: marcar e desmarcar já avisam o tutor
 
 > **Adriana, 25/set/2026:** *"Assinalei a marcação que a tutora pediu para agendar na segunda 28/09 a reposição, e não deu nenhuma mensagem para enviar ao tutor! Precisa ter a mensagem que com a marcação ficará 1 reposição… Caso o tutor desmarque, temos que voltar e desmarcar, e o saldo volta!"*
@@ -174,7 +214,7 @@ O saldo de reposição não muda ao marcar: o crédito só sai quando ele vem. A
 ### Provas
 
 Todas rodam sem rede e sem dado de cliente:
-- `node tests/fase0-ciclo-fechado.test.js`: 61 provas;
+- `node tests/fase0-ciclo-fechado.test.js`: 73 provas;
 - `node tests/servidor-senha.test.js`: 11 provas.
 
 O harness completo precisa do retrato da VPS e não rodou nesta sessão.
@@ -186,6 +226,7 @@ O harness completo precisa do retrato da VPS e não rodou nesta sessão.
 | 1ª | FAIL | dose em dobro, alarme de quem faltou, check-in em dobro da pernoite |
 | 2ª | FAIL | a junção de remédio olhava só o horário; o cancelar da noite anterior não gravava |
 | 3ª | **CONCERNS — pode publicar** | ressalvas |
+| 4ª (orçamento e reposição) | **CONCERNS — pode publicar** | M1, M2 e B1 a B5, todos corrigidos (ver K) |
 
 Destino de cada ressalva da 3ª rodada:
 - **C1:** o exemplo do campo agora pede o nome do remédio primeiro: "Ex.: Otomax — gotas no ouvido, 2x ao dia";
@@ -814,6 +855,7 @@ Nunca um filho maior que o pai. Abre só o caminho da tela ativa. A pendência s
 | **Central Zêluz › Peludinhos** | Cadastro de Peludinhos (`ficha`) | Um cadastro só, para Day Care e AuAulândia — tudo começa aqui. | so-gestao (+ destaque) |
 | | Buscar peludinho *(sem `data-v`)* | Achar um peludinho depressa e abrir a ficha dele. Abre a MESMA tela do Cadastro, já no campo de busca. | so-gestao (espelha o Cadastro) |
 | **Central Zêluz › Day Care** | Hoje na Zêluz (`hoje`) | Quem está na Zêluz hoje e quem está com pendência: vacina, vermífugo, carrapaticida, coleira e escova. | `PERM` `hoje-na-casa` (consultora · supervisão · gestão · diretoria) |
+| **Central Zêluz › Day Care** | Quem chamar hoje (`contatos`) | Com quem falar hoje: quem está na casa com algo vencido, quem vem no próximo dia e quem não respondeu. Um toque abre o WhatsApp com a mensagem pronta. | `PERM` `hoje-na-casa` (consultora · supervisão · gestão · diretoria) |
 | | Lançamentos do dia (`dashdc`) | A planilha do Day Care, item por item. | so-recepcao |
 | | Pendências de prevenção (`pendencias`) | O que ficou para a próxima vinda: vermífugo, carrapaticida, coleira, medicação e hidratação de quem não veio. | `PERM` `pendencias-prevencao` (consultora · supervisão · gestão · diretoria) |
 | | Peso (`peso`) | Pesar qualquer FILHOt: recepção, veterinária e gestão. | so-pesa |
