@@ -1207,6 +1207,41 @@ provaAsync('QA17 F1 — mudou o shampoo: o automático troca a célula que ELE e
     assert.deepStrictEqual(ch, [], 'nada removido, nada duplicado');
   } finally { run('DB=__bkF1.db; dashPonteChamar=__bkF1.pc; dashAutoCalcular=__bkF1.ac; zHojeISO=__bkF1.hz; audit=__bkF1.au;'); }
 });
+provaAsync('QA18 — a planilha não deixou tirar a célula velha: ela continua no registro e a próxima conferência tenta de novo', async () => {
+  run(`__bkG1={db:DB, pc:dashPonteChamar, ac:dashAutoCalcular, hz:zHojeISO, au:audit};
+    __ch=[]; __reg=null; __falhaRem=true; __planilha=['Lana/Spitz (SHAMPOO · NA RECEPÇÃO)']; __jaAuto={banho:['Lana/Spitz (SHAMPOO · NA RECEPÇÃO)']};
+    zHojeISO=function(){ return '2026-09-25'; }; audit=function(){};
+    DB={ref:function(p){ return { once:function(){ return Promise.resolve({val:function(){ return JSON.parse(JSON.stringify(__jaAuto)); }}); },
+      set:function(v){ __reg=JSON.parse(JSON.stringify(v)); return Promise.resolve(); }, update:function(){ return Promise.resolve(); } }; }};
+    dashPonteChamar=function(d){ __ch.push(JSON.parse(JSON.stringify(d)));
+      if(d.acao==='lerDia') return Promise.resolve({ok:true, conteudo:{Banho:__planilha.slice()}});
+      if(d.acao==='remover' && __falhaRem) return Promise.resolve({ok:false, erro:'a ponte não respondeu'});
+      return Promise.resolve({ok:true}); };
+    dashAutoCalcular=function(){ var o={}; Object.keys(DASH_AUTO_COLS).forEach(function(k){ o[k]=[]; });
+      o.banho=['Lana/Spitz (SHAMPOO · MEDICAMENTOSO · NA BOLSA)']; o._horas={banho:{}};
+      o._horas.banho[dashAutoNomeChave(o.banho[0])]='10:00'; return o; };`);
+  try {
+    await run("dashAutoSincronizar('2026-10-01')");
+    for (let i = 0; i < 40; i++) await Promise.resolve();
+    const reg = JSON.parse(JSON.stringify(run('__reg')));
+    assert.ok((reg.banho || []).indexOf('Lana/Spitz (SHAMPOO · NA RECEPÇÃO)') >= 0, 'o texto velho continua sendo dele: ' + JSON.stringify(reg.banho));
+    assert.ok(!JSON.parse(JSON.stringify(run('__ch'))).some((c) => c.acao === 'lancar'), 'sem tirar a velha, não põe a nova (nada de duas células)');
+    // a próxima conferência: agora a ponte deixa
+    run("__ch=[]; __falhaRem=false; __jaAuto=__reg;");
+    await run("dashAutoSincronizar('2026-10-01')");
+    for (let i = 0; i < 40; i++) await Promise.resolve();
+    const ch = JSON.parse(JSON.stringify(run('__ch'))).filter((c) => c.acao !== 'lerDia').map((c) => c.acao);
+    assert.deepStrictEqual(ch, ['remover', 'lancar'], 'tentou de novo e acertou');
+  } finally { run('DB=__bkG1.db; dashPonteChamar=__bkG1.pc; dashAutoCalcular=__bkG1.ac; zHojeISO=__bkG1.hz; audit=__bkG1.au;'); }
+});
+prova('QA18 — a baixa da hospedagem no dia da troca não "cumpre" a troca', () => {
+  run(`__bkG2={l:repLancamentos, h:repHojeISO}; repHojeISO=function(){ return '2026-09-25'; };
+    repLancamentos=function(){ return [{_id:'t1', tipo:'credito', data:'2026-09-29', motivo:'troca', volta:'2026-09-30', troca:{de:'2026-09-29', para:'2026-09-30'}},
+      {_id:'orc-x-1', tipo:'uso', data:'2026-09-30', orcId:'x', motivo:'hospedagem'}]; };`);
+  try {
+    assert.strictEqual(run("repTrocasPendentes({n:'Billy Paul', tutor:'Juliana'})"), 1);
+  } finally { run('repLancamentos=__bkG2.l; repHojeISO=__bkG2.h;'); }
+});
 prova('QA17 F2/F3 — parêntese no nome do shampoo vira espaço; rascunho de antes (sem qual/nome) não acusa alteração', () => {
   assert.strictEqual(run("banhoRecDetalhe({sham:'SHAMPOO', nome:'Episoothe (Virbac)', onde:'NA BOLSA'})"), ' (SHAMPOO · EPISOOTHE VIRBAC · NA BOLSA)');
   assert.strictEqual(run("dashDetTextoLimpo('Otomax (2x ao dia)')"), 'OTOMAX 2X AO DIA');
