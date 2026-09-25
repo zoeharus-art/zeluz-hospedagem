@@ -105,6 +105,8 @@ Cartão marcado "atualizado" antes desta versão e com a ficha ainda devendo **v
 | **Planilha e TV** | a célula do banho leva tudo: `Lana/Spitz (SHAMPOO · MEDICAMENTOSO · CLORESTEN · NA BOLSA)`. Sem qual/nome, sai igual ao de antes: `(SHAMPOO · NA RECEPÇÃO)` |
 | **Lançamentos do dia › Banho** | os mesmos campos (qual e nome, opcionais) e o mesmo "aqui na loja". Escolhido o FILHOt, **o shampoo gravado no banho fixo dele já vem marcado** — é rascunho, a recepção só confere e lança |
 | **Hoje na Zêluz e Vencimentos** | "🛁 banho hoje 10:00 (fixo) · shampoo próprio medicamentoso Cloresten — está na bolsa". Quem usa o da casa não ganha aviso |
+| **Mudou o shampoo de quem já tem banho fixo** (QA17) | os dias que o automático **já tinha escrito** na planilha também mudam: a célula que ELE escreveu sai e a nova entra, com a hora. A célula que uma pessoa escreveu à mão não é tocada |
+| **Nome com parêntese** (QA17) | "Episoothe (Virbac)" vira `EPISOOTHE VIRBAC` na planilha — o parêntese confundiria a leitura do nome e do tutor (xarás) |
 
 - **Onde está no código:** `DASH_SHAM_TIPO`, `DASH_SHAM_ONDE` (NA LOJA), item `banho` de `DASH_ITENS` (campos `tipo` e `nome`), `banhoRecNormal`, `banhoRecDetalhe`, `banhoRecShampooFrase`, `banhoPreMarcarLanc`, `banhosLinhaHTML`, `banhosSet`, `banhosValidar`, `banhosSalvar`.
 
@@ -364,7 +366,7 @@ O saldo de reposição não muda ao marcar: o crédito só sai quando ele vem. A
 ### Provas
 
 Todas rodam sem rede e sem dado de cliente:
-- `node tests/fase0-ciclo-fechado.test.js`: 141 provas (com os cenários A, B, D, F, G, H, I, J, K, L e M do fechamento pelo quadro e o fechamento por assunto, incluindo os achados do QA8 ao QA12);
+- `node tests/fase0-ciclo-fechado.test.js`: 143 provas (com os cenários A, B, D, F, G, H, I, J, K, L e M do fechamento pelo quadro e o fechamento por assunto, incluindo os achados do QA8 ao QA12);
 - `node tests/servidor-senha.test.js`: 11 provas.
 
 **Harness completo** (`node tests/harness.js`). Ele precisa do retrato da VPS, que não é acessível daqui. Por isso rodou com um **retrato sintético**, só numa cópia, com o bloco das provas de dado real desligado. O mesmo retrato foi usado nas duas versões:

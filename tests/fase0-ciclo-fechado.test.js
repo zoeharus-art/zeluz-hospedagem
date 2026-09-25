@@ -1179,6 +1179,46 @@ provaAsync('Banhos recorrentes: salvar grava qual e o nome (e "sem shampoo" apag
   } finally { run("delete BANHO_RASC['lana__bia']; banhosPelDe=__bkS3.pd; banhosPodeEditar=__bkS3.pe; banhosRenderLinha=__bkS3.rl; setPelExtra=__bkS3.sp; audit=__bkS3.au; banhoAutoPedirConferencia=__bkS3.pc; renderPel=__bkS3.rp; pelExtra=__bkS3.ex;"); }
 });
 
+console.log('\nQA17 — o shampoo mudado chega à planilha dos dias já escritos; parêntese no nome; rascunho antigo');
+provaAsync('QA17 F1 — mudou o shampoo: o automático troca a célula que ELE escreveu (e não toca na da pessoa)', async () => {
+  run(`__bkF1={db:DB, pc:dashPonteChamar, ac:dashAutoCalcular, hz:zHojeISO, au:audit};
+    __ch=[]; __planilha=['Lana/Spitz (SHAMPOO · NA RECEPÇÃO)']; __jaAuto={banho:['Lana/Spitz (SHAMPOO · NA RECEPÇÃO)']};
+    zHojeISO=function(){ return '2026-09-25'; }; audit=function(){};
+    DB={ref:function(p){ return { once:function(){ return Promise.resolve({val:function(){ return JSON.parse(JSON.stringify(__jaAuto)); }}); },
+      set:function(){ return Promise.resolve(); }, update:function(){ return Promise.resolve(); } }; }};
+    dashPonteChamar=function(d){ __ch.push(JSON.parse(JSON.stringify(d)));
+      if(d.acao==='lerDia') return Promise.resolve({ok:true, conteudo:{Banho:__planilha.slice()}}); return Promise.resolve({ok:true}); };
+    dashAutoCalcular=function(){ var o={}; Object.keys(DASH_AUTO_COLS).forEach(function(k){ o[k]=[]; });
+      o.banho=['Lana/Spitz (SHAMPOO · MEDICAMENTOSO · CLORESTEN · NA BOLSA)']; o._horas={banho:{}};
+      o._horas.banho[dashAutoNomeChave(o.banho[0])]='10:00'; return o; };`);
+  try {
+    await run("dashAutoSincronizar('2026-10-01')");
+    for (let i = 0; i < 40; i++) await Promise.resolve();
+    let ch = JSON.parse(JSON.stringify(run('__ch'))).filter((c) => c.acao !== 'lerDia');
+    assert.deepStrictEqual(ch.map((c) => c.acao + ':' + c.valor), [
+      'remover:Lana/Spitz (SHAMPOO · NA RECEPÇÃO)',
+      'lancar:Lana/Spitz (SHAMPOO · MEDICAMENTOSO · CLORESTEN · NA BOLSA)'], JSON.stringify(ch));
+    assert.strictEqual(ch[1].hora, '10:00');
+    // a célula que uma PESSOA escreveu não é do automático: fica como está
+    run("__ch=[]; __planilha=['Lana - Spitz']; __jaAuto={banho:[]};");
+    await run("dashAutoSincronizar('2026-10-01')");
+    for (let i = 0; i < 40; i++) await Promise.resolve();
+    ch = JSON.parse(JSON.stringify(run('__ch'))).filter((c) => c.acao !== 'lerDia');
+    assert.deepStrictEqual(ch, [], 'nada removido, nada duplicado');
+  } finally { run('DB=__bkF1.db; dashPonteChamar=__bkF1.pc; dashAutoCalcular=__bkF1.ac; zHojeISO=__bkF1.hz; audit=__bkF1.au;'); }
+});
+prova('QA17 F2/F3 — parêntese no nome do shampoo vira espaço; rascunho de antes (sem qual/nome) não acusa alteração', () => {
+  assert.strictEqual(run("banhoRecDetalhe({sham:'SHAMPOO', nome:'Episoothe (Virbac)', onde:'NA BOLSA'})"), ' (SHAMPOO · EPISOOTHE VIRBAC · NA BOLSA)');
+  assert.strictEqual(run("dashDetTextoLimpo('Otomax (2x ao dia)')"), 'OTOMAX 2X AO DIA');
+  run(`__bkF3={pe:pelExtra, P:PELUDINHOS}; PELUDINHOS=[{n:'Nick', tutor:'Cláudia'}];
+    pelExtra=function(){ return {banho_rec:{ativo:true, freq:'semanal', dia:'qui', hora:'10:00', desde:'2026-10-01', sham:'SEM SHAMPOO', onde:'', obs:''}}; };
+    banhoRascCarregar();
+    BANHO_RASC[banhosChave(PELUDINHOS[0])]={ativo:true, freq:'semanal', dia:'qui', hora:'10:00', desde:'2026-10-01', sham:'SEM SHAMPOO', onde:'', obs:'', excecoes:{}};`);
+  try {
+    assert.ok(!/ainda não foi gravada/.test(run('banhosLinhaHTML(PELUDINHOS[0])')), 'o rascunho guardado antes da versão nova é o mesmo combinado');
+  } finally { run('delete BANHO_RASC[banhosChave(PELUDINHOS[0])]; pelExtra=__bkF3.pe; PELUDINHOS=__bkF3.P;'); }
+});
+
 // ================================================================== Orçamento → Check-in (25/set)
 console.log('\nOrçamentos de hospedagem — o cliente novo é reconhecido e quem chega aparece no Check-in');
 prova('cliente novo (avulso) com check-in feito SAI de "Estadias fechadas" (o caso do Pingo)', () => {
