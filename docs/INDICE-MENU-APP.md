@@ -85,11 +85,32 @@ Cartão marcado "atualizado" antes desta versão e com a ficha ainda devendo **v
 - As senhas reais **saíram dos 24 arquivos de teste**. Agora vêm do ambiente: `ZELUZ_SENHA_DIRETORIA`, `ZELUZ_SENHA_GESTAO` e `ZELUZ_SENHA_PLANTAO`.
 - O rastro da auditoria sai sempre no formato que o banco aceita (`_audNormalizar`). Antes, um registro sem `quem` e `role` voltava para o bolso a cada reenvio, para sempre.
 
+### (H) Relatórios: a foto do xará não é mais oferecida ao FILHOt novo
+
+> **Adriana, 25/set/2026:** *"Toda vez que um novo peludinho chega (hoje o Thor, Spitz, da Juliana), pergunta em Relatórios se a foto é dele. Está confundindo agora o Thor da Andrea com o novato Spitz."*
+
+**Antes:** a pergunta "esta foto é dele?" devia aparecer só para foto **órfã** (guardada numa chave que não é ficha de ninguém). Mas a conta oferecia também a foto de **outra ficha que existe**. Todo FILHOt novo com um xará antigo caía na pergunta, e um "é ele" copiava a foto do outro.
+
+**Agora:**
+- Foto de ficha que existe não é candidata: o Thor novo vai para "precisa fotografar".
+- Card novo **"Duas fichas com a MESMA foto"**: mostra as fichas que ficaram com a foto copiada antes desta correção. A foto certa se tira em «Trocar».
+
+### (I) Correções do QA Gate (Elo 6), antes de publicar
+
+| Achado | Correção |
+|---|---|
+| Remédio da recepção + check-in de pertences podiam virar **duas doses** (alarme de novo depois de dado) | viram **uma** quando é o mesmo FILHOt e horário, ou o mesmo remédio com até 1 h de diferença. Fica a que já tem "dei" registrado (`medJuntarDoDia`) |
+| Remédio lançado para quem **faltou** tocava alarme e cobrava a Gestão | quem está "faltou" sai da fila na montagem e pela chamada viva. O check-in do corpo **não foi tocado** |
+| Pernoite de dia anterior: **check-in em dobro** entre aparelhos | três proteções:<br>• a noite é relida no banco antes do check-in e do cancelar;<br>• o fechamento e o cancelamento são por transação;<br>• a noite já coberta por uma estadia sai da lista. A janela passa a ser de 7 dias |
+| "Sim" antigo com a ficha devendo aparecia como "respondido" nos contadores | o estado do assunto passa a conferir a ficha |
+| Rastro da auditoria sem autor no check-in novo | campo vazio não apaga o autor |
+| Servidor da senha | quatro ajustes:<br>• freio por aparelho, e acertar não zera os erros;<br>• a resposta de aparelho não liberado não traz o nome;<br>• o endereço vem pelo `X-Real-IP`;<br>• o resumo do endereço leva sal |
+
 ### Provas
 
 Todas rodam sem rede e sem dado de cliente:
-- `node tests/fase0-ciclo-fechado.test.js`: 29 provas;
-- `node tests/servidor-senha.test.js`: 10 provas.
+- `node tests/fase0-ciclo-fechado.test.js`: 41 provas;
+- `node tests/servidor-senha.test.js`: 11 provas.
 
 O harness completo precisa do retrato da VPS e não rodou nesta sessão.
 

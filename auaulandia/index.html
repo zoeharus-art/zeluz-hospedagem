@@ -39797,6 +39797,15 @@
   function semFotoDados(){
     var chaves=fotoChavesConhecidas();
     var sem=[], soltas=[];
+    // AS FOTOS QUE JÁ TÊM DONO (Adriana, 25/set/2026: "toda vez que um novo peludinho chega
+    // — hoje o Thor, Spitz, da Juliana — pergunta em Relatórios se a foto é dele; está
+    // confundindo o Thor da Andrea com o novato"). A pergunta era para foto ÓRFÃ — guardada
+    // numa chave que não é ficha de ninguém —, como diz a nota acima. Mas a conta oferecia
+    // também a foto de OUTRA ficha que existe: todo FILHOt novo com um xará antigo caía na
+    // pergunta, e um "é ele" copiava a foto do outro. Foto de ficha que existe (ativa ou não)
+    // não é candidata: é do dono dela.
+    var comFicha={};
+    (PELUDINHOS||[]).forEach(function(p){ try{ comFicha[pelKey(p)]=1; }catch(e){} /* silencioso de propósito: ficha sem chave não tem foto para proteger */ });
     (PELUDINHOS||[]).forEach(function(p){
       if(typeof pelInativo==='function' && pelInativo(p)) return;
       var k=pelKey(p);
@@ -39808,7 +39817,7 @@
                 tel:((typeof pelGet==='function')?pelGet(p,'tel'):'')||''};
       // existe foto guardada com o MESMO NOME e outro sufixo? pode ser dele — ou de um xará
       var nk=jsNorm(nome);
-      var cand=Object.keys(chaves).filter(function(fk){ return String(fk).split('__')[0]===nk; });
+      var cand=Object.keys(chaves).filter(function(fk){ return String(fk).split('__')[0]===nk && !comFicha[fk]; });
       if(cand.length){ base.candidatas=cand; soltas.push(base); }
       else sem.push(base);
     });
@@ -40755,6 +40764,36 @@
   // O card que a Adriana pediu: as fotos na tela, para ela dizer quem é quem.
   // O que foi respondido NESTA sessão fica na tela até alguém abrir a tela de novo.
   var FOTO_CONF_AGORA={};        // {"ficha||foto": 'sim'|'nao'}
+  /* DUAS FICHAS COM A MESMA FOTO (25/set/2026). Antes da correção de semFotoDados, um "é
+   * ele" na pergunta do xará COPIAVA a foto de um FILHOt para a ficha do outro (o Thor da
+   * Andrea e o Thor da Juliana). A cópia não se desfaz sozinha — ninguém sabe qual das duas
+   * fichas está errada, então o app não escolhe: mostra as duas e pede a foto certa. */
+  function fotosRepetidasDados(){
+    var porFoto={};
+    (PELUDINHOS||[]).forEach(function(p){
+      if(typeof pelInativo==='function' && pelInativo(p)) return;
+      var k=''; try{ k=pelKey(p); }catch(e){ k=''; } /* silencioso de propósito: ficha sem chave não tem foto */
+      var url=k?(FOTOS||{})[k]:'';
+      if(!url) return;
+      (porFoto[url]=porFoto[url]||[]).push({nome:(typeof pelNome==='function'?pelNome(p):p.n)||'', tutor:((typeof pelGet==='function')?pelGet(p,'tutor'):'')||p.tutor||'', chave:k});
+    });
+    return Object.keys(porFoto).filter(function(u){ return porFoto[u].length>1; })
+      .map(function(u){ return {url:u, fichas:porFoto[u]}; });
+  }
+  function fotosRepetidasHTML(){
+    var G=[]; try{ G=fotosRepetidasDados(); }catch(e){ return ''; } /* silencioso de propósito: aviso de apoio — falhar não pode derrubar os Relatórios */
+    if(!G.length) return '';
+    return '<div class="card" style="margin-bottom:12px;border-left:4px solid var(--crm-critico)">'
+      +'<div style="font-weight:800;color:var(--z-blue);font-size:16px">Duas fichas com a MESMA foto ('+G.length+')</div>'
+      +'<div class="hint" style="margin-top:2px">Uma delas está com a foto do outro FILHOt. Abra a ficha de quem está com a foto errada e tire a foto certa em &laquo;Trocar&raquo; — a nova substitui a antiga.</div>'
+      +G.map(function(g){
+        return '<div style="display:flex;gap:10px;align-items:center;padding:9px 0;border-top:1px solid var(--line)">'
+          +'<div style="width:48px;height:48px;border-radius:10px;flex:0 0 48px;background-image:url(\''+String(g.url).replace(/'/g,'%27')+'\');background-size:cover;background-position:center"></div>'
+          +'<div style="font-size:14px;color:var(--z-blue);font-weight:700">'
+          +g.fichas.map(function(f){ return escAttr(f.nome)+(f.tutor?(' <span style="font-weight:600;color:var(--muted)">(tutor: '+escAttr(f.tutor)+')</span>'):''); }).join('<br>')
+          +'</div></div>';
+      }).join('')+'</div>';
+  }
   function fotosConferirHTML(){
     var d;
     try{ d=semFotoDados(); }catch(e){ return ''; }
@@ -40852,7 +40891,7 @@
     var el=document.getElementById('relGrid'); if(!el) return;
     if(!FOTO_CONF.__lido){ FOTO_CONF.__lido=true; try{ fotoConfCarregar().then(function(){ try{ renderRelatorios(); }catch(e){} /* silencioso de propósito: redesenho de tela — falhar não pode derrubar quem chamou */ }); }catch(e){} /* silencioso de propósito: redesenho de tela — falhar não pode derrubar quem chamou */ }
     el.innerHTML='<div id="relStatus" class="card" style="display:none;margin-bottom:12px;border-left:4px solid var(--z-gold)"></div>'
-      +fotosConferirHTML()+RELATORIOS.map(function(r){
+      +fotosRepetidasHTML()+fotosConferirHTML()+RELATORIOS.map(function(r){
       return '<div class="card" style="margin-bottom:12px"><h2 style="font-size:17px">'+relEsc(r.t)+'</h2>'
         +'<div class="hint" style="margin-bottom:10px">'+relEsc(r.d)+'</div>'
         +'<button class="btn btn-gold" onclick="'+r.fn+'">Baixar Excel</button>'

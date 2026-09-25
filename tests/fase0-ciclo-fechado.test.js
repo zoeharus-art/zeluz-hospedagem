@@ -455,6 +455,37 @@ prova('sem busca: só quem tem banho fixo (gravado ou ligado no rascunho); a bus
   }
 });
 
+// ================================================================== Foto do Thor (25/set)
+console.log('\nRelatórios — a foto do xará não é oferecida ao FILHOt novo');
+prova('Thor novo (Juliana) sem foto + Thor antigo (Andrea) com foto: NÃO pergunta; foto órfã, sim', () => {
+  run(`__bkpP=PELUDINHOS; __bkpF=FOTOS; __bkpI=pelInativo;
+       pelInativo=function(){ return false; };
+       PELUDINHOS=[{n:'Thor', tutor:'Andrea'}, {n:'Thor', tutor:'Juliana'}, {n:'Lua', tutor:'Rui'}];
+       FOTOS={}; FOTOS[pelKey(PELUDINHOS[0])]='data:foto-thor-andrea';
+       FOTOS['lua__rui antigo']='data:foto-orfa-da-lua';`);
+  try {
+    const d = run('semFotoDados()');
+    const soltas = JSON.parse(JSON.stringify(d.soltas)).map((o) => o.nome);
+    const sem = JSON.parse(JSON.stringify(d.sem)).map((o) => o.nome);
+    assert.ok(sem.indexOf('Thor') >= 0, 'o Thor da Juliana vai para "precisa fotografar"');
+    assert.ok(soltas.indexOf('Thor') < 0, 'a foto do Thor da Andrea não é oferecida');
+    assert.ok(soltas.indexOf('Lua') >= 0, 'a foto órfã (chave sem ficha) continua sendo perguntada');
+  } finally { run('PELUDINHOS=__bkpP; FOTOS=__bkpF; pelInativo=__bkpI;'); }
+});
+
+prova('a foto copiada por engano aparece: duas fichas com a MESMA foto', () => {
+  run(`__bkpP=PELUDINHOS; __bkpF=FOTOS; __bkpI=pelInativo;
+       pelInativo=function(){ return false; };
+       PELUDINHOS=[{n:'Thor', tutor:'Andrea'}, {n:'Thor', tutor:'Juliana'}, {n:'Lua', tutor:'Rui'}];
+       FOTOS={}; FOTOS[pelKey(PELUDINHOS[0])]='data:x'; FOTOS[pelKey(PELUDINHOS[1])]='data:x'; FOTOS[pelKey(PELUDINHOS[2])]='data:y';`);
+  try {
+    const G = JSON.parse(run('JSON.stringify(fotosRepetidasDados())'));
+    assert.strictEqual(G.length, 1);
+    igual(G[0].fichas.map((f) => f.tutor).sort(), ['Andrea', 'Juliana']);
+    assert.ok(/MESMA foto/.test(run('fotosRepetidasHTML()')));
+  } finally { run('PELUDINHOS=__bkpP; FOTOS=__bkpF; pelInativo=__bkpI;'); }
+});
+
 // ------------------------------------------------ o fim
 console.log('\n' + ok + ' provas passaram' + (falhas.length ? (', ' + falhas.length + ' falharam:') : '.'));
 falhas.forEach((f) => console.log('  - ' + f));
