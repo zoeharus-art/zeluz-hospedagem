@@ -22706,7 +22706,9 @@
       ['enviadas','respostas','cobrancas','tentativas'].forEach(function(c){ Object.keys(r[c]||{}).forEach(function(t){ if(vencEhAntecipado(t)) _antT[vencTipoBase(t)]=1; }); });
       // QA10: é o cartão INTEIRO (ficha_atualizada fecha também as perguntas "fazer hoje?"
       // ainda não mandadas) — segura tudo o que a pergunta de hoje cobre, perguntado ou não.
-      if(Object.keys(_antT).length || dia===hoje) itensN=itensN.concat((hojeAntecipar(exN, p, dia, r)||{}).itens||[]);
+      // QA12: também o cartão de um dia que AINDA VAI CHEGAR (a véspera fecha o de amanhã): no dia,
+      // a pergunta "fazer hoje?" dele não pode nascer "respondida".
+      if(Object.keys(_antT).length || dia>=hoje) itensN=itensN.concat((hojeAntecipar(exN, p, dia, r)||{}).itens||[]);
     }catch(e){ return null; } /* silencioso de propósito: quem chama decide o lado seguro */
     var resps=r.respostas||{}, recusou={};
     Object.keys(resps).forEach(function(t){ if(vencRespNaoMudaFicha((resps[t]||{}).v)) recusou[vencTipoBase(t)]=1; });
@@ -35944,11 +35946,12 @@
   }
   // Houve conversa sobre o assunto `base` DEPOIS do fechamento (a pergunta mandada depois)?
   function vencConversaDepoisDe(r, base, lim){
-    r=r||{}; var achou=false;
+    r=r||{}; var achou=false, agora=Date.now();
     ['enviadas','respostas','cobrancas','tentativas'].forEach(function(c){
       Object.keys(r[c]||{}).forEach(function(t){
         if(achou || vencTipoBase(t)!==base) return;
-        var x=r[c][t]; (Array.isArray(x)?x:[x]).forEach(function(y){ if(y && Number(y.ts)>lim) achou=true; });
+        // QA12: hora no futuro (relógio adiantado) não é "depois" — regravaria o fechamento a cada gravação.
+        var x=r[c][t]; (Array.isArray(x)?x:[x]).forEach(function(y){ if(y && Number(y.ts)>lim && Number(y.ts)<=agora) achou=true; });
       });
     });
     return achou;
@@ -37302,7 +37305,15 @@
       // VELHA da carteirinha fecha o "em aberto", mas a vacina continua vencida e a aplicar.
       var fe=r.fechados||{};
       // QA11: o recado combinado DEPOIS do fechamento (a pergunta "fazer hoje?" mandada depois) é outro.
-      if(fe.vacina && !(Number((r.vet||{}).ts||0)>Number(fe.vacina.ts||0))) return;
+      if(fe.vacina && !(Number((r.vet||{}).ts||0)>Number(fe.vacina.ts||0))){
+        // QA12: o recado nascido do "em aberto" (vacina NUNCA registrada, "fazer aqui") não é do
+        // assunto vacina — gravar a antirrábica do cartão não o tira enquanto ELA ainda deve.
+        var emAberto=true;
+        try{ var nomesV=String((r.vet||{}).vacinas||'');
+             emAberto=vencFichaDeveAgora(ch, {}, dia).some(function(x){ return x && x.vacina && x.sem_registro && nomesV.indexOf(VENC_VACINA_NOME[x.k]||x.nome)>=0; }); }
+        catch(e){ emAberto=true; } /* silencioso de propósito: na dúvida, o recado fica */
+        if(!emAberto) return;
+      }
       if(fe.aberto){
         var vacDeve=true;
         try{ vacDeve=vencFichaDeveAgora(ch, {}, dia).some(function(x){ return x && x.vacina; }); }
