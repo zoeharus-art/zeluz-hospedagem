@@ -112,6 +112,17 @@ Cartão marcado "atualizado" antes desta versão e com a ficha ainda devendo **v
 - **Nada é gravado e nenhum nó novo nasce.** A aba é uma leitura das fontes que já existem (`daycare/vencimentos`, `daycare/pendencias` e a própria ficha). Uma cópia consolidada gravada à parte seria a segunda verdade que envelhece.
 - **Para agentes:** a mesma leitura (`fichaUnicaDados`) devolve tudo em campos com nome. O contrato está no PRD-006, seção "Arquitetura do ciclo fechado".
 
+**Correções da 6ª rodada do QA (ficha e check-in), antes de publicar:**
+
+| Achado | Correção |
+|---|---|
+| **A1:** abrir a aba enquanto a primeira leitura da sessão ainda corria **congelava a página** (laço de redesenho) | uma leitura por vez; redesenha só quando algo mudou; no máximo 4 novas tentativas espaçadas, e depois a aba diz "Não consegui ler agora — toque na aba de novo" |
+| **M1:** leitura que falhava era refeita sem parar | a mesma trava |
+| **M2:** a aba ficava presa em "Montando…" quando a ficha se redesenhava | a ficha redesenhada desenha a aba de novo (vale também para Medicamentos, que tinha o mesmo defeito) |
+| **M3:** a aba e as Respostas pendentes discordavam sobre o que espera resposta | "Esperando resposta" usa a mesma régua das Respostas pendentes, com a trava da ficha |
+| **M4:** trocar a cor podia estragar o que foi escrito ("rosa choque" virava "azul choque") | a cor só troca a que o próprio seletor pôs; o que foi escrito à mão fica intacto e a cor entra na frente. O seletor acompanha o que se digita |
+| Baixos | gênero e plural dos itens novos ("pijama vermelho", "meias vermelhas"), rolagem da barra "Ir para" sem folga a mais, registros antigos (sem assunto, só com a ficha atualizada), aba e linha só para quem fala com o tutor, "ela/ele" conforme o FILHOt, "são dois itens", atalho "Medicação" |
+
 ### (O) Check-in da hospedagem no celular: pertences sem digitar
 
 > **Adriana, 25/set/2026:** *"Check-in, preenchimento de hospedagem, está muito difícil. Precisa colocar manual os pertences! Digitar! Está confuso. Tela imensa, sem agilidade nenhuma. Péssima visibilidade no celular."*
@@ -127,7 +138,7 @@ Medido a 375 px de largura, antes da mudança:
 | Tocar num tipo | só adiciona. **O teclado não abre mais sozinho** |
 | A cor | é **um toque**, num seletor na própria linha: preto, branco, azul, rosa, vermelho, estampado etc. Concorda com o item ("coleira vermelha", "peitoral vermelho"). Ração, comida natural, petiscos e tapete não têm seletor: ali o que importa é a marca |
 | O detalhe por escrito | continua existindo, **opcional** ("Detalhe (opcional): marca, estampa…"). Trocar a cor mexe só na cor e mantém o resto |
-| Ir de um cartão a outro | uma barra **Ir para:** logo abaixo do nome do FILHOt, com Datas · Alimentação · Remédios · Pertences · Assinatura e salvar |
+| Ir de um cartão a outro | uma barra **Ir para:** logo abaixo do nome do FILHOt, com Datas · Alimentação · Medicação · Pertences · Assinatura e salvar |
 
 - **O dado gravado não mudou:** a cor entra no começo da mesma especificação de sempre. A Conferência, o PDF e o Check-out leem igual.
 - O check-in do corpo e o de pertences do Day Care **não foram tocados**. Só o cartão de Pertences do check-in da hospedagem e a barra de atalhos.
@@ -265,7 +276,7 @@ O saldo de reposição não muda ao marcar: o crédito só sai quando ele vem. A
 ### Provas
 
 Todas rodam sem rede e sem dado de cliente:
-- `node tests/fase0-ciclo-fechado.test.js`: 83 provas;
+- `node tests/fase0-ciclo-fechado.test.js`: 86 provas;
 - `node tests/servidor-senha.test.js`: 11 provas.
 
 O harness completo precisa do retrato da VPS e não rodou nesta sessão.
@@ -279,6 +290,7 @@ O harness completo precisa do retrato da VPS e não rodou nesta sessão.
 | 3ª | **CONCERNS — pode publicar** | ressalvas |
 | 4ª (orçamento e reposição) | **CONCERNS — pode publicar** | M1, M2 e B1 a B5, todos corrigidos (ver K) |
 | 5ª (Turma, WhatsApp, Quem chamar hoje) | **FAIL** → corrigido | A1, A2, M1 a M6 e os baixos, todos corrigidos (ver N) |
+| 6ª (check-in no celular e ficha única) | **FAIL** (ficha) · CONCERNS (check-in) → corrigido | A1, M1 a M4 e os baixos, todos corrigidos (ver P) |
 
 Destino de cada ressalva da 3ª rodada:
 - **C1:** o exemplo do campo agora pede o nome do remédio primeiro: "Ex.: Otomax — gotas no ouvido, 2x ao dia";

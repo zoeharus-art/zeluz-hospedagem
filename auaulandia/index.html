@@ -3622,7 +3622,7 @@
         <span class="ci-atalhos-rot">Ir para:</span>
         <button type="button" onclick="ciIrPara('ciCardDatas')">Datas</button>
         <button type="button" onclick="ciIrPara('ciCardAlim')">Alimentação</button>
-        <button type="button" onclick="ciIrPara('ciCardMed')">Remédios</button>
+        <button type="button" onclick="ciIrPara('ciCardMed')">Medicação</button>
         <button type="button" onclick="ciIrPara('ciCardPert')">Pertences</button>
         <button type="button" onclick="ciIrPara('ciCardAssina')">Assinatura e salvar</button>
       </div>
@@ -3778,7 +3778,7 @@
 
       <div class="card" id="ciCardPert">
         <h2>Pertences</h2>
-        <div class="hint">Toque no que o tutor trouxe — <strong>tocou duas vezes, são dois</strong> (ex: 2 roupas). A <strong>cor é um toque</strong>, na própria linha; o detalhe por escrito é opcional. Não achou na lista? Acrescente lá embaixo — vai para o banco e aparece para todos.</div>
+        <div class="hint">Toque no que o tutor trouxe — <strong>tocou duas vezes, são dois itens</strong> (ex.: 2 roupas). A <strong>cor é um toque</strong>, na própria linha; o detalhe por escrito é opcional. Não achou na lista? Acrescente lá embaixo — vai para o banco e aparece para todos.</div>
         <button type="button" class="ci-toggle-novo" id="ciPertManageBtn" style="margin-top:0;display:none" onclick="ciTogglePertManage()"><span data-icon="paw"></span><span id="ciPertManageTxt">Gerenciar itens do banco (editar / excluir)</span></button>
         <div id="ciPertGrid" class="pert-grid"></div>
         <div id="ciPertSel"></div>
@@ -23819,6 +23819,12 @@
       abrirPeludinho(pelAtualIdx);
       const bt=Array.prototype.find.call(document.querySelectorAll('.subtab2'), b=>(b.getAttribute('onclick')||'').indexOf("'"+ativa+"'")>=0);
       if(bt) pelSubtab(bt, ativa);
+      // As abas que se desenham por função (QA, 25/set/2026): reativar sem desenhar deixava a
+      // aba presa em "Montando…" depois de qualquer redesenho da ficha.
+      try{
+        if(ativa==='ps-tutor' && typeof fichaTutorRender==='function') fichaTutorRender();
+        if(ativa==='ps-med' && typeof fmedRender==='function') fmedRender();
+      }catch(e){ /* silencioso de propósito: redesenho de aba — a ficha já está na tela */ }
       try{ window.scrollTo(0,y); }catch(e){} /* silencioso de propósito: enfeite de tela (foco, rolagem, mídia) — falhar não muda dado nenhum */
     }catch(e){} /* silencioso de propósito: guarda defensiva — falhar aqui não pode interromper quem chamou */
   }
@@ -23947,7 +23953,7 @@
              que a informação não se perca". O que a ficha deve, o que ficou pendente de outro
              dia e cada conversa com o tutor — quem mandou, quando e o que ele respondeu. Só
              leitura: as fontes continuam onde sempre estiveram. Dado de cobrança = sensível. -->
-        <div class="subtab2 so-sensivel" onclick="pelSubtab(this,'ps-tutor');fichaTutorRender()">Com o tutor</div>
+        <div class="subtab2 so-sensivel" onclick="pelSubtab(this,'ps-tutor');fichaTutorRender(true)">Com o tutor</div>
         <div class="subtab2" onclick="pelSubtab(this,'ps-rotina')">Rotina &amp; Almoço</div>
         <div class="subtab2" onclick="pelSubtab(this,'ps-exames')">Exames do corpo</div>
         <div class="subtab2" onclick="pelSubtab(this,'ps-atencao')">Atenção &amp; Cuidados</div>
@@ -38982,13 +38988,21 @@
           Object.keys(r[c]||{}).forEach(function(t){ tipos[t]=1; });
         });
         var lista=Object.keys(tipos);
-        // O cartão respondido pelo caminho antigo (antes das mensagens por assunto).
-        if(!lista.length && (r.resposta || r.msg_enviada)) lista=[''];
+        // O cartão respondido pelo caminho antigo (antes das mensagens por assunto), e o que
+        // só tem a ficha atualizada.
+        if(!lista.length && (r.resposta || r.msg_enviada || r.ficha_atualizada)) lista=[''];
+        // O "Sim" com a trava (QA, 25/set/2026): o mesmo cálculo das Respostas pendentes, para
+        // a aba e a lista nunca discordarem sobre o que está fechado.
+        var deveC=null;
+        try{ deveC=vencSimComTrava(r) ? vencFichaDeveAgora(chave, r, dia) : (r.ficha_atualizada?[]:null); }
+        catch(e){ deveC=null; } /* silencioso de propósito: sem a ficha em memória vale o registro */
+        var semEnviadas=!Object.keys(r.enviadas||{}).length;
         lista.forEach(function(t){
-          var env=t?((r.enviadas||{})[t]||null):(r.msg_enviada||null);
+          // msg_enviada antiga (de antes das mensagens por assunto) vale como o envio do dia.
+          var env=t?(((r.enviadas||{})[t])||(semEnviadas?(r.msg_enviada||null):null)):(r.msg_enviada||null);
           var rt=t?vencRespostaDe(r, t):(r.resposta?{v:r.resposta, quem:r.resposta_quem, ts:r.resposta_ts}:null);
           var estado='';
-          try{ estado=vencEstadoTipo(r, t, agora); }
+          try{ estado=vencEstadoTipo(r, t, agora, deveC); }
           catch(e){ estado=''; } /* silencioso de propósito: registro antigo sem assunto fica sem estado */
           var c={dia:dia, tipo:t, assunto:t?vencRotuloTipo(t):'Prevenção', antecipado:vencEhAntecipado(t),
             enviada:env?{quem:String(env.quem||''), ts:Number(env.ts||0)}:null,
@@ -38996,15 +39010,28 @@
             cobrancas:vencCobrancasDe(r, t).length, tentativas:vencTentativasDe(r, t).length,
             estado:estado, ficha_atualizada:!!r.ficha_atualizada};
           out.conversas.push(c);
-          if(estado==='aguardando'||estado==='cobrar') out.esperando.push(c);
         });
+      });
+      // O que ESPERA resposta é o mesmo das Respostas pendentes e do Quem chamar hoje — uma
+      // régua só (vencPendLista), com as conversas daqui para mostrar quem mandou e quando.
+      var P=null;
+      try{ P=vencPendLista(VENC_PEND, hoje, agora); }
+      catch(e){ P=null; } /* silencioso de propósito: sem a lista, nada é afirmado como pendente */
+      (P||[]).forEach(function(x){
+        if(x.chave!==chave) return;
+        var c=out.conversas.filter(function(y){ return y.dia===x.dia && y.tipo===x.tipo; })[0];
+        if(!c) return;
+        c.estado=x.estado;
+        out.esperando.push(c);
       });
     }
     return out;
   }
   // A linha do cabeçalho da ficha: bater o olho e saber se há algo em aberto com o tutor.
   // Só com o que JÁ está em memória — abrir a ficha não pode custar leitura nova.
+  function fichaTutorPode(){ try{ return (typeof podePapel!=='function') || podePapel('hoje-na-casa'); }catch(e){ return false; } }
   function fichaTutorLinhaHTML(p){
+    if(!fichaTutorPode()) return '';
     var d=null;
     try{ d=fichaUnicaDados(p); }
     catch(e){ return ''; } /* silencioso de propósito: enfeite de cabeçalho — a aba mostra o resto */
@@ -39017,20 +39044,59 @@
     return '<div class="so-sensivel" style="margin-top:6px;font-size:13px;font-weight:800;color:var(--crm-atencao-text)">'
       +'Com o tutor: '+escAttr(partes.join(' · '))+' — veja na aba <strong>Com o tutor</strong>.</div>';
   }
-  function fichaTutorRender(){
+  // A LEITURA DA ABA (QA, 25/set/2026). Antes, com a primeira leitura da sessão ainda em
+  // andamento, a leitura devolvia "nada" na hora, a aba se redesenhava e pedia de novo — um
+  // laço de microtarefas que congelava a página. Agora: uma leitura por vez, redesenho SÓ
+  // quando algo mudou de verdade, e no máximo 4 novas tentativas espaçadas enquanto outra
+  // leitura estiver em curso. Depois disso a aba diz que não conseguiu, e para.
+  var FT_LENDO=false, FT_TENT={p:null, n:0};
+  function fichaTutorAtiva(p){
+    try{
+      var sec=document.getElementById('ps-tutor');
+      return !!(sec && sec.classList.contains('active') && pelAtual===p);
+    }catch(e){ return false; }
+  }
+  function fichaTutorLer(p, d){
+    if(FT_TENT.p!==p) FT_TENT={p:p, n:0};
+    // Esgotadas as tentativas, só o toque na aba (fichaTutorRender(true)) lê de novo.
+    if(!DB || FT_LENDO || FT_TENT.n>=4) return;
+    var falta=[];
+    // A varredura tem trava própria de 2 min: pedir sempre traz a novidade sem custo.
+    try{ if(typeof vencPendCarregar==='function') falta.push(vencPendCarregar()); }catch(e){ /* silencioso de propósito: a aba diz que não leu */ }
+    try{ if(!d.lido.pendencias && typeof pendCarregar==='function') falta.push(pendCarregar()); }catch(e){ /* silencioso de propósito: a aba diz que não leu */ }
+    if(!falta.length) return;
+    FT_LENDO=true;
+    var antes=JSON.stringify([d.lido, d.conversas, d.pendencias]);
+    Promise.all(falta).then(function(){
+      FT_LENDO=false;
+      if(!fichaTutorAtiva(p)) return;
+      var d2=fichaUnicaDados(p);
+      if(JSON.stringify([d2.lido, d2.conversas, d2.pendencias])!==antes){ fichaTutorRender(); return; }
+      if(d2.lido.conversas && d2.lido.pendencias) return;          // leu e nada mudou: para aqui
+      // Nada mudou e ainda falta ler: outra leitura estava em curso. Tenta de novo, espaçado,
+      // no máximo 4 vezes; na última, a aba diz que não conseguiu (e não lê mais sozinha).
+      FT_TENT.n++;
+      if(FT_TENT.n<4) setTimeout(function(){ try{ if(fichaTutorAtiva(p)) fichaTutorRender(); }catch(e){} /* silencioso de propósito: redesenho de tela */ }, 1500);
+      else fichaTutorRender();
+    }, function(){ FT_LENDO=false; });
+  }
+  // `manual` = a pessoa tocou na aba: vale como nova chance de ler.
+  function fichaTutorRender(manual){
     var raiz=document.getElementById('fichaTutorRoot'); if(!raiz) return;
+    if(manual) FT_TENT={p:null, n:0};
+    if(!fichaTutorPode()){
+      raiz.innerHTML='<div class="card"><div class="hint">A conversa com o tutor é das Consultoras de Bem-Estar, da Supervisão e da Gestão.</div></div>';
+      return;
+    }
     var p=(typeof pelAtual!=='undefined')?pelAtual:null;
     if(!p){ raiz.innerHTML='<div class="card"><div class="hint">Abra a ficha de um FILHOt.</div></div>'; return; }
     var d=fichaUnicaDados(p);
-    // O que falta ler, lê uma vez — e redesenha quando chega.
-    if(DB){
-      var falta=[];
-      if(!d.lido.conversas && typeof vencPendCarregar==='function') falta.push(vencPendCarregar());
-      if(!d.lido.pendencias && typeof pendCarregar==='function') falta.push(pendCarregar());
-      if(falta.length) Promise.all(falta).then(function(){
-        try{ if(pelAtual===p) fichaTutorRender(); }catch(e){ /* silencioso de propósito: redesenho de tela */ }
-      });
-    }
+    var desistiu=(FT_TENT.p===p && FT_TENT.n>=4);
+    var lendo=desistiu?'<div class="hint" style="color:var(--crm-atencao-text);font-weight:700">Não consegui ler agora — toque na aba de novo em instantes.</div>'
+                      :'<div class="hint">Lendo&hellip;</div>';
+    fichaTutorLer(p, d);
+    var fem=/^f/i.test(String((d.filhot&&d.filhot.sexo)||''));
+    var ele=fem?'ela':'ele';
     var dd=function(iso){ return (((typeof fmtBR==='function')?fmtBR(iso):'')||iso||'').slice(0,5); };
     var quando=function(x){ return x&&x.ts?(escAttr(x.quem||'-')+', '+escAttr(dd(zDiaDoTs(x.ts)))+' às '+escAttr(vencHora(x.ts))):''; };
     var h='<div class="card"><h2 style="font-size:19px">Agora</h2>';
@@ -39044,17 +39110,17 @@
       : '<div class="hint" style="color:var(--crm-ok);font-weight:700">Nada vencido nem em aberto.</div>';
     // as pendências
     h+='<div class="hint" style="margin-top:10px;font-weight:800;color:var(--z-blue)">Pendências de outro dia</div>';
-    h+=!d.lido.pendencias?'<div class="hint">Lendo&hellip;</div>'
+    h+=!d.lido.pendencias?lendo
       :(d.pendencias.length?('<div style="font-size:13.5px;font-weight:700;color:var(--crm-atencao-text)">'
           +d.pendencias.map(function(x){ return escAttr(x.rotulo)+(x.dia?(' de '+escAttr(dd(x.dia))):''); }).join(' · ')
-          +'</div><div class="hint">Lançado para um dia em que ele não veio: volta a ser cobrado na próxima vinda.</div>')
+          +'</div><div class="hint">Lançado para um dia em que '+ele+' não veio: volta a ser cobrado na próxima vinda.</div>')
         :'<div class="hint" style="color:var(--crm-ok);font-weight:700">Nenhuma.</div>');
     // esperando resposta
     h+='<div class="hint" style="margin-top:10px;font-weight:800;color:var(--z-blue)">Esperando resposta do tutor</div>';
-    h+=!d.lido.conversas?'<div class="hint">Lendo&hellip;</div>'
+    h+=!d.lido.conversas?lendo
       :(d.esperando.length?d.esperando.map(function(c){
           return '<div style="font-size:13.5px;font-weight:700;color:'+(c.estado==='cobrar'?'var(--crm-critico)':'var(--z-blue)')+'">'
-            +escAttr(c.assunto)+' — mandada por '+quando(c.enviada)
+            +escAttr(c.assunto)+' — '+(c.enviada?('mandada por '+quando(c.enviada)):'mandada (sem registro de quem)')
             +(c.estado==='cobrar'?' · <strong>passou do prazo: cobrar</strong>':'')+'</div>';
         }).join(''):'<div class="hint" style="color:var(--crm-ok);font-weight:700">Nenhuma conversa esperando.</div>');
     h+='<div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:12px">'
@@ -39063,14 +39129,14 @@
     // as conversas
     h+='<div class="card"><h2 style="font-size:19px">Conversas com o tutor</h2>'
       +'<div class="hint">Os últimos '+VENC_PEND_DIAS+' dias e os próximos já combinados: cada mensagem, quem mandou, o que o tutor respondeu e as cobranças. Nada aqui se apaga.</div>';
-    if(!d.lido.conversas) h+='<div class="hint" style="padding:8px 0">Lendo&hellip;</div>';
+    if(!d.lido.conversas) h+='<div style="padding:8px 0">'+lendo+'</div>';
     else if(!d.conversas.length) h+='<div class="hint" style="padding:8px 0">Nenhuma conversa registrada neste período.</div>';
     else d.conversas.forEach(function(c){
       h+='<div style="padding:9px 0;border-top:1px solid var(--line)">'
         +'<div style="font-size:14px;font-weight:800;color:var(--z-blue)">'+escAttr(dd(c.dia))+' · '+escAttr(c.assunto)
-        +(c.antecipado?' <span class="hint" style="margin:0">(com ele na casa)</span>':'')+'</div>'
+        +(c.antecipado?(' <span class="hint" style="margin:0">(com '+ele+' na casa)</span>'):'')+'</div>'
         +'<div style="font-size:13px;color:var(--z-blue);line-height:1.5">'
-        +(c.enviada?('Mandada por '+quando(c.enviada)):'Ainda não mandada')
+        +(c.enviada?('Mandada por '+quando(c.enviada)):(c.tipo?'Ainda não mandada':'Registro antigo'))
         +(c.resposta?(' · <strong>Resposta:</strong> '+escAttr(c.resposta.rotulo)+(c.resposta.ts?(' ('+quando(c.resposta)+')'):'')):'')
         +(c.cobrancas?(' · '+c.cobrancas+(c.cobrancas>1?' cobranças':' cobrança')):'')
         +(c.tentativas?(' · '+c.tentativas+(c.tentativas>1?' tentativas sem resposta':' tentativa sem resposta')):'')
@@ -44732,66 +44798,102 @@
   function ciIrPara(id){
     try{
       const el=document.getElementById(id); if(!el) return;
+      // A área coberta é o fundo MAIS BAIXO dos cabeçalhos presos — eles se sobrepõem no
+      // topo, e somar as alturas descontava a mais (QA B2).
       let topo=0;
       document.querySelectorAll('.mobtop, .main > .head').forEach(function(h){
         const st=getComputedStyle(h);
-        if(st.display!=='none' && (st.position==='sticky'||st.position==='fixed')) topo+=h.offsetHeight;
+        if(st.display!=='none' && (st.position==='sticky'||st.position==='fixed')) topo=Math.max(topo, h.getBoundingClientRect().bottom);
       });
       const y=el.getBoundingClientRect().top+window.scrollY-topo-8;
       window.scrollTo({top:Math.max(0,y), behavior:'smooth'});
     }catch(e){ /* silencioso de propósito: atalho de rolagem — falhar não muda dado nenhum */ }
   }
   // ---- a cor num toque ------------------------------------------------------------------
-  // As cores no masculino e no feminino: "coleira vermelha", "peitoral vermelho" — a ficha
-  // sai no PDF e vai para o tutor, e erro de concordância ali é a Zêluz escrevendo errado.
-  var CI_PERT_CORES=[['preto','preta'],['branco','branca'],['cinza','cinza'],['azul','azul'],['azul-marinho','azul-marinho'],
-    ['rosa','rosa'],['vermelho','vermelha'],['verde','verde'],['amarelo','amarela'],['laranja','laranja'],['roxo','roxa'],
-    ['marrom','marrom'],['bege','bege'],['caramelo','caramelo'],['estampado','estampada'],['xadrez','xadrez'],['colorido','colorida']];
+  // As cores em quatro formas — masculino, feminino e os dois plurais: "coleira vermelha",
+  // "peitoral vermelho", "meias vermelhas". A ficha sai no PDF e vai para o tutor, e erro de
+  // concordância ali é a Zêluz escrevendo errado.
+  var CI_PERT_CORES=[['preto','preta','pretos','pretas'],['branco','branca','brancos','brancas'],
+    ['cinza','cinza','cinza','cinza'],['azul','azul','azuis','azuis'],['azul-marinho','azul-marinho','azul-marinho','azul-marinho'],
+    ['rosa','rosa','rosa','rosa'],['vermelho','vermelha','vermelhos','vermelhas'],['verde','verde','verdes','verdes'],
+    ['amarelo','amarela','amarelos','amarelas'],['laranja','laranja','laranja','laranja'],['roxo','roxa','roxos','roxas'],
+    ['marrom','marrom','marrons','marrons'],['bege','bege','beges','beges'],['caramelo','caramelo','caramelo','caramelo'],
+    ['estampado','estampada','estampados','estampadas'],['xadrez','xadrez','xadrez','xadrez'],['colorido','colorida','coloridos','coloridas']];
   // Ração, comida, petisco e tapete: o que importa é a marca, não a cor.
   var CI_PERT_SEM_COR={racao:1, natural:1, petisco:1, tapete:1};
   function ciPertCorPede(k){ return !CI_PERT_SEM_COR[String(k||'')]; }
-  // "Coleira", "Cama", "Bolsa / mala", "Guia", "Roupa" são femininos; "Peitoral", "Pote",
-  // "Brinquedo", masculinos. Para o item novo do banco vale a regra da última letra do
-  // primeiro nome (a, ção, gem) — é o que acerta o português na imensa maioria.
-  function ciPertFem(nome){
+  // As palavras que a regra da última letra erra (QA, 25/set/2026).
+  var CI_PERT_GENERO={pijama:'m', sofa:'m', mapa:'m', dia:'m', rede:'f', chave:'f', tag:'f', manta:'f', mochila:'f', cobertor:'m'};
+  // Qual das quatro formas: 0 masc · 1 fem · 2 masc plural · 3 fem plural. "Coleira", "Cama",
+  // "Bolsa / mala", "Guia", "Roupa": feminino; "Peitoral", "Pote", "Brinquedo": masculino. Para
+  // o item novo do banco, a lista acima e a regra da última letra (a, ção, gem); plural pelo "s".
+  function ciPertForma(nome){
     var w=jsNorm(String(nome||'').split(/[\s\/]+/)[0]||'');
-    return /(a|cao|gem)$/.test(w);
+    var plural=/s$/.test(w) && w.length>3;
+    var sing=plural?w.replace(/(oe|ae)s$/,'$1').replace(/s$/,''):w;
+    var g=CI_PERT_GENERO[sing];
+    var fem=g?(g==='f'):/(a|cao|gem)$/.test(sing);
+    return (plural?2:0)+(fem?1:0);
   }
-  // A cor que a especificação já traz no começo ("vermelha Zeedog" → "vermelha"), em
-  // qualquer das duas formas. '' = nenhuma.
-  function ciPertCorDe(spec){
-    var t=jsNorm(String(spec||'')).trim();
+  function ciPertFem(nome){ return ciPertForma(nome)%2===1; }
+  // Todas as formas de todas as cores, sem acento, da mais longa para a mais curta.
+  function ciPertCorFormas(){
+    var f=[];
+    CI_PERT_CORES.forEach(function(l){ l.forEach(function(c){ var n=jsNorm(c); if(f.indexOf(n)<0) f.push(n); }); });
+    return f.sort(function(a,b){ return b.length-a.length; });
+  }
+  // NUNCA APAGAR O QUE A CONSULTORA ESCREVEU (QA M4, 25/set/2026). A cor só é trocada quando
+  // o começo do texto é a cor que o PRÓPRIO seletor pôs (p.corSel — memória da tela, não vai
+  // para o banco). "rosa choque", "preto e branco", "Verde água": escritos à mão, ficam
+  // intactos, e a cor escolhida entra na frente. A exceção é o dado antigo no formato que o
+  // seletor escreveria — a cor inteira sozinha, ou seguida de uma marca com letra maiúscula
+  // ("vermelha Zeedog"): aí o seletor reconhece a cor e troca só ela.
+  function ciPertCorInicial(spec){
+    spec=String(spec||'').normalize('NFC').trim();
+    var t=jsNorm(spec);
     var achou='';
-    CI_PERT_CORES.forEach(function(par){
-      par.forEach(function(c){
-        var n=jsNorm(c);
-        if((t===n || t.indexOf(n+' ')===0) && n.length>achou.length) achou=n;
-      });
+    ciPertCorFormas().some(function(n){
+      if(t===n){ achou=n; return true; }
+      if(t.indexOf(n+' ')===0){
+        var prox=spec.slice(n.length).trim();
+        if(/^[A-ZÀ-Ý]/.test(prox)){ achou=n; return true; }
+        return true;                                            // cor seguida de palavra minúscula: é texto dela
+      }
+      return false;
     });
     return achou;
   }
-  // Troca (ou põe) a cor no começo da especificação e guarda o resto como está. Pura.
-  function ciPertComCor(spec, cor){
-    spec=String(spec||'').trim();
-    var atual=ciPertCorDe(spec);
+  function ciPertCorAtual(p){
+    var spec=String((p&&p.spec)||'').normalize('NFC').trim(), t=jsNorm(spec);
+    var c=jsNorm(String((p&&p.corSel)||''));
+    if(c && (t===c || t.indexOf(c+' ')===0)) return c;
+    if(p && p.corSel===undefined) return ciPertCorInicial(spec);
+    return '';
+  }
+  // Pura: troca a cor que está no começo (atual, já sem acento) pela nova; sem atual, a nova
+  // entra na frente. O resto do texto fica exatamente como estava.
+  function ciPertComCor(spec, cor, atual){
+    spec=String(spec||'').normalize('NFC').trim();
+    if(atual===undefined) atual=ciPertCorInicial(spec);
     var resto=atual?spec.slice(atual.length).trim():spec;
     return ((cor||'')+(resto?((cor?' ':'')+resto):'')).trim();
   }
   function ciPertCorHTML(p){
     if(!ciPertCorPede(p.k)) return '';
-    var fem=ciPertFem(p.nome), atual=ciPertCorDe(p.spec);
+    var forma=ciPertForma(p.nome), atual=ciPertCorAtual(p);
     var h='<select class="pert-row-cor'+(atual?' tem':'')+'" aria-label="Cor" onchange="ciPertCor(\''+p.uid+'\',this.value)">'
       +'<option value="">cor…</option>';
-    CI_PERT_CORES.forEach(function(par){
-      var c=fem?par[1]:par[0];
-      var on=(atual && (jsNorm(par[0])===atual || jsNorm(par[1])===atual));
+    CI_PERT_CORES.forEach(function(l){
+      var c=l[forma];
+      var on=!!atual && l.some(function(x){ return jsNorm(x)===atual; });
       h+='<option value="'+escAttr(c)+'"'+(on?' selected':'')+'>'+escAttr(c)+'</option>';
     });
     return h+'</select>';
   }
   function ciPertCor(uid, cor){
     const p=ciPertSel.find(function(x){ return x.uid===uid; }); if(!p) return;
-    p.spec=ciPertComCor(p.spec, cor);
+    p.spec=ciPertComCor(p.spec, cor, ciPertCorAtual(p));
+    p.corSel=cor||'';
     // Só a própria linha muda: redesenhar tudo tiraria o foco de quem está digitando em outra.
     try{
       const row=document.querySelector('#ciPertSel .pert-row[data-uid="'+uid+'"]');
@@ -44801,7 +44903,14 @@
       }
     }catch(e){ /* silencioso de propósito: enfeite de tela — o dado já está em ciPertSel */ }
   }
-  function ciEditPertSpec(uid,val){ const p=ciPertSel.find(function(x){ return x.uid===uid; }); if(p) p.spec=val; }
+  function ciEditPertSpec(uid,val){ const p=ciPertSel.find(function(x){ return x.uid===uid; }); if(!p) return; p.spec=val;
+    // O seletor acompanha o que foi digitado (QA M4): mostra a cor só enquanto o texto começa por ela.
+    try{
+      if(p.corSel===undefined) p.corSel=ciPertCorInicial(val)||'';
+      const sel=document.querySelector('#ciPertSel .pert-row[data-uid="'+uid+'"] .pert-row-cor');
+      if(sel){ const a=ciPertCorAtual(p); if(!a){ sel.value=''; p.corSel=''; } sel.classList.toggle('tem', !!a); }
+    }catch(e){ /* silencioso de propósito: enfeite de tela — o dado já está em ciPertSel */ }
+  }
   function ciRemovePertUnit(uid){ ciPertSel=ciPertSel.filter(function(x){ return x.uid!==uid; }); ciDrawPert(); }
   // Gestão: renomear um item do banco de pertences (mantém a mesma chave).
   async function ciRenomearPertBanco(k){

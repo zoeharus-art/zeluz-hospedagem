@@ -883,10 +883,47 @@ prova('a cor num toque concorda com o item (coleira vermelha, peitoral vermelho)
 prova('trocar a cor mexe só na cor: o resto do que foi escrito fica', () => {
   assert.strictEqual(run("ciPertComCor('', 'vermelha')"), 'vermelha');
   assert.strictEqual(run("ciPertComCor('Zeedog', 'vermelha')"), 'vermelha Zeedog');
-  assert.strictEqual(run("ciPertComCor('vermelha Zeedog', 'azul')"), 'azul Zeedog');
-  assert.strictEqual(run("ciPertComCor('azul-marinho de lã', 'preto')"), 'preto de lã', 'cor composta sai inteira');
+  assert.strictEqual(run("ciPertComCor('vermelha Zeedog', 'azul')"), 'azul Zeedog', 'cor + marca: o formato do próprio seletor');
+  assert.strictEqual(run("ciPertComCor('Azul-Marinho Zeedog', 'preto')"), 'preto Zeedog', 'cor composta sai inteira');
   assert.strictEqual(run("ciPertComCor('vermelha Zeedog', '')"), 'Zeedog', 'tirar a cor');
   assert.ok(/value="azul" selected/.test(run("ciPertCorHTML({uid:'a', k:'coleira', nome:'Coleira', spec:'azul Zeedog'})")), 'a cor escrita aparece marcada');
+});
+prova('QA M4 — o que a Consultora escreveu à mão nunca é apagado nem estragado pela cor', () => {
+  [['rosa choque', 'azul', 'azul rosa choque'], ['preto e branco', 'azul', 'azul preto e branco'],
+   ['Verde água', 'azul', 'azul Verde água'], ['laranja de pelúcia', 'azul', 'azul laranja de pelúcia'],
+   ['xadrez vermelho', 'azul', 'azul xadrez vermelho'], ['rosa choque', '', 'rosa choque']]
+    .forEach(([spec, cor, esperado]) => assert.strictEqual(run('ciPertComCor(' + JSON.stringify(spec) + ',' + JSON.stringify(cor) + ')'), esperado, spec));
+  // acento decomposto (NFD) não corta no meio da letra
+  assert.strictEqual(run('ciPertComCor(' + JSON.stringify('Ro\u0301sa Zeedog') + ", 'azul')"), 'azul Zeedog');
+  // o seletor põe, depois troca: só a cor que ELE pôs é trocada
+  run("__pc={uid:'z', k:'coleira', nome:'Coleira', spec:'rosa choque'};");
+  assert.strictEqual(run('ciPertCorAtual(__pc)'), '', 'texto à mão: o seletor começa em "cor…"');
+  run("__pc.spec=ciPertComCor(__pc.spec, 'azul', ciPertCorAtual(__pc)); __pc.corSel='azul';");
+  run("__pc.spec=ciPertComCor(__pc.spec, 'preta', ciPertCorAtual(__pc)); __pc.corSel='preta';");
+  assert.strictEqual(run('__pc.spec'), 'preta rosa choque');
+});
+prova('QA B1 — gênero e plural dos itens novos do banco', () => {
+  const html = (nome) => run("ciPertCorHTML({uid:'a', k:'x', nome:" + JSON.stringify(nome) + ", spec:''})");
+  assert.ok(/>vermelho</.test(html('Pijama')) && !/>vermelha</.test(html('Pijama')), 'pijama: masculino');
+  assert.ok(/>vermelha</.test(html('Rede')), 'rede: feminino');
+  assert.ok(/>vermelhas</.test(html('Meias')) && /Botinhas/.test('Botinhas') && />vermelhas</.test(html('Botinhas')), 'meias, botinhas: feminino plural');
+  assert.ok(/>azuis</.test(html('Brinquedos')) && />vermelhos</.test(html('Brinquedos')), 'brinquedos: masculino plural');
+});
+provaAsync('QA A1 — a aba Com o tutor NÃO entra em laço quando a primeira leitura ainda está em curso', async () => {
+  run(`__bk7={vp:VENC_PEND, vpl:VENC_PEND_LENDO, pa:PEND_ABERTAS, db:DB, ge:document.getElementById, pc:pendCarregar, st:setTimeout};
+    __renders=0; __root={innerHTML:''}; __sec={classList:{contains:function(){ return true; }}};
+    VENC_PEND=null; VENC_PEND_LENDO=true; PEND_ABERTAS=null;
+    DB={ref:function(){ return {}; }};
+    pendCarregar=function(){ return Promise.resolve(null); };
+    setTimeout=function(){ return 0; };   // as novas tentativas espaçadas não correm aqui
+    document.getElementById=function(id){ if(id==='fichaTutorRoot'){ __renders++; return __root; } if(id==='ps-tutor') return __sec; return null; };
+    pelAtual={n:'Mel', tutor:'Ana'};`);
+  try {
+    run('fichaTutorRender(true)');
+    for (let i = 0; i < 50; i++) await Promise.resolve();
+    const n = run('__renders');
+    assert.ok(n <= 6, 'redesenhos: ' + n);
+  } finally { run('VENC_PEND=__bk7.vp; VENC_PEND_LENDO=__bk7.vpl; PEND_ABERTAS=__bk7.pa; DB=__bk7.db; document.getElementById=__bk7.ge; pendCarregar=__bk7.pc; setTimeout=__bk7.st; pelAtual=null;'); }
 });
 
 // ================================================================== Ficha única: Com o tutor (25/set)
@@ -899,7 +936,7 @@ prova('a ficha única junta ficha, pendências e cada conversa (quem mandou, o q
     __K=dcKey('Mel','Ana');
     VENC_PEND={}; VENC_PEND['2026-09-20']={}; VENC_PEND['2026-09-20'][__K]={pet:'Mel', tutor:'Ana',
       enviadas:{antip:{quem:'Bia', ts:${Date.UTC(2026, 8, 19, 17)}}},
-      respostas:{antip:{v:'nao_agora', quem:'Bia', ts:${Date.UTC(2026, 8, 19, 20)}}}};
+      respostas:{antip:{v:'nao', quem:'Bia', ts:${Date.UTC(2026, 8, 19, 20)}}}};
     VENC_PEND['2026-09-24']={}; VENC_PEND['2026-09-24'][__K]={pet:'Mel', tutor:'Ana',
       enviadas:{ant_antip:{quem:'Caio', ts:${Date.UTC(2026, 8, 22, 12)}}}, cobrancas:{ant_antip:[{quem:'Caio', ts:1}]}};
     PEND_ABERTAS={}; PEND_ABERTAS[__K]={vermifugo:{status:'aberta', dia:'2026-09-22'}};`);
@@ -913,7 +950,8 @@ prova('a ficha única junta ficha, pendências e cada conversa (quem mandou, o q
     assert.strictEqual(d.conversas[0].antecipado, true);
     assert.strictEqual(d.conversas[0].cobrancas, 1);
     assert.strictEqual(d.conversas[1].resposta.quem, 'Bia');
-    assert.ok(d.conversas[1].resposta.rotulo.length > 0, 'a resposta sai com o rótulo da tela');
+    assert.strictEqual(d.conversas[1].resposta.rotulo, run("vencRespRotulo('nao')"), 'a resposta sai com o rótulo da tela');
+    assert.ok(d.conversas[1].resposta.rotulo !== 'nao', 'o rótulo, não o valor cru (QA B7)');
     assert.deepStrictEqual(d.esperando.map((x) => x.tipo), ['ant_antip'], 'a de hoje espera resposta; a de 20/09 foi respondida');
     assert.ok(/1 item vencido · 1 conversa sem resposta · 1 pendência de outro dia/.test(run("fichaTutorLinhaHTML({n:'Mel', tutor:'Ana'})")));
   } finally { run('VENC_PEND=__bk3.vp; PEND_ABERTAS=__bk3.pa; zHojeISO=__bk3.hz; pelExtra=__bk3.pe; poTelDoTutor=__bk3.te;'); }
