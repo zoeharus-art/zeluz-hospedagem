@@ -127,7 +127,9 @@ Cartão marcado "atualizado" antes desta versão e com a ficha ainda devendo **v
 | **Reposições › Extrato** | só o crédito tinha botão («Estornar»); um uso cancelado não tinha como voltar | o uso tem **«Devolver»** (pede o motivo). O uso da hospedagem (orçamento) não tem: quem o desfaz é o próprio orçamento |
 | **Reposições › a marcada para um dia que já passou** | sumia da tela e prendia o crédito: não dava para desmarcar nem remarcar («Marcar reposição» dizia "Não achei um crédito sem dia marcado") | aparece em vermelho: "Estava marcada para 23/09 e ela não repôs · desmarcar". «Marcar reposição» remarca a mesma reposição |
 
-- **Nada é apagado:** o uso devolvido fica riscado no Extrato; a devolução aparece como "+1 DEVOLVIDA", com o motivo e "devolveu a reposição de dd/mm".
+- **Tirar um dia que também está marcado** (na tela de Reposições): a tela pergunta, com três saídas — «Tirar e desmarcar 30/09 (o tutor não vem)», «Tirar só o lançamento (a marcação continua)» ou «Manter». Sem a pergunta, a marcação ficaria e o automático poria a Reposição de volta na planilha.
+- **A marcada que já passou só aparece enquanto há saldo livre para ela** (QA14): com o saldo já todo marcado para outros dias, ela não "continua valendo" e não se remarca — senão ficariam mais dias marcados do que reposições.
+- **Nada é apagado:** o uso devolvido fica riscado no Extrato; a devolução aparece como "+1 DEVOLVIDA", com o motivo e "devolveu a reposição de dd/mm". A devolução tem chave fixa (`dev-{uso}`): dois toques ou dois aparelhos gravam o mesmo nó.
 - **O dia fica guardado:** o crédito mostra no Extrato "marcada para dd/mm", "desmarcada de dd/mm (por quem)" ou "estava marcada para dd/mm e foi remarcada para dd/mm (por quem)".
 - **Ligação nova:** o uso criado pelos Lançamentos do dia guarda `lanc:{dia, id}` do lançamento. Os antigos, sem ligação, são achados pelo dia e pelo texto "Reposição lançada nos Lançamentos do dia".
 - **Celular:** na lista de Reposições, os botões descem para baixo do texto (antes espremiam o nome até virar uma coluna de uma palavra).
@@ -342,7 +344,7 @@ O saldo de reposição não muda ao marcar: o crédito só sai quando ele vem. A
 ### Provas
 
 Todas rodam sem rede e sem dado de cliente:
-- `node tests/fase0-ciclo-fechado.test.js`: 126 provas (com os cenários A, B, D, F, G, H, I, J, K, L e M do fechamento pelo quadro e o fechamento por assunto, incluindo os achados do QA8 ao QA12);
+- `node tests/fase0-ciclo-fechado.test.js`: 129 provas (com os cenários A, B, D, F, G, H, I, J, K, L e M do fechamento pelo quadro e o fechamento por assunto, incluindo os achados do QA8 ao QA12);
 - `node tests/servidor-senha.test.js`: 11 provas.
 
 **Harness completo** (`node tests/harness.js`). Ele precisa do retrato da VPS, que não é acessível daqui. Por isso rodou com um **retrato sintético**, só numa cópia, com o bloco das provas de dado real desligado. O mesmo retrato foi usado nas duas versões:

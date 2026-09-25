@@ -699,7 +699,9 @@ provaAsync('tirar a Reposição dos Lançamentos do dia devolve o dia ao saldo (
     __rm3=[]; __push3=[]; __msg3=null; __perg3=null;
     DB={ref:function(p){ return {
       remove:function(){ __rm3.push(p); return Promise.resolve(); },
-      push:function(v){ __push3.push({p:p, v:JSON.parse(JSON.stringify(v))}); return Promise.resolve({key:'e9'}); } }; }};
+      update:function(v){ __upd3.push({p:p, v:JSON.parse(JSON.stringify(v))}); return Promise.resolve(); },
+      set:function(v){ __push3.push({p:p, v:JSON.parse(JSON.stringify(v))}); return Promise.resolve(); } }; }};
+    __upd3=[];
     DASH_DADOS={reposicao:{L1:{valor:'Safira/Spitz', chave:'safira__bia'}}};
     dashDia=function(){ return '2026-09-30'; }; repHojeISO=function(){ return '2026-09-25'; };
     dashItem=function(){ return {t:'Reposição'}; };
@@ -719,7 +721,7 @@ provaAsync('tirar a Reposição dos Lançamentos do dia devolve o dia ao saldo (
     assert.deepStrictEqual(JSON.parse(JSON.stringify(run('__rm3'))).length, 1, 'saiu dos Lançamentos do dia');
     const push = JSON.parse(JSON.stringify(run('__push3')));
     assert.strictEqual(push.length, 1, 'uma devolução');
-    assert.ok(/daycare\/reposicao\/.+\/lancamentos/.test(push[0].p));
+    assert.ok(/daycare\/reposicao\/.+\/lancamentos\/dev-u1$/.test(push[0].p), 'chave fixa: dois toques gravam o mesmo nó');
     assert.strictEqual(push[0].v.tipo, 'estorno');
     assert.strictEqual(push[0].v.estornaId, 'u1', 'aponta para o uso do lançamento');
     assert.strictEqual(push[0].v.dia_devolvido, '2026-09-30', 'com o dia');
@@ -737,10 +739,83 @@ provaAsync('tirar a Reposição dos Lançamentos do dia devolve o dia ao saldo (
     assert.ok(JSON.parse(JSON.stringify(run('__perg3'))).some((t) => /Não achei o abatimento/.test(t)));
   } finally { run('DB=__bkR3.db; DASH_DADOS=__bkR3.dd; dashDia=__bkR3.di; dashItem=__bkR3.it; zPergunta=__bkR3.zp; renderDash=__bkR3.rd; audit=__bkR3.au; dashEspelhar=__bkR3.esp; repMsgModal=__bkR3.mm; repLancamentos=__bkR3.l; repSaldo=__bkR3.s; repLivresSemDia=__bkR3.lsd; prevCorrigePetDe=__bkR3.pc; repHojeISO=__bkR3.h; pelExtra=__bkR3.pe;'); }
 });
+prova('QA14 A1 — a marcada que já passou só "continua valendo" até o que ainda está livre no saldo', () => {
+  run(`__bkQ1={l:repLancamentos, h:repHojeISO, lsd:repLivresSemDia}; repHojeISO=function(){ return '2026-09-25'; };
+    repLancamentos=function(){ return [{_id:'c1', tipo:'credito', data:'2026-09-10', volta:'2026-09-23'},
+      {_id:'c2', tipo:'credito', data:'2026-09-11', volta:'2026-09-30'}, {_id:'u1', tipo:'uso', data:'2026-09-24'}]; };`);
+  try {
+    run('repLivresSemDia=function(){ return 0; };');   // saldo 1, e ele já está na marcada de 30/09
+    assert.deepStrictEqual(JSON.parse(JSON.stringify(run("repVoltasVencidasValendo({}, null, '2026-09-25')"))), [], 'nada livre: a vencida não "vale"');
+    assert.strictEqual(run('repCreditoLivre({})'), null, 'e não se remarca: mais dias marcados que saldo era barrado antes');
+    run('repLivresSemDia=function(){ return 1; };');   // o caso B da Safira: saldo 1, nada marcado adiante
+    assert.strictEqual(run("repVoltasVencidasValendo({}, null, '2026-09-25')[0]._id"), 'c1');
+    assert.strictEqual(run('repCreditoLivre({})._id'), 'c1');
+  } finally { run('repLancamentos=__bkQ1.l; repHojeISO=__bkQ1.h; repLivresSemDia=__bkQ1.lsd;'); }
+});
+provaAsync('QA14 M1 — desmarcar um dia que já passou não inventa reposição na mensagem', async () => {
+  const B = bancoFalso({});
+  ctx.__B = B;
+  run(`__bkQ2={db:DB, p:PELUDINHOS, l:repLancamentos, pl:repPodeLancar, zp:zPergunta, mm:repMsgModal, rr:renderReposicao, s:repSaldo, d:repDisponivel, h:repHojeISO, au:audit};
+       __msgQ2=null; DB=__B; PELUDINHOS=[{n:'Safira', tutor:'Bia'}]; audit=function(){};
+       repHojeISO=function(){ return '2026-09-25'; };
+       repLancamentos=function(){ return [{_id:'c1', tipo:'credito', data:'2026-09-10', volta:'2026-09-23'}]; };
+       repSaldo=function(){ return 1; }; repDisponivel=function(){ return 1; };
+       repPodeLancar=function(){ return true; }; zPergunta=function(){ return Promise.resolve(true); };
+       repMsgModal=function(t, l, texto){ __msgQ2={t:t, l:l, texto:texto}; }; renderReposicao=function(){};`);
+  try {
+    await run("repDesmarcar(0, '2026-09-23')");
+    for (let i = 0; i < 10; i++) await Promise.resolve();
+    const m = run('__msgQ2');
+    assert.ok(/fica 1 reposição para marcar/.test(m.texto), m.texto);
+    assert.ok(/não repôs na quarta-feira, 23\/09: a data saiu/.test(JSON.stringify(m.l)), JSON.stringify(m.l));
+  } finally { run('DB=__bkQ2.db; PELUDINHOS=__bkQ2.p; repLancamentos=__bkQ2.l; repPodeLancar=__bkQ2.pl; zPergunta=__bkQ2.zp; repMsgModal=__bkQ2.mm; renderReposicao=__bkQ2.rr; repSaldo=__bkQ2.s; repDisponivel=__bkQ2.d; repHojeISO=__bkQ2.h; audit=__bkQ2.au;'); }
+});
+provaAsync('QA14 M2 — tirar um dia que também está marcado: a recepção escolhe tirar e desmarcar, ou só o lançamento', async () => {
+  run(`__bkQ3={db:DB, dd:DASH_DADOS, di:dashDia, it:dashItem, ze:zEscolha, zp:zPergunta, rd:renderDash, au:audit, esp:dashEspelhar, mm:repMsgModal,
+         l:repLancamentos, s:repSaldo, lsd:repLivresSemDia, pc:prevCorrigePetDe, h:repHojeISO, pe:pelExtra};
+    __upd=[]; __set=[]; __rm=[]; __esc=null; __resp='ambos';
+    DB={ref:function(p){ return {
+      remove:function(){ __rm.push(p); return Promise.resolve(); },
+      update:function(v){ __upd.push({p:p, v:JSON.parse(JSON.stringify(v))}); return Promise.resolve(); },
+      set:function(v){ __set.push({p:p, v:JSON.parse(JSON.stringify(v))}); return Promise.resolve(); } }; }};
+    dashDia=function(){ return '2026-09-30'; }; repHojeISO=function(){ return '2026-09-25'; };
+    dashItem=function(){ return {t:'Reposição'}; };
+    zEscolha=function(t, linhas, bts){ __esc={t:t, linhas:linhas, bts:bts.map(function(b){ return b.t; })};
+      var i=(__resp==='ambos')?0:((__resp==='so')?1:2); bts[i].fn(); };
+    zPergunta=function(){ throw new Error('com marcação no dia, a pergunta é a de três saídas'); };
+    renderDash=function(){}; audit=function(){}; dashEspelhar=function(){}; repMsgModal=function(){};
+    pelExtra=function(){ return {sexo:'Fêmea'}; };
+    prevCorrigePetDe=function(){ return {n:'Safira', tutor:'Bia'}; };
+    repLancamentos=function(){ return [{_id:'c1', tipo:'credito', data:'2026-09-10', volta:'2026-09-30'},
+      {_id:'u1', tipo:'uso', data:'2026-09-30', obs:'Reposição lançada nos Lançamentos do dia', lanc:{dia:'2026-09-30', id:'L1'}}]; };
+    repSaldo=function(){ return 0; }; repLivresSemDia=function(){ return 0; };`);
+  try {
+    run("DASH_DADOS={reposicao:{L1:{valor:'Safira/Spitz', chave:'safira__bia'}}};");
+    await run("dashRemover('reposicao','L1')");
+    for (let i = 0; i < 20; i++) await Promise.resolve();
+    const e = JSON.parse(JSON.stringify(run('__esc')));
+    assert.ok(/Tirar e desmarcar 30\/09/.test(e.bts[0]) && /Tirar só o lançamento/.test(e.bts[1]) && e.bts[2] === 'Manter', JSON.stringify(e.bts));
+    let upd = JSON.parse(JSON.stringify(run('__upd')));
+    assert.strictEqual(upd.length, 1, 'desmarcou');
+    assert.ok(/lancamentos\/c1$/.test(upd[0].p) && upd[0].v.volta === '' && upd[0].v.volta_desmarcada.dia === '2026-09-30');
+    assert.strictEqual(run('__set.length'), 1, 'e devolveu o uso');
+    // só o lançamento: a marcação continua
+    run("__upd=[]; __set=[]; __rm=[]; __resp='so'; DASH_DADOS={reposicao:{L1:{valor:'Safira/Spitz', chave:'safira__bia'}}};");
+    await run("dashRemover('reposicao','L1')");
+    for (let i = 0; i < 20; i++) await Promise.resolve();
+    assert.strictEqual(run('__upd.length'), 0, 'a marcação continua');
+    assert.strictEqual(run('__set.length'), 1, 'o uso volta do mesmo jeito');
+    // manter: nada acontece
+    run("__upd=[]; __set=[]; __rm=[]; __resp='manter'; DASH_DADOS={reposicao:{L1:{valor:'Safira/Spitz', chave:'safira__bia'}}};");
+    await run("dashRemover('reposicao','L1')");
+    for (let i = 0; i < 20; i++) await Promise.resolve();
+    assert.strictEqual(run('__rm.length + __upd.length + __set.length'), 0);
+  } finally { run('DB=__bkQ3.db; DASH_DADOS=__bkQ3.dd; dashDia=__bkQ3.di; dashItem=__bkQ3.it; zEscolha=__bkQ3.ze; zPergunta=__bkQ3.zp; renderDash=__bkQ3.rd; audit=__bkQ3.au; dashEspelhar=__bkQ3.esp; repMsgModal=__bkQ3.mm; repLancamentos=__bkQ3.l; repSaldo=__bkQ3.s; repLivresSemDia=__bkQ3.lsd; prevCorrigePetDe=__bkQ3.pc; repHojeISO=__bkQ3.h; pelExtra=__bkQ3.pe;'); }
+});
 provaAsync('«Devolver» no Extrato: o uso cancelado volta para o saldo, com o motivo e o dia', async () => {
   run(`__bkR4={db:DB, p:PELUDINHOS, l:repLancamentos, s:repSaldo, pl:repPodeLancar, zt:zTexto, mm:repMsgModal, rr:renderReposicao, ae:repAbrirExtrato, au:audit, lsd:repLivresSemDia, h:repHojeISO, pe:pelExtra};
     __push4=[]; __msg4=null;
-    DB={ref:function(p){ return { push:function(v){ __push4.push({p:p, v:JSON.parse(JSON.stringify(v))}); return Promise.resolve({key:'e1'}); } }; }};
+    DB={ref:function(p){ return { set:function(v){ __push4.push({p:p, v:JSON.parse(JSON.stringify(v))}); return Promise.resolve(); } }; }};
     PELUDINHOS=[{n:'Safira', tutor:'Bia'}]; repHojeISO=function(){ return '2026-09-25'; }; pelExtra=function(){ return {sexo:'Fêmea'}; };
     repLancamentos=function(){ return [{_id:'c1', tipo:'credito', data:'2026-09-10'}, {_id:'u1', tipo:'uso', data:'2026-09-23', obs:''},
       {_id:'orc-x-1', tipo:'uso', data:'2026-09-20'}]; };
@@ -755,6 +830,7 @@ provaAsync('«Devolver» no Extrato: o uso cancelado volta para o saldo, com o m
     assert.strictEqual(push[0].v.estornaId, 'u1');
     assert.strictEqual(push[0].v.obs, 'a tutora cancelou');
     assert.strictEqual(push[0].v.dia_devolvido, '2026-09-23');
+    assert.ok(/\/dev-u1$/.test(push[0].p));
     assert.ok(/Saldo agora: 1/.test(JSON.stringify(run('__msg4').l)));
     run('__push4=[];');
     await run("repDevolverUso(0,'orc-x-1')");
