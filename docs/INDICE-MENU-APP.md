@@ -127,6 +127,8 @@ Cartão marcado "atualizado" antes desta versão e com a ficha ainda devendo **v
 | No dia da troca | «Veio repor hoje» e o lançamento de Reposição do dia registram a vinda **pela troca** (`motivo:'troca'`): a tela diz "TROCA CUMPRIDA — as reposições continuam N" e **nenhuma mensagem de reposição** vai ao tutor |
 | Desfazer a troca | «desmarcar» ao lado da troca (ou «Tirar e desfazer a troca» nos Lançamentos do dia). Se o crédito nasceu da troca e o dia de origem **ainda não passou**, ele é estornado: a falta avisada sai e ele volta a vir naquele dia. Se o dia de origem **já passou** (ele de fato não veio), a falta fica e vira reposição sem dia. Se a falta já tinha sido avisada antes, ela fica |
 | A troca "viva" | só enquanto o dia marcado é o da própria troca (`troca.para === volta`). Remarcada, vira reposição comum — e as telas deixam de dizer "troca" |
+| Mensagens ao desfazer (QA16) | desfazer a troca manda ao tutor "a troca do dia 29/09 (terça-feira) para o dia 30/09 (quarta-feira) foi desfeita. A Coco Chanel vem na terça-feira, 29/09, como sempre." — sem falar em reposição. Se a falta fica (o dia já passou ou já tinha sido avisada), a mensagem diz que ela continua valendo e quantas ficam para marcar. «Tirar só o lançamento» não manda nada ao tutor (a marcação ou a troca continua). O saldo mostrado desconta o crédito da troca que sai junto |
+| O crédito da troca não é reposição (QA16) | enquanto a troca não é cumprida, o crédito dela não conta como reposição livre: o «Marcar reposição» de outro dia sai como **avulso** (a lei de 21/set: sem crédito livre, é avulso) e o orçamento de hospedagem não o oferece como desconto (`repTrocasPendentes`) |
 | Márcia autoriza tarde | o pedido é revalidado antes de gravar: se a troca não vale mais (o dia de origem passou), nada é gravado e a tela diz por quê |
 | Estorno na planilha | a falta avisada de um crédito estornado não vai mais para a planilha (e o banho fixo também não a conta) |
 | Trocas antigas da Lista de troca | continuam na lista, com o × para cancelar (o × não aparece nas trocas novas — elas se desfazem pelo «desmarcar»). Elas só ocupavam a vaga (sem falta avisada e fora da planilha): para Coco Chanel e Billy Paul, cancele a antiga e faça a troca de novo |
@@ -362,7 +364,7 @@ O saldo de reposição não muda ao marcar: o crédito só sai quando ele vem. A
 ### Provas
 
 Todas rodam sem rede e sem dado de cliente:
-- `node tests/fase0-ciclo-fechado.test.js`: 138 provas (com os cenários A, B, D, F, G, H, I, J, K, L e M do fechamento pelo quadro e o fechamento por assunto, incluindo os achados do QA8 ao QA12);
+- `node tests/fase0-ciclo-fechado.test.js`: 141 provas (com os cenários A, B, D, F, G, H, I, J, K, L e M do fechamento pelo quadro e o fechamento por assunto, incluindo os achados do QA8 ao QA12);
 - `node tests/servidor-senha.test.js`: 11 provas.
 
 **Harness completo** (`node tests/harness.js`). Ele precisa do retrato da VPS, que não é acessível daqui. Por isso rodou com um **retrato sintético**, só numa cópia, com o bloco das provas de dado real desligado. O mesmo retrato foi usado nas duas versões:
