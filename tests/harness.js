@@ -3386,7 +3386,9 @@ async function main() {
         check('v-24 · o painel desenha um campo de texto de verdade (não um botão disfarçado)',
           /<input type="text" class="cad-in" id="dashT_medicacao_qual" maxlength="80"/.test(pv), pv.slice(0, 500));
         check('v-24 · o exemplo aparece dentro do campo, e o campo nasce vazio',
-          /placeholder="Ex\.: gotas no ouvido, 2x ao dia"/.test(pv) && /value=""/.test(pv));
+          // 25/set/2026 (QA C1 da Fase 0): o exemplo pede o NOME do remédio primeiro — é por ele
+          // que o alarme junta a dose da recepção com a do check-in de pertences.
+          /placeholder="Ex\.: Otomax — gotas no ouvido, 2x ao dia"/.test(pv) && /value=""/.test(pv));
         check('v-24 · e os dois botões de ONDE continuam desenhados ao lado',
           pv.indexOf('Está na bolsa dele') > 0 && pv.indexOf('Está na recepção') > 0);
         check('v-24 · o painel desenha o relógio do horário, como no Banho',
@@ -4540,8 +4542,11 @@ async function main() {
         it28[0].vence <= it28[1].vence && it28[1].vence <= it28[2].vence);
       check('v-28 · "ou é vermífugo ou exame de fezes" — quem fez o exame não deve o vermífugo',
         ctx.vencItensDe({ verm_p: '2026-09-10', fezes_t: '2026-09-01' }, '2026-09-22', 7, '2026-09-21').length === 0);
+      // 25/set/2026 (F0.4): vale o MAIS RECENTE dos dois. Com só o "vence em" dos dois, o exame
+      // de 11/09 (feito em 14/05) seria mais novo que o vermífugo de 10/09 (dado em 13/05) — por
+      // isso o exame aqui é de um ciclo anterior: quem está no caminho do vermífugo não o deve.
       check('v-28 · e quem toma vermífugo não é cobrado pelo exame',
-        !ctx.vencItensDe({ verm_p: '2026-09-10', fezes_p: '2026-09-11' }, '2026-09-22', 7, '2026-09-21')
+        !ctx.vencItensDe({ verm_p: '2026-09-10', fezes_p: '2026-08-01' }, '2026-09-22', 7, '2026-09-21')
           .some((x) => x.k === 'fezes_p'));
       check('v-28 · a ficha ANTIGA conta: carrapaticida_p e vermifugo_p são lidos pelo `alt`',
         ctx.vencItensDe({ carrapaticida_p: '2026-09-15' }, '2026-09-22', 7, '2026-09-21')
@@ -4893,6 +4898,17 @@ async function main() {
         check('v-28 · e a tela diz o que falta, com o caminho para a ficha',
           html.indexOf('Falta atualizar a ficha: ') > 0 && /vencAbrirFicha\(/.test(html)
           && html.indexOf('>Abrir a ficha</a>') > 0);
+        // 25/set/2026 (F0.3, a trava do "Sim"): com a ficha AINDA devendo (vermífugo, carrapaticida
+        // e raiva do Otávio), o "Sim" não fecha — abre o quadro para atualizar a data ali mesmo.
+        ctx.vencFicha('otavio__marcela', true);
+        await drenar(6);
+        check('v-28 · com a ficha ainda devendo, o "Sim" NÃO fecha o cartão (trava da Fase 0)',
+          !doNo28().ficha_atualizada, JSON.stringify(doNo28().ficha_atualizada));
+        // A ficha é atualizada — nada mais VENCIDO; o vermífugo vence na semana, e por isso o
+        // cartão continua na lista. Agora o "Sim" fecha. (Quando a ficha fica toda em dia pelo
+        // quadro, o cartão some e o app fecha o assunto sozinho — prevCorrigeFecharConversa.)
+        vm.runInContext("pelCadCache['otávio__marcela'].verm_p='2026-09-25'; pelCadCache['otávio__marcela'].ecto_p='2026-10-20';"
+          + " pelCadCache['otávio__marcela'].vac_raiva_p='2027-09-24'; if(typeof vencMemoLimpar==='function') vencMemoLimpar();", ctx);
         ctx.vencFicha('otavio__marcela', true);
         await drenar(6);
         check('v-28 · só "Sim" fecha o cartão — e fecha com quem disse e quando',
@@ -5012,7 +5028,7 @@ async function main() {
         // …e a porta única de escrita sempre deixa rastro de auditoria (que também assina).
         // 25/set/2026 (QA A2): vencGravar passou a reler o mapa do banco antes de gravar e
         // cresceu — a janela da busca acompanha.
-        const comRastro = /function vencGravar\([\s\S]{0,2600}?audit\('vence-amanha', rotuloAudit, \{alvo:chave/.test(html);
+        const comRastro = /function vencGravar\([\s\S]{0,3700}?audit\('vence-amanha', rotuloAudit, \{alvo:chave/.test(html);
         return comQuem && comRastro;
       })());
     check('v-28 · abrir a tela não escreve uma linha: vencAbrir só lê',
@@ -5037,7 +5053,7 @@ async function main() {
       && (html.match(/vencRedesenhoAuto\(\)/g) || []).length === 5
       && !/setTimeout\(function\(\)\{ try\{ if\(document\.getElementById\('vencRoot'\)\) vencRender\(\); \}/.test(html));
     check('v-28 · e os GESTOS continuam redesenhando na hora — quem tocou num botão vê o que mudou',
-      /function vencGravar\([\s\S]{0,2600}?vencRender\(\);/.test(html));
+      /function vencGravar\([\s\S]{0,3700}?vencRender\(\);/.test(html));
     if (typeof ctx.vencRedesenhoAuto === 'function') {
       const geAuto = ctx.document.getElementById;
       const raizAuto = { innerHTML: '', contains: (el) => el === ctx.__focoAuto };
@@ -13829,7 +13845,7 @@ async function main() {
     // so-master dele passou inteira para a "Linha do tempo do dia".
     // 18/set/2026: "Lançar pagamento" saiu do menu (Adriana: "delete lançar pagamentos..
     // inútil") — 36 itens viraram 35. Nenhum outro mudou de classe.
-    check('promessa — os 39 itens do menu mantiveram exatamente as classes so-*/op-only que já tinham',
+    check('promessa — os 40 itens do menu mantiveram exatamente as classes so-*/op-only que já tinham',
       difere.length === 0 && Object.keys(achado).length === Object.keys(ACESSO_ESPERADO).length,
       JSON.stringify(difere.map((k) => k + ': "' + achado[k] + '" ≠ "' + ACESSO_ESPERADO[k] + '"')));
 
@@ -16223,8 +16239,11 @@ async function main() {
         ctx.vermDose2Prevista(Object.assign({}, duas, { verm_dose2_t: '2026-09-22' })) === '');
       check('v-31 · data de 2ª dose ANTERIOR à 1ª é ficha errada, não dose dada: continua cobrando',
         ctx.vermDose2Prevista(Object.assign({}, duas, { verm_dose2_t: '2026-08-01' })) === '2026-09-22');
-      check('v-31 · quem fez exame de fezes não deve vermífugo — nem a 2ª dose',
-        ctx.vencItensDe(Object.assign({}, duas, { fezes_t: '2026-09-01' }), '2026-09-22', 7, '2026-09-21')
+      // 25/set/2026 (F0.4): vale o mais recente, e no EMPATE (exame no mesmo dia da 1ª dose) o
+      // caminho é o do vermífugo. Exame DEPOIS da 1ª dose dispensa também a 2ª — é o que o app faz
+      // hoje, e a decisão clínica (B2) está com a Adriana.
+      check('v-31 · quem fez exame de fezes DEPOIS da 1ª dose não deve vermífugo — nem a 2ª dose',
+        ctx.vencItensDe(Object.assign({}, duas, { fezes_t: '2026-09-05' }), '2026-09-22', 7, '2026-09-21')
           .filter((x) => x.k === 'verm_dose2_p').length === 0);
       const it31 = ctx.vencItensDe(duas, '2026-09-22', 7, '2026-09-21');
       check('v-31 · a 2ª dose entra em Vence amanhã com o nome dela, 21 dias depois da 1ª',
@@ -19266,7 +19285,8 @@ async function main() {
         check('v-41 · e o quadro leva ao Check-in, que é onde a pernoite se resolve',
           cardMarcia.indexOf('checkin') > 0);
         check('v-41 · "O que fazer hoje" ganha o mesmo quadro, nas três mesas',
-          html.indexOf("var quadroPern=mesaBox(pc===null?null:pc.total,'Pernoites de hoje',") > 0
+          // 25/set/2026 (F0.5): o número soma as noites de dias anteriores ainda sem check-in.
+          html.indexOf("var quadroPern=mesaBox(pc===null?null:(pc.total+pAnt),'Pernoites de hoje',") > 0
           && (html.match(/B\.push\(quadroPern\);/g) || []).length === 3);
         check('v-41 · o grupo do plantão só recebe aviso se ele EXISTIR na ponte — nunca inventar destino',
           html.indexOf("return tgGrupoNaPonte('plantao').then(function(tem){") > 0
@@ -20864,8 +20884,13 @@ async function main() {
           verm_p: '2027-05-10', ecto_p: '2027-05-10', escova_p: '2027-05-10' },
         '2026-09-24', 7, '2026-09-24', { incluirSemRegistro: true }).length === 0);
       // Quem pede isto são as DUAS telas dela — e a Prevenção continua exatamente como era.
-      check('v-46 · só a tela Vencimentos e a Hoje na Zêluz pedem o "em aberto"; a Prevenção não mudou',
-        (html.match(/incluirSemRegistro:true/g) || []).length === 2
+      // 25/set/2026: pedem também a trava do "Sim" (vencFichaDeveAgora), a ficha única
+      // (fichaUnicaDados) e a Turma do dia — todas conversa com o tutor. A Prevenção continua fora.
+      check('v-46 · só as telas de conversa com o tutor pedem o "em aberto"; a Prevenção não mudou',
+        (html.match(/incluirSemRegistro:true/g) || []).length === 5
+        && /function vencFichaDeveAgora[\s\S]{0,400}incluirSemRegistro:true/.test(html)
+        && /function fichaUnicaDados[\s\S]{0,2000}incluirSemRegistro:true/.test(html)
+        && /function turmaListaDoDia[\s\S]{0,5000}incluirSemRegistro:true/.test(html)
         && !/renderPrevencao[\s\S]{0,4000}?incluirSemRegistro/.test(html)
         && /function prevPendencias\(ex, grupo\)\{/.test(html));
       check('v-46 · e o item em aberto é assunto PRÓPRIO ("aberto"), nunca misturado com o que vence',
@@ -20900,9 +20925,12 @@ async function main() {
           ctx.vencRotuloTipo('aberto') === 'Em aberto na ficha — nunca registrado');
         // Os BOTÕES do "em aberto" são outros: "na bolsa" e "na loja" não cabem em item
         // que ninguém sabe se já foi feito. A conversa é pedir a data ou a carteirinha.
-        check('v-46 · os botões do "em aberto" são os da ficha — nada de "na bolsa" nem "na loja"',
-          ctx.vencRespostasDe('aberto', '2026-09-24').map((x) => x.v).join(',') === 'ab_data,ab_fazer,sem,nao'
-          && ctx.vencRespostasDe('aberto', '2026-09-24').every((x) => !x.lanca),
+        // 25/set/2026 (F0.3, pedido da Adriana): "Nunca fez — fazer aqui" passou a LANÇAR, pela
+        // bolsa ou pela loja, e a avisar a veterinária no dia dele. A resposta antiga "ab_fazer"
+        // segue legível no histórico, fora dos botões.
+        check('v-46 · os botões do "em aberto": mandar a data, fazer aqui (bolsa ou loja, lança), não respondeu, não quer',
+          ctx.vencRespostasDe('aberto', '2026-09-24').map((x) => x.v).join(',') === 'ab_data,ab_bolsa,ab_loja,sem,nao'
+          && ctx.vencRespostasDe('aberto', '2026-09-24').filter((x) => x.lanca).map((x) => x.v).join(',') === 'ab_bolsa,ab_loja',
           JSON.stringify(ctx.vencRespostasDe('aberto', '2026-09-24').map((x) => x.t)));
         check('v-46 · "Vai mandar a data ou a carteirinha" abre a pergunta da ficha na hora',
           ctx.vencRespDef('ab_data').ficha === true
@@ -21300,7 +21328,8 @@ async function main() {
       const chip47 = ctx.prevCorrigeChip(chave47, 'ecto_p', '⚠ carrapaticida venceu 08/09', 'hoje', 'color:var(--crm-critico)');
       check('v-47 · o chip da pendência É O BOTÃO: "⚠ carrapaticida venceu 08/09" abre o painel',
         chip47.indexOf('<button') === 0
-        && chip47.indexOf("prevCorrigeAbrir('" + chave47 + "','ecto_p','hoje')") > 0
+        // 25/set/2026 (F0.3): o toque leva também a ORIGEM — o quadro abre logo abaixo de onde se tocou.
+        && chip47.indexOf("prevCorrigeAbrir('" + chave47 + "','ecto_p','hoje','") > 0
         && chip47.indexOf('carrapaticida venceu 08/09') > 0, chip47.slice(0, 160));
       ctx.document.body.dataset.role = 'monitor';
       check('v-47 · para o monitor o chip continua sendo texto — ele lê, não corrige',

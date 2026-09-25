@@ -22646,7 +22646,30 @@
       texto:textoOk||((pelNome(p)||'')+' — '+nome+' em dia até '+(para?fmtBR(para):'—')
         +(comoTexto==='vencimento digitado à mão'?' (marcado à mão)':''))};
     PREV_CORRIGE_ABERTO=''; PREV_CORRIGE_ORIGEM='';
+    // A FICHA FICOU EM DIA PELO QUADRO (25/set/2026): o cartão de Vencimentos some da lista
+    // quando não há mais o que cobrar — e, com ele, o botão "Sim". Sem isto a conversa com o
+    // tutor ficava aberta para sempre e voltava como "cobrar". Quem pôs a última data fecha o
+    // assunto, com o nome e a hora, como se tivesse tocado "Sim".
+    try{ prevCorrigeFecharConversa(p, chave); }catch(e){ /* silencioso de propósito: fechar é consequência — a data já está gravada */ }
     prevCorrigeRedesenhar(tela);
+  }
+  function prevCorrigeFecharConversa(p, chave){
+    if(!DB || !chave || typeof vencRegDeDia!=='function') return;
+    var hoje=(typeof zHojeISO==='function')?zHojeISO():'';
+    var dias=[];
+    [((typeof vencDiaAlvo==='function')?vencDiaAlvo():''), hoje].forEach(function(d){ if(d && dias.indexOf(d)<0) dias.push(d); });
+    dias.forEach(function(dia){
+      var r=vencRegDeDia(dia, chave);
+      if(!r || r.ficha_atualizada) return;
+      var conversou=Object.keys(r.enviadas||{}).length || Object.keys(r.respostas||{}).length || r.msg_enviada || r.resposta;
+      if(!conversou) return;
+      if(vencFichaDeveAgora(chave, r, dia).length) return;        // ainda deve algo: continua aberto
+      var quem=(typeof quemSou==='function'?quemSou():'-');
+      var nome=((typeof pelNome==='function')?pelNome(p):'')||(p&&p.n)||'';
+      vencGravar(chave, {ficha_atualizada:{quem:quem, ts:Date.now(), via:'quadro'}, ficha_falta:null},
+        'a ficha de '+nome+' ficou em dia pelo quadro de atualização — o assunto com o tutor fechou (dia '+dia+')',
+        {nome:nome, tutor:((typeof pelGet==='function')?pelGet(p,'tutor'):'')||(p&&p.tutor)||'', itens:[]}, dia, true);
+    });
   }
   function prevEdicaoHTML(o){
     var chave=pelKey(o.p), ex=pelExtra(o.p)||{};
@@ -34969,8 +34992,8 @@
   // O dia que a tela está mostrando. '' = o próximo dia de Day Care (o "amanhã" dela).
   var VENC_DIA_SEL='';
   var VENC_REG=null;         // daycare/vencimentos/{dia} — null = ainda não li (nunca afirmar zero)
-  var VENC_REG_DIA='';
-  var VENC_REG_QUANDO=0;     // quando o VENC_REG foi lido (a lista de contatos usa a leitura mais nova)       // de que dia é o VENC_REG que está em memória
+  var VENC_REG_DIA='';       // de que dia é o VENC_REG que está em memória
+  var VENC_REG_QUANDO=0;     // quando o VENC_REG foi lido (a lista de contatos usa a leitura mais nova)
   var VENC_LENDO=false;      // uma leitura de cada vez (os quadros dos dashboards também pedem)
   var VENC_CFG=null;         // daycare/config/textos/vencimento — null = ainda não li
   var VENC_ABERTO={};        // {chave:true} — o bloco "Pode fazer na Zêluz" aberto. NADA gravado.
@@ -36280,6 +36303,10 @@
         var env=r.enviadas||{};
         Object.keys(env).forEach(function(tipo){
           var st=vencEstadoTipo(r, tipo, agora, deveP);
+          // A conversa IRMÃ do mesmo dia (a mensagem do dia × a pergunta "fazer hoje?") já foi
+          // respondida (QA NOVO-1): o tutor já disse o que fazer — cobrar a outra seria pedir
+          // de novo o que ele respondeu. Vale nos dois sentidos.
+          if(vencRespostaDe(r, vencEhAntecipado(tipo)?vencTipoBase(tipo):hojeTipoAnt(tipo))) return;
           if(st!=='cobrar' && st!=='aguardando') return;      // só o que FOI mandado e não teve resposta
           // O assunto ANTECIPADO tem retrato próprio (itens_ant): os itens dele vencem
           // DEPOIS do dia, e o retrato do dia não os conhece.
@@ -36464,13 +36491,25 @@
     // e relê o banco DEPOIS dele — sem isto, os dois liam o mesmo mapa e o segundo apagava o
     // que o primeiro tinha gravado.
     var filaK=dia+'|'+chave;
-    var antes=VENC_FILA_GRAV[filaK]||Promise.resolve();
+    // Prazo de 15 s (QA NOVO-3): uma gravação que nunca termina (sem rede) não prende para
+    // sempre as seguintes do mesmo registro.
+    var espera=VENC_FILA_GRAV[filaK];
+    var antes=espera ? new Promise(function(ok){
+      var t=setTimeout(ok, 15000);
+      espera.then(function(){ clearTimeout(t); ok(); }, function(){ clearTimeout(t); ok(); });
+    }) : Promise.resolve();
     var agora=antes.then(function(){ return vencLerMapas(dia, chave, campos); }).then(function(frescos){
     var reg=Object.assign({}, patch);
     if(frescos) campos.forEach(function(c){
       // undefined = a releitura falhou: fica o mapa montado pela memória, como antes.
       if(frescos[c]!==undefined) reg[c]=vencMesclarMapa(frescos[c], antesMem[c], patch[c]);
     });
+    // O rastro pode depender do que vai ser gravado de verdade — "2ª cobrança" conta pelo mapa
+    // relido do banco, não pela memória (QA NOVO-4).
+    if(typeof rotuloAudit==='function'){
+      try{ rotuloAudit=rotuloAudit(reg); }
+      catch(e){ rotuloAudit='gravou o registro de vencimentos'; } /* silencioso de propósito: o rastro sai genérico, a gravação não para */
+    }
     if(o){
       if(!semItens && o.itens&&o.itens.length) reg.itens=vencSnapItens(o);
       // O NOME viaja com o registro (21/set/2026). A resposta pendente de 12 dias atrás
@@ -36577,9 +36616,10 @@
       tent[tipo]=(tent[tipo]||[]).concat([{quem:quem, ts:agora}]);
       var __pt={tentativas:tent};
       if(vencEhAntecipado(tipo)){ __pt.antecipado=true; __pt.itens_ant=vencSnapItens(o); }
-      return vencGravar(chave, __pt,
-        'anotou que o tutor de '+o.nome+' NÃO respondeu sobre '+rot+' (dia '+dia+') — '
-        +tent[tipo].length+'ª tentativa; o assunto continua pendente', o, dia, vencEhAntecipado(tipo));
+      return vencGravar(chave, __pt, function(reg){
+        var n=(((reg||{}).tentativas||{})[tipo]||tent[tipo]).length;
+        return 'anotou que o tutor de '+o.nome+' NÃO respondeu sobre '+rot+' (dia '+dia+') — '
+          +n+'ª tentativa; o assunto continua pendente'; }, o, dia, vencEhAntecipado(tipo));
     }
     var resps=Object.assign({}, r.respostas||{});
     var antes=String((resps[tipo]||{}).v||'');
@@ -36788,9 +36828,10 @@
     var quem=(typeof quemSou==='function'?quemSou():'-');
     var cob=Object.assign({}, r.cobrancas||{});
     cob[tipo]=(cob[tipo]||[]).concat([{quem:quem, ts:Date.now()}]);
-    return vencGravar(chave, {cobrancas:cob},
-      'cobrou a resposta do tutor de '+o.nome+' sobre '+String(vencRotuloTipo(tipo)).toLowerCase()
-      +' ('+cob[tipo].length+'ª cobrança, dia '+dia+')', o, dia, vencEhAntecipado(tipo));
+    return vencGravar(chave, {cobrancas:cob}, function(reg){
+      var n=(((reg||{}).cobrancas||{})[tipo]||cob[tipo]).length;
+      return 'cobrou a resposta do tutor de '+o.nome+' sobre '+String(vencRotuloTipo(tipo)).toLowerCase()
+        +' ('+n+'ª cobrança, dia '+dia+')'; }, o, dia, vencEhAntecipado(tipo));
   }
   // O bloco de "Pode fazer na Zêluz": abre RASCUNHO. Nada é gravado até o Confirmar.
   function vencAbrirLanc(chave, forcar){
@@ -38820,9 +38861,14 @@
       // …e também quando a pergunta nova JÁ SAIU (QA N2): a conversa mais nova do mesmo
       // assunto, em qualquer dia da varredura, manda — a velha deixa de ser cobrada.
       var maisNova={};
-      Object.keys(VENC_PEND||{}).forEach(function(d){
-        Object.keys((VENC_PEND[d])||{}).forEach(function(ch){
-          var env=((VENC_PEND[d][ch])||{}).enviadas||{};
+      // As mesmas fontes da gaveta do próximo dia (QA NOVO-2): a varredura, e a leitura do dia
+      // quando ela é a mais nova.
+      var fontes={};
+      Object.keys(VENC_PEND||{}).forEach(function(d){ fontes[d]=VENC_PEND[d]; });
+      if(regNovo && dia) fontes[dia]=VENC_REG;
+      Object.keys(fontes).forEach(function(d){
+        Object.keys((fontes[d])||{}).forEach(function(ch){
+          var env=((fontes[d][ch])||{}).enviadas||{};
           Object.keys(env).forEach(function(t){
             var k=ch+'|'+vencTipoBase(t), ts=Number((env[t]||{}).ts||0);
             if(ts>(maisNova[k]||0)) maisNova[k]=ts;
@@ -39736,7 +39782,7 @@
   function turmaDocHTML(){
     return '<html xmlns:x="urn:schemas-microsoft-com:office:excel"><head><meta charset="UTF-8">'
       +'<style>body{font-family:Calibri,Arial,sans-serif}td,th{border:1px solid #b6c2cc;padding:4px 7px;font-size:11pt;vertical-align:top}'
-      +'th{background:#234D67;color:#FFFDF6;font-weight:bold;text-align:left}@media print{body{margin:8mm}}</style></head><body>'
+      +'th{background:#234D67;color:#FFFDF6;font-weight:bold;text-align:left}@page{margin:8mm}</style></head><body>'
       +turmaTabelaHTML()+'</body></html>';
   }
   // O arquivo leva o TELEFONE de cada tutor: sai só para quem fala com o tutor (a mesma

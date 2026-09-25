@@ -171,7 +171,7 @@ Medido a 375 px de largura, antes da mudança:
 
 | Achado | Correção |
 |---|---|
-| **A1:** dez checagens do harness e dois scripts de captura esperavam as telas antigas | atualizados: a chave `contatos` (lista do Time, subgrupo do Day Care, acesso esperado, 40 itens no menu), o contador "(2 · 2 hoje)", o botão direto, a janela das buscas em `vencGravar`, as Turminhas abrindo a Turma do dia e o "Cobrar no WhatsApp". **Conferido:** o harness completo, rodado com um retrato sintético, dá as mesmas 26 falhas da versão de antes da branch (todas por falta de dado no retrato) e nenhuma nova |
+| **A1:** dez checagens do harness e dois scripts de captura esperavam as telas antigas | atualizados: a chave `contatos` (lista do Time, subgrupo do Day Care, acesso esperado, 40 itens no menu), o contador "(2 · 2 hoje)", o botão direto, a janela das buscas em `vencGravar`, as Turminhas abrindo a Turma do dia e o "Cobrar no WhatsApp". **Conferido:** ver "Harness completo", no fim desta seção |
 | **A2:** com dois aparelhos, a lista lia uma cópia velha: o mesmo pedido saía de novo, e o toque **apagava o "Mandei" do outro aparelho** | antes de gravar envios, respostas, cobranças, tentativas e o lançamento automático, o app **relê do banco** aquele mapa e soma só o assunto do toque (vale para todas as telas). A lista relê o dia ao abrir |
 | **M1:** Vencimentos › Hoje oferecia de novo o que o "fazer hoje?" já tinha perguntado | o cartão do próprio dia também avisa; e a pergunta de hoje não some depois |
 | **M2:** a cobrança de ontem e a pergunta de hoje sobre o mesmo item apareciam juntas | a pergunta nova substitui a cobrança da velha |
@@ -278,10 +278,25 @@ O saldo de reposição não muda ao marcar: o crédito só sai quando ele vem. A
 ### Provas
 
 Todas rodam sem rede e sem dado de cliente:
-- `node tests/fase0-ciclo-fechado.test.js`: 92 provas;
+- `node tests/fase0-ciclo-fechado.test.js`: 95 provas;
 - `node tests/servidor-senha.test.js`: 11 provas.
 
-O harness completo precisa do retrato da VPS e não rodou nesta sessão.
+**Harness completo** (`node tests/harness.js`). Ele precisa do retrato da VPS, que não é acessível daqui. Por isso rodou com um **retrato sintético**, só numa cópia, com o bloco das provas de dado real desligado. O mesmo retrato foi usado nas duas versões:
+
+| Versão | Resultado |
+|---|---|
+| `master` publicado (`d824fbe`) | 3842 ok · 17 falhas |
+| esta branch | 3844 ok · **as mesmas 17 falhas**, nenhuma nova |
+
+As 17 falham nas duas porque o retrato sintético não tem os dados que elas leem. Na primeira comparação, feita com uma base que já tinha parte da Fase 0, **9 checagens falhavam só na branch**. Nenhuma era defeito do app: eram as regras antigas que a Fase 0 mudou de propósito (v-24, v-28 ×2, v-31, v-41, v-46 ×2 e v-47) e a margem de impressão da Turma do dia (v-21). As checagens foram atualizadas com o motivo escrito ao lado.
+
+A do v-28 revelou um furo de verdade:
+- quando a ficha ficava toda em dia pelo quadro, o cartão saía da lista e levava o botão "Sim";
+- a conversa com o tutor nunca fechava.
+
+Agora quem põe a última data fecha o assunto, com o nome e a hora (`prevCorrigeFecharConversa`).
+
+**Antes de publicar, rodar o harness com o retrato real da VPS.**
 
 **QA Gate (Elo 6):** três rodadas por agente independente.
 
@@ -294,6 +309,7 @@ O harness completo precisa do retrato da VPS e não rodou nesta sessão.
 | 5ª (Turma, WhatsApp, Quem chamar hoje) | **FAIL** → corrigido | A1, A2, M1 a M6 e os baixos, todos corrigidos (ver N) |
 | 6ª (check-in no celular e ficha única) | **FAIL** (ficha) · CONCERNS (check-in) → corrigido | A1, M1 a M4 e os baixos, todos corrigidos (ver P) |
 | Re-QA da 6ª | **CONCERNS — pode publicar** | 7 ressalvas baixas, corrigidas (ver P) |
+| Re-QA final (5ª) | **CONCERNS** | NOVO-1 (MÉDIO): respondida a conversa do dia, a pergunta "fazer hoje?" do mesmo assunto não é mais cobrada, e vice-versa. NOVO-2 a NOVO-6 (baixos): fonte mais nova, prazo da fila, rastro contado pelo que foi gravado, textos. Todos corrigidos |
 
 Destino de cada ressalva da 3ª rodada:
 - **C1:** o exemplo do campo agora pede o nome do remédio primeiro: "Ex.: Otomax — gotas no ouvido, 2x ao dia";

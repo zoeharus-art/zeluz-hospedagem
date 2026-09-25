@@ -1100,6 +1100,63 @@ prova('QA B-N6 — o estado de cada conversa não contradiz a lista: "legado" e 
   } finally { run('VENC_PEND=__bk9.vp; PEND_ABERTAS=__bk9.pa; zHojeISO=__bk9.hz; pelExtra=__bk9.pe;'); }
 });
 
+// ================================================================== Re-QA final (25/set)
+console.log('\nRe-QA final — a conversa irmã respondida e o rastro');
+prova('QA NOVO-1 — respondida a conversa do dia, a pergunta "fazer hoje?" do mesmo assunto não é cobrada (e vice-versa)', () => {
+  const agora = Date.UTC(2026, 8, 24, 18);
+  const regs = { '2026-09-24': { mel__ana: { pet: 'Mel', enviadas: { ant_antip: { quem: 'a', ts: agora - 10 * 3600000 } },
+    respostas: { antip: { v: 'casa', quem: 'b', ts: agora - 3600000 } } } } };
+  assert.deepStrictEqual(JSON.parse(JSON.stringify(run('vencPendLista(' + JSON.stringify(regs) + ", '2026-09-24', " + agora + ')'))), []);
+  const regs2 = { '2026-09-24': { mel__ana: { pet: 'Mel', enviadas: { antip: { quem: 'a', ts: agora - 10 * 3600000 } },
+    respostas: { ant_antip: { v: 'nao', quem: 'b', ts: agora - 3600000 } } } } };
+  assert.deepStrictEqual(JSON.parse(JSON.stringify(run('vencPendLista(' + JSON.stringify(regs2) + ", '2026-09-24', " + agora + ')'))), []);
+  const regs3 = { '2026-09-24': { mel__ana: { pet: 'Mel', enviadas: { antip: { quem: 'a', ts: agora - 10 * 3600000 } },
+    respostas: { vacina: { v: 'x', quem: 'b', ts: agora - 3600000 } } } } };
+  assert.strictEqual(JSON.parse(JSON.stringify(run('vencPendLista(' + JSON.stringify(regs3) + ", '2026-09-24', " + agora + ')'))).length, 1,
+    'resposta de OUTRO assunto não fecha este');
+});
+provaAsync('QA NOVO-4 — o rastro conta a cobrança pelo que foi gravado (a do outro aparelho entra na conta)', async () => {
+  run(`__bk10={db:DB, vr:VENC_REG, vrd:VENC_REG_DIA, vp:VENC_PEND, au:audit, vre:vencRender, vrq:vencRedesenharQuadros, qs:quemSou, vo:vencObjDe};
+    __loja10={'daycare/vencimentos/2026-09-28/thor__bia/cobrancas':{antip:[{quem:'Ana', ts:5}]}}; __rastro=null;
+    DB={ref:function(p){ return {
+      once:function(){ return Promise.resolve({val:function(){ var v=__loja10[p]; return v===undefined?null:JSON.parse(JSON.stringify(v)); }}); },
+      update:function(){ return Promise.resolve(); } }; }};
+    VENC_REG={'thor__bia':{}}; VENC_REG_DIA='2026-09-28'; VENC_PEND=null;
+    audit=function(a, t){ __rastro=t; }; vencRender=function(){}; vencRedesenharQuadros=function(){};
+    quemSou=function(){ return 'Bia'; }; vencObjDe=function(){ return {nome:'Thor', tutor:'Bia', itens:[]}; };`);
+  try {
+    await run("vencCobrei('thor__bia','antip','2026-09-28')");
+    assert.ok(/\(2ª cobrança, dia 2026-09-28\)/.test(run('__rastro')), run('__rastro'));
+  } finally { run('DB=__bk10.db; VENC_REG=__bk10.vr; VENC_REG_DIA=__bk10.vrd; VENC_PEND=__bk10.vp; audit=__bk10.au; vencRender=__bk10.vre; vencRedesenharQuadros=__bk10.vrq; quemSou=__bk10.qs; vencObjDe=__bk10.vo;'); }
+});
+
+provaAsync('a ficha ficou em dia pelo quadro: o assunto com o tutor fecha sozinho, com quem e quando', async () => {
+  run(`__bk11={db:DB, vr:VENC_REG, vrd:VENC_REG_DIA, vp:VENC_PEND, au:audit, vre:vencRender, vrq:vencRedesenharQuadros, qs:quemSou, hz:zHojeISO, vda:vencDiaAlvo, pe:pelExtra, pp:prevCorrigePetDe};
+    __grav11=[];
+    DB={ref:function(p){ return { once:function(){ return Promise.resolve({val:function(){ return null; }}); },
+      update:function(v){ __grav11.push({p:p, v:v}); return Promise.resolve(); } }; }};
+    zHojeISO=function(){ return '2026-09-24'; }; vencDiaAlvo=function(){ return '2026-09-25'; };
+    __P11={n:'Mel', tutor:'Ana'};
+    pelExtra=function(){ return {verm_p:'2027-01-10', ecto_p:'2026-12-01', vac_mult_p:'2027-05-10', vac_gripe_p:'2027-05-10', vac_raiva_p:'2027-05-10', escova_p:'2027-01-01'}; };
+    prevCorrigePetDe=function(){ return __P11; };
+    VENC_REG={}; VENC_REG[dcKey('Mel','Ana')]={enviadas:{antip:{quem:'x', ts:1}}}; VENC_REG_DIA='2026-09-25'; VENC_PEND=null;
+    audit=function(){}; vencRender=function(){}; vencRedesenharQuadros=function(){}; quemSou=function(){ return 'Bia'; };`);
+  try {
+    run("prevCorrigeFecharConversa(__P11, dcKey('Mel','Ana'))");
+    for (let i = 0; i < 20; i++) await Promise.resolve();
+    const g = JSON.parse(JSON.stringify(run('__grav11')));
+    assert.strictEqual(g.length, 1, JSON.stringify(g));
+    assert.ok(/daycare\/vencimentos\/2026-09-25\//.test(g[0].p));
+    assert.strictEqual(g[0].v.ficha_atualizada.quem, 'Bia');
+    assert.strictEqual(g[0].v.ficha_atualizada.via, 'quadro');
+    // ficha AINDA devendo: não fecha
+    run("__grav11=[]; pelExtra=function(){ return {verm_p:'2026-09-01'}; };");
+    run("prevCorrigeFecharConversa(__P11, dcKey('Mel','Ana'))");
+    for (let i = 0; i < 20; i++) await Promise.resolve();
+    assert.strictEqual(JSON.parse(JSON.stringify(run('__grav11'))).length, 0, 'com a ficha devendo, continua aberto');
+  } finally { run('DB=__bk11.db; VENC_REG=__bk11.vr; VENC_REG_DIA=__bk11.vrd; VENC_PEND=__bk11.vp; audit=__bk11.au; vencRender=__bk11.vre; vencRedesenharQuadros=__bk11.vrq; quemSou=__bk11.qs; zHojeISO=__bk11.hz; vencDiaAlvo=__bk11.vda; pelExtra=__bk11.pe; prevCorrigePetDe=__bk11.pp;'); }
+});
+
 // ------------------------------------------------ o fim
 fila.then(() => {
   console.log('\n' + ok + ' provas passaram' + (falhas.length ? (', ' + falhas.length + ' falharam:') : '.'));
