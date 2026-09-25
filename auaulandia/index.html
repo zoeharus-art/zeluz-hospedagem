@@ -2719,6 +2719,14 @@
                num lugar só. O contador entra em <span> COM atributos de propósito: o rótulo
                do item é o último <span> puro, e é por ele que a tela do Time se espelha. -->
           <a data-v="hoje" style="display:none" title="Quem está na Zêluz hoje e quem está com pendência: vacina, vermífugo, carrapaticida, coleira e escova."><span data-icon="paw"></span><span>Hoje na Zêluz</span><span id="navHojeN" style="margin-left:6px;font-weight:800;color:var(--crm-critico)"></span></a>
+          <!-- BANHOS RECORRENTES (Adriana, 24/set/2026) — "preciso de uma caixa fácil para
+               marcar 'esse peludo tem banho ou não', sem entrar na ficha e fazer todo um
+               cadastro. A ficha está muito confusa."
+               Fica colado nos Lançamentos do dia porque é a outra metade do mesmo trabalho:
+               ali se lança o banho de hoje, aqui se combina o banho que se repete — e o app
+               passa a lançar sozinho. A classe de acesso é a MESMA do Lançamentos do dia
+               (so-recepcao): quem lança banho é quem combina banho. -->
+          <a data-v="banhos" class="so-recepcao" title="Quem tem banho fixo, em que dia e a que horas — o app lança sozinho na planilha."><span data-icon="drop"></span><span>Banhos recorrentes</span></a>
           <!-- Adriana, 19/ago/2026: é aqui que a recepção lança o que hoje digita na
                planilha — e a planilha vira só o espelho que alimenta a TV. -->
           <a data-v="dashdc" class="so-recepcao" title="A planilha do Day Care, item por item."><span data-icon="list-check"></span><span>Lançamentos do dia</span></a>
@@ -4257,6 +4265,16 @@
     <div class="role-note"><span data-icon="paw"></span><span><strong>Quem está na Zêluz hoje.</strong> Uma linha por FILHOt, com o que está vencido — vacina, vermífugo, carrapaticida, coleira e troca de escova —, quem toma remédio de uso contínuo e o que ficou pendente da última vinda. <strong>Quem tem pendência vem primeiro.</strong> A lista se atualiza sozinha conforme a chamada e o check-in acontecem.</span></div>
     <div id="hojeRoot"><div class="card"><div class="hint">Montando a lista de quem está na casa&hellip;</div></div></div>
   </section>
+  <!-- ===== BANHOS RECORRENTES (Adriana, 24/set/2026) ==============================
+       "Muitos peludos tomam banho já marcado, semanal ou quinzenal, e são do Day Care; o
+        horário é sempre o mesmo. Em vez de lançar no dia, isso já vai automaticamente e a
+        gente só altera se o tutor mudar."
+       Uma linha por FILHOt, um interruptor, e os botões na própria linha. Nada é gravado
+       antes do Salvar daquela linha — e cada gravação deixa rastro de→para. -->
+  <section class="view" id="v-banhos">
+    <div class="role-note"><span data-icon="drop"></span><span><strong>Quem tem banho fixo.</strong> Ligue o interruptor do FILHOt e diga o ritmo (semanal ou quinzenal), o dia, a hora, a partir de quando e o shampoo — sem abrir a ficha. O app lança sozinho na planilha, na coluna <strong>Banho</strong> e <strong>Hora Banho</strong>, hoje e nos próximos 14 dias. <strong>Nada é gravado antes de você tocar em Salvar.</strong></span></div>
+    <div id="banhosRoot"><div class="card"><div class="hint">Montando a lista dos banhos combinados&hellip;</div></div></div>
+  </section>
   <section class="view" id="v-vencimentos">
     <div class="role-note"><span data-icon="alert"></span><span><strong>Está vencendo.</strong> Escolha o dia no menu — Hoje, segunda, terça, quarta, quinta ou sexta — e veja quem vem naquele dia com vacina, carrapaticida, coleira, vermífugo ou troca de escova vencendo, mais o que <strong>nunca foi registrado</strong> na ficha. A mensagem para o tutor já sai pronta — copie, mande no WhatsApp e <strong>registre aqui o que ele respondeu</strong>. O cartão só fecha quando a ficha estiver atualizada.</span></div>
     <div id="vencRoot"><div class="card"><div class="hint">Carregando os vencimentos do próximo dia…</div></div></div>
@@ -5370,6 +5388,7 @@
     daycare:['Day Care','Chamada, almoço, atividades, EA.'],hospedagem:['Plantão da noite','O relatório de cada hóspede, turno a turno.'],
     gestdia:['Conferência do dia','Medicações por horário, problemas e os três tempos do plantão.'],
     aulunos:['Aulunos','A turma do dia.'],dashdc:['Lançamentos do dia','A planilha do Day Care, item por item.'],
+    banhos:['Banhos recorrentes','Quem tem banho fixo, em que dia e a que horas — o app lança sozinho na planilha.'],
     hoje:['Hoje na Zêluz','Quem está na Zêluz agora e quem está com pendência.'],
     pendencias:['Pendências de prevenção','O que ficou para a próxima vinda de quem não veio.'],
     vencimentos:['Está vencendo','Quem vem no dia, o que está vencendo e o que está em aberto na ficha.'],vacinas:['Prevenção','Vacina, vermífugo, coleira e exame de fezes: quem está atrasado e quem está para vencer.'],
@@ -5484,6 +5503,7 @@
       if(typeof renderPrevCheckup==='function') renderPrevCheckup();
     }
     if(v==='dashdc'){ if(typeof dashCarregar==='function') dashCarregar(); }
+    if(v==='banhos'){ if(typeof banhosAbrir==='function') banhosAbrir(); }
     if(v==='pendencias'){ if(typeof pendAbrir==='function') pendAbrir(); }
     if(v==='vencimentos'){ if(typeof vencAbrir==='function') vencAbrir(); }
     if(v==='hoje'){ if(typeof hojeAbrir==='function') hojeAbrir(); }
@@ -9563,6 +9583,107 @@
     if(JSON.stringify(prev.estoque||{})!==JSON.stringify(it.estoque||{})) mud.push('estoque');
     if(!mud.length) return null;
     return 'Alterou '+mud.join(', ');
+  }
+  /* ===== UM REMÉDIO, UMA LINHA — A ASSINATURA DA MEDICAÇÃO (Adriana, 24/set/2026) =====
+   * "O check-in de entrada da hospedagem da Lisa está confuso: apareceu várias vezes o VitaC
+   *  e o Ômega 3, ela toma uma vez por dia; tive que remover vários. Por quê?"
+   *
+   * A CAUSA está em ciAddMed (ver o comentário lá): a linha pré-preenchida da ficha ganhava
+   * um id NOVO a cada check-in, e gravar com id novo não é atualizar o remédio — é criar
+   * outro igual. A Lisa tinha 4 pares idênticos; o Kako, 9 cópias do PromunDog. Ao todo, 47
+   * duplicados em 33 agendas.
+   *
+   * Corrigida a causa, falta a REDE: o dado antigo já duplicado, e qualquer outra porta que
+   * um dia repita o erro. A assinatura abaixo diz, em uma linha, quando dois itens são o
+   * MESMO remédio escrito duas vezes — e é a MESMA conta no check-in, na aba Medicamentos
+   * da ficha e na lista que vai para a estadia. Uma régua só.
+   *
+   * O que NÃO entra na assinatura, de propósito: a suspensão da vet e o "parou de tomar".
+   * Um item suspenso e um item vivo com a mesma dose são coisas DIFERENTES — juntá-los
+   * ressuscitaria em silêncio o que a veterinária mandou parar (a lição do caso Hulk).
+   */
+  function medAssinatura(it){
+    it=it||{};
+    var n=function(v){ return (typeof jsNorm==='function')?jsNorm(String(v==null?'':v)):String(v==null?'':v).trim().toLowerCase(); };
+    var qn=(typeof qtdNum==='function')?qtdNum(it.q):null;
+    var q=(qn!=null)?String(qn):n(it.q);
+    var hs=(Array.isArray(it.horarios)?it.horarios.slice():[]).map(n).filter(Boolean).sort().join(',');
+    var qd=(it.quando&&it.quando.ref&&it.quando.ref!=='fixo')
+      ? (n(it.quando.ref)+'|'+((it.quando.rel==='depois')?'depois':'antes')+'|'+(parseInt(it.quando.min,10)||0))
+      : '';
+    return [n(it.nome), q, n(it.u), n(it.local), hs, n(it.tipo||'medicamento'),
+            (it.continuo===true?'continuo':''), n(it.dataFim), qd, n(it.motivo),
+            (it.suspenso?'suspenso':''), (it.paradoEm?'parou':'')].join('§');
+  }
+  // QUANDO aquele item foi criado. O id do check-in e o da ficha carregam o relógio
+  // ('ci_1758…', 'fmn_1758…', 'novo_1758…'); os outros caem para o carimbo que o próprio
+  // item guarda. Sem nenhum dos dois vale 0 — e o desempate é o id, que é estável.
+  function medItemQuando(id, it){
+    it=it||{};
+    var m=/^(?:ci|fmn|novo|vet)_(\d{10,})_/.exec(String(id||''));
+    if(m) return parseInt(m[1],10)||0;
+    if(it.informado_por && it.informado_por.ts) return it.informado_por.ts;
+    if(it.paradoEm && it.paradoEm.ts) return it.paradoEm.ts;
+    if(it.suspensoTs) return it.suspensoTs;
+    return 0;
+  }
+  /* Devolve {itens, sai, nomes} — os que FICAM (um por assinatura, o mais recente), os ids
+   * que saem e os nomes do que foi juntado. NÃO grava nada: quem chama decide o que fazer.
+   * Item sem nome legível nunca é deduplicado — rascunho não é remédio. */
+  function medDedupe(mapa){
+    mapa=mapa||{};
+    var porAss={}, sai=[], nomes=[];
+    Object.keys(mapa).forEach(function(id){
+      var it=mapa[id]||{};
+      if(typeof nomeMedOk==='function' && !nomeMedOk(it.nome)) return;   // rascunho: fica como está
+      var a=medAssinatura(it);
+      var ts=medItemQuando(id,it);
+      var atual=porAss[a];
+      if(!atual){ porAss[a]={id:id, ts:ts}; return; }
+      // O mais recente vence. Empate de relógio: vence o id maior, que é estável entre
+      // aparelhos — assim dois celulares deduplicando a mesma agenda chegam ao MESMO item.
+      if((ts>atual.ts)||(ts===atual.ts && String(id)>String(atual.id))){ sai.push(atual.id); porAss[a]={id:id, ts:ts}; }
+      else sai.push(id);
+      if((it.nome||'') && nomes.indexOf(it.nome)<0) nomes.push(it.nome);
+    });
+    var fica={};
+    Object.keys(mapa).forEach(function(id){ if(sai.indexOf(id)<0) fica[id]=mapa[id]; });
+    return {itens:fica, sai:sai, nomes:nomes};
+  }
+  /* A GRAVAÇÃO SEM DUPLICAR — a porta única para escrever itens na agenda a partir de uma
+   * tela (check-in e aba Medicamentos da ficha). Lê o que já está no banco, junta com o que
+   * está na tela (a tela vence no MESMO id), deduplica por assinatura, grava quem fica e
+   * REMOVE quem sai — com rastro 'medicacao-agenda-dedupe', para ninguém descobrir um dia
+   * que um remédio sumiu sem explicação. */
+  function medAgendaGravarItens(key, meds, contexto){
+    if(!DB || !key) return Promise.resolve({ok:false, erro:'sem banco ou sem chave'});
+    meds=meds||{};
+    return DB.ref('auaulandia/medicacao-agenda/'+key+'/itens').once('value').then(function(s){
+      var jaLa=s.val()||{};
+      var todos=Object.assign({}, jaLa, meds);        // o que está na tela vence no MESMO id
+      var d=medDedupe(todos);
+      var ops=[];
+      Object.keys(meds).forEach(function(id){
+        if(d.sai.indexOf(id)>=0) return;              // esta linha perdeu para uma igual
+        ops.push(DB.ref('auaulandia/medicacao-agenda/'+key+'/itens/'+id).update(meds[id]));
+      });
+      d.sai.forEach(function(id){
+        if(jaLa[id]===undefined) return;              // nunca esteve no banco: nada a remover
+        ops.push(DB.ref('auaulandia/medicacao-agenda/'+key+'/itens/'+id).remove());
+      });
+      return Promise.all(ops).then(function(){
+        if(d.sai.length && typeof audit==='function'){
+          audit('medicacao-agenda-dedupe',
+            'juntou '+d.sai.length+' remédio(s) repetido(s)'+(d.nomes.length?(' — '+d.nomes.join(', ')):'')
+            +' ('+(contexto||'agenda')+')',
+            {alvo:key, itens:d.sai.join(' ')});
+        }
+        return {ok:true, sai:d.sai, nomes:d.nomes};
+      });
+    }).catch(function(e){
+      _logFalhaGrav('auaulandia/medicacao-agenda/ (medAgendaGravarItens '+(contexto||'')+')', e);
+      return {ok:false, erro:e};
+    });
   }
   // opts.ficha = a linha está na aba Medicamentos da ficha: o rodapé deixa de ser "Remover"
   // (que apaga) e vira "Parou de tomar" (que encerra sem apagar nada) — a lei do histórico.
@@ -15513,7 +15634,7 @@
   // inteira DEPOIS de a correção estar publicada — o aviso apareceu, ninguém tocou.
   // Agora o aparelho PARADO recarrega sozinho: trancado, com a aba escondida, na porta de
   // entrada ou 3 minutos sem ninguém tocar nele. Mão na tela = nunca recarrega.
-  const APP_VERSAO='2026-09-24-07';
+  const APP_VERSAO='2026-09-24-08';
   var RECARGA_PARADO_MS=3*60*1000, __versaoPublicada=null, __recargaTimer=null;
   function vigiarVersao(){
     if(!DB) return;
@@ -20775,8 +20896,40 @@
   function prevItensDoFiltro(){
     return PREV_ITENS.map(function(it){ return {k:it.k, nome:it.nome}; });
   }
-  function prevFaltasDe(ex){
+  /* ===== "SÓ O QUE ESTÁ EM ABERTO" (Adriana, 24/set/2026) ===========================
+   * "Fui em Prevenção e procurei a Cindy. Aparece a vacina que só vence dia 12. Eu preciso
+   *  só do que está em aberto. A coleira está vencida, ok. A escova de dente vai ser trocada
+   *  na semana que vem, e ele não me deixa ir para a semana que vem. Só tem que aparecer o
+   *  que está vencido ou que não tem data. Não dá para ficar aparecendo tudo; se aparece
+   *  tudo, a gente não consegue ver. Se não tem nada vencido, não aparece: está tudo em dia."
+   *
+   * EM ABERTO = vencido (a data já passou) OU sem data nenhuma na ficha. Nada mais.
+   * O que vence lá na frente não é dívida — é agenda, e agenda tem tela própria
+   * (Vencimentos). Por isso a janela abaixo nasce em ZERO.
+   *
+   * O botão "Mostrar também o que vence nos próximos 30 dias" liga a janela quando alguém
+   * QUER olhar adiante, e a escolha fica guardada no aparelho: quem trabalha assim não
+   * precisa reapertar todo dia. */
+  var PREV_JANELA_CH='zeluz_prev_janela', PREV_JANELA=null, PREV_JANELA_DIAS=30;
+  function prevJanela(){
+    if(PREV_JANELA===null){
+      PREV_JANELA=0;
+      try{ if(String(localStorage.getItem(PREV_JANELA_CH))===String(PREV_JANELA_DIAS)) PREV_JANELA=PREV_JANELA_DIAS; }
+      catch(e){} /* silencioso de propósito: sem valor guardado vale o padrão — só o que está em aberto */
+    }
+    return PREV_JANELA;
+  }
+  function prevJanelaVirar(){
+    PREV_JANELA=(prevJanela()?0:PREV_JANELA_DIAS);
+    try{ localStorage.setItem(PREV_JANELA_CH, String(PREV_JANELA)); }
+    catch(e){} /* silencioso de propósito: aparelho sem espaço não pode travar a tela */
+    PREV_ABERTO=''; PREV_CORRIGE_ABERTO='';
+    renderPrevencao();
+  }
+  // janela: quantos dias à frente também contam. 0 (o padrão) = só o que está EM ABERTO.
+  function prevFaltasDe(ex, janela){
     ex=ex||{};
+    janela=(janela==null)?prevJanela():janela;
     var out=[];
     PREV_ITENS.forEach(function(it){
       // "ou é vermífugo ou exame" — quem tem um não deve o outro.
@@ -20792,8 +20945,16 @@
         out.push({k:it.k, nome:it.nome, tipo:'sem', afazer:true, rotina:!!it.rotina}); return;
       }
       if(!v){ if(!it.opcional) out.push({k:it.k, nome:it.nome, tipo:'sem', rotina:!!it.rotina}); return; }
-      if(venceuISO(v)) out.push({k:it.k, nome:it.nome, tipo:'venc', data:v, dias:-diasAteISO(v),
-                                 rotina:!!it.rotina, antigo:(prevOrigem(ex,it)==='antigo')});
+      if(venceuISO(v)){ out.push({k:it.k, nome:it.nome, tipo:'venc', data:v, dias:-diasAteISO(v),
+                                 rotina:!!it.rotina, antigo:(prevOrigem(ex,it)==='antigo')}); return; }
+      // AINDA NÃO VENCEU. Só entra quando alguém pediu para olhar adiante — e entra com
+      // tipo PRÓPRIO ('avencer'), para nunca se confundir com dívida em nenhuma conta.
+      if(janela>0){
+        var dv=diasAteISO(v);
+        if(dv!==null && dv>=0 && dv<=janela)
+          out.push({k:it.k, nome:it.nome, tipo:'avencer', data:v, dias:dv,
+                    rotina:!!it.rotina, manual:!!ex[it.k+'_manual']});
+      }
     });
     // O peso não entra aqui desde 15/set/2026 — ver o comentário em prevItensDoFiltro().
     return out;
@@ -20808,7 +20969,12 @@
   }
   // Em que situação este FILHOt está. A ordem é a da urgência: erro de digitação antes
   // de vencimento, vencimento antes de cadastro faltando, e rotina por último.
+  // As faltas EM ABERTO — as únicas que classificam. O que ainda vai vencer não muda a
+  // situação do FILHOt: ele não está devendo nada (24/set/2026).
+  function prevAbertas(faltas){ return (faltas||[]).filter(function(f){ return f.tipo!=='avencer'; }); }
   function prevClasse(faltas, ex){
+    faltas=prevAbertas(faltas);
+    if(!faltas.length) return 'avencer';   // só tem coisa por vencer: não é dívida
     if(faltas.some(function(f){ return f.tipo==='invalida'; })) return 'erro';
     if(faltas.some(function(f){ return f.tipo==='venc' && !f.rotina && !f.antigo; })) return 'deve';
     // vencido SÓ pelo campo abandonado: a ficha é que está velha, não o FILHOt
@@ -20825,6 +20991,8 @@
     {k:'antigo', t:'Ficha por migrar', dica:'A data está só no campo antigo do cadastro (carrapaticida/vermífugo), que a equipe deixou de usar. Pode ser que já tenha sido dado e ninguém lançou no campo novo — confira com o tutor antes de cobrar.'},
     {k:'rotina', t:'Rotina',        dica:'Só o check-up. Rotina da casa, não prevenção. (O peso saiu daqui em 15/set/2026 e a escova de dentes em 21/set/2026 — a escova agora conta como prevenção.)'},
     {k:'erro',   t:'Data errada',   dica:'Alguém digitou o ano errado na ficha (0026, 0207). Precisa de correção manual.'},
+    // Só existe com a janela ligada — sem ela, nada "por vencer" entra na conta (24/set/2026).
+    {k:'avencer',t:'Vence em breve', dica:'Não está devendo nada: tem item que vence nos próximos dias. Aparece porque você ligou «Mostrar também o que vence nos próximos 30 dias».'},
     {k:'tudo',   t:'Tudo',          dica:'Todo mundo com qualquer pendência, das quatro situações acima.'}
   ];
   function prevDados(){
@@ -20837,7 +21005,11 @@
       var faltas=prevFaltasDe(ex);
       if(!faltas.length) return;
       var classe=prevClasse(faltas, ex);
-      if(PREV_TIPO!=='tudo' && classe!==PREV_TIPO) return;
+      // Ligar o botão dos 30 dias é dizer "quero ver TAMBÉM o que está por vencer" — não é
+      // trocar de aba. Por isso quem só tem item a vencer entra junto de quem está devendo.
+      var cabeNaAba=(PREV_TIPO==='tudo') || (classe===PREV_TIPO)
+        || (prevJanela()>0 && PREV_TIPO==='deve' && classe==='avencer');
+      if(!cabeNaAba) return;
       if(PREV_FILTRO!=='tudo' && !faltas.some(function(f){ return f.k===PREV_FILTRO; })) return;
       var nome=(typeof pelNome==='function'?pelNome(p):'')||p.n||'';
       var tutor=(typeof pelGet==='function'?pelGet(p,'tutor'):'')||p.tutor||'';
@@ -20845,6 +21017,7 @@
       out.push({p:p, nome:nome, tutor:tutor, classe:classe,
                 raca:(typeof pelGet==='function'?pelGet(p,'raca'):'')||p.raca||'',
                 faltas:faltas,
+                abertas:prevAbertas(faltas).length,
                 venc:faltas.filter(function(f){ return f.tipo==='venc'; }).length});
     });
     // Quem tem coisa VENCIDA vem primeiro, e dentro disso quem tem mais pendência.
@@ -21097,8 +21270,16 @@
       var semPrev =contaPor(function(f){ return f.tipo==='sem'  && !f.rotina; });
       var rotina  =contaPor(function(f){ return !!f.rotina; });
       var quebrada=contaPor(function(f){ return f.tipo==='invalida'; });
-      var comPrev=todos.filter(function(o){ return o.faltas.some(function(f){ return !f.rotina && f.tipo!=='invalida'; }); }).length;
-      res.innerHTML='<div class="pair"><span class="k">FILHOts com prevenção pendente</span>'
+      var comPrev=todos.filter(function(o){ return o.faltas.some(function(f){ return !f.rotina && f.tipo!=='invalida' && f.tipo!=='avencer'; }); }).length;
+      // "Se não tem nada vencido, não aparece: está tudo em dia." Quem não aparece precisa
+      // ser CONTADO — senão a tela vazia parece tela quebrada (Adriana, 24/set/2026).
+      var ativos=0;
+      try{ ativos=(PELUDINHOS||[]).filter(function(q){ return !(typeof pelInativo==='function'&&pelInativo(q)); }).length; }
+      catch(e){ ativos=0; } /* silencioso de propósito: sem o cadastro o resumo sai sem este número */
+      var emDia=Math.max(0, ativos-comPrev);
+      res.innerHTML='<div class="pair"><span class="k">FILHOts <strong>em dia</strong> — nada vencido nem em branco</span>'
+        +'<span class="val" style="font-weight:800;color:var(--crm-ok)">'+emDia+'</span></div>'
+        +'<div class="pair"><span class="k">FILHOts com prevenção pendente</span>'
         +'<span class="val" style="font-weight:800;color:var(--z-blue)">'+comPrev+'</span></div>'
         +'<div class="pair"><span class="k">Vacina ou antiparasitário <strong>vencido</strong></span>'
         +'<span class="val" style="font-weight:800;color:'+(vencPrev?'var(--crm-critico)':'var(--crm-ok)')+'">'+vencPrev+'</span></div>'
@@ -21127,6 +21308,19 @@
         +'</div>';
       var dica=(PREV_TIPOS.filter(function(x){ return x.k===PREV_TIPO; })[0]||{}).dica||'';
       if(dica) abas+='<div class="hint" style="margin:-4px 0 8px">'+escAttr(dica)+'</div>';
+      // O INTERRUPTOR DOS 30 DIAS. Desligado (o padrão) a tela mostra só o que está em
+      // aberto — que é o pedido dela. Ligado, acrescenta o que vence nos próximos 30 dias,
+      // sem esconder nada do que já estava. A escolha fica guardada no aparelho.
+      var _jan=prevJanela();
+      abas+='<div style="margin:-2px 0 9px">'
+        +'<button type="button" class="btn" id="prevJanelaBt" style="padding:7px 13px;font-size:12.5px;font-weight:800;border:1.5px solid '
+        +(_jan?'var(--z-blue)':'var(--line)')+';background:'+(_jan?'var(--z-blue)':'var(--z-cream-warm)')
+        +';color:'+(_jan?'var(--z-cream)':'var(--z-blue)')+'" onclick="prevJanelaVirar()">'
+        +(_jan?'Mostrando também o que vence nos próximos 30 dias':'Mostrar também o que vence nos próximos 30 dias')+'</button>'
+        +'<div class="hint" style="margin-top:3px">'
+        +(_jan?'Além do que está em aberto, a lista traz o que vence até '+escAttr(fmtBR(addDiasISO(hojeISO(),PREV_JANELA_DIAS)))+'. Toque de novo para ver só o que está em aberto.'
+              :'A lista mostra <strong>só o que está vencido ou sem data</strong>. Quem está em dia não aparece.')
+        +'</div></div>';
       var bt=function(k,rot,n,nv){
         var on=(PREV_FILTRO===k);
         return '<button class="btn" style="padding:6px 12px;font-size:12.5px;font-weight:800;border:1.5px solid '
@@ -21136,12 +21330,15 @@
           +(nv?'<span style="color:'+(on?'#F6D8D4':'var(--crm-critico)')+';font-weight:800"> · '+nv+' venc.</span>':'')
           +'</button>';
       };
-      var h=abas+bt('tudo','Todos os itens',todos.length,todos.reduce(function(a,o){ return a+o.venc; },0));
+      // Os botões de item ficam numa faixa só, abaixo do interruptor dos 30 dias: sem esta
+      // caixa o primeiro deles subia e colava na frase do botão (24/set/2026).
+      var h=abas+'<div style="display:flex;flex-wrap:wrap;gap:6px">'
+        +bt('tudo','Todos os itens',todos.length,todos.reduce(function(a,o){ return a+o.venc; },0));
       prevItensDoFiltro().forEach(function(it){
         if(!cont[it.k]) return;                       // item sem ninguém devendo não vira botão
         h+=bt(it.k,it.nome,cont[it.k],contVenc[it.k]||0);
       });
-      fl.innerHTML=h;
+      fl.innerHTML=h+'</div>';
     }
 
     var el=document.getElementById('prevLista'); if(!el) return;
@@ -21149,12 +21346,14 @@
     // vencer é justamente o caso em que ainda não há dívida nenhuma — e é a hora de vender
     // a nova. A caixa de mensagem (plano B do "copiar") mora aqui pelo mesmo motivo: ela
     // precisa existir na tela em qualquer um dos caminhos abaixo.
-    var topo='<div id="prevMsgCaixa" class="card" style="display:none"></div>'+prevBlocoColeiraVencendo();
+    var topo='<div id="prevMsgCaixa" class="card" style="display:none"></div>'
+      +prevCorrigeOkHTML()+prevBlocoColeiraVencendo();
     if(!lista.length){
       var vazio = (PREV_TIPO==='deve')   ? 'Ninguém devendo vacina ou antiparasitário. Prevenção em dia.'
                 : (PREV_TIPO==='semcad') ? 'Todas as fichas de prevenção têm pelo menos uma data.'
                 : (PREV_TIPO==='rotina') ? 'Nada de rotina pendente.'
                 : (PREV_TIPO==='erro')   ? 'Nenhuma data impossível na ficha.'
+                : (PREV_TIPO==='avencer')? 'Ninguém com item vencendo nos próximos '+PREV_JANELA_DIAS+' dias.'
                 : 'Ninguém com pendência. Prevenção em dia.';
       el.innerHTML=topo+'<div class="card"><div class="hint" style="color:var(--crm-ok);font-weight:700">'
         +(PREV_FILTRO==='tudo'?escAttr(vazio):'Ninguém devendo este item nesta situação.')+'</div></div>';
@@ -21167,30 +21366,82 @@
     lista=lista.filter(function(o){ return !prevEhHospede(o.p); });
     var htmlHosp=prevBlocoHospedes(hosp);
     if(!lista.length){ el.innerHTML=topo+(htmlHosp||'<div class="card"><div class="hint">Só hóspedes nesta lista.</div></div>'); return; }
-    el.innerHTML=topo+htmlHosp+'<div class="card"><h2 style="font-size:17px">Aulunos — '+lista.length+' FILHOt'+(lista.length>1?'s':'')+'</h2>'
-      +lista.map(function(o){
-        var _ch=pelKey(o.p);
-        if(PREV_ABERTO===_ch) return prevEdicaoHTML(o);
-        return '<div style="border-top:1px solid var(--line);padding:11px 0;cursor:pointer" onclick="prevAbrir(\''+_ch+'\')">'
-          +'<div style="font-weight:800;color:var(--z-blue);font-size:15px">'+escAttr(o.nome)
-          +' <span style="font-weight:600;font-size:12.5px;color:var(--muted)">'+escAttr(o.raca||'')
-          +(o.tutor?(' · '+escAttr(o.tutor)):'')+'</span>'
-          +' <span style="font-weight:700;font-size:11.5px;color:var(--z-gold-deep)">toque para lançar</span></div>'
-          +'<div style="display:flex;flex-wrap:wrap;gap:5px;margin-top:5px">'
-          +o.faltas.map(function(f){
-              var venc=(f.tipo==='venc'), ruim=(f.tipo==='invalida');
-              var fundo = ruim ? 'background:#3B1F1F;color:#FFD9D9'
-                        : venc ? 'background:#F6D8D4;color:#8E1B10'
-                        : f.rotina ? 'background:rgba(124,139,153,.18);color:var(--muted)'
-                        : 'background:rgba(222,180,40,.22);color:var(--z-blue)';
-              var txt = ruim ? (' — DATA IMPOSSÍVEL ('+escAttr(f.data||'')+') · corrija o ano na ficha')
-                      : venc ? (f.data?(' — venceu '+fmtBR(f.data)+(f.dias?(' (há '+f.dias+' dia'+(f.dias>1?'s':'')+')'):'')):' — vencido')
-                      : (f.afazer?' — A FAZER NA ZÊLUZ':' — sem data');
-              return '<span style="border-radius:999px;padding:3px 11px;font-size:12px;font-weight:800;'+fundo+'">'
-                +escAttr(f.nome)+txt+'</span>';
-            }).join('')
-          +'</div></div>';
-      }).join('')+'</div>';
+    el.innerHTML=topo+htmlHosp+prevTabelaHTML(lista, cont);
+  }
+  /* ===== A TABELA DA PREVENÇÃO (Adriana, 24/set/2026) ===============================
+   * "Preciso de uma tabela. Facilitar a vida aqui."
+   * Uma linha por FILHOt; uma coluna por item que ALGUÉM está devendo (item que ninguém
+   * deve não vira coluna — coluna vazia é ruído). Cada célula é o chip tocável de sempre:
+   * toca e abre o painel que grava na ficha, sem sair da tela. Célula sem nada é um traço,
+   * e traço quer dizer "em dia".
+   * A tabela rola de lado dentro da própria caixa — a página nunca rola na horizontal. */
+  // dd/mm na célula quando a data é DESTE ano (é o que cabe e é o que ela pediu); com outro
+  // ano, a data inteira — "venceu 01/09" de 2024 ao lado de um de 2026 enganaria.
+  function prevCelulaData(iso){
+    var br=fmtBR(iso)||'';
+    return (String(iso||'').slice(0,4)===hojeISO().slice(0,4)) ? br.slice(0,5) : br;
+  }
+  function prevCelulaTexto(f){
+    if(!f) return '';
+    if(f.tipo==='invalida') return 'data impossível ('+(f.data||'')+')';
+    if(f.tipo==='venc') return f.data?('venceu '+prevCelulaData(f.data)):'vencido';
+    if(f.tipo==='avencer') return 'vence '+(f.data?prevCelulaData(f.data):'—')+(f.manual?' (à mão)':'');
+    return f.afazer?'A FAZER NA ZÊLUZ':'sem data';
+  }
+  function prevCelulaEstilo(f){
+    if(!f) return '';
+    if(f.tipo==='invalida') return 'background:#3B1F1F;color:#FFD9D9';
+    if(f.tipo==='venc') return 'background:#F6D8D4;color:#8E1B10';
+    if(f.tipo==='avencer') return 'background:rgba(46,125,138,.16);color:#1F5F69';
+    if(f.rotina) return 'background:rgba(124,139,153,.18);color:var(--muted)';
+    return 'background:rgba(222,180,40,.22);color:var(--z-blue)';
+  }
+  function prevTabelaHTML(lista, cont){
+    cont=cont||{};
+    // As colunas: os itens que aparecem NESTA lista (e só o escolhido, quando há filtro).
+    var vistos={};
+    lista.forEach(function(o){ (o.faltas||[]).forEach(function(f){ vistos[f.k]=1; }); });
+    var cols=prevItensDoFiltro().filter(function(it){
+      if(PREV_FILTRO!=='tudo') return it.k===PREV_FILTRO;
+      return !!vistos[it.k];
+    });
+    if(!cols.length) cols=prevItensDoFiltro().filter(function(it){ return !!cont[it.k]; });
+    var hoje=hojeISO();
+    // A coluna do nome tem largura FIXA: sem isto, no celular ela come a tela inteira e as
+    // colunas dos itens ficam todas fora do campo de visão (24/set/2026).
+    var LARG_NOME=170, LARG_COL=132;
+    var th=function(t, extra){ return '<th style="text-align:left;padding:7px 9px;font-size:12px;font-weight:800;color:var(--z-cream);background:var(--z-blue);white-space:nowrap;'+(extra||'')+'">'+escAttr(t)+'</th>'; };
+    var h='<div class="card"><h2 style="font-size:17px">Aulunos — '+lista.length+' FILHOt'+(lista.length>1?'s':'')+'</h2>'
+      +'<div class="hint" style="margin-bottom:7px">Toque na data de qualquer célula para atualizar ali mesmo — vai direto para a ficha do FILHOt. Toque no <strong>nome</strong> para abrir a ficha de prevenção inteira dele.</div>'
+      +'<div style="overflow-x:auto;-webkit-overflow-scrolling:touch">'
+      +'<table style="border-collapse:collapse;width:100%;table-layout:fixed;min-width:'+(LARG_NOME+cols.length*LARG_COL)+'px">'
+      +'<thead><tr>'+th('Peludinho','width:'+LARG_NOME+'px')
+      +cols.map(function(c){ return th(c.nome,'width:'+LARG_COL+'px;white-space:normal'); }).join('')+'</tr></thead><tbody>';
+    lista.forEach(function(o){
+      var ch=pelKey(o.p);
+      var porK={}; (o.faltas||[]).forEach(function(f){ porK[f.k]=f; });
+      h+='<tr style="border-top:1px solid var(--line)">'
+        +'<td style="padding:8px 9px;vertical-align:top;width:'+LARG_NOME+'px;overflow-wrap:anywhere">'
+        +'<button type="button" class="btn" style="background:none;border:none;padding:0;text-align:left;font:inherit;cursor:pointer" onclick="prevAbrir(\''+jsAspas(ch)+'\')">'
+        +'<span style="font-weight:800;color:var(--z-blue);font-size:14.5px;text-decoration:underline">'+escAttr(o.nome)+'</span></button>'
+        +'<div style="font-size:11.5px;color:var(--muted);font-weight:600">'+escAttr(o.raca||'')
+        +(o.tutor?(' · '+escAttr(o.tutor)):'')+'</div></td>';
+      cols.forEach(function(c){
+        var f=porK[c.k];
+        if(!f){ h+='<td style="padding:8px 9px;color:var(--muted);font-size:12.5px;font-weight:700">—</td>'; return; }
+        h+='<td style="padding:8px 9px;overflow-wrap:anywhere">'
+          +prevCorrigeChip(ch, c.k, prevCelulaTexto(f), 'prev',
+             'font-size:11.5px;white-space:nowrap;'+prevCelulaEstilo(f))
+          +'</td>';
+      });
+      h+='</tr>';
+      // O painel de gravação e a ficha inteira moram numa linha própria, abaixo daquele
+      // FILHOt: é onde a pessoa está olhando, e a tabela não se desmancha.
+      var painel=prevCorrigePainelHTML(ch, 'prev', hoje);
+      var ficha=(PREV_ABERTO===ch)?prevEdicaoHTML(o):'';
+      if(painel||ficha) h+='<tr><td colspan="'+(cols.length+1)+'" style="padding:0 9px 9px">'+painel+ficha+'</td></tr>';
+    });
+    return h+'</tbody></table></div></div>';
   }
 
   // ===== PREVENÇÃO DO HÓSPEDE — convite, não cobrança ============================
@@ -21370,11 +21621,11 @@
         +'<div style="font-weight:800;color:var(--z-blue);font-size:15px">'+escAttr(o.nome)
         +' <span style="font-weight:600;font-size:12.5px;color:var(--muted)">'+escAttr(o.raca||'')+(o.tutor?(' · '+escAttr(o.tutor)):'')+'</span></div>'
         +'<div style="display:flex;flex-wrap:wrap;gap:5px;margin:5px 0">'
+        // A MESMA frase e a MESMA cor da tabela dos aulunos — duas escritas do mesmo item
+        // seriam duas verdades sobre o mesmo FILHOt (24/set/2026).
         +o.faltas.filter(function(f){ return !f.rotina; }).map(function(f){
-            var v=(f.tipo==='venc');
             return '<span style="border-radius:999px;padding:3px 11px;font-size:12px;font-weight:800;'
-              +(v?'background:#F6D8D4;color:#8E1B10':'background:rgba(222,180,40,.22);color:var(--z-blue)')+'">'
-              +escAttr(f.nome)+(v&&f.data?(' — venceu '+fmtBR(f.data)):'')+'</span>';
+              +prevCelulaEstilo(f)+'">'+escAttr(f.nome+' — '+prevCelulaTexto(f))+'</span>';
           }).join('')
         +'</div>'
         +(av?('<div class="hint" style="margin:4px 0;color:var(--crm-ok);font-weight:700">Tutor avisado em '+fmtBR(av.quando||'')+(av.quem?(' por '+escAttr(av.quem)):'')+'.</div>'):'')
@@ -21382,7 +21633,12 @@
         +'<button type="button" class="btn btn-gold" style="padding:6px 14px;font-size:12.5px" onclick="prevCopiarTutor(\''+jsAspas(ch)+'\',this)">Copiar mensagem para o tutor</button>'
         +'<button type="button" class="btn" style="padding:6px 14px;font-size:12.5px;background:var(--z-cream-warm);color:var(--z-blue);border:1.5px solid var(--line)" onclick="prevMarcarAvisado(\''+jsAspas(ch)+'\',this)">'+(av?'Avisei de novo':'Já avisei')+'</button>'
         +'<button type="button" class="btn" style="padding:6px 14px;font-size:12.5px;background:none;border:none;color:var(--z-blue);font-weight:800;text-decoration:underline" onclick="prevAbrir(\''+jsAspas(ch)+'\')">lançar a data que ele mandou</button>'
-        +'</div></div>';
+        +'</div>'
+        // ⚠ 24/set/2026 — "lançar a data que ele mandou" NÃO abria nada: o hóspede sai da
+        // lista dos aulunos, e era só lá que a ficha de lançamento era desenhada. Botão que
+        // não faz nada e não diz por quê é a falha muda de sempre. Agora ela abre AQUI.
+        +((PREV_ABERTO===ch)?prevEdicaoHTML(o):'')
+        +'</div>';
     });
     return h+'</div>';
   }
@@ -21539,7 +21795,11 @@
   // O chip. Sem permissão (monitor, plantonista) ele continua sendo o texto de sempre.
   function prevCorrigeChip(chave, k, texto, tela, estilo){
     estilo=String(estilo||'');
-    if(!k || !chave || !prevCorrigePode()) return '<span style="'+estilo+'">'+escAttr(texto)+'</span>';
+    // Quem só LÊ recebe a mesma etiqueta, no mesmo lugar — sem o lápis e sem a borda de
+    // "toque aqui". A tabela da Prevenção fica igual para todo mundo; o que muda é poder
+    // gravar (24/set/2026).
+    if(!k || !chave || !prevCorrigePode())
+      return '<span style="display:inline-block;padding:2px 9px;border-radius:999px;font-weight:800;'+estilo+'">'+escAttr(texto)+'</span>';
     var aberto=(PREV_CORRIGE_ABERTO===prevCorrigeAlvo(chave,k));
     return '<button type="button" class="prev-corrige-chip"'
       +' style="padding:2px 9px;border-radius:999px;border:1.5px '+(aberto?'solid':'dashed')+' currentColor;'
@@ -21567,9 +21827,14 @@
     try{ y=(window.pageYOffset||document.documentElement.scrollTop||0); }catch(e){} /* silencioso de propósito: enfeite de tela (foco, rolagem, mídia) — falhar não muda dado nenhum */
     try{
       if(tela==='venc'){ if(typeof vencRender==='function') vencRender(); }
+      else if(tela==='prev'){ if(typeof renderPrevencao==='function') renderPrevencao(); }
       else if(typeof hojeRender==='function') hojeRender();
     }catch(e){} /* silencioso de propósito: redesenho de tela — falhar não pode derrubar quem chamou */
     try{ window.scrollTo(0,y); }catch(e){} /* silencioso de propósito: enfeite de tela (foco, rolagem, mídia) — falhar não muda dado nenhum */
+  }
+  // A frase da tela de origem, para o rastro dizer de onde o toque veio.
+  function prevCorrigeTelaNome(tela){
+    return (tela==='venc')?'Vencimentos':((tela==='prev')?'Prevenção':'Hoje na Zêluz');
   }
   // A confirmação verde do que acabou de ser atualizado. A linha some da lista na hora —
   // e quem atualizou precisa VER que sumiu porque ficou em dia, e não por um bug.
@@ -21712,10 +21977,11 @@
     var nome=(it&&it.nome)||k;
     try{ if(typeof audit==='function') audit('prevencao-atualizada-na-tela',
       (pelNome(p)||'')+': '+nome+' — '+comoTexto+', vence em '+(para?fmtBR(para):'—')
-      +' (antes '+(de?fmtBR(de):'sem data')+'), atualizado na tela '+(tela==='venc'?'Vencimentos':'Hoje na Zêluz'),
+      +' (antes '+(de?fmtBR(de):'sem data')+'), atualizado na tela '+prevCorrigeTelaNome(tela),
       {alvo:chave, item:k, de:de||'', para:para||'', pet:pelNome(p)||''}); }catch(e){} /* silencioso de propósito: o audit() tem bolso próprio e reenvia sozinho — falhar aqui não pode travar a ação */
     PREV_CORRIGE_OK[prevCorrigeAlvo(chave,k)]={ts:Date.now(), ate:para||'',
-      texto:(pelNome(p)||'')+' — '+nome+' em dia até '+(para?fmtBR(para):'—')};
+      texto:(pelNome(p)||'')+' — '+nome+' em dia até '+(para?fmtBR(para):'—')
+        +(comoTexto==='vencimento digitado à mão'?' (marcado à mão)':'')};
     PREV_CORRIGE_ABERTO='';
     prevCorrigeRedesenhar(tela);
   }
@@ -21765,7 +22031,9 @@
   function prevLinhaTexto(o){
     return o.nome+(o.raca?(' ('+o.raca+')'):'')+(o.tutor?(' — '+o.tutor):'')+': '
       +o.faltas.map(function(f){
-          return f.nome+(f.tipo==='venc'?(f.data?(' venceu '+fmtBR(f.data)):' vencido'):' sem data');
+          // A MESMA frase da célula da tabela: 'avencer' não pode virar "sem data" no texto
+          // que a recepção cola no WhatsApp (24/set/2026).
+          return f.nome+' '+prevCelulaTexto(f);
         }).join(' · ');
   }
   function copiarPrevencao(){
@@ -21805,7 +22073,8 @@
             var f=porK[it.k];
             if(!f) return '<td class="ok">ok</td>';
             if(f.tipo==='venc') return '<td class="venc">VENCEU '+(f.data?e(fmtBR(f.data)):'')+'</td>';
-            return '<td class="sem">sem data</td>';
+            if(f.tipo==='avencer') return '<td>'+e(prevCelulaTexto(f))+'</td>';
+            return '<td class="sem">'+e(prevCelulaTexto(f))+'</td>';
           }).join('')+'</tr>';
     });
     h+='</table></body></html>';
@@ -22699,7 +22968,7 @@
     const _hojeBusca=hojeISO();
     document.getElementById('pelBody').innerHTML=list.map((o,row)=>{ const p=o.p; return `<tr onclick="abrirPeludinhoLista(${o.i})" style="cursor:pointer">
       <td class="pel-num">${row+1}</td>
-      <td><span class="pel-nome">${pelNome(p)}</span>${p.apelido?` <span class="pel-obs">${p.apelido}</span>`:''}${((pelExtra(p).castrado||p.castrado)==='Não')?' <span class="pel-obs">Não castrado</span>':''}${linhaBuscaCadastro(p,_hojeBusca)}${medLinhaDoPel(p)}</td>
+      <td><span class="pel-nome">${pelNome(p)}</span>${p.apelido?` <span class="pel-obs">${p.apelido}</span>`:''}${((pelExtra(p).castrado||p.castrado)==='Não')?' <span class="pel-obs">Não castrado</span>':''}${banhoRecEtiquetaPel(p)}${linhaBuscaCadastro(p,_hojeBusca)}${medLinhaDoPel(p)}</td>
       <td>${pelGet(p,'raca')||'—'}</td>
       <td><span class="pel-freq">${pelFreq(p)}</span></td>
       <td class="dias-cell">${diasHtml(pelDias(p))}</td>
@@ -23369,7 +23638,9 @@
       wrap.innerHTML='<div class="hint">Lendo os medicamentos deste FILHOt&hellip;</div>';
       if(!DB){ wrap.innerHTML='<div class="hint">Banco conectando&hellip; abra a aba de novo em instantes.</div>'; return; }
       DB.ref('auaulandia/medicacao-agenda/'+key+'/itens').once('value').then(function(s){
-        FMED_ITENS=s.val()||{}; FMED_CARREGOU=true; fmedDesenhar();
+        // A MESMA régua do check-in (24/set/2026): dado antigo repetido aparece UMA vez só.
+        // Quem limpa o banco é o "Salvar medicamentos", com rastro — ver fmedSalvar.
+        FMED_ITENS=medDedupe(s.val()||{}).itens; FMED_CARREGOU=true; fmedDesenhar();
       }).catch(function(e){
         _logLeituraFalhou('auaulandia/medicacao-agenda/ (fmedRender)', e);
         wrap.innerHTML='<div class="hint" style="color:var(--crm-critico);font-weight:700">Não consegui ler os medicamentos: '+escAttr((e&&e.message)||String(e))+'</div>';
@@ -23485,12 +23756,14 @@
       const acao=medDiffAcao(FMED_ITENS[id], it);
       if(acao){ const hist=Array.isArray(it.historico)?it.historico.slice():[]; hist.push({quem:quem, quando:agoraBR(), acao:acao+' (ficha)'}); it.historico=hist; }
       it.informado_por={quem:quem, quando:agoraBR(), ts:Date.now()};
-      ops.push(DB.ref('auaulandia/medicacao-agenda/'+FMED_KEY+'/itens/'+id).update(it));
     });
+    // A MESMA porta do check-in: grava o que fica, remove o repetido e deixa o rastro
+    // 'medicacao-agenda-dedupe'. Duas telas, uma régua só (24/set/2026).
+    ops.push(medAgendaGravarItens(FMED_KEY, itens, 'ficha Medicamentos'));
     Promise.all(ops).then(function(){
       return DB.ref('auaulandia/medicacao-agenda/'+FMED_KEY+'/itens').once('value');
     }).then(function(s){
-      FMED_ITENS=s.val()||{}; FMED_CARREGOU=true; fmedDesenhar();
+      FMED_ITENS=medDedupe(s.val()||{}).itens; FMED_CARREGOU=true; fmedDesenhar();
       if(st){ st.style.color='var(--crm-ok)'; st.textContent='✅ Medicamentos salvos. O Check-in da hospedagem já traz esta lista para confirmar com o tutor.'; }
       if(typeof audit==='function') audit('ficha-medicamentos', resumo.join(' | '),
         {alvo:FMED_KEY, pet:pelNome(pelAtual)||'', quem:quem});
@@ -31962,7 +32235,12 @@
    * Agora o cartão mostra as DUAS coisas, com a etiqueta dizendo de onde veio. A linha do
    * automático NÃO tem botão "tirar": ela se corrige na origem (a tela de Reposições, a
    * ficha) — apagar aqui seria mentira, porque na passada seguinte ele escreveria de novo. */
-  var DASH_ITEM_AUTO={reposicao:'reposicao', faltas:'faltas', adaptacao:'adaptacao'};
+  // 24/set/2026: o banho entrou aqui. O que o combinado da ficha lançou aparece no MESMO
+  // cartão em que a recepção lança à mão — com a etiqueta dizendo de onde veio, para
+  // ninguém lançar de novo achando que falhou (a lição da Safira, 23/set).
+  var DASH_ITEM_AUTO={reposicao:'reposicao', faltas:'faltas', adaptacao:'adaptacao', banho:'banho'};
+  // A etiqueta de cada fonte automática. Sem entrada aqui, é só "automático".
+  var DASH_AUTO_TAG={banho:'automático · banho fixo'};
   // Colunas que SÓ o automático preenche — não há como lançá-las à mão. Ganham um cartão
   // de leitura no fim da tela, para a casa ver o dia inteiro num lugar só.
   var DASH_AUTO_SO_LEITURA=[
@@ -31992,7 +32270,7 @@
       else if(e.estado==='lendo'){ txt='conferindo a planilha…'; }
       return '<div class="pair dash-auto" style="padding:6px 0;border-bottom:1px solid var(--line)">'
         +'<span class="k"><strong>'+escAttr(v)+'</strong>'
-        +' <span class="dash-auto-tag">automático</span>'
+        +' <span class="dash-auto-tag">'+escAttr(DASH_AUTO_TAG[autoK]||'automático')+'</span>'
         +(txt?(' <span style="color:'+cor+';font-weight:800;font-size:11.5px">'+esc(txt)+'</span>'):'')
         +'</span></div>';
     }).join('');
@@ -36307,6 +36585,12 @@
     // O remédio de uso contínuo entra no cartão (22/set/2026): quem fala com o tutor sobre
     // vacina também precisa saber que este FILHOt é cardíaco — é a mesma conversa.
     h+=medLinhaDoPel(o.p,'Uso contínuo, do cadastro. Confirme com o tutor se continua igual.');
+    // O banho fixo daquele dia (24/set/2026): quem fala com o tutor sobre vacina também
+    // precisa saber que ele já tem banho marcado — é a mesma conversa, e evita remarcar.
+    try{
+      var _bf=(typeof banhoRecFraseDia==='function')?banhoRecFraseDia(o.p, dia, hoje):'';
+      if(_bf) h+='<div class="med-linha">'+escAttr(_bf)+'</div>';
+    }catch(e){} /* silencioso de propósito: sem o combinado o cartão sai igual ao de antes */
     // os itens, com a data — é o que ela dita ao tutor
     h+='<div style="display:flex;flex-wrap:wrap;gap:5px;margin:7px 0">';
     (o.itens||[]).forEach(function(x){
@@ -37105,6 +37389,11 @@
       var remedio=false;
       try{ remedio=!!(typeof medLinhaDoPel==='function' && medLinhaDoPel(p)); }
       catch(e){ remedio=false; } /* silencioso de propósito: sem a linha do remédio a lista segue */
+      // O banho fixo de HOJE (24/set/2026): quem está no balcão com o FILHOt na mão precisa
+      // saber que ele toma banho hoje, e a que horas — senão o tutor leva embora antes.
+      var banho='';
+      try{ banho=(typeof banhoRecFraseDia==='function')?banhoRecFraseDia(p, hoje, hoje):''; }
+      catch(e){ banho=''; } /* silencioso de propósito: sem o combinado a lista segue igual */
       var pend=hojePendDe(chave);
       var respostas=resp[chave]||[];
       // "APROVEITANDO QUE ELE ESTÁ AQUI" (24/set/2026): o que vence DEPOIS de hoje e ANTES
@@ -37127,7 +37416,7 @@
         sexo:(typeof pelGet==='function'?pelGet(p,'sexo'):'')||p.sexo||'',
         tel:(typeof poTelDoTutor==='function')?poTelDoTutor(p):'',
         fonte:fonte, hora:hojeHoraDe(chave, ck),
-        itens:itens, remedio:remedio, pend:pend, respostas:respostas,
+        itens:itens, remedio:remedio, banho:banho, pend:pend, respostas:respostas,
         proxima:ant.proxima, antec:ant.itens, antGrupos:antGrupos,
         antAbertos:antAbertos, antReg:antReg,
         pesa:(itens.length+pend.length+respostas.length+antAbertos.length)});
@@ -37194,6 +37483,7 @@
     var partes=[o.nome+(o.raca?('/'+o.raca):'')];
     if(o.tutor) partes.push('tutor '+o.tutor);
     (o.itens||[]).forEach(function(x){ partes.push('⚠ '+hojeFraseItem(x, hoje)); });
+    if(o.banho) partes.push(o.banho);
     if(o.remedio) partes.push('💊 toma remédio');
     (o.pend||[]).forEach(function(x){
       partes.push('pendência: '+x.rotulo+(x.dia?(' de '+((typeof fmtBR==='function'?fmtBR(x.dia):'')||x.dia).slice(0,5)):''));
@@ -37338,6 +37628,9 @@
         +(o.raca?('<span style="font-weight:600;color:var(--muted)">/'+escAttr(o.raca)+'</span>'):'')+'</strong>'
         +(o.tutor?('<span class="hint" style="margin:0">tutor '+escAttr(o.tutor)+'</span>'):'')
         +'<span class="hint" style="margin:0;color:var(--crm-ok);font-weight:700">'+escAttr(hojeFrasePresenca(o))+'</span>'
+        // O banho fixo de hoje fica na PRIMEIRA linha, junto do nome: ele não é pendência,
+        // é compromisso do dia — e some no fim da tarde se ninguém vir (24/set/2026).
+        +(o.banho?('<span class="hoje-banho" style="margin:0;font-size:13px;font-weight:800;color:var(--z-blue)">'+escAttr(o.banho)+'</span>'):'')
         +'</div>';
       if(!o.pesa && !(o.antec||[]).length){
         h+='<div class="hint" style="margin-top:3px">Nada pendente.</div>';
@@ -37489,6 +37782,499 @@
       +'<div class="hint" style="margin-top:3px">Cada lançamento vai para a planilha do dia em que foi feito. O rastro de cada tentativa fica na auditoria (Operação › Linha do tempo do dia).</div></div>';
   }
 
+  /* ===================================================================================
+   * BANHO RECORRENTE — "isso já vai automaticamente" (Adriana, 24/set/2026)
+   *
+   * As palavras dela: "Muitos peludos tomam banho já marcado, semanal ou quinzenal, e são
+   * do Day Care; o horário é sempre o mesmo. Em vez de lançar no dia, isso já vai
+   * automaticamente e a gente só altera se o tutor mudar. Ex.: Lana toma banho de 15 em 15
+   * dias, às quintas, a partir de 01/10. Nick da Cláudia toma banho toda quinta. Preciso de
+   * uma caixa fácil para marcar 'esse peludo tem banho ou não', sem entrar na ficha e fazer
+   * todo um cadastro. A ficha está muito confusa."
+   *
+   * O DESENHO
+   *   · O combinado mora na FICHA (pelExtra.banho_rec) — uma fonte só, como todo o resto.
+   *   · Quem edita é a tela "Banhos recorrentes" (Central Zêluz › Day Care): uma linha por
+   *     FILHOt, um interruptor e, ao ligar, os botões na PRÓPRIA linha. Ninguém precisa
+   *     abrir a ficha.
+   *   · Nada grava antes do "Salvar" daquela linha, e cada gravação deixa rastro de→para.
+   *   · O lançamento na planilha é feito pelo MESMO motor automático das reposições
+   *     (dashAutoCalcular / dashAutoSincronizar), na coluna "Banho" + "Hora Banho", hoje e
+   *     nos 14 dias seguintes. Ele nunca duplica o que a recepção lançou à mão, nunca
+   *     lança em feriado nem em dia de falta avisada, e TIRA o que ele mesmo escreveu se o
+   *     FILHOt for marcado como FALTOU na chamada.
+   *   · Um dia específico se resolve por EXCEÇÃO ("pular o próximo", "mudar só o dia X") —
+   *     o combinado continua valendo para todos os outros.
+   * =================================================================================== */
+  var BANHO_SEM=['dom','seg','ter','qua','qui','sex','sab'];
+  var BANHO_DIAS=[['seg','Seg'],['ter','Ter'],['qua','Qua'],['qui','Qui'],['sex','Sex']];
+  var BANHO_DIA_NOME={seg:'segunda',ter:'terça',qua:'quarta',qui:'quinta',sex:'sexta'};
+  var BANHO_FREQS=[['semanal','Semanal'],['quinzenal','Quinzenal']];
+  // De meia em meia hora, das 8 às 17 — a janela em que o banho acontece na casa. Quem
+  // precisar de outra hora usa o campo ao lado: o botão é o atalho, não a cerca.
+  var BANHO_HORAS=(function(){ var o=[]; for(var h=8;h<=17;h++){ o.push(String(h).padStart(2,'0')+':00'); if(h<17) o.push(String(h).padStart(2,'0')+':30'); } return o; })();
+  var BANHO_BUSCA='', BANHO_ABERTO={}, BANHO_RASC={}, BANHO_MSG={};
+  // O RASCUNHO NÃO VIVE SÓ NA MEMÓRIA (a lei de 15/set/2026). Quem combinou o banho de seis
+  // FILHOts e trocou de tela sem salvar não pode perder o que digitou: o que está na tela e
+  // ainda não foi gravado fica guardado no aparelho, e a linha volta dizendo que há alteração
+  // pendente. Some só quando o Salvar grava de verdade.
+  var BANHO_RASC_CH='zeluz_banho_rascunho', BANHO_RASC_LIDO=false;
+  function banhoRascCarregar(){
+    if(BANHO_RASC_LIDO) return;
+    BANHO_RASC_LIDO=true;
+    try{ var o=JSON.parse(localStorage.getItem(BANHO_RASC_CH)||'{}'); if(o&&typeof o==='object') BANHO_RASC=o; }
+    catch(e){} /* silencioso de propósito: sem valor guardado vale o que está na ficha */
+  }
+  function banhoRascGuardar(){
+    try{ localStorage.setItem(BANHO_RASC_CH, JSON.stringify(BANHO_RASC)); }
+    catch(e){} /* silencioso de propósito: aparelho sem espaço não pode travar a tela */
+  }
+
+  // ---- o combinado, lido da ficha -----------------------------------------------------
+  function banhoRecNormal(br){
+    br=br||{};
+    return {ativo:!!br.ativo,
+            freq:(br.freq==='quinzenal')?'quinzenal':'semanal',
+            dia:(BANHO_DIA_NOME[br.dia]?br.dia:''),
+            hora:(typeof horaOk==='function'&&horaOk(br.hora))?br.hora:String(br.hora||''),
+            desde:String(br.desde||'').slice(0,10),
+            sham:String(br.sham||''), onde:String(br.onde||''), obs:String(br.obs||''),
+            excecoes:(br.excecoes&&typeof br.excecoes==='object')?br.excecoes:{}};
+  }
+  function banhoRecDe(p){
+    try{ var ex=(typeof pelExtra==='function')?(pelExtra(p)||{}):{}; if(!ex.banho_rec) return null; return banhoRecNormal(ex.banho_rec); }
+    catch(e){ return null; } /* silencioso de propósito: sem o combinado a linha só não aparece */
+  }
+  // A 1ª ocorrência do dia da semana escolhido em/depois de "a partir de". É DELA que sai a
+  // paridade do quinzenal: 01/10 (quinta) → 01/10, 15/10, 29/10 — e nunca 08/10.
+  function banhoRecBase(br){
+    if(!br||!br.desde||!br.dia) return '';
+    var d=br.desde;
+    for(var i=0;i<7;i++){
+      var dd=new Date(d+'T12:00:00'); if(isNaN(dd.getTime())) return '';
+      if(BANHO_SEM[dd.getDay()]===br.dia) return d;
+      d=(typeof orcMaisDias==='function')?orcMaisDias(d,1):'';
+      if(!d) return '';
+    }
+    return '';
+  }
+  function banhoRecCaiNoDia(br, iso){
+    if(!br||!br.ativo||!br.dia||!br.desde) return false;
+    if(!/^\d{4}-\d{2}-\d{2}$/.test(String(iso||''))) return false;
+    if(iso<br.desde) return false;
+    var d=new Date(iso+'T12:00:00'); if(isNaN(d.getTime())) return false;
+    if(BANHO_SEM[d.getDay()]!==br.dia) return false;
+    if(br.freq!=='quinzenal') return true;
+    var base=banhoRecBase(br); if(!base) return false;
+    var dif=Math.round((d-new Date(base+'T12:00:00'))/86400000);
+    return dif>=0 && (dif%14)===0;
+  }
+  function banhoRecExcecao(br, iso){ return (br&&br.excecoes&&br.excecoes[iso])?br.excecoes[iso]:null; }
+  // Vale mesmo neste dia? (cai no ritmo E ninguém mandou pular só este)
+  function banhoRecValeNoDia(br, iso){
+    if(!banhoRecCaiNoDia(br, iso)) return false;
+    var e=banhoRecExcecao(br, iso);
+    return !(e&&e.pular);
+  }
+  function banhoRecHoraNoDia(br, iso){
+    var e=banhoRecExcecao(br, iso);
+    return (e&&e.hora)?String(e.hora):String((br&&br.hora)||'');
+  }
+  // A próxima vez em que ele tem banho, a partir de uma data (inclusive). Olha 90 dias à
+  // frente — mais do que isso é combinado que não existe.
+  function banhoRecProxima(br, apartirISO, pulandoExcecoes){
+    if(!br||!br.ativo) return '';
+    var d=String(apartirISO||'').slice(0,10); if(!/^\d{4}-\d{2}-\d{2}$/.test(d)) return '';
+    for(var i=0;i<90;i++){
+      if(pulandoExcecoes ? banhoRecValeNoDia(br,d) : banhoRecCaiNoDia(br,d)) return d;
+      d=(typeof orcMaisDias==='function')?orcMaisDias(d,1):''; if(!d) return '';
+    }
+    return '';
+  }
+  // "banho quinzenal qui 10:00" — a frase curta, igual em toda tela.
+  function banhoRecTexto(br){
+    if(!br||!br.ativo) return '';
+    return 'banho '+(br.freq==='quinzenal'?'quinzenal':'semanal')
+      +(br.dia?(' '+br.dia):'')+(br.hora?(' '+br.hora):'');
+  }
+  // O detalhe que vai junto do nome na célula da planilha — o MESMO formato do lançamento à
+  // mão: "Lana/Spitz (SHAMPOO · NA RECEPÇÃO)".
+  function banhoRecDetalhe(br){
+    if(!br) return '';
+    var partes=[];
+    if(br.sham) partes.push(String(br.sham).toUpperCase());
+    if(br.onde && br.sham && br.sham!=='SEM SHAMPOO') partes.push(String(br.onde).toUpperCase());
+    return partes.length?(' ('+partes.join(' · ')+')'):'';
+  }
+  function banhoRecValorPlanilha(p, br){
+    var base=(typeof dashNomePlanilha==='function')?dashNomePlanilha(p):((p&&p.n)||'');
+    return base+banhoRecDetalhe(br||banhoRecDe(p));
+  }
+  // "🛁 banho hoje 10:00 (fixo)" — na Hoje na Zêluz e nos Vencimentos.
+  function banhoRecFraseDia(p, iso, hoje){
+    var br=banhoRecDe(p); if(!br||!banhoRecValeNoDia(br, iso)) return '';
+    var quando=(iso===hoje)?'hoje':(((typeof fmtBR==='function')?fmtBR(iso):iso)||iso).slice(0,5);
+    var h=banhoRecHoraNoDia(br, iso);
+    return '🛁 banho '+quando+(h?(' '+h):'')+' (fixo)';
+  }
+  // A etiqueta da linha do cadastro — e o atalho para a tela onde se muda isso.
+  function banhoRecEtiquetaPel(p){
+    var br=banhoRecDe(p);
+    var txt=(br&&br.ativo)?('🛁 '+banhoRecTexto(br)):'sem banho fixo';
+    var cor=(br&&br.ativo)?'var(--z-blue)':'var(--muted)';
+    return '<span class="pel-banho-rec" style="display:inline-block;margin-left:6px;font-size:11.5px;font-weight:800;color:'+cor+';text-decoration:underline;cursor:pointer"'
+      +' title="Abrir Banhos recorrentes para mudar este combinado"'
+      +' onclick="event.stopPropagation();banhosAbrirDe(\''+jsAspas((typeof pelNome==='function'?pelNome(p):'')||p.n||'')+'\')">'+escAttr(txt)+'</span>';
+  }
+
+  // ---- quem realmente toma banho naquele dia (a conta que o automático usa) -------------
+  // `veio` = o app já sabe que ele está/estará na casa naquele dia (turma de hoje ou os dias
+  // marcados na ficha). Reposição agendada conta como vir; falta avisada, feriado e domingo
+  // tiram o banho do dia; e a chamada de HOJE tem a última palavra.
+  function banhoAutoPodeNoDia(p, iso, veio){
+    try{ if(typeof orcFechado==='function' && orcFechado(iso)) return false; }
+    catch(e){} /* silencioso de propósito: sem a tabela de feriados vale o calendário comum */
+    try{
+      var avisou=((typeof repLancamentos==='function')?(repLancamentos(p)||[]):[])
+        .some(function(l){ return l && l.tipo==='credito' && l.data===iso; });
+      if(avisou) return false;                       // falta avisada: ele não vem nesse dia
+    }catch(e){} /* silencioso de propósito: sem os lançamentos de reposição vale o que se sabe */
+    var vem=!!veio;
+    if(!vem){ try{ vem=((typeof repAgendaDe==='function')?repAgendaDe(p):[]).indexOf(iso)>=0; }catch(e){ vem=false; } }
+    if(!vem) return false;
+    try{
+      var hoje=(typeof zHojeISO==='function')?zHojeISO():'';
+      if(iso===hoje && dcChamada && dcChamada[dcKey(p.n,p.tutor)]==='faltou') return false;
+    }catch(e){} /* silencioso de propósito: sem a chamada em memória vale o combinado */
+    return true;
+  }
+
+  // ===== A TELA "BANHOS RECORRENTES" ====================================================
+  function banhosPodeEditar(){ return (typeof canEditPel==='function') && canEditPel(); }
+  function banhosChave(p){ return dcKey(p.n, p.tutor); }
+  function banhosPelDe(chave){
+    if(typeof PELUDINHOS==='undefined'||!Array.isArray(PELUDINHOS)) return null;
+    for(var i=0;i<PELUDINHOS.length;i++){ if(banhosChave(PELUDINHOS[i])===chave) return PELUDINHOS[i]; }
+    return null;
+  }
+  // O RASCUNHO da linha: o que está na tela e ainda NÃO foi gravado. Nada grava antes do
+  // "Salvar" — a lei de sempre.
+  function banhosRasc(chave){
+    banhoRascCarregar();
+    if(!BANHO_RASC[chave]){
+      var p=banhosPelDe(chave);
+      var br=p?banhoRecDe(p):null;
+      BANHO_RASC[chave]=br?banhoRecNormal(br):banhoRecNormal({});
+    }
+    return BANHO_RASC[chave];
+  }
+  function banhosLista(){
+    if(typeof PELUDINHOS==='undefined'||!Array.isArray(PELUDINHOS)) return [];
+    var q=(typeof jsNorm==='function')?jsNorm(BANHO_BUSCA||''):String(BANHO_BUSCA||'').toLowerCase();
+    return PELUDINHOS.filter(function(p){ return !(typeof pelInativo==='function' && pelInativo(p)); })
+      .filter(function(p){
+        if(!q) return true;
+        try{ return (typeof termosBuscaPel==='function')?(termosBuscaPel(p).indexOf(q)>=0):(jsNorm(p.n||'').indexOf(q)>=0); }
+        catch(e){ return true; } /* silencioso de propósito: sem a busca, a lista sai inteira */
+      })
+      .sort(function(a,b){
+        var na=(typeof pelNome==='function'?pelNome(a):a.n)||'', nb=(typeof pelNome==='function'?pelNome(b):b.n)||'';
+        return jsNorm(na).localeCompare(jsNorm(nb),'pt');
+      });
+  }
+  function banhosAbrir(){
+    var raiz=document.getElementById('banhosRoot'); if(!raiz) return;
+    banhosRender();
+  }
+  // Atalho da linha do cadastro: abre a tela já com o nome na busca.
+  function banhosAbrirDe(nome){
+    BANHO_BUSCA=String(nome||'');
+    try{ if(typeof irParaView==='function') irParaView('banhos'); }
+    catch(e){} /* silencioso de propósito: guarda defensiva — falhar aqui não pode interromper quem chamou */
+    banhosRender();
+    try{ var b=document.getElementById('banhosBusca'); if(b) b.value=BANHO_BUSCA; }
+    catch(e){} /* silencioso de propósito: enfeite de tela — falhar não muda dado nenhum */
+  }
+  function banhosBuscar(v){ BANHO_BUSCA=String(v==null?'':v); banhosRenderLista(); }
+  function banhosRender(){
+    var raiz=document.getElementById('banhosRoot'); if(!raiz) return;
+    var pode=banhosPodeEditar();
+    var total=0, ligados=0;
+    try{
+      var todos=(typeof PELUDINHOS!=='undefined'&&Array.isArray(PELUDINHOS))?PELUDINHOS.filter(function(p){ return !(typeof pelInativo==='function'&&pelInativo(p)); }):[];
+      total=todos.length;
+      ligados=todos.filter(function(p){ var b=banhoRecDe(p); return !!(b&&b.ativo); }).length;
+    }catch(e){} /* silencioso de propósito: o cabeçalho sai sem os números, a lista continua */
+    raiz.innerHTML='<div class="card" style="border-left:4px solid var(--z-gold)">'
+      +'<h2 style="font-size:19px;margin-bottom:2px">'+ligados+' com banho fixo · '+total+' na casa</h2>'
+      +'<div class="hint">Um interruptor por FILHOt: <strong>tem banho fixo</strong> ou não tem. Ao ligar, diga o ritmo (semanal ou quinzenal), o dia, a hora, a partir de quando e o shampoo — tudo na própria linha, sem abrir a ficha. '
+      +'O app lança sozinho na planilha (coluna <strong>Banho</strong> e <strong>Hora Banho</strong>) no dia certo, hoje e nos próximos 14 dias, e a TV toca o alarme na hora. '
+      +'Não lança em feriado, nem em dia de falta avisada, nem para quem não vem naquele dia — e some se ele for marcado como faltou na chamada. '
+      +'<strong>Nada é gravado antes de você tocar em Salvar</strong> na linha.</div>'
+      +(pode?'':'<div class="hint" style="margin-top:6px;color:var(--crm-atencao-text);font-weight:700">Aqui você só lê: quem combina banho com o tutor é a Central Zêluz, a Supervisão ou a Gestão.</div>')
+      +'<input class="cad-in" id="banhosBusca" style="margin-top:9px" placeholder="Buscar o FILHOt pelo nome…" autocomplete="off" value="'+escAttr(BANHO_BUSCA)+'" oninput="banhosBuscar(this.value)">'
+      +'</div>'
+      +'<div id="banhosLista"></div>';
+    banhosRenderLista();
+  }
+  function banhosRenderLista(){
+    var el=document.getElementById('banhosLista'); if(!el) return;
+    var L=banhosLista();
+    if(!L.length){ el.innerHTML='<div class="card"><div class="hint">Nenhum FILHOt com esse nome na busca.</div></div>'; return; }
+    el.innerHTML='<div class="card" style="padding-top:6px">'
+      +L.map(function(p){ return '<div class="banho-linha" id="banhoL_'+escAttr(banhosChave(p))+'">'+banhosLinhaHTML(p)+'</div>'; }).join('')
+      +'</div>';
+  }
+  function banhosRenderLinha(chave){
+    var el=document.getElementById('banhoL_'+chave); if(!el) return;
+    var p=banhosPelDe(chave); if(!p) return;
+    el.innerHTML=banhosLinhaHTML(p);
+  }
+  function banhosBtn(on, rot, onclick, pode){
+    return '<button type="button"'+(pode?'':' disabled')+' onclick="'+onclick+'" style="border-radius:999px;padding:5px 12px;font-size:12.5px;font-weight:800;cursor:'+(pode?'pointer':'not-allowed')
+      +';border:1.5px solid '+(on?'var(--z-blue)':'var(--line)')+';background:'+(on?'var(--z-blue)':'var(--z-cream-warm)')+';color:'+(on?'#FFFDF6':'var(--z-blue)')+'">'+escAttr(rot)+'</button>';
+  }
+  function banhosLinhaHTML(p){
+    var chave=banhosChave(p), ka=jsAspas(chave);
+    var salvo=banhoRecDe(p), r=banhosRasc(chave);
+    var pode=banhosPodeEditar();
+    var aberto=!!(r.ativo||BANHO_ABERTO[chave]);
+    var nome=(typeof pelNome==='function'?pelNome(p):'')||p.n||'';
+    var raca=(typeof pelGet==='function'?pelGet(p,'raca'):'')||p.raca||'';
+    var tutor=(typeof pelGet==='function'?pelGet(p,'tutor'):'')||p.tutor||'';
+    var hoje=(typeof zHojeISO==='function')?zHojeISO():'';
+    var h='<div style="padding:11px 0 10px;border-top:1px solid var(--line);border-left:3px solid '
+      +((salvo&&salvo.ativo)?'var(--z-gold)':'var(--line)')+';padding-left:10px;padding-right:12px">'
+      +'<div style="display:flex;gap:9px;align-items:baseline;flex-wrap:wrap">'
+      +'<strong style="font-size:16px;color:var(--z-blue)">'+escAttr(nome)
+      +(raca?('<span style="font-weight:600;color:var(--muted)">/'+escAttr(raca)+'</span>'):'')+'</strong>'
+      +(tutor?('<span class="hint" style="margin:0">tutor '+escAttr(tutor)+'</span>'):'')
+      // O INTERRUPTOR — a "caixa fácil" que ela pediu.
+      +'<label style="margin-left:auto;display:flex;gap:7px;align-items:center;font-size:13px;font-weight:800;color:var(--z-blue);cursor:'+(pode?'pointer':'not-allowed')+'">'
+      +'<input type="checkbox" id="banhoOn_'+escAttr(chave)+'"'+(r.ativo?' checked':'')+(pode?'':' disabled')
+      +' onchange="banhosLigar(\''+ka+'\',this.checked)" style="width:20px;height:20px;accent-color:var(--z-gold)">'
+      +'Tem banho fixo</label>'
+      +'</div>';
+    // A frase do que está GRAVADO — para a pessoa saber o que muda antes de mudar.
+    h+='<div class="hint" style="margin:3px 0 0">'
+      +((salvo&&salvo.ativo)
+        ? ('Combinado: <strong>'+escAttr(banhoRecTexto(salvo))+'</strong>'
+           +(salvo.desde?(' · a partir de '+escAttr(((typeof fmtBR==='function')?fmtBR(salvo.desde):salvo.desde)||salvo.desde)):'')
+           +escAttr(banhoRecDetalhe(salvo))
+           +(banhoRecProxima(salvo, hoje, true)?(' · próximo: '+escAttr(((typeof fmtBR==='function')?fmtBR(banhoRecProxima(salvo,hoje,true)):'')||'')):''))
+        : 'Gravado hoje: <strong>sem banho fixo</strong> — o banho dele é lançado à mão, dia a dia.')
+      +'</div>';
+    if(aberto){
+      h+='<div style="margin-top:8px;display:flex;flex-direction:column;gap:7px">';
+      h+='<div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center"><span class="cad-lb" style="min-width:74px">Ritmo</span>'
+        +BANHO_FREQS.map(function(f){ return banhosBtn(r.freq===f[0], f[1], 'banhosSet(\''+ka+'\',\'freq\',\''+f[0]+'\')', pode); }).join('')+'</div>';
+      h+='<div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center"><span class="cad-lb" style="min-width:74px">Dia</span>'
+        +BANHO_DIAS.map(function(d){ return banhosBtn(r.dia===d[0], d[1], 'banhosSet(\''+ka+'\',\'dia\',\''+d[0]+'\')', pode); }).join('')+'</div>';
+      h+='<div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center"><span class="cad-lb" style="min-width:74px">Hora</span>'
+        +BANHO_HORAS.map(function(x){ return banhosBtn(r.hora===x, x, 'banhosSet(\''+ka+'\',\'hora\',\''+x+'\')', pode); }).join('')
+        +'<input type="time" class="cad-in" style="max-width:130px" value="'+escAttr(r.hora||'')+'"'+(pode?'':' disabled')
+        +' onchange="banhosSet(\''+ka+'\',\'hora\',this.value)"></div>';
+      h+='<div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center"><span class="cad-lb" style="min-width:74px">A partir de</span>'
+        +'<input type="date" class="cad-in" style="max-width:170px" min="2015-01-01" max="2035-12-31" value="'+escAttr(r.desde||'')+'"'+(pode?'':' disabled')
+        +' onkeydown="return dataSoNoCalendario(event)" onchange="banhosSet(\''+ka+'\',\'desde\',this.value)"></div>';
+      h+='<div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center"><span class="cad-lb" style="min-width:74px">Shampoo</span>'
+        +DASH_SHAM.map(function(o){ return banhosBtn(r.sham===o.v, o.t, 'banhosSet(\''+ka+'\',\'sham\',\''+jsAspas(o.v)+'\')', pode); }).join('')+'</div>';
+      if(r.sham==='SHAMPOO'||r.sham==='LOJA'){
+        h+='<div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center"><span class="cad-lb" style="min-width:74px">Onde está</span>'
+          +DASH_SHAM_ONDE.map(function(o){ return banhosBtn(r.onde===o.v, o.t, 'banhosSet(\''+ka+'\',\'onde\',\''+jsAspas(o.v)+'\')', pode); }).join('')+'</div>';
+      }
+      h+='<div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center"><span class="cad-lb" style="min-width:74px">Observação</span>'
+        +'<input class="cad-in" style="flex:1;min-width:180px" placeholder="Ex.: tosa higiênica junto" value="'+escAttr(r.obs||'')+'"'+(pode?'':' disabled')
+        +' onchange="banhosSet(\''+ka+'\',\'obs\',this.value)"></div>';
+      // O que vai para a planilha, escrito antes de gravar. Ninguém descobre depois.
+      h+='<div class="hint" style="margin:2px 0 0">Vai para a planilha assim: <strong>'
+        +escAttr(banhoRecValorPlanilha(p, r))+'</strong>'+(r.hora?(' · hora <strong>'+escAttr(r.hora)+'</strong>'):'')+'</div>';
+      if(pode){
+        h+='<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:3px">'
+          +'<button type="button" class="btn btn-primary" style="padding:7px 16px;font-size:13px;font-weight:800" onclick="banhosSalvar(\''+ka+'\')">Salvar</button>';
+        var prox=(salvo&&salvo.ativo)?banhoRecProxima(salvo, hoje, true):'';
+        if(prox){
+          var proxBR=((typeof fmtBR==='function')?fmtBR(prox):prox)||prox;
+          h+='<button type="button" class="btn" style="padding:7px 14px;font-size:12.5px;font-weight:800;background:var(--z-cream-warm);border:1.5px solid var(--line);color:var(--z-blue)" onclick="banhosPular(\''+ka+'\')">Pular o próximo ('+escAttr(proxBR.slice(0,5))+')</button>'
+            +'<button type="button" class="btn" style="padding:7px 14px;font-size:12.5px;font-weight:800;background:var(--z-cream-warm);border:1.5px solid var(--line);color:var(--z-blue)" onclick="banhosMudarDia(\''+ka+'\')">Mudar só o dia '+escAttr(proxBR.slice(0,5))+'</button>';
+        }
+        h+='</div>';
+      }
+      // As exceções já combinadas — visíveis, porque exceção esquecida vira surpresa.
+      var exc=(salvo&&salvo.excecoes)?Object.keys(salvo.excecoes).sort():[];
+      if(exc.length){
+        h+='<div class="hint" style="margin:2px 0 0">Exceções: '
+          +exc.map(function(d){
+            var e=salvo.excecoes[d]||{};
+            var br=((typeof fmtBR==='function')?fmtBR(d):d)||d;
+            return escAttr(br.slice(0,5))+(e.pular?' (pulado)':(e.hora?(' às '+escAttr(e.hora)):''))
+              +' <span style="text-decoration:underline;cursor:pointer" onclick="banhosTirarExcecao(\''+ka+'\',\''+d+'\')">desfazer</span>';
+          }).join(' · ')+'</div>';
+      }
+      h+='</div>';
+    }
+    if(BANHO_MSG[chave]) h+='<div style="margin-top:5px;font-size:13px;font-weight:800;color:'+escAttr(BANHO_MSG[chave].cor||'var(--muted)')+'">'+escAttr(BANHO_MSG[chave].txt||'')+'</div>';
+    // Voltou para a tela e havia algo digitado que nunca foi salvo: a linha DIZ isso. Rascunho
+    // que some em silêncio é trabalho perdido sem ninguém saber.
+    else if(BANHO_RASC[chave] && JSON.stringify(BANHO_RASC[chave])!==JSON.stringify(banhoRecNormal(salvo||{})))
+      h+='<div style="margin-top:5px;font-size:13px;font-weight:800;color:var(--crm-atencao-text)">Há uma alteração nesta linha que ainda não foi gravada — confira e toque em Salvar.</div>';
+    h+='</div>';
+    return h;
+  }
+  function banhosLigar(chave, ligado){
+    if(!banhosPodeEditar()) return;
+    var r=banhosRasc(chave);
+    r.ativo=!!ligado;
+    BANHO_ABERTO[chave]=!!ligado;
+    // Ligou agora e não havia combinado: começa no padrão mais comum — semanal, na próxima
+    // ocorrência do dia que a pessoa escolher. Sem dia escolhido, "a partir de" é hoje.
+    if(r.ativo && !r.desde) r.desde=(typeof zHojeISO==='function')?zHojeISO():'';
+    banhoRascGuardar();
+    BANHO_MSG[chave]={cor:'var(--crm-atencao-text)', txt:ligado
+      ? 'Combine o ritmo, o dia e a hora e toque em Salvar — nada foi gravado ainda.'
+      : 'Toque em Salvar para tirar o banho fixo deste FILHOt — nada foi gravado ainda.'};
+    banhosRenderLinha(chave);
+  }
+  function banhosSet(chave, campo, valor){
+    if(!banhosPodeEditar()) return;
+    var r=banhosRasc(chave);
+    if(campo==='hora') valor=(typeof normHora==='function')?(normHora(valor)||String(valor||'')):String(valor||'');
+    if(campo==='desde') valor=String(valor||'').slice(0,10);
+    r[campo]=valor;
+    if(campo==='sham' && valor==='SEM SHAMPOO') r.onde='';
+    // Escolheu o dia e o "a partir de" é anterior: a data anda para a PRÓXIMA ocorrência
+    // daquele dia — é o que ela quis dizer com "a partir de 01/10, às quintas".
+    if(campo==='dia'){
+      var base=banhoRecBase(Object.assign({}, r, {ativo:true}));
+      if(base) r.desde=base;
+    }
+    banhoRascGuardar();
+    BANHO_MSG[chave]={cor:'var(--crm-atencao-text)', txt:'Mudou na tela. Toque em Salvar para gravar.'};
+    banhosRenderLinha(chave);
+  }
+  function banhosValidar(r){
+    if(!r.ativo) return '';
+    if(!r.dia) return 'escolha o DIA da semana em que ele toma banho.';
+    if(!(typeof horaOk==='function'?horaOk(r.hora):/^\d{2}:\d{2}$/.test(r.hora||''))) return 'escolha a HORA do banho — é ela que faz o alarme tocar na TV.';
+    if(!/^\d{4}-\d{2}-\d{2}$/.test(r.desde||'')) return 'informe A PARTIR DE quando esse combinado vale.';
+    if(!r.sham) return 'diga se ele traz shampoo, compra na loja ou vem sem.';
+    if((r.sham==='SHAMPOO'||r.sham==='LOJA') && !r.onde) return 'diga ONDE está o shampoo (na recepção ou na bolsa).';
+    return '';
+  }
+  function banhosSalvar(chave){
+    if(!banhosPodeEditar()){ BANHO_MSG[chave]={cor:'var(--crm-critico)', txt:'Você não tem permissão para mudar o banho fixo.'}; banhosRenderLinha(chave); return; }
+    var p=banhosPelDe(chave); if(!p) return;
+    var r=banhosRasc(chave);
+    var prob=banhosValidar(r);
+    if(prob){ BANHO_MSG[chave]={cor:'var(--crm-critico)', txt:'✋ '+prob}; banhosRenderLinha(chave); return; }
+    var antes=banhoRecDe(p);
+    var antesTxt=(antes&&antes.ativo)?(banhoRecTexto(antes)+banhoRecDetalhe(antes)+(antes.desde?(' desde '+antes.desde):'')):'sem banho fixo';
+    // As exceções já combinadas continuam valendo: mudar o ritmo não apaga o "pula o dia 15".
+    var novo=r.ativo
+      ? {ativo:true, freq:r.freq, dia:r.dia, hora:r.hora, desde:r.desde, sham:r.sham,
+         onde:((r.sham==='SEM SHAMPOO')?'':r.onde), obs:r.obs||'',
+         excecoes:(antes&&antes.excecoes)?antes.excecoes:{}}
+      : {ativo:false, freq:r.freq, dia:r.dia||'', hora:r.hora||'', desde:r.desde||'', sham:r.sham||'',
+         onde:r.onde||'', obs:r.obs||'', excecoes:(antes&&antes.excecoes)?antes.excecoes:{}};
+    var depoisTxt=novo.ativo?(banhoRecTexto(novo)+banhoRecDetalhe(novo)+' desde '+novo.desde):'sem banho fixo';
+    BANHO_MSG[chave]={cor:'var(--muted)', txt:'Salvando…'};
+    banhosRenderLinha(chave);
+    Promise.resolve(setPelExtra(p,{banho_rec:novo})).then(function(res){
+      if(res&&res.ok===false){ BANHO_MSG[chave]={cor:'var(--crm-critico)', txt:'⚠️ Não salvei: '+((res.erro&&res.erro.message)||res.erro||'o banco recusou')}; banhosRenderLinha(chave); return; }
+      if(typeof audit==='function') audit('banho-recorrente', antesTxt+' → '+depoisTxt,
+        {alvo:chave, pet:((typeof pelNome==='function')?pelNome(p):'')||p.n||'', quem:(typeof quemSou==='function'?quemSou():'-')});
+      BANHO_MSG[chave]={cor:'var(--crm-ok)', txt:novo.ativo
+        ? '✅ Salvo — o app lança o banho sozinho na planilha no dia certo. A conferência do dia acontece em instantes.'
+        : '✅ Salvo — este FILHOt não tem mais banho fixo. A conferência do dia acontece em instantes.'};
+      delete BANHO_RASC[chave]; banhoRascGuardar();   // gravou de verdade: o rascunho morre aqui
+      banhosRenderLinha(chave);
+      try{ if(typeof renderPel==='function') renderPel(); }
+      catch(e){} /* silencioso de propósito: redesenho de tela — falhar não pode derrubar quem chamou */
+      banhoAutoPedirConferencia();   // a planilha se acerta em instantes, numa passada só
+    }).catch(function(e){
+      // "Salvando…" nunca pode ficar pendurado: se a gravação cair, a linha DIZ o que houve.
+      _logFalhaGrav('banho fixo de '+(((typeof pelNome==='function')?pelNome(p):'')||p.n||''), e);
+      BANHO_MSG[chave]={cor:'var(--crm-critico)', txt:'⚠️ Não salvei: '+((e&&e.message)||e)+'. Confira e toque em Salvar de novo.'};
+      banhosRenderLinha(chave);
+    });
+  }
+  // A CONFERÊNCIA DA PLANILHA, UMA SÓ. Ligar o banho fixo de trinta FILHOts seguidos não pode
+  // virar trinta conferências de 15 dias × 7 colunas na ponte. O pedido entra numa fila de 20
+  // segundos: vários Salvares seguidos viram UMA passada, logo depois do último.
+  var BANHO_AUTO_T=null;
+  function banhoAutoPedirConferencia(){
+    if(BANHO_AUTO_T) return;                       // já há uma conferência a caminho
+    BANHO_AUTO_T=setTimeout(function(){
+      BANHO_AUTO_T=null;
+      try{ if(typeof dashAutoRodar==='function') dashAutoRodar(true); }
+      catch(e){} /* silencioso de propósito: a conferência periódica (5 min) resolve o mesmo dia */
+    }, 20000);
+  }
+  // ---- as exceções de UM dia -----------------------------------------------------------
+  function banhosGravarExcecao(chave, dia, valor, frase){
+    var p=banhosPelDe(chave); if(!p) return;
+    var br=banhoRecDe(p); if(!br||!br.ativo) return;
+    var exc=Object.assign({}, br.excecoes||{});
+    if(valor===null) delete exc[dia]; else exc[dia]=valor;
+    var novo=Object.assign({}, br, {excecoes:exc});
+    BANHO_MSG[chave]={cor:'var(--muted)', txt:'Salvando…'};
+    banhosRenderLinha(chave);
+    Promise.resolve(setPelExtra(p,{banho_rec:novo})).then(function(res){
+      if(res&&res.ok===false){ BANHO_MSG[chave]={cor:'var(--crm-critico)', txt:'⚠️ Não salvei: '+((res.erro&&res.erro.message)||res.erro||'o banco recusou')}; banhosRenderLinha(chave); return; }
+      if(typeof audit==='function') audit('banho-recorrente', frase,
+        {alvo:chave, pet:((typeof pelNome==='function')?pelNome(p):'')||p.n||'', quem:(typeof quemSou==='function'?quemSou():'-')});
+      BANHO_MSG[chave]={cor:'var(--crm-ok)', txt:'✅ '+frase};
+      banhosRenderLinha(chave);
+      banhoAutoPedirConferencia();   // a planilha se acerta em instantes, numa passada só
+    }).catch(function(e){
+      _logFalhaGrav('exceção do banho fixo em '+dia, e);
+      BANHO_MSG[chave]={cor:'var(--crm-critico)', txt:'⚠️ Não salvei: '+((e&&e.message)||e)+'. Tente de novo.'};
+      banhosRenderLinha(chave);
+    });
+  }
+  async function banhosPular(chave){
+    if(!banhosPodeEditar()) return;
+    var p=banhosPelDe(chave); if(!p) return;
+    var br=banhoRecDe(p); if(!br||!br.ativo) return;
+    var hoje=(typeof zHojeISO==='function')?zHojeISO():'';
+    var dia=banhoRecProxima(br, hoje, true); if(!dia) return;
+    var br2=((typeof fmtBR==='function')?fmtBR(dia):dia)||dia;
+    if(typeof zPergunta==='function'){
+      var ok=await zPergunta('Pular o banho de '+br2+'?',
+        ['Só este dia. O combinado continua valendo para os próximos.',
+         'Se ele já foi lançado na planilha, o app tira na próxima conferência.'],
+        {sim:'Pular só este dia', nao:'Voltar'});
+      if(!ok) return;
+    }
+    banhosGravarExcecao(chave, dia, {pular:true, quem:(typeof quemSou==='function'?quemSou():'-'), ts:Date.now()},
+      'pulou o banho de '+br2);
+  }
+  async function banhosMudarDia(chave){
+    if(!banhosPodeEditar()) return;
+    var p=banhosPelDe(chave); if(!p) return;
+    var br=banhoRecDe(p); if(!br||!br.ativo) return;
+    var hoje=(typeof zHojeISO==='function')?zHojeISO():'';
+    var dia=banhoRecProxima(br, hoje, true); if(!dia) return;
+    var br2=((typeof fmtBR==='function')?fmtBR(dia):dia)||dia;
+    var nova='';
+    if(typeof zTexto==='function'){
+      nova=await zTexto('Que horas fica o banho de '+br2+'?',
+        ['Só este dia — nos outros continua às '+(br.hora||'—')+'.'],
+        {rotulo:'Hora', dica:'Ex: 14:30', botao:'Mudar só este dia', botaoNao:'Voltar', minimo:4,
+         erro:'Escreva a hora assim: 14:30.'});
+      if(nova==null) return;
+    }
+    var h=(typeof normHora==='function')?normHora(nova):String(nova||'');
+    if(!h){ BANHO_MSG[chave]={cor:'var(--crm-critico)', txt:'✋ Escreva a hora assim: 14:30.'}; banhosRenderLinha(chave); return; }
+    banhosGravarExcecao(chave, dia, {hora:h, quem:(typeof quemSou==='function'?quemSou():'-'), ts:Date.now()},
+      'mudou o banho de '+br2+' para '+h);
+  }
+  function banhosTirarExcecao(chave, dia){
+    if(!banhosPodeEditar()) return;
+    var br2=((typeof fmtBR==='function')?fmtBR(dia):dia)||dia;
+    banhosGravarExcecao(chave, dia, null, 'desfez a exceção de '+br2);
+  }
+
   // ===== A PLANILHA SE PREENCHE SOZINHA — Adriana, 25/ago/2026 =====================
   // "Precisamos que a tabela das reposições, banhos e etc seja preenchida automaticamente."
   // O que ela decidiu: o app preenche o que JÁ SABE e não depende de horário. O que tem
@@ -37515,15 +38301,22 @@
     clienteNovo:  'Cliente Novo',
     aulunosRestr: 'Aulunos com restriçóes',
     hospRestr:    'Hóspedes com Restrições',
-    adaptacao:    'Adaptação'
+    adaptacao:    'Adaptação',
+    // 24/set/2026 — o banho recorrente. É o PRIMEIRO item do automático que tem HORA: a
+    // célula do nome vai em "Banho" e a hora em "Hora Banho", que é o que faz o alarme
+    // tocar na TV. Ver DASH_AUTO_COLS_HORA logo abaixo.
+    banho:        'Banho'
   };
+  // A coluna da HORA de cada item que tem hora. Fora daqui, o automático escreve só o nome.
+  var DASH_AUTO_COLS_HORA={ banho:'Hora Banho' };
   // Itens que fazem sentido escrever com antecedência (a Adriana: "já existe reposição
   // lançada lá para frente de tutores super organizados… aniversários já sabemos de todos").
-  var DASH_AUTO_FUTURO={reposicao:true, faltas:true, aniversario:true};
+  // O banho fixo entra aqui por definição: ele é combinado justamente para não depender do dia.
+  var DASH_AUTO_FUTURO={reposicao:true, faltas:true, aniversario:true, banho:true};
   var DASH_AUTO_ROTULO={
     reposicao:'Reposição', faltas:'Falta avisada', aniversario:'Aniversariante',
     clienteNovo:'Cliente novo', aulunosRestr:'Auluno com restrição',
-    hospRestr:'Hóspede com restrição', adaptacao:'Em adaptação'
+    hospRestr:'Hóspede com restrição', adaptacao:'Em adaptação', banho:'Banho fixo'
   };
   function dashAutoDias(n){ return (typeof orcMaisDias==='function')?orcMaisDias((typeof zHojeISO==='function'?zHojeISO():''),n):''; }
   // Compara pelo NOME, não pela linha inteira: a recepção escreve "Ozzy - Lhasa" e o app
@@ -37607,6 +38400,10 @@
   // O que DEVE estar na planilha naquele dia, item por item. Só lê o que o app já tem.
   function dashAutoCalcular(iso){
     var out={}; Object.keys(DASH_AUTO_COLS).forEach(function(k){ out[k]=[]; });
+    // A HORA de cada nome, por item que tem hora. Fica FORA das listas de propósito: as
+    // listas viram o registro gravado em daycare/dashboard-auto/{dia}, e hora não é nome.
+    // Quem lê isto é só dashAutoSincronizar, na hora de chamar a ponte.
+    out._horas={banho:{}};
     if(typeof PELUDINHOS==='undefined') return out;
     var hoje=(typeof zHojeISO==='function')?zHojeISO():'';
     var ehHoje=(iso===hoje);
@@ -37646,6 +38443,16 @@
           if(dm===null){ try{ dm=Math.round((new Date(iso+'T12:00:00')-new Date(mat+'T12:00:00'))/86400000); }catch(e){ dm=null; } }
           if(dm!==null && dm>=0 && dm<=DASH_AUTO_45) out.clienteNovo.push(dashNomePlanilha(p));
         }
+        // --- Banho fixo (o combinado da ficha, Adriana 24/set/2026). Morador não tem banho
+        // fixo lançado na planilha do Day Care — ele não é auluno de ninguém.
+        if(!ehMorador){
+          var _br=banhoRecDe(p);
+          if(_br && _br.ativo && banhoRecValeNoDia(_br, iso) && banhoAutoPodeNoDia(p, iso, veio)){
+            var _vb=banhoRecValorPlanilha(p, _br);
+            out.banho.push(_vb);
+            out._horas.banho[dashAutoNomeChave(_vb)]=banhoRecHoraNoDia(_br, iso);
+          }
+        }
         // --- Auluno com restrição (só quem vem nesse dia — a TV é do dia)
         if(veio && dashAutoTemRestricao(ex)) out.aulunosRestr.push(dashAutoTextoRestricao(p,ex));
         // --- Adaptação: dentro dos 45 dias corridos, e vindo nesse dia.
@@ -37670,9 +38477,9 @@
         });
       }catch(e){} /* silencioso de propósito: função opcional, pode não existir nesta tela */
     }
-    // sem repetidos
-    Object.keys(out).forEach(function(k){
-      var visto={}; out[k]=out[k].filter(function(v){ var c=dashAutoNomeChave(v); if(visto[c]) return false; visto[c]=1; return true; });
+    // sem repetidos (só as LISTAS — `_horas` não é lista de nomes)
+    Object.keys(DASH_AUTO_COLS).forEach(function(k){
+      var visto={}; out[k]=(out[k]||[]).filter(function(v){ var c=dashAutoNomeChave(v); if(visto[c]) return false; visto[c]=1; return true; });
     });
     // Restrições em ORDEM ALFABÉTICA (Adriana, 04/set/2026): a lista saía na ordem do
     // cadastro, e quem procura um FILHOt no quadro procura pelo nome. Vale para aulunos e
@@ -37702,8 +38509,12 @@
       }
       var hojeISOs=(typeof zHojeISO==='function')?zHojeISO():'';
       var desejado=dashAutoCalcular(iso);
-      // Dia futuro: só reposição, falta avisada e aniversário.
-      if(iso>hojeISOs) Object.keys(desejado).forEach(function(k){ if(!DASH_AUTO_FUTURO[k]) desejado[k]=[]; });
+      // Dia futuro: só reposição, falta avisada, aniversário e banho fixo.
+      if(iso>hojeISOs) Object.keys(DASH_AUTO_COLS).forEach(function(k){ if(!DASH_AUTO_FUTURO[k]) desejado[k]=[]; });
+      var horasDe=function(k, v){
+        var m=(desejado._horas&&desejado._horas[k])||{};
+        return m[dashAutoNomeChave(v)]||'';
+      };
       var tarefas=[], novoRegistro={}, resumo={posto:0, tirado:0};
       // ===== A CONFIRMAÇÃO, NOME POR NOME (Adriana, 21/set/2026) ====================
       // "Ter confirmação que foi lançado." Antes este registro guardava só a lista do que o
@@ -37727,7 +38538,10 @@
         // 1) falta na planilha → lançar
         quer.forEach(function(v){
           if(atualCh[dashAutoNomeChave(v)]!==undefined){ marcar(k, v, true, ''); return; }   // já está lá (de qualquer jeito)
-          tarefas.push(dashPonteChamar({acao:'lancar', dia:iso, coluna:col, valor:v})
+          // A HORA vai na mesma chamada, na coluna de hora do item (o banho fixo é o
+          // primeiro a ter uma): é ela que faz o alarme tocar na TV.
+          tarefas.push(dashPonteChamar({acao:'lancar', dia:iso, coluna:col,
+                                        colunaHora:(DASH_AUTO_COLS_HORA[k]||''), hora:horasDe(k, v), valor:v})
             .then(function(x){
               var ok=!!(x&&x.ok);
               if(ok) resumo.posto++;
@@ -37739,7 +38553,10 @@
         antes.forEach(function(v){
           if(querCh[dashAutoNomeChave(v)]!==undefined) return;
           if(atualCh[dashAutoNomeChave(v)]===undefined) return;      // já não está na planilha
-          tarefas.push(dashPonteChamar({acao:'remover', dia:iso, coluna:col, valor:atualCh[dashAutoNomeChave(v)]})
+          // Tira a hora junto: banho cancelado que deixasse "10:00" na planilha faria a TV
+          // tocar o alarme de um banho que não existe mais.
+          tarefas.push(dashPonteChamar({acao:'remover', dia:iso, coluna:col,
+                                        colunaHora:(DASH_AUTO_COLS_HORA[k]||''), valor:atualCh[dashAutoNomeChave(v)]})
             .then(function(x){ if(x&&x.ok) resumo.tirado++; return x; }));
         });
         novoRegistro[k]=quer;
@@ -41763,10 +42580,22 @@
   }
   function ciMedConfirmar(btn){ ciMedConfSet(btn,'ok'); }
   function ciMedMudou(btn){ ciMedConfSet(btn,'mudou'); }
-  // opts.daFicha = a linha veio da agenda do FILHOt e precisa da palavra do tutor.
+  // opts.daFicha  = a linha veio da agenda do FILHOt e precisa da palavra do tutor.
+  // opts.agendaId = o id que esse remédio JÁ TEM na agenda. É o conserto do bug da Lisa
+  //                 (Adriana, 24/set/2026): "apareceu várias vezes o VitaC e o Ômega 3, ela
+  //                 toma uma vez por dia; tive que remover vários. Por quê?"
+  //
+  // A CAUSA, exata: esta função criava id NOVO ('ci_'+agora) para TODA linha — inclusive
+  // para a que veio PRÉ-PREENCHIDA da ficha. Na gravação, cada linha vira
+  // medicacao-agenda/{chave}/itens/{id}.update(…) e, com id novo, isso não atualiza o
+  // remédio que já existe: CRIA outro igual. Um check-in, uma cópia. Quatro check-ins da
+  // Lisa, quatro VitaC. (47 duplicados em 33 agendas; o Kako com 9 cópias do PromunDog.)
+  //
+  // A CORREÇÃO: quem veio da ficha CONSERVA o id da agenda. Só o que a Consultora digita de
+  // novo no check-in ganha id novo — que é o único caso em que "novo" é a verdade.
   function ciAddMed(item, opts){
     const wrap=document.getElementById('ciMeds'); if(!wrap) return;
-    const id='ci_'+Date.now()+'_'+Math.random().toString(36).slice(2,6);
+    const id=(opts&&opts.agendaId)?String(opts.agendaId):('ci_'+Date.now()+'_'+Math.random().toString(36).slice(2,6));
     // Início já vem com a data de entrada da estadia (a Consultora só ajusta se for outro dia).
     const ent=(document.getElementById('ciEntrada')||{}).value||'';
     const base=item||{nome:'',q:'',u:'',horarios:[''],tipo:'medicamento'};
@@ -41844,13 +42673,19 @@
   function ciPreencherMedicacao(){
     if(!DB) return; const key=ciKey(); if(!key) return;
     DB.ref('auaulandia/medicacao-agenda/'+key+'/itens').once('value').then(function(s){
-      const itens=s.val()||{}; const ids=Object.keys(itens);
+      const brutos=s.val()||{};
+      // DADO ANTIGO JÁ DUPLICADO: a agenda da Lisa chegava com 4 VitaC iguais. A tela mostra
+      // UM só por assinatura — e, ao salvar, medAgendaGravarItens remove os repetidos do
+      // banco com rastro. A Consultora não precisa mais apagar linha por linha.
+      const itens=medDedupe(brutos).itens; const ids=Object.keys(itens);
       if(!ids.length) return;
       const wrap=document.getElementById('ciMeds'); if(!wrap) return; wrap.innerHTML='';
       // Os de USO CONTÍNUO vêm primeiro: são o que a aba Medicamentos da ficha guarda e o
       // que o tutor precisa confirmar item por item.
       const ordenados=ids.slice().sort(function(a,b){ return ((itens[b]||{}).continuo?1:0)-((itens[a]||{}).continuo?1:0); });
-      ordenados.forEach(function(id){ ciAddMed(itens[id], {daFicha:true}); });
+      // agendaId: a linha conserva o id que o remédio JÁ TEM na agenda — é isto que faz o
+      // segundo check-in ATUALIZAR o VitaC em vez de criar outro.
+      ordenados.forEach(function(id){ ciAddMed(itens[id], {daFicha:true, agendaId:id}); });
       const ms=document.getElementById('ci-med-status'); if(ms){ ms.style.color='var(--crm-atencao-text)'; ms.textContent='Medicação que já está na ficha deste FILHOt — confirme CADA item com o tutor: Confirmado ou Mudou. O check-in não fecha sem isso.'; }
     }).catch(function(e){ _logLeituraFalhou('auaulandia/medicacao-agenda/ (ciPreencherMedicacao)', e); });
   }
@@ -42212,7 +43047,9 @@
       pertences:ciColetarPert()
     };
   }
-  function ciMedsToLista(itens){ return Object.values(itens).map(function(it){ const o={ nome:it.nome, tipo:it.tipo, q:it.q, u:it.u, horarios:it.horarios, origem:it.origem||'tutor' }; if(it.estoque) o.estoque=it.estoque; if(it.freq) o.freq=it.freq; if(it.local) o.local=it.local; if(it.dataInicio) o.dataInicio=it.dataInicio; if(it.continuo) o.continuo=true; else if(it.dataFim) o.dataFim=it.dataFim; return o; }); }
+  // A lista que vai para a ESTADIA. Deduplicada pela mesma assinatura da agenda (24/set/2026):
+  // sem isto, a estadia da Lisa levava "VitaC" quatro vezes na conferência e no check-out.
+  function ciMedsToLista(itens){ itens=medDedupe(itens||{}).itens; return Object.values(itens).map(function(it){ const o={ nome:it.nome, tipo:it.tipo, q:it.q, u:it.u, horarios:it.horarios, origem:it.origem||'tutor' }; if(it.estoque) o.estoque=it.estoque; if(it.freq) o.freq=it.freq; if(it.local) o.local=it.local; if(it.dataInicio) o.dataInicio=it.dataInicio; if(it.continuo) o.continuo=true; else if(it.dataFim) o.dataFim=it.dataFim; return o; }); }
 
   // ---- Salvar no sistema ----
   // ==================================================================================
@@ -42914,7 +43751,22 @@
       // A agenda de medicação é reescrita do zero: se um remédio saiu, o alarme dele
       // precisa sumir junto — senão o despertador continua tocando por um remédio que
       // não existe mais.
-      ops.push(DB.ref('auaulandia/medicacao-agenda/'+key+'/itens').set(P.temMed?meds:null));
+      // Deduplicado por assinatura antes de escrever: corrigir REESCREVE o nó, então é aqui
+      // que o dado antigo repetido (os 4 VitaC da Lisa) para de voltar (24/set/2026).
+      var _medsCorr=P.temMed?medDedupe(meds):{sai:[],itens:null,nomes:[]};
+      // Lê ANTES de reescrever só para poder DIZER o que sumiu: reescrever o nó em silêncio
+      // faria um remédio desaparecer sem ninguém saber por quê.
+      ops.push(DB.ref('auaulandia/medicacao-agenda/'+key+'/itens').once('value').then(function(s){
+        var jaLa=s.val()||{}, fica=(P.temMed?_medsCorr.itens:null)||{};
+        var sumiram=Object.keys(jaLa).filter(function(id){ return fica[id]===undefined; });
+        return DB.ref('auaulandia/medicacao-agenda/'+key+'/itens').set(P.temMed?_medsCorr.itens:null).then(function(){
+          if(sumiram.length && typeof audit==='function')
+            audit('medicacao-agenda-dedupe','a correção do check-in tirou '+sumiram.length+' item(ns) da agenda'
+              +(_medsCorr.sai.length?(' — '+_medsCorr.sai.length+' era(m) repetido(s)'):'')
+              +(_medsCorr.nomes.length?(': '+_medsCorr.nomes.join(', ')):''),
+              {alvo:key, pet:ciHosp.nome||'', itens:sumiram.join(' ')});
+        });
+      }).catch(function(e){ _logFalhaGrav('auaulandia/medicacao-agenda/ (check-in corrigir)', e); }));
       if(P.temMed) ops.push(DB.ref('auaulandia/medicacao-agenda/'+key).update({ nome:ciHosp.nome||'', tutor:ciHosp.tutor||'', estadiaId:estadiaId, _ts:Date.now(), _quem:quemSou() }));
     }
     else if(modo==='acrescentar'){
@@ -42995,7 +43847,11 @@
     if(P.temMed && modo!=='corrigir'){   // no corrigir a agenda já foi reescrita acima
       const eid=(modo==='acrescentar')?estadiaId:ref.key;
       ops.push(DB.ref('auaulandia/medicacao-agenda/'+key).update({ nome:ciHosp.nome||'', tutor:ciHosp.tutor||'', estadiaId:eid, _ts:Date.now(), _quem:quemSou() }));
-      Object.keys(meds).forEach(function(mid){ ops.push(DB.ref('auaulandia/medicacao-agenda/'+key+'/itens/'+mid).update(meds[mid])); });
+      // ⚠ 24/set/2026 — AQUI nascia a duplicata da Lisa. O laço de antes fazia
+      // `itens/{mid}.update(...)` com o id que a TELA tinha inventado; agora ciAddMed
+      // conserva o id da agenda, e esta porta ainda deduplica por assinatura e REMOVE o que
+      // ficou repetido de antes (com rastro). Salvar o check-in duas vezes não cria nada.
+      ops.push(medAgendaGravarItens(key, meds, 'check-in '+(modo||'novo')));
     }
     Promise.all(ops).then(function(){
       __ciTravar(false); ciSalvoAgora=true;

@@ -2,6 +2,120 @@
 
 > Regra: o app tem de ser autoexplicativo, para treinamento rápido. Cada item tem **Título** e **subtítulo** (a explicação curta que aparece como dica no menu e no índice da Gestão no computador). Nomes são decisão da Adriana.
 
+## O que mudou em 24/set/2026 (v 2026-09-24-08)
+
+### (A) O remédio que se multiplicava a cada check-in — a agenda da Lisa
+
+> **Adriana, 24/set/2026:** *"O check-in de entrada da hospedagem da Lisa está confuso: apareceu várias vezes o VitaC e o Ômega 3, ela toma uma vez por dia; tive que remover vários. Por quê?"*
+
+**A causa, exata.** `ciAddMed` criava um id NOVO (`ci_<relógio>_<aleatório>`) para **toda** linha do check-in — inclusive para a que vinha **pré-preenchida da ficha**. Na gravação, cada linha vira `auaulandia/medicacao-agenda/{chave}/itens/{id}.update(…)`. Com id novo, isso **não atualiza** o remédio que já existe: **cria outro igual**. Um check-in, uma cópia. Quatro check-ins da Lisa, quatro VitaC. No banco havia **47 duplicados em 33 agendas** — o Kako com **9 cópias** do PromunDog.
+
+**A correção, em três camadas:**
+
+| Camada | O quê |
+|---|---|
+| A causa | a linha vinda da ficha **conserva o id da agenda** (`ciAddMed(item, {daFicha:true, agendaId:id})`). Só o que a Consultora digita de novo ganha id novo |
+| A régua | `medAssinatura(item)` diz quando dois itens são o **mesmo remédio escrito duas vezes**: nome + dose + medida + local + horários + tipo + contínuo/data-fim + "quando dar" + motivo, tudo normalizado. **Suspenso pela vet** e **parou de tomar** entram na assinatura de propósito — para nunca se juntarem com o item vivo (a lição do caso Hulk) |
+| A porta única | `medAgendaGravarItens(chave, meds, contexto)` lê o que está no banco, junta com o que está na tela (a tela vence no mesmo id), deduplica, grava quem fica e **remove** quem sai, com rastro **`medicacao-agenda-dedupe`** (quantos, quais nomes, em quem) |
+
+**Onde a régua vale:** no salvar do check-in (novo, *acrescentar* e *corrigir*), na aba **Medicamentos** da ficha, na lista que vai para a **estadia** (`ciMedsToLista`) e na **abertura** do check-in — dado antigo já duplicado aparece **uma vez só** na tela, e sai do banco no primeiro Salvar.
+
+**O que NÃO mudou:** remédio novo continua entrando normalmente; o histórico, a suspensão da vet e o "parou de tomar" continuam intocados; nada é apagado sem rastro.
+
+---
+
+### (B) Tela nova: **Banhos recorrentes**
+
+> **Adriana, 24/set/2026:** *"Muitos peludos tomam banho já marcado, semanal ou quinzenal, e são do Day Care; o horário é sempre o mesmo. Em vez de lançar no dia, isso já vai automaticamente e a gente só altera se o tutor mudar. Ex.: Lana toma banho de 15 em 15 dias, às quintas, a partir de 01/10. Nick da Cláudia toma banho toda quinta. Preciso de uma caixa fácil para marcar 'esse peludo tem banho ou não', sem entrar na ficha e fazer todo um cadastro. A ficha está muito confusa."*
+
+| Onde fica | Central Zêluz › Day Care, **logo antes de Lançamentos do dia** (a ordem alfabética do bloco) |
+|---|---|
+| `data-v` | `banhos` |
+| Quem vê | a **mesma** classe de Lançamentos do dia: `so-recepcao`. Quem lança banho é quem combina banho |
+| Quem grava | quem edita ficha (`canEditPel` → capacidade `editar-peludinho`: Central Zêluz, Supervisão, Gestão, Diretoria). O `setPelExtra` barra o resto mesmo se a função for chamada por fora — **esconder não é impedir** |
+| Onde o dado mora | na **ficha** (`pelExtra.banho_rec`), como todo o resto. Nenhum nó novo |
+
+**A tela.** Uma linha por FILHOt ativo, com busca por nome no topo, e um interruptor **"Tem banho fixo"**. Ao ligar, os botões aparecem **na própria linha** — sem abrir a ficha:
+
+| O botão | O que diz |
+|---|---|
+| Ritmo | Semanal · Quinzenal |
+| Dia | Seg · Ter · Qua · Qui · Sex |
+| Hora | 08:00 a 17:00 de meia em meia hora, mais um campo de hora livre ao lado |
+| A partir de | a data em que o combinado começa a valer (ao escolher o dia, ela anda sozinha para a próxima ocorrência daquele dia) |
+| Shampoo | Sim, trouxe o dele · Comprou aqui na loja · Não trouxe |
+| Onde está | Está na recepção · Está na bolsa dele (só aparece quando há shampoo) |
+| Observação | texto curto |
+
+Antes do **Salvar**, a linha mostra a frase inteira que vai para a planilha: *"Vai para a planilha assim: **Lana/Cocker (SHAMPOO · NA RECEPÇÃO)** · hora **10:00**"*. **Nada é gravado antes do Salvar daquela linha**, e cada gravação deixa rastro **`banho-recorrente`**, de → para.
+
+**A conta do ritmo.** Quinzenal conta a paridade **a partir de `desde`**: 01/10 (quinta) → 01/10, 15/10, 29/10 — e nunca 08/10. Semanal é toda semana no dia escolhido. Antes de `desde` não existe combinado nenhum.
+
+**Um dia específico** se resolve por **exceção**, sem desfazer o combinado: **"Pular o próximo (dd/mm)"** e **"Mudar só o dia dd/mm"** gravam em `banho_rec.excecoes[dia]`. As exceções ficam visíveis na linha, com um "desfazer" ao lado — exceção esquecida vira surpresa.
+
+**O lançamento automático.** É o **mesmo motor** das reposições (`dashAutoCalcular` / `dashAutoSincronizar`), agora com a fonte `banho`. Hoje e nos **14 dias** seguintes (`DASH_AUTO_FUTURO.banho`), ele escreve o nome na coluna **"Banho"** e a hora em **"Hora Banho"** — a primeira fonte automática com hora (`DASH_AUTO_COLS_HORA`), e é ela que faz o alarme tocar na TV.
+
+| A trava | Por quê |
+|---|---|
+| Respeita `dashNomePlanilha` | com xará, o nome leva o primeiro nome do tutor — o mesmo que a recepção escreve |
+| Não duplica o manual | dedupe pelo nome (`dashAutoNomeChave`): se a recepção já lançou o banho dele naquele dia, o automático não escreve de novo |
+| Feriado e domingo | a casa não abre: não lança (`orcFechado`, a **mesma** lista do Orçamento) |
+| Falta avisada | o dia que gerou o crédito da reposição é dia em que ele não vem: não lança |
+| Quem não vem no dia | fora dos dias da ficha, não lança. **Reposição agendada** para aquele dia **conta como vir** |
+| Marcado FALTOU na chamada | o automático deixa de querer aquele banho — e **tira da planilha o que ele mesmo escreveu**, com a hora junto (a regra que já valia para a reposição) |
+
+Nos **Lançamentos do dia**, a linha do automático aparece no **próprio cartão Banho**, com a etiqueta **"automático · banho fixo"** e sem botão "tirar": ela se corrige na origem, que é esta tela.
+
+**Onde mais o combinado aparece** (a lei do *"dado carregado numa tela só some nas outras"*):
+
+| A tela | O que mostra |
+|---|---|
+| Cadastro de Peludinhos | etiqueta na linha: *"🛁 banho quinzenal qui 10:00"* ou *"sem banho fixo"* — e ela é o **atalho** para esta tela, já com o nome na busca |
+| Hoje na Zêluz | na primeira linha do FILHOt: *"🛁 banho hoje 10:00 (fixo)"* — inclusive no texto que vai para o WhatsApp e para o Excel |
+| Vencimentos | no cartão, ao lado do remédio de uso contínuo: quem fala com o tutor sobre vacina também precisa saber que ele já tem banho marcado |
+
+**A rede de testes.** Bloco **v-48** em `tests/harness.js` (72 provas): a assinatura e a dedupe da medicação, a gravação que não duplica ao salvar duas vezes, o ritmo quinzenal caindo em 01/10, 15/10 e 29/10 (e não em 08/10), o semanal toda quinta, as exceções, o automático escrevendo Banho + Hora Banho no dia certo, não duplicando o manual, pulando feriado, falta avisada e FALTOU, e o interruptor + Salvar gravando `banho_rec` com rastro. O bloco cobre ainda a Prevenção (parte C). Capturas em `docs/capturas-v36/` (`tests/capturar-v36.js`), incluindo a tabela da Prevenção com e sem o botão dos 30 dias.
+
+---
+
+### (C) Prevenção: só o que está em aberto, e em tabela
+
+> **Adriana, 24/set/2026:** *"Fui em Prevenção e procurei a Cindy. Aparece a vacina que só vence dia 12. Eu preciso só do que está em aberto. A coleira está vencida, ok. A escova de dente vai ser trocada na semana que vem, e ele não me deixa ir para a semana que vem. Só tem que aparecer o que está vencido ou que não tem data. Não dá para ficar aparecendo tudo; se aparece tudo, a gente não consegue ver. Se não tem nada vencido, não aparece: está tudo em dia. Preciso de uma tabela. Facilitar a vida aqui."*
+
+**O que é "em aberto".** Vencido (a data já passou) **ou** sem data nenhuma na ficha. Nada mais. O que vence lá na frente não é dívida — é agenda, e agenda tem tela própria (**Vencimentos**). Onde isso aparecia era no painel que abria ao tocar no FILHOt: ele listava os **onze** itens de `PREV_ITENS`, inclusive os que estavam em dia. A lista em si já só trazia vencido/sem data — o que poluía era o painel.
+
+| O que muda | Como |
+|---|---|
+| A lista | uma **tabela**: uma linha por FILHOt, uma coluna por item que **alguém** está devendo (item que ninguém deve não vira coluna) |
+| A célula | o mesmo **chip tocável** de sempre — "venceu 01/09", "sem data", "A FAZER NA ZÊLUZ" — e toca-se nele para gravar ali, sem sair da tela (`prevCorrigePainelHTML`, tela `'prev'`) |
+| Em dia | um **traço**. Traço quer dizer "em dia" |
+| O nome | é botão: abre a ficha de prevenção inteira daquele FILHOt, numa linha logo abaixo (a tela antiga continua existindo — mudou de porta, não sumiu) |
+| Quem não deve nada | **não aparece** — e o resumo diz quantos são: *"FILHOts em dia — nada vencido nem em branco"* |
+| Data na célula | **dd/mm** quando é deste ano; com outro ano, a data inteira — "venceu 01/09" de 2024 ao lado de um de 2026 enganaria |
+| Largura | a tabela rola **dentro da própria caixa** (`overflow-x:auto`); a coluna do nome tem largura fixa, senão no celular ela come a tela |
+
+**O botão dos 30 dias.** *"Mostrar também o que vence nos próximos 30 dias"* liga uma janela (`prevJanela()`, padrão **zero**) que acrescenta o que vence até lá, com tipo **próprio** (`avencer`) e cor própria — nunca confundido com dívida em conta nenhuma. A escolha fica guardada **no aparelho** (`zeluz_prev_janela`): quem trabalha assim não reaperta todo dia. Ligado o botão, quem só tem item por vencer entra na **mesma aba** de quem está devendo — ligar é dizer *"quero ver também"*, não *"quero trocar de aba"*.
+
+**A régua em uma linha:** `prevFaltasDe(ficha, janela)` — `janela = 0` devolve só vencido e sem data; `janela = 30` acrescenta o que vence em até 30 dias. `prevAbertas(faltas)` separa dívida de agenda, e é só a dívida que classifica o FILHOt (`prevClasse`).
+
+### "Vence em" aceita data futura — em todo lugar
+
+É justamente *"vai ser trocada na semana que vem"*. Conferido campo a campo, e agora provado pela rede de testes:
+
+| Onde | Regra |
+|---|---|
+| Ficha (`prevVenceCampoHTML`) | `min="2015-01-01" max="2035-12-31"` — futuro é o ponto do campo |
+| Cadastro novo (`naV_*`) | idem, e a validação só confere o **ano** (2015–2035) |
+| Painel da tela (`prevCorrV_*`) | idem |
+| `prevVenceManualSet` | **não** barra futuro em lugar nenhum |
+| **"Feito em"** (`prevCorrT_*`, `prevT_*`, `naP_*`) | `max = hoje`, e a validação recusa por dentro, com o recado que manda ao campo certo: *"A data em que foi feito está no futuro. Se o que você sabe é quando VENCE, use o campo «Vence em…»"* |
+
+**Dois consertos que vieram junto.** (1) O texto que a recepção cola no WhatsApp e o Excel passaram a usar a **mesma frase** da célula — antes escreviam "sem data" para um item que apenas ia vencer. (2) No bloco dos **hóspedes**, o botão *"lançar a data que ele mandou"* **não abria nada**: o hóspede sai da lista dos aulunos, e era só lá que a ficha de lançamento era desenhada. Botão que não faz nada e não diz por quê é a falha muda de sempre — agora a ficha abre ali mesmo.
+
+Gravado um vencimento futuro, o item **sai** da lista de abertos na hora (passou a ser futuro) e a confirmação verde diz *"em dia até 01/10 **(marcado à mão)**"*. Com o botão dos 30 dias ligado ele reaparece como *"vence 01/10 (à mão)"*. O rastro `prevencao-atualizada-na-tela` agora também diz **"atualizado na tela Prevenção"**.
+
+---
+
 ## O que mudou em 24/set/2026 (v 2026-09-24-03)
 
 Adriana, em 24/set/2026:
