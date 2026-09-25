@@ -25,12 +25,17 @@ A equipe continua digitando o mesmo PIN. Custo: R$ 0,00, porque roda na VPS da K
 |---|---|
 | Senha certa, aparelho liberado | entra (token com papel) |
 | Senha certa da **Gestão** em aparelho novo | entra, marcada como aparelho novo, para a Gestão poder liberá-lo (a mesma regra do app de 05/ago) |
-| Senha certa da equipe em aparelho **não** liberado | recusa, com o nome da pessoa, para o app mostrar o aviso de sempre |
+| Senha certa da equipe em aparelho **não** liberado | recusa como "aparelho não liberado", **sem o nome** da pessoa |
 | Senha errada | recusa, sem dizer de quem seria |
-| 5 erros do mesmo endereço em 10 min | aquele endereço espera 15 min |
-| 60 erros de qualquer lugar em 10 min | todos esperam 10 min (freio contra o ataque espalhado) |
+| 5 erros do mesmo aparelho em 10 min | aquele aparelho espera 15 min (a digitação errada trava só o celular que errou, não a loja) |
+| 20 erros do mesmo endereço em 10 min | aquele endereço espera 15 min |
+| 150 erros de qualquer lugar em 10 min | todos esperam 5 min (freio contra o ataque espalhado; só acontece sob ataque) |
 
-Toda tentativa deixa rastro em `auaulandia/logins-servidor/{dia}`. O rastro **não guarda a senha nem o endereço de ninguém**: só uma impressão digital curta do endereço.
+Acertar a senha **não zera** os erros: quem tem um PIN válido não pode alternar erros e acertos para testar todos os outros.
+
+Toda tentativa conferida deixa rastro em `auaulandia/logins-servidor/{dia}`:
+- o rastro **não guarda a senha nem o endereço**: guarda só uma impressão digital curta do endereço, com um sal que nasce a cada partida do serviço e não sai da memória;
+- pedido barrado pelo freio não grava nada.
 
 A conta mora em `logica.js`, e as provas dela estão em `tests/servidor-senha.test.js`. Para rodar as provas: `node tests/servidor-senha.test.js`.
 
@@ -61,7 +66,7 @@ A conta mora em `logica.js`, e as provas dela estão em `tests/servidor-senha.te
    ```nginx
    location /zeluz/senha/ {
      proxy_pass http://127.0.0.1:8787/;
-     proxy_set_header X-Forwarded-For $remote_addr;
+     proxy_set_header X-Real-IP $remote_addr;
    }
    ```
 5. **Conferir:** `curl https://kairospresenca.com.br/zeluz/senha/saude` deve responder `{"ok":true}`.

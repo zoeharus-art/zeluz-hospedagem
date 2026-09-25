@@ -134,12 +134,37 @@ prova('sem ficha casada ou sem hora não vira dose (não há de quem nem quando)
   ctx.__L = { a1: { chave: '', hora: '9:00', valor: 'X' }, a2: { chave: 'tico__joana', hora: '', valor: 'Tico' } };
   assert.strictEqual(run('medDosesDosLancamentos(__L, {})').length, 0);
 });
-prova('a MESMA dose já registrada no check-in de pertences não entra duas vezes', () => {
-  ctx.__L = { a1: { chave: 'tico__joana', hora: '09:00', valor: 'Tico (Joana)', det: { qual: 'Apoquel' } } };
-  ctx.__M = { tico__joana: { itens: { i1: { horarios: ['9:00'] } } } };
-  assert.strictEqual(run('medDosesDosLancamentos(__L, __M)').length, 0);
-  ctx.__M = { tico__joana: { itens: { i1: { horarios: ['18:00'] } } } };
-  assert.strictEqual(run('medDosesDosLancamentos(__L, __M)').length, 1, 'horário diferente é outra dose');
+prova('QA A2 — quem está "faltou" na chamada não gera alarme nem cobrança', () => {
+  ctx.__L = { a1: { chave: 'tico__joana', hora: '09:00', valor: 'Tico', det: { qual: 'Apoquel' } } };
+  assert.strictEqual(run("medDosesDosLancamentos(__L, {tico__joana:'faltou'})").length, 0);
+  assert.strictEqual(run("medDosesDosLancamentos(__L, {tico__joana:'veio'})").length, 1);
+});
+// As doses do check-in de pertences (daycare/med-dia) e as da recepção, juntas.
+const DC = (hr, nome) => ({ tico__joana: { nome: 'Tico', itens: { medicacao_0: { nome: nome || 'Apoquel', dose: '1 comp', horarios: [hr] } } } });
+const LANC = (hr, qual) => ({ a1: { chave: 'tico__joana', hora: hr, valor: 'Tico (Joana)', det: { qual: qual || 'Apoquel 5,4 mg' } } });
+const juntar = (medDia, lancs, log) => {
+  ctx.__M = medDia; ctx.__L = lancs; ctx.__G = log || {};
+  return run('medJuntarDoDia(medDosesDoCheckinDia(__M), medDosesDosLancamentos(__L, {}), __G)')
+    .map((d) => d.itemId + '@' + d.horario);
+};
+prova('mesmo FILHOt, mesmo horário: UMA dose (a do check-in de pertences, a de sempre)', () => {
+  igual(juntar(DC('09:00'), LANC('9:00')), ['medicacao_0@09:00']);
+});
+prova('QA A1 — a recepção lançou, a Zelosa deu, DEPOIS veio o check-in: fica a dose já registrada', () => {
+  const log = { dc__tico__joana: { 'lanc_a1_08-00': { quem: 'Zelosa', ts: 1 } } };
+  igual(juntar(DC('08:00'), LANC('08:00'), log), ['lanc_a1@08:00'], 'o alarme não toca de novo');
+});
+prova('QA A1 — mesmo remédio com 30 min de diferença (08:00 × 08:30): UMA dose, não duas', () => {
+  igual(juntar(DC('08:30'), LANC('08:00')), ['medicacao_0@08:30']);
+});
+prova('remédios diferentes, ou o mesmo com mais de 1 h de diferença: duas doses de verdade', () => {
+  assert.strictEqual(juntar(DC('08:30', 'Ômega 3'), LANC('08:00', 'Apoquel')).length, 2);
+  assert.strictEqual(juntar(DC('14:00'), LANC('08:00')).length, 2, '8h e 14h são duas tomadas');
+});
+prova('"Ômega" e "Omega 3" são o mesmo remédio; "Apoquel" e "Apoquel 5,4 mg" também', () => {
+  assert.ok(run("medMesmoRemedio('Ômega', 'Omega 3 cápsula')"));
+  assert.ok(run("medMesmoRemedio('Apoquel', 'apoquel 5,4 mg')"));
+  assert.ok(!run("medMesmoRemedio('Vita', 'Vitamina C')"), 'palavras diferentes não se juntam');
 });
 
 // ================================================================== F0.2 — feriado
@@ -219,6 +244,31 @@ prova('"Não quer agora" deixa a ficha como está — aquele assunto não trava 
   // "Vai mandar na bolsa" lança — mas a ficha só fica em dia depois da dose: trava.
   ctx.__r = { respostas: { vacina: { v: 'vet_tutor' }, antip: { v: 'bolsa' } } };
   assert.strictEqual(run('vencFichaAindaDeve(__o, __r)').length, 2);
+});
+
+prova('QA M1 — "Sim" antigo com a ficha devendo: o assunto NÃO conta como respondido', () => {
+  ctx.__o = { chave: 'simba__ana', nome: 'Simba', itens: [{ k: 'vac_mult_p', atrasado: true, vence: '2026-09-10' }] };
+  ctx.__r = { ficha_atualizada: { quem: 'X', ts: 1 }, enviadas: { vacina: { ts: 1, quem: 'X' } } };
+  assert.strictEqual(run("vencEstadoTipo(__r, 'vacina', 2)"), 'fechado', 'sem saber da ficha, vale como sempre');
+  assert.notStrictEqual(run("vencEstadoTipo(__r, 'vacina', 2, vencFichaAindaDeve(__o, __r))"), 'fechado');
+  assert.strictEqual(run('vencAbertosDe(__o, __r, 2).length'), 1, 'o cartão, o selo e o quadro contam o assunto aberto');
+});
+prova('QA B3 — a resposta antiga "Nunca fez — quer fazer aqui" não passa como "Não quer agora"', () => {
+  ctx.__o = { chave: 'simba__ana', nome: 'Simba', itens: [{ k: 'verm_p', sem_registro: true }] };
+  ctx.__r = { respostas: { aberto: { v: 'ab_fazer' } } };
+  assert.strictEqual(run('vencFichaAindaDeve(__o, __r).length'), 1);
+});
+prova('QA M2 — campo vazio (undefined) no rastro não apaga quem fez', () => {
+  run(`__bkpSes=_sessao; __bkpDB=DB; __audGrav=[];
+       _sessao=function(){ return {nome:'Amanda', role:'consultora'}; };
+       DB={ ref:function(){ return { push:function(rec){ __audGrav.push(rec); return Promise.resolve(); } }; } };`);
+  try {
+    run("audit('checkin', 'fez o check-in', {quem: undefined, pet: undefined, alvo: 'thor__bia'})");
+    const rec = run('__audGrav[0]');
+    assert.strictEqual(rec.quem, 'Amanda');
+    assert.ok(!('pet' in rec), 'o campo vazio não vai ao banco');
+    assert.strictEqual(rec.alvo, 'thor__bia');
+  } finally { run('_sessao=__bkpSes; DB=__bkpDB;'); }
 });
 
 // ================================================================== F0.4 — vermífugo e exame
@@ -365,6 +415,22 @@ prova('a mais recente é de outra vinda, mas existe a desta noite: não acusa fa
     assert.strictEqual(run("hospTemEstadiaNoDia('thor__bia','2026-09-25')"), true);
     assert.strictEqual(run("hospTemEstadiaNoDia('thor__bia','2026-09-30')"), false);
   } finally { run('CF_ESTADIAS=__bkpCF; EST_TODAS=__bkpET;'); }
+});
+
+prova('QA A3 — "cobrir a noite" é entrar até ela e sair DEPOIS dela', () => {
+  assert.strictEqual(run("estadiaCobreNoite({entrada:'2026-09-24', saida:'2026-09-25'}, '2026-09-24')"), true, 'a pernoite daquela noite');
+  assert.strictEqual(run("estadiaCobreNoite({entrada:'2026-09-20', saida:'2026-09-24'}, '2026-09-24')"), false, 'saiu naquela manhã: não dormiu lá');
+  assert.strictEqual(run("estadiaCobreNoite({entrada:'2026-09-24', saida:'2026-09-25', status:'cancelada'}, '2026-09-24')"), false);
+});
+prova('QA A3 — a noite que já tem estadia (check-in feito pela busca) sai da lista: não convida a um 2º check-in', () => {
+  run(`__bkpP=PELUDINHOS; __bkpET=EST_TODAS; __bkpPA=PERN_ATRAS;
+       PELUDINHOS=[{n:'Thor', tutor:'Bia'}, {n:'Lua', tutor:'Caio'}];
+       EST_TODAS={e9:{refKey:pelKey(PELUDINHOS[0]), entrada:'2026-09-24', saida:'2026-09-25'}};
+       PERN_ATRAS=[{_dia:'2026-09-24', _chave:dcKey('Thor','Bia'), chave:dcKey('Thor','Bia'), nome:'Thor'},
+                   {_dia:'2026-09-24', _chave:dcKey('Lua','Caio'), chave:dcKey('Lua','Caio'), nome:'Lua'}];`);
+  try {
+    igual(JSON.parse(run('JSON.stringify(pernAnterioresVisiveis().map(function(r){ return r.nome; }))')), ['Lua']);
+  } finally { run('PELUDINHOS=__bkpP; EST_TODAS=__bkpET; PERN_ATRAS=__bkpPA;'); }
 });
 
 // ================================================================== F0.6 — banhos recorrentes

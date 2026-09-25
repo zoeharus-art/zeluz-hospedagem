@@ -83,8 +83,14 @@ function perfilPublico(perfil) {
 
 // ---- o freio contra quem tenta adivinhar ------------------------------------------------
 // Um PIN de 4 dígitos tem 10.000 combinações: sem freio, um robô testa todas em minutos.
-// Dois freios: por endereço (5 erros em 10 min → 15 min parado) e o GERAL (60 erros em 10 min
-// de qualquer lugar → 10 min parado — é o que segura o ataque espalhado por muitos endereços).
+// Três freios (revistos pelo QA da Fase 0, 25/set/2026):
+//   · por APARELHO + endereço: 5 erros em 10 min → 15 min parado. É o da digitação errada:
+//     trava só o celular que errou, não a loja inteira (que sai por UM endereço só);
+//   · por ENDEREÇO: 20 erros em 10 min → 15 min parado. Segura quem troca o id do aparelho;
+//   · o GERAL: 150 erros em 10 min de qualquer lugar → 5 min parado. Só acontece sob ataque
+//     espalhado por muitos endereços — e é melhor a casa esperar 5 min do que perder a senha.
+// ACERTAR NÃO ZERA os erros: quem tem um PIN válido (qualquer colaborador) não pode alternar
+// 4 erros e 1 acerto para testar o espaço inteiro sem nunca ser barrado.
 function criarLimitador(op) {
   op = op || {};
   const max = op.max || 5;
@@ -105,7 +111,7 @@ function criarLimitador(op) {
       reg.set(chave, r);
       return r.ate > agora;
     },
-    acertou(chave) { reg.delete(chave); },
+    acertou() { /* de propósito: acertar não zera os erros (ver o comentário acima) */ },
     limpar(agora) {
       for (const [k, r] of reg) {
         if (r.ate <= agora && !r.falhas.some((t) => agora - t < janela)) reg.delete(k);
@@ -123,34 +129,36 @@ function criarLimitador(op) {
  *                                           que o app oferece para liberar)
  *   400 {ok:false, erro:'pedido'}         — senha fora do formato ou aparelho sem id
  *   401 {ok:false, erro:'senha'}          — senha errada
- *   403 {ok:false, erro:'aparelho', nome} — senha certa em aparelho não liberado
+ *   403 {ok:false, erro:'aparelho'}      — senha certa em aparelho não liberado (sem o nome)
  *   429 {ok:false, erro:'espera', esperaSeg} — freio acionado
  */
 async function decidir(pedido, dep) {
   const agora = dep.agora();
   const ip = String(pedido.ip || '-');
-  const sitIp = dep.porIp.situacao(ip, agora);
-  const sitGeral = dep.geral.situacao('geral', agora);
-  if (sitIp.bloqueado || sitGeral.bloqueado) {
-    const espera = Math.max(sitIp.esperaMs, sitGeral.esperaMs);
+  const aparelho = String(pedido.aparelho || '');
+  const chaveAp = ip + '|' + aparelho;
+  const sits = [dep.porAparelho.situacao(chaveAp, agora), dep.porIp.situacao(ip, agora), dep.geral.situacao('geral', agora)];
+  if (sits.some((x) => x.bloqueado)) {
+    const espera = Math.max.apply(null, sits.map((x) => x.esperaMs));
     return { status: 429, corpo: { ok: false, erro: 'espera', esperaSeg: Math.ceil(espera / 1000) } };
   }
   const pin = normalizarPin(pedido.pin);
-  const aparelho = String(pedido.aparelho || '');
   if (!pin || !idAparelhoValido(aparelho)) {
     return { status: 400, corpo: { ok: false, erro: 'pedido' } };
   }
   const tabela = await dep.tabela();
   const perfil = tabela[pin];
   if (!perfil) {
+    dep.porAparelho.falhou(chaveAp, agora);
     dep.porIp.falhou(ip, agora);
     dep.geral.falhou('geral', agora);
     return { status: 401, corpo: { ok: false, erro: 'senha' } };
   }
-  dep.porIp.acertou(ip);
   const liberado = await dep.aparelhoLiberado(aparelho);
   if (!liberado && !ehGestao(perfil)) {
-    return { status: 403, corpo: { ok: false, erro: 'aparelho', nome: perfil.nome || '' }, perfil };
+    // Sem o nome: a resposta não pode dizer, a quem está num aparelho estranho, de quem é o
+    // PIN que acabou de acertar (QA da Fase 0). O app já sabe dizer "aparelho não liberado".
+    return { status: 403, corpo: { ok: false, erro: 'aparelho' }, perfil };
   }
   return { status: 200, corpo: { ok: true, perfil: perfilPublico(perfil), aparelhoNovo: !liberado }, perfil };
 }

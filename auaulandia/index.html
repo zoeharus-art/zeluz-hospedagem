@@ -10700,6 +10700,8 @@
           }
           const patch={}; marcados.forEach(function(m){ patch[m.k]='faltou'; });
           return DB.ref('daycare/chamada/'+hoje).update(patch).then(function(){
+            try{ if(typeof medTirarDosesDeQuemFaltou==='function') Object.keys(patch).forEach(medTirarDosesDeQuemFaltou); }
+            catch(e){ _logFalhaGrav('a fila do remédio de quem faltou (falta automática)', e); }
             if(typeof audit==='function') audit('falta-automatica',
               marcados.length+' sem check-in até as '+CK_HORA_FALTA+'h: '+marcados.map(function(m){ return m.nome; }).join(', '),
               {assinou:'sistema'});
@@ -19200,9 +19202,14 @@
   let MED_AGENDA_TODOS=[]; // [{hospNome,key,itemId,nome,q,u,horario}]
   let despMedNaTela=null, despMedAtual=null, despMedAtualDoseId=null;
   function ehHojeAua(){ const d=selectedDate, n=new Date(); return d.getFullYear()===n.getFullYear() && d.getMonth()===n.getMonth() && d.getDate()===n.getDate(); }
+  // Cargas em paralelo (lançar e tirar remédio em sequência, a volta do relógio) somavam as
+  // duas listas: a mesma dose aparecia duas vezes no painel. Agora cada carga monta a SUA
+  // lista e só a última a terminar vale (QA da Fase 0, 25/set/2026).
+  var __medAgendaGeracao=0;
   function carregarAgendaMedTodos(){
-    MED_AGENDA_TODOS=[];
-    if(!DB) return;
+    if(!DB){ MED_AGENDA_TODOS=[]; return; }
+    var ger=++__medAgendaGeracao;
+    var lista=[];
     __medAgendaFalhas=0;
     const jobs=(hospedes||[]).map(function(h){
       const key=medAgendaKey(h); if(!key) return Promise.resolve();
@@ -19212,69 +19219,92 @@
           const it=itens[id]||{};
           if(it.suspenso) return; // Onda 3: medicação suspensa pela vet não gera alarme (mata o caso Hulk)
           if(!medVigenteEm(it)) return; // parou no dia do término (ou ainda não começou) — não gera alarme
-          (it.horarios||[]).forEach(function(hr){ MED_AGENDA_TODOS.push({hospNome:h.nome||'', key:key, itemId:id, nome:it.nome||'', q:it.q||'', u:it.u||'', local:it.local||'', obs:it.obs||'', horario:hr}); });
+          (it.horarios||[]).forEach(function(hr){ lista.push({hospNome:h.nome||'', key:key, itemId:id, nome:it.nome||'', q:it.q||'', u:it.u||'', local:it.local||'', obs:it.obs||'', horario:hr}); });
         });
       }).catch(function(e){ __medAgendaFalhas++; _logLeituraFalhou('auaulandia/medicacao-agenda/ (carregarAgendaMedTodos)', e); });
     });
+    // Leitura ÚNICA (once), de propósito: zMapaUma abriria um ouvinte permanente num nó de
+    // UM dia, e ouvinte de dia que ninguém fecha é conexão e download para sempre.
+    var ler=function(caminho, rotulo){
+      return DB.ref(caminho).once('value').then(function(s){ return s.val()||{}; })
+        // Leitura que falhou conta como falha (Fase 0): o retrato do vigia sai "parcial", e
+        // o servidor não acha que não havia dose.
+        .catch(function(e){ __medAgendaFalhas++; _logFalhaGrav(rotulo+' (carregarAgendaMedTodos)', e); return {}; });
+    };
     Promise.all(jobs).catch(function(){}) /* silencioso de propósito: guarda defensiva — falhar aqui não pode interromper quem chamou */.then(function(){
       // ===== A MEDICAÇÃO DO DAY CARE ENTRA NO MESMO ALARME (Adriana, 13/ago/2026) ====
       // "O horário precisa virar alarme — isso é importantíssimo." O remédio que o tutor
       // manda com o auluno do dia é tão remédio quanto o do hóspede. Em vez de um segundo
       // despertador (que ninguém manteria), a dose do Day Care entra na MESMA fila: mesmo
       // som, mesma confirmação, mesmo registro de quem deu.
-      if(DB){
-        DB.ref('daycare/med-dia/'+dcDataKey()).once('value').then(function(s){
-          var v=s.val()||{};
-          Object.keys(v).forEach(function(k){
-            var reg=v[k]||{}, itens=reg.itens||{};
-            Object.keys(itens).forEach(function(id){
-              var it=itens[id]||{};
-              (it.horarios||[]).forEach(function(hr){
-                MED_AGENDA_TODOS.push({hospNome:reg.nome||'', key:'dc__'+k, itemId:id,
-                  nome:it.nome||'', q:it.dose||'', u:'', local:'Day Care', obs:it.obs||'', horario:hr});
-              });
-            });
-          });
-          return v;
-        // Leitura que falhou conta como falha (Fase 0, 25/set/2026): antes, o med-dia que não
-        // desceu deixava o retrato do vigia "completo", e o servidor achava que não havia dose.
-        }).catch(function(e){ __medAgendaFalhas++; _logFalhaGrav('daycare/med-dia/ (carregarAgendaMedTodos)', e); return {}; })
-        // O remédio lançado na recepção (Lançamentos do dia › Medicação) entra na MESMA fila.
-        // A regra está em medDosesDosLancamentos, logo abaixo.
-        .then(function(medDia){
-          return DB.ref('daycare/dashboard/'+dcDataKey()+'/medicacao').once('value').then(function(s2){
-            medDosesDosLancamentos(s2.val()||{}, medDia||{}).forEach(function(d){ MED_AGENDA_TODOS.push(d); });
-          }).catch(function(e){ __medAgendaFalhas++; _logFalhaGrav('daycare/dashboard/…/medicacao (carregarAgendaMedTodos)', e); });
-        }).then(function(){ if(typeof carregarMedAtrasadaGestora==='function') carregarMedAtrasadaGestora(); medVigiaGravar(); });
-      } else { if(typeof carregarMedAtrasadaGestora==='function') carregarMedAtrasadaGestora(); medVigiaGravar(); }
-    });
+      // Fase 0 (25/set/2026): o remédio lançado na recepção entra na mesma fila, e as duas
+      // portas se juntam numa regra só (medJuntarDoDia, logo abaixo).
+      var hojeDc=dcDataKey();
+      return Promise.all([
+        DB.ref('daycare/med-dia/'+hojeDc).once('value').then(function(s){ return s.val()||{}; })
+          .catch(function(e){ __medAgendaFalhas++; _logFalhaGrav('daycare/med-dia/ (carregarAgendaMedTodos)', e); return {}; }),
+        ler('daycare/dashboard/'+hojeDc+'/medicacao', 'daycare/dashboard/…/medicacao'),
+        ler('daycare/chamada/'+hojeDc, 'daycare/chamada/'),
+        (typeof medLogHoje==='function'?medLogHoje():Promise.resolve({})).catch(function(){ return {}; }) /* silencioso de propósito: sem o registro de hoje, a regra fica com a dose do check-in de pertences, a de sempre */
+      ]).then(function(r){
+        medJuntarDoDia(medDosesDoCheckinDia(r[0]), medDosesDosLancamentos(r[1], r[2]), r[3])
+          .forEach(function(d){ lista.push(d); });
+      });
+    }).then(function(){
+      if(ger!==__medAgendaGeracao) return;          // outra carga começou depois: ela é que vale
+      MED_AGENDA_TODOS=lista;
+      if(typeof carregarMedAtrasadaGestora==='function') carregarMedAtrasadaGestora();
+      medVigiaGravar();
+    }).catch(function(e){ _logFalhaGrav('agenda de medicação do dia (carregarAgendaMedTodos)', e); });
   }
-  // ===== O REMÉDIO LANÇADO NA RECEPÇÃO TAMBÉM TOCA O ALARME (Fase 0, 25/set/2026) ====
-  // Auditoria de 25/set/2026: o item "Medicação" dos Lançamentos do dia ia à planilha e à
-  // TV ("Hora Medicação"), mas não entrava nesta fila. Sem alarme no celular de quem dá o
-  // remédio, sem "Dei agora" e sem o vigia do servidor. A dose do check-in de pertences
-  // (daycare/med-dia) sempre entrou; a lançada na recepção, não.
-  // Regra: lançamento de Medicação de HOJE, com a ficha casada (`chave`) e horário, vira
-  // uma dose esperada. Se o check-in de pertences do MESMO FILHOt já tem dose no MESMO
-  // horário, é a mesma dose escrita duas vezes e não entra de novo: alarme em dobro deixaria
-  // a segunda "atrasada" para sempre, e o vigia cobraria uma dose que foi dada.
-  // Função PURA: é ela que o teste morde (tests/fase0-ciclo-fechado.test.js).
+  /* ===== O REMÉDIO LANÇADO NA RECEPÇÃO TAMBÉM TOCA O ALARME (Fase 0, 25/set/2026) ====
+   * Auditoria de 25/set/2026: o item "Medicação" dos Lançamentos do dia ia à planilha e à
+   * TV ("Hora Medicação"), mas não entrava nesta fila. Sem alarme no celular de quem dá o
+   * remédio, sem "Dei agora" e sem o vigia do servidor. A dose do check-in de pertences
+   * (daycare/med-dia) sempre entrou; a lançada na recepção, não.
+   *
+   * O QA da Fase 0 (25/set) achou os dois riscos de ligar a recepção no alarme, e a regra
+   * abaixo fecha os dois:
+   *   · DOSE EM DOBRO. A recepção lança o Apoquel das 8h, a Zelosa dá e toca "Dei"; às 8h30
+   *     sai o check-in de pertences com o mesmo Apoquel. Eram dois códigos de dose: o alarme
+   *     voltava a tocar e o vigia cobrava a Gestão por uma dose já dada. Agora as duas portas
+   *     são UMA dose quando é o mesmo FILHOt e o mesmo horário, ou o mesmo remédio com até
+   *     MED_JUNTAR_MIN de diferença. Fica a que já tem registro de "dei"; sem registro, a do
+   *     check-in de pertences (a de sempre).
+   *   · QUEM FALTOU. O lançamento fica no dia quando o FILHOt falta (vira pendência) — mas
+   *     remédio para quem não está na casa não pode tocar alarme nem cobrar ninguém. Quem
+   *     está "faltou" na chamada sai da fila.
+   * Funções PURAS: é nelas que o teste morde (tests/fase0-ciclo-fechado.test.js). */
+  var MED_JUNTAR_MIN=60;
   function medHoraHHMM(h){
     var m=/^(\d{1,2}):(\d{2})/.exec(String(h||'').trim());
     return m?(String(m[1]).padStart(2,'0')+':'+m[2]):'';
   }
-  function medDosesDosLancamentos(lancs, medDia){
+  function medMinutosDe(h){ var t=medHoraHHMM(h); return t?(Number(t.slice(0,2))*60+Number(t.slice(3,5))):null; }
+  // As doses do check-in de pertences (daycare/med-dia), no formato da fila.
+  function medDosesDoCheckinDia(medDia){
+    var out=[];
+    Object.keys(medDia||{}).forEach(function(k){
+      var reg=(medDia||{})[k]||{}, itens=reg.itens||{};
+      Object.keys(itens).forEach(function(id){
+        var it=itens[id]||{};
+        (it.horarios||[]).forEach(function(hr){
+          out.push({hospNome:reg.nome||'', key:'dc__'+k, itemId:id,
+            nome:it.nome||'', q:it.dose||'', u:'', local:'Day Care', obs:it.obs||'', horario:hr});
+        });
+      });
+    });
+    return out;
+  }
+  // As doses lançadas na recepção, de hoje, com ficha e horário — menos as de quem faltou.
+  function medDosesDosLancamentos(lancs, chamada){
     var out=[];
     Object.keys(lancs||{}).forEach(function(id){
       var r=(lancs||{})[id]||{};
       var chave=String(r.chave||'').trim();
       var hora=medHoraHHMM(r.hora);
       if(!chave || !hora) return;                  // sem ficha ou sem hora: não há de quem nem quando
-      var ja=((medDia||{})[chave]||{}).itens||{};
-      var mesmoHorario=Object.keys(ja).some(function(i){
-        return ((ja[i]||{}).horarios||[]).some(function(x){ return medHoraHHMM(x)===hora; });
-      });
-      if(mesmoHorario) return;
+      if(String(((chamada||{})[chave])||'')==='faltou') return;   // não está na casa
       var det=r.det||{};
       var nome=String(det.qual||'').trim()||String(r.valor||'').trim();
       out.push({hospNome:String(r.valor||'').split(' (')[0].trim(), key:'dc__'+chave, itemId:'lanc_'+id,
@@ -19282,6 +19312,46 @@
         obs:'lançado na recepção'+(det.onde?(' · '+String(det.onde).toLowerCase()):''), horario:hora});
     });
     return out;
+  }
+  // É o MESMO remédio? Nome igual, ou a mesma primeira palavra (com 4 letras ou mais):
+  // "Apoquel" e "Apoquel 5,4 mg, meio comprimido" são o mesmo; "Ômega" e "Omega 3" também.
+  function medMesmoRemedio(a, b){
+    var na=jsNorm(String(a||'')), nb=jsNorm(String(b||''));
+    if(!na || !nb) return false;
+    if(na===nb) return true;
+    var pa=na.split(' ')[0].replace(/[^a-z0-9]/g,''), pb=nb.split(' ')[0].replace(/[^a-z0-9]/g,'');
+    return pa.length>=4 && pa===pb;
+  }
+  function medMesmaDose(lanc, dc){
+    if(!lanc || !dc || lanc.key!==dc.key) return false;
+    var ml=medMinutosDe(lanc.horario), md=medMinutosDe(dc.horario);
+    if(ml===null || md===null) return false;
+    if(ml===md) return true;                        // mesmo FILHOt, mesmo horário: a mesma dose
+    return Math.abs(ml-md)<=MED_JUNTAR_MIN && medMesmoRemedio(lanc.nome, dc.nome);
+  }
+  function medJuntarDoDia(dcDoses, lancDoses, log){
+    var dada=function(d){ var L=((log||{})[d.key])||{}; return !!L[magDoseId(d.itemId, d.horario)]; };
+    var usadas={}, fora={}, out=[];
+    (lancDoses||[]).forEach(function(l){
+      var par=-1;
+      (dcDoses||[]).forEach(function(d, i){ if(par<0 && !usadas[i] && medMesmaDose(l, d)) par=i; });
+      if(par<0){ out.push(l); return; }
+      usadas[par]=1;
+      // A que já tem "dei" registrado manda: é ela que o alarme e o vigia conferem.
+      if(dada(l) && !dada(dcDoses[par])){ out.push(l); fora[par]=1; }
+    });
+    (dcDoses||[]).forEach(function(d, i){ if(!fora[i]) out.push(d); });
+    return out;
+  }
+  // Quem acabou de ser marcado "faltou" sai da fila na hora, sem reler nada: o remédio da
+  // recepção não toca alarme nem cobra ninguém por um FILHOt que não está na casa.
+  function medTirarDosesDeQuemFaltou(chave){
+    try{
+      var k='dc__'+String(chave||'');
+      var antes=(MED_AGENDA_TODOS||[]).length;
+      MED_AGENDA_TODOS=(MED_AGENDA_TODOS||[]).filter(function(d){ return !(d.key===k && String(d.itemId||'').indexOf('lanc_')===0); });
+      if(MED_AGENDA_TODOS.length!==antes) medVigiaGravar();
+    }catch(e){ _logFalhaGrav('tirar da fila o remédio de quem faltou', e); }
   }
   // O retrato do dia para o vigia do servidor: dose esperada por dose esperada. A ponte
   // (vigiaMedicacao no Apps Script) lê isto e cobra o que passou de 30 min sem registro —
@@ -24949,6 +25019,13 @@
       if(next==='faltou' && typeof pendVarrerDia==='function') pendVarrerDia(dcDataKey(), [k]);
       if(next==='veio' && typeof pendAvisarChegada==='function') pendAvisarChegada(k);
     }catch(e){ _logFalhaGrav('as pendências de prevenção de '+k+' (chamada)', e); }
+    // O remédio lançado na recepção segue a chamada (QA da Fase 0, 25/set/2026): faltou, sai
+    // da fila do alarme na hora; a falta desfeita traz a dose de volta (uma releitura só
+    // nesse caso raro — marcar presença, que é o normal, não relê nada).
+    try{
+      if(next==='faltou' && typeof medTirarDosesDeQuemFaltou==='function') medTirarDosesDeQuemFaltou(k);
+      else if(cur==='faltou' && typeof carregarAgendaMedTodos==='function') carregarAgendaMedTodos();
+    }catch(e){ _logFalhaGrav('a fila do remédio de '+k+' (chamada)', e); }
     renderDaycare();
   }
   // ===== A CHAMADA DE HOJE FICA VIVA (Adriana, 24/set/2026) ==========================
@@ -24987,6 +25064,13 @@
       try{ if((dcAtiv==='checkin-corpo'||dcAtiv==='checkout-corpo') && typeof ckRedesenharDeFora==='function') ckRedesenharDeFora(); }catch(e){ /* silencioso de propósito: redesenho de tela */ }
       try{ if(typeof hojeRedesenhar==='function') hojeRedesenhar(); }catch(e){ /* silencioso de propósito: redesenho de tela */ }
       try{ if(typeof hojeAtualizarBadge==='function') hojeAtualizarBadge(); }catch(e){ /* silencioso de propósito: enfeite de menu — falhar não muda dado nenhum */ }
+      // O remédio lançado na recepção sai da fila do alarme de quem está "faltou" — venha a
+      // falta da chamada, do check-in do corpo ou da falta automática (QA da Fase 0). É aqui,
+      // na chamada viva, e não dentro do check-in, de propósito: o check-in fica intocado.
+      try{
+        if(typeof medTirarDosesDeQuemFaltou==='function')
+          Object.keys(dcChamada||{}).forEach(function(k){ if(dcChamada[k]==='faltou') medTirarDosesDeQuemFaltou(k); });
+      }catch(e){ _logFalhaGrav('a fila do remédio de quem faltou (chamada viva)', e); }
     });
   }
   // A HORA em que ele entrou, quando o check-in do corpo do dia já está na memória desta
@@ -35383,9 +35467,13 @@
     return (((r||{}).respostas||{})[tipo])||null;
   }
   // O ESTADO de um assunto. Função pura: recebe o registro, o assunto e o relógio.
-  function vencEstadoTipo(r, tipo, agora){
+  // `deve` (opcional, QA da Fase 0): o que a ficha AINDA deve (vencFichaAindaDeve). Um "Sim,
+  // ficha atualizada" gravado com a ficha devendo não fecha o assunto — senão o cartão
+  // aparecia aberto e o selo, o quadro e as Respostas pendentes diziam "respondido".
+  // Sem `deve`, vale como sempre valeu.
+  function vencEstadoTipo(r, tipo, agora, deve){
     r=r||{};
-    if(r.ficha_atualizada) return 'fechado';
+    if(r.ficha_atualizada && !(Array.isArray(deve) && deve.length)) return 'fechado';
     var rt=vencRespostaDe(r, tipo);
     if(rt){ if(vencRespFecha(rt.v)) return 'fechado'; }
     else if(!r.respostas && vencRespFecha(r.resposta)) return 'fechado';
@@ -35399,8 +35487,21 @@
   // é ela que encerra o cartão, como sempre foi.
   function vencAbertosDe(o, r, agora){
     r=r||{};
+    var deve=vencDeveDe(o, r);
     return vencGrupos(o).map(function(g){ return g.tipo; })
-      .filter(function(t){ return vencEstadoTipo(r, t, agora)!=='fechado'; });
+      .filter(function(t){ return vencEstadoTipo(r, t, agora, deve)!=='fechado'; });
+  }
+  // O que a ficha ainda deve, só quando há um "Sim" gravado (o único caso em que importa).
+  function vencDeveDe(o, r){ return (r && r.ficha_atualizada)?vencFichaAindaDeve(o, r):null; }
+  // O mesmo, para quem só tem a chave e o dia (as Respostas pendentes, o recado da vet): lê
+  // a ficha de AGORA. FILHOt que saiu do cadastro não deve nada aqui.
+  function vencFichaDeveAgora(chave, r, dia){
+    try{
+      var p=prevCorrigePetDe(chave); if(!p) return [];
+      var hoje=(typeof zHojeISO==='function')?zHojeISO():'';
+      var itens=vencItensDe(pelExtra(p)||{}, dia||hoje, vencMargem(), hoje, {incluirSemRegistro:true});
+      return vencFichaAindaDeve({itens:itens}, r);
+    }catch(e){ return []; } /* silencioso de propósito: sem a ficha em memória vale o "Sim" gravado, como sempre valeu */
   }
   // Os assuntos cuja mensagem ainda não saiu.
   function vencFaltaMandarDe(o, r, agora){
@@ -35542,7 +35643,7 @@
       var abertos=vencAbertosDe(o, r, agora);
       if(abertos.length) semResposta++; else respondido++;
       if(vencFaltaMandarDe(o, r, agora).length) aMandar++;
-      if(abertos.some(function(t){ return vencEstadoTipo(r, t, agora)==='cobrar'; })) cobrar++;
+      if(abertos.some(function(t){ return vencEstadoTipo(r, t, agora, vencDeveDe(o, r))==='cobrar'; })) cobrar++;
     });
     return {dia:dia, total:L.length, aMandar:aMandar, semResposta:semResposta,
             cobrar:cobrar, respondido:respondido};
@@ -35607,8 +35708,9 @@
       var abertos=vencAbertosDe(o, r, agora);
       if(!abertos.length){ out.respondido++; return; }
       if(vencFaltaMandarDe(o, r, agora).length) out.aMandar++;
-      if(abertos.some(function(t){ return vencEstadoTipo(r, t, agora)==='cobrar'; })) out.cobrar++;
-      else if(abertos.some(function(t){ return vencEstadoTipo(r, t, agora)==='aguardando'; })) out.aguardando++;
+      var deveC=vencDeveDe(o, r);
+      if(abertos.some(function(t){ return vencEstadoTipo(r, t, agora, deveC)==='cobrar'; })) out.cobrar++;
+      else if(abertos.some(function(t){ return vencEstadoTipo(r, t, agora, deveC)==='aguardando'; })) out.aguardando++;
     });
     return out;
   }
@@ -35799,10 +35901,11 @@
       var doDia=regs[dia]||{};
       Object.keys(doDia).forEach(function(chave){
         var r=doDia[chave]||{};
-        if(r.ficha_atualizada) return;                       // assunto fechado
+        var deveP=r.ficha_atualizada?vencFichaDeveAgora(chave, r, dia):null;
+        if(r.ficha_atualizada && !deveP.length) return;      // assunto fechado (e a ficha em dia)
         var env=r.enviadas||{};
         Object.keys(env).forEach(function(tipo){
-          var st=vencEstadoTipo(r, tipo, agora);
+          var st=vencEstadoTipo(r, tipo, agora, deveP);
           if(st!=='cobrar' && st!=='aguardando') return;      // só o que FOI mandado e não teve resposta
           // O assunto ANTECIPADO tem retrato próprio (itens_ant): os itens dele vencem
           // DEPOIS do dia, e o retrato do dia não os conhece.
@@ -36480,7 +36583,8 @@
     var out=[];
     Object.keys(VENC_REG||{}).forEach(function(ch){
       var r=VENC_REG[ch]||{};
-      if(!r.vet||r.ficha_atualizada) return;
+      if(!r.vet) return;
+      if(r.ficha_atualizada && !vencFichaDeveAgora(ch, r, dia).length) return;
       out.push(Object.assign({chave:ch}, r.vet));
     });
     return out;
@@ -36528,12 +36632,10 @@
    * ================================================================================== */
   // A resposta deixa a ficha como está? Só o "Não quer agora" (e o que não diz nada à
   // ficha: sem data nova, sem lançamento, sem período da veterinária).
-  function vencRespNaoMudaFicha(v){
-    v=String(v||''); if(!v||v==='sem') return false;
-    var d=vencRespDef(v);
-    if(!d) return false;                                     // resposta antiga desconhecida: confere a ficha
-    return d.fecha!==false && !d.ficha && !d.lanca && !d.periodo && !d.vetDia;
-  }
+  // Só o "Não quer agora" — a resposta de recusa, a mesma nas cinco tabelas. Qualquer outra,
+  // inclusive as antigas (o "Nunca fez — quer fazer aqui" de antes de 25/set, que não
+  // lançava nada), confere a ficha (QA da Fase 0).
+  function vencRespNaoMudaFicha(v){ return String(v||'')==='nao'; }
   // Os itens que a ficha AINDA deve — vencidos ou nunca registrados, obrigatórios, fora do
   // assunto em que o tutor recusou. Função pura: recebe o cartão (o) e o registro (r).
   function vencFichaAindaDeve(o, r){
@@ -36567,7 +36669,7 @@
         if(typeof zAlertao==='function') zAlertao('A FICHA AINDA NÃO ESTÁ EM DIA',
           ['A ficha de '+o.nome+' ainda mostra: '+vencJuntar(deve.map(function(x){ return vencFraseItem(x, hojeF); }))+'.',
            podeGravar
-             ? 'Grave a data no quadro que abriu no cartão, logo abaixo dos itens. Com a ficha em dia, o cartão fecha.'
+             ? 'Grave a data no quadro que abriu no cartão, logo abaixo dos itens (os outros itens abrem tocando neles). Com as datas gravadas, toque em "Sim" de novo.'
              : 'Quem grava a data é a recepção, a Supervisão ou a Gestão.',
            'Se o tutor ainda não mandou a data, toque em "Não" — o cartão continua na fila, e ninguém esquece.'],
           {botao:'Entendi'});
@@ -37024,7 +37126,7 @@
     var agoraC=Date.now();
     vencMensagens(o, dia, hoje).forEach(function(m){
       var jaFoi=envMsg[m.tipo];
-      var estado=vencEstadoTipo(r, m.tipo, agoraC);
+      var estado=vencEstadoTipo(r, m.tipo, agoraC, deveF);
       var borda=(estado==='cobrar')?'2px solid #E08856':'1px solid var(--line)';
       h+='<div style="margin-top:11px;padding-top:9px;border-top:'+borda+'">'
         +'<div style="display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-bottom:4px">'
@@ -39164,7 +39266,9 @@
    * lidos (uma vez por dia, por aparelho), e o que ficou "aguardando" continua na tela,
    * com a data da noite, até alguém fazer o check-in daquela noite ou dizer o que houve.
    * ================================================================================== */
-  var PERN_DIAS_ATRAS=3;
+  // 7 dias corridos (QA da Fase 0): com 3, a noite de sexta sumia na terça — e antes disso
+  // depois de um feriado prolongado.
+  var PERN_DIAS_ATRAS=7;
   var PERN_ATRAS=null;          // [{_dia,_chave,...}] ainda aguardando; null = ainda não li
   var PERN_ATRAS_LIDO_EM='';    // o dia (hoje) em que a varredura foi feita
   // Função PURA: recebe {dia:{chave:registro}} e devolve o que ainda espera check-in, dos
@@ -39218,14 +39322,46 @@
   function pernAtrasDe(dia, chave){
     return (PERN_ATRAS||[]).filter(function(r){ return r._dia===dia && r._chave===chave; })[0]||null;
   }
+  /* A NOITE QUE JÁ TEM ESTADIA (QA da Fase 0, 25/set/2026). O check-in feito pela busca
+   * normal (sem o botão da fila) não fecha a fila — e a noite continuaria na tela como "sem
+   * ficha e sem valor", convidando a um SEGUNDO check-in: duas estadias, duas cobranças. A
+   * noite coberta por uma estadia sai da lista. "Cobrir a noite" = entrou até aquela data e
+   * saiu DEPOIS dela (quem saiu naquela manhã não dormiu lá naquela noite). */
+  function estadiaCobreNoite(e, noite){
+    e=e||{};
+    if(String(e.status||'')==='cancelada') return false;
+    var iso=/^\d{4}-\d{2}-\d{2}$/;
+    var ent=String(e.entrada||''), sai=String(e.saida||'');
+    if(!iso.test(ent) || !iso.test(String(noite||''))) return false;
+    if(ent>noite) return false;
+    if(iso.test(sai) && !(sai>noite)) return false;
+    return true;
+  }
+  // Devolve o id da estadia que cobre aquela noite daquele FILHOt, ou ''.
+  function pernEstadiaDaNoite(r){
+    try{
+      var i=pernFichaIndiceDe(r); if(i<0) return '';
+      var pk=pelKey(PELUDINHOS[i]); if(!pk) return '';
+      var T=(typeof EST_TODAS!=='undefined' && EST_TODAS)?EST_TODAS:{};
+      var achou='';
+      Object.keys(T).forEach(function(id){ var e=T[id]||{}; if(!achou && e.refKey===pk && estadiaCobreNoite(e, r._dia)) achou=id; });
+      return achou;
+    }catch(e){ return ''; } /* silencioso de propósito: sem as estadias em memória, a noite continua na lista — e a ação confere de novo */
+  }
+  // O que a tela mostra: as noites que ainda esperam alguém e que nenhuma estadia cobre.
+  function pernAnterioresVisiveis(){
+    if(PERN_ATRAS===null) return null;
+    return PERN_ATRAS.filter(function(r){ return !pernEstadiaDaNoite(r); });
+  }
   function pernAtrasTirar(dia, chave){
     if(PERN_ATRAS) PERN_ATRAS=PERN_ATRAS.filter(function(r){ return !(r._dia===dia && r._chave===chave); });
   }
-  function pernFilaCarregar(dia, aoChegar){
+  function pernFilaCarregar(dia, aoChegar, forcarAtras){
     dia=dia||pernHoje();
     if(!DB){ if(typeof aoChegar==='function') aoChegar(); return Promise.resolve({}); }
-    // Quem lê o dia de hoje lê também as noites que ficaram para trás (uma vez por dia).
-    if(dia===pernHoje()){ try{ pernAtrasCarregar(false); }catch(e){ _logLeituraFalhou('pernoites dos dias anteriores', e); } }
+    // Quem lê o dia de hoje lê também as noites que ficaram para trás. Abrir a tela (Check-in,
+    // mesa, painel) relê: outro aparelho pode ter resolvido a noite (QA da Fase 0).
+    if(dia===pernHoje()){ try{ pernAtrasCarregar(!!forcarAtras); }catch(e){ _logLeituraFalhou('pernoites dos dias anteriores', e); } }
     return DB.ref(pernNo(dia)).once('value').then(function(s){
       PERN_FILA=s.val()||{}; PERN_FILA_DIA=dia; PERN_FILA_LIDO=true;
       try{ pernCartaoRender(); }catch(e){} /* silencioso de propósito: redesenho de tela — falhar não pode derrubar quem chamou */
@@ -39242,7 +39378,7 @@
   function pernFilaGarantir(dia, forcar, aoChegar){
     dia=dia||pernHoje();
     if(!forcar && PERN_FILA_LIDO && PERN_FILA_DIA===dia){ if(typeof aoChegar==='function') aoChegar(); return Promise.resolve(PERN_FILA); }
-    return pernFilaCarregar(dia, aoChegar);
+    return pernFilaCarregar(dia, aoChegar, forcar);
   }
   // A fila do dia que está no cache, em ordem de lançamento. `status` filtra.
   function pernLista(status){
@@ -39262,7 +39398,7 @@
     var esp=viva.filter(function(r){ return String(r.status||'aguardando')==='aguardando'; });
     // `anteriores`: noites de dias passados ainda sem check-in (null = ainda não li).
     return {total:viva.length, semCheckin:esp.length, feitos:viva.length-esp.length,
-            anteriores:(PERN_ATRAS===null)?null:PERN_ATRAS.length};
+            anteriores:(function(){ var v=pernAnterioresVisiveis(); return v===null?null:v.length; })()};
   }
   // Passou da hora de fechar e ainda há pernoite sem check-in? O aviso NÃO depende de alguém
   // abrir a tela certa: ele aparece no Check-in E no Dashboard da Márcia.
@@ -39274,7 +39410,7 @@
   }
   // As noites que ficaram para trás não esperam as 19h: já passaram.
   function pernAnterioresAlertaHTML(){
-    var A=PERN_ATRAS||[]; if(!A.length) return '';
+    var A=pernAnterioresVisiveis()||[]; if(!A.length) return '';
     return '<div class="dc-faltas" style="margin:10px 0;border-color:var(--crm-critico)">'
       +'<strong>Pernoite de dia anterior sem check-in: '
       +escAttr(A.map(function(r){ return pernNomeLimpo(r.nome)+' — '+pernNoiteTexto(r._dia); }).join(', '))+'.</strong>'
@@ -39366,7 +39502,7 @@
   // O bloco das noites que ficaram para trás — ANTES do de hoje: é o mais antigo que pede
   // alguém primeiro.
   function pernAnterioresHTML(){
-    var A=PERN_ATRAS||[]; if(!A.length) return '';
+    var A=pernAnterioresVisiveis()||[]; if(!A.length) return '';
     var h='<div class="card" style="border-left:4px solid var(--crm-critico)">'
       +'<h2 style="font-size:17px">Pernoites de dias anteriores sem check-in ('+A.length+')</h2>'
       +'<div class="hint">A noite já aconteceu e ficou sem ficha e sem valor. O check-in abre com a data daquela noite.</div>'
@@ -39456,9 +39592,55 @@
     }
     return i;
   }
+  /* A NOITE ANTERIOR É CONFERIDA NO BANCO ANTES DE QUALQUER AÇÃO (QA da Fase 0). A lista
+   * deste aparelho pode estar velha: outro aparelho pode ter feito o check-in ou cancelado.
+   * Agir em cima da lista velha fazia a SEGUNDA estadia da mesma noite (duas cobranças) ou
+   * gravava "cancelado" por cima de um check-in feito. Aqui: relê a noite, confere se já há
+   * estadia cobrindo a data e só então segue. `seguir(r)` recebe o registro atual. */
+  function pernConferirNoite(dia, chave, seguir){
+    if(!DB){ if(typeof zAlertao==='function') zAlertao('Sem conexão com o banco agora',
+      ['Não dá para conferir se outro aparelho já resolveu esta noite. Tente de novo em instantes.'],{botao:'Entendi'}); return; }
+    DB.ref(pernNo(dia)+'/'+chave).once('value').then(function(s){
+      var atual=s.val()||null;
+      var st=String((atual&&atual.status)||'aguardando');
+      var r=Object.assign({}, pernAtrasDe(dia, chave)||{}, atual||{}, {_dia:dia, _chave:chave});
+      if(!atual || st!=='aguardando'){
+        pernAtrasTirar(dia, chave);
+        try{ pernCartaoRender(); }catch(e){} /* silencioso de propósito: redesenho de tela — falhar não pode derrubar quem chamou */
+        if(typeof zAlertao==='function') zAlertao('ESTA NOITE JÁ FOI RESOLVIDA',
+          [pernNomeLimpo(r.nome||'')+' — noite de '+pernNoiteTexto(dia)+': '
+            +(st==='checkin_feito'?('o check-in já foi feito'+(atual&&atual.checkin_quem?(' por '+atual.checkin_quem):'')+'.')
+              :(st==='cancelado'?('foi cancelada'+(atual&&atual.cancel_quem?(' por '+atual.cancel_quem):'')+(atual&&atual.cancel_motivo?(' — '+atual.cancel_motivo):'')+'.')
+                :'o lançamento não está mais na fila.')),
+           'Nada foi feito agora. A lista deste aparelho foi atualizada.'],{botao:'Entendi', ok:true});
+        return;
+      }
+      var est=pernEstadiaDaNoite(r);
+      if(est){
+        // Já existe estadia daquela noite (o check-in foi feito pela busca, sem o botão da
+        // fila): a fila fecha apontando para ela, em vez de nascer uma segunda estadia.
+        var up={ status:'checkin_feito', estadiaId:String(est), checkin_quem:'sistema (a estadia já existia)', checkin_ts:Date.now() };
+        DB.ref(pernNo(dia)+'/'+chave).update(up).then(function(){
+          pernAtrasTirar(dia, chave);
+          try{ pernCartaoRender(); }catch(e){} /* silencioso de propósito: redesenho de tela — falhar não pode derrubar quem chamou */
+          try{ if(typeof audit==='function') audit('pernoite-daycare','a noite de '+dia+' de '+pernNomeLimpo(r.nome||'')+' já tinha estadia ('+est+'): fila fechada sem novo check-in',{pet:pernNomeLimpo(r.nome||'')}); }catch(e){} /* silencioso de propósito: o audit() tem bolso próprio e reenvia sozinho */
+        }).catch(function(e){ _logFalhaGrav('fechar a fila da noite que já tinha estadia', e); });
+        if(typeof zAlertao==='function') zAlertao('ESSA NOITE JÁ TEM ESTADIA',
+          ['Já existe uma estadia de '+pernNomeLimpo(r.nome||'')+' cobrindo a noite de '+pernNoiteTexto(dia)+'.',
+           'Não é preciso outro check-in — a pernoite saiu da fila. Se faltar algo, corrija a estadia que já existe.'],{botao:'Entendi', ok:true});
+        return;
+      }
+      seguir(r);
+    }).catch(function(e){
+      _logLeituraFalhou(pernNo(dia)+'/'+chave+' (pernConferirNoite)', e);
+      if(typeof zAlertao==='function') zAlertao('NÃO CONSEGUI CONFERIR ESTA NOITE',
+        ['O erro foi: '+((e&&e.message)||e)+'.','Nada foi feito. Tente de novo em instantes — outro aparelho pode já ter resolvido.'],{botao:'Entendi'});
+    });
+  }
   // `dia` (opcional, Fase 0): a noite de um dia anterior — a entrada é aquela noite.
   function pernFazerCheckin(chave, dia){
     var anterior=!!(dia && dia!==pernHoje());
+    if(anterior && !pernConferido(dia, chave)) return pernConferirNoite(dia, chave, function(){ __pernConferido[dia+'|'+chave]=Date.now(); pernFazerCheckin(chave, dia); });
     var r=anterior?pernAtrasDe(dia, chave):(PERN_FILA||{})[chave]; if(!r) return;
     var i=pernFichaIndiceDe(Object.assign({_chave:chave}, r));
     if(i<0){
@@ -39497,7 +39679,28 @@
     var up={ status:'checkin_feito', estadiaId:String(estadiaId||''),
              checkin_quem:(typeof quemSou==='function'?quemSou():'-'), checkin_ts:Date.now() };
     PERN_CI_PENDENTE=null;
-    return DB.ref(pernNo(dia)+'/'+ch).update(up).then(function(){
+    // Noite de dia anterior: fecha a fila SÓ se ninguém fechou antes (transação). Se outro
+    // aparelho fez o check-in da mesma noite enquanto este preenchia, há DUAS estadias — e
+    // isso é dito na hora, com o que fazer, em vez de trocar em silêncio o id gravado.
+    var anterior=(dia!==pernHoje()), outraEstadia='';
+    var gravar=anterior
+      ? DB.ref(pernNo(dia)+'/'+ch).transaction(function(cur){
+          cur=cur||{};
+          if(String(cur.status||'aguardando')==='checkin_feito' && cur.estadiaId && String(cur.estadiaId)!==up.estadiaId){
+            outraEstadia=String(cur.estadiaId); return;                               // desiste
+          }
+          return Object.assign({}, cur, up);
+        }).then(function(res){
+          if(res && res.committed) return true;
+          if(typeof zAlertao==='function') zAlertao('ESTA NOITE FICOU COM DUAS ESTADIAS',
+            ['Outro aparelho fez o check-in da mesma noite ('+pernNoiteTexto(dia)+') enquanto você preenchia.',
+             'A sua estadia foi salva, mas a noite já estava ligada à estadia '+outraEstadia+'.',
+             'Avise a Gestão para cancelar uma das duas — senão a mesma noite é cobrada duas vezes.'],{botao:'Vou avisar'});
+          try{ if(typeof audit==='function') audit('pernoite-daycare','DUAS estadias para a noite de '+dia+': '+outraEstadia+' e '+up.estadiaId,{}); }catch(e){} /* silencioso de propósito: o audit() tem bolso próprio e reenvia sozinho */
+          return true;
+        })
+      : DB.ref(pernNo(dia)+'/'+ch).update(up);
+    return gravar.then(function(){
       if(PERN_FILA_DIA===dia && PERN_FILA[ch]) Object.assign(PERN_FILA[ch], up);
       pernAtrasTirar(dia, ch);
       try{ if(typeof audit==='function') audit('pernoite-daycare','check-in de pernoite feito — estadia '+up.estadiaId+(dia!==pernHoje()?(' (noite de '+dia+')'):''),{}); }catch(e){} /* silencioso de propósito: o audit() tem bolso próprio e reenvia sozinho */
@@ -39516,8 +39719,17 @@
   }
   // ---- o tutor veio buscar ----------------------------------------------------------
   // Cancelar é decisão, não acidente: pede o motivo escrito e grava QUEM cancelou.
+  // A conferência vale por 1 minuto: o bastante para o toque seguir, curto demais para uma
+  // lista velha voltar a valer.
+  var __pernConferido={};
+  function pernConferido(dia, chave){
+    var t=__pernConferido[dia+'|'+chave]||0;
+    if(Date.now()-t<60000){ delete __pernConferido[dia+'|'+chave]; return true; }
+    return false;
+  }
   function pernCancelar(chave, diaOpc){
     var anterior=!!(diaOpc && diaOpc!==pernHoje());
+    if(anterior && !pernConferido(diaOpc, chave)) return pernConferirNoite(diaOpc, chave, function(){ __pernConferido[diaOpc+'|'+chave]=Date.now(); pernCancelar(chave, diaOpc); });
     var r=anterior?pernAtrasDe(diaOpc, chave):(PERN_FILA||{})[chave]; if(!r) return;
     if(typeof zTexto!=='function'){ return; }
     zTexto('Cancelar a pernoite de '+pernNomeLimpo(r.nome||'')+'?',
@@ -39531,13 +39743,28 @@
       var dia=anterior?diaOpc:(PERN_FILA_DIA||pernHoje());
       var up={ status:'cancelado', cancel_motivo:String(motivo||'').trim(),
                cancel_quem:(typeof quemSou==='function'?quemSou():'-'), cancel_ts:Date.now() };
-      DB.ref(pernNo(dia)+'/'+chave).update(up).then(function(){
+      // Noite de dia anterior: grava SÓ se ela ainda estiver esperando (transação). Entre a
+      // conferência e o motivo digitado, outro aparelho pode ter feito o check-in — e o
+      // "cancelado" não pode cair por cima de uma noite que tem ficha e valor.
+      var gravar=anterior
+        ? DB.ref(pernNo(dia)+'/'+chave).transaction(function(cur){
+            if(!cur || String(cur.status||'aguardando')!=='aguardando') return;   // desiste
+            return Object.assign({}, cur, up);
+          }).then(function(res){
+            if(res && res.committed) return true;
+            pernAtrasTirar(dia, chave); pernCartaoRender();
+            if(typeof zAlertao==='function') zAlertao('ESTA NOITE JÁ FOI RESOLVIDA',
+              ['Outro aparelho resolveu a noite de '+pernNoiteTexto(dia)+' enquanto você escrevia. Nada foi cancelado.'],{botao:'Entendi', ok:true});
+            throw {__desistiu:true};
+          })
+        : DB.ref(pernNo(dia)+'/'+chave).update(up);
+      gravar.then(function(){
         if(anterior) pernAtrasTirar(dia, chave);
         else if(PERN_FILA[chave]) Object.assign(PERN_FILA[chave], up);
         try{ if(typeof audit==='function') audit('pernoite-daycare','cancelou a pernoite de '+pernNomeLimpo(r.nome||'')+' — '+up.cancel_motivo,{pet:pernNomeLimpo(r.nome||'')}); }catch(e){} /* silencioso de propósito: o audit() tem bolso próprio e reenvia sozinho */
         pernCartaoRender();
         try{ if(typeof renderDash==='function') renderDash(); }catch(e){} /* silencioso de propósito: redesenho de tela — falhar não pode derrubar quem chamou */
-      }).catch(function(e){ alert('Não consegui cancelar: '+((e&&e.message)||e)+'\n\nNada foi mudado. Tente de novo em instantes.'); });
+      }).catch(function(e){ if(e&&e.__desistiu) return; alert('Não consegui cancelar: '+((e&&e.message)||e)+'\n\nNada foi mudado. Tente de novo em instantes.'); });
     });
   }
   // ===== QUEM AINDA NÃO TEM MICROCHIP — Adriana, 19/ago/2026 =====================
@@ -40792,7 +41019,11 @@
     try{
       const u=_sessao();
       const dia=_audKey();
-      const rec=_audNormalizar(Object.assign({ ts:Date.now(), hora:horaAgora(), quem:(u.nome||'-'), role:(u.role||'-'), acao:acao||'', detalhe:(detalhe==null?'':String(detalhe)) }, meta||{}));
+      // Campo `undefined` no meta não existe no banco (o SDK recusa a entrada inteira) e,
+      // copiado por cima, apagava o autor: o check-in novo passa `quem: undefined` e o
+      // rastro saía sem dizer quem fez (QA da Fase 0). Só entra o que tem valor.
+      const _m={}; Object.keys(meta||{}).forEach(function(k){ if(meta[k]!==undefined) _m[k]=meta[k]; });
+      const rec=_audNormalizar(Object.assign({ ts:Date.now(), hora:horaAgora(), quem:(u.nome||'-'), role:(u.role||'-'), acao:acao||'', detalhe:(detalhe==null?'':String(detalhe)) }, _m));
       if(!DB){ _audGuardarNoBolso(dia, rec, 'banco reconectando'); return; }
       DB.ref('daycare/auditoria/'+dia).push(rec).catch(function(e){ _audGuardarNoBolso(dia, rec, (e&&e.message)||String(e)); });
     }catch(e){
@@ -50112,7 +50343,7 @@
     if(C===null) return h+poSemLeituraHTML('as pernoites lançadas hoje')
       +poIrHTML('checkin','Abrir o Check-in da hospedagem')+'</article>';
     // As noites de dias anteriores sem check-in vêm primeiro (Fase 0, 25/set/2026).
-    var ANT=(typeof PERN_ATRAS!=='undefined' && PERN_ATRAS)?PERN_ATRAS:[];
+    var ANT=((typeof pernAnterioresVisiveis==='function')?pernAnterioresVisiveis():null)||[];
     if(ANT.length){
       h+='<div class="pm-lista">';
       ANT.slice(0,4).forEach(function(r){

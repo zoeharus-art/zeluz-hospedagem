@@ -58,9 +58,13 @@ async function aparelhoLiberado(id) {
   return !!s.val();
 }
 
-const porIp = L.criarLimitador({ max: 5, janelaMs: 10 * 60 * 1000, bloqueioMs: 15 * 60 * 1000 });
-const geral = L.criarLimitador({ max: 60, janelaMs: 10 * 60 * 1000, bloqueioMs: 10 * 60 * 1000 });
-setInterval(() => { const t = Date.now(); porIp.limpar(t); geral.limpar(t); }, 5 * 60 * 1000).unref();
+const porAparelho = L.criarLimitador({ max: 5, janelaMs: 10 * 60 * 1000, bloqueioMs: 15 * 60 * 1000 });
+const porIp = L.criarLimitador({ max: 20, janelaMs: 10 * 60 * 1000, bloqueioMs: 15 * 60 * 1000 });
+const geral = L.criarLimitador({ max: 150, janelaMs: 10 * 60 * 1000, bloqueioMs: 5 * 60 * 1000 });
+setInterval(() => { const t = Date.now(); porAparelho.limpar(t); porIp.limpar(t); geral.limpar(t); }, 5 * 60 * 1000).unref();
+// O sal do resumo do endereço nasce a cada partida do serviço e nunca sai da memória: sem
+// ele, o resumo de um IPv4 não se desfaz (são só 4 bilhões de endereços para testar).
+const SAL_ORIGEM = crypto.randomBytes(16);
 
 // O rastro de cada tentativa — SEM a senha. O endereço vai resumido (impressão digital curta):
 // dá para ver que foi o mesmo lugar tentando, sem guardar o endereço de ninguém.
@@ -71,7 +75,7 @@ function registrar(ok, motivo, pedido, perfil) {
   const reg = {
     ts: agora.getTime(), ok: !!ok, motivo: String(motivo || ''),
     aparelho: String(pedido.aparelho || '').slice(0, 80),
-    origem: crypto.createHash('sha256').update(String(pedido.ip || '-')).digest('hex').slice(0, 12),
+    origem: crypto.createHmac('sha256', SAL_ORIGEM).update(String(pedido.ip || '-')).digest('hex').slice(0, 12),
   };
   if (perfil) { reg.nome = String(perfil.nome || ''); reg.role = String(perfil.role || ''); }
   return db.ref('auaulandia/logins-servidor/' + dia).push(reg)
@@ -79,12 +83,13 @@ function registrar(ok, motivo, pedido, perfil) {
 }
 
 function ipDe(req) {
-  // Atrás do nginx, o endereço de verdade vem no cabeçalho — e só se confia nele quando a
-  // conexão veio do próprio servidor (o nginx).
+  // Atrás do nginx, o endereço de verdade vem no X-Real-IP, que o NGINX escreve ($remote_addr)
+  // — e só se confia nele quando a conexão veio do próprio servidor. O X-Forwarded-For não:
+  // o primeiro valor dele é escrito por quem pede, e trocar de "endereço" seria de graça.
   const direto = String(req.socket.remoteAddress || '');
   const local = direto === '127.0.0.1' || direto === '::1' || direto === '::ffff:127.0.0.1';
-  const xff = String(req.headers['x-forwarded-for'] || '').split(',')[0].trim();
-  return (local && xff) ? xff : direto;
+  const real = String(req.headers['x-real-ip'] || '').trim();
+  return (local && real) ? real : direto;
 }
 function cors(req, res) {
   const o = String(req.headers.origin || '');
@@ -121,13 +126,17 @@ const servidor = http.createServer((req, res) => {
       const r = await L.decidir(pedido, {
         agora: () => Date.now(),
         tabela: async () => L.montarTabela(fixas(), await equipe()),
-        aparelhoLiberado, porIp, geral,
+        aparelhoLiberado, porAparelho, porIp, geral,
       });
       if (r.status === 200) {
         r.corpo.token = await admin.auth().createCustomToken(L.uidDoPerfil(r.perfil), L.claimsDoPerfil(r.perfil));
       }
-      registrar(r.status === 200, r.corpo.erro || (r.corpo.aparelhoNovo ? 'aparelho-novo' : 'entrou'), pedido,
-        (r.status === 200 || r.status === 403) ? r.perfil : null);
+      // Pedido barrado pelo freio (429) ou torto (400) não grava nada: uma enxurrada de
+      // pedidos não pode virar uma enxurrada de gravações no banco.
+      if (r.status !== 429 && r.status !== 400) {
+        registrar(r.status === 200, r.corpo.erro || (r.corpo.aparelhoNovo ? 'aparelho-novo' : 'entrou'), pedido,
+          (r.status === 200 || r.status === 403) ? r.perfil : null);
+      }
       return responder(res, r.status, r.corpo);
     } catch (e) {
       // Falha do servidor NÃO vira "senha errada": o celular precisa saber que o problema é

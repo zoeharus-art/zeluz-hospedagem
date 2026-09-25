@@ -36,8 +36,9 @@ function deps(relogio) {
     agora: () => t.v,
     tabela: async () => L.montarTabela(FIXAS, EQUIPE),
     aparelhoLiberado: async (id) => id === APARELHO_OK,
-    porIp: L.criarLimitador({ max: 5, janelaMs: 600000, bloqueioMs: 900000 }),
-    geral: L.criarLimitador({ max: 60, janelaMs: 600000, bloqueioMs: 600000 }),
+    porAparelho: L.criarLimitador({ max: 5, janelaMs: 600000, bloqueioMs: 900000 }),
+    porIp: L.criarLimitador({ max: 20, janelaMs: 600000, bloqueioMs: 900000 }),
+    geral: L.criarLimitador({ max: 150, janelaMs: 600000, bloqueioMs: 300000 }),
   };
 }
 
@@ -66,10 +67,11 @@ function deps(relogio) {
     assert.deepStrictEqual(Object.keys(r.corpo).sort(), ['erro', 'ok']);
   });
 
-  await prova('equipe em aparelho NÃO liberado: 403 (a trava de aparelho de 05/ago vale no servidor)', async () => {
+  await prova('equipe em aparelho NÃO liberado: 403, SEM o nome de quem é a senha', async () => {
     const r = await L.decidir({ pin: '4444', aparelho: APARELHO_NOVO, ip: '10.0.0.1' }, deps());
     assert.strictEqual(r.status, 403);
     assert.strictEqual(r.corpo.erro, 'aparelho');
+    assert.ok(!('nome' in r.corpo));
   });
 
   await prova('Gestão em aparelho novo: entra, marcada como aparelho novo (para poder liberá-lo)', async () => {
@@ -82,34 +84,39 @@ function deps(relogio) {
     const d = deps();
     assert.strictEqual((await L.decidir({ pin: '12a4', aparelho: APARELHO_OK, ip: 'x' }, d)).status, 400);
     assert.strictEqual((await L.decidir({ pin: '4444', aparelho: '', ip: 'x' }, d)).status, 400);
-    assert.strictEqual(d.porIp.tamanho(), 0);
+    assert.strictEqual(d.porIp.tamanho() + d.porAparelho.tamanho(), 0);
   });
 
-  await prova('5 erros do mesmo endereço em 10 min: o 6º pedido espera — até com a senha certa', async () => {
+  await prova('5 erros do MESMO aparelho: ele espera 15 min — até com a senha certa; o celular ao lado segue', async () => {
     const d = deps();
-    for (let i = 0; i < 5; i++) await L.decidir({ pin: '900' + i, aparelho: APARELHO_OK, ip: '10.9.9.9' }, d);
-    const r = await L.decidir({ pin: '4444', aparelho: APARELHO_OK, ip: '10.9.9.9' }, d);
+    for (let i = 0; i < 5; i++) await L.decidir({ pin: '900' + i, aparelho: APARELHO_OK, ip: 'loja' }, d);
+    const r = await L.decidir({ pin: '4444', aparelho: APARELHO_OK, ip: 'loja' }, d);
     assert.strictEqual(r.status, 429);
     assert.ok(r.corpo.esperaSeg > 0);
-    // outro endereço segue entrando
-    assert.strictEqual((await L.decidir({ pin: '4444', aparelho: APARELHO_OK, ip: '10.1.1.1' }, d)).status, 200);
-    // passados 15 minutos, o endereço volta
+    // a loja inteira sai por UM endereço: o outro celular da recepção continua entrando
+    assert.strictEqual((await L.decidir({ pin: '2222', aparelho: 'outro-celular-da-loja', ip: 'loja' }, d)).status, 200);
     d.t.v += 15 * 60 * 1000 + 1;
-    assert.strictEqual((await L.decidir({ pin: '4444', aparelho: APARELHO_OK, ip: '10.9.9.9' }, d)).status, 200);
+    assert.strictEqual((await L.decidir({ pin: '4444', aparelho: APARELHO_OK, ip: 'loja' }, d)).status, 200);
   });
 
-  await prova('ataque espalhado (60 erros de endereços diferentes): o freio geral segura todo mundo', async () => {
+  await prova('trocar o id do aparelho não adianta: 20 erros do mesmo endereço param o endereço', async () => {
     const d = deps();
-    for (let i = 0; i < 60; i++) await L.decidir({ pin: String(7000 + i), aparelho: APARELHO_OK, ip: 'ip-' + i }, d);
-    const r = await L.decidir({ pin: '4444', aparelho: APARELHO_OK, ip: 'ip-novo' }, d);
-    assert.strictEqual(r.status, 429);
+    for (let i = 0; i < 20; i++) await L.decidir({ pin: String(7000 + i), aparelho: 'falso-' + i + '-xxxxx', ip: 'robo' }, d);
+    assert.strictEqual((await L.decidir({ pin: '4444', aparelho: APARELHO_OK, ip: 'robo' }, d)).status, 429);
   });
 
-  await prova('acertar a senha zera os erros daquele endereço', async () => {
+  await prova('ataque espalhado (150 erros de endereços diferentes): o freio geral segura', async () => {
+    const d = deps();
+    for (let i = 0; i < 150; i++) await L.decidir({ pin: String(7000 + i), aparelho: APARELHO_OK, ip: 'ip-' + i }, d);
+    assert.strictEqual((await L.decidir({ pin: '4444', aparelho: APARELHO_OK, ip: 'ip-novo' }, d)).status, 429);
+  });
+
+  await prova('acertar NÃO zera os erros: quem tem um PIN não alterna erros e acertos para testar os outros', async () => {
     const d = deps();
     for (let i = 0; i < 4; i++) await L.decidir({ pin: '900' + i, aparelho: APARELHO_OK, ip: 'ip-a' }, d);
     assert.strictEqual((await L.decidir({ pin: '4444', aparelho: APARELHO_OK, ip: 'ip-a' }, d)).status, 200);
-    assert.strictEqual((await L.decidir({ pin: '9005', aparelho: APARELHO_OK, ip: 'ip-a' }, d)).status, 401, 'o 1º erro depois do acerto não bloqueia');
+    assert.strictEqual((await L.decidir({ pin: '9005', aparelho: APARELHO_OK, ip: 'ip-a' }, d)).status, 401);
+    assert.strictEqual((await L.decidir({ pin: '4444', aparelho: APARELHO_OK, ip: 'ip-a' }, d)).status, 429, 'o 5º erro trava, com acerto no meio');
   });
 
   await prova('o token leva só papel, nome, id e a marca da Diretoria; o uid é estável por pessoa', () => {
