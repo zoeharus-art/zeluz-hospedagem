@@ -106,14 +106,16 @@ Cartão marcado "atualizado" antes desta versão e com a ficha ainda devendo **v
 | O quê | Como |
 |---|---|
 | Quando | toda vez que uma data de prevenção é gravada na ficha, de qualquer tela (quadro do cartão, aba Prevenção, blocos da ficha, "Vence em" digitado), e só depois de a gravação dar certo. Lançamentos do dia não grava a ficha e, por isso, não fecha nada |
-| Dias considerados | antes de fechar, o aparelho relê do banco os dias de conversa (30 dias para trás e 21 para frente), com a mesma trava de 2 minutos da Mesa e de Hoje na Zêluz. Assim fecha também no aparelho que só abriu a Prevenção |
+| Dias considerados | antes de fechar, o aparelho relê do banco os dias de conversa (30 dias para trás e 21 para frente), com a mesma trava de 2 minutos da Mesa e de Hoje na Zêluz. Se essa leitura já estiver em curso (a Mesa pediu), espera ela chegar. Assim fecha também no aparelho que só abriu a Prevenção e no dia que está aberto em Vencimentos desde cedo |
+| Duas gravações seguidas | vale a data mais nova de cada campo: gravar e, logo em seguida, corrigir não fecha pela data que foi desfeita |
 | Onde fica registrado | no mesmo registro da conversa: `daycare/vencimentos/{dia}/{chave}/fechados/{assunto}` = quem, quando e `via: ficha`. Vale para todos os dias em que houve conversa sobre aquele assunto |
 | O que fecha | só o assunto que **foi conversado** com o tutor (mandado, respondido, cobrado ou tentado) e que não tem mais item dele no cartão. A pergunta "fazer hoje?" do mesmo assunto fecha junto |
 | O que continua aberto | todo assunto com item ainda no cartão (a vacina continua sendo cobrada) e o assunto que ainda nem foi mandado |
-| A pergunta "fazer hoje?" | tem janela própria: vale até a próxima vinda (mais a folga de Configurações). Enquanto o item ainda estiver nessa janela, ela **não** fecha, mesmo que o cartão do dia tenha esvaziado. Em semana de feriado isso importa (ex.: 05/10, ele só volta em 19/10). A mesma janela vale para o fechamento pelo quadro |
+| A pergunta "fazer hoje?" | tem janela própria: vale até a próxima vinda (mais a folga de Configurações). Enquanto o item que **ela pergunta** ainda estiver nessa janela, o assunto dela **não** fecha, mesmo que o cartão do dia tenha esvaziado. Em semana de feriado isso importa (ex.: 05/10, ele só volta em 19/10). A régua é a mesma da própria pergunta (`hojeAntecipar`): só segura o assunto perguntado e só o que ela cobre (check-up e exame de fezes, por exemplo, não). A mesma janela vale para o fechamento pelo quadro. Quando a mensagem do dia e a pergunta são do mesmo assunto, ele inteiro fica aberto até o item da pergunta ser gravado, porque o fechamento é por assunto |
 | Data apagada | apagar a data não é resolver: o item que virou "em aberto" segura o assunto que foi conversado |
 | Reabre | se a data for corrigida para trás (gravou no FILHOt errado e desfez), o assunto que **a ficha** fechou volta a ser cobrado. O que o tutor respondeu não é tocado |
-| Se o fechamento automático falhar | fica no log de falhas, sem alerta para quem salvou a ficha (a ficha foi salva) |
+| Se o fechamento automático falhar | fica no log de falhas, sem alerta para quem salvou a ficha (a ficha foi salva). Vale também para o fechamento pelo quadro |
+| Registro antigo sem o retrato dos itens | o que nunca foi registrado na ficha segura o assunto de base (não fecha). Falha para o lado seguro e sai da faixa de 30 dias sozinho |
 | Em todas as telas | cartão de Vencimentos, calendário, contagens, Respostas pendentes, Quem chamar hoje, Hoje na Zêluz e aba Com o tutor, que mostra "**resolvido na ficha** (quem, quando)" |
 | Recado da veterinária | sai quando a vacina foi resolvida na ficha. Quando só o "em aberto" fechou (por exemplo, com a data velha da carteirinha) e a vacina ainda deve, o recado **fica** |
 
@@ -302,7 +304,7 @@ O saldo de reposição não muda ao marcar: o crédito só sai quando ele vem. A
 ### Provas
 
 Todas rodam sem rede e sem dado de cliente:
-- `node tests/fase0-ciclo-fechado.test.js`: 105 provas (com os cenários A, B, D, F, G, H, I e J do fechamento pelo quadro e o fechamento por assunto, incluindo os achados do QA8);
+- `node tests/fase0-ciclo-fechado.test.js`: 107 provas (com os cenários A, B, D, F, G, H, I, J e K do fechamento pelo quadro e o fechamento por assunto, incluindo os achados do QA8 e do QA9);
 - `node tests/servidor-senha.test.js`: 11 provas.
 
 **Harness completo** (`node tests/harness.js`). Ele precisa do retrato da VPS, que não é acessível daqui. Por isso rodou com um **retrato sintético**, só numa cópia, com o bloco das provas de dado real desligado. O mesmo retrato foi usado nas duas versões:

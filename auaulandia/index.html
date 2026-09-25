@@ -22690,10 +22690,9 @@
       var itensN=vencItensDe(exN, dia, vencMargem(), hoje, {incluirSemRegistro:true});
       // QA8: a pergunta "fazer hoje?" tem janela própria (até a próxima vinda, + folga).
       try{
-        var _ant=['enviadas','respostas','cobrancas','tentativas'].some(function(c){ return Object.keys(r[c]||{}).some(vencEhAntecipado); });
-        var _prox=_ant?proximaVindaDe(p, dia):null;
-        var _teto=_prox?addDiasISO(_prox, hojeFolgaAntecipar()-1):'';
-        if(_teto) itensN=itensN.concat(vencItensDe(exN, _teto, 0, hoje)||[]);
+        var _antT={};
+        ['enviadas','respostas','cobrancas','tentativas'].forEach(function(c){ Object.keys(r[c]||{}).forEach(function(t){ if(vencEhAntecipado(t)) _antT[vencTipoBase(t)]=1; }); });
+        if(Object.keys(_antT).length) itensN=itensN.concat(((hojeAntecipar(exN, p, dia, r)||{}).itens||[]).filter(function(x){ return _antT[vencTipoDoItemObj(x)]; }));
       }catch(e){ return; } /* silencioso de propósito: na dúvida não fecha */
       var resps=r.respostas||{}, recusou={};
       Object.keys(resps).forEach(function(t){ if(vencRespNaoMudaFicha((resps[t]||{}).v)) recusou[vencTipoBase(t)]=1; });
@@ -22702,7 +22701,7 @@
       var nome=((typeof pelNome==='function')?pelNome(p):'')||(p&&p.n)||'';
       vencGravar(chave, {ficha_atualizada:{quem:quem, ts:Date.now(), via:'quadro'}, ficha_falta:null},
         'com a última data gravada pelo quadro, nada mais a combinar com o tutor de '+nome+' — o assunto fechou (dia '+dia+')',
-        {nome:nome, tutor:((typeof pelGet==='function')?pelGet(p,'tutor'):'')||(p&&p.tutor)||'', itens:[]}, dia, true);
+        {nome:nome, tutor:((typeof pelGet==='function')?pelGet(p,'tutor'):'')||(p&&p.tutor)||'', itens:[], silencioso:true}, dia, true);
     });
   }
   function prevEdicaoHTML(o){
@@ -36613,21 +36612,19 @@
     return Object.keys(conv).filter(function(t){ return !ja[t] && !tem[t]; });
   }
   // Os assuntos que ainda TÊM item: o cartão do dia e, quando houve a pergunta "fazer hoje?",
-  // a janela dela (até a próxima vinda, + folga) — QA8. Data apagada não resolve: o item que
+  // o que ELA pergunta (a mesma régua de hojeAntecipar, só dos assuntos perguntados) — QA8/QA9. Data apagada não resolve: o item que
   // virou "em aberto" segura o assunto em que foi conversado. null = não sei (não fecha nada).
   function vencAssuntosComItem(ex, r, dia, hoje, p){
     r=r||{};
     var itens=[];
     try{
       itens=vencItensDe(ex||{}, dia, vencMargem(), hoje, {incluirSemRegistro:true})||[];
-      var temAnt=false;
+      var antT={};
       ['enviadas','respostas','cobrancas','tentativas'].forEach(function(c){
-        Object.keys(r[c]||{}).forEach(function(t){ if(vencEhAntecipado(t)) temAnt=true; });
+        Object.keys(r[c]||{}).forEach(function(t){ if(vencEhAntecipado(t)) antT[vencTipoBase(t)]=1; });
       });
-      if(temAnt && p && typeof proximaVindaDe==='function'){
-        var prox=proximaVindaDe(p, dia);
-        var teto=prox?addDiasISO(prox, hojeFolgaAntecipar()-1):'';
-        if(teto) itens=itens.concat(vencItensDe(ex||{}, teto, 0, hoje)||[]);
+      if(Object.keys(antT).length && p && typeof hojeAntecipar==='function'){
+        ((hojeAntecipar(ex||{}, p, dia, r)||{}).itens||[]).forEach(function(x){ if(antT[vencTipoDoItemObj(x)]) itens.push(x); });
       }
     }catch(e){ return null; } /* silencioso de propósito: ficha estranha não fecha nada */
     var snapK={};
@@ -36655,16 +36652,32 @@
     if(!DB || !p) return;
     // QA8: a varredura pode não existir neste aparelho (só abriu a Prevenção) ou estar velha
     // (a conversa nasceu depois em outro aparelho). A leitura tem trava própria de 2 min.
-    var pr=null; try{ pr=(typeof vencPendCarregar==='function')?vencPendCarregar():null; }catch(e){ pr=null; } /* silencioso de propósito: sem a leitura vale a memória */
-    if(pr && typeof pr.then==='function') pr.then(function(){ vencFecharAssuntosFazer(p, patch); }, function(){ vencFecharAssuntosFazer(p, patch); });
-    else vencFecharAssuntosFazer(p, patch);
+    var k=(typeof dcKey==='function')?dcKey(p.n, p.tutor):''; if(!k) return;
+    // QA9: duas gravações seguidas — vale a data MAIS NOVA de cada campo, não a da 1ª.
+    VENC_FECHA_PATCH[k]=Object.assign(VENC_FECHA_PATCH[k]||{}, patch||{});
+    var fazer=function(){ var pt=VENC_FECHA_PATCH[k]; delete VENC_FECHA_PATCH[k]; if(pt) vencFecharAssuntosFazer(p, pt); };
+    var tent=0;
+    var ir=function(){
+      // QA9: leitura já em curso (a Mesa pediu): espera ela chegar em vez de fechar com a memória vazia.
+      if(typeof VENC_PEND_LENDO!=='undefined' && VENC_PEND_LENDO && tent++<50){ setTimeout(ir, 300); return; }
+      var pr=null; try{ pr=(typeof vencPendCarregar==='function')?vencPendCarregar():null; }catch(e){ pr=null; } /* silencioso de propósito: sem a leitura vale a memória */
+      if(pr && typeof pr.then==='function') pr.then(fazer, fazer); else fazer();
+    };
+    ir();
   }
+  var VENC_FECHA_PATCH={};
   function vencFecharAssuntosFazer(p, patch){
     if(!DB || !p) return;
     var chave=(typeof dcKey==='function')?dcKey(p.n, p.tutor):''; if(!chave) return;
     var hoje=(typeof zHojeISO==='function')?zHojeISO():'';
     var ex=Object.assign({}, ((typeof pelExtra==='function')?pelExtra(p):{})||{}, patch||{});
     var dias={};
+    // QA9: o dia da tela (VENC_REG) é lido uma vez só; a varredura acabou de ser relida.
+    // Só vale a da varredura quando ela é MAIS NOVA que a leitura da tela (a mesma régua da
+    // lista de contatos): a tela aberta depois da varredura já tem o registro mais fresco.
+    if(VENC_REG && VENC_REG_DIA && VENC_PEND && (VENC_PEND[VENC_REG_DIA]||{})[chave]
+       && VENC_PEND_QUANDO>=VENC_REG_QUANDO)
+      VENC_REG[chave]=Object.assign({}, VENC_PEND[VENC_REG_DIA][chave]);
     Object.keys(VENC_PEND||{}).forEach(function(d){ if((VENC_PEND[d]||{})[chave]) dias[d]=1; });
     if(VENC_REG && VENC_REG_DIA && VENC_REG[chave]) dias[VENC_REG_DIA]=1;
     var quem=(typeof quemSou==='function'?quemSou():'-');
