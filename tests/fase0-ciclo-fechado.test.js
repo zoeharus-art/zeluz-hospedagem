@@ -777,12 +777,13 @@ prova('a mensagem do atrasado diz cada item com a data dele e pede para fazer ho
     assert.ok(/^Olá, Ana, tudo bem\?/.test(m), m);
     assert.ok(m.indexOf('Aproveitando que a Mel está conosco hoje: o carrapaticida venceu em 01/09 e a coleira') > 0, m);
     assert.ok(/vence em 27\/09\./.test(m), 'o item que ainda não venceu não finge estar atrasado: ' + m);
-    assert.ok(/O prazo já chegou/.test(m), m);
+    assert.ok(/O ideal é aproveitar e fazer hoje mesmo\. Podemos\?/.test(m), m);
+    assert.ok(!/O prazo já chegou/.test(m), 'mensagem mista não generaliza o prazo (QA)');
     const f = run('hojeFraseAntecipar(' + o + ", {itens:" + o + ".itens}, '2026-09-24')");
     assert.ok(/— ela está aqui hoje: fazer hoje\?$/.test(f), f);
     // o que só vence DEPOIS continua com a pergunta de antes (antecipar)
     const m2 = run("hojeMsgAntecipar({nome:'Mel', tutor:'Ana', sexo:'F', itens:[{k:'ecto_p', nome:'Carrapaticida', vence:'2026-09-26', atrasado:false}]}, 'antip', '2026-09-24')");
-    assert.ok(/Podemos fazer hoje de uma vez\?/.test(m2) && !/O prazo já chegou/.test(m2), m2);
+    assert.ok(/Podemos fazer hoje de uma vez\?/.test(m2) && !/O ideal é aproveitar/.test(m2), m2);
   } finally { run(ATRAS_VOLTA); }
 });
 prova('"Mandar no WhatsApp" direto (sem abrir a dobra) abre a conversa e marca que saiu', () => {
@@ -849,7 +850,7 @@ prova('o cartão do próximo dia avisa que HOJE o assunto já foi perguntado (e 
   try {
     assert.ok(/já foi perguntado ao tutor/.test(run("vencJaPerguntadoHojeHTML('mel__ana','antip','2026-09-25','2026-09-24')")));
     assert.strictEqual(run("vencJaPerguntadoHoje('thor__bia','antip','2026-09-25','2026-09-24')"), null);
-    assert.strictEqual(run("vencJaPerguntadoHoje('mel__ana','antip','2026-09-24','2026-09-24')"), null, 'no próprio dia não há aviso');
+    assert.ok(run("vencJaPerguntadoHoje('mel__ana','antip','2026-09-24','2026-09-24')"), 'QA M1 — o cartão do PRÓPRIO dia também avisa');
   } finally { run(CT_VOLTA); }
 });
 prova('"Mandar no WhatsApp" do próximo dia grava no PRÓXIMO DIA — não no dia que a tela de Vencimentos tem aberto', () => {
@@ -924,6 +925,76 @@ prova('sem as leituras em mão, a ficha única diz "não li" — nunca "nada"', 
     assert.deepStrictEqual(d.lido, { conversas: false, pendencias: false });
     assert.strictEqual(d.conversas.length + d.pendencias.length, 0);
   } finally { run('VENC_PEND=__bk3.vp; PEND_ABERTAS=__bk3.pa;'); }
+});
+
+// ================================================================== QA da 5ª rodada (25/set)
+console.log('\nQA da 5ª rodada — Quem chamar hoje, WhatsApp e Turma');
+prova('QA A2 — gravar relê o mapa do banco: o "Mandei" da vacina feito em outro aparelho não some', () => {
+  // O banco já tem a vacina (outro aparelho); a memória deste aparelho não sabe.
+  const r = JSON.parse(JSON.stringify(run(`vencMesclarMapa({vacina:{quem:'A', ts:10}}, {}, {antip:{quem:'B', ts:20}})`)));
+  assert.deepStrictEqual(Object.keys(r).sort(), ['antip', 'vacina']);
+  // desfazer (o assunto sai do mapa novo) continua tirando só ele
+  const d = JSON.parse(JSON.stringify(run(`vencMesclarMapa({vacina:{v:'sim'}, antip:{v:'nao'}}, {vacina:{v:'sim'}, antip:{v:'nao'}}, {vacina:{v:'sim'}})`)));
+  assert.deepStrictEqual(Object.keys(d), ['vacina']);
+  // o que este aparelho não mexeu fica como o banco diz (mesmo que a memória esteja velha)
+  const v = JSON.parse(JSON.stringify(run(`vencMesclarMapa({vacina:{v:'sim', ts:9}}, {vacina:{v:'nao', ts:1}}, {vacina:{v:'nao', ts:1}, antip:{v:'x'}})`)));
+  assert.strictEqual(v.vacina.v, 'sim');
+});
+provaAsync('QA A2 — vencGravar grava o mapa relido do banco somado ao assunto deste toque', async () => {
+  run(`__bk5={db:DB, vr:VENC_REG, vrd:VENC_REG_DIA, vp:VENC_PEND, au:audit, vre:vencRender, vrq:vencRedesenharQuadros};
+    __loja={'daycare/vencimentos/2026-09-28/thor__bia/enviadas':{vacina:{quem:'A', ts:10}}};
+    __upd=null;
+    DB={ref:function(p){ return {
+      once:function(){ return Promise.resolve({val:function(){ return __loja[p]===undefined?null:__loja[p]; }}); },
+      update:function(v){ __upd={p:p, v:v}; return Promise.resolve(); } }; }};
+    VENC_REG={}; VENC_REG_DIA='2026-09-28'; VENC_PEND=null;
+    audit=function(){}; vencRender=function(){}; vencRedesenharQuadros=function(){};`);
+  try {
+    const ok = await run(`vencGravar('thor__bia', {enviadas:{antip:{quem:'B', ts:20}}}, 'teste', {nome:'Thor', tutor:'Bia', itens:[]}, '2026-09-28')`);
+    assert.strictEqual(ok, true);
+    const u = JSON.parse(JSON.stringify(run('__upd')));
+    assert.strictEqual(u.p, 'daycare/vencimentos/2026-09-28/thor__bia');
+    assert.deepStrictEqual(Object.keys(u.v.enviadas).sort(), ['antip', 'vacina'], 'a vacina do outro aparelho continua lá');
+    assert.deepStrictEqual(Object.keys(JSON.parse(JSON.stringify(run("VENC_REG['thor__bia'].enviadas")))).sort(), ['antip', 'vacina'], 'e a memória aprende');
+  } finally { run('DB=__bk5.db; VENC_REG=__bk5.vr; VENC_REG_DIA=__bk5.vrd; VENC_PEND=__bk5.vp; audit=__bk5.au; vencRender=__bk5.vre; vencRedesenharQuadros=__bk5.vrq;'); }
+});
+prova('QA M1 — a pergunta de hoje já saiu: a mensagem do dia mandada depois não a faz sumir', () => {
+  assert.strictEqual(run("hojeVesperaTratou({enviadas:{ant_antip:{ts:1}, antip:{ts:2}}}, 'antip')"), false);
+  assert.strictEqual(run("hojeVesperaTratou({enviadas:{antip:{ts:2}}}, 'antip')"), true, 'sem a pergunta de hoje, a véspera manda');
+});
+prova('QA M2 — a cobrança da conversa velha sai quando o mesmo assunto está numa pergunta nova', () => {
+  run(CT_BKP + `VENC_PEND={'2026-09-23':{'mel__ana':{pet:'Mel', tutor:'Ana', enviadas:{ant_antip:{quem:'x', ts:${AGORA - 30 * 3600000}}}}},
+                 '2026-09-24':{}, '2026-09-25':{}};`);
+  try {
+    const d = JSON.parse(JSON.stringify(run('contatosDados(' + AGORA + ')')));
+    assert.deepStrictEqual(d.aqui.map((x) => x.chave), ['mel__ana']);
+    assert.deepStrictEqual(d.cobrar.map((x) => x.chave), [], 'a Mel não recebe a cobrança de ontem e a pergunta de hoje');
+  } finally { run(CT_VOLTA); }
+});
+prova('QA M5 — janela do WhatsApp bloqueada: nada é marcado como mandado', () => {
+  run(`__bk6={wo:window.open, al:alert, hm:hojeMandei, ge:document.getElementById};
+    __marcou=null; __avisou=null;
+    window.open=function(){ return null; }; alert=function(t){ __avisou=t; };
+    hojeMandei=function(c,t){ __marcou=c; };
+    document.getElementById=function(){ return {value:'Oi'}; };`);
+  try {
+    assert.strictEqual(run("zWhatsAbrir('31999990000','Oi')"), false);
+    run("hojeWhats('mel__ana','antip','31999990000')");
+    assert.strictEqual(run('__marcou'), null);
+    assert.ok(/bloqueada/.test(run('__avisou')));
+  } finally { run('window.open=__bk6.wo; alert=__bk6.al; hojeMandei=__bk6.hm; document.getElementById=__bk6.ge;'); }
+});
+prova('Turma do dia — troca ainda PEDIDA (sem o sim da Gestora) não muda a turma', () => {
+  run(`__bkt={pd:pelDias, rl:repLancamentos, ra:repAgendaDe, pe:pelExtra, pi:pelInativo, mz:ehMoradorZeluz};
+       pelDias=function(p){ return p.dias||[]; }; pelInativo=function(){ return false; }; ehMoradorZeluz=function(){ return false; };
+       repLancamentos=function(){ return []; }; repAgendaDe=function(){ return []; }; pelExtra=function(){ return {}; };`);
+  try {
+    const f = "{pets:[{n:'Boris', tutor:'Laura', dias:['sex']}], trocas:{'2026-09-23':{'boris__laura':{de:'2026-09-25', para:'2026-09-23', status:'pedido'}}}, avulsos:{}, chamada:{}, pend:[], margem:3, hoje:'2026-09-21'}";
+    const sex = JSON.parse(JSON.stringify(run("turmaListaDoDia('2026-09-25', " + f + ')')));
+    assert.deepStrictEqual(sex.vem.map((o) => o.nome), ['Boris'], 'pedida: continua vindo na sexta');
+    const qua = JSON.parse(JSON.stringify(run("turmaListaDoDia('2026-09-23', " + f + ')')));
+    assert.deepStrictEqual(qua.vem.map((o) => o.nome), [], 'pedida: ainda não vem na quarta');
+  } finally { run('pelDias=__bkt.pd; repLancamentos=__bkt.rl; repAgendaDe=__bkt.ra; pelExtra=__bkt.pe; pelInativo=__bkt.pi; ehMoradorZeluz=__bkt.mz;'); }
 });
 
 // ------------------------------------------------ o fim

@@ -155,9 +155,23 @@ Medido a 375 px de largura, antes da mudança:
 - **não entra** quando a mensagem da véspera já tratou do assunto para hoje (saiu ou foi respondida);
 - o bloco ganhou **Mandar no WhatsApp** direto, sem abrir a dobra. **Ver a mensagem** abre o texto para editar; depois de mandada, o botão vira **Registrar a resposta**.
 
+**Correções da 5ª rodada do QA (antes de publicar):**
+
+| Achado | Correção |
+|---|---|
+| **A1:** três checagens do harness e dois scripts de captura esperavam as telas antigas | atualizados: a chave `contatos`, o contador "(2 · 2 hoje)", o botão direto, as Turminhas abrindo a Turma do dia e o "Cobrar no WhatsApp" |
+| **A2:** com dois aparelhos, a lista lia uma cópia velha: o mesmo pedido saía de novo, e o toque **apagava o "Mandei" do outro aparelho** | antes de gravar envios, respostas, cobranças, tentativas e o lançamento automático, o app **relê do banco** aquele mapa e soma só o assunto do toque (vale para todas as telas). A lista relê o dia ao abrir |
+| **M1:** Vencimentos › Hoje oferecia de novo o que o "fazer hoje?" já tinha perguntado | o cartão do próprio dia também avisa; e a pergunta de hoje não some depois |
+| **M2:** a cobrança de ontem e a pergunta de hoje sobre o mesmo item apareciam juntas | a pergunta nova substitui a cobrança da velha |
+| **M3:** o contador de Quem chamar hoje não acompanhava os toques de outras telas | acompanha |
+| **M4:** cada abertura relia centenas de KB | no máximo uma releitura a cada 30 s |
+| **M5:** janela do WhatsApp bloqueada era marcada como "mandada" | nada é marcado, e a tela avisa |
+| **M6:** o contador pesava a cada marcação da chamada | a conta espera 300 ms e junta as rajadas |
+| Baixos | concordância no Excel da Turma ("1 vem"), frase da mensagem mista sem generalizar o prazo, subtítulo do quadro, "Nada a mandar para o próximo dia", troca ainda pedida não muda a turma, feriado avisado na Turma, Excel e PDF da Turma (com telefones) só para quem fala com o tutor, botão direto espera os textos de Configurações, "Ver a resposta" com o assunto fechado |
+
 **Mensagens novas em Configurações › Mensagens prontas** (editáveis, com `{itens}` obrigatório):
-- *Fazer hoje — já venceu e ele está na casa:* "Olá, {tutor}, tudo bem? 🐾 / Aproveitando que {ofilhot} está conosco hoje: {itens}. / O prazo já chegou, então o melhor é fazer hoje mesmo. Podemos? É só nos confirmar por aqui que já deixamos tudo pronto."
-- *Fazer hoje — vacina que já venceu:* a mesma abertura, com "A nossa Veterinária atende hoje e pode aplicar durante o dia {dele} aqui. O prazo já chegou: podemos fazer hoje mesmo?"
+- *Fazer hoje — já venceu e ele está na casa:* "Olá, {tutor}, tudo bem? 🐾 / Aproveitando que {ofilhot} está conosco hoje: {itens}. / O ideal é aproveitar e fazer hoje mesmo. Podemos? É só nos confirmar por aqui que já deixamos tudo pronto."
+- *Fazer hoje — vacina que já venceu:* a mesma abertura, com "A nossa Veterinária atende hoje e pode aplicar durante o dia {dele} aqui. Podemos fazer hoje mesmo?"
 - `{itens}` traz cada item com a sua data ("o carrapaticida venceu em 01/09 e a coleira repelente Seresto vence em 27/09"): misturado, nenhum finge estar atrasado.
 
 ### (M) WhatsApp em um toque
@@ -251,7 +265,7 @@ O saldo de reposição não muda ao marcar: o crédito só sai quando ele vem. A
 ### Provas
 
 Todas rodam sem rede e sem dado de cliente:
-- `node tests/fase0-ciclo-fechado.test.js`: 77 provas;
+- `node tests/fase0-ciclo-fechado.test.js`: 83 provas;
 - `node tests/servidor-senha.test.js`: 11 provas.
 
 O harness completo precisa do retrato da VPS e não rodou nesta sessão.
@@ -264,6 +278,7 @@ O harness completo precisa do retrato da VPS e não rodou nesta sessão.
 | 2ª | FAIL | a junção de remédio olhava só o horário; o cancelar da noite anterior não gravava |
 | 3ª | **CONCERNS — pode publicar** | ressalvas |
 | 4ª (orçamento e reposição) | **CONCERNS — pode publicar** | M1, M2 e B1 a B5, todos corrigidos (ver K) |
+| 5ª (Turma, WhatsApp, Quem chamar hoje) | **FAIL** → corrigido | A1, A2, M1 a M6 e os baixos, todos corrigidos (ver N) |
 
 Destino de cada ressalva da 3ª rodada:
 - **C1:** o exemplo do campo agora pede o nome do remédio primeiro: "Ex.: Otomax — gotas no ouvido, 2x ao dia";

@@ -12199,9 +12199,10 @@ async function main() {
     // com o MESMO rótulo. Nenhuma das 17 anteriores saiu.
     const CHAVES_DE_SEMPRE = ['checkin', 'conferencia', 'recepcao', 'cuidadovet', 'hospedagem', 'checkout',
       'checkoutconf', 'emporio', 'linhadotempo', 'ficha', 'hospedes', 'pessoas', 'renovacao', 'reposicao',
-      'orcamento', 'relatorios', 'pendencias', 'vencimentos', 'hoje'];
+      'orcamento', 'relatorios', 'pendencias', 'vencimentos', 'hoje', 'contatos'];
+    // 25/set/2026: a 20ª — 'contatos' (Quem chamar hoje), no sidebar e aqui, com o MESMO rótulo.
     const chaves = navKeys.slice().sort();
-    check('mordida — as CHAVES são as 18 de antes MAIS a do Hoje na Zêluz: nenhuma sumiu',
+    check('mordida — as CHAVES são as 18 de antes MAIS a do Hoje na Zêluz e a do Quem chamar hoje: nenhuma sumiu',
       JSON.stringify(chaves) === JSON.stringify(CHAVES_DE_SEMPRE.slice().sort()), JSON.stringify(chaves));
     // Cada rótulo da tela Time é O MESMO que o sidebar mostra para aquele data-v.
     const rotuloDoMenu = (k) => {
@@ -20202,8 +20203,10 @@ async function main() {
           ctx.document.getElementById = function (id) { return String(id) === 'navHojeN' ? span44 : null; };
           ctx.hojeAtualizarBadge();
         } finally { ctx.document.getElementById = bkpGeb44; }
-        check('v-44 · o contador ao lado do item do menu é o de PRESENTES COM PENDÊNCIA',
-          span44.textContent === '(2)', span44.textContent);
+        // 25/set/2026: o que JÁ venceu, com ele na casa, virou a pergunta "fazer hoje?" — o
+        // Simba e o Batata, com item vencido, passam a contar também no "hoje".
+        check('v-44 · o contador ao lado do item do menu é o de PRESENTES COM PENDÊNCIA (e quantos têm pergunta hoje)',
+          span44.textContent === '(2 · 2 hoje)', span44.textContent);
         // ---- o texto do WhatsApp: cabeçalho com os dois números ----
         const txt = ctx.hojeTexto();
         check('v-44 · "Copiar lista" leva o cabeçalho com os dois números e uma linha por FILHOt',
@@ -20525,9 +20528,11 @@ async function main() {
         // ---- a dobra, na própria linha: perguntar não pode custar outra tela -------
         const gC = (cookie.antGrupos || [])[0];
         const fechado = ctx.hojeAntBlocoHTML(cookie, gC, HOJE45, {}, Date.now());
-        check('v-45 · a linha do FILHOt ganha o destaque laranja e o botão "Perguntar ao tutor"',
+        // 25/set/2026: "Perguntar ao tutor" virou dois botões — "Mandar no WhatsApp" (um toque,
+        // já marca que saiu) e "Ver a mensagem" (abre a dobra).
+        check('v-45 · a linha do FILHOt ganha o destaque laranja, o WhatsApp direto e o "Ver a mensagem"',
           fechado.indexOf('⏰ ') > 0 && fechado.indexOf('— fazer hoje?') > 0
-          && fechado.indexOf('>Perguntar ao tutor<') > 0
+          && fechado.indexOf('hojeWhatsDireto(') > 0
           && fechado.indexOf('hojeAbrirPergunta(') > 0, fechado.slice(0, 260));
         check('v-45 · fechada, a dobra não traz mensagem nenhuma — a tela não enche de texto sem pedido',
           fechado.indexOf('<textarea') < 0);

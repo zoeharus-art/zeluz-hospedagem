@@ -6234,7 +6234,7 @@
     var ha=null; try{ ha=(typeof hojeAnteciparContagem==='function')?hojeAnteciparContagem():null; }
     catch(e){ ha=null; } /* silencioso de propósito: guarda defensiva — se o valor não vier, o quadro não aparece */
     var quadroFazerHoje=mesaBox(ha===null?null:ha.total,'Perguntar hoje ao tutor',
-      'está na casa AGORA e vence antes de voltar — aproveitar e fazer hoje','#E08856',ir('hoje'));
+      'está na casa AGORA e venceu ou vence antes de voltar — aproveitar e fazer hoje','#E08856',ir('hoje'));
     var vp=(typeof vencPendContagem==='function')?vencPendContagem():null;
     var quadroRespPend=mesaBox(vp===null?null:vp.total,'Respostas pendentes',
       (vp&&vp.cobrar?(vp.cobrar+' já passaram do prazo — cobrar o tutor'):'mandado e sem resposta — responda aqui mesmo'),
@@ -6809,9 +6809,15 @@
     if(d && d.length>=10 && d.length<=11) d='55'+d;           // número sem o país
     return 'https://wa.me/'+(d||'')+'?text='+encodeURIComponent(String(texto||''));
   }
+  // Devolve se a janela ABRIU (QA M5): bloqueada pelo navegador, nada é marcado como mandado —
+  // senão o app cobraria depois uma mensagem que nunca saiu.
   function zWhatsAbrir(tel, texto){
-    try{ window.open(zWhatsLink(tel, texto), '_blank'); return true; }
-    catch(e){ _logFalhaGrav('abrir o WhatsApp', e); return false; }
+    try{
+      var w=window.open(zWhatsLink(tel, texto), '_blank');
+      if(w) return true;
+      alert('O navegador não abriu o WhatsApp (janela bloqueada). Nada foi marcado como mandado. Use o Copiar e mande por fora.');
+      return false;
+    }catch(e){ _logFalhaGrav('abrir o WhatsApp', e); return false; }
   }
   function repTelDe(p){ try{ return (typeof poTelDoTutor==='function')?poTelDoTutor(p):''; }catch(e){ return ''; } }
   // Modal com a confirmação em cima e a mensagem pronta embaixo — a consultora copia e
@@ -35067,10 +35073,10 @@
     // misturado, cada um diz a sua verdade, e nenhum finge estar atrasado.
     atrasado_hoje:'Olá, {tutor}, tudo bem? 🐾\n'
       +'Aproveitando que {ofilhot} está conosco hoje: {itens}.\n'
-      +'O prazo já chegou, então o melhor é fazer hoje mesmo. Podemos? É só nos confirmar por aqui que já deixamos tudo pronto.',
+      +'O ideal é aproveitar e fazer hoje mesmo. Podemos? É só nos confirmar por aqui que já deixamos tudo pronto.',
     atrasado_hoje_vacina:'Olá, {tutor}, tudo bem? 🐾\n'
       +'💉 Aproveitando que {ofilhot} está conosco hoje: {itens}.\n'
-      +'A nossa Veterinária atende hoje e pode aplicar durante o dia {dele} aqui. O prazo já chegou: podemos fazer hoje mesmo?'
+      +'A nossa Veterinária atende hoje e pode aplicar durante o dia {dele} aqui. Podemos fazer hoje mesmo?'
   };
   // A ordem em que as mensagens aparecem no cartão, e como cada uma se chama na tela.
   // 24/set/2026: 'aberto' entrou no fim da ordem — é o assunto do que NUNCA foi registrado
@@ -35709,7 +35715,7 @@
     var txt=ta?String(ta.value||''):'';
     if(!txt){ alert('Não achei a mensagem. Abra a tela de novo.'); return; }
     var o=vencAchar(chave);
-    zWhatsAbrir((o&&o.tel)||'', txt);
+    if(!zWhatsAbrir((o&&o.tel)||'', txt)) return;
     vencMandei(chave, tipo);
   }
   function vencWhatsCobranca(chave, tipo, dia){
@@ -35717,7 +35723,7 @@
     var txt=ta?String(ta.value||''):'';
     if(!txt){ alert('Não achei a cobrança. Abra a tela de novo.'); return; }
     var o=null; try{ o=vencObjDe(chave, dia); }catch(e){ o=null; } /* silencioso de propósito: sem o cartão, o WhatsApp abre para escolher o contato */
-    zWhatsAbrir((o&&o.tel)||'', txt);
+    if(!zWhatsAbrir((o&&o.tel)||'', txt)) return;
     vencCobrei(chave, tipo, dia);
   }
   function vencCopiar(chave, tipo, btn){
@@ -36350,6 +36356,8 @@
   // Os quadros que vivem FORA desta tela. Redesenhar aqui é o que faz a resposta dada no
   // dashboard aparecer no dashboard — sem esperar ninguém abrir a tela de Vence amanhã.
   function vencRedesenharQuadros(){
+    try{ if(typeof contatosAtualizarBadge==='function') contatosAtualizarBadge(); if(typeof contatosRedesenhar==='function') contatosRedesenhar(); }
+    catch(e){ /* silencioso de propósito: enfeite de menu — falhar não muda dado nenhum */ }
     try{ vencAtualizarBadge(); }catch(e){ /* silencioso de propósito: enfeite de menu — falhar não muda dado nenhum */ }
     try{ if(typeof mesaRender==='function' && document.getElementById('mesaRoot')) mesaRender(); }catch(e){ /* silencioso de propósito: redesenho de tela — falhar não pode derrubar quem chamou */ }
     try{ vencPcQuadro('pcCardVence', blocoVenceHTML()); }catch(e){ /* silencioso de propósito: redesenho de tela — falhar não pode derrubar quem chamou */ }
@@ -36373,11 +36381,55 @@
   // outros — o que vence DEPOIS de hoje, não o que já venceu. Sobrescrever `itens` aqui
   // apagaria o retrato do assunto que a véspera gravou para este mesmo dia. Ela guarda o
   // seu retrato em `itens_ant` e passa por aqui sem encostar no de ninguém.
+  // OS MAPAS POR ASSUNTO (QA A2, 25/set/2026). enviadas, respostas, cobranças, tentativas e o
+  // lançamento automático são mapas {assunto: …} gravados INTEIROS. Quem montava o mapa a
+  // partir da memória do aparelho apagava o que outro aparelho tinha gravado desde a última
+  // leitura: o "Mandei" da vacina feito no balcão sumia quando a recepção tocava o do
+  // vermífugo. Agora, antes de gravar, o mapa é relido do banco (uma leitura pequena) e só
+  // o assunto que ESTE toque mudou entra por cima. O formato gravado não muda.
+  var VENC_MAPAS_POR_ASSUNTO=['enviadas','respostas','cobrancas','tentativas','auto'];
+  // Pura: o mapa do banco (fresco), o que este aparelho tinha (velho) e o que ele quer (novo).
+  // Entra por cima só o assunto que mudou de velho para novo; o que sumiu de velho para novo
+  // sai (é o "desfazer"); o resto fica como o banco diz.
+  function vencMesclarMapa(fresco, velho, novo){
+    var out=Object.assign({}, (fresco&&typeof fresco==='object')?fresco:{});
+    velho=(velho&&typeof velho==='object')?velho:{};
+    novo=(novo&&typeof novo==='object')?novo:{};
+    Object.keys(novo).forEach(function(t){
+      if(JSON.stringify(novo[t])!==JSON.stringify(velho[t])) out[t]=novo[t];
+    });
+    Object.keys(velho).forEach(function(t){ if(!(t in novo)) delete out[t]; });
+    return out;
+  }
+  function vencLerMapas(dia, chave, campos){
+    if(!campos.length||!DB) return Promise.resolve(null);
+    return Promise.all(campos.map(function(c){
+      try{
+        var r=DB.ref(vencNo(dia,chave)+'/'+c);
+        if(!r||typeof r.once!=='function') return Promise.resolve(undefined);
+        return r.once('value').then(function(s){ return s.val(); })
+          .catch(function(e){ _logLeituraFalhou(vencNo(dia,chave)+'/'+c+' (vencLerMapas)', e); return undefined; });
+      }catch(e){ return Promise.resolve(undefined); } /* silencioso de propósito: sem a releitura vale a memória, como sempre valeu */
+    })).then(function(vals){
+      var m={};
+      campos.forEach(function(c, i){ m[c]=vals[i]; });
+      return m;
+    });
+  }
   function vencGravar(chave, patch, rotuloAudit, oOpc, diaOpc, semItens){
     var dia=diaOpc||vencDiaAlvo();
     if(!DB||!dia||!chave) return Promise.resolve(false);
     var o=oOpc||vencAchar(chave, dia);
+    var antesMem=vencRegDeDia(dia, chave)||{};
+    var campos=VENC_MAPAS_POR_ASSUNTO.filter(function(c){
+      return patch && patch[c] && typeof patch[c]==='object' && !Array.isArray(patch[c]);
+    });
+    return vencLerMapas(dia, chave, campos).then(function(frescos){
     var reg=Object.assign({}, patch);
+    if(frescos) campos.forEach(function(c){
+      // undefined = a releitura falhou: fica o mapa montado pela memória, como antes.
+      if(frescos[c]!==undefined) reg[c]=vencMesclarMapa(frescos[c], antesMem[c], patch[c]);
+    });
     if(o){
       if(!semItens && o.itens&&o.itens.length) reg.itens=vencSnapItens(o);
       // O NOME viaja com o registro (21/set/2026). A resposta pendente de 12 dias atrás
@@ -36406,6 +36458,7 @@
         ['O erro foi: '+((e&&e.message)||e),
          'Nada mudou — o cartão continua aberto. Tente de novo em instantes.'],{botao:'Entendi'});
       return false;
+    });
     });
   }
   // "Mandei" — só diz que aquela mensagem SAIU. Não é resposta do tutor, e não fecha nada.
@@ -38023,6 +38076,10 @@
   // A mensagem do Vence amanhã para HOJE já cuidou deste assunto? Pura: só o registro do dia.
   function hojeVesperaTratou(r, tipoBase){
     if(!r) return false;
+    // A pergunta de HOJE já saiu (ou foi respondida): ela continua de pé, mesmo que depois
+    // alguém tenha mandado a mensagem do dia pelo cartão de Vencimentos (QA M1).
+    var ta=hojeTipoAnt(tipoBase);
+    if((r.enviadas||{})[ta] || vencRespostaDe(r, ta)) return false;
     if(vencMandada(r, tipoBase) || vencRespostaDe(r, tipoBase)) return true;
     // O cartão respondido pelo caminho antigo (resposta do cartão inteiro, sem assunto).
     return !r.respostas && !!r.resposta;
@@ -38037,7 +38094,9 @@
   // conversa. null = não foi perguntado hoje.
   function vencJaPerguntadoHoje(chave, tipo, dia, hoje){
     hoje=hoje||((typeof zHojeISO==='function')?zHojeISO():'');
-    if(!hoje||!dia||dia===hoje) return null;
+    // Vale também para o cartão do PRÓPRIO dia (QA M1): Vencimentos › Hoje, ou o toque vindo da
+    // Turma do dia, ofereciam de novo o que a pergunta "fazer hoje?" já tinha feito.
+    if(!hoje||!dia) return null;
     var r=null;
     try{ r=vencRegDeDia(hoje, chave); }
     catch(e){ r=null; } /* silencioso de propósito: sem o registro de hoje o cartão fica como sempre foi */
@@ -38148,13 +38207,19 @@
     var ta=document.getElementById('hojeMsg_'+chave+'__'+tipo);
     var txt=ta?String(ta.value||''):'';
     if(!txt){ alert('Não achei a mensagem. Abra a tela de novo.'); return; }
-    zWhatsAbrir(tel||'', txt);
+    if(!zWhatsAbrir(tel||'', txt)) return;
     hojeMandei(chave, tipo);
   }
   // UM TOQUE, sem abrir a dobra (Adriana, 25/set/2026: "só deu um clique, copia a mensagem,
   // já manda"). A mensagem é a de Configurações, montada na hora; quem quiser mexer no
   // texto antes abre a dobra e usa o botão de lá.
   function hojeWhatsDireto(chave, tipo){
+    // Sem o texto de Configurações sairia o de fábrica no lugar do que a Gestão escreveu.
+    if(VENC_CFG===null){
+      try{ if(typeof vencCfgCarregar==='function') vencCfgCarregar(); }catch(e){ /* silencioso de propósito: o aviso abaixo diz o que fazer */ }
+      alert('Lendo os textos de Configurações — toque de novo em instantes.');
+      return Promise.resolve(false);
+    }
     var hoje=(typeof zHojeISO==='function')?zHojeISO():'';
     var o=hojeObjAnt(chave, tipo);
     if(!o){ alert('Não achei a pergunta deste FILHOt. Abra a tela de novo.'); return; }
@@ -38208,7 +38273,7 @@
           +' onclick="hojeAbrirPergunta(\'' + ka + '\',\'' + escAttr(tipo) + '\')">Ver a mensagem</button>')
         : ('<button type="button" class="btn btn-gold" style="padding:6px 13px;font-size:12.5px;font-weight:800"'
           +' onclick="hojeAbrirPergunta(\'' + ka + '\',\'' + escAttr(tipo) + '\')">'
-          +(aberto?'fechar':'Registrar a resposta')+'</button>'))
+          +(aberto?'fechar':(estado==='fechado'?'Ver a resposta':'Registrar a resposta'))+'</button>'))
       +vencSeloEstado(estado)+'</div>';
     if(!aberto) return h+'</div>';
     var oA=hojeObjAnt(o.chave, tipo)||o;
@@ -38494,6 +38559,9 @@
     }
     try{ if(typeof vencPendCarregar==='function') tarefas.push(vencPendCarregar()); }
     catch(e){ /* silencioso de propósito: sem as respostas a lista sai sem elas */ }
+    if(typeof VENC_CFG!=='undefined' && VENC_CFG===null && typeof vencCfgCarregar==='function'){
+      try{ tarefas.push(vencCfgCarregar()); }catch(e){ /* silencioso de propósito: o botão direto espera o texto */ }
+    }
     return Promise.all(tarefas).then(function(){
       try{ hojeAtualizarBadge(); }
       catch(e){ /* silencioso de propósito: enfeite de menu — falhar não muda dado nenhum */ }
@@ -38657,9 +38725,12 @@
     // 2) vem no próximo dia da casa: a mensagem da véspera ainda não saiu
     var dia=contatosDiaSeguinte(hoje);
     out.dia=dia;
+    // A varredura (relida ao abrir a tela) vem antes da cópia do dia, que pode ser a da
+    // entrada no app (QA A2). As duas recebem as gravações deste aparelho na hora.
     var regDia=function(chave){
+      if(VENC_PEND && VENC_PEND[dia]) return VENC_PEND[dia][chave]||{};
       if(VENC_REG && VENC_REG_DIA===dia) return VENC_REG[chave]||{};
-      return ((VENC_PEND||{})[dia]||{})[chave]||{};
+      return {};
     };
     if(dia && ((VENC_REG!==null && VENC_REG_DIA===dia) || VENC_PEND!==null)){
       out.lido.amanha=true;
@@ -38689,7 +38760,13 @@
     catch(e){ P=null; } /* silencioso de propósito: sem a varredura a gaveta diz que ainda não leu */
     if(P){
       out.lido.cobrar=true;
+      // O mesmo tutor e o mesmo assunto já estão numa pergunta nova, acima (QA M2): a conversa
+      // nova substitui a cobrança da velha — duas mensagens sobre o mesmo carrapaticida, no
+      // mesmo dia, é ruído para o tutor.
+      var novas={};
+      out.aqui.concat(out.amanha).forEach(function(x){ novas[x.chave+'|'+vencTipoBase(x.tipo)]=1; });
       P.forEach(function(x){
+        if(novas[x.chave+'|'+vencTipoBase(x.tipo)]) return;
         if(x.estado!=='cobrar'){ out.aguardando++; return; }
         out.cobrar.push({grupo:'cobrar', chave:x.chave, tipo:x.tipo, dia:x.dia, nome:vencPendNome(x),
           tutor:x.tutor||'', rotulo:x.rotulo||'', espera:vencEspera(x.ts, agora),
@@ -38699,7 +38776,14 @@
     return out;
   }
   function contatosTotal(d){ return d?(d.aqui.length+d.amanha.length+d.cobrar.length):0; }
+  // Adiado e juntado (QA M6): a chamada viva redesenha a cada marcação, e esta conta monta
+  // três listas. Em rajada, só a última conta.
+  var __contatosBadgeT=null;
   function contatosAtualizarBadge(){
+    if(__contatosBadgeT) clearTimeout(__contatosBadgeT);
+    __contatosBadgeT=setTimeout(function(){ __contatosBadgeT=null; contatosAtualizarBadgeJa(); }, 300);
+  }
+  function contatosAtualizarBadgeJa(){
     var el=document.getElementById('navContatosN'); if(!el) return;
     var d=null;
     try{ d=contatosDados(); }
@@ -38753,7 +38837,7 @@
          :(grupo==='amanha')?vencWhatsNoDia(x.chave, x.tipo, x.dia)
          :vencCobrarNoWhats(x.chave, x.tipo, x.dia);
     Promise.resolve(p).then(function(ok){
-      if(ok) CONTATOS_ULTIMO={texto:((grupo==='cobrar')?'cobrança enviada para ':'mensagem enviada para ')
+      if(ok) CONTATOS_ULTIMO={texto:((grupo==='cobrar')?'cobrança aberta no WhatsApp e marcada, para ':'mensagem aberta no WhatsApp e marcada como mandada, para ')
         +(x.tutor?(x.tutor+' ('+x.nome+')'):x.nome)+': '+String(x.rotulo||'').toLowerCase()+'.', ts:Date.now()};
       contatosRender();
       try{ hojeAtualizarBadge(); }catch(e){ /* silencioso de propósito: enfeite de menu — falhar não muda dado nenhum */ }
@@ -38774,8 +38858,17 @@
     contatosRender();
     if(!DB) return;
     var tarefas=[];
-    // As respostas e envios de OUTROS aparelhos: a varredura é relida ao abrir, sempre.
-    try{ tarefas.push(vencPendCarregar(true)); }catch(e){ /* silencioso de propósito: a gaveta diz que ainda não leu */ }
+    // As respostas e envios de OUTROS aparelhos. A varredura é relida ao abrir, mas não
+    // mais de uma vez a cada 30 s (QA M4: cada releitura desce centenas de KB).
+    try{ tarefas.push(vencPendCarregar((typeof VENC_PEND_QUANDO==='number')?((Date.now()-VENC_PEND_QUANDO)>30000):true)); }
+    catch(e){ /* silencioso de propósito: a gaveta diz que ainda não leu */ }
+    // O dia que a entrada no app leu uma vez só (QA A2): sem reler, a gaveta do próximo dia
+    // mostrava como "a mandar" o que outro aparelho já tinha mandado.
+    try{
+      var __hj=(typeof zHojeISO==='function')?zHojeISO():'';
+      var __ds=contatosDiaSeguinte(__hj);
+      if(VENC_REG_DIA && (VENC_REG_DIA===__ds || VENC_REG_DIA===__hj)) tarefas.push(vencCarregar(VENC_REG_DIA));
+    }catch(e){ /* silencioso de propósito: sem a releitura vale a varredura, que é mais nova */ }
     try{ tarefas.push(hojeCarregar()); }catch(e){ /* silencioso de propósito: a gaveta diz que ainda não leu */ }
     // O texto das mensagens é o de Configurações: sem ele, sairia o de fábrica.
     if(VENC_CFG===null){ try{ tarefas.push(vencCfgCarregar()); }catch(e){ /* silencioso de propósito: os botões esperam o texto */ } }
@@ -38833,7 +38926,7 @@
       'aqui', d.aqui, d.lido.aqui, 'Ninguém na casa com pergunta a fazer.');
     h+=contatosGavetaHTML('Vêm '+escAttr(frDia||'no próximo dia')+' — avisar',
       'A mensagem da véspera: o que vence ou já venceu para quem vem no próximo dia da casa.',
-      'amanha', d.amanha, d.lido.amanha, 'Todas as mensagens do próximo dia já saíram.');
+      'amanha', d.amanha, d.lido.amanha, 'Nada a mandar para o próximo dia.');
     h+=contatosGavetaHTML('Não responderam — cobrar',
       'Mensagem mandada, prazo passado e nenhuma resposta. A cobrança é outra conversa, não o reenvio da primeira.'
       +(d.aguardando?(' <strong>'+d.aguardando+'</strong> ainda '+(d.aguardando>1?'estão':'está')+' dentro do prazo.'):''),
@@ -39337,6 +39430,8 @@
       Object.keys((f.trocas||{})[para]||{}).forEach(function(k){
         var t=((f.trocas||{})[para]||{})[k]||{};
         if(t.status==='cancelada'||t.status==='recusada') return;
+        // Pedida e ainda sem o sim da Gestora não vale (QA): o Day Care só conta a confirmada.
+        if(t.status==='pedido') return;
         if(t.de===iso) trocouDaqui[k]=Object.assign({para:para}, t);
         if(para===iso) trocouPraCa[k]=t;
       });
@@ -39409,11 +39504,14 @@
     var h='<div class="card" style="border-left:4px solid var(--z-gold)">'
       +'<div style="display:flex;flex-wrap:wrap;gap:6px">'+abas+'</div>'
       +'<h2 style="font-size:19px;margin:10px 0 2px">'+escAttr(nomeDia.charAt(0).toUpperCase()+nomeDia.slice(1))+': '+L.vem.length+' '+(L.vem.length===1?'vem':'vêm')+'</h2>'
+      +((typeof orcEhFeriado==='function' && orcEhFeriado(iso))?'<div style="margin:0 0 4px;font-weight:800;color:var(--crm-critico)">Feriado: a casa não abre neste dia.</div>':'')
       +'<div class="hint" style="margin:0">'+(cobrar?('<strong style="color:var(--crm-critico)">'+cobrar+' com algo a cobrar</strong> · '):'')
       +(L.naoVem.length?(L.naoVem.length+(L.naoVem.length===1?' avisou que não vem · ':' avisaram que não vêm · ')):'')+'toque no nome para abrir a ficha; no que cobrar, para as mensagens prontas.</div>'
       +'<div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:10px">'
-      +'<button type="button" class="btn btn-gold" style="padding:8px 14px;font-size:13px;font-weight:800" onclick="turmaExcel()">Baixar Excel</button>'
-      +'<button type="button" class="btn" style="padding:8px 14px;font-size:13px;font-weight:800;background:#fff;color:var(--z-blue);border:1.5px solid var(--line)" onclick="turmaPDF()">PDF / imprimir</button>'
+      +(turmaPodeBaixar()
+        ? ('<button type="button" class="btn btn-gold" style="padding:8px 14px;font-size:13px;font-weight:800" onclick="turmaExcel()">Baixar Excel</button>'
+          +'<button type="button" class="btn" style="padding:8px 14px;font-size:13px;font-weight:800;background:#fff;color:var(--z-blue);border:1.5px solid var(--line)" onclick="turmaPDF()">PDF / imprimir</button>')
+        : '')
       +'<button type="button" class="btn" style="padding:8px 14px;font-size:13px;font-weight:800;background:#fff;color:var(--z-blue);border:1.5px solid var(--line)" onclick="setDcDia(\''+TURMA_DIA+'\')">Abrir a Chamada deste dia</button>'
       +'</div></div>';
     var linha=function(o){
@@ -39470,7 +39568,7 @@
     };
     var nomeDia=(typeof repDiaSemanaComData==='function')?repDiaSemanaComData(D.iso):fmtBR(D.iso);
     return '<table><tr><td colspan="7" style="border:none;font-size:16pt;font-weight:bold;color:#234D67">Zêluz · Turma de '+e(nomeDia)+'</td></tr>'
-      +'<tr><td colspan="7" style="border:none;font-size:10pt;color:#555">'+L.vem.length+' vêm · '+L.naoVem.length+' avisaram que não vêm</td></tr></table><br>'
+      +'<tr><td colspan="7" style="border:none;font-size:10pt;color:#555">'+L.vem.length+(L.vem.length===1?' vem · ':' vêm · ')+L.naoVem.length+(L.naoVem.length===1?' avisou que não vem':' avisaram que não vêm')+'</td></tr></table><br>'
       +'<table><tr><th>FILHOt</th><th>Raça</th><th>Tutor</th><th>Telefone</th><th>Como vem</th><th>O que cobrar</th><th>Reposições</th></tr>'
       +L.vem.map(function(o){ return linha(o, true); }).join('')
       +L.naoVem.map(function(o){ return linha(o, false); }).join('')+'</table>';
@@ -39481,11 +39579,16 @@
       +'th{background:#234D67;color:#FFFDF6;font-weight:bold;text-align:left}@media print{body{margin:8mm}}</style></head><body>'
       +turmaTabelaHTML()+'</body></html>';
   }
+  // O arquivo leva o TELEFONE de cada tutor: sai só para quem fala com o tutor (a mesma
+  // permissão do Hoje na Zêluz e do Quem chamar hoje). A lista na tela continua para todos.
+  function turmaPodeBaixar(){ try{ return (typeof podePapel!=='function') || podePapel('hoje-na-casa'); }catch(e){ return false; } }
   function turmaExcel(){
+    if(!turmaPodeBaixar()){ alert('O arquivo da turma leva o telefone dos tutores: sai para as Consultoras, a Supervisão e a Gestão.'); return; }
     var iso=turmaIsoDoDia(TURMA_DIA);
     relEntregar('Zeluz-turma-'+iso+'.xls', turmaDocHTML());
   }
   function turmaPDF(){
+    if(!turmaPodeBaixar()){ alert('O arquivo da turma leva o telefone dos tutores: sai para as Consultoras, a Supervisão e a Gestão.'); return; }
     var w=null; try{ w=window.open('','_blank'); }catch(e){ w=null; } /* silencioso de propósito: o aviso abaixo diz o que fazer */
     if(!w){ alert('O navegador bloqueou a janela. Libere os pop-ups deste site e toque de novo.'); return; }
     w.document.open(); w.document.write(turmaDocHTML()); w.document.close();
@@ -41490,7 +41593,7 @@
       diz('A mensagem de vermífugo, carrapaticida e coleira precisa conter {item} — é ele que diz O QUE está vencendo. Nada foi salvo.','var(--crm-critico)'); return; }
     if(['atrasado_hoje','atrasado_hoje_vacina'].some(function(k){
          return String(reg[k]||'').indexOf('{itens}')<0 && String(reg[k]||'').indexOf('{item}')<0; })){
-      diz('As duas mensagens de &ldquo;já venceu e ele está na casa&rdquo; precisam conter {itens} — é ele que diz ao tutor O QUE venceu e quando. Nada foi salvo.','var(--crm-critico)'); return; }
+      diz('As duas mensagens de “já venceu e ele está na casa” precisam conter {itens} — é ele que diz ao tutor O QUE venceu e quando. Nada foi salvo.','var(--crm-critico)'); return; }
     var margem=parseInt(String(((document.getElementById('cfgVencMargem')||{}).value||'')).replace(/\D/g,''),10);
     if(!(margem>0&&margem<=90)){ diz('A folga precisa ser um número de dias entre 1 e 90. Nada foi salvo.','var(--crm-critico)'); return; }
     var cobH=parseFloat(String(((document.getElementById('cfgVencCobrancaH')||{}).value||'')).replace(',','.'));

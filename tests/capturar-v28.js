@@ -418,7 +418,7 @@ async function dispensarCartazes(page, quantos) {
         await page.waitForTimeout(900);
         const cob = page.locator('#vencCard_' + CSS_escapar(injetou)).first();
         const tcob = (await cob.count()) ? ((await cob.innerText()) || '') : '';
-        ['COBRAR', 'sem resposta — cobrar', 'Copiar a cobrança', 'Cobrei']
+        ['COBRAR', 'sem resposta — cobrar', 'Cobrar no WhatsApp', 'Cobrei']
           .forEach((x) => { if (tcob.indexOf(x) < 0) problemas.push('o cartão em "cobrar" (' + larg.rot + ') não mostra "' + x + '"'); });
         if (!/Mandado às \d\d:\d\d/.test(tcob))
           problemas.push('o cartão em "cobrar" (' + larg.rot + ') não diz a que horas a mensagem saiu');

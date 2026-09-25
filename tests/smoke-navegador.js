@@ -453,7 +453,8 @@ async function varrerPapel(navegador, base, papel, senha, quem, origem, aparelho
     .filter((o) => o.chave && o.sel));
 
   const paradas = itens.map((o) => ({ chave: o.v, rotulo: o.rotulo, sel: '#nav a[data-v="' + o.v + '"]', view: idDaView(o.v) }))
-    .concat(daycare.map((o) => ({ chave: o.chave, rotulo: o.rotulo, sel: o.sel, view: 'v-daycare' })));
+    // 25/set/2026: as Turminhas (data-d) abrem a Turma do dia; as atividades, o Day Care.
+    .concat(daycare.map((o) => ({ chave: o.chave, rotulo: o.rotulo, sel: o.sel, view: (o.sel.indexOf('data-d=') >= 0 ? 'v-turma' : 'v-daycare') })));
 
   for (const parada of paradas) {
     errosSoltos.length = 0;
