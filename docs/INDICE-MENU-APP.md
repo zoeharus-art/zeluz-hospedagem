@@ -95,6 +95,26 @@ Cartão marcado "atualizado" antes desta versão e com a ficha ainda devendo **v
 - Foto de ficha que existe não é candidata: o Thor novo vai para "precisa fotografar".
 - Card novo **"Duas fichas com a MESMA foto"**: mostra as fichas que ficaram com a foto copiada antes desta correção. A foto certa se tira em «Trocar».
 
+### (O) Check-in da hospedagem no celular: pertences sem digitar
+
+> **Adriana, 25/set/2026:** *"Check-in, preenchimento de hospedagem, está muito difícil. Precisa colocar manual os pertences! Digitar! Está confuso. Tela imensa, sem agilidade nenhuma. Péssima visibilidade no celular."*
+
+Medido a 375 px de largura, antes da mudança:
+- a ficha inteira tinha cerca de 5.500 px de altura;
+- só o cartão de Pertences tinha 1.267 px: os 12 tipos de item viravam 12 botões empilhados, com a largura inteira da tela;
+- cada toque num tipo abria o teclado sozinho, pedindo para escrever.
+
+| O quê | Agora |
+|---|---|
+| Os tipos de item | viram **pílulas lado a lado**, do tamanho do nome. Os 12 cabem em 5 linhas |
+| Tocar num tipo | só adiciona. **O teclado não abre mais sozinho** |
+| A cor | é **um toque**, num seletor na própria linha: preto, branco, azul, rosa, vermelho, estampado etc. Concorda com o item ("coleira vermelha", "peitoral vermelho"). Ração, comida natural, petiscos e tapete não têm seletor: ali o que importa é a marca |
+| O detalhe por escrito | continua existindo, **opcional** ("Detalhe (opcional): marca, estampa…"). Trocar a cor mexe só na cor e mantém o resto |
+| Ir de um cartão a outro | uma barra **Ir para:** logo abaixo do nome do FILHOt, com Datas · Alimentação · Remédios · Pertences · Assinatura e salvar |
+
+- **O dado gravado não mudou:** a cor entra no começo da mesma especificação de sempre. A Conferência, o PDF e o Check-out leem igual.
+- O check-in do corpo e o de pertences do Day Care **não foram tocados**. Só o cartão de Pertences do check-in da hospedagem e a barra de atalhos.
+
 ### (N) Quem chamar hoje, e "está aqui hoje, está atrasado: podemos fazer hoje?"
 
 > **Adriana, 25/set/2026:** *"Que a gente consiga bater o olho e ver. Que o consultor vire e fale: eu tenho que entrar em contato com fulano, ciclano. E ele só deu um clique, copia a mensagem, já manda."* · *"O peludo está aqui hoje? Vamos fazer hoje. Podemos fazer, tutor? Hoje o peludo já está aqui. Vamos fazer hoje, porque está atrasado."*
@@ -214,7 +234,7 @@ O saldo de reposição não muda ao marcar: o crédito só sai quando ele vem. A
 ### Provas
 
 Todas rodam sem rede e sem dado de cliente:
-- `node tests/fase0-ciclo-fechado.test.js`: 73 provas;
+- `node tests/fase0-ciclo-fechado.test.js`: 75 provas;
 - `node tests/servidor-senha.test.js`: 11 provas.
 
 O harness completo precisa do retrato da VPS e não rodou nesta sessão.

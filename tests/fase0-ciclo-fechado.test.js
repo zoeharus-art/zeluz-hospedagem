@@ -866,6 +866,28 @@ prova('"Mandar no WhatsApp" do próximo dia grava no PRÓXIMO DIA — não no di
   } finally { run(CT_VOLTA + 'vencGravar=__bk2.vg; window.open=__bk2.wo; VENC_DIA_SEL=__bk2.sel;'); }
 });
 
+// ================================================================== Check-in da hospedagem no celular (25/set)
+console.log('\nCheck-in da hospedagem — pertences sem digitar');
+prova('a cor num toque concorda com o item (coleira vermelha, peitoral vermelho)', () => {
+  assert.strictEqual(run("ciPertFem('Coleira')"), true);
+  assert.strictEqual(run("ciPertFem('Bolsa / mala')"), true);
+  assert.strictEqual(run("ciPertFem('Peitoral')"), false);
+  assert.strictEqual(run("ciPertFem('Pote')"), false);
+  const fem = run("ciPertCorHTML({uid:'a', k:'coleira', nome:'Coleira', spec:''})");
+  assert.ok(/>vermelha</.test(fem) && !/>vermelho</.test(fem), 'coleira: feminino');
+  const masc = run("ciPertCorHTML({uid:'b', k:'peitoral', nome:'Peitoral', spec:''})");
+  assert.ok(/>vermelho</.test(masc) && !/>vermelha</.test(masc), 'peitoral: masculino');
+  assert.strictEqual(run("ciPertCorHTML({uid:'c', k:'racao', nome:'Ração', spec:''})"), '', 'ração: a marca importa, não a cor');
+});
+prova('trocar a cor mexe só na cor: o resto do que foi escrito fica', () => {
+  assert.strictEqual(run("ciPertComCor('', 'vermelha')"), 'vermelha');
+  assert.strictEqual(run("ciPertComCor('Zeedog', 'vermelha')"), 'vermelha Zeedog');
+  assert.strictEqual(run("ciPertComCor('vermelha Zeedog', 'azul')"), 'azul Zeedog');
+  assert.strictEqual(run("ciPertComCor('azul-marinho de lã', 'preto')"), 'preto de lã', 'cor composta sai inteira');
+  assert.strictEqual(run("ciPertComCor('vermelha Zeedog', '')"), 'Zeedog', 'tirar a cor');
+  assert.ok(/value="azul" selected/.test(run("ciPertCorHTML({uid:'a', k:'coleira', nome:'Coleira', spec:'azul Zeedog'})")), 'a cor escrita aparece marcada');
+});
+
 // ------------------------------------------------ o fim
 fila.then(() => {
   console.log('\n' + ok + ' provas passaram' + (falhas.length ? (', ' + falhas.length + ' falharam:') : '.'));

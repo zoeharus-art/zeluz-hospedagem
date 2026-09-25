@@ -3468,8 +3468,13 @@
     #v-checkin .pert-chip-manage .pcm-edit,#v-checkin .pert-chip-manage .pcm-del{width:30px;height:30px;border-radius:8px;border:1.5px solid var(--line);background:#fff;cursor:pointer;font-weight:800;font-size:14px;line-height:1}
     #v-checkin .pert-chip-manage .pcm-del{color:var(--crm-critico);border-color:var(--crm-critico)}
     #v-checkin .pert-chip-manage .pcm-edit{color:var(--z-blue)}
-    @media(max-width:640px){#v-checkin .pert-grid{grid-template-columns:repeat(2,1fr)}}
-    @media(max-width:400px){#v-checkin .pert-grid{grid-template-columns:1fr}}
+    /* NO CELULAR, PÍLULAS (Adriana, 25/set/2026: "tela imensa, sem agilidade nenhuma, péssima
+       visibilidade no celular"). A grade de uma coluna empilhava 12 botões de largura inteira
+       — o card de Pertences passava de 1.200 px. Lado a lado, do tamanho do nome, cabem em
+       poucas linhas. O modo gerenciar continua um por linha: ali há dois botões em cada. */
+    @media(max-width:640px){#v-checkin .pert-grid{display:flex;flex-wrap:wrap;gap:7px}
+      #v-checkin .pert-grid .pert-chip{flex:0 0 auto;padding:9px 14px;border-radius:999px}
+      #v-checkin .pert-grid .pert-chip-manage{flex:1 1 100%}}
     #v-checkin .pert-chip{display:flex;align-items:center;justify-content:center;gap:7px;text-align:center;padding:11px 10px;border:1.5px solid var(--line);border-radius:12px;background:#fff;color:var(--z-blue);font-family:var(--font-ui);font-weight:700;font-size:13.5px;cursor:pointer;transition:.12s}
     #v-checkin .pert-chip:hover{border-color:var(--z-gold);background:var(--z-cream)}
     #v-checkin .pert-chip.on{border-color:var(--crm-ok);background:rgba(39,174,96,.08)}
@@ -3482,7 +3487,16 @@
     #v-checkin .pert-row-spec:focus{border-color:var(--z-gold);outline:none}
     #v-checkin .pert-row-del{flex:0 0 auto;width:34px;height:34px;border-radius:9px;border:1.5px solid var(--line);background:#fff;color:var(--crm-critico);font-weight:800;font-size:15px;cursor:pointer;line-height:1}
     #v-checkin .pert-row-del:hover{background:rgba(192,57,43,.08);border-color:var(--crm-critico)}
-    @media(max-width:480px){#v-checkin .pert-row{flex-wrap:wrap}#v-checkin .pert-row-spec{flex:1 1 100%;order:3}}
+    #v-checkin .ci-atalhos{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin:-4px 0 14px}
+    #v-checkin .ci-atalhos-rot{font-size:12.5px;font-weight:700;color:var(--muted);margin-right:2px}
+    #v-checkin .ci-atalhos button{font-family:var(--font-ui);font-size:13px;font-weight:800;color:var(--z-blue);background:#fff;border:1.5px solid var(--line);border-radius:999px;padding:7px 12px;cursor:pointer}
+    #v-checkin .ci-atalhos button:active{background:var(--z-cream-warm)}
+    #v-checkin .pert-row-cor{flex:0 0 auto;max-width:132px;font-family:var(--font-ui);font-size:14px;font-weight:700;padding:8px 10px;border:1.5px solid var(--line);border-radius:10px;background:#fff;color:var(--z-blue)}
+    #v-checkin .pert-row-cor.tem{border-color:var(--crm-ok);background:rgba(39,174,96,.08)}
+    @media(max-width:480px){#v-checkin .pert-row{flex-wrap:wrap;gap:7px 8px;padding:8px 10px}
+      #v-checkin .pert-row-nome{flex:1 1 0;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+      #v-checkin .pert-row-cor{max-width:116px;padding:7px 8px;font-size:13.5px}
+      #v-checkin .pert-row-spec{flex:1 1 100%;order:3;padding:8px 11px;font-size:13.5px}}
     #v-checkin .sig-wrap{border:2px dashed var(--z-gold);border-radius:14px;background:var(--z-cream-warm);position:relative}
     #v-checkin canvas#ciSig{width:100%;height:190px;display:block;border-radius:12px;touch-action:none;cursor:crosshair;background:#fff}
     #v-checkin .sig-hint{position:absolute;top:50%;left:0;right:0;transform:translateY(-50%);text-align:center;color:#c9bfa8;font-weight:700;pointer-events:none;font-size:14px}
@@ -3601,6 +3615,17 @@
         </div>
         <div id="ciPills"></div>
       </div>
+      <!-- ATALHOS (Adriana, 25/set/2026: "tela imensa, sem agilidade nenhuma, péssima
+           visibilidade no celular"). A ficha tem nove cartões; no celular passa de 5.000 px.
+           Um toque leva ao cartão — sem rolar procurando. Nada muda no que se preenche. -->
+      <div class="ci-atalhos" aria-label="Ir para">
+        <span class="ci-atalhos-rot">Ir para:</span>
+        <button type="button" onclick="ciIrPara('ciCardDatas')">Datas</button>
+        <button type="button" onclick="ciIrPara('ciCardAlim')">Alimentação</button>
+        <button type="button" onclick="ciIrPara('ciCardMed')">Remédios</button>
+        <button type="button" onclick="ciIrPara('ciCardPert')">Pertences</button>
+        <button type="button" onclick="ciIrPara('ciCardAssina')">Assinatura e salvar</button>
+      </div>
 
       <!-- Cadastro incompleto — o check-in é o momento de completar (decisão da Adriana, 29/jul/2026).
            17/set/2026, no check-in da Lisa (tutora Nilce, aluna há anos): o cartão aparecia
@@ -3655,7 +3680,7 @@
         <div id="ciPernoiteBox" style="display:none;margin-top:10px"></div>
       </div>
 
-      <div class="card">
+      <div class="card" id="ciCardDatas">
         <h2>Datas da estadia</h2>
         <div class="hint">Cada estadia é uma pasta separada — ração, remédio e pertences nunca se misturam entre uma vez e outra.</div>
         <div class="cad-grid">
@@ -3674,7 +3699,7 @@
         <div class="field" style="margin-top:8px"><input class="cad-in" id="ciObsGeral" placeholder="Ex: tutor pediu para observar se manca à noite · estranha lugar novo, dar atenção" autocomplete="off"></div>
       </div>
 
-      <div class="card">
+      <div class="card" id="ciCardAlim">
         <h2>Alimentação</h2>
         <div class="hint">O que ele come nesta estadia. <strong>Nenhuma alimentação pode ser trocada.</strong> Preencha com o tutor — a conferência só pesa a ração e confere se cobre a estadia.</div>
         <!-- A CONFIRMAÇÃO DO QUE ELE COME (Adriana, 23/set/2026): "essa informação tem que
@@ -3742,7 +3767,7 @@
         </div>
       </div>
 
-      <div class="card">
+      <div class="card" id="ciCardMed">
         <h2>Medicação e suplementos</h2>
         <div class="hint">Cadastre cada medicamento/suplemento com o <strong>nome</strong>, a <strong>quantidade (número + medida)</strong> e os <strong>horários reais</strong>. Isso alimenta o despertador da AuAulândia. À prova de erro — sem número e medida não salva.</div>
         <div id="ciMeds"></div>
@@ -3751,9 +3776,9 @@
         <div class="field" style="margin-top:10px"><label>Observação da medicação <span style="font-weight:600;color:var(--muted)">(recados do tutor, remédio de urgência)</span></label><input class="cad-in" id="ciMedObs" placeholder="Ex: tutor mandou Buscopan em caso de urgência — só se necessário" autocomplete="off"></div>
       </div>
 
-      <div class="card">
+      <div class="card" id="ciCardPert">
         <h2>Pertences</h2>
-        <div class="hint">Toque no tipo de item para adicionar o que o tutor trouxe. Pode adicionar <strong>vários do mesmo tipo</strong> (ex: 2 peitorais, 5 roupas) — cada um com a sua especificação. Depois é só editar ou remover cada um. Não achou na lista? Acrescente — vai para o banco e aparece para todos.</div>
+        <div class="hint">Toque no que o tutor trouxe — <strong>tocou duas vezes, são dois</strong> (ex: 2 roupas). A <strong>cor é um toque</strong>, na própria linha; o detalhe por escrito é opcional. Não achou na lista? Acrescente lá embaixo — vai para o banco e aparece para todos.</div>
         <button type="button" class="ci-toggle-novo" id="ciPertManageBtn" style="margin-top:0;display:none" onclick="ciTogglePertManage()"><span data-icon="paw"></span><span id="ciPertManageTxt">Gerenciar itens do banco (editar / excluir)</span></button>
         <div id="ciPertGrid" class="pert-grid"></div>
         <div id="ciPertSel"></div>
@@ -3761,7 +3786,7 @@
           <div style="display:flex;gap:8px"><input class="cad-in" id="ciPertNovo" placeholder="Ex: Cobertor" autocomplete="off" onkeydown="if(event.key==='Enter'){event.preventDefault();ciAddPertItem();}"><button class="btn btn-gold" style="flex:0 0 auto" onclick="ciAddPertItem()">Adicionar</button></div></div>
       </div>
 
-      <div class="card">
+      <div class="card" id="ciCardAssina">
         <h2>Assinatura do tutor</h2>
         <div class="hint">Peça para o tutor assinar com o dedo no tablet, confirmando os dados e os horários de medicação.</div>
         <label class="ci-spa-conf" style="margin:0 0 10px"><input type="checkbox" id="ciSemTutor" onchange="ciSemTutorChange()"><span>O tutor <strong>não veio</strong> — outra pessoa deixou (taxi dog, vizinho…). <strong>Dispensa assinatura.</strong></span></label>
@@ -44431,13 +44456,90 @@
       const same=ciPertSel.filter(function(x){ return x.k===p.k; }); const multi=same.length>1; const idx=same.indexOf(p)+1;
       return '<div class="pert-row" data-uid="'+p.uid+'">'+
         '<div class="pert-row-nome">'+esc(p.nome)+(multi?' <span class="pert-row-n">#'+idx+'</span>':'')+'</div>'+
-        '<input class="pert-row-spec" value="'+escAttr(p.spec)+'" placeholder="'+escAttr(ciPertSpecPh(p.k))+'" oninput="ciEditPertSpec(\''+p.uid+'\',this.value)">'+
+        ciPertCorHTML(p)+
+        '<input class="pert-row-spec" value="'+escAttr(p.spec)+'" placeholder="'+escAttr(ciPertCorPede(p.k)?'Detalhe (opcional): marca, estampa…':ciPertSpecPh(p.k))+'" oninput="ciEditPertSpec(\''+p.uid+'\',this.value)">'+
         '<button type="button" class="pert-row-del" title="Remover" aria-label="Remover" onclick="ciRemovePertUnit(\''+p.uid+'\')">&#10005;</button>'+
       '</div>';
     }).join('');
   }
-  function ciAddPertUnit(k){ const uid=ciUid(); ciPertSel.push({uid:uid,k:k,nome:ciPertNome(k),spec:''}); ciDrawPert();
-    const el=document.querySelector('#ciPertSel .pert-row[data-uid="'+uid+'"] .pert-row-spec'); if(el) setTimeout(function(){ try{ el.focus(); }catch(e){} /* silencioso de propósito: enfeite de tela (foco, rolagem, mídia) — falhar não muda dado nenhum */ },30); }
+  // O toque SÓ adiciona (25/set/2026). Antes, o campo de texto ganhava o foco e o teclado
+  // subia a cada item — "precisa colocar manual os pertences, digitar". A cor é um toque na
+  // linha; escrever é opcional e fica para quem quiser.
+  function ciAddPertUnit(k){ const uid=ciUid(); ciPertSel.push({uid:uid,k:k,nome:ciPertNome(k),spec:''}); ciDrawPert(); }
+  // O atalho da ficha: rola até o cartão descontando o que fica preso no topo (a barra azul
+  // do celular e o título da tela) — senão o título do cartão nasce escondido embaixo deles.
+  function ciIrPara(id){
+    try{
+      const el=document.getElementById(id); if(!el) return;
+      let topo=0;
+      document.querySelectorAll('.mobtop, .main > .head').forEach(function(h){
+        const st=getComputedStyle(h);
+        if(st.display!=='none' && (st.position==='sticky'||st.position==='fixed')) topo+=h.offsetHeight;
+      });
+      const y=el.getBoundingClientRect().top+window.scrollY-topo-8;
+      window.scrollTo({top:Math.max(0,y), behavior:'smooth'});
+    }catch(e){ /* silencioso de propósito: atalho de rolagem — falhar não muda dado nenhum */ }
+  }
+  // ---- a cor num toque ------------------------------------------------------------------
+  // As cores no masculino e no feminino: "coleira vermelha", "peitoral vermelho" — a ficha
+  // sai no PDF e vai para o tutor, e erro de concordância ali é a Zêluz escrevendo errado.
+  var CI_PERT_CORES=[['preto','preta'],['branco','branca'],['cinza','cinza'],['azul','azul'],['azul-marinho','azul-marinho'],
+    ['rosa','rosa'],['vermelho','vermelha'],['verde','verde'],['amarelo','amarela'],['laranja','laranja'],['roxo','roxa'],
+    ['marrom','marrom'],['bege','bege'],['caramelo','caramelo'],['estampado','estampada'],['xadrez','xadrez'],['colorido','colorida']];
+  // Ração, comida, petisco e tapete: o que importa é a marca, não a cor.
+  var CI_PERT_SEM_COR={racao:1, natural:1, petisco:1, tapete:1};
+  function ciPertCorPede(k){ return !CI_PERT_SEM_COR[String(k||'')]; }
+  // "Coleira", "Cama", "Bolsa / mala", "Guia", "Roupa" são femininos; "Peitoral", "Pote",
+  // "Brinquedo", masculinos. Para o item novo do banco vale a regra da última letra do
+  // primeiro nome (a, ção, gem) — é o que acerta o português na imensa maioria.
+  function ciPertFem(nome){
+    var w=jsNorm(String(nome||'').split(/[\s\/]+/)[0]||'');
+    return /(a|cao|gem)$/.test(w);
+  }
+  // A cor que a especificação já traz no começo ("vermelha Zeedog" → "vermelha"), em
+  // qualquer das duas formas. '' = nenhuma.
+  function ciPertCorDe(spec){
+    var t=jsNorm(String(spec||'')).trim();
+    var achou='';
+    CI_PERT_CORES.forEach(function(par){
+      par.forEach(function(c){
+        var n=jsNorm(c);
+        if((t===n || t.indexOf(n+' ')===0) && n.length>achou.length) achou=n;
+      });
+    });
+    return achou;
+  }
+  // Troca (ou põe) a cor no começo da especificação e guarda o resto como está. Pura.
+  function ciPertComCor(spec, cor){
+    spec=String(spec||'').trim();
+    var atual=ciPertCorDe(spec);
+    var resto=atual?spec.slice(atual.length).trim():spec;
+    return ((cor||'')+(resto?((cor?' ':'')+resto):'')).trim();
+  }
+  function ciPertCorHTML(p){
+    if(!ciPertCorPede(p.k)) return '';
+    var fem=ciPertFem(p.nome), atual=ciPertCorDe(p.spec);
+    var h='<select class="pert-row-cor'+(atual?' tem':'')+'" aria-label="Cor" onchange="ciPertCor(\''+p.uid+'\',this.value)">'
+      +'<option value="">cor…</option>';
+    CI_PERT_CORES.forEach(function(par){
+      var c=fem?par[1]:par[0];
+      var on=(atual && (jsNorm(par[0])===atual || jsNorm(par[1])===atual));
+      h+='<option value="'+escAttr(c)+'"'+(on?' selected':'')+'>'+escAttr(c)+'</option>';
+    });
+    return h+'</select>';
+  }
+  function ciPertCor(uid, cor){
+    const p=ciPertSel.find(function(x){ return x.uid===uid; }); if(!p) return;
+    p.spec=ciPertComCor(p.spec, cor);
+    // Só a própria linha muda: redesenhar tudo tiraria o foco de quem está digitando em outra.
+    try{
+      const row=document.querySelector('#ciPertSel .pert-row[data-uid="'+uid+'"]');
+      if(row){
+        const inp=row.querySelector('.pert-row-spec'); if(inp) inp.value=p.spec;
+        const sel=row.querySelector('.pert-row-cor'); if(sel) sel.classList.toggle('tem', !!cor);
+      }
+    }catch(e){ /* silencioso de propósito: enfeite de tela — o dado já está em ciPertSel */ }
+  }
   function ciEditPertSpec(uid,val){ const p=ciPertSel.find(function(x){ return x.uid===uid; }); if(p) p.spec=val; }
   function ciRemovePertUnit(uid){ ciPertSel=ciPertSel.filter(function(x){ return x.uid!==uid; }); ciDrawPert(); }
   // Gestão: renomear um item do banco de pertences (mantém a mesma chave).
