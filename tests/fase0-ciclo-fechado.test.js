@@ -888,6 +888,44 @@ prova('trocar a cor mexe só na cor: o resto do que foi escrito fica', () => {
   assert.ok(/value="azul" selected/.test(run("ciPertCorHTML({uid:'a', k:'coleira', nome:'Coleira', spec:'azul Zeedog'})")), 'a cor escrita aparece marcada');
 });
 
+// ================================================================== Ficha única: Com o tutor (25/set)
+console.log('\nFicha única — "Com o tutor": nada se perde');
+prova('a ficha única junta ficha, pendências e cada conversa (quem mandou, o que respondeu, cobranças)', () => {
+  run(`__bk3={vp:VENC_PEND, pa:PEND_ABERTAS, hz:zHojeISO, pe:pelExtra, te:poTelDoTutor};
+    zHojeISO=function(){ return '2026-09-24'; };
+    pelExtra=function(){ return {ecto_p:'2026-09-01', verm_p:'2026-12-01'}; };
+    poTelDoTutor=function(){ return '31999990000'; };
+    __K=dcKey('Mel','Ana');
+    VENC_PEND={}; VENC_PEND['2026-09-20']={}; VENC_PEND['2026-09-20'][__K]={pet:'Mel', tutor:'Ana',
+      enviadas:{antip:{quem:'Bia', ts:${Date.UTC(2026, 8, 19, 17)}}},
+      respostas:{antip:{v:'nao_agora', quem:'Bia', ts:${Date.UTC(2026, 8, 19, 20)}}}};
+    VENC_PEND['2026-09-24']={}; VENC_PEND['2026-09-24'][__K]={pet:'Mel', tutor:'Ana',
+      enviadas:{ant_antip:{quem:'Caio', ts:${Date.UTC(2026, 8, 22, 12)}}}, cobrancas:{ant_antip:[{quem:'Caio', ts:1}]}};
+    PEND_ABERTAS={}; PEND_ABERTAS[__K]={vermifugo:{status:'aberta', dia:'2026-09-22'}};`);
+  try {
+    const d = JSON.parse(JSON.stringify(run("fichaUnicaDados({n:'Mel', tutor:'Ana', sexo:'F'}, " + Date.UTC(2026, 8, 24, 18) + ')')));
+    assert.strictEqual(d.filhot.tel, '31999990000');
+    assert.deepStrictEqual(d.ficha.filter((x) => !x.sem_registro).map((x) => x.k + (x.atrasado ? '!' : '')), ['ecto_p!'], 'com data, só o que venceu (o vermífugo de dezembro não)');
+    assert.ok(d.ficha.some((x) => x.sem_registro && x.k === 'vac_raiva_p'), 'o que nunca foi registrado também é da ficha única');
+    assert.deepStrictEqual(d.pendencias.map((x) => x.item + '@' + x.dia), ['vermifugo@2026-09-22']);
+    assert.deepStrictEqual(d.conversas.map((x) => x.dia + '|' + x.tipo), ['2026-09-24|ant_antip', '2026-09-20|antip'], 'da mais nova para a mais antiga');
+    assert.strictEqual(d.conversas[0].antecipado, true);
+    assert.strictEqual(d.conversas[0].cobrancas, 1);
+    assert.strictEqual(d.conversas[1].resposta.quem, 'Bia');
+    assert.ok(d.conversas[1].resposta.rotulo.length > 0, 'a resposta sai com o rótulo da tela');
+    assert.deepStrictEqual(d.esperando.map((x) => x.tipo), ['ant_antip'], 'a de hoje espera resposta; a de 20/09 foi respondida');
+    assert.ok(/1 item vencido · 1 conversa sem resposta · 1 pendência de outro dia/.test(run("fichaTutorLinhaHTML({n:'Mel', tutor:'Ana'})")));
+  } finally { run('VENC_PEND=__bk3.vp; PEND_ABERTAS=__bk3.pa; zHojeISO=__bk3.hz; pelExtra=__bk3.pe; poTelDoTutor=__bk3.te;'); }
+});
+prova('sem as leituras em mão, a ficha única diz "não li" — nunca "nada"', () => {
+  run(`__bk3={vp:VENC_PEND, pa:PEND_ABERTAS}; VENC_PEND=null; PEND_ABERTAS=null;`);
+  try {
+    const d = JSON.parse(JSON.stringify(run("fichaUnicaDados({n:'Mel', tutor:'Ana'})")));
+    assert.deepStrictEqual(d.lido, { conversas: false, pendencias: false });
+    assert.strictEqual(d.conversas.length + d.pendencias.length, 0);
+  } finally { run('VENC_PEND=__bk3.vp; PEND_ABERTAS=__bk3.pa;'); }
+});
+
 // ------------------------------------------------ o fim
 fila.then(() => {
   console.log('\n' + ok + ' provas passaram' + (falhas.length ? (', ' + falhas.length + ' falharam:') : '.'));

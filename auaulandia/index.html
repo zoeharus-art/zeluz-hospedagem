@@ -23898,6 +23898,7 @@
           <!-- "E onde for a informação dele precisa ir a medicação" (Adriana, 22/set/2026).
                No cabeçalho, antes de qualquer aba: quem abre a ficha já sabe. -->
           <div id="pelMedLinha">${medLinhaDoPel(p,'Detalhes e alterações na aba Medicamentos.')}</div>
+          <div id="pelTutorLinha">${(typeof fichaTutorLinhaHTML==='function')?fichaTutorLinhaHTML(p):''}</div>
           <div id="pelCategoriaEdit" style="margin-top:11px">${categoriaEditInner(p)}</div>
           <div id="pelDiasEdit" style="margin-top:9px">${diasEditInner(p)}</div>
           ${can?'<div class="hint" style="margin-top:4px;font-size:11px">Toque nos dias para marcar quando o peludinho vem — a frequência ajusta sozinha.</div>':''}
@@ -23936,6 +23937,11 @@
              FILHOt precisa para ficar bem. E é DAQUI que o Check-in da hospedagem puxa o
              que vai ser perguntado ao tutor. -->
         <div class="subtab2" onclick="pelSubtab(this,'ps-med');fmedRender()">Medicamentos</div>
+        <!-- COM O TUTOR (Adriana, 25/set/2026): "que vá tudo para uma ficha única do cliente e
+             que a informação não se perca". O que a ficha deve, o que ficou pendente de outro
+             dia e cada conversa com o tutor — quem mandou, quando e o que ele respondeu. Só
+             leitura: as fontes continuam onde sempre estiveram. Dado de cobrança = sensível. -->
+        <div class="subtab2 so-sensivel" onclick="pelSubtab(this,'ps-tutor');fichaTutorRender()">Com o tutor</div>
         <div class="subtab2" onclick="pelSubtab(this,'ps-rotina')">Rotina &amp; Almoço</div>
         <div class="subtab2" onclick="pelSubtab(this,'ps-exames')">Exames do corpo</div>
         <div class="subtab2" onclick="pelSubtab(this,'ps-atencao')">Atenção &amp; Cuidados</div>
@@ -24036,6 +24042,8 @@
         <div id="fmedAcoes"></div>
         <div id="fmed-status" class="rel-status"></div>
       </div></div>
+
+      <div class="ppanel2" id="ps-tutor"><div id="fichaTutorRoot"><div class="card"><div class="hint">Montando o histórico com o tutor&hellip;</div></div></div></div>
 
       <div class="ppanel2" id="ps-rotina"><div class="card">
         <h2 style="font-size:20px">Rotina &amp; alimentação</h2>
@@ -38834,6 +38842,156 @@
     // Sem o texto de Configurações, os botões esperam: mandar o texto de fábrica no lugar
     // do que a Gestão escreveu seria mandar a mensagem errada.
     if(VENC_CFG===null) raiz.querySelectorAll('button.btn-gold').forEach(function(b){ b.disabled=true; b.style.opacity='.5'; });
+  }
+
+  // ===== A FICHA ÚNICA: "COM O TUTOR" (Adriana, 25/set/2026) ==========================
+  // "Pensando que no futuro humanos, máquina e um agente vão utilizar essas informações:
+  //  que vá tudo para uma ficha única do cliente e que a informação não se perca."
+  // UMA leitura, pura na memória, que junta o que mora em quatro lugares:
+  //   • a ficha — o que venceu, vence hoje ou nunca foi registrado    (vencItensDe)
+  //   • as pendências — o lançado para um dia em que ele não veio      (daycare/pendencias)
+  //   • as conversas com o tutor — mandou, respondeu, cobrou, tentou   (daycare/vencimentos)
+  //   • o que ainda espera resposta                                     (o estado de cada conversa)
+  // NADA é gravado aqui e nenhum nó novo nasce. A ficha única é uma LEITURA das fontes que
+  // já existem: uma cópia "consolidada" gravada à parte seria a segunda verdade que
+  // envelhece. É esta função que um agente lê — os campos têm nome e não dependem da tela.
+  function fichaUnicaDados(p, agora){
+    agora=agora||Date.now();
+    var hoje=(typeof zHojeISO==='function')?zHojeISO():'';
+    var g=function(c){ return (typeof pelGet==='function')?(pelGet(p,c)||''):(p[c]||''); };
+    var chave=(p&&typeof dcKey==='function')?dcKey(p.n,p.tutor):'';
+    var out={chave:chave, hoje:hoje,
+      filhot:{nome:((typeof pelNome==='function')?pelNome(p):'')||(p&&p.n)||'', tutor:g('tutor'), raca:g('raca'), sexo:g('sexo'),
+              tel:(typeof poTelDoTutor==='function')?(poTelDoTutor(p)||''):''},
+      lido:{conversas:(typeof VENC_PEND!=='undefined'&&VENC_PEND!==null),
+            pendencias:(typeof PEND_ABERTAS!=='undefined'&&PEND_ABERTAS!==null)},
+      ficha:[], pendencias:[], esperando:[], conversas:[]};
+    if(!p||!chave) return out;
+    // a ficha
+    var ex=(typeof pelExtra==='function')?(pelExtra(p)||{}):{};
+    var itens=[];
+    try{ itens=vencItensDe(ex, hoje, 0, hoje, {incluirSemRegistro:true})||[]; }
+    catch(e){ itens=[]; } /* silencioso de propósito: ficha estranha não derruba a leitura inteira */
+    itens.forEach(function(x){
+      out.ficha.push({k:x.k, item:vencNomeComArtigo(x), vence:x.vence||'', atrasado:!!x.atrasado,
+        sem_registro:!!x.sem_registro, frase:hojeFraseItem(x, hoje)});
+    });
+    // as pendências de outro dia
+    if(out.lido.pendencias) hojePendDe(chave).forEach(function(x){
+      out.pendencias.push({item:x.item, rotulo:x.rotulo, dia:x.dia});
+    });
+    // as conversas, da mais nova para a mais antiga
+    if(out.lido.conversas){
+      Object.keys(VENC_PEND).filter(function(d){ return /^\d{4}-\d{2}-\d{2}$/.test(d); }).sort().reverse().forEach(function(dia){
+        var r=(VENC_PEND[dia]||{})[chave]; if(!r) return;
+        var tipos={};
+        ['enviadas','respostas','cobrancas','tentativas'].forEach(function(c){
+          Object.keys(r[c]||{}).forEach(function(t){ tipos[t]=1; });
+        });
+        var lista=Object.keys(tipos);
+        // O cartão respondido pelo caminho antigo (antes das mensagens por assunto).
+        if(!lista.length && (r.resposta || r.msg_enviada)) lista=[''];
+        lista.forEach(function(t){
+          var env=t?((r.enviadas||{})[t]||null):(r.msg_enviada||null);
+          var rt=t?vencRespostaDe(r, t):(r.resposta?{v:r.resposta, quem:r.resposta_quem, ts:r.resposta_ts}:null);
+          var estado='';
+          try{ estado=vencEstadoTipo(r, t, agora); }
+          catch(e){ estado=''; } /* silencioso de propósito: registro antigo sem assunto fica sem estado */
+          var c={dia:dia, tipo:t, assunto:t?vencRotuloTipo(t):'Prevenção', antecipado:vencEhAntecipado(t),
+            enviada:env?{quem:String(env.quem||''), ts:Number(env.ts||0)}:null,
+            resposta:rt?{v:String(rt.v||''), rotulo:vencRespRotulo(rt.v)||String(rt.v||''), quem:String(rt.quem||''), ts:Number(rt.ts||0)}:null,
+            cobrancas:vencCobrancasDe(r, t).length, tentativas:vencTentativasDe(r, t).length,
+            estado:estado, ficha_atualizada:!!r.ficha_atualizada};
+          out.conversas.push(c);
+          if(estado==='aguardando'||estado==='cobrar') out.esperando.push(c);
+        });
+      });
+    }
+    return out;
+  }
+  // A linha do cabeçalho da ficha: bater o olho e saber se há algo em aberto com o tutor.
+  // Só com o que JÁ está em memória — abrir a ficha não pode custar leitura nova.
+  function fichaTutorLinhaHTML(p){
+    var d=null;
+    try{ d=fichaUnicaDados(p); }
+    catch(e){ return ''; } /* silencioso de propósito: enfeite de cabeçalho — a aba mostra o resto */
+    var venc=d.ficha.filter(function(x){ return x.atrasado; }).length;
+    var partes=[];
+    if(venc) partes.push(venc+(venc>1?' itens vencidos':' item vencido'));
+    if(d.esperando.length) partes.push(d.esperando.length+(d.esperando.length>1?' conversas sem resposta':' conversa sem resposta'));
+    if(d.pendencias.length) partes.push(d.pendencias.length+(d.pendencias.length>1?' pendências de outro dia':' pendência de outro dia'));
+    if(!partes.length) return '';
+    return '<div class="so-sensivel" style="margin-top:6px;font-size:13px;font-weight:800;color:var(--crm-atencao-text)">'
+      +'Com o tutor: '+escAttr(partes.join(' · '))+' — veja na aba <strong>Com o tutor</strong>.</div>';
+  }
+  function fichaTutorRender(){
+    var raiz=document.getElementById('fichaTutorRoot'); if(!raiz) return;
+    var p=(typeof pelAtual!=='undefined')?pelAtual:null;
+    if(!p){ raiz.innerHTML='<div class="card"><div class="hint">Abra a ficha de um FILHOt.</div></div>'; return; }
+    var d=fichaUnicaDados(p);
+    // O que falta ler, lê uma vez — e redesenha quando chega.
+    if(DB){
+      var falta=[];
+      if(!d.lido.conversas && typeof vencPendCarregar==='function') falta.push(vencPendCarregar());
+      if(!d.lido.pendencias && typeof pendCarregar==='function') falta.push(pendCarregar());
+      if(falta.length) Promise.all(falta).then(function(){
+        try{ if(pelAtual===p) fichaTutorRender(); }catch(e){ /* silencioso de propósito: redesenho de tela */ }
+      });
+    }
+    var dd=function(iso){ return (((typeof fmtBR==='function')?fmtBR(iso):'')||iso||'').slice(0,5); };
+    var quando=function(x){ return x&&x.ts?(escAttr(x.quem||'-')+', '+escAttr(dd(zDiaDoTs(x.ts)))+' às '+escAttr(vencHora(x.ts))):''; };
+    var h='<div class="card"><h2 style="font-size:19px">Agora</h2>';
+    // a ficha
+    var devendo=d.ficha.filter(function(x){ return x.atrasado||x.sem_registro||x.vence===d.hoje; });
+    h+='<div class="hint" style="margin-top:6px;font-weight:800;color:var(--z-blue)">O que a ficha deve</div>';
+    h+=devendo.length
+      ? ('<div style="font-size:13.5px;font-weight:700;line-height:1.6;color:var(--z-blue)">'+devendo.map(function(x){
+          return '<span style="color:'+(x.atrasado?'var(--crm-critico)':'var(--crm-atencao-text)')+'">'+escAttr(x.frase)+'</span>';
+        }).join(' <span style="color:var(--muted)">·</span> ')+'</div>')
+      : '<div class="hint" style="color:var(--crm-ok);font-weight:700">Nada vencido nem em aberto.</div>';
+    // as pendências
+    h+='<div class="hint" style="margin-top:10px;font-weight:800;color:var(--z-blue)">Pendências de outro dia</div>';
+    h+=!d.lido.pendencias?'<div class="hint">Lendo&hellip;</div>'
+      :(d.pendencias.length?('<div style="font-size:13.5px;font-weight:700;color:var(--crm-atencao-text)">'
+          +d.pendencias.map(function(x){ return escAttr(x.rotulo)+(x.dia?(' de '+escAttr(dd(x.dia))):''); }).join(' · ')
+          +'</div><div class="hint">Lançado para um dia em que ele não veio: volta a ser cobrado na próxima vinda.</div>')
+        :'<div class="hint" style="color:var(--crm-ok);font-weight:700">Nenhuma.</div>');
+    // esperando resposta
+    h+='<div class="hint" style="margin-top:10px;font-weight:800;color:var(--z-blue)">Esperando resposta do tutor</div>';
+    h+=!d.lido.conversas?'<div class="hint">Lendo&hellip;</div>'
+      :(d.esperando.length?d.esperando.map(function(c){
+          return '<div style="font-size:13.5px;font-weight:700;color:'+(c.estado==='cobrar'?'var(--crm-critico)':'var(--z-blue)')+'">'
+            +escAttr(c.assunto)+' — mandada por '+quando(c.enviada)
+            +(c.estado==='cobrar'?' · <strong>passou do prazo: cobrar</strong>':'')+'</div>';
+        }).join(''):'<div class="hint" style="color:var(--crm-ok);font-weight:700">Nenhuma conversa esperando.</div>');
+    h+='<div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:12px">'
+      +'<button type="button" class="btn btn-gold" style="padding:7px 14px;font-size:13px;font-weight:800" onclick="irParaView(\'contatos\')">Quem chamar hoje</button>'
+      +'</div></div>';
+    // as conversas
+    h+='<div class="card"><h2 style="font-size:19px">Conversas com o tutor</h2>'
+      +'<div class="hint">Os últimos '+VENC_PEND_DIAS+' dias e os próximos já combinados: cada mensagem, quem mandou, o que o tutor respondeu e as cobranças. Nada aqui se apaga.</div>';
+    if(!d.lido.conversas) h+='<div class="hint" style="padding:8px 0">Lendo&hellip;</div>';
+    else if(!d.conversas.length) h+='<div class="hint" style="padding:8px 0">Nenhuma conversa registrada neste período.</div>';
+    else d.conversas.forEach(function(c){
+      h+='<div style="padding:9px 0;border-top:1px solid var(--line)">'
+        +'<div style="font-size:14px;font-weight:800;color:var(--z-blue)">'+escAttr(dd(c.dia))+' · '+escAttr(c.assunto)
+        +(c.antecipado?' <span class="hint" style="margin:0">(com ele na casa)</span>':'')+'</div>'
+        +'<div style="font-size:13px;color:var(--z-blue);line-height:1.5">'
+        +(c.enviada?('Mandada por '+quando(c.enviada)):'Ainda não mandada')
+        +(c.resposta?(' · <strong>Resposta:</strong> '+escAttr(c.resposta.rotulo)+(c.resposta.ts?(' ('+quando(c.resposta)+')'):'')):'')
+        +(c.cobrancas?(' · '+c.cobrancas+(c.cobrancas>1?' cobranças':' cobrança')):'')
+        +(c.tentativas?(' · '+c.tentativas+(c.tentativas>1?' tentativas sem resposta':' tentativa sem resposta')):'')
+        +(c.ficha_atualizada?' · ficha atualizada':'')
+        +'</div></div>';
+    });
+    h+='</div>';
+    raiz.innerHTML=h;
+  }
+  // O dia (AAAA-MM-DD) de um carimbo de hora, no relógio do aparelho.
+  function zDiaDoTs(ts){
+    var d=new Date(Number(ts||0)); if(isNaN(d)) return '';
+    var p2=function(x){ return String(x).padStart(2,'0'); };
+    return d.getFullYear()+'-'+p2(d.getMonth()+1)+'-'+p2(d.getDate());
   }
 
   // ===== FILA DE REENVIO À PLANILHA — Adriana, 04/set/2026 =========================

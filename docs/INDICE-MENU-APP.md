@@ -95,6 +95,23 @@ Cartão marcado "atualizado" antes desta versão e com a ficha ainda devendo **v
 - Foto de ficha que existe não é candidata: o Thor novo vai para "precisa fotografar".
 - Card novo **"Duas fichas com a MESMA foto"**: mostra as fichas que ficaram com a foto copiada antes desta correção. A foto certa se tira em «Trocar».
 
+### (P) Ficha única: aba "Com o tutor" na ficha do FILHOt
+
+> **Adriana, 25/set/2026:** *"Pensando que no futuro humanos, máquina e um agente vão utilizar essas informações: menos cliques, que vá tudo para uma ficha única do cliente e que a informação não se perca."*
+
+**Cadastro de Peludinhos › (FILHOt) › Com o tutor** (aba nova, visível para Consultoras, Supervisão, Gestão e Diretoria):
+
+| Bloco | O que mostra |
+|---|---|
+| **Agora › O que a ficha deve** | o que venceu, vence hoje ou nunca foi registrado |
+| **Agora › Pendências de outro dia** | o que foi lançado para um dia em que ele não veio e volta a ser cobrado na próxima vinda |
+| **Agora › Esperando resposta do tutor** | cada mensagem sem resposta, com quem mandou e quando; em vermelho quando passou do prazo e é para cobrar |
+| **Conversas com o tutor** | dos últimos 30 dias e dos próximos já combinados, da mais nova para a mais antiga: o assunto, quem mandou e quando, a resposta (quem registrou e quando), as cobranças, as tentativas e se a ficha foi atualizada. A pergunta feita com ele na casa aparece marcada "(com ele na casa)" |
+
+- **No cabeçalho da ficha**, logo abaixo da linha do remédio, aparece uma linha quando há algo em aberto: *"Com o tutor: 1 item vencido · 1 conversa sem resposta · 1 pendência de outro dia"*.
+- **Nada é gravado e nenhum nó novo nasce.** A aba é uma leitura das fontes que já existem (`daycare/vencimentos`, `daycare/pendencias` e a própria ficha). Uma cópia consolidada gravada à parte seria a segunda verdade que envelhece.
+- **Para agentes:** a mesma leitura (`fichaUnicaDados`) devolve tudo em campos com nome. O contrato está no PRD-006, seção "Arquitetura do ciclo fechado".
+
 ### (O) Check-in da hospedagem no celular: pertences sem digitar
 
 > **Adriana, 25/set/2026:** *"Check-in, preenchimento de hospedagem, está muito difícil. Precisa colocar manual os pertences! Digitar! Está confuso. Tela imensa, sem agilidade nenhuma. Péssima visibilidade no celular."*
@@ -234,7 +251,7 @@ O saldo de reposição não muda ao marcar: o crédito só sai quando ele vem. A
 ### Provas
 
 Todas rodam sem rede e sem dado de cliente:
-- `node tests/fase0-ciclo-fechado.test.js`: 75 provas;
+- `node tests/fase0-ciclo-fechado.test.js`: 77 provas;
 - `node tests/servidor-senha.test.js`: 11 provas.
 
 O harness completo precisa do retrato da VPS e não rodou nesta sessão.
