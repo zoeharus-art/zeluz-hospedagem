@@ -22692,7 +22692,9 @@
       try{
         var _antT={};
         ['enviadas','respostas','cobrancas','tentativas'].forEach(function(c){ Object.keys(r[c]||{}).forEach(function(t){ if(vencEhAntecipado(t)) _antT[vencTipoBase(t)]=1; }); });
-        if(Object.keys(_antT).length) itensN=itensN.concat(((hojeAntecipar(exN, p, dia, r)||{}).itens||[]).filter(function(x){ return _antT[vencTipoDoItemObj(x)]; }));
+        // QA10: aqui é o cartão INTEIRO (ficha_atualizada fecha também as perguntas "fazer hoje?"
+        // ainda não mandadas) — segura tudo o que a pergunta de hoje cobre, perguntado ou não.
+        if(Object.keys(_antT).length || dia===hoje) itensN=itensN.concat((hojeAntecipar(exN, p, dia, r)||{}).itens||[]);
       }catch(e){ return; } /* silencioso de propósito: na dúvida não fecha */
       var resps=r.respostas||{}, recusou={};
       Object.keys(resps).forEach(function(t){ if(vencRespNaoMudaFicha((resps[t]||{}).v)) recusou[vencTipoBase(t)]=1; });
@@ -36655,7 +36657,17 @@
     var k=(typeof dcKey==='function')?dcKey(p.n, p.tutor):''; if(!k) return;
     // QA9: duas gravações seguidas — vale a data MAIS NOVA de cada campo, não a da 1ª.
     VENC_FECHA_PATCH[k]=Object.assign(VENC_FECHA_PATCH[k]||{}, patch||{});
-    var fazer=function(){ var pt=VENC_FECHA_PATCH[k]; delete VENC_FECHA_PATCH[k]; if(pt) vencFecharAssuntosFazer(p, pt); };
+    var fazer=function(){
+      // QA10: a gravação ANTERIOR deste FILHOt (o fechamento da data que agora foi corrigida)
+      // pode estar em curso — a conta espera ela chegar à memória, senão não vê o que reabrir.
+      var fila=Object.keys(VENC_FILA_GRAV).filter(function(x){ return x.slice(x.indexOf('|')+1)===k; })
+        .map(function(x){ return VENC_FILA_GRAV[x]; });
+      var seguir=function(){ var pt=VENC_FECHA_PATCH[k]; delete VENC_FECHA_PATCH[k]; if(pt) vencFecharAssuntosFazer(p, pt); };
+      if(!fila.length){ seguir(); return; }
+      var feito=false, uma=function(){ if(!feito){ feito=true; seguir(); } };
+      var t=setTimeout(uma, 15000);
+      Promise.all(fila).then(function(){ clearTimeout(t); uma(); }, function(){ clearTimeout(t); uma(); });
+    };
     var tent=0;
     var ir=function(){
       // QA9: leitura já em curso (a Mesa pediu): espera ela chegar em vez de fechar com a memória vazia.
@@ -36694,7 +36706,11 @@
       var rots=function(l){ return vencJuntar(l.map(function(t){ return String(vencRotuloTipo(t)).toLowerCase(); })); };
       // O rastro diz o que a conta viu — "não tem mais pendência de …" — e não "resolveu":
       // o rótulo é do ASSUNTO inteiro (vermífugo, carrapaticida e coleira), não do campo gravado.
-      vencGravar(chave, {fechados:fech},
+      var gr={fechados:fech};
+      // QA10: o cartão inteiro fechado pelo QUADRO também foi a ficha que fechou — a data
+      // corrigida para trás o reabre junto (senão o recado da veterinária não volta).
+      if(reab.length && r.ficha_atualizada && r.ficha_atualizada.via==='quadro') gr.ficha_atualizada=null;
+      vencGravar(chave, gr,
         (res.length?('a ficha de '+nome+' não tem mais pendência de '+rots(res)+' no cartão — a conversa com o tutor sobre isso fechou'):'')
         +(reab.length?((res.length?'; ':'')+'a ficha de '+nome+' voltou a ter pendência de '+rots(reab)+' — a conversa reabriu'):'')
         +' (dia '+dia+')',

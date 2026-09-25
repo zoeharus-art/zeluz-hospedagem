@@ -1188,6 +1188,24 @@ provaAsync('a ficha ficou em dia pelo quadro: fecha só quando nada conversado f
         { enviadas: { ant_antip: { quem: 'x', ts: 1 }, escova: { quem: 'x', ts: 1 } } });
       assert.strictEqual((await esperar()).length, 1, 'J2: fora da janela, o cartão vazio fecha');
     } finally { run('proximaVindaDe=__pv11;'); }
+    // L — QA10 MÉDIO-1: HOJE ele está aqui e só volta em 05/10. Hoje na Zêluz ofereceu duas
+    // perguntas (carrapaticida 01/10 e raiva 02/10); só a do carrapaticida saiu, e o
+    // carrapaticida é gravado pelo quadro. A pergunta da vacina, nunca mandada, não pode
+    // virar "respondido": o cartão inteiro NÃO fecha.
+    run("__pv11=proximaVindaDe; __dv11=vencEhDiaVet; proximaVindaDe=function(){ return '2026-10-05'; }; vencEhDiaVet=function(){ return true; }; VENC_REG_DIA='2026-09-21';");
+    try {
+      cenario(Object.assign({}, emDia, { ecto_p: '2026-10-01', vac_raiva_p: '2026-10-02' }), { ecto_p: '2026-12-10' },
+        { enviadas: { ant_antip: { quem: 'x', ts: 1 } } });
+      assert.strictEqual((await esperar()).length, 0, 'L: a pergunta da vacina ainda por mandar segura');
+      // L2 — nenhuma pergunta saiu (só a mensagem da escova); gravar a escova não esconde as perguntas de hoje
+      cenario(Object.assign({}, emDia, { ecto_p: '2026-10-01', escova_p: '2026-09-01' }), { escova_p: '2026-12-01' },
+        { enviadas: { escova: { quem: 'x', ts: 1 } } });
+      assert.strictEqual((await esperar()).length, 0, 'L2: as perguntas de hoje seguram o cartão de hoje');
+      // L3 — nada mais a perguntar até a próxima vinda: o cartão vazio fecha
+      cenario(Object.assign({}, emDia, { ecto_p: '2026-12-10', escova_p: '2026-09-01' }), { escova_p: '2026-12-01' },
+        { enviadas: { escova: { quem: 'x', ts: 1 } } });
+      assert.strictEqual((await esperar()).length, 1, 'L3: sem nada na janela, fecha');
+    } finally { run("proximaVindaDe=__pv11; vencEhDiaVet=__dv11; VENC_REG_DIA='2026-09-22';"); }
     // K — QA9 BAIXO-4: o fechamento automático que falha não diz "tente de novo" a quem
     // salvou a ficha (a data foi salva; o cartão continua para o "Sim")
     run("__db11=DB; __za11=zAlertao; __al11=0; zAlertao=function(){ __al11++; }; DB={ref:function(){ return { once:function(){ return Promise.resolve({val:function(){ return null; }}); }, update:function(){ return Promise.reject(new Error('sem rede')); } }; }};");
@@ -1426,6 +1444,50 @@ provaAsync('MÉDIO-1 / BAIXO-1 / BAIXO-2 (QA9) — tela aberta com registro velh
     for (let i = 0; i < 5 && run('__tq21.length'); i++) { run('__tq21.splice(0).forEach(function(f){ f(); })'); g = await esperar(); }
     assert.strictEqual(g.length, 0, 'BAIXO-2: a correção vence a data velha — nada fecha');
   } finally { run('DB=__bk21.db; VENC_REG=__bk21.vr; VENC_REG_DIA=__bk21.vrd; VENC_REG_QUANDO=__bk21.vrq; VENC_PEND=__bk21.vp; VENC_PEND_QUANDO=__bk21.vpq; VENC_PEND_LENDO=__bk21.vpl; audit=__bk21.au; vencRender=__bk21.vre; vencRedesenharQuadros=__bk21.vrq2; quemSou=__bk21.qs; zHojeISO=__bk21.hz; pelExtra=__bk21.pe; vencAtualizarBadge=__bk21.vab; setTimeout=__bk21.st;'); }
+});
+
+// ================================================================== QA10 — 3ª rodada
+console.log('\nQA10 — reabrir desfaz também o cartão fechado pelo quadro; a gravação anterior em curso');
+provaAsync('MÉDIO-2 / BAIXO-1 (QA10) — reabrir apaga o fechamento do quadro; e espera a gravação anterior do mesmo FILHOt', async () => {
+  run(`__bk22={db:DB, vr:VENC_REG, vrd:VENC_REG_DIA, vp:VENC_PEND, vpq:VENC_PEND_QUANDO, vpl:VENC_PEND_LENDO, au:audit, vre:vencRender, vrq2:vencRedesenharQuadros, qs:quemSou, hz:zHojeISO, pe:pelExtra, vab:vencAtualizarBadge, fg:VENC_FILA_GRAV};
+    __grav22=[]; __K22=dcKey('Thor','Bia'); __P22={n:'Thor', tutor:'Bia'};
+    DB={ref:function(p){ return {
+      once:function(){ return Promise.resolve({val:function(){ return null; }}); },
+      update:function(v){ __grav22.push({p:p, v:JSON.parse(JSON.stringify(v))}); return Promise.resolve(); } }; }};
+    zHojeISO=function(){ return '2026-09-21'; };
+    pelExtra=function(){ return ${JSON.stringify(Object.assign({}, FA_EM_DIA, { vac_raiva_p: '2026-09-24' }))}; };
+    VENC_REG=null; VENC_REG_DIA=''; VENC_PEND_LENDO=false; VENC_FILA_GRAV={};
+    audit=function(){}; vencRender=function(){}; vencRedesenharQuadros=function(){}; vencAtualizarBadge=function(){}; quemSou=function(){ return 'Ana'; };`);
+  const esperar = async () => { for (let i = 0; i < 40; i++) await Promise.resolve(); return JSON.parse(JSON.stringify(run('__grav22'))); };
+  try {
+    // MÉDIO-2 — a raiva gravada fechou o assunto (ficha) e o cartão inteiro (quadro); foi o FILHOt
+    // errado e a data volta para 24/09: reabre o assunto E o cartão (o recado da veterinária volta)
+    run(`VENC_PEND={'2026-09-22':{}}; VENC_PEND_QUANDO=Date.now();
+      VENC_PEND['2026-09-22'][__K22]={enviadas:{ant_vacina:{ts:1}}, respostas:{ant_vacina:{v:'manhã', ts:2}},
+        fechados:{vacina:{quem:'Ana', ts:3, via:'ficha'}}, ficha_atualizada:{quem:'Ana', ts:3, via:'quadro'}};`);
+    run("vencFecharAssuntosPelaFicha(__P22, {vac_raiva_p:'2026-09-24'})");
+    let g = await esperar();
+    assert.strictEqual(g.length, 1, 'gravou a reabertura');
+    assert.deepStrictEqual(g[0].v.fechados, {}, 'o assunto voltou');
+    assert.ok('ficha_atualizada' in g[0].v && g[0].v.ficha_atualizada === null, 'o cartão fechado pelo quadro também reabre');
+    // o "Sim" da pessoa (ficha_atualizada sem via quadro) a ficha não desfaz
+    run(`__grav22=[]; VENC_PEND['2026-09-22'][__K22]={enviadas:{vacina:{ts:1}}, fechados:{vacina:{quem:'Ana', ts:3, via:'ficha'}}, ficha_atualizada:{quem:'Bia', ts:4}};`);
+    run("vencFecharAssuntosPelaFicha(__P22, {vac_raiva_p:'2026-09-24'})");
+    g = await esperar();
+    assert.strictEqual(g.length, 1);
+    assert.ok(!('ficha_atualizada' in g[0].v), 'o "Sim" continua');
+    // BAIXO-1 — a gravação ANTERIOR deste FILHOt (o fechamento) ainda está a caminho do banco
+    // quando a data é corrigida: a conta espera ela chegar à memória e então reabre
+    run(`__grav22=[]; VENC_PEND['2026-09-22'][__K22]={enviadas:{vacina:{ts:1}}};
+      VENC_FILA_GRAV['2026-09-22|'+__K22]=new Promise(function(ok){ __solta22=ok; });`);
+    run("vencFecharAssuntosPelaFicha(__P22, {vac_raiva_p:'2026-09-24'})");
+    g = await esperar();
+    assert.strictEqual(g.length, 0, 'ainda esperando a gravação anterior');
+    run("VENC_PEND['2026-09-22'][__K22].fechados={vacina:{quem:'Ana', ts:5, via:'ficha'}}; __solta22();");
+    g = await esperar();
+    assert.strictEqual(g.length, 1, 'depois que a anterior chegou, a conta viu o que reabrir');
+    assert.deepStrictEqual(g[0].v.fechados, {});
+  } finally { run('DB=__bk22.db; VENC_REG=__bk22.vr; VENC_REG_DIA=__bk22.vrd; VENC_PEND=__bk22.vp; VENC_PEND_QUANDO=__bk22.vpq; VENC_PEND_LENDO=__bk22.vpl; audit=__bk22.au; vencRender=__bk22.vre; vencRedesenharQuadros=__bk22.vrq2; quemSou=__bk22.qs; zHojeISO=__bk22.hz; pelExtra=__bk22.pe; vencAtualizarBadge=__bk22.vab; VENC_FILA_GRAV=__bk22.fg;'); }
 });
 
 // ------------------------------------------------ o fim
