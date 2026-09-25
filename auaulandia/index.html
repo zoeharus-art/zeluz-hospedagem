@@ -6676,11 +6676,13 @@
         corpo='Passando para confirmar: a reposição d'+o+' '+nome+' ficou marcada para '+dia+'.';
         corpo+=livres
           ? ('\n\nCom essa marcação, '+(livres===1?'fica 1 reposição':('ficam '+livres+' reposições'))+' ainda sem dia.')
-          : ('\n\nCom essa marcação, todas as reposições d'+o+' '+nome+' já têm dia.');
+          : '\n\nCom essa marcação, não fica nenhuma reposição sem dia.';
       }else{
-        corpo='Passando para confirmar: a reposição d'+o+' '+nome+' que estava marcada para '+dia+' foi desmarcada.';
-        corpo+='\n\nEla continua valendo: '+(livres===1?'fica 1 reposição':('ficam '+livres+' reposições'))
-          +' para marcar quando for melhor para vocês.';
+        corpo='Passando para confirmar: a reposição d'+o+' '+nome+' que estava marcada para '+dia+', foi desmarcada.';
+        corpo+=livres
+          ? ('\n\nEla continua valendo: '+(livres===1?'fica 1 reposição':('ficam '+livres+' reposições'))
+             +' para marcar quando for melhor para vocês.')
+          : '\n\nEla continua valendo: quando for melhor para vocês, é só combinar o novo dia.';
       }
     }else{
       corpo='Passando para dizer que '+o+' '+nome+' usou hoje uma reposição.';
@@ -6697,12 +6699,20 @@
     var br=repBRdata(iso);
     return (w?(w+', '):'')+String(br).slice(0,5);
   }
+  // "na segunda-feira, 28/09" / "no sábado, 03/10" — a preposição certa para cada dia.
+  function repNoDia(iso){
+    var w=-1; try{ w=new Date(String(iso)+'T12:00:00').getDay(); }catch(e){ w=-1; } /* silencioso de propósito: sem o dia da semana vale "em" */
+    var pre=(w===0||w===6)?'no ':((w>0)?'na ':'em ');
+    return pre+repDiaSemanaComData(iso);
+  }
   // Quantas reposições dele ainda não têm dia marcado. `ajuste`: a marcação (+1) ou a
   // desmarcação (−1) que acabou de ser gravada — o cache local só atualiza quando o banco
   // responde, e a mensagem não pode sair com o número velho.
   function repLivresSemDia(p, ajuste){
+    // O DISPONÍVEL, não o saldo (QA, 25/set): dia reservado para uma hospedagem que ainda
+    // aguarda resposta já está prometido — a mensagem não pode oferecê-lo ao tutor de novo.
     var saldo=0, marcadas=0;
-    try{ saldo=repSaldo(p); marcadas=(repAgendaDe(p)||[]).length; }catch(e){ /* cache ainda não desceu: a conta sai com zero, nunca negativa */ }
+    try{ saldo=(typeof repDisponivel==='function')?repDisponivel(p):repSaldo(p); marcadas=(repAgendaDe(p)||[]).length; }catch(e){ /* cache ainda não desceu: a conta sai com zero, nunca negativa */ }
     return Math.max(0, saldo-(marcadas+(Number(ajuste)||0)));
   }
   // DESMARCAR. O tutor desistiu do dia combinado: a data sai do crédito (que continua dele),
@@ -6717,7 +6727,7 @@
     var anulado={}; L.forEach(function(l){ if(l.tipo==='estorno'&&l.estornaId) anulado[l.estornaId]=true; });
     var cred=L.filter(function(l){ return l.tipo==='credito' && l.volta===dia && !anulado[l._id]; })[0];
     if(!cred){ alert('Não achei a reposição marcada para '+repBRdata(dia)+'. Atualize a tela.'); return; }
-    if(!await zPergunta('Desmarcar a reposição de '+pelNome(p)+' em '+repDiaSemanaComData(dia)+'?',
+    if(!await zPergunta('Desmarcar a reposição de '+pelNome(p)+' '+repNoDia(dia)+'?',
       ['A reposição continua valendo — só o dia sai. Ela volta a ficar sem dia marcado.',
        'A planilha daquele dia deixa de receber a Reposição na próxima conferência (até '+DASH_AUTO_MIN+' min).'],
       {sim:'Desmarcar', nao:'Manter o dia'})) return;
@@ -6727,7 +6737,7 @@
       if(typeof audit==='function') audit('reposicao-desmarcada', pelNome(p)+' não vem mais repor em '+repBRdata(dia),
         {alvo:(typeof dcKey==='function'?dcKey(p.n,p.tutor):''), pet:pelNome(p)});
       repMsgModal('✅ Reposição desmarcada',
-        [pelNome(p)+' não vem mais repor em '+repDiaSemanaComData(dia)+'.',
+        [pelNome(p)+' não vem mais repor '+repNoDia(dia)+'.',
          'A reposição continua valendo: '+(livres===1?'1 reposição':(livres+' reposições'))+' sem dia marcado.'],
         repMensagem(p,'desmarcada',{volta:dia, livres:livres}));
       try{ if(typeof vagasCarregarDia==='function') vagasCarregarDia(dia, true); }catch(e){ /* as vagas se refazem na próxima leitura */ }
@@ -7945,7 +7955,7 @@
         repAuditDiaDele(p, dia);
         solta(); dxFechar();
         repMsgModal('✅ Reposição marcada',
-          [pelNome(p)+' vem repor em '+repDiaSemanaComData(dia)+' — usando a falta de '+repBRdata(cred.data)+'.',
+          [pelNome(p)+' vem repor '+repNoDia(dia)+' — usando a falta de '+repBRdata(cred.data)+'.',
            'Não se cobra nada: é reposição. A planilha daquele dia recebe a Reposição na próxima conferência (até '+DASH_AUTO_MIN+' min).',
            'Se o tutor desmarcar: tela de Reposições › «desmarcar» ao lado da data — a reposição volta a ficar sem dia.']
           .concat(aut?['Encaixe acima do limite, autorizado por '+aut.quem+'.']:[]),

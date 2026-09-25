@@ -594,21 +594,28 @@ prova('marcar: a mensagem diz o dia e quantas ficam sem dia (1, várias, nenhuma
     assert.ok(/a reposição da Luna ficou marcada para segunda-feira, 28\/09/.test(m1), m1);
     assert.ok(/fica 1 reposição ainda sem dia/.test(m1));
     assert.ok(/ficam 2 reposições ainda sem dia/.test(run("repMensagem(__p, 'agendada', {volta:'2026-09-28', livres:2})")));
-    assert.ok(/todas as reposições da Luna já têm dia/.test(run("repMensagem(__p, 'agendada', {volta:'2026-09-28', livres:0})")));
+    assert.ok(/não fica nenhuma reposição sem dia/.test(run("repMensagem(__p, 'agendada', {volta:'2026-09-28', livres:0})")));
     const d = run("repMensagem(__p, 'desmarcada', {volta:'2026-09-28', livres:2})");
-    assert.ok(/estava marcada para segunda-feira, 28\/09 foi desmarcada/.test(d), d);
+    assert.ok(/estava marcada para segunda-feira, 28\/09, foi desmarcada/.test(d), d);
+    assert.ok(!/ficam 0/.test(run("repMensagem(__p, 'desmarcada', {volta:'2026-09-28', livres:0})")), 'nunca "ficam 0 reposições"');
     assert.ok(/ficam 2 reposições para marcar/.test(d));
   } finally { run('pelExtra=__bkpPE;'); }
 });
 prova('a conta das que ficam sem dia desconta a marcação que acabou de ser gravada', () => {
-  run(`__bkpS=repSaldo; __bkpA=repAgendaDe; repSaldo=function(){ return 2; }; repAgendaDe=function(){ return []; };`);
+  run(`__bkpS=repSaldo; __bkpA=repAgendaDe; __bkpD=repDisponivel; repDisponivel=function(){ return 2; }; repSaldo=function(){ return 2; }; repAgendaDe=function(){ return []; };`);
   try {
     assert.strictEqual(run('repLivresSemDia({}, +1)'), 1, '2 reposições, 1 marcada agora → fica 1');
     run("repAgendaDe=function(){ return ['2026-09-28']; };");
     assert.strictEqual(run('repLivresSemDia({}, -1)'), 2, 'desmarcou a única → voltam as 2');
     run("repAgendaDe=function(){ return ['2026-09-28','2026-10-02','2026-10-05']; };");
     assert.strictEqual(run('repLivresSemDia({}, 0)'), 0, 'nunca negativo');
-  } finally { run('repSaldo=__bkpS; repAgendaDe=__bkpA;'); }
+    run("repAgendaDe=function(){ return []; }; repDisponivel=function(){ return 1; };");
+    assert.strictEqual(run('repLivresSemDia({}, +1)'), 0, 'dia reservado em hospedagem não é oferecido de novo (QA)');
+  } finally { run('repSaldo=__bkpS; repAgendaDe=__bkpA; repDisponivel=__bkpD;'); }
+});
+prova('"na segunda-feira, 28/09" e "no sábado, 03/10"', () => {
+  assert.strictEqual(run("repNoDia('2026-09-28')"), 'na segunda-feira, 28/09');
+  assert.strictEqual(run("repNoDia('2026-10-03')"), 'no sábado, 03/10');
 });
 provaAsync('desmarcar: a data sai do crédito (fica guardada), e a mensagem sai pronta', async () => {
   const B = bancoFalso({});
@@ -616,7 +623,7 @@ provaAsync('desmarcar: a data sai do crédito (fica guardada), e a mensagem sai 
   run(`__bkpDB=DB; __bkpP=PELUDINHOS; __bkpL=repLancamentos; __bkpPL=repPodeLancar; __bkpZP=zPergunta; __bkpMM=repMsgModal; __bkpRR=renderReposicao; __bkpS=repSaldo;
        __msg=null; DB=__B; PELUDINHOS=[{n:'Luna', tutor:'Ana'}];
        repLancamentos=function(){ return [{_id:'c1', tipo:'credito', data:'2026-09-22', volta:'2026-09-28'}]; };
-       repSaldo=function(){ return 1; };
+       repSaldo=function(){ return 1; }; __bkpD2=repDisponivel; repDisponivel=function(){ return 1; };
        repPodeLancar=function(){ return true; }; zPergunta=function(){ return Promise.resolve(true); };
        repMsgModal=function(t, l, texto){ __msg={t:t, texto:texto}; }; renderReposicao=function(){};`);
   try {
@@ -628,7 +635,7 @@ provaAsync('desmarcar: a data sai do crédito (fica guardada), e a mensagem sai 
     assert.ok(msg && /desmarcada/.test(msg.t));
     assert.ok(/fica 1 reposição para marcar/.test(msg.texto), msg && msg.texto);
   } finally {
-    run('DB=__bkpDB; PELUDINHOS=__bkpP; repLancamentos=__bkpL; repPodeLancar=__bkpPL; zPergunta=__bkpZP; repMsgModal=__bkpMM; renderReposicao=__bkpRR; repSaldo=__bkpS;');
+    run('DB=__bkpDB; PELUDINHOS=__bkpP; repLancamentos=__bkpL; repPodeLancar=__bkpPL; zPergunta=__bkpZP; repMsgModal=__bkpMM; renderReposicao=__bkpRR; repSaldo=__bkpS; repDisponivel=__bkpD2;');
   }
 });
 
