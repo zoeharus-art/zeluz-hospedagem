@@ -4274,6 +4274,13 @@
         gente só altera se o tutor mudar."
        Uma linha por FILHOt, um interruptor, e os botões na própria linha. Nada é gravado
        antes do Salvar daquela linha — e cada gravação deixa rastro de→para. -->
+  <!-- A TURMA DO DIA (Adriana, 25/set/2026): "Não precisa aparecer o quadro imenso de
+       peludinhos. O Boris trocou a sexta pela quarta e aparece lá. Preciso baixar em Excel ou
+       PDF quem vem que dia — para mandar mensagens e cobrar vermífugo, vacina, e quem marcou
+       reposição." Uma linha por FILHOt, com o que cobrar de cada um. -->
+  <section class="view" id="v-turma">
+    <div id="turmaRoot"><div class="card"><div class="hint">Montando a turma do dia&hellip;</div></div></div>
+  </section>
   <section class="view" id="v-banhos">
     <div class="role-note"><span data-icon="drop"></span><span><strong>Quem tem banho fixo.</strong> Ligue o interruptor do FILHOt e diga o ritmo (semanal ou quinzenal), o dia, a hora, a partir de quando e o shampoo — sem abrir a ficha. O app lança sozinho na planilha, na coluna <strong>Banho</strong> e <strong>Hora Banho</strong>, hoje e nos próximos 14 dias. <strong>Nada é gravado antes de você tocar em Salvar.</strong></span></div>
     <div id="banhosRoot"><div class="card"><div class="hint">Montando a lista dos banhos combinados&hellip;</div></div></div>
@@ -5392,6 +5399,7 @@
     gestdia:['Conferência do dia','Medicações por horário, problemas e os três tempos do plantão.'],
     aulunos:['Aulunos','A turma do dia.'],dashdc:['Lançamentos do dia','A planilha do Day Care, item por item.'],
     banhos:['Banhos recorrentes','Quem tem banho fixo, em que dia e a que horas — o app lança sozinho na planilha.'],
+    turma:['Turma do dia','Quem vem, quem avisou que não vem e o que cobrar de cada um — com Excel e PDF.'],
     hoje:['Hoje na Zêluz','Quem está na Zêluz agora e quem está com pendência.'],
     pendencias:['Pendências de prevenção','O que ficou para a próxima vinda de quem não veio.'],
     vencimentos:['Está vencendo','Quem vem no dia, o que está vencendo e o que está em aberto na ficha.'],vacinas:['Prevenção','Vacina, vermífugo, coleira e exame de fezes: quem está atrasado e quem está para vencer.'],
@@ -5507,6 +5515,7 @@
     }
     if(v==='dashdc'){ if(typeof dashCarregar==='function') dashCarregar(); }
     if(v==='banhos'){ if(typeof banhosAbrir==='function') banhosAbrir(); }
+    if(v==='turma'){ if(typeof turmaAbrir==='function') turmaAbrir(); }
     if(v==='pendencias'){ if(typeof pendAbrir==='function') pendAbrir(); }
     if(v==='vencimentos'){ if(typeof vencAbrir==='function') vencAbrir(); }
     if(v==='hoje'){ if(typeof hojeAbrir==='function') hojeAbrir(); }
@@ -24784,7 +24793,9 @@
     let h='';
     if(!escopo){
       // Turminhas = sub-sanfona recolhivel (Adriana: seta em Turminhas p/ a barra nao ficar enorme).
-      let dias=ORDEM_DIAS.map(d=>`<a data-d="${d}" onclick="setDcDia('${d}')">${DIA_FULL[d]}${d===HOJE_DIA?' · hoje':''}${vePorDia()?`<span class="dia-n">${nMatriculados(d)}</span>`:''}</a>`).join('');
+      // Turminhas abrem a TURMA DO DIA, enxuta (25/set/2026). A Chamada daquele dia continua a
+      // um toque, no alto da lista — e quem tem menu por atividade (monitor) nem vê Turminhas.
+      let dias=ORDEM_DIAS.map(d=>`<a data-d="${d}" onclick="turmaAbrirDia('${d}')">${DIA_FULL[d]}${d===HOJE_DIA?' · hoje':''}${vePorDia()?`<span class="dia-n">${nMatriculados(d)}</span>`:''}</a>`).join('');
       if(vePorDia()) dias+=`<a onclick="abrirTodosPeludinhos()">Todos<span class="dia-n">${PELUDINHOS.filter(p=>!pelInativo(p)).length}</span></a>`;
       h+='<div class="dcsub" data-dcsub="turminhas"><div class="subnav-grp dcsub-head" onclick="toggleDcSub(this)">Turminhas'+_car+'</div><div class="dcsub-panel">'+dias+'</div></div>';
     }
@@ -38664,6 +38675,220 @@
     return true;
   }
 
+  /* ===== A TURMA DO DIA (Adriana, 25/set/2026) ===========================================
+   * Uma linha por FILHOt, em três blocos, lidos das MESMAS fontes do resto do app — nada
+   * de verdade nova:
+   *   · VÊM: os fixos do dia da semana + quem vem por reposição marcada, por troca de dia
+   *     ou como avulso lançado para aquela data;
+   *   · AVISARAM QUE NÃO VÊM: o fixo com falta avisada naquela data (crédito de reposição)
+   *     ou que trocou o dia — o caso do Boris, que trocou a sexta pela quarta;
+   *   · o QUE COBRAR de cada um: a prevenção vencida, vencendo ou em aberto na ficha (a mesma
+   *     régua dos Vencimentos) e o que ficou pendente de outro dia (Pendências de prevenção:
+   *     o remédio ou o vermífugo lançado num dia em que ele não veio).
+   * Tocar no nome abre a FICHA; tocar no que cobrar abre os VENCIMENTOS daquele dia, com as
+   * mensagens prontas. Excel e PDF saem da mesma lista.
+   * ======================================================================================= */
+  var TURMA_DIA='';           // 'seg'…'sex' — o dia da semana escolhido nas Turminhas
+  var TURMA_AVULSOS={};       // {iso: {chave: {nome}}} — avulsos lançados para a data
+  var TURMA_ORDEM=['dom','seg','ter','qua','qui','sex','sab'];
+  // A PRÓXIMA ocorrência do dia da semana: numa quinta, "Quinta" é hoje e "Sexta" é amanhã.
+  function turmaIsoDoDia(d, hoje){
+    hoje=hoje||((typeof zHojeISO==='function')?zHojeISO():'');
+    var alvo=TURMA_ORDEM.indexOf(d); if(alvo<0||!hoje) return '';
+    var w=new Date(hoje+'T12:00:00').getDay();
+    return addDiasISO(hoje, (alvo-w+7)%7);
+  }
+  function turmaAbrirDia(d){
+    TURMA_DIA=d;
+    try{ if(typeof irParaView==='function') irParaView('turma'); }catch(e){} /* silencioso de propósito: guarda defensiva — a tela se desenha abaixo de qualquer jeito */
+    try{ if(typeof closeNav==='function') closeNav(); }catch(e){} /* silencioso de propósito: enfeite de tela */
+  }
+  function turmaAbrir(){
+    var raiz=document.getElementById('turmaRoot'); if(!raiz) return;
+    if(!TURMA_DIA) TURMA_DIA=(typeof HOJE_DIA!=='undefined')?HOJE_DIA:'seg';
+    turmaRender();
+    // O que muda de um dia para o outro desce agora: as pendências de outros dias e os
+    // avulsos lançados para esta data. O resto (cadastro, reposições, trocas) já é vivo.
+    var iso=turmaIsoDoDia(TURMA_DIA);
+    var pr=[];
+    try{ if(typeof pendCarregar==='function') pr.push(pendCarregar()); }catch(e){} /* silencioso de propósito: sem as pendências a lista sai sem elas, e diz isso */
+    if(DB && iso) pr.push(DB.ref('daycare/dashboard/'+iso+'/avulso').once('value').then(function(s){
+      var v=s.val()||{}, m={};
+      Object.keys(v).forEach(function(id){ var r=v[id]||{}; if(r.chave) m[r.chave]={nome:String(r.valor||'')}; });
+      TURMA_AVULSOS[iso]=m;
+    }).catch(function(e){ _logLeituraFalhou('daycare/dashboard/'+iso+'/avulso (turmaAbrir)', e); }));
+    Promise.all(pr).then(turmaRender, turmaRender);
+  }
+  // A régua, numa função PURA: recebe o dia e as fontes; devolve {vem, naoVem}. É ela que a
+  // prova morde (tests/fase0-ciclo-fechado.test.js).
+  //   fontes = {pets, trocas (TROCA_CACHE), avulsos ({chave}), chamada ({chave:'veio'|'faltou'}),
+  //             pend (pendLista()), margem, hoje}
+  function turmaListaDoDia(iso, f){
+    f=f||{};
+    var d=TURMA_ORDEM[new Date(iso+'T12:00:00').getDay()];
+    var hoje=f.hoje||'';
+    var vem=[], naoVem=[], visto={};
+    var anulados=function(L){ var a={}; (L||[]).forEach(function(l){ if(l&&l.tipo==='estorno'&&l.estornaId) a[l.estornaId]=1; }); return a; };
+    // Quem trocou ESTE dia por outro: {pelKey: troca}
+    var trocouDaqui={}, trocouPraCa={};
+    Object.keys(f.trocas||{}).forEach(function(para){
+      Object.keys((f.trocas||{})[para]||{}).forEach(function(k){
+        var t=((f.trocas||{})[para]||{})[k]||{};
+        if(t.status==='cancelada'||t.status==='recusada') return;
+        if(t.de===iso) trocouDaqui[k]=Object.assign({para:para}, t);
+        if(para===iso) trocouPraCa[k]=t;
+      });
+    });
+    (f.pets||[]).forEach(function(p){
+      if(!p || (typeof pelInativo==='function' && pelInativo(p))) return;
+      if(typeof ehMoradorZeluz==='function' && ehMoradorZeluz(p)) return;       // mora aqui: não é turma
+      var pk=pelKey(p), ck=dcKey(p.n, p.tutor);
+      var fixo=(pelDias(p)||[]).indexOf(d)>=0;
+      var L=(typeof repLancamentos==='function')?(repLancamentos(p)||[]):[];
+      var an=anulados(L);
+      var falta=L.filter(function(l){ return l&&l.tipo==='credito'&&l.data===iso&&!an[l._id]; })[0]||null;
+      var repor=((typeof repAgendaDe==='function')?(repAgendaDe(p)||[]):[]).indexOf(iso)>=0;
+      var porque='';
+      if(!fixo){
+        if(repor) porque='reposição';
+        else if(trocouPraCa[pk]) porque='troca'+(trocouPraCa[pk].de?(' (no lugar de '+fmtBR(trocouPraCa[pk].de).slice(0,5)+')'):'');
+        else if((f.avulsos||{})[ck]) porque='avulso';
+        else return;                                                          // não é deste dia
+      }
+      var base={p:p, chave:ck, nome:pelNome(p)||p.n||'', raca:(pelGet(p,'raca')||p.raca||''),
+                tutor:(pelGet(p,'tutor')||p.tutor||''), tel:(typeof poTelDoTutor==='function')?poTelDoTutor(p):'',
+                reposicoes:(typeof repSaldo==='function')?repSaldo(p):0};
+      if(fixo && (falta || trocouDaqui[pk])){
+        var t=trocouDaqui[pk];
+        base.motivo=t ? ('trocou para '+fmtBR(t.para).slice(0,5))
+                      : ('falta avisada — '+((typeof REP_MOTIVOS!=='undefined'&&REP_MOTIVOS[falta.motivo])||falta.motivo||'sem motivo'))
+                        +((falta&&falta.volta)?(' · repõe em '+fmtBR(falta.volta).slice(0,5)):'');
+        naoVem.push(base); return;
+      }
+      if(visto[ck]) return; visto[ck]=1;
+      base.porque=porque;                                                     // '' = fixo do dia
+      base.chamada=(iso===hoje)?String(((f.chamada||{})[ck])||''):'';
+      // O que cobrar: a MESMA régua dos Vencimentos (vencida, vencendo, em aberto)…
+      var ex=(typeof pelExtra==='function')?(pelExtra(p)||{}):{};
+      base.prevencao=(typeof vencItensDe==='function')
+        ? vencItensDe(ex, iso, (f.margem>0?f.margem:0), hoje||iso, {incluirSemRegistro:true}).map(function(x){
+            return {k:x.k, texto:(x.nome||'')+' — '+vencQuantoTexto(x, hoje||iso), atrasado:!!x.atrasado, aberto:!!x.sem_registro};
+          }) : [];
+      // …e o que ficou de outro dia (não veio, ou não deu tempo): as Pendências de prevenção.
+      base.pendentes=(f.pend||[]).filter(function(x){ return x.chave===ck || x.chave===pk; }).map(function(x){
+        return String(x.valor||x.item||'')+' (de '+fmtBR(x.dia).slice(0,5)+')';
+      });
+      vem.push(base);
+    });
+    var porNome=function(a,b){ return jsNorm(a.nome).localeCompare(jsNorm(b.nome),'pt'); };
+    return {vem:vem.sort(porNome), naoVem:naoVem.sort(porNome)};
+  }
+  function turmaDados(){
+    var iso=turmaIsoDoDia(TURMA_DIA);
+    var hoje=(typeof zHojeISO==='function')?zHojeISO():'';
+    var pend=[]; try{ pend=(typeof pendLista==='function')?pendLista():[]; }catch(e){ pend=[]; } /* silencioso de propósito: sem as pendências a lista sai sem elas */
+    var cham=(iso===hoje)?((typeof dcChamada!=='undefined'&&dcChamada&&Object.keys(dcChamada).length)?dcChamada:(PEND_CHAMADA||{})):{};
+    return {iso:iso, hoje:hoje, L:turmaListaDoDia(iso, {pets:PELUDINHOS||[], trocas:TROCA_CACHE||{}, avulsos:TURMA_AVULSOS[iso]||{},
+      chamada:cham, pend:pend, margem:(typeof vencMargem==='function')?vencMargem():0, hoje:hoje})};
+  }
+  function turmaRender(){
+    var raiz=document.getElementById('turmaRoot'); if(!raiz) return;
+    if(typeof PELUDINHOS==='undefined'||!PELUDINHOS.length){ raiz.innerHTML='<div class="card"><div class="hint">Esperando o cadastro chegar…</div></div>'; return; }
+    var D=turmaDados(), iso=D.iso, L=D.L;
+    var nomeDia=(typeof repDiaSemanaComData==='function')?repDiaSemanaComData(iso):fmtBR(iso);
+    var ehHoje=(iso===D.hoje);
+    var abas=ORDEM_DIAS.map(function(d){
+      var on=(d===TURMA_DIA);
+      return '<button type="button" onclick="TURMA_DIA=\''+d+'\';turmaAbrir()" style="border-radius:999px;padding:6px 12px;font:inherit;font-size:13px;font-weight:800;cursor:pointer;border:1.5px solid '
+        +(on?'var(--z-blue)':'var(--line)')+';background:'+(on?'var(--z-blue)':'#fff')+';color:'+(on?'#FFFDF6':'var(--z-blue)')+'">'
+        +DIA_FULL[d]+(d===HOJE_DIA?' · hoje':'')+'</button>';
+    }).join('');
+    var cobrar=L.vem.filter(function(o){ return (o.prevencao||[]).length||(o.pendentes||[]).length; }).length;
+    var h='<div class="card" style="border-left:4px solid var(--z-gold)">'
+      +'<div style="display:flex;flex-wrap:wrap;gap:6px">'+abas+'</div>'
+      +'<h2 style="font-size:19px;margin:10px 0 2px">'+escAttr(nomeDia.charAt(0).toUpperCase()+nomeDia.slice(1))+': '+L.vem.length+' '+(L.vem.length===1?'vem':'vêm')+'</h2>'
+      +'<div class="hint" style="margin:0">'+(cobrar?('<strong style="color:var(--crm-critico)">'+cobrar+' com algo a cobrar</strong> · '):'')
+      +(L.naoVem.length?(L.naoVem.length+(L.naoVem.length===1?' avisou que não vem · ':' avisaram que não vêm · ')):'')+'toque no nome para abrir a ficha; no que cobrar, para as mensagens prontas.</div>'
+      +'<div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:10px">'
+      +'<button type="button" class="btn btn-gold" style="padding:8px 14px;font-size:13px;font-weight:800" onclick="turmaExcel()">Baixar Excel</button>'
+      +'<button type="button" class="btn" style="padding:8px 14px;font-size:13px;font-weight:800;background:#fff;color:var(--z-blue);border:1.5px solid var(--line)" onclick="turmaPDF()">PDF / imprimir</button>'
+      +'<button type="button" class="btn" style="padding:8px 14px;font-size:13px;font-weight:800;background:#fff;color:var(--z-blue);border:1.5px solid var(--line)" onclick="setDcDia(\''+TURMA_DIA+'\')">Abrir a Chamada deste dia</button>'
+      +'</div></div>';
+    var linha=function(o){
+      var i=(PELUDINHOS||[]).indexOf(o.p);
+      var tag=o.porque?('<span style="font-size:11px;font-weight:800;border-radius:999px;padding:1px 8px;background:rgba(46,125,138,.14);color:#1F5F69">'+escAttr(o.porque)+'</span> '):'';
+      var cham=(o.chamada==='veio')?'<span style="font-size:11px;font-weight:800;color:var(--crm-ok)">✓ veio</span> '
+              :((o.chamada==='faltou')?'<span style="font-size:11px;font-weight:800;color:var(--crm-critico)">faltou</span> ':'');
+      // Quem avisou que não vem não tem o que cobrar neste dia: as listas vêm vazias.
+      // O que VENCEU ou VENCE sai item a item (tem data e urgência); o que está EM ABERTO na
+      // ficha sai num chip só — seis chips iguais de "nunca registrado" escondiam o vencido.
+      var pv=o.prevencao||[];
+      var abertos=pv.filter(function(x){ return x.aberto; });
+      var itens=pv.filter(function(x){ return !x.aberto; }).map(function(x){ return '<span style="display:inline-block;margin:3px 4px 0 0;font-size:12px;font-weight:700;border-radius:999px;padding:2px 9px;'
+          +(x.atrasado?'background:#F6D8D4;color:#8E1B10':'background:rgba(222,180,40,.22);color:var(--z-blue)')+'">'+escAttr(x.texto)+'</span>'; }).join('')
+        +(abertos.length?('<span style="display:inline-block;margin:3px 4px 0 0;font-size:12px;font-weight:700;border-radius:12px;padding:2px 9px;background:rgba(46,125,138,.16);color:#1F5F69">Em aberto na ficha: '
+          +escAttr(abertos.map(function(x){ return String(x.texto||'').split(' — ')[0]; }).join(' · '))+'</span>'):'')
+        +(o.pendentes||[]).map(function(t){ return '<span style="display:inline-block;margin:3px 4px 0 0;font-size:12px;font-weight:700;border-radius:999px;padding:2px 9px;background:#F6D8D4;color:#8E1B10">pendente: '+escAttr(t)+'</span>'; }).join('');
+      return '<div style="padding:9px 0;border-top:1px solid var(--line)">'
+        +'<div style="display:flex;flex-wrap:wrap;gap:6px;align-items:baseline">'
+        +'<button type="button" onclick="'+(i>=0?('turmaAbrirFicha('+i+')'):'')+'" style="border:none;background:none;padding:0;font:inherit;font-size:15.5px;font-weight:800;color:var(--z-blue);cursor:pointer;text-align:left">'+escAttr(o.nome)+'</button>'
+        +'<span style="font-size:12.5px;color:var(--muted);font-weight:600">'+escAttr(o.raca||'')+(o.tutor?(' · '+escAttr(o.tutor)):'')+'</span> '+tag+cham
+        +(o.reposicoes>0?('<span style="font-size:11px;font-weight:800;color:var(--z-gold-deep)">'+o.reposicoes+' '+(o.reposicoes===1?'reposição':'reposições')+'</span>'):'')
+        +'</div>'
+        +(itens?('<div onclick="turmaAbrirVencimentos()" style="cursor:pointer">'+itens+'</div>'):'')
+        +(o.motivo?('<div class="hint" style="margin:2px 0 0">'+escAttr(o.motivo)+'</div>'):'')
+        +'</div>';
+    };
+    h+='<div class="card"><h3 style="font-size:15px;margin:0 0 2px">Vêm ('+L.vem.length+')</h3>'
+      +(L.vem.length?L.vem.map(linha).join(''):'<div class="hint">Ninguém para este dia.</div>')+'</div>';
+    if(L.naoVem.length) h+='<div class="card"><h3 style="font-size:15px;margin:0 0 2px">Avisaram que não vêm ('+L.naoVem.length+')</h3>'
+      +L.naoVem.map(linha).join('')+'</div>';
+    if(PEND_ABERTAS===null) h+='<div class="hint">Ainda conferindo as pendências de outros dias…</div>';
+    raiz.innerHTML=h;
+  }
+  function turmaAbrirFicha(i){
+    try{ if(typeof pelOrigem!=='undefined') pelOrigem='turma'; }catch(e){} /* silencioso de propósito: a ficha abre igual */
+    try{ if(typeof irParaView==='function') irParaView('ficha'); if(typeof abrirPeludinho==='function') abrirPeludinho(i); }
+    catch(e){ _logFalhaGrav('abrir a ficha pela Turma do dia', e); }
+  }
+  // As mensagens prontas de quem vem neste dia moram nos Vencimentos — um toque leva lá.
+  function turmaAbrirVencimentos(){
+    try{ if(typeof irParaView==='function') irParaView('vencimentos'); if(typeof vencTrocarDia==='function') vencTrocarDia(turmaIsoDoDia(TURMA_DIA)); }
+    catch(e){ _logFalhaGrav('abrir os Vencimentos pela Turma do dia', e); }
+  }
+  // A MESMA lista, em tabela — para o Excel e para o PDF.
+  function turmaTabelaHTML(){
+    var D=turmaDados(), L=D.L;
+    var e=function(v){ return escAttr(v==null?'':String(v)); };
+    var linha=function(o, vem){
+      var cobrar=(o.prevencao||[]).map(function(x){ return x.texto; }).concat((o.pendentes||[]).map(function(t){ return 'pendente: '+t; })).join(' · ');
+      return '<tr><td><b>'+e(o.nome)+'</b></td><td>'+e(o.raca)+'</td><td>'+e(o.tutor)+'</td><td>'+e(o.tel)+'</td>'
+        +'<td>'+e(vem?(o.porque||'fixo'):'não vem')+(o.chamada?(' · '+e(o.chamada)):'')+'</td>'
+        +'<td>'+e(vem?cobrar:(o.motivo||''))+'</td><td>'+(o.reposicoes>0?o.reposicoes:'')+'</td></tr>';
+    };
+    var nomeDia=(typeof repDiaSemanaComData==='function')?repDiaSemanaComData(D.iso):fmtBR(D.iso);
+    return '<table><tr><td colspan="7" style="border:none;font-size:16pt;font-weight:bold;color:#234D67">Zêluz · Turma de '+e(nomeDia)+'</td></tr>'
+      +'<tr><td colspan="7" style="border:none;font-size:10pt;color:#555">'+L.vem.length+' vêm · '+L.naoVem.length+' avisaram que não vêm</td></tr></table><br>'
+      +'<table><tr><th>FILHOt</th><th>Raça</th><th>Tutor</th><th>Telefone</th><th>Como vem</th><th>O que cobrar</th><th>Reposições</th></tr>'
+      +L.vem.map(function(o){ return linha(o, true); }).join('')
+      +L.naoVem.map(function(o){ return linha(o, false); }).join('')+'</table>';
+  }
+  function turmaDocHTML(){
+    return '<html xmlns:x="urn:schemas-microsoft-com:office:excel"><head><meta charset="UTF-8">'
+      +'<style>body{font-family:Calibri,Arial,sans-serif}td,th{border:1px solid #b6c2cc;padding:4px 7px;font-size:11pt;vertical-align:top}'
+      +'th{background:#234D67;color:#FFFDF6;font-weight:bold;text-align:left}@media print{body{margin:8mm}}</style></head><body>'
+      +turmaTabelaHTML()+'</body></html>';
+  }
+  function turmaExcel(){
+    var iso=turmaIsoDoDia(TURMA_DIA);
+    relEntregar('Zeluz-turma-'+iso+'.xls', turmaDocHTML());
+  }
+  function turmaPDF(){
+    var w=null; try{ w=window.open('','_blank'); }catch(e){ w=null; } /* silencioso de propósito: o aviso abaixo diz o que fazer */
+    if(!w){ alert('O navegador bloqueou a janela. Libere os pop-ups deste site e toque de novo.'); return; }
+    w.document.open(); w.document.write(turmaDocHTML()); w.document.close();
+    setTimeout(function(){ try{ w.focus(); w.print(); }catch(e){} /* silencioso de propósito: a página fica aberta para imprimir à mão */ }, 400);
+  }
   // ===== A TELA "BANHOS RECORRENTES" ====================================================
   function banhosPodeEditar(){ return (typeof canEditPel==='function') && canEditPel(); }
   function banhosChave(p){ return dcKey(p.n, p.tutor); }

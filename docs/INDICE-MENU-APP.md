@@ -95,6 +95,24 @@ Cartão marcado "atualizado" antes desta versão e com a ficha ainda devendo **v
 - Foto de ficha que existe não é candidata: o Thor novo vai para "precisa fotografar".
 - Card novo **"Duas fichas com a MESMA foto"**: mostra as fichas que ficaram com a foto copiada antes desta correção. A foto certa se tira em «Trocar».
 
+### (L) Turminhas → Turma do dia (lista enxuta, com Excel e PDF)
+
+> **Adriana, 25/set/2026:** *"Não precisa aparecer o quadro imenso de peludinhos. O Boris trocou a sexta pela quarta (dia 23) e aparece lá — já era esperado que ele não viria. Preciso conseguir baixar em Excel ou PDF quem vem em cada dia, para mandar mensagens e cobrar vermífugo, vacina etc., junto com quem marcou reposição."*
+
+**Turminhas › (dia)** abre a **Turma do dia**, e não mais a Chamada com o quadro grande. A Chamada daquele dia continua a um toque, no alto. Quem tem menu por atividade, como os monitores, não vê as Turminhas.
+
+| Bloco | Quem entra |
+|---|---|
+| **Vêm** | os fixos do dia da semana, mais quem vem por **reposição marcada**, por **troca** ("no lugar de 26/09") ou como **avulso** lançado para a data. Hoje também mostra "✓ veio" ou "faltou" da chamada |
+| **Avisaram que não vêm** | o fixo com **falta avisada** naquela data (com o motivo e "repõe em…") ou que **trocou o dia** ("trocou para 23/09"). É o caso do Boris |
+| **O que cobrar** (em cada linha) | a prevenção vencida ou vencendo, pela mesma régua dos Vencimentos; o que está em aberto na ficha, num chip só; e o que ficou **pendente de outro dia** (Pendências de prevenção: o vermífugo lançado num dia em que ele não veio) |
+
+- **Tocar no nome** abre a ficha.
+- **Tocar no que cobrar** abre os Vencimentos daquele dia, com as mensagens prontas.
+- **Baixar Excel** e **PDF / imprimir** saem da mesma lista. As colunas são: FILHOt, raça, tutor, telefone, como vem, o que cobrar e reposições.
+- **Moradores** (Repolho etc.) não entram: não são turma.
+- **Nada novo é gravado:** a tela só lê o cadastro, as reposições, as trocas, as pendências e os avulsos do dia.
+
 ### (K) Orçamentos de hospedagem → Check-in
 
 > **Adriana, 25/set/2026:** *"O Pingo já foi embora, já foi feito o check-out dele, e ele continua aparecendo em Estadias fechadas. Era para ele ter ido para Já hospedados. Elizabeth, Pipoca hoje — precisariam de já ir para o check-in direto, assim como o Camus. Poder dar entrada pelo orçamento de hospedagem ou também no check-in. Aqui só está aparecendo a Pipoca do João."*
@@ -139,7 +157,7 @@ O saldo de reposição não muda ao marcar: o crédito só sai quando ele vem. A
 ### Provas
 
 Todas rodam sem rede e sem dado de cliente:
-- `node tests/fase0-ciclo-fechado.test.js`: 56 provas;
+- `node tests/fase0-ciclo-fechado.test.js`: 59 provas;
 - `node tests/servidor-senha.test.js`: 11 provas.
 
 O harness completo precisa do retrato da VPS e não rodou nesta sessão.

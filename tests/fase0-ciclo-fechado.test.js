@@ -666,6 +666,50 @@ prova('Check-in mostra quem chega hoje pelos orçamentos fechados — e não que
   assert.strictEqual(L[0].atrasado, true, 'a Elizabeth devia ter entrado ontem: aparece com o aviso');
 });
 
+// ================================================================== Turma do dia (25/set)
+console.log('\nTurma do dia — quem vem, quem avisou que não vem e o que cobrar');
+prova('o Boris trocou a sexta pela quarta: na sexta ele está em "avisaram que não vêm"; na quarta, em "vêm"', () => {
+  run(`__bkp={pd:pelDias, rl:repLancamentos, ra:repAgendaDe, pe:pelExtra, te:poTelDoTutor, rs:repSaldo, pi:pelInativo, mz:ehMoradorZeluz};
+       pelDias=function(p){ return p.dias||[]; }; pelInativo=function(){ return false; }; ehMoradorZeluz=function(p){ return !!p.morador; };
+       repLancamentos=function(p){ return p.lanc||[]; }; repAgendaDe=function(p){ return p.agenda||[]; };
+       pelExtra=function(){ return {}; }; poTelDoTutor=function(){ return '+5531999990000'; }; repSaldo=function(p){ return p.saldo||0; };
+       __P=[{n:'Boris', tutor:'Laura', dias:['sex']},
+            {n:'Amora', tutor:'Rui', dias:['sex']},
+            {n:'Lana',  tutor:'Bia', dias:['qua'], agenda:['2026-09-25'], saldo:1},
+            {n:'Nick',  tutor:'Cláudia', dias:['seg']},
+            {n:'Repolho', tutor:'Zêluz', dias:['sex'], morador:true}];
+       __T={'2026-09-23':{}}; __T['2026-09-23'][pelKey(__P[0])]={de:'2026-09-25', para:'2026-09-23', status:'confirmada'};`);
+  try {
+    const sexta = JSON.parse(JSON.stringify(run("turmaListaDoDia('2026-09-25', {pets:__P, trocas:__T, avulsos:{}, chamada:{}, pend:[], margem:3, hoje:'2026-09-25'})")));
+    assert.deepStrictEqual(sexta.vem.map((o) => o.nome), ['Amora', 'Lana'], 'Repolho mora aqui: não é turma');
+    assert.strictEqual(sexta.vem[1].porque, 'reposição');
+    assert.deepStrictEqual(sexta.naoVem.map((o) => o.nome), ['Boris']);
+    assert.ok(/trocou para 23\/09/.test(sexta.naoVem[0].motivo), sexta.naoVem[0].motivo);
+    const quarta = JSON.parse(JSON.stringify(run("turmaListaDoDia('2026-09-23', {pets:__P, trocas:__T, avulsos:{}, chamada:{}, pend:[], margem:3, hoje:'2026-09-23'})")));
+    const b = quarta.vem.filter((o) => o.nome === 'Boris')[0];
+    assert.ok(b && /troca/.test(b.porque), 'o Boris vem na quarta, por troca');
+  } finally { run('pelDias=__bkp.pd; repLancamentos=__bkp.rl; repAgendaDe=__bkp.ra; pelExtra=__bkp.pe; poTelDoTutor=__bkp.te; repSaldo=__bkp.rs; pelInativo=__bkp.pi; ehMoradorZeluz=__bkp.mz;'); }
+});
+prova('falta avisada tira da turma e diz o motivo; o que ficou pendente de outro dia aparece para cobrar', () => {
+  run(`__bkp={pd:pelDias, rl:repLancamentos, ra:repAgendaDe, pe:pelExtra, te:poTelDoTutor, rs:repSaldo, pi:pelInativo, mz:ehMoradorZeluz};
+       pelDias=function(p){ return p.dias||[]; }; pelInativo=function(){ return false; }; ehMoradorZeluz=function(){ return false; };
+       repLancamentos=function(p){ return p.lanc||[]; }; repAgendaDe=function(){ return []; };
+       pelExtra=function(){ return {}; }; poTelDoTutor=function(){ return ''; }; repSaldo=function(){ return 0; };
+       __P=[{n:'Tico', tutor:'Joana', dias:['sex'], lanc:[{_id:'c1', tipo:'credito', data:'2026-09-25', motivo:'viagem', volta:'2026-09-29'}]},
+            {n:'Mel', tutor:'Ana', dias:['sex']}];
+       __PEND=[{chave:dcKey('Mel','Ana'), item:'vermifugo', valor:'Vermífugo', dia:'2026-09-22'}];`);
+  try {
+    const r = JSON.parse(JSON.stringify(run("turmaListaDoDia('2026-09-25', {pets:__P, trocas:{}, avulsos:{}, chamada:{}, pend:__PEND, margem:3, hoje:'2026-09-25'})")));
+    assert.deepStrictEqual(r.naoVem.map((o) => o.nome), ['Tico']);
+    assert.ok(/falta avisada — Tutor viajou · repõe em 29\/09/.test(r.naoVem[0].motivo), r.naoVem[0].motivo);
+    assert.deepStrictEqual(r.vem[0].pendentes, ['Vermífugo (de 22/09)']);
+  } finally { run('pelDias=__bkp.pd; repLancamentos=__bkp.rl; repAgendaDe=__bkp.ra; pelExtra=__bkp.pe; poTelDoTutor=__bkp.te; repSaldo=__bkp.rs; pelInativo=__bkp.pi; ehMoradorZeluz=__bkp.mz;'); }
+});
+prova('a próxima ocorrência do dia: numa sexta, "Sexta" é hoje e "Segunda" é a que vem', () => {
+  assert.strictEqual(run("turmaIsoDoDia('sex', '2026-09-25')"), '2026-09-25');
+  assert.strictEqual(run("turmaIsoDoDia('seg', '2026-09-25')"), '2026-09-28');
+});
+
 // ------------------------------------------------ o fim
 fila.then(() => {
   console.log('\n' + ok + ' provas passaram' + (falhas.length ? (', ' + falhas.length + ' falharam:') : '.'));
