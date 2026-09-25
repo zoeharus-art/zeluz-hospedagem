@@ -74,7 +74,9 @@ const APP = 'auaulandia/index.html';
 const PORTA = Number(process.env.CAP_PORTA) || 8831;
 const EMU_PORTA = Number(process.env.CAP_EMU_PORTA) || 9031;
 const SAIDA = path.join(RAIZ, 'docs', 'capturas-v28');
-const SENHA_DIRETORIA = '1101';
+// A senha NÃO fica no repositório (público). Fase 0, 25/set/2026: vem do ambiente.
+const SENHA_DIRETORIA = process.env.ZELUZ_SENHA_DIRETORIA || '';
+if (!SENHA_DIRETORIA) { console.error('Defina ZELUZ_SENHA_DIRETORIA (a senha da Diretoria) antes de rodar esta captura.'); process.exit(1); }
 
 // ------------------------------------------------------------------ servidor local
 function tipoDe(p) {
@@ -416,7 +418,7 @@ async function dispensarCartazes(page, quantos) {
         await page.waitForTimeout(900);
         const cob = page.locator('#vencCard_' + CSS_escapar(injetou)).first();
         const tcob = (await cob.count()) ? ((await cob.innerText()) || '') : '';
-        ['COBRAR', 'sem resposta — cobrar', 'Copiar a cobrança', 'Cobrei']
+        ['COBRAR', 'sem resposta — cobrar', 'Cobrar no WhatsApp', 'Cobrei']
           .forEach((x) => { if (tcob.indexOf(x) < 0) problemas.push('o cartão em "cobrar" (' + larg.rot + ') não mostra "' + x + '"'); });
         if (!/Mandado às \d\d:\d\d/.test(tcob))
           problemas.push('o cartão em "cobrar" (' + larg.rot + ') não diz a que horas a mensagem saiu');

@@ -1,6 +1,418 @@
-# Índice do app — menu aprovado pela Adriana (reorganizado em 08/set/2026, ajustado em 15, 17, 18, 19, 21 e 24/set/2026)
+# Índice do app — menu aprovado pela Adriana (reorganizado em 08/set/2026, ajustado em 15, 17, 18, 19, 21, 24 e 25/set/2026)
 
 > Regra: o app tem de ser autoexplicativo, para treinamento rápido. Cada item tem **Título** e **subtítulo** (a explicação curta que aparece como dica no menu e no índice da Gestão no computador). Nomes são decisão da Adriana.
+
+## O que mudou em 25/set/2026 (v 2026-09-25-01) — Fase 0 do "ciclo fechado"
+
+> **Origem:** auditoria completa de 25/set/2026 e PRD-006 ("nada fica sem cobrar, nada fica esquecido"). A Adriana respondeu "ok" para todas as recomendações e autorizou a Fase 0. **Nada aqui foi publicado ainda:** a versão fica no branch até a Adriana aprovar a publicação, porque o sistema está em uso.
+
+> **Adriana, 25/set/2026:** *"Eu clico aqui, vermífugo, Simba, nada acontece."* · *"Vermífugo: duas doses com 21 dias de intervalo, depois 4 meses; opção de dose única; exame de fezes com data e resultado."* · *"Banhos recorrentes: só quem tem banho fixo."*
+
+### (A) O remédio lançado na recepção entra no alarme e no vigia
+
+**Antes:** o remédio lançado em **Lançamentos do dia › Medicação** ia para a planilha e para a TV, mas não entrava no registro de doses. Ficavam de fora três coisas:
+- o alarme no celular;
+- o "Dei agora";
+- o vigia do servidor.
+
+Só entrava a dose do check-in de pertences.
+
+**Agora:** lançamento de Medicação de **hoje**, com a ficha casada e horário, vira dose esperada (`medDosesDosLancamentos`).
+- Se o check-in de pertences já tem a mesma dose no mesmo horário, ela **não entra duas vezes**.
+- Lançar ou tirar o remédio refaz a agenda na hora.
+
+### (B) Feriado: a falta automática das 12h não marca a turma inteira
+
+**Antes:** num feriado, a falta das 12h marcava como "faltou" todo mundo da turma. O vigia da ponte do Telegram também avisava a falta.
+
+**Agora:**
+- O app lê a lista de feriados, a mesma do orçamento (`auaulandia/config/orcamento/feriados`), e não marca falta em feriado.
+- A ponte (`integracao-telegram/Codigo.gs`, `_ehFeriado`) também pula o feriado. **Ela precisa ser republicada no Apps Script.**
+
+### (C) Vencimentos: o toque abre o quadro ALI, e o cartão só fecha com a ficha em dia
+
+| O quê | Antes | Agora |
+|---|---|---|
+| Tocar no nome no resumo do topo ("Vermífugo: Simba") | o quadro abria no cartão, lá embaixo: parecia que o toque não fazia nada | o quadro abre **logo abaixo da linha tocada** |
+| Dois FILHOts com o mesmo nome (tutores diferentes) | o segundo sumia do resumo | aparecem os dois (a conferência é pela chave) |
+| "Nunca fez — quer fazer aqui" | fechava o assunto e **não lançava nada** | dois botões, cada um lança o vermífugo e o carrapaticida nos Lançamentos do dia; a vacina em aberto vira recado para a veterinária no dia dele:<br>• "Nunca fez — fazer aqui, **está na bolsa**";<br>• "Nunca fez — fazer aqui, **pegar na loja**" |
+| "Sim, a ficha foi atualizada" | fechava o cartão sem conferir a ficha | **só fecha se a ficha estiver em dia**. Se ainda há vacina, vermífugo ou carrapaticida vencido ou nunca registrado, abre o quadro de gravar a data e diz o que falta |
+
+Ficam de fora dessa trava:
+- o que é opcional: coleira, escova, exame de fezes e 2ª dose;
+- o assunto em que o tutor disse "Não quer agora".
+
+Cartão marcado "atualizado" antes desta versão e com a ficha ainda devendo **volta aberto**, com a linha explicando.
+
+### (D) Vermífugo no quadro rápido (sem abrir a ficha)
+
+- **Dose única** ou **2 doses (repete em 21 dias)**, escolhido na hora de gravar. Com 2 doses:
+  - a 2ª fica prevista em 21 dias;
+  - o próximo vermífugo vem 4 meses depois da 2ª.
+- Gravar a **2ª dose** recalcula o próximo vermífugo **a partir dela**. Antes, a data ia para um campo que a conta não lia.
+  - 2ª dose antes da 1ª é recusada.
+  - "Não vai ter 2ª dose" passa para dose única.
+- **Exame de fezes** no mesmo quadro: data, próxima em 4 meses e **resultado**. Fica recolhido: toca-se para abrir.
+- **Regra "vermífugo OU exame de fezes": vale o mais recente** (`vermOuFezes`).
+  - Antes, qualquer exame registrado, de qualquer ano, dispensava o vermífugo para sempre. Quem tinha um exame antigo e um vermífugo novo **não devia nenhum dos dois**, e o vermífugo vencia em silêncio.
+  - A regra é a mesma na Prevenção, nos Vencimentos e na ficha.
+
+### (E) Hospedagem: pernoite de ontem e hóspede recorrente
+
+- **Pernoite lançada ontem e sem check-in** continua aparecendo, com a data da noite, por até 3 dias. Aparece em três lugares:
+  - no Check-in;
+  - na mesa do dia;
+  - no painel da Márcia.
+
+  "Fazer o check-in desta noite" abre com a entrada **naquela noite**. "Tutor buscou, cancelar" pede o motivo, como sempre.
+- **Hóspede sem check-in** agora confere as **datas** da estadia. Antes, qualquer estadia antiga, de qualquer mês, contava como check-in feito, e o cliente recorrente nunca aparecia. Estadia cancelada não conta.
+
+### (F) Banhos recorrentes: só quem tem banho fixo
+
+- A lista abre só com quem tem banho fixo. Conta tanto o gravado quanto o ligado no rascunho: a linha recém-ligada não some no meio da edição.
+- A busca procura em **todos** os ativos, para incluir alguém novo.
+- O botão **"Mostrar também quem não tem banho fixo"** mostra a casa inteira.
+
+### (G) Segurança (P0 da auditoria)
+
+- **Servidor da senha (Rota A)** pronto em `servidor-senha/`:
+  - confere o PIN no servidor da Kairós e devolve o token com o papel;
+  - tem freio contra quem tenta adivinhar;
+  - mantém a trava de aparelho;
+  - deixa rastro sem guardar a senha.
+
+  **Ainda não está no ar:** a instalação na VPS e as etapas seguintes estão em `servidor-senha/LEIA-ME.md`.
+- As senhas reais **saíram dos 24 arquivos de teste**. Agora vêm do ambiente: `ZELUZ_SENHA_DIRETORIA`, `ZELUZ_SENHA_GESTAO` e `ZELUZ_SENHA_PLANTAO`.
+- O rastro da auditoria sai sempre no formato que o banco aceita (`_audNormalizar`). Antes, um registro sem `quem` e `role` voltava para o bolso a cada reenvio, para sempre.
+
+### (H) Relatórios: a foto do xará não é mais oferecida ao FILHOt novo
+
+> **Adriana, 25/set/2026:** *"Toda vez que um novo peludinho chega (hoje o Thor, Spitz, da Juliana), pergunta em Relatórios se a foto é dele. Está confundindo agora o Thor da Andrea com o novato Spitz."*
+
+**Antes:** a pergunta "esta foto é dele?" devia aparecer só para foto **órfã** (guardada numa chave que não é ficha de ninguém). Mas a conta oferecia também a foto de **outra ficha que existe**. Todo FILHOt novo com um xará antigo caía na pergunta, e um "é ele" copiava a foto do outro.
+
+**Agora:**
+- Foto de ficha que existe não é candidata: o Thor novo vai para "precisa fotografar".
+- Card novo **"Duas fichas com a MESMA foto"**: mostra as fichas que ficaram com a foto copiada antes desta correção. A foto certa se tira em «Trocar».
+
+### (T) Banho fixo: o shampoo vai junto (qual, nome e onde está)
+
+> **Adriana, 25/set/2026:** *"Temos diversos peludinhos do Day Care que usam shampoo hipoalergênico, shampoo medicamentoso e tudo mais, e que o tutor já manda na mochila ou fica aqui… essa informação precisa ir junto para o dashboard, para o pessoal já descer com o shampoo… o shampoo está na bolsa que o tutor manda, ou está aqui embaixo na loja. Essa informação precisa ficar."*
+
+| Onde | O que mudou |
+|---|---|
+| **Banhos recorrentes** (a linha do FILHOt) | depois de "Shampoo" (trouxe o dele / comprou na loja), a linha pergunta **Qual** (Hipoalergênico, Medicamentoso; tocar de novo desmarca) e o **nome** (ex.: Cloresten), e **Onde está** ganhou **"Está aqui na loja"**, ao lado de "na bolsa dele" e "na recepção". Fica gravado no combinado (`banho_rec.tipo`, `banho_rec.nome`) |
+| **Planilha e TV** | a célula do banho leva tudo: `Lana/Spitz (SHAMPOO · MEDICAMENTOSO · CLORESTEN · NA BOLSA)`. Sem qual/nome, sai igual ao de antes: `(SHAMPOO · NA RECEPÇÃO)` |
+| **Lançamentos do dia › Banho** | os mesmos campos (qual e nome, opcionais) e o mesmo "aqui na loja". Escolhido o FILHOt, **o shampoo gravado no banho fixo dele já vem marcado** — é rascunho, a recepção só confere e lança |
+| **Hoje na Zêluz e Vencimentos** | "🛁 banho hoje 10:00 (fixo) · shampoo próprio medicamentoso Cloresten — está na bolsa". Quem usa o da casa não ganha aviso |
+| **Mudou o shampoo de quem já tem banho fixo** (QA17) | os dias que o automático **já tinha escrito** na planilha também mudam: a célula que ELE escreveu sai e a nova entra, com a hora. A célula que uma pessoa escreveu à mão não é tocada |
+| **Nome com parêntese** (QA17) | "Episoothe (Virbac)" vira `EPISOOTHE VIRBAC` na planilha — o parêntese confundiria a leitura do nome e do tutor (xarás) |
+
+- **Onde está no código:** `DASH_SHAM_TIPO`, `DASH_SHAM_ONDE` (NA LOJA), item `banho` de `DASH_ITENS` (campos `tipo` e `nome`), `banhoRecNormal`, `banhoRecDetalhe`, `banhoRecShampooFrase`, `banhoPreMarcarLanc`, `banhosLinhaHTML`, `banhosSet`, `banhosValidar`, `banhosSalvar`.
+
+### (S) Troca de dia: falta avisada no dia dele e Reposição no novo
+
+> **Adriana, 25/set/2026:** *"O tutor está querendo trocar o dia tal e vir no outro… não quero usar a reposição, eu quero trocar o dia… A troca pedida do dia tal pro dia tal foi feita. Coco Chanel da Juliana e Billy Paul da Juliana precisam estar com falta avisada na terça-feira e ir direto para reposição na quarta."*
+
+**Onde:** Reposições › «Marcar reposição» › marcar **"É troca de dia"** e dizer em que dia dele ele NÃO vem. O «+ Marcar troca» da Lista de troca abre a mesma tela, já com a troca marcada.
+
+| O quê | Como |
+|---|---|
+| O que grava | um crédito próprio da troca: `data` = o dia dele (falta avisada), `volta` = o dia novo (Reposição), `motivo:'troca'`, `troca:{de, para, quem, ts}`. Se o tutor já tinha avisado a falta daquele dia, a troca usa aquela falta |
+| As reposições que ele já tinha | não são usadas: a troca não depende de saldo e nunca vira avulso |
+| Já estava marcada como reposição no dia novo | converte: a reposição marcada volta a ficar sem dia (o dia fica guardado em `volta_desmarcada`, "virou troca") |
+| Planilha | falta avisada no dia dele e Reposição no dia novo, pela conferência automática |
+| Turma | no dia dele: "trocou para 30/09"; no dia novo: "troca (no lugar de 29/09)". Vagas e lista de Reposições dizem "troca" |
+| Mensagem para o tutor | "Passando para confirmar: a troca pedida do dia 29/09 (terça-feira) para o dia 30/09 (quarta-feira) foi feita. A Coco Chanel vem na quarta-feira, 30/09." — não fala em reposição |
+| Dia lotado | «Avisar a Márcia» leva a troca dentro do pedido; quando ela autoriza, o app faz a troca inteira |
+| Não deixa | o dia que sai não é dia dele; o dia novo já é dia dele; o dia que sai já passou (use «+ Falta»); os dois dias iguais; a mesma troca duas vezes; o dia novo ocupado por avulso ou por troca antiga (desfaça lá primeiro) |
+| No dia da troca | «Veio repor hoje» e o lançamento de Reposição do dia registram a vinda **pela troca** (`motivo:'troca'`): a tela diz "TROCA CUMPRIDA — as reposições continuam N" e **nenhuma mensagem de reposição** vai ao tutor |
+| Desfazer a troca | «desmarcar» ao lado da troca (ou «Tirar e desfazer a troca» nos Lançamentos do dia). Se o crédito nasceu da troca e o dia de origem **ainda não passou**, ele é estornado: a falta avisada sai e ele volta a vir naquele dia. Se o dia de origem **já passou** (ele de fato não veio), a falta fica e vira reposição sem dia. Se a falta já tinha sido avisada antes, ela fica |
+| A troca "viva" | só enquanto o dia marcado é o da própria troca (`troca.para === volta`). Remarcada, vira reposição comum — e as telas deixam de dizer "troca" |
+| Mensagens ao desfazer (QA16) | desfazer a troca manda ao tutor "a troca do dia 29/09 (terça-feira) para o dia 30/09 (quarta-feira) foi desfeita. A Coco Chanel vem na terça-feira, 29/09, como sempre." — sem falar em reposição. Se a falta fica (o dia já passou ou já tinha sido avisada), a mensagem diz que ela continua valendo e quantas ficam para marcar. «Tirar só o lançamento» não manda nada ao tutor (a marcação ou a troca continua). O saldo mostrado desconta o crédito da troca que sai junto |
+| O crédito da troca não é reposição (QA16) | enquanto a troca não é cumprida, o crédito dela não conta como reposição livre: o «Marcar reposição» de outro dia sai como **avulso** (a lei de 21/set: sem crédito livre, é avulso) e o orçamento de hospedagem não o oferece como desconto (`repTrocasPendentes`) |
+| Márcia autoriza tarde | o pedido é revalidado antes de gravar: se a troca não vale mais (o dia de origem passou), nada é gravado e a tela diz por quê |
+| Estorno na planilha | a falta avisada de um crédito estornado não vai mais para a planilha (e o banho fixo também não a conta) |
+| Trocas antigas da Lista de troca | continuam na lista, com o × para cancelar (o × não aparece nas trocas novas — elas se desfazem pelo «desmarcar»). Elas só ocupavam a vaga (sem falta avisada e fora da planilha): para Coco Chanel e Billy Paul, cancele a antiga e faça a troca de novo |
+
+- **Onde está no código:** `dxVereditoTroca`, `repTrocaGravar`, `repTrocaFeitaModal`, `dxTrocaMudou`, `dxTrocaAtual`; `dxVeredito`, `dxConfirmar`, `dxPedir`, `vagasAutorizar`, `repMensagem` ('troca'), `turmaListaDoDia`, `ocupantesDoDia`, `renderReposicao` e `trocaAbrirLancar` ajustadas.
+
+### (R) Reposição: tirar, devolver ao saldo e remarcar
+
+> **Adriana, 25/set/2026:** *"Uma tutora cancelou a reposição da Safira na quarta e não consigo remarcar e nem cancelar. Preciso de poder tirar a reposição e ela voltar para a quantidade que o tutor tem! Com o dia que foi remarcada."*
+
+**Três becos sem saída, fechados:**
+
+| Onde | Antes | Agora |
+|---|---|---|
+| **Lançamentos do dia › Reposição › Tirar** | o lançamento abatia 1 do Banco de Reposições; tirar tirava da planilha, mas o saldo **não voltava** | a confirmação diz "a reposição volta para o saldo: era N, fica N+1"; tirar devolve o uso daquele lançamento e sai a mensagem pronta para o tutor ("a reposição … que estava marcada para quarta-feira, 30/09, foi desmarcada") |
+| **Reposições › Extrato** | só o crédito tinha botão («Estornar»); um uso cancelado não tinha como voltar | o uso tem **«Devolver»** (pede o motivo). O uso da hospedagem (orçamento) não tem: quem o desfaz é o próprio orçamento |
+| **Reposições › a marcada para um dia que já passou** | sumia da tela e prendia o crédito: não dava para desmarcar nem remarcar («Marcar reposição» dizia "Não achei um crédito sem dia marcado") | aparece em vermelho: "Estava marcada para 23/09 e ela não repôs · desmarcar". «Marcar reposição» remarca a mesma reposição |
+
+- **Tirar um dia que também está marcado** (na tela de Reposições): a tela pergunta, com três saídas — «Tirar e desmarcar 30/09 (o tutor não vem)», «Tirar só o lançamento (a marcação continua)» ou «Manter». Sem a pergunta, a marcação ficaria e o automático poria a Reposição de volta na planilha.
+- **A marcada que já passou só aparece enquanto há saldo livre para ela** (QA14): com o saldo já todo marcado para outros dias, ela não "continua valendo" e não se remarca — senão ficariam mais dias marcados do que reposições.
+- **Nada é apagado:** o uso devolvido fica riscado no Extrato; a devolução aparece como "+1 DEVOLVIDA", com o motivo e "devolveu a reposição de dd/mm". A devolução tem chave fixa (`dev-{uso}`): dois toques ou dois aparelhos gravam o mesmo nó.
+- **O dia fica guardado:** o crédito mostra no Extrato "marcada para dd/mm", "desmarcada de dd/mm (por quem)" ou "estava marcada para dd/mm e foi remarcada para dd/mm (por quem)".
+- **Ligação nova:** o uso criado pelos Lançamentos do dia guarda `lanc:{dia, id}` do lançamento. Os antigos, sem ligação, são achados pelo dia e pelo texto "Reposição lançada nos Lançamentos do dia".
+- **Celular:** na lista de Reposições, os botões descem para baixo do texto (antes espremiam o nome até virar uma coluna de uma palavra).
+- **Onde está no código:** `repUsoDoLancamento`, `repUsoDevolvivel`, `repVoltasVencidas`, `repDevolverUso`, `repDevolverUsoGravar`, `dashRepDoLancamento`, `repExtratoDesmarcada`; `dashRemover`, `dashRepAbater`, `repCreditoLivre`, `repAgendarVolta`, `repDesmarcar`, `renderReposicao` e `repAbrirExtrato` ajustadas.
+
+### (Q) Fechamento por assunto
+
+> **Adriana, 25/set/2026:** *"Pode seguir com o fechamento por assunto."*
+
+**Antes:** a conversa com o tutor só fechava pelo "Sim" do cartão inteiro, e o cartão só sai quando tudo está em dia. Se o vermífugo já estava registrado na ficha, mas a vacina continuava no cartão, a conversa do vermífugo **continuava sendo cobrada**.
+
+**Agora:** cada **assunto** fecha sozinho quando a ficha deixa de ter item dele no cartão daquele dia.
+
+| O quê | Como |
+|---|---|
+| Quando | toda vez que uma data de prevenção é gravada na ficha, de qualquer tela (quadro do cartão, aba Prevenção, blocos da ficha, "Vence em" digitado), e só depois de a gravação dar certo. Lançamentos do dia não grava a ficha e, por isso, não fecha nada |
+| Dias considerados | antes de fechar, o aparelho relê do banco os dias de conversa (30 dias para trás e 21 para frente), com a mesma trava de 2 minutos da Mesa e de Hoje na Zêluz. Se essa leitura já estiver em curso (a Mesa pediu), espera a leitura chegar. Assim fecha também no aparelho que só abriu a Prevenção e no dia que está aberto em Vencimentos desde cedo |
+| Duas gravações seguidas | vale a data mais nova de cada campo: gravar e, logo em seguida, corrigir não fecha pela data que foi desfeita. Se o fechamento da primeira ainda estiver a caminho do banco, a conta da segunda espera que ele chegue (até 15 segundos). Se as duas gravações acabarem fundidas numa conta só, o cartão fechado pelo quadro reabre pela mesma régua que o fechou |
+| Onde fica registrado | no mesmo registro da conversa: `daycare/vencimentos/{dia}/{chave}/fechados/{assunto}` = quem, quando e `via: ficha`. Vale para todos os dias em que houve conversa sobre aquele assunto |
+| O que fecha | só o assunto que **foi conversado** com o tutor (mandado, respondido, cobrado ou tentado) e que não tem mais item dele no cartão. A pergunta "fazer hoje?" do mesmo assunto que **já tinha saído** fecha junto. A que nunca saiu continua "a mandar" enquanto Hoje na Zêluz a oferecer; a que sair depois do fechamento é outra conversa: espera a resposta e fecha de novo quando a ficha a resolver |
+| O que continua aberto | todo assunto com item ainda no cartão (a vacina continua sendo cobrada) e o assunto que ainda nem foi mandado |
+| A pergunta "fazer hoje?" | tem janela própria: vale até a próxima vinda (mais a folga de Configurações). Enquanto o item que **ela pergunta** ainda estiver nessa janela, o assunto dela **não** fecha, mesmo que o cartão do dia tenha esvaziado. Em semana de feriado isso importa (ex.: 05/10, ele só volta em 19/10). A régua é a mesma da própria pergunta (`hojeAntecipar`): só segura o assunto perguntado e só o que ela cobre (check-up e exame de fezes, por exemplo, não). No fechamento do **cartão inteiro** pelo quadro, a régua segura tudo o que a pergunta daquele dia cobre, perguntado ou não, no cartão de hoje e no de um dia que ainda vai chegar (a véspera não fecha o cartão de amanhã se, amanhã, com ele na casa, houver pergunta a fazer): a pergunta oferecida e ainda não mandada não pode virar "respondido". Quando a mensagem do dia e a pergunta são do mesmo assunto, ele inteiro fica aberto até o item da pergunta ser gravado, porque o fechamento é por assunto |
+| Data apagada | apagar a data não é resolver: o item que virou "em aberto" segura o assunto que foi conversado |
+| Reabre | se a data for corrigida para trás (gravou no FILHOt errado e desfez), o assunto que **a ficha** fechou volta a ser cobrado. Se o cartão inteiro tinha sido fechado pelo quadro, ele reabre quando a régua do quadro (`vencQuadroSegura`) volta a encontrar item, também de assunto nunca conversado, e o recado da veterinária volta. A pergunta mandada depois do fechamento não reabre o que a ficha já tinha resolvido. O que o tutor respondeu e o "Sim" dado pela pessoa não são tocados |
+| Se o fechamento automático falhar | fica no log de falhas, sem alerta para quem salvou a ficha (a ficha foi salva). Vale também para o fechamento pelo quadro |
+| Registro antigo sem o retrato dos itens | o que nunca foi registrado na ficha segura o assunto de base (não fecha). Falha para o lado seguro e sai da faixa de 30 dias sozinho |
+| Em todas as telas | cartão de Vencimentos, calendário, contagens, Respostas pendentes, Quem chamar hoje, Hoje na Zêluz e aba Com o tutor, que mostra "**resolvido na ficha** (quem, quando)" |
+| Recado da veterinária | sai quando a vacina foi resolvida na ficha. Quando só o "em aberto" fechou (por exemplo, com a data velha da carteirinha) e a vacina ainda deve, o recado **fica**. O recado combinado **depois** do fechamento (pela pergunta mandada depois) também fica. O recado de uma vacina **nunca registrada** ("Nunca fez — fazer aqui") fica enquanto ela deve, mesmo que outra vacina do cartão tenha sido gravada e fechado o assunto vacina |
+
+O fechamento do cartão inteiro (o "Sim" e o fechamento pelo quadro com o cartão vazio) continua como estava.
+
+### (P) Ficha única: aba "Com o tutor" na ficha do FILHOt
+
+> **Adriana, 25/set/2026:** *"Pensando que no futuro humanos, máquina e um agente vão utilizar essas informações: menos cliques, que vá tudo para uma ficha única do cliente e que a informação não se perca."*
+
+**Cadastro de Peludinhos › (FILHOt) › Com o tutor** (aba nova, visível para Consultoras, Supervisão, Gestão e Diretoria):
+
+| Bloco | O que mostra |
+|---|---|
+| **Agora › O que a ficha deve** | o que venceu, vence hoje ou nunca foi registrado |
+| **Agora › Pendências de outro dia** | o que foi lançado para um dia em que ele não veio e volta a ser cobrado na próxima vinda |
+| **Agora › Esperando resposta do tutor** | cada mensagem sem resposta, com quem mandou e quando; em vermelho quando passou do prazo e é para cobrar |
+| **Conversas com o tutor** | dos últimos 30 dias e dos próximos já combinados, da mais nova para a mais antiga: o assunto, quem mandou e quando, a resposta (quem registrou e quando), as cobranças, as tentativas e se a ficha foi atualizada. A pergunta feita com ele na casa aparece marcada "(com ele na casa)" |
+
+- **No cabeçalho da ficha**, logo abaixo da linha do remédio, aparece uma linha quando há algo em aberto: *"Com o tutor: 1 item vencido · 1 conversa sem resposta · 1 pendência de outro dia"*.
+- **Nada é gravado e nenhum nó novo nasce.** A aba é uma leitura das fontes que já existem (`daycare/vencimentos`, `daycare/pendencias` e a própria ficha). Uma cópia consolidada gravada à parte seria a segunda verdade que envelhece.
+- **Para agentes:** a mesma leitura (`fichaUnicaDados`) devolve tudo em campos com nome. O contrato está no PRD-006, seção "Arquitetura do ciclo fechado".
+
+**Correções da 6ª rodada do QA (ficha e check-in), antes de publicar:**
+
+| Achado | Correção |
+|---|---|
+| **A1:** abrir a aba enquanto a primeira leitura da sessão ainda corria **congelava a página** (laço de redesenho) | uma leitura por vez; redesenha só quando algo mudou; no máximo 4 novas tentativas espaçadas, e depois a aba diz "Não consegui ler agora — toque na aba de novo" |
+| **M1:** leitura que falhava era refeita sem parar | a mesma trava |
+| **M2:** a aba ficava presa em "Montando…" quando a ficha se redesenhava | a ficha redesenhada desenha a aba de novo (vale também para Medicamentos, que tinha o mesmo defeito) |
+| **M3:** a aba e as Respostas pendentes discordavam sobre o que espera resposta | "Esperando resposta" usa a mesma régua das Respostas pendentes, com a trava da ficha |
+| **M4:** trocar a cor podia estragar o que foi escrito ("rosa choque" virava "azul choque") | a cor só troca a que o próprio seletor pôs; o que foi escrito à mão fica intacto e a cor entra na frente. O seletor acompanha o que se digita |
+| Re-QA da 6ª rodada: **CONCERNS — pode publicar**, com 7 ressalvas baixas, todas corrigidas | a aba se atualiza sozinha quando a leitura chega por outra tela; as tentativas param quando a ficha sai da tela; "Rosa Choque", "Verde Água" e "Azul Marinho" escritos à mão não são trocados; o rascunho de Medicamentos sobrevive ao redesenho da ficha; abrir a ficha voltou a ser leve (a régua olha só os registros deste FILHOt); o estado de cada conversa marca "legado" e "substituída" em vez de contradizer a lista; textos |
+| Baixos | gênero e plural dos itens novos ("pijama vermelho", "meias vermelhas"), rolagem da barra "Ir para" sem folga a mais, registros antigos (sem assunto, só com a ficha atualizada), aba e linha só para quem fala com o tutor, "ela/ele" conforme o FILHOt, "são dois itens", atalho "Medicação" |
+
+### (O) Check-in da hospedagem no celular: pertences sem digitar
+
+> **Adriana, 25/set/2026:** *"Check-in, preenchimento de hospedagem, está muito difícil. Precisa colocar manual os pertences! Digitar! Está confuso. Tela imensa, sem agilidade nenhuma. Péssima visibilidade no celular."*
+
+Medido a 375 px de largura, antes da mudança:
+- a ficha inteira tinha cerca de 5.500 px de altura;
+- só o cartão de Pertences tinha 1.267 px: os 12 tipos de item viravam 12 botões empilhados, com a largura inteira da tela;
+- cada toque num tipo abria o teclado sozinho, pedindo para escrever.
+
+| O quê | Agora |
+|---|---|
+| Os tipos de item | viram **pílulas lado a lado**, do tamanho do nome. Os 12 cabem em 5 linhas |
+| Tocar num tipo | só adiciona. **O teclado não abre mais sozinho** |
+| A cor | é **um toque**, num seletor na própria linha: preto, branco, azul, rosa, vermelho, estampado etc. Concorda com o item ("coleira vermelha", "peitoral vermelho"). Ração, comida natural, petiscos e tapete não têm seletor: ali o que importa é a marca |
+| O detalhe por escrito | continua existindo, **opcional** ("Detalhe (opcional): marca, estampa…"). Trocar a cor mexe só na cor e mantém o resto |
+| Ir de um cartão a outro | uma barra **Ir para:** logo abaixo do nome do FILHOt, com Datas · Alimentação · Medicação · Pertences · Assinatura e salvar |
+
+- **O dado gravado não mudou:** a cor entra no começo da mesma especificação de sempre. A Conferência, o PDF e o Check-out leem igual.
+- O check-in do corpo e o de pertences do Day Care **não foram tocados**. Só o cartão de Pertences do check-in da hospedagem e a barra de atalhos.
+
+### (N) Quem chamar hoje, e "está aqui hoje, está atrasado: podemos fazer hoje?"
+
+> **Adriana, 25/set/2026:** *"Que a gente consiga bater o olho e ver. Que o consultor vire e fale: eu tenho que entrar em contato com fulano, ciclano. E ele só deu um clique, copia a mensagem, já manda."* · *"O peludo está aqui hoje? Vamos fazer hoje. Podemos fazer, tutor? Hoje o peludo já está aqui. Vamos fazer hoje, porque está atrasado."*
+
+**Tela nova: Central Zêluz › Day Care › Quem chamar hoje**, logo abaixo de Hoje na Zêluz, com o contador no menu. Uma lista só, em três gavetas, com **um botão por linha**:
+
+| Gaveta | Quem entra | O botão |
+|---|---|---|
+| **Estão aqui hoje — podemos fazer hoje?** | quem está na casa com algo que **já venceu**, vence hoje ou vence antes de voltar, e a pergunta ainda não saiu | **Mandar no WhatsApp**: abre a conversa do tutor com a mensagem pronta e marca que saiu |
+| **Vêm (próximo dia da casa) — avisar** | a mensagem da véspera que ainda não saiu | o mesmo; grava sempre no próximo dia da casa, qualquer que seja o dia aberto na tela de Vencimentos |
+| **Não responderam — cobrar** | mensagem mandada, prazo vencido e nenhuma resposta | **Cobrar no WhatsApp**: abre com a cobrança e marca **Cobrei** |
+
+- **Nada novo é gravado por esta tela.** Cada botão usa o mesmo gesto da tela de origem, e o estado continua em `daycare/vencimentos/{dia}/{chave}`. A resposta do tutor se registra no cartão do FILHOt, em Hoje na Zêluz ou em Vencimentos.
+- **O mesmo pedido não sai duas vezes.** Quem foi (ou vai ser) perguntado hoje, com ele na casa, não aparece de novo na gaveta do próximo dia. O cartão de Vencimentos do próximo dia avisa: *"Hoje, com o FILHOt na casa, este assunto já foi perguntado ao tutor — resposta: …"*.
+- Enquanto os textos de Configurações não carregam, os botões esperam: mandar o texto de fábrica no lugar do que a Gestão escreveu seria mandar a mensagem errada.
+- A mesma leitura (`contatosDados`) devolve tudo em campos com nome: é a porta para um agente ler, no futuro, "com quem falar hoje".
+
+**Hoje na Zêluz: o atrasado virou pergunta.** Antes, o que já tinha vencido era só o alerta vermelho da linha, sem mensagem. Agora:
+- vermífugo, 2ª dose, carrapaticida, coleira e escova que **já venceram** (ou vencem hoje) entram no bloco laranja "fazer hoje?";
+- a vacina vencida entra só em **dia de atendimento da Veterinária** (segunda a sexta, exceto quinta);
+- **não entra** quando a mensagem da véspera já tratou do assunto para hoje (saiu ou foi respondida);
+- o bloco ganhou **Mandar no WhatsApp** direto, sem abrir a dobra. **Ver a mensagem** abre o texto para editar; depois de mandada, o botão vira **Registrar a resposta**.
+
+**Correções da 5ª rodada do QA (antes de publicar):**
+
+| Achado | Correção |
+|---|---|
+| **A1:** dez checagens do harness e dois scripts de captura esperavam as telas antigas | atualizados: a chave `contatos` (lista do Time, subgrupo do Day Care, acesso esperado, 40 itens no menu), o contador "(2 · 2 hoje)", o botão direto, a janela das buscas em `vencGravar`, as Turminhas abrindo a Turma do dia e o "Cobrar no WhatsApp". **Conferido:** ver "Harness completo", no fim desta seção |
+| **A2:** com dois aparelhos, a lista lia uma cópia velha: o mesmo pedido saía de novo, e o toque **apagava o "Mandei" do outro aparelho** | antes de gravar envios, respostas, cobranças, tentativas e o lançamento automático, o app **relê do banco** aquele mapa e soma só o assunto do toque (vale para todas as telas). A lista relê o dia ao abrir |
+| **M1:** Vencimentos › Hoje oferecia de novo o que o "fazer hoje?" já tinha perguntado | o cartão do próprio dia também avisa; e a pergunta de hoje não some depois |
+| **M2:** a cobrança de ontem e a pergunta de hoje sobre o mesmo item apareciam juntas | a pergunta nova substitui a cobrança da velha |
+| **M3:** o contador de Quem chamar hoje não acompanhava os toques de outras telas | acompanha |
+| **M4:** cada abertura relia centenas de KB | no máximo uma releitura a cada 30 s |
+| **M5:** janela do WhatsApp bloqueada era marcada como "mandada" | nada é marcado, e a tela avisa |
+| **M6:** o contador pesava a cada marcação da chamada | a conta espera 300 ms e junta as rajadas |
+| Re-QA (N2 a N6) | a cobrança velha também sai quando a pergunta nova **já foi mandada**; a lista usa a leitura mais nova das duas; a conversa do dia respondida fecha o "fazer hoje?"; o desfazer usa a memória de depois do "sim"; cobranças e tentativas de dois aparelhos somam; dois toques rápidos gravam em fila, sem um apagar o outro |
+| Baixos | concordância no Excel da Turma ("1 vem"), frase da mensagem mista sem generalizar o prazo, subtítulo do quadro, "Nada a mandar para o próximo dia", troca ainda pedida não muda a turma, feriado avisado na Turma, Excel e PDF da Turma (com telefones) só para quem fala com o tutor, botão direto espera os textos de Configurações, "Ver a resposta" com o assunto fechado |
+
+**Mensagens novas em Configurações › Mensagens prontas** (editáveis, com `{itens}` obrigatório):
+- *Fazer hoje — já venceu e ele está na casa:* "Olá, {tutor}, tudo bem? 🐾 / Aproveitando que {ofilhot} está conosco hoje: {itens}. / O ideal é aproveitar e fazer hoje mesmo. Podemos? É só nos confirmar por aqui que já deixamos tudo pronto."
+- *Fazer hoje — vacina que já venceu:* a mesma abertura, com "A nossa Veterinária atende hoje e pode aplicar durante o dia {dele} aqui. Podemos fazer hoje mesmo?"
+- `{itens}` traz cada item com a sua data ("o carrapaticida venceu em 01/09 e a coleira repelente Seresto vence em 27/09"): misturado, nenhum finge estar atrasado.
+
+### (M) WhatsApp em um toque
+
+> **Adriana, 25/set/2026:** *"Ele só deu um clique, copia a mensagem, já manda automaticamente e a gente já resolve."*
+
+Onde havia mensagem pronta para o tutor, o botão principal agora é **Mandar no WhatsApp**. Ele abre a conversa **do tutor** (o telefone da ficha, com o 55) com a mensagem já escrita, incluindo o que a Consultora editou na caixa. Falta só tocar em enviar.
+
+| Onde | O toque também… |
+|---|---|
+| Vencimentos: mensagem de cada assunto | marca **Mandei** (eram três toques: Copiar, colar, Mandei) |
+| Vencimentos: cobrança ("Cobrar no WhatsApp") | marca **Cobrei** |
+| Hoje na Zêluz: "Perguntar hoje" (ele está aqui) | marca **Mandei** |
+| Reposição: lançada, marcada, desmarcada, usada e abatida | abre a conversa com a mensagem |
+
+- **Copiar** continua ali, ao lado, para quem manda por outro caminho.
+- **Sem telefone na ficha**, o WhatsApp abre para escolher o contato.
+- **O app não envia sozinho.** Isso depende da API do WhatsApp, que é decisão futura. Quem envia é a Consultora.
+
+### (L) Turminhas → Turma do dia (lista enxuta, com Excel e PDF)
+
+> **Adriana, 25/set/2026:** *"Não precisa aparecer o quadro imenso de peludinhos. O Boris trocou a sexta pela quarta (dia 23) e aparece lá — já era esperado que ele não viria. Preciso conseguir baixar em Excel ou PDF quem vem em cada dia, para mandar mensagens e cobrar vermífugo, vacina etc., junto com quem marcou reposição."*
+
+**Turminhas › (dia)** abre a **Turma do dia**, e não mais a Chamada com o quadro grande. A Chamada daquele dia continua a um toque, no alto. Quem tem menu por atividade, como os monitores, não vê as Turminhas.
+
+| Bloco | Quem entra |
+|---|---|
+| **Vêm** | os fixos do dia da semana, mais quem vem por **reposição marcada**, por **troca** ("no lugar de 26/09") ou como **avulso** lançado para a data. Hoje também mostra "✓ veio" ou "faltou" da chamada |
+| **Avisaram que não vêm** | o fixo com **falta avisada** naquela data (com o motivo e "repõe em…") ou que **trocou o dia** ("trocou para 23/09"). É o caso do Boris |
+| **O que cobrar** (em cada linha) | a prevenção vencida ou vencendo, pela mesma régua dos Vencimentos; o que está em aberto na ficha, num chip só; e o que ficou **pendente de outro dia** (Pendências de prevenção: o vermífugo lançado num dia em que ele não veio) |
+
+- **Tocar no nome** abre a ficha.
+- **Tocar no que cobrar** abre os Vencimentos daquele dia, com as mensagens prontas.
+- **Baixar Excel** e **PDF / imprimir** saem da mesma lista. As colunas são: FILHOt, raça, tutor, telefone, como vem, o que cobrar e reposições.
+- **Moradores** (Repolho etc.) não entram: não são turma.
+- **Nada novo é gravado:** a tela só lê o cadastro, as reposições, as trocas, as pendências e os avulsos do dia.
+
+### (K) Orçamentos de hospedagem → Check-in
+
+> **Adriana, 25/set/2026:** *"O Pingo já foi embora, já foi feito o check-out dele, e ele continua aparecendo em Estadias fechadas. Era para ele ter ido para Já hospedados. Elizabeth, Pipoca hoje — precisariam de já ir para o check-in direto, assim como o Camus. Poder dar entrada pelo orçamento de hospedagem ou também no check-in. Aqui só está aparecendo a Pipoca do João."*
+
+**O Pingo em "Estadias fechadas".**
+- **A causa:** o cliente novo entra no orçamento com a chave provisória `avulso__nome__tutor`. A estadia nasce, no check-in, com a chave do cadastro, e a comparação parava no "avulso". O check-in dele nunca era reconhecido, e o card ficava em "Estadias fechadas" até a saída passar.
+- **Agora:** os dois lados são escritos do mesmo jeito antes de comparar (sem o "avulso__", sem acento, sem caixa), e ele desce para "Já hospedados / passadas". Xará de outro tutor continua sendo outro FILHOt.
+
+**O Camus e a Elizabeth fora do Check-in.**
+- **A causa:** a lista "sem check-in" nasce da planilha, e o orçamento fechado de cliente novo nem sempre casa com um cadastro lá.
+- **Agora:** o **topo do Check-in** tem o cartão **"Chegam pelos orçamentos fechados"**, lido direto dos orçamentos:
+  - só os fechados com a entrada até hoje, a saída ainda por vir e o FILHOt ainda sem check-in;
+  - quem devia ter entrado antes aparece com o aviso em vermelho;
+  - "Fazer check-in" abre a ficha com as datas do orçamento, pelo mesmo atalho da tela de Orçamentos;
+  - enquanto as estadias carregam, o cartão não aparece, para ninguém ser chamado a um segundo check-in;
+  - ele se refaz sozinho quando um check-in é salvo.
+
+O check-in do corpo e o de pertences não foram tocados. A ficha do check-in da hospedagem também não: só entrou o cartão no alto.
+
+**Correções da 4ª rodada do QA (orçamento e reposição):**
+
+| Achado | Correção |
+|---|---|
+| **M1:** tutor "Maria" contava como "Mariana" (e "Ana" como "Anabela"): um orçamento podia sumir do cartão ou prender as noites de outra reserva | o começo do nome do tutor vale só até o fim da palavra. "João" continua sendo "João Francisco…" |
+| **M2:** com o tutor escrito de outro jeito, o "Fazer check-in" achava a ficha, mas as datas da última estadia sobrescreviam as do orçamento | o bilhete das datas passa a levar a chave da ficha achada |
+| **B1:** leitura das estadias que falhou mandava todo mundo fazer check-in | estadias vazias escondem o cartão ("não sei" não é "ninguém entrou") |
+| **B2:** os 60 orçamentos eram baixados de novo a cada toque | lidos há menos de 3 minutos, vale o que está em mão |
+| **B3:** tutor com ponto ou barra ("Ana C. Souza", "Ana/Pedro") não era reconhecido | ponto, barra, cerquilha, cifrão e colchete viram espaço nos dois lados |
+| **B4:** o aviso de desmarcar dizia "0 reposições sem dia" | sem a conta em mão, diz "continua valendo e volta a ficar sem dia marcado" |
+| **B5:** cliente de primeira vez: o Novo Hóspede não traz as datas do orçamento | o cartão escreve as datas na linha e diz para cadastrar em Novo Hóspede |
+
+### (J) Reposição: marcar e desmarcar já avisam o tutor
+
+> **Adriana, 25/set/2026:** *"Assinalei a marcação que a tutora pediu para agendar na segunda 28/09 a reposição, e não deu nenhuma mensagem para enviar ao tutor! Precisa ter a mensagem que com a marcação ficará 1 reposição… Caso o tutor desmarque, temos que voltar e desmarcar, e o saldo volta!"*
+
+| O quê | Antes | Agora |
+|---|---|---|
+| **Marcar a reposição** (tela de Reposições › "Marcar reposição") | o aviso "DIA EXTRA MARCADO", sem mensagem para o tutor. A mensagem só existia ao lançar a falta e quando ele vinha repor | abre a mesma caixa verde de mensagem pronta: "a reposição da Luna ficou marcada para segunda-feira, 28/09. Com essa marcação, fica 1 reposição ainda sem dia" |
+| **Desmarcar** | não existia | cada data em "Vem repor em…" tem **desmarcar**. A data sai do crédito e a reposição continua valendo, sem dia. O dia desmarcado fica guardado no crédito (`volta_desmarcada`), com quem e quando. A planilha daquele dia deixa de receber a Reposição na próxima conferência e as vagas se abrem. Sai a mensagem para o tutor: "continua valendo: fica 1 reposição para marcar" |
+
+O saldo de reposição não muda ao marcar: o crédito só sai quando ele vem. A mensagem fala de "quantas ficam **sem dia**", que é o que o tutor precisa saber.
+
+### (I) Correções do QA Gate (Elo 6), antes de publicar
+
+| Achado | Correção |
+|---|---|
+| Remédio da recepção + check-in de pertences podiam virar **duas doses** (alarme de novo depois de dado) | viram **uma** quando é o mesmo FILHOt e horário, ou o mesmo remédio com até 1 h de diferença. Fica a que já tem "dei" registrado (`medJuntarDoDia`) |
+| Remédio lançado para quem **faltou** tocava alarme e cobrava a Gestão | quem está "faltou" sai da fila na montagem e pela chamada viva. O check-in do corpo **não foi tocado** |
+| Pernoite de dia anterior: **check-in em dobro** entre aparelhos | três proteções:<br>• a noite é relida no banco antes do check-in e do cancelar;<br>• o fechamento e o cancelamento são por transação;<br>• a noite já coberta por uma estadia sai da lista. A janela passa a ser de 7 dias |
+| "Sim" antigo com a ficha devendo aparecia como "respondido" nos contadores | o estado do assunto passa a conferir a ficha |
+| Rastro da auditoria sem autor no check-in novo | campo vazio não apaga o autor |
+| Servidor da senha | quatro ajustes:<br>• freio por aparelho, e acertar não zera os erros;<br>• a resposta de aparelho não liberado não traz o nome;<br>• o endereço vem pelo `X-Real-IP`;<br>• o resumo do endereço leva sal |
+
+### Provas
+
+Todas rodam sem rede e sem dado de cliente:
+- `node tests/fase0-ciclo-fechado.test.js`: 145 provas (com os cenários A, B, D, F, G, H, I, J, K, L e M do fechamento pelo quadro e o fechamento por assunto, incluindo os achados do QA8 ao QA12);
+- `node tests/servidor-senha.test.js`: 11 provas.
+
+**Harness completo** (`node tests/harness.js`). Ele precisa do retrato da VPS, que não é acessível daqui. Por isso rodou com um **retrato sintético**, só numa cópia, com o bloco das provas de dado real desligado. O mesmo retrato foi usado nas duas versões:
+
+| Versão | Resultado |
+|---|---|
+| `master` publicado (`d824fbe`) | 3842 ok · 17 falhas |
+| esta branch | 3844 ok · **as mesmas 17 falhas**, nenhuma nova |
+
+As 17 falham nas duas porque o retrato sintético não tem os dados que elas leem. Na primeira comparação, feita com uma base que já tinha parte da Fase 0, **9 checagens falhavam só na branch**. Nenhuma era defeito do app: eram as regras antigas que a Fase 0 mudou de propósito (v-24, v-28 ×2, v-31, v-41, v-46 ×2 e v-47) e a margem de impressão da Turma do dia (v-21). As checagens foram atualizadas com o motivo escrito ao lado.
+
+A do v-28 revelou um furo de verdade:
+- quando a ficha ficava toda em dia pelo quadro, o cartão saía da lista e levava o botão "Sim";
+- a conversa com o tutor nunca fechava.
+
+Agora quem põe a última data fecha o assunto, com o nome e a hora (`prevCorrigeFecharConversa`).
+- Só fecha quando o **cartão do dia fica vazio**, que é quando ele some da lista e leva o "Sim" junto. Qualquer item ainda no cartão segura, mesmo que ainda nem tenha sido mandado ao tutor; enquanto o cartão está na tela, quem fecha é a pessoa, pelo "Sim". O assunto que o tutor recusou não segura.
+- Lê a ficha **nova**, a que acabou de ser gravada, e usa a chave dos Vencimentos, qualquer que seja a tela.
+- As regras vieram da revisão final do QA, que reprovou a primeira versão.
+
+**Antes de publicar, rodar o harness com o retrato real da VPS.**
+
+**QA Gate (Elo 6):** três rodadas por agente independente.
+
+| Rodada | Veredito | O que achou |
+|---|---|---|
+| 1ª | FAIL | dose em dobro, alarme de quem faltou, check-in em dobro da pernoite |
+| 2ª | FAIL | a junção de remédio olhava só o horário; o cancelar da noite anterior não gravava |
+| 3ª | **CONCERNS — pode publicar** | ressalvas |
+| 4ª (orçamento e reposição) | **CONCERNS — pode publicar** | M1, M2 e B1 a B5, todos corrigidos (ver K) |
+| 5ª (Turma, WhatsApp, Quem chamar hoje) | **FAIL** → corrigido | A1, A2, M1 a M6 e os baixos, todos corrigidos (ver N) |
+| 6ª (check-in no celular e ficha única) | **FAIL** (ficha) · CONCERNS (check-in) → corrigido | A1, M1 a M4 e os baixos, todos corrigidos (ver P) |
+| Re-QA da 6ª | **CONCERNS — pode publicar** | 7 ressalvas baixas, corrigidas (ver P) |
+| Re-QA de `2b4a574` | **FAIL** → corrigido com a regra validada pelo próprio QA | o fechamento pelo quadro ainda fechava um cartão com assunto que nem tinha sido mandado ao tutor (a vacina sumia) e fechava com a ficha devendo. Passou a valer a regra mais simples, testada pelo QA numa cópia: **fecha só quando o cartão do dia fica vazio**. A conversa irmã só fecha o assunto com resposta de verdade (não com "Não respondeu" antigo) |
+| QA de `0b1b2ca` e `1ae740c` | **FAIL** → corrigido | a primeira versão do fechamento pelo quadro fechava conversa sem resposta, apagava o recado da veterinária e não fechava o caso certo; a conversa irmã respondida passa a fechar o assunto também no estado (cartão, calendário, contagens); o rascunho de Medicamentos só volta se for do mesmo FILHOt |
+| Re-QA final (5ª) | **CONCERNS** | NOVO-1 (MÉDIO): respondida a conversa do dia, a pergunta "fazer hoje?" do mesmo assunto não é mais cobrada, e vice-versa. NOVO-2 a NOVO-6 (baixos): fonte mais nova, prazo da fila, rastro contado pelo que foi gravado, textos. Todos corrigidos |
+
+Destino de cada ressalva da 3ª rodada:
+- **C1:** o exemplo do campo agora pede o nome do remédio primeiro: "Ex.: Otomax — gotas no ouvido, 2x ao dia";
+- **C2:** nome genérico não junta doses;
+- **C3:** o "Sim" antigo continua fechando em todas as telas;
+- **C4:** fica como está (só leitura).
+
+Nenhuma função do check-in do corpo, de pertences ou da hospedagem foi alterada.
+
+---
 
 ## O que mudou em 24/set/2026 (v 2026-09-24-08)
 
@@ -619,6 +1031,7 @@ Nunca um filho maior que o pai. Abre só o caminho da tela ativa. A pendência s
 | **Central Zêluz › Peludinhos** | Cadastro de Peludinhos (`ficha`) | Um cadastro só, para Day Care e AuAulândia — tudo começa aqui. | so-gestao (+ destaque) |
 | | Buscar peludinho *(sem `data-v`)* | Achar um peludinho depressa e abrir a ficha dele. Abre a MESMA tela do Cadastro, já no campo de busca. | so-gestao (espelha o Cadastro) |
 | **Central Zêluz › Day Care** | Hoje na Zêluz (`hoje`) | Quem está na Zêluz hoje e quem está com pendência: vacina, vermífugo, carrapaticida, coleira e escova. | `PERM` `hoje-na-casa` (consultora · supervisão · gestão · diretoria) |
+| **Central Zêluz › Day Care** | Quem chamar hoje (`contatos`) | Com quem falar hoje: quem está na casa com algo vencido, quem vem no próximo dia e quem não respondeu. Um toque abre o WhatsApp com a mensagem pronta. | `PERM` `hoje-na-casa` (consultora · supervisão · gestão · diretoria) |
 | | Lançamentos do dia (`dashdc`) | A planilha do Day Care, item por item. | so-recepcao |
 | | Pendências de prevenção (`pendencias`) | O que ficou para a próxima vinda: vermífugo, carrapaticida, coleira, medicação e hidratação de quem não veio. | `PERM` `pendencias-prevencao` (consultora · supervisão · gestão · diretoria) |
 | | Peso (`peso`) | Pesar qualquer FILHOt: recepção, veterinária e gestão. | so-pesa |
