@@ -22654,8 +22654,17 @@
     prevCorrigeRedesenhar(tela);
   }
   function prevCorrigeFecharConversa(p, chave){
-    if(!DB || !chave || typeof vencRegDeDia!=='function') return;
+    if(!DB || !p || typeof vencRegDeDia!=='function') return;
+    // A chave dos Vencimentos é a dcKey — a Prevenção chama com a pelKey (QA, B1).
+    chave=(typeof dcKey==='function')?dcKey(p.n, p.tutor):chave;
+    if(!chave) return;
     var hoje=(typeof zHojeISO==='function')?zHojeISO():'';
+    // A ficha NOVA (QA A2): a data que acabou de ser gravada ainda não voltou do banco para o
+    // cadastro em memória (chega ~90 ms depois); ela está na cópia local que setPelExtra já
+    // escreveu. Sem isto, o app olhava a data velha e nunca fechava o caso para o qual existe.
+    var exN={};
+    try{ exN=Object.assign({}, pelExtra(p)||{}, JSON.parse(localStorage.getItem('zeluz_pel_'+pelKey(p))||'{}')); }
+    catch(e){ return; } /* silencioso de propósito: sem a ficha nova não se fecha nada — o cartão continua como está */
     var dias=[];
     [((typeof vencDiaAlvo==='function')?vencDiaAlvo():''), hoje].forEach(function(d){ if(d && dias.indexOf(d)<0) dias.push(d); });
     dias.forEach(function(dia){
@@ -22663,11 +22672,21 @@
       if(!r || r.ficha_atualizada) return;
       var conversou=Object.keys(r.enviadas||{}).length || Object.keys(r.respostas||{}).length || r.msg_enviada || r.resposta;
       if(!conversou) return;
-      if(vencFichaDeveAgora(chave, r, dia).length) return;        // ainda deve algo: continua aberto
+      // Fecha SÓ quando nenhum assunto conversado com o tutor ainda tem item no cartão do dia
+      // (QA A1): a vacina em aberto numa conversa de vermífugo, a escova vencida, a vacina
+      // autorizada para a veterinária — tudo isso segue aberto. O assunto que o tutor recusou
+      // ("Não quer agora") não segura o fechamento. Registro antigo, sem assunto: qualquer item
+      // ainda no cartão segura.
+      var itensN=vencItensDe(exN, dia, vencMargem(), hoje, {incluirSemRegistro:true});
+      var resps=r.respostas||{}, conv={};
+      Object.keys(r.enviadas||{}).concat(Object.keys(resps)).forEach(function(t){ conv[vencTipoBase(t)]=1; });
+      Object.keys(resps).forEach(function(t){ if(vencRespNaoMudaFicha((resps[t]||{}).v)) delete conv[vencTipoBase(t)]; });
+      var semAssunto=!Object.keys(r.enviadas||{}).length && !Object.keys(resps).length;
+      if(itensN.some(function(x){ return semAssunto || conv[vencTipoDoItemObj(x)]; })) return;
       var quem=(typeof quemSou==='function'?quemSou():'-');
       var nome=((typeof pelNome==='function')?pelNome(p):'')||(p&&p.n)||'';
       vencGravar(chave, {ficha_atualizada:{quem:quem, ts:Date.now(), via:'quadro'}, ficha_falta:null},
-        'a ficha de '+nome+' ficou em dia pelo quadro de atualização — o assunto com o tutor fechou (dia '+dia+')',
+        'com a última data gravada pelo quadro, nada mais a combinar com o tutor de '+nome+' — o assunto fechou (dia '+dia+')',
         {nome:nome, tutor:((typeof pelGet==='function')?pelGet(p,'tutor'):'')||(p&&p.tutor)||'', itens:[]}, dia, true);
     });
   }
@@ -23843,7 +23862,11 @@
       let medVelho=null, medAcoesVelho=null;
       if(ativa==='ps-med'){
         const mi=document.getElementById('fmedItens');
-        if(mi && mi.children && mi.children.length){ medVelho=mi; medAcoesVelho=document.getElementById('fmedAcoes'); }
+        // Só o rascunho DESTE FILHOt (QA B3): se a ficha que se redesenha for de outro, o
+        // rascunho do anterior não pode aparecer nela (nem ser salvo na agenda errada).
+        let mesmo=false;
+        try{ mesmo=(typeof medChaveDoPel==='function') && !!pelAtual && medChaveDoPel(pelAtual)===FMED_KEY; }catch(e){ mesmo=false; } /* silencioso de propósito: na dúvida, redesenha do salvo */
+        if(mesmo && mi && mi.querySelector && mi.querySelector('.magitem')){ medVelho=mi; medAcoesVelho=document.getElementById('fmedAcoes'); }
       }
       // Redesenhar a ficha NÃO pode mandar a pessoa de volta ao topo (Adriana, 25/ago/2026).
       const y=(window.pageYOffset||document.documentElement.scrollTop||0);
@@ -35862,6 +35885,9 @@
   function vencEstadoTipo(r, tipo, agora, deve){
     r=r||{};
     if(r.ficha_atualizada && !(Array.isArray(deve) && deve.length)) return 'fechado';
+    // A conversa IRMÃ do mesmo dia (a mensagem do dia × a pergunta "fazer hoje?") já foi
+    // respondida: o tutor já disse o que fazer — este assunto está fechado em todas as telas.
+    if(tipo && vencRespostaDe(r, vencEhAntecipado(tipo)?vencTipoBase(tipo):hojeTipoAnt(tipo))) return 'fechado';
     var rt=vencRespostaDe(r, tipo);
     if(rt){ if(vencRespFecha(rt.v)) return 'fechado'; }
     else if(!r.respostas && vencRespFecha(r.resposta)) return 'fechado';

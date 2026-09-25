@@ -278,7 +278,7 @@ O saldo de reposição não muda ao marcar: o crédito só sai quando ele vem. A
 ### Provas
 
 Todas rodam sem rede e sem dado de cliente:
-- `node tests/fase0-ciclo-fechado.test.js`: 95 provas;
+- `node tests/fase0-ciclo-fechado.test.js`: 96 provas;
 - `node tests/servidor-senha.test.js`: 11 provas.
 
 **Harness completo** (`node tests/harness.js`). Ele precisa do retrato da VPS, que não é acessível daqui. Por isso rodou com um **retrato sintético**, só numa cópia, com o bloco das provas de dado real desligado. O mesmo retrato foi usado nas duas versões:
@@ -295,6 +295,9 @@ A do v-28 revelou um furo de verdade:
 - a conversa com o tutor nunca fechava.
 
 Agora quem põe a última data fecha o assunto, com o nome e a hora (`prevCorrigeFecharConversa`).
+- Só fecha quando **nenhum assunto conversado com o tutor** ainda tem item no cartão do dia. A vacina em aberto numa conversa de vermífugo, a escova vencida e a vacina autorizada para a veterinária seguem abertas; o assunto que o tutor recusou não segura.
+- Lê a ficha **nova**, a que acabou de ser gravada, e usa a chave dos Vencimentos, qualquer que seja a tela.
+- As regras vieram da revisão final do QA, que reprovou a primeira versão.
 
 **Antes de publicar, rodar o harness com o retrato real da VPS.**
 
@@ -309,6 +312,7 @@ Agora quem põe a última data fecha o assunto, com o nome e a hora (`prevCorrig
 | 5ª (Turma, WhatsApp, Quem chamar hoje) | **FAIL** → corrigido | A1, A2, M1 a M6 e os baixos, todos corrigidos (ver N) |
 | 6ª (check-in no celular e ficha única) | **FAIL** (ficha) · CONCERNS (check-in) → corrigido | A1, M1 a M4 e os baixos, todos corrigidos (ver P) |
 | Re-QA da 6ª | **CONCERNS — pode publicar** | 7 ressalvas baixas, corrigidas (ver P) |
+| QA de `0b1b2ca` e `1ae740c` | **FAIL** → corrigido | a primeira versão do fechamento pelo quadro fechava conversa sem resposta, apagava o recado da veterinária e não fechava o caso certo; a conversa irmã respondida passa a fechar o assunto também no estado (cartão, calendário, contagens); o rascunho de Medicamentos só volta se for do mesmo FILHOt |
 | Re-QA final (5ª) | **CONCERNS** | NOVO-1 (MÉDIO): respondida a conversa do dia, a pergunta "fazer hoje?" do mesmo assunto não é mais cobrada, e vice-versa. NOVO-2 a NOVO-6 (baixos): fonte mais nova, prazo da fila, rastro contado pelo que foi gravado, textos. Todos corrigidos |
 
 Destino de cada ressalva da 3ª rodada:

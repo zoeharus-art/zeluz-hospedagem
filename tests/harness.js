@@ -20885,9 +20885,12 @@ async function main() {
         '2026-09-24', 7, '2026-09-24', { incluirSemRegistro: true }).length === 0);
       // Quem pede isto são as DUAS telas dela — e a Prevenção continua exatamente como era.
       // 25/set/2026: pedem também a trava do "Sim" (vencFichaDeveAgora), a ficha única
-      // (fichaUnicaDados) e a Turma do dia — todas conversa com o tutor. A Prevenção continua fora.
+      // (fichaUnicaDados), a Turma do dia e o fechamento pelo quadro (prevCorrigeFecharConversa,
+      // que só fecha quando nada conversado ficou no cartão — nem o que nunca foi registrado).
+      // Todas conversa com o tutor. A Prevenção continua fora.
       check('v-46 · só as telas de conversa com o tutor pedem o "em aberto"; a Prevenção não mudou',
-        (html.match(/incluirSemRegistro:true/g) || []).length === 5
+        (html.match(/incluirSemRegistro:true/g) || []).length === 6
+        && /function prevCorrigeFecharConversa[\s\S]{0,2500}incluirSemRegistro:true/.test(html)
         && /function vencFichaDeveAgora[\s\S]{0,400}incluirSemRegistro:true/.test(html)
         && /function fichaUnicaDados[\s\S]{0,2000}incluirSemRegistro:true/.test(html)
         && /function turmaListaDoDia[\s\S]{0,5000}incluirSemRegistro:true/.test(html)
